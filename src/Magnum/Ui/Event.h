@@ -27,7 +27,7 @@
 */
 
 /** @file
- * @brief Class @ref Magnum::Ui::PointerEvent, @ref Magnum::Ui::PointerMoveEvent, @ref Magnum::Ui::FocusEvent, @ref Magnum::Ui::KeyEvent, @ref Magnum::Ui::TextInputEvent, @ref Magnum::Ui::VisibilityLostEvent, enum @ref Magnum::Ui::Pointer, @ref Magnum::Ui::Key, @ref Magnum::Ui::Modifier, enum set @ref Magnum::Ui::Pointers, @ref Magnum::Ui::Modifiers
+ * @brief Class @ref Magnum::Ui::PointerEvent, @ref Magnum::Ui::PointerMoveEvent, @ref Magnum::Ui::PointerCancelEvent, @ref Magnum::Ui::FocusEvent, @ref Magnum::Ui::KeyEvent, @ref Magnum::Ui::TextInputEvent, @ref Magnum::Ui::VisibilityLostEvent, enum @ref Magnum::Ui::Pointer, @ref Magnum::Ui::Key, @ref Magnum::Ui::Modifier, enum set @ref Magnum::Ui::Pointers, @ref Magnum::Ui::Modifiers
  * @m_since_latest
  */
 
@@ -160,6 +160,34 @@ class MAGNUM_UI_EXPORT PointerEvent {
         Nanoseconds time() const { return _time; }
 
         /**
+         * @brief Whether it's a fallthrough event
+         *
+         * Fallthrough events are sent to nodes with
+         * @ref NodeFlag::FallthroughPointerEvents set that are parents of the
+         * node that received the event originally. If this function returns
+         * @cpp true @ce, @ref isNodePressed(), @ref isNodeHovered(),
+         * @ref isNodeFocused() and @ref isCaptured() refer to the child node
+         * the original event was called on.
+         *
+         * Accepting a primary fallthrough event causes a
+         * @ref AbstractLayer::pointerCancelEvent() to be sent to the currently
+         * pressed, hovered, captured and focused nodes, if any. If (and only
+         * if) the original node was captured or pressed, the fallthrough node
+         * is made captured or pressed instead. If (and only if) the original
+         * node was hovered, the fallthrough node is made hovered, however,
+         * currently, no @ref AbstractLayer::pointerEnterEvent() is
+         * subsequently sent to it. The focused node, if any, is lost and not
+         * transferred anywhere unless the node that accepted the fallthrough
+         * event is itself focused, in which case it stays.
+         *
+         * Accepting a secondary fallthrough event causes a
+         * @ref AbstractLayer::pointerCancelEvent() to be sent only to the
+         * currently captured node, if any. If (and only if) the original node
+         * was captured, the fallthrough node is made captured instead.
+         */
+        bool isFallthrough() const { return _fallthrough; }
+
+        /**
          * @brief Pointer event source
          *
          * @see @ref isPrimary(), @ref id()
@@ -220,12 +248,14 @@ class MAGNUM_UI_EXPORT PointerEvent {
          * @brief Whether the event is called on a node that's currently pressed
          *
          * Returns @cpp true @ce if @ref AbstractUserInterface::currentPressedNode()
-         * is the same as the node the event is called on, @cpp false @ce
-         * otherwise. In particular, is @cpp false @ce for a first press event
-         * happening on given node and is @cpp true @ce for a release event if
-         * it happens inside the pressed node. However, it's @cpp true @ce also
-         * for a release that happens outside of a pressed and captured node.
-         * @see @ref isNodeHovered(), @ref isNodeFocused(), @ref isCaptured()
+         * is the same as the node the event is called on or is a child of a
+         * node a fallthrough event is called on, @cpp false @ce otherwise. In
+         * particular, is @cpp false @ce for a first press event happening on
+         * given node and is @cpp true @ce for a release event if it happens
+         * inside the pressed node. However, it's @cpp true @ce also for a
+         * release that happens outside of a pressed and captured node.
+         * @see @ref isFallthrough(), @ref isNodeHovered(),
+         *      @ref isNodeFocused(), @ref isCaptured()
          */
         bool isNodePressed() const { return _nodePressed; }
 
@@ -233,9 +263,10 @@ class MAGNUM_UI_EXPORT PointerEvent {
          * @brief Whether the event is called on a node that's currently hovered
          *
          * Returns @cpp true @ce if @ref AbstractUserInterface::currentHoveredNode()
-         * is the same as the node the event is called on, @cpp false @ce
-         * otherwise. In particular, is @cpp false @ce for a press or release
-         * event that happened without a preceding move on given node, is also
+         * is the same as the node the event is called on or is a child of a
+         * node a fallthrough event is called on, @cpp false @ce otherwise. In
+         * particular, is @cpp false @ce for a press or release event that
+         * happened without a preceding move on given node, is also
          * @cpp false @ce if a release event happens outside of a captured
          * node.
          *
@@ -244,8 +275,8 @@ class MAGNUM_UI_EXPORT PointerEvent {
          * being in an active area of the node by either accepting the event or
          * not accepting it and letting it potentially fall through to other
          * nodes.
-         * @see @ref isNodePressed(), @ref isNodeFocused(), @ref isCaptured(),
-         *      @ref setAccepted()
+         * @see @ref isFallthrough(), @ref isNodePressed(),
+         *      @ref isNodeFocused(), @ref isCaptured(), @ref setAccepted()
          */
         bool isNodeHovered() const { return _nodeHovered; }
 
@@ -253,21 +284,28 @@ class MAGNUM_UI_EXPORT PointerEvent {
          * @brief Whether the event is called on a node that's currently focused
          *
          * Returns @cpp true @ce if @ref AbstractUserInterface::currentFocusedNode()
-         * is the same as the node the event is called on, @cpp false @ce
-         * otherwise. Unlike @ref isNodeHovered(), returns @cpp true @ce also
-         * if the actual pointer position is outside of the area of the node
-         * the event is called on, for example in case of an event capture.
-         * @see @ref isNodePressed(), @ref isCaptured()
+         * is the same as the node the event is called on or is a child of a
+         * node a fallthrough event is called on, @cpp false @ce otherwise.
+         * Unlike @ref isNodeHovered(), returns @cpp true @ce also if the
+         * actual pointer position is outside of the area of the node the event
+         * is called on, for example in case of an event capture.
+         * @see @ref isFallthrough(), @ref isNodePressed(), @ref isCaptured()
          */
         bool isNodeFocused() const { return _nodeFocused; }
 
         /**
          * @brief Whether the event is captured on a node
          *
-         * On a press event is always implicitly @cpp true @ce, on a release
-         * event is @cpp true @ce only if the event happens on a captured node.
-         * @see @ref isNodePressed(), @ref isNodeHovered(),
-         *      @ref isNodeFocused()
+         * Implicitly @cpp true @ce if @ref AbstractUserInterface::currentCapturedNode()
+         * is the same as the node the event is called on or is a child of a
+         * node a fallthrough event is called on, @cpp false @ce otherwise,
+         * unless a previously called event handler modified the capture.
+         *
+         * Always implicitly @cpp true @ce for a primary press event, unless a
+         * previously called event handler reset the capture. On a release
+         * event is implicitly @cpp true @ce if the event happens on a captured
+         * node, or if a previously called event handler set the capture.
+         * @see @ref isFallthrough(), @ref isPrimary(), @ref setCaptured()
          */
         bool isCaptured() const { return _captured; }
 
@@ -304,7 +342,10 @@ class MAGNUM_UI_EXPORT PointerEvent {
         /**
          * @brief Set the event as accepted
          *
-         * Once an event is accepted, it doesn't propagate further.
+         * Once an event is accepted, it doesn't propagate further. It may
+         * however still fall through to parent nodes marked with
+         * @ref NodeFlag::FallthroughPointerEvents, see @ref isFallthrough()
+         * for more information.
          */
         void setAccepted(bool accepted = true) {
             _accepted = accepted;
@@ -319,6 +360,7 @@ class MAGNUM_UI_EXPORT PointerEvent {
         PointerEventSource _source;
         Pointer _pointer;
         bool _primary;
+        bool _fallthrough = false;
         bool _nodePressed = false;
         bool _nodeHovered = false;
         bool _nodeFocused = false;
@@ -371,6 +413,34 @@ class MAGNUM_UI_EXPORT PointerMoveEvent {
 
         /** @brief Time at which the event happened */
         Nanoseconds time() const { return _time; }
+
+        /**
+         * @brief Whether it's a fallthrough event
+         *
+         * Fallthrough events are sent to nodes with
+         * @ref NodeFlag::FallthroughPointerEvents set that are parents of the
+         * node that received the event originally. If this function returns
+         * @cpp true @ce, @ref isNodePressed(), @ref isNodeHovered(),
+         * @ref isNodeFocused() and @ref isCaptured() refer to the child node
+         * the original event was called on.
+         *
+         * Accepting a primary fallthrough event causes a
+         * @ref AbstractLayer::pointerCancelEvent() to be sent to the currently
+         * pressed, hovered, captured and focused nodes, if any. If (and only
+         * if) the original node was captured or pressed, the fallthrough node
+         * is made captured or pressed instead. If (and only if) the original
+         * node was hovered, the fallthrough node is made hovered, however,
+         * currently, no @ref AbstractLayer::pointerEnterEvent() is
+         * subsequently sent to it. The focused node, if any, is lost and not
+         * transferred anywhere unless the node that accepted the fallthrough
+         * event is itself focused, in which case it stays.
+         *
+         * Accepting a secondary fallthrough event causes a
+         * @ref AbstractLayer::pointerCancelEvent() to be sent only to the
+         * currently captured node, if any. If (and only if) the original node
+         * was captured, the fallthrough node is made captured instead.
+         */
+        bool isFallthrough() const { return _fallthrough; }
 
         /**
          * @brief Pointer event source
@@ -462,10 +532,11 @@ class MAGNUM_UI_EXPORT PointerMoveEvent {
          * @brief Whether the event is called on a node that's currently hovered
          *
          * Returns @cpp true @ce if @ref AbstractUserInterface::currentPressedNode()
-         * is the same as the node the event is called on, @cpp false @ce
-         * otherwise. In particular, is @cpp true @ce also for a move that
-         * happens outside of a pressed and captured node.
-         * @see @ref isNodeHovered(), @ref isNodeFocused()
+         * is the same as the node the initial non-fallthrough event is called
+         * on, @cpp false @ce otherwise. In particular, is @cpp true @ce also
+         * for a move that happens outside of a pressed and captured node.
+         * @see @ref isFallthrough(), @ref isNodeHovered(),
+         *      @ref isNodeFocused()
          */
         bool isNodePressed() const { return _nodePressed; }
 
@@ -473,12 +544,13 @@ class MAGNUM_UI_EXPORT PointerMoveEvent {
          * @brief Whether the event is called on a node that's currently hovered
          *
          * Returns @cpp true @ce if @ref AbstractUserInterface::currentHoveredNode()
-         * is the same as the node the event is called on, @cpp false @ce
-         * otherwise. In particular, is @cpp false @ce for the first move event
-         * happening on a node, @cpp true @ce for the enter event and all
-         * subsequent accepted move events on the same node, @cpp false @ce for
-         * the leave event. On a captured move event returns @cpp false @ce for
-         * if the pointer was moved outside of the node area.
+         * is the same as the node the initial non-fallthrough event is called
+         * on, @cpp false @ce otherwise. In particular, is @cpp false @ce for
+         * the first move event happening on a node, @cpp true @ce for the
+         * enter event and all subsequent accepted move events on the same
+         * node, @cpp false @ce for the leave event. On a captured move event
+         * returns @cpp false @ce for if the pointer was moved outside of the
+         * node area.
          *
          * Note that even if this function returns @cpp true @ce, the event
          * handler still controls whether the node actually appears in
@@ -488,8 +560,8 @@ class MAGNUM_UI_EXPORT PointerMoveEvent {
          * then become hovered, if there are none then the hovered node becomes
          * null and subsequent move events called on this node will be called
          * with this function returning @cpp false @ce.
-         * @see @ref isNodePressed(), @ref isNodeFocused(), @ref isCaptured(),
-         *      @ref setAccepted()
+         * @see @ref isFallthrough(), @ref isNodePressed(),
+         *      @ref isNodeFocused(), @ref isCaptured(), @ref setAccepted()
          */
         bool isNodeHovered() const { return _nodeHovered; }
 
@@ -497,21 +569,24 @@ class MAGNUM_UI_EXPORT PointerMoveEvent {
          * @brief Whether the event is called on a node that's currently focused
          *
          * Returns @cpp true @ce if @ref AbstractUserInterface::currentFocusedNode()
-         * is the same as the node the event is called on, @cpp false @ce
-         * otherwise. Unlike @ref isNodeHovered(), returns @cpp true @ce also
-         * if the actual pointer position is outside of the area of the node
-         * the event is called on, for example in case of an event capture.
-         * @see @ref isNodePressed(), @ref isCaptured()
+         * is the same as the node the initial non-fallthrough event is called
+         * on, @cpp false @ce otherwise. Unlike @ref isNodeHovered(), returns
+         * @cpp true @ce also if the actual pointer position is outside of the
+         * area of the node the event is called on, for example in case of an
+         * event capture.
+         * @see @ref isFallthrough(), @ref isNodePressed(), @ref isCaptured()
          */
         bool isNodeFocused() const { return _nodeFocused; }
 
         /**
          * @brief Whether the event is captured on a node
          *
-         * Is implicitly @cpp true @ce if the event happens on a captured node,
-         * @cpp false @ce otherwise.
-         * @see @ref isNodePressed(), @ref isNodeHovered(),
-         *      @ref isNodeFocused()
+         * Is implicitly @cpp true @ce if
+         * @ref AbstractUserInterface::currentCapturedNode() is the same as the
+         * node the event is called on or is a child of a node a fallthrough
+         * event is called on, @cpp false @ce otherwise, unless a previously
+         * called event handler modified the capture.
+         * @see @ref isFallthrough(), @ref setCaptured()
          */
         bool isCaptured() const { return _captured; }
 
@@ -543,7 +618,10 @@ class MAGNUM_UI_EXPORT PointerMoveEvent {
         /**
          * @brief Set the event as accepted
          *
-         * Once an event is accepted, it doesn't propagate further.
+         * Once an event is accepted, it doesn't propagate further. It may
+         * however still fall through to parent nodes marked with
+         * @ref NodeFlag::FallthroughPointerEvents, see @ref isFallthrough() for
+         * more information.
          */
         void setAccepted(bool accepted = true) {
             _accepted = accepted;
@@ -559,11 +637,41 @@ class MAGNUM_UI_EXPORT PointerMoveEvent {
         Pointer _pointer; /* NullOpt encoded as Pointer{} to avoid an include */
         Pointers _pointers;
         bool _primary;
+        bool _fallthrough = false;
         bool _nodePressed = false;
         bool _nodeHovered = false;
         bool _nodeFocused = false;
         bool _accepted = false;
         bool _captured = false;
+};
+
+/**
+@brief Pointer cancel event
+@m_since_latest
+
+@see @ref AbstractUserInterface::pointerPressEvent(),
+    @ref AbstractUserInterface::pointerReleaseEvent(),
+    @ref AbstractUserInterface::pointerMoveEvent(),
+    @ref AbstractLayer::pointerCancelEvent(), @ref PointerEvent,
+    @ref PointerMoveEvent, @ref VisibilityLostEvent
+*/
+class PointerCancelEvent {
+    public:
+        /**
+         * @brief Constructor
+         * @param time      Time at which the event happened
+         *
+         * The @p time may get used for UI animations. A default-constructed
+         * value causes an animation play time to be in the past, thus
+         * immediately transitioning to a stopped state.
+         */
+        explicit PointerCancelEvent(Nanoseconds time): _time{time} {}
+
+        /** @brief Time at which the event happened */
+        Nanoseconds time() const { return _time; }
+
+    private:
+        Nanoseconds _time;
 };
 
 /**
