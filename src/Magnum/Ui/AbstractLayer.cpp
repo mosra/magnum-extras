@@ -741,6 +741,19 @@ void AbstractLayer::pointerLeaveEvent(const UnsignedInt dataId, PointerMoveEvent
 
 void AbstractLayer::doPointerLeaveEvent(UnsignedInt, PointerMoveEvent&) {}
 
+void AbstractLayer::pointerCancelEvent(const UnsignedInt dataId, PointerCancelEvent& event) {
+    CORRADE_ASSERT(features() & LayerFeature::Event,
+        "Ui::AbstractLayer::pointerCancelEvent(): feature not supported", );
+    #ifndef CORRADE_NO_ASSERT
+    const State& state = *_state;
+    #endif
+    CORRADE_ASSERT(dataId < state.data.size(),
+        "Ui::AbstractLayer::pointerCancelEvent(): index" << dataId << "out of range for" << state.data.size() << "data", );
+    return doPointerCancelEvent(dataId, event);
+}
+
+void AbstractLayer::doPointerCancelEvent(UnsignedInt, PointerCancelEvent&) {}
+
 void AbstractLayer::focusEvent(const UnsignedInt dataId, FocusEvent& event) {
     CORRADE_ASSERT(features() & LayerFeature::Event,
         "Ui::AbstractLayer::focusEvent(): feature not supported", );

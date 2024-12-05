@@ -783,6 +783,21 @@ class MAGNUM_UI_EXPORT AbstractLayer {
         void pointerLeaveEvent(UnsignedInt dataId, PointerMoveEvent& event);
 
         /**
+         * @brief Handle a pointer cancel event
+         *
+         * Used internally from @ref AbstractUserInterface::pointerPressEvent(),
+         * @relativeref{AbstractUserInterface,pointerReleaseEvent()} and
+         * @relativeref{AbstractUserInterface,pointerMoveEvent()}. Exposed just
+         * for testing purposes, there should be no need to call this function
+         * directly. Expects that the layer supports @ref LayerFeature::Event
+         * and @p dataId is less than @ref capacity(), with the assumption that
+         * the ID points to a valid data. Delegates to
+         * @ref doPointerCancelEvent(), see its documentation for more
+         * information.
+         */
+        void pointerCancelEvent(UnsignedInt dataId, PointerCancelEvent& event);
+
+        /**
          * @brief Handle a focus event
          *
          * Used internally from @ref AbstractUserInterface::focusEvent() and
@@ -1492,6 +1507,24 @@ class MAGNUM_UI_EXPORT AbstractLayer {
          * @see @ref PointerMoveEvent::isPrimary()
          */
         virtual void doPointerLeaveEvent(UnsignedInt dataId, PointerMoveEvent& event);
+
+        /**
+         * @brief Handle a pointer cancel event
+         * @param dataId            Data ID the event happens on. Guaranteed to
+         *      be less than @ref capacity() and point to a valid data.
+         * @param event             Event data
+         *
+         * Implementation for @ref pointerCancelEvent(), which is called from
+         * @ref AbstractUserInterface::pointerPressEvent(),
+         * @relativeref{AbstractUserInterface,pointerReleaseEvent()} or
+         * @relativeref{AbstractUserInterface,pointerMoveEvent()} if the event
+         * falls through and gets accepted by a node different than the one it
+         * originally happened on. It's guaranteed that @ref doUpdate() was
+         * called before this function with up-to-date data for @p dataId.
+         *
+         * Default implementation does nothing.
+         */
+        virtual void doPointerCancelEvent(UnsignedInt dataId, PointerCancelEvent& event);
 
         /**
          * @brief Handle a focus event

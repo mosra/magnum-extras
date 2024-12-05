@@ -23,15 +23,15 @@
      inkscape:pagecheckerboard="0"
      inkscape:deskcolor="#d1d1d1"
      inkscape:document-units="px"
-     inkscape:zoom="2.0281122"
-     inkscape:cx="255.90301"
-     inkscape:cy="141.75745"
+     inkscape:zoom="2.8681838"
+     inkscape:cx="231.15674"
+     inkscape:cy="100.5863"
      inkscape:window-width="1920"
      inkscape:window-height="1031"
      inkscape:window-x="0"
      inkscape:window-y="0"
      inkscape:window-maximized="1"
-     inkscape:current-layer="layer2" />
+     inkscape:current-layer="layer7" />
   <defs
      id="defs1" />
   <g
@@ -164,12 +164,34 @@
      inkscape:groupmode="layer"
      id="layer5"
      inkscape:label="press"
-     style="display:inline">
+     style="display:none">
     <circle
        style="font-variation-settings:normal;opacity:1;fill:#2f83cc;fill-opacity:1;stroke:none;stroke-width:0.528902;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:0.528902, 2.11561;stroke-dashoffset:0;stroke-opacity:1"
        id="path67"
        cx="47.911594"
        cy="28.218731"
+       r="2.1166666" />
+  </g>
+  <g
+     inkscape:groupmode="layer"
+     id="layer7"
+     inkscape:label="fallthrough">
+    <path
+       style="fill:none;fill-opacity:1;stroke:#2f83cc;stroke-width:0.529167;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:none;-inkscape-stroke:none"
+       d="m 47.911593,13.346526 c -1.134217,5.192932 1.672563,9.523897 0,14.872204"
+       id="path2"
+       sodipodi:nodetypes="cc" />
+    <circle
+       style="display:inline;font-variation-settings:normal;opacity:1;fill:#cd3431;fill-opacity:1;stroke:none;stroke-width:0.528902;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:0.528902, 2.11561;stroke-dashoffset:0;stroke-opacity:1"
+       id="circle1"
+       cx="47.911594"
+       cy="28.218731"
+       r="2.1166666" />
+    <circle
+       style="font-variation-settings:normal;display:inline;opacity:1;fill:#2f83cc;fill-opacity:1;stroke:none;stroke-width:0.528902;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:0.528902, 2.11561;stroke-dashoffset:0;stroke-opacity:1"
+       id="circle2"
+       cx="47.911594"
+       cy="13.346526"
        r="2.1166666" />
   </g>
 </svg>

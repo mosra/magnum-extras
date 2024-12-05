@@ -3310,6 +3310,11 @@ void AbstractLayerTest::pointerEvent() {
             CORRADE_COMPARE(event.pointer(), Pointer::Finger);
             called *= 11;
         }
+        void doPointerCancelEvent(UnsignedInt dataId, PointerCancelEvent& event) override {
+            CORRADE_COMPARE(dataId, 6);
+            CORRADE_COMPARE(event.time(), 12345678_nsec);
+            called *= 13;
+        }
 
         int called = 1;
     } layer{layerHandle(0, 1)};
@@ -3317,6 +3322,7 @@ void AbstractLayerTest::pointerEvent() {
     /* Capture correct test case name */
     CORRADE_VERIFY(true);
 
+    layer.create();
     layer.create();
     layer.create();
     layer.create();
@@ -3338,8 +3344,11 @@ void AbstractLayerTest::pointerEvent() {
     } {
         PointerMoveEvent event{1234567_nsec, PointerEventSource::Touch, Pointer::Finger, {}, true, 0};
         layer.pointerLeaveEvent(5, event);
+    } {
+        PointerCancelEvent event{12345678_nsec};
+        layer.pointerCancelEvent(6, event);
     }
-    CORRADE_COMPARE(layer.called, 2*3*5*7*11);
+    CORRADE_COMPARE(layer.called, 2*3*5*7*11*13);
 }
 
 void AbstractLayerTest::pointerEventNotSupported() {
@@ -3353,6 +3362,7 @@ void AbstractLayerTest::pointerEventNotSupported() {
 
     PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseMiddle, true, 0};
     PointerMoveEvent moveEvent{{}, PointerEventSource::Mouse, {}, {}, true, 0};
+    PointerCancelEvent cancelEvent{{}};
 
     std::ostringstream out;
     Error redirectError{&out};
@@ -3361,12 +3371,14 @@ void AbstractLayerTest::pointerEventNotSupported() {
     layer.pointerMoveEvent(0, moveEvent);
     layer.pointerEnterEvent(0, moveEvent);
     layer.pointerLeaveEvent(0, moveEvent);
+    layer.pointerCancelEvent(0, cancelEvent);
     CORRADE_COMPARE_AS(out.str(),
         "Ui::AbstractLayer::pointerPressEvent(): feature not supported\n"
         "Ui::AbstractLayer::pointerReleaseEvent(): feature not supported\n"
         "Ui::AbstractLayer::pointerMoveEvent(): feature not supported\n"
         "Ui::AbstractLayer::pointerEnterEvent(): feature not supported\n"
-        "Ui::AbstractLayer::pointerLeaveEvent(): feature not supported\n",
+        "Ui::AbstractLayer::pointerLeaveEvent(): feature not supported\n"
+        "Ui::AbstractLayer::pointerCancelEvent(): feature not supported\n",
         TestSuite::Compare::String);
 }
 
@@ -3384,11 +3396,13 @@ void AbstractLayerTest::pointerEventNotImplemented() {
 
     PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseMiddle, true, 0};
     PointerMoveEvent moveEvent{{}, PointerEventSource::Mouse, {}, {}, true, 0};
+    PointerCancelEvent cancelEvent{{}};
     layer.pointerPressEvent(0, event);
     layer.pointerReleaseEvent(0, event);
     layer.pointerMoveEvent(0, moveEvent);
     layer.pointerEnterEvent(0, moveEvent);
     layer.pointerLeaveEvent(0, moveEvent);
+    layer.pointerCancelEvent(0, cancelEvent);
 
     /* Shouldn't crash or anything */
     CORRADE_VERIFY(true);
@@ -3411,6 +3425,7 @@ void AbstractLayerTest::pointerEventOutOfRange() {
 
     PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseMiddle, true, 0};
     PointerMoveEvent moveEvent{{}, PointerEventSource::Mouse, {}, {}, true, 0};
+    PointerCancelEvent cancelEvent{{}};
 
     std::ostringstream out;
     Error redirectError{&out};
@@ -3419,12 +3434,14 @@ void AbstractLayerTest::pointerEventOutOfRange() {
     layer.pointerMoveEvent(2, moveEvent);
     layer.pointerEnterEvent(2, moveEvent);
     layer.pointerLeaveEvent(2, moveEvent);
+    layer.pointerCancelEvent(2, cancelEvent);
     CORRADE_COMPARE_AS(out.str(),
         "Ui::AbstractLayer::pointerPressEvent(): index 2 out of range for 2 data\n"
         "Ui::AbstractLayer::pointerReleaseEvent(): index 2 out of range for 2 data\n"
         "Ui::AbstractLayer::pointerMoveEvent(): index 2 out of range for 2 data\n"
         "Ui::AbstractLayer::pointerEnterEvent(): index 2 out of range for 2 data\n"
-        "Ui::AbstractLayer::pointerLeaveEvent(): index 2 out of range for 2 data\n",
+        "Ui::AbstractLayer::pointerLeaveEvent(): index 2 out of range for 2 data\n"
+        "Ui::AbstractLayer::pointerCancelEvent(): index 2 out of range for 2 data\n",
         TestSuite::Compare::String);
 }
 
@@ -3485,6 +3502,7 @@ void AbstractLayerTest::pointerEventAlreadyAccepted() {
     layer.pointerMoveEvent(0, moveEvent);
     layer.pointerEnterEvent(0, moveEvent);
     layer.pointerLeaveEvent(0, moveEvent);
+    /* PointerCancelEvent cannot be accepted */
     CORRADE_COMPARE(out.str(),
         "Ui::AbstractLayer::pointerPressEvent(): event already accepted\n"
         "Ui::AbstractLayer::pointerReleaseEvent(): event already accepted\n"

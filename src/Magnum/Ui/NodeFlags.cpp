@@ -40,6 +40,7 @@ Debug& operator<<(Debug& debug, const NodeFlag value) {
         _c(Clip)
         _c(NoEvents)
         _c(Disabled)
+        _c(FallthroughPointerEvents)
         _c(Focusable)
         #undef _c
         /* LCOV_EXCL_STOP */
@@ -55,6 +56,7 @@ Debug& operator<<(Debug& debug, const NodeFlags value) {
         NodeFlag::Disabled,
         /* Implied by Disabled, has to be after */
         NodeFlag::NoEvents,
+        NodeFlag::FallthroughPointerEvents,
         NodeFlag::Focusable
     });
 }

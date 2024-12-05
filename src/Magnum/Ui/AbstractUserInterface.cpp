@@ -3544,7 +3544,11 @@ bool AbstractUserInterface::callTextInputEventOnNode(const NodeHandle node, Text
     return acceptedByAnyData;
 }
 
-template<class Event, void(AbstractLayer::*function)(UnsignedInt, Event&)> bool AbstractUserInterface::callEventOnNode(const Vector2& globalPositionScaled, const NodeHandle node, Event& event, const bool rememberCaptureOnUnaccepted) {
+/* If this is called for fallthrough events, `targetNode` is the node on which
+   the original event was accepted (to mark the pressed / hovered / captured
+   bits appropriately), and `node` is the fallthrough node. In all other cases
+   they're the same. */
+template<class Event, void(AbstractLayer::*function)(UnsignedInt, Event&)> bool AbstractUserInterface::callEventOnNode(const Vector2& globalPositionScaled, const NodeHandle node, const NodeHandle targetNode, Event& event, const bool rememberCaptureOnUnaccepted) {
     State& state = *_state;
 
     /* Set isNodeHovered() to false if the event is called on node that
@@ -3553,7 +3557,7 @@ template<class Event, void(AbstractLayer::*function)(UnsignedInt, Event&)> bool 
        as a move outside of the captured node), so we can't set it
        unconditionally. */
     const bool nodeHovered = event._nodeHovered;
-    if(node != state.currentHoveredNode)
+    if(targetNode != state.currentHoveredNode)
         event._nodeHovered = false;
 
     /* On the other hand, isNodePressed() / isNodeFocused() is set
@@ -3561,7 +3565,12 @@ template<class Event, void(AbstractLayer::*function)(UnsignedInt, Event&)> bool 
        a pressed / focused node but outside of it by looking at
        isNodeHovered(), no need to encode that information redundantly in
        multiple properties. */
-    event._nodePressed = node == state.currentPressedNode;
+    event._nodePressed = targetNode == state.currentPressedNode;
+    /* While hovered and pressed attributes get inherited to fallthrough events
+       (since if a child is pressed / hovered, the parent transitively is also)
+       it doesn't hold for focus. Thus the comparison is done only against the
+       node the event is currently called on, not on the node the original of
+       the fallthrough event was called on. */
     event._nodeFocused = node == state.currentFocusedNode;
 
     const UnsignedInt nodeId = nodeHandleId(node);
@@ -3655,6 +3664,97 @@ template<class Event, void(AbstractLayer::*function)(UnsignedInt, Event&)> NodeH
     return {};
 }
 
+template<class Event, void(AbstractLayer::*function)(UnsignedInt, Event&)> MAGNUM_UI_LOCAL void AbstractUserInterface::callFallthroughPointerEvents(/*mutable*/ NodeHandle targetNode, const Vector2& globalPositionScaled, Event& event, const bool allowCapture) {
+    State& state = *_state;
+
+    /* Mark the event as a fallthrough one from now on. The assumption is that
+       it won't get used for a non-fallthrough event anymore. */
+    event._fallthrough = true;
+
+    /* Go through parent nodes and call fallthrough events on all nodes that
+       want them */
+    NodeHandle parent = state.nodes[nodeHandleId(targetNode)].used.parent;
+    while(parent != NodeHandle::Null) {
+        /* If the event is primary and is accepted, make the fallthrough node
+           take over the current pressed / hovered / ... nodes. Secondary
+           events don't affect that, so for them nothing is done if they're
+           accepted. */
+        const UnsignedInt parentId = nodeHandleId(parent);
+        if(state.nodes[parentId].used.flags >= NodeFlag::FallthroughPointerEvents && callEventOnNode<Event, function>(globalPositionScaled, parent, targetNode, event)) {
+            /* Call a pointer cancel event on previous pressed / hovered /
+               focused nodes if the event is primary. Call a pointer cancel on
+               the previously captured node always, even for secondary events
+               (for which, if accepted, the assumption is that they want to
+               change the capture, because there's no other observable effect
+               if those get accepted). If the same node is listed in multiple
+               current entries, make sure it's called just once. */
+            const NodeHandle nodes[]{
+                event._primary ? state.currentPressedNode : NodeHandle::Null,
+                event._primary ? state.currentHoveredNode : NodeHandle::Null,
+                event._primary ? state.currentFocusedNode : NodeHandle::Null,
+                state.currentCapturedNode
+            };
+            for(std::size_t i = 0; i != Containers::arraySize(nodes); ++i) {
+                NodeHandle node = nodes[i];
+                for(std::size_t j = 0; j != i; ++j) {
+                    /* ... only once for each node if the same node appears in
+                       multiple of these */
+                    if(nodes[j] == node) {
+                        node = NodeHandle::Null;
+                        break;
+                    }
+                }
+                /* ... and only if given node isn't the (parent) node on which
+                   the fallthrough event was called, in which case it stays */
+                if(node == NodeHandle::Null || node == parent)
+                    continue;
+
+                const UnsignedInt nodeId = nodeHandleId(node);
+                for(UnsignedInt j = state.visibleNodeEventDataOffsets[nodeId], jMax = state.visibleNodeEventDataOffsets[nodeId + 1]; j != jMax; ++j) {
+                    const DataHandle data = state.visibleNodeEventData[j];
+                    PointerCancelEvent cancelEvent{event.time()};
+                    state.layers[dataHandleLayerId(data)].used.instance->pointerCancelEvent(dataHandleId(data), cancelEvent);
+                }
+            }
+
+            /* For a primary event, a cancel event was called above for the
+               nodes listed in these. Update them. */
+            if(event._primary) {
+                /* If the pressed / hovered node was the node the event was
+                   originally called on, make the node that accepted the
+                   fallback event currently pressed / hovered. Otherwise reset
+                   it to null. */
+                state.currentPressedNode = state.currentPressedNode == targetNode ?
+                    parent : NodeHandle::Null;
+                state.currentHoveredNode = state.currentHoveredNode == targetNode ?
+                    parent : NodeHandle::Null;
+
+                /* Focused node gets currently unconditionally reset, unless
+                   it's the node the fallthrough event was actually called
+                   on. */
+                if(state.currentFocusedNode != parent)
+                    state.currentFocusedNode = NodeHandle::Null;
+
+                /* Since the event was accepted and currently pressed / hovered
+                   / ... state was moved to this node, it becomes the target
+                   node for all subsequent fallthrough events */
+                targetNode = parent;
+            }
+
+            /* If the fallback event wants to capture the node and it's allowed
+               (i.e., it isn't a primary release event), make it so. If it
+               doesn't, reset it. Unlike with press / hover, this is done
+               regardless of whether the original node was captured or not. */
+            if(event._captured && allowCapture)
+                state.currentCapturedNode = parent;
+            else
+                state.currentCapturedNode = NodeHandle::Null;
+        }
+
+        parent = state.nodes[parentId].used.parent;
+    }
+}
+
 bool AbstractUserInterface::pointerPressEvent(const Vector2& globalPosition, PointerEvent& event) {
     CORRADE_ASSERT(!event._accepted,
         "Ui::AbstractUserInterface::pointerPressEvent(): event already accepted", {});
@@ -3706,7 +3806,10 @@ bool AbstractUserInterface::pointerPressEvent(const Vector2& globalPosition, Poi
        still desired, the calledNode is the same as currentCapturedNode and
        thus it stays). Otherwise, if the event was accepted but the capture was
        removed, reset it. Otherwise the event was not accepted at all, in which
-       case nothing changes. */
+       case nothing changes.
+
+       This is done before calling fallthrough events as they should have a
+       chance to further adjust the capture, both ways. */
     if(pressAcceptedByAnyData) {
         if(event._captured)
             state.currentCapturedNode = calledNode;
@@ -3762,6 +3865,16 @@ bool AbstractUserInterface::pointerPressEvent(const Vector2& globalPosition, Poi
         } else state.currentFocusedNode = NodeHandle::Null;
     }
 
+    /* Fire fallthrough events on all parent nodes that have
+       FallthroughPointerEvents set. Do it either if the press was accepted or
+       if the event wasn't accepted but there's a captured node (as in that
+       case it wouldn't propagate anywhere, making it impossible for the
+       fallthrough nodes to catch such events). */
+    if(pressAcceptedByAnyData || state.currentCapturedNode != NodeHandle::Null)
+        callFallthroughPointerEvents<PointerEvent, &AbstractLayer::pointerPressEvent>(
+            calledNode != NodeHandle::Null ? calledNode : state.currentCapturedNode,
+            globalPositionScaled, event, /*allowCapture*/ true);
+
     return pressAcceptedByAnyData;
 }
 
@@ -3810,11 +3923,6 @@ bool AbstractUserInterface::pointerReleaseEvent(const Vector2& globalPosition, P
         releaseAcceptedByAnyData = calledNode != NodeHandle::Null;
     }
 
-    /* After a release that's a primary event, there should be no pressed node
-       anymore */
-    if(event.isPrimary())
-        state.currentPressedNode = NodeHandle::Null;
-
     /* Update the last relative position with this one if it's a primary
        event */
     /** @todo update this before calling any event functions so the event
@@ -3823,7 +3931,11 @@ bool AbstractUserInterface::pointerReleaseEvent(const Vector2& globalPosition, P
         state.currentGlobalPointerPosition = globalPositionScaled;
 
     /* After a release coming from a primary event, there should be no captured
-       node anymore either */
+       node anymore either. Non-primary fallthrough events that are fired at
+       the end may subsequently change the capture again.
+
+       This is done before calling fallthrough events as they should have a
+       chance to further adjust the capture, both ways. */
     if(event.isPrimary()) {
         state.currentCapturedNode = NodeHandle::Null;
 
@@ -3833,6 +3945,23 @@ bool AbstractUserInterface::pointerReleaseEvent(const Vector2& globalPosition, P
     } else if(calledNode != NodeHandle::Null) {
         state.currentCapturedNode = event._captured ? calledNode : NodeHandle::Null;
     }
+
+    /* Fire fallthrough events on all parent nodes that have
+       FallthroughPointerEvents set. Do it either if the press was accepted or
+       if the event wasn't accepted but there's a captured node (as in that
+       case it wouldn't propagate anywhere, making it impossible for the
+       fallthrough nodes to catch such events). Allow them to change capture
+       only if they're secondary release events. */
+    if(releaseAcceptedByAnyData || state.currentCapturedNode != NodeHandle::Null)
+        callFallthroughPointerEvents<PointerEvent, &AbstractLayer::pointerReleaseEvent>(
+            calledNode != NodeHandle::Null ? calledNode : state.currentCapturedNode,
+            globalPositionScaled, event, /*allowCapture*/ !event.isPrimary());
+
+    /* After a release that's a primary event, there should be no pressed node
+       anymore. Reset only after the fallthrough events are called to have them
+       receive isNodePressed() the same as the original events did. */
+    if(event.isPrimary())
+        state.currentPressedNode = NodeHandle::Null;
 
     return releaseAcceptedByAnyData;
 }
@@ -3854,9 +3983,11 @@ bool AbstractUserInterface::pointerMoveEvent(const Vector2& globalPosition, Poin
 
        This is currently done just for primary events, as the library would
        need to track the position for an arbitrary number of secondary touches
-       otherwise. */
-    event._relativePosition = event.isPrimary() && state.currentGlobalPointerPosition ?
+       otherwise. It's subsequently being reset for enter/leave events, and
+       then set back for fallthrough events. */
+    const Vector2 relativePosition = event.isPrimary() && state.currentGlobalPointerPosition ?
         globalPositionScaled - *state.currentGlobalPointerPosition : Vector2{};
+    event._relativePosition = relativePosition;
 
     /* If there's a node capturing pointer events, call the event on it
        directly. Given that update() was called, it should be either null or
@@ -4011,7 +4142,12 @@ bool AbstractUserInterface::pointerMoveEvent(const Vector2& globalPosition, Poin
     }
 
     /* Update the captured node based on what's desired. If the captured state
-       was the same before, this is a no op, i.e. assigning the same value. */
+       was the same before, this is a no op, i.e. assigning the same value. The
+       fallthrough events that are fired at the end may subsequently change the
+       capture again.
+
+       This is done before calling fallthrough events as they should have a
+       chance to further adjust the capture, both ways. */
     if(event._captured) {
         /* If the captured state was set, the event was either called on a
            captured node (and then either accepted, or not, which caused it to
@@ -4035,6 +4171,11 @@ bool AbstractUserInterface::pointerMoveEvent(const Vector2& globalPosition, Poin
            any way in order to make it possible for the pointer to return to
            the node area and then perform a release, still causing it to be
            interpreted as a tap or click for example. */
+        /** @todo Once a press generates an enter event etc., it should no
+            longer happen that there's a different pressed and hovered node;
+            after that this will no longer cause the pressed node to be reset
+            too soon for a fallthrough event. See corresponding XFAILs in the
+            eventPointerFallthrough() test. */
         if(event.isPrimary() && state.currentCapturedNode == NodeHandle::Null && (calledNode != state.currentPressedNode || !insideNodeArea || !moveAcceptedByAnyData))
             state.currentPressedNode = NodeHandle::Null;
 
@@ -4042,6 +4183,20 @@ bool AbstractUserInterface::pointerMoveEvent(const Vector2& globalPosition, Poin
         /** @todo update this before calling any event functions so the event
             handlers can rely on this information being up to date if needed */
         state.currentGlobalPointerPosition = globalPositionScaled;
+    }
+
+    /* Fire fallthrough events on all parent nodes that have
+       FallthroughPointerEvents set. Do it either if the press was accepted or
+       if the event wasn't accepted but there's a captured node (as in that
+       case it wouldn't propagate anywhere, making it impossible for the
+       fallthrough nodes to catch such events). Those should also still get the
+       relative position like the original event (which was potentially
+       subsequently cleared for emitting enter/leave events). */
+    if(moveAcceptedByAnyData || state.currentCapturedNode != NodeHandle::Null) {
+        event._relativePosition = relativePosition;
+        callFallthroughPointerEvents<PointerMoveEvent, &AbstractLayer::pointerMoveEvent>(
+            calledNode != NodeHandle::Null ? calledNode : state.currentCapturedNode,
+            globalPositionScaled, event, /*allowCapture*/ true);
     }
 
     return moveAcceptedByAnyData;

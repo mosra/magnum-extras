@@ -682,6 +682,70 @@ Information about whether a node the event is called on is focused is available
 via @ref KeyEvent::isNodeFocused() and similarly on other event classes. For
 diagnostic purposes it's also available through @ref currentFocusedNode().
 
+@subsection Ui-AbstractUserInterface-events-fallthrough Pointer event fallthrough
+
+By default, a pointer event is directed only to a single node, either as a
+result of the hierarchy propagation, or because given node captures the event,
+and as soon as the event is accepted it's not sent to any other node.
+
+Sometimes it's however desirable to have events fall through to outer nodes,
+for example to allow scrolling an area that's otherwise full of active
+elements. This can be achieved by marking given node with
+@ref NodeFlag::FallthroughPointerEvents. When a pointer event happens on any
+child of such a node, the event is then sent to it as well, with
+@ref PointerEvent::isFallthrough() / @ref PointerMoveEvent::isFallthrough()
+being @cpp true @ce.
+
+The node can then either just observe the event without accepting, in which
+case the event outcome isn't any different compared to when the node isn't
+marked with @ref NodeFlag::FallthroughPointerEvents. For a fallthrough event
+the @ref PointerEvent::isNodePressed(), @relativeref{PointerEvent,isNodeHovered()}
+and @relativeref{PointerEvent,isCaptured()} properties are inherited from the
+original node, with the logic that if a child node was pressed or hovered, its
+parent (whose area includes the child node) is pressed or hovered as well.
+
+Or, instead of observing, the fallthrough event can be accepted. Accepting the
+fallthrough event makes the node inherit the pressed, hovered and captured
+properties from the original one, and the original node gets a
+@ref PointerCancelEvent in exchange. The fallthrough works across nested
+top-level nodes as well. Continuing from the event propagation example above
+and assuming the `panel` node is marked as fallthrough, such as to implement a
+"pull down to refresh" behavior, the event handling could look like this:
+
+@m_class{m-row}
+
+@parblock
+
+@m_div{m-col-m-5 m-nopadt}
+@htmlinclude ui-node-hierarchy-event-fallthrough.svg
+@m_enddiv
+
+@m_class{m-col-m-7 m-nopadt m-nopadl}
+
+@par
+    1.  Call a @m_class{m-label m-info} **press** event on the `titleTooltip`.
+        It's accepted, thus it's captured and continues to fallthrough parent
+        nodes.
+        -   A fallthrough press on `panel`. Not accepted but the handler
+            remembers its position.
+    2.  Call a drag event on the captured `titleTooltip`. Continue to
+        fallthrough parents.
+        -   A fallthrough drag on `panel`. The handler accepts it if it was
+            dragged far enough. The `panel` is now captured instead of
+            `titleTooltip`, which gets a cancel event.
+    3.  All further drags go directly to `panel`. The
+        @m_class{m-label m-danger} **release** as well, which then removes the
+        `panel` capture again.
+
+@endparblock
+
+It's possible for multiple nodes in a hierarchy chain to be marked with
+@ref NodeFlag::FallthroughPointerEvents and the fallthrough events get sent to
+all of them in reverse hierarchy order. Accepting then always sends the cancel
+event to the node that previously accepted the event, either the original one
+or a previous fallthrough event, and the pressed / hovered / captured node ends
+up being set to the last node in the chain that accepted the event.
+
 @section Ui-AbstractUserInterface-dpi DPI awareness
 
 If you use the application integration shown above, in particular the
@@ -2295,6 +2359,30 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
          * handling node at given position, the previously remembered pressed
          * and captured nodes are reset if and only if the event is primary.
          *
+         * After the above, if the event was accepted on any node or wasn't but
+         * is still captured on any node, it falls through upwards the parent
+         * hierarchy, calling @ref AbstractLayer::pointerPressEvent() on all
+         * data attached to nodes that have
+         * @ref NodeFlag::FallthroughPointerEvents set, with
+         * @ref PointerEvent::isFallthrough() being @cpp true @ce and the
+         * @relativeref{PointerEvent,isNodePressed()},
+         * @relativeref{PointerEvent,isNodeHovered()},
+         * @relativeref{PointerEvent,isNodeFocused()} and
+         * @relativeref{PointerEvent,isCaptured()} properties inherited as
+         * described in @ref Ui-AbstractUserInterface-events-fallthrough. If
+         * any data accept the event, @ref AbstractLayer::pointerCancelEvent()
+         * is called on all data attached to any previously captured node, and
+         * if the event is primary, also any previously pressed, hovered or
+         * focused nodes. The captured state is then transferred to the new
+         * node, and for a primary event the pressed and hovered state is
+         * transferred as well. However, currently, no
+         * @ref AbstractLayer::pointerEnterEvent() is subsequently sent to the
+         * new node. Focus is lost for a primary event unless the node that
+         * accepted the fallthrough event is itself focused, in which case it
+         * stays unchanged. This fallthrough then repeats until a root node is
+         * reached, and each time an event is accepted on a new node it's
+         * cancelled on the previous as appropriate.
+         *
          * Returns @cpp true @ce if the press event was accepted by at least
          * one data, @cpp false @ce if it wasn't or there wasn't any visible
          * event handling node at given position and thus the event should be
@@ -2304,8 +2392,8 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
          * Expects that the event is not accepted yet.
          * @see @ref PointerEvent::isPrimary(), @ref PointerEvent::isAccepted(),
          *      @ref PointerEvent::setAccepted(), @ref currentPressedNode(),
-         *      @ref currentCapturedNode(), @ref currentFocusedNode(),
-         *      @ref currentGlobalPointerPosition()
+         *      @ref currentHoveredNode(), @ref currentCapturedNode(),
+         *      @ref currentFocusedNode(), @ref currentGlobalPointerPosition()
          */
         bool pointerPressEvent(const Vector2& globalPosition, PointerEvent& event);
 
@@ -2354,6 +2442,30 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
          * release the existing capture or make the containing node capture
          * future events by setting @ref PointerEvent::setCaptured().
          *
+         * After the above, if the event was accepted on any node or wasn't but
+         * is still captured on any node, it falls through upwards the parent
+         * hierarchy, calling @ref AbstractLayer::pointerReleaseEvent() on all
+         * data attached to nodes that have
+         * @ref NodeFlag::FallthroughPointerEvents set, with
+         * @ref PointerEvent::isFallthrough() being @cpp true @ce and the
+         * @relativeref{PointerEvent,isNodePressed()},
+         * @relativeref{PointerEvent,isNodeHovered()},
+         * @relativeref{PointerEvent,isNodeFocused()} and
+         * @relativeref{PointerEvent,isCaptured()} properties inherited as
+         * described in @ref Ui-AbstractUserInterface-events-fallthrough. If
+         * any data accept the event, @ref AbstractLayer::pointerCancelEvent()
+         * is called on all data attached to any previously captured node, and
+         * if the event is primary, also any previously pressed, hovered or
+         * focused nodes. The captured state is then transferred to the new
+         * node, and for a primary event the pressed and hovered state is
+         * transferred as well. However, currently, no
+         * @ref AbstractLayer::pointerEnterEvent() is subsequently sent to the
+         * new node. Focus is lost for a primary event unless the node that
+         * accepted the fallthrough event is itself focused, in which case it
+         * stays unchanged. This fallthrough then repeats until a root node is
+         * reached, and each time an event is accepted on a new node it's
+         * cancelled on the previous as appropriate.
+         *
          * Returns @cpp true @ce if the event was accepted by at least one
          * data, @cpp false @ce if it wasn't or there wasn't any visible event
          * handling node at given position and thus the event should be
@@ -2362,7 +2474,8 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
          * Expects that the event is not accepted yet.
          * @see @ref PointerEvent::isPrimary(), @ref PointerEvent::isAccepted(),
          *      @ref PointerEvent::setAccepted(), @ref currentPressedNode(),
-         *      @ref currentCapturedNode(), @ref currentGlobalPointerPosition()
+         *      @ref currentHoveredNode(), @ref currentCapturedNode(),
+         *      @ref currentGlobalPointerPosition()
          */
         bool pointerReleaseEvent(const Vector2& globalPosition, PointerEvent& event);
 
@@ -2439,6 +2552,30 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
          * Calling @ref PointerMoveEvent::setCaptured() in the leave event has
          * no effect in this case.
          *
+         * After the above, if the event was accepted on any node or wasn't but
+         * is still captured on any node, it falls through upwards the parent
+         * hierarchy, calling @ref AbstractLayer::pointerMoveEvent() on all
+         * data attached to nodes that have
+         * @ref NodeFlag::FallthroughPointerEvents set, with
+         * @ref PointerMoveEvent::isFallthrough() being @cpp true @ce and the
+         * @relativeref{PointerMoveEvent,isNodePressed()},
+         * @relativeref{PointerMoveEvent,isNodeHovered()},
+         * @relativeref{PointerMoveEvent,isNodeFocused()} and
+         * @relativeref{PointerMoveEvent,isCaptured()} properties inherited as
+         * described in @ref Ui-AbstractUserInterface-events-fallthrough. If
+         * any data accept the event, @ref AbstractLayer::pointerCancelEvent()
+         * is called on all data attached to any previously captured node, and
+         * if the event is primary, also any previously pressed, hovered or
+         * focused nodes. The captured state is then transferred to the new
+         * node, and for a primary event the pressed and hovered state is
+         * transferred as well. However, currently, no
+         * @ref AbstractLayer::pointerEnterEvent() is subsequently sent to the
+         * new node. Focus is lost for a primary event unless the node that
+         * accepted the fallthrough event is itself focused, in which case it
+         * stays unchanged. This fallthrough then repeats until a root node is
+         * reached, and each time an event is accepted on a new node it's
+         * cancelled on the previous as appropriate.
+         *
          * Returns @cpp true @ce if the event was accepted by at least one
          * data, @cpp false @ce if it wasn't or there wasn't any visible event
          * handling node at given position and thus the event should be
@@ -2447,8 +2584,9 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
          *
          * Expects that the event is not accepted yet.
          * @see @ref PointerEvent::isAccepted(),
-         *      @ref PointerEvent::setAccepted(), @ref currentCapturedNode(),
-         *      @ref currentHoveredNode(), @ref currentGlobalPointerPosition()
+         *      @ref PointerEvent::setAccepted(), @ref currentPressedNode(),
+         *      @ref currentHoveredNode(), @ref currentCapturedNode(),
+         *      @ref currentGlobalPointerPosition()
          */
         bool pointerMoveEvent(const Vector2& globalPosition, PointerMoveEvent& event);
 
@@ -2757,11 +2895,15 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
         /* Used by *Event() functions */
         MAGNUM_UI_LOCAL void callVisibilityLostEventOnNode(NodeHandle node, VisibilityLostEvent& event, bool canBePressedOrHovering);
         template<void(AbstractLayer::*function)(UnsignedInt, FocusEvent&)> MAGNUM_UI_LOCAL bool callFocusEventOnNode(NodeHandle node, FocusEvent& event);
-        template<void(AbstractLayer::*function)(UnsignedInt, KeyEvent&)> MAGNUM_UI_LOCAL bool callKeyEventOnNode(NodeHandle node, KeyEvent& even);
-        MAGNUM_UI_LOCAL bool callTextInputEventOnNode(NodeHandle node, TextInputEvent& even);
-        template<class Event, void(AbstractLayer::*function)(UnsignedInt, Event&)> MAGNUM_UI_LOCAL bool callEventOnNode(const Vector2& globalPositionScaled, NodeHandle node, Event& event, bool rememberCaptureOnUnaccepted = false);
+        template<void(AbstractLayer::*function)(UnsignedInt, KeyEvent&)> MAGNUM_UI_LOCAL bool callKeyEventOnNode(NodeHandle node, KeyEvent& event);
+        MAGNUM_UI_LOCAL bool callTextInputEventOnNode(NodeHandle node, TextInputEvent& event);
+        template<class Event, void(AbstractLayer::*function)(UnsignedInt, Event&)> MAGNUM_UI_LOCAL bool callEventOnNode(const Vector2& globalPositionScaled, NodeHandle node, NodeHandle targetNode, Event& event, bool rememberCaptureOnUnaccepted = false);
+        template<class Event, void(AbstractLayer::*function)(UnsignedInt, Event&)> MAGNUM_UI_LOCAL bool callEventOnNode(const Vector2& globalPositionScaled, NodeHandle node, Event& event, bool rememberCaptureOnUnaccepted = false) {
+            return callEventOnNode<Event, function>(globalPositionScaled, node, node, event, rememberCaptureOnUnaccepted);
+        }
         template<class Event, void(AbstractLayer::*function)(UnsignedInt, Event&)> MAGNUM_UI_LOCAL NodeHandle callEvent(const Vector2& globalPositionScaled, UnsignedInt visibleNodeIndex, Event& event);
         template<class Event, void(AbstractLayer::*function)(UnsignedInt, Event&)> MAGNUM_UI_LOCAL NodeHandle callEvent(const Vector2& globalPositionScaled, Event& event);
+        template<class Event, void(AbstractLayer::*function)(UnsignedInt, Event&)> MAGNUM_UI_LOCAL void callFallthroughPointerEvents(NodeHandle node, const Vector2& globalPositionScaled, Event& event, bool allowCapture);
         template<void(AbstractLayer::*function)(UnsignedInt, KeyEvent&)> MAGNUM_UI_LOCAL bool keyPressOrReleaseEvent(KeyEvent& event);
 
         struct State;

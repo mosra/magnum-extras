@@ -54,8 +54,8 @@ void NodeFlagsTest::debugFlag() {
 
 void NodeFlagsTest::debugFlags() {
     std::ostringstream out;
-    Debug{&out} << (NodeFlag::Hidden|NodeFlag(0xe0)) << NodeFlags{};
-    CORRADE_COMPARE(out.str(), "Ui::NodeFlag::Hidden|Ui::NodeFlag(0xe0) Ui::NodeFlags{}\n");
+    Debug{&out} << (NodeFlag::Hidden|NodeFlag(0x80)) << NodeFlags{};
+    CORRADE_COMPARE(out.str(), "Ui::NodeFlag::Hidden|Ui::NodeFlag(0x80) Ui::NodeFlags{}\n");
 }
 
 void NodeFlagsTest::debugFlagsSupersets() {
