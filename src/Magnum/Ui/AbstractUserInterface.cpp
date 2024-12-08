@@ -3564,13 +3564,15 @@ template<class Event, void(AbstractLayer::*function)(UnsignedInt, Event&)> bool 
     event._nodePressed = node == state.currentPressedNode;
     event._nodeFocused = node == state.currentFocusedNode;
 
-    /* Remember the initial event capture state to reset it after each
-       non-accepted event handler call */
     const UnsignedInt nodeId = nodeHandleId(node);
-    const bool captured = event._captured;
     bool acceptedByAnyData = false;
     for(UnsignedInt j = state.visibleNodeEventDataOffsets[nodeId], jMax = state.visibleNodeEventDataOffsets[nodeId + 1]; j != jMax; ++j) {
         const DataHandle data = state.visibleNodeEventData[j];
+        /* Remember the previous event capture state to reset it after each
+           non-accepted event handler call. Has to be done here in the inner
+           loop and not outside so the capture state changes aren't lost when
+           an accepted event is followed by a non-accepted one. */
+        const bool captured = event._captured;
         event._position = globalPositionScaled - state.absoluteNodeOffsets[nodeId];
         event._nodeSize = state.nodeSizes[nodeId];
         event._accepted = false;
