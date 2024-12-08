@@ -16937,6 +16937,8 @@ void AbstractUserInterfaceTest::eventCaptureToggleCaptureInNotAcceptedEvent() {
                 dataHandle(handle(), dataId, 1), event.position());
             if(acceptPress & dataId)
                 event.setAccepted();
+            if(capture && capture->second() & dataId)
+                event.setCaptured(capture->first());
         }
         void doPointerReleaseEvent(UnsignedInt dataId, PointerEvent& event) override {
             /* The data generation is faked here, but it matches as we don't
@@ -16947,6 +16949,8 @@ void AbstractUserInterfaceTest::eventCaptureToggleCaptureInNotAcceptedEvent() {
                 dataHandle(handle(), dataId, 1), event.position());
             if(acceptRelease & dataId)
                 event.setAccepted();
+            if(capture && capture->second() & dataId)
+                event.setCaptured(capture->first());
         }
         void doPointerMoveEvent(UnsignedInt dataId, PointerMoveEvent& event) override {
             /* The data generation is faked here, but it matches as we don't
@@ -16964,11 +16968,15 @@ void AbstractUserInterfaceTest::eventCaptureToggleCaptureInNotAcceptedEvent() {
             /* The data generation is faked here, but it matches as we don't
                reuse any data */
             arrayAppend(eventCalls, InPlaceInit, Enter|(event.isCaptured() ? Captured : 0), dataHandle(handle(), dataId, 1), event.position());
+            if(capture && capture->second() & dataId)
+                event.setCaptured(capture->first());
         }
         void doPointerLeaveEvent(UnsignedInt dataId, PointerMoveEvent& event) override {
             /* The data generation is faked here, but it matches as we don't
                reuse any data */
             arrayAppend(eventCalls, InPlaceInit, Leave|(event.isCaptured() ? Captured : 0), dataHandle(handle(), dataId, 1), event.position());
+            if(capture && capture->second() & dataId)
+                event.setCaptured(capture->first());
         }
 
         /* It's a mask, not ID to be able to select more than one data for
@@ -17002,8 +17010,8 @@ void AbstractUserInterfaceTest::eventCaptureToggleCaptureInNotAcceptedEvent() {
         ui.layer<Layer>(layer).acceptMove = 1;
         ui.layer<Layer>(layer).capture = Containers::pair(true, 2);
         CORRADE_VERIFY(ui.pointerMoveEvent({30.0f, 10.0f}, eventMove));
-        /* Node 2 captures in a non-accepted event, which should be ignored */
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
+        /* Node 2 captures in a non-accepted event, which should be ignored */
         CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), node1);
 
@@ -17017,14 +17025,10 @@ void AbstractUserInterfaceTest::eventCaptureToggleCaptureInNotAcceptedEvent() {
     /* Like above, but reversed -- data4 captures but isn't accepted, data2
        does nothing */
     } {
-        /* Just to reset everything */
+        /* Just to reset the hover */
         /** @todo have a pointerCancelEvent() for this */
-        PointerEvent eventReleaseReset{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0};
-        ui.pointerReleaseEvent({1000.0f, 1000.0f}, eventReleaseReset);
         PointerMoveEvent eventMoveReset{{}, PointerEventSource::Mouse, {}, {}, true, 0};
         ui.pointerMoveEvent({1000.0f, 1000.0f}, eventMoveReset);
-        CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
-        CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
 
         ui.layer<Layer>(layer).eventCalls = {};
@@ -17045,10 +17049,36 @@ void AbstractUserInterfaceTest::eventCaptureToggleCaptureInNotAcceptedEvent() {
             {Enter, data1, {10.0f, 10.0f}}, /* neither this */
         })), TestSuite::Compare::Container);
 
-    /* Cancelling capture in a non-accepted captured move event (i.e., outside
-       of bounds) should still work */
+    /* Setting capture in an accepted event and then having another
+       non-accepted event shouldn't cause the capture to get ignored */
     } {
-        /* Just to reset everything */
+        /* Just to reset the hover */
+        /** @todo have a pointerCancelEvent() for this */
+        PointerMoveEvent eventMoveReset{{}, PointerEventSource::Mouse, {}, {}, true, 0};
+        ui.pointerMoveEvent({1000.0f, 1000.0f}, eventMoveReset);
+        CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
+
+        ui.layer<Layer>(layer).eventCalls = {};
+
+        PointerMoveEvent eventMove{{}, PointerEventSource::Mouse, {}, {}, true, 0};
+        ui.layer<Layer>(layer).acceptMove = 4;
+        ui.layer<Layer>(layer).capture = Containers::pair(true, 4);
+        CORRADE_VERIFY(ui.pointerMoveEvent({30.0f, 10.0f}, eventMove));
+        CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentCapturedNode(), node2);
+        CORRADE_COMPARE(ui.currentHoveredNode(), node2);
+
+        CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
+            {Move, data4, {10.0f, 10.0f}}, /* captures */
+            {Move|Captured, data2, {10.0f, 10.0f}},
+            {Enter|Captured, data4, {10.0f, 10.0f}},
+            {Enter|Captured, data2, {10.0f, 10.0f}},
+        })), TestSuite::Compare::Container);
+
+    /* Similarly, clearing capture in an accepted event and then having another
+       non-accepted event shouldn't cause the capture reset to get ignored */
+    } {
+        /* Just to reset the hover and capture */
         /** @todo have a pointerCancelEvent() for this */
         PointerEvent eventReleaseReset{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0};
         ui.pointerReleaseEvent({1000.0f, 1000.0f}, eventReleaseReset);
@@ -17059,6 +17089,31 @@ void AbstractUserInterfaceTest::eventCaptureToggleCaptureInNotAcceptedEvent() {
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
 
         ui.layer<Layer>(layer).eventCalls = {};
+
+        PointerEvent eventPress{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0};
+        ui.layer<Layer>(layer).acceptPress = 4;
+        ui.layer<Layer>(layer).capture = Containers::pair(false, 4);
+        CORRADE_VERIFY(ui.pointerPressEvent({30.0f, 10.0f}, eventPress));
+        CORRADE_COMPARE(ui.currentPressedNode(), node2);
+        CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
+
+        CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
+            {Press|Captured, data4, {10.0f, 10.0f}}, /* disables capture */
+            {Press, data2, {10.0f, 10.0f}},
+        })), TestSuite::Compare::Container);
+
+    /* Cancelling capture in a non-accepted captured move event (i.e., outside
+       of bounds) should still work */
+    } {
+        /* Just to reset the press */
+        /** @todo have a pointerCancelEvent() for this */
+        PointerEvent eventReleaseReset{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0};
+        ui.pointerReleaseEvent({1000.0f, 1000.0f}, eventReleaseReset);
+        CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
+
+        ui.layer<Layer>(layer).eventCalls = {};
+        ui.layer<Layer>(layer).capture = {};
 
         /* The press event accepts and captures unconditionally */
         PointerEvent eventPress{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0};
