@@ -16517,6 +16517,27 @@ void AbstractUserInterfaceTest::eventCaptureToggleCapture() {
             {Release, leftData1, {30.0f, 10.0f}}, /* actually on rightData */
         })), TestSuite::Compare::Container);
 
+    /* If capture is enabled on release, it doesn't affect anything either,
+       except for the isCaptured() bit being true for subsequent data */
+    } {
+        ui.layer<Layer>(layer).eventCalls = {};
+
+        /* Releases on leftData2 already */
+        PointerEvent eventRelease{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0};
+        ui.layer<Layer>(layer).capture = Containers::pair(true, 7);
+        ui.layer<Layer>(layer).captureEnter = {};
+        ui.layer<Layer>(layer).captureLeave = {};
+        CORRADE_VERIFY(ui.pointerReleaseEvent({30.0f, 10.0f}, eventRelease));
+        CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
+
+        CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
+            {Release, leftData2, {10.0f, 10.0f}},
+            /** @todo or have the isCaptured() bit reset back for all releases? */
+            {Release|Captured, leftData1, {10.0f, 10.0f}},
+        })), TestSuite::Compare::Container);
+
     /* For a move the capture can be disabled and re-enabled again. The next
        (move/release) event then happens either on the captured node or the
        actual node that's under. */
