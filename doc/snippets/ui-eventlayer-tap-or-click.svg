@@ -1,0 +1,25 @@
+<svg style="width: 424px; height: 104px;" viewBox="0 0 112.18 27.517" class="m-image">
+ <g transform="translate(0 -.18563)" stroke-linecap="round" stroke-linejoin="round">
+  <rect x="84.667" y="2.1167" width="25.4" height="9.525" rx="1.0583" ry="1.0583" fill="#dcdcdc" fill-opacity=".75" stroke-dasharray="0.529, 2.116" stroke-width=".529"/>
+  <text x="55.20055" y="25.16762" fill="#dcdcdc" font-family="'Source Sans Pro'" font-size="4.2333px" stroke-dasharray="0.529, 2.116" stroke-width=".529" text-align="center" text-anchor="middle" style="font-variant-caps:normal;font-variant-east-asian:normal;font-variant-ligatures:normal;font-variant-numeric:normal;line-height:1.25;text-decoration-color:#000000;text-decoration-line:none" xml:space="preserve"><tspan x="55.20055" y="25.16762" font-family="'Source Sans Pro'" font-size="4.2333px" stroke-width=".529" style="font-variant-caps:normal;font-variant-east-asian:normal;font-variant-ligatures:normal;font-variant-numeric:normal">Accepted</tspan></text>
+  <g stroke-width=".52917">
+   <circle cx="91.751" cy="6.5038" r="2.1167" fill="#2f83cc" stroke-dasharray="0.529167, 2.11667"/>
+   <path d="m91.751 6.5038c1.4246 6.4879 6.0014 9.0796 12.02 9.3547" fill="none" stroke="#2f83cc"/>
+   <circle cx="103.77" cy="15.858" r="2.1167" fill="#cd3431" stroke-dasharray="0.529167, 2.11667"/>
+  </g>
+  <rect x="42.333" y="2.1167" width="25.4" height="9.525" rx="1.0583" ry="1.0583" fill="#dcdcdc" fill-opacity=".75" stroke-dasharray="0.529, 2.116" stroke-width=".529"/>
+  <g stroke-width=".52917">
+   <circle cx="49.418" cy="6.5038" r="2.1167" fill="#2f83cc" stroke-dasharray="0.529167, 2.11667"/>
+   <path d="m49.418 6.5038c-2.6444 9.3756 9.5433 12.626 13.068 2.2692" fill="none" stroke="#2f83cc"/>
+   <circle cx="62.486" cy="8.7729" r="2.1167" fill="#cd3431" stroke-dasharray="0.529167, 2.11667"/>
+  </g>
+  <text x="14.983884" y="25.16762" fill="#dcdcdc" font-family="'Source Sans Pro'" font-size="4.2333px" stroke-dasharray="0.529, 2.116" stroke-width=".529" text-align="center" text-anchor="middle" style="font-variant-caps:normal;font-variant-east-asian:normal;font-variant-ligatures:normal;font-variant-numeric:normal;line-height:1.25;text-decoration-color:#000000;text-decoration-line:none" xml:space="preserve"><tspan x="14.983884" y="25.16762" font-family="'Source Sans Pro'" font-size="4.2333px" stroke-width=".529" style="font-variant-caps:normal;font-variant-east-asian:normal;font-variant-ligatures:normal;font-variant-numeric:normal">Accepted</tspan></text>
+  <rect x="2.1167" y="2.1167" width="25.4" height="9.525" rx="1.0583" ry="1.0583" fill="#dcdcdc" fill-opacity=".75" stroke-dasharray="0.529, 2.116" stroke-width=".529"/>
+  <g stroke-width=".52917">
+   <circle cx="9.2015" cy="6.5038" r="2.1167" fill="#2f83cc" stroke-dasharray="0.529167, 2.11667"/>
+   <path d="m9.2015 6.5038c0.92595 1.1248 3.5841 3.012 6.534 1.8301" fill="none" stroke="#2f83cc"/>
+   <circle cx="15.735" cy="8.3338" r="2.1167" fill="#cd3431" stroke-dasharray="0.529167, 2.11667"/>
+  </g>
+  <text x="97.349731" y="25.16762" fill="#dcdcdc" font-family="'Source Sans Pro'" font-size="4.2333px" stroke-dasharray="0.529, 2.116" stroke-width=".529" text-align="center" text-anchor="middle" style="font-variant-caps:normal;font-variant-east-asian:normal;font-variant-ligatures:normal;font-variant-numeric:normal;line-height:1.25;text-decoration-color:#000000;text-decoration-line:none" xml:space="preserve"><tspan x="97.349731" y="25.16762" font-family="'Source Sans Pro'" font-size="4.2333px" stroke-width=".529" style="font-variant-caps:normal;font-variant-east-asian:normal;font-variant-ligatures:normal;font-variant-numeric:normal">Rejected</tspan></text>
+ </g>
+</svg>
