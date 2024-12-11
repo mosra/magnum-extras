@@ -1,0 +1,24 @@
+<svg style="width: 424px; height: 96px;" viewBox="0 0 112.18 25.4" class="m-image">
+ <defs>
+  <marker id="a" overflow="visible" markerHeight="1" markerWidth="1" orient="auto-start-reverse" preserveAspectRatio="xMidYMid" viewBox="0 0 1 1">
+   <path transform="scale(.7)" d="m-0.21115-4.1056 6.4223 3.2111a1 1 90 0 1 0 1.7889l-6.4223 3.2111a1.2361 1.2361 31.717 0 1-1.7889-1.1056v-6a1.2361 1.2361 148.28 0 1 1.7889-1.1056z" fill="context-stroke" fill-rule="evenodd"/>
+  </marker>
+ </defs>
+ <g transform="matrix(.82813 0 0 .2034 0 -.037757)" display="none" stroke-width="2.4365">
+  <rect y=".18562" width="135.47" height="124.87" fill="#2f363f" stroke-dasharray="1.28893, 5.15571" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.2889"/>
+ </g>
+ <g transform="translate(0 -.18563)" stroke-linecap="round" stroke-linejoin="round">
+  <rect x="84.667" y="2.1167" width="25.4" height="9.525" rx="1.0583" ry="1.0583" fill="#dcdcdc" fill-opacity=".75" stroke-dasharray="0.529, 2.116" stroke-width=".529"/>
+  <text x="55.20055" y="22.01746" fill="#dcdcdc" font-family="'Source Sans Pro'" font-size="4.2333px" stroke-dasharray="0.529, 2.116" stroke-width=".529" text-align="center" text-anchor="middle" style="font-variant-caps:normal;font-variant-east-asian:normal;font-variant-ligatures:normal;font-variant-numeric:normal;line-height:1.25;text-decoration-color:#000000;text-decoration-line:none" xml:space="preserve"><tspan x="55.20055" y="22.01746" font-family="'Source Sans Pro'" font-size="4.2333px" stroke-width=".529" style="font-variant-caps:normal;font-variant-east-asian:normal;font-variant-ligatures:normal;font-variant-numeric:normal">Accepted</tspan></text>
+  <circle cx="81.237" cy="14.152" r="2.1167" fill="#2f83cc" stroke-dasharray="0.529167, 2.11667" stroke-width=".52917"/>
+  <path d="m81.237 14.152c4.9235-4.6814 13.89-6.6057 19.909-6.3306" fill="none" marker-end="url(#a)" stop-color="#000000" stroke="#2f83cc" stroke-width=".52917" style="-inkscape-stroke:none;font-variation-settings:normal"/>
+  <rect x="42.333" y="2.1167" width="25.4" height="9.525" rx="1.0583" ry="1.0583" fill="#dcdcdc" fill-opacity=".75" stroke-dasharray="0.529, 2.116" stroke-width=".529"/>
+  <circle cx="52.888" cy="6.3884" r="2.1167" fill="#2f83cc" stroke-dasharray="0.529167, 2.11667" stroke-width=".52917"/>
+  <text x="14.983884" y="22.01746" fill="#dcdcdc" font-family="'Source Sans Pro'" font-size="4.2333px" stroke-dasharray="0.529, 2.116" stroke-width=".529" text-align="center" text-anchor="middle" style="font-variant-caps:normal;font-variant-east-asian:normal;font-variant-ligatures:normal;font-variant-numeric:normal;line-height:1.25;text-decoration-color:#000000;text-decoration-line:none" xml:space="preserve"><tspan x="14.983884" y="22.01746" font-family="'Source Sans Pro'" font-size="4.2333px" stroke-width=".529" style="font-variant-caps:normal;font-variant-east-asian:normal;font-variant-ligatures:normal;font-variant-numeric:normal">Accepted</tspan></text>
+  <rect x="2.1167" y="2.1167" width="25.4" height="9.525" rx="1.0583" ry="1.0583" fill="#dcdcdc" fill-opacity=".75" stroke-dasharray="0.529, 2.116" stroke-width=".529"/>
+  <circle cx="6.1826" cy="7.2913" r="2.1167" fill="#2f83cc" stroke-dasharray="0.529167, 2.11667" stroke-width=".52917"/>
+  <path d="m6.1826 7.2913c1.6685 0.75358 7.3362 2.0613 13.228 1.305" fill="none" marker-end="url(#a)" stroke="#2f83cc" stroke-width=".52917"/>
+  <text x="97.349731" y="22.01746" fill="#dcdcdc" font-family="'Source Sans Pro'" font-size="4.2333px" stroke-dasharray="0.529, 2.116" stroke-width=".529" text-align="center" text-anchor="middle" style="font-variant-caps:normal;font-variant-east-asian:normal;font-variant-ligatures:normal;font-variant-numeric:normal;line-height:1.25;text-decoration-color:#000000;text-decoration-line:none" xml:space="preserve"><tspan x="97.349731" y="22.01746" font-family="'Source Sans Pro'" font-size="4.2333px" stroke-width=".529" style="font-variant-caps:normal;font-variant-east-asian:normal;font-variant-ligatures:normal;font-variant-numeric:normal">Rejected</tspan></text>
+  <path d="m52.888 6.3884c6.7638-1.3597 13.711 1.5044 19.603 0.74816" fill="none" marker-end="url(#a)" stroke="#2f83cc" stroke-width=".52917"/>
+ </g>
+</svg>

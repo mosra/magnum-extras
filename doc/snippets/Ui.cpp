@@ -35,8 +35,10 @@
 #include "Magnum/Ui/BaseLayerAnimator.h"
 #include "Magnum/Ui/TextLayerAnimator.h"
 #include "Magnum/Ui/Event.h"
+#include "Magnum/Ui/EventLayer.h"
 #include "Magnum/Ui/GenericAnimator.h"
 #include "Magnum/Ui/Handle.h"
+#include "Magnum/Ui/NodeFlags.h"
 
 #define DOXYGEN_ELLIPSIS(...) __VA_ARGS__
 #define DOXYGEN_IGNORE(...) __VA_ARGS__
@@ -185,6 +187,80 @@ Ui::FocusEvent event{{}};
 if(!ui.focusEvent(node, event))
     ui.focusEvent(Ui::NodeHandle::Null, event);
 /* [AbstractUserInterface-focusEvent-blur-if-not-focusable] */
+}
+
+{
+Ui::AbstractUserInterface ui{{100, 100}};
+/* [EventLayer-setup] */
+Ui::EventLayer& layer = ui.setLayerInstance(
+    Containers::pointer<Ui::EventLayer>(ui.createLayer()));
+/* [EventLayer-setup] */
+
+/* [EventLayer-create] */
+Ui::NodeHandle button = DOXYGEN_ELLIPSIS({});
+
+layer.onTapOrClick(button, []{
+    Debug{} << "Click!";
+});
+/* [EventLayer-create] */
+
+/* [EventLayer-create-scoped] */
+class Observer {
+    public:
+        explicit Observer(Ui::EventLayer& layer, Ui::NodeHandle button):
+            _c{layer.onTapOrClickScoped(button, {*this, &Observer::call})} {}
+
+        void call() {
+            DOXYGEN_ELLIPSIS()
+        }
+
+    private:
+        Ui::EventConnection _c;
+};
+/* [EventLayer-create-scoped] */
+}
+
+{
+Ui::AbstractUserInterface ui{{100, 100}};
+Ui::EventLayer layer{Ui::layerHandle(0, 1)};
+/* [EventLayer-tap-position] */
+Ui::NodeHandle picker = DOXYGEN_ELLIPSIS({});
+
+layer.onPress(picker, [&ui, picker, DOXYGEN_ELLIPSIS(&layer)](const Vector2& position) {
+    Vector2 normalized = position/ui.nodeSize(picker);
+    Color3 color = Color3::fromHsv({DOXYGEN_ELLIPSIS(0.0_degf), normalized.x(), 1.0f - normalized.y()});
+    DOXYGEN_ELLIPSIS(static_cast<void>(layer); static_cast<void>(color);)
+});
+/* [EventLayer-tap-position] */
+}
+
+{
+Ui::AbstractUserInterface ui{{100, 100}};
+Ui::EventLayer layer{Ui::layerHandle(0, 1)};
+/* [EventLayer-drag] */
+Ui::NodeHandle scrollbar = DOXYGEN_ELLIPSIS({});
+Ui::NodeHandle scrollarea = ui.createNode(DOXYGEN_ELLIPSIS({}, {}), Ui::NodeFlag::Clip);
+Ui::NodeHandle contents = ui.createNode(scrollarea, DOXYGEN_ELLIPSIS({}, {}));
+
+layer.onDrag(scrollbar, [&ui, scrollarea, contents](const Vector2& relativePosition) {
+    Vector2 offset = ui.nodeOffset(contents);
+    offset.x() = Math::clamp(offset.y() - relativePosition.y(),
+        0.0f, ui.nodeSize(contents).y() - ui.nodeSize(scrollarea).y());
+    ui.setNodeOffset(scrollarea, offset);
+});
+/* [EventLayer-drag] */
+}
+
+{
+Ui::AbstractUserInterface ui{{100, 100}};
+Ui::EventLayer layer{Ui::layerHandle(0, 1)};
+/* [EventLayer-pinch] */
+Ui::NodeHandle canvas = DOXYGEN_ELLIPSIS({});
+
+layer.onPinch(canvas, [&ui, canvas](const Vector2&, const Vector2& relativeTranslation, const Complex&, Float) {
+    ui.setNodeOffset(canvas, ui.nodeOffset(canvas) + relativeTranslation);
+});
+/* [EventLayer-pinch] */
 }
 
 {

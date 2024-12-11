@@ -122,9 +122,119 @@ namespace Implementation {
 @m_since_latest
 
 Provides signal/slot-like functionality, connecting events happening on nodes
-with aribtrary functions handling them.
-@see @ref UserInterface::eventLayer(),
-    @ref UserInterface::setEventLayerInstance(), @ref StyleFeature::EventLayer
+with arbitrary functions handling them.
+
+@section Ui-EventLayer-setup Setting up an event layer instance
+
+If you create a @ref UserInterfaceGL instance with a style and don't exclude
+@ref StyleFeature::EventLayer, an implicit instance is already provided and
+available through @ref UserInterface::eventLayer(). If you don't, or if you
+want to set up a custom event layer, pass its instance to
+@ref AbstractUserInterface::setLayerInstance():
+
+@snippet Ui.cpp EventLayer-setup
+
+@section Ui-EventLayer-create Creating event handlers
+
+An event handler is created by calling one of the `on*()` APIs with a
+@ref NodeHandle to react on (or any @ref AbstractWidget "Widget" instance,
+since it's implicitly convertible to a @ref NodeHandle as well) and a desired
+function. For example, using @ref onTapOrClick() to print a message to standard
+output when a button is tapped or clicked:
+
+@snippet Ui.cpp EventLayer-create
+
+By default the event handler is tied to lifetime of the node it's added to. You
+can use the returned @ref DataHandle to @ref remove() it earlier, if needed. As
+an alternative, all APIs have `on*Scoped()` variants that return a
+[RAII](https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization)
+@ref EventConnection instance that removes the handler when destructed, which
+is useful for example when the lifetime is tied to a concrete class instance.
+In the following snippet, the @ref onTapOrClickScoped() in addition uses a @relativeref{Corrade,Containers::Function} created from a member function
+instead of a lambda:
+
+@snippet Ui.cpp EventLayer-create-scoped
+
+@section Ui-EventLayer-tap-click-press-release Tap or click, press & release
+
+A function passed to @ref onTapOrClick() gets called when a
+@ref Pointer::MouseLeft, primary @ref Pointer::Finger or @ref Pointer::Pen
+(i.e., a pointer type that's understood as performing the primary action) is
+pressed and subsequently released on the same node. Relying on
+@ref Ui-AbstractUserInterface-events-capture "pointer capture" being implicitly
+enabled on a @m_class{m-label m-info} **press**, the pointer is allowed to
+leave the area when being pressed. If a @m_class{m-label m-danger} **release**
+then happens with the pointer back over the node, it's still recognized as a
+tap or click, which improves reliability especially with imprecise touch input.
+On the other hand, releasing with a pointer outside of the node will not be
+recognized as a tap or click, which is a common usage pattern for canceling
+accidental UI actions.
+
+@htmlinclude ui-eventlayer-tap-or-click.svg
+
+The @ref onMiddleClick() and @ref onRightClick() APIs then expose the same
+functionality for @ref Pointer::MouseMiddle or @ref Pointer::MouseRight. Right
+now, @ref Pointer::Eraser doesn't have any matching event handler. Finally, the
+@ref onPress() and @ref onRelease() counterparts get called when
+@ref Pointer::MouseLeft, primary @ref Pointer::Finger or @ref Pointer::Pen gets
+pressed or released.
+
+All these functions have additional overloads that pass a node-relative
+position to the handler, useful in case the position matters. For example to
+calculate a concrete color when pressing on a color picker:
+
+@snippet Ui.cpp EventLayer-tap-position
+
+@section Ui-EventLayer-drag Pointer drag
+
+The @ref onDrag() API calls a function when @ref Pointer::MouseLeft, primary
+@ref Pointer::Finger or @ref Pointer::Pen is dragged over a node, passing a
+relative movement position to it. The handler is called only if the event is
+@ref Ui-AbstractUserInterface-events-capture "captured on the node", i.e. when
+the drag started on it in the first place. Which prevents accidental action,
+such as when dragging from outside of the active UI area, however at the same
+time it also allows the pointer to leave the node when dragging without the
+action being aborted. Such behavior is useful especially when interacting with
+narrow UI elements such as scrollbars or sliders.
+
+@htmlinclude ui-eventlayer-drag.svg
+
+Below is an example of a (vertical) scrollbar implementation affecting a
+scrollable view. At its core, a scroll area is a node with @ref NodeFlag::Clip
+enabled, containing another larger node within, and the scrolling is performed
+by adjusting offset of the inner node with
+@ref AbstractUserInterface::setNodeOffset(). Additionally the code makes sure
+it doesn't scroll beyond either of the edges.
+
+@snippet Ui.cpp EventLayer-drag
+
+As with other pointer event handlers, there's also an overload taking both a
+movement delta and a position within a node.
+
+@section Ui-EventLayer-pinch Pinch zoom and rotation
+
+On input devices supporting multi-touch, @ref onPinch() calls a function as
+soon as two fingers are pressed and dragged relatively to each other, passing
+it a scale, rotation and translation delta. As with @ref onDrag(), the gesture
+is only recognized when it started on given node but the pointers can leave the
+area when pressed. As an example, the following snippet implements two-finger
+panning in a drawing application while the single-pointer @ref onDrag() would
+be used for drawing:
+
+@m_class{m-console-wrap}
+
+@snippet Ui.cpp EventLayer-pinch
+
+@section Ui-EventLayer-press-release-enter-leave-focus-blur Pointer enter and leave, focus and blur
+
+With @ref onEnter() and @ref onLeave() you can implement various actions
+happening when the primary pointer enters or leaves the node area. Usually
+there's however just visual feedback, which is likely already handled by
+@ref BaseLayer and @ref TextLayer style transitions.
+
+For nodes that have @ref NodeFlag::Focusable enabled, @ref onFocus() and
+@ref onBlur() can attach actions to an input being focused and blurred again,
+for example to open a keypad or an autocompletion popup.
 */
 class MAGNUM_UI_EXPORT EventLayer: public AbstractLayer {
     public:
@@ -195,7 +305,8 @@ class MAGNUM_UI_EXPORT EventLayer: public AbstractLayer {
          * any of its parents is removed, it's the caller responsibility to
          * ensure it doesn't outlive the state captured in the @p slot. See
          * @ref onPressScoped() for a scoped alternative.
-         * @ref PointerEvent::isPrimary()
+         * @see @ref Ui-EventLayer-tap-click-press-release,
+         *      @ref PointerEvent::isPrimary()
          */
         DataHandle onPress(NodeHandle node, Containers::Function<void()>&& slot);
 
@@ -207,6 +318,7 @@ class MAGNUM_UI_EXPORT EventLayer: public AbstractLayer {
          *
          * Compared to @ref onPress() the connection is removed automatically
          * when the returned @ref EventConnection gets destroyed.
+         * @see @ref Ui-EventLayer-create
          */
         EventConnection onPressScoped(NodeHandle node, Containers::Function<void()>&& slot) {
             return EventConnection{*this, onPress(node, Utility::move(slot))};
@@ -230,7 +342,8 @@ class MAGNUM_UI_EXPORT EventLayer: public AbstractLayer {
          * any of its parents is removed, it's the caller responsibility to
          * ensure it doesn't outlive the state captured in the @p slot. See
          * @ref onReleaseScoped() for a scoped alternative.
-         * @ref PointerEvent::isPrimary()
+         * @see @ref Ui-EventLayer-tap-click-press-release,
+         *      @ref PointerEvent::isPrimary()
          */
         DataHandle onRelease(NodeHandle node, Containers::Function<void()>&& slot);
 
@@ -242,6 +355,7 @@ class MAGNUM_UI_EXPORT EventLayer: public AbstractLayer {
          *
          * Compared to @ref onRelease() the connection is removed automatically
          * when the returned @ref EventConnection gets destroyed.
+         * @see @ref Ui-EventLayer-create
          */
         EventConnection onReleaseScoped(NodeHandle node, Containers::Function<void()>&& slot) {
             return EventConnection{*this, onRelease(node, Utility::move(slot))};
@@ -269,7 +383,8 @@ class MAGNUM_UI_EXPORT EventLayer: public AbstractLayer {
          * any of its parents is removed, it's the caller responsibility to
          * ensure it doesn't outlive the state captured in the @p slot. See
          * @ref onTapOrClickScoped() for a scoped alternative.
-         * @ref PointerEvent::isPrimary()
+         * @see @ref Ui-EventLayer-tap-click-press-release,
+         *      @ref PointerEvent::isPrimary()
          */
         DataHandle onTapOrClick(NodeHandle node, Containers::Function<void()>&& slot);
 
@@ -281,6 +396,7 @@ class MAGNUM_UI_EXPORT EventLayer: public AbstractLayer {
          *
          * Compared to @ref onTapOrClick() the connection is removed
          * automatically when the returned @ref EventConnection gets destroyed.
+         * @see @ref Ui-EventLayer-create
          */
         EventConnection onTapOrClickScoped(NodeHandle node, Containers::Function<void()>&& slot) {
             return EventConnection{*this, onTapOrClick(node, Utility::move(slot))};
@@ -308,6 +424,7 @@ class MAGNUM_UI_EXPORT EventLayer: public AbstractLayer {
          * it's the caller responsibility to ensure it doesn't outlive the
          * state captured in the @p slot. See @ref onMiddleClickScoped() for a
          * scoped alternative.
+         * @see @ref Ui-EventLayer-tap-click-press-release
          */
         DataHandle onMiddleClick(NodeHandle node, Containers::Function<void()>&& slot);
 
@@ -319,6 +436,7 @@ class MAGNUM_UI_EXPORT EventLayer: public AbstractLayer {
          *
          * Compared to @ref onMiddleClick() the connection is removed
          * automatically when the returned @ref EventConnection gets destroyed.
+         * @see @ref Ui-EventLayer-create
          */
         EventConnection onMiddleClickScoped(NodeHandle node, Containers::Function<void()>&& slot) {
             return EventConnection{*this, onMiddleClick(node, Utility::move(slot))};
@@ -346,6 +464,7 @@ class MAGNUM_UI_EXPORT EventLayer: public AbstractLayer {
          * it's the caller responsibility to ensure it doesn't outlive the
          * state captured in the @p slot. See @ref onMiddleClickScoped() for a
          * scoped alternative.
+         * @see @ref Ui-EventLayer-tap-click-press-release
          */
         DataHandle onRightClick(NodeHandle node, Containers::Function<void()>&& slot);
 
@@ -357,6 +476,7 @@ class MAGNUM_UI_EXPORT EventLayer: public AbstractLayer {
          *
          * Compared to @ref onRightClick() the connection is removed
          * automatically when the returned @ref EventConnection gets destroyed.
+         * @see @ref Ui-EventLayer-create
          */
         EventConnection onRightClickScoped(NodeHandle node, Containers::Function<void()>&& slot) {
             return EventConnection{*this, onRightClick(node, Utility::move(slot))};
@@ -383,7 +503,7 @@ class MAGNUM_UI_EXPORT EventLayer: public AbstractLayer {
          * parents is removed, it's the caller responsibility to ensure it
          * doesn't outlive the state captured in the @p slot. See
          * @ref onDragScoped() for a scoped alternative.
-         * @ref PointerMoveEvent::isPrimary()
+         * @see @ref Ui-EventLayer-drag, @ref PointerMoveEvent::isPrimary()
          */
         DataHandle onDrag(NodeHandle node, Containers::Function<void(const Vector2& relativePosition)>&& slot);
 
@@ -395,6 +515,7 @@ class MAGNUM_UI_EXPORT EventLayer: public AbstractLayer {
          *
          * Compared to @ref onDrag() the connection is removed automatically
          * when the returned @ref EventConnection gets destroyed.
+         * @see @ref Ui-EventLayer-create
          */
         EventConnection onDragScoped(NodeHandle node, Containers::Function<void(const Vector2& relativePosition)>&& slot) {
             return EventConnection{*this, onDrag(node, Utility::move(slot))};
@@ -428,6 +549,7 @@ class MAGNUM_UI_EXPORT EventLayer: public AbstractLayer {
          * @p node or any of its parents is removed, it's the caller
          * responsibility to ensure it doesn't outlive the state captured in
          * the @p slot. See @ref onPinchScoped() for a scoped alternative.
+         * @see @ref Ui-EventLayer-pinch
          */
         DataHandle onPinch(NodeHandle node, Containers::Function<void(const Vector2& position, const Vector2& relativeTranslation, const Complex& relativeRotation, Float relativeScaling)>&& slot);
 
@@ -436,6 +558,7 @@ class MAGNUM_UI_EXPORT EventLayer: public AbstractLayer {
          *
          * Compared to @ref onPinch() the connection is removed automatically
          * when the returned @ref EventConnection gets destroyed.
+         * @see @ref Ui-EventLayer-create
          */
         EventConnection onPinchScoped(NodeHandle node, Containers::Function<void(const Vector2& position, const Vector2& relativeTranslation, const Complex& relativeRotation, Float relativeScaling)>&& slot) {
             return EventConnection{*this, onPinch(node, Utility::move(slot))};
@@ -452,7 +575,8 @@ class MAGNUM_UI_EXPORT EventLayer: public AbstractLayer {
          * parents is removed, it's the caller responsibility to ensure it
          * doesn't outlive the state captured in the @p slot. See
          * @ref onEnterScoped() for a scoped alternative.
-         * @ref PointerMoveEvent::isPrimary()
+         * @see @ref Ui-EventLayer-press-release-enter-leave-focus-blur,
+         *      @ref PointerMoveEvent::isPrimary()
          */
         DataHandle onEnter(NodeHandle node, Containers::Function<void()>&& slot);
 
@@ -461,6 +585,7 @@ class MAGNUM_UI_EXPORT EventLayer: public AbstractLayer {
          *
          * Compared to @ref onEnter() the connection is removed automatically
          * when the returned @ref EventConnection gets destroyed.
+         * @see @ref Ui-EventLayer-create
          */
         EventConnection onEnterScoped(NodeHandle node, Containers::Function<void()>&& slot) {
             return EventConnection{*this, onEnter(node, Utility::move(slot))};
@@ -477,7 +602,8 @@ class MAGNUM_UI_EXPORT EventLayer: public AbstractLayer {
          * parents is removed, it's the caller responsibility to ensure it
          * doesn't outlive the state captured in the @p slot. See
          * @ref onLeaveScoped() for a scoped alternative.
-         * @ref PointerMoveEvent::isPrimary()
+         * @see @ref Ui-EventLayer-press-release-enter-leave-focus-blur,
+         *      @ref PointerMoveEvent::isPrimary()
          */
         DataHandle onLeave(NodeHandle node, Containers::Function<void()>&& slot);
 
@@ -486,6 +612,7 @@ class MAGNUM_UI_EXPORT EventLayer: public AbstractLayer {
          *
          * Compared to @ref onLeave() the connection is removed automatically
          * when the returned @ref EventConnection gets destroyed.
+         * @see @ref Ui-EventLayer-create
          */
         EventConnection onLeaveScoped(NodeHandle node, Containers::Function<void()>&& slot) {
             return EventConnection{*this, onLeave(node, Utility::move(slot))};
@@ -502,6 +629,7 @@ class MAGNUM_UI_EXPORT EventLayer: public AbstractLayer {
          * parents is removed, it's the caller responsibility to ensure it
          * doesn't outlive the state captured in the @p slot. See
          * @ref onFocusScoped() for a scoped alternative.
+         * @see @ref Ui-EventLayer-press-release-enter-leave-focus-blur
          */
         DataHandle onFocus(NodeHandle node, Containers::Function<void()>&& slot);
 
@@ -510,6 +638,7 @@ class MAGNUM_UI_EXPORT EventLayer: public AbstractLayer {
          *
          * Compared to @ref onFocus() the connection is removed automatically
          * when the returned @ref EventConnection gets destroyed.
+         * @see @ref Ui-EventLayer-create
          */
         EventConnection onFocusScoped(NodeHandle node, Containers::Function<void()>&& slot) {
             return EventConnection{*this, onFocus(node, Utility::move(slot))};
@@ -526,6 +655,7 @@ class MAGNUM_UI_EXPORT EventLayer: public AbstractLayer {
          * parents is removed, it's the caller responsibility to ensure it
          * doesn't outlive the state captured in the @p slot. See
          * @ref onBlurScoped() for a scoped alternative.
+         * @see @ref Ui-EventLayer-press-release-enter-leave-focus-blur
          */
         DataHandle onBlur(NodeHandle node, Containers::Function<void()>&& slot);
 
@@ -534,6 +664,7 @@ class MAGNUM_UI_EXPORT EventLayer: public AbstractLayer {
          *
          * Compared to @ref onBlur() the connection is removed automatically
          * when the returned @ref EventConnection gets destroyed.
+         * @see @ref Ui-EventLayer-create
          */
         EventConnection onBlurScoped(NodeHandle node, Containers::Function<void()>&& slot) {
             return EventConnection{*this, onBlur(node, Utility::move(slot))};
