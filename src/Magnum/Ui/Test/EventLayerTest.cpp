@@ -1991,41 +1991,54 @@ void EventLayerTest::dragPress() {
         ++called;
     });
 
-    /* The press event should get accepted for mouse left, *primary* finger or
-       pen to prevent it from being propagated further if no other data accepts
-       it. The handler shouldn't get called though. */
+    /* The press event should get accepted for *captured* mouse left, *primary*
+       finger or pen to prevent it from being propagated further if no other
+       data accepts it. The handler shouldn't get called though. */
     {
         PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0};
+        event.setCaptured(true);
         layer.pointerPressEvent(dataHandleId(handle), event);
         CORRADE_VERIFY(event.isAccepted());
         CORRADE_COMPARE(called, 0);
     } {
+        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0};
+        event.setCaptured(false);
+        layer.pointerPressEvent(dataHandleId(handle), event);
+        CORRADE_VERIFY(!event.isAccepted());
+        CORRADE_COMPARE(called, 0);
+    } {
         PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseMiddle, true, 0};
+        event.setCaptured(true);
         layer.pointerPressEvent(dataHandleId(handle), event);
         CORRADE_VERIFY(!event.isAccepted());
         CORRADE_COMPARE(called, 0);
     } {
         PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseRight, true, 0};
+        event.setCaptured(true);
         layer.pointerPressEvent(dataHandleId(handle), event);
         CORRADE_VERIFY(!event.isAccepted());
         CORRADE_COMPARE(called, 0);
     } {
         PointerEvent event{{}, PointerEventSource::Touch, Pointer::Finger, true, 0};
+        event.setCaptured(true);
         layer.pointerPressEvent(dataHandleId(handle), event);
         CORRADE_VERIFY(event.isAccepted());
         CORRADE_COMPARE(called, 0);
     } {
         PointerEvent event{{}, PointerEventSource::Touch, Pointer::Finger, false, 0};
+        event.setCaptured(true);
         layer.pointerPressEvent(dataHandleId(handle), event);
         CORRADE_VERIFY(!event.isAccepted());
         CORRADE_COMPARE(called, 0);
     } {
         PointerEvent event{{}, PointerEventSource::Pen, Pointer::Pen, true, 0};
+        event.setCaptured(true);
         layer.pointerPressEvent(dataHandleId(handle), event);
         CORRADE_VERIFY(event.isAccepted());
         CORRADE_COMPARE(called, 0);
     } {
         PointerEvent event{{}, PointerEventSource::Pen, Pointer::Eraser, true, 0};
+        event.setCaptured(true);
         layer.pointerPressEvent(dataHandleId(handle), event);
         CORRADE_VERIFY(!event.isAccepted());
         CORRADE_COMPARE(called, 0);
@@ -2033,16 +2046,19 @@ void EventLayerTest::dragPress() {
     /* Any other than press or move event shouldn't get accepted */
     } {
         PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0};
+        event.setCaptured(true);
         layer.pointerReleaseEvent(dataHandleId(handle), event);
         CORRADE_VERIFY(!event.isAccepted());
         CORRADE_COMPARE(called, 0);
     } {
         PointerMoveEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, Pointer::MouseLeft, true, 0};
+        event.setCaptured(true);
         layer.pointerEnterEvent(dataHandleId(handle), event);
         CORRADE_VERIFY(!event.isAccepted());
         CORRADE_COMPARE(called, 0);
     } {
         PointerMoveEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, Pointer::MouseLeft, true, 0};
+        event.setCaptured(true);
         layer.pointerLeaveEvent(dataHandleId(handle), event);
         CORRADE_VERIFY(!event.isAccepted());
         CORRADE_COMPARE(called, 0);

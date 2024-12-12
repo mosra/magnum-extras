@@ -487,13 +487,23 @@ void EventLayer::doPointerPressEvent(const UnsignedInt dataId, PointerEvent& eve
         return;
     }
 
+    /* Accept a *captured* press of appropriate pointers that precede a drag.
+       Since the move is then converted to a drag only if it's captured as
+       well, it doesn't make sense to accept non-captured presses here. */
+    if(data.eventType == Implementation::EventType::Drag &&
+        event.pointer() & (Pointer::MouseLeft|Pointer::Finger|Pointer::Pen) &&
+        event.isCaptured())
+    {
+        event.setAccepted();
+        return;
+    }
+
     /* Accept also a press of appropriate pointers that precede a tap/click,
-       drag, focus, right click or middle click. Otherwise it could get
-       propagated further, causing the subsequent release or move to get called
-       on some entirely other node. */
+       focus, right click or middle click. Otherwise it could get propagated
+       further, causing the subsequent release or move to get called on some
+       entirely other node. */
     if(
         ((data.eventType == Implementation::EventType::TapOrClick ||
-          data.eventType == Implementation::EventType::Drag ||
           data.eventType == Implementation::EventType::Focus) &&
             event.pointer() & (Pointer::MouseLeft|Pointer::Finger|Pointer::Pen)) ||
         (data.eventType == Implementation::EventType::MiddleClick &&
