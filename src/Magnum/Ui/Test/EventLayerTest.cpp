@@ -1109,14 +1109,14 @@ void EventLayerTest::pressReleaseFromUserInterface() {
     layer.onPress(node, [&pressCalled]{
         ++pressCalled;
     });
-    layer.onPress(node, [&pressPositionCalled](const Vector2& position){
+    layer.onPress(node, [&pressPositionCalled](const Vector2& position) {
         CORRADE_COMPARE(position, (Vector2{25.0f, 20.0f}));
         ++pressPositionCalled;
     });
     layer.onRelease(node, [&releaseCalled]{
         ++releaseCalled;
     });
-    layer.onRelease(node, [&releasePositionCalled](const Vector2& position){
+    layer.onRelease(node, [&releasePositionCalled](const Vector2& position) {
         CORRADE_COMPARE(position, (Vector2{25.0f, 15.0f}));
         ++releasePositionCalled;
     });
@@ -1332,7 +1332,7 @@ void EventLayerTest::tapOrClickFromUserInterface() {
     layer.onTapOrClick(node, [&called]{
         ++called;
     });
-    layer.onTapOrClick(node, [&positionCalled](const Vector2& position){
+    layer.onTapOrClick(node, [&positionCalled](const Vector2& position) {
         CORRADE_COMPARE(position, (Vector2{25.0f, 15.0f}));
         ++positionCalled;
     });
@@ -1558,7 +1558,7 @@ void EventLayerTest::middleClickFromUserInterface() {
     layer.onMiddleClick(node, [&called]{
         ++called;
     });
-    layer.onMiddleClick(node, [&positionCalled](const Vector2& position){
+    layer.onMiddleClick(node, [&positionCalled](const Vector2& position) {
         CORRADE_COMPARE(position, (Vector2{25.0f, 15.0f}));
         ++positionCalled;
     });
@@ -1777,7 +1777,7 @@ void EventLayerTest::rightClickFromUserInterface() {
     layer.onRightClick(node, [&called]{
         ++called;
     });
-    layer.onRightClick(node, [&positionCalled](const Vector2& position){
+    layer.onRightClick(node, [&positionCalled](const Vector2& position) {
         CORRADE_COMPARE(position, (Vector2{25.0f, 15.0f}));
         ++positionCalled;
     });
@@ -1897,7 +1897,7 @@ void EventLayerTest::drag() {
 
     Int called = 0;
     Vector2 calledOffset;
-    DataHandle handle = layer.onDrag(nodeHandle(0, 1), [&called, &calledOffset](const Vector2& offset){
+    DataHandle handle = layer.onDrag(nodeHandle(0, 1), [&called, &calledOffset](const Vector2& offset) {
         ++called;
         calledOffset += offset;
     });
@@ -1989,7 +1989,7 @@ void EventLayerTest::dragPress() {
     EventLayer layer{layerHandle(0, 1)};
 
     Int called = 0;
-    DataHandle handle = layer.onDrag(nodeHandle(0, 1), [&called](const Vector2&){
+    DataHandle handle = layer.onDrag(nodeHandle(0, 1), [&called](const Vector2&) {
         ++called;
     });
 
@@ -2105,11 +2105,11 @@ void EventLayerTest::dragFromUserInterface() {
     NodeHandle node = ui.createNode({25, 50}, {50, 25});
 
     Int called = 0, positionCalled = 0;
-    layer.onDrag(node, [&called](const Vector2& relativePosition){
+    layer.onDrag(node, [&called](const Vector2& relativePosition) {
         CORRADE_COMPARE(relativePosition, (Vector2{-5.0f, -10.0f}));
         ++called;
     });
-    layer.onDrag(node, [&positionCalled](const Vector2& position, const Vector2& relativePosition){
+    layer.onDrag(node, [&positionCalled](const Vector2& position, const Vector2& relativePosition) {
         CORRADE_COMPARE(position, (Vector2{20.0f, 5.0f}));
         CORRADE_COMPARE(relativePosition, (Vector2{-5.0f, -10.0f}));
         ++positionCalled;
@@ -2171,7 +2171,7 @@ void EventLayerTest::pinch() {
     EventLayer layer{layerHandle(0, 1)};
 
     Int called = 0;
-    DataHandle handle = layer.onPinch(nodeHandle(0, 1), [&called](const Vector2&, const Vector2&, const Complex&, Float){
+    DataHandle handle = layer.onPinch(nodeHandle(0, 1), [&called](const Vector2&, const Vector2&, const Complex&, Float) {
         ++called;
     });
 
@@ -2563,7 +2563,7 @@ void EventLayerTest::pinchFromUserInterface() {
     layer.onPress(nodeBelow, [&belowCalled]{
         ++belowCalled;
     });
-    layer.onDrag(nodeBelow, [&belowCalled](const Vector2&){
+    layer.onDrag(nodeBelow, [&belowCalled](const Vector2&) {
         ++belowCalled;
     });
     layer.onRelease(nodeBelow, [&belowCalled]{
@@ -2579,7 +2579,7 @@ void EventLayerTest::pinchFromUserInterface() {
         Complex relativeRotation;
         Float relativeScaling;
     } expected;
-    DataHandle data = layer.onPinch(node, [&called, &expected](const Vector2& position, const Vector2& relativeTranslation, const Complex& relativeRotation, const Float relativeScaling){
+    DataHandle data = layer.onPinch(node, [&called, &expected](const Vector2& position, const Vector2& relativeTranslation, const Complex& relativeRotation, Float relativeScaling) {
         CORRADE_COMPARE(position, expected.position);
         CORRADE_COMPARE(relativeTranslation, expected.relativeTranslation);
         CORRADE_COMPARE(relativeRotation, expected.relativeRotation);
@@ -2714,7 +2714,7 @@ void EventLayerTest::pinchFromUserInterface() {
         ui.update();
 
         NodeHandle node2 = ui.createNode({25, 50}, {50, 25});
-        DataHandle data2 = layer.onPinch(node2, [&called, &expected](const Vector2& position, const Vector2& relativeTranslation, const Complex& relativeRotation, const Float relativeScaling){
+        DataHandle data2 = layer.onPinch(node2, [&called, &expected](const Vector2& position, const Vector2& relativeTranslation, const Complex& relativeRotation, Float relativeScaling) {
             CORRADE_COMPARE(position, expected.position);
             CORRADE_COMPARE(relativeTranslation, expected.relativeTranslation);
             CORRADE_COMPARE(relativeRotation, expected.relativeRotation);
@@ -2765,10 +2765,10 @@ void EventLayerTest::pinchAndDragFromUserInterface() {
 
     Int pinchCalled = 0;
     Int dragCalled = 0;
-    layer.onPinch(node, [&pinchCalled](const Vector2&, const Vector2&, const Complex&, Float){
+    layer.onPinch(node, [&pinchCalled](const Vector2&, const Vector2&, const Complex&, Float) {
         ++pinchCalled;
     });
-    layer.onDrag(node, [&dragCalled](const Vector2&){
+    layer.onDrag(node, [&dragCalled](const Vector2&) {
         ++dragCalled;
     });
 
