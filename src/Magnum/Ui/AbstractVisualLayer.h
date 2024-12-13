@@ -39,8 +39,9 @@ namespace Magnum { namespace Ui {
 @brief Base for visual data layers
 @m_since_latest
 
-Provides style management and style changing depending on input events for
-builtin visual layers like @ref BaseLayer or @ref TextLayer.
+Provides style management and style changing depending on primary &
+non-fallthrough input events for builtin visual layers like @ref BaseLayer or
+@ref TextLayer.
 */
 class MAGNUM_UI_EXPORT AbstractVisualLayer: public AbstractLayer {
     public:

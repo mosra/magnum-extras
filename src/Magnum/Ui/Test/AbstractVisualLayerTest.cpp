@@ -2033,6 +2033,12 @@ void AbstractVisualLayerTest::eventStyleTransition() {
 
     AbstractUserInterface ui{{100, 100}};
 
+    /* A fallthrough node below all others. The events reach it, but it
+       shouldn't react to them in any way because they're fallthrough. It's
+       also focusable just in case those events would somehow reach there
+       too. */
+    NodeHandle nodeFallthrough = ui.createNode({}, {7.0f, 7.0f}, NodeFlag::FallthroughPointerEvents|NodeFlag::Focusable);
+
     /*   1  2  3  4  5  6
        2 +-----+  +-----+
        3 |green|  | red |
@@ -2040,14 +2046,15 @@ void AbstractVisualLayerTest::eventStyleTransition() {
        5 +-----+  +-----+
        6 |blue |  |white|
        7 +-----+  +-----+ */
-    NodeHandle nodeGreen = ui.createNode({1.0f, 2.0f}, {2.0f, 2.0f});
-    NodeHandle nodeRed = ui.createNode({4.0f, 2.0f}, {2.0f, 2.0f});
-    NodeHandle nodeBlue = ui.createNode({1.0f, 5.0f}, {2.0f, 2.0f});
-    NodeHandle nodeWhite = ui.createNode({4.0f, 5.0f}, {2.0f, 2.0f});
+    NodeHandle nodeGreen = ui.createNode(nodeFallthrough, {1.0f, 2.0f}, {2.0f, 2.0f});
+    NodeHandle nodeRed = ui.createNode(nodeFallthrough, {4.0f, 2.0f}, {2.0f, 2.0f});
+    NodeHandle nodeBlue = ui.createNode(nodeFallthrough, {1.0f, 5.0f}, {2.0f, 2.0f});
+    NodeHandle nodeWhite = ui.createNode(nodeFallthrough, {4.0f, 5.0f}, {2.0f, 2.0f});
 
     StyleLayer& layer = ui.setLayerInstance(Containers::pointer<StyleLayer>(ui.createLayer(), shared));
     /* One extra data to verify it's mapping from nodes to data correctly */
     layer.create(StyleIndex::Green);
+    DataHandle dataFallthrough = layer.create(StyleIndex::Green, nodeFallthrough);
     DataHandle dataGreen = layer.create(StyleIndex::Green, nodeGreen);
     DataHandle dataRed = layer.create(StyleIndex::Red, nodeRed);
     DataHandle dataBlue = layer.create(StyleIndex::Blue, nodeBlue);
@@ -2075,6 +2082,7 @@ void AbstractVisualLayerTest::eventStyleTransition() {
     CORRADE_COMPARE(layer.state(), LayerStates{});
     /* The style could be simply copied to calculatedStyles after an update as
        no transition is set */
+    CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataFallthrough)]), StyleIndex::Green);
     CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataGreen)]), StyleIndex::Green);
     CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataRed)]), StyleIndex::Red);
     CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataBlue)]), StyleIndex::Blue);
@@ -2093,6 +2101,8 @@ void AbstractVisualLayerTest::eventStyleTransition() {
         CORRADE_COMPARE(ui.currentCapturedNode(), nodeGreen);
         CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
         CORRADE_COMPARE(layer.style<StyleIndex>(dataGreen), StyleIndex::GreenPressed);
+        /* No change to the fallthrough node */
+        CORRADE_COMPARE(layer.style<StyleIndex>(dataFallthrough), StyleIndex::Green);
         CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
     }
 
@@ -2106,6 +2116,8 @@ void AbstractVisualLayerTest::eventStyleTransition() {
         CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataRed)]), StyleIndex::Red);
         CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataBlue)]), StyleIndex::Blue);
         CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataWhite)]), StyleIndex::White);
+        /* No change to the fallthrough node */
+        CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataFallthrough)]), StyleIndex::Green);
     }
 
     /* Release on the green node. Again, the node isn't registered as hovered,
@@ -2120,6 +2132,8 @@ void AbstractVisualLayerTest::eventStyleTransition() {
         CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
         CORRADE_COMPARE(layer.style<StyleIndex>(dataGreen), StyleIndex::Green);
+        /* No change to the fallthrough node */
+        CORRADE_COMPARE(layer.style<StyleIndex>(dataFallthrough), StyleIndex::Green);
         CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
     }
 
@@ -2130,6 +2144,8 @@ void AbstractVisualLayerTest::eventStyleTransition() {
         CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataRed)]), StyleIndex::Red);
         CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataBlue)]), StyleIndex::Blue);
         CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataWhite)]), StyleIndex::White);
+        /* No change to the fallthrough node */
+        CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataFallthrough)]), StyleIndex::Green);
     }
 
     /* Move on the red node makes it hovered */
@@ -2143,6 +2159,8 @@ void AbstractVisualLayerTest::eventStyleTransition() {
         CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
         CORRADE_COMPARE(layer.style<StyleIndex>(dataRed), StyleIndex::RedHover);
+        /* No change to the fallthrough node */
+        CORRADE_COMPARE(layer.style<StyleIndex>(dataFallthrough), StyleIndex::Green);
         CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
     }
 
@@ -2153,6 +2171,8 @@ void AbstractVisualLayerTest::eventStyleTransition() {
         CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataRed)]), StyleIndex::RedHover);
         CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataBlue)]), StyleIndex::Blue);
         CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataWhite)]), StyleIndex::White);
+        /* No change to the fallthrough node */
+        CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataFallthrough)]), StyleIndex::Green);
     }
 
     /* Tap on it makes it hovered & pressed */
@@ -2166,6 +2186,8 @@ void AbstractVisualLayerTest::eventStyleTransition() {
         CORRADE_COMPARE(ui.currentCapturedNode(), nodeRed);
         CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
         CORRADE_COMPARE(layer.style<StyleIndex>(dataRed), StyleIndex::RedPressedHover);
+        /* No change to the fallthrough node */
+        CORRADE_COMPARE(layer.style<StyleIndex>(dataFallthrough), StyleIndex::Green);
         CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
     }
 
@@ -2176,6 +2198,8 @@ void AbstractVisualLayerTest::eventStyleTransition() {
         CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataRed)]), StyleIndex::RedPressedHover);
         CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataBlue)]), StyleIndex::Blue);
         CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataWhite)]), StyleIndex::White);
+        /* No change to the fallthrough node */
+        CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataFallthrough)]), StyleIndex::Green);
     }
 
     /* Move away makes it only pressed, without hover, as implicit capture is
@@ -2190,6 +2214,8 @@ void AbstractVisualLayerTest::eventStyleTransition() {
         CORRADE_COMPARE(ui.currentCapturedNode(), nodeRed);
         CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
         CORRADE_COMPARE(layer.style<StyleIndex>(dataRed), StyleIndex::RedPressed);
+        /* No change to the fallthrough node */
+        CORRADE_COMPARE(layer.style<StyleIndex>(dataFallthrough), StyleIndex::Green);
         CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
     }
 
@@ -2200,6 +2226,8 @@ void AbstractVisualLayerTest::eventStyleTransition() {
         CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataRed)]), StyleIndex::RedPressed);
         CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataBlue)]), StyleIndex::Blue);
         CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataWhite)]), StyleIndex::White);
+        /* No change to the fallthrough node */
+        CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataFallthrough)]), StyleIndex::Green);
     }
 
     /* Move back makes it hovered & pressed again */
@@ -2213,6 +2241,8 @@ void AbstractVisualLayerTest::eventStyleTransition() {
         CORRADE_COMPARE(ui.currentCapturedNode(), nodeRed);
         CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
         CORRADE_COMPARE(layer.style<StyleIndex>(dataRed), StyleIndex::RedPressedHover);
+        /* No change to the fallthrough node */
+        CORRADE_COMPARE(layer.style<StyleIndex>(dataFallthrough), StyleIndex::Green);
         CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
     }
 
@@ -2223,6 +2253,8 @@ void AbstractVisualLayerTest::eventStyleTransition() {
         CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataRed)]), StyleIndex::RedPressedHover);
         CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataBlue)]), StyleIndex::Blue);
         CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataWhite)]), StyleIndex::White);
+        /* No change to the fallthrough node */
+        CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataFallthrough)]), StyleIndex::Green);
     }
 
     /* Release makes it only hover again */
@@ -2236,6 +2268,8 @@ void AbstractVisualLayerTest::eventStyleTransition() {
         CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
         CORRADE_COMPARE(layer.style<StyleIndex>(dataRed), StyleIndex::RedHover);
+        /* No change to the fallthrough node */
+        CORRADE_COMPARE(layer.style<StyleIndex>(dataFallthrough), StyleIndex::Green);
         CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
     }
 
@@ -2246,6 +2280,8 @@ void AbstractVisualLayerTest::eventStyleTransition() {
         CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataRed)]), StyleIndex::RedHover);
         CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataBlue)]), StyleIndex::Blue);
         CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataWhite)]), StyleIndex::White);
+        /* No change to the fallthrough node */
+        CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataFallthrough)]), StyleIndex::Green);
     }
 
     /* Move away makes it not hovered anymore */
@@ -2259,6 +2295,8 @@ void AbstractVisualLayerTest::eventStyleTransition() {
         CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
         CORRADE_COMPARE(layer.style<StyleIndex>(dataRed), StyleIndex::Red);
+        /* No change to the fallthrough node */
+        CORRADE_COMPARE(layer.style<StyleIndex>(dataFallthrough), StyleIndex::Green);
         CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
     }
 
@@ -2269,6 +2307,8 @@ void AbstractVisualLayerTest::eventStyleTransition() {
         CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataRed)]), StyleIndex::Red);
         CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataBlue)]), StyleIndex::Blue);
         CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataWhite)]), StyleIndex::White);
+        /* No change to the fallthrough node */
+        CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataFallthrough)]), StyleIndex::Green);
     }
 
     /* Make the Green, Red and Blue nodes focusable for the rest of the test
@@ -2288,6 +2328,8 @@ void AbstractVisualLayerTest::eventStyleTransition() {
         CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentFocusedNode(), nodeGreen);
         CORRADE_COMPARE(layer.style<StyleIndex>(dataGreen), StyleIndex::GreenFocused);
+        /* No change to the fallthrough node */
+        CORRADE_COMPARE(layer.style<StyleIndex>(dataFallthrough), StyleIndex::Green);
         CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
     }
 
@@ -2298,6 +2340,8 @@ void AbstractVisualLayerTest::eventStyleTransition() {
         CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataRed)]), StyleIndex::Red);
         CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataBlue)]), StyleIndex::Blue);
         CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataWhite)]), StyleIndex::White);
+        /* No change to the fallthrough node */
+        CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataFallthrough)]), StyleIndex::Green);
     }
 
     /* Moving onto the green node makes it focused & hovered */
@@ -2311,6 +2355,8 @@ void AbstractVisualLayerTest::eventStyleTransition() {
         CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentFocusedNode(), nodeGreen);
         CORRADE_COMPARE(layer.style<StyleIndex>(dataGreen), StyleIndex::GreenFocusedHover);
+        /* No change to the fallthrough node */
+        CORRADE_COMPARE(layer.style<StyleIndex>(dataFallthrough), StyleIndex::Green);
         CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
     }
 
@@ -2321,6 +2367,8 @@ void AbstractVisualLayerTest::eventStyleTransition() {
         CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataRed)]), StyleIndex::Red);
         CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataBlue)]), StyleIndex::Blue);
         CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataWhite)]), StyleIndex::White);
+        /* No change to the fallthrough node */
+        CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataFallthrough)]), StyleIndex::Green);
     }
 
     /* Pressing on the green node makes it pressed & hovered, as that has a
@@ -2335,6 +2383,8 @@ void AbstractVisualLayerTest::eventStyleTransition() {
         CORRADE_COMPARE(ui.currentCapturedNode(), nodeGreen);
         CORRADE_COMPARE(ui.currentFocusedNode(), nodeGreen);
         CORRADE_COMPARE(layer.style<StyleIndex>(dataGreen), StyleIndex::GreenPressedHover);
+        /* No change to the fallthrough node */
+        CORRADE_COMPARE(layer.style<StyleIndex>(dataFallthrough), StyleIndex::Green);
         CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
     }
 
@@ -2345,6 +2395,8 @@ void AbstractVisualLayerTest::eventStyleTransition() {
         CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataRed)]), StyleIndex::Red);
         CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataBlue)]), StyleIndex::Blue);
         CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataWhite)]), StyleIndex::White);
+        /* No change to the fallthrough node */
+        CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataFallthrough)]), StyleIndex::Green);
     }
 
     /* Moving away from the green node makes it only pressed, again with that
@@ -2359,6 +2411,8 @@ void AbstractVisualLayerTest::eventStyleTransition() {
         CORRADE_COMPARE(ui.currentCapturedNode(), nodeGreen);
         CORRADE_COMPARE(ui.currentFocusedNode(), nodeGreen);
         CORRADE_COMPARE(layer.style<StyleIndex>(dataGreen), StyleIndex::GreenPressed);
+        /* No change to the fallthrough node */
+        CORRADE_COMPARE(layer.style<StyleIndex>(dataFallthrough), StyleIndex::Green);
         CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
     }
 
@@ -2369,6 +2423,8 @@ void AbstractVisualLayerTest::eventStyleTransition() {
         CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataRed)]), StyleIndex::Red);
         CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataBlue)]), StyleIndex::Blue);
         CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataWhite)]), StyleIndex::White);
+        /* No change to the fallthrough node */
+        CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataFallthrough)]), StyleIndex::Green);
     }
 
     /* Moving back to the green node makes it again pressed & hovered, taking
@@ -2383,6 +2439,8 @@ void AbstractVisualLayerTest::eventStyleTransition() {
         CORRADE_COMPARE(ui.currentCapturedNode(), nodeGreen);
         CORRADE_COMPARE(ui.currentFocusedNode(), nodeGreen);
         CORRADE_COMPARE(layer.style<StyleIndex>(dataGreen), StyleIndex::GreenPressedHover);
+        /* No change to the fallthrough node */
+        CORRADE_COMPARE(layer.style<StyleIndex>(dataFallthrough), StyleIndex::Green);
         CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
     }
 
@@ -2393,6 +2451,8 @@ void AbstractVisualLayerTest::eventStyleTransition() {
         CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataRed)]), StyleIndex::Red);
         CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataBlue)]), StyleIndex::Blue);
         CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataWhite)]), StyleIndex::White);
+        /* No change to the fallthrough node */
+        CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataFallthrough)]), StyleIndex::Green);
     }
 
     /* Releasing on the green node makes it focused & hovered */
@@ -2406,6 +2466,8 @@ void AbstractVisualLayerTest::eventStyleTransition() {
         CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentFocusedNode(), nodeGreen);
         CORRADE_COMPARE(layer.style<StyleIndex>(dataGreen), StyleIndex::GreenFocusedHover);
+        /* No change to the fallthrough node */
+        CORRADE_COMPARE(layer.style<StyleIndex>(dataFallthrough), StyleIndex::Green);
         CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
     }
 
@@ -2416,6 +2478,8 @@ void AbstractVisualLayerTest::eventStyleTransition() {
         CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataRed)]), StyleIndex::Red);
         CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataBlue)]), StyleIndex::Blue);
         CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataWhite)]), StyleIndex::White);
+        /* No change to the fallthrough node */
+        CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataFallthrough)]), StyleIndex::Green);
     }
 
     /* Blurring the green node makes it just focused */
@@ -2429,6 +2493,8 @@ void AbstractVisualLayerTest::eventStyleTransition() {
         CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
         CORRADE_COMPARE(layer.style<StyleIndex>(dataGreen), StyleIndex::GreenHover);
+        /* No change to the fallthrough node */
+        CORRADE_COMPARE(layer.style<StyleIndex>(dataFallthrough), StyleIndex::Green);
         CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
     }
 
@@ -2439,6 +2505,8 @@ void AbstractVisualLayerTest::eventStyleTransition() {
         CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataRed)]), StyleIndex::Red);
         CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataBlue)]), StyleIndex::Blue);
         CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataWhite)]), StyleIndex::White);
+        /* No change to the fallthrough node */
+        CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataFallthrough)]), StyleIndex::Green);
     }
 
     /* Focusing the green node makes it focused & hovered again */
@@ -2452,6 +2520,8 @@ void AbstractVisualLayerTest::eventStyleTransition() {
         CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentFocusedNode(), nodeGreen);
         CORRADE_COMPARE(layer.style<StyleIndex>(dataGreen), StyleIndex::GreenFocusedHover);
+        /* No change to the fallthrough node */
+        CORRADE_COMPARE(layer.style<StyleIndex>(dataFallthrough), StyleIndex::Green);
         CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
     }
 
@@ -2462,6 +2532,8 @@ void AbstractVisualLayerTest::eventStyleTransition() {
         CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataRed)]), StyleIndex::Red);
         CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataBlue)]), StyleIndex::Blue);
         CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataWhite)]), StyleIndex::White);
+        /* No change to the fallthrough node */
+        CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataFallthrough)]), StyleIndex::Green);
     }
 
     /* Moving away from the green node makes it only focused */
@@ -2475,6 +2547,8 @@ void AbstractVisualLayerTest::eventStyleTransition() {
         CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentFocusedNode(), nodeGreen);
         CORRADE_COMPARE(layer.style<StyleIndex>(dataGreen), StyleIndex::GreenFocused);
+        /* No change to the fallthrough node */
+        CORRADE_COMPARE(layer.style<StyleIndex>(dataFallthrough), StyleIndex::Green);
         CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
     }
 
@@ -2485,6 +2559,8 @@ void AbstractVisualLayerTest::eventStyleTransition() {
         CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataRed)]), StyleIndex::Red);
         CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataBlue)]), StyleIndex::Blue);
         CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataWhite)]), StyleIndex::White);
+        /* No change to the fallthrough node */
+        CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataFallthrough)]), StyleIndex::Green);
     }
 
     /* Pressing on the green node makes it pressed, as that has again a
@@ -2499,6 +2575,8 @@ void AbstractVisualLayerTest::eventStyleTransition() {
         CORRADE_COMPARE(ui.currentCapturedNode(), nodeGreen);
         CORRADE_COMPARE(ui.currentFocusedNode(), nodeGreen);
         CORRADE_COMPARE(layer.style<StyleIndex>(dataGreen), StyleIndex::GreenPressed);
+        /* No change to the fallthrough node */
+        CORRADE_COMPARE(layer.style<StyleIndex>(dataFallthrough), StyleIndex::Green);
         CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
     }
 
@@ -2509,6 +2587,8 @@ void AbstractVisualLayerTest::eventStyleTransition() {
         CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataRed)]), StyleIndex::Red);
         CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataBlue)]), StyleIndex::Blue);
         CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataWhite)]), StyleIndex::White);
+        /* No change to the fallthrough node */
+        CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataFallthrough)]), StyleIndex::Green);
     }
 
     /* Releasing on the green node makes it again focused */
@@ -2522,6 +2602,8 @@ void AbstractVisualLayerTest::eventStyleTransition() {
         CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentFocusedNode(), nodeGreen);
         CORRADE_COMPARE(layer.style<StyleIndex>(dataGreen), StyleIndex::GreenFocused);
+        /* No change to the fallthrough node */
+        CORRADE_COMPARE(layer.style<StyleIndex>(dataFallthrough), StyleIndex::Green);
         CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
     }
 
@@ -2532,6 +2614,8 @@ void AbstractVisualLayerTest::eventStyleTransition() {
         CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataRed)]), StyleIndex::Red);
         CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataBlue)]), StyleIndex::Blue);
         CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataWhite)]), StyleIndex::White);
+        /* No change to the fallthrough node */
+        CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataFallthrough)]), StyleIndex::Green);
     }
 
     /* Blurring the green node makes it inactive again */
@@ -2545,6 +2629,8 @@ void AbstractVisualLayerTest::eventStyleTransition() {
         CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
         CORRADE_COMPARE(layer.style<StyleIndex>(dataGreen), StyleIndex::Green);
+        /* No change to the fallthrough node */
+        CORRADE_COMPARE(layer.style<StyleIndex>(dataFallthrough), StyleIndex::Green);
         CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
     }
 
@@ -2555,6 +2641,8 @@ void AbstractVisualLayerTest::eventStyleTransition() {
         CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataRed)]), StyleIndex::Red);
         CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataBlue)]), StyleIndex::Blue);
         CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataWhite)]), StyleIndex::White);
+        /* No change to the fallthrough node */
+        CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataFallthrough)]), StyleIndex::Green);
     }
 
     /* Move on and away from the blue is accepted but makes no change to it,
@@ -2571,6 +2659,8 @@ void AbstractVisualLayerTest::eventStyleTransition() {
         CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
         CORRADE_COMPARE(layer.style<StyleIndex>(dataBlue), data.dynamicAnimated ? StyleIndex(StyleCount + 0) : StyleIndex::Blue);
+        /* No change to the fallthrough node */
+        CORRADE_COMPARE(layer.style<StyleIndex>(dataFallthrough), StyleIndex::Green);
         CORRADE_COMPARE(layer.state(), LayerStates{});
     } {
         PointerMoveEvent event{{}, PointerEventSource::Mouse, {}, {}, true, 0};
@@ -2580,6 +2670,8 @@ void AbstractVisualLayerTest::eventStyleTransition() {
         CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
         CORRADE_COMPARE(layer.style<StyleIndex>(dataBlue), data.dynamicAnimated ? StyleIndex(StyleCount + 0) : StyleIndex::Blue);
+        /* No change to the fallthrough node */
+        CORRADE_COMPARE(layer.style<StyleIndex>(dataFallthrough), StyleIndex::Green);
         CORRADE_COMPARE(layer.state(), LayerStates{});
     }
 
@@ -2594,12 +2686,16 @@ void AbstractVisualLayerTest::eventStyleTransition() {
         CORRADE_VERIFY(ui.pointerPressEvent({5.0f, 5.0f}, event));
         CORRADE_COMPARE(ui.currentPressedNode(), nodeWhite);
         CORRADE_COMPARE(layer.style<StyleIndex>(dataWhite), data.dynamicAnimated ? StyleIndex(StyleCount + 0) : StyleIndex::White);
+        /* No change to the fallthrough node */
+        CORRADE_COMPARE(layer.style<StyleIndex>(dataFallthrough), StyleIndex::Green);
         CORRADE_COMPARE(layer.state(), LayerStates{});
     } {
         PointerEvent event{{}, PointerEventSource::Pen, Pointer::Pen, true, 0};
         CORRADE_VERIFY(ui.pointerReleaseEvent({5.5f, 4.5f}, event));
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(layer.style<StyleIndex>(dataWhite), data.dynamicAnimated ? StyleIndex(StyleCount + 0) : StyleIndex::White);
+        /* No change to the fallthrough node */
+        CORRADE_COMPARE(layer.style<StyleIndex>(dataFallthrough), StyleIndex::Green);
         CORRADE_COMPARE(layer.state(), LayerStates{});
     }
 
@@ -2662,12 +2758,16 @@ void AbstractVisualLayerTest::eventStyleTransition() {
         CORRADE_VERIFY(ui.focusEvent(nodeRed, event));
         CORRADE_COMPARE(ui.currentFocusedNode(), nodeRed);
         CORRADE_COMPARE(layer.style<StyleIndex>(dataRed), data.dynamicAnimated ? StyleIndex(StyleCount + 0) : StyleIndex::Red);
+        /* No change to the fallthrough node */
+        CORRADE_COMPARE(layer.style<StyleIndex>(dataFallthrough), StyleIndex::Green);
         CORRADE_COMPARE(layer.state(), LayerStates{});
     } {
         FocusEvent event{{}};
         CORRADE_VERIFY(!ui.focusEvent(NodeHandle::Null, event));
         CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
         CORRADE_COMPARE(layer.style<StyleIndex>(dataRed), data.dynamicAnimated ? StyleIndex(StyleCount + 0) : StyleIndex::Red);
+        /* No change to the fallthrough node */
+        CORRADE_COMPARE(layer.style<StyleIndex>(dataFallthrough), StyleIndex::Green);
         CORRADE_COMPARE(layer.state(), LayerStates{});
     }
 }

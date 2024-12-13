@@ -358,11 +358,12 @@ UnsignedInt AbstractVisualLayer::styleOrAnimationTargetStyle(const UnsignedInt s
 }
 
 void AbstractVisualLayer::doPointerPressEvent(const UnsignedInt dataId, PointerEvent& event) {
-    /* Only reacting to primary pointer types typically used to click/tap on
-       things */
-    if(!event.isPrimary() || (event.pointer() != Pointer::MouseLeft &&
-                              event.pointer() != Pointer::Finger &&
-                              event.pointer() != Pointer::Pen))
+    /* Not dealing with fallthrough events; only reacting to primary pointer
+       types typically used to click/tap on things */
+    if(event.isFallthrough() || !event.isPrimary() ||
+        (event.pointer() != Pointer::MouseLeft &&
+         event.pointer() != Pointer::Finger &&
+         event.pointer() != Pointer::Pen))
         return;
 
     const State& state = *_state;
@@ -400,11 +401,12 @@ void AbstractVisualLayer::doPointerPressEvent(const UnsignedInt dataId, PointerE
 }
 
 void AbstractVisualLayer::doPointerReleaseEvent(const UnsignedInt dataId, PointerEvent& event) {
-    /* Only reacting to primary pointer types typically used to click/tap on
-       things */
-    if(!event.isPrimary() || (event.pointer() != Pointer::MouseLeft &&
-                              event.pointer() != Pointer::Finger &&
-                              event.pointer() != Pointer::Pen))
+    /* Not dealing with fallthrough events; only reacting to primary pointer
+       types typically used to click/tap on things */
+    if(event.isFallthrough() || !event.isPrimary() ||
+        (event.pointer() != Pointer::MouseLeft &&
+         event.pointer() != Pointer::Finger &&
+         event.pointer() != Pointer::Pen))
         return;
 
     const State& state = *_state;
@@ -445,8 +447,9 @@ void AbstractVisualLayer::doPointerReleaseEvent(const UnsignedInt dataId, Pointe
 }
 
 void AbstractVisualLayer::doPointerMoveEvent(UnsignedInt, PointerMoveEvent& event) {
-    /* Only reacting to primary pointer types */
-    if(!event.isPrimary())
+    /* Not dealing with fallthrough events; only reacting to primary pointer
+       types */
+    if(event.isFallthrough() || !event.isPrimary())
         return;
 
     /* In order to have Enter/Leave emitted as well */
@@ -454,6 +457,10 @@ void AbstractVisualLayer::doPointerMoveEvent(UnsignedInt, PointerMoveEvent& even
 }
 
 void AbstractVisualLayer::doPointerEnterEvent(const UnsignedInt dataId, PointerMoveEvent& event) {
+    /* Right now, fallthrough enter/leave events are not sent by anything, so
+       just assume they never arrive */
+    CORRADE_INTERNAL_DEBUG_ASSERT(!event.isFallthrough());
+
     const State& state = *_state;
     const Shared::State& sharedState = state.shared;
     CORRADE_INTERNAL_DEBUG_ASSERT(state.styles.size() == capacity());
@@ -483,6 +490,10 @@ void AbstractVisualLayer::doPointerEnterEvent(const UnsignedInt dataId, PointerM
 }
 
 void AbstractVisualLayer::doPointerLeaveEvent(const UnsignedInt dataId, PointerMoveEvent& event) {
+    /* Right now, fallthrough enter/leave events are not sent by anything, so
+       just assume they never arrive */
+    CORRADE_INTERNAL_DEBUG_ASSERT(!event.isFallthrough());
+
     const State& state = *_state;
     const Shared::State& sharedState = state.shared;
     CORRADE_INTERNAL_DEBUG_ASSERT(state.styles.size() == capacity());
