@@ -95,6 +95,7 @@ struct EventLayerTest: TestSuite::Tester {
     void pinchReset();
     void pinchPressMoveRelease();
     void pinchFromUserInterface();
+    void pinchFromUserInterfaceMultipleHandlers();
     void pinchAndDragFromUserInterface();
 
     void enter();
@@ -354,7 +355,8 @@ EventLayerTest::EventLayerTest() {
     addInstancedTests({&EventLayerTest::pinchFromUserInterface},
         Containers::arraySize(FromUserInterfaceData));
 
-    addTests({&EventLayerTest::pinchAndDragFromUserInterface,
+    addTests({&EventLayerTest::pinchFromUserInterfaceMultipleHandlers,
+              &EventLayerTest::pinchAndDragFromUserInterface,
 
               &EventLayerTest::enter,
               &EventLayerTest::enterMove,
@@ -2830,6 +2832,44 @@ void EventLayerTest::pinchFromUserInterface() {
         CORRADE_COMPARE(ui.currentCapturedNode(), node2);
         CORRADE_COMPARE(called, 4);
         CORRADE_COMPARE(belowCalled, 0);
+    }
+}
+
+void EventLayerTest::pinchFromUserInterfaceMultipleHandlers() {
+    AbstractUserInterface ui{{100, 100}};
+
+    EventLayer& layer = ui.setLayerInstance(Containers::pointer<EventLayer>(ui.createLayer()));
+
+    NodeHandle node = ui.createNode({25, 50}, {50, 25});
+
+    /* With just one handler it gets called alright */
+    Int called1 = 0;
+    layer.onPinch(node, [&called1](const Vector2&, const Vector2&, const Complex&, Float) {
+        ++called1;
+    });
+    {
+        PointerEvent press1{{}, PointerEventSource::Touch, Pointer::Finger, true, 633};
+        PointerEvent press2{{}, PointerEventSource::Touch, Pointer::Finger, false, 3371};
+        PointerMoveEvent move{{}, PointerEventSource::Touch, {}, {}, false, 3371};
+        CORRADE_VERIFY(ui.pointerPressEvent({50, 70}, press1));
+        CORRADE_VERIFY(ui.pointerPressEvent({50, 75}, press2));
+        CORRADE_VERIFY(ui.pointerMoveEvent({50, 65}, move));
+        CORRADE_COMPARE(called1, 1);
+    }
+
+    /* Second handler on the same node breaks it because it's currently tracked
+       on a data ID and not a node ID */
+    Int called2 = 0;
+    layer.onPinch(node, [&called2](const Vector2&, const Vector2&, const Complex&, Float) {
+        ++called2;
+    });
+    {
+        PointerMoveEvent move{{}, PointerEventSource::Touch, {}, {}, false, 3371};
+
+        CORRADE_EXPECT_FAIL("Multiple onPinch() handlers on the same node conflict with each other, causing nothing to be sent.");
+        CORRADE_VERIFY(ui.pointerMoveEvent({50, 75}, move));
+        CORRADE_COMPARE(called1, 2);
+        CORRADE_COMPARE(called2, 1);
     }
 }
 

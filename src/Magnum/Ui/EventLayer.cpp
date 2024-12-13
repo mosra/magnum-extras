@@ -77,6 +77,9 @@ struct EventLayer::State {
     Containers::Array<Data> data;
 
     Platform::TwoFingerGesture twoFingerGesture;
+    /** @todo remember the node instead of data, once the event handling is
+        reworked to be called for all data attached to given node at once, to
+        allow multiple onPinch() associated with the same node */
     UnsignedInt twoFingerGestureData = ~UnsignedInt{};
 
     UnsignedInt usedScopedConnectionCount = 0;
