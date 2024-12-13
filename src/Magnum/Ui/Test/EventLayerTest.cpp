@@ -2341,8 +2341,9 @@ void EventLayerTest::pinchReset() {
         layer.pointerMoveEvent(dataHandleId(first), move);
         CORRADE_COMPARE(firstCalled, 1);
 
-    /* A mouse or pen press, move, release or visibility lost on the second
-       should be independent and not result in the gesture being reset */
+    /* A mouse or pen press, move, release, cancel or visibility lost on the
+       second should be independent and not result in the gesture being
+       reset */
     } {
         /* Matching ID shouldn't cause any problem either */
         PointerEvent mousePress{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 36};
@@ -2351,6 +2352,7 @@ void EventLayerTest::pinchReset() {
         PointerEvent penPress{{}, PointerEventSource::Pen, Pointer::Pen, true, 36};
         PointerMoveEvent penMove{{}, PointerEventSource::Mouse, {}, {}, true, 36};
         PointerEvent penRelease{{}, PointerEventSource::Pen, Pointer::Pen, true, 36};
+        PointerCancelEvent cancel{{}};
         VisibilityLostEvent visibilityLost;
         layer.pointerPressEvent(dataHandleId(second), mousePress);
         layer.pointerMoveEvent(dataHandleId(second), mouseMove);
@@ -2358,6 +2360,7 @@ void EventLayerTest::pinchReset() {
         layer.pointerPressEvent(dataHandleId(second), penPress);
         layer.pointerMoveEvent(dataHandleId(second), penMove);
         layer.pointerReleaseEvent(dataHandleId(second), penRelease);
+        layer.pointerCancelEvent(dataHandleId(second), cancel);
         layer.visibilityLostEvent(dataHandleId(second), visibilityLost);
         CORRADE_COMPARE(firstCalled, 1);
 
@@ -2408,7 +2411,7 @@ void EventLayerTest::pinchReset() {
         layer.pointerMoveEvent(dataHandleId(first), move2);
         CORRADE_COMPARE(firstCalled, 4);
 
-    /* And a release also */
+    /* And a finger release on the second also */
     } {
         /* Even a different ID should reset it */
         PointerEvent fingerRelease{{}, PointerEventSource::Touch, Pointer::Finger, false, 22};
@@ -2429,10 +2432,10 @@ void EventLayerTest::pinchReset() {
         layer.pointerMoveEvent(dataHandleId(first), move2);
         CORRADE_COMPARE(firstCalled, 5);
 
-    /* Visibility lost event resets as well */
+    /* Cancel on the same data ID resets */
     } {
-        VisibilityLostEvent lost;
-        layer.visibilityLostEvent(dataHandleId(first), lost);
+        PointerCancelEvent cancel{{}};
+        layer.pointerCancelEvent(dataHandleId(first), cancel);
         CORRADE_COMPARE(firstCalled, 5);
 
         /* Slot no longer triggered on the next move on the first */
@@ -2448,6 +2451,26 @@ void EventLayerTest::pinchReset() {
         layer.pointerPressEvent(dataHandleId(first), secondary);
         layer.pointerMoveEvent(dataHandleId(first), move2);
         CORRADE_COMPARE(firstCalled, 6);
+
+    /* Visibility lost event resets as well */
+    } {
+        VisibilityLostEvent lost;
+        layer.visibilityLostEvent(dataHandleId(first), lost);
+        CORRADE_COMPARE(firstCalled, 6);
+
+        /* Slot no longer triggered on the next move on the first */
+        PointerMoveEvent move1{{}, PointerEventSource::Touch, {}, Pointer::Finger, true, 36};
+        layer.pointerMoveEvent(dataHandleId(first), move1);
+        CORRADE_COMPARE(firstCalled, 6);
+
+        /* The gesture needs to be fully recognized on the first again */
+        PointerEvent primary{{}, PointerEventSource::Touch, Pointer::Finger, true, 36};
+        PointerEvent secondary{{}, PointerEventSource::Touch, Pointer::Finger, false, 17};
+        PointerMoveEvent move2{{}, PointerEventSource::Touch, {}, Pointer::Finger, true, 36};
+        layer.pointerPressEvent(dataHandleId(first), primary);
+        layer.pointerPressEvent(dataHandleId(first), secondary);
+        layer.pointerMoveEvent(dataHandleId(first), move2);
+        CORRADE_COMPARE(firstCalled, 7);
 
     /* If the data is removed and created again with the same ID, it gets reset
        also. Transitive data removal due to the node being removed is tested in
@@ -2466,7 +2489,7 @@ void EventLayerTest::pinchReset() {
         /* Slot no longer triggered on the next move on the first */
         PointerMoveEvent move1{{}, PointerEventSource::Touch, {}, Pointer::Finger, true, 36};
         layer.pointerMoveEvent(dataHandleId(first2), move1);
-        CORRADE_COMPARE(firstCalled, 6);
+        CORRADE_COMPARE(firstCalled, 7);
 
         /* The gesture needs to be fully recognized on the first again */
         PointerEvent primary{{}, PointerEventSource::Touch, Pointer::Finger, true, 36};
@@ -2475,7 +2498,7 @@ void EventLayerTest::pinchReset() {
         layer.pointerPressEvent(dataHandleId(first2), primary);
         layer.pointerPressEvent(dataHandleId(first2), secondary);
         layer.pointerMoveEvent(dataHandleId(first2), move2);
-        CORRADE_COMPARE(firstCalled, 7);
+        CORRADE_COMPARE(firstCalled, 8);
     }
 }
 

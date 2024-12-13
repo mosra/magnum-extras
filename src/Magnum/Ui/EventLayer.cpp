@@ -657,6 +657,18 @@ void EventLayer::doPointerLeaveEvent(const UnsignedInt dataId, PointerMoveEvent&
     }
 }
 
+void EventLayer::doPointerCancelEvent(const UnsignedInt dataId, PointerCancelEvent&) {
+    State& state = *_state;
+    Data& data = state.data[dataId];
+
+    /* If pointer event was cancelled for data for which a gesture is tracked,
+       reset it */
+    if(data.eventType == Implementation::EventType::Pinch && state.twoFingerGestureData == dataId) {
+        state.twoFingerGestureData = ~UnsignedInt{};
+        state.twoFingerGesture = Platform::TwoFingerGesture{};
+    }
+}
+
 void EventLayer::doFocusEvent(const UnsignedInt dataId, FocusEvent& event) {
     Data& data = _state->data[dataId];
     if(data.eventType == Implementation::EventType::Focus) {
