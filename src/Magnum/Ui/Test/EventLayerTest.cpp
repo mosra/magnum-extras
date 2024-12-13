@@ -95,6 +95,7 @@ struct EventLayerTest: TestSuite::Tester {
     void pinchReset();
     void pinchPressMoveRelease();
     void pinchFromUserInterface();
+    void pinchAndDragFromUserInterface();
 
     void enter();
     void enterMove();
@@ -330,6 +331,7 @@ EventLayerTest::EventLayerTest() {
               &EventLayerTest::pinchReset,
               &EventLayerTest::pinchPressMoveRelease,
               &EventLayerTest::pinchFromUserInterface,
+              &EventLayerTest::pinchAndDragFromUserInterface,
 
               &EventLayerTest::enter,
               &EventLayerTest::enterMove,
@@ -2748,6 +2750,84 @@ void EventLayerTest::pinchFromUserInterface() {
         CORRADE_COMPARE(ui.currentCapturedNode(), node2);
         CORRADE_COMPARE(called, 4);
         CORRADE_COMPARE(belowCalled, 0);
+    }
+}
+
+void EventLayerTest::pinchAndDragFromUserInterface() {
+    /* Verifies that if a node has both onDrag() and onPinch(), it doesn't get
+       both */
+
+    AbstractUserInterface ui{{100, 100}};
+
+    EventLayer& layer = ui.setLayerInstance(Containers::pointer<EventLayer>(ui.createLayer()));
+
+    NodeHandle node = ui.createNode({25, 50}, {50, 25});
+
+    Int pinchCalled = 0;
+    Int dragCalled = 0;
+    layer.onPinch(node, [&pinchCalled](const Vector2&, const Vector2&, const Complex&, Float){
+        ++pinchCalled;
+    });
+    layer.onDrag(node, [&dragCalled](const Vector2&){
+        ++dragCalled;
+    });
+
+    /* A press and a move of one finger calls the drag */
+    {
+        PointerEvent press1{{}, PointerEventSource::Touch, Pointer::Finger, true, 633};
+        CORRADE_VERIFY(ui.pointerPressEvent({50, 70}, press1));
+        CORRADE_COMPARE(pinchCalled, 0);
+        CORRADE_COMPARE(dragCalled, 0);
+
+        PointerMoveEvent move1{{}, PointerEventSource::Touch, {}, Pointer::Finger, true, 633};
+        CORRADE_VERIFY(ui.pointerMoveEvent({50, 65}, move1));
+        CORRADE_COMPARE(pinchCalled, 0);
+        CORRADE_COMPARE(dragCalled, 1);
+
+    /* A press and move of another finger calls the pinch. Since it's a
+       secondary finger, it won't call the drag. */
+    } {
+        PointerEvent press2{{}, PointerEventSource::Touch, Pointer::Finger, false, 3371};
+        CORRADE_VERIFY(ui.pointerPressEvent({50, 75}, press2));
+        CORRADE_COMPARE(pinchCalled, 0);
+        CORRADE_COMPARE(dragCalled, 1);
+
+        PointerMoveEvent move2{{}, PointerEventSource::Touch, {}, Pointer::Finger, false, 3371};
+        CORRADE_VERIFY(ui.pointerMoveEvent({50, 70}, move2));
+        CORRADE_COMPARE(pinchCalled, 1);
+        CORRADE_COMPARE(dragCalled, 1);
+
+    /* A move of the first finger should calls the pinch again, but not drag */
+    } {
+        PointerMoveEvent move1{{}, PointerEventSource::Touch, {}, Pointer::Finger, true, 633};
+        CORRADE_VERIFY(ui.pointerMoveEvent({50, 60}, move1));
+        CORRADE_COMPARE(pinchCalled, 2);
+        CORRADE_COMPARE(dragCalled, 1);
+
+    /* A release of the second finger and a move of the first calls the drag */
+    } {
+        PointerEvent release2{{}, PointerEventSource::Touch, Pointer::Finger, false, 3371};
+        CORRADE_VERIFY(ui.pointerReleaseEvent({50, 60}, release2));
+        CORRADE_COMPARE(pinchCalled, 2);
+        CORRADE_COMPARE(dragCalled, 1);
+
+        PointerMoveEvent move1{{}, PointerEventSource::Touch, {}, Pointer::Finger, true, 633};
+        CORRADE_VERIFY(ui.pointerMoveEvent({50, 60}, move1));
+        CORRADE_COMPARE(pinchCalled, 2);
+        CORRADE_COMPARE(dragCalled, 2);
+
+    /* A press and move of yet another secondary finger again calls the
+       pinch */
+    } {
+        PointerEvent press2{{}, PointerEventSource::Touch, Pointer::Finger, false, 1221};
+        CORRADE_VERIFY(ui.pointerPressEvent({50, 75}, press2));
+        CORRADE_COMPARE(pinchCalled, 2);
+        CORRADE_COMPARE(dragCalled, 2);
+
+        PointerMoveEvent move2{{}, PointerEventSource::Touch, {}, Pointer::Finger, false, 1221};
+        CORRADE_VERIFY(ui.pointerMoveEvent({50, 70}, move2));
+        CORRADE_COMPARE(pinchCalled, 3);
+        CORRADE_COMPARE(dragCalled, 2);
     }
 }
 
