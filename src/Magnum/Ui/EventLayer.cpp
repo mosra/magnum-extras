@@ -443,6 +443,10 @@ void EventLayer::doPointerPressEvent(const UnsignedInt dataId, PointerEvent& eve
     State& state = *_state;
     Data& data = state.data[dataId];
 
+    /* Not dealing with fallthrough events */
+    if(event.isFallthrough())
+        return;
+
     /* If there's a pinch, feed the gesture recognition */
     /** @todo what's the desired behavior when the underlying node position is
         animated? if the gesture would be recognized globally, only the final
@@ -518,6 +522,10 @@ void EventLayer::doPointerReleaseEvent(const UnsignedInt dataId, PointerEvent& e
     State& state = *_state;
     Data& data = state.data[dataId];
 
+    /* Not dealing with fallthrough events */
+    if(event.isFallthrough())
+        return;
+
     /* If there's a pinch, feed the gesture recognition. Same logic as in
        doPointerPressEvent(), see above for details. */
     if(data.eventType == Implementation::EventType::Pinch) {
@@ -567,6 +575,10 @@ void EventLayer::doPointerReleaseEvent(const UnsignedInt dataId, PointerEvent& e
 void EventLayer::doPointerMoveEvent(const UnsignedInt dataId, PointerMoveEvent& event) {
     State& state = *_state;
     Data& data = state.data[dataId];
+
+    /* Not dealing with fallthrough events */
+    if(event.isFallthrough())
+        return;
 
     /* If there's a pinch, feed the gesture recognition. Same initial logic as
        in doPointerPressEvent() and doPointerReleaseEvent(), see above for
@@ -618,6 +630,10 @@ void EventLayer::doPointerMoveEvent(const UnsignedInt dataId, PointerMoveEvent& 
 void EventLayer::doPointerEnterEvent(const UnsignedInt dataId, PointerMoveEvent& event) {
     /* event is guaranteed to be primary by AbstractLayer */
 
+    /* Right now, fallthrough enter/leave events are not sent by anything, so
+       just assume they never arrive */
+    CORRADE_INTERNAL_DEBUG_ASSERT(!event.isFallthrough());
+
     Data& data = _state->data[dataId];
     if(data.eventType == Implementation::EventType::Enter) {
         reinterpret_cast<void(*)(Containers::FunctionData&, const PointerMoveEvent&)>(data.call)(data.slot, event);
@@ -628,6 +644,10 @@ void EventLayer::doPointerEnterEvent(const UnsignedInt dataId, PointerMoveEvent&
 
 void EventLayer::doPointerLeaveEvent(const UnsignedInt dataId, PointerMoveEvent& event) {
     /* event is guaranteed to be primary by AbstractLayer */
+
+    /* Right now, fallthrough enter/leave events are not sent by anything, so
+       just assume they never arrive */
+    CORRADE_INTERNAL_DEBUG_ASSERT(!event.isFallthrough());
 
     Data& data = _state->data[dataId];
     if(data.eventType == Implementation::EventType::Leave) {

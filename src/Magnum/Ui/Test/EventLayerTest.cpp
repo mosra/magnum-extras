@@ -260,6 +260,16 @@ const struct {
 
 const struct {
     const char* name;
+    NodeFlags flags;
+    bool parent;
+} FromUserInterfaceData[]{
+    {"with a node below", {}, false},
+    {"with a fallthrough parent node",
+        NodeFlag::FallthroughPointerEvents, true}
+};
+
+const struct {
+    const char* name;
     DataHandle(EventLayer::*call)(NodeHandle, Containers::Function<void()>&&);
     PointerEventSource source;
     Pointer pointer;
@@ -305,43 +315,60 @@ EventLayerTest::EventLayerTest() {
 
               &EventLayerTest::press,
               &EventLayerTest::release,
-              &EventLayerTest::releasePress,
-              &EventLayerTest::pressReleaseFromUserInterface,
+              &EventLayerTest::releasePress});
 
-              &EventLayerTest::tapOrClick,
-              &EventLayerTest::tapOrClickPress,
-              &EventLayerTest::tapOrClickFromUserInterface,
+    addInstancedTests({&EventLayerTest::pressReleaseFromUserInterface},
+        Containers::arraySize(FromUserInterfaceData));
 
-              &EventLayerTest::middleClick,
-              &EventLayerTest::middleClickPress,
-              &EventLayerTest::middleClickFromUserInterface,
+    addTests({&EventLayerTest::tapOrClick,
+              &EventLayerTest::tapOrClickPress});
 
-              &EventLayerTest::rightClick,
-              &EventLayerTest::rightClickPress,
-              &EventLayerTest::rightClickFromUserInterface});
+    addInstancedTests({&EventLayerTest::tapOrClickFromUserInterface},
+        Containers::arraySize(FromUserInterfaceData));
+
+    addTests({&EventLayerTest::middleClick,
+              &EventLayerTest::middleClickPress});
+
+    addInstancedTests({&EventLayerTest::middleClickFromUserInterface},
+        Containers::arraySize(FromUserInterfaceData));
+
+    addTests({&EventLayerTest::rightClick,
+              &EventLayerTest::rightClickPress});
+
+    addInstancedTests({&EventLayerTest::rightClickFromUserInterface},
+        Containers::arraySize(FromUserInterfaceData));
 
     addInstancedTests({&EventLayerTest::tapOrClickMiddleClickRightClickEdges},
         Containers::arraySize(TapOrClickMiddleClickRightClickEdgesData));
 
     addTests({&EventLayerTest::drag,
-              &EventLayerTest::dragPress,
-              &EventLayerTest::dragFromUserInterface,
+              &EventLayerTest::dragPress});
 
-              &EventLayerTest::pinch,
+    addInstancedTests({&EventLayerTest::dragFromUserInterface},
+        Containers::arraySize(FromUserInterfaceData));
+
+    addTests({&EventLayerTest::pinch,
               &EventLayerTest::pinchReset,
-              &EventLayerTest::pinchPressMoveRelease,
-              &EventLayerTest::pinchFromUserInterface,
-              &EventLayerTest::pinchAndDragFromUserInterface,
+              &EventLayerTest::pinchPressMoveRelease});
+
+    addInstancedTests({&EventLayerTest::pinchFromUserInterface},
+        Containers::arraySize(FromUserInterfaceData));
+
+    addTests({&EventLayerTest::pinchAndDragFromUserInterface,
 
               &EventLayerTest::enter,
               &EventLayerTest::enterMove,
               &EventLayerTest::leave,
-              &EventLayerTest::leaveMove,
-              &EventLayerTest::enterLeaveFromUserInterface,
+              &EventLayerTest::leaveMove});
 
-              &EventLayerTest::focus,
-              &EventLayerTest::blur,
-              &EventLayerTest::focusBlurFromUserInterface});
+    addInstancedTests({&EventLayerTest::enterLeaveFromUserInterface},
+        Containers::arraySize(FromUserInterfaceData));
+
+    addTests({&EventLayerTest::focus,
+              &EventLayerTest::blur});
+
+    addInstancedTests({&EventLayerTest::focusBlurFromUserInterface},
+        Containers::arraySize(FromUserInterfaceData));
 }
 
 void EventLayerTest::eventConnectionConstruct() {
@@ -1081,6 +1108,9 @@ void EventLayerTest::releasePress() {
 }
 
 void EventLayerTest::pressReleaseFromUserInterface() {
+    auto&& data = FromUserInterfaceData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
     /* "Integration" test to verify onPress() and onRelease() behavior with the
        whole event pipeline in AbstractUserInterface.
 
@@ -1095,7 +1125,7 @@ void EventLayerTest::pressReleaseFromUserInterface() {
     /* A node below the one that should react to the tap or click event,
        accepting presses. Shouldn't get considered at all. */
     Int belowCalled = 0;
-    NodeHandle nodeBelow = ui.createNode({}, {100, 100});
+    NodeHandle nodeBelow = ui.createNode({}, {100, 100}, data.flags);
     layer.onPress(nodeBelow, [&belowCalled]{
         ++belowCalled;
     });
@@ -1105,7 +1135,9 @@ void EventLayerTest::pressReleaseFromUserInterface() {
 
     Int pressCalled = 0, pressPositionCalled = 0,
         releaseCalled = 0, releasePositionCalled = 0;
-    NodeHandle node = ui.createNode({25, 50}, {50, 25});
+    NodeHandle node = ui.createNode(
+        data.parent ? nodeBelow : NodeHandle::Null,
+        {25, 50}, {50, 25});
     layer.onPress(node, [&pressCalled]{
         ++pressCalled;
     });
@@ -1312,6 +1344,9 @@ void EventLayerTest::tapOrClickPress() {
 }
 
 void EventLayerTest::tapOrClickFromUserInterface() {
+    auto&& data = FromUserInterfaceData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
     /* "Integration" test to verify onTapOrClick() behavior with the whole
        event pipeline in AbstractUserInterface */
 
@@ -1322,13 +1357,15 @@ void EventLayerTest::tapOrClickFromUserInterface() {
     /* A node below the one that should react to the tap or click event,
        accepting presses. Shouldn't get considered at all. */
     Int belowCalled = 0;
-    NodeHandle nodeBelow = ui.createNode({}, {100, 100});
+    NodeHandle nodeBelow = ui.createNode({}, {100, 100}, data.flags);
     layer.onPress(nodeBelow, [&belowCalled]{
         ++belowCalled;
     });
 
     Int called = 0, positionCalled = 0;
-    NodeHandle node = ui.createNode({25, 50}, {50, 25});
+    NodeHandle node = ui.createNode(
+        data.parent ? nodeBelow : NodeHandle::Null,
+        {25, 50}, {50, 25});
     layer.onTapOrClick(node, [&called]{
         ++called;
     });
@@ -1538,6 +1575,9 @@ void EventLayerTest::middleClickPress() {
 }
 
 void EventLayerTest::middleClickFromUserInterface() {
+    auto&& data = FromUserInterfaceData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
     /* "Integration" test to verify onTapOrClick() behavior with the whole
        event pipeline in AbstractUserInterface */
 
@@ -1548,13 +1588,15 @@ void EventLayerTest::middleClickFromUserInterface() {
     /* A node below the one that should react to the middle click event,
        accepting presses. Shouldn't get considered at all. */
     Int belowCalled = 0;
-    NodeHandle nodeBelow = ui.createNode({}, {100, 100});
+    NodeHandle nodeBelow = ui.createNode({}, {100, 100}, data.flags);
     layer.onPress(nodeBelow, [&belowCalled]{
         ++belowCalled;
     });
 
     Int called = 0, positionCalled = 0;
-    NodeHandle node = ui.createNode({25, 50}, {50, 25});
+    NodeHandle node = ui.createNode(
+        data.parent ? nodeBelow : NodeHandle::Null,
+        {25, 50}, {50, 25});
     layer.onMiddleClick(node, [&called]{
         ++called;
     });
@@ -1757,6 +1799,9 @@ void EventLayerTest::rightClickPress() {
 }
 
 void EventLayerTest::rightClickFromUserInterface() {
+    auto&& data = FromUserInterfaceData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
     /* "Integration" test to verify onTapOrClick() behavior with the whole
        event pipeline in AbstractUserInterface */
 
@@ -1767,13 +1812,15 @@ void EventLayerTest::rightClickFromUserInterface() {
     /* A node below the one that should react to the right click event,
        accepting presses. Shouldn't get considered at all. */
     Int belowCalled = 0;
-    NodeHandle nodeBelow = ui.createNode({}, {100, 100});
+    NodeHandle nodeBelow = ui.createNode({}, {100, 100}, data.flags);
     layer.onPress(nodeBelow, [&belowCalled]{
         ++belowCalled;
     });
 
     Int called = 0, positionCalled = 0;
-    NodeHandle node = ui.createNode({25, 50}, {50, 25});
+    NodeHandle node = ui.createNode(
+        data.parent ? nodeBelow : NodeHandle::Null,
+        {25, 50}, {50, 25});
     layer.onRightClick(node, [&called]{
         ++called;
     });
@@ -2087,6 +2134,9 @@ void EventLayerTest::dragPress() {
 }
 
 void EventLayerTest::dragFromUserInterface() {
+    auto&& data = FromUserInterfaceData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
     /* "Integration" test to verify onDrag() behavior with the whole event
        pipeline in AbstractUserInterface */
 
@@ -2097,12 +2147,14 @@ void EventLayerTest::dragFromUserInterface() {
     /* A node below the one that should react to the drag event, accepting
        presses. Shouldn't get considered at all. */
     Int belowCalled = 0;
-    NodeHandle nodeBelow = ui.createNode({}, {100, 100});
+    NodeHandle nodeBelow = ui.createNode({}, {100, 100}, data.flags);
     layer.onPress(nodeBelow, [&belowCalled]{
         ++belowCalled;
     });
 
-    NodeHandle node = ui.createNode({25, 50}, {50, 25});
+    NodeHandle node = ui.createNode(
+        data.parent ? nodeBelow : NodeHandle::Null,
+        {25, 50}, {50, 25});
 
     Int called = 0, positionCalled = 0;
     layer.onDrag(node, [&called](const Vector2& relativePosition) {
@@ -2549,6 +2601,9 @@ void EventLayerTest::pinchPressMoveRelease() {
 }
 
 void EventLayerTest::pinchFromUserInterface() {
+    auto&& data = FromUserInterfaceData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
     /* "Integration" test to verify onDrag() behavior with the whole event
        pipeline in AbstractUserInterface */
 
@@ -2559,7 +2614,7 @@ void EventLayerTest::pinchFromUserInterface() {
     /* A node below the one that should react to the drag event, accepting
        presses, moves and releases. Shouldn't get considered at all. */
     Int belowCalled = 0;
-    NodeHandle nodeBelow = ui.createNode({}, {100, 100});
+    NodeHandle nodeBelow = ui.createNode({}, {100, 100}, data.flags);
     layer.onPress(nodeBelow, [&belowCalled]{
         ++belowCalled;
     });
@@ -2570,7 +2625,9 @@ void EventLayerTest::pinchFromUserInterface() {
         ++belowCalled;
     });
 
-    NodeHandle node = ui.createNode({25, 50}, {50, 25});
+    NodeHandle node = ui.createNode(
+        data.parent ? nodeBelow : NodeHandle::Null,
+        {25, 50}, {50, 25});
 
     Int called = 0;
     struct {
@@ -2579,7 +2636,7 @@ void EventLayerTest::pinchFromUserInterface() {
         Complex relativeRotation;
         Float relativeScaling;
     } expected;
-    DataHandle data = layer.onPinch(node, [&called, &expected](const Vector2& position, const Vector2& relativeTranslation, const Complex& relativeRotation, Float relativeScaling) {
+    DataHandle nodeData = layer.onPinch(node, [&called, &expected](const Vector2& position, const Vector2& relativeTranslation, const Complex& relativeRotation, Float relativeScaling) {
         CORRADE_COMPARE(position, expected.position);
         CORRADE_COMPARE(relativeTranslation, expected.relativeTranslation);
         CORRADE_COMPARE(relativeRotation, expected.relativeRotation);
@@ -2714,14 +2771,14 @@ void EventLayerTest::pinchFromUserInterface() {
         ui.update();
 
         NodeHandle node2 = ui.createNode({25, 50}, {50, 25});
-        DataHandle data2 = layer.onPinch(node2, [&called, &expected](const Vector2& position, const Vector2& relativeTranslation, const Complex& relativeRotation, Float relativeScaling) {
+        DataHandle nodeData2 = layer.onPinch(node2, [&called, &expected](const Vector2& position, const Vector2& relativeTranslation, const Complex& relativeRotation, Float relativeScaling) {
             CORRADE_COMPARE(position, expected.position);
             CORRADE_COMPARE(relativeTranslation, expected.relativeTranslation);
             CORRADE_COMPARE(relativeRotation, expected.relativeRotation);
             CORRADE_COMPARE(relativeScaling, expected.relativeScaling);
             ++called;
         });
-        CORRADE_COMPARE(dataHandleId(data2), dataHandleId(data));
+        CORRADE_COMPARE(dataHandleId(nodeData2), dataHandleId(nodeData));
 
         /* Move of the primary finger isn't even accepted now because the
            gesture recognizer doesn't track it as pressed */
@@ -3116,6 +3173,9 @@ void EventLayerTest::leaveMove() {
 }
 
 void EventLayerTest::enterLeaveFromUserInterface() {
+    auto&& data = FromUserInterfaceData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
     /* "Integration" test to verify onEnter() and onLeave() behavior with the
        whole event pipeline in AbstractUserInterface.
 
@@ -3130,7 +3190,7 @@ void EventLayerTest::enterLeaveFromUserInterface() {
     /* A node below the one that should react to the enter/leave event,
        accepting the same. Shouldn't get considered at all. */
     Int belowCalled = 0;
-    NodeHandle nodeBelow = ui.createNode({}, {100, 100});
+    NodeHandle nodeBelow = ui.createNode({}, {100, 100}, data.flags);
     layer.onEnter(nodeBelow, [&belowCalled]{
         ++belowCalled;
     });
@@ -3139,7 +3199,9 @@ void EventLayerTest::enterLeaveFromUserInterface() {
     });
 
     Int enterCalled = 0, leaveCalled = 0;
-    NodeHandle node = ui.createNode({25, 50}, {50, 25});
+    NodeHandle node = ui.createNode(
+        data.parent ? nodeBelow : NodeHandle::Null,
+        {25, 50}, {50, 25});
     layer.onEnter(node, [&enterCalled]{
         ++enterCalled;
     });
@@ -3254,6 +3316,9 @@ void EventLayerTest::blur() {
 }
 
 void EventLayerTest::focusBlurFromUserInterface() {
+    auto&& data = FromUserInterfaceData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
     /* "Integration" test to verify onFocus() and onBlur() behavior with the
        whole event pipeline in AbstractUserInterface.
 
@@ -3268,7 +3333,7 @@ void EventLayerTest::focusBlurFromUserInterface() {
     /* A node below the one that should react to the focus/blur event,
        accepting the same. Shouldn't get considered at all. */
     Int belowCalled = 0;
-    NodeHandle nodeBelow = ui.createNode({}, {100, 100}, NodeFlag::Focusable);
+    NodeHandle nodeBelow = ui.createNode({}, {100, 100}, data.flags|NodeFlag::Focusable);
     layer.onFocus(nodeBelow, [&belowCalled]{
         ++belowCalled;
     });
@@ -3277,7 +3342,9 @@ void EventLayerTest::focusBlurFromUserInterface() {
     });
 
     Int focusCalled = 0, blurCalled = 0;
-    NodeHandle node = ui.createNode({25, 50}, {50, 25}, NodeFlag::Focusable);
+    NodeHandle node = ui.createNode(
+        data.parent ? nodeBelow : NodeHandle::Null,
+        {25, 50}, {50, 25}, NodeFlag::Focusable);
     layer.onFocus(node, [&focusCalled]{
         ++focusCalled;
     });
