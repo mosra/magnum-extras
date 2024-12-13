@@ -257,8 +257,14 @@ Ui::EventLayer layer{Ui::layerHandle(0, 1)};
 /* [EventLayer-pinch] */
 Ui::NodeHandle canvas = DOXYGEN_ELLIPSIS({});
 
+layer.onDrag(canvas, [canvas](const Vector2& position, const Vector2& relativePosition) {
+    DOXYGEN_IGNORE(static_cast<void>(position);static_cast<void>(relativePosition);static_cast<void>(canvas);)// Draw ...
+});
 layer.onPinch(canvas, [&ui, canvas](const Vector2&, const Vector2& relativeTranslation, const Complex&, Float) {
     ui.setNodeOffset(canvas, ui.nodeOffset(canvas) + relativeTranslation);
+
+    // Also discard any in-progress draw from onDrag() that may have been made
+    // while just one finger of the two was down ...
 });
 /* [EventLayer-pinch] */
 }

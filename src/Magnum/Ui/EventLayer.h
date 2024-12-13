@@ -498,10 +498,14 @@ class MAGNUM_UI_EXPORT EventLayer: public AbstractLayer {
          * it's called only if the move event is captured on given node.
          * Expects that the @p slot is not @cpp nullptr @ce.
          *
-         * Use @ref onPinch() to handle two-finger gestures. The returned
-         * @ref DataHandle is automatically removed once @p node or any of its
-         * parents is removed, it's the caller responsibility to ensure it
-         * doesn't outlive the state captured in the @p slot. See
+         * Use @ref onPinch() to handle two-finger gestures. In particular, if
+         * @ref onPinch() is handled by the layer as well, only one of
+         * @ref onDrag() and @ref onPinch() is called depending on whether a
+         * two-finger gesture is recognized, never both at the same time.
+         *
+         * The returned @ref DataHandle is automatically removed once @p node
+         * or any of its parents is removed, it's the caller responsibility to
+         * ensure it doesn't outlive the state captured in the @p slot. See
          * @ref onDragScoped() for a scoped alternative.
          * @see @ref Ui-EventLayer-drag, @ref PointerMoveEvent::isPrimary()
          */
@@ -545,7 +549,12 @@ class MAGNUM_UI_EXPORT EventLayer: public AbstractLayer {
          * visibility to events.
          *
          * Use @ref onDrag() to handle a regular single-finger, mouse or pen
-         * drag. The returned @ref DataHandle is automatically removed once
+         * drag. In particular, if @ref onDrag() is handled by the layer as
+         * well, only one of @ref onDrag() and @ref onPinch() is called
+         * depending on whether a two-finger gesture is recognized, never both
+         * at the same time.
+         *
+         * The returned @ref DataHandle is automatically removed once
          * @p node or any of its parents is removed, it's the caller
          * responsibility to ensure it doesn't outlive the state captured in
          * the @p slot. See @ref onPinchScoped() for a scoped alternative.

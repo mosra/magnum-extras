@@ -596,9 +596,13 @@ void EventLayer::doPointerMoveEvent(const UnsignedInt dataId, PointerMoveEvent& 
     if(!event.isPrimary())
         return;
 
+    /* Drag is fired only if the event is captured to exclude drags starting
+       from outside of the node, and also only if a pinch isn't recognized at
+       the same time (for another data on the same node), in which case it'd be
+       stupid to fire both */
     if(data.eventType == Implementation::EventType::Drag &&
         (event.pointers() & (Pointer::MouseLeft|Pointer::Finger|Pointer::Pen)) &&
-        event.isCaptured())
+        event.isCaptured() && !state.twoFingerGesture)
     {
         reinterpret_cast<void(*)(Containers::FunctionData&, const PointerMoveEvent&)>(data.call)(data.slot, event);
         event.setAccepted();
