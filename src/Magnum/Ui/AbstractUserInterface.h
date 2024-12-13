@@ -482,13 +482,14 @@ alternative to recreating a short-lived popup many times over, for example.
 
 @snippet Ui.cpp AbstractUserInterface-nodes-order-clear
 
-Besides the top-level node order, visibility is defined by the hierarchy.
-Parents are always behind their children (so, from the snippet above, the
-`panel` background will be visible underneath the `title` and `content`),
-however there's no order specified between siblings (i.e., one can't rely on
-`title` being drawn before `content` or vice versa). The assumption here is
-that majority of UIs are non-overlapping hierarchies for which such an ordering
-would be a costly extra step without significant benefits.
+In addition to the top-level node order, visibility is defined by the node
+hierarchy. Parents are always behind their children (so, from the snippet
+above, the `panel` background will be visible underneath the `title` and
+`content`), however there's no order specified between siblings (i.e., one
+can't rely on `title` being drawn before `content` or vice versa). The
+assumption here is that majority of UIs are non-overlapping hierarchies for
+which such an ordering would be a costly extra step without significant
+benefits.
 
 @subsubsection Ui-AbstractUserInterface-nodes-order-nested Nested top-level node hierarchies
 

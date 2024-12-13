@@ -42,7 +42,8 @@ namespace Magnum { namespace Ui {
 @brief Node behavior flag
 @m_since_latest
 
-@see @ref NodeFlags, @ref AbstractUserInterface::createNode(),
+@see @ref NodeFlags, @ref Ui-AbstractUserInterface-nodes-flags,
+    @ref AbstractUserInterface::createNode(),
     @ref AbstractUserInterface::nodeFlags(),
     @ref AbstractUserInterface::setNodeFlags(),
     @ref AbstractUserInterface::addNodeFlags(),
@@ -117,6 +118,7 @@ enum class NodeFlag: UnsignedByte {
      *
      * Changing this flag causes
      * @ref UserInterfaceState::NeedsNodeEnabledUpdate to be set.
+     * @see @ref Ui-AbstractUserInterface-events-focus
      */
     Focusable = 1 << 4,
 };
