@@ -244,9 +244,9 @@ Ui::NodeHandle contents = ui.createNode(scrollarea, DOXYGEN_ELLIPSIS({}, {}));
 
 layer.onDrag(scrollbar, [&ui, scrollarea, contents](const Vector2& relativePosition) {
     Vector2 offset = ui.nodeOffset(contents);
-    offset.x() = Math::clamp(offset.y() - relativePosition.y(),
-        0.0f, ui.nodeSize(contents).y() - ui.nodeSize(scrollarea).y());
-    ui.setNodeOffset(scrollarea, offset);
+    offset.y() = Math::clamp(offset.y() - relativePosition.y(),
+        ui.nodeSize(scrollarea).y() - ui.nodeSize(contents).y(), 0.0f);
+    ui.setNodeOffset(contents, offset);
 });
 /* [EventLayer-drag] */
 }
