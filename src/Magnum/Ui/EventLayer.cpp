@@ -82,6 +82,20 @@ struct EventLayer::State {
         allow multiple onPinch() associated with the same node */
     UnsignedInt twoFingerGestureData = ~UnsignedInt{};
 
+    Float dragThresholdSquared = 16.0f*16.0f;
+    /** @todo remember the node instead of data, once the event handling is
+        reworked to be called for all data attached to given node at once, to
+        allow multiple fallthrough onDrag() associated with the same node */
+    UnsignedInt dragFallthroughData = ~UnsignedInt{};
+    /* If dragFallthroughData is not ~UnsignedInt{}, this contains position of
+       the last press for a drag on a fallthrough node. Once the (squared)
+       distance between this and current (fallthrough) move goes over
+       dragThresholdSquared, the event is accapted, causing the fallthrough
+       node to take over it, the onDrag function is called with the whole
+       position, and the dragFallthroughData is reset back to ~UnsignedInt{} to
+       indicate we're not waiting on any threshold anymore. */
+    Vector2 dragFallthroughPosition;
+
     UnsignedInt usedScopedConnectionCount = 0;
 };
 
@@ -152,6 +166,15 @@ UnsignedInt EventLayer::usedAllocatedConnectionCount() const {
             ++count;
 
     return count;
+}
+
+Float EventLayer::dragThreshold() const {
+    return Math::sqrt(_state->dragThresholdSquared);
+}
+
+EventLayer& EventLayer::setDragThreshold(const Float distance) {
+    _state->dragThresholdSquared = distance*distance;
+    return *this;
 }
 
 DataHandle EventLayer::create(const NodeHandle node, const Implementation::EventType eventType, Containers::FunctionData&& slot, void(*call)()) {
@@ -318,10 +341,12 @@ DataHandle EventLayer::onDrag(const NodeHandle node, Containers::Function<void(c
             #ifndef CORRADE_MSVC2015_COMPATIBILITY
             +
             #else
-            static_cast<void(*)(Containers::FunctionData&, const PointerMoveEvent&)>
+            static_cast<void(*)(Containers::FunctionData&, const PointerMoveEvent&, const Vector2&)>
             #endif
-        ([](Containers::FunctionData& slot, const PointerMoveEvent& event) {
-            static_cast<Containers::Function<void(const Vector2&)>&>(slot)(event.relativePosition());
+        ([](Containers::FunctionData& slot, const PointerMoveEvent&, const Vector2& relativePosition) {
+            /* The relative position is supplied custom in case of drag event
+               fallthrough so it cannot be event.relativePosition() */
+            static_cast<Containers::Function<void(const Vector2&)>&>(slot)(relativePosition);
         })));
 }
 
@@ -331,10 +356,12 @@ DataHandle EventLayer::onDrag(const NodeHandle node, Containers::Function<void(c
             #ifndef CORRADE_MSVC2015_COMPATIBILITY
             +
             #else
-            static_cast<void(*)(Containers::FunctionData&, const PointerMoveEvent&)>
+            static_cast<void(*)(Containers::FunctionData&, const PointerMoveEvent&, const Vector2&)>
             #endif
-        ([](Containers::FunctionData& slot, const PointerMoveEvent& event) {
-            static_cast<Containers::Function<void(const Vector2&, const Vector2&)>&>(slot)(event.position(), event.relativePosition());
+        ([](Containers::FunctionData& slot, const PointerMoveEvent& event, const Vector2& relativePosition) {
+            /* The relative position is supplied custom in case of drag event
+               fallthrough so it cannot be event.relativePosition() */
+            static_cast<Containers::Function<void(const Vector2&, const Vector2&)>&>(slot)(event.position(), relativePosition);
         })));
 }
 
@@ -446,7 +473,29 @@ void EventLayer::doPointerPressEvent(const UnsignedInt dataId, PointerEvent& eve
     State& state = *_state;
     Data& data = state.data[dataId];
 
-    /* Not dealing with fallthrough events */
+    /* Handle a *captured* *primary* press of appropriate pointers that precede
+       a drag. Since the move is then converted to a drag only if it's captured
+       as well, it doesn't make sense to accept non-captured presses here. */
+    if(data.eventType == Implementation::EventType::Drag &&
+        event.pointer() & (Pointer::MouseLeft|Pointer::Finger|Pointer::Pen) &&
+        event.isCaptured() && event.isPrimary())
+    {
+        /* If it's a fallthrough event, remember its position but don't accept.
+           We'll accept in doPointerMoveEvent() later if the distance moves
+           sufficiently far, until then it stays captured on the original
+           node */
+        if(event.isFallthrough()) {
+            state.dragFallthroughData = dataId;
+            state.dragFallthroughPosition = event.position();
+
+        /* If not a fallthrough event, accept so it doesn't get propagated
+           further and subsequent moves get directed to the same node. */
+        } else event.setAccepted();
+
+        return;
+    }
+
+    /* All other cases are not dealing with fallthrough events */
     if(event.isFallthrough())
         return;
 
@@ -490,17 +539,6 @@ void EventLayer::doPointerPressEvent(const UnsignedInt dataId, PointerEvent& eve
         event.pointer() & (Pointer::MouseLeft|Pointer::Finger|Pointer::Pen))
     {
         reinterpret_cast<void(*)(Containers::FunctionData&, const PointerEvent&)>(data.call)(data.slot, event);
-        event.setAccepted();
-        return;
-    }
-
-    /* Accept a *captured* press of appropriate pointers that precede a drag.
-       Since the move is then converted to a drag only if it's captured as
-       well, it doesn't make sense to accept non-captured presses here. */
-    if(data.eventType == Implementation::EventType::Drag &&
-        event.pointer() & (Pointer::MouseLeft|Pointer::Finger|Pointer::Pen) &&
-        event.isCaptured())
-    {
         event.setAccepted();
         return;
     }
@@ -579,7 +617,38 @@ void EventLayer::doPointerMoveEvent(const UnsignedInt dataId, PointerMoveEvent& 
     State& state = *_state;
     Data& data = state.data[dataId];
 
-    /* Not dealing with fallthrough events */
+    /* Handle a fallthrough (captured and primary) drag */
+    if(data.eventType == Implementation::EventType::Drag &&
+        (event.pointers() & (Pointer::MouseLeft|Pointer::Finger|Pointer::Pen)) &&
+        event.isCaptured() && event.isPrimary() &&
+        event.isFallthrough()
+    ) {
+        /* If the data ID matches the ID we remembered for the press (and thus
+           the saved position is valid), check if the pointer moved since the
+           press at least the drag threshold. If it did, call the event handler
+           and accept the event. Accepting transfers node capture etc to the
+           fallthrough node, meaning that all following events get sent
+           directly to it afterwards. I.e., the threshold is only for the
+           initial movement, not used again after. If it's not moved enough
+           yet, bail -- maybe next time it will be. */
+        if(state.dragFallthroughData == dataId) {
+            if((state.dragFallthroughPosition - event.position()).dot() >= state.dragThresholdSquared) {
+                reinterpret_cast<void(*)(Containers::FunctionData&, const PointerMoveEvent&, const Vector2&)>(data.call)(data.slot, event, event.position() - state.dragFallthroughPosition);
+                event.setAccepted();
+            } else return;
+        }
+
+        /* Afterwards, i.e. either once the event got accepted, transferring
+           the capture to the fallthrough node, or the drag is happening on
+           some unknown data, reset the remembered state. This is to avoid it
+           being accidentally reused in some accidental edge case (such as
+           moves getting captured) later. */
+        state.dragFallthroughData = ~UnsignedInt{};
+        state.dragFallthroughPosition = {};
+        return;
+    }
+
+    /* All other cases are not dealing with fallthrough events */
     if(event.isFallthrough())
         return;
 
@@ -619,7 +688,7 @@ void EventLayer::doPointerMoveEvent(const UnsignedInt dataId, PointerMoveEvent& 
         (event.pointers() & (Pointer::MouseLeft|Pointer::Finger|Pointer::Pen)) &&
         event.isCaptured() && !state.twoFingerGesture)
     {
-        reinterpret_cast<void(*)(Containers::FunctionData&, const PointerMoveEvent&)>(data.call)(data.slot, event);
+        reinterpret_cast<void(*)(Containers::FunctionData&, const PointerMoveEvent&, const Vector2&)>(data.call)(data.slot, event, event.relativePosition());
         event.setAccepted();
     }
 

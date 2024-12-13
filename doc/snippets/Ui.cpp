@@ -249,6 +249,18 @@ layer.onDrag(scrollbar, [&ui, scrollarea, contents](const Vector2& relativePosit
     ui.setNodeOffset(contents, offset);
 });
 /* [EventLayer-drag] */
+
+/* [EventLayer-drag-to-scroll] */
+layer.onDrag(scrollarea, [&ui, scrollarea, contents](const Vector2& relativePosition) {
+    ui.setNodeOffset(contents, Math::clamp(
+        ui.nodeOffset(contents) + relativePosition,
+        ui.nodeSize(scrollarea) - ui.nodeSize(contents), Vector2{0.0f}));
+});
+/* [EventLayer-drag-to-scroll] */
+
+/* [EventLayer-drag-to-scroll-fallthrough] */
+ui.addNodeFlags(scrollarea, Ui::NodeFlag::FallthroughPointerEvents);
+/* [EventLayer-drag-to-scroll-fallthrough] */
 }
 
 {

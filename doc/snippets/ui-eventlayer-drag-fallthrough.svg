@@ -1,0 +1,25 @@
+<svg style="width: 384px; height: 168px;" viewBox="0 0 101.6 44.45" class="m-image">
+ <g transform="translate(0 -.18563)">
+  <rect x="57.15" y="2.3023" width="42.333" height="31.75" rx="1.0583" ry="1.0583" fill="#dcdcdc" fill-opacity=".74902" stop-color="#000000" style="-inkscape-stroke:none;font-variation-settings:normal"/>
+  <rect x="65.617" y="10.769" width="25.4" height="9.525" rx="1.0583" ry="1.0583" fill="#405363" fill-opacity=".74902"/>
+  <rect x="2.1167" y="2.3023" width="42.333" height="31.75" rx="1.0583" ry="1.0583" fill="#405363" fill-opacity=".74902"/>
+  <text x="23.24312" y="41.299755" fill="#dcdcdc" font-family="'Source Sans Pro'" font-size="4.2333px" stroke-dasharray="0.529, 2.116" stroke-linecap="round" stroke-linejoin="round" stroke-width=".529" text-align="center" text-anchor="middle" style="font-variant-caps:normal;font-variant-east-asian:normal;font-variant-ligatures:normal;font-variant-numeric:normal;line-height:1.25;text-decoration-color:#000000;text-decoration-line:none" xml:space="preserve"><tspan x="23.24312" y="41.299755" font-family="'Source Sans Pro'" font-size="4.2333px" stroke-width=".529" style="font-variant-caps:normal;font-variant-east-asian:normal;font-variant-ligatures:normal;font-variant-numeric:normal">Tap on inner node</tspan></text>
+  <rect x="10.583" y="10.769" width="25.4" height="9.525" rx="1.0583" ry="1.0583" fill="#dcdcdc" fill-opacity=".75"/>
+  <circle cx="18.074" cy="13.659" r="2.1167" fill="#2f83cc" stroke-dasharray="0.529167, 2.11667" stroke-linecap="round" stroke-linejoin="round" stroke-width=".52917"/>
+  <path d="m18.074 13.659c0.59781 1.1248 0.79976 2.8263 1.0581 4.8929" fill="none" stroke="#2f83cc" stroke-linecap="round" stroke-linejoin="round" stroke-width=".52917"/>
+  <g stroke-linecap="round" stroke-linejoin="round">
+   <circle cx="19.526" cy="19.602" r="2.1167" fill="#cd3431" stroke-dasharray="0.529167, 2.11667" stroke-width=".52917"/>
+   <text x="78.276451" y="41.299755" fill="#dcdcdc" font-family="'Source Sans Pro'" font-size="4.2333px" stroke-dasharray="0.529, 2.116" stroke-width=".529" text-align="center" text-anchor="middle" style="font-variant-caps:normal;font-variant-east-asian:normal;font-variant-ligatures:normal;font-variant-numeric:normal;line-height:1.25;text-decoration-color:#000000;text-decoration-line:none" xml:space="preserve"><tspan x="78.276451" y="41.299755" font-family="'Source Sans Pro'" font-size="4.2333px" stroke-width=".529" style="font-variant-caps:normal;font-variant-east-asian:normal;font-variant-ligatures:normal;font-variant-numeric:normal">Drag on outer node</tspan></text>
+   <circle cx="70.989" cy="13.659" r="2.1167" fill="#2f83cc" stroke-dasharray="0.529167, 2.11667" stroke-width=".52917"/>
+  </g>
+  <path d="m70.989 13.659c0.63062 1.5842 1.6395 5.4931 1.929 8.6969" fill="none" stroke="#2f83cc" stroke-dasharray="0.529167,1.05833399" stroke-dashoffset="2.0638" stroke-linecap="round" stroke-linejoin="round" stroke-width=".52917"/>
+  <g stroke-linecap="round" stroke-linejoin="round" stroke-width=".52917">
+   <g>
+    <path d="m73.037 29.903c0.12182-3.1568-0.0462-5.2263-0.11903-7.5471" fill="#2f363f" stroke="#2f83cc" style="-inkscape-stroke:none;font-variation-settings:normal"/>
+    <path d="m70.993 23.003 3.7725-0.33679" fill="#2f363f" stop-color="#000000" stroke="#2f83cc" style="-inkscape-stroke:none;font-variation-settings:normal"/>
+    <text x="82.694748" y="23.062094" fill="#2f83cc" font-family="'Source Sans Pro'" font-size="3.5278px" stop-color="#000000" stroke-dasharray="0.529167, 2.11667" text-align="center" text-anchor="middle" style="-inkscape-stroke:none;font-variant-caps:normal;font-variant-east-asian:normal;font-variant-ligatures:normal;font-variant-numeric:normal;font-variation-settings:normal;line-height:1;text-decoration-color:#000000;text-decoration-line:none" xml:space="preserve"><tspan x="82.694748" y="23.062094" stop-color="#000000" style="-inkscape-stroke:none;font-variant-caps:normal;font-variant-east-asian:normal;font-variant-ligatures:normal;font-variant-numeric:normal;font-variation-settings:normal;line-height:1">Distance </tspan><tspan x="82.694748" y="26.589874" stop-color="#000000" style="-inkscape-stroke:none;font-variant-caps:normal;font-variant-east-asian:normal;font-variant-ligatures:normal;font-variant-numeric:normal;font-variation-settings:normal;line-height:1">threshold</tspan></text>
+   </g>
+   <circle cx="72.999" cy="30.168" r="2.1167" fill="#cd3431" stroke-dasharray="0.529167, 2.11667"/>
+  </g>
+ </g>
+</svg>

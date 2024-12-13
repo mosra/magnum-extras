@@ -111,7 +111,8 @@ enum class NodeFlag: UnsignedByte {
     /**
      * Pointer events happening on nested nodes fall through to this node,
      * which can then accept them, causing a pointer cancel event to happen on
-     * the original node.
+     * the original node. See @ref Ui-AbstractUserInterface-events-fallthrough
+     * for a detailed description of this behavior.
      *
      * Changing this flag doesn't cause any @ref UserInterfaceState to be set,
      * it comes to effect when the next pointer event happens.

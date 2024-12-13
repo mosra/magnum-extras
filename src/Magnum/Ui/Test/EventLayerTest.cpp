@@ -90,6 +90,8 @@ struct EventLayerTest: TestSuite::Tester {
     void drag();
     void dragPress();
     void dragFromUserInterface();
+    void dragFromUserInterfaceFallthroughThreshold();
+    void dragFromUserInterfaceFallthroughThresholdMultipleHandlers();
 
     void pinch();
     void pinchReset();
@@ -271,6 +273,14 @@ const struct {
 
 const struct {
     const char* name;
+    bool positionCallback;
+} DragFromUserInterfaceFallthroughThresholdData[]{
+    {"", false},
+    {"with position callback", true}
+};
+
+const struct {
+    const char* name;
     DataHandle(EventLayer::*call)(NodeHandle, Containers::Function<void()>&&);
     PointerEventSource source;
     Pointer pointer;
@@ -348,7 +358,12 @@ EventLayerTest::EventLayerTest() {
     addInstancedTests({&EventLayerTest::dragFromUserInterface},
         Containers::arraySize(FromUserInterfaceData));
 
-    addTests({&EventLayerTest::pinch,
+    addInstancedTests({&EventLayerTest::dragFromUserInterfaceFallthroughThreshold},
+        Containers::arraySize(DragFromUserInterfaceFallthroughThresholdData));
+
+    addTests({&EventLayerTest::dragFromUserInterfaceFallthroughThresholdMultipleHandlers,
+
+              &EventLayerTest::pinch,
               &EventLayerTest::pinchReset,
               &EventLayerTest::pinchPressMoveRelease});
 
@@ -484,6 +499,7 @@ void EventLayerTest::construct() {
     CORRADE_COMPARE(layer.handle(), layerHandle(137, 0xfe));
     CORRADE_COMPARE(layer.usedScopedConnectionCount(), 0);
     CORRADE_COMPARE(layer.usedAllocatedConnectionCount(), 0);
+    CORRADE_COMPARE(layer.dragThreshold(), 16.0f);
 }
 
 void EventLayerTest::constructCopy() {
@@ -2218,6 +2234,197 @@ void EventLayerTest::dragFromUserInterface() {
         CORRADE_COMPARE(called, 1);
         CORRADE_COMPARE(positionCalled, 1);
         CORRADE_COMPARE(belowCalled, 0);
+    }
+}
+
+void EventLayerTest::dragFromUserInterfaceFallthroughThreshold() {
+    auto&& data = DragFromUserInterfaceFallthroughThresholdData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
+    /* Compared to dragFromUserInterface(), which tests that it doesn't
+       unconditionally fall through to other nodes, this verifies that the
+       threshold is in effect */
+
+    AbstractUserInterface ui{{100, 100}};
+
+    EventLayer& layer = ui.setLayerInstance(Containers::pointer<EventLayer>(ui.createLayer()));
+    CORRADE_COMPARE(layer.dragThreshold(), 16.0f);
+
+    Vector2 belowCalled;
+    NodeHandle nodeBelow = ui.createNode({}, {100, 100}, NodeFlag::FallthroughPointerEvents);
+    /* Verify that both variants of the callback get the same data for the
+       initial jump */
+    /** @todo once it's possible to have multiple fallback onDrag handlers for
+        the same node, add them both instead of having an instanced test
+        case */
+    if(data.positionCallback)
+        layer.onDrag(nodeBelow, [&belowCalled](const Vector2&, const Vector2& relativePosition) {
+            belowCalled += relativePosition;
+        });
+    else
+        layer.onDrag(nodeBelow, [&belowCalled](const Vector2& relativePosition) {
+            belowCalled += relativePosition;
+        });
+
+    Int betweenCalled = 0;
+    NodeHandle nodeBetween = ui.createNode(nodeBelow, {}, {100, 100});
+    layer.onDrag(nodeBetween, [&betweenCalled](const Vector2&) {
+        ++betweenCalled;
+    });
+
+    Vector2 aboveCalled;
+    NodeHandle nodeAbove = ui.createNode(nodeBetween, {}, {100, 100});
+    layer.onDrag(nodeAbove, [&aboveCalled](const Vector2& relativePosition) {
+        aboveCalled += relativePosition;
+    });
+
+    /* Set the threshold lower, sqrt(3*3 + 4*4) = 5 */
+    layer.setDragThreshold(5.0f);
+    CORRADE_COMPARE(layer.dragThreshold(), 5.0f);
+
+    /* Press to capture the node */
+    {
+        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0};
+        CORRADE_VERIFY(ui.pointerPressEvent({50, 70}, event));
+        CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentPressedNode(), nodeAbove);
+        CORRADE_COMPARE(ui.currentCapturedNode(), nodeAbove);
+        CORRADE_COMPARE(belowCalled, Vector2{});
+        CORRADE_COMPARE(betweenCalled, 0);
+        CORRADE_COMPARE(aboveCalled, Vector2{});
+
+    /* Move by 3 units horizontally directs to the above */
+    } {
+        PointerMoveEvent event{{}, PointerEventSource::Mouse, {}, Pointer::MouseLeft, true, 0};
+        CORRADE_VERIFY(ui.pointerMoveEvent({53, 70}, event));
+        CORRADE_COMPARE(ui.currentHoveredNode(), nodeAbove);
+        CORRADE_COMPARE(ui.currentPressedNode(), nodeAbove);
+        CORRADE_COMPARE(ui.currentCapturedNode(), nodeAbove);
+        CORRADE_COMPARE(belowCalled, Vector2{});
+        CORRADE_COMPARE(betweenCalled, 0);
+        CORRADE_COMPARE(aboveCalled, (Vector2{3.0f, 0.0f}));
+
+    /* Move by 2 units vertically still also. The sum is 5 units but not the
+       length. */
+    } {
+        aboveCalled = {};
+
+        PointerMoveEvent event{{}, PointerEventSource::Mouse, {}, Pointer::MouseLeft, true, 0};
+        CORRADE_VERIFY(ui.pointerMoveEvent({53, 72}, event));
+        CORRADE_COMPARE(ui.currentHoveredNode(), nodeAbove);
+        CORRADE_COMPARE(ui.currentPressedNode(), nodeAbove);
+        CORRADE_COMPARE(ui.currentCapturedNode(), nodeAbove);
+        CORRADE_COMPARE(belowCalled, Vector2{});
+        CORRADE_COMPARE(betweenCalled, 0);
+        CORRADE_COMPARE(aboveCalled, (Vector2{0.0f, 2.0f}));
+
+    /* Moving by 2 more transfers the capture to the fallthrough node, dragging
+       by the whole amount. Is still called on the above as well, the node in
+       between that isn't fallthrough gets nothing. */
+    } {
+        aboveCalled = {};
+
+        PointerMoveEvent event{{}, PointerEventSource::Mouse, {}, Pointer::MouseLeft, true, 0};
+        CORRADE_VERIFY(ui.pointerMoveEvent({53, 74}, event));
+        CORRADE_COMPARE(ui.currentHoveredNode(), nodeBelow);
+        CORRADE_COMPARE(ui.currentPressedNode(), nodeBelow);
+        CORRADE_COMPARE(ui.currentCapturedNode(), nodeBelow);
+        CORRADE_COMPARE(belowCalled, (Vector2{3.0f, 4.0f}));
+        CORRADE_COMPARE(betweenCalled, 0);
+        CORRADE_COMPARE(aboveCalled, (Vector2{0.0f, 2.0f}));
+
+    /* The next move is directed to just the node below. The distance from the
+       initial press is now less than the threshold again but that's not
+       considered anymore. */
+    } {
+        belowCalled = {};
+        aboveCalled = {};
+
+        PointerMoveEvent event{{}, PointerEventSource::Mouse, {}, Pointer::MouseLeft, true, 0};
+        CORRADE_VERIFY(ui.pointerMoveEvent({53, 73}, event));
+        CORRADE_COMPARE(ui.currentHoveredNode(), nodeBelow);
+        CORRADE_COMPARE(ui.currentPressedNode(), nodeBelow);
+        CORRADE_COMPARE(ui.currentCapturedNode(), nodeBelow);
+        CORRADE_COMPARE(belowCalled, (Vector2{0.0f, -1.0f}));
+        CORRADE_COMPARE(betweenCalled, 0);
+        CORRADE_COMPARE(aboveCalled, Vector2{});
+
+    /* Another press makes it start over again, i.e. directed to the top
+       node */
+    } {
+        belowCalled = {};
+
+        PointerEvent press{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0};
+        PointerMoveEvent move{{}, PointerEventSource::Mouse, {}, Pointer::MouseLeft, true, 0};
+        CORRADE_VERIFY(ui.pointerPressEvent({30, 20}, press));
+        CORRADE_VERIFY(ui.pointerMoveEvent({30, 18}, move));
+        CORRADE_COMPARE(ui.currentHoveredNode(), nodeAbove);
+        CORRADE_COMPARE(ui.currentPressedNode(), nodeAbove);
+        CORRADE_COMPARE(ui.currentCapturedNode(), nodeAbove);
+        CORRADE_COMPARE(belowCalled, Vector2{});
+        CORRADE_COMPARE(betweenCalled, 0);
+        CORRADE_COMPARE(aboveCalled, (Vector2{0.0f, -2.0f}));
+
+    /* And again only after reaching the threshold it's transferred below */
+    } {
+        aboveCalled = {};
+
+        PointerMoveEvent event{{}, PointerEventSource::Mouse, {}, Pointer::MouseLeft, true, 0};
+        CORRADE_VERIFY(ui.pointerMoveEvent({30, 25}, event));
+        CORRADE_COMPARE(ui.currentHoveredNode(), nodeBelow);
+        CORRADE_COMPARE(ui.currentPressedNode(), nodeBelow);
+        CORRADE_COMPARE(ui.currentCapturedNode(), nodeBelow);
+        CORRADE_COMPARE(belowCalled, (Vector2{0.0f, 5.0f}));
+        CORRADE_COMPARE(betweenCalled, 0);
+        CORRADE_COMPARE(aboveCalled, (Vector2{0.0f, 7.0f}));
+    }
+}
+
+void EventLayerTest::dragFromUserInterfaceFallthroughThresholdMultipleHandlers() {
+    AbstractUserInterface ui{{100, 100}};
+
+    EventLayer& layer = ui.setLayerInstance(Containers::pointer<EventLayer>(ui.createLayer()));
+
+    NodeHandle nodeBelow = ui.createNode({}, {100, 100}, NodeFlag::FallthroughPointerEvents);
+
+    Int aboveCalled = 0;
+    NodeHandle nodeAbove = ui.createNode(nodeBelow, {}, {100, 100});
+    layer.onDrag(nodeAbove, [&aboveCalled](const Vector2&) {
+        ++aboveCalled;
+    });
+
+    /* With just one handler it gets called alright */
+    Int belowCalled1 = 0;
+    layer.onDrag(nodeBelow, [&belowCalled1](const Vector2&) {
+        ++belowCalled1;
+    });
+    {
+        PointerEvent press{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0};
+        PointerMoveEvent move{{}, PointerEventSource::Mouse, {}, Pointer::MouseLeft, true, 0};
+        CORRADE_VERIFY(ui.pointerPressEvent({50, 70}, press));
+        CORRADE_VERIFY(ui.pointerMoveEvent({70, 70}, move));
+        CORRADE_COMPARE(aboveCalled, 1);
+        CORRADE_COMPARE(belowCalled1, 1);
+    }
+
+    /* Second handler on the same node breaks it because it's currently tracked
+       on a data ID and not a node ID. Doing a press + drag again so it starts
+       from the nodeAbove -- it's only the fallthrough that breaks, not the
+       direct call. */
+    Int belowCalled2 = 0;
+    layer.onDrag(nodeBelow, [&belowCalled2](const Vector2&) {
+        ++belowCalled2;
+    });
+    {
+        PointerEvent press{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0};
+        PointerMoveEvent move{{}, PointerEventSource::Mouse, {}, Pointer::MouseLeft, true, 0};
+        CORRADE_VERIFY(ui.pointerPressEvent({50, 70}, press));
+        CORRADE_VERIFY(ui.pointerMoveEvent({70, 70}, move));
+        CORRADE_COMPARE(aboveCalled, 2);
+
+        CORRADE_EXPECT_FAIL("Multiple onDrag() handlers on the same fallthrough node conflict with each other, causing nothing to be sent.");
+        CORRADE_COMPARE(belowCalled1, 2);
+        CORRADE_COMPARE(belowCalled2, 1);
     }
 }
 

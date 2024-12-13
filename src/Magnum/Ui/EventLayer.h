@@ -211,6 +211,50 @@ it doesn't scroll beyond either of the edges.
 As with other pointer event handlers, there's also an overload taking both a
 movement delta and a position within a node.
 
+@subsection Ui-EventLayer-drag-to-scroll Scrolling using pointer drag
+
+A common touch interface pattern for scrollable views is to drag on the view
+itself, without any scroll bars. Compared to above, the following implements
+scrolling using drag in both directions, with @ref onDrag() set up on the
+`scrollarea` itself:
+
+@snippet Ui.cpp EventLayer-drag-to-scroll
+
+This however only works only as long as the drag isn't initiated on an inner
+node that itself accepts events, even if just for visual feedback. Because as
+shown for the tap or click above, as soon as a press gets accepted by an inner
+node, further events get captured on it and don't reach the scroll area. A
+solution is to enable @ref NodeFlag::FallthroughPointerEvents on the scroll
+area containing the @ref onDrag() handler. That'll cause it to receive also all
+events that were accepted on inner nodes.
+
+@snippet Ui.cpp EventLayer-drag-to-scroll-fallthrough
+
+With this option it doesn't take over the drag events unconditionally because
+even just a tap where the pointer moves slightly between a press and a release
+would be interpreted as a drag of the whole area, making it almost impossible
+to interact with the inner contents. Instead, there's a distance threshold,
+configurable with @ref setDragThreshold(), after which the press, move and
+release is no longer treated as a tap or click, but gets interpreted as a drag.
+Thus, after a press, the drag will be initially directed to items underneath,
+highlighting them for example, and only after reaching the threshold it'll jump
+and start scrolling instead of affecting the items underneath. See
+@ref Ui-AbstractUserInterface-events-fallthrough for a detailed description of
+this behavior.
+
+@htmlinclude ui-eventlayer-drag-fallthrough.svg
+
+@m_class{m-note m-warning}
+
+@par
+    At the moment, nesting of multiple draggable scroll areas isn't implemented
+    and doesn't behave gracefully. Dragging will cause all of them to scroll
+    simultaneously.
+
+If the contents don't need to be interacted with in any way, an alternative is
+to enable @ref NodeFlag::NoEvents on them. In that case there will be no scroll
+delay, as the events will always go directly to the scroll area.
+
 @section Ui-EventLayer-pinch Pinch zoom and rotation
 
 On input devices supporting multi-touch, @ref onPinch() calls a function as
@@ -291,6 +335,19 @@ class MAGNUM_UI_EXPORT EventLayer: public AbstractLayer {
          * @see @ref Corrade::Containers::Function "Containers::Function<R(Args...)>::isAllocated()"
          */
         UnsignedInt usedAllocatedConnectionCount() const;
+
+        /** @brief Distance threshold for fallthrough drag */
+        Float dragThreshold() const;
+
+        /**
+         * @brief Set a distance threshold for fallthrough drag
+         *
+         * When @ref onDrag() is set up on a node with
+         * @ref NodeFlag::FallthroughPointerEvents, pointer events that are
+         * accepted by child nodes are only interpreted as a drag after the
+         * total drag distance exceeds @p distance. Default is @cpp 16.0f @ce.
+         */
+        EventLayer& setDragThreshold(Float distance);
 
         /**
          * @brief Connect to a finger / pen tap or left mouse press
@@ -503,11 +560,18 @@ class MAGNUM_UI_EXPORT EventLayer: public AbstractLayer {
          * The @p slot, receiving the movement delta and optionally also a
          * node-relative position at which the move happened, is called when a
          * @ref Pointer::MouseLeft, primary @ref Pointer::Finger or
-         * @ref Pointer::Pen move happens on the @p node, and it isn't a
-         * fallthrough event from a child node. To prevent the slot from being
-         * triggered by drags that originated outside of @p node, it's called
-         * only if the move event is captured on given node. Expects that the
-         * @p slot is not @cpp nullptr @ce.
+         * @ref Pointer::Pen move happens on the @p node. To prevent the slot
+         * from being triggered by drags that originated outside of @p node,
+         * it's called only if the move event is captured on given node.
+         * Expects that the @p slot is not @cpp nullptr @ce.
+         *
+         * See @ref Ui-EventLayer-drag-to-scroll for additional considerations
+         * when implementing scrollable views. In particular, if the event is
+         * originating on given node, the @p slot gets called immediately. If
+         * it's a fallthrough event from a child node, the @p slot gets called
+         * after the distance reaches the threshold configurable with
+         * @ref setDragThreshold(), at which point which the event capture is
+         * transferred to @p node.
          *
          * Use @ref onPinch() to handle two-finger gestures. In particular, if
          * @ref onPinch() is handled by the layer as well, only one of
