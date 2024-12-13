@@ -522,6 +522,31 @@ void AbstractVisualLayer::doPointerLeaveEvent(const UnsignedInt dataId, PointerM
     }
 }
 
+void AbstractVisualLayer::doPointerCancelEvent(const UnsignedInt dataId, PointerCancelEvent&) {
+    const State& state = *_state;
+    const Shared::State& sharedState = state.shared;
+    CORRADE_INTERNAL_DEBUG_ASSERT(state.styles.size() == capacity());
+    UnsignedInt& style = state.styles[dataId];
+
+    /* If the style is dynamic, maybe it has an animation with a target style
+       index assigned, which we can use as the (soon-to-be-)current style index
+       to transition from. */
+    const UnsignedInt currentStyle = styleOrAnimationTargetStyle(style);
+
+    /* Transition the style to inactive out if it's not dynamic */
+    if(currentStyle < sharedState.styleCount) {
+        const UnsignedInt nextStyle = sharedState.styleTransitionToInactiveOut(currentStyle);
+        CORRADE_ASSERT(nextStyle < sharedState.styleCount,
+            "Ui::AbstractVisualLayer::pointerCancelEvent(): style transition from" << currentStyle << "to" << nextStyle << "out of range for" << sharedState.styleCount << "styles", );
+        /* If the transitioned style is different from the current one (or the
+           one that's the animation target), update it */
+        if(nextStyle != currentStyle) {
+            style = nextStyle;
+            setNeedsUpdate(LayerState::NeedsDataUpdate);
+        }
+    }
+}
+
 void AbstractVisualLayer::doFocusEvent(const UnsignedInt dataId, FocusEvent& event) {
     const State& state = *_state;
     const Shared::State& sharedState = state.shared;

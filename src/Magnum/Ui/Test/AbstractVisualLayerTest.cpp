@@ -2770,6 +2770,31 @@ void AbstractVisualLayerTest::eventStyleTransition() {
         CORRADE_COMPARE(layer.style<StyleIndex>(dataFallthrough), StyleIndex::Green);
         CORRADE_COMPARE(layer.state(), LayerStates{});
     }
+
+    /* Cancel on the green node that was made pressed + hovered before resets
+       it back to an inactive state. Faked by calling it on the layer directly
+       because otherwise the setup is too painful. */
+    /** @todo clean up once there's pointerCancelEvent() on the UI itself */
+    layer.setStyle(dataGreen, StyleIndex::GreenPressedHover);
+    ui.update();
+    CORRADE_COMPARE(layer.state(), LayerStates{});
+    CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataGreen)]), StyleIndex::GreenPressedHover);
+    if(data.dynamicAnimated)
+        moveStyleToDynamic(dataGreen);
+    {
+        PointerCancelEvent event{{}};
+        layer.pointerCancelEvent(dataHandleId(dataGreen), event);
+        CORRADE_COMPARE(layer.style<StyleIndex>(dataGreen), StyleIndex::Green);
+        /* No fallthrough happening in this case */
+        CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
+    }
+
+    if(data.update) {
+        ui.update();
+        CORRADE_COMPARE(layer.state(), LayerStates{});
+        CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataGreen)]), StyleIndex::Green);
+        /* No fallthrough happening in this case */
+    }
 }
 
 void AbstractVisualLayerTest::eventStyleTransitionNoHover() {
@@ -3606,6 +3631,26 @@ void AbstractVisualLayerTest::eventStyleTransitionOutOfRange() {
         CORRADE_COMPARE(out.str(), Utility::formatString("Ui::AbstractVisualLayer::blurEvent(): style transition from {0} to {1} out of range for {1} styles\n", UnsignedInt(StyleIndex::RedHover), StyleCount));
     }
 
+    /* OOB toInactiveOut transition in doPointerCancelEvent(). Faked by calling
+       it on the layer directly because otherwise the setup is too painful. */
+    /** @todo clean up once there's pointerCancelEvent() on the UI itself */
+    shared.setStyleTransition<StyleIndex,
+        styleIndexTransitionOutOfRange,
+        styleIndexTransitionToInactiveOver,
+        styleIndexTransitionToFocusedOut,
+        styleIndexTransitionToFocusedOver,
+        styleIndexTransitionToPressedOut,
+        styleIndexTransitionToPressedOver,
+        styleIndexTransitionToDisabledDoNotCall>();
+    {
+        PointerCancelEvent event{{}};
+
+        std::ostringstream out;
+        Error redirectError{&out};
+        layer.pointerCancelEvent(dataHandleId(nodeData), event);
+        CORRADE_COMPARE(out.str(),  Utility::formatString("Ui::AbstractVisualLayer::pointerCancelEvent(): style transition from {0} to {1} out of range for {1} styles\n", UnsignedInt(StyleIndex::RedHover), StyleCount));
+    }
+
     /* OOB toInactiveOut transition in the visibility lost event */
     shared.setStyleTransition<StyleIndex,
         styleIndexTransitionOutOfRange,
@@ -3760,6 +3805,20 @@ void AbstractVisualLayerTest::eventStyleTransitionDynamicStyle() {
         CORRADE_COMPARE(ui.currentHoveredNode(), node);
         CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
         CORRADE_COMPARE(layer.style<StyleIndex>(nodeData), StyleIndex::GreenHover);
+        CORRADE_COMPARE(layer.style(nodeDataDynamic), StyleCount + 0);
+
+    /* toInactiveOut transition in the cancel event. Faked by calling it on the
+       layer directly because otherwise the setup is too painful. */
+    /** @todo clean up once there's pointerCancelEvent() on the UI itself */
+    } {
+        PointerCancelEvent event{{}};
+        layer.pointerCancelEvent(dataHandleId(nodeData), event);
+        layer.pointerCancelEvent(dataHandleId(nodeDataDynamic), event);
+        /* Since it's called directly, the UI isn't aware of the change */
+        CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentHoveredNode(), node);
+        CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(layer.style<StyleIndex>(nodeData), StyleIndex::Green);
         CORRADE_COMPARE(layer.style(nodeDataDynamic), StyleCount + 0);
 
     /* toFocused transition in the focus event */

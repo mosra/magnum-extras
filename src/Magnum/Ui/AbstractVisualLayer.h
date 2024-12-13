@@ -336,6 +336,7 @@ class MAGNUM_UI_EXPORT AbstractVisualLayer: public AbstractLayer {
         void doPointerMoveEvent(UnsignedInt dataId, PointerMoveEvent& event) override;
         void doPointerEnterEvent(UnsignedInt dataId, PointerMoveEvent& event) override;
         void doPointerLeaveEvent(UnsignedInt dataId, PointerMoveEvent& event) override;
+        void doPointerCancelEvent(UnsignedInt dataId, PointerCancelEvent& event) override;
         void doFocusEvent(UnsignedInt dataId, FocusEvent& event) override;
         void doBlurEvent(UnsignedInt dataId, FocusEvent& event) override;
         void doVisibilityLostEvent(UnsignedInt dataId, VisibilityLostEvent& event) override;
