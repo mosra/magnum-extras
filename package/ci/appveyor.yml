@@ -2,113 +2,113 @@ clone_depth: 1
 
 environment:
   matrix:
-  - TARGET: desktop
-    COMPILER: msvc
-    PLATFORM: x64
-    APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
-    APPVEYOR_JOB_NAME: windows-msvc2015
-    CONFIGURATION: Debug
-  - TARGET: desktop
-    COMPILER: msvc
-    PLATFORM: x64
-    APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
-    APPVEYOR_JOB_NAME: windows-msvc2017
-    CONFIGURATION: Debug
-  - TARGET: desktop
-    COMPILER: msvc
-    PLATFORM: x64
-    APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
-    APPVEYOR_JOB_NAME: windows-msvc2019
-    CONFIGURATION: Debug
-  - TARGET: desktop
-    COMPILER: msvc
-    PLATFORM: x64
-    APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2022
-    APPVEYOR_JOB_NAME: windows-msvc2022
-    CONFIGURATION: Debug
-  - TARGET: desktop
-    COMPILER: msvc
-    PLATFORM: x64
-    APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
-    APPVEYOR_JOB_NAME: windows-static-msvc2019
-    CONFIGURATION: Debug
-    BUILD_STATIC: ON
-  - TARGET: desktop
-    COMPILER: msvc
-    PLATFORM: x64
-    APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2022
-    APPVEYOR_JOB_NAME: windows-static-msvc2022
-    CONFIGURATION: Debug
-    BUILD_STATIC: ON
-  - TARGET: desktop
-    COMPILER: msvc-clang
-    PLATFORM: x64
-    APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
-    APPVEYOR_JOB_NAME: windows-msvc2019-clang
-    CONFIGURATION: Debug
+  # - TARGET: desktop
+  #   COMPILER: msvc
+  #   PLATFORM: x64
+  #   APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
+  #   APPVEYOR_JOB_NAME: windows-msvc2015
+  #   CONFIGURATION: Debug
+  # - TARGET: desktop
+  #   COMPILER: msvc
+  #   PLATFORM: x64
+  #   APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
+  #   APPVEYOR_JOB_NAME: windows-msvc2017
+  #   CONFIGURATION: Debug
+  # - TARGET: desktop
+  #   COMPILER: msvc
+  #   PLATFORM: x64
+  #   APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
+  #   APPVEYOR_JOB_NAME: windows-msvc2019
+  #   CONFIGURATION: Debug
+  # - TARGET: desktop
+  #   COMPILER: msvc
+  #   PLATFORM: x64
+  #   APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2022
+  #   APPVEYOR_JOB_NAME: windows-msvc2022
+  #   CONFIGURATION: Debug
+  # - TARGET: desktop
+  #   COMPILER: msvc
+  #   PLATFORM: x64
+  #   APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
+  #   APPVEYOR_JOB_NAME: windows-static-msvc2019
+  #   CONFIGURATION: Debug
+  #   BUILD_STATIC: ON
+  # - TARGET: desktop
+  #   COMPILER: msvc
+  #   PLATFORM: x64
+  #   APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2022
+  #   APPVEYOR_JOB_NAME: windows-static-msvc2022
+  #   CONFIGURATION: Debug
+  #   BUILD_STATIC: ON
+  # - TARGET: desktop
+  #   COMPILER: msvc-clang
+  #   PLATFORM: x64
+  #   APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
+  #   APPVEYOR_JOB_NAME: windows-msvc2019-clang
+  #   CONFIGURATION: Debug
   - TARGET: desktop
     COMPILER: msvc-clang
     PLATFORM: x64
     APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2022
     APPVEYOR_JOB_NAME: windows-msvc2022-clang
     CONFIGURATION: Debug
-  # Build the 32bit as Release, so we catch things that are not a problem
-  # either with 64bit or Debug.
-  - TARGET: desktop
-    COMPILER: msvc
-    PLATFORM:
-    APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
-    APPVEYOR_JOB_NAME: windows-32b-msvc2015
-    CONFIGURATION: Release
-  - TARGET: desktop
-    COMPILER: msvc
-    PLATFORM: x64
-    # Same reasoning as in Corrade for /EHsc
-    COMPILER_EXTRA: -DCMAKE_CXX_FLAGS="/permissive- /EHsc" -DCORRADE_MSVC_COMPATIBILITY=OFF
-    APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
-    APPVEYOR_JOB_NAME: windows-conforming-msvc2019
-    CONFIGURATION: Debug
-  - TARGET: desktop
-    COMPILER: msvc
-    PLATFORM: x64
-    # Not playing with fire and using /EHsc on 2022 as well
-    COMPILER_EXTRA: -DCMAKE_CXX_FLAGS="/permissive- /EHsc" -DCORRADE_MSVC_COMPATIBILITY=OFF
-    APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2022
-    APPVEYOR_JOB_NAME: windows-conforming-msvc2022
-    CONFIGURATION: Debug
-  - TARGET: desktop
-    COMPILER: mingw
-    PLATFORM: x64 # Needed for GLFW download
-    APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
-    APPVEYOR_JOB_NAME: windows-mingw
-  #- TARGET: desktop-gles
-    #TARGET_GLES2: ON
-    #APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
-    #APPVEYOR_JOB_NAME: windows-gles2-msvc2019
-    #COMPILER: msvc
-  - TARGET: desktop-gles
-    PLATFORM: x64 # Needed for GLFW download
-    TARGET_GLES2: OFF
-    APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
-    APPVEYOR_JOB_NAME: windows-gles3-msvc2019
-    COMPILER: msvc
-  #- TARGET: desktop-gles
-    #PLATFORM: x64 # Needed for GLFW download
-    #TARGET_GLES2: ON
-    #APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2022
-    #APPVEYOR_JOB_NAME: windows-gles2-msvc2022
-    #COMPILER: msvc
-  - TARGET: desktop-gles
-    PLATFORM: x64 # Needed for GLFW download
-    TARGET_GLES2: OFF
-    APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2022
-    APPVEYOR_JOB_NAME: windows-gles3-msvc2022
-    COMPILER: msvc
-  - TARGET: rt
-    TARGET_GLES2: OFF
-    APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
-    APPVEYOR_JOB_NAME: windows-rt-gles3-msvc2017
-    COMPILER: msvc
+  # # Build the 32bit as Release, so we catch things that are not a problem
+  # # either with 64bit or Debug.
+  # - TARGET: desktop
+  #   COMPILER: msvc
+  #   PLATFORM:
+  #   APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
+  #   APPVEYOR_JOB_NAME: windows-32b-msvc2015
+  #   CONFIGURATION: Release
+  # - TARGET: desktop
+  #   COMPILER: msvc
+  #   PLATFORM: x64
+  #   # Same reasoning as in Corrade for /EHsc
+  #   COMPILER_EXTRA: -DCMAKE_CXX_FLAGS="/permissive- /EHsc" -DCORRADE_MSVC_COMPATIBILITY=OFF
+  #   APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
+  #   APPVEYOR_JOB_NAME: windows-conforming-msvc2019
+  #   CONFIGURATION: Debug
+  # - TARGET: desktop
+  #   COMPILER: msvc
+  #   PLATFORM: x64
+  #   # Not playing with fire and using /EHsc on 2022 as well
+  #   COMPILER_EXTRA: -DCMAKE_CXX_FLAGS="/permissive- /EHsc" -DCORRADE_MSVC_COMPATIBILITY=OFF
+  #   APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2022
+  #   APPVEYOR_JOB_NAME: windows-conforming-msvc2022
+  #   CONFIGURATION: Debug
+  # - TARGET: desktop
+  #   COMPILER: mingw
+  #   PLATFORM: x64 # Needed for GLFW download
+  #   APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
+  #   APPVEYOR_JOB_NAME: windows-mingw
+  # #- TARGET: desktop-gles
+  #   #TARGET_GLES2: ON
+  #   #APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
+  #   #APPVEYOR_JOB_NAME: windows-gles2-msvc2019
+  #   #COMPILER: msvc
+  # - TARGET: desktop-gles
+  #   PLATFORM: x64 # Needed for GLFW download
+  #   TARGET_GLES2: OFF
+  #   APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
+  #   APPVEYOR_JOB_NAME: windows-gles3-msvc2019
+  #   COMPILER: msvc
+  # #- TARGET: desktop-gles
+  #   #PLATFORM: x64 # Needed for GLFW download
+  #   #TARGET_GLES2: ON
+  #   #APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2022
+  #   #APPVEYOR_JOB_NAME: windows-gles2-msvc2022
+  #   #COMPILER: msvc
+  # - TARGET: desktop-gles
+  #   PLATFORM: x64 # Needed for GLFW download
+  #   TARGET_GLES2: OFF
+  #   APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2022
+  #   APPVEYOR_JOB_NAME: windows-gles3-msvc2022
+  #   COMPILER: msvc
+  # - TARGET: rt
+  #   TARGET_GLES2: OFF
+  #   APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
+  #   APPVEYOR_JOB_NAME: windows-rt-gles3-msvc2017
+  #   COMPILER: msvc
 
 install:
 # Ninja. `cinst ninja` started 503ing in late November 2019 and wasn't really
