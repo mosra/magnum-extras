@@ -373,7 +373,9 @@ jobs:
     steps:
     - install-base-linux:
         extra: libgl1-mesa-dev libsdl2-dev libglfw3-dev
-    - cap-ninja-jobs
+    # 20 leads to OOMs as of 2024-12-13
+    - cap-ninja-jobs:
+        count: 16
     - install-gcc-4_8
     - install-cmake:
         version: "3.5.2"
