@@ -163,39 +163,16 @@ foreach(_component ${MagnumExtras_FIND_COMPONENTS})
     else()
         # Library components
         if(_component IN_LIST _MAGNUMEXTRAS_LIBRARY_COMPONENTS)
-            add_library(MagnumExtras::${_component} UNKNOWN IMPORTED)
-
             # Try to find both debug and release version
             find_library(MAGNUMEXTRAS_${_COMPONENT}_LIBRARY_DEBUG Magnum${_component}-d)
             find_library(MAGNUMEXTRAS_${_COMPONENT}_LIBRARY_RELEASE Magnum${_component})
             mark_as_advanced(MAGNUMEXTRAS_${_COMPONENT}_LIBRARY_DEBUG
                 MAGNUMEXTRAS_${_COMPONENT}_LIBRARY_RELEASE)
 
-            if(MAGNUMEXTRAS_${_COMPONENT}_LIBRARY_RELEASE)
-                set_property(TARGET MagnumExtras::${_component} APPEND PROPERTY
-                    IMPORTED_CONFIGURATIONS RELEASE)
-                set_property(TARGET MagnumExtras::${_component} PROPERTY
-                    IMPORTED_LOCATION_RELEASE ${MAGNUMEXTRAS_${_COMPONENT}_LIBRARY_RELEASE})
-            endif()
-
-            if(MAGNUMEXTRAS_${_COMPONENT}_LIBRARY_DEBUG)
-                set_property(TARGET MagnumExtras::${_component} APPEND PROPERTY
-                    IMPORTED_CONFIGURATIONS DEBUG)
-                set_property(TARGET MagnumExtras::${_component} PROPERTY
-                    IMPORTED_LOCATION_DEBUG ${MAGNUMEXTRAS_${_COMPONENT}_LIBRARY_DEBUG})
-            endif()
-
         # Executables
         elseif(_component IN_LIST _MAGNUMEXTRAS_EXECUTABLE_COMPONENTS)
-            add_executable(MagnumExtras::${_component} IMPORTED)
-
             find_program(MAGNUMEXTRAS_${_COMPONENT}_EXECUTABLE magnum-${_component})
             mark_as_advanced(MAGNUMEXTRAS_${_COMPONENT}_EXECUTABLE)
-
-            if(MAGNUMEXTRAS_${_COMPONENT}_EXECUTABLE)
-                set_property(TARGET MagnumExtras::${_component} PROPERTY
-                    IMPORTED_LOCATION ${MAGNUMEXTRAS_${_COMPONENT}_EXECUTABLE})
-            endif()
 
         # Something unknown, skip. FPHSA will take care of handling this below.
         else()
@@ -223,6 +200,32 @@ foreach(_component ${MagnumExtras_FIND_COMPONENTS})
         else()
             set(MagnumExtras_${_component}_FOUND FALSE)
             continue()
+        endif()
+
+        # Target and location for libraries/plugins
+        if(_component IN_LIST _MAGNUMEXTRAS_LIBRARY_COMPONENTS)
+            add_library(MagnumExtras::${_component} UNKNOWN IMPORTED)
+
+            if(MAGNUMEXTRAS_${_COMPONENT}_LIBRARY_RELEASE)
+                set_property(TARGET MagnumExtras::${_component} APPEND PROPERTY
+                    IMPORTED_CONFIGURATIONS RELEASE)
+                set_property(TARGET MagnumExtras::${_component} PROPERTY
+                    IMPORTED_LOCATION_RELEASE ${MAGNUMEXTRAS_${_COMPONENT}_LIBRARY_RELEASE})
+            endif()
+
+            if(MAGNUMEXTRAS_${_COMPONENT}_LIBRARY_DEBUG)
+                set_property(TARGET MagnumExtras::${_component} APPEND PROPERTY
+                    IMPORTED_CONFIGURATIONS DEBUG)
+                set_property(TARGET MagnumExtras::${_component} PROPERTY
+                    IMPORTED_LOCATION_DEBUG ${MAGNUMEXTRAS_${_COMPONENT}_LIBRARY_DEBUG})
+            endif()
+
+        # Target and location for executable components
+        elseif(_component IN_LIST _MAGNUMEXTRAS_EXECUTABLE_COMPONENTS)
+            add_executable(MagnumExtras::${_component} IMPORTED)
+
+            set_property(TARGET MagnumExtras::${_component} PROPERTY
+                IMPORTED_LOCATION ${MAGNUMEXTRAS_${_COMPONENT}_EXECUTABLE})
         endif()
 
         # Link to core Magnum library, add inter-library dependencies
