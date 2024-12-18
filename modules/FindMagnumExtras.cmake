@@ -158,7 +158,7 @@ foreach(_component ${MagnumExtras_FIND_COMPONENTS})
     # Create imported target in case the library is found. If the project is
     # added as subproject to CMake, the target already exists and all the
     # required setup is already done from the build tree.
-    if(TARGET MagnumExtras::${_component})
+    if(TARGET "MagnumExtras::${_component}") # Quotes to "fix" KDE's higlighter
         set(MagnumExtras_${_component}_FOUND TRUE)
     else()
         # Library components
