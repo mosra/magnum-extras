@@ -161,6 +161,14 @@ foreach(_component ${MagnumExtras_FIND_COMPONENTS})
     if(TARGET "MagnumExtras::${_component}") # Quotes to "fix" KDE's higlighter
         set(MagnumExtras_${_component}_FOUND TRUE)
     else()
+        # Find library includes. Each has a configure.h file so there doesn't
+        # need to be any specialized per-library handling.
+        if(_component IN_LIST _MAGNUMEXTRAS_LIBRARY_COMPONENTS)
+            find_file(_MAGNUMEXTRAS_${_COMPONENT}_CONFIGURE_FILE configure.h
+                HINTS ${MAGNUMEXTRAS_INCLUDE_DIR}/Magnum/${_component})
+            mark_as_advanced(_MAGNUMEXTRAS_${_COMPONENT}_CONFIGURE_FILE)
+        endif()
+
         # Library components
         if(_component IN_LIST _MAGNUMEXTRAS_LIBRARY_COMPONENTS)
             # Try to find both debug and release version
@@ -168,6 +176,37 @@ foreach(_component ${MagnumExtras_FIND_COMPONENTS})
             find_library(MAGNUMEXTRAS_${_COMPONENT}_LIBRARY_RELEASE Magnum${_component})
             mark_as_advanced(MAGNUMEXTRAS_${_COMPONENT}_LIBRARY_DEBUG
                 MAGNUMEXTRAS_${_COMPONENT}_LIBRARY_RELEASE)
+
+            # Determine if the library is static or dynamic by reading the
+            # per-library config file. If the file wasn't found, skip this so
+            # it fails on the FPHSA below and not right here.
+            if(_MAGNUMEXTRAS_${_COMPONENT}_CONFIGURE_FILE)
+                file(READ ${_MAGNUMEXTRAS_${_COMPONENT}_CONFIGURE_FILE} _magnumExtrasConfigure)
+                string(REGEX REPLACE ";" "\\\\;" _magnumExtrasConfigure "${_magnumExtrasConfigure}")
+                string(REGEX REPLACE "\n" ";" _magnumExtrasConfigure "${_magnumExtrasConfigure}")
+                list(FIND _magnumExtrasConfigure "#define MAGNUM_${_COMPONENT}_BUILD_STATIC" _magnumExtrasBuildStatic)
+                if(NOT _magnumExtrasBuildStatic EQUAL -1)
+                    # The variable is inconsistently named between C++ and
+                    # CMake, so keep it underscored / private
+                    set(_MAGNUMEXTRAS_${_COMPONENT}_BUILD_STATIC ON)
+                endif()
+            endif()
+
+            # On Windows, if we have a dynamic build of given library, find the
+            # DLLs as well. Abuse find_program() since the DLLs should be
+            # alongside usual executables. On MinGW they however have a lib
+            # prefix.
+            if(CORRADE_TARGET_WINDOWS AND NOT _MAGNUMEXTRAS_${_COMPONENT}_BUILD_STATIC)
+                find_program(MAGNUMEXTRAS_${_COMPONENT}_DLL_DEBUG ${CMAKE_SHARED_LIBRARY_PREFIX}Magnum${_component}-d.dll)
+                find_program(MAGNUMEXTRAS_${_COMPONENT}_DLL_RELEASE ${CMAKE_SHARED_LIBRARY_PREFIX}Magnum${_component}.dll)
+                mark_as_advanced(MAGNUMEXTRAS_${_COMPONENT}_DLL_DEBUG
+                    MAGNUMEXTRAS_${_COMPONENT}_DLL_RELEASE)
+            # If not on Windows or on a static build, unset the DLL variables
+            # to avoid leaks when switching shared and static builds
+            else()
+                unset(MAGNUMEXTRAS_${_COMPONENT}_DLL_DEBUG CACHE)
+                unset(MAGNUMEXTRAS_${_COMPONENT}_DLL_RELEASE CACHE)
+            endif()
 
         # Executables
         elseif(_component IN_LIST _MAGNUMEXTRAS_EXECUTABLE_COMPONENTS)
@@ -179,46 +218,61 @@ foreach(_component ${MagnumExtras_FIND_COMPONENTS})
             continue()
         endif()
 
-        # No special setup required for Ui library
-
-        # Find library includes
-        if(_component IN_LIST _MAGNUMEXTRAS_LIBRARY_COMPONENTS)
-            find_path(_MAGNUMEXTRAS_${_COMPONENT}_INCLUDE_DIR
-                NAMES ${_component}.h
-                HINTS ${MAGNUMEXTRAS_INCLUDE_DIR}/Magnum/${_component})
-            mark_as_advanced(_MAGNUMEXTRAS_${_COMPONENT}_INCLUDE_DIR)
-        endif()
-
         # Decide if the library was found. If not, skip the rest, which
         # populates the target properties and finds additional dependencies.
         # This means that the rest can also rely on that some FindXYZ.cmake is
         # present in _MAGNUMEXTRAS_DEPENDENCY_MODULE_DIR -- given that the
         # library needing XYZ was found, it likely also installed FindXYZ for
         # itself.
-        if((_component IN_LIST _MAGNUMEXTRAS_LIBRARY_COMPONENTS AND _MAGNUMEXTRAS_${_COMPONENT}_INCLUDE_DIR AND (MAGNUMEXTRAS_${_COMPONENT}_LIBRARY_DEBUG OR MAGNUMEXTRAS_${_COMPONENT}_LIBRARY_RELEASE)) OR (_component IN_LIST _MAGNUMEXTRAS_EXECUTABLE_COMPONENTS AND MAGNUMEXTRAS_${_COMPONENT}_EXECUTABLE))
+        if(
+            # If the component is a library, it should have the configure file
+            (_component IN_LIST _MAGNUMEXTRAS_LIBRARY_COMPONENTS AND _MAGNUMEXTRAS_${_COMPONENT}_CONFIGURE_FILE AND (
+                # And it should have a debug library, and a DLL found if
+                # expected
+                (MAGNUMEXTRAS_${_COMPONENT}_LIBRARY_DEBUG AND (
+                    NOT DEFINED MAGNUMEXTRAS_${_COMPONENT}_DLL_DEBUG OR
+                    MAGNUMEXTRAS_${_COMPONENT}_DLL_DEBUG)) OR
+                # Or have a release library, and a DLL found if expected
+                (MAGNUMEXTRAS_${_COMPONENT}_LIBRARY_RELEASE AND (
+                    NOT DEFINED MAGNUMEXTRAS_${_COMPONENT}_DLL_RELEASE OR
+                    MAGNUMEXTRAS_${_COMPONENT}_DLL_RELEASE)))) OR
+            # If the component is an executable, it should have just the
+            # location
+            (_component IN_LIST _MAGNUMEXTRAS_EXECUTABLE_COMPONENTS AND MAGNUMEXTRAS_${_COMPONENT}_EXECUTABLE)
+        )
             set(MagnumExtras_${_component}_FOUND TRUE)
         else()
             set(MagnumExtras_${_component}_FOUND FALSE)
             continue()
         endif()
 
-        # Target and location for libraries/plugins
+        # Target and location for libraries
         if(_component IN_LIST _MAGNUMEXTRAS_LIBRARY_COMPONENTS)
-            add_library(MagnumExtras::${_component} UNKNOWN IMPORTED)
-
-            if(MAGNUMEXTRAS_${_COMPONENT}_LIBRARY_RELEASE)
-                set_property(TARGET MagnumExtras::${_component} APPEND PROPERTY
-                    IMPORTED_CONFIGURATIONS RELEASE)
-                set_property(TARGET MagnumExtras::${_component} PROPERTY
-                    IMPORTED_LOCATION_RELEASE ${MAGNUMEXTRAS_${_COMPONENT}_LIBRARY_RELEASE})
+            if(_MAGNUMEXTRAS_${_COMPONENT}_BUILD_STATIC)
+                add_library(MagnumExtras::${_component} STATIC IMPORTED)
+            else()
+                add_library(MagnumExtras::${_component} SHARED IMPORTED)
             endif()
 
-            if(MAGNUMEXTRAS_${_COMPONENT}_LIBRARY_DEBUG)
+            foreach(_CONFIG DEBUG RELEASE)
+                if(NOT MAGNUMEXTRAS_${_COMPONENT}_LIBRARY_${_CONFIG})
+                    continue()
+                endif()
+
                 set_property(TARGET MagnumExtras::${_component} APPEND PROPERTY
-                    IMPORTED_CONFIGURATIONS DEBUG)
-                set_property(TARGET MagnumExtras::${_component} PROPERTY
-                    IMPORTED_LOCATION_DEBUG ${MAGNUMEXTRAS_${_COMPONENT}_LIBRARY_DEBUG})
-            endif()
+                    IMPORTED_CONFIGURATIONS ${_CONFIG})
+                # Unfortunately for a DLL the two properties are swapped out,
+                # *.lib goes to IMPLIB, so it's duplicated like this
+                if(DEFINED MAGNUMEXTRAS_${_COMPONENT}_DLL_${_CONFIG})
+                    # Quotes to "fix" KDE's higlighter
+                    set_target_properties("MagnumExtras::${_component}" PROPERTIES
+                        IMPORTED_LOCATION_${_CONFIG} ${MAGNUMEXTRAS_${_COMPONENT}_DLL_${_CONFIG}}
+                        IMPORTED_IMPLIB_${_CONFIG} ${MAGNUMEXTRAS_${_COMPONENT}_LIBRARY_${_CONFIG}})
+                else()
+                    set_property(TARGET MagnumExtras::${_component} PROPERTY
+                        IMPORTED_LOCATION_${_CONFIG} ${MAGNUMEXTRAS_${_COMPONENT}_LIBRARY_${_CONFIG}})
+                endif()
+            endforeach()
 
         # Target and location for executable components
         elseif(_component IN_LIST _MAGNUMEXTRAS_EXECUTABLE_COMPONENTS)
@@ -228,8 +282,10 @@ foreach(_component ${MagnumExtras_FIND_COMPONENTS})
                 IMPORTED_LOCATION ${MAGNUMEXTRAS_${_COMPONENT}_EXECUTABLE})
         endif()
 
-        # Link to core Magnum library, add inter-library dependencies
+        # No special setup required for Ui library
+
         if(_component IN_LIST _MAGNUMEXTRAS_LIBRARY_COMPONENTS)
+            # Link to core Magnum library, add inter-library dependencies
             foreach(_dependency ${_MAGNUMEXTRAS_${_component}_CORRADE_DEPENDENCIES})
                 set_property(TARGET MagnumExtras::${_component} APPEND PROPERTY
                     INTERFACE_LINK_LIBRARIES Corrade::${_dependency})
