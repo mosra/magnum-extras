@@ -176,6 +176,28 @@ void MyApplication::pointerMoveEvent(PointerMoveEvent& event) {
 
 namespace C {
 
+/* [UserInterfaceGL-setup-delayed] */
+class MyApplication: public Platform::Application {
+    DOXYGEN_ELLIPSIS(explicit MyApplication(const Arguments& arguments);)
+
+    private:
+        Ui::UserInterfaceGL _ui{NoCreate};
+};
+
+MyApplication::MyApplication(const Arguments& arguments):
+    Platform::Application{arguments, NoCreate}
+{
+    DOXYGEN_ELLIPSIS()
+
+    create(DOXYGEN_ELLIPSIS());
+    _ui.create(DOXYGEN_ELLIPSIS(*this), Ui::McssDarkStyle{});
+}
+/* [UserInterfaceGL-setup-delayed] */
+
+}
+
+namespace D {
+
 /* [RendererGL-compositing-framebuffer] */
 class MyApplication: public Platform::Application {
     DOXYGEN_ELLIPSIS(explicit MyApplication(const Arguments& arguments);
@@ -220,6 +242,5 @@ void MyApplication::drawEvent() {
     redraw();
 }
 /* [RendererGL-compositing-framebuffer-draw] */
-
 
 }

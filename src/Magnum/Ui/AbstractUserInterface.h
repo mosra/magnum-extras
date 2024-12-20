@@ -272,7 +272,15 @@ events get positioned, and a style instance describing how the widgets will
 look like. At the moment, @ref McssDarkStyle is the only style provided by the
 library itself.
 
-@snippet Ui-gl.cpp AbstractUserInterface-setup
+@snippet Ui-gl.cpp UserInterfaceGL-setup
+
+<b></b>
+
+@m_class{m-note m-info}
+
+@par
+    See the @ref UserInterfaceGL class documentation if you need delayed
+    creation or more control over what's being set up.
 
 Then, at the very least, the UI needs to be (re)drawn when needed. The renderer
 uses a [premultiplied alpha](https://developer.nvidia.com/content/alpha-blending-pre-or-not-pre)

@@ -46,13 +46,85 @@ namespace Magnum { namespace Ui {
 @brief OpenGL implementation of the main user interface
 @m_since_latest
 
-Provides an interface for setting up @ref RendererGL, @ref BaseLayerGL and
-@ref TextLayerGL instances, either directly or via an @ref AbstractStyle
-instance.
+Owns the whole user interface, providing everything from input event handling
+to animation and drawing. Compared to @ref AbstractUserInterface includes
+everything that's needed by builtin widgets, while the @ref UserInterface base
+class is a common interface not tied to OpenGL.
 
 @note This class is available only if Magnum is compiled with
     @ref MAGNUM_TARGET_GL enabled (done by default). See @ref building-features
     for more information.
+
+@section Ui-UserInterfaceGL-setup Setting up a user interface instance
+
+The simplest variant of the constructor takes a UI size, in respect to which
+all contents as well as input events get positioned, and a style instance
+describing how the widgets all look like. At the moment, @ref McssDarkStyle is
+the only style provided by the library itself.
+
+@snippet Ui-gl.cpp UserInterfaceGL-setup
+
+The rest of the setup --- drawing and event handling --- is the same for all
+@ref AbstractUserInterface subclasses, see its documentation for details.
+
+@subsection Ui-UserInterfaceGL-setup-options Additional setup options
+
+The above by default populates the user interface with everything a style
+provides for use by builtin widgets --- in particular, making @ref baseLayer(),
+@ref textLayer(), @ref eventLayer() and @ref snapLayouter() all available. In
+case you for example use just a subset of the builtin widgets that only need a
+part of the above, you can specify a @ref StyleFeatures subset. This can be
+further combined with @ref setStyle(), where, as long as you specify
+non-overlapping sets of @ref StyleFeatures, you can combine multiple styles
+together:
+
+@snippet Ui-gl.cpp UserInterfaceGL-setup-features
+
+The constructors also provide a way to supply external plugin managers for
+fonts and images, for example if you want to configure the plugins before
+they're used or if you're going to use the same plugin managers elsewhere and
+want to reduce duplication. The passed instances are expected to stay alive for
+the whole user interface lifetime.
+
+@snippet Ui-gl.cpp UserInterfaceGL-setup-managers
+
+@subsection Ui-UserInterfaceGL-setup-delayed Delayed user interface creation
+
+By default, the class expects that a Magnum OpenGL context is available at the
+point of construction. If you're using @ref platform-configuration-delayed "delayed Application context creation"
+or if you just need additional logic before creating the UI, you can employ a
+similar approach as with the application itself --- construct with
+@ref UserInterfaceGL(NoCreateT) and then call @ref create() once you're ready:
+
+@snippet Ui-sdl2.cpp UserInterfaceGL-setup-delayed
+
+The @ref create() as well as the main constructor both exit the application if
+something goes wrong such as if a font plugin cannot be loaded. If you want to
+deal with potential errors more gracefully or try out several options,
+@ref tryCreate() returns @cpp false @ce instead of exiting, and there's a
+@ref trySetStyle() counterpart as well.
+
+@subsection Ui-UserInterfaceGL-setup-renderer Supplying a custom renderer instance
+
+Setting a style either in the constructor or in @ref create() / @ref tryCreate()
+implicitly sets up a @ref RendererGL instance. If you want to supply a custom
+one --- for example to set up a @ref Ui-RendererGL-compositing-framebuffer "compositing framebuffer"
+for a custom layer --- pass it to @ref setRendererInstance() and then call
+@ref setSize() and @ref setStyle() / @ref trySetStyle() instead of
+@ref create() / @ref tryCreate():
+
+@snippet Ui-gl.cpp UserInterfaceGL-setup-renderer
+
+@subsection Ui-UserInterfaceGL-setup-layers Supplying custom layer and layouter instances
+
+If a constructor or @ref create() taking a style isn't used at all, or if a
+style is applied excluding a particular layer or layouter, you can supply a
+custom instance using @ref setBaseLayerInstance(), @ref setTextLayerInstance(),
+@ref setEventLayerInstance() or @ref setSnapLayouterInstance(). Note that
+however, at this point, you're on your own when you attempt to use any builtin
+widgets that rely on given instance being set up in a particular way.
+
+@snippet Ui-gl.cpp UserInterfaceGL-setup-layer
 */
 class MAGNUM_UI_EXPORT UserInterfaceGL: public UserInterface {
     public:

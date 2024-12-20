@@ -24,8 +24,11 @@
     DEALINGS IN THE SOFTWARE.
 */
 
+#include <Corrade/PluginManager/Manager.h>
 #include <Magnum/GL/DefaultFramebuffer.h>
 #include <Magnum/GL/Renderer.h>
+#include <Magnum/Text/AbstractFont.h>
+#include <Magnum/Trade/AbstractImporter.h>
 
 #include "Magnum/Ui/BaseLayerGL.h"
 #include "Magnum/Ui/BaseLayerAnimator.h"
@@ -47,9 +50,10 @@ using namespace Magnum;
 void mainUiGL();
 void mainUiGL() {
 {
-/* [AbstractUserInterface-setup] */
+/* Used by both AbstractUserInterface and UserInterfaceGL docs */
+/* [UserInterfaceGL-setup] */
 Ui::UserInterfaceGL ui{{800, 600}, Ui::McssDarkStyle{}};
-/* [AbstractUserInterface-setup] */
+/* [UserInterfaceGL-setup] */
 
 /* [AbstractUserInterface-setup-blend] */
 GL::Renderer::setBlendFunction(
@@ -72,6 +76,58 @@ if(ui.state()) {
     ui.draw();
 }
 /* [AbstractUserInterface-setup-draw-ondemand] */
+}
+
+{
+struct: Ui::AbstractStyle {
+    Ui::StyleFeatures doFeatures() const override { return {}; }
+    bool doApply(Ui::UserInterface&, Ui::StyleFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override {
+        return false;
+    }
+} myCustomStyle;
+/* [UserInterfaceGL-setup-features] */
+/* Pick everything except icons from the builtin style */
+Ui::UserInterfaceGL ui{{800, 600}, Ui::McssDarkStyle{},
+    ~Ui::StyleFeature::TextLayerImages};
+
+DOXYGEN_ELLIPSIS()
+
+/* Use icons from a custom style instead */
+ui.setStyle(myCustomStyle, Ui::StyleFeature::TextLayerImages);
+/* [UserInterfaceGL-setup-features] */
+}
+
+{
+/* [UserInterfaceGL-setup-managers] */
+PluginManager::Manager<Trade::AbstractImporter> importerManager;
+PluginManager::Manager<Text::AbstractFont> fontManager;
+DOXYGEN_ELLIPSIS()
+
+Ui::UserInterfaceGL ui{DOXYGEN_ELLIPSIS({}, Ui::McssDarkStyle{}), &importerManager, &fontManager};
+/* [UserInterfaceGL-setup-managers] */
+}
+
+{
+/* [UserInterfaceGL-setup-renderer] */
+Ui::UserInterfaceGL ui{NoCreate};
+
+ui
+    .setRendererInstance(Containers::pointer<Ui::RendererGL>(DOXYGEN_ELLIPSIS()))
+    .setSize(DOXYGEN_ELLIPSIS({}))
+    .setStyle(Ui::McssDarkStyle{});
+/* [UserInterfaceGL-setup-renderer] */
+}
+
+{
+Ui::BaseLayerGL::Shared shared{Ui::BaseLayerGL::Shared::Configuration{1}};
+/* [UserInterfaceGL-setup-layer] */
+Ui::UserInterfaceGL ui{DOXYGEN_ELLIPSIS({}), Ui::McssDarkStyle{},
+    ~Ui::StyleFeature::BaseLayer};
+
+DOXYGEN_ELLIPSIS()
+
+ui.setBaseLayerInstance(Containers::pointer<Ui::BaseLayerGL>(DOXYGEN_ELLIPSIS(ui.createLayer(), shared)));
+/* [UserInterfaceGL-setup-layer] */
 }
 
 {
