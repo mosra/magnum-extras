@@ -604,7 +604,7 @@ workflows:
         - linux-gles3
         - linux-static
         - linux-arm64
-    # - ios-gles3:
-    #     requires:
-    #     - macos-gles3
-    #     - macos-static
+    - ios-gles3:
+        requires:
+        - macos-gles3
+        - macos-static
