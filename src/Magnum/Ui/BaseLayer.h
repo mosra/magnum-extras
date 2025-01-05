@@ -31,6 +31,7 @@
  * @m_since_latest
  */
 
+#include <initializer_list>
 #include <Magnum/Math/Color.h>
 
 #include "Magnum/Ui/AbstractVisualLayer.h"

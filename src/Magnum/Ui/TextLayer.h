@@ -31,6 +31,7 @@
  * @m_since_latest
  */
 
+#include <initializer_list>
 #include <Corrade/Containers/StringView.h> /* for templated create() overloads */
 #include <Corrade/PluginManager/Manager.h>
 #include <Magnum/Math/Color.h>
