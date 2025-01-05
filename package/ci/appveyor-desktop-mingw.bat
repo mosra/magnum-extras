@@ -74,21 +74,18 @@ ctest -V -E "GLTest|GLBenchmark" --timeout 60 || exit /b
 rem Test install, after running the tests as for them it shouldn't be needed
 cmake --build . --target install || exit /b
 
-rem Coverage upload. Disabled as of 2024-08-25 because it reports a ton of
-rem bogus uncovered lines containing just }. Tried to use newer lcov, newer
-rem mingw, grcov instead of lcov, it was either producing the same crap or was
-rem not working at all. Fuck it, then.
-
-rem set PATH=C:\msys64\usr\bin;%PATH%
-rem bash %APPVEYOR_BUILD_FOLDER%\package\ci\appveyor-lcov.sh || exit /b
-rem The damn new codecov binary is apparently unable to work with
-rem subdirectories on Windows. Nobody cares.
-rem https://github.com/codecov/codecov-action/issues/862
-rem cd %APPVEYOR_BUILD_FOLDER%
-rem move build\coverage.info coverage.info || exit /b
+rem Coverage upload
+cd %APPVEYOR_BUILD_FOLDER%
+set GCOV=C:/mingw-w64/x86_64-7.2.0-posix-seh-rt_v5-rev1/mingw64/bin/gcov.exe
+rem Keep in sync with circleci.yml, appveyor-desktop.bat and PKBUILD-coverage,
+rem please. The --source-dir needs to be present in order to circumvent
+rem     Warning: "../foo" cannot be normalized because of "..", so skip it.
+rem that happens with CMake before 3.21 that doesn't yet pass full paths to
+rem Ninja: https://github.com/mozilla/grcov/issues/1182
+grcov build -t lcov --source-dir %APPVEYOR_BUILD_FOLDER%/build --keep-only "*/src/Magnum*/*" --ignore "*/Test/*" --ignore "*/build/src/*" --ignore "*/ui-gallery.cpp" -o coverage.info --excl-line LCOV_EXCL_LINE --excl-start LCOV_EXCL_START --excl-stop LCOV_EXCL_STOP || exit /b
 rem Official docs say "not needed for public repos", in reality not using the
 rem token is "extremely flakey". What's best is that if the upload fails, the
 rem damn thing exits with a success error code, and nobody cares:
 rem https://github.com/codecov/codecov-circleci-orb/issues/139
 rem https://community.codecov.com/t/commit-sha-does-not-match-circle-build/4266
-rem codecov -f ./coverage.info -t 14b2f31d-6cee-4ad3-9391-f60d4ba85612 -X gcov || exit /b
+codecov -f ./coverage.info -t 14b2f31d-6cee-4ad3-9391-f60d4ba85612 -X gcov || exit /b
