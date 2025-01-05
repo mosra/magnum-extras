@@ -24,14 +24,12 @@
     DEALINGS IN THE SOFTWARE.
 */
 
-#include <sstream>
 #include <Corrade/Containers/BitArrayView.h>
 #include <Corrade/Containers/StridedArrayView.h>
-#include <Corrade/Containers/StringStl.h> /** @todo remove once Debug is stream-free */
+#include <Corrade/Containers/String.h>
 #include <Corrade/TestSuite/Tester.h>
 #include <Corrade/TestSuite/Compare/Container.h>
 #include <Corrade/TestSuite/Compare/String.h>
-#include <Corrade/Utility/DebugStl.h> /** @todo remove once Debug is stream-free */
 
 #include "Magnum/Ui/Anchor.h"
 #include "Magnum/Ui/Handle.h"
@@ -264,87 +262,87 @@ SnapLayouterTest::SnapLayouterTest() {
 }
 
 void SnapLayouterTest::debugSnap() {
-    std::ostringstream out;
+    Containers::String out;
     Debug{&out} << Snap::InsideX << Snap(0xbe);
-    CORRADE_COMPARE(out.str(), "Ui::Snap::InsideX Ui::Snap(0xbe)\n");
+    CORRADE_COMPARE(out, "Ui::Snap::InsideX Ui::Snap(0xbe)\n");
 }
 
 void SnapLayouterTest::debugSnapPacked() {
-    std::ostringstream out;
+    Containers::String out;
     /* Last is not packed, ones before should not make any flags persistent */
     Debug{&out} << Debug::packed << Snap::InsideX << Debug::packed << Snap(0xbe) << Snap::Right;
-    CORRADE_COMPARE(out.str(), "InsideX 0xbe Ui::Snap::Right\n");
+    CORRADE_COMPARE(out, "InsideX 0xbe Ui::Snap::Right\n");
 }
 
 void SnapLayouterTest::debugSnaps() {
-    std::ostringstream out;
+    Containers::String out;
     /* There isn't any bit free to test how the remains get printed */
     Debug{&out} << (Snap::Left|Snap::InsideX) << Snaps{};
-    CORRADE_COMPARE(out.str(), "Ui::Snap::Left|Ui::Snap::InsideX Ui::Snaps{}\n");
+    CORRADE_COMPARE(out, "Ui::Snap::Left|Ui::Snap::InsideX Ui::Snaps{}\n");
 }
 
 void SnapLayouterTest::debugSnapsPacked() {
-    std::ostringstream out;
+    Containers::String out;
     /* There isn't any bit free to test how the remains get printed. Last is
        not packed, ones before should not make any flags persistent. */
     Debug{&out} << Debug::packed << (Snap::Left|Snap::NoPadY) << Debug::packed << Snaps{} << (Snap::InsideX|Snap::NoPadY);
-    CORRADE_COMPARE(out.str(), "Left|NoPadY {} Ui::Snap::InsideX|Ui::Snap::NoPadY\n");
+    CORRADE_COMPARE(out, "Left|NoPadY {} Ui::Snap::InsideX|Ui::Snap::NoPadY\n");
 }
 
 void SnapLayouterTest::debugSnapsSupersets() {
     /* Fill is all FillX and FillY combined */
     {
-        std::ostringstream out;
+        Containers::String out;
         Debug{&out} << (Snap::Fill|Snap::FillX|Snap::FillY);
-        CORRADE_COMPARE(out.str(), "Ui::Snap::Fill\n");
+        CORRADE_COMPARE(out, "Ui::Snap::Fill\n");
 
     /* FillX and FillY is edges combined */
     } {
-        std::ostringstream out;
+        Containers::String out;
         Debug{&out}
             << (Snap::FillX|Snap::Left|Snap::Right)
             << (Snap::FillY|Snap::Top|Snap::Bottom);
-        CORRADE_COMPARE(out.str(), "Ui::Snap::FillX Ui::Snap::FillY\n");
+        CORRADE_COMPARE(out, "Ui::Snap::FillX Ui::Snap::FillY\n");
 
     /* Corners are edges combined */
     } {
-        std::ostringstream out;
+        Containers::String out;
         Debug{&out}
             << (Snap::TopLeft|Snap::Top|Snap::Left)
             << (Snap::BottomLeft|Snap::Bottom|Snap::Left)
             << (Snap::TopRight|Snap::Top|Snap::Right)
             << (Snap::BottomRight|Snap::Bottom|Snap::Right);
-        CORRADE_COMPARE(out.str(), "Ui::Snap::TopLeft Ui::Snap::BottomLeft Ui::Snap::TopRight Ui::Snap::BottomRight\n");
+        CORRADE_COMPARE(out, "Ui::Snap::TopLeft Ui::Snap::BottomLeft Ui::Snap::TopRight Ui::Snap::BottomRight\n");
 
     /* Combining corners + edges picks up the fill first, not corners */
     } {
-        std::ostringstream out;
+        Containers::String out;
         Debug{&out}
             /* Both in each pair do the same */
             << (Snap::TopLeft|Snap::Right) << (Snap::FillX|Snap::Top)
             << (Snap::BottomRight|Snap::Top) << (Snap::FillY|Snap::Right);
-        CORRADE_COMPARE(out.str(), "Ui::Snap::FillX|Ui::Snap::Top Ui::Snap::FillX|Ui::Snap::Top Ui::Snap::FillY|Ui::Snap::Right Ui::Snap::FillY|Ui::Snap::Right\n");
+        CORRADE_COMPARE(out, "Ui::Snap::FillX|Ui::Snap::Top Ui::Snap::FillX|Ui::Snap::Top Ui::Snap::FillY|Ui::Snap::Right Ui::Snap::FillY|Ui::Snap::Right\n");
 
     /* Inside is InsideX and InsideY combined */
     } {
-        std::ostringstream out;
+        Containers::String out;
         Debug{&out} << (Snap::InsideX|Snap::InsideY);
-        CORRADE_COMPARE(out.str(), "Ui::Snap::Inside\n");
+        CORRADE_COMPARE(out, "Ui::Snap::Inside\n");
 
     /* NoPad is NoPadX and NoPadY combined */
     } {
-        std::ostringstream out;
+        Containers::String out;
         Debug{&out} << (Snap::NoPadX |Snap::NoPadY);
-        CORRADE_COMPARE(out.str(), "Ui::Snap::NoPad\n");
+        CORRADE_COMPARE(out, "Ui::Snap::NoPad\n");
     }
 }
 
 void SnapLayouterTest::snapInside() {
     auto&& data = SnapInsideData[testCaseInstanceId()];
     {
-        std::ostringstream out;
+        Containers::String out;
         Debug{&out, Debug::Flag::NoNewlineAtTheEnd|Debug::Flag::Packed} << data.snap;
-        setTestCaseDescription(out.str());
+        setTestCaseDescription(out);
     }
 
     CORRADE_COMPARE(Implementation::snapInside(data.snap), data.expected);
@@ -353,9 +351,9 @@ void SnapLayouterTest::snapInside() {
 void SnapLayouterTest::snap() {
     auto&& data = SnapData[testCaseInstanceId()];
     {
-        std::ostringstream out;
+        Containers::String out;
         Debug{&out, Debug::Flag::NoNewlineAtTheEnd|Debug::Flag::Packed} << data.snap;
-        setTestCaseDescription(out.str());
+        setTestCaseDescription(out);
     }
 
     Containers::Pair<Vector2, Vector2> out = Implementation::snap(data.snap,
@@ -973,13 +971,13 @@ void SnapLayouterTest::layoutInvalid() {
 
     NodeHandle node = ui.createNode({}, {});
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     AbstractSnapLayout{ui, layouter, {}, NodeHandle::Null, {}};
     AbstractSnapLayout{ui, layouter, {}, nodeHandle(0x12345, 0xabc), {}};
     AbstractSnapLayout{ui, layouter, Snap::Right|Snap::Bottom|Snap::InsideY, node, {}};
     Ui::snap(ui, layouter, {}, nodeHandle(0x12345, 0xabc), {});
-    CORRADE_COMPARE_AS(out.str(),
+    CORRADE_COMPARE_AS(out,
         "Ui::AbstractSnapLayout: invalid target handle Ui::NodeHandle::Null\n"
         "Ui::AbstractSnapLayout: invalid target handle Ui::NodeHandle(0x12345, 0xabc)\n"
         "Ui::AbstractSnapLayout: target cannot be a root node for Ui::Snap::BottomRight|Ui::Snap::InsideY\n"
@@ -1008,13 +1006,13 @@ void SnapLayouterTest::invalidHandle() {
 
     SnapLayouter layouter{layouterHandle(0, 1)};
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     layouter.snap(LayoutHandle::Null);
     layouter.snap(LayouterDataHandle::Null);
     layouter.target(LayoutHandle::Null);
     layouter.target(LayouterDataHandle::Null);
-    CORRADE_COMPARE_AS(out.str(),
+    CORRADE_COMPARE_AS(out,
         "Ui::SnapLayouter::snap(): invalid handle Ui::LayoutHandle::Null\n"
         "Ui::SnapLayouter::snap(): invalid handle Ui::LayouterDataHandle::Null\n"
         "Ui::SnapLayouter::target(): invalid handle Ui::LayoutHandle::Null\n"

@@ -24,10 +24,10 @@
     DEALINGS IN THE SOFTWARE.
 */
 
-#include <sstream> /** @todo remove once Debug is stream-free */
+#include <Corrade/Containers/ArrayView.h>
+#include <Corrade/Containers/String.h>
 #include <Corrade/TestSuite/Tester.h>
 #include <Magnum/Math/Vector2.h>
-#include <Corrade/Utility/DebugStl.h> /** @todo remove once Debug is stream-free */
 
 #include "Magnum/Ui/BaseLayer.h"
 #include "Magnum/Ui/EventLayer.h"
@@ -196,11 +196,11 @@ void UserInterfaceTest::setBaseLayerInstanceInvalid() {
     } ui{NoCreate};
     ui.setBaseLayerInstance(Containers::pointer<Layer>(ui.createLayer(), shared));
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     ui.setBaseLayerInstance(nullptr);
     ui.setBaseLayerInstance(Containers::pointer<Layer>(ui.createLayer(), shared));
-    CORRADE_COMPARE(out.str(),
+    CORRADE_COMPARE(out,
         "Ui::UserInterface::setBaseLayerInstance(): instance is null\n"
         "Ui::UserInterface::setBaseLayerInstance(): instance already set\n");
 }
@@ -213,10 +213,10 @@ void UserInterfaceTest::baseLayerInvalid() {
     } ui{NoCreate};
     CORRADE_VERIFY(!ui.hasBaseLayer());
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     ui.baseLayer();
-    CORRADE_COMPARE(out.str(), "Ui::UserInterface::baseLayer(): no instance set\n");
+    CORRADE_COMPARE(out, "Ui::UserInterface::baseLayer(): no instance set\n");
 }
 
 void UserInterfaceTest::setTextLayerInstance() {
@@ -272,11 +272,11 @@ void UserInterfaceTest::setTextLayerInstanceInvalid() {
     } ui{NoCreate};
     ui.setTextLayerInstance(Containers::pointer<Layer>(ui.createLayer(), shared));
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     ui.setTextLayerInstance(nullptr);
     ui.setTextLayerInstance(Containers::pointer<Layer>(ui.createLayer(), shared));
-    CORRADE_COMPARE(out.str(),
+    CORRADE_COMPARE(out,
         "Ui::UserInterface::setTextLayerInstance(): instance is null\n"
         "Ui::UserInterface::setTextLayerInstance(): instance already set\n");
 }
@@ -288,10 +288,10 @@ void UserInterfaceTest::textLayerInvalid() {
         explicit Interface(NoCreateT): UserInterface{NoCreate} {}
     } ui{NoCreate};
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     ui.textLayer();
-    CORRADE_COMPARE(out.str(), "Ui::UserInterface::textLayer(): no instance set\n");
+    CORRADE_COMPARE(out, "Ui::UserInterface::textLayer(): no instance set\n");
 }
 
 void UserInterfaceTest::setEventLayerInstance() {
@@ -325,11 +325,11 @@ void UserInterfaceTest::setEventLayerInstanceInvalid() {
     } ui{NoCreate};
     ui.setEventLayerInstance(Containers::pointer<EventLayer>(ui.createLayer()));
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     ui.setEventLayerInstance(nullptr);
     ui.setEventLayerInstance(Containers::pointer<EventLayer>(ui.createLayer()));
-    CORRADE_COMPARE(out.str(),
+    CORRADE_COMPARE(out,
         "Ui::UserInterface::setEventLayerInstance(): instance is null\n"
         "Ui::UserInterface::setEventLayerInstance(): instance already set\n");
 }
@@ -341,10 +341,10 @@ void UserInterfaceTest::eventLayerInvalid() {
         explicit Interface(NoCreateT): UserInterface{NoCreate} {}
     } ui{NoCreate};
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     ui.eventLayer();
-    CORRADE_COMPARE(out.str(), "Ui::UserInterface::eventLayer(): no instance set\n");
+    CORRADE_COMPARE(out, "Ui::UserInterface::eventLayer(): no instance set\n");
 }
 
 void UserInterfaceTest::setSnapLayouterInstance() {
@@ -374,11 +374,11 @@ void UserInterfaceTest::setSnapLayouterInstanceInvalid() {
     } ui{NoCreate};
     ui.setSnapLayouterInstance(Containers::pointer<SnapLayouter>(ui.createLayouter()));
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     ui.setSnapLayouterInstance(nullptr);
     ui.setSnapLayouterInstance(Containers::pointer<SnapLayouter>(ui.createLayouter()));
-    CORRADE_COMPARE(out.str(),
+    CORRADE_COMPARE(out,
         "Ui::UserInterface::setSnapLayouterInstance(): instance is null\n"
         "Ui::UserInterface::setSnapLayouterInstance(): instance already set\n");
 }
@@ -390,10 +390,10 @@ void UserInterfaceTest::snapLayouterInvalid() {
         explicit Interface(NoCreateT): UserInterface{NoCreate} {}
     } ui{NoCreate};
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     ui.snapLayouter();
-    CORRADE_COMPARE(out.str(), "Ui::UserInterface::snapLayouter(): no instance set\n");
+    CORRADE_COMPARE(out, "Ui::UserInterface::snapLayouter(): no instance set\n");
 }
 
 }}}}

@@ -24,14 +24,12 @@
     DEALINGS IN THE SOFTWARE.
 */
 
-#include <sstream> /** @todo remove once Debug is stream-free */
 #include <Corrade/Containers/GrowableArray.h>
 #include <Corrade/Containers/Pair.h>
-#include <Corrade/Containers/StringStl.h> /** @todo remove once Debug is stream-free */
+#include <Corrade/Containers/String.h>
 #include <Corrade/TestSuite/Tester.h>
 #include <Corrade/TestSuite/Compare/Container.h>
 #include <Corrade/TestSuite/Compare/String.h>
-#include <Corrade/Utility/DebugStl.h> /** @todo remove once Debug is stream-free */
 #include <Magnum/Math/Vector2.h>
 
 #include "Magnum/Ui/AbstractRenderer.h"
@@ -85,33 +83,33 @@ AbstractRendererTest::AbstractRendererTest() {
 }
 
 void AbstractRendererTest::debugFeature() {
-    std::ostringstream out;
+    Containers::String out;
     Debug{&out} << RendererFeature::Composite << RendererFeature(0xbe);
-    CORRADE_COMPARE(out.str(), "Ui::RendererFeature::Composite Ui::RendererFeature(0xbe)\n");
+    CORRADE_COMPARE(out, "Ui::RendererFeature::Composite Ui::RendererFeature(0xbe)\n");
 }
 
 void AbstractRendererTest::debugFeatures() {
-    std::ostringstream out;
+    Containers::String out;
     Debug{&out} << (RendererFeature::Composite|RendererFeature(0xb0)) << RendererFeatures{};
-    CORRADE_COMPARE(out.str(), "Ui::RendererFeature::Composite|Ui::RendererFeature(0xb0) Ui::RendererFeatures{}\n");
+    CORRADE_COMPARE(out, "Ui::RendererFeature::Composite|Ui::RendererFeature(0xb0) Ui::RendererFeatures{}\n");
 }
 
 void AbstractRendererTest::debugTargetState() {
-    std::ostringstream out;
+    Containers::String out;
     Debug{&out} << RendererTargetState::Draw << RendererTargetState(0xbe);
-    CORRADE_COMPARE(out.str(), "Ui::RendererTargetState::Draw Ui::RendererTargetState(0xbe)\n");
+    CORRADE_COMPARE(out, "Ui::RendererTargetState::Draw Ui::RendererTargetState(0xbe)\n");
 }
 
 void AbstractRendererTest::debugDrawState() {
-    std::ostringstream out;
+    Containers::String out;
     Debug{&out} << RendererDrawState::Blending << RendererDrawState(0xbe);
-    CORRADE_COMPARE(out.str(), "Ui::RendererDrawState::Blending Ui::RendererDrawState(0xbe)\n");
+    CORRADE_COMPARE(out, "Ui::RendererDrawState::Blending Ui::RendererDrawState(0xbe)\n");
 }
 
 void AbstractRendererTest::debugDrawStates() {
-    std::ostringstream out;
+    Containers::String out;
     Debug{&out} << (RendererDrawState::Scissor|RendererDrawState(0xe0)) << RendererDrawStates{};
-    CORRADE_COMPARE(out.str(), "Ui::RendererDrawState::Scissor|Ui::RendererDrawState(0xe0) Ui::RendererDrawStates{}\n");
+    CORRADE_COMPARE(out, "Ui::RendererDrawState::Scissor|Ui::RendererDrawState(0xe0) Ui::RendererDrawStates{}\n");
 }
 
 void AbstractRendererTest::construct() {
@@ -203,12 +201,12 @@ void AbstractRendererTest::setupFramebuffersInvalid() {
     draw.setupFramebuffers({15, 37});
     draw.transition(RendererTargetState::Draw, {});
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     initial.setupFramebuffers({0, 13});
     initial.setupFramebuffers({14, 0});
     draw.setupFramebuffers({15, 37});
-    CORRADE_COMPARE_AS(out.str(),
+    CORRADE_COMPARE_AS(out,
         "Ui::AbstractRenderer::setupFramebuffers(): expected non-zero size, got {0, 13}\n"
         "Ui::AbstractRenderer::setupFramebuffers(): expected non-zero size, got {14, 0}\n"
         "Ui::AbstractRenderer::setupFramebuffers(): not allowed to be called in Ui::RendererTargetState::Draw\n",
@@ -353,7 +351,7 @@ void AbstractRendererTest::transitionInvalid() {
     draw.transition(RendererTargetState::Draw, {});
     final.transition(RendererTargetState::Final, {});
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     /* The check is a whitelist so we shouldn't need to verify all invalid
        combinations, just one. OTOH transition() above verifies all valid
@@ -362,7 +360,7 @@ void AbstractRendererTest::transitionInvalid() {
     draw.transition(RendererTargetState::Composite, RendererDrawState::Scissor|RendererDrawState::Blending);
     draw.transition(RendererTargetState::Final, RendererDrawState::Scissor);
     final.transition(RendererTargetState::Initial, RendererDrawState::Blending);
-    CORRADE_COMPARE_AS(out.str(),
+    CORRADE_COMPARE_AS(out,
         "Ui::AbstractRenderer::transition(): invalid transition from Ui::RendererTargetState::Draw to Ui::RendererTargetState::Initial\n"
         "Ui::AbstractRenderer::transition(): invalid Ui::RendererDrawState::Blending|Ui::RendererDrawState::Scissor in a transition to Ui::RendererTargetState::Composite\n"
         "Ui::AbstractRenderer::transition(): invalid Ui::RendererDrawState::Scissor in a transition to Ui::RendererTargetState::Final\n"
@@ -382,10 +380,10 @@ void AbstractRendererTest::transitionNoFramebufferSetup() {
         void doTransition(RendererTargetState, RendererTargetState, RendererDrawStates, RendererDrawStates) override {}
     } renderer;
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     renderer.transition(RendererTargetState::Initial, {});
-    CORRADE_COMPARE(out.str(), "Ui::AbstractRenderer::transition(): framebuffer size wasn't set up\n");
+    CORRADE_COMPARE(out, "Ui::AbstractRenderer::transition(): framebuffer size wasn't set up\n");
 }
 
 void AbstractRendererTest::transitionCompositeNotSupported() {
@@ -403,10 +401,10 @@ void AbstractRendererTest::transitionCompositeNotSupported() {
     /* Transition needs a framebuffer size set up */
     renderer.setupFramebuffers({15, 37});
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     renderer.transition(RendererTargetState::Composite, {});
-    CORRADE_COMPARE(out.str(), "Ui::AbstractRenderer::transition(): transition to Ui::RendererTargetState::Composite not supported\n");
+    CORRADE_COMPARE(out, "Ui::AbstractRenderer::transition(): transition to Ui::RendererTargetState::Composite not supported\n");
 }
 
 }}}}

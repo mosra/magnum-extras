@@ -24,9 +24,8 @@
     DEALINGS IN THE SOFTWARE.
 */
 
-#include <sstream> /** @todo remove once Debug is stream-free */
+#include <Corrade/Containers/String.h>
 #include <Corrade/TestSuite/Tester.h>
-#include <Corrade/Utility/DebugStl.h> /** @todo remove once Debug is stream-free */
 
 #include "Magnum/Ui/NodeFlags.h"
 
@@ -47,23 +46,23 @@ NodeFlagsTest::NodeFlagsTest() {
 }
 
 void NodeFlagsTest::debugFlag() {
-    std::ostringstream out;
+    Containers::String out;
     Debug{&out} << NodeFlag::Hidden << NodeFlag(0xbe);
-    CORRADE_COMPARE(out.str(), "Ui::NodeFlag::Hidden Ui::NodeFlag(0xbe)\n");
+    CORRADE_COMPARE(out, "Ui::NodeFlag::Hidden Ui::NodeFlag(0xbe)\n");
 }
 
 void NodeFlagsTest::debugFlags() {
-    std::ostringstream out;
+    Containers::String out;
     Debug{&out} << (NodeFlag::Hidden|NodeFlag(0x80)) << NodeFlags{};
-    CORRADE_COMPARE(out.str(), "Ui::NodeFlag::Hidden|Ui::NodeFlag(0x80) Ui::NodeFlags{}\n");
+    CORRADE_COMPARE(out, "Ui::NodeFlag::Hidden|Ui::NodeFlag(0x80) Ui::NodeFlags{}\n");
 }
 
 void NodeFlagsTest::debugFlagsSupersets() {
     /* Disabled is a superset of NoEvents, so only one should be printed */
     {
-        std::ostringstream out;
+        Containers::String out;
         Debug{&out} << (NodeFlag::Disabled|NodeFlag::NoEvents);
-        CORRADE_COMPARE(out.str(), "Ui::NodeFlag::Disabled\n");
+        CORRADE_COMPARE(out, "Ui::NodeFlag::Disabled\n");
     }
 }
 

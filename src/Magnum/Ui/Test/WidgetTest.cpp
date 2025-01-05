@@ -24,10 +24,9 @@
     DEALINGS IN THE SOFTWARE.
 */
 
-#include <sstream>
 #include <Corrade/Containers/Optional.h>
+#include <Corrade/Containers/String.h>
 #include <Corrade/TestSuite/Tester.h>
-#include <Corrade/Utility/DebugStl.h> /** @todo remove once Debug is stream-free */
 #include <Magnum/Math/Vector2.h>
 
 #include "Magnum/Ui/Anchor.h"
@@ -122,12 +121,12 @@ template<class T> void WidgetTest::constructInvalid() {
         explicit Interface(NoCreateT): WidgetTraits<T>::UserInterfaceType{NoCreate} {}
     } ui{NoCreate};
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     /* Releasing the (invalid) node handle so it isn't attempted to be removed
        as well */
     T{ui, nodeHandle(0x12345, 0xabc)}.release();
-    CORRADE_COMPARE(out.str(), "Ui::AbstractWidget: invalid handle Ui::NodeHandle(0x12345, 0xabc)\n");
+    CORRADE_COMPARE(out, "Ui::AbstractWidget: invalid handle Ui::NodeHandle(0x12345, 0xabc)\n");
 }
 
 template<class T> void WidgetTest::constructFromAnchor() {
@@ -208,10 +207,10 @@ void WidgetTest::destructInvalidNode() {
     CORRADE_VERIFY(!ui.isHandleValid(node));
     CORRADE_COMPARE(widget->node(), node);
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     widget = Containers::NullOpt;
-    CORRADE_COMPARE(out.str(), "Ui::AbstractWidget: invalid handle Ui::NodeHandle(0x0, 0x1) on destruction\n");
+    CORRADE_COMPARE(out, "Ui::AbstractWidget: invalid handle Ui::NodeHandle(0x0, 0x1) on destruction\n");
 }
 
 void WidgetTest::hidden() {

@@ -24,16 +24,15 @@
     DEALINGS IN THE SOFTWARE.
 */
 
-#include <sstream> /** @todo remove once Debug is stream-free */
 #include <Corrade/Containers/Array.h>
 #include <Corrade/Containers/BitArrayView.h>
 #include <Corrade/Containers/Function.h>
 #include <Corrade/Containers/GrowableArray.h>
 #include <Corrade/Containers/Optional.h>
 #include <Corrade/Containers/StridedArrayView.h>
+#include <Corrade/Containers/String.h>
 #include <Corrade/TestSuite/Tester.h>
-#include <Corrade/Utility/DebugStl.h> /** @todo remove once Debug is stream-free */
-#include <Corrade/Utility/FormatStl.h> /** @todo remove once Debug is stream-free */
+#include <Corrade/Utility/Format.h>
 
 #include "Magnum/Ui/AbstractUserInterface.h"
 #include "Magnum/Ui/AbstractVisualLayer.h"
@@ -1190,7 +1189,7 @@ void AbstractVisualLayerTest::invalidHandle() {
         explicit Layer(LayerHandle handle, Shared& shared): AbstractVisualLayer{handle, shared} {}
     } layer{layerHandle(0, 1), shared};
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     layer.style(DataHandle::Null);
     layer.style(LayerDataHandle::Null);
@@ -1198,7 +1197,7 @@ void AbstractVisualLayerTest::invalidHandle() {
     layer.setStyle(LayerDataHandle::Null, 0);
     layer.setTransitionedStyle(ui, DataHandle::Null, 0);
     layer.setTransitionedStyle(ui, LayerDataHandle::Null, 0);
-    CORRADE_COMPARE(out.str(),
+    CORRADE_COMPARE(out,
         "Ui::AbstractVisualLayer::style(): invalid handle Ui::DataHandle::Null\n"
         "Ui::AbstractVisualLayer::style(): invalid handle Ui::LayerDataHandle::Null\n"
         "Ui::AbstractVisualLayer::setStyle(): invalid handle Ui::DataHandle::Null\n"
@@ -1227,13 +1226,13 @@ void AbstractVisualLayerTest::styleOutOfRange() {
 
     DataHandle layerData = layer.create();
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     layer.setStyle(layerData, 3);
     layer.setStyle(dataHandleData(layerData), 3);
     layer.setTransitionedStyle(ui, layerData, data.styleCount);
     layer.setTransitionedStyle(ui, dataHandleData(layerData), data.styleCount);
-    CORRADE_COMPARE(out.str(), Utility::formatString(
+    CORRADE_COMPARE(out, Utility::format(
         "Ui::AbstractVisualLayer::setStyle(): style 3 out of range for 3 styles\n"
         "Ui::AbstractVisualLayer::setStyle(): style 3 out of range for 3 styles\n"
         "Ui::AbstractVisualLayer::setTransitionedStyle(): style {0} out of range for {0} styles\n"
@@ -1344,12 +1343,12 @@ void AbstractVisualLayerTest::dynamicStyleRecycleInvalid() {
         using AbstractVisualLayer::create;
     } layer{layerHandle(0, 1), shared};
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     layer.recycleDynamicStyle(2);
     layer.dynamicStyleAnimation(4);
     layer.recycleDynamicStyle(4);
-    CORRADE_COMPARE(out.str(),
+    CORRADE_COMPARE(out,
         "Ui::AbstractVisualLayer::recycleDynamicStyle(): style 2 not allocated\n"
         "Ui::AbstractVisualLayer::dynamicStyleAnimation(): index 4 out of range for 4 dynamic styles\n"
         "Ui::AbstractVisualLayer::recycleDynamicStyle(): index 4 out of range for 4 dynamic styles\n");
@@ -3501,10 +3500,10 @@ void AbstractVisualLayerTest::eventStyleTransitionOutOfRange() {
     {
         PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0};
 
-        std::ostringstream out;
+        Containers::String out;
         Error redirectError{&out};
         ui.pointerPressEvent({2.0f, 2.0f}, event);
-        CORRADE_COMPARE(out.str(), Utility::formatString( "Ui::AbstractVisualLayer::pointerPressEvent(): style transition from {0} to {1} out of range for {1} styles\n", UnsignedByte(StyleIndex::Red), StyleCount));
+        CORRADE_COMPARE(out, Utility::format( "Ui::AbstractVisualLayer::pointerPressEvent(): style transition from {0} to {1} out of range for {1} styles\n", UnsignedByte(StyleIndex::Red), StyleCount));
     }
 
     /* OOB toPressedOver transition in the press event */
@@ -3531,10 +3530,10 @@ void AbstractVisualLayerTest::eventStyleTransitionOutOfRange() {
 
         PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0};
 
-        std::ostringstream out;
+        Containers::String out;
         Error redirectError{&out};
         ui.pointerPressEvent({2.0f, 2.0f}, event);
-        CORRADE_COMPARE(out.str(), Utility::formatString("Ui::AbstractVisualLayer::pointerPressEvent(): style transition from {0} to {1} out of range for {1} styles\n", UnsignedByte(StyleIndex::RedHover), StyleCount));
+        CORRADE_COMPARE(out, Utility::format("Ui::AbstractVisualLayer::pointerPressEvent(): style transition from {0} to {1} out of range for {1} styles\n", UnsignedByte(StyleIndex::RedHover), StyleCount));
     }
 
     /* OOB toInactiveOver transition */
@@ -3549,10 +3548,10 @@ void AbstractVisualLayerTest::eventStyleTransitionOutOfRange() {
     {
         PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0};
 
-        std::ostringstream out;
+        Containers::String out;
         Error redirectError{&out};
         ui.pointerReleaseEvent({1.5f, 2.5f}, event);
-        CORRADE_COMPARE(out.str(), Utility::formatString("Ui::AbstractVisualLayer::pointerReleaseEvent(): style transition from {0} to {1} out of range for {1} styles\n", UnsignedInt(StyleIndex::RedHover), StyleCount));
+        CORRADE_COMPARE(out, Utility::format("Ui::AbstractVisualLayer::pointerReleaseEvent(): style transition from {0} to {1} out of range for {1} styles\n", UnsignedInt(StyleIndex::RedHover), StyleCount));
     }
 
     /* OOB toInactiveOut transition in the leave event */
@@ -3567,10 +3566,10 @@ void AbstractVisualLayerTest::eventStyleTransitionOutOfRange() {
     {
         PointerMoveEvent event{{}, PointerEventSource::Mouse, {}, {}, true, 0};
 
-        std::ostringstream out;
+        Containers::String out;
         Error redirectError{&out};
         ui.pointerMoveEvent({8.5f, 2.0f}, event);
-        CORRADE_COMPARE(out.str(), Utility::formatString("Ui::AbstractVisualLayer::pointerLeaveEvent(): style transition from {0} to {1} out of range for {1} styles\n", UnsignedInt(StyleIndex::RedHover), StyleCount));
+        CORRADE_COMPARE(out, Utility::format("Ui::AbstractVisualLayer::pointerLeaveEvent(): style transition from {0} to {1} out of range for {1} styles\n", UnsignedInt(StyleIndex::RedHover), StyleCount));
     }
 
     /* OOB toInactiveOver transition in the enter event */
@@ -3585,10 +3584,10 @@ void AbstractVisualLayerTest::eventStyleTransitionOutOfRange() {
     {
         PointerMoveEvent event{{}, PointerEventSource::Mouse, {}, {}, true, 0};
 
-        std::ostringstream out;
+        Containers::String out;
         Error redirectError{&out};
         ui.pointerMoveEvent({1.5f, 2.0f}, event);
-        CORRADE_COMPARE(out.str(), Utility::formatString("Ui::AbstractVisualLayer::pointerEnterEvent(): style transition from {0} to {1} out of range for {1} styles\n", UnsignedInt(StyleIndex::RedHover), StyleCount));
+        CORRADE_COMPARE(out, Utility::format("Ui::AbstractVisualLayer::pointerEnterEvent(): style transition from {0} to {1} out of range for {1} styles\n", UnsignedInt(StyleIndex::RedHover), StyleCount));
     }
 
     /* OOB toFocusedOver transition in the focus event */
@@ -3603,10 +3602,10 @@ void AbstractVisualLayerTest::eventStyleTransitionOutOfRange() {
     {
         FocusEvent event{{}};
 
-        std::ostringstream out;
+        Containers::String out;
         Error redirectError{&out};
         ui.focusEvent(node, event);
-        CORRADE_COMPARE(out.str(), Utility::formatString("Ui::AbstractVisualLayer::focusEvent(): style transition from {0} to {1} out of range for {1} styles\n", UnsignedInt(StyleIndex::RedHover), StyleCount));
+        CORRADE_COMPARE(out, Utility::format("Ui::AbstractVisualLayer::focusEvent(): style transition from {0} to {1} out of range for {1} styles\n", UnsignedInt(StyleIndex::RedHover), StyleCount));
     }
 
     /* OOB toInactiveOver transition in the blur event. Doing a
@@ -3625,10 +3624,10 @@ void AbstractVisualLayerTest::eventStyleTransitionOutOfRange() {
         ui.focusEvent(node, event1);
         FocusEvent event2{{}};
 
-        std::ostringstream out;
+        Containers::String out;
         Error redirectError{&out};
         ui.focusEvent(NodeHandle::Null, event2);
-        CORRADE_COMPARE(out.str(), Utility::formatString("Ui::AbstractVisualLayer::blurEvent(): style transition from {0} to {1} out of range for {1} styles\n", UnsignedInt(StyleIndex::RedHover), StyleCount));
+        CORRADE_COMPARE(out, Utility::format("Ui::AbstractVisualLayer::blurEvent(): style transition from {0} to {1} out of range for {1} styles\n", UnsignedInt(StyleIndex::RedHover), StyleCount));
     }
 
     /* OOB toInactiveOut transition in doPointerCancelEvent(). Faked by calling
@@ -3645,10 +3644,10 @@ void AbstractVisualLayerTest::eventStyleTransitionOutOfRange() {
     {
         PointerCancelEvent event{{}};
 
-        std::ostringstream out;
+        Containers::String out;
         Error redirectError{&out};
         layer.pointerCancelEvent(dataHandleId(nodeData), event);
-        CORRADE_COMPARE(out.str(),  Utility::formatString("Ui::AbstractVisualLayer::pointerCancelEvent(): style transition from {0} to {1} out of range for {1} styles\n", UnsignedInt(StyleIndex::RedHover), StyleCount));
+        CORRADE_COMPARE(out,  Utility::format("Ui::AbstractVisualLayer::pointerCancelEvent(): style transition from {0} to {1} out of range for {1} styles\n", UnsignedInt(StyleIndex::RedHover), StyleCount));
     }
 
     /* OOB toInactiveOut transition in the visibility lost event */
@@ -3663,10 +3662,10 @@ void AbstractVisualLayerTest::eventStyleTransitionOutOfRange() {
     ui.addNodeFlags(node, NodeFlag::NoEvents);
     CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeEnabledUpdate);
     {
-        std::ostringstream out;
+        Containers::String out;
         Error redirectError{&out};
         ui.update();
-        CORRADE_COMPARE(out.str(), Utility::formatString("Ui::AbstractVisualLayer::visibilityLostEvent(): style transition from {0} to {1} out of range for {1} styles\n", UnsignedInt(StyleIndex::RedHover), StyleCount));
+        CORRADE_COMPARE(out, Utility::format("Ui::AbstractVisualLayer::visibilityLostEvent(): style transition from {0} to {1} out of range for {1} styles\n", UnsignedInt(StyleIndex::RedHover), StyleCount));
     }
 
     /* OOB toDisabled transition in doUpdate() */
@@ -3681,10 +3680,10 @@ void AbstractVisualLayerTest::eventStyleTransitionOutOfRange() {
     ui.addNodeFlags(node, NodeFlag::Disabled);
     CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeEnabledUpdate);
     {
-        std::ostringstream out;
+        Containers::String out;
         Error redirectError{&out};
         ui.update();
-        CORRADE_COMPARE(out.str(), Utility::formatString("Ui::AbstractVisualLayer::update(): style transition from {0} to {1} out of range for {1} styles\n", UnsignedInt(StyleIndex::RedHover), StyleCount));
+        CORRADE_COMPARE(out, Utility::format("Ui::AbstractVisualLayer::update(): style transition from {0} to {1} out of range for {1} styles\n", UnsignedInt(StyleIndex::RedHover), StyleCount));
     }
 }
 

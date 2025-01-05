@@ -24,11 +24,10 @@
     DEALINGS IN THE SOFTWARE.
 */
 
-#include <sstream> /** @todo remove once Debug is stream-free */
-#include <Corrade/Containers/StringStl.h> /** @todo remove once Debug is stream-free */
+#include <Corrade/Containers/ArrayView.h>
+#include <Corrade/Containers/String.h>
 #include <Corrade/TestSuite/Tester.h>
 #include <Corrade/TestSuite/Compare/String.h>
-#include <Corrade/Utility/DebugStl.h> /** @todo remove once Debug is stream-free */
 #include <Magnum/PixelFormat.h>
 #include <Magnum/Text/AbstractFont.h>
 #include <Magnum/Text/AbstractGlyphCache.h>
@@ -170,15 +169,15 @@ AbstractStyleTest::AbstractStyleTest() {
 }
 
 void AbstractStyleTest::debugFeature() {
-    std::ostringstream out;
+    Containers::String out;
     Debug{&out} << StyleFeature::BaseLayer << StyleFeature(0xbe);
-    CORRADE_COMPARE(out.str(), "Ui::StyleFeature::BaseLayer Ui::StyleFeature(0xbe)\n");
+    CORRADE_COMPARE(out, "Ui::StyleFeature::BaseLayer Ui::StyleFeature(0xbe)\n");
 }
 
 void AbstractStyleTest::debugFeatures() {
-    std::ostringstream out;
+    Containers::String out;
     Debug{&out} << (StyleFeature::TextLayer|StyleFeature(0xe0)) << StyleFeatures{};
-    CORRADE_COMPARE(out.str(), "Ui::StyleFeature::TextLayer|Ui::StyleFeature(0xe0) Ui::StyleFeatures{}\n");
+    CORRADE_COMPARE(out, "Ui::StyleFeature::TextLayer|Ui::StyleFeature(0xe0) Ui::StyleFeatures{}\n");
 }
 
 void AbstractStyleTest::construct() {
@@ -220,10 +219,10 @@ void AbstractStyleTest::noFeaturesReturned() {
         bool doApply(UserInterface&, StyleFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override { return {}; }
     } style;
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     style.features();
-    CORRADE_COMPARE(out.str(), "Ui::AbstractStyle::features(): implementation returned an empty set\n");
+    CORRADE_COMPARE(out, "Ui::AbstractStyle::features(): implementation returned an empty set\n");
 }
 
 void AbstractStyleTest::styleCount() {
@@ -294,7 +293,7 @@ void AbstractStyleTest::styleCountNotSupported() {
     /* Capture correct function name */
     CORRADE_VERIFY(true);
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     style.baseLayerStyleUniformCount();
     style.baseLayerStyleCount();
@@ -304,7 +303,7 @@ void AbstractStyleTest::styleCountNotSupported() {
     style.textLayerEditingStyleUniformCount();
     style.textLayerEditingStyleCount();
     style.textLayerDynamicStyleCount();
-    CORRADE_COMPARE_AS(out.str(),
+    CORRADE_COMPARE_AS(out,
         "Ui::AbstractStyle::baseLayerStyleUniformCount(): feature not supported\n"
         "Ui::AbstractStyle::baseLayerStyleCount(): feature not supported\n"
         "Ui::AbstractStyle::baseLayerDynamicStyleCount(): feature not supported\n"
@@ -329,7 +328,7 @@ void AbstractStyleTest::styleCountNotImplemented() {
     /* *DynamicStyleCount() and textLayerEditingStyle*Count() has a default
        implementation, tested in styleCountNotImplementedDefaults() below */
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     /* The *UniformCount() delegate to *Count() by default, so the assertion
        is the same. Delegation and value propagation tested below. */
@@ -339,7 +338,7 @@ void AbstractStyleTest::styleCountNotImplemented() {
     style.textLayerStyleCount();
     style.textLayerEditingStyleUniformCount();
     style.textLayerEditingStyleCount();
-    CORRADE_COMPARE_AS(out.str(),
+    CORRADE_COMPARE_AS(out,
         "Ui::AbstractStyle::baseLayerStyleCount(): feature advertised but not implemented\n"
         "Ui::AbstractStyle::baseLayerStyleCount(): feature advertised but not implemented\n"
         "Ui::AbstractStyle::textLayerStyleCount(): feature advertised but not implemented\n"
@@ -472,12 +471,12 @@ void AbstractStyleTest::baseLayerFlagsInvalid() {
     } style{{}},
       styleReturnedInvalid{BaseLayerSharedFlag::SubdividedQuads|BaseLayerSharedFlag::Textured|BaseLayerSharedFlag::NoOutline};
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     styleReturnedInvalid.baseLayerFlags();
     style.setBaseLayerFlags(BaseLayerSharedFlag::NoOutline|BaseLayerSharedFlag::SubdividedQuads|BaseLayerSharedFlag::Textured, {});
     style.setBaseLayerFlags({}, BaseLayerSharedFlag::NoOutline|BaseLayerSharedFlag::SubdividedQuads|BaseLayerSharedFlag::Textured);
-    CORRADE_COMPARE_AS(out.str(),
+    CORRADE_COMPARE_AS(out,
         "Ui::AbstractStyle::baseLayerFlags(): implementation returned disallowed Ui::BaseLayerSharedFlag::Textured|Ui::BaseLayerSharedFlag::SubdividedQuads\n"
         "Ui::AbstractStyle::setBaseLayerFlags(): Ui::BaseLayerSharedFlag::Textured|Ui::BaseLayerSharedFlag::NoOutline isn't allowed to be added\n"
         "Ui::AbstractStyle::setBaseLayerFlags(): Ui::BaseLayerSharedFlag::Textured|Ui::BaseLayerSharedFlag::SubdividedQuads isn't allowed to be cleared\n",
@@ -531,12 +530,12 @@ void AbstractStyleTest::textLayerGlyphCachePropertiesNotSupported() {
     /* Capture correct function name */
     CORRADE_VERIFY(true);
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     style.textLayerGlyphCacheFormat();
     style.textLayerGlyphCacheSize(StyleFeature::TextLayer);
     style.textLayerGlyphCachePadding();
-    CORRADE_COMPARE_AS(out.str(),
+    CORRADE_COMPARE_AS(out,
         "Ui::AbstractStyle::textLayerGlyphCacheFormat(): feature not supported\n"
         "Ui::AbstractStyle::textLayerGlyphCacheSize(): feature not supported\n"
         "Ui::AbstractStyle::textLayerGlyphCachePadding(): feature not supported\n",
@@ -553,12 +552,12 @@ void AbstractStyleTest::textLayerGlyphCachePropertiesNotImplemented() {
         bool doApply(UserInterface&, StyleFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override { return {}; }
     } style;
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     /* textLayerGlyphCacheFormat() and textLayerGlyphCachePadding() have
        defaults, tested below */
     style.textLayerGlyphCacheSize(StyleFeature::TextLayer);
-    CORRADE_COMPARE(out.str(), "Ui::AbstractStyle::textLayerGlyphCacheSize(): feature advertised but not implemented\n");
+    CORRADE_COMPARE(out, "Ui::AbstractStyle::textLayerGlyphCacheSize(): feature advertised but not implemented\n");
 }
 
 void AbstractStyleTest::textLayerGlyphCachePropertiesNotImplementedDefaults() {
@@ -585,10 +584,10 @@ void AbstractStyleTest::textLayerGlyphCacheSizeNoTextFeature() {
         bool doApply(UserInterface&, StyleFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override { return {}; }
     } style;
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     style.textLayerGlyphCacheSize(StyleFeature::BaseLayer|StyleFeature(0x40));
-    CORRADE_COMPARE(out.str(), "Ui::AbstractStyle::textLayerGlyphCacheSize(): expected a superset of Ui::StyleFeature::TextLayer but got Ui::StyleFeature::BaseLayer|Ui::StyleFeature(0x40)\n");
+    CORRADE_COMPARE(out, "Ui::AbstractStyle::textLayerGlyphCacheSize(): expected a superset of Ui::StyleFeature::TextLayer but got Ui::StyleFeature::BaseLayer|Ui::StyleFeature(0x40)\n");
 }
 
 void AbstractStyleTest::textLayerGlyphCacheSizeFeaturesNotSupported() {
@@ -601,10 +600,10 @@ void AbstractStyleTest::textLayerGlyphCacheSizeFeaturesNotSupported() {
         bool doApply(UserInterface&, StyleFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override { return {}; }
     } style;
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     style.textLayerGlyphCacheSize(StyleFeature::TextLayer|StyleFeature::BaseLayer);
-    CORRADE_COMPARE(out.str(), "Ui::AbstractStyle::textLayerGlyphCacheSize(): Ui::StyleFeature::BaseLayer|Ui::StyleFeature::TextLayer not a subset of supported Ui::StyleFeature::TextLayer\n");
+    CORRADE_COMPARE(out, "Ui::AbstractStyle::textLayerGlyphCacheSize(): Ui::StyleFeature::BaseLayer|Ui::StyleFeature::TextLayer not a subset of supported Ui::StyleFeature::TextLayer\n");
 }
 
 void AbstractStyleTest::setTextLayerDynamicStyleCount() {
@@ -796,10 +795,10 @@ void AbstractStyleTest::applyNoFeatures() {
     /* Capture correct function name */
     CORRADE_VERIFY(true);
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     style.apply(ui, {}, nullptr, nullptr);
-    CORRADE_COMPARE(out.str(), "Ui::AbstractStyle::apply(): no features specified\n");
+    CORRADE_COMPARE(out, "Ui::AbstractStyle::apply(): no features specified\n");
 }
 
 void AbstractStyleTest::applyFeaturesNotSupported() {
@@ -820,10 +819,10 @@ void AbstractStyleTest::applyFeaturesNotSupported() {
     /* Capture correct function name */
     CORRADE_VERIFY(true);
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     style.apply(ui, StyleFeature::TextLayer|StyleFeature::BaseLayer, nullptr, nullptr);
-    CORRADE_COMPARE(out.str(), "Ui::AbstractStyle::apply(): Ui::StyleFeature::BaseLayer|Ui::StyleFeature::TextLayer not a subset of supported Ui::StyleFeature::TextLayer\n");
+    CORRADE_COMPARE(out, "Ui::AbstractStyle::apply(): Ui::StyleFeature::BaseLayer|Ui::StyleFeature::TextLayer not a subset of supported Ui::StyleFeature::TextLayer\n");
 }
 
 void AbstractStyleTest::applyNoSizeSet() {
@@ -844,10 +843,10 @@ void AbstractStyleTest::applyNoSizeSet() {
     /* Capture correct function name */
     CORRADE_VERIFY(true);
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     style.apply(ui, StyleFeature::TextLayer, nullptr, nullptr);
-    CORRADE_COMPARE(out.str(), "Ui::AbstractStyle::apply(): user interface size wasn't set\n");
+    CORRADE_COMPARE(out, "Ui::AbstractStyle::apply(): user interface size wasn't set\n");
 }
 
 void AbstractStyleTest::applyBaseLayerNotPresent() {
@@ -882,10 +881,10 @@ void AbstractStyleTest::applyBaseLayerNotPresent() {
     /* Capture correct function name */
     CORRADE_VERIFY(true);
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     style.apply(ui, StyleFeature::BaseLayer, nullptr, nullptr);
-    CORRADE_COMPARE(out.str(), "Ui::AbstractStyle::apply(): base layer not present in the user interface\n");
+    CORRADE_COMPARE(out, "Ui::AbstractStyle::apply(): base layer not present in the user interface\n");
 }
 
 void AbstractStyleTest::applyBaseLayerDifferentStyleCount() {
@@ -938,7 +937,7 @@ void AbstractStyleTest::applyBaseLayerDifferentStyleCount() {
     CORRADE_VERIFY(Style{3, 5, 10}
         .apply(ui, StyleFeature::BaseLayer, nullptr, nullptr));
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     Style{4, 5, 11}
         .apply(ui, StyleFeature::BaseLayer, nullptr, nullptr);
@@ -946,7 +945,7 @@ void AbstractStyleTest::applyBaseLayerDifferentStyleCount() {
         .apply(ui, StyleFeature::BaseLayer, nullptr, nullptr);
     Style{3, 5, 12}
         .apply(ui, StyleFeature::BaseLayer, nullptr, nullptr);
-    CORRADE_COMPARE_AS(out.str(),
+    CORRADE_COMPARE_AS(out,
         "Ui::AbstractStyle::apply(): style wants 4 uniforms, 5 styles and at least 11 dynamic styles but the base layer has 3, 5 and 11\n"
         "Ui::AbstractStyle::apply(): style wants 3 uniforms, 4 styles and at least 11 dynamic styles but the base layer has 3, 5 and 11\n"
         "Ui::AbstractStyle::apply(): style wants 3 uniforms, 5 styles and at least 12 dynamic styles but the base layer has 3, 5 and 11\n",
@@ -984,10 +983,10 @@ void AbstractStyleTest::applyTextLayerNotPresent() {
     /* Capture correct function name */
     CORRADE_VERIFY(true);
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     style.apply(ui, StyleFeature::TextLayer, nullptr, nullptr);
-    CORRADE_COMPARE(out.str(), "Ui::AbstractStyle::apply(): text layer not present in the user interface\n");
+    CORRADE_COMPARE(out, "Ui::AbstractStyle::apply(): text layer not present in the user interface\n");
 }
 
 void AbstractStyleTest::applyTextLayerDifferentStyleCount() {
@@ -1057,7 +1056,7 @@ void AbstractStyleTest::applyTextLayerDifferentStyleCount() {
     CORRADE_VERIFY(Style{3, 5, 7, 2, 10}
         .apply(ui, StyleFeature::TextLayer, nullptr, &_fontManager));
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     Style{4, 5, 7, 2, 11}
         .apply(ui, StyleFeature::TextLayer, nullptr, nullptr);
@@ -1069,7 +1068,7 @@ void AbstractStyleTest::applyTextLayerDifferentStyleCount() {
         .apply(ui, StyleFeature::TextLayer, nullptr, nullptr);
     Style{3, 5, 7, 2, 12}
         .apply(ui, StyleFeature::TextLayer, nullptr, nullptr);
-    CORRADE_COMPARE_AS(out.str(),
+    CORRADE_COMPARE_AS(out,
         "Ui::AbstractStyle::apply(): style wants 4 uniforms, 5 styles, 7 editing uniforms, 2 editing styles and at least 11 dynamic styles but the text layer has 3, 5, 7, 2 and 11\n"
         "Ui::AbstractStyle::apply(): style wants 3 uniforms, 4 styles, 7 editing uniforms, 2 editing styles and at least 11 dynamic styles but the text layer has 3, 5, 7, 2 and 11\n"
         "Ui::AbstractStyle::apply(): style wants 3 uniforms, 5 styles, 8 editing uniforms, 2 editing styles and at least 11 dynamic styles but the text layer has 3, 5, 7, 2 and 11\n"
@@ -1110,10 +1109,10 @@ void AbstractStyleTest::applyTextLayerNoGlyphCache() {
     /* Capture correct function name */
     CORRADE_VERIFY(true);
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     style.apply(ui, StyleFeature::TextLayer, nullptr, nullptr);
-    CORRADE_COMPARE(out.str(), "Ui::AbstractStyle::apply(): glyph cache not present in the text layer\n");
+    CORRADE_COMPARE(out, "Ui::AbstractStyle::apply(): glyph cache not present in the text layer\n");
 }
 
 void AbstractStyleTest::applyTextLayerDifferentGlyphCache() {
@@ -1184,7 +1183,7 @@ void AbstractStyleTest::applyTextLayerDifferentGlyphCache() {
     CORRADE_VERIFY(Style{PixelFormat::RG16F, {2, 5, 2}, {4, 1}}
         .apply(ui, StyleFeature::TextLayer, nullptr, &_fontManager));
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     Style{PixelFormat::R8Unorm, {3, 5, 2}, {4, 1}}
         .apply(ui, StyleFeature::TextLayer, nullptr, nullptr);
@@ -1198,7 +1197,7 @@ void AbstractStyleTest::applyTextLayerDifferentGlyphCache() {
         .apply(ui, StyleFeature::TextLayer, nullptr, nullptr);
     Style{PixelFormat::RG16F, {3, 5, 2}, {4, 2}}
         .apply(ui, StyleFeature::TextLayer, nullptr, nullptr);
-    CORRADE_COMPARE_AS(out.str(),
+    CORRADE_COMPARE_AS(out,
         "Ui::AbstractStyle::apply(): style wants a PixelFormat::R8Unorm glyph cache of size at least {3, 5, 2} and padding at least {4, 1} but the text layer has PixelFormat::RG16F, {3, 5, 2} and {4, 1}\n"
        "Ui::AbstractStyle::apply(): style wants a PixelFormat::RG16F glyph cache of size at least {4, 5, 2} and padding at least {4, 1} but the text layer has PixelFormat::RG16F, {3, 5, 2} and {4, 1}\n"
        "Ui::AbstractStyle::apply(): style wants a PixelFormat::RG16F glyph cache of size at least {3, 6, 2} and padding at least {4, 1} but the text layer has PixelFormat::RG16F, {3, 5, 2} and {4, 1}\n"
@@ -1251,10 +1250,10 @@ void AbstractStyleTest::applyTextLayerNoFontManager() {
     /* Capture correct function name */
     CORRADE_VERIFY(true);
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     style.apply(ui, StyleFeature::TextLayer, &_importerManager, nullptr);
-    CORRADE_COMPARE(out.str(), "Ui::AbstractStyle::apply(): fontManager has to be specified for applying a text layer style\n");
+    CORRADE_COMPARE(out, "Ui::AbstractStyle::apply(): fontManager has to be specified for applying a text layer style\n");
 }
 
 void AbstractStyleTest::applyTextLayerImagesTextLayerNotPresent() {
@@ -1278,10 +1277,10 @@ void AbstractStyleTest::applyTextLayerImagesTextLayerNotPresent() {
     /* Capture correct function name */
     CORRADE_VERIFY(true);
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     style.apply(ui, StyleFeature::TextLayerImages, nullptr, nullptr);
-    CORRADE_COMPARE(out.str(), "Ui::AbstractStyle::apply(): text layer not present in the user interface\n");
+    CORRADE_COMPARE(out, "Ui::AbstractStyle::apply(): text layer not present in the user interface\n");
 }
 
 void AbstractStyleTest::applyTextLayerImagesNoImporterManager() {
@@ -1327,10 +1326,10 @@ void AbstractStyleTest::applyTextLayerImagesNoImporterManager() {
     /* Capture correct function name */
     CORRADE_VERIFY(true);
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     style.apply(ui, StyleFeature::TextLayerImages, nullptr, &_fontManager);
-    CORRADE_COMPARE(out.str(), "Ui::AbstractStyle::apply(): importerManager has to be specified for applying text layer style images\n");
+    CORRADE_COMPARE(out, "Ui::AbstractStyle::apply(): importerManager has to be specified for applying text layer style images\n");
 }
 
 void AbstractStyleTest::applyEventLayerNotPresent() {
@@ -1375,10 +1374,10 @@ void AbstractStyleTest::applyEventLayerNotPresent() {
     /* Capture correct function name */
     CORRADE_VERIFY(true);
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     style.apply(ui, StyleFeature::EventLayer, nullptr, nullptr);
-    CORRADE_COMPARE(out.str(), "Ui::AbstractStyle::apply(): event layer not present in the user interface\n");
+    CORRADE_COMPARE(out, "Ui::AbstractStyle::apply(): event layer not present in the user interface\n");
 }
 
 void AbstractStyleTest::applySnapLayouterNotPresent() {
@@ -1412,10 +1411,10 @@ void AbstractStyleTest::applySnapLayouterNotPresent() {
     /* Capture correct function name */
     CORRADE_VERIFY(true);
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     style.apply(ui, StyleFeature::SnapLayouter, nullptr, nullptr);
-    CORRADE_COMPARE(out.str(), "Ui::AbstractStyle::apply(): snap layouter not present in the user interface\n");
+    CORRADE_COMPARE(out, "Ui::AbstractStyle::apply(): snap layouter not present in the user interface\n");
 }
 
 }}}}

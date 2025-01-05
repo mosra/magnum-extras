@@ -24,11 +24,10 @@
     DEALINGS IN THE SOFTWARE.
 */
 
-#include <sstream> /** @todo remove once Debug is stream-free */
+#include <Corrade/Containers/ArrayView.h>
 #include <Corrade/Containers/Optional.h>
 #include <Corrade/Containers/String.h>
 #include <Corrade/TestSuite/Tester.h>
-#include <Corrade/Utility/DebugStl.h> /** @todo remove once Debug is stream-free */
 #include <Magnum/Text/Alignment.h>
 #include <Magnum/Text/Direction.h>
 #include <Magnum/Text/Feature.h>
@@ -295,10 +294,10 @@ void TextPropertiesTest::alignmentInvalid() {
 
     TextProperties properties;
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     properties.setAlignment(Text::Alignment::LineCenterGlyphBounds);
-    CORRADE_COMPARE(out.str(), "Ui::TextProperties::setAlignment(): Text::Alignment::LineCenterGlyphBounds is not supported\n");
+    CORRADE_COMPARE(out, "Ui::TextProperties::setAlignment(): Text::Alignment::LineCenterGlyphBounds is not supported\n");
 }
 
 void TextPropertiesTest::languageInvalid() {
@@ -311,10 +310,10 @@ void TextPropertiesTest::languageInvalid() {
     CORRADE_COMPARE(properties.language(), "eh-UH-KindaLong");
     CORRADE_COMPARE(properties.language().size(), 15);
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     properties.setLanguage("eh-UH-MuchLonger");
-    CORRADE_COMPARE(out.str(), "Ui::TextProperties::setLanguage(): expected at most a 15-byte string, got 16\n");
+    CORRADE_COMPARE(out, "Ui::TextProperties::setLanguage(): expected at most a 15-byte string, got 16\n");
 }
 
 void TextPropertiesTest::directionValueOverflow() {

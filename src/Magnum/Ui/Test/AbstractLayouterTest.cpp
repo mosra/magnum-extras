@@ -24,14 +24,12 @@
     DEALINGS IN THE SOFTWARE.
 */
 
-#include <sstream>
 #include <Corrade/Containers/StridedBitArrayView.h>
 #include <Corrade/Containers/StridedArrayView.h>
-#include <Corrade/Containers/StringStl.h> /** @todo remove once Debug is stream-free */
+#include <Corrade/Containers/String.h>
 #include <Corrade/TestSuite/Tester.h>
 #include <Corrade/TestSuite/Compare/Container.h>
 #include <Corrade/TestSuite/Compare/String.h>
-#include <Corrade/Utility/DebugStl.h> /** @todo remove once Debug is stream-free */
 #include <Magnum/Math/Vector2.h>
 
 #include "Magnum/Ui/AbstractLayouter.h"
@@ -110,24 +108,24 @@ AbstractLayouterTest::AbstractLayouterTest() {
 }
 
 void AbstractLayouterTest::debugState() {
-    std::ostringstream out;
+    Containers::String out;
     Debug{&out} << LayouterState::NeedsUpdate << LayouterState(0xbe);
-    CORRADE_COMPARE(out.str(), "Ui::LayouterState::NeedsUpdate Ui::LayouterState(0xbe)\n");
+    CORRADE_COMPARE(out, "Ui::LayouterState::NeedsUpdate Ui::LayouterState(0xbe)\n");
 }
 
 void AbstractLayouterTest::debugStates() {
-    std::ostringstream out;
+    Containers::String out;
     Debug{&out} << (LayouterState::NeedsUpdate|LayouterState(0xe0)) << LayouterStates{};
-    CORRADE_COMPARE(out.str(), "Ui::LayouterState::NeedsUpdate|Ui::LayouterState(0xe0) Ui::LayouterStates{}\n");
+    CORRADE_COMPARE(out, "Ui::LayouterState::NeedsUpdate|Ui::LayouterState(0xe0) Ui::LayouterStates{}\n");
 }
 
 void AbstractLayouterTest::debugStatesSupersets() {
     /* NeedsAssignmentUpdate is a superset of NeedsUpdate, so only one should
        be printed */
     {
-        std::ostringstream out;
+        Containers::String out;
         Debug{&out} << (LayouterState::NeedsUpdate|LayouterState::NeedsAssignmentUpdate);
-        CORRADE_COMPARE(out.str(), "Ui::LayouterState::NeedsAssignmentUpdate\n");
+        CORRADE_COMPARE(out, "Ui::LayouterState::NeedsAssignmentUpdate\n");
     }
 }
 
@@ -155,10 +153,10 @@ void AbstractLayouterTest::constructInvalidHandle() {
         void doUpdate(Containers::BitArrayView, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const NodeHandle>&, const Containers::StridedArrayView1D<Vector2>&, const  Containers::StridedArrayView1D<Vector2>&) override {}
     };
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     Layouter{LayouterHandle::Null};
-    CORRADE_COMPARE(out.str(),
+    CORRADE_COMPARE(out,
         "Ui::AbstractLayouter: handle is null\n");
 }
 
@@ -384,10 +382,10 @@ void AbstractLayouterTest::addNullNode() {
         void doUpdate(Containers::BitArrayView, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const NodeHandle>&, const Containers::StridedArrayView1D<Vector2>&, const  Containers::StridedArrayView1D<Vector2>&) override {}
     } layouter{layouterHandle(0, 1)};
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     layouter.add(NodeHandle::Null);
-    CORRADE_COMPARE(out.str(),
+    CORRADE_COMPARE(out,
         "Ui::AbstractLayouter::add(): invalid handle Ui::NodeHandle::Null\n");
 }
 
@@ -407,12 +405,12 @@ void AbstractLayouterTest::addNoHandlesLeft() {
     CORRADE_COMPARE(layouter.capacity(), 1 << Implementation::LayouterDataHandleIdBits);
     CORRADE_COMPARE(layouter.usedCount(), 1 << Implementation::LayouterDataHandleIdBits);
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     layouter.add(nodeHandle(0x1, 0x2));
     /* Number is hardcoded in the expected message but not elsewhere in order
        to give a heads-up when modifying the handle ID bit count */
-    CORRADE_COMPARE(out.str(),
+    CORRADE_COMPARE(out,
         "Ui::AbstractLayouter::add(): can only have at most 1048576 layouts\n");
 }
 
@@ -429,7 +427,7 @@ void AbstractLayouterTest::removeInvalid() {
 
     LayoutHandle handle = layouter.add(nodeHandle(0x1, 0x2));
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     layouter.remove(LayoutHandle::Null);
     /* Valid layouter, invalid data */
@@ -438,7 +436,7 @@ void AbstractLayouterTest::removeInvalid() {
     layouter.remove(layoutHandle(LayouterHandle::Null, layoutHandleData(handle)));
     /* LayouterDataHandle directly */
     layouter.remove(LayouterDataHandle(0x123abcde));
-    CORRADE_COMPARE_AS(out.str(),
+    CORRADE_COMPARE_AS(out,
         "Ui::AbstractLayouter::remove(): invalid handle Ui::LayoutHandle::Null\n"
         "Ui::AbstractLayouter::remove(): invalid handle Ui::LayoutHandle({0x0, 0x1}, {0xabcde, 0x123})\n"
         "Ui::AbstractLayouter::remove(): invalid handle Ui::LayoutHandle(Null, {0x0, 0x1})\n"
@@ -458,7 +456,7 @@ void AbstractLayouterTest::nodeInvalid() {
 
     LayoutHandle handle = layouter.add(nodeHandle(0x1, 0x2));
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     layouter.node(LayoutHandle::Null);
     /* Valid layer, invalid data */
@@ -467,7 +465,7 @@ void AbstractLayouterTest::nodeInvalid() {
     layouter.node(layoutHandle(LayouterHandle::Null, layoutHandleData(handle)));
     /* LayerDataHandle directly */
     layouter.node(LayouterDataHandle(0x123abcde));
-    CORRADE_COMPARE_AS(out.str(),
+    CORRADE_COMPARE_AS(out,
         "Ui::AbstractLayouter::node(): invalid handle Ui::LayoutHandle::Null\n"
         "Ui::AbstractLayouter::node(): invalid handle Ui::LayoutHandle({0xab, 0x12}, {0xabcde, 0x123})\n"
         "Ui::AbstractLayouter::node(): invalid handle Ui::LayoutHandle(Null, {0x0, 0x1})\n"
@@ -505,11 +503,11 @@ void AbstractLayouterTest::setSizeZero() {
         void doUpdate(Containers::BitArrayView, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const NodeHandle>&, const Containers::StridedArrayView1D<Vector2>&, const  Containers::StridedArrayView1D<Vector2>&) override {}
     } layouter{layouterHandle(0, 1)};
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     layouter.setSize({0.0f, 1.0f});
     layouter.setSize({1.0f, 0.0f});
-    CORRADE_COMPARE_AS(out.str(),
+    CORRADE_COMPARE_AS(out,
         "Ui::AbstractLayouter::setSize(): expected a non-zero size, got Vector(0, 1)\n"
         "Ui::AbstractLayouter::setSize(): expected a non-zero size, got Vector(1, 0)\n",
         TestSuite::Compare::String);
@@ -742,7 +740,7 @@ void AbstractLayouterTest::updateInvalidSizes() {
     layouter.add(nodeHandle(3, 1));
     layouter.add(nodeHandle(4, 1));
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     UnsignedByte layoutIdsToUpdate[1]{};
     NodeHandle parents[2];
@@ -755,7 +753,7 @@ void AbstractLayouterTest::updateInvalidSizes() {
     layouter.update(Containers::BitArrayView{layoutIdsToUpdate, 0, 5}, {}, parentsInvalid, offsets, sizes);
     layouter.update(Containers::BitArrayView{layoutIdsToUpdate, 0, 5}, {}, parents, offsetsInvalid, sizes);
     layouter.update(Containers::BitArrayView{layoutIdsToUpdate, 0, 5}, {}, parents, offsets, sizesInvalid);
-    CORRADE_COMPARE(out.str(),
+    CORRADE_COMPARE(out,
         "Ui::AbstractLayouter::update(): expected layoutIdsToUpdate to have 5 bits but got 6\n"
         "Ui::AbstractLayouter::update(): expected node parent, offset and size views to have the same size but got 3, 2 and 2\n"
         "Ui::AbstractLayouter::update(): expected node parent, offset and size views to have the same size but got 2, 3 and 2\n"
@@ -775,10 +773,10 @@ void AbstractLayouterTest::updateNoSizeSet() {
         Int called = 0;
     } layouter{layouterHandle(0, 1)};
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     layouter.update({}, {}, {}, {}, {});
-    CORRADE_COMPARE(out.str(), "Ui::AbstractLayouter::update(): user interface size wasn't set\n");
+    CORRADE_COMPARE(out, "Ui::AbstractLayouter::update(): user interface size wasn't set\n");
 }
 
 void AbstractLayouterTest::state() {

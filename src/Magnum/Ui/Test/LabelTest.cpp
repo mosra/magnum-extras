@@ -24,9 +24,8 @@
     DEALINGS IN THE SOFTWARE.
 */
 
-#include <sstream> /** @todo remove once Debug is stream-free */
+#include <Corrade/Containers/String.h>
 #include <Corrade/TestSuite/Compare/Numeric.h>
-#include <Corrade/Utility/DebugStl.h> /** @todo remove once Debug is stream-free */
 
 #include "Magnum/Ui/Anchor.h"
 #include "Magnum/Ui/Label.h"
@@ -107,9 +106,9 @@ LabelTest::LabelTest() {
 }
 
 void LabelTest::debugStyle() {
-    std::ostringstream out;
+    Containers::String out;
     Debug{&out} << LabelStyle::Success << LabelStyle(0xef);
-    CORRADE_COMPARE(out.str(), "Ui::LabelStyle::Success Ui::LabelStyle(0xef)\n");
+    CORRADE_COMPARE(out, "Ui::LabelStyle::Success Ui::LabelStyle(0xef)\n");
 }
 
 void LabelTest::constructEmpty() {

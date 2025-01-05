@@ -24,17 +24,15 @@
     DEALINGS IN THE SOFTWARE.
 */
 
-#include <sstream>
 #include <Corrade/Containers/BitArrayView.h>
 #include <Corrade/Containers/Optional.h>
 #include <Corrade/Containers/Iterable.h>
 #include <Corrade/Containers/StridedArrayView.h>
 #include <Corrade/Containers/StridedBitArrayView.h>
-#include <Corrade/Containers/StringStl.h> /** @todo remove once Debug is stream-free */
+#include <Corrade/Containers/String.h>
 #include <Corrade/TestSuite/Tester.h>
 #include <Corrade/TestSuite/Compare/Container.h>
 #include <Corrade/TestSuite/Compare/String.h>
-#include <Corrade/Utility/DebugStl.h>
 #include <Magnum/Math/Time.h>
 #include <Magnum/Math/Vector2.h>
 
@@ -340,51 +338,51 @@ AbstractLayerTest::AbstractLayerTest() {
 }
 
 void AbstractLayerTest::debugFeature() {
-    std::ostringstream out;
+    Containers::String out;
     Debug{&out} << LayerFeature::Draw << LayerFeature(0xbe);
-    CORRADE_COMPARE(out.str(), "Ui::LayerFeature::Draw Ui::LayerFeature(0xbe)\n");
+    CORRADE_COMPARE(out, "Ui::LayerFeature::Draw Ui::LayerFeature(0xbe)\n");
 }
 
 void AbstractLayerTest::debugFeatures() {
-    std::ostringstream out;
+    Containers::String out;
     Debug{&out} << (LayerFeature::Draw|LayerFeature(0x80)) << LayerFeatures{};
-    CORRADE_COMPARE(out.str(), "Ui::LayerFeature::Draw|Ui::LayerFeature(0x80) Ui::LayerFeatures{}\n");
+    CORRADE_COMPARE(out, "Ui::LayerFeature::Draw|Ui::LayerFeature(0x80) Ui::LayerFeatures{}\n");
 }
 
 void AbstractLayerTest::debugFeaturesSupersets() {
     /* DrawUsesBlending and DrawUsesScissor are both a superset of Draw, so
        only one should be printed, but if there are both then both should be */
     {
-        std::ostringstream out;
+        Containers::String out;
         Debug{&out} << (LayerFeature::DrawUsesBlending|LayerFeature::Draw);
-        CORRADE_COMPARE(out.str(), "Ui::LayerFeature::DrawUsesBlending\n");
+        CORRADE_COMPARE(out, "Ui::LayerFeature::DrawUsesBlending\n");
     } {
-        std::ostringstream out;
+        Containers::String out;
         Debug{&out} << (LayerFeature::DrawUsesScissor|LayerFeature::Draw);
-        CORRADE_COMPARE(out.str(), "Ui::LayerFeature::DrawUsesScissor\n");
+        CORRADE_COMPARE(out, "Ui::LayerFeature::DrawUsesScissor\n");
     } {
-        std::ostringstream out;
+        Containers::String out;
         Debug{&out} << (LayerFeature::DrawUsesBlending|LayerFeature::DrawUsesScissor);
-        CORRADE_COMPARE(out.str(), "Ui::LayerFeature::DrawUsesBlending|Ui::LayerFeature::DrawUsesScissor\n");
+        CORRADE_COMPARE(out, "Ui::LayerFeature::DrawUsesBlending|Ui::LayerFeature::DrawUsesScissor\n");
 
     /* Composite is a superset of Draw, so only one should be printed */
     } {
-        std::ostringstream out;
+        Containers::String out;
         Debug{&out} << (LayerFeature::Composite|LayerFeature::Draw);
-        CORRADE_COMPARE(out.str(), "Ui::LayerFeature::Composite\n");
+        CORRADE_COMPARE(out, "Ui::LayerFeature::Composite\n");
     }
 }
 
 void AbstractLayerTest::debugState() {
-    std::ostringstream out;
+    Containers::String out;
     Debug{&out} << LayerState::NeedsAttachmentUpdate << LayerState(0xbebe);
-    CORRADE_COMPARE(out.str(), "Ui::LayerState::NeedsAttachmentUpdate Ui::LayerState(0xbebe)\n");
+    CORRADE_COMPARE(out, "Ui::LayerState::NeedsAttachmentUpdate Ui::LayerState(0xbebe)\n");
 }
 
 void AbstractLayerTest::debugStates() {
-    std::ostringstream out;
+    Containers::String out;
     Debug{&out} << (LayerState::NeedsSharedDataUpdate|LayerState(0xb000)) << LayerStates{};
-    CORRADE_COMPARE(out.str(), "Ui::LayerState::NeedsSharedDataUpdate|Ui::LayerState(0xb000) Ui::LayerStates{}\n");
+    CORRADE_COMPARE(out, "Ui::LayerState::NeedsSharedDataUpdate|Ui::LayerState(0xb000) Ui::LayerStates{}\n");
 }
 
 void AbstractLayerTest::debugStatesSupersets() {
@@ -392,32 +390,32 @@ void AbstractLayerTest::debugStatesSupersets() {
        of NeedsNodeOrderUpdate, so only one should be printed, but if there are
        both then both should be */
     {
-        std::ostringstream out;
+        Containers::String out;
         Debug{&out} << (LayerState::NeedsNodeOrderUpdate|LayerState::NeedsAttachmentUpdate);
-        CORRADE_COMPARE(out.str(), "Ui::LayerState::NeedsAttachmentUpdate\n");
+        CORRADE_COMPARE(out, "Ui::LayerState::NeedsAttachmentUpdate\n");
     } {
-        std::ostringstream out;
+        Containers::String out;
         Debug{&out} << (LayerState::NeedsNodeOrderUpdate|LayerState::NeedsNodeOffsetSizeUpdate);
-        CORRADE_COMPARE(out.str(), "Ui::LayerState::NeedsNodeOffsetSizeUpdate\n");
+        CORRADE_COMPARE(out, "Ui::LayerState::NeedsNodeOffsetSizeUpdate\n");
     } {
-        std::ostringstream out;
+        Containers::String out;
         Debug{&out} << (LayerState::NeedsNodeOrderUpdate|LayerState::NeedsNodeOffsetSizeUpdate|LayerState::NeedsAttachmentUpdate);
-        CORRADE_COMPARE(out.str(), "Ui::LayerState::NeedsNodeOffsetSizeUpdate|Ui::LayerState::NeedsAttachmentUpdate\n");
+        CORRADE_COMPARE(out, "Ui::LayerState::NeedsNodeOffsetSizeUpdate|Ui::LayerState::NeedsAttachmentUpdate\n");
     } {
 
     /* NeedsNodeOrderUpdate is a superset of NeedsNodeEnabledUpdate, so only
        one should be printed */
     } {
-        std::ostringstream out;
+        Containers::String out;
         Debug{&out} << (LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsNodeOrderUpdate);
-        CORRADE_COMPARE(out.str(), "Ui::LayerState::NeedsNodeOrderUpdate\n");
+        CORRADE_COMPARE(out, "Ui::LayerState::NeedsNodeOrderUpdate\n");
 
     /* NeedsAttachmentUpdate is a superset of NeedsNodeOpacityUpdate, so only
        one should be printed */
     } {
-        std::ostringstream out;
+        Containers::String out;
         Debug{&out} << (LayerState::NeedsNodeOpacityUpdate|LayerState::NeedsAttachmentUpdate);
-        CORRADE_COMPARE(out.str(), "Ui::LayerState::NeedsAttachmentUpdate\n");
+        CORRADE_COMPARE(out, "Ui::LayerState::NeedsAttachmentUpdate\n");
     }
 }
 
@@ -446,10 +444,10 @@ void AbstractLayerTest::constructInvalidHandle() {
         LayerFeatures doFeatures() const override { return {}; }
     };
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     Layer{LayerHandle::Null};
-    CORRADE_COMPARE(out.str(),
+    CORRADE_COMPARE(out,
         "Ui::AbstractLayer: handle is null\n");
 }
 
@@ -536,11 +534,11 @@ void AbstractLayerTest::stateQueryInvalid() {
         }
     } layerCompositing{layerHandle(0, 1)};
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     layer.state();
     layerCompositing.state();
-    CORRADE_COMPARE_AS(out.str(),
+    CORRADE_COMPARE_AS(out,
         "Ui::AbstractLayer::state(): implementation expected to return a subset of Ui::LayerState::NeedsDataUpdate|Ui::LayerState::NeedsCommonDataUpdate|Ui::LayerState::NeedsSharedDataUpdate but got Ui::LayerState::NeedsSharedDataUpdate|Ui::LayerState::NeedsCompositeOffsetSizeUpdate\n"
         "Ui::AbstractLayer::state(): implementation expected to return a subset of Ui::LayerState::NeedsDataUpdate|Ui::LayerState::NeedsCommonDataUpdate|Ui::LayerState::NeedsSharedDataUpdate|Ui::LayerState::NeedsCompositeOffsetSizeUpdate but got Ui::LayerState::NeedsNodeEnabledUpdate|Ui::LayerState::NeedsSharedDataUpdate\n",
         TestSuite::Compare::String);
@@ -586,12 +584,12 @@ void AbstractLayerTest::setNeedsUpdateInvalid() {
     CORRADE_COMPARE(layer.state(), LayerStates{});
     CORRADE_COMPARE(layerCompositing.state(), LayerStates{});
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     layer.setNeedsUpdate({});
     layer.setNeedsUpdate(LayerState::NeedsCompositeOffsetSizeUpdate);
     layerCompositing.setNeedsUpdate(LayerState::NeedsNodeOffsetSizeUpdate);
-    CORRADE_COMPARE_AS(out.str(),
+    CORRADE_COMPARE_AS(out,
         "Ui::AbstractLayer::setNeedsUpdate(): expected a non-empty subset of Ui::LayerState::NeedsDataUpdate|Ui::LayerState::NeedsCommonDataUpdate|Ui::LayerState::NeedsSharedDataUpdate but got Ui::LayerStates{}\n"
         "Ui::AbstractLayer::setNeedsUpdate(): expected a non-empty subset of Ui::LayerState::NeedsDataUpdate|Ui::LayerState::NeedsCommonDataUpdate|Ui::LayerState::NeedsSharedDataUpdate but got Ui::LayerState::NeedsCompositeOffsetSizeUpdate\n"
         "Ui::AbstractLayer::setNeedsUpdate(): expected a non-empty subset of Ui::LayerState::NeedsDataUpdate|Ui::LayerState::NeedsCommonDataUpdate|Ui::LayerState::NeedsSharedDataUpdate|Ui::LayerState::NeedsCompositeOffsetSizeUpdate but got Ui::LayerState::NeedsNodeOffsetSizeUpdate\n",
@@ -805,12 +803,12 @@ void AbstractLayerTest::createNoHandlesLeft() {
     CORRADE_COMPARE(layer.capacity(), 1 << Implementation::LayerDataHandleIdBits);
     CORRADE_COMPARE(layer.usedCount(), 1 << Implementation::LayerDataHandleIdBits);
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     layer.create();
     /* Number is hardcoded in the expected message but not elsewhere in order
        to give a heads-up when modifying the handle ID bit count */
-    CORRADE_COMPARE(out.str(),
+    CORRADE_COMPARE(out,
         "Ui::AbstractLayer::create(): can only have at most 1048576 data\n");
 }
 
@@ -860,7 +858,7 @@ void AbstractLayerTest::removeInvalid() {
 
     DataHandle handle = layer.create();
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     layer.remove(DataHandle::Null);
     /* Valid layer, invalid data */
@@ -869,7 +867,7 @@ void AbstractLayerTest::removeInvalid() {
     layer.remove(dataHandle(LayerHandle::Null, dataHandleData(handle)));
     /* LayerDataHandle directly */
     layer.remove(LayerDataHandle(0x123abcde));
-    CORRADE_COMPARE_AS(out.str(),
+    CORRADE_COMPARE_AS(out,
         "Ui::AbstractLayer::remove(): invalid handle Ui::DataHandle::Null\n"
         "Ui::AbstractLayer::remove(): invalid handle Ui::DataHandle({0x0, 0x1}, {0xabcde, 0x123})\n"
         "Ui::AbstractLayer::remove(): invalid handle Ui::DataHandle(Null, {0x0, 0x1})\n"
@@ -988,7 +986,7 @@ void AbstractLayerTest::attachInvalid() {
 
     DataHandle handle = layer.create();
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     layer.attach(DataHandle::Null, nodeHandle(2865, 0xcec));
     layer.node(DataHandle::Null);
@@ -1001,7 +999,7 @@ void AbstractLayerTest::attachInvalid() {
     /* LayerDataHandle directly */
     layer.attach(LayerDataHandle(0x123abcde), nodeHandle(2865, 0xcec));
     layer.node(LayerDataHandle(0x123abcde));
-    CORRADE_COMPARE_AS(out.str(),
+    CORRADE_COMPARE_AS(out,
         "Ui::AbstractLayer::attach(): invalid handle Ui::DataHandle::Null\n"
         "Ui::AbstractLayer::node(): invalid handle Ui::DataHandle::Null\n"
         "Ui::AbstractLayer::attach(): invalid handle Ui::DataHandle({0xab, 0x12}, {0xabcde, 0x123})\n"
@@ -1048,13 +1046,13 @@ void AbstractLayerTest::setSizeZero() {
         }
     } layer{layerHandle(0, 1)};
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     layer.setSize({0.0f, 1.0f}, {2, 3});
     layer.setSize({1.0f, 0.0f}, {2, 3});
     layer.setSize({1.0f, 2.0f}, {0, 3});
     layer.setSize({1.0f, 2.0f}, {3, 0});
-    CORRADE_COMPARE_AS(out.str(),
+    CORRADE_COMPARE_AS(out,
         "Ui::AbstractLayer::setSize(): expected non-zero sizes, got Vector(0, 1) and Vector(2, 3)\n"
         "Ui::AbstractLayer::setSize(): expected non-zero sizes, got Vector(1, 0) and Vector(2, 3)\n"
         "Ui::AbstractLayer::setSize(): expected non-zero sizes, got Vector(1, 2) and Vector(0, 3)\n"
@@ -1071,10 +1069,10 @@ void AbstractLayerTest::setSizeNotSupported() {
         LayerFeatures doFeatures() const override { return {}; }
     } layer{layerHandle(0, 1)};
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     layer.setSize({}, {});
-    CORRADE_COMPARE(out.str(),
+    CORRADE_COMPARE(out,
         "Ui::AbstractLayer::setSize(): Ui::LayerFeature::Draw not supported\n");
 }
 
@@ -1155,10 +1153,10 @@ void AbstractLayerTest::assignDataAnimatorNotSupported() {
         AnimatorFeatures doFeatures() const override { return {}; }
     } animator{animatorHandle(0, 1)};
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     layer.assignAnimator(animator);
-    CORRADE_COMPARE(out.str(), "Ui::AbstractLayer::assignAnimator(): data animation not supported\n");
+    CORRADE_COMPARE(out, "Ui::AbstractLayer::assignAnimator(): data animation not supported\n");
 }
 
 void AbstractLayerTest::assignStyleAnimatorNotSupported() {
@@ -1177,10 +1175,10 @@ void AbstractLayerTest::assignStyleAnimatorNotSupported() {
         AnimatorFeatures doFeatures() const override { return {}; }
     } animator{animatorHandle(0, 1)};
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     layer.assignAnimator(animator);
-    CORRADE_COMPARE(out.str(), "Ui::AbstractLayer::assignAnimator(): style animation not supported\n");
+    CORRADE_COMPARE(out, "Ui::AbstractLayer::assignAnimator(): style animation not supported\n");
 }
 
 void AbstractLayerTest::assignDataAnimatorInvalid() {
@@ -1207,11 +1205,11 @@ void AbstractLayerTest::assignDataAnimatorInvalid() {
 
     layer.assignAnimator(animatorAlreadyAssociated);
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     layer.assignAnimator(animatorNoDataAttachment);
     layer.assignAnimator(animatorAlreadyAssociated);
-    CORRADE_COMPARE_AS(out.str(),
+    CORRADE_COMPARE_AS(out,
         "Ui::AbstractLayer::assignAnimator(): data attachment not supported by the animator\n"
         "Ui::AbstractLayer::assignAnimator(): animator already assigned to Ui::LayerHandle(0xab, 0x12)\n",
         TestSuite::Compare::String);
@@ -1241,11 +1239,11 @@ void AbstractLayerTest::assignStyleAnimatorInvalid() {
 
     layer.assignAnimator(animatorAlreadyAssociated);
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     layer.assignAnimator(animatorNoDataAttachment);
     layer.assignAnimator(animatorAlreadyAssociated);
-    CORRADE_COMPARE_AS(out.str(),
+    CORRADE_COMPARE_AS(out,
         "Ui::AbstractLayer::assignAnimator(): data attachment not supported by the animator\n"
         "Ui::AbstractLayer::assignAnimator(): animator already assigned to Ui::LayerHandle(0xab, 0x12)\n",
         TestSuite::Compare::String);
@@ -1509,10 +1507,10 @@ void AbstractLayerTest::cleanDataAnimatorsInvalidFeatures() {
         }
     } animator2{animatorHandle(1, 3)};
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     layer.cleanData({animator1, animator2});
-    CORRADE_COMPARE(out.str(), "Ui::AbstractLayer::cleanData(): data attachment not supported by an animator\n");
+    CORRADE_COMPARE(out, "Ui::AbstractLayer::cleanData(): data attachment not supported by an animator\n");
 }
 
 void AbstractLayerTest::cleanDataAnimatorsLayerNotSet() {
@@ -1544,10 +1542,10 @@ void AbstractLayerTest::cleanDataAnimatorsLayerNotSet() {
     } animator2{animatorHandle(1, 3)};
     /* Second animator layer not set */
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     layer.cleanData({animator1, animator2});
-    CORRADE_COMPARE(out.str(), "Ui::AbstractLayer::cleanData(): animator has no layer set for data attachment\n");
+    CORRADE_COMPARE(out, "Ui::AbstractLayer::cleanData(): animator has no layer set for data attachment\n");
 }
 
 void AbstractLayerTest::cleanDataAnimatorsInvalidLayer() {
@@ -1571,10 +1569,10 @@ void AbstractLayerTest::cleanDataAnimatorsInvalidLayer() {
     animator1.setLayer(layer1);
     animator2.setLayer(layer2);
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     layer1.cleanData({animator1, animator2});
-    CORRADE_COMPARE(out.str(), "Ui::AbstractLayer::cleanData(): expected an animator assigned to Ui::LayerHandle(0xab, 0x12) but got Ui::LayerHandle(0xcd, 0x34)\n");
+    CORRADE_COMPARE(out, "Ui::AbstractLayer::cleanData(): expected an animator assigned to Ui::LayerHandle(0xab, 0x12) but got Ui::LayerHandle(0xcd, 0x34)\n");
 }
 
 void AbstractLayerTest::advanceDataAnimations() {
@@ -1707,10 +1705,10 @@ void AbstractLayerTest::advanceDataAnimationsNotSupported() {
         }
     } layer{layerHandle(0, 1)};
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     layer.advanceAnimations(0_nsec, {}, {}, {}, Containers::Iterable<AbstractDataAnimator>{});
-    CORRADE_COMPARE(out.str(), "Ui::AbstractLayer::advanceAnimations(): data animation not supported\n");
+    CORRADE_COMPARE(out, "Ui::AbstractLayer::advanceAnimations(): data animation not supported\n");
 }
 
 void AbstractLayerTest::advanceStyleAnimationsNotSupported() {
@@ -1725,10 +1723,10 @@ void AbstractLayerTest::advanceStyleAnimationsNotSupported() {
         }
     } layer{layerHandle(0, 1)};
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     layer.advanceAnimations(0_nsec, {}, {}, {}, Containers::Iterable<AbstractStyleAnimator>{});
-    CORRADE_COMPARE(out.str(), "Ui::AbstractLayer::advanceAnimations(): style animation not supported\n");
+    CORRADE_COMPARE(out, "Ui::AbstractLayer::advanceAnimations(): style animation not supported\n");
 }
 
 void AbstractLayerTest::advanceDataAnimationsNotImplemented() {
@@ -1745,10 +1743,10 @@ void AbstractLayerTest::advanceDataAnimationsNotImplemented() {
         }
     } layer{layerHandle(0, 1)};
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     layer.advanceAnimations(0_nsec, {}, {}, {}, Containers::Iterable<AbstractDataAnimator>{});
-    CORRADE_COMPARE(out.str(), "Ui::AbstractLayer::advanceAnimations(): data animation advertised but not implemented\n");
+    CORRADE_COMPARE(out, "Ui::AbstractLayer::advanceAnimations(): data animation advertised but not implemented\n");
 }
 
 void AbstractLayerTest::advanceStyleAnimationsNotImplemented() {
@@ -1765,10 +1763,10 @@ void AbstractLayerTest::advanceStyleAnimationsNotImplemented() {
         }
     } layer{layerHandle(0, 1)};
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     layer.advanceAnimations(0_nsec, {}, {}, {}, Containers::Iterable<AbstractStyleAnimator>{});
-    CORRADE_COMPARE(out.str(), "Ui::AbstractLayer::advanceAnimations(): style animation advertised but not implemented\n");
+    CORRADE_COMPARE(out, "Ui::AbstractLayer::advanceAnimations(): style animation advertised but not implemented\n");
 }
 
 void AbstractLayerTest::advanceDataAnimationsInvalidFeatures() {
@@ -1794,10 +1792,10 @@ void AbstractLayerTest::advanceDataAnimationsInvalidFeatures() {
       animator2{animatorHandle(1, 3), AnimatorFeature::NodeAttachment};
     layer.assignAnimator(animator1);
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     layer.advanceAnimations(0_nsec, {}, {}, {}, {animator1, animator2});
-    CORRADE_COMPARE(out.str(), "Ui::AbstractLayer::advanceAnimations(): data attachment not supported by an animator\n");
+    CORRADE_COMPARE(out, "Ui::AbstractLayer::advanceAnimations(): data attachment not supported by an animator\n");
 }
 
 void AbstractLayerTest::advanceStyleAnimationsInvalidFeatures() {
@@ -1823,10 +1821,10 @@ void AbstractLayerTest::advanceStyleAnimationsInvalidFeatures() {
       animator2{animatorHandle(1, 3), AnimatorFeature::NodeAttachment};
     layer.assignAnimator(animator1);
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     layer.advanceAnimations(0_nsec, {}, {}, {}, {animator1, animator2});
-    CORRADE_COMPARE(out.str(), "Ui::AbstractLayer::advanceAnimations(): data attachment not supported by an animator\n");
+    CORRADE_COMPARE(out, "Ui::AbstractLayer::advanceAnimations(): data attachment not supported by an animator\n");
 }
 
 void AbstractLayerTest::advanceDataAnimationsLayerNotSet() {
@@ -1851,10 +1849,10 @@ void AbstractLayerTest::advanceDataAnimationsLayerNotSet() {
    layer.assignAnimator(animator1);
     /* Second animator layer not set */
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     layer.advanceAnimations(0_nsec, {}, {}, {}, {animator1, animator2});
-    CORRADE_COMPARE(out.str(), "Ui::AbstractLayer::advanceAnimations(): animator has no layer set for data attachment\n");
+    CORRADE_COMPARE(out, "Ui::AbstractLayer::advanceAnimations(): animator has no layer set for data attachment\n");
 }
 
 void AbstractLayerTest::advanceStyleAnimationsLayerNotSet() {
@@ -1879,10 +1877,10 @@ void AbstractLayerTest::advanceStyleAnimationsLayerNotSet() {
    layer.assignAnimator(animator1);
     /* Second animator layer not set */
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     layer.advanceAnimations(0_nsec, {}, {}, {}, {animator1, animator2});
-    CORRADE_COMPARE(out.str(), "Ui::AbstractLayer::advanceAnimations(): animator has no layer set for data attachment\n");
+    CORRADE_COMPARE(out, "Ui::AbstractLayer::advanceAnimations(): animator has no layer set for data attachment\n");
 }
 
 void AbstractLayerTest::advanceDataAnimationsInvalidLayer() {
@@ -1907,10 +1905,10 @@ void AbstractLayerTest::advanceDataAnimationsInvalidLayer() {
     layer1.assignAnimator(animator1);
     layer2.assignAnimator(animator2);
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     layer1.advanceAnimations(0_nsec, {}, {}, {}, {animator1, animator2});
-    CORRADE_COMPARE(out.str(), "Ui::AbstractLayer::advanceAnimations(): expected an animator assigned to Ui::LayerHandle(0xab, 0x12) but got Ui::LayerHandle(0xcd, 0x34)\n");
+    CORRADE_COMPARE(out, "Ui::AbstractLayer::advanceAnimations(): expected an animator assigned to Ui::LayerHandle(0xab, 0x12) but got Ui::LayerHandle(0xcd, 0x34)\n");
 }
 
 void AbstractLayerTest::advanceStyleAnimationsInvalidLayer() {
@@ -1935,10 +1933,10 @@ void AbstractLayerTest::advanceStyleAnimationsInvalidLayer() {
     layer1.assignAnimator(animator1);
     layer2.assignAnimator(animator2);
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     layer1.advanceAnimations(0_nsec, {}, {}, {}, {animator1, animator2});
-    CORRADE_COMPARE(out.str(), "Ui::AbstractLayer::advanceAnimations(): expected an animator assigned to Ui::LayerHandle(0xab, 0x12) but got Ui::LayerHandle(0xcd, 0x34)\n");
+    CORRADE_COMPARE(out, "Ui::AbstractLayer::advanceAnimations(): expected an animator assigned to Ui::LayerHandle(0xab, 0x12) but got Ui::LayerHandle(0xcd, 0x34)\n");
 }
 
 void AbstractLayerTest::advanceDataAnimationsInvalidSize() {
@@ -1987,13 +1985,13 @@ void AbstractLayerTest::advanceDataAnimationsInvalidSize() {
     Float factorStorage[6];
     Float factorStorageHigh[7];
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     layer.advanceAnimations(0_nsec, maskStorageLow, factorStorageLow, maskStorageLow, {animator1, animator2, animator3});
     layer.advanceAnimations(0_nsec, maskStorage, factorStorage, maskStorageHigh, {animator1, animator2, animator3});
     layer.advanceAnimations(0_nsec, maskStorage, factorStorageHigh, maskStorage, {animator1, animator2, animator3});
     layer.advanceAnimations(0_nsec, maskStorageHigh, factorStorage, maskStorage, {animator1, animator2, animator3});
-    CORRADE_COMPARE_AS(out.str(),
+    CORRADE_COMPARE_AS(out,
         "Ui::AbstractLayer::advanceAnimations(): expected activeStorage, factorStorage and removeStorage views to have the same size of at least 6 elements but got 5, 5 and 5\n"
         "Ui::AbstractLayer::advanceAnimations(): expected activeStorage, factorStorage and removeStorage views to have the same size of at least 6 elements but got 6, 6 and 7\n"
         "Ui::AbstractLayer::advanceAnimations(): expected activeStorage, factorStorage and removeStorage views to have the same size of at least 6 elements but got 6, 7 and 6\n"
@@ -2047,13 +2045,13 @@ void AbstractLayerTest::advanceStyleAnimationsInvalidSize() {
     Float factorStorage[6];
     Float factorStorageHigh[7];
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     layer.advanceAnimations(0_nsec, maskStorageLow, factorStorageLow, maskStorageLow, {animator1, animator2, animator3});
     layer.advanceAnimations(0_nsec, maskStorage, factorStorage, maskStorageHigh, {animator1, animator2, animator3});
     layer.advanceAnimations(0_nsec, maskStorage, factorStorageHigh, maskStorage, {animator1, animator2, animator3});
     layer.advanceAnimations(0_nsec, maskStorageHigh, factorStorage, maskStorage, {animator1, animator2, animator3});
-    CORRADE_COMPARE_AS(out.str(),
+    CORRADE_COMPARE_AS(out,
         "Ui::AbstractLayer::advanceAnimations(): expected activeStorage, factorStorage and removeStorage views to have the same size of at least 6 elements but got 5, 5 and 5\n"
         "Ui::AbstractLayer::advanceAnimations(): expected activeStorage, factorStorage and removeStorage views to have the same size of at least 6 elements but got 6, 6 and 7\n"
         "Ui::AbstractLayer::advanceAnimations(): expected activeStorage, factorStorage and removeStorage views to have the same size of at least 6 elements but got 6, 7 and 6\n"
@@ -2416,12 +2414,12 @@ void AbstractLayerTest::updateInvalidState() {
         LayerFeatures doFeatures() const override { return {}; }
     } layer{layerHandle(0, 1)};
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     layer.update({}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
     layer.update(LayerState::NeedsDataClean, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
     layer.update(LayerState::NeedsCompositeOffsetSizeUpdate, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
-    CORRADE_COMPARE_AS(out.str(),
+    CORRADE_COMPARE_AS(out,
         "Ui::AbstractLayer::update(): expected a non-empty subset of Ui::LayerState::NeedsNodeOffsetSizeUpdate|Ui::LayerState::NeedsAttachmentUpdate|Ui::LayerState::NeedsDataUpdate|Ui::LayerState::NeedsCommonDataUpdate|Ui::LayerState::NeedsSharedDataUpdate but got Ui::LayerStates{}\n"
         "Ui::AbstractLayer::update(): expected a non-empty subset of Ui::LayerState::NeedsNodeOffsetSizeUpdate|Ui::LayerState::NeedsAttachmentUpdate|Ui::LayerState::NeedsDataUpdate|Ui::LayerState::NeedsCommonDataUpdate|Ui::LayerState::NeedsSharedDataUpdate but got Ui::LayerState::NeedsDataClean\n"
         "Ui::AbstractLayer::update(): expected a non-empty subset of Ui::LayerState::NeedsNodeOffsetSizeUpdate|Ui::LayerState::NeedsAttachmentUpdate|Ui::LayerState::NeedsDataUpdate|Ui::LayerState::NeedsCommonDataUpdate|Ui::LayerState::NeedsSharedDataUpdate but got Ui::LayerState::NeedsCompositeOffsetSizeUpdate\n",
@@ -2439,11 +2437,11 @@ void AbstractLayerTest::updateInvalidStateComposite() {
         }
     } layer{layerHandle(0, 1)};
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     layer.update({}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
     layer.update(LayerState::NeedsDataClean, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
-    CORRADE_COMPARE_AS(out.str(),
+    CORRADE_COMPARE_AS(out,
         "Ui::AbstractLayer::update(): expected a non-empty subset of Ui::LayerState::NeedsNodeOffsetSizeUpdate|Ui::LayerState::NeedsAttachmentUpdate|Ui::LayerState::NeedsDataUpdate|Ui::LayerState::NeedsCommonDataUpdate|Ui::LayerState::NeedsSharedDataUpdate|Ui::LayerState::NeedsCompositeOffsetSizeUpdate but got Ui::LayerStates{}\n"
         "Ui::AbstractLayer::update(): expected a non-empty subset of Ui::LayerState::NeedsNodeOffsetSizeUpdate|Ui::LayerState::NeedsAttachmentUpdate|Ui::LayerState::NeedsDataUpdate|Ui::LayerState::NeedsCommonDataUpdate|Ui::LayerState::NeedsSharedDataUpdate|Ui::LayerState::NeedsCompositeOffsetSizeUpdate but got Ui::LayerState::NeedsDataClean\n",
         TestSuite::Compare::String);
@@ -2460,7 +2458,7 @@ void AbstractLayerTest::updateInvalidSizes() {
 
     UnsignedByte nodesEnabled[1]{};
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     layer.update(
         LayerState::NeedsDataUpdate,
@@ -2581,7 +2579,7 @@ void AbstractLayerTest::updateInvalidSizes() {
             {}
         })
     );
-    CORRADE_COMPARE_AS(out.str(),
+    CORRADE_COMPARE_AS(out,
         "Ui::AbstractLayer::update(): expected clip rect ID and data count views to have the same size but got 3 and 2\n"
         "Ui::AbstractLayer::update(): expected node offset, size, opacity and enabled views to have the same size but got 2, 3, 2 and 2\n"
         "Ui::AbstractLayer::update(): expected node offset, size, opacity and enabled views to have the same size but got 2, 2, 3 and 2\n"
@@ -2608,10 +2606,10 @@ void AbstractLayerTest::updateNoSizeSet() {
     /* It's fine if the layer doesn't support drawing */
     layerNoDraw.update(LayerState::NeedsDataUpdate, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     layer.update(LayerState::NeedsDataUpdate, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
-    CORRADE_COMPARE(out.str(), "Ui::AbstractLayer::update(): user interface size wasn't set\n");
+    CORRADE_COMPARE(out, "Ui::AbstractLayer::update(): user interface size wasn't set\n");
 }
 
 void AbstractLayerTest::state() {
@@ -2838,10 +2836,10 @@ void AbstractLayerTest::compositeNotSupported() {
         void doTransition(RendererTargetState, RendererTargetState, RendererDrawStates, RendererDrawStates) override {}
     } renderer;
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     layer.composite(renderer, {}, {}, 0, 0);
-    CORRADE_COMPARE(out.str(), "Ui::AbstractLayer::composite(): feature not supported\n");
+    CORRADE_COMPARE(out, "Ui::AbstractLayer::composite(): feature not supported\n");
 }
 
 void AbstractLayerTest::compositeNotImplemented() {
@@ -2861,10 +2859,10 @@ void AbstractLayerTest::compositeNotImplemented() {
         void doTransition(RendererTargetState, RendererTargetState, RendererDrawStates, RendererDrawStates) override {}
     } renderer;
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     layer.composite(renderer, {}, {}, 0, 0);
-    CORRADE_COMPARE(out.str(), "Ui::AbstractLayer::composite(): feature advertised but not implemented\n");
+    CORRADE_COMPARE(out, "Ui::AbstractLayer::composite(): feature advertised but not implemented\n");
 }
 
 void AbstractLayerTest::compositeInvalidSizes() {
@@ -2884,7 +2882,7 @@ void AbstractLayerTest::compositeInvalidSizes() {
         void doTransition(RendererTargetState, RendererTargetState, RendererDrawStates, RendererDrawStates) override {}
     } renderer;
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     layer.composite(renderer,
         Containers::arrayView<Vector2>({
@@ -2920,7 +2918,7 @@ void AbstractLayerTest::compositeInvalidSizes() {
         }),
         2, 1
     );
-    CORRADE_COMPARE_AS(out.str(),
+    CORRADE_COMPARE_AS(out,
         "Ui::AbstractLayer::composite(): expected rect offset and size views to have the same size but got 2 and 3\n"
         "Ui::AbstractLayer::composite(): offset 3 and count 0 out of range for 2 items\n"
         "Ui::AbstractLayer::composite(): offset 2 and count 1 out of range for 2 items\n",
@@ -3070,10 +3068,10 @@ void AbstractLayerTest::drawNotSupported() {
         LayerFeatures doFeatures() const override { return {}; }
     } layer{layerHandle(0, 1)};
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     layer.draw({}, 0, 0, {}, {}, 0, 0, {}, {}, {}, {}, {}, {});
-    CORRADE_COMPARE(out.str(), "Ui::AbstractLayer::draw(): feature not supported\n");
+    CORRADE_COMPARE(out, "Ui::AbstractLayer::draw(): feature not supported\n");
 }
 
 void AbstractLayerTest::drawNotImplemented() {
@@ -3087,10 +3085,10 @@ void AbstractLayerTest::drawNotImplemented() {
         }
     } layer{layerHandle(0, 1)};
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     layer.draw({}, 0, 0, {}, {}, 0, 0, {}, {}, {}, {}, {}, {});
-    CORRADE_COMPARE(out.str(), "Ui::AbstractLayer::draw(): feature advertised but not implemented\n");
+    CORRADE_COMPARE(out, "Ui::AbstractLayer::draw(): feature advertised but not implemented\n");
 }
 
 void AbstractLayerTest::drawInvalidSizes() {
@@ -3106,7 +3104,7 @@ void AbstractLayerTest::drawInvalidSizes() {
 
     UnsignedByte nodesEnabled[1]{};
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     layer.draw(
         {},
@@ -3258,7 +3256,7 @@ void AbstractLayerTest::drawInvalidSizes() {
         {}, {}, {}, {},
         {}, {}
     );
-    CORRADE_COMPARE_AS(out.str(),
+    CORRADE_COMPARE_AS(out,
         "Ui::AbstractLayer::draw(): expected clip rect ID and data count views to have the same size but got 3 and 2\n"
         "Ui::AbstractLayer::draw(): expected node offset, size, opacity and enabled views to have the same size but got 2, 3, 2 and 2\n"
         "Ui::AbstractLayer::draw(): expected node offset, size, opacity and enabled views to have the same size but got 2, 2, 3 and 2\n"
@@ -3364,7 +3362,7 @@ void AbstractLayerTest::pointerEventNotSupported() {
     PointerMoveEvent moveEvent{{}, PointerEventSource::Mouse, {}, {}, true, 0};
     PointerCancelEvent cancelEvent{{}};
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     layer.pointerPressEvent(0, event);
     layer.pointerReleaseEvent(0, event);
@@ -3372,7 +3370,7 @@ void AbstractLayerTest::pointerEventNotSupported() {
     layer.pointerEnterEvent(0, moveEvent);
     layer.pointerLeaveEvent(0, moveEvent);
     layer.pointerCancelEvent(0, cancelEvent);
-    CORRADE_COMPARE_AS(out.str(),
+    CORRADE_COMPARE_AS(out,
         "Ui::AbstractLayer::pointerPressEvent(): feature not supported\n"
         "Ui::AbstractLayer::pointerReleaseEvent(): feature not supported\n"
         "Ui::AbstractLayer::pointerMoveEvent(): feature not supported\n"
@@ -3427,7 +3425,7 @@ void AbstractLayerTest::pointerEventOutOfRange() {
     PointerMoveEvent moveEvent{{}, PointerEventSource::Mouse, {}, {}, true, 0};
     PointerCancelEvent cancelEvent{{}};
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     layer.pointerPressEvent(2, event);
     layer.pointerReleaseEvent(2, event);
@@ -3435,7 +3433,7 @@ void AbstractLayerTest::pointerEventOutOfRange() {
     layer.pointerEnterEvent(2, moveEvent);
     layer.pointerLeaveEvent(2, moveEvent);
     layer.pointerCancelEvent(2, cancelEvent);
-    CORRADE_COMPARE_AS(out.str(),
+    CORRADE_COMPARE_AS(out,
         "Ui::AbstractLayer::pointerPressEvent(): index 2 out of range for 2 data\n"
         "Ui::AbstractLayer::pointerReleaseEvent(): index 2 out of range for 2 data\n"
         "Ui::AbstractLayer::pointerMoveEvent(): index 2 out of range for 2 data\n"
@@ -3467,11 +3465,11 @@ void AbstractLayerTest::pointerEventNotPrimary() {
     layer.pointerReleaseEvent(0, event);
     layer.pointerMoveEvent(0, moveEvent);
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     layer.pointerEnterEvent(0, moveEvent);
     layer.pointerLeaveEvent(0, moveEvent);
-    CORRADE_COMPARE(out.str(),
+    CORRADE_COMPARE(out,
         "Ui::AbstractLayer::pointerEnterEvent(): event not primary\n"
         "Ui::AbstractLayer::pointerLeaveEvent(): event not primary\n");
 }
@@ -3495,7 +3493,7 @@ void AbstractLayerTest::pointerEventAlreadyAccepted() {
     PointerMoveEvent moveEvent{{}, PointerEventSource::Mouse, {}, {}, true, 0};
     moveEvent.setAccepted();
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     layer.pointerPressEvent(0, event);
     layer.pointerReleaseEvent(0, event);
@@ -3503,7 +3501,7 @@ void AbstractLayerTest::pointerEventAlreadyAccepted() {
     layer.pointerEnterEvent(0, moveEvent);
     layer.pointerLeaveEvent(0, moveEvent);
     /* PointerCancelEvent cannot be accepted */
-    CORRADE_COMPARE(out.str(),
+    CORRADE_COMPARE(out,
         "Ui::AbstractLayer::pointerPressEvent(): event already accepted\n"
         "Ui::AbstractLayer::pointerReleaseEvent(): event already accepted\n"
         "Ui::AbstractLayer::pointerMoveEvent(): event already accepted\n"
@@ -3561,11 +3559,11 @@ void AbstractLayerTest::focusBlurEventNotSupported() {
 
     FocusEvent event{{}};
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     layer.focusEvent(0, event);
     layer.blurEvent(0, event);
-    CORRADE_COMPARE(out.str(),
+    CORRADE_COMPARE(out,
         "Ui::AbstractLayer::focusEvent(): feature not supported\n"
         "Ui::AbstractLayer::blurEvent(): feature not supported\n");
 }
@@ -3607,11 +3605,11 @@ void AbstractLayerTest::focusBlurEventOutOfRange() {
 
     FocusEvent event{{}};
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     layer.focusEvent(2, event);
     layer.blurEvent(2, event);
-    CORRADE_COMPARE(out.str(),
+    CORRADE_COMPARE(out,
         "Ui::AbstractLayer::focusEvent(): index 2 out of range for 2 data\n"
         "Ui::AbstractLayer::blurEvent(): index 2 out of range for 2 data\n");
 }
@@ -3633,11 +3631,11 @@ void AbstractLayerTest::focusBlurEventAlreadyAccepted() {
     FocusEvent event{{}};
     event.setAccepted();
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     layer.focusEvent(0, event);
     layer.blurEvent(0, event);
-    CORRADE_COMPARE(out.str(),
+    CORRADE_COMPARE(out,
         "Ui::AbstractLayer::focusEvent(): event already accepted\n"
         "Ui::AbstractLayer::blurEvent(): event already accepted\n");
 }
@@ -3695,11 +3693,11 @@ void AbstractLayerTest::keyEventNotSupported() {
 
     KeyEvent event{{}, Key::C, {}};
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     layer.keyPressEvent(0, event);
     layer.keyReleaseEvent(0, event);
-    CORRADE_COMPARE(out.str(),
+    CORRADE_COMPARE(out,
         "Ui::AbstractLayer::keyPressEvent(): feature not supported\n"
         "Ui::AbstractLayer::keyReleaseEvent(): feature not supported\n");
 }
@@ -3741,11 +3739,11 @@ void AbstractLayerTest::keyEventOutOfRange() {
 
     KeyEvent event{{}, Key::Backquote, {}};
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     layer.keyPressEvent(2, event);
     layer.keyReleaseEvent(2, event);
-    CORRADE_COMPARE(out.str(),
+    CORRADE_COMPARE(out,
         "Ui::AbstractLayer::keyPressEvent(): index 2 out of range for 2 data\n"
         "Ui::AbstractLayer::keyReleaseEvent(): index 2 out of range for 2 data\n");
 }
@@ -3767,11 +3765,11 @@ void AbstractLayerTest::keyEventAlreadyAccepted() {
     KeyEvent event{{}, Key::Space, {}};
     event.setAccepted();
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     layer.keyPressEvent(0, event);
     layer.keyReleaseEvent(0, event);
-    CORRADE_COMPARE(out.str(),
+    CORRADE_COMPARE(out,
         "Ui::AbstractLayer::keyPressEvent(): event already accepted\n"
         "Ui::AbstractLayer::keyReleaseEvent(): event already accepted\n");
 }
@@ -3820,10 +3818,10 @@ void AbstractLayerTest::textInputEventNotSupported() {
 
     TextInputEvent event{{}, "oh"};
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     layer.textInputEvent(0, event);
-    CORRADE_COMPARE(out.str(),
+    CORRADE_COMPARE(out,
         "Ui::AbstractLayer::textInputEvent(): feature not supported\n");
 }
 
@@ -3863,10 +3861,10 @@ void AbstractLayerTest::textInputEventOutOfRange() {
 
     TextInputEvent event{{}, "ooh"};
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     layer.textInputEvent(2, event);
-    CORRADE_COMPARE(out.str(),
+    CORRADE_COMPARE(out,
         "Ui::AbstractLayer::textInputEvent(): index 2 out of range for 2 data\n");
 }
 
@@ -3887,10 +3885,10 @@ void AbstractLayerTest::textInputEventAlreadyAccepted() {
     TextInputEvent event{{}, "welp"};
     event.setAccepted();
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     layer.textInputEvent(0, event);
-    CORRADE_COMPARE(out.str(),
+    CORRADE_COMPARE(out,
         "Ui::AbstractLayer::textInputEvent(): event already accepted\n");
 }
 
@@ -3934,10 +3932,10 @@ void AbstractLayerTest::visibilityLostEventNotSupported() {
 
     VisibilityLostEvent event;
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     layer.visibilityLostEvent(0, event);
-    CORRADE_COMPARE_AS(out.str(),
+    CORRADE_COMPARE_AS(out,
         "Ui::AbstractLayer::visibilityLostEvent(): feature not supported\n",
         TestSuite::Compare::String);
 }
@@ -3978,10 +3976,10 @@ void AbstractLayerTest::visibilityLostEventOutOfRange() {
 
     VisibilityLostEvent event;
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     layer.visibilityLostEvent(2, event);
-    CORRADE_COMPARE_AS(out.str(),
+    CORRADE_COMPARE_AS(out,
         "Ui::AbstractLayer::visibilityLostEvent(): index 2 out of range for 2 data\n",
         TestSuite::Compare::String);
 }

@@ -24,18 +24,16 @@
     DEALINGS IN THE SOFTWARE.
 */
 
-#include <sstream>
 #include <Corrade/Containers/BitArray.h>
 #include <Corrade/Containers/Optional.h>
 #include <Corrade/Containers/Pair.h>
 #include <Corrade/Containers/StaticArray.h>
 #include <Corrade/Containers/StridedBitArrayView.h>
 #include <Corrade/Containers/StridedArrayView.h>
-#include <Corrade/Containers/StringStl.h> /** @todo remove once Debug is stream-free */
+#include <Corrade/Containers/String.h>
 #include <Corrade/TestSuite/Tester.h>
 #include <Corrade/TestSuite/Compare/Container.h>
 #include <Corrade/TestSuite/Compare/String.h>
-#include <Corrade/Utility/DebugStl.h> /** @todo remove once Debug is stream-free */
 #include <Corrade/Utility/Format.h>
 #include <Magnum/Math/Constants.h>
 #include <Magnum/Math/Time.h>
@@ -422,57 +420,57 @@ AbstractAnimatorTest::AbstractAnimatorTest() {
 }
 
 void AbstractAnimatorTest::debugFeature() {
-    std::ostringstream out;
+    Containers::String out;
     Debug{&out} << AnimatorFeature::NodeAttachment << AnimatorFeature(0xbe);
-    CORRADE_COMPARE(out.str(), "Ui::AnimatorFeature::NodeAttachment Ui::AnimatorFeature(0xbe)\n");
+    CORRADE_COMPARE(out, "Ui::AnimatorFeature::NodeAttachment Ui::AnimatorFeature(0xbe)\n");
 }
 
 void AbstractAnimatorTest::debugFeatures() {
-    std::ostringstream out;
+    Containers::String out;
     Debug{&out} << (AnimatorFeature::NodeAttachment|AnimatorFeature(0xe0)) << AnimatorFeatures{};
-    CORRADE_COMPARE(out.str(), "Ui::AnimatorFeature::NodeAttachment|Ui::AnimatorFeature(0xe0) Ui::AnimatorFeatures{}\n");
+    CORRADE_COMPARE(out, "Ui::AnimatorFeature::NodeAttachment|Ui::AnimatorFeature(0xe0) Ui::AnimatorFeatures{}\n");
 }
 
 void AbstractAnimatorTest::debugState() {
-    std::ostringstream out;
+    Containers::String out;
     Debug{&out} << AnimatorState::NeedsAdvance << AnimatorState(0xbe);
-    CORRADE_COMPARE(out.str(), "Ui::AnimatorState::NeedsAdvance Ui::AnimatorState(0xbe)\n");
+    CORRADE_COMPARE(out, "Ui::AnimatorState::NeedsAdvance Ui::AnimatorState(0xbe)\n");
 }
 
 void AbstractAnimatorTest::debugStates() {
-    std::ostringstream out;
+    Containers::String out;
     Debug{&out} << (AnimatorState::NeedsAdvance|AnimatorState(0xe0)) << AnimatorStates{};
-    CORRADE_COMPARE(out.str(), "Ui::AnimatorState::NeedsAdvance|Ui::AnimatorState(0xe0) Ui::AnimatorStates{}\n");
+    CORRADE_COMPARE(out, "Ui::AnimatorState::NeedsAdvance|Ui::AnimatorState(0xe0) Ui::AnimatorStates{}\n");
 }
 
 void AbstractAnimatorTest::debugAnimationFlag() {
-    std::ostringstream out;
+    Containers::String out;
     Debug{&out} << AnimationFlag::KeepOncePlayed << AnimationFlag(0xbe);
-    CORRADE_COMPARE(out.str(), "Ui::AnimationFlag::KeepOncePlayed Ui::AnimationFlag(0xbe)\n");
+    CORRADE_COMPARE(out, "Ui::AnimationFlag::KeepOncePlayed Ui::AnimationFlag(0xbe)\n");
 }
 
 void AbstractAnimatorTest::debugAnimationFlags() {
-    std::ostringstream out;
+    Containers::String out;
     Debug{&out} << (AnimationFlag::KeepOncePlayed|AnimationFlag(0xe0)) << AnimationFlags{};
-    CORRADE_COMPARE(out.str(), "Ui::AnimationFlag::KeepOncePlayed|Ui::AnimationFlag(0xe0) Ui::AnimationFlags{}\n");
+    CORRADE_COMPARE(out, "Ui::AnimationFlag::KeepOncePlayed|Ui::AnimationFlag(0xe0) Ui::AnimationFlags{}\n");
 }
 
 void AbstractAnimatorTest::debugAnimationState() {
-    std::ostringstream out;
+    Containers::String out;
     Debug{&out} << AnimationState::Paused << AnimationState(0xbe);
-    CORRADE_COMPARE(out.str(), "Ui::AnimationState::Paused Ui::AnimationState(0xbe)\n");
+    CORRADE_COMPARE(out, "Ui::AnimationState::Paused Ui::AnimationState(0xbe)\n");
 }
 
 void AbstractAnimatorTest::debugNodeAnimation() {
-    std::ostringstream out;
+    Containers::String out;
     Debug{&out} << NodeAnimation::Enabled << NodeAnimation(0xbe);
-    CORRADE_COMPARE(out.str(), "Ui::NodeAnimation::Enabled Ui::NodeAnimation(0xbe)\n");
+    CORRADE_COMPARE(out, "Ui::NodeAnimation::Enabled Ui::NodeAnimation(0xbe)\n");
 }
 
 void AbstractAnimatorTest::debugNodeAnimations() {
-    std::ostringstream out;
+    Containers::String out;
     Debug{&out} << (NodeAnimation::OffsetSize|NodeAnimation(0xe0)) << NodeAnimations{};
-    CORRADE_COMPARE(out.str(), "Ui::NodeAnimation::OffsetSize|Ui::NodeAnimation(0xe0) Ui::NodeAnimations{}\n");
+    CORRADE_COMPARE(out, "Ui::NodeAnimation::OffsetSize|Ui::NodeAnimation(0xe0) Ui::NodeAnimations{}\n");
 }
 
 void AbstractAnimatorTest::construct() {
@@ -548,10 +546,10 @@ void AbstractAnimatorTest::constructInvalidHandle() {
         AnimatorFeatures doFeatures() const override { return {}; }
     };
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     Animator{AnimatorHandle::Null};
-    CORRADE_COMPARE(out.str(),
+    CORRADE_COMPARE(out,
         "Ui::AbstractAnimator: handle is null\n");
 }
 
@@ -735,10 +733,10 @@ void AbstractAnimatorTest::featuresMutuallyExclusive() {
         }
     } animator{animatorHandle(0, 1)};
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     animator.features();
-    CORRADE_COMPARE(out.str(), "Ui::AbstractAnimator::features(): Ui::AnimatorFeature::NodeAttachment and Ui::AnimatorFeature::DataAttachment are mutually exclusive\n");
+    CORRADE_COMPARE(out, "Ui::AbstractAnimator::features(): Ui::AnimatorFeature::NodeAttachment and Ui::AnimatorFeature::DataAttachment are mutually exclusive\n");
 }
 
 void AbstractAnimatorTest::genericSetLayer() {
@@ -787,10 +785,10 @@ void AbstractAnimatorTest::genericSetLayerInvalid() {
     CORRADE_COMPARE(animator.layer(), layer.handle());
 
     /* Second time it asserts, even if the layer is the same */
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     animator.setLayer(layer);
-    CORRADE_COMPARE(out.str(), "Ui::AbstractGenericAnimator::setLayer(): layer already set to Ui::LayerHandle(0xab, 0x12)\n");
+    CORRADE_COMPARE(out, "Ui::AbstractGenericAnimator::setLayer(): layer already set to Ui::LayerHandle(0xab, 0x12)\n");
 }
 
 void AbstractAnimatorTest::genericSetLayerInvalidFeatures() {
@@ -813,10 +811,10 @@ void AbstractAnimatorTest::genericSetLayerInvalidFeatures() {
         LayerFeatures doFeatures() const override { return {}; }
     } layer{layerHandle(0, 1)};
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     animator.setLayer(layer);
-    CORRADE_COMPARE(out.str(), "Ui::AbstractGenericAnimator::setLayer(): feature not supported\n");
+    CORRADE_COMPARE(out, "Ui::AbstractGenericAnimator::setLayer(): feature not supported\n");
 }
 
 void AbstractAnimatorTest::createRemove() {
@@ -1212,12 +1210,12 @@ void AbstractAnimatorTest::createNoHandlesLeft() {
     CORRADE_COMPARE(animator.capacity(), 1 << Implementation::AnimatorDataHandleIdBits);
     CORRADE_COMPARE(animator.usedCount(), 1 << Implementation::AnimatorDataHandleIdBits);
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     animator.create(17_nsec, 65_nsec);
     /* Number is hardcoded in the expected message but not elsewhere in order
        to give a heads-up when modifying the handle ID bit count */
-    CORRADE_COMPARE(out.str(),
+    CORRADE_COMPARE(out,
         "Ui::AbstractAnimator::create(): can only have at most 1048576 animations\n");
 }
 
@@ -1231,11 +1229,11 @@ void AbstractAnimatorTest::createInvalid() {
         AnimatorFeatures doFeatures() const override { return {}; }
     } animator{animatorHandle(0, 1)};
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     animator.create(15_nsec, 0_nsec);
     animator.create(15_nsec, -1_nsec);
-    CORRADE_COMPARE(out.str(),
+    CORRADE_COMPARE(out,
         "Ui::AbstractAnimator::create(): expected positive duration, got Nanoseconds(0)\n"
         "Ui::AbstractAnimator::create(): expected positive duration, got Nanoseconds(-1)\n");
 }
@@ -1310,11 +1308,11 @@ void AbstractAnimatorTest::createNodeAttachmentInvalidFeatures() {
         }
     } animator{animatorHandle(0, 1)};
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     animator.create(0_nsec, 1_nsec, NodeHandle::Null, 1);
     animator.create(0_nsec, 1_nsec, NodeHandle::Null, AnimationFlag::KeepOncePlayed);
-    CORRADE_COMPARE(out.str(),
+    CORRADE_COMPARE(out,
         "Ui::AbstractAnimator::create(): node attachment not supported\n"
         "Ui::AbstractAnimator::create(): node attachment not supported\n");
 }
@@ -1435,7 +1433,7 @@ void AbstractAnimatorTest::createDataAttachmentNoLayerSet() {
         }
     } animator{animatorHandle(0, 1)};
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     animator.create(0_nsec, 1_nsec, DataHandle::Null, 1);
     animator.create(0_nsec, 1_nsec, DataHandle::Null, AnimationFlag::KeepOncePlayed);
@@ -1443,7 +1441,7 @@ void AbstractAnimatorTest::createDataAttachmentNoLayerSet() {
        for consistency */
     animator.create(0_nsec, 1_nsec, LayerDataHandle::Null, 1);
     animator.create(0_nsec, 1_nsec, LayerDataHandle::Null, AnimationFlag::KeepOncePlayed);
-    CORRADE_COMPARE(out.str(),
+    CORRADE_COMPARE(out,
         "Ui::AbstractAnimator::create(): no layer set for data attachment\n"
         "Ui::AbstractAnimator::create(): no layer set for data attachment\n"
         "Ui::AbstractAnimator::create(): no layer set for data attachment\n"
@@ -1478,11 +1476,11 @@ void AbstractAnimatorTest::createDataAttachmentInvalidLayer() {
     animator.create(0_nsec, 1_nsec, layerDataHandle(0xabcde, 0x123), 1);
     animator.create(0_nsec, 1_nsec, layerDataHandle(0xabcde, 0x123), AnimationFlag::KeepOncePlayed);
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     animator.create(0_nsec, 1_nsec, dataHandle(layerHandle(0xab, 0x13), 0xabcde, 0x123), 1);
     animator.create(0_nsec, 1_nsec, dataHandle(layerHandle(0xab, 0x13), 0xabcde, 0x123), AnimationFlag::KeepOncePlayed);
-    CORRADE_COMPARE(out.str(),
+    CORRADE_COMPARE(out,
         "Ui::AbstractAnimator::create(): expected a data handle with Ui::LayerHandle(0xab, 0x12) but got Ui::DataHandle({0xab, 0x13}, {0xabcde, 0x123})\n"
         "Ui::AbstractAnimator::create(): expected a data handle with Ui::LayerHandle(0xab, 0x12) but got Ui::DataHandle({0xab, 0x13}, {0xabcde, 0x123})\n");
 }
@@ -1500,13 +1498,13 @@ void AbstractAnimatorTest::createDataAttachmentInvalidFeatures() {
         }
     } animator{animatorHandle(0, 1)};
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     animator.create(0_nsec, 1_nsec, DataHandle::Null, 1);
     animator.create(0_nsec, 1_nsec, LayerDataHandle::Null, 1);
     animator.create(0_nsec, 1_nsec, DataHandle::Null, AnimationFlag::KeepOncePlayed);
     animator.create(0_nsec, 1_nsec, LayerDataHandle::Null, AnimationFlag::KeepOncePlayed);
-    CORRADE_COMPARE(out.str(),
+    CORRADE_COMPARE(out,
         "Ui::AbstractAnimator::create(): data attachment not supported\n"
         "Ui::AbstractAnimator::create(): data attachment not supported\n"
         "Ui::AbstractAnimator::create(): data attachment not supported\n"
@@ -1526,7 +1524,7 @@ void AbstractAnimatorTest::removeInvalid() {
 
     AnimationHandle handle = animator.create(12_nsec, 13_nsec);
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     animator.remove(AnimationHandle::Null);
     /* Valid animator, invalid data */
@@ -1535,7 +1533,7 @@ void AbstractAnimatorTest::removeInvalid() {
     animator.remove(animationHandle(AnimatorHandle::Null, animationHandleData(handle)));
     /* AnimatorDataHandle directly */
     animator.remove(AnimatorDataHandle(0x123abcde));
-    CORRADE_COMPARE_AS(out.str(),
+    CORRADE_COMPARE_AS(out,
         "Ui::AbstractAnimator::remove(): invalid handle Ui::AnimationHandle::Null\n"
         "Ui::AbstractAnimator::remove(): invalid handle Ui::AnimationHandle({0x0, 0x1}, {0xabcde, 0x123})\n"
         "Ui::AbstractAnimator::remove(): invalid handle Ui::AnimationHandle(Null, {0x0, 0x1})\n"
@@ -1633,7 +1631,7 @@ void AbstractAnimatorTest::propertiesInvalid() {
 
     AnimationHandle handle = animator.create(12_nsec, 13_nsec);
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     animator.duration(AnimationHandle::Null);
     animator.repeatCount(AnimationHandle::Null);
@@ -1686,7 +1684,7 @@ void AbstractAnimatorTest::propertiesInvalid() {
     animator.stopped(AnimatorDataHandle(0x123abcde));
     animator.state(AnimatorDataHandle(0x123abcde));
     animator.factor(AnimatorDataHandle(0x123abcde));
-    CORRADE_COMPARE_AS(out.str(),
+    CORRADE_COMPARE_AS(out,
         "Ui::AbstractAnimator::duration(): invalid handle Ui::AnimationHandle::Null\n"
         "Ui::AbstractAnimator::repeatCount(): invalid handle Ui::AnimationHandle::Null\n"
         "Ui::AbstractAnimator::setRepeatCount(): invalid handle Ui::AnimationHandle::Null\n"
@@ -1817,7 +1815,7 @@ void AbstractAnimatorTest::attachNodeInvalid() {
 
     AnimationHandle handle = animator.create(0_nsec, 1_nsec);
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     animator.attach(AnimationHandle::Null, nodeHandle(2865, 0xcec));
     animator.node(AnimationHandle::Null);
@@ -1830,7 +1828,7 @@ void AbstractAnimatorTest::attachNodeInvalid() {
     /* AnimatorDataHandle directly */
     animator.attach(AnimatorDataHandle(0x123abcde), nodeHandle(2865, 0xcec));
     animator.node(AnimatorDataHandle(0x123abcde));
-    CORRADE_COMPARE_AS(out.str(),
+    CORRADE_COMPARE_AS(out,
         "Ui::AbstractAnimator::attach(): invalid handle Ui::AnimationHandle::Null\n"
         "Ui::AbstractAnimator::node(): invalid handle Ui::AnimationHandle::Null\n"
         "Ui::AbstractAnimator::attach(): invalid handle Ui::AnimationHandle({0xab, 0x12}, {0xabcde, 0x123})\n"
@@ -1857,14 +1855,14 @@ void AbstractAnimatorTest::attachNodeInvalidFeatures() {
 
     AnimationHandle handle = animator.create(0_nsec, 1_nsec);
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     animator.attach(handle, nodeHandle(2865, 0xcec));
     animator.attach(animationHandleData(handle), nodeHandle(2865, 0xcec));
     animator.node(handle);
     animator.node(animationHandleData(handle));
     animator.nodes();
-    CORRADE_COMPARE_AS(out.str(),
+    CORRADE_COMPARE_AS(out,
         "Ui::AbstractAnimator::attach(): node attachment not supported\n"
         "Ui::AbstractAnimator::attach(): node attachment not supported\n"
         "Ui::AbstractAnimator::node(): feature not supported\n"
@@ -1986,7 +1984,7 @@ void AbstractAnimatorTest::attachDataInvalid() {
 
     AnimationHandle handle = animator.create(0_nsec, 1_nsec);
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     animator.attach(AnimationHandle::Null, dataHandle(animator.layer(), 2865, 0xcec));
     animator.attach(AnimationHandle::Null, layerDataHandle(2865, 0xcec));
@@ -2003,7 +2001,7 @@ void AbstractAnimatorTest::attachDataInvalid() {
     animator.attach(AnimatorDataHandle(0x123abcde), dataHandle(animator.layer(), 2865, 0xcec));
     animator.attach(AnimatorDataHandle(0x123abcde), layerDataHandle(2865, 0xcec));
     animator.data(AnimatorDataHandle(0x123abcde));
-    CORRADE_COMPARE_AS(out.str(),
+    CORRADE_COMPARE_AS(out,
         "Ui::AbstractAnimator::attach(): invalid handle Ui::AnimationHandle::Null\n"
         "Ui::AbstractAnimator::attach(): invalid handle Ui::AnimationHandle::Null\n"
         "Ui::AbstractAnimator::data(): invalid handle Ui::AnimationHandle::Null\n"
@@ -2037,13 +2035,13 @@ void AbstractAnimatorTest::attachDataNoLayerSet() {
     CORRADE_COMPARE(animator.data(handle), DataHandle::Null);
     CORRADE_COMPARE(animator.data(animationHandleData(handle)), DataHandle::Null);
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     animator.attach(handle, dataHandle(animator.layer(), 2865, 0xcec));
     animator.attach(handle, layerDataHandle(2865, 0xcec));
     animator.attach(animationHandleData(handle), dataHandle(animator.layer(), 2865, 0xcec));
     animator.attach(animationHandleData(handle), layerDataHandle(2865, 0xcec));
-    CORRADE_COMPARE(out.str(),
+    CORRADE_COMPARE(out,
         "Ui::AbstractAnimator::attach(): no layer set for data attachment\n"
         "Ui::AbstractAnimator::attach(): no layer set for data attachment\n"
         "Ui::AbstractAnimator::attach(): no layer set for data attachment\n"
@@ -2080,11 +2078,11 @@ void AbstractAnimatorTest::attachDataInvalidLayer() {
     animator.attach(handle, layerDataHandle(0xabcde, 0x123));
     animator.attach(animationHandleData(handle), layerDataHandle(0xabcde, 0x123));
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     animator.attach(handle, dataHandle(layerHandle(0xab, 0x13), 0xabcde, 0x123));
     animator.attach(animationHandleData(handle), dataHandle(layerHandle(0xab, 0x13), 0xabcde, 0x123));
-    CORRADE_COMPARE(out.str(),
+    CORRADE_COMPARE(out,
         "Ui::AbstractAnimator::attach(): expected a data handle with Ui::LayerHandle(0xab, 0x12) but got Ui::DataHandle({0xab, 0x13}, {0xabcde, 0x123})\n"
         "Ui::AbstractAnimator::attach(): expected a data handle with Ui::LayerHandle(0xab, 0x12) but got Ui::DataHandle({0xab, 0x13}, {0xabcde, 0x123})\n");
 }
@@ -2104,7 +2102,7 @@ void AbstractAnimatorTest::attachDataInvalidFeatures() {
 
     AnimationHandle handle = animator.create(0_nsec, 1_nsec);
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     animator.attach(handle, DataHandle::Null);
     animator.attach(handle, LayerDataHandle::Null);
@@ -2113,7 +2111,7 @@ void AbstractAnimatorTest::attachDataInvalidFeatures() {
     animator.data(handle);
     animator.data(animationHandleData(handle));
     animator.layerData();
-    CORRADE_COMPARE_AS(out.str(),
+    CORRADE_COMPARE_AS(out,
         "Ui::AbstractAnimator::attach(): data attachment not supported\n"
         "Ui::AbstractAnimator::attach(): data attachment not supported\n"
         "Ui::AbstractAnimator::attach(): data attachment not supported\n"
@@ -2280,11 +2278,11 @@ void AbstractAnimatorTest::cleanInvalid() {
     /* Capture correct function name */
     CORRADE_VERIFY(true);
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     UnsignedByte data[1]{};
     animator.clean(Containers::BitArrayView{data, 0, 2});
-    CORRADE_COMPARE(out.str(), "Ui::AbstractAnimator::clean(): expected 3 bits but got 2\n");
+    CORRADE_COMPARE(out, "Ui::AbstractAnimator::clean(): expected 3 bits but got 2\n");
 }
 
 void AbstractAnimatorTest::cleanNodes() {
@@ -2439,10 +2437,10 @@ void AbstractAnimatorTest::cleanNodesInvalidFeatures() {
         AnimatorFeatures doFeatures() const override { return {}; }
     } animator{animatorHandle(0, 1)};
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     animator.cleanNodes({});
-    CORRADE_COMPARE(out.str(), "Ui::AbstractAnimator::cleanNodes(): feature not supported\n");
+    CORRADE_COMPARE(out, "Ui::AbstractAnimator::cleanNodes(): feature not supported\n");
 }
 
 void AbstractAnimatorTest::cleanData() {
@@ -2638,10 +2636,10 @@ void AbstractAnimatorTest::cleanDataInvalidFeatures() {
         AnimatorFeatures doFeatures() const override { return {}; }
     } animator{animatorHandle(0, 1)};
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     animator.cleanData({});
-    CORRADE_COMPARE(out.str(), "Ui::AbstractAnimator::cleanData(): feature not supported\n");
+    CORRADE_COMPARE(out, "Ui::AbstractAnimator::cleanData(): feature not supported\n");
 }
 
 void AbstractAnimatorTest::cleanDataNoLayerSet() {
@@ -2655,10 +2653,10 @@ void AbstractAnimatorTest::cleanDataNoLayerSet() {
         }
     } animator{animatorHandle(0, 1)};
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     animator.cleanData({});
-    CORRADE_COMPARE(out.str(), "Ui::AbstractAnimator::cleanData(): no layer set for data attachment\n");
+    CORRADE_COMPARE(out, "Ui::AbstractAnimator::cleanData(): no layer set for data attachment\n");
 }
 
 void AbstractAnimatorTest::playPauseStop() {
@@ -2735,7 +2733,7 @@ void AbstractAnimatorTest::playPauseStopInvalid() {
 
     AnimationHandle handle = animator.create(12_nsec, 13_nsec);
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     animator.play(AnimationHandle::Null, 0_nsec);
     animator.pause(AnimationHandle::Null, 0_nsec);
@@ -2752,7 +2750,7 @@ void AbstractAnimatorTest::playPauseStopInvalid() {
     animator.play(AnimatorDataHandle(0x123abcde), 0_nsec);
     animator.pause(AnimatorDataHandle(0x123abcde), 0_nsec);
     animator.stop(AnimatorDataHandle(0x123abcde), 0_nsec);
-    CORRADE_COMPARE_AS(out.str(),
+    CORRADE_COMPARE_AS(out,
         "Ui::AbstractAnimator::play(): invalid handle Ui::AnimationHandle::Null\n"
         "Ui::AbstractAnimator::pause(): invalid handle Ui::AnimationHandle::Null\n"
         "Ui::AbstractAnimator::stop(): invalid handle Ui::AnimationHandle::Null\n"
@@ -3378,13 +3376,13 @@ void AbstractAnimatorTest::updateInvalid() {
     animator.update(46_nsec, mask, factors, mask);
     CORRADE_COMPARE(animator.time(), 46_nsec);
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     animator.update(45_nsec, mask, factors, mask);
     animator.update(46_nsec, mask, factors, maskIncorrect);
     animator.update(46_nsec, mask, factorsIncorrect, mask);
     animator.update(46_nsec, maskIncorrect, factors, mask);
-    CORRADE_COMPARE_AS(out.str(),
+    CORRADE_COMPARE_AS(out,
         "Ui::AbstractAnimator::update(): expected a time at least Nanoseconds(46) but got Nanoseconds(45)\n"
         "Ui::AbstractAnimator::update(): expected active, factors and remove views to have a size of 3 but got 3, 3 and 4\n"
         "Ui::AbstractAnimator::update(): expected active, factors and remove views to have a size of 3 but got 3, 4 and 3\n"
@@ -3452,11 +3450,11 @@ void AbstractAnimatorTest::advanceGenericInvalid() {
     Float factors[3];
     Float factorsInvalid[4];
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     animator.advance(active, factorsInvalid);
     animator.advance(activeInvalid, factors);
-    CORRADE_COMPARE_AS(out.str(),
+    CORRADE_COMPARE_AS(out,
         "Ui::AbstractGenericAnimator::advance(): expected active and factors views to have a size of 3 but got 3 and 4\n"
         "Ui::AbstractGenericAnimator::advance(): expected active and factors views to have a size of 3 but got 4 and 3\n",
         TestSuite::Compare::String);
@@ -3562,7 +3560,7 @@ void AbstractAnimatorTest::advanceNodeInvalid() {
     NodeFlags nodeFlags[3];
     NodeFlags nodeFlagsInvalid[4];
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     animator.advance(active, factorsInvalid, nodeOffsetsSizes, nodeOffsetsSizes, nodeFlags, nodesEnabled);
     animator.advance(activeInvalid, factors, nodeOffsetsSizes, nodeOffsetsSizes, nodeFlags, nodesEnabled);
@@ -3570,7 +3568,7 @@ void AbstractAnimatorTest::advanceNodeInvalid() {
     animator.advance(active, factors, nodeOffsetsSizes, nodeOffsetsSizes, nodeFlagsInvalid, nodesEnabled);
     animator.advance(active, factors, nodeOffsetsSizes, nodeOffsetsSizesInvalid, nodeFlags, nodesEnabled);
     animator.advance(active, factors, nodeOffsetsSizesInvalid, nodeOffsetsSizes, nodeFlags, nodesEnabled);
-    CORRADE_COMPARE_AS(out.str(),
+    CORRADE_COMPARE_AS(out,
         "Ui::AbstractNodeAnimator::advance(): expected active and factors views to have a size of 2 but got 2 and 3\n"
         "Ui::AbstractNodeAnimator::advance(): expected active and factors views to have a size of 2 but got 3 and 2\n"
         "Ui::AbstractNodeAnimator::advance(): expected node offset, size, flags and remove views to have the same size but got 3, 3, 3 and 4\n"

@@ -24,13 +24,12 @@
     DEALINGS IN THE SOFTWARE.
 */
 
-#include <sstream> /** @todo remove once Debug is stream-free */
 #include <Corrade/Containers/Function.h>
 #include <Corrade/Containers/Optional.h>
 #include <Corrade/Containers/StridedArrayView.h>
+#include <Corrade/Containers/String.h>
 #include <Corrade/TestSuite/Tester.h>
 #include <Corrade/TestSuite/Compare/Numeric.h>
-#include <Corrade/Utility/DebugStl.h> /** @todo remove once Debug is stream-free */
 #include <Magnum/Math/Complex.h>
 
 #include "Magnum/Ui/AbstractUserInterface.h"
@@ -538,10 +537,10 @@ void EventLayerTest::constructMoveScopedConnectionsActive() {
         EventConnection connection2 = a.onTapOrClickScoped(NodeHandle::Null, []{});
         CORRADE_COMPARE(a.usedScopedConnectionCount(), 2);
 
-        std::ostringstream out;
+        Containers::String out;
         Error redirectError{&out};
         EventLayer b{Utility::move(a)};
-        CORRADE_COMPARE(out.str(), "Ui::EventLayer: 2 scoped connections already active, can't move\n");
+        CORRADE_COMPARE(out, "Ui::EventLayer: 2 scoped connections already active, can't move\n");
 
         /* The connections would try to call isHandleValid() on a, which has an
            empty _state due to the destructive move and thus would crash. Put a
@@ -555,11 +554,11 @@ void EventLayerTest::constructMoveScopedConnectionsActive() {
         CORRADE_COMPARE(a.usedScopedConnectionCount(), 3);
 
         EventLayer b{layerHandle(0, 2)};
-        std::ostringstream out;
+        Containers::String out;
         Error redirectError{&out};
         b = Utility::move(a);
         a = Utility::move(b);
-        CORRADE_COMPARE(out.str(),
+        CORRADE_COMPARE(out,
             "Ui::EventLayer: 3 scoped connections already active in the moved-from object, can't move\n"
             "Ui::EventLayer: 3 scoped connections already active in the moved-to object, can't move\n");
 
@@ -576,10 +575,10 @@ void EventLayerTest::destructScopedConnectionsActive() {
     EventConnection connection2 = a->onTapOrClickScoped(NodeHandle::Null, []{});
     CORRADE_COMPARE(a->usedScopedConnectionCount(), 2);
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     a = {};
-    CORRADE_COMPARE(out.str(), "Ui::EventLayer: destructed with 2 scoped connections still active\n");
+    CORRADE_COMPARE(out, "Ui::EventLayer: destructed with 2 scoped connections still active\n");
 
     /* The connections would try to call isHandleValid() on a, which is
         destructed and thus would crash. Put a new instance on the same
@@ -656,10 +655,10 @@ void EventLayerTest::invalidSlot() {
 
     EventLayer layer{layerHandle(0, 1)};
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     layer.onBlur(nodeHandle(0, 1), nullptr);
-    CORRADE_COMPARE(out.str(), "Ui::EventLayer: slot is null\n");
+    CORRADE_COMPARE(out, "Ui::EventLayer: slot is null\n");
 }
 
 void EventLayerTest::connect() {

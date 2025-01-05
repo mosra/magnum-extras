@@ -24,14 +24,12 @@
     DEALINGS IN THE SOFTWARE.
 */
 
-#include <sstream> /** @todo remove once Debug is stream-free */
 #include <Corrade/Containers/BitArrayView.h>
 #include <Corrade/Containers/Function.h>
 #include <Corrade/Containers/StridedArrayView.h>
-#include <Corrade/Containers/StringStl.h> /** @todo remove once Debug is stream-free */
+#include <Corrade/Containers/String.h>
 #include <Corrade/TestSuite/Tester.h>
 #include <Corrade/TestSuite/Compare/String.h>
-#include <Corrade/Utility/DebugStl.h> /** @todo remove once Debug is stream-free */
 
 #include "Magnum/Animation/Easing.h"
 #include "Magnum/Math/Time.h"
@@ -498,11 +496,11 @@ void GenericAnimatorTest::createInvalid() {
 
     GenericAnimator animator{animatorHandle(0, 1)};
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     animator.create(nullptr, Animation::Easing::linear, 0_nsec, 1_nsec);
     animator.create([](Float) {}, nullptr, 0_nsec, 1_nsec);
-    CORRADE_COMPARE_AS(out.str(),
+    CORRADE_COMPARE_AS(out,
         "Ui::GenericAnimator::create(): animation is null\n"
         "Ui::GenericAnimator::create(): easing is null\n",
         TestSuite::Compare::String);
@@ -513,11 +511,11 @@ void GenericAnimatorTest::createInvalidNode() {
 
     GenericNodeAnimator animator{animatorHandle(0, 1)};
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     animator.create(nullptr, Animation::Easing::linear, 0_nsec, 1_nsec, NodeHandle::Null);
     animator.create([](NodeHandle, Float) {}, nullptr, 0_nsec, 1_nsec, NodeHandle::Null);
-    CORRADE_COMPARE_AS(out.str(),
+    CORRADE_COMPARE_AS(out,
         "Ui::GenericNodeAnimator::create(): animation is null\n"
         "Ui::GenericNodeAnimator::create(): easing is null\n",
         TestSuite::Compare::String);
@@ -535,13 +533,13 @@ void GenericAnimatorTest::createInvalidData() {
     } layer{layerHandle(0, 1)};
     animator.setLayer(layer);
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     animator.create(nullptr, Animation::Easing::linear, 0_nsec, 1_nsec, DataHandle::Null);
     animator.create(nullptr, Animation::Easing::linear, 0_nsec, 1_nsec, LayerDataHandle::Null);
     animator.create([](DataHandle, Float) {}, nullptr, 0_nsec, 1_nsec, DataHandle::Null);
     animator.create([](DataHandle, Float) {}, nullptr, 0_nsec, 1_nsec, LayerDataHandle::Null);
-    CORRADE_COMPARE_AS(out.str(),
+    CORRADE_COMPARE_AS(out,
         "Ui::GenericDataAnimator::create(): animation is null\n"
         "Ui::GenericDataAnimator::create(): animation is null\n"
         "Ui::GenericDataAnimator::create(): easing is null\n"
@@ -556,7 +554,7 @@ void GenericAnimatorTest::propertiesInvalid() {
 
     AnimationHandle handle = animator.create([](Float) {}, Animation::Easing::linear, 12_nsec, 13_nsec);
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     animator.easing(AnimationHandle::Null);
     /* Valid animator, invalid data */
@@ -565,7 +563,7 @@ void GenericAnimatorTest::propertiesInvalid() {
     animator.easing(animationHandle(AnimatorHandle::Null, animationHandleData(handle)));
     /* AnimatorDataHandle directly */
     animator.easing(AnimatorDataHandle(0x123abcde));
-    CORRADE_COMPARE_AS(out.str(),
+    CORRADE_COMPARE_AS(out,
         "Ui::GenericAnimator::easing(): invalid handle Ui::AnimationHandle::Null\n"
         "Ui::GenericAnimator::easing(): invalid handle Ui::AnimationHandle({0x0, 0x1}, {0xabcde, 0x123})\n"
         "Ui::GenericAnimator::easing(): invalid handle Ui::AnimationHandle(Null, {0x0, 0x1})\n"
@@ -580,7 +578,7 @@ void GenericAnimatorTest::propertiesInvalidNode() {
 
     AnimationHandle handle = animator.create([](NodeHandle, Float) {}, Animation::Easing::linear, 12_nsec, 13_nsec, NodeHandle::Null);
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     animator.easing(AnimationHandle::Null);
     /* Valid animator, invalid data */
@@ -589,7 +587,7 @@ void GenericAnimatorTest::propertiesInvalidNode() {
     animator.easing(animationHandle(AnimatorHandle::Null, animationHandleData(handle)));
     /* AnimatorDataHandle directly */
     animator.easing(AnimatorDataHandle(0x123abcde));
-    CORRADE_COMPARE_AS(out.str(),
+    CORRADE_COMPARE_AS(out,
         "Ui::GenericNodeAnimator::easing(): invalid handle Ui::AnimationHandle::Null\n"
         "Ui::GenericNodeAnimator::easing(): invalid handle Ui::AnimationHandle({0x0, 0x1}, {0xabcde, 0x123})\n"
         "Ui::GenericNodeAnimator::easing(): invalid handle Ui::AnimationHandle(Null, {0x0, 0x1})\n"
@@ -611,7 +609,7 @@ void GenericAnimatorTest::propertiesInvalidData() {
 
     AnimationHandle handle = animator.create([](DataHandle, Float) {}, Animation::Easing::linear, 12_nsec, 13_nsec, DataHandle::Null);
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     animator.easing(AnimationHandle::Null);
     /* Valid animator, invalid data */
@@ -620,7 +618,7 @@ void GenericAnimatorTest::propertiesInvalidData() {
     animator.easing(animationHandle(AnimatorHandle::Null, animationHandleData(handle)));
     /* AnimatorDataHandle directly */
     animator.easing(AnimatorDataHandle(0x123abcde));
-    CORRADE_COMPARE_AS(out.str(),
+    CORRADE_COMPARE_AS(out,
         "Ui::GenericDataAnimator::easing(): invalid handle Ui::AnimationHandle::Null\n"
         "Ui::GenericDataAnimator::easing(): invalid handle Ui::AnimationHandle({0x0, 0x1}, {0xabcde, 0x123})\n"
         "Ui::GenericDataAnimator::easing(): invalid handle Ui::AnimationHandle(Null, {0x0, 0x1})\n"

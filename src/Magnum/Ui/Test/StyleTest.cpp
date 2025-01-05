@@ -24,7 +24,6 @@
     DEALINGS IN THE SOFTWARE.
 */
 
-#include <sstream> /** @todo remove once Debug is stream-free */
 #include <Corrade/Containers/Optional.h>
 #include <Corrade/Containers/StridedArrayView.h>
 #include <Corrade/Containers/StringIterable.h>
@@ -34,7 +33,6 @@
 #include <Corrade/TestSuite/Compare/Numeric.h>
 #include <Corrade/TestSuite/Compare/String.h>
 #include <Corrade/Utility/ConfigurationGroup.h>
-#include <Corrade/Utility/DebugStl.h> /** @todo remove once Debug is stream-free */
 #include <Magnum/PixelFormat.h>
 #include <Magnum/Text/AbstractGlyphCache.h>
 #include <Magnum/Text/AbstractFont.h>
@@ -123,9 +121,9 @@ using Implementation::TextStyleUniform;
 using Implementation::TextEditingStyle;
 
 void StyleTest::debugIcon() {
-    std::ostringstream out;
+    Containers::String out;
     Debug{&out} << Icon::Yes << Icon(0xdeadcafe);
-    CORRADE_COMPARE(out.str(), "Ui::Icon::Yes Ui::Icon(0xdeadcafe)\n");
+    CORRADE_COMPARE(out, "Ui::Icon::Yes Ui::Icon(0xdeadcafe)\n");
 }
 
 void StyleTest::baseMcssDark() {
@@ -433,10 +431,10 @@ void StyleTest::applyTextLayerCannotOpenFont() {
 
     McssDarkStyle style;
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     CORRADE_VERIFY(!style.apply(ui, StyleFeature::TextLayer, nullptr, &fontManager));
-    CORRADE_COMPARE_AS(out.str(),
+    CORRADE_COMPARE_AS(out,
         "\nUi::McssDarkStyle::apply(): cannot open a font\n",
         TestSuite::Compare::StringHasSuffix);
 }
@@ -481,10 +479,10 @@ void StyleTest::applyTextLayerImagesCannotOpen() {
 
     McssDarkStyle style;
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     CORRADE_VERIFY(!style.apply(ui, StyleFeature::TextLayerImages, &importerManager, nullptr));
-    CORRADE_COMPARE_AS(out.str(),
+    CORRADE_COMPARE_AS(out,
         "\nUi::McssDarkStyle::apply(): cannot open an icon atlas\n",
         TestSuite::Compare::StringHasSuffix);
 }
@@ -530,10 +528,10 @@ void StyleTest::applyTextLayerImagesCannotFit() {
 
     McssDarkStyle style;
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     CORRADE_VERIFY(!style.apply(ui, StyleFeature::TextLayerImages, &_importerManager, nullptr));
-    CORRADE_COMPARE(out.str(), "Ui::McssDarkStyle::apply(): cannot fit 2 icons into the glyph cache\n");
+    CORRADE_COMPARE(out, "Ui::McssDarkStyle::apply(): cannot fit 2 icons into the glyph cache\n");
 }
 
 void StyleTest::applyTextLayerImagesUnexpectedFormat() {
@@ -579,10 +577,10 @@ void StyleTest::applyTextLayerImagesUnexpectedFormat() {
 
     McssDarkStyle style;
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     CORRADE_VERIFY(!style.apply(ui, StyleFeature::TextLayerImages, &importerManager, nullptr));
-    CORRADE_COMPARE(out.str(), "Ui::McssDarkStyle::apply(): expected PixelFormat::R8Unorm icons but got an image with PixelFormat::R32F\n");
+    CORRADE_COMPARE(out, "Ui::McssDarkStyle::apply(): expected PixelFormat::R8Unorm icons but got an image with PixelFormat::R32F\n");
 }
 
 void StyleTest::applyTextLayerTwice() {

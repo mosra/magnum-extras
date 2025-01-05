@@ -24,18 +24,16 @@
     DEALINGS IN THE SOFTWARE.
 */
 
-#include <sstream> /** @todo remove once Debug is stream-free */
 #include <Corrade/Containers/BitArray.h>
 #include <Corrade/Containers/BitArrayView.h>
 #include <Corrade/Containers/Iterable.h>
 #include <Corrade/Containers/Optional.h>
 #include <Corrade/Containers/Reference.h>
 #include <Corrade/Containers/StridedArrayView.h>
-#include <Corrade/Containers/StringStl.h> /** @todo remove once Debug is stream-free */
+#include <Corrade/Containers/String.h>
 #include <Corrade/TestSuite/Tester.h>
 #include <Corrade/TestSuite/Compare/Container.h>
 #include <Corrade/TestSuite/Compare/String.h>
-#include <Corrade/Utility/DebugStl.h> /** @todo remove once Debug is stream-free */
 #include <Magnum/Animation/Easing.h>
 #include <Magnum/Math/Time.h>
 
@@ -145,15 +143,15 @@ BaseLayerStyleAnimatorTest::BaseLayerStyleAnimatorTest() {
 }
 
 void BaseLayerStyleAnimatorTest::debugAnimation() {
-    std::ostringstream out;
+    Containers::String out;
     Debug{&out} << BaseLayerStyleAnimation::Style << BaseLayerStyleAnimation(0xbe);
-    CORRADE_COMPARE(out.str(), "Ui::BaseLayerStyleAnimation::Style Ui::BaseLayerStyleAnimation(0xbe)\n");
+    CORRADE_COMPARE(out, "Ui::BaseLayerStyleAnimation::Style Ui::BaseLayerStyleAnimation(0xbe)\n");
 }
 
 void BaseLayerStyleAnimatorTest::debugAnimations() {
-    std::ostringstream out;
+    Containers::String out;
     Debug{&out} << (BaseLayerStyleAnimation::Uniform|BaseLayerStyleAnimation(0xe0)) << BaseLayerStyleAnimations{};
-    CORRADE_COMPARE(out.str(), "Ui::BaseLayerStyleAnimation::Uniform|Ui::BaseLayerStyleAnimation(0xe0) Ui::BaseLayerStyleAnimations{}\n");
+    CORRADE_COMPARE(out, "Ui::BaseLayerStyleAnimation::Uniform|Ui::BaseLayerStyleAnimation(0xe0) Ui::BaseLayerStyleAnimations{}\n");
 }
 
 void BaseLayerStyleAnimatorTest::construct() {
@@ -481,7 +479,7 @@ void BaseLayerStyleAnimatorTest::createInvalid() {
     BaseLayerStyleAnimator animator{animatorHandle(0, 1)};
     layer.assignAnimator(animator);
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     /* Verify all four create() overloads check the layer being set early
        enough */
@@ -495,7 +493,7 @@ void BaseLayerStyleAnimatorTest::createInvalid() {
     animator.create(0, 1, nullptr, 12_nsec, 13_nsec, DataHandle::Null);
     /* Other things like data handle layer part not matching etc. tested in
        AbstractAnimatorTest already */
-    CORRADE_COMPARE_AS(out.str(),
+    CORRADE_COMPARE_AS(out,
         "Ui::BaseLayerStyleAnimator::create(): no layer set\n"
         "Ui::BaseLayerStyleAnimator::create(): no layer set\n"
         "Ui::BaseLayerStyleAnimator::create(): no layer set\n"
@@ -531,7 +529,7 @@ void BaseLayerStyleAnimatorTest::propertiesInvalid() {
 
     AnimationHandle handle = animator.create(0, 1, Animation::Easing::linear, 12_nsec, 13_nsec, DataHandle::Null);
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     animator.easing(AnimationHandle::Null);
     animator.uniforms(AnimationHandle::Null);
@@ -548,7 +546,7 @@ void BaseLayerStyleAnimatorTest::propertiesInvalid() {
     animator.easing(AnimatorDataHandle(0x123abcde));
     animator.uniforms(AnimatorDataHandle(0x123abcde));
     animator.paddings(AnimatorDataHandle(0x123abcde));
-    CORRADE_COMPARE_AS(out.str(),
+    CORRADE_COMPARE_AS(out,
         "Ui::BaseLayerStyleAnimator::easing(): invalid handle Ui::AnimationHandle::Null\n"
         "Ui::BaseLayerStyleAnimator::uniforms(): invalid handle Ui::AnimationHandle::Null\n"
         "Ui::BaseLayerStyleAnimator::paddings(): invalid handle Ui::AnimationHandle::Null\n"
@@ -1196,13 +1194,13 @@ void BaseLayerStyleAnimatorTest::advanceInvalid() {
     Vector4 dynamicStylePaddings[2];
     Vector4 dynamicStylePaddingsInvalid[3];
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     animator.advance(mask, factors, maskInvalid, dynamicStyleUniforms, dynamicStylePaddings, {});
     animator.advance(mask, factorsInvalid, mask, dynamicStyleUniforms, dynamicStylePaddings, {});
     animator.advance(maskInvalid, factors, mask, dynamicStyleUniforms, dynamicStylePaddings, {});
     animator.advance(mask, factors, mask, dynamicStyleUniforms, dynamicStylePaddingsInvalid, {});
-    CORRADE_COMPARE_AS(out.str(),
+    CORRADE_COMPARE_AS(out,
         "Ui::BaseLayerStyleAnimator::advance(): expected active, factors and remove views to have a size of 3 but got 3, 3 and 4\n"
         "Ui::BaseLayerStyleAnimator::advance(): expected active, factors and remove views to have a size of 3 but got 3, 4 and 3\n"
         "Ui::BaseLayerStyleAnimator::advance(): expected active, factors and remove views to have a size of 3 but got 4, 3 and 3\n"

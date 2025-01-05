@@ -24,7 +24,6 @@
     DEALINGS IN THE SOFTWARE.
 */
 
-#include <sstream> /** @todo remove once Debug is stream-free */
 #include <Corrade/Containers/BitArrayView.h>
 #include <Corrade/Containers/StridedArrayView.h>
 #include <Corrade/Containers/StringIterable.h>
@@ -33,7 +32,6 @@
 #include <Corrade/TestSuite/Compare/Numeric.h>
 #include <Corrade/Utility/Algorithms.h>
 #include <Corrade/Utility/ConfigurationGroup.h>
-#include <Corrade/Utility/DebugStl.h> /** @todo remove once Debug is stream-free */
 #include <Corrade/Utility/Path.h>
 #include <Magnum/Image.h>
 #include <Magnum/ImageView.h>
@@ -1106,11 +1104,11 @@ void BaseLayerGLTest::setTextureTexturingNotEnabled() {
 
     GL::Texture2DArray texture;
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     layer.setTexture(texture);
     layer.setTexture(GL::Texture2DArray{}); /* R-value overload */
-    CORRADE_COMPARE(out.str(),
+    CORRADE_COMPARE(out,
         "Ui::BaseLayerGL::setTexture(): texturing not enabled\n"
         "Ui::BaseLayerGL::setTexture(): texturing not enabled\n");
 }
@@ -1121,10 +1119,10 @@ void BaseLayerGLTest::drawNoSizeSet() {
     BaseLayerGL::Shared shared{BaseLayer::Shared::Configuration{3}};
     BaseLayerGL layer{layerHandle(0, 1), shared};
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     layer.draw({}, 0, 0, {}, {}, 0, 0, {}, {}, {}, {}, {}, {});
-    CORRADE_COMPARE(out.str(), "Ui::BaseLayerGL::draw(): user interface size wasn't set\n");
+    CORRADE_COMPARE(out, "Ui::BaseLayerGL::draw(): user interface size wasn't set\n");
 }
 
 void BaseLayerGLTest::drawNoStyleSet() {
@@ -1139,10 +1137,10 @@ void BaseLayerGLTest::drawNoStyleSet() {
 
     layer.setSize({10, 10}, {10, 10});
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     layer.draw({}, 0, 0, {}, {}, 0, 0, {}, {}, {}, {}, {}, {});
-    CORRADE_COMPARE(out.str(), "Ui::BaseLayerGL::draw(): no style data was set\n");
+    CORRADE_COMPARE(out, "Ui::BaseLayerGL::draw(): no style data was set\n");
 }
 
 void BaseLayerGLTest::drawNoTextureSet() {
@@ -1158,10 +1156,10 @@ void BaseLayerGLTest::drawNoTextureSet() {
     BaseLayerGL layer{layerHandle(0, 1), shared};
     layer.setSize({10, 10}, {10, 10});
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     layer.draw({}, 0, 0, {}, {}, 0, 0, {}, {}, {}, {}, {}, {});
-    CORRADE_COMPARE(out.str(), "Ui::BaseLayerGL::draw(): no texture to draw with was set\n");
+    CORRADE_COMPARE(out, "Ui::BaseLayerGL::draw(): no texture to draw with was set\n");
 }
 
 constexpr Vector2i RenderSize{128, 64};

@@ -24,20 +24,18 @@
     DEALINGS IN THE SOFTWARE.
 */
 
-#include <sstream>
 #include <Corrade/Containers/GrowableArray.h>
 #include <Corrade/Containers/Iterable.h>
 #include <Corrade/Containers/Optional.h>
 #include <Corrade/Containers/Pair.h>
 #include <Corrade/Containers/StridedArrayView.h>
 #include <Corrade/Containers/StridedBitArrayView.h>
-#include <Corrade/Containers/StringStl.h> /** @todo remove once Debug is stream-free */
+#include <Corrade/Containers/String.h>
 #include <Corrade/Containers/Triple.h>
 #include <Corrade/TestSuite/Tester.h>
 #include <Corrade/TestSuite/Compare/Container.h>
 #include <Corrade/TestSuite/Compare/Numeric.h>
 #include <Corrade/TestSuite/Compare/String.h>
-#include <Corrade/Utility/DebugStl.h> /** @todo remove once Debug is stream-free */
 #include <Corrade/Utility/Format.h>
 #include <Magnum/Math/Time.h>
 #include <Magnum/Math/Vector4.h>
@@ -1183,94 +1181,94 @@ AbstractUserInterfaceTest::AbstractUserInterfaceTest() {
 }
 
 void AbstractUserInterfaceTest::debugState() {
-    std::ostringstream out;
+    Containers::String out;
     Debug{&out} << UserInterfaceState::NeedsNodeClean << UserInterfaceState(0xbebe);
-    CORRADE_COMPARE(out.str(), "Ui::UserInterfaceState::NeedsNodeClean Ui::UserInterfaceState(0xbebe)\n");
+    CORRADE_COMPARE(out, "Ui::UserInterfaceState::NeedsNodeClean Ui::UserInterfaceState(0xbebe)\n");
 }
 
 void AbstractUserInterfaceTest::debugStates() {
-    std::ostringstream out;
+    Containers::String out;
     Debug{&out} << (UserInterfaceState::NeedsNodeClean|UserInterfaceState(0x8000)) << UserInterfaceStates{};
-    CORRADE_COMPARE(out.str(), "Ui::UserInterfaceState::NeedsNodeClean|Ui::UserInterfaceState(0x8000) Ui::UserInterfaceStates{}\n");
+    CORRADE_COMPARE(out, "Ui::UserInterfaceState::NeedsNodeClean|Ui::UserInterfaceState(0x8000) Ui::UserInterfaceStates{}\n");
 }
 
 void AbstractUserInterfaceTest::debugStatesSupersets() {
     /* NeedsDataAttachmentUpdate is a superset of NeedsDataUpdate, so only one
        should be printed */
     {
-        std::ostringstream out;
+        Containers::String out;
         Debug{&out} << (UserInterfaceState::NeedsDataUpdate|UserInterfaceState::NeedsDataAttachmentUpdate);
-        CORRADE_COMPARE(out.str(), "Ui::UserInterfaceState::NeedsDataAttachmentUpdate\n");
+        CORRADE_COMPARE(out, "Ui::UserInterfaceState::NeedsDataAttachmentUpdate\n");
 
     /* NeedsOpacityUpdate is a superset of NeedsDataUpdate, so only one should
        be printed */
     } {
-        std::ostringstream out;
+        Containers::String out;
         Debug{&out} << (UserInterfaceState::NeedsNodeOpacityUpdate|UserInterfaceState::NeedsDataUpdate);
-        CORRADE_COMPARE(out.str(), "Ui::UserInterfaceState::NeedsNodeOpacityUpdate\n");
+        CORRADE_COMPARE(out, "Ui::UserInterfaceState::NeedsNodeOpacityUpdate\n");
 
     /* NeedsOpacityUpdate and NeedsDataAttachmentUpdate are both a superset of
        NeedsDataUpdate, so both should be printed */
     } {
-        std::ostringstream out;
+        Containers::String out;
         Debug{&out} << (UserInterfaceState::NeedsNodeOpacityUpdate|UserInterfaceState::NeedsDataAttachmentUpdate|UserInterfaceState::NeedsDataUpdate);
-        CORRADE_COMPARE(out.str(), "Ui::UserInterfaceState::NeedsDataAttachmentUpdate|Ui::UserInterfaceState::NeedsNodeOpacityUpdate\n");
+        CORRADE_COMPARE(out, "Ui::UserInterfaceState::NeedsDataAttachmentUpdate|Ui::UserInterfaceState::NeedsNodeOpacityUpdate\n");
 
     /* NeedsNodeEnabledUpdate is a superset of NeedsDataAttachmentUpdate, so
        only one should be printed */
     } {
-        std::ostringstream out;
+        Containers::String out;
         Debug{&out} << (UserInterfaceState::NeedsNodeEnabledUpdate|UserInterfaceState::NeedsDataAttachmentUpdate);
-        CORRADE_COMPARE(out.str(), "Ui::UserInterfaceState::NeedsNodeEnabledUpdate\n");
+        CORRADE_COMPARE(out, "Ui::UserInterfaceState::NeedsNodeEnabledUpdate\n");
 
     /* NeedsNodeClipUpdate is a superset of NeedsNodeEnabledUpdate, so only one
        should be printed */
     } {
-        std::ostringstream out;
+        Containers::String out;
         Debug{&out} << (UserInterfaceState::NeedsNodeClipUpdate|UserInterfaceState::NeedsNodeEnabledUpdate);
-        CORRADE_COMPARE(out.str(), "Ui::UserInterfaceState::NeedsNodeClipUpdate\n");
+        CORRADE_COMPARE(out, "Ui::UserInterfaceState::NeedsNodeClipUpdate\n");
 
     /* NeedsLayoutUpdate is a superset of NeedsNodeClipUpdate, so only one
        should be printed */
     } {
-        std::ostringstream out;
+        Containers::String out;
         Debug{&out} << (UserInterfaceState::NeedsLayoutUpdate|UserInterfaceState::NeedsNodeClipUpdate);
-        CORRADE_COMPARE(out.str(), "Ui::UserInterfaceState::NeedsLayoutUpdate\n");
+        CORRADE_COMPARE(out, "Ui::UserInterfaceState::NeedsLayoutUpdate\n");
 
     /* NeedsLayoutAssignmentUpdate is a superset of NeedsLayoutUpdate, so only
        one should be printed */
     } {
-        std::ostringstream out;
+        Containers::String out;
         Debug{&out} << (UserInterfaceState::NeedsLayoutAssignmentUpdate|UserInterfaceState::NeedsLayoutUpdate);
-        CORRADE_COMPARE(out.str(), "Ui::UserInterfaceState::NeedsLayoutAssignmentUpdate\n");
+        CORRADE_COMPARE(out, "Ui::UserInterfaceState::NeedsLayoutAssignmentUpdate\n");
 
     /* NeedsNodeUpdate is a superset of NeedsNodeLayoutAssignmentUpdate, so
        only one should be printed */
     } {
-        std::ostringstream out;
+        Containers::String out;
         Debug{&out} << (UserInterfaceState::NeedsNodeUpdate|UserInterfaceState::NeedsLayoutAssignmentUpdate);
-        CORRADE_COMPARE(out.str(), "Ui::UserInterfaceState::NeedsNodeUpdate\n");
+        CORRADE_COMPARE(out, "Ui::UserInterfaceState::NeedsNodeUpdate\n");
 
     /* NeedsNodeClean is a superset of NeedsNodeUpdate, so only one should be
        printed */
     } {
-        std::ostringstream out;
+        Containers::String out;
         Debug{&out} << (UserInterfaceState::NeedsNodeClean|UserInterfaceState::NeedsNodeUpdate);
-        CORRADE_COMPARE(out.str(), "Ui::UserInterfaceState::NeedsNodeClean\n");
+        CORRADE_COMPARE(out, "Ui::UserInterfaceState::NeedsNodeClean\n");
 
     /* NeedsNodeClean is a superset of NeedsDataClean, so only one should be
        printed */
     } {
-        std::ostringstream out;
+        Containers::String out;
         Debug{&out} << (UserInterfaceState::NeedsNodeClean|UserInterfaceState::NeedsDataClean);
-        CORRADE_COMPARE(out.str(), "Ui::UserInterfaceState::NeedsNodeClean\n");
+        CORRADE_COMPARE(out, "Ui::UserInterfaceState::NeedsNodeClean\n");
 
     /* NeedsNodeClean is a superset of all others, so it should be printed
        alone */
     } {
-        std::ostringstream out;
+        Containers::String out;
         Debug{&out} << (UserInterfaceState::NeedsNodeClean|UserInterfaceState::NeedsDataClean|UserInterfaceState::NeedsNodeUpdate|UserInterfaceState::NeedsDataUpdate|UserInterfaceState::NeedsDataAttachmentUpdate);
-        CORRADE_COMPARE(out.str(), "Ui::UserInterfaceState::NeedsNodeClean\n");
+        CORRADE_COMPARE(out, "Ui::UserInterfaceState::NeedsNodeClean\n");
     }
 }
 
@@ -1462,11 +1460,11 @@ void AbstractUserInterfaceTest::rendererSetInstanceInvalid() {
     ui.setRendererInstance(Containers::pointer<Renderer>());
     CORRADE_VERIFY(ui.hasRenderer());
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     ui.setRendererInstance(nullptr);
     ui.setRendererInstance(Containers::pointer<Renderer>());
-    CORRADE_COMPARE(out.str(),
+    CORRADE_COMPARE(out,
         "Ui::AbstractUserInterface::setRendererInstance(): instance is null\n"
         "Ui::AbstractUserInterface::setRendererInstance(): instance already set\n");
 }
@@ -1497,10 +1495,10 @@ void AbstractUserInterfaceTest::rendererSetInstanceCompositeNotSupported() {
 
     /* Setting a renderer instance that doesn't support compositing will then
        fail */
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     ui.setRendererInstance(Containers::pointer<Renderer>());
-    CORRADE_COMPARE(out.str(), "Ui::AbstractUserInterface::setRendererInstance(): renderer without Ui::RendererFeature::Composite not usable with a layer that has Ui::LayerFeature::Composite\n");
+    CORRADE_COMPARE(out, "Ui::AbstractUserInterface::setRendererInstance(): renderer without Ui::RendererFeature::Composite not usable with a layer that has Ui::LayerFeature::Composite\n");
 }
 
 void AbstractUserInterfaceTest::rendererNotSet() {
@@ -1510,11 +1508,11 @@ void AbstractUserInterfaceTest::rendererNotSet() {
     const AbstractUserInterface& cui = ui;
     CORRADE_VERIFY(!ui.hasRenderer());
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     ui.renderer();
     cui.renderer();
-    CORRADE_COMPARE(out.str(),
+    CORRADE_COMPARE(out,
         "Ui::AbstractUserInterface::renderer(): no renderer instance set\n"
         "Ui::AbstractUserInterface::renderer(): no renderer instance set\n");
 }
@@ -1824,10 +1822,10 @@ void AbstractUserInterfaceTest::layerCreateInvalid() {
 
     AbstractUserInterface ui{{100, 100}};
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     ui.createLayer(LayerHandle(0xabcd));
-    CORRADE_COMPARE(out.str(),
+    CORRADE_COMPARE(out,
         "Ui::AbstractUserInterface::createLayer(): invalid before handle Ui::LayerHandle(0xcd, 0xab)\n");
 }
 
@@ -1845,12 +1843,12 @@ void AbstractUserInterfaceTest::layerSetInstanceInvalid() {
     LayerHandle handle = ui.createLayer();
     ui.setLayerInstance(Containers::pointer<Layer>(handle));
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     ui.setLayerInstance(nullptr);
     ui.setLayerInstance(Containers::pointer<Layer>(LayerHandle(0xabcd)));
     ui.setLayerInstance(Containers::pointer<Layer>(handle));
-    CORRADE_COMPARE_AS(out.str(),
+    CORRADE_COMPARE_AS(out,
         "Ui::AbstractUserInterface::setLayerInstance(): instance is null\n"
         "Ui::AbstractUserInterface::setLayerInstance(): invalid handle Ui::LayerHandle(0xcd, 0xab)\n"
         "Ui::AbstractUserInterface::setLayerInstance(): instance for Ui::LayerHandle(0x0, 0x1) already set\n",
@@ -1882,10 +1880,10 @@ void AbstractUserInterfaceTest::layerSetInstanceCompositeNotSupported() {
         }
     };
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer()));
-    CORRADE_COMPARE(out.str(), "Ui::AbstractUserInterface::setLayerInstance(): layer with Ui::LayerFeature::Composite not usable with a renderer that has Ui::RendererFeatures{}\n");
+    CORRADE_COMPARE(out, "Ui::AbstractUserInterface::setLayerInstance(): layer with Ui::LayerFeature::Composite not usable with a renderer that has Ui::RendererFeatures{}\n");
 }
 
 void AbstractUserInterfaceTest::layerGetInvalid() {
@@ -1906,7 +1904,7 @@ void AbstractUserInterfaceTest::layerGetInvalid() {
 
     LayerHandle handle = ui.createLayer();
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     ui.layerPrevious(LayerHandle(0x12ab));
     ui.layerPrevious(LayerHandle::Null);
@@ -1917,7 +1915,7 @@ void AbstractUserInterfaceTest::layerGetInvalid() {
     /* Const overloads */
     cui.layer(handle);
     cui.layer(LayerHandle::Null);
-    CORRADE_COMPARE(out.str(),
+    CORRADE_COMPARE(out,
         "Ui::AbstractUserInterface::layerPrevious(): invalid handle Ui::LayerHandle(0xab, 0x12)\n"
         "Ui::AbstractUserInterface::layerPrevious(): invalid handle Ui::LayerHandle::Null\n"
         "Ui::AbstractUserInterface::layerNext(): invalid handle Ui::LayerHandle(0xab, 0x12)\n"
@@ -1933,10 +1931,10 @@ void AbstractUserInterfaceTest::layerRemoveInvalid() {
 
     AbstractUserInterface ui{{100, 100}};
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     ui.removeLayer(LayerHandle::Null);
-    CORRADE_COMPARE(out.str(),
+    CORRADE_COMPARE(out,
         "Ui::AbstractUserInterface::removeLayer(): invalid handle Ui::LayerHandle::Null\n");
 }
 
@@ -1953,12 +1951,12 @@ void AbstractUserInterfaceTest::layerNoHandlesLeft() {
     CORRADE_COMPARE(ui.layerCapacity(), 1 << Implementation::LayerHandleIdBits);
     CORRADE_COMPARE(ui.layerUsedCount(), 1 << Implementation::LayerHandleIdBits);
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     ui.createLayer();
     /* Number is hardcoded in the expected message but not elsewhere in order
        to give a heads-up when modifying the handle ID bit count */
-    CORRADE_COMPARE(out.str(),
+    CORRADE_COMPARE(out,
         "Ui::AbstractUserInterface::createLayer(): can only have at most 256 layers\n");
 }
 
@@ -2266,10 +2264,10 @@ void AbstractUserInterfaceTest::layouterCreateInvalid() {
 
     AbstractUserInterface ui{{100, 100}};
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     ui.createLayouter(LayouterHandle(0xabcd));
-    CORRADE_COMPARE(out.str(),
+    CORRADE_COMPARE(out,
         "Ui::AbstractUserInterface::createLayouter(): invalid before handle Ui::LayouterHandle(0xcd, 0xab)\n");
 }
 
@@ -2287,12 +2285,12 @@ void AbstractUserInterfaceTest::layouterSetInstanceInvalid() {
     LayouterHandle handle = ui.createLayouter();
     ui.setLayouterInstance(Containers::pointer<Layouter>(handle));
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     ui.setLayouterInstance(nullptr);
     ui.setLayouterInstance(Containers::pointer<Layouter>(LayouterHandle(0xabcd)));
     ui.setLayouterInstance(Containers::pointer<Layouter>(handle));
-    CORRADE_COMPARE_AS(out.str(),
+    CORRADE_COMPARE_AS(out,
         "Ui::AbstractUserInterface::setLayouterInstance(): instance is null\n"
         "Ui::AbstractUserInterface::setLayouterInstance(): invalid handle Ui::LayouterHandle(0xcd, 0xab)\n"
         "Ui::AbstractUserInterface::setLayouterInstance(): instance for Ui::LayouterHandle(0x0, 0x1) already set\n",
@@ -2317,7 +2315,7 @@ void AbstractUserInterfaceTest::layouterGetInvalid() {
 
     LayouterHandle handle = ui.createLayouter();
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     ui.layouterPrevious(LayouterHandle(0x12ab));
     ui.layouterPrevious(LayouterHandle::Null);
@@ -2328,7 +2326,7 @@ void AbstractUserInterfaceTest::layouterGetInvalid() {
     /* Const overloads */
     cui.layouter(handle);
     cui.layouter(LayouterHandle::Null);
-    CORRADE_COMPARE(out.str(),
+    CORRADE_COMPARE(out,
         "Ui::AbstractUserInterface::layouterPrevious(): invalid handle Ui::LayouterHandle(0xab, 0x12)\n"
         "Ui::AbstractUserInterface::layouterPrevious(): invalid handle Ui::LayouterHandle::Null\n"
         "Ui::AbstractUserInterface::layouterNext(): invalid handle Ui::LayouterHandle(0xab, 0x12)\n"
@@ -2344,10 +2342,10 @@ void AbstractUserInterfaceTest::layouterRemoveInvalid() {
 
     AbstractUserInterface ui{{100, 100}};
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     ui.removeLayouter(LayouterHandle::Null);
-    CORRADE_COMPARE(out.str(),
+    CORRADE_COMPARE(out,
         "Ui::AbstractUserInterface::removeLayouter(): invalid handle Ui::LayouterHandle::Null\n");
 }
 
@@ -2364,12 +2362,12 @@ void AbstractUserInterfaceTest::layouterNoHandlesLeft() {
     CORRADE_COMPARE(ui.layouterCapacity(), 1 << Implementation::LayouterHandleIdBits);
     CORRADE_COMPARE(ui.layouterUsedCount(), 1 << Implementation::LayouterHandleIdBits);
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     ui.createLayouter();
     /* Number is hardcoded in the expected message but not elsewhere in order
        to give a heads-up when modifying the handle ID bit count */
-    CORRADE_COMPARE(out.str(),
+    CORRADE_COMPARE(out,
         "Ui::AbstractUserInterface::createLayouter(): can only have at most 256 layouters\n");
 }
 
@@ -2769,7 +2767,7 @@ void AbstractUserInterfaceTest::animatorSetInstanceInvalid() {
     AnimatorHandle handle = ui.createAnimator();
     ui.setGenericAnimatorInstance(Containers::pointer<GenericAnimator>(handle));
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     ui.setGenericAnimatorInstance(nullptr);
     ui.setNodeAnimatorInstance(nullptr);
@@ -2783,7 +2781,7 @@ void AbstractUserInterfaceTest::animatorSetInstanceInvalid() {
     ui.setNodeAnimatorInstance(Containers::pointer<NodeAnimatorWithoutFeature>(ui.createAnimator()));
     ui.setDataAnimatorInstance(Containers::pointer<DataAnimatorWithoutFeature>(ui.createAnimator()));
     ui.setStyleAnimatorInstance(Containers::pointer<StyleAnimatorWithoutFeature>(ui.createAnimator()));
-    CORRADE_COMPARE_AS(out.str(),
+    CORRADE_COMPARE_AS(out,
         "Ui::AbstractUserInterface::setGenericAnimatorInstance(): instance is null\n"
         "Ui::AbstractUserInterface::setNodeAnimatorInstance(): instance is null\n"
         "Ui::AbstractUserInterface::setDataAnimatorInstance(): instance is null\n"
@@ -2818,14 +2816,14 @@ void AbstractUserInterfaceTest::animatorGetInvalid() {
 
     AnimatorHandle handle = ui.createAnimator();
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     ui.animator(handle);
     ui.animator(AnimatorHandle::Null);
     /* Const overloads */
     cui.animator(handle);
     cui.animator(AnimatorHandle::Null);
-    CORRADE_COMPARE(out.str(),
+    CORRADE_COMPARE(out,
         "Ui::AbstractUserInterface::animator(): Ui::AnimatorHandle(0x1, 0x1) has no instance set\n"
         "Ui::AbstractUserInterface::animator(): invalid handle Ui::AnimatorHandle::Null\n"
         "Ui::AbstractUserInterface::animator(): Ui::AnimatorHandle(0x1, 0x1) has no instance set\n"
@@ -2837,10 +2835,10 @@ void AbstractUserInterfaceTest::animatorRemoveInvalid() {
 
     AbstractUserInterface ui{{100, 100}};
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     ui.removeAnimator(AnimatorHandle::Null);
-    CORRADE_COMPARE(out.str(),
+    CORRADE_COMPARE(out,
         "Ui::AbstractUserInterface::removeAnimator(): invalid handle Ui::AnimatorHandle::Null\n");
 }
 
@@ -2857,12 +2855,12 @@ void AbstractUserInterfaceTest::animatorNoHandlesLeft() {
     CORRADE_COMPARE(ui.animatorCapacity(), 1 << Implementation::AnimatorHandleIdBits);
     CORRADE_COMPARE(ui.animatorUsedCount(), 1 << Implementation::AnimatorHandleIdBits);
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     ui.createAnimator();
     /* Number is hardcoded in the expected message but not elsewhere in order
        to give a heads-up when modifying the handle ID bit count */
-    CORRADE_COMPARE(out.str(),
+    CORRADE_COMPARE(out,
         "Ui::AbstractUserInterface::createAnimator(): can only have at most 256 animators\n");
 }
 
@@ -3068,10 +3066,10 @@ void AbstractUserInterfaceTest::nodeCreateInvalid() {
 
     AbstractUserInterface ui{{100, 100}};
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     ui.createNode(NodeHandle(0x123abcde), {}, {});
-    CORRADE_COMPARE(out.str(),
+    CORRADE_COMPARE(out,
         "Ui::AbstractUserInterface::createNode(): invalid parent handle Ui::NodeHandle(0xabcde, 0x123)\n");
 }
 
@@ -3080,7 +3078,7 @@ void AbstractUserInterfaceTest::nodeGetSetInvalid() {
 
     AbstractUserInterface ui{{100, 100}};
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     ui.nodeParent(NodeHandle(0x123abcde));
     ui.nodeOffset(NodeHandle(0x123abcde));
@@ -3093,7 +3091,7 @@ void AbstractUserInterfaceTest::nodeGetSetInvalid() {
     ui.setNodeFlags(NodeHandle(0x123abcde), {});
     ui.addNodeFlags(NodeHandle(0x123abcde), {});
     ui.clearNodeFlags(NodeHandle(0x123abcde), {});
-    CORRADE_COMPARE_AS(out.str(),
+    CORRADE_COMPARE_AS(out,
         "Ui::AbstractUserInterface::nodeParent(): invalid handle Ui::NodeHandle(0xabcde, 0x123)\n"
         "Ui::AbstractUserInterface::nodeOffset(): invalid handle Ui::NodeHandle(0xabcde, 0x123)\n"
         "Ui::AbstractUserInterface::nodeSize(): invalid handle Ui::NodeHandle(0xabcde, 0x123)\n"
@@ -3113,11 +3111,11 @@ void AbstractUserInterfaceTest::nodeRemoveInvalid() {
 
     AbstractUserInterface ui{{100, 100}};
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     ui.removeNode(NodeHandle::Null);
     ui.removeNode(NodeHandle(0x123abcde));
-    CORRADE_COMPARE(out.str(),
+    CORRADE_COMPARE(out,
         "Ui::AbstractUserInterface::removeNode(): invalid handle Ui::NodeHandle::Null\n"
         "Ui::AbstractUserInterface::removeNode(): invalid handle Ui::NodeHandle(0xabcde, 0x123)\n");
 }
@@ -3135,12 +3133,12 @@ void AbstractUserInterfaceTest::nodeNoHandlesLeft() {
     CORRADE_COMPARE(ui.nodeCapacity(), 1 << Implementation::NodeHandleIdBits);
     CORRADE_COMPARE(ui.nodeUsedCount(), 1 << Implementation::NodeHandleIdBits);
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     ui.createNode(NodeHandle::Null, {}, {}, {});
     /* Number is hardcoded in the expected message but not elsewhere in order
        to give a heads-up when modifying the handle ID bit count */
-    CORRADE_COMPARE(out.str(),
+    CORRADE_COMPARE(out,
         "Ui::AbstractUserInterface::createNode(): can only have at most 1048576 nodes\n");
 }
 
@@ -4229,7 +4227,7 @@ void AbstractUserInterfaceTest::nodeOrderGetSetInvalid() {
     ui.clearNodeOrder(notInOrder);
     CORRADE_VERIFY(!ui.isNodeOrdered(notInOrder));
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     ui.isNodeTopLevel(NodeHandle::Null);
     ui.isNodeTopLevel(NodeHandle(0x123abcde));
@@ -4276,7 +4274,7 @@ void AbstractUserInterfaceTest::nodeOrderGetSetInvalid() {
     /* Flattening root nodes is not allowed, whether they're in order or not */
     ui.flattenNodeOrder(inOrder);
     ui.flattenNodeOrder(notInOrder);
-    CORRADE_COMPARE_AS(out.str(),
+    CORRADE_COMPARE_AS(out,
         "Ui::AbstractUserInterface::isNodeTopLevel(): invalid handle Ui::NodeHandle::Null\n"
         "Ui::AbstractUserInterface::isNodeTopLevel(): invalid handle Ui::NodeHandle(0xabcde, 0x123)\n"
         "Ui::AbstractUserInterface::isNodeOrdered(): invalid handle Ui::NodeHandle::Null\n"
@@ -4386,12 +4384,12 @@ void AbstractUserInterfaceTest::dataAttachInvalid() {
     AbstractUserInterface ui{{100, 100}};
     NodeHandle node = ui.createNode({}, {});
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     ui.attachData(NodeHandle(0x123abcde), DataHandle::Null);
     ui.attachData(node, DataHandle::Null);
     ui.attachData(node, DataHandle(0x12abcde34567));
-    CORRADE_COMPARE(out.str(),
+    CORRADE_COMPARE(out,
         "Ui::AbstractUserInterface::attachData(): invalid handle Ui::NodeHandle(0xabcde, 0x123)\n"
         "Ui::AbstractUserInterface::attachData(): invalid handle Ui::DataHandle::Null\n"
         "Ui::AbstractUserInterface::attachData(): invalid handle Ui::DataHandle({0xab, 0x12}, {0x34567, 0xcde})\n");
@@ -4527,12 +4525,12 @@ void AbstractUserInterfaceTest::animationAttachNodeInvalid() {
 
     AnimationHandle animation = animator.create(0_nsec, 1_nsec);
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     ui.attachAnimation(NodeHandle(0x123abcde), animation);
     ui.attachAnimation(node, AnimationHandle::Null);
     ui.attachAnimation(node, AnimationHandle(0x12abcde34567));
-    CORRADE_COMPARE(out.str(),
+    CORRADE_COMPARE(out,
         "Ui::AbstractUserInterface::attachAnimation(): invalid handle Ui::NodeHandle(0xabcde, 0x123)\n"
         "Ui::AbstractUserInterface::attachAnimation(): invalid handle Ui::AnimationHandle::Null\n"
         "Ui::AbstractUserInterface::attachAnimation(): invalid handle Ui::AnimationHandle({0xab, 0x12}, {0x34567, 0xcde})\n");
@@ -4560,10 +4558,10 @@ void AbstractUserInterfaceTest::animationAttachNodeInvalidFeatures() {
 
     AnimationHandle handle = ui.animator<Animator>(animatorHandle).create(0_nsec, 1_nsec);
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     ui.attachAnimation(node, handle);
-    CORRADE_COMPARE(out.str(),
+    CORRADE_COMPARE(out,
         "Ui::AbstractUserInterface::attachAnimation(): node attachment not supported by this animator\n");
 }
 
@@ -4649,13 +4647,13 @@ void AbstractUserInterfaceTest::animationAttachDataInvalid() {
     DataHandle dataLayer1 = layer1.create();
     DataHandle dataLayer2 = layer2.create();
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     ui.attachAnimation(dataHandle(layer1.handle(), 0xabcde, 0x123), animation);
     ui.attachAnimation(dataLayer1, AnimationHandle::Null);
     ui.attachAnimation(dataLayer1, AnimationHandle(0x12abcde34567));
     ui.attachAnimation(dataLayer2, animation);
-    CORRADE_COMPARE_AS(out.str(),
+    CORRADE_COMPARE_AS(out,
         "Ui::AbstractUserInterface::attachAnimation(): invalid handle Ui::DataHandle({0x0, 0x1}, {0xabcde, 0x123})\n"
         "Ui::AbstractUserInterface::attachAnimation(): invalid handle Ui::AnimationHandle::Null\n"
         "Ui::AbstractUserInterface::attachAnimation(): invalid handle Ui::AnimationHandle({0xab, 0x12}, {0x34567, 0xcde})\n"
@@ -4691,10 +4689,10 @@ void AbstractUserInterfaceTest::animationAttachDataInvalidFeatures() {
     DataHandle data = layer.create();
     AnimationHandle handle = animator.create(0_nsec, 1_nsec);
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     ui.attachAnimation(data, handle);
-    CORRADE_COMPARE(out.str(),
+    CORRADE_COMPARE(out,
         "Ui::AbstractUserInterface::attachAnimation(): data attachment not supported by this animator\n");
 }
 
@@ -4953,7 +4951,7 @@ void AbstractUserInterfaceTest::setSizeZero() {
 
     AbstractUserInterface ui{NoCreate};
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     ui.setSize({0.0f, 1.0f}, {2.0f, 3.0f}, {4, 5});
     ui.setSize({1.0f, 0.0f}, {2.0f, 3.0f}, {4, 5});
@@ -4961,7 +4959,7 @@ void AbstractUserInterfaceTest::setSizeZero() {
     ui.setSize({1.0f, 2.0f}, {3.0f, 0.0f}, {4, 5});
     ui.setSize({1.0f, 2.0f}, {3.0f, 4.0f}, {0, 5});
     ui.setSize({1.0f, 2.0f}, {3.0f, 4.0f}, {5, 0});
-    CORRADE_COMPARE_AS(out.str(),
+    CORRADE_COMPARE_AS(out,
         "Ui::AbstractUserInterface::setSize(): expected non-zero sizes, got Vector(0, 1), Vector(2, 3) and Vector(4, 5)\n"
         "Ui::AbstractUserInterface::setSize(): expected non-zero sizes, got Vector(1, 0), Vector(2, 3) and Vector(4, 5)\n"
         "Ui::AbstractUserInterface::setSize(): expected non-zero sizes, got Vector(1, 2), Vector(0, 3) and Vector(4, 5)\n"
@@ -4984,10 +4982,10 @@ void AbstractUserInterfaceTest::setSizeNotCalledBeforeUpdate() {
     ui.createNode({}, {});
     CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeUpdate);
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     ui.update();
-    CORRADE_COMPARE(out.str(),
+    CORRADE_COMPARE(out,
         "Ui::AbstractUserInterface::update(): user interface size wasn't set\n");
 }
 
@@ -6959,10 +6957,10 @@ void AbstractUserInterfaceTest::advanceAnimationsInvalidTime() {
     ui.advanceAnimations(56_nsec);
     CORRADE_COMPARE(ui.animationTime(), 56_nsec);
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     ui.advanceAnimations(55_nsec);
-    CORRADE_COMPARE(out.str(), "Ui::AbstractUserInterface::advanceAnimations(): expected a time at least Nanoseconds(56) but got Nanoseconds(55)\n");
+    CORRADE_COMPARE(out, "Ui::AbstractUserInterface::advanceAnimations(): expected a time at least Nanoseconds(56) but got Nanoseconds(55)\n");
 }
 
 void AbstractUserInterfaceTest::updateOrder() {
@@ -12307,10 +12305,10 @@ void AbstractUserInterfaceTest::drawNoRendererSet() {
 
     AbstractUserInterface ui{{100, 100}};
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     ui.draw();
-    CORRADE_COMPARE(out.str(), "Ui::AbstractUserInterface::draw(): no renderer instance set\n");
+    CORRADE_COMPARE(out, "Ui::AbstractUserInterface::draw(): no renderer instance set\n");
 }
 
 void AbstractUserInterfaceTest::eventEmpty() {
@@ -12381,7 +12379,7 @@ void AbstractUserInterfaceTest::eventAlreadyAccepted() {
     TextInputEvent textInputEvent{{}, "nope"};
     textInputEvent.setAccepted();
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     ui.pointerPressEvent({}, pointerEvent);
     ui.pointerReleaseEvent({}, pointerEvent);
@@ -12390,7 +12388,7 @@ void AbstractUserInterfaceTest::eventAlreadyAccepted() {
     ui.keyPressEvent(keyEvent);
     ui.keyReleaseEvent(keyEvent);
     ui.textInputEvent(textInputEvent);
-    CORRADE_COMPARE_AS(out.str(),
+    CORRADE_COMPARE_AS(out,
         "Ui::AbstractUserInterface::pointerPressEvent(): event already accepted\n"
         "Ui::AbstractUserInterface::pointerReleaseEvent(): event already accepted\n"
         "Ui::AbstractUserInterface::pointerMoveEvent(): event already accepted\n"
@@ -19989,11 +19987,11 @@ void AbstractUserInterfaceTest::eventFocusInvalid() {
 
     FocusEvent event{{}};
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     ui.focusEvent(nodeNotFocusable, event);
     ui.focusEvent(nodeHandle(0x12345, 0xabc), event);
-    CORRADE_COMPARE(out.str(),
+    CORRADE_COMPARE(out,
         "Ui::AbstractUserInterface::focusEvent(): node not focusable\n"
         "Ui::AbstractUserInterface::focusEvent(): invalid handle Ui::NodeHandle(0x12345, 0xabc)\n");
 }

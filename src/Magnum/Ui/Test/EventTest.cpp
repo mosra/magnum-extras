@@ -24,12 +24,10 @@
     DEALINGS IN THE SOFTWARE.
 */
 
-#include <sstream>
 #include <Corrade/Containers/Optional.h>
-#include <Corrade/Containers/StringStl.h> /** @todo remove once Debug is stream-free */
+#include <Corrade/Containers/String.h>
 #include <Corrade/TestSuite/Tester.h>
 #include <Corrade/TestSuite/Compare/String.h>
-#include <Corrade/Utility/DebugStl.h> /** @todo remove once Debug is stream-free */
 
 #include "Magnum/Ui/Event.h"
 
@@ -93,39 +91,39 @@ EventTest::EventTest() {
 }
 
 void EventTest::debugPointerEventSource() {
-    std::ostringstream out;
+    Containers::String out;
     Debug{&out} << PointerEventSource::Touch << PointerEventSource(0xde);
-    CORRADE_COMPARE(out.str(), "Ui::PointerEventSource::Touch Ui::PointerEventSource(0xde)\n");
+    CORRADE_COMPARE(out, "Ui::PointerEventSource::Touch Ui::PointerEventSource(0xde)\n");
 }
 
 void EventTest::debugPointer() {
-    std::ostringstream out;
+    Containers::String out;
     Debug{&out} << Pointer::MouseMiddle << Pointer(0xde);
-    CORRADE_COMPARE(out.str(), "Ui::Pointer::MouseMiddle Ui::Pointer(0xde)\n");
+    CORRADE_COMPARE(out, "Ui::Pointer::MouseMiddle Ui::Pointer(0xde)\n");
 }
 
 void EventTest::debugPointers() {
-    std::ostringstream out;
+    Containers::String out;
     Debug{&out} << (Pointer::MouseLeft|Pointer::Finger|Pointer(0x80)) << Pointers{};
-    CORRADE_COMPARE(out.str(), "Ui::Pointer::MouseLeft|Ui::Pointer::Finger|Ui::Pointer(0x80) Ui::Pointers{}\n");
+    CORRADE_COMPARE(out, "Ui::Pointer::MouseLeft|Ui::Pointer::Finger|Ui::Pointer(0x80) Ui::Pointers{}\n");
 }
 
 void EventTest::debugKey() {
-    std::ostringstream out;
+    Containers::String out;
     Debug{&out} << Key::RightSuper << Key(0xcc00);
-    CORRADE_COMPARE(out.str(), "Ui::Key::RightSuper Ui::Key(0xcc00)\n");
+    CORRADE_COMPARE(out, "Ui::Key::RightSuper Ui::Key(0xcc00)\n");
 }
 
 void EventTest::debugModifier() {
-    std::ostringstream out;
+    Containers::String out;
     Debug{&out} << Modifier::Super << Modifier(0xbb);
-    CORRADE_COMPARE(out.str(), "Ui::Modifier::Super Ui::Modifier(0xbb)\n");
+    CORRADE_COMPARE(out, "Ui::Modifier::Super Ui::Modifier(0xbb)\n");
 }
 
 void EventTest::debugModifiers() {
-    std::ostringstream out;
+    Containers::String out;
     Debug{&out} << (Modifier::Shift|Modifier::Ctrl|Modifier(0x80)) << Modifiers{};
-    CORRADE_COMPARE(out.str(), "Ui::Modifier::Shift|Ui::Modifier::Ctrl|Ui::Modifier(0x80) Ui::Modifiers{}\n");
+    CORRADE_COMPARE(out, "Ui::Modifier::Shift|Ui::Modifier::Ctrl|Ui::Modifier(0x80) Ui::Modifiers{}\n");
 }
 
 void EventTest::pointer() {
@@ -183,14 +181,14 @@ void EventTest::pointer() {
 void EventTest::pointerInvalid() {
     CORRADE_SKIP_IF_NO_ASSERT();
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     PointerEvent{{}, PointerEventSource::Mouse, Pointer::Finger, true, 0};
     PointerEvent{{}, PointerEventSource::Touch, Pointer::MouseMiddle, true, 0};
     PointerEvent{{}, PointerEventSource::Pen, Pointer::Finger, true, 0};
     PointerEvent{{}, PointerEventSource::Mouse, Pointer::MouseMiddle, false, 0};
     PointerEvent{{}, PointerEventSource::Pen, Pointer::Eraser, false, 0};
-    CORRADE_COMPARE_AS(out.str(),
+    CORRADE_COMPARE_AS(out,
         "Ui::PointerEvent: invalid combination of Ui::PointerEventSource::Mouse and Ui::Pointer::Finger\n"
         "Ui::PointerEvent: invalid combination of Ui::PointerEventSource::Touch and Ui::Pointer::MouseMiddle\n"
         "Ui::PointerEvent: invalid combination of Ui::PointerEventSource::Pen and Ui::Pointer::Finger\n"
@@ -279,14 +277,14 @@ void EventTest::pointerMove() {
 void EventTest::pointerMoveInvalid() {
     CORRADE_SKIP_IF_NO_ASSERT();
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     PointerMoveEvent{{}, PointerEventSource::Mouse, Pointer::Finger, {}, true, 0};
     PointerMoveEvent{{}, PointerEventSource::Touch, Pointer::MouseMiddle, {}, true, 0};
     PointerMoveEvent{{}, PointerEventSource::Pen, Pointer::Finger, {}, true, 0};
     PointerMoveEvent{{}, PointerEventSource::Mouse, Pointer::MouseMiddle, {}, false, 0};
     PointerMoveEvent{{}, PointerEventSource::Pen, Pointer::Eraser, {}, false, 0};
-    CORRADE_COMPARE_AS(out.str(),
+    CORRADE_COMPARE_AS(out,
         "Ui::PointerMoveEvent: invalid combination of Ui::PointerEventSource::Mouse and Ui::Pointer::Finger\n"
         "Ui::PointerMoveEvent: invalid combination of Ui::PointerEventSource::Touch and Ui::Pointer::MouseMiddle\n"
         "Ui::PointerMoveEvent: invalid combination of Ui::PointerEventSource::Pen and Ui::Pointer::Finger\n"

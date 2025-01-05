@@ -24,8 +24,7 @@
     DEALINGS IN THE SOFTWARE.
 */
 
-#include <sstream> /** @todo remove once Debug is stream-free */
-#include <Corrade/Containers/StringStl.h> /** @todo remove once Debug is stream-free */
+#include <Corrade/Containers/String.h>
 #include <Corrade/TestSuite/Compare/String.h>
 #include <Magnum/GL/Framebuffer.h>
 #include <Magnum/GL/DefaultFramebuffer.h>
@@ -139,13 +138,13 @@ void RendererGLTest::compositingFramebufferNoFramebufferSizeSet() {
     RendererGL renderer{RendererGL::Flag::CompositingFramebuffer};
     const RendererGL& crenderer = renderer;
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     renderer.compositingFramebuffer();
     crenderer.compositingFramebuffer();
     renderer.compositingTexture();
     crenderer.compositingTexture();
-    CORRADE_COMPARE_AS(out.str(),
+    CORRADE_COMPARE_AS(out,
         "Ui::RendererGL::compositingFramebuffer(): framebuffer size wasn't set up\n"
         "Ui::RendererGL::compositingFramebuffer(): framebuffer size wasn't set up\n"
         "Ui::RendererGL::compositingTexture(): framebuffer size wasn't set up\n"

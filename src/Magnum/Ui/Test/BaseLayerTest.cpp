@@ -25,15 +25,13 @@
 */
 
 #include <new>
-#include <sstream> /** @todo remove once Debug is stream-free */
 #include <Corrade/Containers/BitArrayView.h>
 #include <Corrade/Containers/Optional.h>
 #include <Corrade/Containers/StridedArrayView.h>
-#include <Corrade/Containers/StringStl.h> /** @todo remove once Debug is stream-free */
+#include <Corrade/Containers/String.h>
 #include <Corrade/TestSuite/Tester.h>
 #include <Corrade/TestSuite/Compare/Container.h>
 #include <Corrade/TestSuite/Compare/String.h>
-#include <Corrade/Utility/DebugStl.h> /** @todo remove once Debug is stream-free */
 
 #include "Magnum/Ui/AbstractUserInterface.h"
 #include "Magnum/Ui/BaseLayer.h"
@@ -857,23 +855,23 @@ void BaseLayerTest::styleUniformSetters() {
 }
 
 void BaseLayerTest::sharedDebugFlag() {
-    std::ostringstream out;
+    Containers::String out;
     Debug{&out} << BaseLayerSharedFlag::BackgroundBlur << BaseLayerSharedFlag(0xbe);
-    CORRADE_COMPARE(out.str(), "Ui::BaseLayerSharedFlag::BackgroundBlur Ui::BaseLayerSharedFlag(0xbe)\n");
+    CORRADE_COMPARE(out, "Ui::BaseLayerSharedFlag::BackgroundBlur Ui::BaseLayerSharedFlag(0xbe)\n");
 }
 
 void BaseLayerTest::sharedDebugFlags() {
-    std::ostringstream out;
+    Containers::String out;
     Debug{&out} << (BaseLayerSharedFlag::BackgroundBlur|BaseLayerSharedFlag(0x80)) << BaseLayerSharedFlags{};
-    CORRADE_COMPARE(out.str(), "Ui::BaseLayerSharedFlag::BackgroundBlur|Ui::BaseLayerSharedFlag(0x80) Ui::BaseLayerSharedFlags{}\n");
+    CORRADE_COMPARE(out, "Ui::BaseLayerSharedFlag::BackgroundBlur|Ui::BaseLayerSharedFlag(0x80) Ui::BaseLayerSharedFlags{}\n");
 }
 
 void BaseLayerTest::sharedDebugFlagSupersets() {
     /* TextureMask is a superset of Textured, so only one should get printed */
     {
-        std::ostringstream out;
+        Containers::String out;
         Debug{&out} << (BaseLayerSharedFlag::Textured|BaseLayerSharedFlag::TextureMask);
-        CORRADE_COMPARE(out.str(), "Ui::BaseLayerSharedFlag::TextureMask\n");
+        CORRADE_COMPARE(out, "Ui::BaseLayerSharedFlag::TextureMask\n");
     }
 }
 
@@ -896,11 +894,11 @@ void BaseLayerTest::sharedConfigurationConstructZeroStyleOrUniformCount() {
     BaseLayer::Shared::Configuration{0, 0};
     BaseLayer::Shared::Configuration{0};
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     BaseLayer::Shared::Configuration{0, 4};
     BaseLayer::Shared::Configuration{4, 0};
-    CORRADE_COMPARE_AS(out.str(),
+    CORRADE_COMPARE_AS(out,
         "Ui::BaseLayer::Shared::Configuration: expected style uniform count and style count to be either both zero or both non-zero, got 0 and 4\n"
         "Ui::BaseLayer::Shared::Configuration: expected style uniform count and style count to be either both zero or both non-zero, got 4 and 0\n",
         TestSuite::Compare::String);
@@ -953,10 +951,10 @@ void BaseLayerTest::sharedConfigurationSettersInvalid() {
     /* This also */
     configuration.setBackgroundBlurRadius(2, 150.0f);
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     configuration.setBackgroundBlurRadius(32);
-    CORRADE_COMPARE(out.str(), "Ui::BaseLayer::Shared::Configuration::setBackgroundBlurRadius(): radius 32 too large\n");
+    CORRADE_COMPARE(out, "Ui::BaseLayer::Shared::Configuration::setBackgroundBlurRadius(): radius 32 too large\n");
 }
 
 void BaseLayerTest::sharedConstruct() {
@@ -1044,7 +1042,7 @@ void BaseLayerTest::sharedConstructInvalid() {
     Shared{Shared::Configuration{0}.setDynamicStyleCount(1)};
     Shared{Shared::Configuration{1}.setDynamicStyleCount(0)};
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     /* These all could be checked in Configuration directly, but doing so would
        require the application to fill the configuration in a certain order
@@ -1053,7 +1051,7 @@ void BaseLayerTest::sharedConstructInvalid() {
     Shared{Shared::Configuration{1}.addFlags(BaseLayerSharedFlag::SubdividedQuads|BaseLayerSharedFlag::NoRoundedCorners)};
     Shared{Shared::Configuration{1}.addFlags(BaseLayerSharedFlag::SubdividedQuads|BaseLayerSharedFlag::NoOutline)};
     Shared{Shared::Configuration{1}.addFlags(BaseLayerSharedFlag::SubdividedQuads|BaseLayerSharedFlag::NoOutline|BaseLayerSharedFlag::NoRoundedCorners)};
-    CORRADE_COMPARE_AS(out.str(),
+    CORRADE_COMPARE_AS(out,
         "Ui::BaseLayer::Shared: expected non-zero total style count\n"
         "Ui::BaseLayer::Shared: Ui::BaseLayerSharedFlag::SubdividedQuads and Ui::BaseLayerSharedFlag::NoRoundedCorners are mutually exclusive\n"
         "Ui::BaseLayer::Shared: Ui::BaseLayerSharedFlag::SubdividedQuads and Ui::BaseLayerSharedFlag::NoOutline are mutually exclusive\n"
@@ -1223,7 +1221,7 @@ void BaseLayerTest::sharedSetStyleInvalidSize() {
         .setDynamicStyleCount(data.dynamicStyleCount)
     };
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     shared.setStyle(BaseLayerCommonStyleUniform{},
         {BaseLayerStyleUniform{}, BaseLayerStyleUniform{}},
@@ -1237,7 +1235,7 @@ void BaseLayerTest::sharedSetStyleInvalidSize() {
         {BaseLayerStyleUniform{}, BaseLayerStyleUniform{}, BaseLayerStyleUniform{}},
         {0, 1, 2, 1, 0},
         {{}, {}, {}});
-    CORRADE_COMPARE(out.str(),
+    CORRADE_COMPARE(out,
         "Ui::BaseLayer::Shared::setStyle(): expected 3 uniforms, got 2\n"
         "Ui::BaseLayer::Shared::setStyle(): expected 5 style uniform indices, got 3\n"
         "Ui::BaseLayer::Shared::setStyle(): expected either no or 5 paddings, got 3\n");
@@ -1252,13 +1250,13 @@ void BaseLayerTest::sharedSetStyleInvalidMapping() {
         void doSetStyle(const BaseLayerCommonStyleUniform&, Containers::ArrayView<const BaseLayerStyleUniform>) override {}
     } shared{BaseLayer::Shared::Configuration{3, 6}};
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     shared.setStyle(BaseLayerCommonStyleUniform{},
         {BaseLayerStyleUniform{}, BaseLayerStyleUniform{}, BaseLayerStyleUniform{}},
         {0, 1, 2, 1, 3, 2},
         {});
-    CORRADE_COMPARE_AS(out.str(),
+    CORRADE_COMPARE_AS(out,
         "Ui::BaseLayer::Shared::setStyle(): uniform index 3 out of range for 3 uniforms at index 4\n",
         TestSuite::Compare::String);
 }
@@ -1411,12 +1409,12 @@ void BaseLayerTest::sharedSetStyleImplicitMappingInvalidSize() {
         .setDynamicStyleCount(data.dynamicStyleCount)
     };
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     shared.setStyle(BaseLayerCommonStyleUniform{},
         {BaseLayerStyleUniform{}, BaseLayerStyleUniform{}},
         {{}, {}, {}, {}, {}});
-    CORRADE_COMPARE(out.str(),
+    CORRADE_COMPARE(out,
         "Ui::BaseLayer::Shared::setStyle(): there's 3 uniforms for 5 styles, provide an explicit mapping\n");
 }
 
@@ -1546,12 +1544,12 @@ void BaseLayerTest::backgroundBlurPassCountInvalid() {
     Layer noBlur{layerHandle(0, 1), sharedNoBlur};
     Layer blur{layerHandle(0, 1), sharedBlur};
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     noBlur.backgroundBlurPassCount();
     noBlur.setBackgroundBlurPassCount(2);
     blur.setBackgroundBlurPassCount(0);
-    CORRADE_COMPARE_AS(out.str(),
+    CORRADE_COMPARE_AS(out,
         "Ui::BaseLayer::backgroundBlurPassCount(): background blur not enabled\n"
         "Ui::BaseLayer::setBackgroundBlurPassCount(): background blur not enabled\n"
         "Ui::BaseLayer::setBackgroundBlurPassCount(): expected at least one pass\n",
@@ -1663,10 +1661,10 @@ void BaseLayerTest::dynamicStyleInvalid() {
         explicit Layer(LayerHandle handle, Shared& shared): BaseLayer{handle, shared} {}
     } layer{layerHandle(0, 1), shared};
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     layer.setDynamicStyle(3, BaseLayerStyleUniform{}, {});
-    CORRADE_COMPARE(out.str(), "Ui::BaseLayer::setDynamicStyle(): index 3 out of range for 3 dynamic styles\n");
+    CORRADE_COMPARE(out, "Ui::BaseLayer::setDynamicStyle(): index 3 out of range for 3 dynamic styles\n");
 }
 
 template<class T> void BaseLayerTest::createRemove() {
@@ -2003,7 +2001,7 @@ void BaseLayerTest::setTextureCoordinatesInvalid() {
 
     DataHandle data = layer.create(0);
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     layer.textureCoordinateOffset(data);
     layer.textureCoordinateOffset(dataHandleData(data));
@@ -2011,7 +2009,7 @@ void BaseLayerTest::setTextureCoordinatesInvalid() {
     layer.textureCoordinateSize(dataHandleData(data));
     layer.setTextureCoordinates(data, {}, {});
     layer.setTextureCoordinates(dataHandleData(data), {}, {});
-    CORRADE_COMPARE_AS(out.str(),
+    CORRADE_COMPARE_AS(out,
         "Ui::BaseLayer::textureCoordinateOffset(): texturing not enabled\n"
         "Ui::BaseLayer::textureCoordinateOffset(): texturing not enabled\n"
         "Ui::BaseLayer::textureCoordinateSize(): texturing not enabled\n"
@@ -2036,7 +2034,7 @@ void BaseLayerTest::invalidHandle() {
         explicit Layer(LayerHandle handle, Shared& shared): BaseLayer{handle, shared} {}
     } layer{layerHandle(0, 1), shared};
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     layer.color(DataHandle::Null);
     layer.color(LayerDataHandle::Null);
@@ -2056,7 +2054,7 @@ void BaseLayerTest::invalidHandle() {
     layer.textureCoordinateSize(LayerDataHandle::Null);
     layer.setTextureCoordinates(DataHandle::Null, {}, {});
     layer.setTextureCoordinates(LayerDataHandle::Null, {}, {});
-    CORRADE_COMPARE_AS(out.str(),
+    CORRADE_COMPARE_AS(out,
         "Ui::BaseLayer::color(): invalid handle Ui::DataHandle::Null\n"
         "Ui::BaseLayer::color(): invalid handle Ui::LayerDataHandle::Null\n"
         "Ui::BaseLayer::setColor(): invalid handle Ui::DataHandle::Null\n"
@@ -2099,10 +2097,10 @@ void BaseLayerTest::styleOutOfRange() {
         explicit Layer(LayerHandle handle, Shared& shared): BaseLayer{handle, shared} {}
     } layer{layerHandle(0, 1), shared};
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     layer.create(3);
-    CORRADE_COMPARE(out.str(),
+    CORRADE_COMPARE(out,
         "Ui::BaseLayer::create(): style 3 out of range for 3 styles\n");
 }
 
@@ -2712,10 +2710,10 @@ void BaseLayerTest::updateNoStyleSet() {
        guarantees the same on a higher level), not needed for anything here */
     layer.setSize({1, 1}, {1, 1});
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     layer.update(LayerState::NeedsDataUpdate, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
-    CORRADE_COMPARE(out.str(), "Ui::BaseLayer::update(): no style data was set\n");
+    CORRADE_COMPARE(out, "Ui::BaseLayer::update(): no style data was set\n");
 }
 
 void BaseLayerTest::sharedNeedsUpdateStatePropagatedToLayers() {

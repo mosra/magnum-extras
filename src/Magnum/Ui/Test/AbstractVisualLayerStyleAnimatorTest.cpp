@@ -24,13 +24,11 @@
     DEALINGS IN THE SOFTWARE.
 */
 
-#include <sstream> /** @todo remove once Debug is stream-free */
 #include <Corrade/Containers/BitArrayView.h>
 #include <Corrade/Containers/Optional.h>
-#include <Corrade/Containers/StringStl.h> /** @todo remove once Debug is stream-free */
+#include <Corrade/Containers/String.h>
 #include <Corrade/TestSuite/Tester.h>
 #include <Corrade/TestSuite/Compare/String.h>
-#include <Corrade/Utility/DebugStl.h> /** @todo remove once Debug is stream-free */
 #include <Magnum/Math/Time.h>
 
 #include "Magnum/Ui/AbstractVisualLayer.h"
@@ -160,10 +158,10 @@ void AbstractVisualLayerStyleAnimatorTest::assignAnimatorInvalid() {
     } animator{animatorHandle(0, 1)};
     CORRADE_COMPARE(animator.layer(), LayerHandle::Null);
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     layer.assignAnimator(animator);
-    CORRADE_COMPARE(out.str(), "Ui::AbstractVisualLayer::assignAnimator(): can't animate a layer with zero dynamic styles\n");
+    CORRADE_COMPARE(out, "Ui::AbstractVisualLayer::assignAnimator(): can't animate a layer with zero dynamic styles\n");
 }
 
 void AbstractVisualLayerStyleAnimatorTest::setDefaultStyleAnimator() {
@@ -235,11 +233,11 @@ void AbstractVisualLayerStyleAnimatorTest::setDefaultStyleAnimatorInvalid() {
     /* animator1 is unassigned */
     layer2.assignAnimator(animator2);
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     layer1.setDefaultStyleAnimator(&animator1);
     layer1.setDefaultStyleAnimator(&animator2);
-    CORRADE_COMPARE_AS(out.str(),
+    CORRADE_COMPARE_AS(out,
         "Ui::AbstractVisualLayer::setDefaultStyleAnimator(): animator isn't assigned to any layer\n"
         "Ui::AbstractVisualLayer::setDefaultStyleAnimator(): expected an animator assigned to Ui::LayerHandle(0xab, 0x12) but got Ui::LayerHandle(0xcd, 0x34)\n",
         TestSuite::Compare::String);
@@ -271,7 +269,7 @@ void AbstractVisualLayerStyleAnimatorTest::propertiesInvalid() {
 
     AnimationHandle handle = animator.create(12_nsec, 13_nsec, DataHandle::Null);
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     animator.targetStyle(AnimationHandle::Null);
     animator.dynamicStyle(AnimationHandle::Null);
@@ -284,7 +282,7 @@ void AbstractVisualLayerStyleAnimatorTest::propertiesInvalid() {
     /* AnimatorDataHandle directly */
     animator.targetStyle(AnimatorDataHandle(0x123abcde));
     animator.dynamicStyle(AnimatorDataHandle(0x123abcde));
-    CORRADE_COMPARE_AS(out.str(),
+    CORRADE_COMPARE_AS(out,
         "Ui::AbstractVisualLayerStyleAnimator::targetStyle(): invalid handle Ui::AnimationHandle::Null\n"
         "Ui::AbstractVisualLayerStyleAnimator::dynamicStyle(): invalid handle Ui::AnimationHandle::Null\n"
 

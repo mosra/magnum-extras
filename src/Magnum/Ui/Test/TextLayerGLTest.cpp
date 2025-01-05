@@ -24,7 +24,6 @@
     DEALINGS IN THE SOFTWARE.
 */
 
-#include <sstream> /** @todo remove once Debug is stream-free */
 #include <Corrade/Containers/BitArrayView.h>
 #include <Corrade/Containers/StridedArrayView.h>
 #include <Corrade/Containers/StringIterable.h>
@@ -32,7 +31,6 @@
 #include <Corrade/PluginManager/PluginMetadata.h>
 #include <Corrade/TestSuite/Compare/Numeric.h>
 #include <Corrade/Utility/ConfigurationGroup.h>
-#include <Corrade/Utility/DebugStl.h> /** @todo remove once Debug is stream-free */
 #include <Corrade/Utility/Path.h>
 #include <Magnum/Image.h>
 #include <Magnum/ImageView.h>
@@ -1017,10 +1015,10 @@ void TextLayerGLTest::drawNoSizeSet() {
     TextLayerGL::Shared shared{TextLayer::Shared::Configuration{3}};
     TextLayerGL layer{layerHandle(0, 1), shared};
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     layer.draw({}, 0, 0, {}, {}, 0, 0, {}, {}, {}, {}, {}, {});
-    CORRADE_COMPARE(out.str(), "Ui::TextLayerGL::draw(): user interface size wasn't set\n");
+    CORRADE_COMPARE(out, "Ui::TextLayerGL::draw(): user interface size wasn't set\n");
 }
 
 void TextLayerGLTest::drawNoStyleSet() {
@@ -1035,10 +1033,10 @@ void TextLayerGLTest::drawNoStyleSet() {
 
     layer.setSize({10, 10}, {10, 10});
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     layer.draw({}, 0, 0, {}, {}, 0, 0, {}, {}, {}, {}, {}, {});
-    CORRADE_COMPARE(out.str(), "Ui::TextLayerGL::draw(): no style data was set\n");
+    CORRADE_COMPARE(out, "Ui::TextLayerGL::draw(): no style data was set\n");
 }
 
 void TextLayerGLTest::renderSetup() {

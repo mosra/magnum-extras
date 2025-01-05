@@ -24,18 +24,16 @@
     DEALINGS IN THE SOFTWARE.
 */
 
-#include <sstream> /** @todo remove once Debug is stream-free */
 #include <Corrade/Containers/BitArray.h>
-#include <Corrade/Containers/StridedBitArrayView.h>
 #include <Corrade/Containers/Iterable.h>
 #include <Corrade/Containers/Optional.h>
 #include <Corrade/Containers/Reference.h>
 #include <Corrade/Containers/StridedArrayView.h>
-#include <Corrade/Containers/StringStl.h> /** @todo remove once Debug is stream-free */
+#include <Corrade/Containers/StridedBitArrayView.h>
+#include <Corrade/Containers/String.h>
 #include <Corrade/TestSuite/Tester.h>
 #include <Corrade/TestSuite/Compare/Container.h>
 #include <Corrade/TestSuite/Compare/String.h>
-#include <Corrade/Utility/DebugStl.h> /** @todo remove once Debug is stream-free */
 #include <Magnum/PixelFormat.h>
 #include <Magnum/Animation/Easing.h>
 #include <Magnum/Math/Time.h>
@@ -277,15 +275,15 @@ TextLayerStyleAnimatorTest::TextLayerStyleAnimatorTest() {
 }
 
 void TextLayerStyleAnimatorTest::debugAnimation() {
-    std::ostringstream out;
+    Containers::String out;
     Debug{&out} << TextLayerStyleAnimation::Style << TextLayerStyleAnimation(0xbe);
-    CORRADE_COMPARE(out.str(), "Ui::TextLayerStyleAnimation::Style Ui::TextLayerStyleAnimation(0xbe)\n");
+    CORRADE_COMPARE(out, "Ui::TextLayerStyleAnimation::Style Ui::TextLayerStyleAnimation(0xbe)\n");
 }
 
 void TextLayerStyleAnimatorTest::debugAnimations() {
-    std::ostringstream out;
+    Containers::String out;
     Debug{&out} << (TextLayerStyleAnimation::Uniform|TextLayerStyleAnimation(0xe0)) << TextLayerStyleAnimations{};
-    CORRADE_COMPARE(out.str(), "Ui::TextLayerStyleAnimation::Uniform|Ui::TextLayerStyleAnimation(0xe0) Ui::TextLayerStyleAnimations{}\n");
+    CORRADE_COMPARE(out, "Ui::TextLayerStyleAnimation::Uniform|Ui::TextLayerStyleAnimation(0xe0) Ui::TextLayerStyleAnimations{}\n");
 }
 
 void TextLayerStyleAnimatorTest::construct() {
@@ -816,7 +814,7 @@ void TextLayerStyleAnimatorTest::createInvalid() {
     TextLayerStyleAnimator animator{animatorHandle(0, 1)};
     layer.assignAnimator(animator);
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     /* Verify all four create() overloads check the layer being set early
        enough */
@@ -835,7 +833,7 @@ void TextLayerStyleAnimatorTest::createInvalid() {
     animator.create(4, 2, Animation::Easing::linear, 12_nsec, 13_nsec, DataHandle::Null);
     /* Other things like data handle layer part not matching etc. tested in
        AbstractAnimatorTest already */
-    CORRADE_COMPARE_AS(out.str(),
+    CORRADE_COMPARE_AS(out,
         "Ui::TextLayerStyleAnimator::create(): no layer set\n"
         "Ui::TextLayerStyleAnimator::create(): no layer set\n"
         "Ui::TextLayerStyleAnimator::create(): no layer set\n"
@@ -881,7 +879,7 @@ void TextLayerStyleAnimatorTest::propertiesInvalid() {
 
     AnimationHandle handle = animator.create(0, 1, Animation::Easing::linear, 12_nsec, 13_nsec, DataHandle::Null);
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     animator.easing(AnimationHandle::Null);
     animator.uniforms(AnimationHandle::Null);
@@ -918,7 +916,7 @@ void TextLayerStyleAnimatorTest::propertiesInvalid() {
     animator.selectionUniforms(AnimatorDataHandle(0x123abcde));
     animator.selectionPaddings(AnimatorDataHandle(0x123abcde));
     animator.selectionTextUniforms(AnimatorDataHandle(0x123abcde));
-    CORRADE_COMPARE_AS(out.str(),
+    CORRADE_COMPARE_AS(out,
         "Ui::TextLayerStyleAnimator::easing(): invalid handle Ui::AnimationHandle::Null\n"
         "Ui::TextLayerStyleAnimator::uniforms(): invalid handle Ui::AnimationHandle::Null\n"
         "Ui::TextLayerStyleAnimator::paddings(): invalid handle Ui::AnimationHandle::Null\n"
@@ -2403,7 +2401,7 @@ void TextLayerStyleAnimatorTest::advanceInvalid() {
     Vector4 dynamicEditingStylePaddings[4];
     Vector4 dynamicEditingStylePaddingsInvalid[3];
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     animator.advance(mask, factors, maskInvalid,
         dynamicStyleUniforms,
@@ -2491,7 +2489,7 @@ void TextLayerStyleAnimatorTest::advanceInvalid() {
         dynamicStylePaddings,
         dynamicEditingStyleUniforms,
         dynamicEditingStylePaddingsInvalid, {});
-    CORRADE_COMPARE_AS(out.str(),
+    CORRADE_COMPARE_AS(out,
         "Ui::TextLayerStyleAnimator::advance(): expected active, factors and remove views to have a size of 3 but got 3, 3 and 4\n"
         "Ui::TextLayerStyleAnimator::advance(): expected active, factors and remove views to have a size of 3 but got 3, 4 and 3\n"
         "Ui::TextLayerStyleAnimator::advance(): expected active, factors and remove views to have a size of 3 but got 4, 3 and 3\n"

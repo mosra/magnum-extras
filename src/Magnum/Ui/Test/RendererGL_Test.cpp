@@ -24,11 +24,9 @@
     DEALINGS IN THE SOFTWARE.
 */
 
-#include <sstream> /** @todo remove once Debug is stream-free */
-#include <Corrade/Containers/StringStl.h> /** @todo remove once Debug is stream-free */
+#include <Corrade/Containers/String.h>
 #include <Corrade/TestSuite/Tester.h>
 #include <Corrade/TestSuite/Compare/String.h>
-#include <Corrade/Utility/DebugStl.h> /** @todo remove once Debug is stream-free */
 
 #include "Magnum/Ui/RendererGL.h"
 
@@ -55,15 +53,15 @@ RendererGL_Test::RendererGL_Test() {
 }
 
 void RendererGL_Test::debugFlag() {
-    std::ostringstream out;
+    Containers::String out;
     Debug{&out} << RendererGL::Flag::CompositingFramebuffer << RendererGL::Flag(0xbe);
-    CORRADE_COMPARE(out.str(), "Ui::RendererGL::Flag::CompositingFramebuffer Ui::RendererGL::Flag(0xbe)\n");
+    CORRADE_COMPARE(out, "Ui::RendererGL::Flag::CompositingFramebuffer Ui::RendererGL::Flag(0xbe)\n");
 }
 
 void RendererGL_Test::debugFlags() {
-    std::ostringstream out;
+    Containers::String out;
     Debug{&out} << (RendererGL::Flag::CompositingFramebuffer|RendererGL::Flag(0xb0)) << RendererGL::Flags{};
-    CORRADE_COMPARE(out.str(), "Ui::RendererGL::Flag::CompositingFramebuffer|Ui::RendererGL::Flag(0xb0) Ui::RendererGL::Flags{}\n");
+    CORRADE_COMPARE(out, "Ui::RendererGL::Flag::CompositingFramebuffer|Ui::RendererGL::Flag(0xb0) Ui::RendererGL::Flags{}\n");
 }
 
 void RendererGL_Test::construct() {
@@ -79,13 +77,13 @@ void RendererGL_Test::compositingFramebufferTextureNotEnabled() {
     RendererGL renderer;
     const RendererGL& crenderer = renderer;
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     renderer.compositingFramebuffer();
     crenderer.compositingFramebuffer();
     renderer.compositingTexture();
     crenderer.compositingTexture();
-    CORRADE_COMPARE_AS(out.str(),
+    CORRADE_COMPARE_AS(out,
         "Ui::RendererGL::compositingFramebuffer(): compositing framebuffer not enabled\n"
         "Ui::RendererGL::compositingFramebuffer(): compositing framebuffer not enabled\n"
         "Ui::RendererGL::compositingTexture(): compositing framebuffer not enabled\n"

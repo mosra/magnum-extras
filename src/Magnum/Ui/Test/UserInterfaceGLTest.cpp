@@ -24,10 +24,9 @@
     DEALINGS IN THE SOFTWARE.
 */
 
-#include <sstream> /** @todo remove once Debug is stream-free */
+#include <Corrade/Containers/String.h>
 #include <Corrade/TestSuite/Tester.h>
 #include <Corrade/PluginManager/Manager.h>
-#include <Corrade/Utility/DebugStl.h> /** @todo remove once Debug is stream-free */
 #include <Magnum/PixelFormat.h>
 #include <Magnum/GL/OpenGLTester.h>
 #include <Magnum/Text/AbstractFont.h>
@@ -524,14 +523,14 @@ void UserInterfaceGLTest::createAlreadyCreated() {
     if(data.features)
         ui.setStyle(style, data.features, nullptr, &_fontManager);
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     if(data.tryCreate)
         ui.tryCreate({100, 100}, style);
     else
         ui.create({100, 100}, style);
     /* The message is printed by tryCreate() always */
-    CORRADE_COMPARE(out.str(), "Ui::UserInterfaceGL::tryCreate(): user interface already created\n");
+    CORRADE_COMPARE(out, "Ui::UserInterfaceGL::tryCreate(): user interface already created\n");
 }
 
 void UserInterfaceGLTest::createFailed() {
@@ -694,10 +693,10 @@ void UserInterfaceGLTest::setStyleNoFeatures() {
     /* Capture correct function name */
     CORRADE_VERIFY(true);
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     ui.trySetStyle(style, {}, &_importerManager, &_fontManager);
-    CORRADE_COMPARE(out.str(), "Ui::UserInterfaceGL::trySetStyle(): no features specified\n");
+    CORRADE_COMPARE(out, "Ui::UserInterfaceGL::trySetStyle(): no features specified\n");
 }
 
 void UserInterfaceGLTest::setStyleFeaturesNotSupported() {
@@ -717,10 +716,10 @@ void UserInterfaceGLTest::setStyleFeaturesNotSupported() {
     /* Capture correct function name */
     CORRADE_VERIFY(true);
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     ui.trySetStyle(style, StyleFeature::BaseLayer|StyleFeature::TextLayer, &_importerManager, &_fontManager);
-    CORRADE_COMPARE(out.str(), "Ui::UserInterfaceGL::trySetStyle(): Ui::StyleFeature::BaseLayer|Ui::StyleFeature::TextLayer not a subset of supported Ui::StyleFeature::BaseLayer\n");
+    CORRADE_COMPARE(out, "Ui::UserInterfaceGL::trySetStyle(): Ui::StyleFeature::BaseLayer|Ui::StyleFeature::TextLayer not a subset of supported Ui::StyleFeature::BaseLayer\n");
 }
 
 void UserInterfaceGLTest::setStyleNoSizeSet() {
@@ -737,11 +736,11 @@ void UserInterfaceGLTest::setStyleNoSizeSet() {
 
     UserInterfaceGL ui{NoCreate};
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     ui.setStyle(style);
     ui.trySetStyle(style);
-    CORRADE_COMPARE(out.str(),
+    CORRADE_COMPARE(out,
         "Ui::UserInterfaceGL::trySetStyle(): user interface size wasn't set\n"
         "Ui::UserInterfaceGL::trySetStyle(): user interface size wasn't set\n");
 }
@@ -763,10 +762,10 @@ void UserInterfaceGLTest::setStyleBaseLayerAlreadyPresent() {
     /* Capture correct function name */
     CORRADE_VERIFY(true);
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     ui.trySetStyle(style, &_importerManager, &_fontManager);
-    CORRADE_COMPARE(out.str(), "Ui::UserInterfaceGL::trySetStyle(): base layer already present\n");
+    CORRADE_COMPARE(out, "Ui::UserInterfaceGL::trySetStyle(): base layer already present\n");
 }
 
 void UserInterfaceGLTest::setStyleTextLayerAlreadyPresent() {
@@ -786,10 +785,10 @@ void UserInterfaceGLTest::setStyleTextLayerAlreadyPresent() {
     /* Capture correct function name */
     CORRADE_VERIFY(true);
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     ui.trySetStyle(style, &_importerManager, &_fontManager);
-    CORRADE_COMPARE(out.str(), "Ui::UserInterfaceGL::trySetStyle(): text layer already present\n");
+    CORRADE_COMPARE(out, "Ui::UserInterfaceGL::trySetStyle(): text layer already present\n");
 }
 
 void UserInterfaceGLTest::setStyleTextLayerArrayGlyphCache() {
@@ -809,10 +808,10 @@ void UserInterfaceGLTest::setStyleTextLayerArrayGlyphCache() {
     /* Capture correct function name */
     CORRADE_VERIFY(true);
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     ui.trySetStyle(style, &_importerManager, &_fontManager);
-    CORRADE_COMPARE(out.str(), "Ui::UserInterfaceGL::trySetStyle(): only 2D glyph cache is supported at the moment, got a size of {16, 24, 2}\n");
+    CORRADE_COMPARE(out, "Ui::UserInterfaceGL::trySetStyle(): only 2D glyph cache is supported at the moment, got a size of {16, 24, 2}\n");
 }
 
 void UserInterfaceGLTest::setStyleTextLayerImagesTextLayerNotPresentNotApplied() {
@@ -830,10 +829,10 @@ void UserInterfaceGLTest::setStyleTextLayerImagesTextLayerNotPresentNotApplied()
     /* Capture correct function name */
     CORRADE_VERIFY(true);
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     ui.trySetStyle(style, &_importerManager, &_fontManager);
-    CORRADE_COMPARE(out.str(), "Ui::UserInterfaceGL::trySetStyle(): text layer not present and Ui::StyleFeature::TextLayer isn't being applied as well\n");
+    CORRADE_COMPARE(out, "Ui::UserInterfaceGL::trySetStyle(): text layer not present and Ui::StyleFeature::TextLayer isn't being applied as well\n");
 }
 
 void UserInterfaceGLTest::setStyleEventLayerAlreadyPresent() {
@@ -852,10 +851,10 @@ void UserInterfaceGLTest::setStyleEventLayerAlreadyPresent() {
     /* Capture correct function name */
     CORRADE_VERIFY(true);
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     ui.trySetStyle(style, &_importerManager, &_fontManager);
-    CORRADE_COMPARE(out.str(), "Ui::UserInterfaceGL::trySetStyle(): event layer already present\n");
+    CORRADE_COMPARE(out, "Ui::UserInterfaceGL::trySetStyle(): event layer already present\n");
 }
 
 void UserInterfaceGLTest::setStyleSnapLayouterAlreadyPresent() {
@@ -874,10 +873,10 @@ void UserInterfaceGLTest::setStyleSnapLayouterAlreadyPresent() {
     /* Capture correct function name */
     CORRADE_VERIFY(true);
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     ui.trySetStyle(style, &_importerManager, &_fontManager);
-    CORRADE_COMPARE(out.str(), "Ui::UserInterfaceGL::trySetStyle(): snap layouter already present\n");
+    CORRADE_COMPARE(out, "Ui::UserInterfaceGL::trySetStyle(): snap layouter already present\n");
 }
 
 }}}}

@@ -24,12 +24,10 @@
     DEALINGS IN THE SOFTWARE.
 */
 
-#include <sstream>
 #include <Corrade/Containers/BitArrayView.h>
-#include <Corrade/Containers/StringStl.h> /** @todo remove once Debug is stream-free */
+#include <Corrade/Containers/String.h>
 #include <Corrade/TestSuite/Tester.h>
 #include <Corrade/TestSuite/Compare/String.h>
-#include <Corrade/Utility/DebugStl.h> /** @todo remove once Debug is stream-free */
 #include <Magnum/Math/Vector2.h>
 
 #include "Magnum/Ui/AbstractLayouter.h"
@@ -131,12 +129,12 @@ template<class T> void AnchorTest::constructInvalid() {
     LayoutHandle layout = layouter.add(node);
     LayoutHandle layout2 = layouter.add(node2);
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     T{ui, nodeHandle(0x12345, 0xabc), layout};
     T{ui, node, layoutHandle(layouterHandle(0x67, 0xde), 0x12345, 0xabc)};
     T{ui, node, layout2};
-    CORRADE_COMPARE_AS(out.str(),
+    CORRADE_COMPARE_AS(out,
         "Ui::AbstractAnchor: invalid handle Ui::NodeHandle(0x12345, 0xabc)\n"
         "Ui::AbstractAnchor: invalid handle Ui::LayoutHandle({0x67, 0xde}, {0x12345, 0xabc})\n"
         "Ui::AbstractAnchor: Ui::LayoutHandle({0x0, 0x1}, {0x1, 0x1}) not associated with Ui::NodeHandle(0x0, 0x1)\n",
@@ -203,13 +201,13 @@ void AnchorTest::layoutInvalid() {
     NodeHandle node = ui.createNode({}, {});
     AbstractAnchor a{ui, node, LayoutHandle::Null};
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     /* LOL, LayoutHandle(a); says it's redefining a with a different type?!
        What's up with that syntax?? Now I have to add another void cast because
        otherwise it says expression result is unused. */
     static_cast<void>(static_cast<LayoutHandle>(a));
-    CORRADE_COMPARE(out.str(), "Ui::AbstractAnchor: layout is null\n");
+    CORRADE_COMPARE(out, "Ui::AbstractAnchor: layout is null\n");
 }
 
 }}}}

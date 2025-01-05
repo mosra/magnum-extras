@@ -25,19 +25,16 @@
 */
 
 #include <new>
-#include <sstream> /** @todo remove once Debug is stream-free */
 #include <Corrade/Containers/StridedBitArrayView.h>
 #include <Corrade/Containers/Optional.h>
 #include <Corrade/Containers/StridedArrayView.h>
 #include <Corrade/Containers/String.h>
-#include <Corrade/Containers/StringStl.h> /** @todo remove once Debug is stream-free */
 #include <Corrade/TestSuite/Tester.h>
 #include <Corrade/TestSuite/Compare/Container.h>
 #include <Corrade/TestSuite/Compare/Numeric.h>
 #include <Corrade/TestSuite/Compare/String.h>
 #include <Corrade/Utility/Algorithms.h>
-#include <Corrade/Utility/FormatStl.h> /** @todo remove once Debug is stream-free */
-#include <Corrade/Utility/DebugStl.h> /** @todo remove once Debug is stream-free */
+#include <Corrade/Utility/Format.h>
 #include <Magnum/PixelFormat.h>
 #include <Magnum/Math/Range.h>
 #include <Magnum/Text/AbstractGlyphCache.h>
@@ -1626,12 +1623,12 @@ void TextLayerTest::fontHandle() {
 void TextLayerTest::fontHandleInvalid() {
     CORRADE_SKIP_IF_NO_DEBUG_ASSERT();
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     Ui::fontHandle(0x8000, 0x1);
     Ui::fontHandle(0x1, 0x2);
     Ui::fontHandleId(FontHandle::Null);
-    CORRADE_COMPARE_AS(out.str(),
+    CORRADE_COMPARE_AS(out,
         "Ui::fontHandle(): expected index to fit into 15 bits and generation into 1, got 0x8000 and 0x1\n"
         "Ui::fontHandle(): expected index to fit into 15 bits and generation into 1, got 0x1 and 0x2\n"
         "Ui::fontHandleId(): the handle is null\n",
@@ -1639,27 +1636,27 @@ void TextLayerTest::fontHandleInvalid() {
 }
 
 void TextLayerTest::debugFontHandle() {
-    std::ostringstream out;
+    Containers::String out;
     Debug{&out} << FontHandle::Null << Ui::fontHandle(0x2bcd, 0x1);
-    CORRADE_COMPARE(out.str(), "Ui::FontHandle::Null Ui::FontHandle(0x2bcd, 0x1)\n");
+    CORRADE_COMPARE(out, "Ui::FontHandle::Null Ui::FontHandle(0x2bcd, 0x1)\n");
 }
 
 void TextLayerTest::debugDataFlag() {
-    std::ostringstream out;
+    Containers::String out;
     Debug{&out} << TextDataFlag::Editable << TextDataFlag(0xbe);
-    CORRADE_COMPARE(out.str(), "Ui::TextDataFlag::Editable Ui::TextDataFlag(0xbe)\n");
+    CORRADE_COMPARE(out, "Ui::TextDataFlag::Editable Ui::TextDataFlag(0xbe)\n");
 }
 
 void TextLayerTest::debugDataFlags() {
-    std::ostringstream out;
+    Containers::String out;
     Debug{&out} << (TextDataFlag::Editable|TextDataFlag(0xa0)) << TextDataFlags{};
-    CORRADE_COMPARE(out.str(), "Ui::TextDataFlag::Editable|Ui::TextDataFlag(0xa0) Ui::TextDataFlags{}\n");
+    CORRADE_COMPARE(out, "Ui::TextDataFlag::Editable|Ui::TextDataFlag(0xa0) Ui::TextDataFlags{}\n");
 }
 
 void TextLayerTest::debugEdit() {
-    std::ostringstream out;
+    Containers::String out;
     Debug{&out} << TextEdit::MoveCursorLineBegin << TextEdit(0xbe);
-    CORRADE_COMPARE(out.str(), "Ui::TextEdit::MoveCursorLineBegin Ui::TextEdit(0xbe)\n");
+    CORRADE_COMPARE(out, "Ui::TextEdit::MoveCursorLineBegin Ui::TextEdit(0xbe)\n");
 }
 
 void TextLayerTest::sharedConfigurationConstruct() {
@@ -1681,11 +1678,11 @@ void TextLayerTest::sharedConfigurationConstructZeroStyleOrUniformCount() {
     TextLayer::Shared::Configuration{0, 0};
     TextLayer::Shared::Configuration{0};
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     TextLayer::Shared::Configuration{0, 4};
     TextLayer::Shared::Configuration{4, 0};
-    CORRADE_COMPARE_AS(out.str(),
+    CORRADE_COMPARE_AS(out,
         "Ui::TextLayer::Shared::Configuration: expected style uniform count and style count to be either both zero or both non-zero, got 0 and 4\n"
         "Ui::TextLayer::Shared::Configuration: expected style uniform count and style count to be either both zero or both non-zero, got 4 and 0\n",
         TestSuite::Compare::String);
@@ -1791,12 +1788,12 @@ void TextLayerTest::sharedConfigurationSettersInvalidEditingStyleOrUniformCount(
 
     TextLayer::Shared::Configuration zeroStyles{0};
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     configuration.setEditingStyleCount(0, 4);
     configuration.setEditingStyleCount(4, 0);
     zeroStyles.setEditingStyleCount(3, 2);
-    CORRADE_COMPARE_AS(out.str(),
+    CORRADE_COMPARE_AS(out,
         "Ui::TextLayer::Shared::Configuration::setEditingStyleCount(): expected uniform count and count to be either both zero or both non-zero, got 0 and 4\n"
         "Ui::TextLayer::Shared::Configuration::setEditingStyleCount(): expected uniform count and count to be either both zero or both non-zero, got 4 and 0\n"
         "Ui::TextLayer::Shared::Configuration::setEditingStyleCount(): editing style count has to be zero if style count is zero, got 2\n",
@@ -1898,10 +1895,10 @@ void TextLayerTest::sharedConstructZeroStyleCount() {
     Shared{Shared::Configuration{0}.setDynamicStyleCount(1)};
     Shared{Shared::Configuration{1}.setDynamicStyleCount(0)};
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     Shared{Shared::Configuration{0}.setDynamicStyleCount(0)};
-    CORRADE_COMPARE(out.str(), "Ui::TextLayer::Shared: expected non-zero total style count\n");
+    CORRADE_COMPARE(out, "Ui::TextLayer::Shared: expected non-zero total style count\n");
 }
 
 void TextLayerTest::sharedSetGlyphCache() {
@@ -1950,10 +1947,10 @@ void TextLayerTest::sharedSetGlyphCacheAlreadySet() {
     shared.setGlyphCache(cache);
     CORRADE_VERIFY(shared.hasGlyphCache());
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     shared.setGlyphCache(cache);
-    CORRADE_COMPARE(out.str(), "Ui::TextLayer::Shared::setGlyphCache(): glyph cache already set\n");
+    CORRADE_COMPARE(out, "Ui::TextLayer::Shared::setGlyphCache(): glyph cache already set\n");
 }
 
 void TextLayerTest::sharedNoGlyphCache() {
@@ -1966,12 +1963,12 @@ void TextLayerTest::sharedNoGlyphCache() {
         void doSetEditingStyle(const TextLayerCommonEditingStyleUniform&, Containers::ArrayView<const TextLayerEditingStyleUniform>) override {}
     } shared{TextLayer::Shared::Configuration{3, 5}};
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     shared.glyphCache();
     /* Const overload */
     const_cast<const Shared&>(shared).glyphCache();
-    CORRADE_COMPARE(out.str(),
+    CORRADE_COMPARE(out,
         "Ui::TextLayer::Shared::glyphCache(): no glyph cache set\n"
         "Ui::TextLayer::Shared::glyphCache(): no glyph cache set\n");
 }
@@ -2147,10 +2144,10 @@ void TextLayerTest::sharedAddFontTakeOwnershipNull() {
     } shared{TextLayer::Shared::Configuration{3, 5}};
     CORRADE_COMPARE(shared.fontCount(), 0);
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     shared.addFont(nullptr, 13.0f);
-    CORRADE_COMPARE(out.str(), "Ui::TextLayer::Shared::addFont(): font is null\n");
+    CORRADE_COMPARE(out, "Ui::TextLayer::Shared::addFont(): font is null\n");
 }
 
 void TextLayerTest::sharedAddFontNoCache() {
@@ -2174,11 +2171,11 @@ void TextLayerTest::sharedAddFontNoCache() {
         Containers::Pointer<Text::AbstractShaper> doCreateShaper() override { return {}; }
     } font;
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     shared.addFont(font, 1.0f);
     shared.addInstancelessFont(0, 0.5f);
-    CORRADE_COMPARE(out.str(),
+    CORRADE_COMPARE(out,
         "Ui::TextLayer::Shared::addFont(): no glyph cache set\n"
         "Ui::TextLayer::Shared::addInstancelessFont(): no glyph cache set\n");
 }
@@ -2219,11 +2216,11 @@ void TextLayerTest::sharedAddFontNotFoundInCache() {
         Containers::Pointer<Text::AbstractShaper> doCreateShaper() override { return {}; }
     } font;
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     shared.addFont(font, 1.0f);
     shared.addInstancelessFont(2, 1.0f);
-    CORRADE_COMPARE(out.str(),
+    CORRADE_COMPARE(out,
         "Ui::TextLayer::Shared::addFont(): font not found among 2 fonts in set glyph cache\n"
         "Ui::TextLayer::Shared::addInstancelessFont(): index 2 out of range for 2 fonts in set glyph cache\n");
 }
@@ -2269,13 +2266,13 @@ void TextLayerTest::sharedAddFontNoHandlesLeft() {
 
     CORRADE_COMPARE(shared.fontCount(), 1 << Implementation::FontHandleIdBits);
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     shared.addFont(font, 1.0f);
     shared.addInstancelessFont(glyphCacheInstanceLessFontId, 1.0f);
     /* Number is hardcoded in the expected message but not elsewhere in order
        to give a heads-up when modifying the handle ID bit count */
-    CORRADE_COMPARE(out.str(),
+    CORRADE_COMPARE(out,
         "Ui::TextLayer::Shared::addFont(): can only have at most 32768 fonts\n"
         "Ui::TextLayer::Shared::addInstancelessFont(): can only have at most 32768 fonts\n");
 }
@@ -2316,10 +2313,10 @@ void TextLayerTest::sharedAddInstancelessFontHasInstance() {
     } shared{TextLayer::Shared::Configuration{3, 5}};
     shared.setGlyphCache(cache);
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     shared.addInstancelessFont(glyphCacheFontId, 1.0f);
-    CORRADE_COMPARE(out.str(),
+    CORRADE_COMPARE(out,
         "Ui::TextLayer::Shared::addInstancelessFont(): glyph cache font 1 has an instance set\n");
 }
 
@@ -2359,7 +2356,7 @@ void TextLayerTest::sharedFontInvalidHandle() {
        font as a fallback */
     shared.addFont(font, 13.0f);
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     shared.glyphCacheFontId(FontHandle(0x12ab));
     shared.glyphCacheFontId(FontHandle::Null);
@@ -2370,7 +2367,7 @@ void TextLayerTest::sharedFontInvalidHandle() {
     /* Const overload */
     const_cast<const Shared&>(shared).font(FontHandle(0x12ab));
     const_cast<const Shared&>(shared).font(FontHandle::Null);
-    CORRADE_COMPARE(out.str(),
+    CORRADE_COMPARE(out,
         "Ui::TextLayer::Shared::glyphCacheFontId(): invalid handle Ui::FontHandle(0x12ab, 0x0)\n"
         "Ui::TextLayer::Shared::glyphCacheFontId(): invalid handle Ui::FontHandle::Null\n"
         "Ui::TextLayer::Shared::hasFontInstance(): invalid handle Ui::FontHandle(0x12ab, 0x0)\n"
@@ -2422,10 +2419,10 @@ void TextLayerTest::sharedFontNoInstance() {
     FontHandle instanceless = shared.addInstancelessFont(glyphCacheInstanceLessFontId, 0.3f);
     CORRADE_VERIFY(!shared.hasFontInstance(instanceless));
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     shared.font(instanceless);
-    CORRADE_COMPARE(out.str(), "Ui::TextLayer::Shared::font(): Ui::FontHandle(0x1, 0x1) is an instance-less font\n");
+    CORRADE_COMPARE(out, "Ui::TextLayer::Shared::font(): Ui::FontHandle(0x1, 0x1) is an instance-less font\n");
 }
 
 void TextLayerTest::sharedSetStyle() {
@@ -3170,7 +3167,7 @@ void TextLayerTest::sharedSetStyleInvalidSize() {
         .setDynamicStyleCount(data.dynamicStyleCount)
     };
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     shared.setStyle(TextLayerCommonStyleUniform{},
         {TextLayerStyleUniform{}, TextLayerStyleUniform{}},
@@ -3282,7 +3279,7 @@ void TextLayerTest::sharedSetStyleInvalidSize() {
         {-1, -1, -1, -1, -1},
         {-1, -1, -1, -1, -1},
         {{}, {}, {}});
-    CORRADE_COMPARE_AS(out.str(),
+    CORRADE_COMPARE_AS(out,
         "Ui::TextLayer::Shared::setStyle(): expected 3 uniforms, got 2\n"
         "Ui::TextLayer::Shared::setStyle(): expected 5 style uniform indices, got 3\n"
         "Ui::TextLayer::Shared::setStyle(): expected 5 font handles, got 3\n"
@@ -3308,7 +3305,7 @@ void TextLayerTest::sharedSetStyleInvalidMapping() {
         void doSetEditingStyle(const TextLayerCommonEditingStyleUniform&, Containers::ArrayView<const TextLayerEditingStyleUniform>) override {}
     } shared{TextLayer::Shared::Configuration{3, 6}};
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     shared.setStyle(TextLayerCommonStyleUniform{},
         {TextLayerStyleUniform{}, TextLayerStyleUniform{}, TextLayerStyleUniform{}},
@@ -3318,7 +3315,7 @@ void TextLayerTest::sharedSetStyleInvalidMapping() {
         {Text::Alignment{}, Text::Alignment{}, Text::Alignment{},
          Text::Alignment{}, Text::Alignment{}, Text::Alignment{}},
         {}, {}, {}, {}, {}, {});
-    CORRADE_COMPARE_AS(out.str(),
+    CORRADE_COMPARE_AS(out,
         "Ui::TextLayer::Shared::setStyle(): uniform index 3 out of range for 3 uniforms at index 4\n",
         TestSuite::Compare::String);
 }
@@ -3981,7 +3978,7 @@ void TextLayerTest::sharedSetStyleImplicitMappingInvalidSize() {
         .setDynamicStyleCount(data.dynamicStyleCount)
     };
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     shared.setStyle(TextLayerCommonStyleUniform{},
         {TextLayerStyleUniform{}, TextLayerStyleUniform{}, TextLayerStyleUniform{}},
@@ -3991,7 +3988,7 @@ void TextLayerTest::sharedSetStyleImplicitMappingInvalidSize() {
         {-1, -1, -1, -1, -1},
         {-1, -1, -1, -1, -1},
         {{}, {}, {}, {}, {}});
-    CORRADE_COMPARE(out.str(),
+    CORRADE_COMPARE(out,
         "Ui::TextLayer::Shared::setStyle(): there's 3 uniforms for 5 styles, provide an explicit mapping\n");
 }
 
@@ -4037,7 +4034,7 @@ void TextLayerTest::sharedSetStyleInvalidFontHandle() {
         {Text::Alignment::MiddleLeft, Text::Alignment::TopRight, Text::Alignment::BottomRight, Text::Alignment::LineLeft},
         {}, {}, {}, {}, {}, {});
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     /* Testing just the implicit mapping variant, as both variants delegate to
        the same internal helper */
@@ -4046,7 +4043,7 @@ void TextLayerTest::sharedSetStyleInvalidFontHandle() {
         {handle, FontHandle(0x12ab), handle, handle},
         {Text::Alignment::MiddleLeft, Text::Alignment::TopRight, Text::Alignment::BottomRight, Text::Alignment::LineLeft},
         {}, {}, {}, {}, {}, {});
-    CORRADE_COMPARE(out.str(),
+    CORRADE_COMPARE(out,
         "Ui::TextLayer::Shared::setStyle(): invalid handle Ui::FontHandle(0x12ab, 0x0) at index 1\n");
 }
 
@@ -4062,7 +4059,7 @@ void TextLayerTest::sharedSetStyleInvalidAlignment() {
         void doSetEditingStyle(const TextLayerCommonEditingStyleUniform&, Containers::ArrayView<const TextLayerEditingStyleUniform>) override {}
     } shared{TextLayer::Shared::Configuration{2}};
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     /* Testing just the implicit mapping variant, as both variants delegate to
        the same internal helper */
@@ -4071,7 +4068,7 @@ void TextLayerTest::sharedSetStyleInvalidAlignment() {
         {FontHandle::Null, FontHandle::Null},
         {Text::Alignment::MiddleLeft, Text::Alignment::LineCenterGlyphBounds},
         {}, {}, {}, {}, {}, {});
-    CORRADE_COMPARE(out.str(),
+    CORRADE_COMPARE(out,
         "Ui::TextLayer::Shared::setStyle(): unsupported Text::Alignment::LineCenterGlyphBounds at index 1\n");
 }
 
@@ -4087,7 +4084,7 @@ void TextLayerTest::sharedSetStyleInvalidFeatures() {
         void doSetEditingStyle(const TextLayerCommonEditingStyleUniform&, Containers::ArrayView<const TextLayerEditingStyleUniform>) override {}
     } shared{TextLayer::Shared::Configuration{2}};
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     /* Testing just the implicit mapping variant, as both variants delegate to
        the same internal helper */
@@ -4109,7 +4106,7 @@ void TextLayerTest::sharedSetStyleInvalidFeatures() {
          Text::Feature::HistoricalLigatures,
          Text::Feature::SlashedZero},
         {5, 3}, {0, 1}, {}, {}, {});
-    CORRADE_COMPARE_AS(out.str(),
+    CORRADE_COMPARE_AS(out,
         "Ui::TextLayer::Shared::setStyle(): feature offset 3 and count 2 out of range for 4 features at index 1\n"
         "Ui::TextLayer::Shared::setStyle(): feature offset 5 and count 0 out of range for 4 features at index 0\n",
         TestSuite::Compare::String);
@@ -4129,7 +4126,7 @@ void TextLayerTest::sharedSetStyleInvalidEditingStyles() {
         .setEditingStyleCount(2, 3)
     };
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     /* Testing just the implicit mapping variant, as both variants delegate to
        the same internal helper */
@@ -4149,7 +4146,7 @@ void TextLayerTest::sharedSetStyleInvalidEditingStyles() {
         {0, 2},
         {3, -1},
         {});
-    CORRADE_COMPARE_AS(out.str(),
+    CORRADE_COMPARE_AS(out,
         "Ui::TextLayer::Shared::setStyle(): cursor style 3 out of range for 3 editing styles at index 1\n"
         "Ui::TextLayer::Shared::setStyle(): selection style 3 out of range for 3 editing styles at index 0\n",
         TestSuite::Compare::String);
@@ -4345,7 +4342,7 @@ void TextLayerTest::sharedSetEditingStyleInvalidSize() {
         .setDynamicStyleCount(data.dynamicStyleCount)
     };
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     shared.setEditingStyle(TextLayerCommonEditingStyleUniform{},
         {TextLayerEditingStyleUniform{},
@@ -4382,7 +4379,7 @@ void TextLayerTest::sharedSetEditingStyleInvalidSize() {
         {2, 1, 0, 0, 1},
         {{}, {}, {}, {}, {}},
         {});
-    CORRADE_COMPARE_AS(out.str(),
+    CORRADE_COMPARE_AS(out,
         "Ui::TextLayer::Shared::setEditingStyle(): expected 3 uniforms, got 2\n"
         "Ui::TextLayer::Shared::setEditingStyle(): expected 5 style uniform indices, got 3\n"
         "Ui::TextLayer::Shared::setEditingStyle(): expected either no or 5 text uniform indices, got 4\n"
@@ -4405,7 +4402,7 @@ void TextLayerTest::sharedSetEditingStyleInvalidMapping() {
         .setEditingStyleCount(3)
     };
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     shared.setEditingStyle(TextLayerCommonEditingStyleUniform{},
         {TextLayerEditingStyleUniform{},
@@ -4429,7 +4426,7 @@ void TextLayerTest::sharedSetEditingStyleInvalidMapping() {
          TextLayerEditingStyleUniform{}},
         {-1, 1, 2},
         {{}, {}, {}});
-    CORRADE_COMPARE_AS(out.str(),
+    CORRADE_COMPARE_AS(out,
         "Ui::TextLayer::Shared::setEditingStyle(): uniform index 3 out of range for 3 uniforms at index 4\n"
         "Ui::TextLayer::Shared::setEditingStyle(): text uniform index 2 out of range for 2 uniforms at index 4\n"
         "Ui::TextLayer::Shared::setEditingStyle(): text uniform index 2 out of range for 2 uniforms at index 2\n",
@@ -4610,13 +4607,13 @@ void TextLayerTest::sharedSetEditingStyleImplicitMappingInvalidSize() {
         .setDynamicStyleCount(data.dynamicStyleCount)
     };
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     shared.setEditingStyle(TextLayerCommonEditingStyleUniform{},
         {TextLayerEditingStyleUniform{}, TextLayerEditingStyleUniform{}, TextLayerEditingStyleUniform{}},
         {{}, {}, {}, {}, {}},
         {{}, {}, {}, {}, {}});
-    CORRADE_COMPARE(out.str(),
+    CORRADE_COMPARE(out,
         "Ui::TextLayer::Shared::setEditingStyle(): there's 3 uniforms for 5 styles, provide an explicit mapping\n");
 }
 
@@ -5306,7 +5303,7 @@ void TextLayerTest::dynamicStyleInvalid() {
     /* Calling setDynamicStyle() on a layer w/o editing styles is fine */
     layerNoEditingStyles.setDynamicStyle(0, TextLayerStyleUniform{}, FontHandle::Null, Text::Alignment::MiddleCenter, {}, {});
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     layer.dynamicStyleFeatures(3);
     layer.dynamicStyleCursorStyle(3);
@@ -5327,7 +5324,7 @@ void TextLayerTest::dynamicStyleInvalid() {
     layerNoEditingStyles.setDynamicStyleWithCursorSelection(0, TextLayerStyleUniform{}, FontHandle::Null, Text::Alignment::MiddleCenter, {}, {}, TextLayerEditingStyleUniform{}, {}, TextLayerEditingStyleUniform{}, {}, {});
     layerNoEditingStyles.setDynamicStyleWithCursor(0, TextLayerStyleUniform{}, FontHandle::Null, Text::Alignment::MiddleCenter, {}, {}, TextLayerEditingStyleUniform{}, {});
     layerNoEditingStyles.setDynamicStyleWithSelection(0, TextLayerStyleUniform{}, FontHandle::Null, Text::Alignment::MiddleCenter, {}, {}, TextLayerEditingStyleUniform{}, {}, {});
-    CORRADE_COMPARE_AS(out.str(),
+    CORRADE_COMPARE_AS(out,
         "Ui::TextLayer::dynamicStyleFeatures(): index 3 out of range for 3 dynamic styles\n"
         "Ui::TextLayer::dynamicStyleCursorStyle(): index 3 out of range for 3 dynamic styles\n"
         "Ui::TextLayer::dynamicStyleSelectionStyle(): index 3 out of range for 3 dynamic styles\n"
@@ -6260,11 +6257,11 @@ void TextLayerTest::createNoStyleSet() {
         explicit Layer(LayerHandle handle, Shared& shared): TextLayer{handle, shared} {}
     } layer{layerHandle(0, 1), shared};
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     layer.create(2, "", {});
     layer.createGlyph(1, 0, {});
-    CORRADE_COMPARE(out.str(),
+    CORRADE_COMPARE(out,
         "Ui::TextLayer::create(): no style data was set\n"
         "Ui::TextLayer::createGlyph(): no style data was set\n");
 }
@@ -6434,11 +6431,11 @@ void TextLayerTest::setCursorInvalid() {
     DataHandle data = layer.create(0, "hello!!", {}, TextDataFlag::Editable);
     CORRADE_COMPARE(layer.cursor(data), Containers::pair(7u, 7u));
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     layer.setCursor(data, 8);
     layer.setCursor(data, 7, 8);
-    CORRADE_COMPARE_AS(out.str(),
+    CORRADE_COMPARE_AS(out,
         "Ui::TextLayer::setCursor(): position 8 out of range for a text of 7 bytes\n"
         "Ui::TextLayer::setCursor(): selection 8 out of range for a text of 7 bytes\n",
         TestSuite::Compare::String);
@@ -6655,7 +6652,7 @@ void TextLayerTest::updateTextInvalid() {
     DataHandle data = layer.create(0, "hello!!", {}, TextDataFlag::Editable);
     CORRADE_COMPARE(layer.cursor(data), Containers::pair(7u, 7u));
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     layer.updateText(data, 8, 0, 0, "", 0);
     layer.updateText(data, 5, 3, 0, "", 0);
@@ -6670,7 +6667,7 @@ void TextLayerTest::updateTextInvalid() {
     /* Text size got smaller by 2 here but larger by 3, yet still not enouh */
     layer.updateText(data, 3, 2, 0, "hey", 9);
     layer.updateText(data, 3, 2, 0, "hey", 8, 9);
-    CORRADE_COMPARE_AS(out.str(),
+    CORRADE_COMPARE_AS(out,
         "Ui::TextLayer::updateText(): remove offset 8 and size 0 out of range for a text of 7 bytes\n"
         "Ui::TextLayer::updateText(): remove offset 5 and size 3 out of range for a text of 7 bytes\n"
         "Ui::TextLayer::updateText(): remove offset 4294967295 and size 1 out of range for a text of 7 bytes\n"
@@ -6812,12 +6809,12 @@ void TextLayerTest::editTextInvalid() {
 
     DataHandle data = layer.create(0, "hello!!", {}, TextDataFlag::Editable);
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     layer.editText(data, TextEdit::RemoveAfterCursor, "ah");
     /* Test one more enum value, and the LayerDataHandle overload */
     layer.editText(dataHandleData(data), TextEdit::MoveCursorLeft, "ah");
-    CORRADE_COMPARE_AS(out.str(),
+    CORRADE_COMPARE_AS(out,
         "Ui::TextLayer::editText(): Ui::TextEdit::RemoveAfterCursor requires no text to insert\n"
         "Ui::TextLayer::editText(): Ui::TextEdit::MoveCursorLeft requires no text to insert\n",
         TestSuite::Compare::String);
@@ -7266,7 +7263,7 @@ void TextLayerTest::createSetTextTextPropertiesEditableInvalid() {
        is okay */
     layer.setText(editable2, "hey", data.properties, TextDataFlags{});
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     layer.create(0, "hello", data.properties, TextDataFlag::Editable);
     /* Should assert also if trying to pass features to a text that already has
@@ -7274,7 +7271,7 @@ void TextLayerTest::createSetTextTextPropertiesEditableInvalid() {
     layer.setText(editable, "hey", data.properties);
     /* Or if passing features that didn't have the flag but now does */
     layer.setText(nonEditable, "hey", data.properties, TextDataFlag::Editable);
-    CORRADE_COMPARE_AS(out.str(), Utility::formatString(
+    CORRADE_COMPARE_AS(out, Utility::format(
         "Ui::TextLayer::create(): {0}\n"
         "Ui::TextLayer::setText(): {0}\n"
         "Ui::TextLayer::setText(): {0}\n",
@@ -7527,7 +7524,7 @@ void TextLayerTest::invalidHandle() {
         explicit Layer(LayerHandle handle, Shared& shared): TextLayer{handle, shared} {}
     } layer{layerHandle(0, 1), shared};
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     layer.flags(DataHandle::Null);
     layer.flags(LayerDataHandle::Null);
@@ -7559,7 +7556,7 @@ void TextLayerTest::invalidHandle() {
     layer.padding(LayerDataHandle::Null);
     layer.setPadding(DataHandle::Null, {});
     layer.setPadding(LayerDataHandle::Null, {});
-    CORRADE_COMPARE_AS(out.str(),
+    CORRADE_COMPARE_AS(out,
         "Ui::TextLayer::flags(): invalid handle Ui::DataHandle::Null\n"
         "Ui::TextLayer::flags(): invalid handle Ui::LayerDataHandle::Null\n"
         "Ui::TextLayer::glyphCount(): invalid handle Ui::DataHandle::Null\n"
@@ -7639,13 +7636,13 @@ void TextLayerTest::invalidFontHandle() {
 
     DataHandle data = layer.create(0, "", {});
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     layer.create(0, "", FontHandle(0x12ab));
     layer.createGlyph(0, 0, FontHandle(0x12ab));
     layer.setText(data, "", FontHandle(0x12ab));
     layer.setGlyph(data, 0, FontHandle(0x12ab));
-    CORRADE_COMPARE(out.str(),
+    CORRADE_COMPARE(out,
         "Ui::TextLayer::create(): invalid handle Ui::FontHandle(0x12ab, 0x0)\n"
         "Ui::TextLayer::createGlyph(): invalid handle Ui::FontHandle(0x12ab, 0x0)\n"
         "Ui::TextLayer::setText(): invalid handle Ui::FontHandle(0x12ab, 0x0)\n"
@@ -7699,7 +7696,7 @@ void TextLayerTest::nonEditableText() {
     DataHandle text = layer.create(0, "", {});
     DataHandle glyph = layer.createGlyph(0, 0, {});
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     layer.cursor(text);
     layer.cursor(glyph);
@@ -7713,7 +7710,7 @@ void TextLayerTest::nonEditableText() {
     layer.updateText(glyph, 0, 0, 0, {}, 0);
     layer.editText(text, TextEdit::MoveCursorLeft, {});
     layer.editText(glyph, TextEdit::MoveCursorLeft, {});
-    CORRADE_COMPARE_AS(out.str(),
+    CORRADE_COMPARE_AS(out,
         "Ui::TextLayer::cursor(): text doesn't have Ui::TextDataFlag::Editable set\n"
         "Ui::TextLayer::cursor(): text doesn't have Ui::TextDataFlag::Editable set\n"
         "Ui::TextLayer::setCursor(): text doesn't have Ui::TextDataFlag::Editable set\n"
@@ -7778,7 +7775,7 @@ void TextLayerTest::noSharedStyleFonts() {
     DataHandle layerData = layer.create(1, "", fontHandle);
     DataHandle layerDataDynamic = layer.create(5, "", fontHandle);
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     layer.create(1, "", {});
     layer.create(4, "", {});
@@ -7788,7 +7785,7 @@ void TextLayerTest::noSharedStyleFonts() {
     layer.setText(layerDataDynamic, "", {});
     layer.setGlyph(layerData, 1, {});
     layer.setGlyph(layerDataDynamic, 1, {});
-    CORRADE_COMPARE_AS(out.str(),
+    CORRADE_COMPARE_AS(out,
         "Ui::TextLayer::create(): style 1 has no font set and no custom font was supplied\n"
         "Ui::TextLayer::create(): dynamic style 0 has no font set and no custom font was supplied\n"
         "Ui::TextLayer::createGlyph(): style 3 has no font set and no custom font was supplied\n"
@@ -7835,13 +7832,13 @@ void TextLayerTest::noFontInstance() {
 
     DataHandle data = layer.createGlyph(0, 0, {});
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     layer.create(0, "", {});
     layer.create(0, "", fontHandle2);
     layer.setText(data, "", {});
     layer.setText(data, "", fontHandle2);
-    CORRADE_COMPARE(out.str(),
+    CORRADE_COMPARE(out,
         "Ui::TextLayer::create(): Ui::FontHandle(0x0, 0x1) is an instance-less font\n"
         "Ui::TextLayer::create(): Ui::FontHandle(0x1, 0x1) is an instance-less font\n"
         "Ui::TextLayer::setText(): Ui::FontHandle(0x0, 0x1) is an instance-less font\n"
@@ -7902,11 +7899,11 @@ void TextLayerTest::styleOutOfRange() {
         explicit Layer(LayerHandle handle, Shared& shared): TextLayer{handle, shared} {}
     } layer{layerHandle(0, 1), shared};
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     layer.create(3, "", {});
     layer.createGlyph(3, 0, {});
-    CORRADE_COMPARE(out.str(),
+    CORRADE_COMPARE(out,
         "Ui::TextLayer::create(): style 3 out of range for 3 styles\n"
         "Ui::TextLayer::createGlyph(): style 3 out of range for 3 styles\n");
 }
@@ -7949,11 +7946,11 @@ void TextLayerTest::glyphOutOfRange() {
 
     DataHandle data = layer.createGlyph(2, 55, {});
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     layer.createGlyph(2, 56, {});
     layer.setGlyph(data, 56, {});
-    CORRADE_COMPARE(out.str(),
+    CORRADE_COMPARE(out,
         "Ui::TextLayer::createGlyph(): glyph 56 out of range for 56 glyphs in glyph cache font 1\n"
         "Ui::TextLayer::setGlyph(): glyph 56 out of range for 56 glyphs in glyph cache font 1\n");
 }
@@ -9707,10 +9704,10 @@ void TextLayerTest::updateNoStyleSet() {
        guarantees the same on a higher level), not needed for anything here */
     layer.setSize({1, 1}, {1, 1});
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     layer.update(LayerState::NeedsDataUpdate, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
-    CORRADE_COMPARE(out.str(), "Ui::TextLayer::update(): no style data was set\n");
+    CORRADE_COMPARE(out, "Ui::TextLayer::update(): no style data was set\n");
 }
 
 void TextLayerTest::updateNoEditingStyleSet() {
@@ -9756,10 +9753,10 @@ void TextLayerTest::updateNoEditingStyleSet() {
             {}, {}, {}, {}, {}, {});
     else CORRADE_INTERNAL_ASSERT_UNREACHABLE();
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     layer.update(LayerState::NeedsDataUpdate, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
-    CORRADE_COMPARE(out.str(), "Ui::TextLayer::update(): no editing style data was set\n");
+    CORRADE_COMPARE(out, "Ui::TextLayer::update(): no editing style data was set\n");
 }
 
 void TextLayerTest::sharedNeedsUpdateStatePropagatedToLayers() {

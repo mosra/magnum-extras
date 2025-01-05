@@ -24,9 +24,8 @@
     DEALINGS IN THE SOFTWARE.
 */
 
-#include <sstream> /** @todo remove once Debug is stream-free */
+#include <Corrade/Containers/String.h>
 #include <Corrade/TestSuite/Compare/Numeric.h>
-#include <Corrade/Utility/DebugStl.h> /** @todo remove once Debug is stream-free */
 
 #include "Magnum/Ui/Anchor.h"
 #include "Magnum/Ui/Event.h"
@@ -75,9 +74,9 @@ InputTest::InputTest() {
 }
 
 void InputTest::debugStyle() {
-    std::ostringstream out;
+    Containers::String out;
     Debug{&out} << InputStyle::Warning << InputStyle(0xef);
-    CORRADE_COMPARE(out.str(), "Ui::InputStyle::Warning Ui::InputStyle(0xef)\n");
+    CORRADE_COMPARE(out, "Ui::InputStyle::Warning Ui::InputStyle(0xef)\n");
 }
 
 void InputTest::construct() {

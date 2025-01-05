@@ -24,11 +24,9 @@
     DEALINGS IN THE SOFTWARE.
 */
 
-#include <sstream>
-#include <Corrade/Containers/StringStl.h> /** @todo remove once Debug is stream-free */
+#include <Corrade/Containers/String.h>
 #include <Corrade/TestSuite/Tester.h>
 #include <Corrade/TestSuite/Compare/String.h>
-#include <Corrade/Utility/DebugStl.h>
 
 #include "Magnum/Ui/Handle.h"
 
@@ -140,12 +138,12 @@ void HandleTest::layer() {
 void HandleTest::layerInvalid() {
     CORRADE_SKIP_IF_NO_DEBUG_ASSERT();
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     layerHandle(0x100, 0x1);
     layerHandle(0x1, 0x100);
     layerHandleId(LayerHandle::Null);
-    CORRADE_COMPARE_AS(out.str(),
+    CORRADE_COMPARE_AS(out,
         "Ui::layerHandle(): expected index to fit into 8 bits and generation into 8, got 0x100 and 0x1\n"
         "Ui::layerHandle(): expected index to fit into 8 bits and generation into 8, got 0x1 and 0x100\n"
         "Ui::layerHandleId(): the handle is null\n",
@@ -153,9 +151,9 @@ void HandleTest::layerInvalid() {
 }
 
 void HandleTest::debugLayer() {
-    std::ostringstream out;
+    Containers::String out;
     Debug{&out} << LayerHandle::Null << layerHandle(0x12, 0xab);
-    CORRADE_COMPARE(out.str(), "Ui::LayerHandle::Null Ui::LayerHandle(0x12, 0xab)\n");
+    CORRADE_COMPARE(out, "Ui::LayerHandle::Null Ui::LayerHandle(0x12, 0xab)\n");
 }
 
 void HandleTest::layerData() {
@@ -178,12 +176,12 @@ void HandleTest::layerData() {
 void HandleTest::layerDataInvalid() {
     CORRADE_SKIP_IF_NO_DEBUG_ASSERT();
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     layerDataHandle(0x100000, 0x1);
     layerDataHandle(0x1, 0x1000);
     layerDataHandleId(LayerDataHandle::Null);
-    CORRADE_COMPARE_AS(out.str(),
+    CORRADE_COMPARE_AS(out,
         "Ui::layerDataHandle(): expected index to fit into 20 bits and generation into 12, got 0x100000 and 0x1\n"
         "Ui::layerDataHandle(): expected index to fit into 20 bits and generation into 12, got 0x1 and 0x1000\n"
         "Ui::layerDataHandleId(): the handle is null\n",
@@ -191,9 +189,9 @@ void HandleTest::layerDataInvalid() {
 }
 
 void HandleTest::debugLayerData() {
-    std::ostringstream out;
+    Containers::String out;
     Debug{&out} << LayerDataHandle::Null << layerDataHandle(0x12345, 0xabc);
-    CORRADE_COMPARE(out.str(), "Ui::LayerDataHandle::Null Ui::LayerDataHandle(0x12345, 0xabc)\n");
+    CORRADE_COMPARE(out, "Ui::LayerDataHandle::Null Ui::LayerDataHandle(0x12345, 0xabc)\n");
 }
 
 void HandleTest::data() {
@@ -235,7 +233,7 @@ void HandleTest::data() {
 void HandleTest::dataInvalid() {
     CORRADE_SKIP_IF_NO_DEBUG_ASSERT();
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     dataHandle(LayerHandle::Null, 0x100000, 0x1);
     dataHandle(LayerHandle::Null, 0x1, 0x1000);
@@ -243,7 +241,7 @@ void HandleTest::dataInvalid() {
     dataHandleLayerId(DataHandle::Null);
     dataHandleId(dataHandle(layerHandle(0x1, 0x1), LayerDataHandle::Null));
     dataHandleId(DataHandle::Null);
-    CORRADE_COMPARE_AS(out.str(),
+    CORRADE_COMPARE_AS(out,
         "Ui::dataHandle(): expected index to fit into 20 bits and generation into 12, got 0x100000 and 0x1\n"
         "Ui::dataHandle(): expected index to fit into 20 bits and generation into 12, got 0x1 and 0x1000\n"
         "Ui::dataHandleLayerId(): the layer portion of Ui::DataHandle(Null, {0x1, 0x1}) is null\n"
@@ -254,9 +252,9 @@ void HandleTest::dataInvalid() {
 }
 
 void HandleTest::debugData() {
-    std::ostringstream out;
+    Containers::String out;
     Debug{&out} << DataHandle::Null << dataHandle(LayerHandle::Null, layerDataHandle(0xabcde, 0x12)) << dataHandle(layerHandle(0x34, 0x56), LayerDataHandle::Null) << dataHandle(layerHandle(0x34, 0x56), 0xabcde, 0x12);
-    CORRADE_COMPARE(out.str(), "Ui::DataHandle::Null Ui::DataHandle(Null, {0xabcde, 0x12}) Ui::DataHandle({0x34, 0x56}, Null) Ui::DataHandle({0x34, 0x56}, {0xabcde, 0x12})\n");
+    CORRADE_COMPARE(out, "Ui::DataHandle::Null Ui::DataHandle(Null, {0xabcde, 0x12}) Ui::DataHandle({0x34, 0x56}, Null) Ui::DataHandle({0x34, 0x56}, {0xabcde, 0x12})\n");
 }
 
 void HandleTest::node() {
@@ -279,12 +277,12 @@ void HandleTest::node() {
 void HandleTest::nodeInvalid() {
     CORRADE_SKIP_IF_NO_DEBUG_ASSERT();
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     nodeHandle(0x100000, 0x1);
     nodeHandle(0x1, 0x1000);
     nodeHandleId(NodeHandle::Null);
-    CORRADE_COMPARE_AS(out.str(),
+    CORRADE_COMPARE_AS(out,
         "Ui::nodeHandle(): expected index to fit into 20 bits and generation into 12, got 0x100000 and 0x1\n"
         "Ui::nodeHandle(): expected index to fit into 20 bits and generation into 12, got 0x1 and 0x1000\n"
         "Ui::nodeHandleId(): the handle is null\n",
@@ -292,9 +290,9 @@ void HandleTest::nodeInvalid() {
 }
 
 void HandleTest::debugNode() {
-    std::ostringstream out;
+    Containers::String out;
     Debug{&out} << NodeHandle::Null << nodeHandle(0x12345, 0xabc);
-    CORRADE_COMPARE(out.str(), "Ui::NodeHandle::Null Ui::NodeHandle(0x12345, 0xabc)\n");
+    CORRADE_COMPARE(out, "Ui::NodeHandle::Null Ui::NodeHandle(0x12345, 0xabc)\n");
 }
 
 void HandleTest::layouter() {
@@ -317,12 +315,12 @@ void HandleTest::layouter() {
 void HandleTest::layouterInvalid() {
     CORRADE_SKIP_IF_NO_DEBUG_ASSERT();
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     layouterHandle(0x100, 0x1);
     layouterHandle(0x1, 0x100);
     layouterHandleId(LayouterHandle::Null);
-    CORRADE_COMPARE_AS(out.str(),
+    CORRADE_COMPARE_AS(out,
         "Ui::layouterHandle(): expected index to fit into 8 bits and generation into 8, got 0x100 and 0x1\n"
         "Ui::layouterHandle(): expected index to fit into 8 bits and generation into 8, got 0x1 and 0x100\n"
         "Ui::layouterHandleId(): the handle is null\n",
@@ -330,9 +328,9 @@ void HandleTest::layouterInvalid() {
 }
 
 void HandleTest::debugLayouter() {
-    std::ostringstream out;
+    Containers::String out;
     Debug{&out} << LayouterHandle::Null << layouterHandle(0x12, 0xab);
-    CORRADE_COMPARE(out.str(), "Ui::LayouterHandle::Null Ui::LayouterHandle(0x12, 0xab)\n");
+    CORRADE_COMPARE(out, "Ui::LayouterHandle::Null Ui::LayouterHandle(0x12, 0xab)\n");
 }
 
 void HandleTest::layouterData() {
@@ -355,12 +353,12 @@ void HandleTest::layouterData() {
 void HandleTest::layouterDataInvalid() {
     CORRADE_SKIP_IF_NO_DEBUG_ASSERT();
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     layouterDataHandle(0x100000, 0x1);
     layouterDataHandle(0x1, 0x1000);
     layouterDataHandleId(LayouterDataHandle::Null);
-    CORRADE_COMPARE_AS(out.str(),
+    CORRADE_COMPARE_AS(out,
         "Ui::layouterDataHandle(): expected index to fit into 20 bits and generation into 12, got 0x100000 and 0x1\n"
         "Ui::layouterDataHandle(): expected index to fit into 20 bits and generation into 12, got 0x1 and 0x1000\n"
         "Ui::layouterDataHandleId(): the handle is null\n",
@@ -368,9 +366,9 @@ void HandleTest::layouterDataInvalid() {
 }
 
 void HandleTest::debugLayouterData() {
-    std::ostringstream out;
+    Containers::String out;
     Debug{&out} << LayouterDataHandle::Null << layouterDataHandle(0x12345, 0xabc);
-    CORRADE_COMPARE(out.str(), "Ui::LayouterDataHandle::Null Ui::LayouterDataHandle(0x12345, 0xabc)\n");
+    CORRADE_COMPARE(out, "Ui::LayouterDataHandle::Null Ui::LayouterDataHandle(0x12345, 0xabc)\n");
 }
 
 void HandleTest::layout() {
@@ -412,7 +410,7 @@ void HandleTest::layout() {
 void HandleTest::layoutInvalid() {
     CORRADE_SKIP_IF_NO_DEBUG_ASSERT();
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     layoutHandle(LayouterHandle::Null, 0x100000, 0x1);
     layoutHandle(LayouterHandle::Null, 0x1, 0x1000);
@@ -420,7 +418,7 @@ void HandleTest::layoutInvalid() {
     layoutHandleLayouterId(LayoutHandle::Null);
     layoutHandleId(layoutHandle(layouterHandle(0x1, 0x1), LayouterDataHandle::Null));
     layoutHandleId(LayoutHandle::Null);
-    CORRADE_COMPARE_AS(out.str(),
+    CORRADE_COMPARE_AS(out,
         "Ui::layoutHandle(): expected index to fit into 20 bits and generation into 12, got 0x100000 and 0x1\n"
         "Ui::layoutHandle(): expected index to fit into 20 bits and generation into 12, got 0x1 and 0x1000\n"
         "Ui::layoutHandleLayouterId(): the layouter portion of Ui::LayoutHandle(Null, {0x1, 0x1}) is null\n"
@@ -431,9 +429,9 @@ void HandleTest::layoutInvalid() {
 }
 
 void HandleTest::debugLayout() {
-    std::ostringstream out;
+    Containers::String out;
     Debug{&out} << LayoutHandle::Null << layoutHandle(LayouterHandle::Null, layouterDataHandle(0xabcde, 0x12)) << layoutHandle(layouterHandle(0x34, 0x56), LayouterDataHandle::Null) << layoutHandle(layouterHandle(0x34, 0x56), 0xabcde, 0x12);
-    CORRADE_COMPARE(out.str(), "Ui::LayoutHandle::Null Ui::LayoutHandle(Null, {0xabcde, 0x12}) Ui::LayoutHandle({0x34, 0x56}, Null) Ui::LayoutHandle({0x34, 0x56}, {0xabcde, 0x12})\n");
+    CORRADE_COMPARE(out, "Ui::LayoutHandle::Null Ui::LayoutHandle(Null, {0xabcde, 0x12}) Ui::LayoutHandle({0x34, 0x56}, Null) Ui::LayoutHandle({0x34, 0x56}, {0xabcde, 0x12})\n");
 }
 
 void HandleTest::animator() {
@@ -456,12 +454,12 @@ void HandleTest::animator() {
 void HandleTest::animatorInvalid() {
     CORRADE_SKIP_IF_NO_DEBUG_ASSERT();
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     animatorHandle(0x100, 0x1);
     animatorHandle(0x1, 0x100);
     animatorHandleId(AnimatorHandle::Null);
-    CORRADE_COMPARE_AS(out.str(),
+    CORRADE_COMPARE_AS(out,
         "Ui::animatorHandle(): expected index to fit into 8 bits and generation into 8, got 0x100 and 0x1\n"
         "Ui::animatorHandle(): expected index to fit into 8 bits and generation into 8, got 0x1 and 0x100\n"
         "Ui::animatorHandleId(): the handle is null\n",
@@ -469,9 +467,9 @@ void HandleTest::animatorInvalid() {
 }
 
 void HandleTest::debugAnimator() {
-    std::ostringstream out;
+    Containers::String out;
     Debug{&out} << AnimatorHandle::Null << animatorHandle(0x12, 0xab);
-    CORRADE_COMPARE(out.str(), "Ui::AnimatorHandle::Null Ui::AnimatorHandle(0x12, 0xab)\n");
+    CORRADE_COMPARE(out, "Ui::AnimatorHandle::Null Ui::AnimatorHandle(0x12, 0xab)\n");
 }
 
 void HandleTest::animatorData() {
@@ -494,12 +492,12 @@ void HandleTest::animatorData() {
 void HandleTest::animatorDataInvalid() {
     CORRADE_SKIP_IF_NO_DEBUG_ASSERT();
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     animatorDataHandle(0x100000, 0x1);
     animatorDataHandle(0x1, 0x1000);
     animatorDataHandleId(AnimatorDataHandle::Null);
-    CORRADE_COMPARE_AS(out.str(),
+    CORRADE_COMPARE_AS(out,
         "Ui::animatorDataHandle(): expected index to fit into 20 bits and generation into 12, got 0x100000 and 0x1\n"
         "Ui::animatorDataHandle(): expected index to fit into 20 bits and generation into 12, got 0x1 and 0x1000\n"
         "Ui::animatorDataHandleId(): the handle is null\n",
@@ -507,9 +505,9 @@ void HandleTest::animatorDataInvalid() {
 }
 
 void HandleTest::debugAnimatorData() {
-    std::ostringstream out;
+    Containers::String out;
     Debug{&out} << AnimatorDataHandle::Null << animatorDataHandle(0x12345, 0xabc);
-    CORRADE_COMPARE(out.str(), "Ui::AnimatorDataHandle::Null Ui::AnimatorDataHandle(0x12345, 0xabc)\n");
+    CORRADE_COMPARE(out, "Ui::AnimatorDataHandle::Null Ui::AnimatorDataHandle(0x12345, 0xabc)\n");
 }
 
 void HandleTest::animation() {
@@ -551,7 +549,7 @@ void HandleTest::animation() {
 void HandleTest::animationInvalid() {
     CORRADE_SKIP_IF_NO_DEBUG_ASSERT();
 
-    std::ostringstream out;
+    Containers::String out;
     Error redirectError{&out};
     animationHandle(AnimatorHandle::Null, 0x100000, 0x1);
     animationHandle(AnimatorHandle::Null, 0x1, 0x1000);
@@ -559,7 +557,7 @@ void HandleTest::animationInvalid() {
     animationHandleAnimatorId(AnimationHandle::Null);
     animationHandleId(animationHandle(animatorHandle(0x1, 0x1), AnimatorDataHandle::Null));
     animationHandleId(AnimationHandle::Null);
-    CORRADE_COMPARE_AS(out.str(),
+    CORRADE_COMPARE_AS(out,
         "Ui::animationHandle(): expected index to fit into 20 bits and generation into 12, got 0x100000 and 0x1\n"
         "Ui::animationHandle(): expected index to fit into 20 bits and generation into 12, got 0x1 and 0x1000\n"
         "Ui::animationHandleAnimatorId(): the animator portion of Ui::AnimationHandle(Null, {0x1, 0x1}) is null\n"
@@ -570,9 +568,9 @@ void HandleTest::animationInvalid() {
 }
 
 void HandleTest::debugAnimation() {
-    std::ostringstream out;
+    Containers::String out;
     Debug{&out} << AnimationHandle::Null << animationHandle(AnimatorHandle::Null, animatorDataHandle(0xabcde, 0x12)) << animationHandle(animatorHandle(0x34, 0x56), AnimatorDataHandle::Null) << animationHandle(animatorHandle(0x34, 0x56), 0xabcde, 0x12);
-    CORRADE_COMPARE(out.str(), "Ui::AnimationHandle::Null Ui::AnimationHandle(Null, {0xabcde, 0x12}) Ui::AnimationHandle({0x34, 0x56}, Null) Ui::AnimationHandle({0x34, 0x56}, {0xabcde, 0x12})\n");
+    CORRADE_COMPARE(out, "Ui::AnimationHandle::Null Ui::AnimationHandle(Null, {0xabcde, 0x12}) Ui::AnimationHandle({0x34, 0x56}, Null) Ui::AnimationHandle({0x34, 0x56}, {0xabcde, 0x12})\n");
 }
 
 }}}}
