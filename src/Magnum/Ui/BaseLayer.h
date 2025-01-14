@@ -147,12 +147,12 @@ struct BaseLayerCommonStyleUniform {
      * @parblock
      *
      * @m_div{m-col-s-6 m-text-center m-nopadt m-nopadx}
-     * @image html ui-baselayer-blur.png width=256px
+     * @image html ui-baselayer-flag-blur.png width=256px
      * Default value of @cpp 1.0f @ce
      * @m_enddiv
      *
      * @m_div{m-col-s-6 m-text-center m-nopadt m-nopadx}
-     * @image html ui-baselayer-blur-alpha.png width=256px
+     * @image html ui-baselayer-flag-blur-alpha.png width=256px
      * Value of @cpp 0.75f @ce
      * @m_enddiv
      *
@@ -900,12 +900,12 @@ enum class BaseLayerSharedFlag: UnsignedByte {
      * @parblock
      *
      * @m_div{m-col-m-6 m-text-center m-nopadt m-nopadx}
-     * @image html ui-baselayer-default.png width=256px
+     * @image html ui-baselayer-flag-default.png width=256px
      * Without @ref BaseLayerSharedFlag::BackgroundBlur
      * @m_enddiv
      *
      * @m_div{m-col-m-6 m-text-center m-nopadt m-nopadx}
-     * @image html ui-baselayer-blur.png width=256px
+     * @image html ui-baselayer-flag-blur.png width=256px
      * With @ref BaseLayerSharedFlag::BackgroundBlur
      * @m_enddiv
      *
@@ -970,12 +970,12 @@ enum class BaseLayerSharedFlag: UnsignedByte {
      * @parblock
      *
      * @m_div{m-col-m-6 m-text-center m-nopadt m-nopadx}
-     * @image html ui-baselayer-blur-textured.png width=256px
+     * @image html ui-baselayer-flag-blur-textured.png width=256px
      * Default @ref BaseLayerSharedFlag::Textured behavior
      * @m_enddiv
      *
      * @m_div{m-col-m-6 m-text-center m-nopadt m-nopadx}
-     * @image html ui-baselayer-blur-textured-mask.png width=256px
+     * @image html ui-baselayer-flag-blur-textured-mask.png width=256px
      * With @ref BaseLayerSharedFlag::TextureMask
      * @m_enddiv
      *

@@ -45,8 +45,8 @@ else()
     message(FATAL_ERROR "No windowless application available on this platform")
 endif()
 
-add_executable(ui-baselayer-flags ui-baselayer-flags.cpp)
-target_link_libraries(ui-baselayer-flags PRIVATE
+add_executable(ui-baselayer ui-baselayer.cpp)
+target_link_libraries(ui-baselayer PRIVATE
     Magnum::GL
     Magnum::Trade
     Magnum::WindowlessApplication

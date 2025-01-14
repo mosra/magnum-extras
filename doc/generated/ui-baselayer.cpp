@@ -59,15 +59,15 @@ using namespace Magnum::Math::Literals;
 
 namespace {
 
-struct UiBaseLayerFlags: Platform::WindowlessApplication {
-    explicit UiBaseLayerFlags(const Arguments& arguments): Platform::WindowlessApplication{arguments} {}
+struct UiBaseLayer: Platform::WindowlessApplication {
+    explicit UiBaseLayer(const Arguments& arguments): Platform::WindowlessApplication{arguments} {}
 
     int exec() override;
 };
 
 constexpr Vector2i ImageSize{512, 256};
 
-int UiBaseLayerFlags::exec() {
+int UiBaseLayer::exec() {
     GL::Renderer::setBlendFunction(GL::Renderer::BlendFunction::One, GL::Renderer::BlendFunction::OneMinusSourceAlpha);
 
     /* The actual framebuffer size is 4x the UI size */
@@ -125,6 +125,16 @@ int UiBaseLayerFlags::exec() {
         {});
     Ui::BaseLayerGL& layer = ui.setLayerInstance(Containers::pointer<Ui::BaseLayerGL>(ui.createLayer(), layerShared));
 
+    {
+        renderer.compositingTexture().setSubImage(0, {}, *backgroundImage);
+
+        Ui::NodeHandle node = ui.createNode({8, 8}, {112, 48});
+        layer.create(0, node);
+        ui.draw();
+        ui.removeNode(node);
+        converter->convertToFile(renderer.compositingFramebuffer().read({{}, ImageSize}, {PixelFormat::RGBA8Unorm}), "ui-baselayer-flag-default.png");
+    }
+
     Ui::BaseLayerGL::Shared layerSharedBackgroundBlur{Ui::BaseLayerGL::Shared::Configuration{1}
         .addFlags(Ui::BaseLayerSharedFlag::BackgroundBlur)
         .setBackgroundBlurRadius(31)};
@@ -139,6 +149,16 @@ int UiBaseLayerFlags::exec() {
     Ui::BaseLayerGL& layerBackgroundBlur = ui.setLayerInstance(Containers::pointer<Ui::BaseLayerGL>(ui.createLayer(), layerSharedBackgroundBlur));
     layerBackgroundBlur
         .setBackgroundBlurPassCount(8);
+
+    {
+        renderer.compositingTexture().setSubImage(0, {}, *backgroundImage);
+
+        Ui::NodeHandle node = ui.createNode({8, 8}, {112, 48});
+        layerBackgroundBlur.create(0, node);
+        ui.draw();
+        ui.removeNode(node);
+        converter->convertToFile(renderer.compositingFramebuffer().read({{}, ImageSize}, {PixelFormat::RGBA8Unorm}), "ui-baselayer-flag-blur.png");
+    }
 
     Ui::BaseLayerGL::Shared layerSharedBackgroundBlurAlpha{Ui::BaseLayerGL::Shared::Configuration{1}
         .addFlags(Ui::BaseLayerSharedFlag::BackgroundBlur)
@@ -155,6 +175,16 @@ int UiBaseLayerFlags::exec() {
     Ui::BaseLayerGL& layerBackgroundBlurAlpha = ui.setLayerInstance(Containers::pointer<Ui::BaseLayerGL>(ui.createLayer(), layerSharedBackgroundBlurAlpha));
     layerBackgroundBlurAlpha
         .setBackgroundBlurPassCount(8);
+
+    {
+        renderer.compositingTexture().setSubImage(0, {}, *backgroundImage);
+
+        Ui::NodeHandle node = ui.createNode({8, 8}, {112, 48});
+        layerBackgroundBlurAlpha.create(0, node);
+        ui.draw();
+        ui.removeNode(node);
+        converter->convertToFile(renderer.compositingFramebuffer().read({{}, ImageSize}, {PixelFormat::RGBA8Unorm}), "ui-baselayer-flag-blur-alpha.png");
+    }
 
     Ui::BaseLayerGL::Shared layerSharedBackgroundBlurTextured{Ui::BaseLayerGL::Shared::Configuration{1}
         .addFlags(Ui::BaseLayerSharedFlag::BackgroundBlur|
@@ -174,6 +204,16 @@ int UiBaseLayerFlags::exec() {
     layerBackgroundBlurTextured
         .setBackgroundBlurPassCount(8)
         .setTexture(texture);
+
+    {
+        renderer.compositingTexture().setSubImage(0, {}, *backgroundImage);
+
+        Ui::NodeHandle node = ui.createNode({8, 8}, {112, 48});
+        layerBackgroundBlurTextured.create(0, node);
+        ui.draw();
+        ui.removeNode(node);
+        converter->convertToFile(renderer.compositingFramebuffer().read({{}, ImageSize}, {PixelFormat::RGBA8Unorm}), "ui-baselayer-flag-blur-textured.png");
+    }
 
     Ui::BaseLayerGL::Shared layerSharedBackgroundBlurTextureMask{Ui::BaseLayerGL::Shared::Configuration{1}
         .addFlags(Ui::BaseLayerSharedFlag::BackgroundBlur|
@@ -198,42 +238,10 @@ int UiBaseLayerFlags::exec() {
         renderer.compositingTexture().setSubImage(0, {}, *backgroundImage);
 
         Ui::NodeHandle node = ui.createNode({8, 8}, {112, 48});
-        layer.create(0, node);
-        ui.draw();
-        ui.removeNode(node);
-        converter->convertToFile(renderer.compositingFramebuffer().read({{}, ImageSize}, {PixelFormat::RGBA8Unorm}), "ui-baselayer-default.png");
-    } {
-        renderer.compositingTexture().setSubImage(0, {}, *backgroundImage);
-
-        Ui::NodeHandle node = ui.createNode({8, 8}, {112, 48});
-        layerBackgroundBlur.create(0, node);
-        ui.draw();
-        ui.removeNode(node);
-        converter->convertToFile(renderer.compositingFramebuffer().read({{}, ImageSize}, {PixelFormat::RGBA8Unorm}), "ui-baselayer-blur.png");
-    }  {
-        renderer.compositingTexture().setSubImage(0, {}, *backgroundImage);
-
-        Ui::NodeHandle node = ui.createNode({8, 8}, {112, 48});
-        layerBackgroundBlurAlpha.create(0, node);
-        ui.draw();
-        ui.removeNode(node);
-        converter->convertToFile(renderer.compositingFramebuffer().read({{}, ImageSize}, {PixelFormat::RGBA8Unorm}), "ui-baselayer-blur-alpha.png");
-    } {
-        renderer.compositingTexture().setSubImage(0, {}, *backgroundImage);
-
-        Ui::NodeHandle node = ui.createNode({8, 8}, {112, 48});
-        layerBackgroundBlurTextured.create(0, node);
-        ui.draw();
-        ui.removeNode(node);
-        converter->convertToFile(renderer.compositingFramebuffer().read({{}, ImageSize}, {PixelFormat::RGBA8Unorm}), "ui-baselayer-blur-textured.png");
-    } {
-        renderer.compositingTexture().setSubImage(0, {}, *backgroundImage);
-
-        Ui::NodeHandle node = ui.createNode({8, 8}, {112, 48});
         layerBackgroundBlurTextureMask.create(0, node);
         ui.draw();
         ui.removeNode(node);
-        converter->convertToFile(renderer.compositingFramebuffer().read({{}, ImageSize}, {PixelFormat::RGBA8Unorm}), "ui-baselayer-blur-textured-mask.png");
+        converter->convertToFile(renderer.compositingFramebuffer().read({{}, ImageSize}, {PixelFormat::RGBA8Unorm}), "ui-baselayer-flag-blur-textured-mask.png");
     }
 
     return 0;
@@ -241,4 +249,4 @@ int UiBaseLayerFlags::exec() {
 
 }
 
-MAGNUM_WINDOWLESSAPPLICATION_MAIN(UiBaseLayerFlags)
+MAGNUM_WINDOWLESSAPPLICATION_MAIN(UiBaseLayer)
