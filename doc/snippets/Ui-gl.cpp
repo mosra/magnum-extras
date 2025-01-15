@@ -27,6 +27,7 @@
 #include <Corrade/PluginManager/Manager.h>
 #include <Magnum/GL/DefaultFramebuffer.h>
 #include <Magnum/GL/Renderer.h>
+#include <Magnum/GL/TextureArray.h>
 #include <Magnum/Text/AbstractFont.h>
 #include <Magnum/Trade/AbstractImporter.h>
 
@@ -44,6 +45,7 @@
 #define DOXYGEN_IGNORE(...) __VA_ARGS__
 
 using namespace Magnum;
+using namespace Math::Literals;
 
 /* Make sure the name doesn't conflict with any other snippets to avoid linker
    warnings, unlike with `int main()` there now has to be a declaration to
@@ -129,6 +131,90 @@ DOXYGEN_ELLIPSIS()
 
 ui.setBaseLayerInstance(Containers::pointer<Ui::BaseLayerGL>(DOXYGEN_ELLIPSIS(ui.createLayer(), shared)));
 /* [UserInterfaceGL-setup-layer] */
+}
+
+{
+/* [BaseLayer-setup-shared] */
+Ui::BaseLayerGL::Shared baseLayerShared{
+    Ui::BaseLayer::Shared::Configuration{3}
+};
+/* [BaseLayer-setup-shared] */
+
+Ui::AbstractUserInterface ui{{100, 100}};
+/* [BaseLayer-setup] */
+Ui::BaseLayer& baseLayer = ui.setLayerInstance(
+    Containers::pointer<Ui::BaseLayerGL>(ui.createLayer(), baseLayerShared));
+/* [BaseLayer-setup] */
+static_cast<void>(baseLayer);
+}
+
+{
+Ui::UserInterfaceGL ui{NoCreate};
+Ui::BaseLayerGL::Shared baseLayerShared{Ui::BaseLayer::Shared::Configuration{1}};
+/* [BaseLayer-setup-implicit] */
+ui.setBaseLayerInstance(
+    Containers::pointer<Ui::BaseLayerGL>(ui.createLayer(), baseLayerShared));
+/* [BaseLayer-setup-implicit] */
+}
+
+{
+Ui::UserInterfaceGL ui{NoCreate};
+/* [BaseLayer-style-textured] */
+Ui::BaseLayerGL::Shared texturedLayerShared{
+    Ui::BaseLayerGL::Shared::Configuration{DOXYGEN_ELLIPSIS(1)}
+        .addFlags(Ui::BaseLayerSharedFlag::Textured)
+};
+texturedLayerShared.setStyle(DOXYGEN_ELLIPSIS(Ui::BaseLayerCommonStyleUniform{}), {
+    Ui::BaseLayerStyleUniform{}, /* 0 */
+    Ui::BaseLayerStyleUniform{}  /* 1 */
+        .setOutlineWidth(2.0f)
+        .setOutlineColor(0xdcdcdcff_rgbaf*0.25f),
+    Ui::BaseLayerStyleUniform{}  /* 2 */
+        .setCornerRadius(12.0f)
+}, {});
+
+Ui::BaseLayerGL& texturedLayer = ui.setLayerInstance(
+    Containers::pointer<Ui::BaseLayerGL>(ui.createLayer(), texturedLayerShared));
+GL::Texture2DArray texture;
+DOXYGEN_ELLIPSIS()
+texturedLayer.setTexture(texture);
+
+DOXYGEN_ELLIPSIS()
+
+Ui::NodeHandle image = DOXYGEN_ELLIPSIS({});
+Ui::NodeHandle outlined = DOXYGEN_ELLIPSIS({});
+Ui::NodeHandle avatar = DOXYGEN_ELLIPSIS({});
+texturedLayer.create(0, image);
+texturedLayer.create(1, outlined);
+Ui::DataHandle avatarData = texturedLayer.create(2, avatar);
+texturedLayer.setTextureCoordinates(avatarData, {0.4f, 0.0f, 0.0f}, {0.25f, 0.5f});
+/* [BaseLayer-style-textured] */
+}
+
+{
+Ui::UserInterfaceGL ui{NoCreate};
+/* [BaseLayer-style-background-blur] */
+ui.setRendererInstance(Containers::pointer<Ui::RendererGL>(
+    Ui::RendererGL::Flag::CompositingFramebuffer));
+
+Ui::BaseLayerGL::Shared blurLayerShared{
+    Ui::BaseLayerGL::Shared::Configuration{DOXYGEN_ELLIPSIS(1)}
+        .addFlags(Ui::BaseLayerSharedFlag::BackgroundBlur)
+        .setBackgroundBlurRadius(DOXYGEN_ELLIPSIS(4))
+};
+blurLayerShared.setStyle(DOXYGEN_ELLIPSIS(Ui::BaseLayerCommonStyleUniform{}), {
+    Ui::BaseLayerStyleUniform{}  /* 0 */
+        .setCornerRadius(12.0f)
+        .setColor(0xffffffff_rgbaf*0.667f)
+}, {});
+Ui::BaseLayer& blurLayer = ui.setLayerInstance(
+    Containers::pointer<Ui::BaseLayerGL>(ui.createLayer(), blurLayerShared));
+
+DOXYGEN_ELLIPSIS()
+
+Ui::NodeHandle background = DOXYGEN_ELLIPSIS({});
+blurLayer.create(0, background);
+/* [BaseLayer-style-background-blur] */
 }
 
 {

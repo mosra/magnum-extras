@@ -26,6 +26,7 @@
 
 #include <Corrade/Containers/Function.h>
 #include <Corrade/Containers/GrowableArray.h>
+#include <Corrade/Containers/StridedArrayView.h>
 #include <Corrade/Containers/String.h>
 #include <Magnum/Animation/Easing.h>
 
@@ -187,6 +188,216 @@ Ui::FocusEvent event{{}};
 if(!ui.focusEvent(node, event))
     ui.focusEvent(Ui::NodeHandle::Null, event);
 /* [AbstractUserInterface-focusEvent-blur-if-not-focusable] */
+}
+
+{
+struct Shared: Ui::BaseLayer::Shared {
+    explicit Shared(): Ui::BaseLayer::Shared::Shared{Configuration{1}} {}
+
+    void doSetStyle(const Ui::BaseLayerCommonStyleUniform&, Containers::ArrayView<const Ui::BaseLayerStyleUniform>) override {}
+} baseLayerShared;
+/* [BaseLayer-setup-style] */
+baseLayerShared.setStyle(Ui::BaseLayerCommonStyleUniform{}, {
+    Ui::BaseLayerStyleUniform{}, /* Style 0, default */
+    Ui::BaseLayerStyleUniform{}  /* Style 1 */
+        .setColor(0x2f83cc_rgbf),
+    Ui::BaseLayerStyleUniform{}  /* Style 2 */
+        .setColor(0x00000000_rgbaf)
+        .setOutlineColor(0xdcdcdc_rgbf)
+        .setOutlineWidth(2.0f)
+}, {});
+/* [BaseLayer-setup-style] */
+
+struct BaseLayer: Ui::BaseLayer {
+    explicit BaseLayer(Ui::LayerHandle layer, Ui::BaseLayer::Shared& shared): Ui::BaseLayer{layer, shared} {}
+};
+Ui::AbstractUserInterface ui{{100, 100}};
+Ui::BaseLayer& baseLayer = ui.setLayerInstance(Containers::pointer<BaseLayer>(ui.createLayer(), baseLayerShared));
+{
+/* [BaseLayer-create] */
+Ui::NodeHandle blueBox = ui.createNode(DOXYGEN_ELLIPSIS({}, {}));
+
+baseLayer.create(1, blueBox);
+/* [BaseLayer-create] */
+}
+
+{
+/* [BaseLayer-style-enums] */
+enum class BaseLayerStyle {
+    Default,
+    Blue,
+    Outline,
+    Count
+};
+
+Ui::BaseLayerStyleUniform uniforms[Int(BaseLayerStyle::Count)];
+uniforms[Int(BaseLayerStyle::Blue)]
+    .setColor(0x2f83cc_rgbf);
+uniforms[Int(BaseLayerStyle::Outline)]
+    .setColor(0x00000000_rgbaf)
+    .setOutlineColor(0xdcdcdc_rgbf)
+    .setOutlineWidth(2.0f);
+baseLayerShared.setStyle(Ui::BaseLayerCommonStyleUniform{}, uniforms, {});
+
+DOXYGEN_ELLIPSIS(Ui::NodeHandle blueBox{};)
+
+baseLayer.create(BaseLayerStyle::Blue, blueBox);
+/* [BaseLayer-style-enums] */
+}
+
+{
+/* [BaseLayer-style-color1] */
+baseLayerShared.setStyle(DOXYGEN_ELLIPSIS(Ui::BaseLayerCommonStyleUniform{}), {
+    Ui::BaseLayerStyleUniform{} /* 0 */
+        .setColor(0x2f83cc_rgbf),
+    Ui::BaseLayerStyleUniform{} /* 1 */
+        .setColor(0xdcdcdc_rgbf, 0xa5c9ea_rgbf)
+}, {});
+
+DOXYGEN_ELLIPSIS()
+
+Ui::NodeHandle blueBox = DOXYGEN_ELLIPSIS({});
+baseLayer.create(0, blueBox);
+
+Ui::NodeHandle gradient = DOXYGEN_ELLIPSIS({});
+baseLayer.create(1, gradient);
+/* [BaseLayer-style-color1] */
+
+/* [BaseLayer-style-color2] */
+Ui::NodeHandle coloredGradient = DOXYGEN_ELLIPSIS({});
+Ui::DataHandle coloredGradientData = baseLayer.create(1, coloredGradient);
+baseLayer.setColor(coloredGradientData, 0x3bd267_rgbf);
+
+Ui::NodeHandle fadedGradient = DOXYGEN_ELLIPSIS({});
+ui.setNodeOpacity(fadedGradient, 0.25f);
+baseLayer.create(1, fadedGradient);
+/* [BaseLayer-style-color2] */
+}
+
+{
+/* [BaseLayer-style-rounded-corners] */
+baseLayerShared.setStyle(
+    Ui::BaseLayerCommonStyleUniform{}
+        .setSmoothness(1.0f),
+    {
+        Ui::BaseLayerStyleUniform{} /* 0 */
+            .setCornerRadius(8.0f)
+            .setColor(0xcd3431_rgbf),
+        Ui::BaseLayerStyleUniform{} /* 1 */
+            /* Top left, bottom left, top right, bottom right */
+            .setCornerRadius({8.0f, 1.0f, 8.0f, 1.0f})
+            .setColor(0xdcdcdc_rgbf)
+    }, {});
+
+DOXYGEN_ELLIPSIS()
+
+Ui::NodeHandle heading = ui.createNode(DOXYGEN_ELLIPSIS({}, {}));
+Ui::NodeHandle close = ui.createNode(heading, DOXYGEN_ELLIPSIS({}, {}));
+baseLayer.create(1, heading);
+baseLayer.create(0, close);
+/* [BaseLayer-style-rounded-corners] */
+}
+
+{
+/* [BaseLayer-style-outline] */
+baseLayerShared.setStyle(DOXYGEN_ELLIPSIS(Ui::BaseLayerCommonStyleUniform{}), {
+    Ui::BaseLayerStyleUniform{} /* 0 */
+        .setColor(0x00000000_rgbaf)
+        .setOutlineColor(0xdcdcdc_rgbf)
+        .setOutlineWidth(1.0f),
+    Ui::BaseLayerStyleUniform{} /* 1 */
+        .setColor(0xa5c9ea_rgbf)
+        .setOutlineColor(0x405363_rgbf)
+        /* Left, top, right, bottom */
+        .setOutlineWidth({1.0f, 1.0f, 16.0f, 1.0f})
+        .setCornerRadius(12.0f)
+        .setInnerOutlineCornerRadius(11.0f),
+    Ui::BaseLayerStyleUniform{} /* 2 */
+        .setColor(0x2a703f_rgbf)
+        .setOutlineColor(0x3bd267_rgbf)
+        .setOutlineWidth(2.0f)
+        .setCornerRadius(2.0f)
+        .setInnerOutlineCornerRadius(10.0f)
+}, {});
+
+DOXYGEN_ELLIPSIS()
+
+Ui::NodeHandle frame = DOXYGEN_ELLIPSIS({});
+Ui::NodeHandle toggle = DOXYGEN_ELLIPSIS({});
+Ui::NodeHandle radio = DOXYGEN_ELLIPSIS({});
+baseLayer.create(0, frame);
+baseLayer.create(1, toggle);
+baseLayer.create(2, radio);
+/* [BaseLayer-style-outline] */
+}
+
+{
+Float percentage{};
+/* [BaseLayer-style-outline-data-width] */
+baseLayerShared.setStyle(DOXYGEN_ELLIPSIS(Ui::BaseLayerCommonStyleUniform{}), {
+    Ui::BaseLayerStyleUniform{} /* 0 */
+        .setColor(0x3bd267_rgbf)
+        .setOutlineColor(0x405363_rgbf)
+        .setCornerRadius(6.0f)
+        .setInnerOutlineCornerRadius(6.0f)
+}, {});
+
+DOXYGEN_ELLIPSIS()
+
+Ui::NodeHandle progress = DOXYGEN_ELLIPSIS({});
+Ui::DataHandle progressData = baseLayer.create(0, progress);
+baseLayer.setOutlineWidth(progressData, /* Left, top, right, bottom */
+    {0.0f, 0.0f, ui.nodeSize(progress).x()*(100.0f - percentage)/100.0f, 0.0f});
+/* [BaseLayer-style-outline-data-width] */
+}
+
+{
+/* [BaseLayer-style-padding] */
+baseLayerShared.setStyle(DOXYGEN_ELLIPSIS(Ui::BaseLayerCommonStyleUniform{}), {
+    Ui::BaseLayerStyleUniform{} /* 0 */
+        .setColor(0x00000000_rgbaf)
+        .setOutlineColor(0xa5c9ea_rgbf)
+        .setOutlineWidth(1.0f)
+        .setCornerRadius(5.0f)
+        .setInnerOutlineCornerRadius(4.0f),
+    Ui::BaseLayerStyleUniform{} /* 1 */
+        .setColor(0xa5c9ea_rgbf)
+        .setCornerRadius(2.0f)
+}, {
+    {},                         /* 0 */
+    Vector4{3.0f}               /* 1 */
+});
+
+DOXYGEN_ELLIPSIS()
+
+Ui::NodeHandle button = DOXYGEN_ELLIPSIS({});
+baseLayer.create(0, button);
+baseLayer.create(1, button);
+/* [BaseLayer-style-padding] */
+}
+
+{
+/* [BaseLayer-style-padding-data] */
+baseLayerShared.setStyle(DOXYGEN_ELLIPSIS(Ui::BaseLayerCommonStyleUniform{}), {
+    Ui::BaseLayerStyleUniform{} /* 0 */
+        .setColor(0x405363_rgbf*0.9f, 0x405363_rgbf*1.1f)
+        .setCornerRadius(3.0f),
+    Ui::BaseLayerStyleUniform{} /* 1 */
+        .setColor(0x3bd267_rgbf*1.1f, 0x3bd267_rgbf*0.9f)
+        .setCornerRadius(6.0f)
+}, {
+    Vector4{3.0f},              /* 0 */
+    {},                         /* 1 */
+});
+
+DOXYGEN_ELLIPSIS()
+
+Ui::NodeHandle slider = ui.createNode(DOXYGEN_ELLIPSIS({}, {}));
+Ui::NodeHandle bar = ui.createNode(slider, {}, ui.nodeSize(slider));
+baseLayer.create(0, slider);
+baseLayer.create(1, bar);
+/* [BaseLayer-style-padding-data] */
+}
 }
 
 {

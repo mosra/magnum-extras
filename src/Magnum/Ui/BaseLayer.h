@@ -27,7 +27,7 @@
 */
 
 /** @file
- * @brief Class @ref Magnum::Ui::BaseLayer, struct @ref Magnum::Ui::BaseLayerCommonStyleUniform, @ref Magnum::Ui::BaseLayerStyleUniform
+ * @brief Class @ref Magnum::Ui::BaseLayer, struct @ref Magnum::Ui::BaseLayerCommonStyleUniform, @ref Magnum::Ui::BaseLayerStyleUniform, enum @ref Magnum::Ui::BaseLayerSharedFlag, enum set @ref Magnum::Ui::BaseLayerSharedFlags
  * @m_since_latest
  */
 
@@ -41,6 +41,9 @@ namespace Magnum { namespace Ui {
 /**
 @brief Properties common to all @ref BaseLayer style uniforms
 @m_since_latest
+
+See the @ref BaseLayer class documentation for information about setting up an
+instance of the base layer and using it.
 
 Together with one or more @ref BaseLayerStyleUniform instances contains style
 properties that are used by the @ref BaseLayer shaders to draw the layer data,
@@ -168,6 +171,9 @@ struct BaseLayerCommonStyleUniform {
 /**
 @brief @ref BaseLayer style uniform
 @m_since_latest
+
+See the @ref BaseLayer class documentation for information about setting up an
+instance of the base layer and using it.
 
 Instances of this class together with @ref BaseLayerCommonStyleUniform contain
 style properties that are used by the @ref BaseLayer shaders to draw the layer
@@ -398,12 +404,267 @@ struct BaseLayerStyleUniform {
 @brief Base layer
 @m_since_latest
 
-Draws quads with a color gradient, variable rounded corners and outline. You'll
-most likely instantiate the class through @ref BaseLayerGL, which contains a
-concrete OpenGL implementation.
-@see @ref UserInterface::baseLayer(),
-    @ref UserInterface::setBaseLayerInstance(), @ref StyleFeature::BaseLayer,
-    @ref BaseLayerStyleAnimator
+Draws quads with a color gradient, variable rounded corners and outline,
+optionally with texturing and background blur.
+
+@section Ui-BaseLayer-setup Setting up a base layer instance
+
+If you create a @ref UserInterfaceGL instance with a style and don't exclude
+@ref StyleFeature::BaseLayer, an implicit instance of the @ref BaseLayerGL
+subclass, configured for use with builtin widgets, is already provided and
+available through @ref UserInterface::baseLayer().
+
+For a custom instance, you first need to instantiate @ref BaseLayer::Shared,
+which contains GPU shaders and style definitions. It takes a
+@ref BaseLayer::Shared::Configuration instance, where at the very least you
+have to specify how many distinct visual *styles* you intend to use --- which
+is for example the number @cpp 3 @ce in the following snippet:
+
+@snippet Ui-gl.cpp BaseLayer-setup-shared
+
+The shared instance, in this case a concrete @ref BaseLayerGL::Shared subclass
+for the OpenGL implementation of this layer, is then passed to the layer
+constructor alongside a fresh @ref AbstractUserInterface::createLayer() handle,
+and is expected to stay alive for the whole layer lifetime. The shared instance
+can be used by multiple layers, for example if the application wants to have a
+dedicated layer for very dynamic UI content, or when it needs draw ordering
+that would be impossible with just one layer instance. If you want to supply an
+instance for the implicit @ref UserInterface::baseLayer(), pass it to
+@ref UserInterfaceGL::setBaseLayerInstance():
+
+@snippet Ui-gl.cpp BaseLayer-setup-implicit
+
+Otherwise, if you want to set up a custom base layer that's independent of the
+one exposed through @ref UserInterface::baseLayer(), possibly for completely
+custom widgets, pass the newly created instance to
+@ref AbstractUserInterface::setLayerInstance() instead:
+
+@snippet Ui-gl.cpp BaseLayer-setup
+
+Afterwards, in order to be able to draw the layer, a style has to be set with
+@ref BaseLayer::Shared::setStyle(). At the very least you're expected to pass a
+@ref BaseLayerCommonStyleUniform containing properties common to all styles,
+and an array of @ref BaseLayerStyleUniform matching the style count set in the
+@ref BaseLayer::Shared::Configuration. Default-constructed instances will
+result in white quads with no outline or rounded corners, you can then use
+method chaining to update only the properties you're interested in. So, for
+example, with style @cpp 0 @ce being the default, style @cpp 1 @ce being a blue
+quad and style @cpp 2 @ce transparent with a white outline:
+
+@snippet Ui.cpp BaseLayer-setup-style
+
+With this, assuming @ref AbstractUserInterface::draw() is called in an
+appropriate place, the layer is ready to use. All style options are described
+in detail further below.
+
+@section Ui-BaseLayer-create Creating quads
+
+A quad is created by calling @ref create() with desired style index and a
+@ref NodeHandle the data should be attached to. In this case it picks the style
+@cpp 1 @ce, which colors the quad blue:
+
+@snippet Ui.cpp BaseLayer-create
+
+As with all other data, they're implicitly tied to lifetime of the node they're
+attached to. You can remember the @ref Ui::DataHandle returned by @ref create()
+to modify the data later, @ref attach() to a different node or @ref remove()
+it.
+
+@section Ui-BaseLayer-style-enums Using an enum for style indexing
+
+While the style indices are internally just a contiguous sequence of integers,
+an @cpp enum @ce is a more convenient way to index them. The @ref create() as
+well as @ref setStyle() can also accept an @cpp enum @ce for the style index,
+and @ref style() has a templated overload that you can use to retrieve the
+style index in the enum type again. The above style setup and use could then
+look for example like this:
+
+@snippet Ui.cpp BaseLayer-style-enums
+
+@section Ui-BaseLayer-style Style options
+
+@subsection Ui-BaseLayer-style-color Base color and gradient
+
+@image html ui-baselayer-style-color.png width=256px
+
+Apart from the single color shown above, there's a
+@ref BaseLayerStyleUniform::setColor(const Color4&, const Color4&) overload
+that allows you to supply two colors for a gradient. Right now, the gradient
+can only be vertical.
+
+@snippet Ui.cpp BaseLayer-style-color1
+
+The style-supplied color is additionally multiplied by a data-specific color
+set with @ref setColor(), which is shown in the third square above. Main use
+case is various color swatches where it would be impractical to have to add
+each custom color to the style data. Finally, the color is also multiplied by a
+per-node opacity coming from @ref AbstractUserInterface::setNodeOpacity(), as
+shown in the fourth square above, which can be used for various fade-in /
+fade-out effects.
+
+@snippet Ui.cpp BaseLayer-style-color2
+
+@subsection Ui-BaseLayer-style-rounded-corners Rounded corners
+
+@image html ui-baselayer-style-rounded-corners.png width=256px
+
+With @ref BaseLayerStyleUniform::setCornerRadius() the quads can have rounded
+corners, and the radius can be also different for each corner. The edges are
+aliased by default, use @ref BaseLayerCommonStyleUniform::setSmoothness() to
+smoothen them out. The smoothness radius is in actual framebuffer pixels and
+not UI units in order to ensure crisp look everywhere without having to
+specifically deal with HiDPI displays, and it's a common setting for all as
+it's assumed that the styles will all want to use the same value.
+
+@snippet Ui.cpp BaseLayer-style-rounded-corners
+
+Finally, @ref BaseLayerCommonStyleUniform::setSmoothness() supports different
+inner and outer smoothness to achieve certain kind of effects, but again it's a
+common setting for all styles.
+
+@subsection Ui-BaseLayer-style-outline Outline width and color
+
+@image html ui-baselayer-style-outline.png width=256px
+
+@ref BaseLayerStyleUniform::setOutlineWidth() sets width of the outline.
+Similarly to corner radius, the width can be different for each edge, such as
+for the switch-like shape above. When outline is combined with rounded corners,
+@ref BaseLayerStyleUniform::setInnerOutlineCornerRadius() specifies the inner
+corner radius. In many cases it'll be set to outer radius with outline width
+subtracted, but different values can be used to achieve various effects.
+
+@snippet Ui.cpp BaseLayer-style-outline
+
+@image html ui-baselayer-style-outline-data-width.png width=256px
+
+The style-supplied outline width is added together with per-data outline width
+coming from @ref setOutlineWidth(). The intended usage scenario is implementing
+simple progress bars and scrollbars. For the image above, the style has the
+outline fully defined except for its width, which is then supplied dynamically
+based on the actual percentage it should visualize.
+
+@snippet Ui.cpp BaseLayer-style-outline-data-width
+
+@subsection Ui-BaseLayer-style-padding Padding inside the node
+
+The last argument to @ref BaseLayer::Shared::setStyle() is an optional list of
+per-style padding values, which specify a padding between the rendered quad and
+edges of the node containing it. Visually, the same can be achieved by
+attaching the data to an appropriately shrunk child node instead, but doing so
+may interfere with event handling behavior if both nodes are meant to behave as
+a single active element.
+
+@image html ui-baselayer-style-padding.png width=256px
+
+On the left above is a button-like shape with a detached outline, achieved by
+placing two quads inside the same node, with one being just an outline and the
+other having a padding. The draw order isn't guaranteed in case of multiple
+data attached to the same node, but as the shapes don't overlap, it doesn't
+matter.
+
+@snippet Ui.cpp BaseLayer-style-padding
+
+There's also @ref setPadding() for additional per-data padding, which is useful
+for example when aligning icons next to variable-width text. Or, as shown with
+the slider above on the right, for additional styling flexibility. In order to
+ensure correct draw order, the green bar is put into a child node, but both
+have the same size to have the whole area react the same way to taps or clicks.
+
+@snippet Ui.cpp BaseLayer-style-padding-data
+
+@subsection Ui-BaseLayer-style-textured Textured drawing
+
+@image html ui-baselayer-style-textured.png width=256px
+
+If @ref BaseLayerSharedFlag::Textured is enabled in
+@ref BaseLayer::Shared::Configuration, each quad additionally multiplies its
+color with a texture. In case of a @ref BaseLayerGL it's a
+@ref GL::Texture2DArray supplied via @relativeref{BaseLayerGL,setTexture()}. By
+default the whole first slice of the texture array is used, however it's
+assumed that a texture atlas is used from which particular data use
+sub-rectangles defined with @ref setTextureCoordinates(). Texturing can be
+combined with rounded corners and all other features. The texture coordinates
+include the outline, if it's present, but the outline itself isn't textured.
+
+@snippet Ui-gl.cpp BaseLayer-style-textured
+
+You can use @ref TextureTools::AtlasLandfill or
+@ref TextureTools::atlasArrayPowerOfTwo() to pack multiple images into a single
+atlas, the former is usable for incremental packing as well. The supplied
+texture is expected to be alive for the whole layer lifetime, alternatively you
+can use @ref BaseLayerGL::setTexture(GL::Texture2DArray&&) to move its
+ownership to the layer instance. Currently only a single texture can be used
+with the layer, if you need to draw from multiple textures, create additional
+layer instances.
+
+@subsection Ui-BaseLayer-style-background-blur Background blur
+
+@m_class{m-row m-container-inflate}
+
+@parblock
+
+@m_div{m-col-l-4 m-col-m-6 m-text-center m-nopadx}
+@image html ui-baselayer-flag-default.png width=256px
+Default look of semi-transparent quads @m_span{null} @m_endspan
+@m_enddiv
+
+@m_div{m-col-l-4 m-col-m-6 m-text-center m-nopadx}
+@image html ui-baselayer-flag-blur.png width=256px
+With background blur enabled @m_span{null} @m_endspan
+@m_enddiv
+
+@m_div{m-col-l-4 m-col-m-6 m-push-m-3 m-push-l-0 m-text-center m-nopadx}
+@image html ui-baselayer-flag-blur-alpha.png width=256px
+Background blur with alpha of @cpp 0.75f @ce
+@m_enddiv
+
+@endparblock
+
+With @ref BaseLayerSharedFlag::BackgroundBlur, and
+@ref RendererGL::Flag::CompositingFramebuffer enabled for the renderer,
+semi-transparent quads will be drawn with their background blurred. Blur
+strength can be controlled with @ref BaseLayer::Shared::Configuration::setBackgroundBlurRadius()
+and @ref setBackgroundBlurPassCount(),
+@ref BaseLayerCommonStyleUniform::setBackgroundBlurAlpha() can be used to
+achieve a frosted-glass-like effect. This effect relies on the UI being able to
+read back the framebuffer it draws to, see the @ref RendererGL documentation
+for a detailed example of how to set up the compositing framebuffer in the
+application.
+
+@snippet Ui-gl.cpp BaseLayer-style-background-blur
+
+As the effect is potentially expensive, only the framebuffer areas that
+actually are covered by quads get blurred. The effect is stackable, meaning
+that blurred quads in each top-level node hierarchy will blur contents of all
+top-level hierarchies underneath. To avoid performance issues, it's thus
+recommended to switch to non-blurred layers when stacking reaches a certain
+level.
+
+@m_class{m-row}
+
+@parblock
+
+@m_div{m-col-m-6 m-text-center m-nopadx}
+@image html ui-baselayer-flag-blur-textured.png width=256px
+Default blurred texturing behavior @m_span{null} @m_endspan
+@m_enddiv
+
+@m_div{m-col-m-6 m-text-center m-nopadx}
+@image html ui-baselayer-flag-blur-textured-mask.png width=256px
+With @ref BaseLayerSharedFlag::TextureMask
+@m_enddiv
+
+@endparblock
+
+Finally, when texturing is enabled together with background blur, the
+@ref BaseLayerSharedFlag::TextureMask flag may come handy. By default, without
+blur, transparent texture areas are see-through so this flag doesn't make any
+visual difference, but with blur enabled, the flag excludes the transparent
+areas from being blurred, allowing you to apply any custom shape to the blurred
+area. In this case, the masking --- but not the texture color --- is applied to
+the outline as well.
+
+@see @ref BaseLayerStyleAnimator
 */
 class MAGNUM_UI_EXPORT BaseLayer: public AbstractVisualLayer {
     public:
@@ -901,7 +1162,7 @@ enum class BaseLayerSharedFlag: UnsignedByte {
      *
      * @m_div{m-col-m-6 m-text-center m-nopadt m-nopadx}
      * @image html ui-baselayer-flag-default.png width=256px
-     * Without @ref BaseLayerSharedFlag::BackgroundBlur
+     * Default look of semi-transparent quads @m_span{null} @m_endspan
      * @m_enddiv
      *
      * @m_div{m-col-m-6 m-text-center m-nopadt m-nopadx}
@@ -971,7 +1232,7 @@ enum class BaseLayerSharedFlag: UnsignedByte {
      *
      * @m_div{m-col-m-6 m-text-center m-nopadt m-nopadx}
      * @image html ui-baselayer-flag-blur-textured.png width=256px
-     * Default @ref BaseLayerSharedFlag::Textured behavior
+     * Default blurred texturing behavior @m_span{null} @m_endspan
      * @m_enddiv
      *
      * @m_div{m-col-m-6 m-text-center m-nopadt m-nopadx}
@@ -1026,9 +1287,11 @@ MAGNUM_UI_EXPORT Debug& operator<<(Debug& debug, BaseLayerSharedFlags value);
 /**
 @brief Shared state for the base layer
 
-Contains style data. You'll most likely instantiate the class through
-@ref BaseLayerGL::Shared. In order to update or draw the layer it's expected
-that @ref setStyle() was called.
+Contains style definitions. See the @ref BaseLayer class documentation for
+information about setting up an instance of this layer and using it.
+
+You'll most likely instantiate the class through @ref BaseLayerGL::Shared. In
+order to update or draw the layer it's expected that @ref setStyle() was called.
 */
 class MAGNUM_UI_EXPORT BaseLayer::Shared: public AbstractVisualLayer::Shared {
     public:
@@ -1146,6 +1409,8 @@ class MAGNUM_UI_EXPORT BaseLayer::Shared: public AbstractVisualLayer::Shared {
 /**
 @brief Configuration of a base layer shared state
 
+See the @ref BaseLayer class documentation for information about setting up an
+instance of this layer and using it.
 @see @ref BaseLayerGL::Shared::Shared(const Configuration&)
 */
 class MAGNUM_UI_EXPORT BaseLayer::Shared::Configuration {

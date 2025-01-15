@@ -44,6 +44,11 @@ namespace Magnum { namespace Ui {
 @brief OpenGL implementation of the base layer
 @m_since_latest
 
+See the @ref BaseLayer base class documentation for information about setting
+up an instance of this layer and using it. The base class contains most of the
+interface you'll be interacting with, this subclass exposes just the APIs tied
+to OpenGL, such as texture setup.
+
 The layer assumes @ref RendererGL is set on the user interface (or
 @ref UserInterfaceGL used, which does so automatically), see its documentation
 for more information about GL state expectations. The layer produces geometry
@@ -156,10 +161,13 @@ class MAGNUM_UI_EXPORT BaseLayerGL: public BaseLayer {
 /**
 @brief Shared state for the OpenGL implementation of the base layer
 
-Contains shader instances. In order to update or draw the layer it's expected
-that @ref setStyle() was called, in case @ref BaseLayerSharedFlag::Textured is
-enabled additionally it's expected that @ref setTexture() was called on the
-layer as well.
+Contains GPU shaders and style definitions. See the @ref BaseLayer class
+documentation for information about setting up an instance of this layer and
+using it.
+
+In order to update or draw the layer it's expected that @ref setStyle() was
+called, in case @ref BaseLayerSharedFlag::Textured is enabled additionally it's
+expected that @ref setTexture() was called on the layer as well.
 */
 class MAGNUM_UI_EXPORT BaseLayerGL::Shared: public BaseLayer::Shared {
     public:
