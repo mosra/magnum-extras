@@ -128,9 +128,16 @@ with arbitrary functions handling them.
 
 If you create a @ref UserInterfaceGL instance with a style and don't exclude
 @ref StyleFeature::EventLayer, an implicit instance is already provided and
-available through @ref UserInterface::eventLayer(). If you don't, or if you
-want to set up a custom event layer, pass its instance to
-@ref AbstractUserInterface::setLayerInstance():
+available through @ref UserInterface::eventLayer(). Otherwise, the event layer
+doesn't have any shared state or configuration, so it's just about constructing
+it from a fresh @ref AbstractUserInterface::createLayer() handle and passing it
+to @ref UserInterface::setEventLayerInstance():
+
+@snippet Ui-gl.cpp EventLayer-setup-implicit
+
+In comparison, if you want to set up a custom event layer that's independent of
+the one exposed through @ref UserInterface::eventLayer(), pass the newly
+created instance to @ref AbstractUserInterface::setLayerInstance() instead:
 
 @snippet Ui.cpp EventLayer-setup
 

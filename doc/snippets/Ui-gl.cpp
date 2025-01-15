@@ -32,6 +32,7 @@
 
 #include "Magnum/Ui/BaseLayerGL.h"
 #include "Magnum/Ui/BaseLayerAnimator.h"
+#include "Magnum/Ui/EventLayer.h"
 #include "Magnum/Ui/Handle.h"
 #include "Magnum/Ui/RendererGL.h"
 #include "Magnum/Ui/Style.h"
@@ -164,6 +165,13 @@ DOXYGEN_ELLIPSIS()
 
 textLayer.assignAnimator(animator);
 /* [TextLayerStyleAnimator-setup2] */
+}
+
+{
+Ui::UserInterfaceGL ui{NoCreate};
+/* [EventLayer-setup-implicit] */
+ui.setEventLayerInstance(Containers::pointer<Ui::EventLayer>(ui.createLayer()));
+/* [EventLayer-setup-implicit] */
 }
 
 {
