@@ -356,7 +356,9 @@ class MAGNUM_UI_EXPORT AbstractVisualLayer::Shared {
          * @brief Move constructor
          *
          * Performs a destructive move, i.e. the original object isn't usable
-         * afterwards anymore.
+         * afterwards anymore. Note that it's allowed to move the shared
+         * instance even after it had been referenced by a layer --- internally
+         * the layers will appropriately relocate their references as well.
          */
         Shared(Shared&&) noexcept;
 
@@ -365,7 +367,13 @@ class MAGNUM_UI_EXPORT AbstractVisualLayer::Shared {
         /** @brief Copying is not allowed */
         Shared& operator=(const Shared&) = delete;
 
-        /** @brief Move assignment */
+        /**
+         * @brief Move assignment
+         *
+         * Note that it's allowed to move the shared instance even after it had
+         * been referenced by a layer --- internally the layers will
+         * appropriately update their references as well.
+         */
         Shared& operator=(Shared&&) noexcept;
 
         /**
