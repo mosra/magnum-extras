@@ -143,8 +143,7 @@ int UiBaseLayer::exec() {
             .setSmoothness(1.0f),
         {Ui::BaseLayerStyleUniform{}
             .setCornerRadius(12.0f)
-            .setColor(0xffffffff_rgbaf*0.667f)
-            .setOutlineColor(0x00000000_rgbaf)},
+            .setColor(0xffffffff_rgbaf*0.667f)},
         {});
     Ui::BaseLayerGL& layerBackgroundBlur = ui.setLayerInstance(Containers::pointer<Ui::BaseLayerGL>(ui.createLayer(), layerSharedBackgroundBlur));
     layerBackgroundBlur
@@ -169,8 +168,7 @@ int UiBaseLayer::exec() {
             .setBackgroundBlurAlpha(0.75f),
         {Ui::BaseLayerStyleUniform{}
             .setCornerRadius(12.0f)
-            .setColor(0xffffffff_rgbaf*0.667f)
-            .setOutlineColor(0x00000000_rgbaf)},
+            .setColor(0xffffffff_rgbaf*0.667f)},
         {});
     Ui::BaseLayerGL& layerBackgroundBlurAlpha = ui.setLayerInstance(Containers::pointer<Ui::BaseLayerGL>(ui.createLayer(), layerSharedBackgroundBlurAlpha));
     layerBackgroundBlurAlpha
