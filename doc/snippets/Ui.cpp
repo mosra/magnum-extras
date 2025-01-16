@@ -634,13 +634,13 @@ Nanoseconds now;
 enum class BaseLayerStyle {
     DOXYGEN_ELLIPSIS()
     Button,
-    ButtonHover,
+    ButtonHovered,
     DOXYGEN_ELLIPSIS()
 };
 
 Ui::DataHandle buttonBackground = DOXYGEN_ELLIPSIS({});
 
-animator.create(BaseLayerStyle::ButtonHover, BaseLayerStyle::Button,
+animator.create(BaseLayerStyle::ButtonHovered, BaseLayerStyle::Button,
     Animation::Easing::cubicOut, now, 0.5_sec, buttonBackground);
 /* [BaseLayerStyleAnimator-create] */
 }
@@ -657,13 +657,13 @@ Nanoseconds now;
 enum class TextLayerStyle {
     DOXYGEN_ELLIPSIS()
     Button,
-    ButtonHover,
+    ButtonHovered,
     DOXYGEN_ELLIPSIS()
 };
 
 Ui::DataHandle buttonText = DOXYGEN_ELLIPSIS({});
 
-animator.create(TextLayerStyle::ButtonHover, TextLayerStyle::Button,
+animator.create(TextLayerStyle::ButtonHovered, TextLayerStyle::Button,
     Animation::Easing::cubicOut, now, 0.5_sec, buttonText);
 /* [TextLayerStyleAnimator-create] */
 }
