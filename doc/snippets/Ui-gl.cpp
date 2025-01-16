@@ -193,6 +193,26 @@ texturedLayer.setTextureCoordinates(avatarData, {0.4f, 0.0f, 0.0f}, {0.25f, 0.5f
 
 {
 Ui::UserInterfaceGL ui{NoCreate};
+/* [BaseLayer-dynamic-styles] */
+Ui::BaseLayerGL::Shared baseLayerShared{
+    Ui::BaseLayerGL::Shared::Configuration{DOXYGEN_ELLIPSIS(1)}
+        .setDynamicStyleCount(10)
+};
+Ui::BaseLayerGL& baseLayer = ui.setLayerInstance(
+    Containers::pointer<Ui::BaseLayerGL>(ui.createLayer(), baseLayerShared));
+
+DOXYGEN_ELLIPSIS()
+
+UnsignedInt dynamicStyleId = DOXYGEN_ELLIPSIS(0); /* anything less than the dynamic style count */
+baseLayer.setDynamicStyle(dynamicStyleId, DOXYGEN_ELLIPSIS(Ui::BaseLayerStyleUniform{}, {}));
+
+Ui::NodeHandle node = DOXYGEN_ELLIPSIS({});
+baseLayer.create(baseLayer.shared().styleCount() + dynamicStyleId, node);
+/* [BaseLayer-dynamic-styles] */
+}
+
+{
+Ui::UserInterfaceGL ui{NoCreate};
 /* [BaseLayer-style-background-blur] */
 ui.setRendererInstance(Containers::pointer<Ui::RendererGL>(
     Ui::RendererGL::Flag::CompositingFramebuffer));

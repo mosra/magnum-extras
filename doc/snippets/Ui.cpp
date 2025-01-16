@@ -26,6 +26,7 @@
 
 #include <Corrade/Containers/Function.h>
 #include <Corrade/Containers/GrowableArray.h>
+#include <Corrade/Containers/Optional.h>
 #include <Corrade/Containers/StridedArrayView.h>
 #include <Corrade/Containers/String.h>
 #include <Magnum/Animation/Easing.h>
@@ -90,7 +91,119 @@ shared.setStyleTransition<StyleIndex,
 /* [AbstractVisualLayer-Shared-setStyleTransition] */
 }
 
-namespace A {
+/* Anonymous namespace to avoid "no previous declaration" warnings, main() and
+   main2() is then outside of it to avoid "unused function" warnings */
+namespace A { namespace {
+/* [BaseLayer-style-transitions] */
+enum BaseLayerStyle {
+    Button,
+    ButtonHovered,
+    ButtonPressed,
+    ButtonPressedHovered,
+    Label
+};
+BaseLayerStyle toInactiveOut(BaseLayerStyle style) {
+    switch(style) {
+        case BaseLayerStyle::ButtonHovered:
+        case BaseLayerStyle::ButtonPressed:
+        case BaseLayerStyle::ButtonPressedHovered:
+            return BaseLayerStyle::Button;
+        default:
+            return style;
+    }
+}
+BaseLayerStyle toInactiveOver(BaseLayerStyle style) {
+    switch(style) {
+        case BaseLayerStyle::Button:
+        case BaseLayerStyle::ButtonPressed:
+        case BaseLayerStyle::ButtonPressedHovered:
+            return BaseLayerStyle::ButtonHovered;
+        default:
+            return style;
+    }
+}
+BaseLayerStyle toPressedOut(BaseLayerStyle style) {
+    switch(style) {
+        case BaseLayerStyle::Button:
+        case BaseLayerStyle::ButtonHovered:
+        case BaseLayerStyle::ButtonPressedHovered:
+            return BaseLayerStyle::ButtonPressed;
+        default:
+            return style;
+    }
+}
+BaseLayerStyle toPressedOver(BaseLayerStyle style) {
+    switch(style) {
+        case BaseLayerStyle::Button:
+        case BaseLayerStyle::ButtonHovered:
+        case BaseLayerStyle::ButtonPressed:
+            return BaseLayerStyle::ButtonPressedHovered;
+        default:
+            return style;
+    }
+}
+
+DOXYGEN_ELLIPSIS(} void main(); void main() { struct Shared: Ui::BaseLayer::Shared {
+    explicit Shared(): Ui::BaseLayer::Shared::Shared{Configuration{1}} {}
+    void doSetStyle(const Ui::BaseLayerCommonStyleUniform&, Containers::ArrayView<const Ui::BaseLayerStyleUniform>) override {}
+} baseLayerShared;)
+
+baseLayerShared.setStyleTransition<BaseLayerStyle,
+    toInactiveOut,
+    toInactiveOver,
+    nullptr,
+    nullptr,
+    toPressedOut,
+    toPressedOver,
+    nullptr>();
+/* [BaseLayer-style-transitions] */
+}
+
+namespace {
+/* [BaseLayer-style-transitions-deduplicated] */
+struct Transition {
+    BaseLayerStyle inactiveOut;
+    BaseLayerStyle inactiveOver;
+    BaseLayerStyle pressedOut;
+    BaseLayerStyle pressedOver;
+};
+Transition transition(BaseLayerStyle style) {
+    /* In C++20 you can further simplify with `using enum BaseLayerStyle` */
+    switch(style) {
+        case BaseLayerStyle::Button:
+        case BaseLayerStyle::ButtonHovered:
+        case BaseLayerStyle::ButtonPressed:
+        case BaseLayerStyle::ButtonPressedHovered:
+            return {BaseLayerStyle::Button,
+                    BaseLayerStyle::ButtonHovered,
+                    BaseLayerStyle::ButtonPressed,
+                    BaseLayerStyle::ButtonPressedHovered};
+        default:
+            return {style, style, style, style};
+    }
+}
+template<BaseLayerStyle Transition::*member> BaseLayerStyle to(BaseLayerStyle style) {
+    return transition(style).*member;
+}
+
+DOXYGEN_ELLIPSIS(} void main2(); void main2() { struct Shared: Ui::BaseLayer::Shared {
+    explicit Shared(): Ui::BaseLayer::Shared::Shared{Configuration{1}} {}
+    void doSetStyle(const Ui::BaseLayerCommonStyleUniform&, Containers::ArrayView<const Ui::BaseLayerStyleUniform>) override {}
+} baseLayerShared;)
+
+baseLayerShared.setStyleTransition<BaseLayerStyle,
+    to<&Transition::inactiveOut>,
+    to<&Transition::inactiveOver>,
+    nullptr,
+    nullptr,
+    to<&Transition::pressedOut>,
+    to<&Transition::pressedOver>,
+    nullptr>();
+/* [BaseLayer-style-transitions-deduplicated] */
+}
+}
+
+namespace B {
 
 /* Declarations to avoid -Wmisssing-prototypes */
 void setNodeName(Ui::NodeHandle node, Containers::StringView name);
@@ -397,6 +510,23 @@ Ui::NodeHandle bar = ui.createNode(slider, {}, ui.nodeSize(slider));
 baseLayer.create(0, slider);
 baseLayer.create(1, bar);
 /* [BaseLayer-style-padding-data] */
+}
+
+{
+/* [BaseLayer-dynamic-styles-allocate] */
+/* Attempt to allocate a dynamic style ID, if available */
+Containers::Optional<UnsignedInt> dynamicStyleId = baseLayer.allocateDynamicStyle();
+if(!dynamicStyleId) {
+    DOXYGEN_ELLIPSIS()
+}
+
+/* Populate it, use */
+baseLayer.setDynamicStyle(*dynamicStyleId, DOXYGEN_ELLIPSIS(Ui::BaseLayerStyleUniform{}, {}));
+DOXYGEN_ELLIPSIS()
+
+/* Once not used anymore, recycle the ID again */
+baseLayer.recycleDynamicStyle(*dynamicStyleId);
+/* [BaseLayer-dynamic-styles-allocate] */
 }
 }
 

@@ -1,0 +1,82 @@
+<svg style="width: 630px; height: 180px;" viewBox="0 0 166.69 47.625" class="m-image">
+ <g transform="translate(-7.9375 -7.9375)">
+  <g fill="#3bd267">
+   <path d="m107.16 53.181c-3.0686 0-5.5562-2.4876-5.5562-5.5563"/>
+   <path d="m101.6 15.875c0-3.0686 2.4876-5.5563 5.5562-5.5563"/>
+   <path d="m172.24 22.225c0-6.5756-5.3306-11.906-11.906-11.906v11.906h11.906l-11.906-11.906"/>
+   <path d="m107.16 10.319v5.5563h-5.5562l5.5562-5.5563"/>
+   <path d="m101.6 47.625h5.5562v5.5563l-5.5562-5.5563"/>
+   <path d="m15.875 53.181c-3.0686 0-5.5562-2.4876-5.5562-5.5563"/>
+   <path d="m10.319 15.875c0-3.0686 2.4876-5.5563 5.5562-5.5563"/>
+   <path d="m80.963 22.225c0-6.5756-5.3306-11.906-11.906-11.906v11.906h11.906l-11.906-11.906"/>
+   <path d="m15.875 10.319v5.5563h-5.5562l5.5562-5.5563"/>
+   <path d="m10.319 47.625h5.5562v5.5563l-5.5562-5.5563"/>
+  </g>
+  <g fill="none" stroke="#dcdcdc" stroke-dashoffset="54.075" stroke-linejoin="round" stroke-width=".39688">
+   <g>
+    <path d="m160.34 10.319c6.5756 0 11.906 5.3306 11.906 11.906" stop-color="#000000" style="font-variation-settings:normal"/>
+    <path d="m101.6 15.875c0-3.0686 2.4876-5.5563 5.5562-5.5563" stop-color="#000000" style="font-variation-settings:normal"/>
+    <path d="m107.16 53.181c-3.0686 0-5.5562-2.4876-5.5562-5.5563" stop-color="#000000" style="font-variation-settings:normal"/>
+    <path d="m107.16 10.319h53.181" stop-color="#000000" style="font-variation-settings:normal"/>
+    <path d="m172.24 22.225-0.0411 30.785" stop-color="#000000" style="font-variation-settings:normal"/>
+    <path d="m107.16 53.181h65.484" stop-color="#000000" style="font-variation-settings:normal"/>
+    <path d="m101.6 15.875v31.75" stop-color="#000000" style="font-variation-settings:normal"/>
+    <path d="m69.056 10.319c6.5756 1e-6 11.906 5.3306 11.906 11.906" stop-color="#000000" style="font-variation-settings:normal"/>
+    <path d="m10.319 15.875c0-3.0686 2.4876-5.5563 5.5562-5.5563" stop-color="#000000" style="font-variation-settings:normal"/>
+    <path d="m15.875 53.181c-3.0686 0-5.5562-2.4876-5.5562-5.5563" stop-color="#000000" style="font-variation-settings:normal"/>
+    <path d="m15.875 10.319h53.181" stop-color="#000000" style="font-variation-settings:normal"/>
+    <path d="m80.963 22.225-0.04125 30.785" stop-color="#000000" style="font-variation-settings:normal"/>
+    <path d="m15.875 53.181h65.484" stop-color="#000000" style="font-variation-settings:normal"/>
+    <path d="m10.319 15.875v31.75" stop-color="#000000" style="font-variation-settings:normal"/>
+   </g>
+   <g stroke-linecap="round">
+    <path d="m107.16 13.891v3.9687"/>
+    <path d="m105.17 15.875h3.9688"/>
+    <path d="m160.34 20.241v3.9688"/>
+    <path d="m158.35 22.225h3.9687"/>
+    <path d="m107.16 45.641v3.9688"/>
+    <path d="m105.17 47.625h3.9688"/>
+    <path d="m172.24 51.197v3.9688"/>
+    <path d="m170.26 53.181h3.9687"/>
+    <path d="m15.875 13.891v3.9687"/>
+    <path d="m13.891 15.875h3.9687"/>
+    <path d="m69.056 20.241v3.9688"/>
+    <path d="m67.072 22.225h3.9687"/>
+    <path d="m15.875 45.641v3.9688"/>
+    <path d="m13.891 47.625h3.9688"/>
+    <path d="m80.963 51.197v3.9688"/>
+    <path d="m78.978 53.181h3.9687"/>
+   </g>
+  </g>
+ </g>
+ <g fill="none" stroke="#2f83cc" stroke-linecap="round" stroke-linejoin="round" stroke-width=".39688">
+  <g stroke-dashoffset="204.38">
+   <path d="m165.7 0.99219v45.641" style="font-variation-settings:normal"/>
+   <path d="m92.273 0.99219v45.641" style="font-variation-settings:normal"/>
+   <path d="m92.273 0.99219h73.225" style="font-variation-settings:normal"/>
+   <path d="m92.273 46.633h73.225" style="font-variation-settings:normal"/>
+   <path d="m74.414 0.99219v45.641" style="font-variation-settings:normal"/>
+   <path d="m0.99219 0.99219v45.641" style="font-variation-settings:normal"/>
+   <path d="m0.99166 0.99219h73.225" style="font-variation-settings:normal"/>
+   <path d="m0.99166 46.633h73.225" style="font-variation-settings:normal"/>
+  </g>
+  <path d="m0.99219 46.633 73.422-45.641" stop-color="#000000" stroke-dasharray="0.396876, 1.58751" style="-inkscape-stroke:none;font-variation-settings:normal"/>
+  <g stroke-dashoffset="204.38">
+   <path d="m150.81 0.99219v45.641" style="font-variation-settings:normal"/>
+   <path d="m100.21 0.99219v45.641" style="font-variation-settings:normal"/>
+   <path d="m165.7 14.883h-73.422" style="font-variation-settings:normal"/>
+   <path d="m92.273 38.695h73.422" style="font-variation-settings:normal"/>
+  </g>
+  <g stroke-dasharray="0.396876, 1.58751">
+   <path d="m92.273 14.883 7.9375-13.891" stop-color="#000000" style="-inkscape-stroke:none;font-variation-settings:normal"/>
+   <path d="m92.273 38.695 7.9375 7.9375" stop-color="#000000" style="-inkscape-stroke:none;font-variation-settings:normal"/>
+   <path d="m150.81 46.633 14.883-7.9375" style="font-variation-settings:normal"/>
+   <path d="m150.81 0.99219 14.883 13.891" stop-color="#000000" style="-inkscape-stroke:none;font-variation-settings:normal"/>
+   <path d="m100.21 14.883c0.99219 0 50.602-13.891 50.602-13.891" style="-inkscape-stroke:none;font-variation-settings:normal"/>
+   <path d="m92.273 38.695 7.9375-23.813" style="-inkscape-stroke:none;font-variation-settings:normal"/>
+   <path d="m100.21 38.695 50.602-23.813" style="-inkscape-stroke:none;font-variation-settings:normal"/>
+   <path d="m100.21 46.633c0.99219 0 50.602-7.9375 50.602-7.9375" style="-inkscape-stroke:none;font-variation-settings:normal"/>
+   <path d="m150.81 38.695 14.883-23.813" style="-inkscape-stroke:none;font-variation-settings:normal"/>
+  </g>
+ </g>
+</svg>

@@ -664,7 +664,105 @@ areas from being blurred, allowing you to apply any custom shape to the blurred
 area. In this case, the masking --- but not the texture color --- is applied to
 the outline as well.
 
-@see @ref BaseLayerStyleAnimator
+@section Ui-BaseLayer-dynamic-styles Dynamic styles
+
+The @ref BaseLayer::Shared::setStyle() API is meant to be used to supply style
+data for all known styles at once, with the assumption that the styles are
+likely supplied from some constant memory and will be updated only in rare
+scenarios afterwards, such as when switching application themes.
+
+If a particular style needs to be modified often and it's not achievable with
+@ref setColor(), @ref setOutlineWidth() or @ref setPadding() on the data
+itself, a dynamic style can be used instead. Dynamic styles have to be
+explicitly requested with
+@ref BaseLayer::Shared::Configuration::setDynamicStyleCount(), after which the
+style uniform buffer isn't shared among all layers using given
+@ref BaseLayer::Shared instance, but is local to each layer and each layer has
+its own set of dynamic styles. Dynamic styles occupy indices from
+@ref BaseLayer::Shared::styleCount() upwards and their properties are specified
+via @ref setDynamicStyle().
+
+@snippet Ui-gl.cpp BaseLayer-dynamic-styles
+
+The main use case for dynamic styles is animations, for example various fade-in
+and fade-out transitions based on input events and application state changes.
+See the @ref BaseLayerStyleAnimator class for a high-level style animator
+working with the base layer. Note that if you intend to directly use dynamic
+styles along with the animator, you should use @ref allocateDynamicStyle() and
+@ref recycleDynamicStyle() to prevent the animator from stealing dynamic styles
+you use elsewhere:
+
+@snippet Ui.cpp BaseLayer-dynamic-styles-allocate
+
+@section Ui-BaseLayer-style-transitions Style transition based on input events
+
+With interactive UI elements such as buttons or inputs you'll likely have
+different styles for an inactive and active state, possibly handling hover and
+focus as well. While the style can be switched using @ref setStyle() for
+example in an @ref EventLayer::onPress() handler, this quickly becomes very
+tedious and repetitive. Instead, style transition can be implemented using
+@ref BaseLayer::Shared::setStyleTransition().
+
+It accepts a set of functions that get called with a style index when a node is
+hovered, pressed, released etc., and should return a style index that matches
+the new state. Assuming there's a button with various states, a label that
+doesn't visually react to events, and the style doesn't deal with focused or
+disabled state, implementing automatic transitions could look like this:
+
+@snippet Ui.cpp BaseLayer-style-transitions
+
+As in other APIs that deal with styles, the functions can operate either on an
+@cpp enum @ce, or on a plain @relativeref{Magnum,UnsignedInt}. If @cpp nullptr @ce
+is passed for any function, given transition is assumed to an identity, i.e. as
+if the input was returned unchanged. The focused transition can happen only on
+nodes that are @ref NodeFlag::Focusable, disabled transition then on node
+hierarchies that have @ref NodeFlag::Disabled set.
+
+Looking at the above snippet, you'll likely notice that there's a lot of
+repetition. The @ref BaseLayer::Shared::setStyleTransition() API is
+deliberately minimalistic and you're encouraged to implement the transitions in
+any way that makes sense for given use case. Instead of a @cpp switch @ce they
+can be for example baked into a compile-time lookup table. Or there can be just
+a single transition function for which only a part of the result gets used each
+time:
+
+@snippet Ui.cpp BaseLayer-style-transitions-deduplicated
+
+@section Ui-BaseLayer-performance Options affecting performance
+
+@subsection Ui-BaseLayer-performance-shaders Configuring shader complexity
+
+The @ref BaseLayerSharedFlag::NoOutline and
+@relativeref{BaseLayerSharedFlag,NoRoundedCorners} options disable rendering of
+outline and rounded corners, respectively, making the layer behave as if those
+features were not specified in any style nor supplied via
+@ref setOutlineWidth(). The likely use case for these flags is for example a
+texture / icon layer which don't make use of any outlines or rounded corners,
+and depending on the platform this can significantly reduce shader complexity.
+
+@htmlinclude ui-baselayer-subdivided-quads.svg
+
+By default, each quad is literally two triangles, and positioning of the
+outline and rounded corners is done purely in shader code. While that's fine on
+common hardware, certain low-power GPUs may struggle with fragment shader
+complexity. By enabling @ref BaseLayerSharedFlag::SubdividedQuads the drawing
+is split up into 9 quads as shown on the right, offloading a large part of the
+work to the vertex shader instead. Apart from that, the visual output is
+exactly the same with and without this flag enabled. A downside is however that
+a lot more data needs to be uploaded to the GPU, so this flag is only useful
+when the gains in fragment processing time outweigh the additional vertex data
+overhead.
+
+In case of background blur, smaller blur radii need less texture samples and
+thus are faster. Besides that, the second argument passed to
+@ref BaseLayer::Shared::Configuration::setBackgroundBlurRadius() is a cutoff
+threshold, which excludes samples that would contribute to the final pixel
+value less than given threshold. By default it's @cpp 0.5f/255.0f @ce, i.e.
+what would be at best a rounding error when operating on a 8-bit-per-channel
+framebuffer. With a higher threshold the processing will get faster in exchange
+for decreased blur quality. Finally, @ref setBackgroundBlurPassCount() can be
+used to perform a blur of smaller radius in multiple passes, in case a bigger
+radius is hitting hardware or implementation limits.
 */
 class MAGNUM_UI_EXPORT BaseLayer: public AbstractVisualLayer {
     public:
