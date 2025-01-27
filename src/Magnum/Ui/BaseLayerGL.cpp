@@ -51,7 +51,7 @@
 #include "Magnum/Ui/Implementation/blurCoefficients.h"
 #include "Magnum/Ui/Implementation/BlurShaderGL.h"
 
-#ifdef MAGNUM_BUILD_STATIC
+#ifdef MAGNUM_UI_BUILD_STATIC
 static void importShaderResources() {
     CORRADE_RESOURCE_INITIALIZE(MagnumUi_RESOURCES)
 }
@@ -146,7 +146,7 @@ BaseShaderGL::BaseShaderGL(const Flags flags, const UnsignedInt styleCount): _fl
     MAGNUM_ASSERT_GL_EXTENSION_SUPPORTED(GL::Extensions::ARB::explicit_attrib_location);
     #endif
 
-    #ifdef MAGNUM_BUILD_STATIC
+    #ifdef MAGNUM_UI_BUILD_STATIC
     if(!Utility::Resource::hasGroup("MagnumUi"_s))
         importShaderResources();
     #endif
@@ -224,7 +224,7 @@ BlurShaderGL::BlurShaderGL(UnsignedInt radius, Float limit) {
     MAGNUM_ASSERT_GL_EXTENSION_SUPPORTED(GL::Extensions::ARB::explicit_attrib_location);
     #endif
 
-    #ifdef MAGNUM_BUILD_STATIC
+    #ifdef MAGNUM_UI_BUILD_STATIC
     if(!Utility::Resource::hasGroup("MagnumUi"_s))
         importShaderResources();
     #endif

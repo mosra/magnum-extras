@@ -28,6 +28,11 @@
 # property that would have to be set on each target separately.
 set(CMAKE_FOLDER "Magnum/Ui/Test")
 
+# This, and all subsequent checks of the same variable, assumes that Magnum
+# itself is built as static and plugins in turn as well. If only the UI library
+# is built as static (i.e., MAGNUM_UI_BUILD_STATIC is ON but
+# MAGNUM_BUILD_STATIC is OFF), then the plugins are assumed to be dynamic and
+# thus don't need to be linked.
 if(MAGNUM_BUILD_STATIC)
     find_package(Magnum COMPONENTS AnyImageImporter)
     find_package(MagnumPlugins COMPONENTS StbImageImporter StbTrueTypeFont)

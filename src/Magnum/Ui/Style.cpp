@@ -49,7 +49,7 @@
 #include "Magnum/Ui/TextLayer.h"
 #include "Magnum/Ui/UserInterface.h"
 
-#ifdef MAGNUM_BUILD_STATIC
+#ifdef MAGNUM_UI_BUILD_STATIC
 static void importShaderResources() {
     CORRADE_RESOURCE_INITIALIZE(MagnumUi_RESOURCES)
 }
@@ -668,7 +668,7 @@ bool McssDarkStyle::doApply(UserInterface& ui, const StyleFeatures features, Plu
        the thing is just stupid. */
     Ui::FontHandle iconFont{};
     if(features & (StyleFeature::TextLayer|StyleFeature::TextLayerImages)) {
-        #ifdef MAGNUM_BUILD_STATIC
+        #ifdef MAGNUM_UI_BUILD_STATIC
         if(!Utility::Resource::hasGroup("MagnumUi"_s))
             importShaderResources();
         #endif

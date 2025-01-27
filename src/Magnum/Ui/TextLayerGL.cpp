@@ -46,7 +46,7 @@
 
 #include "Magnum/Ui/Implementation/textLayerState.h"
 
-#ifdef MAGNUM_BUILD_STATIC
+#ifdef MAGNUM_UI_BUILD_STATIC
 static void importShaderResources() {
     CORRADE_RESOURCE_INITIALIZE(MagnumUi_RESOURCES)
 }
@@ -101,7 +101,7 @@ TextShaderGL::TextShaderGL(const UnsignedInt styleCount) {
     MAGNUM_ASSERT_GL_EXTENSION_SUPPORTED(GL::Extensions::ARB::explicit_attrib_location);
     #endif
 
-    #ifdef MAGNUM_BUILD_STATIC
+    #ifdef MAGNUM_UI_BUILD_STATIC
     if(!Utility::Resource::hasGroup("MagnumUi"_s))
         importShaderResources();
     #endif
@@ -194,7 +194,7 @@ TextEditingShaderGL::TextEditingShaderGL(const UnsignedInt styleCount) {
     MAGNUM_ASSERT_GL_EXTENSION_SUPPORTED(GL::Extensions::ARB::explicit_attrib_location);
     #endif
 
-    #ifdef MAGNUM_BUILD_STATIC
+    #ifdef MAGNUM_UI_BUILD_STATIC
     if(!Utility::Resource::hasGroup("MagnumUi"_s))
         importShaderResources();
     #endif
