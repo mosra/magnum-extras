@@ -129,7 +129,10 @@ struct TextLayerStyleUniform {
     /**
      * @brief Color
      *
-     * Default value is @cpp 0xffffffff_srgbaf @ce.
+     * Default value is @cpp 0xffffffff_srgbaf @ce. The color multiplies the
+     * glyph texture and is further multiplied with per-data value supplied
+     * with @ref TextLayer::setColor() and node opacity coming from
+     * @ref AbstractUserInterface::setNodeOpacity().
      */
     Color4 color;
 };

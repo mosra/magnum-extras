@@ -351,14 +351,22 @@ struct BaseLayerStyleUniform {
     /**
      * @brief Top gradient color
      *
-     * Default value is @cpp 0xffffffff_srgbaf @ce.
+     * Default value is @cpp 0xffffffff_srgbaf @ce. The color is further
+     * multiplied with per-data value supplied with @ref BaseLayer::setColor(),
+     * potentially with a texture if @ref BaseLayerSharedFlag::Textured is
+     * enabled, and with node opacity coming from
+     * @ref AbstractUserInterface::setNodeOpacity().
      */
     Color4 topColor;
 
     /**
      * @brief Bottom gradient color
      *
-     * Default value is @cpp 0xffffffff_srgbaf @ce.
+     * Default value is @cpp 0xffffffff_srgbaf @ce. The color is further
+     * multiplied with per-data value supplied with @ref BaseLayer::setColor(),
+     * potentially with a texture if @ref BaseLayerSharedFlag::Textured is
+     * enabled, and with node opacity coming from
+     * @ref AbstractUserInterface::setNodeOpacity().
      */
     Color4 bottomColor;
 
@@ -369,6 +377,12 @@ struct BaseLayerStyleUniform {
      * @ref outlineWidth is non-zero on at least one side or if the difference
      * between @ref cornerRadius and @ref innerOutlineCornerRadius makes it
      * show. Not used if @ref BaseLayerSharedFlag::NoOutline is enabled.
+     *
+     * Unlike @ref topColor and @ref bottomColor, the outline color isn't
+     * multiplied with @ref BaseLayer::setColor(). Node opacity coming from
+     * @ref AbstractUserInterface::setNodeOpacity() affects it however, and
+     * texture alpha as well if @ref BaseLayerSharedFlag::TextureMask is
+     * enabled.
      */
     Color4 outlineColor;
 
@@ -377,6 +391,8 @@ struct BaseLayerStyleUniform {
      *
      * In order left, top, right, bottom. Default value is @cpp 0.0f @ce for
      * all sides. Not used if @ref BaseLayerSharedFlag::NoOutline is enabled.
+     * The width is further extended with the per-data value coming from
+     * @ref BaseLayer::setOutlineWidth().
      */
     Vector4 outlineWidth;
 
