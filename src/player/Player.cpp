@@ -229,7 +229,7 @@ Overlay::Overlay(Platform::ScreenedApplication& application):
 
         /* This function needs to be called instead of doing it all in JS in
            order to correctly propagate canvas size change */
-        this->application().setContainerCssClass(_isFullsize ? "fullsize" : "");
+        this->application().setContainerCssClass(_isFullsize ? "mn-fullsize" : "");
     });
     /** @todo clean up once there's a builtin thing for dialogs */
     /* Abusing styles for creating modal dialog backgrounds */
