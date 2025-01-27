@@ -52,6 +52,9 @@ commands:
       extra:
         type: string
         default: ""
+      sudo:
+        type: string
+        default: ""
     steps:
     - run:
         # TODO when switching to the new codecov uploader, gpg and git needs to
@@ -59,24 +62,9 @@ commands:
         name: Update apt and install base packages
         # Git is needed always for cloning Corrade
         command: |
-          apt update
+          << parameters.sudo >> apt update
           if [[ "$CMAKE_CXX_FLAGS" == *"--coverage"* ]]; then export LCOV_PACKAGES="lcov curl"; fi
-          # libidn11 needed by CMake
-          apt install -y git ninja-build libidn11 $LCOV_PACKAGES << parameters.extra >>
-
-  install-base-linux-arm64:
-    parameters:
-      extra:
-        type: string
-        default: ""
-    steps:
-    - run:
-        name: Update apt and install base packages
-        # Compared to Docker images this needs sudo
-        command: |
-          sudo apt update
-          if [[ "$CMAKE_CXX_FLAGS" == *"--coverage"* ]]; then export LCOV_PACKAGES="lcov curl"; fi
-          sudo apt install -y ninja-build gcc cmake $LCOV_PACKAGES << parameters.extra >>
+          << parameters.sudo >> apt install -y git ninja-build $LCOV_PACKAGES << parameters.extra >>
 
   # TODO this might get resolved with 1.11.1:
   #   https://github.com/ninja-build/ninja/pull/1827
@@ -291,8 +279,9 @@ jobs:
       CONFIGURATION: Debug
       PLATFORM_GL_API: GLX
     steps:
+    # libidn11 needed by CMake
     - install-base-linux:
-        extra: libgl1-mesa-dev libsdl2-dev libglfw3-dev
+        extra: libidn11 libgl1-mesa-dev libsdl2-dev libglfw3-dev
     - cap-ninja-jobs
     - install-gcc-4_8
     - install-cmake:
@@ -308,10 +297,11 @@ jobs:
       CONFIGURATION: Debug
       PLATFORM_GL_API: GLX
     steps:
-    # Not installing the old GCC 4.8 and CMake 3.4 to speed up. These are
-    # tested more than enough on other jobs.
-    - install-base-linux-arm64:
-        extra: libgl1-mesa-dev libsdl2-dev libglfw3-dev
+    # Not installing the old GCC 4.8 and CMake 3.5 to speed up. These are
+    # tested more than enough on other jobs. Machine executors need sudo.
+    - install-base-linux:
+        extra: gcc cmake libgl1-mesa-dev libsdl2-dev libglfw3-dev
+        sudo: sudo
     - build:
         script: unix-desktop.sh
     - lcov
@@ -326,8 +316,9 @@ jobs:
       # STUPID yml interprets unquoted ON as a boolean
       TARGET_GLES2: "ON"
     steps:
+    # libidn11 needed by CMake
     - install-base-linux:
-        extra: libsdl2-dev libglfw3-dev wget unzip
+        extra: libidn11 libsdl2-dev libglfw3-dev wget unzip
     - cap-ninja-jobs
     - install-gcc-4_8
     - install-cmake:
@@ -348,8 +339,9 @@ jobs:
       # STUPID yml interprets unquoted OFF as a boolean
       TARGET_GLES2: "OFF"
     steps:
+    # libidn11 needed by CMake
     - install-base-linux:
-        extra: libsdl2-dev libglfw3-dev wget unzip
+        extra: libidn11 libsdl2-dev libglfw3-dev wget unzip
     - cap-ninja-jobs
     - install-gcc-4_8
     - install-cmake:
@@ -371,8 +363,9 @@ jobs:
       CONFIGURATION: Debug
       PLATFORM_GL_API: GLX
     steps:
+    # libidn11 needed by CMake
     - install-base-linux:
-        extra: libgl1-mesa-dev libsdl2-dev libglfw3-dev
+        extra: libidn11 libgl1-mesa-dev libsdl2-dev libglfw3-dev
     # 20 leads to OOMs as of 2024-12-13
     - cap-ninja-jobs:
         count: 16
@@ -392,8 +385,9 @@ jobs:
       CONFIGURATION: Release
       PLATFORM_GL_API: GLX
     steps:
+    # libidn11 needed by CMake
     - install-base-linux:
-        extra: libgl1-mesa-dev libsdl2-dev libglfw3-dev
+        extra: libidn11 libgl1-mesa-dev libsdl2-dev libglfw3-dev
     - cap-ninja-jobs
     - install-gcc-4_8
     - install-cmake:
@@ -412,8 +406,9 @@ jobs:
       CONFIGURATION: Debug
       PLATFORM_GL_API: GLX
     steps:
+    # libidn11 needed by CMake
     - install-base-linux:
-        extra: libgl1-mesa-dev libsdl2-dev libglfw3-dev
+        extra: libidn11 libgl1-mesa-dev libsdl2-dev libglfw3-dev
     - install-clang
     - install-cmake:
         version: "3.5.2"
