@@ -923,7 +923,9 @@ class MAGNUM_UI_EXPORT BaseLayer: public AbstractVisualLayer {
          */
         template<class StyleIndex
             #ifndef DOXYGEN_GENERATING_OUTPUT
-            , class = typename std::enable_if<std::is_enum<StyleIndex>::value>::type
+            /* Accept any enum except NodeHandle to prevent create(node) from
+               being called by mistake */
+            , class = typename std::enable_if<std::is_enum<StyleIndex>::value && !std::is_same<StyleIndex, NodeHandle>::value>::type
             #endif
         > DataHandle create(StyleIndex style, NodeHandle node =
             #ifdef DOXYGEN_GENERATING_OUTPUT
