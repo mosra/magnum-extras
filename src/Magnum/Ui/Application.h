@@ -165,7 +165,7 @@ template<class ApplicationPointers> Pointers pointersFor(const ApplicationPointe
 }
 
 /** @todo remove once the deprecated MouseEvent is gone */
-#if defined(CORRADE_TARGET_MSVC) && _MSC_VER < 1940
+#if defined(CORRADE_TARGET_MSVC) && !defined(CORRADE_TARGET_CLANG) && _MSC_VER < 1940
 CORRADE_HAS_TYPE(IsPointerEvent, decltype(std::declval<T>().pointer()));
 CORRADE_HAS_TYPE(IsPointerMoveEvent, decltype(std::declval<T>().pointers()));
 #endif
