@@ -2220,8 +2220,8 @@ void TextLayer::doUpdate(const LayerStates states, const Containers::StridedArra
             for(Implementation::TextLayerVertex& vertex: vertexData) {
                 vertex.position = vertex.position*Vector2::yScale(-1.0f) + offset;
                 vertex.color = data.color*opacity;
-                /* For dynamic styles the uniform mapping is implicit and they're
-                   placed right after all non-dynamic styles */
+                /* For dynamic styles the uniform mapping is implicit and
+                   they're placed right after all non-dynamic styles */
                 vertex.styleUniform = data.calculatedStyle < sharedState.styleCount ?
                     sharedState.styles[data.calculatedStyle].uniform :
                     sharedState.styleUniformCount + data.calculatedStyle - sharedState.styleCount;

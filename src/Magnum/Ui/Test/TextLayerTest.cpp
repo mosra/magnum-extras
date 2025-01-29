@@ -5744,17 +5744,17 @@ template<class StyleIndex, class GlyphIndex> void TextLayerTest::createRemoveSet
     CORRADE_COMPARE(layer.padding(fourth), Vector4{0.0f});
     CORRADE_COMPARE(layer.state(), data.state);
 
-    /* There should be four glyph runs, assigned to the four data */
+    /* There should be six glyph runs, assigned to the six data */
     CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().data).slice(&Implementation::TextLayerData::glyphRun), Containers::arrayView({
         0u, 1u, 2u, 3u, 4u, 5u
     }), TestSuite::Compare::Container);
     CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().glyphRuns).slice(&Implementation::TextLayerGlyphRun::glyphOffset), Containers::arrayView({
-        /* The second and third data is a singly glyph, `second` text is using
+        /* The second and third data is a single glyph, `second` text is using
            the OneGlyphShaper, so it's just one glyph; `third` is empty */
         0u, 5u, 6u, 7u, 8u, 8u
     }), TestSuite::Compare::Container);
     CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().glyphRuns).slice(&Implementation::TextLayerGlyphRun::glyphCount), Containers::arrayView({
-        /* The second and third data is a singly glyph, `second` text is using
+        /* The second and third data is a single glyph, `second` text is using
            the OneGlyphShaper, so it's just one glyph; `third` is empty */
         5u, 1u, 1u, 1u, 0u, 2u
     }), TestSuite::Compare::Container);
@@ -5851,8 +5851,8 @@ template<class StyleIndex, class GlyphIndex> void TextLayerTest::createRemoveSet
     }
 
     /* Removing a text marks the original run as unused, and as it's not
-       attached to any node, also not any state flag. The remaining data don't
-       need any refresh, they still draw correctly. */
+       attached to any node, doesn't set any state flag. The remaining data
+       don't need any refresh, they still draw correctly. */
     data.layerDataHandleOverloads ?
         layer.remove(dataHandleData(fourth)) :
         layer.remove(fourth);
@@ -8182,6 +8182,8 @@ void TextLayerTest::updateCleanDataOrder() {
                 {});
     } else CORRADE_INTERNAL_ASSERT_UNREACHABLE();
 
+    /* Transition for disabled node6, which is done below through the
+       nodesEnabled (that has only node15 enabled) view passed to update() */
     shared.setStyleTransition(
         nullptr,
         nullptr,
@@ -8244,7 +8246,7 @@ void TextLayerTest::updateCleanDataOrder() {
     NodeHandle node6 = nodeHandle(6, 0);
     NodeHandle node15 = nodeHandle(15, 0);
 
-    /* Create 10 data handles. Only four get filled and actually used. */
+    /* Create 11 data handles. Only four get filled and actually used. */
     layer.create(0, "", {});                            /* 0, quad 0 */
     layer.create(0, "", {});                            /* 1, quad 1 */
     layer.create(0, "", {});                            /* 2, quad 2 */
@@ -9428,7 +9430,7 @@ void TextLayerTest::updatePadding() {
        correctly from both the data and the style. Additionally, in comparison
        to updateAlignment(), shape direction is returned from the shaper
        directly instead of being passed from TextProperties, and the
-       style-supplied alignment is a bogus value and padding from the
+       style-supplied alignment is a bogus value and alignment from the
        TextProperties is used instead. */
 
     struct: Text::AbstractFont {

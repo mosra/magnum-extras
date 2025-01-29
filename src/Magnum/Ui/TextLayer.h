@@ -92,7 +92,10 @@ data, packed in a form that allows direct usage in uniform buffers. Total count
 of styles is specified with the
 @ref TextLayer::Shared::Configuration::Configuration() constructor, uniforms
 are then uploaded using @ref TextLayer::Shared::setStyle(), style data that
-aren't used by the shader are passed to the function separately.
+aren't used by the shader are passed to the function separately. If dynamic
+styles are enabled with @ref TextLayer::Shared::Configuration::setDynamicStyleCount(),
+instances of this class are also passed to @ref TextLayer::setDynamicStyle()
+and variants.
 */
 struct TextLayerStyleUniform {
     /** @brief Construct with default values */

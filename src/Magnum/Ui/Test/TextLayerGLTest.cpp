@@ -1392,7 +1392,7 @@ void TextLayerGLTest::renderCustomColor() {
     setTestCaseDescription(data.name);
 
     /* Basically the same as the "colored" case in render(), except that the
-       color is additionally taken from the per-vertex data as well */
+       color is additionally taken from the data and node opacity as well */
 
     if(!(_fontManager.load("StbTrueTypeFont") & PluginManager::LoadState::Loaded))
         CORRADE_SKIP("StbTrueTypeFont plugin not found.");
@@ -1962,7 +1962,7 @@ void TextLayerGLTest::renderDynamicStyles() {
 
     #if defined(MAGNUM_TARGET_GLES) && !defined(MAGNUM_TARGET_WEBGL)
     /* Same problem is with all builtin shaders, so this doesn't seem to be a
-       bug in the base layer shader code */
+       bug in the text layer shader code */
     if(GL::Context::current().detectedDriver() & GL::Context::DetectedDriver::SwiftShader)
         CORRADE_SKIP("UBOs with dynamically indexed arrays don't seem to work on SwiftShader, can't test.");
     #endif
@@ -2171,7 +2171,7 @@ void TextLayerGLTest::drawOrder() {
 
     #if defined(MAGNUM_TARGET_GLES) && !defined(MAGNUM_TARGET_WEBGL)
     /* Same problem is with all builtin shaders, so this doesn't seem to be a
-       bug in the base layer shader code */
+       bug in the text layer shader code */
     if(GL::Context::current().detectedDriver() & GL::Context::DetectedDriver::SwiftShader)
         CORRADE_SKIP("UBOs with dynamically indexed arrays don't seem to work on SwiftShader, can't test.");
     #endif
@@ -2392,7 +2392,7 @@ void TextLayerGLTest::drawClipping() {
 
     #if defined(MAGNUM_TARGET_GLES) && !defined(MAGNUM_TARGET_WEBGL)
     /* Same problem is with all builtin shaders, so this doesn't seem to be a
-       bug in the base layer shader code */
+       bug in the text layer shader code */
     if(GL::Context::current().detectedDriver() & GL::Context::DetectedDriver::SwiftShader)
         CORRADE_SKIP("UBOs with dynamically indexed arrays don't seem to work on SwiftShader, can't test.");
     #endif
@@ -2510,7 +2510,7 @@ void TextLayerGLTest::eventStyleTransition() {
 
     #if defined(MAGNUM_TARGET_GLES) && !defined(MAGNUM_TARGET_WEBGL)
     /* Same problem is with all builtin shaders, so this doesn't seem to be a
-       bug in the base layer shader code */
+       bug in the text layer shader code */
     if(GL::Context::current().detectedDriver() & GL::Context::DetectedDriver::SwiftShader)
         CORRADE_SKIP("UBOs with dynamically indexed arrays don't seem to work on SwiftShader, can't test.");
     #endif

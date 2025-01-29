@@ -165,8 +165,9 @@ struct BaseLayer::State: AbstractVisualLayer::State {
     /* 3 bytes free */
 
     Containers::Array<Implementation::BaseLayerData> data;
-    /* Is either Implementation::BaseLayerVertex or BaseLayerTexturedVertex
-       based on whether texturing is enabled */
+    /* Is either Implementation::BaseLayerVertex, BaseLayerTexturedVertex,
+       BaseLayerSubdividedVertex or BaseLayerSubdividedTexturedVertex based on
+       whether texturing / SubdividedQuads is enabled */
     Containers::Array<char> vertices;
     Containers::Array<UnsignedInt> indices;
 

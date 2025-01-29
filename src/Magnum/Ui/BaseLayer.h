@@ -181,7 +181,9 @@ data, packed in a form that allows direct usage in uniform buffers. Total count
 of styles is specified with the
 @ref BaseLayer::Shared::Configuration::Configuration() constructor, uniforms
 are then uploaded using @ref BaseLayer::Shared::setStyle(), style data that
-aren't used by the shader are passed to the function separately.
+aren't used by the shader are passed to the function separately. If dynamic
+styles are enabled with @ref BaseLayer::Shared::Configuration::setDynamicStyleCount(),
+instances of this class are also passed to @ref BaseLayer::setDynamicStyle().
 */
 struct BaseLayerStyleUniform {
     /** @brief Construct with default values */
@@ -1407,7 +1409,8 @@ Contains style definitions. See the @ref BaseLayer class documentation for
 information about setting up an instance of this layer and using it.
 
 You'll most likely instantiate the class through @ref BaseLayerGL::Shared. In
-order to update or draw the layer it's expected that @ref setStyle() was called.
+order to update or draw the layer it's expected that @ref setStyle() was
+called.
 */
 class MAGNUM_UI_EXPORT BaseLayer::Shared: public AbstractVisualLayer::Shared {
     public:

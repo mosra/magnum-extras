@@ -253,7 +253,7 @@ const struct {
     {"", false, 1.0f},
     {"partial update", true, 1.0f},
     {"node opacity", false, 0.75f},
-    {"node opacity. partial update", true, 0.75f},
+    {"node opacity, partial update", true, 0.75f},
 };
 
 const struct {
@@ -1254,7 +1254,7 @@ template<BaseLayerSharedFlag flag> void BaseLayerGLTest::renderCustomColor() {
     setTestCaseTemplateName(flag == BaseLayerSharedFlag::SubdividedQuads ? "Flag::SubdividedQuads" : "");
 
     /* Basically the same as the "gradient" case in render(), except that the
-       color is additionally taken from the per-vertex data as well */
+       color is additionally taken from the data and node opacity as well */
 
     AbstractUserInterface ui{RenderSize};
     ui.setRendererInstance(Containers::pointer<RendererGL>());
@@ -2587,12 +2587,14 @@ void BaseLayerGLTest::eventStyleTransition() {
     MAGNUM_VERIFY_NO_GL_ERROR();
     Image2D before = _framebuffer.read({{}, RenderSize}, {PixelFormat::RGBA8Unorm});
 
-    _framebuffer.clear(GL::FramebufferClear::Color);
-
     PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0};
     CORRADE_VERIFY(ui.pointerPressEvent({64.0f, 24.0f}, event));
     CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataUpdate);
 
+    /* We have blending enabled and the gradient is semi-transparent, which
+       means a subsequent draw would try to blend with the previous, causing
+       unwanted difference */
+    _framebuffer.clear(GL::FramebufferClear::Color);
     ui.draw();
 
     MAGNUM_VERIFY_NO_GL_ERROR();

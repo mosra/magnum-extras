@@ -2183,6 +2183,8 @@ void BaseLayerTest::updateDataOrder() {
             {{}, {}});
     } else CORRADE_INTERNAL_ASSERT_UNREACHABLE();
 
+    /* Transition for disabled node6, which is done below through the
+       nodesEnabled (that has only node15 enabled) view passed to update() */
     shared.setStyleTransition(
         nullptr,
         nullptr,
