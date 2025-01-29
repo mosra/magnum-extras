@@ -1856,7 +1856,7 @@ void TextLayerTest::sharedConstructCopy() {
            without the constructor the type would be impossible to construct
            (and thus also to copy), leading to false positives in the trait
            check below */
-        explicit CORRADE_UNUSED Shared(const Configuration& configuration): TextLayer::Shared{Containers::pointer<TextLayer::Shared::State>(*this, configuration)} {}
+        explicit CORRADE_UNUSED Shared(const Configuration& configuration): TextLayer::Shared{configuration} {}
 
         void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
         void doSetEditingStyle(const TextLayerCommonEditingStyleUniform&, Containers::ArrayView<const TextLayerEditingStyleUniform>) override {}
