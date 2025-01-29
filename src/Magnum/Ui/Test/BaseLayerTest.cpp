@@ -911,6 +911,7 @@ void BaseLayerTest::sharedConfigurationConstructZeroStyleOrUniformCount() {
 }
 
 void BaseLayerTest::sharedConfigurationConstructCopy() {
+    /* Testing just some properties, it's an implicitly generated copy */
     BaseLayer::Shared::Configuration a{3, 5};
 
     BaseLayer::Shared::Configuration b = a;

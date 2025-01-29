@@ -1701,6 +1701,7 @@ void TextLayerTest::sharedConfigurationConstructZeroStyleOrUniformCount() {
 }
 
 void TextLayerTest::sharedConfigurationConstructCopy() {
+    /* Testing just some properties, it's an implicitly generated copy */
     TextLayer::Shared::Configuration a{3, 5};
 
     TextLayer::Shared::Configuration b = a;
