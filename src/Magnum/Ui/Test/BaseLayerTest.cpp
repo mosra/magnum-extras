@@ -107,6 +107,7 @@ struct BaseLayerTest: TestSuite::Tester {
 
     template<class T> void createRemove();
     void createRemoveHandleRecycle();
+    void createStyleOutOfRange();
 
     void setColor();
     void setOutlineWidth();
@@ -115,7 +116,6 @@ struct BaseLayerTest: TestSuite::Tester {
     void setTextureCoordinatesInvalid();
 
     void invalidHandle();
-    void styleOutOfRange();
 
     /* assignAnimator(), setDefaultStyleAnimator() and advanceAnimations()
        tested in BaseLayerStyleAnimatorTest */
@@ -390,7 +390,7 @@ const struct {
 const struct {
     const char* name;
     UnsignedInt styleCount, dynamicStyleCount;
-} StyleOutOfRangeData[]{
+} CreateStyleOutOfRangeData[]{
     {"", 3, 0},
     {"dynamic styles", 1, 2},
 };
@@ -488,20 +488,20 @@ BaseLayerTest::BaseLayerTest() {
                                       &BaseLayerTest::createRemove<Enum>},
         Containers::arraySize(CreateRemoveData));
 
-    addTests({&BaseLayerTest::createRemoveHandleRecycle,
+    addTests({&BaseLayerTest::createRemoveHandleRecycle});
 
-              &BaseLayerTest::setColor,
+    addInstancedTests({&BaseLayerTest::createStyleOutOfRange},
+        Containers::arraySize(CreateStyleOutOfRangeData));
+
+    addTests({&BaseLayerTest::setColor,
               &BaseLayerTest::setOutlineWidth,
               &BaseLayerTest::setPadding,
               &BaseLayerTest::setTextureCoordinates,
               &BaseLayerTest::setTextureCoordinatesInvalid,
 
-              &BaseLayerTest::invalidHandle});
+              &BaseLayerTest::invalidHandle,
 
-    addInstancedTests({&BaseLayerTest::styleOutOfRange},
-        Containers::arraySize(StyleOutOfRangeData));
-
-    addTests({&BaseLayerTest::updateEmpty});
+              &BaseLayerTest::updateEmpty});
 
     addInstancedTests({&BaseLayerTest::updateDataOrder},
         Containers::arraySize(UpdateDataOrderData));
@@ -1764,6 +1764,34 @@ void BaseLayerTest::createRemoveHandleRecycle() {
     CORRADE_COMPARE(layer.padding(second2), Vector4{0.0f});
 }
 
+void BaseLayerTest::createStyleOutOfRange() {
+    auto&& data = CreateStyleOutOfRangeData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    /* In this case the uniform count is higher than the style count, which is
+       unlikely to happen in practice. It's to verify the check happens against
+       the style count, not uniform count. */
+    struct LayerShared: BaseLayer::Shared {
+        explicit LayerShared(const Configuration& configuration): BaseLayer::Shared{configuration} {}
+
+        void doSetStyle(const BaseLayerCommonStyleUniform&, Containers::ArrayView<const BaseLayerStyleUniform>) override {}
+    } shared{BaseLayer::Shared::Configuration{6, data.styleCount}
+        .setDynamicStyleCount(data.dynamicStyleCount)
+    };
+
+    struct Layer: BaseLayer {
+        explicit Layer(LayerHandle handle, Shared& shared): BaseLayer{handle, shared} {}
+    } layer{layerHandle(0, 1), shared};
+
+    Containers::String out;
+    Error redirectError{&out};
+    layer.create(3);
+    CORRADE_COMPARE(out,
+        "Ui::BaseLayer::create(): style 3 out of range for 3 styles\n");
+}
+
 void BaseLayerTest::setColor() {
     struct LayerShared: BaseLayer::Shared {
         explicit LayerShared(const Configuration& configuration): BaseLayer::Shared{configuration} {}
@@ -2081,34 +2109,6 @@ void BaseLayerTest::invalidHandle() {
         "Ui::BaseLayer::setTextureCoordinates(): invalid handle Ui::DataHandle::Null\n"
         "Ui::BaseLayer::setTextureCoordinates(): invalid handle Ui::LayerDataHandle::Null\n",
         TestSuite::Compare::String);
-}
-
-void BaseLayerTest::styleOutOfRange() {
-    auto&& data = StyleOutOfRangeData[testCaseInstanceId()];
-    setTestCaseDescription(data.name);
-
-    CORRADE_SKIP_IF_NO_ASSERT();
-
-    /* In this case the uniform count is higher than the style count, which is
-       unlikely to happen in practice. It's to verify the check happens against
-       the style count, not uniform count. */
-    struct LayerShared: BaseLayer::Shared {
-        explicit LayerShared(const Configuration& configuration): BaseLayer::Shared{configuration} {}
-
-        void doSetStyle(const BaseLayerCommonStyleUniform&, Containers::ArrayView<const BaseLayerStyleUniform>) override {}
-    } shared{BaseLayer::Shared::Configuration{6, data.styleCount}
-        .setDynamicStyleCount(data.dynamicStyleCount)
-    };
-
-    struct Layer: BaseLayer {
-        explicit Layer(LayerHandle handle, Shared& shared): BaseLayer{handle, shared} {}
-    } layer{layerHandle(0, 1), shared};
-
-    Containers::String out;
-    Error redirectError{&out};
-    layer.create(3);
-    CORRADE_COMPARE(out,
-        "Ui::BaseLayer::create(): style 3 out of range for 3 styles\n");
 }
 
 void BaseLayerTest::updateEmpty() {

@@ -153,6 +153,7 @@ struct TextLayerTest: TestSuite::Tester {
     /* remove() and setText() tested here as well */
     template<class StyleIndex, class GlyphIndex> void createRemoveSet();
     void createRemoveHandleRecycle();
+    void createStyleOutOfRange();
     void createNoStyleSet();
 
     void setCursor();
@@ -176,7 +177,6 @@ struct TextLayerTest: TestSuite::Tester {
     void nonEditableText();
     void noSharedStyleFonts();
     void noFontInstance();
-    void styleOutOfRange();
     void glyphOutOfRange();
 
     /* assignAnimator(), setDefaultStyleAnimator() and advanceAnimations()
@@ -548,6 +548,14 @@ const struct {
 const struct {
     const char* name;
     UnsignedInt styleCount, dynamicStyleCount;
+} CreateStyleOutOfRangeData[]{
+    {"", 3, 0},
+    {"dynamic styles", 1, 2},
+};
+
+const struct {
+    const char* name;
+    UnsignedInt styleCount, dynamicStyleCount;
 } CreateUpdateNoStyleSetData[]{
     {"", 1, 0},
     {"dynamic styles", 1, 5},
@@ -912,14 +920,6 @@ const struct {
         Text::ShapeDirection::Unspecified,
         "snme", 2, {}, TextEdit::InsertAfterCursor, "\xff\xfež\xfd\xfc",
         "sn\xff\xfež\xfd\xfcme", {2, 2}, LayerState::NeedsDataUpdate},
-};
-
-const struct {
-    const char* name;
-    UnsignedInt styleCount, dynamicStyleCount;
-} StyleOutOfRangeData[]{
-    {"", 3, 0},
-    {"dynamic styles", 1, 2},
 };
 
 const struct {
@@ -1312,6 +1312,9 @@ TextLayerTest::TextLayerTest() {
     addInstancedTests({&TextLayerTest::createRemoveHandleRecycle},
         Containers::arraySize(CreateRemoveHandleRecycleData));
 
+    addInstancedTests({&TextLayerTest::createStyleOutOfRange},
+        Containers::arraySize(CreateStyleOutOfRangeData));
+
     addInstancedTests({&TextLayerTest::createNoStyleSet},
         Containers::arraySize(CreateUpdateNoStyleSetData));
 
@@ -1343,12 +1346,8 @@ TextLayerTest::TextLayerTest() {
               &TextLayerTest::invalidFontHandle,
               &TextLayerTest::nonEditableText,
               &TextLayerTest::noSharedStyleFonts,
-              &TextLayerTest::noFontInstance});
-
-    addInstancedTests({&TextLayerTest::styleOutOfRange},
-        Containers::arraySize(StyleOutOfRangeData));
-
-    addTests({&TextLayerTest::glyphOutOfRange,
+              &TextLayerTest::noFontInstance,
+              &TextLayerTest::glyphOutOfRange,
 
               &TextLayerTest::updateEmpty});
 
@@ -6249,6 +6248,69 @@ void TextLayerTest::createRemoveHandleRecycle() {
     CORRADE_COMPARE(layer.stateData().data[dataHandleId(first2)].textRun, 0xffffffffu);
 }
 
+void TextLayerTest::createStyleOutOfRange() {
+    auto&& data = CreateStyleOutOfRangeData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct: Text::AbstractFont {
+        Text::FontFeatures doFeatures() const override { return {}; }
+        bool doIsOpened() const override { return true; }
+        void doClose() override {}
+
+        void doGlyphIdsInto(const Containers::StridedArrayView1D<const char32_t>&, const Containers::StridedArrayView1D<UnsignedInt>&) override {}
+        Vector2 doGlyphSize(UnsignedInt) override { return {}; }
+        Vector2 doGlyphAdvance(UnsignedInt) override { return {}; }
+        Containers::Pointer<Text::AbstractShaper> doCreateShaper() override { return {}; }
+    } font;
+
+    struct: Text::AbstractGlyphCache {
+        using Text::AbstractGlyphCache::AbstractGlyphCache;
+
+        Text::GlyphCacheFeatures doFeatures() const override { return {}; }
+        void doSetImage(const Vector2i&, const ImageView2D&) override {}
+    } cache{PixelFormat::R8Unorm, {32, 32, 2}};
+    cache.addFont(56, &font);
+
+    /* In this case the uniform count is higher than the style count, which is
+       unlikely to happen in practice. It's to verify the check happens against
+       the style count, not uniform count. */
+    struct LayerShared: TextLayer::Shared {
+        explicit LayerShared(const Configuration& configuration): TextLayer::Shared{configuration} {}
+
+        using TextLayer::Shared::setGlyphCache;
+
+        void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
+        void doSetEditingStyle(const TextLayerCommonEditingStyleUniform&, Containers::ArrayView<const TextLayerEditingStyleUniform>) override {}
+    } shared{TextLayer::Shared::Configuration{6, data.styleCount}
+        .setDynamicStyleCount(data.dynamicStyleCount)
+    };
+    shared.setGlyphCache(cache);
+
+    FontHandle fontHandle = shared.addFont(font, 1.0f);
+
+    shared.setStyle(
+        TextLayerCommonStyleUniform{},
+        Containers::arrayView({TextLayerStyleUniform{}, TextLayerStyleUniform{}, TextLayerStyleUniform{}, TextLayerStyleUniform{}, TextLayerStyleUniform{}, TextLayerStyleUniform{}}),
+        Containers::arrayView({0u, 1u, 2u}).prefix(data.styleCount),
+        Containers::arrayView({fontHandle, fontHandle, fontHandle}).prefix(data.styleCount),
+        Containers::arrayView({Text::Alignment{}, Text::Alignment{}, Text::Alignment{}}).prefix(data.styleCount),
+        {}, {}, {}, {}, {}, {});
+
+    struct Layer: TextLayer {
+        explicit Layer(LayerHandle handle, Shared& shared): TextLayer{handle, shared} {}
+    } layer{layerHandle(0, 1), shared};
+
+    Containers::String out;
+    Error redirectError{&out};
+    layer.create(3, "", {});
+    layer.createGlyph(3, 0, {});
+    CORRADE_COMPARE(out,
+        "Ui::TextLayer::create(): style 3 out of range for 3 styles\n"
+        "Ui::TextLayer::createGlyph(): style 3 out of range for 3 styles\n");
+}
+
 void TextLayerTest::createNoStyleSet() {
     auto&& data = CreateUpdateNoStyleSetData[testCaseInstanceId()];
     setTestCaseDescription(data.name);
@@ -7856,69 +7918,6 @@ void TextLayerTest::noFontInstance() {
         "Ui::TextLayer::create(): Ui::FontHandle(0x1, 0x1) is an instance-less font\n"
         "Ui::TextLayer::setText(): Ui::FontHandle(0x0, 0x1) is an instance-less font\n"
         "Ui::TextLayer::setText(): Ui::FontHandle(0x1, 0x1) is an instance-less font\n");
-}
-
-void TextLayerTest::styleOutOfRange() {
-    auto&& data = StyleOutOfRangeData[testCaseInstanceId()];
-    setTestCaseDescription(data.name);
-
-    CORRADE_SKIP_IF_NO_ASSERT();
-
-    struct: Text::AbstractFont {
-        Text::FontFeatures doFeatures() const override { return {}; }
-        bool doIsOpened() const override { return true; }
-        void doClose() override {}
-
-        void doGlyphIdsInto(const Containers::StridedArrayView1D<const char32_t>&, const Containers::StridedArrayView1D<UnsignedInt>&) override {}
-        Vector2 doGlyphSize(UnsignedInt) override { return {}; }
-        Vector2 doGlyphAdvance(UnsignedInt) override { return {}; }
-        Containers::Pointer<Text::AbstractShaper> doCreateShaper() override { return {}; }
-    } font;
-
-    struct: Text::AbstractGlyphCache {
-        using Text::AbstractGlyphCache::AbstractGlyphCache;
-
-        Text::GlyphCacheFeatures doFeatures() const override { return {}; }
-        void doSetImage(const Vector2i&, const ImageView2D&) override {}
-    } cache{PixelFormat::R8Unorm, {32, 32, 2}};
-    cache.addFont(56, &font);
-
-    /* In this case the uniform count is higher than the style count, which is
-       unlikely to happen in practice. It's to verify the check happens against
-       the style count, not uniform count. */
-    struct LayerShared: TextLayer::Shared {
-        explicit LayerShared(const Configuration& configuration): TextLayer::Shared{configuration} {}
-
-        using TextLayer::Shared::setGlyphCache;
-
-        void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
-        void doSetEditingStyle(const TextLayerCommonEditingStyleUniform&, Containers::ArrayView<const TextLayerEditingStyleUniform>) override {}
-    } shared{TextLayer::Shared::Configuration{6, data.styleCount}
-        .setDynamicStyleCount(data.dynamicStyleCount)
-    };
-    shared.setGlyphCache(cache);
-
-    FontHandle fontHandle = shared.addFont(font, 1.0f);
-
-    shared.setStyle(
-        TextLayerCommonStyleUniform{},
-        Containers::arrayView({TextLayerStyleUniform{}, TextLayerStyleUniform{}, TextLayerStyleUniform{}, TextLayerStyleUniform{}, TextLayerStyleUniform{}, TextLayerStyleUniform{}}),
-        Containers::arrayView({0u, 1u, 2u}).prefix(data.styleCount),
-        Containers::arrayView({fontHandle, fontHandle, fontHandle}).prefix(data.styleCount),
-        Containers::arrayView({Text::Alignment{}, Text::Alignment{}, Text::Alignment{}}).prefix(data.styleCount),
-        {}, {}, {}, {}, {}, {});
-
-    struct Layer: TextLayer {
-        explicit Layer(LayerHandle handle, Shared& shared): TextLayer{handle, shared} {}
-    } layer{layerHandle(0, 1), shared};
-
-    Containers::String out;
-    Error redirectError{&out};
-    layer.create(3, "", {});
-    layer.createGlyph(3, 0, {});
-    CORRADE_COMPARE(out,
-        "Ui::TextLayer::create(): style 3 out of range for 3 styles\n"
-        "Ui::TextLayer::createGlyph(): style 3 out of range for 3 styles\n");
 }
 
 void TextLayerTest::glyphOutOfRange() {
