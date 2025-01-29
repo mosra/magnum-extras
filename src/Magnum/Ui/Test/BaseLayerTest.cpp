@@ -612,6 +612,9 @@ void BaseLayerTest::styleUniformCommonConstructNoInit() {
         CORRADE_COMPARE(a.smoothness, 3.0f);
         CORRADE_COMPARE(a.innerOutlineSmoothness, 20.0f);
     }
+
+    /* Implicit construction is not allowed */
+    CORRADE_VERIFY(!std::is_convertible<NoInitT, BaseLayerCommonStyleUniform>::value);
 }
 
 void BaseLayerTest::styleUniformCommonSetters() {
@@ -825,6 +828,9 @@ void BaseLayerTest::styleUniformConstructNoInit() {
         CORRADE_COMPARE(a.bottomColor, 0xff3366_rgbf);
         CORRADE_COMPARE(a.innerOutlineCornerRadius, (Vector4{1.0f, 2.0f, 3.0f, 4.0f}));
     }
+
+    /* Implicit construction is not allowed */
+    CORRADE_VERIFY(!std::is_convertible<NoInitT, BaseLayerStyleUniform>::value);
 }
 
 void BaseLayerTest::styleUniformSetters() {

@@ -1438,6 +1438,9 @@ void TextLayerTest::styleUniformCommonConstructNoInit() {
         /* No actual fields yet */
         CORRADE_VERIFY(true);
     }
+
+    /* Implicit construction is not allowed */
+    CORRADE_VERIFY(!std::is_convertible<NoInitT, TextLayerCommonStyleUniform>::value);
 }
 
 void TextLayerTest::styleUniformCommonSetters() {
@@ -1487,6 +1490,9 @@ void TextLayerTest::styleUniformConstructNoInit() {
         #endif
         CORRADE_COMPARE(a.color, 0xff3366_rgbf);
     }
+
+    /* Implicit construction is not allowed */
+    CORRADE_VERIFY(!std::is_convertible<NoInitT, TextLayerStyleUniform>::value);
 }
 
 void TextLayerTest::styleUniformSetters() {
@@ -1536,6 +1542,9 @@ void TextLayerTest::editingStyleUniformCommonConstructNoInit() {
         #endif
         CORRADE_COMPARE(a.smoothness, 3.0f);
     }
+
+    /* Implicit construction is not allowed */
+    CORRADE_VERIFY(!std::is_convertible<NoInitT, TextLayerCommonEditingStyleUniform>::value);
 }
 
 void TextLayerTest::editingStyleUniformCommonSetters() {
@@ -1593,6 +1602,9 @@ void TextLayerTest::editingStyleUniformConstructNoInit() {
         CORRADE_COMPARE(a.backgroundColor, 0xff3366_rgbf);
         CORRADE_COMPARE(a.cornerRadius, 34.0f);
     }
+
+    /* Implicit construction is not allowed */
+    CORRADE_VERIFY(!std::is_convertible<NoInitT, TextLayerEditingStyleUniform>::value);
 }
 
 void TextLayerTest::editingStyleUniformSetters() {
