@@ -75,6 +75,16 @@ typedef Containers::EnumSet<BaseLayerSharedFlag> BaseLayerSharedFlags;
 class EventConnection;
 class EventLayer;
 
+class LineLayer;
+struct LineLayerCommonStyleUniform;
+struct LineLayerStyleUniform;
+#ifdef MAGNUM_TARGET_GL
+class LineLayerGL;
+#endif
+enum class LineCapStyle: UnsignedByte;
+enum class LineJoinStyle: UnsignedByte;
+enum class LineAlignment: UnsignedByte;
+
 enum class FontHandle: UnsignedShort;
 class TextLayer;
 struct TextLayerCommonStyleUniform;

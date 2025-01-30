@@ -58,6 +58,7 @@ corrade_add_test(UiGenericAnimatorTest GenericAnimatorTest.cpp LIBRARIES MagnumU
 corrade_add_test(UiHandleTest HandleTest.cpp LIBRARIES MagnumUi)
 corrade_add_test(UiInputTest InputTest.cpp LIBRARIES MagnumUi)
 corrade_add_test(UiLabelTest LabelTest.cpp LIBRARIES MagnumUi)
+corrade_add_test(UiLineLayerTest LineLayerTest.cpp LIBRARIES MagnumUiTestLib)
 corrade_add_test(UiNodeFlagsTest NodeFlagsTest.cpp LIBRARIES MagnumUi)
 corrade_add_test(UiSnapLayouterTest SnapLayouterTest.cpp LIBRARIES MagnumUiTestLib)
 
@@ -166,9 +167,11 @@ if(NOT CMAKE_CXX_FLAGS MATCHES "-std=")
        (CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang" AND NOT CMAKE_CXX_COMPILER_VERSION VERSION_LESS "6.0.1") OR
        (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC" AND NOT CMAKE_CXX_COMPILER_VERSION VERSION_LESS "19.10"))
         corrade_add_test(UiBaseLayerCpp14Test BaseLayerCpp14Test.cpp LIBRARIES MagnumUi)
+        corrade_add_test(UiLineLayerCpp14Test LineLayerCpp14Test.cpp LIBRARIES MagnumUi)
         corrade_add_test(UiTextLayerCpp14Test TextLayerCpp14Test.cpp LIBRARIES MagnumUi)
         set_target_properties(
             UiBaseLayerCpp14Test
+            UiLineLayerCpp14Test
             UiTextLayerCpp14Test
             PROPERTIES CORRADE_CXX_STANDARD 14)
    endif()
@@ -178,6 +181,7 @@ if(MAGNUM_TARGET_GL)
     find_package(Magnum REQUIRED DebugTools)
 
     corrade_add_test(UiBaseLayerGL_Test BaseLayerGL_Test.cpp LIBRARIES MagnumUiTestLib)
+    corrade_add_test(UiLineLayerGL_Test LineLayerGL_Test.cpp LIBRARIES MagnumUiTestLib)
     corrade_add_test(UiRendererGL_Test RendererGL_Test.cpp LIBRARIES MagnumUiTestLib)
     corrade_add_test(UiTextLayerGL_Test TextLayerGL_Test.cpp LIBRARIES MagnumUiTestLib)
     corrade_add_test(UiUserInterfaceGL_Test UserInterfaceGL_Test.cpp LIBRARIES MagnumUi)
@@ -329,6 +333,32 @@ if(MAGNUM_BUILD_GL_TESTS)
         endif()
         if(MagnumPlugins_StbImageImporter_FOUND)
             target_link_libraries(UiBlurShaderGLTest PRIVATE MagnumPlugins::StbImageImporter)
+        endif()
+    endif()
+
+    corrade_add_test(UiLineLayerGLTest LineLayerGLTest.cpp
+        LIBRARIES
+            MagnumUiTestLib
+            Magnum::DebugTools
+            Magnum::OpenGLTester
+        FILES
+            LineLayerTestFiles/butt-bevel.png
+            LineLayerTestFiles/color.png
+            LineLayerTestFiles/default.png
+            LineLayerTestFiles/draw-order.png
+            LineLayerTestFiles/loop.png
+            LineLayerTestFiles/round-bevel.png
+            LineLayerTestFiles/smooth.png
+            LineLayerTestFiles/square-miter.png
+            LineLayerTestFiles/strip.png
+            LineLayerTestFiles/triangle-miter-limit.png)
+    target_include_directories(UiLineLayerGLTest PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
+    if(MAGNUM_BUILD_STATIC)
+        if(Magnum_AnyImageImporter_FOUND)
+            target_link_libraries(UiLineLayerGLTest PRIVATE Magnum::AnyImageImporter)
+        endif()
+        if(MagnumPlugins_StbImageImporter_FOUND)
+            target_link_libraries(UiLineLayerGLTest PRIVATE MagnumPlugins::StbImageImporter)
         endif()
     endif()
 

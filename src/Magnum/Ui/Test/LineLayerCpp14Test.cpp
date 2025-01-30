@@ -24,35 +24,44 @@
     DEALINGS IN THE SOFTWARE.
 */
 
-/* Subset of Magnum/Shaders/compatibility.glsl with just things relevant for
-   GLSL 3.30+ and GLSL ES 3.00+ */
+#include <Corrade/TestSuite/Tester.h>
 
-#if !defined(GL_ES) && defined(GL_ARB_shading_language_420pack) && !defined(MAGNUM_DISABLE_GL_ARB_shading_language_420pack)
-    #extension GL_ARB_shading_language_420pack: enable
-    #define RUNTIME_CONST
-    #define EXPLICIT_BINDING
-#endif
+#include "Magnum/Ui/LineLayer.h"
 
-#if !defined(GL_ES) && defined(GL_ARB_explicit_uniform_location) && !defined(MAGNUM_DISABLE_GL_ARB_explicit_uniform_location)
-    #extension GL_ARB_explicit_uniform_location: enable
-    #define EXPLICIT_UNIFORM_LOCATION
-#endif
+namespace Magnum { namespace Ui { namespace Test { namespace {
 
-#ifdef GL_ES
-    #if __VERSION__ >= 310 || (defined(MAGNUM_GLSL_VERSION) && MAGNUM_GLSL_VERSION >= 310)
-        #define EXPLICIT_BINDING
-        #define EXPLICIT_UNIFORM_LOCATION
-    #endif
-    /* RUNTIME_CONST is not available in OpenGL ES */
-#endif
+struct LineLayerCpp14Test: TestSuite::Tester {
+    explicit LineLayerCpp14Test();
 
-/* This is added compared to Magnum/Shaders/compatibility.glsl. Since UI is 2D,
-   noperspective is useful a lot, and it helps quite significantly. */
-#if defined(GL_ES) && defined(GL_NV_shader_noperspective_interpolation)
-    #extension GL_NV_shader_noperspective_interpolation: require
-#endif
-#if !defined(GL_ES) || defined(GL_NV_shader_noperspective_interpolation)
-    #define NOPERSPECTIVE noperspective
-#else
-    #define NOPERSPECTIVE
-#endif
+    void styleUniformCommonSettersConstexpr();
+    void styleUniformSettersConstexpr();
+};
+
+LineLayerCpp14Test::LineLayerCpp14Test() {
+    addTests({&LineLayerCpp14Test::styleUniformCommonSettersConstexpr,
+              &LineLayerCpp14Test::styleUniformSettersConstexpr});
+}
+
+using namespace Math::Literals;
+
+void LineLayerCpp14Test::styleUniformCommonSettersConstexpr() {
+    constexpr LineLayerCommonStyleUniform a = LineLayerCommonStyleUniform{}
+        .setSmoothness(1.0f);
+    CORRADE_COMPARE(a.smoothness, 1.0f);
+}
+
+void LineLayerCpp14Test::styleUniformSettersConstexpr() {
+    constexpr LineLayerStyleUniform a = LineLayerStyleUniform{}
+        .setColor(0xff336699_rgbaf)
+        .setWidth(3.0f)
+        .setSmoothness(15.0f)
+        .setMiterLimit(3.7654f);
+    CORRADE_COMPARE(a.color, 0xff336699_rgbaf);
+    CORRADE_COMPARE(a.width, 3.0f);
+    CORRADE_COMPARE(a.smoothness, 15.0f);
+    CORRADE_COMPARE(a.miterLimit, 3.7654f);
+}
+
+}}}}
+
+CORRADE_TEST_MAIN(Magnum::Ui::Test::LineLayerCpp14Test)

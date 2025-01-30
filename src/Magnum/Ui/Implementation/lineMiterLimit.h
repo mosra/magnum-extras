@@ -1,3 +1,5 @@
+#ifndef Magnum_Ui_Implementation_lineMiterLimit_h
+#define Magnum_Ui_Implementation_lineMiterLimit_h
 /*
     This file is part of Magnum.
 
@@ -24,35 +26,38 @@
     DEALINGS IN THE SOFTWARE.
 */
 
-/* Subset of Magnum/Shaders/compatibility.glsl with just things relevant for
-   GLSL 3.30+ and GLSL ES 3.00+ */
+#include <Corrade/Utility/Assert.h>
 
-#if !defined(GL_ES) && defined(GL_ARB_shading_language_420pack) && !defined(MAGNUM_DISABLE_GL_ARB_shading_language_420pack)
-    #extension GL_ARB_shading_language_420pack: enable
-    #define RUNTIME_CONST
-    #define EXPLICIT_BINDING
-#endif
+#include "Magnum/Math/Functions.h"
 
-#if !defined(GL_ES) && defined(GL_ARB_explicit_uniform_location) && !defined(MAGNUM_DISABLE_GL_ARB_explicit_uniform_location)
-    #extension GL_ARB_explicit_uniform_location: enable
-    #define EXPLICIT_UNIFORM_LOCATION
-#endif
+namespace Magnum { namespace Ui { namespace Implementation {
 
-#ifdef GL_ES
-    #if __VERSION__ >= 310 || (defined(MAGNUM_GLSL_VERSION) && MAGNUM_GLSL_VERSION >= 310)
-        #define EXPLICIT_BINDING
-        #define EXPLICIT_UNIFORM_LOCATION
+/* These helpers, along with tests, are copied verbatim between the Shaders and
+   Ui libraries */
+
+inline Float lineMiterLengthLimit(const char*
+    #if !defined(CORRADE_NO_ASSERT) && !defined(CORRADE_STANDARD_ASSERT)
+    const name
     #endif
-    /* RUNTIME_CONST is not available in OpenGL ES */
-#endif
+, const Float limit) {
+    CORRADE_ASSERT(limit >= 1.0f && !Math::isInf(limit),
+        name << "expected a finite value greater than or equal to 1, got" << limit, {});
+    /* Calculate the half-angle from the length and return a cosine of it */
+    return Math::cos(2.0f*Math::asin(1.0f/limit));
+}
 
-/* This is added compared to Magnum/Shaders/compatibility.glsl. Since UI is 2D,
-   noperspective is useful a lot, and it helps quite significantly. */
-#if defined(GL_ES) && defined(GL_NV_shader_noperspective_interpolation)
-    #extension GL_NV_shader_noperspective_interpolation: require
-#endif
-#if !defined(GL_ES) || defined(GL_NV_shader_noperspective_interpolation)
-    #define NOPERSPECTIVE noperspective
-#else
-    #define NOPERSPECTIVE
+inline Float lineMiterAngleLimit(const char*
+    #if !defined(CORRADE_NO_ASSERT) && !defined(CORRADE_STANDARD_ASSERT)
+    const name
+    #endif
+, const Rad limit) {
+    using namespace Math::Literals;
+    CORRADE_ASSERT(limit > 0.0_radf && limit <= Rad{Constants::pi()},
+        name << "expected a value greater than 0° and less than or equal to 180°, got" << Float(Deg(limit)) << Debug::nospace << "°", {});
+    /* Return a cosine of the angle */
+    return Math::cos(limit);
+}
+
+}}}
+
 #endif

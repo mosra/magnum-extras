@@ -67,6 +67,7 @@ set(MagnumUi_GracefulAssert_SRCS
     Event.cpp
     EventLayer.cpp
     GenericAnimator.cpp
+    LineLayer.cpp
     SnapLayouter.cpp
     TextLayer.cpp
     TextLayerAnimator.cpp
@@ -94,6 +95,7 @@ set(MagnumUi_HEADERS
     Handle.h
     Input.h
     Label.h
+    LineLayer.h
     NodeFlags.h
     SnapLayouter.h
     Style.h
@@ -112,6 +114,8 @@ set(MagnumUi_PRIVATE_HEADERS
     Implementation/abstractVisualLayerAnimatorState.h
     Implementation/baseLayerState.h
     Implementation/baseStyleUniformsMcssDark.h
+    Implementation/lineLayerState.h
+    Implementation/lineMiterLimit.h
     Implementation/textLayerState.h
     Implementation/textStyleMcssDark.h
     Implementation/textStyleUniformsMcssDark.h
@@ -125,11 +129,13 @@ if(MAGNUM_TARGET_GL)
         ${MagnumUi_RESOURCES})
     list(APPEND MagnumUi_GracefulAssert_SRCS
         BaseLayerGL.cpp
+        LineLayerGL.cpp
         RendererGL.cpp
         TextLayerGL.cpp
         UserInterfaceGL.cpp)
     list(APPEND MagnumUi_HEADERS
         BaseLayerGL.h
+        LineLayerGL.h
         RendererGL.h
         TextLayerGL.h
         UserInterfaceGL.h)
