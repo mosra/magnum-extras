@@ -6221,8 +6221,12 @@ void TextLayerTest::createRemoveHandleRecycle() {
 
     DataHandle first = layer.create(0, "hello", {}, data.flags);
     DataHandle second = layer.create(0, "again", {}, data.flags);
+    layer.setColor(first, 0x663399_rgbf);
+    layer.setColor(second, 0xff3366_rgbf);
     layer.setPadding(first, Vector4{15.0f});
     layer.setPadding(second, Vector4{5.0f});
+    CORRADE_COMPARE(layer.color(first), 0x663399_rgbf);
+    CORRADE_COMPARE(layer.color(second), 0xff3366_rgbf);
     CORRADE_COMPARE(layer.padding(first), Vector4{15.0f});
     CORRADE_COMPARE(layer.padding(second), Vector4{5.0f});
     CORRADE_COMPARE(layer.stateData().data[dataHandleId(first)].flags, data.flags);
@@ -6230,11 +6234,12 @@ void TextLayerTest::createRemoveHandleRecycle() {
     CORRADE_COMPARE(layer.stateData().data[dataHandleId(second)].flags, data.flags);
     CORRADE_COMPARE(layer.stateData().data[dataHandleId(second)].textRun, data.flags >= TextDataFlag::Editable ? 1 : 0xffffffffu);
 
-    /* Data that reuses a previous slot should have the padding cleared, as
+    /* Data that reuses a previous slot should have all properties cleared, as
        well as the flags and text run if the previous one was editable */
     layer.remove(second);
     DataHandle second2 = layer.create(0, "yes", {});
     CORRADE_COMPARE(dataHandleId(second2), dataHandleId(second));
+    CORRADE_COMPARE(layer.color(second2), 0xffffff_rgbf);
     CORRADE_COMPARE(layer.padding(second2), Vector4{0.0f});
     CORRADE_COMPARE(layer.stateData().data[dataHandleId(second2)].flags, TextDataFlags{});
     CORRADE_COMPARE(layer.stateData().data[dataHandleId(second2)].textRun, 0xffffffffu);
@@ -6243,6 +6248,7 @@ void TextLayerTest::createRemoveHandleRecycle() {
     layer.remove(first);
     DataHandle first2 = layer.createGlyph(0, 0, {});
     CORRADE_COMPARE(dataHandleId(first2), dataHandleId(first));
+    CORRADE_COMPARE(layer.color(first2), 0xffffff_rgbf);
     CORRADE_COMPARE(layer.padding(first2), Vector4{0.0f});
     CORRADE_COMPARE(layer.stateData().data[dataHandleId(first2)].flags, TextDataFlags{});
     CORRADE_COMPARE(layer.stateData().data[dataHandleId(first2)].textRun, 0xffffffffu);

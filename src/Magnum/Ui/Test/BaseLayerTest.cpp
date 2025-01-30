@@ -1745,7 +1745,9 @@ void BaseLayerTest::createRemoveHandleRecycle() {
         explicit LayerShared(const Configuration& configuration): BaseLayer::Shared{configuration} {}
 
         void doSetStyle(const BaseLayerCommonStyleUniform&, Containers::ArrayView<const BaseLayerStyleUniform>) override {}
-    } shared{BaseLayer::Shared::Configuration{1, 3}};
+    } shared{BaseLayer::Shared::Configuration{1, 3}
+        .addFlags(BaseLayerSharedFlag::Textured)
+    };
 
     struct Layer: BaseLayer {
         explicit Layer(LayerHandle handle, Shared& shared): BaseLayer{handle, shared} {}
@@ -1753,15 +1755,31 @@ void BaseLayerTest::createRemoveHandleRecycle() {
 
     DataHandle first = layer.create(0);
     DataHandle second = layer.create(0);
+    layer.setColor(second, 0xff3366_rgbf);
+    layer.setOutlineWidth(second, Vector4{2.0f});
     layer.setPadding(second, Vector4{5.0f});
+    layer.setTextureCoordinates(second, Vector3{3.0f}, Vector2{4.0f});
+    CORRADE_COMPARE(layer.color(first), 0xffffff_rgbf);
+    CORRADE_COMPARE(layer.outlineWidth(first), Vector4{0.0f});
     CORRADE_COMPARE(layer.padding(first), Vector4{0.0f});
+    CORRADE_COMPARE(layer.textureCoordinateOffset(first), Vector3{0.0f});
+    CORRADE_COMPARE(layer.textureCoordinateSize(first), Vector2{1.0f});
+    CORRADE_COMPARE(layer.color(second), 0xff3366_rgbf);
+    CORRADE_COMPARE(layer.outlineWidth(second), Vector4{2.0f});
     CORRADE_COMPARE(layer.padding(second), Vector4{5.0f});
+    CORRADE_COMPARE(layer.textureCoordinateOffset(second), Vector3{3.0f});
+    CORRADE_COMPARE(layer.textureCoordinateSize(second), Vector2{4.0f});
 
-    /* Data that reuses a previous slot should have the padding cleared */
+    /* Data that reuses a previous slot should have all properties cleared back
+       to defaults */
     layer.remove(second);
     DataHandle second2 = layer.create(0);
     CORRADE_COMPARE(dataHandleId(second2), dataHandleId(second));
+    CORRADE_COMPARE(layer.color(second2), 0xffffff_rgbf);
+    CORRADE_COMPARE(layer.outlineWidth(second2), Vector4{0.0f});
     CORRADE_COMPARE(layer.padding(second2), Vector4{0.0f});
+    CORRADE_COMPARE(layer.textureCoordinateOffset(second2), Vector3{0.0f});
+    CORRADE_COMPARE(layer.textureCoordinateSize(second2), Vector2{1.0f});
 }
 
 void BaseLayerTest::createStyleOutOfRange() {
