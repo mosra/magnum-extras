@@ -31,12 +31,13 @@
 #include <Corrade/Containers/String.h>
 #include <Corrade/Utility/Format.h>
 #include <Corrade/Utility/Resource.h>
-#include <Magnum/Math/Matrix3.h>
 #include <Magnum/Math/Range.h>
 #include <Magnum/GL/AbstractShaderProgram.h>
 #include <Magnum/GL/Buffer.h>
 #include <Magnum/GL/Context.h>
+#ifndef MAGNUM_TARGET_GLES
 #include <Magnum/GL/Extensions.h>
+#endif
 #include <Magnum/GL/Framebuffer.h>
 #include <Magnum/GL/Mesh.h>
 #include <Magnum/GL/Renderer.h>

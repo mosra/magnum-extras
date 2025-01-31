@@ -35,12 +35,12 @@
 #include "Magnum/Ui/AbstractVisualLayer.h"
 #include "Magnum/Ui/BaseLayer.h"
 #include "Magnum/Ui/BaseLayerAnimator.h"
-#include "Magnum/Ui/TextLayerAnimator.h"
 #include "Magnum/Ui/Event.h"
 #include "Magnum/Ui/EventLayer.h"
 #include "Magnum/Ui/GenericAnimator.h"
 #include "Magnum/Ui/Handle.h"
 #include "Magnum/Ui/NodeFlags.h"
+#include "Magnum/Ui/TextLayerAnimator.h"
 
 #define DOXYGEN_ELLIPSIS(...) __VA_ARGS__
 #define DOXYGEN_IGNORE(...) __VA_ARGS__
