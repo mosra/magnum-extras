@@ -1231,7 +1231,6 @@ class MAGNUM_UI_EXPORT BaseLayer: public AbstractVisualLayer {
            on the subclass */
         LayerFeatures doFeatures() const override;
 
-        LayerStates doState() const override;
         void doSetSize(const Vector2& size, const Vector2i& framebufferSize) override;
         void doUpdate(LayerStates states, const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectDataCounts, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, const Containers::StridedArrayView1D<const Float>& nodeOpacities, Containers::BitArrayView nodesEnabled, const Containers::StridedArrayView1D<const Vector2>& clipRectOffsets, const Containers::StridedArrayView1D<const Vector2>& clipRectSizes, const Containers::StridedArrayView1D<const Vector2>& compositeRectOffsets, const Containers::StridedArrayView1D<const Vector2>& compositeRectSizes) override;
 
@@ -1243,8 +1242,9 @@ class MAGNUM_UI_EXPORT BaseLayer: public AbstractVisualLayer {
         MAGNUM_UI_LOCAL Vector2 textureCoordinateSizeInternal(UnsignedInt id) const;
         MAGNUM_UI_LOCAL void setTextureCoordinatesInternal(UnsignedInt id, const Vector3& offset, const Vector2& size);
 
-        /* Can't be MAGNUM_UI_LOCAL otherwise deriving from this class in
-           tests causes linker errors */
+        /* These can't be MAGNUM_UI_LOCAL otherwise deriving from this class
+           in tests causes linker errors */
+        LayerStates doState() const override;
         void doAdvanceAnimations(Nanoseconds time, Containers::MutableBitArrayView activeStorage, const Containers::StridedArrayView1D<Float>& factorStorage, Containers::MutableBitArrayView removeStorage, const Containers::Iterable<AbstractStyleAnimator>& animators) override;
 };
 

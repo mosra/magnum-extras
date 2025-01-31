@@ -1873,7 +1873,6 @@ class MAGNUM_UI_EXPORT TextLayer: public AbstractVisualLayer {
            that's on the subclass */
         LayerFeatures doFeatures() const override;
 
-        LayerStates doState() const override;
         void doUpdate(LayerStates states, const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectDataCounts, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, const Containers::StridedArrayView1D<const Float>& nodeOpacities, Containers::BitArrayView nodesEnabled, const Containers::StridedArrayView1D<const Vector2>& clipRectOffsets, const Containers::StridedArrayView1D<const Vector2>& clipRectSizes, const Containers::StridedArrayView1D<const Vector2>& compositeRectOffsets, const Containers::StridedArrayView1D<const Vector2>& compositeRectSizes) override;
 
     private:
@@ -1918,6 +1917,7 @@ class MAGNUM_UI_EXPORT TextLayer: public AbstractVisualLayer {
 
         /* Can't be MAGNUM_UI_LOCAL otherwise deriving from this class in
            tests causes linker errors */
+        LayerStates doState() const override;
         void doClean(Containers::BitArrayView dataIdsToRemove) override;
         void doAdvanceAnimations(Nanoseconds time, Containers::MutableBitArrayView activeStorage, const Containers::StridedArrayView1D<Float>& factorStorage, Containers::MutableBitArrayView removeStorage, const Containers::Iterable<AbstractStyleAnimator>& animators) override;
         void doKeyPressEvent(UnsignedInt dataId, KeyEvent& event) override;
