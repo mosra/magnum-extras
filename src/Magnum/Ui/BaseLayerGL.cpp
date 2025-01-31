@@ -97,7 +97,6 @@ class BaseShaderGL: public GL::AbstractShaderProgram {
         typedef GL::Attribute<4, UnsignedInt> Style;
         typedef GL::Attribute<5, Vector3> TextureCoordinates;
 
-        explicit BaseShaderGL(UnsignedInt styleCount);
         explicit BaseShaderGL(Flags flags, UnsignedInt styleCount);
 
         BaseShaderGL& setProjection(const Vector2& scaling, const Float pixelScaling) {
