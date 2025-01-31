@@ -412,7 +412,7 @@ void TextLayerGL::doUpdate(const LayerStates states, const Containers::StridedAr
     TextLayer::doUpdate(states, dataIds, clipRectIds, clipRectDataCounts, nodeOffsets, nodeSizes, nodeOpacities, nodesEnabled, clipRectOffsets, clipRectSizes, compositeRectOffsets, compositeRectSizes);
 
     /* The branching here mirrors how TextLayer::doUpdate() restricts the
-       updates */
+       updates. Keep in sync. */
     if(states >= LayerState::NeedsNodeOrderUpdate ||
        states >= LayerState::NeedsDataUpdate)
     {
@@ -425,6 +425,7 @@ void TextLayerGL::doUpdate(const LayerStates states, const Containers::StridedAr
     }
     if(states >= LayerState::NeedsNodeOffsetSizeUpdate ||
        states >= LayerState::NeedsNodeEnabledUpdate ||
+       states >= LayerState::NeedsNodeOpacityUpdate ||
        states >= LayerState::NeedsDataUpdate)
     {
         state.vertexBuffer.setData(state.vertices);

@@ -2027,7 +2027,8 @@ void TextLayer::doUpdate(const LayerStates states, const Containers::StridedArra
     }
 
     /* Fill in indices in desired order if either the data themselves or the
-       node order changed */
+       node order changed. Keep the checks in sync with
+       TextLayerGL::doUpdate(). */
     if(states >= LayerState::NeedsNodeOrderUpdate ||
        states >= LayerState::NeedsDataUpdate)
     {
@@ -2140,7 +2141,8 @@ void TextLayer::doUpdate(const LayerStates states, const Containers::StridedArra
 
     /* Fill in vertex data if the data themselves, the node offset/size or node
        enablement (and thus calculated styles) or opacities (and thus
-       calculated colors) changed */
+       calculated colors) changed. Keep the checks in sync with
+       TextLayerGL::doUpdate(). */
     /** @todo split this further to just position-related data update and other
         data if it shows to help with perf */
     if(states >= LayerState::NeedsNodeOffsetSizeUpdate ||

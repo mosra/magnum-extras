@@ -543,7 +543,8 @@ void BaseLayer::doUpdate(const LayerStates states, const Containers::StridedArra
     /* Fill in indices in desired order if either the data themselves or the
        node order changed. Flattening the logic for less indentation, first the
        less-data-heavy case with just a single quad for every data but a more
-       complicated fragment shader. */
+       complicated fragment shader. Keep the checks in sync with
+       BaseLayerGL::doUpdate(). */
     const bool updateIndices =
         states >= LayerState::NeedsNodeOrderUpdate ||
         states >= LayerState::NeedsDataUpdate;
@@ -655,7 +656,8 @@ void BaseLayer::doUpdate(const LayerStates states, const Containers::StridedArra
     /* Fill in vertex data if the data themselves, the node offset/size or node
        enablement (and thus calculated styles) changed. Again flattening the
        logic for less indentation, first the less-data-heavy case with just a
-       single quad for every data. */
+       single quad for every data. Keep the checks in sync with
+       BaseLayerGL::doUpdate(). */
     /** @todo split this further to just position-related data update and other
         data if it shows to help with perf */
     const bool updateVertices =
