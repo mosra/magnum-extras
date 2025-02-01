@@ -797,25 +797,42 @@ const struct {
     const char* name;
     bool editableBefore, editableAfter;
     UnsignedInt(*transition)(UnsignedInt);
+    UnsignedInt(*transitionDisabled)(UnsignedInt);
 } EventStyleTransitionData[]{
     {"", false, false,
         [](UnsignedInt style) -> UnsignedInt {
             if(style == 0) return 2;
+            CORRADE_INTERNAL_ASSERT_UNREACHABLE();
+        },
+        [](UnsignedInt style) -> UnsignedInt {
+            if(style == 2) return 0;
             CORRADE_INTERNAL_ASSERT_UNREACHABLE();
         }},
     {"editable", true, true,
         [](UnsignedInt style) -> UnsignedInt {
             if(style == 1) return 3;
             CORRADE_INTERNAL_ASSERT_UNREACHABLE();
+        },
+        [](UnsignedInt style) -> UnsignedInt {
+            if(style == 3) return 0;
+            CORRADE_INTERNAL_ASSERT_UNREACHABLE();
         }},
     {"editable, editing style only before", true, false,
         [](UnsignedInt style) -> UnsignedInt {
             if(style == 1) return 2;
             CORRADE_INTERNAL_ASSERT_UNREACHABLE();
+        },
+        [](UnsignedInt style) -> UnsignedInt {
+            if(style == 2) return 0;
+            CORRADE_INTERNAL_ASSERT_UNREACHABLE();
         }},
     {"editable, editing style only after", false, true,
         [](UnsignedInt style) -> UnsignedInt {
             if(style == 0) return 3;
+            CORRADE_INTERNAL_ASSERT_UNREACHABLE();
+        },
+        [](UnsignedInt style) -> UnsignedInt {
+            if(style == 3) return 0;
             CORRADE_INTERNAL_ASSERT_UNREACHABLE();
         }},
 };
@@ -2408,7 +2425,8 @@ void TextLayerGLTest::eventStyleTransition() {
     /* Switches between the "default" / "default, default selection style" and
        "colored" / "colored, cursor + selection style, colored text" cases from
        render() after a press event, also with getting or losing the editing
-       style. Everything else is tested in AbstractVisualLayerTest already. */
+       style, and subsequently to a disabled style, which is "default" again.
+       Everything else is tested in AbstractVisualLayerTest already. */
 
     if(!(_fontManager.load("StbTrueTypeFont") & PluginManager::LoadState::Loaded))
         CORRADE_SKIP("StbTrueTypeFont plugin not found.");
@@ -2452,16 +2470,15 @@ void TextLayerGLTest::eventStyleTransition() {
          data.editableAfter ? 2 : -1},
         {})
         .setStyleTransition(
-            [](UnsignedInt) -> UnsignedInt {
-                CORRADE_INTERNAL_ASSERT_UNREACHABLE();
+            [](UnsignedInt style) -> UnsignedInt {
+                /* Gets triggered right before disabled transition */
+                return style;
             },
             [](UnsignedInt) -> UnsignedInt {
                 CORRADE_INTERNAL_ASSERT_UNREACHABLE();
             },
             data.transition,
-            [](UnsignedInt) -> UnsignedInt {
-                CORRADE_INTERNAL_ASSERT_UNREACHABLE();
-            });
+            data.transitionDisabled);
     if(data.editableBefore || data.editableAfter) layerShared.setEditingStyle(
         TextLayerCommonEditingStyleUniform{},
         {TextLayerEditingStyleUniform{},
@@ -2498,11 +2515,21 @@ void TextLayerGLTest::eventStyleTransition() {
     /* We have blending enabled, which means a subsequent draw would try to
        blend with the previous, causing unwanted difference */
     _framebuffer.clear(GL::FramebufferClear::Color);
-
     ui.draw();
 
     MAGNUM_VERIFY_NO_GL_ERROR();
     Image2D after = _framebuffer.read({{}, RenderSize}, {PixelFormat::RGBA8Unorm});
+
+    /* Verify that node disabling alone causes a proper render data update as
+       well */
+    ui.addNodeFlags(node, NodeFlag::Disabled);
+    CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeEnabledUpdate);
+
+    _framebuffer.clear(GL::FramebufferClear::Color);
+    ui.draw();
+
+    MAGNUM_VERIFY_NO_GL_ERROR();
+    Image2D disabled = _framebuffer.read({{}, RenderSize}, {PixelFormat::RGBA8Unorm});
 
     if(!(_importerManager.load("AnyImageImporter") & PluginManager::LoadState::Loaded) ||
        !(_importerManager.load("StbImageImporter") & PluginManager::LoadState::Loaded))
@@ -2525,6 +2552,9 @@ void TextLayerGLTest::eventStyleTransition() {
             data.editableAfter ?
                 "TextLayerTestFiles/colored-cursor-selection-text.png" :
                 "TextLayerTestFiles/colored.png"),
+        DebugTools::CompareImageToFile{_importerManager});
+    CORRADE_COMPARE_WITH(disabled,
+        Utility::Path::join(UI_TEST_DIR, "TextLayerTestFiles/default.png"),
         DebugTools::CompareImageToFile{_importerManager});
 }
 

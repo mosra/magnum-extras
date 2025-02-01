@@ -2548,8 +2548,8 @@ void BaseLayerGLTest::drawClipping() {
 
 void BaseLayerGLTest::eventStyleTransition() {
     /* Switches between the "default" and "gradient" cases from render() after
-       a press event. Everything else is tested in AbstractVisualLayerTest
-       already. */
+       a press event, and subsequently to a disabled style, which is "default"
+       again. Everything else is tested in AbstractVisualLayerTest already. */
 
     AbstractUserInterface ui{RenderSize};
     ui.setRendererInstance(Containers::pointer<RendererGL>());
@@ -2562,7 +2562,9 @@ void BaseLayerGLTest::eventStyleTransition() {
                 .setColor(0xeeddaa_rgbf, 0x77442299_rgbaf)
         }, {})
         .setStyleTransition(
-            [](UnsignedInt) -> UnsignedInt {
+            [](UnsignedInt style) -> UnsignedInt {
+                /* Gets triggered right before disabled transition */
+                if(style == 1) return 1;
                 CORRADE_INTERNAL_ASSERT_UNREACHABLE();
             },
             [](UnsignedInt) -> UnsignedInt {
@@ -2572,7 +2574,8 @@ void BaseLayerGLTest::eventStyleTransition() {
                 if(style == 0) return 1;
                 CORRADE_INTERNAL_ASSERT_UNREACHABLE();
             },
-            [](UnsignedInt) -> UnsignedInt {
+            [](UnsignedInt style) -> UnsignedInt {
+                if(style == 1) return 0;
                 CORRADE_INTERNAL_ASSERT_UNREACHABLE();
             });
 
@@ -2600,6 +2603,16 @@ void BaseLayerGLTest::eventStyleTransition() {
     MAGNUM_VERIFY_NO_GL_ERROR();
     Image2D after = _framebuffer.read({{}, RenderSize}, {PixelFormat::RGBA8Unorm});
 
+    /* Verify that node disabling alone causes a proper render data update as
+       well */
+    ui.addNodeFlags(node, NodeFlag::Disabled);
+    CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeEnabledUpdate);
+
+    ui.draw();
+
+    MAGNUM_VERIFY_NO_GL_ERROR();
+    Image2D disabled = _framebuffer.read({{}, RenderSize}, {PixelFormat::RGBA8Unorm});
+
     if(!(_manager.load("AnyImageImporter") & PluginManager::LoadState::Loaded) ||
        !(_manager.load("StbImageImporter") & PluginManager::LoadState::Loaded))
         CORRADE_SKIP("AnyImageImporter / StbImageImporter plugins not found.");
@@ -2615,6 +2628,9 @@ void BaseLayerGLTest::eventStyleTransition() {
         DebugTools::CompareImageToFile{_manager});
     CORRADE_COMPARE_WITH(after,
         Utility::Path::join(UI_TEST_DIR, "BaseLayerTestFiles/gradient.png"),
+        DebugTools::CompareImageToFile{_manager});
+    CORRADE_COMPARE_WITH(disabled,
+        Utility::Path::join(UI_TEST_DIR, "BaseLayerTestFiles/default.png"),
         DebugTools::CompareImageToFile{_manager});
 }
 
