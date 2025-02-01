@@ -1272,9 +1272,6 @@ template<BaseLayerSharedFlag flag> void BaseLayerGLTest::renderCustomColor() {
     ui.setLayerInstance(Containers::pointer<BaseLayerGL>(layer, layerShared));
 
     NodeHandle node = ui.createNode({8.0f, 8.0f}, {112.0f, 48.0f});
-    if(data.opacity != 1.0f)
-        ui.setNodeOpacity(node, data.opacity);
-
     DataHandle nodeData = ui.layer<BaseLayerGL>(layer).create(0, node);
 
     if(data.partialUpdate) {
@@ -1286,6 +1283,20 @@ template<BaseLayerSharedFlag flag> void BaseLayerGLTest::renderCustomColor() {
     CORRADE_COMPARE_AS(ui.state(),
         UserInterfaceState::NeedsDataUpdate,
         TestSuite::Compare::GreaterOrEqual);
+
+    if(data.opacity != 1.0f) {
+        /* Update to verify that the opacity change alone triggers data upload
+           as well */
+        if(data.partialUpdate) {
+            ui.update();
+            CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
+        }
+
+        ui.setNodeOpacity(node, data.opacity);
+        CORRADE_COMPARE_AS(ui.state(),
+            UserInterfaceState::NeedsNodeOpacityUpdate,
+            TestSuite::Compare::GreaterOrEqual);
+    }
 
     ui.draw();
 
