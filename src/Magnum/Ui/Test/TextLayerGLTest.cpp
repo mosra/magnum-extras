@@ -84,8 +84,8 @@ struct TextLayerGLTest: GL::OpenGLTester {
     void renderEdgeSmoothness();
     void renderAlignmentPadding();
     void renderCustomColor();
-    void renderChangeText();
     void renderChangeStyle();
+    void renderChangeText();
 
     void renderDynamicStyles();
 
