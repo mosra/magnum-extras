@@ -2190,7 +2190,7 @@ void TextLayer::doUpdate(const LayerStates states, const Containers::StridedArra
             }
             Vector2 offset = nodeOffsets[nodeId] + padding.xy();
             const Vector2 size = nodeSizes[nodeId] - padding.xy() - Math::gather<'z', 'w'>(padding);
-            const UnsignedByte alignmentHorizontal = (UnsignedByte(data.alignment) & Text::Implementation::AlignmentHorizontal);
+            const UnsignedByte alignmentHorizontal = UnsignedByte(data.alignment) & Text::Implementation::AlignmentHorizontal;
             if(alignmentHorizontal == Text::Implementation::AlignmentLeft) {
                 offset.x() += 0.0f;
             } else if(alignmentHorizontal == Text::Implementation::AlignmentRight) {
@@ -2200,8 +2200,8 @@ void TextLayer::doUpdate(const LayerStates states, const Containers::StridedArra
                     offset.x() += Math::round(size.x()*0.5f);
                 else
                     offset.x() += size.x()*0.5f;
-            }
-            const UnsignedByte alignmentVertical = (UnsignedByte(data.alignment) & Text::Implementation::AlignmentVertical);
+            } else CORRADE_INTERNAL_ASSERT_UNREACHABLE(); /* LCOV_EXCL_LINE */
+            const UnsignedByte alignmentVertical = UnsignedByte(data.alignment) & Text::Implementation::AlignmentVertical;
             /* For Line/Middle it's aligning either the line or bounding box
                middle (which is already at y=0 by the Text::alignRenderedLine())
                to node middle */
@@ -2215,7 +2215,7 @@ void TextLayer::doUpdate(const LayerStates states, const Containers::StridedArra
                     offset.y() += Math::round(size.y()*0.5f);
                 else
                     offset.y() += size.y()*0.5f;
-            }
+            } else CORRADE_INTERNAL_ASSERT_UNREACHABLE(); /* LCOV_EXCL_LINE */
 
             /* Translate the (aligned) glyph run, fill color and style */
             const Float opacity = nodeOpacities[nodeId];
