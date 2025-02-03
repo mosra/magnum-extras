@@ -35,6 +35,7 @@
 #include "Magnum/Ui/BaseLayerAnimator.h"
 #include "Magnum/Ui/EventLayer.h"
 #include "Magnum/Ui/Handle.h"
+#include "Magnum/Ui/LineLayerGL.h"
 #include "Magnum/Ui/RendererGL.h"
 #include "Magnum/Ui/Style.h"
 #include "Magnum/Ui/TextLayerGL.h"
@@ -253,6 +254,42 @@ DOXYGEN_ELLIPSIS()
 
 baseLayer.assignAnimator(animator);
 /* [BaseLayerStyleAnimator-setup2] */
+}
+
+{
+/* [LineLayer-setup-shared] */
+Ui::LineLayerGL::Shared lineLayerShared{
+    Ui::LineLayer::Shared::Configuration{3}
+};
+/* [LineLayer-setup-shared] */
+
+Ui::AbstractUserInterface ui{{100, 100}};
+/* [LineLayer-setup] */
+Ui::LineLayer& lineLayer = ui.setLayerInstance(
+    Containers::pointer<Ui::LineLayerGL>(ui.createLayer(), lineLayerShared));
+/* [LineLayer-setup] */
+static_cast<void>(lineLayer);
+}
+
+{
+Ui::AbstractUserInterface ui{{100, 100}};
+/* [LineLayer-style-cap-join] */
+Ui::LineLayerGL::Shared lineLayerSharedRound{
+    Ui::LineLayer::Shared::Configuration{DOXYGEN_ELLIPSIS(1)}
+        .setCapStyle(Ui::LineCapStyle::Round)
+};
+Ui::LineLayerGL::Shared lineLayerSharedSquare{
+    Ui::LineLayer::Shared::Configuration{DOXYGEN_ELLIPSIS(1)}
+        .setCapStyle(Ui::LineCapStyle::Square)
+};
+
+Ui::LineLayer& lineLayerRound = ui.setLayerInstance(
+    Containers::pointer<Ui::LineLayerGL>(ui.createLayer(), lineLayerSharedRound));
+Ui::LineLayer& lineLayerSquare = ui.setLayerInstance(
+    Containers::pointer<Ui::LineLayerGL>(ui.createLayer(), lineLayerSharedSquare));
+/* [LineLayer-style-cap-join] */
+static_cast<void>(lineLayerRound);
+static_cast<void>(lineLayerSquare);
 }
 
 {

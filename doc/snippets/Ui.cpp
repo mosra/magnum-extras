@@ -35,6 +35,7 @@
 #include "Magnum/Ui/AbstractVisualLayer.h"
 #include "Magnum/Ui/BaseLayer.h"
 #include "Magnum/Ui/BaseLayerAnimator.h"
+#include "Magnum/Ui/LineLayer.h"
 #include "Magnum/Ui/Event.h"
 #include "Magnum/Ui/EventLayer.h"
 #include "Magnum/Ui/GenericAnimator.h"
@@ -643,6 +644,161 @@ Ui::DataHandle buttonBackground = DOXYGEN_ELLIPSIS({});
 animator.create(BaseLayerStyle::ButtonHovered, BaseLayerStyle::Button,
     Animation::Easing::cubicOut, now, 0.5_sec, buttonBackground);
 /* [BaseLayerStyleAnimator-create] */
+}
+
+{
+struct Shared: Ui::LineLayer::Shared {
+    explicit Shared(): Ui::LineLayer::Shared::Shared{Configuration{1}} {}
+
+    void doSetStyle(const Ui::LineLayerCommonStyleUniform&, Containers::ArrayView<const Ui::LineLayerStyleUniform>) override {}
+} lineLayerShared;
+/* [LineLayer-setup-style] */
+lineLayerShared.setStyle(Ui::LineLayerCommonStyleUniform{}, {
+    Ui::LineLayerStyleUniform{}, /* Style 0, default */
+    Ui::LineLayerStyleUniform{}  /* Style 1 */
+        .setColor(0x2f83cc_rgbf)
+        .setWidth(2.0f),
+    Ui::LineLayerStyleUniform{}  /* Style 2 */
+        .setColor(0xa5c9ea_rgbf)
+        .setWidth(3.0f)
+        .setSmoothness(8.0f)
+}, {
+    Ui::LineAlignment{},
+    Ui::LineAlignment::MiddleCenter,
+    Ui::LineAlignment::BottomLeft,
+}, {});
+/* [LineLayer-setup-style] */
+
+struct LineLayer: Ui::LineLayer {
+    explicit LineLayer(Ui::LayerHandle layer, Ui::LineLayer::Shared& shared): Ui::LineLayer{layer, shared} {}
+};
+Ui::AbstractUserInterface ui{{100, 100}};
+Ui::LineLayer& lineLayer = ui.setLayerInstance(Containers::pointer<LineLayer>(ui.createLayer(), lineLayerShared));
+{
+/* [LineLayer-create-strip] */
+Ui::NodeHandle node = ui.createNode(DOXYGEN_ELLIPSIS({}, {}));
+
+lineLayer.createStrip(1, {
+    {8.0f, -24.0f}, {8.0f, 24.0f}, {56.0f, 24.0f}
+}, {}, node);
+/* [LineLayer-create-strip] */
+
+/* [LineLayer-create-loop] */
+lineLayer.createLoop(1, {
+    {-56.0f, -24.0f}, {-8.0f, -24.0f}, {-8.0f, 24.0f}, {-56.0f, 24.0f}
+}, {}, node);
+
+lineLayer.createLoop(1, {{56.0f, -24.0f}}, {}, node);
+/* [LineLayer-create-loop] */
+
+/* [LineLayer-create-indexed] */
+lineLayer.create(1, {
+    0, 1, 1, 2,
+    3, 4, 4, 5, 5, 6, 6, 3,
+    7, 7
+}, {
+    {8.0f, -24.0f}, {8.0f, 24.0f}, {56.0f, 24.0f},
+    {-56.0f, -24.0f}, {-8.0f, -24.0f}, {-8.0f, 24.0f}, {-56.0f, 24.0f},
+    {56.0f, -24.0f}
+}, {}, node);
+/* [LineLayer-create-indexed] */
+}
+
+{
+/* [LineLayer-style-smoothness] */
+lineLayerShared.setStyle(
+    Ui::LineLayerCommonStyleUniform{}
+        .setSmoothness(1.0f),
+    {
+        Ui::LineLayerStyleUniform{} /* 0 */
+            .setColor(0x2f83cc_rgbf),
+        Ui::LineLayerStyleUniform{} /* 1 */
+            .setColor(0xa5c9ea_rgbf)
+            .setSmoothness(6.0f)
+    }, {DOXYGEN_ELLIPSIS(Ui::LineAlignment{})}, {});
+
+DOXYGEN_ELLIPSIS()
+
+Ui::NodeHandle circle = DOXYGEN_ELLIPSIS({});
+lineLayer.createLoop(0, {DOXYGEN_ELLIPSIS({})}, {}, circle);
+
+Ui::NodeHandle glow = DOXYGEN_ELLIPSIS({});
+lineLayer.createLoop(1, {DOXYGEN_ELLIPSIS({})}, {}, glow);
+/* [LineLayer-style-smoothness] */
+}
+
+{
+/* [LineLayer-style-color1] */
+lineLayerShared.setStyle(DOXYGEN_ELLIPSIS(Ui::LineLayerCommonStyleUniform{}), {
+    Ui::LineLayerStyleUniform{}, /* 0 */
+    Ui::LineLayerStyleUniform{}  /* 1 */
+        .setColor(0x2f83cc_rgbf)
+}, {DOXYGEN_ELLIPSIS(Ui::LineAlignment{})}, {});
+
+DOXYGEN_ELLIPSIS()
+
+Ui::NodeHandle blue = DOXYGEN_ELLIPSIS({});
+lineLayer.createStrip(1, {DOXYGEN_ELLIPSIS({})}, {}, blue);
+
+Ui::NodeHandle colored = DOXYGEN_ELLIPSIS({});
+Ui::DataHandle coloredData = lineLayer.createStrip(0, {DOXYGEN_ELLIPSIS({})}, {}, colored);
+lineLayer.setColor(coloredData, 0x3bd267_rgbf);
+
+Ui::NodeHandle fadedBlue = DOXYGEN_ELLIPSIS({});
+lineLayer.createStrip(1, {DOXYGEN_ELLIPSIS({})}, {}, fadedBlue);
+ui.setNodeOpacity(fadedBlue, 0.25f);
+/* [LineLayer-style-color1] */
+
+/* [LineLayer-style-color2] */
+Ui::NodeHandle gradient = DOXYGEN_ELLIPSIS({});
+lineLayer.createStrip(0, {
+    DOXYGEN_ELLIPSIS({})
+}, {
+    0x2f83cc_rgbf, 0x3bd267_rgbf, 0xc7cf2f_rgbf, DOXYGEN_ELLIPSIS()
+}, gradient);
+/* [LineLayer-style-color2] */
+
+/* [LineLayer-style-alignment-padding] */
+lineLayerShared.setStyle(DOXYGEN_ELLIPSIS(Ui::LineLayerCommonStyleUniform{}), {
+    Ui::LineLayerStyleUniform{}
+        .setWidth(5.0f),
+    DOXYGEN_ELLIPSIS()
+}, {
+    Ui::LineAlignment::BottomLeft,
+    DOXYGEN_ELLIPSIS()
+}, {
+    /* Padding is half of line width to make a point at origin touch the bottom
+       left node corner, but not leak out of it */
+    Vector4{2.5f},
+    DOXYGEN_ELLIPSIS()
+});
+/* [LineLayer-style-alignment-padding] */
+
+/* [LineLayer-style-width] */
+lineLayerShared.setStyle(DOXYGEN_ELLIPSIS(Ui::LineLayerCommonStyleUniform{}), {
+    Ui::LineLayerStyleUniform{} /* 0 */
+        .setColor(0x2f83cc_rgbf)
+        .setWidth(3.0f),
+    Ui::LineLayerStyleUniform{} /* 1 */
+        .setColor(0x292e32_rgbf)
+        .setWidth(11.0f)
+        .setSmoothness(1.5f),
+    Ui::LineLayerStyleUniform{}  /* 2 */
+        .setColor(0xdcdcdc_rgbf)
+        .setWidth(10.0f)
+}, {DOXYGEN_ELLIPSIS()}, {});
+
+Ui::NodeHandle circle = ui.createNode(DOXYGEN_ELLIPSIS({}, {}));
+Ui::NodeHandle pointOuter = ui.createNode(circle, DOXYGEN_ELLIPSIS({}, {}));
+Ui::NodeHandle point = ui.createNode(pointOuter, DOXYGEN_ELLIPSIS({}, {}));
+
+lineLayer.createLoop(0, {DOXYGEN_ELLIPSIS({})}, {}, circle);
+
+Vector2 position[]{DOXYGEN_ELLIPSIS({})};
+lineLayer.createStrip(1, position, {}, pointOuter);
+lineLayer.createStrip(2, position, {}, point);
+/* [LineLayer-style-width] */
+}
 }
 
 {

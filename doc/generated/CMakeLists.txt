@@ -31,7 +31,7 @@ project(MagnumExtrasDocumentationImageGenerator CXX)
 
 set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/../../modules/" ${CMAKE_MODULE_PATH})
 
-find_package(Magnum REQUIRED GL Trade)
+find_package(Magnum REQUIRED GL MeshTools Primitives Trade)
 find_package(MagnumExtras REQUIRED Ui)
 
 set_directory_properties(PROPERTIES CORRADE_USE_PEDANTIC_FLAGS ON)
@@ -49,6 +49,15 @@ endif()
 add_executable(ui-baselayer ui-baselayer.cpp)
 target_link_libraries(ui-baselayer PRIVATE
     Magnum::GL
+    Magnum::Trade
+    Magnum::WindowlessApplication
+    MagnumExtras::Ui)
+
+add_executable(ui-linelayer ui-linelayer.cpp)
+target_link_libraries(ui-linelayer PRIVATE
+    Magnum::GL
+    Magnum::MeshTools
+    Magnum::Primitives
     Magnum::Trade
     Magnum::WindowlessApplication
     MagnumExtras::Ui)

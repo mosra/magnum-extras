@@ -436,6 +436,264 @@ MAGNUM_UI_EXPORT Debug& operator<<(Debug& debug, LineAlignment value);
 @brief Line layer
 @m_since_latest
 
+Draws smooth wide lines with configurable caps and joins and per-point colors.
+Based on the same internal implementation as @ref Shaders::LineGL.
+
+@section Ui-LineLayer-setup Setting up a line layer instance
+
+First you need to instantiate @ref LineLayer::Shared, which contains GPU
+shaders and style definitions. It takes a @ref LineLayer::Shared::Configuration
+instance, where at the very least you have to specify how many distinct visual
+* *styles* you intend to use --- which is for example the number @cpp 3 @ce in
+the following snippet:
+
+@snippet Ui-gl.cpp LineLayer-setup-shared
+
+The shared instance, in this case a concrete @ref LineLayerGL::Shared subclass
+for the OpenGL implementation of this layer, is then passed to the layer
+constructor alongside a fresh @ref AbstractUserInterface::createLayer() handle,
+and is expected to stay alive for the whole layer lifetime. The shared instance
+can be used by multiple layers, for example if the application wants to have a
+dedicated layer for very dynamic UI content, or when it wants to combine
+visual options that have to be hardcoded in particular
+@ref LineLayer::Shared instances. Pass the newly created instance to
+@ref AbstractUserInterface::setLayerInstance():
+
+@snippet Ui-gl.cpp LineLayer-setup
+
+Afterwards, in order to be able to draw the layer, a style has to be set with
+@ref LineLayer::Shared::setStyle(). At the very least you're expected to pass a
+@ref LineLayerCommonStyleUniform containing properties common to all styles, an
+array of @ref LineLayerStyleUniform matching the style count set in the
+@ref LineLayer::Shared::Configuration and a list of alignment values specifying
+how a particular line art should be placed inside each node.
+Default-constructed instances will result in white single-unit-wide lines, you
+can then use method chaining to update only the properties you're interested
+in; zero-initialized @ref LineAlignment value is equivalent to
+@ref LineAlignment::MiddleCenter. So, for example, with style @cpp 0 @ce being
+the default, style @cpp 1 @ce being a centered blue wide line and style
+@cpp 2 @ce an azure glow aligned to the bottom left corner of the node:
+
+@snippet Ui.cpp LineLayer-setup-style
+
+With this, assuming @ref AbstractUserInterface::draw() is called in an
+appropriate place, the layer is ready to use. All style options are described
+in detail further below.
+
+@m_class{m-note m-info}
+
+@par Using an enum for style indexing
+    Like with @ref BaseLayer, it's possible to use an @cpp enum @ce for
+    populating @ref LineLayer styles and referencing them when creating data.
+    See the corresponding @ref Ui-BaseLayer-style-enums "BaseLayer documentation chapter"
+    for a detailed example.
+
+Unlike with @ref BaseLayer or @ref TextLayer, the default @ref UserInterface
+implementation doesn't implicitly provide a @ref LineLayer instance.
+
+@section Ui-LineLayer-create Creating lines
+
+A line strip is created by calling @ref createStrip() with desired style index,
+a list of points that are meant to be connected together and a @ref NodeHandle
+the data should be attached to. In this case it picks the style @cpp 1 @ce from
+above, which makes a wide blue line:
+
+@snippet Ui.cpp LineLayer-create-strip
+
+The @ref createLoop() function then creates a loop, connecting also the first
+and last point back together. If you give it just a single point, it will
+render a literal point. The visual output of these three calls is shown below.
+
+@snippet Ui.cpp LineLayer-create-loop
+
+@image html ui-linelayer-create.png width=256px
+
+Both @ref createStrip() and @ref createLoop() are convenience alternatives to
+@ref create(). This function takes an indexed list of points, where each pair
+of indices describes a line segment. Points that are referenced exactly twice form a line join, if they're referenced twice from a single pair, they form a literal
+point. The index buffer thus allows you to put multiple disjoint line strips
+and loops together. An indexed equivalent to the three calls to
+@ref createStrip() and @ref createLoop() from above would look like this:
+
+@snippet Ui.cpp LineLayer-create-indexed
+
+As with all other data, they're implicitly tied to lifetime of the node they're
+attached to. You can remember the @ref Ui::DataHandle returned by
+@ref create(), @ref createStrip() or @ref createLoop() to modify the data
+later, @ref attach() to a different node or @ref remove() it.
+
+@section Ui-LineLayer-style Style options
+
+@subsection Ui-LineLayer-style-smoothness Edge smoothness
+
+@image html ui-linelayer-style-smoothness.png width=256px
+
+One of the most desirable aspects of line rendering is antialiasing. Like
+@ref BaseLayer, @ref LineLayer performs it in the shader without needing to
+rely on multisampling. With @ref LineLayerCommonStyleUniform::setSmoothness(),
+like the corresponding style option in @ref BaseLayer, you set up a smoothness
+radius in framebuffer pixels. Additionally, for creating glow, shadows and
+other effects, @ref LineLayerStyleUniform::setSmoothness() can override the
+smoothness per style, and this value is in UI units instead of pixels. The
+desired usage is that the common smoothness gets tuned for both @ref BaseLayer
+and @ref LineLayer to a value that makes sense for the UI in general, and the
+per-style smoothness is then used for line elements that need a fuzzy
+appearance. Of the two values coming from the style, the larger one --- when
+both are converted to the same units --- gets used.
+
+@snippet Ui.cpp LineLayer-style-smoothness
+
+@subsection Ui-LineLayer-style-cap-join Line cap and join
+
+The layer allows choosing between various cap and join styles shown below. The
+default is @ref LineCapStyle::Square and @ref LineJoinStyle::Miter, and
+currently this option is statically compiled into the shader, which means you
+have to choose it upfront via @ref Shared::Configuration::setCapStyle() and
+@ref Shared::Configuration::setJoinStyle().
+
+@m_class{m-row}
+
+@parblock
+
+@m_div{m-col-l-6  m-text-center}
+@htmlinclude line-cap-butt.svg
+@ref LineCapStyle::Butt
+@m_enddiv
+
+@m_div{m-col-l-6 m-text-center}
+@htmlinclude line-cap-square.svg
+@ref LineCapStyle::Square
+@m_enddiv
+
+@m_div{m-col-l-6 m-text-center}
+@htmlinclude line-cap-round.svg
+@ref LineCapStyle::Round
+@m_enddiv
+
+@m_div{m-col-l-6 m-text-center}
+@htmlinclude line-cap-triangle.svg
+@ref LineCapStyle::Triangle
+@m_enddiv
+
+@endparblock
+
+@ref LineJoinStyle::Miter joins have a configurable limit to prevent them from
+getting too long with sharp angles, after which they become
+@ref LineJoinStyle::Bevel. The limit is configurable per style using
+@ref LineLayerStyleUniform::setMiterAngleLimit() and
+@ref LineLayerStyleUniform::setMiterLengthLimit().
+
+@m_class{m-row}
+
+@parblock
+
+@m_div{m-col-l-6  m-text-center}
+@htmlinclude line-join-miter.svg
+@ref LineJoinStyle::Miter
+@m_enddiv
+
+@m_div{m-col-l-6 m-text-center}
+@htmlinclude line-join-bevel.svg
+@ref LineJoinStyle::Bevel
+@m_enddiv
+
+@endparblock
+
+If you need to combine lines with different cap and join styles, you can create
+multiple line layers, each with a differently-configured @ref LineLayer::Shared
+instance:
+
+@snippet Ui-gl.cpp LineLayer-style-cap-join
+
+@subsection Ui-LineLayer-style-color Style, per-data and per-point color
+
+@image html ui-linelayer-style-color.png width=256px
+
+In addition to @ref LineLayerStyleUniform::setColor() shown above, the color is
+multiplied by a data-specific color set with @ref setColor(). The main use
+case, like with @ref BaseLayer, is to allow for example custom plot coloring
+where it would be impractical to dynamically update style data based on what's
+being shown. The color is further multiplied by a per-node opacity coming from
+@ref AbstractUserInterface::setNodeOpacity(), which can be used for various
+fade-in / fade-out effects.
+
+@snippet Ui.cpp LineLayer-style-color1
+
+Finally, as visualized with the fourth arc above, it's possible to color each
+individual point by passing a list of colors to @ref create(),
+@ref createStrip() or @ref createLoop(), one for each point. The per-point
+colors then get multiplied with the other colors set for the style and the
+data.
+
+@snippet Ui.cpp LineLayer-style-color2
+
+@subsection Ui-LineLayer-style-alignment-padding Alignment and padding inside the node
+
+@ref LineAlignment::MiddleCenter --- or the default-constructed
+@ref LineAlignment value --- passed to @ref LineLayer::Shared::setStyle()
+aligns @cpp {0.0f, 0.0f} @ce to a vertical and horizontal center of given node,
+thus as long as the points are aligned around that origin, the whole line art
+will be centered. At the moment, it's not possible to align based on the actual
+bounding rectangle of the point data.
+
+@ref LineAlignment::TopLeft and other alignment values move the origin to the
+edges and corners, which is useful for example with various data plots. With
+those, and especially when combined with wider lines, it's useful to specify
+also a padding inside the node. That's done with the last argument to
+@ref LineLayer::Shared::setStyle(), and the result is that a line crossing
+through @cpp {0.0f, 0.0f} @ce won't partially leak out of node edges. Similarly
+as with @ref Ui-BaseLayer-style-padding "padding in BaseLayer", it's one value
+for each of four node edges, but often a single value for all is enough:
+
+@snippet Ui.cpp LineLayer-style-alignment-padding
+
+Finally, both alignment and padding can be overriden on a per-data basis with
+@ref setAlignment() and @ref setPadding(), which may be useful for example when
+aligning line art next to variable-width text. Note that, however, the draw
+order isn't guaranteed in case of multiple data attached to the same node, so
+it only gives a reliable output as long as the shapes don't overlap.
+
+@subsection Ui-LineLayer-style-width-outline Line width and outline
+
+@image html ui-linelayer-style-outline.png width=128px
+
+As shown above, line width is controllable with
+@ref LineLayerStyleUniform::setWidth(). At the moment there's no possibility of
+having an outline, however you can emulate this to a certain degree by putting
+another, slightly wider, line consisting of the same points underneath. In
+order to ensure the outline is drawn below, it has to be put into a parent
+node. In the following snippet, a white dot with a dark slightly blurry outline
+is put on top of a blue circle, thus needing three nested nodes:
+
+@snippet Ui.cpp LineLayer-style-width
+
+@section Ui-LineLayer-style-transitions Style transition based on input events
+
+Like with @ref BaseLayer, it's possible to configure @ref LineLayer to perform
+automatic style transitions based on input events, such as highlighting on
+hover or press. See the @ref Ui-BaseLayer-style-transitions "BaseLayer documentation for style transition"
+for a detailed example, the interfaces are the same between the two.
+
+@m_class{m-note m-warning}
+
+@par
+    Note that, however, at the moment, the whole node area reacts to the event,
+    not just when a particular line segment is under the pointer. Thus it's
+    currently not possible to implement for example selection of particular
+    lines in a plot.
+
+@section Ui-LineLayer-data-update Updating line data
+
+Any created line can be subsequently updated with @ref setLineStrip(),
+@ref setLineLoop() and @ref setLine(). Those functions take the same arguments
+and behave the same as as @ref createStrip(), @ref createLoop() and
+@ref create(), and are a more efficient operation than data removal and
+recreation if the point and index count doesn't change, which is a common case
+for example when updating plotted values.
+
+Changing the point / index count is supported however and internally there's
+also no distinction between a strip, loop or an indexed line, so a strip can be
+safely changed to a loop etc.
 */
 class MAGNUM_UI_EXPORT LineLayer: public AbstractVisualLayer {
     public:
