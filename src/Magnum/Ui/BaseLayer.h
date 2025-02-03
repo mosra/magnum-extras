@@ -596,8 +596,10 @@ have the same size to have the whole area react the same way to taps or clicks.
 
 If @ref BaseLayerSharedFlag::Textured is enabled in
 @ref BaseLayer::Shared::Configuration, each quad additionally multiplies its
-color with a texture. In case of a @ref BaseLayerGL it's a
-@ref GL::Texture2DArray supplied via @relativeref{BaseLayerGL,setTexture()}. By
+color with a texture. Unlike most other interfaces which are accessible
+directly through the generic @ref BaseLayer, textures are tied to GPU-specific
+APIs, in this case a @ref GL::Texture2DArray, and you're meant to supply it via
+@ref BaseLayerGL::setTexture() on the concrete @ref BaseLayerGL subclass. By
 default the whole first slice of the texture array is used, however it's
 assumed that a texture atlas is used from which particular data use
 sub-rectangles defined with @ref setTextureCoordinates(). Texturing can be
