@@ -28,7 +28,7 @@
 #include <Corrade/Containers/StringIterable.h>
 #include <Corrade/PluginManager/Manager.h>
 #include <Corrade/PluginManager/PluginMetadata.h>
-#include <Corrade/Utility/Configuration.h>
+#include <Corrade/Utility/ConfigurationGroup.h>
 #include <Corrade/Utility/Path.h>
 #include <Magnum/Image.h>
 #include <Magnum/ImageView.h>
