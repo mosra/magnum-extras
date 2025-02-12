@@ -224,7 +224,7 @@ void ImagePlayer::load(Containers::StringView filename, Trade::AbstractImporter&
 
     _imageInfo.setText(Utility::format(
         "{}: {}x{}, {}",
-        Utility::Path::split(filename).second(),
+        Utility::Path::filename(filename),
         image->size().x(), image->size().y(),
         out.str()),
         /** @todo ugh, having to specify this every time is NASTY, what to do

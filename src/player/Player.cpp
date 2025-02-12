@@ -659,7 +659,7 @@ void Player::loadFile(std::size_t totalCount, const char* filename, Containers::
                 /* Not found: maybe it's referencing something from a subdirectory,
                 try just the filename */
                 if(found == player._droppedFiles.end()) {
-                    const Containers::StringView relative = Utility::Path::split(filename).second();
+                    const Containers::StringView relative = Utility::Path::filename(filename);
                     found = player._droppedFiles.find(relative);
                     if(found == player._droppedFiles.end()) return {};
 

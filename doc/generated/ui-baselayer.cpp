@@ -104,7 +104,7 @@ int UiBaseLayer::exec() {
     if(!importer || !converter)
         return 1;
 
-    if(!importer->openFile(Utility::Path::join(Utility::Path::split(__FILE__).first(), "balloon.jpg")))
+    if(!importer->openFile(Utility::Path::join(Utility::Path::path(__FILE__), "balloon.jpg")))
         return 2;
     Containers::Optional<Trade::ImageData2D> backgroundImage = importer->image2D(0);
     CORRADE_INTERNAL_ASSERT(backgroundImage && backgroundImage->size() == ImageSize);
@@ -118,7 +118,7 @@ int UiBaseLayer::exec() {
         pngcrush -ow mask-premultiplied.png
        which turns the RGBA8 to RG8 to save space, and which StbImageImporter
        will then expand back to RGBA8 on import. */
-    if(!importer->openFile(Utility::Path::join(Utility::Path::split(__FILE__).first(), "mask-premultiplied.png")))
+    if(!importer->openFile(Utility::Path::join(Utility::Path::path(__FILE__), "mask-premultiplied.png")))
         return 2;
     Containers::Optional<Trade::ImageData2D> mask = importer->image2D(0);
     CORRADE_INTERNAL_ASSERT(mask && mask->format() == PixelFormat::RGBA8Unorm && mask->size() == (Vector2i{112*4, 48*4}));

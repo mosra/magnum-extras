@@ -1496,7 +1496,7 @@ void ScenePlayer::load(Containers::StringView filename, Trade::AbstractImporter&
     /* Populate the model info */
     _modelInfo.setText(Containers::ArrayView<const char>{Utility::format(
         "{}: {} objs, {} cams, {} meshes, {} mats, {}/{} texs, {} anims",
-        Utility::Path::split(filename).second(),
+        Utility::Path::filename(filename),
         importer.objectCount(),
         importer.cameraCount(),
         importer.meshCount(),
