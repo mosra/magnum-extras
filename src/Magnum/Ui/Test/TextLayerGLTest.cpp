@@ -315,7 +315,7 @@ constexpr Vector2i RenderSize{128, 64};
 /* Bounding box reported by Text::renderLineGlyphPositionsInto(). May change
    when StbTrueTypeFont gets kerning implemented, a different font or a
    different text is used. */
-constexpr Range2D RenderAlignmentBoundingBox{{0.0f, -9.26651f}, {84.6205f, 33.4002f}};
+constexpr Range2D RenderAlignmentBoundingBox{{0.0f, -10.4897f}, {79.9598f, 32.177f}};
 
 const struct {
     const char* name;
@@ -916,7 +916,7 @@ TextLayerGLTest::TextLayerGLTest() {
        doesn't have to suffer stb_truetype's extreme rasterization slowness
        again and again. They only check that the font was opened afterwards. */
     if((_font = _fontManager.loadAndInstantiate("StbTrueTypeFont")) &&
-       _font->openFile(Utility::Path::join(UI_DIR, "SourceSansPro-Regular.ttf"), 32.0f))
+       _font->openFile(Utility::Path::join(UI_DIR, "SourceSans3-Regular.otf"), 32.0f))
         _font->fillGlyphCache(_fontGlyphCache, "Magi");
 }
 

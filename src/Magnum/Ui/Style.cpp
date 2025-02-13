@@ -695,7 +695,7 @@ bool McssDarkStyle::doApply(UserInterface& ui, const StyleFeatures features, Plu
         const Utility::Resource rs{"MagnumUi"_s};
 
         Containers::Pointer<Text::AbstractFont> font = fontManager->loadAndInstantiate("TrueTypeFont");
-        if(!font || !font->openData(rs.getRaw("SourceSansPro-Regular.ttf"_s), 16.0f*2*(Vector2{ui.framebufferSize()}/ui.size()).max())) {
+        if(!font || !font->openData(rs.getRaw("SourceSans3-Regular.otf"_s), 16.0f*2*(Vector2{ui.framebufferSize()}/ui.size()).max())) {
             Error{} << "Ui::McssDarkStyle::apply(): cannot open a font";
             return {};
         }
