@@ -160,7 +160,7 @@ ui.setBaseLayerInstance(
 
 {
 Ui::UserInterfaceGL ui{NoCreate};
-/* [BaseLayer-style-textured] */
+/* [BaseLayer-style-textured1] */
 Ui::BaseLayerGL::Shared texturedLayerShared{
     Ui::BaseLayerGL::Shared::Configuration{DOXYGEN_ELLIPSIS(1)}
         .addFlags(Ui::BaseLayerSharedFlag::Textured)
@@ -179,9 +179,9 @@ Ui::BaseLayerGL& texturedLayer = ui.setLayerInstance(
 GL::Texture2DArray texture;
 DOXYGEN_ELLIPSIS()
 texturedLayer.setTexture(texture);
+/* [BaseLayer-style-textured1] */
 
-DOXYGEN_ELLIPSIS()
-
+/* [BaseLayer-style-textured2] */
 Ui::NodeHandle image = DOXYGEN_ELLIPSIS({});
 Ui::NodeHandle outlined = DOXYGEN_ELLIPSIS({});
 Ui::NodeHandle avatar = DOXYGEN_ELLIPSIS({});
@@ -189,7 +189,7 @@ texturedLayer.create(0, image);
 texturedLayer.create(1, outlined);
 Ui::DataHandle avatarData = texturedLayer.create(2, avatar);
 texturedLayer.setTextureCoordinates(avatarData, {0.4f, 0.0f, 0.0f}, {0.25f, 0.5f});
-/* [BaseLayer-style-textured] */
+/* [BaseLayer-style-textured2] */
 }
 
 {

@@ -445,9 +445,10 @@ for the OpenGL implementation of this layer, is then passed to the layer
 constructor alongside a fresh @ref AbstractUserInterface::createLayer() handle,
 and is expected to stay alive for the whole layer lifetime. The shared instance
 can be used by multiple layers, for example if the application wants to have a
-dedicated layer for very dynamic UI content, or when it needs draw ordering
-that would be impossible with just one layer instance. If you want to supply an
-instance for the implicit @ref UserInterface::baseLayer(), pass it to
+dedicated layer for very dynamic UI content, or when it wants to combine
+visual options that have to be hardcoded in particular @ref BaseLayer::Shared
+instances. If you want to supply an instance for the implicit
+@ref UserInterface::baseLayer(), pass it to
 @ref UserInterfaceGL::setBaseLayerInstance():
 
 @snippet Ui-gl.cpp BaseLayer-setup-implicit
@@ -479,7 +480,7 @@ in detail further below.
 
 A quad is created by calling @ref create() with desired style index and a
 @ref NodeHandle the data should be attached to. In this case it picks the style
-@cpp 1 @ce, which colors the quad blue:
+@cpp 1 @ce from above, which colors the quad blue:
 
 @snippet Ui.cpp BaseLayer-create
 
@@ -599,23 +600,26 @@ If @ref BaseLayerSharedFlag::Textured is enabled in
 color with a texture. Unlike most other interfaces which are accessible
 directly through the generic @ref BaseLayer, textures are tied to GPU-specific
 APIs, in this case a @ref GL::Texture2DArray, and you're meant to supply it via
-@ref BaseLayerGL::setTexture() on the concrete @ref BaseLayerGL subclass. By
-default the whole first slice of the texture array is used, however it's
+@ref BaseLayerGL::setTexture() on the concrete @ref BaseLayerGL subclass. The
+supplied texture is expected to be alive for the whole layer lifetime,
+alternatively you can use @ref BaseLayerGL::setTexture(GL::Texture2DArray&&) to
+move its ownership to the layer instance.
+
+@snippet Ui-gl.cpp BaseLayer-style-textured1
+
+By default the whole first slice of the texture array is used, however it's
 assumed that a texture atlas is used from which particular data use
 sub-rectangles defined with @ref setTextureCoordinates(). Texturing can be
 combined with rounded corners and all other features. The texture coordinates
 include the outline, if it's present, but the outline itself isn't textured.
 
-@snippet Ui-gl.cpp BaseLayer-style-textured
+@snippet Ui-gl.cpp BaseLayer-style-textured2
 
 You can use @ref TextureTools::AtlasLandfill or
 @ref TextureTools::atlasArrayPowerOfTwo() to pack multiple images into a single
-atlas, the former is usable for incremental packing as well. The supplied
-texture is expected to be alive for the whole layer lifetime, alternatively you
-can use @ref BaseLayerGL::setTexture(GL::Texture2DArray&&) to move its
-ownership to the layer instance. Currently only a single texture can be used
-with the layer, if you need to draw from multiple textures, create additional
-layer instances.
+atlas, the former is usable for incremental packing as well. Currently only a
+single texture can be used with the layer, if you need to draw from multiple
+textures, create additional layer instances.
 
 @subsection Ui-BaseLayer-style-background-blur Background blur
 
@@ -693,8 +697,8 @@ scenarios afterwards, such as when switching application themes.
 
 If a particular style needs to be modified often and it's not achievable with
 @ref setColor(), @ref setOutlineWidth() or @ref setPadding() on the data
-itself, a dynamic style can be used instead. Dynamic styles have to be
-explicitly requested with
+itself or it'd have to be updated on many data at once, a dynamic style can be
+used instead. Dynamic styles have to be explicitly requested with
 @ref BaseLayer::Shared::Configuration::setDynamicStyleCount(), after which the
 style uniform buffer isn't shared among all layers using given
 @ref BaseLayer::Shared instance, but is local to each layer and each layer has
@@ -747,6 +751,14 @@ a single transition function for which only a part of the result gets used each
 time:
 
 @snippet Ui.cpp BaseLayer-style-transitions-deduplicated
+
+<b></b>
+
+@m_class{m-note m-info}
+
+@par
+    Note that, at the moment, the whole node area reacts to the event, thus
+    even the padding and rounded corner area.
 
 @section Ui-BaseLayer-performance Options affecting performance
 
