@@ -2136,12 +2136,31 @@ class MAGNUM_UI_EXPORT TextLayer::Shared: public AbstractVisualLayer::Shared {
          * The @p uniforms view is expected to have the same size as
          * @ref styleUniformCount(), the @p fonts and @p alignments views the
          * same size as @ref styleCount(). All font handles are expected to be
-         * either @ref FontHandle::Null or valid, all @p alignments values are
-         * expected to not be `*GlyphBounds` as the implementation can only
-         * align based on font metrics and cursor position, not actual glyph
-         * bounds. See @ref TextProperties::setAlignment() for a detailed
-         * explanation of alignment behavior respectively to the nodes the text
-         * is attached to.
+         * either @ref FontHandle::Null or valid.
+         *
+         * All @p alignments values are expected to not be `*GlyphBounds` as
+         * the implementation can only align based on font metrics and cursor
+         * position, not actual glyph bounds. In addition to the behavior
+         * described in particular @ref Text::Alignment values, the aligned
+         * origin is then further offset respectively to the node the text is
+         * attached to. In particular:
+         *
+         *  -   `*Left` makes the horizontal origin aligned with node left side
+         *  -   `*Right` makes the horizontal origin aligned with node right
+         *      side
+         *  -   `*Center` makes the horizontal origin aligned with horizontal
+         *      node center, and additionally `*Integral` rounds the horizontal
+         *      offset inside the node to whole units
+         *  -   `*Top` makes the vertical origin aligned with node top side
+         *  -   `*Bottom` makes the vertical origin aligned with node bottom
+         *      side
+         *  -   `*Line` and `*Middle` makes the vertical origin aligned with
+         *      vertical node center, and additionally `*Integral` rounds the
+         *      vertical offset inside the node to whole units. The difference
+         *      between the two is that multiple texts with different font
+         *      metrics get their line positions matched with `*Line`, while
+         *      `*Middle` makes the midpoint between font ascent and descent
+         *      matched.
          *
          * The @p featureOffsets and @p featureCounts views are expected to
          * both either have a size of @ref styleCount(), or both be empty. If
@@ -2206,9 +2225,8 @@ class MAGNUM_UI_EXPORT TextLayer::Shared: public AbstractVisualLayer::Shared {
          * @ref FontHandle::Null or valid, all @p styleAlignments values are
          * expected to not be `*GlyphBounds` as the implementation can only
          * align based on font metrics and cursor position, not actual glyph
-         * bounds. See @ref TextProperties::setAlignment() for a detailed
-         * explanation of alignment behavior respectively to the nodes the text
-         * is attached to.
+         * bounds. Detailed behavior of all alignment values is described in
+         * the @ref setStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>, const Containers::StridedArrayView1D<const FontHandle>&, const Containers::StridedArrayView1D<const Text::Alignment>&, Containers::ArrayView<const TextFeatureValue>, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const Int>&, const Containers::StridedArrayView1D<const Int>&, const Containers::StridedArrayView1D<const Vector4>&) "above overload".
          *
          * The @p styleFeatureOffsets and @p styleFeatureCounts views are
          * expected to both either have a size of @ref styleCount(), or both be

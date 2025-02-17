@@ -149,28 +149,9 @@ class MAGNUM_UI_EXPORT TextProperties {
          * @relativeref{Corrade,Containers::NullOpt}, expects that the
          * @p alignment isn't `*GlyphBounds` as the implementation can only
          * align based on font metrics and cursor position, not actual glyph
-         * bounds.
-         *
-         * In addition to the behavior in particular @ref Text::Alignment
-         * values, the aligned origin is then further offset respectively to
-         * the node the text is attached to. In particular:
-         *
-         *  -   `*Left` makes the horizontal origin aligned with node left side
-         *  -   `*Right` makes the horizontal origin aligned with node right
-         *      side
-         *  -   `*Center` makes the horizontal origin aligned with horizontal
-         *      node center, and additionally `*Integral` rounds the horizontal
-         *      offset inside the node to whole units
-         *  -   `*Top` makes the vertical origin aligned with node top side
-         *  -   `*Bottom` makes the vertical origin aligned with node bottom
-         *      side
-         *  -   `*Line` and `*Middle` makes the vertical origin aligned with
-         *      vertical node center, and additionally `*Integral` rounds the
-         *      vertical offset inside the node to whole units. The difference
-         *      between the two is that multiple texts with different font
-         *      metrics get their line positions matched with `*Line`, while
-         *      `*Middle` makes the midpoint between font ascent and descent
-         *      matched.
+         * bounds. See @ref TextLayer::Shared::setStyle() for a detailed
+         * explanation of alignment behavior respectively to the nodes the text
+         * is attached to.
          */
         TextProperties& setAlignment(Containers::Optional<Text::Alignment> alignment) &;
         /** @overload */
