@@ -172,9 +172,9 @@ class MAGNUM_UI_EXPORT TextProperties {
          *      `*Middle` makes the midpoint between font ascent and descent
          *      matched.
          */
-        TextProperties& setAlignment(const Containers::Optional<Text::Alignment>& alignment) &;
+        TextProperties& setAlignment(Containers::Optional<Text::Alignment> alignment) &;
         /** @overload */
-        TextProperties&& setAlignment(const Containers::Optional<Text::Alignment>& alignment) &&;
+        TextProperties&& setAlignment(Containers::Optional<Text::Alignment> alignment) &&;
 
         /** @brief Font for the whole text */
         FontHandle font() const { return _font; }

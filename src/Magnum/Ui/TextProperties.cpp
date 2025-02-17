@@ -73,14 +73,14 @@ Containers::Optional<Text::Alignment> TextProperties::alignment() const {
         Containers::NullOpt : Containers::optional(_alignment);
 }
 
-TextProperties& TextProperties::setAlignment(const Containers::Optional<Text::Alignment>& alignment) & {
+TextProperties& TextProperties::setAlignment(Containers::Optional<Text::Alignment> alignment) & {
     CORRADE_ASSERT(!alignment || !(UnsignedByte(*alignment) & Text::Implementation::AlignmentGlyphBounds),
         "Ui::TextProperties::setAlignment():" << alignment << "is not supported", *this);
     _alignment = alignment ? *alignment : Text::Alignment(0xff);
     return *this;
 }
 
-TextProperties&& TextProperties::setAlignment(const Containers::Optional<Text::Alignment>& alignment) && {
+TextProperties&& TextProperties::setAlignment(Containers::Optional<Text::Alignment> alignment) && {
     return Utility::move(setAlignment(alignment));
 }
 
