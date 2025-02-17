@@ -508,7 +508,7 @@ void StyleTest::applyTextLayerImagesCannotFit() {
     /* Add a monster image to the atlas which in turn should make it impossible
        to put anything else there */
     Vector2i offset[1];
-    glyphCache.atlas().add({{500, 500}}, offset);
+    CORRADE_VERIFY(glyphCache.atlas().add({{500, 500}}, offset));
 
     struct LayerShared: TextLayer::Shared {
         explicit LayerShared(): TextLayer::Shared{Configuration{Implementation::TextStyleUniformCount, Implementation::TextStyleCount}
