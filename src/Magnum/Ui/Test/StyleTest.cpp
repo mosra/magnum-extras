@@ -34,6 +34,7 @@
 #include <Corrade/TestSuite/Compare/String.h>
 #include <Corrade/Utility/ConfigurationGroup.h>
 #include <Magnum/PixelFormat.h>
+#include <Magnum/Math/Range.h>
 #include <Magnum/Text/AbstractGlyphCache.h>
 #include <Magnum/Text/AbstractFont.h>
 #include <Magnum/TextureTools/Atlas.h>

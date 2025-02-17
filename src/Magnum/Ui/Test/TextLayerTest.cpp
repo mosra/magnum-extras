@@ -995,14 +995,14 @@ const struct {
         {50.5f, 70.7f},
         {50.5f, 76.7f},
         0.3f, 0.1f}, /* Swapped compared to LTR */
-    {"bottom start, unspecified direction",
-        Text::Alignment::BottomStart, Text::ShapeDirection::Unspecified,
+    {"bottom begin, unspecified direction",
+        Text::Alignment::BottomBegin, Text::ShapeDirection::Unspecified,
         /* Same as bottom start */
         {50.5f, 120.9f - 4.0f},
         {50.5f, 120.9f},
         0.1f, 0.3f},
-    {"middle start, RTL",
-        Text::Alignment::MiddleStart, Text::ShapeDirection::RightToLeft,
+    {"middle begin, RTL",
+        Text::Alignment::MiddleBegin, Text::ShapeDirection::RightToLeft,
         /* Same as middle right */
         {50.5f + 200.8f - 9.0f, 20.5f + 50.2f - 5.5f + 7.0f},
         {50.5f + 200.8f - 6.0f, 20.5f + 50.2f - 4.0f + 8.0f},
