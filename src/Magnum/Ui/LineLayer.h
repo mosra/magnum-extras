@@ -442,10 +442,10 @@ Based on the same internal implementation as @ref Shaders::LineGL.
 @section Ui-LineLayer-setup Setting up a line layer instance
 
 First you need to instantiate @ref LineLayer::Shared, which contains GPU
-shaders and style definitions. It takes a @ref LineLayer::Shared::Configuration
-instance, where at the very least you have to specify how many distinct visual
-* *styles* you intend to use --- which is for example the number @cpp 3 @ce in
-the following snippet:
+shaders and style definitions. It takes a @ref LineLayer::Shared::Configuration,
+where at the very least you have to specify how many distinct visual *styles*
+you intend to use --- which is for example the number @cpp 3 @ce in the
+following snippet:
 
 @snippet Ui-gl.cpp LineLayer-setup-shared
 
@@ -454,10 +454,9 @@ for the OpenGL implementation of this layer, is then passed to the layer
 constructor alongside a fresh @ref AbstractUserInterface::createLayer() handle,
 and is expected to stay alive for the whole layer lifetime. The shared instance
 can be used by multiple layers, for example if the application wants to have a
-dedicated layer for very dynamic UI content, or when it wants to combine
-visual options that have to be hardcoded in particular
-@ref LineLayer::Shared instances. Pass the newly created instance to
-@ref AbstractUserInterface::setLayerInstance():
+dedicated layer for very dynamic UI content, or if it combines visual options
+that have to be hardcoded in particular @ref LineLayer::Shared instances. Pass
+the newly created layer to @ref AbstractUserInterface::setLayerInstance():
 
 @snippet Ui-gl.cpp LineLayer-setup
 

@@ -427,16 +427,16 @@ optionally with texturing and background blur.
 
 @section Ui-BaseLayer-setup Setting up a base layer instance
 
-If you create a @ref UserInterfaceGL instance with a style and don't exclude
+If you create a @ref UserInterfaceGL with a style and don't exclude
 @ref StyleFeature::BaseLayer, an implicit instance of the @ref BaseLayerGL
 subclass, configured for use with builtin widgets, is already provided and
 available through @ref UserInterface::baseLayer().
 
-For a custom instance, you first need to instantiate @ref BaseLayer::Shared,
-which contains GPU shaders and style definitions. It takes a
-@ref BaseLayer::Shared::Configuration instance, where at the very least you
-have to specify how many distinct visual *styles* you intend to use --- which
-is for example the number @cpp 3 @ce in the following snippet:
+For a custom layer, you first need to instantiate @ref BaseLayer::Shared, which
+contains GPU shaders and style definitions. It takes a
+@ref BaseLayer::Shared::Configuration, where at the very least you have to
+specify how many distinct visual *styles* you intend to use --- which is for
+example the number @cpp 3 @ce in the following snippet:
 
 @snippet Ui-gl.cpp BaseLayer-setup-shared
 
@@ -445,17 +445,16 @@ for the OpenGL implementation of this layer, is then passed to the layer
 constructor alongside a fresh @ref AbstractUserInterface::createLayer() handle,
 and is expected to stay alive for the whole layer lifetime. The shared instance
 can be used by multiple layers, for example if the application wants to have a
-dedicated layer for very dynamic UI content, or when it wants to combine
-visual options that have to be hardcoded in particular @ref BaseLayer::Shared
-instances. If you want to supply an instance for the implicit
-@ref UserInterface::baseLayer(), pass it to
-@ref UserInterfaceGL::setBaseLayerInstance():
+dedicated layer for very dynamic UI content, or if it combines visual options
+that have to be hardcoded in particular @ref BaseLayer::Shared instances. To
+make the layer available as the implicit @ref UserInterface::baseLayer(), pass
+it to @ref UserInterfaceGL::setBaseLayerInstance():
 
 @snippet Ui-gl.cpp BaseLayer-setup-implicit
 
 Otherwise, if you want to set up a custom base layer that's independent of the
 one exposed through @ref UserInterface::baseLayer(), possibly for completely
-custom widgets, pass the newly created instance to
+custom widgets, pass the newly created layer to
 @ref AbstractUserInterface::setLayerInstance() instead:
 
 @snippet Ui-gl.cpp BaseLayer-setup
@@ -523,7 +522,7 @@ fade-out effects.
 
 @snippet Ui.cpp BaseLayer-style-color2
 
-@subsection Ui-BaseLayer-style-rounded-corners Rounded corners
+@subsection Ui-BaseLayer-style-rounded-corners-smoothness Rounded corners and edge smoothness
 
 @image html ui-baselayer-style-rounded-corners.png width=256px
 
