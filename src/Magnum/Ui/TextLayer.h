@@ -453,14 +453,14 @@ enum class TextEdit: UnsignedByte {
      * multiple Unicode codepoints (such as combining diacritics), the cursor
      * will not jump over the whole combined sequence but move inside.
      *
-     * By default, the cursor moves backward in the byte stream, which is
-     * optically to the left for left-to-right alphabets. If
+     * By default, the cursor moves forward in the byte stream, which is
+     * optically to the right for left-to-right alphabets. If
      * @ref TextProperties::shapeDirection() is
      * @ref Text::ShapeDirection::RightToLeft or if it's
      * @relativeref{Text::ShapeDirection,Unspecified} and was detected to be
      * @relativeref{Text::ShapeDirection,RightToLeft} after calling
      * @ref Text::AbstractShaper::shape() internally, the cursor still moves
-     * *optically* to the right, although it's forward in the byte stream.
+     * *optically* to the right, although it's backward in the byte stream.
      * @see @ref TextEdit::ExtendSelectionRight
      */
     MoveCursorRight,
@@ -477,14 +477,14 @@ enum class TextEdit: UnsignedByte {
      * multiple Unicode codepoints (such as combining diacritics), the cursor
      * will not jump over the whole combined sequence but move inside.
      *
-     * By default, the cursor moves backward in the byte stream, which is
-     * optically to the left for left-to-right alphabets. If
+     * By default, the cursor moves forward in the byte stream, which is
+     * optically to the right for left-to-right alphabets. If
      * @ref TextProperties::shapeDirection() is
      * @ref Text::ShapeDirection::RightToLeft or if it's
      * @relativeref{Text::ShapeDirection,Unspecified} and was detected to be
      * @relativeref{Text::ShapeDirection,RightToLeft} after calling
      * @ref Text::AbstractShaper::shape() internally, the cursor still moves
-     * *optically* to the right, although it's forward in the byte stream.
+     * *optically* to the right, although it's backward in the byte stream.
      * @see @ref TextEdit::MoveCursorRight
      */
     ExtendSelectionRight,
