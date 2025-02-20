@@ -64,9 +64,9 @@ Additional apps are built separately. See the
 
 @m_class{m-block m-success}
 
-@thirdparty This library makes use of the [Adobe Source Sans Pro](https://github.com/adobe-fonts/source-sans-pro)
+@thirdparty This library makes use of the [Adobe Source Sans](https://github.com/adobe-fonts/source-sans)
     font, licensed under @m_class{m-label m-success} **OFL 1.1**
-    ([license text](https://github.com/adobe-fonts/source-sans-pro/blob/release/LICENSE.md),
+    ([license text](https://github.com/adobe-fonts/source-sans/blob/release/LICENSE.md),
     [choosealicense.com](https://choosealicense.com/licenses/ofl-1.1/)).
     Attribution is required for public use.
 

@@ -127,7 +127,7 @@ Available values correspond to @ref DebugTools::FrameProfilerGL::Value names.
 The screenshot was made using the
 [Littlest Tokyo](https://sketchfab.com/models/94b24a60dc1b48248de50bf087c0f042)
 model by [Glen Fox](https://www.artstation.com/glenatron), licensed under the
-CC 4.0 Attribution license. The app makes use of the Adobe Source Sans Pro font
+CC 4.0 Attribution license. The app makes use of the Adobe Source Sans font
 through the @ref Ui library, see its documentation for license information.
 
 */
