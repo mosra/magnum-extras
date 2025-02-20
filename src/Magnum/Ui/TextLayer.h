@@ -45,6 +45,9 @@ namespace Magnum { namespace Ui {
 @brief Properties common to all @ref TextLayer style uniforms
 @m_since_latest
 
+See the @ref TextLayer class documentation for information about setting up an
+instance of the text layer and using it.
+
 Together with one or more @ref TextLayerStyleUniform instances contains style
 properties that are used by the @ref TextLayer shaders to draw the layer data,
 packed in a form that allows direct usage in uniform buffers. Is uploaded
@@ -85,6 +88,9 @@ struct alignas(4) TextLayerCommonStyleUniform {
 /**
 @brief @ref TextLayer style uniform
 @m_since_latest
+
+See the @ref TextLayer class documentation for information about setting up an
+instance of the text layer and using it.
 
 Instances of this class together with @ref TextLayerCommonStyleUniform contain
 style properties that are used by the @ref TextLayer shaders to draw the layer
@@ -145,6 +151,10 @@ struct TextLayerStyleUniform {
 @brief Properties common to all @ref TextLayer editing style uniforms
 @m_since_latest
 
+See the @ref TextLayer class documentation for information about setting up an
+instance of the text layer and using it, and @ref Ui-TextLayer-editing in
+particular for setting up styles for editable text.
+
 Together with one or more @ref TextLayerEditingStyleUniform instances contains
 style properties that are used by the @ref TextLayer shaders to draw the layer
 editing data such as cursors and selection rectangles, packed in a form that
@@ -203,6 +213,10 @@ struct TextLayerCommonEditingStyleUniform {
 /**
 @brief @ref TextLayer editing style uniform
 @m_since_latest
+
+See the @ref TextLayer class documentation for information about setting up an
+instance of the text layer and using it, and @ref Ui-TextLayer-editing in
+particular for setting up styles for editable text.
 
 Instances of this class together with @ref TextLayerCommonEditingStyleUniform
 contain style properties that are used by the @ref TextLayer shaders to draw
@@ -294,6 +308,9 @@ namespace Implementation {
 @brief Font handle
 @m_since_latest
 
+Used for identifying fonts in the @ref TextLayer. See its documentation for
+information about setting up an instance of the text layer and using it.
+
 Uses 15 bits for storing an ID and 1 bit for a generation.
 @see @ref TextLayer::Shared::addFont(), @ref fontHandle(), @ref fontHandleId(),
     @ref fontHandleGeneration()
@@ -350,7 +367,8 @@ constexpr UnsignedInt fontHandleGeneration(FontHandle handle) {
 @brief Text layer data flag
 @m_since_latest
 
-@see @ref TextDataFlags, @ref TextLayer::create(), @ref TextLayer::flags()
+@see @ref Ui-TextLayer-editing, @ref TextDataFlags, @ref TextLayer::create(),
+    @ref TextLayer::flags()
 */
 enum class TextDataFlag: UnsignedByte {
     /**
@@ -392,7 +410,7 @@ MAGNUM_UI_EXPORT Debug& operator<<(Debug& debug, TextDataFlags value);
 /**
 @brief Text edit operation
 
-@see @ref TextLayer::editText()
+@see @ref Ui-TextLayer-editing, @ref TextLayer::editText()
 */
 enum class TextEdit: UnsignedByte {
     /**
@@ -653,12 +671,496 @@ MAGNUM_UI_EXPORT Debug& operator<<(Debug& debug, TextEdit value);
 @brief Text layer
 @m_since_latest
 
-Draws text laid out using the @ref Text library. You'll most likely instantiate
-the class through @ref TextLayerGL, which contains a concrete OpenGL
-implementation.
-@see @ref UserInterface::textLayer(),
-    @ref UserInterface::setTextLayerInstance(), @ref StyleFeature::TextLayer,
-    @ref TextLayerStyleAnimator
+Draws text laid out using the @ref Text library, including editing
+capabilities.
+
+@section Ui-TextLayer-setup Setting up a text layer instance
+
+If you create a @ref UserInterfaceGL with a style and don't exclude
+@ref StyleFeature::TextLayer, an implicit instance of the @ref TextLayerGL
+subclass, configured for use with builtin widgets, is already provided and
+available through @ref UserInterface::textLayer().
+
+For a custom layer, you first need to instantiate @ref TextLayer::Shared,
+which contains a glyph cache, font instances, GPU shaders and style
+definitions. It takes a @ref TextLayer::Shared::Configuration, where at the
+very least you have to specify how many distinct visual *styles* you intend to
+use --- which is for example the number @cpp 3 @ce in the following snippet:
+
+@snippet Ui-gl.cpp TextLayer-setup-shared
+
+The shared instance, in this case a concrete @ref TextLayerGL::Shared subclass
+for the OpenGL implementation of this layer, is then passed to the layer
+constructor alongside a fresh @ref AbstractUserInterface::createLayer() handle,
+and is expected to stay alive for the whole layer lifetime. The shared instance
+can be used by multiple layers, for example if the application wants to have a
+dedicated layer for very dynamic UI content, or if it combines visual options
+that have to be hardcoded in particular @ref TextLayer::Shared instances. To
+make the layer available as the implicit @ref UserInterface::textLayer(), pass
+it to @ref UserInterfaceGL::setTextLayerInstance():
+
+@snippet Ui-gl.cpp TextLayer-setup-implicit
+
+Otherwise, if you want to set up a custom base layer that's independent of the
+one exposed through @ref UserInterface::textLayer(), possibly for completely
+custom widgets, pass the newly created layer to
+@ref AbstractUserInterface::setLayerInstance() instead:
+
+@snippet Ui-gl.cpp TextLayer-setup
+
+Afterwards, in order to be able to draw the layer, a glyph cache with at least
+one font has to be added, and a style referencing them has to be set. For the
+@ref TextLayerGL implementation it's @ref Text::GlyphCacheGL. Assuming
+monochrome fonts, construct it with a single-channel pixel format and a size
+large enough to fit pre-rendered glyphs of all fonts you'll need, and pass it
+to @ref TextLayerGL::Shared::setGlyphCache(). The glyph cache is expected to be
+alive for the whole shared instance lifetime, alternatively you
+can use @ref TextLayerGL::Shared::setGlyphCache(Text::GlyphCacheGL&&) to move
+its ownership to the shared instance.
+
+@snippet Ui-gl.cpp TextLayer-setup-glyph-cache
+
+@ref Text::AbstractFont instances, commonly loaded using a plugin manager, are
+then added with @ref TextLayerGL::Shared::addFont(), together with specifying
+size in UI coordinates at which a text using them should be rendered. The
+function then returns a @ref FontHandle, which is subsequently used to
+reference the font from styles. As with the glyph cache, the font instance is
+expected to be alive for the whole shared instance lifetime, or you can use
+@ref TextLayerGL::Shared::addFont(Containers::Pointer<Text::AbstractFont>&&, Float)
+to move its ownership to the shared instance. Note that you're still
+responsible for keeping the plugin manager instance around even in that case.
+
+@snippet Ui.cpp TextLayer-setup-fonts
+
+<b></b>
+
+@m_class{m-note m-warning}
+
+@par
+    At the moment, there's no mechanism in place to automatically fill the
+    glyph cache based on what glyphs are used, you have to do it explicitly
+    using @ref Text::AbstractFont::fillGlyphCache().
+
+Assuming the UI size matches the framebuffer size, a good default is to use the
+same size in @ref Text::AbstractFont::openFile() /
+@relativeref{Text::AbstractFont,openData()} and
+@ref TextLayerGL::Shared::addFont(), like in the snippet above. See the
+@ref Ui-TextLayer-dpi section below for additional considerations.
+
+Finally, a style referencing the fonts has to be set with
+@ref TextLayer::Shared::setStyle(). At the very least you're expected to pass a
+@ref TextLayerCommonStyleUniform containing properties common to all styles, an
+array of @ref TextLayerStyleUniform matching the style count in the
+@ref TextLayer::Shared::Configuration, and a @ref FontHandle and
+@ref Text::Alignment alignment that given style should use. Default-constructed
+instances will result in white text, you can then use method chaining to update
+only the properties you're interested in; zero-initialized @ref Text::Alignment
+value is equivalent to @ref Text::Alignment::LineLeft. In the following
+snippet, style @cpp 0 @ce uses the first, larger font and style defaults, style
+@cpp 1 @ce is the first font again but with a blue color, and style @cpp 2 @ce
+is the smaller font centered:
+
+@snippet Ui.cpp TextLayer-setup-style
+
+With this, assuming @ref AbstractUserInterface::draw() is called in an
+appropriate place, the layer is ready to use. All style options are described
+in detail further below.
+
+@m_class{m-note m-info}
+
+@par Using an enum for style indexing
+    Like with @ref BaseLayer, it's possible to use an @cpp enum @ce for
+    populating @ref TextLayer styles and referencing them when creating data.
+    See the corresponding @ref Ui-BaseLayer-style-enums "BaseLayer documentation chapter"
+    for a detailed example.
+
+@section Ui-TextLayer-create Creating texts
+
+A text is created by calling @ref create() with desired style index, the actual
+UTF-8 string to render, a @ref TextProperties instance with optional
+data-specific shaping and layout settings, and a @ref NodeHandle the data
+should be attached to. In this case it picks the style @cpp 1 @ce from above,
+which makes the text blue:
+
+@snippet Ui.cpp TextLayer-create
+
+As with all other data, they're implicitly tied to lifetime of the node they're
+attached to. You can remember the @ref Ui::DataHandle returned by @ref create()
+to modify the data later, @ref attach() to a different node or @ref remove()
+it.
+
+@section Ui-TextLayer-style Style, shaping and layout options
+
+@subsection Ui-TextLayer-style-color Text color
+
+@image html ui-textlayer-style-color.png width=192px
+
+The color supplied with @ref TextLayerStyleUniform::setColor() as shown above
+is additionally multiplied by a data-specific color set with @ref setColor().
+The main use case, like with @ref BaseLayer, is to allow for example custom
+label coloring where it would be impractical to dynamically update style data
+based on what's being shown. The color is further multiplied by a per-node
+opacity coming from @ref AbstractUserInterface::setNodeOpacity(), which can be
+used for various fade-in / fade-out effects.
+
+@snippet Ui.cpp TextLayer-style-color
+
+At the moment, there's no possibility to assign different color to individual
+glyphs or text ranges.
+
+@subsection Ui-TextLayer-style-alignment-padding Alignment and padding inside the node
+
+@ref Text::Alignment::MiddleCenter passed to @ref TextLayer::Shared::setStyle()
+aligns vertical and horizontal glyph bounds, defined by font ascent, descent,
+line advance and glyph advance, to vertical and horizontal center of given
+node. @ref Text::Alignment::TopLeft and other alignment values then align a
+particular edge or baseline of the text to node edges and corners. With those,
+it's often desirable to specify also a padding inside the node with the last
+argument to @ref TextLayer::Shared::setStyle(), so e.g. a text inside a text
+box has some spacing around without having to put it inside a slightly smaller
+child node. Similarly as with @ref Ui-BaseLayer-style-padding "padding in BaseLayer",
+it's one value for each of four node edges, but often a single value for all is
+enough:
+
+@snippet Ui.cpp TextLayer-style-alignment-padding
+
+If needed, style-provided alignment can be overriden for particular data with
+@ref TextProperties::setAlignment() --- or by passing a @ref Text::Alignment
+directly, as it's implicitly convertible to @ref TextProperties --- when
+creating or updating the text. Note that, unlike e.g.
+@ref LineLayer::setAlignment(), the alignment cannot be changed dynamically for
+an already shaped text. The reason is that the alignment may offset each line
+differently and is dependent on shaping direction of the input text, but
+neither the input text nor line break positions or other properties are
+remembered by default.
+
+@image html ui-textlayer-style-data-padding.png width=96px
+
+Finally, the padding can be overriden on a per-data basis with @ref setPadding().
+This is especially useful when aligning text of a variable width next to other
+UI elements such as icons, or combining two differently styled pieces of text
+together. The following snippet shows aligning a text next to a colored hash
+character using @ref size() to query the actual rendered size, the other
+element could also be anything from a @ref BaseLayer or a @ref LineLayer which
+provide the same padding interfaces. Additionally, the space between the two is
+defined by the style itself and thus doesn't have to be hardcoded in the offset
+calculation:
+
+@snippet Ui.cpp TextLayer-style-data-padding
+
+@subsection Ui-TextLayer-style-shaping Font, shaping language, script and direction
+
+Besides alignment, @ref TextProperties::setFont() --- or, again, passing a
+@ref FontHandle directly, as it's implicitly convertible to @ref TextProperties
+--- allows you to override the font for a particular data. This is useful for
+example when a certain text is using a script not supported by the font coming
+from the style:
+
+@snippet Ui.cpp TextLayer-style-shaping-font
+
+It's also possible to explicitly specify the script, language and direction of
+given text, however note that support for these options is highly dependent on
+the font plugin used. @relativeref{Text,HarfBuzzFont}, for example, attempts to
+detect these properties by default, so not setting them to any fixed value will
+likely provide better results when working with text coming from unknown
+international sources. On the other hand, specifying these properties if you're
+sure about the text origin avoids the autodetection, which can improve
+performance with highly dynamic text. In contrast,
+@relativeref{Text,StbTrueTypeFont} for example doesn't support any of these
+properties and setting them will have no effect.
+
+@snippet Ui.cpp TextLayer-style-shaping-script-language-direction
+
+At the moment, only @ref Text::LayoutDirection::HorizontalTopToBottom is
+supported, i.e. vertical text isn't possible yet. See also
+@ref Text::Alignment::LineBegin, @ref Text::Alignment::LineEnd and other
+alignment values that resolve to either left or right alignment based on
+either the detected or supplied @ref Text::ShapeDirection.
+
+@subsection Ui-TextLayer-style-features Font feature selection
+
+@image html ui-textlayer-style-features.png width=256px
+
+@ref TextProperties::setFeatures() allows you to configure OpenType typographic
+features applied when shaping given text. Again, support for these depends on
+the font plugin used as well as features exposed by a particular font file. At
+the moment, @relativeref{Text,HarfBuzzFont} is the only plugin implementing
+these, and most of the features are limited to OTF fonts, TTF supports only a
+small subset such as toggling @ref Text::Feature::Kerning. In the following
+snippet, the whole text gets @ref Text::Feature::OldstyleFigures enabled,
+causing certain numbers to reach below the baseline, then an alternative glyph
+of the *a* character in *Status* is picked, and @ref Text::Feature::SmallCapitals
+is used for the part of the string containing the actual status description:
+
+@snippet Ui.cpp TextLayer-style-features-data
+
+Note that the features will likely need additional glyphs to be pre-filled in
+the cache. The @ref Text::AbstractFont::fillGlyphCache(AbstractGlyphCache&, const Containers::StridedArrayView1D<const UnsignedInt>&)
+overload allows you to specify individual glyph IDs, and
+@ref Text::AbstractFont::glyphForName() allows you to query the IDs by names
+that you can look up in some font inspection utility. In case of the
+[Source Sans](https://github.com/adobe-fonts/source-sans) font used here, it
+could look like this:
+
+@snippet Ui.cpp TextLayer-style-features-fill-glyph-cache
+
+Font features can be also specified as part of the style. For example you may
+want to have all title labels in small caps, and all numeric fields with
+@ref Text::Feature::TabularFigures instead of proportional and with
+@ref Text::Feature::SlashedZero to distinguish a zero from an uppercase O. All
+used features are supplied as a list in the fifth argument to
+@ref TextLayer::Shared::setStyle(), and then each style specifies an offset and
+count into this list in the next two arguments. The same features can be used
+by multiple ranges, count being @cpp 0 @ce means no features are used for given
+style:
+
+@snippet Ui.cpp TextLayer-style-features
+
+@section Ui-TextLayer-single-glyphs Rendering single glyphs
+
+@image html ui-textlayer-single-glyph.png width=32px
+
+With @ref createGlyph() you can render a single glyph specified with its ID.
+This is useful mainly with icon fonts, where you can for example use
+@ref Text::AbstractFont::glyphForName() at runtime if the font has named
+glyphs:
+
+@snippet Ui.cpp TextLayer-single-glyph-runtime
+
+Or you can maintain an @cpp enum @ce with name-to-glyph-ID mapping. Similarly
+to style IDs, @ref createGlyph() accepts both plain integers and enums for a
+glyph ID:
+
+@snippet Ui.cpp TextLayer-single-glyph-enum
+
+It's however also possible to insert your own image data into the glyph cache
+and reference them with this function. Assuming a list of images imported for
+example from a set of PNGs, call @ref Text::AbstractGlyphCache::addFont() to
+add a new font ID, copy the image contents to places in the cache reserved
+using @ref TextureTools::AtlasLandfill::add(), make the glyph cache aware of
+the new icons with @ref Text::AbstractGlyphCache::addGlyph(), and at the end
+upload the updated part of the glyph cache to the GPU texture using
+@ref Text::AbstractGlyphCache::flushImage().
+
+@snippet Ui.cpp TextLayer-single-glyph-instanceless1
+
+Finally add the newly added icons as a new @ref FontHandle using
+@ref TextLayer::Shared::addInstancelessFont(). Compared to
+@ref TextLayer::Shared::addFont() it takes a *scale* instead of size. Assuming
+the UI size matches the framebuffer size, use @cpp 1.0f @ce if you want to draw
+the icons in their original pixel size. the @ref Ui-TextLayer-dpi section below
+for additional considerations. The font handle can then be referenced from the
+style or passed directly to @ref createGlyph().
+
+@snippet Ui.cpp TextLayer-single-glyph-instanceless2
+
+See @ref Text::AbstractGlyphCache and @ref TextureTools::AtlasLandfill for
+detailed information about how the cache and atlas packing works internally.
+
+@section Ui-TextLayer-update Updating text data
+
+Any created text or single glyph can be subsequently updated with
+@ref setText() and @ref setGlyph(). These functions take the same arguments and
+behave the same as @ref create() and @ref createGlyph(). Internally there's no
+distinction between a text and a single glyph, so a text can be safely changed
+to just a glyph and vice versa.
+
+@section Ui-TextLayer-dynamic-styles Dynamic styles
+
+Like with @ref Ui-BaseLayer-dynamic-styles "BaseLayer dynamic styles", the
+@ref TextLayer::Shared::setStyle() API is meant to be used to supply data for
+static styles, and dynamic styles, requested with
+@ref TextLayer::Shared::Configuration::setDynamicStyleCount() and specified via
+@ref setDynamicStyle(), used for style data that change very often:
+
+@snippet Ui-gl.cpp TextLayer-dynamic-styles
+
+The main use case for dynamic styles is animations, which is for the text layer
+implemented in the @ref TextLayerStyleAnimator class. Again note that if you
+intend to directly use dynamic styles along with the animator, you should use
+@ref allocateDynamicStyle() and @ref recycleDynamicStyle() to prevent the
+animator from stealing dynamic styles you use elsewhere:
+
+@snippet Ui.cpp TextLayer-dynamic-styles-allocate
+
+@section Ui-TextLayer-style-transitions Style transition based on input events
+
+Like with @ref BaseLayer, it's possible to configure @ref TextLayer to perform
+automatic style transitions based on input events, such as highlighting on
+hover or press. See the @ref Ui-BaseLayer-style-transitions "BaseLayer documentation for style transition"
+for a detailed example, the interfaces are the same between the two.
+
+@m_class{m-note m-info}
+
+@par
+    Note that at the moment, the whole node area reacts to the event, not just
+    when the text glyphs themselves are under the pointer.
+
+@section Ui-TextLayer-editing Editable text
+
+By default, the text layer shapes the input text into glyphs, throwing away the
+input text and all its properties like language or direction, and remembering
+just which glyphs to render at which positions. As majority of text in user
+interfaces is non-editable and often only set, never queried back, there's no
+need to implicitly store such info.
+
+To make editable text, first a style describing how cursor and selection looks
+like needs to be configured. As both the cursor and the selection are
+rectangular shapes, there's a single *editing style* definition, and then it's
+specified which of them are used for cursors and which for selection. By
+default there are no editing styles and their desired count has to be specified
+via @ref TextLayer::Shared::Configuration::setEditingStyleCount(), in this
+example we'll have just two, used by three regular styles:
+
+@snippet Ui-gl.cpp TextLayer-editing-style-shared
+
+Style data is then supplied with @ref TextLayer::Shared::setEditingStyle().
+Similarly to regular styles, there can be multiple editing styles, and they
+consist of a @ref TextLayerCommonEditingStyleUniform, containing properties
+common to all editing styles, an array of @ref TextLayerEditingStyleUniform,
+matching the style count specified in the configuration. Default-constructed
+instances will result in white rectangles, you can then use method chaining to
+update only the properties you're interested in. Finally, there is a list of
+padding values, which define how far from the actual glyph bounds the selection
+or cursor expands. In case of cursors in particular, with no padding specified
+they'd have a zero width and thus be invisible. The following snippet defines
+an azure style @cpp 0 @ce for a cursor, expanding one UI unit on each side from
+the cursor position, and a blue selection style @cpp 1 @ce, tightly wrapping
+the glyph rectangle:
+
+@snippet Ui.cpp TextLayer-editing-style-editing
+
+After that, the editing styles need to be referenced from the regular styles.
+This is done with the eighth and ninth argument to
+@ref TextLayer::Shared::setStyle(), which are are cursor and selection style
+indices, respectively, or @cpp -1 @ce if given style shouldn't have a cursor /
+selection style assigned. If either of those arguments is left empty, it's the
+same as if it'd have @cpp -1 @ce for all styles. Here style @cpp 0 @ce is a
+regular non-editing style, @cpp 1 @ce is a style with both a cursor and
+selection style, and @cpp 2 @ce has just a selection, for example if a certain
+label is meant to be just selectable but not directly editable:
+
+@snippet Ui.cpp TextLayer-editing-style
+
+With the editing style set up, an editable text can be made by passing
+@ref TextDataFlag::Editable to either @ref create() or @ref setText()
+Initially it will have no selection and the cursor at the end, you can then use
+@ref setCursor() to specify the byte position where the cursor and selection
+should be:
+
+@snippet Ui.cpp TextLayer-editing-create
+
+Contents of an editable text are then subsequently queryable with @ref text().
+The @ref updateText() function can perform incremental updates in addition to
+cursor movement and the @ref editText() API is for higher-level operations with
+UTF-8 and text directionality awareness. This function is also what is called
+on actual key and text input events, described in
+@ref Ui-TextLayer-editing-events below.
+
+@subsection Ui-TextLayer-editing-color Cursor and selection color, selection text style
+
+@image html ui-textlayer-editing-color.png width=128px
+
+Apart from the selection / cursor rectangle color, set with
+@ref TextLayerEditingStyleUniform::setBackgroundColor(), it's possible to
+override style of the text under selection using the third argument to
+@ref TextLayer::Shared::setEditingStyle(). Compared to above, the following
+snippet adds a style number @cpp 3 @ce, which is then referenced from the
+selection editing style, and which makes the selected text darker:
+
+@snippet Ui.cpp TextLayer-editing-style-text-selection
+
+Note that only the @ref TextLayerCommonStyleUniform is used from the style
+override, not font, alignment or other properties.
+
+@subsection Ui-TextLayer-editing-padding Cursor and selection rectangle padding
+
+@image html ui-textlayer-editing-padding.png width=128px
+
+Padding used in the snippets above was only horizontal, but vertical padding
+can be used for example to achieve better optical alignment of both the text
+itself and the selection rectangle inside an edit box, or to make a cursor
+stand out more. Horizontal padding also doesn't necessarily have to be
+symmetrical. For the cursor it's often desirable to have it shifted towards the
+typing direction. Here it's still two units wide, but is shifted to the right
+for @ref Text::ShapeDirection::LeftToRight text, and to the left for
+@relativeref{Text::ShapeDirection,RightToLeft} text:
+
+@snippet Ui.cpp TextLayer-editing-style-padding
+
+@subsection Ui-TextLayer-editing-rounded-corners-smoothness Rounded corners and edge smoothness
+
+@image html ui-textlayer-editing-rounded.png width=128px
+
+@ref TextLayerEditingStyleUniform::setCornerRadius() allows you to make the
+cursor and selection rectangle corners rounded. The edges are aliased by
+default, use @ref TextLayerCommonEditingStyleUniform::setSmoothness() to
+smoothen them out. The radius is in framebuffer pixels, same as with
+@ref Ui-BaseLayer-style-rounded-corners-smoothness "BaseLayer edge smoothness".
+
+@snippet Ui.cpp TextLayer-editing-style-rounded
+
+@subsection Ui-TextLayer-editing-events Reacting to focus, pointer and keyboard input events
+
+Assuming key and text input events are propagated to the UI from the
+application as described in the @ref Ui-AbstractUserInterface-application "AbstractUserInterface documentation",
+if a text with @ref TextDataFlag::Editable is attached to a
+@ref NodeFlag::Focusable node, focusing it either programmatically or with a
+pointer tap or click will make it receive all keyboard and text input events,
+allowing the user to edit the text. Arrow and other editing keys map to
+concrete actions described in the @ref TextEdit enum.
+
+@snippet Ui.cpp TextLayer-editing-focusable
+
+<b></b>
+
+@m_class{m-note m-warning}
+
+@par
+    Note that currently only cursor movement and selection via a keyboard is
+    implemented, not with a pointer yet.
+
+For proper visual feedback on focus and blur of a particular widget containing
+the editable text it's recommended to implement also the `toFocusedOut` and
+`toFocusedOver` state transitions in @ref Shared::setStyleTransition() for all
+visual layers used in given widget, in addition to the basic inactive, pressed
+and disabled transitions shown in the
+@ref Ui-BaseLayer-style-transitions "BaseLayer documentation for style transitions".
+
+@subsection Ui-TextLayer-editing-dynamic-styles Dynamic editing styles
+
+Dynamic styles, @ref Ui-TextLayer-dynamic-styles "described above", have also
+variants that include cursor and selection styles. Depending on the subset of
+editing styles you want to have for a particular dynamic style, use
+@ref setDynamicStyleWithCursor(), @ref setDynamicStyleWithSelection() or
+@ref setDynamicStyleWithCursorSelection() instead of @ref setDynamicStyle().
+
+@section Ui-TextLayer-dpi Text crispness and DPI awareness
+
+If the UI size differs from the actual framebuffer size, which is often the
+case on HiDPI systems and other scenarios described in
+@ref Ui-AbstractUserInterface-dpi "AbstractUserInterface DPI awareness docs",
+using the same font size in both @ref Text::AbstractFont::openFile() /
+@relativeref{Text::AbstractFont,openData()} and
+@ref TextLayerGL::Shared::addFont() will result in blurry text. Additionally,
+because glyphs are often placed at subpixel locations, it's often better to
+supersample the font at twice the size it's used in for crisper edges even if
+no HiDPI interface scaling is involved. Thus, the size at which the font is
+opened and at which the glyph cache is filled should be multiplied by a factor
+compared to the size the font is used in the UI:
+
+@snippet Ui.cpp TextLayer-dpi
+
+Fonts added with @ref TextLayerGL::Shared::addInstancelessFont() should then
+use the `scale` directly.
+
+<b></b>
+
+@m_class{m-note m-warning}
+
+@par
+    Keep in mind that since glyphs may get rendered at a bigger size, the glyph
+    cache may also need to be created with a bigger size in that case.
 */
 class MAGNUM_UI_EXPORT TextLayer: public AbstractVisualLayer {
     public:

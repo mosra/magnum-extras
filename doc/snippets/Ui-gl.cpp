@@ -25,10 +25,12 @@
 */
 
 #include <Corrade/PluginManager/Manager.h>
+#include <Magnum/PixelFormat.h>
 #include <Magnum/GL/DefaultFramebuffer.h>
 #include <Magnum/GL/Renderer.h>
 #include <Magnum/GL/TextureArray.h>
 #include <Magnum/Text/AbstractFont.h>
+#include <Magnum/Text/GlyphCacheGL.h>
 #include <Magnum/Trade/AbstractImporter.h>
 
 #include "Magnum/Ui/BaseLayerGL.h"
@@ -40,6 +42,7 @@
 #include "Magnum/Ui/Style.h"
 #include "Magnum/Ui/TextLayerGL.h"
 #include "Magnum/Ui/TextLayerAnimator.h"
+#include "Magnum/Ui/TextProperties.h"
 #include "Magnum/Ui/UserInterfaceGL.h"
 
 #define DOXYGEN_ELLIPSIS(...) __VA_ARGS__
@@ -290,6 +293,66 @@ Ui::LineLayer& lineLayerSquare = ui.setLayerInstance(
 /* [LineLayer-style-cap-join] */
 static_cast<void>(lineLayerRound);
 static_cast<void>(lineLayerSquare);
+}
+
+{
+/* [TextLayer-setup-shared] */
+Ui::TextLayerGL::Shared textLayerShared{
+    Ui::TextLayer::Shared::Configuration{3}
+};
+/* [TextLayer-setup-shared] */
+
+Ui::AbstractUserInterface ui{{100, 100}};
+/* [TextLayer-setup] */
+Ui::TextLayer& textLayer = ui.setLayerInstance(
+    Containers::pointer<Ui::TextLayerGL>(ui.createLayer(), textLayerShared));
+/* [TextLayer-setup] */
+static_cast<void>(textLayer);
+
+/* [TextLayer-setup-glyph-cache] */
+Text::GlyphCacheGL glyphCache{PixelFormat::R8Unorm, {1024, 1024}};
+
+textLayerShared.setGlyphCache(glyphCache);
+/* [TextLayer-setup-glyph-cache] */
+}
+
+{
+Ui::UserInterfaceGL ui{NoCreate};
+Ui::TextLayerGL::Shared textLayerShared{Ui::TextLayer::Shared::Configuration{1}};
+/* [TextLayer-setup-implicit] */
+ui.setTextLayerInstance(
+    Containers::pointer<Ui::TextLayerGL>(ui.createLayer(), textLayerShared));
+/* [TextLayer-setup-implicit] */
+}
+
+{
+Ui::UserInterfaceGL ui{NoCreate};
+/* [TextLayer-dynamic-styles] */
+Ui::TextLayerGL::Shared textLayerShared{
+    Ui::TextLayerGL::Shared::Configuration{DOXYGEN_ELLIPSIS(1)}
+        .setDynamicStyleCount(10)
+};
+Ui::TextLayerGL& textLayer = ui.setLayerInstance(
+    Containers::pointer<Ui::TextLayerGL>(ui.createLayer(), textLayerShared));
+
+DOXYGEN_ELLIPSIS()
+
+UnsignedInt dynamicStyleId = DOXYGEN_ELLIPSIS(0); /* anything less than the dynamic style count */
+textLayer.setDynamicStyle(dynamicStyleId, DOXYGEN_ELLIPSIS(Ui::TextLayerStyleUniform{}, {}, {}, {}, {}));
+
+Ui::NodeHandle node = DOXYGEN_ELLIPSIS({});
+textLayer.create(textLayer.shared().styleCount() + dynamicStyleId,
+    DOXYGEN_ELLIPSIS("", {}), node);
+/* [TextLayer-dynamic-styles] */
+}
+
+{
+/* [TextLayer-editing-style-shared] */
+Ui::TextLayerGL::Shared textLayerShared{
+    Ui::TextLayer::Shared::Configuration{3}
+        .setEditingStyleCount(2)
+};
+/* [TextLayer-editing-style-shared] */
 }
 
 {

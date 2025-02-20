@@ -61,3 +61,10 @@ target_link_libraries(ui-linelayer PRIVATE
     Magnum::Trade
     Magnum::WindowlessApplication
     MagnumExtras::Ui)
+
+add_executable(ui-textlayer ui-textlayer.cpp)
+target_link_libraries(ui-textlayer PRIVATE
+    Magnum::GL
+    Magnum::Trade
+    Magnum::WindowlessApplication
+    MagnumExtras::Ui)

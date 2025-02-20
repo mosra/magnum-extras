@@ -29,7 +29,19 @@
 #include <Corrade/Containers/Optional.h>
 #include <Corrade/Containers/StridedArrayView.h>
 #include <Corrade/Containers/String.h>
+#include <Corrade/PluginManager/Manager.h>
+#include <Corrade/Utility/Algorithms.h>
 #include <Magnum/Animation/Easing.h>
+#include <Magnum/Math/Range.h>
+#include <Magnum/Text/AbstractFont.h>
+#include <Magnum/Text/AbstractGlyphCache.h>
+#include <Magnum/Text/Alignment.h>
+#include <Magnum/Text/Direction.h>
+#include <Magnum/Text/Feature.h>
+#include <Magnum/Text/Script.h>
+#include <Magnum/TextureTools/Atlas.h>
+#include <Magnum/Trade/ImageData.h>
+#include <Magnum/ImageView.h>
 
 #include "Magnum/Ui/AbstractUserInterface.h"
 #include "Magnum/Ui/AbstractVisualLayer.h"
@@ -41,7 +53,9 @@
 #include "Magnum/Ui/GenericAnimator.h"
 #include "Magnum/Ui/Handle.h"
 #include "Magnum/Ui/NodeFlags.h"
+#include "Magnum/Ui/TextLayer.h"
 #include "Magnum/Ui/TextLayerAnimator.h"
+#include "Magnum/Ui/TextProperties.h"
 
 #define DOXYGEN_ELLIPSIS(...) __VA_ARGS__
 #define DOXYGEN_IGNORE(...) __VA_ARGS__
@@ -798,6 +812,389 @@ Vector2 position[]{DOXYGEN_ELLIPSIS({})};
 lineLayer.createStrip(1, position, {}, pointOuter);
 lineLayer.createStrip(2, position, {}, point);
 /* [LineLayer-style-width] */
+}
+}
+
+{
+struct Shared: Ui::TextLayer::Shared {
+    explicit Shared(): Ui::TextLayer::Shared::Shared{Configuration{1}} {}
+
+    void doSetStyle(const Ui::TextLayerCommonStyleUniform&, Containers::ArrayView<const Ui::TextLayerStyleUniform>) override {}
+    void doSetEditingStyle(const Ui::TextLayerCommonEditingStyleUniform&, Containers::ArrayView<const Ui::TextLayerEditingStyleUniform>) override {}
+} textLayerShared;
+struct GlyphCache: Text::AbstractGlyphCache {
+    explicit GlyphCache(): Text::AbstractGlyphCache{PixelFormat{}, Vector2i{}} {}
+    Text::GlyphCacheFeatures doFeatures() const override { return {}; }
+} glyphCache;
+/* [TextLayer-setup-fonts] */
+PluginManager::Manager<Text::AbstractFont> fontManager;
+
+Containers::Pointer<Text::AbstractFont> font16 =
+    fontManager.loadAndInstantiate("TrueTypeFont");
+font16->openFile("font.ttf", 16.0f);
+font16->fillGlyphCache(glyphCache, "abcdefghijklmnopqrstuvwxyz"
+                                   "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+                                   "0123456789?!:;,. ");
+
+Containers::Pointer<Text::AbstractFont> font12 =
+    fontManager.loadAndInstantiate("TrueTypeFont");
+font12->openFile("font.ttf", 12.0f);
+font12->fillGlyphCache(glyphCache, "abcdefghijklmnopqrstuvwxyz"
+                                   "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+                                   "0123456789?!:;,. ");
+
+Ui::FontHandle font16Handle = textLayerShared.addFont(*font16, font16->size());
+Ui::FontHandle font12Handle = textLayerShared.addFont(*font12, font12->size());
+/* [TextLayer-setup-fonts] */
+
+/* [TextLayer-setup-style] */
+textLayerShared.setStyle(Ui::TextLayerCommonStyleUniform{}, {
+    Ui::TextLayerStyleUniform{}, /* Style 0, default */
+    Ui::TextLayerStyleUniform{}  /* Style 1 */
+        .setColor(0x2f83cc_rgbf),
+    Ui::TextLayerStyleUniform{}  /* Style 2 */
+}, {
+    font16Handle,
+    font16Handle,
+    font12Handle
+}, {
+    Text::Alignment{},
+    Text::Alignment{},
+    Text::Alignment::MiddleCenter
+}, {}, {}, {}, {}, {}, {});
+/* [TextLayer-setup-style] */
+
+struct TextLayer: Ui::TextLayer {
+    explicit TextLayer(Ui::LayerHandle layer, Ui::TextLayer::Shared& shared): Ui::TextLayer{layer, shared} {}
+};
+Ui::AbstractUserInterface ui{{100, 100}};
+Ui::TextLayer& textLayer = ui.setLayerInstance(Containers::pointer<TextLayer>(ui.createLayer(), textLayerShared));
+{
+/* [TextLayer-create] */
+Ui::NodeHandle node = ui.createNode(DOXYGEN_ELLIPSIS({}, {}));
+
+textLayer.create(1, "hello!", {}, node);
+/* [TextLayer-create] */
+}
+
+{
+/* [TextLayer-style-color] */
+textLayerShared.setStyle(DOXYGEN_ELLIPSIS(Ui::TextLayerCommonStyleUniform{}), {
+    Ui::TextLayerStyleUniform{}, /* 0 */
+    Ui::TextLayerStyleUniform{}  /* 1 */
+        .setColor(0x2f83cc_rgbf)
+}, {DOXYGEN_ELLIPSIS(Ui::FontHandle{})}, {DOXYGEN_ELLIPSIS(Text::Alignment{})}, {}, {}, {}, {}, {}, {});
+
+DOXYGEN_ELLIPSIS()
+
+Ui::NodeHandle blue = DOXYGEN_ELLIPSIS({});
+textLayer.create(1, "hello!", {}, blue);
+
+Ui::NodeHandle colored = DOXYGEN_ELLIPSIS({});
+Ui::DataHandle coloredData = textLayer.create(0, "HEY", {}, colored);
+textLayer.setColor(coloredData, 0x3bd267_rgbf);
+
+Ui::NodeHandle fadedBlue = DOXYGEN_ELLIPSIS({});
+textLayer.create(1, "shh", {}, fadedBlue);
+ui.setNodeOpacity(fadedBlue, 0.25f);
+/* [TextLayer-style-color] */
+}
+
+{
+/* [TextLayer-style-alignment-padding] */
+textLayerShared.setStyle(DOXYGEN_ELLIPSIS(Ui::TextLayerCommonStyleUniform{}), {DOXYGEN_ELLIPSIS(Ui::TextLayerStyleUniform{})}, {DOXYGEN_ELLIPSIS(Ui::FontHandle{})}, {
+    Text::Alignment::TopLeft
+}, {}, {}, {}, {}, {}, {
+    Vector4{8.0f}
+});
+/* [TextLayer-style-alignment-padding] */
+}
+
+{
+/* [TextLayer-style-data-padding] */
+textLayerShared.setStyle(DOXYGEN_ELLIPSIS(Ui::TextLayerCommonStyleUniform{}), {
+    Ui::TextLayerStyleUniform{} /* 0 */
+        .setColor(0xa5c9ea_rgbf),
+    Ui::TextLayerStyleUniform{} /* 1 */
+        .setColor(0x2f83cc_rgbf)
+}, {DOXYGEN_ELLIPSIS(Ui::FontHandle{})}, {
+    /* With centered alignment half of the padding value is used for each */
+    Text::Alignment::MiddleCenter,
+    Text::Alignment::MiddleCenter
+}, {}, {}, {}, {}, {}, {
+    /* Left, top, right, bottom */
+    {0.0f, 0.0f, 2.0f, 0.0f},
+    {2.0f, 0.0f, 0.0f, 0.0f}
+});
+
+DOXYGEN_ELLIPSIS()
+
+Ui::NodeHandle node = DOXYGEN_ELLIPSIS({});
+Ui::DataHandle hash = textLayer.create(0, "#", {}, node);
+Ui::DataHandle text = textLayer.create(1, "whee", {}, node);
+
+/* Left, top, right, bottom. Again, centered alignment makes use of half of the
+   padding value for each, keeping the two centered as a group. */
+textLayer.setPadding(hash, {0.0f, 0.0f, textLayer.size(text).x(), 0.0f});
+textLayer.setPadding(text, {textLayer.size(hash).x(), 0.0f, 0.0f, 0.0f});
+/* [TextLayer-style-data-padding] */
+}
+
+{
+/* [TextLayer-style-shaping-font] */
+Ui::FontHandle greekFontHandle = textLayerShared.addFont(DOXYGEN_ELLIPSIS(*font16, 1.0f));
+
+DOXYGEN_ELLIPSIS()
+
+Ui::NodeHandle hello = DOXYGEN_ELLIPSIS({});
+textLayer.create(DOXYGEN_ELLIPSIS(0), "Γεια!", greekFontHandle, hello);
+/* [TextLayer-style-shaping-font] */
+
+/* [TextLayer-style-shaping-script-language-direction] */
+textLayer.create(DOXYGEN_ELLIPSIS(0), "Γεια!",
+    Ui::TextProperties{}
+        .setFont(greekFontHandle)
+        .setScript(Text::Script::Greek)
+        .setLanguage("el-GR")
+        .setShapeDirection(Text::ShapeDirection::LeftToRight),
+    hello);
+/* [TextLayer-style-shaping-script-language-direction] */
+}
+
+{
+Ui::NodeHandle node{};
+/* [TextLayer-style-features-data] */
+textLayer.create(DOXYGEN_ELLIPSIS(0), "Status: 418 I'm a Teapot",
+    Ui::TextProperties{}.setFeatures({
+         Text::Feature::OldstyleFigures,
+        {Text::Feature::CharacterVariants2, 2, 3},
+        {Text::Feature::SmallCapitals, 8, ~UnsignedInt{}},
+    }), DOXYGEN_ELLIPSIS(node));
+/* [TextLayer-style-features-data] */
+}
+
+{
+Containers::Pointer<Text::AbstractFont> font =
+    fontManager.loadAndInstantiate("TrueTypeFont");
+/* [TextLayer-style-features-fill-glyph-cache] */
+font->fillGlyphCache(glyphCache, {
+    /* Small capitals */
+    font->glyphForName("A.s"),
+    font->glyphForName("B.s"),
+    font->glyphForName("C.s"),
+    font->glyphForName("D.s"),
+    DOXYGEN_ELLIPSIS()
+    /* Oldstyle figures */
+    font->glyphForName("one.t"),
+    font->glyphForName("two.t"),
+    font->glyphForName("three.t"),
+    DOXYGEN_ELLIPSIS()
+    /* Character variant for lowercase a */
+    font->glyphForName("a.a")
+});
+/* [TextLayer-style-features-fill-glyph-cache] */
+}
+
+{
+/* [TextLayer-style-features] */
+textLayerShared.setStyle(DOXYGEN_ELLIPSIS(Ui::TextLayerCommonStyleUniform{}), {
+    Ui::TextLayerStyleUniform{} /* title */
+        .setColor(0xdcdcdc_rgbf),
+    Ui::TextLayerStyleUniform{} /* main title */
+        .setColor(0xa5c9ea_rgbf),
+    Ui::TextLayerStyleUniform{} /* numeric fields */
+        .setColor(0xdcdcdc_rgbf),
+    Ui::TextLayerStyleUniform{} /* general text */
+        .setColor(0xdcdcdc_rgbf)
+}, {DOXYGEN_ELLIPSIS()}, {DOXYGEN_ELLIPSIS()}, {
+    Text::Feature::SmallCapitals,  /* 0 */
+    Text::Feature::TabularFigures, /* 1 */
+    Text::Feature::SlashedZero,    /* 2 */
+}, {
+    0, /* title */
+    0, /* main title */
+    1, /* numeric fields */
+    0, /* general text */
+}, {
+    1, /* title uses feature 0 */
+    1, /* main title uses feature 0 as well */
+    2, /* numeric fields use feature 1 and 2 */
+    0  /* general text uses no features */
+}, {}, {}, {});
+/* [TextLayer-style-features] */
+}
+
+{
+Ui::NodeHandle node{};
+Containers::Pointer<Text::AbstractFont> font =
+    fontManager.loadAndInstantiate("TrueTypeFont");
+/* [TextLayer-single-glyph-runtime] */
+textLayer.createGlyph(DOXYGEN_ELLIPSIS(0), font->glyphForName("coffee"), {}, node);
+/* [TextLayer-single-glyph-runtime] */
+
+/* [TextLayer-single-glyph-enum] */
+enum class IconFont: UnsignedInt {
+    DOXYGEN_ELLIPSIS()
+    Coffee = 2249, /* queried from the font in an offline step */
+};
+
+textLayer.createGlyph(DOXYGEN_ELLIPSIS(0), IconFont::Coffee, {}, node);
+/* [TextLayer-single-glyph-enum] */
+}
+
+{
+Ui::NodeHandle node{};
+/* [TextLayer-single-glyph-instanceless1] */
+Containers::Array<Trade::ImageData2D> icons = DOXYGEN_ELLIPSIS({}); /* or Image, ImageView, etc. */
+UnsignedInt iconFontId = textLayerShared.glyphCache().addFont(icons.size());
+
+Containers::Array<Vector3i> offsets{NoInit, icons.size()};
+Containers::Optional<Range3Di> flushRange = textLayerShared.glyphCache().atlas()
+    .add(stridedArrayView(icons).slice(&Trade::ImageData2D::size), offsets);
+CORRADE_INTERNAL_ASSERT(flushRange);
+Containers::StridedArrayView3D<Color4ub> dst =
+    textLayerShared.glyphCache().image().pixels<Color4ub>();
+for(std::size_t i = 0; i != icons.size(); ++i) {
+    Containers::StridedArrayView3D<const Color4ub> src = icons[i].pixels<Color4ub>();
+    Utility::copy(src, dst.sliceSize(
+        {std::size_t(offsets[i].z()),
+         std::size_t(offsets[i].y()),
+         std::size_t(offsets[i].x())}, src.size()));
+    textLayerShared.glyphCache().addGlyph(iconFontId, i, {},
+        offsets[i].z(), Range2Di::fromSize(offsets[i].xy(), icons[i].size()));
+}
+
+textLayerShared.glyphCache().flushImage(*flushRange);
+/* [TextLayer-single-glyph-instanceless1] */
+
+/* [TextLayer-single-glyph-instanceless2] */
+Ui::FontHandle iconFontHandle = textLayerShared.addInstancelessFont(iconFontId, 1.0f);
+
+DOXYGEN_ELLIPSIS()
+
+/* Create a glyph from containing icon at offset 3 in the `icons` array above */
+textLayer.createGlyph(DOXYGEN_ELLIPSIS(0), 3, iconFontHandle, DOXYGEN_ELLIPSIS(node));
+/* [TextLayer-single-glyph-instanceless2] */
+}
+
+{
+/* [TextLayer-dynamic-styles-allocate] */
+/* Attempt to allocate a dynamic style ID, if available */
+Containers::Optional<UnsignedInt> dynamicStyleId = textLayer.allocateDynamicStyle();
+if(!dynamicStyleId) {
+    DOXYGEN_ELLIPSIS()
+}
+
+/* Populate it, use */
+textLayer.setDynamicStyle(*dynamicStyleId, DOXYGEN_ELLIPSIS(Ui::TextLayerStyleUniform{}, {}, {}, {}, {}));
+DOXYGEN_ELLIPSIS()
+
+/* Once not used anymore, recycle the ID again */
+textLayer.recycleDynamicStyle(*dynamicStyleId);
+/* [TextLayer-dynamic-styles-allocate] */
+}
+
+{
+/* [TextLayer-editing-style-editing] */
+textLayerShared.setEditingStyle(Ui::TextLayerCommonEditingStyleUniform{}, {
+    Ui::TextLayerEditingStyleUniform{}  /* 0 */
+        .setBackgroundColor(0xa5c9ea_rgbf),
+    Ui::TextLayerEditingStyleUniform{}  /* 1 */
+        .setBackgroundColor(0x2f83cc_rgbf),
+}, {}, {
+    /* Begin, top, end, bottom */
+    {1.0f, 0.0f, 1.0f, 0.0f},           /* 0 */
+    {}                                  /* 1 */
+});
+/* [TextLayer-editing-style-editing] */
+
+/* [TextLayer-editing-style] */
+textLayerShared.setStyle(DOXYGEN_ELLIPSIS(Ui::TextLayerCommonStyleUniform{}), {
+    Ui::TextLayerStyleUniform{} /* 0 */
+        DOXYGEN_ELLIPSIS(),
+    Ui::TextLayerStyleUniform{} /* 1 */
+        DOXYGEN_ELLIPSIS(),
+    Ui::TextLayerStyleUniform{} /* 2 */
+        DOXYGEN_ELLIPSIS(),
+}, {DOXYGEN_ELLIPSIS()}, {DOXYGEN_ELLIPSIS()}, {}, {}, {}, {
+    -1, /* Style 0 uses no cursor style */
+    0,  /* Style 1 uses editing style 0 for cursor */
+    -1  /* Style 2 uses no cursor style */
+}, {
+    -1, /* Style 0 uses no selection style */
+    1,  /* Style 1 uses editing style 1 for selection */
+    1   /* Style 2 uses editing style 1 for selection */
+}, {});
+/* [TextLayer-editing-style] */
+}
+
+{
+/* [TextLayer-editing-create] */
+Ui::NodeHandle node = DOXYGEN_ELLIPSIS({});
+Ui::DataHandle text = textLayer.create(DOXYGEN_ELLIPSIS(0), "Hello world!", {},
+    Ui::TextDataFlag::Editable, node);
+textLayer.setCursor(text, 7, 4); /* Selecting "o w" with cursor at byte 7 */
+/* [TextLayer-editing-create] */
+}
+
+/* [TextLayer-editing-style-text-selection] */
+textLayerShared.setStyle(DOXYGEN_ELLIPSIS(Ui::TextLayerCommonStyleUniform{}), {
+    Ui::TextLayerStyleUniform{} /* 0 */
+        DOXYGEN_ELLIPSIS(),
+    Ui::TextLayerStyleUniform{} /* 1 */
+        DOXYGEN_ELLIPSIS(),
+    Ui::TextLayerStyleUniform{} /* 2 */
+        DOXYGEN_ELLIPSIS(),
+    Ui::TextLayerStyleUniform{} /* 3 */
+        .setColor(0x2f363f_rgbf),
+}, DOXYGEN_ELLIPSIS({}, {}, {}, {}, {}, {}, {},{}));
+
+textLayerShared.setEditingStyle(DOXYGEN_ELLIPSIS(Ui::TextLayerCommonEditingStyleUniform{}), {DOXYGEN_ELLIPSIS()}, {
+    -1, /* (Cursor) style 0 doesn't override any style for text selection */
+    3   /* (Selection) style 1 uses style 3 for text selection */
+}, {DOXYGEN_ELLIPSIS()});
+/* [TextLayer-editing-style-text-selection] */
+
+/* [TextLayer-editing-style-padding] */
+textLayerShared.setEditingStyle(DOXYGEN_ELLIPSIS(Ui::TextLayerCommonEditingStyleUniform{}), {DOXYGEN_ELLIPSIS()}, {}, {
+    /* Begin, top, end, bottom */
+    {0.0f, 0.0f, 2.0f, 0.0f},          /* (Cursor) style 0 */
+    {1.0f, -1.0f, 1.0f, -1.0f}         /* (Selection) style 1 */
+});
+/* [TextLayer-editing-style-padding] */
+
+/* [TextLayer-editing-style-rounded] */
+textLayerShared.setEditingStyle(DOXYGEN_ELLIPSIS(Ui::TextLayerCommonEditingStyleUniform{}), {
+    Ui::TextLayerEditingStyleUniform{}  /* (Cursor) style 0 */
+        .setBackgroundColor(0xa5c9ea_rgbf)
+        .setCornerRadius(1.0f),
+    Ui::TextLayerEditingStyleUniform{}  /* (Selection) style 1 */
+        .setBackgroundColor(0x2f83cc_rgbf)
+        .setCornerRadius(2.0f),
+}, {DOXYGEN_ELLIPSIS()}, {DOXYGEN_ELLIPSIS()});
+/* [TextLayer-editing-style-rounded] */
+
+{
+/* [TextLayer-editing-focusable] */
+Ui::NodeHandle node = ui.createNode(DOXYGEN_ELLIPSIS({}, {}), Ui::NodeFlag::Focusable);
+Ui::DataHandle text = textLayer.create(DOXYGEN_ELLIPSIS(0, "", {}), Ui::TextDataFlag::Editable, node);
+/* [TextLayer-editing-focusable] */
+static_cast<void>(text);
+}
+
+{
+PluginManager::Manager<Text::AbstractFont> fontManager;
+Containers::Pointer<Text::AbstractFont> font =
+    fontManager.loadAndInstantiate("TrueTypeFont");
+/* [TextLayer-dpi] */
+/* Supersample 2x in addition to DPI scaling */
+Float scale = 2.0f*(Vector2{ui.framebufferSize()}/ui.size()).max();
+
+font->openFile("font.ttf", 16.0f);
+DOXYGEN_ELLIPSIS()
+Ui::FontHandle fontHandle = textLayerShared.addFont(*font, font->size()*scale);
+/* [TextLayer-dpi] */
+static_cast<void>(fontHandle);
 }
 }
 

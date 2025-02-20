@@ -45,8 +45,9 @@ namespace Magnum { namespace Ui {
 @m_since_latest
 
 A subset of @ref Text::FeatureRange that always affects the whole text. Meant
-to be used to supply default features for a style.
-@see @ref TextLayer::Shared::setStyle()
+to be used to supply default features for a style in
+@ref TextLayer::Shared::setStyle(). See the @ref TextLayer class documentation
+for information about setting up an instance of the text layer and using it.
 */
 class MAGNUM_UI_EXPORT TextFeatureValue {
     public:
@@ -88,7 +89,10 @@ class MAGNUM_UI_EXPORT TextFeatureValue {
 @brief Text properties
 @m_since_latest
 
-@see @ref TextLayer::create(), @ref TextLayer::setText()
+Overrides and customization affecting text layout and shaping in
+@ref TextLayer::create() and @ref TextLayer::setText(). See the @ref TextLayer
+class documentation for information about setting up an instance of the text
+layer and using it.
 */
 class MAGNUM_UI_EXPORT TextProperties {
     public:

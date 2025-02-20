@@ -42,6 +42,11 @@ namespace Magnum { namespace Ui {
 @brief OpenGL implementation of the text layer
 @m_since_latest
 
+See the @ref TextLayer base class documentation for information about setting
+up an instance of this layer and using it. The base class contains most of the
+interface you'll be interacting with, this subclass exposes just the APIs tied
+to OpenGL, such as glyph cache setup.
+
 The layer assumes @ref RendererGL is set on the user interface (or
 @ref UserInterfaceGL used, which does so automatically), see its documentation
 for more information about GL state expectations. The layer produces geometry
