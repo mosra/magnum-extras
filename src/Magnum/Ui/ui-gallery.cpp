@@ -106,6 +106,7 @@ class UiGallery: public Platform::Application {
         void pointerPressEvent(PointerEvent& event) override;
         void pointerReleaseEvent(PointerEvent& event) override;
         void pointerMoveEvent(PointerMoveEvent& event) override;
+        void scrollEvent(ScrollEvent& event) override;
         void keyPressEvent(KeyEvent& event) override;
         void keyReleaseEvent(KeyEvent& event) override;
         void textInputEvent(TextInputEvent& event) override;
@@ -339,6 +340,12 @@ void UiGallery::pointerReleaseEvent(PointerEvent& event) {
 
 void UiGallery::pointerMoveEvent(PointerMoveEvent& event) {
     _ui.pointerMoveEvent(event);
+
+    if(_ui.state()) redraw();
+}
+
+void UiGallery::scrollEvent(ScrollEvent& event) {
+    _ui.scrollEvent(event);
 
     if(_ui.state()) redraw();
 }
