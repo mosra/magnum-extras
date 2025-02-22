@@ -262,6 +262,13 @@ If the contents don't need to be interacted with in any way, an alternative is
 to enable @ref NodeFlag::NoEvents on them. In that case there will be no scroll
 delay, as the events will always go directly to the scroll area.
 
+@section Ui-EventLayer-scroll Scroll
+
+With @ref onScroll() you can react to mouse wheel or touchpad scroll events.
+Note that in this case, compared to @ref onDrag(), the offset is not in UI
+units, but rather scroll *steps*, where @cpp 1.0f @ce usually maps to one tick
+of a mouse scroll wheel, with right and up being positive.
+
 @section Ui-EventLayer-pinch Pinch zoom and rotation
 
 On input devices supporting multi-touch, @ref onPinch() calls a function as
@@ -602,6 +609,43 @@ class MAGNUM_UI_EXPORT EventLayer: public AbstractLayer {
         }
 
         /**
+         * @brief Connect to a scroll
+         *
+         * The @p slot, receiving the scroll offset and optionally also a
+         * node-relative position at which the scroll happened, is called when
+         * a scroll happens on the @p node. Expects that the @p slot is not
+         * @cpp nullptr @ce.
+         *
+         * Note that unlike @ref onDrag(), the offset is not in UI units, but
+         * rather scroll *steps*, where @cpp 1.0f @ce usually maps to one tick
+         * of a mouse scroll wheel, with right and up being positive.
+         *
+         * The returned @ref DataHandle is automatically removed once @p node
+         * or any of its parents is removed, it's the caller responsibility to
+         * ensure it doesn't outlive the state captured in the @p slot. See
+         * @ref onScrollScoped() for a scoped alternative.
+         * @see @ref Ui-EventLayer-scroll
+         */
+        DataHandle onScroll(NodeHandle node, Containers::Function<void(const Vector2& offset)>&& slot);
+        /** @overload */
+        DataHandle onScroll(NodeHandle node, Containers::Function<void(const Vector2& position, const Vector2& offset)>&& slot);
+
+        /**
+         * @brief Scoped connection to a scroll
+         *
+         * Compared to @ref onScroll() the connection is removed automatically
+         * when the returned @ref EventConnection gets destroyed.
+         * @see @ref Ui-EventLayer-create
+         */
+        EventConnection onScrollScoped(NodeHandle node, Containers::Function<void(const Vector2& offset)>&& slot) {
+            return EventConnection{*this, onScroll(node, Utility::move(slot))};
+        }
+        /** @overload */
+        EventConnection onScrollScoped(NodeHandle node, Containers::Function<void(const Vector2& position, const Vector2& offset)>&& slot) {
+            return EventConnection{*this, onScroll(node, Utility::move(slot))};
+        }
+
+        /**
          * @brief Connect to a two-finger pinch, zoom or pan gesture
          *
          * The @p slot is called when two or more @ref Pointer::Finger are
@@ -797,6 +841,7 @@ class MAGNUM_UI_EXPORT EventLayer: public AbstractLayer {
         MAGNUM_UI_LOCAL void doPointerEnterEvent(UnsignedInt dataId, PointerMoveEvent& event) override;
         MAGNUM_UI_LOCAL void doPointerLeaveEvent(UnsignedInt dataId, PointerMoveEvent& event) override;
         MAGNUM_UI_LOCAL void doPointerCancelEvent(UnsignedInt dataId, PointerCancelEvent& event) override;
+        MAGNUM_UI_LOCAL void doScrollEvent(UnsignedInt dataId, ScrollEvent& event) override;
         MAGNUM_UI_LOCAL void doFocusEvent(UnsignedInt dataId, FocusEvent& event) override;
         MAGNUM_UI_LOCAL void doBlurEvent(UnsignedInt dataId, FocusEvent& event) override;
         MAGNUM_UI_LOCAL void doVisibilityLostEvent(UnsignedInt dataId, VisibilityLostEvent& event) override;

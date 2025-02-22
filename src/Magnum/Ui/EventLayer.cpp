@@ -54,6 +54,7 @@ namespace Implementation {
         MiddleClick,
         RightClick,
         Drag,
+        Scroll,
         Pinch
     };
 }
@@ -362,6 +363,32 @@ DataHandle EventLayer::onDrag(const NodeHandle node, Containers::Function<void(c
             /* The relative position is supplied custom in case of drag event
                fallthrough so it cannot be event.relativePosition() */
             static_cast<Containers::Function<void(const Vector2&, const Vector2&)>&>(slot)(event.position(), relativePosition);
+        })));
+}
+
+DataHandle EventLayer::onScroll(const NodeHandle node, Containers::Function<void(const Vector2&)>&& slot) {
+    return create(node, Implementation::EventType::Scroll, Utility::move(slot),
+        reinterpret_cast<void(*)()>(
+            #ifndef CORRADE_MSVC2015_COMPATIBILITY
+            +
+            #else
+            static_cast<void(*)(Containers::FunctionData&, const ScrollEvent&)>
+            #endif
+        ([](Containers::FunctionData& slot, const ScrollEvent& event) {
+            static_cast<Containers::Function<void(const Vector2&)>&>(slot)(event.offset());
+        })));
+}
+
+DataHandle EventLayer::onScroll(const NodeHandle node, Containers::Function<void(const Vector2&, const Vector2&)>&& slot) {
+    return create(node, Implementation::EventType::Scroll, Utility::move(slot),
+        reinterpret_cast<void(*)()>(
+            #ifndef CORRADE_MSVC2015_COMPATIBILITY
+            +
+            #else
+            static_cast<void(*)(Containers::FunctionData&, const ScrollEvent&)>
+            #endif
+        ([](Containers::FunctionData& slot, const ScrollEvent& event) {
+            static_cast<Containers::Function<void(const Vector2&, const Vector2&)>&>(slot)(event.position(), event.offset());
         })));
 }
 
@@ -738,6 +765,14 @@ void EventLayer::doPointerCancelEvent(const UnsignedInt dataId, PointerCancelEve
     if(data.eventType == Implementation::EventType::Pinch && state.twoFingerGestureData == dataId) {
         state.twoFingerGestureData = ~UnsignedInt{};
         state.twoFingerGesture = Platform::TwoFingerGesture{};
+    }
+}
+
+void EventLayer::doScrollEvent(const UnsignedInt dataId, ScrollEvent& event) {
+    Data& data = _state->data[dataId];
+    if(data.eventType == Implementation::EventType::Scroll) {
+        reinterpret_cast<void(*)(Containers::FunctionData&, const ScrollEvent&)>(data.call)(data.slot, event);
+        event.setAccepted();
     }
 }
 

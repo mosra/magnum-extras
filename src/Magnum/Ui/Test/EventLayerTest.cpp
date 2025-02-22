@@ -92,6 +92,9 @@ struct EventLayerTest: TestSuite::Tester {
     void dragFromUserInterfaceFallthroughThreshold();
     void dragFromUserInterfaceFallthroughThresholdMultipleHandlers();
 
+    void scroll();
+    void scrollFromUserInterface();
+
     void pinch();
     void pinchReset();
     void pinchPressMoveRelease();
@@ -225,6 +228,16 @@ const struct {
             PointerMoveEvent event{{}, PointerEventSource::Mouse, {}, Pointer::MouseLeft, true, 0};
             event.setCaptured(true); /* only captured events are considered */
             layer.pointerMoveEvent(dataId, event);
+        }},
+    {_c(onScroll, const Vector2&),
+        [](EventLayer& layer, UnsignedInt dataId) {
+            ScrollEvent event{{}, {}};
+            layer.scrollEvent(dataId, event);
+        }},
+    {_cn("onScroll with a position", onScroll, const Vector2&, const Vector2&),
+        [](EventLayer& layer, UnsignedInt dataId) {
+            ScrollEvent event{{}, {}};
+            layer.scrollEvent(dataId, event);
         }},
     {_c(onPinch, const Vector2&, const Vector2&, const Complex&, Float),
         [](EventLayer& layer, UnsignedInt dataId) {
@@ -362,7 +375,12 @@ EventLayerTest::EventLayerTest() {
 
     addTests({&EventLayerTest::dragFromUserInterfaceFallthroughThresholdMultipleHandlers,
 
-              &EventLayerTest::pinch,
+              &EventLayerTest::scroll});
+
+    addInstancedTests({&EventLayerTest::scrollFromUserInterface},
+        Containers::arraySize(FromUserInterfaceData));
+
+    addTests({&EventLayerTest::pinch,
               &EventLayerTest::pinchReset,
               &EventLayerTest::pinchPressMoveRelease});
 
@@ -967,6 +985,10 @@ void EventLayerTest::press() {
         layer.pointerLeaveEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 3);
     } {
+        ScrollEvent event{{}, {}};
+        layer.scrollEvent(dataHandleId(handle), event);
+        CORRADE_COMPARE(called, 3);
+    } {
         FocusEvent event{{}};
         layer.focusEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 3);
@@ -1031,6 +1053,10 @@ void EventLayerTest::release() {
     } {
         PointerMoveEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, Pointer::MouseLeft, true, 0};
         layer.pointerLeaveEvent(dataHandleId(handle), event);
+        CORRADE_COMPARE(called, 3);
+    } {
+        ScrollEvent event{{}, {}};
+        layer.scrollEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 3);
     } {
         FocusEvent event{{}};
@@ -1101,6 +1127,11 @@ void EventLayerTest::releasePress() {
     } {
         PointerMoveEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, Pointer::MouseLeft, true, 0};
         layer.pointerLeaveEvent(dataHandleId(handle), event);
+        CORRADE_VERIFY(!event.isAccepted());
+        CORRADE_COMPARE(called, 0);
+    } {
+        ScrollEvent event{{}, {}};
+        layer.scrollEvent(dataHandleId(handle), event);
         CORRADE_VERIFY(!event.isAccepted());
         CORRADE_COMPARE(called, 0);
     } {
@@ -1265,6 +1296,10 @@ void EventLayerTest::tapOrClick() {
         layer.pointerLeaveEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 3);
     } {
+        ScrollEvent event{{}, {}};
+        layer.scrollEvent(dataHandleId(handle), event);
+        CORRADE_COMPARE(called, 3);
+    } {
         FocusEvent event{{}};
         layer.focusEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 3);
@@ -1337,6 +1372,11 @@ void EventLayerTest::tapOrClickPress() {
     } {
         PointerMoveEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, Pointer::MouseLeft, true, 0};
         layer.pointerLeaveEvent(dataHandleId(handle), event);
+        CORRADE_VERIFY(!event.isAccepted());
+        CORRADE_COMPARE(called, 0);
+    } {
+        ScrollEvent event{{}, {}};
+        layer.scrollEvent(dataHandleId(handle), event);
         CORRADE_VERIFY(!event.isAccepted());
         CORRADE_COMPARE(called, 0);
     } {
@@ -1501,6 +1541,10 @@ void EventLayerTest::middleClick() {
         layer.pointerLeaveEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 1);
     } {
+        ScrollEvent event{{}, {}};
+        layer.scrollEvent(dataHandleId(handle), event);
+        CORRADE_COMPARE(called, 1);
+    } {
         FocusEvent event{{}};
         layer.focusEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 1);
@@ -1568,6 +1612,11 @@ void EventLayerTest::middleClickPress() {
     } {
         PointerMoveEvent event{{}, PointerEventSource::Mouse, Pointer::MouseMiddle, Pointer::MouseMiddle, true, 0};
         layer.pointerLeaveEvent(dataHandleId(handle), event);
+        CORRADE_VERIFY(!event.isAccepted());
+        CORRADE_COMPARE(called, 0);
+    } {
+        ScrollEvent event{{}, {}};
+        layer.scrollEvent(dataHandleId(handle), event);
         CORRADE_VERIFY(!event.isAccepted());
         CORRADE_COMPARE(called, 0);
     } {
@@ -1725,6 +1774,10 @@ void EventLayerTest::rightClick() {
         layer.pointerLeaveEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 1);
     } {
+        ScrollEvent event{{}, {}};
+        layer.scrollEvent(dataHandleId(handle), event);
+        CORRADE_COMPARE(called, 1);
+    } {
         FocusEvent event{{}};
         layer.focusEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 1);
@@ -1792,6 +1845,11 @@ void EventLayerTest::rightClickPress() {
     } {
         PointerMoveEvent event{{}, PointerEventSource::Mouse, Pointer::MouseRight, Pointer::MouseRight, true, 0};
         layer.pointerLeaveEvent(dataHandleId(handle), event);
+        CORRADE_VERIFY(!event.isAccepted());
+        CORRADE_COMPARE(called, 0);
+    } {
+        ScrollEvent event{{}, {}};
+        layer.scrollEvent(dataHandleId(handle), event);
         CORRADE_VERIFY(!event.isAccepted());
         CORRADE_COMPARE(called, 0);
     } {
@@ -2039,6 +2097,10 @@ void EventLayerTest::drag() {
         layer.pointerLeaveEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 3);
     } {
+        ScrollEvent event{{}, {}};
+        layer.scrollEvent(dataHandleId(handle), event);
+        CORRADE_COMPARE(called, 3);
+    } {
         FocusEvent event{{}};
         layer.focusEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 3);
@@ -2126,6 +2188,11 @@ void EventLayerTest::dragPress() {
         PointerMoveEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, Pointer::MouseLeft, true, 0};
         event.setCaptured(true);
         layer.pointerLeaveEvent(dataHandleId(handle), event);
+        CORRADE_VERIFY(!event.isAccepted());
+        CORRADE_COMPARE(called, 0);
+    } {
+        ScrollEvent event{{}, {}};
+        layer.scrollEvent(dataHandleId(handle), event);
         CORRADE_VERIFY(!event.isAccepted());
         CORRADE_COMPARE(called, 0);
     } {
@@ -2427,6 +2494,98 @@ void EventLayerTest::dragFromUserInterfaceFallthroughThresholdMultipleHandlers()
     }
 }
 
+void EventLayerTest::scroll() {
+    EventLayer layer{layerHandle(0, 1)};
+
+    Int called = 0;
+    Vector2 calledOffset;
+    DataHandle handle = layer.onScroll(nodeHandle(0, 1), [&called, &calledOffset](const Vector2& offset) {
+        ++called;
+        calledOffset += offset;
+    });
+
+    /* Should only get fired for a scroll */
+    {
+        ScrollEvent event{{}, {2.3f, -4.7f}};
+        layer.scrollEvent(dataHandleId(handle), event);
+        CORRADE_COMPARE(called, 1);
+        CORRADE_COMPARE(calledOffset, (Vector2{2.3f, -4.7f}));
+
+    /* Shouldn't get fired for any other than scroll events */
+    } {
+        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0};
+        layer.pointerPressEvent(dataHandleId(handle), event);
+        CORRADE_COMPARE(called, 1);
+    } {
+        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0};
+        layer.pointerReleaseEvent(dataHandleId(handle), event);
+        CORRADE_COMPARE(called, 1);
+    } {
+        PointerMoveEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, Pointer::MouseLeft, true, 0};
+        layer.pointerMoveEvent(dataHandleId(handle), event);
+        CORRADE_COMPARE(called, 1);
+    } {
+        PointerMoveEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, Pointer::MouseLeft, true, 0};
+        layer.pointerEnterEvent(dataHandleId(handle), event);
+        CORRADE_COMPARE(called, 1);
+    } {
+        PointerMoveEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, Pointer::MouseLeft, true, 0};
+        layer.pointerLeaveEvent(dataHandleId(handle), event);
+        CORRADE_COMPARE(called, 1);
+    } {
+        FocusEvent event{{}};
+        layer.focusEvent(dataHandleId(handle), event);
+        CORRADE_COMPARE(called, 1);
+    } {
+        FocusEvent event{{}};
+        layer.blurEvent(dataHandleId(handle), event);
+        CORRADE_COMPARE(called, 1);
+    }
+}
+
+void EventLayerTest::scrollFromUserInterface() {
+    auto&& data = FromUserInterfaceData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
+    /* "Integration" test to verify onScroll() behavior with the whole event
+       pipeline in AbstractUserInterface */
+
+    AbstractUserInterface ui{{100, 100}};
+
+    EventLayer& layer = ui.setLayerInstance(Containers::pointer<EventLayer>(ui.createLayer()));
+
+    /* A node below the one that should react to the scroll event, accepting
+       scroll as well. Shouldn't get considered at all. */
+    Int belowCalled = 0;
+    NodeHandle nodeBelow = ui.createNode({}, {100, 100}, data.flags);
+    layer.onScroll(nodeBelow, [&belowCalled](const Vector2&){
+        ++belowCalled;
+    });
+
+    Int called = 0, positionCalled = 0;
+    NodeHandle node = ui.createNode(
+        data.parent ? nodeBelow : NodeHandle::Null,
+        {25, 50}, {50, 25});
+    layer.onScroll(node, [&called](const Vector2& offset){
+        CORRADE_COMPARE(offset, (Vector2{2.3f, -4.7f}));
+        ++called;
+    });
+    layer.onScroll(node, [&positionCalled](const Vector2& position, const Vector2& offset) {
+        CORRADE_COMPARE(position, (Vector2{25.0f, 15.0f}));
+        CORRADE_COMPARE(offset, (Vector2{2.3f, -4.7f}));
+        ++positionCalled;
+    });
+
+    /* A scroll should be accepted and resulting in the handler being called */
+    {
+        ScrollEvent event{{}, {2.3f, -4.7f}};
+        CORRADE_VERIFY(ui.scrollEvent({50, 65}, event));
+        CORRADE_COMPARE(called, 1);
+        CORRADE_COMPARE(positionCalled, 1);
+        CORRADE_COMPARE(belowCalled, 0);
+    }
+}
+
 void EventLayerTest::pinch() {
     EventLayer layer{layerHandle(0, 1)};
 
@@ -2497,6 +2656,10 @@ void EventLayerTest::pinch() {
     } {
         PointerMoveEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, Pointer::MouseLeft, true, 0};
         layer.pointerLeaveEvent(dataHandleId(handle), event);
+        CORRADE_COMPARE(called, 2);
+    } {
+        ScrollEvent event{{}, {}};
+        layer.scrollEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 2);
     } {
         FocusEvent event{{}};
@@ -2816,6 +2979,11 @@ void EventLayerTest::pinchPressMoveRelease() {
     } {
         PointerMoveEvent event{{}, PointerEventSource::Touch, {}, {}, true, 32};
         layer.pointerLeaveEvent(dataHandleId(handle), event);
+        CORRADE_VERIFY(!event.isAccepted());
+        CORRADE_COMPARE(called, 2);
+    } {
+        ScrollEvent event{{}, {}};
+        layer.scrollEvent(dataHandleId(handle), event);
         CORRADE_VERIFY(!event.isAccepted());
         CORRADE_COMPARE(called, 2);
     } {
@@ -3207,6 +3375,10 @@ void EventLayerTest::enter() {
         layer.pointerLeaveEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 5);
     } {
+        ScrollEvent event{{}, {}};
+        layer.scrollEvent(dataHandleId(handle), event);
+        CORRADE_COMPARE(called, 5);
+    } {
         FocusEvent event{{}};
         layer.focusEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 5);
@@ -3274,6 +3446,11 @@ void EventLayerTest::enterMove() {
     } {
         PointerMoveEvent event{{}, PointerEventSource::Mouse, {}, {}, true, 0};
         layer.pointerLeaveEvent(dataHandleId(handle), event);
+        CORRADE_VERIFY(!event.isAccepted());
+        CORRADE_COMPARE(called, 0);
+    } {
+        ScrollEvent event{{}, {}};
+        layer.scrollEvent(dataHandleId(handle), event);
         CORRADE_VERIFY(!event.isAccepted());
         CORRADE_COMPARE(called, 0);
     } {
@@ -3349,6 +3526,10 @@ void EventLayerTest::leave() {
         layer.pointerEnterEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 5);
     } {
+        ScrollEvent event{{}, {}};
+        layer.scrollEvent(dataHandleId(handle), event);
+        CORRADE_COMPARE(called, 5);
+    } {
         FocusEvent event{{}};
         layer.focusEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 5);
@@ -3416,6 +3597,11 @@ void EventLayerTest::leaveMove() {
     } {
         PointerMoveEvent event{{}, PointerEventSource::Mouse, {}, {}, true, 0};
         layer.pointerEnterEvent(dataHandleId(handle), event);
+        CORRADE_VERIFY(!event.isAccepted());
+        CORRADE_COMPARE(called, 0);
+    } {
+        ScrollEvent event{{}, {}};
+        layer.scrollEvent(dataHandleId(handle), event);
         CORRADE_VERIFY(!event.isAccepted());
         CORRADE_COMPARE(called, 0);
     } {
@@ -3536,6 +3722,10 @@ void EventLayerTest::focus() {
         layer.pointerLeaveEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 1);
     } {
+        ScrollEvent event{{}, {}};
+        layer.scrollEvent(dataHandleId(handle), event);
+        CORRADE_COMPARE(called, 1);
+    } {
         FocusEvent event{{}};
         layer.blurEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 1);
@@ -3576,6 +3766,10 @@ void EventLayerTest::blur() {
     } {
         PointerMoveEvent event{{}, PointerEventSource::Mouse, {}, {}, true, 0};
         layer.pointerLeaveEvent(dataHandleId(handle), event);
+        CORRADE_COMPARE(called, 1);
+    } {
+        ScrollEvent event{{}, {}};
+        layer.scrollEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 1);
     } {
         FocusEvent event{{}};
