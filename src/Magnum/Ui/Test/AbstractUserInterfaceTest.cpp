@@ -210,6 +210,8 @@ struct AbstractUserInterfaceTest: TestSuite::Tester {
 
     void eventPointerFallthrough();
 
+    void eventScroll();
+
     void eventFocus();
     void eventFocusNotAccepted();
     void eventFocusNodeHiddenDisabledNoEvents();
@@ -1146,9 +1148,12 @@ AbstractUserInterfaceTest::AbstractUserInterfaceTest() {
     addInstancedTests({&AbstractUserInterfaceTest::eventCaptureAllDataRemoved},
         Containers::arraySize(EventCaptureCleanUpdateData));
 
-    addTests({&AbstractUserInterfaceTest::eventPointerFallthrough,
+    addTests({&AbstractUserInterfaceTest::eventPointerFallthrough});
 
-              &AbstractUserInterfaceTest::eventFocus,
+    addInstancedTests({&AbstractUserInterfaceTest::eventScroll},
+        Containers::arraySize(EventLayouterUpdateData));
+
+    addTests({&AbstractUserInterfaceTest::eventFocus,
               &AbstractUserInterfaceTest::eventFocusNotAccepted});
 
     addInstancedTests({&AbstractUserInterfaceTest::eventFocusNodeHiddenDisabledNoEvents},
@@ -18920,6 +18925,428 @@ void AbstractUserInterfaceTest::eventPointerFallthrough() {
             {Cancel, level5Leaf1Data1, {}},
             {Move|Secondary|Pressed|Captured|Fallthrough, fallthrough1Data2, {3.0f, 11.0f}},
             {Move|Secondary|Pressed|Captured|Fallthrough, fallthrough1Data1, {3.0f, 11.0f}},
+        })), TestSuite::Compare::Container);
+    }
+}
+
+void AbstractUserInterfaceTest::eventScroll() {
+    auto&& data = EventLayouterUpdateData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
+    /* framebufferSize isn't used for anything here; events should get scaled
+       to (0.1, 0.01) */
+    AbstractUserInterface ui{{300.0f, 200.0f}, {3000.0f, 20000.0f}, {30, 20}};
+
+    enum Event {
+        Scroll = 1,
+        PointerPress = 2,
+        PointerMove = 3,
+        Focus = 4,
+        Captured = 1 << 3,
+        Pressed = 1 << 4,
+        Hovered = 1 << 5,
+        Focused = 1 << 6,
+    };
+
+    struct Layer: AbstractLayer {
+        using AbstractLayer::AbstractLayer;
+        using AbstractLayer::create;
+
+        LayerFeatures doFeatures() const override { return LayerFeature::Event; }
+
+        void doScrollEvent(UnsignedInt dataId, ScrollEvent& event) override {
+            CORRADE_COMPARE(event.time(), 12345_nsec);
+            const Vector2 expectedNodeSizes[]{
+                {19.0f, 21.0f},
+                {23.0f, 27.0f}
+            };
+            CORRADE_COMPARE(event.nodeSize(), expectedNodeSizes[nodeHandleId(nodes()[dataId])]);
+            CORRADE_COMPARE(event.offset(), (Vector2{3.5f, -4.7f}));
+            /* The data generation is faked here, but it matches as we don't
+               reuse any data */
+            arrayAppend(eventCalls, InPlaceInit,
+                (event.isCaptured() ? Captured : 0)|
+                (event.isNodePressed() ? Pressed : 0)|
+                (event.isNodeHovered() ? Hovered : 0)|
+                (event.isNodeFocused() ? Focused : 0)|Scroll,
+                dataHandle(handle(), dataId, 1), event.position());
+            if(accept)
+                event.setAccepted();
+        }
+        void doPointerPressEvent(UnsignedInt dataId, PointerEvent& event) override {
+            /* Only move (optionally) captures, press doesn't to avoid extra
+               complexity */
+            event.setCaptured(false);
+            /* The data generation is faked here, but it matches as we don't
+               reuse any data */
+            arrayAppend(eventCalls, InPlaceInit,
+                (event.isCaptured() ? Captured : 0)|
+                (event.isNodePressed() ? Pressed : 0)|
+                (event.isNodeHovered() ? Hovered : 0)|
+                (event.isNodeFocused() ? Focused : 0)|PointerPress,
+                dataHandle(handle(), dataId, 1), event.position());
+            event.setAccepted();
+        }
+        void doPointerMoveEvent(UnsignedInt dataId, PointerMoveEvent& event) override {
+            /* The data generation is faked here, but it matches as we don't
+               reuse any data */
+            arrayAppend(eventCalls, InPlaceInit,
+                (event.isCaptured() ? Captured : 0)|
+                (event.isNodePressed() ? Pressed : 0)|
+                (event.isNodeHovered() ? Hovered : 0)|
+                (event.isNodeFocused() ? Focused : 0)|PointerMove,
+                dataHandle(handle(), dataId, 1), event.position());
+            if(capturePointerMove)
+                event.setCaptured(*capturePointerMove);
+            event.setAccepted();
+        }
+        void doFocusEvent(UnsignedInt dataId, FocusEvent& event) override {
+            /* The data generation is faked here, but it matches as we don't
+               reuse any data */
+            arrayAppend(eventCalls, InPlaceInit,
+                (event.isNodePressed() ? Pressed : 0)|
+                (event.isNodeHovered() ? Hovered : 0)|Focus,
+                dataHandle(handle(), dataId, 1), Containers::NullOpt);
+            event.setAccepted();
+        }
+
+        bool accept = true;
+        Containers::Optional<bool> capturePointerMove;
+        Containers::Array<Containers::Triple<Int, DataHandle, Containers::Optional<Vector2>>> eventCalls;
+    };
+
+    struct Layouter: AbstractLayouter {
+        using AbstractLayouter::AbstractLayouter;
+        using AbstractLayouter::add;
+
+        void doUpdate(Containers::BitArrayView layoutIdsToUpdate, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const NodeHandle>&, const Containers::StridedArrayView1D<Vector2>& nodeOffsets, const  Containers::StridedArrayView1D<Vector2>& nodeSizes) override {
+            const Containers::StridedArrayView1D<const NodeHandle> nodes = this->nodes();
+            for(std::size_t i = 0; i != layoutIdsToUpdate.size(); ++i) {
+                if(!layoutIdsToUpdate[i])
+                    continue;
+                nodeOffsets[nodeHandleId(nodes[i])].y() -= 1000.0f;
+                nodeSizes[nodeHandleId(nodes[i])] *= 100.0f;
+            }
+        }
+    };
+
+    /* Two nodes next to each other. If the layouter is enabled, the nodes are
+       shifted & scaled which makes them completely unreachable by events, and
+       the layouter then undoes that */
+    Vector2 baseNodeOffset{0.0f, data.layouter ? 1000.0f : 0.0f};
+    Vector2 baseNodeScale{data.layouter ? 0.01f : 1.0f};
+    NodeHandle left = ui.createNode(
+        baseNodeOffset + Vector2{20.0f, 0.0f},
+        baseNodeScale*Vector2{19.0f, 21.0f});
+    NodeHandle right = ui.createNode(
+        baseNodeOffset + Vector2{40.0f, 0.0f},
+        baseNodeScale*Vector2{23.0f, 27.0f});
+
+    /* Update explicitly before adding the layouter as
+       NeedsLayoutAssignmentUpdate is a subset of this, and having just that
+       one set may uncover accidental omissions in internal state updates
+       compared to updating just once after creating both nodes and data */
+    if(data.update) {
+        CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeUpdate);
+        ui.update();
+        CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
+    }
+
+    if(data.layouter) {
+        Layouter& layouter = ui.setLayouterInstance(Containers::pointer<Layouter>(ui.createLayouter()));
+        layouter.add(left);
+        layouter.add(right);
+
+        /* Update explicitly before adding the layer as
+           NeedsDataAttachmentUpdate is a subset of this, and having just that
+           one set may uncover accidental omissions in internal state updates
+           compared to updating just once after creating both nodes and data */
+        if(data.update) {
+            CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsLayoutAssignmentUpdate);
+            ui.update();
+            CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
+        }
+    }
+
+    Layer& layer = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer()));
+    DataHandle leftData1 = layer.create(left);
+    DataHandle leftData2 = layer.create(left);
+    DataHandle rightData = layer.create(right);
+
+    if(data.update) {
+        CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataAttachmentUpdate);
+        ui.update();
+        CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
+    }
+
+    /* Scoll over a node is propagated to it. It however doesn't affect the
+       currently hovered node, nor the position is remembered. */
+    {
+        ScrollEvent event{12345_nsec, {3.5f, -4.7f}};
+        layer.accept = true;
+        CORRADE_VERIFY(ui.scrollEvent({300.0f, 1100.0f}, event));
+        CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentGlobalPointerPosition(), Containers::NullOpt);
+
+        CORRADE_COMPARE_AS(layer.eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Containers::Optional<Vector2>>>({
+            {Scroll, leftData2, Vector2{10.0f, 11.0f}},
+            {Scroll, leftData1, Vector2{10.0f, 11.0f}},
+        })), TestSuite::Compare::Container);
+
+    /* Not accepting the event gets correctly propagated. It doesn't affect
+       hovered / pressed / position state in that case either. */
+    } {
+        layer.eventCalls = {};
+
+        ScrollEvent event{12345_nsec, {3.5f, -4.7f}};
+        layer.accept = false;
+        CORRADE_VERIFY(!ui.scrollEvent({250.0f, 1000.0f}, event));
+        CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentGlobalPointerPosition(), Containers::NullOpt);
+
+        CORRADE_COMPARE_AS(layer.eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Containers::Optional<Vector2>>>({
+            {Scroll, leftData2, Vector2{5.0f, 10.0f}},
+            {Scroll, leftData1, Vector2{5.0f, 10.0f}},
+        })), TestSuite::Compare::Container);
+
+    /* If a node is hovered, it's propagated to the scrol, the scroll itself
+       doesn't change anything from that now either. */
+    } {
+        layer.eventCalls = {};
+
+        PointerMoveEvent eventMove{{}, PointerEventSource::Mouse, {}, {}, true, 0};
+        layer.capturePointerMove = {};
+        CORRADE_VERIFY(ui.pointerMoveEvent({500.0f, 1500.0f}, eventMove));
+        CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentHoveredNode(), right);
+        CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentGlobalPointerPosition(), (Vector2{50.0f, 15.0f}));
+
+        ScrollEvent event{12345_nsec, {3.5f, -4.7f}};
+        layer.accept = true;
+        CORRADE_VERIFY(ui.scrollEvent({550.0f, 1000.0f}, event));
+        CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentHoveredNode(), right);
+        CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentGlobalPointerPosition(), (Vector2{50.0f, 15.0f}));
+
+        CORRADE_COMPARE_AS(layer.eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Containers::Optional<Vector2>>>({
+            {PointerMove, rightData, Vector2{10.0f, 15.0f}},
+            {Scroll|Hovered, rightData, Vector2{15.0f, 10.0f}},
+        })), TestSuite::Compare::Container);
+
+    /* If a hovered node that gets the event is pressed, it's propagated to the
+       events. If another node is, it doesn't. */
+    } {
+        layer.eventCalls = {};
+
+        PointerEvent eventPointerPress1{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0};
+        CORRADE_VERIFY(ui.pointerPressEvent({500.0f, 1000.0f}, eventPointerPress1));
+        CORRADE_COMPARE(ui.currentPressedNode(), right);
+        CORRADE_COMPARE(ui.currentHoveredNode(), right);
+        CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
+
+        ScrollEvent event1{12345_nsec, {3.5f, -4.7f}};
+        layer.accept = true;
+        CORRADE_VERIFY(ui.scrollEvent({550.0f, 1000.0f}, event1));
+
+        PointerEvent eventPointerPress2{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0};
+        CORRADE_VERIFY(ui.pointerPressEvent({350.0f, 1000.0f}, eventPointerPress2));
+        CORRADE_COMPARE(ui.currentPressedNode(), left);
+        CORRADE_COMPARE(ui.currentHoveredNode(), right);
+        CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
+
+        ScrollEvent event2{12345_nsec, {3.5f, -4.7f}};
+        layer.accept = true;
+        CORRADE_VERIFY(ui.scrollEvent({600.0f, 1500.0f}, event2));
+
+        CORRADE_COMPARE_AS(layer.eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Containers::Optional<Vector2>>>({
+            {PointerPress|Hovered, rightData, Vector2{10.0f, 10.0f}},
+            {Scroll|Pressed|Hovered, rightData, Vector2{15.0f, 10.0f}},
+            {PointerPress, leftData2, Vector2{15.0f, 10.0f}},
+            {PointerPress, leftData1, Vector2{15.0f, 10.0f}},
+            {Scroll|Hovered, rightData, Vector2{20.0f, 15.0f}},
+        })), TestSuite::Compare::Container);
+
+    /* The pressed / hovered node doesn't get reset if the scroll event isn't
+       accepted */
+    } {
+        /* Just to reset the currently pressed node */
+        /** @todo have a pointerCancelEvent() for this */
+        PointerEvent eventPointerPressReset{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0};
+        ui.pointerPressEvent({1000.0f, 1000.0f}, eventPointerPressReset);
+        CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
+
+        layer.eventCalls = {};
+
+        PointerEvent eventPointerPress{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0};
+        CORRADE_VERIFY(ui.pointerPressEvent({500.0f, 1000.0f}, eventPointerPress));
+        CORRADE_COMPARE(ui.currentPressedNode(), right);
+        CORRADE_COMPARE(ui.currentHoveredNode(), right);
+        CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
+
+        ScrollEvent event{12345_nsec, {3.5f, -4.7f}};
+        layer.accept = false;
+        CORRADE_VERIFY(!ui.scrollEvent({550.0f, 1500.0f}, event));
+        CORRADE_COMPARE(ui.currentPressedNode(), right);
+        CORRADE_COMPARE(ui.currentHoveredNode(), right);
+        CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
+
+        CORRADE_COMPARE_AS(layer.eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Containers::Optional<Vector2>>>({
+            {PointerPress|Hovered, rightData, Vector2{10.0f, 10.0f}},
+            {Scroll|Pressed|Hovered, rightData, Vector2{15.0f, 15.0f}},
+        })), TestSuite::Compare::Container);
+
+    /* If a node is captured, it's picked instead of a node that's under
+       the event position. The capture doesn't get reset after. */
+    } {
+        /* Just to reset the currently pressed & hovered node */
+        /** @todo have a pointerCancelEvent() for this */
+        PointerEvent eventPointerPressReset{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0};
+        PointerMoveEvent eventMoveReset{{}, PointerEventSource::Mouse, {}, {}, true, 0};
+        ui.pointerPressEvent({1000.0f, 1000.0f}, eventPointerPressReset);
+        ui.pointerMoveEvent({1000.0f, 1000.0f}, eventMoveReset);
+        CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
+
+        layer.eventCalls = {};
+
+        PointerMoveEvent eventMove1{{}, PointerEventSource::Mouse, {}, {}, true, 0};
+        layer.capturePointerMove = true;
+        CORRADE_VERIFY(ui.pointerMoveEvent({300.0f, 1000.0f}, eventMove1));
+        CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentHoveredNode(), left);
+        CORRADE_COMPARE(ui.currentCapturedNode(), left);
+        CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
+
+        PointerMoveEvent eventMove2{{}, PointerEventSource::Mouse, {}, {}, true, 0};
+        layer.capturePointerMove = {};
+        CORRADE_VERIFY(ui.pointerMoveEvent({500.0f, 1000.0f}, eventMove2));
+        CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
+        /* The pointer is over the right node, but since the left node is
+           captured the current hovered node isn't set */
+        CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentCapturedNode(), left);
+        CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
+
+        ScrollEvent event{12345_nsec, {3.5f, -4.7f}};
+        layer.accept = true;
+        CORRADE_VERIFY(ui.scrollEvent({500.0f, 1500.0f}, event));
+        CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentCapturedNode(), left);
+        CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
+
+        CORRADE_COMPARE_AS(layer.eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Containers::Optional<Vector2>>>({
+            /* Verifying also that it gets propagated to all data */
+            {PointerMove, leftData2, Vector2{10.0f, 10.0f}},
+            {PointerMove|Captured, leftData1, Vector2{10.0f, 10.0f}},
+            /* All below are actually the right node */
+            {PointerMove|Captured, leftData2, Vector2{30.0f, 10.0f}},
+            {PointerMove|Captured, leftData1, Vector2{30.0f, 10.0f}},
+            {Scroll|Captured, leftData2, Vector2{30.0f, 15.0f}},
+            {Scroll|Captured, leftData1, Vector2{30.0f, 15.0f}},
+        })), TestSuite::Compare::Container);
+
+    /* The capture also doesn't get reset if the scroll event isn't accepted.
+       There's no way to reset the capture from the event either. */
+    } {
+        /* Just to reset everything */
+        /** @todo have a pointerCancelEvent() for this */
+        PointerMoveEvent eventMoveReset{{}, PointerEventSource::Mouse, {}, {}, true, 0};
+        layer.capturePointerMove = false;
+        CORRADE_VERIFY(ui.pointerMoveEvent({200.0f, 5000.0f}, eventMoveReset));
+        CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
+
+        layer.eventCalls = {};
+
+        PointerMoveEvent eventMove{{}, PointerEventSource::Mouse, {}, {}, true, 0};
+        layer.capturePointerMove = true;
+        CORRADE_VERIFY(ui.pointerMoveEvent({500.0f, 1000.0f}, eventMove));
+        CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentCapturedNode(), right);
+        CORRADE_COMPARE(ui.currentHoveredNode(), right);
+        CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentGlobalPointerPosition(), (Vector2{50.0f, 10.0f}));
+
+        ScrollEvent event{12345_nsec, {3.5f, -4.7f}};
+        layer.accept = false;
+        CORRADE_VERIFY(!ui.scrollEvent({600.0f, 1500.0f}, event));
+        CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentHoveredNode(), right);
+        CORRADE_COMPARE(ui.currentCapturedNode(), right);
+        CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
+
+        CORRADE_COMPARE_AS(layer.eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Containers::Optional<Vector2>>>({
+            {PointerMove, rightData, Vector2{10.0f, 10.0f}},
+            {Scroll|Captured|Hovered, rightData, Vector2{20.0f, 15.0f}},
+        })), TestSuite::Compare::Container);
+
+    /* A focused node doesn't steal the scroll events, they still get directed
+       based on capture or position. If a scroll happens on a focused node
+       however, it's shown in the event. The scroll event doesn't change the
+       focused node either. */
+    } {
+        /* Just to reset everything */
+        /** @todo have a pointerCancelEvent() for this */
+        PointerMoveEvent eventMoveReset{{}, PointerEventSource::Mouse, {}, {}, true, 0};
+        layer.capturePointerMove = false;
+        CORRADE_VERIFY(ui.pointerMoveEvent({200.0f, 5000.0f}, eventMoveReset));
+        CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
+
+        ui.addNodeFlags(left, NodeFlag::Focusable);
+        layer.eventCalls = {};
+
+        FocusEvent eventFocus{{}};
+        CORRADE_VERIFY(ui.focusEvent(left, eventFocus));
+        CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentFocusedNode(), left);
+
+        ScrollEvent event1{12345_nsec, {3.5f, -4.7f}};
+        layer.accept = true;
+        CORRADE_VERIFY(ui.scrollEvent({600.0f, 1500.0f}, event1));
+        CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentFocusedNode(), left);
+
+        ScrollEvent event2{12345_nsec, {3.5f, -4.7f}};
+        layer.accept = true;
+        CORRADE_VERIFY(ui.scrollEvent({350.0f, 1000.0f}, event2));
+        CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentFocusedNode(), left);
+
+        ScrollEvent event3{12345_nsec, {3.5f, -4.7f}};
+        layer.accept = false;
+        CORRADE_VERIFY(!ui.scrollEvent({550.0f, 1500.0f}, event3));
+        CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentFocusedNode(), left);
+
+        CORRADE_COMPARE_AS(layer.eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Containers::Optional<Vector2>>>({
+            {Focus, leftData2, Containers::NullOpt},
+            {Focus, leftData1, Containers::NullOpt},
+            {Scroll, rightData, Vector2{20.0f, 15.0f}},
+            {Scroll|Focused, leftData2, Vector2{15.0f, 10.0f}},
+            {Scroll|Focused, leftData1, Vector2{15.0f, 10.0f}},
+            {Scroll, rightData, Vector2{15.0f, 15.0f}},
         })), TestSuite::Compare::Container);
     }
 }

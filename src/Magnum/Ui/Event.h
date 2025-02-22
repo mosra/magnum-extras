@@ -27,7 +27,7 @@
 */
 
 /** @file
- * @brief Class @ref Magnum::Ui::PointerEvent, @ref Magnum::Ui::PointerMoveEvent, @ref Magnum::Ui::PointerCancelEvent, @ref Magnum::Ui::FocusEvent, @ref Magnum::Ui::KeyEvent, @ref Magnum::Ui::TextInputEvent, @ref Magnum::Ui::VisibilityLostEvent, enum @ref Magnum::Ui::Pointer, @ref Magnum::Ui::Key, @ref Magnum::Ui::Modifier, enum set @ref Magnum::Ui::Pointers, @ref Magnum::Ui::Modifiers
+ * @brief Class @ref Magnum::Ui::PointerEvent, @ref Magnum::Ui::PointerMoveEvent, @ref Magnum::Ui::PointerCancelEvent, @ref Magnum::Ui::ScrollEvent, @ref Magnum::Ui::FocusEvent, @ref Magnum::Ui::KeyEvent, @ref Magnum::Ui::TextInputEvent, @ref Magnum::Ui::VisibilityLostEvent, enum @ref Magnum::Ui::Pointer, @ref Magnum::Ui::Key, @ref Magnum::Ui::Modifier, enum set @ref Magnum::Ui::Pointers, @ref Magnum::Ui::Modifiers
  * @m_since_latest
  */
 
@@ -672,6 +672,142 @@ class PointerCancelEvent {
 
     private:
         Nanoseconds _time;
+};
+
+/**
+@brief Scroll event
+@m_since_latest
+
+@see @ref AbstractUserInterface::scrollEvent(),
+    @ref AbstractLayer::scrollEvent()
+*/
+class ScrollEvent {
+    public:
+        /**
+         * @brief Constructor
+         * @param time      Time at which the event happened
+         * @param offset    Scroll offset in *steps*, where @cpp 1.0f @ce is
+         *      equivalent to one tick of a mouse scroll wheel, and right and
+         *      up direction is positive
+         *
+         * The @p time may get used for UI animations. A default-constructed
+         * value causes an animation play time to be in the past, thus
+         * immediately transitioning to a stopped state. The position and
+         * node-related properties are set from @ref AbstractUserInterface
+         * event handler internals.
+         */
+        explicit ScrollEvent(Nanoseconds time, const Vector2& offset): _time{time}, _offset{offset} {}
+
+        /** @brief Time at which the event happened */
+        Nanoseconds time() const { return _time; }
+
+        /**
+         * @brief Scroll offset
+         *
+         * Note that unlike @ref position(), the offset is not in UI units, but
+         * rather scroll *steps*, where @cpp 1.0f @ce usually maps to one tick
+         * of a mouse scroll wheel, with right and up being positive. Depending
+         * on desktop UI scaling, browser zoom factor and system settings the
+         * offset may also be a fractional value, and even with a magnitude
+         * less than one. Which means a plain integer conversion may result in
+         * it being zero.
+         */
+        Vector2 offset() const { return _offset; }
+
+        /**
+         * @brief Event position
+         *
+         * Relative to top left corner of the node the event is called on. Use
+         * @ref nodeSize() to calculate a position relative to the node size or
+         * to other edges / corners. If the position has any coordinate less
+         * than @cpp 0.0f @ce or greater or equal to @ref nodeSize(), the event
+         * was called outside of the node area, for example when a pointer is
+         * released outside of a captured node.
+         */
+        Vector2 position() const { return _position; }
+
+        /**
+         * @brief Size of the node the event is called on
+         *
+         * Returns a size of given node after all layout calculations.
+         * @see @ref position(), @ref AbstractUserInterface::nodeSize()
+         */
+        Vector2 nodeSize() const { return _nodeSize; }
+
+        /**
+         * @brief Whether the event is called on a node that's currently pressed
+         *
+         * Returns @cpp true @ce if @ref AbstractUserInterface::currentPressedNode()
+         * is the same as the node the event is called on, @cpp false @ce
+         * otherwise.
+         * @see @ref isNodePressed(), @ref isNodeFocused(), @ref isCaptured()
+         */
+        bool isNodePressed() const { return _nodePressed; }
+
+        /**
+         * @brief Whether the event is called on a node that's currently hovered
+         *
+         * Returns @cpp true @ce if @ref AbstractUserInterface::currentHoveredNode()
+         * is the same as the node the event is called on, @cpp false @ce
+         * otherwise.
+         * @see @ref isNodePressed(), @ref isNodeFocused(), @ref isCaptured()
+         */
+        bool isNodeHovered() const { return _nodeHovered; }
+
+        /**
+         * @brief Whether the event is called on a node that's currently focused
+         *
+         * Returns @cpp true @ce if @ref AbstractUserInterface::currentFocusedNode()
+         * is the same as the node the event is called on, @cpp false @ce
+         * otherwise. Unlike @ref isNodeHovered(), returns @cpp true @ce also
+         * if the actual pointer position is outside of the area of the node
+         * the event is called on, for example in case of an event capture.
+         * @see @ref isNodePressed(), @ref isCaptured()
+         */
+        bool isNodeFocused() const { return _nodeFocused; }
+
+        /**
+         * @brief Whether the event is captured on a node
+         *
+         * If the event is called on a
+         * @ref AbstractUserInterface::currentFocusedNode(), returns
+         * @cpp false @ce. Otherwise returns @cpp true @ce if
+         * @ref AbstractUserInterface::currentCapturedNode() is the same as the
+         * node the event is called on, @cpp false @ce otherwise. Unlike
+         * @ref PointerEvent or @ref PointerMoveEvent, scroll events don't have
+         * a possibility to modify the captured status.
+         * @see @ref isNodePressed(), @ref isNodeHovered(),
+         *      @ref isNodeFocused()
+         */
+        bool isCaptured() const { return _captured; }
+
+        /**
+         * @brief Whether the event is accepted
+         *
+         * Implicitly @cpp false @ce.
+         */
+        bool isAccepted() const { return _accepted; }
+
+        /**
+         * @brief Set the event as accepted
+         *
+         * Once an event is accepted, it doesn't propagate further.
+         */
+        void setAccepted(bool accepted = true) {
+            _accepted = accepted;
+        }
+
+    private:
+        friend AbstractUserInterface;
+
+        Nanoseconds _time;
+        Vector2 _position, _nodeSize;
+        Vector2 _offset;
+        bool _nodePressed = false;
+        bool _nodeHovered = false;
+        bool _nodeFocused = false;
+        bool _accepted = false;
+        bool _captured = false;
 };
 
 /**

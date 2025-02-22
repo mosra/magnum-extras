@@ -4202,6 +4202,50 @@ bool AbstractUserInterface::pointerMoveEvent(const Vector2& globalPosition, Poin
     return moveAcceptedByAnyData;
 }
 
+bool AbstractUserInterface::scrollEvent(const Vector2& globalPosition, ScrollEvent& event) {
+    CORRADE_ASSERT(!event._accepted,
+        "Ui::AbstractUserInterface::scrollEvent(): event already accepted", {});
+
+    update();
+
+    State& state = *_state;
+    const Vector2 globalPositionScaled = globalPosition*state.size/state.windowSize;
+
+    /* If there's a node capturing events, call the event on it directly. Given
+       that update() was called, it should be either null or valid. */
+    bool acceptedByAnyData = false;
+    if(state.currentCapturedNode != NodeHandle::Null) {
+        CORRADE_INTERNAL_ASSERT(isHandleValid(state.currentCapturedNode));
+
+        /* Called on a captured node, so isCaptured() should be true,
+           isNodeHovered() is true if it's also currently hovered */
+        event._captured = true;
+        event._nodeHovered = state.currentHoveredNode == state.currentCapturedNode;
+
+        acceptedByAnyData = callEventOnNode<ScrollEvent, &AbstractLayer::scrollEvent>(globalPositionScaled, state.currentCapturedNode, event);
+
+    /* Otherwise the usual hit testing etc. */
+    } else {
+        /* Not called on a captured node, isCaptured() should be false and thus
+           isNodeHovered() can be true */
+        event._captured = false;
+        event._nodeHovered = true;
+
+        acceptedByAnyData = callEvent<ScrollEvent, &AbstractLayer::scrollEvent>(globalPositionScaled, event) != NodeHandle::Null;
+    }
+
+    /* Changing the capture state isn't possible from a scroll event, as that
+       would need to potentially emit a pointer leave and pointer enter event
+       which isn't really possible now. */
+    CORRADE_INTERNAL_ASSERT(event._captured == (state.currentCapturedNode != NodeHandle::Null));
+
+    /* Unlike pointer press/release/move events, scroll events don't affect
+       currently pressed or hovered node and neither the current global pointer
+       position. */
+
+    return acceptedByAnyData;
+}
+
 bool AbstractUserInterface::focusEvent(const NodeHandle node, FocusEvent& event) {
     CORRADE_ASSERT(!event._accepted,
         "Ui::AbstractUserInterface::focusEvent(): event already accepted", {});

@@ -145,6 +145,12 @@ struct AbstractLayerTest: TestSuite::Tester {
     void pointerEventNotPrimary();
     void pointerEventAlreadyAccepted();
 
+    void scrollEvent();
+    void scrollEventNotSupported();
+    void scrollEventNotImplemented();
+    void scrollEventOutOfRange();
+    void scrollEventAlreadyAccepted();
+
     void focusBlurEvent();
     void focusBlurEventNotSupported();
     void focusBlurEventNotImplemented();
@@ -312,6 +318,12 @@ AbstractLayerTest::AbstractLayerTest() {
               &AbstractLayerTest::pointerEventOutOfRange,
               &AbstractLayerTest::pointerEventNotPrimary,
               &AbstractLayerTest::pointerEventAlreadyAccepted,
+
+              &AbstractLayerTest::scrollEvent,
+              &AbstractLayerTest::scrollEventNotSupported,
+              &AbstractLayerTest::scrollEventNotImplemented,
+              &AbstractLayerTest::scrollEventOutOfRange,
+              &AbstractLayerTest::scrollEventAlreadyAccepted,
 
               &AbstractLayerTest::focusBlurEvent,
               &AbstractLayerTest::focusBlurEventNotSupported,
@@ -3507,6 +3519,122 @@ void AbstractLayerTest::pointerEventAlreadyAccepted() {
         "Ui::AbstractLayer::pointerMoveEvent(): event already accepted\n"
         "Ui::AbstractLayer::pointerEnterEvent(): event already accepted\n"
         "Ui::AbstractLayer::pointerLeaveEvent(): event already accepted\n");
+}
+
+void AbstractLayerTest::scrollEvent() {
+    struct: AbstractLayer {
+        using AbstractLayer::AbstractLayer;
+        using AbstractLayer::create;
+
+        LayerFeatures doFeatures() const override {
+            return LayerFeature::Event;
+        }
+
+        void doScrollEvent(UnsignedInt dataId, ScrollEvent& event) override {
+            CORRADE_COMPARE(dataId, 1);
+            CORRADE_COMPARE(event.time(), 1234_nsec);
+            CORRADE_COMPARE(event.offset(), (Vector2{2.4f, -3.1f}));
+            called *= 2;
+        }
+
+        int called = 1;
+    } layer{layerHandle(0, 1)};
+
+    /* Capture correct test case name */
+    CORRADE_VERIFY(true);
+
+    layer.create();
+    layer.create();
+    {
+        ScrollEvent event{1234_nsec, {2.4f, -3.1f}};
+        layer.scrollEvent(1, event);
+    }
+    CORRADE_COMPARE(layer.called, 2);
+}
+
+void AbstractLayerTest::scrollEventNotSupported() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct: AbstractLayer {
+        using AbstractLayer::AbstractLayer;
+
+        LayerFeatures doFeatures() const override { return {}; }
+    } layer{layerHandle(0, 1)};
+
+    ScrollEvent event{{}, {}};
+
+    Containers::String out;
+    Error redirectError{&out};
+    layer.scrollEvent(0, event);
+    CORRADE_COMPARE(out,
+        "Ui::AbstractLayer::scrollEvent(): feature not supported\n");
+}
+
+void AbstractLayerTest::scrollEventNotImplemented() {
+    struct: AbstractLayer {
+        using AbstractLayer::AbstractLayer;
+        using AbstractLayer::create;
+
+        LayerFeatures doFeatures() const override {
+            return LayerFeature::Event;
+        }
+    } layer{layerHandle(0, 1)};
+
+    layer.create();
+
+    ScrollEvent event{{}, {}};
+    layer.scrollEvent(0, event);
+
+    /* Shouldn't crash or anything */
+    CORRADE_VERIFY(true);
+}
+
+void AbstractLayerTest::scrollEventOutOfRange() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct: AbstractLayer {
+        using AbstractLayer::AbstractLayer;
+        using AbstractLayer::create;
+
+        LayerFeatures doFeatures() const override {
+            return LayerFeature::Event;
+        }
+    } layer{layerHandle(0, 1)};
+
+    layer.create();
+    layer.create();
+
+    ScrollEvent event{{}, {}};
+
+    Containers::String out;
+    Error redirectError{&out};
+    layer.scrollEvent(2, event);
+    CORRADE_COMPARE(out,
+        "Ui::AbstractLayer::scrollEvent(): index 2 out of range for 2 data\n");
+}
+
+void AbstractLayerTest::scrollEventAlreadyAccepted() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct: AbstractLayer {
+        using AbstractLayer::AbstractLayer;
+        using AbstractLayer::create;
+
+        LayerFeatures doFeatures() const override {
+            return LayerFeature::Event;
+        }
+    } layer{layerHandle(0, 1)};
+
+    layer.create();
+
+    ScrollEvent event{{}, {}};
+    event.setAccepted();
+
+    Containers::String out;
+    Error redirectError{&out};
+    layer.scrollEvent(0, event);
+    CORRADE_COMPARE(out,
+        "Ui::AbstractLayer::scrollEvent(): event already accepted\n");
 }
 
 void AbstractLayerTest::focusBlurEvent() {

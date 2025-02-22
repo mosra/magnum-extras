@@ -314,11 +314,12 @@ care of by a @ref RendererGL instance internally.
 
 For actual interactivity, the user interface needs to receive input events via
 @ref pointerPressEvent(), @ref pointerReleaseEvent(), @ref pointerMoveEvent(),
-@ref keyPressEvent(), @ref keyReleaseEvent() and @ref textInputEvent(). They
-take a @ref PointerEvent, @ref PointerMoveEvent, @ref KeyEvent or
-@ref TextInputEvent instances containing the actual event data such as the
-pointer or key being pressed, and in case of pointer events also a position at
-which the event happens. For example:
+@ref scrollEvent(), @ref keyPressEvent(), @ref keyReleaseEvent() and
+@ref textInputEvent(). They take a @ref PointerEvent, @ref PointerMoveEvent,
+@ref ScrollEvent, @ref KeyEvent or @ref TextInputEvent instances containing the
+actual event data such as the pointer or key being pressed, and in case of
+pointer and scroll events also a position at which the event happens. For
+example:
 
 @snippet Ui.cpp AbstractUserInterface-setup-events
 
@@ -2614,6 +2615,46 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
         template<class Event, class ...Args, class = decltype(Implementation::PointerMoveEventConverter<Event>::move(std::declval<AbstractUserInterface&>(), std::declval<Event&>(), std::declval<Args>()...))> bool pointerMoveEvent(Event& event, Args&&... args) {
             return Implementation::PointerMoveEventConverter<Event>::move(*this, event, Utility::forward<Args>(args)...);
         }
+
+        /**
+         * @brief Handle a scroll event
+         *
+         * Implicitly calls @ref update(), which in turn implicitly calls
+         * @ref clean(). The @p globalPosition is assumed to be in respect to
+         * @ref windowSize(), and is internally scaled to match @ref size()
+         * before being set in the passed @ref ScrollEvent instance.
+         *
+         * If a node was captured by a previous @ref pointerPressEvent(),
+         * @ref pointerMoveEvent() or a non-primary @ref pointerReleaseEvent(),
+         * calls @ref AbstractLayer::scrollEvent() on all data attached to that
+         * node belonging to layers that support @ref LayerFeature::Event even
+         * if the event happened outside of its area, with the event position
+         * made relative to the node.
+         *
+         * Otherwise, if no node is captured, propagates it to nodes under
+         * (scaled) @p globalPosition and calls @ref AbstractLayer::scrollEvent()
+         * on all data attached to it belonging to layers that support
+         * @ref LayerFeature::Event, in a front-to-back order as described in
+         * @ref Ui-AbstractUserInterface-events-propagation. For each such
+         * node, the event is always called on all attached data, regardless of
+         * the accept status. For each call the @ref ScrollEvent::position() is
+         * made relative to the node to which given data is attached.
+         *
+         * Unlike pointer events, scroll events don't have any effect on
+         * @ref currentHoveredNode(), @ref currentPressedNode(),
+         * @ref currentCapturedNode(), @ref currentFocusedNode() or
+         * @ref currentGlobalPointerPosition().
+         *
+         * Returns @cpp true @ce if the event was accepted by at least one
+         * data; @cpp false @ce if it wasn't or there wasn't any visible event
+         * handling node at given position and thus the event should be
+         * propagated further.
+         *
+         * Expects that the event is not accepted yet.
+         * @see @ref ScrollEvent::isAccepted(),
+         *      @ref ScrollEvent::setAccepted()
+         */
+        bool scrollEvent(const Vector2& globalPosition, ScrollEvent& event);
 
         /**
          * @brief Handle a focus event

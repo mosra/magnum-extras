@@ -53,8 +53,8 @@ struct EventTest: TestSuite::Tester {
     void pointerMoveNoPointerRelativePosition();
     void pointerCancel();
 
+    void scroll();
     void focus();
-
     void key();
     void textInput();
 
@@ -82,8 +82,8 @@ EventTest::EventTest() {
               &EventTest::pointerMoveNoPointerRelativePosition,
               &EventTest::pointerCancel,
 
+              &EventTest::scroll,
               &EventTest::focus,
-
               &EventTest::key,
               &EventTest::textInput,
 
@@ -353,6 +353,25 @@ void EventTest::pointerMoveNoPointerRelativePosition() {
 void EventTest::pointerCancel() {
     PointerCancelEvent event{1234567_nsec};
     CORRADE_COMPARE(event.time(), 1234567_nsec);
+}
+
+void EventTest::scroll() {
+    ScrollEvent event{1234567_nsec, {3.2f, -4.7f}};
+    CORRADE_COMPARE(event.time(), 1234567_nsec);
+    CORRADE_COMPARE(event.offset(), (Vector2{3.2f, -4.7f}));
+    CORRADE_COMPARE(event.position(), Vector2{});
+    CORRADE_COMPARE(event.nodeSize(), Vector2{});
+    CORRADE_VERIFY(!event.isNodePressed());
+    CORRADE_VERIFY(!event.isNodeHovered());
+    CORRADE_VERIFY(!event.isNodeFocused());
+    CORRADE_VERIFY(!event.isCaptured());
+    CORRADE_VERIFY(!event.isAccepted());
+
+    event.setAccepted();
+    CORRADE_VERIFY(event.isAccepted());
+
+    event.setAccepted(false);
+    CORRADE_VERIFY(!event.isAccepted());
 }
 
 void EventTest::focus() {
