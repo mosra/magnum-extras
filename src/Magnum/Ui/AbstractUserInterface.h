@@ -2313,12 +2313,13 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
          * Implicitly calls @ref update(), which in turn implicitly calls
          * @ref clean(). The @p globalPosition is assumed to be in respect to
          * @ref windowSize(), and is internally scaled to match @ref size()
-         * before being set to @ref PointerEvent.
+         * before being set in the passed @ref PointerEvent instance.
          *
          * If the event is not primary and a node was captured by a previous
          * @ref pointerPressEvent(), @ref pointerMoveEvent() or a non-primary
-         * @ref pointerReleaseEvent(), calls @ref pointerPressEvent() on all
-         * data attached to that node even if the event happens outside of its
+         * @ref pointerReleaseEvent(), calls @ref AbstractLayer::pointerPressEvent()
+         * on all data attached to that node belonging to layers that support
+         * @ref LayerFeature::Event even if the event happens outside of its
          * area, with the event position made relative to the node.
          *
          * Otherwise, if either the event is primary or no node is captured,
@@ -2424,13 +2425,14 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
          * Implicitly calls @ref update(), which in turn implicitly calls
          * @ref clean(). The @p globalPosition is assumed to be in respect to
          * @ref windowSize(), and is internally scaled to match @ref size()
-         * before being set to @ref PointerEvent.
+         * before being set in the passed @ref PointerEvent instance.
          *
          * If a node was captured by a previous @ref pointerPressEvent(),
          * @ref pointerMoveEvent() or a non-primary @ref pointerReleaseEvent(),
          * calls @ref AbstractLayer::pointerReleaseEvent() on all data attached
-         * to that node even if the event happens outside of its area, with the
-         * event position made relative to the node.
+         * to that node belonging to layers that support
+         * @ref LayerFeature::Event even if the event happens outside of its
+         * area, with the event position made relative to the node.
          *
          * Otherwise, if a node wasn't captured, propagates the event to nodes
          * under (scaled) @p globalPosition and calls
@@ -2506,13 +2508,15 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
          * Implicitly calls @ref update(), which in turn implicitly calls
          * @ref clean(). The @p globalPosition is assumed to be in respect to
          * @ref windowSize(), and is internally scaled to match @ref size()
-         * before being set to @ref PointerEvent.
+         * before being used to calculate relative position and before both get
+         * set in the passed @ref PointerMoveEvent instance.
          *
          * If a node was captured by a previous @ref pointerPressEvent() or
          * @ref pointerMoveEvent(), @ref pointerReleaseEvent() wasn't called
          * yet and the node wasn't removed since, calls
          * @ref AbstractLayer::pointerMoveEvent() on all data attached to that
-         * node even if it happens outside of its area, with the event position
+         * node belonging to layers that support @ref LayerFeature::Event even
+         * if the event happens outside of its area, with the event position
          * made relative to the node. If the move event is primary, happened
          * inside the node area and is accepted by at least one data, the node
          * is treated as hovered, otherwise as not hovered. An
@@ -2671,7 +2675,15 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
          * @ref AbstractLayer::keyPressEvent() on all data attached to it
          * belonging to layers that support @ref LayerFeature::Event.
          *
-         * Otherwise, if @ref currentGlobalPointerPosition() is not
+         * Otherwise, if a node was captured by a previous
+         * @ref pointerPressEvent() or @ref pointerMoveEvent(),
+         * @ref pointerReleaseEvent() wasn't called yet and the node wasn't
+         * removed since, calls @ref AbstractLayer::keyPressEvent() on all data
+         * attached to that node belonging to layers that support
+         * @ref LayerFeature::Event.
+         *
+         * Otherwise, if no node is captured and
+         * @ref currentGlobalPointerPosition() is not
          * @relativeref{Corrade,Containers::NullOpt}, propagates the event to
          * nodes under it and calls @ref AbstractLayer::keyPressEvent() on all
          * data attached to it belonging to layers that support

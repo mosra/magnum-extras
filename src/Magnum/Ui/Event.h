@@ -1080,7 +1080,7 @@ class MAGNUM_UI_EXPORT KeyEvent {
          * If the event was called on a
          * @ref AbstractUserInterface::currentFocusedNode(), returns
          * @relativeref{Corrade,Containers::NullOpt}, consistently with
-         * @ref nodeSize(). Otherwise the node was picked based on pointer
+         * @ref position(). Otherwise the node was picked based on pointer
          * position from a preceding pointer press, release or move event, and
          * the function returns a size of given node after all layout
          * calculations.

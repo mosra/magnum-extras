@@ -4270,7 +4270,7 @@ template<void(AbstractLayer::*function)(UnsignedInt, KeyEvent&)> bool AbstractUs
         CORRADE_INTERNAL_ASSERT(isHandleValid(state.currentFocusedNode));
 
         /* event._captured is false, event._hovering is set by
-           callNonPositionedEventOnNode() itself */
+           callKeyEventOnNode() itself */
 
         acceptedByAnyData = callKeyEventOnNode<function>(state.currentFocusedNode, event);
 
@@ -4307,7 +4307,7 @@ template<void(AbstractLayer::*function)(UnsignedInt, KeyEvent&)> bool AbstractUs
         }
 
         /* Changing the capture state isn't possible from a key event, as that
-           would need to potentially emit a pointer release and pointer enter
+           would need to potentially emit a pointer leave and pointer enter
            event which isn't really possible now. */
         CORRADE_INTERNAL_ASSERT(event._captured == (state.currentGlobalPointerPosition && state.currentCapturedNode != NodeHandle::Null));
     }

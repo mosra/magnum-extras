@@ -798,6 +798,23 @@ class MAGNUM_UI_EXPORT AbstractLayer {
         void pointerCancelEvent(UnsignedInt dataId, PointerCancelEvent& event);
 
         /**
+         * @brief Handle a scroll event
+         *
+         * Used internally from @ref AbstractUserInterface::scrollEvent().
+         * Exposed just for testing purposes, there should be no need to call
+         * this function directly. Expects that the layer supports
+         * @ref LayerFeature::Event and @p dataId is less than @ref capacity(),
+         * with the assumption that the ID points to a valid data and
+         * @ref ScrollEvent::position() is relative to the node to which the
+         * data is attached. The event is expected to not be accepted yet.
+         * Delegates to @ref doScrollEvent(), see its documentation for more
+         * information.
+         * @see @ref ScrollEvent::isAccepted(),
+         *      @ref ScrollEvent::setAccepted()
+         */
+        void scrollEvent(UnsignedInt dataId, ScrollEvent& event);
+
+        /**
          * @brief Handle a focus event
          *
          * Used internally from @ref AbstractUserInterface::focusEvent() and
@@ -1354,8 +1371,9 @@ class MAGNUM_UI_EXPORT AbstractLayer {
          *      be less than @ref capacity() and point to a valid data.
          * @param event             Event data, with
          *      @ref PointerEvent::position() relative to the node to which the
-         *      data is attached. The position is guaranteed to be within the
-         *      area of the node.
+         *      data is attached. If pointer event capture is active and the
+         *      event is not primary, the position can be outside of the area
+         *      of the node.
          *
          * Implementation for @ref pointerPressEvent(), which is called from
          * @ref AbstractUserInterface::pointerPressEvent(). See its
@@ -1525,6 +1543,30 @@ class MAGNUM_UI_EXPORT AbstractLayer {
          * Default implementation does nothing.
          */
         virtual void doPointerCancelEvent(UnsignedInt dataId, PointerCancelEvent& event);
+
+        /**
+         * @brief Handle a scroll event
+         * @param dataId            Data ID the event happens on. Guaranteed to
+         *      be less than @ref capacity() and point to a valid data.
+         * @param event             Event data, with
+         *      @ref ScrollEvent::position() relative to the node to which the
+         *      data is attached. If pointer event capture is active, the
+         *      position can be outside of the area of the node.
+         *
+         * Implementation for @ref scrollEvent(), which is called from
+         * @ref AbstractUserInterface::scrollEvent(). See its documentation for
+         * more information about pointer event behavior, especially event
+         * capture. It's guaranteed that @ref doUpdate() was called before this
+         * function with up-to-date data for @p dataId.
+         *
+         * If the implementation handles the event, it's expected to call
+         * @ref ScrollEvent::setAccepted() on it to prevent it from being
+         * propagated further.
+         *
+         * Default implementation does nothing, i.e. the @p event gets
+         * implicitly propagated further.
+         */
+        virtual void doScrollEvent(UnsignedInt dataId, ScrollEvent& event);
 
         /**
          * @brief Handle a focus event
