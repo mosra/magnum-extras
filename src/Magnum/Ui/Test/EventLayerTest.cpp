@@ -1960,10 +1960,10 @@ void EventLayerTest::drag() {
     EventLayer layer{layerHandle(0, 1)};
 
     Int called = 0;
-    Vector2 calledOffset;
-    DataHandle handle = layer.onDrag(nodeHandle(0, 1), [&called, &calledOffset](const Vector2& offset) {
+    Vector2 calledRelativePosition;
+    DataHandle handle = layer.onDrag(nodeHandle(0, 1), [&called, &calledRelativePosition](const Vector2& relativePosition) {
         ++called;
-        calledOffset += offset;
+        calledRelativePosition += relativePosition;
     });
 
     /* Should only get fired for a move with mouse left, *primary* finger or
@@ -1987,7 +1987,7 @@ void EventLayerTest::drag() {
         event.setCaptured(true);
         layer.pointerMoveEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 1);
-        CORRADE_COMPARE(calledOffset, (Vector2{-1.0f, 2.4f}));
+        CORRADE_COMPARE(calledRelativePosition, (Vector2{-1.0f, 2.4f}));
     } {
         PointerMoveEvent event{{}, PointerEventSource::Mouse, {}, Pointer::MouseMiddle, true, 0};
         event.setCaptured(true);
@@ -2003,7 +2003,7 @@ void EventLayerTest::drag() {
         event.setCaptured(true);
         layer.pointerMoveEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 2);
-        CORRADE_COMPARE(calledOffset, (Vector2{-0.5f, 1.4f}));
+        CORRADE_COMPARE(calledRelativePosition, (Vector2{-0.5f, 1.4f}));
     } {
         PointerMoveEvent event{{}, PointerEventSource::Touch, {}, Pointer::Finger|Pointer::Eraser, false, 0, {0.5f, -1.0f}};
         event.setCaptured(true);
@@ -2014,7 +2014,7 @@ void EventLayerTest::drag() {
         event.setCaptured(true);
         layer.pointerMoveEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 3);
-        CORRADE_COMPARE(calledOffset, (Vector2{0.5f, 0.9f}));
+        CORRADE_COMPARE(calledRelativePosition, (Vector2{0.5f, 0.9f}));
     } {
         PointerMoveEvent event{{}, PointerEventSource::Pen, {}, Pointer::Eraser, true, 0};
         event.setCaptured(true);
