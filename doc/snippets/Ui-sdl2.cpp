@@ -97,6 +97,7 @@ class MyApplication: public Platform::Application {
         DOXYGEN_ELLIPSIS(void pointerPressEvent(PointerEvent& event) override;
         void pointerReleaseEvent(PointerEvent& event) override;
         void pointerMoveEvent(PointerMoveEvent& event) override;
+        void scrollEvent(ScrollEvent& event) override;
         void keyPressEvent(KeyEvent& event) override;
         void keyReleaseEvent(KeyEvent& event) override;
         void textInputEvent(TextInputEvent& event) override;)
@@ -121,6 +122,12 @@ void MyApplication::pointerReleaseEvent(PointerEvent& event) {
 }
 void MyApplication::pointerMoveEvent(PointerMoveEvent& event) {
     if(!_ui.pointerMoveEvent(event)) {
+        DOXYGEN_ELLIPSIS()
+    }
+    if(_ui.state()) redraw();
+}
+void MyApplication::scrollEvent(ScrollEvent& event) {
+    if(!_ui.scrollEvent(event)) {
         DOXYGEN_ELLIPSIS()
     }
     if(_ui.state()) redraw();

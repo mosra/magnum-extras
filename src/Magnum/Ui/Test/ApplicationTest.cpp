@@ -48,10 +48,12 @@ struct ApplicationTest: TestSuite::Tester {
     void pointerReleaseEvent();
     void pointerMoveEvent();
     void pointerPressReleaseMoveEventNoTouchOrPen();
+    void scrollEvent();
     #ifdef MAGNUM_BUILD_DEPRECATED
     void mousePressEvent();
     void mouseReleaseEvent();
     void mouseMoveEvent();
+    void mouseScrollEvent();
     #endif
     void keyPressEvent();
     void keyReleaseEvent();
@@ -241,6 +243,28 @@ const struct {
         {}, true},
 };
 
+struct CustomScrollEvent {
+    explicit CustomScrollEvent(const Vector2& position, const Vector2& offset): _position{position}, _offset{offset} {}
+
+    Vector2 position() const { return _position; }
+    Vector2 offset() const { return _offset; }
+    void setAccepted() { accepted = true; }
+
+    bool accepted = false;
+
+    private:
+        Vector2 _position;
+        Vector2 _offset;
+};
+
+const struct {
+    const char* name;
+    bool accept;
+} ScrollEventData[]{
+    {"not accepted", false},
+    {"", true}
+};
+
 #ifdef MAGNUM_BUILD_DEPRECATED
 struct CustomMouseEvent {
     enum class Button {
@@ -323,6 +347,28 @@ const struct {
         CustomMouseMoveEvent::Button::Bottom,
         {}, true},
     {"no buttons", {}, {}, false},
+};
+
+struct CustomMouseScrollEvent {
+    explicit CustomMouseScrollEvent(const Vector2i& position, const Vector2& offset): _position{position}, _offset{offset} {}
+
+    Vector2i position() const { return _position; }
+    Vector2 offset() const { return _offset; }
+    void setAccepted() { accepted = true; }
+
+    bool accepted = false;
+
+    private:
+        Vector2i _position;
+        Vector2 _offset;
+};
+
+const struct {
+    const char* name;
+    bool accept;
+} MouseScrollEventData[]{
+    {"not accepted", false},
+    {"", true}
 };
 #endif
 
@@ -563,6 +609,9 @@ ApplicationTest::ApplicationTest() {
 
     addTests({&ApplicationTest::pointerPressReleaseMoveEventNoTouchOrPen});
 
+    addInstancedTests({&ApplicationTest::scrollEvent},
+        Containers::arraySize(ScrollEventData));
+
     #ifdef MAGNUM_BUILD_DEPRECATED
     addInstancedTests({&ApplicationTest::mousePressEvent},
         Containers::arraySize(MousePressReleaseEventData));
@@ -572,6 +621,9 @@ ApplicationTest::ApplicationTest() {
 
     addInstancedTests({&ApplicationTest::mouseMoveEvent},
         Containers::arraySize(MouseMoveEventData));
+
+    addInstancedTests({&ApplicationTest::mouseScrollEvent},
+        Containers::arraySize(MouseScrollEventData));
     #endif
 
     addInstancedTests({&ApplicationTest::keyPressEvent},
@@ -639,6 +691,9 @@ void ApplicationTest::pointerPressEvent() {
             CORRADE_FAIL("This shouldn't be called.");
         }
         void doPointerLeaveEvent(UnsignedInt, PointerMoveEvent&) override {
+            CORRADE_FAIL("This shouldn't be called.");
+        }
+        void doScrollEvent(UnsignedInt, ScrollEvent&) override {
             CORRADE_FAIL("This shouldn't be called.");
         }
         void doFocusEvent(UnsignedInt, FocusEvent&) override {
@@ -716,6 +771,9 @@ void ApplicationTest::pointerReleaseEvent() {
         void doPointerLeaveEvent(UnsignedInt, PointerMoveEvent&) override {
             CORRADE_FAIL("This shouldn't be called.");
         }
+        void doScrollEvent(UnsignedInt, ScrollEvent&) override {
+            CORRADE_FAIL("This shouldn't be called.");
+        }
         void doFocusEvent(UnsignedInt, FocusEvent&) override {
             CORRADE_FAIL("This shouldn't be called.");
         }
@@ -788,6 +846,9 @@ void ApplicationTest::pointerMoveEvent() {
         }
         /* Enter / leave events do get called as a consequence of the move
            event internally, we don't care */
+        void doScrollEvent(UnsignedInt, ScrollEvent&) override {
+            CORRADE_FAIL("This shouldn't be called.");
+        }
         void doFocusEvent(UnsignedInt, FocusEvent&) override {
             CORRADE_FAIL("This shouldn't be called.");
         }
@@ -940,6 +1001,72 @@ void ApplicationTest::pointerPressReleaseMoveEventNoTouchOrPen() {
     CORRADE_VERIFY(move.accepted);
 }
 
+void ApplicationTest::scrollEvent() {
+    auto&& data = ScrollEventData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
+    /* The events should internally still be reported relative to the UI size,
+       same as when passed directly. I.e., scaled by {0.1f, 10.0f}; framebuffer
+       size isn't used for anything here. */
+    AbstractUserInterface ui{{200.0f, 300.0f}, {2000.0f, 30.0f}, {666, 777}};
+
+    struct Layer: AbstractLayer {
+        explicit Layer(LayerHandle handle, bool accept): AbstractLayer{handle}, accept{accept} {}
+
+        using AbstractLayer::create;
+
+        LayerFeatures doFeatures() const override {
+            return LayerFeature::Event;
+        }
+        void doPointerPressEvent(UnsignedInt, PointerEvent&) override {
+            CORRADE_FAIL("This shouldn't be called.");
+        }
+        void doPointerReleaseEvent(UnsignedInt, PointerEvent&) override {
+            CORRADE_FAIL("This shouldn't be called.");
+        }
+        void doPointerMoveEvent(UnsignedInt, PointerMoveEvent&) override {
+            CORRADE_FAIL("This shouldn't be called.");
+        }
+        void doPointerEnterEvent(UnsignedInt, PointerMoveEvent&) override {
+            CORRADE_FAIL("This shouldn't be called.");
+        }
+        void doPointerLeaveEvent(UnsignedInt, PointerMoveEvent&) override {
+            CORRADE_FAIL("This shouldn't be called.");
+        }
+        void doScrollEvent(UnsignedInt, ScrollEvent& event) override {
+            CORRADE_COMPARE(event.position(), (Vector2{156.25f, 230.7f}));
+            CORRADE_COMPARE(event.offset(), (Vector2{2.5f, -3.7f}));
+            event.setAccepted(accept);
+            ++called;
+        }
+        void doFocusEvent(UnsignedInt, FocusEvent&) override {
+            CORRADE_FAIL("This shouldn't be called.");
+        }
+        void doBlurEvent(UnsignedInt, FocusEvent&) override {
+            CORRADE_FAIL("This shouldn't be called.");
+        }
+        void doKeyPressEvent(UnsignedInt, KeyEvent&) override {
+            CORRADE_FAIL("This shouldn't be called.");
+        }
+        void doKeyReleaseEvent(UnsignedInt, KeyEvent&) override {
+            CORRADE_FAIL("This shouldn't be called.");
+        }
+        void doTextInputEvent(UnsignedInt, TextInputEvent&) override {
+            CORRADE_FAIL("This shouldn't be called.");
+        }
+
+        bool accept;
+        Int called = 0;
+    };
+    Layer& layer = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer(), data.accept));
+    layer.create(ui.createNode({}, ui.size()));
+
+    CustomScrollEvent e{{1562.5f, 23.07f}, {2.5f, -3.7f}};
+    /* Should return true only if it's accepted */
+    CORRADE_COMPARE(ui.scrollEvent(e), data.accept);
+    CORRADE_COMPARE(e.accepted, data.accept);
+}
+
 #ifdef MAGNUM_BUILD_DEPRECATED
 void ApplicationTest::mousePressEvent() {
     auto&& data = MousePressReleaseEventData[testCaseInstanceId()];
@@ -977,6 +1104,9 @@ void ApplicationTest::mousePressEvent() {
             CORRADE_FAIL("This shouldn't be called.");
         }
         void doPointerLeaveEvent(UnsignedInt, PointerMoveEvent&) override {
+            CORRADE_FAIL("This shouldn't be called.");
+        }
+        void doScrollEvent(UnsignedInt, ScrollEvent&) override {
             CORRADE_FAIL("This shouldn't be called.");
         }
         void doFocusEvent(UnsignedInt, FocusEvent&) override {
@@ -1048,6 +1178,9 @@ void ApplicationTest::mouseReleaseEvent() {
         void doPointerLeaveEvent(UnsignedInt, PointerMoveEvent&) override {
             CORRADE_FAIL("This shouldn't be called.");
         }
+        void doScrollEvent(UnsignedInt, ScrollEvent&) override {
+            CORRADE_FAIL("This shouldn't be called.");
+        }
         void doFocusEvent(UnsignedInt, FocusEvent&) override {
             CORRADE_FAIL("This shouldn't be called.");
         }
@@ -1114,6 +1247,9 @@ void ApplicationTest::mouseMoveEvent() {
         }
         /* Enter / leave events do get called as a consequence of the move
            event internally, we don't care */
+        void doScrollEvent(UnsignedInt, ScrollEvent&) override {
+            CORRADE_FAIL("This shouldn't be called.");
+        }
         void doFocusEvent(UnsignedInt, FocusEvent&) override {
             CORRADE_FAIL("This shouldn't be called.");
         }
@@ -1142,6 +1278,72 @@ void ApplicationTest::mouseMoveEvent() {
     CORRADE_COMPARE(ui.pointerMoveEvent(e), data.accept);
     /* Should be called always */
     CORRADE_COMPARE(layer.called, 1);
+    CORRADE_COMPARE(e.accepted, data.accept);
+}
+
+void ApplicationTest::mouseScrollEvent() {
+    auto&& data = MouseScrollEventData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
+    /* The events should internally still be reported relative to the UI size,
+       same as when passed directly. I.e., scaled by {0.1f, 10.0f}; framebuffer
+       size isn't used for anything here. */
+    AbstractUserInterface ui{{200.0f, 300.0f}, {2000.0f, 30.0f}, {666, 777}};
+
+    struct Layer: AbstractLayer {
+        explicit Layer(LayerHandle handle, bool accept): AbstractLayer{handle}, accept{accept} {}
+
+        using AbstractLayer::create;
+
+        LayerFeatures doFeatures() const override {
+            return LayerFeature::Event;
+        }
+        void doPointerPressEvent(UnsignedInt, PointerEvent&) override {
+            CORRADE_FAIL("This shouldn't be called.");
+        }
+        void doPointerReleaseEvent(UnsignedInt, PointerEvent&) override {
+            CORRADE_FAIL("This shouldn't be called.");
+        }
+        void doPointerMoveEvent(UnsignedInt, PointerMoveEvent&) override {
+            CORRADE_FAIL("This shouldn't be called.");
+        }
+        void doPointerEnterEvent(UnsignedInt, PointerMoveEvent&) override {
+            CORRADE_FAIL("This shouldn't be called.");
+        }
+        void doPointerLeaveEvent(UnsignedInt, PointerMoveEvent&) override {
+            CORRADE_FAIL("This shouldn't be called.");
+        }
+        void doScrollEvent(UnsignedInt, ScrollEvent& event) override {
+            CORRADE_COMPARE(event.position(), (Vector2{156.0f, 230.0f}));
+            CORRADE_COMPARE(event.offset(), (Vector2{2.5f, -3.7f}));
+            event.setAccepted(accept);
+            ++called;
+        }
+        void doFocusEvent(UnsignedInt, FocusEvent&) override {
+            CORRADE_FAIL("This shouldn't be called.");
+        }
+        void doBlurEvent(UnsignedInt, FocusEvent&) override {
+            CORRADE_FAIL("This shouldn't be called.");
+        }
+        void doKeyPressEvent(UnsignedInt, KeyEvent&) override {
+            CORRADE_FAIL("This shouldn't be called.");
+        }
+        void doKeyReleaseEvent(UnsignedInt, KeyEvent&) override {
+            CORRADE_FAIL("This shouldn't be called.");
+        }
+        void doTextInputEvent(UnsignedInt, TextInputEvent&) override {
+            CORRADE_FAIL("This shouldn't be called.");
+        }
+
+        bool accept;
+        Int called = 0;
+    };
+    Layer& layer = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer(), data.accept));
+    layer.create(ui.createNode({}, ui.size()));
+
+    CustomMouseScrollEvent e{{1560, 23}, {2.5f, -3.7f}};
+    /* Should return true only if it's accepted */
+    CORRADE_COMPARE(ui.scrollEvent(e), data.accept);
     CORRADE_COMPARE(e.accepted, data.accept);
 }
 #endif
@@ -1175,6 +1377,9 @@ void ApplicationTest::keyPressEvent() {
             event.setAccepted();
         }
         void doPointerLeaveEvent(UnsignedInt, PointerMoveEvent&) override {
+            CORRADE_FAIL("This shouldn't be called.");
+        }
+        void doScrollEvent(UnsignedInt, ScrollEvent&) override {
             CORRADE_FAIL("This shouldn't be called.");
         }
         void doFocusEvent(UnsignedInt, FocusEvent&) override {
@@ -1250,6 +1455,9 @@ void ApplicationTest::keyReleaseEvent() {
         void doPointerLeaveEvent(UnsignedInt, PointerMoveEvent&) override {
             CORRADE_FAIL("This shouldn't be called.");
         }
+        void doScrollEvent(UnsignedInt, ScrollEvent&) override {
+            CORRADE_FAIL("This shouldn't be called.");
+        }
         void doFocusEvent(UnsignedInt, FocusEvent&) override {
             CORRADE_FAIL("This shouldn't be called.");
         }
@@ -1321,6 +1529,9 @@ void ApplicationTest::textInputEvent() {
             event.setAccepted();
         }
         void doPointerLeaveEvent(UnsignedInt, PointerMoveEvent&) override {
+            CORRADE_FAIL("This shouldn't be called.");
+        }
+        void doScrollEvent(UnsignedInt, ScrollEvent&) override {
             CORRADE_FAIL("This shouldn't be called.");
         }
         void doFocusEvent(UnsignedInt, FocusEvent& event) override {

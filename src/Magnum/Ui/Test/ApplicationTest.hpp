@@ -98,6 +98,17 @@ struct ApplicationTest: Platform::Application {
             redraw();
         }
     }
+    void scrollEvent(ScrollEvent& event) override {
+        if(!_ui.scrollEvent(event))
+            Debug{} << "scroll event not accepted";
+        if(!event.isAccepted())
+            Debug{} << "scroll event accept not propagated";
+
+        if(_ui.state()) {
+            Debug{} << "redraw triggered by" << _ui.state();
+            redraw();
+        }
+    }
     #else
     CORRADE_IGNORE_DEPRECATED_PUSH
     void mousePressEvent(MouseEvent& event) override {
@@ -127,6 +138,17 @@ struct ApplicationTest: Platform::Application {
             Debug{} << "mouse move event not accepted";
         if(!event.isAccepted())
             Debug{} << "mouse move event accept not propagated";
+
+        if(_ui.state()) {
+            Debug{} << "redraw triggered by" << _ui.state();
+            redraw();
+        }
+    }
+    void mouseScrollEvent(MouseScrollEvent& event) override {
+        if(!_ui.scrollEvent(event))
+            Debug{} << "mouse scroll event not accepted";
+        if(!event.isAccepted())
+            Debug{} << "mouse scroll event accept not propagated";
 
         if(_ui.state()) {
             Debug{} << "redraw triggered by" << _ui.state();
@@ -211,6 +233,11 @@ ApplicationTest::ApplicationTest(const Arguments& arguments): Platform::Applicat
 
         void doPointerLeaveEvent(UnsignedInt, Ui::PointerMoveEvent& event) override {
             Debug{} << event.pointers() << "leave at" << Debug::packed << event.position();
+            event.setAccepted();
+        }
+
+        void doScrollEvent(UnsignedInt, Ui::ScrollEvent& event) override {
+            Debug{} << Debug::packed << event.offset() << "scroll at" << Debug::packed << event.position();
             event.setAccepted();
         }
 

@@ -251,6 +251,7 @@ namespace Implementation {
     template<class, class = void> struct ApplicationSizeConverter;
     template<class, class = void> struct PointerEventConverter;
     template<class, class = void> struct PointerMoveEventConverter;
+    template<class, class = void> struct ScrollEventConverter;
     template<class, class = void> struct KeyEventConverter;
     template<class, class = void> struct TextInputEventConverter;
 }
@@ -356,9 +357,9 @@ scheduled only when needed:
 
 With the code below, events coming from the application get internally
 converted to a corresponding @ref PointerEvent, @ref PointerMoveEvent,
-@ref KeyEvent or @ref TextInputEvent instance with a subset of information
-given application provides. Then, if the event is accepted by the user
-interface, matching @ref Platform::Sdl2Application::PointerEvent::setAccepted() "Platform::*Application::PointerEvent::setAccepted()"
+@ref ScrollEvent, @ref KeyEvent or @ref TextInputEvent instance with a subset
+of information given application provides. Then, if the event is accepted by
+the user interface, matching @ref Platform::Sdl2Application::PointerEvent::setAccepted() "Platform::*Application::PointerEvent::setAccepted()"
 etc. get called as well, to prevent it from propagating further in certain
 circumstances (such as to the browser window when compiling for the web). To
 make sure the UI is appropriately redrawn after handling an event, each of
@@ -2655,6 +2656,19 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
          *      @ref ScrollEvent::setAccepted()
          */
         bool scrollEvent(const Vector2& globalPosition, ScrollEvent& event);
+
+        /**
+         * @brief Handle an external scroll event
+         *
+         * Converts the @p event to a @ref ScrollEvent and delegates to
+         * @ref scrollEvent(const Vector2&, ScrollEvent&), see its
+         * documentation and @ref Ui-AbstractUserInterface-application for more
+         * information. The @p args allow passing optional extra arguments to a
+         * particular event converter.
+         */
+        template<class Event, class ...Args, class = decltype(Implementation::ScrollEventConverter<Event>::trigger(std::declval<AbstractUserInterface&>(), std::declval<Event&>(), std::declval<Args>()...))> bool scrollEvent(Event& event, Args&&... args) {
+            return Implementation::ScrollEventConverter<Event>::trigger(*this, event, Utility::forward<Args>(args)...);
+        }
 
         /**
          * @brief Handle a focus event

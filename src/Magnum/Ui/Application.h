@@ -35,11 +35,13 @@ Including this header allows you to pass a @ref Magnum::Platform::Sdl2Applicatio
 @relativeref{Magnum::Ui::AbstractUserInterface,setSize()} to query properties
 from and to pass @ref Magnum::Platform::Sdl2Application::PointerEvent "Magnum::Platform::*Application::PointerEvent",
 @relativeref{Magnum::Platform::Sdl2Application,PointerMoveEvent},
+@relativeref{Magnum::Platform::Sdl2Application,ScrollEvent},
 @relativeref{Magnum::Platform::Sdl2Application,KeyEvent} and
 @relativeref{Magnum::Platform::Sdl2Application,TextInputEvent} to
 @ref Magnum::Ui::AbstractUserInterface::pointerPressEvent(),
 @relativeref{Magnum::Ui::AbstractUserInterface,pointerReleaseEvent()},
 @relativeref{Magnum::Ui::AbstractUserInterface,pointerMoveEvent()},
+@relativeref{Magnum::Ui::AbstractUserInterface,scrollEvent()},
 @relativeref{Magnum::Ui::AbstractUserInterface,keyPressEvent()},
 @relativeref{Magnum::Ui::AbstractUserInterface,keyReleaseEvent()} and
 @relativeref{Magnum::Ui::AbstractUserInterface,textInputEvent()}. See
@@ -214,6 +216,50 @@ template<class Event> struct PointerEventConverter<Event, typename std::enable_i
 
         PointerEvent e{time, source, pointer, event.isPrimary(), event.id()};
         if(ui.pointerReleaseEvent(event.position(), e)) {
+            event.setAccepted();
+            return true;
+        }
+
+        return false;
+    }
+};
+
+template<class Event> struct ScrollEventConverter<Event,
+    /* Clang (16, but probably others too) is only able to match this with the
+       >=. Without it, it can only match if the size is 1, which was only the
+       case with the now-deprecated MouseEvent::Button. I suppose the boolean
+       conversion in SFINAE contexts has some funny "optimization" that doesn't
+       take the higher bits into account or some such. */
+    #ifdef CORRADE_TARGET_CLANG
+    typename std::enable_if<sizeof(&Event::offset) >= 0>::type
+    /* MSVC cannot match the above and ScrollEvent doesn't have any nested
+       type, only the now-deprecated MouseEvent::Button is what works on older
+       MSVC. Fortunately this seems to be fixed in MSVC 2022 17.10+. Compared
+       to PointerEvent we don't need to avoid any conflict here so just enable
+       it always. */
+    #elif defined(CORRADE_TARGET_MSVC) && _MSC_VER < 1940
+    void
+    /* GCC is fine */
+    #else
+    typename std::enable_if<sizeof(&Event::offset)>::type
+    #endif
+> {
+    static bool trigger(AbstractUserInterface& ui, Event& event, const Nanoseconds time = {}) {
+        ScrollEvent e{time, event.offset()};
+        if(ui.scrollEvent(
+            /* This converter can be called with the deprecated
+               MouseScrollEvent as well, as there's no easy way to distinguish
+               them. The only difference between the two is that the position
+               is an integer vector in the deprecated one. Add a cast to
+               Vector2 to make it work with both. */
+            /** @todo remove the case once the deprecated MouseScrollEvent is
+                gone */
+            #ifdef MAGNUM_BUILD_DEPRECATED
+            Vector2{event.position()}
+            #else
+            event.position()
+            #endif
+        , e)) {
             event.setAccepted();
             return true;
         }
