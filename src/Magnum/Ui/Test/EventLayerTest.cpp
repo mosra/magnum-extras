@@ -1139,8 +1139,8 @@ void EventLayerTest::pressReleaseFromUserInterface() {
 
     EventLayer& layer = ui.setLayerInstance(Containers::pointer<EventLayer>(ui.createLayer()));
 
-    /* A node below the one that should react to the tap or click event,
-       accepting presses. Shouldn't get considered at all. */
+    /* A node below the one that should react to the press or release event,
+       accepting presses and releases. Shouldn't get considered at all. */
     Int belowCalled = 0;
     NodeHandle nodeBelow = ui.createNode({}, {100, 100}, data.flags);
     layer.onPress(nodeBelow, [&belowCalled]{
@@ -1170,7 +1170,7 @@ void EventLayerTest::pressReleaseFromUserInterface() {
         ++releasePositionCalled;
     });
 
-    /* A press should be accepted but not resulting in the handler being
+    /* A press should be accepted and resulting in the press handler being
        called */
     {
         PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0};
@@ -1183,7 +1183,7 @@ void EventLayerTest::pressReleaseFromUserInterface() {
         CORRADE_COMPARE(releasePositionCalled, 0);
         CORRADE_COMPARE(belowCalled, 0);
 
-    /* A release should be accepted as well, resulting in the handler being
+    /* A release should be accepted and resulting in the release handler being
        called */
     } {
         PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0};

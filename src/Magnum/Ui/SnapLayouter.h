@@ -533,8 +533,8 @@ class MAGNUM_UI_EXPORT AbstractSnapLayout {
 @brief Templated base for @ref SnapLayouter layout creation helpers
 @m_since_latest
 
-Restricts @ref AbstractAnchor to a concrete user interface instance. See the
-base class documentation for more information.
+Restricts @ref AbstractSnapLayout to a concrete user interface instance. See
+the base class documentation for more information.
 @see @ref SnapLayout
 */
 template<class UserInterface> class BasicSnapLayout: public AbstractSnapLayout {
