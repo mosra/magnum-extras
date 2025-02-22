@@ -1831,7 +1831,7 @@ void AbstractUserInterfaceTest::layerCreateInvalid() {
     Error redirectError{&out};
     ui.createLayer(LayerHandle(0xabcd));
     CORRADE_COMPARE(out,
-        "Ui::AbstractUserInterface::createLayer(): invalid before handle Ui::LayerHandle(0xcd, 0xab)\n");
+        "Ui::AbstractUserInterface::createLayer(): invalid behind handle Ui::LayerHandle(0xcd, 0xab)\n");
 }
 
 void AbstractUserInterfaceTest::layerSetInstanceInvalid() {

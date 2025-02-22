@@ -885,9 +885,9 @@ LayerHandle AbstractUserInterface::layerNext(LayerHandle handle) const {
     return next;
 }
 
-LayerHandle AbstractUserInterface::createLayer(const LayerHandle before) {
-    CORRADE_ASSERT(before == LayerHandle::Null || isHandleValid(before),
-        "Ui::AbstractUserInterface::createLayer(): invalid before handle" << before, {});
+LayerHandle AbstractUserInterface::createLayer(const LayerHandle behind) {
+    CORRADE_ASSERT(behind == LayerHandle::Null || isHandleValid(behind),
+        "Ui::AbstractUserInterface::createLayer(): invalid behind handle" << behind, {});
 
     /* Find the first free layer if there is, update the free index to point to
        the next one (or none) */
@@ -921,15 +921,15 @@ LayerHandle AbstractUserInterface::createLayer(const LayerHandle before) {
 
     /* This is the first ever layer, no need to connect with anything else */
     if(state.firstLayer == LayerHandle::Null) {
-        CORRADE_INTERNAL_ASSERT(before == LayerHandle::Null);
+        CORRADE_INTERNAL_ASSERT(behind == LayerHandle::Null);
         layer->used.previous = handle;
         layer->used.next = handle;
         state.firstLayer = handle;
         return handle;
     }
 
-    const LayerHandle next = before == LayerHandle::Null ?
-        state.firstLayer : before;
+    const LayerHandle next = behind == LayerHandle::Null ?
+        state.firstLayer : behind;
     const LayerHandle previous = state.layers[layerHandleId(next)].used.previous;
     layer->used.previous = previous;
     layer->used.next = next;
@@ -937,7 +937,7 @@ LayerHandle AbstractUserInterface::createLayer(const LayerHandle before) {
     state.layers[layerHandleId(previous)].used.next = handle;
 
     /* If the `before` layer was first, the new layer is now first */
-    if(state.firstLayer == before)
+    if(state.firstLayer == behind)
         state.firstLayer = handle;
 
     /* (Re)initialize running offsets for attached data animators */

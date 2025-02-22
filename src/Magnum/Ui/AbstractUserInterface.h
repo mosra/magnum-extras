@@ -1140,7 +1140,7 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
 
         /**
          * @brief Create a layer
-         * @param before    A layer to order before for draw and event
+         * @param behind    A layer to order behind for draw and event
          *      processing or @ref LayerHandle::Null if ordered as last (i.e.,
          *      at the front, being drawn last and receiving events first).
          *      Expected to be valid if not null.
@@ -1155,7 +1155,7 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
          * @see @ref isHandleValid(LayerHandle) const,
          *      @ref layerCapacity(), @ref layerUsedCount()
          */
-        LayerHandle createLayer(LayerHandle before =
+        LayerHandle createLayer(LayerHandle behind =
             #ifdef DOXYGEN_GENERATING_OUTPUT
             LayerHandle::Null
             #else
