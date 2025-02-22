@@ -20672,6 +20672,7 @@ void AbstractUserInterfaceTest::eventKeyPressRelease() {
         Captured = 1 << 3,
         Pressed = 1 << 4,
         Hovered = 1 << 5,
+        Focused = 1 << 6,
     };
 
     struct Layer: AbstractLayer {
@@ -20698,7 +20699,8 @@ void AbstractUserInterfaceTest::eventKeyPressRelease() {
             arrayAppend(eventCalls, InPlaceInit,
                 (event.isCaptured() ? Captured : 0)|
                 (event.isNodePressed() ? Pressed : 0)|
-                (event.isNodeHovered() ? Hovered : 0)|Press,
+                (event.isNodeHovered() ? Hovered : 0)|
+                (event.isNodeFocused() ? Focused : 0)|Press,
                 dataHandle(handle(), dataId, 1), event.position());
             if(acceptPress)
                 event.setAccepted();
@@ -20721,7 +20723,8 @@ void AbstractUserInterfaceTest::eventKeyPressRelease() {
             arrayAppend(eventCalls, InPlaceInit,
                 (event.isCaptured() ? Captured : 0)|
                 (event.isNodePressed() ? Pressed : 0)|
-                (event.isNodeHovered() ? Hovered : 0)|Release,
+                (event.isNodeHovered() ? Hovered : 0)|
+                (event.isNodeFocused() ? Focused : 0)|Release,
                 dataHandle(handle(), dataId, 1), event.position());
             if(acceptRelease)
                 event.setAccepted();
@@ -20735,7 +20738,8 @@ void AbstractUserInterfaceTest::eventKeyPressRelease() {
             arrayAppend(eventCalls, InPlaceInit,
                 (event.isCaptured() ? Captured : 0)|
                 (event.isNodePressed() ? Pressed : 0)|
-                (event.isNodeHovered() ? Hovered : 0)|PointerPress,
+                (event.isNodeHovered() ? Hovered : 0)|
+                (event.isNodeFocused() ? Focused : 0)|PointerPress,
                 dataHandle(handle(), dataId, 1), event.position());
             event.setAccepted();
         }
@@ -20745,7 +20749,8 @@ void AbstractUserInterfaceTest::eventKeyPressRelease() {
             arrayAppend(eventCalls, InPlaceInit,
                 (event.isCaptured() ? Captured : 0)|
                 (event.isNodePressed() ? Pressed : 0)|
-                (event.isNodeHovered() ? Hovered : 0)|PointerMove,
+                (event.isNodeHovered() ? Hovered : 0)|
+                (event.isNodeFocused() ? Focused : 0)|PointerMove,
                 dataHandle(handle(), dataId, 1), event.position());
             if(capturePointerMove)
                 event.setCaptured(*capturePointerMove);
@@ -20976,7 +20981,8 @@ void AbstractUserInterfaceTest::eventKeyPressRelease() {
             {Release|Hovered, rightData, Vector2{-5.0f, 10.0f}},
         })), TestSuite::Compare::Container);
 
-    /* The pressed node doesn't get reset if the key events aren't accepted */
+    /* The pressed / hovered node doesn't get reset if the key events aren't
+       accepted */
     } {
         /* Just to reset the currently pressed node */
         /** @todo have a pointerCancelEvent() for this */
@@ -21136,10 +21142,10 @@ void AbstractUserInterfaceTest::eventKeyPressRelease() {
         CORRADE_COMPARE_AS(layer.eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Containers::Optional<Vector2>>>({
             {Focus, leftData2, Containers::NullOpt},
             {Focus, leftData1, Containers::NullOpt},
-            {Press, leftData2, Containers::NullOpt},
-            {Press, leftData1, Containers::NullOpt},
-            {Release, leftData2, Containers::NullOpt},
-            {Release, leftData1, Containers::NullOpt},
+            {Press|Focused, leftData2, Containers::NullOpt},
+            {Press|Focused, leftData1, Containers::NullOpt},
+            {Release|Focused, leftData2, Containers::NullOpt},
+            {Release|Focused, leftData1, Containers::NullOpt},
         })), TestSuite::Compare::Container);
 
     /* If the node is focused but also captured and hovered, the hovered bit is
@@ -21166,8 +21172,8 @@ void AbstractUserInterfaceTest::eventKeyPressRelease() {
 
         CORRADE_COMPARE_AS(layer.eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Containers::Optional<Vector2>>>({
             {Focus|Hovered, rightData, Containers::NullOpt},
-            {Press|Hovered, rightData, Containers::NullOpt},
-            {Release|Hovered, rightData, Containers::NullOpt},
+            {Press|Hovered|Focused, rightData, Containers::NullOpt},
+            {Release|Hovered|Focused, rightData, Containers::NullOpt},
         })), TestSuite::Compare::Container);
 
     /* Removing the focus makes it behave the same as before, i.e. picking the
