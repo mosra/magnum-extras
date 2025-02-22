@@ -375,7 +375,6 @@ class MAGNUM_UI_EXPORT EventLayer: public AbstractLayer {
          *      @ref PointerEvent::isFallthrough()
          */
         DataHandle onPress(NodeHandle node, Containers::Function<void()>&& slot);
-
         /** @overload */
         DataHandle onPress(NodeHandle node, Containers::Function<void(const Vector2& position)>&& slot);
 
@@ -389,7 +388,6 @@ class MAGNUM_UI_EXPORT EventLayer: public AbstractLayer {
         EventConnection onPressScoped(NodeHandle node, Containers::Function<void()>&& slot) {
             return EventConnection{*this, onPress(node, Utility::move(slot))};
         }
-
         /** @overload */
         EventConnection onPressScoped(NodeHandle node, Containers::Function<void(const Vector2& position)>&& slot) {
             return EventConnection{*this, onPress(node, Utility::move(slot))};
@@ -414,7 +412,6 @@ class MAGNUM_UI_EXPORT EventLayer: public AbstractLayer {
          *      @ref PointerEvent::isFallthrough()
          */
         DataHandle onRelease(NodeHandle node, Containers::Function<void()>&& slot);
-
         /** @overload */
         DataHandle onRelease(NodeHandle node, Containers::Function<void(const Vector2& position)>&& slot);
 
@@ -428,7 +425,6 @@ class MAGNUM_UI_EXPORT EventLayer: public AbstractLayer {
         EventConnection onReleaseScoped(NodeHandle node, Containers::Function<void()>&& slot) {
             return EventConnection{*this, onRelease(node, Utility::move(slot))};
         }
-
         /** @overload */
         EventConnection onReleaseScoped(NodeHandle node, Containers::Function<void(const Vector2& position)>&& slot) {
             return EventConnection{*this, onRelease(node, Utility::move(slot))};
@@ -457,7 +453,6 @@ class MAGNUM_UI_EXPORT EventLayer: public AbstractLayer {
          *      @ref PointerEvent::isFallthrough()
          */
         DataHandle onTapOrClick(NodeHandle node, Containers::Function<void()>&& slot);
-
         /** @overload */
         DataHandle onTapOrClick(NodeHandle node, Containers::Function<void(const Vector2& position)>&& slot);
 
@@ -471,7 +466,6 @@ class MAGNUM_UI_EXPORT EventLayer: public AbstractLayer {
         EventConnection onTapOrClickScoped(NodeHandle node, Containers::Function<void()>&& slot) {
             return EventConnection{*this, onTapOrClick(node, Utility::move(slot))};
         }
-
         /** @overload */
         EventConnection onTapOrClickScoped(NodeHandle node, Containers::Function<void(const Vector2& position)>&& slot) {
             return EventConnection{*this, onTapOrClick(node, Utility::move(slot))};
@@ -499,7 +493,6 @@ class MAGNUM_UI_EXPORT EventLayer: public AbstractLayer {
          *      @ref PointerEvent::isFallthrough()
          */
         DataHandle onMiddleClick(NodeHandle node, Containers::Function<void()>&& slot);
-
         /** @overload */
         DataHandle onMiddleClick(NodeHandle node, Containers::Function<void(const Vector2& position)>&& slot);
 
@@ -513,7 +506,6 @@ class MAGNUM_UI_EXPORT EventLayer: public AbstractLayer {
         EventConnection onMiddleClickScoped(NodeHandle node, Containers::Function<void()>&& slot) {
             return EventConnection{*this, onMiddleClick(node, Utility::move(slot))};
         }
-
         /** @overload */
         EventConnection onMiddleClickScoped(NodeHandle node, Containers::Function<void(const Vector2& position)>&& slot) {
             return EventConnection{*this, onMiddleClick(node, Utility::move(slot))};
@@ -541,7 +533,6 @@ class MAGNUM_UI_EXPORT EventLayer: public AbstractLayer {
          *      @ref PointerEvent::isFallthrough()
          */
         DataHandle onRightClick(NodeHandle node, Containers::Function<void()>&& slot);
-
         /** @overload */
         DataHandle onRightClick(NodeHandle node, Containers::Function<void(const Vector2& position)>&& slot);
 
@@ -555,7 +546,6 @@ class MAGNUM_UI_EXPORT EventLayer: public AbstractLayer {
         EventConnection onRightClickScoped(NodeHandle node, Containers::Function<void()>&& slot) {
             return EventConnection{*this, onRightClick(node, Utility::move(slot))};
         }
-
         /** @overload */
         EventConnection onRightClickScoped(NodeHandle node, Containers::Function<void(const Vector2& position)>&& slot) {
             return EventConnection{*this, onRightClick(node, Utility::move(slot))};
@@ -593,7 +583,6 @@ class MAGNUM_UI_EXPORT EventLayer: public AbstractLayer {
          *      @ref PointerMoveEvent::isFallthrough()
          */
         DataHandle onDrag(NodeHandle node, Containers::Function<void(const Vector2& relativePosition)>&& slot);
-
         /** @overload */
         DataHandle onDrag(NodeHandle node, Containers::Function<void(const Vector2& position, const Vector2& relativePosition)>&& slot);
 
@@ -607,7 +596,6 @@ class MAGNUM_UI_EXPORT EventLayer: public AbstractLayer {
         EventConnection onDragScoped(NodeHandle node, Containers::Function<void(const Vector2& relativePosition)>&& slot) {
             return EventConnection{*this, onDrag(node, Utility::move(slot))};
         }
-
         /** @overload */
         EventConnection onDragScoped(NodeHandle node, Containers::Function<void(const Vector2& position, const Vector2& relativePosition)>&& slot) {
             return EventConnection{*this, onDrag(node, Utility::move(slot))};

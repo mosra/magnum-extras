@@ -1672,7 +1672,6 @@ class MAGNUM_UI_EXPORT TextLayer: public AbstractVisualLayer {
             NodeHandle{} /* To not have to include Handle.h */
             #endif
         );
-
         /** @overload */
         DataHandle create(UnsignedInt style, Containers::StringView text, const TextProperties& properties, NodeHandle node) {
             return create(style, text, properties, TextDataFlags{}, node);
