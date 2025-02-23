@@ -267,7 +267,20 @@ delay, as the events will always go directly to the scroll area.
 With @ref onScroll() you can react to mouse wheel or touchpad scroll events.
 Note that in this case, compared to @ref onDrag(), the offset is not in UI
 units, but rather scroll *steps*, where @cpp 1.0f @ce usually maps to one tick
-of a mouse scroll wheel, with right and up being positive.
+of a mouse scroll wheel, with right and up being positive. Such a step value is
+useful mainly for implementing actions like changing currently selected item in
+a dropdown or adjusting numeric values, however note that depending on the
+platform and system settings the step may also be a fractional value, and even
+with a magnitude less than one. Which means a plain integer conversion may
+result in it being zero.
+
+The @ref onDragOrScroll() then combines @ref onDrag() and @ref onScroll(),
+which is useful for scrollable views that want to react to both scroll events
+and pointer drag. In this case, the scroll step value is multiplied a factor
+configurable with @ref setScrollStepDistance() to get an equivalent of a
+pointer drag distance. If scrolling using pointer drag is undesirable, you can
+also just use @ref onScroll() and do the multiplication with
+@ref scrollStepDistance() directly.
 
 @section Ui-EventLayer-pinch Pinch zoom and rotation
 
@@ -362,6 +375,20 @@ class MAGNUM_UI_EXPORT EventLayer: public AbstractLayer {
          * total drag distance exceeds @p distance. Default is @cpp 16.0f @ce.
          */
         EventLayer& setDragThreshold(Float distance);
+
+        /** @brief Distance for a single scroll step */
+        Vector2 scrollStepDistance() const;
+
+        /**
+         * @brief Set a distance for a single scroll step
+         *
+         * When @ref onDragOrScroll() is triggered from a scroll event, the
+         * scroll offset is multiplied with this value to get a movement
+         * equivalent to a pointer drag. It's possible to have a different
+         * horizontal and vertical distance, negative values then flip the
+         * scroll direction. Default is @cpp 100.0f @ce in both directions.
+         */
+        EventLayer& setScrollStepDistance(const Vector2& distance);
 
         /**
          * @brief Connect to a finger / pen tap or left mouse press
@@ -577,10 +604,12 @@ class MAGNUM_UI_EXPORT EventLayer: public AbstractLayer {
          * @ref setDragThreshold(), at which point which the event capture is
          * transferred to @p node.
          *
-         * Use @ref onPinch() to handle two-finger gestures. In particular, if
-         * @ref onPinch() is handled by the layer as well, only one of
-         * @ref onDrag() and @ref onPinch() is called depending on whether a
-         * two-finger gesture is recognized, never both at the same time.
+         * Use @ref onDragOrScroll() to handle both drag and mouse or touchpad
+         * scroll with a single interface. Use @ref onPinch() to handle
+         * two-finger gestures. In particular, if @ref onPinch() is handled by
+         * the layer as well, only one of @ref onDrag() and @ref onPinch() is
+         * called depending on whether a two-finger gesture is recognized,
+         * never both at the same time.
          *
          * The returned @ref DataHandle is automatically removed once @p node
          * or any of its parents is removed, it's the caller responsibility to
@@ -618,7 +647,9 @@ class MAGNUM_UI_EXPORT EventLayer: public AbstractLayer {
          *
          * Note that unlike @ref onDrag(), the offset is not in UI units, but
          * rather scroll *steps*, where @cpp 1.0f @ce usually maps to one tick
-         * of a mouse scroll wheel, with right and up being positive.
+         * of a mouse scroll wheel, with right and up being positive. Use
+         * @ref onDragOrScroll() to handle both pointer drag and mouse or
+         * touchpad scroll with a single interface.
          *
          * The returned @ref DataHandle is automatically removed once @p node
          * or any of its parents is removed, it's the caller responsibility to
@@ -643,6 +674,46 @@ class MAGNUM_UI_EXPORT EventLayer: public AbstractLayer {
         /** @overload */
         EventConnection onScrollScoped(NodeHandle node, Containers::Function<void(const Vector2& position, const Vector2& offset)>&& slot) {
             return EventConnection{*this, onScroll(node, Utility::move(slot))};
+        }
+
+        /**
+         * @brief Connect to a drag or scroll
+         *
+         * Combines @ref onDrag() and @ref onScroll() in a single event
+         * handler, meant to be used to implement scrollable views that work
+         * with both touch and mouse or touchpad input. See their documentation
+         * for more information, especially related to pointer event
+         * fallthrough.
+         *
+         * If the @p slot is called in response to a scroll, the scroll offset
+         * is multiplied with a factor configurable with
+         * @ref setScrollStepDistance() to get an equivalent of a pointer drag
+         * distance. You can specify a different horizontal and vertical value,
+         * if needed.
+         *
+         * The returned @ref DataHandle is automatically removed once @p node
+         * or any of its parents is removed, it's the caller responsibility to
+         * ensure it doesn't outlive the state captured in the @p slot. See
+         * @ref onDragOrScrollScoped() for a scoped alternative.
+         * @see @ref Ui-EventLayer-scroll
+         */
+        DataHandle onDragOrScroll(NodeHandle node, Containers::Function<void(const Vector2& relativePosition)>&& slot);
+        /** @overload */
+        DataHandle onDragOrScroll(NodeHandle node, Containers::Function<void(const Vector2& position, const Vector2& relativePosition)>&& slot);
+
+        /**
+         * @brief Scoped connection to a drag or scroll
+         *
+         * Compared to @ref onDragOrScroll() the connection is removed automatically
+         * when the returned @ref EventConnection gets destroyed.
+         * @see @ref Ui-EventLayer-create
+         */
+        EventConnection onDragOrScrollScoped(NodeHandle node, Containers::Function<void(const Vector2& relativePosition)>&& slot) {
+            return EventConnection{*this, onDragOrScroll(node, Utility::move(slot))};
+        }
+        /** @overload */
+        EventConnection onDragOrScrollScoped(NodeHandle node, Containers::Function<void(const Vector2& position, const Vector2& relativePosition)>&& slot) {
+            return EventConnection{*this, onDragOrScroll(node, Utility::move(slot))};
         }
 
         /**

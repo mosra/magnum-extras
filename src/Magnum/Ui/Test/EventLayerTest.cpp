@@ -239,6 +239,28 @@ const struct {
             ScrollEvent event{{}, {}};
             layer.scrollEvent(dataId, event);
         }},
+    {_cn("onDragOrScroll with a drag", onDragOrScroll, const Vector2&),
+        [](EventLayer& layer, UnsignedInt dataId) {
+            PointerMoveEvent event{{}, PointerEventSource::Mouse, {}, Pointer::MouseLeft, true, 0};
+            event.setCaptured(true); /* only captured events are considered */
+            layer.pointerMoveEvent(dataId, event);
+        }},
+    {_cn("onDragOrScroll with a drag and a position", onDragOrScroll, const Vector2&, const Vector2&),
+        [](EventLayer& layer, UnsignedInt dataId) {
+            PointerMoveEvent event{{}, PointerEventSource::Mouse, {}, Pointer::MouseLeft, true, 0};
+            event.setCaptured(true); /* only captured events are considered */
+            layer.pointerMoveEvent(dataId, event);
+        }},
+    {_cn("onDragOrScroll with a scroll", onDragOrScroll, const Vector2&),
+        [](EventLayer& layer, UnsignedInt dataId) {
+            ScrollEvent event{{}, {}};
+            layer.scrollEvent(dataId, event);
+        }},
+    {_cn("onDragOrScroll with a scroll and a position", onDragOrScroll, const Vector2&, const Vector2&),
+        [](EventLayer& layer, UnsignedInt dataId) {
+            ScrollEvent event{{}, {}};
+            layer.scrollEvent(dataId, event);
+        }},
     {_c(onPinch, const Vector2&, const Vector2&, const Complex&, Float),
         [](EventLayer& layer, UnsignedInt dataId) {
             /* Is triggered only if at least a primary + secondary finger is
@@ -285,10 +307,66 @@ const struct {
 
 const struct {
     const char* name;
-    bool positionCallback;
-} DragFromUserInterfaceFallthroughThresholdData[]{
+    bool dragOrScroll;
+} DragData[]{
     {"", false},
-    {"with position callback", true}
+    {"drag or scroll", true},
+};
+
+const struct {
+    const char* name;
+    NodeFlags flags;
+    bool parent;
+    bool dragOrScroll;
+} DragFromUserInterfaceData[]{
+    {"with a node below", {}, false, false},
+    {"with a fallthrough parent node",
+        NodeFlag::FallthroughPointerEvents, true, false},
+    {"drag or scroll, with a node below", {}, false, true},
+    {"drag or scroll, with a fallthrough parent node",
+        NodeFlag::FallthroughPointerEvents, true, true}
+};
+
+const struct {
+    const char* name;
+    bool positionCallback;
+    bool dragOrScroll;
+} DragFromUserInterfaceFallthroughThresholdData[]{
+    {"", false, false},
+    {"with position callback", true, false},
+    {"drag or scroll", false, true},
+    {"drag or scroll, with position callback", true, true}
+};
+
+const struct {
+    const char* name;
+    bool dragOrScroll;
+    Containers::Optional<Vector2> scrollStepDistance;
+    Vector2 offsetMultiplier;
+} ScrollData[]{
+    {"", false, {}, Vector2{1.0f}},
+    {"drag or scroll", true, {}, Vector2{100.0f}},
+    {"drag or scroll, custom step distance", true, Vector2{50.0f, 200.0f}, {50.0f, 200.0f}},
+};
+
+const struct {
+    const char* name;
+    NodeFlags flags;
+    bool parent;
+    bool dragOrScroll;
+    Containers::Optional<Vector2> scrollStepDistance;
+    Vector2 offsetMultiplier;
+} ScrollFromUserInterfaceData[]{
+    {"with a node below",
+        {}, false, false, {}, Vector2{1.0f}},
+    {"with a fallthrough parent node",
+        NodeFlag::FallthroughPointerEvents, true, false, {}, Vector2{1.0f}},
+    {"drag or scroll, with a node below",
+        {}, false, true, {}, Vector2{100.0f}},
+    {"drag or scroll, with a fallthrough parent node",
+        NodeFlag::FallthroughPointerEvents, true, true, {}, Vector2{100.0f}},
+    {"drag or scroll, custom step distance",
+        {}, false, true, Vector2{50.0f, 200.0f}, {50.0f, 200.0f}},
 };
 
 const struct {
@@ -364,21 +442,23 @@ EventLayerTest::EventLayerTest() {
     addInstancedTests({&EventLayerTest::tapOrClickMiddleClickRightClickEdges},
         Containers::arraySize(TapOrClickMiddleClickRightClickEdgesData));
 
-    addTests({&EventLayerTest::drag,
-              &EventLayerTest::dragPress});
+    addInstancedTests({&EventLayerTest::drag,
+                       &EventLayerTest::dragPress},
+        Containers::arraySize(DragData));
 
     addInstancedTests({&EventLayerTest::dragFromUserInterface},
-        Containers::arraySize(FromUserInterfaceData));
+        Containers::arraySize(DragFromUserInterfaceData));
 
     addInstancedTests({&EventLayerTest::dragFromUserInterfaceFallthroughThreshold},
         Containers::arraySize(DragFromUserInterfaceFallthroughThresholdData));
 
-    addTests({&EventLayerTest::dragFromUserInterfaceFallthroughThresholdMultipleHandlers,
+    addTests({&EventLayerTest::dragFromUserInterfaceFallthroughThresholdMultipleHandlers});
 
-              &EventLayerTest::scroll});
+    addInstancedTests({&EventLayerTest::scroll},
+        Containers::arraySize(ScrollData));
 
     addInstancedTests({&EventLayerTest::scrollFromUserInterface},
-        Containers::arraySize(FromUserInterfaceData));
+        Containers::arraySize(ScrollFromUserInterfaceData));
 
     addTests({&EventLayerTest::pinch,
               &EventLayerTest::pinchReset,
@@ -517,6 +597,7 @@ void EventLayerTest::construct() {
     CORRADE_COMPARE(layer.usedScopedConnectionCount(), 0);
     CORRADE_COMPARE(layer.usedAllocatedConnectionCount(), 0);
     CORRADE_COMPARE(layer.dragThreshold(), 16.0f);
+    CORRADE_COMPARE(layer.scrollStepDistance(), Vector2{100.0f});
 }
 
 void EventLayerTest::constructCopy() {
@@ -2015,14 +2096,20 @@ void EventLayerTest::tapOrClickMiddleClickRightClickEdges() {
 }
 
 void EventLayerTest::drag() {
+    auto&& data = DragData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
     EventLayer layer{layerHandle(0, 1)};
 
     Int called = 0;
     Vector2 calledRelativePosition;
-    DataHandle handle = layer.onDrag(nodeHandle(0, 1), [&called, &calledRelativePosition](const Vector2& relativePosition) {
+    auto slot = [&called, &calledRelativePosition](const Vector2& relativePosition) {
         ++called;
         calledRelativePosition += relativePosition;
-    });
+    };
+    DataHandle handle = data.dragOrScroll ?
+        layer.onDragOrScroll(nodeHandle(0, 1), slot) :
+        layer.onDrag(nodeHandle(0, 1), slot);
 
     /* Should only get fired for a move with mouse left, *primary* finger or
        pen present among pointers() and only if the event is captured (i.e.,
@@ -2097,10 +2184,6 @@ void EventLayerTest::drag() {
         layer.pointerLeaveEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 3);
     } {
-        ScrollEvent event{{}, {}};
-        layer.scrollEvent(dataHandleId(handle), event);
-        CORRADE_COMPARE(called, 3);
-    } {
         FocusEvent event{{}};
         layer.focusEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 3);
@@ -2109,15 +2192,28 @@ void EventLayerTest::drag() {
         layer.blurEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 3);
     }
+
+    /* Though this fires for a scroll event if this is onDragOrScroll() */
+    if(!data.dragOrScroll) {
+        ScrollEvent event{{}, {}};
+        layer.scrollEvent(dataHandleId(handle), event);
+        CORRADE_COMPARE(called, 3);
+    }
 }
 
 void EventLayerTest::dragPress() {
+    auto&& data = DragData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
     EventLayer layer{layerHandle(0, 1)};
 
     Int called = 0;
-    DataHandle handle = layer.onDrag(nodeHandle(0, 1), [&called](const Vector2&) {
+    auto slot = [&called](const Vector2&) {
         ++called;
-    });
+    };
+    DataHandle handle = data.dragOrScroll ?
+        layer.onDragOrScroll(nodeHandle(0, 1), slot) :
+        layer.onDrag(nodeHandle(0, 1), slot);
 
     /* The press event should get accepted for *captured* mouse left, *primary*
        finger or pen to prevent it from being propagated further if no other
@@ -2191,11 +2287,6 @@ void EventLayerTest::dragPress() {
         CORRADE_VERIFY(!event.isAccepted());
         CORRADE_COMPARE(called, 0);
     } {
-        ScrollEvent event{{}, {}};
-        layer.scrollEvent(dataHandleId(handle), event);
-        CORRADE_VERIFY(!event.isAccepted());
-        CORRADE_COMPARE(called, 0);
-    } {
         FocusEvent event{{}};
         layer.focusEvent(dataHandleId(handle), event);
         CORRADE_VERIFY(!event.isAccepted());
@@ -2205,10 +2296,19 @@ void EventLayerTest::dragPress() {
         layer.blurEvent(dataHandleId(handle), event);
         CORRADE_VERIFY(!event.isAccepted());
         CORRADE_COMPARE(called, 0);
+    }
+
+    /* Though this fires for a scroll event if this is onDragOrScroll() */
+    if(!data.dragOrScroll) {
+        ScrollEvent event{{}, {}};
+        layer.scrollEvent(dataHandleId(handle), event);
+        CORRADE_VERIFY(!event.isAccepted());
+        CORRADE_COMPARE(called, 0);
+    }
 
     /* Verify that the callback is actually properly registered so this doesn't
        result in false positives */
-    } {
+    {
         PointerMoveEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, Pointer::MouseLeft, true, 0};
         event.setCaptured(true);
         layer.pointerMoveEvent(dataHandleId(handle), event);
@@ -2218,7 +2318,7 @@ void EventLayerTest::dragPress() {
 }
 
 void EventLayerTest::dragFromUserInterface() {
-    auto&& data = FromUserInterfaceData[testCaseInstanceId()];
+    auto&& data = DragFromUserInterfaceData[testCaseInstanceId()];
     setTestCaseDescription(data.name);
 
     /* "Integration" test to verify onDrag() behavior with the whole event
@@ -2240,16 +2340,24 @@ void EventLayerTest::dragFromUserInterface() {
         data.parent ? nodeBelow : NodeHandle::Null,
         {25, 50}, {50, 25});
 
-    Int called = 0, positionCalled = 0;
-    layer.onDrag(node, [&called](const Vector2& relativePosition) {
+    Int called = 0;
+    auto slot = [&called](const Vector2& relativePosition) {
         CORRADE_COMPARE(relativePosition, (Vector2{-5.0f, -10.0f}));
         ++called;
-    });
-    layer.onDrag(node, [&positionCalled](const Vector2& position, const Vector2& relativePosition) {
+    };
+    data.dragOrScroll ?
+        layer.onDragOrScroll(node, slot) :
+        layer.onDrag(node, slot);
+
+    Int positionCalled = 0;
+    auto positionSlot = [&positionCalled](const Vector2& position, const Vector2& relativePosition) {
         CORRADE_COMPARE(position, (Vector2{20.0f, 5.0f}));
         CORRADE_COMPARE(relativePosition, (Vector2{-5.0f, -10.0f}));
         ++positionCalled;
-    });
+    };
+    data.dragOrScroll ?
+        layer.onDragOrScroll(node, positionSlot) :
+        layer.onDrag(node, positionSlot);
 
     /* A move alone with a button pressed but no captured node shouldn't be
        accepted because it means it originates outside of the UI, and such
@@ -2323,14 +2431,21 @@ void EventLayerTest::dragFromUserInterfaceFallthroughThreshold() {
     /** @todo once it's possible to have multiple fallback onDrag handlers for
         the same node, add them both instead of having an instanced test
         case */
-    if(data.positionCallback)
-        layer.onDrag(nodeBelow, [&belowCalled](const Vector2&, const Vector2& relativePosition) {
+    if(data.positionCallback) {
+        auto slot = [&belowCalled](const Vector2&, const Vector2& relativePosition) {
             belowCalled += relativePosition;
-        });
-    else
-        layer.onDrag(nodeBelow, [&belowCalled](const Vector2& relativePosition) {
+        };
+        data.dragOrScroll ?
+            layer.onDragOrScroll(nodeBelow, slot) :
+            layer.onDrag(nodeBelow, slot);
+    } else {
+        auto slot = [&belowCalled](const Vector2& relativePosition) {
             belowCalled += relativePosition;
-        });
+        };
+        data.dragOrScroll ?
+            layer.onDragOrScroll(nodeBelow, slot) :
+            layer.onDrag(nodeBelow, slot);
+    }
 
     Int betweenCalled = 0;
     NodeHandle nodeBetween = ui.createNode(nodeBelow, {}, {100, 100});
@@ -2495,14 +2610,28 @@ void EventLayerTest::dragFromUserInterfaceFallthroughThresholdMultipleHandlers()
 }
 
 void EventLayerTest::scroll() {
+    auto&& data = ScrollData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
     EventLayer layer{layerHandle(0, 1)};
+    CORRADE_COMPARE(layer.scrollStepDistance(), Vector2{100.0f});
+
+    if(data.scrollStepDistance) {
+        layer.setScrollStepDistance(*data.scrollStepDistance);
+        CORRADE_COMPARE(layer.scrollStepDistance(), data.scrollStepDistance);
+    }
 
     Int called = 0;
     Vector2 calledOffset;
-    DataHandle handle = layer.onScroll(nodeHandle(0, 1), [&called, &calledOffset](const Vector2& offset) {
-        ++called;
-        calledOffset += offset;
-    });
+    DataHandle handle = data.dragOrScroll ?
+        layer.onDragOrScroll(nodeHandle(0, 1), [&called, &calledOffset, &data](const Vector2& offset) {
+            ++called;
+            calledOffset += offset/data.offsetMultiplier;
+        }) :
+        layer.onScroll(nodeHandle(0, 1), [&called, &calledOffset](const Vector2& offset) {
+            ++called;
+            calledOffset += offset;
+        });
 
     /* Should only get fired for a scroll */
     {
@@ -2522,6 +2651,8 @@ void EventLayerTest::scroll() {
         CORRADE_COMPARE(called, 1);
     } {
         PointerMoveEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, Pointer::MouseLeft, true, 0};
+        /* For this one it does only if onDragOrScroll is used *and* it's
+           captured, tested in drag() instead */
         layer.pointerMoveEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 1);
     } {
@@ -2544,7 +2675,7 @@ void EventLayerTest::scroll() {
 }
 
 void EventLayerTest::scrollFromUserInterface() {
-    auto&& data = FromUserInterfaceData[testCaseInstanceId()];
+    auto&& data = ScrollFromUserInterfaceData[testCaseInstanceId()];
     setTestCaseDescription(data.name);
 
     /* "Integration" test to verify onScroll() behavior with the whole event
@@ -2553,6 +2684,8 @@ void EventLayerTest::scrollFromUserInterface() {
     AbstractUserInterface ui{{100, 100}};
 
     EventLayer& layer = ui.setLayerInstance(Containers::pointer<EventLayer>(ui.createLayer()));
+    if(data.scrollStepDistance)
+        layer.setScrollStepDistance(*data.scrollStepDistance);
 
     /* A node below the one that should react to the scroll event, accepting
        scroll as well. Shouldn't get considered at all. */
@@ -2562,19 +2695,33 @@ void EventLayerTest::scrollFromUserInterface() {
         ++belowCalled;
     });
 
-    Int called = 0, positionCalled = 0;
     NodeHandle node = ui.createNode(
         data.parent ? nodeBelow : NodeHandle::Null,
         {25, 50}, {50, 25});
-    layer.onScroll(node, [&called](const Vector2& offset){
-        CORRADE_COMPARE(offset, (Vector2{2.3f, -4.7f}));
-        ++called;
-    });
-    layer.onScroll(node, [&positionCalled](const Vector2& position, const Vector2& offset) {
-        CORRADE_COMPARE(position, (Vector2{25.0f, 15.0f}));
-        CORRADE_COMPARE(offset, (Vector2{2.3f, -4.7f}));
-        ++positionCalled;
-    });
+
+    Int called = 0;
+    data.dragOrScroll ?
+        layer.onDragOrScroll(node, [&called, &data](const Vector2& offset){
+            CORRADE_COMPARE(offset, (Vector2{2.3f, -4.7f}*data.offsetMultiplier));
+            ++called;
+        }) :
+            layer.onScroll(node, [&called](const Vector2& offset){
+            CORRADE_COMPARE(offset, (Vector2{2.3f, -4.7f}));
+            ++called;
+        });
+
+    Int positionCalled = 0;
+    data.dragOrScroll ?
+        layer.onDragOrScroll(node, [&positionCalled, &data](const Vector2& position, const Vector2& offset) {
+            CORRADE_COMPARE(position, (Vector2{25.0f, 15.0f}));
+            CORRADE_COMPARE(offset, (Vector2{2.3f, -4.7f}*data.offsetMultiplier));
+            ++positionCalled;
+        }) :
+        layer.onScroll(node, [&positionCalled](const Vector2& position, const Vector2& offset) {
+            CORRADE_COMPARE(position, (Vector2{25.0f, 15.0f}));
+            CORRADE_COMPARE(offset, (Vector2{2.3f, -4.7f}));
+            ++positionCalled;
+        });
 
     /* A scroll should be accepted and resulting in the handler being called */
     {

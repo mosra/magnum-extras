@@ -55,6 +55,7 @@ namespace Implementation {
         RightClick,
         Drag,
         Scroll,
+        DragOrScroll,
         Pinch
     };
 }
@@ -96,6 +97,8 @@ struct EventLayer::State {
        position, and the dragFallthroughData is reset back to ~UnsignedInt{} to
        indicate we're not waiting on any threshold anymore. */
     Vector2 dragFallthroughPosition;
+
+    Vector2 scrollStepDistance{100.0f};
 
     UnsignedInt usedScopedConnectionCount = 0;
 };
@@ -175,6 +178,15 @@ Float EventLayer::dragThreshold() const {
 
 EventLayer& EventLayer::setDragThreshold(const Float distance) {
     _state->dragThresholdSquared = distance*distance;
+    return *this;
+}
+
+Vector2 EventLayer::scrollStepDistance() const {
+    return _state->scrollStepDistance;
+}
+
+EventLayer& EventLayer::setScrollStepDistance(const Vector2& distance) {
+    _state->scrollStepDistance = distance;
     return *this;
 }
 
@@ -392,6 +404,32 @@ DataHandle EventLayer::onScroll(const NodeHandle node, Containers::Function<void
         })));
 }
 
+DataHandle EventLayer::onDragOrScroll(const NodeHandle node, Containers::Function<void(const Vector2&)>&& slot) {
+    return create(node, Implementation::EventType::DragOrScroll, Utility::move(slot),
+        reinterpret_cast<void(*)()>(
+            #ifndef CORRADE_MSVC2015_COMPATIBILITY
+            +
+            #else
+            static_cast<void(*)(Containers::FunctionData&, const Vector2&, const Vector2&)>
+            #endif
+        ([](Containers::FunctionData& slot, const Vector2&, const Vector2& offset) {
+            static_cast<Containers::Function<void(const Vector2&)>&>(slot)(offset);
+        })));
+}
+
+DataHandle EventLayer::onDragOrScroll(const NodeHandle node, Containers::Function<void(const Vector2&, const Vector2&)>&& slot) {
+    return create(node, Implementation::EventType::DragOrScroll, Utility::move(slot),
+        reinterpret_cast<void(*)()>(
+            #ifndef CORRADE_MSVC2015_COMPATIBILITY
+            +
+            #else
+            static_cast<void(*)(Containers::FunctionData&, const Vector2&, const Vector2&)>
+            #endif
+        ([](Containers::FunctionData& slot, const Vector2& position, const Vector2& offset) {
+            static_cast<Containers::Function<void(const Vector2&, const Vector2&)>&>(slot)(position, offset);
+        })));
+}
+
 DataHandle EventLayer::onPinch(const NodeHandle node, Containers::Function<void(const Vector2&, const Vector2&, const Complex&, Float)>&& slot) {
     return create(node, Implementation::EventType::Pinch, Utility::move(slot),
         reinterpret_cast<void(*)()>(
@@ -501,11 +539,13 @@ void EventLayer::doPointerPressEvent(const UnsignedInt dataId, PointerEvent& eve
     Data& data = state.data[dataId];
 
     /* Handle a *captured* *primary* press of appropriate pointers that precede
-       a drag. Since the move is then converted to a drag only if it's captured
-       as well, it doesn't make sense to accept non-captured presses here. */
-    if(data.eventType == Implementation::EventType::Drag &&
-        event.pointer() & (Pointer::MouseLeft|Pointer::Finger|Pointer::Pen) &&
-        event.isCaptured() && event.isPrimary())
+       a drag / drag or scroll. Since the move is then converted to a drag only
+       if it's captured as well, it doesn't make sense to accept non-captured
+       presses here. */
+    if((data.eventType == Implementation::EventType::Drag ||
+        data.eventType == Implementation::EventType::DragOrScroll) &&
+       event.pointer() & (Pointer::MouseLeft|Pointer::Finger|Pointer::Pen) &&
+       event.isCaptured() && event.isPrimary())
     {
         /* If it's a fallthrough event, remember its position but don't accept.
            We'll accept in doPointerMoveEvent() later if the distance moves
@@ -644,11 +684,12 @@ void EventLayer::doPointerMoveEvent(const UnsignedInt dataId, PointerMoveEvent& 
     State& state = *_state;
     Data& data = state.data[dataId];
 
-    /* Handle a fallthrough (captured and primary) drag */
-    if(data.eventType == Implementation::EventType::Drag &&
-        (event.pointers() & (Pointer::MouseLeft|Pointer::Finger|Pointer::Pen)) &&
-        event.isCaptured() && event.isPrimary() &&
-        event.isFallthrough()
+    /* Handle a fallthrough (captured and primary) drag / drag or scroll */
+    if((data.eventType == Implementation::EventType::Drag ||
+        data.eventType == Implementation::EventType::DragOrScroll) &&
+       (event.pointers() & (Pointer::MouseLeft|Pointer::Finger|Pointer::Pen)) &&
+       event.isCaptured() && event.isPrimary() &&
+       event.isFallthrough()
     ) {
         /* If the data ID matches the ID we remembered for the press (and thus
            the saved position is valid), check if the pointer moved since the
@@ -660,7 +701,11 @@ void EventLayer::doPointerMoveEvent(const UnsignedInt dataId, PointerMoveEvent& 
            yet, bail -- maybe next time it will be. */
         if(state.dragFallthroughData == dataId) {
             if((state.dragFallthroughPosition - event.position()).dot() >= state.dragThresholdSquared) {
-                reinterpret_cast<void(*)(Containers::FunctionData&, const PointerMoveEvent&, const Vector2&)>(data.call)(data.slot, event, event.position() - state.dragFallthroughPosition);
+                if(data.eventType == Implementation::EventType::Drag)
+                    reinterpret_cast<void(*)(Containers::FunctionData&, const PointerMoveEvent&, const Vector2&)>(data.call)(data.slot, event, event.position() - state.dragFallthroughPosition);
+                else if(data.eventType == Implementation::EventType::DragOrScroll)
+                    reinterpret_cast<void(*)(Containers::FunctionData&, const Vector2&, const Vector2&)>(data.call)(data.slot, event.position(), event.position() - state.dragFallthroughPosition);
+                else CORRADE_INTERNAL_ASSERT_UNREACHABLE(); /* LCOV_EXCL_LINE */
                 event.setAccepted();
             } else return;
         }
@@ -711,11 +756,16 @@ void EventLayer::doPointerMoveEvent(const UnsignedInt dataId, PointerMoveEvent& 
        from outside of the node, and also only if a pinch isn't recognized at
        the same time (for another data on the same node), in which case it'd be
        stupid to fire both */
-    if(data.eventType == Implementation::EventType::Drag &&
-        (event.pointers() & (Pointer::MouseLeft|Pointer::Finger|Pointer::Pen)) &&
-        event.isCaptured() && !state.twoFingerGesture)
+    if((data.eventType == Implementation::EventType::Drag ||
+        data.eventType == Implementation::EventType::DragOrScroll) &&
+       (event.pointers() & (Pointer::MouseLeft|Pointer::Finger|Pointer::Pen)) &&
+       event.isCaptured() && !state.twoFingerGesture)
     {
-        reinterpret_cast<void(*)(Containers::FunctionData&, const PointerMoveEvent&, const Vector2&)>(data.call)(data.slot, event, event.relativePosition());
+        if(data.eventType == Implementation::EventType::Drag)
+            reinterpret_cast<void(*)(Containers::FunctionData&, const PointerMoveEvent&, const Vector2&)>(data.call)(data.slot, event, event.relativePosition());
+        else if(data.eventType == Implementation::EventType::DragOrScroll)
+            reinterpret_cast<void(*)(Containers::FunctionData&, const Vector2&, const Vector2&)>(data.call)(data.slot, event.position(), event.relativePosition());
+        else CORRADE_INTERNAL_ASSERT_UNREACHABLE(); /* LCOV_EXCL_LINE */
         event.setAccepted();
     }
 
@@ -769,9 +819,14 @@ void EventLayer::doPointerCancelEvent(const UnsignedInt dataId, PointerCancelEve
 }
 
 void EventLayer::doScrollEvent(const UnsignedInt dataId, ScrollEvent& event) {
-    Data& data = _state->data[dataId];
+    State& state = *_state;
+    Data& data = state.data[dataId];
+
     if(data.eventType == Implementation::EventType::Scroll) {
         reinterpret_cast<void(*)(Containers::FunctionData&, const ScrollEvent&)>(data.call)(data.slot, event);
+        event.setAccepted();
+    } else if(data.eventType == Implementation::EventType::DragOrScroll) {
+        reinterpret_cast<void(*)(Containers::FunctionData&, const Vector2&, const Vector2&)>(data.call)(data.slot, event.position(), event.offset()*state.scrollStepDistance);
         event.setAccepted();
     }
 }
