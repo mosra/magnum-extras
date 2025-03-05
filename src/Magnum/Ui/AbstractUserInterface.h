@@ -93,14 +93,14 @@ enum class UserInterfaceState: UnsignedShort {
 
     /**
      * @ref AbstractUserInterface::update() needs to be called to refresh the
-     * enabled node set after node flags changed. Set implicitly after every
+     * set of nodes that can be affected by certain events after node flags
+     * changed. Set implicitly after every
      * @relativeref{AbstractUserInterface,setNodeFlags()},
      * @relativeref{AbstractUserInterface,addNodeFlags()} and
      * @relativeref{AbstractUserInterface,clearNodeFlags()} that changes the
-     * presence of the @ref NodeFlag::NoEvents, @ref NodeFlag::Disabled or
-     * @ref NodeFlag::Focusable flag; is reset next time
-     * @ref AbstractUserInterface::update() is called. Implies
-     * @ref UserInterfaceState::NeedsDataAttachmentUpdate. Implied by
+     * presence of the @ref NodeFlag::NoBlur flag; is reset next time
+     * @ref AbstractUserInterface::update() is called. Implied by
+     * @relativeref{UserInterfaceState,NeedsNodeEnabledUpdate},
      * @relativeref{UserInterfaceState,NeedsNodeClipUpdate},
      * @relativeref{UserInterfaceState,NeedsLayoutUpdate},
      * @relativeref{UserInterfaceState,NeedsLayoutAssignmentUpdate},
@@ -108,7 +108,27 @@ enum class UserInterfaceState: UnsignedShort {
      * @relativeref{UserInterfaceState,NeedsNodeClean}, so it's also set by
      * everything that sets those flags.
      */
-    NeedsNodeEnabledUpdate = NeedsDataAttachmentUpdate|(1 << 2),
+    NeedsNodeEventMaskUpdate = 1 << 2,
+
+    /**
+     * @ref AbstractUserInterface::update() needs to be called to refresh the
+     * enabled node set after node flags changed. Set implicitly after every
+     * @relativeref{AbstractUserInterface,setNodeFlags()},
+     * @relativeref{AbstractUserInterface,addNodeFlags()} and
+     * @relativeref{AbstractUserInterface,clearNodeFlags()} that changes the
+     * presence of the @ref NodeFlag::NoEvents, @ref NodeFlag::Disabled or
+     * @ref NodeFlag::Focusable flag; is reset next time
+     * @ref AbstractUserInterface::update() is called. Implies
+     * @ref UserInterfaceState::NeedsNodeEventMaskUpdate and
+     * @relativeref{UserInterfaceState,NeedsDataAttachmentUpdate}. Implied by
+     * @relativeref{UserInterfaceState,NeedsNodeClipUpdate},
+     * @relativeref{UserInterfaceState,NeedsLayoutUpdate},
+     * @relativeref{UserInterfaceState,NeedsLayoutAssignmentUpdate},
+     * @relativeref{UserInterfaceState,NeedsNodeUpdate} and
+     * @relativeref{UserInterfaceState,NeedsNodeClean}, so it's also set by
+     * everything that sets those flags.
+     */
+    NeedsNodeEnabledUpdate = NeedsNodeEventMaskUpdate|NeedsDataAttachmentUpdate|(1 << 3),
 
     /**
      * @ref AbstractUserInterface::update() needs to be called to refresh the
@@ -128,7 +148,7 @@ enum class UserInterfaceState: UnsignedShort {
      * @relativeref{UserInterfaceState,NeedsNodeClean}, so it's also set by
      * everything that sets those flags.
      */
-    NeedsNodeClipUpdate = NeedsNodeEnabledUpdate|(1 << 3),
+    NeedsNodeClipUpdate = NeedsNodeEnabledUpdate|(1 << 4),
 
     /**
      * @ref AbstractUserInterface::update() needs to be called to refresh the
@@ -144,7 +164,7 @@ enum class UserInterfaceState: UnsignedShort {
      * @relativeref{UserInterfaceState,NeedsNodeClean}, so it's also set by
      * everything that sets those flags.
      */
-    NeedsLayoutUpdate = NeedsNodeClipUpdate|(1 << 4),
+    NeedsLayoutUpdate = NeedsNodeClipUpdate|(1 << 5),
 
     /**
      * @ref AbstractUserInterface::update() needs to be called to refresh the
@@ -159,7 +179,7 @@ enum class UserInterfaceState: UnsignedShort {
      * @relativeref{UserInterfaceState,NeedsNodeClean}, so it's also set by
      * everything that sets those flags.
      */
-    NeedsLayoutAssignmentUpdate = NeedsLayoutUpdate|(1 << 5),
+    NeedsLayoutAssignmentUpdate = NeedsLayoutUpdate|(1 << 6),
 
     /**
      * @ref AbstractUserInterface::update() needs to be called to refresh the
@@ -171,7 +191,7 @@ enum class UserInterfaceState: UnsignedShort {
      * @relativeref{UserInterfaceState,NeedsNodeClean}, so it's also set by
      * everything that sets those flags.
      */
-    NeedsNodeOpacityUpdate = NeedsDataUpdate|(1 << 6),
+    NeedsNodeOpacityUpdate = NeedsDataUpdate|(1 << 7),
 
     /**
      * @ref AbstractUserInterface::update() needs to be called to refresh the
@@ -190,7 +210,7 @@ enum class UserInterfaceState: UnsignedShort {
      * @relativeref{UserInterfaceState,NeedsNodeClean}, so it's also set by
      * everything that sets that flag.
      */
-    NeedsNodeUpdate = NeedsLayoutAssignmentUpdate|NeedsNodeOpacityUpdate|(1 << 7),
+    NeedsNodeUpdate = NeedsLayoutAssignmentUpdate|NeedsNodeOpacityUpdate|(1 << 8),
 
     /**
      * @ref AbstractUserInterface::clean() needs to be called to prune
@@ -200,7 +220,7 @@ enum class UserInterfaceState: UnsignedShort {
      * @ref AbstractUserInterface::clean() is called. Implied by
      * @ref UserInterfaceState::NeedsNodeClean.
      */
-    NeedsDataClean = 1 << 8,
+    NeedsDataClean = 1 << 9,
 
     /**
      * @ref AbstractUserInterface::clean() needs to be called to prune child
@@ -212,7 +232,7 @@ enum class UserInterfaceState: UnsignedShort {
      * @ref UserInterfaceState::NeedsNodeUpdate and
      * @relativeref{UserInterfaceState,NeedsDataClean}.
      */
-    NeedsNodeClean = NeedsNodeUpdate|NeedsDataClean|(1 << 9),
+    NeedsNodeClean = NeedsNodeUpdate|NeedsDataClean|(1 << 10),
 
     /**
      * @ref AbstractUserInterface::advanceAnimations() needs to be called to
@@ -222,7 +242,7 @@ enum class UserInterfaceState: UnsignedShort {
      * animations are @ref AnimationState::Scheduled,
      * @ref AnimationState::Playing or @ref AnimationState::Paused anymore.
      */
-    NeedsAnimationAdvance = 1 << 10,
+    NeedsAnimationAdvance = 1 << 11,
 };
 
 /**
@@ -682,11 +702,15 @@ pointer position. Only nodes that are marked with @ref NodeFlag::Focusable can
 be focused. Focus is then activated either by a pointer press on given node, or
 programmatically by passing given node handle to @ref focusEvent(). Then
 @ref keyPressEvent(), @ref keyReleaseEvent() as well as @ref textInputEvent()
-are all directed to that node with no propagation anywhere else. The node is
-then *blurred* by a pointer press outside of its area, or programmatically by
-passing @ref NodeHandle::Null to @ref focusEvent(), after which key events
-again go only to the node under cursor and @ref textInputEvent() is ignored
-completely, returning @cpp false @ce always.
+are all directed to that node with no propagation anywhere else.
+
+The node is then *blurred* by a pointer press outside of its area, or
+programmatically by passing @ref NodeHandle::Null to @ref focusEvent(), after
+which key events again go only to the node under cursor and
+@ref textInputEvent() is ignored completely, returning @cpp false @ce always.
+This behavior can be further tuned using @ref NodeFlag::NoBlur, where press on
+such a node or its children will *not* cause the current focus to get lost,
+which is useful for example when implementing virtual keyboards.
 
 Information about whether a node the event is called on is focused is available
 via @ref KeyEvent::isNodeFocused() and similarly on other event classes. For
@@ -1888,7 +1912,9 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
          * be set. If @ref NodeFlag::NoEvents, @ref NodeFlag::Disabled or
          * @ref NodeFlag::Focusable was added or cleared by calling this
          * function, it causes @ref UserInterfaceState::NeedsNodeEnabledUpdate
-         * to be set.
+         * to be set. If @ref NodeFlag::NoBlur was added or cleared by calling
+         * this function, it causes
+         * @ref UserInterfaceState::NeedsNodeEventMaskUpdate to be set.
          * @see @ref isHandleValid(NodeHandle) const, @ref addNodeFlags(),
          *      @ref clearNodeFlags()
          */

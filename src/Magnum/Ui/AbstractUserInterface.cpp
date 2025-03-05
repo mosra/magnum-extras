@@ -64,6 +64,7 @@ Debug& operator<<(Debug& debug, const UserInterfaceState value) {
         #define _c(value) case UserInterfaceState::value: return debug << "::" #value;
         _c(NeedsDataUpdate)
         _c(NeedsDataAttachmentUpdate)
+        _c(NeedsNodeEventMaskUpdate)
         _c(NeedsNodeEnabledUpdate)
         _c(NeedsNodeClipUpdate)
         _c(NeedsLayoutUpdate)
@@ -103,6 +104,8 @@ Debug& operator<<(Debug& debug, const UserInterfaceStates value) {
         UserInterfaceState::NeedsNodeClipUpdate,
         /* Implied by NeedsNodeClipUpdate, has to be after */
         UserInterfaceState::NeedsNodeEnabledUpdate,
+        /* Implied by NeedsNodeEnabledUpdate, has to be after */
+        UserInterfaceState::NeedsNodeEventMaskUpdate,
         /* Implied by NeedsNodeEnabledUpdate, has to be after */
         UserInterfaceState::NeedsDataAttachmentUpdate,
         /* Implied by NeedsDataAttachmentUpdate, has to be after */
@@ -565,6 +568,7 @@ struct AbstractUserInterface::State {
     Containers::MutableBitArrayView visibleNodeMask;
     Containers::MutableBitArrayView visibleEventNodeMask;
     Containers::MutableBitArrayView visibleEnabledNodeMask;
+    Containers::MutableBitArrayView visibleBlurNodeMask;
     Containers::ArrayView<Vector2> clipRectOffsets;
     Containers::ArrayView<Vector2> clipRectSizes;
     Containers::ArrayView<UnsignedInt> clipRectNodeCounts;
@@ -1791,6 +1795,11 @@ void AbstractUserInterface::setNodeFlagsInternal(const UnsignedInt id, const Nod
         NeedsDataUpdate or anything else is set afterwards */
     if((state.nodes[id].used.flags & (NodeFlag::NoEvents|NodeFlag::Disabled|NodeFlag::Focusable)) != (flags & (NodeFlag::NoEvents|NodeFlag::Disabled|NodeFlag::Focusable)))
         state.state |= UserInterfaceState::NeedsNodeEnabledUpdate;
+    /* Unlike NoEvents, Disabled or Focusable this doesn't affect current state
+       in any way, only changes how future events behave, so it's a separate
+       state flag */
+    if((state.nodes[id].used.flags & NodeFlag::NoBlur) != (flags & NodeFlag::NoBlur))
+        state.state |= UserInterfaceState::NeedsNodeEventMaskUpdate;
     state.nodes[id].used.flags = flags;
 }
 
@@ -2687,6 +2696,7 @@ AbstractUserInterface& AbstractUserInterface::update() {
             {NoInit, state.nodes.size(), state.visibleNodeMask},
             {NoInit, state.nodes.size(), state.visibleEventNodeMask},
             {NoInit, state.nodes.size(), state.visibleEnabledNodeMask},
+            {NoInit, state.nodes.size(), state.visibleBlurNodeMask},
             {NoInit, state.nodes.size(), state.clipRectOffsets},
             {NoInit, state.nodes.size(), state.clipRectSizes},
             {NoInit, state.nodes.size(), state.clipRectNodeCounts},
@@ -2920,6 +2930,22 @@ AbstractUserInterface& AbstractUserInterface::update() {
             state.visibleNodeIds,
             state.visibleNodeChildrenCounts,
             state.visibleEnabledNodeMask);
+    }
+    /* If no node event mask state update is needed, the
+       `state.visibleBlurNodeMask` is up-to-date. This is separate from the
+       above because it doesn't imply NeedsDataAttachmentUpdate. */
+    if(states >= UserInterfaceState::NeedsNodeEventMaskUpdate) {
+        /** @todo copy() for a BitArrayView, finally */
+        CORRADE_INTERNAL_ASSERT(state.visibleBlurNodeMask.offset() == 0);
+        const std::size_t sizeWholeBytes = (state.visibleNodeMask.size() + 7)/8;
+        Utility::copy(
+            Containers::arrayView(state.visibleNodeMask.data(), sizeWholeBytes),
+            Containers::arrayView(state.visibleBlurNodeMask.data(), sizeWholeBytes));
+        Implementation::propagateNodeFlagToChildrenInto<NodeFlag::NoBlur>(
+            stridedArrayView(state.nodes).slice(&Node::used).slice(&Node::Used::flags),
+            state.visibleNodeIds,
+            state.visibleNodeChildrenCounts,
+            state.visibleBlurNodeMask);
     }
 
     /* If no data attachment update is needed, the data in
@@ -3840,17 +3866,21 @@ bool AbstractUserInterface::pointerPressEvent(const Vector2& globalPosition, Poi
        with focus. With other pointer types and secondary events nothing gets
        focused  but also they don't blur anything. */
     if(event.isPrimary() && (event.pointer() & (Pointer::MouseLeft|Pointer::Finger|Pointer::Pen))) {
-        /* Call a focus event if the press was accepted and on a node that's
-           focusable */
+        /* We'll call a focus event if the press was accepted and on a node
+           that's focusable */
         const NodeHandle nodeToFocus =
             pressAcceptedByAnyData &&
             state.nodes[nodeHandleId(calledNode)].used.flags >= NodeFlag::Focusable &&
             state.visibleEventNodeMask[nodeHandleId(calledNode)] ?
                 calledNode : NodeHandle::Null;
 
-        /* If the node to be focused is different from the currently focused
-           one, call a blur event on the original, if there's any. */
-        if(nodeToFocus != state.currentFocusedNode && state.currentFocusedNode != NodeHandle::Null) {
+        /* If there's a node to be focused, or the press was on a node that
+           isn't NoBlur, or the press wasn't accepted by any node, and the node
+           to be focused is different from the currently focused node, call a
+           blur event on the original, if there's any. */
+        if((nodeToFocus != NodeHandle::Null || !pressAcceptedByAnyData || state.visibleBlurNodeMask[nodeHandleId(calledNode)]) &&
+           (nodeToFocus != state.currentFocusedNode && state.currentFocusedNode != NodeHandle::Null)
+        ) {
             FocusEvent blurEvent{event.time()};
             callFocusEventOnNode<&AbstractLayer::blurEvent>(state.currentFocusedNode, blurEvent);
         }
@@ -3863,13 +3893,20 @@ bool AbstractUserInterface::pointerPressEvent(const Vector2& globalPosition, Poi
             if(callFocusEventOnNode<&AbstractLayer::focusEvent>(nodeToFocus, focusEvent))
                 state.currentFocusedNode = nodeToFocus;
             else {
+                /** @todo call blur and reset currentFocusedNode only if the
+                    calledNode isn't NoBlur as well? any real use case for
+                    that? */
                 /* If the unaccepted focus event happened on an already focused
                    node, call a blur event for it. */
                 if(state.currentFocusedNode == nodeToFocus)
                     callFocusEventOnNode<&AbstractLayer::blurEvent>(state.currentFocusedNode, focusEvent);
                 state.currentFocusedNode = NodeHandle::Null;
             }
-        } else state.currentFocusedNode = NodeHandle::Null;
+        /* If there's no node to focus, the currently focused node gets reset,
+           together with the blur event called above, only if the press wasn't
+           accepted on a NoBlur node */
+        } else if(!pressAcceptedByAnyData || state.visibleBlurNodeMask[nodeHandleId(calledNode)])
+            state.currentFocusedNode = NodeHandle::Null;
     }
 
     /* Fire fallthrough events on all parent nodes that have

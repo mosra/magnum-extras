@@ -189,7 +189,7 @@ std::size_t visibleTopLevelNodeIndicesInto(const Containers::StridedArrayView1D<
 /* The `visibleNodeIds` and `visibleNodeChildrenCounts` are outputs of
    orderVisibleNodesDepthFirstInto() above. The `mask` bits get set to 1 for
    all nodes that have a particular NodeFlag set, or any of their parents has it
-   set. To be used for NodeFlag::NoEvent and Disabled.
+   set. To be used for NodeFlag::NoEvent, Disabled and NoBlur.
 
    Only ever resets bits, never sets -- assumes the mask is initially set to
    1s (for example for visible and not culled nodes), and the operation results

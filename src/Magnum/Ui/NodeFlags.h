@@ -130,13 +130,27 @@ enum class NodeFlag: UnsignedByte {
      * a primary pointer press or programmatically via
      * @ref AbstractUserInterface::focusEvent(). If @ref NodeFlag::NoEvents or
      * @ref NodeFlag::Disabled is set on the same node or any of its parents,
-     * this flag is ignored.
+     * this flag is ignored. If @ref NodeFlag::NoBlur is set on the same node
+     * or any of its parents, this flag gets a precedence.
      *
      * Changing this flag causes
      * @ref UserInterfaceState::NeedsNodeEnabledUpdate to be set.
-     * @see @ref Ui-AbstractUserInterface-events-focus
+     * @see @ref Ui-AbstractUserInterface-events-focus, @ref NodeFlag::NoBlur
      */
     Focusable = 1 << 5,
+
+    /**
+     * By default, a primary pointer press on a node that is different from the
+     * currently focused node blurs it. This flag disables that behavior on
+     * given node and all nested nodes, which is useful for example with
+     * virtual keyboards, where pressing on a key shouldn't cause the input
+     * field to lose focus. If @ref NodeFlag::Focusable is set on a node
+     * affected by this flag, this flag is ignored.
+     *
+     * Changing this flag causes
+     * @ref UserInterfaceState::NeedsNodeEventMaskUpdate to be set.
+     */
+    NoBlur = 1 << 6
 };
 
 /**

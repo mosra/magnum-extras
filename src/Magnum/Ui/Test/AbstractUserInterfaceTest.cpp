@@ -223,6 +223,8 @@ struct AbstractUserInterfaceTest: TestSuite::Tester {
     void eventFocusBlurByPointerPress();
     void eventFocusBlurByPointerPressNotAccepted();
     void eventFocusBlurByPointerPressNodeDisabledNoEvents();
+    void eventFocusBlurByPointerPressNoBlur();
+    void eventFocusBlurByPointerPressNodeBecomesNoBlur();
 
     void eventKeyPressRelease();
     void eventTextInput();
@@ -944,6 +946,22 @@ const struct {
         UserInterfaceState::NeedsNodeEnabledUpdate},
 };
 
+const struct {
+    const char* name;
+    bool parentNode;
+    bool update;
+    UserInterfaceStates expectedState;
+} EventFocusBlurByPointerPressNodeBecomesNoBlurData[]{
+    {"", false, false,
+        UserInterfaceState::NeedsNodeUpdate},
+    {"update before", false, true,
+        UserInterfaceState::NeedsNodeEventMaskUpdate},
+    {"on parent node", true, false,
+        UserInterfaceState::NeedsNodeUpdate},
+    {"on parent node, update before", true, true,
+        UserInterfaceState::NeedsNodeEventMaskUpdate},
+};
+
 AbstractUserInterfaceTest::AbstractUserInterfaceTest() {
     addTests({&AbstractUserInterfaceTest::debugState,
               &AbstractUserInterfaceTest::debugStates,
@@ -1176,6 +1194,11 @@ AbstractUserInterfaceTest::AbstractUserInterfaceTest() {
     addInstancedTests({&AbstractUserInterfaceTest::eventFocusBlurByPointerPressNodeDisabledNoEvents},
         Containers::arraySize(EventFocusBlurByPointerPressNodeDisabledNoEventsData));
 
+    addTests({&AbstractUserInterfaceTest::eventFocusBlurByPointerPressNoBlur});
+
+    addInstancedTests({&AbstractUserInterfaceTest::eventFocusBlurByPointerPressNodeBecomesNoBlur},
+        Containers::arraySize(EventFocusBlurByPointerPressNodeBecomesNoBlurData));
+
     addInstancedTests({&AbstractUserInterfaceTest::eventKeyPressRelease},
         Containers::arraySize(EventLayouterUpdateData));
 
@@ -1218,6 +1241,13 @@ void AbstractUserInterfaceTest::debugStatesSupersets() {
         Containers::String out;
         Debug{&out} << (UserInterfaceState::NeedsNodeOpacityUpdate|UserInterfaceState::NeedsDataAttachmentUpdate|UserInterfaceState::NeedsDataUpdate);
         CORRADE_COMPARE(out, "Ui::UserInterfaceState::NeedsDataAttachmentUpdate|Ui::UserInterfaceState::NeedsNodeOpacityUpdate\n");
+
+    /* NeedsNodeEnabledUpdate is a superset of NeedsNodeEventMaskUpdate, so
+       only one should be printed */
+    } {
+        Containers::String out;
+        Debug{&out} << (UserInterfaceState::NeedsNodeEnabledUpdate|UserInterfaceState::NeedsNodeEventMaskUpdate);
+        CORRADE_COMPARE(out, "Ui::UserInterfaceState::NeedsNodeEnabledUpdate\n");
 
     /* NeedsNodeEnabledUpdate is a superset of NeedsDataAttachmentUpdate, so
        only one should be printed */
@@ -9111,12 +9141,15 @@ void AbstractUserInterfaceTest::state() {
     ui.clearNodeFlags(node, NodeFlag::NoEvents);
     CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
 
-    /* Not testing NodeFlag::Focusable because it sets NeedsNodeEnabledUpdate
-       but doesn't actually cause anything to change in the internal state,
-       apart from clearing the currentFocusedNode(). And that's tested well
-       enough elsewhere. */
-    /** @todo test once it causes some focusable node trees or some such to be
-        rebuilt */
+    /* Not testing NodeFlag::Focusable because it sets
+       NeedsNodeFocusEnabledUpdate but, apart from clearing the
+       currentFocusedNode(), doesn't actually cause anything to change in the
+       state passed to layers or layouters. And that's tested well enough
+       elsewhere. Similarly, NodeFlag::NoBlur sets NeedsNodeEventMaskUpdate
+       which doesn't change affect layers or layouters at all, and that's also
+       tested elsewhere. */
+    /** @todo test once it causes some publicly queryable state such as
+        focusable node trees or some such to be rebuilt */
 
     /* Setting a Clip flag that's already there should be a no-op,
        independently of what other flags get added */
@@ -21079,6 +21112,435 @@ void AbstractUserInterfaceTest::eventFocusBlurByPointerPressNodeDisabledNoEvents
     CORRADE_COMPARE_AS(layer.eventCalls, (Containers::arrayView<Containers::Pair<Int, DataHandle>>({
         {Press, nestedData},
         {Focus, nestedData}
+    })), TestSuite::Compare::Container);
+}
+
+void AbstractUserInterfaceTest::eventFocusBlurByPointerPressNoBlur() {
+    /* Event scaling doesn't affect these tests */
+    AbstractUserInterface ui{{100, 100}};
+
+    enum Event {
+        Press = 1,
+        Focus = 2,
+        Blur = 3,
+        Rejected = 1 << 2
+    };
+
+    struct Layer: AbstractLayer {
+        using AbstractLayer::AbstractLayer;
+        using AbstractLayer::create;
+
+        LayerFeatures doFeatures() const override { return LayerFeature::Event; }
+
+        void doPointerPressEvent(UnsignedInt dataId, PointerEvent& event) override {
+            if(!rejectPress || *rejectPress != dataId)
+                event.setAccepted();
+            /* The data generation is faked here, but it matches as we don't
+               reuse any data */
+            arrayAppend(eventCalls, InPlaceInit,
+                (event.isAccepted() ? 0 : Rejected)|Press,
+                dataHandle(handle(), dataId, 1));
+        }
+        void doFocusEvent(UnsignedInt dataId, FocusEvent& event) override {
+            if(!rejectFocus || *rejectFocus != dataId)
+                event.setAccepted();
+            /* The data generation is faked here, but it matches as we don't
+               reuse any data */
+            arrayAppend(eventCalls, InPlaceInit,
+                (event.isAccepted() ? 0 : Rejected)|Focus,
+                dataHandle(handle(), dataId, 1));
+        }
+        void doBlurEvent(UnsignedInt dataId, FocusEvent&) override {
+            /* The data generation is faked here, but it matches as we don't
+               reuse any data */
+            arrayAppend(eventCalls, InPlaceInit, Blur,
+                dataHandle(handle(), dataId, 1));
+        }
+
+        Containers::Optional<UnsignedInt> rejectPress;
+        Containers::Optional<UnsignedInt> rejectFocus;
+        Containers::Array<Containers::Pair<Int, DataHandle>> eventCalls;
+    };
+    Layer& layer = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer()));
+
+    /* 20 +-----------+-----------+----------------------------------+ 20
+          | Focusable | Focusable |             NoBlur               |
+       30 |           | NoBlur    |+---------+----------+-----------+| 30
+          |           |           || child01 | NoEvents | Focusable ||
+       40 +-----------+-----------++---------+----------+-----------++ 40
+          |   node    +----------+|
+       50 |+---------+| NoEvents ||
+          || NoBlur  ||  NoBlur  ||
+       60 ++---------++----------++
+          10         30          50          60         70           80 */
+
+    NodeHandle nodeFocusable = ui.createNode({10.0f, 20.0f}, {20.0f, 20.0f}, NodeFlag::Focusable);
+    NodeHandle nodeFocusableNoBlur = ui.createNode({30.0f, 20.0f}, {20.0f, 20.0f}, NodeFlag::Focusable|NodeFlag::NoBlur);
+    DataHandle dataFocusable = layer.create(nodeFocusable);
+    DataHandle dataFocusableNoBlur = layer.create(nodeFocusableNoBlur);
+
+    NodeHandle nodeNoBlur = ui.createNode({50.0f, 20.0f}, {30.0f, 20.0f}, NodeFlag::NoBlur);
+    NodeHandle nodeNoBlurChild0 = ui.createNode(nodeNoBlur, {0.0f, 10.0f}, {10.0f, 10.0f});
+    NodeHandle nodeNoBlurChild1 = ui.createNode(nodeNoBlurChild0, {}, {10.0f, 10.0f});
+    /*NodeHandle nodeNoBlurChildNoEvents =*/ ui.createNode(nodeNoBlur, {10.0f, 10.0f}, {10.0f, 10.0f}, NodeFlag::NoEvents);
+    NodeHandle nodeNoBlurChildFocusable = ui.createNode(nodeNoBlur, {20.0f, 10.0f}, {10.0f, 10.0f}, NodeFlag::Focusable);
+    DataHandle dataNoBlur = layer.create(nodeNoBlur);
+    DataHandle dataNoBlurChild1 = layer.create(nodeNoBlurChild1);
+    DataHandle dataNoBlurChildFocusable = layer.create(nodeNoBlurChildFocusable);
+
+    NodeHandle node = ui.createNode({10.0f, 40.0f}, {40.0f, 20.0f});
+    NodeHandle nodeChildNoBlur = ui.createNode(node, {0.0f, 10.0f}, {20.0f, 10.0f});
+    /*NodeHandle nodeChildNoBlurNoEvents =*/ ui.createNode(node, {20.0f, 10.0f}, {20.0f, 10.0f});
+    DataHandle dataNode = layer.create(node);
+    DataHandle dataNodeChildNoBlur = layer.create(nodeChildNoBlur);
+
+    /* Pressing on a NoBlur node or any child doesn't blur the focused node */
+    {
+        FocusEvent focus{{}};
+        CORRADE_VERIFY(ui.focusEvent(nodeFocusable, focus));
+        CORRADE_COMPARE(ui.currentFocusedNode(), nodeFocusable);
+
+        PointerEvent press1{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0};
+        CORRADE_VERIFY(ui.pointerPressEvent({55.0f, 25.0f}, press1));
+        CORRADE_COMPARE(ui.currentPressedNode(), nodeNoBlur);
+        CORRADE_COMPARE(ui.currentFocusedNode(), nodeFocusable);
+
+        PointerEvent press2{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0};
+        CORRADE_VERIFY(ui.pointerPressEvent({55.0f, 35.0f}, press2));
+        CORRADE_COMPARE(ui.currentPressedNode(), nodeNoBlurChild1);
+        CORRADE_COMPARE(ui.currentFocusedNode(), nodeFocusable);
+
+        CORRADE_COMPARE_AS(layer.eventCalls, (Containers::arrayView<Containers::Pair<Int, DataHandle>>({
+            {Focus, dataFocusable},
+            {Press, dataNoBlur},
+            {Press, dataNoBlurChild1},
+        })), TestSuite::Compare::Container);
+
+    /* Pressing on child of a NoBlur node that doesn't accept the event will
+       not blur the focused node either */
+    } {
+        layer.eventCalls = {};
+
+        FocusEvent focus{{}};
+        CORRADE_VERIFY(ui.focusEvent(nodeFocusable, focus));
+        CORRADE_COMPARE(ui.currentFocusedNode(), nodeFocusable);
+
+        PointerEvent press{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0};
+        layer.rejectPress = dataHandleId(dataNoBlurChild1);
+        CORRADE_VERIFY(ui.pointerPressEvent({55.0f, 35.0f}, press));
+        CORRADE_COMPARE(ui.currentPressedNode(), nodeNoBlur);
+        CORRADE_COMPARE(ui.currentFocusedNode(), nodeFocusable);
+
+        CORRADE_COMPARE_AS(layer.eventCalls, (Containers::arrayView<Containers::Pair<Int, DataHandle>>({
+            {Focus, dataFocusable},
+            {Press|Rejected, dataNoBlurChild1},
+            {Press, dataNoBlur},
+        })), TestSuite::Compare::Container);
+
+    /* Pressing on a NoEvents child of a NoBlur node doesn't blur it either as
+       it propagates back to the NoBlur node */
+    } {
+        layer.eventCalls = {};
+        layer.rejectPress = {};
+
+        FocusEvent focus{{}};
+        CORRADE_VERIFY(ui.focusEvent(nodeFocusable, focus));
+        CORRADE_COMPARE(ui.currentFocusedNode(), nodeFocusable);
+
+        PointerEvent press{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0};
+        CORRADE_VERIFY(ui.pointerPressEvent({65.0f, 35.0f}, press));
+        CORRADE_COMPARE(ui.currentPressedNode(), nodeNoBlur);
+        CORRADE_COMPARE(ui.currentFocusedNode(), nodeFocusable);
+
+        CORRADE_COMPARE_AS(layer.eventCalls, (Containers::arrayView<Containers::Pair<Int, DataHandle>>({
+            {Focus, dataFocusable},
+            {Press, dataNoBlur},
+        })), TestSuite::Compare::Container);
+
+    /* Pressing on a root NoBlur node that doesn't accept the event will blur
+       as it propagates outside */
+    } {
+        layer.eventCalls = {};
+
+        FocusEvent focus{{}};
+        CORRADE_VERIFY(ui.focusEvent(nodeFocusable, focus));
+        CORRADE_COMPARE(ui.currentFocusedNode(), nodeFocusable);
+
+        PointerEvent press{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0};
+        layer.rejectPress = dataHandleId(dataNoBlur);
+        CORRADE_VERIFY(!ui.pointerPressEvent({55.0f, 25.0f}, press));
+        CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
+
+        CORRADE_COMPARE_AS(layer.eventCalls, (Containers::arrayView<Containers::Pair<Int, DataHandle>>({
+            {Focus, dataFocusable},
+            {Press|Rejected, dataNoBlur},
+            {Blur, dataFocusable},
+        })), TestSuite::Compare::Container);
+
+    /* Pressing on a NoBlur node that doesn't accept the event with a parent
+       that's not NoBlur will blur */
+    } {
+        layer.eventCalls = {};
+
+        FocusEvent focus{{}};
+        CORRADE_VERIFY(ui.focusEvent(nodeFocusable, focus));
+        CORRADE_COMPARE(ui.currentFocusedNode(), nodeFocusable);
+
+        PointerEvent press{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0};
+        layer.rejectPress = dataHandleId(dataNodeChildNoBlur);
+        CORRADE_VERIFY(ui.pointerPressEvent({15.0f, 55.0f}, press));
+        CORRADE_COMPARE(ui.currentPressedNode(), node);
+        CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
+
+        CORRADE_COMPARE_AS(layer.eventCalls, (Containers::arrayView<Containers::Pair<Int, DataHandle>>({
+            {Focus, dataFocusable},
+            {Press|Rejected, dataNodeChildNoBlur},
+            {Press, dataNode},
+            {Blur, dataFocusable},
+        })), TestSuite::Compare::Container);
+
+    /* Pressing on a NoBlur + NoEvents node with a parent that's neither blurs
+       because it propagates to the parent */
+    } {
+        layer.eventCalls = {};
+        layer.rejectPress = {};
+
+        FocusEvent focus{{}};
+        CORRADE_VERIFY(ui.focusEvent(nodeFocusable, focus));
+        CORRADE_COMPARE(ui.currentFocusedNode(), nodeFocusable);
+
+        PointerEvent press{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0};
+        CORRADE_VERIFY(ui.pointerPressEvent({35.0f, 55.0f}, press));
+        CORRADE_COMPARE(ui.currentPressedNode(), node);
+        CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
+
+        CORRADE_COMPARE_AS(layer.eventCalls, (Containers::arrayView<Containers::Pair<Int, DataHandle>>({
+            {Focus, dataFocusable},
+            {Press, dataNode},
+            {Blur, dataFocusable},
+        })), TestSuite::Compare::Container);
+
+    /* Focusable node that's itself NoBlur or its parent can be focused, and
+       blurs the previous. Pressing on the *focused* NoBlur node calls a focus
+       event again as well, with no blur because it's the same node. */
+    } {
+        layer.eventCalls = {};
+        layer.rejectPress = {};
+
+        FocusEvent focus{{}};
+        CORRADE_VERIFY(ui.focusEvent(nodeFocusable, focus));
+        CORRADE_COMPARE(ui.currentFocusedNode(), nodeFocusable);
+
+        PointerEvent press1{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0};
+        CORRADE_VERIFY(ui.pointerPressEvent({35.0f, 35.0f}, press1));
+        CORRADE_COMPARE(ui.currentPressedNode(), nodeFocusableNoBlur);
+        CORRADE_COMPARE(ui.currentFocusedNode(), nodeFocusableNoBlur);
+
+        PointerEvent press2{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0};
+        CORRADE_VERIFY(ui.pointerPressEvent({75.0f, 35.0f}, press2));
+        CORRADE_COMPARE(ui.currentPressedNode(), nodeNoBlurChildFocusable);
+        CORRADE_COMPARE(ui.currentFocusedNode(), nodeNoBlurChildFocusable);
+
+        PointerEvent press3{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0};
+        CORRADE_VERIFY(ui.pointerPressEvent({75.0f, 35.0f}, press3));
+        CORRADE_COMPARE(ui.currentPressedNode(), nodeNoBlurChildFocusable);
+        CORRADE_COMPARE(ui.currentFocusedNode(), nodeNoBlurChildFocusable);
+
+        CORRADE_COMPARE_AS(layer.eventCalls, (Containers::arrayView<Containers::Pair<Int, DataHandle>>({
+            {Focus, dataFocusable},
+            {Press, dataFocusableNoBlur},
+            {Blur, dataFocusable},
+            {Focus, dataFocusableNoBlur},
+            {Press, dataNoBlurChildFocusable},
+            {Blur, dataFocusableNoBlur},
+            {Focus, dataNoBlurChildFocusable},
+            {Press, dataNoBlurChildFocusable},
+            {Focus, dataNoBlurChildFocusable},
+            /* Focusing the same node, so no Blur here */
+        })), TestSuite::Compare::Container);
+
+    /* Not accepting a focus on a Focusable but NoBlur node resets the focus,
+       i.e. same as if NoBlur wasn't on it at all */
+    } {
+        /* Just to reset the currently focused node */
+        FocusEvent focusReset{{}};
+        ui.focusEvent(NodeHandle::Null, focusReset);
+        CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
+
+        layer.eventCalls = {};
+
+        FocusEvent focus{{}};
+        CORRADE_VERIFY(ui.focusEvent(nodeFocusable, focus));
+        CORRADE_COMPARE(ui.currentFocusedNode(), nodeFocusable);
+
+        PointerEvent press{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0};
+        layer.rejectFocus = dataHandleId(dataFocusableNoBlur);
+        CORRADE_VERIFY(ui.pointerPressEvent({35.0f, 35.0f}, press));
+        CORRADE_COMPARE(ui.currentPressedNode(), nodeFocusableNoBlur);
+        CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
+
+        CORRADE_COMPARE_AS(layer.eventCalls, (Containers::arrayView<Containers::Pair<Int, DataHandle>>({
+            {Focus, dataFocusable},
+            {Press, dataFocusableNoBlur},
+            {Blur, dataFocusable},
+            {Focus|Rejected, dataFocusableNoBlur},
+        })), TestSuite::Compare::Container);
+
+    /* With direct focusEvent() it however leaves the previous one focused,
+       again the same behavior as if NoBlur wasn't present */
+    } {
+        layer.eventCalls = {};
+
+        FocusEvent focus1{{}};
+        CORRADE_VERIFY(ui.focusEvent(nodeFocusable, focus1));
+        CORRADE_COMPARE(ui.currentFocusedNode(), nodeFocusable);
+
+        FocusEvent focus2{{}};
+        layer.rejectFocus = dataHandleId(dataFocusableNoBlur);
+        CORRADE_VERIFY(!ui.focusEvent(nodeFocusableNoBlur, focus2));
+        CORRADE_COMPARE(ui.currentFocusedNode(), nodeFocusable);
+
+        CORRADE_COMPARE_AS(layer.eventCalls, (Containers::arrayView<Containers::Pair<Int, DataHandle>>({
+            {Focus, dataFocusable},
+            {Focus|Rejected, dataFocusableNoBlur},
+        })), TestSuite::Compare::Container);
+
+    /* Not accepting a focus on a *focused* NoBlur node resets the focus as
+       well. This time trying with a child of NoBlur node instead. */
+    } {
+        /* Just to reset the currently focused node */
+        FocusEvent focusReset{{}};
+        ui.focusEvent(NodeHandle::Null, focusReset);
+        CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
+
+        layer.eventCalls = {};
+        layer.rejectFocus = {};
+
+        FocusEvent focus{{}};
+        CORRADE_VERIFY(ui.focusEvent(nodeNoBlurChildFocusable, focus));
+        CORRADE_COMPARE(ui.currentFocusedNode(), nodeNoBlurChildFocusable);
+
+        PointerEvent press{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0};
+        layer.rejectFocus = dataHandleId(dataNoBlurChildFocusable);
+        CORRADE_VERIFY(ui.pointerPressEvent({75.0f, 35.0f}, press));
+        CORRADE_COMPARE(ui.currentPressedNode(), nodeNoBlurChildFocusable);
+        CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
+
+        CORRADE_COMPARE_AS(layer.eventCalls, (Containers::arrayView<Containers::Pair<Int, DataHandle>>({
+            {Focus, dataNoBlurChildFocusable},
+            {Press, dataNoBlurChildFocusable},
+            {Focus|Rejected, dataNoBlurChildFocusable},
+            /* Here it's blurred after, not before, because it's the same
+               data */
+            {Blur, dataNoBlurChildFocusable},
+        })), TestSuite::Compare::Container);
+
+    /* Same behavior with direct focusEvent() */
+    } {
+        layer.eventCalls = {};
+        layer.rejectFocus = {};
+
+        FocusEvent focus1{{}};
+        CORRADE_VERIFY(ui.focusEvent(nodeNoBlurChildFocusable, focus1));
+        CORRADE_COMPARE(ui.currentFocusedNode(), nodeNoBlurChildFocusable);
+
+        FocusEvent focus2{{}};
+        layer.rejectFocus = dataHandleId(dataNoBlurChildFocusable);
+        CORRADE_VERIFY(!ui.focusEvent(nodeNoBlurChildFocusable, focus2));
+        CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
+
+        CORRADE_COMPARE_AS(layer.eventCalls, (Containers::arrayView<Containers::Pair<Int, DataHandle>>({
+            {Focus, dataNoBlurChildFocusable},
+            {Focus|Rejected, dataNoBlurChildFocusable},
+            /* Here it's blurred after because it's the same data */
+            {Blur, dataNoBlurChildFocusable},
+        })), TestSuite::Compare::Container);
+    }
+}
+
+void AbstractUserInterfaceTest::eventFocusBlurByPointerPressNodeBecomesNoBlur() {
+    auto&& data = EventFocusBlurByPointerPressNodeBecomesNoBlurData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
+    /* Derived from eventFocusBlurByPointerPressNodeDisabledNoEvents() but
+       testing a case where another node gets a NoBlur flag aftewrwards, to
+       verify the internal state is correctly updated for that to work
+       correctly */
+
+    /* Event scaling doesn't affect these tests */
+    AbstractUserInterface ui{{100, 100}};
+
+    enum Event {
+        Press = 0,
+        Focus = 1,
+        Blur = 2
+    };
+
+    struct Layer: AbstractLayer {
+        using AbstractLayer::AbstractLayer;
+        using AbstractLayer::create;
+
+        LayerFeatures doFeatures() const override { return LayerFeature::Event; }
+
+        void doPointerPressEvent(UnsignedInt dataId, PointerEvent& event) override {
+            /* The data generation is faked here, but it matches as we don't
+               reuse any data */
+            arrayAppend(eventCalls, InPlaceInit, Press,
+                dataHandle(handle(), dataId, 1));
+            event.setAccepted();
+        }
+        void doFocusEvent(UnsignedInt dataId, FocusEvent& event) override {
+            /* The data generation is faked here, but it matches as we don't
+               reuse any data */
+            arrayAppend(eventCalls, InPlaceInit, Focus,
+                dataHandle(handle(), dataId, 1));
+            event.setAccepted();
+        }
+        void doBlurEvent(UnsignedInt dataId, FocusEvent&) override {
+            /* The data generation is faked here, but it matches as we don't
+               reuse any data */
+            arrayAppend(eventCalls, InPlaceInit, Blur,
+                dataHandle(handle(), dataId, 1));
+        }
+
+        Containers::Array<Containers::Pair<Int, DataHandle>> eventCalls;
+    };
+
+    Layer& layer = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer()));
+
+    /* Nested node in order to verify that the flag gets propagated through the
+       hierarchy */
+    NodeHandle node = ui.createNode({10.0f, 20.0f}, {20.0f, 20.0f});
+    NodeHandle nested = ui.createNode(node, {}, {20.0f, 20.0f});
+    DataHandle nestedData = layer.create(nested);
+
+    NodeHandle focused = ui.createNode({30.0f, 20.0f}, {20.0f, 20.0f}, NodeFlag::Focusable);
+    DataHandle focusedData = layer.create(focused);
+
+    if(data.update) {
+        ui.update();
+        CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
+    }
+
+    ui.addNodeFlags(data.parentNode ? node : nested, NodeFlag::NoBlur);
+    CORRADE_COMPARE(ui.state(), data.expectedState);
+
+    FocusEvent focus{{}};
+    CORRADE_VERIFY(ui.focusEvent(focused, focus));
+    CORRADE_COMPARE(ui.currentFocusedNode(), focused);
+    CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
+
+    PointerEvent press{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0};
+    CORRADE_VERIFY(ui.pointerPressEvent({20.0f, 30.0f}, press));
+    CORRADE_COMPARE(ui.currentPressedNode(), nested);
+    /* The focused node should stay because the pressed node is NoBlur */
+    CORRADE_COMPARE(ui.currentFocusedNode(), focused);
+
+    CORRADE_COMPARE_AS(layer.eventCalls, (Containers::arrayView<Containers::Pair<Int, DataHandle>>({
+        {Focus, focusedData},
+        {Press, nestedData},
+        /* No blur */
     })), TestSuite::Compare::Container);
 }
 
