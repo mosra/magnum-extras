@@ -1783,6 +1783,12 @@ void AbstractUserInterface::setNodeFlagsInternal(const UnsignedInt id, const Nod
        there will be focusable node fallbacks / trees (where pressing on a node
        that's not focusable itself but its parent is focuses the parent), which
        then will need the full process as NoEvents and Disabled as well. */
+    /** @todo toggling Focusable and NoEvents may not always result in layer
+        data being updated, for example when such a node is inactive, and thus
+        that could be a subset of NeedsNodeEnabledUpdate that doesn't imply
+        NeedsDataUpdate .. with that, update() would re-query state() after
+        calling visibilityLostEvent() (if at all), and perform layer updates if
+        NeedsDataUpdate or anything else is set afterwards */
     if((state.nodes[id].used.flags & (NodeFlag::NoEvents|NodeFlag::Disabled|NodeFlag::Focusable)) != (flags & (NodeFlag::NoEvents|NodeFlag::Disabled|NodeFlag::Focusable)))
         state.state |= UserInterfaceState::NeedsNodeEnabledUpdate;
     state.nodes[id].used.flags = flags;
