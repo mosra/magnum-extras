@@ -25,9 +25,9 @@
 */
 
 #include <new>
-#include <Corrade/Containers/StridedBitArrayView.h>
 #include <Corrade/Containers/Optional.h>
 #include <Corrade/Containers/StridedArrayView.h>
+#include <Corrade/Containers/StridedBitArrayView.h>
 #include <Corrade/Containers/String.h>
 #include <Corrade/TestSuite/Tester.h>
 #include <Corrade/TestSuite/Compare/Container.h>
@@ -9962,9 +9962,8 @@ void TextLayerTest::keyTextEvent() {
     Layer& layer = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer(), shared));
     NodeHandle node = ui.createNode({}, {100, 100}, NodeFlag::Focusable);
 
-    /* Use style 2 to verify it actually uses that one and not some other
-       in subsequent updateText(); have also some text before and after to
-       catch weird overlaps and OOB issues */
+    /* Have also some text before and after to catch weird overlaps and OOB
+       issues */
     layer.create(0, "aaaa", {}, TextDataFlag::Editable);
     DataHandle text = layer.create(0, "hello", {}, TextDataFlag::Editable, node);
     layer.setCursor(text, 3);
