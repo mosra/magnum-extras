@@ -1180,6 +1180,31 @@ Ui::NodeHandle node = ui.createNode(DOXYGEN_ELLIPSIS({}, {}), Ui::NodeFlag::Focu
 Ui::DataHandle text = textLayer.create(DOXYGEN_ELLIPSIS(0, "", {}), Ui::TextDataFlag::Editable, node);
 /* [TextLayer-editing-focusable] */
 static_cast<void>(text);
+
+{
+Ui::EventLayer& eventLayer = ui.setLayerInstance(Containers::pointer<Ui::EventLayer>(ui.createLayer()));
+/* [TextLayer-editing-virtual-keyboard] */
+Ui::NodeHandle keyboard = ui.createNode(DOXYGEN_ELLIPSIS({}, {}), Ui::NodeFlag::NoBlur);
+
+Ui::NodeHandle keyQ = ui.createNode(keyboard, DOXYGEN_ELLIPSIS({}, {}));
+eventLayer.onPress(keyQ, [&ui]{
+    Ui::TextInputEvent event{{}, "q"};
+    ui.textInputEvent(event);
+});
+Ui::NodeHandle keyW = ui.createNode(keyboard, DOXYGEN_ELLIPSIS({}, {}));
+eventLayer.onPress(keyW, [&ui]{
+    Ui::TextInputEvent event{{}, "w"};
+    ui.textInputEvent(event);
+});
+DOXYGEN_ELLIPSIS()
+Ui::NodeHandle keyBackspace = ui.createNode(keyboard, DOXYGEN_ELLIPSIS({}, {}));
+eventLayer.onPress(keyBackspace, [&ui]{
+    Ui::KeyEvent event{{}, Ui::Key::Backspace, {}};
+    ui.keyPressEvent(event);
+});
+DOXYGEN_ELLIPSIS()
+/* [TextLayer-editing-virtual-keyboard] */
+}
 }
 
 {
