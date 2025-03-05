@@ -2890,8 +2890,9 @@ AbstractUserInterface& AbstractUserInterface::update() {
             and such */
     }
 
-    /* If no node enabled state update is needed, the `state.visibleNodeMask`
-       and `state.visibleEnabledNodeMask` are up-to-date.
+    /* If no node enabled state update is needed, the `state.visibleNodeMask`,
+       `state.visibleEventNodeMask` and `state.visibleEnabledNodeMask` are
+       up-to-date.
 
        Note that `visibleOrVisibilityLostEventNodeMask` is *not* up-to-date as
        it got allocated anew in each update() allocation. It's used only in the
