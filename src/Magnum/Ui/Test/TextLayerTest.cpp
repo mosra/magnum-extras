@@ -25,6 +25,8 @@
 */
 
 #include <new>
+/* for keyTextEventSynthesizedFromPointerPress(), an "integration test" */
+#include <Corrade/Containers/Function.h>
 #include <Corrade/Containers/Optional.h>
 #include <Corrade/Containers/StridedArrayView.h>
 #include <Corrade/Containers/StridedBitArrayView.h>
@@ -45,6 +47,8 @@
 
 #include "Magnum/Ui/AbstractUserInterface.h"
 #include "Magnum/Ui/Event.h"
+/* for keyTextEventSynthesizedFromPointerPress(), an "integration test" */
+#include "Magnum/Ui/EventLayer.h"
 #include "Magnum/Ui/Handle.h"
 #include "Magnum/Ui/NodeFlags.h"
 #include "Magnum/Ui/TextLayer.h"
@@ -194,6 +198,7 @@ struct TextLayerTest: TestSuite::Tester {
     void sharedNeedsUpdateStatePropagatedToLayers();
 
     void keyTextEvent();
+    void keyTextEventSynthesizedFromPointerPress();
 };
 
 using namespace Math::Literals;
@@ -1196,6 +1201,14 @@ const struct {
         1, 5, true, true, LayerState::NeedsCommonDataUpdate},
 };
 
+const struct {
+    const char* name;
+    bool update;
+} KeyTextEventSynthesizedFromPointerPressData[]{
+    {"", false},
+    {"with explicit update", true},
+};
+
 TextLayerTest::TextLayerTest() {
     addTests({&TextLayerTest::styleUniformSizeAlignment<TextLayerCommonStyleUniform>,
               &TextLayerTest::styleUniformSizeAlignment<TextLayerStyleUniform>,
@@ -1368,6 +1381,9 @@ TextLayerTest::TextLayerTest() {
         Containers::arraySize(SharedNeedsUpdateStatePropagatedToLayersData));
 
     addTests({&TextLayerTest::keyTextEvent});
+
+    addInstancedTests({&TextLayerTest::keyTextEventSynthesizedFromPointerPress},
+        Containers::arraySize(KeyTextEventSynthesizedFromPointerPressData));
 }
 
 using namespace Containers::Literals;
@@ -10205,6 +10221,139 @@ void TextLayerTest::keyTextEvent() {
         CORRADE_VERIFY(!ui.keyPressEvent(event));
         CORRADE_COMPARE(layer.text(text), "heavenly mayo");
         CORRADE_COMPARE(layer.cursor(text), Containers::pair(12u, 12u));
+        CORRADE_COMPARE(layer.state(), LayerStates{});
+    }
+}
+
+void TextLayerTest::keyTextEventSynthesizedFromPointerPress() {
+    auto&& data = KeyTextEventSynthesizedFromPointerPressData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
+    struct: Text::AbstractFont {
+        Text::FontFeatures doFeatures() const override { return {}; }
+        bool doIsOpened() const override { return true; }
+        void doClose() override {}
+
+        void doGlyphIdsInto(const Containers::StridedArrayView1D<const char32_t>&, const Containers::StridedArrayView1D<UnsignedInt>&) override {}
+        Vector2 doGlyphSize(UnsignedInt) override { return {}; }
+        Vector2 doGlyphAdvance(UnsignedInt) override { return {}; }
+        Containers::Pointer<Text::AbstractShaper> doCreateShaper() override { return Containers::pointer<ThreeGlyphShaper>(*this); }
+    } font;
+
+    struct: Text::AbstractGlyphCache {
+        using Text::AbstractGlyphCache::AbstractGlyphCache;
+
+        Text::GlyphCacheFeatures doFeatures() const override { return {}; }
+        void doSetImage(const Vector2i&, const ImageView2D&) override {}
+    } cache{PixelFormat::R8Unorm, {32, 32, 2}};
+    cache.addFont(98, &font);
+
+    struct LayerShared: TextLayer::Shared {
+        explicit LayerShared(const Configuration& configuration): TextLayer::Shared{configuration} {}
+
+        using TextLayer::Shared::setGlyphCache;
+
+        void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
+        void doSetEditingStyle(const TextLayerCommonEditingStyleUniform&, Containers::ArrayView<const TextLayerEditingStyleUniform>) override {}
+    } shared{TextLayer::Shared::Configuration{1}};
+    shared.setGlyphCache(cache);
+    /* Interestingly enough, these two can't be chained together as on some
+       compilers it'd call addFont() before setGlyphCache(), causing an
+       assert */
+    shared.setStyle(TextLayerCommonStyleUniform{},
+        {TextLayerStyleUniform{}},
+        {shared.addFont(font, 1.0f)},
+        {Text::Alignment::MiddleCenter},
+        {}, {}, {}, {}, {}, {});
+
+    struct Layer: TextLayer {
+        explicit Layer(LayerHandle handle, Shared& shared): TextLayer{handle, shared} {}
+    };
+
+    AbstractUserInterface ui{{100, 100}};
+
+    Layer& layer = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer(), shared));
+    EventLayer& eventLayer = ui.setLayerInstance(Containers::pointer<EventLayer>(ui.createLayer()));
+
+    NodeHandle node = ui.createNode({}, {10, 10}, NodeFlag::Focusable);
+    DataHandle text = layer.create(0, "hello", {}, TextDataFlag::Editable, node);
+    CORRADE_COMPARE(layer.text(text), "hello");
+    CORRADE_COMPARE(layer.cursor(text), Containers::pair(5u, 5u));
+
+    /* Virtual keyboard */
+    NodeHandle keyboard = ui.createNode({50, 0}, {50, 50}, NodeFlag::NoBlur);
+
+    NodeHandle exclamation = ui.createNode(keyboard, {0, 0}, {10, 10});
+    eventLayer.onPress(exclamation, [&]{
+        TextInputEvent event{{}, "!"};
+        ui.textInputEvent(event);
+    });
+
+    NodeHandle backspace = ui.createNode(keyboard, {10, 0}, {10, 10});
+    eventLayer.onPress(backspace, [&]{
+        KeyEvent event{{}, Key::Backspace, {}};
+        ui.keyPressEvent(event);
+    });
+
+    if(data.update) {
+        ui.update();
+        CORRADE_COMPARE(layer.state(), LayerStates{});
+    }
+
+    /* Focus the node */
+    {
+        FocusEvent event{{}};
+        ui.focusEvent(node, event);
+        CORRADE_COMPARE(ui.currentFocusedNode(), node);
+    }
+
+    if(data.update) {
+        ui.update();
+        CORRADE_COMPARE(layer.state(), LayerStates{});
+    }
+
+    /* Delete last char. The text node stays focused and is updated. */
+    {
+        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0};
+        CORRADE_VERIFY(ui.pointerPressEvent({65, 5}, event));
+        CORRADE_COMPARE(ui.currentPressedNode(), backspace);
+        CORRADE_COMPARE(ui.currentFocusedNode(), node);
+        CORRADE_COMPARE(layer.text(text), "hell");
+        CORRADE_COMPARE(layer.cursor(text), Containers::pair(4u, 4u));
+    }
+
+    if(data.update) {
+        ui.update();
+        CORRADE_COMPARE(layer.state(), LayerStates{});
+    }
+
+    /* Add an exclamation mark. Again it stays focused and is updated. */
+    {
+        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0};
+        CORRADE_VERIFY(ui.pointerPressEvent({55, 5}, event));
+        CORRADE_COMPARE(ui.currentPressedNode(), exclamation);
+        CORRADE_COMPARE(ui.currentFocusedNode(), node);
+        CORRADE_COMPARE(layer.text(text), "hell!");
+        CORRADE_COMPARE(layer.cursor(text), Containers::pair(5u, 5u));
+    }
+
+    if(data.update) {
+        ui.update();
+        CORRADE_COMPARE(layer.state(), LayerStates{});
+    }
+
+    /* More!! */
+    {
+        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0};
+        CORRADE_VERIFY(ui.pointerPressEvent({55, 5}, event));
+        CORRADE_COMPARE(ui.currentPressedNode(), exclamation);
+        CORRADE_COMPARE(ui.currentFocusedNode(), node);
+        CORRADE_COMPARE(layer.text(text), "hell!!");
+        CORRADE_COMPARE(layer.cursor(text), Containers::pair(6u, 6u));
+    }
+
+    if(data.update) {
+        ui.update();
         CORRADE_COMPARE(layer.state(), LayerStates{});
     }
 }

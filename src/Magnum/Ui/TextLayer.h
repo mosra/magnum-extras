@@ -1127,6 +1127,32 @@ visual layers used in given widget, in addition to the basic inactive, pressed
 and disabled transitions shown in the
 @ref Ui-BaseLayer-style-transitions "BaseLayer documentation for style transitions".
 
+@subsubsection Ui-TextLayer-editing-virtual-keyboards Implementing virtual keyboards
+
+Besides key and text input events coming from the OS, it's possible to
+synthesize them to implement a virtual keyboard, for example by hooking to
+pointer presses using @ref EventLayer::onPress(), as shown below. See the
+@ref EventLayer documentation for information about setting up the event layer.
+
+An important thing to consider is that, by default, pressing outside of a node
+that's currently focused will blur it, which ultimately means that when using
+the virtual keyboard, you'd lose focus of the input field after each key press.
+This behavior can be disabled for a node and all its children with
+@ref NodeFlag::NoBlur, and is recommended to be done for the whole virtual
+keyboard, not just individual keys, so even accidental presses in between the
+keys don't lose focus.
+
+@snippet Ui.cpp TextLayer-editing-virtual-keyboard
+
+Generally you'd synthesize a @ref TextInputEvent for any key that inserts text,
+and @ref KeyEvent for keys that perform cursor movement or deletion. Uppercase
+can be implemented for example by having the virtual
+@m_class{m-label m-default} **Shift** key toggle a boolean, which the
+@ref EventLayer::onPress() handlers then use to synthesize either @cpp "q" @ce
+or @cpp "Q" @ce. Or pressing the @m_class{m-label m-default} **Shift** key
+toggles visibility of an entirely different key set for uppercase letters,
+completely with different labels for those.
+
 @subsection Ui-TextLayer-editing-dynamic-styles Dynamic editing styles
 
 Dynamic styles, @ref Ui-TextLayer-dynamic-styles "described above", have also
