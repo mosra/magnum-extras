@@ -78,7 +78,7 @@ namespace Implementation {
 
 struct LineLayerPoint {
     Vector2 position;
-    Color4 color;
+    Vector4 color;
 };
 
 struct LineLayerPointIndex {

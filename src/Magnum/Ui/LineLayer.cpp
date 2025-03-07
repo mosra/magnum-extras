@@ -380,7 +380,7 @@ void LineLayer::fillPoints(const char*
     #ifndef CORRADE_NO_ASSERT
     const messagePrefix
     #endif
-, const UnsignedInt dataId, const Containers::StridedArrayView1D<const Vector2>& points, const Containers::StridedArrayView1D<const Color4>& colors) {
+, const UnsignedInt dataId, const Containers::StridedArrayView1D<const Vector2>& points, const Containers::StridedArrayView1D<const Vector4>& colors) {
     CORRADE_ASSERT(colors.isEmpty() || colors.size() == points.size(),
         messagePrefix << "expected either no or" << points.size() << "colors, got" << colors.size(), );
 
@@ -429,7 +429,7 @@ DataHandle LineLayer::createInternal(const char*
     return handle;
 }
 
-DataHandle LineLayer::create(const UnsignedInt style, const Containers::StridedArrayView1D<const UnsignedInt>& indices, const Containers::StridedArrayView1D<const Vector2>& points, const Containers::StridedArrayView1D<const Color4>& colors, const NodeHandle node) {
+DataHandle LineLayer::create(const UnsignedInt style, const Containers::StridedArrayView1D<const UnsignedInt>& indices, const Containers::StridedArrayView1D<const Vector2>& points, const Containers::StridedArrayView1D<const Vector4>& colors, const NodeHandle node) {
     const DataHandle handle = createInternal("Ui::LineLayer::create():", style, indices.size(), points.size(), node);
     /* Indices abuse the point / color storage for finding neighbors, thus
        points and colors have to be filled only afterwards */
@@ -443,7 +443,7 @@ DataHandle LineLayer::create(const UnsignedInt style, const std::initializer_lis
     return create(style, Containers::stridedArrayView(indices), Containers::stridedArrayView(points), Containers::stridedArrayView(colors), node);
 }
 
-DataHandle LineLayer::createStrip(const UnsignedInt style, const Containers::StridedArrayView1D<const Vector2>& points, const Containers::StridedArrayView1D<const Color4>& colors, const NodeHandle node) {
+DataHandle LineLayer::createStrip(const UnsignedInt style, const Containers::StridedArrayView1D<const Vector2>& points, const Containers::StridedArrayView1D<const Vector4>& colors, const NodeHandle node) {
     const DataHandle handle = createInternal("Ui::LineLayer::createStrip():", style, points.isEmpty() ? 0 : 2*points.size() - 2, points.size(), node);
     fillStripIndices("Ui::LineLayer::createStrip():", dataHandleId(handle));
     fillPoints("Ui::LineLayer::createStrip():", dataHandleId(handle), points, colors);
@@ -455,7 +455,7 @@ DataHandle LineLayer::createStrip(const UnsignedInt style, const std::initialize
     return createStrip(style, Containers::stridedArrayView(points), Containers::stridedArrayView(colors), node);
 }
 
-DataHandle LineLayer::createLoop(const UnsignedInt style, const Containers::StridedArrayView1D<const Vector2>& points, const Containers::StridedArrayView1D<const Color4>& colors, const NodeHandle node) {
+DataHandle LineLayer::createLoop(const UnsignedInt style, const Containers::StridedArrayView1D<const Vector2>& points, const Containers::StridedArrayView1D<const Vector4>& colors, const NodeHandle node) {
     const DataHandle handle = createInternal("Ui::LineLayer::createLoop():", style, 2*points.size(), points.size(), node);
     fillLoopIndices("Ui::LineLayer::createLoop():", dataHandleId(handle));
     fillPoints("Ui::LineLayer::createLoop():", dataHandleId(handle), points, colors);
@@ -527,7 +527,7 @@ UnsignedInt LineLayer::pointCount(const LayerDataHandle handle) const {
     return state.runs[state.data[layerDataHandleId(handle)].run].pointCount;
 }
 
-void LineLayer::setLine(const DataHandle handle, const Containers::StridedArrayView1D<const UnsignedInt>& indices, const Containers::StridedArrayView1D<const Vector2>& points, const Containers::StridedArrayView1D<const Color4>& colors) {
+void LineLayer::setLine(const DataHandle handle, const Containers::StridedArrayView1D<const UnsignedInt>& indices, const Containers::StridedArrayView1D<const Vector2>& points, const Containers::StridedArrayView1D<const Vector4>& colors) {
     CORRADE_ASSERT(isHandleValid(handle),
         "Ui::LineLayer::setLine(): invalid handle" << handle, );
     setLineInternal(dataHandleId(handle), indices, points, colors);
@@ -537,7 +537,7 @@ void LineLayer::setLine(const DataHandle handle, const std::initializer_list<Uns
     setLine(handle, Containers::stridedArrayView(indices), Containers::stridedArrayView(points), Containers::stridedArrayView(colors));
 }
 
-void LineLayer::setLine(const LayerDataHandle handle, const Containers::StridedArrayView1D<const UnsignedInt>& indices, const Containers::StridedArrayView1D<const Vector2>& points, const Containers::StridedArrayView1D<const Color4>& colors) {
+void LineLayer::setLine(const LayerDataHandle handle, const Containers::StridedArrayView1D<const UnsignedInt>& indices, const Containers::StridedArrayView1D<const Vector2>& points, const Containers::StridedArrayView1D<const Vector4>& colors) {
     CORRADE_ASSERT(isHandleValid(handle),
         "Ui::LineLayer::setLine(): invalid handle" << handle, );
     setLineInternal(layerDataHandleId(handle), indices, points, colors);
@@ -547,7 +547,7 @@ void LineLayer::setLine(const LayerDataHandle handle, const std::initializer_lis
     setLine(handle, Containers::stridedArrayView(indices), Containers::stridedArrayView(points), Containers::stridedArrayView(colors));
 }
 
-void LineLayer::setLineInternal(const UnsignedInt id, const Containers::StridedArrayView1D<const UnsignedInt>& indices, const Containers::StridedArrayView1D<const Vector2>& points, const Containers::StridedArrayView1D<const Color4>& colors) {
+void LineLayer::setLineInternal(const UnsignedInt id, const Containers::StridedArrayView1D<const UnsignedInt>& indices, const Containers::StridedArrayView1D<const Vector2>& points, const Containers::StridedArrayView1D<const Vector4>& colors) {
     State& state = static_cast<State&>(*_state);
 
     /* If the run has the same count of points and indices, reuse it, otherwise
@@ -577,7 +577,7 @@ void LineLayer::setLineInternal(const UnsignedInt id, const Containers::StridedA
     setNeedsUpdate(LayerState::NeedsDataUpdate);
 }
 
-void LineLayer::setLineStrip(const DataHandle handle, const Containers::StridedArrayView1D<const Vector2>& points, const Containers::StridedArrayView1D<const Color4>& colors) {
+void LineLayer::setLineStrip(const DataHandle handle, const Containers::StridedArrayView1D<const Vector2>& points, const Containers::StridedArrayView1D<const Vector4>& colors) {
     CORRADE_ASSERT(isHandleValid(handle),
         "Ui::LineLayer::setLineStrip(): invalid handle" << handle, );
     setLineStripInternal(dataHandleId(handle), points, colors);
@@ -587,7 +587,7 @@ void LineLayer::setLineStrip(const DataHandle handle, const std::initializer_lis
     setLineStrip(handle, Containers::stridedArrayView(points), Containers::stridedArrayView(colors));
 }
 
-void LineLayer::setLineStrip(const LayerDataHandle handle, const Containers::StridedArrayView1D<const Vector2>& points, const Containers::StridedArrayView1D<const Color4>& colors) {
+void LineLayer::setLineStrip(const LayerDataHandle handle, const Containers::StridedArrayView1D<const Vector2>& points, const Containers::StridedArrayView1D<const Vector4>& colors) {
     CORRADE_ASSERT(isHandleValid(handle),
         "Ui::LineLayer::setLineStrip(): invalid handle" << handle, );
     setLineStripInternal(layerDataHandleId(handle), points, colors);
@@ -597,7 +597,7 @@ void LineLayer::setLineStrip(const LayerDataHandle handle, const std::initialize
     setLineStrip(handle, Containers::stridedArrayView(points), Containers::stridedArrayView(colors));
 }
 
-void LineLayer::setLineStripInternal(const UnsignedInt id, const Containers::StridedArrayView1D<const Vector2>& points, const Containers::StridedArrayView1D<const Color4>& colors) {
+void LineLayer::setLineStripInternal(const UnsignedInt id, const Containers::StridedArrayView1D<const Vector2>& points, const Containers::StridedArrayView1D<const Vector4>& colors) {
     State& state = static_cast<State&>(*_state);
 
     /* If the run has the same count of points and indices, reuse it, otherwise
@@ -629,7 +629,7 @@ void LineLayer::setLineStripInternal(const UnsignedInt id, const Containers::Str
     setNeedsUpdate(LayerState::NeedsDataUpdate);
 }
 
-void LineLayer::setLineLoop(const DataHandle handle, const Containers::StridedArrayView1D<const Vector2>& points, const Containers::StridedArrayView1D<const Color4>& colors) {
+void LineLayer::setLineLoop(const DataHandle handle, const Containers::StridedArrayView1D<const Vector2>& points, const Containers::StridedArrayView1D<const Vector4>& colors) {
     CORRADE_ASSERT(isHandleValid(handle),
         "Ui::LineLayer::setLineLoop(): invalid handle" << handle, );
     setLineLoopInternal(dataHandleId(handle), points, colors);
@@ -639,7 +639,7 @@ void LineLayer::setLineLoop(const DataHandle handle, const std::initializer_list
     setLineLoop(handle, Containers::stridedArrayView(points), Containers::stridedArrayView(colors));
 }
 
-void LineLayer::setLineLoop(const LayerDataHandle handle, const Containers::StridedArrayView1D<const Vector2>& points, const Containers::StridedArrayView1D<const Color4>& colors) {
+void LineLayer::setLineLoop(const LayerDataHandle handle, const Containers::StridedArrayView1D<const Vector2>& points, const Containers::StridedArrayView1D<const Vector4>& colors) {
     CORRADE_ASSERT(isHandleValid(handle),
         "Ui::LineLayer::setLineLoop(): invalid handle" << handle, );
     setLineLoopInternal(layerDataHandleId(handle), points, colors);
@@ -649,7 +649,7 @@ void LineLayer::setLineLoop(const LayerDataHandle handle, const std::initializer
     setLineLoop(handle, Containers::stridedArrayView(points), Containers::stridedArrayView(colors));
 }
 
-void LineLayer::setLineLoopInternal(const UnsignedInt id, const Containers::StridedArrayView1D<const Vector2>& points, const Containers::StridedArrayView1D<const Color4>& colors) {
+void LineLayer::setLineLoopInternal(const UnsignedInt id, const Containers::StridedArrayView1D<const Vector2>& points, const Containers::StridedArrayView1D<const Vector4>& colors) {
     State& state = static_cast<State&>(*_state);
 
     /* If the run has the same count of points and indices, reuse it, otherwise

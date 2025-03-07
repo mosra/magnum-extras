@@ -747,14 +747,21 @@ class MAGNUM_UI_EXPORT LineLayer: public AbstractVisualLayer {
          * an array of @cpp 0xffffffff_srgbaf @ce was supplied.
          * @see @ref createStrip(), @ref createLoop(), @ref setAlignment()
          */
-        DataHandle create(UnsignedInt style, const Containers::StridedArrayView1D<const UnsignedInt>& indices, const Containers::StridedArrayView1D<const Vector2>& points, const Containers::StridedArrayView1D<const Color4>& colors, NodeHandle node =
+        /* This one takes Vector4 instead of Color4 because color views are
+           implicitly convertible to vectors but not the other way around */
+        DataHandle create(UnsignedInt style, const Containers::StridedArrayView1D<const UnsignedInt>& indices, const Containers::StridedArrayView1D<const Vector2>& points, const Containers::StridedArrayView1D<const Vector4>& colors, NodeHandle node =
             #ifdef DOXYGEN_GENERATING_OUTPUT
             NodeHandle::Null
             #else
             NodeHandle{} /* To not have to include Handle.h */
             #endif
         );
+        /* There is no Vector3 / Color3 overload because, since the colors are
+           optional, it'd be ambiguous to call the function with just {} or
+           nullptr, making the most common use case too annoying */
         /** @overload */
+        /* This one takes a Color4 instead of Vector4 in order to have e.g.
+           0x993366_rgbf implicitly converted to 0x993366ff_rgbaf */
         DataHandle create(UnsignedInt style, std::initializer_list<UnsignedInt> indices, std::initializer_list<Vector2> points, std::initializer_list<Color4> colors, NodeHandle node =
             #ifdef DOXYGEN_GENERATING_OUTPUT
             NodeHandle::Null
@@ -767,7 +774,7 @@ class MAGNUM_UI_EXPORT LineLayer: public AbstractVisualLayer {
          * @brief Create a line from an indexed list of points with a style index in a concrete enum type
          *
          * Casts @p style to @relativeref{Magnum,UnsignedInt} and delegates to
-         * @ref create(UnsignedInt, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Color4>&, NodeHandle).
+         * @ref create(UnsignedInt, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector4>&, NodeHandle).
          */
         template<class StyleIndex
             #ifndef DOXYGEN_GENERATING_OUTPUT
@@ -775,7 +782,7 @@ class MAGNUM_UI_EXPORT LineLayer: public AbstractVisualLayer {
                from being called by mistake */
             , class = typename std::enable_if<std::is_enum<StyleIndex>::value && !std::is_same<StyleIndex, NodeHandle>::value>::type
             #endif
-        > DataHandle create(StyleIndex style, const Containers::StridedArrayView1D<const UnsignedInt>& indices, const Containers::StridedArrayView1D<const Vector2>& points, const Containers::StridedArrayView1D<const Color4>& colors, NodeHandle node =
+        > DataHandle create(StyleIndex style, const Containers::StridedArrayView1D<const UnsignedInt>& indices, const Containers::StridedArrayView1D<const Vector2>& points, const Containers::StridedArrayView1D<const Vector4>& colors, NodeHandle node =
             #ifdef DOXYGEN_GENERATING_OUTPUT
             NodeHandle::Null
             #else
@@ -811,20 +818,28 @@ class MAGNUM_UI_EXPORT LineLayer: public AbstractVisualLayer {
          *
          * Creates a single connected line strip. The @p points are expected to
          * be either empty or at least two. Convenience equivalent to calling
-         * @ref create(UnsignedInt, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Color4>&, NodeHandle)
+         * @ref create(UnsignedInt, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector4>&, NodeHandle)
          * with @p indices being a @cpp {0, 1, 1, 2, 2, 3, ..., points.size() - 2, points.size() - 1} @ce
          * range. See its documentation for more information about other
          * arguments.
          * @see @ref createLoop(), @ref setAlignment()
          */
-        DataHandle createStrip(UnsignedInt style, const Containers::StridedArrayView1D<const Vector2>& points, const Containers::StridedArrayView1D<const Color4>& colors, NodeHandle node =
+        /* These take Vector4 / Vector3 instead of Color4 / Color3 because
+           color views are implicitly convertible to vector views but not the
+           other way around */
+        DataHandle createStrip(UnsignedInt style, const Containers::StridedArrayView1D<const Vector2>& points, const Containers::StridedArrayView1D<const Vector4>& colors, NodeHandle node =
             #ifdef DOXYGEN_GENERATING_OUTPUT
             NodeHandle::Null
             #else
             NodeHandle{} /* To not have to include Handle.h */
             #endif
         );
+        /* There is no Vector3 / Color3 overload because, since the colors are
+           optional, it'd be ambiguous to call the function with just {} or
+           nullptr, making the most common use case too annoying */
         /** @overload */
+        /* This one takes a Color4 instead of Vector4 in order to have e.g.
+           0x993366_rgbf implicitly converted to 0x993366ff_rgbaf */
         DataHandle createStrip(UnsignedInt style, std::initializer_list<Vector2> points, std::initializer_list<Color4> colors, NodeHandle node =
             #ifdef DOXYGEN_GENERATING_OUTPUT
             NodeHandle::Null
@@ -837,7 +852,7 @@ class MAGNUM_UI_EXPORT LineLayer: public AbstractVisualLayer {
          * @brief Create a line strip with a style index in a concrete enum type
          *
          * Casts @p style to @relativeref{Magnum,UnsignedInt} and delegates to
-         * @ref createStrip(UnsignedInt, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Color4>&, NodeHandle).
+         * @ref createStrip(UnsignedInt, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector4>&, NodeHandle).
          */
         template<class StyleIndex
             #ifndef DOXYGEN_GENERATING_OUTPUT
@@ -845,7 +860,7 @@ class MAGNUM_UI_EXPORT LineLayer: public AbstractVisualLayer {
                from being called by mistake */
             , class = typename std::enable_if<std::is_enum<StyleIndex>::value && !std::is_same<StyleIndex, NodeHandle>::value>::type
             #endif
-        > DataHandle createStrip(StyleIndex style, const Containers::StridedArrayView1D<const Vector2>& points, const Containers::StridedArrayView1D<const Color4>& colors, NodeHandle node =
+        > DataHandle createStrip(StyleIndex style, const Containers::StridedArrayView1D<const Vector2>& points, const Containers::StridedArrayView1D<const Vector4>& colors, NodeHandle node =
             #ifdef DOXYGEN_GENERATING_OUTPUT
             NodeHandle::Null
             #else
@@ -882,20 +897,27 @@ class MAGNUM_UI_EXPORT LineLayer: public AbstractVisualLayer {
          * Creates a single line loop with the last point connected to the
          * first. The @p points are expected to be either empty, a single point
          * (which will create a literal point) or at least three. Convenience
-         * equivalent to calling @ref create(UnsignedInt, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Color4>&, NodeHandle)
+         * equivalent to calling @ref create(UnsignedInt, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector4>&, NodeHandle)
          * with @p indices being a @cpp {0, 1, 1, 2, 2, 3, ..., points.size() - 1, 0, @ce
          * range. See its documentation for more information about other
          * arguments.
          * @see @ref createStrip(), @ref setAlignment()
          */
-        DataHandle createLoop(UnsignedInt style, const Containers::StridedArrayView1D<const Vector2>& points, const Containers::StridedArrayView1D<const Color4>& colors, NodeHandle node =
+        /* This one takes Vector4 instead of Color4 because color views are
+           implicitly convertible to vectors but not the other way around */
+        DataHandle createLoop(UnsignedInt style, const Containers::StridedArrayView1D<const Vector2>& points, const Containers::StridedArrayView1D<const Vector4>& colors, NodeHandle node =
             #ifdef DOXYGEN_GENERATING_OUTPUT
             NodeHandle::Null
             #else
             NodeHandle{} /* To not have to include Handle.h */
             #endif
         );
+        /* There is no Vector3 / Color3 overload because, since the colors are
+           optional, it'd be ambiguous to call the function with just {} or
+           nullptr, making the most common use case too annoying */
         /** @overload */
+        /* This one takes a Color4 instead of Vector4 in order to have e.g.
+           0x993366_rgbf implicitly converted to 0x993366ff_rgbaf */
         DataHandle createLoop(UnsignedInt style, std::initializer_list<Vector2> points, std::initializer_list<Color4> colors, NodeHandle node =
             #ifdef DOXYGEN_GENERATING_OUTPUT
             NodeHandle::Null
@@ -908,7 +930,7 @@ class MAGNUM_UI_EXPORT LineLayer: public AbstractVisualLayer {
          * @brief Create a line loop with a style index in a concrete enum type
          *
          * Casts @p style to @relativeref{Magnum,UnsignedInt} and delegates to
-         * @ref createLoop(UnsignedInt, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Color4>&, NodeHandle).
+         * @ref createLoop(UnsignedInt, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector4>&, NodeHandle).
          */
         template<class StyleIndex
             #ifndef DOXYGEN_GENERATING_OUTPUT
@@ -916,7 +938,7 @@ class MAGNUM_UI_EXPORT LineLayer: public AbstractVisualLayer {
                from being called by mistake */
             , class = typename std::enable_if<std::is_enum<StyleIndex>::value && !std::is_same<StyleIndex, NodeHandle>::value>::type
             #endif
-        > DataHandle createLoop(StyleIndex style, const Containers::StridedArrayView1D<const Vector2>& points, const Containers::StridedArrayView1D<const Color4>& colors, NodeHandle node =
+        > DataHandle createLoop(StyleIndex style, const Containers::StridedArrayView1D<const Vector2>& points, const Containers::StridedArrayView1D<const Vector4>& colors, NodeHandle node =
             #ifdef DOXYGEN_GENERATING_OUTPUT
             NodeHandle::Null
             #else
@@ -1001,7 +1023,7 @@ class MAGNUM_UI_EXPORT LineLayer: public AbstractVisualLayer {
          *
          * Expects that @p handle is valid. The @p indices, @p points and
          * @p colors are interpreted the same way with the same restrictions as
-         * in @ref create(UnsignedInt, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Color4>&, NodeHandle),
+         * in @ref create(UnsignedInt, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector4>&, NodeHandle),
          * see its documentation for more information.
          *
          * Calling this function causes @ref LayerState::NeedsDataUpdate to be
@@ -1009,18 +1031,25 @@ class MAGNUM_UI_EXPORT LineLayer: public AbstractVisualLayer {
          * @see @ref isHandleValid(DataHandle) const, @see @ref setLineStrip(),
          *      @ref setLineLoop()
          */
-        void setLine(DataHandle handle, const Containers::StridedArrayView1D<const UnsignedInt>& indices, const Containers::StridedArrayView1D<const Vector2>& points, const Containers::StridedArrayView1D<const Color4>& colors);
+        /* This one takes Vector4 instead of Color4 because color views are
+           implicitly convertible to vectors but not the other way around */
+        void setLine(DataHandle handle, const Containers::StridedArrayView1D<const UnsignedInt>& indices, const Containers::StridedArrayView1D<const Vector2>& points, const Containers::StridedArrayView1D<const Vector4>& colors);
+        /* There is no Vector3 / Color3 overload because, since the colors are
+           optional, it'd be ambiguous to call the function with just {} or
+           nullptr, making the most common use case too annoying */
         /** @overload */
+        /* This one takes a Color4 instead of Vector4 in order to have e.g.
+           0x993366_rgbf implicitly converted to 0x993366ff_rgbaf */
         void setLine(DataHandle handle, std::initializer_list<UnsignedInt> indices, std::initializer_list<Vector2> points, std::initializer_list<Color4> colors);
 
         /**
          * @brief Set line data assuming it belongs to this layer
          *
-         * Like @ref setLine(DataHandle, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Color4>&)
+         * Like @ref setLine(DataHandle, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector4>&)
          * but without checking that @p handle indeed belongs to this layer.
          * See its documentation for more information.
          */
-        void setLine(LayerDataHandle handle, const Containers::StridedArrayView1D<const UnsignedInt>& indices, const Containers::StridedArrayView1D<const Vector2>& points, const Containers::StridedArrayView1D<const Color4>& colors);
+        void setLine(LayerDataHandle handle, const Containers::StridedArrayView1D<const UnsignedInt>& indices, const Containers::StridedArrayView1D<const Vector2>& points, const Containers::StridedArrayView1D<const Vector4>& colors);
         /** @overload */
         void setLine(LayerDataHandle handle, std::initializer_list<UnsignedInt> indices, std::initializer_list<Vector2> points, std::initializer_list<Color4> colors);
 
@@ -1029,7 +1058,7 @@ class MAGNUM_UI_EXPORT LineLayer: public AbstractVisualLayer {
          *
          * Expects that @p handle is valid. The @p points and @p colors are
          * interpreted the same way with the same restrictions as
-         * in @ref createStrip(UnsignedInt, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Color4>&, NodeHandle),
+         * in @ref createStrip(UnsignedInt, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector4>&, NodeHandle),
          * see its documentation for more information.
          *
          * Calling this function causes @ref LayerState::NeedsDataUpdate to be
@@ -1037,18 +1066,25 @@ class MAGNUM_UI_EXPORT LineLayer: public AbstractVisualLayer {
          * @see @ref isHandleValid(DataHandle) const, @see @ref setLine(),
          *      @ref setLineLoop()
          */
-        void setLineStrip(DataHandle handle, const Containers::StridedArrayView1D<const Vector2>& points, const Containers::StridedArrayView1D<const Color4>& colors);
+        /* This one takes Vector4 instead of Color4 because color views are
+           implicitly convertible to vectors but not the other way around */
+        void setLineStrip(DataHandle handle, const Containers::StridedArrayView1D<const Vector2>& points, const Containers::StridedArrayView1D<const Vector4>& colors);
+        /* There is no Vector3 / Color3 overload because, since the colors are
+           optional, it'd be ambiguous to call the function with just {} or
+           nullptr, making the most common use case too annoying */
         /** @overload */
+        /* This one takes a Color4 instead of Vector4 in order to have e.g.
+           0x993366_rgbf implicitly converted to 0x993366ff_rgbaf */
         void setLineStrip(DataHandle handle, std::initializer_list<Vector2> points, std::initializer_list<Color4> colors);
 
         /**
          * @brief Set line strip data assuming it belongs to this layer
          *
-         * Like @ref setLineStrip(DataHandle, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Color4>&)
+         * Like @ref setLineStrip(DataHandle, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector4>&)
          * but without checking that @p handle indeed belongs to this layer.
          * See its documentation for more information.
          */
-        void setLineStrip(LayerDataHandle handle, const Containers::StridedArrayView1D<const Vector2>& points, const Containers::StridedArrayView1D<const Color4>& colors);
+        void setLineStrip(LayerDataHandle handle, const Containers::StridedArrayView1D<const Vector2>& points, const Containers::StridedArrayView1D<const Vector4>& colors);
         /** @overload */
         void setLineStrip(LayerDataHandle handle, std::initializer_list<Vector2> points, std::initializer_list<Color4> colors);
 
@@ -1057,7 +1093,7 @@ class MAGNUM_UI_EXPORT LineLayer: public AbstractVisualLayer {
          *
          * Expects that @p handle is valid. The @p points and @p colors are
          * interpreted the same way with the same restrictions as
-         * in @ref createLoop(UnsignedInt, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Color4>&, NodeHandle),
+         * in @ref createLoop(UnsignedInt, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector4>&, NodeHandle),
          * see its documentation for more information.
          *
          * Calling this function causes @ref LayerState::NeedsDataUpdate to be
@@ -1065,18 +1101,25 @@ class MAGNUM_UI_EXPORT LineLayer: public AbstractVisualLayer {
          * @see @ref isHandleValid(DataHandle) const, @see @ref setLine(),
          *      @ref setLineStrip()
          */
-        void setLineLoop(DataHandle handle, const Containers::StridedArrayView1D<const Vector2>& points, const Containers::StridedArrayView1D<const Color4>& colors);
+        /* This one takes Vector4 instead of Color4 because color views are
+           implicitly convertible to vectors but not the other way around */
+        void setLineLoop(DataHandle handle, const Containers::StridedArrayView1D<const Vector2>& points, const Containers::StridedArrayView1D<const Vector4>& colors);
+        /* There is no Vector3 / Color3 overload because, since the colors are
+           optional, it'd be ambiguous to call the function with just {} or
+           nullptr, making the most common use case too annoying */
         /** @overload */
+        /* This one takes a Color4 instead of Vector4 in order to have e.g.
+           0x993366_rgbf implicitly converted to 0x993366ff_rgbaf */
         void setLineLoop(DataHandle handle, std::initializer_list<Vector2> points, std::initializer_list<Color4> colors);
 
         /**
          * @brief Set line loop data assuming it belongs to this layer
          *
-         * Like @ref setLineLoop(DataHandle, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Color4>&)
+         * Like @ref setLineLoop(DataHandle, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector4>&)
          * but without checking that @p handle indeed belongs to this layer.
          * See its documentation for more information.
          */
-        void setLineLoop(LayerDataHandle handle, const Containers::StridedArrayView1D<const Vector2>& points, const Containers::StridedArrayView1D<const Color4>& colors);
+        void setLineLoop(LayerDataHandle handle, const Containers::StridedArrayView1D<const Vector2>& points, const Containers::StridedArrayView1D<const Vector4>& colors);
         /** @overload */
         void setLineLoop(LayerDataHandle handle, std::initializer_list<Vector2> points, std::initializer_list<Color4> colors);
 
@@ -1256,16 +1299,16 @@ class MAGNUM_UI_EXPORT LineLayer: public AbstractVisualLayer {
         MAGNUM_UI_LOCAL void fillIndices(const char* messagePrefix, UnsignedInt dataId, const Containers::StridedArrayView1D<const UnsignedInt>& indices);
         MAGNUM_UI_LOCAL void fillStripIndices(const char* messagePrefix, UnsignedInt dataId);
         MAGNUM_UI_LOCAL void fillLoopIndices(const char* messagePrefix, UnsignedInt dataId);
-        MAGNUM_UI_LOCAL void fillPoints(const char* messagePrefix, UnsignedInt dataId, const Containers::StridedArrayView1D<const Vector2>& points, const Containers::StridedArrayView1D<const Color4>& colors);
+        MAGNUM_UI_LOCAL void fillPoints(const char* messagePrefix, UnsignedInt dataId, const Containers::StridedArrayView1D<const Vector2>& points, const Containers::StridedArrayView1D<const Vector4>& colors);
 
         /* Used by create(), createLoop() and createStrip() */
         MAGNUM_UI_LOCAL DataHandle createInternal(const char* messagePrefix, UnsignedInt style, UnsignedInt indexCount, UnsignedInt pointCount, NodeHandle node);
         /* Used by remove() */
         MAGNUM_UI_LOCAL void removeInternal(UnsignedInt id);
 
-        MAGNUM_UI_LOCAL void setLineInternal(UnsignedInt id, const Containers::StridedArrayView1D<const UnsignedInt>& indices, const Containers::StridedArrayView1D<const Vector2>& points, const Containers::StridedArrayView1D<const Color4>& colors);
-        MAGNUM_UI_LOCAL void setLineStripInternal(UnsignedInt id, const Containers::StridedArrayView1D<const Vector2>& points, const Containers::StridedArrayView1D<const Color4>& colors);
-        MAGNUM_UI_LOCAL void setLineLoopInternal(UnsignedInt id, const Containers::StridedArrayView1D<const Vector2>& points, const Containers::StridedArrayView1D<const Color4>& colors);
+        MAGNUM_UI_LOCAL void setLineInternal(UnsignedInt id, const Containers::StridedArrayView1D<const UnsignedInt>& indices, const Containers::StridedArrayView1D<const Vector2>& points, const Containers::StridedArrayView1D<const Vector4>& colors);
+        MAGNUM_UI_LOCAL void setLineStripInternal(UnsignedInt id, const Containers::StridedArrayView1D<const Vector2>& points, const Containers::StridedArrayView1D<const Vector4>& colors);
+        MAGNUM_UI_LOCAL void setLineLoopInternal(UnsignedInt id, const Containers::StridedArrayView1D<const Vector2>& points, const Containers::StridedArrayView1D<const Vector4>& colors);
 
         MAGNUM_UI_LOCAL void setColorInternal(UnsignedInt id, const Color4& color);
         MAGNUM_UI_LOCAL Containers::Optional<LineAlignment> alignmentInternal(UnsignedInt id) const;
