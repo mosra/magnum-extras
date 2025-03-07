@@ -464,8 +464,8 @@ Afterwards, in order to be able to draw the layer, a style has to be set with
 @ref LineLayer::Shared::setStyle(). At the very least you're expected to pass a
 @ref LineLayerCommonStyleUniform containing properties common to all styles, an
 array of @ref LineLayerStyleUniform matching the style count set in the
-@ref LineLayer::Shared::Configuration and a list of alignment values specifying
-how a particular line art should be placed inside each node.
+@ref LineLayer::Shared::Configuration and a list of per-style alignment values
+specifying how a particular line art should be placed inside each node.
 Default-constructed instances will result in white single-unit-wide lines, you
 can then use method chaining to update only the properties you're interested
 in; zero-initialized @ref LineAlignment value is equivalent to

@@ -668,18 +668,18 @@ struct Shared: Ui::LineLayer::Shared {
 } lineLayerShared;
 /* [LineLayer-setup-style] */
 lineLayerShared.setStyle(Ui::LineLayerCommonStyleUniform{}, {
-    Ui::LineLayerStyleUniform{}, /* Style 0, default */
-    Ui::LineLayerStyleUniform{}  /* Style 1 */
+    Ui::LineLayerStyleUniform{},    /* Style 0, default */
+    Ui::LineLayerStyleUniform{}     /* Style 1 */
         .setColor(0x2f83cc_rgbf)
         .setWidth(2.0f),
-    Ui::LineLayerStyleUniform{}  /* Style 2 */
+    Ui::LineLayerStyleUniform{}     /* Style 2 */
         .setColor(0xa5c9ea_rgbf)
         .setWidth(3.0f)
         .setSmoothness(8.0f)
 }, {
-    Ui::LineAlignment{},
-    Ui::LineAlignment::MiddleCenter,
-    Ui::LineAlignment::BottomLeft,
+    Ui::LineAlignment{},             /* Alignment for style 0 */
+    Ui::LineAlignment::MiddleCenter, /* Alignment for style 1 */
+    Ui::LineAlignment::BottomLeft,   /* Alignment for style 2 */
 }, {});
 /* [LineLayer-setup-style] */
 
@@ -849,18 +849,18 @@ Ui::FontHandle font12Handle = textLayerShared.addFont(*font12, font12->size());
 
 /* [TextLayer-setup-style] */
 textLayerShared.setStyle(Ui::TextLayerCommonStyleUniform{}, {
-    Ui::TextLayerStyleUniform{}, /* Style 0, default */
-    Ui::TextLayerStyleUniform{}  /* Style 1 */
+    Ui::TextLayerStyleUniform{},    /* Style 0, default */
+    Ui::TextLayerStyleUniform{}     /* Style 1 */
         .setColor(0x2f83cc_rgbf),
-    Ui::TextLayerStyleUniform{}  /* Style 2 */
+    Ui::TextLayerStyleUniform{}     /* Style 2 */
 }, {
-    font16Handle,
-    font16Handle,
-    font12Handle
+    font16Handle,                   /* Font for style 0 */
+    font16Handle,                   /* Font for style 1 */
+    font12Handle                    /* Font for style 2 */
 }, {
-    Text::Alignment{},
-    Text::Alignment{},
-    Text::Alignment::MiddleCenter
+    Text::Alignment{},              /* Alignment for style 0 */
+    Text::Alignment{},              /* Alignment for style 1 */
+    Text::Alignment::MiddleCenter   /* Alignment for style 2 */
 }, {}, {}, {}, {}, {}, {});
 /* [TextLayer-setup-style] */
 
