@@ -273,7 +273,8 @@ struct TextLayerEditingStyleUniform {
      *
      * Default value is @cpp 0xffffffff_srgbaf @ce. The selection text color is
      * applied directly to individual glyphs and is thus supplied separately in
-     * @ref TextLayer::Shared::setEditingStyle().
+     * @ref TextLayer::Shared::setEditingStyle(). Is further multiplied with
+     * node opacity coming from @ref AbstractUserInterface::setNodeOpacity().
      */
     Color4 backgroundColor;
 
@@ -2297,12 +2298,14 @@ class MAGNUM_UI_EXPORT TextLayer: public AbstractVisualLayer {
         /**
          * @brief Set text custom base color
          *
-         * Expects that @p handle is valid. @ref TextLayerStyleUniform::color
-         * is multiplied with @p color. Applies to style override for selected
-         * text as well, but not to
+         * Expects that @p handle is valid. The @p color is multiplied with
+         * @ref TextLayerStyleUniform::color, and with node opacity coming from
+         * @ref AbstractUserInterface::setNodeOpacity(). Applies to style
+         * override for selected text as well, but not to
          * @ref TextLayerEditingStyleUniform::backgroundColor for cursor and
          * selection rectangles. By default, the custom color is
-         * @cpp 0xffffffff_srgbaf @ce, i.e. not affecting the style in any way.
+         * @cpp 0xffffffff_srgbaf @ce, i.e. not affecting the color coming from
+         * the style in any way.
          *
          * Calling this function causes @ref LayerState::NeedsDataUpdate to be
          * set.

@@ -743,7 +743,8 @@ class MAGNUM_UI_EXPORT LineLayer: public AbstractVisualLayer {
          * The @p colors array is expected to be either empty or have the same
          * size as @p points. If non-empty, each point is drawn with a
          * corresponding color that's further multiplied by a color coming from
-         * the style and potentially from @ref setColor(). If empty, it's as if
+         * the style, from @ref setColor() and with node opacity coming from
+         * @ref AbstractUserInterface::setNodeOpacity(). If empty, it's as if
          * an array of @cpp 0xffffffff_srgbaf @ce was supplied.
          * @see @ref createStrip(), @ref createLoop(), @ref setAlignment()
          */
@@ -1142,10 +1143,11 @@ class MAGNUM_UI_EXPORT LineLayer: public AbstractVisualLayer {
         /**
          * @brief Set custom line color
          *
-         * Expects that @p handle is valid. @ref LineLayerStyleUniform::color
-         * and per-point colors, if specified in @ref create() or
-         * @ref setLine(), are all multiplied together with @p color. By
-         * default, the custom color is @cpp 0xffffffff_srgbaf @ce, i.e. not
+         * Expects that @p handle is valid. The @p color is multiplied with
+         * @ref LineLayerStyleUniform::color, with per-point colors, if
+         * specified in @ref create(), @ref setLine() or overloads, and with
+         * node opacity coming from @ref AbstractUserInterface::setNodeOpacity().
+         * By default, the custom color is @cpp 0xffffffff_srgbaf @ce, i.e. not
          * affecting the style or per-point colors in any way.
          *
          * Calling this function causes @ref LayerState::NeedsDataUpdate to be

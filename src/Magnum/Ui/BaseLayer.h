@@ -1005,11 +1005,13 @@ class MAGNUM_UI_EXPORT BaseLayer: public AbstractVisualLayer {
         /**
          * @brief Set quad custom base color
          *
-         * Expects that @p handle is valid.
+         * Expects that @p handle is valid. The @p color is multiplied with
          * @ref BaseLayerStyleUniform::topColor and
-         * @relativeref{BaseLayerStyleUniform,bottomColor} is multiplied with
-         * @p color. By default, the custom color is @cpp 0xffffffff_srgbaf @ce,
-         * i.e. not affecting the style in any way.
+         * @relativeref{BaseLayerStyleUniform,bottomColor}, with a texture if
+         * @ref BaseLayerSharedFlag::Textured is enabled, and with node opacity
+         * coming from @ref AbstractUserInterface::setNodeOpacity(). By
+         * default, the custom color is @cpp 0xffffffff_srgbaf @ce, i.e. not
+         * affecting the color coming from the style or texture in any way.
          *
          * Calling this function causes @ref LayerState::NeedsDataUpdate to be
          * set.
