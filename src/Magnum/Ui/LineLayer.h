@@ -198,11 +198,13 @@ struct MAGNUM_UI_EXPORT LineLayerStyleUniform {
     /**
      * @brief Line color
      *
-     * Default value is @cpp 0xffffffff_srgbaf @ce. The color is further
-     * multiplied with per-data value supplied with @ref LineLayer::setColor(),
-     * color specified for individual points in @ref LineLayer::create(),
+     * The color is expected to have premultiplied alpha. Default value is
+     * @cpp 0xffffffff_srgbaf @ce. The color is further multiplied with
+     * per-data value supplied with @ref LineLayer::setColor(), color specified
+     * for individual points in @ref LineLayer::create(),
      * @relativeref{LineLayer,setLine()} and overloads, and with node opacity
      * coming from @ref AbstractUserInterface::setNodeOpacity().
+     * @see @ref Color4::premultiplied()
      */
     Color4 color;
 
@@ -741,12 +743,14 @@ class MAGNUM_UI_EXPORT LineLayer: public AbstractVisualLayer {
          * if the same point is present more than once.
          *
          * The @p colors array is expected to be either empty or have the same
-         * size as @p points. If non-empty, each point is drawn with a
-         * corresponding color that's further multiplied by a color coming from
-         * the style, from @ref setColor() and with node opacity coming from
+         * size as @p points. If non-empty, the colors are expected to have
+         * premultiplied alpha and each point is drawn with a corresponding
+         * color that's further multiplied by a color coming from the style,
+         * from @ref setColor() and with node opacity coming from
          * @ref AbstractUserInterface::setNodeOpacity(). If empty, it's as if
          * an array of @cpp 0xffffffff_srgbaf @ce was supplied.
-         * @see @ref createStrip(), @ref createLoop(), @ref setAlignment()
+         * @see @ref createStrip(), @ref createLoop(), @ref setAlignment(),
+         *      @ref Color4::premultiplied()
          */
         /* This one takes Vector4 instead of Color4 because color views are
            implicitly convertible to vectors but not the other way around */
@@ -1143,7 +1147,8 @@ class MAGNUM_UI_EXPORT LineLayer: public AbstractVisualLayer {
         /**
          * @brief Set custom line color
          *
-         * Expects that @p handle is valid. The @p color is multiplied with
+         * Expects that @p handle is valid. The @p color is expected to have
+         * premultiplied alpha. It is multiplied with
          * @ref LineLayerStyleUniform::color, with per-point colors, if
          * specified in @ref create(), @ref setLine() or overloads, and with
          * node opacity coming from @ref AbstractUserInterface::setNodeOpacity().
@@ -1152,7 +1157,8 @@ class MAGNUM_UI_EXPORT LineLayer: public AbstractVisualLayer {
          *
          * Calling this function causes @ref LayerState::NeedsDataUpdate to be
          * set.
-         * @see @ref isHandleValid(DataHandle) const
+         * @see @ref isHandleValid(DataHandle) const,
+         *      @ref Color4::premultiplied()
          */
         void setColor(DataHandle handle, const Color4& color);
 

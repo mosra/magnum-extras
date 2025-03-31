@@ -353,38 +353,44 @@ struct BaseLayerStyleUniform {
     /**
      * @brief Top gradient color
      *
-     * Default value is @cpp 0xffffffff_srgbaf @ce. The color is further
-     * multiplied with per-data value supplied with @ref BaseLayer::setColor(),
-     * potentially with a texture if @ref BaseLayerSharedFlag::Textured is
-     * enabled, and with node opacity coming from
+     * The color is expected to have premultiplied alpha. Default value is
+     * @cpp 0xffffffff_srgbaf @ce. The color is further multiplied with
+     * per-data value supplied with @ref BaseLayer::setColor(), potentially
+     * with a texture if @ref BaseLayerSharedFlag::Textured is enabled, and
+     * with node opacity coming from
      * @ref AbstractUserInterface::setNodeOpacity().
+     * @see @ref Color4::premultiplied()
      */
     Color4 topColor;
 
     /**
      * @brief Bottom gradient color
      *
-     * Default value is @cpp 0xffffffff_srgbaf @ce. The color is further
-     * multiplied with per-data value supplied with @ref BaseLayer::setColor(),
-     * potentially with a texture if @ref BaseLayerSharedFlag::Textured is
-     * enabled, and with node opacity coming from
+     * The color is expected to have premultiplied alpha. Default value is
+     * @cpp 0xffffffff_srgbaf @ce. The color is further multiplied with
+     * per-data value supplied with @ref BaseLayer::setColor(), potentially
+     * with a texture if @ref BaseLayerSharedFlag::Textured is enabled, and
+     * with node opacity coming from
      * @ref AbstractUserInterface::setNodeOpacity().
+     * @see @ref Color4::premultiplied()
      */
     Color4 bottomColor;
 
     /**
      * @brief Outline color
      *
-     * Default value is @cpp 0xffffffff_srgbaf @ce. Visible only if
-     * @ref outlineWidth is non-zero on at least one side or if the difference
-     * between @ref cornerRadius and @ref innerOutlineCornerRadius makes it
-     * show. Not used if @ref BaseLayerSharedFlag::NoOutline is enabled.
+     * The color is expected to have premultiplied alpha. Default value is
+     * @cpp 0xffffffff_srgbaf @ce. Visible only if @ref outlineWidth is
+     * non-zero on at least one side or if the difference between
+     * @ref cornerRadius and @ref innerOutlineCornerRadius makes it show. Not
+     * used if @ref BaseLayerSharedFlag::NoOutline is enabled.
      *
      * Unlike @ref topColor and @ref bottomColor, the outline color isn't
      * multiplied with @ref BaseLayer::setColor(). Node opacity coming from
      * @ref AbstractUserInterface::setNodeOpacity() affects it however, and
      * texture alpha as well if @ref BaseLayerSharedFlag::TextureMask is
      * enabled.
+     * @see @ref Color4::premultiplied()
      */
     Color4 outlineColor;
 
@@ -1005,7 +1011,8 @@ class MAGNUM_UI_EXPORT BaseLayer: public AbstractVisualLayer {
         /**
          * @brief Set quad custom base color
          *
-         * Expects that @p handle is valid. The @p color is multiplied with
+         * Expects that @p handle is valid. The @p color is expected to have
+         * premultiplied alpha. It is multiplied with
          * @ref BaseLayerStyleUniform::topColor and
          * @relativeref{BaseLayerStyleUniform,bottomColor}, with a texture if
          * @ref BaseLayerSharedFlag::Textured is enabled, and with node opacity
@@ -1015,7 +1022,8 @@ class MAGNUM_UI_EXPORT BaseLayer: public AbstractVisualLayer {
          *
          * Calling this function causes @ref LayerState::NeedsDataUpdate to be
          * set.
-         * @see @ref isHandleValid(DataHandle) const
+         * @see @ref isHandleValid(DataHandle) const,
+         *      @ref Color4::premultiplied()
          */
         void setColor(DataHandle handle, const Color4& color);
 

@@ -138,10 +138,12 @@ struct TextLayerStyleUniform {
     /**
      * @brief Color
      *
-     * Default value is @cpp 0xffffffff_srgbaf @ce. The color multiplies the
-     * glyph texture and is further multiplied with per-data value supplied
-     * with @ref TextLayer::setColor() and node opacity coming from
+     * The color is expected to have premultiplied alpha. Default value is
+     * @cpp 0xffffffff_srgbaf @ce. The color multiplies the glyph texture and
+     * is further multiplied with per-data value supplied with
+     * @ref TextLayer::setColor() and node opacity coming from
      * @ref AbstractUserInterface::setNodeOpacity().
+     * @see @ref Color4::premultiplied()
      */
     Color4 color;
 };
@@ -271,11 +273,13 @@ struct TextLayerEditingStyleUniform {
     /**
      * @brief Selection background color
      *
-     * Default value is @cpp 0xffffffff_srgbaf @ce. Is further multiplied with
-     * node opacity coming from @ref AbstractUserInterface::setNodeOpacity().
-     * Color and other style properties for selection *text* are applied
-     * directly to individual glyphs and are thus supplied separately through
-     * the @p textUniforms argument to @ref TextLayer::Shared::setEditingStyle().
+     * The color is expected to have premultiplied alpha. Default value is
+     * @cpp 0xffffffff_srgbaf @ce. Is further multiplied with node opacity
+     * coming from @ref AbstractUserInterface::setNodeOpacity(). Color and
+     * other style properties for selection *text* are applied directly to
+     * individual glyphs and are thus supplied separately through the
+     * @p textUniforms argument to @ref TextLayer::Shared::setEditingStyle().
+     * @see @ref Color4::premultiplied()
      */
     Color4 backgroundColor;
 
@@ -2299,7 +2303,8 @@ class MAGNUM_UI_EXPORT TextLayer: public AbstractVisualLayer {
         /**
          * @brief Set text custom base color
          *
-         * Expects that @p handle is valid. The @p color is multiplied with
+         * Expects that @p handle is valid. The @p color is expected to have
+         * premultiplied alpha. It is multiplied with
          * @ref TextLayerStyleUniform::color, and with node opacity coming from
          * @ref AbstractUserInterface::setNodeOpacity(). Applies to style
          * override for selected text as well, but not to
@@ -2310,7 +2315,8 @@ class MAGNUM_UI_EXPORT TextLayer: public AbstractVisualLayer {
          *
          * Calling this function causes @ref LayerState::NeedsDataUpdate to be
          * set.
-         * @see @ref isHandleValid(DataHandle) const
+         * @see @ref isHandleValid(DataHandle) const,
+         *      @ref Color4::premultiplied()
          */
         void setColor(DataHandle handle, const Color4& color);
 
