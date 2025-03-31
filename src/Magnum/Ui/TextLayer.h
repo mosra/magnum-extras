@@ -271,10 +271,11 @@ struct TextLayerEditingStyleUniform {
     /**
      * @brief Selection background color
      *
-     * Default value is @cpp 0xffffffff_srgbaf @ce. The selection text color is
-     * applied directly to individual glyphs and is thus supplied separately in
-     * @ref TextLayer::Shared::setEditingStyle(). Is further multiplied with
+     * Default value is @cpp 0xffffffff_srgbaf @ce. Is further multiplied with
      * node opacity coming from @ref AbstractUserInterface::setNodeOpacity().
+     * Color and other style properties for selection *text* are applied
+     * directly to individual glyphs and are thus supplied separately through
+     * the @p textUniforms argument to @ref TextLayer::Shared::setEditingStyle().
      */
     Color4 backgroundColor;
 
