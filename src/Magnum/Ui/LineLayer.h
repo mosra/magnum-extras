@@ -785,7 +785,7 @@ class MAGNUM_UI_EXPORT LineLayer: public AbstractVisualLayer {
             #ifndef DOXYGEN_GENERATING_OUTPUT
             /* Accept any enum except NodeHandle to prevent create(node, ...)
                from being called by mistake */
-            , class = typename std::enable_if<std::is_enum<StyleIndex>::value && !std::is_same<StyleIndex, NodeHandle>::value>::type
+            , typename std::enable_if<std::is_enum<StyleIndex>::value && !std::is_same<StyleIndex, NodeHandle>::value, int>::type = 0
             #endif
         > DataHandle create(StyleIndex style, const Containers::StridedArrayView1D<const UnsignedInt>& indices, const Containers::StridedArrayView1D<const Vector2>& points, const Containers::StridedArrayView1D<const Vector4>& colors, NodeHandle node =
             #ifdef DOXYGEN_GENERATING_OUTPUT
@@ -801,7 +801,7 @@ class MAGNUM_UI_EXPORT LineLayer: public AbstractVisualLayer {
             #ifndef DOXYGEN_GENERATING_OUTPUT
             /* Accept any enum except NodeHandle to prevent create(node, ...)
                from being called by mistake */
-            , class = typename std::enable_if<std::is_enum<StyleIndex>::value && !std::is_same<StyleIndex, NodeHandle>::value>::type
+            , typename std::enable_if<std::is_enum<StyleIndex>::value && !std::is_same<StyleIndex, NodeHandle>::value, int>::type = 0
             #endif
         > DataHandle create(StyleIndex style, std::initializer_list<UnsignedInt> indices, std::initializer_list<Vector2> points, std::initializer_list<Color4> colors, NodeHandle node =
             #ifdef DOXYGEN_GENERATING_OUTPUT
@@ -863,7 +863,7 @@ class MAGNUM_UI_EXPORT LineLayer: public AbstractVisualLayer {
             #ifndef DOXYGEN_GENERATING_OUTPUT
             /* Accept any enum except NodeHandle to prevent create(node, ...)
                from being called by mistake */
-            , class = typename std::enable_if<std::is_enum<StyleIndex>::value && !std::is_same<StyleIndex, NodeHandle>::value>::type
+            , typename std::enable_if<std::is_enum<StyleIndex>::value && !std::is_same<StyleIndex, NodeHandle>::value, int>::type = 0
             #endif
         > DataHandle createStrip(StyleIndex style, const Containers::StridedArrayView1D<const Vector2>& points, const Containers::StridedArrayView1D<const Vector4>& colors, NodeHandle node =
             #ifdef DOXYGEN_GENERATING_OUTPUT
@@ -879,7 +879,7 @@ class MAGNUM_UI_EXPORT LineLayer: public AbstractVisualLayer {
             #ifndef DOXYGEN_GENERATING_OUTPUT
             /* Accept any enum except NodeHandle to prevent create(node, ...)
                from being called by mistake */
-            , class = typename std::enable_if<std::is_enum<StyleIndex>::value && !std::is_same<StyleIndex, NodeHandle>::value>::type
+            , typename std::enable_if<std::is_enum<StyleIndex>::value && !std::is_same<StyleIndex, NodeHandle>::value, int>::type = 0
             #endif
         > DataHandle createStrip(StyleIndex style, std::initializer_list<Vector2> points, std::initializer_list<Color4> colors, NodeHandle node =
             #ifdef DOXYGEN_GENERATING_OUTPUT
@@ -941,7 +941,7 @@ class MAGNUM_UI_EXPORT LineLayer: public AbstractVisualLayer {
             #ifndef DOXYGEN_GENERATING_OUTPUT
             /* Accept any enum except NodeHandle to prevent create(node, ...)
                from being called by mistake */
-            , class = typename std::enable_if<std::is_enum<StyleIndex>::value && !std::is_same<StyleIndex, NodeHandle>::value>::type
+            , typename std::enable_if<std::is_enum<StyleIndex>::value && !std::is_same<StyleIndex, NodeHandle>::value, int>::type = 0
             #endif
         > DataHandle createLoop(StyleIndex style, const Containers::StridedArrayView1D<const Vector2>& points, const Containers::StridedArrayView1D<const Vector4>& colors, NodeHandle node =
             #ifdef DOXYGEN_GENERATING_OUTPUT
@@ -957,7 +957,7 @@ class MAGNUM_UI_EXPORT LineLayer: public AbstractVisualLayer {
             #ifndef DOXYGEN_GENERATING_OUTPUT
             /* Accept any enum except NodeHandle to prevent create(node, ...)
                from being called by mistake */
-            , class = typename std::enable_if<std::is_enum<StyleIndex>::value && !std::is_same<StyleIndex, NodeHandle>::value>::type
+            , typename std::enable_if<std::is_enum<StyleIndex>::value && !std::is_same<StyleIndex, NodeHandle>::value, int>::type = 0
             #endif
         > DataHandle createLoop(StyleIndex style, std::initializer_list<Vector2> points, std::initializer_list<Color4> colors, NodeHandle node =
             #ifdef DOXYGEN_GENERATING_OUTPUT

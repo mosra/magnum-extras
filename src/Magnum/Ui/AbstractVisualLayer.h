@@ -140,7 +140,7 @@ class MAGNUM_UI_EXPORT AbstractVisualLayer: public AbstractLayer {
          */
         template<class StyleIndex
             #ifndef DOXYGEN_GENERATING_OUTPUT
-            , class = typename std::enable_if<std::is_enum<StyleIndex>::value>::type
+            , typename std::enable_if<std::is_enum<StyleIndex>::value, int>::type = 0
             #endif
         > void setStyle(DataHandle handle, StyleIndex style) {
             setStyle(handle, UnsignedInt(style));
@@ -163,7 +163,7 @@ class MAGNUM_UI_EXPORT AbstractVisualLayer: public AbstractLayer {
          */
         template<class StyleIndex
             #ifndef DOXYGEN_GENERATING_OUTPUT
-            , class = typename std::enable_if<std::is_enum<StyleIndex>::value>::type
+            , typename std::enable_if<std::is_enum<StyleIndex>::value, int>::type = 0
             #endif
         > void setStyle(LayerDataHandle handle, StyleIndex style) {
             setStyle(handle, UnsignedInt(style));
@@ -196,7 +196,7 @@ class MAGNUM_UI_EXPORT AbstractVisualLayer: public AbstractLayer {
          */
         template<class StyleIndex
             #ifndef DOXYGEN_GENERATING_OUTPUT
-            , class = typename std::enable_if<std::is_enum<StyleIndex>::value>::type
+            , typename std::enable_if<std::is_enum<StyleIndex>::value, int>::type = 0
             #endif
         > void setTransitionedStyle(const AbstractUserInterface& ui, DataHandle handle, StyleIndex style) {
             setTransitionedStyle(ui, handle, UnsignedInt(style));
@@ -219,7 +219,7 @@ class MAGNUM_UI_EXPORT AbstractVisualLayer: public AbstractLayer {
          */
         template<class StyleIndex
             #ifndef DOXYGEN_GENERATING_OUTPUT
-            , class = typename std::enable_if<std::is_enum<StyleIndex>::value>::type
+            , typename std::enable_if<std::is_enum<StyleIndex>::value, int>::type = 0
             #endif
         > void setTransitionedStyle(const AbstractUserInterface& ui, LayerDataHandle handle, StyleIndex style) {
             setTransitionedStyle(ui, handle, UnsignedInt(style));

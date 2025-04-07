@@ -1719,7 +1719,7 @@ class MAGNUM_UI_EXPORT TextLayer: public AbstractVisualLayer {
             #ifndef DOXYGEN_GENERATING_OUTPUT
             /* Accept any enum except NodeHandle to prevent create(node, text)
                from being called by mistake */
-            , class = typename std::enable_if<std::is_enum<StyleIndex>::value && !std::is_same<StyleIndex, NodeHandle>::value>::type
+            , typename std::enable_if<std::is_enum<StyleIndex>::value && !std::is_same<StyleIndex, NodeHandle>::value, int>::type = 0
             #endif
         > DataHandle create(StyleIndex style, Containers::StringView text, const TextProperties& properties, TextDataFlags flags = {}, NodeHandle node =
             #ifdef DOXYGEN_GENERATING_OUTPUT
@@ -1736,7 +1736,7 @@ class MAGNUM_UI_EXPORT TextLayer: public AbstractVisualLayer {
             #ifndef DOXYGEN_GENERATING_OUTPUT
             /* Accept any enum except NodeHandle to prevent create(node, text)
                from being called by mistake */
-            , class = typename std::enable_if<std::is_enum<StyleIndex>::value && !std::is_same<StyleIndex, NodeHandle>::value>::type
+            , typename std::enable_if<std::is_enum<StyleIndex>::value && !std::is_same<StyleIndex, NodeHandle>::value, int>::type = 0
             #endif
         > DataHandle create(StyleIndex style, Containers::StringView text, const TextProperties& properties, NodeHandle node) {
             return create(style, text, properties, TextDataFlags{}, node);
@@ -1792,7 +1792,7 @@ class MAGNUM_UI_EXPORT TextLayer: public AbstractVisualLayer {
             #ifndef DOXYGEN_GENERATING_OUTPUT
             /* Accept any enum except NodeHandle to prevent
                createGlyph(node, glyph) from being called by mistake */
-            , class = typename std::enable_if<std::is_enum<StyleIndex>::value && !std::is_same<StyleIndex, NodeHandle>::value>::type
+            , typename std::enable_if<std::is_enum<StyleIndex>::value && !std::is_same<StyleIndex, NodeHandle>::value, int>::type = 0
             #endif
         > DataHandle createGlyph(StyleIndex style, UnsignedInt glyph, const TextProperties& properties, NodeHandle node =
             #ifdef DOXYGEN_GENERATING_OUTPUT
@@ -1814,7 +1814,7 @@ class MAGNUM_UI_EXPORT TextLayer: public AbstractVisualLayer {
             #ifndef DOXYGEN_GENERATING_OUTPUT
             /* Accept any enum except NodeHandle to prevent
                createGlyph(node, glyph) from being called by mistake */
-            , class = typename std::enable_if<std::is_enum<GlyphIndex>::value && !std::is_same<GlyphIndex, NodeHandle>::value>::type
+            , typename std::enable_if<std::is_enum<GlyphIndex>::value && !std::is_same<GlyphIndex, NodeHandle>::value, int>::type = 0
             #endif
         > DataHandle createGlyph(UnsignedInt style, GlyphIndex glyph, const TextProperties& properties, NodeHandle node =
             #ifdef DOXYGEN_GENERATING_OUTPUT
@@ -1837,7 +1837,7 @@ class MAGNUM_UI_EXPORT TextLayer: public AbstractVisualLayer {
             /* Accept any enum except NodeHandle to prevent
                createGlyph(node, glyph), createGlyph(style, node) etc.
                from being called by mistake */
-            , class = typename std::enable_if<std::is_enum<StyleIndex>::value && std::is_enum<GlyphIndex>::value && !std::is_same<StyleIndex, NodeHandle>::value && !std::is_same<GlyphIndex, NodeHandle>::value>::type
+            , typename std::enable_if<std::is_enum<StyleIndex>::value && std::is_enum<GlyphIndex>::value && !std::is_same<StyleIndex, NodeHandle>::value && !std::is_same<GlyphIndex, NodeHandle>::value, int>::type = 0
             #endif
         > DataHandle createGlyph(StyleIndex style, GlyphIndex glyph, const TextProperties& properties, NodeHandle node =
             #ifdef DOXYGEN_GENERATING_OUTPUT
@@ -2255,7 +2255,7 @@ class MAGNUM_UI_EXPORT TextLayer: public AbstractVisualLayer {
          */
         template<class GlyphIndex
             #ifndef DOXYGEN_GENERATING_OUTPUT
-            , class = typename std::enable_if<std::is_enum<GlyphIndex>::value>::type
+            , typename std::enable_if<std::is_enum<GlyphIndex>::value, int>::type = 0
             #endif
         > void setGlyph(DataHandle handle, GlyphIndex glyph, const TextProperties& properties) {
             return setGlyph(handle, UnsignedInt(glyph), properties);
@@ -2278,7 +2278,7 @@ class MAGNUM_UI_EXPORT TextLayer: public AbstractVisualLayer {
          */
         template<class GlyphIndex
             #ifndef DOXYGEN_GENERATING_OUTPUT
-            , class = typename std::enable_if<std::is_enum<GlyphIndex>::value>::type
+            , typename std::enable_if<std::is_enum<GlyphIndex>::value, int>::type = 0
             #endif
         > void setGlyph(LayerDataHandle handle, GlyphIndex glyph, const TextProperties& properties) {
             return setGlyph(handle, UnsignedInt(glyph), properties);
