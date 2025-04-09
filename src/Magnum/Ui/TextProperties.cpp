@@ -111,8 +111,8 @@ TextProperties& TextProperties::setFeatures(const Containers::ArrayView<const Te
         _state.emplace();
     /* Using a growable array as the users may want to reuse instances to avoid
        temporary allocations */
-    /** @todo arrayClear(), or maybe arrayAssign() here */
-    arrayResize(_state->features, NoInit, 0);
+    /** @todo some arrayAssign()? */
+    arrayClear(_state->features);
     arrayAppend(_state->features, features);
     return *this;
 }

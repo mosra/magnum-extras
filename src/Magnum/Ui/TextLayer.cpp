@@ -283,7 +283,7 @@ void TextLayer::Shared::setStyleInternal(const TextLayerCommonStyleUniform& comm
     Utility::copy(styleFonts, stridedArrayView(state.styles).slice(&Implementation::TextLayerStyle::font));
     Utility::copy(styleAlignments, stridedArrayView(state.styles).slice(&Implementation::TextLayerStyle::alignment));
     if(styleFeatureOffsets.isEmpty()) {
-        arrayResize(state.styleFeatures, NoInit, 0);
+        arrayClear(state.styleFeatures);
         /** @todo some Utility::fill() for this */
         for(Implementation::TextLayerStyle& style: state.styles) {
             style.featureOffset = 0;

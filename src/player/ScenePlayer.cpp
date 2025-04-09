@@ -1692,7 +1692,7 @@ void ScenePlayer::drawEvent() {
         /* Calculate light positions first, upload them to all shaders -- all
            of them are there only if they are actually used, so it's not doing
            any wasteful work */
-        arrayResize(_data->lightPositions, 0);
+        arrayClear(_data->lightPositions);
         _data->camera->draw(_data->lightDrawables);
         CORRADE_INTERNAL_ASSERT(_data->lightPositions.size() == _data->lightCount);
         for(auto&& shader: _phongShaders)
