@@ -165,7 +165,7 @@ bool UserInterfaceGL::trySetStyle(const AbstractStyle& style, const StyleFeature
         const Vector3i glyphCacheSize = style.textLayerGlyphCacheSize(features);
         /** @todo clean up once an array glyph cache exists */
         CORRADE_ASSERT(glyphCacheSize.z() == 1,
-            "Ui::UserInterfaceGL::trySetStyle(): only 2D glyph cache is supported at the moment, got a size of" << Debug::packed << style.textLayerGlyphCacheSize(features), {});
+            "Ui::UserInterfaceGL::trySetStyle(): only 2D glyph cache is supported at the moment, got a size of" << Debug::packed << glyphCacheSize, {});
         state.textLayerShared.setGlyphCache(Text::GlyphCacheGL{style.textLayerGlyphCacheFormat(), glyphCacheSize.xy(), style.textLayerGlyphCachePadding()});
     }
     if(features >= StyleFeature::TextLayerImages) {

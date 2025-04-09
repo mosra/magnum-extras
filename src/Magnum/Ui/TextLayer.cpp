@@ -1100,7 +1100,7 @@ void TextLayer::shapeGlyphInternal(
        (and can thus be filled in on-demand), here we require those to be
        present upfront. */
     const UnsignedInt cacheGlobalGlyphId = glyphCache->glyphId(fontState.glyphCacheFontId, glyphId);
-    const Containers::Triple<Vector2i, Int, Range2Di> glyph = sharedState.glyphCache->glyph(cacheGlobalGlyphId);
+    const Containers::Triple<Vector2i, Int, Range2Di> glyph = glyphCache->glyph(cacheGlobalGlyphId);
     const Range2D glyphRectangle = Range2D{Range2Di::fromSize(glyph.first(), glyph.third().size())}
         .scaled(fontState.scale);
 
