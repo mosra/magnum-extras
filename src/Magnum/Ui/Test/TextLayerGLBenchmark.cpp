@@ -156,7 +156,7 @@ void TextLayerGLBenchmark::fragment() {
     /* If not drawing the cursor, add a single all-white glyph spanning the
        whole cache. Default padding is 1, reset it back to 0 to make this
        work. */
-    Text::GlyphCacheGL cache{PixelFormat::R8Unorm, {32, 32}, {}};
+    Text::GlyphCacheArrayGL cache{PixelFormat::R8Unorm, {32, 32, 1}, {}};
     UnsignedInt fontId = cache.addFont(font.glyphCount(), &font);
     if(!data.drawCursor) {
         cache.addGlyph(fontId, 0, {-16, -16}, {{}, {32, 32}});

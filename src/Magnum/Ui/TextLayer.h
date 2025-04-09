@@ -691,7 +691,7 @@ For a custom layer, you first need to instantiate @ref TextLayer::Shared,
 which contains a glyph cache, font instances, GPU shaders and style
 definitions. It's constructed from a glyph cache reference and a configuration
 instance. In case of the @ref TextLayerGL implementation the cache is
-@ref Text::GlyphCacheGL. Assuming monochrome fonts, construct it with a
+@ref Text::GlyphCacheArrayGL. Assuming monochrome fonts, construct it with a
 single-channel pixel format and a size large enough to fit pre-rendered glyphs
 of all fonts you'll need:
 
@@ -699,7 +699,7 @@ of all fonts you'll need:
 
 The glyph cache is expected to be alive for the whole shared instance lifetime,
 alternatively you can use the
-@ref TextLayerGL::Shared::Shared(Text::GlyphCacheGL&&, const Configuration&)
+@ref TextLayerGL::Shared::Shared(Text::GlyphCacheArrayGL&&, const Configuration&)
 constructor to move its ownership to the shared instance. For the
 @ref TextLayer::Shared::Configuration, at the very least you have to specify
 how many distinct visual *styles* you intend to use, which is for example
@@ -2930,7 +2930,7 @@ class MAGNUM_UI_EXPORT TextLayer::Shared: public AbstractVisualLayer::Shared {
 /**
 @brief Configuration of a base layer shared state
 
-@see @ref TextLayerGL::Shared::Shared(Text::GlyphCacheGL&, const Configuration&)
+@see @ref TextLayerGL::Shared::Shared(Text::GlyphCacheArrayGL&, const Configuration&)
 */
 class MAGNUM_UI_EXPORT TextLayer::Shared::Configuration {
     public:

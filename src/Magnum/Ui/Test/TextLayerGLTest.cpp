@@ -44,6 +44,7 @@
 #include <Magnum/Text/AbstractShaper.h>
 #include <Magnum/Text/Alignment.h>
 #include <Magnum/Text/GlyphCacheGL.h>
+#include <Magnum/TextureTools/Atlas.h>
 #include <Magnum/Trade/AbstractImporter.h>
 
 #include "Magnum/Ui/AbstractUserInterface.h"
@@ -104,7 +105,9 @@ struct TextLayerGLTest: GL::OpenGLTester {
            is done just once for all tests that need it; thus also the font has
            to be shared among all */
         Containers::Pointer<Text::AbstractFont> _font;
-        Text::GlyphCacheGL _fontGlyphCache{PixelFormat::R8Unorm, {64, 64}};
+        /* Cache size picked so it *has to* use more than one layer to fit all
+           glyphs, checked in the constructor */
+        Text::GlyphCacheArrayGL _fontGlyphCache{PixelFormat::R8Unorm, {32, 32, 4}};
 };
 
 using namespace Math::Literals;
@@ -912,12 +915,17 @@ TextLayerGLTest::TextLayerGLTest() {
        doesn't have to suffer stb_truetype's extreme rasterization slowness
        again and again. They only check that the font was opened afterwards. */
     if((_font = _fontManager.loadAndInstantiate("StbTrueTypeFont")) &&
-       _font->openFile(Utility::Path::join(UI_DIR, "SourceSans3-Regular.otf"), 32.0f))
+       _font->openFile(Utility::Path::join(UI_DIR, "SourceSans3-Regular.otf"), 32.0f)) {
         _font->fillGlyphCache(_fontGlyphCache, "Magi");
+        /* The cache should be small enough to have the glyphs spread over
+           multiple layers, to verify the three-component texture coordinates
+           work properly in the shader */
+        CORRADE_INTERNAL_ASSERT(_fontGlyphCache.atlas().filledSize().z() > 2);
+    }
 }
 
 void TextLayerGLTest::sharedConstruct() {
-    Text::GlyphCacheGL cache{PixelFormat::R8Unorm, {8, 8}};
+    Text::GlyphCacheArrayGL cache{PixelFormat::R8Unorm, {8, 8, 2}};
     CORRADE_VERIFY(cache.texture().id());
 
     {
@@ -931,7 +939,7 @@ void TextLayerGLTest::sharedConstruct() {
 }
 
 void TextLayerGLTest::sharedConstructTakeCacheOwnership() {
-    Text::GlyphCacheGL cache{PixelFormat::R8Unorm, {8, 8}};
+    Text::GlyphCacheArrayGL cache{PixelFormat::R8Unorm, {8, 8, 2}};
     CORRADE_VERIFY(cache.texture().id());
 
     {
@@ -942,7 +950,7 @@ void TextLayerGLTest::sharedConstructTakeCacheOwnership() {
         /* It should get moved in */
         CORRADE_VERIFY(!cache.texture().id());
         CORRADE_VERIFY(&shared.glyphCache() != &cache);
-        CORRADE_COMPARE(shared.glyphCache().size(), (Vector3i{8, 8, 1}));
+        CORRADE_COMPARE(shared.glyphCache().size(), (Vector3i{8, 8, 2}));
     }
 
     /** @todo any way to check that a deletion happened? */
@@ -954,8 +962,8 @@ void TextLayerGLTest::sharedConstructCopy() {
 }
 
 void TextLayerGLTest::sharedConstructMove() {
-    Text::GlyphCacheGL cache{PixelFormat::R8Unorm, {8, 8}};
-    Text::GlyphCacheGL cache2{PixelFormat::RGBA8Unorm, {32, 32}};
+    Text::GlyphCacheArrayGL cache{PixelFormat::R8Unorm, {8, 8, 2}};
+    Text::GlyphCacheArrayGL cache2{PixelFormat::RGBA8Unorm, {32, 32, 1}};
     TextLayerGL::Shared a{cache, TextLayer::Shared::Configuration{3}};
 
     TextLayerGL::Shared b{Utility::move(a)};
@@ -972,7 +980,7 @@ void TextLayerGLTest::sharedConstructMove() {
 }
 
 void TextLayerGLTest::construct() {
-    Text::GlyphCacheGL cache{PixelFormat::R8Unorm, {8, 8}};
+    Text::GlyphCacheArrayGL cache{PixelFormat::R8Unorm, {8, 8, 2}};
     TextLayerGL::Shared shared{cache, TextLayer::Shared::Configuration{3}};
 
     TextLayerGL layer{layerHandle(137, 0xfe), shared};
@@ -983,7 +991,7 @@ void TextLayerGLTest::construct() {
 }
 
 void TextLayerGLTest::constructDerived() {
-    Text::GlyphCacheGL cache{PixelFormat::R8Unorm, {8, 8}};
+    Text::GlyphCacheArrayGL cache{PixelFormat::R8Unorm, {8, 8, 2}};
     TextLayerGL::Shared shared{cache, TextLayer::Shared::Configuration{3}};
 
     /* Verify just that subclassing works without hitting linker errors due to
@@ -1005,7 +1013,7 @@ void TextLayerGLTest::constructCopy() {
 }
 
 void TextLayerGLTest::constructMove() {
-    Text::GlyphCacheGL cache{PixelFormat::R8Unorm, {8, 8}};
+    Text::GlyphCacheArrayGL cache{PixelFormat::R8Unorm, {8, 8, 2}};
     TextLayerGL::Shared shared{cache, TextLayer::Shared::Configuration{3}};
     TextLayerGL::Shared shared2{cache, TextLayer::Shared::Configuration{5}};
 
@@ -1027,7 +1035,7 @@ void TextLayerGLTest::constructMove() {
 void TextLayerGLTest::drawNoSizeSet() {
     CORRADE_SKIP_IF_NO_ASSERT();
 
-    Text::GlyphCacheGL cache{PixelFormat::R8Unorm, {8, 8}};
+    Text::GlyphCacheArrayGL cache{PixelFormat::R8Unorm, {8, 8, 2}};
     TextLayerGL::Shared shared{cache, TextLayer::Shared::Configuration{3}};
     TextLayerGL layer{layerHandle(0, 1), shared};
 
@@ -1043,7 +1051,7 @@ void TextLayerGLTest::drawNoStyleSet() {
 
     CORRADE_SKIP_IF_NO_ASSERT();
 
-    Text::GlyphCacheGL cache{PixelFormat::R8Unorm, {8, 8}};
+    Text::GlyphCacheArrayGL cache{PixelFormat::R8Unorm, {8, 8, 2}};
     TextLayerGL::Shared shared{cache, TextLayer::Shared::Configuration{3}
         .setDynamicStyleCount(data.dynamicStyleCount)};
     TextLayerGL layer{layerHandle(0, 1), shared};
@@ -2081,7 +2089,7 @@ void TextLayerGLTest::drawOrder() {
 
     /* A full-white glyph cache, containing just one 7x16 glyph. Default
        padding is 1, resetting to 0 to make this work. */
-    Text::GlyphCacheGL cache{PixelFormat::R8Unorm, {8, 16}, {}};
+    Text::GlyphCacheArrayGL cache{PixelFormat::R8Unorm, {8, 16, 1}, {}};
     for(auto row: cache.image().pixels<UnsignedByte>()[0])
         for(UnsignedByte& pixel: row)
             pixel = 255;
@@ -2266,7 +2274,7 @@ void TextLayerGLTest::drawClipping() {
 
     /* A full-white glyph cache, containing just one 7x160 glyph. Default
        padding is 1, resetting to 0 to make this work. */
-    Text::GlyphCacheGL cache{PixelFormat::R8Unorm, {8, 160}, {}};
+    Text::GlyphCacheArrayGL cache{PixelFormat::R8Unorm, {8, 160, 1}, {}};
     for(auto row: cache.image().pixels<UnsignedByte>()[0])
         for(UnsignedByte& pixel: row)
             pixel = 255;

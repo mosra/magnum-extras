@@ -65,7 +65,6 @@ struct UserInterfaceGLTest: GL::OpenGLTester {
     void setStyleNoSizeSet();
     void setStyleBaseLayerAlreadyPresent();
     void setStyleTextLayerAlreadyPresent();
-    void setStyleTextLayerArrayGlyphCache();
     void setStyleTextLayerImagesTextLayerNotPresentNotApplied();
     void setStyleEventLayerAlreadyPresent();
     void setStyleSnapLayouterAlreadyPresent();
@@ -245,7 +244,6 @@ UserInterfaceGLTest::UserInterfaceGLTest() {
               &UserInterfaceGLTest::setStyleNoSizeSet,
               &UserInterfaceGLTest::setStyleBaseLayerAlreadyPresent,
               &UserInterfaceGLTest::setStyleTextLayerAlreadyPresent,
-              &UserInterfaceGLTest::setStyleTextLayerArrayGlyphCache,
               &UserInterfaceGLTest::setStyleTextLayerImagesTextLayerNotPresentNotApplied,
               &UserInterfaceGLTest::setStyleEventLayerAlreadyPresent,
               &UserInterfaceGLTest::setStyleSnapLayouterAlreadyPresent});
@@ -576,10 +574,9 @@ void UserInterfaceGLTest::setStyle() {
         UnsignedInt doTextLayerEditingStyleCount() const override { return 7; }
         UnsignedInt doTextLayerDynamicStyleCount() const override { return 13; }
         PixelFormat doTextLayerGlyphCacheFormat() const override { return PixelFormat::R16F; }
-        /** @todo test the array size once supported */
         Vector3i doTextLayerGlyphCacheSize(StyleFeatures features) const override {
             _glyphCacheSizeQueriedFeatures = features;
-            return {16, 24, 1};
+            return {16, 24, 3};
         }
         Vector2i doTextLayerGlyphCachePadding() const override { return {3, 1}; }
         bool doApply(UserInterface&, StyleFeatures features, PluginManager::Manager<Trade::AbstractImporter>* importerManager, PluginManager::Manager<Text::AbstractFont>* fontManager) const override {
@@ -642,8 +639,7 @@ void UserInterfaceGLTest::setStyle() {
         CORRADE_COMPARE(ui.textLayer().shared().dynamicStyleCount(), 13);
 
         CORRADE_COMPARE(ui.textLayer().shared().glyphCache().format(), PixelFormat::R16F);
-        /** @todo test the array size once supported */
-        CORRADE_COMPARE(ui.textLayer().shared().glyphCache().size(), (Vector3i{16, 24, 1}));
+        CORRADE_COMPARE(ui.textLayer().shared().glyphCache().size(), (Vector3i{16, 24, 3}));
         CORRADE_COMPARE(ui.textLayer().shared().glyphCache().padding(), (Vector2i{3, 1}));
     }
 
@@ -768,7 +764,7 @@ void UserInterfaceGLTest::setStyleBaseLayerAlreadyPresent() {
 }
 
 void UserInterfaceGLTest::setStyleTextLayerAlreadyPresent() {
-    Text::GlyphCacheGL cache{PixelFormat::R8Unorm, {32, 32}};
+    Text::GlyphCacheArrayGL cache{PixelFormat::R8Unorm, {32, 32, 1}};
 
     TextLayerGL::Shared shared{cache, TextLayer::Shared::Configuration{1}};
     UserInterfaceGL ui{NoCreate};
@@ -790,29 +786,6 @@ void UserInterfaceGLTest::setStyleTextLayerAlreadyPresent() {
     Error redirectError{&out};
     ui.trySetStyle(style, &_importerManager, &_fontManager);
     CORRADE_COMPARE(out, "Ui::UserInterfaceGL::trySetStyle(): text layer already present\n");
-}
-
-void UserInterfaceGLTest::setStyleTextLayerArrayGlyphCache() {
-    UserInterfaceGL ui{NoCreate};
-    ui.setSize({200, 300});
-
-    struct: AbstractStyle {
-        StyleFeatures doFeatures() const override { return StyleFeature::TextLayer; }
-        UnsignedInt doTextLayerStyleCount() const override { return 1; }
-        Vector3i doTextLayerGlyphCacheSize(StyleFeatures) const override { return {16, 24, 2}; }
-        bool doApply(UserInterface&, StyleFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override {
-            CORRADE_FAIL("This shouldn't get called.");
-            return {};
-        }
-    } style;
-
-    /* Capture correct function name */
-    CORRADE_VERIFY(true);
-
-    Containers::String out;
-    Error redirectError{&out};
-    ui.trySetStyle(style, &_importerManager, &_fontManager);
-    CORRADE_COMPARE(out, "Ui::UserInterfaceGL::trySetStyle(): only 2D glyph cache is supported at the moment, got a size of {16, 24, 2}\n");
 }
 
 void UserInterfaceGLTest::setStyleTextLayerImagesTextLayerNotPresentNotApplied() {

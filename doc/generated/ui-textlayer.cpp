@@ -106,7 +106,7 @@ int UiTextLayer::exec() {
     if(!fontLarge || !fontLarge->openFile(Utility::Path::join(Utility::Path::path(__FILE__), "../../src/Magnum/Ui/SourceSans3-Regular.otf"), 2*40.0f))
         return 1;
 
-    Text::GlyphCacheGL glyphCache{PixelFormat::R8Unorm, {1024, 1024}};
+    Text::GlyphCacheArrayGL glyphCache{PixelFormat::R8Unorm, {1024, 1024, 1}};
     font->fillGlyphCache(glyphCache,
         "abcdefghijklmnopqrstuvwxyz"
         "ABCDEFGHIJKLMNOPQRSTUVWXYZ"

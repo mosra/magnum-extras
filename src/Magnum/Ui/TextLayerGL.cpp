@@ -41,7 +41,7 @@
 #include <Magnum/GL/Mesh.h>
 #include <Magnum/GL/Renderer.h>
 #include <Magnum/GL/Shader.h>
-#include <Magnum/GL/Texture.h>
+#include <Magnum/GL/TextureArray.h>
 #include <Magnum/GL/Version.h>
 #include <Magnum/Text/GlyphCacheGL.h>
 
@@ -82,7 +82,7 @@ class TextShaderGL: public GL::AbstractShaderProgram {
             return *this;
         }
 
-        TextShaderGL& bindGlyphTexture(GL::Texture2D& texture) {
+        TextShaderGL& bindGlyphTexture(GL::Texture2DArray& texture) {
             texture.bind(GlyphTextureBinding);
             return *this;
         }
@@ -250,14 +250,14 @@ TextEditingShaderGL::TextEditingShaderGL(const UnsignedInt styleCount) {
 }
 
 struct TextLayerGL::Shared::State: TextLayer::Shared::State {
-    explicit State(Shared& self, Text::GlyphCacheGL& glyphCache, const Configuration& configuration);
-    explicit State(Shared& self, Text::GlyphCacheGL&& glyphCache, const Configuration& configuration);
+    explicit State(Shared& self, Text::GlyphCacheArrayGL& glyphCache, const Configuration& configuration);
+    explicit State(Shared& self, Text::GlyphCacheArrayGL&& glyphCache, const Configuration& configuration);
 
     /* Never used directly, only owns the instance passed to the
        Shared(GlyphCacheGL&&) constructor if it got called instead of
        Shared(GlyphCacheGL&). The actual used glyph cache reference is in the
        base state struct. */
-    Containers::Optional<Text::GlyphCacheGL> glyphCacheStorage;
+    Containers::Optional<Text::GlyphCacheArrayGL> glyphCacheStorage;
     TextShaderGL shader;
     /* Used only if editingStyleCount is non-zero */
     TextEditingShaderGL editingShader{NoCreate};
@@ -267,7 +267,7 @@ struct TextLayerGL::Shared::State: TextLayer::Shared::State {
     GL::Buffer editingStyleBuffer{NoCreate};
 };
 
-TextLayerGL::Shared::State::State(Shared& self, Text::GlyphCacheGL& glyphCache,  const Configuration& configuration):
+TextLayerGL::Shared::State::State(Shared& self, Text::GlyphCacheArrayGL& glyphCache, const Configuration& configuration):
     TextLayer::Shared::State{self, glyphCache, configuration},
     /* If dynamic editing styles are enabled, there's two extra styles for each
         dynamic style, one reserved for under-cursor text and one for selected
@@ -292,13 +292,13 @@ TextLayerGL::Shared::State::State(Shared& self, Text::GlyphCacheGL& glyphCache, 
    move-constructed. It assumes that the Optional contains the data at offset 0
    in the class, which holds right now, and likely will going forward, since it
    isn't some 3rd party container like std::optional. But still, nasty. */
-TextLayerGL::Shared::State::State(Shared& self, Text::GlyphCacheGL&& glyphCache, const Configuration& configuration): State{self, *reinterpret_cast<Text::GlyphCacheGL*>(&glyphCacheStorage), configuration} {
+TextLayerGL::Shared::State::State(Shared& self, Text::GlyphCacheArrayGL&& glyphCache, const Configuration& configuration): State{self, *reinterpret_cast<Text::GlyphCacheArrayGL*>(&glyphCacheStorage), configuration} {
     glyphCacheStorage = Utility::move(glyphCache);
 }
 
-TextLayerGL::Shared::Shared(Text::GlyphCacheGL& glyphCache, const Configuration& configuration): TextLayer::Shared{Containers::pointer<State>(*this, glyphCache, configuration)} {}
+TextLayerGL::Shared::Shared(Text::GlyphCacheArrayGL& glyphCache, const Configuration& configuration): TextLayer::Shared{Containers::pointer<State>(*this, glyphCache, configuration)} {}
 
-TextLayerGL::Shared::Shared(Text::GlyphCacheGL&& glyphCache, const Configuration& configuration): TextLayer::Shared{Containers::pointer<State>(*this, Utility::move(glyphCache), configuration)} {}
+TextLayerGL::Shared::Shared(Text::GlyphCacheArrayGL&& glyphCache, const Configuration& configuration): TextLayer::Shared{Containers::pointer<State>(*this, Utility::move(glyphCache), configuration)} {}
 
 TextLayerGL::Shared::Shared(NoCreateT) noexcept: TextLayer::Shared{NoCreate} {}
 
@@ -496,7 +496,7 @@ void TextLayerGL::doDraw(const Containers::StridedArrayView1D<const UnsignedInt>
     CORRADE_ASSERT(sharedState.setStyleCalled,
         "Ui::TextLayerGL::draw(): no style data was set", );
 
-    sharedState.shader.bindGlyphTexture(static_cast<Text::GlyphCacheGL&>(sharedState.glyphCache).texture());
+    sharedState.shader.bindGlyphTexture(static_cast<Text::GlyphCacheArrayGL&>(sharedState.glyphCache).texture());
 
     /* If there are dynamic styles, bind the layer-specific buffer that
        contains them, otherwise bind the shared buffer */

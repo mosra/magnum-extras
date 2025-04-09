@@ -105,7 +105,7 @@ Debug& operator<<(Debug& debug, const TextEdit value) {
     return debug << "(" << Debug::nospace << Debug::hex << UnsignedByte(value) << Debug::nospace << ")";
 }
 
-TextLayer::Shared::State::State(Shared& self, Text::AbstractGlyphCache& glyphCache, const Configuration& configuration): AbstractVisualLayer::Shared::State{self, configuration.styleCount(), configuration.dynamicStyleCount()}, hasEditingStyles{configuration.hasEditingStyles()}, styleUniformCount{configuration.styleUniformCount()}, editingStyleUniformCount{configuration.editingStyleUniformCount()}, glyphCache{glyphCache} {
+TextLayer::Shared::State::State(Shared& self, Text::AbstractGlyphCache& glyphCache, const Configuration& configuration): AbstractVisualLayer::Shared::State{self, configuration.styleCount(), configuration.dynamicStyleCount()}, hasEditingStyles{configuration.hasEditingStyles()}, styleUniformCount{configuration.styleUniformCount()}, editingStyleUniformCount{configuration.editingStyleUniformCount()}, glyphCache(glyphCache) {
     styleStorage = Containers::ArrayTuple{
         {NoInit, configuration.styleCount(), styles},
         {NoInit, configuration.dynamicStyleCount() ? configuration.styleUniformCount() : 0, styleUniforms},

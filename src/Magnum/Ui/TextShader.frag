@@ -27,7 +27,7 @@
 #ifdef EXPLICIT_BINDING
 layout(binding = 0)
 #endif
-uniform lowp sampler2D glyphTextureData;
+uniform lowp sampler2DArray glyphTextureData;
 
 NOPERSPECTIVE in mediump vec3 interpolatedTextureCoordinates;
 NOPERSPECTIVE in lowp vec4 interpolatedColor;
@@ -35,5 +35,5 @@ NOPERSPECTIVE in lowp vec4 interpolatedColor;
 out lowp vec4 fragmentColor;
 
 void main() {
-    fragmentColor = interpolatedColor*texture(glyphTextureData, interpolatedTextureCoordinates.xy).r;
+    fragmentColor = interpolatedColor*texture(glyphTextureData, interpolatedTextureCoordinates).r;
 }

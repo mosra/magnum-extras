@@ -123,20 +123,20 @@ class MAGNUM_UI_EXPORT TextLayerGL::Shared: public TextLayer::Shared {
          * @brief Construct with a reference to a glyph cache instance
          *
          * The @p glyphCache is expected to be in scope for the whole shared
-         * instance lifetime. Use the @ref Shared(Text::GlyphCacheGL&&, const Configuration&)
+         * instance lifetime. Use the @ref Shared(Text::GlyphCacheArrayGL&&, const Configuration&)
          * constructor to make the shared state take over the glyph cache
          * instance.
          */
-        explicit Shared(Text::GlyphCacheGL& glyphCache, const Configuration& configuration);
+        explicit Shared(Text::GlyphCacheArrayGL& glyphCache, const Configuration& configuration);
 
         /**
          * @brief Construct with taking over ownership of a glyph cache instance
          *
-         * Like @ref Shared(Text::GlyphCacheGL&, const Configuration&), but the
-         * shared state takes over the glyph cache ownership. You can access
-         * the instance using @ref glyphCache() later.
+         * Like @ref Shared(Text::GlyphCacheArrayGL&, const Configuration&),
+         * but the shared state takes over the glyph cache ownership. You can
+         * access the instance using @ref glyphCache() later.
          */
-        explicit Shared(Text::GlyphCacheGL&& glyphCache, const Configuration& configuration);
+        explicit Shared(Text::GlyphCacheArrayGL&& glyphCache, const Configuration& configuration);
 
         /**
          * @brief Construct without creating the contents

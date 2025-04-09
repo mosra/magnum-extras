@@ -297,7 +297,7 @@ static_cast<void>(lineLayerSquare);
 
 {
 /* [TextLayer-setup-glyph-cache] */
-Text::GlyphCacheGL glyphCache{PixelFormat::R8Unorm, {1024, 1024}};
+Text::GlyphCacheArrayGL glyphCache{PixelFormat::R8Unorm, {512, 512, 4}};
 /* [TextLayer-setup-glyph-cache] */
 
 /* [TextLayer-setup-shared] */
@@ -316,7 +316,7 @@ static_cast<void>(textLayer);
 
 {
 Ui::UserInterfaceGL ui{NoCreate};
-Text::GlyphCacheGL glyphCache{PixelFormat::R8Unorm, {8, 8}};
+Text::GlyphCacheArrayGL glyphCache{PixelFormat::R8Unorm, {8, 8, 1}};
 Ui::TextLayerGL::Shared textLayerShared{glyphCache, Ui::TextLayer::Shared::Configuration{1}};
 /* [TextLayer-setup-implicit] */
 ui.setTextLayerInstance(
@@ -326,7 +326,7 @@ ui.setTextLayerInstance(
 
 {
 Ui::UserInterfaceGL ui{NoCreate};
-Text::GlyphCacheGL glyphCache{PixelFormat::R8Unorm, {8, 8}};
+Text::GlyphCacheArrayGL glyphCache{PixelFormat::R8Unorm, {8, 8, 1}};
 /* [TextLayer-dynamic-styles] */
 Ui::TextLayerGL::Shared textLayerShared{glyphCache,
     Ui::TextLayerGL::Shared::Configuration{DOXYGEN_ELLIPSIS(1)}
@@ -347,7 +347,7 @@ textLayer.create(textLayer.shared().styleCount() + dynamicStyleId,
 }
 
 {
-Text::GlyphCacheGL glyphCache{PixelFormat::R8Unorm, {8, 8}};
+Text::GlyphCacheArrayGL glyphCache{PixelFormat::R8Unorm, {8, 8, 1}};
 /* [TextLayer-editing-style-shared] */
 Ui::TextLayerGL::Shared textLayerShared{glyphCache,
     Ui::TextLayer::Shared::Configuration{3}
@@ -358,7 +358,7 @@ Ui::TextLayerGL::Shared textLayerShared{glyphCache,
 
 {
 Ui::AbstractUserInterface ui{{100, 100}};
-Text::GlyphCacheGL glyphCache{PixelFormat::R8Unorm, {8, 8}};
+Text::GlyphCacheArrayGL glyphCache{PixelFormat::R8Unorm, {8, 8, 1}};
 Ui::TextLayerStyleAnimator animator{Ui::animatorHandle(0, 1)};
 /* [TextLayerStyleAnimator-setup2] */
 Ui::TextLayerGL::Shared textLayerShared{glyphCache,
