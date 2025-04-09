@@ -31,6 +31,7 @@
 #include <Corrade/Containers/String.h>
 #include <Corrade/PluginManager/Manager.h>
 #include <Corrade/Utility/Algorithms.h>
+#include <Magnum/ImageView.h>
 #include <Magnum/Animation/Easing.h>
 #include <Magnum/Math/Range.h>
 #include <Magnum/Text/AbstractFont.h>
@@ -41,7 +42,6 @@
 #include <Magnum/Text/Script.h>
 #include <Magnum/TextureTools/Atlas.h>
 #include <Magnum/Trade/ImageData.h>
-#include <Magnum/ImageView.h>
 
 #include "Magnum/Ui/AbstractUserInterface.h"
 #include "Magnum/Ui/AbstractVisualLayer.h"
