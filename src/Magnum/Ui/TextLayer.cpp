@@ -945,11 +945,12 @@ void TextLayer::shapeTextInternal(const UnsignedInt id, const UnsignedInt style,
     const Text::AbstractGlyphCache* const glyphCache = sharedState.glyphCache;
     CORRADE_INTERNAL_ASSERT(glyphCache);
 
-    /* Query font-specific glyph IDs and convert them to cache-global */
-    shaper.glyphIdsInto(glyphData.slice(&Implementation::TextLayerGlyphData::glyphId));
+    /* Query font-specific glyph IDs and convert them to cache-global
+       in-place */
     {
-        for(Implementation::TextLayerGlyphData& glyph: glyphData)
-            glyph.glyphId = glyphCache->glyphId(fontState.glyphCacheFontId, glyph.glyphId);
+        const Containers::StridedArrayView1D<UnsignedInt> glyphIds = glyphData.slice(&Implementation::TextLayerGlyphData::glyphId);
+        shaper.glyphIdsInto(glyphIds);
+        glyphCache->glyphIdsInto(fontState.glyphCacheFontId, glyphIds, glyphIds);
     }
 
     /* Save scale, size, direction-resolved alignment and the glyph run
