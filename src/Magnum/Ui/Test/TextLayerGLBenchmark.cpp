@@ -166,11 +166,10 @@ void TextLayerGLBenchmark::fragment() {
         cache.flushImage({{}, {32, 32}});
     }
 
-    TextLayerGL::Shared shared{TextLayer::Shared::Configuration{1}
+    TextLayerGL::Shared shared{cache, TextLayer::Shared::Configuration{1}
         .setEditingStyleCount(1)
         .setDynamicStyleCount(data.dynamicStyleCount)
     };
-    shared.setGlyphCache(cache);
 
     FontHandle fontHandle = shared.addFont(font, 2048.0f);
 

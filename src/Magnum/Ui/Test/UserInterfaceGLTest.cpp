@@ -30,7 +30,7 @@
 #include <Magnum/PixelFormat.h>
 #include <Magnum/GL/OpenGLTester.h>
 #include <Magnum/Text/AbstractFont.h>
-#include <Magnum/Text/AbstractGlyphCache.h>
+#include <Magnum/Text/GlyphCacheGL.h>
 #include <Magnum/Trade/AbstractImporter.h>
 
 #include "Magnum/Ui/AbstractStyle.h"
@@ -641,7 +641,6 @@ void UserInterfaceGLTest::setStyle() {
         CORRADE_COMPARE(ui.textLayer().shared().editingStyleCount(), 7);
         CORRADE_COMPARE(ui.textLayer().shared().dynamicStyleCount(), 13);
 
-        CORRADE_VERIFY(ui.textLayer().shared().hasGlyphCache());
         CORRADE_COMPARE(ui.textLayer().shared().glyphCache().format(), PixelFormat::R16F);
         /** @todo test the array size once supported */
         CORRADE_COMPARE(ui.textLayer().shared().glyphCache().size(), (Vector3i{16, 24, 1}));
@@ -769,7 +768,9 @@ void UserInterfaceGLTest::setStyleBaseLayerAlreadyPresent() {
 }
 
 void UserInterfaceGLTest::setStyleTextLayerAlreadyPresent() {
-    TextLayerGL::Shared shared{TextLayer::Shared::Configuration{1}};
+    Text::GlyphCacheGL cache{PixelFormat::R8Unorm, {32, 32}};
+
+    TextLayerGL::Shared shared{cache, TextLayer::Shared::Configuration{1}};
     UserInterfaceGL ui{NoCreate};
     ui.setSize({200, 300})
       .setTextLayerInstance(Containers::pointer<TextLayerGL>(ui.createLayer(), shared));

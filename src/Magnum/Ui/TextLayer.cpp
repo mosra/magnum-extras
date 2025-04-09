@@ -105,7 +105,7 @@ Debug& operator<<(Debug& debug, const TextEdit value) {
     return debug << "(" << Debug::nospace << Debug::hex << UnsignedByte(value) << Debug::nospace << ")";
 }
 
-TextLayer::Shared::State::State(Shared& self, const Configuration& configuration): AbstractVisualLayer::Shared::State{self, configuration.styleCount(), configuration.dynamicStyleCount()}, hasEditingStyles{configuration.hasEditingStyles()}, styleUniformCount{configuration.styleUniformCount()}, editingStyleUniformCount{configuration.editingStyleUniformCount()} {
+TextLayer::Shared::State::State(Shared& self, Text::AbstractGlyphCache& glyphCache, const Configuration& configuration): AbstractVisualLayer::Shared::State{self, configuration.styleCount(), configuration.dynamicStyleCount()}, hasEditingStyles{configuration.hasEditingStyles()}, styleUniformCount{configuration.styleUniformCount()}, editingStyleUniformCount{configuration.editingStyleUniformCount()}, glyphCache{glyphCache} {
     styleStorage = Containers::ArrayTuple{
         {NoInit, configuration.styleCount(), styles},
         {NoInit, configuration.dynamicStyleCount() ? configuration.styleUniformCount() : 0, styleUniforms},
@@ -122,7 +122,7 @@ TextLayer::Shared::Shared(Containers::Pointer<State>&& state): AbstractVisualLay
         "Ui::TextLayer::Shared: expected non-zero total style count", );
 }
 
-TextLayer::Shared::Shared(const Configuration& configuration): Shared{Containers::pointer<State>(*this, configuration)} {}
+TextLayer::Shared::Shared(Text::AbstractGlyphCache& glyphCache, const Configuration& configuration): Shared{Containers::pointer<State>(*this, glyphCache, configuration)} {}
 
 TextLayer::Shared::Shared(NoCreateT) noexcept: AbstractVisualLayer::Shared{NoCreate} {}
 
@@ -142,27 +142,12 @@ bool TextLayer::Shared::hasEditingStyles() const {
     return static_cast<const State&>(*_state).hasEditingStyles;
 }
 
-TextLayer::Shared& TextLayer::Shared::setGlyphCache(Text::AbstractGlyphCache& cache) {
-    State& state = static_cast<State&>(*_state);
-    CORRADE_ASSERT(!state.glyphCache,
-        "Ui::TextLayer::Shared::setGlyphCache(): glyph cache already set", *this);
-    state.glyphCache = &cache;
-    return *this;
-}
-
-bool TextLayer::Shared::hasGlyphCache() const {
-    return static_cast<const State&>(*_state).glyphCache;
-}
-
 Text::AbstractGlyphCache& TextLayer::Shared::glyphCache() {
     return const_cast<Text::AbstractGlyphCache&>(const_cast<const TextLayer::Shared&>(*this).glyphCache());
 }
 
 const Text::AbstractGlyphCache& TextLayer::Shared::glyphCache() const {
-    const State& state = static_cast<const State&>(*_state);
-    CORRADE_ASSERT(state.glyphCache,
-        "Ui::TextLayer::Shared::glyphCache(): no glyph cache set", *state.glyphCache);
-    return *state.glyphCache;
+    return static_cast<const State&>(*_state).glyphCache;
 }
 
 std::size_t TextLayer::Shared::fontCount() const {
@@ -184,11 +169,9 @@ bool TextLayer::Shared::isHandleValid(const FontHandle handle) const {
 
 FontHandle TextLayer::Shared::addFont(Text::AbstractFont& font, const Float size) {
     State& state = static_cast<State&>(*_state);
-    CORRADE_ASSERT(state.glyphCache,
-        "Ui::TextLayer::Shared::addFont(): no glyph cache set", {});
-    const Containers::Optional<UnsignedInt> glyphCacheFontId = state.glyphCache->findFont(font);
+    const Containers::Optional<UnsignedInt> glyphCacheFontId = state.glyphCache.findFont(font);
     CORRADE_ASSERT(glyphCacheFontId,
-        "Ui::TextLayer::Shared::addFont(): font not found among" << state.glyphCache->fontCount() << "fonts in associated glyph cache", {});
+        "Ui::TextLayer::Shared::addFont(): font not found among" << state.glyphCache.fontCount() << "fonts in associated glyph cache", {});
     CORRADE_ASSERT(state.fonts.size() < 1 << Implementation::FontHandleIdBits,
         "Ui::TextLayer::Shared::addFont(): can only have at most" << (1 << Implementation::FontHandleIdBits) << "fonts", {});
     /** @todo assert that the font is opened? doesn't prevent anybody from
@@ -208,11 +191,9 @@ FontHandle TextLayer::Shared::addFont(Containers::Pointer<Text::AbstractFont>&& 
 
 FontHandle TextLayer::Shared::addInstancelessFont(const UnsignedInt glyphCacheFontId, const Float scale) {
     State& state = static_cast<State&>(*_state);
-    CORRADE_ASSERT(state.glyphCache,
-        "Ui::TextLayer::Shared::addInstancelessFont(): no glyph cache set", {});
-    CORRADE_ASSERT(glyphCacheFontId < state.glyphCache->fontCount(),
-        "Ui::TextLayer::Shared::addInstancelessFont(): index" << glyphCacheFontId << "out of range for" << state.glyphCache->fontCount() << "fonts in associated glyph cache", {});
-    CORRADE_ASSERT(!state.glyphCache->fontPointer(glyphCacheFontId),
+    CORRADE_ASSERT(glyphCacheFontId < state.glyphCache.fontCount(),
+        "Ui::TextLayer::Shared::addInstancelessFont(): index" << glyphCacheFontId << "out of range for" << state.glyphCache.fontCount() << "fonts in associated glyph cache", {});
+    CORRADE_ASSERT(!state.glyphCache.fontPointer(glyphCacheFontId),
         "Ui::TextLayer::Shared::addInstancelessFont(): glyph cache font" << glyphCacheFontId << "has an instance set", {});
     CORRADE_ASSERT(state.fonts.size() < 1 << Implementation::FontHandleIdBits,
         "Ui::TextLayer::Shared::addInstancelessFont(): can only have at most" << (1 << Implementation::FontHandleIdBits) << "fonts", {});
@@ -939,18 +920,12 @@ void TextLayer::shapeTextInternal(const UnsignedInt id, const UnsignedInt style,
             glyphOffsetsPositions);
     }
 
-    /* Glyph cache. The create() (or createGlyph()) should have ensured that a
-       glyph cache is set, thus the subsequent setText() doesn't need to check
-       again. */
-    const Text::AbstractGlyphCache* const glyphCache = sharedState.glyphCache;
-    CORRADE_INTERNAL_ASSERT(glyphCache);
-
     /* Query font-specific glyph IDs and convert them to cache-global
        in-place */
     {
         const Containers::StridedArrayView1D<UnsignedInt> glyphIds = glyphData.slice(&Implementation::TextLayerGlyphData::glyphId);
         shaper.glyphIdsInto(glyphIds);
-        glyphCache->glyphIdsInto(fontState.glyphCacheFontId, glyphIds, glyphIds);
+        sharedState.glyphCache.glyphIdsInto(fontState.glyphCacheFontId, glyphIds, glyphIds);
     }
 
     /* Save scale, size, direction-resolved alignment and the glyph run
@@ -1086,21 +1061,18 @@ void TextLayer::shapeGlyphInternal(
        TextProperties */
     const Text::Alignment resolvedAlignment = Text::alignmentForDirection(alignment, properties.layoutDirection(), properties.shapeDirection());
 
-    /* The createGlyph() (or create()) should have ensured that a glyph cache
-       is set, thus the subsequent setGlyph() doesn't need to check again. */
     const Implementation::TextLayerFont& fontState = sharedState.fonts[fontHandleId(font)];
-    const Text::AbstractGlyphCache* const glyphCache = sharedState.glyphCache;
-    CORRADE_INTERNAL_ASSERT(glyphCache);
+    const Text::AbstractGlyphCache& glyphCache = sharedState.glyphCache;
 
-    CORRADE_ASSERT(glyphId < glyphCache->fontGlyphCount(fontState.glyphCacheFontId),
-        messagePrefix << "glyph" << glyphId << "out of range for" << glyphCache->fontGlyphCount(fontState.glyphCacheFontId) << "glyphs in glyph cache font" << fontState.glyphCacheFontId, );
+    CORRADE_ASSERT(glyphId < glyphCache.fontGlyphCount(fontState.glyphCacheFontId),
+        messagePrefix << "glyph" << glyphId << "out of range for" << glyphCache.fontGlyphCount(fontState.glyphCacheFontId) << "glyphs in glyph cache font" << fontState.glyphCacheFontId, );
 
     /* Query the glyph rectangle in order to align it. Compared to a regular
        text run, where the glyphs might not be present in the glyph cache yet
        (and can thus be filled in on-demand), here we require those to be
        present upfront. */
-    const UnsignedInt cacheGlobalGlyphId = glyphCache->glyphId(fontState.glyphCacheFontId, glyphId);
-    const Containers::Triple<Vector2i, Int, Range2Di> glyph = glyphCache->glyph(cacheGlobalGlyphId);
+    const UnsignedInt cacheGlobalGlyphId = glyphCache.glyphId(fontState.glyphCacheFontId, glyphId);
+    const Containers::Triple<Vector2i, Int, Range2Di> glyph = glyphCache.glyph(cacheGlobalGlyphId);
     const Range2D glyphRectangle = Range2D{Range2Di::fromSize(glyph.first(), glyph.third().size())}
         .scaled(fontState.scale);
 
@@ -2174,7 +2146,7 @@ void TextLayer::doUpdate(const LayerStates states, const Containers::StridedArra
             const Containers::StridedArrayView1D<const Implementation::TextLayerGlyphData> glyphData = state.glyphData.sliceSize(glyphRun.glyphOffset, glyphRun.glyphCount);
             const Containers::StridedArrayView1D<Implementation::TextLayerVertex> vertexData = state.vertices.sliceSize(glyphRun.glyphOffset*4, glyphRun.glyphCount*4);
             Text::renderGlyphQuadsInto(
-                *sharedState.glyphCache,
+                sharedState.glyphCache,
                 data.scale,
                 glyphData.slice(&Implementation::TextLayerGlyphData::position),
                 glyphData.slice(&Implementation::TextLayerGlyphData::glyphId),

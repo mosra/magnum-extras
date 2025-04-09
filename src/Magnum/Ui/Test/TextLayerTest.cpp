@@ -106,14 +106,9 @@ struct TextLayerTest: TestSuite::Tester {
     void sharedConstructMove();
     void sharedConstructZeroStyleCount();
 
-    void sharedSetGlyphCache();
-    void sharedSetGlyphCacheAlreadySet();
-    void sharedNoGlyphCache();
-
     void sharedAddFont();
     void sharedAddFontTakeOwnership();
     void sharedAddFontTakeOwnershipNull();
-    void sharedAddFontNoCache();
     void sharedAddFontNotFoundInCache();
     void sharedAddFontNoHandlesLeft();
     void sharedAddInstancelessFontHasInstance();
@@ -1254,16 +1249,11 @@ TextLayerTest::TextLayerTest() {
               &TextLayerTest::sharedConstructNoCreate,
               &TextLayerTest::sharedConstructCopy,
               &TextLayerTest::sharedConstructMove,
-              &TextLayerTest::sharedConstructZeroStyleCount});
-
-    addTests({&TextLayerTest::sharedSetGlyphCache,
-              &TextLayerTest::sharedSetGlyphCacheAlreadySet,
-              &TextLayerTest::sharedNoGlyphCache,
+              &TextLayerTest::sharedConstructZeroStyleCount,
 
               &TextLayerTest::sharedAddFont,
               &TextLayerTest::sharedAddFontTakeOwnership,
               &TextLayerTest::sharedAddFontTakeOwnershipNull,
-              &TextLayerTest::sharedAddFontNoCache,
               &TextLayerTest::sharedAddFontNotFoundInCache,
               &TextLayerTest::sharedAddFontNoHandlesLeft,
               &TextLayerTest::sharedAddInstancelessFontHasInstance,
@@ -1829,12 +1819,19 @@ void TextLayerTest::sharedConfigurationSettersInvalidEditingStyleOrUniformCount(
 }
 
 void TextLayerTest::sharedConstruct() {
+    struct: Text::AbstractGlyphCache {
+        using Text::AbstractGlyphCache::AbstractGlyphCache;
+
+        Text::GlyphCacheFeatures doFeatures() const override { return {}; }
+        void doSetImage(const Vector2i&, const ImageView2D&) override {}
+    } cache{PixelFormat::R8Unorm, {32, 32}};
+
     struct Shared: TextLayer::Shared {
-        explicit Shared(const Configuration& configuration): TextLayer::Shared{configuration} {}
+        explicit Shared(Text::AbstractGlyphCache& glyphCache, const Configuration& configuration): TextLayer::Shared{glyphCache, configuration} {}
 
         void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
         void doSetEditingStyle(const TextLayerCommonEditingStyleUniform&, Containers::ArrayView<const TextLayerEditingStyleUniform>) override {}
-    } shared{TextLayer::Shared::Configuration{3, 5}
+    } shared{cache, TextLayer::Shared::Configuration{3, 5}
         .setEditingStyleCount(2, 7)
         .setDynamicStyleCount(4)
     };
@@ -1845,7 +1842,8 @@ void TextLayerTest::sharedConstruct() {
     CORRADE_COMPARE(shared.dynamicStyleCount(), 4);
     CORRADE_VERIFY(shared.hasEditingStyles());
 
-    CORRADE_VERIFY(!shared.hasGlyphCache());
+    CORRADE_COMPARE(&shared.glyphCache(), &cache);
+    CORRADE_COMPARE(&static_cast<const Shared&>(shared).glyphCache(), &cache);
 
     CORRADE_COMPARE(shared.fontCount(), 0);
     CORRADE_VERIFY(!shared.isHandleValid(FontHandle::Null));
@@ -1872,7 +1870,7 @@ void TextLayerTest::sharedConstructCopy() {
            without the constructor the type would be impossible to construct
            (and thus also to copy), leading to false positives in the trait
            check below */
-        explicit CORRADE_UNUSED Shared(const Configuration& configuration): TextLayer::Shared{configuration} {}
+        explicit CORRADE_UNUSED Shared(Text::AbstractGlyphCache& glyphCache, const Configuration& configuration): TextLayer::Shared{glyphCache, configuration} {}
 
         void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
         void doSetEditingStyle(const TextLayerCommonEditingStyleUniform&, Containers::ArrayView<const TextLayerEditingStyleUniform>) override {}
@@ -1883,14 +1881,22 @@ void TextLayerTest::sharedConstructCopy() {
 }
 
 void TextLayerTest::sharedConstructMove() {
+    struct: Text::AbstractGlyphCache {
+        using Text::AbstractGlyphCache::AbstractGlyphCache;
+
+        Text::GlyphCacheFeatures doFeatures() const override { return {}; }
+        void doSetImage(const Vector2i&, const ImageView2D&) override {}
+    } cache{PixelFormat::R8Unorm, {32, 32}},
+      cache2{PixelFormat::RGBA8Unorm, {8, 8}};
+
     struct Shared: TextLayer::Shared {
-        explicit Shared(const Configuration& configuration): TextLayer::Shared{configuration} {}
+        explicit Shared(Text::AbstractGlyphCache& glyphCache, const Configuration& configuration): TextLayer::Shared{glyphCache, configuration} {}
 
         void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
         void doSetEditingStyle(const TextLayerCommonEditingStyleUniform&, Containers::ArrayView<const TextLayerEditingStyleUniform>) override {}
     };
 
-    Shared a{TextLayer::Shared::Configuration{3, 5}
+    Shared a{cache, TextLayer::Shared::Configuration{3, 5}
         .setDynamicStyleCount(4)
     };
 
@@ -1898,12 +1904,14 @@ void TextLayerTest::sharedConstructMove() {
     CORRADE_COMPARE(b.styleUniformCount(), 3);
     CORRADE_COMPARE(b.styleCount(), 5);
     CORRADE_COMPARE(b.dynamicStyleCount(), 4);
+    CORRADE_COMPARE(&b.glyphCache(), &cache);
 
-    Shared c{TextLayer::Shared::Configuration{5, 7}};
+    Shared c{cache, TextLayer::Shared::Configuration{5, 7}};
     c = Utility::move(b);
     CORRADE_COMPARE(c.styleUniformCount(), 3);
     CORRADE_COMPARE(c.styleCount(), 5);
     CORRADE_COMPARE(c.dynamicStyleCount(), 4);
+    CORRADE_COMPARE(&c.glyphCache(), &cache);
 
     CORRADE_VERIFY(std::is_nothrow_move_constructible<Shared>::value);
     CORRADE_VERIFY(std::is_nothrow_move_assignable<Shared>::value);
@@ -1912,93 +1920,28 @@ void TextLayerTest::sharedConstructMove() {
 void TextLayerTest::sharedConstructZeroStyleCount() {
     CORRADE_SKIP_IF_NO_ASSERT();
 
+    struct: Text::AbstractGlyphCache {
+        using Text::AbstractGlyphCache::AbstractGlyphCache;
+
+        Text::GlyphCacheFeatures doFeatures() const override { return {}; }
+        void doSetImage(const Vector2i&, const ImageView2D&) override {}
+    } cache{PixelFormat::R8Unorm, {32, 32}};
+
     struct Shared: TextLayer::Shared {
-        explicit Shared(const Configuration& configuration): TextLayer::Shared{configuration} {}
+        explicit Shared(Text::AbstractGlyphCache& glyphCache, const Configuration& configuration): TextLayer::Shared{glyphCache, configuration} {}
 
         void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
         void doSetEditingStyle(const TextLayerCommonEditingStyleUniform&, Containers::ArrayView<const TextLayerEditingStyleUniform>) override {}
     };
 
     /* Zero style count or dynamic style count is fine on its own */
-    Shared{Shared::Configuration{0}.setDynamicStyleCount(1)};
-    Shared{Shared::Configuration{1}.setDynamicStyleCount(0)};
+    Shared{cache, Shared::Configuration{0}.setDynamicStyleCount(1)};
+    Shared{cache, Shared::Configuration{1}.setDynamicStyleCount(0)};
 
     Containers::String out;
     Error redirectError{&out};
-    Shared{Shared::Configuration{0}.setDynamicStyleCount(0)};
+    Shared{cache, Shared::Configuration{0}.setDynamicStyleCount(0)};
     CORRADE_COMPARE(out, "Ui::TextLayer::Shared: expected non-zero total style count\n");
-}
-
-void TextLayerTest::sharedSetGlyphCache() {
-    struct: Text::AbstractGlyphCache {
-        using Text::AbstractGlyphCache::AbstractGlyphCache;
-
-        Text::GlyphCacheFeatures doFeatures() const override { return {}; }
-        void doSetImage(const Vector2i&, const ImageView2D&) override {}
-    } cache{PixelFormat::R8Unorm, {32, 32, 2}};
-
-    struct Shared: TextLayer::Shared {
-        explicit Shared(const Configuration& configuration): TextLayer::Shared{configuration} {}
-
-        using TextLayer::Shared::setGlyphCache;
-
-        void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
-        void doSetEditingStyle(const TextLayerCommonEditingStyleUniform&, Containers::ArrayView<const TextLayerEditingStyleUniform>) override {}
-    } shared{TextLayer::Shared::Configuration{3, 5}};
-    CORRADE_VERIFY(!shared.hasGlyphCache());
-
-    shared.setGlyphCache(cache);
-    CORRADE_VERIFY(shared.hasGlyphCache());
-    CORRADE_COMPARE(&shared.glyphCache(), &cache);
-    /* Const overload */
-    CORRADE_COMPARE(&const_cast<const Shared&>(shared).glyphCache(), &cache);
-}
-
-void TextLayerTest::sharedSetGlyphCacheAlreadySet() {
-    CORRADE_SKIP_IF_NO_ASSERT();
-
-    struct: Text::AbstractGlyphCache {
-        using Text::AbstractGlyphCache::AbstractGlyphCache;
-
-        Text::GlyphCacheFeatures doFeatures() const override { return {}; }
-        void doSetImage(const Vector2i&, const ImageView2D&) override {}
-    } cache{PixelFormat::R8Unorm, {32, 32, 2}};
-
-    struct Shared: TextLayer::Shared {
-        explicit Shared(const Configuration& configuration): TextLayer::Shared{configuration} {}
-
-        using TextLayer::Shared::setGlyphCache;
-
-        void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
-        void doSetEditingStyle(const TextLayerCommonEditingStyleUniform&, Containers::ArrayView<const TextLayerEditingStyleUniform>) override {}
-    } shared{TextLayer::Shared::Configuration{3, 5}};
-    shared.setGlyphCache(cache);
-    CORRADE_VERIFY(shared.hasGlyphCache());
-
-    Containers::String out;
-    Error redirectError{&out};
-    shared.setGlyphCache(cache);
-    CORRADE_COMPARE(out, "Ui::TextLayer::Shared::setGlyphCache(): glyph cache already set\n");
-}
-
-void TextLayerTest::sharedNoGlyphCache() {
-    CORRADE_SKIP_IF_NO_ASSERT();
-
-    struct Shared: TextLayer::Shared {
-        explicit Shared(const Configuration& configuration): TextLayer::Shared{configuration} {}
-
-        void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
-        void doSetEditingStyle(const TextLayerCommonEditingStyleUniform&, Containers::ArrayView<const TextLayerEditingStyleUniform>) override {}
-    } shared{TextLayer::Shared::Configuration{3, 5}};
-
-    Containers::String out;
-    Error redirectError{&out};
-    shared.glyphCache();
-    /* Const overload */
-    const_cast<const Shared&>(shared).glyphCache();
-    CORRADE_COMPARE(out,
-        "Ui::TextLayer::Shared::glyphCache(): no glyph cache set\n"
-        "Ui::TextLayer::Shared::glyphCache(): no glyph cache set\n");
 }
 
 void TextLayerTest::sharedAddFont() {
@@ -2010,14 +1953,11 @@ void TextLayerTest::sharedAddFont() {
     } cache{PixelFormat::R8Unorm, {32, 32, 2}};
 
     struct Shared: TextLayer::Shared {
-        explicit Shared(const Configuration& configuration): TextLayer::Shared{configuration} {}
-
-        using TextLayer::Shared::setGlyphCache;
+        explicit Shared(Text::AbstractGlyphCache& glyphCache, const Configuration& configuration): TextLayer::Shared{glyphCache, configuration} {}
 
         void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
         void doSetEditingStyle(const TextLayerCommonEditingStyleUniform&, Containers::ArrayView<const TextLayerEditingStyleUniform>) override {}
-    } shared{TextLayer::Shared::Configuration{3, 5}};
-    shared.setGlyphCache(cache);
+    } shared{cache, TextLayer::Shared::Configuration{3, 5}};
     CORRADE_COMPARE(shared.fontCount(), 0);
 
     struct
@@ -2116,14 +2056,11 @@ void TextLayerTest::sharedAddFontTakeOwnership() {
 
     {
         struct Shared: TextLayer::Shared {
-            explicit Shared(const Configuration& configuration): TextLayer::Shared{configuration} {}
-
-            using TextLayer::Shared::setGlyphCache;
+            explicit Shared(Text::AbstractGlyphCache& glyphCache, const Configuration& configuration): TextLayer::Shared{glyphCache, configuration} {}
 
             void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
             void doSetEditingStyle(const TextLayerCommonEditingStyleUniform&, Containers::ArrayView<const TextLayerEditingStyleUniform>) override {}
-        } shared{TextLayer::Shared::Configuration{3, 5}};
-        shared.setGlyphCache(cache);
+        } shared{cache, TextLayer::Shared::Configuration{3, 5}};
         CORRADE_COMPARE(shared.fontCount(), 0);
 
         Containers::Pointer<Font> font1{InPlaceInit, destructed};
@@ -2164,48 +2101,25 @@ void TextLayerTest::sharedAddFontTakeOwnership() {
 void TextLayerTest::sharedAddFontTakeOwnershipNull() {
     CORRADE_SKIP_IF_NO_ASSERT();
 
+    struct: Text::AbstractGlyphCache {
+        using Text::AbstractGlyphCache::AbstractGlyphCache;
+
+        Text::GlyphCacheFeatures doFeatures() const override { return {}; }
+        void doSetImage(const Vector2i&, const ImageView2D&) override {}
+    } cache{PixelFormat::R8Unorm, {32, 32}};
+
     struct Shared: TextLayer::Shared {
-        explicit Shared(const Configuration& configuration): TextLayer::Shared{configuration} {}
+        explicit Shared(Text::AbstractGlyphCache& glyphCache, const Configuration& configuration): TextLayer::Shared{glyphCache, configuration} {}
 
         void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
         void doSetEditingStyle(const TextLayerCommonEditingStyleUniform&, Containers::ArrayView<const TextLayerEditingStyleUniform>) override {}
-    } shared{TextLayer::Shared::Configuration{3, 5}};
+    } shared{cache, TextLayer::Shared::Configuration{3, 5}};
     CORRADE_COMPARE(shared.fontCount(), 0);
 
     Containers::String out;
     Error redirectError{&out};
     shared.addFont(nullptr, 13.0f);
     CORRADE_COMPARE(out, "Ui::TextLayer::Shared::addFont(): font is null\n");
-}
-
-void TextLayerTest::sharedAddFontNoCache() {
-    CORRADE_SKIP_IF_NO_ASSERT();
-
-    struct Shared: TextLayer::Shared {
-        explicit Shared(const Configuration& configuration): TextLayer::Shared{configuration} {}
-
-        void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
-        void doSetEditingStyle(const TextLayerCommonEditingStyleUniform&, Containers::ArrayView<const TextLayerEditingStyleUniform>) override {}
-    } shared{TextLayer::Shared::Configuration{3, 5}};
-
-    struct: Text::AbstractFont {
-        Text::FontFeatures doFeatures() const override { return {}; }
-        bool doIsOpened() const override { return false; }
-        void doClose() override {}
-
-        void doGlyphIdsInto(const Containers::StridedArrayView1D<const char32_t>&, const Containers::StridedArrayView1D<UnsignedInt>&) override {}
-        Vector2 doGlyphSize(UnsignedInt) override { return {}; }
-        Vector2 doGlyphAdvance(UnsignedInt) override { return {}; }
-        Containers::Pointer<Text::AbstractShaper> doCreateShaper() override { return {}; }
-    } font;
-
-    Containers::String out;
-    Error redirectError{&out};
-    shared.addFont(font, 1.0f);
-    shared.addInstancelessFont(0, 0.5f);
-    CORRADE_COMPARE(out,
-        "Ui::TextLayer::Shared::addFont(): no glyph cache set\n"
-        "Ui::TextLayer::Shared::addInstancelessFont(): no glyph cache set\n");
 }
 
 void TextLayerTest::sharedAddFontNotFoundInCache() {
@@ -2224,14 +2138,11 @@ void TextLayerTest::sharedAddFontNotFoundInCache() {
     cache.addFont(36);
 
     struct Shared: TextLayer::Shared {
-        explicit Shared(const Configuration& configuration): TextLayer::Shared{configuration} {}
-
-        using TextLayer::Shared::setGlyphCache;
+        explicit Shared(Text::AbstractGlyphCache& glyphCache, const Configuration& configuration): TextLayer::Shared{glyphCache, configuration} {}
 
         void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
         void doSetEditingStyle(const TextLayerCommonEditingStyleUniform&, Containers::ArrayView<const TextLayerEditingStyleUniform>) override {}
-    } shared{TextLayer::Shared::Configuration{3, 5}};
-    shared.setGlyphCache(cache);
+    } shared{cache, TextLayer::Shared::Configuration{3, 5}};
 
     struct: Text::AbstractFont {
         Text::FontFeatures doFeatures() const override { return {}; }
@@ -2278,14 +2189,11 @@ void TextLayerTest::sharedAddFontNoHandlesLeft() {
     UnsignedInt glyphCacheInstanceLessFontId = cache.addFont(223);
 
     struct Shared: TextLayer::Shared {
-        explicit Shared(const Configuration& configuration): TextLayer::Shared{configuration} {}
-
-        using TextLayer::Shared::setGlyphCache;
+        explicit Shared(Text::AbstractGlyphCache& glyphCache, const Configuration& configuration): TextLayer::Shared{glyphCache, configuration} {}
 
         void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
         void doSetEditingStyle(const TextLayerCommonEditingStyleUniform&, Containers::ArrayView<const TextLayerEditingStyleUniform>) override {}
-    } shared{TextLayer::Shared::Configuration{3, 5}};
-    shared.setGlyphCache(cache);
+    } shared{cache, TextLayer::Shared::Configuration{3, 5}};
 
     FontHandle handle;
     for(std::size_t i = 0; i != 1 << Implementation::FontHandleIdBits; ++i)
@@ -2332,14 +2240,11 @@ void TextLayerTest::sharedAddInstancelessFontHasInstance() {
     UnsignedInt glyphCacheFontId = cache.addFont(67, &font);
 
     struct Shared: TextLayer::Shared {
-        explicit Shared(const Configuration& configuration): TextLayer::Shared{configuration} {}
-
-        using TextLayer::Shared::setGlyphCache;
+        explicit Shared(Text::AbstractGlyphCache& glyphCache, const Configuration& configuration): TextLayer::Shared{glyphCache, configuration} {}
 
         void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
         void doSetEditingStyle(const TextLayerCommonEditingStyleUniform&, Containers::ArrayView<const TextLayerEditingStyleUniform>) override {}
-    } shared{TextLayer::Shared::Configuration{3, 5}};
-    shared.setGlyphCache(cache);
+    } shared{cache, TextLayer::Shared::Configuration{3, 5}};
 
     Containers::String out;
     Error redirectError{&out};
@@ -2371,14 +2276,11 @@ void TextLayerTest::sharedFontInvalidHandle() {
     cache.addFont(67, &font);
 
     struct Shared: TextLayer::Shared {
-        explicit Shared(const Configuration& configuration): TextLayer::Shared{configuration} {}
-
-        using TextLayer::Shared::setGlyphCache;
+        explicit Shared(Text::AbstractGlyphCache& glyphCache, const Configuration& configuration): TextLayer::Shared{glyphCache, configuration} {}
 
         void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
         void doSetEditingStyle(const TextLayerCommonEditingStyleUniform&, Containers::ArrayView<const TextLayerEditingStyleUniform>) override {}
-    } shared{TextLayer::Shared::Configuration{3, 5}};
-    shared.setGlyphCache(cache);
+    } shared{cache, TextLayer::Shared::Configuration{3, 5}};
 
     /* Need to add at least one font because the assertion returns the first
        font as a fallback */
@@ -2431,14 +2333,11 @@ void TextLayerTest::sharedFontNoInstance() {
     UnsignedInt glyphCacheInstanceLessFontId = cache.addFont(233);
 
     struct Shared: TextLayer::Shared {
-        explicit Shared(const Configuration& configuration): TextLayer::Shared{configuration} {}
-
-        using TextLayer::Shared::setGlyphCache;
+        explicit Shared(Text::AbstractGlyphCache& glyphCache, const Configuration& configuration): TextLayer::Shared{glyphCache, configuration} {}
 
         void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
         void doSetEditingStyle(const TextLayerCommonEditingStyleUniform&, Containers::ArrayView<const TextLayerEditingStyleUniform>) override {}
-    } shared{TextLayer::Shared::Configuration{3, 5}};
-    shared.setGlyphCache(cache);
+    } shared{cache, TextLayer::Shared::Configuration{3, 5}};
 
     /* Need to add at least one font with an instance because the assertion
        returns the first font as a fallback */
@@ -2476,10 +2375,9 @@ void TextLayerTest::sharedSetStyle() {
     };
 
     struct Shared: TextLayer::Shared {
-        explicit Shared(const Configuration& configuration): TextLayer::Shared{configuration} {}
+        explicit Shared(Text::AbstractGlyphCache& glyphCache, const Configuration& configuration): TextLayer::Shared{glyphCache, configuration} {}
 
         State& state() { return static_cast<State&>(*_state); }
-        using TextLayer::Shared::setGlyphCache;
 
         void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform> uniforms) override {
             /** @todo test the common style once it contains something */
@@ -2492,11 +2390,10 @@ void TextLayerTest::sharedSetStyle() {
         }
 
         Int setStyleCalled = 0;
-    } shared{TextLayer::Shared::Configuration{3, 5}
+    } shared{cache, TextLayer::Shared::Configuration{3, 5}
         .setEditingStyleCount(1, 2)
         .setDynamicStyleCount(data.dynamicStyleCount)
     };
-    shared.setGlyphCache(cache);
 
     /* Capture correct function name */
     CORRADE_VERIFY(true);
@@ -2610,10 +2507,9 @@ void TextLayerTest::sharedSetStyleImplicitFeatures() {
     };
 
     struct Shared: TextLayer::Shared {
-        explicit Shared(const Configuration& configuration): TextLayer::Shared{configuration} {}
+        explicit Shared(Text::AbstractGlyphCache& glyphCache, const Configuration& configuration): TextLayer::Shared{glyphCache, configuration} {}
 
         State& state() { return static_cast<State&>(*_state); }
-        using TextLayer::Shared::setGlyphCache;
 
         void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform> uniforms) override {
             /** @todo test the common style once it contains something */
@@ -2626,11 +2522,10 @@ void TextLayerTest::sharedSetStyleImplicitFeatures() {
         }
 
         Int setStyleCalled = 0;
-    } shared{TextLayer::Shared::Configuration{3, 5}
+    } shared{cache, TextLayer::Shared::Configuration{3, 5}
         .setEditingStyleCount(1, 2)
         .setDynamicStyleCount(data.dynamicStyleCount)
     };
-    shared.setGlyphCache(cache);
 
     /* Capture correct function name */
     CORRADE_VERIFY(true);
@@ -2794,10 +2689,9 @@ void TextLayerTest::sharedSetStyleImplicitEditingStyles() {
     };
 
     struct Shared: TextLayer::Shared {
-        explicit Shared(const Configuration& configuration): TextLayer::Shared{configuration} {}
+        explicit Shared(Text::AbstractGlyphCache& glyphCache, const Configuration& configuration): TextLayer::Shared{glyphCache, configuration} {}
 
         State& state() { return static_cast<State&>(*_state); }
-        using TextLayer::Shared::setGlyphCache;
 
         void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform> uniforms) override {
             /** @todo test the common style once it contains something */
@@ -2810,11 +2704,10 @@ void TextLayerTest::sharedSetStyleImplicitEditingStyles() {
         }
 
         Int setStyleCalled = 0;
-    } shared{TextLayer::Shared::Configuration{3, 5}
+    } shared{cache, TextLayer::Shared::Configuration{3, 5}
         .setEditingStyleCount(1, 2)
         .setDynamicStyleCount(data.dynamicStyleCount)
     };
-    shared.setGlyphCache(cache);
 
     /* Capture correct function name */
     CORRADE_VERIFY(true);
@@ -3016,10 +2909,9 @@ void TextLayerTest::sharedSetStyleImplicitPadding() {
     };
 
     struct Shared: TextLayer::Shared {
-        explicit Shared(const Configuration& configuration): TextLayer::Shared{configuration} {}
+        explicit Shared(Text::AbstractGlyphCache& glyphCache, const Configuration& configuration): TextLayer::Shared{glyphCache, configuration} {}
 
         State& state() { return static_cast<State&>(*_state); }
-        using TextLayer::Shared::setGlyphCache;
 
         void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform> uniforms) override {
             /** @todo test the common style once it contains something */
@@ -3032,11 +2924,10 @@ void TextLayerTest::sharedSetStyleImplicitPadding() {
         }
 
         Int setStyleCalled = 0;
-    } shared{TextLayer::Shared::Configuration{3, 5}
+    } shared{cache, TextLayer::Shared::Configuration{3, 5}
         .setEditingStyleCount(1, 2)
         .setDynamicStyleCount(data.dynamicStyleCount)
     };
-    shared.setGlyphCache(cache);
 
     /* Capture correct function name */
     CORRADE_VERIFY(true);
@@ -3183,12 +3074,19 @@ void TextLayerTest::sharedSetStyleInvalidSize() {
 
     CORRADE_SKIP_IF_NO_ASSERT();
 
+    struct: Text::AbstractGlyphCache {
+        using Text::AbstractGlyphCache::AbstractGlyphCache;
+
+        Text::GlyphCacheFeatures doFeatures() const override { return {}; }
+        void doSetImage(const Vector2i&, const ImageView2D&) override {}
+    } cache{PixelFormat::R8Unorm, {32, 32}};
+
     struct Shared: TextLayer::Shared {
-        explicit Shared(const Configuration& configuration): TextLayer::Shared{configuration} {}
+        explicit Shared(Text::AbstractGlyphCache& glyphCache, const Configuration& configuration): TextLayer::Shared{glyphCache, configuration} {}
 
         void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
         void doSetEditingStyle(const TextLayerCommonEditingStyleUniform&, Containers::ArrayView<const TextLayerEditingStyleUniform>) override {}
-    } shared{TextLayer::Shared::Configuration{3, 5}
+    } shared{cache, TextLayer::Shared::Configuration{3, 5}
         .setEditingStyleCount(1, 2)
         /* The checks should all deal with just the shared style count, not be
            dependent on this */
@@ -3326,12 +3224,19 @@ void TextLayerTest::sharedSetStyleInvalidSize() {
 void TextLayerTest::sharedSetStyleInvalidMapping() {
     CORRADE_SKIP_IF_NO_ASSERT();
 
+    struct: Text::AbstractGlyphCache {
+        using Text::AbstractGlyphCache::AbstractGlyphCache;
+
+        Text::GlyphCacheFeatures doFeatures() const override { return {}; }
+        void doSetImage(const Vector2i&, const ImageView2D&) override {}
+    } cache{PixelFormat::R8Unorm, {32, 32}};
+
     struct Shared: TextLayer::Shared {
-        explicit Shared(const Configuration& configuration): TextLayer::Shared{configuration} {}
+        explicit Shared(Text::AbstractGlyphCache& glyphCache, const Configuration& configuration): TextLayer::Shared{glyphCache, configuration} {}
 
         void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
         void doSetEditingStyle(const TextLayerCommonEditingStyleUniform&, Containers::ArrayView<const TextLayerEditingStyleUniform>) override {}
-    } shared{TextLayer::Shared::Configuration{3, 6}};
+    } shared{cache, TextLayer::Shared::Configuration{3, 6}};
 
     Containers::String out;
     Error redirectError{&out};
@@ -3371,10 +3276,9 @@ void TextLayerTest::sharedSetStyleImplicitMapping() {
     };
 
     struct Shared: TextLayer::Shared {
-        explicit Shared(const Configuration& configuration): TextLayer::Shared{configuration} {}
+        explicit Shared(Text::AbstractGlyphCache& glyphCache, const Configuration& configuration): TextLayer::Shared{glyphCache, configuration} {}
 
         State& state() { return static_cast<State&>(*_state); }
-        using TextLayer::Shared::setGlyphCache;
 
         void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform> uniforms) override {
             /** @todo test the common style once it contains something */
@@ -3387,11 +3291,10 @@ void TextLayerTest::sharedSetStyleImplicitMapping() {
         }
 
         Int setStyleCalled = 0;
-    } shared{TextLayer::Shared::Configuration{3}
+    } shared{cache, TextLayer::Shared::Configuration{3}
         .setEditingStyleCount(1, 2)
         .setDynamicStyleCount(data.dynamicStyleCount)
     };
-    shared.setGlyphCache(cache);
 
     /* Capture correct function name */
     CORRADE_VERIFY(true);
@@ -3492,10 +3395,9 @@ void TextLayerTest::sharedSetStyleImplicitMappingImplicitFeatures() {
     };
 
     struct Shared: TextLayer::Shared {
-        explicit Shared(const Configuration& configuration): TextLayer::Shared{configuration} {}
+        explicit Shared(Text::AbstractGlyphCache& glyphCache, const Configuration& configuration): TextLayer::Shared{glyphCache, configuration} {}
 
         State& state() { return static_cast<State&>(*_state); }
-        using TextLayer::Shared::setGlyphCache;
 
         void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform> uniforms) override {
             /** @todo test the common style once it contains something */
@@ -3508,11 +3410,10 @@ void TextLayerTest::sharedSetStyleImplicitMappingImplicitFeatures() {
         }
 
         Int setStyleCalled = 0;
-    } shared{TextLayer::Shared::Configuration{3}
+    } shared{cache, TextLayer::Shared::Configuration{3}
         .setEditingStyleCount(1, 2)
         .setDynamicStyleCount(data.dynamicStyleCount)
     };
-    shared.setGlyphCache(cache);
 
     /* Capture correct function name */
     CORRADE_VERIFY(true);
@@ -3655,10 +3556,9 @@ void TextLayerTest::sharedSetStyleImplicitMappingImplicitEditingStyles() {
     };
 
     struct Shared: TextLayer::Shared {
-        explicit Shared(const Configuration& configuration): TextLayer::Shared{configuration} {}
+        explicit Shared(Text::AbstractGlyphCache& glyphCache, const Configuration& configuration): TextLayer::Shared{glyphCache, configuration} {}
 
         State& state() { return static_cast<State&>(*_state); }
-        using TextLayer::Shared::setGlyphCache;
 
         void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform> uniforms) override {
             /** @todo test the common style once it contains something */
@@ -3671,11 +3571,10 @@ void TextLayerTest::sharedSetStyleImplicitMappingImplicitEditingStyles() {
         }
 
         Int setStyleCalled = 0;
-    } shared{TextLayer::Shared::Configuration{3}
+    } shared{cache, TextLayer::Shared::Configuration{3}
         .setEditingStyleCount(1, 2)
         .setDynamicStyleCount(data.dynamicStyleCount)
     };
-    shared.setGlyphCache(cache);
 
     /* Capture correct function name */
     CORRADE_VERIFY(true);
@@ -3847,10 +3746,9 @@ void TextLayerTest::sharedSetStyleImplicitMappingImplicitPadding() {
     };
 
     struct Shared: TextLayer::Shared {
-        explicit Shared(const Configuration& configuration): TextLayer::Shared{configuration} {}
+        explicit Shared(Text::AbstractGlyphCache& glyphCache, const Configuration& configuration): TextLayer::Shared{glyphCache, configuration} {}
 
         State& state() { return static_cast<State&>(*_state); }
-        using TextLayer::Shared::setGlyphCache;
 
         void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform> uniforms) override {
             /** @todo test the common style once it contains something */
@@ -3863,11 +3761,10 @@ void TextLayerTest::sharedSetStyleImplicitMappingImplicitPadding() {
         }
 
         Int setStyleCalled = 0;
-    } shared{TextLayer::Shared::Configuration{3}
+    } shared{cache, TextLayer::Shared::Configuration{3}
         .setEditingStyleCount(1, 2)
         .setDynamicStyleCount(data.dynamicStyleCount)
     };
-    shared.setGlyphCache(cache);
 
     /* Capture correct function name */
     CORRADE_VERIFY(true);
@@ -3995,12 +3892,19 @@ void TextLayerTest::sharedSetStyleImplicitMappingInvalidSize() {
 
     CORRADE_SKIP_IF_NO_ASSERT();
 
+    struct: Text::AbstractGlyphCache {
+        using Text::AbstractGlyphCache::AbstractGlyphCache;
+
+        Text::GlyphCacheFeatures doFeatures() const override { return {}; }
+        void doSetImage(const Vector2i&, const ImageView2D&) override {}
+    } cache{PixelFormat::R8Unorm, {32, 32}};
+
     struct Shared: TextLayer::Shared {
-        explicit Shared(const Configuration& configuration): TextLayer::Shared{configuration} {}
+        explicit Shared(Text::AbstractGlyphCache& glyphCache, const Configuration& configuration): TextLayer::Shared{glyphCache, configuration} {}
 
         void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
         void doSetEditingStyle(const TextLayerCommonEditingStyleUniform&, Containers::ArrayView<const TextLayerEditingStyleUniform>) override {}
-    } shared{TextLayer::Shared::Configuration{3, 5}
+    } shared{cache, TextLayer::Shared::Configuration{3, 5}
         /* The checks should all deal with just the shared style count, not be
            dependent on this */
         .setDynamicStyleCount(data.dynamicStyleCount)
@@ -4043,14 +3947,11 @@ void TextLayerTest::sharedSetStyleInvalidFontHandle() {
     cache.addFont(67, &font);
 
     struct Shared: TextLayer::Shared {
-        explicit Shared(const Configuration& configuration): TextLayer::Shared{configuration} {}
-
-        using TextLayer::Shared::setGlyphCache;
+        explicit Shared(Text::AbstractGlyphCache& glyphCache, const Configuration& configuration): TextLayer::Shared{glyphCache, configuration} {}
 
         void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
         void doSetEditingStyle(const TextLayerCommonEditingStyleUniform&, Containers::ArrayView<const TextLayerEditingStyleUniform>) override {}
-    } shared{TextLayer::Shared::Configuration{4}};
-    shared.setGlyphCache(cache);
+    } shared{cache, TextLayer::Shared::Configuration{4}};
 
     FontHandle handle = shared.addFont(font, 13.0f);
 
@@ -4078,14 +3979,19 @@ void TextLayerTest::sharedSetStyleInvalidFontHandle() {
 void TextLayerTest::sharedSetStyleInvalidAlignment() {
     CORRADE_SKIP_IF_NO_ASSERT();
 
-    struct Shared: TextLayer::Shared {
-        explicit Shared(const Configuration& configuration): TextLayer::Shared{configuration} {}
+    struct: Text::AbstractGlyphCache {
+        using Text::AbstractGlyphCache::AbstractGlyphCache;
 
-        using TextLayer::Shared::setGlyphCache;
+        Text::GlyphCacheFeatures doFeatures() const override { return {}; }
+        void doSetImage(const Vector2i&, const ImageView2D&) override {}
+    } cache{PixelFormat::R8Unorm, {32, 32}};
+
+    struct Shared: TextLayer::Shared {
+        explicit Shared(Text::AbstractGlyphCache& glyphCache, const Configuration& configuration): TextLayer::Shared{glyphCache, configuration} {}
 
         void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
         void doSetEditingStyle(const TextLayerCommonEditingStyleUniform&, Containers::ArrayView<const TextLayerEditingStyleUniform>) override {}
-    } shared{TextLayer::Shared::Configuration{2}};
+    } shared{cache, TextLayer::Shared::Configuration{2}};
 
     Containers::String out;
     Error redirectError{&out};
@@ -4103,14 +4009,19 @@ void TextLayerTest::sharedSetStyleInvalidAlignment() {
 void TextLayerTest::sharedSetStyleInvalidFeatures() {
     CORRADE_SKIP_IF_NO_ASSERT();
 
-    struct Shared: TextLayer::Shared {
-        explicit Shared(const Configuration& configuration): TextLayer::Shared{configuration} {}
+    struct: Text::AbstractGlyphCache {
+        using Text::AbstractGlyphCache::AbstractGlyphCache;
 
-        using TextLayer::Shared::setGlyphCache;
+        Text::GlyphCacheFeatures doFeatures() const override { return {}; }
+        void doSetImage(const Vector2i&, const ImageView2D&) override {}
+    } cache{PixelFormat::R8Unorm, {32, 32}};
+
+    struct Shared: TextLayer::Shared {
+        explicit Shared(Text::AbstractGlyphCache& glyphCache, const Configuration& configuration): TextLayer::Shared{glyphCache, configuration} {}
 
         void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
         void doSetEditingStyle(const TextLayerCommonEditingStyleUniform&, Containers::ArrayView<const TextLayerEditingStyleUniform>) override {}
-    } shared{TextLayer::Shared::Configuration{2}};
+    } shared{cache, TextLayer::Shared::Configuration{2}};
 
     Containers::String out;
     Error redirectError{&out};
@@ -4143,14 +4054,19 @@ void TextLayerTest::sharedSetStyleInvalidFeatures() {
 void TextLayerTest::sharedSetStyleInvalidEditingStyles() {
     CORRADE_SKIP_IF_NO_ASSERT();
 
-    struct Shared: TextLayer::Shared {
-        explicit Shared(const Configuration& configuration): TextLayer::Shared{configuration} {}
+    struct: Text::AbstractGlyphCache {
+        using Text::AbstractGlyphCache::AbstractGlyphCache;
 
-        using TextLayer::Shared::setGlyphCache;
+        Text::GlyphCacheFeatures doFeatures() const override { return {}; }
+        void doSetImage(const Vector2i&, const ImageView2D&) override {}
+    } cache{PixelFormat::R8Unorm, {32, 32}};
+
+    struct Shared: TextLayer::Shared {
+        explicit Shared(Text::AbstractGlyphCache& glyphCache, const Configuration& configuration): TextLayer::Shared{glyphCache, configuration} {}
 
         void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
         void doSetEditingStyle(const TextLayerCommonEditingStyleUniform&, Containers::ArrayView<const TextLayerEditingStyleUniform>) override {}
-    } shared{TextLayer::Shared::Configuration{2}
+    } shared{cache, TextLayer::Shared::Configuration{2}
         .setEditingStyleCount(2, 3)
     };
 
@@ -4184,8 +4100,15 @@ void TextLayerTest::sharedSetEditingStyle() {
     auto&& data = SharedSetStyleData[testCaseInstanceId()];
     setTestCaseDescription(data.name);
 
+    struct: Text::AbstractGlyphCache {
+        using Text::AbstractGlyphCache::AbstractGlyphCache;
+
+        Text::GlyphCacheFeatures doFeatures() const override { return {}; }
+        void doSetImage(const Vector2i&, const ImageView2D&) override {}
+    } cache{PixelFormat::R8Unorm, {32, 32}};
+
     struct Shared: TextLayer::Shared {
-        explicit Shared(const Configuration& configuration): TextLayer::Shared{configuration} {}
+        explicit Shared(Text::AbstractGlyphCache& glyphCache, const Configuration& configuration): TextLayer::Shared{glyphCache, configuration} {}
 
         State& state() { return static_cast<State&>(*_state); }
 
@@ -4200,7 +4123,7 @@ void TextLayerTest::sharedSetEditingStyle() {
         }
 
         Int setEditingStyleCalled = 0;
-    } shared{TextLayer::Shared::Configuration{17, 52}
+    } shared{cache, TextLayer::Shared::Configuration{17, 52}
         .setEditingStyleCount(3, 5)
         .setDynamicStyleCount(data.dynamicStyleCount)
     };
@@ -4253,8 +4176,15 @@ void TextLayerTest::sharedSetEditingStyleImplicitTextUniforms() {
     auto&& data = SharedSetStyleData[testCaseInstanceId()];
     setTestCaseDescription(data.name);
 
+    struct: Text::AbstractGlyphCache {
+        using Text::AbstractGlyphCache::AbstractGlyphCache;
+
+        Text::GlyphCacheFeatures doFeatures() const override { return {}; }
+        void doSetImage(const Vector2i&, const ImageView2D&) override {}
+    } cache{PixelFormat::R8Unorm, {32, 32}};
+
     struct Shared: TextLayer::Shared {
-        explicit Shared(const Configuration& configuration): TextLayer::Shared{configuration} {}
+        explicit Shared(Text::AbstractGlyphCache& glyphCache, const Configuration& configuration): TextLayer::Shared{glyphCache, configuration} {}
 
         State& state() { return static_cast<State&>(*_state); }
 
@@ -4269,7 +4199,7 @@ void TextLayerTest::sharedSetEditingStyleImplicitTextUniforms() {
         }
 
         Int setEditingStyleCalled = 0;
-    } shared{TextLayer::Shared::Configuration{17, 52}
+    } shared{cache, TextLayer::Shared::Configuration{17, 52}
         .setEditingStyleCount(3, 5)
         .setDynamicStyleCount(data.dynamicStyleCount)
     };
@@ -4358,12 +4288,19 @@ void TextLayerTest::sharedSetEditingStyleInvalidSize() {
 
     CORRADE_SKIP_IF_NO_ASSERT();
 
+    struct: Text::AbstractGlyphCache {
+        using Text::AbstractGlyphCache::AbstractGlyphCache;
+
+        Text::GlyphCacheFeatures doFeatures() const override { return {}; }
+        void doSetImage(const Vector2i&, const ImageView2D&) override {}
+    } cache{PixelFormat::R8Unorm, {32, 32}};
+
     struct Shared: TextLayer::Shared {
-        explicit Shared(const Configuration& configuration): TextLayer::Shared{configuration} {}
+        explicit Shared(Text::AbstractGlyphCache& glyphCache, const Configuration& configuration): TextLayer::Shared{glyphCache, configuration} {}
 
         void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
         void doSetEditingStyle(const TextLayerCommonEditingStyleUniform&, Containers::ArrayView<const TextLayerEditingStyleUniform>) override {}
-    } shared{TextLayer::Shared::Configuration{17, 52}
+    } shared{cache, TextLayer::Shared::Configuration{17, 52}
         .setEditingStyleCount(3, 5)
         /* The checks should all deal with just the shared style count, not be
            dependent on this */
@@ -4419,14 +4356,21 @@ void TextLayerTest::sharedSetEditingStyleInvalidSize() {
 void TextLayerTest::sharedSetEditingStyleInvalidMapping() {
     CORRADE_SKIP_IF_NO_ASSERT();
 
+    struct: Text::AbstractGlyphCache {
+        using Text::AbstractGlyphCache::AbstractGlyphCache;
+
+        Text::GlyphCacheFeatures doFeatures() const override { return {}; }
+        void doSetImage(const Vector2i&, const ImageView2D&) override {}
+    } cache{PixelFormat::R8Unorm, {32, 32}};
+
     struct Shared: TextLayer::Shared {
-        explicit Shared(const Configuration& configuration): TextLayer::Shared{configuration} {}
+        explicit Shared(Text::AbstractGlyphCache& glyphCache, const Configuration& configuration): TextLayer::Shared{glyphCache, configuration} {}
 
         void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
         void doSetEditingStyle(const TextLayerCommonEditingStyleUniform&, Containers::ArrayView<const TextLayerEditingStyleUniform>) override {}
-    } shared{TextLayer::Shared::Configuration{2, 1}
+    } shared{cache, TextLayer::Shared::Configuration{2, 1}
         .setEditingStyleCount(3, 6)
-    }, sharedMatchingUniformCount{TextLayer::Shared::Configuration{2, 1}
+    }, sharedMatchingUniformCount{cache, TextLayer::Shared::Configuration{2, 1}
         .setEditingStyleCount(3)
     };
 
@@ -4465,8 +4409,15 @@ void TextLayerTest::sharedSetEditingStyleImplicitMapping() {
     auto&& data = SharedSetStyleData[testCaseInstanceId()];
     setTestCaseDescription(data.name);
 
+    struct: Text::AbstractGlyphCache {
+        using Text::AbstractGlyphCache::AbstractGlyphCache;
+
+        Text::GlyphCacheFeatures doFeatures() const override { return {}; }
+        void doSetImage(const Vector2i&, const ImageView2D&) override {}
+    } cache{PixelFormat::R8Unorm, {32, 32}};
+
     struct Shared: TextLayer::Shared {
-        explicit Shared(const Configuration& configuration): TextLayer::Shared{configuration} {}
+        explicit Shared(Text::AbstractGlyphCache& glyphCache, const Configuration& configuration): TextLayer::Shared{glyphCache, configuration} {}
 
         State& state() { return static_cast<State&>(*_state); }
 
@@ -4481,7 +4432,7 @@ void TextLayerTest::sharedSetEditingStyleImplicitMapping() {
         }
 
         Int setEditingStyleCalled = 0;
-    } shared{TextLayer::Shared::Configuration{17, 52}
+    } shared{cache, TextLayer::Shared::Configuration{17, 52}
         .setEditingStyleCount(3)
         .setDynamicStyleCount(data.dynamicStyleCount)
     };
@@ -4529,8 +4480,15 @@ void TextLayerTest::sharedSetEditingStyleImplicitMappingImplicitTextUniforms() {
     auto&& data = SharedSetStyleData[testCaseInstanceId()];
     setTestCaseDescription(data.name);
 
+    struct: Text::AbstractGlyphCache {
+        using Text::AbstractGlyphCache::AbstractGlyphCache;
+
+        Text::GlyphCacheFeatures doFeatures() const override { return {}; }
+        void doSetImage(const Vector2i&, const ImageView2D&) override {}
+    } cache{PixelFormat::R8Unorm, {32, 32}};
+
     struct Shared: TextLayer::Shared {
-        explicit Shared(const Configuration& configuration): TextLayer::Shared{configuration} {}
+        explicit Shared(Text::AbstractGlyphCache& glyphCache, const Configuration& configuration): TextLayer::Shared{glyphCache, configuration} {}
 
         State& state() { return static_cast<State&>(*_state); }
 
@@ -4545,7 +4503,7 @@ void TextLayerTest::sharedSetEditingStyleImplicitMappingImplicitTextUniforms() {
         }
 
         Int setEditingStyleCalled = 0;
-    } shared{TextLayer::Shared::Configuration{17, 52}
+    } shared{cache, TextLayer::Shared::Configuration{17, 52}
         .setEditingStyleCount(3)
         .setDynamicStyleCount(data.dynamicStyleCount)
     };
@@ -4623,12 +4581,19 @@ void TextLayerTest::sharedSetEditingStyleImplicitMappingInvalidSize() {
 
     CORRADE_SKIP_IF_NO_ASSERT();
 
+    struct: Text::AbstractGlyphCache {
+        using Text::AbstractGlyphCache::AbstractGlyphCache;
+
+        Text::GlyphCacheFeatures doFeatures() const override { return {}; }
+        void doSetImage(const Vector2i&, const ImageView2D&) override {}
+    } cache{PixelFormat::R8Unorm, {32, 32}};
+
     struct Shared: TextLayer::Shared {
-        explicit Shared(const Configuration& configuration): TextLayer::Shared{configuration} {}
+        explicit Shared(Text::AbstractGlyphCache& glyphCache, const Configuration& configuration): TextLayer::Shared{glyphCache, configuration} {}
 
         void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
         void doSetEditingStyle(const TextLayerCommonEditingStyleUniform&, Containers::ArrayView<const TextLayerEditingStyleUniform>) override {}
-    } shared{TextLayer::Shared::Configuration{17, 52}
+    } shared{cache, TextLayer::Shared::Configuration{17, 52}
         .setEditingStyleCount(3, 5)
         /* The checks should all deal with just the shared style count, not be
            dependent on this */
@@ -4646,12 +4611,19 @@ void TextLayerTest::sharedSetEditingStyleImplicitMappingInvalidSize() {
 }
 
 void TextLayerTest::construct() {
+    struct: Text::AbstractGlyphCache {
+        using Text::AbstractGlyphCache::AbstractGlyphCache;
+
+        Text::GlyphCacheFeatures doFeatures() const override { return {}; }
+        void doSetImage(const Vector2i&, const ImageView2D&) override {}
+    } cache{PixelFormat::R8Unorm, {32, 32}};
+
     struct LayerShared: TextLayer::Shared {
-        explicit LayerShared(const Configuration& configuration): TextLayer::Shared{configuration} {}
+        explicit LayerShared(Text::AbstractGlyphCache& glyphCache, const Configuration& configuration): TextLayer::Shared{glyphCache, configuration} {}
 
         void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
         void doSetEditingStyle(const TextLayerCommonEditingStyleUniform&, Containers::ArrayView<const TextLayerEditingStyleUniform>) override {}
-    } shared{TextLayer::Shared::Configuration{3, 5}};
+    } shared{cache, TextLayer::Shared::Configuration{3, 5}};
 
     struct Layer: TextLayer {
         explicit Layer(LayerHandle handle, Shared& shared): TextLayer{handle, shared} {}
@@ -4669,8 +4641,15 @@ void TextLayerTest::constructCopy() {
 }
 
 void TextLayerTest::constructMove() {
+    struct: Text::AbstractGlyphCache {
+        using Text::AbstractGlyphCache::AbstractGlyphCache;
+
+        Text::GlyphCacheFeatures doFeatures() const override { return {}; }
+        void doSetImage(const Vector2i&, const ImageView2D&) override {}
+    } cache{PixelFormat::R8Unorm, {32, 32}};
+
     struct LayerShared: TextLayer::Shared {
-        explicit LayerShared(const Configuration& configuration): TextLayer::Shared{configuration} {}
+        explicit LayerShared(Text::AbstractGlyphCache& glyphCache, const Configuration& configuration): TextLayer::Shared{glyphCache, configuration} {}
 
         void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
         void doSetEditingStyle(const TextLayerCommonEditingStyleUniform&, Containers::ArrayView<const TextLayerEditingStyleUniform>) override {}
@@ -4680,8 +4659,8 @@ void TextLayerTest::constructMove() {
         explicit Layer(LayerHandle handle, LayerShared& shared): TextLayer{handle, shared} {}
     };
 
-    LayerShared shared{TextLayer::Shared::Configuration{1, 3}};
-    LayerShared shared2{TextLayer::Shared::Configuration{5, 7}};
+    LayerShared shared{cache, TextLayer::Shared::Configuration{1, 3}};
+    LayerShared shared2{cache, TextLayer::Shared::Configuration{5, 7}};
 
     Layer a{layerHandle(137, 0xfe), shared};
 
@@ -4722,16 +4701,13 @@ void TextLayerTest::dynamicStyle() {
     cache.addFont(67, &font);
 
     struct LayerShared: TextLayer::Shared {
-        explicit LayerShared(const Configuration& configuration): TextLayer::Shared{configuration} {}
-
-        using TextLayer::Shared::setGlyphCache;
+        explicit LayerShared(Text::AbstractGlyphCache& glyphCache, const Configuration& configuration): TextLayer::Shared{glyphCache, configuration} {}
 
         void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
         void doSetEditingStyle(const TextLayerCommonEditingStyleUniform&, Containers::ArrayView<const TextLayerEditingStyleUniform>) override {}
-    } shared{TextLayer::Shared::Configuration{3, 5}
+    } shared{cache, TextLayer::Shared::Configuration{3, 5}
         .setDynamicStyleCount(3)
     };
-    shared.setGlyphCache(cache);
 
     FontHandle fontHandle = shared.addFont(font, 1.0f);
 
@@ -4855,12 +4831,19 @@ void TextLayerTest::dynamicStyle() {
 }
 
 void TextLayerTest::dynamicStyleFeatureAllocation() {
+    struct: Text::AbstractGlyphCache {
+        using Text::AbstractGlyphCache::AbstractGlyphCache;
+
+        Text::GlyphCacheFeatures doFeatures() const override { return {}; }
+        void doSetImage(const Vector2i&, const ImageView2D&) override {}
+    } cache{PixelFormat::R8Unorm, {32, 32}};
+
     struct LayerShared: TextLayer::Shared {
-        explicit LayerShared(const Configuration& configuration): TextLayer::Shared{configuration} {}
+        explicit LayerShared(Text::AbstractGlyphCache& glyphCache, const Configuration& configuration): TextLayer::Shared{glyphCache, configuration} {}
 
         void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
         void doSetEditingStyle(const TextLayerCommonEditingStyleUniform&, Containers::ArrayView<const TextLayerEditingStyleUniform>) override {}
-    } shared{TextLayer::Shared::Configuration{12, 2}
+    } shared{cache, TextLayer::Shared::Configuration{12, 2}
         .setDynamicStyleCount(3)
     };
 
@@ -4998,14 +4981,19 @@ void TextLayerTest::dynamicStyleEditingStyles() {
     auto&& data = DynamicStyleEditingStylesData[testCaseInstanceId()];
     setTestCaseDescription(data.name);
 
-    struct LayerShared: TextLayer::Shared {
-        explicit LayerShared(const Configuration& configuration): TextLayer::Shared{configuration} {}
+    struct: Text::AbstractGlyphCache {
+        using Text::AbstractGlyphCache::AbstractGlyphCache;
 
-        using TextLayer::Shared::setGlyphCache;
+        Text::GlyphCacheFeatures doFeatures() const override { return {}; }
+        void doSetImage(const Vector2i&, const ImageView2D&) override {}
+    } cache{PixelFormat::R8Unorm, {32, 32}};
+
+    struct LayerShared: TextLayer::Shared {
+        explicit LayerShared(Text::AbstractGlyphCache& glyphCache, const Configuration& configuration): TextLayer::Shared{glyphCache, configuration} {}
 
         void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
         void doSetEditingStyle(const TextLayerCommonEditingStyleUniform&, Containers::ArrayView<const TextLayerEditingStyleUniform>) override {}
-    } shared{TextLayer::Shared::Configuration{3, 1}
+    } shared{cache, TextLayer::Shared::Configuration{3, 1}
         /* There's zero editing styles, so we explicitly opt-in for them for
            dynamic styles */
         .setDynamicStyleCount(2, true)
@@ -5285,12 +5273,19 @@ void TextLayerTest::dynamicStyleEditingStyles() {
 }
 
 void TextLayerTest::dynamicStyleNoDynamicStyles() {
+    struct: Text::AbstractGlyphCache {
+        using Text::AbstractGlyphCache::AbstractGlyphCache;
+
+        Text::GlyphCacheFeatures doFeatures() const override { return {}; }
+        void doSetImage(const Vector2i&, const ImageView2D&) override {}
+    } cache{PixelFormat::R8Unorm, {32, 32}};
+
     struct LayerShared: TextLayer::Shared {
-        explicit LayerShared(const Configuration& configuration): TextLayer::Shared{configuration} {}
+        explicit LayerShared(Text::AbstractGlyphCache& glyphCache, const Configuration& configuration): TextLayer::Shared{glyphCache, configuration} {}
 
         void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
         void doSetEditingStyle(const TextLayerCommonEditingStyleUniform&, Containers::ArrayView<const TextLayerEditingStyleUniform>) override {}
-    } shared{TextLayer::Shared::Configuration{12, 2}};
+    } shared{cache, TextLayer::Shared::Configuration{12, 2}};
 
     struct Layer: TextLayer {
         explicit Layer(LayerHandle handle, Shared& shared): TextLayer{handle, shared} {}
@@ -5305,16 +5300,23 @@ void TextLayerTest::dynamicStyleNoDynamicStyles() {
 void TextLayerTest::dynamicStyleInvalid() {
     CORRADE_SKIP_IF_NO_ASSERT();
 
+    struct: Text::AbstractGlyphCache {
+        using Text::AbstractGlyphCache::AbstractGlyphCache;
+
+        Text::GlyphCacheFeatures doFeatures() const override { return {}; }
+        void doSetImage(const Vector2i&, const ImageView2D&) override {}
+    } cache{PixelFormat::R8Unorm, {32, 32}};
+
     struct LayerShared: TextLayer::Shared {
-        explicit LayerShared(const Configuration& configuration): TextLayer::Shared{configuration} {}
+        explicit LayerShared(Text::AbstractGlyphCache& glyphCache, const Configuration& configuration): TextLayer::Shared{glyphCache, configuration} {}
 
         void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
         void doSetEditingStyle(const TextLayerCommonEditingStyleUniform&, Containers::ArrayView<const TextLayerEditingStyleUniform>) override {}
-    } shared{TextLayer::Shared::Configuration{12, 7}
+    } shared{cache, TextLayer::Shared::Configuration{12, 7}
         /* Making sure it's less than both style count and uniform count to
            verify it's not checked against those */
         .setDynamicStyleCount(3, true)
-    }, sharedNoEditingStyles{TextLayer::Shared::Configuration{12, 7}
+    }, sharedNoEditingStyles{cache, TextLayer::Shared::Configuration{12, 7}
         .setDynamicStyleCount(1, false)
     };
 
@@ -5519,16 +5521,13 @@ template<class StyleIndex, class GlyphIndex> void TextLayerTest::createRemoveSet
     }
 
     struct LayerShared: TextLayer::Shared {
-        explicit LayerShared(const Configuration& configuration): TextLayer::Shared{configuration} {}
-
-        using TextLayer::Shared::setGlyphCache;
+        explicit LayerShared(Text::AbstractGlyphCache& glyphCache, const Configuration& configuration): TextLayer::Shared{glyphCache, configuration} {}
 
         void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
         void doSetEditingStyle(const TextLayerCommonEditingStyleUniform&, Containers::ArrayView<const TextLayerEditingStyleUniform>) override {}
-    } shared{TextLayer::Shared::Configuration{data.styleCount}
+    } shared{cache, TextLayer::Shared::Configuration{data.styleCount}
         .setDynamicStyleCount(data.dynamicStyleCount)
     };
-    shared.setGlyphCache(cache);
 
     /* The three-glyph font is scaled to 0.5, the one-glyph to 2.0 */
     FontHandle threeGlyphFontHandle = shared.addFont(threeGlyphFont, 8.0f);
@@ -6210,17 +6209,11 @@ void TextLayerTest::createRemoveHandleRecycle() {
     cache.addFont(67, &font);
 
     struct LayerShared: TextLayer::Shared {
-        explicit LayerShared(const Configuration& configuration): TextLayer::Shared{configuration} {}
-
-        using TextLayer::Shared::setGlyphCache;
+        explicit LayerShared(Text::AbstractGlyphCache& glyphCache, const Configuration& configuration): TextLayer::Shared{glyphCache, configuration} {}
 
         void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
         void doSetEditingStyle(const TextLayerCommonEditingStyleUniform&, Containers::ArrayView<const TextLayerEditingStyleUniform>) override {}
-    } shared{TextLayer::Shared::Configuration{1}};
-    shared.setGlyphCache(cache);
-    /* Interestingly enough, these two can't be chained together as on some
-       compilers it'd call addFont() before setGlyphCache(), causing an
-       assert */
+    } shared{cache, TextLayer::Shared::Configuration{1}};
     shared.setStyle(TextLayerCommonStyleUniform{},
         {TextLayerStyleUniform{}},
         {shared.addFont(font, 1.0f)},
@@ -6299,16 +6292,13 @@ void TextLayerTest::createStyleOutOfRange() {
        unlikely to happen in practice. It's to verify the check happens against
        the style count, not uniform count. */
     struct LayerShared: TextLayer::Shared {
-        explicit LayerShared(const Configuration& configuration): TextLayer::Shared{configuration} {}
-
-        using TextLayer::Shared::setGlyphCache;
+        explicit LayerShared(Text::AbstractGlyphCache& glyphCache, const Configuration& configuration): TextLayer::Shared{glyphCache, configuration} {}
 
         void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
         void doSetEditingStyle(const TextLayerCommonEditingStyleUniform&, Containers::ArrayView<const TextLayerEditingStyleUniform>) override {}
-    } shared{TextLayer::Shared::Configuration{6, data.styleCount}
+    } shared{cache, TextLayer::Shared::Configuration{6, data.styleCount}
         .setDynamicStyleCount(data.dynamicStyleCount)
     };
-    shared.setGlyphCache(cache);
 
     FontHandle fontHandle = shared.addFont(font, 1.0f);
 
@@ -6339,14 +6329,21 @@ void TextLayerTest::createNoStyleSet() {
 
     CORRADE_SKIP_IF_NO_ASSERT();
 
+    struct: Text::AbstractGlyphCache {
+        using Text::AbstractGlyphCache::AbstractGlyphCache;
+
+        Text::GlyphCacheFeatures doFeatures() const override { return {}; }
+        void doSetImage(const Vector2i&, const ImageView2D&) override {}
+    } cache{PixelFormat::R8Unorm, {32, 32}};
+
     struct LayerShared: TextLayer::Shared {
-        explicit LayerShared(const Configuration& configuration): TextLayer::Shared{configuration} {}
+        explicit LayerShared(Text::AbstractGlyphCache& glyphCache, const Configuration& configuration): TextLayer::Shared{glyphCache, configuration} {}
 
         void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
         void doSetEditingStyle(const TextLayerCommonEditingStyleUniform&, Containers::ArrayView<const TextLayerEditingStyleUniform>) override {}
     /* It should complain regardless of dynamic style count and even if the
        style count is 0 as the common uniform is still used in that case */
-    } shared{TextLayer::Shared::Configuration{data.styleCount}
+    } shared{cache, TextLayer::Shared::Configuration{data.styleCount}
         .setDynamicStyleCount(data.dynamicStyleCount)
     };
 
@@ -6384,17 +6381,11 @@ void TextLayerTest::setCursor() {
     cache.addFont(67, &font);
 
     struct LayerShared: TextLayer::Shared {
-        explicit LayerShared(const Configuration& configuration): TextLayer::Shared{configuration} {}
-
-        using TextLayer::Shared::setGlyphCache;
+        explicit LayerShared(Text::AbstractGlyphCache& glyphCache, const Configuration& configuration): TextLayer::Shared{glyphCache, configuration} {}
 
         void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
         void doSetEditingStyle(const TextLayerCommonEditingStyleUniform&, Containers::ArrayView<const TextLayerEditingStyleUniform>) override {}
-    } shared{TextLayer::Shared::Configuration{1}};
-    shared.setGlyphCache(cache);
-    /* Interestingly enough, these two can't be chained together as on some
-       compilers it'd call addFont() before setGlyphCache(), causing an
-       assert */
+    } shared{cache, TextLayer::Shared::Configuration{1}};
     shared.setStyle(TextLayerCommonStyleUniform{},
         {TextLayerStyleUniform{}},
         {shared.addFont(font, 1.0f)},
@@ -6504,17 +6495,11 @@ void TextLayerTest::setCursorInvalid() {
     cache.addFont(67, &font);
 
     struct LayerShared: TextLayer::Shared {
-        explicit LayerShared(const Configuration& configuration): TextLayer::Shared{configuration} {}
-
-        using TextLayer::Shared::setGlyphCache;
+        explicit LayerShared(Text::AbstractGlyphCache& glyphCache, const Configuration& configuration): TextLayer::Shared{glyphCache, configuration} {}
 
         void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
         void doSetEditingStyle(const TextLayerCommonEditingStyleUniform&, Containers::ArrayView<const TextLayerEditingStyleUniform>) override {}
-    } shared{TextLayer::Shared::Configuration{1}};
-    shared.setGlyphCache(cache);
-    /* Interestingly enough, these two can't be chained together as on some
-       compilers it'd call addFont() before setGlyphCache(), causing an
-       assert */
+    } shared{cache, TextLayer::Shared::Configuration{1}};
     shared.setStyle(TextLayerCommonStyleUniform{},
         {TextLayerStyleUniform{}},
         {shared.addFont(font, 1.0f)},
@@ -6559,17 +6544,11 @@ void TextLayerTest::updateText() {
     cache.addFont(98, &font);
 
     struct LayerShared: TextLayer::Shared {
-        explicit LayerShared(const Configuration& configuration): TextLayer::Shared{configuration} {}
-
-        using TextLayer::Shared::setGlyphCache;
+        explicit LayerShared(Text::AbstractGlyphCache& glyphCache, const Configuration& configuration): TextLayer::Shared{glyphCache, configuration} {}
 
         void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
         void doSetEditingStyle(const TextLayerCommonEditingStyleUniform&, Containers::ArrayView<const TextLayerEditingStyleUniform>) override {}
-    } shared{TextLayer::Shared::Configuration{3}};
-    shared.setGlyphCache(cache);
-    /* Interestingly enough, these two can't be chained together as on some
-       compilers it'd call addFont() before setGlyphCache(), causing an
-       assert */
+    } shared{cache, TextLayer::Shared::Configuration{3}};
     shared.setStyle(TextLayerCommonStyleUniform{},
         {TextLayerStyleUniform{}, TextLayerStyleUniform{}, TextLayerStyleUniform{}},
         {FontHandle::Null, FontHandle::Null, shared.addFont(font, 1.0f)},
@@ -6725,17 +6704,11 @@ void TextLayerTest::updateTextInvalid() {
     cache.addFont(67, &font);
 
     struct LayerShared: TextLayer::Shared {
-        explicit LayerShared(const Configuration& configuration): TextLayer::Shared{configuration} {}
-
-        using TextLayer::Shared::setGlyphCache;
+        explicit LayerShared(Text::AbstractGlyphCache& glyphCache, const Configuration& configuration): TextLayer::Shared{glyphCache, configuration} {}
 
         void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
         void doSetEditingStyle(const TextLayerCommonEditingStyleUniform&, Containers::ArrayView<const TextLayerEditingStyleUniform>) override {}
-    } shared{TextLayer::Shared::Configuration{1}};
-    shared.setGlyphCache(cache);
-    /* Interestingly enough, these two can't be chained together as on some
-       compilers it'd call addFont() before setGlyphCache(), causing an
-       assert */
+    } shared{cache, TextLayer::Shared::Configuration{1}};
     shared.setStyle(TextLayerCommonStyleUniform{},
         {TextLayerStyleUniform{}},
         {shared.addFont(font, 1.0f)},
@@ -6809,17 +6782,11 @@ void TextLayerTest::editText() {
     cache.addFont(98, &font);
 
     struct LayerShared: TextLayer::Shared {
-        explicit LayerShared(const Configuration& configuration): TextLayer::Shared{configuration} {}
-
-        using TextLayer::Shared::setGlyphCache;
+        explicit LayerShared(Text::AbstractGlyphCache& glyphCache, const Configuration& configuration): TextLayer::Shared{glyphCache, configuration} {}
 
         void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
         void doSetEditingStyle(const TextLayerCommonEditingStyleUniform&, Containers::ArrayView<const TextLayerEditingStyleUniform>) override {}
-    } shared{TextLayer::Shared::Configuration{3}};
-    shared.setGlyphCache(cache);
-    /* Interestingly enough, these two can't be chained together as on some
-       compilers it'd call addFont() before setGlyphCache(), causing an
-       assert */
+    } shared{cache, TextLayer::Shared::Configuration{3}};
     shared.setStyle(TextLayerCommonStyleUniform{},
         {TextLayerStyleUniform{}, TextLayerStyleUniform{}, TextLayerStyleUniform{}},
         {FontHandle::Null, FontHandle::Null, shared.addFont(font, 1.0f)},
@@ -6883,17 +6850,11 @@ void TextLayerTest::editTextInvalid() {
     cache.addFont(67, &font);
 
     struct LayerShared: TextLayer::Shared {
-        explicit LayerShared(const Configuration& configuration): TextLayer::Shared{configuration} {}
-
-        using TextLayer::Shared::setGlyphCache;
+        explicit LayerShared(Text::AbstractGlyphCache& glyphCache, const Configuration& configuration): TextLayer::Shared{glyphCache, configuration} {}
 
         void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
         void doSetEditingStyle(const TextLayerCommonEditingStyleUniform&, Containers::ArrayView<const TextLayerEditingStyleUniform>) override {}
-    } shared{TextLayer::Shared::Configuration{1}};
-    shared.setGlyphCache(cache);
-    /* Interestingly enough, these two can't be chained together as on some
-       compilers it'd call addFont() before setGlyphCache(), causing an
-       assert */
+    } shared{cache, TextLayer::Shared::Configuration{1}};
     shared.setStyle(TextLayerCommonStyleUniform{},
         {TextLayerStyleUniform{}},
         {shared.addFont(font, 1.0f)},
@@ -7001,15 +6962,13 @@ void TextLayerTest::createSetTextTextProperties() {
     cache.addGlyph(cache.addFont(1, &font), 0, {}, {});
 
     struct LayerShared: TextLayer::Shared {
-        explicit LayerShared(const Configuration& configuration): TextLayer::Shared{configuration} {}
-
-        using TextLayer::Shared::setGlyphCache;
+        explicit LayerShared(Text::AbstractGlyphCache& glyphCache, const Configuration& configuration): TextLayer::Shared{glyphCache, configuration} {}
 
         void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
         void doSetEditingStyle(const TextLayerCommonEditingStyleUniform&, Containers::ArrayView<const TextLayerEditingStyleUniform>) override {}
-    } shared{TextLayer::Shared::Configuration{data.styleCount}
-        .setDynamicStyleCount(data.dynamicStyleCount)};
-    shared.setGlyphCache(cache);
+    } shared{cache, TextLayer::Shared::Configuration{data.styleCount}
+        .setDynamicStyleCount(data.dynamicStyleCount)
+    };
 
     FontHandle fontHandle = shared.addFont(font, 16.0f);
     if(!data.dynamicStyleCount)
@@ -7177,15 +7136,13 @@ void TextLayerTest::createSetTextTextPropertiesEditable() {
     cache.addGlyph(cache.addFont(1, &font), 0, {}, {});
 
     struct LayerShared: TextLayer::Shared {
-        explicit LayerShared(const Configuration& configuration): TextLayer::Shared{configuration} {}
-
-        using TextLayer::Shared::setGlyphCache;
+        explicit LayerShared(Text::AbstractGlyphCache& glyphCache, const Configuration& configuration): TextLayer::Shared{glyphCache, configuration} {}
 
         void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
         void doSetEditingStyle(const TextLayerCommonEditingStyleUniform&, Containers::ArrayView<const TextLayerEditingStyleUniform>) override {}
-    } shared{TextLayer::Shared::Configuration{data.styleCount}
-        .setDynamicStyleCount(data.dynamicStyleCount)};
-    shared.setGlyphCache(cache);
+    } shared{cache, TextLayer::Shared::Configuration{data.styleCount}
+        .setDynamicStyleCount(data.dynamicStyleCount)
+    };
 
     FontHandle fontHandle = shared.addFont(font, 16.0f);
     FontHandle fontHandle2 = shared.addFont(font, 12.0f);
@@ -7329,17 +7286,11 @@ void TextLayerTest::createSetTextTextPropertiesEditableInvalid() {
     cache.addFont(67, &font);
 
     struct LayerShared: TextLayer::Shared {
-        explicit LayerShared(const Configuration& configuration): TextLayer::Shared{configuration} {}
-
-        using TextLayer::Shared::setGlyphCache;
+        explicit LayerShared(Text::AbstractGlyphCache& glyphCache, const Configuration& configuration): TextLayer::Shared{glyphCache, configuration} {}
 
         void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
         void doSetEditingStyle(const TextLayerCommonEditingStyleUniform&, Containers::ArrayView<const TextLayerEditingStyleUniform>) override {}
-    } shared{TextLayer::Shared::Configuration{1}};
-    shared.setGlyphCache(cache);
-    /* Interestingly enough, these two can't be chained together as on some
-       compilers it'd call addFont() before setGlyphCache(), causing an
-       assert */
+    } shared{cache, TextLayer::Shared::Configuration{1}};
     shared.setStyle(TextLayerCommonStyleUniform{},
         {TextLayerStyleUniform{}},
         {shared.addFont(font, 1.0f)},
@@ -7396,17 +7347,11 @@ void TextLayerTest::createSetUpdateTextFromLayerItself() {
     cache.addFont(98, &font);
 
     struct LayerShared: TextLayer::Shared {
-        explicit LayerShared(const Configuration& configuration): TextLayer::Shared{configuration} {}
-
-        using TextLayer::Shared::setGlyphCache;
+        explicit LayerShared(Text::AbstractGlyphCache& glyphCache, const Configuration& configuration): TextLayer::Shared{glyphCache, configuration} {}
 
         void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
         void doSetEditingStyle(const TextLayerCommonEditingStyleUniform&, Containers::ArrayView<const TextLayerEditingStyleUniform>) override {}
-    } shared{TextLayer::Shared::Configuration{1}};
-    shared.setGlyphCache(cache);
-    /* Interestingly enough, these two can't be chained together as on some
-       compilers it'd call addFont() before setGlyphCache(), causing an
-       assert */
+    } shared{cache, TextLayer::Shared::Configuration{1}};
     shared.setStyle(TextLayerCommonStyleUniform{},
         {TextLayerStyleUniform{}},
         {shared.addFont(font, 1.0f)},
@@ -7460,17 +7405,11 @@ void TextLayerTest::setColor() {
     cache.addFont(67, &font);
 
     struct LayerShared: TextLayer::Shared {
-        explicit LayerShared(const Configuration& configuration): TextLayer::Shared{configuration} {}
-
-        using TextLayer::Shared::setGlyphCache;
+        explicit LayerShared(Text::AbstractGlyphCache& glyphCache, const Configuration& configuration): TextLayer::Shared{glyphCache, configuration} {}
 
         void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
         void doSetEditingStyle(const TextLayerCommonEditingStyleUniform&, Containers::ArrayView<const TextLayerEditingStyleUniform>) override {}
-    } shared{TextLayer::Shared::Configuration{1}};
-    shared.setGlyphCache(cache);
-    /* Interestingly enough, these two can't be chained together as on some
-       compilers it'd call addFont() before setGlyphCache(), causing an
-       assert */
+    } shared{cache, TextLayer::Shared::Configuration{1}};
     shared.setStyle(TextLayerCommonStyleUniform{},
         {TextLayerStyleUniform{}},
         {shared.addFont(font, 1.0f)},
@@ -7534,17 +7473,11 @@ void TextLayerTest::setPadding() {
     cache.addFont(67, &font);
 
     struct LayerShared: TextLayer::Shared {
-        explicit LayerShared(const Configuration& configuration): TextLayer::Shared{configuration} {}
-
-        using TextLayer::Shared::setGlyphCache;
+        explicit LayerShared(Text::AbstractGlyphCache& glyphCache, const Configuration& configuration): TextLayer::Shared{glyphCache, configuration} {}
 
         void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
         void doSetEditingStyle(const TextLayerCommonEditingStyleUniform&, Containers::ArrayView<const TextLayerEditingStyleUniform>) override {}
-    } shared{TextLayer::Shared::Configuration{1}};
-    shared.setGlyphCache(cache);
-    /* Interestingly enough, these two can't be chained together as on some
-       compilers it'd call addFont() before setGlyphCache(), causing an
-       assert */
+    } shared{cache, TextLayer::Shared::Configuration{1}};
     shared.setStyle(TextLayerCommonStyleUniform{},
         {TextLayerStyleUniform{}},
         {shared.addFont(font, 1.0f)},
@@ -7608,14 +7541,19 @@ void TextLayerTest::setPadding() {
 void TextLayerTest::invalidHandle() {
     CORRADE_SKIP_IF_NO_ASSERT();
 
-    struct LayerShared: TextLayer::Shared {
-        explicit LayerShared(const Configuration& configuration): TextLayer::Shared{configuration} {}
+    struct: Text::AbstractGlyphCache {
+        using Text::AbstractGlyphCache::AbstractGlyphCache;
 
-        using TextLayer::Shared::setGlyphCache;
+        Text::GlyphCacheFeatures doFeatures() const override { return {}; }
+        void doSetImage(const Vector2i&, const ImageView2D&) override {}
+    } cache{PixelFormat::R8Unorm, {32, 32}};
+
+    struct LayerShared: TextLayer::Shared {
+        explicit LayerShared(Text::AbstractGlyphCache& glyphCache, const Configuration& configuration): TextLayer::Shared{glyphCache, configuration} {}
 
         void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
         void doSetEditingStyle(const TextLayerCommonEditingStyleUniform&, Containers::ArrayView<const TextLayerEditingStyleUniform>) override {}
-    } shared{TextLayer::Shared::Configuration{1}};
+    } shared{cache, TextLayer::Shared::Configuration{1}};
 
     struct Layer: TextLayer {
         explicit Layer(LayerHandle handle, Shared& shared): TextLayer{handle, shared} {}
@@ -7710,17 +7648,11 @@ void TextLayerTest::invalidFontHandle() {
     cache.addFont(67, &font);
 
     struct LayerShared: TextLayer::Shared {
-        explicit LayerShared(const Configuration& configuration): TextLayer::Shared{configuration} {}
-
-        using TextLayer::Shared::setGlyphCache;
+        explicit LayerShared(Text::AbstractGlyphCache& glyphCache, const Configuration& configuration): TextLayer::Shared{glyphCache, configuration} {}
 
         void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
         void doSetEditingStyle(const TextLayerCommonEditingStyleUniform&, Containers::ArrayView<const TextLayerEditingStyleUniform>) override {}
-    } shared{TextLayer::Shared::Configuration{1}};
-    shared.setGlyphCache(cache);
-    /* Interestingly enough, these two can't be chained together as on some
-       compilers it'd call addFont() before setGlyphCache(), causing an
-       assert */
+    } shared{cache, TextLayer::Shared::Configuration{1}};
     shared.setStyle(TextLayerCommonStyleUniform{},
         {TextLayerStyleUniform{}},
         {shared.addFont(font, 1.0f)},
@@ -7769,17 +7701,11 @@ void TextLayerTest::nonEditableText() {
     cache.addFont(67, &font);
 
     struct LayerShared: TextLayer::Shared {
-        explicit LayerShared(const Configuration& configuration): TextLayer::Shared{configuration} {}
-
-        using TextLayer::Shared::setGlyphCache;
+        explicit LayerShared(Text::AbstractGlyphCache& glyphCache, const Configuration& configuration): TextLayer::Shared{glyphCache, configuration} {}
 
         void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
         void doSetEditingStyle(const TextLayerCommonEditingStyleUniform&, Containers::ArrayView<const TextLayerEditingStyleUniform>) override {}
-    } shared{TextLayer::Shared::Configuration{1}};
-    shared.setGlyphCache(cache);
-    /* Interestingly enough, these two can't be chained together as on some
-       compilers it'd call addFont() before setGlyphCache(), causing an
-       assert */
+    } shared{cache, TextLayer::Shared::Configuration{1}};
     shared.setStyle(TextLayerCommonStyleUniform{},
         {TextLayerStyleUniform{}},
         {shared.addFont(font, 1.0f)},
@@ -7846,16 +7772,13 @@ void TextLayerTest::noSharedStyleFonts() {
     cache.addFont(67, &font);
 
     struct LayerShared: TextLayer::Shared {
-        explicit LayerShared(const Configuration& configuration): TextLayer::Shared{configuration} {}
-
-        using TextLayer::Shared::setGlyphCache;
+        explicit LayerShared(Text::AbstractGlyphCache& glyphCache, const Configuration& configuration): TextLayer::Shared{glyphCache, configuration} {}
 
         void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
         void doSetEditingStyle(const TextLayerCommonEditingStyleUniform&, Containers::ArrayView<const TextLayerEditingStyleUniform>) override {}
-    } shared{TextLayer::Shared::Configuration{4}
+    } shared{cache, TextLayer::Shared::Configuration{4}
         .setDynamicStyleCount(2)
     };
-    shared.setGlyphCache(cache);
 
     FontHandle fontHandle = shared.addFont(font, 1.0f);
 
@@ -7906,14 +7829,11 @@ void TextLayerTest::noFontInstance() {
     UnsignedInt glyphCacheInstanceLessFontId = cache.addFont(233);
 
     struct LayerShared: TextLayer::Shared {
-        explicit LayerShared(const Configuration& configuration): TextLayer::Shared{configuration} {}
-
-        using TextLayer::Shared::setGlyphCache;
+        explicit LayerShared(Text::AbstractGlyphCache& glyphCache, const Configuration& configuration): TextLayer::Shared{glyphCache, configuration} {}
 
         void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
         void doSetEditingStyle(const TextLayerCommonEditingStyleUniform&, Containers::ArrayView<const TextLayerEditingStyleUniform>) override {}
-    } shared{TextLayer::Shared::Configuration{1}};
-    shared.setGlyphCache(cache);
+    } shared{cache, TextLayer::Shared::Configuration{1}};
 
     FontHandle fontHandle1 = shared.addInstancelessFont(glyphCacheInstanceLessFontId, 0.1f);
     FontHandle fontHandle2 = shared.addInstancelessFont(glyphCacheInstanceLessFontId, 0.1f);
@@ -7957,14 +7877,11 @@ void TextLayerTest::glyphOutOfRange() {
     UnsignedInt glyphCacheFontId = cache.addFont(56);
 
     struct LayerShared: TextLayer::Shared {
-        explicit LayerShared(const Configuration& configuration): TextLayer::Shared{configuration} {}
-
-        using TextLayer::Shared::setGlyphCache;
+        explicit LayerShared(Text::AbstractGlyphCache& glyphCache, const Configuration& configuration): TextLayer::Shared{glyphCache, configuration} {}
 
         void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
         void doSetEditingStyle(const TextLayerCommonEditingStyleUniform&, Containers::ArrayView<const TextLayerEditingStyleUniform>) override {}
-    } shared{TextLayer::Shared::Configuration{2, 3}};
-    shared.setGlyphCache(cache);
+    } shared{cache, TextLayer::Shared::Configuration{2, 3}};
 
     FontHandle fontHandle = shared.addInstancelessFont(glyphCacheFontId, 1.0f);
     shared.setStyle(TextLayerCommonStyleUniform{},
@@ -8010,14 +7927,11 @@ void TextLayerTest::updateEmpty() {
     cache.addFont(56, &font);
 
     struct LayerShared: TextLayer::Shared {
-        explicit LayerShared(const Configuration& configuration): TextLayer::Shared{configuration} {}
-
-        using TextLayer::Shared::setGlyphCache;
+        explicit LayerShared(Text::AbstractGlyphCache& glyphCache, const Configuration& configuration): TextLayer::Shared{glyphCache, configuration} {}
 
         void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
         void doSetEditingStyle(const TextLayerCommonEditingStyleUniform&, Containers::ArrayView<const TextLayerEditingStyleUniform>) override {}
-    } shared{TextLayer::Shared::Configuration{1}};
-    shared.setGlyphCache(cache);
+    } shared{cache, TextLayer::Shared::Configuration{1}};
 
     FontHandle fontHandle = shared.addFont(font, 1.0f);
     shared.setStyle(
@@ -8108,17 +8022,14 @@ void TextLayerTest::updateCleanDataOrder() {
     }
 
     struct LayerShared: TextLayer::Shared {
-        explicit LayerShared(const Configuration& configuration): TextLayer::Shared{configuration} {}
-
-        using TextLayer::Shared::setGlyphCache;
+        explicit LayerShared(Text::AbstractGlyphCache& glyphCache, const Configuration& configuration): TextLayer::Shared{glyphCache, configuration} {}
 
         void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
         void doSetEditingStyle(const TextLayerCommonEditingStyleUniform&, Containers::ArrayView<const TextLayerEditingStyleUniform>) override {}
-    } shared{TextLayer::Shared::Configuration{6, data.styleCount}
+    } shared{cache, TextLayer::Shared::Configuration{6, data.styleCount}
         .setEditingStyleCount(data.editingStyleCount ? 4 : 0, data.editingStyleCount)
         .setDynamicStyleCount(data.dynamicStyleCount, data.hasEditingStyles)
     };
-    shared.setGlyphCache(cache);
 
     /* The three-glyph font is scaled to 0.5, the one-glyph to 2.0 */
     FontHandle threeGlyphFontHandle = shared.addFont(threeGlyphFont, 8.0f);
@@ -9250,16 +9161,13 @@ void TextLayerTest::updateAlignment() {
     cache.addGlyph(cache.addFont(1, &font), 0, {}, {{}, {1, 2}});
 
     struct LayerShared: TextLayer::Shared {
-        explicit LayerShared(const Configuration& configuration): TextLayer::Shared{configuration} {}
-
-        using TextLayer::Shared::setGlyphCache;
+        explicit LayerShared(Text::AbstractGlyphCache& glyphCache, const Configuration& configuration): TextLayer::Shared{glyphCache, configuration} {}
 
         void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
         void doSetEditingStyle(const TextLayerCommonEditingStyleUniform&, Containers::ArrayView<const TextLayerEditingStyleUniform>) override {}
-    } shared{TextLayer::Shared::Configuration{1}
+    } shared{cache, TextLayer::Shared::Configuration{1}
         .setEditingStyleCount(1)
     };
-    shared.setGlyphCache(cache);
 
     /* Font scaled 2x, so all metrics coming from the font or the cache should
        be scaled 2x */
@@ -9374,14 +9282,11 @@ void TextLayerTest::updateAlignmentGlyph() {
     cache.addGlyph(glyphCacheFontId, 17, {-2, -3}, {{}, {3, 4}});
 
     struct LayerShared: TextLayer::Shared {
-        explicit LayerShared(const Configuration& configuration): TextLayer::Shared{configuration} {}
-
-        using TextLayer::Shared::setGlyphCache;
+        explicit LayerShared(Text::AbstractGlyphCache& glyphCache, const Configuration& configuration): TextLayer::Shared{glyphCache, configuration} {}
 
         void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
         void doSetEditingStyle(const TextLayerCommonEditingStyleUniform&, Containers::ArrayView<const TextLayerEditingStyleUniform>) override {}
-    } shared{TextLayer::Shared::Configuration{1}};
-    shared.setGlyphCache(cache);
+    } shared{cache, TextLayer::Shared::Configuration{1}};
 
     /* Font scaled 2x, so all metrics coming from the the cache should be
        scaled 2x */
@@ -9522,16 +9427,13 @@ void TextLayerTest::updatePadding() {
     cache.addGlyph(cache.addFont(1, &font), 0, {}, {{}, {1, 2}});
 
     struct LayerShared: TextLayer::Shared {
-        explicit LayerShared(const Configuration& configuration): TextLayer::Shared{configuration} {}
-
-        using TextLayer::Shared::setGlyphCache;
+        explicit LayerShared(Text::AbstractGlyphCache& glyphCache, const Configuration& configuration): TextLayer::Shared{glyphCache, configuration} {}
 
         void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
         void doSetEditingStyle(const TextLayerCommonEditingStyleUniform&, Containers::ArrayView<const TextLayerEditingStyleUniform>) override {}
-    } shared{TextLayer::Shared::Configuration{1}
+    } shared{cache, TextLayer::Shared::Configuration{1}
         .setEditingStyleCount(1)
     };
-    shared.setGlyphCache(cache);
 
     /* Font scaled 2x, so all metrics coming from the font or the cache should
        be scaled 2x */
@@ -9646,14 +9548,11 @@ void TextLayerTest::updatePaddingGlyph() {
     cache.addGlyph(glyphCacheFontId, 17, {-2, -3}, {{}, {3, 4}});
 
     struct LayerShared: TextLayer::Shared {
-        explicit LayerShared(const Configuration& configuration): TextLayer::Shared{configuration} {}
-
-        using TextLayer::Shared::setGlyphCache;
+        explicit LayerShared(Text::AbstractGlyphCache& glyphCache, const Configuration& configuration): TextLayer::Shared{glyphCache, configuration} {}
 
         void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
         void doSetEditingStyle(const TextLayerCommonEditingStyleUniform&, Containers::ArrayView<const TextLayerEditingStyleUniform>) override {}
-    } shared{TextLayer::Shared::Configuration{1}};
-    shared.setGlyphCache(cache);
+    } shared{cache, TextLayer::Shared::Configuration{1}};
 
     /* Font scaled 2x, so all metrics coming from the the cache should be
        scaled 2x */
@@ -9723,14 +9622,21 @@ void TextLayerTest::updateNoStyleSet() {
 
     CORRADE_SKIP_IF_NO_ASSERT();
 
+    struct: Text::AbstractGlyphCache {
+        using Text::AbstractGlyphCache::AbstractGlyphCache;
+
+        Text::GlyphCacheFeatures doFeatures() const override { return {}; }
+        void doSetImage(const Vector2i&, const ImageView2D&) override {}
+    } cache{PixelFormat::R8Unorm, {32, 32}};
+
     struct LayerShared: TextLayer::Shared {
-        explicit LayerShared(const Configuration& configuration): TextLayer::Shared{configuration} {}
+        explicit LayerShared(Text::AbstractGlyphCache& glyphCache, const Configuration& configuration): TextLayer::Shared{glyphCache, configuration} {}
 
         void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
         void doSetEditingStyle(const TextLayerCommonEditingStyleUniform&, Containers::ArrayView<const TextLayerEditingStyleUniform>) override {}
     /* It should complain regardless of dynamic style count and even if the
        style count is 0 as the common uniform is still used in that case */
-    } shared{TextLayer::Shared::Configuration{data.styleCount}
+    } shared{cache, TextLayer::Shared::Configuration{data.styleCount}
         .setDynamicStyleCount(data.dynamicStyleCount)
     };
 
@@ -9754,14 +9660,21 @@ void TextLayerTest::updateNoEditingStyleSet() {
 
     CORRADE_SKIP_IF_NO_ASSERT();
 
+    struct: Text::AbstractGlyphCache {
+        using Text::AbstractGlyphCache::AbstractGlyphCache;
+
+        Text::GlyphCacheFeatures doFeatures() const override { return {}; }
+        void doSetImage(const Vector2i&, const ImageView2D&) override {}
+    } cache{PixelFormat::R8Unorm, {32, 32}};
+
     struct LayerShared: TextLayer::Shared {
-        explicit LayerShared(const Configuration& configuration): TextLayer::Shared{configuration} {}
+        explicit LayerShared(Text::AbstractGlyphCache& glyphCache, const Configuration& configuration): TextLayer::Shared{glyphCache, configuration} {}
 
         void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
         void doSetEditingStyle(const TextLayerCommonEditingStyleUniform&, Containers::ArrayView<const TextLayerEditingStyleUniform>) override {}
     /* It should complain regardless of dynamic style count and even if the
        style count is 0 as the common uniform is still used in that case */
-    } shared{TextLayer::Shared::Configuration{data.styleCount}
+    } shared{cache, TextLayer::Shared::Configuration{data.styleCount}
         .setEditingStyleCount(data.styleCount ? 1 : 0)
         /* If the editing style count is 0, we have to explicitly opt in for
            dynamic editing styles */
@@ -9801,12 +9714,19 @@ void TextLayerTest::sharedNeedsUpdateStatePropagatedToLayers() {
     auto&& data = SharedNeedsUpdateStatePropagatedToLayersData[testCaseInstanceId()];
     setTestCaseDescription(data.name);
 
+    struct: Text::AbstractGlyphCache {
+        using Text::AbstractGlyphCache::AbstractGlyphCache;
+
+        Text::GlyphCacheFeatures doFeatures() const override { return {}; }
+        void doSetImage(const Vector2i&, const ImageView2D&) override {}
+    } cache{PixelFormat::R8Unorm, {32, 32}};
+
     struct LayerShared: TextLayer::Shared {
-        explicit LayerShared(const Configuration& configuration): TextLayer::Shared{configuration} {}
+        explicit LayerShared(Text::AbstractGlyphCache& glyphCache, const Configuration& configuration): TextLayer::Shared{glyphCache, configuration} {}
 
         void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
         void doSetEditingStyle(const TextLayerCommonEditingStyleUniform&, Containers::ArrayView<const TextLayerEditingStyleUniform>) override {}
-    } shared{TextLayer::Shared::Configuration{1}
+    } shared{cache, TextLayer::Shared::Configuration{1}
         .setEditingStyleCount(data.editingStyleCount)
         .setDynamicStyleCount(data.dynamicStyleCount)
     };
@@ -9952,17 +9872,11 @@ void TextLayerTest::keyTextEvent() {
     cache.addFont(98, &font);
 
     struct LayerShared: TextLayer::Shared {
-        explicit LayerShared(const Configuration& configuration): TextLayer::Shared{configuration} {}
-
-        using TextLayer::Shared::setGlyphCache;
+        explicit LayerShared(Text::AbstractGlyphCache& glyphCache, const Configuration& configuration): TextLayer::Shared{glyphCache, configuration} {}
 
         void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
         void doSetEditingStyle(const TextLayerCommonEditingStyleUniform&, Containers::ArrayView<const TextLayerEditingStyleUniform>) override {}
-    } shared{TextLayer::Shared::Configuration{1}};
-    shared.setGlyphCache(cache);
-    /* Interestingly enough, these two can't be chained together as on some
-       compilers it'd call addFont() before setGlyphCache(), causing an
-       assert */
+    } shared{cache, TextLayer::Shared::Configuration{1}};
     shared.setStyle(TextLayerCommonStyleUniform{},
         {TextLayerStyleUniform{}},
         {shared.addFont(font, 1.0f)},
@@ -10249,17 +10163,11 @@ void TextLayerTest::keyTextEventSynthesizedFromPointerPress() {
     cache.addFont(98, &font);
 
     struct LayerShared: TextLayer::Shared {
-        explicit LayerShared(const Configuration& configuration): TextLayer::Shared{configuration} {}
-
-        using TextLayer::Shared::setGlyphCache;
+        explicit LayerShared(Text::AbstractGlyphCache& glyphCache, const Configuration& configuration): TextLayer::Shared{glyphCache, configuration} {}
 
         void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
         void doSetEditingStyle(const TextLayerCommonEditingStyleUniform&, Containers::ArrayView<const TextLayerEditingStyleUniform>) override {}
-    } shared{TextLayer::Shared::Configuration{1}};
-    shared.setGlyphCache(cache);
-    /* Interestingly enough, these two can't be chained together as on some
-       compilers it'd call addFont() before setGlyphCache(), causing an
-       assert */
+    } shared{cache, TextLayer::Shared::Configuration{1}};
     shared.setStyle(TextLayerCommonStyleUniform{},
         {TextLayerStyleUniform{}},
         {shared.addFont(font, 1.0f)},

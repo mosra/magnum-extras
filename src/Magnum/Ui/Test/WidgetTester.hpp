@@ -79,9 +79,7 @@ struct TestBaseLayer: BaseLayer {
 };
 
 struct TestTextLayerShared: TextLayer::Shared {
-    explicit TestTextLayerShared(): TextLayer::Shared{Configuration{Implementation::TextStyleUniformCount, Implementation::TextStyleCount}} {
-        setGlyphCache(glyphCache);
-
+    explicit TestTextLayerShared(): TextLayer::Shared{glyphCache, Configuration{Implementation::TextStyleUniformCount, Implementation::TextStyleCount}} {
         font.openFile("", 16.0f);
         glyphCache.addFont(Implementation::IconCount + 1, &font);
 

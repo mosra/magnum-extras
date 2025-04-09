@@ -114,14 +114,29 @@ class MAGNUM_UI_EXPORT TextLayerGL: public TextLayer {
 @brief Shared state for the OpenGL implementation of the text layer
 
 Contains fonts, shader instances and style data. In order to use the layer it's
-expected that @ref setGlyphCache() was called and at least one font was added
-with @ref addFont(). In order to update or draw the layer it's expected that
-@ref setStyle() was called.
+expected that at least one font was added with @ref addFont(). In order to
+update or draw the layer it's expected that @ref setStyle() was called.
 */
 class MAGNUM_UI_EXPORT TextLayerGL::Shared: public TextLayer::Shared {
     public:
-        /** @brief Constructor */
-        explicit Shared(const Configuration& configuration);
+        /**
+         * @brief Construct with a reference to a glyph cache instance
+         *
+         * The @p glyphCache is expected to be in scope for the whole shared
+         * instance lifetime. Use the @ref Shared(Text::GlyphCacheGL&&, const Configuration&)
+         * constructor to make the shared state take over the glyph cache
+         * instance.
+         */
+        explicit Shared(Text::GlyphCacheGL& glyphCache, const Configuration& configuration);
+
+        /**
+         * @brief Construct with taking over ownership of a glyph cache instance
+         *
+         * Like @ref Shared(Text::GlyphCacheGL&, const Configuration&), but the
+         * shared state takes over the glyph cache ownership. You can access
+         * the instance using @ref glyphCache() later.
+         */
+        explicit Shared(Text::GlyphCacheGL&& glyphCache, const Configuration& configuration);
 
         /**
          * @brief Construct without creating the contents
@@ -131,27 +146,6 @@ class MAGNUM_UI_EXPORT TextLayerGL::Shared: public TextLayer::Shared {
          * constructor has undefined behavior and will likely crash.
          */
         explicit Shared(NoCreateT) noexcept;
-
-        /**
-         * @brief Set a glyph cache instance
-         * @return Reference to self (for method chaining)
-         *
-         * Has to be called before any @ref addFont(), is expected to be called
-         * exactly once. Use the @ref setGlyphCache(Text::GlyphCacheGL&&)
-         * overload to make the shared state take over the glyph cache
-         * instance.
-         */
-        Shared& setGlyphCache(Text::GlyphCacheGL& cache);
-
-        /**
-         * @brief Set a glyph cache instance and take over its ownership
-         * @return Reference to self (for method chaining)
-         *
-         * Like @ref setGlyphCache(Text::GlyphCacheGL&), but the shared state
-         * takes over the glyph cache ownership. You can access the instance
-         * using @ref glyphCache() later.
-         */
-        Shared& setGlyphCache(Text::GlyphCacheGL&& cache);
 
         /* Overloads to remove a WTF factor from method chaining order */
         #ifndef DOXYGEN_GENERATING_OUTPUT

@@ -261,8 +261,6 @@ bool AbstractStyle::apply(UserInterface& ui, const StyleFeatures features, Plugi
             shared.dynamicStyleCount() >= textLayerDynamicStyleCount(),
             "Ui::AbstractStyle::apply(): style wants" << textLayerStyleUniformCount() << "uniforms," << textLayerStyleCount() << "styles," << textLayerEditingStyleUniformCount() << "editing uniforms," << textLayerEditingStyleCount() << "editing styles and at least" << textLayerDynamicStyleCount() << "dynamic styles but the text layer has" << shared.styleUniformCount() << Debug::nospace << "," << shared.styleCount() << Debug::nospace << "," << shared.editingStyleUniformCount() << Debug::nospace << "," << shared.editingStyleCount() << "and" << shared.dynamicStyleCount(), {});
 
-        CORRADE_ASSERT(shared.hasGlyphCache(),
-            "Ui::AbstractStyle::apply(): glyph cache not present in the text layer", {});
         const Text::AbstractGlyphCache& cache = shared.glyphCache();
         const Vector3i cacheSize = textLayerGlyphCacheSize(features);
         CORRADE_ASSERT(

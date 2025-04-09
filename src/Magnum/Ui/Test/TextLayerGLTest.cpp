@@ -62,13 +62,11 @@ struct TextLayerGLTest: GL::OpenGLTester {
     explicit TextLayerGLTest();
 
     void sharedConstruct();
+    void sharedConstructTakeCacheOwnership();
     /* NoCreate tested in TextLayerGL_Test to verify it works without a GL
        context */
     void sharedConstructCopy();
     void sharedConstructMove();
-
-    void sharedSetGlyphCache();
-    void sharedSetGlyphCacheTakeOwnership();
 
     void construct();
     void constructDerived();
@@ -839,11 +837,9 @@ const struct {
 
 TextLayerGLTest::TextLayerGLTest() {
     addTests({&TextLayerGLTest::sharedConstruct,
+              &TextLayerGLTest::sharedConstructTakeCacheOwnership,
               &TextLayerGLTest::sharedConstructCopy,
               &TextLayerGLTest::sharedConstructMove,
-
-              &TextLayerGLTest::sharedSetGlyphCache,
-              &TextLayerGLTest::sharedSetGlyphCacheTakeOwnership,
 
               &TextLayerGLTest::construct,
               &TextLayerGLTest::constructDerived,
@@ -921,9 +917,35 @@ TextLayerGLTest::TextLayerGLTest() {
 }
 
 void TextLayerGLTest::sharedConstruct() {
-    TextLayerGL::Shared shared{TextLayer::Shared::Configuration{3, 5}};
-    CORRADE_COMPARE(shared.styleUniformCount(), 3);
-    CORRADE_COMPARE(shared.styleCount(), 5);
+    Text::GlyphCacheGL cache{PixelFormat::R8Unorm, {8, 8}};
+    CORRADE_VERIFY(cache.texture().id());
+
+    {
+        TextLayerGL::Shared shared{cache, TextLayer::Shared::Configuration{3, 5}};
+        CORRADE_COMPARE(shared.styleUniformCount(), 3);
+        CORRADE_COMPARE(shared.styleCount(), 5);
+    }
+
+    /* It shouldn't get accidentally moved in and deleted */
+    CORRADE_VERIFY(cache.texture().id());
+}
+
+void TextLayerGLTest::sharedConstructTakeCacheOwnership() {
+    Text::GlyphCacheGL cache{PixelFormat::R8Unorm, {8, 8}};
+    CORRADE_VERIFY(cache.texture().id());
+
+    {
+        TextLayerGL::Shared shared{Utility::move(cache), TextLayer::Shared::Configuration{3, 5}};
+        CORRADE_COMPARE(shared.styleUniformCount(), 3);
+        CORRADE_COMPARE(shared.styleCount(), 5);
+
+        /* It should get moved in */
+        CORRADE_VERIFY(!cache.texture().id());
+        CORRADE_VERIFY(&shared.glyphCache() != &cache);
+        CORRADE_COMPARE(shared.glyphCache().size(), (Vector3i{8, 8, 1}));
+    }
+
+    /** @todo any way to check that a deletion happened? */
 }
 
 void TextLayerGLTest::sharedConstructCopy() {
@@ -932,52 +954,26 @@ void TextLayerGLTest::sharedConstructCopy() {
 }
 
 void TextLayerGLTest::sharedConstructMove() {
-    TextLayerGL::Shared a{TextLayer::Shared::Configuration{3}};
+    Text::GlyphCacheGL cache{PixelFormat::R8Unorm, {8, 8}};
+    Text::GlyphCacheGL cache2{PixelFormat::RGBA8Unorm, {32, 32}};
+    TextLayerGL::Shared a{cache, TextLayer::Shared::Configuration{3}};
 
     TextLayerGL::Shared b{Utility::move(a)};
     CORRADE_COMPARE(b.styleCount(), 3);
+    CORRADE_COMPARE(&b.glyphCache(), &cache);
 
-    TextLayerGL::Shared c{TextLayer::Shared::Configuration{5}};
+    TextLayerGL::Shared c{cache2, TextLayer::Shared::Configuration{5}};
     c = Utility::move(b);
     CORRADE_COMPARE(c.styleCount(), 3);
+    CORRADE_COMPARE(&c.glyphCache(), &cache);
 
     CORRADE_VERIFY(std::is_nothrow_move_constructible<TextLayerGL::Shared>::value);
     CORRADE_VERIFY(std::is_nothrow_move_assignable<TextLayerGL::Shared>::value);
 }
 
-void TextLayerGLTest::sharedSetGlyphCache() {
-    Text::GlyphCacheGL cache{PixelFormat::R8Unorm, {32, 32}};
-    CORRADE_VERIFY(cache.texture().id());
-
-    {
-        TextLayerGL::Shared shared{TextLayer::Shared::Configuration{3}};
-        shared.setGlyphCache(cache);
-        CORRADE_COMPARE(&shared.glyphCache(), &cache);
-    }
-
-    /* It shouldn't get accidentally moved in and deleted */
-    CORRADE_VERIFY(cache.texture().id());
-}
-
-void TextLayerGLTest::sharedSetGlyphCacheTakeOwnership() {
-    Text::GlyphCacheGL cache{PixelFormat::R8Unorm, {32, 32}};
-    CORRADE_VERIFY(cache.texture().id());
-
-    {
-        TextLayerGL::Shared shared{TextLayer::Shared::Configuration{3}};
-        shared.setGlyphCache(Utility::move(cache));
-
-        /* It should get moved in */
-        CORRADE_VERIFY(!cache.texture().id());
-        CORRADE_VERIFY(&shared.glyphCache() != &cache);
-        CORRADE_COMPARE(shared.glyphCache().size(), (Vector3i{32, 32, 1}));
-    }
-
-    /** @todo any way to check that a deletion happened? */
-}
-
 void TextLayerGLTest::construct() {
-    TextLayerGL::Shared shared{TextLayer::Shared::Configuration{3}};
+    Text::GlyphCacheGL cache{PixelFormat::R8Unorm, {8, 8}};
+    TextLayerGL::Shared shared{cache, TextLayer::Shared::Configuration{3}};
 
     TextLayerGL layer{layerHandle(137, 0xfe), shared};
     CORRADE_COMPARE(layer.handle(), layerHandle(137, 0xfe));
@@ -987,7 +983,8 @@ void TextLayerGLTest::construct() {
 }
 
 void TextLayerGLTest::constructDerived() {
-    TextLayerGL::Shared shared{TextLayer::Shared::Configuration{3}};
+    Text::GlyphCacheGL cache{PixelFormat::R8Unorm, {8, 8}};
+    TextLayerGL::Shared shared{cache, TextLayer::Shared::Configuration{3}};
 
     /* Verify just that subclassing works without hitting linker errors due to
        virtual symbols not being exported or due to the delegated-to functions
@@ -1008,8 +1005,9 @@ void TextLayerGLTest::constructCopy() {
 }
 
 void TextLayerGLTest::constructMove() {
-    TextLayerGL::Shared shared{TextLayer::Shared::Configuration{3}};
-    TextLayerGL::Shared shared2{TextLayer::Shared::Configuration{5}};
+    Text::GlyphCacheGL cache{PixelFormat::R8Unorm, {8, 8}};
+    TextLayerGL::Shared shared{cache, TextLayer::Shared::Configuration{3}};
+    TextLayerGL::Shared shared2{cache, TextLayer::Shared::Configuration{5}};
 
     TextLayerGL a{layerHandle(137, 0xfe), shared};
 
@@ -1029,7 +1027,8 @@ void TextLayerGLTest::constructMove() {
 void TextLayerGLTest::drawNoSizeSet() {
     CORRADE_SKIP_IF_NO_ASSERT();
 
-    TextLayerGL::Shared shared{TextLayer::Shared::Configuration{3}};
+    Text::GlyphCacheGL cache{PixelFormat::R8Unorm, {8, 8}};
+    TextLayerGL::Shared shared{cache, TextLayer::Shared::Configuration{3}};
     TextLayerGL layer{layerHandle(0, 1), shared};
 
     Containers::String out;
@@ -1044,7 +1043,8 @@ void TextLayerGLTest::drawNoStyleSet() {
 
     CORRADE_SKIP_IF_NO_ASSERT();
 
-    TextLayerGL::Shared shared{TextLayer::Shared::Configuration{3}
+    Text::GlyphCacheGL cache{PixelFormat::R8Unorm, {8, 8}};
+    TextLayerGL::Shared shared{cache, TextLayer::Shared::Configuration{3}
         .setDynamicStyleCount(data.dynamicStyleCount)};
     TextLayerGL layer{layerHandle(0, 1), shared};
 
@@ -1146,14 +1146,13 @@ void TextLayerGLTest::render() {
         {},
         data.cursorPadding
     };
-    TextLayerGL::Shared layerShared{TextLayer::Shared::Configuration{
+    TextLayerGL::Shared layerShared{_fontGlyphCache, TextLayer::Shared::Configuration{
         UnsignedInt(Containers::arraySize(styleUniforms)),
         UnsignedInt(Containers::arraySize(styleToUniform))}
             .setEditingStyleCount(
                 data.styleUniformEditingCommon ? Containers::arraySize(editingStyleUniforms) : 0,
                 data.styleUniformEditingCommon ? Containers::arraySize(editingStyleToUniform) : 0)
     };
-    layerShared.setGlyphCache(_fontGlyphCache);
     FontHandle fontHandle[]{
         layerShared.addFont(*_font, 32.0f)
     };
@@ -1240,9 +1239,8 @@ void TextLayerGLTest::renderEdgeSmoothness() {
        stb_truetype's extreme rasterization slowness */
     CORRADE_VERIFY(_font && _font->isOpened());
 
-    TextLayerGL::Shared layerShared{TextLayer::Shared::Configuration{1}
+    TextLayerGL::Shared layerShared{_fontGlyphCache, TextLayer::Shared::Configuration{1}
         .setEditingStyleCount(2)};
-    layerShared.setGlyphCache(_fontGlyphCache);
     /* Verifying the ArrayView overload with implicit uniform mapping as that's
        not tested anywhere else */
     TextLayerStyleUniform uniforms[]{
@@ -1337,10 +1335,9 @@ void TextLayerGLTest::renderAlignmentPadding() {
        stb_truetype's extreme rasterization slowness */
     CORRADE_VERIFY(_font && _font->isOpened());
 
-    TextLayerGL::Shared layerShared{TextLayer::Shared::Configuration{1}
+    TextLayerGL::Shared layerShared{_fontGlyphCache, TextLayer::Shared::Configuration{1}
         .setEditingStyleCount(data.editable ? 2 : 0)
     };
-    layerShared.setGlyphCache(_fontGlyphCache);
 
     FontHandle fontHandle = layerShared.addFont(*_font, 32.0f);
     layerShared.setStyle(TextLayerCommonStyleUniform{},
@@ -1421,10 +1418,9 @@ void TextLayerGLTest::renderCustomColor() {
        stb_truetype's extreme rasterization slowness */
     CORRADE_VERIFY(_font && _font->isOpened());
 
-    TextLayerGL::Shared layerShared{TextLayer::Shared::Configuration{2, 1}
+    TextLayerGL::Shared layerShared{_fontGlyphCache, TextLayer::Shared::Configuration{2, 1}
         .setEditingStyleCount(data.editable ? 2 : 0)
     };
-    layerShared.setGlyphCache(_fontGlyphCache);
 
     FontHandle fontHandle = layerShared.addFont(*_font, 32.0f);
     layerShared.setStyle(TextLayerCommonStyleUniform{},
@@ -1523,10 +1519,9 @@ void TextLayerGLTest::renderChangeStyle() {
        stb_truetype's extreme rasterization slowness */
     CORRADE_VERIFY(_font && _font->isOpened());
 
-    TextLayerGL::Shared layerShared{TextLayer::Shared::Configuration{4, 3}
+    TextLayerGL::Shared layerShared{_fontGlyphCache, TextLayer::Shared::Configuration{4, 3}
         .setEditingStyleCount(data.editableBefore || data.editableAfter ? 3 : 0)
     };
-    layerShared.setGlyphCache(_fontGlyphCache);
 
     FontHandle fontHandle = layerShared.addFont(*_font, 32.0f);
     layerShared.setStyle(TextLayerCommonStyleUniform{},
@@ -1623,10 +1618,9 @@ void TextLayerGLTest::renderChangeText() {
        stb_truetype's extreme rasterization slowness */
     CORRADE_VERIFY(_font && _font->isOpened());
 
-    TextLayerGL::Shared layerShared{TextLayer::Shared::Configuration{2, 1}
+    TextLayerGL::Shared layerShared{_fontGlyphCache, TextLayer::Shared::Configuration{2, 1}
         .setEditingStyleCount(data.editableBefore || data.editableAfter ? 2 : 0)
     };
-    layerShared.setGlyphCache(_fontGlyphCache);
 
     FontHandle fontHandle = layerShared.addFont(*_font, 32.0f);
     layerShared.setStyle(TextLayerCommonStyleUniform{},
@@ -1713,7 +1707,7 @@ void TextLayerGLTest::renderDynamicStyles() {
        stb_truetype's extreme rasterization slowness */
     CORRADE_VERIFY(_font && _font->isOpened());
 
-    TextLayerGL::Shared layerShared{
+    TextLayerGL::Shared layerShared{_fontGlyphCache,
         TextLayer::Shared::Configuration{data.noBaseStyles ? 0u : 3u,
                                          data.noBaseStyles ? 0u : 4u}
             /* Include editing styles only if there's any set and base styles
@@ -1724,7 +1718,6 @@ void TextLayerGLTest::renderDynamicStyles() {
             /* Include dynamic editing styles if there's any */
             .setDynamicStyleCount(2, data.dynamicStyleUniformCursor || data.dynamicStyleUniformSelection)
     };
-    layerShared.setGlyphCache(_fontGlyphCache);
     FontHandle fontHandle = layerShared.addFont(*_font, 32.0f);
 
     TextLayerGL* layer{};
@@ -2095,10 +2088,9 @@ void TextLayerGLTest::drawOrder() {
     cache.flushImage({{}, {8, 16}});
     cache.addGlyph(cache.addFont(1, &font), 0, {}, {{}, {7, 16}});
 
-    TextLayerGL::Shared layerShared{TextLayer::Shared::Configuration{3, 4}
+    TextLayerGL::Shared layerShared{cache, TextLayer::Shared::Configuration{3, 4}
         .setEditingStyleCount(6)
     };
-    layerShared.setGlyphCache(cache);
 
     FontHandle fontHandleLarge = layerShared.addFont(font, 16.0f);
     FontHandle fontHandleSmall = layerShared.addFont(font, 8.0f);
@@ -2281,10 +2273,9 @@ void TextLayerGLTest::drawClipping() {
     cache.flushImage({{}, {8, 160}});
     cache.addGlyph(cache.addFont(1, &font), 0, {}, {{}, {7, 160}});
 
-    TextLayerGL::Shared layerShared{TextLayer::Shared::Configuration{3, 5}
+    TextLayerGL::Shared layerShared{cache, TextLayer::Shared::Configuration{3, 5}
         .setEditingStyleCount(6)
     };
-    layerShared.setGlyphCache(cache);
 
     FontHandle fontHandleLarge = layerShared.addFont(font, 160.0f);
     FontHandle fontHandleSmall = layerShared.addFont(font, 80.0f);
@@ -2449,10 +2440,9 @@ void TextLayerGLTest::eventStyleTransition() {
        stb_truetype's extreme rasterization slowness */
     CORRADE_VERIFY(_font && _font->isOpened());
 
-    TextLayerGL::Shared layerShared{TextLayer::Shared::Configuration{5, 4}
+    TextLayerGL::Shared layerShared{_fontGlyphCache, TextLayer::Shared::Configuration{5, 4}
         .setEditingStyleCount(data.editableBefore || data.editableAfter ? 3 : 0)
     };
-    layerShared.setGlyphCache(_fontGlyphCache);
 
     FontHandle fontHandle = layerShared.addFont(*_font, 32.0f);
     layerShared

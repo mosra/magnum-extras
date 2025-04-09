@@ -319,8 +319,8 @@ void StyleTest::apply() {
     /* Window size isn't needed for anything here */
     ui.setSize(Vector2{200.0f, 300.0f}/data.dpiScaling, {1, 1}, {200, 300});
 
-    struct baseLayerShared: BaseLayer::Shared {
-        explicit baseLayerShared(): BaseLayer::Shared{Configuration{Implementation::BaseStyleCount}} {}
+    struct BaseLayerShared: BaseLayer::Shared {
+        explicit BaseLayerShared(): BaseLayer::Shared{Configuration{Implementation::BaseStyleCount}} {}
 
         void doSetStyle(const BaseLayerCommonStyleUniform&, Containers::ArrayView<const BaseLayerStyleUniform>) override {}
     } baseLayerShared;
@@ -338,16 +338,13 @@ void StyleTest::apply() {
     } glyphCache{PixelFormat::R8Unorm, {512, 512}};
 
     struct TestTextLayerShared: TextLayer::Shared {
-        explicit TestTextLayerShared(): TextLayer::Shared{Configuration{Implementation::TextStyleUniformCount, Implementation::TextStyleCount}
+        explicit TestTextLayerShared(Text::AbstractGlyphCache& glyphCache): TextLayer::Shared{glyphCache, Configuration{Implementation::TextStyleUniformCount, Implementation::TextStyleCount}
             .setEditingStyleCount(Implementation::TextEditingStyleCount)
         } {}
 
-        using TextLayer::Shared::setGlyphCache;
-
         void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
         void doSetEditingStyle(const TextLayerCommonEditingStyleUniform&, Containers::ArrayView<const TextLayerEditingStyleUniform>) override {}
-    } textLayerShared;
-    textLayerShared.setGlyphCache(glyphCache);
+    } textLayerShared{glyphCache};
 
     struct TestTextLayer: TextLayer {
         explicit TestTextLayer(LayerHandle handle, Shared& shared): TextLayer{handle, shared} {}
@@ -414,16 +411,13 @@ void StyleTest::applyTextLayerCannotOpenFont() {
     } glyphCache{PixelFormat::R8Unorm, {512, 512}};
 
     struct LayerShared: TextLayer::Shared {
-        explicit LayerShared(): TextLayer::Shared{Configuration{Implementation::TextStyleUniformCount, Implementation::TextStyleCount}
+        explicit LayerShared(Text::AbstractGlyphCache& glyphCache): TextLayer::Shared{glyphCache, Configuration{Implementation::TextStyleUniformCount, Implementation::TextStyleCount}
             .setEditingStyleCount(Implementation::TextEditingStyleCount)
         } {}
 
-        using TextLayer::Shared::setGlyphCache;
-
         void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
         void doSetEditingStyle(const TextLayerCommonEditingStyleUniform&, Containers::ArrayView<const TextLayerEditingStyleUniform>) override {}
-    } layerShared;
-    layerShared.setGlyphCache(glyphCache);
+    } layerShared{glyphCache};
 
     struct Layer: TextLayer {
         explicit Layer(LayerHandle handle, Shared& shared): TextLayer{handle, shared} {}
@@ -462,16 +456,13 @@ void StyleTest::applyTextLayerImagesCannotOpen() {
     } glyphCache{PixelFormat::R8Unorm, {512, 512}};
 
     struct LayerShared: TextLayer::Shared {
-        explicit LayerShared(): TextLayer::Shared{Configuration{Implementation::TextStyleUniformCount, Implementation::TextStyleCount}
+        explicit LayerShared(Text::AbstractGlyphCache& glyphCache): TextLayer::Shared{glyphCache, Configuration{Implementation::TextStyleUniformCount, Implementation::TextStyleCount}
             .setEditingStyleCount(Implementation::TextEditingStyleCount)
         } {}
 
-        using TextLayer::Shared::setGlyphCache;
-
         void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
         void doSetEditingStyle(const TextLayerCommonEditingStyleUniform&, Containers::ArrayView<const TextLayerEditingStyleUniform>) override {}
-    } layerShared;
-    layerShared.setGlyphCache(glyphCache);
+    } layerShared{glyphCache};
 
     struct Layer: TextLayer {
         explicit Layer(LayerHandle handle, Shared& shared): TextLayer{handle, shared} {}
@@ -511,16 +502,13 @@ void StyleTest::applyTextLayerImagesCannotFit() {
     CORRADE_VERIFY(glyphCache.atlas().add({{500, 500}}, offset));
 
     struct LayerShared: TextLayer::Shared {
-        explicit LayerShared(): TextLayer::Shared{Configuration{Implementation::TextStyleUniformCount, Implementation::TextStyleCount}
+        explicit LayerShared(Text::AbstractGlyphCache& glyphCache): TextLayer::Shared{glyphCache, Configuration{Implementation::TextStyleUniformCount, Implementation::TextStyleCount}
             .setEditingStyleCount(Implementation::TextEditingStyleCount)
         } {}
 
-        using TextLayer::Shared::setGlyphCache;
-
         void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
         void doSetEditingStyle(const TextLayerCommonEditingStyleUniform&, Containers::ArrayView<const TextLayerEditingStyleUniform>) override {}
-    } layerShared;
-    layerShared.setGlyphCache(glyphCache);
+    } layerShared{glyphCache};
 
     struct Layer: TextLayer {
         explicit Layer(LayerHandle handle, Shared& shared): TextLayer{handle, shared} {}
@@ -560,16 +548,13 @@ void StyleTest::applyTextLayerImagesUnexpectedFormat() {
     } glyphCache{PixelFormat::R8Unorm, {512, 512}};
 
     struct LayerShared: TextLayer::Shared {
-        explicit LayerShared(): TextLayer::Shared{Configuration{Implementation::TextStyleUniformCount, Implementation::TextStyleCount}
+        explicit LayerShared(Text::AbstractGlyphCache& glyphCache): TextLayer::Shared{glyphCache, Configuration{Implementation::TextStyleUniformCount, Implementation::TextStyleCount}
             .setEditingStyleCount(Implementation::TextEditingStyleCount)
         } {}
 
-        using TextLayer::Shared::setGlyphCache;
-
         void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
         void doSetEditingStyle(const TextLayerCommonEditingStyleUniform&, Containers::ArrayView<const TextLayerEditingStyleUniform>) override {}
-    } layerShared;
-    layerShared.setGlyphCache(glyphCache);
+    } layerShared{glyphCache};
 
     struct Layer: TextLayer {
         explicit Layer(LayerHandle handle, Shared& shared): TextLayer{handle, shared} {}
@@ -606,16 +591,13 @@ void StyleTest::applyTextLayerTwice() {
     } glyphCache{PixelFormat::R8Unorm, {512, 512}};
 
     struct TestTextLayerShared: TextLayer::Shared {
-        explicit TestTextLayerShared(): TextLayer::Shared{Configuration{Implementation::TextStyleUniformCount, Implementation::TextStyleCount}
+        explicit TestTextLayerShared(Text::AbstractGlyphCache& glyphCache): TextLayer::Shared{glyphCache, Configuration{Implementation::TextStyleUniformCount, Implementation::TextStyleCount}
             .setEditingStyleCount(Implementation::TextEditingStyleCount)
         } {}
 
-        using TextLayer::Shared::setGlyphCache;
-
         void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
         void doSetEditingStyle(const TextLayerCommonEditingStyleUniform&, Containers::ArrayView<const TextLayerEditingStyleUniform>) override {}
-    } textLayerShared;
-    textLayerShared.setGlyphCache(glyphCache);
+    } textLayerShared{glyphCache};
 
     struct TestTextLayer: TextLayer {
         explicit TestTextLayer(LayerHandle handle, Shared& shared): TextLayer{handle, shared} {}

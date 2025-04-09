@@ -84,7 +84,7 @@ struct TextLayerEditingStyle {
 }
 
 struct TextLayer::Shared::State: AbstractVisualLayer::Shared::State {
-    explicit State(Shared& self, const Configuration& configuration);
+    explicit State(Shared& self, Text::AbstractGlyphCache& glyphCache, const Configuration& configuration);
 
     /* First 2/6 bytes overlap with padding of the base struct */
 
@@ -112,7 +112,7 @@ struct TextLayer::Shared::State: AbstractVisualLayer::Shared::State {
 
     /* Glyph cache used by all fonts. It's expected to know about each font
        that's added. */
-    Text::AbstractGlyphCache* glyphCache{};
+    Text::AbstractGlyphCache& glyphCache;
 
     /* Fonts. Because a glyph cache doesn't allow glyph removal, they can only
        be added, not removed, thus all extra logic for freed items and

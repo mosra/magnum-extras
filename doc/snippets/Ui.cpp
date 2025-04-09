@@ -32,6 +32,7 @@
 #include <Corrade/PluginManager/Manager.h>
 #include <Corrade/Utility/Algorithms.h>
 #include <Magnum/ImageView.h>
+#include <Magnum/PixelFormat.h>
 #include <Magnum/Animation/Easing.h>
 #include <Magnum/Math/Range.h>
 #include <Magnum/Text/AbstractFont.h>
@@ -816,16 +817,16 @@ lineLayer.createStrip(2, position, {}, point);
 }
 
 {
-struct Shared: Ui::TextLayer::Shared {
-    explicit Shared(): Ui::TextLayer::Shared::Shared{Configuration{1}} {}
-
-    void doSetStyle(const Ui::TextLayerCommonStyleUniform&, Containers::ArrayView<const Ui::TextLayerStyleUniform>) override {}
-    void doSetEditingStyle(const Ui::TextLayerCommonEditingStyleUniform&, Containers::ArrayView<const Ui::TextLayerEditingStyleUniform>) override {}
-} textLayerShared;
 struct GlyphCache: Text::AbstractGlyphCache {
     explicit GlyphCache(): Text::AbstractGlyphCache{PixelFormat{}, Vector2i{}} {}
     Text::GlyphCacheFeatures doFeatures() const override { return {}; }
 } glyphCache;
+struct Shared: Ui::TextLayer::Shared {
+    explicit Shared(Text::AbstractGlyphCache& glyphCache): Ui::TextLayer::Shared::Shared{glyphCache, Configuration{1}} {}
+
+    void doSetStyle(const Ui::TextLayerCommonStyleUniform&, Containers::ArrayView<const Ui::TextLayerStyleUniform>) override {}
+    void doSetEditingStyle(const Ui::TextLayerCommonEditingStyleUniform&, Containers::ArrayView<const Ui::TextLayerEditingStyleUniform>) override {}
+} textLayerShared{glyphCache};
 /* [TextLayer-setup-fonts] */
 PluginManager::Manager<Text::AbstractFont> fontManager;
 

@@ -689,9 +689,21 @@ available through @ref UserInterface::textLayer().
 
 For a custom layer, you first need to instantiate @ref TextLayer::Shared,
 which contains a glyph cache, font instances, GPU shaders and style
-definitions. It takes a @ref TextLayer::Shared::Configuration, where at the
-very least you have to specify how many distinct visual *styles* you intend to
-use --- which is for example the number @cpp 3 @ce in the following snippet:
+definitions. It's constructed from a glyph cache reference and a configuration
+instance. In case of the @ref TextLayerGL implementation the cache is
+@ref Text::GlyphCacheGL. Assuming monochrome fonts, construct it with a
+single-channel pixel format and a size large enough to fit pre-rendered glyphs
+of all fonts you'll need:
+
+@snippet Ui-gl.cpp TextLayer-setup-glyph-cache
+
+The glyph cache is expected to be alive for the whole shared instance lifetime,
+alternatively you can use the
+@ref TextLayerGL::Shared::Shared(Text::GlyphCacheGL&&, const Configuration&)
+constructor to move its ownership to the shared instance. For the
+@ref TextLayer::Shared::Configuration, at the very least you have to specify
+how many distinct visual *styles* you intend to use, which is for example
+the number @cpp 3 @ce in the following snippet:
 
 @snippet Ui-gl.cpp TextLayer-setup-shared
 
@@ -714,27 +726,18 @@ custom widgets, pass the newly created layer to
 
 @snippet Ui-gl.cpp TextLayer-setup
 
-Afterwards, in order to be able to draw the layer, a glyph cache with at least
-one font has to be added, and a style referencing them has to be set. For the
-@ref TextLayerGL implementation it's @ref Text::GlyphCacheGL. Assuming
-monochrome fonts, construct it with a single-channel pixel format and a size
-large enough to fit pre-rendered glyphs of all fonts you'll need, and pass it
-to @ref TextLayerGL::Shared::setGlyphCache(). The glyph cache is expected to be
-alive for the whole shared instance lifetime, alternatively you
-can use @ref TextLayerGL::Shared::setGlyphCache(Text::GlyphCacheGL&&) to move
-its ownership to the shared instance.
-
-@snippet Ui-gl.cpp TextLayer-setup-glyph-cache
-
-@ref Text::AbstractFont instances, commonly loaded using a plugin manager, are
-then added with @ref TextLayerGL::Shared::addFont(), together with specifying
-size in UI coordinates at which a text using them should be rendered. The
-function then returns a @ref FontHandle, which is subsequently used to
-reference the font from styles. As with the glyph cache, the font instance is
-expected to be alive for the whole shared instance lifetime, or you can use
+Afterwards, in order to be able to draw the layer, at least one font has to be
+added, and a style referencing the fonts has to be set. @ref Text::AbstractFont
+instances, commonly loaded using a plugin manager, are added with
+@ref TextLayerGL::Shared::addFont(), together with specifying size in UI
+coordinates at which a text using them should be rendered. The function then
+returns a @ref FontHandle, which is subsequently used to reference the font
+from styles. As with the glyph cache, the font instance is expected to be alive
+for the whole shared instance lifetime, or you can use
 @ref TextLayerGL::Shared::addFont(Containers::Pointer<Text::AbstractFont>&&, Float)
-to move its ownership to the shared instance. Note that you're still
-responsible for keeping the plugin manager instance around even in that case.
+to move the loaded plugin ownership to the shared instance. Note that you're
+still responsible for keeping the plugin manager instance around even in that
+case.
 
 @snippet Ui.cpp TextLayer-setup-fonts
 
@@ -2465,9 +2468,9 @@ class MAGNUM_UI_EXPORT TextLayer: public AbstractVisualLayer {
 @brief Shared state for the text layer
 
 Contains a set of fonts and a glyph cache used by all of them. In order to use
-the layer it's expected that @ref setGlyphCache() was called and at least one
-font was added with @ref addFont(). In order to update or draw the layer it's
-expected that @ref setStyle() was called.
+the layer it's expected that at least one font was added with @ref addFont().
+In order to update or draw the layer it's expected that @ref setStyle() was
+called.
 
 Pre-filling the glyph cache with appropriate glyphs for a particular font is
 the user responsibility, the implementation currently won't perform that on its
@@ -2525,19 +2528,7 @@ class MAGNUM_UI_EXPORT TextLayer::Shared: public AbstractVisualLayer::Shared {
          */
         bool hasEditingStyles() const;
 
-        /**
-         * @brief Whether a glyph cache has been set
-         *
-         * @see @ref glyphCache(), @ref setGlyphCache()
-         */
-        bool hasGlyphCache() const;
-
-        /**
-         * @brief Glyph cache instance
-         *
-         * Expects that a glyph cache was set with @ref setGlyphCache().
-         * @see @ref hasGlyphCache()
-         */
+        /** @brief Glyph cache instance */
         Text::AbstractGlyphCache& glyphCache();
         const Text::AbstractGlyphCache& glyphCache() const; /**< @overload */
 
@@ -2905,16 +2896,6 @@ class MAGNUM_UI_EXPORT TextLayer::Shared: public AbstractVisualLayer::Shared {
     protected:
         struct State;
 
-        /**
-         * @brief Set a glyph cache instance
-         * @return Reference to self (for method chaining)
-         *
-         * Has to be called before any @ref addFont(), is expected to be called
-         * exactly once. You'll most probably want to set it through the public
-         * @ref TextLayerGL::Shared::setGlyphCache(Text::GlyphCacheGL&).
-         */
-        Shared& setGlyphCache(Text::AbstractGlyphCache& cache);
-
     #ifdef DOXYGEN_GENERATING_OUTPUT
     private:
     #else
@@ -2925,7 +2906,7 @@ class MAGNUM_UI_EXPORT TextLayer::Shared: public AbstractVisualLayer::Shared {
 
         MAGNUM_UI_LOCAL explicit Shared(Containers::Pointer<State>&& state);
         /* Used by tests to avoid having to include / allocate the state */
-        explicit Shared(const Configuration& configuration);
+        explicit Shared(Text::AbstractGlyphCache& cache, const Configuration& configuration);
         /* Can't be MAGNUM_UI_LOCAL, used by tests */
         explicit Shared(NoCreateT) noexcept;
 
@@ -2949,7 +2930,7 @@ class MAGNUM_UI_EXPORT TextLayer::Shared: public AbstractVisualLayer::Shared {
 /**
 @brief Configuration of a base layer shared state
 
-@see @ref TextLayerGL::Shared::Shared(const Configuration&)
+@see @ref TextLayerGL::Shared::Shared(Text::GlyphCacheGL&, const Configuration&)
 */
 class MAGNUM_UI_EXPORT TextLayer::Shared::Configuration {
     public:

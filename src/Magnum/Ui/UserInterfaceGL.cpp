@@ -142,7 +142,17 @@ bool UserInterfaceGL::trySetStyle(const AbstractStyle& style, const StyleFeature
     if(features >= StyleFeature::TextLayer) {
         CORRADE_ASSERT(!state.textLayer,
             "Ui::UserInterfaceGL::trySetStyle(): text layer already present", {});
+
+        /** @todo clean up once an array glyph cache exists */
+        const Vector3i glyphCacheSize = style.textLayerGlyphCacheSize(features);
+        CORRADE_ASSERT(glyphCacheSize.z() == 1,
+            "Ui::UserInterfaceGL::trySetStyle(): only 2D glyph cache is supported at the moment, got a size of" << Debug::packed << glyphCacheSize, {});
+
         state.textLayerShared = TextLayerGL::Shared{
+            Text::GlyphCacheGL{
+                style.textLayerGlyphCacheFormat(),
+                glyphCacheSize.xy(),
+                style.textLayerGlyphCachePadding()},
             TextLayer::Shared::Configuration{style.textLayerStyleUniformCount(),
                                              style.textLayerStyleCount()}
                 .setEditingStyleCount(style.textLayerEditingStyleUniformCount(),
@@ -160,13 +170,6 @@ bool UserInterfaceGL::trySetStyle(const AbstractStyle& style, const StyleFeature
             _state->fontManagerStorage.emplace();
             _state->fontManager = &*_state->fontManagerStorage;
         }
-
-        /* Create a glyph cache */
-        const Vector3i glyphCacheSize = style.textLayerGlyphCacheSize(features);
-        /** @todo clean up once an array glyph cache exists */
-        CORRADE_ASSERT(glyphCacheSize.z() == 1,
-            "Ui::UserInterfaceGL::trySetStyle(): only 2D glyph cache is supported at the moment, got a size of" << Debug::packed << glyphCacheSize, {});
-        state.textLayerShared.setGlyphCache(Text::GlyphCacheGL{style.textLayerGlyphCacheFormat(), glyphCacheSize.xy(), style.textLayerGlyphCachePadding()});
     }
     if(features >= StyleFeature::TextLayerImages) {
         /* If features contain StyleFeature::TextLayer, state.textLayer was

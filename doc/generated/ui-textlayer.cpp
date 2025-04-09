@@ -148,11 +148,10 @@ int UiTextLayer::exec() {
     });
 
     /* Images for the main style docs */
-    Ui::TextLayerGL::Shared layerShared{
+    Ui::TextLayerGL::Shared layerShared{glyphCache,
         Ui::TextLayerGL::Shared::Configuration{10}
             .setEditingStyleCount(6)
     };
-    layerShared.setGlyphCache(glyphCache);
 
     Ui::FontHandle fontHandle = layerShared.addFont(*font, 12.0f);
     Ui::FontHandle fontLargeHandle = layerShared.addFont(*fontLarge, 20.0f);
