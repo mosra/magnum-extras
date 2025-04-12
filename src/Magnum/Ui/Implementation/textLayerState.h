@@ -166,6 +166,9 @@ struct TextLayerGlyphRun {
     /* Backreference to the `TextLayerData` so the `glyphRun` can be updated
        there when recompacting */
     UnsignedInt data;
+    /* Ratio of the style size and font size, for appropriately scaling the
+       rectangles coming out of the glyph cache */
+    Float scale;
 };
 
 struct TextLayerTextRun {
@@ -202,9 +205,6 @@ struct TextLayerData {
     UnsignedInt textRun;
     /* calculatedStyle is filled by AbstractVisualLayer::doUpdate() */
     UnsignedInt style, calculatedStyle;
-    /* Ratio of the style size and font size, for appropriately scaling the
-       rectangles coming out of the glyph cache */
-    Float scale;
     /* Actual rectangle occupied by the text glyphs. Used for cursor /
        selection positioning by the layer itself, in particular to know where
        to position the cursor at the very end, as the glyph run contains only

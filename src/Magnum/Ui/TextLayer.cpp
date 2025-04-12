@@ -889,7 +889,7 @@ void TextLayer::shapeTextInternal(const UnsignedInt id, const UnsignedInt style,
     const UnsignedInt glyphRun = state.glyphRuns.size();
     const UnsignedInt glyphOffset = state.glyphData.size();
     const Containers::StridedArrayView1D<Implementation::TextLayerGlyphData> glyphData = arrayAppend(state.glyphData, NoInit, glyphCount);
-    arrayAppend(state.glyphRuns, InPlaceInit, glyphOffset, glyphCount, id);
+    arrayAppend(state.glyphRuns, InPlaceInit, glyphOffset, glyphCount, id, fontState.scale);
 
     /* Query glyph offsets and advances, abuse the glyphData fields for those;
        then convert those in-place to absolute glyph positions and align
@@ -931,7 +931,6 @@ void TextLayer::shapeTextInternal(const UnsignedInt id, const UnsignedInt style,
     /* Save scale, rectangle, direction-resolved alignment and the glyph run
        reference for use in doUpdate() later */
     Implementation::TextLayerData& data = state.data[id];
-    data.scale = fontState.scale;
     data.rectangle = rectangle;
     data.alignment = resolvedAlignment;
     data.glyphRun = glyphRun;
@@ -1101,12 +1100,11 @@ void TextLayer::shapeGlyphInternal(
     const UnsignedInt glyphOffset = state.glyphData.size();
     arrayAppend(state.glyphData, InPlaceInit,
         *glyphPosition, cacheGlobalGlyphId, 0u /* (Unused) cluster ID */);
-    arrayAppend(state.glyphRuns, InPlaceInit, glyphOffset, 1u, id);
+    arrayAppend(state.glyphRuns, InPlaceInit, glyphOffset, 1u, id, fontState.scale);
 
     /* Save scale, size, direction-resolved alignment and the glyph run
        reference for use in doUpdate() later */
     Implementation::TextLayerData& data = state.data[id];
-    data.scale = fontState.scale;
     data.rectangle = rectangle;
     data.alignment = resolvedAlignment;
     data.glyphRun = glyphRun;
@@ -2147,7 +2145,7 @@ void TextLayer::doUpdate(const LayerStates states, const Containers::StridedArra
             const Containers::StridedArrayView1D<Implementation::TextLayerVertex> vertexData = state.vertices.sliceSize(glyphRun.glyphOffset*4, glyphRun.glyphCount*4);
             Text::renderGlyphQuadsInto(
                 sharedState.glyphCache,
-                data.scale,
+                glyphRun.scale,
                 glyphData.slice(&Implementation::TextLayerGlyphData::position),
                 glyphData.slice(&Implementation::TextLayerGlyphData::glyphId),
                 vertexData.slice(&Implementation::TextLayerVertex::position),
