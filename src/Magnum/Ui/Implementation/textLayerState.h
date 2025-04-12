@@ -199,6 +199,7 @@ struct TextLayerTextRun {
 
 struct TextLayerData {
     Vector4 padding;
+    /* Set to ~UnsignedInt{} if there are no glyphs */
     UnsignedInt glyphRun;
     /* Used only if flags contain TextDataFlag::Editable, otherwise set to
        ~UnsignedInt{} */

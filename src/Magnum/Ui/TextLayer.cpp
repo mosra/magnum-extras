@@ -872,24 +872,18 @@ void TextLayer::shapeTextInternal(const UnsignedInt id, const UnsignedInt style,
         fontState.shaper = fontState.font->createShaper();
     Text::AbstractShaper& shaper = *fontState.shaper;
 
-    /* Shape the text */
+    /* Shape the text and make room for the shaped glyphs */
     shaper.setScript(properties.script());
     shaper.setLanguage(properties.language());
     shaper.setDirection(properties.shapeDirection());
     const UnsignedInt glyphCount = shaper.shape(text, features);
+    const UnsignedInt glyphOffset = state.glyphData.size();
+    const Containers::StridedArrayView1D<Implementation::TextLayerGlyphData> glyphData = arrayAppend(state.glyphData, NoInit, glyphCount);
 
     /* Resolve the alignment based on direction */
     const Text::Alignment resolvedAlignment = Text::alignmentForDirection(alignment,
         properties.layoutDirection(),
         shaper.direction());
-
-    /* Add a new glyph run. Any previous run for this data was marked as unused
-       in previous remove() or in setText() right before calling this
-       function. */
-    const UnsignedInt glyphRun = state.glyphRuns.size();
-    const UnsignedInt glyphOffset = state.glyphData.size();
-    const Containers::StridedArrayView1D<Implementation::TextLayerGlyphData> glyphData = arrayAppend(state.glyphData, NoInit, glyphCount);
-    arrayAppend(state.glyphRuns, InPlaceInit, glyphOffset, glyphCount, id, fontState.scale);
 
     /* Query glyph offsets and advances, abuse the glyphData fields for those;
        then convert those in-place to absolute glyph positions and align
@@ -928,12 +922,20 @@ void TextLayer::shapeTextInternal(const UnsignedInt id, const UnsignedInt style,
         sharedState.glyphCache.glyphIdsInto(fontState.glyphCacheFontId, glyphIds, glyphIds);
     }
 
-    /* Save scale, rectangle, direction-resolved alignment and the glyph run
-       reference for use in doUpdate() later */
+    /* Save scale, rectangle, direction-resolved alignment */
     Implementation::TextLayerData& data = state.data[id];
     data.rectangle = rectangle;
     data.alignment = resolvedAlignment;
-    data.glyphRun = glyphRun;
+
+    /* If the shaping resulted in any glyphs, add a new glyph run. Any previous
+       run for this data was marked as unused in previous remove() or in
+       setText() right before calling this function. */
+    if(glyphCount) {
+        data.glyphRun = state.glyphRuns.size();
+        arrayAppend(state.glyphRuns, InPlaceInit, glyphOffset, glyphCount, id, fontState.scale);
+    } else {
+        data.glyphRun = ~UnsignedInt{};
+    }
 
     /* Save extra properties used by editable text. They occupy otherwise
        unused free space in TextLayerData and TextLayerGlyphData, see the
@@ -1203,7 +1205,8 @@ void TextLayer::removeInternal(const UnsignedInt id) {
 
     /* Mark the glyph run as unused. It'll be removed during the next
        recompaction in doUpdate(). */
-    state.glyphRuns[state.data[id].glyphRun].glyphOffset = ~UnsignedInt{};
+    if(state.data[id].glyphRun != ~UnsignedInt{})
+        state.glyphRuns[state.data[id].glyphRun].glyphOffset = ~UnsignedInt{};
 
     /* If there's a text run, mark it as unused as well; it'll be removed in
        doUpdate() too */
@@ -1239,14 +1242,16 @@ UnsignedInt TextLayer::glyphCount(const DataHandle handle) const {
     CORRADE_ASSERT(isHandleValid(handle),
         "Ui::TextLayer::glyphCount(): invalid handle" << handle, {});
     const State& state = static_cast<const State&>(*_state);
-    return state.glyphRuns[state.data[dataHandleId(handle)].glyphRun].glyphCount;
+    const UnsignedInt glyphRun = state.data[dataHandleId(handle)].glyphRun;
+    return glyphRun == ~UnsignedInt{} ? 0 : state.glyphRuns[glyphRun].glyphCount;
 }
 
 UnsignedInt TextLayer::glyphCount(const LayerDataHandle handle) const {
     CORRADE_ASSERT(isHandleValid(handle),
         "Ui::TextLayer::glyphCount(): invalid handle" << handle, {});
     const State& state = static_cast<const State&>(*_state);
-    return state.glyphRuns[state.data[layerDataHandleId(handle)].glyphRun].glyphCount;
+    const UnsignedInt glyphRun = state.data[layerDataHandleId(handle)].glyphRun;
+    return glyphRun == ~UnsignedInt{} ? 0 : state.glyphRuns[glyphRun].glyphCount;
 }
 
 Vector2 TextLayer::size(const DataHandle handle) const {
@@ -1400,9 +1405,10 @@ void TextLayer::setTextInternal(const UnsignedInt id, const Containers::StringVi
     State& state = static_cast<State&>(*_state);
     Implementation::TextLayerData& data = state.data[id];
 
-    /* Mark the original glyph run as unused. It'll be removed during the next
-       recompaction in doUpdate(). */
-    state.glyphRuns[data.glyphRun].glyphOffset = ~UnsignedInt{};
+    /* If the text has any glyphs, mark the original glyph run as unused. It'll
+       be removed during the next recompaction in doUpdate(). */
+    if(data.glyphRun != ~UnsignedInt{})
+        state.glyphRuns[data.glyphRun].glyphOffset = ~UnsignedInt{};
 
     /* If there's a text run, mark it as unused as well; it'll be removed in
        doUpdate() too */
@@ -1733,12 +1739,14 @@ void TextLayer::setGlyphInternal(const UnsignedInt id, const UnsignedInt glyph, 
     State& state = static_cast<State&>(*_state);
     Implementation::TextLayerData& data = state.data[id];
 
-    /* Mark the original glyph run as unused. It'll be removed during the next
-       recompaction in doUpdate(). We could also just reuse the offset in case
-       the original run was 1 glyph or more (and setTextInternal() could do
-       that too), but this way makes the often-updated data clustered to the
-       end, allowing potential savings in data upload. */
-    state.glyphRuns[data.glyphRun].glyphOffset = ~UnsignedInt{};
+    /* If the text has any glyphs, mark the original glyph run as unused. It'll
+       be removed during the next recompaction in doUpdate(). We could also
+       just reuse the offset in case the original run was 1 glyph or more (and
+       setTextInternal() could do that too), but this way makes the
+       often-updated data clustered to the end, allowing potential savings in
+       data upload. */
+    if(data.glyphRun != ~UnsignedInt{})
+        state.glyphRuns[data.glyphRun].glyphOffset = ~UnsignedInt{};
 
     /* If there's a text run, mark it as unused as well; it'll be removed in
        doUpdate() too */
@@ -2006,8 +2014,9 @@ void TextLayer::doUpdate(const LayerStates states, const Containers::StridedArra
         UnsignedInt drawEditingRectCount = 0;
         for(const UnsignedInt id: dataIds) {
             const Implementation::TextLayerData& data = state.data[id];
-            const Implementation::TextLayerGlyphRun& glyphRun = state.glyphRuns[data.glyphRun];
-            drawGlyphCount += glyphRun.glyphCount;
+            if(data.glyphRun != ~UnsignedInt{}) {
+                drawGlyphCount += state.glyphRuns[data.glyphRun].glyphCount;
+            }
             if(data.textRun != ~UnsignedInt{}) {
                 Int cursorStyle, selectionStyle;
                 /** @todo ugh, this is duplicated three times */
@@ -2036,14 +2045,17 @@ void TextLayer::doUpdate(const LayerStates states, const Containers::StridedArra
         UnsignedInt editingRectOffset = 0;
         for(std::size_t i = 0; i != dataIds.size(); ++i) {
             const Implementation::TextLayerData& data = state.data[dataIds[i]];
-            const Implementation::TextLayerGlyphRun& glyphRun = state.glyphRuns[data.glyphRun];
 
-            /* Generate indices in draw order. Remeber the offset for each data
-               to draw from later. */
+            /* Remeber the offset for each data to draw from later */
             state.indexDrawOffsets[i] = {indexOffset, editingRectOffset*6};
-            const Containers::ArrayView<UnsignedInt> indexData = state.indices.sliceSize(indexOffset, glyphRun.glyphCount*6);
-            Text::renderGlyphQuadIndicesInto(glyphRun.glyphOffset, indexData);
-            indexOffset += indexData.size();
+
+            /* If there are any glyphs, generate indices in draw order */
+            if(data.glyphRun != ~UnsignedInt{}) {
+                const Implementation::TextLayerGlyphRun& glyphRun = state.glyphRuns[data.glyphRun];
+                const Containers::ArrayView<UnsignedInt> indexData = state.indices.sliceSize(indexOffset, glyphRun.glyphCount*6);
+                Text::renderGlyphQuadIndicesInto(glyphRun.glyphOffset, indexData);
+                indexOffset += indexData.size();
+            }
 
             /* If the text is editable, generate indices for cursor and
                selection as well. They're currently both drawn in the same
@@ -2129,23 +2141,32 @@ void TextLayer::doUpdate(const LayerStates states, const Containers::StridedArra
         for(const UnsignedInt dataId: dataIds) {
             const UnsignedInt nodeId = nodeHandleId(nodes[dataId]);
             const Implementation::TextLayerData& data = state.data[dataId];
-            const Implementation::TextLayerGlyphRun& glyphRun = state.glyphRuns[data.glyphRun];
 
-            /* Fill in quad vertices in the same order as the original text
-               runs */
-            /** @todo ideally this would only be done if some text actually
-                changes, not on every visibility change */
-            const Containers::StridedArrayView1D<const Implementation::TextLayerGlyphData> glyphData = state.glyphData.sliceSize(glyphRun.glyphOffset, glyphRun.glyphCount);
-            const Containers::StridedArrayView1D<Implementation::TextLayerVertex> vertexData = state.vertices.sliceSize(glyphRun.glyphOffset*4, glyphRun.glyphCount*4);
-            Text::renderGlyphQuadsInto(
-                sharedState.glyphCache,
-                glyphRun.scale,
-                glyphData.slice(&Implementation::TextLayerGlyphData::position),
-                glyphData.slice(&Implementation::TextLayerGlyphData::glyphId),
-                vertexData.slice(&Implementation::TextLayerVertex::position),
-                vertexData.slice(&Implementation::TextLayerVertex::textureCoordinates));
+            /* If there are any glyphs, fill in quad vertices in the same order
+               as the original text runs. If there are not, the views stay
+               empty. They're subsequently used also for cursor placement and
+               selection highlighting, so they have to be in the outer
+               scope. */
+            Containers::StridedArrayView1D<const Implementation::TextLayerGlyphData> glyphData;
+            Containers::StridedArrayView1D<Implementation::TextLayerVertex> vertexData;
+            if(data.glyphRun != ~UnsignedInt{}) {
+                const Implementation::TextLayerGlyphRun& glyphRun = state.glyphRuns[data.glyphRun];
+                /** @todo ideally this would only be done if some text actually
+                    changes, not on every visibility change */
+                glyphData = state.glyphData.sliceSize(glyphRun.glyphOffset, glyphRun.glyphCount);
+                vertexData = state.vertices.sliceSize(glyphRun.glyphOffset*4, glyphRun.glyphCount*4);
+                Text::renderGlyphQuadsInto(
+                    sharedState.glyphCache,
+                    glyphRun.scale,
+                    glyphData.slice(&Implementation::TextLayerGlyphData::position),
+                    glyphData.slice(&Implementation::TextLayerGlyphData::glyphId),
+                    vertexData.slice(&Implementation::TextLayerVertex::position),
+                    vertexData.slice(&Implementation::TextLayerVertex::textureCoordinates));
+            }
 
-            /* Align the glyph run relative to the node area */
+            /* Align the glyph run relative to the node area. This is done even
+               if there are no glyphs, as the offset is subsequently used for
+               editing cursor as well. */
             Vector4 padding = data.padding;
             if(data.calculatedStyle < sharedState.styleCount)
                 padding += sharedState.styles[data.calculatedStyle].padding;
