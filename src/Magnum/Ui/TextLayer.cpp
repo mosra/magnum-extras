@@ -928,7 +928,7 @@ void TextLayer::shapeTextInternal(const UnsignedInt id, const UnsignedInt style,
         sharedState.glyphCache.glyphIdsInto(fontState.glyphCacheFontId, glyphIds, glyphIds);
     }
 
-    /* Save scale, size, direction-resolved alignment and the glyph run
+    /* Save scale, rectangle, direction-resolved alignment and the glyph run
        reference for use in doUpdate() later */
     Implementation::TextLayerData& data = state.data[id];
     data.scale = fontState.scale;
