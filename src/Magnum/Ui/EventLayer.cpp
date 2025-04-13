@@ -528,10 +528,9 @@ void EventLayer::removeInternal(const UnsignedInt id) {
 
 void EventLayer::doClean(const Containers::BitArrayView dataIdsToRemove) {
     /** @todo some way to iterate bits */
-    for(std::size_t i = 0; i != dataIdsToRemove.size(); ++i) {
-        if(!dataIdsToRemove[i]) continue;
-        removeInternal(i);
-    }
+    for(std::size_t i = 0; i != dataIdsToRemove.size(); ++i)
+        if(dataIdsToRemove[i])
+            removeInternal(i);
 }
 
 void EventLayer::doPointerPressEvent(const UnsignedInt dataId, PointerEvent& event) {
