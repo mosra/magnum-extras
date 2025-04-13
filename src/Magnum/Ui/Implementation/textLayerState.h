@@ -37,6 +37,7 @@
 #include <Magnum/Text/AbstractFont.h>
 #include <Magnum/Text/AbstractShaper.h>
 #include <Magnum/Text/Alignment.h>
+#include <Magnum/Text/Renderer.h>
 
 #include "Magnum/Ui/TextLayer.h"
 #include "Magnum/Ui/TextProperties.h"
@@ -299,6 +300,16 @@ struct TextLayer::State: AbstractVisualLayer::State {
        during each doUpdate(). */
     Containers::Array<Implementation::TextLayerGlyphData> glyphData;
     Containers::Array<char> textData;
+
+    /* Text renderer using the shader glyph cache, and with a custom allocator
+       that puts data into an appropriate slice of `glyphData` above. The
+       second instance is the same except for RendererCoreFlag::GlyphClusters
+       enabled for editable text. */
+    /** @todo hmm, maybe make that optional in there or some such to avoid
+        having two instances? or maybe the edit-aware variant will grow further
+        (more per-run info, etc.) that this is warranted? */
+    Text::RendererCore renderer;
+    Text::RendererCore rendererGlyphClusters;
 
     /* Glyph / text runs. Each run is a complete text belogning to one text
        layer data. Ordered by the offset. Removed items get marked as unused,

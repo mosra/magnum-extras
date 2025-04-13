@@ -463,7 +463,15 @@ TextLayer::Shared::Configuration& TextLayer::Shared::Configuration::setDynamicSt
     return *this;
 }
 
-TextLayer::State::State(Shared::State& shared): AbstractVisualLayer::State{shared}, styleUpdateStamp{shared.styleUpdateStamp}, editingStyleUpdateStamp{shared.editingStyleUpdateStamp} {
+TextLayer::State::State(Shared::State& shared):
+    AbstractVisualLayer::State{shared},
+    styleUpdateStamp{shared.styleUpdateStamp},
+    editingStyleUpdateStamp{shared.editingStyleUpdateStamp},
+    /* These get created below, just to not have to do nasty things to
+       deduplicate allocator lambda definitions */
+    renderer{NoCreate},
+    rendererGlyphClusters{NoCreate}
+{
     dynamicStyleStorage = Containers::ArrayTuple{
         /* If editing styles are present, the uniform array additionally stores
            also uniforms for selected text (and reserved for cursors) */
@@ -477,6 +485,64 @@ TextLayer::State::State(Shared::State& shared): AbstractVisualLayer::State{share
         {ValueInit, shared.hasEditingStyles ? shared.dynamicStyleCount*2 : 0, dynamicEditingStyleUniforms},
         {ValueInit, shared.hasEditingStyles ? shared.dynamicStyleCount*2 : 0, dynamicEditingStylePaddings},
     };
+
+    const auto glyphAllocator = [](void* const state_, const UnsignedInt glyphCount, Containers::StridedArrayView1D<Vector2>& glyphPositions, Containers::StridedArrayView1D<UnsignedInt>& glyphIds, Containers::StridedArrayView1D<UnsignedInt>* const glyphClusters, Containers::StridedArrayView1D<Vector2>& glyphAdvances) {
+        State& state = *static_cast<TextLayer::State*>(state_);
+
+        /* Assumes that reserve() is never called on the renderer and as such
+           state.glyphData is full of existing data. Then the allocator is
+           either called from clear(), in which case both the views and the
+           requested count is empty, or the glyphPositions etc. views point to
+           its suffix and thus glyphCount is the size by which the array should
+           be grown. */
+        CORRADE_INTERNAL_ASSERT((glyphCount == 0 && glyphPositions.size() == 0) || glyphPositions.data() ==  reinterpret_cast<const char*>(state.glyphData.end() - glyphPositions.size()) + (glyphPositions.data() ? offsetof(Implementation::TextLayerGlyphData, position) : 0));
+        arrayAppend(state.glyphData, NoInit, glyphCount);
+
+        /* The returned views will thus be again suffixes of state.glyphData
+           with the size being a sum of the requested glyph count and existing
+           view size */
+        /** @todo change to suffix() once it takes suffix size and not prefix
+            size */
+        const Containers::StridedArrayView1D<Implementation::TextLayerGlyphData> glyphData = state.glyphData.exceptPrefix(state.glyphData.size() - (glyphCount + glyphPositions.size()));
+        glyphPositions = glyphData.slice(&Implementation::TextLayerGlyphData::position);
+        glyphIds = glyphData.slice(&Implementation::TextLayerGlyphData::glyphId);
+        /* The clusters are populated by just one renderer of the two */
+        if(glyphClusters)
+            *glyphClusters = glyphData.slice(&Implementation::TextLayerGlyphData::glyphCluster);
+        /* Advances alias the suffix of IDs and clusters */
+        glyphAdvances = Containers::arrayCast<Vector2>(glyphData.exceptPrefix(glyphData.size() - glyphCount).slice(&Implementation::TextLayerGlyphData::glyphId));
+    };
+    const auto runAllocator = [](void* const state_, const UnsignedInt runCount, Containers::StridedArrayView1D<Float>& runScales, Containers::StridedArrayView1D<UnsignedInt>& runEnds) {
+        State& state = *static_cast<TextLayer::State*>(state_);
+
+        /* Like with the glyph allocator above assumes that reserve() is never
+           called on the renderer and as such state.glyphRuns is full of
+           existing data. Then the allocator is either called from clear(), in
+           which case both the views and the requested count is empty, or the
+           runScales etc. views point to its suffix and thus runCount is the
+           size by which the array should be grown. */
+        CORRADE_INTERNAL_ASSERT((runCount == 0 && runScales.size() == 0) || runScales.data() == reinterpret_cast<const char*>(state.glyphRuns.end() - runScales.size()) + (runScales.data() ? offsetof(Implementation::TextLayerGlyphRun, scale) : 0));
+        arrayAppend(state.glyphRuns, NoInit, runCount);
+
+        /* The returned views will thus be again suffixes of state.glyphRuns
+           with the size being a sum of the requested run count and existing
+           view size */
+        /** @todo change to suffix() once it takes suffix size and not prefix
+            size */
+        const Containers::StridedArrayView1D<Implementation::TextLayerGlyphRun> glyphRuns = state.glyphRuns.exceptPrefix(state.glyphRuns.size() - (runCount + runScales.size()));
+        runScales = glyphRuns.slice(&Implementation::TextLayerGlyphRun::scale);
+        /* The run end gets saved to the glyphCache field, after render() the
+           caller takes that value to populate glyphCount and glyphOffset
+           correctly */
+        runEnds = glyphRuns.slice(&Implementation::TextLayerGlyphRun::glyphCount);
+    };
+    renderer = Text::RendererCore{shared.glyphCache,
+        glyphAllocator, this,
+        runAllocator, this};
+    rendererGlyphClusters = Text::RendererCore{shared.glyphCache,
+        glyphAllocator, this,
+        runAllocator, this,
+        Text::RendererCoreFlag::GlyphClusters};
 }
 
 TextLayer::TextLayer(const LayerHandle handle, Containers::Pointer<State>&& state): AbstractVisualLayer{handle, Utility::move(state)} {}
@@ -863,87 +929,66 @@ void TextLayer::shapeTextInternal(const UnsignedInt id, const UnsignedInt style,
         features[i] = styleFeatures[i];
     Utility::copy(properties.features(), features.exceptPrefix(styleFeatures.size()));
 
-    /** @todo once the TextProperties combine multiple fonts, scripts etc, this
-        all should probably get wrapped in some higher level API in Text
-        directly (AbstractLayouter?), which cuts the text to parts depending
-        on font, script etc. and then puts all shaped runs together again? */
     /* Get a shaper instance */
     if(!fontState.shaper)
         fontState.shaper = fontState.font->createShaper();
     Text::AbstractShaper& shaper = *fontState.shaper;
 
-    /* Shape the text and make room for the shaped glyphs */
+    /* Remember where the glyph run for this data will appear when allocated by
+       the renderer. Any previous run for this data was marked as unused in
+       previous remove() or in setText() right before calling this function. */
+    const UnsignedInt glyphOffset = state.glyphData.size();
+    const UnsignedInt glyphRunOffset = state.glyphRuns.size();
+
+    /* Pick a renderer instance based on whether we want to populate glyph
+       cluster info and reset() it to make it append to the end of
+       `state.glyphData` and `state.glyphRuns` as well as discarding any
+       previously used alignment or direction. */
+    Text::RendererCore& renderer = flags >= TextDataFlag::Editable ? state.rendererGlyphClusters : state.renderer;
+    renderer.reset();
+
+    /* Set shaper properties and render the text with it */
     shaper.setScript(properties.script());
     shaper.setLanguage(properties.language());
     shaper.setDirection(properties.shapeDirection());
-    const UnsignedInt glyphCount = shaper.shape(text, features);
-    const UnsignedInt glyphOffset = state.glyphData.size();
-    const Containers::StridedArrayView1D<Implementation::TextLayerGlyphData> glyphData = arrayAppend(state.glyphData, NoInit, glyphCount);
+    const Containers::Pair<Range2D, Range1Dui> rectangleRunRange = renderer
+        .setAlignment(alignment)
+        .setLayoutDirection(properties.layoutDirection())
+        .render(shaper, fontState.scale*fontState.font->size(), text, features);
 
-    /* Resolve the alignment based on direction */
-    const Text::Alignment resolvedAlignment = Text::alignmentForDirection(alignment,
+    /* Fill in remaining properties for all runs allocated by the renderer. So
+       far assuming there's either one or none at all if the text has no
+       glyphs, once BIDI support is in or we call add() multiple times there
+       can be more than one. */
+    UnsignedInt dataGlyphOffset = 0;
+    CORRADE_INTERNAL_ASSERT(rectangleRunRange.second().size() <= 1);
+    for(UnsignedInt i = rectangleRunRange.second().min(); i != rectangleRunRange.second().max(); ++i) {
+        Implementation::TextLayerGlyphRun& run = state.glyphRuns[glyphRunOffset + i];
+        run.data = id;
+        /* glyphCount contains the end glyph offset for given run, which is
+           relative to start of the rendering. The actual glyphCount is thus
+           this value minus the previous run end and the glyphOffset is the
+           previous run end plus the absolute glyph offset */
+        run.glyphCount -= dataGlyphOffset;
+        run.glyphOffset = glyphOffset + dataGlyphOffset;
+        dataGlyphOffset += run.glyphCount;
+    }
+
+    /* Save scale, rectangle, alignment resolved based on direction */
+    Implementation::TextLayerData& data = state.data[id];
+    data.rectangle = rectangleRunRange.first();
+    data.alignment = Text::alignmentForDirection(alignment,
         properties.layoutDirection(),
         shaper.direction());
+    /* If the rendering resulted in no glyphs, there's no glyph run to
+       reference */
+    data.glyphRun =  rectangleRunRange.second().size() ? glyphRunOffset : ~UnsignedInt{};
 
-    /* Query glyph offsets and advances, abuse the glyphData fields for those;
-       then convert those in-place to absolute glyph positions and align
-       them */
-    const Containers::StridedArrayView1D<Vector2> glyphOffsetsPositions = glyphData.slice(&Implementation::TextLayerGlyphData::position);
-    const Containers::StridedArrayView1D<Vector2> glyphAdvances = Containers::arrayCast<Vector2>(glyphData.slice(&Implementation::TextLayerGlyphData::glyphId));
-    shaper.glyphOffsetsAdvancesInto(glyphOffsetsPositions, glyphAdvances);
-    Range2D rectangle{NoInit};
-    {
-        Vector2 cursor;
-        const Range2D lineRectangle = Text::renderLineGlyphPositionsInto(
-            *fontState.font,
-            fontState.scale*fontState.font->size(),
-            properties.layoutDirection(),
-            glyphOffsetsPositions,
-            glyphAdvances,
-            cursor,
-            glyphOffsetsPositions);
-        const Range2D blockRectangle = Text::alignRenderedLine(
-            lineRectangle,
-            properties.layoutDirection(),
-            resolvedAlignment,
-            glyphOffsetsPositions);
-        rectangle = Text::alignRenderedBlock(
-            blockRectangle,
-            properties.layoutDirection(),
-            resolvedAlignment,
-            glyphOffsetsPositions);
-    }
-
-    /* Query font-specific glyph IDs and convert them to cache-global
-       in-place */
-    {
-        const Containers::StridedArrayView1D<UnsignedInt> glyphIds = glyphData.slice(&Implementation::TextLayerGlyphData::glyphId);
-        shaper.glyphIdsInto(glyphIds);
-        sharedState.glyphCache.glyphIdsInto(fontState.glyphCacheFontId, glyphIds, glyphIds);
-    }
-
-    /* Save scale, rectangle, direction-resolved alignment */
-    Implementation::TextLayerData& data = state.data[id];
-    data.rectangle = rectangle;
-    data.alignment = resolvedAlignment;
-
-    /* If the shaping resulted in any glyphs, add a new glyph run. Any previous
-       run for this data was marked as unused in previous remove() or in
-       setText() right before calling this function. */
-    if(glyphCount) {
-        data.glyphRun = state.glyphRuns.size();
-        arrayAppend(state.glyphRuns, InPlaceInit, glyphOffset, glyphCount, id, fontState.scale);
-    } else {
-        data.glyphRun = ~UnsignedInt{};
-    }
-
-    /* Save extra properties used by editable text. They occupy otherwise
-       unused free space in TextLayerData and TextLayerGlyphData, see the
-       member documentation for details why they're stored here and not in
-       dedicated edit-only structures. */
+    /* If the text is editable, its cluster info was filled by the
+       `rendererGlyphClusters` above already. Save also the resolved shaper
+       direction. */
     if(flags >= TextDataFlag::Editable) {
         data.usedDirection = shaper.direction();
-        shaper.glyphClustersInto(glyphData.slice(&Implementation::TextLayerGlyphData::glyphCluster));
 
     /* If the text is not editable, reset the direction to prevent other code
        accidentally relying on some random value. The clusters aren't reset

@@ -162,6 +162,8 @@ struct TextLayerTest: TestSuite::Tester {
     void editText();
     void editTextInvalid();
 
+    void cycleGlyphEditableNonEditableText();
+
     void createSetTextTextProperties();
     void createSetTextTextPropertiesEditable();
     void createSetTextTextPropertiesEditableInvalid();
@@ -1329,7 +1331,9 @@ TextLayerTest::TextLayerTest() {
     addInstancedTests({&TextLayerTest::editText},
         Containers::arraySize(EditData));
 
-    addTests({&TextLayerTest::editTextInvalid});
+    addTests({&TextLayerTest::editTextInvalid,
+
+              &TextLayerTest::cycleGlyphEditableNonEditableText});
 
     addInstancedTests({&TextLayerTest::createSetTextTextProperties},
         Containers::arraySize(CreateSetTextTextPropertiesData));
@@ -5383,8 +5387,9 @@ void TextLayerTest::dynamicStyleInvalid() {
 struct ThreeGlyphShaper: Text::AbstractShaper {
     explicit ThreeGlyphShaper(Text::AbstractFont& font, Text::ShapeDirection direction = Text::ShapeDirection::Unspecified): Text::AbstractShaper{font}, _direction{direction}, _constructedDirection{direction} {}
 
-    UnsignedInt doShape(Containers::StringView text, UnsignedInt, UnsignedInt, Containers::ArrayView<const Text::FeatureRange>) override {
-        return text.size();
+    UnsignedInt doShape(Containers::StringView, UnsignedInt begin, UnsignedInt end, Containers::ArrayView<const Text::FeatureRange>) override {
+        _begin = begin;
+        return end - begin;
     }
     bool doSetDirection(Text::ShapeDirection direction) override {
         /* The direction should be either specified in the constructor (in the
@@ -5404,11 +5409,11 @@ struct ThreeGlyphShaper: Text::AbstractShaper {
     void doGlyphIdsInto(const Containers::StridedArrayView1D<UnsignedInt>& ids) const override {
         /* Just cycling through three glyphs */
         for(std::size_t i = 0; i != ids.size(); ++i) {
-            if(i % 3 == 0)
+            if((_begin + i) % 3 == 0)
                 ids[i] = 22;
-            else if(i % 3 == 1)
+            else if((_begin + i) % 3 == 1)
                 ids[i] = 13;
-            else if(i % 3 == 2)
+            else if((_begin + i) % 3 == 2)
                 ids[i] = 97;
             else CORRADE_INTERNAL_ASSERT_UNREACHABLE();
         }
@@ -5416,17 +5421,18 @@ struct ThreeGlyphShaper: Text::AbstractShaper {
     void doGlyphOffsetsAdvancesInto(const Containers::StridedArrayView1D<Vector2>& offsets, const Containers::StridedArrayView1D<Vector2>& advances) const override {
         /* Each next glyph has the advance and offset higher */
         for(std::size_t i = 0; i != offsets.size(); ++i) {
-            offsets[i] = {Float(i), 1.0f + Float(i)};
-            advances[i] = {2.0f + Float(i), 0.0f};
+            offsets[i] = {Float(_begin + i), 1.0f + Float(_begin + i)};
+            advances[i] = {2.0f + Float(_begin + i), 0.0f};
         }
     }
     void doGlyphClustersInto(const Containers::StridedArrayView1D<UnsignedInt>& clusters) const override {
         /* Just a trivial 1:1 mapping */
         for(std::size_t i = 0; i != clusters.size(); ++i)
-            clusters[i] = i;
+            clusters[i] = _begin + i;
     }
 
     private:
+        UnsignedInt _begin;
         Text::ShapeDirection _direction, _constructedDirection;
 };
 
@@ -6006,8 +6012,10 @@ template<class StyleIndex, class GlyphIndex> void TextLayerTest::createRemoveSet
             textProperties);
         /* This changes empty text to a non-empty, i.e. there's no previous
            glyph run to remove. OTOH it makes the text non-editable, so the
-           text run is removed without a replacement. */
-        layer.setText(dataHandleData(fifth), "eh", textProperties, TextDataFlags{});
+           text run is removed without a replacement. Plus it uses a newline
+           to verify it's propagated correctly all the way to
+           Text::RendererCore and back. */
+        layer.setText(dataHandleData(fifth), "a\nh", textProperties, TextDataFlags{});
         /* This changes empty text to a glyph, so again no previous glyph run
            to remove. But it again causes the text run to be removed. */
         layer.setGlyph(dataHandleData(third), GlyphIndex(33), textProperties);
@@ -6018,7 +6026,7 @@ template<class StyleIndex, class GlyphIndex> void TextLayerTest::createRemoveSet
         layer.setGlyph(second,
             data.customFont ? GlyphIndex(13) : GlyphIndex(66),
             textProperties);
-        layer.setText(fifth, "eh", textProperties, TextDataFlags{});
+        layer.setText(fifth, "a\nh", textProperties, TextDataFlags{});
         layer.setGlyph(third, GlyphIndex(33), textProperties);
     }
     CORRADE_COMPARE(layer.flags(second), TextDataFlags{});
@@ -6059,8 +6067,8 @@ template<class StyleIndex, class GlyphIndex> void TextLayerTest::createRemoveSet
             0u, 2u, 1u,
             /* Glyph 13 */
             2u,
-            /* Glyphs 22, 13 */
-            0u, 2u,
+            /* Glyphs 22, 97, char in the middle that mapped to 13 is \n */
+            0u, 1u,
             /* Single (invalid) glyph 33 */
             0u
         }), TestSuite::Compare::Container);
@@ -6088,8 +6096,8 @@ template<class StyleIndex, class GlyphIndex> void TextLayerTest::createRemoveSet
                scaled to 0.5, aligned to BottomRight */
             {-13.0f, 2.0f},
             /* "ah", aligned to MiddleCenter */
-            {-2.5f, 2.5f},
-            {-1.0f, 3.0f},
+            {-1.0f, 10.5f},
+            {-1.0f, 3.5f},
             /* Single (invalid) glyph 33, MiddleCenter */
             {-10.0f, 1.0f},
         }), TestSuite::Compare::Container);
@@ -6116,8 +6124,8 @@ template<class StyleIndex, class GlyphIndex> void TextLayerTest::createRemoveSet
             3u,
             /* Single glyph 66 */
             3u,
-            /* Glyphs 22, 13 */
-            0u, 2u,
+            /* Glyphs 22, 97, char in the middle that mapped to 13 is \n */
+            0u, 1u,
             /* Single (invalid) glyph 33 */
             0u
         }), TestSuite::Compare::Container);
@@ -6142,8 +6150,8 @@ template<class StyleIndex, class GlyphIndex> void TextLayerTest::createRemoveSet
             /* Single glyph 66 again, aligned to BottomRight */
             {-20.0f, 2.0f},
             /* "ah", aligned to MiddleCenter */
-            {-2.5f, 2.5f},
-            {-1.0f, 3.0f},
+            {-1.0f, 10.5f},
+            {-1.0f, 3.5f},
             /* Single (invalid) glyph 33, MiddleCenter */
             {-10.0f, 1.0f},
         }), TestSuite::Compare::Container);
@@ -6964,6 +6972,123 @@ void TextLayerTest::editTextInvalid() {
         "Ui::TextLayer::editText(): Ui::TextEdit::RemoveAfterCursor requires no text to insert\n"
         "Ui::TextLayer::editText(): Ui::TextEdit::MoveCursorLeft requires no text to insert\n",
         TestSuite::Compare::String);
+}
+
+void TextLayerTest::cycleGlyphEditableNonEditableText() {
+    /* Internally two instances of Text::RendererCore are used, one that
+       populates glyph clusters, and one that not. One or the other gets used
+       based on whether given text is editable, and each time reset() is called
+       to sync the allocators to point to the same data between the two.
+
+       Verify that cycling the two renderers when doing text updates, as well
+       as direct glyph setting, doesn't trigger any suspicious behavior.
+       There's no update() call between so the internal arrays are just growing
+       indefinitely but each time the last run should contain the same
+       data. */
+
+    struct Shaper: Text::AbstractShaper {
+        using Text::AbstractShaper::AbstractShaper;
+
+        UnsignedInt doShape(Containers::StringView, UnsignedInt begin, UnsignedInt end, Containers::ArrayView<const Text::FeatureRange>) override {
+            return end - begin;
+        }
+        void doGlyphIdsInto(const Containers::StridedArrayView1D<UnsignedInt>& ids) const override {
+            for(UnsignedInt& i: ids)
+                i = 0;
+        }
+        void doGlyphOffsetsAdvancesInto(const Containers::StridedArrayView1D<Vector2>& offsets, const Containers::StridedArrayView1D<Vector2>& advances) const override {
+            offsets[0] = {};
+            advances[0] = {5.0f, 0.0f};
+        }
+        void doGlyphClustersInto(const Containers::StridedArrayView1D<UnsignedInt>& clusters) const override {
+            for(UnsignedInt& i: clusters)
+                i = 0;
+        }
+    };
+
+    struct: Text::AbstractFont {
+        Text::FontFeatures doFeatures() const override { return {}; }
+        bool doIsOpened() const override { return _opened; }
+        Properties doOpenFile(Containers::StringView, Float) override {
+            _opened = true;
+            return {12.0f, 4.0f, -4.0f, 8.0f, 1};
+        }
+        void doClose() override { _opened = false; }
+
+        void doGlyphIdsInto(const Containers::StridedArrayView1D<const char32_t>&, const Containers::StridedArrayView1D<UnsignedInt>&) override {}
+        Vector2 doGlyphSize(UnsignedInt) override { return {}; }
+        Vector2 doGlyphAdvance(UnsignedInt) override { return {}; }
+        Containers::Pointer<Text::AbstractShaper> doCreateShaper() override { return Containers::pointer<Shaper>(*this); }
+
+        bool _opened = false;
+    } font;
+    font.openFile({}, 0.0f);
+
+    struct: Text::AbstractGlyphCache {
+        using Text::AbstractGlyphCache::AbstractGlyphCache;
+
+        Text::GlyphCacheFeatures doFeatures() const override { return {}; }
+        void doSetImage(const Vector2i&, const ImageView2D&) override {}
+    /* Default padding is 1, resetting to 0 for simplicity */
+    } cache{PixelFormat::R8Unorm, {32, 32}, {}};
+    cache.addFont(1, &font);
+
+    struct LayerShared: TextLayer::Shared {
+        explicit LayerShared(Text::AbstractGlyphCache& glyphCache, const Configuration& configuration): TextLayer::Shared{glyphCache, configuration} {}
+
+        void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
+        void doSetEditingStyle(const TextLayerCommonEditingStyleUniform&, Containers::ArrayView<const TextLayerEditingStyleUniform>) override {}
+    } shared{cache, TextLayer::Shared::Configuration{1}};
+    shared.setStyle(TextLayerCommonStyleUniform{},
+        {TextLayerStyleUniform{}},
+        {shared.addFont(font, 12.0f)},
+        {Text::Alignment::TopLeft},
+        {}, {}, {}, {}, {}, {});
+
+    struct Layer: TextLayer {
+        explicit Layer(LayerHandle handle, Shared& shared): TextLayer{handle, shared} {}
+
+        const State& stateData() const {
+            return static_cast<const State&>(*_state);
+        }
+    } layer{layerHandle(0, 1), shared};
+
+    DataHandle text = layer.create(0, "hello", {});
+
+    UnsignedInt reallocatedGlyphs = 0, reallocatedRuns = 0;
+    const void* previousGlyphs = layer.stateData().glyphData.data();
+    const void* previousRuns = layer.stateData().glyphRuns.data();
+    for(std::size_t i = 0; i != 1000; ++i) {
+        CORRADE_ITERATION(i);
+
+        if(i % 3 == 0) {
+            layer.setText(text, "hey", {}, TextDataFlag::Editable);
+            CORRADE_COMPARE(layer.stateData().glyphData.size(), 5 + (i/3)*9 + 3);
+
+        } else if(i % 3 == 1) {
+            layer.setText(text, "hello", {});
+            CORRADE_COMPARE(layer.stateData().glyphData.size(), 5 + (i/3)*9 + 8);
+
+        } else {
+            layer.setGlyph(text, 0, {});
+            CORRADE_COMPARE(layer.stateData().glyphData.size(), 5 + (i/3)*9 + 9);
+        }
+
+        CORRADE_COMPARE(layer.stateData().glyphRuns.size(), 2 + i);
+
+        if(previousGlyphs != layer.stateData().glyphData.data())
+            ++reallocatedGlyphs;
+        if(previousRuns != layer.stateData().glyphRuns.data())
+            ++reallocatedRuns;
+        previousGlyphs = layer.stateData().glyphData.data();
+        previousRuns = layer.stateData().glyphRuns.data();
+    }
+
+    /* To actually verify the allocators handle this correctly, the underlying
+       storage should be reallocated a few times */
+    CORRADE_VERIFY(reallocatedGlyphs);
+    CORRADE_VERIFY(reallocatedRuns);
+    CORRADE_INFO("Reallocated glyphs" << reallocatedGlyphs << "times, runs" << reallocatedRuns << "times");
 }
 
 void TextLayerTest::createSetTextTextProperties() {
