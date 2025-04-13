@@ -1835,19 +1835,13 @@ LayerStates TextLayer::doState() const {
 }
 
 void TextLayer::doClean(const Containers::BitArrayView dataIdsToRemove) {
-    State& state = static_cast<State&>(*_state);
-
-    /* Mark glyph / text runs attached to removed data as unused. They'll get
-       removed during the next recompaction in doUpdate(). */
+    /* Mark glyph / text runs attached to removed data as unused, similarly as
+       when calling remove(). They'll get actually removed during the next
+       recompaction in doUpdate(). */
     /** @todo some way to iterate set bits */
-    for(std::size_t i = 0; i != dataIdsToRemove.size(); ++i) {
-        if(!dataIdsToRemove[i])
-            continue;
-
-        state.glyphRuns[state.data[i].glyphRun].glyphOffset = ~UnsignedInt{};
-        if(state.data[i].textRun != ~UnsignedInt{})
-            state.textRuns[state.data[i].textRun].textOffset = ~UnsignedInt{};
-    }
+    for(std::size_t i = 0; i != dataIdsToRemove.size(); ++i)
+        if(dataIdsToRemove[i])
+            removeInternal(i);
 
     /* Data removal doesn't need anything to be reuploaded to continue working
        correctly, thus setNeedsUpdate() isn't called, and neither is in

@@ -791,21 +791,13 @@ LayerStates LineLayer::doState() const {
 }
 
 void LineLayer::doClean(const Containers::BitArrayView dataIdsToRemove) {
-    State& state = static_cast<State&>(*_state);
-
-    /* Mark runs attached to removed data as unused. They'll get removed during
-       the next recompaction in doUpdate(). */
+    /* Mark runs attached to removed data as unused, similarly as when calling
+       remove(). They'll get actually removed during the next recompaction in
+       doUpdate(). */
     /** @todo some way to iterate set bits */
-    for(std::size_t i = 0; i != dataIdsToRemove.size(); ++i) {
-        if(!dataIdsToRemove[i])
-            continue;
-
-        Implementation::LineLayerRun& run = state.runs[state.data[i].run];
-        /* Both `indexOffset` and `pointOffset` are marked to avoid
-           inconsistency. */
-        run.indexOffset = ~UnsignedInt{};
-        run.pointOffset = ~UnsignedInt{};
-    }
+    for(std::size_t i = 0; i != dataIdsToRemove.size(); ++i)
+        if(dataIdsToRemove[i])
+            removeInternal(i);
 
     /* Data removal doesn't need anything to be reuploaded to continue working
        correctly, thus setNeedsUpdate() isn't called, and neither is in
