@@ -39,6 +39,7 @@
 #include <Magnum/GL/Framebuffer.h>
 #include <Magnum/GL/OpenGLTester.h>
 #include <Magnum/GL/Texture.h>
+#include <Magnum/GL/TextureArray.h>
 #include <Magnum/GL/TextureFormat.h>
 #include <Magnum/Text/AbstractFont.h>
 #include <Magnum/Text/AbstractShaper.h>
@@ -947,8 +948,8 @@ void TextLayerGLTest::sharedConstructTakeCacheOwnership() {
         CORRADE_COMPARE(shared.styleUniformCount(), 3);
         CORRADE_COMPARE(shared.styleCount(), 5);
 
-        /* It should get moved in */
-        CORRADE_VERIFY(!cache.texture().id());
+        /* It should get moved in. The cache state gets moved, which means it's
+           impossible to access cache.texture() at this point. */
         CORRADE_VERIFY(&shared.glyphCache() != &cache);
         CORRADE_COMPARE(shared.glyphCache().size(), (Vector3i{8, 8, 2}));
     }
