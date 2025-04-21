@@ -81,7 +81,7 @@ struct TextLayerGLTest: GL::OpenGLTester {
     void renderSetup();
     void renderTeardown();
     void render();
-    void renderEdgeSmoothness();
+    void renderEditingSmoothness();
     void renderAlignmentPadding();
     void renderCustomColor();
     void renderChangeStyle();
@@ -300,7 +300,7 @@ const struct {
     const char* name;
     Float scale;
     bool setSizeLater;
-} RenderEdgeSmoothnessData[]{
+} RenderEditingSmoothnessData[]{
     {"", 1.0f, false},
     {"UI 100x larger than framebuffer",
         100.0f, false},
@@ -860,8 +860,8 @@ TextLayerGLTest::TextLayerGLTest() {
         &TextLayerGLTest::renderSetup,
         &TextLayerGLTest::renderTeardown);
 
-    addInstancedTests({&TextLayerGLTest::renderEdgeSmoothness},
-        Containers::arraySize(RenderEdgeSmoothnessData),
+    addInstancedTests({&TextLayerGLTest::renderEditingSmoothness},
+        Containers::arraySize(RenderEditingSmoothnessData),
         &TextLayerGLTest::renderSetup,
         &TextLayerGLTest::renderTeardown);
 
@@ -1225,8 +1225,8 @@ void TextLayerGLTest::render() {
         DebugTools::CompareImageToFile{_importerManager});
 }
 
-void TextLayerGLTest::renderEdgeSmoothness() {
-    auto&& data = RenderEdgeSmoothnessData[testCaseInstanceId()];
+void TextLayerGLTest::renderEditingSmoothness() {
+    auto&& data = RenderEditingSmoothnessData[testCaseInstanceId()];
     setTestCaseDescription(data.name);
 
     if(!(_fontManager.load("StbTrueTypeFont") & PluginManager::LoadState::Loaded))

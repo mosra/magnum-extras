@@ -335,13 +335,13 @@ const struct {
             .setColor(0xffffffff_rgbaf*0.75f)},
     {"common smoothness, UI size 10x larger", 10.0f,
         LineLayerCommonStyleUniform{}
-            .setSmoothness(8.0f), /* in pixels, no change */
+            .setSmoothness(8.0f),   /* in pixels, no change */
         LineLayerStyleUniform{}
             .setWidth(120.0f)
             .setColor(0xffffffff_rgbaf*0.75f)},
     {"common smoothness, UI size 10x smaller", 0.1f,
         LineLayerCommonStyleUniform{}
-            .setSmoothness(8.0f), /* in pixels, no change */
+            .setSmoothness(8.0f),   /* in pixels, no change */
         LineLayerStyleUniform{}
             .setWidth(1.2f)
             .setColor(0xffffffff_rgbaf*0.75f)},
@@ -352,18 +352,16 @@ const struct {
             .setSmoothness(8.0f)
             .setColor(0xffffffff_rgbaf*0.75f)},
     {"per-style smoothness, UI size 10x larger", 10.0f,
-        LineLayerCommonStyleUniform{}
-            .setSmoothness(8.0f),
+        LineLayerCommonStyleUniform{},
         LineLayerStyleUniform{}
-            .setWidth(120.0f)
-            .setSmoothness(80.0f) /* in UI units, so also 10x larger */
+            .setWidth(120.0f)       /* in UI units, so also 10x larger */
+            .setSmoothness(80.0f)   /* in UI units, so also 10x larger */
             .setColor(0xffffffff_rgbaf*0.75f)},
     {"per-style smoothness, UI size 10x smaller", 0.1f,
-        LineLayerCommonStyleUniform{}
-            .setSmoothness(8.0f),
+        LineLayerCommonStyleUniform{},
         LineLayerStyleUniform{}
-            .setWidth(1.2f)
-            .setSmoothness(0.8f) /* in UI units, so also 10x larger */
+            .setWidth(1.2f)         /* in UI units, so also 10x smaller */
+            .setSmoothness(0.8f)    /* in UI units, so also 10x smaller */
             .setColor(0xffffffff_rgbaf*0.75f)},
     {"both common and per-style smoothness, common is larger", 1.0f,
         LineLayerCommonStyleUniform{}
@@ -374,17 +372,17 @@ const struct {
             .setColor(0xffffffff_rgbaf*0.75f)},
     {"both common and per-style smoothness, common is larger, UI size 10x larger", 10.0f,
         LineLayerCommonStyleUniform{}
-            .setSmoothness(8.0f),
+            .setSmoothness(8.0f),   /* in pixels, no change */
         LineLayerStyleUniform{}
-            .setWidth(120.0f)
-            .setSmoothness(70.0f)
+            .setWidth(120.0f)       /* in UI units, so also 10x larger */
+            .setSmoothness(70.0f)   /* in UI units, so also 10x larger */
             .setColor(0xffffffff_rgbaf*0.75f)},
     {"both common and per-style smoothness, common is larger, UI size 10x smaller", 0.1f,
         LineLayerCommonStyleUniform{}
-            .setSmoothness(8.0f),
+            .setSmoothness(8.0f),   /* in pixels, no change */
         LineLayerStyleUniform{}
-            .setWidth(1.2f)
-            .setSmoothness(0.7f)
+            .setWidth(1.2f)         /* in UI units, so also 10x smaller */
+            .setSmoothness(0.7f)    /* in UI units, so also 10x smaller */
             .setColor(0xffffffff_rgbaf*0.75f)},
     {"both common and per-style smoothness, per-style is larger", 1.0f,
         LineLayerCommonStyleUniform{}
@@ -395,17 +393,17 @@ const struct {
             .setColor(0xffffffff_rgbaf*0.75f)},
     {"both common and per-style smoothness, per-style is larger, UI size 10x larger", 10.0f,
         LineLayerCommonStyleUniform{}
-            .setSmoothness(7.0f),
+            .setSmoothness(7.0f),   /* in pixels, no change */
         LineLayerStyleUniform{}
-            .setWidth(120.0f)
-            .setSmoothness(80.0f)
+            .setWidth(120.0f)       /* in UI units, so also 10x larger */
+            .setSmoothness(80.0f)   /* in UI units, so also 10x larger */
             .setColor(0xffffffff_rgbaf*0.75f)},
     {"both common and per-style smoothness, per-style is larger, UI size 10x smaller", 0.1f,
         LineLayerCommonStyleUniform{}
-            .setSmoothness(7.0f),
+            .setSmoothness(7.0f),   /* in pixels, no change */
         LineLayerStyleUniform{}
-            .setWidth(1.2f)
-            .setSmoothness(0.8f)
+            .setWidth(1.2f)         /* in UI units, so also 10x smaller */
+            .setSmoothness(0.8f)    /* in UI units, so also 10x smaller */
             .setColor(0xffffffff_rgbaf*0.75f)},
 };
 
@@ -864,6 +862,9 @@ void LineLayerGLTest::renderLoop() {
 void LineLayerGLTest::renderSmoothness() {
     auto&& data = RenderSmoothnessData[testCaseInstanceId()];
     setTestCaseDescription(data.name);
+
+    /* It should produce the same result (8 *pixel* smoothness) regardless of
+       the actual UI size */
 
     /* Event handling size not used for anything, can stay arbitrary */
     AbstractUserInterface ui{Vector2{RenderSize}*data.uiScale, {1, 1}, RenderSize};
