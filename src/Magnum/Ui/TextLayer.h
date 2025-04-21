@@ -198,9 +198,10 @@ struct TextLayerCommonEditingStyleUniform {
     /**
      * @brief Edge smoothness radius
      *
-     * In pixels, i.e. setting the value to @cpp 1.0f @ce will make the
-     * smoothing extend 1 pixel on each side of the edge. Default value is
-     * @cpp 0.0f @ce.
+     * In framebuffer pixels (as opposed to UI units). E.g., setting the value
+     * to @cpp 1.0f @ce will make the smoothing extend 1 pixel on each side of
+     * the edge. Default value is @cpp 0.0f @ce.
+     * @see @ref Ui-AbstractUserInterface-dpi
      */
     Float smoothness;
 
@@ -286,7 +287,7 @@ struct TextLayerEditingStyleUniform {
     /**
      * @brief Corner radius
      *
-     * Default value is @cpp 0.0f @ce. Note that unlike
+     * In UI units. Default value is @cpp 0.0f @ce. Note that unlike
      * @ref BaseLayerStyleUniform::cornerRadius this is just a single value for
      * all corners.
      */
@@ -2335,7 +2336,8 @@ class MAGNUM_UI_EXPORT TextLayer: public AbstractVisualLayer {
         /**
          * @brief Text custom padding
          *
-         * In order left, top. right, bottom. Expects that @p handle is valid.
+         * In UI units, in order left, top. right, bottom. Expects that
+         * @p handle is valid.
          * @see @ref isHandleValid(DataHandle) const
          */
         Vector4 padding(DataHandle handle) const;
@@ -2343,17 +2345,18 @@ class MAGNUM_UI_EXPORT TextLayer: public AbstractVisualLayer {
         /**
          * @brief Text custom padding assuming it belongs to this layer
          *
-         * In order left, top. right, bottom. Expects that @p handle is valid.
-         * @see @ref isHandleValid(LayerDataHandle) const
+         * Like @ref padding(DataHandle) const but without checking that
+         * @p handle indeed belongs to this layer. See its documentation for
+         * more information.
          */
         Vector4 padding(LayerDataHandle handle) const;
 
         /**
          * @brief Set text custom padding
          *
-         * Expects that @p handle is valid. The @p padding is in order left,
-         * top, right, bottom and is added to the per-style padding values
-         * specified in @ref Shared::setStyle().
+         * Expects that @p handle is valid. The @p padding is in UI units, in
+         * order left, top, right, bottom and is added to the per-style padding
+         * values specified in @ref Shared::setStyle().
          *
          * Calling this function causes @ref LayerState::NeedsDataUpdate to be
          * set.
@@ -2373,12 +2376,9 @@ class MAGNUM_UI_EXPORT TextLayer: public AbstractVisualLayer {
         /**
          * @brief Set text custom padding with all edges having the same value
          *
-         * Expects that @p handle is valid. The @p padding is added to the
-         * per-style padding values specified in @ref Shared::setStyle().
-         *
-         * Calling this function causes @ref LayerState::NeedsDataUpdate to be
-         * set.
-         * @see @ref isHandleValid(DataHandle) const
+         * Equivalent to calling @ref setPadding(DataHandle, const Vector4&)
+         * with all four components set to @p padding. See its documentation
+         * for more information.
          */
         void setPadding(DataHandle handle, Float padding) {
             setPadding(handle, Vector4{padding});
@@ -2555,7 +2555,7 @@ class MAGNUM_UI_EXPORT TextLayer::Shared: public AbstractVisualLayer::Shared {
         /**
          * @brief Add a font
          * @param font      Font instance
-         * @param size      Size at which to render the font
+         * @param size      Size in points at which to render the font
          * @return New font handle
          *
          * Expects that @ref glyphCache() is set and contains @p font. Doesn't
@@ -2569,14 +2569,14 @@ class MAGNUM_UI_EXPORT TextLayer::Shared: public AbstractVisualLayer::Shared {
          * as long as the shared state is used. Use the
          * @ref addFont(Containers::Pointer<Text::AbstractFont>&&, Float)
          * overload to make the shared state take over the font instance.
-         * @see @ref addInstancelessFont()
+         * @see @ref addInstancelessFont(), @ref Text-AbstractFont-font-size
          */
         FontHandle addFont(Text::AbstractFont& font, Float size);
 
         /**
          * @brief Add a font and take over its ownership
          * @param font      Font instance
-         * @param size      Size at which to render the font
+         * @param size      Size in points at which to render the font
          * @return New font handle
          *
          * Like @ref addFont(Text::AbstractFont&, Float), but the shared state
@@ -2584,6 +2584,7 @@ class MAGNUM_UI_EXPORT TextLayer::Shared: public AbstractVisualLayer::Shared {
          * @ref font() later. It's the caller responsibility to ensure the
          * plugin manager the font is coming from stays in scope for as long as
          * the shared state is used.
+         * @see @ref Text-AbstractFont-font-size
          */
         FontHandle addFont(Containers::Pointer<Text::AbstractFont>&& font, Float size);
 
@@ -2657,8 +2658,8 @@ class MAGNUM_UI_EXPORT TextLayer::Shared: public AbstractVisualLayer::Shared {
          *      uniforms
          * @param selectionStyles  Selection style IDs corresponding to style
          *      uniforms
-         * @param paddings      Padding inside the node in order left, top,
-         *      right, bottom corresponding to style uniforms
+         * @param paddings      Padding inside the node in UI units, in order
+         *      left, top, right, bottom, corresponding to style uniforms
          * @return Reference to self (for method chaining)
          *
          * The @p uniforms view is expected to have the same size as
@@ -2741,8 +2742,8 @@ class MAGNUM_UI_EXPORT TextLayer::Shared: public AbstractVisualLayer::Shared {
          * @param styleFeatureCounts  Per-style counts into @p styleFeatures
          * @param styleCursorStyles  Per-style cursor style IDs
          * @param styleSelectionStyles  Per-style selection style IDs
-         * @param stylePaddings     Per-style padding inside the node in order
-         *      left, top, right, bottom
+         * @param stylePaddings     Per-style padding inside the node in UI
+         *      units, in order left, top, right, bottom
          * @return Reference to self (for method chaining)
          *
          * The @p uniforms view is expected to have the same size as
@@ -2803,8 +2804,8 @@ class MAGNUM_UI_EXPORT TextLayer::Shared: public AbstractVisualLayer::Shared {
          * @param textUniforms      Base style uniform IDs to use for selected
          *      portions of the text. Not used if given style is for a cursor.
          * @param paddings          Paddings outside the cursor or selection
-         *      rectangle in order begin, top, end, bottom corresponding to
-         *      style uniforms
+         *      rectangle in UI units, in order begin, top, end, bottom
+         *      corresponding to style uniforms
          * @return Reference to self (for method chaining)
          *
          * The @p uniforms view is expected to have the same size as
@@ -2852,7 +2853,8 @@ class MAGNUM_UI_EXPORT TextLayer::Shared: public AbstractVisualLayer::Shared {
          * @param styleTextUniforms  Base style uniform IDs to use for selected
          *      portions of the text. Not used if given style is for a cursor.
          * @param stylePaddings     Per-style margins outside the cursor or
-         *      selection rectangle in order left, top, right, bottom
+         *      selection rectangle in UI units, in order left, top, right,
+         *      bottom
          * @return Reference to self (for method chaining)
          *
          * The @p uniforms view is expected to have the same size as

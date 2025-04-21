@@ -115,19 +115,21 @@ struct BaseLayerCommonStyleUniform {
     /**
      * @brief Edge smoothness radius
      *
-     * In pixels, i.e. setting the value to @cpp 1.0f @ce will make the
-     * smoothing extend 1 pixel on each side of the edge. Default value is
-     * @cpp 0.0f @ce.
+     * In framebuffer pixels (as opposed to UI units). E.g., setting the value
+     * to @cpp 1.0f @ce will make the smoothing extend 1 pixel on each side of
+     * the edge. Default value is @cpp 0.0f @ce.
+     * @see @ref Ui-AbstractUserInterface-dpi
      */
     Float smoothness;
 
     /**
      * @brief Inner outline edge smoothness radius
      *
-     * In pixels, i.e. setting the value to @cpp 1.0f @ce will make the
-     * smoothing extend 1 pixel on each side of the edge. Default value is
-     * @cpp 0.0f @ce. Not used if @ref BaseLayerSharedFlag::NoOutline is
-     * enabled.
+     * In framebuffer pixels (as opposed to UI units). E.g., setting the value
+     * to @cpp 1.0f @ce will make the smoothing extend 1 pixel on each side of
+     * the edge. Default value is @cpp 0.0f @ce. Not used if
+     * @ref BaseLayerSharedFlag::NoOutline is enabled.
+     * @see @ref Ui-AbstractUserInterface-dpi
      */
     Float innerOutlineSmoothness;
 
@@ -397,9 +399,10 @@ struct BaseLayerStyleUniform {
     /**
      * @brief Outline width
      *
-     * In order left, top, right, bottom. Default value is @cpp 0.0f @ce for
-     * all sides. Not used if @ref BaseLayerSharedFlag::NoOutline is enabled.
-     * The width is further extended with the per-data value coming from
+     * In UI units, in order left, top, right, bottom. Default value is
+     * @cpp 0.0f @ce for all sides. Not used if
+     * @ref BaseLayerSharedFlag::NoOutline is enabled. The width is further
+     * extended with the per-data value coming from
      * @ref BaseLayer::setOutlineWidth().
      */
     Vector4 outlineWidth;
@@ -407,8 +410,8 @@ struct BaseLayerStyleUniform {
     /**
      * @brief Corner radius
      *
-     * In order top left, bottom left, top right, bottom right. Default value
-     * is @cpp 0.0f @ce for all sides. Not used if
+     * In UI units, in order top left, bottom left, top right, bottom right.
+     * Default value is @cpp 0.0f @ce for all sides. Not used if
      * @ref BaseLayerSharedFlag::NoRoundedCorners is enabled.
      */
     Vector4 cornerRadius;
@@ -416,8 +419,8 @@ struct BaseLayerStyleUniform {
     /**
      * @brief Inner outline corner radius
      *
-     * In order top left, bottom left, top right, bottom right. Default value
-     * is @cpp 0.0f @ce for all sides. Not used if
+     * In UI units, in order top left, bottom left, top right, bottom right.
+     * Default value is @cpp 0.0f @ce for all sides. Not used if
      * @ref BaseLayerSharedFlag::NoOutline or
      * @relativeref{BaseLayerSharedFlag,NoRoundedCorners} is enabled.
      */
@@ -1039,7 +1042,8 @@ class MAGNUM_UI_EXPORT BaseLayer: public AbstractVisualLayer {
         /**
          * @brief Quad custom outline width
          *
-         * In order left, top. right, bottom. Expects that @p handle is valid.
+         * In UI units, in order left, top. right, bottom. Expects that
+         * @p handle is valid.
          * @see @ref isHandleValid(DataHandle) const
          */
         Vector4 outlineWidth(DataHandle handle) const;
@@ -1047,16 +1051,17 @@ class MAGNUM_UI_EXPORT BaseLayer: public AbstractVisualLayer {
         /**
          * @brief Quad custom outline width assuming it belongs to this layer
          *
-         * In order left, top. right, bottom. Expects that @p handle is valid.
-         * @see @ref isHandleValid(LayerDataHandle) const
+         * Like @ref outlineWidth(DataHandle) const but without checking that
+         * @p handle indeed belongs to this layer. See its documentation for
+         * more information.
          */
         Vector4 outlineWidth(LayerDataHandle handle) const;
 
         /**
          * @brief Set quad custom outline width
          *
-         * Expects that @p handle is valid. The @p width is in order left, top,
-         * right, bottom and is added to
+         * Expects that @p handle is valid. The @p width is in UI units, in
+         * order left, top, right, bottom and is added to
          * @ref BaseLayerStyleUniform::outlineWidth. By default, unless
          * specified in @ref create() already, the custom outline width is a
          * zero vector, i.e. not affecting the style in any way. Has no visual
@@ -1071,14 +1076,9 @@ class MAGNUM_UI_EXPORT BaseLayer: public AbstractVisualLayer {
         /**
          * @brief Set quad custom outline width with all edges having the same value
          *
-         * Expects that @p handle is valid. The @p width is added to
-         * @ref BaseLayerStyleUniform::outlineWidth. By default, the custom
-         * outline width is zero, i.e. not affecting the style in any way. Has
-         * no visual effect if @ref BaseLayerSharedFlag::NoOutline is enabled.
-         *
-         * Calling this function causes @ref LayerState::NeedsDataUpdate to be
-         * set.
-         * @see @ref isHandleValid(DataHandle) const
+         * Equivalent to calling @ref setOutlineWidth(DataHandle, const Vector4&)
+         * with all four components set to @p width. See its documentation for
+         * more information.
          */
         void setOutlineWidth(DataHandle handle, Float width) {
             setOutlineWidth(handle, Vector4{width});
@@ -1107,7 +1107,8 @@ class MAGNUM_UI_EXPORT BaseLayer: public AbstractVisualLayer {
         /**
          * @brief Quad custom padding
          *
-         * In order left, top. right, bottom. Expects that @p handle is valid.
+         * In UI units, in order left, top. right, bottom. Expects that
+         * @p handle is valid.
          * @see @ref isHandleValid(DataHandle) const
          */
         Vector4 padding(DataHandle handle) const;
@@ -1115,18 +1116,19 @@ class MAGNUM_UI_EXPORT BaseLayer: public AbstractVisualLayer {
         /**
          * @brief Quad custom padding assuming it belongs to this layer
          *
-         * In order left, top. right, bottom. Expects that @p handle is valid.
-         * @see @ref isHandleValid(LayerDataHandle) const
+         * Like @ref padding(DataHandle) const but without checking that
+         * @p handle indeed belongs to this layer. See its documentation for
+         * more information.
          */
         Vector4 padding(LayerDataHandle handle) const;
 
         /**
          * @brief Set quad custom padding
          *
-         * Expects that @p handle is valid. The @p padding is in order left,
-         * top, right, bottom and is added to the per-style padding values
-         * specified in @ref Shared::setStyle(). By default the padding is a
-         * zero vector, i.e. the quad fills the node area completely.
+         * Expects that @p handle is valid. The @p padding is in UI units, in
+         * order left, top, right, bottom and is added to the per-style padding
+         * values specified in @ref Shared::setStyle(). By default the padding
+         * is a zero vector, i.e. the quad fills the node area completely.
          *
          * Calling this function causes @ref LayerState::NeedsDataUpdate to be
          * set.
@@ -1146,14 +1148,9 @@ class MAGNUM_UI_EXPORT BaseLayer: public AbstractVisualLayer {
         /**
          * @brief Set quad custom padding with all edges having the same value
          *
-         * Expects that @p handle is valid. The @p padding is added to the
-         * per-style padding values specified in @ref Shared::setStyle(). By
-         * default there's zero padding, i.e. the quad fills the node area
-         * completely.
-         *
-         * Calling this function causes @ref LayerState::NeedsDataUpdate to be
-         * set.
-         * @see @ref isHandleValid(DataHandle) const
+         * Equivalent to calling @ref setPadding(DataHandle, const Vector4&)
+         * with all four components set to @p padding. See its documentation
+         * for more information.
          */
         void setPadding(DataHandle handle, Float padding) {
             setPadding(handle, Vector4{padding});
@@ -1457,8 +1454,8 @@ class MAGNUM_UI_EXPORT BaseLayer::Shared: public AbstractVisualLayer::Shared {
          * @brief Set style data with implicit mapping between styles and uniforms
          * @param commonUniform Common style uniform data
          * @param uniforms      Style uniforms
-         * @param paddings      Padding inside the node in order left, top,
-         *      right, bottom corresponding to style uniforms
+         * @param paddings      Padding inside the node in UI units, in order
+         *      left, top, right, bottom, corresponding to style uniforms
          * @return Reference to self (for method chaining)
          *
          * The @p uniforms view is expected to have the same size as
@@ -1488,8 +1485,8 @@ class MAGNUM_UI_EXPORT BaseLayer::Shared: public AbstractVisualLayer::Shared {
          * @param commonUniform     Common style uniform data
          * @param uniforms          Style uniforms
          * @param styleToUniform    Style to style uniform mapping
-         * @param stylePaddings     Per-style padding inside the node in order
-         *      left, top, right, bottom
+         * @param stylePaddings     Per-style padding inside the node in UI
+         *      units, in order left, top, right, bottom
          * @return Reference to self (for method chaining)
          *
          * The @p uniforms view is expected to have the same size as

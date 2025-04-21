@@ -86,10 +86,12 @@ struct LineLayerCommonStyleUniform {
     /**
      * @brief Edge smoothness radius
      *
-     * In pixels, i.e. setting the value to @cpp 1.0f @ce will make the
-     * smoothing extend 1 pixel on each side of the edge. Default value is
-     * @cpp 0.0f @ce. The bigger value between this and
-     * @ref LineLayerStyleUniform::smoothness, converted to pixels, gets used.
+     * In framebuffer pixels (as opposed to UI units). E.g., setting the value
+     * to @cpp 1.0f @ce will make the smoothing extend 1 pixel on each side of
+     * the edge. Default value is @cpp 0.0f @ce. The bigger value between this
+     * and @ref LineLayerStyleUniform::smoothness, converted to pixels, gets
+     * used.
+     * @see @ref Ui-AbstractUserInterface-dpi
      */
     Float smoothness;
 
@@ -211,7 +213,7 @@ struct MAGNUM_UI_EXPORT LineLayerStyleUniform {
     /**
      * @brief Line width
      *
-     * Default value is @cpp 1.0f @ce.
+     * In UI units. Default value is @cpp 1.0f @ce.
      */
     Float width;
 
@@ -712,7 +714,7 @@ class MAGNUM_UI_EXPORT LineLayer: public AbstractVisualLayer {
          * @brief Create a line from an indexed list of points
          * @param style         Style index
          * @param indices       Indices pointing into the @p points view
-         * @param points        Line points indexed by @p indices
+         * @param points        Line points, in UI units, indexed by @p indices
          * @param colors        Optional per-point colors
          * @param node          Node to attach to
          * @return New data handle
@@ -816,7 +818,7 @@ class MAGNUM_UI_EXPORT LineLayer: public AbstractVisualLayer {
         /**
          * @brief Create a line strip
          * @param style         Style index
-         * @param points        Line strip points
+         * @param points        Line strip points, in UI units
          * @param colors        Optional per-point colors
          * @param node          Node to attach to
          * @return New data handle
@@ -894,7 +896,7 @@ class MAGNUM_UI_EXPORT LineLayer: public AbstractVisualLayer {
         /**
          * @brief Create a line loop
          * @param style         Style index
-         * @param points        Line loop points
+         * @param points        Line loop points, in UI units
          * @param colors        Optional per-point colors
          * @param node          Node to attach to
          * @return New data handle
@@ -1216,7 +1218,8 @@ class MAGNUM_UI_EXPORT LineLayer: public AbstractVisualLayer {
         /**
          * @brief Custom line padding
          *
-         * In order left, top. right, bottom. Expects that @p handle is valid.
+         * In UI units, in order left, top. right, bottom. Expects that
+         * @p handle is valid.
          * @see @ref isHandleValid(DataHandle) const
          */
         Vector4 padding(DataHandle handle) const;
@@ -1224,19 +1227,20 @@ class MAGNUM_UI_EXPORT LineLayer: public AbstractVisualLayer {
         /**
          * @brief Custom line padding assuming it belongs to this layer
          *
-         * In order left, top. right, bottom. Expects that @p handle is valid.
-         * @see @ref isHandleValid(LayerDataHandle) const
+         * Like @ref padding(DataHandle) const but without checking that
+         * @p handle indeed belongs to this layer. See its documentation for
+         * more information.
          */
         Vector4 padding(LayerDataHandle handle) const;
 
         /**
          * @brief Set custom line padding
          *
-         * Expects that @p handle is valid. The @p padding is in order left,
-         * top, right, bottom and is added to the per-style padding values
-         * specified in @ref Shared::setStyle(). By default the padding is a
-         * zero vector, i.e. the line isn't offset in any way when aligning
-         * inside the node.
+         * Expects that @p handle is valid. The @p padding is in UI units, in
+         * order left, top, right, bottom and is added to the per-style padding
+         * values specified in @ref Shared::setStyle(). By default the padding
+         * is a zero vector, i.e. the line isn't offset in any way when
+         * aligning inside the node.
          *
          * Calling this function causes @ref LayerState::NeedsDataUpdate to be
          * set.
@@ -1256,14 +1260,9 @@ class MAGNUM_UI_EXPORT LineLayer: public AbstractVisualLayer {
         /**
          * @brief Set custom line padding with all edges having the same value
          *
-         * Expects that @p handle is valid. The @p padding is added to the
-         * per-style padding values specified in @ref Shared::setStyle(). By
-         * default there's zero padding, i.e. the line isn't offset in any way
-         * when aligning inside the node.
-         *
-         * Calling this function causes @ref LayerState::NeedsDataUpdate to be
-         * set.
-         * @see @ref isHandleValid(DataHandle) const
+         * Equivalent to calling @ref setPadding(DataHandle, const Vector4&)
+         * with all four components set to @p padding. See its documentation
+         * for more information.
          */
         void setPadding(DataHandle handle, Float padding) {
             setPadding(handle, Vector4{padding});
@@ -1364,8 +1363,8 @@ class MAGNUM_UI_EXPORT LineLayer::Shared: public AbstractVisualLayer::Shared {
          * @param commonUniform Common style uniform data
          * @param uniforms      Style uniforms
          * @param alignments    Line alignment corresponding to style uniforms
-         * @param paddings      Padding inside the node in order left, top,
-         *      right, bottom corresponding to style uniforms
+         * @param paddings      Padding inside the node in UI units, in order
+         *      left, top, right, bottom, corresponding to style uniforms
          * @return Reference to self (for method chaining)
          *
          * The @p uniforms view is expected to have the same size as
@@ -1394,8 +1393,8 @@ class MAGNUM_UI_EXPORT LineLayer::Shared: public AbstractVisualLayer::Shared {
          * @param uniforms          Style uniforms
          * @param styleToUniform    Style to style uniform mapping
          * @param styleAlignments   Per-style line alignment
-         * @param stylePaddings     Per-style padding inside the node in order
-         *      left, top, right, bottom
+         * @param stylePaddings     Per-style padding inside the node in UI
+         *      units, in order left, top, right, bottom
          * @return Reference to self (for method chaining)
          *
          * The @p uniforms view is expected to have the same size as
