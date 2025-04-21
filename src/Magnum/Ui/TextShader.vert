@@ -33,9 +33,6 @@ layout(std140
     , binding = 0
     #endif
 ) uniform Style {
-    /* Reserved so users set up the style data from a placeholder
-       TextLayerStyleCommon and TextLayerStyleItem[] instead of just items
-       alone, which would make future code adapting rather error-prone */
     lowp vec4 reserved;
     StyleEntry styles[STYLE_COUNT];
 };
