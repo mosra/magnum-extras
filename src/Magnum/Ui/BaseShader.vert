@@ -42,9 +42,9 @@ layout(std140
     StyleEntry styles[STYLE_COUNT];
 };
 
-#define style_smoothness smoothnessInnerOutlineSmoothnessBackgroundBlurAlphaReserved.x
+#define commonStyle_smoothness smoothnessInnerOutlineSmoothnessBackgroundBlurAlphaReserved.x
 #ifndef NO_OUTLINE
-#define style_innerOutlineSmoothness smoothnessInnerOutlineSmoothnessBackgroundBlurAlphaReserved.y
+#define commonStyle_innerOutlineSmoothness smoothnessInnerOutlineSmoothnessBackgroundBlurAlphaReserved.y
 #endif
 
 #ifdef EXPLICIT_UNIFORM_LOCATION
@@ -102,7 +102,7 @@ void main() {
     #ifndef SUBDIVIDED_QUADS
     /* The halfQuadSize passed to the fragment shader needs to be *without* the
        expansion to correctly know where the edges are */
-    halfQuadSize = abs(centerDistance) - vec2(style_smoothness*projection.z);
+    halfQuadSize = abs(centerDistance) - vec2(commonStyle_smoothness*projection.z);
     #ifndef NO_OUTLINE
     /* Calculate the outline quad size here already to save a vec4 load in each
        fragment shader invocation */
@@ -188,8 +188,8 @@ void main() {
        for the inner vertices. If they'd be zero, all pixels in the center quad
        would classify as being on the inner outline edge, causing the fragment
        shader to draw the whole thing with just the outline color. */
-    lowp float smoothness = style_smoothness*projection.z;
-    lowp float innerOutlineSmoothness = style_innerOutlineSmoothness*projection.z;
+    lowp float smoothness = commonStyle_smoothness*projection.z;
+    lowp float innerOutlineSmoothness = commonStyle_innerOutlineSmoothness*projection.z;
     mediump float radiusOrSmoothnessShift = max(cornerRadius, smoothness);
     mediump float innerRadiusOrSmoothnessShift = max(1.0*projection.z, max(outlineCornerRadius, innerOutlineSmoothness));
 
