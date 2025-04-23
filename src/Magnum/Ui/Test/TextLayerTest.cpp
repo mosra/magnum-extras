@@ -66,11 +66,13 @@ struct TextLayerTest: TestSuite::Tester {
     template<class T> void styleUniformSizeAlignment();
 
     void styleUniformCommonConstructDefault();
+    void styleUniformCommonConstruct();
     void styleUniformCommonConstructNoInit();
     void styleUniformCommonSetters();
 
     void styleUniformConstructDefault();
     void styleUniformConstruct();
+    void styleUniformConstructDistanceField();
     void styleUniformConstructNoInit();
     void styleUniformSetters();
 
@@ -91,6 +93,9 @@ struct TextLayerTest: TestSuite::Tester {
     void debugDataFlag();
     void debugDataFlags();
     void debugEdit();
+
+    void sharedDebugFlag();
+    void sharedDebugFlags();
 
     void sharedConfigurationConstruct();
     void sharedConfigurationConstructSameStyleUniformCount();
@@ -1022,32 +1027,38 @@ const struct {
     bool emptyUpdate;
     UnsignedInt styleCount, editingStyleCount, dynamicStyleCount;
     bool hasEditingStyles;
+    TextLayerSharedFlags flags;
     Vector2 node6Offset, node6Size;
     Vector4 paddingFromStyle;
     Vector4 paddingFromData;
-    TextDataFlags flags;
+    TextDataFlags dataFlags;
     Containers::Pair<UnsignedInt, UnsignedInt> data3Cursor, data9Cursor;
     Containers::Pair<Int, Int> editingStyle1, editingStyle2, editingStyle3;
     LayerStates states;
     bool expectIndexDataUpdated, expectVertexDataUpdated, expectEditingDataPresent;
 } UpdateCleanDataOrderData[]{
-    {"empty update", true, 6, 0, 0, false,
+    {"empty update", true, 6, 0, 0, false, {},
         {}, {}, {}, {}, {},
         {}, {}, {-1, -1}, {-1, -1}, {-1, -1},
         LayerState::NeedsDataUpdate, true, true, false},
-    {"", false, 6, 0, 0, false,
+    {"", false, 6, 0, 0, false, {},
         {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, {},
         {}, {}, {-1, -1}, {-1, -1}, {-1, -1},
         LayerState::NeedsDataUpdate, true, true, false},
-    {"node offset/size update only", false, 6, 0, 0, false,
+    {"distance field", false, 6, 0, 0, false,
+        TextLayerSharedFlag::DistanceField,
+        {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, {},
+        {}, {}, {-1, -1}, {-1, -1}, {-1, -1},
+        LayerState::NeedsDataUpdate, true, true, false},
+    {"node offset/size update only", false, 6, 0, 0, false, {},
         {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, {},
         {}, {}, {-1, -1}, {-1, -1}, {-1, -1},
         LayerState::NeedsNodeOffsetSizeUpdate, false, true, false},
-    {"node order update only", false, 6, 0, 0, false,
+    {"node order update only", false, 6, 0, 0, false, {},
         {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, {},
         {}, {}, {-1, -1}, {-1, -1}, {-1, -1},
         LayerState::NeedsNodeOrderUpdate, true, false, false},
-    {"node enabled update only", false, 6, 0, 0, false,
+    {"node enabled update only", false, 6, 0, 0, false, {},
         {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, {},
         {}, {}, {-1, -1}, {-1, -1}, {-1, -1},
         LayerState::NeedsNodeEnabledUpdate, false, true, false},
@@ -1056,89 +1067,89 @@ const struct {
     /** @todo Which ultimately means this doesn't correctly test that the
         implementation correctly handles the NeedsNodeOpacityUpdate flag alone
         -- what can I do differently to test that? */
-    {"node enabled + opacity update only", false, 6, 0, 0, false,
+    {"node enabled + opacity update only", false, 6, 0, 0, false, {},
         {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, {},
         {}, {}, {-1, -1}, {-1, -1}, {-1, -1},
         LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsNodeOpacityUpdate, false, true, false},
     /* These two shouldn't cause anything to be done in update(), and also no
        crashes */
-    {"shared data update only", false, 6, 0, 0, false,
+    {"shared data update only", false, 6, 0, 0, false, {},
         {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, {},
         {}, {}, {-1, -1}, {-1, -1}, {-1, -1},
         LayerState::NeedsSharedDataUpdate, false, false, false},
-    {"common data update only", false, 6, 0, 0, false,
+    {"common data update only", false, 6, 0, 0, false, {},
         {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, {},
         {}, {}, {-1, -1}, {-1, -1}, {-1, -1},
         LayerState::NeedsCommonDataUpdate, false, false, false},
     /* This would cause an update of the dynamic style data in derived classes
        if appropriate internal flags would be set internally, but in the base
        class it's nothing */
-    {"common data update only, dynamic styles", false, 4, 0, 2, false,
+    {"common data update only, dynamic styles", false, 4, 0, 2, false, {},
         {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, {},
         {}, {}, {-1, -1}, {-1, -1}, {-1, -1},
         LayerState::NeedsCommonDataUpdate, false, false, false},
-    {"padding from style", false, 6, 0, 0, false,
+    {"padding from style", false, 6, 0, 0, false, {},
         {-1.0f, 1.5f}, {13.0f, 17.0f},
         {2.0f, 0.5f, 1.0f, 1.5f}, {}, {},
         {}, {}, {-1, -1}, {-1, -1}, {-1, -1},
         LayerState::NeedsDataUpdate, true, true, false},
-    {"padding from data", false, 6, 0, 0, false,
+    {"padding from data", false, 6, 0, 0, false, {},
         {-1.0f, 1.5f}, {13.0f, 17.0f},
         {}, {2.0f, 0.5f, 1.0f, 1.5f}, {},
         {}, {}, {-1, -1}, {-1, -1}, {-1, -1},
         LayerState::NeedsDataUpdate, true, true, false},
-    {"padding from both style and data", false, 6, 0, 0, false,
+    {"padding from both style and data", false, 6, 0, 0, false, {},
         {-1.0f, 1.5f}, {13.0f, 17.0f},
         {0.5f, 0.0f, 1.0f, 0.75f}, {1.5f, 0.5f, 0.0f, 0.75f}, {},
         {}, {}, {-1, -1}, {-1, -1}, {-1, -1},
         LayerState::NeedsDataUpdate, true, true, false},
-    {"unused dynamic styles", false, 6, 0, 17, false,
+    {"unused dynamic styles", false, 6, 0, 17, false, {},
         {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, {},
         {}, {}, {-1, -1}, {-1, -1}, {-1, -1},
         LayerState::NeedsDataUpdate, true, true, false},
-    {"dynamic styles", false, 4, 0, 2, false,
+    {"dynamic styles", false, 4, 0, 2, false, {},
         {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, {},
         {}, {}, {-1, -1}, {-1, -1}, {-1, -1},
         LayerState::NeedsDataUpdate, true, true, false},
-    {"dynamic styles, padding from dynamic style", false, 4, 0, 2, false,
+    {"dynamic styles, padding from dynamic style", false, 4, 0, 2, false, {},
         {-1.0f, 1.5f}, {13.0f, 17.0f},
         {2.0f, 0.5f, 1.0f, 1.5f}, {}, {},
         {}, {}, {-1, -1}, {-1, -1}, {-1, -1},
         LayerState::NeedsDataUpdate, true, true, false},
-    {"dynamic styles, padding from both dynamic style and data", false, 4, 0, 2, false,
+    {"dynamic styles, padding from both dynamic style and data", false, 4, 0, 2, false, {},
         {-1.0f, 1.5f}, {13.0f, 17.0f},
         {0.5f, 0.0f, 1.0f, 0.75f}, {1.5f, 0.5f, 0.0f, 0.75f}, {},
         {}, {}, {-1, -1}, {-1, -1}, {-1, -1},
         LayerState::NeedsDataUpdate, true, true, false},
-    {"editable, no editing styles", false, 6, 0, 0, false,
+    {"editable, no editing styles", false, 6, 0, 0, false, {},
         {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, TextDataFlag::Editable,
         {}, {},
         {-1, -1}, {-1, -1}, {-1, -1},
         LayerState::NeedsDataUpdate, true, true, false},
     /* The editing styles are there but nothing references them, which means
        the corresponding draw data aren't filled either */
-    {"editable, editing styles but not used", false, 6, 3, 0, false,
+    {"editable, editing styles but not used", false, 6, 3, 0, false, {},
         {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, TextDataFlag::Editable,
         {}, {},
         {-1, -1}, {-1, -1}, {-1, -1},
         LayerState::NeedsDataUpdate, true, true, false},
-    {"editable", false, 6, 3, 0, false,
+    {"editable", false, 6, 3, 0, false, {},
         {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, TextDataFlag::Editable,
         {2, 5}, {1, 1},
         {-1, 1}, {1, 0}, {2, 0},
         LayerState::NeedsDataUpdate, true, true, true},
-    {"editable, different selection direction", false, 6, 3, 0, false,
+    {"editable, different selection direction", false, 6, 3, 0, false, {},
         {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, TextDataFlag::Editable,
         {5, 2}, {1, 1},
         {-1, 1}, {1, 0}, {2, 0},
         LayerState::NeedsDataUpdate, true, true, true},
-    {"editable, non-empty selection but no selection style", false, 6, 3, 0, false,
+    {"editable, non-empty selection but no selection style", false, 6, 3, 0, false, {},
         {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, TextDataFlag::Editable,
         {2, 5}, {1, 2},
         {-1, 1}, {1, 0}, {2, -1},
         LayerState::NeedsDataUpdate, true, true, true},
     /* Shouldn't cause anything to be done in update(), and also no crashes */
-    {"editable, shared data update only", false, 6, 3, 0, false,
+    {"editable, shared data update only", false, 6, 3, 0, false, {},
         {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, TextDataFlag::Editable,
         {2, 5}, {1, 1},
         {-1, 1}, {1, 0}, {2, 0},
@@ -1146,24 +1157,24 @@ const struct {
            are done with full NeedsDataUpdate and they'd check for the data
            being empty instead */
         LayerState::NeedsSharedDataUpdate, false, false, true},
-    {"editable, dynamic, no editing styles", false, 4, 0, 2, false,
+    {"editable, dynamic, no editing styles", false, 4, 0, 2, false, {},
         {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, TextDataFlag::Editable,
         {}, {},
         {-1, -1}, {-1, -1}, {-1, -1},
         LayerState::NeedsDataUpdate, true, true, false},
-    {"editable, dynamic, editing styles but not used", false, 4, 0, 2, true,
+    {"editable, dynamic, editing styles but not used", false, 4, 0, 2, true, {},
         {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, TextDataFlag::Editable,
         {}, {},
         {-1, -1}, {-1, -1}, {-1, -1},
         LayerState::NeedsDataUpdate, true, true, false},
-    {"editable, dynamic", false, 4, 2, 2, false,
+    {"editable, dynamic", false, 4, 2, 2, false, {},
         {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, TextDataFlag::Editable,
         {2, 5}, {1, 1},
         /* editingStyle2 is used as dynamic */
         {-1, 0}, {-1, -1}, {1, -1},
         LayerState::NeedsDataUpdate, true, true, true},
     /* Shouldn't cause anything to be done in update(), and also no crashes */
-    {"editable, dynamic, shared data update only", false, 4, 2, 2, false,
+    {"editable, dynamic, shared data update only", false, 4, 2, 2, false, {},
         {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, TextDataFlag::Editable,
         {2, 5}, {1, 1},
         /* editingStyle2 is used as dynamic */
@@ -1213,11 +1224,13 @@ TextLayerTest::TextLayerTest() {
               &TextLayerTest::styleUniformSizeAlignment<TextLayerEditingStyleUniform>,
 
               &TextLayerTest::styleUniformCommonConstructDefault,
+              &TextLayerTest::styleUniformCommonConstruct,
               &TextLayerTest::styleUniformCommonConstructNoInit,
               &TextLayerTest::styleUniformCommonSetters,
 
               &TextLayerTest::styleUniformConstructDefault,
               &TextLayerTest::styleUniformConstruct,
+              &TextLayerTest::styleUniformConstructDistanceField,
               &TextLayerTest::styleUniformConstructNoInit,
               &TextLayerTest::styleUniformSetters,
 
@@ -1238,6 +1251,9 @@ TextLayerTest::TextLayerTest() {
               &TextLayerTest::debugDataFlag,
               &TextLayerTest::debugDataFlags,
               &TextLayerTest::debugEdit,
+
+              &TextLayerTest::sharedDebugFlag,
+              &TextLayerTest::sharedDebugFlags,
 
               &TextLayerTest::sharedConfigurationConstruct,
               &TextLayerTest::sharedConfigurationConstructSameStyleUniformCount,
@@ -1413,15 +1429,13 @@ template<class T> void TextLayerTest::styleUniformSizeAlignment() {
 void TextLayerTest::styleUniformCommonConstructDefault() {
     TextLayerCommonStyleUniform a;
     TextLayerCommonStyleUniform b{DefaultInit};
-    /* No actual fields yet */
-    static_cast<void>(a);
-    static_cast<void>(b);
+    CORRADE_COMPARE(a.smoothness, 0.0f);
+    CORRADE_COMPARE(b.smoothness, 0.0f);
 
     constexpr TextLayerCommonStyleUniform ca;
     constexpr TextLayerCommonStyleUniform cb{DefaultInit};
-    /* No actual fields yet */
-    static_cast<void>(ca);
-    static_cast<void>(cb);
+    CORRADE_COMPARE(ca.smoothness, 0.0f);
+    CORRADE_COMPARE(cb.smoothness, 0.0f);
 
     CORRADE_VERIFY(std::is_nothrow_default_constructible<TextLayerCommonStyleUniform>::value);
     CORRADE_VERIFY(std::is_nothrow_constructible<TextLayerCommonStyleUniform, DefaultInitT>::value);
@@ -1430,11 +1444,18 @@ void TextLayerTest::styleUniformCommonConstructDefault() {
     CORRADE_VERIFY(!std::is_convertible<DefaultInitT, TextLayerCommonStyleUniform>::value);
 }
 
+void TextLayerTest::styleUniformCommonConstruct() {
+    TextLayerCommonStyleUniform a{3.0f};
+    CORRADE_COMPARE(a.smoothness, 3.0f);
+
+    constexpr TextLayerCommonStyleUniform ca{3.0f};
+    CORRADE_COMPARE(ca.smoothness, 3.0f);
+}
+
 void TextLayerTest::styleUniformCommonConstructNoInit() {
     /* Testing only some fields, should be enough */
     TextLayerCommonStyleUniform a;
-    /* No actual fields yet */
-    static_cast<void>(a);
+    a.smoothness = 3.0f;
 
     new(&a) TextLayerCommonStyleUniform{NoInit};
     {
@@ -1442,10 +1463,9 @@ void TextLayerTest::styleUniformCommonConstructNoInit() {
            inherit __GNUC__ if GCC is used instead of leaving it at 4 like
            Clang itself does */
         #if defined(CORRADE_TARGET_GCC) && !defined(CORRADE_TARGET_CLANG) && __GNUC__*100 + __GNUC_MINOR__ >= 601 && __OPTIMIZE__
-        //CORRADE_EXPECT_FAIL("GCC 6.1+ misoptimizes and overwrites the value.");
+        CORRADE_EXPECT_FAIL("GCC 6.1+ misoptimizes and overwrites the value.");
         #endif
-        /* No actual fields yet */
-        CORRADE_VERIFY(true);
+        CORRADE_COMPARE(a.smoothness, 3.0f);
     }
 
     /* Implicit construction is not allowed */
@@ -1454,8 +1474,8 @@ void TextLayerTest::styleUniformCommonConstructNoInit() {
 
 void TextLayerTest::styleUniformCommonSetters() {
     TextLayerCommonStyleUniform a;
-    static_cast<void>(a);
-    CORRADE_SKIP("No actual fields yet");
+    a.setSmoothness(34.0f);
+    CORRADE_COMPARE(a.smoothness, 34.0f);
 }
 
 void TextLayerTest::styleUniformConstructDefault() {
@@ -1463,11 +1483,27 @@ void TextLayerTest::styleUniformConstructDefault() {
     TextLayerStyleUniform b{DefaultInit};
     CORRADE_COMPARE(a.color, 0xffffffff_srgbaf);
     CORRADE_COMPARE(b.color, 0xffffffff_srgbaf);
+    CORRADE_COMPARE(a.outlineColor, 0xffffffff_srgbaf);
+    CORRADE_COMPARE(b.outlineColor, 0xffffffff_srgbaf);
+    CORRADE_COMPARE(a.outlineWidth, 0.0f);
+    CORRADE_COMPARE(b.outlineWidth, 0.0f);
+    CORRADE_COMPARE(a.edgeOffset, 0.0f);
+    CORRADE_COMPARE(b.edgeOffset, 0.0f);
+    CORRADE_COMPARE(a.smoothness, 0.0f);
+    CORRADE_COMPARE(b.smoothness, 0.0f);
 
     constexpr TextLayerStyleUniform ca;
     constexpr TextLayerStyleUniform cb{DefaultInit};
     CORRADE_COMPARE(ca.color, 0xffffffff_srgbaf);
     CORRADE_COMPARE(cb.color, 0xffffffff_srgbaf);
+    CORRADE_COMPARE(ca.outlineColor, 0xffffffff_srgbaf);
+    CORRADE_COMPARE(cb.outlineColor, 0xffffffff_srgbaf);
+    CORRADE_COMPARE(ca.outlineWidth, 0.0f);
+    CORRADE_COMPARE(cb.outlineWidth, 0.0f);
+    CORRADE_COMPARE(ca.edgeOffset, 0.0f);
+    CORRADE_COMPARE(cb.edgeOffset, 0.0f);
+    CORRADE_COMPARE(ca.smoothness, 0.0f);
+    CORRADE_COMPARE(cb.smoothness, 0.0f);
 
     CORRADE_VERIFY(std::is_nothrow_default_constructible<TextLayerStyleUniform>::value);
     CORRADE_VERIFY(std::is_nothrow_constructible<TextLayerStyleUniform, DefaultInitT>::value);
@@ -1479,15 +1515,40 @@ void TextLayerTest::styleUniformConstructDefault() {
 void TextLayerTest::styleUniformConstruct() {
     TextLayerStyleUniform a{0xff336699_rgbaf};
     CORRADE_COMPARE(a.color, 0xff336699_rgbaf);
+    CORRADE_COMPARE(a.outlineColor, 0xffffffff_srgbaf);
+    CORRADE_COMPARE(a.outlineWidth, 0.0f);
+    CORRADE_COMPARE(a.edgeOffset, 0.0f);
+    CORRADE_COMPARE(a.smoothness, 0.0f);
 
     constexpr TextLayerStyleUniform ca{0xff336699_rgbaf};
     CORRADE_COMPARE(ca.color, 0xff336699_rgbaf);
+    CORRADE_COMPARE(ca.outlineColor, 0xffffffff_srgbaf);
+    CORRADE_COMPARE(ca.outlineWidth, 0.0f);
+    CORRADE_COMPARE(ca.edgeOffset, 0.0f);
+    CORRADE_COMPARE(ca.smoothness, 0.0f);
+}
+
+void TextLayerTest::styleUniformConstructDistanceField() {
+    TextLayerStyleUniform a{0xff336699_rgbaf, 0xaabbccdd_rgbaf, 2.0f, 3.0f, 4.0f};
+    CORRADE_COMPARE(a.color, 0xff336699_rgbaf);
+    CORRADE_COMPARE(a.outlineColor, 0xaabbccdd_rgbaf);
+    CORRADE_COMPARE(a.outlineWidth, 2.0f);
+    CORRADE_COMPARE(a.edgeOffset, 3.0f);
+    CORRADE_COMPARE(a.smoothness, 4.0f);
+
+    constexpr TextLayerStyleUniform ca{0xff336699_rgbaf, 0xaabbccdd_rgbaf, 2.0f, 3.0f, 4.0f};
+    CORRADE_COMPARE(ca.color, 0xff336699_rgbaf);
+    CORRADE_COMPARE(ca.outlineColor, 0xaabbccdd_rgbaf);
+    CORRADE_COMPARE(ca.outlineWidth, 2.0f);
+    CORRADE_COMPARE(ca.edgeOffset, 3.0f);
+    CORRADE_COMPARE(ca.smoothness, 4.0f);
 }
 
 void TextLayerTest::styleUniformConstructNoInit() {
     /* Testing only some fields, should be enough */
     TextLayerStyleUniform a;
     a.color = 0xff3366_rgbf;
+    a.outlineWidth = 3.5f;
 
     new(&a) TextLayerStyleUniform{NoInit};
     {
@@ -1498,6 +1559,7 @@ void TextLayerTest::styleUniformConstructNoInit() {
         CORRADE_EXPECT_FAIL("GCC 6.1+ misoptimizes and overwrites the value.");
         #endif
         CORRADE_COMPARE(a.color, 0xff3366_rgbf);
+        CORRADE_COMPARE(a.outlineWidth, 3.5f);
     }
 
     /* Implicit construction is not allowed */
@@ -1506,8 +1568,16 @@ void TextLayerTest::styleUniformConstructNoInit() {
 
 void TextLayerTest::styleUniformSetters() {
     TextLayerStyleUniform a;
-    a.setColor(0xff336699_rgbaf);
+    a.setColor(0xff336699_rgbaf)
+     .setOutlineColor(0x663399ff_rgbaf)
+     .setOutlineWidth(3.0f)
+     .setEdgeOffset(-4.0f)
+     .setSmoothness(0.3f);
     CORRADE_COMPARE(a.color, 0xff336699_rgbaf);
+    CORRADE_COMPARE(a.outlineColor, 0x663399ff_rgbaf);
+    CORRADE_COMPARE(a.outlineWidth, 3.0f);
+    CORRADE_COMPARE(a.edgeOffset, -4.0f);
+    CORRADE_COMPARE(a.smoothness, 0.3f);
 }
 
 void TextLayerTest::editingStyleUniformCommonConstructDefault() {
@@ -1680,6 +1750,18 @@ void TextLayerTest::debugEdit() {
     CORRADE_COMPARE(out, "Ui::TextEdit::MoveCursorLineBegin Ui::TextEdit(0xbe)\n");
 }
 
+void TextLayerTest::sharedDebugFlag() {
+    Containers::String out;
+    Debug{&out} << TextLayerSharedFlag::DistanceField << TextLayerSharedFlag(0xbe);
+    CORRADE_COMPARE(out, "Ui::TextLayerSharedFlag::DistanceField Ui::TextLayerSharedFlag(0xbe)\n");
+}
+
+void TextLayerTest::sharedDebugFlags() {
+    Containers::String out;
+    Debug{&out} << (TextLayerSharedFlag::DistanceField|TextLayerSharedFlag(0x80)) << TextLayerSharedFlags{};
+    CORRADE_COMPARE(out, "Ui::TextLayerSharedFlag::DistanceField|Ui::TextLayerSharedFlag(0x80) Ui::TextLayerSharedFlags{}\n");
+}
+
 void TextLayerTest::sharedConfigurationConstruct() {
     TextLayer::Shared::Configuration configuration{3, 5};
     CORRADE_COMPARE(configuration.styleUniformCount(), 3);
@@ -1734,14 +1816,19 @@ void TextLayerTest::sharedConfigurationSetters() {
     CORRADE_COMPARE(configuration.editingStyleCount(), 0);
     CORRADE_COMPARE(configuration.dynamicStyleCount(), 0);
     CORRADE_COMPARE(configuration.hasEditingStyles(), false);
+    CORRADE_COMPARE(configuration.flags(), TextLayerSharedFlags{});
 
     configuration
         .setEditingStyleCount(2, 7)
-        .setDynamicStyleCount(9);
+        .setDynamicStyleCount(9)
+        .setFlags(TextLayerSharedFlag::DistanceField)
+        .addFlags(TextLayerSharedFlag(0xe0))
+        .clearFlags(TextLayerSharedFlag(0x70));
     CORRADE_COMPARE(configuration.editingStyleUniformCount(), 2);
     CORRADE_COMPARE(configuration.editingStyleCount(), 7);
     CORRADE_COMPARE(configuration.dynamicStyleCount(), 9);
     CORRADE_COMPARE(configuration.hasEditingStyles(), true);
+    CORRADE_COMPARE(configuration.flags(), TextLayerSharedFlag::DistanceField|TextLayerSharedFlag(0x80));
 
     /* Disabling dynamic editing styles if there's non-zero editing style count
        is a no-op */
@@ -1838,6 +1925,7 @@ void TextLayerTest::sharedConstruct() {
     } shared{cache, TextLayer::Shared::Configuration{3, 5}
         .setEditingStyleCount(2, 7)
         .setDynamicStyleCount(4)
+        .setFlags(TextLayerSharedFlag::DistanceField)
     };
     CORRADE_COMPARE(shared.styleUniformCount(), 3);
     CORRADE_COMPARE(shared.styleCount(), 5);
@@ -1845,6 +1933,7 @@ void TextLayerTest::sharedConstruct() {
     CORRADE_COMPARE(shared.editingStyleCount(), 7);
     CORRADE_COMPARE(shared.dynamicStyleCount(), 4);
     CORRADE_VERIFY(shared.hasEditingStyles());
+    CORRADE_COMPARE(shared.flags(), TextLayerSharedFlag::DistanceField);
 
     CORRADE_COMPARE(&shared.glyphCache(), &cache);
     CORRADE_COMPARE(&static_cast<const Shared&>(shared).glyphCache(), &cache);
@@ -2383,8 +2472,8 @@ void TextLayerTest::sharedSetStyle() {
 
         State& state() { return static_cast<State&>(*_state); }
 
-        void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform> uniforms) override {
-            /** @todo test the common style once it contains something */
+        void doSetStyle(const TextLayerCommonStyleUniform& commonUniform, Containers::ArrayView<const TextLayerStyleUniform> uniforms) override {
+            CORRADE_COMPARE(commonUniform.smoothness, 3.14f);
             CORRADE_COMPARE(uniforms.size(), 3);
             CORRADE_COMPARE(uniforms[1].color, 0xc0ffee_rgbf);
             ++setStyleCalled;
@@ -2408,7 +2497,8 @@ void TextLayerTest::sharedSetStyle() {
     FontHandle first = shared.addFont(font1, 13.0f);
     FontHandle second = shared.addFont(font2, 6.0f);
     shared.setStyle(
-        TextLayerCommonStyleUniform{},
+        TextLayerCommonStyleUniform{}
+            .setSmoothness(3.14f),
         {TextLayerStyleUniform{},
          TextLayerStyleUniform{}
             .setColor(0xc0ffee_rgbf),
@@ -2441,7 +2531,7 @@ void TextLayerTest::sharedSetStyle() {
         /* If there are dynamic styles, it's copied into an internal array
            instead of calling doSetStyle(). The following is thus checking the
            same as doSetStyle() but on the internal array. */
-        /** @todo test the common style once it has something */
+        CORRADE_COMPARE(shared.state().commonStyleUniform.smoothness, 3.14f);
         CORRADE_COMPARE(shared.state().styleUniforms.size(), 3);
         CORRADE_COMPARE(shared.state().styleUniforms[1].color, 0xc0ffee_rgbf);
     }
@@ -2515,8 +2605,8 @@ void TextLayerTest::sharedSetStyleImplicitFeatures() {
 
         State& state() { return static_cast<State&>(*_state); }
 
-        void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform> uniforms) override {
-            /** @todo test the common style once it contains something */
+        void doSetStyle(const TextLayerCommonStyleUniform& commonUniform, Containers::ArrayView<const TextLayerStyleUniform> uniforms) override {
+            CORRADE_COMPARE(commonUniform.smoothness, 3.14f);
             CORRADE_COMPARE(uniforms.size(), 3);
             CORRADE_COMPARE(uniforms[1].color, 0xc0ffee_rgbf);
             ++setStyleCalled;
@@ -2540,7 +2630,8 @@ void TextLayerTest::sharedSetStyleImplicitFeatures() {
     FontHandle first = shared.addFont(font1, 13.0f);
     FontHandle second = shared.addFont(font2, 6.0f);
     shared.setStyle(
-        TextLayerCommonStyleUniform{},
+        TextLayerCommonStyleUniform{}
+            .setSmoothness(3.14f),
         {TextLayerStyleUniform{},
          TextLayerStyleUniform{}
             .setColor(0xc0ffee_rgbf),
@@ -2567,7 +2658,7 @@ void TextLayerTest::sharedSetStyleImplicitFeatures() {
         /* If there are dynamic styles, it's copied into an internal array
            instead of calling doSetStyle(). The following is thus checking the
            same as doSetStyle() but on the internal array. */
-        /** @todo test the common style once it has something */
+        CORRADE_COMPARE(shared.state().commonStyleUniform.smoothness, 3.14f);
         CORRADE_COMPARE(shared.state().styleUniforms.size(), 3);
         CORRADE_COMPARE(shared.state().styleUniforms[1].color, 0xc0ffee_rgbf);
     }
@@ -2614,7 +2705,8 @@ void TextLayerTest::sharedSetStyleImplicitFeatures() {
     /* Setting a style with implicit features after non-implicit features were
        set should reset them back to nothing */
     shared.setStyle(
-        TextLayerCommonStyleUniform{},
+        TextLayerCommonStyleUniform{}
+            .setSmoothness(3.14f),
         {TextLayerStyleUniform{},
          TextLayerStyleUniform{}
             .setColor(0xc0ffee_rgbf),
@@ -2639,7 +2731,8 @@ void TextLayerTest::sharedSetStyleImplicitFeatures() {
          {1.0f, 3.0f, 2.0f, 4.0f},
          {4.0f, 1.0f, 3.0f, 2.0f}});
     shared.setStyle(
-        TextLayerCommonStyleUniform{},
+        TextLayerCommonStyleUniform{}
+            .setSmoothness(3.14f),
         {TextLayerStyleUniform{},
          TextLayerStyleUniform{}
             .setColor(0xc0ffee_rgbf),
@@ -2697,8 +2790,8 @@ void TextLayerTest::sharedSetStyleImplicitEditingStyles() {
 
         State& state() { return static_cast<State&>(*_state); }
 
-        void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform> uniforms) override {
-            /** @todo test the common style once it contains something */
+        void doSetStyle(const TextLayerCommonStyleUniform& commonUniform, Containers::ArrayView<const TextLayerStyleUniform> uniforms) override {
+            CORRADE_COMPARE(commonUniform.smoothness, 3.14f);
             CORRADE_COMPARE(uniforms.size(), 3);
             CORRADE_COMPARE(uniforms[1].color, 0xc0ffee_rgbf);
             ++setStyleCalled;
@@ -2722,7 +2815,8 @@ void TextLayerTest::sharedSetStyleImplicitEditingStyles() {
     FontHandle first = shared.addFont(font1, 13.0f);
     FontHandle second = shared.addFont(font2, 6.0f);
     shared.setStyle(
-        TextLayerCommonStyleUniform{},
+        TextLayerCommonStyleUniform{}
+            .setSmoothness(3.14f),
         {TextLayerStyleUniform{},
          TextLayerStyleUniform{}
             .setColor(0xc0ffee_rgbf),
@@ -2753,7 +2847,7 @@ void TextLayerTest::sharedSetStyleImplicitEditingStyles() {
         /* If there are dynamic styles, it's copied into an internal array
            instead of calling doSetStyle(). The following is thus checking the
            same as doSetStyle() but on the internal array. */
-        /** @todo test the common style once it has something */
+        CORRADE_COMPARE(shared.state().commonStyleUniform.smoothness, 3.14f);
         CORRADE_COMPARE(shared.state().styleUniforms.size(), 3);
         CORRADE_COMPARE(shared.state().styleUniforms[1].color, 0xc0ffee_rgbf);
     }
@@ -2802,7 +2896,8 @@ void TextLayerTest::sharedSetStyleImplicitEditingStyles() {
     /* Setting a style with implicit editing styles after non-implicit editing
        styles were set should reset them back to nothing ... */
     shared.setStyle(
-        TextLayerCommonStyleUniform{},
+        TextLayerCommonStyleUniform{}
+            .setSmoothness(3.14f),
         {TextLayerStyleUniform{},
          TextLayerStyleUniform{}
             .setColor(0xc0ffee_rgbf),
@@ -2829,7 +2924,8 @@ void TextLayerTest::sharedSetStyleImplicitEditingStyles() {
          {1.0f, 3.0f, 2.0f, 4.0f},
          {4.0f, 1.0f, 3.0f, 2.0f}});
     shared.setStyle(
-        TextLayerCommonStyleUniform{},
+        TextLayerCommonStyleUniform{}
+            .setSmoothness(3.14f),
         {TextLayerStyleUniform{},
          TextLayerStyleUniform{}
             .setColor(0xc0ffee_rgbf),
@@ -2859,7 +2955,8 @@ void TextLayerTest::sharedSetStyleImplicitEditingStyles() {
 
     /* ... independently for cursor and selection styles */
     shared.setStyle(
-        TextLayerCommonStyleUniform{},
+        TextLayerCommonStyleUniform{}
+            .setSmoothness(3.14f),
         {TextLayerStyleUniform{},
          TextLayerStyleUniform{}
             .setColor(0xc0ffee_rgbf),
@@ -2917,8 +3014,8 @@ void TextLayerTest::sharedSetStyleImplicitPadding() {
 
         State& state() { return static_cast<State&>(*_state); }
 
-        void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform> uniforms) override {
-            /** @todo test the common style once it contains something */
+        void doSetStyle(const TextLayerCommonStyleUniform& commonUniform, Containers::ArrayView<const TextLayerStyleUniform> uniforms) override {
+            CORRADE_COMPARE(commonUniform.smoothness, 3.14f);
             CORRADE_COMPARE(uniforms.size(), 3);
             CORRADE_COMPARE(uniforms[1].color, 0xc0ffee_rgbf);
             ++setStyleCalled;
@@ -2942,7 +3039,8 @@ void TextLayerTest::sharedSetStyleImplicitPadding() {
     FontHandle first = shared.addFont(font1, 13.0f);
     FontHandle second = shared.addFont(font2, 6.0f);
     shared.setStyle(
-        TextLayerCommonStyleUniform{},
+        TextLayerCommonStyleUniform{}
+            .setSmoothness(3.14f),
         {TextLayerStyleUniform{},
          TextLayerStyleUniform{}
             .setColor(0xc0ffee_rgbf),
@@ -2969,7 +3067,7 @@ void TextLayerTest::sharedSetStyleImplicitPadding() {
         /* If there are dynamic styles, it's copied into an internal array
            instead of calling doSetStyle(). The following is thus checking the
            same as doSetStyle() but on the internal array. */
-        /** @todo test the common style once it has something */
+        CORRADE_COMPARE(shared.state().commonStyleUniform.smoothness, 3.14f);
         CORRADE_COMPARE(shared.state().styleUniforms.size(), 3);
         CORRADE_COMPARE(shared.state().styleUniforms[1].color, 0xc0ffee_rgbf);
     }
@@ -3018,7 +3116,8 @@ void TextLayerTest::sharedSetStyleImplicitPadding() {
     /* Setting a style with implicit padding after a non-implicit padding was
        set should reset it back to zeros */
     shared.setStyle(
-        TextLayerCommonStyleUniform{},
+        TextLayerCommonStyleUniform{}
+            .setSmoothness(3.14f),
         {TextLayerStyleUniform{},
          TextLayerStyleUniform{}
             .setColor(0xc0ffee_rgbf),
@@ -3043,7 +3142,8 @@ void TextLayerTest::sharedSetStyleImplicitPadding() {
          {1.0f, 3.0f, 2.0f, 4.0f},
          {4.0f, 1.0f, 3.0f, 2.0f}});
     shared.setStyle(
-        TextLayerCommonStyleUniform{},
+        TextLayerCommonStyleUniform{}
+            .setSmoothness(3.14f),
         {TextLayerStyleUniform{},
          TextLayerStyleUniform{}
             .setColor(0xc0ffee_rgbf),
@@ -3284,8 +3384,8 @@ void TextLayerTest::sharedSetStyleImplicitMapping() {
 
         State& state() { return static_cast<State&>(*_state); }
 
-        void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform> uniforms) override {
-            /** @todo test the common style once it contains something */
+        void doSetStyle(const TextLayerCommonStyleUniform& commonUniform, Containers::ArrayView<const TextLayerStyleUniform> uniforms) override {
+            CORRADE_COMPARE(commonUniform.smoothness, 3.14f);
             CORRADE_COMPARE(uniforms.size(), 3);
             CORRADE_COMPARE(uniforms[1].color, 0xc0ffee_rgbf);
             ++setStyleCalled;
@@ -3309,7 +3409,8 @@ void TextLayerTest::sharedSetStyleImplicitMapping() {
     FontHandle first = shared.addFont(font1, 13.0f);
     FontHandle second = shared.addFont(font2, 6.0f);
     shared.setStyle(
-        TextLayerCommonStyleUniform{},
+        TextLayerCommonStyleUniform{}
+            .setSmoothness(3.14f),
         {TextLayerStyleUniform{},
          TextLayerStyleUniform{}
             .setColor(0xc0ffee_rgbf),
@@ -3335,7 +3436,7 @@ void TextLayerTest::sharedSetStyleImplicitMapping() {
         /* If there are dynamic styles, it's copied into an internal array
            instead of calling doSetStyle(). The following is thus checking the
            same as doSetStyle() but on the internal array. */
-        /** @todo test the common style once it has something */
+        CORRADE_COMPARE(shared.state().commonStyleUniform.smoothness, 3.14f);
         CORRADE_COMPARE(shared.state().styleUniforms.size(), 3);
         CORRADE_COMPARE(shared.state().styleUniforms[1].color, 0xc0ffee_rgbf);
     }
@@ -3403,8 +3504,8 @@ void TextLayerTest::sharedSetStyleImplicitMappingImplicitFeatures() {
 
         State& state() { return static_cast<State&>(*_state); }
 
-        void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform> uniforms) override {
-            /** @todo test the common style once it contains something */
+        void doSetStyle(const TextLayerCommonStyleUniform& commonUniform, Containers::ArrayView<const TextLayerStyleUniform> uniforms) override {
+            CORRADE_COMPARE(commonUniform.smoothness, 3.14f);
             CORRADE_COMPARE(uniforms.size(), 3);
             CORRADE_COMPARE(uniforms[1].color, 0xc0ffee_rgbf);
             ++setStyleCalled;
@@ -3428,7 +3529,8 @@ void TextLayerTest::sharedSetStyleImplicitMappingImplicitFeatures() {
     FontHandle first = shared.addFont(font1, 13.0f);
     FontHandle second = shared.addFont(font2, 6.0f);
     shared.setStyle(
-        TextLayerCommonStyleUniform{},
+        TextLayerCommonStyleUniform{}
+            .setSmoothness(3.14f),
         {TextLayerStyleUniform{},
          TextLayerStyleUniform{}
             .setColor(0xc0ffee_rgbf),
@@ -3450,7 +3552,7 @@ void TextLayerTest::sharedSetStyleImplicitMappingImplicitFeatures() {
         /* If there are dynamic styles, it's copied into an internal array
            instead of calling doSetStyle(). The following is thus checking the
            same as doSetStyle() but on the internal array. */
-        /** @todo test the common style once it has something */
+        CORRADE_COMPARE(shared.state().commonStyleUniform.smoothness, 3.14f);
         CORRADE_COMPARE(shared.state().styleUniforms.size(), 3);
         CORRADE_COMPARE(shared.state().styleUniforms[1].color, 0xc0ffee_rgbf);
     }
@@ -3491,7 +3593,8 @@ void TextLayerTest::sharedSetStyleImplicitMappingImplicitFeatures() {
     /* Setting a style with implicit features after non-implicit features were
        set should reset them back to nothing */
     shared.setStyle(
-        TextLayerCommonStyleUniform{},
+        TextLayerCommonStyleUniform{}
+            .setSmoothness(3.14f),
         {TextLayerStyleUniform{},
          TextLayerStyleUniform{}
             .setColor(0xc0ffee_rgbf),
@@ -3511,7 +3614,8 @@ void TextLayerTest::sharedSetStyleImplicitMappingImplicitFeatures() {
          {4.0f, 3.0f, 2.0f, 1.0f},
          {2.0f, 1.0f, 4.0f, 3.0f}});
     shared.setStyle(
-        TextLayerCommonStyleUniform{},
+        TextLayerCommonStyleUniform{}
+            .setSmoothness(3.14f),
         {TextLayerStyleUniform{},
          TextLayerStyleUniform{}
             .setColor(0xc0ffee_rgbf),
@@ -3564,8 +3668,8 @@ void TextLayerTest::sharedSetStyleImplicitMappingImplicitEditingStyles() {
 
         State& state() { return static_cast<State&>(*_state); }
 
-        void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform> uniforms) override {
-            /** @todo test the common style once it contains something */
+        void doSetStyle(const TextLayerCommonStyleUniform& commonUniform, Containers::ArrayView<const TextLayerStyleUniform> uniforms) override {
+            CORRADE_COMPARE(commonUniform.smoothness, 3.14f);
             CORRADE_COMPARE(uniforms.size(), 3);
             CORRADE_COMPARE(uniforms[1].color, 0xc0ffee_rgbf);
             ++setStyleCalled;
@@ -3589,7 +3693,8 @@ void TextLayerTest::sharedSetStyleImplicitMappingImplicitEditingStyles() {
     FontHandle first = shared.addFont(font1, 13.0f);
     FontHandle second = shared.addFont(font2, 6.0f);
     shared.setStyle(
-        TextLayerCommonStyleUniform{},
+        TextLayerCommonStyleUniform{}
+            .setSmoothness(3.14f),
         {TextLayerStyleUniform{},
          TextLayerStyleUniform{}
             .setColor(0xc0ffee_rgbf),
@@ -3615,7 +3720,7 @@ void TextLayerTest::sharedSetStyleImplicitMappingImplicitEditingStyles() {
         /* If there are dynamic styles, it's copied into an internal array
            instead of calling doSetStyle(). The following is thus checking the
            same as doSetStyle() but on the internal array. */
-        /** @todo test the common style once it has something */
+        CORRADE_COMPARE(shared.state().commonStyleUniform.smoothness, 3.14f);
         CORRADE_COMPARE(shared.state().styleUniforms.size(), 3);
         CORRADE_COMPARE(shared.state().styleUniforms[1].color, 0xc0ffee_rgbf);
     }
@@ -3658,7 +3763,8 @@ void TextLayerTest::sharedSetStyleImplicitMappingImplicitEditingStyles() {
     /* Setting a style with implicit editing styles after non-implicit editing
        styles were set should reset them back to nothing ... */
     shared.setStyle(
-        TextLayerCommonStyleUniform{},
+        TextLayerCommonStyleUniform{}
+            .setSmoothness(3.14f),
         {TextLayerStyleUniform{},
          TextLayerStyleUniform{}
             .setColor(0xc0ffee_rgbf),
@@ -3678,7 +3784,8 @@ void TextLayerTest::sharedSetStyleImplicitMappingImplicitEditingStyles() {
          {4.0f, 3.0f, 2.0f, 1.0f},
          {2.0f, 1.0f, 4.0f, 3.0f}});
     shared.setStyle(
-        TextLayerCommonStyleUniform{},
+        TextLayerCommonStyleUniform{}
+            .setSmoothness(3.14f),
         {TextLayerStyleUniform{},
          TextLayerStyleUniform{}
             .setColor(0xc0ffee_rgbf),
@@ -3703,7 +3810,8 @@ void TextLayerTest::sharedSetStyleImplicitMappingImplicitEditingStyles() {
 
     /* ... independently for cursor and selection styles */
     shared.setStyle(
-        TextLayerCommonStyleUniform{},
+        TextLayerCommonStyleUniform{}
+            .setSmoothness(3.14f),
         {TextLayerStyleUniform{},
          TextLayerStyleUniform{}
             .setColor(0xc0ffee_rgbf),
@@ -3754,8 +3862,8 @@ void TextLayerTest::sharedSetStyleImplicitMappingImplicitPadding() {
 
         State& state() { return static_cast<State&>(*_state); }
 
-        void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform> uniforms) override {
-            /** @todo test the common style once it contains something */
+        void doSetStyle(const TextLayerCommonStyleUniform& commonUniform, Containers::ArrayView<const TextLayerStyleUniform> uniforms) override {
+            CORRADE_COMPARE(commonUniform.smoothness, 3.14f);
             CORRADE_COMPARE(uniforms.size(), 3);
             CORRADE_COMPARE(uniforms[1].color, 0xc0ffee_rgbf);
             ++setStyleCalled;
@@ -3779,7 +3887,8 @@ void TextLayerTest::sharedSetStyleImplicitMappingImplicitPadding() {
     FontHandle first = shared.addFont(font1, 13.0f);
     FontHandle second = shared.addFont(font2, 6.0f);
     shared.setStyle(
-        TextLayerCommonStyleUniform{},
+        TextLayerCommonStyleUniform{}
+            .setSmoothness(3.14f),
         {TextLayerStyleUniform{},
          TextLayerStyleUniform{}
             .setColor(0xc0ffee_rgbf),
@@ -3803,7 +3912,7 @@ void TextLayerTest::sharedSetStyleImplicitMappingImplicitPadding() {
         /* If there are dynamic styles, it's copied into an internal array
            instead of calling doSetStyle(). The following is thus checking the
            same as doSetStyle() but on the internal array. */
-        /** @todo test the common style once it has something */
+        CORRADE_COMPARE(shared.state().commonStyleUniform.smoothness, 3.14f);
         CORRADE_COMPARE(shared.state().styleUniforms.size(), 3);
         CORRADE_COMPARE(shared.state().styleUniforms[1].color, 0xc0ffee_rgbf);
     }
@@ -3846,7 +3955,8 @@ void TextLayerTest::sharedSetStyleImplicitMappingImplicitPadding() {
     /* Setting a style with implicit padding after a non-implicit padding was
        set should reset it back to zeros */
     shared.setStyle(
-        TextLayerCommonStyleUniform{},
+        TextLayerCommonStyleUniform{}
+            .setSmoothness(3.14f),
         {TextLayerStyleUniform{},
          TextLayerStyleUniform{}
             .setColor(0xc0ffee_rgbf),
@@ -3866,7 +3976,8 @@ void TextLayerTest::sharedSetStyleImplicitMappingImplicitPadding() {
          {4.0f, 3.0f, 2.0f, 1.0f},
          {2.0f, 1.0f, 4.0f, 3.0f}});
     shared.setStyle(
-        TextLayerCommonStyleUniform{},
+        TextLayerCommonStyleUniform{}
+            .setSmoothness(3.14f),
         {TextLayerStyleUniform{},
          TextLayerStyleUniform{}
             .setColor(0xc0ffee_rgbf),
@@ -8242,9 +8353,12 @@ void TextLayerTest::updateCleanDataOrder() {
     } shared{cache, TextLayer::Shared::Configuration{6, data.styleCount}
         .setEditingStyleCount(data.editingStyleCount ? 4 : 0, data.editingStyleCount)
         .setDynamicStyleCount(data.dynamicStyleCount, data.hasEditingStyles)
+        .setFlags(data.flags)
     };
 
-    /* The three-glyph font is scaled to 0.5, the one-glyph to 2.0 */
+    /* The three-glyph font is scaled to 0.5, the one-glyph to 2.0, this scale
+       is baked into the quad size and also saved into the scale field if
+       TextLayerSharedFlag::DistanceField is enabled */
     FontHandle threeGlyphFontHandle = shared.addFont(threeGlyphFont, 8.0f);
     FontHandle oneGlyphFontHandle = shared.addFont(oneGlyphFont, 4.0f);
 
@@ -8402,7 +8516,7 @@ void TextLayerTest::updateCleanDataOrder() {
     /* Node 6 is disabled, so style 5 should get transitioned to 2 if not
        dynamic */
     DataHandle data3 = layer.create(5, "hello",         /* 3, quad 2 to 6 */
-        {}, data.flags, node6);
+        {}, data.dataFlags, node6);
     layer.create(0, "a", {});                           /* 4, quad 7 */
     /* Node 6 is disabled, but style 4 has no disabled transition so this stays
        the same */
@@ -8410,7 +8524,7 @@ void TextLayerTest::updateCleanDataOrder() {
         Text::Alignment::TopCenter, node6);
     layer.create(3, "", {});                            /* 6, no quad */
     DataHandle data7 = layer.create(1, "ahoy",          /* 7, quad 9 */
-        Text::Alignment::BottomRight, data.flags, node15);
+        Text::Alignment::BottomRight, data.dataFlags, node15);
     layer.create(0, "a", {});                           /* 8, quad 10 */
     DataHandle data9 = layer.create(3, "hi",            /* 9, quad 11 to 12 */
         TextProperties{}
@@ -8418,7 +8532,7 @@ void TextLayerTest::updateCleanDataOrder() {
             .setAlignment(Text::Alignment::LineEnd)
             /* Swaps horizontal padding of the cursor */
             .setShapeDirection(Text::ShapeDirection::RightToLeft),
-        data.flags, node15);
+        data.dataFlags, node15);
     /* Node 6 is disabled, but style 3 has no disabled transition so this stays
        the same */
     layer.create(3, "",                                 /* 10, no quad */
@@ -8426,7 +8540,7 @@ void TextLayerTest::updateCleanDataOrder() {
             .setAlignment(Text::Alignment::MiddleCenter)
             /* Should behave the same as Unspecified */
             .setShapeDirection(Text::ShapeDirection::LeftToRight),
-        data.flags, node6);
+        data.dataFlags, node6);
 
     /* These are further multiplied by the node opacities */
     layer.setColor(data3, 0xff336699_rgbaf);
@@ -8439,7 +8553,7 @@ void TextLayerTest::updateCleanDataOrder() {
         layer.setPadding(data5, data.paddingFromData);
     }
 
-    if(data.flags >= TextDataFlag::Editable) {
+    if(data.dataFlags >= TextDataFlag::Editable) {
         /* Data 3 has both cursor and selection always, the selection may
            change direction though */
         layer.setCursor(data3, data.data3Cursor.first(), data.data3Cursor.second());
@@ -8466,7 +8580,7 @@ void TextLayerTest::updateCleanDataOrder() {
         0u, 2u, 3u, 4u, 5u, 7u, 8u, 9u
     }), TestSuite::Compare::Container);
 
-    if(data.flags >= TextDataFlag::Editable) {
+    if(data.dataFlags >= TextDataFlag::Editable) {
         CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().data).slice(&Implementation::TextLayerData::textRun), Containers::arrayView({
             0xffffffffu, 0xffffffffu, 0xffffffffu, 0u, 0xffffffffu,
             0xffffffffu, 0xffffffffu, 1u, 0xffffffffu, 2u, 3u
@@ -8575,13 +8689,32 @@ void TextLayerTest::updateCleanDataOrder() {
     }
 
     if(data.expectVertexDataUpdated) {
+        /* Depending on whether TextLayerSharedFlag::DistanceField is enabled
+           the vertex data contain a different type. Make a view on the common
+           prefix. */
+        std::size_t vertexTypeSize = data.flags >= TextLayerSharedFlag::DistanceField ?
+            sizeof(Implementation::TextLayerDistanceFieldVertex) :
+            sizeof(Implementation::TextLayerVertex);
+        Containers::StridedArrayView1D<const Implementation::TextLayerVertex> vertices{
+            layer.stateData().vertices,
+            reinterpret_cast<const Implementation::TextLayerVertex*>(layer.stateData().vertices.data()),
+            layer.stateData().vertices.size()/vertexTypeSize,
+            std::ptrdiff_t(vertexTypeSize)};
+        Containers::StridedArrayView1D<const Vector2> positions = vertices.slice(&Implementation::TextLayerVertex::position);
+        Containers::StridedArrayView1D<const Vector3> textureCoordinates = vertices.slice(&Implementation::TextLayerVertex::textureCoordinates);
+        Containers::StridedArrayView1D<const Float> invertedRunScales =
+            data.flags >= TextLayerSharedFlag::DistanceField ?
+                stridedArrayView(Containers::arrayCast<Implementation::TextLayerDistanceFieldVertex>(layer.stateData().vertices)).slice(&Implementation::TextLayerDistanceFieldVertex::invertedRunScale) : nullptr;
+
         /* The vertices are there for all data that have glyphs, but only the
            actually used are filled */
-        CORRADE_COMPARE(layer.stateData().vertices.size(), 13*4);
+        CORRADE_COMPARE(layer.stateData().vertices.size(), 13*4* vertexTypeSize);
         /* (Possibly editable) text 3, quads 2 to 6 */
         for(std::size_t i = 0; i != 5*4; ++i) {
             CORRADE_ITERATION(i);
-            CORRADE_COMPARE(layer.stateData().vertices[2*4 + i].color, 0xff336699_rgbaf*0.4f);
+            CORRADE_COMPARE(vertices[2*4 + i].color, 0xff336699_rgbaf*0.4f);
+            if(data.flags >= TextLayerSharedFlag::DistanceField)
+                CORRADE_COMPARE(invertedRunScales[2*4 + i], 1.0f/0.5f); /* threeGlyphFont */
         }
         /* Created with style 5, which if not dynamic is transitioned to 2 as
            the node is disabled, which is mapped to uniform 0. If dynamic, it's
@@ -8593,55 +8726,58 @@ void TextLayerTest::updateCleanDataOrder() {
             for(std::size_t i: {0, 1}) {
                 CORRADE_ITERATION(i);
                 if(data.styleCount == 6)
-                    CORRADE_COMPARE(layer.stateData().vertices[2*4 + i*4 + j].styleUniform, 0);
+                    CORRADE_COMPARE(vertices[2*4 + i*4 + j].styleUniform, 0);
                 else if(data.styleCount == 4)
-                    CORRADE_COMPARE(layer.stateData().vertices[2*4 + i*4 + j].styleUniform, 7);
+                    CORRADE_COMPARE(vertices[2*4 + i*4 + j].styleUniform, 7);
                 else CORRADE_INTERNAL_ASSERT_UNREACHABLE();
             }
             for(std::size_t i: {2, 3, 4}) {
                 CORRADE_ITERATION(i);
                 if(data.styleCount == 6)
-                    CORRADE_COMPARE(layer.stateData().vertices[2*4 + i*4 + j].styleUniform, data.expectEditingDataPresent ? 5 : 0);
+                    CORRADE_COMPARE(vertices[2*4 + i*4 + j].styleUniform, data.expectEditingDataPresent ? 5 : 0);
                 else if(data.styleCount == 4)
-                    CORRADE_COMPARE(layer.stateData().vertices[2*4 + i*4 + j].styleUniform, data.expectEditingDataPresent ? 10 : 7);
+                    CORRADE_COMPARE(vertices[2*4 + i*4 + j].styleUniform, data.expectEditingDataPresent ? 10 : 7);
                 else CORRADE_INTERNAL_ASSERT_UNREACHABLE();
             }
         }
         /* Glyph 5, quad 8 */
         for(std::size_t i = 0; i != 1*4; ++i) {
             CORRADE_ITERATION(i);
-            CORRADE_COMPARE(layer.stateData().vertices[8*4 + i].color, 0xcceeff00_rgbaf*0.4f);
+            CORRADE_COMPARE(vertices[8*4 + i].color, 0xcceeff00_rgbaf*0.4f);
+            if(data.flags >= TextLayerSharedFlag::DistanceField)
+                CORRADE_COMPARE(invertedRunScales[8*4 + i], 1.0f/0.5f); /* threeGlyphFont */
             /* Created with style 4, which if not dynamic is mapped to uniform
                1. If dynamic, it's implicitly `uniformCount + (id - styleCount)`,
                thus 6. */
             if(data.styleCount == 6)
-                CORRADE_COMPARE(layer.stateData().vertices[8*4 + i].styleUniform, 1);
+                CORRADE_COMPARE(vertices[8*4 + i].styleUniform, 1);
             else if(data.styleCount == 4)
-                CORRADE_COMPARE(layer.stateData().vertices[8*4 + i].styleUniform, 6);
+                CORRADE_COMPARE(vertices[8*4 + i].styleUniform, 6);
             else CORRADE_INTERNAL_ASSERT_UNREACHABLE();
         }
         /* (Possibly editable) text 7, quad 9 */
         for(std::size_t i = 0; i != 1*4; ++i) {
             CORRADE_ITERATION(i);
-            CORRADE_COMPARE(layer.stateData().vertices[9*4 + i].color, 0x11223344_rgbaf*0.9f);
+            CORRADE_COMPARE(vertices[9*4 + i].color, 0x11223344_rgbaf*0.9f);
+            if(data.flags >= TextLayerSharedFlag::DistanceField)
+                CORRADE_COMPARE(invertedRunScales[9*4 + i], 1.0f/2.0f); /* oneGlyphFont */
             /* Created with style 1, which is mapped to uniform 2. The
                selection doesn't override the text uniform, so it's always the
                same. */
-            CORRADE_COMPARE(layer.stateData().vertices[9*4 + i].styleUniform, 2);
+            CORRADE_COMPARE(vertices[9*4 + i].styleUniform, 2);
         }
         /* (Possibly editable) text 9, quads 11 to 12 */
         for(std::size_t i = 0; i != 2*4; ++i) {
             CORRADE_ITERATION(i);
-            CORRADE_COMPARE(layer.stateData().vertices[11*4 + i].color, 0x663399ff_rgbaf*0.9f);
+            CORRADE_COMPARE(vertices[11*4 + i].color, 0x663399ff_rgbaf*0.9f);
+            if(data.flags >= TextLayerSharedFlag::DistanceField)
+                CORRADE_COMPARE(invertedRunScales[11*4 + i], 1.0f/0.5f); /* threeGlyphFont */
             /* Created with style 3, which is mapped to uniform 1. There's only
                a cursor, which doesn't override the text uniform, so it's
                always the same. */
-            CORRADE_COMPARE(layer.stateData().vertices[11*4 + i].styleUniform, 1);
+            CORRADE_COMPARE(vertices[11*4 + i].styleUniform, 1);
         }
         /* (Possibly editable) text 10 is empty */
-
-        Containers::StridedArrayView1D<const Vector2> positions = stridedArrayView(layer.stateData().vertices).slice(&Implementation::TextLayerVertex::position);
-        Containers::StridedArrayView1D<const Vector3> textureCoordinates = stridedArrayView(layer.stateData().vertices).slice(&Implementation::TextLayerVertex::textureCoordinates);
 
         /* Text 3 and glyph 5 are attached to node 6, which has offset
            {1.0, 2.0} and a center of {6.0, 9.5}. Shaped positions should match
@@ -8924,7 +9060,7 @@ void TextLayerTest::updateCleanDataOrder() {
         0u, 2u, 3u, 4u, 5u, 7u, 8u, 9u
     }), TestSuite::Compare::Container);
 
-    if(data.flags >= TextDataFlag::Editable) {
+    if(data.dataFlags >= TextDataFlag::Editable) {
         CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().data).slice(&Implementation::TextLayerData::textRun), Containers::arrayView({
             0xffffffffu, 0xffffffffu, 0xffffffffu, 0u, 0xffffffffu,
             0xffffffffu, 0xffffffffu, 1u, 0xffffffffu, 2u, 3u
@@ -8952,6 +9088,24 @@ void TextLayerTest::updateCleanDataOrder() {
     UnsignedInt dataIdsPostClean[]{9, 7};
     layer.update(data.states|LayerState::NeedsDataUpdate, dataIdsPostClean, {}, {}, nodeOffsets, nodeSizes, nodeOpacities, nodesEnabled, {}, {}, {}, {});
 
+    /* Like in the expectVertexDataUpdated branch above, but making the view
+       again because it could get reallocated here if it was empty before. It
+       however won't get reallocated after this point, since it only shrinks
+       now. */
+    std::size_t vertexTypeSize = data.flags >= TextLayerSharedFlag::DistanceField ?
+        sizeof(Implementation::TextLayerDistanceFieldVertex) :
+        sizeof(Implementation::TextLayerVertex);
+    Containers::StridedArrayView1D<const Implementation::TextLayerVertex> vertices{
+        layer.stateData().vertices,
+        reinterpret_cast<const Implementation::TextLayerVertex*>(layer.stateData().vertices.data()),
+        layer.stateData().vertices.size()/vertexTypeSize,
+        std::ptrdiff_t(vertexTypeSize)};
+    Containers::StridedArrayView1D<const Vector2> positions = vertices.slice(&Implementation::TextLayerVertex::position);
+    Containers::StridedArrayView1D<const Vector3> textureCoordinates = vertices.slice(&Implementation::TextLayerVertex::textureCoordinates);
+    Containers::StridedArrayView1D<const Float> invertedRunScales =
+        data.flags >= TextLayerSharedFlag::DistanceField ?
+            stridedArrayView(Containers::arrayCast<Implementation::TextLayerDistanceFieldVertex>(layer.stateData().vertices)).slice(&Implementation::TextLayerDistanceFieldVertex::invertedRunScale) : nullptr;
+
     /* There should be just 6 glyph runs, assigned to the remaining 9 data */
     CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().data).slice(&Implementation::TextLayerData::glyphRun), Containers::arrayView({
         0u, 0xffffffffu /* no run */, 1u, 2u /* free data */, 2u,
@@ -8973,7 +9127,7 @@ void TextLayerTest::updateCleanDataOrder() {
     CORRADE_COMPARE(layer.glyphCount(data9), 2u);
 
     /* And 2 text runs, assigned to the remining 2 texts */
-    if(data.flags >= TextDataFlag::Editable) {
+    if(data.dataFlags >= TextDataFlag::Editable) {
         CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().data).slice(&Implementation::TextLayerData::textRun), Containers::arrayView({
             0xffffffffu, 0xffffffffu, 0xffffffffu, 0u /* free data */,
             0xffffffffu, 0xffffffffu, 0xffffffffu, 0u, 0xffffffffu, 1u,
@@ -9032,27 +9186,28 @@ void TextLayerTest::updateCleanDataOrder() {
         })), TestSuite::Compare::Container);
 
     /* Vertices for all remaining 7 glyphs */
-    CORRADE_COMPARE(layer.stateData().vertices.size(), 7*4);
+    CORRADE_COMPARE(layer.stateData().vertices.size(), 7*4*vertexTypeSize);
     /* (Possibly editable) text 7, quad 3 */
     for(std::size_t i = 0; i != 1*4; ++i) {
         CORRADE_ITERATION(i);
-        CORRADE_COMPARE(layer.stateData().vertices[3*4 + i].color, 0x11223344_rgbaf*0.9f);
+        CORRADE_COMPARE(vertices[3*4 + i].color, 0x11223344_rgbaf*0.9f);
+        if(data.flags >= TextLayerSharedFlag::DistanceField)
+            CORRADE_COMPARE(invertedRunScales[3*4 + i], 1.0f/2.0f); /* oneGlyphFont */
         /* Created with style 1, which is mapped to uniform 2. The selection
            doesn't override the text uniform, so it's always the same. */
-        CORRADE_COMPARE(layer.stateData().vertices[3*4 + i].styleUniform, 2);
+        CORRADE_COMPARE(vertices[3*4 + i].styleUniform, 2);
     }
     /* (Possibly editable) text 9, quads 5 to 6 */
     for(std::size_t i = 0; i != 2*4; ++i) {
         CORRADE_ITERATION(i);
-        CORRADE_COMPARE(layer.stateData().vertices[5*4 + i].color, 0x663399ff_rgbaf*0.9f);
+        CORRADE_COMPARE(vertices[5*4 + i].color, 0x663399ff_rgbaf*0.9f);
+        if(data.flags >= TextLayerSharedFlag::DistanceField)
+            CORRADE_COMPARE(invertedRunScales[5*4 + i], 1.0f/0.5f); /* threeGlyphFont */
         /* Created with style 3, which is mapped to uniform 1. There's only a
            cursor, which doesn't override the text uniform, so it's always the
            same. */
-        CORRADE_COMPARE(layer.stateData().vertices[5*4 + i].styleUniform, 1);
+        CORRADE_COMPARE(vertices[5*4 + i].styleUniform, 1);
     }
-
-    Containers::StridedArrayView1D<const Vector2> positions = stridedArrayView(layer.stateData().vertices).slice(&Implementation::TextLayerVertex::position);
-    Containers::StridedArrayView1D<const Vector3> textureCoordinates = stridedArrayView(layer.stateData().vertices).slice(&Implementation::TextLayerVertex::textureCoordinates);
 
     /* Text 7 and 9, now quads 3 and 5 to 6 */
     CORRADE_COMPARE_AS(positions.sliceSize(3*4, 1*4), Containers::arrayView<Vector2>({
@@ -9157,7 +9312,7 @@ void TextLayerTest::updateCleanDataOrder() {
     CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().glyphRuns).slice(&Implementation::TextLayerGlyphRun::glyphOffset), Containers::arrayView({
         0u, 1u, 2u, 0xffffffffu, 4u, 5u
     }), TestSuite::Compare::Container);
-    if(data.flags >= TextDataFlag::Editable)
+    if(data.dataFlags >= TextDataFlag::Editable)
         CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().textRuns).slice(&Implementation::TextLayerTextRun::textOffset), Containers::arrayView({
             0xffffffffu, 4u
         }), TestSuite::Compare::Container);
@@ -9186,7 +9341,7 @@ void TextLayerTest::updateCleanDataOrder() {
     CORRADE_COMPARE(layer.glyphCount(data9), 2u);
 
     /* And 1 text run, assigned to the remining text */
-    if(data.flags >= TextDataFlag::Editable) {
+    if(data.dataFlags >= TextDataFlag::Editable) {
         CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().data).slice(&Implementation::TextLayerData::textRun), Containers::arrayView({
             0xffffffffu, 0xffffffffu, 0xffffffffu, 0u /* free data */,
             0xffffffffu, 0xffffffffu, 0xffffffffu, 0u /* free data */,
@@ -9239,15 +9394,17 @@ void TextLayerTest::updateCleanDataOrder() {
         })), TestSuite::Compare::Container);
 
     /* Vertices for all remaining 6 glyphs */
-    CORRADE_COMPARE(layer.stateData().vertices.size(), 6*4);
+    CORRADE_COMPARE(layer.stateData().vertices.size(), 6*4*vertexTypeSize);
     /* (Possibly editable) text 9, quads 4 to 5 */
     for(std::size_t i = 0; i != 2*4; ++i) {
         CORRADE_ITERATION(i);
-        CORRADE_COMPARE(layer.stateData().vertices[4*4 + i].color, 0x663399ff_rgbaf*0.9f);
+        CORRADE_COMPARE(vertices[4*4 + i].color, 0x663399ff_rgbaf*0.9f);
+        if(data.flags >= TextLayerSharedFlag::DistanceField)
+            CORRADE_COMPARE(invertedRunScales[4*4 + i], 1.0f/0.5f); /* threeGlyphFont */
         /* Created with style 3, which is mapped to uniform 1. There's only a
            cursor, which doesn't override the text uniform, so it's always the
            same. */
-        CORRADE_COMPARE(layer.stateData().vertices[4*4 + i].styleUniform, 1);
+        CORRADE_COMPARE(vertices[4*4 + i].styleUniform, 1);
     }
 
     /* Text 9, now quad 4 to 5 */
@@ -9445,7 +9602,7 @@ void TextLayerTest::updateAlignment() {
     /* 2--3
        |  |
        0--1 */
-    CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().vertices).slice(&Implementation::TextLayerVertex::position), Containers::arrayView<Vector2>({
+    CORRADE_COMPARE_AS(stridedArrayView(Containers::arrayCast<Implementation::TextLayerVertex>(layer.stateData().vertices)).slice(&Implementation::TextLayerVertex::position), Containers::arrayView<Vector2>({
         Vector2{0.0f, 0.0f} + data.offset,
         Vector2{2.0f, 0.0f} + data.offset,
         Vector2{0.0f, -4.0f} + data.offset,
@@ -9559,7 +9716,7 @@ void TextLayerTest::updateAlignmentGlyph() {
     /* 2--3
        |  |
        0--1 */
-    CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().vertices).slice(&Implementation::TextLayerVertex::position), Containers::arrayView<Vector2>({
+    CORRADE_COMPARE_AS(stridedArrayView(Containers::arrayCast<Implementation::TextLayerVertex>(layer.stateData().vertices)).slice(&Implementation::TextLayerVertex::position), Containers::arrayView<Vector2>({
         Vector2{0.0f, 0.0f} + data.offsetGlyph,
         Vector2{6.0f, 0.0f} + data.offsetGlyph,
         Vector2{0.0f, -8.0f} + data.offsetGlyph,
@@ -9705,7 +9862,7 @@ void TextLayerTest::updatePadding() {
     /* 2--3
        |  |
        0--1 */
-    CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().vertices).slice(&Implementation::TextLayerVertex::position), Containers::arrayView<Vector2>({
+    CORRADE_COMPARE_AS(stridedArrayView(Containers::arrayCast<Implementation::TextLayerVertex>(layer.stateData().vertices)).slice(&Implementation::TextLayerVertex::position), Containers::arrayView<Vector2>({
         Vector2{0.0f, 0.0f} + data.offset,
         Vector2{2.0f, 0.0f} + data.offset,
         Vector2{0.0f, -4.0f} + data.offset,
@@ -9825,7 +9982,7 @@ void TextLayerTest::updatePaddingGlyph() {
     /* 2--3
        |  |
        0--1 */
-    CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().vertices).slice(&Implementation::TextLayerVertex::position), Containers::arrayView<Vector2>({
+    CORRADE_COMPARE_AS(stridedArrayView(Containers::arrayCast<Implementation::TextLayerVertex>(layer.stateData().vertices)).slice(&Implementation::TextLayerVertex::position), Containers::arrayView<Vector2>({
         Vector2{0.0f, 0.0f} + data.offsetGlyph,
         Vector2{6.0f, 0.0f} + data.offsetGlyph,
         Vector2{0.0f, -8.0f} + data.offsetGlyph,

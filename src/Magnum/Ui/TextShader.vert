@@ -26,6 +26,8 @@
 
 struct StyleEntry {
     lowp vec4 color;
+    lowp vec4 outlineColor;
+    mediump vec4 outlineWidthEdgeOffsetSmoothnessReserved;
 };
 
 layout(std140
@@ -33,30 +35,44 @@ layout(std140
     , binding = 0
     #endif
 ) uniform Style {
-    lowp vec4 reserved;
+    lowp vec4 smoothnessReserved;
     StyleEntry styles[STYLE_COUNT];
 };
 
 #ifdef EXPLICIT_UNIFORM_LOCATION
 layout(location = 0)
 #endif
-uniform highp vec2 projection;
+uniform highp vec4 projection; /* xy = UI size to unit square scaling,
+                                  z = one pixel as a distance value delta,
+                                  w = one UI unit as a distance value delta */
 
 layout(location = 0) in highp vec2 position;
 layout(location = 1) in mediump vec3 textureCoordinates;
 layout(location = 2) in lowp vec4 color;
 layout(location = 3) in mediump uint style;
+#ifdef DISTANCE_FIELD
+layout(location = 4) in mediump float invertedRunScale;
+#endif
 
 NOPERSPECTIVE out mediump vec3 interpolatedTextureCoordinates;
 flat out lowp vec4 interpolatedColor;
+#ifdef DISTANCE_FIELD
+flat out mediump uint interpolatedStyle;
+flat out mediump float interpolatedInvertedRunScale;
+#endif
 
 void main() {
     interpolatedTextureCoordinates = textureCoordinates;
-    /* Calculate the combined color here already to save a vec4 load in each
-       fragment shader invocation */
+    /* Calculate the combined base color here already to save a vec4 load in
+       each fragment shader invocation. Outline color, if used, is fetched in
+       the fragment shader always alongside other properties. */
     interpolatedColor = styles[style].color*color;
+    #ifdef DISTANCE_FIELD
+    interpolatedStyle = style;
+    interpolatedInvertedRunScale = invertedRunScale;
+    #endif
 
     /* The projection scales from UI size to the 2x2 unit square and Y-flips,
        the (-1, 1) then translates the origin from top left to center */
-    gl_Position = vec4(projection*position + vec2(-1.0, 1.0), 0.0, 1.0);
+    gl_Position = vec4(projection.xy*position + vec2(-1.0, 1.0), 0.0, 1.0);
 }

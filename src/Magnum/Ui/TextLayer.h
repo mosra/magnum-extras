@@ -56,9 +56,12 @@ shader are passed to the function separately.
 
 Currently this is just a placeholder with no properties.
 */
-struct alignas(4) TextLayerCommonStyleUniform {
+struct TextLayerCommonStyleUniform {
     /** @brief Construct with default values */
-    constexpr explicit TextLayerCommonStyleUniform(DefaultInitT = DefaultInit) noexcept {}
+    constexpr explicit TextLayerCommonStyleUniform(DefaultInitT = DefaultInit) noexcept: smoothness{0.0f} {}
+
+    /** @brief Constructor */
+    constexpr /*implicit*/ TextLayerCommonStyleUniform(Float smoothness): smoothness {smoothness} {}
 
     /** @brief Construct without initializing the contents */
     explicit TextLayerCommonStyleUniform(NoInitT) noexcept {}
@@ -73,12 +76,34 @@ struct alignas(4) TextLayerCommonStyleUniform {
      */
 
     /**
+     * @brief Set the @ref smoothness field
+     * @return Reference to self (for method chaining)
+     */
+    CORRADE_CONSTEXPR14 TextLayerCommonStyleUniform& setSmoothness(Float smoothness) {
+        this->smoothness = smoothness;
+        return *this;
+    }
+
+    /**
      * @}
      */
 
-    /** @todo remove the alignas once actual attributes are here */
+    /**
+     * @brief Edge smoothness radius
+     *
+     * Used only if the text layer is created with a distance field glyph
+     * cache, ignored otherwise. In framebuffer pixels (as opposed to UI
+     * units). E.g., setting the value to @cpp 1.0f @ce will make the smoothing
+     * extend 1 pixel on each side of the edge. Default value is @cpp 0.0f @ce.
+     * The bigger value between this and
+     * @ref TextLayerStyleUniform::smoothness, converted to pixels, gets used.
+     * @see @ref TextLayerGL::Shared::Shared(Text::DistanceFieldGlyphCacheArrayGL&, const Configuration&),
+     *      @ref TextLayerSharedFlag::DistanceField,
+     *      @ref Ui-AbstractUserInterface-dpi
+     */
+    Float smoothness;
+
     #ifndef DOXYGEN_GENERATING_OUTPUT
-    Int:32;
     Int:32;
     Int:32;
     Int:32;
@@ -105,10 +130,18 @@ and variants.
 */
 struct TextLayerStyleUniform {
     /** @brief Construct with default values */
-    constexpr explicit TextLayerStyleUniform(DefaultInitT = DefaultInit) noexcept: color{1.0f} {}
+    constexpr explicit TextLayerStyleUniform(DefaultInitT = DefaultInit) noexcept: color{1.0f}, outlineColor{1.0f}, outlineWidth{0.0f}, edgeOffset{0.0f}, smoothness{0.0f} {}
 
-    /** @brief Constructor */
-    constexpr /*implicit*/ TextLayerStyleUniform(const Color4& color): color{color} {}
+    /**
+     * @brief Construct for a regular rendering
+     *
+     * The @ref outlineColor, @ref outlineWidth, @ref edgeOffset and
+     * @ref smoothness are left at their default values.
+     */
+    constexpr /*implicit*/ TextLayerStyleUniform(const Color4& color): color{color}, outlineColor{1.0f}, outlineWidth{0.0f}, edgeOffset{0.0f}, smoothness{0.0f} {}
+
+    /** @brief Construct for a distance field rendering */
+    constexpr /*implicit*/ TextLayerStyleUniform(const Color4& color, const Color4& outlineColor, Float outlineWidth, Float edgeOffset, Float smoothness): color{color}, outlineColor{outlineColor}, outlineWidth{outlineWidth}, edgeOffset{edgeOffset}, smoothness{smoothness} {}
 
     /** @brief Construct without initializing the contents */
     explicit TextLayerStyleUniform(NoInitT) noexcept: color{NoInit} {}
@@ -132,6 +165,42 @@ struct TextLayerStyleUniform {
     }
 
     /**
+     * @brief Set the @ref outlineColor field
+     * @return Reference to self (for method chaining)
+     */
+    CORRADE_CONSTEXPR14 TextLayerStyleUniform& setOutlineColor(const Color4& color) {
+        outlineColor = color;
+        return *this;
+    }
+
+    /**
+     * @brief Set the @ref outlineWidth field
+     * @return Reference to self (for method chaining)
+     */
+    CORRADE_CONSTEXPR14 TextLayerStyleUniform& setOutlineWidth(Float width) {
+        outlineWidth = width;
+        return *this;
+    }
+
+    /**
+     * @brief Set the @ref edgeOffset field
+     * @return Reference to self (for method chaining)
+     */
+    CORRADE_CONSTEXPR14 TextLayerStyleUniform& setEdgeOffset(Float offset) {
+        edgeOffset = offset;
+        return *this;
+    }
+
+    /**
+     * @brief Set the @ref smoothness field
+     * @return Reference to self (for method chaining)
+     */
+    CORRADE_CONSTEXPR14 TextLayerStyleUniform& setSmoothness(Float smoothness) {
+        this->smoothness = smoothness;
+        return *this;
+    }
+
+    /**
      * @}
      */
 
@@ -146,8 +215,61 @@ struct TextLayerStyleUniform {
      * @see @ref Color4::premultiplied()
      */
     Color4 color;
-};
 
+    /**
+     * @brief Outline color
+     *
+     * Used only if the text layer is created with a distance field glyph
+     * cache, ignored otherwise. The color is expected to have premultiplied
+     * alpha. Default value is @cpp 0xffffffff_srgbaf @ce. Visible only if
+     * @ref outlineWidth is non-zero.
+     *
+     * Unlike @ref color, the outline color isn't multiplied with
+     * @ref TextLayer::setColor(). Node opacity coming from
+     * @ref AbstractUserInterface::setNodeOpacity() affects it however.
+     * @see @ref TextLayerGL::Shared::Shared(Text::DistanceFieldGlyphCacheArrayGL&, const Configuration&),
+     *      @ref Color4::premultiplied()
+     */
+    Color4 outlineColor;
+
+    /**
+     * @brief Outline width
+     *
+     * Used only if the text layer is created with a distance field glyph
+     * cache, ignored otherwise. In UI units, the actual outline width is
+     * clamped to what the distance field radius allows. Default value is
+     * @cpp 0.0f @ce.
+     * @see @ref TextLayerGL::Shared::Shared(Text::DistanceFieldGlyphCacheArrayGL&, const Configuration&)
+     */
+    Float outlineWidth;
+
+    /**
+     * @brief Edge offset
+     *
+     * Used only if the text layer is created with a distance field glyph
+     * cache, ignored otherwise. In UI units, positive values dilate the edges
+     * and negative values erode it, the actual offset is clamped to what the
+     * distance field radius allows. Default value is @cpp 0.0f @ce.
+     * @see @ref TextLayerGL::Shared::Shared(Text::DistanceFieldGlyphCacheArrayGL&, const Configuration&)
+     */
+    Float edgeOffset;
+
+    /**
+     * @brief Edge smoothness radius
+     *
+     * Used only if the text layer is created with a distance field glyph
+     * cache, ignored otherwise. Compared to
+     * @ref TextLayerCommonStyleUniform::smoothness is in UI units instead of
+     * pixels. Default is @cpp 0.0f @ce. Of the two, the larger value in pixels
+     * gets used.
+     * @see @ref TextLayerGL::Shared::Shared(Text::DistanceFieldGlyphCacheArrayGL&, const Configuration&)
+     */
+    Float smoothness;
+
+    #ifndef DOXYGEN_GENERATING_OUTPUT
+    Int:32;
+    #endif
+};
 
 /**
 @brief Properties common to all @ref TextLayer editing style uniforms
@@ -2465,6 +2587,56 @@ class MAGNUM_UI_EXPORT TextLayer: public AbstractVisualLayer {
 };
 
 /**
+@brief Text layer shared state flag
+@m_since_latest
+
+@see @ref TextLayerSharedFlags,
+    @ref TextLayer::Shared::Configuration::setFlags(),
+    @ref TextLayer::Shared::flags()
+*/
+enum class TextLayerSharedFlag: UnsignedByte {
+    /**
+     * Distance field rendering. If enabled, the
+     * @ref TextLayerCommonStyleUniform::smoothness,
+     * @ref TextLayerStyleUniform::outlineColor,
+     * @ref TextLayerStyleUniform::outlineWidth,
+     * @ref TextLayerStyleUniform::edgeOffset and
+     * @ref TextLayerStyleUniform::smoothness get used as well. Enabled
+     * implicitly when the shared state is constructed with
+     * @ref TextLayerGL::Shared::Shared(Text::DistanceFieldGlyphCacheArrayGL&, const Configuration&)
+     * or @ref TextLayerGL::Shared::Shared(Text::DistanceFieldGlyphCacheArrayGL&&, const Configuration&),
+     * on the other hand is expected to not be set when using the
+     * @ref TextLayerGL::Shared::Shared(Text::GlyphCacheArrayGL&, const Configuration&)
+     * or @ref TextLayerGL::Shared::Shared(Text::GlyphCacheArrayGL&&, const Configuration&)
+     * constructors.
+     */
+    DistanceField = 1 << 0
+};
+
+/**
+@brief Text layer shared state flag
+@m_since_latest
+
+@see @ref TextLayer::Shared::Configuration::setFlags(),
+    @ref TextLayer::Shared::flags()
+*/
+typedef Containers::EnumSet<TextLayerSharedFlag> TextLayerSharedFlags;
+
+CORRADE_ENUMSET_OPERATORS(TextLayerSharedFlags)
+
+/**
+@debugoperatorenum{TextLayerSharedFlag}
+@m_since_latest
+*/
+MAGNUM_UI_EXPORT Debug& operator<<(Debug& debug, TextLayerSharedFlag value);
+
+/**
+@debugoperatorenum{TextLayerSharedFlags}
+@m_since_latest
+*/
+MAGNUM_UI_EXPORT Debug& operator<<(Debug& debug, TextLayerSharedFlags value);
+
+/**
 @brief Shared state for the text layer
 
 Contains a set of fonts and a glyph cache used by all of them. In order to use
@@ -2528,7 +2700,17 @@ class MAGNUM_UI_EXPORT TextLayer::Shared: public AbstractVisualLayer::Shared {
          */
         bool hasEditingStyles() const;
 
-        /** @brief Glyph cache instance */
+        /** @brief Flags */
+        TextLayerSharedFlags flags() const;
+
+        /**
+         * @brief Glyph cache instance
+         *
+         * The actual type depends on the concrete layer implementation, in
+         * case of @ref TextLayerGL it's either @ref Text::GlyphCacheArrayGL or
+         * @ref Text::DistanceFieldGlyphCacheArrayGL based on whether
+         * @ref flags() contain @ref TextLayerSharedFlag::DistanceField.
+         */
         Text::AbstractGlyphCache& glyphCache();
         const Text::AbstractGlyphCache& glyphCache() const; /**< @overload */
 
@@ -3051,10 +3233,50 @@ class MAGNUM_UI_EXPORT TextLayer::Shared::Configuration {
          */
         Configuration& setDynamicStyleCount(UnsignedInt count, bool withEditingStyles);
 
+        /** @brief Flags */
+        TextLayerSharedFlags flags() const { return _flags; }
+
+        /**
+         * @brief Set flags
+         * @return Reference to self (for method chaining)
+         *
+         * By default no flags are set.
+         * @see @ref addFlags(), @ref clearFlags()
+         */
+        Configuration& setFlags(TextLayerSharedFlags flags) {
+            _flags = flags;
+            return *this;
+        }
+
+        /**
+         * @brief Add flags
+         * @return Reference to self (for method chaining)
+         *
+         * Calls @ref setFlags() with the existing flags ORed with @p flags.
+         * Useful for preserving previously set flags.
+         * @see @ref clearFlags()
+         */
+        Configuration& addFlags(TextLayerSharedFlags flags) {
+            return setFlags(_flags|flags);
+        }
+
+        /**
+         * @brief Clear flags
+         * @return Reference to self (for method chaining)
+         *
+         * Calls @ref setFlags() with the existing flags ANDed with the inverse
+         * of @p flags. Useful for removing a subset of previously set flags.
+         * @see @ref addFlags()
+         */
+        Configuration& clearFlags(TextLayerSharedFlags flags) {
+            return setFlags(_flags & ~flags);
+        }
+
     private:
         UnsignedInt _styleUniformCount, _styleCount;
         UnsignedInt _editingStyleUniformCount = 0, _editingStyleCount = 0;
         UnsignedInt _dynamicStyleCount = 0;
+        TextLayerSharedFlags _flags;
         bool _dynamicEditingStyles = false;
 };
 

@@ -43,7 +43,7 @@
 #include <Magnum/GL/Shader.h>
 #include <Magnum/GL/TextureArray.h>
 #include <Magnum/GL/Version.h>
-#include <Magnum/Text/GlyphCacheGL.h>
+#include <Magnum/Text/DistanceFieldGlyphCacheGL.h>
 
 #include "Magnum/Ui/Implementation/textLayerState.h"
 
@@ -67,18 +67,27 @@ class TextShaderGL: public GL::AbstractShaderProgram {
         };
 
     public:
+        enum Flag: UnsignedByte {
+            DistanceField = 1 << 0
+        };
+
+        typedef Containers::EnumSet<Flag> Flags;
+
         typedef GL::Attribute<0, Vector2> Position;
         typedef GL::Attribute<1, Vector3> TextureCoordinates;
         typedef GL::Attribute<2, Vector4> Color4;
         typedef GL::Attribute<3, UnsignedInt> Style;
+        typedef GL::Attribute<4, Float> Scale;
 
-        explicit TextShaderGL(UnsignedInt styleCount);
+        explicit TextShaderGL(Flags flags, UnsignedInt styleCount);
 
-        TextShaderGL& setProjection(const Vector2& scaling) {
-            /* Y-flipped scale from the UI size to the 2x2 unit square, the
-               shader then translates by (-1, 1) on its own to put the origin
-               at center */
-            setUniform(_projectionUniform, Vector2{2.0f, -2.0f}/scaling);
+        TextShaderGL& setProjection(const Vector2& scaling, const Float pixelScaling, const Float distanceFieldScaling) {
+            /* XY is Y-flipped scale from the UI size to the 2x2 unit square,
+               the shader then translates by (-1, 1) on its own to put the
+               origin at center. Z and W is the distance field value delta
+               corresponding to, when multiplied with per-text-run scale, one
+               framebuffer pixel and one UI unit. */
+            setUniform(_projectionUniform, Vector4{2.0f/scaling.x(), -2.0f/scaling.y(), pixelScaling*distanceFieldScaling, distanceFieldScaling});
             return *this;
         }
 
@@ -96,7 +105,16 @@ class TextShaderGL: public GL::AbstractShaderProgram {
         Int _projectionUniform = 0;
 };
 
-TextShaderGL::TextShaderGL(const UnsignedInt styleCount) {
+#ifdef CORRADE_TARGET_CLANG
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunused-function"
+#endif
+CORRADE_ENUMSET_OPERATORS(TextShaderGL::Flags)
+#ifdef CORRADE_TARGET_CLANG
+#pragma clang diagnostic pop
+#endif
+
+TextShaderGL::TextShaderGL(const Flags flags, const UnsignedInt styleCount) {
     GL::Context& context = GL::Context::current();
     #ifndef MAGNUM_TARGET_GLES
     MAGNUM_ASSERT_GL_EXTENSION_SUPPORTED(GL::Extensions::ARB::explicit_attrib_location);
@@ -122,11 +140,14 @@ TextShaderGL::TextShaderGL(const UnsignedInt styleCount) {
 
     GL::Shader vert{version, GL::Shader::Type::Vertex};
     vert.addSource(Utility::format("#define STYLE_COUNT {}\n", styleCount))
+        .addSource(flags >= Flag::DistanceField ? "#define DISTANCE_FIELD\n"_s : ""_s)
         .addSource(rs.getString("compatibility.glsl"_s))
         .addSource(rs.getString("TextShader.vert"_s));
 
     GL::Shader frag{version, GL::Shader::Type::Fragment};
-    frag.addSource(rs.getString("compatibility.glsl"_s))
+    frag.addSource(Utility::format("#define STYLE_COUNT {}\n", styleCount))
+        .addSource(flags >= Flag::DistanceField ? "#define DISTANCE_FIELD\n"_s : ""_s)
+        .addSource(rs.getString("compatibility.glsl"_s))
         .addSource(rs.getString("TextShader.frag"_s));
 
     CORRADE_INTERNAL_ASSERT(vert.compile() && frag.compile());
@@ -250,14 +271,21 @@ TextEditingShaderGL::TextEditingShaderGL(const UnsignedInt styleCount) {
 }
 
 struct TextLayerGL::Shared::State: TextLayer::Shared::State {
+    /* Delegated to from the four variants below */
+    explicit State(Shared& self, Text::AbstractGlyphCache& glyphCache, const Configuration& configuration);
+
     explicit State(Shared& self, Text::GlyphCacheArrayGL& glyphCache, const Configuration& configuration);
+    explicit State(Shared& self, Text::DistanceFieldGlyphCacheArrayGL& glyphCache, const Configuration& configuration);
+
     explicit State(Shared& self, Text::GlyphCacheArrayGL&& glyphCache, const Configuration& configuration);
+    explicit State(Shared& self, Text::DistanceFieldGlyphCacheArrayGL&& glyphCache, const Configuration& configuration);
 
     /* Never used directly, only owns the instance passed to the
-       Shared(GlyphCacheGL&&) constructor if it got called instead of
-       Shared(GlyphCacheGL&). The actual used glyph cache reference is in the
+       Shared(*GlyphCacheGL&&) constructor if it got called instead of
+       Shared(*GlyphCacheGL&). The actual used glyph cache reference is in the
        base state struct. */
     Containers::Optional<Text::GlyphCacheArrayGL> glyphCacheStorage;
+    Containers::Optional<Text::DistanceFieldGlyphCacheArrayGL> distanceFieldGlyphCacheStorage;
     TextShaderGL shader;
     /* Used only if editingStyleCount is non-zero */
     TextEditingShaderGL editingShader{NoCreate};
@@ -265,15 +293,24 @@ struct TextLayerGL::Shared::State: TextLayer::Shared::State {
        layer has its own copies instead */
     GL::Buffer styleBuffer{NoCreate};
     GL::Buffer editingStyleBuffer{NoCreate};
+    /* If not zero, a distance field glyph cache is used and this describes a
+       distance field value delta that corresponds to one UI unit if a glyph is
+       rendered at exactly the size in UI units it has pixels in the cache.
+       E.g., if a distance field radius is 16 pixels, the distance between
+       distance field value 0 and 1 is 32 pixels, and this value is thus
+       1/32. */
+    Float distanceFieldScaling = 0.0f;
 };
 
-TextLayerGL::Shared::State::State(Shared& self, Text::GlyphCacheArrayGL& glyphCache, const Configuration& configuration):
+TextLayerGL::Shared::State::State(Shared& self, Text::AbstractGlyphCache& glyphCache, const Configuration& configuration):
     TextLayer::Shared::State{self, glyphCache, configuration},
-    /* If dynamic editing styles are enabled, there's two extra styles for each
-        dynamic style, one reserved for under-cursor text and one for selected
-        text. If there are no dynamic styles, the editing styles pick those
-        from the regular styleUniformCount range. */
-    shader{configuration.styleUniformCount() + configuration.dynamicStyleCount()*(configuration.hasEditingStyles() ? 3 : 1)}
+    shader{
+        configuration.flags() >= TextLayerSharedFlag::DistanceField ? TextShaderGL::Flag::DistanceField : TextShaderGL::Flags{},
+        /* If dynamic editing styles are enabled, there's two extra styles for
+           each dynamic style, one reserved for under-cursor text and one for
+           selected text. If there are no dynamic styles, the editing styles
+           pick those from the regular styleUniformCount range. */
+        configuration.styleUniformCount() + configuration.dynamicStyleCount()*(configuration.hasEditingStyles() ? 3 : 1)}
 {
     if(!dynamicStyleCount) {
         styleBuffer = GL::Buffer{GL::Buffer::TargetHint::Uniform, {nullptr, sizeof(TextLayerCommonStyleUniform) + sizeof(TextLayerStyleUniform)*styleUniformCount}};
@@ -285,6 +322,11 @@ TextLayerGL::Shared::State::State(Shared& self, Text::GlyphCacheArrayGL& glyphCa
         editingShader = TextEditingShaderGL{configuration.editingStyleUniformCount() + 2*configuration.dynamicStyleCount()};
 }
 
+TextLayerGL::Shared::State::State(Shared& self, Text::GlyphCacheArrayGL& glyphCache, const Configuration& configuration): State{self, static_cast<Text::AbstractGlyphCache&>(glyphCache), configuration} {
+    CORRADE_ASSERT(!(flags >= TextLayerSharedFlag::DistanceField),
+        "Ui::TextLayerGL::Shared:" << TextLayerSharedFlag::DistanceField << "cannot be used with a non-distance-field glyph cache", );
+}
+
 /* The base State struct contains an AbstractGlyphCache reference that cannot
    be rebound later, which means that here, in order to make it point to the
    yet-to-be-constructed instance, we have to do a nasty cast of the address of
@@ -292,13 +334,49 @@ TextLayerGL::Shared::State::State(Shared& self, Text::GlyphCacheArrayGL& glyphCa
    move-constructed. It assumes that the Optional contains the data at offset 0
    in the class, which holds right now, and likely will going forward, since it
    isn't some 3rd party container like std::optional. But still, nasty. */
-TextLayerGL::Shared::State::State(Shared& self, Text::GlyphCacheArrayGL&& glyphCache, const Configuration& configuration): State{self, *reinterpret_cast<Text::GlyphCacheArrayGL*>(&glyphCacheStorage), configuration} {
+TextLayerGL::Shared::State::State(Shared& self, Text::GlyphCacheArrayGL&& glyphCache, const Configuration& configuration): State{self, *reinterpret_cast<Text::AbstractGlyphCache*>(&glyphCacheStorage), configuration} {
     glyphCacheStorage = Utility::move(glyphCache);
+}
+
+TextLayerGL::Shared::State::State(Shared& self, Text::DistanceFieldGlyphCacheArrayGL& glyphCache, const Configuration& configuration): State{self,
+    static_cast<Text::AbstractGlyphCache&>(glyphCache),
+    /* Implicitly add the DistanceField flag, the delegated-to constructor then
+       uses it to correctly set up the shader and everything else */
+    Configuration{configuration}
+        .addFlags(TextLayerSharedFlag::DistanceField)
+} {
+    /* Make sure this is in sync with the overload below */
+    distanceFieldScaling = 0.5f/glyphCache.radius();
+}
+
+/* Same as the nasty reinterpret_cast code above, just with
+   DistanceFieldGlyphCacheArrayGL instead of GlyphCacheArrayGL which is stored
+   in the other Optional member. Cannot delegate to the
+   Text::DistanceFieldGlyphCacheArrayGL& overload above because that one
+   accesses the passed glyph cache instance, which isn't move-constructed yet,
+   and thus have to replicate all the flag-adding and scaling calculation logic
+   here. */
+/** @todo ehh, if one more "make sure this is in sync" thing gets added to both
+    of these, maybe reconsider this whole thing and do it differently */
+TextLayerGL::Shared::State::State(Shared& self, Text::DistanceFieldGlyphCacheArrayGL&& glyphCache, const Configuration& configuration): State{
+    self, *reinterpret_cast<Text::AbstractGlyphCache*>(&distanceFieldGlyphCacheStorage),
+    /* Implicitly add the DistanceField flag, the delegated-to constructor then
+       uses it to correctly set up the shader and everything else */
+    Configuration{configuration}
+        .addFlags(TextLayerSharedFlag::DistanceField)
+} {
+    /* Make sure this is in sync with the overload above */
+    distanceFieldScaling = 0.5f/glyphCache.radius();
+    distanceFieldGlyphCacheStorage = Utility::move(glyphCache);
 }
 
 TextLayerGL::Shared::Shared(Text::GlyphCacheArrayGL& glyphCache, const Configuration& configuration): TextLayer::Shared{Containers::pointer<State>(*this, glyphCache, configuration)} {}
 
 TextLayerGL::Shared::Shared(Text::GlyphCacheArrayGL&& glyphCache, const Configuration& configuration): TextLayer::Shared{Containers::pointer<State>(*this, Utility::move(glyphCache), configuration)} {}
+
+TextLayerGL::Shared::Shared(Text::DistanceFieldGlyphCacheArrayGL& glyphCache, const Configuration& configuration): TextLayer::Shared{Containers::pointer<State>(*this, glyphCache, configuration)} {}
+
+TextLayerGL::Shared::Shared(Text::DistanceFieldGlyphCacheArrayGL&& glyphCache, const Configuration& configuration): TextLayer::Shared{Containers::pointer<State>(*this, Utility::move(glyphCache), configuration)} {}
 
 TextLayerGL::Shared::Shared(NoCreateT) noexcept: TextLayer::Shared{NoCreate} {}
 
@@ -360,16 +438,25 @@ struct TextLayerGL::State: TextLayer::State {
     GL::Buffer editingStyleBuffer{NoCreate};
 };
 
-TextLayerGL::TextLayerGL(const LayerHandle handle, Shared& sharedState): TextLayer{handle, Containers::pointer<State>(static_cast<Shared::State&>(*sharedState._state))} {
+TextLayerGL::TextLayerGL(const LayerHandle handle, Shared& sharedState_): TextLayer{handle, Containers::pointer<State>(static_cast<Shared::State&>(*sharedState_._state))} {
     auto& state = static_cast<State&>(*_state);
-    state.mesh.addVertexBuffer(state.vertexBuffer, 0,
-        TextShaderGL::Position{},
-        TextShaderGL::TextureCoordinates{},
-        TextShaderGL::Color4{},
-        TextShaderGL::Style{});
+    auto& sharedState = static_cast<Shared::State&>(state.shared);
+    if(sharedState.flags >= TextLayerSharedFlag::DistanceField)
+        state.mesh.addVertexBuffer(state.vertexBuffer, 0,
+            TextShaderGL::Position{},
+            TextShaderGL::TextureCoordinates{},
+            TextShaderGL::Color4{},
+            TextShaderGL::Style{},
+            TextShaderGL::Scale{});
+    else
+        state.mesh.addVertexBuffer(state.vertexBuffer, 0,
+            TextShaderGL::Position{},
+            TextShaderGL::TextureCoordinates{},
+            TextShaderGL::Color4{},
+            TextShaderGL::Style{});
     state.mesh.setIndexBuffer(state.indexBuffer, 0, GL::MeshIndexType::UnsignedInt);
 
-    if(static_cast<Shared::State&>(state.shared).hasEditingStyles) {
+    if(sharedState.hasEditingStyles) {
         state.editingVertexBuffer = GL::Buffer{GL::Buffer::TargetHint::Array};
         state.editingIndexBuffer = GL::Buffer{GL::Buffer::TargetHint::ElementArray};
         state.editingMesh = GL::Mesh{};
@@ -390,7 +477,8 @@ void TextLayerGL::doSetSize(const Vector2& size, const Vector2i& framebufferSize
     auto& state = static_cast<State&>(*_state);
     auto& sharedState = static_cast<Shared::State&>(state.shared);
 
-    sharedState.shader.setProjection(size);
+    /** @todo Max or min? Should I even bother with non-square scaling? */
+    sharedState.shader.setProjection(size, (size/Vector2{framebufferSize}).max(), sharedState.distanceFieldScaling);
     if(sharedState.hasEditingStyles)
         /** @todo Max or min? Should I even bother with non-square scaling? */
         sharedState.editingShader.setProjection(size, (size/Vector2{framebufferSize}).max());

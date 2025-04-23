@@ -45,13 +45,23 @@ TextLayerCpp14Test::TextLayerCpp14Test() {
 using namespace Math::Literals;
 
 void TextLayerCpp14Test::styleUniformCommonSettersConstexpr() {
-    CORRADE_SKIP("No setters so far.");
+    constexpr TextLayerCommonStyleUniform a = TextLayerCommonStyleUniform{}
+        .setSmoothness(2.3f);
+    CORRADE_COMPARE(a.smoothness, 2.3f);
 }
 
 void TextLayerCpp14Test::styleUniformSettersConstexpr() {
     constexpr TextLayerStyleUniform a = TextLayerStyleUniform{}
-        .setColor(0xff663399_rgbaf);
+        .setColor(0xff663399_rgbaf)
+        .setOutlineColor(0xaabbccdd_rgbaf)
+        .setOutlineWidth(2.5f)
+        .setEdgeOffset(-4.5f)
+        .setSmoothness(10.5f);
     CORRADE_COMPARE(a.color, 0xff663399_rgbaf);
+    CORRADE_COMPARE(a.outlineColor, 0xaabbccdd_rgbaf);
+    CORRADE_COMPARE(a.outlineWidth, 2.5f);
+    CORRADE_COMPARE(a.edgeOffset, -4.5f);
+    CORRADE_COMPARE(a.smoothness, 10.5f);
 }
 
 }}}}

@@ -123,7 +123,11 @@ class MAGNUM_UI_EXPORT TextLayerGL::Shared: public TextLayer::Shared {
          * @brief Construct with a reference to a glyph cache instance
          *
          * The @p glyphCache is expected to be in scope for the whole shared
-         * instance lifetime. Use the @ref Shared(Text::GlyphCacheArrayGL&&, const Configuration&)
+         * instance lifetime. Expects that @ref Configuration::flags() do *not*
+         * contain @ref TextLayerSharedFlag::DistanceField, use the
+         * @ref Shared(Text::DistanceFieldGlyphCacheArrayGL&, const Configuration&)
+         * constructor in that case instead. Use the
+         * @ref Shared(Text::GlyphCacheArrayGL&&, const Configuration&)
          * constructor to make the shared state take over the glyph cache
          * instance.
          */
@@ -134,9 +138,36 @@ class MAGNUM_UI_EXPORT TextLayerGL::Shared: public TextLayer::Shared {
          *
          * Like @ref Shared(Text::GlyphCacheArrayGL&, const Configuration&),
          * but the shared state takes over the glyph cache ownership. You can
-         * access the instance using @ref glyphCache() later.
+         * access the instance using @ref glyphCache() later, although note
+         * that casting the returned @ref Text::AbstractGlyphCache reference to
+         * a correct type is user responsibility.
+         * @see @ref flags(), @ref TextLayerSharedFlag::DistanceField
          */
         explicit Shared(Text::GlyphCacheArrayGL&& glyphCache, const Configuration& configuration);
+
+        /**
+         * @brief Construct with a reference to a distance field glyph cache instance
+         *
+         * Implicitly enables @ref TextLayerSharedFlag::DistanceField, allowing
+         * use of additional style options. The @p glyphCache is expected to be in
+         * scope for the whole shared instance lifetime. Use the
+         * @ref Shared(Text::DistanceFieldGlyphCacheArrayGL&&, const Configuration&)
+         * constructor to make the shared state take over the glyph cache
+         * instance.
+         */
+        explicit Shared(Text::DistanceFieldGlyphCacheArrayGL& glyphCache, const Configuration& configuration);
+
+        /**
+         * @brief Construct with taking over ownership of a distance field glyph cache instance
+         *
+         * Like @ref Shared(Text::DistanceFieldGlyphCacheArrayGL&, const Configuration&),
+         * but the shared state takes over the glyph cache ownership. You can
+         * access the instance using @ref glyphCache() later, although note
+         * that casting the returned @ref Text::AbstractGlyphCache reference to
+         * a correct type is user responsibility.
+         * @see @ref flags(), @ref TextLayerSharedFlag::DistanceField
+         */
+        explicit Shared(Text::DistanceFieldGlyphCacheArrayGL&& glyphCache, const Configuration& configuration);
 
         /**
          * @brief Construct without creating the contents

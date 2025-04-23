@@ -105,7 +105,27 @@ Debug& operator<<(Debug& debug, const TextEdit value) {
     return debug << "(" << Debug::nospace << Debug::hex << UnsignedByte(value) << Debug::nospace << ")";
 }
 
-TextLayer::Shared::State::State(Shared& self, Text::AbstractGlyphCache& glyphCache, const Configuration& configuration): AbstractVisualLayer::Shared::State{self, configuration.styleCount(), configuration.dynamicStyleCount()}, hasEditingStyles{configuration.hasEditingStyles()}, styleUniformCount{configuration.styleUniformCount()}, editingStyleUniformCount{configuration.editingStyleUniformCount()}, glyphCache(glyphCache) {
+Debug& operator<<(Debug& debug, const TextLayerSharedFlag value) {
+    debug << "Ui::TextLayerSharedFlag" << Debug::nospace;
+
+    switch(value) {
+        /* LCOV_EXCL_START */
+        #define _c(value) case TextLayerSharedFlag::value: return debug << "::" #value;
+        _c(DistanceField)
+        #undef _c
+        /* LCOV_EXCL_STOP */
+    }
+
+    return debug << "(" << Debug::nospace << Debug::hex << UnsignedByte(value) << Debug::nospace << ")";
+}
+
+Debug& operator<<(Debug& debug, const TextLayerSharedFlags value) {
+    return Containers::enumSetDebugOutput(debug, value, "Ui::TextLayerSharedFlags{}", {
+        TextLayerSharedFlag::DistanceField
+    });
+}
+
+TextLayer::Shared::State::State(Shared& self, Text::AbstractGlyphCache& glyphCache, const Configuration& configuration): AbstractVisualLayer::Shared::State{self, configuration.styleCount(), configuration.dynamicStyleCount()}, hasEditingStyles{configuration.hasEditingStyles()}, flags{configuration.flags()}, styleUniformCount{configuration.styleUniformCount()}, editingStyleUniformCount{configuration.editingStyleUniformCount()}, glyphCache(glyphCache) {
     styleStorage = Containers::ArrayTuple{
         {NoInit, configuration.styleCount(), styles},
         {NoInit, configuration.dynamicStyleCount() ? configuration.styleUniformCount() : 0, styleUniforms},
@@ -140,6 +160,10 @@ UnsignedInt TextLayer::Shared::editingStyleCount() const {
 
 bool TextLayer::Shared::hasEditingStyles() const {
     return static_cast<const State&>(*_state).hasEditingStyles;
+}
+
+TextLayerSharedFlags TextLayer::Shared::flags() const {
+    return static_cast<const State&>(*_state).flags;
 }
 
 Text::AbstractGlyphCache& TextLayer::Shared::glyphCache() {
@@ -2179,10 +2203,24 @@ void TextLayer::doUpdate(const LayerStates states, const Containers::StridedArra
 
         const Containers::StridedArrayView1D<const Ui::NodeHandle> nodes = this->nodes();
 
-        /* Generate vertex data */
-        arrayResize(state.vertices, NoInit, totalGlyphCount*4);
+        /* Resize the vertex array to fit all data, make a view on the common
+           type prefix */
+        const std::size_t typeSize = sharedState.flags & TextLayerSharedFlag::DistanceField ?
+            sizeof(Implementation::TextLayerDistanceFieldVertex) :
+            sizeof(Implementation::TextLayerVertex);
+        arrayResize(state.vertices, NoInit, totalGlyphCount*4*typeSize);
+        const Containers::StridedArrayView1D<Implementation::TextLayerVertex> vertices{
+            state.vertices,
+            reinterpret_cast<Implementation::TextLayerVertex*>(state.vertices.data()),
+            state.vertices.size()/typeSize,
+            std::ptrdiff_t(typeSize)};
+
+        /* If any selection or cursor style is present, make room in the
+           editing vertex array as well */
         if(sharedState.hasEditingStyles)
             arrayResize(state.editingVertices, NoInit, state.textRuns.size()*2*4);
+
+        /* Generate vertex data */
         for(const UnsignedInt dataId: dataIds) {
             const UnsignedInt nodeId = nodeHandleId(nodes[dataId]);
             const Implementation::TextLayerData& data = state.data[dataId];
@@ -2199,7 +2237,7 @@ void TextLayer::doUpdate(const LayerStates states, const Containers::StridedArra
                 /** @todo ideally this would only be done if some text actually
                     changes, not on every visibility change */
                 glyphData = state.glyphData.sliceSize(glyphRun.glyphOffset, glyphRun.glyphCount);
-                vertexData = state.vertices.sliceSize(glyphRun.glyphOffset*4, glyphRun.glyphCount*4);
+                vertexData = vertices.sliceSize(glyphRun.glyphOffset*4, glyphRun.glyphCount*4);
                 Text::renderGlyphQuadsInto(
                     sharedState.glyphCache,
                     glyphRun.scale,
@@ -2383,6 +2421,27 @@ void TextLayer::doUpdate(const LayerStates states, const Containers::StridedArra
                         data.usedDirection,
                         nodeOpacities[nodeId]);
                 }
+            }
+        }
+
+        /* Fill in also extra per-run properties needed for distance field
+           rendering if enabled */
+        if(sharedState.flags >= TextLayerSharedFlag::DistanceField) {
+            /* Doing it like this instead of casting the typeless
+               state.vertices array to ensure it's not accidentally in some
+               entirely different type */
+            const Containers::ArrayView<Implementation::TextLayerDistanceFieldVertex> distanceFieldVertices = Containers::arrayCast<Implementation::TextLayerDistanceFieldVertex>(vertices).asContiguous();
+
+            for(const UnsignedInt dataId: dataIds) {
+                const Implementation::TextLayerData& data = state.data[dataId];
+                if(data.glyphRun == ~UnsignedInt{})
+                    continue;
+
+                /** @todo again ideally this would only be done if some text
+                    actually changes, not on every visibility change */
+                const Implementation::TextLayerGlyphRun& glyphRun = state.glyphRuns[data.glyphRun];
+                for(Implementation::TextLayerDistanceFieldVertex& i: distanceFieldVertices.sliceSize(glyphRun.glyphOffset*4, glyphRun.glyphCount*4))
+                    i.invertedRunScale = 1.0f/glyphRun.scale;
             }
         }
     }

@@ -414,6 +414,16 @@ if(MAGNUM_BUILD_GL_TESTS)
             TextLayerTestFiles/default.png
             TextLayerTestFiles/default-glyph.png
             TextLayerTestFiles/default-selection.png
+            TextLayerTestFiles/distancefield-colored.png
+            TextLayerTestFiles/distancefield-default.png
+            TextLayerTestFiles/distancefield-dilate.png
+            TextLayerTestFiles/distancefield-dilate-oob.png
+            TextLayerTestFiles/distancefield-dilate-outline.png
+            TextLayerTestFiles/distancefield-dilate-outline-cursor-selection-text.png
+            TextLayerTestFiles/distancefield-empty.png
+            TextLayerTestFiles/distancefield-erode.png
+            TextLayerTestFiles/distancefield-smooth.png
+            TextLayerTestFiles/distancefield-width-smoothness.png
             TextLayerTestFiles/draw-order.png
             TextLayerTestFiles/draw-order-editable.png)
     target_include_directories(UiTextLayerGLTest PRIVATE ${CMAKE_CURRENT_BINARY_DIR})

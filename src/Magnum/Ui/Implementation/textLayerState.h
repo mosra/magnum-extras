@@ -105,11 +105,15 @@ struct TextLayer::Shared::State: AbstractVisualLayer::Shared::State {
        dynamic styles with editing styles included */
     bool hasEditingStyles;
 
-    /* 3/7 bytes free, 1 byte free on a no-assert build */
+    TextLayerSharedFlags flags;
+
+    /* 2 bytes free, 0 bytes free on a no-assert build */
 
     /* Can't be inferred from {styleUniforms,editingStyleUniforms}.size() as
        those are non-empty only if dynamicStyleCount is non-zero */
     UnsignedInt styleUniformCount, editingStyleUniformCount;
+
+    /* 0/4 bytes free */
 
     /* Glyph cache used by all fonts. It's expected to know about each font
        that's added. */
@@ -236,6 +240,15 @@ struct TextLayerVertex {
     UnsignedInt styleUniform;
 };
 
+struct TextLayerDistanceFieldVertex {
+    /* Has to be a member and not a base class because then is_standard_layout
+       complains, making arrayCast() impossible. Sigh. */
+    TextLayerVertex vertex;
+    /* Scale from the TextLayerGlyphRun but inverted, so the shader knows how
+       the distance field value delta maps to actual UI / framebuffer pixels */
+    Float invertedRunScale;
+};
+
 struct TextLayerEditingVertex {
     Vector2 position;
     Vector2 centerDistance;
@@ -325,9 +338,11 @@ struct TextLayer::State: AbstractVisualLayer::State {
     Containers::Array<Implementation::TextLayerData> data;
 
     /* Vertex data, ultimately built from `glyphData` combined with color and
-       style index from `data`; vertex data for cursor and selection
-       rectangles */
-    Containers::Array<Implementation::TextLayerVertex> vertices;
+       style index from `data`. Is either Implementation::TextLayerVertex or
+       TextLayerDistanceFieldVertex based on whether Flag::DistanceField is
+       enabled */
+    Containers::Array<char> vertices;
+    /* Vertex data for cursor and selection rectangles */
     Containers::Array<Implementation::TextLayerEditingVertex> editingVertices;
 
     /* Index data, used to draw from `vertices` and `editingVertices`. In draw
