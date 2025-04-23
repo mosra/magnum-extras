@@ -30,7 +30,7 @@ layout(binding = 0)
 uniform lowp sampler2DArray glyphTextureData;
 
 NOPERSPECTIVE in mediump vec3 interpolatedTextureCoordinates;
-NOPERSPECTIVE in lowp vec4 interpolatedColor;
+flat in lowp vec4 interpolatedColor;
 
 out lowp vec4 fragmentColor;
 
