@@ -734,6 +734,9 @@ void BaseLayer::doUpdate(const LayerStates states, const Containers::StridedArra
 
         /* Fill in also quad texture coordinates if enabled */
         if(sharedState.flags & BaseLayerSharedFlag::Textured) {
+            /* Doing it like this instead of casting the typeless
+               state.vertices array to ensure it's not accidentally in some
+               entirely different type */
             const Containers::ArrayView<Implementation::BaseLayerTexturedVertex> texturedVertices = Containers::arrayCast<Implementation::BaseLayerTexturedVertex>(vertices).asContiguous();
 
             for(const UnsignedInt dataId: dataIds) {

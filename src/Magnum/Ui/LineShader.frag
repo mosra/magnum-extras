@@ -74,7 +74,8 @@ void main() {
     mediump const float width = styles[interpolatedStyle].style_width;
     /* The common smoothness is in pixels, treated the same way as in BaseLayer
        and TextLayer. The per-style smoothness is in UI units for glows and
-       such, and thus doesn't need to be scaled anymore. */
+       such, and thus doesn't need to be scaled anymore. Pick one that's larger
+       when both are converted to the UI units. */
     mediump const float smoothness = max(commonStyle_smoothness*projection.z, styles[interpolatedStyle].style_smoothness);
 
     mediump const float factor = lineBlendFactor(
