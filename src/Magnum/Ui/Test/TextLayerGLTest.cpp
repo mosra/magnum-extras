@@ -917,7 +917,7 @@ TextLayerGLTest::TextLayerGLTest() {
        again and again. They only check that the font was opened afterwards. */
     if((_font = _fontManager.loadAndInstantiate("StbTrueTypeFont")) &&
        _font->openFile(Utility::Path::join(UI_DIR, "SourceSans3-Regular.otf"), 32.0f)) {
-        _font->fillGlyphCache(_fontGlyphCache, "Magi");
+        CORRADE_INTERNAL_ASSERT(_font->fillGlyphCache(_fontGlyphCache, "Magi"));
         /* The cache should be small enough to have the glyphs spread over
            multiple layers, to verify the three-component texture coordinates
            work properly in the shader */
