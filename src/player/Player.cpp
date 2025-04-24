@@ -249,11 +249,8 @@ Overlay::Overlay(Platform::ScreenedApplication& application):
         ui.baseLayer().create(ui.baseLayer().shared().styleCount() + 1, dialog);
         Ui::DataHandle hint = ui.textLayer().create(Ui::Implementation::TextStyle::LabelInfoText, "Drag&drop a file and everything it references here to play it.", {}, dialog);
         ui.textLayer().setPadding(hint, {0.0f, -30.0f, 0.0f, 30.0f});
-        /** @todo clean this up once multi-line text is possible */
-        Ui::DataHandle disclaimer1 = ui.textLayer().create(Ui::Implementation::TextStyle::LabelDimText, "All data are processed and viewed locally in your", {}, dialog);
-        ui.textLayer().setPadding(disclaimer1, {0.0f, 10.0f, 0.0f, -10.0f});
-        Ui::DataHandle disclaimer2 = ui.textLayer().create(Ui::Implementation::TextStyle::LabelDimText, "web browser. Nothing is uploaded to the server.", {}, dialog);
-        ui.textLayer().setPadding(disclaimer2, {0.0f, 10.0f + ui.textLayer().size(disclaimer1).y(), 0.0f, -10.0f - ui.textLayer().size(disclaimer1).y()});
+        Ui::DataHandle disclaimer = ui.textLayer().create(Ui::Implementation::TextStyle::LabelDimText, "All data are processed and viewed locally in your\nweb browser. Nothing is uploaded to the server.", {}, dialog);
+        ui.textLayer().setPadding(disclaimer, {0.0f, 20.0f, 0.0f, -20.0f});
     }
     /* Error dialog. Hidden initially, shown if there's a loading error. */
     error = Ui::snap(ui, Ui::Snap::Fill|Ui::Snap::NoPad, {});
@@ -264,11 +261,7 @@ Overlay::Overlay(Platform::ScreenedApplication& application):
         ui.baseLayer().create(ui.baseLayer().shared().styleCount() + 2, dialog);
         errorMessage = Ui::Label{
             Ui::snap(ui, Ui::Snap::Top|Ui::Snap::Inside, dialog, {0.0f, 15.0f}, LabelSize), "No recognizable file dropped.", Ui::LabelStyle::Danger};
-        /** @todo clean this up once multi-line text is possible */
-        Ui::DataHandle details1 = ui.textLayer().create(Ui::Implementation::TextStyle::LabelDimText, "Try with another file or check the browser", {}, dialog);
-        ui.textLayer().setPadding(details1, {0.0f, -10.0f, 0.0f, 10.0f});
-        Ui::DataHandle details2 = ui.textLayer().create(Ui::Implementation::TextStyle::LabelDimText, "console for details. Bug reports welcome.", {}, dialog);
-        ui.textLayer().setPadding(details2, {0.0f, -10.0f + ui.textLayer().size(details1).y(), 0.0f, 10.0f - ui.textLayer().size(details1).y()});
+        ui.textLayer().create(Ui::Implementation::TextStyle::LabelDimText, "Try with another file or check the browser\nconsole for details. Bug reports welcome.", {}, dialog);
 
         Ui::NodeHandle close = Ui::button(
             Ui::snap(ui, Ui::Snap::Bottom|Ui::Snap::Inside, dialog, ButtonSize), "Oh well", Ui::ButtonStyle::Danger);
