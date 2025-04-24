@@ -118,45 +118,52 @@ set_property(TARGET
     UiTextLayerTest
     APPEND PROPERTY COMPILE_DEFINITIONS "CORRADE_GRACEFUL_ASSERT")
 
-find_package(Magnum OPTIONAL_COMPONENTS
-    Sdl2Application
-    GlfwApplication
-    EmscriptenApplication)
-if(Magnum_Sdl2Application_FOUND)
-    add_executable(UiSdl2ApplicationTest Sdl2ApplicationTest.cpp)
-    target_link_libraries(UiSdl2ApplicationTest PRIVATE
-        MagnumUi
-        Magnum::Sdl2Application)
-    if(CORRADE_TARGET_EMSCRIPTEN)
-        add_custom_command(TARGET UiSdl2ApplicationTest POST_BUILD
+if(NOT CORRADE_TARGET_ANDROID)
+    find_package(Magnum OPTIONAL_COMPONENTS Sdl2Application)
+    if(Magnum_Sdl2Application_FOUND)
+        add_executable(UiSdl2ApplicationTest Sdl2ApplicationTest.cpp)
+        target_link_libraries(UiSdl2ApplicationTest PRIVATE
+            MagnumUi
+            Magnum::Sdl2Application)
+        if(CORRADE_TARGET_EMSCRIPTEN)
+            add_custom_command(TARGET UiSdl2ApplicationTest POST_BUILD
+                COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                    ${MAGNUM_WEBAPPLICATION_CSS}
+                    ${MAGNUM_EMSCRIPTENAPPLICATION_JS}
+                    $<TARGET_FILE_DIR:UiSdl2ApplicationTest>
+                COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                    "${CMAKE_CURRENT_SOURCE_DIR}/Sdl2ApplicationTest.html"
+                    "$<TARGET_FILE_DIR:UiSdl2ApplicationTest>/UiSdl2ApplicationTest.html")
+        endif()
+    endif()
+endif()
+
+if(NOT CORRADE_TARGET_ANDROID AND NOT CORRADE_TARGET_IOS AND NOT CORRADE_TARGET_EMSCRIPTEN)
+    find_package(Magnum OPTIONAL_COMPONENTS GlfwApplication)
+    if(Magnum_GlfwApplication_FOUND)
+        add_executable(UiGlfwApplicationTest GlfwApplicationTest.cpp)
+        target_link_libraries(UiGlfwApplicationTest PRIVATE
+            MagnumUi
+            Magnum::GlfwApplication)
+    endif()
+endif()
+
+if(CORRADE_TARGET_EMSCRIPTEN)
+    find_package(Magnum OPTIONAL_COMPONENTS EmscriptenApplication)
+    if(Magnum_EmscriptenApplication_FOUND)
+        add_executable(UiEmscriptenApplicationTest EmscriptenApplicationTest.cpp)
+        target_link_libraries(UiEmscriptenApplicationTest PRIVATE
+            MagnumUi
+            Magnum::EmscriptenApplication)
+        add_custom_command(TARGET UiEmscriptenApplicationTest POST_BUILD
             COMMAND ${CMAKE_COMMAND} -E copy_if_different
                 ${MAGNUM_WEBAPPLICATION_CSS}
                 ${MAGNUM_EMSCRIPTENAPPLICATION_JS}
-                $<TARGET_FILE_DIR:UiSdl2ApplicationTest>
+                $<TARGET_FILE_DIR:UiEmscriptenApplicationTest>
             COMMAND ${CMAKE_COMMAND} -E copy_if_different
-                "${CMAKE_CURRENT_SOURCE_DIR}/Sdl2ApplicationTest.html"
-                "$<TARGET_FILE_DIR:UiSdl2ApplicationTest>/UiSdl2ApplicationTest.html")
+                "${CMAKE_CURRENT_SOURCE_DIR}/EmscriptenApplicationTest.html"
+                "$<TARGET_FILE_DIR:UiEmscriptenApplicationTest>/UiEmscriptenApplicationTest.html")
     endif()
-endif()
-if(Magnum_GlfwApplication_FOUND)
-    add_executable(UiGlfwApplicationTest GlfwApplicationTest.cpp)
-    target_link_libraries(UiGlfwApplicationTest PRIVATE
-        MagnumUi
-        Magnum::GlfwApplication)
-endif()
-if(Magnum_EmscriptenApplication_FOUND)
-    add_executable(UiEmscriptenApplicationTest EmscriptenApplicationTest.cpp)
-    target_link_libraries(UiEmscriptenApplicationTest PRIVATE
-        MagnumUi
-        Magnum::EmscriptenApplication)
-    add_custom_command(TARGET UiEmscriptenApplicationTest POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different
-            ${MAGNUM_WEBAPPLICATION_CSS}
-            ${MAGNUM_EMSCRIPTENAPPLICATION_JS}
-            $<TARGET_FILE_DIR:UiEmscriptenApplicationTest>
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different
-            "${CMAKE_CURRENT_SOURCE_DIR}/EmscriptenApplicationTest.html"
-            "$<TARGET_FILE_DIR:UiEmscriptenApplicationTest>/UiEmscriptenApplicationTest.html")
 endif()
 
 # Build these only if there's no explicit -std= passed in the flags
