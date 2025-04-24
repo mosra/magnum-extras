@@ -37,7 +37,7 @@
 #include <Magnum/Text/AbstractFont.h>
 #include <Magnum/Text/AbstractShaper.h>
 #include <Magnum/Text/Alignment.h>
-#include <Magnum/Text/GlyphCacheGL.h>
+#include <Magnum/Text/DistanceFieldGlyphCacheGL.h>
 
 #include "Magnum/Ui/AbstractUserInterface.h"
 #include "Magnum/Ui/TextLayerGL.h"
@@ -62,14 +62,16 @@ using namespace Math::Literals;
 
 const struct {
     const char* name;
+    bool distanceField;
     UnsignedInt dynamicStyleCount;
     bool drawCursor;
     const char* text;
 } FragmentData[]{
-    {"glyph quad", 0, false, "a"},
-    {"glyph quad, dynamic styles", 1, false, "a"},
-    {"cursor quad", 0, true, ""},
-    {"cursor quad, dynamic styles", 1, true, ""},
+    {"glyph quad", false, 0, false, "a"},
+    {"glyph quad, dynamic styles", false, 1, false, "a"},
+    {"glyph quad, distance field", true, 0, false, "a"},
+    {"cursor quad", false, 0, true, ""},
+    {"cursor quad, dynamic styles", false, 1, true, ""},
 };
 
 TextLayerGLBenchmark::TextLayerGLBenchmark() {
@@ -153,23 +155,43 @@ void TextLayerGLBenchmark::fragment() {
     } font;
     font.openFile({}, 32.0f);
 
-    /* If not drawing the cursor, add a single all-white glyph spanning the
-       whole cache. Default padding is 1, reset it back to 0 to make this
-       work. */
-    Text::GlyphCacheArrayGL cache{PixelFormat::R8Unorm, {32, 32, 1}, {}};
-    UnsignedInt fontId = cache.addFont(font.glyphCount(), &font);
-    if(!data.drawCursor) {
-        cache.addGlyph(fontId, 0, {-16, -16}, {{}, {32, 32}});
-        Utility::copy(
-            Containers::StridedArrayView2D<const char>{"\xff", {32, 32}, {0, 0}},
-            cache.image().pixels<char>()[0]);
-        cache.flushImage({{}, {32, 32}});
-    }
+    Image2D white{PixelFormat::R8Unorm, {32, 32}, Containers::Array<char>{DirectInit, 32*32, '\xff'}};
 
-    TextLayerGL::Shared shared{cache, TextLayer::Shared::Configuration{1}
-        .setEditingStyleCount(1)
-        .setDynamicStyleCount(data.dynamicStyleCount)
-    };
+    TextLayerGL::Shared shared{NoCreate};
+    if(!data.distanceField) {
+        shared = TextLayerGL::Shared{
+            Text::GlyphCacheArrayGL{PixelFormat::R8Unorm, {32, 32, 1}, {}},
+            TextLayer::Shared::Configuration{1}
+                .setEditingStyleCount(1)
+                .setDynamicStyleCount(data.dynamicStyleCount)};
+
+        /* If not drawing the cursor, add a single all-white glyph spanning the
+           whole cache. Default padding is 1, reset it back to 0 to make this
+           work. */
+        UnsignedInt fontId = shared.glyphCache().addFont(font.glyphCount(), &font);
+        if(!data.drawCursor)
+            shared.glyphCache().addGlyph(fontId, 0, {-16, -16}, {{}, {32, 32}});
+
+        Utility::copy(
+            white.pixels<UnsignedByte>(),
+            shared.glyphCache().image().pixels<UnsignedByte>()[0]);
+        shared.glyphCache().flushImage({{}, {32, 32}});
+
+    } else {
+        shared = TextLayerGL::Shared{
+            Text::DistanceFieldGlyphCacheArrayGL{{64, 64, 1}, {32, 32}, 2},
+            TextLayer::Shared::Configuration{1}
+                .setEditingStyleCount(1)
+                .setDynamicStyleCount(data.dynamicStyleCount)};
+
+        /* Here it needs to exclude padding. Assuming we don't test cursor
+           drawing with distance field enabled because that makes no sense as
+           no glyphs are drawn in that case. */
+        CORRADE_INTERNAL_ASSERT(!data.drawCursor);
+        UnsignedInt fontId = shared.glyphCache().addFont(font.glyphCount(), &font);
+        shared.glyphCache().addGlyph(fontId, 0, {-30, -30}, {{2, 2}, {60, 60}});
+        shared.glyphCache().setProcessedImage({}, white);
+    }
 
     FontHandle fontHandle = shared.addFont(font, 2048.0f);
 
