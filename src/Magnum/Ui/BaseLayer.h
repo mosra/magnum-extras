@@ -553,12 +553,14 @@ common setting for all styles.
 
 @image html ui-baselayer-style-outline.png width=256px
 
-@ref BaseLayerStyleUniform::setOutlineWidth() sets width of the outline.
-Similarly to corner radius, the width can be different for each edge, such as
-for the switch-like shape above. When outline is combined with rounded corners,
-@ref BaseLayerStyleUniform::setInnerOutlineCornerRadius() specifies the inner
-corner radius. In many cases it'll be set to outer radius with outline width
-subtracted, but different values can be used to achieve various effects.
+@ref BaseLayerStyleUniform::setOutlineWidth() and
+@relativeref{BaseLayerStyleUniform,setOutlineColor()} set properties of the
+outline. Similarly to corner radius, the width can be different for each edge,
+such as for the switch-like shape above. When outline is combined with rounded
+corners, @ref BaseLayerStyleUniform::setInnerOutlineCornerRadius() specifies
+the inner corner radius. In many cases it'll be set to outer radius with
+outline width subtracted, but different values can be used to achieve various
+effects.
 
 @snippet Ui.cpp BaseLayer-style-outline
 
@@ -571,6 +573,8 @@ outline fully defined except for its width, which is then supplied dynamically
 based on the actual percentage it should visualize.
 
 @snippet Ui.cpp BaseLayer-style-outline-data-width
+
+Unlike base color, the outline color isn't affected by @ref setColor().
 
 @subsection Ui-BaseLayer-style-padding Padding inside the node
 
