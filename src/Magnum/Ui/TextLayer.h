@@ -1259,7 +1259,7 @@ visual layers used in given widget, in addition to the basic inactive, pressed
 and disabled transitions shown in the
 @ref Ui-BaseLayer-style-transitions "BaseLayer documentation for style transitions".
 
-@subsubsection Ui-TextLayer-editing-virtual-keyboards Implementing virtual keyboards
+@subsection Ui-TextLayer-editing-virtual-keyboards Implementing virtual keyboards
 
 Besides key and text input events coming from the OS, it's possible to
 synthesize them to implement a virtual keyboard, for example by hooking to
