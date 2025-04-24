@@ -341,8 +341,11 @@ TextLayerGL::Shared::State::State(Shared& self, Text::GlyphCacheArrayGL&& glyphC
 TextLayerGL::Shared::State::State(Shared& self, Text::DistanceFieldGlyphCacheArrayGL& glyphCache, const Configuration& configuration): State{self,
     static_cast<Text::AbstractGlyphCache&>(glyphCache),
     /* Implicitly add the DistanceField flag, the delegated-to constructor then
-       uses it to correctly set up the shader and everything else */
-    Configuration{configuration}
+       uses it to correctly set up the shader and everything else. MSVC 2015
+       and 2017 interpret Configuration{} as "cast configuration to a const&"
+       or some such, have to use Configuration() to make an actual mutable
+       copy. */
+    Configuration(configuration)
         .addFlags(TextLayerSharedFlag::DistanceField)
 } {
     /* Make sure this is in sync with the overload below */
@@ -361,8 +364,11 @@ TextLayerGL::Shared::State::State(Shared& self, Text::DistanceFieldGlyphCacheArr
 TextLayerGL::Shared::State::State(Shared& self, Text::DistanceFieldGlyphCacheArrayGL&& glyphCache, const Configuration& configuration): State{
     self, *reinterpret_cast<Text::AbstractGlyphCache*>(&distanceFieldGlyphCacheStorage),
     /* Implicitly add the DistanceField flag, the delegated-to constructor then
-       uses it to correctly set up the shader and everything else */
-    Configuration{configuration}
+       uses it to correctly set up the shader and everything else. MSVC 2015
+       and 2017 interpret Configuration{} as "cast configuration to a const&"
+       or some such, have to use Configuration() to make an actual mutable
+       copy. */
+    Configuration(configuration)
         .addFlags(TextLayerSharedFlag::DistanceField)
 } {
     /* Make sure this is in sync with the overload above */
