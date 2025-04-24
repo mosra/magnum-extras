@@ -256,7 +256,8 @@ Overlay::Overlay(Platform::ScreenedApplication& application):
         ui.textLayer().setPadding(disclaimer2, {0.0f, 10.0f + ui.textLayer().size(disclaimer1).y(), 0.0f, -10.0f - ui.textLayer().size(disclaimer1).y()});
     }
     /* Error dialog. Hidden initially, shown if there's a loading error. */
-    error = Ui::snap(ui, Ui::Snap::Fill|Ui::Snap::NoPad, {}, Ui::NodeFlag::Hidden);
+    error = Ui::snap(ui, Ui::Snap::Fill|Ui::Snap::NoPad, {});
+    ui.clearNodeOrder(error);
     {
         ui.baseLayer().create(ui.baseLayer().shared().styleCount() + 0, error);
         Ui::NodeHandle dialog = Ui::snap(ui, {}, error, {440, 200});
