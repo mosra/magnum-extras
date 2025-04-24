@@ -45,7 +45,7 @@
 #include <Magnum/Text/AbstractFont.h>
 #include <Magnum/Text/Alignment.h>
 #include <Magnum/Text/Feature.h>
-#include <Magnum/Text/GlyphCacheGL.h>
+#include <Magnum/Text/DistanceFieldGlyphCacheGL.h>
 #include <Magnum/Trade/AbstractImageConverter.h>
 
 #include "Magnum/Ui/AbstractUserInterface.h"
@@ -97,7 +97,7 @@ int UiTextLayer::exec() {
     if(!converter)
         return 1;
 
-    /* Font & glyph cache used by everything */
+    /* Non-distance-field font & glyph cache */
     PluginManager::Manager<Text::AbstractFont> fontManager;
     Containers::Pointer<Text::AbstractFont> font = fontManager.loadAndInstantiate("HarfBuzzFont");
     if(!font || !font->openFile(Utility::Path::join(Utility::Path::path(__FILE__), "../../src/Magnum/Ui/SourceSans3-Regular.otf"), 2*24.0f))
@@ -342,6 +342,82 @@ int UiTextLayer::exec() {
         ui.draw();
         ui.removeNode(root);
         converter->convertToFile(unpremultiply(renderer.compositingFramebuffer().read({{0, 64}, {256, 128}}, {PixelFormat::RGBA8Unorm})), "ui-textlayer-editing-rounded.png");
+    }
+
+    /* Distance field glyph cache and font */
+    Containers::Pointer<Text::AbstractFont> fontDistanceField =  fontManager.loadAndInstantiate("HarfBuzzFont");
+    if(!fontDistanceField || !fontDistanceField->openFile(Utility::Path::join(Utility::Path::path(__FILE__), "../../src/Magnum/Ui/SourceSans3-Regular.otf"), 8*16.0f))
+        return 1;
+    Text::DistanceFieldGlyphCacheArrayGL glyphCacheDistanceField{{1024, 1024, 1}, {256, 256}, 20};
+    fontDistanceField->fillGlyphCache(glyphCacheDistanceField,
+        "abcdefghijklmnopqrstuvwxyz"
+        "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+        "1234567890! .#:'?");
+
+    /* Images for the distance field style docs */
+    Ui::TextLayerGL::Shared layerSharedDistanceField{glyphCacheDistanceField,
+        Ui::TextLayerGL::Shared::Configuration{5}
+    };
+
+    Ui::FontHandle fontHandleDistanceField = layerSharedDistanceField.addFont(*fontDistanceField, 12.0f);
+    Ui::FontHandle fontSmallHandleDistanceField = layerSharedDistanceField.addFont(*fontDistanceField, 8.0f);
+    Ui::FontHandle fontLargeHandleDistanceField = layerSharedDistanceField.addFont(*fontDistanceField, 16.0f);
+
+    layerSharedDistanceField.setStyle(
+        Ui::TextLayerCommonStyleUniform{}
+            .setSmoothness(1.0f),
+        {Ui::TextLayerStyleUniform{}    /* 0 */
+            .setColor(0x2f83cc_rgbf),
+         Ui::TextLayerStyleUniform{}    /* 1 */
+            .setColor(0xa5c9ea_rgbf),
+         Ui::TextLayerStyleUniform{}    /* 2 */
+            .setColor(0xdcdcdc_rgbf)
+            .setSmoothness(4.0f),
+         Ui::TextLayerStyleUniform{}    /* 3 */
+            .setColor(0xdcdcdc_rgbf)
+            .setOutlineColor(0x2f83cc_rgbf)
+            .setOutlineWidth(1.25f)
+            .setEdgeOffset(0.625f),
+         Ui::TextLayerStyleUniform{}    /* 4 */
+            .setColor(0x2f83cc_rgbf)
+            .setEdgeOffset(0.75f)},
+        {fontSmallHandleDistanceField,
+         fontLargeHandleDistanceField,
+         fontHandleDistanceField,
+         fontHandleDistanceField,
+         fontHandleDistanceField},
+        {Text::Alignment::MiddleCenter,
+         Text::Alignment::MiddleCenter,
+         Text::Alignment::MiddleCenter,
+         Text::Alignment::MiddleCenter,
+         Text::Alignment::MiddleCenter},
+        {}, {}, {}, {}, {}, {});
+    Ui::TextLayer& layerDistanceField = ui.setLayerInstance(Containers::pointer<Ui::TextLayerGL>(ui.createLayer(), layerSharedDistanceField));
+
+    {
+        renderer.compositingFramebuffer().clearColor(0, 0x00000000_rgbaf);
+
+        Ui::NodeHandle root = ui.createNode({}, {96, 20});
+        Ui::NodeHandle small = ui.createNode(root, {}, {28, 20});
+        Ui::NodeHandle big = ui.createNode(root, {28, 0}, {20, 20});
+        Ui::NodeHandle smooth = ui.createNode(root, {48, 0}, {48, 20});
+        layerDistanceField.create(0, "small", {}, small);
+        layerDistanceField.create(1, "big", {}, big);
+        layerDistanceField.create(2, "smooth", {}, smooth);
+        ui.draw();
+        ui.removeNode(root);
+        converter->convertToFile(unpremultiply(renderer.compositingFramebuffer().read({{0, 48}, {384, 128}}, {PixelFormat::RGBA8Unorm})), "ui-textlayer-style-smoothness.png");
+    } {
+        renderer.compositingFramebuffer().clearColor(0, 0x00000000_rgbaf);
+
+        Ui::NodeHandle root = ui.createNode({}, {96, 16});
+        Ui::NodeHandle edgy = ui.createNode(root, {}, {48, 16});
+        Ui::NodeHandle bulky = ui.createNode(root, {48, 0}, {48, 16});
+        layerDistanceField.create(3, "edgy.", {}, edgy);
+        layerDistanceField.create(4, "bulky!?", {}, bulky);
+        ui.draw();
+        ui.removeNode(root);
+        converter->convertToFile(unpremultiply(renderer.compositingFramebuffer().read({{0, 64}, {384, 128}}, {PixelFormat::RGBA8Unorm})), "ui-textlayer-style-offset-outline.png");
     }
 
     return 0;

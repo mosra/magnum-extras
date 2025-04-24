@@ -1026,6 +1026,67 @@ textLayerShared.setStyle(DOXYGEN_ELLIPSIS(Ui::TextLayerCommonStyleUniform{}), {
 }
 
 {
+/* [TextLayer-distancefield-setup-fonts] */
+Containers::Pointer<Text::AbstractFont> font =
+    fontManager.loadAndInstantiate("TrueTypeFont");
+font->openFile("font.ttf", 64.0f);
+font->fillGlyphCache(glyphCache, "abcdefghijklmnopqrstuvwxyz"
+                                 "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+                                 "0123456789?!:;,. ");
+
+Ui::FontHandle font8Handle = textLayerShared.addFont(*font, 8.0f);
+Ui::FontHandle font16Handle = textLayerShared.addFont(*font, 16.0f);
+Ui::FontHandle font12Handle = textLayerShared.addFont(*font, 12.0f);
+/* [TextLayer-distancefield-setup-fonts] */
+
+/* [TextLayer-distancefield-smoothness] */
+textLayerShared.setStyle(
+    Ui::TextLayerCommonStyleUniform{}
+        .setSmoothness(1.0f),
+    {Ui::TextLayerStyleUniform{}    /* 0 */
+        .setColor(0x2f83cc_rgbf),
+     Ui::TextLayerStyleUniform{}    /* 1 */
+        .setColor(0xa5c9ea_rgbf),
+     Ui::TextLayerStyleUniform{}    /* 2 */
+        .setColor(0xdcdcdc_rgbf)
+        .setSmoothness(4.0f)},
+    {font8Handle,                   /* Font for style 0 */
+     font16Handle,                  /* Font for style 1 */
+     font12Handle},                 /* Font for style 2 */
+    {DOXYGEN_ELLIPSIS(Text::Alignment{})}, {}, {}, {}, {}, {}, {});
+
+DOXYGEN_ELLIPSIS()
+
+Ui::NodeHandle small = DOXYGEN_ELLIPSIS({});
+Ui::NodeHandle big = DOXYGEN_ELLIPSIS({});
+Ui::NodeHandle smooth = DOXYGEN_ELLIPSIS({});
+textLayer.create(0, "small", {}, small);
+textLayer.create(1, "big", {}, big);
+textLayer.create(2, "smooth", {}, smooth);
+/* [TextLayer-distancefield-smoothness] */
+
+/* [TextLayer-distancefield-offset-outline] */
+textLayerShared.setStyle(DOXYGEN_ELLIPSIS(Ui::TextLayerCommonStyleUniform{}), {
+    Ui::TextLayerStyleUniform{}    /* 0 */
+        .setColor(0xdcdcdc_rgbf)
+        .setOutlineColor(0x2f83cc_rgbf)
+        .setOutlineWidth(1.25f)
+        .setEdgeOffset(0.625f),
+    Ui::TextLayerStyleUniform{}    /* 1 */
+        .setColor(0x2f83cc_rgbf)
+        .setEdgeOffset(0.75f)
+}, {DOXYGEN_ELLIPSIS(Ui::FontHandle{})}, {DOXYGEN_ELLIPSIS(Text::Alignment{})}, {}, {}, {}, {}, {}, {});
+
+DOXYGEN_ELLIPSIS()
+
+Ui::NodeHandle edgy = DOXYGEN_ELLIPSIS({});
+Ui::NodeHandle bulky = DOXYGEN_ELLIPSIS({});
+textLayer.create(0, "edgy.", {}, edgy);
+textLayer.create(1, "bulky?!", {}, bulky);
+/* [TextLayer-distancefield-offset-outline] */
+}
+
+{
 Ui::NodeHandle node{};
 Containers::Pointer<Text::AbstractFont> font =
     fontManager.loadAndInstantiate("TrueTypeFont");

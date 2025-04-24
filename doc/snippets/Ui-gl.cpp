@@ -30,7 +30,7 @@
 #include <Magnum/GL/Renderer.h>
 #include <Magnum/GL/TextureArray.h>
 #include <Magnum/Text/AbstractFont.h>
-#include <Magnum/Text/GlyphCacheGL.h>
+#include <Magnum/Text/DistanceFieldGlyphCacheGL.h>
 #include <Magnum/Trade/AbstractImporter.h>
 
 #include "Magnum/Ui/BaseLayerGL.h"
@@ -297,7 +297,7 @@ static_cast<void>(lineLayerSquare);
 
 {
 /* [TextLayer-setup-glyph-cache] */
-Text::GlyphCacheArrayGL glyphCache{PixelFormat::R8Unorm, {512, 512, 4}};
+Text::GlyphCacheArrayGL glyphCache{PixelFormat::R8Unorm, {256, 256, 4}};
 /* [TextLayer-setup-glyph-cache] */
 
 /* [TextLayer-setup-shared] */
@@ -322,6 +322,16 @@ Ui::TextLayerGL::Shared textLayerShared{glyphCache, Ui::TextLayer::Shared::Confi
 ui.setTextLayerInstance(
     Containers::pointer<Ui::TextLayerGL>(ui.createLayer(), textLayerShared));
 /* [TextLayer-setup-implicit] */
+}
+
+{
+/* [TextLayer-distancefield-setup] */
+Text::DistanceFieldGlyphCacheArrayGL glyphCache{{1024, 1024, 4}, {256, 256}, 20};
+
+Ui::TextLayerGL::Shared textLayerShared{glyphCache,
+    Ui::TextLayer::Shared::Configuration{3}
+};
+/* [TextLayer-distancefield-setup] */
 }
 
 {

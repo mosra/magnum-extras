@@ -547,7 +547,9 @@ it's assumed that the styles will all want to use the same value.
 
 Finally, @ref BaseLayerCommonStyleUniform::setSmoothness() supports different
 inner and outer smoothness to achieve certain kind of effects, but again it's a
-common setting for all styles.
+common setting for all styles. Similar options for edge smoothness tuning are
+in the @ref Ui-LineLayer-style-smoothness "LineLayer" and
+@ref Ui-TextLayer-distancefield-smoothness "distance-field-enabled TextLayer".
 
 @subsection Ui-BaseLayer-style-outline Outline width and color
 

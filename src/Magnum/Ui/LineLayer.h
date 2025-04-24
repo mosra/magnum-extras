@@ -538,11 +538,13 @@ like the corresponding style option in @ref BaseLayer, you set up a smoothness
 radius in framebuffer pixels. Additionally, for creating glow, shadows and
 other effects, @ref LineLayerStyleUniform::setSmoothness() can override the
 smoothness per style, and this value is in UI units instead of pixels. The
-desired usage is that the common smoothness gets tuned for both @ref BaseLayer
-and @ref LineLayer to a value that makes sense for the UI in general, and the
-per-style smoothness is then used for line elements that need a fuzzy
-appearance. Of the two values coming from the style, the larger one --- when
-both are converted to the same units --- gets used.
+desired usage is that the common smoothness gets tuned for
+@ref Ui-BaseLayer-style-rounded-corners-smoothness "BaseLayer", line layer and
+any @ref Ui-TextLayer-distancefield-smoothness "distance-field-enabled TextLayer"
+to a value that makes sense for the UI in general, and the per-style smoothness
+is then used for line elements that need a fuzzy appearance. Of the two values
+coming from the style, the larger one --- when both are converted to the same
+units --- gets used.
 
 @snippet Ui.cpp LineLayer-style-smoothness
 

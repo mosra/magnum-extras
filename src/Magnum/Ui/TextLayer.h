@@ -1048,6 +1048,97 @@ style:
 
 @snippet Ui.cpp TextLayer-style-features
 
+@section Ui-TextLayer-distancefield Distance field rendering
+
+With @ref Text::GlyphCacheArrayGL that's used above, drawing a particularly
+sized text involves first populating the cache with a font rasterized at a
+matching size. This gives the font plugin an opportunity to align glyph
+outlines in a way that best suits given size. While it's possible to pass the
+same @ref Text::AbstractFont instance to @ref TextLayer::Shared::addFont()
+multiple times with different sizes, the result will likely be either blurry or
+jaggy.
+
+Having a dedicated font for every size becomes impractical if the application
+needs to use many font sizes, if it needs to scale the text dynamically or if
+advanced effects such as thinning, thickening or outline are needed. For such
+cases, it's possible to use @ref Text::DistanceFieldGlyphCacheArrayGL instead.
+Compared to the regular glyph cache it requires three input parameters, size of
+the source image, size of the resulting glyph cache image and a radius for the
+distance field creation. Their relation and effect on output quality and memory
+use is described in detail in @ref TextureTools-DistanceFieldGL-parameters "TextureTools::DistanceFieldGL docs".
+In short, the ratio between the input and output image size is usually four or
+eight times, and the size of the font should match the larger size. So, for
+example, if a @cpp {256, 256} @ce @ref Text::GlyphCacheGL would be filled with
+a 16 pt font, a @cpp {1024, 1024} @ce source image for the distance field
+should use a 64 pt font. The radius should then be chosen so it's at least one
+or two pixels in the scaled-down result, so in this case at least @cpp 4 @ce:
+
+@snippet Ui-gl.cpp TextLayer-distancefield-setup
+
+The glyph cache is expected to be alive for the whole shared instance lifetime,
+or you can again use the
+@ref TextLayerGL::Shared::Shared(Text::DistanceFieldGlyphCacheArrayGL&&, const Configuration&)
+constructor to move the glyph cache ownership to the shared instance.
+Afterwards, you can add the same font instance more than once with different
+sizes. The sizes no longer need to match the size at which the font was opened
+and rasterized, but rather should be a concrete size at which it's meant to be
+drawn in the UI:
+
+@snippet Ui.cpp TextLayer-distancefield-setup-fonts
+
+@subsection Ui-TextLayer-distancefield-smoothness Edge smoothness
+
+@image html ui-textlayer-style-smoothness.png width=256px
+
+With @ref Text::GlyphCacheArrayGL, the rendered text has edges antialiased
+already by the rasterizer of a particular font plugin. With distance field
+rendering you have full control over how the edges look. Similarly to
+@ref BaseLayer and @ref LineLayer, the edges are aliased by default and with
+@ref TextLayerCommonStyleUniform::setSmoothness() you set up a smoothness
+radius in framebuffer pixels. Additionally, for effects like shadow or glow,
+@ref TextLayerStyleUniform::setSmoothness() can override the smoothness per
+style, and this value is in UI units instead of pixels. The desired usage is
+that the common smoothness gets tuned for
+@ref Ui-BaseLayer-style-rounded-corners-smoothness "BaseLayer",
+@ref Ui-LineLayer-style-smoothness "LineLayer" and any distance-field-enabled
+text layer to a value that makes sense for the UI in general, and the per-style
+smoothness is then used for text elements that need a fuzzy appearance. Of the
+two values coming from the style, the larger one --- when both are converted to
+the same units --- gets used.
+
+@snippet Ui.cpp TextLayer-distancefield-smoothness
+
+Note that the smoothness is *not* depending on the size at which the text is
+actually drawn, it's always in pixels or UI units.
+
+@subsection Ui-TextLayer-distancefield-offset-outline Edge offset and outline
+
+@image html ui-textlayer-style-offset-outline.png width=256px
+
+@ref TextLayerStyleUniform::setOutlineWidth() and
+@relativeref{TextLayerStyleUniform,setOutlineColor()} set properties of the
+outline. For consistentcy with vector drawing elsewhere, the outline is
+centered on the edge, so e.g. a two-pixel outline would extend one pixel inside
+the glyph and one pixel outside. With @ref TextLayerStyleUniform::setEdgeOffset()
+you can adjust the edge position to make the glyphs thicker or thinner, and a
+combination of these two allows you to adjust whether the outline will grow
+from the center, outside or inside:
+
+@snippet Ui.cpp TextLayer-distancefield-offset-outline
+
+The range how far an outline together with edge offset can go is clamped to the
+radius used when constructing the @ref Text::DistanceFieldGlyphCacheArrayGL.
+From the snippet above, a radius of @cpp 20 @ce, together with the font being
+scaled down from @cpp 64.0f @ce, means the edge can extend at most five pixels
+for `font16Handle` or two and half for `font8Handle`. If you don't need that
+much, you can reduce the radius, which also means the glyphs will occupy less
+space and the distance field processing takes less time.
+
+Similarly as with the smoothness, the outline width and offset doesn't depend
+on size of the font actually used in given style. Consistently with
+@ref Ui-BaseLayer-style-outline "BaseLayer outline drawing" the outline color
+isn't affected by @ref setColor().
+
 @section Ui-TextLayer-single-glyphs Rendering single glyphs
 
 @image html ui-textlayer-single-glyph.png width=32px
@@ -1087,7 +1178,10 @@ style or passed directly to @ref createGlyph().
 @snippet Ui.cpp TextLayer-single-glyph-instanceless2
 
 See @ref Text::AbstractGlyphCache and @ref TextureTools::AtlasLandfill for
-detailed information about how the cache and atlas packing works internally.
+detailed information about how the cache and atlas packing works internally. If
+you use @ref Text::DistanceFieldGlyphCacheArrayGL, you don't need to do
+anything extra as the distance field conversion will be performed by the
+@relativeref{Text::AbstractGlyphCache,flushImage()} call on the fly.
 
 @section Ui-TextLayer-update Updating text data
 
