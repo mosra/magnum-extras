@@ -341,7 +341,7 @@ const struct {
             /* The outline shouldn't be multiplied with the texture, neither
                the texture should shine through if semi-transparent */
             .setOutlineWidth(8.0f)
-            .setOutlineColor(0xa5c9eaff_rgbf*0.75f)},
+            .setOutlineColor(0xa5c9eaff_rgbaf*0.75f)},
     {"alpha mask", "mask-premultiplied.png", "textured-mask.png",
         /* Brighter than default clear color to verify the masked out parts
            aren't just black */
