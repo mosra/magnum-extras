@@ -114,9 +114,7 @@ bool UserInterfaceGL::trySetStyle(const AbstractStyle& style, const StyleFeature
         "Ui::UserInterfaceGL::trySetStyle(): no features specified", {});
     CORRADE_ASSERT(features <= style.features(),
         "Ui::UserInterfaceGL::trySetStyle():" << features << "not a subset of supported" << style.features(), {});
-    /* Checking the integer property to be sure we don't accidentally do a too
-       fuzzy comparison like could happen with .isZero() */
-    CORRADE_ASSERT(framebufferSize() != Vector2i{},
+    CORRADE_ASSERT(!framebufferSize().isZero(),
         "Ui::UserInterfaceGL::trySetStyle(): user interface size wasn't set",
         /* Has to return true with CORRADE_GRACEFUL_ASSERT so when tested
            through setStyle() it doesn't std::exit() the whole executable */

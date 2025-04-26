@@ -234,9 +234,7 @@ bool AbstractStyle::apply(UserInterface& ui, const StyleFeatures features, Plugi
         "Ui::AbstractStyle::apply(): no features specified", {});
     CORRADE_ASSERT(features <= this->features(),
         "Ui::AbstractStyle::apply():" << features << "not a subset of supported" << this->features(), {});
-    /* Checking the integer property to be sure we don't accidentally do a too
-       fuzzy comparison like could happen with .isZero() */
-    CORRADE_ASSERT(ui.framebufferSize() != Vector2i{},
+    CORRADE_ASSERT(!ui.framebufferSize().isZero(),
         "Ui::AbstractStyle::apply(): user interface size wasn't set", {});
     #ifndef CORRADE_NO_ASSERT
     if(features >= StyleFeature::BaseLayer) {
