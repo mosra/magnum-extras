@@ -183,15 +183,6 @@ class MAGNUM_UI_EXPORT BaseLayerGL::Shared: public BaseLayer::Shared {
          */
         explicit Shared(NoCreateT) noexcept;
 
-        /* Overloads to remove a WTF factor from method chaining order */
-        #ifndef DOXYGEN_GENERATING_OUTPUT
-        MAGNUMEXTRAS_UI_ABSTRACTVISUALLAYER_SHARED_SUBCLASS_IMPLEMENTATION()
-        Shared& setStyle(const BaseLayerCommonStyleUniform& commonUniform, Containers::ArrayView<const BaseLayerStyleUniform> uniforms, const Containers::StridedArrayView1D<const Vector4>& paddins);
-        Shared& setStyle(const BaseLayerCommonStyleUniform& commonUniform, std::initializer_list<BaseLayerStyleUniform> uniforms, std::initializer_list<Vector4> paddings);
-        Shared& setStyle(const BaseLayerCommonStyleUniform& commonUniform, Containers::ArrayView<const BaseLayerStyleUniform> uniforms, const Containers::StridedArrayView1D<const UnsignedInt>& styleToUniform, const Containers::StridedArrayView1D<const Vector4>& stylePaddings);
-        Shared& setStyle(const BaseLayerCommonStyleUniform& commonUniform, std::initializer_list<BaseLayerStyleUniform> uniforms, std::initializer_list<UnsignedInt> styleToUniform, std::initializer_list<Vector4> stylePaddings);
-        #endif
-
     private:
         struct State;
         friend BaseLayerGL;

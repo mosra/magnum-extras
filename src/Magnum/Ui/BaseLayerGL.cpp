@@ -368,22 +368,6 @@ BaseLayerGL::Shared::Shared(const Configuration& configuration): BaseLayer::Shar
 
 BaseLayerGL::Shared::Shared(NoCreateT) noexcept: BaseLayer::Shared{NoCreate} {}
 
-BaseLayerGL::Shared& BaseLayerGL::Shared::setStyle(const BaseLayerCommonStyleUniform& commonUniform, const Containers::ArrayView<const BaseLayerStyleUniform> uniforms, const Containers::StridedArrayView1D<const Vector4>& paddings) {
-    return static_cast<Shared&>(BaseLayer::Shared::setStyle(commonUniform, uniforms, paddings));
-}
-
-BaseLayerGL::Shared& BaseLayerGL::Shared::setStyle(const BaseLayerCommonStyleUniform& commonUniform, const std::initializer_list<BaseLayerStyleUniform> uniforms, const std::initializer_list<Vector4> paddings) {
-    return static_cast<Shared&>(BaseLayer::Shared::setStyle(commonUniform, uniforms, paddings));
-}
-
-BaseLayerGL::Shared& BaseLayerGL::Shared::setStyle(const BaseLayerCommonStyleUniform& commonUniform, const Containers::ArrayView<const BaseLayerStyleUniform> uniforms, const Containers::StridedArrayView1D<const UnsignedInt>& styleToUniform, const Containers::StridedArrayView1D<const Vector4>& stylePaddings) {
-    return static_cast<Shared&>(BaseLayer::Shared::setStyle(commonUniform, uniforms, styleToUniform, stylePaddings));
-}
-
-BaseLayerGL::Shared& BaseLayerGL::Shared::setStyle(const BaseLayerCommonStyleUniform& commonUniform, const std::initializer_list<BaseLayerStyleUniform> uniforms, const std::initializer_list<UnsignedInt> styleToUniform, const std::initializer_list<Vector4> stylePaddings) {
-    return static_cast<Shared&>(BaseLayer::Shared::setStyle(commonUniform, uniforms, styleToUniform, stylePaddings));
-}
-
 void BaseLayerGL::Shared::doSetStyle(const BaseLayerCommonStyleUniform& commonUniform, const Containers::ArrayView<const BaseLayerStyleUniform> uniforms) {
     /* This function should get called only if the dynamic style count is 0 */
     auto& state = static_cast<State&>(*_state);
