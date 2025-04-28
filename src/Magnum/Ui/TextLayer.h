@@ -2572,7 +2572,9 @@ class MAGNUM_UI_EXPORT TextLayer: public AbstractVisualLayer {
          *
          * Expects that @p handle is valid. The @p padding is in UI units, in
          * order left, top, right, bottom and is added to the per-style padding
-         * values specified in @ref Shared::setStyle().
+         * values specified in @ref Shared::setStyle(). By default, the custom
+         * padding is a zero vector, i.e. not affecting the padding coming from
+         * the style in any way.
          *
          * Calling this function causes @ref LayerState::NeedsDataUpdate to be
          * set.

@@ -1240,9 +1240,9 @@ class MAGNUM_UI_EXPORT LineLayer: public AbstractVisualLayer {
          *
          * Expects that @p handle is valid. The @p padding is in UI units, in
          * order left, top, right, bottom and is added to the per-style padding
-         * values specified in @ref Shared::setStyle(). By default the padding
-         * is a zero vector, i.e. the line isn't offset in any way when
-         * aligning inside the node.
+         * values specified in @ref Shared::setStyle(). By default, the custom
+         * padding is a zero vector, i.e. not affecting the padding coming from
+         * the style in any way.
          *
          * Calling this function causes @ref LayerState::NeedsDataUpdate to be
          * set.
