@@ -1220,7 +1220,7 @@ class MAGNUM_UI_EXPORT LineLayer: public AbstractVisualLayer {
         /**
          * @brief Custom line padding
          *
-         * In UI units, in order left, top. right, bottom. Expects that
+         * In UI units, in order left, top, right, bottom. Expects that
          * @p handle is valid.
          * @see @ref isHandleValid(DataHandle) const
          */

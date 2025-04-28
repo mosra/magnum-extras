@@ -2552,7 +2552,7 @@ class MAGNUM_UI_EXPORT TextLayer: public AbstractVisualLayer {
         /**
          * @brief Custom text padding
          *
-         * In UI units, in order left, top. right, bottom. Expects that
+         * In UI units, in order left, top, right, bottom. Expects that
          * @p handle is valid.
          * @see @ref isHandleValid(DataHandle) const
          */

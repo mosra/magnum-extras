@@ -1048,7 +1048,7 @@ class MAGNUM_UI_EXPORT BaseLayer: public AbstractVisualLayer {
         /**
          * @brief Custom quad outline width
          *
-         * In UI units, in order left, top. right, bottom. Expects that
+         * In UI units, in order left, top, right, bottom. Expects that
          * @p handle is valid.
          * @see @ref isHandleValid(DataHandle) const
          */
@@ -1113,7 +1113,7 @@ class MAGNUM_UI_EXPORT BaseLayer: public AbstractVisualLayer {
         /**
          * @brief Custom quad padding
          *
-         * In UI units, in order left, top. right, bottom. Expects that
+         * In UI units, in order left, top, right, bottom. Expects that
          * @p handle is valid.
          * @see @ref isHandleValid(DataHandle) const
          */
