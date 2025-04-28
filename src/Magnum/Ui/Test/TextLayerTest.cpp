@@ -930,99 +930,6 @@ const struct {
 };
 
 const struct {
-    const char* name;
-    Text::Alignment alignment;
-    Text::ShapeDirection shapeDirection;
-    /* Node offset is {50.5, 20.5}, size {200.8, 100.4}; bounding box {9, 11},
-       ascent 7, descent -4 */
-    Vector2 offset;
-    /* Glyph ounding box is {6, 8}, offset {-4, -6} */
-    Vector2 offsetGlyph;
-    Float editingPaddingL, editingPaddingR;
-} UpdateAlignmentPaddingData[]{
-    {"line left",
-        Text::Alignment::LineLeft, Text::ShapeDirection::Unspecified,
-        /* 20.5 + 100.4/2 = 70.7 */
-        {50.5f, 70.7f},
-        {50.5f, 76.7f},
-        0.1f, 0.3f},
-    {"line right",
-        Text::Alignment::LineRight, Text::ShapeDirection::Unspecified,
-        {50.5f + 200.8f - 9.0f, 70.7f},
-        {50.5f + 200.8f - 6.0f, 76.7f},
-        0.1f, 0.3f},
-    {"top center",
-        Text::Alignment::TopCenter, Text::ShapeDirection::Unspecified,
-        {50.5f + 100.4f - 4.5f, 20.5f + 7.0f},
-        {50.5f + 100.4f - 3.0f, 20.5f + 8.0f},
-        0.1f, 0.3f},
-    {"top center, interal",
-        Text::Alignment::TopCenterIntegral, Text::ShapeDirection::Unspecified,
-        /* Only the offset inside the node and the bounding box is rounded,
-           not the node offset itself; not the Y coordinate either */
-        {50.5f + 100.0f - 5.0f, 20.5f + 7.0f},
-        /* No change for the glyph as the glyph cache has integer sizes */
-        {50.5f + 100.0f - 3.0f, 20.5f + 8.0f},
-        0.1f, 0.3f},
-    {"bottom left",
-        Text::Alignment::BottomLeft, Text::ShapeDirection::Unspecified,
-        {50.5f, 120.9f - 4.0f},
-        {50.5f, 120.9f},
-        0.1f, 0.3f},
-    {"middle right",
-        Text::Alignment::MiddleRight, Text::ShapeDirection::Unspecified,
-        {50.5f + 200.8f - 9.0f, 20.5f + 50.2f - 5.5f + 7.0f},
-        {50.5f + 200.8f - 6.0f, 20.5f + 50.2f - 4.0f + 8.0f},
-        0.1f, 0.3f},
-    {"middle right, integral",
-        Text::Alignment::MiddleRightIntegral, Text::ShapeDirection::Unspecified,
-        /* Only the offset inside the node and the bounding box is rounded,
-           not the node offset itself; not the X coordinate either. Note that
-           the Y rounding is in the other direction compared to X because of Y
-           flip. */
-        {50.5f + 200.8f - 9.0f, 20.5f + 50.0f - 5.0f + 7.0f},
-        {50.5f + 200.8f - 6.0f, 20.5f + 50.0f - 4.0f + 8.0f},
-        0.1f, 0.3f},
-    {"middle center",
-        Text::Alignment::MiddleCenter, Text::ShapeDirection::Unspecified,
-        {50.5f + 100.4f - 4.5f, 20.5f + 50.2f - 5.5f + 7.0f},
-        {50.5f + 100.4f - 3.0f, 20.5f + 50.2f - 4.0f + 8.0f},
-        0.1f, 0.3f},
-    {"middle center, integral",
-        Text::Alignment::MiddleCenterIntegral, Text::ShapeDirection::Unspecified,
-        /* Only the offset inside the node and the bounding box is rounded,
-           not the node offset itself. Note that the Y rounding is in the other
-           direction compared to X because of Y flip. */
-        {50.5f + 100.0f - 5.0f, 20.5f + 50.0f - 5.0f + 7.0f},
-        {50.5f + 100.0f - 3.0f, 20.5f + 50.0f - 4.0f + 8.0f},
-        0.1f, 0.3f},
-    {"line end, RTL",
-        Text::Alignment::LineEnd, Text::ShapeDirection::RightToLeft,
-        /* Same as line left */
-        {50.5f, 70.7f},
-        {50.5f, 76.7f},
-        0.3f, 0.1f}, /* Swapped compared to LTR */
-    {"bottom begin, unspecified direction",
-        Text::Alignment::BottomBegin, Text::ShapeDirection::Unspecified,
-        /* Same as bottom start */
-        {50.5f, 120.9f - 4.0f},
-        {50.5f, 120.9f},
-        0.1f, 0.3f},
-    {"middle begin, RTL",
-        Text::Alignment::MiddleBegin, Text::ShapeDirection::RightToLeft,
-        /* Same as middle right */
-        {50.5f + 200.8f - 9.0f, 20.5f + 50.2f - 5.5f + 7.0f},
-        {50.5f + 200.8f - 6.0f, 20.5f + 50.2f - 4.0f + 8.0f},
-        0.3f, 0.1f}, /* Swapped compared to LTR */
-    {"middle center, RTL",
-        Text::Alignment::MiddleCenter, Text::ShapeDirection::RightToLeft,
-        /* No change compared to middle center above */
-        {50.5f + 100.4f - 4.5f, 20.5f + 50.2f - 5.5f + 7.0f},
-        {50.5f + 100.4f - 3.0f, 20.5f + 50.2f - 4.0f + 8.0f},
-        0.3f, 0.1f}, /* Swapped compared to LTR */
-};
-
-const struct {
     TestSuite::TestCaseDescriptionSourceLocation name;
     bool emptyUpdate;
     UnsignedInt styleCount, editingStyleCount, dynamicStyleCount;
@@ -1183,6 +1090,99 @@ const struct {
            are done with full NeedsDataUpdate and they'd check for the data
            being empty instead */
         LayerState::NeedsSharedDataUpdate, false, false, true},
+};
+
+const struct {
+    const char* name;
+    Text::Alignment alignment;
+    Text::ShapeDirection shapeDirection;
+    /* Node offset is {50.5, 20.5}, size {200.8, 100.4}; bounding box {9, 11},
+       ascent 7, descent -4 */
+    Vector2 offset;
+    /* Glyph ounding box is {6, 8}, offset {-4, -6} */
+    Vector2 offsetGlyph;
+    Float editingPaddingL, editingPaddingR;
+} UpdateAlignmentPaddingData[]{
+    {"line left",
+        Text::Alignment::LineLeft, Text::ShapeDirection::Unspecified,
+        /* 20.5 + 100.4/2 = 70.7 */
+        {50.5f, 70.7f},
+        {50.5f, 76.7f},
+        0.1f, 0.3f},
+    {"line right",
+        Text::Alignment::LineRight, Text::ShapeDirection::Unspecified,
+        {50.5f + 200.8f - 9.0f, 70.7f},
+        {50.5f + 200.8f - 6.0f, 76.7f},
+        0.1f, 0.3f},
+    {"top center",
+        Text::Alignment::TopCenter, Text::ShapeDirection::Unspecified,
+        {50.5f + 100.4f - 4.5f, 20.5f + 7.0f},
+        {50.5f + 100.4f - 3.0f, 20.5f + 8.0f},
+        0.1f, 0.3f},
+    {"top center, interal",
+        Text::Alignment::TopCenterIntegral, Text::ShapeDirection::Unspecified,
+        /* Only the offset inside the node and the bounding box is rounded,
+           not the node offset itself; not the Y coordinate either */
+        {50.5f + 100.0f - 5.0f, 20.5f + 7.0f},
+        /* No change for the glyph as the glyph cache has integer sizes */
+        {50.5f + 100.0f - 3.0f, 20.5f + 8.0f},
+        0.1f, 0.3f},
+    {"bottom left",
+        Text::Alignment::BottomLeft, Text::ShapeDirection::Unspecified,
+        {50.5f, 120.9f - 4.0f},
+        {50.5f, 120.9f},
+        0.1f, 0.3f},
+    {"middle right",
+        Text::Alignment::MiddleRight, Text::ShapeDirection::Unspecified,
+        {50.5f + 200.8f - 9.0f, 20.5f + 50.2f - 5.5f + 7.0f},
+        {50.5f + 200.8f - 6.0f, 20.5f + 50.2f - 4.0f + 8.0f},
+        0.1f, 0.3f},
+    {"middle right, integral",
+        Text::Alignment::MiddleRightIntegral, Text::ShapeDirection::Unspecified,
+        /* Only the offset inside the node and the bounding box is rounded,
+           not the node offset itself; not the X coordinate either. Note that
+           the Y rounding is in the other direction compared to X because of Y
+           flip. */
+        {50.5f + 200.8f - 9.0f, 20.5f + 50.0f - 5.0f + 7.0f},
+        {50.5f + 200.8f - 6.0f, 20.5f + 50.0f - 4.0f + 8.0f},
+        0.1f, 0.3f},
+    {"middle center",
+        Text::Alignment::MiddleCenter, Text::ShapeDirection::Unspecified,
+        {50.5f + 100.4f - 4.5f, 20.5f + 50.2f - 5.5f + 7.0f},
+        {50.5f + 100.4f - 3.0f, 20.5f + 50.2f - 4.0f + 8.0f},
+        0.1f, 0.3f},
+    {"middle center, integral",
+        Text::Alignment::MiddleCenterIntegral, Text::ShapeDirection::Unspecified,
+        /* Only the offset inside the node and the bounding box is rounded,
+           not the node offset itself. Note that the Y rounding is in the other
+           direction compared to X because of Y flip. */
+        {50.5f + 100.0f - 5.0f, 20.5f + 50.0f - 5.0f + 7.0f},
+        {50.5f + 100.0f - 3.0f, 20.5f + 50.0f - 4.0f + 8.0f},
+        0.1f, 0.3f},
+    {"line end, RTL",
+        Text::Alignment::LineEnd, Text::ShapeDirection::RightToLeft,
+        /* Same as line left */
+        {50.5f, 70.7f},
+        {50.5f, 76.7f},
+        0.3f, 0.1f}, /* Swapped compared to LTR */
+    {"bottom begin, unspecified direction",
+        Text::Alignment::BottomBegin, Text::ShapeDirection::Unspecified,
+        /* Same as bottom start */
+        {50.5f, 120.9f - 4.0f},
+        {50.5f, 120.9f},
+        0.1f, 0.3f},
+    {"middle begin, RTL",
+        Text::Alignment::MiddleBegin, Text::ShapeDirection::RightToLeft,
+        /* Same as middle right */
+        {50.5f + 200.8f - 9.0f, 20.5f + 50.2f - 5.5f + 7.0f},
+        {50.5f + 200.8f - 6.0f, 20.5f + 50.2f - 4.0f + 8.0f},
+        0.3f, 0.1f}, /* Swapped compared to LTR */
+    {"middle center, RTL",
+        Text::Alignment::MiddleCenter, Text::ShapeDirection::RightToLeft,
+        /* No change compared to middle center above */
+        {50.5f + 100.4f - 4.5f, 20.5f + 50.2f - 5.5f + 7.0f},
+        {50.5f + 100.4f - 3.0f, 20.5f + 50.2f - 4.0f + 8.0f},
+        0.3f, 0.1f}, /* Swapped compared to LTR */
 };
 
 const struct {
