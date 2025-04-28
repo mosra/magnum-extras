@@ -1068,10 +1068,10 @@ class MAGNUM_UI_EXPORT BaseLayer: public AbstractVisualLayer {
          *
          * Expects that @p handle is valid. The @p width is in UI units, in
          * order left, top, right, bottom and is added to
-         * @ref BaseLayerStyleUniform::outlineWidth. By default, unless
-         * specified in @ref create() already, the custom outline width is a
-         * zero vector, i.e. not affecting the style in any way. Has no visual
-         * effect if @ref BaseLayerSharedFlag::NoOutline is enabled.
+         * @ref BaseLayerStyleUniform::outlineWidth. By default the custom
+         * outline width is a zero vector, i.e. not affecting the style in any
+         * way. Has no visual effect if @ref BaseLayerSharedFlag::NoOutline is
+         * enabled.
          *
          * Calling this function causes @ref LayerState::NeedsDataUpdate to be
          * set.
