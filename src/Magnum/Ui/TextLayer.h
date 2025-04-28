@@ -2505,7 +2505,7 @@ class MAGNUM_UI_EXPORT TextLayer: public AbstractVisualLayer {
         }
 
         /**
-         * @brief Text custom base color
+         * @brief Custom text base color
          *
          * Expects that @p handle is valid.
          * @see @ref isHandleValid(DataHandle) const
@@ -2513,7 +2513,7 @@ class MAGNUM_UI_EXPORT TextLayer: public AbstractVisualLayer {
         Color4 color(DataHandle handle) const;
 
         /**
-         * @brief Text custom base color assuming it belongs to this layer
+         * @brief Custom text base color assuming it belongs to this layer
          *
          * Expects that @p handle is valid.
          * @see @ref isHandleValid(LayerDataHandle) const
@@ -2521,7 +2521,7 @@ class MAGNUM_UI_EXPORT TextLayer: public AbstractVisualLayer {
         Color4 color(LayerDataHandle handle) const;
 
         /**
-         * @brief Set text custom base color
+         * @brief Set custom text base color
          *
          * Expects that @p handle is valid. The @p color is expected to have
          * premultiplied alpha. It is multiplied with
@@ -2541,7 +2541,7 @@ class MAGNUM_UI_EXPORT TextLayer: public AbstractVisualLayer {
         void setColor(DataHandle handle, const Color4& color);
 
         /**
-         * @brief Set text custom base color assuming it belongs to this layer
+         * @brief Set custom text base color assuming it belongs to this layer
          *
          * Like @ref setColor(DataHandle, const Color4&) but without checking
          * that @p handle indeed belongs to this layer. See its documentation
@@ -2550,7 +2550,7 @@ class MAGNUM_UI_EXPORT TextLayer: public AbstractVisualLayer {
         void setColor(LayerDataHandle handle, const Color4& color);
 
         /**
-         * @brief Text custom padding
+         * @brief Custom text padding
          *
          * In UI units, in order left, top. right, bottom. Expects that
          * @p handle is valid.
@@ -2559,7 +2559,7 @@ class MAGNUM_UI_EXPORT TextLayer: public AbstractVisualLayer {
         Vector4 padding(DataHandle handle) const;
 
         /**
-         * @brief Text custom padding assuming it belongs to this layer
+         * @brief Custom text padding assuming it belongs to this layer
          *
          * Like @ref padding(DataHandle) const but without checking that
          * @p handle indeed belongs to this layer. See its documentation for
@@ -2568,7 +2568,7 @@ class MAGNUM_UI_EXPORT TextLayer: public AbstractVisualLayer {
         Vector4 padding(LayerDataHandle handle) const;
 
         /**
-         * @brief Set text custom padding
+         * @brief Set custom text padding
          *
          * Expects that @p handle is valid. The @p padding is in UI units, in
          * order left, top, right, bottom and is added to the per-style padding
@@ -2581,7 +2581,7 @@ class MAGNUM_UI_EXPORT TextLayer: public AbstractVisualLayer {
         void setPadding(DataHandle handle, const Vector4& padding);
 
         /**
-         * @brief Set text custom padding assuming it belongs to this layer
+         * @brief Set custom text padding assuming it belongs to this layer
          *
          * Like @ref setPadding(DataHandle, const Vector4&) but without
          * checking that @p handle indeed belongs to this layer. See its
@@ -2590,7 +2590,7 @@ class MAGNUM_UI_EXPORT TextLayer: public AbstractVisualLayer {
         void setPadding(LayerDataHandle handle, const Vector4& padding);
 
         /**
-         * @brief Set text custom padding with all edges having the same value
+         * @brief Set custom text padding with all edges having the same value
          *
          * Equivalent to calling @ref setPadding(DataHandle, const Vector4&)
          * with all four components set to @p padding. See its documentation
@@ -2601,7 +2601,7 @@ class MAGNUM_UI_EXPORT TextLayer: public AbstractVisualLayer {
         }
 
         /**
-         * @brief Set text custom padding with all edges having the same value assuming it belongs to this layer
+         * @brief Set custom text padding with all edges having the same value assuming it belongs to this layer
          *
          * Like @ref setPadding(DataHandle, Float) but without checking that
          * @p handle indeed belongs to this layer. See its documentation for

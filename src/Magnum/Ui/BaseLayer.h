@@ -1002,7 +1002,7 @@ class MAGNUM_UI_EXPORT BaseLayer: public AbstractVisualLayer {
         }
 
         /**
-         * @brief Quad custom base color
+         * @brief Custom quad base color
          *
          * Expects that @p handle is valid.
          * @see @ref isHandleValid(DataHandle) const
@@ -1010,7 +1010,7 @@ class MAGNUM_UI_EXPORT BaseLayer: public AbstractVisualLayer {
         Color4 color(DataHandle handle) const;
 
         /**
-         * @brief Quad custom base color assuming it belongs to this layer
+         * @brief Custom quad base color assuming it belongs to this layer
          *
          * Expects that @p handle is valid.
          * @see @ref isHandleValid(LayerDataHandle) const
@@ -1018,7 +1018,7 @@ class MAGNUM_UI_EXPORT BaseLayer: public AbstractVisualLayer {
         Color4 color(LayerDataHandle handle) const;
 
         /**
-         * @brief Set quad custom base color
+         * @brief Set custom quad base color
          *
          * Expects that @p handle is valid. The @p color is expected to have
          * premultiplied alpha. It is multiplied with
@@ -1037,7 +1037,7 @@ class MAGNUM_UI_EXPORT BaseLayer: public AbstractVisualLayer {
         void setColor(DataHandle handle, const Color4& color);
 
         /**
-         * @brief Set quad custom base color assuming it belongs to this layer
+         * @brief Set custom quad base color assuming it belongs to this layer
          *
          * Like @ref setColor(DataHandle, const Color4&) but without checking
          * that @p handle indeed belongs to this layer. See its documentation
@@ -1046,7 +1046,7 @@ class MAGNUM_UI_EXPORT BaseLayer: public AbstractVisualLayer {
         void setColor(LayerDataHandle handle, const Color4& color);
 
         /**
-         * @brief Quad custom outline width
+         * @brief Custom quad outline width
          *
          * In UI units, in order left, top. right, bottom. Expects that
          * @p handle is valid.
@@ -1055,7 +1055,7 @@ class MAGNUM_UI_EXPORT BaseLayer: public AbstractVisualLayer {
         Vector4 outlineWidth(DataHandle handle) const;
 
         /**
-         * @brief Quad custom outline width assuming it belongs to this layer
+         * @brief Custom quad outline width assuming it belongs to this layer
          *
          * Like @ref outlineWidth(DataHandle) const but without checking that
          * @p handle indeed belongs to this layer. See its documentation for
@@ -1064,7 +1064,7 @@ class MAGNUM_UI_EXPORT BaseLayer: public AbstractVisualLayer {
         Vector4 outlineWidth(LayerDataHandle handle) const;
 
         /**
-         * @brief Set quad custom outline width
+         * @brief Set custom quad outline width
          *
          * Expects that @p handle is valid. The @p width is in UI units, in
          * order left, top, right, bottom and is added to
@@ -1080,7 +1080,7 @@ class MAGNUM_UI_EXPORT BaseLayer: public AbstractVisualLayer {
         void setOutlineWidth(DataHandle handle, const Vector4& width);
 
         /**
-         * @brief Set quad custom outline width with all edges having the same value
+         * @brief Set custom quad outline width with all edges having the same value
          *
          * Equivalent to calling @ref setOutlineWidth(DataHandle, const Vector4&)
          * with all four components set to @p width. See its documentation for
@@ -1091,7 +1091,7 @@ class MAGNUM_UI_EXPORT BaseLayer: public AbstractVisualLayer {
         }
 
         /**
-         * @brief Set quad custom outline width assuming it belongs to this layer
+         * @brief Set custom quad outline width assuming it belongs to this layer
          *
          * Like @ref setOutlineWidth(DataHandle, const Vector4&) but without
          * checking that @p handle indeed belongs to this layer. See its
@@ -1100,7 +1100,7 @@ class MAGNUM_UI_EXPORT BaseLayer: public AbstractVisualLayer {
         void setOutlineWidth(LayerDataHandle handle, const Vector4& width);
 
         /**
-         * @brief Set quad custom outline width with all edges having the same value assuming it belongs to this layer
+         * @brief Set custom quad outline width with all edges having the same value assuming it belongs to this layer
          *
          * Like @ref setOutlineWidth(DataHandle, Float) but without checking
          * that @p handle indeed belongs to this layer. See its documentation
@@ -1111,7 +1111,7 @@ class MAGNUM_UI_EXPORT BaseLayer: public AbstractVisualLayer {
         }
 
         /**
-         * @brief Quad custom padding
+         * @brief Custom quad padding
          *
          * In UI units, in order left, top. right, bottom. Expects that
          * @p handle is valid.
@@ -1120,7 +1120,7 @@ class MAGNUM_UI_EXPORT BaseLayer: public AbstractVisualLayer {
         Vector4 padding(DataHandle handle) const;
 
         /**
-         * @brief Quad custom padding assuming it belongs to this layer
+         * @brief Custom quad padding assuming it belongs to this layer
          *
          * Like @ref padding(DataHandle) const but without checking that
          * @p handle indeed belongs to this layer. See its documentation for
@@ -1129,7 +1129,7 @@ class MAGNUM_UI_EXPORT BaseLayer: public AbstractVisualLayer {
         Vector4 padding(LayerDataHandle handle) const;
 
         /**
-         * @brief Set quad custom padding
+         * @brief Set custom quad padding
          *
          * Expects that @p handle is valid. The @p padding is in UI units, in
          * order left, top, right, bottom and is added to the per-style padding
@@ -1143,7 +1143,7 @@ class MAGNUM_UI_EXPORT BaseLayer: public AbstractVisualLayer {
         void setPadding(DataHandle handle, const Vector4& padding);
 
         /**
-         * @brief Set quad custom padding assuming it belongs to this layer
+         * @brief Set custom quad padding assuming it belongs to this layer
          *
          * Like @ref setPadding(DataHandle, const Vector4&) but without
          * checking that @p handle indeed belongs to this layer. See its
@@ -1152,7 +1152,7 @@ class MAGNUM_UI_EXPORT BaseLayer: public AbstractVisualLayer {
         void setPadding(LayerDataHandle handle, const Vector4& padding);
 
         /**
-         * @brief Set quad custom padding with all edges having the same value
+         * @brief Set custom quad padding with all edges having the same value
          *
          * Equivalent to calling @ref setPadding(DataHandle, const Vector4&)
          * with all four components set to @p padding. See its documentation
@@ -1163,7 +1163,7 @@ class MAGNUM_UI_EXPORT BaseLayer: public AbstractVisualLayer {
         }
 
         /**
-         * @brief Set quad custom padding with all edges having the same value assuming it belongs to this layer
+         * @brief Set custom quad padding with all edges having the same value assuming it belongs to this layer
          *
          * Like @ref setPadding(DataHandle, Float) but without checking that
          * @p handle indeed belongs to this layer. See its documentation for
