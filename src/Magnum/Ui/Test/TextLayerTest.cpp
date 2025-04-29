@@ -6445,9 +6445,9 @@ void TextLayerTest::createRemoveHandleRecycle() {
     CORRADE_COMPARE(layer.color(second), 0xff3366_rgbf);
     CORRADE_COMPARE(layer.padding(first), Vector4{15.0f});
     CORRADE_COMPARE(layer.padding(second), Vector4{5.0f});
-    CORRADE_COMPARE(layer.stateData().data[dataHandleId(first)].flags, data.flags);
+    CORRADE_COMPARE(layer.flags(first), data.flags);
+    CORRADE_COMPARE(layer.flags(second), data.flags);
     CORRADE_COMPARE(layer.stateData().data[dataHandleId(first)].textRun, data.flags >= TextDataFlag::Editable ? 0 : 0xffffffffu);
-    CORRADE_COMPARE(layer.stateData().data[dataHandleId(second)].flags, data.flags);
     CORRADE_COMPARE(layer.stateData().data[dataHandleId(second)].textRun, data.flags >= TextDataFlag::Editable ? 1 : 0xffffffffu);
 
     /* Data that reuses a previous slot should have all properties cleared, as
@@ -6457,7 +6457,7 @@ void TextLayerTest::createRemoveHandleRecycle() {
     CORRADE_COMPARE(dataHandleId(second2), dataHandleId(second));
     CORRADE_COMPARE(layer.color(second2), 0xffffff_rgbf);
     CORRADE_COMPARE(layer.padding(second2), Vector4{0.0f});
-    CORRADE_COMPARE(layer.stateData().data[dataHandleId(second2)].flags, TextDataFlags{});
+    CORRADE_COMPARE(layer.flags(second2), TextDataFlags{});
     CORRADE_COMPARE(layer.stateData().data[dataHandleId(second2)].textRun, 0xffffffffu);
 
     /* Same for a glyph */
@@ -6466,7 +6466,7 @@ void TextLayerTest::createRemoveHandleRecycle() {
     CORRADE_COMPARE(dataHandleId(first2), dataHandleId(first));
     CORRADE_COMPARE(layer.color(first2), 0xffffff_rgbf);
     CORRADE_COMPARE(layer.padding(first2), Vector4{0.0f});
-    CORRADE_COMPARE(layer.stateData().data[dataHandleId(first2)].flags, TextDataFlags{});
+    CORRADE_COMPARE(layer.flags(first2), TextDataFlags{});
     CORRADE_COMPARE(layer.stateData().data[dataHandleId(first2)].textRun, 0xffffffffu);
 }
 
