@@ -1223,11 +1223,10 @@ template<BaseLayerSharedFlag flag> void BaseLayerGLTest::render() {
         styleToUniform,
         {});
 
-    LayerHandle layer = ui.createLayer();
-    ui.setLayerInstance(Containers::pointer<BaseLayerGL>(layer, layerShared));
+    BaseLayer& layer = ui.setLayerInstance(Containers::pointer<BaseLayerGL>(ui.createLayer(), layerShared));
 
     NodeHandle node = ui.createNode({8.0f, 8.0f}, {112.0f, 48.0f});
-    ui.layer<BaseLayerGL>(layer).create(1, node);
+    layer.create(1, node);
 
     ui.draw();
 
@@ -1268,18 +1267,17 @@ template<BaseLayerSharedFlag flag> void BaseLayerGLTest::renderCustomColor() {
                       0x77442299_rgbaf/0x336699aa_rgbaf)
     }, {});
 
-    LayerHandle layer = ui.createLayer();
-    ui.setLayerInstance(Containers::pointer<BaseLayerGL>(layer, layerShared));
+    BaseLayer& layer = ui.setLayerInstance(Containers::pointer<BaseLayerGL>(ui.createLayer(), layerShared));
 
     NodeHandle node = ui.createNode({8.0f, 8.0f}, {112.0f, 48.0f});
-    DataHandle nodeData = ui.layer<BaseLayerGL>(layer).create(0, node);
+    DataHandle nodeData = layer.create(0, node);
 
     if(data.partialUpdate) {
         ui.update();
         CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
     }
 
-    ui.layer<BaseLayerGL>(layer).setColor(nodeData, 0x336699aa_rgbaf/data.opacity);
+    layer.setColor(nodeData, 0x336699aa_rgbaf/data.opacity);
     CORRADE_COMPARE_AS(ui.state(),
         UserInterfaceState::NeedsDataUpdate,
         TestSuite::Compare::GreaterOrEqual);
@@ -1342,18 +1340,17 @@ template<BaseLayerSharedFlag flag> void BaseLayerGLTest::renderCustomOutlineWidt
             .setOutlineWidth({16.0f, 2.0f, 4.0f, 0.0f})
     }, {});
 
-    LayerHandle layer = ui.createLayer();
-    ui.setLayerInstance(Containers::pointer<BaseLayerGL>(layer, layerShared));
+    BaseLayer& layer = ui.setLayerInstance(Containers::pointer<BaseLayerGL>(ui.createLayer(), layerShared));
 
     NodeHandle node = ui.createNode({8.0f, 8.0f}, {112.0f, 48.0f});
-    DataHandle nodeData = ui.layer<BaseLayerGL>(layer).create(0, node);
+    DataHandle nodeData = layer.create(0, node);
 
     if(data.partialUpdate) {
         ui.update();
         CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
     }
 
-    ui.layer<BaseLayerGL>(layer).setOutlineWidth(nodeData, {-8.0f, 6.0f, 4.0f, 8.0f});
+    layer.setOutlineWidth(nodeData, {-8.0f, 6.0f, 4.0f, 8.0f});
     CORRADE_COMPARE_AS(ui.state(),
         UserInterfaceState::NeedsDataUpdate,
         TestSuite::Compare::GreaterOrEqual);
@@ -1405,11 +1402,10 @@ template<BaseLayerSharedFlag flag> void BaseLayerGLTest::renderPadding() {
             .setOutlineWidth({18.0f, 8.0f, 0.0f, 4.0f})},
         {data.paddingFromStyle});
 
-    LayerHandle layer = ui.createLayer();
-    ui.setLayerInstance(Containers::pointer<BaseLayerGL>(layer, layerShared));
+    BaseLayer& layer = ui.setLayerInstance(Containers::pointer<BaseLayerGL>(ui.createLayer(), layerShared));
 
     NodeHandle node = ui.createNode(data.nodeOffset, data.nodeSize);
-    DataHandle nodeData = ui.layer<BaseLayerGL>(layer).create(0, node);
+    DataHandle nodeData = layer.create(0, node);
 
     if(data.partialUpdate) {
         ui.update();
@@ -1417,7 +1413,7 @@ template<BaseLayerSharedFlag flag> void BaseLayerGLTest::renderPadding() {
     }
 
     if(!data.paddingFromData.isZero()) {
-        ui.layer<BaseLayerGL>(layer).setPadding(nodeData, data.paddingFromData);
+        layer.setPadding(nodeData, data.paddingFromData);
         CORRADE_COMPARE_AS(ui.state(),
             UserInterfaceState::NeedsDataUpdate,
             TestSuite::Compare::GreaterOrEqual);
@@ -1465,18 +1461,17 @@ template<BaseLayerSharedFlag flag> void BaseLayerGLTest::renderChangeStyle() {
     };
     layerShared.setStyle(BaseLayerCommonStyleUniform{}, uniforms, {});
 
-    LayerHandle layer = ui.createLayer();
-    ui.setLayerInstance(Containers::pointer<BaseLayerGL>(layer, layerShared));
+    BaseLayer& layer = ui.setLayerInstance(Containers::pointer<BaseLayerGL>(ui.createLayer(), layerShared));
 
     NodeHandle node = ui.createNode({8.0f, 8.0f}, {112.0f, 48.0f});
-    DataHandle nodeData = ui.layer<BaseLayerGL>(layer).create(0, node);
+    DataHandle nodeData = layer.create(0, node);
 
     if(data.partialUpdate) {
         ui.update();
         CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
     }
 
-    ui.layer<BaseLayerGL>(layer).setStyle(nodeData, 1);
+    layer.setStyle(nodeData, 1);
     CORRADE_COMPARE_AS(ui.state(),
         UserInterfaceState::NeedsDataUpdate,
         TestSuite::Compare::GreaterOrEqual);
@@ -2356,8 +2351,7 @@ void BaseLayerGLTest::drawOrder() {
             .setColor(0x0000ff_rgbf)
     }, {0, 1, 2}, {});
 
-    LayerHandle layer = ui.createLayer();
-    ui.setLayerInstance(Containers::pointer<BaseLayerGL>(layer, layerShared));
+    BaseLayer& layer = ui.setLayerInstance(Containers::pointer<BaseLayerGL>(ui.createLayer(), layerShared));
 
     NodeHandle topLevelOnTopGreen = ui.createNode({8.0f, 8.0f}, {32.0f, 32.0f});
 
@@ -2370,17 +2364,17 @@ void BaseLayerGLTest::drawOrder() {
     NodeHandle childAboveRed = ui.createNode(childBelowBlue, {-8.0f, 8.0f}, {16.0f, 16.0f});
 
     if(data.dataInNodeOrder) {
-        ui.layer<BaseLayerGL>(layer).create(0, topLevelBelowRed);
-        ui.layer<BaseLayerGL>(layer).create(1, topLevelOnTopGreen);
-        ui.layer<BaseLayerGL>(layer).create(2, topLevelHiddenBlue);
-        ui.layer<BaseLayerGL>(layer).create(2, childBelowBlue);
-        ui.layer<BaseLayerGL>(layer).create(0, childAboveRed);
+        layer.create(0, topLevelBelowRed);
+        layer.create(1, topLevelOnTopGreen);
+        layer.create(2, topLevelHiddenBlue);
+        layer.create(2, childBelowBlue);
+        layer.create(0, childAboveRed);
     } else {
-        ui.layer<BaseLayerGL>(layer).create(1, topLevelOnTopGreen);
-        ui.layer<BaseLayerGL>(layer).create(2, topLevelHiddenBlue);
-        ui.layer<BaseLayerGL>(layer).create(0, topLevelBelowRed);
-        ui.layer<BaseLayerGL>(layer).create(0, childAboveRed);
-        ui.layer<BaseLayerGL>(layer).create(2, childBelowBlue);
+        layer.create(1, topLevelOnTopGreen);
+        layer.create(2, topLevelHiddenBlue);
+        layer.create(0, topLevelBelowRed);
+        layer.create(0, childAboveRed);
+        layer.create(2, childBelowBlue);
     }
 
     ui.draw();
@@ -2590,11 +2584,10 @@ void BaseLayerGLTest::eventStyleTransition() {
                 CORRADE_INTERNAL_ASSERT_UNREACHABLE();
             });
 
-    LayerHandle layer = ui.createLayer();
-    ui.setLayerInstance(Containers::pointer<BaseLayerGL>(layer, layerShared));
+    BaseLayer& layer = ui.setLayerInstance(Containers::pointer<BaseLayerGL>(ui.createLayer(), layerShared));
 
     NodeHandle node = ui.createNode({8.0f, 8.0f}, {112.0f, 48.0f});
-    ui.layer<BaseLayerGL>(layer).create(0, node);
+    layer.create(0, node);
 
     ui.draw();
 

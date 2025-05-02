@@ -1753,21 +1753,20 @@ void TextLayerGLTest::render() {
             editingStylePaddings);
     }
 
-    LayerHandle layer = ui.createLayer();
-    ui.setLayerInstance(Containers::pointer<TextLayerGL>(layer, layerShared));
+    TextLayer& layer = ui.setLayerInstance(Containers::pointer<TextLayerGL>(ui.createLayer(), layerShared));
 
     NodeHandle node = ui.createNode({8.0f, 8.0f}, {112.0f, 48.0f});
     /* Using a text that has glyphs both above and below line and doesn't need
        too many glyphs */
     if(data.singleGlyph) {
-        ui.layer<TextLayerGL>(layer).createGlyph(1, _font->glyphId('g'), {}, node);
+        layer.createGlyph(1, _font->glyphId('g'), {}, node);
         CORRADE_INTERNAL_ASSERT(!data.styleUniformEditingCommon);
     } else {
-        DataHandle nodeData = ui.layer<TextLayerGL>(layer).create(1, "Maggi", {},
+        DataHandle nodeData = layer.create(1, "Maggi", {},
             data.styleUniformEditingCommon ? TextDataFlag::Editable : TextDataFlags{},
             node);
         if(data.styleUniformEditingCommon)
-            ui.layer<TextLayerGL>(layer).setCursor(nodeData, data.cursor, data.selection);
+            layer.setCursor(nodeData, data.cursor, data.selection);
     }
 
     ui.draw();
@@ -2077,15 +2076,14 @@ void TextLayerGLTest::renderAlignmentPadding() {
         {},
         {{5.0f, 0.0f, 5.0f, 0.0f}, {}});
 
-    LayerHandle layer = ui.createLayer();
-    ui.setLayerInstance(Containers::pointer<TextLayerGL>(layer, layerShared));
+    TextLayer& layer = ui.setLayerInstance(Containers::pointer<TextLayerGL>(ui.createLayer(), layerShared));
 
     NodeHandle node = ui.createNode(data.nodeOffset, data.nodeSize);
-    DataHandle nodeData = ui.layer<TextLayerGL>(layer).create(0, "Maggi", {},
+    DataHandle nodeData = layer.create(0, "Maggi", {},
         data.editable ? TextDataFlag::Editable : TextDataFlags{},
         node);
     if(data.editable)
-        ui.layer<TextLayerGL>(layer).setCursor(nodeData, 2, 5);
+        layer.setCursor(nodeData, 2, 5);
 
     if(data.partialUpdate) {
         ui.update();
@@ -2093,7 +2091,7 @@ void TextLayerGLTest::renderAlignmentPadding() {
     }
 
     if(!data.paddingFromData.isZero()) {
-        ui.layer<TextLayerGL>(layer).setPadding(nodeData, data.paddingFromData);
+        layer.setPadding(nodeData, data.paddingFromData);
         CORRADE_COMPARE_AS(ui.state(),
             UserInterfaceState::NeedsDataUpdate,
             TestSuite::Compare::GreaterOrEqual);
@@ -2179,20 +2177,19 @@ void TextLayerGLTest::renderCustomColor() {
         {-1, 1},
         {{5.0f, 0.0f, 5.0f, 0.0f}, {}});
 
-    LayerHandle layer = ui.createLayer();
-    ui.setLayerInstance(Containers::pointer<TextLayerGL>(layer, layerShared));
+    TextLayer& layer = ui.setLayerInstance(Containers::pointer<TextLayerGL>(ui.createLayer(), layerShared));
 
     NodeHandle node = ui.createNode({8.0f, 8.0f}, {112.0f, 48.0f});
-    DataHandle nodeData = ui.layer<TextLayerGL>(layer).create(0, "Maggi", {}, data.editable ? TextDataFlag::Editable : TextDataFlags{}, node);
+    DataHandle nodeData = layer.create(0, "Maggi", {}, data.editable ? TextDataFlag::Editable : TextDataFlags{}, node);
     if(data.editable)
-        ui.layer<TextLayerGL>(layer).setCursor(nodeData, 2, 5);
+        layer.setCursor(nodeData, 2, 5);
 
     if(data.partialUpdate) {
         ui.update();
         CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
     }
 
-    ui.layer<TextLayerGL>(layer).setColor(nodeData, 0x336699aa_rgbaf/data.opacity);
+    layer.setColor(nodeData, 0x336699aa_rgbaf/data.opacity);
     CORRADE_COMPARE_AS(ui.state(),
         UserInterfaceState::NeedsDataUpdate,
         TestSuite::Compare::GreaterOrEqual);
@@ -2287,22 +2284,21 @@ void TextLayerGLTest::renderChangeStyle() {
         {-1, -1, 3},
         {{}, {5.0f, 0.0f, 5.0f, 0.0f}, {}});
 
-    LayerHandle layer = ui.createLayer();
-    ui.setLayerInstance(Containers::pointer<TextLayerGL>(layer, layerShared));
+    TextLayer& layer = ui.setLayerInstance(Containers::pointer<TextLayerGL>(ui.createLayer(), layerShared));
 
     NodeHandle node = ui.createNode({8.0f, 8.0f}, {112.0f, 48.0f});
-    DataHandle nodeData = ui.layer<TextLayerGL>(layer).create(0, "Maggi", {},
+    DataHandle nodeData = layer.create(0, "Maggi", {},
         data.editableBefore || data.editableAfter ? TextDataFlag::Editable : TextDataFlags{},
         node);
     if(data.editableBefore || data.editableAfter)
-        ui.layer<TextLayerGL>(layer).setCursor(nodeData, 2, 5);
+        layer.setCursor(nodeData, 2, 5);
 
     if(data.partialUpdate) {
         ui.update();
         CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
     }
 
-    ui.layer<TextLayerGL>(layer).setStyle(nodeData, data.editableAfter ? 2 : 1);
+    layer.setStyle(nodeData, data.editableAfter ? 2 : 1);
     CORRADE_COMPARE_AS(ui.state(),
         UserInterfaceState::NeedsDataUpdate,
         TestSuite::Compare::GreaterOrEqual);
@@ -2376,15 +2372,14 @@ void TextLayerGLTest::renderChangeText() {
         {-1, 1},
         {{5.0f, 0.0f, 5.0f, 0.0f}, {}});
 
-    LayerHandle layer = ui.createLayer();
-    ui.setLayerInstance(Containers::pointer<TextLayerGL>(layer, layerShared));
+    TextLayer& layer = ui.setLayerInstance(Containers::pointer<TextLayerGL>(ui.createLayer(), layerShared));
 
     NodeHandle node = ui.createNode({8.0f, 8.0f}, {112.0f, 48.0f});
-    DataHandle nodeData = ui.layer<TextLayerGL>(layer).create(0, "gM!", {},
+    DataHandle nodeData = layer.create(0, "gM!", {},
         data.editableBefore ? TextDataFlag::Editable : TextDataFlags{},
         node);
     if(data.editableBefore)
-        ui.layer<TextLayerGL>(layer).setCursor(nodeData, 1, 3);
+        layer.setCursor(nodeData, 1, 3);
 
     if(data.partialUpdate) {
         ui.update();
@@ -2393,12 +2388,12 @@ void TextLayerGLTest::renderChangeText() {
 
     /* If no flags are specified, they're carried over */
     if(data.editableAfter == data.editableBefore)
-        ui.layer<TextLayerGL>(layer).setText(nodeData, "Maggi", {});
+        layer.setText(nodeData, "Maggi", {});
     else
-        ui.layer<TextLayerGL>(layer).setText(nodeData, "Maggi", {},
+        layer.setText(nodeData, "Maggi", {},
             data.editableAfter ? TextDataFlag::Editable : TextDataFlags{});
     if(data.editableAfter)
-        ui.layer<TextLayerGL>(layer).setCursor(nodeData, 2, 5);
+        layer.setCursor(nodeData, 2, 5);
     CORRADE_COMPARE_AS(ui.state(),
         UserInterfaceState::NeedsDataUpdate,
         TestSuite::Compare::GreaterOrEqual);
@@ -2880,8 +2875,7 @@ void TextLayerGLTest::drawOrder() {
         Vector4{1.0f}, Vector4{1.0f}, Vector4{1.0f}
     });
 
-    LayerHandle layer = ui.createLayer();
-    ui.setLayerInstance(Containers::pointer<TextLayerGL>(layer, layerShared));
+    TextLayer& layer = ui.setLayerInstance(Containers::pointer<TextLayerGL>(ui.createLayer(), layerShared));
 
     NodeHandle topLevelOnTopGreen = ui.createNode({12.0f, 8.0f}, {32.0f, 32.0f});
 
@@ -2896,22 +2890,22 @@ void TextLayerGLTest::drawOrder() {
     TextDataFlags flags = data.editable ? TextDataFlag::Editable : TextDataFlags{};
     DataHandle texts[5];
     if(data.dataInNodeOrder) {
-        texts[0] = ui.layer<TextLayerGL>(layer).create(0, "ab", {}, flags, topLevelBelowRed);
-        texts[1] = ui.layer<TextLayerGL>(layer).create(2, "abc", {}, flags, topLevelOnTopGreen);
-        texts[2] = ui.layer<TextLayerGL>(layer).create(3, "abcdef", {}, flags, topLevelHiddenBlue);
-        texts[3] = ui.layer<TextLayerGL>(layer).create(3, "abcd", {}, flags, childBelowBlue);
-        texts[4] = ui.layer<TextLayerGL>(layer).create(1, "abcde", {}, flags, childAboveRed);
+        texts[0] = layer.create(0, "ab", {}, flags, topLevelBelowRed);
+        texts[1] = layer.create(2, "abc", {}, flags, topLevelOnTopGreen);
+        texts[2] = layer.create(3, "abcdef", {}, flags, topLevelHiddenBlue);
+        texts[3] = layer.create(3, "abcd", {}, flags, childBelowBlue);
+        texts[4] = layer.create(1, "abcde", {}, flags, childAboveRed);
     } else {
-        texts[0] = ui.layer<TextLayerGL>(layer).create(2, "abc", {}, flags, topLevelOnTopGreen);
-        texts[1] = ui.layer<TextLayerGL>(layer).create(3, "abcdef", {}, flags, topLevelHiddenBlue);
-        texts[2] = ui.layer<TextLayerGL>(layer).create(0, "ab", {}, flags, topLevelBelowRed);
-        texts[3] = ui.layer<TextLayerGL>(layer).create(1, "abcde", {}, flags, childAboveRed);
-        texts[4] = ui.layer<TextLayerGL>(layer).create(3, "abcd", {}, flags, childBelowBlue);
+        texts[0] = layer.create(2, "abc", {}, flags, topLevelOnTopGreen);
+        texts[1] = layer.create(3, "abcdef", {}, flags, topLevelHiddenBlue);
+        texts[2] = layer.create(0, "ab", {}, flags, topLevelBelowRed);
+        texts[3] = layer.create(1, "abcde", {}, flags, childAboveRed);
+        texts[4] = layer.create(3, "abcd", {}, flags, childBelowBlue);
     }
 
     /* Make all fully selected if editable */
     if(data.editable) for(DataHandle text: texts)
-        ui.layer<TextLayerGL>(layer).setCursor(text, 0, ui.layer<TextLayerGL>(layer).text(text).size());
+        layer.setCursor(text, 0, layer.text(text).size());
 
     ui.draw();
 
@@ -3222,19 +3216,18 @@ void TextLayerGLTest::eventStyleTransition() {
         {-1, -1, 4},
         {{}, {5.0f, 0.0f, 5.0f, 0.0f}, {}});
 
-    LayerHandle layer = ui.createLayer();
-    ui.setLayerInstance(Containers::pointer<TextLayerGL>(layer, layerShared));
+    TextLayer& layer = ui.setLayerInstance(Containers::pointer<TextLayerGL>(ui.createLayer(), layerShared));
 
     NodeHandle node = ui.createNode({8.0f, 8.0f}, {112.0f, 48.0f});
     /* Using a text that has glyphs both above and below line and doesn't need
        too many glyphs */
-    DataHandle nodeData = ui.layer<TextLayerGL>(layer).create(
+    DataHandle nodeData = layer.create(
         data.editableBefore ? 1 : 0,
         "Maggi", {},
         data.editableBefore || data.editableAfter ? TextDataFlag::Editable : TextDataFlags{},
         node);
     if(data.editableBefore || data.editableAfter)
-        ui.layer<TextLayerGL>(layer).setCursor(nodeData, 2, 5);
+        layer.setCursor(nodeData, 2, 5);
 
     ui.draw();
 
