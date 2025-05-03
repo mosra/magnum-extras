@@ -1193,6 +1193,9 @@ DataHandle TextLayer::createInternal(const NodeHandle node) {
         state.styles = stridedArrayView(state.data).slice(&Implementation::TextLayerData::style);
         state.calculatedStyles = stridedArrayView(state.data).slice(&Implementation::TextLayerData::calculatedStyle);
     }
+
+    Implementation::TextLayerData& data = state.data[id];
+    data.padding = {};
     return handle;
 }
 
@@ -1220,7 +1223,6 @@ DataHandle TextLayer::create(const UnsignedInt style, const Containers::StringVi
         #endif
         id, style, text, properties, flags);
     Implementation::TextLayerData& data = state.data[id];
-    data.padding = {};
     /* glyphRun, textRun and flags is filled by shapeTextInternal() */
     data.style = style;
     /* calculatedStyle is filled by AbstractVisualLayer::doUpdate() */
@@ -1250,7 +1252,6 @@ DataHandle TextLayer::createGlyph(const UnsignedInt style, const UnsignedInt gly
         #endif
         id, style, glyph, properties);
     Implementation::TextLayerData& data = state.data[id];
-    data.padding = {};
     /* glyphRun, textRun and flags is filled by shapeGlyphInternal() */
     data.style = style;
     /* calculatedStyle is filled by AbstractVisualLayer::doUpdate() */
