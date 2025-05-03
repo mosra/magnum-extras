@@ -1122,7 +1122,9 @@ already by the rasterizer of a particular font plugin. With distance field
 rendering you have full control over how the edges look. Similarly to
 @ref BaseLayer and @ref LineLayer, the edges are aliased by default and with
 @ref TextLayerCommonStyleUniform::setSmoothness() you set up a smoothness
-radius in framebuffer pixels. Additionally, for effects like shadow or glow,
+radius in framebuffer pixels. It's not in UI units in order to ensure crisp
+look everywhere without having to specifically deal with HiDPI displays.
+Additionally, for effects like shadow or glow,
 @ref TextLayerStyleUniform::setSmoothness() can override the smoothness per
 style, and this value is in UI units instead of pixels. The desired usage is
 that the common smoothness gets tuned for
@@ -1413,7 +1415,6 @@ variants that include cursor and selection styles. Depending on the subset of
 editing styles you want to have for a particular dynamic style, use
 @ref setDynamicStyleWithCursor(), @ref setDynamicStyleWithSelection() or
 @ref setDynamicStyleWithCursorSelection() instead of @ref setDynamicStyle().
-
 */
 class MAGNUM_UI_EXPORT TextLayer: public AbstractVisualLayer {
     public:

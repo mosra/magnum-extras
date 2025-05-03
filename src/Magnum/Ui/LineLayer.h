@@ -535,10 +535,11 @@ One of the most desirable aspects of line rendering is antialiasing. Like
 @ref BaseLayer, @ref LineLayer performs it in the shader without needing to
 rely on multisampling. With @ref LineLayerCommonStyleUniform::setSmoothness(),
 like the corresponding style option in @ref BaseLayer, you set up a smoothness
-radius in framebuffer pixels. Additionally, for creating glow, shadows and
-other effects, @ref LineLayerStyleUniform::setSmoothness() can override the
-smoothness per style, and this value is in UI units instead of pixels. The
-desired usage is that the common smoothness gets tuned for
+radius in framebuffer pixels. It's not in UI units in order to ensure crisp
+look everywhere without having to specifically deal with HiDPI displays. Additionally, for creating glow, shadows and other effects,
+@ref LineLayerStyleUniform::setSmoothness() can override the smoothness per
+style, and this value is in UI units instead of pixels. The desired usage is
+that the common smoothness gets tuned for
 @ref Ui-BaseLayer-style-rounded-corners-smoothness "BaseLayer", line layer and
 any @ref Ui-TextLayer-distancefield-smoothness "distance-field-enabled TextLayer"
 to a value that makes sense for the UI in general, and the per-style smoothness
