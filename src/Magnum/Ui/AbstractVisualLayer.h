@@ -69,8 +69,9 @@ class MAGNUM_UI_EXPORT AbstractVisualLayer: public AbstractLayer {
         /**
          * @brief Shared state used by this layer
          *
-         * Reference to the instance passed to @ref BaseLayerGL::BaseLayerGL(LayerHandle, Shared&)
-         * or @ref TextLayerGL::TextLayerGL(LayerHandle, Shared&).
+         * Reference to the instance passed to @ref BaseLayerGL::BaseLayerGL(LayerHandle, Shared&),
+         * @ref LineLayerGL::LineLayerGL(LayerHandle, Shared&) or
+         * @ref TextLayerGL::TextLayerGL(LayerHandle, Shared&).
          */
         Shared& shared();
         const Shared& shared() const; /**< @overload */

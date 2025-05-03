@@ -1223,7 +1223,7 @@ DataHandle TextLayer::create(const UnsignedInt style, const Containers::StringVi
         #endif
         id, style, text, properties, flags);
     Implementation::TextLayerData& data = state.data[id];
-    /* glyphRun, textRun and flags is filled by shapeTextInternal() */
+    /* glyphRun, textRun and flags is filled by shapeRememberTextInternal() */
     data.style = style;
     /* calculatedStyle is filled by AbstractVisualLayer::doUpdate() */
     data.color = Color4{1.0f};

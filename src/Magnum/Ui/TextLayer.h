@@ -1196,7 +1196,7 @@ upload the updated part of the glyph cache to the GPU texture using
 
 @snippet Ui.cpp TextLayer-single-glyph-instanceless1
 
-Finally add the newly added icons as a new @ref FontHandle using
+Finally create a @ref FontHandle for the new set of glyphs using
 @ref TextLayer::Shared::addInstancelessFont(). Compared to
 @ref TextLayer::Shared::addFont() it takes a *scale* instead of size. Assuming
 the UI size matches the framebuffer size, use @cpp 1.0f @ce if you want to draw
@@ -2420,8 +2420,8 @@ class MAGNUM_UI_EXPORT TextLayer: public AbstractVisualLayer {
          *
          * Calling this function causes @ref LayerState::NeedsDataUpdate to be
          * set, unless the operation performed is a no-op such as inserting
-         * empty text or moving a cursor / deleting a character to the left
-         * with the cursor already being on the leftmost side of the text.
+         * empty text or moving a cursor / deleting a character with there
+         * being no character to move over or delete.
          * @see @ref isHandleValid(DataHandle) const,
          *      @ref flags(DataHandle) const, @ref setText()
          */
