@@ -2206,7 +2206,7 @@ void TextLayer::doUpdate(const LayerStates states, const Containers::StridedArra
 
         /* Resize the vertex array to fit all data, make a view on the common
            type prefix */
-        const std::size_t typeSize = sharedState.flags & TextLayerSharedFlag::DistanceField ?
+        const std::size_t typeSize = sharedState.flags >= TextLayerSharedFlag::DistanceField ?
             sizeof(Implementation::TextLayerDistanceFieldVertex) :
             sizeof(Implementation::TextLayerVertex);
         arrayResize(state.vertices, NoInit, totalGlyphCount*4*typeSize);
@@ -2215,6 +2215,14 @@ void TextLayer::doUpdate(const LayerStates states, const Containers::StridedArra
             reinterpret_cast<Implementation::TextLayerVertex*>(state.vertices.data()),
             state.vertices.size()/typeSize,
             std::ptrdiff_t(typeSize)};
+
+        /* View on the distance field vertices to fill in the run scales below,
+           if distance field is enabled. Doing it like this instead of casting
+           the typeless state.vertices array to ensure it's not accidentally in
+           some entirely different type. */
+        const Containers::ArrayView<Implementation::TextLayerDistanceFieldVertex> distanceFieldVertices = sharedState.flags >= TextLayerSharedFlag::DistanceField ?
+            Containers::arrayCast<Implementation::TextLayerDistanceFieldVertex>(vertices).asContiguous() :
+            nullptr;
 
         /* If any selection or cursor style is present, make room in the
            editing vertex array as well */
@@ -2246,6 +2254,16 @@ void TextLayer::doUpdate(const LayerStates states, const Containers::StridedArra
                     glyphData.slice(&Implementation::TextLayerGlyphData::glyphId),
                     vertexData.slice(&Implementation::TextLayerVertex::position),
                     vertexData.slice(&Implementation::TextLayerVertex::textureCoordinates));
+
+                /* Fill in also extra per-run properties needed for distance
+                   field rendering if enabled */
+                /** @todo again ideally this would only be done if some text
+                    actually changes, not on every visibility change */
+                if(sharedState.flags >= TextLayerSharedFlag::DistanceField) {
+                    const Float invertedRunScale = 1.0f/glyphRun.scale;
+                    for(Implementation::TextLayerDistanceFieldVertex& i: distanceFieldVertices.sliceSize(glyphRun.glyphOffset*4, glyphRun.glyphCount*4))
+                        i.invertedRunScale = invertedRunScale;
+                }
             }
 
             /* Align the glyph run relative to the node area. This is done even
@@ -2422,27 +2440,6 @@ void TextLayer::doUpdate(const LayerStates states, const Containers::StridedArra
                         data.usedDirection,
                         nodeOpacities[nodeId]);
                 }
-            }
-        }
-
-        /* Fill in also extra per-run properties needed for distance field
-           rendering if enabled */
-        if(sharedState.flags >= TextLayerSharedFlag::DistanceField) {
-            /* Doing it like this instead of casting the typeless
-               state.vertices array to ensure it's not accidentally in some
-               entirely different type */
-            const Containers::ArrayView<Implementation::TextLayerDistanceFieldVertex> distanceFieldVertices = Containers::arrayCast<Implementation::TextLayerDistanceFieldVertex>(vertices).asContiguous();
-
-            for(const UnsignedInt dataId: dataIds) {
-                const Implementation::TextLayerData& data = state.data[dataId];
-                if(data.glyphRun == ~UnsignedInt{})
-                    continue;
-
-                /** @todo again ideally this would only be done if some text
-                    actually changes, not on every visibility change */
-                const Implementation::TextLayerGlyphRun& glyphRun = state.glyphRuns[data.glyphRun];
-                for(Implementation::TextLayerDistanceFieldVertex& i: distanceFieldVertices.sliceSize(glyphRun.glyphOffset*4, glyphRun.glyphCount*4))
-                    i.invertedRunScale = 1.0f/glyphRun.scale;
             }
         }
     }
