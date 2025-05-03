@@ -934,7 +934,7 @@ const struct {
     bool emptyUpdate;
     UnsignedInt styleCount, editingStyleCount, dynamicStyleCount;
     bool hasEditingStyles;
-    TextLayerSharedFlags flags;
+    TextLayerSharedFlags sharedLayerFlags;
     Vector2 node6Offset, node6Size;
     Vector4 paddingFromStyle;
     Vector4 paddingFromData;
@@ -8353,7 +8353,7 @@ void TextLayerTest::updateCleanDataOrder() {
     } shared{cache, TextLayer::Shared::Configuration{6, data.styleCount}
         .setEditingStyleCount(data.editingStyleCount ? 4 : 0, data.editingStyleCount)
         .setDynamicStyleCount(data.dynamicStyleCount, data.hasEditingStyles)
-        .setFlags(data.flags)
+        .setFlags(data.sharedLayerFlags)
     };
 
     /* The three-glyph font is scaled to 0.5, the one-glyph to 2.0, this scale
@@ -8692,7 +8692,7 @@ void TextLayerTest::updateCleanDataOrder() {
         /* Depending on whether TextLayerSharedFlag::DistanceField is enabled
            the vertex data contain a different type. Make a view on the common
            prefix. */
-        std::size_t vertexTypeSize = data.flags >= TextLayerSharedFlag::DistanceField ?
+        std::size_t vertexTypeSize = data.sharedLayerFlags >= TextLayerSharedFlag::DistanceField ?
             sizeof(Implementation::TextLayerDistanceFieldVertex) :
             sizeof(Implementation::TextLayerVertex);
         Containers::StridedArrayView1D<const Implementation::TextLayerVertex> vertices{
@@ -8703,7 +8703,7 @@ void TextLayerTest::updateCleanDataOrder() {
         Containers::StridedArrayView1D<const Vector2> positions = vertices.slice(&Implementation::TextLayerVertex::position);
         Containers::StridedArrayView1D<const Vector3> textureCoordinates = vertices.slice(&Implementation::TextLayerVertex::textureCoordinates);
         Containers::StridedArrayView1D<const Float> invertedRunScales =
-            data.flags >= TextLayerSharedFlag::DistanceField ?
+            data.sharedLayerFlags >= TextLayerSharedFlag::DistanceField ?
                 stridedArrayView(Containers::arrayCast<Implementation::TextLayerDistanceFieldVertex>(layer.stateData().vertices)).slice(&Implementation::TextLayerDistanceFieldVertex::invertedRunScale) : nullptr;
 
         /* The vertices are there for all data that have glyphs, but only the
@@ -8713,7 +8713,7 @@ void TextLayerTest::updateCleanDataOrder() {
         for(std::size_t i = 0; i != 5*4; ++i) {
             CORRADE_ITERATION(i);
             CORRADE_COMPARE(vertices[2*4 + i].color, 0xff336699_rgbaf*0.4f);
-            if(data.flags >= TextLayerSharedFlag::DistanceField)
+            if(data.sharedLayerFlags >= TextLayerSharedFlag::DistanceField)
                 CORRADE_COMPARE(invertedRunScales[2*4 + i], 1.0f/0.5f); /* threeGlyphFont */
         }
         /* Created with style 5, which if not dynamic is transitioned to 2 as
@@ -8744,7 +8744,7 @@ void TextLayerTest::updateCleanDataOrder() {
         for(std::size_t i = 0; i != 1*4; ++i) {
             CORRADE_ITERATION(i);
             CORRADE_COMPARE(vertices[8*4 + i].color, 0xcceeff00_rgbaf*0.4f);
-            if(data.flags >= TextLayerSharedFlag::DistanceField)
+            if(data.sharedLayerFlags >= TextLayerSharedFlag::DistanceField)
                 CORRADE_COMPARE(invertedRunScales[8*4 + i], 1.0f/0.5f); /* threeGlyphFont */
             /* Created with style 4, which if not dynamic is mapped to uniform
                1. If dynamic, it's implicitly `uniformCount + (id - styleCount)`,
@@ -8759,7 +8759,7 @@ void TextLayerTest::updateCleanDataOrder() {
         for(std::size_t i = 0; i != 1*4; ++i) {
             CORRADE_ITERATION(i);
             CORRADE_COMPARE(vertices[9*4 + i].color, 0x11223344_rgbaf*0.9f);
-            if(data.flags >= TextLayerSharedFlag::DistanceField)
+            if(data.sharedLayerFlags >= TextLayerSharedFlag::DistanceField)
                 CORRADE_COMPARE(invertedRunScales[9*4 + i], 1.0f/2.0f); /* oneGlyphFont */
             /* Created with style 1, which is mapped to uniform 2. The
                selection doesn't override the text uniform, so it's always the
@@ -8770,7 +8770,7 @@ void TextLayerTest::updateCleanDataOrder() {
         for(std::size_t i = 0; i != 2*4; ++i) {
             CORRADE_ITERATION(i);
             CORRADE_COMPARE(vertices[11*4 + i].color, 0x663399ff_rgbaf*0.9f);
-            if(data.flags >= TextLayerSharedFlag::DistanceField)
+            if(data.sharedLayerFlags >= TextLayerSharedFlag::DistanceField)
                 CORRADE_COMPARE(invertedRunScales[11*4 + i], 1.0f/0.5f); /* threeGlyphFont */
             /* Created with style 3, which is mapped to uniform 1. There's only
                a cursor, which doesn't override the text uniform, so it's
@@ -9092,7 +9092,7 @@ void TextLayerTest::updateCleanDataOrder() {
        again because it could get reallocated here if it was empty before. It
        however won't get reallocated after this point, since it only shrinks
        now. */
-    std::size_t vertexTypeSize = data.flags >= TextLayerSharedFlag::DistanceField ?
+    std::size_t vertexTypeSize = data.sharedLayerFlags >= TextLayerSharedFlag::DistanceField ?
         sizeof(Implementation::TextLayerDistanceFieldVertex) :
         sizeof(Implementation::TextLayerVertex);
     Containers::StridedArrayView1D<const Implementation::TextLayerVertex> vertices{
@@ -9103,7 +9103,7 @@ void TextLayerTest::updateCleanDataOrder() {
     Containers::StridedArrayView1D<const Vector2> positions = vertices.slice(&Implementation::TextLayerVertex::position);
     Containers::StridedArrayView1D<const Vector3> textureCoordinates = vertices.slice(&Implementation::TextLayerVertex::textureCoordinates);
     Containers::StridedArrayView1D<const Float> invertedRunScales =
-        data.flags >= TextLayerSharedFlag::DistanceField ?
+        data.sharedLayerFlags >= TextLayerSharedFlag::DistanceField ?
             stridedArrayView(Containers::arrayCast<Implementation::TextLayerDistanceFieldVertex>(layer.stateData().vertices)).slice(&Implementation::TextLayerDistanceFieldVertex::invertedRunScale) : nullptr;
 
     /* There should be just 6 glyph runs, assigned to the remaining 9 data */
@@ -9191,7 +9191,7 @@ void TextLayerTest::updateCleanDataOrder() {
     for(std::size_t i = 0; i != 1*4; ++i) {
         CORRADE_ITERATION(i);
         CORRADE_COMPARE(vertices[3*4 + i].color, 0x11223344_rgbaf*0.9f);
-        if(data.flags >= TextLayerSharedFlag::DistanceField)
+        if(data.sharedLayerFlags >= TextLayerSharedFlag::DistanceField)
             CORRADE_COMPARE(invertedRunScales[3*4 + i], 1.0f/2.0f); /* oneGlyphFont */
         /* Created with style 1, which is mapped to uniform 2. The selection
            doesn't override the text uniform, so it's always the same. */
@@ -9201,7 +9201,7 @@ void TextLayerTest::updateCleanDataOrder() {
     for(std::size_t i = 0; i != 2*4; ++i) {
         CORRADE_ITERATION(i);
         CORRADE_COMPARE(vertices[5*4 + i].color, 0x663399ff_rgbaf*0.9f);
-        if(data.flags >= TextLayerSharedFlag::DistanceField)
+        if(data.sharedLayerFlags >= TextLayerSharedFlag::DistanceField)
             CORRADE_COMPARE(invertedRunScales[5*4 + i], 1.0f/0.5f); /* threeGlyphFont */
         /* Created with style 3, which is mapped to uniform 1. There's only a
            cursor, which doesn't override the text uniform, so it's always the
@@ -9399,7 +9399,7 @@ void TextLayerTest::updateCleanDataOrder() {
     for(std::size_t i = 0; i != 2*4; ++i) {
         CORRADE_ITERATION(i);
         CORRADE_COMPARE(vertices[4*4 + i].color, 0x663399ff_rgbaf*0.9f);
-        if(data.flags >= TextLayerSharedFlag::DistanceField)
+        if(data.sharedLayerFlags >= TextLayerSharedFlag::DistanceField)
             CORRADE_COMPARE(invertedRunScales[4*4 + i], 1.0f/0.5f); /* threeGlyphFont */
         /* Created with style 3, which is mapped to uniform 1. There's only a
            cursor, which doesn't override the text uniform, so it's always the
