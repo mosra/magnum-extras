@@ -27,6 +27,7 @@
 #include <Corrade/Containers/StridedArrayView.h>
 #include <Corrade/Containers/String.h>
 #include <Corrade/PluginManager/Manager.h>
+#include <Corrade/Utility/Algorithms.h>
 #include <Corrade/Utility/Path.h>
 #include <Magnum/Image.h>
 #include <Magnum/ImageView.h>
@@ -46,7 +47,10 @@
 #include <Magnum/Text/Alignment.h>
 #include <Magnum/Text/Feature.h>
 #include <Magnum/Text/DistanceFieldGlyphCacheGL.h>
+#include <Magnum/TextureTools/Atlas.h>
 #include <Magnum/Trade/AbstractImageConverter.h>
+#include <Magnum/Trade/AbstractImporter.h>
+#include <Magnum/Trade/ImageData.h>
 
 #include "Magnum/Ui/AbstractUserInterface.h"
 #include "Magnum/Ui/RendererGL.h"
@@ -64,7 +68,7 @@ struct UiTextLayer: Platform::WindowlessApplication {
     int exec() override;
 };
 
-constexpr Vector2i ImageSize{512, 128};
+constexpr Vector2i ImageSize{512, 256};
 
 /** @todo ffs, duplicated three times, make a batch utility in Magnum */
 Image2D unpremultiply(Image2D image) {
@@ -79,7 +83,7 @@ int UiTextLayer::exec() {
     GL::Renderer::setBlendFunction(GL::Renderer::BlendFunction::One, GL::Renderer::BlendFunction::OneMinusSourceAlpha);
 
     /* The actual framebuffer size is 4x the UI size */
-    Ui::AbstractUserInterface ui{{128.0f, 32.0f}, Vector2{ImageSize}, ImageSize};
+    Ui::AbstractUserInterface ui{{128.0f, 64.0f}, Vector2{ImageSize}, ImageSize};
     /* Using a compositing framebuffer because it's easier than setting up a
        custom framebuffer here */
     Ui::RendererGL& renderer = ui.setRendererInstance(Containers::pointer<Ui::RendererGL>(Ui::RendererGL::Flag::CompositingFramebuffer));
@@ -89,8 +93,10 @@ int UiTextLayer::exec() {
     if(!converter)
         return 1;
 
-    /* Non-distance-field font & glyph cache */
     PluginManager::Manager<Text::AbstractFont> fontManager;
+    PluginManager::Manager<Trade::AbstractImporter> importerManager;
+
+    /* Non-distance-field font & glyph cache */
     Containers::Pointer<Text::AbstractFont> font = fontManager.loadAndInstantiate("HarfBuzzFont");
     if(!font || !font->openFile(Utility::Path::join(Utility::Path::path(__FILE__), "../../src/Magnum/Ui/SourceSans3-Regular.otf"), 2*24.0f))
         return 1;
@@ -265,7 +271,7 @@ int UiTextLayer::exec() {
         layer.create(1, "shh", {}, faded);
         ui.draw();
         ui.removeNode(root);
-        converter->convertToFile(unpremultiply(renderer.compositingFramebuffer().read({{0, 64}, {384, 128}}, {PixelFormat::RGBA8Unorm})), "ui-textlayer-style-color.png");
+        converter->convertToFile(unpremultiply(renderer.compositingFramebuffer().read({{0, 192}, {384, 256}}, {PixelFormat::RGBA8Unorm})), "ui-textlayer-style-color.png");
     } {
         renderer.compositingFramebuffer().clearColor(0, 0x00000000_rgbaf);
 
@@ -277,7 +283,7 @@ int UiTextLayer::exec() {
 
         ui.draw();
         ui.removeNode(root);
-        converter->convertToFile(unpremultiply(renderer.compositingFramebuffer().read({{0, 64}, {192, 128}}, {PixelFormat::RGBA8Unorm})), "ui-textlayer-style-data-padding.png");
+        converter->convertToFile(unpremultiply(renderer.compositingFramebuffer().read({{0, 192}, {192, 256}}, {PixelFormat::RGBA8Unorm})), "ui-textlayer-style-data-padding.png");
     } {
         renderer.compositingFramebuffer().clearColor(0, 0x00000000_rgbaf);
 
@@ -294,7 +300,7 @@ int UiTextLayer::exec() {
 
         ui.draw();
         ui.removeNode(root);
-        converter->convertToFile(unpremultiply(renderer.compositingFramebuffer().read({{}, ImageSize}, {PixelFormat::RGBA8Unorm})), "ui-textlayer-style-features.png");
+        converter->convertToFile(unpremultiply(renderer.compositingFramebuffer().read({{0, 128}, {256, 256}}, {PixelFormat::RGBA8Unorm})), "ui-textlayer-style-features.png");
     } {
         renderer.compositingFramebuffer().clearColor(0, 0x00000000_rgbaf);
 
@@ -303,7 +309,7 @@ int UiTextLayer::exec() {
 
         ui.draw();
         ui.removeNode(root);
-        converter->convertToFile(unpremultiply(renderer.compositingFramebuffer().read({{0, 64}, {64, 128}}, {PixelFormat::RGBA8Unorm})), "ui-textlayer-single-glyph.png");
+        converter->convertToFile(unpremultiply(renderer.compositingFramebuffer().read({{0, 192}, {64, 256}}, {PixelFormat::RGBA8Unorm})), "ui-textlayer-single-glyph.png");
     } {
         renderer.compositingFramebuffer().clearColor(0, 0x00000000_rgbaf);
 
@@ -313,7 +319,7 @@ int UiTextLayer::exec() {
 
         ui.draw();
         ui.removeNode(root);
-        converter->convertToFile(unpremultiply(renderer.compositingFramebuffer().read({{0, 64}, {256, 128}}, {PixelFormat::RGBA8Unorm})), "ui-textlayer-editing-color.png");
+        converter->convertToFile(unpremultiply(renderer.compositingFramebuffer().read({{0, 192}, {256, 256}}, {PixelFormat::RGBA8Unorm})), "ui-textlayer-editing-color.png");
     } {
         renderer.compositingFramebuffer().clearColor(0, 0x00000000_rgbaf);
 
@@ -323,7 +329,7 @@ int UiTextLayer::exec() {
 
         ui.draw();
         ui.removeNode(root);
-        converter->convertToFile(unpremultiply(renderer.compositingFramebuffer().read({{0, 64}, {256, 128}}, {PixelFormat::RGBA8Unorm})), "ui-textlayer-editing-padding.png");
+        converter->convertToFile(unpremultiply(renderer.compositingFramebuffer().read({{0, 192}, {256, 256}}, {PixelFormat::RGBA8Unorm})), "ui-textlayer-editing-padding.png");
     } {
         renderer.compositingFramebuffer().clearColor(0, 0x00000000_rgbaf);
 
@@ -333,23 +339,54 @@ int UiTextLayer::exec() {
 
         ui.draw();
         ui.removeNode(root);
-        converter->convertToFile(unpremultiply(renderer.compositingFramebuffer().read({{0, 64}, {256, 128}}, {PixelFormat::RGBA8Unorm})), "ui-textlayer-editing-rounded.png");
+        converter->convertToFile(unpremultiply(renderer.compositingFramebuffer().read({{0, 192}, {256, 256}}, {PixelFormat::RGBA8Unorm})), "ui-textlayer-editing-rounded.png");
     }
 
     /* Distance field glyph cache and font */
     Containers::Pointer<Text::AbstractFont> fontDistanceField =  fontManager.loadAndInstantiate("HarfBuzzFont");
     if(!fontDistanceField || !fontDistanceField->openFile(Utility::Path::join(Utility::Path::path(__FILE__), "../../src/Magnum/Ui/SourceSans3-Regular.otf"), 8*16.0f))
         return 1;
-    Text::DistanceFieldGlyphCacheArrayGL glyphCacheDistanceField{{1024, 1024, 1}, {256, 256}, 20};
+    Text::DistanceFieldGlyphCacheArrayGL glyphCacheDistanceField{{1024, 2048, 1}, {256, 512}, 20};
+
+    /* Images for the distance field style docs */
+    Ui::TextLayerGL::Shared layerSharedDistanceField{glyphCacheDistanceField,
+        Ui::TextLayerGL::Shared::Configuration{6}
+    };
+
+    /* Extra "clock needle" glyph for the distance field cache. The SVG should
+       be then verbatim copied into the [TextLayer-transformation] snippet in
+       doc/snippets/Ui.cpp. */
+    Ui::FontHandle needleFont;
+    {
+        Containers::Pointer<Trade::AbstractImporter> importer = importerManager.loadAndInstantiate("SvgImporter");
+        if(!importer || !importer->openFile(Utility::Path::join(Utility::Path::path(__FILE__), "../artwork/ui-textlayer-needle.svg")))
+            return 1;
+
+        Containers::Optional<Trade::ImageData2D> image = importer->image2D(0);
+        if(!image)
+            return 1;
+
+        Vector2i offset[1];
+        Containers::Optional<Range2Di> out = glyphCacheDistanceField.atlas().add({image->size()}, offset);
+        CORRADE_INTERNAL_ASSERT(out);
+        Utility::copy(
+            image->pixels<Color4ub>().slice(&Color4ub::r),
+            glyphCacheDistanceField.image().pixels<UnsignedByte>()[0].sliceSize(
+                {std::size_t(offset->y()), std::size_t(offset->x())},
+                {std::size_t(image->size().y()), std::size_t(image->size().x())}));
+        glyphCacheDistanceField.flushImage(*out);
+
+        UnsignedInt fontId = glyphCacheDistanceField.addFont(1);
+        glyphCacheDistanceField.addGlyph(fontId, 0, {-16, -16}, Range2Di::fromSize(*offset, image->size()));
+
+        needleFont = layerSharedDistanceField.addInstancelessFont(fontId, 0.125f);
+    }
+
+    /* Glyphs added after the needle to fit in the space next to it */
     fontDistanceField->fillGlyphCache(glyphCacheDistanceField,
         "abcdefghijklmnopqrstuvwxyz"
         "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
         "1234567890! .#:'?");
-
-    /* Images for the distance field style docs */
-    Ui::TextLayerGL::Shared layerSharedDistanceField{glyphCacheDistanceField,
-        Ui::TextLayerGL::Shared::Configuration{5}
-    };
 
     Ui::FontHandle fontHandleDistanceField = layerSharedDistanceField.addFont(*fontDistanceField, 12.0f);
     Ui::FontHandle fontSmallHandleDistanceField = layerSharedDistanceField.addFont(*fontDistanceField, 8.0f);
@@ -372,19 +409,27 @@ int UiTextLayer::exec() {
             .setEdgeOffset(0.625f),
          Ui::TextLayerStyleUniform{}    /* 4 */
             .setColor(0x2f83cc_rgbf)
-            .setEdgeOffset(0.75f)},
+            .setEdgeOffset(0.75f),
+         Ui::TextLayerStyleUniform{}    /* 5 */
+            .setColor(0xdcdcdc_rgbf)
+            .setOutlineColor(0x2f83cc_rgbf)
+            .setOutlineWidth(0.5f)
+            .setEdgeOffset(0.5f)},
         {fontSmallHandleDistanceField,
          fontLargeHandleDistanceField,
          fontHandleDistanceField,
          fontHandleDistanceField,
+         fontHandleDistanceField,
          fontHandleDistanceField},
-        {Text::Alignment::MiddleCenter,
-         Text::Alignment::MiddleCenter,
-         Text::Alignment::MiddleCenter,
-         Text::Alignment::MiddleCenter,
-         Text::Alignment::MiddleCenter},
-        {}, {}, {}, {}, {}, {});
-    Ui::TextLayer& layerDistanceField = ui.setLayerInstance(Containers::pointer<Ui::TextLayerGL>(ui.createLayer(), layerSharedDistanceField));
+        {Text::Alignment::MiddleCenter,  /* 0 */
+         Text::Alignment::MiddleCenter,  /* 1 */
+         Text::Alignment::MiddleCenter,  /* 2 */
+         Text::Alignment::MiddleCenter,  /* 3 */
+         Text::Alignment::MiddleCenter,  /* 4 */
+         Text::Alignment::LineCenter},   /* 5 */
+        {}, {}, {}, {}, {},
+        {{}, {}, {}, {}, {}, Vector4{2.0f, 0.0f, 2.0f, 0.0f} /* 5 */});
+    Ui::TextLayer& layerDistanceField = ui.setLayerInstance(Containers::pointer<Ui::TextLayerGL>(ui.createLayer(), layerSharedDistanceField, Ui::TextLayerFlag::Transformable));
 
     {
         renderer.compositingFramebuffer().clearColor(0, 0x00000000_rgbaf);
@@ -398,7 +443,7 @@ int UiTextLayer::exec() {
         layerDistanceField.create(2, "smooth", {}, smooth);
         ui.draw();
         ui.removeNode(root);
-        converter->convertToFile(unpremultiply(renderer.compositingFramebuffer().read({{0, 48}, {384, 128}}, {PixelFormat::RGBA8Unorm})), "ui-textlayer-style-smoothness.png");
+        converter->convertToFile(unpremultiply(renderer.compositingFramebuffer().read({{0, 176}, {384, 256}}, {PixelFormat::RGBA8Unorm})), "ui-textlayer-style-smoothness.png");
     } {
         renderer.compositingFramebuffer().clearColor(0, 0x00000000_rgbaf);
 
@@ -409,7 +454,28 @@ int UiTextLayer::exec() {
         layerDistanceField.create(4, "bulky!?", {}, bulky);
         ui.draw();
         ui.removeNode(root);
-        converter->convertToFile(unpremultiply(renderer.compositingFramebuffer().read({{0, 64}, {384, 128}}, {PixelFormat::RGBA8Unorm})), "ui-textlayer-style-offset-outline.png");
+        converter->convertToFile(unpremultiply(renderer.compositingFramebuffer().read({{0, 192}, {384, 256}}, {PixelFormat::RGBA8Unorm})), "ui-textlayer-style-offset-outline.png");
+    } {
+        renderer.compositingFramebuffer().clearColor(0, 0x00000000_rgbaf);
+
+        Ui::NodeHandle clock = ui.createNode({}, {64, 64});
+        layerDistanceField.create(5, "12", Text::Alignment::TopCenter, clock);
+        layerDistanceField.create(5, "3", Text::Alignment::MiddleRight, clock);
+        layerDistanceField.create(5, "6", Text::Alignment::BottomCenter, clock);
+        layerDistanceField.create(5, "9", Text::Alignment::MiddleLeft, clock);
+
+        Ui::NodeHandle hours = ui.createNode(clock, {}, ui.nodeSize(clock));
+        Ui::DataHandle hoursData = layerDistanceField.createGlyph(5, 0, needleFont, hours);
+        layerDistanceField.rotate(hoursData, 360.0_degf*(10.0f + 11.0f/60.0f)/12.0f);
+        layerDistanceField.scale(hoursData, 0.75f);
+
+        Ui::NodeHandle minutes = ui.createNode(hours, {}, ui.nodeSize(hours));
+        Ui::DataHandle minutesData = layerDistanceField.createGlyph(5, 0, needleFont, minutes);
+        layerDistanceField.rotate(minutesData, 360.0_degf*11.0f/60.0f);
+
+        ui.draw();
+        ui.removeNode(clock);
+        converter->convertToFile(unpremultiply(renderer.compositingFramebuffer().read({{0, 0}, {256, 256}}, {PixelFormat::RGBA8Unorm})), "ui-textlayer-transformation.png");
     }
 
     return 0;

@@ -42,6 +42,7 @@
 #include <Magnum/Text/Feature.h>
 #include <Magnum/Text/Script.h>
 #include <Magnum/TextureTools/Atlas.h>
+#include <Magnum/Trade/AbstractImporter.h>
 #include <Magnum/Trade/ImageData.h>
 
 #include "Magnum/Ui/AbstractUserInterface.h"
@@ -1141,6 +1142,62 @@ DOXYGEN_ELLIPSIS()
 /* Create a glyph from containing icon at offset 3 in the `icons` array above */
 textLayer.createGlyph(DOXYGEN_ELLIPSIS(0), 3, iconFontHandle, DOXYGEN_ELLIPSIS(node));
 /* [TextLayer-single-glyph-instanceless2] */
+}
+
+{
+/* [TextLayer-transformation-clock1] */
+PluginManager::Manager<Trade::AbstractImporter> importerManager;
+Containers::Pointer<Trade::AbstractImporter> importer =
+    importerManager.loadAndInstantiate("SvgImporter");
+if(!importer || !importer->openData(R"(
+<svg version="1.1" viewBox="0 0 32 256" xmlns="http://www.w3.org/2000/svg">
+  <rect width="32" height="256"/>
+  <path d="m16 0-4 16-12 224 16 16 16-16-12-224z" fill="#fff"/>
+</svg>
+)"))
+    Fatal{} << "Uh oh";
+
+Containers::Optional<Trade::ImageData2D> needle = importer->image2D(0);
+/* [TextLayer-transformation-clock1] */
+
+/* [TextLayer-transformation-clock2] */
+Vector3i offset[1];
+Containers::Optional<Range3Di> flushRange = textLayer.shared().glyphCache()
+    .atlas().add({needle->size()}, offset);
+CORRADE_INTERNAL_ASSERT(flushRange);
+Containers::StridedArrayView3D<const UnsignedByte> src =
+    needle->pixels<Color4ub>().slice(&Color4ub::r); /* just the red channel */
+Containers::StridedArrayView3D<UnsignedByte> dst =
+    textLayer.shared().glyphCache().image().pixels<UnsignedByte>();
+Utility::copy(src, dst.sliceSize(
+    {std::size_t(offset->z()),
+     std::size_t(offset->y()),
+     std::size_t(offset->x())}, src.size()));
+textLayer.shared().glyphCache().flushImage(*flushRange);
+
+UnsignedInt needleFontId = textLayer.shared().glyphCache().addFont(1);
+textLayer.shared().glyphCache().addGlyph(needleFontId, 0,
+    {-16, -16}, offset->z(), Range2Di::fromSize(offset->xy(), needle->size()));
+Ui::FontHandle needleFont = textLayer.shared().addInstancelessFont(needleFontId, DOXYGEN_ELLIPSIS(0.125f));
+/* [TextLayer-transformation-clock2] */
+
+UnsignedInt style = 0;
+/* [TextLayer-transformation-clock3] */
+Ui::NodeHandle clock = DOXYGEN_ELLIPSIS(ui.createNode({}, {64, 64}));
+textLayer.create(style, "12", Text::Alignment::TopCenter, clock);
+textLayer.create(style, "3", Text::Alignment::MiddleRight, clock);
+textLayer.create(style, "6", Text::Alignment::BottomCenter, clock);
+textLayer.create(style, "9", Text::Alignment::MiddleLeft, clock);
+
+Ui::NodeHandle hours = ui.createNode(clock, {}, ui.nodeSize(clock));
+Ui::DataHandle hoursData = textLayer.createGlyph(style, 0, needleFont, hours);
+textLayer.rotate(hoursData, 360.0_degf*(10.0f + 11.0f/60.0f)/12.0f);
+textLayer.scale(hoursData, 0.75f);
+
+Ui::NodeHandle minutes = ui.createNode(hours, {}, ui.nodeSize(hours));
+Ui::DataHandle minutesData = textLayer.createGlyph(style, 0, needleFont, minutes);
+textLayer.rotate(minutesData, 360.0_degf*11.0f/60.0f);
+/* [TextLayer-transformation-clock3] */
 }
 
 {

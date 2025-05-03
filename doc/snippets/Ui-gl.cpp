@@ -336,6 +336,20 @@ Ui::TextLayerGL::Shared textLayerShared{glyphCache,
 
 {
 Ui::UserInterfaceGL ui{NoCreate};
+Text::DistanceFieldGlyphCacheArrayGL glyphCache{DOXYGEN_ELLIPSIS({}, {}, 0)};
+Ui::TextLayerGL::Shared textLayerShared{glyphCache,
+    Ui::TextLayer::Shared::Configuration{DOXYGEN_ELLIPSIS(0)}
+};
+/* [TextLayer-transformation-setup] */
+Ui::TextLayerGL& textLayer = ui.setLayerInstance(
+    Containers::pointer<Ui::TextLayerGL>(ui.createLayer(), textLayerShared,
+                                         Ui::TextLayerFlag::Transformable));
+/* [TextLayer-transformation-setup] */
+static_cast<void>(textLayer);
+}
+
+{
+Ui::UserInterfaceGL ui{NoCreate};
 Text::GlyphCacheArrayGL glyphCache{PixelFormat::R8Unorm, {8, 8, 1}};
 /* [TextLayer-dynamic-styles] */
 Ui::TextLayerGL::Shared textLayerShared{glyphCache,

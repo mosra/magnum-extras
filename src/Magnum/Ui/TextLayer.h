@@ -1275,6 +1275,47 @@ behave the same as @ref create() and @ref createGlyph(). Internally there's no
 distinction between a text and a single glyph, so a text can be safely changed
 to just a glyph and vice versa.
 
+@section Ui-TextLayer-transformation Arbitrary text and glyph transformation
+
+By constructing the layer with @ref TextLayerFlag::Transformable, the text data
+can be arbitrarily translated, rotated and scaled, replacing the padding
+functionality. While this feature works with the regular glyph cache as well,
+it's mainly intended for use with @ref Ui-TextLayer-distancefield "distance field rendering"
+which ensures the transformation doesn't cause any visual artifacts.
+
+@snippet Ui-gl.cpp TextLayer-transformation-setup
+
+For a more involved example, the following code will draw an analog clock with
+hands drawn as rotated glyphs. First, the hand is imported from an inline SVG
+with one of the SVG importer plugins such as the
+@relativeref{Trade,LunaSvgImporter}. It'll result in a 32x256 image that's ---
+as documented --- in @ref PixelFormat::RGBA8Unorm, but is just black and white:
+
+@snippet Ui.cpp TextLayer-transformation-clock1
+
+Afterwards, similarly to the @ref Ui-TextLayer-single-glyphs "glyph cache packing code above",
+the image is added to the glyph cache. Just the red channel is copied because
+the distance field glyph cache is single-channel, and the
+@ref Text::AbstractGlyphCache::flushImage() call will process it to a distance
+field. Then a @ref Ui::FontHandle with this single image as glyph @cpp 0 @ce is
+added, which gets referenced later. The @cpp {-16, 16} @ce offset moves the
+glyph origin to the desired rotation center. The scale passed to
+@ref TextLayer::Shared::addInstancelessFont() is chosen so the 256-pixel-high
+input image has the right size for the desired size of the clock in the UI.
+
+@snippet Ui.cpp TextLayer-transformation-clock2
+
+@image html ui-textlayer-transformation.png width=128px
+
+Finally, assuming `style` has a regular font associated, 12-, 3-, 6- and 9-hour
+marks are added using various @ref Text::Alignment values. Two other nodes,
+added as children in order to make the hands appear above the numbers, with the
+`needleFont` glyph @cpp 0 @ce from above, then show a time of 10:11. The
+default hand rotation is at the 12-hour mark, first child is the scaled-down
+hand showing hours, and second, again above hours, is then minutes:
+
+@snippet Ui.cpp TextLayer-transformation-clock3
+
 @section Ui-TextLayer-dynamic-styles Dynamic styles
 
 Like with @ref Ui-BaseLayer-dynamic-styles "BaseLayer dynamic styles", the
