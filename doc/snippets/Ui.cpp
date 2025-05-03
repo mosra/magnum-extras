@@ -832,17 +832,21 @@ PluginManager::Manager<Text::AbstractFont> fontManager;
 
 Containers::Pointer<Text::AbstractFont> font16 =
     fontManager.loadAndInstantiate("TrueTypeFont");
-font16->openFile("font.ttf", 16.0f);
-font16->fillGlyphCache(glyphCache, "abcdefghijklmnopqrstuvwxyz"
-                                   "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-                                   "0123456789?!:;,. ");
+if(!font16 ||
+   !font16->openFile("font.ttf", 16.0f) ||
+   !font16->fillGlyphCache(glyphCache, "abcdefghijklmnopqrstuvwxyz"
+                                       "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+                                       "0123456789?!:;,. "))
+    Fatal{} << "Uh oh";
 
 Containers::Pointer<Text::AbstractFont> font12 =
     fontManager.loadAndInstantiate("TrueTypeFont");
-font12->openFile("font.ttf", 12.0f);
-font12->fillGlyphCache(glyphCache, "abcdefghijklmnopqrstuvwxyz"
-                                   "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-                                   "0123456789?!:;,. ");
+if(!font12 ||
+   !font12->openFile("font.ttf", 12.0f) ||
+   !font12->fillGlyphCache(glyphCache, "abcdefghijklmnopqrstuvwxyz"
+                                       "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+                                       "0123456789?!:;,. "))
+    Fatal{} << "Oh no";
 
 Ui::FontHandle font16Handle = textLayerShared.addFont(*font16, font16->size());
 Ui::FontHandle font12Handle = textLayerShared.addFont(*font12, font12->size());
