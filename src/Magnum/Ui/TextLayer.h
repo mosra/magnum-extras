@@ -1048,15 +1048,42 @@ style:
 
 @snippet Ui.cpp TextLayer-style-features
 
+@section Ui-TextLayer-dpi Text crispness and DPI awareness
+
+With @ref Text::GlyphCacheArrayGL, if the UI size differs from the actual
+framebuffer size, which is often the case on HiDPI systems and other scenarios
+described in @ref Ui-AbstractUserInterface-dpi "AbstractUserInterface DPI awareness docs",
+using the same font size in both @ref Text::AbstractFont::openFile() /
+@relativeref{Text::AbstractFont,openData()} and
+@ref TextLayerGL::Shared::addFont() will result in blurry text. Additionally,
+because glyphs are often placed at subpixel locations, it's often better to
+supersample the font at twice the size it's used in for crisper edges even if
+no HiDPI interface scaling is involved. Thus, the size at which the font is
+opened and at which the glyph cache is filled should be multiplied by a factor
+compared to the size the font is used in the UI:
+
+@snippet Ui.cpp TextLayer-dpi
+
+Fonts added with @ref TextLayerGL::Shared::addInstancelessFont() should then
+use the `scale` directly.
+
+<b></b>
+
+@m_class{m-note m-warning}
+
+@par
+    Keep in mind that since glyphs may get rendered at a bigger size, the glyph
+    cache may also need to be created with a bigger size in that case.
+
 @section Ui-TextLayer-distancefield Distance field rendering
 
 With @ref Text::GlyphCacheArrayGL that's used above, drawing a particularly
 sized text involves first populating the cache with a font rasterized at a
-matching size. This gives the font plugin an opportunity to align glyph
-outlines in a way that best suits given size. While it's possible to pass the
-same @ref Text::AbstractFont instance to @ref TextLayer::Shared::addFont()
-multiple times with different sizes, the result will likely be either blurry or
-jaggy.
+size matching physical screen pixels. This gives the font plugin an opportunity
+to align glyph outlines in a way that best suits given size. While it's
+possible to pass the same @ref Text::AbstractFont instance to
+@ref TextLayer::Shared::addFont() multiple times with different sizes, the
+result will likely be either blurry or jaggy.
 
 Having a dedicated font for every size becomes impractical if the application
 needs to use many font sizes, if it needs to scale the text dynamically or if
@@ -1387,32 +1414,6 @@ editing styles you want to have for a particular dynamic style, use
 @ref setDynamicStyleWithCursor(), @ref setDynamicStyleWithSelection() or
 @ref setDynamicStyleWithCursorSelection() instead of @ref setDynamicStyle().
 
-@section Ui-TextLayer-dpi Text crispness and DPI awareness
-
-If the UI size differs from the actual framebuffer size, which is often the
-case on HiDPI systems and other scenarios described in
-@ref Ui-AbstractUserInterface-dpi "AbstractUserInterface DPI awareness docs",
-using the same font size in both @ref Text::AbstractFont::openFile() /
-@relativeref{Text::AbstractFont,openData()} and
-@ref TextLayerGL::Shared::addFont() will result in blurry text. Additionally,
-because glyphs are often placed at subpixel locations, it's often better to
-supersample the font at twice the size it's used in for crisper edges even if
-no HiDPI interface scaling is involved. Thus, the size at which the font is
-opened and at which the glyph cache is filled should be multiplied by a factor
-compared to the size the font is used in the UI:
-
-@snippet Ui.cpp TextLayer-dpi
-
-Fonts added with @ref TextLayerGL::Shared::addInstancelessFont() should then
-use the `scale` directly.
-
-<b></b>
-
-@m_class{m-note m-warning}
-
-@par
-    Keep in mind that since glyphs may get rendered at a bigger size, the glyph
-    cache may also need to be created with a bigger size in that case.
 */
 class MAGNUM_UI_EXPORT TextLayer: public AbstractVisualLayer {
     public:
