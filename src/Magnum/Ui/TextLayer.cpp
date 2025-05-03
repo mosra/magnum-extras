@@ -60,6 +60,26 @@ Debug& operator<<(Debug& debug, const FontHandle value) {
     return debug << "Ui::FontHandle(" << Debug::nospace << Debug::hex << fontHandleId(value) << Debug::nospace << "," << Debug::hex << fontHandleGeneration(value) << Debug::nospace << ")";
 }
 
+Debug& operator<<(Debug& debug, const TextLayerFlag value) {
+    debug << "Ui::TextLayerFlag" << Debug::nospace;
+
+    switch(value) {
+        /* LCOV_EXCL_START */
+        #define _c(value) case TextLayerFlag::value: return debug << "::" #value;
+        _c(Transformable)
+        #undef _c
+        /* LCOV_EXCL_STOP */
+    }
+
+    return debug << "(" << Debug::nospace << Debug::hex << UnsignedByte(value) << Debug::nospace << ")";
+}
+
+Debug& operator<<(Debug& debug, const TextLayerFlags value) {
+    return Containers::enumSetDebugOutput(debug, value, "Ui::TextLayerFlags{}", {
+        TextLayerFlag::Transformable
+    });
+}
+
 Debug& operator<<(Debug& debug, const TextDataFlag value) {
     debug << "Ui::TextDataFlag" << Debug::nospace;
 
@@ -487,10 +507,11 @@ TextLayer::Shared::Configuration& TextLayer::Shared::Configuration::setDynamicSt
     return *this;
 }
 
-TextLayer::State::State(Shared::State& shared):
+TextLayer::State::State(Shared::State& shared, const TextLayerFlags flags):
     AbstractVisualLayer::State{shared},
     styleUpdateStamp{shared.styleUpdateStamp},
     editingStyleUpdateStamp{shared.editingStyleUpdateStamp},
+    flags{flags},
     /* These get created below, just to not have to do nasty things to
        deduplicate allocator lambda definitions */
     renderer{NoCreate},
@@ -571,7 +592,11 @@ TextLayer::State::State(Shared::State& shared):
 
 TextLayer::TextLayer(const LayerHandle handle, Containers::Pointer<State>&& state): AbstractVisualLayer{handle, Utility::move(state)} {}
 
-TextLayer::TextLayer(const LayerHandle handle, Shared& shared): TextLayer{handle, Containers::pointer<State>(static_cast<Shared::State&>(*shared._state))} {}
+TextLayer::TextLayer(const LayerHandle handle, Shared& shared, TextLayerFlags flags): TextLayer{handle, Containers::pointer<State>(static_cast<Shared::State&>(*shared._state), flags)} {}
+
+TextLayerFlags TextLayer::flags() const {
+    return static_cast<const State&>(*_state).flags;
+}
 
 TextLayer& TextLayer::assignAnimator(TextLayerStyleAnimator& animator) {
     return static_cast<TextLayer&>(AbstractVisualLayer::assignAnimator(animator));
@@ -1195,7 +1220,12 @@ DataHandle TextLayer::createInternal(const NodeHandle node) {
     }
 
     Implementation::TextLayerData& data = state.data[id];
-    data.padding = {};
+    /* In case of a transformable layer the rotation is set to an identity
+       Complex, not all-zero */
+    if(state.flags >= TextLayerFlag::Transformable)
+        data.transformation = {};
+    else
+        data.padding = {};
     return handle;
 }
 
@@ -1210,6 +1240,8 @@ DataHandle TextLayer::create(const UnsignedInt style, const Containers::StringVi
        create() to work */
     CORRADE_ASSERT(style < sharedState.styleCount + sharedState.dynamicStyleCount,
         "Ui::TextLayer::create(): style" << style << "out of range for" << sharedState.styleCount + sharedState.dynamicStyleCount << "styles", {});
+    CORRADE_ASSERT(!(state.flags >= TextLayerFlag::Transformable) || !(flags >= TextDataFlag::Editable),
+        "Ui::TextLayer::create(): cannot use" << TextDataFlag::Editable << "on a" << TextLayerFlag::Transformable << "layer", {});
 
     /* Create a data */
     const DataHandle handle = createInternal(node);
@@ -1473,6 +1505,12 @@ void TextLayer::setText(const LayerDataHandle handle, const Containers::StringVi
 
 void TextLayer::setTextInternal(const UnsignedInt id, const Containers::StringView text, const TextProperties& properties, const TextDataFlags flags) {
     State& state = static_cast<State&>(*_state);
+    /* Can only get fired by the setText() overloads with an explicit flags
+       parameter, not when it's passed from the existing data itself. It's
+       however put here to avoid logic duplication. */
+    CORRADE_ASSERT(!(state.flags >= TextLayerFlag::Transformable) || !(flags >= TextDataFlag::Editable),
+        "Ui::TextLayer::setText(): cannot use" << TextDataFlag::Editable << "on a" << TextLayerFlag::Transformable << "layer", );
+
     Implementation::TextLayerData& data = state.data[id];
 
     /* If the text has any glyphs, mark the original glyph run as unused. It'll
@@ -1864,13 +1902,20 @@ void TextLayer::setColorInternal(const UnsignedInt id, const Color4& color) {
 Vector4 TextLayer::padding(const DataHandle handle) const {
     CORRADE_ASSERT(isHandleValid(handle),
         "Ui::TextLayer::padding(): invalid handle" << handle, {});
-    return static_cast<const State&>(*_state).data[dataHandleId(handle)].padding;
+    return paddingInternal(dataHandleId(handle));
 }
 
 Vector4 TextLayer::padding(const LayerDataHandle handle) const {
     CORRADE_ASSERT(isHandleValid(handle),
         "Ui::TextLayer::padding(): invalid handle" << handle, {});
-    return static_cast<const State&>(*_state).data[layerDataHandleId(handle)].padding;
+    return paddingInternal(layerDataHandleId(handle));
+}
+
+Vector4 TextLayer::paddingInternal(const UnsignedInt id) const {
+    const State& state = static_cast<const State&>(*_state);
+    CORRADE_ASSERT(!(state.flags >= TextLayerFlag::Transformable),
+        "Ui::TextLayer::padding(): per-data padding not available on a" << TextLayerFlag::Transformable << "layer", {});
+    return state.data[id].padding;
 }
 
 void TextLayer::setPadding(const DataHandle handle, const Vector4& padding) {
@@ -1886,7 +1931,127 @@ void TextLayer::setPadding(const LayerDataHandle handle, const Vector4& padding)
 }
 
 void TextLayer::setPaddingInternal(const UnsignedInt id, const Vector4& padding) {
-    static_cast<State&>(*_state).data[id].padding = padding;
+    State& state = static_cast<State&>(*_state);
+    CORRADE_ASSERT(!(state.flags >= TextLayerFlag::Transformable),
+        "Ui::TextLayer::setPadding(): per-data padding not available on a" << TextLayerFlag::Transformable << "layer", );
+    state.data[id].padding = padding;
+    setNeedsUpdate(LayerState::NeedsDataUpdate);
+}
+
+Containers::Pair<Vector2, Complex> TextLayer::transformation(const DataHandle handle) const {
+    CORRADE_ASSERT(isHandleValid(handle),
+        "Ui::TextLayer::transformation(): invalid handle" << handle, {});
+    return transformationInternal(dataHandleId(handle));
+}
+
+Containers::Pair<Vector2, Complex> TextLayer::transformation(const LayerDataHandle handle) const {
+    CORRADE_ASSERT(isHandleValid(handle),
+        "Ui::TextLayer::transformation(): invalid handle" << handle, {});
+    return transformationInternal(layerDataHandleId(handle));
+}
+
+Containers::Pair<Vector2, Complex> TextLayer::transformationInternal(const UnsignedInt id) const {
+    const State& state = static_cast<const State&>(*_state);
+    CORRADE_ASSERT(state.flags >= TextLayerFlag::Transformable,
+        "Ui::TextLayer::transformation(): layer isn't" << TextLayerFlag::Transformable, {});
+    const Implementation::TextLayerData::Transformation& transformation = state.data[id].transformation;
+    return {transformation.translation, transformation.rotationScaling};
+}
+
+void TextLayer::setTransformation(const DataHandle handle, const Vector2& translation, const Complex& rotation, const Float scaling) {
+    CORRADE_ASSERT(isHandleValid(handle),
+        "Ui::TextLayer::setTransformation(): invalid handle" << handle, );
+    setTransformationInternal(dataHandleId(handle), translation, rotation, scaling);
+}
+
+void TextLayer::setTransformation(const LayerDataHandle handle, const Vector2& translation, const Complex& rotation, const Float scaling) {
+    CORRADE_ASSERT(isHandleValid(handle),
+        "Ui::TextLayer::setTransformation(): invalid handle" << handle, );
+    setTransformationInternal(layerDataHandleId(handle), translation, rotation, scaling);
+}
+
+void TextLayer::setTransformation(const DataHandle handle, const Vector2& translation, const Rad rotation, const Float scaling) {
+    setTransformation(handle, translation, Complex::rotation(rotation), scaling);
+}
+
+void TextLayer::setTransformation(const LayerDataHandle handle, const Vector2& translation, const Rad rotation, const Float scaling) {
+    setTransformation(handle, translation, Complex::rotation(rotation), scaling);
+}
+
+void TextLayer::setTransformationInternal(const UnsignedInt id, const Vector2& translation, const Complex& rotation, const Float scaling) {
+    State& state = static_cast<State&>(*_state);
+    CORRADE_ASSERT(state.flags >= TextLayerFlag::Transformable,
+        "Ui::TextLayer::setTransformation(): layer isn't" << TextLayerFlag::Transformable, );
+    state.data[id].transformation = {translation, rotation*scaling};
+    setNeedsUpdate(LayerState::NeedsDataUpdate);
+}
+
+void TextLayer::translate(const DataHandle handle, const Vector2& translation) {
+    CORRADE_ASSERT(isHandleValid(handle),
+        "Ui::TextLayer::translate(): invalid handle" << handle, );
+    translateInternal(dataHandleId(handle), translation);
+}
+
+void TextLayer::translate(const LayerDataHandle handle, const Vector2& translation) {
+    CORRADE_ASSERT(isHandleValid(handle),
+        "Ui::TextLayer::translate(): invalid handle" << handle, );
+    translateInternal(layerDataHandleId(handle), translation);
+}
+
+void TextLayer::translateInternal(const UnsignedInt id, const Vector2& translation) {
+    State& state = static_cast<State&>(*_state);
+    CORRADE_ASSERT(state.flags >= TextLayerFlag::Transformable,
+        "Ui::TextLayer::translate(): layer isn't" << TextLayerFlag::Transformable, );
+    state.data[id].transformation.translation += translation;
+    setNeedsUpdate(LayerState::NeedsDataUpdate);
+}
+
+void TextLayer::rotate(const DataHandle handle, const Complex& rotation) {
+    CORRADE_ASSERT(isHandleValid(handle),
+        "Ui::TextLayer::rotate(): invalid handle" << handle, );
+    rotateInternal(dataHandleId(handle), rotation);
+}
+
+void TextLayer::rotate(const LayerDataHandle handle, const Complex& rotation) {
+    CORRADE_ASSERT(isHandleValid(handle),
+        "Ui::TextLayer::rotate(): invalid handle" << handle, );
+    rotateInternal(layerDataHandleId(handle), rotation);
+}
+
+void TextLayer::rotate(const DataHandle handle, const Rad rotation) {
+    rotate(handle, Complex::rotation(rotation));
+}
+
+void TextLayer::rotate(const LayerDataHandle handle, const Rad rotation) {
+    rotate(handle, Complex::rotation(rotation));
+}
+
+void TextLayer::rotateInternal(const UnsignedInt id, const Complex& rotation) {
+    State& state = static_cast<State&>(*_state);
+    CORRADE_ASSERT(state.flags >= TextLayerFlag::Transformable,
+        "Ui::TextLayer::rotate(): layer isn't" << TextLayerFlag::Transformable, );
+    Implementation::TextLayerData::Transformation& transformation = state.data[id].transformation;
+    transformation.rotationScaling = rotation*transformation.rotationScaling;
+    setNeedsUpdate(LayerState::NeedsDataUpdate);
+}
+
+void TextLayer::scale(const DataHandle handle, const Float scaling) {
+    CORRADE_ASSERT(isHandleValid(handle),
+        "Ui::TextLayer::scale(): invalid handle" << handle, );
+    scaleInternal(dataHandleId(handle), scaling);
+}
+
+void TextLayer::scale(const LayerDataHandle handle, const Float scaling) {
+    CORRADE_ASSERT(isHandleValid(handle),
+        "Ui::TextLayer::scale(): invalid handle" << handle, );
+    scaleInternal(layerDataHandleId(handle), scaling);
+}
+
+void TextLayer::scaleInternal(const UnsignedInt id, const Float scaling) {
+    State& state = static_cast<State&>(*_state);
+    CORRADE_ASSERT(state.flags >= TextLayerFlag::Transformable,
+        "Ui::TextLayer::scale(): layer isn't" << TextLayerFlag::Transformable, );
+    state.data[id].transformation.rotationScaling *= scaling;
     setNeedsUpdate(LayerState::NeedsDataUpdate);
 }
 
@@ -2260,16 +2425,27 @@ void TextLayer::doUpdate(const LayerStates states, const Containers::StridedArra
                 /** @todo again ideally this would only be done if some text
                     actually changes, not on every visibility change */
                 if(sharedState.flags >= TextLayerSharedFlag::DistanceField) {
-                    const Float invertedRunScale = 1.0f/glyphRun.scale;
+                    /* We very neatly save four bytes and two multiplications
+                       per data by combining transformation scaling with the
+                       rotation. Unfortunately for distance field we then need
+                       to extract it back to appropriately scale the outlines
+                       and smoothness, involving a square root. */
+                    const Float invertedRunScale = 1.0f/(glyphRun.scale*
+                        (state.flags >= TextLayerFlag::Transformable ?
+                            data.transformation.rotationScaling.length() : 1.0f));
                     for(Implementation::TextLayerDistanceFieldVertex& i: distanceFieldVertices.sliceSize(glyphRun.glyphOffset*4, glyphRun.glyphCount*4))
                         i.invertedRunScale = invertedRunScale;
                 }
             }
 
-            /* Align the glyph run relative to the node area. This is done even
-               if there are no glyphs, as the offset is subsequently used for
-               editing cursor as well. */
-            Vector4 padding = data.padding;
+            /* Align the glyph run relative to the node area, taking alignment
+               and padding into account. This is done even if there are no
+               glyphs, as the offset is subsequently used for editing cursor as
+               well.
+
+               Arbitrary transformation, in case it's enabled, replaces the
+               per-data padding and it's applied last, after all alignment. */
+            Vector4 padding = state.flags >= TextLayerFlag::Transformable ? Vector4{} : data.padding;
             if(data.calculatedStyle < sharedState.styleCount)
                 padding += sharedState.styles[data.calculatedStyle].padding;
             else {
@@ -2305,16 +2481,33 @@ void TextLayer::doUpdate(const LayerStates states, const Containers::StridedArra
                     offset.y() += size.y()*0.5f;
             } else CORRADE_INTERNAL_ASSERT_UNREACHABLE(); /* LCOV_EXCL_LINE */
 
-            /* Translate the (aligned) glyph run, fill color and style */
+            /* Fill color and style */
             const Float opacity = nodeOpacities[nodeId];
             for(Implementation::TextLayerVertex& vertex: vertexData) {
-                vertex.position = vertex.position*Vector2::yScale(-1.0f) + offset;
                 vertex.color = data.color*opacity;
                 /* For dynamic styles the uniform mapping is implicit and
                    they're placed right after all non-dynamic styles */
                 vertex.styleUniform = data.calculatedStyle < sharedState.styleCount ?
                     sharedState.styles[data.calculatedStyle].uniform :
                     sharedState.styleUniformCount + data.calculatedStyle - sharedState.styleCount;
+            }
+
+            /* Translate the (aligned) glyph run. If transformation is enabled,
+               first perform a full transformation relative to the glyph run
+               origin. The glyph quad coordinates are produced with Y up, and
+               the Y flip makes them consistent with the UI coordinate system
+               being Y down. In case of the transformation the Y flip is done
+               even before rotation, which then causes positive rotation angle
+               to be interpreted clockwise without needing to do any additional
+               sign flips. */
+            if(state.flags >= TextLayerFlag::Transformable) {
+                /** @todo batch, SIMD-infused utility for this */
+                const Vector2 translation = offset + data.transformation.translation;
+                for(Implementation::TextLayerVertex& vertex: vertexData)
+                    vertex.position = translation + data.transformation.rotationScaling.transformVector(vertex.position*Vector2::yScale(-1.0f));
+            } else {
+                for(Implementation::TextLayerVertex& vertex: vertexData)
+                    vertex.position = offset + vertex.position*Vector2::yScale(-1.0f);
             }
 
             /* If the text is editable, generate also the cursor and selection

@@ -38,6 +38,7 @@
 #include <Corrade/Utility/Algorithms.h>
 #include <Corrade/Utility/Format.h>
 #include <Magnum/PixelFormat.h>
+#include <Magnum/Math/Matrix3.h>
 #include <Magnum/Math/Range.h>
 #include <Magnum/Text/AbstractGlyphCache.h>
 #include <Magnum/Text/Alignment.h>
@@ -90,6 +91,8 @@ struct TextLayerTest: TestSuite::Tester {
     void fontHandleInvalid();
     void debugFontHandle();
 
+    void debugLayerFlag();
+    void debugLayerFlags();
     void debugDataFlag();
     void debugDataFlags();
     void debugEdit();
@@ -177,10 +180,15 @@ struct TextLayerTest: TestSuite::Tester {
 
     void setColor();
     void setPadding();
+    void setPaddingInvalid();
+    void setTransformation();
+    void setTransformationInvalid();
 
     void invalidHandle();
+    void invalidHandleTransformation();
     void invalidFontHandle();
     void nonEditableText();
+    void nonEditableTextTransformation();
     void noSharedStyleFonts();
     void noFontInstance();
     void glyphOutOfRange();
@@ -194,6 +202,7 @@ struct TextLayerTest: TestSuite::Tester {
     void updateAlignmentGlyph();
     void updatePadding();
     void updatePaddingGlyph();
+    void updateTransformation();
     void updateNoStyleSet();
     void updateNoEditingStyleSet();
 
@@ -211,6 +220,14 @@ const struct {
 } SharedSetStyleData[]{
     {"", 0},
     {"dynamic styles", 17}
+};
+
+const struct {
+    const char* name;
+    TextLayerFlags layerFlags;
+} ConstructData[]{
+    {"", {}},
+    {"transformable", TextLayerFlag::Transformable}
 };
 
 const struct {
@@ -504,52 +521,58 @@ const struct {
     LayerStates state;
     bool layerDataHandleOverloads, customFont, customAlignment, nullStyleFonts;
     UnsignedInt styleCount, dynamicStyleCount;
+    TextLayerFlags layerFlags;
     Containers::Optional<TextDataFlags> flags;
 } CreateRemoveSetData[]{
     {"create",
         NodeHandle::Null, LayerState::NeedsDataUpdate,
-        false, false, false, false, 3, 0, {}},
+        false, false, false, false, 3, 0, {}, {}},
     {"create and attach",
         nodeHandle(9872, 0xbeb), LayerState::NeedsNodeOffsetSizeUpdate|LayerState::NeedsAttachmentUpdate|LayerState::NeedsDataUpdate,
-        false, false, false, false, 3, 0, {}},
+        false, false, false, false, 3, 0, {}, {}},
     {"LayerDataHandle overloads",
         NodeHandle::Null, LayerState::NeedsDataUpdate,
-        true, false, false, false, 3, 0, {}},
+        true, false, false, false, 3, 0, {}, {}},
     {"custom fonts",
         NodeHandle::Null, LayerState::NeedsDataUpdate,
-        false, true, false, false, 3, 0, {}},
+        false, true, false, false, 3, 0, {}, {}},
     {"custom fonts, null style fonts",
         NodeHandle::Null, LayerState::NeedsDataUpdate,
-        false, true, false, true, 3, 0, {}},
+        false, true, false, true, 3, 0, {}, {}},
     {"custom fonts, LayerDataHandle overloads",
         NodeHandle::Null, LayerState::NeedsDataUpdate,
-        true, true, false, false, 3, 0, {}},
+        true, true, false, false, 3, 0, {}, {}},
     {"custom alignment",
         NodeHandle::Null, LayerState::NeedsDataUpdate,
-        false, false, true, false, 3, 0, {}},
+        false, false, true, false, 3, 0, {}, {}},
     {"dynamic styles",
         NodeHandle::Null, LayerState::NeedsCommonDataUpdate|LayerState::NeedsDataUpdate,
-        false, false, false, false, 1, 2, {}},
+        false, false, false, false, 1, 2, {}, {}},
     {"dynamic styles, custom alignment",
         NodeHandle::Null, LayerState::NeedsCommonDataUpdate|LayerState::NeedsDataUpdate,
-        false, false, true, false, 1, 2, {}},
+        false, false, true, false, 1, 2, {}, {}},
+    {"transformable",
+        NodeHandle::Null, LayerState::NeedsDataUpdate,
+        false, false, false, false, 3, 0, TextLayerFlag::Transformable, {}},
     {"editable",
         NodeHandle::Null, LayerState::NeedsDataUpdate,
-        false, false, false, false, 3, 0, ~~TextDataFlag::Editable},
+        false, false, false, false, 3, 0, {}, ~~TextDataFlag::Editable},
     {"editable, create and attach",
         nodeHandle(9872, 0xbeb), LayerState::NeedsNodeOffsetSizeUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsAttachmentUpdate|LayerState::NeedsDataUpdate,
-        false, false, false, false, 3, 0, ~~TextDataFlag::Editable},
+        false, false, false, false, 3, 0, {}, ~~TextDataFlag::Editable},
     {"editable, LayerDataHandle overloads",
         NodeHandle::Null, LayerState::NeedsDataUpdate,
-        true, false, false, false, 3, 0, ~~TextDataFlag::Editable},
+        true, false, false, false, 3, 0, {}, ~~TextDataFlag::Editable},
 };
 
 const struct {
     const char* name;
+    TextLayerFlags layerFlags;
     TextDataFlags flags;
 } CreateRemoveHandleRecycleData[]{
-    {"", {}},
-    {"editable", TextDataFlag::Editable}
+    {"", {}, {}},
+    {"transformable", TextLayerFlag::Transformable, {}},
+    {"editable", {}, TextDataFlag::Editable},
 };
 
 const struct {
@@ -935,37 +958,38 @@ const struct {
     UnsignedInt styleCount, editingStyleCount, dynamicStyleCount;
     bool hasEditingStyles;
     TextLayerSharedFlags sharedLayerFlags;
+    TextLayerFlags layerFlags;
     Vector2 node6Offset, node6Size;
     Vector4 paddingFromStyle;
-    Vector4 paddingFromData;
+    Vector4 paddingOrTranslationFromData;
     TextDataFlags dataFlags;
     Containers::Pair<UnsignedInt, UnsignedInt> data3Cursor, data9Cursor;
     Containers::Pair<Int, Int> editingStyle1, editingStyle2, editingStyle3;
     LayerStates states;
     bool expectIndexDataUpdated, expectVertexDataUpdated, expectEditingDataPresent;
 } UpdateCleanDataOrderData[]{
-    {"empty update", true, 6, 0, 0, false, {},
+    {"empty update", true, 6, 0, 0, false, {}, {},
         {}, {}, {}, {}, {},
         {}, {}, {-1, -1}, {-1, -1}, {-1, -1},
         LayerState::NeedsDataUpdate, true, true, false},
-    {"", false, 6, 0, 0, false, {},
+    {"", false, 6, 0, 0, false, {}, {},
         {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, {},
         {}, {}, {-1, -1}, {-1, -1}, {-1, -1},
         LayerState::NeedsDataUpdate, true, true, false},
     {"distance field", false, 6, 0, 0, false,
-        TextLayerSharedFlag::DistanceField,
+        TextLayerSharedFlag::DistanceField, {},
         {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, {},
         {}, {}, {-1, -1}, {-1, -1}, {-1, -1},
         LayerState::NeedsDataUpdate, true, true, false},
-    {"node offset/size update only", false, 6, 0, 0, false, {},
+    {"node offset/size update only", false, 6, 0, 0, false, {}, {},
         {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, {},
         {}, {}, {-1, -1}, {-1, -1}, {-1, -1},
         LayerState::NeedsNodeOffsetSizeUpdate, false, true, false},
-    {"node order update only", false, 6, 0, 0, false, {},
+    {"node order update only", false, 6, 0, 0, false, {}, {},
         {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, {},
         {}, {}, {-1, -1}, {-1, -1}, {-1, -1},
         LayerState::NeedsNodeOrderUpdate, true, false, false},
-    {"node enabled update only", false, 6, 0, 0, false, {},
+    {"node enabled update only", false, 6, 0, 0, false, {}, {},
         {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, {},
         {}, {}, {-1, -1}, {-1, -1}, {-1, -1},
         LayerState::NeedsNodeEnabledUpdate, false, true, false},
@@ -974,89 +998,108 @@ const struct {
     /** @todo Which ultimately means this doesn't correctly test that the
         implementation correctly handles the NeedsNodeOpacityUpdate flag alone
         -- what can I do differently to test that? */
-    {"node enabled + opacity update only", false, 6, 0, 0, false, {},
+    {"node enabled + opacity update only", false, 6, 0, 0, false, {}, {},
         {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, {},
         {}, {}, {-1, -1}, {-1, -1}, {-1, -1},
         LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsNodeOpacityUpdate, false, true, false},
     /* These two shouldn't cause anything to be done in update(), and also no
        crashes */
-    {"shared data update only", false, 6, 0, 0, false, {},
+    {"shared data update only", false, 6, 0, 0, false, {}, {},
         {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, {},
         {}, {}, {-1, -1}, {-1, -1}, {-1, -1},
         LayerState::NeedsSharedDataUpdate, false, false, false},
-    {"common data update only", false, 6, 0, 0, false, {},
+    {"common data update only", false, 6, 0, 0, false, {}, {},
         {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, {},
         {}, {}, {-1, -1}, {-1, -1}, {-1, -1},
         LayerState::NeedsCommonDataUpdate, false, false, false},
     /* This would cause an update of the dynamic style data in derived classes
        if appropriate internal flags would be set internally, but in the base
        class it's nothing */
-    {"common data update only, dynamic styles", false, 4, 0, 2, false, {},
+    {"common data update only, dynamic styles", false, 4, 0, 2, false, {}, {},
         {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, {},
         {}, {}, {-1, -1}, {-1, -1}, {-1, -1},
         LayerState::NeedsCommonDataUpdate, false, false, false},
-    {"padding from style", false, 6, 0, 0, false, {},
+    {"padding from style", false, 6, 0, 0, false, {}, {},
         {-1.0f, 1.5f}, {13.0f, 17.0f},
         {2.0f, 0.5f, 1.0f, 1.5f}, {}, {},
         {}, {}, {-1, -1}, {-1, -1}, {-1, -1},
         LayerState::NeedsDataUpdate, true, true, false},
-    {"padding from data", false, 6, 0, 0, false, {},
+    {"padding from data", false, 6, 0, 0, false, {}, {},
         {-1.0f, 1.5f}, {13.0f, 17.0f},
         {}, {2.0f, 0.5f, 1.0f, 1.5f}, {},
         {}, {}, {-1, -1}, {-1, -1}, {-1, -1},
         LayerState::NeedsDataUpdate, true, true, false},
-    {"padding from both style and data", false, 6, 0, 0, false, {},
+    {"padding from both style and data", false, 6, 0, 0, false, {}, {},
         {-1.0f, 1.5f}, {13.0f, 17.0f},
         {0.5f, 0.0f, 1.0f, 0.75f}, {1.5f, 0.5f, 0.0f, 0.75f}, {},
         {}, {}, {-1, -1}, {-1, -1}, {-1, -1},
         LayerState::NeedsDataUpdate, true, true, false},
-    {"unused dynamic styles", false, 6, 0, 17, false, {},
+    {"unused dynamic styles", false, 6, 0, 17, false, {}, {},
         {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, {},
         {}, {}, {-1, -1}, {-1, -1}, {-1, -1},
         LayerState::NeedsDataUpdate, true, true, false},
-    {"dynamic styles", false, 4, 0, 2, false, {},
+    {"dynamic styles", false, 4, 0, 2, false, {}, {},
         {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, {},
         {}, {}, {-1, -1}, {-1, -1}, {-1, -1},
         LayerState::NeedsDataUpdate, true, true, false},
-    {"dynamic styles, padding from dynamic style", false, 4, 0, 2, false, {},
+    {"dynamic styles, padding from dynamic style", false, 4, 0, 2, false, {}, {},
         {-1.0f, 1.5f}, {13.0f, 17.0f},
         {2.0f, 0.5f, 1.0f, 1.5f}, {}, {},
         {}, {}, {-1, -1}, {-1, -1}, {-1, -1},
         LayerState::NeedsDataUpdate, true, true, false},
-    {"dynamic styles, padding from both dynamic style and data", false, 4, 0, 2, false, {},
+    {"dynamic styles, padding from both dynamic style and data", false, 4, 0, 2, false, {}, {},
         {-1.0f, 1.5f}, {13.0f, 17.0f},
         {0.5f, 0.0f, 1.0f, 0.75f}, {1.5f, 0.5f, 0.0f, 0.75f}, {},
         {}, {}, {-1, -1}, {-1, -1}, {-1, -1},
         LayerState::NeedsDataUpdate, true, true, false},
-    {"editable, no editing styles", false, 6, 0, 0, false, {},
+    {"transformable", false, 6, 0, 0, false, {}, TextLayerFlag::Transformable,
+        {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, {},
+        {}, {}, {-1, -1}, {-1, -1}, {-1, -1},
+        LayerState::NeedsDataUpdate, true, true, false},
+    {"transformable, translation", false, 6, 0, 0, false, {}, TextLayerFlag::Transformable,
+        {-1.0f, 1.5f}, {10.0f, 15.0f}, {},
+        /* First two components interpreted as translation, which is then
+           subtracted from node offset */
+        {2.0f, 0.5f, 0.0f, 0.0f}, {},
+        {}, {}, {-1, -1}, {-1, -1}, {-1, -1},
+        LayerState::NeedsDataUpdate, true, true, false},
+    {"transformable, translation + padding from style", false, 6, 0, 0, false, {}, TextLayerFlag::Transformable,
+        {-1.0f, 1.5f}, {11.5f, 16.75f},
+        {0.5f, 0.25f, 1.0f, 1.5f},
+        /* First two components interpreted as translation, which is then
+           together with style padding subtracted from node offset */
+        {1.5f, 0.25f, 0.0f, 0.0f}, {},
+        {}, {}, {-1, -1}, {-1, -1}, {-1, -1},
+        LayerState::NeedsDataUpdate, true, true, false},
+    {"editable, no editing styles", false, 6, 0, 0, false, {}, {},
         {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, TextDataFlag::Editable,
         {}, {},
         {-1, -1}, {-1, -1}, {-1, -1},
         LayerState::NeedsDataUpdate, true, true, false},
     /* The editing styles are there but nothing references them, which means
        the corresponding draw data aren't filled either */
-    {"editable, editing styles but not used", false, 6, 3, 0, false, {},
+    {"editable, editing styles but not used", false, 6, 3, 0, false, {}, {},
         {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, TextDataFlag::Editable,
         {}, {},
         {-1, -1}, {-1, -1}, {-1, -1},
         LayerState::NeedsDataUpdate, true, true, false},
-    {"editable", false, 6, 3, 0, false, {},
+    {"editable", false, 6, 3, 0, false, {}, {},
         {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, TextDataFlag::Editable,
         {2, 5}, {1, 1},
         {-1, 1}, {1, 0}, {2, 0},
         LayerState::NeedsDataUpdate, true, true, true},
-    {"editable, different selection direction", false, 6, 3, 0, false, {},
+    {"editable, different selection direction", false, 6, 3, 0, false, {}, {},
         {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, TextDataFlag::Editable,
         {5, 2}, {1, 1},
         {-1, 1}, {1, 0}, {2, 0},
         LayerState::NeedsDataUpdate, true, true, true},
-    {"editable, non-empty selection but no selection style", false, 6, 3, 0, false, {},
+    {"editable, non-empty selection but no selection style", false, 6, 3, 0, false, {}, {},
         {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, TextDataFlag::Editable,
         {2, 5}, {1, 2},
         {-1, 1}, {1, 0}, {2, -1},
         LayerState::NeedsDataUpdate, true, true, true},
     /* Shouldn't cause anything to be done in update(), and also no crashes */
-    {"editable, shared data update only", false, 6, 3, 0, false, {},
+    {"editable, shared data update only", false, 6, 3, 0, false, {}, {},
         {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, TextDataFlag::Editable,
         {2, 5}, {1, 1},
         {-1, 1}, {1, 0}, {2, 0},
@@ -1064,24 +1107,24 @@ const struct {
            are done with full NeedsDataUpdate and they'd check for the data
            being empty instead */
         LayerState::NeedsSharedDataUpdate, false, false, true},
-    {"editable, dynamic, no editing styles", false, 4, 0, 2, false, {},
+    {"editable, dynamic, no editing styles", false, 4, 0, 2, false, {}, {},
         {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, TextDataFlag::Editable,
         {}, {},
         {-1, -1}, {-1, -1}, {-1, -1},
         LayerState::NeedsDataUpdate, true, true, false},
-    {"editable, dynamic, editing styles but not used", false, 4, 0, 2, true, {},
+    {"editable, dynamic, editing styles but not used", false, 4, 0, 2, true, {}, {},
         {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, TextDataFlag::Editable,
         {}, {},
         {-1, -1}, {-1, -1}, {-1, -1},
         LayerState::NeedsDataUpdate, true, true, false},
-    {"editable, dynamic", false, 4, 2, 2, false, {},
+    {"editable, dynamic", false, 4, 2, 2, false, {}, {},
         {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, TextDataFlag::Editable,
         {2, 5}, {1, 1},
         /* editingStyle2 is used as dynamic */
         {-1, 0}, {-1, -1}, {1, -1},
         LayerState::NeedsDataUpdate, true, true, true},
     /* Shouldn't cause anything to be done in update(), and also no crashes */
-    {"editable, dynamic, shared data update only", false, 4, 2, 2, false, {},
+    {"editable, dynamic, shared data update only", false, 4, 2, 2, false, {}, {},
         {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, TextDataFlag::Editable,
         {2, 5}, {1, 1},
         /* editingStyle2 is used as dynamic */
@@ -1187,6 +1230,61 @@ const struct {
 
 const struct {
     const char* name;
+    TextLayerSharedFlags sharedLayerFlags;
+    TextLayerFlags layerFlags;
+    Vector2 translation;
+    Rad rotation;
+    Float scaling;
+    Matrix3 expected;
+} UpdateTransformationData[]{
+    {"",
+        {}, {},
+        {}, {}, 1.0f, Matrix3{Math::IdentityInit}},
+    {"distance field",
+        TextLayerSharedFlag::DistanceField, {},
+        {}, {}, 1.0f, Matrix3{Math::IdentityInit}},
+    {"transformable",
+        {}, TextLayerFlag::Transformable,
+        {}, {}, 1.0f, Matrix3{Math::IdentityInit}},
+    {"transformable, translation",
+        {}, TextLayerFlag::Transformable,
+        {2.5f, -15.0f}, {}, 1.0f, Matrix3::translation({2.5f, -15.0f})},
+    /* The first is just to make it easier to see what's wrong if everything is
+       broken for some reason. */
+    {"transformable, rotation 90°",
+        {}, TextLayerFlag::Transformable,
+        {}, 90.0_degf, 1.0f, Matrix3::rotation(90.0_degf)},
+    /* Positive rotation should be clockwise, as explicitly verified in the
+       test case */
+    {"transformable, rotation 35°",
+        {}, TextLayerFlag::Transformable,
+        {}, 35.0_degf, 1.0f, Matrix3::rotation(35.0_degf)},
+    /* Negative rotation should result in rotation counterclockwise instead */
+    {"transformable, rotation -35°",
+        {}, TextLayerFlag::Transformable,
+        {}, -35.0_degf, 1.0f, Matrix3::rotation(-35.0_degf)},
+    {"transformable, scaling",
+        {}, TextLayerFlag::Transformable,
+        {}, {}, 2.5f, Matrix3::scaling(Vector2{2.5f})},
+    {"transformable, translation + rotation + scaling",
+        {}, TextLayerFlag::Transformable,
+        {2.5f, -15.0f}, 35.0_degf, 2.5f,
+        Matrix3::translation({2.5f, -15.0f})*
+        Matrix3::rotation(35.0_degf)*
+        Matrix3::scaling(Vector2{2.5f})},
+    {"transformable + distance field",
+        TextLayerSharedFlag::DistanceField, TextLayerFlag::Transformable,
+        {}, {}, 1.0f, Matrix3{Math::IdentityInit}},
+    {"transformable + distance field, translation + rotation + scaling",
+        TextLayerSharedFlag::DistanceField, TextLayerFlag::Transformable,
+        {2.5f, -15.0f}, 35.0_degf, 2.5f,
+        Matrix3::translation({2.5f, -15.0f})*
+        Matrix3::rotation(35.0_degf)*
+        Matrix3::scaling(Vector2{2.5f})},
+};
+
+const struct {
+    const char* name;
     UnsignedInt editingStyleCount, dynamicStyleCount;
     bool setStyle, setEditingStyle;
     LayerStates extraState;
@@ -1248,6 +1346,8 @@ TextLayerTest::TextLayerTest() {
               &TextLayerTest::fontHandleInvalid,
               &TextLayerTest::debugFontHandle,
 
+              &TextLayerTest::debugLayerFlag,
+              &TextLayerTest::debugLayerFlags,
               &TextLayerTest::debugDataFlag,
               &TextLayerTest::debugDataFlags,
               &TextLayerTest::debugEdit,
@@ -1308,8 +1408,10 @@ TextLayerTest::TextLayerTest() {
                        &TextLayerTest::sharedSetEditingStyleImplicitMappingInvalidSize},
         Containers::arraySize(SharedSetStyleData));
 
-    addTests({&TextLayerTest::construct,
-              &TextLayerTest::constructCopy,
+    addInstancedTests({&TextLayerTest::construct},
+        Containers::arraySize(ConstructData));
+
+    addTests({&TextLayerTest::constructCopy,
               &TextLayerTest::constructMove});
 
     addInstancedTests({&TextLayerTest::dynamicStyle},
@@ -1364,10 +1466,15 @@ TextLayerTest::TextLayerTest() {
 
     addTests({&TextLayerTest::setColor,
               &TextLayerTest::setPadding,
+              &TextLayerTest::setPaddingInvalid,
+              &TextLayerTest::setTransformation,
+              &TextLayerTest::setTransformationInvalid,
 
               &TextLayerTest::invalidHandle,
+              &TextLayerTest::invalidHandleTransformation,
               &TextLayerTest::invalidFontHandle,
               &TextLayerTest::nonEditableText,
+              &TextLayerTest::nonEditableTextTransformation,
               &TextLayerTest::noSharedStyleFonts,
               &TextLayerTest::noFontInstance,
               &TextLayerTest::glyphOutOfRange,
@@ -1382,6 +1489,9 @@ TextLayerTest::TextLayerTest() {
                        &TextLayerTest::updatePadding,
                        &TextLayerTest::updatePaddingGlyph},
         Containers::arraySize(UpdateAlignmentPaddingData));
+
+    addInstancedTests({&TextLayerTest::updateTransformation},
+        Containers::arraySize(UpdateTransformationData));
 
     addInstancedTests({&TextLayerTest::updateNoStyleSet,
                        &TextLayerTest::updateNoEditingStyleSet},
@@ -1730,6 +1840,18 @@ void TextLayerTest::debugFontHandle() {
     Containers::String out;
     Debug{&out} << FontHandle::Null << Ui::fontHandle(0x2bcd, 0x1);
     CORRADE_COMPARE(out, "Ui::FontHandle::Null Ui::FontHandle(0x2bcd, 0x1)\n");
+}
+
+void TextLayerTest::debugLayerFlag() {
+    Containers::String out;
+    Debug{&out} << TextLayerFlag::Transformable << TextLayerFlag(0xbe);
+    CORRADE_COMPARE(out, "Ui::TextLayerFlag::Transformable Ui::TextLayerFlag(0xbe)\n");
+}
+
+void TextLayerTest::debugLayerFlags() {
+    Containers::String out;
+    Debug{&out} << (TextLayerFlag::Transformable|TextLayerFlag(0xa0)) << TextLayerFlags{};
+    CORRADE_COMPARE(out, "Ui::TextLayerFlag::Transformable|Ui::TextLayerFlag(0xa0) Ui::TextLayerFlags{}\n");
 }
 
 void TextLayerTest::debugDataFlag() {
@@ -4726,6 +4848,9 @@ void TextLayerTest::sharedSetEditingStyleImplicitMappingInvalidSize() {
 }
 
 void TextLayerTest::construct() {
+    auto&& data = ConstructData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
     struct: Text::AbstractGlyphCache {
         using Text::AbstractGlyphCache::AbstractGlyphCache;
 
@@ -4741,13 +4866,14 @@ void TextLayerTest::construct() {
     } shared{cache, TextLayer::Shared::Configuration{3, 5}};
 
     struct Layer: TextLayer {
-        explicit Layer(LayerHandle handle, Shared& shared): TextLayer{handle, shared} {}
-    } layer{layerHandle(137, 0xfe), shared};
+        explicit Layer(LayerHandle handle, Shared& shared, TextLayerFlags flags): TextLayer{handle, shared, flags} {}
+    } layer{layerHandle(137, 0xfe), shared, data.layerFlags};
 
     CORRADE_COMPARE(layer.handle(), layerHandle(137, 0xfe));
     CORRADE_COMPARE(&layer.shared(), &shared);
     /* Const overload */
     CORRADE_COMPARE(&static_cast<const Layer&>(layer).shared(), &shared);
+    CORRADE_COMPARE(layer.flags(), data.layerFlags);
 }
 
 void TextLayerTest::constructCopy() {
@@ -5684,12 +5810,12 @@ template<class StyleIndex, class GlyphIndex> void TextLayerTest::createRemoveSet
         {});
 
     struct Layer: TextLayer {
-        explicit Layer(LayerHandle handle, Shared& shared): TextLayer{handle, shared} {}
+        explicit Layer(LayerHandle handle, Shared& shared, TextLayerFlags flags): TextLayer{handle, shared, flags} {}
 
         const State& stateData() const {
             return static_cast<const State&>(*_state);
         }
-    } layer{layerHandle(0, 1), shared};
+    } layer{layerHandle(0, 1), shared, data.layerFlags};
 
     if(data.dynamicStyleCount == 2) {
         /* If custom alignment specified in TextProperties is used, these have
@@ -5727,7 +5853,10 @@ template<class StyleIndex, class GlyphIndex> void TextLayerTest::createRemoveSet
         CORRADE_COMPARE(layer.text(first), "hello");
     }
     CORRADE_COMPARE(layer.color(first), 0xffffff_rgbf);
-    CORRADE_COMPARE(layer.padding(first), Vector4{0.0f});
+    if(data.layerFlags >= TextLayerFlag::Transformable)
+        CORRADE_COMPARE(layer.transformation(first), Containers::pair(Vector2{}, Complex{Math::IdentityInit}));
+    else
+        CORRADE_COMPARE(layer.padding(first), Vector4{0.0f});
     CORRADE_COMPARE(layer.state(), data.state);
 
     /* Single (invalid) glyph; createGlyph() takes no TextDataFlags */
@@ -5744,7 +5873,10 @@ template<class StyleIndex, class GlyphIndex> void TextLayerTest::createRemoveSet
     CORRADE_COMPARE(layer.glyphCount(firstGlyph), 1);
     CORRADE_COMPARE(layer.size(firstGlyph), (Vector2{8.0f, 12.0f}));
     CORRADE_COMPARE(layer.color(firstGlyph), 0xffffff_rgbf);
-    CORRADE_COMPARE(layer.padding(firstGlyph), Vector4{0.0f});
+    if(data.layerFlags >= TextLayerFlag::Transformable)
+        CORRADE_COMPARE(layer.transformation(firstGlyph), Containers::pair(Vector2{}, Complex{Math::IdentityInit}));
+    else
+        CORRADE_COMPARE(layer.padding(firstGlyph), Vector4{0.0f});
     CORRADE_COMPARE(layer.state(), data.state);
 
     /* Default null node, testing also the getter overloads and templates;
@@ -5778,7 +5910,10 @@ template<class StyleIndex, class GlyphIndex> void TextLayerTest::createRemoveSet
             CORRADE_COMPARE(layer.text(dataHandleData(second)), "ahoy");
         }
         CORRADE_COMPARE(layer.color(dataHandleData(second)), 0xffffff_rgbf);
-        CORRADE_COMPARE(layer.padding(dataHandleData(second)), Vector4{0.0f});
+        if(data.layerFlags >= TextLayerFlag::Transformable)
+            CORRADE_COMPARE(layer.transformation(dataHandleData(second)), Containers::pair(Vector2{}, Complex{Math::IdentityInit}));
+        else
+            CORRADE_COMPARE(layer.padding(dataHandleData(second)), Vector4{0.0f});
     } else {
         CORRADE_COMPARE(layer.style(second), 2);
         /* Can't use StyleIndex, as the function restricts to enum types which
@@ -5793,7 +5928,10 @@ template<class StyleIndex, class GlyphIndex> void TextLayerTest::createRemoveSet
             CORRADE_COMPARE(layer.text(second), "ahoy");
         }
         CORRADE_COMPARE(layer.color(second), 0xffffff_rgbf);
-        CORRADE_COMPARE(layer.padding(second), Vector4{0.0f});
+        if(data.layerFlags >= TextLayerFlag::Transformable)
+            CORRADE_COMPARE(layer.transformation(second), Containers::pair(Vector2{}, Complex{Math::IdentityInit}));
+        else
+            CORRADE_COMPARE(layer.padding(second), Vector4{0.0f});
     }
     CORRADE_COMPARE(layer.state(), data.state);
 
@@ -5812,7 +5950,10 @@ template<class StyleIndex, class GlyphIndex> void TextLayerTest::createRemoveSet
     CORRADE_COMPARE(layer.glyphCount(secondGlyph), 1);
     CORRADE_COMPARE(layer.size(secondGlyph), (Vector2{16.0f, 24.0f}));
     CORRADE_COMPARE(layer.color(secondGlyph), 0xffffff_rgbf);
-    CORRADE_COMPARE(layer.padding(secondGlyph), Vector4{0.0f});
+    if(data.layerFlags >= TextLayerFlag::Transformable)
+        CORRADE_COMPARE(layer.transformation(secondGlyph), Containers::pair(Vector2{}, Complex{Math::IdentityInit}));
+    else
+        CORRADE_COMPARE(layer.padding(secondGlyph), Vector4{0.0f});
     CORRADE_COMPARE(layer.state(), data.state);
 
     /* Empty text */
@@ -5846,7 +5987,10 @@ template<class StyleIndex, class GlyphIndex> void TextLayerTest::createRemoveSet
         CORRADE_COMPARE(layer.text(third), "");
     }
     CORRADE_COMPARE(layer.color(third), 0xffffff_rgbf);
-    CORRADE_COMPARE(layer.padding(third), Vector4{0.0f});
+    if(data.layerFlags >= TextLayerFlag::Transformable)
+        CORRADE_COMPARE(layer.transformation(third), Containers::pair(Vector2{}, Complex{Math::IdentityInit}));
+    else
+        CORRADE_COMPARE(layer.padding(third), Vector4{0.0f});
     CORRADE_COMPARE(layer.state(), data.state);
 
     DataHandle fourth = data.flags ?
@@ -5876,7 +6020,10 @@ template<class StyleIndex, class GlyphIndex> void TextLayerTest::createRemoveSet
         CORRADE_COMPARE(layer.text(fourth), "hi");
     }
     CORRADE_COMPARE(layer.color(fourth), 0xffffff_rgbf);
-    CORRADE_COMPARE(layer.padding(fourth), Vector4{0.0f});
+    if(data.layerFlags >= TextLayerFlag::Transformable)
+        CORRADE_COMPARE(layer.transformation(fourth), Containers::pair(Vector2{}, Complex{Math::IdentityInit}));
+    else
+        CORRADE_COMPARE(layer.padding(fourth), Vector4{0.0f});
     CORRADE_COMPARE(layer.state(), data.state);
 
     /* Empty text that is never editable and thus has neither a glyph nor a
@@ -5892,7 +6039,10 @@ template<class StyleIndex, class GlyphIndex> void TextLayerTest::createRemoveSet
     CORRADE_COMPARE(layer.glyphCount(fifth), 0);
     CORRADE_COMPARE(layer.size(fifth), (Vector2{0.0f, 6.0f}));
     CORRADE_COMPARE(layer.color(fifth), 0xffffff_rgbf);
-    CORRADE_COMPARE(layer.padding(fifth), Vector4{0.0f});
+    if(data.layerFlags >= TextLayerFlag::Transformable)
+        CORRADE_COMPARE(layer.transformation(fifth), Containers::pair(Vector2{}, Complex{Math::IdentityInit}));
+    else
+        CORRADE_COMPARE(layer.padding(fifth), Vector4{0.0f});
     CORRADE_COMPARE(layer.state(), data.state);
 
     /* Another empty text, again also editable */
@@ -5922,7 +6072,10 @@ template<class StyleIndex, class GlyphIndex> void TextLayerTest::createRemoveSet
         CORRADE_COMPARE(layer.text(sixth), "");
     }
     CORRADE_COMPARE(layer.color(sixth), 0xffffff_rgbf);
-    CORRADE_COMPARE(layer.padding(sixth), Vector4{0.0f});
+    if(data.layerFlags >= TextLayerFlag::Transformable)
+        CORRADE_COMPARE(layer.transformation(sixth), Containers::pair(Vector2{}, Complex{Math::IdentityInit}));
+    else
+        CORRADE_COMPARE(layer.padding(sixth), Vector4{0.0f});
     CORRADE_COMPARE(layer.state(), data.state);
 
     /* There should be five glyph runs, assigned to data that resulted in
@@ -6428,23 +6581,33 @@ void TextLayerTest::createRemoveHandleRecycle() {
         {}, {}, {}, {}, {}, {});
 
     struct Layer: TextLayer {
-        explicit Layer(LayerHandle handle, Shared& shared): TextLayer{handle, shared} {}
+        explicit Layer(LayerHandle handle, Shared& shared, TextLayerFlags flags): TextLayer{handle, shared, flags} {}
 
         const State& stateData() const {
             return static_cast<const State&>(*_state);
         }
-    } layer{layerHandle(0, 1), shared};
+    } layer{layerHandle(0, 1), shared, data.layerFlags};
 
     DataHandle first = layer.create(0, "hello", {}, data.flags);
     DataHandle second = layer.create(0, "again", {}, data.flags);
     layer.setColor(first, 0x663399_rgbf);
     layer.setColor(second, 0xff3366_rgbf);
-    layer.setPadding(first, Vector4{15.0f});
-    layer.setPadding(second, Vector4{5.0f});
+    if(data.layerFlags >= TextLayerFlag::Transformable) {
+        layer.setTransformation(first, {3.5f, -7.0f}, Complex{}, 2.0f);
+        layer.setTransformation(second, {-2.3f, 12.5f}, 35.0_degf, 1.0f);
+    } else {
+        layer.setPadding(first, Vector4{15.0f});
+        layer.setPadding(second, Vector4{5.0f});
+    }
     CORRADE_COMPARE(layer.color(first), 0x663399_rgbf);
     CORRADE_COMPARE(layer.color(second), 0xff3366_rgbf);
-    CORRADE_COMPARE(layer.padding(first), Vector4{15.0f});
-    CORRADE_COMPARE(layer.padding(second), Vector4{5.0f});
+    if(data.layerFlags >= TextLayerFlag::Transformable) {
+        CORRADE_COMPARE(layer.transformation(first), Containers::pair(Vector2{3.5f, -7.0f}, Complex{2.0f, 0.0f}));
+        CORRADE_COMPARE(layer.transformation(second), Containers::pair(Vector2{-2.3f, 12.5f}, Complex::rotation(35.0_degf)));
+    } else {
+        CORRADE_COMPARE(layer.padding(first), Vector4{15.0f});
+        CORRADE_COMPARE(layer.padding(second), Vector4{5.0f});
+    }
     CORRADE_COMPARE(layer.flags(first), data.flags);
     CORRADE_COMPARE(layer.flags(second), data.flags);
     CORRADE_COMPARE(layer.stateData().data[dataHandleId(first)].textRun, data.flags >= TextDataFlag::Editable ? 0 : 0xffffffffu);
@@ -6456,7 +6619,10 @@ void TextLayerTest::createRemoveHandleRecycle() {
     DataHandle second2 = layer.create(0, "yes", {});
     CORRADE_COMPARE(dataHandleId(second2), dataHandleId(second));
     CORRADE_COMPARE(layer.color(second2), 0xffffff_rgbf);
-    CORRADE_COMPARE(layer.padding(second2), Vector4{0.0f});
+    if(data.layerFlags >= TextLayerFlag::Transformable)
+        CORRADE_COMPARE(layer.transformation(second2), Containers::pair(Vector2{}, Complex{Math::IdentityInit}));
+    else
+        CORRADE_COMPARE(layer.padding(second2), Vector4{0.0f});
     CORRADE_COMPARE(layer.flags(second2), TextDataFlags{});
     CORRADE_COMPARE(layer.stateData().data[dataHandleId(second2)].textRun, 0xffffffffu);
 
@@ -6465,7 +6631,10 @@ void TextLayerTest::createRemoveHandleRecycle() {
     DataHandle first2 = layer.createGlyph(0, 0, {});
     CORRADE_COMPARE(dataHandleId(first2), dataHandleId(first));
     CORRADE_COMPARE(layer.color(first2), 0xffffff_rgbf);
-    CORRADE_COMPARE(layer.padding(first2), Vector4{0.0f});
+    if(data.layerFlags >= TextLayerFlag::Transformable)
+        CORRADE_COMPARE(layer.transformation(first2), Containers::pair(Vector2{}, Complex{Math::IdentityInit}));
+    else
+        CORRADE_COMPARE(layer.padding(first2), Vector4{0.0f});
     CORRADE_COMPARE(layer.flags(first2), TextDataFlags{});
     CORRADE_COMPARE(layer.stateData().data[dataHandleId(first2)].textRun, 0xffffffffu);
 }
@@ -7862,6 +8031,296 @@ void TextLayerTest::setPadding() {
     CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
 }
 
+void TextLayerTest::setPaddingInvalid() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct: Text::AbstractFont {
+        Text::FontFeatures doFeatures() const override { return {}; }
+        bool doIsOpened() const override { return true; }
+        void doClose() override {}
+
+        void doGlyphIdsInto(const Containers::StridedArrayView1D<const char32_t>&, const Containers::StridedArrayView1D<UnsignedInt>&) override {}
+        Vector2 doGlyphSize(UnsignedInt) override { return {}; }
+        Vector2 doGlyphAdvance(UnsignedInt) override { return {}; }
+        Containers::Pointer<Text::AbstractShaper> doCreateShaper() override { return Containers::pointer<OneGlyphShaper>(*this); }
+    } font;
+
+    struct: Text::AbstractGlyphCache {
+        using Text::AbstractGlyphCache::AbstractGlyphCache;
+
+        Text::GlyphCacheFeatures doFeatures() const override { return {}; }
+        void doSetImage(const Vector2i&, const ImageView2D&) override {}
+    } cache{PixelFormat::R8Unorm, {32, 32, 2}};
+    cache.addFont(67, &font);
+
+    struct LayerShared: TextLayer::Shared {
+        explicit LayerShared(Text::AbstractGlyphCache& glyphCache, const Configuration& configuration): TextLayer::Shared{glyphCache, configuration} {}
+
+        void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
+        void doSetEditingStyle(const TextLayerCommonEditingStyleUniform&, Containers::ArrayView<const TextLayerEditingStyleUniform>) override {}
+    } shared{cache, TextLayer::Shared::Configuration{1}};
+    shared.setStyle(TextLayerCommonStyleUniform{},
+        {TextLayerStyleUniform{}},
+        {shared.addFont(font, 1.0f)},
+        {Text::Alignment{}},
+        {}, {}, {}, {}, {}, {});
+
+    struct Layer: TextLayer {
+        explicit Layer(LayerHandle handle, Shared& shared): TextLayer{handle, shared, TextLayerFlag::Transformable} {}
+    } layer{layerHandle(0, 1), shared};
+
+    DataHandle data = layer.create(0, "", {});
+
+    Containers::String out;
+    Error redirectError{&out};
+    layer.padding(data);
+    layer.padding(dataHandleData(data));
+    layer.setPadding(data, Vector4{});
+    layer.setPadding(dataHandleData(data), Vector4{});
+    layer.setPadding(data, 0.0f);
+    layer.setPadding(dataHandleData(data), 0.0f);
+    CORRADE_COMPARE_AS(out,
+        "Ui::TextLayer::padding(): per-data padding not available on a Ui::TextLayerFlag::Transformable layer\n"
+        "Ui::TextLayer::padding(): per-data padding not available on a Ui::TextLayerFlag::Transformable layer\n"
+        "Ui::TextLayer::setPadding(): per-data padding not available on a Ui::TextLayerFlag::Transformable layer\n"
+        "Ui::TextLayer::setPadding(): per-data padding not available on a Ui::TextLayerFlag::Transformable layer\n"
+        "Ui::TextLayer::setPadding(): per-data padding not available on a Ui::TextLayerFlag::Transformable layer\n"
+        "Ui::TextLayer::setPadding(): per-data padding not available on a Ui::TextLayerFlag::Transformable layer\n",
+        TestSuite::Compare::String);
+}
+
+void TextLayerTest::setTransformation() {
+    struct: Text::AbstractFont {
+        Text::FontFeatures doFeatures() const override { return {}; }
+        bool doIsOpened() const override { return true; }
+        void doClose() override {}
+
+        void doGlyphIdsInto(const Containers::StridedArrayView1D<const char32_t>&, const Containers::StridedArrayView1D<UnsignedInt>&) override {}
+        Vector2 doGlyphSize(UnsignedInt) override { return {}; }
+        Vector2 doGlyphAdvance(UnsignedInt) override { return {}; }
+        Containers::Pointer<Text::AbstractShaper> doCreateShaper() override { return Containers::pointer<OneGlyphShaper>(*this); }
+    } font;
+
+    struct: Text::AbstractGlyphCache {
+        using Text::AbstractGlyphCache::AbstractGlyphCache;
+
+        Text::GlyphCacheFeatures doFeatures() const override { return {}; }
+        void doSetImage(const Vector2i&, const ImageView2D&) override {}
+    } cache{PixelFormat::R8Unorm, {32, 32, 2}};
+    cache.addFont(67, &font);
+
+    struct LayerShared: TextLayer::Shared {
+        explicit LayerShared(Text::AbstractGlyphCache& glyphCache, const Configuration& configuration): TextLayer::Shared{glyphCache, configuration} {}
+
+        void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
+        void doSetEditingStyle(const TextLayerCommonEditingStyleUniform&, Containers::ArrayView<const TextLayerEditingStyleUniform>) override {}
+    } shared{cache, TextLayer::Shared::Configuration{1}};
+    shared.setStyle(TextLayerCommonStyleUniform{},
+        {TextLayerStyleUniform{}},
+        {shared.addFont(font, 1.0f)},
+        {Text::Alignment::MiddleCenter},
+        {}, {}, {}, {}, {}, {});
+
+    struct Layer: TextLayer {
+        explicit Layer(LayerHandle handle, Shared& shared): TextLayer{handle, shared, TextLayerFlag::Transformable} {}
+    } layer{layerHandle(0, 1), shared};
+
+    /* Required to be called before update() (because AbstractUserInterface
+       guarantees the same on a higher level), not needed for anything here */
+    layer.setSize({1, 1}, {1, 1});
+
+    /* Just to be sure the setters aren't picking up the first ever data
+       always */
+    layer.create(0, "", {});
+
+    /* There's nothing that would work differently for createGlyph() */
+    DataHandle data = layer.create(0, "", {});
+    CORRADE_COMPARE(layer.transformation(data), Containers::pair(Vector2{}, Complex{Math::IdentityInit}));
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
+
+    /* Clear the state flags */
+    layer.update(LayerState::NeedsDataUpdate, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
+    CORRADE_COMPARE(layer.state(), LayerStates{});
+
+    /* Setting a transformation marks the layer as dirty */
+    layer.setTransformation(data, {2.0f, 4.0f}, Complex::rotation(35.0_degf), 3.0f);
+    CORRADE_COMPARE(layer.transformation(data), Containers::pair(Vector2{2.0f, 4.0f}, Complex::rotation(35.0_degf)*3.0f));
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
+
+    /* Clear the state flags */
+    layer.update(LayerState::NeedsDataUpdate, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
+    CORRADE_COMPARE(layer.state(), LayerStates{});
+
+    /* Testing also the LayerDataHandle overload */
+    layer.setTransformation(dataHandleData(data), {1.0f, 3.0f}, Complex::rotation(-35.0_degf), 2.0f);
+    CORRADE_COMPARE(layer.transformation(dataHandleData(data)), Containers::pair(Vector2{1.0f, 3.0f}, Complex::rotation(-35.0_degf)*2.0f));
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
+
+    /* Clear the state flags */
+    layer.update(LayerState::NeedsDataUpdate, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
+    CORRADE_COMPARE(layer.state(), LayerStates{});
+
+    /* Overload taking an angle directly */
+    layer.setTransformation(data, {2.0f, 4.0f}, 35.0_degf, 3.0f);
+    CORRADE_COMPARE(layer.transformation(data), Containers::pair(Vector2{2.0f, 4.0f}, Complex::rotation(35.0_degf)*3.0f));
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
+
+    /* Clear the state flags */
+    layer.update(LayerState::NeedsDataUpdate, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
+    CORRADE_COMPARE(layer.state(), LayerStates{});
+
+    /* Testing also the LayerDataHandle overload */
+    layer.setTransformation(dataHandleData(data), {1.0f, 3.0f}, -35.0_degf, 2.0f);
+    CORRADE_COMPARE(layer.transformation(dataHandleData(data)), Containers::pair(Vector2{1.0f, 3.0f}, Complex::rotation(-35.0_degf)*2.0f));
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
+
+    /* Clear the state flags */
+    layer.update(LayerState::NeedsDataUpdate, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
+    CORRADE_COMPARE(layer.state(), LayerStates{});
+
+    /* Translating adds to existing transformation */
+    layer.translate(data, {0.5f, -0.25f});
+    CORRADE_COMPARE(layer.transformation(data), Containers::pair(Vector2{1.5f, 2.75f}, Complex::rotation(-35.0_degf)*2.0f));
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
+
+    /* Clear the state flags */
+    layer.update(LayerState::NeedsDataUpdate, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
+    CORRADE_COMPARE(layer.state(), LayerStates{});
+
+    /* Testing also the LayerDataHandle overload */
+    layer.translate(dataHandleData(data), {-0.5f, 0.25f});
+    CORRADE_COMPARE(layer.transformation(dataHandleData(data)), Containers::pair(Vector2{1.0f, 3.0f}, Complex::rotation(-35.0_degf)*2.0f));
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
+
+    /* Clear the state flags */
+    layer.update(LayerState::NeedsDataUpdate, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
+    CORRADE_COMPARE(layer.state(), LayerStates{});
+
+    /* Rotating adds to existing transformation */
+    layer.rotate(data, Complex::rotation(15.0_degf)*1.5f);
+    CORRADE_COMPARE(layer.transformation(data), Containers::pair(Vector2{1.0f, 3.0f}, Complex::rotation(-20.0_degf)*3.0f));
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
+
+    /* Clear the state flags */
+    layer.update(LayerState::NeedsDataUpdate, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
+    CORRADE_COMPARE(layer.state(), LayerStates{});
+
+    /* Testing also the LayerDataHandle overload */
+    layer.rotate(dataHandleData(data), Complex::rotation(-15.0_degf)/1.5f);
+    CORRADE_COMPARE(layer.transformation(dataHandleData(data)), Containers::pair(Vector2{1.0f, 3.0f}, Complex::rotation(-35.0_degf)*2.0f));
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
+
+    /* Clear the state flags */
+    layer.update(LayerState::NeedsDataUpdate, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
+    CORRADE_COMPARE(layer.state(), LayerStates{});
+
+    /* Overload taking an angle directly */
+    layer.rotate(data, 15.0_degf);
+    CORRADE_COMPARE(layer.transformation(data), Containers::pair(Vector2{1.0f, 3.0f}, Complex::rotation(-20.0_degf)*2.0f));
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
+
+    /* Clear the state flags */
+    layer.update(LayerState::NeedsDataUpdate, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
+    CORRADE_COMPARE(layer.state(), LayerStates{});
+
+    /* Testing also the LayerDataHandle overload */
+    layer.rotate(dataHandleData(data), -15.0_degf);
+    CORRADE_COMPARE(layer.transformation(dataHandleData(data)), Containers::pair(Vector2{1.0f, 3.0f}, Complex::rotation(-35.0_degf)*2.0f));
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
+
+    /* Clear the state flags */
+    layer.update(LayerState::NeedsDataUpdate, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
+    CORRADE_COMPARE(layer.state(), LayerStates{});
+
+    /* Scaling adds to existing transformation */
+    layer.scale(data, 4.0f);
+    CORRADE_COMPARE(layer.transformation(data), Containers::pair(Vector2{1.0f, 3.0f}, Complex::rotation(-35.0_degf)*8.0f));
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
+
+    /* Clear the state flags */
+    layer.update(LayerState::NeedsDataUpdate, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
+    CORRADE_COMPARE(layer.state(), LayerStates{});
+
+    /* Testing also the LayerDataHandle overload */
+    layer.scale(dataHandleData(data), 0.25f);
+    CORRADE_COMPARE(layer.transformation(dataHandleData(data)), Containers::pair(Vector2{1.0f, 3.0f}, Complex::rotation(-35.0_degf)*2.0f));
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
+}
+
+void TextLayerTest::setTransformationInvalid() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct: Text::AbstractFont {
+        Text::FontFeatures doFeatures() const override { return {}; }
+        bool doIsOpened() const override { return true; }
+        void doClose() override {}
+
+        void doGlyphIdsInto(const Containers::StridedArrayView1D<const char32_t>&, const Containers::StridedArrayView1D<UnsignedInt>&) override {}
+        Vector2 doGlyphSize(UnsignedInt) override { return {}; }
+        Vector2 doGlyphAdvance(UnsignedInt) override { return {}; }
+        Containers::Pointer<Text::AbstractShaper> doCreateShaper() override { return Containers::pointer<OneGlyphShaper>(*this); }
+    } font;
+
+    struct: Text::AbstractGlyphCache {
+        using Text::AbstractGlyphCache::AbstractGlyphCache;
+
+        Text::GlyphCacheFeatures doFeatures() const override { return {}; }
+        void doSetImage(const Vector2i&, const ImageView2D&) override {}
+    } cache{PixelFormat::R8Unorm, {32, 32, 2}};
+    cache.addFont(67, &font);
+
+    struct LayerShared: TextLayer::Shared {
+        explicit LayerShared(Text::AbstractGlyphCache& glyphCache, const Configuration& configuration): TextLayer::Shared{glyphCache, configuration} {}
+
+        void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
+        void doSetEditingStyle(const TextLayerCommonEditingStyleUniform&, Containers::ArrayView<const TextLayerEditingStyleUniform>) override {}
+    } shared{cache, TextLayer::Shared::Configuration{1}};
+    shared.setStyle(TextLayerCommonStyleUniform{},
+        {TextLayerStyleUniform{}},
+        {shared.addFont(font, 1.0f)},
+        {Text::Alignment{}},
+        {}, {}, {}, {}, {}, {});
+
+    struct Layer: TextLayer {
+        explicit Layer(LayerHandle handle, Shared& shared): TextLayer{handle, shared} {}
+    } layer{layerHandle(0, 1), shared};
+
+    DataHandle data = layer.create(0, "", {});
+
+    Containers::String out;
+    Error redirectError{&out};
+    layer.transformation(data);
+    layer.transformation(dataHandleData(data));
+    layer.setTransformation(data, {}, Complex{}, {});
+    layer.setTransformation(data, {}, Rad{}, {});
+    layer.setTransformation(dataHandleData(data), {}, Complex{}, {});
+    layer.setTransformation(dataHandleData(data), {}, Rad{}, {});
+    layer.translate(data, {});
+    layer.translate(dataHandleData(data), {});
+    layer.rotate(data, Complex{});
+    layer.rotate(data, Rad{});
+    layer.rotate(dataHandleData(data), Complex{});
+    layer.rotate(dataHandleData(data), Rad{});
+    layer.scale(data, {});
+    layer.scale(dataHandleData(data), {});
+    CORRADE_COMPARE_AS(out,
+        "Ui::TextLayer::transformation(): layer isn't Ui::TextLayerFlag::Transformable\n"
+        "Ui::TextLayer::transformation(): layer isn't Ui::TextLayerFlag::Transformable\n"
+        "Ui::TextLayer::setTransformation(): layer isn't Ui::TextLayerFlag::Transformable\n"
+        "Ui::TextLayer::setTransformation(): layer isn't Ui::TextLayerFlag::Transformable\n"
+        "Ui::TextLayer::setTransformation(): layer isn't Ui::TextLayerFlag::Transformable\n"
+        "Ui::TextLayer::setTransformation(): layer isn't Ui::TextLayerFlag::Transformable\n"
+        "Ui::TextLayer::translate(): layer isn't Ui::TextLayerFlag::Transformable\n"
+        "Ui::TextLayer::translate(): layer isn't Ui::TextLayerFlag::Transformable\n"
+        "Ui::TextLayer::rotate(): layer isn't Ui::TextLayerFlag::Transformable\n"
+        "Ui::TextLayer::rotate(): layer isn't Ui::TextLayerFlag::Transformable\n"
+        "Ui::TextLayer::rotate(): layer isn't Ui::TextLayerFlag::Transformable\n"
+        "Ui::TextLayer::rotate(): layer isn't Ui::TextLayerFlag::Transformable\n"
+        "Ui::TextLayer::scale(): layer isn't Ui::TextLayerFlag::Transformable\n"
+        "Ui::TextLayer::scale(): layer isn't Ui::TextLayerFlag::Transformable\n",
+        TestSuite::Compare::String);
+}
+
 void TextLayerTest::invalidHandle() {
     CORRADE_SKIP_IF_NO_ASSERT();
 
@@ -7946,6 +8405,61 @@ void TextLayerTest::invalidHandle() {
         "Ui::TextLayer::padding(): invalid handle Ui::LayerDataHandle::Null\n"
         "Ui::TextLayer::setPadding(): invalid handle Ui::DataHandle::Null\n"
         "Ui::TextLayer::setPadding(): invalid handle Ui::LayerDataHandle::Null\n",
+        TestSuite::Compare::String);
+}
+
+void TextLayerTest::invalidHandleTransformation() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct: Text::AbstractGlyphCache {
+        using Text::AbstractGlyphCache::AbstractGlyphCache;
+
+        Text::GlyphCacheFeatures doFeatures() const override { return {}; }
+        void doSetImage(const Vector2i&, const ImageView2D&) override {}
+    } cache{PixelFormat::R8Unorm, {32, 32}};
+
+    struct LayerShared: TextLayer::Shared {
+        explicit LayerShared(Text::AbstractGlyphCache& glyphCache, const Configuration& configuration): TextLayer::Shared{glyphCache, configuration} {}
+
+        void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
+        void doSetEditingStyle(const TextLayerCommonEditingStyleUniform&, Containers::ArrayView<const TextLayerEditingStyleUniform>) override {}
+    } shared{cache, TextLayer::Shared::Configuration{1}};
+
+    struct Layer: TextLayer {
+        explicit Layer(LayerHandle handle, Shared& shared): TextLayer{handle, shared} {}
+    } layer{layerHandle(0, 1), shared};
+
+    Containers::String out;
+    Error redirectError{&out};
+    layer.transformation(DataHandle::Null);
+    layer.transformation(LayerDataHandle::Null);
+    layer.setTransformation(DataHandle::Null, {}, Complex{}, {});
+    layer.setTransformation(LayerDataHandle::Null, {}, Complex{}, {});
+    layer.setTransformation(DataHandle::Null, {}, Rad{}, {});
+    layer.setTransformation(LayerDataHandle::Null, {}, Rad{}, {});
+    layer.translate(DataHandle::Null, {});
+    layer.translate(LayerDataHandle::Null, {});
+    layer.rotate(DataHandle::Null, Complex{});
+    layer.rotate(LayerDataHandle::Null, Complex{});
+    layer.rotate(DataHandle::Null, Rad{});
+    layer.rotate(LayerDataHandle::Null, Rad{});
+    layer.scale(DataHandle::Null, {});
+    layer.scale(LayerDataHandle::Null, {});
+    CORRADE_COMPARE_AS(out,
+        "Ui::TextLayer::transformation(): invalid handle Ui::DataHandle::Null\n"
+        "Ui::TextLayer::transformation(): invalid handle Ui::LayerDataHandle::Null\n"
+        "Ui::TextLayer::setTransformation(): invalid handle Ui::DataHandle::Null\n"
+        "Ui::TextLayer::setTransformation(): invalid handle Ui::LayerDataHandle::Null\n"
+        "Ui::TextLayer::setTransformation(): invalid handle Ui::DataHandle::Null\n"
+        "Ui::TextLayer::setTransformation(): invalid handle Ui::LayerDataHandle::Null\n"
+        "Ui::TextLayer::translate(): invalid handle Ui::DataHandle::Null\n"
+        "Ui::TextLayer::translate(): invalid handle Ui::LayerDataHandle::Null\n"
+        "Ui::TextLayer::rotate(): invalid handle Ui::DataHandle::Null\n"
+        "Ui::TextLayer::rotate(): invalid handle Ui::LayerDataHandle::Null\n"
+        "Ui::TextLayer::rotate(): invalid handle Ui::DataHandle::Null\n"
+        "Ui::TextLayer::rotate(): invalid handle Ui::LayerDataHandle::Null\n"
+        "Ui::TextLayer::scale(): invalid handle Ui::DataHandle::Null\n"
+        "Ui::TextLayer::scale(): invalid handle Ui::LayerDataHandle::Null\n",
         TestSuite::Compare::String);
 }
 
@@ -8070,6 +8584,58 @@ void TextLayerTest::nonEditableText() {
         "Ui::TextLayer::updateText(): text doesn't have Ui::TextDataFlag::Editable set\n"
         "Ui::TextLayer::editText(): text doesn't have Ui::TextDataFlag::Editable set\n"
         "Ui::TextLayer::editText(): text doesn't have Ui::TextDataFlag::Editable set\n",
+        TestSuite::Compare::String);
+}
+
+void TextLayerTest::nonEditableTextTransformation() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct: Text::AbstractFont {
+        Text::FontFeatures doFeatures() const override { return {}; }
+        bool doIsOpened() const override { return true; }
+        void doClose() override {}
+
+        void doGlyphIdsInto(const Containers::StridedArrayView1D<const char32_t>&, const Containers::StridedArrayView1D<UnsignedInt>&) override {}
+        Vector2 doGlyphSize(UnsignedInt) override { return {}; }
+        Vector2 doGlyphAdvance(UnsignedInt) override { return {}; }
+        Containers::Pointer<Text::AbstractShaper> doCreateShaper() override { return Containers::pointer<OneGlyphShaper>(*this); }
+    } font;
+
+    struct: Text::AbstractGlyphCache {
+        using Text::AbstractGlyphCache::AbstractGlyphCache;
+
+        Text::GlyphCacheFeatures doFeatures() const override { return {}; }
+        void doSetImage(const Vector2i&, const ImageView2D&) override {}
+    } cache{PixelFormat::R8Unorm, {32, 32, 2}};
+    cache.addFont(67, &font);
+
+    struct LayerShared: TextLayer::Shared {
+        explicit LayerShared(Text::AbstractGlyphCache& glyphCache, const Configuration& configuration): TextLayer::Shared{glyphCache, configuration} {}
+
+        void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
+        void doSetEditingStyle(const TextLayerCommonEditingStyleUniform&, Containers::ArrayView<const TextLayerEditingStyleUniform>) override {}
+    } shared{cache, TextLayer::Shared::Configuration{1}};
+    shared.setStyle(TextLayerCommonStyleUniform{},
+        {TextLayerStyleUniform{}},
+        {shared.addFont(font, 1.0f)},
+        {Text::Alignment{}},
+        {}, {}, {}, {}, {}, {});
+
+    struct Layer: TextLayer {
+        explicit Layer(LayerHandle handle, Shared& shared): TextLayer{handle, shared, TextLayerFlag::Transformable} {}
+    } layer{layerHandle(0, 1), shared};
+
+    DataHandle data = layer.create(0, "", {});
+
+    Containers::String out;
+    Error redirectError{&out};
+    layer.create(0, "", {}, TextDataFlag::Editable);
+    layer.setText(data, "", {}, TextDataFlag::Editable);
+    layer.setText(dataHandleData(data), "", {}, TextDataFlag::Editable);
+    CORRADE_COMPARE_AS(out,
+        "Ui::TextLayer::create(): cannot use Ui::TextDataFlag::Editable on a Ui::TextLayerFlag::Transformable layer\n"
+        "Ui::TextLayer::setText(): cannot use Ui::TextDataFlag::Editable on a Ui::TextLayerFlag::Transformable layer\n"
+        "Ui::TextLayer::setText(): cannot use Ui::TextDataFlag::Editable on a Ui::TextLayerFlag::Transformable layer\n",
         TestSuite::Compare::String);
 }
 
@@ -8456,12 +9022,12 @@ void TextLayerTest::updateCleanDataOrder() {
     );
 
     struct Layer: TextLayer {
-        explicit Layer(LayerHandle handle, Shared& shared): TextLayer{handle, shared} {}
+        explicit Layer(LayerHandle handle, Shared& shared, TextLayerFlags flags): TextLayer{handle, shared, flags} {}
 
         const State& stateData() const {
             return static_cast<const State&>(*_state);
         }
-    } layer{layerHandle(0, 1), shared};
+    } layer{layerHandle(0, 1), shared, data.layerFlags};
 
     /* Required to be called before update() (because AbstractUserInterface
        guarantees the same on a higher level), not needed for anything here */
@@ -8548,9 +9114,14 @@ void TextLayerTest::updateCleanDataOrder() {
     layer.setColor(data7, 0x11223344_rgbaf);
     layer.setColor(data9, 0x663399_rgbf);
 
-    if(!data.paddingFromData.isZero()) {
-        layer.setPadding(data3, data.paddingFromData);
-        layer.setPadding(data5, data.paddingFromData);
+    if(!data.paddingOrTranslationFromData.isZero()) {
+        if(data.layerFlags >= TextLayerFlag::Transformable) {
+            layer.setTransformation(data3, data.paddingOrTranslationFromData.xy(), Complex{}, 1.0f);
+            layer.setTransformation(data5, data.paddingOrTranslationFromData.xy(), Complex{}, 1.0f);
+        } else {
+            layer.setPadding(data3, data.paddingOrTranslationFromData);
+            layer.setPadding(data5, data.paddingOrTranslationFromData);
+        }
     }
 
     if(data.dataFlags >= TextDataFlag::Editable) {
@@ -9988,6 +10559,197 @@ void TextLayerTest::updatePaddingGlyph() {
         Vector2{0.0f, -8.0f} + data.offsetGlyph,
         Vector2{6.0f, -8.0f} + data.offsetGlyph
     }), TestSuite::Compare::Container);
+}
+
+void TextLayerTest::updateTransformation() {
+    auto&& data = UpdateTransformationData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
+    /* Trimmed-down variant of updatePadding() that checks transformations get
+       applied in correct order respective to node offset and padding coming
+       from style. Testing with multiple glyphs to verify they're all
+       transformed while preserving their relative position. Single-glyph
+       rendering has no specific behavior so it isn't tested. */
+
+    struct: Text::AbstractFont {
+        Text::FontFeatures doFeatures() const override { return {}; }
+        bool doIsOpened() const override { return _opened; }
+        Properties doOpenFile(Containers::StringView, Float size) override {
+            _opened = true;
+            /* Line height shouldn't be used for anything */
+            return {size, 7.0f*size/100.0f, -4.0f*size/100.0f, 10000.0f, 1};
+        }
+        void doClose() override { _opened = false; }
+
+        void doGlyphIdsInto(const Containers::StridedArrayView1D<const char32_t>&, const Containers::StridedArrayView1D<UnsignedInt>&) override {}
+        Vector2 doGlyphSize(UnsignedInt) override { return {}; }
+        Vector2 doGlyphAdvance(UnsignedInt) override { return {}; }
+        Containers::Pointer<Text::AbstractShaper> doCreateShaper() override {
+            struct Shaper: Text::AbstractShaper {
+                explicit Shaper(Text::AbstractFont& font): Text::AbstractShaper{font} {}
+
+                UnsignedInt doShape(Containers::StringView text, UnsignedInt, UnsignedInt, Containers::ArrayView<const Text::FeatureRange>) override {
+                    return text.size();
+                }
+                void doGlyphIdsInto(const Containers::StridedArrayView1D<UnsignedInt>& ids) const override {
+                    for(std::size_t i = 0; i != ids.size(); ++i)
+                        ids[i] = 0;
+                }
+                void doGlyphOffsetsAdvancesInto(const Containers::StridedArrayView1D<Vector2>& offsets, const Containers::StridedArrayView1D<Vector2>& advances) const override {
+                    for(std::size_t i = 0; i != offsets.size(); ++i) {
+                        offsets[i] = {};
+                        advances[i] = {3.0f*font().size()/100.0f, 0.0f};
+                    }
+                }
+                void doGlyphClustersInto(const Containers::StridedArrayView1D<UnsignedInt>&) const override {
+                    CORRADE_FAIL("This shouldn't be called.");
+                }
+            };
+            return Containers::pointer<Shaper>(*this);
+        }
+
+        bool _opened = false;
+    } font;
+    /* Open the font at twice the size to then add it back at the original size
+       below, to verify this 0.5x scale gets correctly propagated to the
+       distance field attribute */
+    font.openFile({}, 200.0f);
+
+    /* A trivial glyph cache. While font's ascent/descent goes both above and
+       below the line, this is just above. */
+    struct: Text::AbstractGlyphCache {
+        using Text::AbstractGlyphCache::AbstractGlyphCache;
+
+        Text::GlyphCacheFeatures doFeatures() const override { return {}; }
+        void doSetImage(const Vector2i&, const ImageView2D&) override {}
+    /* Default padding is 1, resetting to 0 for simplicity */
+    } cache{PixelFormat::R8Unorm, {32, 32}, {}};
+    /* Y glyph offset to verify the transformation is relative to cursor
+       placement also on Y, not to bounding box edge. The offset and size gets
+       divided by 2. */
+    cache.addGlyph(cache.addFont(1, &font), 0, {0, -2}, {{}, {4, 8}});
+
+    struct LayerShared: TextLayer::Shared {
+        explicit LayerShared(Text::AbstractGlyphCache& glyphCache, const Configuration& configuration): TextLayer::Shared{glyphCache, configuration} {}
+
+        void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
+        void doSetEditingStyle(const TextLayerCommonEditingStyleUniform&, Containers::ArrayView<const TextLayerEditingStyleUniform>) override {}
+    } shared{cache, TextLayer::Shared::Configuration{1}
+        .setFlags(data.sharedLayerFlags)
+    };
+
+    FontHandle fontHandle = shared.addFont(font, 100.0f);
+    shared.setStyle(TextLayerCommonStyleUniform{},
+        {TextLayerStyleUniform{}},
+        {fontHandle},
+        {Text::Alignment::BottomRight},
+        {}, {}, {}, {}, {},
+        {{50.0f, 100.0f, 5.0f, 10.0f}});
+
+    struct Layer: TextLayer {
+        explicit Layer(LayerHandle handle, Shared& shared, TextLayerFlags flags): TextLayer{handle, shared, flags} {}
+
+        const State& stateData() const {
+            return static_cast<const State&>(*_state);
+        }
+    } layer{layerHandle(0, 1), shared, data.layerFlags};
+
+    /* Required to be called before update() (because AbstractUserInterface
+       guarantees the same on a higher level), not needed for anything here */
+    layer.setSize({1, 1}, {1, 1});
+
+    NodeHandle node3 = nodeHandle(3, 0);
+
+    /* 3 chars, so the bounding box is 9x11. It's always that regardless of
+       transformation. */
+    DataHandle node3Data = layer.create(0, "hey", {}, node3);
+    if(data.layerFlags >= TextLayerFlag::Transformable)
+        layer.setTransformation(node3Data, data.translation, data.rotation, data.scaling);
+    CORRADE_COMPARE(layer.size(node3Data), (Vector2{9.0f, 11.0f}));
+
+    Vector2 nodeOffsets[4];
+    Vector2 nodeSizes[4];
+    Float nodeOpacities[4]{};
+    UnsignedByte nodesEnabledData[1]{};
+    Containers::BitArrayView nodesEnabled{nodesEnabledData, 0, 4};
+    nodeOffsets[3] = {20.0f, 10.0f};
+    nodeSizes[3] = {300.0f, 150.0f};
+    UnsignedInt dataIds[]{0};
+    layer.update(LayerState::NeedsDataUpdate, dataIds, {}, {}, nodeOffsets, nodeSizes, nodeOpacities, nodesEnabled, {}, {}, {}, {});
+
+    /* As the alignment is bottom right, the text rendering cursor is at bottom
+       right of the 9x11 box, and it's placed to the bottom right corner of the
+       node. Then, while each glyph bounding box is 3x11, the actual glyph is
+       2x4, so it's 3 units from the bottom and after each there's 1 unit space
+       on the right.
+                       node    node    padding right
+                       offset  size    padding bottom */
+    Vector2 baseOffset{20.0f + 300.0f - 5.0f,
+                       10.0f + 150.0f - 10.0f};
+
+    /* 2--3
+       |  |
+       0--1 */
+    Containers::StridedArrayView1D<const Vector2> positions =
+        data.sharedLayerFlags >= TextLayerSharedFlag::DistanceField ?
+            stridedArrayView(Containers::arrayCast<Implementation::TextLayerDistanceFieldVertex>(layer.stateData().vertices)).slice(&Implementation::TextLayerDistanceFieldVertex::vertex).slice(&Implementation::TextLayerVertex::position) :
+            stridedArrayView(Containers::arrayCast<Implementation::TextLayerVertex>(layer.stateData().vertices)).slice(&Implementation::TextLayerVertex::position);
+    CORRADE_COMPARE_AS(positions, Containers::arrayView<Vector2>({
+        baseOffset + data.expected.transformPoint({-9.0f, -3.0f}),
+        baseOffset + data.expected.transformPoint({-7.0f, -3.0f}),
+        baseOffset + data.expected.transformPoint({-9.0f, -7.0f}),
+        baseOffset + data.expected.transformPoint({-7.0f, -7.0f}),
+
+        baseOffset + data.expected.transformPoint({-6.0f, -3.0f}),
+        baseOffset + data.expected.transformPoint({-4.0f, -3.0f}),
+        baseOffset + data.expected.transformPoint({-6.0f, -7.0f}),
+        baseOffset + data.expected.transformPoint({-4.0f, -7.0f}),
+
+        baseOffset + data.expected.transformPoint({-3.0f, -3.0f}),
+        baseOffset + data.expected.transformPoint({-1.0f, -3.0f}),
+        baseOffset + data.expected.transformPoint({-3.0f, -7.0f}),
+        baseOffset + data.expected.transformPoint({-1.0f, -7.0f}),
+    }), TestSuite::Compare::Container);
+
+    /* If there's a positive rotation, it should be clockwise, i.e. the next
+       quads being lower (i.e., Y larger with Y down) than the first, and vice
+       versa */
+    if(data.rotation > 0.0_radf) {
+        CORRADE_COMPARE_AS(positions[4].y(),
+                           positions[0].y(),
+                           TestSuite::Compare::Greater);
+        CORRADE_COMPARE_AS(positions[8].y(),
+                           positions[4].y(),
+                           TestSuite::Compare::Greater);
+    } else if(data.rotation < 0.0_radf) {
+        CORRADE_COMPARE_AS(positions[4].y(),
+                           positions[0].y(),
+                           TestSuite::Compare::Less);
+        CORRADE_COMPARE_AS(positions[8].y(),
+                           positions[4].y(),
+                           TestSuite::Compare::Less);
+    }
+
+    /* A transform scale should get reflected in the attribute for distance
+       field radius scaling, in addition to the font scale */
+    if(data.sharedLayerFlags >= TextLayerSharedFlag::DistanceField) {
+        CORRADE_COMPARE_AS(stridedArrayView(Containers::arrayCast<Implementation::TextLayerDistanceFieldVertex>(layer.stateData().vertices)).slice(&Implementation::TextLayerDistanceFieldVertex::invertedRunScale), Containers::arrayView({
+            1.0f/(0.5f*data.scaling),
+            1.0f/(0.5f*data.scaling),
+            1.0f/(0.5f*data.scaling),
+            1.0f/(0.5f*data.scaling),
+
+            1.0f/(0.5f*data.scaling),
+            1.0f/(0.5f*data.scaling),
+            1.0f/(0.5f*data.scaling),
+            1.0f/(0.5f*data.scaling),
+
+            1.0f/(0.5f*data.scaling),
+            1.0f/(0.5f*data.scaling),
+            1.0f/(0.5f*data.scaling),
+            1.0f/(0.5f*data.scaling),
+        }), TestSuite::Compare::Container);
+    }
 }
 
 void TextLayerTest::updateNoStyleSet() {

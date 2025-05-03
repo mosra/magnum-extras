@@ -493,11 +493,66 @@ constexpr UnsignedInt fontHandleGeneration(FontHandle handle) {
 }
 
 /**
+@brief Text layer flag
+@m_since_latest
+
+@see @ref TextLayerFlags, @ref TextLayer::flags()
+*/
+enum class TextLayerFlag: UnsignedByte {
+    /**
+     * Enable arbitrary text transformation using
+     * @ref TextLayer::setTransformation(),
+     * @relativeref{TextLayer,translate()}, @relativeref{TextLayer,rotate()}
+     * and @relativeref{TextLayer,scale()}. This feature replaces custom text
+     * padding, meaning that @ref TextLayer::setPadding() cannot be called with
+     * this flag enabled. Only the paddings supplied via
+     * @ref TextLayer::Shared::setStyle() are used. At the moment, text also
+     * can't be marked as @ref TextDataFlag::Editable if this flag is enabled,
+     * as cursor placement with arbitrarily transformed text isn't implemented
+     * yet.
+     *
+     * Note that internally the glyph quad transformation is performed on the
+     * CPU side, which may have performance implications if enabled globally
+     * and not just on text that actually needs arbitrary transformation ---
+     * for that reason this is a per-layer flag and not a
+     * @ref TextLayerSharedFlag so you can have a dedicated layer instance with
+     * all other state shared for just transformed texts alone.
+     *
+     * For crisp rendering with arbitrary rotation and scaling it's recommended
+     * to use this feature together with
+     * @ref Ui-TextLayer-distancefield "distance field rendering".
+     */
+    Transformable = 1 << 0
+};
+
+/**
+@debugoperatorenum{TextLayerFlag}
+@m_since_latest
+*/
+MAGNUM_UI_EXPORT Debug& operator<<(Debug& debug, TextLayerFlag value);
+
+/**
+@brief Text layer data flags
+@m_since_latest
+
+@see @ref TextLayer::flags()
+*/
+typedef Containers::EnumSet<TextLayerFlag> TextLayerFlags;
+
+CORRADE_ENUMSET_OPERATORS(TextLayerFlags)
+
+/**
+@debugoperatorenum{TextLayerFlags}
+@m_since_latest
+*/
+MAGNUM_UI_EXPORT Debug& operator<<(Debug& debug, TextLayerFlags value);
+
+/**
 @brief Text layer data flag
 @m_since_latest
 
 @see @ref Ui-TextLayer-editing, @ref TextDataFlags, @ref TextLayer::create(),
-    @ref TextLayer::flags()
+    @ref TextLayer::flags(DataHandle) const
 */
 enum class TextDataFlag: UnsignedByte {
     /**
@@ -524,7 +579,7 @@ MAGNUM_UI_EXPORT Debug& operator<<(Debug& debug, TextDataFlag value);
 @brief Text layer data flags
 @m_since_latest
 
-@see @ref TextLayer::create(), @ref TextLayer::flags()
+@see @ref TextLayer::create(), @ref TextLayer::flags(DataHandle) const
 */
 typedef Containers::EnumSet<TextDataFlag> TextDataFlags;
 
@@ -1423,10 +1478,17 @@ class MAGNUM_UI_EXPORT TextLayer: public AbstractVisualLayer {
         /**
          * @brief Shared state used by this layer
          *
-         * Reference to the instance passed to @ref TextLayerGL::TextLayerGL(LayerHandle, Shared&).
+         * Reference to the instance passed to @ref TextLayerGL::TextLayerGL(LayerHandle, Shared&, TextLayerFlags).
          */
         inline Shared& shared();
         inline const Shared& shared() const; /**< @overload */
+
+        /**
+         * @brief Layer flags
+         *
+         * @see @ref TextLayer::Shared::flags(), @ref flags(DataHandle) const
+         */
+        TextLayerFlags flags() const;
 
         /**
          * @brief Assign a style animator to this layer
@@ -1897,12 +1959,14 @@ class MAGNUM_UI_EXPORT TextLayer: public AbstractVisualLayer {
          * @return New data handle
          *
          * Expects that @ref Shared::setStyle() has been called, @p style is
-         * less than @ref Shared::totalStyleCount() and
+         * less than @ref Shared::totalStyleCount(),
          * @ref TextProperties::font() is either @ref FontHandle::Null or
-         * valid. Styling is driven from the @ref TextLayerStyleUniform at
-         * index @p style. If @ref TextProperties::font() is not null it's
-         * used, otherwise the default @ref FontHandle assigned to given style
-         * is used and is expected to not be null. The @ref FontHandle, whether
+         * valid and @p flags don't contain @ref TextDataFlag::Editable if the
+         * layer was created with @ref TextLayerFlag::Transformable enabled.
+         * Styling is driven from the @ref TextLayerStyleUniform at index
+         * @p style. If @ref TextProperties::font() is not null it's used,
+         * otherwise the default @ref FontHandle assigned to given style is
+         * used and is expected to not be null. The @ref FontHandle, whether
          * coming from the @p style or from @p properties, is expected to have
          * a font instance. Instance-less fonts can be only used to create
          * single glyphs (such as various icons or images) with
@@ -2097,7 +2161,8 @@ class MAGNUM_UI_EXPORT TextLayer: public AbstractVisualLayer {
          * and cannot be modified independently. Data created with
          * @ref createGlyph() or updated with @ref setGlyph() have the flags
          * always empty.
-         * @see @ref isHandleValid(DataHandle) const
+         * @see @ref isHandleValid(DataHandle) const,
+         *      @ref flags(), @ref TextLayer::Shared::flags()
          */
         TextDataFlags flags(DataHandle handle) const;
 
@@ -2135,6 +2200,9 @@ class MAGNUM_UI_EXPORT TextLayer: public AbstractVisualLayer {
          * the glyphs being drawn, as that may not be known at that time. For
          * @ref createGlyph() or @ref setGlyph() the size is based on the
          * actual glyph size coming out of the glyph cache.
+         *
+         * Text transformation, if @ref TextLayerFlag::Transformable is
+         * enabled, is not taken into account in any way.
          * @see @ref isHandleValid(DataHandle) const
          */
         Vector2 size(DataHandle handle) const;
@@ -2288,17 +2356,17 @@ class MAGNUM_UI_EXPORT TextLayer: public AbstractVisualLayer {
          * fonts can be only used to set single glyphs (such as various icons
          * or images) with @ref setGlyph().
          *
-         * This function preserves existing @ref flags() for given @p handle,
-         * use @ref setText(DataHandle, Containers::StringView, const TextProperties&, TextDataFlags)
+         * This function preserves existing @ref flags(DataHandle) const for
+         * given @p handle, use @ref setText(DataHandle, Containers::StringView, const TextProperties&, TextDataFlags)
          * to supply different @ref TextDataFlags for the new text.
          *
-         * If @ref flags() contain @ref TextDataFlag::Editable, the @p text and
-         * @p properties are remembered and subsequently accessible through
-         * @ref text() and @ref textProperties(), @ref cursor() position and
-         * selection are both set to @p text size. Currently, for editable
-         * text, the @p properties are expected to have empty
-         * @ref TextProperties::features() --- only the features supplied by
-         * the style are used for editable text.
+         * If @ref flags(DataHandle) const contain @ref TextDataFlag::Editable,
+         * the @p text and @p properties are remembered and subsequently
+         * accessible through @ref text() and @ref textProperties(),
+         * @ref cursor() position and selection are both set to @p text size.
+         * Currently, for editable text, the @p properties are expected to have
+         * empty @ref TextProperties::features() --- only the features supplied
+         * by the style are used for editable text.
          *
          * Calling this function causes @ref LayerState::NeedsDataUpdate to be
          * set.
@@ -2313,7 +2381,9 @@ class MAGNUM_UI_EXPORT TextLayer: public AbstractVisualLayer {
          *
          * Like @ref setText(DataHandle, Containers::StringView, const TextProperties&)
          * but supplying different @ref TextDataFlags for the new text instead
-         * of preserving existing @ref flags().
+         * of preserving existing @ref flags(DataHandle) const. Expects that
+         * @p flags don't contain @ref TextDataFlag::Editable if the layer was
+         * created with @ref TextLayerFlag::Transformable enabled.
          */
         void setText(DataHandle handle, Containers::StringView text, const TextProperties& properties, TextDataFlags flags);
 
@@ -2456,10 +2526,10 @@ class MAGNUM_UI_EXPORT TextLayer: public AbstractVisualLayer {
          * @relativeref{TextProperties,shapeDirection()},
          * @relativeref{TextProperties,layoutDirection()} and
          * @relativeref{TextProperties,features()} properties aren't used in
-         * any way; @ref flags() get reset to empty. Note that it's also
-         * possible to change a handle that previously contained a text to a
-         * single glyph and vice versa --- the internal representation of both
-         * is the same.
+         * any way; @ref flags(DataHandle) const get reset to empty. Note that
+         * it's also possible to change a handle that previously contained a
+         * text to a single glyph and vice versa --- the internal
+         * representation of both is the same.
          *
          * Calling this function causes @ref LayerState::NeedsDataUpdate to be
          * set.
@@ -2555,7 +2625,9 @@ class MAGNUM_UI_EXPORT TextLayer: public AbstractVisualLayer {
          * @brief Custom text padding
          *
          * In UI units, in order left, top, right, bottom. Expects that
-         * @p handle is valid.
+         * that the layer was *not* created with
+         * @ref TextLayerFlag::Transformable enabled and that @p handle is
+         * valid.
          * @see @ref isHandleValid(DataHandle) const
          */
         Vector4 padding(DataHandle handle) const;
@@ -2572,11 +2644,13 @@ class MAGNUM_UI_EXPORT TextLayer: public AbstractVisualLayer {
         /**
          * @brief Set custom text padding
          *
-         * Expects that @p handle is valid. The @p padding is in UI units, in
-         * order left, top, right, bottom and is added to the per-style padding
-         * values specified in @ref Shared::setStyle(). By default, the custom
-         * padding is a zero vector, i.e. not affecting the padding coming from
-         * the style in any way.
+         * Expects that that the layer was *not* created with
+         * @ref TextLayerFlag::Transformable enabled and that @p handle is
+         * valid. The @p padding is in UI units, in order left, top, right,
+         * bottom, and is added to the per-style padding values specified in
+         * @ref Shared::setStyle(). By default, the custom padding is a zero
+         * vector, i.e. not affecting the padding coming from the style in any
+         * way.
          *
          * Calling this function causes @ref LayerState::NeedsDataUpdate to be
          * set.
@@ -2615,6 +2689,197 @@ class MAGNUM_UI_EXPORT TextLayer: public AbstractVisualLayer {
             setPadding(handle, Vector4{padding});
         }
 
+        /**
+         * @brief Custom text transformation
+         *
+         * Translation and clockwise rotation multiplied by uniform scaling.
+         * Use @ref Complex::normalized() to extract a pure rotation and
+         * @ref Complex::length() to extract uniform scaling. Expects that the
+         * layer was created with @ref TextLayerFlag::Transformable enabled and
+         * that @p handle is valid.
+         * @see @ref isHandleValid(DataHandle) const
+         */
+        Containers::Pair<Vector2, Complex> transformation(DataHandle handle) const;
+
+        /**
+         * @brief Custom text transformation
+         *
+         * Like @ref transformation(DataHandle) const but without checking that
+         * @p handle indeed belongs to this layer. See its documentation for
+         * more information.
+         */
+        Containers::Pair<Vector2, Complex> transformation(LayerDataHandle handle) const;
+
+        /**
+         * @brief Set custom text transformation
+         *
+         * Expects that the layer was created with
+         * @ref TextLayerFlag::Transformable enabled and that @p handle is
+         * valid. The @p translation is applied on top of how a particular
+         * @ref Text::Alignment causes the text to be aligned within a node, as
+         * specified in @ref TextLayer::Shared::setStyle(). The @p rotation is
+         * interpreted with positive angle clockwise for consistency with the
+         * UI coordinate system being Y down. If @p rotation is not normalized,
+         * its length multiplies @p scaling. Scaling is applied first, rotation
+         * second and translation last. By default, the custom transformation
+         * is a zero translation vector, identity rotation and scaling of
+         * @cpp 1.0f @ce.
+         *
+         * Rotation passed as a @relativeref{Magnum,Complex} is preferrable for
+         * cases of supplying a concrete rotation several times to minimize
+         * trigonometry calculations. Use the @ref setTransformation(DataHandle, const Vector2&, Rad, Float)
+         * convenience overload to supply a concrete angle. Use
+         * @ref translate(), @ref rotate() and @ref scale() to incrementally
+         * change individual properties.
+         *
+         * Calling this function causes @ref LayerState::NeedsDataUpdate to be
+         * set.
+         */
+        void setTransformation(DataHandle handle, const Vector2& translation, const Complex& rotation, Float scaling);
+
+        /**
+         * @brief Set custom text transformation
+         *
+         * Like @ref setTransformation(DataHandle, const Vector2&, const Complex&, Float)
+         * but without checking that @p handle indeed belongs to this layer.
+         * See its documentation for more information.
+         */
+        void setTransformation(LayerDataHandle handle, const Vector2& translation, const Complex& rotation, Float scaling);
+
+        /**
+         * @brief Set custom text transformation
+         *
+         * Equivalent to calling @ref setTransformation(DataHandle, const Vector2&, const Complex&, Float)
+         * with @p rotation passed as @ref Complex::rotation(), positive angle
+         * interpreted as clockwise for consistency with the UI coordinate
+         * system being Y down. See its documentation for more information.
+         *
+         * If supplying a concrete rotation many times, passing it as a
+         * @relativeref{Magnum,Complex} to @ref setTransformation(DataHandle, const Vector2&, const Complex&, Float)
+         * instead of using this function is preferrable to minimize
+         * trigonometry calculations.
+         */
+        void setTransformation(DataHandle handle, const Vector2& translation, Rad rotation, Float scaling);
+
+        /**
+         * @brief Set custom text transformation
+         *
+         * Like @ref setTransformation(DataHandle, const Vector2&, Rad, Float)
+         * but without checking that @p handle indeed belongs to this layer.
+         * See its documentation for more information.
+         */
+        void setTransformation(LayerDataHandle handle, const Vector2& translation, Rad rotation, Float scaling);
+
+        /**
+         * @brief Add to custom text translation
+         *
+         * Expects that the layer was created with
+         * @ref TextLayerFlag::Transformable enabled and that @p handle is
+         * valid. The @p translation is added to existing custom translation,
+         * on top of how a particular @ref Text::Alignment causes the text to
+         * be aligned within a node, as specified in
+         * @ref TextLayer::Shared::setStyle(). Use @ref setTransformation() to
+         * reset the translation to a concrete value. The rotation and scaling,
+         * which are both applied before translation, stay unchanged. By
+         * default, the custom translation is a zero vector.
+         *
+         * Calling this function causes @ref LayerState::NeedsDataUpdate to be
+         * set.
+         * @see @ref rotate(), @ref scale()
+         */
+        void translate(DataHandle handle, const Vector2& translation);
+
+        /**
+         * @brief Add to custom text translation
+         *
+         * Like @ref translate(DataHandle, const Vector2&) but without checking
+         * that @p handle indeed belongs to this layer. See its documentation
+         * for more information.
+         */
+        void translate(LayerDataHandle handle, const Vector2& translation);
+
+        /**
+         * @brief Add to custom text rotation
+         *
+         * Expects that the layer was created with
+         * @ref TextLayerFlag::Transformable enabled and that @p handle is
+         * valid. The @p rotation is interpreted with positive angle clockwise
+         * for consistency with the UI coordinate system being Y down, and is
+         * added to existing custom rotation. Use @ref setTransformation() to
+         * reset the rotation to a concrete value. If @p rotation is not
+         * normalized, its length multiplies existing custom scaling. The
+         * translation, which is applied after rotation and scaling, stays
+         * unchanged.
+         *
+         * Rotation passed as a @relativeref{Magnum,Complex} is preferrable for
+         * cases of supplying a concrete rotation several times to minimize
+         * trigonometry calculations. Use the @ref rotate(DataHandle, Rad)
+         * convenience overload to supply a concrete angle.
+         *
+         * Calling this function causes @ref LayerState::NeedsDataUpdate to be
+         * set.
+         * @see @ref translate(), @ref scale()
+         */
+        void rotate(DataHandle handle, const Complex& rotation);
+
+        /**
+         * @brief Add to custom text rotation
+         *
+         * Like @ref rotate(DataHandle, const Complex&) but without checking
+         * that @p handle indeed belongs to this layer. See its documentation
+         * for more information.
+         */
+        void rotate(LayerDataHandle handle, const Complex& rotation);
+
+        /**
+         * @brief Add to custom text rotation
+         *
+         * Equivalent to calling @ref rotate(DataHandle, const Complex&) with
+         * @p rotation passed as @ref Complex::rotation(), positive angle
+         * interpreted as clockwise for consistency with the UI coordinate
+         * system being Y down. See its documentation for more information.
+         *
+         * If supplying a concrete rotation many times, passing it as a
+         * @relativeref{Magnum,Complex} to @ref rotate(DataHandle, const Complex&)
+         * instead of using this function is preferrable to minimize
+         * trigonometry calculations.
+         */
+        void rotate(DataHandle handle, Rad rotation);
+
+        /**
+         * @brief Add to custom text rotation
+         *
+         * Like @ref rotate(DataHandle, Rad) but without checking that
+         * @p handle indeed belongs to this layer. See its documentation for
+         * more information.
+         */
+        void rotate(LayerDataHandle handle, Rad rotation);
+
+        /**
+         * @brief Update custom text scaling
+         *
+         * Expects that the layer was created with
+         * @ref TextLayerFlag::Transformable enabled and that @p handle is
+         * valid. The @p scaling multiplies existing custom scaling. Use
+         * @ref setTransformation() to reset the scaling to a concrete value.
+         * The rotation and translation, which are both applied after scaling,
+         * stay unchanged. By default, the custom scaling is @cpp 1.0f @ce.
+         *
+         * Calling this function causes @ref LayerState::NeedsDataUpdate to be
+         * set.
+         * @see @ref translate(), @ref rotate()
+         */
+        void scale(DataHandle handle, Float scaling);
+
+        /**
+         * @brief Update custom text scaling
+         *
+         * Like @ref scale(DataHandle, Float) but without checking that
+         * @p handle indeed belongs to this layer. See its documentation for
+         * more information.
+         */
+        void scale(LayerDataHandle handle, Float scaling);
+
     #ifdef DOXYGEN_GENERATING_OUTPUT
     private:
     #else
@@ -2624,7 +2889,7 @@ class MAGNUM_UI_EXPORT TextLayer: public AbstractVisualLayer {
 
         MAGNUM_UI_LOCAL explicit TextLayer(LayerHandle handle, Containers::Pointer<State>&& state);
         /* Used by tests to avoid having to include / allocate the state */
-        explicit TextLayer(LayerHandle handle, Shared& shared);
+        explicit TextLayer(LayerHandle handle, Shared& shared, TextLayerFlags flags = {});
 
         /* These can't be MAGNUM_UI_LOCAL otherwise deriving from this class
            in tests causes linker errors */
@@ -2673,7 +2938,13 @@ class MAGNUM_UI_EXPORT TextLayer: public AbstractVisualLayer {
         MAGNUM_UI_LOCAL void editTextInternal(UnsignedInt id, TextEdit edit, Containers::StringView text);
         MAGNUM_UI_LOCAL void setGlyphInternal(UnsignedInt id, UnsignedInt glyph, const TextProperties& properties);
         MAGNUM_UI_LOCAL void setColorInternal(UnsignedInt id, const Color4& color);
+        MAGNUM_UI_LOCAL Vector4 paddingInternal(UnsignedInt id) const;
         MAGNUM_UI_LOCAL void setPaddingInternal(UnsignedInt id, const Vector4& padding);
+        MAGNUM_UI_LOCAL Containers::Pair<Vector2, Complex> transformationInternal(UnsignedInt id) const;
+        MAGNUM_UI_LOCAL void setTransformationInternal(UnsignedInt id, const Vector2& translation, const Complex& rotation, Float scaling);
+        MAGNUM_UI_LOCAL void translateInternal(UnsignedInt id, const Vector2& translation);
+        MAGNUM_UI_LOCAL void rotateInternal(UnsignedInt id, const Complex& rotation);
+        MAGNUM_UI_LOCAL void scaleInternal(UnsignedInt id, Float scaling);
 
         /* Can't be MAGNUM_UI_LOCAL otherwise deriving from this class in
            tests causes linker errors */
@@ -2798,7 +3069,11 @@ class MAGNUM_UI_EXPORT TextLayer::Shared: public AbstractVisualLayer::Shared {
          */
         bool hasEditingStyles() const;
 
-        /** @brief Flags */
+        /**
+         * @brief Shared layer flags
+         *
+         * @see @ref TextLayer::flags(), @ref TextLayer::flags(DataHandle) const
+         */
         TextLayerSharedFlags flags() const;
 
         /**
@@ -3331,14 +3606,16 @@ class MAGNUM_UI_EXPORT TextLayer::Shared::Configuration {
          */
         Configuration& setDynamicStyleCount(UnsignedInt count, bool withEditingStyles);
 
-        /** @brief Flags */
+        /** @brief Shared layer flags */
         TextLayerSharedFlags flags() const { return _flags; }
 
         /**
-         * @brief Set flags
+         * @brief Set shared layer flags
          * @return Reference to self (for method chaining)
          *
-         * By default no flags are set.
+         * By default no flags are set. The @ref TextLayerFlags get set during
+         * layer construction instead, such as in
+         * @ref TextLayerGL::TextLayerGL(LayerHandle, Shared&, TextLayerFlags).
          * @see @ref addFlags(), @ref clearFlags()
          */
         Configuration& setFlags(TextLayerSharedFlags flags) {

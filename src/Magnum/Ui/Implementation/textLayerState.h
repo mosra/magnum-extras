@@ -33,6 +33,7 @@
 
 #include <Corrade/Containers/Array.h>
 #include <Corrade/Containers/Reference.h>
+#include <Magnum/Math/Complex.h>
 #include <Magnum/Math/Range.h>
 #include <Magnum/Text/AbstractFont.h>
 #include <Magnum/Text/AbstractShaper.h>
@@ -203,7 +204,16 @@ struct TextLayerTextRun {
 };
 
 struct TextLayerData {
-    Vector4 padding;
+    /* Transformation or padding is used depending on the layer having
+       TextLayerFlag::Transformation set */
+    struct Transformation {
+        Vector2 translation;
+        Complex rotationScaling;
+    };
+    union {
+        Vector4 padding;
+        Transformation transformation;
+    };
     /* Set to ~UnsignedInt{} if there are no glyphs */
     UnsignedInt glyphRun;
     /* Used only if flags contain TextDataFlag::Editable, otherwise set to
@@ -285,7 +295,7 @@ inline UnsignedInt selectionStyleTextUniformForDynamicStyle(UnsignedInt dynamicS
 }
 
 struct TextLayer::State: AbstractVisualLayer::State {
-    explicit State(Shared::State& shared);
+    explicit State(Shared::State& shared, TextLayerFlags flags);
 
     /* First 2/6 bytes overlap with padding of the base struct */
 
@@ -307,6 +317,9 @@ struct TextLayer::State: AbstractVisualLayer::State {
        (editing) part */
     bool dynamicStyleChanged = false;
     bool dynamicEditingStyleChanged = false;
+
+    TextLayerFlags flags;
+    /* 3/7 bytes free */
 
     /* Glyph / text data. Only the items referenced from `glyphRuns` /
        `textRuns` are valid, the rest is unused space that gets recompacted

@@ -66,17 +66,20 @@ class MAGNUM_UI_EXPORT TextLayerGL: public TextLayer {
          * @param handle    Layer handle returned from
          *      @ref AbstractUserInterface::createLayer()
          * @param shared    Shared state containing font and style data
+         * @param flags     Text layer flags
          *
          * The @p shared state is expected to be kept in scope for the whole
-         * class lifetime. In order to draw the layer it's expected that
-         * @ref Shared::setStyle() was called.
+         * class lifetime. The @ref TextLayerSharedFlags get set during shared
+         * instance construction instead, via
+         * @ref TextLayer::Shared::Configuration::setFlags(). In order to draw
+         * the layer it's expected that @ref Shared::setStyle() was called.
          */
-        explicit TextLayerGL(LayerHandle handle, Shared& shared);
+        explicit TextLayerGL(LayerHandle handle, Shared& shared, TextLayerFlags flags = {});
 
         /**
          * @brief Shared state used by this layer
          *
-         * Reference to the instance passed to @ref TextLayerGL::TextLayerGL(LayerHandle, Shared&).
+         * Reference to the instance passed to @ref TextLayerGL::TextLayerGL(LayerHandle, Shared&, TextLayerFlags).
          */
         inline Shared& shared();
         /** @overload */

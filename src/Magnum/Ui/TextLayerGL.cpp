@@ -423,7 +423,7 @@ void TextLayerGL::Shared::doSetEditingStyle(const TextLayerCommonEditingStyleUni
 }
 
 struct TextLayerGL::State: TextLayer::State {
-    explicit State(Shared::State& shared): TextLayer::State{shared} {}
+    explicit State(Shared::State& shared, const TextLayerFlags flags): TextLayer::State{shared, flags} {}
 
     GL::Buffer vertexBuffer{GL::Buffer::TargetHint::Array}, indexBuffer{GL::Buffer::TargetHint::ElementArray};
     GL::Mesh mesh;
@@ -444,7 +444,7 @@ struct TextLayerGL::State: TextLayer::State {
     GL::Buffer editingStyleBuffer{NoCreate};
 };
 
-TextLayerGL::TextLayerGL(const LayerHandle handle, Shared& sharedState_): TextLayer{handle, Containers::pointer<State>(static_cast<Shared::State&>(*sharedState_._state))} {
+TextLayerGL::TextLayerGL(const LayerHandle handle, Shared& sharedState_, const TextLayerFlags flags): TextLayer{handle, Containers::pointer<State>(static_cast<Shared::State&>(*sharedState_._state), flags)} {
     auto& state = static_cast<State&>(*_state);
     auto& sharedState = static_cast<Shared::State&>(state.shared);
     if(sharedState.flags >= TextLayerSharedFlag::DistanceField)

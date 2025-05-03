@@ -136,10 +136,12 @@ const struct {
 };
 
 const struct {
-    const char* name;
+    TestSuite::TestCaseDescriptionSourceLocation name;
     const char* filename;
     bool distanceField, singleGlyph;
     UnsignedInt cursor, selection;
+    TextLayerFlags layerFlags;
+    bool flip;
     TextLayerCommonStyleUniform commonStyleUniform;
     TextLayerStyleUniform styleUniform;
     Containers::Optional<TextLayerCommonEditingStyleUniform> styleUniformEditingCommon;
@@ -150,46 +152,58 @@ const struct {
     Containers::Optional<TextLayerStyleUniform> styleUniformSelectionText;
 } RenderData[]{
     {"default", "default.png",
-        false, false, 0, 0,
+        false, false, 0, 0, {}, false,
         TextLayerCommonStyleUniform{},
         TextLayerStyleUniform{},
         {}, {}, {}, {}, {}, {}},
     /* Should be centered according to its bounding box, not according to the
        font metrics -- thus a lot higher than the g in Maggi in the above */
     {"default single glyph", "default-glyph.png",
-        false, true, 0, 0,
+        false, true, 0, 0, {}, false,
         TextLayerCommonStyleUniform{},
         TextLayerStyleUniform{},
         {}, {}, {}, {}, {}, {}},
     {"colored", "colored.png",
-        false, false, 0, 0,
+        false, false, 0, 0, {}, false,
         TextLayerCommonStyleUniform{},
         TextLayerStyleUniform{}
             .setColor(0x3bd267_rgbf),
         {}, {}, {}, {}, {}, {}},
     /* Again, should be centered according to its bounding box */
     {"colored single glyph", "colored-glyph.png",
-        false, true, 0, 0,
+        false, true, 0, 0, {}, false,
         TextLayerCommonStyleUniform{},
         TextLayerStyleUniform{}
             .setColor(0x3bd267_rgbf),
         {}, {}, {}, {}, {}, {}},
     /** @todo test at least toggling kerning once StbTrueTypeFont supports
         that */
+    {"colored, transformable", "colored.png",
+        false, false, 0, 0, TextLayerFlag::Transformable, false,
+        TextLayerCommonStyleUniform{},
+        TextLayerStyleUniform{}
+            .setColor(0x3bd267_rgbf),
+        {}, {}, {}, {}, {}, {}},
+    {"colored, transformable, rotated 180°", "colored.png",
+        false, false, 0, 0, TextLayerFlag::Transformable, true,
+        TextLayerCommonStyleUniform{},
+        TextLayerStyleUniform{}
+            .setColor(0x3bd267_rgbf),
+        {}, {}, {}, {}, {}, {}},
     {"distance field, default", "distancefield-default.png",
-        true, false, 0, 0,
+        true, false, 0, 0, {}, false,
         TextLayerCommonStyleUniform{},
         TextLayerStyleUniform{},
         {}, {}, {}, {}, {}, {}},
     {"distance field, colored", "distancefield-colored.png",
-        true, false, 0, 0,
+        true, false, 0, 0, {}, false,
         TextLayerCommonStyleUniform{}
             .setSmoothness(1.0f),
         TextLayerStyleUniform{}
             .setColor(0x3bd267_rgbf),
         {}, {}, {}, {}, {}, {}},
     {"distance field, colored, large smoothness", "distancefield-smooth.png",
-        true, false, 0, 0,
+        true, false, 0, 0, {}, false,
         TextLayerCommonStyleUniform{}
             .setSmoothness(8.0f),
         TextLayerStyleUniform{}
@@ -199,7 +213,7 @@ const struct {
        sense as it'd make it feel like nothing is changing if the radius is
        chosen to be too small. */
     {"distance field, colored, excessive smoothness", "distancefield-empty.png",
-        true, false, 0, 0,
+        true, false, 0, 0, {}, false,
         TextLayerCommonStyleUniform{}
             .setSmoothness(1000.0f),
         TextLayerStyleUniform{}
@@ -208,14 +222,14 @@ const struct {
     /* All interaction of the two smoothness parameters is tested in
        renderDistanceFieldWidthSmoothness() */
     {"distance field, colored, per-data smoothness", "distancefield-colored.png",
-        true, false, 0, 0,
+        true, false, 0, 0, {}, false,
         TextLayerCommonStyleUniform{},
         TextLayerStyleUniform{}
             .setColor(0x3bd267_rgbf)
             .setSmoothness(1.0f),
         {}, {}, {}, {}, {}, {}},
     {"distance field, colored, large per-data smoothness", "distancefield-smooth.png",
-        true, false, 0, 0,
+        true, false, 0, 0, {}, false,
         TextLayerCommonStyleUniform{},
         TextLayerStyleUniform{}
             .setColor(0x3bd267_rgbf)
@@ -224,7 +238,7 @@ const struct {
     /* This should cause no difference compared to above, verifies that the
        outline color doesn't leak into the base in some way */
     {"distance field, colored, no outline but with outline color set", "distancefield-colored.png",
-        true, false, 0, 0,
+        true, false, 0, 0, {}, false,
         TextLayerCommonStyleUniform{}
             .setSmoothness(1.0f),
         TextLayerStyleUniform{}
@@ -232,7 +246,7 @@ const struct {
             .setOutlineColor(0x3bd267_rgbf),
         {}, {}, {}, {}, {}, {}},
     {"distance field, dilate", "distancefield-dilate.png",
-        true, false, 0, 0,
+        true, false, 0, 0, {}, false,
         TextLayerCommonStyleUniform{}
             .setSmoothness(1.0f),
         TextLayerStyleUniform{}
@@ -240,7 +254,7 @@ const struct {
             .setEdgeOffset(2.0f),
         {}, {}, {}, {}, {}, {}},
     {"distance field, dilate out of bounds", "distancefield-dilate-oob.png",
-        true, false, 0, 0,
+        true, false, 0, 0, {}, false,
         TextLayerCommonStyleUniform{}
             .setSmoothness(1.0f),
         TextLayerStyleUniform{}
@@ -250,7 +264,7 @@ const struct {
     /* Again this should cause no difference compared to above. If it does, the
        above is likely a wrong rendering and this one is correct. */
     {"distance field, dilate out of bounds, no outline but with outline color set", "distancefield-dilate-oob.png",
-        true, false, 0, 0,
+        true, false, 0, 0, {}, false,
         TextLayerCommonStyleUniform{}
             .setSmoothness(1.0f),
         TextLayerStyleUniform{}
@@ -259,7 +273,7 @@ const struct {
             .setEdgeOffset(100.0f),
         {}, {}, {}, {}, {}, {}},
     {"distance field, erode", "distancefield-erode.png",
-        true, false, 0, 0,
+        true, false, 0, 0, {}, false,
         TextLayerCommonStyleUniform{}
             .setSmoothness(1.0f),
         TextLayerStyleUniform{}
@@ -271,7 +285,7 @@ const struct {
         {}, {}, {}, {}, {}, {}},
     /* Results in basically an empty output */
     {"distance field, erode out of bounds", "distancefield-empty.png",
-        true, false, 0, 0,
+        true, false, 0, 0, {}, false,
         TextLayerCommonStyleUniform{}
             .setSmoothness(1.0f),
         TextLayerStyleUniform{}
@@ -283,7 +297,7 @@ const struct {
        other words, this verifies that the outline grows from both sides of the
        edge to be consistent with SVG. */
     {"distance field, dilate + transparent outline", "distancefield-colored.png",
-        true, false, 0, 0,
+        true, false, 0, 0, {}, false,
         TextLayerCommonStyleUniform{}
             .setSmoothness(1.0f),
         TextLayerStyleUniform{}
@@ -293,7 +307,7 @@ const struct {
             .setEdgeOffset(1.5f),
         {}, {}, {}, {}, {}, {}},
     {"distance field, dilate + outline", "distancefield-dilate-outline.png",
-        true, false, 0, 0,
+        true, false, 0, 0, {}, false,
         TextLayerCommonStyleUniform{}
             .setSmoothness(1.0f),
         TextLayerStyleUniform{}
@@ -309,7 +323,7 @@ const struct {
     /* This one should not consider the outline at all, as the dilation alone
        makes it go out of bounds */
     {"distance field, dilate out of bounds + outline", "distancefield-dilate-oob.png",
-        true, false, 0, 0,
+        true, false, 0, 0, {}, false,
         TextLayerCommonStyleUniform{}
             .setSmoothness(1.0f),
         TextLayerStyleUniform{}
@@ -321,7 +335,7 @@ const struct {
     /* In this case the outline is again not considered at all, so it's still
        completely empty */
     {"distance field, erode out of bounds + outline", "distancefield-empty.png",
-        true, false, 0, 0,
+        true, false, 0, 0, {}, false,
         TextLayerCommonStyleUniform{}
             .setSmoothness(1.0f),
         TextLayerStyleUniform{}
@@ -333,7 +347,7 @@ const struct {
     /* In this case only the outline is considered. Together with the base and
        outline color swapped, it looks like "dilate out of bounds" again */
     {"distance field, outline out of bounds", "distancefield-dilate-oob.png",
-        true, false, 0, 0,
+        true, false, 0, 0, {}, false,
         TextLayerCommonStyleUniform{}
             .setSmoothness(1.0f),
         TextLayerStyleUniform{}
@@ -345,7 +359,7 @@ const struct {
        outline being shown. Then, with the base and outline color swapped, it
        looks the same as the non-out-of-bounds "dilate" variant above. */
     {"distance field, erode out of bounds + outline back in bounds", "distancefield-dilate.png",
-        true, false, 0, 0,
+        true, false, 0, 0, {}, false,
         TextLayerCommonStyleUniform{}
             .setSmoothness(1.0f),
         TextLayerStyleUniform{}
@@ -362,7 +376,7 @@ const struct {
        and given that it's transparent it results in the same output as with
        neither outline nor an edge offset */
     {"distance field, dilate out of bounds + transparent outline back in bounds", "distancefield-colored.png",
-        true, false, 0, 0,
+        true, false, 0, 0, {}, false,
         TextLayerCommonStyleUniform{}
             .setSmoothness(1.0f),
         TextLayerStyleUniform{}
@@ -374,34 +388,48 @@ const struct {
             .setOutlineWidth(2*20.0f)
             .setEdgeOffset(20.0f),
         {}, {}, {}, {}, {}, {}},
+    {"distance field, colored, transformable", "distancefield-colored.png",
+        true, false, 0, 0, TextLayerFlag::Transformable, false,
+        TextLayerCommonStyleUniform{}
+            .setSmoothness(1.0f),
+        TextLayerStyleUniform{}
+            .setColor(0x3bd267_rgbf),
+        {}, {}, {}, {}, {}, {}},
+    {"distance field, colored, transformable, rotated 180°", "distancefield-colored.png",
+        true, false, 0, 0, TextLayerFlag::Transformable, true,
+        TextLayerCommonStyleUniform{}
+            .setSmoothness(1.0f),
+        TextLayerStyleUniform{}
+            .setColor(0x3bd267_rgbf),
+        {}, {}, {}, {}, {}, {}},
     /* The cursor has zero width so it's basically invisible */
     {"default, default cursor style", "default.png",
-        false, false, 2, 2,
+        false, false, 2, 2, {}, false,
         TextLayerCommonStyleUniform{},
         TextLayerStyleUniform{},
         TextLayerCommonEditingStyleUniform{},
         TextLayerEditingStyleUniform{}, {}, {}, {}, {}},
     {"default, selection, no selection style", "default.png",
-        false, false, 2, 5,
+        false, false, 2, 5, {}, false,
         TextLayerCommonStyleUniform{},
         TextLayerStyleUniform{},
         TextLayerCommonEditingStyleUniform{},
         {}, {}, {}, {}, {}},
     {"default, default selection style, empty", "default.png",
-        false, false, 2, 2,
+        false, false, 2, 2, {}, false,
         TextLayerCommonStyleUniform{},
         TextLayerStyleUniform{},
         TextLayerCommonEditingStyleUniform{},
         {}, {}, TextLayerEditingStyleUniform{}, {}, {}},
     {"default, default selection style", "default-selection.png",
-        false, false, 2, 5,
+        false, false, 2, 5, {}, false,
         TextLayerCommonStyleUniform{},
         TextLayerStyleUniform{},
         TextLayerCommonEditingStyleUniform{},
         {}, {}, TextLayerEditingStyleUniform{}, {}, {}},
     /* Cursor isn't visible with selection present either */
     {"default, default cursor + selection style", "default-selection.png",
-        false, false, 2, 5,
+        false, false, 2, 5, {}, false,
         TextLayerCommonStyleUniform{},
         TextLayerStyleUniform{},
         TextLayerCommonEditingStyleUniform{},
@@ -411,7 +439,7 @@ const struct {
     /* And thus reversing the direction also doesn't change the appearance in
        any way */
     {"default, default cursor + selection style, reverse direction", "default-selection.png",
-        false, false, 5, 2,
+        false, false, 5, 2, {}, false,
         TextLayerCommonStyleUniform{},
         TextLayerStyleUniform{},
         TextLayerCommonEditingStyleUniform{},
@@ -421,7 +449,7 @@ const struct {
     /* Overriding the selection text uniform with one that has a default value
        also doesn't change anything */
     {"default, default cursor + selection style, default selection text uniform override", "default-selection.png",
-        false, false, 2, 5,
+        false, false, 2, 5, {}, false,
         TextLayerCommonStyleUniform{},
         TextLayerStyleUniform{},
         TextLayerCommonEditingStyleUniform{},
@@ -431,7 +459,7 @@ const struct {
     /* Making the cursor and selection transparent doesn't affect the rendering
        in any way */
     {"colored, transparent cursor + selection style", "colored.png",
-        false, false, 2, 5,
+        false, false, 2, 5, {}, false,
         TextLayerCommonStyleUniform{},
         TextLayerStyleUniform{}
             .setColor(0x3bd267_rgbf),
@@ -443,7 +471,7 @@ const struct {
             .setBackgroundColor(0x00000000_rgbaf), {},
             {}},
     {"colored, cursor style", "colored-cursor.png",
-        false, false, 2, 2,
+        false, false, 2, 2, {}, false,
         TextLayerCommonStyleUniform{},
         TextLayerStyleUniform{}
             .setColor(0x3bd267_rgbf),
@@ -457,7 +485,7 @@ const struct {
         {}, {},
         {}},
     {"colored, cursor style, non-empty selection with no style", "colored-cursor.png",
-        false, false, 2, 5,
+        false, false, 2, 5, {}, false,
         TextLayerCommonStyleUniform{},
         TextLayerStyleUniform{}
             .setColor(0x3bd267_rgbf),
@@ -467,7 +495,7 @@ const struct {
         {}, {},
         {}},
     {"colored, selection style", "colored-selection.png",
-        false, false, 2, 5,
+        false, false, 2, 5, {}, false,
         TextLayerCommonStyleUniform{},
         TextLayerStyleUniform{}
             .setColor(0x3bd267_rgbf),
@@ -480,7 +508,7 @@ const struct {
         {}},
     /* Should look exactly the same as above */
     {"colored, selection style, different direction", "colored-selection.png",
-        false, false, 5, 2,
+        false, false, 5, 2, {}, false,
         TextLayerCommonStyleUniform{},
         TextLayerStyleUniform{}
             .setColor(0x3bd267_rgbf),
@@ -490,7 +518,7 @@ const struct {
             .setBackgroundColor(0xc7cf2f_rgbf), {},
         {}},
     {"colored, cursor + selection style, selection empty", "colored-cursor.png",
-        false, false, 2, 2,
+        false, false, 2, 2, {}, false,
         TextLayerCommonStyleUniform{},
         TextLayerStyleUniform{}
             .setColor(0x3bd267_rgbf),
@@ -501,7 +529,7 @@ const struct {
             .setBackgroundColor(0xc7cf2f_rgbf), {},
         {}},
     {"colored, cursor + selection style", "colored-cursor-selection.png",
-        false, false, 2, 5,
+        false, false, 2, 5, {}, false,
         TextLayerCommonStyleUniform{},
         TextLayerStyleUniform{}
             .setColor(0x3bd267_rgbf),
@@ -514,7 +542,7 @@ const struct {
             .setBackgroundColor(0xc7cf2f_rgbf), {},
         {}},
     {"colored, cursor + selection style, colored text", "colored-cursor-selection-text.png",
-        false, false, 2, 5,
+        false, false, 2, 5, {}, false,
         TextLayerCommonStyleUniform{},
         TextLayerStyleUniform{}
             .setColor(0x3bd267_rgbf),
@@ -528,7 +556,7 @@ const struct {
         TextLayerStyleUniform{}
             .setColor(0x1f1f1f_rgbf)},
     {"colored, cursor + selection style, colored text, smooth rounded corners", "colored-cursor-selection-text-rounded.png",
-        false, false, 2, 5,
+        false, false, 2, 5, {}, false,
         TextLayerCommonStyleUniform{},
         TextLayerStyleUniform{}
             .setColor(0x3bd267_rgbf),
@@ -548,7 +576,7 @@ const struct {
         HarfBuzzFont (rendering `iggaM`, forcing RTL and supplying swizzled
         padding, should result in the same as above) */
     {"distance field, dilate + outline, cursor + selection style", "distancefield-dilate-outline-cursor-selection-text.png",
-        true, false, 2, 5,
+        true, false, 2, 5, {}, false,
         TextLayerCommonStyleUniform{}
             .setSmoothness(1.0f),
         TextLayerStyleUniform{}
@@ -590,11 +618,13 @@ const struct {
     Int cacheProcessedScale;
     UnsignedInt cacheRadius;
     Float fontSize, styleFontSize;
+    TextLayerFlags layerFlags;
+    Float transformationScale;
     TextLayerCommonStyleUniform styleUniformCommon;
     TextLayerStyleUniform styleUniform;
 } RenderDistanceFieldWidthSmoothnessData[]{
     {"common smoothness",
-        0.0f, 0.0f, 1.0f, 4, 20, 96.0f, 64.0f,
+        0.0f, 0.0f, 1.0f, 4, 20, 96.0f, 64.0f, {}, 0.0f,
         TextLayerCommonStyleUniform{}
             .setSmoothness(1.0f),
         TextLayerStyleUniform{}
@@ -605,6 +635,7 @@ const struct {
     {"common smoothness, UI size 10x larger",
         0.0f, 0.0f, 10.0f, 4, 20, 96.0f,
         640.0f, /* style font size in UI units, so also 10x larger */
+        {}, 0.0f,
         TextLayerCommonStyleUniform{}
             .setSmoothness(1.0f),   /* in pixels, no change */
         TextLayerStyleUniform{}
@@ -615,6 +646,7 @@ const struct {
     {"common smoothness, UI size 10x smaller",
         0.0f, 0.0f, 0.1f, 4, 20, 96.0f,
         6.4f, /* style font size in UI units, so also 10x smaller */
+        {}, 0.0f,
         TextLayerCommonStyleUniform{}
             .setSmoothness(1.0f),   /* in pixels, no change */
         TextLayerStyleUniform{}
@@ -623,7 +655,7 @@ const struct {
             .setOutlineWidth(0.4f)  /* in UI units, so also 10x smaller */
             .setEdgeOffset(0.6f)},  /* in UI units, so also 10x smaller */
     {"per-style smoothness",
-        0.0f, 0.0f, 1.0f, 4, 20, 96.0f, 64.0f,
+        0.0f, 0.0f, 1.0f, 4, 20, 96.0f, 64.0f, {}, 0.0f,
         TextLayerCommonStyleUniform{},
         TextLayerStyleUniform{}
             .setColor(0x3bd267_rgbf)
@@ -634,6 +666,7 @@ const struct {
     {"per-style smoothness, UI size 10x larger",
         0.0f, 0.0f, 10.0f, 4, 20, 96.0f,
         640.0f, /* style font size in UI units, so also 10x larger */
+        {}, 0.0f,
         TextLayerCommonStyleUniform{},
         TextLayerStyleUniform{}
             .setColor(0x3bd267_rgbf)
@@ -644,6 +677,7 @@ const struct {
     {"per-style smoothness, UI size 10x smaller",
         0.0f, 0.0f, 0.1f, 4, 20, 96.0f,
         6.4f, /* style font size in UI units, so also 10x smaller */
+        {}, 0.0f,
         TextLayerCommonStyleUniform{},
         TextLayerStyleUniform{}
             .setColor(0x3bd267_rgbf)
@@ -652,7 +686,7 @@ const struct {
             .setEdgeOffset(0.6f)    /* in UI units, so also 10x smaller */
             .setSmoothness(0.1f)},  /* in UI units, so also 10x smaller */
     {"both common and per-style smoothness, common is larger",
-        0.0f, 0.0f, 1.0f, 4, 20, 96.0f, 64.0f,
+        0.0f, 0.0f, 1.0f, 4, 20, 96.0f, 64.0f, {}, 0.0f,
         TextLayerCommonStyleUniform{}
             .setSmoothness(1.0f),
         TextLayerStyleUniform{}
@@ -664,6 +698,7 @@ const struct {
     {"both common and per-style smoothness, common is larger, UI size 10x larger",
         0.0f, 0.0f, 10.0f, 4, 20, 96.0f,
         640.0f, /* style font size in UI units, so also 10x larger */
+        {}, 0.0f,
         TextLayerCommonStyleUniform{}
             .setSmoothness(1.0f),   /* in pixels, no change */
         TextLayerStyleUniform{}
@@ -675,6 +710,7 @@ const struct {
     {"both common and per-style smoothness, common is larger, UI size 10x smaller",
         0.0f, 0.0f, 0.1f, 4, 20, 96.0f,
         6.4f, /* style font size in UI units, so also 10x smaller */
+        {}, 0.0f,
         TextLayerCommonStyleUniform{}
             .setSmoothness(1.0f),   /* in pixels, no change */
         TextLayerStyleUniform{}
@@ -684,7 +720,7 @@ const struct {
             .setEdgeOffset(0.6f)    /* in UI units, so also 10x smaller */
             .setSmoothness(0.02f)}, /* in UI units, so also 10x smaller */
     {"both common and per-style smoothness, per-style is larger",
-        0.0f, 0.0f, 1.0f, 4, 20, 96.0f, 64.0f,
+        0.0f, 0.0f, 1.0f, 4, 20, 96.0f, 64.0f,{}, 0.0f,
         TextLayerCommonStyleUniform{}
             .setSmoothness(0.25f),
         TextLayerStyleUniform{}
@@ -696,6 +732,7 @@ const struct {
     {"both common and per-style smoothness, per-style is larger, UI size 10x larger",
         0.0f, 0.0f, 10.0f, 4, 20, 96.0f,
         640.0f, /* style font size in UI units, so also 10x larger */
+        {}, 0.0f,
         TextLayerCommonStyleUniform{}
             .setSmoothness(0.25f),  /* in pixels, no change */
         TextLayerStyleUniform{}
@@ -707,6 +744,7 @@ const struct {
     {"both common and per-style smoothness, per-style is larger, UI size 10x smaller",
         0.0f, 0.0f, 0.1f, 4, 20, 96.0f,
         6.4f, /* style font size in UI units, so also 10x smaller */
+        {}, 0.0f,
         TextLayerCommonStyleUniform{}
             .setSmoothness(0.25f),   /* in pixels, no change */
         TextLayerStyleUniform{}
@@ -718,7 +756,7 @@ const struct {
     /* This should not result in any difference, except minor rounding errors
        due to the glyph outline possibly being snapped to different pixels */
     {"font rasterized at a larger size",
-        72.0f, 0.752f, 1.0f, 4, 20, 128.0f, 64.0f,
+        72.0f, 0.752f, 1.0f, 4, 20, 128.0f, 64.0f, {}, 0.0f,
         TextLayerCommonStyleUniform{}
             .setSmoothness(1.0f),
         TextLayerStyleUniform{}
@@ -728,7 +766,7 @@ const struct {
             .setEdgeOffset(6.0f)},
     /* Neither these, apart from minor rounding errors */
     {"larger distance field radius",
-        13.5f, 0.349f, 1.0f, 4, 32, 96.0f, 64.0f,
+        13.5f, 0.349f, 1.0f, 4, 32, 96.0f, 64.0f, {}, 0.0f,
         TextLayerCommonStyleUniform{}
             .setSmoothness(1.0f),
         TextLayerStyleUniform{}
@@ -737,7 +775,7 @@ const struct {
             .setOutlineWidth(4.0f)
             .setEdgeOffset(6.0f)},
     {"larger processed distance field size",
-        41.25f, 0.321f, 1.0f, 2, 20, 96.0f, 64.0f,
+        41.25f, 0.321f, 1.0f, 2, 20, 96.0f, 64.0f, {}, 0.0f,
         TextLayerCommonStyleUniform{}
             .setSmoothness(1.0f),
         TextLayerStyleUniform{}
@@ -745,6 +783,44 @@ const struct {
             .setOutlineColor(0xdcdcdc_rgbf)
             .setOutlineWidth(4.0f)
             .setEdgeOffset(6.0f)},
+    /* The additional scale coming from transformation should be taken into
+       account as well to keep smoothness and outline width as it was before */
+    {"transformation, style font size 10x smaller, scaled 10x larger, common smoothness",
+        0.0f, 0.0f, 1.0f, 4, 20, 96.0f, 6.4f, TextLayerFlag::Transformable, 10.0f,
+        TextLayerCommonStyleUniform{}
+            .setSmoothness(1.0f),
+        TextLayerStyleUniform{}
+            .setColor(0x3bd267_rgbf)
+            .setOutlineColor(0xdcdcdc_rgbf)
+            .setOutlineWidth(4.0f)
+            .setEdgeOffset(6.0f)},
+    {"transformation, style font size 10x smaller, scaled 10x larger, per-style smoothness",
+        0.0f, 0.0f, 1.0f, 4, 20, 96.0f, 6.4f, TextLayerFlag::Transformable, 10.0f,
+        TextLayerCommonStyleUniform{},
+        TextLayerStyleUniform{}
+            .setColor(0x3bd267_rgbf)
+            .setOutlineColor(0xdcdcdc_rgbf)
+            .setOutlineWidth(4.0f)
+            .setEdgeOffset(6.0f)
+            .setSmoothness(1.0f)},
+    {"transformation, style font size 10x larger, scaled 10x smaller, common smoothness",
+        0.0f, 0.0f, 1.0f, 4, 20, 96.0f, 640.0f, TextLayerFlag::Transformable, 0.1f,
+        TextLayerCommonStyleUniform{}
+            .setSmoothness(1.0f),
+        TextLayerStyleUniform{}
+            .setColor(0x3bd267_rgbf)
+            .setOutlineColor(0xdcdcdc_rgbf)
+            .setOutlineWidth(4.0f)
+            .setEdgeOffset(6.0f)},
+    {"transformation, style font size 10x larger, scaled 10x smaller, per-style smoothness",
+        0.0f, 0.0f, 1.0f, 4, 20, 96.0f, 640.0f, TextLayerFlag::Transformable, 0.1f,
+        TextLayerCommonStyleUniform{},
+        TextLayerStyleUniform{}
+            .setColor(0x3bd267_rgbf)
+            .setOutlineColor(0xdcdcdc_rgbf)
+            .setOutlineWidth(4.0f)
+            .setEdgeOffset(6.0f)
+            .setSmoothness(1.0f)},
 };
 
 const struct {
@@ -1753,7 +1829,7 @@ void TextLayerGLTest::render() {
             editingStylePaddings);
     }
 
-    TextLayer& layer = ui.setLayerInstance(Containers::pointer<TextLayerGL>(ui.createLayer(), layerShared));
+    TextLayer& layer = ui.setLayerInstance(Containers::pointer<TextLayerGL>(ui.createLayer(), layerShared, data.layerFlags));
 
     NodeHandle node = ui.createNode({8.0f, 8.0f}, {112.0f, 48.0f});
     /* Using a text that has glyphs both above and below line and doesn't need
@@ -1767,6 +1843,8 @@ void TextLayerGLTest::render() {
             node);
         if(data.styleUniformEditingCommon)
             layer.setCursor(nodeData, data.cursor, data.selection);
+        if(data.flip)
+            layer.rotate(nodeData, 180.0_degf);
     }
 
     ui.draw();
@@ -1783,7 +1861,12 @@ void TextLayerGLTest::render() {
     if(GL::Context::current().detectedDriver() & GL::Context::DetectedDriver::SwiftShader)
         CORRADE_SKIP("UBOs with dynamically indexed arrays don't seem to work on SwiftShader, can't test.");
     #endif
-    CORRADE_COMPARE_WITH(_framebuffer.read({{}, RenderSize}, {PixelFormat::RGBA8Unorm}),
+
+    Image2D image = _framebuffer.read({{}, RenderSize}, {PixelFormat::RGBA8Unorm});
+    Containers::StridedArrayView2D<const Color4ub> pixels = image.pixels<Color4ub>();
+    if(data.flip)
+        pixels = pixels.flipped<0>().flipped<1>();
+    CORRADE_COMPARE_WITH(pixels,
         Utility::Path::join({UI_TEST_DIR, "TextLayerTestFiles", data.filename}),
         DebugTools::CompareImageToFile{_importerManager});
 }
@@ -1907,14 +1990,16 @@ void TextLayerGLTest::renderDistanceFieldWidthSmoothness() {
         {Text::Alignment::MiddleCenter},
         {}, {}, {}, {}, {}, {});
 
-    TextLayer& layer = ui.setLayerInstance(Containers::pointer<TextLayerGL>(ui.createLayer(), layerShared));
+    TextLayer& layer = ui.setLayerInstance(Containers::pointer<TextLayerGL>(ui.createLayer(), layerShared, data.layerFlags));
 
     /* The node is slightly shifted on Y in order to have the lowercase m
        centered because metric-based alignment considers also uppercase
        letters */
     NodeHandle node = ui.createNode(Vector2{8.0f, 2.0f}*data.uiScale,
                                     Vector2{112.0f, 48.0f}*data.uiScale);
-    layer.create(0, "m", {}, node);
+    DataHandle nodeData = layer.create(0, "m", {}, node);
+    if(data.layerFlags >= TextLayerFlag::Transformable)
+        layer.scale(nodeData, data.transformationScale);
 
     ui.draw();
 
