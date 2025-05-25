@@ -231,6 +231,29 @@ BaseLayer& BaseLayer::setBackgroundBlurPassCount(UnsignedInt count) {
     return *this;
 }
 
+Containers::Pair<Vector3, Vector2> BaseLayer::defaultTextureCoordinates() const {
+    auto& state = static_cast<const State&>(*_state);
+    #ifndef CORRADE_NO_ASSERT
+    auto& sharedState = static_cast<const Shared::State&>(state.shared);
+    #endif
+    CORRADE_ASSERT(sharedState.flags & BaseLayerSharedFlag::Textured,
+        "Ui::BaseLayer::defaultTextureCoordinates(): texturing not enabled", {});
+    return {state.defaultTextureCoordinateOffset,
+            state.defaultTextureCoordinateSize};
+}
+
+BaseLayer& BaseLayer::setDefaultTextureCoordinates(const Vector3& offset, const Vector2& size) {
+    auto& state = static_cast<State&>(*_state);
+    #ifndef CORRADE_NO_ASSERT
+    auto& sharedState = static_cast<const Shared::State&>(state.shared);
+    #endif
+    CORRADE_ASSERT(sharedState.flags & BaseLayerSharedFlag::Textured,
+        "Ui::BaseLayer::setDefaultTextureCoordinates(): texturing not enabled", *this);
+    state.defaultTextureCoordinateOffset = offset;
+    state.defaultTextureCoordinateSize = size;
+    return *this;
+}
+
 BaseLayer& BaseLayer::assignAnimator(BaseLayerStyleAnimator& animator) {
     return static_cast<BaseLayer&>(AbstractVisualLayer::assignAnimator(animator));
 }
@@ -273,9 +296,7 @@ void BaseLayer::setDynamicStyle(const UnsignedInt id, const BaseLayerStyleUnifor
 
 DataHandle BaseLayer::create(const UnsignedInt style, const NodeHandle node) {
     State& state = static_cast<State&>(*_state);
-    #ifndef CORRADE_NO_ASSERT
     auto& sharedState = static_cast<Shared::State&>(state.shared);
-    #endif
     CORRADE_ASSERT(style < sharedState.styleCount + sharedState.dynamicStyleCount,
         "Ui::BaseLayer::create(): style" << style << "out of range for" << sharedState.styleCount + sharedState.dynamicStyleCount << "styles", {});
 
@@ -293,8 +314,10 @@ DataHandle BaseLayer::create(const UnsignedInt style, const NodeHandle node) {
     data.color = Color3{1.0f};
     data.style = style;
     /* calculatedStyle is filled by AbstractVisualLayer::doUpdate() */
-    data.textureCoordinateOffset = {};
-    data.textureCoordinateSize = Vector2{1.0f};
+    if(sharedState.flags >= BaseLayerSharedFlag::Textured) {
+        data.textureCoordinateOffset = state.defaultTextureCoordinateOffset;
+        data.textureCoordinateSize = state.defaultTextureCoordinateSize;
+    }
     return handle;
 }
 

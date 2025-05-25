@@ -809,6 +809,24 @@ framebuffer. With a higher threshold the processing will get faster in exchange
 for decreased blur quality. Finally, @ref setBackgroundBlurPassCount() can be
 used to perform a blur of smaller radius in multiple passes, in case a bigger
 radius is hitting hardware or implementation limits.
+
+@subsection Ui-BaseLayer-performance-layers Balancing draw call overhead and shader complexity
+
+Depending on a concrete use case and target platform, it might be beneficial to
+have dedicated layer instances with certain features turned off for faster
+rendering, as suggested above with @ref BaseLayerSharedFlag::NoOutline and
+other flags. On the other hand, having too many instances of the same layer
+with each instance used only for a small subset of the UI may cause the draw
+call overhead to be bigger than actual savings in shader complexity.
+
+For example, if some quads need to be textured and some not, using a dedicated
+@ref BaseLayerSharedFlag::Textured in addition to an untextured layer is the
+obvious first choice. But, if mixing those layers proves to be a performance
+issue, it's possible to draw even the untextured quads with the textured layer
+--- make sure that the atlas contains a pixel that's guaranteed to be white and
+call @ref setDefaultTextureCoordinates() with its position. Then quads that
+don't set their own texture coordinates will be drawn as if there was no
+texturing happening.
 */
 class MAGNUM_UI_EXPORT BaseLayer: public AbstractVisualLayer {
     public:
@@ -860,6 +878,32 @@ class MAGNUM_UI_EXPORT BaseLayer: public AbstractVisualLayer {
          * @ref LayerState::NeedsCompositeOffsetSizeUpdate to be set.
          */
         BaseLayer& setBackgroundBlurPassCount(UnsignedInt count);
+
+        /**
+         * @brief Default quad texture coordinates
+         *
+         * Expects that @ref BaseLayerSharedFlag::Textured was enabled for the
+         * shared state the layer was created with.
+         */
+        Containers::Pair<Vector3, Vector2> defaultTextureCoordinates() const;
+
+        /**
+         * @brief Set default quad texture coordinates
+         * @return Reference to self (for method chaining)
+         *
+         * Expects that @ref BaseLayerSharedFlag::Textured was enabled for the
+         * shared state the layer was created with. Desired use case is set the
+         * default texture coordinates to a pixel that's guaranteed to stay
+         * white in the atlas so quads for which @ref setTextureCoordinates()
+         * isn't called behave like if they wouldn't be textured at all.
+         *
+         * Note that calling this function only affects subsequently created
+         * quads, quads created before aren't affected in any way. By default
+         * the @p offset is @cpp {0.0f, 0.0f, 0.0f} @ce and @p size is
+         * @cpp {1.0f, 1.0f} @ce, i.e. covering the whole first slice of the
+         * texture.
+         */
+        BaseLayer& setDefaultTextureCoordinates(const Vector3& offset, const Vector2& size);
 
         /**
          * @brief Assign a style animator to this layer
@@ -1199,8 +1243,9 @@ class MAGNUM_UI_EXPORT BaseLayer: public AbstractVisualLayer {
          *
          * The third coordinate of @p offset is array layer. Expects that
          * @p handle is valid and that @ref BaseLayerSharedFlag::Textured was
-         * enabled for the shared state the layer was created with. By default
-         * the offset is @cpp {0.0f, 0.0f, 0.0f} @ce and size is
+         * enabled for the shared state the layer was created with. By default,
+         * unless overriden with @ref setDefaultTextureCoordinates(), the
+         * @p offset is @cpp {0.0f, 0.0f, 0.0f} @ce and @p size is
          * @cpp {1.0f, 1.0f} @ce, i.e. covering the whole first slice of the
          * texture.
          *

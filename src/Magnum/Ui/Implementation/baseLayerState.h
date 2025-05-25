@@ -182,7 +182,9 @@ struct BaseLayer::State: AbstractVisualLayer::State {
     Containers::Array<UnsignedInt> backgroundBlurIndices;
     UnsignedInt backgroundBlurPassCount = 1;
 
-    /* 0/4 bytes free */
+    /* Used only if Flag::Textured is enabled */
+    Vector3 defaultTextureCoordinateOffset;
+    Vector2 defaultTextureCoordinateSize{1.0f};
 
     /* Used only if shared.dynamicStyleCount is non-zero */
     Containers::ArrayTuple dynamicStyleStorage;

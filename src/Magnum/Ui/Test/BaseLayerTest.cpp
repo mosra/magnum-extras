@@ -2010,8 +2010,17 @@ void BaseLayerTest::setTextureCoordinates() {
        guarantees the same on a higher level), not needed for anything here */
     layer.setSize({1, 1}, {1, 1});
 
+    /* Default texture coordinates */
+    CORRADE_COMPARE(layer.defaultTextureCoordinates(), Containers::pair(Vector3{0.0f}, Vector2{1.0f}));
+
+    /* Updating the default to something else shouldn't set state flags */
+    layer.setDefaultTextureCoordinates({1.0f, 0.25f, 42.0f}, {0.5f, 0.0f});
+    CORRADE_COMPARE(layer.defaultTextureCoordinates(), Containers::pair(Vector3{1.0f, 0.25f, 42.0f}, Vector2{0.5f, 0.0f}));
+    CORRADE_COMPARE(layer.state(), LayerStates{});
+
+    /* Creating data picks the updated default */
     DataHandle data = layer.create(0);
-    CORRADE_COMPARE(layer.textureCoordinates(data), Containers::pair(Vector3{0.0f}, Vector2{1.0f}));
+    CORRADE_COMPARE(layer.textureCoordinates(data), Containers::pair(Vector3{1.0f, 0.25f, 42.0f}, Vector2{0.5f, 0.0f}));
     CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
 
     /* Clear the state flags */
@@ -2031,6 +2040,22 @@ void BaseLayerTest::setTextureCoordinates() {
     layer.setTextureCoordinates(dataHandleData(data), {0.25f, 0.5f, 5.0f}, {0.75f, 0.5f});
     CORRADE_COMPARE(layer.textureCoordinates(data), Containers::pair(Vector3{0.25f, 0.5f, 5.0f}, Vector2{0.75f, 0.5f}));
     CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
+
+    /* Another data with (updated) default texture coordinates */
+    DataHandle data1 = layer.create(0);
+    CORRADE_COMPARE(layer.textureCoordinates(data1), Containers::pair(Vector3{1.0f, 0.25f, 42.0f}, Vector2{0.5f, 0.0f}));
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
+
+    /* Clear the state flags */
+    layer.update(LayerState::NeedsDataUpdate, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
+    CORRADE_COMPARE(layer.state(), LayerStates{});
+
+    /* Updating the default to something else shouldn't set state flags this
+       time either, and shouldn't affect the data created before. */
+    layer.setDefaultTextureCoordinates({0.0f, 0.0f, 13.0f}, {1.0f, 1.0f});
+    CORRADE_COMPARE(layer.defaultTextureCoordinates(), Containers::pair(Vector3{0.0f, 0.0f, 13.0f}, Vector2{1.0f, 1.0f}));
+    CORRADE_COMPARE(layer.textureCoordinates(data1), Containers::pair(Vector3{1.0f, 0.25f, 42.0f}, Vector2{0.5f, 0.0f}));
+    CORRADE_COMPARE(layer.state(), LayerStates{});
 }
 
 void BaseLayerTest::setTextureCoordinatesInvalid() {
@@ -2050,11 +2075,15 @@ void BaseLayerTest::setTextureCoordinatesInvalid() {
 
     Containers::String out;
     Error redirectError{&out};
+    layer.defaultTextureCoordinates();
+    layer.setDefaultTextureCoordinates({}, {});
     layer.textureCoordinates(data);
     layer.textureCoordinates(dataHandleData(data));
     layer.setTextureCoordinates(data, {}, {});
     layer.setTextureCoordinates(dataHandleData(data), {}, {});
     CORRADE_COMPARE_AS(out,
+        "Ui::BaseLayer::defaultTextureCoordinates(): texturing not enabled\n"
+        "Ui::BaseLayer::setDefaultTextureCoordinates(): texturing not enabled\n"
         "Ui::BaseLayer::textureCoordinates(): texturing not enabled\n"
         "Ui::BaseLayer::textureCoordinates(): texturing not enabled\n"
         "Ui::BaseLayer::setTextureCoordinates(): texturing not enabled\n"
