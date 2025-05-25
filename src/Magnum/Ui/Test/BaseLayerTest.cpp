@@ -1762,13 +1762,11 @@ void BaseLayerTest::createRemoveHandleRecycle() {
     CORRADE_COMPARE(layer.color(first), 0xffffff_rgbf);
     CORRADE_COMPARE(layer.outlineWidth(first), Vector4{0.0f});
     CORRADE_COMPARE(layer.padding(first), Vector4{0.0f});
-    CORRADE_COMPARE(layer.textureCoordinateOffset(first), Vector3{0.0f});
-    CORRADE_COMPARE(layer.textureCoordinateSize(first), Vector2{1.0f});
+    CORRADE_COMPARE(layer.textureCoordinates(first), Containers::pair(Vector3{0.0f}, Vector2{1.0f}));
     CORRADE_COMPARE(layer.color(second), 0xff3366_rgbf);
     CORRADE_COMPARE(layer.outlineWidth(second), Vector4{2.0f});
     CORRADE_COMPARE(layer.padding(second), Vector4{5.0f});
-    CORRADE_COMPARE(layer.textureCoordinateOffset(second), Vector3{3.0f});
-    CORRADE_COMPARE(layer.textureCoordinateSize(second), Vector2{4.0f});
+    CORRADE_COMPARE(layer.textureCoordinates(second), Containers::pair(Vector3{3.0f}, Vector2{4.0f}));
 
     /* Data that reuses a previous slot should have all properties cleared back
        to defaults */
@@ -1778,8 +1776,7 @@ void BaseLayerTest::createRemoveHandleRecycle() {
     CORRADE_COMPARE(layer.color(second2), 0xffffff_rgbf);
     CORRADE_COMPARE(layer.outlineWidth(second2), Vector4{0.0f});
     CORRADE_COMPARE(layer.padding(second2), Vector4{0.0f});
-    CORRADE_COMPARE(layer.textureCoordinateOffset(second2), Vector3{0.0f});
-    CORRADE_COMPARE(layer.textureCoordinateSize(second2), Vector2{1.0f});
+    CORRADE_COMPARE(layer.textureCoordinates(second2), Containers::pair(Vector3{0.0f}, Vector2{1.0f}));
 }
 
 void BaseLayerTest::createStyleOutOfRange() {
@@ -2014,8 +2011,7 @@ void BaseLayerTest::setTextureCoordinates() {
     layer.setSize({1, 1}, {1, 1});
 
     DataHandle data = layer.create(0);
-    CORRADE_COMPARE(layer.textureCoordinateOffset(data), Vector3{0.0f});
-    CORRADE_COMPARE(layer.textureCoordinateSize(data), Vector2{1.0f});
+    CORRADE_COMPARE(layer.textureCoordinates(data), Containers::pair(Vector3{0.0f}, Vector2{1.0f}));
     CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
 
     /* Clear the state flags */
@@ -2024,8 +2020,7 @@ void BaseLayerTest::setTextureCoordinates() {
 
     /* Setting texture coordinates marks the layer as dirty */
     layer.setTextureCoordinates(data, {0.5f, 0.75f, 35.0f}, {0.25f, 0.125f});
-    CORRADE_COMPARE(layer.textureCoordinateOffset(data), (Vector3{0.5f, 0.75f, 35.0f}));
-    CORRADE_COMPARE(layer.textureCoordinateSize(data), (Vector2{0.25f, 0.125f}));
+    CORRADE_COMPARE(layer.textureCoordinates(data), Containers::pair(Vector3{0.5f, 0.75f, 35.0f}, Vector2{0.25f, 0.125f}));
     CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
 
     /* Clear the state flags */
@@ -2034,8 +2029,7 @@ void BaseLayerTest::setTextureCoordinates() {
 
     /* Testing also the other overload */
     layer.setTextureCoordinates(dataHandleData(data), {0.25f, 0.5f, 5.0f}, {0.75f, 0.5f});
-    CORRADE_COMPARE(layer.textureCoordinateOffset(data), (Vector3{0.25f, 0.5f, 5.0f}));
-    CORRADE_COMPARE(layer.textureCoordinateSize(data), (Vector2{0.75f, 0.5f}));
+    CORRADE_COMPARE(layer.textureCoordinates(data), Containers::pair(Vector3{0.25f, 0.5f, 5.0f}, Vector2{0.75f, 0.5f}));
     CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
 }
 
@@ -2056,17 +2050,13 @@ void BaseLayerTest::setTextureCoordinatesInvalid() {
 
     Containers::String out;
     Error redirectError{&out};
-    layer.textureCoordinateOffset(data);
-    layer.textureCoordinateOffset(dataHandleData(data));
-    layer.textureCoordinateSize(data);
-    layer.textureCoordinateSize(dataHandleData(data));
+    layer.textureCoordinates(data);
+    layer.textureCoordinates(dataHandleData(data));
     layer.setTextureCoordinates(data, {}, {});
     layer.setTextureCoordinates(dataHandleData(data), {}, {});
     CORRADE_COMPARE_AS(out,
-        "Ui::BaseLayer::textureCoordinateOffset(): texturing not enabled\n"
-        "Ui::BaseLayer::textureCoordinateOffset(): texturing not enabled\n"
-        "Ui::BaseLayer::textureCoordinateSize(): texturing not enabled\n"
-        "Ui::BaseLayer::textureCoordinateSize(): texturing not enabled\n"
+        "Ui::BaseLayer::textureCoordinates(): texturing not enabled\n"
+        "Ui::BaseLayer::textureCoordinates(): texturing not enabled\n"
         "Ui::BaseLayer::setTextureCoordinates(): texturing not enabled\n"
         "Ui::BaseLayer::setTextureCoordinates(): texturing not enabled\n",
         TestSuite::Compare::String);
@@ -2101,10 +2091,8 @@ void BaseLayerTest::invalidHandle() {
     layer.padding(LayerDataHandle::Null);
     layer.setPadding(DataHandle::Null, {});
     layer.setPadding(LayerDataHandle::Null, {});
-    layer.textureCoordinateOffset(DataHandle::Null);
-    layer.textureCoordinateOffset(LayerDataHandle::Null);
-    layer.textureCoordinateSize(DataHandle::Null);
-    layer.textureCoordinateSize(LayerDataHandle::Null);
+    layer.textureCoordinates(DataHandle::Null);
+    layer.textureCoordinates(LayerDataHandle::Null);
     layer.setTextureCoordinates(DataHandle::Null, {}, {});
     layer.setTextureCoordinates(LayerDataHandle::Null, {}, {});
     CORRADE_COMPARE_AS(out,
@@ -2120,10 +2108,8 @@ void BaseLayerTest::invalidHandle() {
         "Ui::BaseLayer::padding(): invalid handle Ui::LayerDataHandle::Null\n"
         "Ui::BaseLayer::setPadding(): invalid handle Ui::DataHandle::Null\n"
         "Ui::BaseLayer::setPadding(): invalid handle Ui::LayerDataHandle::Null\n"
-        "Ui::BaseLayer::textureCoordinateOffset(): invalid handle Ui::DataHandle::Null\n"
-        "Ui::BaseLayer::textureCoordinateOffset(): invalid handle Ui::LayerDataHandle::Null\n"
-        "Ui::BaseLayer::textureCoordinateSize(): invalid handle Ui::DataHandle::Null\n"
-        "Ui::BaseLayer::textureCoordinateSize(): invalid handle Ui::LayerDataHandle::Null\n"
+        "Ui::BaseLayer::textureCoordinates(): invalid handle Ui::DataHandle::Null\n"
+        "Ui::BaseLayer::textureCoordinates(): invalid handle Ui::LayerDataHandle::Null\n"
         "Ui::BaseLayer::setTextureCoordinates(): invalid handle Ui::DataHandle::Null\n"
         "Ui::BaseLayer::setTextureCoordinates(): invalid handle Ui::LayerDataHandle::Null\n",
         TestSuite::Compare::String);

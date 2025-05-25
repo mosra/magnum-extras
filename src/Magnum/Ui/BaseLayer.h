@@ -1175,44 +1175,24 @@ class MAGNUM_UI_EXPORT BaseLayer: public AbstractVisualLayer {
         }
 
         /**
-         * @brief Quad texture coordinate offset
+         * @brief Quad texture coordinate offset and size
          *
          * The third coordinate is array layer. Expects that @p handle is
          * valid and that @ref BaseLayerSharedFlag::Textured was enabled for
          * the shared state the layer was created with.
          * @see @ref isHandleValid(DataHandle) const
          */
-        Vector3 textureCoordinateOffset(DataHandle handle) const;
+        Containers::Pair<Vector3, Vector2> textureCoordinates(DataHandle handle) const;
 
         /**
-         * @brief Quad texture coordinate offset assuming it belongs to this layer
+         * @brief Quad texture coordinate offset and size assuming it belongs to this layer
          *
          * The third coordinate is array layer. Expects that @p handle is
          * valid and that @ref BaseLayerSharedFlag::Textured was enabled for
          * the shared state the layer was created with.
          * @see @ref isHandleValid(LayerDataHandle) const
          */
-        Vector3 textureCoordinateOffset(LayerDataHandle handle) const;
-
-        /**
-         * @brief Quad texture coordinate size
-         *
-         * Expects that @p handle is valid and that
-         * @ref BaseLayerSharedFlag::Textured was enabled for the shared state
-         * the layer was created with.
-         * @see @ref isHandleValid(DataHandle) const
-         */
-        Vector2 textureCoordinateSize(DataHandle handle) const;
-
-        /**
-         * @brief Quad texture coordinate size assuming it belongs to this layer
-         *
-         * Expects that @p handle is valid and that
-         * @ref BaseLayerSharedFlag::Textured was enabled for the shared state
-         * the layer was created with.
-         * @see @ref isHandleValid(LayerDataHandle) const
-         */
-        Vector2 textureCoordinateSize(LayerDataHandle handle) const;
+        Containers::Pair<Vector3, Vector2> textureCoordinates(LayerDataHandle handle) const;
 
         /**
          * @brief Set quad texture coordinates
@@ -1265,8 +1245,7 @@ class MAGNUM_UI_EXPORT BaseLayer: public AbstractVisualLayer {
         MAGNUM_UI_LOCAL void setColorInternal(UnsignedInt id, const Color4& color);
         MAGNUM_UI_LOCAL void setOutlineWidthInternal(UnsignedInt id, const Vector4& width);
         MAGNUM_UI_LOCAL void setPaddingInternal(UnsignedInt id, const Vector4& padding);
-        MAGNUM_UI_LOCAL Vector3 textureCoordinateOffsetInternal(UnsignedInt id) const;
-        MAGNUM_UI_LOCAL Vector2 textureCoordinateSizeInternal(UnsignedInt id) const;
+        MAGNUM_UI_LOCAL Containers::Pair<Vector3, Vector2> textureCoordinatesInternal(UnsignedInt id) const;
         MAGNUM_UI_LOCAL void setTextureCoordinatesInternal(UnsignedInt id, const Vector3& offset, const Vector2& size);
 
         /* These can't be MAGNUM_UI_LOCAL otherwise deriving from this class

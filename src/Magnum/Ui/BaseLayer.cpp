@@ -385,42 +385,24 @@ void BaseLayer::setPaddingInternal(const UnsignedInt id, const Vector4& padding)
     setNeedsUpdate(LayerState::NeedsDataUpdate);
 }
 
-Vector3 BaseLayer::textureCoordinateOffset(const DataHandle handle) const {
+Containers::Pair<Vector3, Vector2> BaseLayer::textureCoordinates(const DataHandle handle) const {
     CORRADE_ASSERT(isHandleValid(handle),
-        "Ui::BaseLayer::textureCoordinateOffset(): invalid handle" << handle, {});
-    return textureCoordinateOffsetInternal(dataHandleId(handle));
+        "Ui::BaseLayer::textureCoordinates(): invalid handle" << handle, {});
+    return textureCoordinatesInternal(dataHandleId(handle));
 }
 
-Vector3 BaseLayer::textureCoordinateOffset(const LayerDataHandle handle) const {
+Containers::Pair<Vector3, Vector2> BaseLayer::textureCoordinates(const LayerDataHandle handle) const {
     CORRADE_ASSERT(isHandleValid(handle),
-        "Ui::BaseLayer::textureCoordinateOffset(): invalid handle" << handle, {});
-    return textureCoordinateOffsetInternal(layerDataHandleId(handle));
+        "Ui::BaseLayer::textureCoordinates(): invalid handle" << handle, {});
+    return textureCoordinatesInternal(layerDataHandleId(handle));
 }
 
-Vector3 BaseLayer::textureCoordinateOffsetInternal(const UnsignedInt id) const {
+Containers::Pair<Vector3, Vector2> BaseLayer::textureCoordinatesInternal(const UnsignedInt id) const {
     auto& state = static_cast<const State&>(*_state);
     CORRADE_ASSERT(static_cast<const Shared::State&>(state.shared).flags & BaseLayerSharedFlag::Textured,
-        "Ui::BaseLayer::textureCoordinateOffset(): texturing not enabled", {});
-    return state.data[id].textureCoordinateOffset;
-}
-
-Vector2 BaseLayer::textureCoordinateSize(const DataHandle handle) const {
-    CORRADE_ASSERT(isHandleValid(handle),
-        "Ui::BaseLayer::textureCoordinateSize(): invalid handle" << handle, {});
-    return textureCoordinateSizeInternal(dataHandleId(handle));
-}
-
-Vector2 BaseLayer::textureCoordinateSize(const LayerDataHandle handle) const {
-    CORRADE_ASSERT(isHandleValid(handle),
-        "Ui::BaseLayer::textureCoordinateSize(): invalid handle" << handle, {});
-    return textureCoordinateSizeInternal(layerDataHandleId(handle));
-}
-
-Vector2 BaseLayer::textureCoordinateSizeInternal(const UnsignedInt id) const {
-    auto& state = static_cast<const State&>(*_state);
-    CORRADE_ASSERT(static_cast<const Shared::State&>(state.shared).flags & BaseLayerSharedFlag::Textured,
-        "Ui::BaseLayer::textureCoordinateSize(): texturing not enabled", {});
-    return state.data[id].textureCoordinateSize;
+        "Ui::BaseLayer::textureCoordinates(): texturing not enabled", {});
+    return {state.data[id].textureCoordinateOffset,
+            state.data[id].textureCoordinateSize};
 }
 
 void BaseLayer::setTextureCoordinates(const DataHandle handle, const Vector3& offset, const Vector2& size) {
