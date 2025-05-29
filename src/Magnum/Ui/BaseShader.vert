@@ -30,7 +30,7 @@ struct StyleEntry {
     lowp vec4 outlineColor;
     mediump vec4 outlineWidth; /* left, top, right, bottom */
     mediump vec4 cornerRadius; /* top left, bottom left, top right, bottom right */
-    mediump vec4 outlineCornerRadius;
+    mediump vec4 innerOutlineCornerRadius;
 };
 
 layout(std140
@@ -91,7 +91,7 @@ NOPERSPECTIVE out mediump vec2 interpolatedCenterDistance;
 /* Horizontal, vertical, outline horizontal, outline vertical */
 NOPERSPECTIVE out mediump vec4 edgeDistance;
 NOPERSPECTIVE out mediump float cornerRadius;
-NOPERSPECTIVE out mediump float outlineCornerRadius;
+NOPERSPECTIVE out mediump float innerOutlineCornerRadius;
 #endif
 
 void main() {
@@ -155,22 +155,22 @@ void main() {
        everywhere. */
     if(cornerId == 0) {         /* Top left */
         cornerRadius = styles[style].cornerRadius.x;
-        outlineCornerRadius = styles[style].outlineCornerRadius.x;
+        innerOutlineCornerRadius = styles[style].innerOutlineCornerRadius.x;
         totalOutlineWidth += vec2(styles[style].outlineWidth.x,
                                   styles[style].outlineWidth.y);
     } else if(cornerId == 1) {  /* Top right */
         cornerRadius = styles[style].cornerRadius.z;
-        outlineCornerRadius = styles[style].outlineCornerRadius.z;
+        innerOutlineCornerRadius = styles[style].innerOutlineCornerRadius.z;
         totalOutlineWidth += vec2(styles[style].outlineWidth.z,
                                   styles[style].outlineWidth.y);
     } else if(cornerId == 2) {  /* Bottom left */
         cornerRadius = styles[style].cornerRadius.y;
-        outlineCornerRadius = styles[style].outlineCornerRadius.y;
+        innerOutlineCornerRadius = styles[style].innerOutlineCornerRadius.y;
         totalOutlineWidth += vec2(styles[style].outlineWidth.x,
                                   styles[style].outlineWidth.w);
     } else if(cornerId == 3) {  /* Bottom right */
         cornerRadius = styles[style].cornerRadius.w;
-        outlineCornerRadius = styles[style].outlineCornerRadius.w;
+        innerOutlineCornerRadius = styles[style].innerOutlineCornerRadius.w;
         totalOutlineWidth += vec2(styles[style].outlineWidth.z,
                                   styles[style].outlineWidth.w);
     } else {
@@ -178,7 +178,7 @@ void main() {
            being initialized". It isn't, as cornerId is only ever those four
            values. */
         cornerRadius = 0.0f;
-        outlineCornerRadius = 0.0f;
+        innerOutlineCornerRadius = 0.0f;
     }
 
     /* Minimal inner quad shift needed to cover the inner/outer corner radius
@@ -191,7 +191,7 @@ void main() {
     lowp float smoothness = commonStyle_smoothness*projection.z;
     lowp float innerOutlineSmoothness = commonStyle_innerOutlineSmoothness*projection.z;
     mediump float radiusOrSmoothnessShift = max(cornerRadius, smoothness);
-    mediump float innerRadiusOrSmoothnessShift = max(1.0*projection.z, max(outlineCornerRadius, innerOutlineSmoothness));
+    mediump float innerRadiusOrSmoothnessShift = max(1.0*projection.z, max(innerOutlineCornerRadius, innerOutlineSmoothness));
 
     /* Calculate how far to shift so the inner vertices include both radii and
        corresponding smoothness and the total outline width, and the outer

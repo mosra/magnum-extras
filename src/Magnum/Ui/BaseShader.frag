@@ -30,7 +30,7 @@ struct StyleEntry {
     lowp vec4 outlineColor;
     mediump vec4 outlineWidth; /* left, top, right, bottom */
     mediump vec4 cornerRadius; /* top left, bottom left, top right, bottom right */
-    mediump vec4 outlineCornerRadius;
+    mediump vec4 innerOutlineCornerRadius;
 };
 
 layout(std140
@@ -83,7 +83,7 @@ NOPERSPECTIVE in mediump vec4 edgeDistance;
    quads. They only get used in the corner quads, because otherwise the
    edgeDistance is always at least as large, cancelling them. */
 NOPERSPECTIVE in mediump float cornerRadius;
-NOPERSPECTIVE in mediump float outlineCornerRadius;
+NOPERSPECTIVE in mediump float innerOutlineCornerRadius;
 #endif
 #ifdef TEXTURED
 NOPERSPECTIVE in mediump vec3 interpolatedTextureCoordinates;
@@ -140,7 +140,7 @@ void main() {
     {
         #ifndef NO_ROUNDED_CORNERS
         /* Outline rounded corner centers */
-        mediump vec4 radius = styles[interpolatedStyle].outlineCornerRadius;
+        mediump vec4 radius = styles[interpolatedStyle].innerOutlineCornerRadius;
         mediump vec2 c0 = vec2(outlineQuadSize.x + radius[0], outlineQuadSize.y + radius[0]);
         mediump vec2 c1 = vec2(outlineQuadSize.x + radius[1], outlineQuadSize.w - radius[1]);
         mediump vec2 c2 = vec2(outlineQuadSize.z - radius[2], outlineQuadSize.y + radius[2]);
@@ -182,9 +182,9 @@ void main() {
         - min(max(cornerCenterDistance.x, cornerCenterDistance.y), 0.0);
 
     /* And similarly for the inner outline edge */
-    lowp vec2 outlineCornerCenterDistance = vec2(outlineCornerRadius) - edgeDistance.zw;
+    lowp vec2 outlineCornerCenterDistance = vec2(innerOutlineCornerRadius) - edgeDistance.zw;
     lowp float outlineDist =
-        outlineCornerRadius - length(max(outlineCornerCenterDistance, vec2(0.0)))
+        innerOutlineCornerRadius - length(max(outlineCornerCenterDistance, vec2(0.0)))
         - min(max(outlineCornerCenterDistance.x, outlineCornerCenterDistance.y), 0.0);
     #endif
 
