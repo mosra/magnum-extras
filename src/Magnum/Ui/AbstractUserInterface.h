@@ -1966,22 +1966,22 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
          */
 
         /**
-         * @brief Capacity of the top-level node order storage
+         * @brief Capacity of the top-level node draw and event processing order storage
          *
          * @ref nodeOrderUsedCount()
          */
         std::size_t nodeOrderCapacity() const;
 
         /**
-         * @brief Count of used items in the top-level node order storage
+         * @brief Count of used items in the top-level node draw and event processing order storage
          *
          * Always at most @ref nodeOrderCapacity(). The operation is done
          * with a @f$ \mathcal{O}(n) @f$ complexity where @f$ n @f$ is
          * @ref nodeOrderCapacity(). When a root node is created or
          * @ref setNodeOrder() is called for the first time on a non-root node,
-         * a slot in the node order storage is used for it, and gets recycled
-         * only when the node is removed again or when @ref flattenNodeOrder()
-         * is called on a non-root node.
+         * a slot in the node draw and event processing order storage is used
+         * for it, and gets recycled only when the node is removed again or
+         * when @ref flattenNodeOrder() is called on a non-root node.
          * @see @ref isNodeTopLevel()
          */
         std::size_t nodeOrderUsedCount() const;
@@ -2015,15 +2015,15 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
         /**
          * @brief Whether a node is top-level for draw and event processing
          *
-         * If not top-level, it's in the usual order defined by the node
-         * hierarchy. If top-level, it's ordered respective to other top-level
-         * nodes. Expects that @p handle is valid.
+         * If not top-level, it's in the usual draw and event processing order
+         * defined by the node hierarchy. If top-level, it's ordered respective
+         * to other top-level nodes. Expects that @p handle is valid.
          *
          * Always returns @cpp true @ce for root nodes. If @ref isNodeOrdered()
          * returns @cpp true @ce, it implies the node is top-level. If this
          * function returns @cpp true @ce, it doesn't necessarily mean the node
          * is visible --- the node or any of its parents could be excluded from
-         * the order or it could be hidden.
+         * the draw and event processing order or it could be hidden.
          * @see @ref isHandleValid(NodeHandle) const, @ref nodeOrderNext(),
          *      @ref setNodeOrder(), @ref clearNodeOrder(),
          *      @ref flattenNodeOrder()
@@ -2038,10 +2038,11 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
          *
          * If this function returns @cpp true @ce, @ref isNodeTopLevel() is
          * @cpp true @ce as well. For non-root nodes the function returning
-         * @cpp true @ce means the node is included in the order respective to
-         * its parent top-level node. It doesn't necessarily mean the node is
-         * visible --- the parents can themselves be excluded from the order or
-         * they could be hidden.
+         * @cpp true @ce means the node is included in the draw and event
+         * processing order respective to its parent top-level node. It doesn't
+         * necessarily mean the node is visible --- the parents can themselves
+         * be excluded from the draw and event processing order or they could
+         * be hidden.
          * @see @ref isHandleValid(NodeHandle) const, @ref nodeOrderNext(),
          *      @ref setNodeOrder(), @ref clearNodeOrder(),
          *      @ref flattenNodeOrder()
@@ -2055,9 +2056,9 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
          * to events later. Expects that @p handle is valid. Returns
          * @ref NodeHandle::Null if the node is first in the draw and
          * processing order, is a root node that's not included in the draw and
-         * event processing order, or is a non-root node that's drawn in a
-         * regular hierarchy-defined order. The returned handle is always
-         * either valid or null.
+         * event processing order, or is a non-root node that's drawn and
+         * has events processed in a regular hierarchy-defined order. The
+         * returned handle is always either valid or null.
          * @see @ref isHandleValid(NodeHandle) const, @ref nodeOrderNext(),
          *      @ref nodeOrderFirst(), @ref nodeOrderLast(),
          *      @ref isNodeOrdered()
@@ -2071,9 +2072,9 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
          * events earlier. Expects that @p handle is valid. Returns
          * @ref NodeHandle::Null if the node is last in the draw and processing
          * order, is a root node that's not included in the draw and event
-         * processing order, or is a non-root node that's drawn in a regular
-         * hierarchy-defined order. The returned handle is always either valid
-         * or null.
+         * processing order, or is a non-root node that's drawn and has events
+         * processed in a regular hierarchy-defined order. The returned handle
+         * is always either valid or null.
          * @see @ref isHandleValid(NodeHandle) const, @ref nodeOrderPrevious(),
          *      @ref nodeOrderLast(), @ref nodeOrderLastNested(),
          *      @ref nodeOrderFirst(), @ref isNodeOrdered()
@@ -2088,9 +2089,10 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
          * top-level hierarchies. If there are no child top-level hierarchies,
          * returns @p handle itself.
          *
-         * The order of child top-level hierarchies relative to the
-         * @p handle gets preserved when modifying the top-level order of
-         * @p handle using @ref setNodeOrder() or @ref clearNodeOrder().
+         * The draw and event processing order of child top-level hierarchies
+         * relative to the @p handle gets preserved when modifying the
+         * top-level draw and event processing order of @p handle using
+         * @ref setNodeOrder() or @ref clearNodeOrder().
          * @see @ref isHandleValid(NodeHandle) const
          */
         NodeHandle nodeOrderLastNested(NodeHandle handle) const;
@@ -2123,18 +2125,20 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
          * event processing order, it's moved, if it wasn't previously a
          * top-level node or if it wasn't included in the draw and event
          * processing order, it's inserted. Use @ref clearNodeOrder() to
-         * exclude the node from the order afterwards and
-         * @ref flattenNodeOrder() to integrate a non-root node back into the
-         * usual order defined by the node hierarchy.
+         * exclude the node from the draw and event processing order afterwards
+         * and @ref flattenNodeOrder() to integrate a non-root node back into
+         * the usual draw and event processing order defined by the node
+         * hierarchy.
          *
          * @m_class{m-note m-warning}
          *
          * @par
          *      At the moment, if a non-root node isn't top-level yet, it can
-         *      be made only if it doesn't already contain a nested top-level
-         *      order. If it does, call @ref clearNodeOrder() on the nested
-         *      top-level nodes first (or @ref flattenNodeOrder() them), after
-         *      that you can order them back.
+         *      be made top-level only if it isn't already included in a nested
+         *      top-level draw and event processing order. If it is, call
+         *      @ref clearNodeOrder() on the nested top-level nodes first (or
+         *      @ref flattenNodeOrder() them), after that you can order them
+         *      back.
          *
          * Calling this function causes @ref UserInterfaceState::NeedsNodeUpdate
          * to be set.
@@ -2157,11 +2161,12 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
          * where @f$ n @f$ is the depth at which @p handle is in the node
          * hierarchy.
          *
-         * If the node contains any child top-level hierarchies, their order
-         * relative to the @p handle gets preserved, i.e. they get inserted
-         * back alongside it next time @ref setNodeOrder() is called. Use
-         * @ref flattenNodeOrder() to integrate a non-root node back into the
-         * usual order defined by the node hierarchy.
+         * If the node contains any child top-level hierarchies, their draw and
+         * event processing order relative to the @p handle gets preserved,
+         * i.e. they get inserted back alongside it next time
+         * @ref setNodeOrder() is called. Use @ref flattenNodeOrder() to
+         * integrate a non-root node back into the usual draw and event
+         * processing order defined by the node hierarchy.
          *
          * If not a no-op, calling this function causes
          * @ref UserInterfaceState::NeedsNodeUpdate to be set.
@@ -2171,7 +2176,7 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
         void clearNodeOrder(NodeHandle handle);
 
         /**
-         * @brief Flatten a non-root top-level node back to the usual order defined by the node hierarchy
+         * @brief Flatten a non-root top-level node back to the usual draw and event processing order defined by the node hierarchy
          *
          * Expects that @p handle is valid and isn't a root node. Undoes the
          * operation done by calling @ref setNodeOrder() on a non-root node,
