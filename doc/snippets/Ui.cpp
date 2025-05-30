@@ -263,7 +263,7 @@ Ui::AbstractUserInterface ui{{100, 100}};
 /* [AbstractUserInterface-setup-events] */
 Ui::PointerEvent event{{},
     Ui::PointerEventSource::Mouse,
-    Ui::Pointer::MouseLeft, true, 0};
+    Ui::Pointer::MouseLeft, true, 0, {}};
 if(!ui.pointerPressEvent({123, 456}, event)) {
     // Not handled by the UI, pass further ...
 }

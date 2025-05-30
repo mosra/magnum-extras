@@ -389,7 +389,7 @@ void ButtonTest::setStyleWhileActive() {
     CORRADE_COMPARE(ui.textLayer().style(button.iconData()), UnsignedInt(Implementation::TextStyle::ButtonIcon));
     CORRADE_COMPARE(ui.textLayer().style(button.textData()), UnsignedInt(Implementation::TextStyle::ButtonText));
 
-    PointerEvent pressEvent{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0};
+    PointerEvent pressEvent{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
     CORRADE_VERIFY(ui.pointerPressEvent({16, 8}, pressEvent));
     CORRADE_COMPARE(ui.currentPressedNode(), button);
 
