@@ -127,13 +127,14 @@ void EventTest::debugModifiers() {
 }
 
 void EventTest::pointer() {
-    PointerEvent event{1234567_nsec, PointerEventSource::Mouse, Pointer::MouseMiddle, true, 1ll << 36};
+    PointerEvent event{1234567_nsec, PointerEventSource::Mouse, Pointer::MouseMiddle, true, 1ll << 36, Modifier::Shift|Modifier::Ctrl};
     CORRADE_COMPARE(event.time(), 1234567_nsec);
     CORRADE_VERIFY(!event.isFallthrough());
     CORRADE_COMPARE(event.source(), PointerEventSource::Mouse);
     CORRADE_COMPARE(event.pointer(), Pointer::MouseMiddle);
     CORRADE_VERIFY(event.isPrimary());
     CORRADE_COMPARE(event.id(), 1ll << 36);
+    CORRADE_COMPARE(event.modifiers(), Modifier::Shift|Modifier::Ctrl);
     CORRADE_COMPARE(event.position(), Vector2{});
     CORRADE_COMPARE(event.nodeSize(), Vector2{});
     CORRADE_VERIFY(!event.isNodePressed());
@@ -152,27 +153,27 @@ void EventTest::pointer() {
     CORRADE_VERIFY(!event.isAccepted());
 
     /* Verify it works with all other combinations as well */
-    PointerEvent event2{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0};
+    PointerEvent event2{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
     CORRADE_COMPARE(event2.source(), PointerEventSource::Mouse);
     CORRADE_COMPARE(event2.pointer(), Pointer::MouseLeft);
     CORRADE_VERIFY(event2.isPrimary());
 
-    PointerEvent event3{{}, PointerEventSource::Mouse, Pointer::MouseRight, true, 0};
+    PointerEvent event3{{}, PointerEventSource::Mouse, Pointer::MouseRight, true, 0, {}};
     CORRADE_COMPARE(event3.source(), PointerEventSource::Mouse);
     CORRADE_COMPARE(event3.pointer(), Pointer::MouseRight);
     CORRADE_VERIFY(event3.isPrimary());
 
-    PointerEvent event4{{}, PointerEventSource::Touch, Pointer::Finger, false, 0};
+    PointerEvent event4{{}, PointerEventSource::Touch, Pointer::Finger, false, 0, {}};
     CORRADE_COMPARE(event4.source(), PointerEventSource::Touch);
     CORRADE_COMPARE(event4.pointer(), Pointer::Finger);
     CORRADE_VERIFY(!event4.isPrimary());
 
-    PointerEvent event5{{}, PointerEventSource::Pen, Pointer::Pen, true, 0};
+    PointerEvent event5{{}, PointerEventSource::Pen, Pointer::Pen, true, 0, {}};
     CORRADE_COMPARE(event5.source(), PointerEventSource::Pen);
     CORRADE_COMPARE(event5.pointer(), Pointer::Pen);
     CORRADE_VERIFY(event5.isPrimary());
 
-    PointerEvent event6{{}, PointerEventSource::Pen, Pointer::Eraser, true, 0};
+    PointerEvent event6{{}, PointerEventSource::Pen, Pointer::Eraser, true, 0, {}};
     CORRADE_COMPARE(event6.source(), PointerEventSource::Pen);
     CORRADE_COMPARE(event6.pointer(), Pointer::Eraser);
     CORRADE_VERIFY(event6.isPrimary());
@@ -183,11 +184,11 @@ void EventTest::pointerInvalid() {
 
     Containers::String out;
     Error redirectError{&out};
-    PointerEvent{{}, PointerEventSource::Mouse, Pointer::Finger, true, 0};
-    PointerEvent{{}, PointerEventSource::Touch, Pointer::MouseMiddle, true, 0};
-    PointerEvent{{}, PointerEventSource::Pen, Pointer::Finger, true, 0};
-    PointerEvent{{}, PointerEventSource::Mouse, Pointer::MouseMiddle, false, 0};
-    PointerEvent{{}, PointerEventSource::Pen, Pointer::Eraser, false, 0};
+    PointerEvent{{}, PointerEventSource::Mouse, Pointer::Finger, true, 0, {}};
+    PointerEvent{{}, PointerEventSource::Touch, Pointer::MouseMiddle, true, 0, {}};
+    PointerEvent{{}, PointerEventSource::Pen, Pointer::Finger, true, 0, {}};
+    PointerEvent{{}, PointerEventSource::Mouse, Pointer::MouseMiddle, false, 0, {}};
+    PointerEvent{{}, PointerEventSource::Pen, Pointer::Eraser, false, 0, {}};
     CORRADE_COMPARE_AS(out,
         "Ui::PointerEvent: invalid combination of Ui::PointerEventSource::Mouse and Ui::Pointer::Finger\n"
         "Ui::PointerEvent: invalid combination of Ui::PointerEventSource::Touch and Ui::Pointer::MouseMiddle\n"
@@ -198,13 +199,14 @@ void EventTest::pointerInvalid() {
 }
 
 void EventTest::pointerPositionNodePressedSize() {
-    PointerEvent event{1234567_nsec, PointerEventSource::Mouse, Pointer::MouseMiddle, true, 1ll << 36, {1.5f, 4.5f}, true, {2.5f, 3.5f}};
+    PointerEvent event{1234567_nsec, PointerEventSource::Mouse, Pointer::MouseMiddle, true, 1ll << 36, Modifier::Shift|Modifier::Ctrl, {1.5f, 4.5f}, true, {2.5f, 3.5f}};
     CORRADE_COMPARE(event.time(), 1234567_nsec);
     CORRADE_VERIFY(!event.isFallthrough());
     CORRADE_COMPARE(event.source(), PointerEventSource::Mouse);
     CORRADE_COMPARE(event.pointer(), Pointer::MouseMiddle);
     CORRADE_VERIFY(event.isPrimary());
     CORRADE_COMPARE(event.id(), 1ll << 36);
+    CORRADE_COMPARE(event.modifiers(), Modifier::Shift|Modifier::Ctrl);
     CORRADE_COMPARE(event.position(), (Vector2{1.5f, 4.5f}));
     CORRADE_COMPARE(event.nodeSize(), (Vector2{2.5f, 3.5f}));
     CORRADE_VERIFY(event.isNodePressed());
@@ -215,7 +217,7 @@ void EventTest::pointerPositionNodePressedSize() {
 }
 
 void EventTest::pointerMove() {
-    PointerMoveEvent event{1234567_nsec, PointerEventSource::Mouse, Pointer::MouseRight, Pointer::MouseLeft|Pointer::Finger, true, 1ll << 37};
+    PointerMoveEvent event{1234567_nsec, PointerEventSource::Mouse, Pointer::MouseRight, Pointer::MouseLeft|Pointer::Finger, true, 1ll << 37, Modifier::Shift|Modifier::Alt};
     CORRADE_COMPARE(event.time(), 1234567_nsec);
     CORRADE_VERIFY(!event.isFallthrough());
     CORRADE_COMPARE(event.source(), PointerEventSource::Mouse);
@@ -223,6 +225,7 @@ void EventTest::pointerMove() {
     CORRADE_COMPARE(event.pointers(), Pointer::MouseLeft|Pointer::Finger);
     CORRADE_VERIFY(event.isPrimary());
     CORRADE_COMPARE(event.id(), 1ll << 37);
+    CORRADE_COMPARE(event.modifiers(), Modifier::Shift|Modifier::Alt);
     CORRADE_COMPARE(event.position(), Vector2{});
     CORRADE_COMPARE(event.relativePosition(), Vector2{});
     CORRADE_COMPARE(event.nodeSize(), Vector2{});
@@ -243,31 +246,31 @@ void EventTest::pointerMove() {
 
     /* Verify it works with all other combinations as well. The set of pressed
        pointers can be arbitrary. */
-    PointerMoveEvent event2{{}, PointerEventSource::Mouse, Pointer::MouseLeft, Pointer::Pen, true, 0};
+    PointerMoveEvent event2{{}, PointerEventSource::Mouse, Pointer::MouseLeft, Pointer::Pen, true, 0, {}};
     CORRADE_COMPARE(event2.source(), PointerEventSource::Mouse);
     CORRADE_COMPARE(event2.pointer(), Pointer::MouseLeft);
     CORRADE_COMPARE(event2.pointers(), Pointer::Pen);
     CORRADE_VERIFY(event2.isPrimary());
 
-    PointerMoveEvent event3{{}, PointerEventSource::Mouse, Pointer::MouseRight, Pointer::Finger, true, 0};
+    PointerMoveEvent event3{{}, PointerEventSource::Mouse, Pointer::MouseRight, Pointer::Finger, true, 0, {}};
     CORRADE_COMPARE(event3.source(), PointerEventSource::Mouse);
     CORRADE_COMPARE(event3.pointer(), Pointer::MouseRight);
     CORRADE_COMPARE(event3.pointers(), Pointer::Finger);
     CORRADE_VERIFY(event3.isPrimary());
 
-    PointerMoveEvent event4{{}, PointerEventSource::Touch, Pointer::Finger, Pointer::MouseMiddle|Pointer::Pen, false, 0};
+    PointerMoveEvent event4{{}, PointerEventSource::Touch, Pointer::Finger, Pointer::MouseMiddle|Pointer::Pen, false, 0, {}};
     CORRADE_COMPARE(event4.source(), PointerEventSource::Touch);
     CORRADE_COMPARE(event4.pointer(), Pointer::Finger);
     CORRADE_COMPARE(event4.pointers(), Pointer::MouseMiddle|Pointer::Pen);
     CORRADE_VERIFY(!event4.isPrimary());
 
-    PointerMoveEvent event5{{}, PointerEventSource::Pen, Pointer::Pen, Pointer::MouseRight, true, 0};
+    PointerMoveEvent event5{{}, PointerEventSource::Pen, Pointer::Pen, Pointer::MouseRight, true, 0, {}};
     CORRADE_COMPARE(event5.source(), PointerEventSource::Pen);
     CORRADE_COMPARE(event5.pointer(), Pointer::Pen);
     CORRADE_COMPARE(event5.pointers(), Pointer::MouseRight);
     CORRADE_VERIFY(event5.isPrimary());
 
-    PointerMoveEvent event6{{}, PointerEventSource::Pen, Pointer::Eraser, Pointer::Finger, true, 0};
+    PointerMoveEvent event6{{}, PointerEventSource::Pen, Pointer::Eraser, Pointer::Finger, true, 0, {}};
     CORRADE_COMPARE(event6.source(), PointerEventSource::Pen);
     CORRADE_COMPARE(event6.pointer(), Pointer::Eraser);
     CORRADE_COMPARE(event6.pointers(), Pointer::Finger);
@@ -279,11 +282,11 @@ void EventTest::pointerMoveInvalid() {
 
     Containers::String out;
     Error redirectError{&out};
-    PointerMoveEvent{{}, PointerEventSource::Mouse, Pointer::Finger, {}, true, 0};
-    PointerMoveEvent{{}, PointerEventSource::Touch, Pointer::MouseMiddle, {}, true, 0};
-    PointerMoveEvent{{}, PointerEventSource::Pen, Pointer::Finger, {}, true, 0};
-    PointerMoveEvent{{}, PointerEventSource::Mouse, Pointer::MouseMiddle, {}, false, 0};
-    PointerMoveEvent{{}, PointerEventSource::Pen, Pointer::Eraser, {}, false, 0};
+    PointerMoveEvent{{}, PointerEventSource::Mouse, Pointer::Finger, {}, true, 0, {}};
+    PointerMoveEvent{{}, PointerEventSource::Touch, Pointer::MouseMiddle, {}, true, 0, {}};
+    PointerMoveEvent{{}, PointerEventSource::Pen, Pointer::Finger, {}, true, 0, {}};
+    PointerMoveEvent{{}, PointerEventSource::Mouse, Pointer::MouseMiddle, {}, false, 0, {}};
+    PointerMoveEvent{{}, PointerEventSource::Pen, Pointer::Eraser, {}, false, 0, {}};
     CORRADE_COMPARE_AS(out,
         "Ui::PointerMoveEvent: invalid combination of Ui::PointerEventSource::Mouse and Ui::Pointer::Finger\n"
         "Ui::PointerMoveEvent: invalid combination of Ui::PointerEventSource::Touch and Ui::Pointer::MouseMiddle\n"
@@ -294,7 +297,7 @@ void EventTest::pointerMoveInvalid() {
 }
 
 void EventTest::pointerMoveRelativePosition() {
-    PointerMoveEvent event{1234567_nsec, PointerEventSource::Pen, Pointer::Eraser, Pointer::MouseLeft|Pointer::Finger, true, 1ll << 44, {3.0f, -6.5f}};
+    PointerMoveEvent event{1234567_nsec, PointerEventSource::Pen, Pointer::Eraser, Pointer::MouseLeft|Pointer::Finger, true, 1ll << 44, Modifier::Ctrl|Modifier::Alt, {3.0f, -6.5f}};
     CORRADE_COMPARE(event.time(), 1234567_nsec);
     CORRADE_VERIFY(!event.isFallthrough());
     CORRADE_COMPARE(event.source(), PointerEventSource::Pen);
@@ -302,6 +305,7 @@ void EventTest::pointerMoveRelativePosition() {
     CORRADE_COMPARE(event.pointers(), Pointer::MouseLeft|Pointer::Finger);
     CORRADE_VERIFY(event.isPrimary());
     CORRADE_COMPARE(event.id(), 1ll << 44);
+    CORRADE_COMPARE(event.modifiers(), Modifier::Ctrl|Modifier::Alt);
     CORRADE_COMPARE(event.position(), Vector2{});
     CORRADE_COMPARE(event.relativePosition(), (Vector2{3.0f, -6.5f}));
     CORRADE_COMPARE(event.nodeSize(), Vector2{});
@@ -313,13 +317,14 @@ void EventTest::pointerMoveRelativePosition() {
 }
 
 void EventTest::pointerMoveNoPointer() {
-    PointerMoveEvent event{1234567_nsec, PointerEventSource::Touch, {}, Pointer::MouseLeft|Pointer::Finger, false, 1ll << 55};
+    PointerMoveEvent event{1234567_nsec, PointerEventSource::Touch, {}, Pointer::MouseLeft|Pointer::Finger, false, 1ll << 55, Modifier::Ctrl|Modifier::Super};
     CORRADE_COMPARE(event.time(), 1234567_nsec);
     CORRADE_VERIFY(!event.isFallthrough());
     CORRADE_COMPARE(event.source(), PointerEventSource::Touch);
     CORRADE_COMPARE(event.pointer(), Containers::NullOpt);
     CORRADE_COMPARE(event.pointers(), Pointer::MouseLeft|Pointer::Finger);
     CORRADE_VERIFY(!event.isPrimary());
+    CORRADE_COMPARE(event.modifiers(), Modifier::Ctrl|Modifier::Super);
     CORRADE_COMPARE(event.id(), 1ll << 55);
     CORRADE_COMPARE(event.position(), Vector2{});
     CORRADE_COMPARE(event.relativePosition(), Vector2{});
@@ -332,7 +337,7 @@ void EventTest::pointerMoveNoPointer() {
 }
 
 void EventTest::pointerMoveNoPointerRelativePosition() {
-    PointerMoveEvent event{1234567_nsec, PointerEventSource::Touch, {}, Pointer::MouseLeft|Pointer::Finger, false, 1ll << 59, {3.0f, -6.5f}};
+    PointerMoveEvent event{1234567_nsec, PointerEventSource::Touch, {}, Pointer::MouseLeft|Pointer::Finger, false, 1ll << 59, Modifier::Ctrl|Modifier::Super, {3.0f, -6.5f}};
     CORRADE_COMPARE(event.time(), 1234567_nsec);
     CORRADE_VERIFY(!event.isFallthrough());
     CORRADE_COMPARE(event.source(), PointerEventSource::Touch);
@@ -340,6 +345,7 @@ void EventTest::pointerMoveNoPointerRelativePosition() {
     CORRADE_COMPARE(event.pointers(), Pointer::MouseLeft|Pointer::Finger);
     CORRADE_VERIFY(!event.isPrimary());
     CORRADE_COMPARE(event.id(), 1ll << 59);
+    CORRADE_COMPARE(event.modifiers(), Modifier::Ctrl|Modifier::Super);
     CORRADE_COMPARE(event.position(), Vector2{});
     CORRADE_COMPARE(event.relativePosition(), (Vector2{3.0f, -6.5f}));
     CORRADE_COMPARE(event.nodeSize(), Vector2{});
@@ -356,9 +362,10 @@ void EventTest::pointerCancel() {
 }
 
 void EventTest::scroll() {
-    ScrollEvent event{1234567_nsec, {3.2f, -4.7f}};
+    ScrollEvent event{1234567_nsec, {3.2f, -4.7f}, Modifier::Alt|Modifier::Super};
     CORRADE_COMPARE(event.time(), 1234567_nsec);
     CORRADE_COMPARE(event.offset(), (Vector2{3.2f, -4.7f}));
+    CORRADE_COMPARE(event.modifiers(), Modifier::Alt|Modifier::Super);
     CORRADE_COMPARE(event.position(), Vector2{});
     CORRADE_COMPARE(event.nodeSize(), Vector2{});
     CORRADE_VERIFY(!event.isNodePressed());
