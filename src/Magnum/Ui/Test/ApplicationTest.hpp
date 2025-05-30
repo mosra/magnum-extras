@@ -212,32 +212,32 @@ ApplicationTest::ApplicationTest(const Arguments& arguments): Platform::Applicat
         }
 
         void doPointerPressEvent(UnsignedInt, Ui::PointerEvent& event) override {
-            Debug{} << event.pointer() << "press at" << Debug::packed << event.position();
+            Debug{} << event.pointer() << "press at" << Debug::packed << event.position() << "with" << event.modifiers();
             event.setAccepted();
         }
 
         void doPointerReleaseEvent(UnsignedInt, Ui::PointerEvent& event) override {
-            Debug{} << event.pointer() << "release at" << Debug::packed << event.position();
+            Debug{} << event.pointer() << "release at" << Debug::packed << event.position() << "with" << event.modifiers();
             event.setAccepted();
         }
 
         void doPointerMoveEvent(UnsignedInt, Ui::PointerMoveEvent& event) override {
-            Debug{} << event.pointers() << "move at" << Debug::packed << event.position();
+            Debug{} << event.pointers() << "move at" << Debug::packed << event.position() << "with" << event.modifiers();
             event.setAccepted();
         }
 
         void doPointerEnterEvent(UnsignedInt, Ui::PointerMoveEvent& event) override {
-            Debug{} << event.pointers() << "enter at" << Debug::packed << event.position();
+            Debug{} << event.pointers() << "enter at" << Debug::packed << event.position() << "with" << event.modifiers();
             event.setAccepted();
         }
 
         void doPointerLeaveEvent(UnsignedInt, Ui::PointerMoveEvent& event) override {
-            Debug{} << event.pointers() << "leave at" << Debug::packed << event.position();
+            Debug{} << event.pointers() << "leave at" << Debug::packed << event.position() << "with" << event.modifiers();
             event.setAccepted();
         }
 
         void doScrollEvent(UnsignedInt, Ui::ScrollEvent& event) override {
-            Debug{} << Debug::packed << event.offset() << "scroll at" << Debug::packed << event.position();
+            Debug{} << Debug::packed << event.offset() << "scroll at" << Debug::packed << event.position() << "with" << event.modifiers();
             event.setAccepted();
         }
 
