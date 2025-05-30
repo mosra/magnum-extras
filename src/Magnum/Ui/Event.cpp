@@ -79,7 +79,7 @@ Debug& operator<<(Debug& debug, const Pointers value) {
     });
 }
 
-PointerEvent::PointerEvent(const Nanoseconds time, const PointerEventSource source, const Pointer pointer, const bool primary, const Long id): _time{time}, _id{id}, _source{source}, _pointer{pointer}, _primary{primary} {
+PointerEvent::PointerEvent(const Nanoseconds time, const PointerEventSource source, const Pointer pointer, const bool primary, const Long id, const Modifiers modifiers): _time{time}, _id{id}, _source{source}, _pointer{pointer}, _modifiers{modifiers}, _primary{primary} {
     CORRADE_ASSERT(
         /* *Not* checking `pointer & (MouseLeft|MouseMiddle|MouseRight)` like
            in other places because that would silently pass through values that
@@ -94,7 +94,7 @@ PointerEvent::PointerEvent(const Nanoseconds time, const PointerEventSource sour
         "Ui::PointerEvent:" << source << "events are expected to be primary", );
 }
 
-PointerEvent::PointerEvent(const Nanoseconds time, const PointerEventSource source, const Pointer pointer, const bool primary, const Long id, const Vector2& position, const bool nodePressed, const Vector2& nodeSize): PointerEvent{time, source, pointer, primary, id} {
+PointerEvent::PointerEvent(const Nanoseconds time, const PointerEventSource source, const Pointer pointer, const bool primary, const Long id, const Modifiers modifiers, const Vector2& position, const bool nodePressed, const Vector2& nodeSize): PointerEvent{time, source, pointer, primary, id, modifiers} {
     /* Used for testing only, it's better done with a double initialization
        like this than to have it delegated to from the main constructor */
     _position = position;
@@ -102,7 +102,7 @@ PointerEvent::PointerEvent(const Nanoseconds time, const PointerEventSource sour
     _nodePressed = nodePressed;
 }
 
-PointerMoveEvent::PointerMoveEvent(const Nanoseconds time, const PointerEventSource source, const Containers::Optional<Pointer> pointer, const Pointers pointers, const bool primary, const Long id): _time{time}, _id{id}, _source{source}, _pointer{pointer ? *pointer : Pointer{}}, _pointers{pointers}, _primary{primary} {
+PointerMoveEvent::PointerMoveEvent(const Nanoseconds time, const PointerEventSource source, const Containers::Optional<Pointer> pointer, const Pointers pointers, const bool primary, const Long id, const Modifiers modifiers): _time{time}, _id{id}, _source{source}, _pointer{pointer ? *pointer : Pointer{}}, _pointers{pointers}, _modifiers{modifiers}, _primary{primary} {
     /* OTOH, pointers can be just anything -- e.g.., it's possible to move a
        mouse while a finger or a pen is pressed, and such event will have mouse
        as a source */
@@ -120,7 +120,7 @@ PointerMoveEvent::PointerMoveEvent(const Nanoseconds time, const PointerEventSou
         "Ui::PointerMoveEvent:" << source << "events are expected to be primary", );
 }
 
-PointerMoveEvent::PointerMoveEvent(const Nanoseconds time, const PointerEventSource source, const Containers::Optional<Pointer> pointer, const Pointers pointers, const bool primary, const Long id, const Vector2& relativePosition): PointerMoveEvent{time, source, pointer, pointers, primary, id} {
+PointerMoveEvent::PointerMoveEvent(const Nanoseconds time, const PointerEventSource source, const Containers::Optional<Pointer> pointer, const Pointers pointers, const bool primary, const Long id, const Modifiers modifiers, const Vector2& relativePosition): PointerMoveEvent{time, source, pointer, pointers, primary, id, modifiers} {
     /* Used for testing only, it's better done with a double initialization
        like this than to have it delegated to from the main constructor */
     _relativePosition = relativePosition;
