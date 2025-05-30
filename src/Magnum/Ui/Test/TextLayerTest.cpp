@@ -11047,7 +11047,7 @@ void TextLayerTest::keyTextEvent() {
 
     /* Hover the node */
     {
-        PointerMoveEvent event{{}, PointerEventSource::Mouse, {}, {}, true, 0};
+        PointerMoveEvent event{{}, PointerEventSource::Mouse, {}, {}, true, 0, {}};
         CORRADE_VERIFY(ui.pointerMoveEvent({50, 50}, event));
         CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), node);
@@ -11074,7 +11074,7 @@ void TextLayerTest::keyTextEvent() {
 
     /* Move pointer away, focus the node instead */
     } {
-        PointerMoveEvent move{{}, PointerEventSource::Mouse, {}, {}, true, 0};
+        PointerMoveEvent move{{}, PointerEventSource::Mouse, {}, {}, true, 0, {}};
         FocusEvent focus{{}};
         CORRADE_VERIFY(!ui.pointerMoveEvent({1000, 1000}, move));
         CORRADE_VERIFY(ui.focusEvent(node, focus));
@@ -11358,7 +11358,7 @@ void TextLayerTest::keyTextEventSynthesizedFromPointerPress() {
 
     /* Delete last char. The text node stays focused and is updated. */
     {
-        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0};
+        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
         CORRADE_VERIFY(ui.pointerPressEvent({65, 5}, event));
         CORRADE_COMPARE(ui.currentPressedNode(), backspace);
         CORRADE_COMPARE(ui.currentFocusedNode(), node);
@@ -11373,7 +11373,7 @@ void TextLayerTest::keyTextEventSynthesizedFromPointerPress() {
 
     /* Add an exclamation mark. Again it stays focused and is updated. */
     {
-        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0};
+        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
         CORRADE_VERIFY(ui.pointerPressEvent({55, 5}, event));
         CORRADE_COMPARE(ui.currentPressedNode(), exclamation);
         CORRADE_COMPARE(ui.currentFocusedNode(), node);
@@ -11388,7 +11388,7 @@ void TextLayerTest::keyTextEventSynthesizedFromPointerPress() {
 
     /* More!! */
     {
-        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0};
+        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
         CORRADE_VERIFY(ui.pointerPressEvent({55, 5}, event));
         CORRADE_COMPARE(ui.currentPressedNode(), exclamation);
         CORRADE_COMPARE(ui.currentFocusedNode(), node);

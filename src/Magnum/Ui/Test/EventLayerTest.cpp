@@ -163,123 +163,123 @@ const struct {
     #define _c(name, ...) _cn(#name, name, __VA_ARGS__)
     {_c(onPress, ),
         [](EventLayer& layer, UnsignedInt dataId) {
-            PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0};
+            PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
             layer.pointerPressEvent(dataId, event);
         }},
     {_cn("onPress with a position", onPress, const Vector2&),
         [](EventLayer& layer, UnsignedInt dataId) {
-            PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0};
+            PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
             layer.pointerPressEvent(dataId, event);
         }},
     {_c(onRelease, ),
         [](EventLayer& layer, UnsignedInt dataId) {
-            PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0};
+            PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
             layer.pointerReleaseEvent(dataId, event);
         }},
     {_cn("onRelease with a position", onRelease, const Vector2&),
         [](EventLayer& layer, UnsignedInt dataId) {
-            PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0};
+            PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
             layer.pointerReleaseEvent(dataId, event);
         }},
     {_c(onTapOrClick, ),
         [](EventLayer& layer, UnsignedInt dataId) {
             /* Yes, this uses the horrific testing-only constructor */
-            PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}, true, {1.0f, 1.0f}};
+            PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}, {}, true, {1.0f, 1.0f}};
             layer.pointerReleaseEvent(dataId, event);
         }},
     {_cn("onTapOrClick with a position", onTapOrClick, const Vector2&),
         [](EventLayer& layer, UnsignedInt dataId) {
             /* Yes, this uses the horrific testing-only constructor */
-            PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}, true, {1.0f, 1.0f}};
+            PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}, {}, true, {1.0f, 1.0f}};
             layer.pointerReleaseEvent(dataId, event);
         }},
     {_c(onMiddleClick, ),
         [](EventLayer& layer, UnsignedInt dataId) {
             /* Yes, this uses the horrific testing-only constructor */
-            PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseMiddle, true, 0, {}, true, {1.0f, 1.0f}};
+            PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseMiddle, true, 0, {}, {}, true, {1.0f, 1.0f}};
             layer.pointerReleaseEvent(dataId, event);
         }},
     {_cn("onMiddleClick with a position", onMiddleClick, const Vector2&),
         [](EventLayer& layer, UnsignedInt dataId) {
             /* Yes, this uses the horrific testing-only constructor */
-            PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseMiddle, true, 0, {}, true, {1.0f, 1.0f}};
+            PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseMiddle, true, 0, {}, {}, true, {1.0f, 1.0f}};
             layer.pointerReleaseEvent(dataId, event);
         }},
     {_c(onRightClick, ),
         [](EventLayer& layer, UnsignedInt dataId) {
             /* Yes, this uses the horrific testing-only constructor */
-            PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseRight, true, 0, {}, true, {1.0f, 1.0f}};
+            PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseRight, true, 0, {}, {}, true, {1.0f, 1.0f}};
             layer.pointerReleaseEvent(dataId, event);
         }},
     {_cn("onRightClick with a position", onRightClick, const Vector2&),
         [](EventLayer& layer, UnsignedInt dataId) {
             /* Yes, this uses the horrific testing-only constructor */
-            PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseRight, true, 0, {}, true, {1.0f, 1.0f}};
+            PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseRight, true, 0, {}, {}, true, {1.0f, 1.0f}};
             layer.pointerReleaseEvent(dataId, event);
         }},
     {_c(onDrag, const Vector2&),
         [](EventLayer& layer, UnsignedInt dataId) {
-            PointerMoveEvent event{{}, PointerEventSource::Mouse, {}, Pointer::MouseLeft, true, 0};
+            PointerMoveEvent event{{}, PointerEventSource::Mouse, {}, Pointer::MouseLeft, true, 0, {}};
             event.setCaptured(true); /* only captured events are considered */
             layer.pointerMoveEvent(dataId, event);
         }},
     {_cn("onDrag with a position", onDrag, const Vector2&, const Vector2&),
         [](EventLayer& layer, UnsignedInt dataId) {
-            PointerMoveEvent event{{}, PointerEventSource::Mouse, {}, Pointer::MouseLeft, true, 0};
+            PointerMoveEvent event{{}, PointerEventSource::Mouse, {}, Pointer::MouseLeft, true, 0, {}};
             event.setCaptured(true); /* only captured events are considered */
             layer.pointerMoveEvent(dataId, event);
         }},
     {_c(onScroll, const Vector2&),
         [](EventLayer& layer, UnsignedInt dataId) {
-            ScrollEvent event{{}, {}};
+            ScrollEvent event{{}, {}, {}};
             layer.scrollEvent(dataId, event);
         }},
     {_cn("onScroll with a position", onScroll, const Vector2&, const Vector2&),
         [](EventLayer& layer, UnsignedInt dataId) {
-            ScrollEvent event{{}, {}};
+            ScrollEvent event{{}, {}, {}};
             layer.scrollEvent(dataId, event);
         }},
     {_cn("onDragOrScroll with a drag", onDragOrScroll, const Vector2&),
         [](EventLayer& layer, UnsignedInt dataId) {
-            PointerMoveEvent event{{}, PointerEventSource::Mouse, {}, Pointer::MouseLeft, true, 0};
+            PointerMoveEvent event{{}, PointerEventSource::Mouse, {}, Pointer::MouseLeft, true, 0, {}};
             event.setCaptured(true); /* only captured events are considered */
             layer.pointerMoveEvent(dataId, event);
         }},
     {_cn("onDragOrScroll with a drag and a position", onDragOrScroll, const Vector2&, const Vector2&),
         [](EventLayer& layer, UnsignedInt dataId) {
-            PointerMoveEvent event{{}, PointerEventSource::Mouse, {}, Pointer::MouseLeft, true, 0};
+            PointerMoveEvent event{{}, PointerEventSource::Mouse, {}, Pointer::MouseLeft, true, 0, {}};
             event.setCaptured(true); /* only captured events are considered */
             layer.pointerMoveEvent(dataId, event);
         }},
     {_cn("onDragOrScroll with a scroll", onDragOrScroll, const Vector2&),
         [](EventLayer& layer, UnsignedInt dataId) {
-            ScrollEvent event{{}, {}};
+            ScrollEvent event{{}, {}, {}};
             layer.scrollEvent(dataId, event);
         }},
     {_cn("onDragOrScroll with a scroll and a position", onDragOrScroll, const Vector2&, const Vector2&),
         [](EventLayer& layer, UnsignedInt dataId) {
-            ScrollEvent event{{}, {}};
+            ScrollEvent event{{}, {}, {}};
             layer.scrollEvent(dataId, event);
         }},
     {_c(onPinch, const Vector2&, const Vector2&, const Complex&, Float),
         [](EventLayer& layer, UnsignedInt dataId) {
             /* Is triggered only if at least a primary + secondary finger is
                pressed and one of them is moved */
-            PointerEvent primary{{}, PointerEventSource::Touch, Pointer::Finger, true, 12};
-            PointerEvent secondary{{}, PointerEventSource::Touch, Pointer::Finger, false, 34};
-            PointerMoveEvent move{{}, PointerEventSource::Touch, {}, Pointer::Finger, false, 34};
+            PointerEvent primary{{}, PointerEventSource::Touch, Pointer::Finger, true, 12, {}};
+            PointerEvent secondary{{}, PointerEventSource::Touch, Pointer::Finger, false, 34, {}};
+            PointerMoveEvent move{{}, PointerEventSource::Touch, {}, Pointer::Finger, false, 34, {}};
             layer.pointerPressEvent(dataId, primary);
             layer.pointerPressEvent(dataId, secondary);
             layer.pointerMoveEvent(dataId, move);
         }},
     {_c(onEnter, ),
         [](EventLayer& layer, UnsignedInt dataId) {
-            PointerMoveEvent event{{}, PointerEventSource::Mouse, {}, {}, true, 0};
+            PointerMoveEvent event{{}, PointerEventSource::Mouse, {}, {}, true, 0, {}};
             layer.pointerEnterEvent(dataId, event);
         }},
     {_c(onLeave, ),
         [](EventLayer& layer, UnsignedInt dataId) {
-            PointerMoveEvent event{{}, PointerEventSource::Mouse, {}, {}, true, 0};
+            PointerMoveEvent event{{}, PointerEventSource::Mouse, {}, {}, true, 0, {}};
             layer.pointerLeaveEvent(dataId, event);
         }},
     {_c(onFocus, ),
@@ -739,7 +739,7 @@ void EventLayerTest::call() {
         CORRADE_COMPARE(layer.usedScopedConnectionCount(), 0);
         CORRADE_COMPARE(layer.usedAllocatedConnectionCount(), 1);
 
-        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0};
+        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
         layer.pointerPressEvent(0, event);
         /* Called it (1) */
         CORRADE_COMPARE(functorCalledConstructedDestructedCount, 1101);
@@ -1020,53 +1020,53 @@ void EventLayerTest::press() {
 
     /* Should only get fired for mouse left, *primary* finger or pen */
     {
-        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0};
+        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
         layer.pointerPressEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 1);
     } {
-        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseMiddle, true, 0};
+        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseMiddle, true, 0, {}};
         layer.pointerPressEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 1);
     } {
-        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseRight, true, 0};
+        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseRight, true, 0, {}};
         layer.pointerPressEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 1);
     } {
-        PointerEvent event{{}, PointerEventSource::Touch, Pointer::Finger, true, 0};
+        PointerEvent event{{}, PointerEventSource::Touch, Pointer::Finger, true, 0, {}};
         layer.pointerPressEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 2);
     } {
-        PointerEvent event{{}, PointerEventSource::Touch, Pointer::Finger, false, 0};
+        PointerEvent event{{}, PointerEventSource::Touch, Pointer::Finger, false, 0, {}};
         layer.pointerPressEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 2);
     } {
-        PointerEvent event{{}, PointerEventSource::Pen, Pointer::Pen, true, 0};
+        PointerEvent event{{}, PointerEventSource::Pen, Pointer::Pen, true, 0, {}};
         layer.pointerPressEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 3);
     } {
-        PointerEvent event{{}, PointerEventSource::Pen, Pointer::Eraser, true, 0};
+        PointerEvent event{{}, PointerEventSource::Pen, Pointer::Eraser, true, 0, {}};
         layer.pointerPressEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 3);
 
     /* Shouldn't get fired for any other than press events */
     } {
-        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0};
+        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
         layer.pointerReleaseEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 3);
     } {
-        PointerMoveEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, Pointer::MouseLeft, true, 0};
+        PointerMoveEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, Pointer::MouseLeft, true, 0, {}};
         layer.pointerMoveEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 3);
     } {
-        PointerMoveEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, Pointer::MouseLeft, true, 0};
+        PointerMoveEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, Pointer::MouseLeft, true, 0, {}};
         layer.pointerEnterEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 3);
     } {
-        PointerMoveEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, Pointer::MouseLeft, true, 0};
+        PointerMoveEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, Pointer::MouseLeft, true, 0, {}};
         layer.pointerLeaveEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 3);
     } {
-        ScrollEvent event{{}, {}};
+        ScrollEvent event{{}, {}, {}};
         layer.scrollEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 3);
     } {
@@ -1090,53 +1090,53 @@ void EventLayerTest::release() {
 
     /* Should only get fired for mouse left, *primary* finger or pen */
     {
-        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0};
+        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
         layer.pointerReleaseEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 1);
     } {
-        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseMiddle, true, 0};
+        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseMiddle, true, 0, {}};
         layer.pointerReleaseEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 1);
     } {
-        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseRight, true, 0};
+        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseRight, true, 0, {}};
         layer.pointerReleaseEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 1);
     } {
-        PointerEvent event{{}, PointerEventSource::Touch, Pointer::Finger, true, 0};
+        PointerEvent event{{}, PointerEventSource::Touch, Pointer::Finger, true, 0, {}};
         layer.pointerReleaseEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 2);
     } {
-        PointerEvent event{{}, PointerEventSource::Touch, Pointer::Finger, false, 0};
+        PointerEvent event{{}, PointerEventSource::Touch, Pointer::Finger, false, 0, {}};
         layer.pointerReleaseEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 2);
     } {
-        PointerEvent event{{}, PointerEventSource::Pen, Pointer::Pen, true, 0};
+        PointerEvent event{{}, PointerEventSource::Pen, Pointer::Pen, true, 0, {}};
         layer.pointerReleaseEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 3);
     } {
-        PointerEvent event{{}, PointerEventSource::Pen, Pointer::Eraser, true, 0};
+        PointerEvent event{{}, PointerEventSource::Pen, Pointer::Eraser, true, 0, {}};
         layer.pointerReleaseEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 3);
 
     /* Shouldn't get fired for any other than release events */
     } {
-        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0};
+        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
         layer.pointerPressEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 3);
     } {
-        PointerMoveEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, Pointer::MouseLeft, true, 0};
+        PointerMoveEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, Pointer::MouseLeft, true, 0, {}};
         layer.pointerMoveEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 3);
     } {
-        PointerMoveEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, Pointer::MouseLeft, true, 0};
+        PointerMoveEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, Pointer::MouseLeft, true, 0, {}};
         layer.pointerEnterEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 3);
     } {
-        PointerMoveEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, Pointer::MouseLeft, true, 0};
+        PointerMoveEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, Pointer::MouseLeft, true, 0, {}};
         layer.pointerLeaveEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 3);
     } {
-        ScrollEvent event{{}, {}};
+        ScrollEvent event{{}, {}, {}};
         layer.scrollEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 3);
     } {
@@ -1164,54 +1164,54 @@ void EventLayerTest::releasePress() {
        as well) or not (and make release happen at whatever node is under
        pointer at the time) */
     {
-        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0};
+        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
         layer.pointerPressEvent(dataHandleId(handle), event);
         CORRADE_VERIFY(!event.isAccepted());
         CORRADE_COMPARE(called, 0);
     } {
-        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseMiddle, true, 0};
+        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseMiddle, true, 0, {}};
         layer.pointerPressEvent(dataHandleId(handle), event);
         CORRADE_VERIFY(!event.isAccepted());
         CORRADE_COMPARE(called, 0);
     } {
-        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseRight, true, 0};
+        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseRight, true, 0, {}};
         layer.pointerPressEvent(dataHandleId(handle), event);
         CORRADE_VERIFY(!event.isAccepted());
         CORRADE_COMPARE(called, 0);
     } {
-        PointerEvent event{{}, PointerEventSource::Touch, Pointer::Finger, true, 0};
+        PointerEvent event{{}, PointerEventSource::Touch, Pointer::Finger, true, 0, {}};
         layer.pointerPressEvent(dataHandleId(handle), event);
         CORRADE_VERIFY(!event.isAccepted());
         CORRADE_COMPARE(called, 0);
     } {
-        PointerEvent event{{}, PointerEventSource::Pen, Pointer::Pen, true, 0};
+        PointerEvent event{{}, PointerEventSource::Pen, Pointer::Pen, true, 0, {}};
         layer.pointerPressEvent(dataHandleId(handle), event);
         CORRADE_VERIFY(!event.isAccepted());
         CORRADE_COMPARE(called, 0);
     } {
-        PointerEvent event{{}, PointerEventSource::Pen, Pointer::Eraser, true, 0};
+        PointerEvent event{{}, PointerEventSource::Pen, Pointer::Eraser, true, 0, {}};
         layer.pointerPressEvent(dataHandleId(handle), event);
         CORRADE_VERIFY(!event.isAccepted());
         CORRADE_COMPARE(called, 0);
 
     /* Any other than release events shouldn't get accepted either */
     } {
-        PointerMoveEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, Pointer::MouseLeft, true, 0};
+        PointerMoveEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, Pointer::MouseLeft, true, 0, {}};
         layer.pointerMoveEvent(dataHandleId(handle), event);
         CORRADE_VERIFY(!event.isAccepted());
         CORRADE_COMPARE(called, 0);
     } {
-        PointerMoveEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, Pointer::MouseLeft, true, 0};
+        PointerMoveEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, Pointer::MouseLeft, true, 0, {}};
         layer.pointerEnterEvent(dataHandleId(handle), event);
         CORRADE_VERIFY(!event.isAccepted());
         CORRADE_COMPARE(called, 0);
     } {
-        PointerMoveEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, Pointer::MouseLeft, true, 0};
+        PointerMoveEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, Pointer::MouseLeft, true, 0, {}};
         layer.pointerLeaveEvent(dataHandleId(handle), event);
         CORRADE_VERIFY(!event.isAccepted());
         CORRADE_COMPARE(called, 0);
     } {
-        ScrollEvent event{{}, {}};
+        ScrollEvent event{{}, {}, {}};
         layer.scrollEvent(dataHandleId(handle), event);
         CORRADE_VERIFY(!event.isAccepted());
         CORRADE_COMPARE(called, 0);
@@ -1229,7 +1229,7 @@ void EventLayerTest::releasePress() {
     /* Verify that the callback is actually properly registered so this doesn't
        result in false positives */
     } {
-        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0};
+        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
         layer.pointerReleaseEvent(dataHandleId(handle), event);
         CORRADE_VERIFY(event.isAccepted());
         CORRADE_COMPARE(called, 1);
@@ -1285,7 +1285,7 @@ void EventLayerTest::pressReleaseFromUserInterface() {
     /* A press should be accepted and resulting in the press handler being
        called */
     {
-        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0};
+        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
         CORRADE_VERIFY(ui.pointerPressEvent({50, 70}, event));
         CORRADE_COMPARE(ui.currentPressedNode(), node);
         CORRADE_COMPARE(ui.currentCapturedNode(), node);
@@ -1298,7 +1298,7 @@ void EventLayerTest::pressReleaseFromUserInterface() {
     /* A release should be accepted and resulting in the release handler being
        called */
     } {
-        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0};
+        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
         CORRADE_VERIFY(ui.pointerReleaseEvent({50, 65}, event));
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
@@ -1322,62 +1322,62 @@ void EventLayerTest::tapOrClick() {
        that's inside of a pressed node (yes this uses the horrific testing-only
        constructor) */
     {
-        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {0.5f, 0.5f}, true, {1.0f, 1.0f}};
+        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}, {0.5f, 0.5f}, true, {1.0f, 1.0f}};
         layer.pointerReleaseEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 1);
     } {
         /* Not pressed */
-        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {0.5f, 0.5f}, false, {1.0f, 1.0f}};
+        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}, {0.5f, 0.5f}, false, {1.0f, 1.0f}};
         layer.pointerReleaseEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 1);
     } {
         /* Wrong button */
-        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseMiddle, true, 0, {0.5f, 0.5f}, true, {1.0f, 1.0f}};
+        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseMiddle, true, 0, {}, {0.5f, 0.5f}, true, {1.0f, 1.0f}};
         layer.pointerReleaseEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 1);
     } {
         /* Wrong button */
-        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseRight, true, 0, {0.5f, 0.5f}, true, {1.0f, 1.0f}};
+        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseRight, true, 0, {}, {0.5f, 0.5f}, true, {1.0f, 1.0f}};
         layer.pointerReleaseEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 1);
     } {
-        PointerEvent event{{}, PointerEventSource::Touch, Pointer::Finger, true, 37, {0.5f, 0.5f}, true, {1.0f, 1.0f}};
+        PointerEvent event{{}, PointerEventSource::Touch, Pointer::Finger, true, 37, {}, {0.5f, 0.5f}, true, {1.0f, 1.0f}};
         layer.pointerReleaseEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 2);
     } {
         /* Secondary finger */
-        PointerEvent event{{}, PointerEventSource::Touch, Pointer::Finger, false, 37, {0.5f, 0.5f}, true, {1.0f, 1.0f}};
+        PointerEvent event{{}, PointerEventSource::Touch, Pointer::Finger, false, 37, {}, {0.5f, 0.5f}, true, {1.0f, 1.0f}};
         layer.pointerReleaseEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 2);
     } {
-        PointerEvent event{{}, PointerEventSource::Pen, Pointer::Pen, true, 0, {0.5f, 0.5f}, true, {1.0f, 1.0f}};
+        PointerEvent event{{}, PointerEventSource::Pen, Pointer::Pen, true, 0, {}, {0.5f, 0.5f}, true, {1.0f, 1.0f}};
         layer.pointerReleaseEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 3);
     } {
         /* Wrong button */
-        PointerEvent event{{}, PointerEventSource::Pen, Pointer::Eraser, true, 0, {0.5f, 0.5f}, true, {1.0f, 1.0f}};
+        PointerEvent event{{}, PointerEventSource::Pen, Pointer::Eraser, true, 0, {}, {0.5f, 0.5f}, true, {1.0f, 1.0f}};
         layer.pointerReleaseEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 3);
 
     /* Shouldn't get fired for any other events than release */
     } {
-        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0};
+        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
         layer.pointerPressEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 3);
     } {
-        PointerMoveEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, Pointer::MouseLeft, true, 0};
+        PointerMoveEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, Pointer::MouseLeft, true, 0, {}};
         layer.pointerMoveEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 3);
     } {
-        PointerMoveEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, Pointer::MouseLeft, true, 0};
+        PointerMoveEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, Pointer::MouseLeft, true, 0, {}};
         layer.pointerEnterEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 3);
     } {
-        PointerMoveEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, Pointer::MouseLeft, true, 0};
+        PointerMoveEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, Pointer::MouseLeft, true, 0, {}};
         layer.pointerLeaveEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 3);
     } {
-        ScrollEvent event{{}, {}};
+        ScrollEvent event{{}, {}, {}};
         layer.scrollEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 3);
     } {
@@ -1403,37 +1403,37 @@ void EventLayerTest::tapOrClickPress() {
        pen to prevent it from being propagated further if no other data accepts
        it. The handler shouldn't get called though. */
     {
-        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0};
+        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
         layer.pointerPressEvent(dataHandleId(handle), event);
         CORRADE_VERIFY(event.isAccepted());
         CORRADE_COMPARE(called, 0);
     } {
-        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseMiddle, true, 0};
+        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseMiddle, true, 0, {}};
         layer.pointerPressEvent(dataHandleId(handle), event);
         CORRADE_VERIFY(!event.isAccepted());
         CORRADE_COMPARE(called, 0);
     } {
-        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseRight, true, 0};
+        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseRight, true, 0, {}};
         layer.pointerPressEvent(dataHandleId(handle), event);
         CORRADE_VERIFY(!event.isAccepted());
         CORRADE_COMPARE(called, 0);
     } {
-        PointerEvent event{{}, PointerEventSource::Touch, Pointer::Finger, true, 0};
+        PointerEvent event{{}, PointerEventSource::Touch, Pointer::Finger, true, 0, {}};
         layer.pointerPressEvent(dataHandleId(handle), event);
         CORRADE_VERIFY(event.isAccepted());
         CORRADE_COMPARE(called, 0);
     } {
-        PointerEvent event{{}, PointerEventSource::Touch, Pointer::Finger, false, 0};
+        PointerEvent event{{}, PointerEventSource::Touch, Pointer::Finger, false, 0, {}};
         layer.pointerPressEvent(dataHandleId(handle), event);
         CORRADE_VERIFY(!event.isAccepted());
         CORRADE_COMPARE(called, 0);
     } {
-        PointerEvent event{{}, PointerEventSource::Pen, Pointer::Pen, true, 0};
+        PointerEvent event{{}, PointerEventSource::Pen, Pointer::Pen, true, 0, {}};
         layer.pointerPressEvent(dataHandleId(handle), event);
         CORRADE_VERIFY(event.isAccepted());
         CORRADE_COMPARE(called, 0);
     } {
-        PointerEvent event{{}, PointerEventSource::Pen, Pointer::Eraser, true, 0};
+        PointerEvent event{{}, PointerEventSource::Pen, Pointer::Eraser, true, 0, {}};
         layer.pointerPressEvent(dataHandleId(handle), event);
         CORRADE_VERIFY(!event.isAccepted());
         CORRADE_COMPARE(called, 0);
@@ -1441,22 +1441,22 @@ void EventLayerTest::tapOrClickPress() {
     /* Any other than press, release or tapOrClick event shouldn't get
        accepted */
     } {
-        PointerMoveEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, Pointer::MouseLeft, true, 0};
+        PointerMoveEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, Pointer::MouseLeft, true, 0, {}};
         layer.pointerMoveEvent(dataHandleId(handle), event);
         CORRADE_VERIFY(!event.isAccepted());
         CORRADE_COMPARE(called, 0);
     } {
-        PointerMoveEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, Pointer::MouseLeft, true, 0};
+        PointerMoveEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, Pointer::MouseLeft, true, 0, {}};
         layer.pointerEnterEvent(dataHandleId(handle), event);
         CORRADE_VERIFY(!event.isAccepted());
         CORRADE_COMPARE(called, 0);
     } {
-        PointerMoveEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, Pointer::MouseLeft, true, 0};
+        PointerMoveEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, Pointer::MouseLeft, true, 0, {}};
         layer.pointerLeaveEvent(dataHandleId(handle), event);
         CORRADE_VERIFY(!event.isAccepted());
         CORRADE_COMPARE(called, 0);
     } {
-        ScrollEvent event{{}, {}};
+        ScrollEvent event{{}, {}, {}};
         layer.scrollEvent(dataHandleId(handle), event);
         CORRADE_VERIFY(!event.isAccepted());
         CORRADE_COMPARE(called, 0);
@@ -1474,7 +1474,7 @@ void EventLayerTest::tapOrClickPress() {
     /* Verify that the callback is actually properly registered so this doesn't
        result in false positives */
     } {
-        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}, true, {1.0f, 1.0f}};
+        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}, {}, true, {1.0f, 1.0f}};
         layer.pointerReleaseEvent(dataHandleId(handle), event);
         CORRADE_VERIFY(event.isAccepted());
         CORRADE_COMPARE(called, 1);
@@ -1515,7 +1515,7 @@ void EventLayerTest::tapOrClickFromUserInterface() {
     /* A press should be accepted but not resulting in the handler being
        called */
     {
-        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0};
+        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
         CORRADE_VERIFY(ui.pointerPressEvent({50, 70}, event));
         CORRADE_COMPARE(ui.currentPressedNode(), node);
         CORRADE_COMPARE(ui.currentCapturedNode(), node);
@@ -1526,7 +1526,7 @@ void EventLayerTest::tapOrClickFromUserInterface() {
     /* A release should be accepted as well, resulting in the handler being
        called */
     } {
-        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0};
+        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
         CORRADE_VERIFY(ui.pointerReleaseEvent({50, 65}, event));
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
@@ -1537,8 +1537,8 @@ void EventLayerTest::tapOrClickFromUserInterface() {
     /* The press and release pointer type or source doesn't have to match,
        currently */
     } {
-        PointerEvent press{{}, PointerEventSource::Pen, Pointer::Pen, true, 0};
-        PointerEvent release{{}, PointerEventSource::Touch, Pointer::Finger, true, 0};
+        PointerEvent press{{}, PointerEventSource::Pen, Pointer::Pen, true, 0, {}};
+        PointerEvent release{{}, PointerEventSource::Touch, Pointer::Finger, true, 0, {}};
         CORRADE_VERIFY(ui.pointerPressEvent({50, 70}, press));
         CORRADE_VERIFY(ui.pointerReleaseEvent({50, 65}, release));
         CORRADE_COMPARE(called, 2);
@@ -1547,8 +1547,8 @@ void EventLayerTest::tapOrClickFromUserInterface() {
 
     /* Press with release outside shouldn't cause a tap or click */
     } {
-        PointerEvent press{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0};
-        PointerEvent release{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0};
+        PointerEvent press{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
+        PointerEvent release{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
         CORRADE_VERIFY(ui.pointerPressEvent({50, 70}, press));
         CORRADE_COMPARE(ui.currentPressedNode(), node);
         CORRADE_COMPARE(ui.currentCapturedNode(), node);
@@ -1570,59 +1570,59 @@ void EventLayerTest::middleClick() {
     /* Should only get fired for mouse middle release that's inside of a
        pressed node (yes this uses the horrific testing-only constructor) */
     {
-        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseMiddle, true, 0, {0.5f, 0.5f}, true, {1.0f, 1.0f}};
+        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseMiddle, true, 0, {}, {0.5f, 0.5f}, true, {1.0f, 1.0f}};
         layer.pointerReleaseEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 1);
     } {
         /* Not pressed */
-        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseMiddle, true, 0, {0.5f, 0.5f}, false, {1.0f, 1.0f}};
+        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseMiddle, true, 0, {}, {0.5f, 0.5f}, false, {1.0f, 1.0f}};
         layer.pointerReleaseEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 1);
     } {
         /* Wrong button */
-        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {0.5f, 0.5f}, true, {1.0f, 1.0f}};
+        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}, {0.5f, 0.5f}, true, {1.0f, 1.0f}};
         layer.pointerReleaseEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 1);
     } {
         /* Wrong button */
-        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseRight, true, 0, {0.5f, 0.5f}, true, {1.0f, 1.0f}};
+        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseRight, true, 0, {}, {0.5f, 0.5f}, true, {1.0f, 1.0f}};
         layer.pointerReleaseEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 1);
     } {
         /* Wrong source */
-        PointerEvent event{{}, PointerEventSource::Touch, Pointer::Finger, true, 37, {0.5f, 0.5f}, true, {1.0f, 1.0f}};
+        PointerEvent event{{}, PointerEventSource::Touch, Pointer::Finger, true, 37, {}, {0.5f, 0.5f}, true, {1.0f, 1.0f}};
         layer.pointerReleaseEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 1);
     } {
         /* Wrong source */
-        PointerEvent event{{}, PointerEventSource::Pen, Pointer::Pen, true, 0, {0.5f, 0.5f}, true, {1.0f, 1.0f}};
+        PointerEvent event{{}, PointerEventSource::Pen, Pointer::Pen, true, 0, {}, {0.5f, 0.5f}, true, {1.0f, 1.0f}};
         layer.pointerReleaseEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 1);
     } {
         /* Wrong source */
-        PointerEvent event{{}, PointerEventSource::Pen, Pointer::Eraser, true, 0, {0.5f, 0.5f}, true, {1.0f, 1.0f}};
+        PointerEvent event{{}, PointerEventSource::Pen, Pointer::Eraser, true, 0, {}, {0.5f, 0.5f}, true, {1.0f, 1.0f}};
         layer.pointerReleaseEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 1);
 
     /* Shouldn't get fired for any other events than release */
     } {
-        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseMiddle, true, 0};
+        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseMiddle, true, 0, {}};
         layer.pointerPressEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 1);
     } {
-        PointerMoveEvent event{{}, PointerEventSource::Mouse, Pointer::MouseMiddle, Pointer::MouseMiddle, true, 0};
+        PointerMoveEvent event{{}, PointerEventSource::Mouse, Pointer::MouseMiddle, Pointer::MouseMiddle, true, 0, {}};
         layer.pointerMoveEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 1);
     } {
-        PointerMoveEvent event{{}, PointerEventSource::Mouse, Pointer::MouseMiddle, Pointer::MouseMiddle, true, 0};
+        PointerMoveEvent event{{}, PointerEventSource::Mouse, Pointer::MouseMiddle, Pointer::MouseMiddle, true, 0, {}};
         layer.pointerEnterEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 1);
     } {
-        PointerMoveEvent event{{}, PointerEventSource::Mouse, Pointer::MouseMiddle, Pointer::MouseMiddle, true, 0};
+        PointerMoveEvent event{{}, PointerEventSource::Mouse, Pointer::MouseMiddle, Pointer::MouseMiddle, true, 0, {}};
         layer.pointerLeaveEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 1);
     } {
-        ScrollEvent event{{}, {}};
+        ScrollEvent event{{}, {}, {}};
         layer.scrollEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 1);
     } {
@@ -1648,32 +1648,32 @@ void EventLayerTest::middleClickPress() {
        being propagated further if no other data accepts it. The handler
        shouldn't get called though. */
     {
-        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0};
+        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
         layer.pointerPressEvent(dataHandleId(handle), event);
         CORRADE_VERIFY(!event.isAccepted());
         CORRADE_COMPARE(called, 0);
     } {
-        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseMiddle, true, 0};
+        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseMiddle, true, 0, {}};
         layer.pointerPressEvent(dataHandleId(handle), event);
         CORRADE_VERIFY(event.isAccepted());
         CORRADE_COMPARE(called, 0);
     } {
-        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseRight, true, 0};
+        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseRight, true, 0, {}};
         layer.pointerPressEvent(dataHandleId(handle), event);
         CORRADE_VERIFY(!event.isAccepted());
         CORRADE_COMPARE(called, 0);
     } {
-        PointerEvent event{{}, PointerEventSource::Touch, Pointer::Finger, true, 0};
+        PointerEvent event{{}, PointerEventSource::Touch, Pointer::Finger, true, 0, {}};
         layer.pointerPressEvent(dataHandleId(handle), event);
         CORRADE_VERIFY(!event.isAccepted());
         CORRADE_COMPARE(called, 0);
     } {
-        PointerEvent event{{}, PointerEventSource::Pen, Pointer::Pen, true, 0};
+        PointerEvent event{{}, PointerEventSource::Pen, Pointer::Pen, true, 0, {}};
         layer.pointerPressEvent(dataHandleId(handle), event);
         CORRADE_VERIFY(!event.isAccepted());
         CORRADE_COMPARE(called, 0);
     } {
-        PointerEvent event{{}, PointerEventSource::Pen, Pointer::Eraser, true, 0};
+        PointerEvent event{{}, PointerEventSource::Pen, Pointer::Eraser, true, 0, {}};
         layer.pointerPressEvent(dataHandleId(handle), event);
         CORRADE_VERIFY(!event.isAccepted());
         CORRADE_COMPARE(called, 0);
@@ -1681,22 +1681,22 @@ void EventLayerTest::middleClickPress() {
     /* Any other than press, release or tapOrClick event shouldn't get
        accepted */
     } {
-        PointerMoveEvent event{{}, PointerEventSource::Mouse, Pointer::MouseMiddle, Pointer::MouseMiddle, true, 0};
+        PointerMoveEvent event{{}, PointerEventSource::Mouse, Pointer::MouseMiddle, Pointer::MouseMiddle, true, 0, {}};
         layer.pointerMoveEvent(dataHandleId(handle), event);
         CORRADE_VERIFY(!event.isAccepted());
         CORRADE_COMPARE(called, 0);
     } {
-        PointerMoveEvent event{{}, PointerEventSource::Mouse, Pointer::MouseMiddle, Pointer::MouseMiddle, true, 0};
+        PointerMoveEvent event{{}, PointerEventSource::Mouse, Pointer::MouseMiddle, Pointer::MouseMiddle, true, 0, {}};
         layer.pointerEnterEvent(dataHandleId(handle), event);
         CORRADE_VERIFY(!event.isAccepted());
         CORRADE_COMPARE(called, 0);
     } {
-        PointerMoveEvent event{{}, PointerEventSource::Mouse, Pointer::MouseMiddle, Pointer::MouseMiddle, true, 0};
+        PointerMoveEvent event{{}, PointerEventSource::Mouse, Pointer::MouseMiddle, Pointer::MouseMiddle, true, 0, {}};
         layer.pointerLeaveEvent(dataHandleId(handle), event);
         CORRADE_VERIFY(!event.isAccepted());
         CORRADE_COMPARE(called, 0);
     } {
-        ScrollEvent event{{}, {}};
+        ScrollEvent event{{}, {}, {}};
         layer.scrollEvent(dataHandleId(handle), event);
         CORRADE_VERIFY(!event.isAccepted());
         CORRADE_COMPARE(called, 0);
@@ -1714,7 +1714,7 @@ void EventLayerTest::middleClickPress() {
     /* Verify that the callback is actually properly registered so this doesn't
        result in false positives */
     } {
-        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseMiddle, true, 0, {}, true, {1.0f, 1.0f}};
+        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseMiddle, true, 0, {}, {}, true, {1.0f, 1.0f}};
         layer.pointerReleaseEvent(dataHandleId(handle), event);
         CORRADE_VERIFY(event.isAccepted());
         CORRADE_COMPARE(called, 1);
@@ -1755,7 +1755,7 @@ void EventLayerTest::middleClickFromUserInterface() {
     /* A press should be accepted but not resulting in the handler being
        called */
     {
-        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseMiddle, true, 0};
+        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseMiddle, true, 0, {}};
         CORRADE_VERIFY(ui.pointerPressEvent({50, 70}, event));
         CORRADE_COMPARE(ui.currentPressedNode(), node);
         CORRADE_COMPARE(ui.currentCapturedNode(), node);
@@ -1766,7 +1766,7 @@ void EventLayerTest::middleClickFromUserInterface() {
     /* A release should be accepted as well, resulting in the handler being
        called */
     } {
-        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseMiddle, true, 0};
+        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseMiddle, true, 0, {}};
         CORRADE_VERIFY(ui.pointerReleaseEvent({50, 65}, event));
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
@@ -1776,8 +1776,8 @@ void EventLayerTest::middleClickFromUserInterface() {
 
     /* Press with release outside shouldn't cause a tap or click */
     } {
-        PointerEvent press{{}, PointerEventSource::Mouse, Pointer::MouseMiddle, true, 0};
-        PointerEvent release{{}, PointerEventSource::Mouse, Pointer::MouseMiddle, true, 0};
+        PointerEvent press{{}, PointerEventSource::Mouse, Pointer::MouseMiddle, true, 0, {}};
+        PointerEvent release{{}, PointerEventSource::Mouse, Pointer::MouseMiddle, true, 0, {}};
         CORRADE_VERIFY(ui.pointerPressEvent({50, 70}, press));
         CORRADE_COMPARE(ui.currentPressedNode(), node);
         CORRADE_COMPARE(ui.currentCapturedNode(), node);
@@ -1799,63 +1799,63 @@ void EventLayerTest::rightClick() {
     /* Should only get fired for mouse middle release that's inside of a
        pressed node (yes this uses the horrific testing-only constructor) */
     {
-        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseRight, true, 0, {0.5f, 0.5f}, true, {1.0f, 1.0f}};
+        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseRight, true, 0, {}, {0.5f, 0.5f}, true, {1.0f, 1.0f}};
         layer.pointerReleaseEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 1);
     } {
         /* Not pressed */
-        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseRight, true, 0, {0.5f, 0.5f}, false, {1.0f, 1.0f}};
+        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseRight, true, 0, {}, {0.5f, 0.5f}, false, {1.0f, 1.0f}};
         layer.pointerReleaseEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 1);
     } {
         /* Wrong button */
-        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {0.5f, 0.5f}, true, {1.0f, 1.0f}};
+        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}, {0.5f, 0.5f}, true, {1.0f, 1.0f}};
         layer.pointerReleaseEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 1);
     } {
         /* Wrong button */
-        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseMiddle, true, 0, {0.5f, 0.5f}, true, {1.0f, 1.0f}};
+        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseMiddle, true, 0, {}, {0.5f, 0.5f}, true, {1.0f, 1.0f}};
         layer.pointerReleaseEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 1);
     } {
         /* Wrong source */
-        PointerEvent event{{}, PointerEventSource::Touch, Pointer::Finger, true, 37, {0.5f, 0.5f}, true, {1.0f, 1.0f}};
+        PointerEvent event{{}, PointerEventSource::Touch, Pointer::Finger, true, 37, {}, {0.5f, 0.5f}, true, {1.0f, 1.0f}};
         layer.pointerReleaseEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 1);
     } {
         /* Wrong source */
-        PointerEvent event{{}, PointerEventSource::Pen, Pointer::Pen, true, 0, {0.5f, 0.5f}, true, {1.0f, 1.0f}};
+        PointerEvent event{{}, PointerEventSource::Pen, Pointer::Pen, true, 0, {}, {0.5f, 0.5f}, true, {1.0f, 1.0f}};
         layer.pointerReleaseEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 1);
     } {
         /* Wrong source */
-        PointerEvent event{{}, PointerEventSource::Pen, Pointer::Eraser, true, 0, {0.5f, 0.5f}, true, {1.0f, 1.0f}};
+        PointerEvent event{{}, PointerEventSource::Pen, Pointer::Eraser, true, 0, {}, {0.5f, 0.5f}, true, {1.0f, 1.0f}};
         layer.pointerReleaseEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 1);
 
     /* Shouldn't get fired for any other events than release */
     } {
-        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseRight, true, 0};
+        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseRight, true, 0, {}};
         layer.pointerPressEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 1);
     } {
-        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseRight, true, 0};
+        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseRight, true, 0, {}};
         layer.pointerReleaseEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 1);
     } {
-        PointerMoveEvent event{{}, PointerEventSource::Mouse, Pointer::MouseRight, Pointer::MouseRight, true, 0};
+        PointerMoveEvent event{{}, PointerEventSource::Mouse, Pointer::MouseRight, Pointer::MouseRight, true, 0, {}};
         layer.pointerMoveEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 1);
     } {
-        PointerMoveEvent event{{}, PointerEventSource::Mouse, Pointer::MouseRight, Pointer::MouseRight, true, 0};
+        PointerMoveEvent event{{}, PointerEventSource::Mouse, Pointer::MouseRight, Pointer::MouseRight, true, 0, {}};
         layer.pointerEnterEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 1);
     } {
-        PointerMoveEvent event{{}, PointerEventSource::Mouse, Pointer::MouseRight, Pointer::MouseRight, true, 0};
+        PointerMoveEvent event{{}, PointerEventSource::Mouse, Pointer::MouseRight, Pointer::MouseRight, true, 0, {}};
         layer.pointerLeaveEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 1);
     } {
-        ScrollEvent event{{}, {}};
+        ScrollEvent event{{}, {}, {}};
         layer.scrollEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 1);
     } {
@@ -1881,32 +1881,32 @@ void EventLayerTest::rightClickPress() {
        being propagated further if no other data accepts it. The handler
        shouldn't get called though. */
     {
-        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0};
+        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
         layer.pointerPressEvent(dataHandleId(handle), event);
         CORRADE_VERIFY(!event.isAccepted());
         CORRADE_COMPARE(called, 0);
     } {
-        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseMiddle, true, 0};
+        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseMiddle, true, 0, {}};
         layer.pointerPressEvent(dataHandleId(handle), event);
         CORRADE_VERIFY(!event.isAccepted());
         CORRADE_COMPARE(called, 0);
     } {
-        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseRight, true, 0};
+        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseRight, true, 0, {}};
         layer.pointerPressEvent(dataHandleId(handle), event);
         CORRADE_VERIFY(event.isAccepted());
         CORRADE_COMPARE(called, 0);
     } {
-        PointerEvent event{{}, PointerEventSource::Touch, Pointer::Finger, true, 0};
+        PointerEvent event{{}, PointerEventSource::Touch, Pointer::Finger, true, 0, {}};
         layer.pointerPressEvent(dataHandleId(handle), event);
         CORRADE_VERIFY(!event.isAccepted());
         CORRADE_COMPARE(called, 0);
     } {
-        PointerEvent event{{}, PointerEventSource::Pen, Pointer::Pen, true, 0};
+        PointerEvent event{{}, PointerEventSource::Pen, Pointer::Pen, true, 0, {}};
         layer.pointerPressEvent(dataHandleId(handle), event);
         CORRADE_VERIFY(!event.isAccepted());
         CORRADE_COMPARE(called, 0);
     } {
-        PointerEvent event{{}, PointerEventSource::Pen, Pointer::Eraser, true, 0};
+        PointerEvent event{{}, PointerEventSource::Pen, Pointer::Eraser, true, 0, {}};
         layer.pointerPressEvent(dataHandleId(handle), event);
         CORRADE_VERIFY(!event.isAccepted());
         CORRADE_COMPARE(called, 0);
@@ -1914,22 +1914,22 @@ void EventLayerTest::rightClickPress() {
     /* Any other than press, release or tapOrClick event shouldn't get
        accepted */
     } {
-        PointerMoveEvent event{{}, PointerEventSource::Mouse, Pointer::MouseRight, Pointer::MouseRight, true, 0};
+        PointerMoveEvent event{{}, PointerEventSource::Mouse, Pointer::MouseRight, Pointer::MouseRight, true, 0, {}};
         layer.pointerMoveEvent(dataHandleId(handle), event);
         CORRADE_VERIFY(!event.isAccepted());
         CORRADE_COMPARE(called, 0);
     } {
-        PointerMoveEvent event{{}, PointerEventSource::Mouse, Pointer::MouseRight, Pointer::MouseRight, true, 0};
+        PointerMoveEvent event{{}, PointerEventSource::Mouse, Pointer::MouseRight, Pointer::MouseRight, true, 0, {}};
         layer.pointerEnterEvent(dataHandleId(handle), event);
         CORRADE_VERIFY(!event.isAccepted());
         CORRADE_COMPARE(called, 0);
     } {
-        PointerMoveEvent event{{}, PointerEventSource::Mouse, Pointer::MouseRight, Pointer::MouseRight, true, 0};
+        PointerMoveEvent event{{}, PointerEventSource::Mouse, Pointer::MouseRight, Pointer::MouseRight, true, 0, {}};
         layer.pointerLeaveEvent(dataHandleId(handle), event);
         CORRADE_VERIFY(!event.isAccepted());
         CORRADE_COMPARE(called, 0);
     } {
-        ScrollEvent event{{}, {}};
+        ScrollEvent event{{}, {}, {}};
         layer.scrollEvent(dataHandleId(handle), event);
         CORRADE_VERIFY(!event.isAccepted());
         CORRADE_COMPARE(called, 0);
@@ -1947,7 +1947,7 @@ void EventLayerTest::rightClickPress() {
     /* Verify that the callback is actually properly registered so this doesn't
        result in false positives */
     } {
-        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseRight, true, 0, {}, true, {1.0f, 1.0f}};
+        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseRight, true, 0, {}, {}, true, {1.0f, 1.0f}};
         layer.pointerReleaseEvent(dataHandleId(handle), event);
         CORRADE_VERIFY(event.isAccepted());
         CORRADE_COMPARE(called, 1);
@@ -1988,7 +1988,7 @@ void EventLayerTest::rightClickFromUserInterface() {
     /* A press should be accepted but not resulting in the handler being
        called */
     {
-        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseRight, true, 0};
+        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseRight, true, 0, {}};
         CORRADE_VERIFY(ui.pointerPressEvent({50, 70}, event));
         CORRADE_COMPARE(ui.currentPressedNode(), node);
         CORRADE_COMPARE(ui.currentCapturedNode(), node);
@@ -1999,7 +1999,7 @@ void EventLayerTest::rightClickFromUserInterface() {
     /* A release should be accepted as well, resulting in the handler being
        called */
     } {
-        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseRight, true, 0};
+        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseRight, true, 0, {}};
         CORRADE_VERIFY(ui.pointerReleaseEvent({50, 65}, event));
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
@@ -2009,8 +2009,8 @@ void EventLayerTest::rightClickFromUserInterface() {
 
     /* Press with release outside shouldn't cause a tap or click */
     } {
-        PointerEvent press{{}, PointerEventSource::Mouse, Pointer::MouseRight, true, 0};
-        PointerEvent release{{}, PointerEventSource::Mouse, Pointer::MouseRight, true, 0};
+        PointerEvent press{{}, PointerEventSource::Mouse, Pointer::MouseRight, true, 0, {}};
+        PointerEvent release{{}, PointerEventSource::Mouse, Pointer::MouseRight, true, 0, {}};
         CORRADE_VERIFY(ui.pointerPressEvent({50, 70}, press));
         CORRADE_COMPARE(ui.currentPressedNode(), node);
         CORRADE_COMPARE(ui.currentCapturedNode(), node);
@@ -2034,62 +2034,62 @@ void EventLayerTest::tapOrClickMiddleClickRightClickEdges() {
 
     {
         /* Top left */
-        PointerEvent event{{}, data.source, data.pointer, true, 0, {0.0f, 0.0f}, true, {1.0f, 1.0f}};
+        PointerEvent event{{}, data.source, data.pointer, true, 0, {}, {0.0f, 0.0f}, true, {1.0f, 1.0f}};
         layer.pointerReleaseEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 1);
     } {
         /* Outside on the top left */
-        PointerEvent event{{}, data.source, data.pointer, true, 0, {-0.1f, -0.1f}, true, {1.0f, 1.0f}};
+        PointerEvent event{{}, data.source, data.pointer, true, 0, {}, {-0.1f, -0.1f}, true, {1.0f, 1.0f}};
         layer.pointerReleaseEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 1);
     } {
         /* Top right */
-        PointerEvent event{{}, data.source, data.pointer, true, 0, {0.0f, 0.9f}, true, {1.0f, 1.0f}};
+        PointerEvent event{{}, data.source, data.pointer, true, 0, {}, {0.0f, 0.9f}, true, {1.0f, 1.0f}};
         layer.pointerReleaseEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 2);
     } {
         /* Outside on the top right */
-        PointerEvent event{{}, data.source, data.pointer, true, 0, {0.0f, 1.0f}, true, {1.0f, 1.0f}};
+        PointerEvent event{{}, data.source, data.pointer, true, 0, {}, {0.0f, 1.0f}, true, {1.0f, 1.0f}};
         layer.pointerReleaseEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 2);
     } {
         /* Bottom left */
-        PointerEvent event{{}, data.source, data.pointer, true, 0, {0.9f, 0.0f}, true, {1.0f, 1.0f}};
+        PointerEvent event{{}, data.source, data.pointer, true, 0, {}, {0.9f, 0.0f}, true, {1.0f, 1.0f}};
         layer.pointerReleaseEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 3);
     } {
         /* Outside on the bottom left */
-        PointerEvent event{{}, data.source, data.pointer, true, 0, {1.0f, 0.0f}, true, {1.0f, 1.0f}};
+        PointerEvent event{{}, data.source, data.pointer, true, 0, {}, {1.0f, 0.0f}, true, {1.0f, 1.0f}};
         layer.pointerReleaseEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 3);
     } {
         /* Bottom right */
-        PointerEvent event{{}, data.source, data.pointer, true, 0, {0.9f, 0.9f}, true, {1.0f, 1.0f}};
+        PointerEvent event{{}, data.source, data.pointer, true, 0, {}, {0.9f, 0.9f}, true, {1.0f, 1.0f}};
         layer.pointerReleaseEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 4);
     } {
         /* Outside on the Bottom right */
-        PointerEvent event{{}, data.source, data.pointer, true, 0, {1.0f, 1.0f}, true, {1.0f, 1.0f}};
+        PointerEvent event{{}, data.source, data.pointer, true, 0, {}, {1.0f, 1.0f}, true, {1.0f, 1.0f}};
         layer.pointerReleaseEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 4);
     } {
         /* Outside on the left */
-        PointerEvent event{{}, data.source, data.pointer, true, 0, {-0.1f, 0.5f}, true, {1.0f, 1.0f}};
+        PointerEvent event{{}, data.source, data.pointer, true, 0, {}, {-0.1f, 0.5f}, true, {1.0f, 1.0f}};
         layer.pointerReleaseEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 4);
     } {
         /* Outside on the top */
-        PointerEvent event{{}, data.source, data.pointer, true, 0, {0.5f, -0.1f}, true, {1.0f, 1.0f}};
+        PointerEvent event{{}, data.source, data.pointer, true, 0, {}, {0.5f, -0.1f}, true, {1.0f, 1.0f}};
         layer.pointerReleaseEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 4);
     } {
         /* Outside on the right */
-        PointerEvent event{{}, data.source, data.pointer, true, 0, {0.5f, 0.5f}, true, {0.5f, 1.0f}};
+        PointerEvent event{{}, data.source, data.pointer, true, 0, {}, {0.5f, 0.5f}, true, {0.5f, 1.0f}};
         layer.pointerReleaseEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 4);
     } {
         /* Outside on the bottom */
-        PointerEvent event{{}, data.source, data.pointer, true, 0, {0.5f, 0.5f}, true, {1.0f, 0.5f}};
+        PointerEvent event{{}, data.source, data.pointer, true, 0, {}, {0.5f, 0.5f}, true, {1.0f, 0.5f}};
         layer.pointerReleaseEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 4);
     }
@@ -2118,69 +2118,69 @@ void EventLayerTest::drag() {
        also a no longer pressed one; extra pressed pointers are ignored as
        well. */
     {
-        PointerMoveEvent event{{}, PointerEventSource::Mouse, {}, {}, true, 0};
+        PointerMoveEvent event{{}, PointerEventSource::Mouse, {}, {}, true, 0, {}};
         event.setCaptured(true);
         layer.pointerMoveEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 0); /* no button pressed */
     } {
-        PointerMoveEvent event{{}, PointerEventSource::Mouse, {}, Pointer::MouseLeft, true, 0};
+        PointerMoveEvent event{{}, PointerEventSource::Mouse, {}, Pointer::MouseLeft, true, 0, {}};
         event.setCaptured(false);
         layer.pointerMoveEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 0); /* not captured */
     } {
-        PointerMoveEvent event{{}, PointerEventSource::Mouse, {}, Pointer::MouseLeft|Pointer::MouseRight, true, 0, {-1.0f, 2.4f}};
+        PointerMoveEvent event{{}, PointerEventSource::Mouse, {}, Pointer::MouseLeft|Pointer::MouseRight, true, 0, {}, {-1.0f, 2.4f}};
         event.setCaptured(true);
         layer.pointerMoveEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 1);
         CORRADE_COMPARE(calledRelativePosition, (Vector2{-1.0f, 2.4f}));
     } {
-        PointerMoveEvent event{{}, PointerEventSource::Mouse, {}, Pointer::MouseMiddle, true, 0};
+        PointerMoveEvent event{{}, PointerEventSource::Mouse, {}, Pointer::MouseMiddle, true, 0, {}};
         event.setCaptured(true);
         layer.pointerMoveEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 1); /* not a valid pointer pressed */
     } {
-        PointerMoveEvent event{{}, PointerEventSource::Mouse, {}, Pointer::MouseRight, true, 0};
+        PointerMoveEvent event{{}, PointerEventSource::Mouse, {}, Pointer::MouseRight, true, 0, {}};
         event.setCaptured(true);
         layer.pointerMoveEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 1); /* not a valid pointer pressed */
     } {
-        PointerMoveEvent event{{}, PointerEventSource::Touch, {}, Pointer::Finger|Pointer::Eraser, true, 0, {0.5f, -1.0f}};
+        PointerMoveEvent event{{}, PointerEventSource::Touch, {}, Pointer::Finger|Pointer::Eraser, true, 0, {}, {0.5f, -1.0f}};
         event.setCaptured(true);
         layer.pointerMoveEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 2);
         CORRADE_COMPARE(calledRelativePosition, (Vector2{-0.5f, 1.4f}));
     } {
-        PointerMoveEvent event{{}, PointerEventSource::Touch, {}, Pointer::Finger|Pointer::Eraser, false, 0, {0.5f, -1.0f}};
+        PointerMoveEvent event{{}, PointerEventSource::Touch, {}, Pointer::Finger|Pointer::Eraser, false, 0, {}, {0.5f, -1.0f}};
         event.setCaptured(true);
         layer.pointerMoveEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 2); /* seconary finger ignored */
     } {
-        PointerMoveEvent event{{}, PointerEventSource::Pen, {}, Pointer::Pen|Pointer::Eraser, true, 0, {1.0f, -0.5f}};
+        PointerMoveEvent event{{}, PointerEventSource::Pen, {}, Pointer::Pen|Pointer::Eraser, true, 0, {}, {1.0f, -0.5f}};
         event.setCaptured(true);
         layer.pointerMoveEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 3);
         CORRADE_COMPARE(calledRelativePosition, (Vector2{0.5f, 0.9f}));
     } {
-        PointerMoveEvent event{{}, PointerEventSource::Pen, {}, Pointer::Eraser, true, 0};
+        PointerMoveEvent event{{}, PointerEventSource::Pen, {}, Pointer::Eraser, true, 0, {}};
         event.setCaptured(true);
         layer.pointerMoveEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 3); /* not a valid pointer pressed */
 
     /* Shouldn't get fired for any other than move events */
     } {
-        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0};
+        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
         layer.pointerPressEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 3);
     } {
-        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0};
+        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
         layer.pointerReleaseEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 3);
     } {
-        PointerMoveEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, Pointer::MouseLeft, true, 0};
+        PointerMoveEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, Pointer::MouseLeft, true, 0, {}};
         layer.pointerEnterEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 3);
     } {
-        PointerMoveEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, Pointer::MouseLeft, true, 0};
+        PointerMoveEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, Pointer::MouseLeft, true, 0, {}};
         layer.pointerLeaveEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 3);
     } {
@@ -2195,7 +2195,7 @@ void EventLayerTest::drag() {
 
     /* Though this fires for a scroll event if this is onDragOrScroll() */
     if(!data.dragOrScroll) {
-        ScrollEvent event{{}, {}};
+        ScrollEvent event{{}, {}, {}};
         layer.scrollEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 3);
     }
@@ -2219,49 +2219,49 @@ void EventLayerTest::dragPress() {
        finger or pen to prevent it from being propagated further if no other
        data accepts it. The handler shouldn't get called though. */
     {
-        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0};
+        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
         event.setCaptured(true);
         layer.pointerPressEvent(dataHandleId(handle), event);
         CORRADE_VERIFY(event.isAccepted());
         CORRADE_COMPARE(called, 0);
     } {
-        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0};
+        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
         event.setCaptured(false);
         layer.pointerPressEvent(dataHandleId(handle), event);
         CORRADE_VERIFY(!event.isAccepted());
         CORRADE_COMPARE(called, 0);
     } {
-        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseMiddle, true, 0};
+        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseMiddle, true, 0, {}};
         event.setCaptured(true);
         layer.pointerPressEvent(dataHandleId(handle), event);
         CORRADE_VERIFY(!event.isAccepted());
         CORRADE_COMPARE(called, 0);
     } {
-        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseRight, true, 0};
+        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseRight, true, 0, {}};
         event.setCaptured(true);
         layer.pointerPressEvent(dataHandleId(handle), event);
         CORRADE_VERIFY(!event.isAccepted());
         CORRADE_COMPARE(called, 0);
     } {
-        PointerEvent event{{}, PointerEventSource::Touch, Pointer::Finger, true, 0};
+        PointerEvent event{{}, PointerEventSource::Touch, Pointer::Finger, true, 0, {}};
         event.setCaptured(true);
         layer.pointerPressEvent(dataHandleId(handle), event);
         CORRADE_VERIFY(event.isAccepted());
         CORRADE_COMPARE(called, 0);
     } {
-        PointerEvent event{{}, PointerEventSource::Touch, Pointer::Finger, false, 0};
+        PointerEvent event{{}, PointerEventSource::Touch, Pointer::Finger, false, 0, {}};
         event.setCaptured(true);
         layer.pointerPressEvent(dataHandleId(handle), event);
         CORRADE_VERIFY(!event.isAccepted());
         CORRADE_COMPARE(called, 0);
     } {
-        PointerEvent event{{}, PointerEventSource::Pen, Pointer::Pen, true, 0};
+        PointerEvent event{{}, PointerEventSource::Pen, Pointer::Pen, true, 0, {}};
         event.setCaptured(true);
         layer.pointerPressEvent(dataHandleId(handle), event);
         CORRADE_VERIFY(event.isAccepted());
         CORRADE_COMPARE(called, 0);
     } {
-        PointerEvent event{{}, PointerEventSource::Pen, Pointer::Eraser, true, 0};
+        PointerEvent event{{}, PointerEventSource::Pen, Pointer::Eraser, true, 0, {}};
         event.setCaptured(true);
         layer.pointerPressEvent(dataHandleId(handle), event);
         CORRADE_VERIFY(!event.isAccepted());
@@ -2269,19 +2269,19 @@ void EventLayerTest::dragPress() {
 
     /* Any other than press or move event shouldn't get accepted */
     } {
-        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0};
+        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
         event.setCaptured(true);
         layer.pointerReleaseEvent(dataHandleId(handle), event);
         CORRADE_VERIFY(!event.isAccepted());
         CORRADE_COMPARE(called, 0);
     } {
-        PointerMoveEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, Pointer::MouseLeft, true, 0};
+        PointerMoveEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, Pointer::MouseLeft, true, 0, {}};
         event.setCaptured(true);
         layer.pointerEnterEvent(dataHandleId(handle), event);
         CORRADE_VERIFY(!event.isAccepted());
         CORRADE_COMPARE(called, 0);
     } {
-        PointerMoveEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, Pointer::MouseLeft, true, 0};
+        PointerMoveEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, Pointer::MouseLeft, true, 0, {}};
         event.setCaptured(true);
         layer.pointerLeaveEvent(dataHandleId(handle), event);
         CORRADE_VERIFY(!event.isAccepted());
@@ -2300,7 +2300,7 @@ void EventLayerTest::dragPress() {
 
     /* Though this fires for a scroll event if this is onDragOrScroll() */
     if(!data.dragOrScroll) {
-        ScrollEvent event{{}, {}};
+        ScrollEvent event{{}, {}, {}};
         layer.scrollEvent(dataHandleId(handle), event);
         CORRADE_VERIFY(!event.isAccepted());
         CORRADE_COMPARE(called, 0);
@@ -2309,7 +2309,7 @@ void EventLayerTest::dragPress() {
     /* Verify that the callback is actually properly registered so this doesn't
        result in false positives */
     {
-        PointerMoveEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, Pointer::MouseLeft, true, 0};
+        PointerMoveEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, Pointer::MouseLeft, true, 0, {}};
         event.setCaptured(true);
         layer.pointerMoveEvent(dataHandleId(handle), event);
         CORRADE_VERIFY(event.isAccepted());
@@ -2363,7 +2363,7 @@ void EventLayerTest::dragFromUserInterface() {
        accepted because it means it originates outside of the UI, and such
        events shouldn't lead to things being dragged. */
     {
-        PointerMoveEvent event{{}, PointerEventSource::Touch, {}, Pointer::Finger, true, 0};
+        PointerMoveEvent event{{}, PointerEventSource::Touch, {}, Pointer::Finger, true, 0, {}};
         CORRADE_VERIFY(!ui.pointerMoveEvent({50, 70}, event));
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
@@ -2375,7 +2375,7 @@ void EventLayerTest::dragFromUserInterface() {
     /* A press should be accepted but not resulting in the handler being
        called */
     } {
-        PointerEvent event{{}, PointerEventSource::Pen, Pointer::Pen, true, 0};
+        PointerEvent event{{}, PointerEventSource::Pen, Pointer::Pen, true, 0, {}};
         CORRADE_VERIFY(ui.pointerPressEvent({50, 70}, event));
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentPressedNode(), node);
@@ -2388,7 +2388,7 @@ void EventLayerTest::dragFromUserInterface() {
        ignored. This isn't likely to happen unless the application drops the
        release events somehow. */
     } {
-        PointerMoveEvent event{{}, PointerEventSource::Mouse, {}, {}, true, 0};
+        PointerMoveEvent event{{}, PointerEventSource::Mouse, {}, {}, true, 0, {}};
         CORRADE_VERIFY(!ui.pointerMoveEvent({50, 65}, event));
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentPressedNode(), node);
@@ -2400,7 +2400,7 @@ void EventLayerTest::dragFromUserInterface() {
     /* A move with a pointer pressed with a node captured should be treated as
        a drag */
     } {
-        PointerMoveEvent event{{}, PointerEventSource::Pen, {}, Pointer::Pen, true, 0};
+        PointerMoveEvent event{{}, PointerEventSource::Pen, {}, Pointer::Pen, true, 0, {}};
         CORRADE_VERIFY(ui.pointerMoveEvent({45, 55}, event));
         CORRADE_COMPARE(ui.currentHoveredNode(), node);
         CORRADE_COMPARE(ui.currentPressedNode(), node);
@@ -2465,7 +2465,7 @@ void EventLayerTest::dragFromUserInterfaceFallthroughThreshold() {
 
     /* Press to capture the node */
     {
-        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0};
+        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
         CORRADE_VERIFY(ui.pointerPressEvent({50, 70}, event));
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentPressedNode(), nodeAbove);
@@ -2476,7 +2476,7 @@ void EventLayerTest::dragFromUserInterfaceFallthroughThreshold() {
 
     /* Move by 3 units horizontally directs to the above */
     } {
-        PointerMoveEvent event{{}, PointerEventSource::Mouse, {}, Pointer::MouseLeft, true, 0};
+        PointerMoveEvent event{{}, PointerEventSource::Mouse, {}, Pointer::MouseLeft, true, 0, {}};
         CORRADE_VERIFY(ui.pointerMoveEvent({53, 70}, event));
         CORRADE_COMPARE(ui.currentHoveredNode(), nodeAbove);
         CORRADE_COMPARE(ui.currentPressedNode(), nodeAbove);
@@ -2490,7 +2490,7 @@ void EventLayerTest::dragFromUserInterfaceFallthroughThreshold() {
     } {
         aboveCalled = {};
 
-        PointerMoveEvent event{{}, PointerEventSource::Mouse, {}, Pointer::MouseLeft, true, 0};
+        PointerMoveEvent event{{}, PointerEventSource::Mouse, {}, Pointer::MouseLeft, true, 0, {}};
         CORRADE_VERIFY(ui.pointerMoveEvent({53, 72}, event));
         CORRADE_COMPARE(ui.currentHoveredNode(), nodeAbove);
         CORRADE_COMPARE(ui.currentPressedNode(), nodeAbove);
@@ -2505,7 +2505,7 @@ void EventLayerTest::dragFromUserInterfaceFallthroughThreshold() {
     } {
         aboveCalled = {};
 
-        PointerMoveEvent event{{}, PointerEventSource::Mouse, {}, Pointer::MouseLeft, true, 0};
+        PointerMoveEvent event{{}, PointerEventSource::Mouse, {}, Pointer::MouseLeft, true, 0, {}};
         CORRADE_VERIFY(ui.pointerMoveEvent({53, 74}, event));
         CORRADE_COMPARE(ui.currentHoveredNode(), nodeBelow);
         CORRADE_COMPARE(ui.currentPressedNode(), nodeBelow);
@@ -2521,7 +2521,7 @@ void EventLayerTest::dragFromUserInterfaceFallthroughThreshold() {
         belowCalled = {};
         aboveCalled = {};
 
-        PointerMoveEvent event{{}, PointerEventSource::Mouse, {}, Pointer::MouseLeft, true, 0};
+        PointerMoveEvent event{{}, PointerEventSource::Mouse, {}, Pointer::MouseLeft, true, 0, {}};
         CORRADE_VERIFY(ui.pointerMoveEvent({53, 73}, event));
         CORRADE_COMPARE(ui.currentHoveredNode(), nodeBelow);
         CORRADE_COMPARE(ui.currentPressedNode(), nodeBelow);
@@ -2535,8 +2535,8 @@ void EventLayerTest::dragFromUserInterfaceFallthroughThreshold() {
     } {
         belowCalled = {};
 
-        PointerEvent press{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0};
-        PointerMoveEvent move{{}, PointerEventSource::Mouse, {}, Pointer::MouseLeft, true, 0};
+        PointerEvent press{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
+        PointerMoveEvent move{{}, PointerEventSource::Mouse, {}, Pointer::MouseLeft, true, 0, {}};
         CORRADE_VERIFY(ui.pointerPressEvent({30, 20}, press));
         CORRADE_VERIFY(ui.pointerMoveEvent({30, 18}, move));
         CORRADE_COMPARE(ui.currentHoveredNode(), nodeAbove);
@@ -2550,7 +2550,7 @@ void EventLayerTest::dragFromUserInterfaceFallthroughThreshold() {
     } {
         aboveCalled = {};
 
-        PointerMoveEvent event{{}, PointerEventSource::Mouse, {}, Pointer::MouseLeft, true, 0};
+        PointerMoveEvent event{{}, PointerEventSource::Mouse, {}, Pointer::MouseLeft, true, 0, {}};
         CORRADE_VERIFY(ui.pointerMoveEvent({30, 25}, event));
         CORRADE_COMPARE(ui.currentHoveredNode(), nodeBelow);
         CORRADE_COMPARE(ui.currentPressedNode(), nodeBelow);
@@ -2580,8 +2580,8 @@ void EventLayerTest::dragFromUserInterfaceFallthroughThresholdMultipleHandlers()
         ++belowCalled1;
     });
     {
-        PointerEvent press{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0};
-        PointerMoveEvent move{{}, PointerEventSource::Mouse, {}, Pointer::MouseLeft, true, 0};
+        PointerEvent press{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
+        PointerMoveEvent move{{}, PointerEventSource::Mouse, {}, Pointer::MouseLeft, true, 0, {}};
         CORRADE_VERIFY(ui.pointerPressEvent({50, 70}, press));
         CORRADE_VERIFY(ui.pointerMoveEvent({70, 70}, move));
         CORRADE_COMPARE(aboveCalled, 1);
@@ -2597,8 +2597,8 @@ void EventLayerTest::dragFromUserInterfaceFallthroughThresholdMultipleHandlers()
         ++belowCalled2;
     });
     {
-        PointerEvent press{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0};
-        PointerMoveEvent move{{}, PointerEventSource::Mouse, {}, Pointer::MouseLeft, true, 0};
+        PointerEvent press{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
+        PointerMoveEvent move{{}, PointerEventSource::Mouse, {}, Pointer::MouseLeft, true, 0, {}};
         CORRADE_VERIFY(ui.pointerPressEvent({50, 70}, press));
         CORRADE_VERIFY(ui.pointerMoveEvent({70, 70}, move));
         CORRADE_COMPARE(aboveCalled, 2);
@@ -2635,32 +2635,32 @@ void EventLayerTest::scroll() {
 
     /* Should only get fired for a scroll */
     {
-        ScrollEvent event{{}, {2.3f, -4.7f}};
+        ScrollEvent event{{}, {2.3f, -4.7f}, {}};
         layer.scrollEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 1);
         CORRADE_COMPARE(calledOffset, (Vector2{2.3f, -4.7f}));
 
     /* Shouldn't get fired for any other than scroll events */
     } {
-        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0};
+        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
         layer.pointerPressEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 1);
     } {
-        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0};
+        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
         layer.pointerReleaseEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 1);
     } {
-        PointerMoveEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, Pointer::MouseLeft, true, 0};
+        PointerMoveEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, Pointer::MouseLeft, true, 0, {}};
         /* For this one it does only if onDragOrScroll is used *and* it's
            captured, tested in drag() instead */
         layer.pointerMoveEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 1);
     } {
-        PointerMoveEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, Pointer::MouseLeft, true, 0};
+        PointerMoveEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, Pointer::MouseLeft, true, 0, {}};
         layer.pointerEnterEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 1);
     } {
-        PointerMoveEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, Pointer::MouseLeft, true, 0};
+        PointerMoveEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, Pointer::MouseLeft, true, 0, {}};
         layer.pointerLeaveEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 1);
     } {
@@ -2725,7 +2725,7 @@ void EventLayerTest::scrollFromUserInterface() {
 
     /* A scroll should be accepted and resulting in the handler being called */
     {
-        ScrollEvent event{{}, {2.3f, -4.7f}};
+        ScrollEvent event{{}, {2.3f, -4.7f}, {}};
         CORRADE_VERIFY(ui.scrollEvent({50, 65}, event));
         CORRADE_COMPARE(called, 1);
         CORRADE_COMPARE(positionCalled, 1);
@@ -2743,8 +2743,8 @@ void EventLayerTest::pinch() {
 
     /* Make the gesture actually recognized first */
     {
-        PointerEvent primary{{}, PointerEventSource::Touch, Pointer::Finger, true, 36};
-        PointerEvent secondary{{}, PointerEventSource::Touch, Pointer::Finger, false, 17};
+        PointerEvent primary{{}, PointerEventSource::Touch, Pointer::Finger, true, 36, {}};
+        PointerEvent secondary{{}, PointerEventSource::Touch, Pointer::Finger, false, 17, {}};
         layer.pointerPressEvent(dataHandleId(handle), primary);
         layer.pointerPressEvent(dataHandleId(handle), secondary);
     }
@@ -2754,58 +2754,58 @@ void EventLayerTest::pinch() {
        repeatedly give back the same data */
     {
         /* Secondary with a matching ID */
-        PointerMoveEvent event{{}, PointerEventSource::Touch, {}, Pointer::Finger, false, 17};
+        PointerMoveEvent event{{}, PointerEventSource::Touch, {}, Pointer::Finger, false, 17, {}};
         layer.pointerMoveEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 1);
     } {
         /* Primary with a matching ID */
-        PointerMoveEvent event{{}, PointerEventSource::Touch, {}, Pointer::Finger, true, 36};
+        PointerMoveEvent event{{}, PointerEventSource::Touch, {}, Pointer::Finger, true, 36, {}};
         layer.pointerMoveEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 2);
     } {
         /* Primary, but different ID */
-        PointerMoveEvent event{{}, PointerEventSource::Touch, {}, Pointer::Finger, true, 37};
+        PointerMoveEvent event{{}, PointerEventSource::Touch, {}, Pointer::Finger, true, 37, {}};
         layer.pointerMoveEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 2);
     } {
         /* Secondary, but different ID. Passing an event that doesn't actually
            have the finger pressed currently works as well, it checks just the
            source. */
-        PointerMoveEvent event{{}, PointerEventSource::Touch, {}, {}, false, 16};
+        PointerMoveEvent event{{}, PointerEventSource::Touch, {}, {}, false, 16, {}};
         layer.pointerMoveEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 2);
     } {
         /* Events coming from a mouse are ignored by the gesture recognizer
            altogether, even if a finger is currently pressed */
-        PointerMoveEvent event{{}, PointerEventSource::Mouse, {}, Pointer::Finger, true, 0};
+        PointerMoveEvent event{{}, PointerEventSource::Mouse, {}, Pointer::Finger, true, 0, {}};
         layer.pointerMoveEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 2);
     } {
         /* Pen also */
-        PointerMoveEvent event{{}, PointerEventSource::Pen, {}, Pointer::Finger, true, 0};
+        PointerMoveEvent event{{}, PointerEventSource::Pen, {}, Pointer::Finger, true, 0, {}};
         layer.pointerMoveEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 2);
 
     /* Shouldn't get fired for any other than move events, even though the
        gesture recognizer is getting fed in press and release as well */
     } {
-        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0};
+        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
         layer.pointerPressEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 2);
     } {
-        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0};
+        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
         layer.pointerReleaseEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 2);
     } {
-        PointerMoveEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, Pointer::MouseLeft, true, 0};
+        PointerMoveEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, Pointer::MouseLeft, true, 0, {}};
         layer.pointerEnterEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 2);
     } {
-        PointerMoveEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, Pointer::MouseLeft, true, 0};
+        PointerMoveEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, Pointer::MouseLeft, true, 0, {}};
         layer.pointerLeaveEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 2);
     } {
-        ScrollEvent event{{}, {}};
+        ScrollEvent event{{}, {}, {}};
         layer.scrollEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 2);
     } {
@@ -2820,19 +2820,19 @@ void EventLayerTest::pinch() {
         /* ID matches the tracked primary finger so this should feed the
            gesture recognizer, but it being fed shouldn't trigger a call. Doing
            as last because this resets the isGesture() bit. */
-        PointerEvent event{{}, PointerEventSource::Touch, Pointer::Finger, true, 36};
+        PointerEvent event{{}, PointerEventSource::Touch, Pointer::Finger, true, 36, {}};
         layer.pointerPressEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 2);
     } {
         /* ID matches the tracked secondary finger so again but again. This
            should set isGesture() back. */
-        PointerEvent event{{}, PointerEventSource::Touch, Pointer::Finger, false, 17};
+        PointerEvent event{{}, PointerEventSource::Touch, Pointer::Finger, false, 17, {}};
         layer.pointerPressEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 2);
     } {
         /* ID matches the tracked secondary finger, so again but again. This
            should reset isGesture() again. */
-        PointerEvent event{{}, PointerEventSource::Touch, Pointer::Finger, false, 17};
+        PointerEvent event{{}, PointerEventSource::Touch, Pointer::Finger, false, 17, {}};
         layer.pointerReleaseEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 2);
     }
@@ -2851,9 +2851,9 @@ void EventLayerTest::pinchReset() {
 
     /* Make the gesture recognized on the first */
     {
-        PointerEvent primary{{}, PointerEventSource::Touch, Pointer::Finger, true, 36};
-        PointerEvent secondary{{}, PointerEventSource::Touch, Pointer::Finger, false, 17};
-        PointerMoveEvent move{{}, PointerEventSource::Touch, {}, Pointer::Finger, true, 36};
+        PointerEvent primary{{}, PointerEventSource::Touch, Pointer::Finger, true, 36, {}};
+        PointerEvent secondary{{}, PointerEventSource::Touch, Pointer::Finger, false, 17, {}};
+        PointerMoveEvent move{{}, PointerEventSource::Touch, {}, Pointer::Finger, true, 36, {}};
         layer.pointerPressEvent(dataHandleId(first), primary);
         layer.pointerPressEvent(dataHandleId(first), secondary);
         layer.pointerMoveEvent(dataHandleId(first), move);
@@ -2864,12 +2864,12 @@ void EventLayerTest::pinchReset() {
        reset */
     } {
         /* Matching ID shouldn't cause any problem either */
-        PointerEvent mousePress{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 36};
-        PointerMoveEvent mouseMove{{}, PointerEventSource::Mouse, {}, {}, true, 36};
-        PointerEvent mouseRelease{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 36};
-        PointerEvent penPress{{}, PointerEventSource::Pen, Pointer::Pen, true, 36};
-        PointerMoveEvent penMove{{}, PointerEventSource::Mouse, {}, {}, true, 36};
-        PointerEvent penRelease{{}, PointerEventSource::Pen, Pointer::Pen, true, 36};
+        PointerEvent mousePress{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 36, {}};
+        PointerMoveEvent mouseMove{{}, PointerEventSource::Mouse, {}, {}, true, 36, {}};
+        PointerEvent mouseRelease{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 36, {}};
+        PointerEvent penPress{{}, PointerEventSource::Pen, Pointer::Pen, true, 36, {}};
+        PointerMoveEvent penMove{{}, PointerEventSource::Mouse, {}, {}, true, 36, {}};
+        PointerEvent penRelease{{}, PointerEventSource::Pen, Pointer::Pen, true, 36, {}};
         PointerCancelEvent cancel{{}};
         VisibilityLostEvent visibilityLost;
         layer.pointerPressEvent(dataHandleId(second), mousePress);
@@ -2883,26 +2883,26 @@ void EventLayerTest::pinchReset() {
         CORRADE_COMPARE(firstCalled, 1);
 
         /* Gets called on the next move on the first */
-        PointerMoveEvent move{{}, PointerEventSource::Touch, {}, Pointer::Finger, true, 36};
+        PointerMoveEvent move{{}, PointerEventSource::Touch, {}, Pointer::Finger, true, 36, {}};
         layer.pointerMoveEvent(dataHandleId(first), move);
         CORRADE_COMPARE(firstCalled, 2);
 
     /* A finger press on the second however resets it */
     } {
         /* Even a different ID should reset it */
-        PointerEvent fingerPress{{}, PointerEventSource::Touch, Pointer::Finger, false, 22};
+        PointerEvent fingerPress{{}, PointerEventSource::Touch, Pointer::Finger, false, 22, {}};
         layer.pointerPressEvent(dataHandleId(second), fingerPress);
         CORRADE_COMPARE(firstCalled, 2);
 
         /* Slot no longer triggered on the next move on the first */
-        PointerMoveEvent move1{{}, PointerEventSource::Touch, {}, Pointer::Finger, true, 36};
+        PointerMoveEvent move1{{}, PointerEventSource::Touch, {}, Pointer::Finger, true, 36, {}};
         layer.pointerMoveEvent(dataHandleId(first), move1);
         CORRADE_COMPARE(firstCalled, 2);
 
         /* The gesture needs to be fully recognized on the first again */
-        PointerEvent primary{{}, PointerEventSource::Touch, Pointer::Finger, true, 36};
-        PointerEvent secondary{{}, PointerEventSource::Touch, Pointer::Finger, false, 17};
-        PointerMoveEvent move2{{}, PointerEventSource::Touch, {}, Pointer::Finger, true, 36};
+        PointerEvent primary{{}, PointerEventSource::Touch, Pointer::Finger, true, 36, {}};
+        PointerEvent secondary{{}, PointerEventSource::Touch, Pointer::Finger, false, 17, {}};
+        PointerMoveEvent move2{{}, PointerEventSource::Touch, {}, Pointer::Finger, true, 36, {}};
         layer.pointerPressEvent(dataHandleId(first), primary);
         layer.pointerPressEvent(dataHandleId(first), secondary);
         layer.pointerMoveEvent(dataHandleId(first), move2);
@@ -2911,19 +2911,19 @@ void EventLayerTest::pinchReset() {
     /* A finger move on the second resets it as well */
     } {
         /* Even a different ID should reset it */
-        PointerMoveEvent fingerMove{{}, PointerEventSource::Touch, {}, {}, false, 22};
+        PointerMoveEvent fingerMove{{}, PointerEventSource::Touch, {}, {}, false, 22, {}};
         layer.pointerMoveEvent(dataHandleId(second), fingerMove);
         CORRADE_COMPARE(firstCalled, 3);
 
         /* Slot no longer triggered on the next move on the first */
-        PointerMoveEvent move1{{}, PointerEventSource::Touch, {}, Pointer::Finger, true, 36};
+        PointerMoveEvent move1{{}, PointerEventSource::Touch, {}, Pointer::Finger, true, 36, {}};
         layer.pointerMoveEvent(dataHandleId(first), move1);
         CORRADE_COMPARE(firstCalled, 3);
 
         /* The gesture needs to be fully recognized on the first again */
-        PointerEvent primary{{}, PointerEventSource::Touch, Pointer::Finger, true, 36};
-        PointerEvent secondary{{}, PointerEventSource::Touch, Pointer::Finger, false, 17};
-        PointerMoveEvent move2{{}, PointerEventSource::Touch, {}, Pointer::Finger, true, 36};
+        PointerEvent primary{{}, PointerEventSource::Touch, Pointer::Finger, true, 36, {}};
+        PointerEvent secondary{{}, PointerEventSource::Touch, Pointer::Finger, false, 17, {}};
+        PointerMoveEvent move2{{}, PointerEventSource::Touch, {}, Pointer::Finger, true, 36, {}};
         layer.pointerPressEvent(dataHandleId(first), primary);
         layer.pointerPressEvent(dataHandleId(first), secondary);
         layer.pointerMoveEvent(dataHandleId(first), move2);
@@ -2932,19 +2932,19 @@ void EventLayerTest::pinchReset() {
     /* And a finger release on the second also */
     } {
         /* Even a different ID should reset it */
-        PointerEvent fingerRelease{{}, PointerEventSource::Touch, Pointer::Finger, false, 22};
+        PointerEvent fingerRelease{{}, PointerEventSource::Touch, Pointer::Finger, false, 22, {}};
         layer.pointerReleaseEvent(dataHandleId(second), fingerRelease);
         CORRADE_COMPARE(firstCalled, 4);
 
         /* Slot no longer triggered on the next move on the first */
-        PointerMoveEvent move1{{}, PointerEventSource::Touch, {}, Pointer::Finger, true, 36};
+        PointerMoveEvent move1{{}, PointerEventSource::Touch, {}, Pointer::Finger, true, 36, {}};
         layer.pointerMoveEvent(dataHandleId(first), move1);
         CORRADE_COMPARE(firstCalled, 4);
 
         /* The gesture needs to be fully recognized on the first again */
-        PointerEvent primary{{}, PointerEventSource::Touch, Pointer::Finger, true, 36};
-        PointerEvent secondary{{}, PointerEventSource::Touch, Pointer::Finger, false, 17};
-        PointerMoveEvent move2{{}, PointerEventSource::Touch, {}, Pointer::Finger, true, 36};
+        PointerEvent primary{{}, PointerEventSource::Touch, Pointer::Finger, true, 36, {}};
+        PointerEvent secondary{{}, PointerEventSource::Touch, Pointer::Finger, false, 17, {}};
+        PointerMoveEvent move2{{}, PointerEventSource::Touch, {}, Pointer::Finger, true, 36, {}};
         layer.pointerPressEvent(dataHandleId(first), primary);
         layer.pointerPressEvent(dataHandleId(first), secondary);
         layer.pointerMoveEvent(dataHandleId(first), move2);
@@ -2957,14 +2957,14 @@ void EventLayerTest::pinchReset() {
         CORRADE_COMPARE(firstCalled, 5);
 
         /* Slot no longer triggered on the next move on the first */
-        PointerMoveEvent move1{{}, PointerEventSource::Touch, {}, Pointer::Finger, true, 36};
+        PointerMoveEvent move1{{}, PointerEventSource::Touch, {}, Pointer::Finger, true, 36, {}};
         layer.pointerMoveEvent(dataHandleId(first), move1);
         CORRADE_COMPARE(firstCalled, 5);
 
         /* The gesture needs to be fully recognized on the first again */
-        PointerEvent primary{{}, PointerEventSource::Touch, Pointer::Finger, true, 36};
-        PointerEvent secondary{{}, PointerEventSource::Touch, Pointer::Finger, false, 17};
-        PointerMoveEvent move2{{}, PointerEventSource::Touch, {}, Pointer::Finger, true, 36};
+        PointerEvent primary{{}, PointerEventSource::Touch, Pointer::Finger, true, 36, {}};
+        PointerEvent secondary{{}, PointerEventSource::Touch, Pointer::Finger, false, 17, {}};
+        PointerMoveEvent move2{{}, PointerEventSource::Touch, {}, Pointer::Finger, true, 36, {}};
         layer.pointerPressEvent(dataHandleId(first), primary);
         layer.pointerPressEvent(dataHandleId(first), secondary);
         layer.pointerMoveEvent(dataHandleId(first), move2);
@@ -2977,14 +2977,14 @@ void EventLayerTest::pinchReset() {
         CORRADE_COMPARE(firstCalled, 6);
 
         /* Slot no longer triggered on the next move on the first */
-        PointerMoveEvent move1{{}, PointerEventSource::Touch, {}, Pointer::Finger, true, 36};
+        PointerMoveEvent move1{{}, PointerEventSource::Touch, {}, Pointer::Finger, true, 36, {}};
         layer.pointerMoveEvent(dataHandleId(first), move1);
         CORRADE_COMPARE(firstCalled, 6);
 
         /* The gesture needs to be fully recognized on the first again */
-        PointerEvent primary{{}, PointerEventSource::Touch, Pointer::Finger, true, 36};
-        PointerEvent secondary{{}, PointerEventSource::Touch, Pointer::Finger, false, 17};
-        PointerMoveEvent move2{{}, PointerEventSource::Touch, {}, Pointer::Finger, true, 36};
+        PointerEvent primary{{}, PointerEventSource::Touch, Pointer::Finger, true, 36, {}};
+        PointerEvent secondary{{}, PointerEventSource::Touch, Pointer::Finger, false, 17, {}};
+        PointerMoveEvent move2{{}, PointerEventSource::Touch, {}, Pointer::Finger, true, 36, {}};
         layer.pointerPressEvent(dataHandleId(first), primary);
         layer.pointerPressEvent(dataHandleId(first), secondary);
         layer.pointerMoveEvent(dataHandleId(first), move2);
@@ -3005,14 +3005,14 @@ void EventLayerTest::pinchReset() {
         CORRADE_COMPARE(dataHandleId(first2), dataHandleId(first));
 
         /* Slot no longer triggered on the next move on the first */
-        PointerMoveEvent move1{{}, PointerEventSource::Touch, {}, Pointer::Finger, true, 36};
+        PointerMoveEvent move1{{}, PointerEventSource::Touch, {}, Pointer::Finger, true, 36, {}};
         layer.pointerMoveEvent(dataHandleId(first2), move1);
         CORRADE_COMPARE(firstCalled, 7);
 
         /* The gesture needs to be fully recognized on the first again */
-        PointerEvent primary{{}, PointerEventSource::Touch, Pointer::Finger, true, 36};
-        PointerEvent secondary{{}, PointerEventSource::Touch, Pointer::Finger, false, 17};
-        PointerMoveEvent move2{{}, PointerEventSource::Touch, {}, Pointer::Finger, true, 36};
+        PointerEvent primary{{}, PointerEventSource::Touch, Pointer::Finger, true, 36, {}};
+        PointerEvent secondary{{}, PointerEventSource::Touch, Pointer::Finger, false, 17, {}};
+        PointerMoveEvent move2{{}, PointerEventSource::Touch, {}, Pointer::Finger, true, 36, {}};
         layer.pointerPressEvent(dataHandleId(first2), primary);
         layer.pointerPressEvent(dataHandleId(first2), secondary);
         layer.pointerMoveEvent(dataHandleId(first2), move2);
@@ -3032,28 +3032,28 @@ void EventLayerTest::pinchPressMoveRelease() {
        from being propagated further if no other data accepts it. The handler
        shouldn't get called though. */
     {
-        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0};
+        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
         layer.pointerPressEvent(dataHandleId(handle), event);
         CORRADE_VERIFY(!event.isAccepted());
         CORRADE_COMPARE(called, 0);
     } {
-        PointerEvent event{{}, PointerEventSource::Pen, Pointer::Pen, true, 0};
+        PointerEvent event{{}, PointerEventSource::Pen, Pointer::Pen, true, 0, {}};
         layer.pointerPressEvent(dataHandleId(handle), event);
         CORRADE_VERIFY(!event.isAccepted());
         CORRADE_COMPARE(called, 0);
     } {
-        PointerEvent event{{}, PointerEventSource::Touch, Pointer::Finger, true, 32};
+        PointerEvent event{{}, PointerEventSource::Touch, Pointer::Finger, true, 32, {}};
         layer.pointerPressEvent(dataHandleId(handle), event);
         CORRADE_VERIFY(event.isAccepted());
         CORRADE_COMPARE(called, 0);
     } {
-        PointerEvent event{{}, PointerEventSource::Touch, Pointer::Finger, false, 16};
+        PointerEvent event{{}, PointerEventSource::Touch, Pointer::Finger, false, 16, {}};
         layer.pointerPressEvent(dataHandleId(handle), event);
         CORRADE_VERIFY(event.isAccepted());
         CORRADE_COMPARE(called, 0);
     } {
         /* Secondary finger press that doesn't match the above isn't used */
-        PointerEvent event{{}, PointerEventSource::Touch, Pointer::Finger, false, 22};
+        PointerEvent event{{}, PointerEventSource::Touch, Pointer::Finger, false, 22, {}};
         layer.pointerPressEvent(dataHandleId(handle), event);
         CORRADE_VERIFY(!event.isAccepted());
         CORRADE_COMPARE(called, 0);
@@ -3061,75 +3061,75 @@ void EventLayerTest::pinchPressMoveRelease() {
     /* Similarly for move. Only in case the actual finger matches what's
        tracked it gets fired. */
     } {
-        PointerMoveEvent event{{}, PointerEventSource::Mouse, {}, {}, true, 0};
+        PointerMoveEvent event{{}, PointerEventSource::Mouse, {}, {}, true, 0, {}};
         layer.pointerMoveEvent(dataHandleId(handle), event);
         CORRADE_VERIFY(!event.isAccepted());
         CORRADE_COMPARE(called, 0);
     } {
-        PointerMoveEvent event{{}, PointerEventSource::Pen, {}, {}, true, 0};
+        PointerMoveEvent event{{}, PointerEventSource::Pen, {}, {}, true, 0, {}};
         layer.pointerMoveEvent(dataHandleId(handle), event);
         CORRADE_VERIFY(!event.isAccepted());
         CORRADE_COMPARE(called, 0);
     } {
-        PointerMoveEvent event{{}, PointerEventSource::Touch, {}, {}, true, 32};
+        PointerMoveEvent event{{}, PointerEventSource::Touch, {}, {}, true, 32, {}};
         layer.pointerMoveEvent(dataHandleId(handle), event);
         CORRADE_VERIFY(event.isAccepted());
         CORRADE_COMPARE(called, 1);
     } {
-        PointerMoveEvent event{{}, PointerEventSource::Touch, {}, {}, false, 16};
+        PointerMoveEvent event{{}, PointerEventSource::Touch, {}, {}, false, 16, {}};
         layer.pointerMoveEvent(dataHandleId(handle), event);
         CORRADE_VERIFY(event.isAccepted());
         CORRADE_COMPARE(called, 2);
     } {
         /* Primary finger move that doesn't match the ID above isn't used */
-        PointerMoveEvent event{{}, PointerEventSource::Touch, {}, {}, true, 44};
+        PointerMoveEvent event{{}, PointerEventSource::Touch, {}, {}, true, 44, {}};
         layer.pointerMoveEvent(dataHandleId(handle), event);
         CORRADE_VERIFY(!event.isAccepted());
         CORRADE_COMPARE(called, 2);
 
     /* And release */
     } {
-        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0};
+        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
         layer.pointerReleaseEvent(dataHandleId(handle), event);
         CORRADE_VERIFY(!event.isAccepted());
         CORRADE_COMPARE(called, 2);
     } {
-        PointerEvent event{{}, PointerEventSource::Pen, Pointer::Pen, true, 0};
+        PointerEvent event{{}, PointerEventSource::Pen, Pointer::Pen, true, 0, {}};
         layer.pointerReleaseEvent(dataHandleId(handle), event);
         CORRADE_VERIFY(!event.isAccepted());
         CORRADE_COMPARE(called, 2);
     } {
         /* Secondary finger release that doesn't match the above isn't used */
-        PointerEvent event{{}, PointerEventSource::Touch, Pointer::Finger, false, 22};
+        PointerEvent event{{}, PointerEventSource::Touch, Pointer::Finger, false, 22, {}};
         layer.pointerReleaseEvent(dataHandleId(handle), event);
         CORRADE_VERIFY(!event.isAccepted());
         CORRADE_COMPARE(called, 2);
     } {
-        PointerEvent event{{}, PointerEventSource::Touch, Pointer::Finger, false, 16};
+        PointerEvent event{{}, PointerEventSource::Touch, Pointer::Finger, false, 16, {}};
         layer.pointerReleaseEvent(dataHandleId(handle), event);
         CORRADE_VERIFY(event.isAccepted());
         CORRADE_COMPARE(called, 2);
     } {
         /* If the primary finger would be released first, the secondary release
            wouldn't be used */
-        PointerEvent event{{}, PointerEventSource::Touch, Pointer::Finger, true, 32};
+        PointerEvent event{{}, PointerEventSource::Touch, Pointer::Finger, true, 32, {}};
         layer.pointerReleaseEvent(dataHandleId(handle), event);
         CORRADE_VERIFY(event.isAccepted());
         CORRADE_COMPARE(called, 2);
 
     /* Any other than press, move or release event shouldn't get accepted */
     } {
-        PointerMoveEvent event{{}, PointerEventSource::Touch, {}, {}, true, 32};
+        PointerMoveEvent event{{}, PointerEventSource::Touch, {}, {}, true, 32, {}};
         layer.pointerEnterEvent(dataHandleId(handle), event);
         CORRADE_VERIFY(!event.isAccepted());
         CORRADE_COMPARE(called, 2);
     } {
-        PointerMoveEvent event{{}, PointerEventSource::Touch, {}, {}, true, 32};
+        PointerMoveEvent event{{}, PointerEventSource::Touch, {}, {}, true, 32, {}};
         layer.pointerLeaveEvent(dataHandleId(handle), event);
         CORRADE_VERIFY(!event.isAccepted());
         CORRADE_COMPARE(called, 2);
     } {
-        ScrollEvent event{{}, {}};
+        ScrollEvent event{{}, {}, {}};
         layer.scrollEvent(dataHandleId(handle), event);
         CORRADE_VERIFY(!event.isAccepted());
         CORRADE_COMPARE(called, 2);
@@ -3193,8 +3193,8 @@ void EventLayerTest::pinchFromUserInterface() {
     /* Presses for the two tracked fingers should be accepted but not resulting
        in the handler being called */
     {
-        PointerEvent event1{{}, PointerEventSource::Touch, Pointer::Finger, true, 633};
-        PointerEvent event2{{}, PointerEventSource::Touch, Pointer::Finger, false, 3371};
+        PointerEvent event1{{}, PointerEventSource::Touch, Pointer::Finger, true, 633, {}};
+        PointerEvent event2{{}, PointerEventSource::Touch, Pointer::Finger, false, 3371, {}};
         CORRADE_VERIFY(ui.pointerPressEvent({50, 70}, event1));
         CORRADE_VERIFY(ui.pointerPressEvent({50, 75}, event2));
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
@@ -3210,7 +3210,7 @@ void EventLayerTest::pinchFromUserInterface() {
         expected.relativeRotation = Complex::rotation(180.0_degf);
         expected.relativeScaling = 1.0f;
 
-        PointerMoveEvent event{{}, PointerEventSource::Touch, {}, {}, false, 3371};
+        PointerMoveEvent event{{}, PointerEventSource::Touch, {}, {}, false, 3371, {}};
         CORRADE_VERIFY(ui.pointerMoveEvent({50, 65}, event));
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentPressedNode(), node);
@@ -3221,7 +3221,7 @@ void EventLayerTest::pinchFromUserInterface() {
     /* A press of another finger should be ignored, and since there's a
        capture, it shouldn't fall through either */
     } {
-        PointerEvent event{{}, PointerEventSource::Touch, Pointer::Finger, false, 1226};
+        PointerEvent event{{}, PointerEventSource::Touch, Pointer::Finger, false, 1226, {}};
         CORRADE_VERIFY(!ui.pointerPressEvent({50, 75}, event));
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentPressedNode(), node);
@@ -3232,7 +3232,7 @@ void EventLayerTest::pinchFromUserInterface() {
     /* A release of one of the fingers should be accepted. Move of that finger
        then doesn't get accepted. */
     } {
-        PointerEvent release{{}, PointerEventSource::Touch, Pointer::Finger, false, 3371};
+        PointerEvent release{{}, PointerEventSource::Touch, Pointer::Finger, false, 3371, {}};
         CORRADE_VERIFY(ui.pointerReleaseEvent({50, 55}, release));
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentPressedNode(), node);
@@ -3240,7 +3240,7 @@ void EventLayerTest::pinchFromUserInterface() {
         CORRADE_COMPARE(called, 1);
         CORRADE_COMPARE(belowCalled, 0);
 
-        PointerMoveEvent move{{}, PointerEventSource::Touch, {}, {}, false, 3371};
+        PointerMoveEvent move{{}, PointerEventSource::Touch, {}, {}, false, 3371, {}};
         CORRADE_VERIFY(!ui.pointerMoveEvent({50, 65}, move));
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentPressedNode(), node);
@@ -3251,7 +3251,7 @@ void EventLayerTest::pinchFromUserInterface() {
     /* A press of another finger from above is accepted now, and a subsequent
        move of even the primary finger generates another pinch. */
     } {
-        PointerEvent press{{}, PointerEventSource::Touch, Pointer::Finger, false, 1226};
+        PointerEvent press{{}, PointerEventSource::Touch, Pointer::Finger, false, 1226, {}};
         CORRADE_VERIFY(ui.pointerPressEvent({50, 65}, press));
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentPressedNode(), node);
@@ -3264,7 +3264,7 @@ void EventLayerTest::pinchFromUserInterface() {
         expected.relativeRotation = Complex::rotation(180.0_degf);
         expected.relativeScaling = 1.0f;
 
-        PointerMoveEvent move{{}, PointerEventSource::Touch, {}, {}, true, 633};
+        PointerMoveEvent move{{}, PointerEventSource::Touch, {}, {}, true, 633, {}};
         CORRADE_VERIFY(ui.pointerMoveEvent({50, 60}, move));
         CORRADE_COMPARE(ui.currentHoveredNode(), node);
         CORRADE_COMPARE(ui.currentPressedNode(), node);
@@ -3283,7 +3283,7 @@ void EventLayerTest::pinchFromUserInterface() {
 
         /* Move of the primary finger isn't even accepted now because the
            gesture recognizer doesn't track it as pressed */
-        PointerMoveEvent move1{{}, PointerEventSource::Touch, {}, {}, true, 633};
+        PointerMoveEvent move1{{}, PointerEventSource::Touch, {}, {}, true, 633, {}};
         CORRADE_VERIFY(!ui.pointerMoveEvent({50, 65}, move1));
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
@@ -3297,9 +3297,9 @@ void EventLayerTest::pinchFromUserInterface() {
         expected.relativeRotation = Complex::rotation(180.0_degf);
         expected.relativeScaling = 1.0f;
 
-        PointerEvent press1{{}, PointerEventSource::Touch, Pointer::Finger, true, 633};
-        PointerEvent press2{{}, PointerEventSource::Touch, Pointer::Finger, false, 3371};
-        PointerMoveEvent move2{{}, PointerEventSource::Touch, {}, {}, false, 3371};
+        PointerEvent press1{{}, PointerEventSource::Touch, Pointer::Finger, true, 633, {}};
+        PointerEvent press2{{}, PointerEventSource::Touch, Pointer::Finger, false, 3371, {}};
+        PointerMoveEvent move2{{}, PointerEventSource::Touch, {}, {}, false, 3371, {}};
         CORRADE_VERIFY(ui.pointerPressEvent({50, 70}, press1));
         CORRADE_VERIFY(ui.pointerPressEvent({50, 75}, press2));
         CORRADE_VERIFY(ui.pointerMoveEvent({50, 65}, move2));
@@ -3328,7 +3328,7 @@ void EventLayerTest::pinchFromUserInterface() {
 
         /* Move of the primary finger isn't even accepted now because the
            gesture recognizer doesn't track it as pressed */
-        PointerMoveEvent move1{{}, PointerEventSource::Touch, {}, {}, true, 633};
+        PointerMoveEvent move1{{}, PointerEventSource::Touch, {}, {}, true, 633, {}};
         CORRADE_VERIFY(!ui.pointerMoveEvent({50, 65}, move1));
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
@@ -3342,9 +3342,9 @@ void EventLayerTest::pinchFromUserInterface() {
         expected.relativeRotation = Complex::rotation(180.0_degf);
         expected.relativeScaling = 1.0f;
 
-        PointerEvent press1{{}, PointerEventSource::Touch, Pointer::Finger, true, 633};
-        PointerEvent press2{{}, PointerEventSource::Touch, Pointer::Finger, false, 3371};
-        PointerMoveEvent move2{{}, PointerEventSource::Touch, {}, {}, false, 3371};
+        PointerEvent press1{{}, PointerEventSource::Touch, Pointer::Finger, true, 633, {}};
+        PointerEvent press2{{}, PointerEventSource::Touch, Pointer::Finger, false, 3371, {}};
+        PointerMoveEvent move2{{}, PointerEventSource::Touch, {}, {}, false, 3371, {}};
         CORRADE_VERIFY(ui.pointerPressEvent({50, 70}, press1));
         CORRADE_VERIFY(ui.pointerPressEvent({50, 75}, press2));
         CORRADE_VERIFY(ui.pointerMoveEvent({50, 65}, move2));
@@ -3369,9 +3369,9 @@ void EventLayerTest::pinchFromUserInterfaceMultipleHandlers() {
         ++called1;
     });
     {
-        PointerEvent press1{{}, PointerEventSource::Touch, Pointer::Finger, true, 633};
-        PointerEvent press2{{}, PointerEventSource::Touch, Pointer::Finger, false, 3371};
-        PointerMoveEvent move{{}, PointerEventSource::Touch, {}, {}, false, 3371};
+        PointerEvent press1{{}, PointerEventSource::Touch, Pointer::Finger, true, 633, {}};
+        PointerEvent press2{{}, PointerEventSource::Touch, Pointer::Finger, false, 3371, {}};
+        PointerMoveEvent move{{}, PointerEventSource::Touch, {}, {}, false, 3371, {}};
         CORRADE_VERIFY(ui.pointerPressEvent({50, 70}, press1));
         CORRADE_VERIFY(ui.pointerPressEvent({50, 75}, press2));
         CORRADE_VERIFY(ui.pointerMoveEvent({50, 65}, move));
@@ -3385,7 +3385,7 @@ void EventLayerTest::pinchFromUserInterfaceMultipleHandlers() {
         ++called2;
     });
     {
-        PointerMoveEvent move{{}, PointerEventSource::Touch, {}, {}, false, 3371};
+        PointerMoveEvent move{{}, PointerEventSource::Touch, {}, {}, false, 3371, {}};
 
         CORRADE_EXPECT_FAIL("Multiple onPinch() handlers on the same node conflict with each other, causing nothing to be sent.");
         CORRADE_VERIFY(ui.pointerMoveEvent({50, 75}, move));
@@ -3415,12 +3415,12 @@ void EventLayerTest::pinchAndDragFromUserInterface() {
 
     /* A press and a move of one finger calls the drag */
     {
-        PointerEvent press1{{}, PointerEventSource::Touch, Pointer::Finger, true, 633};
+        PointerEvent press1{{}, PointerEventSource::Touch, Pointer::Finger, true, 633, {}};
         CORRADE_VERIFY(ui.pointerPressEvent({50, 70}, press1));
         CORRADE_COMPARE(pinchCalled, 0);
         CORRADE_COMPARE(dragCalled, 0);
 
-        PointerMoveEvent move1{{}, PointerEventSource::Touch, {}, Pointer::Finger, true, 633};
+        PointerMoveEvent move1{{}, PointerEventSource::Touch, {}, Pointer::Finger, true, 633, {}};
         CORRADE_VERIFY(ui.pointerMoveEvent({50, 65}, move1));
         CORRADE_COMPARE(pinchCalled, 0);
         CORRADE_COMPARE(dragCalled, 1);
@@ -3428,31 +3428,31 @@ void EventLayerTest::pinchAndDragFromUserInterface() {
     /* A press and move of another finger calls the pinch. Since it's a
        secondary finger, it won't call the drag. */
     } {
-        PointerEvent press2{{}, PointerEventSource::Touch, Pointer::Finger, false, 3371};
+        PointerEvent press2{{}, PointerEventSource::Touch, Pointer::Finger, false, 3371, {}};
         CORRADE_VERIFY(ui.pointerPressEvent({50, 75}, press2));
         CORRADE_COMPARE(pinchCalled, 0);
         CORRADE_COMPARE(dragCalled, 1);
 
-        PointerMoveEvent move2{{}, PointerEventSource::Touch, {}, Pointer::Finger, false, 3371};
+        PointerMoveEvent move2{{}, PointerEventSource::Touch, {}, Pointer::Finger, false, 3371, {}};
         CORRADE_VERIFY(ui.pointerMoveEvent({50, 70}, move2));
         CORRADE_COMPARE(pinchCalled, 1);
         CORRADE_COMPARE(dragCalled, 1);
 
     /* A move of the first finger should calls the pinch again, but not drag */
     } {
-        PointerMoveEvent move1{{}, PointerEventSource::Touch, {}, Pointer::Finger, true, 633};
+        PointerMoveEvent move1{{}, PointerEventSource::Touch, {}, Pointer::Finger, true, 633, {}};
         CORRADE_VERIFY(ui.pointerMoveEvent({50, 60}, move1));
         CORRADE_COMPARE(pinchCalled, 2);
         CORRADE_COMPARE(dragCalled, 1);
 
     /* A release of the second finger and a move of the first calls the drag */
     } {
-        PointerEvent release2{{}, PointerEventSource::Touch, Pointer::Finger, false, 3371};
+        PointerEvent release2{{}, PointerEventSource::Touch, Pointer::Finger, false, 3371, {}};
         CORRADE_VERIFY(ui.pointerReleaseEvent({50, 60}, release2));
         CORRADE_COMPARE(pinchCalled, 2);
         CORRADE_COMPARE(dragCalled, 1);
 
-        PointerMoveEvent move1{{}, PointerEventSource::Touch, {}, Pointer::Finger, true, 633};
+        PointerMoveEvent move1{{}, PointerEventSource::Touch, {}, Pointer::Finger, true, 633, {}};
         CORRADE_VERIFY(ui.pointerMoveEvent({50, 60}, move1));
         CORRADE_COMPARE(pinchCalled, 2);
         CORRADE_COMPARE(dragCalled, 2);
@@ -3460,12 +3460,12 @@ void EventLayerTest::pinchAndDragFromUserInterface() {
     /* A press and move of yet another secondary finger again calls the
        pinch */
     } {
-        PointerEvent press2{{}, PointerEventSource::Touch, Pointer::Finger, false, 1221};
+        PointerEvent press2{{}, PointerEventSource::Touch, Pointer::Finger, false, 1221, {}};
         CORRADE_VERIFY(ui.pointerPressEvent({50, 75}, press2));
         CORRADE_COMPARE(pinchCalled, 2);
         CORRADE_COMPARE(dragCalled, 2);
 
-        PointerMoveEvent move2{{}, PointerEventSource::Touch, {}, Pointer::Finger, false, 1221};
+        PointerMoveEvent move2{{}, PointerEventSource::Touch, {}, Pointer::Finger, false, 1221, {}};
         CORRADE_VERIFY(ui.pointerMoveEvent({50, 70}, move2));
         CORRADE_COMPARE(pinchCalled, 3);
         CORRADE_COMPARE(dragCalled, 2);
@@ -3484,45 +3484,45 @@ void EventLayerTest::enter() {
        AbstractLayer disallows pointerEnterEvent() for non-primary events on
        its own already. */
     {
-        PointerMoveEvent event{{}, PointerEventSource::Mouse, {}, {}, true, 0};
+        PointerMoveEvent event{{}, PointerEventSource::Mouse, {}, {}, true, 0, {}};
         layer.pointerEnterEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 1);
     } {
-        PointerMoveEvent event{{}, PointerEventSource::Mouse, {}, Pointer::MouseLeft|Pointer::MouseMiddle|Pointer::MouseRight, true, 0};
+        PointerMoveEvent event{{}, PointerEventSource::Mouse, {}, Pointer::MouseLeft|Pointer::MouseMiddle|Pointer::MouseRight, true, 0, {}};
         layer.pointerEnterEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 2);
     } {
-        PointerMoveEvent event{{}, PointerEventSource::Touch, {}, Pointer::Eraser|Pointer::Pen|Pointer::Finger, true, 0};
+        PointerMoveEvent event{{}, PointerEventSource::Touch, {}, Pointer::Eraser|Pointer::Pen|Pointer::Finger, true, 0, {}};
         layer.pointerEnterEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 3);
     } {
-        PointerMoveEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, {}, true, 0};
+        PointerMoveEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, {}, true, 0, {}};
         layer.pointerEnterEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 4);
     } {
-        PointerMoveEvent event{{}, PointerEventSource::Pen, Pointer::Eraser, Pointer::Finger, true, 0};
+        PointerMoveEvent event{{}, PointerEventSource::Pen, Pointer::Eraser, Pointer::Finger, true, 0, {}};
         layer.pointerEnterEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 5);
 
     /* Shouldn't get fired for any other than enter events */
     } {
-        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0};
+        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
         layer.pointerPressEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 5);
     } {
-        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0};
+        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
         layer.pointerReleaseEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 5);
     } {
-        PointerMoveEvent event{{}, PointerEventSource::Mouse, {}, {}, true, 0};
+        PointerMoveEvent event{{}, PointerEventSource::Mouse, {}, {}, true, 0, {}};
         layer.pointerMoveEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 5);
     } {
-        PointerMoveEvent event{{}, PointerEventSource::Mouse, {}, {}, true, 0};
+        PointerMoveEvent event{{}, PointerEventSource::Mouse, {}, {}, true, 0, {}};
         layer.pointerLeaveEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 5);
     } {
-        ScrollEvent event{{}, {}};
+        ScrollEvent event{{}, {}, {}};
         layer.scrollEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 5);
     } {
@@ -3549,54 +3549,54 @@ void EventLayerTest::enterMove() {
        thus have the pointerEnterEvent() synthesized. The handler shouldn't get
        called though. */
     {
-        PointerMoveEvent event{{}, PointerEventSource::Mouse, {}, {}, true, 0};
+        PointerMoveEvent event{{}, PointerEventSource::Mouse, {}, {}, true, 0, {}};
         layer.pointerMoveEvent(dataHandleId(handle), event);
         CORRADE_VERIFY(event.isAccepted());
         CORRADE_COMPARE(called, 0);
     } {
-        PointerMoveEvent event{{}, PointerEventSource::Touch, {}, Pointer::Eraser|Pointer::MouseLeft|Pointer::Finger, true, 0};
+        PointerMoveEvent event{{}, PointerEventSource::Touch, {}, Pointer::Eraser|Pointer::MouseLeft|Pointer::Finger, true, 0, {}};
         layer.pointerMoveEvent(dataHandleId(handle), event);
         CORRADE_VERIFY(event.isAccepted());
         CORRADE_COMPARE(called, 0);
     } {
-        PointerMoveEvent event{{}, PointerEventSource::Touch, {}, Pointer::Eraser|Pointer::MouseLeft|Pointer::Finger, false, 0};
+        PointerMoveEvent event{{}, PointerEventSource::Touch, {}, Pointer::Eraser|Pointer::MouseLeft|Pointer::Finger, false, 0, {}};
         layer.pointerMoveEvent(dataHandleId(handle), event);
         CORRADE_VERIFY(!event.isAccepted());
         CORRADE_COMPARE(called, 0);
     } {
-        PointerMoveEvent event{{}, PointerEventSource::Mouse, {}, Pointer::MouseRight|Pointer::MouseMiddle|Pointer::Pen, true, 0};
+        PointerMoveEvent event{{}, PointerEventSource::Mouse, {}, Pointer::MouseRight|Pointer::MouseMiddle|Pointer::Pen, true, 0, {}};
         layer.pointerMoveEvent(dataHandleId(handle), event);
         CORRADE_VERIFY(event.isAccepted());
         CORRADE_COMPARE(called, 0);
     } {
-        PointerMoveEvent event{{}, PointerEventSource::Mouse, Pointer::MouseRight, {}, true, 0};
+        PointerMoveEvent event{{}, PointerEventSource::Mouse, Pointer::MouseRight, {}, true, 0, {}};
         layer.pointerMoveEvent(dataHandleId(handle), event);
         CORRADE_VERIFY(event.isAccepted());
         CORRADE_COMPARE(called, 0);
     } {
-        PointerMoveEvent event{{}, PointerEventSource::Pen, Pointer::Pen, Pointer::MouseMiddle|Pointer::Finger, true, 0};
+        PointerMoveEvent event{{}, PointerEventSource::Pen, Pointer::Pen, Pointer::MouseMiddle|Pointer::Finger, true, 0, {}};
         layer.pointerMoveEvent(dataHandleId(handle), event);
         CORRADE_VERIFY(event.isAccepted());
         CORRADE_COMPARE(called, 0);
 
     /* Any other than move or enter events shouldn't get accepted */
     } {
-        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0};
+        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
         layer.pointerPressEvent(dataHandleId(handle), event);
         CORRADE_VERIFY(!event.isAccepted());
         CORRADE_COMPARE(called, 0);
     } {
-        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0};
+        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
         layer.pointerReleaseEvent(dataHandleId(handle), event);
         CORRADE_VERIFY(!event.isAccepted());
         CORRADE_COMPARE(called, 0);
     } {
-        PointerMoveEvent event{{}, PointerEventSource::Mouse, {}, {}, true, 0};
+        PointerMoveEvent event{{}, PointerEventSource::Mouse, {}, {}, true, 0, {}};
         layer.pointerLeaveEvent(dataHandleId(handle), event);
         CORRADE_VERIFY(!event.isAccepted());
         CORRADE_COMPARE(called, 0);
     } {
-        ScrollEvent event{{}, {}};
+        ScrollEvent event{{}, {}, {}};
         layer.scrollEvent(dataHandleId(handle), event);
         CORRADE_VERIFY(!event.isAccepted());
         CORRADE_COMPARE(called, 0);
@@ -3614,7 +3614,7 @@ void EventLayerTest::enterMove() {
     /* Verify that the callback is actually properly registered so this doesn't
        result in false positives */
     } {
-        PointerMoveEvent event{{}, PointerEventSource::Mouse, {}, {}, true, 0};
+        PointerMoveEvent event{{}, PointerEventSource::Mouse, {}, {}, true, 0, {}};
         layer.pointerEnterEvent(dataHandleId(handle), event);
         /* The accept status is ignored for enter/leave events so the layer
            doesn't call setAccepted() */
@@ -3635,45 +3635,45 @@ void EventLayerTest::leave() {
        AbstractLayer disallows pointerLeaveEvent() for non-primary events on
        its own already. */
     {
-        PointerMoveEvent event{{}, PointerEventSource::Mouse, {}, {}, true, 0};
+        PointerMoveEvent event{{}, PointerEventSource::Mouse, {}, {}, true, 0, {}};
         layer.pointerLeaveEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 1);
     } {
-        PointerMoveEvent event{{}, PointerEventSource::Mouse, {}, Pointer::MouseLeft|Pointer::MouseMiddle|Pointer::MouseRight, true, 0};
+        PointerMoveEvent event{{}, PointerEventSource::Mouse, {}, Pointer::MouseLeft|Pointer::MouseMiddle|Pointer::MouseRight, true, 0, {}};
         layer.pointerLeaveEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 2);
     } {
-        PointerMoveEvent event{{}, PointerEventSource::Touch, {}, Pointer::Eraser|Pointer::Pen|Pointer::Finger, true, 0};
+        PointerMoveEvent event{{}, PointerEventSource::Touch, {}, Pointer::Eraser|Pointer::Pen|Pointer::Finger, true, 0, {}};
         layer.pointerLeaveEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 3);
     } {
-        PointerMoveEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, {}, true, 0};
+        PointerMoveEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, {}, true, 0, {}};
         layer.pointerLeaveEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 4);
     } {
-        PointerMoveEvent event{{}, PointerEventSource::Pen, Pointer::Eraser, Pointer::Finger, true, 0};
+        PointerMoveEvent event{{}, PointerEventSource::Pen, Pointer::Eraser, Pointer::Finger, true, 0, {}};
         layer.pointerLeaveEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 5);
 
     /* Shouldn't get fired for any other than leave events */
     } {
-        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0};
+        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
         layer.pointerPressEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 5);
     } {
-        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0};
+        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
         layer.pointerReleaseEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 5);
     } {
-        PointerMoveEvent event{{}, PointerEventSource::Mouse, {}, {}, true, 0};
+        PointerMoveEvent event{{}, PointerEventSource::Mouse, {}, {}, true, 0, {}};
         layer.pointerMoveEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 5);
     } {
-        PointerMoveEvent event{{}, PointerEventSource::Mouse, {}, {}, true, 0};
+        PointerMoveEvent event{{}, PointerEventSource::Mouse, {}, {}, true, 0, {}};
         layer.pointerEnterEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 5);
     } {
-        ScrollEvent event{{}, {}};
+        ScrollEvent event{{}, {}, {}};
         layer.scrollEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 5);
     } {
@@ -3700,54 +3700,54 @@ void EventLayerTest::leaveMove() {
        thus have the pointerLeaveEvent() synthesized. The handler shouldn't get
        called though. */
     {
-        PointerMoveEvent event{{}, PointerEventSource::Mouse, {}, {}, true, 0};
+        PointerMoveEvent event{{}, PointerEventSource::Mouse, {}, {}, true, 0, {}};
         layer.pointerMoveEvent(dataHandleId(handle), event);
         CORRADE_VERIFY(event.isAccepted());
         CORRADE_COMPARE(called, 0);
     } {
-        PointerMoveEvent event{{}, PointerEventSource::Touch, {}, Pointer::Eraser|Pointer::MouseLeft|Pointer::Finger, true, 0};
+        PointerMoveEvent event{{}, PointerEventSource::Touch, {}, Pointer::Eraser|Pointer::MouseLeft|Pointer::Finger, true, 0, {}};
         layer.pointerMoveEvent(dataHandleId(handle), event);
         CORRADE_VERIFY(event.isAccepted());
         CORRADE_COMPARE(called, 0);
     } {
-        PointerMoveEvent event{{}, PointerEventSource::Touch, {}, Pointer::Eraser|Pointer::MouseLeft|Pointer::Finger, false, 0};
+        PointerMoveEvent event{{}, PointerEventSource::Touch, {}, Pointer::Eraser|Pointer::MouseLeft|Pointer::Finger, false, 0, {}};
         layer.pointerMoveEvent(dataHandleId(handle), event);
         CORRADE_VERIFY(!event.isAccepted());
         CORRADE_COMPARE(called, 0);
     } {
-        PointerMoveEvent event{{}, PointerEventSource::Mouse, {}, Pointer::MouseRight|Pointer::MouseMiddle|Pointer::Pen, true, 0};
+        PointerMoveEvent event{{}, PointerEventSource::Mouse, {}, Pointer::MouseRight|Pointer::MouseMiddle|Pointer::Pen, true, 0, {}};
         layer.pointerMoveEvent(dataHandleId(handle), event);
         CORRADE_VERIFY(event.isAccepted());
         CORRADE_COMPARE(called, 0);
     } {
-        PointerMoveEvent event{{}, PointerEventSource::Mouse, Pointer::MouseRight, {}, true, 0};
+        PointerMoveEvent event{{}, PointerEventSource::Mouse, Pointer::MouseRight, {}, true, 0, {}};
         layer.pointerMoveEvent(dataHandleId(handle), event);
         CORRADE_VERIFY(event.isAccepted());
         CORRADE_COMPARE(called, 0);
     } {
-        PointerMoveEvent event{{}, PointerEventSource::Pen, Pointer::Pen, Pointer::MouseMiddle|Pointer::Finger, true, 0};
+        PointerMoveEvent event{{}, PointerEventSource::Pen, Pointer::Pen, Pointer::MouseMiddle|Pointer::Finger, true, 0, {}};
         layer.pointerMoveEvent(dataHandleId(handle), event);
         CORRADE_VERIFY(event.isAccepted());
         CORRADE_COMPARE(called, 0);
 
     /* Any other than move or leave events shouldn't get accepted */
     } {
-        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0};
+        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
         layer.pointerPressEvent(dataHandleId(handle), event);
         CORRADE_VERIFY(!event.isAccepted());
         CORRADE_COMPARE(called, 0);
     } {
-        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0};
+        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
         layer.pointerReleaseEvent(dataHandleId(handle), event);
         CORRADE_VERIFY(!event.isAccepted());
         CORRADE_COMPARE(called, 0);
     } {
-        PointerMoveEvent event{{}, PointerEventSource::Mouse, {}, {}, true, 0};
+        PointerMoveEvent event{{}, PointerEventSource::Mouse, {}, {}, true, 0, {}};
         layer.pointerEnterEvent(dataHandleId(handle), event);
         CORRADE_VERIFY(!event.isAccepted());
         CORRADE_COMPARE(called, 0);
     } {
-        ScrollEvent event{{}, {}};
+        ScrollEvent event{{}, {}, {}};
         layer.scrollEvent(dataHandleId(handle), event);
         CORRADE_VERIFY(!event.isAccepted());
         CORRADE_COMPARE(called, 0);
@@ -3765,7 +3765,7 @@ void EventLayerTest::leaveMove() {
     /* Verify that the callback is actually properly registered so this doesn't
        result in false positives */
     } {
-        PointerMoveEvent event{{}, PointerEventSource::Mouse, {}, {}, true, 0};
+        PointerMoveEvent event{{}, PointerEventSource::Mouse, {}, {}, true, 0, {}};
         layer.pointerLeaveEvent(dataHandleId(handle), event);
         /* The accept status is ignored for enter/leave events so the layer
            doesn't call setAccepted() */
@@ -3813,7 +3813,7 @@ void EventLayerTest::enterLeaveFromUserInterface() {
 
     /* A move onto the node should result in the enter handler being called */
     {
-        PointerMoveEvent event{{}, PointerEventSource::Mouse, {}, {}, true, 0};
+        PointerMoveEvent event{{}, PointerEventSource::Mouse, {}, {}, true, 0, {}};
         CORRADE_VERIFY(ui.pointerMoveEvent({50, 70}, event));
         CORRADE_COMPARE(ui.currentHoveredNode(), node);
         CORRADE_COMPARE(enterCalled, 1);
@@ -3823,7 +3823,7 @@ void EventLayerTest::enterLeaveFromUserInterface() {
     /* A move out (and out of the below node as well) should result in the
        leave handler being called */
     } {
-        PointerMoveEvent event{{}, PointerEventSource::Mouse, {}, {}, true, 0};
+        PointerMoveEvent event{{}, PointerEventSource::Mouse, {}, {}, true, 0, {}};
         /* There's no node underneath, so this didn't get accepted */
         CORRADE_VERIFY(!ui.pointerMoveEvent({150, 150}, event));
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
@@ -3849,27 +3849,27 @@ void EventLayerTest::focus() {
 
     /* Shouldn't get fired for any other than focus events */
     } {
-        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0};
+        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
         layer.pointerPressEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 1);
     } {
-        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0};
+        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
         layer.pointerReleaseEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 1);
     } {
-        PointerMoveEvent event{{}, PointerEventSource::Mouse, {}, {}, true, 0};
+        PointerMoveEvent event{{}, PointerEventSource::Mouse, {}, {}, true, 0, {}};
         layer.pointerMoveEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 1);
     } {
-        PointerMoveEvent event{{}, PointerEventSource::Mouse, {}, {}, true, 0};
+        PointerMoveEvent event{{}, PointerEventSource::Mouse, {}, {}, true, 0, {}};
         layer.pointerEnterEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 1);
     } {
-        PointerMoveEvent event{{}, PointerEventSource::Mouse, {}, {}, true, 0};
+        PointerMoveEvent event{{}, PointerEventSource::Mouse, {}, {}, true, 0, {}};
         layer.pointerLeaveEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 1);
     } {
-        ScrollEvent event{{}, {}};
+        ScrollEvent event{{}, {}, {}};
         layer.scrollEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 1);
     } {
@@ -3895,27 +3895,27 @@ void EventLayerTest::blur() {
 
     /* Shouldn't get fired for any other than blur events */
     } {
-        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0};
+        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
         layer.pointerPressEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 1);
     } {
-        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0};
+        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
         layer.pointerReleaseEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 1);
     } {
-        PointerMoveEvent event{{}, PointerEventSource::Mouse, {}, {}, true, 0};
+        PointerMoveEvent event{{}, PointerEventSource::Mouse, {}, {}, true, 0, {}};
         layer.pointerMoveEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 1);
     } {
-        PointerMoveEvent event{{}, PointerEventSource::Mouse, {}, {}, true, 0};
+        PointerMoveEvent event{{}, PointerEventSource::Mouse, {}, {}, true, 0, {}};
         layer.pointerEnterEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 1);
     } {
-        PointerMoveEvent event{{}, PointerEventSource::Mouse, {}, {}, true, 0};
+        PointerMoveEvent event{{}, PointerEventSource::Mouse, {}, {}, true, 0, {}};
         layer.pointerLeaveEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 1);
     } {
-        ScrollEvent event{{}, {}};
+        ScrollEvent event{{}, {}, {}};
         layer.scrollEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 1);
     } {
@@ -3981,7 +3981,7 @@ void EventLayerTest::focusBlurFromUserInterface() {
     /* A press on the node result in the focus handler being called as well,
        i.e. it should accept the event here as well */
     } {
-        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0};
+        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
         CORRADE_VERIFY(ui.pointerPressEvent({50, 70}, event));
         CORRADE_COMPARE(ui.currentFocusedNode(), node);
         CORRADE_COMPARE(focusCalled, 2);
@@ -3991,7 +3991,7 @@ void EventLayerTest::focusBlurFromUserInterface() {
     /* A press outside (and out of the below node as well) should result in the
        blur handler being called */
     } {
-        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0};
+        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
         /* There's no node underneath, so this didn't get accepted */
         CORRADE_VERIFY(!ui.pointerPressEvent({150, 150}, event));
         CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);

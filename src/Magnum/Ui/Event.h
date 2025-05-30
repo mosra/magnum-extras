@@ -129,11 +129,12 @@ class MAGNUM_UI_EXPORT PointerEvent {
     public:
         /**
          * @brief Constructor
-         * @param time      Time at which the event happened
-         * @param source    Pointer event source
-         * @param pointer   Pointer type that got pressed or released
-         * @param primary   Whether the pointer is primary
-         * @param id        Pointer ID
+         * @param time          Time at which the event happened
+         * @param source        Pointer event source
+         * @param pointer       Pointer type that got pressed or released
+         * @param primary       Whether the pointer is primary
+         * @param id            Pointer ID
+         * @param modifiers     Active keyboard modifiers
          *
          * The @p time may get used for UI animations. A default-constructed
          * value causes an animation play time to be in the past, thus
@@ -144,7 +145,7 @@ class MAGNUM_UI_EXPORT PointerEvent {
          * properties are set from @ref AbstractUserInterface event handler
          * internals.
          */
-        explicit PointerEvent(Nanoseconds time, PointerEventSource source, Pointer pointer, bool primary, Long id);
+        explicit PointerEvent(Nanoseconds time, PointerEventSource source, Pointer pointer, bool primary, Long id, Modifiers modifiers);
 
         /**
          * @brief Constructor
@@ -154,7 +155,7 @@ class MAGNUM_UI_EXPORT PointerEvent {
          * @ref AbstractUserInterface event handler internals.
          * @experimental
          */
-        explicit PointerEvent(Nanoseconds time, PointerEventSource source, Pointer pointer, bool primary, Long id, const Vector2& position, bool nodePressed, const Vector2& nodeSize);
+        explicit PointerEvent(Nanoseconds time, PointerEventSource source, Pointer pointer, bool primary, Long id, Modifiers modifiers, const Vector2& position, bool nodePressed, const Vector2& nodeSize);
 
         /** @brief Time at which the event happened */
         Nanoseconds time() const { return _time; }
@@ -223,6 +224,9 @@ class MAGNUM_UI_EXPORT PointerEvent {
          * @see @ref source(), @ref isPrimary()
          */
         Long id() const { return _id; }
+
+        /** @brief Active keyboard modifiers */
+        Modifiers modifiers() const { return _modifiers; }
 
         /**
          * @brief Event position
@@ -359,6 +363,7 @@ class MAGNUM_UI_EXPORT PointerEvent {
         Long _id;
         PointerEventSource _source;
         Pointer _pointer;
+        Modifiers _modifiers;
         bool _primary;
         bool _fallthrough = false;
         bool _nodePressed = false;
@@ -382,13 +387,14 @@ class MAGNUM_UI_EXPORT PointerMoveEvent {
     public:
         /**
          * @brief Constructor
-         * @param time      Time at which the event happened
-         * @param source    Pointer event source
-         * @param pointer   Pointer type that changed in this event or
+         * @param time          Time at which the event happened
+         * @param source        Pointer event source
+         * @param pointer       Pointer type that changed in this event or
          *      @relativeref{Corrade,Containers::NullOpt}
-         * @param pointers  Pointer types pressed in this event
-         * @param primary   Whether the pointer is primary
-         * @param id        Pointer ID
+         * @param pointers      Pointer types pressed in this event
+         * @param primary       Whether the pointer is primary
+         * @param id            Pointer ID
+         * @param modifiers     Active keyboard modifiers
          *
          * The @p time may get used for UI animations. A default-constructed
          * value causes an animation play time to be in the past, thus
@@ -400,7 +406,7 @@ class MAGNUM_UI_EXPORT PointerMoveEvent {
          * properties are set from @ref AbstractUserInterface event handler
          * internals.
          */
-        explicit PointerMoveEvent(Nanoseconds time, PointerEventSource source, Containers::Optional<Pointer> pointer, Pointers pointers, bool primary, Long id);
+        explicit PointerMoveEvent(Nanoseconds time, PointerEventSource source, Containers::Optional<Pointer> pointer, Pointers pointers, bool primary, Long id, Modifiers modifiers);
 
         /**
          * @brief Constructor
@@ -409,7 +415,7 @@ class MAGNUM_UI_EXPORT PointerMoveEvent {
          * overwritten in @ref AbstractUserInterface event handler internals.
          * @experimental
          */
-        explicit PointerMoveEvent(Nanoseconds time, PointerEventSource source, Containers::Optional<Pointer> pointer, Pointers pointers, bool primary, Long id, const Vector2& relativePosition);
+        explicit PointerMoveEvent(Nanoseconds time, PointerEventSource source, Containers::Optional<Pointer> pointer, Pointers pointers, bool primary, Long id, Modifiers modifiers, const Vector2& relativePosition);
 
         /** @brief Time at which the event happened */
         Nanoseconds time() const { return _time; }
@@ -491,6 +497,9 @@ class MAGNUM_UI_EXPORT PointerMoveEvent {
          * @see @ref source(), @ref isPrimary()
          */
         Long id() const { return _id; }
+
+        /** @brief Active keyboard modifiers */
+        Modifiers modifiers() const { return _modifiers; }
 
         /**
          * @brief Event position
@@ -636,6 +645,7 @@ class MAGNUM_UI_EXPORT PointerMoveEvent {
         PointerEventSource _source;
         Pointer _pointer; /* NullOpt encoded as Pointer{} to avoid an include */
         Pointers _pointers;
+        Modifiers _modifiers;
         bool _primary;
         bool _fallthrough = false;
         bool _nodePressed = false;
@@ -685,10 +695,11 @@ class ScrollEvent {
     public:
         /**
          * @brief Constructor
-         * @param time      Time at which the event happened
-         * @param offset    Scroll offset in *steps*, where @cpp 1.0f @ce is
-         *      equivalent to one tick of a mouse scroll wheel, and right and
-         *      up direction is positive
+         * @param time          Time at which the event happened
+         * @param offset        Scroll offset in *steps*, where @cpp 1.0f @ce
+         *      is equivalent to one tick of a mouse scroll wheel, and right
+         *      and up direction is positive
+         * @param modifiers     Active keyboard modifiers
          *
          * The @p time may get used for UI animations. A default-constructed
          * value causes an animation play time to be in the past, thus
@@ -696,7 +707,7 @@ class ScrollEvent {
          * node-related properties are set from @ref AbstractUserInterface
          * event handler internals.
          */
-        explicit ScrollEvent(Nanoseconds time, const Vector2& offset): _time{time}, _offset{offset} {}
+        explicit ScrollEvent(Nanoseconds time, const Vector2& offset, Modifiers modifiers): _time{time}, _offset{offset}, _modifiers{modifiers} {}
 
         /** @brief Time at which the event happened */
         Nanoseconds time() const { return _time; }
@@ -713,6 +724,9 @@ class ScrollEvent {
          * it being zero.
          */
         Vector2 offset() const { return _offset; }
+
+        /** @brief Active keyboard modifiers */
+        Modifiers modifiers() const { return _modifiers; }
 
         /**
          * @brief Event position
@@ -803,6 +817,7 @@ class ScrollEvent {
         Nanoseconds _time;
         Vector2 _position, _nodeSize;
         Vector2 _offset;
+        Modifiers _modifiers;
         bool _nodePressed = false;
         bool _nodeHovered = false;
         bool _nodeFocused = false;

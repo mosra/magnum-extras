@@ -3340,19 +3340,19 @@ void AbstractLayerTest::pointerEvent() {
     layer.create();
     layer.create();
     {
-        PointerEvent event{123_nsec, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0};
+        PointerEvent event{123_nsec, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
         layer.pointerPressEvent(1, event);
     } {
-        PointerEvent event{1234_nsec, PointerEventSource::Mouse, Pointer::MouseRight, true, 0};
+        PointerEvent event{1234_nsec, PointerEventSource::Mouse, Pointer::MouseRight, true, 0, {}};
         layer.pointerReleaseEvent(2, event);
     } {
-        PointerMoveEvent event{12345_nsec, PointerEventSource::Pen, Pointer::Pen, {}, true, 0};
+        PointerMoveEvent event{12345_nsec, PointerEventSource::Pen, Pointer::Pen, {}, true, 0, {}};
         layer.pointerMoveEvent(3, event);
     } {
-        PointerMoveEvent event{123456_nsec, PointerEventSource::Touch, Pointer::Finger, {}, true, 0};
+        PointerMoveEvent event{123456_nsec, PointerEventSource::Touch, Pointer::Finger, {}, true, 0, {}};
         layer.pointerEnterEvent(4, event);
     } {
-        PointerMoveEvent event{1234567_nsec, PointerEventSource::Touch, Pointer::Finger, {}, true, 0};
+        PointerMoveEvent event{1234567_nsec, PointerEventSource::Touch, Pointer::Finger, {}, true, 0, {}};
         layer.pointerLeaveEvent(5, event);
     } {
         PointerCancelEvent event{12345678_nsec};
@@ -3370,8 +3370,8 @@ void AbstractLayerTest::pointerEventNotSupported() {
         LayerFeatures doFeatures() const override { return {}; }
     } layer{layerHandle(0, 1)};
 
-    PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseMiddle, true, 0};
-    PointerMoveEvent moveEvent{{}, PointerEventSource::Mouse, {}, {}, true, 0};
+    PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseMiddle, true, 0, {}};
+    PointerMoveEvent moveEvent{{}, PointerEventSource::Mouse, {}, {}, true, 0, {}};
     PointerCancelEvent cancelEvent{{}};
 
     Containers::String out;
@@ -3404,8 +3404,8 @@ void AbstractLayerTest::pointerEventNotImplemented() {
 
     layer.create();
 
-    PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseMiddle, true, 0};
-    PointerMoveEvent moveEvent{{}, PointerEventSource::Mouse, {}, {}, true, 0};
+    PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseMiddle, true, 0, {}};
+    PointerMoveEvent moveEvent{{}, PointerEventSource::Mouse, {}, {}, true, 0, {}};
     PointerCancelEvent cancelEvent{{}};
     layer.pointerPressEvent(0, event);
     layer.pointerReleaseEvent(0, event);
@@ -3433,8 +3433,8 @@ void AbstractLayerTest::pointerEventOutOfRange() {
     layer.create();
     layer.create();
 
-    PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseMiddle, true, 0};
-    PointerMoveEvent moveEvent{{}, PointerEventSource::Mouse, {}, {}, true, 0};
+    PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseMiddle, true, 0, {}};
+    PointerMoveEvent moveEvent{{}, PointerEventSource::Mouse, {}, {}, true, 0, {}};
     PointerCancelEvent cancelEvent{{}};
 
     Containers::String out;
@@ -3469,8 +3469,8 @@ void AbstractLayerTest::pointerEventNotPrimary() {
 
     layer.create();
 
-    PointerEvent event{{}, PointerEventSource::Touch, Pointer::Finger, false, 0};
-    PointerMoveEvent moveEvent{{}, PointerEventSource::Touch, {}, {}, false, 0};
+    PointerEvent event{{}, PointerEventSource::Touch, Pointer::Finger, false, 0, {}};
+    PointerMoveEvent moveEvent{{}, PointerEventSource::Touch, {}, {}, false, 0, {}};
 
     /* These can be called with non-primary events */
     layer.pointerPressEvent(0, event);
@@ -3500,9 +3500,9 @@ void AbstractLayerTest::pointerEventAlreadyAccepted() {
 
     layer.create();
 
-    PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseMiddle, true, 0};
+    PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseMiddle, true, 0, {}};
     event.setAccepted();
-    PointerMoveEvent moveEvent{{}, PointerEventSource::Mouse, {}, {}, true, 0};
+    PointerMoveEvent moveEvent{{}, PointerEventSource::Mouse, {}, {}, true, 0, {}};
     moveEvent.setAccepted();
 
     Containers::String out;
@@ -3546,7 +3546,7 @@ void AbstractLayerTest::scrollEvent() {
     layer.create();
     layer.create();
     {
-        ScrollEvent event{1234_nsec, {2.4f, -3.1f}};
+        ScrollEvent event{1234_nsec, {2.4f, -3.1f}, {}};
         layer.scrollEvent(1, event);
     }
     CORRADE_COMPARE(layer.called, 2);
@@ -3561,7 +3561,7 @@ void AbstractLayerTest::scrollEventNotSupported() {
         LayerFeatures doFeatures() const override { return {}; }
     } layer{layerHandle(0, 1)};
 
-    ScrollEvent event{{}, {}};
+    ScrollEvent event{{}, {}, {}};
 
     Containers::String out;
     Error redirectError{&out};
@@ -3582,7 +3582,7 @@ void AbstractLayerTest::scrollEventNotImplemented() {
 
     layer.create();
 
-    ScrollEvent event{{}, {}};
+    ScrollEvent event{{}, {}, {}};
     layer.scrollEvent(0, event);
 
     /* Shouldn't crash or anything */
@@ -3604,7 +3604,7 @@ void AbstractLayerTest::scrollEventOutOfRange() {
     layer.create();
     layer.create();
 
-    ScrollEvent event{{}, {}};
+    ScrollEvent event{{}, {}, {}};
 
     Containers::String out;
     Error redirectError{&out};
@@ -3627,7 +3627,7 @@ void AbstractLayerTest::scrollEventAlreadyAccepted() {
 
     layer.create();
 
-    ScrollEvent event{{}, {}};
+    ScrollEvent event{{}, {}, {}};
     event.setAccepted();
 
     Containers::String out;
