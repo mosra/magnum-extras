@@ -101,13 +101,32 @@ CORRADE_ENUMSET_OPERATORS(CustomPointers)
 #pragma clang diagnostic pop
 #endif
 
+enum class CustomModifier {
+    Shift = 1 << 12,
+    Ctrl = 1 << 10,
+    Alt = 1 << 20,
+    Super = 1 << 31
+};
+
+typedef Containers::EnumSet<CustomModifier> CustomModifiers;
+
+#ifdef CORRADE_TARGET_CLANG
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunused-function"
+#endif
+CORRADE_ENUMSET_OPERATORS(CustomModifiers)
+#ifdef CORRADE_TARGET_CLANG
+#pragma clang diagnostic pop
+#endif
+
 struct CustomPointerEvent {
-    explicit CustomPointerEvent(CustomPointerEventSource source, CustomPointer pointer, bool primary, Long id, const Vector2& position): _source{source}, _pointer{pointer}, _primary{primary}, _id{id}, _position{position} {}
+    explicit CustomPointerEvent(CustomPointerEventSource source, CustomPointer pointer, bool primary, Long id, CustomModifiers modifiers, const Vector2& position): _source{source}, _pointer{pointer}, _primary{primary}, _id{id}, _modifiers{modifiers}, _position{position} {}
 
     CustomPointerEventSource source() const { return _source; }
     CustomPointer pointer() const { return _pointer; }
     bool isPrimary() const { return _primary; }
     Long id() const { return _id; }
+    CustomModifiers modifiers() const { return _modifiers; }
     Vector2 position() const { return _position; }
     void setAccepted() { accepted = true; }
 
@@ -118,6 +137,7 @@ struct CustomPointerEvent {
         CustomPointer _pointer;
         bool _primary;
         Long _id;
+        CustomModifiers _modifiers;
         Vector2 _position;
 };
 
@@ -126,48 +146,51 @@ const struct {
     CustomPointerEventSource source;
     CustomPointer pointer;
     bool primary;
+    CustomModifiers modifiers;
     /* If NullOpt, the event shouldn't even be called */
     Containers::Optional<PointerEventSource> expectedSource;
     Pointer expectedPointer;
+    Modifiers expectedModifiers;
     bool accept;
 } PointerPressReleaseEventData[]{
     {"mouse left",
-        CustomPointerEventSource::Mouse, CustomPointer::MouseLeft, true,
-        PointerEventSource::Mouse, Pointer::MouseLeft, true},
-    {"mouse middle",
-        CustomPointerEventSource::Mouse, CustomPointer::MouseMiddle, true,
-        PointerEventSource::Mouse, Pointer::MouseMiddle, true},
-    {"mouse right, not accepted",
-        CustomPointerEventSource::Mouse, CustomPointer::MouseRight, true,
-        PointerEventSource::Mouse, Pointer::MouseRight, false},
+        CustomPointerEventSource::Mouse, CustomPointer::MouseLeft, true, {},
+        PointerEventSource::Mouse, Pointer::MouseLeft, {}, true},
+    {"mouse middle + shift & ctrl",
+        CustomPointerEventSource::Mouse, CustomPointer::MouseMiddle, true, CustomModifier::Shift|CustomModifier::Ctrl,
+        PointerEventSource::Mouse, Pointer::MouseMiddle, Modifier::Shift|Modifier::Ctrl, true},
+    {"mouse right + super, not accepted",
+        CustomPointerEventSource::Mouse, CustomPointer::MouseRight, true, CustomModifier::Super,
+        PointerEventSource::Mouse, Pointer::MouseRight, Modifier::Super, false},
     {"finger",
-        CustomPointerEventSource::Touch, CustomPointer::Finger, true,
-        PointerEventSource::Touch, Pointer::Finger, true},
-    {"finger, secondary",
-        CustomPointerEventSource::Touch, CustomPointer::Finger, false,
-        PointerEventSource::Touch, Pointer::Finger, true},
+        CustomPointerEventSource::Touch, CustomPointer::Finger, true, {},
+        PointerEventSource::Touch, Pointer::Finger, {}, true},
+    {"finger + ctrl & alt, secondary",
+        CustomPointerEventSource::Touch, CustomPointer::Finger, false, CustomModifier::Ctrl|CustomModifier::Alt,
+        PointerEventSource::Touch, Pointer::Finger, Modifier::Ctrl|Modifier::Alt, true},
     {"pen",
-        CustomPointerEventSource::Pen, CustomPointer::Pen, true,
-        PointerEventSource::Pen, Pointer::Pen, true},
-    {"eraser",
-        CustomPointerEventSource::Pen, CustomPointer::Eraser, true,
-        PointerEventSource::Pen, Pointer::Eraser, true},
+        CustomPointerEventSource::Pen, CustomPointer::Pen, true, {},
+        PointerEventSource::Pen, Pointer::Pen, {}, true},
+    {"eraser + shift",
+        CustomPointerEventSource::Pen, CustomPointer::Eraser, true, CustomModifier::Shift,
+        PointerEventSource::Pen, Pointer::Eraser, Modifier::Shift, true},
     {"unknown source",
-        CustomPointerEventSource::Trackball, CustomPointer::MouseLeft, false,
-        {}, Pointer{}, false},
+        CustomPointerEventSource::Trackball, CustomPointer::MouseLeft, false, {},
+        {}, Pointer{}, {}, false},
     {"unknown pointer",
-        CustomPointerEventSource::Mouse, CustomPointer::TrackballFire, false,
-        {}, Pointer{}, false},
+        CustomPointerEventSource::Mouse, CustomPointer::TrackballFire, false, {},
+        {}, Pointer{}, {}, false},
 };
 
 struct CustomPointerMoveEvent {
-    explicit CustomPointerMoveEvent(CustomPointerEventSource source, Containers::Optional<CustomPointer> pointer, CustomPointers pointers, bool primary, Long id, const Vector2& position): _source{source}, _pointer{pointer}, _pointers{pointers}, _primary{primary}, _id{id}, _position{position} {}
+    explicit CustomPointerMoveEvent(CustomPointerEventSource source, Containers::Optional<CustomPointer> pointer, CustomPointers pointers, bool primary, Long id, CustomModifiers modifiers, const Vector2& position): _source{source}, _pointer{pointer}, _pointers{pointers}, _primary{primary}, _id{id}, _modifiers{modifiers}, _position{position} {}
 
     CustomPointerEventSource source() const { return _source; }
     Containers::Optional<CustomPointer> pointer() const { return _pointer; }
     CustomPointers pointers() const { return _pointers; }
     bool isPrimary() const { return _primary; }
     Long id() const { return _id; }
+    CustomModifiers modifiers() const { return _modifiers; }
     Vector2 position() const { return _position; }
     void setAccepted() { accepted = true; }
 
@@ -179,6 +202,7 @@ struct CustomPointerMoveEvent {
         CustomPointers _pointers;
         bool _primary;
         Long _id;
+        CustomModifiers _modifiers;
         Vector2 _position;
 };
 
@@ -188,66 +212,69 @@ const struct {
     Containers::Optional<CustomPointer> pointer;
     bool primary;
     CustomPointers pointers;
+    CustomModifiers modifiers;
     /* If NullOpt, the event shouldn't even be called */
     Containers::Optional<PointerEventSource> expectedSource;
     Containers::Optional<Pointer> expectedPointer;
     Pointers expectedPointers;
+    Modifiers expectedModifiers;
     bool accept;
 } PointerMoveEventData[]{
-    {"mouse left + middle + eraser, not accepted",
+    {"mouse left + middle + eraser + ctrl, not accepted",
         CustomPointerEventSource::Pen, {}, true,
-        CustomPointer::MouseLeft|CustomPointer::MouseMiddle|CustomPointer::Eraser,
+        CustomPointer::MouseLeft|CustomPointer::MouseMiddle|CustomPointer::Eraser, CustomModifier::Ctrl,
         PointerEventSource::Pen, {},
-        Pointer::MouseLeft|Pointer::MouseMiddle|Pointer::Eraser, false},
+        Pointer::MouseLeft|Pointer::MouseMiddle|Pointer::Eraser, Modifier::Ctrl, false},
     {"mouse middle + finger + unknown button",
         CustomPointerEventSource::Mouse, {}, true,
-        CustomPointer::MouseMiddle|CustomPointer::Finger|CustomPointer::TrackballFire,
+        CustomPointer::MouseMiddle|CustomPointer::Finger|CustomPointer::TrackballFire, {},
         PointerEventSource::Mouse, {},
-        Pointer::MouseMiddle|Pointer::Finger, true},
-    {"pen hover event",
+        Pointer::MouseMiddle|Pointer::Finger, {}, true},
+    {"pen hover + shift & alt",
         CustomPointerEventSource::Pen, {}, true,
-        {},
+        {}, CustomModifier::Shift|CustomModifier::Alt,
         PointerEventSource::Pen, {},
-        {}, true},
+        {}, Modifier::Shift|Modifier::Alt, true},
     {"secondary touch event, nothing pressed",
         CustomPointerEventSource::Touch, {}, false,
-        {},
+        {}, {},
         PointerEventSource::Touch, {},
-        {}, true},
+        {}, {}, true},
     {"mouse left, unknown source",
         CustomPointerEventSource::Trackball, {}, true,
-        CustomPointer::MouseLeft,
+        CustomPointer::MouseLeft, {},
         /* Not propagated */
         {}, {},
-        {}, false},
+        {}, {}, false},
     {"unknown button alone",
         CustomPointerEventSource::Mouse, {}, true,
-        CustomPointer::TrackballFire,
+        CustomPointer::TrackballFire, {},
         PointerEventSource::Mouse, {},
-        {}, true},
+        {}, {}, true},
     {"mouse left, right newly pressed",
         CustomPointerEventSource::Mouse, CustomPointer::MouseRight, true,
-        CustomPointer::MouseLeft|CustomPointer::MouseRight,
+        CustomPointer::MouseLeft|CustomPointer::MouseRight, {},
         PointerEventSource::Mouse, Pointer::MouseRight,
-        Pointer::MouseLeft|Pointer::MouseRight, true},
+        Pointer::MouseLeft|Pointer::MouseRight, {}, true},
     {"pen + eraser, eraser released",
         CustomPointerEventSource::Pen, CustomPointer::Eraser, true,
-        CustomPointer::Pen,
+        CustomPointer::Pen, {},
         PointerEventSource::Pen, Pointer::Eraser,
-        Pointer::Pen, true},
+        Pointer::Pen, {}, true},
     {"unknown button released alone",
         CustomPointerEventSource::Mouse, CustomPointer::TrackballFire, true,
-        {},
+        {}, {},
         /* Still propagated, but as a plain move event without any buttons */
         PointerEventSource::Mouse, {},
-        {}, true},
+        {}, {}, true},
 };
 
 struct CustomScrollEvent {
-    explicit CustomScrollEvent(const Vector2& position, const Vector2& offset): _position{position}, _offset{offset} {}
+    explicit CustomScrollEvent(const Vector2& position, const Vector2& offset, CustomModifiers modifiers): _position{position}, _offset{offset}, _modifiers{modifiers} {}
 
     Vector2 position() const { return _position; }
     Vector2 offset() const { return _offset; }
+    CustomModifiers modifiers() const { return _modifiers; }
     void setAccepted() { accepted = true; }
 
     bool accepted = false;
@@ -255,14 +282,21 @@ struct CustomScrollEvent {
     private:
         Vector2 _position;
         Vector2 _offset;
+        CustomModifiers _modifiers;
 };
 
 const struct {
     const char* name;
+    CustomModifiers modifiers;
+    Modifiers expectedModifiers;
     bool accept;
 } ScrollEventData[]{
-    {"not accepted", false},
-    {"", true}
+    {"alt, not accepted",
+        CustomModifier::Alt, Modifier::Alt, false},
+    {"",
+        {}, {}, true},
+    {"shift + ctrl",
+        CustomModifier::Shift|CustomModifier::Ctrl, Modifier::Shift|Modifier::Ctrl, true}
 };
 
 #ifdef MAGNUM_BUILD_DEPRECATED
@@ -274,10 +308,20 @@ struct CustomMouseEvent {
         MiddleLeft
     };
 
-    explicit CustomMouseEvent(const Vector2i& position, Button button): _position{position}, _button{button} {}
+    enum class Modifier {
+        Shift = 1 << 3,
+        Ctrl = 1 << 9,
+        Alt = 1 << 19,
+        Super = 1 << 22
+    };
+
+    typedef Containers::EnumSet<Modifier> Modifiers;
+
+    explicit CustomMouseEvent(const Vector2i& position, Button button, Modifiers modifiers): _position{position}, _button{button}, _modifiers{modifiers} {}
 
     Vector2i position() const { return _position; }
     Button button() const { return _button; }
+    Modifiers modifiers() const { return _modifiers; }
     void setAccepted() { accepted = true; }
 
     bool accepted = false;
@@ -285,18 +329,38 @@ struct CustomMouseEvent {
     private:
         Vector2i _position;
         Button _button;
+        Modifiers _modifiers;
 };
+
+#ifdef CORRADE_TARGET_CLANG
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunused-function"
+#endif
+CORRADE_ENUMSET_OPERATORS(CustomMouseEvent::Modifiers)
+#ifdef CORRADE_TARGET_CLANG
+#pragma clang diagnostic pop
+#endif
 
 const struct {
     TestSuite::TestCaseDescriptionSourceLocation name;
     CustomMouseEvent::Button button;
+    CustomMouseEvent::Modifiers modifiers;
     Containers::Optional<Pointer> expectedPointer;
+    Modifiers expectedModifiers;
     bool accept;
 } MousePressReleaseEventData[]{
-    {"left", CustomMouseEvent::Button::Left, Pointer::MouseLeft, true},
-    {"middle", CustomMouseEvent::Button::Middle, Pointer::MouseMiddle, true},
-    {"right, not accepted", CustomMouseEvent::Button::Right, Pointer::MouseRight, false},
-    {"unknown button", CustomMouseEvent::Button::MiddleLeft, {}, false},
+    {"left",
+        CustomMouseEvent::Button::Left, {},
+        Pointer::MouseLeft, {}, true},
+    {"middle + shift",
+        CustomMouseEvent::Button::Middle, CustomMouseEvent::Modifier::Shift,
+        Pointer::MouseMiddle, Modifier::Shift, true},
+    {"right + super, not accepted",
+        CustomMouseEvent::Button::Right, CustomMouseEvent::Modifier::Super,
+        Pointer::MouseRight, Modifier::Super, false},
+    {"unknown button",
+        CustomMouseEvent::Button::MiddleLeft, {},
+        {}, {}, false},
 };
 
 struct CustomMouseMoveEvent {
@@ -309,10 +373,20 @@ struct CustomMouseMoveEvent {
 
     typedef Containers::EnumSet<Button> Buttons;
 
-    explicit CustomMouseMoveEvent(const Vector2i& position, Buttons buttons): _position{position}, _buttons{buttons} {}
+    enum class Modifier {
+        Shift = 1 << 3,
+        Ctrl = 1 << 9,
+        Alt = 1 << 19,
+        Super = 1 << 22
+    };
+
+    typedef Containers::EnumSet<Modifier> Modifiers;
+
+    explicit CustomMouseMoveEvent(const Vector2i& position, Buttons buttons, Modifiers modifiers): _position{position}, _buttons{buttons}, _modifiers{modifiers} {}
 
     Vector2i position() const { return _position; }
     Buttons buttons() const { return _buttons; }
+    Modifiers modifiers() const { return _modifiers; }
     void setAccepted() { accepted = true; }
 
     bool accepted = false;
@@ -320,6 +394,7 @@ struct CustomMouseMoveEvent {
     private:
         Vector2i _position;
         Buttons _buttons;
+        Modifiers _modifiers;
 };
 
 #ifdef CORRADE_TARGET_CLANG
@@ -327,6 +402,7 @@ struct CustomMouseMoveEvent {
 #pragma clang diagnostic ignored "-Wunused-function"
 #endif
 CORRADE_ENUMSET_OPERATORS(CustomMouseMoveEvent::Buttons)
+CORRADE_ENUMSET_OPERATORS(CustomMouseMoveEvent::Modifiers)
 #ifdef CORRADE_TARGET_CLANG
 #pragma clang diagnostic pop
 #endif
@@ -334,26 +410,38 @@ CORRADE_ENUMSET_OPERATORS(CustomMouseMoveEvent::Buttons)
 const struct {
     TestSuite::TestCaseDescriptionSourceLocation name;
     CustomMouseMoveEvent::Buttons buttons;
+    CustomMouseMoveEvent::Modifiers modifiers;
     Pointers expectedPointers;
+    Modifiers expectedModifiers;
     bool accept;
 } MouseMoveEventData[]{
     {"left + middle, not accepted",
-        CustomMouseMoveEvent::Button::Left|CustomMouseMoveEvent::Button::Middle,
-        Pointer::MouseLeft|Pointer::MouseMiddle, false},
-    {"middle + right + unknown button",
-        CustomMouseMoveEvent::Button::Middle|CustomMouseMoveEvent::Button::Right|CustomMouseMoveEvent::Button::Bottom,
-        Pointer::MouseMiddle|Pointer::MouseRight, true},
+        CustomMouseMoveEvent::Button::Left|CustomMouseMoveEvent::Button::Middle, {},
+        Pointer::MouseLeft|Pointer::MouseMiddle, {}, false},
+    {"middle + right + unknown button + alt",
+        CustomMouseMoveEvent::Button::Middle|CustomMouseMoveEvent::Button::Right|CustomMouseMoveEvent::Button::Bottom, CustomMouseMoveEvent::Modifier::Alt,
+        Pointer::MouseMiddle|Pointer::MouseRight, Modifier::Alt, true},
     {"unknown button alone",
-        CustomMouseMoveEvent::Button::Bottom,
-        {}, true},
-    {"no buttons", {}, {}, false},
+        CustomMouseMoveEvent::Button::Bottom, {},
+        {}, {}, true},
+    {"no buttons", {}, {}, {}, {}, false},
 };
 
 struct CustomMouseScrollEvent {
-    explicit CustomMouseScrollEvent(const Vector2i& position, const Vector2& offset): _position{position}, _offset{offset} {}
+    enum class Modifier {
+        Shift = 1 << 3,
+        Ctrl = 1 << 9,
+        Alt = 1 << 19,
+        Super = 1 << 22
+    };
+
+    typedef Containers::EnumSet<Modifier> Modifiers;
+
+    explicit CustomMouseScrollEvent(const Vector2i& position, const Vector2& offset, Modifiers modifiers): _position{position}, _offset{offset}, _modifiers{modifiers} {}
 
     Vector2i position() const { return _position; }
     Vector2 offset() const { return _offset; }
+    Modifiers modifiers() const { return _modifiers; }
     void setAccepted() { accepted = true; }
 
     bool accepted = false;
@@ -361,14 +449,30 @@ struct CustomMouseScrollEvent {
     private:
         Vector2i _position;
         Vector2 _offset;
+        Modifiers _modifiers;
 };
+
+#ifdef CORRADE_TARGET_CLANG
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunused-function"
+#endif
+CORRADE_ENUMSET_OPERATORS(CustomMouseScrollEvent::Modifiers)
+#ifdef CORRADE_TARGET_CLANG
+#pragma clang diagnostic pop
+#endif
 
 const struct {
     const char* name;
+    CustomMouseScrollEvent::Modifiers modifiers;
+    Modifiers expectedModifiers;
     bool accept;
 } MouseScrollEventData[]{
-    {"not accepted", false},
-    {"", true}
+    {"not accepted + super",
+        CustomMouseScrollEvent::Modifier::Super, Modifier::Super, false},
+    {"",
+        {}, {}, true},
+    {"shift + alt",
+        CustomMouseScrollEvent::Modifier::Shift|CustomMouseScrollEvent::Modifier::Alt, Modifier::Shift|Modifier::Alt, true}
 };
 #endif
 
@@ -502,41 +606,23 @@ struct CustomKeyEvent {
         AltGr
     };
 
-    enum class Modifier {
-        Shift = 1 << 12,
-        Ctrl = 1 << 10,
-        Alt = 1 << 20,
-        Super = 1 << 31
-    };
-
-    typedef Containers::EnumSet<Modifier> Modifiers;
-
-    explicit CustomKeyEvent(Key key, Modifiers modifiers): _key{key}, _modifiers{modifiers} {}
+    explicit CustomKeyEvent(Key key, CustomModifiers modifiers): _key{key}, _modifiers{modifiers} {}
 
     Key key() const { return _key; }
-    Modifiers modifiers() const { return _modifiers; }
+    CustomModifiers modifiers() const { return _modifiers; }
     void setAccepted() { accepted = true; }
 
     bool accepted = false;
 
     private:
         Key _key;
-        Modifiers _modifiers;
+        CustomModifiers _modifiers;
 };
-
-#ifdef CORRADE_TARGET_CLANG
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wunused-function"
-#endif
-CORRADE_ENUMSET_OPERATORS(CustomKeyEvent::Modifiers)
-#ifdef CORRADE_TARGET_CLANG
-#pragma clang diagnostic pop
-#endif
 
 const struct {
     TestSuite::TestCaseDescriptionSourceLocation name;
     CustomKeyEvent::Key key;
-    CustomKeyEvent::Modifiers modifiers;
+    CustomModifiers modifiers;
     Key expectedKey;
     Modifiers expectedModifiers;
     bool accept;
@@ -548,16 +634,16 @@ const struct {
         {},
         false},
     {"Shift + Ctrl + C",
-        CustomKeyEvent::Key::C, CustomKeyEvent::Modifier::Shift|CustomKeyEvent::Modifier::Ctrl,
+        CustomKeyEvent::Key::C, CustomModifier::Shift|CustomModifier::Ctrl,
         Key::C, Modifier::Shift|Modifier::Ctrl, true},
     {"Super + Alt + Esc, not accepted",
-        CustomKeyEvent::Key::Esc, CustomKeyEvent::Modifier::Super|CustomKeyEvent::Modifier::Alt,
+        CustomKeyEvent::Key::Esc, CustomModifier::Super|CustomModifier::Alt,
         Key::Esc, Modifier::Super|Modifier::Alt, false},
     {"left Ctrl, recognized as a key and not a modifier",
         CustomKeyEvent::Key::LeftCtrl, {},
         Key::LeftCtrl, {}, true},
     {"Super + Unknown",
-        CustomKeyEvent::Key::Unknown, CustomKeyEvent::Modifier::Super,
+        CustomKeyEvent::Key::Unknown, CustomModifier::Super,
         Key{}, {}, false},
     {"unhandled World1 key",
         CustomKeyEvent::Key::World1, {},
@@ -665,7 +751,7 @@ void ApplicationTest::pointerPressEvent() {
     AbstractUserInterface ui{{200.0f, 300.0f}, {2000.0f, 30.0f}, {666, 777}};
 
     struct Layer: AbstractLayer {
-        explicit Layer(LayerHandle handle, PointerEventSource expectedSource, Pointer expectedPointer, bool expectedPrimary, bool accept): AbstractLayer{handle}, expectedSource{expectedSource}, expectedPointer{expectedPointer}, expectedPrimary{expectedPrimary}, accept{accept} {}
+        explicit Layer(LayerHandle handle, PointerEventSource expectedSource, Pointer expectedPointer, bool expectedPrimary, Modifiers expectedModifiers, bool accept): AbstractLayer{handle}, expectedSource{expectedSource}, expectedPointer{expectedPointer}, expectedPrimary{expectedPrimary}, expectedModifiers{expectedModifiers}, accept{accept} {}
 
         using AbstractLayer::create;
 
@@ -677,6 +763,7 @@ void ApplicationTest::pointerPressEvent() {
             CORRADE_COMPARE(event.pointer(), expectedPointer);
             CORRADE_COMPARE(event.isPrimary(), expectedPrimary);
             CORRADE_COMPARE(event.id(), 1ll << 36);
+            CORRADE_COMPARE(event.modifiers(), expectedModifiers);
             CORRADE_COMPARE(event.position(), (Vector2{156.25f, 230.7f}));
             event.setAccepted(accept);
             ++called;
@@ -715,6 +802,7 @@ void ApplicationTest::pointerPressEvent() {
         PointerEventSource expectedSource;
         Pointer expectedPointer;
         bool expectedPrimary;
+        Modifiers expectedModifiers;
         bool accept;
         Int called = 0;
     };
@@ -722,10 +810,11 @@ void ApplicationTest::pointerPressEvent() {
         data.expectedSource ? *data.expectedSource : PointerEventSource{},
         data.expectedPointer,
         data.primary,
+        data.expectedModifiers,
         data.accept));
     layer.create(ui.createNode({}, ui.size()));
 
-    CustomPointerEvent e{data.source, data.pointer, data.primary, 1ll << 36, {1562.5f, 23.07f}};
+    CustomPointerEvent e{data.source, data.pointer, data.primary, 1ll << 36, data.modifiers, {1562.5f, 23.07f}};
     /* Should return true only if it's accepted */
     CORRADE_COMPARE(ui.pointerPressEvent(e), data.accept);
     /* Should be called only if there's a source / pointer to translate to */
@@ -743,7 +832,7 @@ void ApplicationTest::pointerReleaseEvent() {
     AbstractUserInterface ui{{200.0f, 300.0f}, {20.0f, 3000.0f}, {666, 777}};
 
     struct Layer: AbstractLayer {
-        explicit Layer(LayerHandle handle, PointerEventSource expectedSource, Pointer expectedPointer, bool expectedPrimary, bool accept): AbstractLayer{handle}, expectedSource{expectedSource}, expectedPointer{expectedPointer}, expectedPrimary{expectedPrimary}, accept{accept} {}
+        explicit Layer(LayerHandle handle, PointerEventSource expectedSource, Pointer expectedPointer, bool expectedPrimary, Modifiers expectedModifiers, bool accept): AbstractLayer{handle}, expectedSource{expectedSource}, expectedPointer{expectedPointer}, expectedPrimary{expectedPrimary}, expectedModifiers{expectedModifiers}, accept{accept} {}
 
         using AbstractLayer::create;
 
@@ -758,6 +847,7 @@ void ApplicationTest::pointerReleaseEvent() {
             CORRADE_COMPARE(event.pointer(), expectedPointer);
             CORRADE_COMPARE(event.isPrimary(), expectedPrimary);
             CORRADE_COMPARE(event.id(), 1ll << 47);
+            CORRADE_COMPARE(event.modifiers(), expectedModifiers);
             CORRADE_COMPARE(event.position(), (Vector2{150.75f, 236.25f}));
             event.setAccepted(accept);
             ++called;
@@ -793,6 +883,7 @@ void ApplicationTest::pointerReleaseEvent() {
         PointerEventSource expectedSource;
         Pointer expectedPointer;
         bool expectedPrimary;
+        Modifiers expectedModifiers;
         bool accept;
         Int called = 0;
     };
@@ -800,10 +891,11 @@ void ApplicationTest::pointerReleaseEvent() {
         data.expectedSource ? *data.expectedSource : PointerEventSource{},
         data.expectedPointer,
         data.primary,
+        data.expectedModifiers,
         data.accept));
     layer.create(ui.createNode({}, ui.size()));
 
-    CustomPointerEvent e{data.source, data.pointer, data.primary, 1ll << 47, {15.075f, 2362.5f}};
+    CustomPointerEvent e{data.source, data.pointer, data.primary, 1ll << 47, data.modifiers, {15.075f, 2362.5f}};
     /* Should return true only if it's accepted */
     CORRADE_COMPARE(ui.pointerReleaseEvent(e), data.accept);
     /* Should be called only if there's a source / pointer to translate to */
@@ -821,7 +913,7 @@ void ApplicationTest::pointerMoveEvent() {
     AbstractUserInterface ui{{200.0f, 300.0f}, {2000.0f, 30.0f}, {666, 777}};
 
     struct Layer: AbstractLayer {
-        explicit Layer(LayerHandle handle, PointerEventSource expectedSource, Containers::Optional<Pointer> expectedPointer, Pointers expectedPointers, bool expectedPrimary, bool accept): AbstractLayer{handle}, expectedSource{expectedSource}, expectedPointer{expectedPointer}, expectedPointers{expectedPointers}, expectedPrimary{expectedPrimary}, accept{accept} {}
+        explicit Layer(LayerHandle handle, PointerEventSource expectedSource, Containers::Optional<Pointer> expectedPointer, Pointers expectedPointers, bool expectedPrimary, Modifiers expectedModifiers, bool accept): AbstractLayer{handle}, expectedSource{expectedSource}, expectedPointer{expectedPointer}, expectedPointers{expectedPointers}, expectedPrimary{expectedPrimary}, expectedModifiers{expectedModifiers}, accept{accept} {}
 
         using AbstractLayer::create;
 
@@ -840,6 +932,7 @@ void ApplicationTest::pointerMoveEvent() {
             CORRADE_COMPARE(event.pointers(), expectedPointers);
             CORRADE_COMPARE(event.isPrimary(), expectedPrimary);
             CORRADE_COMPARE(event.id(), 1ll << 55);
+            CORRADE_COMPARE(event.modifiers(), expectedModifiers);
             CORRADE_COMPARE(event.position(), (Vector2{156.125f, 230.4f}));
             event.setAccepted(accept);
             ++called;
@@ -869,6 +962,7 @@ void ApplicationTest::pointerMoveEvent() {
         Containers::Optional<Pointer> expectedPointer;
         Pointers expectedPointers;
         bool expectedPrimary;
+        Modifiers expectedModifiers;
         bool accept;
         Int called = 0;
     };
@@ -877,10 +971,11 @@ void ApplicationTest::pointerMoveEvent() {
         data.expectedPointer,
         data.expectedPointers,
         data.primary,
+        data.expectedModifiers,
         data.accept));
     layer.create(ui.createNode({}, ui.size()));
 
-    CustomPointerMoveEvent e{data.source, data.pointer, data.pointers, data.primary, 1ll << 55, {1561.25f, 23.04f}};
+    CustomPointerMoveEvent e{data.source, data.pointer, data.pointers, data.primary, 1ll << 55, data.modifiers, {1561.25f, 23.04f}};
     /* Should return true only if it's accepted */
     CORRADE_COMPARE(ui.pointerMoveEvent(e), data.accept);
     /* Should be called only if there's a source to translate to */
@@ -904,7 +999,7 @@ void ApplicationTest::pointerPressReleaseMoveEventNoTouchOrPen() {
     typedef Containers::EnumSet<MouseOnlyPointer> MouseOnlyPointers;
 
     struct MouseOnlyPointerEvent {
-        explicit MouseOnlyPointerEvent(MouseOnlyPointer pointer, Long id, const Vector2& position): _pointer{pointer}, _id{id}, _position{position} {}
+        explicit MouseOnlyPointerEvent(MouseOnlyPointer pointer, Long id, CustomModifiers modifiers, const Vector2& position): _pointer{pointer}, _id{id}, _modifiers{modifiers}, _position{position} {}
 
         MouseOnlyPointerEventSource source() const {
             return MouseOnlyPointerEventSource::Mouse;
@@ -912,6 +1007,7 @@ void ApplicationTest::pointerPressReleaseMoveEventNoTouchOrPen() {
         MouseOnlyPointer pointer() const { return _pointer; }
         bool isPrimary() const { return true; }
         Long id() const { return _id; }
+        CustomModifiers modifiers() const { return _modifiers; }
         Vector2 position() const { return _position; }
         void setAccepted() { accepted = true; }
 
@@ -920,11 +1016,12 @@ void ApplicationTest::pointerPressReleaseMoveEventNoTouchOrPen() {
         private:
             MouseOnlyPointer _pointer;
             Long _id;
+            CustomModifiers _modifiers;
             Vector2 _position;
     };
 
     struct MouseOnlyPointerMoveEvent {
-        explicit MouseOnlyPointerMoveEvent(Containers::Optional<MouseOnlyPointer> pointer, MouseOnlyPointers pointers, Long id, const Vector2& position): _pointer{pointer}, _pointers{pointers}, _id{id}, _position{position} {}
+        explicit MouseOnlyPointerMoveEvent(Containers::Optional<MouseOnlyPointer> pointer, MouseOnlyPointers pointers, Long id, CustomModifiers modifiers, const Vector2& position): _pointer{pointer}, _pointers{pointers}, _id{id}, _modifiers{modifiers}, _position{position} {}
 
         MouseOnlyPointerEventSource source() const {
             return MouseOnlyPointerEventSource::Mouse;
@@ -933,6 +1030,7 @@ void ApplicationTest::pointerPressReleaseMoveEventNoTouchOrPen() {
         MouseOnlyPointers pointers() const { return _pointers; }
         bool isPrimary() const { return true; }
         Long id() const { return _id; }
+        CustomModifiers modifiers() const { return _modifiers; }
         Vector2 position() const { return _position; }
         void setAccepted() { accepted = true; }
 
@@ -942,6 +1040,7 @@ void ApplicationTest::pointerPressReleaseMoveEventNoTouchOrPen() {
             Containers::Optional<MouseOnlyPointer> _pointer;
             MouseOnlyPointers _pointers;
             Long _id;
+            CustomModifiers _modifiers;
             Vector2 _position;
     };
 
@@ -959,6 +1058,7 @@ void ApplicationTest::pointerPressReleaseMoveEventNoTouchOrPen() {
             CORRADE_COMPARE(event.pointer(), Pointer::MouseLeft);
             CORRADE_COMPARE(event.isPrimary(), true);
             CORRADE_COMPARE(event.id(), 1ll << 33);
+            CORRADE_COMPARE(event.modifiers(), Modifier::Alt);
             CORRADE_COMPARE(event.position(), (Vector2{1.0f, 2.0f}));
             event.setAccepted();
             called *= 2;
@@ -968,6 +1068,7 @@ void ApplicationTest::pointerPressReleaseMoveEventNoTouchOrPen() {
             CORRADE_COMPARE(event.pointer(), Pointer::MouseRight);
             CORRADE_COMPARE(event.isPrimary(), true);
             CORRADE_COMPARE(event.id(), 1ll << 44);
+            CORRADE_COMPARE(event.modifiers(), Modifier::Shift|Modifier::Ctrl);
             CORRADE_COMPARE(event.position(), (Vector2{3.0f, 4.0f}));
             event.setAccepted();
             called *= 3;
@@ -978,6 +1079,7 @@ void ApplicationTest::pointerPressReleaseMoveEventNoTouchOrPen() {
             CORRADE_COMPARE(event.pointers(), Pointer::MouseRight|Pointer::MouseLeft);
             CORRADE_COMPARE(event.isPrimary(), true);
             CORRADE_COMPARE(event.id(), 1ll << 55);
+            CORRADE_COMPARE(event.modifiers(), Modifier::Super);
             CORRADE_COMPARE(event.position(), (Vector2{5.0f, 6.0f}));
             event.setAccepted();
             called *= 5;
@@ -988,10 +1090,10 @@ void ApplicationTest::pointerPressReleaseMoveEventNoTouchOrPen() {
     Layer& layer = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer()));
     layer.create(ui.createNode({}, ui.size()));
 
-    MouseOnlyPointerEvent press{MouseOnlyPointer::MouseLeft, 1ll << 33, {1.0f, 2.0f}};
-    MouseOnlyPointerEvent release{MouseOnlyPointer::MouseRight, 1ll << 44, {3.0f, 4.0f}};
+    MouseOnlyPointerEvent press{MouseOnlyPointer::MouseLeft, 1ll << 33, CustomModifier::Alt, {1.0f, 2.0f}};
+    MouseOnlyPointerEvent release{MouseOnlyPointer::MouseRight, 1ll << 44, CustomModifier::Shift|CustomModifier::Ctrl, {3.0f, 4.0f}};
     /* Using MouseOnlyPointers{} to not need CORRADE_ENUMSET_OPERATORS() */
-    MouseOnlyPointerMoveEvent move{MouseOnlyPointer::MouseMiddle, MouseOnlyPointers{}|MouseOnlyPointer::MouseRight|MouseOnlyPointer::MouseLeft, 1ll << 55, {5.0f, 6.0f}};
+    MouseOnlyPointerMoveEvent move{MouseOnlyPointer::MouseMiddle, MouseOnlyPointers{}|MouseOnlyPointer::MouseRight|MouseOnlyPointer::MouseLeft, 1ll << 55, CustomModifier::Super, {5.0f, 6.0f}};
     CORRADE_VERIFY(ui.pointerPressEvent(press));
     CORRADE_VERIFY(ui.pointerReleaseEvent(release));
     CORRADE_VERIFY(ui.pointerMoveEvent(move));
@@ -1011,7 +1113,7 @@ void ApplicationTest::scrollEvent() {
     AbstractUserInterface ui{{200.0f, 300.0f}, {2000.0f, 30.0f}, {666, 777}};
 
     struct Layer: AbstractLayer {
-        explicit Layer(LayerHandle handle, bool accept): AbstractLayer{handle}, accept{accept} {}
+        explicit Layer(LayerHandle handle, Modifiers expectedModifiers, bool accept): AbstractLayer{handle}, expectedModifiers{expectedModifiers}, accept{accept} {}
 
         using AbstractLayer::create;
 
@@ -1036,6 +1138,7 @@ void ApplicationTest::scrollEvent() {
         void doScrollEvent(UnsignedInt, ScrollEvent& event) override {
             CORRADE_COMPARE(event.position(), (Vector2{156.25f, 230.7f}));
             CORRADE_COMPARE(event.offset(), (Vector2{2.5f, -3.7f}));
+            CORRADE_COMPARE(event.modifiers(), expectedModifiers);
             event.setAccepted(accept);
             ++called;
         }
@@ -1055,13 +1158,14 @@ void ApplicationTest::scrollEvent() {
             CORRADE_FAIL("This shouldn't be called.");
         }
 
+        Modifiers expectedModifiers;
         bool accept;
         Int called = 0;
     };
-    Layer& layer = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer(), data.accept));
+    Layer& layer = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer(), data.expectedModifiers, data.accept));
     layer.create(ui.createNode({}, ui.size()));
 
-    CustomScrollEvent e{{1562.5f, 23.07f}, {2.5f, -3.7f}};
+    CustomScrollEvent e{{1562.5f, 23.07f}, {2.5f, -3.7f}, data.modifiers};
     /* Should return true only if it's accepted */
     CORRADE_COMPARE(ui.scrollEvent(e), data.accept);
     CORRADE_COMPARE(e.accepted, data.accept);
@@ -1078,7 +1182,7 @@ void ApplicationTest::mousePressEvent() {
     AbstractUserInterface ui{{200.0f, 300.0f}, {2000.0f, 30.0f}, {666, 777}};
 
     struct Layer: AbstractLayer {
-        explicit Layer(LayerHandle handle, Pointer expectedPointer, bool accept): AbstractLayer{handle}, expectedPointer{expectedPointer}, accept{accept} {}
+        explicit Layer(LayerHandle handle, Pointer expectedPointer, Modifiers expectedModifiers, bool accept): AbstractLayer{handle}, expectedPointer{expectedPointer}, expectedModifiers{expectedModifiers}, accept{accept} {}
 
         using AbstractLayer::create;
 
@@ -1090,6 +1194,7 @@ void ApplicationTest::mousePressEvent() {
             CORRADE_COMPARE(event.pointer(), expectedPointer);
             CORRADE_COMPARE(event.isPrimary(), true);
             CORRADE_COMPARE(event.id(), 0);
+            CORRADE_COMPARE(event.modifiers(), expectedModifiers);
             CORRADE_COMPARE(event.position(), (Vector2{156.0f, 230.0f}));
             event.setAccepted(accept);
             ++called;
@@ -1126,13 +1231,14 @@ void ApplicationTest::mousePressEvent() {
         }
 
         Pointer expectedPointer;
+        Modifiers expectedModifiers;
         bool accept;
         Int called = 0;
     };
-    Layer& layer = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer(), data.expectedPointer ? *data.expectedPointer : Pointer{}, data.accept));
+    Layer& layer = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer(), data.expectedPointer ? *data.expectedPointer : Pointer{}, data.expectedModifiers, data.accept));
     layer.create(ui.createNode({}, ui.size()));
 
-    CustomMouseEvent e{{1560, 23}, data.button};
+    CustomMouseEvent e{{1560, 23}, data.button, data.modifiers};
     /* Should return true only if it's accepted */
     CORRADE_COMPARE(ui.pointerPressEvent(e), data.accept);
     /* Should be called only if there's a pointer type to translate to */
@@ -1150,7 +1256,7 @@ void ApplicationTest::mouseReleaseEvent() {
     AbstractUserInterface ui{{200.0f, 300.0f}, {20.0f, 3000.0f}, {666, 777}};
 
     struct Layer: AbstractLayer {
-        explicit Layer(LayerHandle handle, Pointer expectedPointer, bool accept): AbstractLayer{handle}, expectedPointer{expectedPointer}, accept{accept} {}
+        explicit Layer(LayerHandle handle, Pointer expectedPointer, Modifiers expectedModifiers, bool accept): AbstractLayer{handle}, expectedPointer{expectedPointer}, expectedModifiers{expectedModifiers}, accept{accept} {}
 
         using AbstractLayer::create;
 
@@ -1165,6 +1271,7 @@ void ApplicationTest::mouseReleaseEvent() {
             CORRADE_COMPARE(event.pointer(), expectedPointer);
             CORRADE_COMPARE(event.isPrimary(), true);
             CORRADE_COMPARE(event.id(), 0);
+            CORRADE_COMPARE(event.modifiers(), expectedModifiers);
             CORRADE_COMPARE(event.position(), (Vector2{150.0f, 236.0f}));
             event.setAccepted(accept);
             ++called;
@@ -1198,13 +1305,14 @@ void ApplicationTest::mouseReleaseEvent() {
         }
 
         Pointer expectedPointer;
+        Modifiers expectedModifiers;
         bool accept;
         Int called = 0;
     };
-    Layer& layer = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer(), data.expectedPointer ? *data.expectedPointer : Pointer{}, data.accept));
+    Layer& layer = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer(), data.expectedPointer ? *data.expectedPointer : Pointer{}, data.expectedModifiers, data.accept));
     layer.create(ui.createNode({}, ui.size()));
 
-    CustomMouseEvent e{{15, 2360}, data.button};
+    CustomMouseEvent e{{15, 2360}, data.button, data.modifiers};
     /* Should return true only if it's accepted */
     CORRADE_COMPARE(ui.pointerReleaseEvent(e), data.accept);
     /* Should be called only if there's a pointer type to translate to */
@@ -1222,7 +1330,7 @@ void ApplicationTest::mouseMoveEvent() {
     AbstractUserInterface ui{{200.0f, 300.0f}, {2000.0f, 30.0f}, {666, 777}};
 
     struct Layer: AbstractLayer {
-        explicit Layer(LayerHandle handle, Pointers expectedPointers, bool accept): AbstractLayer{handle}, expectedPointers{expectedPointers}, accept{accept} {}
+        explicit Layer(LayerHandle handle, Pointers expectedPointers, Modifiers expectedModifiers, bool accept): AbstractLayer{handle}, expectedPointers{expectedPointers}, expectedModifiers{expectedModifiers}, accept{accept} {}
 
         using AbstractLayer::create;
 
@@ -1241,6 +1349,7 @@ void ApplicationTest::mouseMoveEvent() {
             CORRADE_COMPARE(event.pointers(), expectedPointers);
             CORRADE_COMPARE(event.isPrimary(), true);
             CORRADE_COMPARE(event.id(), 0);
+            CORRADE_COMPARE(event.modifiers(), expectedModifiers);
             CORRADE_COMPARE(event.position(), (Vector2{156.0f, 230.0f}));
             event.setAccepted(accept);
             ++called;
@@ -1267,13 +1376,14 @@ void ApplicationTest::mouseMoveEvent() {
         }
 
         Pointers expectedPointers;
+        Modifiers expectedModifiers;
         bool accept;
         Int called = 0;
     };
-    Layer& layer = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer(), data.expectedPointers, data.accept));
+    Layer& layer = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer(), data.expectedPointers, data.expectedModifiers, data.accept));
     layer.create(ui.createNode({}, ui.size()));
 
-    CustomMouseMoveEvent e{{1560, 23}, data.buttons};
+    CustomMouseMoveEvent e{{1560, 23}, data.buttons, data.modifiers};
     /* Should return true only if it's accepted */
     CORRADE_COMPARE(ui.pointerMoveEvent(e), data.accept);
     /* Should be called always */
@@ -1291,7 +1401,7 @@ void ApplicationTest::mouseScrollEvent() {
     AbstractUserInterface ui{{200.0f, 300.0f}, {2000.0f, 30.0f}, {666, 777}};
 
     struct Layer: AbstractLayer {
-        explicit Layer(LayerHandle handle, bool accept): AbstractLayer{handle}, accept{accept} {}
+        explicit Layer(LayerHandle handle, Modifiers expectedModifiers, bool accept): AbstractLayer{handle}, expectedModifiers{expectedModifiers}, accept{accept} {}
 
         using AbstractLayer::create;
 
@@ -1316,6 +1426,7 @@ void ApplicationTest::mouseScrollEvent() {
         void doScrollEvent(UnsignedInt, ScrollEvent& event) override {
             CORRADE_COMPARE(event.position(), (Vector2{156.0f, 230.0f}));
             CORRADE_COMPARE(event.offset(), (Vector2{2.5f, -3.7f}));
+            CORRADE_COMPARE(event.modifiers(), expectedModifiers);
             event.setAccepted(accept);
             ++called;
         }
@@ -1335,13 +1446,14 @@ void ApplicationTest::mouseScrollEvent() {
             CORRADE_FAIL("This shouldn't be called.");
         }
 
+        Modifiers expectedModifiers;
         bool accept;
         Int called = 0;
     };
-    Layer& layer = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer(), data.accept));
+    Layer& layer = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer(), data.expectedModifiers, data.accept));
     layer.create(ui.createNode({}, ui.size()));
 
-    CustomMouseScrollEvent e{{1560, 23}, {2.5f, -3.7f}};
+    CustomMouseScrollEvent e{{1560, 23}, {2.5f, -3.7f}, data.modifiers};
     /* Should return true only if it's accepted */
     CORRADE_COMPARE(ui.scrollEvent(e), data.accept);
     CORRADE_COMPARE(e.accepted, data.accept);
