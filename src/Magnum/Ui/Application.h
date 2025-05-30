@@ -166,6 +166,21 @@ template<class ApplicationPointers> Pointers pointersFor(const ApplicationPointe
     return out;
 }
 
+template<class ApplicationModifiers> Modifiers modifiersFor(ApplicationModifiers modifiers) {
+    typedef typename ApplicationModifiers::Type ApplicationModifier;
+
+    Modifiers out;
+    if(modifiers & ApplicationModifier::Shift)
+        out |= Modifier::Shift;
+    if(modifiers & ApplicationModifier::Ctrl)
+        out |= Modifier::Ctrl;
+    if(modifiers & ApplicationModifier::Alt)
+        out |= Modifier::Alt;
+    if(modifiers & ApplicationModifier::Super)
+        out |= Modifier::Super;
+    return out;
+}
+
 /** @todo remove once the deprecated MouseEvent is gone */
 #if defined(CORRADE_TARGET_MSVC) && !defined(CORRADE_TARGET_CLANG) && _MSC_VER < 1940
 CORRADE_HAS_TYPE(IsPointerEvent, decltype(std::declval<T>().pointer()));
@@ -199,7 +214,7 @@ template<class Event> struct PointerEventConverter<Event, typename std::enable_i
         if(source == PointerEventSource{} || pointer == Pointer{})
             return false;
 
-        PointerEvent e{time, source, pointer, event.isPrimary(), event.id()};
+        PointerEvent e{time, source, pointer, event.isPrimary(), event.id(), modifiersFor(event.modifiers())};
         if(ui.pointerPressEvent(event.position(), e)) {
             event.setAccepted();
             return true;
@@ -214,7 +229,7 @@ template<class Event> struct PointerEventConverter<Event, typename std::enable_i
         if(source == PointerEventSource{} || pointer == Pointer{})
             return false;
 
-        PointerEvent e{time, source, pointer, event.isPrimary(), event.id()};
+        PointerEvent e{time, source, pointer, event.isPrimary(), event.id(), modifiersFor(event.modifiers())};
         if(ui.pointerReleaseEvent(event.position(), e)) {
             event.setAccepted();
             return true;
@@ -245,7 +260,7 @@ template<class Event> struct ScrollEventConverter<Event,
     #endif
 > {
     static bool trigger(AbstractUserInterface& ui, Event& event, const Nanoseconds time = {}) {
-        ScrollEvent e{time, event.offset()};
+        ScrollEvent e{time, event.offset(), modifiersFor(event.modifiers())};
         if(ui.scrollEvent(
             /* This converter can be called with the deprecated
                MouseScrollEvent as well, as there's no easy way to distinguish
@@ -304,7 +319,7 @@ template<class Event> struct PointerMoveEventConverter<Event, typename std::enab
                 pointer = translated;
         }
 
-        PointerMoveEvent e{time, source, pointer, pointers, event.isPrimary(), event.id()};
+        PointerMoveEvent e{time, source, pointer, pointers, event.isPrimary(), event.id(), modifiersFor(event.modifiers())};
         if(ui.pointerMoveEvent(event.position(), e)) {
             event.setAccepted();
             return true;
@@ -353,7 +368,7 @@ template<class Event> struct PointerEventConverter<Event, typename std::enable_i
         if(pointer == Pointer{})
             return false;
 
-        PointerEvent e{time, PointerEventSource::Mouse, pointer, true, 0};
+        PointerEvent e{time, PointerEventSource::Mouse, pointer, true, 0, modifiersFor(event.modifiers())};
         if(ui.pointerPressEvent(Vector2{event.position()}, e)) {
             event.setAccepted();
             return true;
@@ -367,7 +382,7 @@ template<class Event> struct PointerEventConverter<Event, typename std::enable_i
         if(pointer == Pointer{})
             return false;
 
-        PointerEvent e{time, PointerEventSource::Mouse, pointer, true, 0};
+        PointerEvent e{time, PointerEventSource::Mouse, pointer, true, 0, modifiersFor(event.modifiers())};
         if(ui.pointerReleaseEvent(Vector2{event.position()}, e)) {
             event.setAccepted();
             return true;
@@ -389,7 +404,7 @@ template<class Event> struct PointerMoveEventConverter<Event, typename std::enab
     static bool move(AbstractUserInterface& ui, Event& event, const Nanoseconds time = {}) {
         const Pointers pointers = pointersForButtons<Event>(event.buttons());
 
-        PointerMoveEvent e{time, PointerEventSource::Mouse, {}, pointers, true, 0};
+        PointerMoveEvent e{time, PointerEventSource::Mouse, {}, pointers, true, 0, modifiersFor(event.modifiers())};
         if(ui.pointerMoveEvent(Vector2{event.position()}, e)) {
             event.setAccepted();
             return true;
@@ -571,21 +586,6 @@ template<class ApplicationKey> Key keyFor(ApplicationKey key) {
 }
 
 #undef UI_OPTIONAL_APPLICATION_KEY
-
-template<class ApplicationModifiers> Modifiers modifiersFor(ApplicationModifiers modifiers) {
-    typedef typename ApplicationModifiers::Type ApplicationModifier;
-
-    Modifiers out;
-    if(modifiers & ApplicationModifier::Shift)
-        out |= Modifier::Shift;
-    if(modifiers & ApplicationModifier::Ctrl)
-        out |= Modifier::Ctrl;
-    if(modifiers & ApplicationModifier::Alt)
-        out |= Modifier::Alt;
-    if(modifiers & ApplicationModifier::Super)
-        out |= Modifier::Super;
-    return out;
-}
 
 template<class Event> struct KeyEventConverter<Event,
     /* Clang (16, but probably others too) is only able to match this with the
