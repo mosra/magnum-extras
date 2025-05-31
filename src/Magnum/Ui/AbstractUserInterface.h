@@ -2431,7 +2431,9 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
          * propagated further. Accept status of the focus and blur events
          * doesn't have any effect on the return value.
          *
-         * Expects that the event is not accepted yet.
+         * Expects that the event is not accepted yet. Presence of any
+         * @ref Modifiers doesn't affect the behavior described above in any
+         * way.
          * @see @ref PointerEvent::isPrimary(), @ref PointerEvent::isAccepted(),
          *      @ref PointerEvent::setAccepted(), @ref currentPressedNode(),
          *      @ref currentHoveredNode(), @ref currentCapturedNode(),
@@ -2514,7 +2516,9 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
          * handling node at given position and thus the event should be
          * propagated further.
          *
-         * Expects that the event is not accepted yet.
+         * Expects that the event is not accepted yet. Presence of any
+         * @ref Modifiers doesn't affect the behavior described above in any
+         * way.
          * @see @ref PointerEvent::isPrimary(), @ref PointerEvent::isAccepted(),
          *      @ref PointerEvent::setAccepted(), @ref currentPressedNode(),
          *      @ref currentHoveredNode(), @ref currentCapturedNode(),
@@ -2627,7 +2631,9 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
          * propagated further; accept status of the enter and leave events is
          * ignored.
          *
-         * Expects that the event is not accepted yet.
+         * Expects that the event is not accepted yet. Presence of any
+         * @ref Modifiers doesn't affect the behavior described above in any
+         * way.
          * @see @ref PointerEvent::isAccepted(),
          *      @ref PointerEvent::setAccepted(), @ref currentPressedNode(),
          *      @ref currentHoveredNode(), @ref currentCapturedNode(),
@@ -2682,7 +2688,9 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
          * handling node at given position and thus the event should be
          * propagated further.
          *
-         * Expects that the event is not accepted yet.
+         * Expects that the event is not accepted yet. Presence of any
+         * @ref Modifiers doesn't affect the behavior described above in any
+         * way.
          * @see @ref ScrollEvent::isAccepted(),
          *      @ref ScrollEvent::setAccepted()
          */
