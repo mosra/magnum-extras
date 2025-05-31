@@ -447,9 +447,10 @@ class MAGNUM_UI_EXPORT AbstractVisualLayer::Shared {
          * then doesn't receive any events until enabled again, meaning the
          * disabled style index cannot transition into any other.
          *
-         * If any of the functions is @cpp nullptr @ce, given transition is
-         * a no-op, keeping the same index. All transition functions are
-         * @cpp nullptr @ce initially.
+         * The style transition happens regardless of any @ref Modifiers being
+         * present on the event. If any of the functions is @cpp nullptr @ce,
+         * given transition is a no-op, keeping the same index. All transition
+         * functions are @cpp nullptr @ce initially.
          *
          * For correct behavior, the @p toInactiveOut, @p toInactiveOver,
          * @p toFocusedOut, @p toFocusedOver, @p toPressedOut and
