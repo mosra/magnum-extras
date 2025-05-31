@@ -190,17 +190,6 @@ const struct {
 
 const struct {
     const char* name;
-    bool update;
-    bool templated;
-} EventStyleTransitionNoHoverData[]{
-    {"update before", true, false},
-    {"", false, false},
-    {"templated, update before", true, true},
-    {"templated", false, true},
-};
-
-const struct {
-    const char* name;
     bool templated;
 } EventStyleTransitionDisabledData[]{
     {"", false},
@@ -321,7 +310,7 @@ AbstractVisualLayerTest::AbstractVisualLayerTest() {
         Containers::arraySize(EventStyleTransitionData));
 
     addInstancedTests({&AbstractVisualLayerTest::eventStyleTransitionNoHover},
-        Containers::arraySize(EventStyleTransitionNoHoverData));
+        Containers::arraySize(EventStyleTransitionData));
 
     addInstancedTests({&AbstractVisualLayerTest::eventStyleTransitionDisabled},
         Containers::arraySize(EventStyleTransitionDisabledData));
