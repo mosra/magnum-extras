@@ -1907,26 +1907,24 @@ inline void AbstractUserInterface::removeNodeInternal(const UnsignedInt id) {
        would lead to cycles in the free list. */
     node.used.parent = NodeHandle::Null;
 
-    /* If the generation wrapped around, exit without putting it to the free
-       list. That makes it disabled, i.e. impossible to be recycled later, to
-       avoid aliasing old handles. */
-    if(node.used.generation == 1 << Implementation::NodeHandleGenerationBits)
-        return;
+    /* Put the node at the end of the free list (while they're allocated from
+       the front) to not exhaust the generation counter too fast. If the free
+       list is empty however, update also the index of the first free layer.
 
-    /* Put the node at the end of the free list (while they're allocated
-       from the front) to not exhaust the generation counter too fast. If the
-       free list is empty however, update also the index of the first free
-       layer. */
-    node.free.next = ~UnsignedInt{};
-    if(state.lastFreeNode == ~UnsignedInt{}) {
-        CORRADE_INTERNAL_ASSERT(
-            state.firstFreeNode == ~UnsignedInt{} &&
-            state.lastFreeNode == ~UnsignedInt{});
-        state.firstFreeNode = id;
-    } else {
-        state.nodes[state.lastFreeNode].free.next = id;
+       Don't do this if the generation wrapped around. That makes it disabled,
+       i.e. impossible to be recycled later, to avoid aliasing old handles. */
+    if(node.used.generation != 1 << Implementation::NodeHandleGenerationBits) {
+        node.free.next = ~UnsignedInt{};
+        if(state.lastFreeNode == ~UnsignedInt{}) {
+            CORRADE_INTERNAL_ASSERT(
+                state.firstFreeNode == ~UnsignedInt{} &&
+                state.lastFreeNode == ~UnsignedInt{});
+            state.firstFreeNode = id;
+        } else {
+            state.nodes[state.lastFreeNode].free.next = id;
+        }
+        state.lastFreeNode = id;
     }
-    state.lastFreeNode = id;
 
     /* Nested nodes and data are left dangling and get cleaned up during the
        next clean() call */
