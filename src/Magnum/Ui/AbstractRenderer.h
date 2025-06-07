@@ -297,7 +297,12 @@ class MAGNUM_UI_EXPORT AbstractRenderer {
         void transition(RendererTargetState targetState, RendererDrawStates drawStates);
 
     private:
-        /** @brief Implementation for @ref features() */
+        /**
+         * @brief Implementation for @ref features()
+         *
+         * Note that the value returned by this function is assumed to stay
+         * constant during the whole renderer lifetime.
+         */
         virtual RendererFeatures doFeatures() const = 0;
 
         /**

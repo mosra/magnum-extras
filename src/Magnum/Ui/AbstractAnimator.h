@@ -1254,7 +1254,12 @@ class MAGNUM_UI_EXPORT AbstractAnimator {
         /* Calls setLayerInternal() (yeah, it's ew, sorry) */
         friend AbstractLayer;
 
-        /** @brief Implementation for @ref features() */
+        /**
+         * @brief Implementation for @ref features()
+         *
+         * Note that the value returned by this function is assumed to stay
+         * constant during the whole animator lifetime.
+         */
         virtual AnimatorFeatures doFeatures() const = 0;
 
         /**
