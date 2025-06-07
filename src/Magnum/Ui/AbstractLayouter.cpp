@@ -156,15 +156,17 @@ std::size_t AbstractLayouter::capacity() const {
 }
 
 std::size_t AbstractLayouter::usedCount() const {
-    /* The node is null only for free layouts, so compared to all other
-       usedCount() implementations we can iterate directly instead of going
-       through the linked list. Need to also check for disabled nodes however,
-       as those are not part of the free list either. */
+    /* In general we can assume that the amount of free data is always either
+       zero or significantly less than the capacity, and thus iterating the
+       (presumably small) free list should be faster, even though it involves
+       jumping around in memory. */
     const State& state = *_state;
     std::size_t free = 0;
-    for(const Layout& i: state.layouts)
-        if(i.used.node == NodeHandle::Null && i.used.generation != 1 << Implementation::LayouterDataHandleGenerationBits)
-            ++free;
+    UnsignedInt index = state.firstFree;
+    while(index != ~UnsignedInt{}) {
+        index = state.layouts[index].free.next;
+        ++free;
+    }
     return state.layouts.size() - free;
 }
 
