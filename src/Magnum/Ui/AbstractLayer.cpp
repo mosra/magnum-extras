@@ -37,6 +37,7 @@
 #include "Magnum/Ui/AbstractAnimator.h"
 #include "Magnum/Ui/Event.h"
 #include "Magnum/Ui/Handle.h"
+#include "Magnum/Ui/Implementation/abstractLayerState.h"
 
 namespace Magnum { namespace Ui {
 
@@ -136,73 +137,6 @@ Debug& operator<<(Debug& debug, const LayerStates value) {
     });
 }
 
-namespace {
-
-union Data {
-    explicit Data() noexcept: used{} {}
-
-    struct Used {
-        /* Together with index of this item in `data` used for creating a
-           LayerDataHandle. Increased every time a handle reaches remove(). Has
-           to be initially non-zero to differentiate the first ever handle
-           (with index 0) from LayerDataHandle::Null. Once becomes
-           `1 << LayerDataHandleGenerationBits` the handle gets disabled. */
-        UnsignedShort generation = 1;
-
-        /* Two bytes free */
-
-        /* Node the data is attached to. Becomes null again when the data is
-           freed. Has to be re-filled every time a handle is recycled, so it
-           doesn't make sense to initialize it to anything. */
-        NodeHandle node;
-
-        /* Four bytes free */
-    } used;
-
-    /* Used only if the Data is among free ones */
-    struct Free {
-        /* The generation value has to be preserved in order to increment it
-           next time it gets used */
-        UnsignedShort generation;
-
-        /* The node field is needed to discard free items when directly
-           iterating the list. */
-        /** @todo any idea how to better pack this? this is a bit awful */
-        NodeHandle node;
-
-        /* See State::firstFree for more information */
-        UnsignedInt next;
-    } free;
-};
-
-#ifndef CORRADE_NO_STD_IS_TRIVIALLY_TRAITS
-static_assert(std::is_trivially_copyable<Data>::value, "Data not trivially copyable");
-#endif
-static_assert(
-    offsetof(Data::Used, generation) == offsetof(Data::Free, generation) &&
-    offsetof(Data::Used, node) == offsetof(Data::Free, node),
-    "Data::Used and Free layout not compatible");
-
-}
-
-struct AbstractLayer::State {
-    LayerHandle handle;
-    LayerStates state;
-
-    #ifndef CORRADE_NO_ASSERT
-    bool setSizeCalled = false;
-    #endif
-    /* 0/4 bytes free, 1/5 on a no-assert build */
-
-    Containers::Array<Data> data;
-    /* Indices in the data array. The Data then has a nextFree member
-       containing the next free index. New data get taken from the front,
-       removed are put at the end. A value of ~UnsignedInt{} means there's no
-       (first/next/last) free data. */
-    UnsignedInt firstFree = ~UnsignedInt{};
-    UnsignedInt lastFree = ~UnsignedInt{};
-};
-
 AbstractLayer::AbstractLayer(const LayerHandle handle): _state{InPlaceInit} {
     CORRADE_ASSERT(handle != LayerHandle::Null,
         "Ui::AbstractLayer: handle is null", );
@@ -292,7 +226,7 @@ DataHandle AbstractLayer::create(const NodeHandle node) {
 
     /* Find the first free data if there is, update the free index to point to
        the next one (or none) */
-    Data* data;
+    Implementation::AbstractLayerData* data;
     if(state.firstFree!= ~UnsignedInt{}) {
         data = &state.data[state.firstFree];
 
@@ -366,7 +300,7 @@ void AbstractLayer::remove(const LayerDataHandle handle) {
 
 void AbstractLayer::removeInternal(const UnsignedInt id) {
     State& state = *_state;
-    Data& data = state.data[id];
+    Implementation::AbstractLayerData& data = state.data[id];
 
     /* Increase the data generation so existing handles pointing to this data
        are invalidated */
@@ -462,11 +396,15 @@ NodeHandle AbstractLayer::node(LayerDataHandle data) const {
 }
 
 Containers::StridedArrayView1D<const NodeHandle> AbstractLayer::nodes() const {
-    return stridedArrayView(_state->data).slice(&Data::used).slice(&Data::Used::node);
+    return stridedArrayView(_state->data)
+        .slice(&Implementation::AbstractLayerData::used)
+        .slice(&Implementation::AbstractLayerData::Used::node);
 }
 
 Containers::StridedArrayView1D<const UnsignedShort> AbstractLayer::generations() const {
-    return stridedArrayView(_state->data).slice(&Data::used).slice(&Data::Used::generation);
+    return stridedArrayView(_state->data)
+        .slice(&Implementation::AbstractLayerData::used)
+        .slice(&Implementation::AbstractLayerData::Used::generation);
 }
 
 void AbstractLayer::setSize(const Vector2& size, const Vector2i& framebufferSize) {
@@ -488,7 +426,7 @@ void AbstractLayer::cleanNodes(const Containers::StridedArrayView1D<const Unsign
     Containers::BitArray dataIdsToRemove{ValueInit, state.data.size()};
 
     for(std::size_t i = 0; i != state.data.size(); ++i) {
-        const Data& data = state.data[i];
+        const Implementation::AbstractLayerData& data = state.data[i];
 
         /* Skip data that are free or that aren't attached to any node */
         if(data.used.node == NodeHandle::Null)
@@ -514,7 +452,9 @@ void AbstractLayer::doClean(Containers::BitArrayView) {}
 
 void AbstractLayer::cleanData(const Containers::Iterable<AbstractAnimator>& animators) {
     State& state = *_state;
-    const Containers::StridedArrayView1D<const UnsignedShort> dataGenerations = stridedArrayView(state.data).slice(&Data::used).slice(&Data::Used::generation);
+    const Containers::StridedArrayView1D<const UnsignedShort> dataGenerations = stridedArrayView(state.data)
+        .slice(&Implementation::AbstractLayerData::used)
+        .slice(&Implementation::AbstractLayerData::Used::generation);
 
     for(AbstractAnimator& animator: animators) {
         CORRADE_ASSERT(animator.features() & AnimatorFeature::DataAttachment,

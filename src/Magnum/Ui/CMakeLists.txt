@@ -109,6 +109,7 @@ set(MagnumUi_HEADERS
     visibility.h)
 
 set(MagnumUi_PRIVATE_HEADERS
+    Implementation/abstractLayerState.h
     Implementation/abstractUserInterface.h
     Implementation/abstractVisualLayerState.h
     Implementation/abstractVisualLayerAnimatorState.h
