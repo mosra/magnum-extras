@@ -177,10 +177,8 @@ bool AbstractLayouter::isHandleValid(const LayouterDataHandle handle) const {
     const UnsignedInt index = layouterDataHandleId(handle);
     if(index >= state.layouts.size())
         return false;
-    /* Unlike UserInterface::isHandleValid(LayouterHandle), the generation
-       counter here is 16bit and a disabled handle is signalized by 0x10000,
-       not 0, so for disabled handles this will always fail without having to
-       do any extra checks.
+    /* Zero generation (i.e., where it wrapped around from all bits set) is
+       also invalid.
 
        Note that this can still return true for manually crafted handles that
        point to free layouts with correct generation counters. That could be
@@ -188,7 +186,8 @@ bool AbstractLayouter::isHandleValid(const LayouterDataHandle handle) const {
        other isHandleValid() is capable of that without adding extra state I
        don't think making a single variant tighter is going to make any
        difference. */
-    return layouterDataHandleGeneration(handle) == state.layouts[index].used.generation;
+    const UnsignedInt generation = layouterDataHandleGeneration(handle);
+    return generation && generation == state.layouts[index].used.generation;
 }
 
 bool AbstractLayouter::isHandleValid(const LayoutHandle handle) const {
@@ -257,8 +256,9 @@ void AbstractLayouter::removeInternal(const UnsignedInt id) {
     Layout& layout = state.layouts[id];
 
     /* Increase the layout generation so existing handles pointing to this
-       layout are invalidated */
-    ++layout.used.generation;
+       layout are invalidated. Wrap around to 0 if it goes over the generation
+       bits. */
+    ++layout.used.generation &= (1 << Implementation::LayouterDataHandleGenerationBits) - 1;
 
     /* Set the node attachment to null to avoid falsely recognizing this item
        as used when directly iterating the list */
@@ -270,7 +270,7 @@ void AbstractLayouter::removeInternal(const UnsignedInt id) {
 
        Don't do this if the generation wrapped around. That makes it disabled,
        i.e. impossible to be recycled later, to avoid aliasing old handles. */
-    if(layout.used.generation != 1 << Implementation::LayouterDataHandleGenerationBits) {
+    if(layout.used.generation != 0) {
         layout.free.next = ~UnsignedInt{};
         if(state.lastFree == ~UnsignedInt{}) {
             CORRADE_INTERNAL_ASSERT(
