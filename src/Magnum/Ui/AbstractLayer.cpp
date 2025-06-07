@@ -219,16 +219,14 @@ bool AbstractLayer::isHandleValid(const LayerDataHandle handle) const {
     const UnsignedInt index = layerDataHandleId(handle);
     if(index >= state.data.size())
         return false;
-    /* Zero generation (i.e., where it wrapped around from all bits set) is
-       also invalid.
-
-       Note that this can still return true for manually crafted handles that
-       point to free data with correct generation counters. The only way to
-       detect that would be by either iterating the free list (slow) or by
-       keeping an additional bitfield marking free items. I don't think that's
-       necessary. */
     const UnsignedInt generation = layerDataHandleGeneration(handle);
-    return generation && generation == state.data[index].used.generation;
+    const Implementation::AbstractLayerData& data = state.data[index];
+    /* Zero generation handles (i.e., where it wrapped around from all bits
+       set) are expected to be expired and thus with `used` being false. In
+       other words, it shouldn't be needed to verify also that generation is
+       non-zero. */
+    CORRADE_INTERNAL_DEBUG_ASSERT(generation || !data.used.used);
+    return data.used.used && generation == data.used.generation;
 }
 
 bool AbstractLayer::isHandleValid(const DataHandle handle) const {
@@ -261,6 +259,10 @@ DataHandle AbstractLayer::create(const NodeHandle node) {
     /* Fill the data. In both above cases the generation is already set
        appropriately, either initialized to 1, or incremented when it got
        remove()d (to mark existing handles as invalid) */
+    data->used.used = true;
+
+    /* Mark the layer as needing an update() call, and in case it's attached
+       also the UI needing an update */
     state.state |= LayerState::NeedsDataUpdate;
     if(node != NodeHandle::Null) {
         data->used.node = node;
@@ -317,9 +319,11 @@ void AbstractLayer::removeInternal(const UnsignedInt id) {
     Implementation::AbstractLayerData& data = state.data[id];
 
     /* Increase the data generation so existing handles pointing to this data
-       are invalidated. Wrap around to 0 if it goes over the generation
-       bits. */
+       are invalidated. Wrap around to 0 if it goes over the generation bits.
+       Also mark it as not used so isHandleValid() doesn't return true if the
+       generation matches by accident. */
     ++data.used.generation &= (1 << Implementation::LayerDataHandleGenerationBits) - 1;
+    data.used.used = false;
 
     /* Set the node attachment to null to avoid falsely recognizing this item
        as used when directly iterating the list */

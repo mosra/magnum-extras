@@ -744,14 +744,31 @@ void AbstractLayerTest::createRemoveHandleRecycle() {
         NodeHandle::Null
     }), TestSuite::Compare::Container);
 
+    /* Handles crafted with a manually incremented generation (i.e., the
+       generation that will be used next) shouldn't be reported as valid */
+    DataHandle firstNext = dataHandle(layer.handle(), dataHandleId(first), dataHandleGeneration(first) + 1);
+    DataHandle thirdNext = dataHandle(layer.handle(), dataHandleId(third), dataHandleGeneration(third) + 1);
+    DataHandle fourthNext = dataHandle(layer.handle(), dataHandleId(fourth), dataHandleGeneration(fourth) + 1);
+    CORRADE_VERIFY(!layer.isHandleValid(firstNext));
+    CORRADE_VERIFY(!layer.isHandleValid(thirdNext));
+    CORRADE_VERIFY(!layer.isHandleValid(fourthNext));
+
     /* Allocating new handles should recycle the handles in the order they were
-       removed (oldest first). Their properties should be cleared. */
+       removed (oldest first). They should be the same as the handles crafted
+       above which should report as valid now. Their properties should be
+       cleared. */
     DataHandle fourth2 = layer.create();
     DataHandle first2 = layer.create();
     DataHandle third2 = layer.create();
     CORRADE_COMPARE(first2, dataHandle(layer.handle(), 0, 2));
     CORRADE_COMPARE(third2, dataHandle(layer.handle(), 2, 2));
     CORRADE_COMPARE(fourth2, dataHandle(layer.handle(), 3, 2));
+    CORRADE_COMPARE(first2, firstNext);
+    CORRADE_COMPARE(third2, thirdNext);
+    CORRADE_COMPARE(fourth2, fourthNext);
+    CORRADE_VERIFY(layer.isHandleValid(firstNext));
+    CORRADE_VERIFY(layer.isHandleValid(thirdNext));
+    CORRADE_VERIFY(layer.isHandleValid(fourthNext));
     CORRADE_COMPARE(layer.capacity(), 4);
     CORRADE_COMPARE(layer.usedCount(), 4);
     CORRADE_COMPARE(layer.node(first2), NodeHandle::Null);
