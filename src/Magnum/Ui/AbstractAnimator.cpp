@@ -302,16 +302,15 @@ bool AbstractAnimator::isHandleValid(const AnimatorDataHandle handle) const {
     const UnsignedInt index = animatorDataHandleId(handle);
     if(index >= state.animations.size())
         return false;
-    /* Unlike UserInterface::isHandleValid(AnimatorHandle), the generation
-       counter here is 16bit and a disabled handle is signalized by 0x10000,
-       not 0, so for disabled handles this will always fail without having to
-       do any extra checks.
+    /* Zero generation (i.e., where it wrapped around from all bits set) is
+       also invalid.
 
        Note that this can still return true for manually crafted handles that
        point to free animations with correct generation counters. All other
        isHandleValid() aren't capable of detecting that without adding extra
        state either. */
-    return animatorDataHandleGeneration(handle) == state.animations[index].used.generation;
+    const UnsignedInt generation = animatorDataHandleGeneration(handle);
+    return generation && generation == state.animations[index].used.generation;
 }
 
 bool AbstractAnimator::isHandleValid(const AnimationHandle handle) const {
@@ -492,8 +491,9 @@ void AbstractAnimator::removeInternal(const UnsignedInt id) {
     Animation& animation = state.animations[id];
 
     /* Increase the layout generation so existing handles pointing to this
-       layout are invalidated */
-    ++animation.used.generation;
+       layout are invalidated. Wrap around to 0 if it goes over the generation
+       bits. */
+    ++animation.used.generation &= (1 << Implementation::AnimatorDataHandleGenerationBits) - 1;
 
     /* Set the animation duration to 0 to avoid falsely recognizing this item
        as used when directly iterating the list */
@@ -512,7 +512,7 @@ void AbstractAnimator::removeInternal(const UnsignedInt id) {
 
        Don't do this if the generation wrapped around. That makes it disabled,
        i.e. impossible to be recycled later, to avoid aliasing old handles. */
-    if(animation.used.generation != 1 << Implementation::AnimatorDataHandleGenerationBits) {
+    if(animation.used.generation != 0) {
         animation.free.next = ~UnsignedInt{};
         if(state.lastFree == ~UnsignedInt{}) {
             CORRADE_INTERNAL_ASSERT(

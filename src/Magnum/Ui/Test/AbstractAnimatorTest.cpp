@@ -1192,6 +1192,13 @@ void AbstractAnimatorTest::createRemoveHandleDisable() {
     CORRADE_COMPARE(third, animationHandle(animator.handle(), 2, 1));
     CORRADE_COMPARE(animator.capacity(), 3);
     CORRADE_COMPARE(animator.usedCount(), 3);
+
+    /* The generation counter view should have 0 for the disabled slot */
+    CORRADE_COMPARE_AS(animator.generations(), Containers::arrayView<UnsignedShort>({
+        1,
+        0,
+        1
+    }), TestSuite::Compare::Container);
 }
 
 void AbstractAnimatorTest::createNoHandlesLeft() {

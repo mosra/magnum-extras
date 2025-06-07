@@ -370,6 +370,13 @@ void AbstractLayouterTest::addRemoveHandleDisable() {
     CORRADE_COMPARE(third, layoutHandle(layouter.handle(), 2, 1));
     CORRADE_COMPARE(layouter.capacity(), 3);
     CORRADE_COMPARE(layouter.usedCount(), 3);
+
+    /* The generation counter view should have 0 for the disabled slot */
+    CORRADE_COMPARE_AS(layouter.generations(), Containers::arrayView<UnsignedShort>({
+        1,
+        0,
+        1
+    }), TestSuite::Compare::Container);
 }
 
 void AbstractLayouterTest::addNullNode() {

@@ -830,6 +830,13 @@ void AbstractLayerTest::createRemoveHandleDisable() {
     CORRADE_COMPARE(third, dataHandle(layer.handle(), 2, 1));
     CORRADE_COMPARE(layer.capacity(), 3);
     CORRADE_COMPARE(layer.usedCount(), 3);
+
+    /* The generation counter view should have 0 for the disabled slot */
+    CORRADE_COMPARE_AS(layer.generations(), Containers::arrayView<UnsignedShort>({
+        1,
+        0,
+        1
+    }), TestSuite::Compare::Container);
 }
 
 void AbstractLayerTest::createNoHandlesLeft() {
