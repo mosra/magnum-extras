@@ -241,12 +241,12 @@ ApplicationTest::ApplicationTest(const Arguments& arguments): Platform::Applicat
             event.setAccepted();
         }
 
-        void doFocusEvent(UnsignedInt, FocusEvent& event) override {
+        void doFocusEvent(UnsignedInt, Ui::FocusEvent& event) override {
             Debug{} << "Focus event";
             event.setAccepted();
         }
 
-        void doBlurEvent(UnsignedInt, FocusEvent& event) override {
+        void doBlurEvent(UnsignedInt, Ui::FocusEvent& event) override {
             Debug{} << "Blur event";
             event.setAccepted();
         }
