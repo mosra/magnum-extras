@@ -44,6 +44,7 @@
 #include "Magnum/Ui/Event.h"
 #include "Magnum/Ui/Handle.h"
 #include "Magnum/Ui/NodeFlags.h"
+#include "Magnum/Ui/Implementation/abstractLayerState.h"
 #include "Magnum/Ui/Implementation/abstractUserInterface.h"
 #include "Magnum/Ui/Implementation/orderNodesBreadthFirstInto.h"
 
@@ -603,10 +604,40 @@ AbstractUserInterface::AbstractUserInterface(NoCreateT): _state{InPlaceInit} {}
 
 AbstractUserInterface::AbstractUserInterface(const Vector2i& size): AbstractUserInterface{Vector2{size}, Vector2{size}, size} {}
 
-AbstractUserInterface::AbstractUserInterface(AbstractUserInterface&&) noexcept = default;
+AbstractUserInterface::AbstractUserInterface(AbstractUserInterface&& other) noexcept: _state{Utility::move(other._state)} {
+    /* Update UI references in all layer instances to point to the new
+       location, unless this is a moved-out instance */
+    if(State* const state = _state.get()) for(Layer& layer: state->layers) {
+        if(AbstractLayer* const instance = layer.used.instance.get()) {
+            CORRADE_INTERNAL_ASSERT(instance->_state->ui == &other);
+            instance->_state->ui = this;
+        }
+    }
+}
 
-AbstractUserInterface& AbstractUserInterface::operator=(AbstractUserInterface&&) noexcept = default;
+AbstractUserInterface& AbstractUserInterface::operator=(AbstractUserInterface&& other) noexcept {
+    Utility::swap(other._state, _state);
 
+    /* Update UI references in all layer instances to point to the new
+       locations, on both sides, unless either is a moved-out instance */
+    if(State* const state = _state.get()) for(Layer& layer: state->layers) {
+        if(AbstractLayer* const instance = layer.used.instance.get()) {
+            CORRADE_INTERNAL_ASSERT(instance->_state->ui == &other);
+            instance->_state->ui = this;
+        }
+    }
+    if(State* const state = other._state.get()) for(Layer& layer: state->layers) {
+        if(AbstractLayer* const instance = layer.used.instance.get()) {
+            CORRADE_INTERNAL_ASSERT(instance->_state->ui == this);
+            instance->_state->ui = &other;
+        }
+    }
+
+    return *this;
+}
+
+/** @todo once/if setLayerInstance() allows non-owning layers, the destructor
+    needs to update the UI references in them as well */
 AbstractUserInterface::~AbstractUserInterface() = default;
 
 Vector2 AbstractUserInterface::size() const {
@@ -972,6 +1003,7 @@ AbstractLayer& AbstractUserInterface::setLayerInstance(Containers::Pointer<Abstr
     Layer& layer = state.layers[id];
     layer.used.features = instance->features();
     layer.used.instance = Utility::move(instance);
+    layer.used.instance->_state->ui = this;
 
     /* If the size is already set, immediately proxy it to the layer. If it
        isn't, it gets done during the next setSize() call. */

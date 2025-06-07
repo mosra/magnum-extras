@@ -59,6 +59,8 @@ struct AbstractLayerTest: TestSuite::Tester {
     void constructCopy();
     void constructMove();
 
+    void uiInvalid();
+
     void stateQuery();
     void stateQueryNotImplemented();
     void stateQueryInvalid();
@@ -223,7 +225,9 @@ AbstractLayerTest::AbstractLayerTest() {
               &AbstractLayerTest::construct,
               &AbstractLayerTest::constructInvalidHandle,
               &AbstractLayerTest::constructCopy,
-              &AbstractLayerTest::constructMove});
+              &AbstractLayerTest::constructMove,
+
+              &AbstractLayerTest::uiInvalid});
 
     addInstancedTests({&AbstractLayerTest::stateQuery},
         Containers::arraySize(StateQuerySetNeedsUpdateData));
@@ -434,6 +438,7 @@ void AbstractLayerTest::debugStatesSupersets() {
 void AbstractLayerTest::construct() {
     struct: AbstractLayer {
         using AbstractLayer::AbstractLayer;
+        using AbstractLayer::hasUi;
 
         LayerFeatures doFeatures() const override { return LayerFeatures(0xe0); }
     } layer{layerHandle(0xab, 0x12)};
@@ -445,6 +450,11 @@ void AbstractLayerTest::construct() {
     CORRADE_COMPARE(layer.usedCount(), 0);
     CORRADE_VERIFY(!layer.isHandleValid(LayerDataHandle::Null));
     CORRADE_VERIFY(!layer.isHandleValid(DataHandle::Null));
+    CORRADE_VERIFY(!layer.hasUi());
+
+    /* ui() and hasUi() tested thoroughly in
+       AbstractUserInterfaceTest::layerUserInterfaceReference(), invalid access
+       in uiInvalid() below */
 }
 
 void AbstractLayerTest::constructInvalidHandle() {
@@ -488,6 +498,29 @@ void AbstractLayerTest::constructMove() {
 
     CORRADE_VERIFY(std::is_nothrow_move_constructible<Layer>::value);
     CORRADE_VERIFY(std::is_nothrow_move_assignable<Layer>::value);
+}
+
+void AbstractLayerTest::uiInvalid() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct Layer: AbstractLayer {
+        using AbstractLayer::AbstractLayer;
+        using AbstractLayer::hasUi;
+        using AbstractLayer::ui;
+
+        LayerFeatures doFeatures() const override { return {}; }
+    } layer{layerHandle(0, 1)};
+    const Layer& clayer = layer;
+
+    CORRADE_VERIFY(!layer.hasUi());
+
+    Containers::String out;
+    Error redirectError{&out};
+    layer.ui();
+    clayer.ui();
+    CORRADE_COMPARE(out,
+        "Ui::AbstractLayer::ui(): layer not part of a user interface\n"
+        "Ui::AbstractLayer::ui(): layer not part of a user interface\n");
 }
 
 void AbstractLayerTest::stateQuery() {

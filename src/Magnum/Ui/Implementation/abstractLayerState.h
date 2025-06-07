@@ -26,6 +26,9 @@
     DEALINGS IN THE SOFTWARE.
 */
 
+/* Definition of the AbstractLayer::State struct that's also used by
+   AbstractUserInterface internals to manage the UI reference stored in it */
+
 #include <Corrade/Containers/Array.h>
 
 #include "Magnum/Ui/AbstractLayer.h"
@@ -89,6 +92,10 @@ struct AbstractLayer::State {
     bool setSizeCalled = false;
     #endif
     /* 0/4 bytes free, 1/5 on a no-assert build */
+
+    /* Gets set by AbstractUserInterface::setLayerInstance() and further
+       updated on every UI move */
+    AbstractUserInterface* ui = nullptr;
 
     Containers::Array<Implementation::AbstractLayerData> data;
     /* Indices in the data array. The AbstractLayerData then has a nextFree

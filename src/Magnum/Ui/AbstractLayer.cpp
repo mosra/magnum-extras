@@ -149,6 +149,21 @@ AbstractLayer::~AbstractLayer() = default;
 
 AbstractLayer& AbstractLayer::operator=(AbstractLayer&&) noexcept = default;
 
+bool AbstractLayer::hasUi() const {
+    return _state->ui;
+}
+
+const AbstractUserInterface& AbstractLayer::ui() const {
+    const State& state = *_state;
+    CORRADE_ASSERT(state.ui,
+        "Ui::AbstractLayer::ui(): layer not part of a user interface", *state.ui);
+    return *state.ui;
+}
+
+AbstractUserInterface& AbstractLayer::ui() {
+    return const_cast<AbstractUserInterface&>(const_cast<const AbstractLayer&>(*this).ui());
+}
+
 LayerHandle AbstractLayer::handle() const {
     return _state->handle;
 }

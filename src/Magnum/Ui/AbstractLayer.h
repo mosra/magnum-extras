@@ -904,6 +904,29 @@ class MAGNUM_UI_EXPORT AbstractLayer {
 
     protected:
         /**
+         * @brief Whether the layer is a part of an user interface instance
+         *
+         * Returns @cpp true @ce if the layer has been already passed to
+         * @ref AbstractUserInterface::setLayerInstance(), @cpp false @ce
+         * otherwise. The function isn't public as it's intended to be used
+         * only by the layer implementation itself, not user code.
+         * @see @ref ui()
+         */
+        bool hasUi() const;
+
+        /**
+         * @brief User interface instance the layer is part of
+         *
+         * Expects that the layer has been already passed to
+         * @ref AbstractUserInterface::setLayerInstance(). The function isn't
+         * public as it's intended to be used only by the layer implementation
+         * itself, not user code.
+         * @see @ref hasUi()
+         */
+        AbstractUserInterface& ui();
+        const AbstractUserInterface& ui() const; /**< @overload */
+
+        /**
          * @brief Create a data
          * @param node      Node to attach to
          * @return New data handle
@@ -1029,6 +1052,8 @@ class MAGNUM_UI_EXPORT AbstractLayer {
         void assignAnimator(AbstractStyleAnimator& animator) const;
 
     private:
+        friend AbstractUserInterface; /* for the ui() reference */
+
         /** @brief Implementation for @ref features() */
         virtual LayerFeatures doFeatures() const = 0;
 
