@@ -219,17 +219,16 @@ bool AbstractLayer::isHandleValid(const LayerDataHandle handle) const {
     const UnsignedInt index = layerDataHandleId(handle);
     if(index >= state.data.size())
         return false;
-    /* Unlike UserInterface::isHandleValid(LayerHandle), the generation counter
-       here is 16bit and a disabled handle is signalized by 0x10000, not 0, so
-       for disabled handles this will always fail without having to do any
-       extra checks.
+    /* Zero generation (i.e., where it wrapped around from all bits set) is
+       also invalid.
 
        Note that this can still return true for manually crafted handles that
        point to free data with correct generation counters. The only way to
        detect that would be by either iterating the free list (slow) or by
        keeping an additional bitfield marking free items. I don't think that's
        necessary. */
-    return layerDataHandleGeneration(handle) == state.data[index].used.generation;
+    const UnsignedInt generation = layerDataHandleGeneration(handle);
+    return generation && generation == state.data[index].used.generation;
 }
 
 bool AbstractLayer::isHandleValid(const DataHandle handle) const {
@@ -318,8 +317,9 @@ void AbstractLayer::removeInternal(const UnsignedInt id) {
     Implementation::AbstractLayerData& data = state.data[id];
 
     /* Increase the data generation so existing handles pointing to this data
-       are invalidated */
-    ++data.used.generation;
+       are invalidated. Wrap around to 0 if it goes over the generation
+       bits. */
+    ++data.used.generation &= (1 << Implementation::LayerDataHandleGenerationBits) - 1;
 
     /* Set the node attachment to null to avoid falsely recognizing this item
        as used when directly iterating the list */
@@ -331,7 +331,7 @@ void AbstractLayer::removeInternal(const UnsignedInt id) {
 
        Don't do this if the generation wrapped around. That makes it disabled,
        i.e. impossible to be recycled later, to avoid aliasing old handles. */
-    if(data.used.generation != 1 << Implementation::LayerDataHandleGenerationBits) {
+    if(data.used.generation != 0) {
         data.free.next = ~UnsignedInt{};
         if(state.lastFree == ~UnsignedInt{}) {
             CORRADE_INTERNAL_ASSERT(

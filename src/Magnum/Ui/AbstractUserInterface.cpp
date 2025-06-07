@@ -1068,7 +1068,9 @@ void AbstractUserInterface::removeLayer(const LayerHandle handle) {
     layer.used.features = {};
 
     /* Increase the layer generation so existing handles pointing to this layer
-       are invalidated */
+       are invalidated. The generation counter is 8 bits and is stored in an
+       8-bit type so it automatically wraps around to 0 if it goes over the
+       generation bits. */
     ++layer.used.generation;
 
     /* Put the layer at the end of the free list (while they're allocated from
@@ -1324,7 +1326,9 @@ void AbstractUserInterface::removeLayouter(const LayouterHandle handle) {
     layouter.used.instance = nullptr;
 
     /* Increase the layouter generation so existing handles pointing to this
-       layouter are invalidated */
+       layouter are invalidated. The generation counter is 8 bits and is stored
+       in an 8-bit type so it automatically wraps around to 0 if it goes over
+       the generation bits. */
     ++layouter.used.generation;
 
     /* Put the layouter at the end of the free list (while they're allocated
@@ -1581,7 +1585,9 @@ void AbstractUserInterface::removeAnimator(const AnimatorHandle handle) {
     animator.used.instance = nullptr;
 
     /* Increase the animator generation so existing handles pointing to this
-       animator are invalidated */
+       animator are invalidated. The generation counter is 8 bits and is stored
+       in an 8-bit type so it automatically wraps around to 0 if it goes over
+       the generation bits. */
     ++animator.used.generation;
 
     /* Put the animator at the end of the free list (while they're allocated
@@ -1683,16 +1689,16 @@ bool AbstractUserInterface::isHandleValid(const NodeHandle handle) const {
     const State& state = *_state;
     if(index >= state.nodes.size())
         return false;
-    /* Unlike isHandleValid(LayerHandle), the generation counter here is 16bit
-       and a disabled handle is signalized by 0x10000, not 0, so for disabled
-       handles this will always fail without having to do any extra checks.
+    /* Zero generation (i.e., where it wrapped around from all bits set) is
+       also invalid.
 
        Note that this can still return true for manually crafted handles that
        point to free nodes with correct generation counters. The only way to
        detect that would be by either iterating the free list (slow) or by
        keeping an additional bitfield marking free items. I don't think that's
        necessary. */
-    return nodeHandleGeneration(handle) == state.nodes[index].used.generation;
+    const UnsignedInt generation = nodeHandleGeneration(handle);
+    return generation && generation == state.nodes[index].used.generation;
 }
 
 NodeHandle AbstractUserInterface::createNode(const NodeHandle parent, const Vector2& offset, const Vector2& size, const NodeFlags flags) {
@@ -1899,8 +1905,9 @@ inline void AbstractUserInterface::removeNodeInternal(const UnsignedInt id) {
     }
 
     /* Increase the node generation so existing handles pointing to this
-       node are invalidated */
-    ++node.used.generation;
+       node are invalidated. Wrap around to 0 if it goes over the generation
+       bits. */
+    ++node.used.generation &= (1 << Implementation::NodeHandleGenerationBits) - 1;
 
     /* Parent the node to the root to prevent it from being removed again in
        clean() when its parents get removed as well. Removing more than once
@@ -1913,7 +1920,7 @@ inline void AbstractUserInterface::removeNodeInternal(const UnsignedInt id) {
 
        Don't do this if the generation wrapped around. That makes it disabled,
        i.e. impossible to be recycled later, to avoid aliasing old handles. */
-    if(node.used.generation != 1 << Implementation::NodeHandleGenerationBits) {
+    if(node.used.generation != 0) {
         node.free.next = ~UnsignedInt{};
         if(state.lastFreeNode == ~UnsignedInt{}) {
             CORRADE_INTERNAL_ASSERT(
