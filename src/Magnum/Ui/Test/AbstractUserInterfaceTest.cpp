@@ -80,6 +80,7 @@ struct AbstractUserInterfaceTest: TestSuite::Tester {
     void layerGetInvalid();
     void layerRemoveInvalid();
     void layerNoHandlesLeft();
+    void layerUserInterfaceReference();
 
     void layouter();
     void layouterHandleRecycle();
@@ -991,6 +992,7 @@ AbstractUserInterfaceTest::AbstractUserInterfaceTest() {
               &AbstractUserInterfaceTest::layerGetInvalid,
               &AbstractUserInterfaceTest::layerRemoveInvalid,
               &AbstractUserInterfaceTest::layerNoHandlesLeft,
+              &AbstractUserInterfaceTest::layerUserInterfaceReference,
 
               &AbstractUserInterfaceTest::node,
               &AbstractUserInterfaceTest::nodeHandleRecycle,
@@ -1993,6 +1995,73 @@ void AbstractUserInterfaceTest::layerNoHandlesLeft() {
        to give a heads-up when modifying the handle ID bit count */
     CORRADE_COMPARE(out,
         "Ui::AbstractUserInterface::createLayer(): can only have at most 256 layers\n");
+}
+
+void AbstractUserInterfaceTest::layerUserInterfaceReference() {
+    AbstractUserInterface ui{{100, 100}};
+
+    struct Layer: AbstractLayer {
+        using AbstractLayer::AbstractLayer;
+        using AbstractLayer::hasUi;
+        using AbstractLayer::ui;
+
+        LayerFeatures doFeatures() const override { return {}; }
+    };
+
+    Containers::Pointer<Layer> layer1Instance{InPlaceInit, ui.createLayer()};
+    LayerHandle layerRemoved = ui.createLayer();
+    Containers::Pointer<Layer> layer2Instance{InPlaceInit, ui.createLayer()};
+    /*LayerHandle layerWithNoInstance =*/ ui.createLayer();
+    ui.removeLayer(layerRemoved);
+
+    /* Initially the layers are not part of a user interface */
+    CORRADE_VERIFY(!layer1Instance->hasUi());
+    CORRADE_VERIFY(!layer2Instance->hasUi());
+
+    /* They are after setting them */
+    Layer& layer1 = ui.setLayerInstance(Utility::move(layer1Instance));
+    Layer& layer2 = ui.setLayerInstance(Utility::move(layer2Instance));
+    CORRADE_VERIFY(layer1.hasUi());
+    CORRADE_VERIFY(layer2.hasUi());
+    CORRADE_COMPARE(&layer1.ui(), &ui);
+    CORRADE_COMPARE(&layer2.ui(), &ui);
+
+    /* Move-constructing the UI updates the references accordingly, skipping
+       layers that are removed or have no instance */
+    AbstractUserInterface ui2 = Utility::move(ui);
+    CORRADE_VERIFY(layer1.hasUi());
+    CORRADE_VERIFY(layer2.hasUi());
+    CORRADE_COMPARE(&layer1.ui(), &ui2);
+    CORRADE_COMPARE(&layer2.ui(), &ui2);
+
+    /* Another UI instance with another layer */
+    AbstractUserInterface ui3{{100, 100}};
+    Layer& layer3 = ui3.setLayerInstance(Containers::pointer<Layer>(ui3.createLayer()));
+    CORRADE_VERIFY(layer3.hasUi());
+    CORRADE_COMPARE(&layer3.ui(), &ui3);
+
+    /* Move assignment updates the references for both sides */
+    ui3 = Utility::move(ui2);
+    CORRADE_VERIFY(layer1.hasUi());
+    CORRADE_VERIFY(layer2.hasUi());
+    CORRADE_VERIFY(layer3.hasUi());
+    CORRADE_COMPARE(&layer1.ui(), &ui3);
+    CORRADE_COMPARE(&layer2.ui(), &ui3);
+    CORRADE_COMPARE(&layer3.ui(), &ui2);
+
+    /* Move-constructing a moved-out instance shouldn't crash trying to access
+       empty internal state */
+    AbstractUserInterface ui4 = Utility::move(ui);
+
+    /* Move-assigning to or from a moved-out instance shouldn't crash either.
+       The comparison is to verify which instance is *not* moved out, if it
+       crashes in it, it's all wrong and we're testing some bullshit. */
+    CORRADE_COMPARE(ui3.layerCapacity(), 4);
+    ui = Utility::move(ui3);
+    ui3 = Utility::move(ui);
+
+    /* No way to check anything in the above */
+    CORRADE_VERIFY(true);
 }
 
 void AbstractUserInterfaceTest::layouter() {
