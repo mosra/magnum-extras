@@ -73,7 +73,12 @@ union Layout {
            `1 << LayouterDataHandleGenerationBits` the handle gets disabled. */
         UnsignedShort generation = 1;
 
-        /* Two bytes free */
+        /* Distinguishes between used and freed for isHandleValid().
+           Deliberately put right next to the generation counter so both can be
+           loaded in a single instruction in isHandleValid(). */
+        bool used;
+
+        /* One byte free */
 
         /* Node the layout is assigned to. Is null only when the layout is
            freed. Has to be re-filled every time a handle is recycled, so it
@@ -88,6 +93,12 @@ union Layout {
         /* The generation value has to be preserved in order to increment it
            next time it gets used */
         UnsignedShort generation;
+
+        /* Also has to be preserved in order to know whether the layout is used
+           or not even if it's in the free list */
+        bool used;
+
+        /* Three bytes free */
 
         /* The node field is needed to discard free items when directly
            iterating the list. */
@@ -104,6 +115,7 @@ static_assert(std::is_trivially_copyable<Layout>::value, "Layout not trivially c
 #endif
 static_assert(
     offsetof(Layout::Used, generation) == offsetof(Layout::Free, generation) &&
+    offsetof(Layout::Used, used) == offsetof(Layout::Free, used) &&
     offsetof(Layout::Used, node) == offsetof(Layout::Free, node),
     "Layout::Used and Free layout not compatible");
 
@@ -177,17 +189,14 @@ bool AbstractLayouter::isHandleValid(const LayouterDataHandle handle) const {
     const UnsignedInt index = layouterDataHandleId(handle);
     if(index >= state.layouts.size())
         return false;
-    /* Zero generation (i.e., where it wrapped around from all bits set) is
-       also invalid.
-
-       Note that this can still return true for manually crafted handles that
-       point to free layouts with correct generation counters. That could be
-       detected by checking that the node reference is not null, but as no
-       other isHandleValid() is capable of that without adding extra state I
-       don't think making a single variant tighter is going to make any
-       difference. */
     const UnsignedInt generation = layouterDataHandleGeneration(handle);
-    return generation && generation == state.layouts[index].used.generation;
+    const Layout& layout = state.layouts[index];
+    /* Zero generation handles (i.e., where it wrapped around from all bits
+       set) are expected to be expired and thus with `used` being false. In
+       other words, it shouldn't be needed to verify also that generation is
+       non-zero. */
+    CORRADE_INTERNAL_DEBUG_ASSERT(generation || !layout.used.used);
+    return layout.used.used && generation == layout.used.generation;
 }
 
 bool AbstractLayouter::isHandleValid(const LayoutHandle handle) const {
@@ -223,7 +232,10 @@ LayoutHandle AbstractLayouter::add(const NodeHandle node) {
     /* Fill the data. In both above cases the generation is already set
        appropriately, either initialized to 1, or incremented when it got
        remove()d (to mark existing handles as invalid) */
+    layout->used.used = true;
     layout->used.node = node;
+
+    /* Mark the layouter as needing an update() call */
     state.state |= LayouterState::NeedsAssignmentUpdate;
 
     return layoutHandle(state.handle, (layout - state.layouts), layout->used.generation);
@@ -257,8 +269,10 @@ void AbstractLayouter::removeInternal(const UnsignedInt id) {
 
     /* Increase the layout generation so existing handles pointing to this
        layout are invalidated. Wrap around to 0 if it goes over the generation
-       bits. */
+       bits. Also mark it as not used so isHandleValid() doesn't return true if
+       the generation matches by accident. */
     ++layout.used.generation &= (1 << Implementation::LayouterDataHandleGenerationBits) - 1;
+    layout.used.used = false;
 
     /* Set the node attachment to null to avoid falsely recognizing this item
        as used when directly iterating the list */

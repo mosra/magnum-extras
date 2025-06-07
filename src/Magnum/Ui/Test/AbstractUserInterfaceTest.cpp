@@ -1690,14 +1690,30 @@ void AbstractUserInterfaceTest::layerHandleRecycle() {
     CORRADE_COMPARE(ui.layerCapacity(), 4);
     CORRADE_COMPARE(ui.layerUsedCount(), 1);
 
+    /* Handles crafted with a manually incremented generation (i.e., the
+       generation that will be used next) shouldn't be reported as valid */
+    LayerHandle firstNext = layerHandle(layerHandleId(first), layerHandleGeneration(first) + 1);
+    LayerHandle secondNext = layerHandle(layerHandleId(second), layerHandleGeneration(second) + 1);
+    LayerHandle fourthNext = layerHandle(layerHandleId(fourth), layerHandleGeneration(fourth) + 1);
+    CORRADE_VERIFY(!ui.isHandleValid(firstNext));
+    CORRADE_VERIFY(!ui.isHandleValid(secondNext));
+    CORRADE_VERIFY(!ui.isHandleValid(fourthNext));
+
     /* Allocating new handles should recycle the handles in the order they were
-       removed (oldest first) */
+       removed (oldest first). They should be the same as the handles crafted
+       above which should report as valid now. */
     LayerHandle second2 = ui.createLayer();
     LayerHandle fourth2 = ui.createLayer();
     LayerHandle first2 = ui.createLayer();
     CORRADE_COMPARE(first2, layerHandle(0, 2));
     CORRADE_COMPARE(second2, layerHandle(1, 2));
     CORRADE_COMPARE(fourth2, layerHandle(3, 2));
+    CORRADE_COMPARE(first2, firstNext);
+    CORRADE_COMPARE(second2, secondNext);
+    CORRADE_COMPARE(fourth2, fourthNext);
+    CORRADE_VERIFY(ui.isHandleValid(firstNext));
+    CORRADE_VERIFY(ui.isHandleValid(secondNext));
+    CORRADE_VERIFY(ui.isHandleValid(fourthNext));
     CORRADE_COMPARE(ui.layerCapacity(), 4);
     CORRADE_COMPARE(ui.layerUsedCount(), 4);
 
@@ -2200,14 +2216,30 @@ void AbstractUserInterfaceTest::layouterHandleRecycle() {
     CORRADE_COMPARE(ui.layouterCapacity(), 4);
     CORRADE_COMPARE(ui.layouterUsedCount(), 1);
 
+    /* Handles crafted with a manually incremented generation (i.e., the
+       generation that will be used next) shouldn't be reported as valid */
+    LayouterHandle firstNext = layouterHandle(layouterHandleId(first), layouterHandleGeneration(first) + 1);
+    LayouterHandle secondNext = layouterHandle(layouterHandleId(second), layouterHandleGeneration(second) + 1);
+    LayouterHandle fourthNext = layouterHandle(layouterHandleId(fourth), layouterHandleGeneration(fourth) + 1);
+    CORRADE_VERIFY(!ui.isHandleValid(firstNext));
+    CORRADE_VERIFY(!ui.isHandleValid(secondNext));
+    CORRADE_VERIFY(!ui.isHandleValid(fourthNext));
+
     /* Allocating new handles should recycle the handles in the order they were
-       removed (oldest first) */
+       removed (oldest first). They should be the same as the handles crafted
+       above which should report as valid now. */
     LayouterHandle second2 = ui.createLayouter();
     LayouterHandle fourth2 = ui.createLayouter();
     LayouterHandle first2 = ui.createLayouter();
     CORRADE_COMPARE(first2, layouterHandle(0, 2));
     CORRADE_COMPARE(second2, layouterHandle(1, 2));
     CORRADE_COMPARE(fourth2, layouterHandle(3, 2));
+    CORRADE_COMPARE(first2, firstNext);
+    CORRADE_COMPARE(second2, secondNext);
+    CORRADE_COMPARE(fourth2, fourthNext);
+    CORRADE_VERIFY(ui.isHandleValid(firstNext));
+    CORRADE_VERIFY(ui.isHandleValid(secondNext));
+    CORRADE_VERIFY(ui.isHandleValid(fourthNext));
     CORRADE_COMPARE(ui.layouterCapacity(), 4);
     CORRADE_COMPARE(ui.layouterUsedCount(), 4);
 
@@ -2557,14 +2589,30 @@ void AbstractUserInterfaceTest::animatorHandleRecycle() {
     CORRADE_COMPARE(ui.animatorCapacity(), 4);
     CORRADE_COMPARE(ui.animatorUsedCount(), 1);
 
+    /* Handles crafted with a manually incremented generation (i.e., the
+       generation that will be used next) shouldn't be reported as valid */
+    AnimatorHandle firstNext = animatorHandle(animatorHandleId(first), animatorHandleGeneration(first) + 1);
+    AnimatorHandle secondNext = animatorHandle(animatorHandleId(second), animatorHandleGeneration(second) + 1);
+    AnimatorHandle fourthNext = animatorHandle(animatorHandleId(fourth), animatorHandleGeneration(fourth) + 1);
+    CORRADE_VERIFY(!ui.isHandleValid(firstNext));
+    CORRADE_VERIFY(!ui.isHandleValid(secondNext));
+    CORRADE_VERIFY(!ui.isHandleValid(fourthNext));
+
     /* Allocating new handles should recycle the handles in the order they were
-       removed (oldest first) */
+       removed (oldest first). They should be the same as the handles crafted
+       above which should report as valid now. */
     AnimatorHandle second2 = ui.createAnimator();
     AnimatorHandle fourth2 = ui.createAnimator();
     AnimatorHandle first2 = ui.createAnimator();
     CORRADE_COMPARE(first2, animatorHandle(0, 2));
     CORRADE_COMPARE(second2, animatorHandle(1, 2));
     CORRADE_COMPARE(fourth2, animatorHandle(3, 2));
+    CORRADE_COMPARE(first2, firstNext);
+    CORRADE_COMPARE(second2, secondNext);
+    CORRADE_COMPARE(fourth2, fourthNext);
+    CORRADE_VERIFY(ui.isHandleValid(firstNext));
+    CORRADE_VERIFY(ui.isHandleValid(secondNext));
+    CORRADE_VERIFY(ui.isHandleValid(fourthNext));
     CORRADE_COMPARE(ui.animatorCapacity(), 4);
     CORRADE_COMPARE(ui.animatorUsedCount(), 4);
 
@@ -3052,16 +3100,32 @@ void AbstractUserInterfaceTest::nodeHandleRecycle() {
     CORRADE_COMPARE(ui.nodeCapacity(), 4);
     CORRADE_COMPARE(ui.nodeUsedCount(), 1);
 
+    /* Handles crafted with a manually incremented generation (i.e., the
+       generation that will be used next) shouldn't be reported as valid */
+    NodeHandle firstNext = nodeHandle(nodeHandleId(first), nodeHandleGeneration(first) + 1);
+    NodeHandle thirdNext = nodeHandle(nodeHandleId(third), nodeHandleGeneration(third) + 1);
+    NodeHandle fourthNext = nodeHandle(nodeHandleId(fourth), nodeHandleGeneration(fourth) + 1);
+    CORRADE_VERIFY(!ui.isHandleValid(firstNext));
+    CORRADE_VERIFY(!ui.isHandleValid(thirdNext));
+    CORRADE_VERIFY(!ui.isHandleValid(fourthNext));
+
     /* Allocating new handles should recycle the handles in the order they were
-       removed (oldest first). The opacity (which is so far the only value not
-       specified in createNode() arguments) should be cleared back to the
-       default value. */
+       removed (oldest first). They should be the same as the handles crafted
+       above which should report as valid now. The opacity (which is so far the
+       only value not specified in createNode() arguments) should be cleared
+       back to the default value. */
     NodeHandle fourth2 = ui.createNode({}, {});
     NodeHandle first2 = ui.createNode({}, {});
     NodeHandle third2 = ui.createNode({}, {});
     CORRADE_COMPARE(first2, nodeHandle(0, 2));
     CORRADE_COMPARE(third2, nodeHandle(2, 2));
     CORRADE_COMPARE(fourth2, nodeHandle(3, 2));
+    CORRADE_COMPARE(first2, firstNext);
+    CORRADE_COMPARE(third2, thirdNext);
+    CORRADE_COMPARE(fourth2, fourthNext);
+    CORRADE_VERIFY(ui.isHandleValid(firstNext));
+    CORRADE_VERIFY(ui.isHandleValid(thirdNext));
+    CORRADE_VERIFY(ui.isHandleValid(fourthNext));
     CORRADE_COMPARE(ui.nodeOpacity(first2), 1.0f);
     CORRADE_COMPARE(ui.nodeOpacity(second), 0.75f);
     CORRADE_COMPARE(ui.nodeOpacity(third2), 1.0f);

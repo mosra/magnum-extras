@@ -48,7 +48,12 @@ union AbstractLayerData {
            `1 << LayerDataHandleGenerationBits` the handle gets disabled. */
         UnsignedShort generation = 1;
 
-        /* Two bytes free */
+        /* Distinguishes between used and freed for isHandleValid().
+           Deliberately put right next to the generation counter so both can be
+           loaded in a single instruction in isHandleValid(). */
+        bool used;
+
+        /* One byte free */
 
         /* Node the data is attached to. Becomes null again when the data is
            freed. Has to be re-filled every time a handle is recycled, so it
@@ -63,6 +68,12 @@ union AbstractLayerData {
         /* The generation value has to be preserved in order to increment it
            next time it gets used */
         UnsignedShort generation;
+
+        /* Also has to be preserved in order to know whether the animation is
+           used or not even if it's in the free list */
+        bool used;
+
+        /* One byte free */
 
         /* The node field is needed to discard free items when directly
            iterating the list. */
@@ -79,6 +90,7 @@ static_assert(std::is_trivially_copyable<AbstractLayerData>::value, "AbstractLay
 #endif
 static_assert(
     offsetof(AbstractLayerData::Used, generation) == offsetof(AbstractLayerData::Free, generation) &&
+    offsetof(AbstractLayerData::Used, used) == offsetof(AbstractLayerData::Free, used) &&
     offsetof(AbstractLayerData::Used, node) == offsetof(AbstractLayerData::Free, node),
     "AbstractLayerData::Used and Free layout not compatible");
 

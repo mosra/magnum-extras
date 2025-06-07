@@ -1056,14 +1056,31 @@ void AbstractAnimatorTest::createRemoveHandleRecycle() {
             LayerDataHandle::Null
         }), TestSuite::Compare::Container);
 
+    /* Handles crafted with a manually incremented generation (i.e., the
+       generation that will be used next) shouldn't be reported as valid */
+    AnimationHandle firstNext = animationHandle(animator.handle(), animationHandleId(first), animationHandleGeneration(first) + 1);
+    AnimationHandle thirdNext = animationHandle(animator.handle(), animationHandleId(third), animationHandleGeneration(third) + 1);
+    AnimationHandle fourthNext = animationHandle(animator.handle(), animationHandleId(fourth), animationHandleGeneration(fourth) + 1);
+    CORRADE_VERIFY(!animator.isHandleValid(firstNext));
+    CORRADE_VERIFY(!animator.isHandleValid(thirdNext));
+    CORRADE_VERIFY(!animator.isHandleValid(fourthNext));
+
     /* Allocating new handles should recycle the handles in the order they were
-       removed (oldest first). Their properties should be cleared. */
+       removed (oldest first). They should be the same as the handles crafted
+       above which should report as valid now. Their properties should be
+       cleared.  */
     AnimationHandle fourth2 = animator.create(255_nsec, 8999_nsec);
     AnimationHandle first2 = animator.create(1_nsec, 14_nsec);
     AnimationHandle third2 = animator.create(2872_nsec, 896182_nsec, 333, AnimationFlags{0x40});
     CORRADE_COMPARE(first2, animationHandle(animator.handle(), 0, 2));
     CORRADE_COMPARE(third2, animationHandle(animator.handle(), 2, 2));
     CORRADE_COMPARE(fourth2, animationHandle(animator.handle(), 3, 2));
+    CORRADE_COMPARE(first2, firstNext);
+    CORRADE_COMPARE(third2, thirdNext);
+    CORRADE_COMPARE(fourth2, fourthNext);
+    CORRADE_VERIFY(animator.isHandleValid(firstNext));
+    CORRADE_VERIFY(animator.isHandleValid(thirdNext));
+    CORRADE_VERIFY(animator.isHandleValid(fourthNext));
     CORRADE_COMPARE(animator.capacity(), 4);
     CORRADE_COMPARE(animator.usedCount(), 4);
     CORRADE_COMPARE(animator.duration(first2), 14_nsec);

@@ -152,9 +152,10 @@ union Layer {
            setLayerInstance(), cleared in removeLayer(). */
         LayerFeatures features;
 
-        /* Always meant to be non-null and valid. To make insert/remove
+        /* If used, meant to be non-null and valid. To make insert/remove
            operations easier the list is cyclic, so the last layers's `next` is
-           the same as `_state->firstLayer`. */
+           the same as `_state->firstLayer`. If not used, `previous` is
+           null. */
         LayerHandle previous;
         LayerHandle next;
 
@@ -185,12 +186,16 @@ union Layer {
            next time it gets used */
         UnsignedByte generation;
 
+        /* 1 byte free */
+
+        /* Also has to be preserved in order to know whether the layout is
+           used or not even if it's in the free list */
+        LayerHandle previous;
+
         /* See State::firstFreeLayer for more information. Has to be larger
            than 8 bits in order to distinguish between index 255 and "no next
            free layer" (which is now 65535). */
         UnsignedShort next;
-
-        UnsignedShort:16;
 
         /* Have to be preserved as it's a running offset maintained across both
            used and free layers */
@@ -203,6 +208,7 @@ union Layer {
 static_assert(
     offsetof(Layer::Used, instance) == offsetof(Layer::Free, instance) &&
     offsetof(Layer::Used, generation) == offsetof(Layer::Free, generation) &&
+    offsetof(Layer::Used, previous) == offsetof(Layer::Free, previous) &&
     offsetof(Layer::Used, dataAttachmentAnimatorOffset) == offsetof(Layer::Free, dataAttachmentAnimatorOffset) &&
     offsetof(Layer::Used, dataAnimatorOffset) == offsetof(Layer::Free, dataAnimatorOffset) &&
     offsetof(Layer::Used, styleAnimatorOffset) == offsetof(Layer::Free, styleAnimatorOffset),
@@ -241,9 +247,10 @@ union Layouter {
 
         /* 1 byte free */
 
-        /* Always meant to be non-null and valid. To make insert/remove
+        /* If used, meant to be non-null and valid. To make insert/remove
            operations easier the list is cyclic, so the last layouters's `next`
-           is the same as `_state->firstLayouter`. */
+           is the same as `_state->firstLayouter`. If not used, `previous` is
+           null. */
         LayouterHandle previous;
         LayouterHandle next;
 
@@ -265,6 +272,12 @@ union Layouter {
            next time it gets used */
         UnsignedByte generation;
 
+        /* 1 byte free */
+
+        /* Also has to be preserved in order to know whether the layouter is
+           used or not even if it's in the free list */
+        LayouterHandle previous;
+
         /* See State::firstFreeLayouter for more information. Has to be larger
            than 8 bits in order to distinguish between index 255 and "no next
            free layouter" (which is now 65535). */
@@ -274,7 +287,9 @@ union Layouter {
 
 static_assert(
     offsetof(Layouter::Used, instance) == offsetof(Layouter::Free, instance) &&
-    offsetof(Layouter::Used, generation) == offsetof(Layouter::Free, generation),
+    offsetof(Layouter::Used, generation) == offsetof(Layouter::Free, generation) &&
+    offsetof(Layouter::Used, generation) == offsetof(Layouter::Free, generation) &&
+    offsetof(Layouter::Used, previous) == offsetof(Layouter::Free, previous),
     "Layouter::Used and Free layout not compatible");
 
 union Animator {
@@ -308,7 +323,12 @@ union Animator {
            wraps back to zero once the handle gets disabled. */
         UnsignedByte generation = 1;
 
-        /* 7 byte free */
+        /* Distinguishes between used and freed for isHandleValid().
+           Deliberately put right next to the generation counter so both can be
+           loaded in a single instruction in isHandleValid(). */
+        bool used;
+
+        /* 6 bytes free */
     } used;
 
     /* Used only if the Animator is among the free ones */
@@ -326,16 +346,23 @@ union Animator {
            next time it gets used */
         UnsignedByte generation;
 
+        /* Also has to be preserved in order to know whether the animator is
+           used or not even if it's in the free list */
+        bool used;
+
         /* See State::firstFreeAnimator for more information. Has to be larger
            than 8 bits in order to distinguish between index 255 and "no next
            free layouter" (which is now 65535). */
         UnsignedShort next;
+
+        /* 4 bytes free */
     } free;
 };
 
 static_assert(
     offsetof(Animator::Used, instance) == offsetof(Animator::Free, instance) &&
-    offsetof(Animator::Used, generation) == offsetof(Animator::Free, generation),
+    offsetof(Animator::Used, generation) == offsetof(Animator::Free, generation) &&
+    offsetof(Animator::Used, used) == offsetof(Animator::Free, used),
     "Animator::Used and Free layout not compatible");
 
 union Node {
@@ -366,9 +393,12 @@ union Node {
            `1 << NodeHandleGenerationBits` the handle gets disabled. */
         UnsignedShort generation = 1;
 
-        NodeFlags flags{NoInit};
+        /* Distinguishes between used and freed for isHandleValid().
+           Deliberately put right next to the generation counter so both can be
+           loaded in a single instruction in isHandleValid(). */
+        bool used = false;
 
-        /* One byte free */
+        NodeFlags flags{NoInit};
 
         /* Initial offset and size passed to layouters, if present. Only the
            final offset and size produced by the whole layouter chain actually
@@ -393,6 +423,10 @@ union Node {
         /* The generation value has to be preserved in order to increment it
            next time it gets used */
         UnsignedShort generation;
+
+        /* Also has to be preserved in order to know whether the node is used
+           or not even if it's in the free list */
+        bool used;
 
         /* See State::firstFreeNode for more information */
         UnsignedInt next;
@@ -863,16 +897,15 @@ bool AbstractUserInterface::isHandleValid(const LayerHandle handle) const {
     const UnsignedInt index = layerHandleId(handle);
     if(index >= state.layers.size())
         return false;
-    /* Zero generation (i.e., where it wrapped around from 255) is also
-       invalid.
-
-       Note that this can still return true for manually crafted handles that
-       point to free nodes with correct generation counters. The only way to
-       detect that would be by either iterating the free list (slow) or by
-       keeping an additional bitfield marking free items. I don't think that's
-       necessary. */
     const UnsignedInt generation = layerHandleGeneration(handle);
-    return generation && generation == state.layers[index].used.generation;
+    const Layer& layer = state.layers[index];
+    /* Zero generation handles (i.e., where it wrapped around from all bits
+       set) are expected to be expired and thus with `previous` being null
+       (while, if valid, the `previous` and `next` is a cyclical linked list
+       and thus never null). In other words, it shouldn't be needed to verify
+       also that generation is non-zero. */
+    CORRADE_INTERNAL_DEBUG_ASSERT(generation || layer.used.previous == LayerHandle::Null);
+    return layer.used.previous != LayerHandle::Null && generation == layer.used.generation;
 }
 
 bool AbstractUserInterface::isHandleValid(const DataHandle handle) const {
@@ -1070,8 +1103,11 @@ void AbstractUserInterface::removeLayer(const LayerHandle handle) {
     /* Increase the layer generation so existing handles pointing to this layer
        are invalidated. The generation counter is 8 bits and is stored in an
        8-bit type so it automatically wraps around to 0 if it goes over the
-       generation bits. */
+       generation bits. Also mark it as not used by making the previous layer
+       null so isHandleValid() doesn't return true if the generation matches
+       by accident. */
     ++layer.used.generation;
+    layer.used.previous = LayerHandle::Null;
 
     /* Put the layer at the end of the free list (while they're allocated from
        the front) to not exhaust the generation counter too fast. If the free
@@ -1146,16 +1182,15 @@ bool AbstractUserInterface::isHandleValid(const LayouterHandle handle) const {
     const State& state = *_state;
     if(index >= state.layouters.size())
         return false;
-    /* Zero generation (i.e., where it wrapped around from 255) is also
-       invalid.
-
-       Note that this can still return true for manually crafted handles that
-       point to free nodes with correct generation counters. The only way to
-       detect that would be by either iterating the free list (slow) or by
-       keeping an additional bitfield marking free items. I don't think that's
-       necessary. */
     const UnsignedInt generation = layouterHandleGeneration(handle);
-    return generation && generation == state.layouters[index].used.generation;
+    const Layouter& layouter = state.layouters[index];
+    /* Zero generation handles (i.e., where it wrapped around from all bits
+       set) are expected to be expired and thus with `previous` being null
+       (while, if valid, the `previous` and `next` is a cyclical linked list
+       and thus never null). In other words, it shouldn't be needed to verify
+       also that generation is non-zero. */
+    CORRADE_INTERNAL_DEBUG_ASSERT(generation || layouter.used.previous == LayouterHandle::Null);
+    return layouter.used.previous != LayouterHandle::Null && generation == layouter.used.generation;
 }
 
 bool AbstractUserInterface::isHandleValid(const LayoutHandle handle) const {
@@ -1328,8 +1363,11 @@ void AbstractUserInterface::removeLayouter(const LayouterHandle handle) {
     /* Increase the layouter generation so existing handles pointing to this
        layouter are invalidated. The generation counter is 8 bits and is stored
        in an 8-bit type so it automatically wraps around to 0 if it goes over
-       the generation bits. */
+       the generation bits. Also mark it as not used by making the previous
+       layouter null so isHandleValid() doesn't return true if the generation
+       matches by accident. */
     ++layouter.used.generation;
+    layouter.used.previous = LayouterHandle::Null;
 
     /* Put the layouter at the end of the free list (while they're allocated
        from the front) to not exhaust the generation counter too fast. If the
@@ -1391,16 +1429,14 @@ bool AbstractUserInterface::isHandleValid(const AnimatorHandle handle) const {
     const State& state = *_state;
     if(index >= state.animators.size())
         return false;
-    /* Zero generation (i.e., where it wrapped around from 255) is also
-       invalid.
-
-       Note that this can still return true for manually crafted handles that
-       point to free nodes with correct generation counters. The only way to
-       detect that would be by either iterating the free list (slow) or by
-       keeping an additional bitfield marking free items. I don't think that's
-       necessary. */
     const UnsignedInt generation = animatorHandleGeneration(handle);
-    return generation && generation == state.animators[index].used.generation;
+    const Animator& animator = state.animators[index];
+    /* Zero generation handles (i.e., where it wrapped around from all bits
+       set) are expected to be expired and thus with `used` being false. In
+       other words, it shouldn't be needed to verify also that generation is
+       non-zero. */
+    CORRADE_INTERNAL_DEBUG_ASSERT(generation || !animator.used.used);
+    return animator.used.used && generation == animator.used.generation;
 }
 
 bool AbstractUserInterface::isHandleValid(const AnimationHandle handle) const {
@@ -1443,12 +1479,12 @@ AnimatorHandle AbstractUserInterface::createAnimator() {
         animator = &arrayAppend(state.animators, InPlaceInit);
     }
 
-    /* In both above cases the generation is already set appropriately, either
-       initialized to 1, or incremented when it got remove()d (to mark existing
-       handles as invalid) */
-    const AnimatorHandle handle = animatorHandle((animator - state.animators), animator->used.generation);
+    /* Fill the data. In both above cases the generation is already set
+       appropriately, either initialized to 1, or incremented when it got
+       remove()d (to mark existing handles as invalid) */
+    animator->used.used = true;
 
-    return handle;
+    return animatorHandle((animator - state.animators), animator->used.generation);
 }
 
 AbstractGenericAnimator& AbstractUserInterface::setGenericAnimatorInstance(Containers::Pointer<AbstractGenericAnimator>&& instance) {
@@ -1587,8 +1623,10 @@ void AbstractUserInterface::removeAnimator(const AnimatorHandle handle) {
     /* Increase the animator generation so existing handles pointing to this
        animator are invalidated. The generation counter is 8 bits and is stored
        in an 8-bit type so it automatically wraps around to 0 if it goes over
-       the generation bits. */
+       the generation bits. Also mark it as not used so isHandleValid() doesn't
+       return true if the generation matches by accident. */
     ++animator.used.generation;
+    animator.used.used = false;
 
     /* Put the animator at the end of the free list (while they're allocated
        from the front) to not exhaust the generation counter too fast. If the
@@ -1689,16 +1727,14 @@ bool AbstractUserInterface::isHandleValid(const NodeHandle handle) const {
     const State& state = *_state;
     if(index >= state.nodes.size())
         return false;
-    /* Zero generation (i.e., where it wrapped around from all bits set) is
-       also invalid.
-
-       Note that this can still return true for manually crafted handles that
-       point to free nodes with correct generation counters. The only way to
-       detect that would be by either iterating the free list (slow) or by
-       keeping an additional bitfield marking free items. I don't think that's
-       necessary. */
     const UnsignedInt generation = nodeHandleGeneration(handle);
-    return generation && generation == state.nodes[index].used.generation;
+    const Node& node = state.nodes[index];
+    /* Zero generation handles (i.e., where it wrapped around from all bits
+       set) are expected to be expired and thus with `used` being false. In
+       other words, it shouldn't be needed to verify also that generation is
+       non-zero. */
+    CORRADE_INTERNAL_DEBUG_ASSERT(generation || !node.used.used);
+    return node.used.used && generation == node.used.generation;
 }
 
 NodeHandle AbstractUserInterface::createNode(const NodeHandle parent, const Vector2& offset, const Vector2& size, const NodeFlags flags) {
@@ -1729,6 +1765,7 @@ NodeHandle AbstractUserInterface::createNode(const NodeHandle parent, const Vect
     /* Fill the data. In both above cases the generation is already set
        appropriately, either initialized to 1, or incremented when it got
        remove()d (to mark existing handles as invalid) */
+    node->used.used = true;
     node->used.parent = parent;
     node->used.flags = flags;
     node->used.offset = offset;
@@ -1904,10 +1941,12 @@ inline void AbstractUserInterface::removeNodeInternal(const UnsignedInt id) {
            NeedsNodeClean) in order to even enter clean(), which calls here */
     }
 
-    /* Increase the node generation so existing handles pointing to this
-       node are invalidated. Wrap around to 0 if it goes over the generation
-       bits. */
+    /* Increase the node generation so existing handles pointing to this node
+       are invalidated. Wrap around to 0 if it goes over the generation bits.
+       Also mark it as not used so isHandleValid() doesn't return true if the
+       generation matches by accident. */
     ++node.used.generation &= (1 << Implementation::NodeHandleGenerationBits) - 1;
+    node.used.used = false;
 
     /* Parent the node to the root to prevent it from being removed again in
        clean() when its parents get removed as well. Removing more than once
