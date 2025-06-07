@@ -284,14 +284,31 @@ void AbstractLayouterTest::addRemoveHandleRecycle() {
         NodeHandle::Null
     }), TestSuite::Compare::Container);
 
+    /* Handles crafted with a manually incremented generation (i.e., the
+       generation that will be used next) shouldn't be reported as valid */
+    LayoutHandle firstNext = layoutHandle(layouter.handle(), layoutHandleId(first), layoutHandleGeneration(first) + 1);
+    LayoutHandle thirdNext = layoutHandle(layouter.handle(), layoutHandleId(third), layoutHandleGeneration(third) + 1);
+    LayoutHandle fourthNext = layoutHandle(layouter.handle(), layoutHandleId(fourth), layoutHandleGeneration(fourth) + 1);
+    CORRADE_VERIFY(!layouter.isHandleValid(firstNext));
+    CORRADE_VERIFY(!layouter.isHandleValid(thirdNext));
+    CORRADE_VERIFY(!layouter.isHandleValid(fourthNext));
+
     /* Allocating new handles should recycle the handles in the order they were
-       removed (oldest first). Their properties should be updated. */
+       removed (oldest first). They should be the same as the handles crafted
+       above which should report as valid now. Their properties should be
+       updated. */
     LayoutHandle fourth2 = layouter.add(nodeHandle(0x4, 0xecb));
     LayoutHandle first2 = layouter.add(nodeHandle(0x1, 0xabd));
     LayoutHandle third2 = layouter.add(nodeHandle(0x3, 0xcfb));
     CORRADE_COMPARE(first2, layoutHandle(layouter.handle(), 0, 2));
     CORRADE_COMPARE(third2, layoutHandle(layouter.handle(), 2, 2));
     CORRADE_COMPARE(fourth2, layoutHandle(layouter.handle(), 3, 2));
+    CORRADE_COMPARE(first2, firstNext);
+    CORRADE_COMPARE(third2, thirdNext);
+    CORRADE_COMPARE(fourth2, fourthNext);
+    CORRADE_VERIFY(layouter.isHandleValid(firstNext));
+    CORRADE_VERIFY(layouter.isHandleValid(thirdNext));
+    CORRADE_VERIFY(layouter.isHandleValid(fourthNext));
     CORRADE_COMPARE(layouter.capacity(), 4);
     CORRADE_COMPARE(layouter.usedCount(), 4);
     CORRADE_COMPARE(layouter.node(first2), nodeHandle(0x1, 0xabd));
