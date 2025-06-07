@@ -243,9 +243,20 @@ class MAGNUM_UI_EXPORT AbstractLayouter {
          * @brief Generation counters for all data
          *
          * Meant to be used by code that only gets data IDs or masks but needs
-         * the full @ref LayoutHandle / @ref LayouterDataHandle. Size of the
-         * returned view is the same as @ref capacity().
-         * @see @ref handle()
+         * the full handle, or for various diagnostic purposes such as tracking
+         * handle recycling. Size of the returned view is the same as
+         * @ref capacity(), individual items correspond to generations of
+         * particular data IDs. All values fit into the @ref LayoutHandle /
+         * @ref LayouterDataHandle generation bits, @cpp 0 @ce denotes an
+         * expired generation counter.
+         *
+         * Passing an ID along with the corresponding generation to
+         * @ref layouterDataHandle() produces a @ref LayouterDataHandle,
+         * passing that along with @ref handle() to @ref layoutHandle()
+         * produces a @ref LayoutHandle. Use
+         * @ref isHandleValid(LayouterDataHandle) const /
+         * @ref isHandleValid(LayoutHandle) const to determine whether given
+         * slot is actually used.
          */
         Containers::StridedArrayView1D<const UnsignedShort> generations() const;
 

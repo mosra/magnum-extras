@@ -528,9 +528,19 @@ class MAGNUM_UI_EXPORT AbstractLayer {
          * @brief Generation counters for all data
          *
          * Meant to be used by code that only gets data IDs or masks but needs
-         * the full @ref DataHandle / @ref LayerDataHandle. Size of the
-         * returned view is the same as @ref capacity().
-         * @see @ref handle()
+         * the full handle, or for various diagnostic purposes such as tracking
+         * handle recycling. Size of the returned view is the same as
+         * @ref capacity(), individual items correspond to generations of
+         * particular data IDs. All values fit into the @ref DataHandle /
+         * @ref LayerDataHandle generation bits, @cpp 0 @ce denotes an expired
+         * generation counter.
+         *
+         * Passing an ID along with the corresponding generation to
+         * @ref layerDataHandle() produces a @ref LayerDataHandle, passing that
+         * along with @ref handle() to @ref dataHandle() produces a
+         * @ref DataHandle. Use @ref isHandleValid(LayerDataHandle) const /
+         * @ref isHandleValid(DataHandle) const to determine whether given slot
+         * is actually used.
          */
         Containers::StridedArrayView1D<const UnsignedShort> generations() const;
 

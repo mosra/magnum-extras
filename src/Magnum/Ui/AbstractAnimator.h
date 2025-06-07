@@ -982,9 +982,20 @@ class MAGNUM_UI_EXPORT AbstractAnimator {
          * @brief Generation counters for all data
          *
          * Meant to be used by code that only gets data IDs or masks but needs
-         * the full @ref AnimationHandle / @ref AnimatorDataHandle. Size of the
-         * returned view is the same as @ref capacity().
-         * @see @ref handle()
+         * the full handle, or for various diagnostic purposes such as tracking
+         * handle recycling. Size of the returned view is the same as
+         * @ref capacity(), individual items correspond to generations of
+         * particular data IDs. All values fit into the @ref AnimationHandle /
+         * @ref AnimatorDataHandle generation bits, @cpp 0 @ce denotes an
+         * expired generation counter.
+         *
+         * Passing an ID along with the corresponding generation to
+         * @ref animatorDataHandle() produces an @ref AnimatorDataHandle,
+         * passing that along with @ref handle() to @ref animationHandle()
+         * produces an @ref AnimationHandle. Use
+         * @ref isHandleValid(AnimatorDataHandle) const /
+         * @ref isHandleValid(AnimationHandle) const to determine whether given
+         * slot is actually used.
          */
         Containers::StridedArrayView1D<const UnsignedShort> generations() const;
 
