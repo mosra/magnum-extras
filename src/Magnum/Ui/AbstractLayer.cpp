@@ -198,10 +198,10 @@ std::size_t AbstractLayer::capacity() const {
 }
 
 std::size_t AbstractLayer::usedCount() const {
-    /* The "pointer" chasing in here is a bit nasty, but there's no other way
-       to know which data are actually used and which not. The node is Null
-       for unused data, yes, but it's also null for data that haven't been
-       attached yet. */
+    /* In general we can assume that the amount of free data is always either
+       zero or significantly less than the capacity, and thus iterating the
+       (presumably small) free list should be faster, even though it involves
+       jumping around in memory. */
     const State& state = *_state;
     std::size_t free = 0;
     UnsignedInt index = state.firstFree;
