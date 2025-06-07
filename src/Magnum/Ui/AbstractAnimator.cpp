@@ -281,11 +281,17 @@ std::size_t AbstractAnimator::capacity() const {
 }
 
 std::size_t AbstractAnimator::usedCount() const {
+    /* In general we can assume that the amount of free data is always either
+       zero or significantly less than the capacity, and thus iterating the
+       (presumably small) free list should be faster, even though it involves
+       jumping around in memory. */
     const State& state = *_state;
     std::size_t free = 0;
-    for(const Animation& i: state.animations)
-        if(i.used.duration == 0_nsec && i.used.generation != 1 << Implementation::AnimatorDataHandleGenerationBits)
-            ++free;
+    UnsignedInt index = state.firstFree;
+    while(index != ~UnsignedInt{}) {
+        index = state.animations[index].free.next;
+        ++free;
+    }
     return state.animations.size() - free;
 }
 

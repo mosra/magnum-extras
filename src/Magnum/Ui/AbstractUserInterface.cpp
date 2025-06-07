@@ -838,10 +838,10 @@ std::size_t AbstractUserInterface::layerCapacity() const {
 }
 
 std::size_t AbstractUserInterface::layerUsedCount() const {
-    /* The "pointer" chasing in here is a bit nasty, but there's no other way
-       to know which layers are actually used and which not. The instance is a
-       nullptr for unused layers, yes, but it's also null for layers that don't
-       have it set yet. */
+    /* In general we can assume that the amount of free layers is always either
+       zero or significantly less than the capacity, and thus iterating the
+       (presumably small) free list should be faster, even though it involves
+       jumping around in memory. */
     const State& state = *_state;
     std::size_t free = 0;
     UnsignedShort index = state.firstFreeLayer;
@@ -1119,10 +1119,10 @@ std::size_t AbstractUserInterface::layouterCapacity() const {
 }
 
 std::size_t AbstractUserInterface::layouterUsedCount() const {
-    /* The "pointer" chasing in here is a bit nasty, but there's no other way
-       to know which layouters are actually used and which not. The instance is
-       a nullptr for unused layouters, yes, but it's also null for layouters
-       that don't have it set yet. */
+    /* In general we can assume that the amount of free layouters is always
+       either zero or significantly less than the capacity, and thus iterating
+       the (presumably small) free list should be faster, even though it
+       involves jumping around in memory. */
     std::size_t free = 0;
     const State& state = *_state;
     UnsignedShort index = state.firstFreeLayouter;
@@ -1362,10 +1362,10 @@ std::size_t AbstractUserInterface::animatorCapacity() const {
 }
 
 std::size_t AbstractUserInterface::animatorUsedCount() const {
-    /* The "pointer" chasing in here is a bit nasty, but there's no other way
-       to know which animators are actually used and which not. The instance is
-       a nullptr for unused animators, yes, but it's also null for animators
-       that don't have it set yet. */
+    /* In general we can assume that the amount of free animators is always
+       either zero or significantly less than the capacity, and thus iterating
+       the (presumably small) free list should be faster than going through the
+       whole capacity, even though it involves jumping around in memory. */
     const State& state = *_state;
     std::size_t free = 0;
     UnsignedShort index = state.firstFreeAnimator;
