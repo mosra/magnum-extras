@@ -798,7 +798,7 @@ AbstractRenderer& AbstractUserInterface::setRendererInstance(Containers::Pointer
     #ifndef CORRADE_NO_ASSERT
     if(!(instance->features() >= RendererFeature::Composite)) {
         for(const Layer& layer: state.layers)
-            CORRADE_ASSERT(!layer.used.instance || !(layer.used.instance->features() >= LayerFeature::Composite),
+            CORRADE_ASSERT(!(layer.used.features >= LayerFeature::Composite),
                 "Ui::AbstractUserInterface::setRendererInstance(): renderer without" << RendererFeature::Composite << "not usable with a layer that has" << layer.used.instance->features(), *instance);
     }
     #endif
