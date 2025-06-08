@@ -1093,6 +1093,22 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
         std::size_t layerUsedCount() const;
 
         /**
+         * @brief Generation counters for all layers
+         *
+         * Meant to be used for various diagnostic purposes such as tracking
+         * handle recycling. Size of the returned view is the same as
+         * @ref layerCapacity(), individual items correspond to generations of
+         * particular layer IDs. All values fit into the @ref LayerHandle
+         * generation bits, @cpp 0 @ce denotes an expired generation counter.
+         *
+         * Passing an ID along with the corresponding generation to
+         * @ref layerHandle() produces a @ref LayerHandle. Use
+         * @ref isHandleValid(LayerHandle) const to determine whether given
+         * slot is actually used.
+         */
+        Containers::StridedArrayView1D<const UnsignedByte> layerGenerations() const;
+
+        /**
          * @brief Whether a layer handle is valid
          *
          * A handle is valid if it has been returned from @ref createLayer()
@@ -1301,6 +1317,23 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
         std::size_t layouterUsedCount() const;
 
         /**
+         * @brief Generation counters for all layouters
+         *
+         * Meant to be used for various diagnostic purposes such as tracking
+         * handle recycling. Size of the returned view is the same as
+         * @ref layouterCapacity(), individual items correspond to generations
+         * of particular layouter IDs. All values fit into the
+         * @ref LayouterHandle generation bits, @cpp 0 @ce denotes an expired
+         * generation counter.
+         *
+         * Passing an ID along with the corresponding generation to
+         * @ref layerHandle() produces a @ref LayerHandle. Use
+         * @ref isHandleValid(LayouterHandle) const to determine whether given
+         * slot is actually used.
+         */
+        Containers::StridedArrayView1D<const UnsignedByte> layouterGenerations() const;
+
+        /**
          * @brief Whether a layouter handle is valid
          *
          * A handle is valid if it has been returned from @ref createLayouter()
@@ -1482,6 +1515,23 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
          * @ref animatorCapacity().
          */
         std::size_t animatorUsedCount() const;
+
+        /**
+         * @brief Generation counters for all animators
+         *
+         * Meant to be used for various diagnostic purposes such as tracking
+         * handle recycling. Size of the returned view is the same as
+         * @ref animatorCapacity(), individual items correspond to generations
+         * of particular animator IDs. All values fit into the
+         * @ref AnimatorHandle generation bits, @cpp 0 @ce denotes an expired
+         * generation counter.
+         *
+         * Passing an ID along with the corresponding generation to
+         * @ref animatorHandle() produces an @ref AnimatorHandle. Use
+         * @ref isHandleValid(AnimatorHandle) const to determine whether given
+         * slot is actually used.
+         */
+        Containers::StridedArrayView1D<const UnsignedByte> animatorGenerations() const;
 
         /**
          * @brief Whether an animator handle is valid
@@ -1739,6 +1789,22 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
          * @ref nodeCapacity().
          */
         std::size_t nodeUsedCount() const;
+
+        /**
+         * @brief Generation counters for all nodes
+         *
+         * Meant to be used for various diagnostic purposes such as tracking
+         * handle recycling. Size of the returned view is the same as
+         * @ref nodeCapacity(), individual items correspond to generations of
+         * particular node IDs. All values fit into the @ref NodeHandle
+         * generation bits, @cpp 0 @ce denotes an expired generation counter.
+         *
+         * Passing an ID along with the corresponding generation to
+         * @ref nodeHandle() produces a @ref NodeHandle. Use
+         * @ref isHandleValid(NodeHandle) const to determine whether given slot
+         * is actually used.
+         */
+        Containers::StridedArrayView1D<const UnsignedShort> nodeGenerations() const;
 
         /**
          * @brief Whether a node handle is valid

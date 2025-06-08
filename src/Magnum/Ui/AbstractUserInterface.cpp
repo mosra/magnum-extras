@@ -890,6 +890,12 @@ std::size_t AbstractUserInterface::layerUsedCount() const {
     return state.layers.size() - free;
 }
 
+Containers::StridedArrayView1D<const UnsignedByte> AbstractUserInterface::layerGenerations() const {
+    return Containers::stridedArrayView(_state->layers)
+        .slice(&Layer::used)
+        .slice(&Layer::Used::generation);
+}
+
 bool AbstractUserInterface::isHandleValid(const LayerHandle handle) const {
     if(handle == LayerHandle::Null)
         return false;
@@ -1175,6 +1181,12 @@ std::size_t AbstractUserInterface::layouterUsedCount() const {
     return state.layouters.size() - free;
 }
 
+Containers::StridedArrayView1D<const UnsignedByte> AbstractUserInterface::layouterGenerations() const {
+    return Containers::stridedArrayView(_state->layouters)
+        .slice(&Layouter::used)
+        .slice(&Layouter::Used::generation);
+}
+
 bool AbstractUserInterface::isHandleValid(const LayouterHandle handle) const {
     if(handle == LayouterHandle::Null)
         return false;
@@ -1420,6 +1432,12 @@ std::size_t AbstractUserInterface::animatorUsedCount() const {
         ++free;
     }
     return state.animators.size() - free;
+}
+
+Containers::StridedArrayView1D<const UnsignedByte> AbstractUserInterface::animatorGenerations() const {
+    return Containers::stridedArrayView(_state->animators)
+        .slice(&Animator::used)
+        .slice(&Animator::Used::generation);
 }
 
 bool AbstractUserInterface::isHandleValid(const AnimatorHandle handle) const {
@@ -1718,6 +1736,12 @@ std::size_t AbstractUserInterface::nodeUsedCount() const {
         ++free;
     }
     return state.nodes.size() - free;
+}
+
+Containers::StridedArrayView1D<const UnsignedShort> AbstractUserInterface::nodeGenerations() const {
+    return Containers::stridedArrayView(_state->nodes)
+        .slice(&Node::used)
+        .slice(&Node::Used::generation);
 }
 
 bool AbstractUserInterface::isHandleValid(const NodeHandle handle) const {
