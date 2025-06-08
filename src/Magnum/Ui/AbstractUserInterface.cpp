@@ -1024,6 +1024,12 @@ LayerHandle AbstractUserInterface::createLayer(const LayerHandle behind) {
     return handle;
 }
 
+bool AbstractUserInterface::hasLayerInstance(const LayerHandle handle) const {
+    CORRADE_ASSERT(isHandleValid(handle),
+        "Ui::AbstractUserInterface::hasLayerInstance(): invalid handle" << handle, {});
+    return !!_state->layers[layerHandleId(handle)].used.instance;
+}
+
 AbstractLayer& AbstractUserInterface::setLayerInstance(Containers::Pointer<AbstractLayer>&& instance) {
     State& state = *_state;
     CORRADE_ASSERT(instance,
@@ -1308,6 +1314,12 @@ LayouterHandle AbstractUserInterface::createLayouter(const LayouterHandle before
     return handle;
 }
 
+bool AbstractUserInterface::hasLayouterInstance(const LayouterHandle handle) const {
+    CORRADE_ASSERT(isHandleValid(handle),
+        "Ui::AbstractUserInterface::hasLayouterInstance(): invalid handle" << handle, {});
+    return !!_state->layouters[layouterHandleId(handle)].used.instance;
+}
+
 AbstractLayouter& AbstractUserInterface::setLayouterInstance(Containers::Pointer<AbstractLayouter>&& instance) {
     State& state = *_state;
     CORRADE_ASSERT(instance,
@@ -1503,6 +1515,12 @@ AnimatorHandle AbstractUserInterface::createAnimator() {
     animator->used.used = true;
 
     return animatorHandle((animator - state.animators), animator->used.generation);
+}
+
+bool AbstractUserInterface::hasAnimatorInstance(const AnimatorHandle handle) const {
+    CORRADE_ASSERT(isHandleValid(handle),
+        "Ui::AbstractUserInterface::hasAnimatorInstance(): invalid handle" << handle, {});
+    return !!_state->animators[animatorHandleId(handle)].used.instance;
 }
 
 AbstractGenericAnimator& AbstractUserInterface::setGenericAnimatorInstance(Containers::Pointer<AbstractGenericAnimator>&& instance) {

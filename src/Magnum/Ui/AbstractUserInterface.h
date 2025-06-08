@@ -1204,6 +1204,16 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
         );
 
         /**
+         * @brief Whether an instance has been set for given layer
+         *
+         * Expects that @p handle is valid. Returns @cpp true @ce if
+         * @ref setLayerInstance() has been already called for @p handle,
+         * @cpp false @ce otherwise.
+         * @see @ref layer()
+         */
+        bool hasLayerInstance(LayerHandle handle) const;
+
+        /**
          * @brief Set a layer instance
          * @return Reference to @p instance
          *
@@ -1215,7 +1225,8 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
          * @ref setSize() nor @ref AbstractUserInterface(const Vector2&, const Vector2&, const Vector2i&)
          * was called yet.
          * @see @ref AbstractLayer::handle(),
-         *      @ref isHandleValid(LayerHandle) const
+         *      @ref isHandleValid(LayerHandle) const,
+         *      @ref hasLayerInstance(LayerHandle const
          */
         AbstractLayer& setLayerInstance(Containers::Pointer<AbstractLayer>&& instance);
         /** @overload */
@@ -1228,7 +1239,8 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
          *
          * Expects that @p handle is valid and that @ref setLayerInstance() was
          * called for it.
-         * @see @ref isHandleValid(LayerHandle) const
+         * @see @ref isHandleValid(LayerHandle) const,
+         *      @ref hasLayerInstance(LayerHandle) const
          */
         AbstractLayer& layer(LayerHandle handle);
         const AbstractLayer& layer(LayerHandle handle) const; /**< @overload */
@@ -1239,7 +1251,8 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
          * Expects that @p handle is valid and that @ref setLayerInstance() was
          * called for it. It's the user responsibility to ensure that @p T
          * matches the actual instance type.
-         * @see @ref isHandleValid(LayerHandle) const
+         * @see @ref isHandleValid(LayerHandle) const,
+         *      @ref hasLayerInstance(LayerHandle) const
          */
         template<class T> T& layer(LayerHandle handle) {
             return static_cast<T&>(layer(handle));
@@ -1430,6 +1443,16 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
         );
 
         /**
+         * @brief Whether an instance has been set for given layouter
+         *
+         * Expects that @p handle is valid. Returns @cpp true @ce if
+         * @ref setLayouterInstance() has been already called for @p handle,
+         * @cpp false @ce otherwise.
+         * @see @ref layouter()
+         */
+        bool hasLayouterInstance(LayouterHandle handle) const;
+
+        /**
          * @brief Set a layouter instance
          * @return Reference to @p instance
          *
@@ -1441,7 +1464,8 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
          * neither @ref setSize() nor @ref AbstractUserInterface(const Vector2&, const Vector2&, const Vector2i&)
          * was called yet.
          * @see @ref AbstractLayouter::handle(),
-         *      @ref isHandleValid(LayouterHandle) const
+         *      @ref isHandleValid(LayouterHandle) const,
+         *      @ref hasLayouterInstance(LayouterHandle) const
          */
         AbstractLayouter& setLayouterInstance(Containers::Pointer<AbstractLayouter>&& instance);
         /** @overload */
@@ -1454,7 +1478,8 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
          *
          * Expects that @p handle is valid and that @ref setLayouterInstance()
          * was called for it.
-         * @see @ref isHandleValid(LayouterHandle) const
+         * @see @ref isHandleValid(LayouterHandle) const,
+         *      @ref hasLayouterInstance(LayouterHandle) const
          */
         AbstractLayouter& layouter(LayouterHandle handle);
         const AbstractLayouter& layouter(LayouterHandle handle) const; /**< @overload */
@@ -1465,7 +1490,8 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
          * Expects that @p handle is valid and that @ref setLayouterInstance()
          * was called for it. It's the user responsibility to ensure that @p T
          * matches the actual instance type.
-         * @see @ref isHandleValid(LayouterHandle) const
+         * @see @ref isHandleValid(LayouterHandle) const,
+         *      @ref hasLayouterInstance(LayouterHandle) const
          */
         template<class T> T& layouter(LayouterHandle handle) {
             return static_cast<T&>(layouter(handle));
@@ -1580,6 +1606,17 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
         AnimatorHandle createAnimator();
 
         /**
+         * @brief Whether an instance has been set for given animator
+         *
+         * Expects that @p handle is valid. Returns @cpp true @ce if
+         * @ref setGenericAnimatorInstance(), @ref setNodeAnimatorInstance(),
+         * @ref setDataAnimatorInstance() or @ref setStyleAnimatorInstance()
+         * has been already called for @p handle, @cpp false @ce otherwise.
+         * @see @ref animator()
+         */
+        bool hasAnimatorInstance(AnimatorHandle handle) const;
+
+        /**
          * @brief Set a generic animator instance
          * @return Reference to @p instance
          *
@@ -1597,7 +1634,8 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
          * animator type, which is done with a @f$ \mathcal{O}(n) @f$
          * complexity where @f$ n @f$ is @ref animatorCapacity().
          * @see @ref AbstractAnimator::handle(),
-         *      @ref isHandleValid(AnimatorHandle) const
+         *      @ref isHandleValid(AnimatorHandle) const,
+         *      @ref hasAnimatorInstance(AnimatorHandle) const
          */
         AbstractGenericAnimator& setGenericAnimatorInstance(Containers::Pointer<AbstractGenericAnimator>&& instance);
         /** @overload */
@@ -1621,7 +1659,8 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
          * animator type, which is done with a @f$ \mathcal{O}(n) @f$
          * complexity where @f$ n @f$ is @ref animatorCapacity().
          * @see @ref AbstractAnimator::handle(),
-         *      @ref isHandleValid(AnimatorHandle) const
+         *      @ref isHandleValid(AnimatorHandle) const,
+         *      @ref hasAnimatorInstance(AnimatorHandle) const
          */
         AbstractNodeAnimator& setNodeAnimatorInstance(Containers::Pointer<AbstractNodeAnimator>&& instance);
         /** @overload */
@@ -1647,7 +1686,8 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
          * animator type, which is done with a @f$ \mathcal{O}(n) @f$
          * complexity where @f$ n @f$ is @ref animatorCapacity().
          * @see @ref AbstractAnimator::handle(),
-         *      @ref isHandleValid(AnimatorHandle) const
+         *      @ref isHandleValid(AnimatorHandle) const,
+         *      @ref hasAnimatorInstance(AnimatorHandle) const
          */
         AbstractDataAnimator& setDataAnimatorInstance(Containers::Pointer<AbstractDataAnimator>&& instance);
         /** @overload */
@@ -1673,7 +1713,8 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
          * animator type, which is done with a @f$ \mathcal{O}(n) @f$
          * complexity where @f$ n @f$ is @ref animatorCapacity().
          * @see @ref AbstractAnimator::handle(),
-         *      @ref isHandleValid(AnimatorHandle) const
+         *      @ref isHandleValid(AnimatorHandle) const,
+         *      @ref hasAnimatorInstance(AnimatorHandle) const
          */
         AbstractStyleAnimator& setStyleAnimatorInstance(Containers::Pointer<AbstractStyleAnimator>&& instance);
         /** @overload */
@@ -1688,7 +1729,8 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
          * @ref setGenericAnimatorInstance(), @ref setNodeAnimatorInstance(),
          * @ref setDataAnimatorInstance() or @ref setStyleAnimatorInstance()
          * was called for it.
-         * @see @ref isHandleValid(AnimatorHandle) const
+         * @see @ref isHandleValid(AnimatorHandle) const,
+         *      @ref hasAnimatorInstance(AnimatorHandle) const
          */
         AbstractAnimator& animator(AnimatorHandle handle);
         const AbstractAnimator& animator(AnimatorHandle handle) const; /**< @overload */
@@ -1701,7 +1743,8 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
          * @ref setDataAnimatorInstance() or @ref setStyleAnimatorInstance()
          * was called for it. It's the user responsibility to ensure that @p T
          * matches the actual instance type.
-         * @see @ref isHandleValid(AnimatorHandle) const
+         * @see @ref isHandleValid(AnimatorHandle) const,
+         *      @ref hasAnimatorInstance(AnimatorHandle) const
          */
         template<class T> T& animator(AnimatorHandle handle) {
             return static_cast<T&>(animator(handle));
