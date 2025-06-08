@@ -76,7 +76,7 @@ bool UserInterfaceGL::tryCreateInternal(const AbstractStyle& style, const StyleF
     #ifndef CORRADE_NO_ASSERT
     State& state = static_cast<State&>(*_state);
     #endif
-    CORRADE_ASSERT(!hasRenderer() && !state.baseLayer && !state.textLayer && !state.eventLayer && !state.snapLayouter,
+    CORRADE_ASSERT(!hasRendererInstance() && !state.baseLayer && !state.textLayer && !state.eventLayer && !state.snapLayouter,
         "Ui::UserInterfaceGL::tryCreate(): user interface already created",
         /* Has to return true with CORRADE_GRACEFUL_ASSERT so when tested
            through create() it doesn't std::exit() the whole executable */
@@ -123,7 +123,7 @@ bool UserInterfaceGL::trySetStyle(const AbstractStyle& style, const StyleFeature
     State& state = static_cast<State&>(*_state);
 
     /* Create a renderer, if not already */
-    if(!hasRenderer())
+    if(!hasRendererInstance())
         setRendererInstance(Containers::pointer<RendererGL>());
 
     /* Create layers based on what features are wanted */

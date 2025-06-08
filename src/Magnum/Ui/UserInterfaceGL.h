@@ -471,7 +471,7 @@ class MAGNUM_UI_EXPORT UserInterfaceGL: public UserInterface {
          * function or transitively either by @ref UserInterfaceGL::setStyle()
          * or a @ref UserInterfaceGL constructor taking a style instance. The
          * instance is subsequently available through @ref renderer().
-         * @see @ref hasRenderer()
+         * @see @ref hasRendererInstance()
          */
         UserInterfaceGL& setRendererInstance(Containers::Pointer<RendererGL>&& instance);
 
@@ -527,8 +527,9 @@ class MAGNUM_UI_EXPORT UserInterfaceGL: public UserInterface {
          * See its documentation for more information about style compatibility
          * restrictions.
          * @see @ref setStyle(const AbstractStyle&, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*),
-         *      @ref hasRenderer(), @ref hasBaseLayer(), @ref hasTextLayer(),
-         *      @ref hasEventLayer(), @ref hasSnapLayouter(),
+         *      @ref hasRendererInstance(), @ref hasBaseLayer(),
+         *      @ref hasTextLayer(), @ref hasEventLayer(),
+         *      @ref hasSnapLayouter(),
          *      @ref UserInterfaceGL(const Vector2&, const Vector2&, const Vector2i&, const AbstractStyle&, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*),
          *      @ref UserInterfaceGL(const Vector2i&, const AbstractStyle&, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*)
          */
