@@ -994,16 +994,6 @@ AbstractUserInterfaceTest::AbstractUserInterfaceTest() {
               &AbstractUserInterfaceTest::layerNoHandlesLeft,
               &AbstractUserInterfaceTest::layerUserInterfaceReference,
 
-              &AbstractUserInterfaceTest::node,
-              &AbstractUserInterfaceTest::nodeHandleRecycle,
-              &AbstractUserInterfaceTest::nodeHandleDisable,
-              &AbstractUserInterfaceTest::nodeOpacity,
-              &AbstractUserInterfaceTest::nodeFlags,
-              &AbstractUserInterfaceTest::nodeCreateInvalid,
-              &AbstractUserInterfaceTest::nodeGetSetInvalid,
-              &AbstractUserInterfaceTest::nodeRemoveInvalid,
-              &AbstractUserInterfaceTest::nodeNoHandlesLeft,
-
               &AbstractUserInterfaceTest::layouter,
               &AbstractUserInterfaceTest::layouterHandleRecycle,
               &AbstractUserInterfaceTest::layouterHandleDisable,
@@ -1024,6 +1014,16 @@ AbstractUserInterfaceTest::AbstractUserInterfaceTest() {
               &AbstractUserInterfaceTest::animatorGetInvalid,
               &AbstractUserInterfaceTest::animatorRemoveInvalid,
               &AbstractUserInterfaceTest::animatorNoHandlesLeft,
+
+              &AbstractUserInterfaceTest::node,
+              &AbstractUserInterfaceTest::nodeHandleRecycle,
+              &AbstractUserInterfaceTest::nodeHandleDisable,
+              &AbstractUserInterfaceTest::nodeOpacity,
+              &AbstractUserInterfaceTest::nodeFlags,
+              &AbstractUserInterfaceTest::nodeCreateInvalid,
+              &AbstractUserInterfaceTest::nodeGetSetInvalid,
+              &AbstractUserInterfaceTest::nodeRemoveInvalid,
+              &AbstractUserInterfaceTest::nodeNoHandlesLeft,
 
               &AbstractUserInterfaceTest::nodeOrderRoot,
               &AbstractUserInterfaceTest::nodeOrderNested,
