@@ -816,6 +816,10 @@ Nanoseconds AbstractUserInterface::animationTime() const {
     return _state->animationTime;
 }
 
+bool AbstractUserInterface::hasRendererInstance() const {
+    return !!_state->renderer;
+}
+
 AbstractRenderer& AbstractUserInterface::setRendererInstance(Containers::Pointer<AbstractRenderer>&& instance) {
     State& state = *_state;
     CORRADE_ASSERT(instance,
@@ -848,10 +852,6 @@ AbstractRenderer& AbstractUserInterface::setRendererInstance(Containers::Pointer
         state.renderer->setupFramebuffers(state.framebufferSize);
     }
     return *state.renderer;
-}
-
-bool AbstractUserInterface::hasRenderer() const {
-    return !!_state->renderer;
 }
 
 const AbstractRenderer& AbstractUserInterface::renderer() const {

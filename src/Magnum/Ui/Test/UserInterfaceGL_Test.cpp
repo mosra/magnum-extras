@@ -48,7 +48,7 @@ void UserInterfaceGL_Test::constructNoCreate() {
     CORRADE_COMPARE(ui.framebufferSize(), Vector2i{});
 
     /* Doesn't add any renderer or layers at all, not even ones without GL */
-    CORRADE_VERIFY(!ui.hasRenderer());
+    CORRADE_VERIFY(!ui.hasRendererInstance());
     CORRADE_COMPARE(ui.layerCapacity(), 0);
     CORRADE_COMPARE(ui.layerUsedCount(), 0);
     CORRADE_VERIFY(!ui.hasBaseLayer());

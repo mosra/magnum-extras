@@ -1013,6 +1013,13 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
          */
 
         /**
+         * @brief Whether a renderer instance has been set
+         *
+         * @see @ref renderer(), @ref setRendererInstance()
+         */
+        bool hasRendererInstance() const;
+
+        /**
          * @brief Set renderer instance
          *
          * Expects that the instance hasn't been set yet. A renderer instance
@@ -1027,7 +1034,7 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
          * this function causes @ref AbstractRenderer::setupFramebuffers() to
          * be called. Otherwise the setup gets performed in the next
          * @ref setSize() call.
-         * @see @ref hasRenderer()
+         * @see @ref hasRendererInstance()
          */
         AbstractRenderer& setRendererInstance(Containers::Pointer<AbstractRenderer>&& instance);
         /** @overload */
@@ -1036,17 +1043,10 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
         }
 
         /**
-         * @brief Whether a renderer instance has been set
-         *
-         * @see @ref renderer(), @ref setRendererInstance()
-         */
-        bool hasRenderer() const;
-
-        /**
          * @brief Renderer instance
          *
-         * Expects that @ref setRendererInstance() was called.
-         * @see @ref UserInterfaceGL::renderer()
+         * Expects that @ref setRendererInstance() has been called.
+         * @see @ref hasRendererInstance(), @ref UserInterfaceGL::renderer()
          */
         AbstractRenderer& renderer();
         const AbstractRenderer& renderer() const; /**< @overload */

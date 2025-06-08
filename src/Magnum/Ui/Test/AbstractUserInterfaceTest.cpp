@@ -1321,7 +1321,7 @@ void AbstractUserInterfaceTest::constructNoCreate() {
     CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
     CORRADE_COMPARE(ui.animationTime(), 0_nsec);
 
-    CORRADE_VERIFY(!ui.hasRenderer());
+    CORRADE_VERIFY(!ui.hasRendererInstance());
 
     CORRADE_COMPARE(ui.layerCapacity(), 0);
     CORRADE_COMPARE(ui.layerUsedCount(), 0);
@@ -1449,7 +1449,7 @@ void AbstractUserInterfaceTest::renderer() {
             int& setupCalled;
         };
 
-        CORRADE_VERIFY(!ui.hasRenderer());
+        CORRADE_VERIFY(!ui.hasRendererInstance());
         CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
 
         /* If UI size was already set, setting a renderer instance causes
@@ -1457,7 +1457,7 @@ void AbstractUserInterfaceTest::renderer() {
         Containers::Pointer<Renderer> instance{InPlaceInit, destructed, setupCalled};
         Renderer* instancePointer = instance.get();
         Renderer& instanceReference = ui.setRendererInstance(Utility::move(instance));
-        CORRADE_VERIFY(ui.hasRenderer());
+        CORRADE_VERIFY(ui.hasRendererInstance());
         CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
         CORRADE_COMPARE(&instanceReference, instancePointer);
         CORRADE_COMPARE(&ui.renderer(), instancePointer);
@@ -1495,7 +1495,7 @@ void AbstractUserInterfaceTest::rendererSetInstanceInvalid() {
     };
 
     ui.setRendererInstance(Containers::pointer<Renderer>());
-    CORRADE_VERIFY(ui.hasRenderer());
+    CORRADE_VERIFY(ui.hasRendererInstance());
 
     Containers::String out;
     Error redirectError{&out};
@@ -1543,7 +1543,7 @@ void AbstractUserInterfaceTest::rendererNotSet() {
 
     AbstractUserInterface ui{{100, 100}};
     const AbstractUserInterface& cui = ui;
-    CORRADE_VERIFY(!ui.hasRenderer());
+    CORRADE_VERIFY(!ui.hasRendererInstance());
 
     Containers::String out;
     Error redirectError{&out};

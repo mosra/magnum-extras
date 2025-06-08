@@ -293,7 +293,7 @@ void UserInterfaceGLTest::construct() {
     CORRADE_COMPARE(applyCalled, 1);
 
     /* The renderer instance is set implicitly first time a style is */
-    CORRADE_VERIFY(ui->hasRenderer());
+    CORRADE_VERIFY(ui->hasRendererInstance());
     CORRADE_COMPARE(ui->renderer().currentTargetState(), RendererTargetState::Initial);
     /* const overload */
     const UserInterfaceGL& cui = *ui;
@@ -344,7 +344,7 @@ void UserInterfaceGLTest::constructSingleSize() {
     CORRADE_COMPARE(applyCalled, 1);
 
     /* The renderer instance is set implicitly first time a style is */
-    CORRADE_VERIFY(ui->hasRenderer());
+    CORRADE_VERIFY(ui->hasRendererInstance());
     CORRADE_COMPARE(ui->renderer().currentTargetState(), RendererTargetState::Initial);
     /* const overload */
     const UserInterfaceGL& cui = *ui;
@@ -429,7 +429,7 @@ void UserInterfaceGLTest::create() {
     CORRADE_COMPARE(applyCalled, 1);
 
     /* The renderer instance is set implicitly first time a style is */
-    CORRADE_VERIFY(ui.hasRenderer());
+    CORRADE_VERIFY(ui.hasRendererInstance());
     CORRADE_COMPARE(ui.renderer().currentTargetState(), RendererTargetState::Initial);
     /* const overload */
     const UserInterfaceGL& cui = ui;
@@ -487,7 +487,7 @@ void UserInterfaceGLTest::createSingleSize() {
     CORRADE_COMPARE(applyCalled, 1);
 
     /* The renderer instance is set implicitly first time a style is */
-    CORRADE_VERIFY(ui.hasRenderer());
+    CORRADE_VERIFY(ui.hasRendererInstance());
     CORRADE_COMPARE(ui.renderer().currentTargetState(), RendererTargetState::Initial);
     /* const overload */
     const UserInterfaceGL& cui = ui;
@@ -604,7 +604,7 @@ void UserInterfaceGLTest::setStyle() {
 
     UserInterfaceGL ui{NoCreate};
     ui.setSize({200, 300});
-    CORRADE_VERIFY(!ui.hasRenderer());
+    CORRADE_VERIFY(!ui.hasRendererInstance());
     CORRADE_COMPARE(ui.layerUsedCount(), 0);
 
     /** @todo once FreeTypeFont is fixed to work with multiple plugin managers,
@@ -620,7 +620,7 @@ void UserInterfaceGLTest::setStyle() {
 
     /* The renderer instance is set implicitly first time a style is, and only
        if not already */
-    CORRADE_VERIFY(ui.hasRenderer());
+    CORRADE_VERIFY(ui.hasRendererInstance());
 
     if(data.expectedFeatures & StyleFeature::BaseLayer) {
         CORRADE_VERIFY(ui.hasBaseLayer());
@@ -655,10 +655,10 @@ void UserInterfaceGLTest::setStyle() {
 void UserInterfaceGLTest::setStyleRendererAlreadyPresent() {
     UserInterfaceGL ui{NoCreate};
     ui.setSize({200, 300});
-    CORRADE_VERIFY(!ui.hasRenderer());
+    CORRADE_VERIFY(!ui.hasRendererInstance());
 
     ui.setRendererInstance(Containers::pointer<RendererGL>());
-    CORRADE_VERIFY(ui.hasRenderer());
+    CORRADE_VERIFY(ui.hasRendererInstance());
 
     struct: AbstractStyle {
         StyleFeatures doFeatures() const override { return StyleFeatures{0x10}; }
@@ -668,7 +668,7 @@ void UserInterfaceGLTest::setStyleRendererAlreadyPresent() {
     /* Setting a style shouldn't attempt to set a renderer instance again if
        it's already there */
     ui.setStyle(style);
-    CORRADE_VERIFY(ui.hasRenderer());
+    CORRADE_VERIFY(ui.hasRendererInstance());
 }
 
 void UserInterfaceGLTest::setStyleNoFeatures() {
