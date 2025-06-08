@@ -1742,6 +1742,16 @@ void AbstractUserInterfaceTest::layerHandleRecycle() {
     CORRADE_VERIFY(ui.isHandleValid(fifth));
     CORRADE_COMPARE(ui.layerCapacity(), 5);
     CORRADE_COMPARE(ui.layerUsedCount(), 5);
+
+    /* The generation counter view should reflect the number of how much was
+       given ID recycled */
+    CORRADE_COMPARE_AS(ui.layerGenerations(), Containers::arrayView<UnsignedByte>({
+        2,
+        3,
+        1,
+        2,
+        1
+    }), TestSuite::Compare::Container);
 }
 
 void AbstractUserInterfaceTest::layerHandleDisable() {
@@ -1770,6 +1780,13 @@ void AbstractUserInterfaceTest::layerHandleDisable() {
     CORRADE_COMPARE(third, layerHandle(2, 1));
     CORRADE_COMPARE(ui.layerCapacity(), 3);
     CORRADE_COMPARE(ui.layerUsedCount(), 3);
+
+    /* The generation counter view should have 0 for the disabled slot */
+    CORRADE_COMPARE_AS(ui.layerGenerations(), Containers::arrayView<UnsignedByte>({
+        1,
+        0,
+        1
+    }), TestSuite::Compare::Container);
 }
 
 void AbstractUserInterfaceTest::layerHandleLastFree() {
@@ -2268,6 +2285,16 @@ void AbstractUserInterfaceTest::layouterHandleRecycle() {
     CORRADE_VERIFY(ui.isHandleValid(fifth));
     CORRADE_COMPARE(ui.layouterCapacity(), 5);
     CORRADE_COMPARE(ui.layouterUsedCount(), 5);
+
+    /* The generation counter view should reflect the number of how much was
+       given ID recycled */
+    CORRADE_COMPARE_AS(ui.layouterGenerations(), Containers::arrayView<UnsignedByte>({
+        2,
+        3,
+        1,
+        2,
+        1
+    }), TestSuite::Compare::Container);
 }
 
 void AbstractUserInterfaceTest::layouterHandleDisable() {
@@ -2296,6 +2323,13 @@ void AbstractUserInterfaceTest::layouterHandleDisable() {
     CORRADE_COMPARE(third, layouterHandle(2, 1));
     CORRADE_COMPARE(ui.layouterCapacity(), 3);
     CORRADE_COMPARE(ui.layouterUsedCount(), 3);
+
+    /* The generation counter view should have 0 for the disabled slot */
+    CORRADE_COMPARE_AS(ui.layouterGenerations(), Containers::arrayView<UnsignedByte>({
+        1,
+        0,
+        1
+    }), TestSuite::Compare::Container);
 }
 
 void AbstractUserInterfaceTest::layouterHandleLastFree() {
@@ -2641,6 +2675,16 @@ void AbstractUserInterfaceTest::animatorHandleRecycle() {
     CORRADE_VERIFY(ui.isHandleValid(fifth));
     CORRADE_COMPARE(ui.animatorCapacity(), 5);
     CORRADE_COMPARE(ui.animatorUsedCount(), 5);
+
+    /* The generation counter view should reflect the number of how much was
+       given ID recycled */
+    CORRADE_COMPARE_AS(ui.animatorGenerations(), Containers::arrayView<UnsignedByte>({
+        2,
+        3,
+        1,
+        2,
+        1
+    }), TestSuite::Compare::Container);
 }
 
 void AbstractUserInterfaceTest::animatorHandleDisable() {
@@ -2669,6 +2713,13 @@ void AbstractUserInterfaceTest::animatorHandleDisable() {
     CORRADE_COMPARE(third, animatorHandle(2, 1));
     CORRADE_COMPARE(ui.animatorCapacity(), 3);
     CORRADE_COMPARE(ui.animatorUsedCount(), 3);
+
+    /* The generation counter view should have 0 for the disabled slot */
+    CORRADE_COMPARE_AS(ui.animatorGenerations(), Containers::arrayView<UnsignedByte>({
+        1,
+        0,
+        1
+    }), TestSuite::Compare::Container);
 }
 
 void AbstractUserInterfaceTest::animatorHandleLastFree() {
@@ -3159,6 +3210,16 @@ void AbstractUserInterfaceTest::nodeHandleRecycle() {
     CORRADE_COMPARE(ui.nodeOpacity(fifth), 1.0f);
     CORRADE_COMPARE(ui.nodeCapacity(), 5);
     CORRADE_COMPARE(ui.nodeUsedCount(), 5);
+
+    /* The generation counter view should reflect the number of how much was
+       given ID recycled */
+    CORRADE_COMPARE_AS(ui.nodeGenerations(), Containers::arrayView<UnsignedShort>({
+        2,
+        1,
+        3,
+        2,
+        1
+    }), TestSuite::Compare::Container);
 }
 
 void AbstractUserInterfaceTest::nodeHandleDisable() {
@@ -3187,6 +3248,13 @@ void AbstractUserInterfaceTest::nodeHandleDisable() {
     CORRADE_COMPARE(third, nodeHandle(2, 1));
     CORRADE_COMPARE(ui.nodeCapacity(), 3);
     CORRADE_COMPARE(ui.nodeUsedCount(), 3);
+
+    /* The generation counter view should have 0 for the disabled slot */
+    CORRADE_COMPARE_AS(ui.nodeGenerations(), Containers::arrayView<UnsignedShort>({
+        1,
+        0,
+        1
+    }), TestSuite::Compare::Container);
 }
 
 void AbstractUserInterfaceTest::nodeFlags() {
