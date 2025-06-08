@@ -1832,6 +1832,9 @@ void AbstractUserInterfaceTest::layerSetInstance() {
         LayerHandle first = ui.createLayer();
         LayerHandle second = ui.createLayer();
         LayerHandle third = ui.createLayer();
+        CORRADE_VERIFY(!ui.hasLayerInstance(first));
+        CORRADE_VERIFY(!ui.hasLayerInstance(second));
+        CORRADE_VERIFY(!ui.hasLayerInstance(third));
 
         struct Layer: AbstractLayer {
             explicit Layer(LayerHandle handle, int& destructed): AbstractLayer{handle}, destructed(destructed) {}
@@ -1852,7 +1855,10 @@ void AbstractUserInterfaceTest::layerSetInstance() {
         Layer* secondInstancePointer = secondInstance.get();
         /* Add them in different order, shouldn't matter */
         Layer& secondInstanceReference = ui.setLayerInstance(Utility::move(secondInstance));
+        CORRADE_VERIFY(ui.hasLayerInstance(second));
         Layer& firstInstanceReference = ui.setLayerInstance(Utility::move(firstInstance));
+        CORRADE_VERIFY(ui.hasLayerInstance(first));
+        CORRADE_VERIFY(!ui.hasLayerInstance(third));
         CORRADE_COMPARE(ui.layerCapacity(), 3);
         CORRADE_COMPARE(ui.layerUsedCount(), 3);
         CORRADE_COMPARE(&firstInstanceReference, firstInstancePointer);
@@ -1980,20 +1986,25 @@ void AbstractUserInterfaceTest::layerGetInvalid() {
     ui.layerPrevious(LayerHandle::Null);
     ui.layerNext(LayerHandle(0x12ab));
     ui.layerNext(LayerHandle::Null);
+    ui.hasLayerInstance(LayerHandle(0x12ab));
+    ui.hasLayerInstance(LayerHandle::Null);
     ui.layer(handle);
     ui.layer(LayerHandle::Null);
     /* Const overloads */
     cui.layer(handle);
     cui.layer(LayerHandle::Null);
-    CORRADE_COMPARE(out,
+    CORRADE_COMPARE_AS(out,
         "Ui::AbstractUserInterface::layerPrevious(): invalid handle Ui::LayerHandle(0xab, 0x12)\n"
         "Ui::AbstractUserInterface::layerPrevious(): invalid handle Ui::LayerHandle::Null\n"
         "Ui::AbstractUserInterface::layerNext(): invalid handle Ui::LayerHandle(0xab, 0x12)\n"
         "Ui::AbstractUserInterface::layerNext(): invalid handle Ui::LayerHandle::Null\n"
+        "Ui::AbstractUserInterface::hasLayerInstance(): invalid handle Ui::LayerHandle(0xab, 0x12)\n"
+        "Ui::AbstractUserInterface::hasLayerInstance(): invalid handle Ui::LayerHandle::Null\n"
         "Ui::AbstractUserInterface::layer(): Ui::LayerHandle(0x1, 0x1) has no instance set\n"
         "Ui::AbstractUserInterface::layer(): invalid handle Ui::LayerHandle::Null\n"
         "Ui::AbstractUserInterface::layer(): Ui::LayerHandle(0x1, 0x1) has no instance set\n"
-        "Ui::AbstractUserInterface::layer(): invalid handle Ui::LayerHandle::Null\n");
+        "Ui::AbstractUserInterface::layer(): invalid handle Ui::LayerHandle::Null\n",
+        TestSuite::Compare::String);
 }
 
 void AbstractUserInterfaceTest::layerRemoveInvalid() {
@@ -2374,6 +2385,9 @@ void AbstractUserInterfaceTest::layouterSetInstance() {
         LayouterHandle first = ui.createLayouter();
         LayouterHandle second = ui.createLayouter();
         LayouterHandle third = ui.createLayouter();
+        CORRADE_VERIFY(!ui.hasLayouterInstance(first));
+        CORRADE_VERIFY(!ui.hasLayouterInstance(second));
+        CORRADE_VERIFY(!ui.hasLayouterInstance(third));
 
         struct Layouter: AbstractLayouter {
             explicit Layouter(LayouterHandle handle, int& destructed): AbstractLayouter{handle}, destructed(destructed) {}
@@ -2394,7 +2408,10 @@ void AbstractUserInterfaceTest::layouterSetInstance() {
         Layouter* secondInstancePointer = secondInstance.get();
         /* Set them in different order, shouldn't matter */
         Layouter& secondInstanceReference = ui.setLayouterInstance(Utility::move(secondInstance));
+        CORRADE_VERIFY(ui.hasLayouterInstance(second));
         Layouter& firstInstanceReference = ui.setLayouterInstance(Utility::move(firstInstance));
+        CORRADE_VERIFY(ui.hasLayouterInstance(first));
+        CORRADE_VERIFY(!ui.hasLayouterInstance(third));
         CORRADE_COMPARE(ui.layouterCapacity(), 3);
         CORRADE_COMPARE(ui.layouterUsedCount(), 3);
         CORRADE_COMPARE(&firstInstanceReference, firstInstancePointer);
@@ -2491,20 +2508,25 @@ void AbstractUserInterfaceTest::layouterGetInvalid() {
     ui.layouterPrevious(LayouterHandle::Null);
     ui.layouterNext(LayouterHandle(0x12ab));
     ui.layouterNext(LayouterHandle::Null);
+    ui.hasLayouterInstance(LayouterHandle(0x12ab));
+    ui.hasLayouterInstance(LayouterHandle::Null);
     ui.layouter(handle);
     ui.layouter(LayouterHandle::Null);
     /* Const overloads */
     cui.layouter(handle);
     cui.layouter(LayouterHandle::Null);
-    CORRADE_COMPARE(out,
+    CORRADE_COMPARE_AS(out,
         "Ui::AbstractUserInterface::layouterPrevious(): invalid handle Ui::LayouterHandle(0xab, 0x12)\n"
         "Ui::AbstractUserInterface::layouterPrevious(): invalid handle Ui::LayouterHandle::Null\n"
         "Ui::AbstractUserInterface::layouterNext(): invalid handle Ui::LayouterHandle(0xab, 0x12)\n"
         "Ui::AbstractUserInterface::layouterNext(): invalid handle Ui::LayouterHandle::Null\n"
+        "Ui::AbstractUserInterface::hasLayouterInstance(): invalid handle Ui::LayouterHandle(0xab, 0x12)\n"
+        "Ui::AbstractUserInterface::hasLayouterInstance(): invalid handle Ui::LayouterHandle::Null\n"
         "Ui::AbstractUserInterface::layouter(): Ui::LayouterHandle(0x1, 0x1) has no instance set\n"
         "Ui::AbstractUserInterface::layouter(): invalid handle Ui::LayouterHandle::Null\n"
         "Ui::AbstractUserInterface::layouter(): Ui::LayouterHandle(0x1, 0x1) has no instance set\n"
-        "Ui::AbstractUserInterface::layouter(): invalid handle Ui::LayouterHandle::Null\n");
+        "Ui::AbstractUserInterface::layouter(): invalid handle Ui::LayouterHandle::Null\n",
+        TestSuite::Compare::String);
 }
 
 void AbstractUserInterfaceTest::layouterRemoveInvalid() {
@@ -2781,6 +2803,12 @@ void AbstractUserInterfaceTest::animatorSetInstance() {
         AnimatorHandle fourth = ui.createAnimator();
         AnimatorHandle fifth = ui.createAnimator();
         AnimatorHandle sixth = ui.createAnimator();
+        CORRADE_VERIFY(!ui.hasAnimatorInstance(first));
+        CORRADE_VERIFY(!ui.hasAnimatorInstance(second));
+        CORRADE_VERIFY(!ui.hasAnimatorInstance(third));
+        CORRADE_VERIFY(!ui.hasAnimatorInstance(fourth));
+        CORRADE_VERIFY(!ui.hasAnimatorInstance(fifth));
+        CORRADE_VERIFY(!ui.hasAnimatorInstance(sixth));
 
         struct GenericAnimator: AbstractGenericAnimator {
             explicit GenericAnimator(AnimatorHandle handle, int& destructed): AbstractGenericAnimator{handle}, destructed(destructed) {}
@@ -2844,10 +2872,16 @@ void AbstractUserInterfaceTest::animatorSetInstance() {
         StyleAnimator* sixthInstancePointer = sixthInstance.get();
         /* Set them in different order, shouldn't matter */
         GenericAnimator& fourthInstanceReference = ui.setGenericAnimatorInstance(Utility::move(fourthInstance));
+        CORRADE_VERIFY(ui.hasAnimatorInstance(fourth));
         StyleAnimator& sixthInstanceReference = ui.setStyleAnimatorInstance(Utility::move(sixthInstance));
+        CORRADE_VERIFY(ui.hasAnimatorInstance(sixth));
         NodeAnimator& secondInstanceReference = ui.setNodeAnimatorInstance(Utility::move(secondInstance));
+        CORRADE_VERIFY(ui.hasAnimatorInstance(second));
         DataAnimator& fifthInstanceReference = ui.setDataAnimatorInstance(Utility::move(fifthInstance));
+        CORRADE_VERIFY(ui.hasAnimatorInstance(fifth));
         GenericAnimator& firstInstanceReference = ui.setGenericAnimatorInstance(Utility::move(firstInstance));
+        CORRADE_VERIFY(ui.hasAnimatorInstance(first));
+        CORRADE_VERIFY(!ui.hasAnimatorInstance(third));
         CORRADE_COMPARE(ui.animatorCapacity(), 6);
         CORRADE_COMPARE(ui.animatorUsedCount(), 6);
         CORRADE_COMPARE(&firstInstanceReference, firstInstancePointer);
@@ -3021,16 +3055,21 @@ void AbstractUserInterfaceTest::animatorGetInvalid() {
 
     Containers::String out;
     Error redirectError{&out};
+    ui.hasAnimatorInstance(AnimatorHandle(0x12ab));
+    ui.hasAnimatorInstance(AnimatorHandle::Null);
     ui.animator(handle);
     ui.animator(AnimatorHandle::Null);
     /* Const overloads */
     cui.animator(handle);
     cui.animator(AnimatorHandle::Null);
-    CORRADE_COMPARE(out,
+    CORRADE_COMPARE_AS(out,
+        "Ui::AbstractUserInterface::hasAnimatorInstance(): invalid handle Ui::AnimatorHandle(0xab, 0x12)\n"
+        "Ui::AbstractUserInterface::hasAnimatorInstance(): invalid handle Ui::AnimatorHandle::Null\n"
         "Ui::AbstractUserInterface::animator(): Ui::AnimatorHandle(0x1, 0x1) has no instance set\n"
         "Ui::AbstractUserInterface::animator(): invalid handle Ui::AnimatorHandle::Null\n"
         "Ui::AbstractUserInterface::animator(): Ui::AnimatorHandle(0x1, 0x1) has no instance set\n"
-        "Ui::AbstractUserInterface::animator(): invalid handle Ui::AnimatorHandle::Null\n");
+        "Ui::AbstractUserInterface::animator(): invalid handle Ui::AnimatorHandle::Null\n",
+        TestSuite::Compare::String);
 }
 
 void AbstractUserInterfaceTest::animatorRemoveInvalid() {
