@@ -69,7 +69,7 @@ uniform lowp sampler2D backgroundBlurTextureData;
 #endif
 
 flat in mediump uint interpolatedStyle;
-NOPERSPECTIVE in mediump vec4 interpolatedColor;
+NOPERSPECTIVE in lowp vec4 interpolatedColor;
 #ifndef SUBDIVIDED_QUADS
 flat in mediump vec2 halfQuadSize;
 #ifndef NO_OUTLINE
