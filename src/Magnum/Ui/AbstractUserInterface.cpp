@@ -2865,9 +2865,9 @@ AbstractUserInterface& AbstractUserInterface::update() {
                            multiple layouts set for the same node. */
                         nodeLayouts[{nodeHandleId(node), layouterIndex}] = layoutHandle(layouter, i, 0xfff);
                     }
+                    ++layouterIndex;
                 }
                 layouter = layouterItem.used.next;
-                ++layouterIndex;
             } while(layouter != state.firstLayouter);
         }
 
