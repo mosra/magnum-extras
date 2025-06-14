@@ -425,7 +425,8 @@ void TextLayerGL::Shared::doSetEditingStyle(const TextLayerCommonEditingStyleUni
 struct TextLayerGL::State: TextLayer::State {
     explicit State(Shared::State& shared, const TextLayerFlags flags): TextLayer::State{shared, flags} {}
 
-    GL::Buffer vertexBuffer{GL::Buffer::TargetHint::Array}, indexBuffer{GL::Buffer::TargetHint::ElementArray};
+    GL::Buffer vertexBuffer{GL::Buffer::TargetHint::Array},
+        indexBuffer{GL::Buffer::TargetHint::ElementArray};
     GL::Mesh mesh;
     Vector2 clipScale;
     Vector2i framebufferSize;
