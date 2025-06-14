@@ -11545,7 +11545,7 @@ void AbstractUserInterfaceTest::statePropagateFromLayouters() {
     /* Event/framebuffer scaling doesn't affect these tests */
     AbstractUserInterface ui{{100, 100}};
 
-    /*LayouterHandle layouterWithoutInstance =*/ ui.createLayer();
+    /*LayouterHandle layouterWithoutInstance =*/ ui.createLayouter();
     LayouterHandle layouterRemoved = ui.createLayouter();
     LayouterHandle layouter1 = ui.createLayouter();
     LayouterHandle layouter2 = ui.createLayouter();
