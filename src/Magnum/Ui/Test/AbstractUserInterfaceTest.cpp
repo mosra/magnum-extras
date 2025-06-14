@@ -10743,6 +10743,8 @@ void AbstractUserInterfaceTest::state() {
         ui.removeLayouter(layouter2);
         CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsLayoutAssignmentUpdate);
 
+        layouterUpdateCalls = {};
+
         /* Calling clean() should be a no-op */
         if(data.clean && data.noOp) {
             {
@@ -10752,8 +10754,7 @@ void AbstractUserInterfaceTest::state() {
             CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsLayoutAssignmentUpdate);
             CORRADE_COMPARE(ui.layouter(layouter1).usedCount(), 2);
             CORRADE_COMPARE(ui.layouter<Layouter>(layouter1).cleanCallCount, 1);
-            CORRADE_COMPARE_AS(layouterUpdateCalls, Containers::arrayView({
-                layouterHandleId(layouter2),
+            CORRADE_COMPARE_AS(layouterUpdateCalls, Containers::arrayView<UnsignedInt>({
             }), TestSuite::Compare::Container);
             CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 1);
             CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 21);
@@ -10767,7 +10768,6 @@ void AbstractUserInterfaceTest::state() {
         {
             CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
 
-            layouterUpdateCalls = {};
             ui.layouter<Layouter1>(layouter1).expectedLayoutIdsToUpdate = {};
             ui.layouter<Layouter1>(layouter1).expectedTopLevelLayoutIds = {};
             ui.layouter<Layouter1>(layouter1).expectedNodeOffsetsSizes = {};
