@@ -4626,7 +4626,6 @@ void AbstractUserInterfaceTest::data() {
 void AbstractUserInterfaceTest::dataAttach() {
     /* Event/framebuffer scaling doesn't affect these tests */
     AbstractUserInterface ui{{100, 100}};
-    LayerHandle layerHandle = ui.createLayer();
     NodeHandle node = ui.createNode({}, {});
 
     struct Layer: AbstractLayer {
@@ -4635,22 +4634,22 @@ void AbstractUserInterfaceTest::dataAttach() {
 
         LayerFeatures doFeatures() const override { return {}; }
     };
-    ui.setLayerInstance(Containers::pointer<Layer>(layerHandle));
+    Layer& layer = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer()));
 
-    DataHandle handle = ui.layer<Layer>(layerHandle).create();
-    CORRADE_COMPARE(ui.layer(layerHandle).node(handle), NodeHandle::Null);
+    DataHandle handle = layer.create();
+    CORRADE_COMPARE(layer.node(handle), NodeHandle::Null);
 
     ui.attachData(node, handle);
-    CORRADE_COMPARE(ui.layer(layerHandle).node(handle), node);
+    CORRADE_COMPARE(layer.node(handle), node);
 
     /* The data attachments aren't removed immediately, only during next
        clean() -- tested in cleanRemoveAttachedData() below */
     ui.removeNode(node);
-    CORRADE_COMPARE(ui.layer(layerHandle).node(handle), node);
+    CORRADE_COMPARE(layer.node(handle), node);
 
     /* Attaching to a null node should work also, it resets the attachment */
     ui.attachData(NodeHandle::Null, handle);
-    CORRADE_COMPARE(ui.layer(layerHandle).node(handle), NodeHandle::Null);
+    CORRADE_COMPARE(layer.node(handle), NodeHandle::Null);
 }
 
 void AbstractUserInterfaceTest::dataAttachInvalid() {
@@ -7523,7 +7522,8 @@ void AbstractUserInterfaceTest::state() {
     Containers::Array<UnsignedInt> layouterUpdateCalls;
 
     /* Creating layouters sets no state flags */
-    LayouterHandle layouter1{}, layouter2{};
+    Layouter1* layouter1{};
+    Layouter2* layouter2{};
     /* These are set to all 1s to not trigger a null assertion when
        unconditionally querying layoutHandleId() on them when layouters are not
        used */
@@ -7542,14 +7542,14 @@ void AbstractUserInterfaceTest::state() {
     };
     if(data.layouters) {
         /* Layouter 2 is ordered first even though it has a higher ID */
-        layouter2 = ui.createLayouter();
-        layouter1 = ui.createLayouter(layouter2);
-        ui.setLayouterInstance(Containers::pointer<Layouter2>(layouter2, layouterUpdateCalls));
-        ui.setLayouterInstance(Containers::pointer<Layouter1>(layouter1, layouterUpdateCalls));
+        LayouterHandle layouter2Handle = ui.createLayouter();
+        LayouterHandle layouter1Handle = ui.createLayouter(layouter2Handle);
+        layouter2 = &ui.setLayouterInstance(Containers::pointer<Layouter2>(layouter2Handle, layouterUpdateCalls));
+        layouter1 = &ui.setLayouterInstance(Containers::pointer<Layouter1>(layouter1Handle, layouterUpdateCalls));
         /* The node parents change only after node removal so they're set just
            once and then the original array gets updated */
-        ui.layouter<Layouter1>(layouter1).expectedNodeParents = expectedNodeParents;
-        ui.layouter<Layouter2>(layouter2).expectedNodeParents = expectedNodeParents;
+        layouter1->expectedNodeParents = expectedNodeParents;
+        layouter2->expectedNodeParents = expectedNodeParents;
         CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
 
         /* Calling clean() should be a no-op, not calling anything in the
@@ -7560,8 +7560,8 @@ void AbstractUserInterfaceTest::state() {
                 ui.clean();
             }
             CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
-            CORRADE_COMPARE(ui.layouter<Layouter>(layouter1).cleanCallCount, 0);
-            CORRADE_COMPARE(ui.layouter<Layouter>(layouter2).cleanCallCount, 0);
+            CORRADE_COMPARE(layouter1->cleanCallCount, 0);
+            CORRADE_COMPARE(layouter2->cleanCallCount, 0);
             CORRADE_COMPARE_AS(layouterUpdateCalls,
                 Containers::arrayView<UnsignedInt>({}),
                 TestSuite::Compare::Container);
@@ -7575,8 +7575,8 @@ void AbstractUserInterfaceTest::state() {
                 ui.update();
             }
             CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
-            CORRADE_COMPARE(ui.layouter<Layouter>(layouter1).cleanCallCount, 0);
-            CORRADE_COMPARE(ui.layouter<Layouter>(layouter2).cleanCallCount, 0);
+            CORRADE_COMPARE(layouter1->cleanCallCount, 0);
+            CORRADE_COMPARE(layouter2->cleanCallCount, 0);
             CORRADE_COMPARE_AS(layouterUpdateCalls,
                 Containers::arrayView<UnsignedInt>({}),
                 TestSuite::Compare::Container);
@@ -7584,19 +7584,19 @@ void AbstractUserInterfaceTest::state() {
 
         /* Creating a layout in a layouter sets state flags */
         /* This one gets ignored, as there's the same node added again after */
-        /*layout2Nested2Duplicate =*/ ui.layouter<Layouter2>(layouter2).add(nested2);
-        layout2Node = ui.layouter<Layouter2>(layouter2).add(node);
-        /*layout2Nested2 =*/ ui.layouter<Layouter2>(layouter2).add(nested2);
-        layout2Another1 = ui.layouter<Layouter2>(layouter2).add(another1);
+        /*layout2Nested2Duplicate =*/ layouter2->add(nested2);
+        layout2Node = layouter2->add(node);
+        /*layout2Nested2 =*/ layouter2->add(nested2);
+        layout2Another1 = layouter2->add(another1);
         /* This one is unused because the node is invisible */
-        /*layout1Invisible =*/ ui.layouter<Layouter1>(layouter1).add(invisible);
+        /*layout1Invisible =*/ layouter1->add(invisible);
         /* This one is not referenced by the test as another2 is a non-root
            top-level node so it never appears among top-level layout nodes */
-        /*layout2Another2 =*/ ui.layouter<Layouter2>(layouter2).add(another2);
-        layout1Another1 = ui.layouter<Layouter1>(layouter1).add(another1);
+        /*layout2Another2 =*/ layouter2->add(another2);
+        layout1Another1 = layouter1->add(another1);
         /* This one is again unused because the node is not in the top-level
            order */
-        /*layout1NotInOrder =*/ ui.layouter<Layouter1>(layouter1).add(notInOrder);
+        /*layout1NotInOrder =*/ layouter1->add(notInOrder);
         CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsLayoutAssignmentUpdate);
 
         /* Calling clean() should be a no-op */
@@ -7606,8 +7606,8 @@ void AbstractUserInterfaceTest::state() {
                 ui.clean();
             }
             CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsLayoutAssignmentUpdate);
-            CORRADE_COMPARE(ui.layouter<Layouter>(layouter1).cleanCallCount, 0);
-            CORRADE_COMPARE(ui.layouter<Layouter>(layouter2).cleanCallCount, 0);
+            CORRADE_COMPARE(layouter1->cleanCallCount, 0);
+            CORRADE_COMPARE(layouter2->cleanCallCount, 0);
             CORRADE_COMPARE_AS(layouterUpdateCalls,
                 Containers::arrayView<UnsignedInt>({}),
                 TestSuite::Compare::Container);
@@ -7673,24 +7673,26 @@ void AbstractUserInterfaceTest::state() {
                 {{0.0f, 0.0f}, {9.0f, 9.0f}},
                 {{8.0f, 8.0f}, {8.0f, 8.0f}}
             };
-            ui.layouter<Layouter2>(layouter2).expectedLayoutIdsToUpdate[0] = expectedLayoutIdsToUpdate1;
-            ui.layouter<Layouter1>(layouter1).expectedLayoutIdsToUpdate = expectedLayoutIdsToUpdate2;
-            ui.layouter<Layouter2>(layouter2).expectedLayoutIdsToUpdate[1] = expectedLayoutIdsToUpdate3;
-            ui.layouter<Layouter2>(layouter2).expectedTopLevelLayoutIds[0] = expectedTopLevelLayoutIds1;
-            ui.layouter<Layouter1>(layouter1).expectedTopLevelLayoutIds = expectedTopLevelLayoutIds2;
-            ui.layouter<Layouter2>(layouter2).expectedTopLevelLayoutIds[1] = expectedTopLevelLayoutIds3;
-            ui.layouter<Layouter2>(layouter2).expectedNodeOffsetsSizes[0] = expectedLayoutNodeOffsetsSizes1;
-            ui.layouter<Layouter1>(layouter1).expectedNodeOffsetsSizes = expectedLayoutNodeOffsetsSizes2;
-            ui.layouter<Layouter2>(layouter2).expectedNodeOffsetsSizes[1] = expectedLayoutNodeOffsetsSizes3;
-            ui.layouter<Layouter2>(layouter2).updateCallId = 0;
+            layouter2->expectedLayoutIdsToUpdate[0] = expectedLayoutIdsToUpdate1;
+            layouter1->expectedLayoutIdsToUpdate = expectedLayoutIdsToUpdate2;
+            layouter2->expectedLayoutIdsToUpdate[1] = expectedLayoutIdsToUpdate3;
+            layouter2->expectedTopLevelLayoutIds[0] = expectedTopLevelLayoutIds1;
+            layouter1->expectedTopLevelLayoutIds = expectedTopLevelLayoutIds2;
+            layouter2->expectedTopLevelLayoutIds[1] = expectedTopLevelLayoutIds3;
+            layouter2->expectedNodeOffsetsSizes[0] = expectedLayoutNodeOffsetsSizes1;
+            layouter1->expectedNodeOffsetsSizes = expectedLayoutNodeOffsetsSizes2;
+            layouter2->expectedNodeOffsetsSizes[1] = expectedLayoutNodeOffsetsSizes3;
+            layouter2->updateCallId = 0;
             ui.update();
         }
         CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
-        CORRADE_COMPARE(ui.layouter<Layouter>(layouter1).cleanCallCount, 0);
-        CORRADE_COMPARE(ui.layouter<Layouter>(layouter2).cleanCallCount, 0);
+        CORRADE_COMPARE(layouter1->cleanCallCount, 0);
+        CORRADE_COMPARE(layouter2->cleanCallCount, 0);
         CORRADE_COMPARE_AS(layouterUpdateCalls, Containers::arrayView({
             /* update() gets called twice on layouter 2 */
-            layouterHandleId(layouter2), layouterHandleId(layouter1), layouterHandleId(layouter2)
+            layouterHandleId(layouter2->handle()),
+            layouterHandleId(layouter1->handle()),
+            layouterHandleId(layouter2->handle())
         }), TestSuite::Compare::Container);
     }
 
@@ -7770,8 +7772,7 @@ void AbstractUserInterfaceTest::state() {
     };
 
     /* Creating a layer sets no state flags */
-    LayerHandle layer = ui.createLayer();
-    ui.setLayerInstance(Containers::pointer<Layer>(layer, data.compositingLayer ? LayerFeature::Composite : LayerFeatures{}));
+    Layer& layer = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer(), data.compositingLayer ? LayerFeature::Composite : LayerFeatures{}));
     CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
 
     /* Calling clean() should be a no-op, not calling anything in the layouters
@@ -7783,11 +7784,11 @@ void AbstractUserInterfaceTest::state() {
         }
         CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
         if(data.layouters) {
-            CORRADE_COMPARE(ui.layouter<Layouter>(layouter1).cleanCallCount, 0);
-            CORRADE_COMPARE(ui.layouter<Layouter>(layouter2).cleanCallCount, 0);
+            CORRADE_COMPARE(layouter1->cleanCallCount, 0);
+            CORRADE_COMPARE(layouter2->cleanCallCount, 0);
         }
-        CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
-        CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 0);
+        CORRADE_COMPARE(layer.cleanCallCount, 0);
+        CORRADE_COMPARE(layer.updateCallCount, 0);
     }
 
     /* Calling update() should be a no-op, not calling anything in the
@@ -7799,24 +7800,26 @@ void AbstractUserInterfaceTest::state() {
         }
         CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
         if(data.layouters) {
-            CORRADE_COMPARE(ui.layouter<Layouter>(layouter1).cleanCallCount, 0);
-            CORRADE_COMPARE(ui.layouter<Layouter>(layouter2).cleanCallCount, 0);
+            CORRADE_COMPARE(layouter1->cleanCallCount, 0);
+            CORRADE_COMPARE(layouter2->cleanCallCount, 0);
             CORRADE_COMPARE_AS(layouterUpdateCalls, Containers::arrayView({
-                layouterHandleId(layouter2), layouterHandleId(layouter1), layouterHandleId(layouter2)
+                layouterHandleId(layouter2->handle()),
+                layouterHandleId(layouter1->handle()),
+                layouterHandleId(layouter2->handle())
             }), TestSuite::Compare::Container);
         }
-        CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
-        CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 0);
+        CORRADE_COMPARE(layer.cleanCallCount, 0);
+        CORRADE_COMPARE(layer.updateCallCount, 0);
     }
 
     /* Creating a data in a layer sets state flags to populate their contents */
-    DataHandle dataNested2 = ui.layer<Layer>(layer).create();
-    DataHandle dataNode = ui.layer<Layer>(layer).create();
-    DataHandle dataAnother1 = ui.layer<Layer>(layer).create();
-    DataHandle dataNotAttached = ui.layer<Layer>(layer).create();
-    DataHandle dataNested1 = ui.layer<Layer>(layer).create();
+    DataHandle dataNested2 = layer.create();
+    DataHandle dataNode = layer.create();
+    DataHandle dataAnother1 = layer.create();
+    DataHandle dataNotAttached = layer.create();
+    DataHandle dataNested1 = layer.create();
     CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataUpdate);
-    CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 0);
+    CORRADE_COMPARE(layer.updateCallCount, 0);
 
     /* Calling clean() should be a no-op */
     if(data.clean && data.noOp) {
@@ -7826,11 +7829,11 @@ void AbstractUserInterfaceTest::state() {
         }
         CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataUpdate);
         if(data.layouters) {
-            CORRADE_COMPARE(ui.layouter<Layouter>(layouter1).cleanCallCount, 0);
-            CORRADE_COMPARE(ui.layouter<Layouter>(layouter2).cleanCallCount, 0);
+            CORRADE_COMPARE(layouter1->cleanCallCount, 0);
+            CORRADE_COMPARE(layouter2->cleanCallCount, 0);
         }
-        CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
-        CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 0);
+        CORRADE_COMPARE(layer.cleanCallCount, 0);
+        CORRADE_COMPARE(layer.updateCallCount, 0);
     }
 
     /* Calling update() rebuilds internal state, calls doUpdate() on the layer,
@@ -7860,26 +7863,28 @@ void AbstractUserInterfaceTest::state() {
         };
         /* Nothing is attached to any nodes, so it's just the data alone being
            updated */
-        ui.layer<Layer>(layer).expectedState = LayerState::NeedsDataUpdate;
-        ui.layer<Layer>(layer).expectedDataIds = {};
-        ui.layer<Layer>(layer).expectedNodeOffsetsSizesOpacities = expectedNodeOffsetsSizesOpacities;
-        ui.layer<Layer>(layer).expectedNodesEnabled = expectedNodesEnabled;
-        ui.layer<Layer>(layer).expectedClipRectIdsDataCounts = {};
-        ui.layer<Layer>(layer).expectedClipRectOffsetsSizes = expectedClipRectOffsetsSizes;
+        layer.expectedState = LayerState::NeedsDataUpdate;
+        layer.expectedDataIds = {};
+        layer.expectedNodeOffsetsSizesOpacities = expectedNodeOffsetsSizesOpacities;
+        layer.expectedNodesEnabled = expectedNodesEnabled;
+        layer.expectedClipRectIdsDataCounts = {};
+        layer.expectedClipRectOffsetsSizes = expectedClipRectOffsetsSizes;
         if(data.compositingLayer)
-            ui.layer<Layer>(layer).expectedCompositeRectOffsetsSizes = {};
+            layer.expectedCompositeRectOffsetsSizes = {};
         ui.update();
     }
     CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
     if(data.layouters) {
-        CORRADE_COMPARE(ui.layouter<Layouter>(layouter1).cleanCallCount, 0);
-        CORRADE_COMPARE(ui.layouter<Layouter>(layouter2).cleanCallCount, 0);
+        CORRADE_COMPARE(layouter1->cleanCallCount, 0);
+        CORRADE_COMPARE(layouter2->cleanCallCount, 0);
         CORRADE_COMPARE_AS(layouterUpdateCalls, Containers::arrayView({
-            layouterHandleId(layouter2), layouterHandleId(layouter1), layouterHandleId(layouter2)
+            layouterHandleId(layouter2->handle()),
+            layouterHandleId(layouter1->handle()),
+            layouterHandleId(layouter2->handle())
         }), TestSuite::Compare::Container);
     }
-    CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
-    CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 1);
+    CORRADE_COMPARE(layer.cleanCallCount, 0);
+    CORRADE_COMPARE(layer.updateCallCount, 1);
 
     struct Animator: AbstractGenericAnimator {
         using AbstractGenericAnimator::AbstractGenericAnimator;
@@ -7919,40 +7924,39 @@ void AbstractUserInterfaceTest::state() {
     };
 
     /* Creating animators sets no state flags */
-    AnimatorHandle animator{}, nodeAttachmentAnimator{}, dataAttachmentAnimator{};
+    Animator* animator{};
+    AttachmentAnimator* nodeAttachmentAnimator{};
+    AttachmentAnimator* dataAttachmentAnimator{};
     if(data.nodeAttachmentAnimators || data.dataAttachmentAnimators) {
-        animator = ui.createAnimator();
-        ui.setGenericAnimatorInstance(Containers::pointer<Animator>(animator));
+        animator = &ui.setGenericAnimatorInstance(Containers::pointer<Animator>(ui.createAnimator()));
         if(data.nodeAttachmentAnimators) {
-            nodeAttachmentAnimator = ui.createAnimator();
-            ui.setGenericAnimatorInstance(Containers::pointer<AttachmentAnimator>(nodeAttachmentAnimator, AnimatorFeature::NodeAttachment));
+            nodeAttachmentAnimator = &ui.setGenericAnimatorInstance(Containers::pointer<AttachmentAnimator>(ui.createAnimator(), AnimatorFeature::NodeAttachment));
         }
         if(data.dataAttachmentAnimators) {
-            dataAttachmentAnimator = ui.createAnimator();
-            Containers::Pointer<AttachmentAnimator> instance{InPlaceInit, dataAttachmentAnimator, AnimatorFeature::DataAttachment};
-            instance->setLayer(ui.layer(layer));
-            ui.setGenericAnimatorInstance(Utility::move(instance));
+            Containers::Pointer<AttachmentAnimator> instance{InPlaceInit, ui.createAnimator(), AnimatorFeature::DataAttachment};
+            instance->setLayer(layer);
+            dataAttachmentAnimator = &ui.setGenericAnimatorInstance(Utility::move(instance));
         }
         CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
 
         /* Creating (stopped) animations sets no state flags, independently of
            whether they're attacheable at all, attached to nodes / data or not
            attached */
-        /*AnimationHandle animation =*/ ui.animator<Animator>(animator).create(-10_nsec, 1_nsec, AnimationFlag::KeepOncePlayed);
+        /*AnimationHandle animation =*/ animator->create(-10_nsec, 1_nsec, AnimationFlag::KeepOncePlayed);
         /* One is attached to a node, one to nothing, one to a nested node.
            Both first and third get removed when `node` is removed. */
         if(data.nodeAttachmentAnimators) {
-            /*AnimationHandle animation1 =*/ ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).create(-10_nsec, 1_nsec, node, AnimationFlag::KeepOncePlayed);
-            /*AnimationHandle animation2 =*/ ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).create(-10_nsec, 1_nsec, NodeHandle::Null, AnimationFlag::KeepOncePlayed);
-            /*AnimationHandle animation3 =*/ ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).create(-10_nsec, 1_nsec, nested1, AnimationFlag::KeepOncePlayed);
+            /*AnimationHandle animation1 =*/ nodeAttachmentAnimator->create(-10_nsec, 1_nsec, node, AnimationFlag::KeepOncePlayed);
+            /*AnimationHandle animation2 =*/ nodeAttachmentAnimator->create(-10_nsec, 1_nsec, NodeHandle::Null, AnimationFlag::KeepOncePlayed);
+            /*AnimationHandle animation3 =*/ nodeAttachmentAnimator->create(-10_nsec, 1_nsec, nested1, AnimationFlag::KeepOncePlayed);
         }
         if(data.dataAttachmentAnimators) {
             /* One is attached to a data not attached to any node, one to
                nothing, one to a nested node. The first gets removed when
                removing the data directly, the third when removing `node`. */
-            /*AnimationHandle animation1 =*/ ui.animator<AttachmentAnimator>(dataAttachmentAnimator).create(-10_nsec, 1_nsec, dataNotAttached, AnimationFlag::KeepOncePlayed);
-            ui.animator<AttachmentAnimator>(dataAttachmentAnimator).create(-10_nsec, 1_nsec, DataHandle::Null, AnimationFlag::KeepOncePlayed);
-            ui.animator<AttachmentAnimator>(dataAttachmentAnimator).create(-10_nsec, 1_nsec, dataNested2, AnimationFlag::KeepOncePlayed);
+            /*AnimationHandle animation1 =*/ dataAttachmentAnimator->create(-10_nsec, 1_nsec, dataNotAttached, AnimationFlag::KeepOncePlayed);
+            dataAttachmentAnimator->create(-10_nsec, 1_nsec, DataHandle::Null, AnimationFlag::KeepOncePlayed);
+            dataAttachmentAnimator->create(-10_nsec, 1_nsec, dataNested2, AnimationFlag::KeepOncePlayed);
         }
     }
 
@@ -7965,15 +7969,15 @@ void AbstractUserInterfaceTest::state() {
         }
         CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
         if(data.layouters) {
-            CORRADE_COMPARE(ui.layouter<Layouter>(layouter1).cleanCallCount, 0);
-            CORRADE_COMPARE(ui.layouter<Layouter>(layouter2).cleanCallCount, 0);
+            CORRADE_COMPARE(layouter1->cleanCallCount, 0);
+            CORRADE_COMPARE(layouter2->cleanCallCount, 0);
         }
-        CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
-        CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 1);
+        CORRADE_COMPARE(layer.cleanCallCount, 0);
+        CORRADE_COMPARE(layer.updateCallCount, 1);
         if(data.nodeAttachmentAnimators)
-            CORRADE_COMPARE(ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).cleanCallCount, 0);
+            CORRADE_COMPARE(nodeAttachmentAnimator->cleanCallCount, 0);
         if(data.dataAttachmentAnimators)
-            CORRADE_COMPARE(ui.animator<AttachmentAnimator>(dataAttachmentAnimator).cleanCallCount, 0);
+            CORRADE_COMPARE(dataAttachmentAnimator->cleanCallCount, 0);
     }
 
     /* Calling update() should be a no-op, not calling anything in the
@@ -7985,18 +7989,20 @@ void AbstractUserInterfaceTest::state() {
         }
         CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
         if(data.layouters) {
-            CORRADE_COMPARE(ui.layouter<Layouter>(layouter1).cleanCallCount, 0);
-            CORRADE_COMPARE(ui.layouter<Layouter>(layouter2).cleanCallCount, 0);
+            CORRADE_COMPARE(layouter1->cleanCallCount, 0);
+            CORRADE_COMPARE(layouter2->cleanCallCount, 0);
             CORRADE_COMPARE_AS(layouterUpdateCalls, Containers::arrayView({
-                layouterHandleId(layouter2), layouterHandleId(layouter1), layouterHandleId(layouter2)
+                layouterHandleId(layouter2->handle()),
+                layouterHandleId(layouter1->handle()),
+                layouterHandleId(layouter2->handle())
             }), TestSuite::Compare::Container);
         }
-        CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
-        CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 1);
+        CORRADE_COMPARE(layer.cleanCallCount, 0);
+        CORRADE_COMPARE(layer.updateCallCount, 1);
         if(data.nodeAttachmentAnimators)
-            CORRADE_COMPARE(ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).cleanCallCount, 0);
+            CORRADE_COMPARE(nodeAttachmentAnimator->cleanCallCount, 0);
         if(data.dataAttachmentAnimators)
-            CORRADE_COMPARE(ui.animator<AttachmentAnimator>(dataAttachmentAnimator).cleanCallCount, 0);
+            CORRADE_COMPARE(dataAttachmentAnimator->cleanCallCount, 0);
     }
 
     /* Attaching the data sets flags. Order doesn't matter, as internally it's
@@ -8015,15 +8021,15 @@ void AbstractUserInterfaceTest::state() {
         }
         CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataAttachmentUpdate);
         if(data.layouters) {
-            CORRADE_COMPARE(ui.layouter<Layouter>(layouter1).cleanCallCount, 0);
-            CORRADE_COMPARE(ui.layouter<Layouter>(layouter2).cleanCallCount, 0);
+            CORRADE_COMPARE(layouter1->cleanCallCount, 0);
+            CORRADE_COMPARE(layouter2->cleanCallCount, 0);
         }
-        CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
-        CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 1);
+        CORRADE_COMPARE(layer.cleanCallCount, 0);
+        CORRADE_COMPARE(layer.updateCallCount, 1);
         if(data.nodeAttachmentAnimators)
-            CORRADE_COMPARE(ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).cleanCallCount, 0);
+            CORRADE_COMPARE(nodeAttachmentAnimator->cleanCallCount, 0);
         if(data.dataAttachmentAnimators)
-            CORRADE_COMPARE(ui.animator<AttachmentAnimator>(dataAttachmentAnimator).cleanCallCount, 0);
+            CORRADE_COMPARE(dataAttachmentAnimator->cleanCallCount, 0);
     }
 
     /* Calling update() rebuilds internal state, calls doUpdate() on the layer,
@@ -8069,30 +8075,32 @@ void AbstractUserInterfaceTest::state() {
         };
         /* Data were updated in the previous call, so it's now just the
            node-related state */
-        ui.layer<Layer>(layer).expectedState = LayerState::NeedsNodeOffsetSizeUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsNodeOpacityUpdate|LayerState::NeedsNodeOrderUpdate|(data.compositingLayer ? LayerState::NeedsCompositeOffsetSizeUpdate : LayerStates{});
-        ui.layer<Layer>(layer).expectedDataIds = expectedDataIds;
-        ui.layer<Layer>(layer).expectedNodeOffsetsSizesOpacities = expectedNodeOffsetsSizesOpacities;
-        ui.layer<Layer>(layer).expectedNodesEnabled = expectedNodesEnabled;
-        ui.layer<Layer>(layer).expectedClipRectIdsDataCounts = expectedClipRectIdsDataCounts;
-        ui.layer<Layer>(layer).expectedClipRectOffsetsSizes = expectedClipRectOffsetsSizes;
+        layer.expectedState = LayerState::NeedsNodeOffsetSizeUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsNodeOpacityUpdate|LayerState::NeedsNodeOrderUpdate|(data.compositingLayer ? LayerState::NeedsCompositeOffsetSizeUpdate : LayerStates{});
+        layer.expectedDataIds = expectedDataIds;
+        layer.expectedNodeOffsetsSizesOpacities = expectedNodeOffsetsSizesOpacities;
+        layer.expectedNodesEnabled = expectedNodesEnabled;
+        layer.expectedClipRectIdsDataCounts = expectedClipRectIdsDataCounts;
+        layer.expectedClipRectOffsetsSizes = expectedClipRectOffsetsSizes;
         if(data.compositingLayer)
-            ui.layer<Layer>(layer).expectedCompositeRectOffsetsSizes = expectedCompositeRectOffsetsSizes;
+            layer.expectedCompositeRectOffsetsSizes = expectedCompositeRectOffsetsSizes;
         ui.update();
     }
     CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
     if(data.layouters) {
-        CORRADE_COMPARE(ui.layouter<Layouter>(layouter1).cleanCallCount, 0);
-        CORRADE_COMPARE(ui.layouter<Layouter>(layouter2).cleanCallCount, 0);
+        CORRADE_COMPARE(layouter1->cleanCallCount, 0);
+        CORRADE_COMPARE(layouter2->cleanCallCount, 0);
         CORRADE_COMPARE_AS(layouterUpdateCalls, Containers::arrayView({
-            layouterHandleId(layouter2), layouterHandleId(layouter1), layouterHandleId(layouter2)
+            layouterHandleId(layouter2->handle()),
+            layouterHandleId(layouter1->handle()),
+            layouterHandleId(layouter2->handle())
         }), TestSuite::Compare::Container);
     }
-    CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
-    CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 2);
+    CORRADE_COMPARE(layer.cleanCallCount, 0);
+    CORRADE_COMPARE(layer.updateCallCount, 2);
     if(data.nodeAttachmentAnimators)
-        CORRADE_COMPARE(ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).cleanCallCount, 0);
+        CORRADE_COMPARE(nodeAttachmentAnimator->cleanCallCount, 0);
     if(data.dataAttachmentAnimators)
-        CORRADE_COMPARE(ui.animator<AttachmentAnimator>(dataAttachmentAnimator).cleanCallCount, 0);
+        CORRADE_COMPARE(dataAttachmentAnimator->cleanCallCount, 0);
 
     /* Setting a renderer instance propagates the size to it without setting
        any state flag */
@@ -8142,15 +8150,15 @@ void AbstractUserInterfaceTest::state() {
         }
         CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeClipUpdate);
         if(data.layouters) {
-            CORRADE_COMPARE(ui.layouter<Layouter>(layouter1).cleanCallCount, 0);
-            CORRADE_COMPARE(ui.layouter<Layouter>(layouter2).cleanCallCount, 0);
+            CORRADE_COMPARE(layouter1->cleanCallCount, 0);
+            CORRADE_COMPARE(layouter2->cleanCallCount, 0);
         }
-        CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
-        CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 2);
+        CORRADE_COMPARE(layer.cleanCallCount, 0);
+        CORRADE_COMPARE(layer.updateCallCount, 2);
         if(data.nodeAttachmentAnimators)
-            CORRADE_COMPARE(ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).cleanCallCount, 0);
+            CORRADE_COMPARE(nodeAttachmentAnimator->cleanCallCount, 0);
         if(data.dataAttachmentAnimators)
-            CORRADE_COMPARE(ui.animator<AttachmentAnimator>(dataAttachmentAnimator).cleanCallCount, 0);
+            CORRADE_COMPARE(dataAttachmentAnimator->cleanCallCount, 0);
     }
 
     /* Calling update() should refresh the cull state in all layers. It doesn't
@@ -8192,32 +8200,34 @@ void AbstractUserInterfaceTest::state() {
            an update of node order is triggered. It's however also node enabled
            update because some of the differently visible nodes can now be
            differently enabled. */
-        ui.layer<Layer>(layer).expectedState = LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsNodeOrderUpdate;
-        ui.layer<Layer>(layer).expectedDataIds = expectedDataIds;
-        ui.layer<Layer>(layer).expectedNodeOffsetsSizesOpacities = expectedNodeOffsetsSizesOpacities;
-        ui.layer<Layer>(layer).expectedNodesEnabled = expectedNodesEnabled;
-        ui.layer<Layer>(layer).expectedClipRectIdsDataCounts = expectedClipRectIdsDataCounts;
-        ui.layer<Layer>(layer).expectedClipRectOffsetsSizes = expectedClipRectOffsetsSizes;
+        layer.expectedState = LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsNodeOrderUpdate;
+        layer.expectedDataIds = expectedDataIds;
+        layer.expectedNodeOffsetsSizesOpacities = expectedNodeOffsetsSizesOpacities;
+        layer.expectedNodesEnabled = expectedNodesEnabled;
+        layer.expectedClipRectIdsDataCounts = expectedClipRectIdsDataCounts;
+        layer.expectedClipRectOffsetsSizes = expectedClipRectOffsetsSizes;
         if(data.compositingLayer)
-            ui.layer<Layer>(layer).expectedCompositeRectOffsetsSizes = expectedCompositeRectOffsetsSizes;
+            layer.expectedCompositeRectOffsetsSizes = expectedCompositeRectOffsetsSizes;
         ui.update();
     }
     CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
     CORRADE_COMPARE(ui.renderer<Renderer>().setupFramebufferCallCount, 2);
     CORRADE_COMPARE(ui.renderer().framebufferSize(), (Vector2i{17, 35}));
     if(data.layouters) {
-        CORRADE_COMPARE(ui.layouter<Layouter>(layouter1).cleanCallCount, 0);
-        CORRADE_COMPARE(ui.layouter<Layouter>(layouter2).cleanCallCount, 0);
+        CORRADE_COMPARE(layouter1->cleanCallCount, 0);
+        CORRADE_COMPARE(layouter2->cleanCallCount, 0);
         CORRADE_COMPARE_AS(layouterUpdateCalls, Containers::arrayView({
-            layouterHandleId(layouter2), layouterHandleId(layouter1), layouterHandleId(layouter2)
+            layouterHandleId(layouter2->handle()),
+            layouterHandleId(layouter1->handle()),
+            layouterHandleId(layouter2->handle())
         }), TestSuite::Compare::Container);
     }
-    CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
-    CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 3);
+    CORRADE_COMPARE(layer.cleanCallCount, 0);
+    CORRADE_COMPARE(layer.updateCallCount, 3);
     if(data.nodeAttachmentAnimators)
-        CORRADE_COMPARE(ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).cleanCallCount, 0);
+        CORRADE_COMPARE(nodeAttachmentAnimator->cleanCallCount, 0);
     if(data.dataAttachmentAnimators)
-        CORRADE_COMPARE(ui.animator<AttachmentAnimator>(dataAttachmentAnimator).cleanCallCount, 0);
+        CORRADE_COMPARE(dataAttachmentAnimator->cleanCallCount, 0);
 
     /* Calling setSize() with just the UI size being different but window and
        framebuffer size being the same causes just the cull state update to be
@@ -8235,15 +8245,15 @@ void AbstractUserInterfaceTest::state() {
         }
         CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeClipUpdate);
         if(data.layouters) {
-            CORRADE_COMPARE(ui.layouter<Layouter>(layouter1).cleanCallCount, 0);
-            CORRADE_COMPARE(ui.layouter<Layouter>(layouter2).cleanCallCount, 0);
+            CORRADE_COMPARE(layouter1->cleanCallCount, 0);
+            CORRADE_COMPARE(layouter2->cleanCallCount, 0);
         }
-        CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
-        CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 3);
+        CORRADE_COMPARE(layer.cleanCallCount, 0);
+        CORRADE_COMPARE(layer.updateCallCount, 3);
         if(data.nodeAttachmentAnimators)
-            CORRADE_COMPARE(ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).cleanCallCount, 0);
+            CORRADE_COMPARE(nodeAttachmentAnimator->cleanCallCount, 0);
         if(data.dataAttachmentAnimators)
-            CORRADE_COMPARE(ui.animator<AttachmentAnimator>(dataAttachmentAnimator).cleanCallCount, 0);
+            CORRADE_COMPARE(dataAttachmentAnimator->cleanCallCount, 0);
     }
 
     /* Calling update() resets back to the "everything visible" state like
@@ -8290,36 +8300,38 @@ void AbstractUserInterfaceTest::state() {
         /* Updating the UI size again caused some previously-invisible nodes to
            be visible again, meaning an update of node order and enabled state
            is triggered again */
-        ui.layer<Layer>(layer).expectedState = LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsNodeOrderUpdate;
-        ui.layer<Layer>(layer).expectedDataIds = expectedDataIds;
-        ui.layer<Layer>(layer).expectedNodeOffsetsSizesOpacities = expectedNodeOffsetsSizesOpacities;
-        ui.layer<Layer>(layer).expectedNodesEnabled = expectedNodesEnabled;
-        ui.layer<Layer>(layer).expectedClipRectIdsDataCounts = expectedClipRectIdsDataCounts;
-        ui.layer<Layer>(layer).expectedClipRectOffsetsSizes = expectedClipRectOffsetsSizes;
+        layer.expectedState = LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsNodeOrderUpdate;
+        layer.expectedDataIds = expectedDataIds;
+        layer.expectedNodeOffsetsSizesOpacities = expectedNodeOffsetsSizesOpacities;
+        layer.expectedNodesEnabled = expectedNodesEnabled;
+        layer.expectedClipRectIdsDataCounts = expectedClipRectIdsDataCounts;
+        layer.expectedClipRectOffsetsSizes = expectedClipRectOffsetsSizes;
         if(data.compositingLayer)
-            ui.layer<Layer>(layer).expectedCompositeRectOffsetsSizes = expectedCompositeRectOffsetsSizes;
+            layer.expectedCompositeRectOffsetsSizes = expectedCompositeRectOffsetsSizes;
         ui.update();
     }
     CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
     CORRADE_COMPARE(ui.renderer<Renderer>().setupFramebufferCallCount, 2);
     CORRADE_COMPARE(ui.renderer().framebufferSize(), (Vector2i{17, 35}));
     if(data.layouters) {
-        CORRADE_COMPARE(ui.layouter<Layouter>(layouter1).cleanCallCount, 0);
-        CORRADE_COMPARE(ui.layouter<Layouter>(layouter2).cleanCallCount, 0);
+        CORRADE_COMPARE(layouter1->cleanCallCount, 0);
+        CORRADE_COMPARE(layouter2->cleanCallCount, 0);
         CORRADE_COMPARE_AS(layouterUpdateCalls, Containers::arrayView({
-            layouterHandleId(layouter2), layouterHandleId(layouter1), layouterHandleId(layouter2)
+            layouterHandleId(layouter2->handle()),
+            layouterHandleId(layouter1->handle()),
+            layouterHandleId(layouter2->handle())
         }), TestSuite::Compare::Container);
     }
-    CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
-    CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 4);
+    CORRADE_COMPARE(layer.cleanCallCount, 0);
+    CORRADE_COMPARE(layer.updateCallCount, 4);
     if(data.nodeAttachmentAnimators)
-        CORRADE_COMPARE(ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).cleanCallCount, 0);
+        CORRADE_COMPARE(nodeAttachmentAnimator->cleanCallCount, 0);
     if(data.dataAttachmentAnimators)
-        CORRADE_COMPARE(ui.animator<AttachmentAnimator>(dataAttachmentAnimator).cleanCallCount, 0);
+        CORRADE_COMPARE(dataAttachmentAnimator->cleanCallCount, 0);
 
     /* Marking the layer with Needs*DataUpdate propagates to the UI-wide
        state */
-    ui.layer(layer).setNeedsUpdate(LayerState::NeedsCommonDataUpdate);
+    layer.setNeedsUpdate(LayerState::NeedsCommonDataUpdate);
     CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataUpdate);
 
     /* Calling clean() should be a no-op */
@@ -8331,15 +8343,15 @@ void AbstractUserInterfaceTest::state() {
         CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataUpdate);
         CORRADE_COMPARE(ui.renderer<Renderer>().setupFramebufferCallCount, 2);
         if(data.layouters) {
-            CORRADE_COMPARE(ui.layouter<Layouter>(layouter1).cleanCallCount, 0);
-            CORRADE_COMPARE(ui.layouter<Layouter>(layouter2).cleanCallCount, 0);
+            CORRADE_COMPARE(layouter1->cleanCallCount, 0);
+            CORRADE_COMPARE(layouter2->cleanCallCount, 0);
         }
-        CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
-        CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 4);
+        CORRADE_COMPARE(layer.cleanCallCount, 0);
+        CORRADE_COMPARE(layer.updateCallCount, 4);
         if(data.nodeAttachmentAnimators)
-            CORRADE_COMPARE(ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).cleanCallCount, 0);
+            CORRADE_COMPARE(nodeAttachmentAnimator->cleanCallCount, 0);
         if(data.dataAttachmentAnimators)
-            CORRADE_COMPARE(ui.animator<AttachmentAnimator>(dataAttachmentAnimator).cleanCallCount, 0);
+            CORRADE_COMPARE(dataAttachmentAnimator->cleanCallCount, 0);
     }
 
     /* Calling update() reuploads the exact same data and resets the flag, but
@@ -8385,31 +8397,33 @@ void AbstractUserInterfaceTest::state() {
             {{5.0f, 0.0f}, {1.0f, 2.0f}}, /* matching another1 */
         };
         /* Just a common data update was requested, which is done now */
-        ui.layer<Layer>(layer).expectedState = LayerState::NeedsCommonDataUpdate;
-        ui.layer<Layer>(layer).expectedDataIds = expectedDataIds;
-        ui.layer<Layer>(layer).expectedNodeOffsetsSizesOpacities = expectedNodeOffsetsSizesOpacities;
-        ui.layer<Layer>(layer).expectedNodesEnabled = expectedNodesEnabled;
-        ui.layer<Layer>(layer).expectedClipRectIdsDataCounts = expectedClipRectIdsDataCounts;
-        ui.layer<Layer>(layer).expectedClipRectOffsetsSizes = expectedClipRectOffsetsSizes;
+        layer.expectedState = LayerState::NeedsCommonDataUpdate;
+        layer.expectedDataIds = expectedDataIds;
+        layer.expectedNodeOffsetsSizesOpacities = expectedNodeOffsetsSizesOpacities;
+        layer.expectedNodesEnabled = expectedNodesEnabled;
+        layer.expectedClipRectIdsDataCounts = expectedClipRectIdsDataCounts;
+        layer.expectedClipRectOffsetsSizes = expectedClipRectOffsetsSizes;
         if(data.compositingLayer)
-            ui.layer<Layer>(layer).expectedCompositeRectOffsetsSizes = expectedCompositeRectOffsetsSizes;
+            layer.expectedCompositeRectOffsetsSizes = expectedCompositeRectOffsetsSizes;
         ui.update();
     }
     CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
     CORRADE_COMPARE(ui.renderer<Renderer>().setupFramebufferCallCount, 2);
     if(data.layouters) {
-        CORRADE_COMPARE(ui.layouter<Layouter>(layouter1).cleanCallCount, 0);
-        CORRADE_COMPARE(ui.layouter<Layouter>(layouter2).cleanCallCount, 0);
+        CORRADE_COMPARE(layouter1->cleanCallCount, 0);
+        CORRADE_COMPARE(layouter2->cleanCallCount, 0);
         CORRADE_COMPARE_AS(layouterUpdateCalls, Containers::arrayView({
-            layouterHandleId(layouter2), layouterHandleId(layouter1), layouterHandleId(layouter2)
+            layouterHandleId(layouter2->handle()),
+            layouterHandleId(layouter1->handle()),
+            layouterHandleId(layouter2->handle())
         }), TestSuite::Compare::Container);
     }
-    CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
-    CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 5);
+    CORRADE_COMPARE(layer.cleanCallCount, 0);
+    CORRADE_COMPARE(layer.updateCallCount, 5);
     if(data.nodeAttachmentAnimators)
-        CORRADE_COMPARE(ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).cleanCallCount, 0);
+        CORRADE_COMPARE(nodeAttachmentAnimator->cleanCallCount, 0);
     if(data.dataAttachmentAnimators)
-        CORRADE_COMPARE(ui.animator<AttachmentAnimator>(dataAttachmentAnimator).cleanCallCount, 0);
+        CORRADE_COMPARE(dataAttachmentAnimator->cleanCallCount, 0);
 
     /* Changing a node size sets a state flag to update layout. In this case it
        causes the nested2 node to get culled:
@@ -8437,15 +8451,15 @@ void AbstractUserInterfaceTest::state() {
         CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsLayoutUpdate);
         CORRADE_COMPARE(ui.renderer<Renderer>().setupFramebufferCallCount, 2);
         if(data.layouters) {
-            CORRADE_COMPARE(ui.layouter<Layouter>(layouter1).cleanCallCount, 0);
-            CORRADE_COMPARE(ui.layouter<Layouter>(layouter2).cleanCallCount, 0);
+            CORRADE_COMPARE(layouter1->cleanCallCount, 0);
+            CORRADE_COMPARE(layouter2->cleanCallCount, 0);
         }
-        CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
-        CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 5);
+        CORRADE_COMPARE(layer.cleanCallCount, 0);
+        CORRADE_COMPARE(layer.updateCallCount, 5);
         if(data.nodeAttachmentAnimators)
-            CORRADE_COMPARE(ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).cleanCallCount, 0);
+            CORRADE_COMPARE(nodeAttachmentAnimator->cleanCallCount, 0);
         if(data.dataAttachmentAnimators)
-            CORRADE_COMPARE(ui.animator<AttachmentAnimator>(dataAttachmentAnimator).cleanCallCount, 0);
+            CORRADE_COMPARE(dataAttachmentAnimator->cleanCallCount, 0);
     }
 
     /* Calling update() calls layouters and reuploads the data except for the
@@ -8511,16 +8525,16 @@ void AbstractUserInterfaceTest::state() {
         };
         if(data.layouters) {
             layouterUpdateCalls = {};
-            ui.layouter<Layouter2>(layouter2).expectedLayoutIdsToUpdate[0] = expectedLayoutIdsToUpdate1;
-            ui.layouter<Layouter1>(layouter1).expectedLayoutIdsToUpdate = expectedLayoutIdsToUpdate2;
-            ui.layouter<Layouter2>(layouter2).expectedLayoutIdsToUpdate[1] = expectedLayoutIdsToUpdate3;
-            ui.layouter<Layouter2>(layouter2).expectedTopLevelLayoutIds[0] = expectedTopLevelLayoutIds1;
-            ui.layouter<Layouter1>(layouter1).expectedTopLevelLayoutIds = expectedTopLevelLayoutIds2;
-            ui.layouter<Layouter2>(layouter2).expectedTopLevelLayoutIds[1] = expectedTopLevelLayoutIds3;
-            ui.layouter<Layouter2>(layouter2).expectedNodeOffsetsSizes[0] = expectedLayoutNodeOffsetsSizes1;
-            ui.layouter<Layouter1>(layouter1).expectedNodeOffsetsSizes = expectedLayoutNodeOffsetsSizes2;
-            ui.layouter<Layouter2>(layouter2).expectedNodeOffsetsSizes[1] = expectedLayoutNodeOffsetsSizes3;
-            ui.layouter<Layouter2>(layouter2).updateCallId = 0;
+            layouter2->expectedLayoutIdsToUpdate[0] = expectedLayoutIdsToUpdate1;
+            layouter1->expectedLayoutIdsToUpdate = expectedLayoutIdsToUpdate2;
+            layouter2->expectedLayoutIdsToUpdate[1] = expectedLayoutIdsToUpdate3;
+            layouter2->expectedTopLevelLayoutIds[0] = expectedTopLevelLayoutIds1;
+            layouter1->expectedTopLevelLayoutIds = expectedTopLevelLayoutIds2;
+            layouter2->expectedTopLevelLayoutIds[1] = expectedTopLevelLayoutIds3;
+            layouter2->expectedNodeOffsetsSizes[0] = expectedLayoutNodeOffsetsSizes1;
+            layouter1->expectedNodeOffsetsSizes = expectedLayoutNodeOffsetsSizes2;
+            layouter2->expectedNodeOffsetsSizes[1] = expectedLayoutNodeOffsetsSizes3;
+            layouter2->updateCallId = 0;
         }
 
         UnsignedInt expectedDataIds[]{
@@ -8561,33 +8575,35 @@ void AbstractUserInterfaceTest::state() {
         /* Updating node size means offsets/sizes have to be changed, and the
            order + enabled state as well, as the set of visible nodes may be
            different now */
-        ui.layer<Layer>(layer).expectedState = LayerState::NeedsNodeOffsetSizeUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsNodeOrderUpdate|(data.compositingLayer ? LayerState::NeedsCompositeOffsetSizeUpdate : LayerStates{});
-        ui.layer<Layer>(layer).expectedDataIds = expectedDataIds;
-        ui.layer<Layer>(layer).expectedNodeOffsetsSizesOpacities = expectedNodeOffsetsSizesOpacities;
-        ui.layer<Layer>(layer).expectedNodesEnabled = expectedNodesEnabled;
-        ui.layer<Layer>(layer).expectedClipRectIdsDataCounts = expectedClipRectIdsDataCounts;
-        ui.layer<Layer>(layer).expectedClipRectOffsetsSizes = expectedClipRectOffsetsSizes;
+        layer.expectedState = LayerState::NeedsNodeOffsetSizeUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsNodeOrderUpdate|(data.compositingLayer ? LayerState::NeedsCompositeOffsetSizeUpdate : LayerStates{});
+        layer.expectedDataIds = expectedDataIds;
+        layer.expectedNodeOffsetsSizesOpacities = expectedNodeOffsetsSizesOpacities;
+        layer.expectedNodesEnabled = expectedNodesEnabled;
+        layer.expectedClipRectIdsDataCounts = expectedClipRectIdsDataCounts;
+        layer.expectedClipRectOffsetsSizes = expectedClipRectOffsetsSizes;
         if(data.compositingLayer)
-            ui.layer<Layer>(layer).expectedCompositeRectOffsetsSizes = expectedCompositeRectOffsetsSizes;
+            layer.expectedCompositeRectOffsetsSizes = expectedCompositeRectOffsetsSizes;
 
         ui.update();
     }
     CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
     CORRADE_COMPARE(ui.renderer<Renderer>().setupFramebufferCallCount, 2);
     if(data.layouters) {
-        CORRADE_COMPARE(ui.layouter<Layouter>(layouter1).cleanCallCount, 0);
-        CORRADE_COMPARE(ui.layouter<Layouter>(layouter2).cleanCallCount, 0);
+        CORRADE_COMPARE(layouter1->cleanCallCount, 0);
+        CORRADE_COMPARE(layouter2->cleanCallCount, 0);
         CORRADE_COMPARE_AS(layouterUpdateCalls, Containers::arrayView({
             /* update() again gets called twice on layouter 2 */
-            layouterHandleId(layouter2), layouterHandleId(layouter1), layouterHandleId(layouter2)
+            layouterHandleId(layouter2->handle()),
+            layouterHandleId(layouter1->handle()),
+            layouterHandleId(layouter2->handle())
         }), TestSuite::Compare::Container);
     }
-    CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
-    CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 6);
+    CORRADE_COMPARE(layer.cleanCallCount, 0);
+    CORRADE_COMPARE(layer.updateCallCount, 6);
     if(data.nodeAttachmentAnimators)
-        CORRADE_COMPARE(ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).cleanCallCount, 0);
+        CORRADE_COMPARE(nodeAttachmentAnimator->cleanCallCount, 0);
     if(data.dataAttachmentAnimators)
-        CORRADE_COMPARE(ui.animator<AttachmentAnimator>(dataAttachmentAnimator).cleanCallCount, 0);
+        CORRADE_COMPARE(dataAttachmentAnimator->cleanCallCount, 0);
 
     /* Changing a node offset sets a state flag to update layout and
        recalculate nested node offsets, except for nested2 that's still culled.
@@ -8615,15 +8631,15 @@ void AbstractUserInterfaceTest::state() {
         CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsLayoutUpdate);
         CORRADE_COMPARE(ui.renderer<Renderer>().setupFramebufferCallCount, 2);
         if(data.layouters) {
-            CORRADE_COMPARE(ui.layouter<Layouter>(layouter1).cleanCallCount, 0);
-            CORRADE_COMPARE(ui.layouter<Layouter>(layouter2).cleanCallCount, 0);
+            CORRADE_COMPARE(layouter1->cleanCallCount, 0);
+            CORRADE_COMPARE(layouter2->cleanCallCount, 0);
         }
-        CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
-        CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 6);
+        CORRADE_COMPARE(layer.cleanCallCount, 0);
+        CORRADE_COMPARE(layer.updateCallCount, 6);
         if(data.nodeAttachmentAnimators)
-            CORRADE_COMPARE(ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).cleanCallCount, 0);
+            CORRADE_COMPARE(nodeAttachmentAnimator->cleanCallCount, 0);
         if(data.dataAttachmentAnimators)
-            CORRADE_COMPARE(ui.animator<AttachmentAnimator>(dataAttachmentAnimator).cleanCallCount, 0);
+            CORRADE_COMPARE(dataAttachmentAnimator->cleanCallCount, 0);
     }
 
     /* Calling update() calls layouters, recalculates absoute offsets, uploads
@@ -8688,16 +8704,16 @@ void AbstractUserInterfaceTest::state() {
         };
         if(data.layouters) {
             layouterUpdateCalls = {};
-            ui.layouter<Layouter2>(layouter2).expectedLayoutIdsToUpdate[0] = expectedLayoutIdsToUpdate1;
-            ui.layouter<Layouter1>(layouter1).expectedLayoutIdsToUpdate = expectedLayoutIdsToUpdate2;
-            ui.layouter<Layouter2>(layouter2).expectedLayoutIdsToUpdate[1] = expectedLayoutIdsToUpdate3;
-            ui.layouter<Layouter2>(layouter2).expectedTopLevelLayoutIds[0] = expectedTopLevelLayoutIds1;
-            ui.layouter<Layouter1>(layouter1).expectedTopLevelLayoutIds = expectedTopLevelLayoutIds2;
-            ui.layouter<Layouter2>(layouter2).expectedTopLevelLayoutIds[1] = expectedTopLevelLayoutIds3;
-            ui.layouter<Layouter2>(layouter2).expectedNodeOffsetsSizes[0] = expectedLayoutNodeOffsetsSizes1;
-            ui.layouter<Layouter1>(layouter1).expectedNodeOffsetsSizes = expectedLayoutNodeOffsetsSizes2;
-            ui.layouter<Layouter2>(layouter2).expectedNodeOffsetsSizes[1] = expectedLayoutNodeOffsetsSizes3;
-            ui.layouter<Layouter2>(layouter2).updateCallId = 0;
+            layouter2->expectedLayoutIdsToUpdate[0] = expectedLayoutIdsToUpdate1;
+            layouter1->expectedLayoutIdsToUpdate = expectedLayoutIdsToUpdate2;
+            layouter2->expectedLayoutIdsToUpdate[1] = expectedLayoutIdsToUpdate3;
+            layouter2->expectedTopLevelLayoutIds[0] = expectedTopLevelLayoutIds1;
+            layouter1->expectedTopLevelLayoutIds = expectedTopLevelLayoutIds2;
+            layouter2->expectedTopLevelLayoutIds[1] = expectedTopLevelLayoutIds3;
+            layouter2->expectedNodeOffsetsSizes[0] = expectedLayoutNodeOffsetsSizes1;
+            layouter1->expectedNodeOffsetsSizes = expectedLayoutNodeOffsetsSizes2;
+            layouter2->expectedNodeOffsetsSizes[1] = expectedLayoutNodeOffsetsSizes3;
+            layouter2->updateCallId = 0;
         }
 
         UnsignedInt expectedDataIds[]{
@@ -8737,33 +8753,35 @@ void AbstractUserInterfaceTest::state() {
         };
         /* Updating node size agains means offsets/sizes + order + enabled
            has to be updated now */
-        ui.layer<Layer>(layer).expectedState = LayerState::NeedsNodeOffsetSizeUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsNodeOrderUpdate|(data.compositingLayer ? LayerState::NeedsCompositeOffsetSizeUpdate : LayerStates{});
-        ui.layer<Layer>(layer).expectedDataIds = expectedDataIds;
-        ui.layer<Layer>(layer).expectedNodeOffsetsSizesOpacities = expectedNodeOffsetsSizesOpacities;
-        ui.layer<Layer>(layer).expectedNodesEnabled = expectedNodesEnabled;
-        ui.layer<Layer>(layer).expectedClipRectIdsDataCounts = expectedClipRectIdsDataCounts;
-        ui.layer<Layer>(layer).expectedClipRectOffsetsSizes = expectedClipRectOffsetsSizes;
+        layer.expectedState = LayerState::NeedsNodeOffsetSizeUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsNodeOrderUpdate|(data.compositingLayer ? LayerState::NeedsCompositeOffsetSizeUpdate : LayerStates{});
+        layer.expectedDataIds = expectedDataIds;
+        layer.expectedNodeOffsetsSizesOpacities = expectedNodeOffsetsSizesOpacities;
+        layer.expectedNodesEnabled = expectedNodesEnabled;
+        layer.expectedClipRectIdsDataCounts = expectedClipRectIdsDataCounts;
+        layer.expectedClipRectOffsetsSizes = expectedClipRectOffsetsSizes;
         if(data.compositingLayer)
-            ui.layer<Layer>(layer).expectedCompositeRectOffsetsSizes = expectedCompositeRectOffsetsSizes;
+            layer.expectedCompositeRectOffsetsSizes = expectedCompositeRectOffsetsSizes;
 
         ui.update();
     }
     CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
     CORRADE_COMPARE(ui.renderer<Renderer>().setupFramebufferCallCount, 2);
     if(data.layouters) {
-        CORRADE_COMPARE(ui.layouter<Layouter>(layouter1).cleanCallCount, 0);
-        CORRADE_COMPARE(ui.layouter<Layouter>(layouter2).cleanCallCount, 0);
+        CORRADE_COMPARE(layouter1->cleanCallCount, 0);
+        CORRADE_COMPARE(layouter2->cleanCallCount, 0);
         CORRADE_COMPARE_AS(layouterUpdateCalls, Containers::arrayView({
             /* update() again gets called twice on layouter 2 */
-            layouterHandleId(layouter2), layouterHandleId(layouter1), layouterHandleId(layouter2)
+            layouterHandleId(layouter2->handle()),
+            layouterHandleId(layouter1->handle()),
+            layouterHandleId(layouter2->handle())
         }), TestSuite::Compare::Container);
     }
-    CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
-    CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 7);
+    CORRADE_COMPARE(layer.cleanCallCount, 0);
+    CORRADE_COMPARE(layer.updateCallCount, 7);
     if(data.nodeAttachmentAnimators)
-        CORRADE_COMPARE(ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).cleanCallCount, 0);
+        CORRADE_COMPARE(nodeAttachmentAnimator->cleanCallCount, 0);
     if(data.dataAttachmentAnimators)
-        CORRADE_COMPARE(ui.animator<AttachmentAnimator>(dataAttachmentAnimator).cleanCallCount, 0);
+        CORRADE_COMPARE(dataAttachmentAnimator->cleanCallCount, 0);
 
     /* Setting a Hidden flag sets a state flag */
     ui.addNodeFlags(node, NodeFlag::Hidden);
@@ -8778,15 +8796,15 @@ void AbstractUserInterfaceTest::state() {
         CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeUpdate);
         CORRADE_COMPARE(ui.renderer<Renderer>().setupFramebufferCallCount, 2);
         if(data.layouters) {
-            CORRADE_COMPARE(ui.layouter<Layouter>(layouter1).cleanCallCount, 0);
-            CORRADE_COMPARE(ui.layouter<Layouter>(layouter2).cleanCallCount, 0);
+            CORRADE_COMPARE(layouter1->cleanCallCount, 0);
+            CORRADE_COMPARE(layouter2->cleanCallCount, 0);
         }
-        CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
-        CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 7);
+        CORRADE_COMPARE(layer.cleanCallCount, 0);
+        CORRADE_COMPARE(layer.updateCallCount, 7);
         if(data.nodeAttachmentAnimators)
-            CORRADE_COMPARE(ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).cleanCallCount, 0);
+            CORRADE_COMPARE(nodeAttachmentAnimator->cleanCallCount, 0);
         if(data.dataAttachmentAnimators)
-            CORRADE_COMPARE(ui.animator<AttachmentAnimator>(dataAttachmentAnimator).cleanCallCount, 0);
+            CORRADE_COMPARE(dataAttachmentAnimator->cleanCallCount, 0);
     }
 
     /* Calling update() rebuilds internal state without the hidden hierarchy,
@@ -8832,16 +8850,16 @@ void AbstractUserInterfaceTest::state() {
         };
         if(data.layouters) {
             layouterUpdateCalls = {};
-            ui.layouter<Layouter1>(layouter1).expectedLayoutIdsToUpdate = expectedLayoutIdsToUpdate1;
-            ui.layouter<Layouter2>(layouter2).expectedLayoutIdsToUpdate[0] = expectedLayoutIdsToUpdate2;
-            ui.layouter<Layouter2>(layouter2).expectedLayoutIdsToUpdate[1] = {};
-            ui.layouter<Layouter1>(layouter1).expectedTopLevelLayoutIds = expectedTopLevelLayoutIds1;
-            ui.layouter<Layouter2>(layouter2).expectedTopLevelLayoutIds[0] = expectedTopLevelLayoutIds2;
-            ui.layouter<Layouter2>(layouter2).expectedTopLevelLayoutIds[1] = {};
-            ui.layouter<Layouter1>(layouter1).expectedNodeOffsetsSizes = expectedLayoutNodeOffsetsSizes1;
-            ui.layouter<Layouter2>(layouter2).expectedNodeOffsetsSizes[0] = expectedLayoutNodeOffsetsSizes2;
-            ui.layouter<Layouter2>(layouter2).expectedNodeOffsetsSizes[1] = {};
-            ui.layouter<Layouter2>(layouter2).updateCallId = 0;
+            layouter1->expectedLayoutIdsToUpdate = expectedLayoutIdsToUpdate1;
+            layouter2->expectedLayoutIdsToUpdate[0] = expectedLayoutIdsToUpdate2;
+            layouter2->expectedLayoutIdsToUpdate[1] = {};
+            layouter1->expectedTopLevelLayoutIds = expectedTopLevelLayoutIds1;
+            layouter2->expectedTopLevelLayoutIds[0] = expectedTopLevelLayoutIds2;
+            layouter2->expectedTopLevelLayoutIds[1] = {};
+            layouter1->expectedNodeOffsetsSizes = expectedLayoutNodeOffsetsSizes1;
+            layouter2->expectedNodeOffsetsSizes[0] = expectedLayoutNodeOffsetsSizes2;
+            layouter2->expectedNodeOffsetsSizes[1] = {};
+            layouter2->updateCallId = 0;
         }
 
         UnsignedInt expectedDataIds[]{
@@ -8878,34 +8896,35 @@ void AbstractUserInterfaceTest::state() {
            calculated), which is however smashed together with offset/size
            changes due to the coarseness of the UserInterfaceState bits. */
         /** @todo separate those */
-        ui.layer<Layer>(layer).expectedState = LayerState::NeedsNodeOrderUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsNodeOpacityUpdate|LayerState::NeedsNodeOffsetSizeUpdate|(data.compositingLayer ? LayerState::NeedsCompositeOffsetSizeUpdate : LayerStates{});
-        ui.layer<Layer>(layer).expectedDataIds = expectedDataIds;
-        ui.layer<Layer>(layer).expectedNodeOffsetsSizesOpacities = expectedNodeOffsetsSizesOpacities;
-        ui.layer<Layer>(layer).expectedNodesEnabled = expectedNodesEnabled;
-        ui.layer<Layer>(layer).expectedClipRectIdsDataCounts = expectedClipRectIdsDataCounts;
-        ui.layer<Layer>(layer).expectedClipRectOffsetsSizes = expectedClipRectOffsetsSizes;
+        layer.expectedState = LayerState::NeedsNodeOrderUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsNodeOpacityUpdate|LayerState::NeedsNodeOffsetSizeUpdate|(data.compositingLayer ? LayerState::NeedsCompositeOffsetSizeUpdate : LayerStates{});
+        layer.expectedDataIds = expectedDataIds;
+        layer.expectedNodeOffsetsSizesOpacities = expectedNodeOffsetsSizesOpacities;
+        layer.expectedNodesEnabled = expectedNodesEnabled;
+        layer.expectedClipRectIdsDataCounts = expectedClipRectIdsDataCounts;
+        layer.expectedClipRectOffsetsSizes = expectedClipRectOffsetsSizes;
         if(data.compositingLayer)
-            ui.layer<Layer>(layer).expectedCompositeRectOffsetsSizes = expectedCompositeRectOffsetsSizes;
+            layer.expectedCompositeRectOffsetsSizes = expectedCompositeRectOffsetsSizes;
 
         ui.update();
     }
     CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
     CORRADE_COMPARE(ui.renderer<Renderer>().setupFramebufferCallCount, 2);
     if(data.layouters) {
-        CORRADE_COMPARE(ui.layouter<Layouter>(layouter1).cleanCallCount, 0);
-        CORRADE_COMPARE(ui.layouter<Layouter>(layouter2).cleanCallCount, 0);
+        CORRADE_COMPARE(layouter1->cleanCallCount, 0);
+        CORRADE_COMPARE(layouter2->cleanCallCount, 0);
         CORRADE_COMPARE_AS(layouterUpdateCalls, Containers::arrayView({
             /* layouter 2 gets called just once this time, i.e. the usual first
                call to layouter2 is omitted now */
-            layouterHandleId(layouter1), layouterHandleId(layouter2)
+            layouterHandleId(layouter1->handle()),
+            layouterHandleId(layouter2->handle())
         }), TestSuite::Compare::Container);
     }
-    CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
-    CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 8);
+    CORRADE_COMPARE(layer.cleanCallCount, 0);
+    CORRADE_COMPARE(layer.updateCallCount, 8);
     if(data.nodeAttachmentAnimators)
-        CORRADE_COMPARE(ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).cleanCallCount, 0);
+        CORRADE_COMPARE(nodeAttachmentAnimator->cleanCallCount, 0);
     if(data.dataAttachmentAnimators)
-        CORRADE_COMPARE(ui.animator<AttachmentAnimator>(dataAttachmentAnimator).cleanCallCount, 0);
+        CORRADE_COMPARE(dataAttachmentAnimator->cleanCallCount, 0);
 
     /* Setting a Hidden flag that's already set should be a no-op,
        independently of what other flags get added */
@@ -8925,15 +8944,15 @@ void AbstractUserInterfaceTest::state() {
         CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeUpdate);
         CORRADE_COMPARE(ui.renderer<Renderer>().setupFramebufferCallCount, 2);
         if(data.layouters) {
-            CORRADE_COMPARE(ui.layouter<Layouter>(layouter1).cleanCallCount, 0);
-            CORRADE_COMPARE(ui.layouter<Layouter>(layouter2).cleanCallCount, 0);
+            CORRADE_COMPARE(layouter1->cleanCallCount, 0);
+            CORRADE_COMPARE(layouter2->cleanCallCount, 0);
         }
-        CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
-        CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 8);
+        CORRADE_COMPARE(layer.cleanCallCount, 0);
+        CORRADE_COMPARE(layer.updateCallCount, 8);
         if(data.nodeAttachmentAnimators)
-            CORRADE_COMPARE(ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).cleanCallCount, 0);
+            CORRADE_COMPARE(nodeAttachmentAnimator->cleanCallCount, 0);
         if(data.dataAttachmentAnimators)
-            CORRADE_COMPARE(ui.animator<AttachmentAnimator>(dataAttachmentAnimator).cleanCallCount, 0);
+            CORRADE_COMPARE(dataAttachmentAnimator->cleanCallCount, 0);
     }
 
     /* Calling update() calls layouters with previous data, reuploads the
@@ -8996,16 +9015,16 @@ void AbstractUserInterfaceTest::state() {
         };
         if(data.layouters) {
             layouterUpdateCalls = {};
-            ui.layouter<Layouter2>(layouter2).expectedLayoutIdsToUpdate[0] = expectedLayoutIdsToUpdate1;
-            ui.layouter<Layouter1>(layouter1).expectedLayoutIdsToUpdate = expectedLayoutIdsToUpdate2;
-            ui.layouter<Layouter2>(layouter2).expectedLayoutIdsToUpdate[1] = expectedLayoutIdsToUpdate3;
-            ui.layouter<Layouter2>(layouter2).expectedTopLevelLayoutIds[0] = expectedTopLevelLayoutIds1;
-            ui.layouter<Layouter1>(layouter1).expectedTopLevelLayoutIds = expectedTopLevelLayoutIds2;
-            ui.layouter<Layouter2>(layouter2).expectedTopLevelLayoutIds[1] = expectedTopLevelLayoutIds3;
-            ui.layouter<Layouter2>(layouter2).expectedNodeOffsetsSizes[0] = expectedLayoutNodeOffsetsSizes1;
-            ui.layouter<Layouter1>(layouter1).expectedNodeOffsetsSizes = expectedLayoutNodeOffsetsSizes2;
-            ui.layouter<Layouter2>(layouter2).expectedNodeOffsetsSizes[1] = expectedLayoutNodeOffsetsSizes3;
-            ui.layouter<Layouter2>(layouter2).updateCallId = 0;
+            layouter2->expectedLayoutIdsToUpdate[0] = expectedLayoutIdsToUpdate1;
+            layouter1->expectedLayoutIdsToUpdate = expectedLayoutIdsToUpdate2;
+            layouter2->expectedLayoutIdsToUpdate[1] = expectedLayoutIdsToUpdate3;
+            layouter2->expectedTopLevelLayoutIds[0] = expectedTopLevelLayoutIds1;
+            layouter1->expectedTopLevelLayoutIds = expectedTopLevelLayoutIds2;
+            layouter2->expectedTopLevelLayoutIds[1] = expectedTopLevelLayoutIds3;
+            layouter2->expectedNodeOffsetsSizes[0] = expectedLayoutNodeOffsetsSizes1;
+            layouter1->expectedNodeOffsetsSizes = expectedLayoutNodeOffsetsSizes2;
+            layouter2->expectedNodeOffsetsSizes[1] = expectedLayoutNodeOffsetsSizes3;
+            layouter2->updateCallId = 0;
         }
 
         UnsignedInt expectedDataIds[]{
@@ -9049,33 +9068,35 @@ void AbstractUserInterfaceTest::state() {
            calculated), which is again smashed together with offset/size
            changes due to the coarseness of the UserInterfaceState bits. */
         /** @todo separate those */
-        ui.layer<Layer>(layer).expectedState = LayerState::NeedsNodeOrderUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsNodeOpacityUpdate|LayerState::NeedsNodeOffsetSizeUpdate|(data.compositingLayer ? LayerState::NeedsCompositeOffsetSizeUpdate : LayerStates{});
-        ui.layer<Layer>(layer).expectedDataIds = expectedDataIds;
-        ui.layer<Layer>(layer).expectedNodeOffsetsSizesOpacities = expectedNodeOffsetsSizesOpacities;
-        ui.layer<Layer>(layer).expectedNodesEnabled = expectedNodesEnabled;
-        ui.layer<Layer>(layer).expectedClipRectIdsDataCounts = expectedClipRectIdsDataCounts;
-        ui.layer<Layer>(layer).expectedClipRectOffsetsSizes = expectedClipRectOffsetsSizes;
+        layer.expectedState = LayerState::NeedsNodeOrderUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsNodeOpacityUpdate|LayerState::NeedsNodeOffsetSizeUpdate|(data.compositingLayer ? LayerState::NeedsCompositeOffsetSizeUpdate : LayerStates{});
+        layer.expectedDataIds = expectedDataIds;
+        layer.expectedNodeOffsetsSizesOpacities = expectedNodeOffsetsSizesOpacities;
+        layer.expectedNodesEnabled = expectedNodesEnabled;
+        layer.expectedClipRectIdsDataCounts = expectedClipRectIdsDataCounts;
+        layer.expectedClipRectOffsetsSizes = expectedClipRectOffsetsSizes;
         if(data.compositingLayer)
-            ui.layer<Layer>(layer).expectedCompositeRectOffsetsSizes = expectedCompositeRectOffsetsSizes;
+            layer.expectedCompositeRectOffsetsSizes = expectedCompositeRectOffsetsSizes;
 
         ui.update();
     }
     CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
     CORRADE_COMPARE(ui.renderer<Renderer>().setupFramebufferCallCount, 2);
     if(data.layouters) {
-        CORRADE_COMPARE(ui.layouter<Layouter>(layouter1).cleanCallCount, 0);
-        CORRADE_COMPARE(ui.layouter<Layouter>(layouter2).cleanCallCount, 0);
+        CORRADE_COMPARE(layouter1->cleanCallCount, 0);
+        CORRADE_COMPARE(layouter2->cleanCallCount, 0);
         CORRADE_COMPARE_AS(layouterUpdateCalls, Containers::arrayView({
             /* update() again gets called twice on layouter 2 */
-            layouterHandleId(layouter2), layouterHandleId(layouter1), layouterHandleId(layouter2)
+            layouterHandleId(layouter2->handle()),
+            layouterHandleId(layouter1->handle()),
+            layouterHandleId(layouter2->handle())
         }), TestSuite::Compare::Container);
     }
-    CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
-    CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 9);
+    CORRADE_COMPARE(layer.cleanCallCount, 0);
+    CORRADE_COMPARE(layer.updateCallCount, 9);
     if(data.nodeAttachmentAnimators)
-        CORRADE_COMPARE(ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).cleanCallCount, 0);
+        CORRADE_COMPARE(nodeAttachmentAnimator->cleanCallCount, 0);
     if(data.dataAttachmentAnimators)
-        CORRADE_COMPARE(ui.animator<AttachmentAnimator>(dataAttachmentAnimator).cleanCallCount, 0);
+        CORRADE_COMPARE(dataAttachmentAnimator->cleanCallCount, 0);
 
     /* Resetting a Hidden flag that's not there should be a no-op,
        independently of what other flags get cleared */
@@ -9095,14 +9116,16 @@ void AbstractUserInterfaceTest::state() {
         CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeEnabledUpdate);
         CORRADE_COMPARE(ui.renderer<Renderer>().setupFramebufferCallCount, 2);
         if(data.layouters) {
-            CORRADE_COMPARE(ui.layouter<Layouter>(layouter1).cleanCallCount, 0);
-            CORRADE_COMPARE(ui.layouter<Layouter>(layouter2).cleanCallCount, 0);
+            CORRADE_COMPARE(layouter1->cleanCallCount, 0);
+            CORRADE_COMPARE(layouter2->cleanCallCount, 0);
             CORRADE_COMPARE_AS(layouterUpdateCalls, Containers::arrayView({
-                layouterHandleId(layouter2), layouterHandleId(layouter1), layouterHandleId(layouter2)
+                layouterHandleId(layouter2->handle()),
+                layouterHandleId(layouter1->handle()),
+                layouterHandleId(layouter2->handle())
             }), TestSuite::Compare::Container);
         }
-        CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
-        CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 9);
+        CORRADE_COMPARE(layer.cleanCallCount, 0);
+        CORRADE_COMPARE(layer.updateCallCount, 9);
     }
 
     /* Calling update() rebuilds internal masks of enabled nodes. It doesn't
@@ -9147,33 +9170,35 @@ void AbstractUserInterfaceTest::state() {
            however due to the coarseness of UserInterfaceState bits it's
            together with draw order as well */
         /** @todo separate those */
-        ui.layer<Layer>(layer).expectedState = LayerState::NeedsNodeOrderUpdate|LayerState::NeedsNodeEnabledUpdate;
-        ui.layer<Layer>(layer).expectedDataIds = expectedDataIds;
-        ui.layer<Layer>(layer).expectedNodeOffsetsSizesOpacities = expectedNodeOffsetsSizesOpacities;
-        ui.layer<Layer>(layer).expectedNodesEnabled = expectedNodesEnabled;
-        ui.layer<Layer>(layer).expectedClipRectIdsDataCounts = expectedClipRectIdsDataCounts;
-        ui.layer<Layer>(layer).expectedClipRectOffsetsSizes = expectedClipRectOffsetsSizes;
+        layer.expectedState = LayerState::NeedsNodeOrderUpdate|LayerState::NeedsNodeEnabledUpdate;
+        layer.expectedDataIds = expectedDataIds;
+        layer.expectedNodeOffsetsSizesOpacities = expectedNodeOffsetsSizesOpacities;
+        layer.expectedNodesEnabled = expectedNodesEnabled;
+        layer.expectedClipRectIdsDataCounts = expectedClipRectIdsDataCounts;
+        layer.expectedClipRectOffsetsSizes = expectedClipRectOffsetsSizes;
         if(data.compositingLayer)
-            ui.layer<Layer>(layer).expectedCompositeRectOffsetsSizes = expectedCompositeRectOffsetsSizes;
+            layer.expectedCompositeRectOffsetsSizes = expectedCompositeRectOffsetsSizes;
 
         ui.update();
     }
     CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
     CORRADE_COMPARE(ui.renderer<Renderer>().setupFramebufferCallCount, 2);
     if(data.layouters) {
-        CORRADE_COMPARE(ui.layouter<Layouter>(layouter1).cleanCallCount, 0);
-        CORRADE_COMPARE(ui.layouter<Layouter>(layouter2).cleanCallCount, 0);
+        CORRADE_COMPARE(layouter1->cleanCallCount, 0);
+        CORRADE_COMPARE(layouter2->cleanCallCount, 0);
         CORRADE_COMPARE_AS(layouterUpdateCalls, Containers::arrayView({
             /* update() again gets called twice on layouter 2 */
-            layouterHandleId(layouter2), layouterHandleId(layouter1), layouterHandleId(layouter2)
+            layouterHandleId(layouter2->handle()),
+            layouterHandleId(layouter1->handle()),
+            layouterHandleId(layouter2->handle())
         }), TestSuite::Compare::Container);
     }
-    CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
-    CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 10);
+    CORRADE_COMPARE(layer.cleanCallCount, 0);
+    CORRADE_COMPARE(layer.updateCallCount, 10);
     if(data.nodeAttachmentAnimators)
-        CORRADE_COMPARE(ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).cleanCallCount, 0);
+        CORRADE_COMPARE(nodeAttachmentAnimator->cleanCallCount, 0);
     if(data.dataAttachmentAnimators)
-        CORRADE_COMPARE(ui.animator<AttachmentAnimator>(dataAttachmentAnimator).cleanCallCount, 0);
+        CORRADE_COMPARE(dataAttachmentAnimator->cleanCallCount, 0);
 
     /* Setting a Disabled flag that's already there should be a no-op */
     ui.addNodeFlags(node, NodeFlag::Disabled);
@@ -9200,15 +9225,15 @@ void AbstractUserInterfaceTest::state() {
         CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeEnabledUpdate);
         CORRADE_COMPARE(ui.renderer<Renderer>().setupFramebufferCallCount, 2);
         if(data.layouters) {
-            CORRADE_COMPARE(ui.layouter<Layouter>(layouter1).cleanCallCount, 0);
-            CORRADE_COMPARE(ui.layouter<Layouter>(layouter2).cleanCallCount, 0);
+            CORRADE_COMPARE(layouter1->cleanCallCount, 0);
+            CORRADE_COMPARE(layouter2->cleanCallCount, 0);
         }
-        CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
-        CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 10);
+        CORRADE_COMPARE(layer.cleanCallCount, 0);
+        CORRADE_COMPARE(layer.updateCallCount, 10);
         if(data.nodeAttachmentAnimators)
-            CORRADE_COMPARE(ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).cleanCallCount, 0);
+            CORRADE_COMPARE(nodeAttachmentAnimator->cleanCallCount, 0);
         if(data.dataAttachmentAnimators)
-            CORRADE_COMPARE(ui.animator<AttachmentAnimator>(dataAttachmentAnimator).cleanCallCount, 0);
+            CORRADE_COMPARE(dataAttachmentAnimator->cleanCallCount, 0);
     }
 
     /* Calling update() rebuilds internal masks of enabled nodes. It doesn't
@@ -9253,33 +9278,35 @@ void AbstractUserInterfaceTest::state() {
         /* Toggling a node NoEvents flag causes the same as Disabled due to the
            coarseness of UserInterfaceState bits */
         /** @todo separate those from disabled, separate from node order */
-        ui.layer<Layer>(layer).expectedState = LayerState::NeedsNodeOrderUpdate|LayerState::NeedsNodeEnabledUpdate;
-        ui.layer<Layer>(layer).expectedDataIds = expectedDataIds;
-        ui.layer<Layer>(layer).expectedNodeOffsetsSizesOpacities = expectedNodeOffsetsSizesOpacities;
-        ui.layer<Layer>(layer).expectedNodesEnabled = expectedNodesEnabled;
-        ui.layer<Layer>(layer).expectedClipRectIdsDataCounts = expectedClipRectIdsDataCounts;
-        ui.layer<Layer>(layer).expectedClipRectOffsetsSizes = expectedClipRectOffsetsSizes;
+        layer.expectedState = LayerState::NeedsNodeOrderUpdate|LayerState::NeedsNodeEnabledUpdate;
+        layer.expectedDataIds = expectedDataIds;
+        layer.expectedNodeOffsetsSizesOpacities = expectedNodeOffsetsSizesOpacities;
+        layer.expectedNodesEnabled = expectedNodesEnabled;
+        layer.expectedClipRectIdsDataCounts = expectedClipRectIdsDataCounts;
+        layer.expectedClipRectOffsetsSizes = expectedClipRectOffsetsSizes;
         if(data.compositingLayer)
-            ui.layer<Layer>(layer).expectedCompositeRectOffsetsSizes = expectedCompositeRectOffsetsSizes;
+            layer.expectedCompositeRectOffsetsSizes = expectedCompositeRectOffsetsSizes;
 
         ui.update();
     }
     CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
     CORRADE_COMPARE(ui.renderer<Renderer>().setupFramebufferCallCount, 2);
     if(data.layouters) {
-        CORRADE_COMPARE(ui.layouter<Layouter>(layouter1).cleanCallCount, 0);
-        CORRADE_COMPARE(ui.layouter<Layouter>(layouter2).cleanCallCount, 0);
+        CORRADE_COMPARE(layouter1->cleanCallCount, 0);
+        CORRADE_COMPARE(layouter2->cleanCallCount, 0);
         CORRADE_COMPARE_AS(layouterUpdateCalls, Containers::arrayView({
             /* update() again gets called twice on layouter 2 */
-            layouterHandleId(layouter2), layouterHandleId(layouter1), layouterHandleId(layouter2)
+            layouterHandleId(layouter2->handle()),
+            layouterHandleId(layouter1->handle()),
+            layouterHandleId(layouter2->handle())
         }), TestSuite::Compare::Container);
     }
-    CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
-    CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 11);
+    CORRADE_COMPARE(layer.cleanCallCount, 0);
+    CORRADE_COMPARE(layer.updateCallCount, 11);
     if(data.nodeAttachmentAnimators)
-        CORRADE_COMPARE(ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).cleanCallCount, 0);
+        CORRADE_COMPARE(nodeAttachmentAnimator->cleanCallCount, 0);
     if(data.dataAttachmentAnimators)
-        CORRADE_COMPARE(ui.animator<AttachmentAnimator>(dataAttachmentAnimator).cleanCallCount, 0);
+        CORRADE_COMPARE(dataAttachmentAnimator->cleanCallCount, 0);
 
     /* Clearing also the NoEvents flag sets a state flag to update also the
        event-related masks. */
@@ -9295,15 +9322,15 @@ void AbstractUserInterfaceTest::state() {
         CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeEnabledUpdate);
         CORRADE_COMPARE(ui.renderer<Renderer>().setupFramebufferCallCount, 2);
         if(data.layouters) {
-            CORRADE_COMPARE(ui.layouter<Layouter>(layouter1).cleanCallCount, 0);
-            CORRADE_COMPARE(ui.layouter<Layouter>(layouter2).cleanCallCount, 0);
+            CORRADE_COMPARE(layouter1->cleanCallCount, 0);
+            CORRADE_COMPARE(layouter2->cleanCallCount, 0);
         }
-        CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
-        CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 11);
+        CORRADE_COMPARE(layer.cleanCallCount, 0);
+        CORRADE_COMPARE(layer.updateCallCount, 11);
         if(data.nodeAttachmentAnimators)
-            CORRADE_COMPARE(ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).cleanCallCount, 0);
+            CORRADE_COMPARE(nodeAttachmentAnimator->cleanCallCount, 0);
         if(data.dataAttachmentAnimators)
-            CORRADE_COMPARE(ui.animator<AttachmentAnimator>(dataAttachmentAnimator).cleanCallCount, 0);
+            CORRADE_COMPARE(dataAttachmentAnimator->cleanCallCount, 0);
     }
 
     /* Calling update() rebuilds internal masks of nodes enabled for events, so
@@ -9349,33 +9376,35 @@ void AbstractUserInterfaceTest::state() {
         /* Toggling a node NoEvents flag back causes the same as Disabled due
            to the coarseness of UserInterfaceState bits */
         /** @todo separate those from disabled, separate from node order */
-        ui.layer<Layer>(layer).expectedState = LayerState::NeedsNodeOrderUpdate|LayerState::NeedsNodeEnabledUpdate;
-        ui.layer<Layer>(layer).expectedDataIds = expectedDataIds;
-        ui.layer<Layer>(layer).expectedNodeOffsetsSizesOpacities = expectedNodeOffsetsSizesOpacities;
-        ui.layer<Layer>(layer).expectedNodesEnabled = expectedNodesEnabled;
-        ui.layer<Layer>(layer).expectedClipRectIdsDataCounts = expectedClipRectIdsDataCounts;
-        ui.layer<Layer>(layer).expectedClipRectOffsetsSizes = expectedClipRectOffsetsSizes;
+        layer.expectedState = LayerState::NeedsNodeOrderUpdate|LayerState::NeedsNodeEnabledUpdate;
+        layer.expectedDataIds = expectedDataIds;
+        layer.expectedNodeOffsetsSizesOpacities = expectedNodeOffsetsSizesOpacities;
+        layer.expectedNodesEnabled = expectedNodesEnabled;
+        layer.expectedClipRectIdsDataCounts = expectedClipRectIdsDataCounts;
+        layer.expectedClipRectOffsetsSizes = expectedClipRectOffsetsSizes;
         if(data.compositingLayer)
-            ui.layer<Layer>(layer).expectedCompositeRectOffsetsSizes = expectedCompositeRectOffsetsSizes;
+            layer.expectedCompositeRectOffsetsSizes = expectedCompositeRectOffsetsSizes;
 
         ui.update();
     }
     CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
     CORRADE_COMPARE(ui.renderer<Renderer>().setupFramebufferCallCount, 2);
     if(data.layouters) {
-        CORRADE_COMPARE(ui.layouter<Layouter>(layouter1).cleanCallCount, 0);
-        CORRADE_COMPARE(ui.layouter<Layouter>(layouter2).cleanCallCount, 0);
+        CORRADE_COMPARE(layouter1->cleanCallCount, 0);
+        CORRADE_COMPARE(layouter2->cleanCallCount, 0);
         CORRADE_COMPARE_AS(layouterUpdateCalls, Containers::arrayView({
             /* update() again gets called twice on layouter 2 */
-            layouterHandleId(layouter2), layouterHandleId(layouter1), layouterHandleId(layouter2)
+            layouterHandleId(layouter2->handle()),
+            layouterHandleId(layouter1->handle()),
+            layouterHandleId(layouter2->handle())
         }), TestSuite::Compare::Container);
     }
-    CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
-    CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 12);
+    CORRADE_COMPARE(layer.cleanCallCount, 0);
+    CORRADE_COMPARE(layer.updateCallCount, 12);
     if(data.nodeAttachmentAnimators)
-        CORRADE_COMPARE(ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).cleanCallCount, 0);
+        CORRADE_COMPARE(nodeAttachmentAnimator->cleanCallCount, 0);
     if(data.dataAttachmentAnimators)
-        CORRADE_COMPARE(ui.animator<AttachmentAnimator>(dataAttachmentAnimator).cleanCallCount, 0);
+        CORRADE_COMPARE(dataAttachmentAnimator->cleanCallCount, 0);
 
     /* Resetting a NoEvents flag that's not there should be a no-op */
     ui.clearNodeFlags(node, NodeFlag::NoEvents);
@@ -9409,15 +9438,15 @@ void AbstractUserInterfaceTest::state() {
         CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeClipUpdate);
         CORRADE_COMPARE(ui.renderer<Renderer>().setupFramebufferCallCount, 2);
         if(data.layouters) {
-            CORRADE_COMPARE(ui.layouter<Layouter>(layouter1).cleanCallCount, 0);
-            CORRADE_COMPARE(ui.layouter<Layouter>(layouter2).cleanCallCount, 0);
+            CORRADE_COMPARE(layouter1->cleanCallCount, 0);
+            CORRADE_COMPARE(layouter2->cleanCallCount, 0);
         }
-        CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
-        CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 12);
+        CORRADE_COMPARE(layer.cleanCallCount, 0);
+        CORRADE_COMPARE(layer.updateCallCount, 12);
         if(data.nodeAttachmentAnimators)
-            CORRADE_COMPARE(ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).cleanCallCount, 0);
+            CORRADE_COMPARE(nodeAttachmentAnimator->cleanCallCount, 0);
         if(data.dataAttachmentAnimators)
-            CORRADE_COMPARE(ui.animator<AttachmentAnimator>(dataAttachmentAnimator).cleanCallCount, 0);
+            CORRADE_COMPARE(dataAttachmentAnimator->cleanCallCount, 0);
     }
 
     /* Calling update() uploads the full data including the no-longer-clipped
@@ -9463,31 +9492,33 @@ void AbstractUserInterfaceTest::state() {
         };
         /* Toggling a node Clip flag causes the set of visible nodes to be
            changed, which also affects the set of enabled nodes */
-        ui.layer<Layer>(layer).expectedState = LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsNodeOrderUpdate;
-        ui.layer<Layer>(layer).expectedDataIds = expectedDataIds;
-        ui.layer<Layer>(layer).expectedNodeOffsetsSizesOpacities = expectedNodeOffsetsSizesOpacities;
-        ui.layer<Layer>(layer).expectedNodesEnabled = expectedNodesEnabled;
-        ui.layer<Layer>(layer).expectedClipRectIdsDataCounts = expectedClipRectIdsDataCounts;
-        ui.layer<Layer>(layer).expectedClipRectOffsetsSizes = expectedClipRectOffsetsSizes;
+        layer.expectedState = LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsNodeOrderUpdate;
+        layer.expectedDataIds = expectedDataIds;
+        layer.expectedNodeOffsetsSizesOpacities = expectedNodeOffsetsSizesOpacities;
+        layer.expectedNodesEnabled = expectedNodesEnabled;
+        layer.expectedClipRectIdsDataCounts = expectedClipRectIdsDataCounts;
+        layer.expectedClipRectOffsetsSizes = expectedClipRectOffsetsSizes;
         if(data.compositingLayer)
-            ui.layer<Layer>(layer).expectedCompositeRectOffsetsSizes = expectedCompositeRectOffsetsSizes;
+            layer.expectedCompositeRectOffsetsSizes = expectedCompositeRectOffsetsSizes;
         ui.update();
     }
     CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
     CORRADE_COMPARE(ui.renderer<Renderer>().setupFramebufferCallCount, 2);
     if(data.layouters) {
-        CORRADE_COMPARE(ui.layouter<Layouter>(layouter1).cleanCallCount, 0);
-        CORRADE_COMPARE(ui.layouter<Layouter>(layouter2).cleanCallCount, 0);
+        CORRADE_COMPARE(layouter1->cleanCallCount, 0);
+        CORRADE_COMPARE(layouter2->cleanCallCount, 0);
         CORRADE_COMPARE_AS(layouterUpdateCalls, Containers::arrayView({
-            layouterHandleId(layouter2), layouterHandleId(layouter1), layouterHandleId(layouter2)
+            layouterHandleId(layouter2->handle()),
+            layouterHandleId(layouter1->handle()),
+            layouterHandleId(layouter2->handle())
         }), TestSuite::Compare::Container);
     }
-    CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
-    CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 13);
+    CORRADE_COMPARE(layer.cleanCallCount, 0);
+    CORRADE_COMPARE(layer.updateCallCount, 13);
     if(data.nodeAttachmentAnimators)
-        CORRADE_COMPARE(ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).cleanCallCount, 0);
+        CORRADE_COMPARE(nodeAttachmentAnimator->cleanCallCount, 0);
     if(data.dataAttachmentAnimators)
-        CORRADE_COMPARE(ui.animator<AttachmentAnimator>(dataAttachmentAnimator).cleanCallCount, 0);
+        CORRADE_COMPARE(dataAttachmentAnimator->cleanCallCount, 0);
 
     /* Resetting a Clip flag that's not there should be a no-op, independently
        of what other flags get cleared */
@@ -9507,15 +9538,15 @@ void AbstractUserInterfaceTest::state() {
         CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeClipUpdate);
         CORRADE_COMPARE(ui.renderer<Renderer>().setupFramebufferCallCount, 2);
         if(data.layouters) {
-            CORRADE_COMPARE(ui.layouter<Layouter>(layouter1).cleanCallCount, 0);
-            CORRADE_COMPARE(ui.layouter<Layouter>(layouter2).cleanCallCount, 0);
+            CORRADE_COMPARE(layouter1->cleanCallCount, 0);
+            CORRADE_COMPARE(layouter2->cleanCallCount, 0);
         }
-        CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
-        CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 13);
+        CORRADE_COMPARE(layer.cleanCallCount, 0);
+        CORRADE_COMPARE(layer.updateCallCount, 13);
         if(data.nodeAttachmentAnimators)
-            CORRADE_COMPARE(ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).cleanCallCount, 0);
+            CORRADE_COMPARE(nodeAttachmentAnimator->cleanCallCount, 0);
         if(data.dataAttachmentAnimators)
-            CORRADE_COMPARE(ui.animator<AttachmentAnimator>(dataAttachmentAnimator).cleanCallCount, 0);
+            CORRADE_COMPARE(dataAttachmentAnimator->cleanCallCount, 0);
     }
 
     /* Calling update() reuploads the previous data again and resets the state
@@ -9559,31 +9590,33 @@ void AbstractUserInterfaceTest::state() {
         };
         /* Toggling a node Clip flag again causes the set of visible nodes to
            be changed, which also affects the set of enabled nodes */
-        ui.layer<Layer>(layer).expectedState = LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsNodeOrderUpdate;
-        ui.layer<Layer>(layer).expectedDataIds = expectedDataIds;
-        ui.layer<Layer>(layer).expectedNodeOffsetsSizesOpacities = expectedNodeOffsetsSizesOpacities;
-        ui.layer<Layer>(layer).expectedNodesEnabled = expectedNodesEnabled;
-        ui.layer<Layer>(layer).expectedClipRectIdsDataCounts = expectedClipRectIdsDataCounts;
-        ui.layer<Layer>(layer).expectedClipRectOffsetsSizes = expectedClipRectOffsetsSizes;
+        layer.expectedState = LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsNodeOrderUpdate;
+        layer.expectedDataIds = expectedDataIds;
+        layer.expectedNodeOffsetsSizesOpacities = expectedNodeOffsetsSizesOpacities;
+        layer.expectedNodesEnabled = expectedNodesEnabled;
+        layer.expectedClipRectIdsDataCounts = expectedClipRectIdsDataCounts;
+        layer.expectedClipRectOffsetsSizes = expectedClipRectOffsetsSizes;
         if(data.compositingLayer)
-            ui.layer<Layer>(layer).expectedCompositeRectOffsetsSizes = expectedCompositeRectOffsetsSizes;
+            layer.expectedCompositeRectOffsetsSizes = expectedCompositeRectOffsetsSizes;
         ui.update();
     }
     CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
     CORRADE_COMPARE(ui.renderer<Renderer>().setupFramebufferCallCount, 2);
     if(data.layouters) {
-        CORRADE_COMPARE(ui.layouter<Layouter>(layouter1).cleanCallCount, 0);
-        CORRADE_COMPARE(ui.layouter<Layouter>(layouter2).cleanCallCount, 0);
+        CORRADE_COMPARE(layouter1->cleanCallCount, 0);
+        CORRADE_COMPARE(layouter2->cleanCallCount, 0);
         CORRADE_COMPARE_AS(layouterUpdateCalls, Containers::arrayView({
-            layouterHandleId(layouter2), layouterHandleId(layouter1), layouterHandleId(layouter2)
+            layouterHandleId(layouter2->handle()),
+            layouterHandleId(layouter1->handle()),
+            layouterHandleId(layouter2->handle())
         }), TestSuite::Compare::Container);
     }
-    CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
-    CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 14);
+    CORRADE_COMPARE(layer.cleanCallCount, 0);
+    CORRADE_COMPARE(layer.updateCallCount, 14);
     if(data.nodeAttachmentAnimators)
-        CORRADE_COMPARE(ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).cleanCallCount, 0);
+        CORRADE_COMPARE(nodeAttachmentAnimator->cleanCallCount, 0);
     if(data.dataAttachmentAnimators)
-        CORRADE_COMPARE(ui.animator<AttachmentAnimator>(dataAttachmentAnimator).cleanCallCount, 0);
+        CORRADE_COMPARE(dataAttachmentAnimator->cleanCallCount, 0);
 
     /* Calling clearNodeOrder() sets a state flag */
     ui.clearNodeOrder(another1);
@@ -9598,15 +9631,15 @@ void AbstractUserInterfaceTest::state() {
         CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeUpdate);
         CORRADE_COMPARE(ui.renderer<Renderer>().setupFramebufferCallCount, 2);
         if(data.layouters) {
-            CORRADE_COMPARE(ui.layouter<Layouter>(layouter1).cleanCallCount, 0);
-            CORRADE_COMPARE(ui.layouter<Layouter>(layouter2).cleanCallCount, 0);
+            CORRADE_COMPARE(layouter1->cleanCallCount, 0);
+            CORRADE_COMPARE(layouter2->cleanCallCount, 0);
         }
-        CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
-        CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 14);
+        CORRADE_COMPARE(layer.cleanCallCount, 0);
+        CORRADE_COMPARE(layer.updateCallCount, 14);
         if(data.nodeAttachmentAnimators)
-            CORRADE_COMPARE(ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).cleanCallCount, 0);
+            CORRADE_COMPARE(nodeAttachmentAnimator->cleanCallCount, 0);
         if(data.dataAttachmentAnimators)
-            CORRADE_COMPARE(ui.animator<AttachmentAnimator>(dataAttachmentAnimator).cleanCallCount, 0);
+            CORRADE_COMPARE(dataAttachmentAnimator->cleanCallCount, 0);
     }
 
     /* Calling update() calls the one remaining layouter, uploads data in
@@ -9633,16 +9666,16 @@ void AbstractUserInterfaceTest::state() {
         };
         if(data.layouters) {
             layouterUpdateCalls = {};
-            ui.layouter<Layouter2>(layouter2).expectedLayoutIdsToUpdate[0] = expectedLayoutIdsToUpdate1;
-            ui.layouter<Layouter1>(layouter1).expectedLayoutIdsToUpdate = {};
-            ui.layouter<Layouter2>(layouter2).expectedLayoutIdsToUpdate[1] = {};
-            ui.layouter<Layouter2>(layouter2).expectedTopLevelLayoutIds[0] = expectedTopLevelLayoutIds1;
-            ui.layouter<Layouter1>(layouter1).expectedTopLevelLayoutIds = {};
-            ui.layouter<Layouter2>(layouter2).expectedTopLevelLayoutIds[1] = {};
-            ui.layouter<Layouter2>(layouter2).expectedNodeOffsetsSizes[0] = expectedLayoutNodeOffsetsSizes1;
-            ui.layouter<Layouter1>(layouter1).expectedNodeOffsetsSizes = {};
-            ui.layouter<Layouter2>(layouter2).expectedNodeOffsetsSizes[1] = {};
-            ui.layouter<Layouter2>(layouter2).updateCallId = 0;
+            layouter2->expectedLayoutIdsToUpdate[0] = expectedLayoutIdsToUpdate1;
+            layouter1->expectedLayoutIdsToUpdate = {};
+            layouter2->expectedLayoutIdsToUpdate[1] = {};
+            layouter2->expectedTopLevelLayoutIds[0] = expectedTopLevelLayoutIds1;
+            layouter1->expectedTopLevelLayoutIds = {};
+            layouter2->expectedTopLevelLayoutIds[1] = {};
+            layouter2->expectedNodeOffsetsSizes[0] = expectedLayoutNodeOffsetsSizes1;
+            layouter1->expectedNodeOffsetsSizes = {};
+            layouter2->expectedNodeOffsetsSizes[1] = {};
+            layouter2->updateCallId = 0;
         }
 
         UnsignedInt expectedDataIds[]{
@@ -9678,33 +9711,33 @@ void AbstractUserInterfaceTest::state() {
            to be calculated) being updated, but offset/size update is also
            triggered due to the coarseness of the UserInterfaceState bits */
         /** @todo separate those */
-        ui.layer<Layer>(layer).expectedState = LayerState::NeedsNodeOrderUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsNodeOpacityUpdate|LayerState::NeedsNodeOffsetSizeUpdate|(data.compositingLayer ? LayerState::NeedsCompositeOffsetSizeUpdate : LayerStates{});
-        ui.layer<Layer>(layer).expectedDataIds = expectedDataIds;
-        ui.layer<Layer>(layer).expectedNodeOffsetsSizesOpacities = expectedNodeOffsetsSizesOpacities;
-        ui.layer<Layer>(layer).expectedNodesEnabled = expectedNodesEnabled;
-        ui.layer<Layer>(layer).expectedClipRectIdsDataCounts = expectedClipRectIdsDataCounts;
-        ui.layer<Layer>(layer).expectedClipRectOffsetsSizes = expectedClipRectOffsetsSizes;
+        layer.expectedState = LayerState::NeedsNodeOrderUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsNodeOpacityUpdate|LayerState::NeedsNodeOffsetSizeUpdate|(data.compositingLayer ? LayerState::NeedsCompositeOffsetSizeUpdate : LayerStates{});
+        layer.expectedDataIds = expectedDataIds;
+        layer.expectedNodeOffsetsSizesOpacities = expectedNodeOffsetsSizesOpacities;
+        layer.expectedNodesEnabled = expectedNodesEnabled;
+        layer.expectedClipRectIdsDataCounts = expectedClipRectIdsDataCounts;
+        layer.expectedClipRectOffsetsSizes = expectedClipRectOffsetsSizes;
         if(data.compositingLayer)
-            ui.layer<Layer>(layer).expectedCompositeRectOffsetsSizes = expectedCompositeRectOffsetsSizes;
+            layer.expectedCompositeRectOffsetsSizes = expectedCompositeRectOffsetsSizes;
 
         ui.update();
     }
     CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
     CORRADE_COMPARE(ui.renderer<Renderer>().setupFramebufferCallCount, 2);
     if(data.layouters) {
-        CORRADE_COMPARE(ui.layouter<Layouter>(layouter1).cleanCallCount, 0);
-        CORRADE_COMPARE(ui.layouter<Layouter>(layouter2).cleanCallCount, 0);
+        CORRADE_COMPARE(layouter1->cleanCallCount, 0);
+        CORRADE_COMPARE(layouter2->cleanCallCount, 0);
         CORRADE_COMPARE_AS(layouterUpdateCalls, Containers::arrayView({
             /* Now only layouter2 gets called, once */
-            layouterHandleId(layouter2)
+            layouterHandleId(layouter2->handle())
         }), TestSuite::Compare::Container);
     }
-    CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
-    CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 15);
+    CORRADE_COMPARE(layer.cleanCallCount, 0);
+    CORRADE_COMPARE(layer.updateCallCount, 15);
     if(data.nodeAttachmentAnimators)
-        CORRADE_COMPARE(ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).cleanCallCount, 0);
+        CORRADE_COMPARE(nodeAttachmentAnimator->cleanCallCount, 0);
     if(data.dataAttachmentAnimators)
-        CORRADE_COMPARE(ui.animator<AttachmentAnimator>(dataAttachmentAnimator).cleanCallCount, 0);
+        CORRADE_COMPARE(dataAttachmentAnimator->cleanCallCount, 0);
 
     /* Calling clearNodeOrder() on a node that isn't in the order is a no-op */
     ui.clearNodeOrder(another1);
@@ -9724,15 +9757,15 @@ void AbstractUserInterfaceTest::state() {
         CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeUpdate);
         CORRADE_COMPARE(ui.renderer<Renderer>().setupFramebufferCallCount, 2);
         if(data.layouters) {
-            CORRADE_COMPARE(ui.layouter<Layouter>(layouter1).cleanCallCount, 0);
-            CORRADE_COMPARE(ui.layouter<Layouter>(layouter2).cleanCallCount, 0);
+            CORRADE_COMPARE(layouter1->cleanCallCount, 0);
+            CORRADE_COMPARE(layouter2->cleanCallCount, 0);
         }
-        CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
-        CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 15);
+        CORRADE_COMPARE(layer.cleanCallCount, 0);
+        CORRADE_COMPARE(layer.updateCallCount, 15);
         if(data.nodeAttachmentAnimators)
-            CORRADE_COMPARE(ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).cleanCallCount, 0);
+            CORRADE_COMPARE(nodeAttachmentAnimator->cleanCallCount, 0);
         if(data.dataAttachmentAnimators)
-            CORRADE_COMPARE(ui.animator<AttachmentAnimator>(dataAttachmentAnimator).cleanCallCount, 0);
+            CORRADE_COMPARE(dataAttachmentAnimator->cleanCallCount, 0);
     }
 
     /* Calling update() calls the layouters the same way as before the another1
@@ -9796,16 +9829,16 @@ void AbstractUserInterfaceTest::state() {
         };
         if(data.layouters) {
             layouterUpdateCalls = {};
-            ui.layouter<Layouter2>(layouter2).expectedLayoutIdsToUpdate[0] = expectedLayoutIdsToUpdate1;
-            ui.layouter<Layouter1>(layouter1).expectedLayoutIdsToUpdate = expectedLayoutIdsToUpdate2;
-            ui.layouter<Layouter2>(layouter2).expectedLayoutIdsToUpdate[1] = expectedLayoutIdsToUpdate3;
-            ui.layouter<Layouter2>(layouter2).expectedTopLevelLayoutIds[0] = expectedTopLevelLayoutIds1;
-            ui.layouter<Layouter1>(layouter1).expectedTopLevelLayoutIds = expectedTopLevelLayoutIds2;
-            ui.layouter<Layouter2>(layouter2).expectedTopLevelLayoutIds[1] = expectedTopLevelLayoutIds3;
-            ui.layouter<Layouter2>(layouter2).expectedNodeOffsetsSizes[0] = expectedLayoutNodeOffsetsSizes1;
-            ui.layouter<Layouter1>(layouter1).expectedNodeOffsetsSizes = expectedLayoutNodeOffsetsSizes2;
-            ui.layouter<Layouter2>(layouter2).expectedNodeOffsetsSizes[1] = expectedLayoutNodeOffsetsSizes3;
-            ui.layouter<Layouter2>(layouter2).updateCallId = 0;
+            layouter2->expectedLayoutIdsToUpdate[0] = expectedLayoutIdsToUpdate1;
+            layouter1->expectedLayoutIdsToUpdate = expectedLayoutIdsToUpdate2;
+            layouter2->expectedLayoutIdsToUpdate[1] = expectedLayoutIdsToUpdate3;
+            layouter2->expectedTopLevelLayoutIds[0] = expectedTopLevelLayoutIds1;
+            layouter1->expectedTopLevelLayoutIds = expectedTopLevelLayoutIds2;
+            layouter2->expectedTopLevelLayoutIds[1] = expectedTopLevelLayoutIds3;
+            layouter2->expectedNodeOffsetsSizes[0] = expectedLayoutNodeOffsetsSizes1;
+            layouter1->expectedNodeOffsetsSizes = expectedLayoutNodeOffsetsSizes2;
+            layouter2->expectedNodeOffsetsSizes[1] = expectedLayoutNodeOffsetsSizes3;
+            layouter2->updateCallId = 0;
         }
 
         UnsignedInt expectedDataIds[]{
@@ -9845,33 +9878,35 @@ void AbstractUserInterfaceTest::state() {
         };
         /* Putting a node back to the top-level order triggers offset/size
            update in addition to just the order + enabled + opacity */
-        ui.layer<Layer>(layer).expectedState = LayerState::NeedsNodeOrderUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsNodeOpacityUpdate|LayerState::NeedsNodeOffsetSizeUpdate|(data.compositingLayer ? LayerState::NeedsCompositeOffsetSizeUpdate : LayerStates{});
-        ui.layer<Layer>(layer).expectedDataIds = expectedDataIds;
-        ui.layer<Layer>(layer).expectedNodeOffsetsSizesOpacities = expectedNodeOffsetsSizesOpacities;
-        ui.layer<Layer>(layer).expectedNodesEnabled = expectedNodesEnabled;
-        ui.layer<Layer>(layer).expectedClipRectIdsDataCounts = expectedClipRectIdsDataCounts;
-        ui.layer<Layer>(layer).expectedClipRectOffsetsSizes = expectedClipRectOffsetsSizes;
+        layer.expectedState = LayerState::NeedsNodeOrderUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsNodeOpacityUpdate|LayerState::NeedsNodeOffsetSizeUpdate|(data.compositingLayer ? LayerState::NeedsCompositeOffsetSizeUpdate : LayerStates{});
+        layer.expectedDataIds = expectedDataIds;
+        layer.expectedNodeOffsetsSizesOpacities = expectedNodeOffsetsSizesOpacities;
+        layer.expectedNodesEnabled = expectedNodesEnabled;
+        layer.expectedClipRectIdsDataCounts = expectedClipRectIdsDataCounts;
+        layer.expectedClipRectOffsetsSizes = expectedClipRectOffsetsSizes;
         if(data.compositingLayer)
-            ui.layer<Layer>(layer).expectedCompositeRectOffsetsSizes = expectedCompositeRectOffsetsSizes;
+            layer.expectedCompositeRectOffsetsSizes = expectedCompositeRectOffsetsSizes;
 
         ui.update();
     }
     CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
     CORRADE_COMPARE(ui.renderer<Renderer>().setupFramebufferCallCount, 2);
     if(data.layouters) {
-        CORRADE_COMPARE(ui.layouter<Layouter>(layouter1).cleanCallCount, 0);
-        CORRADE_COMPARE(ui.layouter<Layouter>(layouter2).cleanCallCount, 0);
+        CORRADE_COMPARE(layouter1->cleanCallCount, 0);
+        CORRADE_COMPARE(layouter2->cleanCallCount, 0);
         CORRADE_COMPARE_AS(layouterUpdateCalls, Containers::arrayView({
             /* layouter2 getting called twice again */
-            layouterHandleId(layouter2), layouterHandleId(layouter1), layouterHandleId(layouter2),
+            layouterHandleId(layouter2->handle()),
+            layouterHandleId(layouter1->handle()),
+            layouterHandleId(layouter2->handle()),
         }), TestSuite::Compare::Container);
     }
-    CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
-    CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 16);
+    CORRADE_COMPARE(layer.cleanCallCount, 0);
+    CORRADE_COMPARE(layer.updateCallCount, 16);
     if(data.nodeAttachmentAnimators)
-        CORRADE_COMPARE(ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).cleanCallCount, 0);
+        CORRADE_COMPARE(nodeAttachmentAnimator->cleanCallCount, 0);
     if(data.dataAttachmentAnimators)
-        CORRADE_COMPARE(ui.animator<AttachmentAnimator>(dataAttachmentAnimator).cleanCallCount, 0);
+        CORRADE_COMPARE(dataAttachmentAnimator->cleanCallCount, 0);
 
     /* Calling flattenNodeOrder() sets a state flag */
     ui.flattenNodeOrder(another2);
@@ -9886,15 +9921,15 @@ void AbstractUserInterfaceTest::state() {
         CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeUpdate);
         CORRADE_COMPARE(ui.renderer<Renderer>().setupFramebufferCallCount, 2);
         if(data.layouters) {
-            CORRADE_COMPARE(ui.layouter<Layouter>(layouter1).cleanCallCount, 0);
-            CORRADE_COMPARE(ui.layouter<Layouter>(layouter2).cleanCallCount, 0);
+            CORRADE_COMPARE(layouter1->cleanCallCount, 0);
+            CORRADE_COMPARE(layouter2->cleanCallCount, 0);
         }
-        CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
-        CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 16);
+        CORRADE_COMPARE(layer.cleanCallCount, 0);
+        CORRADE_COMPARE(layer.updateCallCount, 16);
         if(data.nodeAttachmentAnimators)
-            CORRADE_COMPARE(ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).cleanCallCount, 0);
+            CORRADE_COMPARE(nodeAttachmentAnimator->cleanCallCount, 0);
         if(data.dataAttachmentAnimators)
-            CORRADE_COMPARE(ui.animator<AttachmentAnimator>(dataAttachmentAnimator).cleanCallCount, 0);
+            CORRADE_COMPARE(dataAttachmentAnimator->cleanCallCount, 0);
     }
 
     /* Calling update() calls the layouters the same way (flattening the order
@@ -9958,16 +9993,16 @@ void AbstractUserInterfaceTest::state() {
         };
         if(data.layouters) {
             layouterUpdateCalls = {};
-            ui.layouter<Layouter2>(layouter2).expectedLayoutIdsToUpdate[0] = expectedLayoutIdsToUpdate1;
-            ui.layouter<Layouter1>(layouter1).expectedLayoutIdsToUpdate = expectedLayoutIdsToUpdate2;
-            ui.layouter<Layouter2>(layouter2).expectedLayoutIdsToUpdate[1] = expectedLayoutIdsToUpdate3;
-            ui.layouter<Layouter2>(layouter2).expectedTopLevelLayoutIds[0] = expectedTopLevelLayoutIds1;
-            ui.layouter<Layouter1>(layouter1).expectedTopLevelLayoutIds = expectedTopLevelLayoutIds2;
-            ui.layouter<Layouter2>(layouter2).expectedTopLevelLayoutIds[1] = expectedTopLevelLayoutIds3;
-            ui.layouter<Layouter2>(layouter2).expectedNodeOffsetsSizes[0] = expectedLayoutNodeOffsetsSizes1;
-            ui.layouter<Layouter1>(layouter1).expectedNodeOffsetsSizes = expectedLayoutNodeOffsetsSizes2;
-            ui.layouter<Layouter2>(layouter2).expectedNodeOffsetsSizes[1] = expectedLayoutNodeOffsetsSizes3;
-            ui.layouter<Layouter2>(layouter2).updateCallId = 0;
+            layouter2->expectedLayoutIdsToUpdate[0] = expectedLayoutIdsToUpdate1;
+            layouter1->expectedLayoutIdsToUpdate = expectedLayoutIdsToUpdate2;
+            layouter2->expectedLayoutIdsToUpdate[1] = expectedLayoutIdsToUpdate3;
+            layouter2->expectedTopLevelLayoutIds[0] = expectedTopLevelLayoutIds1;
+            layouter1->expectedTopLevelLayoutIds = expectedTopLevelLayoutIds2;
+            layouter2->expectedTopLevelLayoutIds[1] = expectedTopLevelLayoutIds3;
+            layouter2->expectedNodeOffsetsSizes[0] = expectedLayoutNodeOffsetsSizes1;
+            layouter1->expectedNodeOffsetsSizes = expectedLayoutNodeOffsetsSizes2;
+            layouter2->expectedNodeOffsetsSizes[1] = expectedLayoutNodeOffsetsSizes3;
+            layouter2->updateCallId = 0;
         }
 
         UnsignedInt expectedDataIds[]{
@@ -10008,33 +10043,35 @@ void AbstractUserInterfaceTest::state() {
            offset/size update is also triggered due to the coarseness of the
            UserInterfaceState bits */
         /** @todo separate those */
-        ui.layer<Layer>(layer).expectedState = LayerState::NeedsNodeOrderUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsNodeOpacityUpdate|LayerState::NeedsNodeOffsetSizeUpdate|(data.compositingLayer ? LayerState::NeedsCompositeOffsetSizeUpdate : LayerStates{});
-        ui.layer<Layer>(layer).expectedDataIds = expectedDataIds;
-        ui.layer<Layer>(layer).expectedNodeOffsetsSizesOpacities = expectedNodeOffsetsSizesOpacities;
-        ui.layer<Layer>(layer).expectedNodesEnabled = expectedNodesEnabled;
-        ui.layer<Layer>(layer).expectedClipRectIdsDataCounts = expectedClipRectIdsDataCounts;
-        ui.layer<Layer>(layer).expectedClipRectOffsetsSizes = expectedClipRectOffsetsSizes;
+        layer.expectedState = LayerState::NeedsNodeOrderUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsNodeOpacityUpdate|LayerState::NeedsNodeOffsetSizeUpdate|(data.compositingLayer ? LayerState::NeedsCompositeOffsetSizeUpdate : LayerStates{});
+        layer.expectedDataIds = expectedDataIds;
+        layer.expectedNodeOffsetsSizesOpacities = expectedNodeOffsetsSizesOpacities;
+        layer.expectedNodesEnabled = expectedNodesEnabled;
+        layer.expectedClipRectIdsDataCounts = expectedClipRectIdsDataCounts;
+        layer.expectedClipRectOffsetsSizes = expectedClipRectOffsetsSizes;
         if(data.compositingLayer)
-            ui.layer<Layer>(layer).expectedCompositeRectOffsetsSizes = expectedCompositeRectOffsetsSizes;
+            layer.expectedCompositeRectOffsetsSizes = expectedCompositeRectOffsetsSizes;
 
         ui.update();
     }
     CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
     CORRADE_COMPARE(ui.renderer<Renderer>().setupFramebufferCallCount, 2);
     if(data.layouters) {
-        CORRADE_COMPARE(ui.layouter<Layouter>(layouter1).cleanCallCount, 0);
-        CORRADE_COMPARE(ui.layouter<Layouter>(layouter2).cleanCallCount, 0);
+        CORRADE_COMPARE(layouter1->cleanCallCount, 0);
+        CORRADE_COMPARE(layouter2->cleanCallCount, 0);
         CORRADE_COMPARE_AS(layouterUpdateCalls, Containers::arrayView({
             /* layouter2 getting called twice again */
-            layouterHandleId(layouter2), layouterHandleId(layouter1), layouterHandleId(layouter2),
+            layouterHandleId(layouter2->handle()),
+            layouterHandleId(layouter1->handle()),
+            layouterHandleId(layouter2->handle()),
         }), TestSuite::Compare::Container);
     }
-    CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
-    CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 17);
+    CORRADE_COMPARE(layer.cleanCallCount, 0);
+    CORRADE_COMPARE(layer.updateCallCount, 17);
     if(data.nodeAttachmentAnimators)
-        CORRADE_COMPARE(ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).cleanCallCount, 0);
+        CORRADE_COMPARE(nodeAttachmentAnimator->cleanCallCount, 0);
     if(data.dataAttachmentAnimators)
-        CORRADE_COMPARE(ui.animator<AttachmentAnimator>(dataAttachmentAnimator).cleanCallCount, 0);
+        CORRADE_COMPARE(dataAttachmentAnimator->cleanCallCount, 0);
 
     /* Calling flattenNodeOrder() on a node that isn't in top-level (anymore)
        is a no-op */
@@ -10044,10 +10081,10 @@ void AbstractUserInterfaceTest::state() {
     if(data.layouters) {
         /* Removing a layout marks the layouter with NeedsAssignmentUpdate,
            which is then propagated to the UI-wide state */
-        ui.layouter<Layouter>(layouter1).remove(layout1Another1);
+        layouter1->remove(layout1Another1);
         CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsLayoutAssignmentUpdate);
-        CORRADE_COMPARE(ui.layouter(layouter1).usedCount(), 2);
-        CORRADE_COMPARE(ui.layouter(layouter2).usedCount(), 5);
+        CORRADE_COMPARE(layouter1->usedCount(), 2);
+        CORRADE_COMPARE(layouter2->usedCount(), 5);
 
         /* Calling update() then calls the remaining layouter, uploads
            remaining data and resets the remaining state flag */
@@ -10090,16 +10127,16 @@ void AbstractUserInterfaceTest::state() {
                 {{8.0f, 8.0f}, {8.0f, 8.0f}}
             };
             layouterUpdateCalls = {};
-            ui.layouter<Layouter2>(layouter2).expectedLayoutIdsToUpdate[0] = expectedLayoutIdsToUpdate1;
-            ui.layouter<Layouter1>(layouter1).expectedLayoutIdsToUpdate = expectedLayoutIdsToUpdate2;
-            ui.layouter<Layouter2>(layouter2).expectedLayoutIdsToUpdate[1] = {};
-            ui.layouter<Layouter2>(layouter2).expectedTopLevelLayoutIds[0] = expectedTopLevelLayoutIds1;
-            ui.layouter<Layouter1>(layouter1).expectedTopLevelLayoutIds = {};
-            ui.layouter<Layouter2>(layouter2).expectedTopLevelLayoutIds[1] = {};
-            ui.layouter<Layouter2>(layouter2).expectedNodeOffsetsSizes[0] = expectedLayoutNodeOffsetsSizes1;
-            ui.layouter<Layouter1>(layouter1).expectedNodeOffsetsSizes = expectedLayoutNodeOffsetsSizes2;
-            ui.layouter<Layouter2>(layouter2).expectedNodeOffsetsSizes[1] = {};
-            ui.layouter<Layouter2>(layouter2).updateCallId = 0;
+            layouter2->expectedLayoutIdsToUpdate[0] = expectedLayoutIdsToUpdate1;
+            layouter1->expectedLayoutIdsToUpdate = expectedLayoutIdsToUpdate2;
+            layouter2->expectedLayoutIdsToUpdate[1] = {};
+            layouter2->expectedTopLevelLayoutIds[0] = expectedTopLevelLayoutIds1;
+            layouter1->expectedTopLevelLayoutIds = {};
+            layouter2->expectedTopLevelLayoutIds[1] = {};
+            layouter2->expectedNodeOffsetsSizes[0] = expectedLayoutNodeOffsetsSizes1;
+            layouter1->expectedNodeOffsetsSizes = expectedLayoutNodeOffsetsSizes2;
+            layouter2->expectedNodeOffsetsSizes[1] = {};
+            layouter2->updateCallId = 0;
 
             UnsignedInt expectedDataIds[]{
                 dataHandleId(dataAnother1),
@@ -10139,35 +10176,36 @@ void AbstractUserInterfaceTest::state() {
             };
             /* Layout change means offset/size update, which may affect the set
                of visible nodes and thus also the enabled state */
-            ui.layer<Layer>(layer).expectedState = LayerState::NeedsNodeOrderUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsNodeOffsetSizeUpdate|(data.compositingLayer ? LayerState::NeedsCompositeOffsetSizeUpdate : LayerStates{});
-            ui.layer<Layer>(layer).expectedDataIds = expectedDataIds;
-            ui.layer<Layer>(layer).expectedNodeOffsetsSizesOpacities = expectedNodeOffsetsSizesOpacities;
-            ui.layer<Layer>(layer).expectedNodesEnabled = expectedNodesEnabled;
-            ui.layer<Layer>(layer).expectedClipRectIdsDataCounts = expectedClipRectIdsDataCounts;
-            ui.layer<Layer>(layer).expectedClipRectOffsetsSizes = expectedClipRectOffsetsSizes;
+            layer.expectedState = LayerState::NeedsNodeOrderUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsNodeOffsetSizeUpdate|(data.compositingLayer ? LayerState::NeedsCompositeOffsetSizeUpdate : LayerStates{});
+            layer.expectedDataIds = expectedDataIds;
+            layer.expectedNodeOffsetsSizesOpacities = expectedNodeOffsetsSizesOpacities;
+            layer.expectedNodesEnabled = expectedNodesEnabled;
+            layer.expectedClipRectIdsDataCounts = expectedClipRectIdsDataCounts;
+            layer.expectedClipRectOffsetsSizes = expectedClipRectOffsetsSizes;
             if(data.compositingLayer)
-                ui.layer<Layer>(layer).expectedCompositeRectOffsetsSizes = expectedCompositeRectOffsetsSizes;
+                layer.expectedCompositeRectOffsetsSizes = expectedCompositeRectOffsetsSizes;
 
             ui.update();
         }
         CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
-        CORRADE_COMPARE(ui.layouter(layouter1).usedCount(), 2);
-        CORRADE_COMPARE(ui.layouter(layouter2).usedCount(), 5);
-        CORRADE_COMPARE(ui.layouter<Layouter>(layouter1).cleanCallCount, 0);
-        CORRADE_COMPARE(ui.layouter<Layouter>(layouter2).cleanCallCount, 0);
+        CORRADE_COMPARE(layouter1->usedCount(), 2);
+        CORRADE_COMPARE(layouter2->usedCount(), 5);
+        CORRADE_COMPARE(layouter1->cleanCallCount, 0);
+        CORRADE_COMPARE(layouter2->cleanCallCount, 0);
         CORRADE_COMPARE_AS(layouterUpdateCalls, Containers::arrayView({
             /* There's nothing visible left in layouter1, so layouter2 is
                called with everything it has, and then layouter1 with nothing
                just to reset the NeedsLayoutAssignmentUpdate flag. */
             /** @todo which is rather ugly, better idea? */
-            layouterHandleId(layouter2), layouterHandleId(layouter1),
+            layouterHandleId(layouter2->handle()),
+            layouterHandleId(layouter1->handle()),
         }), TestSuite::Compare::Container);
-        CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
-        CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 18);
+        CORRADE_COMPARE(layer.cleanCallCount, 0);
+        CORRADE_COMPARE(layer.updateCallCount, 18);
         if(data.nodeAttachmentAnimators)
-            CORRADE_COMPARE(ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).cleanCallCount, 0);
+            CORRADE_COMPARE(nodeAttachmentAnimator->cleanCallCount, 0);
         if(data.dataAttachmentAnimators)
-            CORRADE_COMPARE(ui.animator<AttachmentAnimator>(dataAttachmentAnimator).cleanCallCount, 0);
+            CORRADE_COMPARE(dataAttachmentAnimator->cleanCallCount, 0);
     }
 
     /* Calling setNodeOpacity() sets a state flag */
@@ -10183,15 +10221,15 @@ void AbstractUserInterfaceTest::state() {
         CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeOpacityUpdate);
         CORRADE_COMPARE(ui.renderer<Renderer>().setupFramebufferCallCount, 2);
         if(data.layouters) {
-            CORRADE_COMPARE(ui.layouter<Layouter>(layouter1).cleanCallCount, 0);
-            CORRADE_COMPARE(ui.layouter<Layouter>(layouter2).cleanCallCount, 0);
+            CORRADE_COMPARE(layouter1->cleanCallCount, 0);
+            CORRADE_COMPARE(layouter2->cleanCallCount, 0);
         }
-        CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
-        CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 17 + (data.layouters ? 1 : 0));
+        CORRADE_COMPARE(layer.cleanCallCount, 0);
+        CORRADE_COMPARE(layer.updateCallCount, 17 + (data.layouters ? 1 : 0));
         if(data.nodeAttachmentAnimators)
-            CORRADE_COMPARE(ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).cleanCallCount, 0);
+            CORRADE_COMPARE(nodeAttachmentAnimator->cleanCallCount, 0);
         if(data.dataAttachmentAnimators)
-            CORRADE_COMPARE(ui.animator<AttachmentAnimator>(dataAttachmentAnimator).cleanCallCount, 0);
+            CORRADE_COMPARE(dataAttachmentAnimator->cleanCallCount, 0);
     }
 
     /* Calling update() calls layers with recalculated opacities. It doesn't
@@ -10241,54 +10279,53 @@ void AbstractUserInterfaceTest::state() {
             {{3.0f, 1.0f}, {2.0f, 4.0f}}, /* matching node */
             {{4.0f, 4.0f}, {1.0f, 1.0f}}, /* matching nested1, clipped */
         };
-        ui.layer<Layer>(layer).expectedState = LayerState::NeedsNodeOpacityUpdate;
-        ui.layer<Layer>(layer).expectedDataIds = expectedDataIds;
-        ui.layer<Layer>(layer).expectedNodeOffsetsSizesOpacities = expectedNodeOffsetsSizesOpacities;
-        ui.layer<Layer>(layer).expectedNodesEnabled = expectedNodesEnabled;
-        ui.layer<Layer>(layer).expectedClipRectIdsDataCounts = expectedClipRectIdsDataCounts;
-        ui.layer<Layer>(layer).expectedClipRectOffsetsSizes = expectedClipRectOffsetsSizes;
+        layer.expectedState = LayerState::NeedsNodeOpacityUpdate;
+        layer.expectedDataIds = expectedDataIds;
+        layer.expectedNodeOffsetsSizesOpacities = expectedNodeOffsetsSizesOpacities;
+        layer.expectedNodesEnabled = expectedNodesEnabled;
+        layer.expectedClipRectIdsDataCounts = expectedClipRectIdsDataCounts;
+        layer.expectedClipRectOffsetsSizes = expectedClipRectOffsetsSizes;
         if(data.compositingLayer)
-            ui.layer<Layer>(layer).expectedCompositeRectOffsetsSizes = expectedCompositeRectOffsetsSizes;
+            layer.expectedCompositeRectOffsetsSizes = expectedCompositeRectOffsetsSizes;
 
         ui.update();
     }
     CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
     CORRADE_COMPARE(ui.renderer<Renderer>().setupFramebufferCallCount, 2);
     if(data.layouters) {
-        CORRADE_COMPARE(ui.layouter<Layouter>(layouter1).cleanCallCount, 0);
-        CORRADE_COMPARE(ui.layouter<Layouter>(layouter2).cleanCallCount, 0);
+        CORRADE_COMPARE(layouter1->cleanCallCount, 0);
+        CORRADE_COMPARE(layouter2->cleanCallCount, 0);
         CORRADE_COMPARE_AS(layouterUpdateCalls, Containers::arrayView({
-            layouterHandleId(layouter2), layouterHandleId(layouter1)
+            layouterHandleId(layouter2->handle()),
+            layouterHandleId(layouter1->handle())
         }), TestSuite::Compare::Container);
     }
-    CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
-    CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 18 + (data.layouters ? 1 : 0));
+    CORRADE_COMPARE(layer.cleanCallCount, 0);
+    CORRADE_COMPARE(layer.updateCallCount, 18 + (data.layouters ? 1 : 0));
     if(data.nodeAttachmentAnimators)
-        CORRADE_COMPARE(ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).cleanCallCount, 0);
+        CORRADE_COMPARE(nodeAttachmentAnimator->cleanCallCount, 0);
     if(data.dataAttachmentAnimators)
-        CORRADE_COMPARE(ui.animator<AttachmentAnimator>(dataAttachmentAnimator).cleanCallCount, 0);
+        CORRADE_COMPARE(dataAttachmentAnimator->cleanCallCount, 0);
 
     /* Add one more layer with an attached animator to check data & layer
        removal behavior, should set no state flags again. Unlike the first one
        it doesn't enable compositing ever. */
-    LayerHandle anotherLayer = ui.createLayer();
-    ui.setLayerInstance(Containers::pointer<Layer>(anotherLayer, LayerFeatures{}));
+    Layer& anotherLayer = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer(), LayerFeatures{}));
     CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
     /* GCC in Release mode complains that some of these may be used
        uninitialized, MSVC as well. They aren't. */
-    AnimatorHandle anotherDataAttachmentAnimator{};
+    AttachmentAnimator* anotherDataAttachmentAnimator{};
     if(data.dataAttachmentAnimators) {
-        anotherDataAttachmentAnimator = ui.createAnimator();
-        Containers::Pointer<AttachmentAnimator> instance{InPlaceInit, anotherDataAttachmentAnimator, AnimatorFeature::DataAttachment};
-        instance->setLayer(ui.layer(anotherLayer));
-        ui.setGenericAnimatorInstance(Utility::move(instance));
+        Containers::Pointer<AttachmentAnimator> instance{InPlaceInit, ui.createAnimator(), AnimatorFeature::DataAttachment};
+        instance->setLayer(anotherLayer);
+        anotherDataAttachmentAnimator = &ui.setGenericAnimatorInstance(Utility::move(instance));
     }
 
     /* Removing data that's not attached to any node marks the layer with
        NeedsDataClean, which is then propagated to the UI-wide state */
-    ui.layer<Layer>(layer).remove(dataNotAttached);
+    layer.remove(dataNotAttached);
     CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataClean);
-    CORRADE_COMPARE(ui.layer(layer).usedCount(), 4);
+    CORRADE_COMPARE(layer.usedCount(), 4);
 
     /* Calling clean() removes animations attached to the removed data and
        resets the states to not require clean() anymore */
@@ -10301,28 +10338,28 @@ void AbstractUserInterfaceTest::state() {
                 true, false, false
             };
             if(data.dataAttachmentAnimators)
-                ui.animator<AttachmentAnimator>(dataAttachmentAnimator).expectedAnimationIdsToRemove = expectedAnimationIdsToRemove;
+                dataAttachmentAnimator->expectedAnimationIdsToRemove = expectedAnimationIdsToRemove;
 
             ui.clean();
         }
         CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
-        CORRADE_COMPARE(ui.layer(layer).usedCount(), 4);
+        CORRADE_COMPARE(layer.usedCount(), 4);
         if(data.layouters) {
-            CORRADE_COMPARE(ui.layouter<Layouter>(layouter1).cleanCallCount, 0);
-            CORRADE_COMPARE(ui.layouter<Layouter>(layouter2).cleanCallCount, 0);
+            CORRADE_COMPARE(layouter1->cleanCallCount, 0);
+            CORRADE_COMPARE(layouter2->cleanCallCount, 0);
         }
-        CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
-        CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 18 + (data.layouters ? 1 : 0));
-        CORRADE_COMPARE(ui.layer<Layer>(anotherLayer).cleanCallCount, 0);
-        CORRADE_COMPARE(ui.layer<Layer>(anotherLayer).updateCallCount, 0);
+        CORRADE_COMPARE(layer.cleanCallCount, 0);
+        CORRADE_COMPARE(layer.updateCallCount, 18 + (data.layouters ? 1 : 0));
+        CORRADE_COMPARE(anotherLayer.cleanCallCount, 0);
+        CORRADE_COMPARE(anotherLayer.updateCallCount, 0);
         if(data.nodeAttachmentAnimators)
-            CORRADE_COMPARE(ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).cleanCallCount, 0);
+            CORRADE_COMPARE(nodeAttachmentAnimator->cleanCallCount, 0);
         if(data.dataAttachmentAnimators) {
-            CORRADE_COMPARE(ui.animator(dataAttachmentAnimator).usedCount(), 2);
-            CORRADE_COMPARE(ui.animator<AttachmentAnimator>(dataAttachmentAnimator).cleanCallCount, 1);
+            CORRADE_COMPARE(dataAttachmentAnimator->usedCount(), 2);
+            CORRADE_COMPARE(dataAttachmentAnimator->cleanCallCount, 1);
             /* The layer this animator is associated with doesn't have
                NeedsDataClean set, so clean() shouldn't be called for it */
-            CORRADE_COMPARE(ui.animator<AttachmentAnimator>(anotherDataAttachmentAnimator).cleanCallCount, 0);
+            CORRADE_COMPARE(anotherDataAttachmentAnimator->cleanCallCount, 0);
         }
     }
 
@@ -10336,29 +10373,29 @@ void AbstractUserInterfaceTest::state() {
             true, false, false
         };
         if(data.dataAttachmentAnimators)
-            ui.animator<AttachmentAnimator>(dataAttachmentAnimator).expectedAnimationIdsToRemove = expectedAnimationIdsToRemove;
+            dataAttachmentAnimator->expectedAnimationIdsToRemove = expectedAnimationIdsToRemove;
 
         ui.update();
     }
-    CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
-    CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 18 + (data.layouters ? 1 : 0));
-    CORRADE_COMPARE(ui.layer<Layer>(anotherLayer).cleanCallCount, 0);
-    CORRADE_COMPARE(ui.layer<Layer>(anotherLayer).updateCallCount, 0);
+    CORRADE_COMPARE(layer.cleanCallCount, 0);
+    CORRADE_COMPARE(layer.updateCallCount, 18 + (data.layouters ? 1 : 0));
+    CORRADE_COMPARE(anotherLayer.cleanCallCount, 0);
+    CORRADE_COMPARE(anotherLayer.updateCallCount, 0);
     if(data.nodeAttachmentAnimators)
-        CORRADE_COMPARE(ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).cleanCallCount, 0);
+        CORRADE_COMPARE(nodeAttachmentAnimator->cleanCallCount, 0);
     if(data.dataAttachmentAnimators) {
-        CORRADE_COMPARE(ui.animator(dataAttachmentAnimator).usedCount(), 2);
-        CORRADE_COMPARE(ui.animator<AttachmentAnimator>(dataAttachmentAnimator).cleanCallCount, 1);
+        CORRADE_COMPARE(dataAttachmentAnimator->usedCount(), 2);
+        CORRADE_COMPARE(dataAttachmentAnimator->cleanCallCount, 1);
         /* The layer this animator is associated with doesn't have
            NeedsDataClean set, so clean() shouldn't be called for it */
-        CORRADE_COMPARE(ui.animator<AttachmentAnimator>(anotherDataAttachmentAnimator).cleanCallCount, 0);
+        CORRADE_COMPARE(anotherDataAttachmentAnimator->cleanCallCount, 0);
     }
 
     /* Removing attached data marks the layer with both NeedsDataClean and
        NeedsAttachmentUpdate, which is then propagated to the UI-wide state */
-    ui.layer<Layer>(layer).remove(dataNode);
+    layer.remove(dataNode);
     CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataClean|UserInterfaceState::NeedsDataAttachmentUpdate);
-    CORRADE_COMPARE(ui.layer(layer).usedCount(), 3);
+    CORRADE_COMPARE(layer.usedCount(), 3);
 
     /* Calling clean() calls animator clean (with an empty mask because no
        animations were attached to this data) and resets the states to not
@@ -10371,24 +10408,24 @@ void AbstractUserInterfaceTest::state() {
                 false, false, false
             };
             if(data.dataAttachmentAnimators)
-                ui.animator<AttachmentAnimator>(dataAttachmentAnimator).expectedAnimationIdsToRemove = expectedAnimationIdsToRemove;
+                dataAttachmentAnimator->expectedAnimationIdsToRemove = expectedAnimationIdsToRemove;
 
             ui.clean();
         }
         CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataAttachmentUpdate);
-        CORRADE_COMPARE(ui.layer(layer).usedCount(), 3);
-        CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
-        CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 18 + (data.layouters ? 1 : 0));
-        CORRADE_COMPARE(ui.layer<Layer>(anotherLayer).cleanCallCount, 0);
-        CORRADE_COMPARE(ui.layer<Layer>(anotherLayer).updateCallCount, 0);
+        CORRADE_COMPARE(layer.usedCount(), 3);
+        CORRADE_COMPARE(layer.cleanCallCount, 0);
+        CORRADE_COMPARE(layer.updateCallCount, 18 + (data.layouters ? 1 : 0));
+        CORRADE_COMPARE(anotherLayer.cleanCallCount, 0);
+        CORRADE_COMPARE(anotherLayer.updateCallCount, 0);
         if(data.nodeAttachmentAnimators)
-            CORRADE_COMPARE(ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).cleanCallCount, 0);
+            CORRADE_COMPARE(nodeAttachmentAnimator->cleanCallCount, 0);
         if(data.dataAttachmentAnimators) {
-            CORRADE_COMPARE(ui.animator(dataAttachmentAnimator).usedCount(), 2);
-            CORRADE_COMPARE(ui.animator<AttachmentAnimator>(dataAttachmentAnimator).cleanCallCount, 2);
+            CORRADE_COMPARE(dataAttachmentAnimator->usedCount(), 2);
+            CORRADE_COMPARE(dataAttachmentAnimator->cleanCallCount, 2);
             /* The layer this animator is associated with doesn't have
                NeedsDataClean set, so clean() shouldn't be called for it */
-            CORRADE_COMPARE(ui.animator<AttachmentAnimator>(anotherDataAttachmentAnimator).cleanCallCount, 0);
+            CORRADE_COMPARE(anotherDataAttachmentAnimator->cleanCallCount, 0);
         }
     }
 
@@ -10437,10 +10474,10 @@ void AbstractUserInterfaceTest::state() {
                notInOrder and nested2 */
             true, true, true, true, false, false, false, false
         };
-        ui.layer<Layer>(layer).expectedDataIds = expectedDataIds;
-        ui.layer<Layer>(layer).expectedClipRectIdsDataCounts = expectedClipRectIdsDataCounts;
+        layer.expectedDataIds = expectedDataIds;
+        layer.expectedClipRectIdsDataCounts = expectedClipRectIdsDataCounts;
         if(data.compositingLayer)
-            ui.layer<Layer>(layer).expectedCompositeRectOffsetsSizes = expectedCompositeRectOffsetsSizes;
+            layer.expectedCompositeRectOffsetsSizes = expectedCompositeRectOffsetsSizes;
         /* Removing attached data means the draw order needs an update.
            Currently, affecting any node attachments triggers a need to update
            draw order on all layers, even those that didn't have the
@@ -10449,47 +10486,47 @@ void AbstractUserInterfaceTest::state() {
            make sense when attaching new data, not removing existing. */
         /** @todo separate those? or with the addition of draw merging this
             won't be possible anymore? */
-        ui.layer<Layer>(layer).expectedState = LayerState::NeedsNodeOpacityUpdate|LayerState::NeedsNodeOrderUpdate;
-        ui.layer<Layer>(anotherLayer).expectedState = LayerState::NeedsNodeOrderUpdate;
+        layer.expectedState = LayerState::NeedsNodeOpacityUpdate|LayerState::NeedsNodeOrderUpdate;
+        anotherLayer.expectedState = LayerState::NeedsNodeOrderUpdate;
         /* The other layer, which didn't need attachment update, doesn't get
            opacity update triggered, only node order */
-        for(LayerHandle i: {layer, anotherLayer}) {
-            CORRADE_ITERATION(i);
-            ui.layer<Layer>(i).expectedNodeOffsetsSizesOpacities = expectedNodeOffsetsSizesOpacities;
-            ui.layer<Layer>(i).expectedNodesEnabled = expectedNodesEnabled;
-            ui.layer<Layer>(i).expectedClipRectOffsetsSizes = expectedClipRectOffsetsSizes;
+        for(Layer* i: {&layer, &anotherLayer}) {
+            CORRADE_ITERATION(i->handle());
+            i->expectedNodeOffsetsSizesOpacities = expectedNodeOffsetsSizesOpacities;
+            i->expectedNodesEnabled = expectedNodesEnabled;
+            i->expectedClipRectOffsetsSizes = expectedClipRectOffsetsSizes;
         }
 
         bool expectedAnimationIdsToRemove[]{
             false, false, false
         };
         if(data.dataAttachmentAnimators)
-            ui.animator<AttachmentAnimator>(dataAttachmentAnimator).expectedAnimationIdsToRemove = expectedAnimationIdsToRemove;
+            dataAttachmentAnimator->expectedAnimationIdsToRemove = expectedAnimationIdsToRemove;
 
         ui.update();
     }
     CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
     CORRADE_COMPARE(ui.renderer<Renderer>().setupFramebufferCallCount, 2);
     if(data.layouters) {
-        CORRADE_COMPARE(ui.layouter<Layouter>(layouter1).cleanCallCount, 0);
-        CORRADE_COMPARE(ui.layouter<Layouter>(layouter2).cleanCallCount, 0);
+        CORRADE_COMPARE(layouter1->cleanCallCount, 0);
+        CORRADE_COMPARE(layouter2->cleanCallCount, 0);
         CORRADE_COMPARE_AS(layouterUpdateCalls, Containers::arrayView({
-            layouterHandleId(layouter2), layouterHandleId(layouter1),
+            layouterHandleId(layouter2->handle()), layouterHandleId(layouter1->handle()),
         }), TestSuite::Compare::Container);
     }
-    CORRADE_COMPARE(ui.layer(layer).usedCount(), 3);
-    CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
-    CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 19 + (data.layouters ? 1 : 0));
-    CORRADE_COMPARE(ui.layer<Layer>(anotherLayer).cleanCallCount, 0);
-    CORRADE_COMPARE(ui.layer<Layer>(anotherLayer).updateCallCount, 1);
+    CORRADE_COMPARE(layer.usedCount(), 3);
+    CORRADE_COMPARE(layer.cleanCallCount, 0);
+    CORRADE_COMPARE(layer.updateCallCount, 19 + (data.layouters ? 1 : 0));
+    CORRADE_COMPARE(anotherLayer.cleanCallCount, 0);
+    CORRADE_COMPARE(anotherLayer.updateCallCount, 1);
     if(data.nodeAttachmentAnimators)
-        CORRADE_COMPARE(ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).cleanCallCount, 0);
+        CORRADE_COMPARE(nodeAttachmentAnimator->cleanCallCount, 0);
     if(data.dataAttachmentAnimators) {
-        CORRADE_COMPARE(ui.animator(dataAttachmentAnimator).usedCount(), 2);
-        CORRADE_COMPARE(ui.animator<AttachmentAnimator>(dataAttachmentAnimator).cleanCallCount, 2);
+        CORRADE_COMPARE(dataAttachmentAnimator->usedCount(), 2);
+        CORRADE_COMPARE(dataAttachmentAnimator->cleanCallCount, 2);
         /* The layer this animator is associated with doesn't have
            NeedsDataClean set, so clean() shouldn't be called for it */
-        CORRADE_COMPARE(ui.animator<AttachmentAnimator>(anotherDataAttachmentAnimator).cleanCallCount, 0);
+        CORRADE_COMPARE(anotherDataAttachmentAnimator->cleanCallCount, 0);
     }
 
     /* Removing a node sets a state flag */
@@ -10497,14 +10534,14 @@ void AbstractUserInterfaceTest::state() {
     CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeClean);
     CORRADE_COMPARE(ui.nodeUsedCount(), 7);
     if(data.layouters) {
-        CORRADE_COMPARE(ui.layouter(layouter1).usedCount(), 2);
-        CORRADE_COMPARE(ui.layouter(layouter2).usedCount(), 5);
+        CORRADE_COMPARE(layouter1->usedCount(), 2);
+        CORRADE_COMPARE(layouter2->usedCount(), 5);
         /* Node parents are reset to Null in clean() for freed nodes, Update
            the expected array to match that */
         expectedNodeParents[nodeHandleId(nested1)] = NodeHandle::Null;
         expectedNodeParents[nodeHandleId(nested2)] = NodeHandle::Null;
     }
-    CORRADE_COMPARE(ui.layer(layer).usedCount(), 3);
+    CORRADE_COMPARE(layer.usedCount(), 3);
 
     /* Calling clean() removes the child nodes, the now-invalid layout
        assignments, data and animation attachments and resets the state to not
@@ -10524,8 +10561,8 @@ void AbstractUserInterfaceTest::state() {
                 true, true, true, false, false
             };
             if(data.layouters) {
-                ui.layouter<Layouter>(layouter1).expectedLayoutIdsToRemove = expectedLayoutIdsToRemove1;
-                ui.layouter<Layouter>(layouter2).expectedLayoutIdsToRemove = expectedLayoutIdsToRemove2;
+                layouter1->expectedLayoutIdsToRemove = expectedLayoutIdsToRemove1;
+                layouter2->expectedLayoutIdsToRemove = expectedLayoutIdsToRemove2;
             }
 
             bool expectedDataIdsToRemove[]{
@@ -10533,9 +10570,9 @@ void AbstractUserInterfaceTest::state() {
                    got orphaned after removing its parent, `node` */
                 true, false, false, false, true
             };
-            ui.layer<Layer>(layer).expectedDataIdsToRemove = expectedDataIdsToRemove;
+            layer.expectedDataIdsToRemove = expectedDataIdsToRemove;
             /* The second layer doesn't have anything */
-            ui.layer<Layer>(anotherLayer).expectedDataIdsToRemove = {};
+            anotherLayer.expectedDataIdsToRemove = {};
 
             bool expectedNodeAttachmentAnimationIdsToRemove[]{
                 /* animation1 and animation3 were attached to `node` and
@@ -10548,9 +10585,9 @@ void AbstractUserInterfaceTest::state() {
                 false, false, true
             };
             if(data.nodeAttachmentAnimators)
-                ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).expectedAnimationIdsToRemove = expectedNodeAttachmentAnimationIdsToRemove;
+                nodeAttachmentAnimator->expectedAnimationIdsToRemove = expectedNodeAttachmentAnimationIdsToRemove;
             if(data.dataAttachmentAnimators)
-                ui.animator<AttachmentAnimator>(dataAttachmentAnimator).expectedAnimationIdsToRemove = expectedDataAttachmentAnimationIdsToRemove;
+                dataAttachmentAnimator->expectedAnimationIdsToRemove = expectedDataAttachmentAnimationIdsToRemove;
 
             ui.clean();
         }
@@ -10558,27 +10595,27 @@ void AbstractUserInterfaceTest::state() {
         CORRADE_COMPARE(ui.renderer<Renderer>().setupFramebufferCallCount, 2);
         CORRADE_COMPARE(ui.nodeUsedCount(), 5);
         if(data.layouters) {
-            CORRADE_COMPARE(ui.layouter(layouter1).usedCount(), 2);
-            CORRADE_COMPARE(ui.layouter(layouter2).usedCount(), 2);
-            CORRADE_COMPARE(ui.layouter<Layouter>(layouter1).cleanCallCount, 1);
-            CORRADE_COMPARE(ui.layouter<Layouter>(layouter2).cleanCallCount, 1);
+            CORRADE_COMPARE(layouter1->usedCount(), 2);
+            CORRADE_COMPARE(layouter2->usedCount(), 2);
+            CORRADE_COMPARE(layouter1->cleanCallCount, 1);
+            CORRADE_COMPARE(layouter2->cleanCallCount, 1);
         }
-        CORRADE_COMPARE(ui.layer(layer).usedCount(), 1);
-        CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 1);
-        CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 19 + (data.layouters ? 1 : 0));
-        CORRADE_COMPARE(ui.layer<Layer>(anotherLayer).cleanCallCount, 1);
-        CORRADE_COMPARE(ui.layer<Layer>(anotherLayer).updateCallCount, 1);
+        CORRADE_COMPARE(layer.usedCount(), 1);
+        CORRADE_COMPARE(layer.cleanCallCount, 1);
+        CORRADE_COMPARE(layer.updateCallCount, 19 + (data.layouters ? 1 : 0));
+        CORRADE_COMPARE(anotherLayer.cleanCallCount, 1);
+        CORRADE_COMPARE(anotherLayer.updateCallCount, 1);
         if(data.nodeAttachmentAnimators) {
-            CORRADE_COMPARE(ui.animator(nodeAttachmentAnimator).usedCount(), 1);
-            CORRADE_COMPARE(ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).cleanCallCount, 1);
+            CORRADE_COMPARE(nodeAttachmentAnimator->usedCount(), 1);
+            CORRADE_COMPARE(nodeAttachmentAnimator->cleanCallCount, 1);
         }
         if(data.dataAttachmentAnimators) {
-            CORRADE_COMPARE(ui.animator(dataAttachmentAnimator).usedCount(), 1);
-            CORRADE_COMPARE(ui.animator<AttachmentAnimator>(dataAttachmentAnimator).cleanCallCount, 3);
+            CORRADE_COMPARE(dataAttachmentAnimator->usedCount(), 1);
+            CORRADE_COMPARE(dataAttachmentAnimator->cleanCallCount, 3);
             /* In this case NeedsDataClean is implied by NeedsNodeClean
                globally and thus clean() *does* get called for this one as
                well */
-            CORRADE_COMPARE(ui.animator<AttachmentAnimator>(anotherDataAttachmentAnimator).cleanCallCount, 1);
+            CORRADE_COMPARE(anotherDataAttachmentAnimator->cleanCallCount, 1);
         }
     }
 
@@ -10618,18 +10655,18 @@ void AbstractUserInterfaceTest::state() {
         };
         if(data.layouters) {
             layouterUpdateCalls = {};
-            ui.layouter<Layouter>(layouter1).expectedLayoutIdsToRemove = expectedLayoutIdsToRemove1;
-            ui.layouter<Layouter>(layouter2).expectedLayoutIdsToRemove = expectedLayoutIdsToRemove2;
-            ui.layouter<Layouter2>(layouter2).expectedLayoutIdsToUpdate[0] = expectedLayoutIdsToUpdate1;
-            ui.layouter<Layouter1>(layouter1).expectedLayoutIdsToUpdate = {};
-            ui.layouter<Layouter2>(layouter2).expectedLayoutIdsToUpdate[1] = {};
-            ui.layouter<Layouter2>(layouter2).expectedTopLevelLayoutIds[0] = expectedTopLevelLayoutIds1;
-            ui.layouter<Layouter1>(layouter1).expectedTopLevelLayoutIds = {};
-            ui.layouter<Layouter2>(layouter2).expectedTopLevelLayoutIds[1] = {};
-            ui.layouter<Layouter2>(layouter2).expectedNodeOffsetsSizes[0] = expectedLayoutNodeOffsetsSizes1;
-            ui.layouter<Layouter1>(layouter1).expectedNodeOffsetsSizes = {};
-            ui.layouter<Layouter2>(layouter2).expectedNodeOffsetsSizes[1] = {};
-            ui.layouter<Layouter2>(layouter2).updateCallId = 0;
+            layouter1->expectedLayoutIdsToRemove = expectedLayoutIdsToRemove1;
+            layouter2->expectedLayoutIdsToRemove = expectedLayoutIdsToRemove2;
+            layouter2->expectedLayoutIdsToUpdate[0] = expectedLayoutIdsToUpdate1;
+            layouter1->expectedLayoutIdsToUpdate = {};
+            layouter2->expectedLayoutIdsToUpdate[1] = {};
+            layouter2->expectedTopLevelLayoutIds[0] = expectedTopLevelLayoutIds1;
+            layouter1->expectedTopLevelLayoutIds = {};
+            layouter2->expectedTopLevelLayoutIds[1] = {};
+            layouter2->expectedNodeOffsetsSizes[0] = expectedLayoutNodeOffsetsSizes1;
+            layouter1->expectedNodeOffsetsSizes = {};
+            layouter2->expectedNodeOffsetsSizes[1] = {};
+            layouter2->updateCallId = 0;
         }
 
         bool expectedDataIdsToRemove[]{
@@ -10676,19 +10713,19 @@ void AbstractUserInterfaceTest::state() {
            updated, however again with the coarseness of UserInterfaceState
            bits it's together with offset/size as well */
         /** @todo separate */
-        ui.layer<Layer>(layer).expectedState = LayerState::NeedsNodeOrderUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsNodeOpacityUpdate|LayerState::NeedsNodeOffsetSizeUpdate|(data.compositingLayer ? LayerState::NeedsCompositeOffsetSizeUpdate : LayerStates{});
+        layer.expectedState = LayerState::NeedsNodeOrderUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsNodeOpacityUpdate|LayerState::NeedsNodeOffsetSizeUpdate|(data.compositingLayer ? LayerState::NeedsCompositeOffsetSizeUpdate : LayerStates{});
         /* The other layer doesn't have compositing enabled ever */
-        ui.layer<Layer>(anotherLayer).expectedState = LayerState::NeedsNodeOrderUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsNodeOpacityUpdate|LayerState::NeedsNodeOffsetSizeUpdate;
-        ui.layer<Layer>(layer).expectedDataIdsToRemove = expectedDataIdsToRemove;
-        ui.layer<Layer>(layer).expectedDataIds = expectedDataIds;
-        ui.layer<Layer>(layer).expectedClipRectIdsDataCounts = expectedClipRectIdsDataCounts;
+        anotherLayer.expectedState = LayerState::NeedsNodeOrderUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsNodeOpacityUpdate|LayerState::NeedsNodeOffsetSizeUpdate;
+        layer.expectedDataIdsToRemove = expectedDataIdsToRemove;
+        layer.expectedDataIds = expectedDataIds;
+        layer.expectedClipRectIdsDataCounts = expectedClipRectIdsDataCounts;
         if(data.compositingLayer)
-            ui.layer<Layer>(layer).expectedCompositeRectOffsetsSizes = expectedCompositeRectOffsetsSizes;
-        for(LayerHandle i: {layer, anotherLayer}) {
-            CORRADE_ITERATION(i);
-            ui.layer<Layer>(i).expectedNodeOffsetsSizesOpacities = expectedNodeOffsetsSizesOpacities;
-            ui.layer<Layer>(i).expectedNodesEnabled = expectedNodesEnabled;
-            ui.layer<Layer>(i).expectedClipRectOffsetsSizes = expectedClipRectOffsetsSizes;
+            layer.expectedCompositeRectOffsetsSizes = expectedCompositeRectOffsetsSizes;
+        for(Layer* i: {&layer, &anotherLayer}) {
+            CORRADE_ITERATION(i->handle());
+            i->expectedNodeOffsetsSizesOpacities = expectedNodeOffsetsSizesOpacities;
+            i->expectedNodesEnabled = expectedNodesEnabled;
+            i->expectedClipRectOffsetsSizes = expectedClipRectOffsetsSizes;
         }
 
         bool expectedNodeAttachmentAnimationIdsToRemove[]{
@@ -10702,9 +10739,9 @@ void AbstractUserInterfaceTest::state() {
             false, false, true
         };
         if(data.nodeAttachmentAnimators)
-            ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).expectedAnimationIdsToRemove = expectedNodeAttachmentAnimationIdsToRemove;
+            nodeAttachmentAnimator->expectedAnimationIdsToRemove = expectedNodeAttachmentAnimationIdsToRemove;
         if(data.dataAttachmentAnimators)
-            ui.animator<AttachmentAnimator>(dataAttachmentAnimator).expectedAnimationIdsToRemove = expectedDataAttachmentAnimationIdsToRemove;
+            dataAttachmentAnimator->expectedAnimationIdsToRemove = expectedDataAttachmentAnimationIdsToRemove;
 
         ui.update();
     }
@@ -10712,35 +10749,35 @@ void AbstractUserInterfaceTest::state() {
     CORRADE_COMPARE(ui.renderer<Renderer>().setupFramebufferCallCount, 2);
     CORRADE_COMPARE(ui.nodeUsedCount(), 5);
     if(data.layouters) {
-        CORRADE_COMPARE(ui.layouter(layouter1).usedCount(), 2);
-        CORRADE_COMPARE(ui.layouter(layouter2).usedCount(), 2);
-        CORRADE_COMPARE(ui.layouter<Layouter>(layouter1).cleanCallCount, 1);
-        CORRADE_COMPARE(ui.layouter<Layouter>(layouter2).cleanCallCount, 1);
+        CORRADE_COMPARE(layouter1->usedCount(), 2);
+        CORRADE_COMPARE(layouter2->usedCount(), 2);
+        CORRADE_COMPARE(layouter1->cleanCallCount, 1);
+        CORRADE_COMPARE(layouter2->cleanCallCount, 1);
         CORRADE_COMPARE_AS(layouterUpdateCalls, Containers::arrayView({
             /* There's just layouter2 called now */
-            layouterHandleId(layouter2),
+            layouterHandleId(layouter2->handle()),
         }), TestSuite::Compare::Container);
     }
-    CORRADE_COMPARE(ui.layer(layer).usedCount(), 1);
-    CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 1);
-    CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 20 + (data.layouters ? 1 : 0));
-    CORRADE_COMPARE(ui.layer<Layer>(anotherLayer).cleanCallCount, 1);
-    CORRADE_COMPARE(ui.layer<Layer>(anotherLayer).updateCallCount, 2);
+    CORRADE_COMPARE(layer.usedCount(), 1);
+    CORRADE_COMPARE(layer.cleanCallCount, 1);
+    CORRADE_COMPARE(layer.updateCallCount, 20 + (data.layouters ? 1 : 0));
+    CORRADE_COMPARE(anotherLayer.cleanCallCount, 1);
+    CORRADE_COMPARE(anotherLayer.updateCallCount, 2);
     if(data.nodeAttachmentAnimators) {
-        CORRADE_COMPARE(ui.animator(nodeAttachmentAnimator).usedCount(), 1);
-        CORRADE_COMPARE(ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).cleanCallCount, 1);
+        CORRADE_COMPARE(nodeAttachmentAnimator->usedCount(), 1);
+        CORRADE_COMPARE(nodeAttachmentAnimator->cleanCallCount, 1);
     }
     if(data.dataAttachmentAnimators) {
-        CORRADE_COMPARE(ui.animator(dataAttachmentAnimator).usedCount(), 1);
-        CORRADE_COMPARE(ui.animator<AttachmentAnimator>(dataAttachmentAnimator).cleanCallCount, 3);
+        CORRADE_COMPARE(dataAttachmentAnimator->usedCount(), 1);
+        CORRADE_COMPARE(dataAttachmentAnimator->cleanCallCount, 3);
         /* In this case NeedsDataClean is implied by NeedsNodeClean globally
            and thus clean() *does* get called for this one as well */
-        CORRADE_COMPARE(ui.animator<AttachmentAnimator>(anotherDataAttachmentAnimator).cleanCallCount, 1);
+        CORRADE_COMPARE(anotherDataAttachmentAnimator->cleanCallCount, 1);
     }
 
     /* Removing a layouter sets a state flag */
     if(data.layouters) {
-        ui.removeLayouter(layouter2);
+        ui.removeLayouter(layouter2->handle());
         CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsLayoutAssignmentUpdate);
 
         layouterUpdateCalls = {};
@@ -10752,14 +10789,14 @@ void AbstractUserInterfaceTest::state() {
                 ui.clean();
             }
             CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsLayoutAssignmentUpdate);
-            CORRADE_COMPARE(ui.layouter(layouter1).usedCount(), 2);
-            CORRADE_COMPARE(ui.layouter<Layouter>(layouter1).cleanCallCount, 1);
+            CORRADE_COMPARE(layouter1->usedCount(), 2);
+            CORRADE_COMPARE(layouter1->cleanCallCount, 1);
             CORRADE_COMPARE_AS(layouterUpdateCalls, Containers::arrayView<UnsignedInt>({
             }), TestSuite::Compare::Container);
-            CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 1);
-            CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 21);
-            CORRADE_COMPARE(ui.layer<Layer>(anotherLayer).cleanCallCount, 1);
-            CORRADE_COMPARE(ui.layer<Layer>(anotherLayer).updateCallCount, 2);
+            CORRADE_COMPARE(layer.cleanCallCount, 1);
+            CORRADE_COMPARE(layer.updateCallCount, 21);
+            CORRADE_COMPARE(anotherLayer.cleanCallCount, 1);
+            CORRADE_COMPARE(anotherLayer.updateCallCount, 2);
         }
 
         /* Calling update() then resets the remaining state flag. There's no
@@ -10768,9 +10805,9 @@ void AbstractUserInterfaceTest::state() {
         {
             CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
 
-            ui.layouter<Layouter1>(layouter1).expectedLayoutIdsToUpdate = {};
-            ui.layouter<Layouter1>(layouter1).expectedTopLevelLayoutIds = {};
-            ui.layouter<Layouter1>(layouter1).expectedNodeOffsetsSizes = {};
+            layouter1->expectedLayoutIdsToUpdate = {};
+            layouter1->expectedTopLevelLayoutIds = {};
+            layouter1->expectedNodeOffsetsSizes = {};
 
             UnsignedInt expectedDataIds[]{
                 dataHandleId(dataAnother1)
@@ -10802,45 +10839,45 @@ void AbstractUserInterfaceTest::state() {
             };
             /* Removing a layouter means node offsets/sizes can change but also
                the set of visible nodes and enabled state */
-            ui.layer<Layer>(layer).expectedState = LayerState::NeedsNodeOrderUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsNodeOffsetSizeUpdate|(data.compositingLayer ? LayerState::NeedsCompositeOffsetSizeUpdate : LayerStates{});
+            layer.expectedState = LayerState::NeedsNodeOrderUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsNodeOffsetSizeUpdate|(data.compositingLayer ? LayerState::NeedsCompositeOffsetSizeUpdate : LayerStates{});
             /* The other layer doesn't have compositing enabled ever */
-            ui.layer<Layer>(anotherLayer).expectedState = LayerState::NeedsNodeOrderUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsNodeOffsetSizeUpdate;
-            ui.layer<Layer>(layer).expectedDataIds = expectedDataIds;
-            ui.layer<Layer>(layer).expectedClipRectIdsDataCounts = expectedClipRectIdsDataCounts;
+            anotherLayer.expectedState = LayerState::NeedsNodeOrderUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsNodeOffsetSizeUpdate;
+            layer.expectedDataIds = expectedDataIds;
+            layer.expectedClipRectIdsDataCounts = expectedClipRectIdsDataCounts;
             if(data.compositingLayer)
-                ui.layer<Layer>(layer).expectedCompositeRectOffsetsSizes = expectedCompositeRectOffsetsSizes;
-            for(LayerHandle i: {layer, anotherLayer}) {
-                CORRADE_ITERATION(i);
-                ui.layer<Layer>(i).expectedNodeOffsetsSizesOpacities = expectedNodeOffsetsSizesOpacities;
-                ui.layer<Layer>(i).expectedNodesEnabled = expectedNodesEnabled;
-                ui.layer<Layer>(i).expectedClipRectOffsetsSizes = expectedClipRectOffsetsSizes;
+                layer.expectedCompositeRectOffsetsSizes = expectedCompositeRectOffsetsSizes;
+            for(Layer* i: {&layer, &anotherLayer}) {
+                CORRADE_ITERATION(i->handle());
+                i->expectedNodeOffsetsSizesOpacities = expectedNodeOffsetsSizesOpacities;
+                i->expectedNodesEnabled = expectedNodesEnabled;
+                i->expectedClipRectOffsetsSizes = expectedClipRectOffsetsSizes;
             }
 
             ui.update();
         }
         CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
-        CORRADE_COMPARE(ui.layouter(layouter1).usedCount(), 2);
-        CORRADE_COMPARE(ui.layouter<Layouter>(layouter1).cleanCallCount, 1);
+        CORRADE_COMPARE(layouter1->usedCount(), 2);
+        CORRADE_COMPARE(layouter1->cleanCallCount, 1);
         CORRADE_COMPARE_AS(layouterUpdateCalls, Containers::arrayView<UnsignedInt>({
             /* No update() is called on layouter2 anymore */
         }), TestSuite::Compare::Container);
-        CORRADE_COMPARE(ui.layer(layer).usedCount(), 1);
-        CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 1);
-        CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 22);
-        CORRADE_COMPARE(ui.layer<Layer>(anotherLayer).cleanCallCount, 1);
-        CORRADE_COMPARE(ui.layer<Layer>(anotherLayer).updateCallCount, 3);
+        CORRADE_COMPARE(layer.usedCount(), 1);
+        CORRADE_COMPARE(layer.cleanCallCount, 1);
+        CORRADE_COMPARE(layer.updateCallCount, 22);
+        CORRADE_COMPARE(anotherLayer.cleanCallCount, 1);
+        CORRADE_COMPARE(anotherLayer.updateCallCount, 3);
         if(data.nodeAttachmentAnimators) {
-            CORRADE_COMPARE(ui.animator(nodeAttachmentAnimator).usedCount(), 1);
-            CORRADE_COMPARE(ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).cleanCallCount, 1);
+            CORRADE_COMPARE(nodeAttachmentAnimator->usedCount(), 1);
+            CORRADE_COMPARE(nodeAttachmentAnimator->cleanCallCount, 1);
         }
         if(data.dataAttachmentAnimators) {
-            CORRADE_COMPARE(ui.animator(dataAttachmentAnimator).usedCount(), 1);
-            CORRADE_COMPARE(ui.animator<AttachmentAnimator>(dataAttachmentAnimator).cleanCallCount, 3);
+            CORRADE_COMPARE(dataAttachmentAnimator->usedCount(), 1);
+            CORRADE_COMPARE(dataAttachmentAnimator->cleanCallCount, 3);
         }
     }
 
     /* Removing a layer sets a state flag */
-    ui.removeLayer(layer);
+    ui.removeLayer(layer.handle());
     CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataAttachmentUpdate);
 
     /* Calling clean() should be a no-op */
@@ -10852,18 +10889,18 @@ void AbstractUserInterfaceTest::state() {
         CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataAttachmentUpdate);
         CORRADE_COMPARE(ui.renderer<Renderer>().setupFramebufferCallCount, 2);
         if(data.layouters) {
-            CORRADE_COMPARE(ui.layouter(layouter1).usedCount(), 2);
-            CORRADE_COMPARE(ui.layouter<Layouter>(layouter1).cleanCallCount, 1);
+            CORRADE_COMPARE(layouter1->usedCount(), 2);
+            CORRADE_COMPARE(layouter1->cleanCallCount, 1);
         }
-        CORRADE_COMPARE(ui.layer<Layer>(anotherLayer).cleanCallCount, 1);
-        CORRADE_COMPARE(ui.layer<Layer>(anotherLayer).updateCallCount, 2 + (data.layouters ? 1 : 0));
+        CORRADE_COMPARE(anotherLayer.cleanCallCount, 1);
+        CORRADE_COMPARE(anotherLayer.updateCallCount, 2 + (data.layouters ? 1 : 0));
         if(data.nodeAttachmentAnimators) {
-            CORRADE_COMPARE(ui.animator(nodeAttachmentAnimator).usedCount(), 1);
-            CORRADE_COMPARE(ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).cleanCallCount, 1);
+            CORRADE_COMPARE(nodeAttachmentAnimator->usedCount(), 1);
+            CORRADE_COMPARE(nodeAttachmentAnimator->cleanCallCount, 1);
         }
         if(data.dataAttachmentAnimators) {
-            CORRADE_COMPARE(ui.animator(dataAttachmentAnimator).usedCount(), 1);
-            CORRADE_COMPARE(ui.animator<AttachmentAnimator>(dataAttachmentAnimator).cleanCallCount, 3);
+            CORRADE_COMPARE(dataAttachmentAnimator->usedCount(), 1);
+            CORRADE_COMPARE(dataAttachmentAnimator->cleanCallCount, 3);
         }
     }
 
@@ -10896,42 +10933,42 @@ void AbstractUserInterfaceTest::state() {
         Containers::Pair<Vector2, Vector2> expectedClipRectOffsetsSizes[]{
             {{}, {}}
         };
-        ui.layer<Layer>(anotherLayer).expectedDataIdsToRemove = {};
+        anotherLayer.expectedDataIdsToRemove = {};
         /* Currently, affecting any node attachments triggers a need to update
            draw order on all layers, even those that didn't have the
            attachments affected */
         /** @todo separate those? or with the addition of draw merging this
             won't be possible anymore? */
-        ui.layer<Layer>(anotherLayer).expectedState = LayerState::NeedsNodeOrderUpdate;
-        ui.layer<Layer>(anotherLayer).expectedDataIds = {};
-        ui.layer<Layer>(anotherLayer).expectedNodeOffsetsSizesOpacities = expectedNodeOffsetsSizesOpacities;
-        ui.layer<Layer>(anotherLayer).expectedNodesEnabled = expectedNodesEnabled;
-        ui.layer<Layer>(anotherLayer).expectedClipRectIdsDataCounts = {};
-        ui.layer<Layer>(anotherLayer).expectedClipRectOffsetsSizes = expectedClipRectOffsetsSizes;
+        anotherLayer.expectedState = LayerState::NeedsNodeOrderUpdate;
+        anotherLayer.expectedDataIds = {};
+        anotherLayer.expectedNodeOffsetsSizesOpacities = expectedNodeOffsetsSizesOpacities;
+        anotherLayer.expectedNodesEnabled = expectedNodesEnabled;
+        anotherLayer.expectedClipRectIdsDataCounts = {};
+        anotherLayer.expectedClipRectOffsetsSizes = expectedClipRectOffsetsSizes;
         ui.update();
     }
     CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
     CORRADE_COMPARE(ui.renderer<Renderer>().setupFramebufferCallCount, 2);
-    CORRADE_COMPARE(ui.layer(anotherLayer).usedCount(), 0);
+    CORRADE_COMPARE(anotherLayer.usedCount(), 0);
     if(data.layouters) {
-        CORRADE_COMPARE(ui.layouter(layouter1).usedCount(), 2);
-        CORRADE_COMPARE(ui.layouter<Layouter>(layouter1).cleanCallCount, 1);
+        CORRADE_COMPARE(layouter1->usedCount(), 2);
+        CORRADE_COMPARE(layouter1->cleanCallCount, 1);
         CORRADE_COMPARE_AS(layouterUpdateCalls, Containers::arrayView<UnsignedInt>({
         }), TestSuite::Compare::Container);
     }
-    CORRADE_COMPARE(ui.layer<Layer>(anotherLayer).cleanCallCount, 1);
-    CORRADE_COMPARE(ui.layer<Layer>(anotherLayer).updateCallCount, 3 + (data.layouters ? 1 : 0));
+    CORRADE_COMPARE(anotherLayer.cleanCallCount, 1);
+    CORRADE_COMPARE(anotherLayer.updateCallCount, 3 + (data.layouters ? 1 : 0));
     if(data.nodeAttachmentAnimators) {
-        CORRADE_COMPARE(ui.animator(nodeAttachmentAnimator).usedCount(), 1);
-        CORRADE_COMPARE(ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).cleanCallCount, 1);
+        CORRADE_COMPARE(nodeAttachmentAnimator->usedCount(), 1);
+        CORRADE_COMPARE(nodeAttachmentAnimator->cleanCallCount, 1);
     }
     if(data.dataAttachmentAnimators) {
-        CORRADE_COMPARE(ui.animator(dataAttachmentAnimator).usedCount(), 1);
+        CORRADE_COMPARE(dataAttachmentAnimator->usedCount(), 1);
         /* The layer the animator was associated with is gone but the animator
            stays. It's just not used for anything anymore. */
-        CORRADE_COMPARE(ui.animator<AttachmentAnimator>(dataAttachmentAnimator).cleanCallCount, 3);
+        CORRADE_COMPARE(dataAttachmentAnimator->cleanCallCount, 3);
         /* The other animator isn't cleaned or affected in any other way */
-        CORRADE_COMPARE(ui.animator<AttachmentAnimator>(anotherDataAttachmentAnimator).cleanCallCount, 1);
+        CORRADE_COMPARE(anotherDataAttachmentAnimator->cleanCallCount, 1);
     }
 }
 
@@ -11469,11 +11506,6 @@ void AbstractUserInterfaceTest::statePropagateFromLayers() {
     /* Event/framebuffer scaling doesn't affect these tests */
     AbstractUserInterface ui{{100, 100}};
 
-    /*LayerHandle layerWithoutInstance =*/ ui.createLayer();
-    LayerHandle layerRemoved = ui.createLayer();
-    LayerHandle layer1 = ui.createLayer();
-    LayerHandle layer2 = ui.createLayer();
-
     struct Layer: AbstractLayer {
         using AbstractLayer::AbstractLayer;
         using AbstractLayer::create;
@@ -11481,9 +11513,10 @@ void AbstractUserInterfaceTest::statePropagateFromLayers() {
 
         LayerFeatures doFeatures() const override { return {}; }
     };
-    ui.setLayerInstance(Containers::pointer<Layer>(layerRemoved));
-    ui.setLayerInstance(Containers::pointer<Layer>(layer1));
-    ui.setLayerInstance(Containers::pointer<Layer>(layer2));
+    /*LayerHandle layerWithoutInstance =*/ ui.createLayer();
+    Layer& layerRemoved = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer()));
+    Layer& layer1 = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer()));
+    Layer& layer2 = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer()));
     CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
 
     /* Create a node for using later and make the state empty again */
@@ -11495,35 +11528,35 @@ void AbstractUserInterfaceTest::statePropagateFromLayers() {
        because the instance is gone), and the layer without an instance is
        skipped. The "works correctly" aspect can't really be observed, we can
        only check that it doesn't crash. */
-    ui.layer(layerRemoved).setNeedsUpdate(data.state);
-    ui.removeLayer(layerRemoved);
+    layerRemoved.setNeedsUpdate(data.state);
+    ui.removeLayer(layerRemoved.handle());
     CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataAttachmentUpdate);
 
     ui.update();
     CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
 
     /* It also shouldn't stop at those, states after those get checked as well */
-    ui.layer(layer1).setNeedsUpdate(data.state);
-    CORRADE_COMPARE(ui.layer(layer1).state(), data.state);
-    CORRADE_COMPARE(ui.layer(layer2).state(), LayerStates{});
+    layer1.setNeedsUpdate(data.state);
+    CORRADE_COMPARE(layer1.state(), data.state);
+    CORRADE_COMPARE(layer2.state(), LayerStates{});
     CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataUpdate);
 
     /* And updating should reset all of them again */
     ui.update();
-    CORRADE_COMPARE(ui.layer(layer1).state(), LayerStates{});
-    CORRADE_COMPARE(ui.layer(layer2).state(), LayerStates{});
+    CORRADE_COMPARE(layer1.state(), LayerStates{});
+    CORRADE_COMPARE(layer2.state(), LayerStates{});
     CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
 
     /* Creating a data results in NeedsDataUpdate on the layer */
-    DataHandle data1 = ui.layer<Layer>(layer1).create();
-    DataHandle data2 = ui.layer<Layer>(layer2).create();
-    CORRADE_COMPARE(ui.layer(layer1).state(), LayerState::NeedsDataUpdate);
+    DataHandle data1 = layer1.create();
+    DataHandle data2 = layer2.create();
+    CORRADE_COMPARE(layer1.state(), LayerState::NeedsDataUpdate);
     CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataUpdate);
 
     /* Attaching results in NeedsAttachmentUpdate in addition, plus extra
        states on the layer itself */
-    ui.layer(layer1).attach(data1, node);
-    CORRADE_COMPARE(ui.layer(layer1).state(), LayerState::NeedsAttachmentUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsNodeOffsetSizeUpdate|LayerState::NeedsDataUpdate);
+    layer1.attach(data1, node);
+    CORRADE_COMPARE(layer1.state(), LayerState::NeedsAttachmentUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsNodeOffsetSizeUpdate|LayerState::NeedsDataUpdate);
     CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataAttachmentUpdate);
 
     /* Hiding a node will set a UI-wide NeedsNodeUpdate flag */
@@ -11533,8 +11566,8 @@ void AbstractUserInterfaceTest::statePropagateFromLayers() {
     /* Having the UI marked with NeedsNodeUpdate shouldn't prevent the
        NeedsDataClean from a later layer from being propagated to the UI-wide
        state */
-    ui.layer<Layer>(layer2).remove(data2);
-    CORRADE_COMPARE(ui.layer(layer2).state(), LayerState::NeedsDataUpdate|LayerState::NeedsDataClean);
+    layer2.remove(data2);
+    CORRADE_COMPARE(layer2.state(), LayerState::NeedsDataUpdate|LayerState::NeedsDataClean);
     CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeUpdate|UserInterfaceState::NeedsDataClean);
 }
 
@@ -11545,11 +11578,6 @@ void AbstractUserInterfaceTest::statePropagateFromLayouters() {
     /* Event/framebuffer scaling doesn't affect these tests */
     AbstractUserInterface ui{{100, 100}};
 
-    /*LayouterHandle layouterWithoutInstance =*/ ui.createLayouter();
-    LayouterHandle layouterRemoved = ui.createLayouter();
-    LayouterHandle layouter1 = ui.createLayouter();
-    LayouterHandle layouter2 = ui.createLayouter();
-
     struct Layouter: AbstractLayouter {
         using AbstractLayouter::AbstractLayouter;
         using AbstractLayouter::add;
@@ -11557,9 +11585,10 @@ void AbstractUserInterfaceTest::statePropagateFromLayouters() {
 
         void doUpdate(Containers::BitArrayView, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const NodeHandle>&, const Containers::StridedArrayView1D<Vector2>&, const  Containers::StridedArrayView1D<Vector2>&) override {}
     };
-    ui.setLayouterInstance(Containers::pointer<Layouter>(layouterRemoved));
-    ui.setLayouterInstance(Containers::pointer<Layouter>(layouter1));
-    ui.setLayouterInstance(Containers::pointer<Layouter>(layouter2));
+    /*LayouterHandle layouterWithoutInstance =*/ ui.createLayouter();
+    Layouter& layouterRemoved = ui.setLayouterInstance(Containers::pointer<Layouter>(ui.createLayouter()));
+    Layouter& layouter1 = ui.setLayouterInstance(Containers::pointer<Layouter>(ui.createLayouter()));
+    Layouter& layouter2 = ui.setLayouterInstance(Containers::pointer<Layouter>(ui.createLayouter()));
     CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
 
     /* Create a node for using later and make the state empty again */
@@ -11571,43 +11600,43 @@ void AbstractUserInterfaceTest::statePropagateFromLayouters() {
        because the instance is gone), and the layouter without an instance is
        skipped. The "works correctly" aspect can't really be observed, we can
        only check that it doesn't crash. */
-    ui.layouter(layouterRemoved).setNeedsUpdate();
-    ui.removeLayouter(layouterRemoved);
+    layouterRemoved.setNeedsUpdate();
+    ui.removeLayouter(layouterRemoved.handle());
     CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsLayoutAssignmentUpdate);
 
     ui.update();
     CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
 
     /* It also shouldn't stop at those, states after those get checked as well */
-    ui.layouter(layouter2).setNeedsUpdate();
-    CORRADE_COMPARE(ui.layouter(layouter1).state(), LayouterStates{});
-    CORRADE_COMPARE(ui.layouter(layouter2).state(), LayouterState::NeedsUpdate);
+    layouter2.setNeedsUpdate();
+    CORRADE_COMPARE(layouter1.state(), LayouterStates{});
+    CORRADE_COMPARE(layouter2.state(), LayouterState::NeedsUpdate);
     CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsLayoutUpdate);
 
     /* And updating should reset all of them again. It should do that even
        though there are no layouts to actually update. */
     ui.update();
-    CORRADE_COMPARE(ui.layouter(layouter1).state(), LayouterStates{});
-    CORRADE_COMPARE(ui.layouter(layouter2).state(), LayouterStates{});
+    CORRADE_COMPARE(layouter1.state(), LayouterStates{});
+    CORRADE_COMPARE(layouter2.state(), LayouterStates{});
     CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
 
     /* Creating a layout results in NeedsAssignmentUpdate */
-    LayoutHandle layout1 = ui.layouter<Layouter>(layouter1).add(node);
-    /*LayoutHandle layout2 =*/ ui.layouter<Layouter>(layouter2).add(node);
-    CORRADE_COMPARE(ui.layouter(layouter1).state(), LayouterState::NeedsAssignmentUpdate);
-    CORRADE_COMPARE(ui.layouter(layouter2).state(), LayouterState::NeedsAssignmentUpdate);
+    LayoutHandle layout1 = layouter1.add(node);
+    /*LayoutHandle layout2 =*/ layouter2.add(node);
+    CORRADE_COMPARE(layouter1.state(), LayouterState::NeedsAssignmentUpdate);
+    CORRADE_COMPARE(layouter2.state(), LayouterState::NeedsAssignmentUpdate);
     CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsLayoutAssignmentUpdate);
 
     /* And updating should reset all of them again */
     ui.update();
-    CORRADE_COMPARE(ui.layouter(layouter1).state(), LayouterStates{});
-    CORRADE_COMPARE(ui.layouter(layouter2).state(), LayouterStates{});
+    CORRADE_COMPARE(layouter1.state(), LayouterStates{});
+    CORRADE_COMPARE(layouter2.state(), LayouterStates{});
     CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
 
     /* Removing a layout results in NeedsAssignmentUpdate again */
-    ui.layouter<Layouter>(layouter1).remove(layout1);
-    CORRADE_COMPARE(ui.layouter(layouter1).state(), LayouterState::NeedsAssignmentUpdate);
-    CORRADE_COMPARE(ui.layouter(layouter2).state(), LayouterStates{});
+    layouter1.remove(layout1);
+    CORRADE_COMPARE(layouter1.state(), LayouterState::NeedsAssignmentUpdate);
+    CORRADE_COMPARE(layouter2.state(), LayouterStates{});
     CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsLayoutAssignmentUpdate);
 }
 
@@ -13036,73 +13065,72 @@ void AbstractUserInterfaceTest::eventEdges() {
         Containers::Array<Containers::Pair<DataHandle, Vector2>> eventCalls;
     };
 
-    LayerHandle layer = ui.createLayer();
-    ui.setLayerInstance(Containers::pointer<Layer>(layer));
+    Layer& layer = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer()));
 
     NodeHandle bottom = ui.createNode({0.0f, 0.0f}, {100.0f, 100.0f});
     NodeHandle top = ui.createNode({10.0f, 20.0f}, {80.0f, 60.0f});
-    DataHandle bottomData = ui.layer<Layer>(layer).create(bottom);
-    DataHandle topData = ui.layer<Layer>(layer).create(top);
+    DataHandle bottomData = layer.create(bottom);
+    DataHandle topData = layer.create(top);
 
     /* Top left corner should go to the top node */
     {
-        ui.layer<Layer>(layer).eventCalls = {};
+        layer.eventCalls = {};
         PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
         CORRADE_VERIFY(ui.pointerPressEvent({100.0f, 2000.0f}, event));
-        CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Pair<DataHandle, Vector2>>({
+        CORRADE_COMPARE_AS(layer.eventCalls, (Containers::arrayView<Containers::Pair<DataHandle, Vector2>>({
             {topData, {0.0f, 0.0f}},
         })), TestSuite::Compare::Container);
 
     /* Top edge should go to the top node */
     } {
-        ui.layer<Layer>(layer).eventCalls = {};
+        layer.eventCalls = {};
         PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
         CORRADE_VERIFY(ui.pointerPressEvent({570.0f, 2000.0f}, event));
-        CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Pair<DataHandle, Vector2>>({
+        CORRADE_COMPARE_AS(layer.eventCalls, (Containers::arrayView<Containers::Pair<DataHandle, Vector2>>({
             {topData, {47.0f, 0.0f}},
         })), TestSuite::Compare::Container);
 
     /* Left edge should go to the top node */
     } {
-        ui.layer<Layer>(layer).eventCalls = {};
+        layer.eventCalls = {};
         PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
         CORRADE_VERIFY(ui.pointerPressEvent({100.0f, 3400.0f}, event));
-        CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Pair<DataHandle, Vector2>>({
+        CORRADE_COMPARE_AS(layer.eventCalls, (Containers::arrayView<Containers::Pair<DataHandle, Vector2>>({
             {topData, {0.0f, 14.0f}},
         })), TestSuite::Compare::Container);
 
     /* Bottom right corner should go to the bottom node */
     } {
-        ui.layer<Layer>(layer).eventCalls = {};
+        layer.eventCalls = {};
         PointerEvent event1{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
         PointerEvent event2{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
         CORRADE_VERIFY(ui.pointerPressEvent({900.0f, 8000.0f}, event1));
         CORRADE_VERIFY(ui.pointerPressEvent({899.0f, 7990.0f}, event2));
-        CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Pair<DataHandle, Vector2>>({
+        CORRADE_COMPARE_AS(layer.eventCalls, (Containers::arrayView<Containers::Pair<DataHandle, Vector2>>({
             {bottomData, {90.0f, 80.0f}},
             {topData, {79.9f, 59.9f}},
         })), TestSuite::Compare::Container);
 
     /* Bottom edge should go to the top node */
     } {
-        ui.layer<Layer>(layer).eventCalls = {};
+        layer.eventCalls = {};
         PointerEvent event1{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
         PointerEvent event2{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
         CORRADE_VERIFY(ui.pointerPressEvent({900.0f, 3400.0f}, event1));
         CORRADE_VERIFY(ui.pointerPressEvent({899.0f, 3400.0f}, event2));
-        CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Pair<DataHandle, Vector2>>({
+        CORRADE_COMPARE_AS(layer.eventCalls, (Containers::arrayView<Containers::Pair<DataHandle, Vector2>>({
             {bottomData, {90.0f, 34.0f}},
             {topData, {79.9f, 14.0f}},
         })), TestSuite::Compare::Container);
 
     /* Right edge should go to the bottom node */
     } {
-        ui.layer<Layer>(layer).eventCalls = {};
+        layer.eventCalls = {};
         PointerEvent event1{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
         PointerEvent event2{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
         CORRADE_VERIFY(ui.pointerPressEvent({570.0f, 8000.0f}, event1));
         CORRADE_VERIFY(ui.pointerPressEvent({570.0f, 7990.0f}, event2));
-        CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Pair<DataHandle, Vector2>>({
+        CORRADE_COMPARE_AS(layer.eventCalls, (Containers::arrayView<Containers::Pair<DataHandle, Vector2>>({
             {bottomData, {57.0f, 80.0f}},
             {topData, {47.0f, 59.9f}},
         })), TestSuite::Compare::Container);
@@ -13200,12 +13228,11 @@ void AbstractUserInterfaceTest::eventPointerPress() {
         CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
     }
 
-    LayerHandle layer = ui.createLayer();
-    ui.setLayerInstance(Containers::pointer<Layer>(layer));
-    /*DataHandle data1 =*/ ui.layer<Layer>(layer).create();
-    DataHandle data2 = ui.layer<Layer>(layer).create(node);
-    DataHandle data3 = ui.layer<Layer>(layer).create(node);
-    DataHandle dataAnother = ui.layer<Layer>(layer).create(another);
+    Layer& layer = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer()));
+    /*DataHandle data1 =*/ layer.create();
+    DataHandle data2 = layer.create(node);
+    DataHandle data3 = layer.create(node);
+    DataHandle dataAnother = layer.create(another);
 
     if(data.update) {
         CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataAttachmentUpdate);
@@ -13237,7 +13264,7 @@ void AbstractUserInterfaceTest::eventPointerPress() {
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentGlobalPointerPosition(), (Vector2{100.0f, 100.0f}));
-        CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
+        CORRADE_COMPARE_AS(layer.eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
         })), TestSuite::Compare::Container);
 
     /* Outside with a secondary event. No hit, the position doesn't get
@@ -13250,7 +13277,7 @@ void AbstractUserInterfaceTest::eventPointerPress() {
         CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         /* Unchanged */
         CORRADE_COMPARE(ui.currentGlobalPointerPosition(), (Vector2{100.0f, 100.0f}));
-        CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
+        CORRADE_COMPARE_AS(layer.eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
         })), TestSuite::Compare::Container);
 
     /* Inside with a secondary event. Accepted, but pressed node isn't recorded
@@ -13263,7 +13290,7 @@ void AbstractUserInterfaceTest::eventPointerPress() {
         CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         /* Unchanged */
         CORRADE_COMPARE(ui.currentGlobalPointerPosition(), (Vector2{100.0f, 100.0f}));
-        CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
+        CORRADE_COMPARE_AS(layer.eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
             {Secondary, data3, {12.0f, 2.0f}},
             {Secondary, data2, {12.0f, 2.0f}}
         })), TestSuite::Compare::Container);
@@ -13271,7 +13298,7 @@ void AbstractUserInterfaceTest::eventPointerPress() {
     /* Inside with a primary event. Hit, remember pressed node and position.
        Second time on the same node the event gets isNodePressed() set. */
     } {
-        ui.layer<Layer>(layer).eventCalls = {};
+        layer.eventCalls = {};
 
         PointerEvent event1{12345_nsec, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
         CORRADE_VERIFY(ui.pointerPressEvent({200.0f, 2500.0f}, event1));
@@ -13287,7 +13314,7 @@ void AbstractUserInterfaceTest::eventPointerPress() {
         CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentGlobalPointerPosition(), (Vector2{22.0f, 23.0f}));
 
-        CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
+        CORRADE_COMPARE_AS(layer.eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
             {Primary, data3, {10.0f, 5.0f}},
             {Primary, data2, {10.0f, 5.0f}},
             {Primary|Pressed, data3, {12.0f, 3.0f}},
@@ -13303,7 +13330,7 @@ void AbstractUserInterfaceTest::eventPointerPress() {
         ui.pointerPressEvent({1000.0f, 1000.0f}, eventPressReset);
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
 
-        ui.layer<Layer>(layer).eventCalls = {};
+        layer.eventCalls = {};
 
         PointerEvent event1{12345_nsec, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
         CORRADE_VERIFY(ui.pointerPressEvent({200.0f, 2500.0f}, event1));
@@ -13320,7 +13347,7 @@ void AbstractUserInterfaceTest::eventPointerPress() {
         /* Unchanged */
         CORRADE_COMPARE(ui.currentGlobalPointerPosition(), (Vector2{20.0f, 25.0f}));
 
-        CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
+        CORRADE_COMPARE_AS(layer.eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
             {Primary, data3, {10.0f, 5.0f}},
             {Primary, data2, {10.0f, 5.0f}},
             {Secondary, dataAnother, {10.0f, 2.0f}},
@@ -13335,7 +13362,7 @@ void AbstractUserInterfaceTest::eventPointerPress() {
         ui.pointerPressEvent({1000.0f, 1000.0f}, eventPressReset);
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
 
-        ui.layer<Layer>(layer).eventCalls = {};
+        layer.eventCalls = {};
 
         PointerEvent event1{12345_nsec, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
         CORRADE_VERIFY(ui.pointerPressEvent({200.0f, 2500.0f}, event1));
@@ -13351,7 +13378,7 @@ void AbstractUserInterfaceTest::eventPointerPress() {
         CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentGlobalPointerPosition(), (Vector2{45.0f, 20.0f}));
 
-        CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
+        CORRADE_COMPARE_AS(layer.eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
             {Primary, data3, {10.0f, 5.0f}},
             {Primary, data2, {10.0f, 5.0f}},
             {Primary, dataAnother, {15.0f, 0.0f}},
@@ -13366,7 +13393,7 @@ void AbstractUserInterfaceTest::eventPointerPress() {
         ui.pointerPressEvent({1000.0f, 1000.0f}, eventPressReset);
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
 
-        ui.layer<Layer>(layer).eventCalls = {};
+        layer.eventCalls = {};
 
         PointerEvent event1{12345_nsec, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
         CORRADE_VERIFY(ui.pointerPressEvent({200.0f, 2500.0f}, event1));
@@ -13383,7 +13410,7 @@ void AbstractUserInterfaceTest::eventPointerPress() {
         /* Unchanged */
         CORRADE_COMPARE(ui.currentGlobalPointerPosition(), (Vector2{20.0f, 25.0f}));
 
-        CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
+        CORRADE_COMPARE_AS(layer.eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
             {Primary, data3, {10.0f, 5.0f}},
             {Primary, data2, {10.0f, 5.0f}}
             /* Press outside isn't going anywhere */
@@ -13398,7 +13425,7 @@ void AbstractUserInterfaceTest::eventPointerPress() {
         ui.pointerPressEvent({1000.0f, 1000.0f}, eventPressReset);
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
 
-        ui.layer<Layer>(layer).eventCalls = {};
+        layer.eventCalls = {};
 
         PointerEvent event1{12345_nsec, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
         CORRADE_VERIFY(ui.pointerPressEvent({200.0f, 2500.0f}, event1));
@@ -13414,7 +13441,7 @@ void AbstractUserInterfaceTest::eventPointerPress() {
         CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentGlobalPointerPosition(), (Vector2{100.0f, 100.0f}));
 
-        CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
+        CORRADE_COMPARE_AS(layer.eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
             {Primary, data3, {10.0f, 5.0f}},
             {Primary, data2, {10.0f, 5.0f}}
             /* Press outside isn't going anywhere */
@@ -13422,7 +13449,7 @@ void AbstractUserInterfaceTest::eventPointerPress() {
 
     /* Press with modifiers behaves the same as without */
     } {
-        ui.layer<Layer>(layer).eventCalls = {};
+        layer.eventCalls = {};
 
         PointerEvent event1{12345_nsec, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, Modifier::Super|Modifier::Alt};
         CORRADE_VERIFY(ui.pointerPressEvent({200.0f, 2500.0f}, event1));
@@ -13716,12 +13743,11 @@ void AbstractUserInterfaceTest::eventPointerRelease() {
         }
     }
 
-    LayerHandle layer = ui.createLayer();
-    ui.setLayerInstance(Containers::pointer<Layer>(layer));
-    /*DataHandle data1 =*/ ui.layer<Layer>(layer).create();
-    DataHandle data2 = ui.layer<Layer>(layer).create(node);
-    DataHandle data3 = ui.layer<Layer>(layer).create(node);
-    DataHandle dataAnother = ui.layer<Layer>(layer).create(another);
+    Layer& layer = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer()));
+    /*DataHandle data1 =*/ layer.create();
+    DataHandle data2 = layer.create(node);
+    DataHandle data3 = layer.create(node);
+    DataHandle dataAnother = layer.create(another);
 
     if(data.update) {
         CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataAttachmentUpdate);
@@ -13737,7 +13763,7 @@ void AbstractUserInterfaceTest::eventPointerRelease() {
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentGlobalPointerPosition(), (Vector2{100.0f, 100.0f}));
-        CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
+        CORRADE_COMPARE_AS(layer.eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
         })), TestSuite::Compare::Container);
 
     /* Outside with a secondary event doesn't remember the position */
@@ -13749,7 +13775,7 @@ void AbstractUserInterfaceTest::eventPointerRelease() {
         CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         /* Unchanged */
         CORRADE_COMPARE(ui.currentGlobalPointerPosition(), (Vector2{100.0f, 100.0f}));
-        CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
+        CORRADE_COMPARE_AS(layer.eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
         })), TestSuite::Compare::Container);
 
     /* Inside, hit, going through all data attachments. Highest ID gets picked
@@ -13761,14 +13787,14 @@ void AbstractUserInterfaceTest::eventPointerRelease() {
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentGlobalPointerPosition(), (Vector2{20.0f, 25.0f}));
-        CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
+        CORRADE_COMPARE_AS(layer.eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
             {Release, data3, {10.0f, 5.0f}},
             {Release, data2, {10.0f, 5.0f}}
         })), TestSuite::Compare::Container);
 
     /* Inside with a secondary event doesn't update the position */
     } {
-        ui.layer<Layer>(layer).eventCalls = {};
+        layer.eventCalls = {};
 
         PointerEvent event{12345_nsec, PointerEventSource::Touch, Pointer::Finger, false, 0, {}};
         CORRADE_VERIFY(ui.pointerReleaseEvent({220.0f, 2200.0f}, event));
@@ -13777,7 +13803,7 @@ void AbstractUserInterfaceTest::eventPointerRelease() {
         CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         /* Unchanged */
         CORRADE_COMPARE(ui.currentGlobalPointerPosition(), (Vector2{20.0f, 25.0f}));
-        CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
+        CORRADE_COMPARE_AS(layer.eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
             {Release|Secondary, data3, {12.0f, 2.0f}},
             {Release|Secondary, data2, {12.0f, 2.0f}}
         })), TestSuite::Compare::Container);
@@ -13785,7 +13811,7 @@ void AbstractUserInterfaceTest::eventPointerRelease() {
     /* A release on the same node sets the isNodePressed() bit and resets the
        currently pressed node */
     } {
-        ui.layer<Layer>(layer).eventCalls = {};
+        layer.eventCalls = {};
 
         PointerEvent eventPress{12345_nsec, PointerEventSource::Pen, Pointer::Pen, true, 0, {}};
         CORRADE_VERIFY(ui.pointerPressEvent({250.0f, 3000.0f}, eventPress));
@@ -13801,7 +13827,7 @@ void AbstractUserInterfaceTest::eventPointerRelease() {
         CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentGlobalPointerPosition(), (Vector2{20.0f, 25.0f}));
 
-        CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
+        CORRADE_COMPARE_AS(layer.eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
             {Press, data3, {15.0f, 10.0f}},
             {Press, data2, {15.0f, 10.0f}},
             {Release|Pressed, data3, {10.0f, 5.0f}},
@@ -13811,7 +13837,7 @@ void AbstractUserInterfaceTest::eventPointerRelease() {
     /* A release on another node resets the currently pressed node, and doesn't
        set the isNodePressed() bit */
     } {
-        ui.layer<Layer>(layer).eventCalls = {};
+        layer.eventCalls = {};
 
         PointerEvent eventPress{12345_nsec, PointerEventSource::Pen, Pointer::Pen, true, 0, {}};
         CORRADE_VERIFY(ui.pointerPressEvent({250.0f, 3000.0f}, eventPress));
@@ -13827,7 +13853,7 @@ void AbstractUserInterfaceTest::eventPointerRelease() {
         CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentGlobalPointerPosition(), (Vector2{40.0f, 25.0f}));
 
-        CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
+        CORRADE_COMPARE_AS(layer.eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
             {Press, data3, {15.0f, 10.0f}},
             {Press, data2, {15.0f, 10.0f}},
             {Release, dataAnother, {10.0f, 5.0f}},
@@ -13835,7 +13861,7 @@ void AbstractUserInterfaceTest::eventPointerRelease() {
 
     /* A release resets the currently pressed node even if modifiers are set */
     } {
-        ui.layer<Layer>(layer).eventCalls = {};
+        layer.eventCalls = {};
 
         PointerEvent eventPress{12345_nsec, PointerEventSource::Pen, Pointer::Pen, true, 0, {}};
         CORRADE_VERIFY(ui.pointerPressEvent({250.0f, 3000.0f}, eventPress));
@@ -13851,7 +13877,7 @@ void AbstractUserInterfaceTest::eventPointerRelease() {
         CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentGlobalPointerPosition(), (Vector2{20.0f, 25.0f}));
 
-        CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
+        CORRADE_COMPARE_AS(layer.eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
             {Press, data3, {15.0f, 10.0f}},
             {Press, data2, {15.0f, 10.0f}},
             {Release|Pressed, data3, {10.0f, 5.0f}},
@@ -13860,7 +13886,7 @@ void AbstractUserInterfaceTest::eventPointerRelease() {
 
     /* A secondary release event doesn't affect the current pressed node */
     } {
-        ui.layer<Layer>(layer).eventCalls = {};
+        layer.eventCalls = {};
 
         PointerEvent eventPress{12345_nsec, PointerEventSource::Pen, Pointer::Pen, true, 0, {}};
         CORRADE_VERIFY(ui.pointerPressEvent({250.0f, 3000.0f}, eventPress));
@@ -13877,7 +13903,7 @@ void AbstractUserInterfaceTest::eventPointerRelease() {
         /* Unchanged */
         CORRADE_COMPARE(ui.currentGlobalPointerPosition(), (Vector2{25.0f, 30.0f}));
 
-        CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
+        CORRADE_COMPARE_AS(layer.eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
             {Press, data3, {15.0f, 10.0f}},
             {Press, data2, {15.0f, 10.0f}},
             {Release|Pressed|Secondary, data3, {10.0f, 5.0f}},
@@ -14171,11 +14197,10 @@ void AbstractUserInterfaceTest::eventPointerMove() {
         }
     }
 
-    LayerHandle layer = ui.createLayer();
-    ui.setLayerInstance(Containers::pointer<Layer>(layer));
-    DataHandle leftData1 = ui.layer<Layer>(layer).create(left);
-    DataHandle leftData2 = ui.layer<Layer>(layer).create(left);
-    DataHandle rightData = ui.layer<Layer>(layer).create(right);
+    Layer& layer = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer()));
+    DataHandle leftData1 = layer.create(left);
+    DataHandle leftData2 = layer.create(left);
+    DataHandle rightData = layer.create(right);
 
     if(data.update) {
         CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataAttachmentUpdate);
@@ -14185,7 +14210,7 @@ void AbstractUserInterfaceTest::eventPointerMove() {
 
     /* Outside, no hit. The pointer position gets remembered though. */
     {
-        ui.layer<Layer>(layer).eventCalls = {};
+        layer.eventCalls = {};
 
         PointerMoveEvent event{12345_nsec, PointerEventSource::Mouse, {}, {}, true, 0, {}};
         CORRADE_VERIFY(!ui.pointerMoveEvent({100.0f, 1000.0f}, event));
@@ -14193,12 +14218,12 @@ void AbstractUserInterfaceTest::eventPointerMove() {
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentGlobalPointerPosition(), (Vector2{10.0f, 10.0f}));
-        CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector4>>({
+        CORRADE_COMPARE_AS(layer.eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector4>>({
         })), TestSuite::Compare::Container);
 
     /* Outside with a secondary event doesn't remember the position */
     } {
-        ui.layer<Layer>(layer).eventCalls = {};
+        layer.eventCalls = {};
 
         PointerMoveEvent event{12345_nsec, PointerEventSource::Touch, {}, {}, false, 0, {}};
         CORRADE_VERIFY(!ui.pointerMoveEvent({120.0f, 1300.0f}, event));
@@ -14207,7 +14232,7 @@ void AbstractUserInterfaceTest::eventPointerMove() {
         CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         /* Unchanged */
         CORRADE_COMPARE(ui.currentGlobalPointerPosition(), (Vector2{10.0f, 10.0f}));
-        CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector4>>({
+        CORRADE_COMPARE_AS(layer.eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector4>>({
         })), TestSuite::Compare::Container);
 
     /* Inside a node, with a secondary event, going through all data
@@ -14215,7 +14240,7 @@ void AbstractUserInterfaceTest::eventPointerMove() {
        case of secondary events, there's also no Enter event happening or a
        hovered node being set or hovered bit flipped in the event. */
     } {
-        ui.layer<Layer>(layer).eventCalls = {};
+        layer.eventCalls = {};
 
         PointerMoveEvent event1{12345_nsec, PointerEventSource::Touch, {}, {}, false, 0, {}};
         CORRADE_VERIFY(ui.pointerMoveEvent({300.0f, 1100.0f}, event1));
@@ -14233,7 +14258,7 @@ void AbstractUserInterfaceTest::eventPointerMove() {
         /* Unchanged */
         CORRADE_COMPARE(ui.currentGlobalPointerPosition(), (Vector2{10.0f, 10.0f}));
 
-        CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector4>>({
+        CORRADE_COMPARE_AS(layer.eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector4>>({
             /* No relative position in any */
             {Move|Secondary, leftData2, {10.0f, 11.0f, 0.0f, 0.0f}},
             {Move|Secondary, leftData1, {10.0f, 11.0f, 0.0f, 0.0f}},
@@ -14247,7 +14272,7 @@ void AbstractUserInterfaceTest::eventPointerMove() {
        picked first. Relative to previous move event even though it didn't hit
        anything, the hovered node gets set to given node. */
     } {
-        ui.layer<Layer>(layer).eventCalls = {};
+        layer.eventCalls = {};
 
         PointerMoveEvent event1{12345_nsec, PointerEventSource::Mouse, {}, {}, true, 0, {}};
         CORRADE_VERIFY(ui.pointerMoveEvent({300.0f, 1100.0f}, event1));
@@ -14263,7 +14288,7 @@ void AbstractUserInterfaceTest::eventPointerMove() {
         CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentGlobalPointerPosition(), (Vector2{35.0f, 10.0f}));
 
-        CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector4>>({
+        CORRADE_COMPARE_AS(layer.eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector4>>({
             /* There's nothing to receive a Leave event. The events also
                don't have Hovered set yet, as current hovered node is null at
                that point. */
@@ -14284,7 +14309,7 @@ void AbstractUserInterfaceTest::eventPointerMove() {
     /* Inside and then to another node with a secondary event. Doesn't update
        the hovered node information. */
     } {
-        ui.layer<Layer>(layer).eventCalls = {};
+        layer.eventCalls = {};
 
         PointerMoveEvent event1{12345_nsec, PointerEventSource::Pen, {}, {}, true, 0, {}};
         CORRADE_VERIFY(ui.pointerMoveEvent({330.0f, 1300.0f}, event1));
@@ -14301,7 +14326,7 @@ void AbstractUserInterfaceTest::eventPointerMove() {
         /* Unchanged */
         CORRADE_COMPARE(ui.currentGlobalPointerPosition(), (Vector2{33.0f, 13.0f}));
 
-        CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector4>>({
+        CORRADE_COMPARE_AS(layer.eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector4>>({
             /* It stays on the same node as above, so no further Enter or
                Leave */
             {Move|Hovered, leftData2, {13.0f, 13.0f, -2.0f, 3.0f}},
@@ -14314,7 +14339,7 @@ void AbstractUserInterfaceTest::eventPointerMove() {
        though it didn't hit anything, the hovered node changes based on what's
        under the pointer at the moment. */
     } {
-        ui.layer<Layer>(layer).eventCalls = {};
+        layer.eventCalls = {};
 
         PointerMoveEvent event1{12345_nsec, PointerEventSource::Pen, {}, {}, true, 0, {}};
         CORRADE_VERIFY(ui.pointerMoveEvent({300.0f, 1100.0f}, event1));
@@ -14330,7 +14355,7 @@ void AbstractUserInterfaceTest::eventPointerMove() {
         CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentGlobalPointerPosition(), (Vector2{55.0f, 10.0f}));
 
-        CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector4>>({
+        CORRADE_COMPARE_AS(layer.eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector4>>({
             /* It stays on the same node, so no further Enter or Leave */
             {Move|Hovered, leftData2, {10.0f, 11.0f, -3.0f, -2.0f}},
             {Move|Hovered, leftData1, {10.0f, 11.0f, -3.0f, -2.0f}},
@@ -14348,7 +14373,7 @@ void AbstractUserInterfaceTest::eventPointerMove() {
 
     /* Out of the node with a secondary event calls nothing */
     } {
-        ui.layer<Layer>(layer).eventCalls = {};
+        layer.eventCalls = {};
 
         PointerMoveEvent event{12345_nsec, PointerEventSource::Touch, {}, {}, false, 0, {}};
         CORRADE_VERIFY(!ui.pointerMoveEvent({100.0f, 1100.0f}, event));
@@ -14357,14 +14382,14 @@ void AbstractUserInterfaceTest::eventPointerMove() {
         CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         /* Unchanged */
         CORRADE_COMPARE(ui.currentGlobalPointerPosition(), (Vector2{55.0f, 10.0f}));
-        CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector4>>({
+        CORRADE_COMPARE_AS(layer.eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector4>>({
             /* No Leave generated as this is not a primary event */
         })), TestSuite::Compare::Container);
 
     /* Out of the node with a primary event. This generates a Leave and is
        again relative to what happened last. */
     } {
-        ui.layer<Layer>(layer).eventCalls = {};
+        layer.eventCalls = {};
 
         PointerMoveEvent event{12345_nsec, PointerEventSource::Mouse, {}, {}, true, 0, {}};
         CORRADE_VERIFY(!ui.pointerMoveEvent({100.0f, 1100.0f}, event));
@@ -14372,7 +14397,7 @@ void AbstractUserInterfaceTest::eventPointerMove() {
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentGlobalPointerPosition(), (Vector2{10.0f, 11.0f}));
-        CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector4>>({
+        CORRADE_COMPARE_AS(layer.eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector4>>({
             {Leave, rightData, {-30.0f, 11.0f, 0.0f, 0.0f}},
             /* There's nothing to receive a Move event afterwards */
         })), TestSuite::Compare::Container);
@@ -14380,7 +14405,7 @@ void AbstractUserInterfaceTest::eventPointerMove() {
     /* Moving in and out of the node with modifiers behaves the same as
        without */
     } {
-        ui.layer<Layer>(layer).eventCalls = {};
+        layer.eventCalls = {};
 
         PointerMoveEvent over{12345_nsec, PointerEventSource::Mouse, {}, {}, true, 0, Modifier::Alt|Modifier::Ctrl};
         CORRADE_VERIFY(ui.pointerMoveEvent({550.0f, 1000.0f}, over));
@@ -14396,7 +14421,7 @@ void AbstractUserInterfaceTest::eventPointerMove() {
         CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentGlobalPointerPosition(), (Vector2{10.0f, 11.0f}));
 
-        CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector4>>({
+        CORRADE_COMPARE_AS(layer.eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector4>>({
             {Move, rightData, {15.0f, 10.0f, 45.0f, -1.0f}},
             {Enter|Hovered, rightData, {15.0f, 10.0f, 0.0f, 0.0f}},
             {Leave, rightData, {-30.0f, 11.0f, 0.0f, 0.0f}},
@@ -14409,7 +14434,7 @@ void AbstractUserInterfaceTest::eventPointerMove() {
         /* Events should get scaled to (0.01, 0.1), i.e. the scale is flipped
            now */
         ui.setSize({300.0f, 200.0f}, {30000.0f, 2000.0f}, {30, 20});
-        ui.layer<Layer>(layer).eventCalls = {};
+        layer.eventCalls = {};
 
         /* Back hovering on the right node */
         PointerMoveEvent event2{12345_nsec, PointerEventSource::Mouse, {}, {}, true, 0, {}};
@@ -14418,7 +14443,7 @@ void AbstractUserInterfaceTest::eventPointerMove() {
         CORRADE_COMPARE(ui.currentHoveredNode(), right);
         CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentGlobalPointerPosition(), (Vector2{55.0f, 10.0f}));
-        CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector4>>({
+        CORRADE_COMPARE_AS(layer.eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector4>>({
             /* Is relative to the {-30, 11} that was above, without considering
                the 10x / 100x scale in any way */
             {Move, rightData, {15.0f, 10.0f, 45.0f, -1.0f}},
@@ -14482,19 +14507,18 @@ void AbstractUserInterfaceTest::eventPointerMovePressRelease() {
         Containers::Array<Containers::Triple<Int, DataHandle, Vector2>> eventCalls;
     };
 
-    LayerHandle layer = ui.createLayer();
-    ui.setLayerInstance(Containers::pointer<Layer>(layer));
+    Layer& layer = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer()));
 
     NodeHandle node = ui.createNode({20.0f, 0.0f}, {20.0f, 20.0f});
     NodeHandle another = ui.createNode({30.0f, 20.0f}, {20.0f, 20.0f});
 
-    /*DataHandle data1 =*/ ui.layer<Layer>(layer).create();
-    DataHandle data2 = ui.layer<Layer>(layer).create(node);
-    DataHandle dataAnother = ui.layer<Layer>(layer).create(another);
+    /*DataHandle data1 =*/ layer.create();
+    DataHandle data2 = layer.create(node);
+    DataHandle dataAnother = layer.create(another);
 
     /* Press, move, release, move on the same node has isNodePressed() set */
     {
-        ui.layer<Layer>(layer).eventCalls = {};
+        layer.eventCalls = {};
 
         PointerEvent pressEvent{{}, PointerEventSource::Touch, Pointer::Finger, true, 0, {}};
         CORRADE_VERIFY(ui.pointerPressEvent({300.0f, 1000.0f}, pressEvent));
@@ -14520,7 +14544,7 @@ void AbstractUserInterfaceTest::eventPointerMovePressRelease() {
         CORRADE_COMPARE(ui.currentHoveredNode(), node);
         CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
 
-        CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
+        CORRADE_COMPARE_AS(layer.eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
             {Press, data2, {10.0f, 10.0f}},
             {Move|Pressed, data2, {15.0f, 15.0f}},
             {Enter|Pressed, data2, {15.0f, 15.0f}},
@@ -14536,7 +14560,7 @@ void AbstractUserInterfaceTest::eventPointerMovePressRelease() {
         ui.pointerMoveEvent({1000.0f, 1000.0f}, eventMoveReset);
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
 
-        ui.layer<Layer>(layer).eventCalls = {};
+        layer.eventCalls = {};
 
         PointerEvent pressEvent{{}, PointerEventSource::Touch, Pointer::Finger, true, 0, {}};
         CORRADE_VERIFY(ui.pointerPressEvent({300.0f, 1000.0f}, pressEvent));
@@ -14552,7 +14576,7 @@ void AbstractUserInterfaceTest::eventPointerMovePressRelease() {
         CORRADE_COMPARE(ui.currentHoveredNode(), another);
         CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
 
-        CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
+        CORRADE_COMPARE_AS(layer.eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
             {Press, data2, {10.0f, 10.0f}},
             {Move, dataAnother, {15.0f, 5.0f}},
             {Enter, dataAnother, {15.0f, 5.0f}},
@@ -14612,16 +14636,15 @@ void AbstractUserInterfaceTest::eventPointerMoveRelativePositionWithPressRelease
         bool accept;
     };
 
-    LayerHandle layer = ui.createLayer();
-    ui.setLayerInstance(Containers::pointer<Layer>(layer, data.accept));
+    Layer& layer = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer(), data.accept));
 
     NodeHandle node = ui.createNode({20.0f, 0.0f}, {20.0f, 20.0f});
-    /*DataHandle nodeData1 =*/ ui.layer<Layer>(layer).create();
-    /*DataHandle nodeData2 =*/ ui.layer<Layer>(layer).create(node);
+    /*DataHandle nodeData1 =*/ layer.create();
+    /*DataHandle nodeData2 =*/ layer.create(node);
 
     /* Press, move, release, move on the same node */
     {
-        ui.layer<Layer>(layer).eventCalls = {};
+        layer.eventCalls = {};
 
         PointerEvent pressEvent{{}, PointerEventSource::Touch, Pointer::Finger, data.primary, 0, {}};
         CORRADE_COMPARE(ui.pointerPressEvent({300.0f, 1000.0f}, pressEvent), data.accept);
@@ -14635,7 +14658,7 @@ void AbstractUserInterfaceTest::eventPointerMoveRelativePositionWithPressRelease
         PointerMoveEvent moveEvent2{{}, PointerEventSource::Touch, {}, {}, data.primary, 0, {}};
         CORRADE_COMPARE(ui.pointerMoveEvent({300.0f, 1000.0f}, moveEvent2), data.accept);
 
-        CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Pair<Int, Vector4>>({
+        CORRADE_COMPARE_AS(layer.eventCalls, (Containers::arrayView<Containers::Pair<Int, Vector4>>({
             {Press, {10.0f, 10.0f, 0.0f, 0.0f}},
             {Move, {15.0f, 15.0f, data.multiplier*5.0f, data.multiplier*5.0f}},
             /* Ideally a move event would be called with the position closer
@@ -14647,7 +14670,7 @@ void AbstractUserInterfaceTest::eventPointerMoveRelativePositionWithPressRelease
 
     /* Move on a node, press outside */
     } {
-        ui.layer<Layer>(layer).eventCalls = {};
+        layer.eventCalls = {};
 
         PointerMoveEvent moveEvent{{}, PointerEventSource::Touch, {}, {}, data.primary, 0, {}};
         CORRADE_COMPARE(ui.pointerMoveEvent({300.0f, 1000.0f}, moveEvent), data.accept);
@@ -14655,7 +14678,7 @@ void AbstractUserInterfaceTest::eventPointerMoveRelativePositionWithPressRelease
         PointerEvent pressEvent{{}, PointerEventSource::Touch, Pointer::Finger, data.primary, 0, {}};
         CORRADE_VERIFY(!ui.pointerPressEvent({100.0f, 1000.0f}, pressEvent));
 
-        CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Pair<Int, Vector4>>({
+        CORRADE_COMPARE_AS(layer.eventCalls, (Containers::arrayView<Containers::Pair<Int, Vector4>>({
             {Move, {10.0f, 10.0f, 0.0f, 0.0f}},
             /* There's nothing to receive a Press event afterwards. The Press
                event also doesn't synthesize a Leave event for the original
@@ -14716,34 +14739,33 @@ void AbstractUserInterfaceTest::eventPointerMoveNotAccepted() {
             accept2 = true;
     };
 
-    LayerHandle layer = ui.createLayer();
-    ui.setLayerInstance(Containers::pointer<Layer>(layer));
+    Layer& layer = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer()));
 
     /* 10 --------     accepts maybe
        01     -------- accepts maybe
        00     -------- accepts always */
     NodeHandle node0 = ui.createNode({20.0f, 0.0f}, {20.0f, 20.0f});
     NodeHandle node1 = ui.createNode({10.0f, 0.0f}, {20.0f, 20.0f});
-    DataHandle data00 = ui.layer<Layer>(layer).create(node0);
-    DataHandle data01 = ui.layer<Layer>(layer).create(node0);
-    DataHandle data10 = ui.layer<Layer>(layer).create(node1);
+    DataHandle data00 = layer.create(node0);
+    DataHandle data01 = layer.create(node0);
+    DataHandle data10 = layer.create(node1);
 
     /* Move on node 1, but the second move doesn't get accepted and falls back
        to node 0, generating Leave and Enter events as appropriate */
     {
-        ui.layer<Layer>(layer).eventCalls = {};
+        layer.eventCalls = {};
 
         PointerMoveEvent eventMove1{{}, PointerEventSource::Pen, {}, {}, true, 0, {}};
-        ui.layer<Layer>(layer).accept2 = true;
+        layer.accept2 = true;
         CORRADE_VERIFY(ui.pointerMoveEvent({15.0f, 10.0f}, eventMove1));
         CORRADE_COMPARE(ui.currentHoveredNode(), node1);
 
         PointerMoveEvent eventMove2{{}, PointerEventSource::Mouse, {}, {}, true, 0, {}};
-        ui.layer<Layer>(layer).accept2 = false;
+        layer.accept2 = false;
         CORRADE_VERIFY(ui.pointerMoveEvent({25.0f, 15.0f}, eventMove2));
         CORRADE_COMPARE(ui.currentHoveredNode(), node0);
 
-        CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
+        CORRADE_COMPARE_AS(layer.eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
             {Move|Accepted, data10, {5.0f, 10.0f}},
             {Enter|Hovered, data10, {5.0f, 10.0f}},
             /* The move is happening on the same node as was hovered before, so
@@ -14766,19 +14788,19 @@ void AbstractUserInterfaceTest::eventPointerMoveNotAccepted() {
         ui.pointerMoveEvent({1000.0f, 1000.0f}, eventMoveReset);
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
 
-        ui.layer<Layer>(layer).eventCalls = {};
+        layer.eventCalls = {};
 
         PointerMoveEvent eventMove1{{}, PointerEventSource::Pen, {}, {}, true, 0, {}};
-        ui.layer<Layer>(layer).accept2 = true;
+        layer.accept2 = true;
         CORRADE_VERIFY(ui.pointerMoveEvent({15.0f, 10.0f}, eventMove1));
         CORRADE_COMPARE(ui.currentHoveredNode(), node1);
 
         PointerMoveEvent eventMove2{{}, PointerEventSource::Touch, {}, {}, false, 0, {}};
-        ui.layer<Layer>(layer).accept2 = false;
+        layer.accept2 = false;
         CORRADE_VERIFY(ui.pointerMoveEvent({25.0f, 15.0f}, eventMove2));
         CORRADE_COMPARE(ui.currentHoveredNode(), node1);
 
-        CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
+        CORRADE_COMPARE_AS(layer.eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
             {Move|Accepted, data10, {5.0f, 10.0f}},
             {Enter|Hovered, data10, {5.0f, 10.0f}},
             /* The event is secondary but still happens on a node that's
@@ -14797,19 +14819,19 @@ void AbstractUserInterfaceTest::eventPointerMoveNotAccepted() {
         ui.pointerMoveEvent({1000.0f, 1000.0f}, eventMoveReset);
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
 
-        ui.layer<Layer>(layer).eventCalls = {};
+        layer.eventCalls = {};
 
         PointerMoveEvent eventMove1{{}, PointerEventSource::Mouse, {}, {}, true, 0, {}};
-        ui.layer<Layer>(layer).accept1 = true;
+        layer.accept1 = true;
         CORRADE_VERIFY(ui.pointerMoveEvent({35.0f, 10.0f}, eventMove1));
         CORRADE_COMPARE(ui.currentHoveredNode(), node0);
 
         PointerMoveEvent eventMove2{{}, PointerEventSource::Touch, {}, {}, true, 0, {}};
-        ui.layer<Layer>(layer).accept2 = false;
+        layer.accept2 = false;
         CORRADE_VERIFY(ui.pointerMoveEvent({25.0f, 15.0f}, eventMove2));
         CORRADE_COMPARE(ui.currentHoveredNode(), node0);
 
-        CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
+        CORRADE_COMPARE_AS(layer.eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
             {Move|Accepted, data01, {15.0f, 10.0f}},
             {Move|Accepted, data00, {15.0f, 10.0f}},
             {Enter|Hovered, data01, {15.0f, 10.0f}},
@@ -14831,19 +14853,19 @@ void AbstractUserInterfaceTest::eventPointerMoveNotAccepted() {
         ui.pointerMoveEvent({1000.0f, 1000.0f}, eventMoveReset);
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
 
-        ui.layer<Layer>(layer).eventCalls = {};
+        layer.eventCalls = {};
 
         PointerMoveEvent eventMove1{{}, PointerEventSource::Pen, {}, {}, true, 0, {}};
-        ui.layer<Layer>(layer).accept1 = true;
+        layer.accept1 = true;
         CORRADE_VERIFY(ui.pointerMoveEvent({35.0f, 10.0f}, eventMove1));
         CORRADE_COMPARE(ui.currentHoveredNode(), node0);
 
         PointerMoveEvent eventMove2{{}, PointerEventSource::Mouse, {}, {}, true, 0, {}};
-        ui.layer<Layer>(layer).accept1 = false;
+        layer.accept1 = false;
         CORRADE_VERIFY(ui.pointerMoveEvent({33.0f, 15.0f}, eventMove2));
         CORRADE_COMPARE(ui.currentHoveredNode(), node0);
 
-        CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
+        CORRADE_COMPARE_AS(layer.eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
             {Move|Accepted, data01, {15.0f, 10.0f}},
             {Move|Accepted, data00, {15.0f, 10.0f}},
             {Enter|Hovered, data01, {15.0f, 10.0f}},
@@ -14908,9 +14930,8 @@ void AbstractUserInterfaceTest::eventPointerMoveNodePositionUpdated() {
         CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
     }
 
-    LayerHandle layer = ui.createLayer();
-    ui.setLayerInstance(Containers::pointer<Layer>(layer));
-    DataHandle nestedData = ui.layer<Layer>(layer).create(nested);
+    Layer& layer = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer()));
+    DataHandle nestedData = layer.create(nested);
 
     if(data.update) {
         CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataAttachmentUpdate);
@@ -14934,7 +14955,7 @@ void AbstractUserInterfaceTest::eventPointerMoveNodePositionUpdated() {
     CORRADE_VERIFY(ui.pointerMoveEvent({350.0f, 2500.0f}, eventMove2));
     CORRADE_COMPARE(ui.currentHoveredNode(), nested);
 
-    CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
+    CORRADE_COMPARE_AS(layer.eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
         {Move, nestedData, {10.0f, 10.0f}},
         {Enter, nestedData, {10.0f, 10.0f}},
         /** @todo what if no mouse event happens here? then it gets nothing?
@@ -15016,9 +15037,8 @@ void AbstractUserInterfaceTest::eventPointerMoveNodeBecomesHiddenDisabledNoEvent
         CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
     }
 
-    LayerHandle layer = ui.createLayer();
-    ui.setLayerInstance(Containers::pointer<Layer>(layer));
-    DataHandle nestedData = ui.layer<Layer>(layer).create(nested);
+    Layer& layer = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer()));
+    DataHandle nestedData = layer.create(nested);
 
     if(data.update) {
         CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataAttachmentUpdate);
@@ -15053,7 +15073,7 @@ void AbstractUserInterfaceTest::eventPointerMoveNodeBecomesHiddenDisabledNoEvent
     CORRADE_VERIFY(!ui.pointerMoveEvent({35.0f, 15.0f}, eventMove2));
     CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
 
-    CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
+    CORRADE_COMPARE_AS(layer.eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
         {Update, {}, {}},
         {Move, nestedData, {10.0f, 10.0f}},
         {Enter, nestedData, {10.0f, 10.0f}},
@@ -15125,9 +15145,8 @@ void AbstractUserInterfaceTest::eventPointerMoveNodeRemoved() {
         CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
     }
 
-    LayerHandle layer = ui.createLayer();
-    ui.setLayerInstance(Containers::pointer<Layer>(layer));
-    DataHandle nestedData = ui.layer<Layer>(layer).create(nested);
+    Layer& layer = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer()));
+    DataHandle nestedData = layer.create(nested);
 
     if(data.update) {
         CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataAttachmentUpdate);
@@ -15163,7 +15182,7 @@ void AbstractUserInterfaceTest::eventPointerMoveNodeRemoved() {
     CORRADE_VERIFY(!ui.pointerMoveEvent({35.0f, 15.0f}, eventMove2));
     CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
 
-    CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
+    CORRADE_COMPARE_AS(layer.eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
         {Move, nestedData, {10.0f, 10.0f}},
         {Enter, nestedData, {10.0f, 10.0f}},
         /* There's no node to execute the Move on, nor a Leave */
@@ -15226,9 +15245,8 @@ void AbstractUserInterfaceTest::eventPointerMoveAllDataRemoved() {
         CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
     }
 
-    LayerHandle layer = ui.createLayer();
-    ui.setLayerInstance(Containers::pointer<Layer>(layer));
-    DataHandle nodeData = ui.layer<Layer>(layer).create(node);
+    Layer& layer = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer()));
+    DataHandle nodeData = layer.create(node);
 
     if(data.update) {
         CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataAttachmentUpdate);
@@ -15240,7 +15258,7 @@ void AbstractUserInterfaceTest::eventPointerMoveAllDataRemoved() {
     CORRADE_VERIFY(ui.pointerMoveEvent({30.0f, 10.0f}, eventMove1));
     CORRADE_COMPARE(ui.currentHoveredNode(), node);
 
-    ui.layer<Layer>(layer).remove(nodeData);
+    layer.remove(nodeData);
     /* The node stays hovered until an actual move event discovers there's no
        data anymore. This is consistent for example with a case where the data
        would change the area where they're active for events -- also something
@@ -15270,7 +15288,7 @@ void AbstractUserInterfaceTest::eventPointerMoveAllDataRemoved() {
     CORRADE_VERIFY(!ui.pointerMoveEvent({35.0f, 15.0f}, eventMove2));
     CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
 
-    CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
+    CORRADE_COMPARE_AS(layer.eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
         {Move, nodeData, {10.0f, 10.0f}},
         {Enter, nodeData, {10.0f, 10.0f}},
         /* There's no data to execute the Move on, nor a Leave */
@@ -15396,11 +15414,10 @@ void AbstractUserInterfaceTest::eventCapture() {
         layouter.add(right);
     }
 
-    LayerHandle layer = ui.createLayer();
-    ui.setLayerInstance(Containers::pointer<Layer>(layer));
-    DataHandle leftData1 = ui.layer<Layer>(layer).create(left);
-    DataHandle leftData2 = ui.layer<Layer>(layer).create(left);
-    DataHandle rightData = ui.layer<Layer>(layer).create(right);
+    Layer& layer = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer()));
+    DataHandle leftData1 = layer.create(left);
+    DataHandle leftData2 = layer.create(left);
+    DataHandle rightData = layer.create(right);
 
     /* Nothing captured initially */
     CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
@@ -15408,7 +15425,7 @@ void AbstractUserInterfaceTest::eventCapture() {
     /* Secondary press on the left node doesn't cause the node to be
        captured */
     {
-        ui.layer<Layer>(layer).eventCalls = {};
+        layer.eventCalls = {};
 
         PointerEvent eventPress{{}, PointerEventSource::Touch, Pointer::Finger, false, 0, {}};
         CORRADE_VERIFY(ui.pointerPressEvent({300.0f, 1000.0f}, eventPress));
@@ -15416,7 +15433,7 @@ void AbstractUserInterfaceTest::eventCapture() {
         CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
 
-        CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
+        CORRADE_COMPARE_AS(layer.eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
             {Press|Secondary, leftData2, {10.0f, 10.0f}},
             {Press|Secondary, leftData1, {10.0f, 10.0f}},
         })), TestSuite::Compare::Container);
@@ -15424,7 +15441,7 @@ void AbstractUserInterfaceTest::eventCapture() {
     /* Capture on the left node, release on it again. Going through all data
        attachments, highest ID gets picked first. */
     } {
-        ui.layer<Layer>(layer).eventCalls = {};
+        layer.eventCalls = {};
 
         PointerEvent eventPress{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
         CORRADE_VERIFY(ui.pointerPressEvent({300.0f, 1000.0f}, eventPress));
@@ -15443,7 +15460,7 @@ void AbstractUserInterfaceTest::eventCapture() {
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
 
         /* Hovered is not set as there's no currently hovered node */
-        CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
+        CORRADE_COMPARE_AS(layer.eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
             {Press|Captured, leftData2, {10.0f, 10.0f}},
             {Press|Captured, leftData1, {10.0f, 10.0f}},
             /* No Enter/Leave events synthesized from Press and Release at the
@@ -15455,7 +15472,7 @@ void AbstractUserInterfaceTest::eventCapture() {
     /* Capture on the left node, release on it with a secondary event will
        not reset it */
     } {
-        ui.layer<Layer>(layer).eventCalls = {};
+        layer.eventCalls = {};
 
         PointerEvent eventPress{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
         CORRADE_VERIFY(ui.pointerPressEvent({300.0f, 1000.0f}, eventPress));
@@ -15469,7 +15486,7 @@ void AbstractUserInterfaceTest::eventCapture() {
         CORRADE_COMPARE(ui.currentCapturedNode(), left);
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
 
-        CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
+        CORRADE_COMPARE_AS(layer.eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
             {Press|Captured, leftData2, {10.0f, 10.0f}},
             {Press|Captured, leftData1, {10.0f, 10.0f}},
             {Release|Pressed|Secondary|Captured, leftData2, {12.0f, 10.0f}},
@@ -15486,7 +15503,7 @@ void AbstractUserInterfaceTest::eventCapture() {
         ui.pointerPressEvent({1000.0f, 1000.0f}, eventPressReset);
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
 
-        ui.layer<Layer>(layer).eventCalls = {};
+        layer.eventCalls = {};
 
         PointerEvent eventPress{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
         CORRADE_VERIFY(ui.pointerPressEvent({300.0f, 1000.0f}, eventPress));
@@ -15513,7 +15530,7 @@ void AbstractUserInterfaceTest::eventCapture() {
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
 
         /* Hovered is not set on any as there's no currently hovered node */
-        CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
+        CORRADE_COMPARE_AS(layer.eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
             {Press|Captured, leftData2, {10.0f, 10.0f}},
             {Press|Captured, leftData1, {10.0f, 10.0f}},
             {Release|Pressed|Secondary|Captured, leftData2, {25.0f, 10.0f}}, /* actually on rightData */
@@ -15526,7 +15543,7 @@ void AbstractUserInterfaceTest::eventCapture() {
 
     /* Capture on the right node, release on the left one */
     } {
-        ui.layer<Layer>(layer).eventCalls = {};
+        layer.eventCalls = {};
 
         PointerEvent eventPress{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
         CORRADE_VERIFY(ui.pointerPressEvent({500.0f, 1000.0f}, eventPress));
@@ -15545,7 +15562,7 @@ void AbstractUserInterfaceTest::eventCapture() {
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
 
         /* Hovered is not set on any as there's no currently hovered node */
-        CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
+        CORRADE_COMPARE_AS(layer.eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
             {Press|Captured, rightData, {10.0f, 10.0f}},
             /* No Enter/Leave events synthesized from Press and Release at the
                moment */
@@ -15555,7 +15572,7 @@ void AbstractUserInterfaceTest::eventCapture() {
     /* Moves are implicitly captured only if they happen between a press &
        release */
     } {
-        ui.layer<Layer>(layer).eventCalls = {};
+        layer.eventCalls = {};
 
         PointerMoveEvent eventMove1{{}, PointerEventSource::Mouse, {}, {}, true, 0, {}};
         CORRADE_VERIFY(ui.pointerMoveEvent({500.0f, 1500.0f}, eventMove1));
@@ -15591,7 +15608,7 @@ void AbstractUserInterfaceTest::eventCapture() {
         CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), right);
 
-        CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
+        CORRADE_COMPARE_AS(layer.eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
             /* A move that happens before a press isn't captured. Hovered not
                set yet as current hovered node is null at the point move event
                is called. */
@@ -15646,7 +15663,7 @@ void AbstractUserInterfaceTest::eventCapture() {
         CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
 
-        ui.layer<Layer>(layer).eventCalls = {};
+        layer.eventCalls = {};
 
         PointerEvent eventPress{{}, PointerEventSource::Pen, Pointer::Pen, true, 0, {}};
         CORRADE_VERIFY(ui.pointerPressEvent({500.0f, 1000.0f}, eventPress));
@@ -15684,7 +15701,7 @@ void AbstractUserInterfaceTest::eventCapture() {
         /* This isn't affected by the release */
         CORRADE_COMPARE(ui.currentHoveredNode(), right);
 
-        CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
+        CORRADE_COMPARE_AS(layer.eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
             {Press|Captured, rightData, {10.0f, 10.0f}},
             /* A captured move on the same node. The node isn't hovered at that
                point yet so it isn't marked as such. */
@@ -15721,7 +15738,7 @@ void AbstractUserInterfaceTest::eventCapture() {
         CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
 
-        ui.layer<Layer>(layer).eventCalls = {};
+        layer.eventCalls = {};
 
         PointerEvent eventPress{{}, PointerEventSource::Pen, Pointer::Pen, true, 0, {}};
         CORRADE_VERIFY(ui.pointerPressEvent({500.0f, 1000.0f}, eventPress));
@@ -15755,7 +15772,7 @@ void AbstractUserInterfaceTest::eventCapture() {
         CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
 
-        CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
+        CORRADE_COMPARE_AS(layer.eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
             {Press|Captured, rightData, {10.0f, 10.0f}},
             /* A captured move on the same node. As all the moves are
                secondary, none of them is marked as Hovered */
@@ -15781,7 +15798,7 @@ void AbstractUserInterfaceTest::eventCapture() {
         CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
 
-        ui.layer<Layer>(layer).eventCalls = {};
+        layer.eventCalls = {};
 
         PointerEvent eventPress1{{}, PointerEventSource::Touch, Pointer::Finger, true, 0, {}};
         CORRADE_VERIFY(ui.pointerPressEvent({500.0f, 1000.0f}, eventPress1));
@@ -15799,7 +15816,7 @@ void AbstractUserInterfaceTest::eventCapture() {
            hovered node doesn't get updated until the next move */
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
 
-        CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
+        CORRADE_COMPARE_AS(layer.eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
             {Press|Captured, rightData, {10.0f, 10.0f}},
             /* No Enter/Leave events synthesized from Press and Release at the
                moment */
@@ -15810,7 +15827,7 @@ void AbstractUserInterfaceTest::eventCapture() {
     /* Capture on the right node, then a secondary press on the left node.
        Compared to the above, it shouldn't cause the capture to be reset. */
     } {
-        ui.layer<Layer>(layer).eventCalls = {};
+        layer.eventCalls = {};
 
         PointerEvent eventPress1{{}, PointerEventSource::Touch, Pointer::Finger, true, 0, {}};
         CORRADE_VERIFY(ui.pointerPressEvent({500.0f, 1000.0f}, eventPress1));
@@ -15826,7 +15843,7 @@ void AbstractUserInterfaceTest::eventCapture() {
         CORRADE_COMPARE(ui.currentCapturedNode(), right);
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
 
-        CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
+        CORRADE_COMPARE_AS(layer.eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
             {Press|Captured, rightData, {10.0f, 10.0f}},
             {Press|Pressed|Captured|Secondary, rightData, {-10.0f, 10.0f}}, /* actually on leftData */
         })), TestSuite::Compare::Container);
@@ -15910,12 +15927,11 @@ void AbstractUserInterfaceTest::eventCaptureEdges() {
         Containers::Array<Containers::Pair<Int, Vector2>> eventCalls;
     };
 
-    LayerHandle layer = ui.createLayer();
-    ui.setLayerInstance(Containers::pointer<Layer>(layer));
+    Layer& layer = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer()));
 
     NodeHandle node = ui.createNode({20.0f, 10.0f}, {20.0f, 20.0f});
-    /*DataHandle nodeData1 =*/ ui.layer<Layer>(layer).create();
-    /*DataHandle nodeData2 =*/ ui.layer<Layer>(layer).create(node);
+    /*DataHandle nodeData1 =*/ layer.create();
+    /*DataHandle nodeData2 =*/ layer.create(node);
 
     /* Set the node as initially hovered */
     PointerMoveEvent eventMove0{{}, PointerEventSource::Mouse, {}, {}, true, 0, {}};
@@ -15924,7 +15940,7 @@ void AbstractUserInterfaceTest::eventCaptureEdges() {
 
     /* Top left corner */
     {
-        ui.layer<Layer>(layer).eventCalls = {};
+        layer.eventCalls = {};
 
         PointerEvent eventPress1{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
         CORRADE_VERIFY(ui.pointerPressEvent({300.0f, 2500.0f}, eventPress1));
@@ -15955,7 +15971,7 @@ void AbstractUserInterfaceTest::eventCaptureEdges() {
         PointerEvent eventRelease2{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
         CORRADE_VERIFY(ui.pointerReleaseEvent({199.0f, 990.0f}, eventRelease2));
 
-        CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Pair<Int, Vector2>>({
+        CORRADE_COMPARE_AS(layer.eventCalls, (Containers::arrayView<Containers::Pair<Int, Vector2>>({
             {Press|Hovered, {10.0f, 15.0f}},
             {Move, {-0.1f, -0.1f}},
             {Leave, {-0.1f, -0.1f}},
@@ -15969,7 +15985,7 @@ void AbstractUserInterfaceTest::eventCaptureEdges() {
 
     /* Top edge */
     } {
-        ui.layer<Layer>(layer).eventCalls = {};
+        layer.eventCalls = {};
 
         PointerEvent eventPress{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
         CORRADE_VERIFY(ui.pointerPressEvent({300.0f, 2500.0f}, eventPress));
@@ -16008,7 +16024,7 @@ void AbstractUserInterfaceTest::eventCaptureEdges() {
         PointerEvent eventRelease2{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
         CORRADE_VERIFY(ui.pointerReleaseEvent({300.0f, 990.0f}, eventRelease2));
 
-        CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Pair<Int, Vector2>>({
+        CORRADE_COMPARE_AS(layer.eventCalls, (Containers::arrayView<Containers::Pair<Int, Vector2>>({
             {Press|Hovered, {10.0f, 15.0f}},
             {Move, {10.0f, -0.1f}},
             {Leave, {10.0f, -0.1f}},
@@ -16024,7 +16040,7 @@ void AbstractUserInterfaceTest::eventCaptureEdges() {
 
     /* Left edge */
     } {
-        ui.layer<Layer>(layer).eventCalls = {};
+        layer.eventCalls = {};
 
         PointerEvent eventPress{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
         CORRADE_VERIFY(ui.pointerPressEvent({300.0f, 2500.0f}, eventPress));
@@ -16063,7 +16079,7 @@ void AbstractUserInterfaceTest::eventCaptureEdges() {
         PointerEvent eventRelease2{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
         CORRADE_VERIFY(ui.pointerReleaseEvent({199.0f, 2500.0f}, eventRelease2));
 
-        CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Pair<Int, Vector2>>({
+        CORRADE_COMPARE_AS(layer.eventCalls, (Containers::arrayView<Containers::Pair<Int, Vector2>>({
             {Press|Hovered, {10.0f, 15.0f}},
             {Move, {-0.1f, 15.0f}},
             {Leave, {-0.1f, 15.0f}},
@@ -16079,7 +16095,7 @@ void AbstractUserInterfaceTest::eventCaptureEdges() {
 
     /* Bottom right corner */
     } {
-        ui.layer<Layer>(layer).eventCalls = {};
+        layer.eventCalls = {};
 
         PointerEvent eventPress{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
         CORRADE_VERIFY(ui.pointerPressEvent({300.0f, 2500.0f}, eventPress));
@@ -16118,7 +16134,7 @@ void AbstractUserInterfaceTest::eventCaptureEdges() {
         PointerEvent eventRelease2{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
         CORRADE_VERIFY(ui.pointerReleaseEvent({400.0f, 3000.0f}, eventRelease2));
 
-        CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Pair<Int, Vector2>>({
+        CORRADE_COMPARE_AS(layer.eventCalls, (Containers::arrayView<Containers::Pair<Int, Vector2>>({
             {Press|Hovered, {10.0f, 15.0f}},
             {Move, {20.0f, 20.0f}},
             {Leave, {20.0f, 20.0f}},
@@ -16134,7 +16150,7 @@ void AbstractUserInterfaceTest::eventCaptureEdges() {
 
     /* Bottom edge */
     } {
-        ui.layer<Layer>(layer).eventCalls = {};
+        layer.eventCalls = {};
 
         PointerEvent eventPress{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
         CORRADE_VERIFY(ui.pointerPressEvent({300.0f, 2500.0f}, eventPress));
@@ -16173,7 +16189,7 @@ void AbstractUserInterfaceTest::eventCaptureEdges() {
         PointerEvent eventRelease2{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
         CORRADE_VERIFY(ui.pointerReleaseEvent({300.0f, 3000.0f}, eventRelease2));
 
-        CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Pair<Int, Vector2>>({
+        CORRADE_COMPARE_AS(layer.eventCalls, (Containers::arrayView<Containers::Pair<Int, Vector2>>({
             {Press|Hovered, {10.0f, 15.0f}},
             {Move, {10.0f, 20.0f}},
             {Leave, {10.0f, 20.0f}},
@@ -16189,7 +16205,7 @@ void AbstractUserInterfaceTest::eventCaptureEdges() {
 
     /* Right edge */
     } {
-        ui.layer<Layer>(layer).eventCalls = {};
+        layer.eventCalls = {};
 
         PointerEvent eventPress{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
         CORRADE_VERIFY(ui.pointerPressEvent({300.0f, 2500.0f}, eventPress));
@@ -16226,7 +16242,7 @@ void AbstractUserInterfaceTest::eventCaptureEdges() {
         PointerEvent eventRelease2{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
         CORRADE_VERIFY(ui.pointerReleaseEvent({400.0f, 2500.0f}, eventRelease2));
 
-        CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Pair<Int, Vector2>>({
+        CORRADE_COMPARE_AS(layer.eventCalls, (Containers::arrayView<Containers::Pair<Int, Vector2>>({
             {Press|Hovered, {10.0f, 15.0f}},
             {Move, {20.0f, 15.0f}},
             {Leave, {20.0f, 15.0f}},
@@ -16308,34 +16324,33 @@ void AbstractUserInterfaceTest::eventCaptureNotAccepted() {
         Containers::Array<Containers::Triple<Int, DataHandle, Vector2>> eventCalls;
     };
 
-    LayerHandle layer = ui.createLayer();
-    ui.setLayerInstance(Containers::pointer<Layer>(layer));
+    Layer& layer = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer()));
 
     /* Two nodes next to each other */
     NodeHandle left = ui.createNode({20.0f, 0.0f}, {20.0f, 20.0f});
     NodeHandle right = ui.createNode({40.0f, 0.0f}, {20.0f, 20.0f});
-    DataHandle leftData1 = ui.layer<Layer>(layer).create(left);
+    DataHandle leftData1 = layer.create(left);
     /* Attachment order doesn't matter, it'll always pick rightData2 first
        because it has higher ID */
-    DataHandle rightData1 = ui.layer<Layer>(layer).create(right);
-    DataHandle rightData2 = ui.layer<Layer>(layer).create(right);
+    DataHandle rightData1 = layer.create(right);
+    DataHandle rightData2 = layer.create(right);
 
     /* If the press event isn't accepted, no capture should happen, so the
        release happens on the actual node that is under */
     {
-        ui.layer<Layer>(layer).eventCalls = {};
+        layer.eventCalls = {};
 
         PointerEvent eventPress{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
-        ui.layer<Layer>(layer).accept1 = false;
-        ui.layer<Layer>(layer).accept2 = false;
+        layer.accept1 = false;
+        layer.accept2 = false;
         CORRADE_VERIFY(!ui.pointerPressEvent({30.0f, 10.0f}, eventPress));
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
 
         PointerEvent eventRelease{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
-        ui.layer<Layer>(layer).accept1 = false;
-        ui.layer<Layer>(layer).accept2 = true;
+        layer.accept1 = false;
+        layer.accept2 = true;
         CORRADE_VERIFY(ui.pointerReleaseEvent({50.0f, 10.0f}, eventRelease));
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
@@ -16343,7 +16358,7 @@ void AbstractUserInterfaceTest::eventCaptureNotAccepted() {
            hovered node doesn't get updated until the next move */
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
 
-        CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
+        CORRADE_COMPARE_AS(layer.eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
             {Press|Captured, leftData1, {10.0f, 10.0f}},
             /* The release event isn't happening on a captured node, so
                isCaptured() is false for it */
@@ -16353,25 +16368,25 @@ void AbstractUserInterfaceTest::eventCaptureNotAccepted() {
 
     /* Same, but move instead of release */
     } {
-        ui.layer<Layer>(layer).eventCalls = {};
+        layer.eventCalls = {};
 
         PointerEvent eventPress{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
-        ui.layer<Layer>(layer).accept1 = false;
-        ui.layer<Layer>(layer).accept2 = false;
+        layer.accept1 = false;
+        layer.accept2 = false;
         CORRADE_VERIFY(!ui.pointerPressEvent({30.0f, 10.0f}, eventPress));
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
 
         PointerMoveEvent eventMove{{}, PointerEventSource::Mouse, {}, {}, true, 0, {}};
-        ui.layer<Layer>(layer).accept1 = false;
-        ui.layer<Layer>(layer).accept2 = true;
+        layer.accept1 = false;
+        layer.accept2 = true;
         CORRADE_VERIFY(ui.pointerMoveEvent({50.0f, 10.0f}, eventMove));
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), right);
 
-        CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
+        CORRADE_COMPARE_AS(layer.eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
             {Press|Captured, leftData1, {10.0f, 10.0f}},
             /* The move event isn't happening on a captured node, so
                isCaptured() is false for it */
@@ -16394,11 +16409,11 @@ void AbstractUserInterfaceTest::eventCaptureNotAccepted() {
         CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
 
-        ui.layer<Layer>(layer).eventCalls = {};
+        layer.eventCalls = {};
 
         PointerEvent eventPress{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
-        ui.layer<Layer>(layer).accept1 = false;
-        ui.layer<Layer>(layer).accept2 = true;
+        layer.accept1 = false;
+        layer.accept2 = true;
         CORRADE_VERIFY(ui.pointerPressEvent({30.0f, 10.0f}, eventPress));
         CORRADE_COMPARE(ui.currentPressedNode(), left);
         CORRADE_COMPARE(ui.currentCapturedNode(), left);
@@ -16407,25 +16422,25 @@ void AbstractUserInterfaceTest::eventCaptureNotAccepted() {
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
 
         PointerEvent eventRelease{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
-        ui.layer<Layer>(layer).accept1 = false;
-        ui.layer<Layer>(layer).accept2 = false;
+        layer.accept1 = false;
+        layer.accept2 = false;
         CORRADE_VERIFY(!ui.pointerReleaseEvent({50.0f, 10.0f}, eventRelease));
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
 
-        CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
+        CORRADE_COMPARE_AS(layer.eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
             {Press|Captured, leftData1, {10.0f, 10.0f}},
             {Release|Captured, leftData1, {30.0f, 10.0f}}, /* actually on rightData */
         })), TestSuite::Compare::Container);
 
     /* If a secondary release isn't accepted, the capture should stay however */
     } {
-        ui.layer<Layer>(layer).eventCalls = {};
+        layer.eventCalls = {};
 
         PointerEvent eventPress{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
-        ui.layer<Layer>(layer).accept1 = false;
-        ui.layer<Layer>(layer).accept2 = true;
+        layer.accept1 = false;
+        layer.accept2 = true;
         CORRADE_VERIFY(ui.pointerPressEvent({30.0f, 10.0f}, eventPress));
         CORRADE_COMPARE(ui.currentPressedNode(), left);
         CORRADE_COMPARE(ui.currentCapturedNode(), left);
@@ -16434,14 +16449,14 @@ void AbstractUserInterfaceTest::eventCaptureNotAccepted() {
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
 
         PointerEvent eventRelease{{}, PointerEventSource::Touch, Pointer::Finger, false, 0, {}};
-        ui.layer<Layer>(layer).accept1 = false;
-        ui.layer<Layer>(layer).accept2 = false;
+        layer.accept1 = false;
+        layer.accept2 = false;
         CORRADE_VERIFY(!ui.pointerReleaseEvent({50.0f, 10.0f}, eventRelease));
         CORRADE_COMPARE(ui.currentPressedNode(), left);
         CORRADE_COMPARE(ui.currentCapturedNode(), left);
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
 
-        CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
+        CORRADE_COMPARE_AS(layer.eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
             {Press|Captured, leftData1, {10.0f, 10.0f}},
             {Release|Secondary|Captured, leftData1, {30.0f, 10.0f}}, /* actually on rightData */
         })), TestSuite::Compare::Container);
@@ -16454,11 +16469,11 @@ void AbstractUserInterfaceTest::eventCaptureNotAccepted() {
         ui.pointerReleaseEvent({1000.0f, 1000.0f}, eventReleaseReset);
         CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
 
-        ui.layer<Layer>(layer).eventCalls = {};
+        layer.eventCalls = {};
 
         PointerEvent eventPress{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
-        ui.layer<Layer>(layer).accept1 = false;
-        ui.layer<Layer>(layer).accept2 = true;
+        layer.accept1 = false;
+        layer.accept2 = true;
         CORRADE_VERIFY(ui.pointerPressEvent({30.0f, 10.0f}, eventPress));
         CORRADE_COMPARE(ui.currentPressedNode(), left);
         CORRADE_COMPARE(ui.currentCapturedNode(), left);
@@ -16467,14 +16482,14 @@ void AbstractUserInterfaceTest::eventCaptureNotAccepted() {
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
 
         PointerMoveEvent eventMove{{}, PointerEventSource::Mouse, {}, {}, true, 0, {}};
-        ui.layer<Layer>(layer).accept1 = false;
-        ui.layer<Layer>(layer).accept2 = false;
+        layer.accept1 = false;
+        layer.accept2 = false;
         CORRADE_VERIFY(!ui.pointerMoveEvent({50.0f, 10.0f}, eventMove));
         CORRADE_COMPARE(ui.currentPressedNode(), left);
         CORRADE_COMPARE(ui.currentCapturedNode(), left);
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
 
-        CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
+        CORRADE_COMPARE_AS(layer.eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
             {Press|Captured, leftData1, {10.0f, 10.0f}},
             {Move|Captured, leftData1, {30.0f, 10.0f}}, /* actually on rightData */
             /* No node was hovered before, so no Leave is emitted */
@@ -16483,11 +16498,11 @@ void AbstractUserInterfaceTest::eventCaptureNotAccepted() {
     /* Moving on the same node but not accepting the move causes Enter / Leave
        to be generated */
     } {
-        ui.layer<Layer>(layer).eventCalls = {};
+        layer.eventCalls = {};
 
         PointerEvent eventPress{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
-        ui.layer<Layer>(layer).accept1 = false;
-        ui.layer<Layer>(layer).accept2 = true;
+        layer.accept1 = false;
+        layer.accept2 = true;
         CORRADE_VERIFY(ui.pointerPressEvent({30.0f, 10.0f}, eventPress));
         CORRADE_COMPARE(ui.currentPressedNode(), left);
         CORRADE_COMPARE(ui.currentCapturedNode(), left);
@@ -16496,22 +16511,22 @@ void AbstractUserInterfaceTest::eventCaptureNotAccepted() {
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
 
         PointerMoveEvent eventMove1{{}, PointerEventSource::Mouse, {}, {}, true, 0, {}};
-        ui.layer<Layer>(layer).accept1 = false;
-        ui.layer<Layer>(layer).accept2 = false;
+        layer.accept1 = false;
+        layer.accept2 = false;
         CORRADE_VERIFY(!ui.pointerMoveEvent({35.0f, 15.0f}, eventMove1));
         CORRADE_COMPARE(ui.currentPressedNode(), left);
         CORRADE_COMPARE(ui.currentCapturedNode(), left);
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
 
         PointerMoveEvent eventMove2{{}, PointerEventSource::Mouse, {}, {}, true, 0, {}};
-        ui.layer<Layer>(layer).accept1 = false;
-        ui.layer<Layer>(layer).accept2 = true;
+        layer.accept1 = false;
+        layer.accept2 = true;
         CORRADE_VERIFY(ui.pointerMoveEvent({30.0f, 10.0f}, eventMove2));
         CORRADE_COMPARE(ui.currentPressedNode(), left);
         CORRADE_COMPARE(ui.currentCapturedNode(), left);
         CORRADE_COMPARE(ui.currentHoveredNode(), left);
 
-        CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
+        CORRADE_COMPARE_AS(layer.eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
             {Press|Captured, leftData1, {10.0f, 10.0f}},
             {Move|Captured, leftData1, {15.0f, 15.0f}},
             /* No node was hovered before, so no Leave is emitted */
@@ -16532,19 +16547,19 @@ void AbstractUserInterfaceTest::eventCaptureNotAccepted() {
         CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
 
-        ui.layer<Layer>(layer).eventCalls = {};
+        layer.eventCalls = {};
 
         PointerMoveEvent eventMove1{{}, PointerEventSource::Mouse, {}, {}, true, 0, {}};
-        ui.layer<Layer>(layer).accept1 = true;
-        ui.layer<Layer>(layer).accept2 = false;
+        layer.accept1 = true;
+        layer.accept2 = false;
         CORRADE_VERIFY(ui.pointerMoveEvent({50.0f, 10.0f}, eventMove1));
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), right);
 
         PointerEvent eventPress{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
-        ui.layer<Layer>(layer).accept1 = false;
-        ui.layer<Layer>(layer).accept2 = true;
+        layer.accept1 = false;
+        layer.accept2 = true;
         CORRADE_VERIFY(ui.pointerPressEvent({50.0f, 10.0f}, eventPress));
         CORRADE_COMPARE(ui.currentPressedNode(), right);
         /* Capture is rightData1 */
@@ -16553,15 +16568,15 @@ void AbstractUserInterfaceTest::eventCaptureNotAccepted() {
         CORRADE_COMPARE(ui.currentHoveredNode(), right);
 
         PointerMoveEvent eventMove2{{}, PointerEventSource::Mouse, {}, {}, true, 0, {}};
-        ui.layer<Layer>(layer).accept1 = false;
-        ui.layer<Layer>(layer).accept2 = true;
+        layer.accept1 = false;
+        layer.accept2 = true;
         CORRADE_VERIFY(ui.pointerMoveEvent({55.0f, 15.0f}, eventMove2));
         CORRADE_COMPARE(ui.currentPressedNode(), right);
         CORRADE_COMPARE(ui.currentCapturedNode(), right);
         /* The hovered node should now be rightData1 */
         CORRADE_COMPARE(ui.currentHoveredNode(), right);
 
-        CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
+        CORRADE_COMPARE_AS(layer.eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
             {Move, rightData2, {10.0f, 10.0f}}, /* not accepted */
             {Move, rightData1, {10.0f, 10.0f}},
             {Enter, rightData2, {10.0f, 10.0f}},
@@ -16650,32 +16665,31 @@ void AbstractUserInterfaceTest::eventCaptureToggleCapture() {
         Containers::Array<Containers::Triple<Int, DataHandle, Vector2>> eventCalls;
     };
 
-    LayerHandle layer = ui.createLayer();
-    ui.setLayerInstance(Containers::pointer<Layer>(layer));
+    Layer& layer = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer()));
 
     /* Two nodes next to each other */
     NodeHandle left = ui.createNode({20.0f, 0.0f}, {20.0f, 20.0f});
     NodeHandle right = ui.createNode({40.0f, 0.0f}, {20.0f, 20.0f});
     /* Three data, using ID 1, 2 and 4 for easier masking */
-    /*DataHandle data0 =*/ ui.layer<Layer>(layer).create();
-    DataHandle leftData1 = ui.layer<Layer>(layer).create(left);
-    DataHandle leftData2 = ui.layer<Layer>(layer).create(left);
-    /*DataHandle data3 =*/ ui.layer<Layer>(layer).create();
-    DataHandle rightData4 = ui.layer<Layer>(layer).create(right);
+    /*DataHandle data0 =*/ layer.create();
+    DataHandle leftData1 = layer.create(left);
+    DataHandle leftData2 = layer.create(left);
+    /*DataHandle data3 =*/ layer.create();
+    DataHandle rightData4 = layer.create(right);
 
     /* If capture is disabled on press, the release happens on the actual node
        that is under. The capture status is preserved across calls, so if
        it gets disabled for one data, the second data get it disabled
        already. */
     {
-        ui.layer<Layer>(layer).eventCalls = {};
+        layer.eventCalls = {};
 
         /* The leftData2 resets the capture already, so the second only passes
            it through */
         PointerEvent eventPress{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
-        ui.layer<Layer>(layer).capture = Containers::pair(false, 2);
-        ui.layer<Layer>(layer).captureEnter = {};
-        ui.layer<Layer>(layer).captureLeave = {};
+        layer.capture = Containers::pair(false, 2);
+        layer.captureEnter = {};
+        layer.captureLeave = {};
         CORRADE_VERIFY(ui.pointerPressEvent({30.0f, 10.0f}, eventPress));
         CORRADE_COMPARE(ui.currentPressedNode(), left);
         CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
@@ -16691,7 +16705,7 @@ void AbstractUserInterfaceTest::eventCaptureToggleCapture() {
            hovered node doesn't get updated until the next move */
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
 
-        CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
+        CORRADE_COMPARE_AS(layer.eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
             {Press|Captured, leftData2, {10.0f, 10.0f}},
             {Press, leftData1, {10.0f, 10.0f}},
             /* The release event isn't happening on a captured node, so
@@ -16701,12 +16715,12 @@ void AbstractUserInterfaceTest::eventCaptureToggleCapture() {
 
     /* Like above, but with leftData1 resetting the capture instead */
     } {
-        ui.layer<Layer>(layer).eventCalls = {};
+        layer.eventCalls = {};
 
         PointerEvent eventPress{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
-        ui.layer<Layer>(layer).capture = Containers::pair(false, 1);
-        ui.layer<Layer>(layer).captureEnter = {};
-        ui.layer<Layer>(layer).captureLeave = {};
+        layer.capture = Containers::pair(false, 1);
+        layer.captureEnter = {};
+        layer.captureLeave = {};
         CORRADE_VERIFY(ui.pointerPressEvent({30.0f, 10.0f}, eventPress));
         CORRADE_COMPARE(ui.currentPressedNode(), left);
         CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
@@ -16718,7 +16732,7 @@ void AbstractUserInterfaceTest::eventCaptureToggleCapture() {
         CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
 
-        CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
+        CORRADE_COMPARE_AS(layer.eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
             {Press|Captured, leftData2, {10.0f, 10.0f}},
             {Press|Captured, leftData1, {10.0f, 10.0f}},
             {Release, rightData4, {10.0f, 10.0f}},
@@ -16726,14 +16740,14 @@ void AbstractUserInterfaceTest::eventCaptureToggleCapture() {
 
     /* Same for move */
     } {
-        ui.layer<Layer>(layer).eventCalls = {};
+        layer.eventCalls = {};
 
         /* The leftData2 resets the capture already, so the second only passes
            it through */
         PointerEvent eventPress{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
-        ui.layer<Layer>(layer).capture = Containers::pair(false, 2);
-        ui.layer<Layer>(layer).captureEnter = {};
-        ui.layer<Layer>(layer).captureLeave = {};
+        layer.capture = Containers::pair(false, 2);
+        layer.captureEnter = {};
+        layer.captureLeave = {};
         CORRADE_VERIFY(ui.pointerPressEvent({30.0f, 10.0f}, eventPress));
         CORRADE_COMPARE(ui.currentPressedNode(), left);
         CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
@@ -16747,7 +16761,7 @@ void AbstractUserInterfaceTest::eventCaptureToggleCapture() {
         CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), right);
 
-        CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
+        CORRADE_COMPARE_AS(layer.eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
             {Press|Captured, leftData2, {10.0f, 10.0f}},
             {Press, leftData1, {10.0f, 10.0f}},
             /* The move event isn't happening on a captured node, so
@@ -16768,12 +16782,12 @@ void AbstractUserInterfaceTest::eventCaptureToggleCapture() {
         CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
 
-        ui.layer<Layer>(layer).eventCalls = {};
+        layer.eventCalls = {};
 
         PointerEvent eventPress{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
-        ui.layer<Layer>(layer).capture = Containers::pair(false, 1);
-        ui.layer<Layer>(layer).captureEnter = {};
-        ui.layer<Layer>(layer).captureLeave = {};
+        layer.capture = Containers::pair(false, 1);
+        layer.captureEnter = {};
+        layer.captureLeave = {};
         CORRADE_VERIFY(ui.pointerPressEvent({30.0f, 10.0f}, eventPress));
         CORRADE_COMPARE(ui.currentPressedNode(), left);
         CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
@@ -16785,7 +16799,7 @@ void AbstractUserInterfaceTest::eventCaptureToggleCapture() {
         CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), right);
 
-        CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
+        CORRADE_COMPARE_AS(layer.eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
             {Press|Captured, leftData2, {10.0f, 10.0f}},
             {Press|Captured, leftData1, {10.0f, 10.0f}},
             {Move, rightData4, {10.0f, 10.0f}},
@@ -16805,12 +16819,12 @@ void AbstractUserInterfaceTest::eventCaptureToggleCapture() {
         CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
 
-        ui.layer<Layer>(layer).eventCalls = {};
+        layer.eventCalls = {};
 
         PointerEvent eventPress{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
-        ui.layer<Layer>(layer).capture = Containers::pair(false, 2);
-        ui.layer<Layer>(layer).captureEnter = {};
-        ui.layer<Layer>(layer).captureLeave = {};
+        layer.capture = Containers::pair(false, 2);
+        layer.captureEnter = {};
+        layer.captureLeave = {};
         CORRADE_VERIFY(ui.pointerPressEvent({30.0f, 10.0f}, eventPress));
         CORRADE_COMPARE(ui.currentPressedNode(), left);
         CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
@@ -16823,7 +16837,7 @@ void AbstractUserInterfaceTest::eventCaptureToggleCapture() {
         CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
 
-        CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
+        CORRADE_COMPARE_AS(layer.eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
             {Press|Captured, leftData2, {10.0f, 10.0f}},
             {Press, leftData1, {10.0f, 10.0f}},
             {Move|Secondary, rightData4, {10.0f, 10.0f}},
@@ -16842,13 +16856,13 @@ void AbstractUserInterfaceTest::eventCaptureToggleCapture() {
         CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
 
-        ui.layer<Layer>(layer).eventCalls = {};
+        layer.eventCalls = {};
 
         /* Captures implicitly */
         PointerEvent eventPress{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
-        ui.layer<Layer>(layer).capture = {};
-        ui.layer<Layer>(layer).captureEnter = {};
-        ui.layer<Layer>(layer).captureLeave = {};
+        layer.capture = {};
+        layer.captureEnter = {};
+        layer.captureLeave = {};
         CORRADE_VERIFY(ui.pointerPressEvent({30.0f, 10.0f}, eventPress));
         CORRADE_COMPARE(ui.currentPressedNode(), left);
         CORRADE_COMPARE(ui.currentCapturedNode(), left);
@@ -16858,9 +16872,9 @@ void AbstractUserInterfaceTest::eventCaptureToggleCapture() {
 
         /* Releases on leftData2 already */
         PointerEvent eventRelease{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
-        ui.layer<Layer>(layer).capture = Containers::pair(false, 7);
-        ui.layer<Layer>(layer).captureEnter = {};
-        ui.layer<Layer>(layer).captureLeave = {};
+        layer.capture = Containers::pair(false, 7);
+        layer.captureEnter = {};
+        layer.captureLeave = {};
         CORRADE_VERIFY(ui.pointerReleaseEvent({50.0f, 10.0f}, eventRelease));
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
@@ -16868,7 +16882,7 @@ void AbstractUserInterfaceTest::eventCaptureToggleCapture() {
            hovered node doesn't get updated until the next move */
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
 
-        CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
+        CORRADE_COMPARE_AS(layer.eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
             {Press|Captured, leftData2, {10.0f, 10.0f}},
             {Press|Captured, leftData1, {10.0f, 10.0f}},
             {Release|Captured, leftData2, {30.0f, 10.0f}}, /* actually on rightData */
@@ -16879,19 +16893,19 @@ void AbstractUserInterfaceTest::eventCaptureToggleCapture() {
     /* If capture is enabled on release, it doesn't affect anything either,
        except for the isCaptured() bit being true for subsequent data */
     } {
-        ui.layer<Layer>(layer).eventCalls = {};
+        layer.eventCalls = {};
 
         /* Releases on leftData2 already */
         PointerEvent eventRelease{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
-        ui.layer<Layer>(layer).capture = Containers::pair(true, 7);
-        ui.layer<Layer>(layer).captureEnter = {};
-        ui.layer<Layer>(layer).captureLeave = {};
+        layer.capture = Containers::pair(true, 7);
+        layer.captureEnter = {};
+        layer.captureLeave = {};
         CORRADE_VERIFY(ui.pointerReleaseEvent({30.0f, 10.0f}, eventRelease));
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
 
-        CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
+        CORRADE_COMPARE_AS(layer.eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
             {Release, leftData2, {10.0f, 10.0f}},
             /** @todo or have the isCaptured() bit reset back for all releases? */
             {Release|Captured, leftData1, {10.0f, 10.0f}},
@@ -16901,14 +16915,14 @@ void AbstractUserInterfaceTest::eventCaptureToggleCapture() {
        (move/release) event then happens either on the captured node or the
        actual node that's under. */
     } {
-        ui.layer<Layer>(layer).eventCalls = {};
+        layer.eventCalls = {};
 
         /* Capture is implicit on a press, so this is the same as
            capture = {} */
         PointerEvent eventPress{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
-        ui.layer<Layer>(layer).capture = Containers::pair(true, 7);
-        ui.layer<Layer>(layer).captureEnter = {};
-        ui.layer<Layer>(layer).captureLeave = {};
+        layer.capture = Containers::pair(true, 7);
+        layer.captureEnter = {};
+        layer.captureLeave = {};
         CORRADE_VERIFY(ui.pointerPressEvent({30.0f, 10.0f}, eventPress));
         CORRADE_COMPARE(ui.currentPressedNode(), left);
         CORRADE_COMPARE(ui.currentCapturedNode(), left);
@@ -16919,9 +16933,9 @@ void AbstractUserInterfaceTest::eventCaptureToggleCapture() {
         /* leftData2 move will reset the capture, leftData1 move will pass it
            through unchanged */
         PointerMoveEvent eventMove1{{}, PointerEventSource::Mouse, {}, {}, true, 0, {}};
-        ui.layer<Layer>(layer).capture = Containers::pair(false, 2);
-        ui.layer<Layer>(layer).captureEnter = {};
-        ui.layer<Layer>(layer).captureLeave = {};
+        layer.capture = Containers::pair(false, 2);
+        layer.captureEnter = {};
+        layer.captureLeave = {};
         CORRADE_VERIFY(ui.pointerMoveEvent({50.0f, 10.0f}, eventMove1));
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
@@ -16932,9 +16946,9 @@ void AbstractUserInterfaceTest::eventCaptureToggleCapture() {
 
         /* This happens on (uncaptured) rightData4, which will capture it */
         PointerMoveEvent eventMove2{{}, PointerEventSource::Mouse, {}, {}, true, 0, {}};
-        ui.layer<Layer>(layer).capture = Containers::pair(true, 4);
-        ui.layer<Layer>(layer).captureEnter = {};
-        ui.layer<Layer>(layer).captureLeave = {};
+        layer.capture = Containers::pair(true, 4);
+        layer.captureEnter = {};
+        layer.captureLeave = {};
         CORRADE_VERIFY(ui.pointerMoveEvent({55.0f, 15.0f}, eventMove2));
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentCapturedNode(), right);
@@ -16942,9 +16956,9 @@ void AbstractUserInterfaceTest::eventCaptureToggleCapture() {
 
         /* rightData4 will reset the capture here */
         PointerMoveEvent eventMove3{{}, PointerEventSource::Mouse, {}, {}, true, 0, {}};
-        ui.layer<Layer>(layer).capture = Containers::pair(false, 4);
-        ui.layer<Layer>(layer).captureEnter = {};
-        ui.layer<Layer>(layer).captureLeave = {};
+        layer.capture = Containers::pair(false, 4);
+        layer.captureEnter = {};
+        layer.captureLeave = {};
         CORRADE_VERIFY(ui.pointerMoveEvent({30.0f, 10.0f}, eventMove3));
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
@@ -16952,7 +16966,7 @@ void AbstractUserInterfaceTest::eventCaptureToggleCapture() {
            hovered anymore */
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
 
-        CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
+        CORRADE_COMPARE_AS(layer.eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
             {Press|Captured, leftData2, {10.0f, 10.0f}},
             {Press|Captured, leftData1, {10.0f, 10.0f}},
             {Move|Captured, leftData2, {30.0f, 10.0f}}, /* actually on rightData */
@@ -16980,48 +16994,48 @@ void AbstractUserInterfaceTest::eventCaptureToggleCapture() {
         CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
 
-        ui.layer<Layer>(layer).eventCalls = {};
+        layer.eventCalls = {};
 
         PointerEvent eventPress{{}, PointerEventSource::Touch, Pointer::Finger, false, 0, {}};
-        ui.layer<Layer>(layer).capture = Containers::pair(true, 2);
-        ui.layer<Layer>(layer).captureEnter = {};
-        ui.layer<Layer>(layer).captureLeave = {};
+        layer.capture = Containers::pair(true, 2);
+        layer.captureEnter = {};
+        layer.captureLeave = {};
         CORRADE_VERIFY(ui.pointerPressEvent({30.0f, 10.0f}, eventPress));
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentCapturedNode(), left);
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
 
         PointerEvent eventRelease1{{}, PointerEventSource::Touch, Pointer::Finger, false, 0, {}};
-        ui.layer<Layer>(layer).capture = Containers::pair(false, 2);
-        ui.layer<Layer>(layer).captureEnter = {};
-        ui.layer<Layer>(layer).captureLeave = {};
+        layer.capture = Containers::pair(false, 2);
+        layer.captureEnter = {};
+        layer.captureLeave = {};
         CORRADE_VERIFY(ui.pointerReleaseEvent({50.0f, 10.0f}, eventRelease1));
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
 
         PointerEvent eventRelease2{{}, PointerEventSource::Touch, Pointer::Finger, false, 0, {}};
-        ui.layer<Layer>(layer).capture = Containers::pair(true, 4);
-        ui.layer<Layer>(layer).captureEnter = {};
-        ui.layer<Layer>(layer).captureLeave = {};
+        layer.capture = Containers::pair(true, 4);
+        layer.captureEnter = {};
+        layer.captureLeave = {};
         CORRADE_VERIFY(ui.pointerReleaseEvent({55.0f, 15.0f}, eventRelease2));
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentCapturedNode(), right);
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
 
         PointerMoveEvent eventMove1{{}, PointerEventSource::Touch, {}, {}, false, 0, {}};
-        ui.layer<Layer>(layer).capture = Containers::pair(false, 4);
-        ui.layer<Layer>(layer).captureEnter = {};
-        ui.layer<Layer>(layer).captureLeave = {};
+        layer.capture = Containers::pair(false, 4);
+        layer.captureEnter = {};
+        layer.captureLeave = {};
         CORRADE_VERIFY(ui.pointerMoveEvent({30.0f, 10.0f}, eventMove1));
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
 
         PointerMoveEvent eventMove2{{}, PointerEventSource::Touch, {}, {}, false, 0, {}};
-        ui.layer<Layer>(layer).capture = Containers::pair(true, 4);
-        ui.layer<Layer>(layer).captureEnter = {};
-        ui.layer<Layer>(layer).captureLeave = {};
+        layer.capture = Containers::pair(true, 4);
+        layer.captureEnter = {};
+        layer.captureLeave = {};
         CORRADE_VERIFY(ui.pointerMoveEvent({55.0f, 15.0f}, eventMove2));
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentCapturedNode(), right);
@@ -17029,7 +17043,7 @@ void AbstractUserInterfaceTest::eventCaptureToggleCapture() {
            hovered anymore */
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
 
-        CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
+        CORRADE_COMPARE_AS(layer.eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
             {Press|Secondary, leftData2, {10.0f, 10.0f}},
             {Press|Secondary|Captured, leftData1, {10.0f, 10.0f}},
             {Release|Secondary|Captured, leftData2, {30.0f, 10.0f}}, /* actually on rightData */
@@ -17051,12 +17065,12 @@ void AbstractUserInterfaceTest::eventCaptureToggleCapture() {
         CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
 
-        ui.layer<Layer>(layer).eventCalls = {};
+        layer.eventCalls = {};
 
         PointerMoveEvent eventMove1{{}, PointerEventSource::Pen, {}, {}, true, 0, {}};
-        ui.layer<Layer>(layer).capture = {};
-        ui.layer<Layer>(layer).captureEnter = {};
-        ui.layer<Layer>(layer).captureLeave = {};
+        layer.capture = {};
+        layer.captureEnter = {};
+        layer.captureLeave = {};
         CORRADE_VERIFY(ui.pointerMoveEvent({50.0f, 10.0f}, eventMove1));
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
@@ -17065,15 +17079,15 @@ void AbstractUserInterfaceTest::eventCaptureToggleCapture() {
         /* Capture happens on leftData2, leftData1 will pass it through
            unchanged */
         PointerMoveEvent eventMove2{{}, PointerEventSource::Pen, {}, {}, true, 0, {}};
-        ui.layer<Layer>(layer).capture = {};
-        ui.layer<Layer>(layer).captureEnter = Containers::pair(true, 2);
-        ui.layer<Layer>(layer).captureLeave = {};
+        layer.capture = {};
+        layer.captureEnter = Containers::pair(true, 2);
+        layer.captureLeave = {};
         CORRADE_VERIFY(ui.pointerMoveEvent({30.0f, 15.0f}, eventMove2));
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentCapturedNode(), left);
         CORRADE_COMPARE(ui.currentHoveredNode(), left);
 
-        CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
+        CORRADE_COMPARE_AS(layer.eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
             {Move, rightData4, {10.0f, 10.0f}},
             {Enter, rightData4, {10.0f, 10.0f}},
             {Move, leftData2, {10.0f, 15.0f}},
@@ -17096,13 +17110,13 @@ void AbstractUserInterfaceTest::eventCaptureToggleCapture() {
         CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
 
-        ui.layer<Layer>(layer).eventCalls = {};
+        layer.eventCalls = {};
 
         /* Capture is unchanged with leftData2, leftData1 will enable it */
         PointerMoveEvent eventMove1{{}, PointerEventSource::Touch, {}, {}, true, 0, {}};
-        ui.layer<Layer>(layer).capture = Containers::pair(true, 1);
-        ui.layer<Layer>(layer).captureEnter = {};
-        ui.layer<Layer>(layer).captureLeave = {};
+        layer.capture = Containers::pair(true, 1);
+        layer.captureEnter = {};
+        layer.captureLeave = {};
         CORRADE_VERIFY(ui.pointerMoveEvent({30.0f, 10.0f}, eventMove1));
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentCapturedNode(), left);
@@ -17111,9 +17125,9 @@ void AbstractUserInterfaceTest::eventCaptureToggleCapture() {
         /* Capture is reset with leftData2, leftData1 passes it through
            unchanged */
         PointerMoveEvent eventMove2{{}, PointerEventSource::Touch, {}, {}, true, 0, {}};
-        ui.layer<Layer>(layer).capture = {};
-        ui.layer<Layer>(layer).captureEnter = {};
-        ui.layer<Layer>(layer).captureLeave = Containers::pair(false, 2);
+        layer.capture = {};
+        layer.captureEnter = {};
+        layer.captureLeave = Containers::pair(false, 2);
         CORRADE_VERIFY(ui.pointerMoveEvent({50.0f, 15.0f}, eventMove2));
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
@@ -17122,7 +17136,7 @@ void AbstractUserInterfaceTest::eventCaptureToggleCapture() {
            again */
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
 
-        CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
+        CORRADE_COMPARE_AS(layer.eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
             {Move, leftData2, {10.0f, 10.0f}},
             {Move, leftData1, {10.0f, 10.0f}},
             /* Yes, leftData2 will have isCaptured set on Enter even though it
@@ -17138,12 +17152,12 @@ void AbstractUserInterfaceTest::eventCaptureToggleCapture() {
     /* Capturing on an uncaptured Leave event does nothing, except for the
        isCaptured() bit being true for subsequent data */
     } {
-        ui.layer<Layer>(layer).eventCalls = {};
+        layer.eventCalls = {};
 
         PointerMoveEvent eventMove1{{}, PointerEventSource::Mouse, {}, {}, true, 0, {}};
-        ui.layer<Layer>(layer).capture = {};
-        ui.layer<Layer>(layer).captureEnter = {};
-        ui.layer<Layer>(layer).captureLeave = {};
+        layer.capture = {};
+        layer.captureEnter = {};
+        layer.captureLeave = {};
         CORRADE_VERIFY(ui.pointerMoveEvent({30.0f, 10.0f}, eventMove1));
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
@@ -17151,16 +17165,16 @@ void AbstractUserInterfaceTest::eventCaptureToggleCapture() {
 
         /* Set on both leftData2 and leftData1 but no effect on either */
         PointerMoveEvent eventMove2{{}, PointerEventSource::Mouse, {}, {}, true, 0, {}};
-        ui.layer<Layer>(layer).capture = {};
-        ui.layer<Layer>(layer).captureEnter = {};
-        ui.layer<Layer>(layer).captureLeave = Containers::pair(true, 3);
+        layer.capture = {};
+        layer.captureEnter = {};
+        layer.captureLeave = Containers::pair(true, 3);
         CORRADE_VERIFY(ui.pointerMoveEvent({50.0f, 15.0f}, eventMove2));
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         /* The capture isn't changed even though the Leave requested it */
         CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), right);
 
-        CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
+        CORRADE_COMPARE_AS(layer.eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
             {Move, leftData2, {10.0f, 10.0f}},
             {Move, leftData1, {10.0f, 10.0f}},
             {Enter, leftData2, {10.0f, 10.0f}},
@@ -17183,12 +17197,12 @@ void AbstractUserInterfaceTest::eventCaptureToggleCapture() {
         CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
 
-        ui.layer<Layer>(layer).eventCalls = {};
+        layer.eventCalls = {};
 
         PointerMoveEvent eventMove1{{}, PointerEventSource::Mouse, {}, {}, true, 0, {}};
-        ui.layer<Layer>(layer).capture = {};
-        ui.layer<Layer>(layer).captureEnter = {};
-        ui.layer<Layer>(layer).captureLeave = {};
+        layer.capture = {};
+        layer.captureEnter = {};
+        layer.captureLeave = {};
         CORRADE_VERIFY(ui.pointerMoveEvent({50.0f, 10.0f}, eventMove1));
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
@@ -17197,16 +17211,16 @@ void AbstractUserInterfaceTest::eventCaptureToggleCapture() {
         /* Enabled on leftData2 move, leftData1 move and leftData2 enter passes
            it through; leftData1 enter disables it */
         PointerMoveEvent eventMove2{{}, PointerEventSource::Mouse, {}, {}, true, 0, {}};
-        ui.layer<Layer>(layer).capture = Containers::pair(true, 2);
-        ui.layer<Layer>(layer).captureEnter = Containers::pair(false, 1);
-        ui.layer<Layer>(layer).captureLeave = {};
+        layer.capture = Containers::pair(true, 2);
+        layer.captureEnter = Containers::pair(false, 1);
+        layer.captureLeave = {};
         CORRADE_VERIFY(ui.pointerMoveEvent({30.0f, 15.0f}, eventMove2));
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         /* No capture as Enter reset it again */
         CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), left);
 
-        CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
+        CORRADE_COMPARE_AS(layer.eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
             {Move, rightData4, {10.0f, 10.0f}},
             {Enter, rightData4, {10.0f, 10.0f}},
             {Move, leftData2, {10.0f, 15.0f}},
@@ -17229,13 +17243,13 @@ void AbstractUserInterfaceTest::eventCaptureToggleCapture() {
         CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
 
-        ui.layer<Layer>(layer).eventCalls = {};
+        layer.eventCalls = {};
 
         /* Capture enabled only on the (second) leftData1 move */
         PointerMoveEvent eventMove1{{}, PointerEventSource::Mouse, {}, {}, true, 0, {}};
-        ui.layer<Layer>(layer).capture = Containers::pair(true, 1);
-        ui.layer<Layer>(layer).captureEnter = {};
-        ui.layer<Layer>(layer).captureLeave = {};
+        layer.capture = Containers::pair(true, 1);
+        layer.captureEnter = {};
+        layer.captureLeave = {};
         CORRADE_VERIFY(ui.pointerMoveEvent({30.0f, 10.0f}, eventMove1));
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentCapturedNode(), left);
@@ -17244,16 +17258,16 @@ void AbstractUserInterfaceTest::eventCaptureToggleCapture() {
         /* Disabled on the leftData2 move already, leftData1 move and leftData2
            leave then passes it through. Enabled again on leftData1 leave. */
         PointerMoveEvent eventMove2{{}, PointerEventSource::Mouse, {}, {}, true, 0, {}};
-        ui.layer<Layer>(layer).capture = Containers::pair(false, 2);
-        ui.layer<Layer>(layer).captureEnter = {};
-        ui.layer<Layer>(layer).captureLeave = Containers::pair(true, 1);
+        layer.capture = Containers::pair(false, 2);
+        layer.captureEnter = {};
+        layer.captureLeave = Containers::pair(true, 1);
         CORRADE_VERIFY(ui.pointerMoveEvent({50.0f, 15.0f}, eventMove2));
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentCapturedNode(), left);
         /* On the right node, but captured on the left, so no hover */
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
 
-        CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
+        CORRADE_COMPARE_AS(layer.eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
             {Move, leftData2, {10.0f, 10.0f}},
             {Move, leftData1, {10.0f, 10.0f}},
             {Enter|Captured, leftData2, {10.0f, 10.0f}},
@@ -17347,34 +17361,33 @@ void AbstractUserInterfaceTest::eventCaptureToggleCaptureInNotAcceptedEvent() {
         Containers::Array<Containers::Triple<Int, DataHandle, Vector2>> eventCalls;
     };
 
-    LayerHandle layer = ui.createLayer();
-    ui.setLayerInstance(Containers::pointer<Layer>(layer));
+    Layer& layer = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer()));
 
     /* Two nodes on top of each other, node 1 above */
     NodeHandle node1 = ui.createNode({20.0f, 0.0f}, {20.0f, 20.0f});
     NodeHandle node2 = ui.createNode({20.0f, 0.0f}, {20.0f, 20.0f});
     /* Three data, using ID 1, 2 and 4 for easier masking */
-    /*DataHandle data0 =*/ ui.layer<Layer>(layer).create();
-    DataHandle data1 = ui.layer<Layer>(layer).create(node1);
-    DataHandle data2 = ui.layer<Layer>(layer).create(node2);
-    /*DataHandle data3 =*/ ui.layer<Layer>(layer).create();
-    DataHandle data4 = ui.layer<Layer>(layer).create(node2);
+    /*DataHandle data0 =*/ layer.create();
+    DataHandle data1 = layer.create(node1);
+    DataHandle data2 = layer.create(node2);
+    /*DataHandle data3 =*/ layer.create();
+    DataHandle data4 = layer.create(node2);
 
     /* Setting capture in events that don't get accepted should do nothing to
        subsequent events and nothing to the end result also */
     {
-        ui.layer<Layer>(layer).eventCalls = {};
+        layer.eventCalls = {};
 
         PointerMoveEvent eventMove{{}, PointerEventSource::Mouse, {}, {}, true, 0, {}};
-        ui.layer<Layer>(layer).acceptMove = 1;
-        ui.layer<Layer>(layer).capture = Containers::pair(true, 2);
+        layer.acceptMove = 1;
+        layer.capture = Containers::pair(true, 2);
         CORRADE_VERIFY(ui.pointerMoveEvent({30.0f, 10.0f}, eventMove));
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         /* Node 2 captures in a non-accepted event, which should be ignored */
         CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), node1);
 
-        CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
+        CORRADE_COMPARE_AS(layer.eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
             {Move, data4, {10.0f, 10.0f}}, /* does nothing */
             {Move, data2, {10.0f, 10.0f}}, /* capturing but not accepted */
             {Move, data1, {10.0f, 10.0f}}, /* shouldn't capture */
@@ -17390,18 +17403,18 @@ void AbstractUserInterfaceTest::eventCaptureToggleCaptureInNotAcceptedEvent() {
         ui.pointerMoveEvent({1000.0f, 1000.0f}, eventMoveReset);
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
 
-        ui.layer<Layer>(layer).eventCalls = {};
+        layer.eventCalls = {};
 
         PointerMoveEvent eventMove{{}, PointerEventSource::Mouse, {}, {}, true, 0, {}};
-        ui.layer<Layer>(layer).acceptMove = 1;
-        ui.layer<Layer>(layer).capture = Containers::pair(true, 4);
+        layer.acceptMove = 1;
+        layer.capture = Containers::pair(true, 4);
         CORRADE_VERIFY(ui.pointerMoveEvent({30.0f, 10.0f}, eventMove));
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         /* Node 2 captures in a non-accepted event, which should be ignored */
         CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), node1);
 
-        CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
+        CORRADE_COMPARE_AS(layer.eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
             {Move, data4, {10.0f, 10.0f}}, /* capturing but not accepted */
             {Move, data2, {10.0f, 10.0f}}, /* does nothing */
             {Move, data1, {10.0f, 10.0f}}, /* shouldn't capture */
@@ -17417,17 +17430,17 @@ void AbstractUserInterfaceTest::eventCaptureToggleCaptureInNotAcceptedEvent() {
         ui.pointerMoveEvent({1000.0f, 1000.0f}, eventMoveReset);
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
 
-        ui.layer<Layer>(layer).eventCalls = {};
+        layer.eventCalls = {};
 
         PointerMoveEvent eventMove{{}, PointerEventSource::Mouse, {}, {}, true, 0, {}};
-        ui.layer<Layer>(layer).acceptMove = 4;
-        ui.layer<Layer>(layer).capture = Containers::pair(true, 4);
+        layer.acceptMove = 4;
+        layer.capture = Containers::pair(true, 4);
         CORRADE_VERIFY(ui.pointerMoveEvent({30.0f, 10.0f}, eventMove));
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentCapturedNode(), node2);
         CORRADE_COMPARE(ui.currentHoveredNode(), node2);
 
-        CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
+        CORRADE_COMPARE_AS(layer.eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
             {Move, data4, {10.0f, 10.0f}}, /* captures */
             {Move|Captured, data2, {10.0f, 10.0f}},
             {Enter|Captured, data4, {10.0f, 10.0f}},
@@ -17447,17 +17460,17 @@ void AbstractUserInterfaceTest::eventCaptureToggleCaptureInNotAcceptedEvent() {
         CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
 
-        ui.layer<Layer>(layer).eventCalls = {};
+        layer.eventCalls = {};
 
         PointerEvent eventPress{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
-        ui.layer<Layer>(layer).acceptPress = 4;
-        ui.layer<Layer>(layer).capture = Containers::pair(false, 4);
+        layer.acceptPress = 4;
+        layer.capture = Containers::pair(false, 4);
         CORRADE_VERIFY(ui.pointerPressEvent({30.0f, 10.0f}, eventPress));
         CORRADE_COMPARE(ui.currentPressedNode(), node2);
         CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
 
-        CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
+        CORRADE_COMPARE_AS(layer.eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
             {Press|Captured, data4, {10.0f, 10.0f}}, /* disables capture */
             {Press, data2, {10.0f, 10.0f}},
         })), TestSuite::Compare::Container);
@@ -17471,8 +17484,8 @@ void AbstractUserInterfaceTest::eventCaptureToggleCaptureInNotAcceptedEvent() {
         ui.pointerReleaseEvent({1000.0f, 1000.0f}, eventReleaseReset);
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
 
-        ui.layer<Layer>(layer).eventCalls = {};
-        ui.layer<Layer>(layer).capture = {};
+        layer.eventCalls = {};
+        layer.capture = {};
 
         /* The press event accepts and captures unconditionally */
         PointerEvent eventPress{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
@@ -17484,15 +17497,15 @@ void AbstractUserInterfaceTest::eventCaptureToggleCaptureInNotAcceptedEvent() {
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
 
         PointerMoveEvent eventMove{{}, PointerEventSource::Mouse, {}, {}, true, 0, {}};
-        ui.layer<Layer>(layer).acceptMove = 0;
-        ui.layer<Layer>(layer).capture = Containers::pair(false, 4);
+        layer.acceptMove = 0;
+        layer.capture = Containers::pair(false, 4);
         CORRADE_VERIFY(!ui.pointerMoveEvent({100.0f, 100.0f}, eventMove));
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         /* The capture should be reset even though the move wasn't accepted */
         CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
 
-        CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
+        CORRADE_COMPARE_AS(layer.eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
             {Press|Captured, data4, {10.0f, 10.0f}},
             {Press|Captured, data2, {10.0f, 10.0f}},
             {Move|Captured, data4, {80.0f, 100.0f}}, /* cancels the capture */
@@ -17503,30 +17516,30 @@ void AbstractUserInterfaceTest::eventCaptureToggleCaptureInNotAcceptedEvent() {
     /* Enabling capture in a secondary press, release, move event that isn't
        accepted should do nothing */
     } {
-        ui.layer<Layer>(layer).eventCalls = {};
+        layer.eventCalls = {};
 
         PointerEvent eventPress{{}, PointerEventSource::Touch, Pointer::Finger, false, 0, {}};
-        ui.layer<Layer>(layer).acceptPress = 0;
-        ui.layer<Layer>(layer).capture = Containers::pair(true, 4);
+        layer.acceptPress = 0;
+        layer.capture = Containers::pair(true, 4);
         CORRADE_VERIFY(!ui.pointerPressEvent({30.0f, 10.0f}, eventPress));
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
 
         PointerMoveEvent eventMove{{}, PointerEventSource::Touch, {}, {}, false, 0, {}};
-        ui.layer<Layer>(layer).acceptMove = 0;
-        ui.layer<Layer>(layer).capture = Containers::pair(true, 4);
+        layer.acceptMove = 0;
+        layer.capture = Containers::pair(true, 4);
         CORRADE_VERIFY(!ui.pointerMoveEvent({35.0f, 15.0f}, eventMove));
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
 
         PointerEvent eventRelease{{}, PointerEventSource::Touch, Pointer::Finger, false, 0, {}};
-        ui.layer<Layer>(layer).acceptRelease = 0;
-        ui.layer<Layer>(layer).capture = Containers::pair(true, 4);
+        layer.acceptRelease = 0;
+        layer.capture = Containers::pair(true, 4);
         CORRADE_VERIFY(!ui.pointerReleaseEvent({30.0f, 10.0f}, eventPress));
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
 
-        CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
+        CORRADE_COMPARE_AS(layer.eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
             {Press|Secondary, data4, {10.0f, 10.0f}},
             {Press|Secondary, data2, {10.0f, 10.0f}},
             {Press|Secondary, data1, {10.0f, 10.0f}},
@@ -17541,37 +17554,37 @@ void AbstractUserInterfaceTest::eventCaptureToggleCaptureInNotAcceptedEvent() {
     /* Disabling capture in a secondary press, release, move event that isn't
        accepted should do nothing */
     } {
-        ui.layer<Layer>(layer).eventCalls = {};
+        layer.eventCalls = {};
 
         PointerEvent eventPressPrimary{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
-        ui.layer<Layer>(layer).acceptPress = 4;
-        ui.layer<Layer>(layer).capture = Containers::pair(true, 4);
+        layer.acceptPress = 4;
+        layer.capture = Containers::pair(true, 4);
         CORRADE_VERIFY(ui.pointerPressEvent({35.0f, 15.0f}, eventPressPrimary));
         CORRADE_COMPARE(ui.currentPressedNode(), node2);
         CORRADE_COMPARE(ui.currentCapturedNode(), node2);
 
         PointerEvent eventPress{{}, PointerEventSource::Touch, Pointer::Finger, false, 0, {}};
-        ui.layer<Layer>(layer).acceptPress = 0;
-        ui.layer<Layer>(layer).capture = Containers::pair(false, 4);
+        layer.acceptPress = 0;
+        layer.capture = Containers::pair(false, 4);
         CORRADE_VERIFY(!ui.pointerPressEvent({30.0f, 10.0f}, eventPress));
         CORRADE_COMPARE(ui.currentPressedNode(), node2);
         CORRADE_COMPARE(ui.currentCapturedNode(), node2);
 
         PointerMoveEvent eventMove{{}, PointerEventSource::Touch, {}, {}, false, 0, {}};
-        ui.layer<Layer>(layer).acceptMove = 0;
-        ui.layer<Layer>(layer).capture = Containers::pair(false, 4);
+        layer.acceptMove = 0;
+        layer.capture = Containers::pair(false, 4);
         CORRADE_VERIFY(!ui.pointerMoveEvent({35.0f, 15.0f}, eventMove));
         CORRADE_COMPARE(ui.currentPressedNode(), node2);
         CORRADE_COMPARE(ui.currentCapturedNode(), node2);
 
         PointerEvent eventRelease{{}, PointerEventSource::Touch, Pointer::Finger, false, 0, {}};
-        ui.layer<Layer>(layer).acceptRelease = 0;
-        ui.layer<Layer>(layer).capture = Containers::pair(false, 4);
+        layer.acceptRelease = 0;
+        layer.capture = Containers::pair(false, 4);
         CORRADE_VERIFY(!ui.pointerReleaseEvent({30.0f, 10.0f}, eventPress));
         CORRADE_COMPARE(ui.currentPressedNode(), node2);
         CORRADE_COMPARE(ui.currentCapturedNode(), node2);
 
-        CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
+        CORRADE_COMPARE_AS(layer.eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
             {Press|Captured, data4, {15.0f, 15.0f}},
             {Press|Captured, data2, {15.0f, 15.0f}},
             {Press|Captured|Secondary, data4, {10.0f, 10.0f}},
@@ -17647,9 +17660,8 @@ void AbstractUserInterfaceTest::eventCaptureNodePositionUpdated() {
         CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
     }
 
-    LayerHandle layer = ui.createLayer();
-    ui.setLayerInstance(Containers::pointer<Layer>(layer));
-    DataHandle nestedData = ui.layer<Layer>(layer).create(nested);
+    Layer& layer = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer()));
+    DataHandle nestedData = layer.create(nested);
 
     if(data.update) {
         CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataAttachmentUpdate);
@@ -17679,7 +17691,7 @@ void AbstractUserInterfaceTest::eventCaptureNodePositionUpdated() {
         CORRADE_COMPARE(ui.currentCapturedNode(), nested);
     } else CORRADE_INTERNAL_ASSERT_UNREACHABLE();
 
-    CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Pair<DataHandle, Vector2>>({
+    CORRADE_COMPARE_AS(layer.eventCalls, (Containers::arrayView<Containers::Pair<DataHandle, Vector2>>({
         {nestedData, {10.0f, 10.0f}},
         /* Should receive up-to-date position, not something relative to a
            position cached at the press; also properly considering the event
@@ -17762,11 +17774,10 @@ void AbstractUserInterfaceTest::eventCaptureNodeBecomesHiddenDisabledNoEvents() 
         CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
     }
 
-    LayerHandle layer = ui.createLayer();
-    ui.setLayerInstance(Containers::pointer<Layer>(layer));
+    Layer& layer = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer()));
 
-    DataHandle leftData = ui.layer<Layer>(layer).create(leftNested);
-    DataHandle rightData = ui.layer<Layer>(layer).create(right);
+    DataHandle leftData = layer.create(leftNested);
+    DataHandle rightData = layer.create(right);
 
     if(data.update) {
         CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataAttachmentUpdate);
@@ -17817,7 +17828,7 @@ void AbstractUserInterfaceTest::eventCaptureNodeBecomesHiddenDisabledNoEvents() 
     CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
 
     if(data.move) {
-        CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
+        CORRADE_COMPARE_AS(layer.eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
             {Update, {}, {}},
             {Press|Captured, leftData, {10.0f, 10.0f}},
             {Move|Captured, leftData, {10.0f, 10.0f}},
@@ -17831,7 +17842,7 @@ void AbstractUserInterfaceTest::eventCaptureNodeBecomesHiddenDisabledNoEvents() 
             {Move, rightData, {10.0f, 10.0f}},
         })), TestSuite::Compare::Container);
     } else {
-        CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
+        CORRADE_COMPARE_AS(layer.eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
             {Update, {}, {}},
             {Press|Captured, leftData, {10.0f, 10.0f}},
             /* The node used to be both pressed and captured, but only one
@@ -17904,10 +17915,9 @@ void AbstractUserInterfaceTest::eventCaptureNodeRemoved() {
         CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
     }
 
-    LayerHandle layer = ui.createLayer();
-    ui.setLayerInstance(Containers::pointer<Layer>(layer));
-    DataHandle leftData = ui.layer<Layer>(layer).create(leftNested);
-    DataHandle rightData = ui.layer<Layer>(layer).create(right);
+    Layer& layer = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer()));
+    DataHandle leftData = layer.create(leftNested);
+    DataHandle rightData = layer.create(right);
 
     if(data.update) {
         CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataAttachmentUpdate);
@@ -17949,7 +17959,7 @@ void AbstractUserInterfaceTest::eventCaptureNodeRemoved() {
 
     CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
 
-    CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Triple<DataHandle, Vector2, bool>>({
+    CORRADE_COMPARE_AS(layer.eventCalls, (Containers::arrayView<Containers::Triple<DataHandle, Vector2, bool>>({
         {leftData, {10.0f, 10.0f}, true},
         /* The release / move event isn't happening on a captured node, so
            isCaptured() is false for it */
@@ -18014,10 +18024,9 @@ void AbstractUserInterfaceTest::eventCaptureAllDataRemoved() {
         CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
     }
 
-    LayerHandle layer = ui.createLayer();
-    ui.setLayerInstance(Containers::pointer<Layer>(layer));
-    DataHandle leftData = ui.layer<Layer>(layer).create(left);
-    /*DataHandle rightData =*/ ui.layer<Layer>(layer).create(right);
+    Layer& layer = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer()));
+    DataHandle leftData = layer.create(left);
+    /*DataHandle rightData =*/ layer.create(right);
 
     if(data.update) {
         CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataAttachmentUpdate);
@@ -18029,7 +18038,7 @@ void AbstractUserInterfaceTest::eventCaptureAllDataRemoved() {
     CORRADE_VERIFY(ui.pointerPressEvent({30.0f, 10.0f}, eventPress));
     CORRADE_COMPARE(ui.currentCapturedNode(), left);
 
-    ui.layer<Layer>(layer).remove(leftData);
+    layer.remove(leftData);
     /* Similar to hover behavior, the node stays captured until an actual event
        discovers there's no data anymore. This is consistent for example with a
        case where the data would change the area where they're active for
@@ -18073,7 +18082,7 @@ void AbstractUserInterfaceTest::eventCaptureAllDataRemoved() {
         CORRADE_COMPARE(ui.currentCapturedNode(), left);
     } else CORRADE_INTERNAL_ASSERT_UNREACHABLE();
 
-    CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Triple<DataHandle, Vector2, bool>>({
+    CORRADE_COMPARE_AS(layer.eventCalls, (Containers::arrayView<Containers::Triple<DataHandle, Vector2, bool>>({
         {leftData, {10.0f, 10.0f}, true},
         /* There's no captured data to execute the event on. It doesn't
            propagate anywhere either, that would go against the capturing
