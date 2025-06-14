@@ -380,7 +380,8 @@ void BaseLayerGL::Shared::doSetStyle(const BaseLayerCommonStyleUniform& commonUn
 struct BaseLayerGL::State: BaseLayer::State {
     explicit State(Shared::State& shared): BaseLayer::State{shared} {}
 
-    GL::Buffer vertexBuffer{GL::Buffer::TargetHint::Array}, indexBuffer{GL::Buffer::TargetHint::ElementArray};
+    GL::Buffer vertexBuffer{GL::Buffer::TargetHint::Array},
+        indexBuffer{GL::Buffer::TargetHint::ElementArray};
     GL::Mesh mesh;
     Vector2 clipScale;
 
