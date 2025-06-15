@@ -547,6 +547,16 @@ void AbstractLayer::doAdvanceAnimations(Nanoseconds, Containers::MutableBitArray
     CORRADE_ASSERT_UNREACHABLE("Ui::AbstractLayer::advanceAnimations(): style animation advertised but not implemented", );
 }
 
+void AbstractLayer::preUpdate(const LayerStates states) {
+    CORRADE_ASSERT(states && states <= (LayerState::NeedsCommonDataUpdate|LayerState::NeedsSharedDataUpdate),
+        "Ui::AbstractLayer::preUpdate(): expected a non-empty subset of" << (LayerState::NeedsCommonDataUpdate|LayerState::NeedsSharedDataUpdate) << "but got" << states, );
+    CORRADE_ASSERT(!(features() >= LayerFeature::Draw) || _state->setSizeCalled,
+        "Ui::AbstractLayer::preUpdate(): user interface size wasn't set", );
+    doPreUpdate(states);
+}
+
+void AbstractLayer::doPreUpdate(LayerStates) {}
+
 void AbstractLayer::update(const LayerStates states, const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectDataCounts, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, const Containers::StridedArrayView1D<const Float>& nodeOpacities, const Containers::BitArrayView nodesEnabled, const Containers::StridedArrayView1D<const Vector2>& clipRectOffsets, const Containers::StridedArrayView1D<const Vector2>& clipRectSizes, const Containers::StridedArrayView1D<const Vector2>& compositeRectOffsets, const Containers::StridedArrayView1D<const Vector2>& compositeRectSizes) {
     #ifndef CORRADE_NO_ASSERT
     LayerStates expectedStates = LayerState::NeedsNodeOffsetSizeUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsNodeOpacityUpdate|LayerState::NeedsNodeOrderUpdate|LayerState::NeedsDataUpdate|LayerState::NeedsCommonDataUpdate|LayerState::NeedsSharedDataUpdate|LayerState::NeedsAttachmentUpdate;

@@ -168,6 +168,7 @@ struct AbstractUserInterfaceTest: TestSuite::Tester {
     void state();
     /* Tests update() and clean() calls triggered by advanceAnimations() */
     void stateAnimations();
+    void statePreUpdateClean();
 
     void statePropagateFromLayers();
     void statePropagateFromLayouters();
@@ -1088,6 +1089,8 @@ AbstractUserInterfaceTest::AbstractUserInterfaceTest() {
 
     addInstancedTests({&AbstractUserInterfaceTest::stateAnimations},
         Containers::arraySize(StateAnimationsData));
+
+    addTests({&AbstractUserInterfaceTest::statePreUpdateClean});
 
     addInstancedTests({&AbstractUserInterfaceTest::statePropagateFromLayers},
         Containers::arraySize(StatePropagateFromLayersData));
@@ -7244,15 +7247,18 @@ void AbstractUserInterfaceTest::updateOrder() {
     AbstractUserInterface ui{{100, 100}};
 
     struct Layer: AbstractLayer {
-        explicit Layer(LayerHandle handle, Containers::Array<LayerHandle>& order): AbstractLayer{handle}, _order(order) {}
+        explicit Layer(LayerHandle handle, Containers::Array<Containers::Pair<bool, LayerHandle>>& order): AbstractLayer{handle}, _order(order) {}
 
         LayerFeatures doFeatures() const override { return {}; }
+        void doPreUpdate(LayerStates) override {
+            arrayAppend(_order, InPlaceInit, false, handle());
+        }
         void doUpdate(LayerStates, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Float>&, Containers::BitArrayView, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&) override {
-            arrayAppend(_order, handle());
+            arrayAppend(_order, InPlaceInit, true, handle());
         }
 
         private:
-            Containers::Array<LayerHandle>& _order;
+            Containers::Array<Containers::Pair<bool, LayerHandle>>& _order;
     };
 
     LayerHandle layer1, layer2, layer3NoInstance, layer4, layer5Removed, layer6;
@@ -7280,7 +7286,7 @@ void AbstractUserInterfaceTest::updateOrder() {
     CORRADE_COMPARE(ui.layerNext(layer5Removed), layer6);
     CORRADE_COMPARE(ui.layerNext(layer6), LayerHandle::Null);
 
-    Containers::Array<LayerHandle> order;
+    Containers::Array<Containers::Pair<bool, LayerHandle>> order;
     ui.setLayerInstance(Containers::pointer<Layer>(layer1, order));
     ui.setLayerInstance(Containers::pointer<Layer>(layer2, order));
     /* No instance for layer 3 */
@@ -7289,14 +7295,22 @@ void AbstractUserInterfaceTest::updateOrder() {
     ui.setLayerInstance(Containers::pointer<Layer>(layer6, order));
 
     /* Initially the update goes through everything due to the layer being
-       removed */
+       removed; the pre-update is called only for layers that have
+       corresponding flag set */
+    ui.layer(layer4).setNeedsUpdate(LayerState::NeedsSharedDataUpdate);
+    ui.layer(layer1).setNeedsUpdate(LayerState::NeedsCommonDataUpdate);
+    ui.layer(layer2).setNeedsUpdate(LayerState::NeedsDataUpdate);
     ui.update();
-    CORRADE_COMPARE_AS(order, Containers::arrayView({
-        layer1,
-        layer2,
-        layer4,
-        layer6,
-    }), TestSuite::Compare::Container);
+    CORRADE_COMPARE_AS(order, (Containers::arrayView<Containers::Pair<bool, LayerHandle>>({
+        {false, layer1},
+        /* layer 2 is only NeedsDataUpdate, no pre-update */
+        {false, layer4},
+        /* layer 6 has no flags, no pre-update */
+        {true, layer1},
+        {true, layer2},
+        {true, layer4},
+        {true, layer6},
+    })), TestSuite::Compare::Container);
 
     /* Next time it should go only through layers that actually have any
        state set, but still in order */
@@ -7304,10 +7318,11 @@ void AbstractUserInterfaceTest::updateOrder() {
     ui.layer(layer6).setNeedsUpdate(LayerState::NeedsDataUpdate);
     ui.layer(layer2).setNeedsUpdate(LayerState::NeedsCommonDataUpdate);
     ui.update();
-    CORRADE_COMPARE_AS(order, Containers::arrayView({
-        layer2,
-        layer6,
-    }), TestSuite::Compare::Container);
+    CORRADE_COMPARE_AS(order, (Containers::arrayView<Containers::Pair<bool, LayerHandle>>({
+        {false, layer2},
+        {true, layer2},
+        {true, layer6},
+    })), TestSuite::Compare::Container);
 }
 
 void AbstractUserInterfaceTest::updateRecycledLayerWithoutInstance() {
@@ -7713,7 +7728,12 @@ void AbstractUserInterfaceTest::state() {
                 TestSuite::Compare::Container);
             ++cleanCallCount;
         }
-
+        void doPreUpdate(const LayerStates state) override {
+            /* The doUpdate() should never get anything except these two */
+            CORRADE_VERIFY(state && state <= (LayerState::NeedsCommonDataUpdate|LayerState::NeedsSharedDataUpdate));
+            CORRADE_COMPARE(state, expectedState & (LayerState::NeedsCommonDataUpdate|LayerState::NeedsSharedDataUpdate));
+            ++preUpdateCallCount;
+        }
         void doUpdate(const LayerStates state, const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectDataCounts, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, const Containers::StridedArrayView1D<const Float>& nodeOpacities, Containers::BitArrayView nodesEnabled, const Containers::StridedArrayView1D<const Vector2>& clipRectOffsets, const Containers::StridedArrayView1D<const Vector2>& clipRectSizes, const Containers::StridedArrayView1D<const Vector2>& compositeRectOffsets, const Containers::StridedArrayView1D<const Vector2>& compositeRectSizes) override {
             CORRADE_ITERATION(handle());
             /* The doUpdate() should never get the NeedsAttachmentUpdate, only
@@ -7765,6 +7785,7 @@ void AbstractUserInterfaceTest::state() {
         Containers::StridedArrayView1D<const Containers::Pair<Vector2, Vector2>> expectedClipRectOffsetsSizes;
         Containers::StridedArrayView1D<const Containers::Pair<Vector2, Vector2>> expectedCompositeRectOffsetsSizes;
         Int cleanCallCount = 0;
+        Int preUpdateCallCount = 0;
         Int updateCallCount = 0;
 
         private:
@@ -7788,6 +7809,7 @@ void AbstractUserInterfaceTest::state() {
             CORRADE_COMPARE(layouter2->cleanCallCount, 0);
         }
         CORRADE_COMPARE(layer.cleanCallCount, 0);
+        CORRADE_COMPARE(layer.preUpdateCallCount, 0);
         CORRADE_COMPARE(layer.updateCallCount, 0);
     }
 
@@ -7809,6 +7831,7 @@ void AbstractUserInterfaceTest::state() {
             }), TestSuite::Compare::Container);
         }
         CORRADE_COMPARE(layer.cleanCallCount, 0);
+        CORRADE_COMPARE(layer.preUpdateCallCount, 0);
         CORRADE_COMPARE(layer.updateCallCount, 0);
     }
 
@@ -7833,6 +7856,7 @@ void AbstractUserInterfaceTest::state() {
             CORRADE_COMPARE(layouter2->cleanCallCount, 0);
         }
         CORRADE_COMPARE(layer.cleanCallCount, 0);
+        CORRADE_COMPARE(layer.preUpdateCallCount, 0);
         CORRADE_COMPARE(layer.updateCallCount, 0);
     }
 
@@ -7884,6 +7908,7 @@ void AbstractUserInterfaceTest::state() {
         }), TestSuite::Compare::Container);
     }
     CORRADE_COMPARE(layer.cleanCallCount, 0);
+    CORRADE_COMPARE(layer.preUpdateCallCount, 0);
     CORRADE_COMPARE(layer.updateCallCount, 1);
 
     struct Animator: AbstractGenericAnimator {
@@ -7973,6 +7998,7 @@ void AbstractUserInterfaceTest::state() {
             CORRADE_COMPARE(layouter2->cleanCallCount, 0);
         }
         CORRADE_COMPARE(layer.cleanCallCount, 0);
+        CORRADE_COMPARE(layer.preUpdateCallCount, 0);
         CORRADE_COMPARE(layer.updateCallCount, 1);
         if(data.nodeAttachmentAnimators)
             CORRADE_COMPARE(nodeAttachmentAnimator->cleanCallCount, 0);
@@ -7998,6 +8024,7 @@ void AbstractUserInterfaceTest::state() {
             }), TestSuite::Compare::Container);
         }
         CORRADE_COMPARE(layer.cleanCallCount, 0);
+        CORRADE_COMPARE(layer.preUpdateCallCount, 0);
         CORRADE_COMPARE(layer.updateCallCount, 1);
         if(data.nodeAttachmentAnimators)
             CORRADE_COMPARE(nodeAttachmentAnimator->cleanCallCount, 0);
@@ -8025,6 +8052,7 @@ void AbstractUserInterfaceTest::state() {
             CORRADE_COMPARE(layouter2->cleanCallCount, 0);
         }
         CORRADE_COMPARE(layer.cleanCallCount, 0);
+        CORRADE_COMPARE(layer.preUpdateCallCount, 0);
         CORRADE_COMPARE(layer.updateCallCount, 1);
         if(data.nodeAttachmentAnimators)
             CORRADE_COMPARE(nodeAttachmentAnimator->cleanCallCount, 0);
@@ -8096,6 +8124,7 @@ void AbstractUserInterfaceTest::state() {
         }), TestSuite::Compare::Container);
     }
     CORRADE_COMPARE(layer.cleanCallCount, 0);
+    CORRADE_COMPARE(layer.preUpdateCallCount, 0);
     CORRADE_COMPARE(layer.updateCallCount, 2);
     if(data.nodeAttachmentAnimators)
         CORRADE_COMPARE(nodeAttachmentAnimator->cleanCallCount, 0);
@@ -8154,6 +8183,7 @@ void AbstractUserInterfaceTest::state() {
             CORRADE_COMPARE(layouter2->cleanCallCount, 0);
         }
         CORRADE_COMPARE(layer.cleanCallCount, 0);
+        CORRADE_COMPARE(layer.preUpdateCallCount, 0);
         CORRADE_COMPARE(layer.updateCallCount, 2);
         if(data.nodeAttachmentAnimators)
             CORRADE_COMPARE(nodeAttachmentAnimator->cleanCallCount, 0);
@@ -8223,6 +8253,7 @@ void AbstractUserInterfaceTest::state() {
         }), TestSuite::Compare::Container);
     }
     CORRADE_COMPARE(layer.cleanCallCount, 0);
+    CORRADE_COMPARE(layer.preUpdateCallCount, 0);
     CORRADE_COMPARE(layer.updateCallCount, 3);
     if(data.nodeAttachmentAnimators)
         CORRADE_COMPARE(nodeAttachmentAnimator->cleanCallCount, 0);
@@ -8249,6 +8280,7 @@ void AbstractUserInterfaceTest::state() {
             CORRADE_COMPARE(layouter2->cleanCallCount, 0);
         }
         CORRADE_COMPARE(layer.cleanCallCount, 0);
+        CORRADE_COMPARE(layer.preUpdateCallCount, 0);
         CORRADE_COMPARE(layer.updateCallCount, 3);
         if(data.nodeAttachmentAnimators)
             CORRADE_COMPARE(nodeAttachmentAnimator->cleanCallCount, 0);
@@ -8323,6 +8355,7 @@ void AbstractUserInterfaceTest::state() {
         }), TestSuite::Compare::Container);
     }
     CORRADE_COMPARE(layer.cleanCallCount, 0);
+    CORRADE_COMPARE(layer.preUpdateCallCount, 0);
     CORRADE_COMPARE(layer.updateCallCount, 4);
     if(data.nodeAttachmentAnimators)
         CORRADE_COMPARE(nodeAttachmentAnimator->cleanCallCount, 0);
@@ -8347,6 +8380,7 @@ void AbstractUserInterfaceTest::state() {
             CORRADE_COMPARE(layouter2->cleanCallCount, 0);
         }
         CORRADE_COMPARE(layer.cleanCallCount, 0);
+        CORRADE_COMPARE(layer.preUpdateCallCount, 0);
         CORRADE_COMPARE(layer.updateCallCount, 4);
         if(data.nodeAttachmentAnimators)
             CORRADE_COMPARE(nodeAttachmentAnimator->cleanCallCount, 0);
@@ -8419,6 +8453,9 @@ void AbstractUserInterfaceTest::state() {
         }), TestSuite::Compare::Container);
     }
     CORRADE_COMPARE(layer.cleanCallCount, 0);
+    /* Because a common data update was requested, preUpdate() gets called as
+       well */
+    CORRADE_COMPARE(layer.preUpdateCallCount, 1);
     CORRADE_COMPARE(layer.updateCallCount, 5);
     if(data.nodeAttachmentAnimators)
         CORRADE_COMPARE(nodeAttachmentAnimator->cleanCallCount, 0);
@@ -8455,6 +8492,7 @@ void AbstractUserInterfaceTest::state() {
             CORRADE_COMPARE(layouter2->cleanCallCount, 0);
         }
         CORRADE_COMPARE(layer.cleanCallCount, 0);
+        CORRADE_COMPARE(layer.preUpdateCallCount, 1);
         CORRADE_COMPARE(layer.updateCallCount, 5);
         if(data.nodeAttachmentAnimators)
             CORRADE_COMPARE(nodeAttachmentAnimator->cleanCallCount, 0);
@@ -8599,6 +8637,7 @@ void AbstractUserInterfaceTest::state() {
         }), TestSuite::Compare::Container);
     }
     CORRADE_COMPARE(layer.cleanCallCount, 0);
+    CORRADE_COMPARE(layer.preUpdateCallCount, 1);
     CORRADE_COMPARE(layer.updateCallCount, 6);
     if(data.nodeAttachmentAnimators)
         CORRADE_COMPARE(nodeAttachmentAnimator->cleanCallCount, 0);
@@ -8635,6 +8674,7 @@ void AbstractUserInterfaceTest::state() {
             CORRADE_COMPARE(layouter2->cleanCallCount, 0);
         }
         CORRADE_COMPARE(layer.cleanCallCount, 0);
+        CORRADE_COMPARE(layer.preUpdateCallCount, 1);
         CORRADE_COMPARE(layer.updateCallCount, 6);
         if(data.nodeAttachmentAnimators)
             CORRADE_COMPARE(nodeAttachmentAnimator->cleanCallCount, 0);
@@ -8777,6 +8817,7 @@ void AbstractUserInterfaceTest::state() {
         }), TestSuite::Compare::Container);
     }
     CORRADE_COMPARE(layer.cleanCallCount, 0);
+    CORRADE_COMPARE(layer.preUpdateCallCount, 1);
     CORRADE_COMPARE(layer.updateCallCount, 7);
     if(data.nodeAttachmentAnimators)
         CORRADE_COMPARE(nodeAttachmentAnimator->cleanCallCount, 0);
@@ -8800,6 +8841,7 @@ void AbstractUserInterfaceTest::state() {
             CORRADE_COMPARE(layouter2->cleanCallCount, 0);
         }
         CORRADE_COMPARE(layer.cleanCallCount, 0);
+        CORRADE_COMPARE(layer.preUpdateCallCount, 1);
         CORRADE_COMPARE(layer.updateCallCount, 7);
         if(data.nodeAttachmentAnimators)
             CORRADE_COMPARE(nodeAttachmentAnimator->cleanCallCount, 0);
@@ -8920,6 +8962,7 @@ void AbstractUserInterfaceTest::state() {
         }), TestSuite::Compare::Container);
     }
     CORRADE_COMPARE(layer.cleanCallCount, 0);
+    CORRADE_COMPARE(layer.preUpdateCallCount, 1);
     CORRADE_COMPARE(layer.updateCallCount, 8);
     if(data.nodeAttachmentAnimators)
         CORRADE_COMPARE(nodeAttachmentAnimator->cleanCallCount, 0);
@@ -8948,6 +8991,7 @@ void AbstractUserInterfaceTest::state() {
             CORRADE_COMPARE(layouter2->cleanCallCount, 0);
         }
         CORRADE_COMPARE(layer.cleanCallCount, 0);
+        CORRADE_COMPARE(layer.preUpdateCallCount, 1);
         CORRADE_COMPARE(layer.updateCallCount, 8);
         if(data.nodeAttachmentAnimators)
             CORRADE_COMPARE(nodeAttachmentAnimator->cleanCallCount, 0);
@@ -9092,6 +9136,7 @@ void AbstractUserInterfaceTest::state() {
         }), TestSuite::Compare::Container);
     }
     CORRADE_COMPARE(layer.cleanCallCount, 0);
+    CORRADE_COMPARE(layer.preUpdateCallCount, 1);
     CORRADE_COMPARE(layer.updateCallCount, 9);
     if(data.nodeAttachmentAnimators)
         CORRADE_COMPARE(nodeAttachmentAnimator->cleanCallCount, 0);
@@ -9125,6 +9170,7 @@ void AbstractUserInterfaceTest::state() {
             }), TestSuite::Compare::Container);
         }
         CORRADE_COMPARE(layer.cleanCallCount, 0);
+        CORRADE_COMPARE(layer.preUpdateCallCount, 1);
         CORRADE_COMPARE(layer.updateCallCount, 9);
     }
 
@@ -9194,6 +9240,7 @@ void AbstractUserInterfaceTest::state() {
         }), TestSuite::Compare::Container);
     }
     CORRADE_COMPARE(layer.cleanCallCount, 0);
+    CORRADE_COMPARE(layer.preUpdateCallCount, 1);
     CORRADE_COMPARE(layer.updateCallCount, 10);
     if(data.nodeAttachmentAnimators)
         CORRADE_COMPARE(nodeAttachmentAnimator->cleanCallCount, 0);
@@ -9229,6 +9276,7 @@ void AbstractUserInterfaceTest::state() {
             CORRADE_COMPARE(layouter2->cleanCallCount, 0);
         }
         CORRADE_COMPARE(layer.cleanCallCount, 0);
+        CORRADE_COMPARE(layer.preUpdateCallCount, 1);
         CORRADE_COMPARE(layer.updateCallCount, 10);
         if(data.nodeAttachmentAnimators)
             CORRADE_COMPARE(nodeAttachmentAnimator->cleanCallCount, 0);
@@ -9302,6 +9350,7 @@ void AbstractUserInterfaceTest::state() {
         }), TestSuite::Compare::Container);
     }
     CORRADE_COMPARE(layer.cleanCallCount, 0);
+    CORRADE_COMPARE(layer.preUpdateCallCount, 1);
     CORRADE_COMPARE(layer.updateCallCount, 11);
     if(data.nodeAttachmentAnimators)
         CORRADE_COMPARE(nodeAttachmentAnimator->cleanCallCount, 0);
@@ -9326,6 +9375,7 @@ void AbstractUserInterfaceTest::state() {
             CORRADE_COMPARE(layouter2->cleanCallCount, 0);
         }
         CORRADE_COMPARE(layer.cleanCallCount, 0);
+        CORRADE_COMPARE(layer.preUpdateCallCount, 1);
         CORRADE_COMPARE(layer.updateCallCount, 11);
         if(data.nodeAttachmentAnimators)
             CORRADE_COMPARE(nodeAttachmentAnimator->cleanCallCount, 0);
@@ -9400,6 +9450,7 @@ void AbstractUserInterfaceTest::state() {
         }), TestSuite::Compare::Container);
     }
     CORRADE_COMPARE(layer.cleanCallCount, 0);
+    CORRADE_COMPARE(layer.preUpdateCallCount, 1);
     CORRADE_COMPARE(layer.updateCallCount, 12);
     if(data.nodeAttachmentAnimators)
         CORRADE_COMPARE(nodeAttachmentAnimator->cleanCallCount, 0);
@@ -9442,6 +9493,7 @@ void AbstractUserInterfaceTest::state() {
             CORRADE_COMPARE(layouter2->cleanCallCount, 0);
         }
         CORRADE_COMPARE(layer.cleanCallCount, 0);
+        CORRADE_COMPARE(layer.preUpdateCallCount, 1);
         CORRADE_COMPARE(layer.updateCallCount, 12);
         if(data.nodeAttachmentAnimators)
             CORRADE_COMPARE(nodeAttachmentAnimator->cleanCallCount, 0);
@@ -9514,6 +9566,7 @@ void AbstractUserInterfaceTest::state() {
         }), TestSuite::Compare::Container);
     }
     CORRADE_COMPARE(layer.cleanCallCount, 0);
+    CORRADE_COMPARE(layer.preUpdateCallCount, 1);
     CORRADE_COMPARE(layer.updateCallCount, 13);
     if(data.nodeAttachmentAnimators)
         CORRADE_COMPARE(nodeAttachmentAnimator->cleanCallCount, 0);
@@ -9542,6 +9595,7 @@ void AbstractUserInterfaceTest::state() {
             CORRADE_COMPARE(layouter2->cleanCallCount, 0);
         }
         CORRADE_COMPARE(layer.cleanCallCount, 0);
+        CORRADE_COMPARE(layer.preUpdateCallCount, 1);
         CORRADE_COMPARE(layer.updateCallCount, 13);
         if(data.nodeAttachmentAnimators)
             CORRADE_COMPARE(nodeAttachmentAnimator->cleanCallCount, 0);
@@ -9612,6 +9666,7 @@ void AbstractUserInterfaceTest::state() {
         }), TestSuite::Compare::Container);
     }
     CORRADE_COMPARE(layer.cleanCallCount, 0);
+    CORRADE_COMPARE(layer.preUpdateCallCount, 1);
     CORRADE_COMPARE(layer.updateCallCount, 14);
     if(data.nodeAttachmentAnimators)
         CORRADE_COMPARE(nodeAttachmentAnimator->cleanCallCount, 0);
@@ -9635,6 +9690,7 @@ void AbstractUserInterfaceTest::state() {
             CORRADE_COMPARE(layouter2->cleanCallCount, 0);
         }
         CORRADE_COMPARE(layer.cleanCallCount, 0);
+        CORRADE_COMPARE(layer.preUpdateCallCount, 1);
         CORRADE_COMPARE(layer.updateCallCount, 14);
         if(data.nodeAttachmentAnimators)
             CORRADE_COMPARE(nodeAttachmentAnimator->cleanCallCount, 0);
@@ -9733,6 +9789,7 @@ void AbstractUserInterfaceTest::state() {
         }), TestSuite::Compare::Container);
     }
     CORRADE_COMPARE(layer.cleanCallCount, 0);
+    CORRADE_COMPARE(layer.preUpdateCallCount, 1);
     CORRADE_COMPARE(layer.updateCallCount, 15);
     if(data.nodeAttachmentAnimators)
         CORRADE_COMPARE(nodeAttachmentAnimator->cleanCallCount, 0);
@@ -9761,6 +9818,7 @@ void AbstractUserInterfaceTest::state() {
             CORRADE_COMPARE(layouter2->cleanCallCount, 0);
         }
         CORRADE_COMPARE(layer.cleanCallCount, 0);
+        CORRADE_COMPARE(layer.preUpdateCallCount, 1);
         CORRADE_COMPARE(layer.updateCallCount, 15);
         if(data.nodeAttachmentAnimators)
             CORRADE_COMPARE(nodeAttachmentAnimator->cleanCallCount, 0);
@@ -9902,6 +9960,7 @@ void AbstractUserInterfaceTest::state() {
         }), TestSuite::Compare::Container);
     }
     CORRADE_COMPARE(layer.cleanCallCount, 0);
+    CORRADE_COMPARE(layer.preUpdateCallCount, 1);
     CORRADE_COMPARE(layer.updateCallCount, 16);
     if(data.nodeAttachmentAnimators)
         CORRADE_COMPARE(nodeAttachmentAnimator->cleanCallCount, 0);
@@ -9925,6 +9984,7 @@ void AbstractUserInterfaceTest::state() {
             CORRADE_COMPARE(layouter2->cleanCallCount, 0);
         }
         CORRADE_COMPARE(layer.cleanCallCount, 0);
+        CORRADE_COMPARE(layer.preUpdateCallCount, 1);
         CORRADE_COMPARE(layer.updateCallCount, 16);
         if(data.nodeAttachmentAnimators)
             CORRADE_COMPARE(nodeAttachmentAnimator->cleanCallCount, 0);
@@ -10067,6 +10127,7 @@ void AbstractUserInterfaceTest::state() {
         }), TestSuite::Compare::Container);
     }
     CORRADE_COMPARE(layer.cleanCallCount, 0);
+    CORRADE_COMPARE(layer.preUpdateCallCount, 1);
     CORRADE_COMPARE(layer.updateCallCount, 17);
     if(data.nodeAttachmentAnimators)
         CORRADE_COMPARE(nodeAttachmentAnimator->cleanCallCount, 0);
@@ -10201,6 +10262,7 @@ void AbstractUserInterfaceTest::state() {
             layouterHandleId(layouter1->handle()),
         }), TestSuite::Compare::Container);
         CORRADE_COMPARE(layer.cleanCallCount, 0);
+        CORRADE_COMPARE(layer.preUpdateCallCount, 1);
         CORRADE_COMPARE(layer.updateCallCount, 18);
         if(data.nodeAttachmentAnimators)
             CORRADE_COMPARE(nodeAttachmentAnimator->cleanCallCount, 0);
@@ -10225,6 +10287,7 @@ void AbstractUserInterfaceTest::state() {
             CORRADE_COMPARE(layouter2->cleanCallCount, 0);
         }
         CORRADE_COMPARE(layer.cleanCallCount, 0);
+        CORRADE_COMPARE(layer.preUpdateCallCount, 1);
         CORRADE_COMPARE(layer.updateCallCount, 17 + (data.layouters ? 1 : 0));
         if(data.nodeAttachmentAnimators)
             CORRADE_COMPARE(nodeAttachmentAnimator->cleanCallCount, 0);
@@ -10301,6 +10364,7 @@ void AbstractUserInterfaceTest::state() {
         }), TestSuite::Compare::Container);
     }
     CORRADE_COMPARE(layer.cleanCallCount, 0);
+    CORRADE_COMPARE(layer.preUpdateCallCount, 1);
     CORRADE_COMPARE(layer.updateCallCount, 18 + (data.layouters ? 1 : 0));
     if(data.nodeAttachmentAnimators)
         CORRADE_COMPARE(nodeAttachmentAnimator->cleanCallCount, 0);
@@ -10349,8 +10413,10 @@ void AbstractUserInterfaceTest::state() {
             CORRADE_COMPARE(layouter2->cleanCallCount, 0);
         }
         CORRADE_COMPARE(layer.cleanCallCount, 0);
+        CORRADE_COMPARE(layer.preUpdateCallCount, 1);
         CORRADE_COMPARE(layer.updateCallCount, 18 + (data.layouters ? 1 : 0));
         CORRADE_COMPARE(anotherLayer.cleanCallCount, 0);
+        CORRADE_COMPARE(anotherLayer.preUpdateCallCount, 0);
         CORRADE_COMPARE(anotherLayer.updateCallCount, 0);
         if(data.nodeAttachmentAnimators)
             CORRADE_COMPARE(nodeAttachmentAnimator->cleanCallCount, 0);
@@ -10378,8 +10444,10 @@ void AbstractUserInterfaceTest::state() {
         ui.update();
     }
     CORRADE_COMPARE(layer.cleanCallCount, 0);
+    CORRADE_COMPARE(layer.preUpdateCallCount, 1);
     CORRADE_COMPARE(layer.updateCallCount, 18 + (data.layouters ? 1 : 0));
     CORRADE_COMPARE(anotherLayer.cleanCallCount, 0);
+    CORRADE_COMPARE(anotherLayer.preUpdateCallCount, 0);
     CORRADE_COMPARE(anotherLayer.updateCallCount, 0);
     if(data.nodeAttachmentAnimators)
         CORRADE_COMPARE(nodeAttachmentAnimator->cleanCallCount, 0);
@@ -10415,8 +10483,10 @@ void AbstractUserInterfaceTest::state() {
         CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataAttachmentUpdate);
         CORRADE_COMPARE(layer.usedCount(), 3);
         CORRADE_COMPARE(layer.cleanCallCount, 0);
+        CORRADE_COMPARE(layer.preUpdateCallCount, 1);
         CORRADE_COMPARE(layer.updateCallCount, 18 + (data.layouters ? 1 : 0));
         CORRADE_COMPARE(anotherLayer.cleanCallCount, 0);
+        CORRADE_COMPARE(anotherLayer.preUpdateCallCount, 0);
         CORRADE_COMPARE(anotherLayer.updateCallCount, 0);
         if(data.nodeAttachmentAnimators)
             CORRADE_COMPARE(nodeAttachmentAnimator->cleanCallCount, 0);
@@ -10516,8 +10586,10 @@ void AbstractUserInterfaceTest::state() {
     }
     CORRADE_COMPARE(layer.usedCount(), 3);
     CORRADE_COMPARE(layer.cleanCallCount, 0);
+    CORRADE_COMPARE(layer.preUpdateCallCount, 1);
     CORRADE_COMPARE(layer.updateCallCount, 19 + (data.layouters ? 1 : 0));
     CORRADE_COMPARE(anotherLayer.cleanCallCount, 0);
+    CORRADE_COMPARE(anotherLayer.preUpdateCallCount, 0);
     CORRADE_COMPARE(anotherLayer.updateCallCount, 1);
     if(data.nodeAttachmentAnimators)
         CORRADE_COMPARE(nodeAttachmentAnimator->cleanCallCount, 0);
@@ -10602,8 +10674,10 @@ void AbstractUserInterfaceTest::state() {
         }
         CORRADE_COMPARE(layer.usedCount(), 1);
         CORRADE_COMPARE(layer.cleanCallCount, 1);
+        CORRADE_COMPARE(layer.preUpdateCallCount, 1);
         CORRADE_COMPARE(layer.updateCallCount, 19 + (data.layouters ? 1 : 0));
         CORRADE_COMPARE(anotherLayer.cleanCallCount, 1);
+        CORRADE_COMPARE(anotherLayer.preUpdateCallCount, 0);
         CORRADE_COMPARE(anotherLayer.updateCallCount, 1);
         if(data.nodeAttachmentAnimators) {
             CORRADE_COMPARE(nodeAttachmentAnimator->usedCount(), 1);
@@ -10760,8 +10834,10 @@ void AbstractUserInterfaceTest::state() {
     }
     CORRADE_COMPARE(layer.usedCount(), 1);
     CORRADE_COMPARE(layer.cleanCallCount, 1);
+    CORRADE_COMPARE(layer.preUpdateCallCount, 1);
     CORRADE_COMPARE(layer.updateCallCount, 20 + (data.layouters ? 1 : 0));
     CORRADE_COMPARE(anotherLayer.cleanCallCount, 1);
+    CORRADE_COMPARE(anotherLayer.preUpdateCallCount, 0);
     CORRADE_COMPARE(anotherLayer.updateCallCount, 2);
     if(data.nodeAttachmentAnimators) {
         CORRADE_COMPARE(nodeAttachmentAnimator->usedCount(), 1);
@@ -10794,8 +10870,10 @@ void AbstractUserInterfaceTest::state() {
             CORRADE_COMPARE_AS(layouterUpdateCalls, Containers::arrayView<UnsignedInt>({
             }), TestSuite::Compare::Container);
             CORRADE_COMPARE(layer.cleanCallCount, 1);
+            CORRADE_COMPARE(layer.preUpdateCallCount, 1);
             CORRADE_COMPARE(layer.updateCallCount, 21);
             CORRADE_COMPARE(anotherLayer.cleanCallCount, 1);
+            CORRADE_COMPARE(anotherLayer.preUpdateCallCount, 0);
             CORRADE_COMPARE(anotherLayer.updateCallCount, 2);
         }
 
@@ -10863,8 +10941,10 @@ void AbstractUserInterfaceTest::state() {
         }), TestSuite::Compare::Container);
         CORRADE_COMPARE(layer.usedCount(), 1);
         CORRADE_COMPARE(layer.cleanCallCount, 1);
+        CORRADE_COMPARE(layer.preUpdateCallCount, 1);
         CORRADE_COMPARE(layer.updateCallCount, 22);
         CORRADE_COMPARE(anotherLayer.cleanCallCount, 1);
+        CORRADE_COMPARE(anotherLayer.preUpdateCallCount, 0);
         CORRADE_COMPARE(anotherLayer.updateCallCount, 3);
         if(data.nodeAttachmentAnimators) {
             CORRADE_COMPARE(nodeAttachmentAnimator->usedCount(), 1);
@@ -10893,6 +10973,7 @@ void AbstractUserInterfaceTest::state() {
             CORRADE_COMPARE(layouter1->cleanCallCount, 1);
         }
         CORRADE_COMPARE(anotherLayer.cleanCallCount, 1);
+        CORRADE_COMPARE(anotherLayer.preUpdateCallCount, 0);
         CORRADE_COMPARE(anotherLayer.updateCallCount, 2 + (data.layouters ? 1 : 0));
         if(data.nodeAttachmentAnimators) {
             CORRADE_COMPARE(nodeAttachmentAnimator->usedCount(), 1);
@@ -10957,6 +11038,7 @@ void AbstractUserInterfaceTest::state() {
         }), TestSuite::Compare::Container);
     }
     CORRADE_COMPARE(anotherLayer.cleanCallCount, 1);
+    CORRADE_COMPARE(anotherLayer.preUpdateCallCount, 0);
     CORRADE_COMPARE(anotherLayer.updateCallCount, 3 + (data.layouters ? 1 : 0));
     if(data.nodeAttachmentAnimators) {
         CORRADE_COMPARE(nodeAttachmentAnimator->usedCount(), 1);
@@ -11493,6 +11575,193 @@ void AbstractUserInterfaceTest::stateAnimations() {
         CORRADE_COMPARE(styleAnimator->cleanCallCount, 1 + data.expectedCleanAfterAnimation);
         CORRADE_COMPARE(ui.isHandleValid(styleAnimation2), data.expectedNode1Valid);
         CORRADE_COMPARE(ui.isHandleValid(styleAnimation1), data.expectedNode2Valid);
+    }
+}
+
+void AbstractUserInterfaceTest::statePreUpdateClean() {
+    /* Tests interaction between doPreUpdate() and doClean() that is too
+       specific to be checked in the state() case above */
+
+    /* Event/framebuffer scaling doesn't affect these tests */
+    AbstractUserInterface ui{{100, 100}};
+
+    enum {
+        Clean = 1000,
+        PreUpdate,
+        Update,
+    };
+
+    struct OtherLayer: AbstractLayer {
+        explicit OtherLayer(LayerHandle handle, Containers::Array<Containers::Pair<int, LayerHandle>>& calls): AbstractLayer{handle}, _calls(calls) {}
+
+        using AbstractLayer::create;
+
+        LayerFeatures doFeatures() const override { return {}; }
+        void doClean(Containers::BitArrayView dataIdsToRemove) override {
+            arrayAppend(_calls, InPlaceInit, Int(dataIdsToRemove.count())|Clean, handle());
+        }
+        void doUpdate(LayerStates, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Float>&, Containers::BitArrayView, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&) override {
+            arrayAppend(_calls, InPlaceInit, Update, handle());
+        }
+
+        private:
+            Containers::Array<Containers::Pair<int, LayerHandle>>& _calls;
+    };
+    struct Layer: AbstractLayer {
+        explicit Layer(LayerHandle handle, Containers::Array<Containers::Pair<int, LayerHandle>>& calls): AbstractLayer{handle}, _calls(calls) {}
+
+        using AbstractLayer::create;
+
+        LayerFeatures doFeatures() const override { return {}; }
+        void doClean(Containers::BitArrayView dataIdsToRemove) override {
+            arrayAppend(_calls, InPlaceInit, Int(dataIdsToRemove.count())|Clean, handle());
+        }
+        void doPreUpdate(LayerStates state) override {
+            CORRADE_ITERATION(handle());
+            CORRADE_COMPARE(state, expectedState);
+            if(removeNode != NodeHandle::Null)
+                ui().removeNode(removeNode);
+            arrayAppend(_calls, InPlaceInit, PreUpdate, handle());
+        }
+        void doUpdate(LayerStates, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Float>&, Containers::BitArrayView, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&) override {
+            arrayAppend(_calls, InPlaceInit, Update, handle());
+        }
+
+        LayerStates expectedState;
+        NodeHandle removeNode = NodeHandle::Null;
+
+        private:
+            Containers::Array<Containers::Pair<int, LayerHandle>>& _calls;
+    };
+
+    Containers::Array<Containers::Pair<int, LayerHandle>> calls;
+    Layer& layer1 = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer(), calls));
+    /*LayerHandle layerWithoutInstance =*/ ui.createLayer();
+    OtherLayer& layer2 = ui.setLayerInstance(Containers::pointer<OtherLayer>(ui.createLayer(), calls));
+    OtherLayer& layerRemoved = ui.setLayerInstance(Containers::pointer<OtherLayer>(ui.createLayer(), calls));
+    Layer& layer3 = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer(), calls));
+    ui.removeLayer(layerRemoved.handle());
+    CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataAttachmentUpdate);
+
+    /* Nodes with attachments from various layers */
+    NodeHandle withLayer1 = ui.createNode({}, {});
+    layer1.create(withLayer1);
+    NodeHandle withLayer2 = ui.createNode({}, {});
+    layer2.create(withLayer2);
+    NodeHandle withLayer3 = ui.createNode({}, {});
+    layer3.create(withLayer3);
+    NodeHandle withLayer23 = ui.createNode({}, {});
+    layer2.create(withLayer23);
+    layer3.create(withLayer23);
+    NodeHandle withLayer12 = ui.createNode({}, {});
+    layer1.create(withLayer12);
+    layer2.create(withLayer12);
+
+    /* Initial update() goes through all layers update() because a layer got
+       removed, but not through preUpdate() */
+    {
+        CORRADE_ITERATION(__FILE__ ":" CORRADE_LINE_STRING);
+        ui.update();
+        CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
+        CORRADE_COMPARE_AS(calls, (Containers::arrayView<Containers::Pair<int, LayerHandle>>({
+            {Update, layer1.handle()},
+            {Update, layer2.handle()},
+            {Update, layer3.handle()},
+        })), TestSuite::Compare::Container);
+    }
+
+    /* Removing a node calls clean() and then an update(). No preUpdate() this
+       time either. */
+    ui.removeNode(withLayer3);
+    CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeClean);
+    {
+        CORRADE_ITERATION(__FILE__ ":" CORRADE_LINE_STRING);
+        calls = {};
+        ui.update();
+        CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
+        CORRADE_COMPARE_AS(calls, (Containers::arrayView<Containers::Pair<int, LayerHandle>>({
+            /* Both clean and update is called on all layers although only for one
+            there's an actual change */
+            {0|Clean, layer1.handle()},
+            {0|Clean, layer2.handle()},
+            {1|Clean, layer3.handle()},
+            {Update, layer1.handle()},
+            {Update, layer2.handle()},
+            {Update, layer3.handle()},
+        })), TestSuite::Compare::Container);
+    }
+
+    /* Triggering a pre-update call without doing anything inside will not
+       cause any clean() to be called */
+    layer1.setNeedsUpdate(LayerState::NeedsSharedDataUpdate);
+    CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataUpdate);
+    {
+        CORRADE_ITERATION(__FILE__ ":" CORRADE_LINE_STRING);
+        calls = {};
+        layer1.expectedState = LayerState::NeedsSharedDataUpdate;
+        ui.update();
+        CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
+        CORRADE_COMPARE_AS(calls, (Containers::arrayView<Containers::Pair<int, LayerHandle>>({
+            {PreUpdate, layer1.handle()},
+            {Update, layer1.handle()},
+        })), TestSuite::Compare::Container);
+    }
+
+    /* Removing a node to trigger clean() and triggering a pre-update call
+       without doing anything inside will not cause second clean() to be
+       called */
+    ui.removeNode(withLayer2);
+    layer3.setNeedsUpdate(LayerState::NeedsCommonDataUpdate);
+    CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeClean);
+    {
+        CORRADE_ITERATION(__FILE__ ":" CORRADE_LINE_STRING);
+        calls = {};
+        layer3.expectedState = LayerState::NeedsCommonDataUpdate;
+        ui.update();
+        CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
+        CORRADE_COMPARE_AS(calls, (Containers::arrayView<Containers::Pair<int, LayerHandle>>({
+            /* Again both clean and update is called on all layers although only
+            for one there's an actual change */
+            {0|Clean, layer1.handle()},
+            {1|Clean, layer2.handle()},
+            {0|Clean, layer3.handle()},
+            {PreUpdate, layer3.handle()},
+            {Update, layer1.handle()},
+            {Update, layer2.handle()},
+            {Update, layer3.handle()},
+        })), TestSuite::Compare::Container);
+    }
+
+    /* Remove a node to trigger clean(), trigger a pre-update call, and remove
+       a node inside preUpdate() as well to trigger it again */
+    ui.removeNode(withLayer1);
+    layer1.setNeedsUpdate(LayerState::NeedsSharedDataUpdate);
+    layer3.setNeedsUpdate(LayerState::NeedsCommonDataUpdate|LayerState::NeedsSharedDataUpdate);
+    CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeClean);
+    {
+        CORRADE_ITERATION(__FILE__ ":" CORRADE_LINE_STRING);
+        calls = {};
+        layer1.removeNode = withLayer12;
+        layer3.removeNode = withLayer23;
+        layer1.expectedState = LayerState::NeedsSharedDataUpdate;
+        layer3.expectedState = LayerState::NeedsCommonDataUpdate|LayerState::NeedsSharedDataUpdate;
+        ui.update();
+        CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
+        CORRADE_COMPARE_AS(calls, (Containers::arrayView<Containers::Pair<int, LayerHandle>>({
+            /* First the clean for the data removed in layer 1 */
+            {1|Clean, layer1.handle()},
+            {0|Clean, layer2.handle()},
+            {0|Clean, layer3.handle()},
+            {PreUpdate, layer1.handle()},
+            {PreUpdate, layer3.handle()},
+            /* Then the clean for the data removed inside preUpdate() calls */
+            {1|Clean, layer1.handle()},
+            {2|Clean, layer2.handle()},
+            {1|Clean, layer3.handle()},
+            {Update, layer1.handle()},
+            {Update, layer2.handle()},
+            {Update, layer3.handle()},
+        })), TestSuite::Compare::Container);
     }
 }
 

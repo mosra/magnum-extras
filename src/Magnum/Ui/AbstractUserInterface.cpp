@@ -2693,12 +2693,50 @@ AbstractUserInterface& AbstractUserInterface::update() {
        update. Is a no-op if there's nothing to clean. */
     clean();
 
-    /* Get the state after the clean call including what bubbles from layers.
-       If there's nothing to update, bail. No other states should be left after
+    /* Go through all layers that have an instance and call preUpdate() for
+       ones that want it. Not querying state() first because that checks the
+       state also for layouters and animators, which we don't need here. */
+    State& state = *_state;
+    if(state.firstLayer != LayerHandle::Null) {
+        /* Make the update calls follow layer order so the implementations can
+           rely on a consistent order of operations compared to going through
+           whatever was the order they were created in. Same order is used for
+           the "large" update() called at the end. */
+        bool preUpdateCalled = false;
+        LayerHandle layer = state.firstLayer;
+        do {
+            const UnsignedInt layerId = layerHandleId(layer);
+            Layer& layerItem = state.layers[layerId];
+
+            /* Call update() only if the layer has an instance and needs to
+               actually update the common or shared data */
+            if(AbstractLayer* const instance = layerItem.used.instance.get()) {
+                if(const LayerStates layerStateToUpdate = instance->state() & (LayerState::NeedsCommonDataUpdate|LayerState::NeedsSharedDataUpdate)) {
+                    preUpdateCalled = true;
+                    instance->preUpdate(layerStateToUpdate);
+                }
+            }
+
+            layer = layerItem.used.next;
+        } while(layer != state.firstLayer);
+
+        /* Clean again in case something in the above causes it to be needed.
+           It's again a no-op if there's nothing to clean, but as the check is
+           still quite involved, it's only called if preUpdate() was called at
+           least once. */
+        if(preUpdateCalled)
+            clean();
+    }
+
+    /* Get the state after the (potentially double) clean call including what
+       bubbles from layers. It should not have NeedsNodeClean / NeedsDataClean
+       in itself. */
+    const UserInterfaceStates states = this->state();
+    CORRADE_INTERNAL_ASSERT(states <= (UserInterfaceState::NeedsNodeUpdate|UserInterfaceState::NeedsAnimationAdvance));
+
+    /* If there's nothing to update, bail. No other states should be left after
        that -- NeedsAnimationAdvance is only propagated from the animators in
        state(), never present directly in state.state. */
-    const UserInterfaceStates states = this->state();
-    State& state = *_state;
     if(!(states & UserInterfaceState::NeedsNodeUpdate)) {
         CORRADE_INTERNAL_ASSERT(!state.state);
         return *this;
