@@ -104,6 +104,34 @@ AbstractVisualLayer::Shared& AbstractVisualLayer::Shared::setStyleTransition(Uns
     return *this;
 }
 
+auto AbstractVisualLayer::Shared::styleTransitionToInactiveOut() const -> UnsignedInt(*)(UnsignedInt) {
+    return _state->styleTransitionToInactiveOut;
+}
+
+auto AbstractVisualLayer::Shared::styleTransitionToInactiveOver() const -> UnsignedInt(*)(UnsignedInt) {
+    return _state->styleTransitionToInactiveOver;
+}
+
+auto AbstractVisualLayer::Shared::styleTransitionToFocusedOut() const -> UnsignedInt(*)(UnsignedInt) {
+    return _state->styleTransitionToFocusedOut;
+}
+
+auto AbstractVisualLayer::Shared::styleTransitionToFocusedOver() const -> UnsignedInt(*)(UnsignedInt) {
+    return _state->styleTransitionToFocusedOver;
+}
+
+auto AbstractVisualLayer::Shared::styleTransitionToPressedOut() const -> UnsignedInt(*)(UnsignedInt) {
+    return _state->styleTransitionToPressedOut;
+}
+
+auto AbstractVisualLayer::Shared::styleTransitionToPressedOver() const -> UnsignedInt(*)(UnsignedInt) {
+    return _state->styleTransitionToPressedOver;
+}
+
+auto AbstractVisualLayer::Shared::styleTransitionToDisabled() const -> UnsignedInt(*)(UnsignedInt) {
+    return _state->styleTransitionToDisabled;
+}
+
 AbstractVisualLayer::State::State(Shared::State& shared): shared(shared), styleTransitionToDisabledUpdateStamp{shared.styleTransitionToDisabledUpdateStamp} {
     dynamicStyleStorage = Containers::ArrayTuple{
         {ValueInit, shared.dynamicStyleCount, dynamicStylesUsed},

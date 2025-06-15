@@ -1570,6 +1570,21 @@ void AbstractVisualLayerTest::eventStyleTransitionNoOp() {
        eventStyleTransitionDynamicStyle() */
     StyleLayerShared shared{StyleCount, data.dynamicAnimated ? 1u : 0u};
 
+    /* All transition functions except for toDisabled are never null, by
+       default they just pass the value through */
+    for(UnsignedInt(*transition)(UnsignedInt): {
+        shared.styleTransitionToInactiveOut(),
+        shared.styleTransitionToInactiveOver(),
+        shared.styleTransitionToFocusedOut(),
+        shared.styleTransitionToFocusedOver(),
+        shared.styleTransitionToPressedOut(),
+        shared.styleTransitionToPressedOver()
+    }) {
+        CORRADE_VERIFY(transition);
+        CORRADE_COMPARE(transition(177820), 177820);
+    }
+    CORRADE_VERIFY(!shared.styleTransitionToDisabled());
+
     AbstractUserInterface ui{{100, 100}};
 
     NodeHandle node = ui.createNode({1.0f, 1.0f}, {2.0f, 2.0f});
@@ -2020,6 +2035,27 @@ void AbstractVisualLayerTest::eventStyleTransition() {
             return UnsignedInt(styleIndexTransitionToDisabledDoNotCall(StyleIndex(s)));
         });
     CORRADE_COMPARE(chaining, &shared);
+
+    /* Cannot really test for equality because of the wrapping, have to verify
+       that each function indeed does what's expected */
+    for(UnsignedInt(*transition)(UnsignedInt): {
+        shared.styleTransitionToInactiveOut(),
+        shared.styleTransitionToInactiveOver(),
+        shared.styleTransitionToFocusedOut(),
+        shared.styleTransitionToFocusedOver(),
+        shared.styleTransitionToPressedOut(),
+        shared.styleTransitionToPressedOver(),
+        shared.styleTransitionToDisabled()
+    })
+        CORRADE_VERIFY(transition);
+    CORRADE_COMPARE(shared.styleTransitionToInactiveOut()(UnsignedInt(StyleIndex::GreenHover)), UnsignedInt(StyleIndex::Green));
+    CORRADE_COMPARE(shared.styleTransitionToInactiveOver()(UnsignedInt(StyleIndex::Green)), UnsignedInt(StyleIndex::GreenHover));
+    CORRADE_COMPARE(shared.styleTransitionToFocusedOut()(UnsignedInt(StyleIndex::Green)), UnsignedInt(StyleIndex::GreenFocused));
+    CORRADE_COMPARE(shared.styleTransitionToFocusedOver()(UnsignedInt(StyleIndex::Green)), UnsignedInt(StyleIndex::GreenFocusedHover));
+    CORRADE_COMPARE(shared.styleTransitionToPressedOut()(UnsignedInt(StyleIndex::Green)), UnsignedInt(StyleIndex::GreenPressed));
+    CORRADE_COMPARE(shared.styleTransitionToPressedOver()(UnsignedInt(StyleIndex::Green)), UnsignedInt(StyleIndex::GreenPressedHover));
+    /* styleTransitionToDisabled() tested in eventStyleTransitionDisabled()
+       instead */
 
     AbstractUserInterface ui{{100, 100}};
 
@@ -2999,6 +3035,9 @@ void AbstractVisualLayerTest::eventStyleTransitionDisabled() {
         });
     CORRADE_COMPARE(chaining, &shared);
     CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
+
+    CORRADE_VERIFY(shared.styleTransitionToDisabled());
+    CORRADE_COMPARE(shared.styleTransitionToDisabled()(UnsignedInt(StyleIndex::Green)), UnsignedInt(StyleIndex::GreenDisabled));
 
     ui.update();
     CORRADE_COMPARE(layer.style<StyleIndex>(dataGreen), StyleIndex::Green);
