@@ -418,6 +418,64 @@ class MAGNUM_UI_EXPORT AbstractVisualLayer::Shared {
         UnsignedInt totalStyleCount() const;
 
         /**
+         * @brief Style transition to an inactive out state
+         * @todoc without the trailing return, Doxygen thinks it's a variable,
+         *      now it thinks the return type is auto, sigh; same below
+         *
+         * Is never @cpp nullptr @ce, if not set it returns a pointer to a
+         * function that returns the argument unchanged.
+         */
+        auto styleTransitionToInactiveOut() const -> UnsignedInt(*)(UnsignedInt);
+
+        /**
+         * @brief Style transition to an inactive over state
+         *
+         * Is never @cpp nullptr @ce, if not set it returns a pointer to a
+         * function that returns the argument unchanged.
+         */
+        auto styleTransitionToInactiveOver() const -> UnsignedInt(*)(UnsignedInt);
+
+        /**
+         * @brief Style transition to a focused out state
+         *
+         * Is never @cpp nullptr @ce, if not set it returns a pointer to a
+         * function that returns the argument unchanged.
+         */
+        auto styleTransitionToFocusedOut() const -> UnsignedInt(*)(UnsignedInt);
+
+        /**
+         * @brief Style transition to a focused over state
+         *
+         * Is never @cpp nullptr @ce, if not set it returns a pointer to a
+         * function that returns the argument unchanged.
+         */
+        auto styleTransitionToFocusedOver() const -> UnsignedInt(*)(UnsignedInt);
+
+        /**
+         * @brief Style transition to a pressed out state
+         *
+         * Is never @cpp nullptr @ce, if not set it returns a pointer to a
+         * function that returns the argument unchanged.
+         */
+        auto styleTransitionToPressedOut() const -> UnsignedInt(*)(UnsignedInt);
+
+        /**
+         * @brief Style transition to a pressed over state
+         *
+         * Is never @cpp nullptr @ce, if not set it returns a pointer to a
+         * function that returns the argument unchanged.
+         */
+        auto styleTransitionToPressedOver() const -> UnsignedInt(*)(UnsignedInt);
+
+        /**
+         * @brief Style transition to a disabled state
+         *
+         * Unlike other transition functions, this one is @cpp nullptr @ce if
+         * not set.
+         */
+        auto styleTransitionToDisabled() const -> UnsignedInt(*)(UnsignedInt);
+
+        /**
          * @brief Set type-erased style transition functions
          * @return Reference to self (for method chaining)
          *
