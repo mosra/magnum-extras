@@ -116,6 +116,11 @@ struct AbstractLayerTest: TestSuite::Tester {
     void advanceDataAnimationsInvalidSize();
     void advanceStyleAnimationsInvalidSize();
 
+    void preUpdate();
+    void preUpdateNotImplemented();
+    void preUpdateInvalidState();
+    void preUpdateNoSizeSet();
+
     void update();
     void updateComposite();
     void updateEmpty();
@@ -287,6 +292,11 @@ AbstractLayerTest::AbstractLayerTest() {
               &AbstractLayerTest::advanceStyleAnimationsInvalidLayer,
               &AbstractLayerTest::advanceDataAnimationsInvalidSize,
               &AbstractLayerTest::advanceStyleAnimationsInvalidSize,
+
+              &AbstractLayerTest::preUpdate,
+              &AbstractLayerTest::preUpdateNotImplemented,
+              &AbstractLayerTest::preUpdateInvalidState,
+              &AbstractLayerTest::preUpdateNoSizeSet,
 
               &AbstractLayerTest::update,
               &AbstractLayerTest::updateComposite,
@@ -2126,6 +2136,82 @@ void AbstractLayerTest::advanceStyleAnimationsInvalidSize() {
         "Ui::AbstractLayer::advanceAnimations(): expected activeStorage, factorStorage and removeStorage views to have the same size of at least 6 elements but got 6, 7 and 6\n"
         "Ui::AbstractLayer::advanceAnimations(): expected activeStorage, factorStorage and removeStorage views to have the same size of at least 6 elements but got 7, 6 and 6\n",
         TestSuite::Compare::String);
+}
+
+void AbstractLayerTest::preUpdate() {
+    struct: AbstractLayer {
+        using AbstractLayer::AbstractLayer;
+
+        LayerFeatures doFeatures() const override { return {}; }
+
+        void doPreUpdate(LayerStates state) override {
+            ++called;
+            CORRADE_COMPARE(state, LayerState::NeedsSharedDataUpdate|LayerState::NeedsCommonDataUpdate);
+        }
+
+        Int called = 0;
+    } layer{layerHandle(0, 1)};
+
+    /* Capture correct function name */
+    CORRADE_VERIFY(true);
+
+    layer.preUpdate(LayerState::NeedsSharedDataUpdate|LayerState::NeedsCommonDataUpdate);
+    CORRADE_COMPARE(layer.called, 1);
+}
+
+void AbstractLayerTest::preUpdateNotImplemented() {
+    struct: AbstractLayer {
+        using AbstractLayer::AbstractLayer;
+
+        LayerFeatures doFeatures() const override { return {}; }
+    } layer{layerHandle(0, 1)};
+
+    layer.preUpdate(LayerState::NeedsSharedDataUpdate);
+
+    /* Shouldn't crash or anything */
+    CORRADE_VERIFY(true);
+}
+
+void AbstractLayerTest::preUpdateInvalidState() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct: AbstractLayer {
+        using AbstractLayer::AbstractLayer;
+
+        LayerFeatures doFeatures() const override { return {}; }
+    } layer{layerHandle(0, 1)};
+
+    Containers::String out;
+    Error redirectError{&out};
+    layer.preUpdate({});
+    layer.preUpdate(LayerState::NeedsDataUpdate|LayerState::NeedsSharedDataUpdate);
+    CORRADE_COMPARE_AS(out,
+        "Ui::AbstractLayer::preUpdate(): expected a non-empty subset of Ui::LayerState::NeedsCommonDataUpdate|Ui::LayerState::NeedsSharedDataUpdate but got Ui::LayerStates{}\n"
+        "Ui::AbstractLayer::preUpdate(): expected a non-empty subset of Ui::LayerState::NeedsCommonDataUpdate|Ui::LayerState::NeedsSharedDataUpdate but got Ui::LayerState::NeedsDataUpdate|Ui::LayerState::NeedsSharedDataUpdate\n",
+        TestSuite::Compare::String);
+}
+
+void AbstractLayerTest::preUpdateNoSizeSet() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct Layer: AbstractLayer {
+        Layer(LayerHandle handle, LayerFeatures features): AbstractLayer{handle}, _features{features} {}
+
+        LayerFeatures doFeatures() const override { return _features; }
+
+        private:
+            LayerFeatures _features;
+    } layerNoDraw{layerHandle(0, 1), {}},
+      layer{layerHandle(0, 1), LayerFeature::Draw};
+
+
+    /* It's fine if the layer doesn't support drawing */
+    layerNoDraw.preUpdate(LayerState::NeedsCommonDataUpdate);
+
+    Containers::String out;
+    Error redirectError{&out};
+    layer.preUpdate(LayerState::NeedsCommonDataUpdate);
+    CORRADE_COMPARE(out, "Ui::AbstractLayer::preUpdate(): user interface size wasn't set\n");
 }
 
 void AbstractLayerTest::update() {

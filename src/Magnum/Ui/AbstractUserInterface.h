@@ -2380,18 +2380,32 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
          * @ref AbstractUserInterface(const Vector2&, const Vector2&, const Vector2i&)
          * constructor was used.
          *
-         * Implicitly calls @ref clean(); called implicitly from @ref draw()
-         * and all event processing functions. If @ref state() contains none of
-         * @ref UserInterfaceState::NeedsDataUpdate,
-         * @ref UserInterfaceState::NeedsDataAttachmentUpdate,
-         * @ref UserInterfaceState::NeedsNodeEnabledUpdate,
-         * @ref UserInterfaceState::NeedsNodeClipUpdate,
-         * @ref UserInterfaceState::NeedsLayoutUpdate,
-         * @ref UserInterfaceState::NeedsLayoutAssignmentUpdate or
-         * @ref UserInterfaceState::NeedsNodeUpdate, this function is a no-op,
-         * otherwise it performs a subset of the following depending on the
-         * state, in order:
+         * Called implicitly from @ref draw() and all event processing
+         * functions. If @ref state() contains none of
+         * @ref UserInterfaceState::NeedsDataClean,
+         * @relativeref{UserInterfaceState,NeedsNodeClean},
+         * @relativeref{UserInterfaceState,NeedsDataUpdate},
+         * @relativeref{UserInterfaceState,NeedsDataAttachmentUpdate},
+         * @relativeref{UserInterfaceState,NeedsNodeEnabledUpdate},
+         * @relativeref{UserInterfaceState,NeedsNodeClipUpdate},
+         * @relativeref{UserInterfaceState,NeedsLayoutUpdate},
+         * @relativeref{UserInterfaceState,NeedsLayoutAssignmentUpdate} or
+         * @relativeref{UserInterfaceState,NeedsNodeUpdate}, this function is a
+         * no-op, otherwise it performs a subset of the following depending on
+         * the state, in order:
          *
+         * -    In case @ref UserInterfaceState::NeedsDataClean or
+         *      @ref UserInterfaceState::NeedsNodeClean is set, calls
+         *      @ref clean()
+         * -    Goes in a back to front order through layers that have
+         *      instances set and calls @ref AbstractLayer::preUpdate() for
+         *      layers that have @ref LayerState::NeedsCommonDataUpdate or
+         *      @ref LayerState::NeedsSharedDataUpdate set to trigger updates
+         *      that are not depending on a concrete set of visible nodes
+         * -    In case the pre-update caused
+         *      @ref UserInterfaceState::NeedsDataClean or
+         *      @ref UserInterfaceState::NeedsNodeClean to be set again, calls
+         *      @ref clean() for the second time
          * -    Orders visible nodes back-to-front for drawing and
          *      front-to-back for event processing
          * -    Orders layouts assigned to nodes by their dependency

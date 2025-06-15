@@ -630,6 +630,24 @@ class MAGNUM_UI_EXPORT AbstractLayer {
         void advanceAnimations(Nanoseconds time, Containers::MutableBitArrayView activeStorage, const Containers::StridedArrayView1D<Float>& factorStorage, Containers::MutableBitArrayView removeStorage, const Containers::Iterable<AbstractStyleAnimator>& animators);
 
         /**
+         * @brief Pre-update common and shared layer data
+         *
+         * Used internally from @ref AbstractUserInterface::update(). Exposed
+         * just for testing purposes, there should be no need to call this
+         * function directly and doing so may cause internal
+         * @ref AbstractUserInterface state update to misbehave.
+         *
+         * Expects that @p states isn't empty and is a subset of
+         * @ref LayerState::NeedsCommonDataUpdate and
+         * @relativeref{LayerState,NeedsSharedDataUpdate}.
+         *
+         * Note that, unlike @ref update(), calling this function *does not*
+         * reset @ref LayerStates present in @p state, that's only done once
+         * @ref update() is subsequently called.
+         */
+        void preUpdate(LayerStates state);
+
+        /**
          * @brief Update visible layer data to given offsets and positions
          *
          * Used internally from @ref AbstractUserInterface::update(). Exposed
@@ -1214,6 +1232,39 @@ class MAGNUM_UI_EXPORT AbstractLayer {
         virtual void doAdvanceAnimations(Nanoseconds time, Containers::MutableBitArrayView activeStorage, const Containers::StridedArrayView1D<Float>& factorStorage, Containers::MutableBitArrayView removeStorage, const Containers::Iterable<AbstractStyleAnimator>& animators);
 
         /**
+         * @brief Pre-update common and shared layer data
+         * @param state             State that's needed to be updated
+         *
+         * Implementation for @ref preUpdate(), which is called from
+         * @ref AbstractUserInterface whenever
+         * @ref UserInterfaceState::NeedsDataUpdate or any of the global or
+         * layer-specific states that imply it are present in
+         * @ref AbstractUserInterface::state(). Is always called after
+         * @ref doClean() and before @ref doUpdate(), @ref doComposite() and
+         * @ref doDraw(), with at least one @ref doSetSize() call happening at
+         * some point before. In case the function performs operations that
+         * trigger @ref UserInterfaceState::NeedsDataClean, another
+         * @ref doClean() is executed right after calling this function. This
+         * function is always called before any internal operations that
+         * calculate the set of visible nodes and data, meaning this function
+         * can be used not just for updating common and shared layer data, but
+         * also for example for data addition or removal.
+         *
+         * The @p state is guaranteed to be a subset of
+         * @ref LayerState::NeedsCommonDataUpdate and
+         * @relativeref{LayerState,NeedsSharedDataUpdate} and the
+         * implementation can make use of this information to skip some of its
+         * internal update logic. It can however also update everything always.
+         * Note that the @ref doUpdate() function gets called every time this
+         * function is called, with a superset of @p state, so the layer can
+         * choose to not implement this function at all if relevant updates can
+         * be done during the regular @ref doUpdate() as well.
+         *
+         * Default implementation does nothing.
+         */
+        virtual void doPreUpdate(LayerStates state);
+
+        /**
          * @brief Update visible layer data to given offsets and positions
          * @param state             State that's needed to be updated
          * @param dataIds           Data IDs to update, in order that matches
@@ -1242,8 +1293,9 @@ class MAGNUM_UI_EXPORT AbstractLayer {
          * @ref UserInterfaceState::NeedsDataUpdate or any of the global or
          * layer-specific states that imply it are present in
          * @ref AbstractUserInterface::state(). Is always called after
-         * @ref doClean() and before @ref doComposite() and @ref doDraw(), with
-         * at least one @ref doSetSize() call happening at some point before.
+         * @ref doPreUpdate() and @ref doClean(), and before @ref doComposite()
+         * and @ref doDraw(), with at least one @ref doSetSize() call happening
+         * at some point before.
          *
          * The @p state is guaranteed to be a subset of
          * @ref LayerState::NeedsNodeOffsetSizeUpdate,
