@@ -31,97 +31,124 @@
 namespace Magnum { namespace Ui {
 
 Debug& operator<<(Debug& debug, const LayerHandle value) {
+    const bool packed = debug.immediateFlags() >= Debug::Flag::Packed;
+
     if(value == LayerHandle::Null)
-        return debug << "Ui::LayerHandle::Null";
-    return debug << "Ui::LayerHandle(" << Debug::nospace << Debug::hex << layerHandleId(value) << Debug::nospace << "," << Debug::hex << layerHandleGeneration(value) << Debug::nospace << ")";
+        return debug << (packed ? "Null" : "Ui::LayerHandle::Null");
+
+    return debug << (packed ? "{" : "Ui::LayerHandle(") << Debug::nospace << Debug::hex << layerHandleId(value) << Debug::nospace << "," << Debug::hex << layerHandleGeneration(value) << Debug::nospace << (packed ? "}" : ")");
 }
 
 Debug& operator<<(Debug& debug, const LayerDataHandle value) {
+    const bool packed = debug.immediateFlags() >= Debug::Flag::Packed;
+
     if(value == LayerDataHandle::Null)
-        return debug << "Ui::LayerDataHandle::Null";
-    return debug << "Ui::LayerDataHandle(" << Debug::nospace << Debug::hex << layerDataHandleId(value) << Debug::nospace << "," << Debug::hex << layerDataHandleGeneration(value) << Debug::nospace << ")";
+        return debug << (packed ? "Null" : "Ui::LayerDataHandle::Null");
+
+    return debug << (packed ? "{" : "Ui::LayerDataHandle(") << Debug::nospace << Debug::hex << layerDataHandleId(value) << Debug::nospace << "," << Debug::hex << layerDataHandleGeneration(value) << Debug::nospace << (packed ? "}" : ")");
 }
 
 Debug& operator<<(Debug& debug, const DataHandle value) {
-    if(value == DataHandle::Null)
-        return debug << "Ui::DataHandle::Null";
+    const bool packed = debug.immediateFlags() >= Debug::Flag::Packed;
 
-    debug << "Ui::DataHandle(" << Debug::nospace;
+    if(value == DataHandle::Null)
+        return debug << (packed ? "Null" : "Ui::DataHandle::Null");
+
+    debug << (packed ? "{" : "Ui::DataHandle(") << Debug::nospace;
     if(dataHandleLayer(value) == LayerHandle::Null)
         debug << "Null,";
     else
         debug << "{" << Debug::nospace << Debug::hex << dataHandleLayerId(value) << Debug::nospace << "," << Debug::hex << dataHandleLayerGeneration(value) << Debug::nospace << "},";
 
     if(dataHandleData(value) == LayerDataHandle::Null)
-        debug << "Null)";
+        debug << (packed ? "Null}" : "Null)");
     else
-        debug << "{" << Debug::nospace << Debug::hex << dataHandleId(value) << Debug::nospace << "," << Debug::hex << dataHandleGeneration(value) << Debug::nospace << "})";
+        debug << "{" << Debug::nospace << Debug::hex << dataHandleId(value) << Debug::nospace << "," << Debug::hex << dataHandleGeneration(value) << Debug::nospace << (packed ? "}}" : "})");
 
     return debug;
 }
 
 Debug& operator<<(Debug& debug, const NodeHandle value) {
+    const bool packed = debug.immediateFlags() >= Debug::Flag::Packed;
+
     if(value == NodeHandle::Null)
-        return debug << "Ui::NodeHandle::Null";
-    return debug << "Ui::NodeHandle(" << Debug::nospace << Debug::hex << nodeHandleId(value) << Debug::nospace << "," << Debug::hex << nodeHandleGeneration(value) << Debug::nospace << ")";
+        return debug << (packed ? "Null" : "Ui::NodeHandle::Null");
+
+    return debug << (packed ? "{" : "Ui::NodeHandle(") << Debug::nospace << Debug::hex << nodeHandleId(value) << Debug::nospace << "," << Debug::hex << nodeHandleGeneration(value) << Debug::nospace << (packed ? "}" : ")");
 }
 
 Debug& operator<<(Debug& debug, const LayouterHandle value) {
+    const bool packed = debug.immediateFlags() >= Debug::Flag::Packed;
+
     if(value == LayouterHandle::Null)
-        return debug << "Ui::LayouterHandle::Null";
-    return debug << "Ui::LayouterHandle(" << Debug::nospace << Debug::hex << layouterHandleId(value) << Debug::nospace << "," << Debug::hex << layouterHandleGeneration(value) << Debug::nospace << ")";
+        return debug << (packed ? "Null" : "Ui::LayouterHandle::Null");
+
+    return debug << (packed ? "{" : "Ui::LayouterHandle(") << Debug::nospace << Debug::hex << layouterHandleId(value) << Debug::nospace << "," << Debug::hex << layouterHandleGeneration(value) << Debug::nospace << (packed ? "}" : ")");
 }
 
 Debug& operator<<(Debug& debug, const LayouterDataHandle value) {
+    const bool packed = debug.immediateFlags() >= Debug::Flag::Packed;
+
     if(value == LayouterDataHandle::Null)
-        return debug << "Ui::LayouterDataHandle::Null";
-    return debug << "Ui::LayouterDataHandle(" << Debug::nospace << Debug::hex << layouterDataHandleId(value) << Debug::nospace << "," << Debug::hex << layouterDataHandleGeneration(value) << Debug::nospace << ")";
+        return debug << (packed ? "Null" : "Ui::LayouterDataHandle::Null");
+
+    return debug << (packed ? "{" : "Ui::LayouterDataHandle(") << Debug::nospace << Debug::hex << layouterDataHandleId(value) << Debug::nospace << "," << Debug::hex << layouterDataHandleGeneration(value) << Debug::nospace << (packed ? "}" : ")");
 }
 
 Debug& operator<<(Debug& debug, const LayoutHandle value) {
-    if(value == LayoutHandle::Null)
-        return debug << "Ui::LayoutHandle::Null";
+    const bool packed = debug.immediateFlags() >= Debug::Flag::Packed;
 
-    debug << "Ui::LayoutHandle(" << Debug::nospace;
+    if(value == LayoutHandle::Null)
+        return debug << (packed ? "Null" : "Ui::LayoutHandle::Null");
+
+    debug << (packed ? "{" : "Ui::LayoutHandle(") << Debug::nospace;
     if(layoutHandleLayouter(value) == LayouterHandle::Null)
         debug << "Null,";
     else
         debug << "{" << Debug::nospace << Debug::hex << layoutHandleLayouterId(value) << Debug::nospace << "," << Debug::hex << layoutHandleLayouterGeneration(value) << Debug::nospace << "},";
 
     if(layoutHandleData(value) == LayouterDataHandle::Null)
-        debug << "Null)";
+        debug << (packed ? "Null}" : "Null)");
     else
-        debug << "{" << Debug::nospace << Debug::hex << layoutHandleId(value) << Debug::nospace << "," << Debug::hex << layoutHandleGeneration(value) << Debug::nospace << "})";
+        debug << "{" << Debug::nospace << Debug::hex << layoutHandleId(value) << Debug::nospace << "," << Debug::hex << layoutHandleGeneration(value) << Debug::nospace << (packed ? "}}" : "})");
 
     return debug;
 }
 
 Debug& operator<<(Debug& debug, const AnimatorHandle value) {
+    const bool packed = debug.immediateFlags() >= Debug::Flag::Packed;
+
     if(value == AnimatorHandle::Null)
-        return debug << "Ui::AnimatorHandle::Null";
-    return debug << "Ui::AnimatorHandle(" << Debug::nospace << Debug::hex << animatorHandleId(value) << Debug::nospace << "," << Debug::hex << animatorHandleGeneration(value) << Debug::nospace << ")";
+        return debug << (packed ? "Null" : "Ui::AnimatorHandle::Null");
+
+    return debug << (packed ? "{" : "Ui::AnimatorHandle(") << Debug::nospace << Debug::hex << animatorHandleId(value) << Debug::nospace << "," << Debug::hex << animatorHandleGeneration(value) << Debug::nospace << (packed ? "}" : ")");
 }
 
 Debug& operator<<(Debug& debug, const AnimatorDataHandle value) {
+    const bool packed = debug.immediateFlags() >= Debug::Flag::Packed;
+
     if(value == AnimatorDataHandle::Null)
-        return debug << "Ui::AnimatorDataHandle::Null";
-    return debug << "Ui::AnimatorDataHandle(" << Debug::nospace << Debug::hex << animatorDataHandleId(value) << Debug::nospace << "," << Debug::hex << animatorDataHandleGeneration(value) << Debug::nospace << ")";
+        return debug << (packed ? "Null" : "Ui::AnimatorDataHandle::Null");
+
+    return debug << (packed ? "{" : "Ui::AnimatorDataHandle(") << Debug::nospace << Debug::hex << animatorDataHandleId(value) << Debug::nospace << "," << Debug::hex << animatorDataHandleGeneration(value) << Debug::nospace << (packed ? "}" : ")");
 }
 
 Debug& operator<<(Debug& debug, const AnimationHandle value) {
-    if(value == AnimationHandle::Null)
-        return debug << "Ui::AnimationHandle::Null";
+    const bool packed = debug.immediateFlags() >= Debug::Flag::Packed;
 
-    debug << "Ui::AnimationHandle(" << Debug::nospace;
+    if(value == AnimationHandle::Null)
+        return debug << (packed ? "Null" : "Ui::AnimationHandle::Null");
+
+    debug << (packed ? "{" : "Ui::AnimationHandle(") << Debug::nospace;
     if(animationHandleAnimator(value) == AnimatorHandle::Null)
         debug << "Null,";
     else
         debug << "{" << Debug::nospace << Debug::hex << animationHandleAnimatorId(value) << Debug::nospace << "," << Debug::hex << animationHandleAnimatorGeneration(value) << Debug::nospace << "},";
 
     if(animationHandleData(value) == AnimatorDataHandle::Null)
-        debug << "Null)";
+        debug << (packed ? "Null}" : "Null)");
     else
-        debug << "{" << Debug::nospace << Debug::hex << animationHandleId(value) << Debug::nospace << "," << Debug::hex << animationHandleGeneration(value) << Debug::nospace << "})";
+        debug << "{" << Debug::nospace << Debug::hex << animationHandleId(value) << Debug::nospace << "," << Debug::hex << animationHandleGeneration(value) << Debug::nospace << (packed ? "}}" : "})");
 
     return debug;
 }

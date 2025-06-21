@@ -55,9 +55,12 @@
 namespace Magnum { namespace Ui {
 
 Debug& operator<<(Debug& debug, const FontHandle value) {
+    const bool packed = debug.immediateFlags() >= Debug::Flag::Packed;
+
     if(value == FontHandle::Null)
-        return debug << "Ui::FontHandle::Null";
-    return debug << "Ui::FontHandle(" << Debug::nospace << Debug::hex << fontHandleId(value) << Debug::nospace << "," << Debug::hex << fontHandleGeneration(value) << Debug::nospace << ")";
+        return debug << (packed ? "Null" : "Ui::FontHandle::Null");
+
+    return debug << (packed ? "{" : "Ui::FontHandle(") << Debug::nospace << Debug::hex << fontHandleId(value) << Debug::nospace << "," << Debug::hex << fontHandleGeneration(value) << Debug::nospace << (packed ? "}" : ")");
 }
 
 Debug& operator<<(Debug& debug, const TextLayerFlag value) {

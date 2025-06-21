@@ -90,6 +90,7 @@ struct TextLayerTest: TestSuite::Tester {
     void fontHandle();
     void fontHandleInvalid();
     void debugFontHandle();
+    void debugFontHandlePacked();
 
     void debugLayerFlag();
     void debugLayerFlags();
@@ -1345,6 +1346,7 @@ TextLayerTest::TextLayerTest() {
               &TextLayerTest::fontHandle,
               &TextLayerTest::fontHandleInvalid,
               &TextLayerTest::debugFontHandle,
+              &TextLayerTest::debugFontHandlePacked,
 
               &TextLayerTest::debugLayerFlag,
               &TextLayerTest::debugLayerFlags,
@@ -1840,6 +1842,13 @@ void TextLayerTest::debugFontHandle() {
     Containers::String out;
     Debug{&out} << FontHandle::Null << Ui::fontHandle(0x2bcd, 0x1);
     CORRADE_COMPARE(out, "Ui::FontHandle::Null Ui::FontHandle(0x2bcd, 0x1)\n");
+}
+
+void TextLayerTest::debugFontHandlePacked() {
+    Containers::String out;
+    /* Last is not packed, ones before should not make any flags persistent */
+    Debug{&out} << Debug::packed << FontHandle::Null << Debug::packed << Ui::fontHandle(0x2bcd, 0x1) << Ui::fontHandle(0x3abc, 0x1);
+    CORRADE_COMPARE(out, "Null {0x2bcd, 0x1} Ui::FontHandle(0x3abc, 0x1)\n");
 }
 
 void TextLayerTest::debugLayerFlag() {

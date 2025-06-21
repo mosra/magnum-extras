@@ -35,13 +35,17 @@ struct NodeFlagsTest: TestSuite::Tester {
     explicit NodeFlagsTest();
 
     void debugFlag();
+    void debugFlagPacked();
     void debugFlags();
+    void debugFlagsPacked();
     void debugFlagsSupersets();
 };
 
 NodeFlagsTest::NodeFlagsTest() {
     addTests({&NodeFlagsTest::debugFlag,
+              &NodeFlagsTest::debugFlagPacked,
               &NodeFlagsTest::debugFlags,
+              &NodeFlagsTest::debugFlagsPacked,
               &NodeFlagsTest::debugFlagsSupersets});
 }
 
@@ -51,10 +55,24 @@ void NodeFlagsTest::debugFlag() {
     CORRADE_COMPARE(out, "Ui::NodeFlag::Hidden Ui::NodeFlag(0xbe)\n");
 }
 
+void NodeFlagsTest::debugFlagPacked() {
+    Containers::String out;
+    /* Last is not packed, ones before should not make any flags persistent */
+    Debug{&out} << Debug::packed << NodeFlag::Hidden << Debug::packed << NodeFlag(0xbe) << NodeFlag::Focusable;
+    CORRADE_COMPARE(out, "Hidden 0xbe Ui::NodeFlag::Focusable\n");
+}
+
 void NodeFlagsTest::debugFlags() {
     Containers::String out;
-    Debug{&out} << (NodeFlag::Hidden|NodeFlag(0x80)) << NodeFlags{};
-    CORRADE_COMPARE(out, "Ui::NodeFlag::Hidden|Ui::NodeFlag(0x80) Ui::NodeFlags{}\n");
+    Debug{&out} << (NodeFlag::Hidden|NodeFlag::Clip|NodeFlag(0x80)) << NodeFlags{};
+    CORRADE_COMPARE(out, "Ui::NodeFlag::Hidden|Ui::NodeFlag::Clip|Ui::NodeFlag(0x80) Ui::NodeFlags{}\n");
+}
+
+void NodeFlagsTest::debugFlagsPacked() {
+    Containers::String out;
+    /* Last is not packed, ones before should not make any flags persistent */
+    Debug{&out} << Debug::packed << (NodeFlag::Hidden|NodeFlag::Clip|NodeFlag(0x80)) << Debug::packed << NodeFlags{} << (NodeFlag::Disabled|NodeFlag::NoBlur);
+    CORRADE_COMPARE(out, "Hidden|Clip|0x80 {} Ui::NodeFlag::Disabled|Ui::NodeFlag::NoBlur\n");
 }
 
 void NodeFlagsTest::debugFlagsSupersets() {
