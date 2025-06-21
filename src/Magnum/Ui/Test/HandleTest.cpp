@@ -38,84 +38,104 @@ struct HandleTest: TestSuite::Tester {
     void layer();
     void layerInvalid();
     void debugLayer();
+    void debugLayerPacked();
 
     void layerData();
     void layerDataInvalid();
     void debugLayerData();
+    void debugLayerDataPacked();
 
     void data();
     void dataInvalid();
     void debugData();
+    void debugDataPacked();
 
     void node();
     void nodeInvalid();
     void debugNode();
+    void debugNodePacked();
 
     void layouter();
     void layouterInvalid();
     void debugLayouter();
+    void debugLayouterPacked();
 
     void layouterData();
     void layouterDataInvalid();
     void debugLayouterData();
+    void debugLayouterDataPacked();
 
     void layout();
     void layoutInvalid();
     void debugLayout();
+    void debugLayoutPacked();
 
     void animator();
     void animatorInvalid();
     void debugAnimator();
+    void debugAnimatorPacked();
 
     void animatorData();
     void animatorDataInvalid();
     void debugAnimatorData();
+    void debugAnimatorDataPacked();
 
     void animation();
     void animationInvalid();
     void debugAnimation();
+    void debugAnimationPacked();
 };
 
 HandleTest::HandleTest() {
     addTests({&HandleTest::layer,
               &HandleTest::layerInvalid,
               &HandleTest::debugLayer,
+              &HandleTest::debugLayerPacked,
 
               &HandleTest::layerData,
               &HandleTest::layerDataInvalid,
               &HandleTest::debugLayerData,
+              &HandleTest::debugLayerDataPacked,
 
               &HandleTest::data,
               &HandleTest::dataInvalid,
               &HandleTest::debugData,
+              &HandleTest::debugDataPacked,
 
               &HandleTest::node,
               &HandleTest::nodeInvalid,
               &HandleTest::debugNode,
+              &HandleTest::debugNodePacked,
 
               &HandleTest::layouter,
               &HandleTest::layouterInvalid,
               &HandleTest::debugLayouter,
+              &HandleTest::debugLayouterPacked,
 
               &HandleTest::layouterData,
               &HandleTest::layouterDataInvalid,
               &HandleTest::debugLayouterData,
+              &HandleTest::debugLayouterDataPacked,
 
               &HandleTest::layout,
               &HandleTest::layoutInvalid,
               &HandleTest::debugLayout,
+              &HandleTest::debugLayoutPacked,
 
               &HandleTest::animator,
               &HandleTest::animatorInvalid,
               &HandleTest::debugAnimator,
+              &HandleTest::debugAnimatorPacked,
 
               &HandleTest::animatorData,
               &HandleTest::animatorDataInvalid,
               &HandleTest::debugAnimatorData,
+              &HandleTest::debugAnimatorDataPacked,
 
               &HandleTest::animation,
               &HandleTest::animationInvalid,
-              &HandleTest::debugAnimation});
+              &HandleTest::debugAnimation,
+              &HandleTest::debugAnimationPacked});
 }
 
 void HandleTest::layer() {
@@ -156,6 +176,13 @@ void HandleTest::debugLayer() {
     CORRADE_COMPARE(out, "Ui::LayerHandle::Null Ui::LayerHandle(0x12, 0xab)\n");
 }
 
+void HandleTest::debugLayerPacked() {
+    Containers::String out;
+    /* Last is not packed, ones before should not make any flags persistent */
+    Debug{&out} << Debug::packed << LayerHandle::Null << Debug::packed << layerHandle(0x12, 0xab) << layerHandle(0x34, 0xcd);
+    CORRADE_COMPARE(out, "Null {0x12, 0xab} Ui::LayerHandle(0x34, 0xcd)\n");
+}
+
 void HandleTest::layerData() {
     CORRADE_COMPARE(LayerDataHandle::Null, LayerDataHandle{});
     CORRADE_COMPARE(layerDataHandle(0, 0), LayerDataHandle::Null);
@@ -192,6 +219,13 @@ void HandleTest::debugLayerData() {
     Containers::String out;
     Debug{&out} << LayerDataHandle::Null << layerDataHandle(0x12345, 0xabc);
     CORRADE_COMPARE(out, "Ui::LayerDataHandle::Null Ui::LayerDataHandle(0x12345, 0xabc)\n");
+}
+
+void HandleTest::debugLayerDataPacked() {
+    Containers::String out;
+    /* Last is not packed, ones before should not make any flags persistent */
+    Debug{&out} << Debug::packed << LayerDataHandle::Null << Debug::packed << layerDataHandle(0x12345, 0xabc) << layerDataHandle(0x67890, 0xdef);
+    CORRADE_COMPARE(out, "Null {0x12345, 0xabc} Ui::LayerDataHandle(0x67890, 0xdef)\n");
 }
 
 void HandleTest::data() {
@@ -257,6 +291,13 @@ void HandleTest::debugData() {
     CORRADE_COMPARE(out, "Ui::DataHandle::Null Ui::DataHandle(Null, {0xabcde, 0x12}) Ui::DataHandle({0x34, 0x56}, Null) Ui::DataHandle({0x34, 0x56}, {0xabcde, 0x12})\n");
 }
 
+void HandleTest::debugDataPacked() {
+    Containers::String out;
+    /* Last is not packed, ones before should not make any flags persistent */
+    Debug{&out} << Debug::packed << DataHandle::Null << Debug::packed << dataHandle(LayerHandle::Null, layerDataHandle(0xabcde, 0x12)) << Debug::packed << dataHandle(layerHandle(0x34, 0x56), LayerDataHandle::Null) << Debug::packed << dataHandle(layerHandle(0x34, 0x56), 0xabcde, 0x12) << dataHandle(layerHandle(0x78, 0x90), 0xf0123, 0xab);
+    CORRADE_COMPARE(out, "Null {Null, {0xabcde, 0x12}} {{0x34, 0x56}, Null} {{0x34, 0x56}, {0xabcde, 0x12}} Ui::DataHandle({0x78, 0x90}, {0xf0123, 0xab})\n");
+}
+
 void HandleTest::node() {
     CORRADE_COMPARE(NodeHandle::Null, NodeHandle{});
     CORRADE_COMPARE(nodeHandle(0, 0), NodeHandle::Null);
@@ -293,6 +334,13 @@ void HandleTest::debugNode() {
     Containers::String out;
     Debug{&out} << NodeHandle::Null << nodeHandle(0x12345, 0xabc);
     CORRADE_COMPARE(out, "Ui::NodeHandle::Null Ui::NodeHandle(0x12345, 0xabc)\n");
+}
+
+void HandleTest::debugNodePacked() {
+    Containers::String out;
+    /* Last is not packed, ones before should not make any flags persistent */
+    Debug{&out} << Debug::packed << NodeHandle::Null << Debug::packed << nodeHandle(0x12345, 0xabc) << nodeHandle(0x67890, 0xdef);
+    CORRADE_COMPARE(out, "Null {0x12345, 0xabc} Ui::NodeHandle(0x67890, 0xdef)\n");
 }
 
 void HandleTest::layouter() {
@@ -333,6 +381,13 @@ void HandleTest::debugLayouter() {
     CORRADE_COMPARE(out, "Ui::LayouterHandle::Null Ui::LayouterHandle(0x12, 0xab)\n");
 }
 
+void HandleTest::debugLayouterPacked() {
+    Containers::String out;
+    /* Last is not packed, ones before should not make any flags persistent */
+    Debug{&out} << Debug::packed << LayouterHandle::Null << Debug::packed << layouterHandle(0x12, 0xab) << layouterHandle(0x34, 0xcd);
+    CORRADE_COMPARE(out, "Null {0x12, 0xab} Ui::LayouterHandle(0x34, 0xcd)\n");
+}
+
 void HandleTest::layouterData() {
     CORRADE_COMPARE(LayouterDataHandle::Null, LayouterDataHandle{});
     CORRADE_COMPARE(layouterDataHandle(0, 0), LayouterDataHandle::Null);
@@ -369,6 +424,13 @@ void HandleTest::debugLayouterData() {
     Containers::String out;
     Debug{&out} << LayouterDataHandle::Null << layouterDataHandle(0x12345, 0xabc);
     CORRADE_COMPARE(out, "Ui::LayouterDataHandle::Null Ui::LayouterDataHandle(0x12345, 0xabc)\n");
+}
+
+void HandleTest::debugLayouterDataPacked() {
+    Containers::String out;
+    /* Last is not packed, ones before should not make any flags persistent */
+    Debug{&out} << Debug::packed << LayouterDataHandle::Null << Debug::packed << layouterDataHandle(0x12345, 0xabc) << layouterDataHandle(0x67890, 0xdef);
+    CORRADE_COMPARE(out, "Null {0x12345, 0xabc} Ui::LayouterDataHandle(0x67890, 0xdef)\n");
 }
 
 void HandleTest::layout() {
@@ -434,6 +496,13 @@ void HandleTest::debugLayout() {
     CORRADE_COMPARE(out, "Ui::LayoutHandle::Null Ui::LayoutHandle(Null, {0xabcde, 0x12}) Ui::LayoutHandle({0x34, 0x56}, Null) Ui::LayoutHandle({0x34, 0x56}, {0xabcde, 0x12})\n");
 }
 
+void HandleTest::debugLayoutPacked() {
+    Containers::String out;
+    /* Last is not packed, ones before should not make any flags persistent */
+    Debug{&out} << Debug::packed << LayoutHandle::Null << Debug::packed << layoutHandle(LayouterHandle::Null, layouterDataHandle(0xabcde, 0x12)) << Debug::packed << layoutHandle(layouterHandle(0x34, 0x56), LayouterDataHandle::Null) << Debug::packed << layoutHandle(layouterHandle(0x34, 0x56), 0xabcde, 0x12) << layoutHandle(layouterHandle(0x78, 0x90), 0xf0123, 0xab);
+    CORRADE_COMPARE(out, "Null {Null, {0xabcde, 0x12}} {{0x34, 0x56}, Null} {{0x34, 0x56}, {0xabcde, 0x12}} Ui::LayoutHandle({0x78, 0x90}, {0xf0123, 0xab})\n");
+}
+
 void HandleTest::animator() {
     CORRADE_COMPARE(AnimatorHandle::Null, AnimatorHandle{});
     CORRADE_COMPARE(animatorHandle(0, 0), AnimatorHandle{});
@@ -472,6 +541,13 @@ void HandleTest::debugAnimator() {
     CORRADE_COMPARE(out, "Ui::AnimatorHandle::Null Ui::AnimatorHandle(0x12, 0xab)\n");
 }
 
+void HandleTest::debugAnimatorPacked() {
+    Containers::String out;
+    /* Last is not packed, ones before should not make any flags persistent */
+    Debug{&out} << Debug::packed << AnimatorHandle::Null << Debug::packed << animatorHandle(0x12, 0xab) << animatorHandle(0x34, 0xcd);
+    CORRADE_COMPARE(out, "Null {0x12, 0xab} Ui::AnimatorHandle(0x34, 0xcd)\n");
+}
+
 void HandleTest::animatorData() {
     CORRADE_COMPARE(AnimatorDataHandle::Null, AnimatorDataHandle{});
     CORRADE_COMPARE(animatorDataHandle(0, 0), AnimatorDataHandle::Null);
@@ -508,6 +584,13 @@ void HandleTest::debugAnimatorData() {
     Containers::String out;
     Debug{&out} << AnimatorDataHandle::Null << animatorDataHandle(0x12345, 0xabc);
     CORRADE_COMPARE(out, "Ui::AnimatorDataHandle::Null Ui::AnimatorDataHandle(0x12345, 0xabc)\n");
+}
+
+void HandleTest::debugAnimatorDataPacked() {
+    Containers::String out;
+    /* Last is not packed, ones before should not make any flags persistent */
+    Debug{&out} << Debug::packed << AnimatorDataHandle::Null << Debug::packed << animatorDataHandle(0x12345, 0xabc) << animatorDataHandle(0x67890, 0xdef);
+    CORRADE_COMPARE(out, "Null {0x12345, 0xabc} Ui::AnimatorDataHandle(0x67890, 0xdef)\n");
 }
 
 void HandleTest::animation() {
@@ -571,6 +654,13 @@ void HandleTest::debugAnimation() {
     Containers::String out;
     Debug{&out} << AnimationHandle::Null << animationHandle(AnimatorHandle::Null, animatorDataHandle(0xabcde, 0x12)) << animationHandle(animatorHandle(0x34, 0x56), AnimatorDataHandle::Null) << animationHandle(animatorHandle(0x34, 0x56), 0xabcde, 0x12);
     CORRADE_COMPARE(out, "Ui::AnimationHandle::Null Ui::AnimationHandle(Null, {0xabcde, 0x12}) Ui::AnimationHandle({0x34, 0x56}, Null) Ui::AnimationHandle({0x34, 0x56}, {0xabcde, 0x12})\n");
+}
+
+void HandleTest::debugAnimationPacked() {
+    Containers::String out;
+    /* Last is not packed, ones before should not make any flags persistent */
+    Debug{&out} << Debug::packed << AnimationHandle::Null << Debug::packed << animationHandle(AnimatorHandle::Null, animatorDataHandle(0xabcde, 0x12)) << Debug::packed << animationHandle(animatorHandle(0x34, 0x56), AnimatorDataHandle::Null) << Debug::packed << animationHandle(animatorHandle(0x34, 0x56), 0xabcde, 0x12) << animationHandle(animatorHandle(0x78, 0x90), 0xf0123, 0xab);
+    CORRADE_COMPARE(out, "Null {Null, {0xabcde, 0x12}} {{0x34, 0x56}, Null} {{0x34, 0x56}, {0xabcde, 0x12}} Ui::AnimationHandle({0x78, 0x90}, {0xf0123, 0xab})\n");
 }
 
 }}}}

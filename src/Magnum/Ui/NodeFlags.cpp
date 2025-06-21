@@ -31,11 +31,14 @@
 namespace Magnum { namespace Ui {
 
 Debug& operator<<(Debug& debug, const NodeFlag value) {
-    debug << "Ui::NodeFlag" << Debug::nospace;
+    const bool packed = debug.immediateFlags() >= Debug::Flag::Packed;
+
+    if(!packed)
+        debug << "Ui::NodeFlag" << Debug::nospace;
 
     switch(value) {
         /* LCOV_EXCL_START */
-        #define _c(value) case NodeFlag::value: return debug << "::" #value;
+        #define _c(value) case NodeFlag::value: return debug << (packed ? "" : "::") << Debug::nospace << #value;
         _c(Hidden)
         _c(Clip)
         _c(NoEvents)
@@ -47,11 +50,11 @@ Debug& operator<<(Debug& debug, const NodeFlag value) {
         /* LCOV_EXCL_STOP */
     }
 
-    return debug << "(" << Debug::nospace << Debug::hex << UnsignedByte(value) << Debug::nospace << ")";
+    return debug << (packed ? "" : "(") << Debug::nospace << Debug::hex << UnsignedByte(value) << Debug::nospace << (packed ? "" : ")");
 }
 
 Debug& operator<<(Debug& debug, const NodeFlags value) {
-    return Containers::enumSetDebugOutput(debug, value, "Ui::NodeFlags{}", {
+    return Containers::enumSetDebugOutput(debug, value, debug.immediateFlags() >= Debug::Flag::Packed ? "{}" : "Ui::NodeFlags{}", {
         NodeFlag::Hidden,
         NodeFlag::Clip,
         NodeFlag::Disabled,
