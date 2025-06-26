@@ -616,7 +616,10 @@ Use @ref AbstractSnapLayout if you want to layout multiple nodes relative to
 each other.
 */
 MAGNUM_UI_EXPORT AbstractAnchor snap(AbstractUserInterface& ui, SnapLayouter& layouter, Snaps snap, NodeHandle target, const Vector2& size, NodeFlags flags = {});
-/** @overload */
+/**
+@overload
+@m_since_latest
+*/
 MAGNUM_UI_EXPORT Anchor snap(UserInterface& ui, SnapLayouter& layouter, Snaps snap, NodeHandle target, const Vector2& size, NodeFlags flags = {});
 
 /**
@@ -636,7 +639,10 @@ Compared to @ref snap(AbstractUserInterface&, SnapLayouter&, Snaps, NodeHandle, 
 the @p offset is added to the offset calculated by the layout.
 */
 MAGNUM_UI_EXPORT AbstractAnchor snap(AbstractUserInterface& ui, SnapLayouter& layouter, Snaps snap, NodeHandle target, const Vector2& offset, const Vector2& size, NodeFlags flags = {});
-/** @overload */
+/**
+@overload
+@m_since_latest
+*/
 MAGNUM_UI_EXPORT Anchor snap(UserInterface& ui, SnapLayouter& layouter, Snaps snap, NodeHandle target, const Vector2& offset, const Vector2& size, NodeFlags flags = {});
 
 /**
@@ -656,7 +662,10 @@ Equivalent to calling @ref snap(AbstractUserInterface&, SnapLayouter&, Snaps, No
 with @p target being @ref NodeHandle::Null.
 */
 MAGNUM_UI_EXPORT AbstractAnchor snap(AbstractUserInterface& ui, SnapLayouter& layouter, Snaps snap, const Vector2& size, NodeFlags flags = {});
-/** @overload */
+/**
+@overload
+@m_since_latest
+*/
 MAGNUM_UI_EXPORT Anchor snap(UserInterface& ui, SnapLayouter& layouter, Snaps snap, const Vector2& size, NodeFlags flags = {});
 
 /**
@@ -676,7 +685,10 @@ Compared to @ref snap(AbstractUserInterface&, SnapLayouter&, Snaps, const Vector
 the @p offset is added to the offset calculated by the layout.
 */
 MAGNUM_UI_EXPORT AbstractAnchor snap(AbstractUserInterface& ui, SnapLayouter& layouter, Snaps snap, const Vector2& offset, const Vector2& size, NodeFlags flags = {});
-/** @overload */
+/**
+@overload
+@m_since_latest
+*/
 MAGNUM_UI_EXPORT Anchor snap(UserInterface& ui, SnapLayouter& layouter, Snaps snap, const Vector2& offset, const Vector2& size, NodeFlags flags = {});
 
 /**

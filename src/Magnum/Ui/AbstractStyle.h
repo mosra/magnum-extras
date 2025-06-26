@@ -103,7 +103,10 @@ enum class StyleFeature: UnsignedByte {
     SnapLayouter = 1 << 4
 };
 
-/** @debugoperatorenum{StyleFeature} */
+/**
+@debugoperatorenum{StyleFeature}
+@m_since_latest
+*/
 MAGNUM_UI_EXPORT Debug& operator<<(Debug& debug, StyleFeature value);
 
 /**
@@ -125,7 +128,10 @@ typedef Containers::EnumSet<StyleFeature
 
 CORRADE_ENUMSET_OPERATORS(StyleFeatures)
 
-/** @debugoperatorenum{StyleFeatures} */
+/**
+@debugoperatorenum{StyleFeatures}
+@m_since_latest
+*/
 MAGNUM_UI_EXPORT Debug& operator<<(Debug& debug, StyleFeatures value);
 
 /**

@@ -229,7 +229,10 @@ As a consequence it can't have its style, icon or text subsequently changed and
 is removed only when the node or its parent get removed.
 */
 MAGNUM_UI_EXPORT Anchor button(const Anchor& anchor, Containers::StringView text, const TextProperties& textProperties, ButtonStyle style = ButtonStyle::Default);
-/** @overload */
+/**
+@overload
+@m_since_latest
+*/
 MAGNUM_UI_EXPORT Anchor button(const Anchor& anchor, Containers::StringView text, ButtonStyle style = ButtonStyle::Default);
 
 /**
@@ -251,7 +254,10 @@ As a consequence it can't have its style, icon or text subsequently changed and
 is removed only when the node or its parent get removed.
 */
 MAGNUM_UI_EXPORT Anchor button(const Anchor& anchor, Icon icon, Containers::StringView text, const TextProperties& textProperties, ButtonStyle style = ButtonStyle::Default);
-/** @overload */
+/**
+@overload
+@m_since_latest
+*/
 MAGNUM_UI_EXPORT Anchor button(const Anchor& anchor, Icon icon, Containers::StringView text, ButtonStyle style = ButtonStyle::Default);
 
 }}

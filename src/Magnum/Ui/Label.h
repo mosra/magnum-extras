@@ -201,7 +201,10 @@ As a consequence it can't have its style, icon or text subsequently changed and
 is removed only when the node or its parent get removed.
 */
 MAGNUM_UI_EXPORT Anchor label(const Anchor& anchor, Containers::StringView text, const TextProperties& textProperties, LabelStyle style = LabelStyle::Default);
-/** @overload */
+/**
+@overload
+@m_since_latest
+*/
 MAGNUM_UI_EXPORT Anchor label(const Anchor& anchor, Containers::StringView text, LabelStyle style = LabelStyle::Default);
 
 }}
