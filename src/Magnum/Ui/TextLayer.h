@@ -593,6 +593,7 @@ MAGNUM_UI_EXPORT Debug& operator<<(Debug& debug, TextDataFlags value);
 
 /**
 @brief Text edit operation
+@m_since_latest
 
 @see @ref Ui-TextLayer-editing, @ref TextLayer::editText()
 */
