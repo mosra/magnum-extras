@@ -72,6 +72,11 @@ class BaseLayerGL;
 enum class BaseLayerSharedFlag: UnsignedByte;
 typedef Containers::EnumSet<BaseLayerSharedFlag> BaseLayerSharedFlags;
 
+class DebugLayer;
+#ifdef MAGNUM_TARGET_GL
+class DebugLayerGL;
+#endif
+
 class EventConnection;
 class EventLayer;
 

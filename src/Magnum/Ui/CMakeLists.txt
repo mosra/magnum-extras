@@ -64,6 +64,7 @@ set(MagnumUi_GracefulAssert_SRCS
     Anchor.cpp
     BaseLayer.cpp
     BaseLayerAnimator.cpp
+    DebugLayer.cpp
     Event.cpp
     EventLayer.cpp
     GenericAnimator.cpp
@@ -89,6 +90,7 @@ set(MagnumUi_HEADERS
     BaseLayer.h
     BaseLayerAnimator.h
     Button.h
+    DebugLayer.h
     Event.h
     EventLayer.h
     GenericAnimator.h
@@ -115,6 +117,7 @@ set(MagnumUi_PRIVATE_HEADERS
     Implementation/abstractVisualLayerAnimatorState.h
     Implementation/baseLayerState.h
     Implementation/baseStyleUniformsMcssDark.h
+    Implementation/debugLayerState.h
     Implementation/lineLayerState.h
     Implementation/lineMiterLimit.h
     Implementation/textLayerState.h
@@ -125,6 +128,7 @@ set(MagnumUi_PRIVATE_HEADERS
 if(MAGNUM_TARGET_GL)
     corrade_add_resource(MagnumUi_RESOURCES resources.conf)
     list(APPEND MagnumUi_SRCS
+        DebugLayerGL.cpp
         # TODO this contains the font and icons as well, split into multiple
         #   files once non-GL / Vulkan builds become desirable
         ${MagnumUi_RESOURCES})
@@ -136,6 +140,7 @@ if(MAGNUM_TARGET_GL)
         UserInterfaceGL.cpp)
     list(APPEND MagnumUi_HEADERS
         BaseLayerGL.h
+        DebugLayerGL.h
         LineLayerGL.h
         RendererGL.h
         TextLayerGL.h

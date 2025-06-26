@@ -52,6 +52,7 @@ corrade_add_test(UiBaseLayerTest BaseLayerTest.cpp LIBRARIES MagnumUiTestLib)
 corrade_add_test(UiBaseLayerStyleAnimatorTest BaseLayerStyleAnimatorTest.cpp LIBRARIES MagnumUiTestLib)
 corrade_add_test(UiBlurShaderTest BlurShaderTest.cpp LIBRARIES MagnumUi)
 corrade_add_test(UiButtonTest ButtonTest.cpp LIBRARIES MagnumUi)
+corrade_add_test(UiDebugLayerTest DebugLayerTest.cpp LIBRARIES MagnumUiTestLib)
 corrade_add_test(UiEventTest EventTest.cpp LIBRARIES MagnumUiTestLib)
 corrade_add_test(UiEventLayerTest EventLayerTest.cpp LIBRARIES MagnumUiTestLib)
 corrade_add_test(UiGenericAnimatorTest GenericAnimatorTest.cpp LIBRARIES MagnumUiTestLib)
@@ -115,6 +116,7 @@ endif()
 
 set_property(TARGET
     UiHandleTest
+    UiDebugLayerTest
     UiTextLayerTest
     APPEND PROPERTY COMPILE_DEFINITIONS "CORRADE_GRACEFUL_ASSERT")
 
@@ -340,6 +342,29 @@ if(MAGNUM_BUILD_GL_TESTS)
         endif()
         if(MagnumPlugins_StbImageImporter_FOUND)
             target_link_libraries(UiBlurShaderGLTest PRIVATE MagnumPlugins::StbImageImporter)
+        endif()
+    endif()
+
+    corrade_add_test(UiDebugLayerGLTest DebugLayerGLTest.cpp
+        LIBRARIES
+            MagnumUi
+            Magnum::DebugTools
+            Magnum::OpenGLTester
+        FILES
+            DebugLayerTestFiles/draw-order-blue.png
+            DebugLayerTestFiles/draw-order-green.png
+            DebugLayerTestFiles/empty.png
+            DebugLayerTestFiles/node-highlight.png
+            DebugLayerTestFiles/node-highlight-color.png
+            # Yes, reusing BaseLayer test file for draw order
+            BaseLayerTestFiles/draw-order.png)
+    target_include_directories(UiDebugLayerGLTest PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
+    if(MAGNUM_BUILD_STATIC)
+        if(Magnum_AnyImageImporter_FOUND)
+            target_link_libraries(UiDebugLayerGLTest PRIVATE Magnum::AnyImageImporter)
+        endif()
+        if(MagnumPlugins_StbImageImporter_FOUND)
+            target_link_libraries(UiDebugLayerGLTest PRIVATE MagnumPlugins::StbImageImporter)
         endif()
     endif()
 
