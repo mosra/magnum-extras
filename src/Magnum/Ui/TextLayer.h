@@ -58,7 +58,14 @@ Currently this is just a placeholder with no properties.
 */
 struct TextLayerCommonStyleUniform {
     /** @brief Construct with default values */
-    constexpr explicit TextLayerCommonStyleUniform(DefaultInitT = DefaultInit) noexcept: smoothness{0.0f} {}
+    constexpr explicit TextLayerCommonStyleUniform(DefaultInitT) noexcept: smoothness{0.0f} {}
+
+    /**
+     * @brief Construct with default values
+     *
+     * Equivalent to @ref TextLayerCommonStyleUniform(DefaultInitT).
+     */
+    constexpr /*implicit*/ TextLayerCommonStyleUniform() noexcept: TextLayerCommonStyleUniform{DefaultInit} {}
 
     /** @brief Constructor */
     constexpr /*implicit*/ TextLayerCommonStyleUniform(Float smoothness): smoothness {smoothness} {}
@@ -130,7 +137,14 @@ and variants.
 */
 struct TextLayerStyleUniform {
     /** @brief Construct with default values */
-    constexpr explicit TextLayerStyleUniform(DefaultInitT = DefaultInit) noexcept: color{1.0f}, outlineColor{1.0f}, outlineWidth{0.0f}, edgeOffset{0.0f}, smoothness{0.0f} {}
+    constexpr explicit TextLayerStyleUniform(DefaultInitT) noexcept: color{1.0f}, outlineColor{1.0f}, outlineWidth{0.0f}, edgeOffset{0.0f}, smoothness{0.0f} {}
+
+    /**
+     * @brief Construct with default values
+     *
+     * Equivalent to @ref TextLayerStyleUniform(DefaultInitT).
+     */
+    constexpr /*implicit*/ TextLayerStyleUniform() noexcept: TextLayerStyleUniform{DefaultInit} {}
 
     /**
      * @brief Construct for a regular rendering
@@ -288,7 +302,14 @@ shader are passed to the function separately.
 */
 struct TextLayerCommonEditingStyleUniform {
     /** @brief Construct with default values */
-    constexpr explicit TextLayerCommonEditingStyleUniform(DefaultInitT = DefaultInit) noexcept: smoothness{0.0f} {}
+    constexpr explicit TextLayerCommonEditingStyleUniform(DefaultInitT) noexcept: smoothness{0.0f} {}
+
+    /**
+     * @brief Construct with default values
+     *
+     * Equivalent to @ref TextLayerCommonEditingStyleUniform(DefaultInitT).
+     */
+    constexpr /*implicit*/ TextLayerCommonEditingStyleUniform() noexcept: TextLayerCommonEditingStyleUniform{DefaultInit} {}
 
     /** @brief Constructor */
     constexpr /*implicit*/ TextLayerCommonEditingStyleUniform(Float smoothness): smoothness{smoothness} {}
@@ -354,7 +375,14 @@ separately.
 */
 struct TextLayerEditingStyleUniform {
     /** @brief Construct with default values */
-    constexpr explicit TextLayerEditingStyleUniform(DefaultInitT = DefaultInit) noexcept: backgroundColor{1.0f}, cornerRadius{0.0f} {}
+    constexpr explicit TextLayerEditingStyleUniform(DefaultInitT) noexcept: backgroundColor{1.0f}, cornerRadius{0.0f} {}
+
+    /**
+     * @brief Construct with default values
+     *
+     * Equivalent to @ref TextLayerEditingStyleUniform(DefaultInitT).
+     */
+    constexpr /*implicit*/ TextLayerEditingStyleUniform() noexcept: TextLayerEditingStyleUniform{DefaultInit} {}
 
     /** @brief Constructor */
     constexpr /*implicit*/ TextLayerEditingStyleUniform(const Color4& backgroundColor, Float cornerRadius): backgroundColor{backgroundColor}, cornerRadius{cornerRadius} {}

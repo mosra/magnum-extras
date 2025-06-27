@@ -53,7 +53,14 @@ shader are passed to the function separately.
 */
 struct BaseLayerCommonStyleUniform {
     /** @brief Construct with default values */
-    constexpr explicit BaseLayerCommonStyleUniform(DefaultInitT = DefaultInit) noexcept: smoothness{0.0f}, innerOutlineSmoothness{0.0f}, backgroundBlurAlpha{1.0f} {}
+    constexpr explicit BaseLayerCommonStyleUniform(DefaultInitT) noexcept: smoothness{0.0f}, innerOutlineSmoothness{0.0f}, backgroundBlurAlpha{1.0f} {}
+
+    /**
+     * @brief Construct with default values
+     *
+     * Equivalent to @ref BaseLayerCommonStyleUniform(DefaultInitT).
+     */
+    constexpr /*implicit*/ BaseLayerCommonStyleUniform() noexcept: BaseLayerCommonStyleUniform{DefaultInit} {}
 
     /** @brief Constructor */
     constexpr /*implicit*/ BaseLayerCommonStyleUniform(Float smoothness, Float innerOutlineSmoothness, Float blurredBackgroundAlpha): smoothness{smoothness}, innerOutlineSmoothness{innerOutlineSmoothness}, backgroundBlurAlpha{blurredBackgroundAlpha} {}
@@ -189,7 +196,14 @@ instances of this class are also passed to @ref BaseLayer::setDynamicStyle().
 */
 struct BaseLayerStyleUniform {
     /** @brief Construct with default values */
-    constexpr explicit BaseLayerStyleUniform(DefaultInitT = DefaultInit) noexcept: topColor{1.0f}, bottomColor{1.0f}, outlineColor{1.0f}, outlineWidth{0.0f}, cornerRadius{0.0f}, innerOutlineCornerRadius{0.0f} {}
+    constexpr explicit BaseLayerStyleUniform(DefaultInitT) noexcept: topColor{1.0f}, bottomColor{1.0f}, outlineColor{1.0f}, outlineWidth{0.0f}, cornerRadius{0.0f}, innerOutlineCornerRadius{0.0f} {}
+
+    /**
+     * @brief Construct with default values
+     *
+     * Equivalent to @ref BaseLayerStyleUniform(DefaultInitT).
+     */
+    constexpr /*implicit*/ BaseLayerStyleUniform() noexcept: BaseLayerStyleUniform{DefaultInit} {}
 
     /** @brief Constructor */
     constexpr /*implicit*/ BaseLayerStyleUniform(const Color4& topColor, const Color4& bottomColor, const Color4& outlineColor, const Vector4& outlineWidth, const Vector4& cornerRadius, const Vector4& innerOutlineCornerRadius): topColor{topColor}, bottomColor{bottomColor}, outlineColor{outlineColor}, outlineWidth{outlineWidth}, cornerRadius{cornerRadius}, innerOutlineCornerRadius{innerOutlineCornerRadius} {}
