@@ -392,7 +392,9 @@ jobs:
     # libidn11 needed by CMake
     - install-base-linux:
         extra: libidn11 libgl1-mesa-dev libsdl2-dev libglfw3-dev
-    - cap-ninja-jobs
+    # 24+ leads to OOMs as of 2025-06-27
+    - cap-ninja-jobs:
+        count: 16
     - install-gcc-4_8
     - install-cmake:
         version: "3.5.2"
