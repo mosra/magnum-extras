@@ -518,7 +518,15 @@ class DebugLayer::DebugIntegration {
 #endif
 
 template<class T> DebugLayer& DebugLayer::setLayerName(const T& layer, const Containers::StringView& name, const typename T::DebugIntegration& integration) {
-    /* Delegating to the r-value overload */
+    /* Delegating to the r-value overload. On MSVC 2015 and 2017 passing a
+       temporary value like this doesn't pick the && overload but const& again,
+       leading to an infinite recursion. Passing `Utility::move(typename ...)`
+       doesn't work either (?!), one has to make a named copy and then move
+       that, sigh. */
+    #ifdef CORRADE_MSVC2017_COMPATIBILITY
+    typename T::DebugIntegration copy{integration};
+    return setLayerName(layer, name, Utility::move(copy));
+    #else
     return setLayerName(layer, name,
         #if defined(CORRADE_TARGET_GCC) && !defined(CORRADE_TARGET_CLANG) && __GNUC__ < 5
         /* Can't use {} because for plain structs it would attempt to
@@ -530,6 +538,7 @@ template<class T> DebugLayer& DebugLayer::setLayerName(const T& layer, const Con
         typename T::DebugIntegration{integration}
         #endif
     );
+    #endif
 }
 
 template<class T> DebugLayer& DebugLayer::setLayerName(const T& layer, const Containers::StringView& name, typename T::DebugIntegration&& integration) {
