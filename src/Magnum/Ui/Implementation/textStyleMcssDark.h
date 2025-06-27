@@ -35,6 +35,7 @@
    file in Style.cpp for actual uses. */
 
 #if defined(_c) && defined(_s) && defined(_e)
+_c(Default,,                        mainFont, MiddleCenter, {})
 _c(Button,IconOnly,                 iconFont, MiddleCenter, { 6.0f, 8.0f,   6.0f, 8.0f})
 _c(Button,TextOnly,                 mainFont, MiddleCenter, { 6.0f, 8.0f,   6.0f, 8.0f})
 /* Assuming a 24x24 icon, a zero-size text and 6-pixel padding between, the

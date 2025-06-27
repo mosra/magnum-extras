@@ -33,6 +33,7 @@
 #ifdef _c
 /* Compared to m.css, which has corner radius 0.2 rem (of 16px, so 3.2px), the
    radius is 4 because 3.2 looks too rough. */
+_c(Default, )
 
 /* Buttons: using m.css' --*-color for default color, --*-button-active-color
    for hover/pressed color. Everything has 80% opacity, the disabled state is

@@ -72,6 +72,14 @@ Containers::StaticArray<7, BaseStyle> styleTransition(const BaseStyle index) {
        to fix this. */
     /** @todo look at this again when gcov / lcov fixes itself */
     switch(index) {
+        case BaseStyle::Default:
+            return {BaseStyle::Default,
+                    BaseStyle::Default,
+                    BaseStyle::Default,
+                    BaseStyle::Default,
+                    BaseStyle::Default,
+                    BaseStyle::Default,
+                    BaseStyle::Default};
         case BaseStyle::ButtonDefaultInactiveOut:
         case BaseStyle::ButtonDefaultInactiveOver:
         case BaseStyle::ButtonDefaultPressedOut:
@@ -267,6 +275,14 @@ Containers::StaticArray<7, TextStyle> styleTransition(const TextStyle index) {
        to fix this. */
     /** @todo look at this again when gcov / lcov fixes itself */
     switch(index) {
+        case TextStyle::Default:
+            return {TextStyle::Default,
+                    TextStyle::Default,
+                    TextStyle::Default,
+                    TextStyle::Default,
+                    TextStyle::Default,
+                    TextStyle::Default,
+                    TextStyle::Default};
         case TextStyle::ButtonIconOnly:
         case TextStyle::ButtonPressedIconOnly:
             return {TextStyle::ButtonIconOnly,
