@@ -46,6 +46,7 @@ non-fallthrough input events for builtin visual layers like @ref BaseLayer or
 class MAGNUM_UI_EXPORT AbstractVisualLayer: public AbstractLayer {
     public:
         class Shared;
+        class DebugIntegration;
 
         /** @brief Copying is not allowed */
         AbstractVisualLayer(const AbstractVisualLayer&) = delete;
@@ -599,6 +600,33 @@ class MAGNUM_UI_EXPORT AbstractVisualLayer::Shared {
         explicit Shared(NoCreateT) noexcept;
 
         Containers::Pointer<State> _state;
+};
+
+/**
+@brief Debug layer integration
+*/
+class MAGNUM_UI_EXPORT AbstractVisualLayer::DebugIntegration {
+    public:
+        /**
+         * @brief Constructor
+         *
+         * The @p styleName function, if set, is used to retrieve names for
+         * non-dynamic styles assigned to particular data. If it returns an
+         * empty string for a particular style ID, it's treated as if the
+         * function wasn't used for given style at all, showing just the ID
+         * alone. The @p style passed to the function is guaranteed to be less
+         * than @ref AbstractVisualLayer::Shared::styleCount() for given layer,
+         * it's not called for dynamic styles which are considered temporary.
+         */
+        /*implicit*/ DebugIntegration(Containers::StringView(*styleName)(UnsignedInt style) = nullptr): _styleName{styleName} {}
+
+        #ifndef DOXYGEN_GENERATING_OUTPUT
+        /* Used internally by DebugLayer, no point in documenting it here */
+        void print(Debug& out, const AbstractVisualLayer& layer, const Containers::StringView& layerName, LayerDataHandle data);
+        #endif
+
+    private:
+        Containers::StringView(*_styleName)(UnsignedInt);
 };
 
 #ifndef DOXYGEN_GENERATING_OUTPUT

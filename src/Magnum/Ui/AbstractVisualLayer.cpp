@@ -667,4 +667,115 @@ void AbstractVisualLayer::doVisibilityLostEvent(const UnsignedInt dataId, Visibi
     }
 }
 
+void AbstractVisualLayer::DebugIntegration::print(Debug& debug, const AbstractVisualLayer& layer, const Containers::StringView& layerName, LayerDataHandle data) {
+    debug << "  Data" << Debug::packed << data << "from layer" << Debug::packed << layer.handle();
+    if(layerName)
+        debug << Debug::color(Debug::Color::Yellow) << layerName << Debug::resetColor;
+
+    const UnsignedInt style = layer.style(data);
+    if(style >= layer.shared().styleCount()) {
+        CORRADE_INTERNAL_DEBUG_ASSERT(style <= layer.shared().totalStyleCount());
+        debug << "with dynamic style" << style - layer.shared().styleCount() << Debug::newline;
+    } else {
+        /* Collect all transitioned styles */
+        const UnsignedInt styleInactiveOut = layer.shared().styleTransitionToInactiveOut()(style);
+        const UnsignedInt styleInactiveOver = layer.shared().styleTransitionToInactiveOver()(style);
+        const UnsignedInt styleFocusedOut = layer.shared().styleTransitionToFocusedOut()(style);
+        const UnsignedInt styleFocusedOver = layer.shared().styleTransitionToFocusedOver()(style);
+        const UnsignedInt stylePressedOut = layer.shared().styleTransitionToPressedOut()(style);
+        const UnsignedInt stylePressedOver = layer.shared().styleTransitionToPressedOver()(style);
+        /* If disabled transition isn't set, assume it's the same as inactive
+           out (which it should as when a node gets disabled it goes through
+           pointer out and pointer release) */
+        const UnsignedInt styleDisabled =
+            layer.shared().styleTransitionToDisabled() ?
+                layer.shared().styleTransitionToDisabled()(style) : styleInactiveOut;
+
+        const auto printStyle = [&debug, this](UnsignedInt style) {
+            Containers::StringView name;
+            if(_styleName)
+                name = _styleName(style);
+            if(name)
+                debug << Debug::color(Debug::Color::Yellow) << name << Debug::resetColor << "(" << Debug::nospace << style << Debug::nospace << ")";
+            else
+                debug << style;
+            debug << Debug::newline;
+        };
+
+        /* If they're all the same as the current one, print just one */
+        if(styleInactiveOut == style &&
+           styleInactiveOver == style &&
+           styleFocusedOut == style &&
+           styleFocusedOver == style &&
+           stylePressedOut == style &&
+           stylePressedOver == style &&
+           styleDisabled == style) {
+            debug << "with style";
+            printStyle(style);
+
+        } else {
+            /* Print the current style if it's not in any transitions, and just
+               a newline if it is */
+            if(styleInactiveOut != style &&
+               styleInactiveOver != style &&
+               styleFocusedOut != style &&
+               styleFocusedOver != style &&
+               stylePressedOut != style &&
+               stylePressedOver != style &&
+               styleDisabled != style) {
+                debug << "with style";
+                printStyle(style);
+            } else debug << Debug::newline;
+
+            /* Inactive style is shown always, but if out and over is the same,
+               print just one */
+            if(styleInactiveOver == styleInactiveOut) {
+                debug << "    Inactive style:";
+                printStyle(styleInactiveOut);
+            } else {
+                debug << "    Inactive out style:";
+                printStyle(styleInactiveOut);
+                debug << "    Inactive over style:";
+                printStyle(styleInactiveOver);
+            }
+
+            /* Print the focused style only if different from inactive */
+            if(styleFocusedOut != styleInactiveOut ||
+               styleFocusedOver != styleInactiveOver) {
+                /* If out and over is the same, print just one */
+                if(styleFocusedOver == styleFocusedOut) {
+                    debug << "    Focused style:";
+                    printStyle(styleFocusedOut);
+                } else {
+                    debug << "    Focused out style:";
+                    printStyle(styleFocusedOut);
+                    debug << "    Focused over style:";
+                    printStyle(styleFocusedOver);
+                }
+            }
+
+            /* Print the pressed style only if different from inactive */
+            if(stylePressedOut != styleInactiveOut ||
+               stylePressedOver != styleInactiveOver) {
+                /* If out and over is the same, print just one */
+                if(stylePressedOver == stylePressedOut) {
+                    debug << "    Pressed style:";
+                    printStyle(stylePressedOut);
+                } else {
+                    debug << "    Pressed out style:";
+                    printStyle(stylePressedOut);
+                    debug << "    Pressed over style:";
+                    printStyle(stylePressedOver);
+                }
+            }
+
+            /* Print the disabled style only if different from inactive out */
+            if(styleDisabled != styleInactiveOut) {
+                debug << "    Disabled style:";
+                printStyle(styleDisabled);
+            }
+        }
+    }
+}
+
 }}
