@@ -53,7 +53,14 @@ shader are passed to the function separately.
 */
 struct LineLayerCommonStyleUniform {
     /** @brief Construct with default values */
-    constexpr explicit LineLayerCommonStyleUniform(DefaultInitT = DefaultInit) noexcept: smoothness{0.0f} {}
+    constexpr explicit LineLayerCommonStyleUniform(DefaultInitT) noexcept: smoothness{0.0f} {}
+
+    /**
+     * @brief Construct with default values
+     *
+     * Equivalent to @ref LineLayerCommonStyleUniform(DefaultInitT).
+     */
+    constexpr /*implicit*/ LineLayerCommonStyleUniform() noexcept: LineLayerCommonStyleUniform{DefaultInit} {}
 
     /** @brief Constructor */
     constexpr /*implicit*/ LineLayerCommonStyleUniform(Float smoothness): smoothness {smoothness} {}
@@ -119,7 +126,14 @@ aren't used by the shader are passed to the function separately.
 */
 struct MAGNUM_UI_EXPORT LineLayerStyleUniform {
     /** @brief Construct with default values */
-    constexpr explicit LineLayerStyleUniform(DefaultInitT = DefaultInit) noexcept: color{1.0f}, width{1.0f}, smoothness{0.0f}, miterLimit{0.875f} {}
+    constexpr explicit LineLayerStyleUniform(DefaultInitT) noexcept: color{1.0f}, width{1.0f}, smoothness{0.0f}, miterLimit{0.875f} {}
+
+    /**
+     * @brief Construct with default values
+     *
+     * Equivalent to @ref LineLayerStyleUniform(DefaultInitT).
+     */
+    constexpr /*implicit*/ LineLayerStyleUniform() noexcept: LineLayerStyleUniform{DefaultInit} {}
 
     /** @brief Constructor */
     constexpr /*implicit*/ LineLayerStyleUniform(const Color4& color, Float width, Float smoothness, Float miterLimit) noexcept: color{color}, width{width}, smoothness{smoothness}, miterLimit{miterLimit} {}
