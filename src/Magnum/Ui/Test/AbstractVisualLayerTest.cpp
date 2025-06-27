@@ -32,11 +32,13 @@
 #include <Corrade/Containers/StridedArrayView.h>
 #include <Corrade/Containers/String.h>
 #include <Corrade/TestSuite/Tester.h>
+#include <Corrade/TestSuite/Compare/String.h>
 #include <Corrade/Utility/Format.h>
 
 #include "Magnum/Ui/AbstractUserInterface.h"
 #include "Magnum/Ui/AbstractVisualLayer.h"
 #include "Magnum/Ui/AbstractVisualLayerAnimator.h"
+#include "Magnum/Ui/DebugLayer.h" /* for debugIntegration() */
 #include "Magnum/Ui/Event.h"
 #include "Magnum/Ui/EventLayer.h"
 #include "Magnum/Ui/Handle.h"
@@ -82,6 +84,11 @@ struct AbstractVisualLayerTest: TestSuite::Tester {
     void eventStyleTransitionDynamicStyle();
 
     void sharedNeedsUpdateStatePropagatedToLayers();
+
+    void debugIntegration();
+    void debugIntegrationNoTransition();
+    void debugIntegrationNoDisabledTransition();
+    void debugIntegrationNoCallback();
 };
 
 using namespace Math::Literals;
@@ -278,6 +285,160 @@ const struct {
         true, false, true, true, false, false},
 };
 
+enum class DebugIntegrationStyle {
+    /* Make the first style not start at 0 to catch issues with printing */
+    Background = 13,
+
+    Label,
+    LabelDisabled,
+
+    Spacer,
+    SpacerHover,
+
+    TouchButton,
+    TouchButtonPressed,
+    TouchButtonDisabled,
+
+    Button,
+    ButtonHover,
+    ButtonPressed,
+    ButtonPressedHover,
+
+    ButtonUnnamed,
+    ButtonUnnamedHover,
+    ButtonUnnamedPressed,
+    ButtonUnnamedPressedHover,
+
+    TouchInput,
+    TouchInputFocused,
+    TouchInputPressed,
+
+    Input,
+    InputHover,
+    InputFocused,
+    InputFocusedHover,
+    InputPressed,
+    /* No InputPressedHover to verify InputPressed doesn't get printed twice */
+    InputDisabled,
+
+    StrangeInput,
+
+    StyleCount,
+    Dynamic = StyleCount + 5
+};
+
+const struct {
+    const char* name;
+    DebugIntegrationStyle style;
+    bool layerName, styleNames;
+    const char* expected;
+} DebugIntegrationData[]{
+    {"dynamic style",
+        /* Name mapping doesn't get used for this one even though it's
+           available */
+        DebugIntegrationStyle::Dynamic, true, true,
+        "Node {0x1, 0x1}\n"
+        "  Data {0x6, 0x2} from layer {0x0, 0x3} Layarr with dynamic style 5"},
+    {"all styles same",
+        DebugIntegrationStyle::Background, true, true,
+        "Node {0x1, 0x1}\n"
+        "  Data {0x6, 0x2} from layer {0x0, 0x3} Layarr with style Background (13)"},
+    {"all styles same, no name mapping",
+        DebugIntegrationStyle::Background, true, false,
+        "Node {0x1, 0x1}\n"
+        "  Data {0x6, 0x2} from layer {0x0, 0x3} Layarr with style 13"},
+    {"all styles same, no layer name",
+        DebugIntegrationStyle::Background, false, true,
+        "Node {0x1, 0x1}\n"
+        "  Data {0x6, 0x2} from layer {0x0, 0x3} with style Background (13)"},
+    {"all styles same, with disabled",
+        DebugIntegrationStyle::Label, true, true,
+        "Node {0x1, 0x1}\n"
+        "  Data {0x6, 0x2} from layer {0x0, 0x3} Layarr\n"
+        "    Inactive style: Label (14)\n"
+        "    Disabled style: LabelDisabled (15)"},
+    {"inactive style only, with hover",
+        DebugIntegrationStyle::Spacer, true, true,
+        "Node {0x1, 0x1}\n"
+        "  Data {0x6, 0x2} from layer {0x0, 0x3} Layarr\n"
+        "    Inactive out style: Spacer (16)\n"
+        "    Inactive over style: SpacerHover (17)"},
+    {"inactive and pressed style, with disabled",
+        DebugIntegrationStyle::TouchButton, true, true,
+        "Node {0x1, 0x1}\n"
+        "  Data {0x6, 0x2} from layer {0x0, 0x3} Layarr\n"
+        "    Inactive style: TouchButton (18)\n"
+        "    Pressed style: TouchButtonPressed (19)\n"
+        "    Disabled style: TouchButtonDisabled (20)"},
+    {"inactive and pressed style, with hover",
+        DebugIntegrationStyle::Button, true, true,
+        "Node {0x1, 0x1}\n"
+        "  Data {0x6, 0x2} from layer {0x0, 0x3} Layarr\n"
+        "    Inactive out style: Button (21)\n"
+        "    Inactive over style: ButtonHover (22)\n"
+        "    Pressed out style: ButtonPressed (23)\n"
+        "    Pressed over style: ButtonPressedHover (24)"},
+    {"inactive and pressed style, with hover, some styles unnamed",
+        DebugIntegrationStyle::ButtonUnnamed, true, true,
+        "Node {0x1, 0x1}\n"
+        "  Data {0x6, 0x2} from layer {0x0, 0x3} Layarr\n"
+        "    Inactive out style: 25\n"
+        "    Inactive over style: ButtonUnnamedHover (26)\n"
+        "    Pressed out style: ButtonUnnamedPressed (27)\n"
+        "    Pressed over style: 28"},
+    {"inactive, focused and pressed style",
+        DebugIntegrationStyle::TouchInput, true, true,
+        "Node {0x1, 0x1}\n"
+        "  Data {0x6, 0x2} from layer {0x0, 0x3} Layarr\n"
+        "    Inactive style: TouchInput (29)\n"
+        "    Focused style: TouchInputFocused (30)\n"
+        "    Pressed style: TouchInputPressed (31)"},
+    {"inactive, focused and pressed style, with hover and disabled",
+        DebugIntegrationStyle::Input, true, true,
+        "Node {0x1, 0x1}\n"
+        "  Data {0x6, 0x2} from layer {0x0, 0x3} Layarr\n"
+        "    Inactive out style: Input (32)\n"
+        "    Inactive over style: InputHover (33)\n"
+        "    Focused out style: InputFocused (34)\n"
+        "    Focused over style: InputFocusedHover (35)\n"
+        "    Pressed style: InputPressed (36)\n"
+        "    Disabled style: InputDisabled (37)"},
+    {"inactive, focused and pressed style, with hover and disable, current style focused hover",
+        DebugIntegrationStyle::InputFocusedHover, true, true,
+        /* Should be exactly the same as above */
+        "Node {0x1, 0x1}\n"
+        "  Data {0x6, 0x2} from layer {0x0, 0x3} Layarr\n"
+        "    Inactive out style: Input (32)\n"
+        "    Inactive over style: InputHover (33)\n"
+        "    Focused out style: InputFocused (34)\n"
+        "    Focused over style: InputFocusedHover (35)\n"
+        "    Pressed style: InputPressed (36)\n"
+        "    Disabled style: InputDisabled (37)"},
+    {"inactive, focused and pressed style, with hover and disabled, current style different from all others, no name mapping",
+        DebugIntegrationStyle::StrangeInput, true, false,
+        "Node {0x1, 0x1}\n"
+        "  Data {0x6, 0x2} from layer {0x0, 0x3} Layarr with style 38\n"
+        "    Inactive out style: 32\n"
+        "    Inactive over style: 33\n"
+        "    Focused out style: 34\n"
+        "    Focused over style: 35\n"
+        "    Pressed style: 36\n"
+        "    Disabled style: 37"},
+    {"inactive, focused and pressed style, with hover and disabled, current style different from all others",
+        DebugIntegrationStyle::StrangeInput, true, true,
+        "Node {0x1, 0x1}\n"
+        "  Data {0x6, 0x2} from layer {0x0, 0x3} Layarr with style StrangeInput (38)\n"
+        "    Inactive out style: Input (32)\n"
+        "    Inactive over style: InputHover (33)\n"
+        "    Focused out style: InputFocused (34)\n"
+        "    Focused over style: InputFocusedHover (35)\n"
+        "    Pressed style: InputPressed (36)\n"
+        "    Disabled style: InputDisabled (37)"},
+    /* The last case here is used in debugIntegrationNoCallback() to verify
+       output w/o a callback and for visual color verification, it's expected
+       to be the most complete, executing all coloring code paths */
+};
+
 AbstractVisualLayerTest::AbstractVisualLayerTest() {
     addTests({&AbstractVisualLayerTest::sharedConstruct,
               &AbstractVisualLayerTest::sharedConstructNoCreate,
@@ -333,6 +494,13 @@ AbstractVisualLayerTest::AbstractVisualLayerTest() {
         Containers::arraySize(EventStyleTransitionDynamicStyleData));
 
     addTests({&AbstractVisualLayerTest::sharedNeedsUpdateStatePropagatedToLayers});
+
+    addInstancedTests({&AbstractVisualLayerTest::debugIntegration},
+        Containers::arraySize(DebugIntegrationData));
+
+    addTests({&AbstractVisualLayerTest::debugIntegrationNoTransition,
+              &AbstractVisualLayerTest::debugIntegrationNoDisabledTransition,
+              &AbstractVisualLayerTest::debugIntegrationNoCallback});
 }
 
 void AbstractVisualLayerTest::sharedConstruct() {
@@ -497,6 +665,7 @@ struct StyleLayer: AbstractVisualLayer {
 
     using AbstractVisualLayer::assignAnimator;
     using AbstractVisualLayer::setDefaultStyleAnimator;
+    using AbstractVisualLayer::remove;
 
     LayerFeatures doFeatures() const override {
         return AbstractVisualLayer::doFeatures()|LayerFeature::AnimateStyles;
@@ -512,6 +681,9 @@ struct StyleLayer: AbstractVisualLayer {
             _state->styles = stridedArrayView(data).slice(&decltype(data)::Type::first);
             _state->calculatedStyles = stridedArrayView(data).slice(&decltype(data)::Type::second);
         }
+        /* There's nothing in AbstractVisualLayer that could assert on this at
+           creation time, so have to do it here instead */
+        CORRADE_INTERNAL_ASSERT(UnsignedInt(style) < shared().styleCount() + shared().dynamicStyleCount());
         data[id].first() = UnsignedInt(style);
         return handle;
     }
@@ -4039,6 +4211,364 @@ void AbstractVisualLayerTest::sharedNeedsUpdateStatePropagatedToLayers() {
     CORRADE_COMPARE(layer2.state(), LayerState::NeedsDataUpdate);
     CORRADE_COMPARE(layer3.state(), LayerState::NeedsDataUpdate|LayerState::NeedsSharedDataUpdate);
     CORRADE_COMPARE(layer4.state(), LayerState::NeedsDataUpdate);
+}
+
+struct DebugIntegrationStyleTransition {
+    DebugIntegrationStyle inactiveOut;
+    DebugIntegrationStyle inactiveOver;
+    DebugIntegrationStyle focusedOut;
+    DebugIntegrationStyle focusedOver;
+    DebugIntegrationStyle pressedOut;
+    DebugIntegrationStyle pressedOver;
+    DebugIntegrationStyle disabled;
+};
+
+DebugIntegrationStyleTransition debugIntegrationStyleTransition(DebugIntegrationStyle style) {
+    switch(style) {
+        case DebugIntegrationStyle::Background:
+            return {DebugIntegrationStyle::Background,
+                    DebugIntegrationStyle::Background,
+                    DebugIntegrationStyle::Background,
+                    DebugIntegrationStyle::Background,
+                    DebugIntegrationStyle::Background,
+                    DebugIntegrationStyle::Background,
+                    DebugIntegrationStyle::Background};
+        case DebugIntegrationStyle::Label:
+        case DebugIntegrationStyle::LabelDisabled:
+            return {DebugIntegrationStyle::Label,
+                    DebugIntegrationStyle::Label,
+                    DebugIntegrationStyle::Label,
+                    DebugIntegrationStyle::Label,
+                    DebugIntegrationStyle::Label,
+                    DebugIntegrationStyle::Label,
+                    DebugIntegrationStyle::LabelDisabled};
+        case DebugIntegrationStyle::Spacer:
+        case DebugIntegrationStyle::SpacerHover:
+            return {DebugIntegrationStyle::Spacer,
+                    DebugIntegrationStyle::SpacerHover,
+                    DebugIntegrationStyle::Spacer,
+                    DebugIntegrationStyle::SpacerHover,
+                    DebugIntegrationStyle::Spacer,
+                    DebugIntegrationStyle::SpacerHover,
+                    DebugIntegrationStyle::Spacer};
+        case DebugIntegrationStyle::TouchButton:
+        case DebugIntegrationStyle::TouchButtonPressed:
+        case DebugIntegrationStyle::TouchButtonDisabled:
+            return {DebugIntegrationStyle::TouchButton,
+                    DebugIntegrationStyle::TouchButton,
+                    DebugIntegrationStyle::TouchButton,
+                    DebugIntegrationStyle::TouchButton,
+                    DebugIntegrationStyle::TouchButtonPressed,
+                    DebugIntegrationStyle::TouchButtonPressed,
+                    DebugIntegrationStyle::TouchButtonDisabled};
+        case DebugIntegrationStyle::Button:
+        case DebugIntegrationStyle::ButtonHover:
+        case DebugIntegrationStyle::ButtonPressed:
+        case DebugIntegrationStyle::ButtonPressedHover:
+            return {DebugIntegrationStyle::Button,
+                    DebugIntegrationStyle::ButtonHover,
+                    DebugIntegrationStyle::Button,
+                    DebugIntegrationStyle::ButtonHover,
+                    DebugIntegrationStyle::ButtonPressed,
+                    DebugIntegrationStyle::ButtonPressedHover,
+                    DebugIntegrationStyle::Button};
+        case DebugIntegrationStyle::ButtonUnnamed:
+        case DebugIntegrationStyle::ButtonUnnamedHover:
+        case DebugIntegrationStyle::ButtonUnnamedPressed:
+        case DebugIntegrationStyle::ButtonUnnamedPressedHover:
+            return {DebugIntegrationStyle::ButtonUnnamed,
+                    DebugIntegrationStyle::ButtonUnnamedHover,
+                    DebugIntegrationStyle::ButtonUnnamed,
+                    DebugIntegrationStyle::ButtonUnnamedHover,
+                    DebugIntegrationStyle::ButtonUnnamedPressed,
+                    DebugIntegrationStyle::ButtonUnnamedPressedHover,
+                    DebugIntegrationStyle::ButtonUnnamed};
+        case DebugIntegrationStyle::TouchInput:
+        case DebugIntegrationStyle::TouchInputFocused:
+        case DebugIntegrationStyle::TouchInputPressed:
+            return {DebugIntegrationStyle::TouchInput,
+                    DebugIntegrationStyle::TouchInput,
+                    DebugIntegrationStyle::TouchInputFocused,
+                    DebugIntegrationStyle::TouchInputFocused,
+                    DebugIntegrationStyle::TouchInputPressed,
+                    DebugIntegrationStyle::TouchInputPressed,
+                    DebugIntegrationStyle::TouchInput};
+        case DebugIntegrationStyle::Input:
+        case DebugIntegrationStyle::InputHover:
+        case DebugIntegrationStyle::InputFocused:
+        case DebugIntegrationStyle::InputFocusedHover:
+        case DebugIntegrationStyle::InputPressed:
+        case DebugIntegrationStyle::InputDisabled:
+        case DebugIntegrationStyle::StrangeInput:
+            return {DebugIntegrationStyle::Input,
+                    DebugIntegrationStyle::InputHover,
+                    DebugIntegrationStyle::InputFocused,
+                    DebugIntegrationStyle::InputFocusedHover,
+                    DebugIntegrationStyle::InputPressed,
+                    DebugIntegrationStyle::InputPressed,
+                    DebugIntegrationStyle::InputDisabled};
+
+        case DebugIntegrationStyle::StyleCount:
+        case DebugIntegrationStyle::Dynamic:
+            CORRADE_INTERNAL_ASSERT_UNREACHABLE();
+    }
+
+    CORRADE_INTERNAL_ASSERT_UNREACHABLE();
+}
+template<DebugIntegrationStyle DebugIntegrationStyleTransition::*member> DebugIntegrationStyle debugIntegrationStyleTransition(DebugIntegrationStyle style) {
+    return debugIntegrationStyleTransition(style).*member;
+}
+
+Containers::StringView debugIntegrationStyleName(UnsignedInt style) {
+    switch(DebugIntegrationStyle(style)) {
+        #define _c(name) case DebugIntegrationStyle::name: return #name;
+        _c(Background)
+        _c(Label)
+        _c(LabelDisabled)
+        _c(Spacer)
+        _c(SpacerHover)
+        _c(TouchButton)
+        _c(TouchButtonPressed)
+        _c(TouchButtonDisabled)
+        _c(Button)
+        _c(ButtonHover)
+        _c(ButtonPressed)
+        _c(ButtonPressedHover)
+        _c(ButtonUnnamedHover)
+        _c(ButtonUnnamedPressed)
+        _c(TouchInput)
+        _c(TouchInputFocused)
+        _c(TouchInputPressed)
+        _c(Input)
+        _c(InputHover)
+        _c(InputFocused)
+        _c(InputFocusedHover)
+        _c(InputPressed)
+        _c(InputDisabled)
+        _c(StrangeInput)
+        #undef _c
+
+        case DebugIntegrationStyle::ButtonUnnamed:
+        case DebugIntegrationStyle::ButtonUnnamedPressedHover:
+            return {};
+
+        case DebugIntegrationStyle::StyleCount:
+        case DebugIntegrationStyle::Dynamic: /* It shouldn't ask for this one */
+            CORRADE_INTERNAL_ASSERT_UNREACHABLE();
+    }
+
+    CORRADE_INTERNAL_ASSERT_UNREACHABLE();
+}
+
+void AbstractVisualLayerTest::debugIntegration() {
+    auto&& data = DebugIntegrationData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
+    AbstractUserInterface ui{{100, 100}};
+    NodeHandle root = ui.createNode({}, {100, 100});
+    NodeHandle node = ui.createNode(root, {}, {100, 100});
+
+    StyleLayerShared shared{UnsignedInt(DebugIntegrationStyle::StyleCount), 6};
+    shared.setStyleTransition<DebugIntegrationStyle,
+        debugIntegrationStyleTransition<&DebugIntegrationStyleTransition::inactiveOut>,
+        debugIntegrationStyleTransition<&DebugIntegrationStyleTransition::inactiveOver>,
+        debugIntegrationStyleTransition<&DebugIntegrationStyleTransition::focusedOut>,
+        debugIntegrationStyleTransition<&DebugIntegrationStyleTransition::focusedOver>,
+        debugIntegrationStyleTransition<&DebugIntegrationStyleTransition::pressedOut>,
+        debugIntegrationStyleTransition<&DebugIntegrationStyleTransition::pressedOver>,
+        debugIntegrationStyleTransition<&DebugIntegrationStyleTransition::disabled>>();
+
+    /* Create and remove a bunch of layers first to have the handle with a
+       non-trivial value */
+    ui.removeLayer(ui.createLayer());
+    ui.removeLayer(ui.createLayer());
+    StyleLayer& layer = ui.setLayerInstance(Containers::pointer<StyleLayer>(ui.createLayer(), shared));
+    /* And also some more data to not list a trivial data handle */
+    layer.create(0);
+    layer.create(0);
+    layer.create(0);
+    layer.create(0);
+    layer.create(0);
+    layer.create(0);
+    layer.remove(layer.create(0));
+    layer.create(data.style, node);
+
+    DebugLayer& debugLayer = ui.setLayerInstance(Containers::pointer<DebugLayer>(ui.createLayer(), DebugLayerSource::NodeDataAttachments, DebugLayerFlag::NodeHighlight));
+
+    Containers::String out;
+    debugLayer.setNodeHighlightCallback([&out](Containers::StringView message) {
+        out = message;
+    });
+    if(data.styleNames)
+        debugLayer.setLayerName(layer, data.layerName ? "Layarr" : "", debugIntegrationStyleName);
+    else
+        debugLayer.setLayerName(layer, data.layerName ? "Layarr" : "");
+
+    /* Make the debug layer aware of everything */
+    ui.update();
+
+    CORRADE_VERIFY(debugLayer.highlightNode(node));
+    CORRADE_COMPARE_AS(out, data.expected, TestSuite::Compare::String);
+}
+
+void AbstractVisualLayerTest::debugIntegrationNoTransition() {
+    AbstractUserInterface ui{{100, 100}};
+    NodeHandle root = ui.createNode({}, {100, 100});
+    NodeHandle node = ui.createNode(root, {}, {100, 100});
+
+    StyleLayerShared shared{UnsignedInt(DebugIntegrationStyle::StyleCount), 6};
+    /* Only the disabled transition is set, which should get used. Others are
+       implicitly passthrough. */
+    shared.setStyleTransition<DebugIntegrationStyle,
+        nullptr,
+        nullptr,
+        nullptr,
+        debugIntegrationStyleTransition<&DebugIntegrationStyleTransition::disabled>>();
+
+    /* The InputFocusedHover will be used as the inactive style, and then a
+       disabled style is shown, which is InputDisabled, nothing else */
+    StyleLayer& layer = ui.setLayerInstance(Containers::pointer<StyleLayer>(ui.createLayer(), shared));
+    layer.create(DebugIntegrationStyle::InputFocusedHover, node);
+
+    DebugLayer& debugLayer = ui.setLayerInstance(Containers::pointer<DebugLayer>(ui.createLayer(), DebugLayerSource::NodeDataAttachments, DebugLayerFlag::NodeHighlight));
+
+    Containers::String out;
+    debugLayer.setNodeHighlightCallback([&out](Containers::StringView message) {
+        out = message;
+    });
+    debugLayer.setLayerName(layer, "", debugIntegrationStyleName);
+
+    /* Make the debug layer aware of everything */
+    ui.update();
+
+    CORRADE_VERIFY(debugLayer.highlightNode(node));
+    CORRADE_COMPARE_AS(out,
+        "Node {0x1, 0x1}\n"
+        "  Data {0x0, 0x1} from layer {0x0, 0x1}\n"
+        "    Inactive style: InputFocusedHover (35)\n"
+        "    Disabled style: InputDisabled (37)",
+        TestSuite::Compare::String);
+}
+
+void AbstractVisualLayerTest::debugIntegrationNoDisabledTransition() {
+    AbstractUserInterface ui{{100, 100}};
+    NodeHandle root = ui.createNode({}, {100, 100});
+    NodeHandle node = ui.createNode(root, {}, {100, 100});
+
+    StyleLayerShared shared{UnsignedInt(DebugIntegrationStyle::StyleCount), 6};
+    /* The disabled transition isn't set, and by default it's a null function
+       pointer, so it shouldn't get called. */
+    shared.setStyleTransition<DebugIntegrationStyle,
+        debugIntegrationStyleTransition<&DebugIntegrationStyleTransition::inactiveOut>,
+        debugIntegrationStyleTransition<&DebugIntegrationStyleTransition::inactiveOver>,
+        debugIntegrationStyleTransition<&DebugIntegrationStyleTransition::focusedOut>,
+        debugIntegrationStyleTransition<&DebugIntegrationStyleTransition::focusedOver>,
+        debugIntegrationStyleTransition<&DebugIntegrationStyleTransition::pressedOut>,
+        debugIntegrationStyleTransition<&DebugIntegrationStyleTransition::pressedOver>,
+        nullptr>();
+
+    StyleLayer& layer = ui.setLayerInstance(Containers::pointer<StyleLayer>(ui.createLayer(), shared));
+    /* Creating a StrangeInput style, for the disabled the inactive out style
+       should be picked, which is Input, and then because it's the same as
+       inactive out, it shouldn't be shown at all */
+    layer.create(DebugIntegrationStyle::StrangeInput, node);
+
+    DebugLayer& debugLayer = ui.setLayerInstance(Containers::pointer<DebugLayer>(ui.createLayer(), DebugLayerSource::NodeDataAttachments, DebugLayerFlag::NodeHighlight));
+
+    Containers::String out;
+    debugLayer.setNodeHighlightCallback([&out](Containers::StringView message) {
+        out = message;
+    });
+    debugLayer.setLayerName(layer, "", debugIntegrationStyleName);
+
+    /* Make the debug layer aware of everything */
+    ui.update();
+
+    CORRADE_VERIFY(debugLayer.highlightNode(node));
+    CORRADE_COMPARE_AS(out,
+        "Node {0x1, 0x1}\n"
+        "  Data {0x0, 0x1} from layer {0x0, 0x1} with style StrangeInput (38)\n"
+        "    Inactive out style: Input (32)\n"
+        "    Inactive over style: InputHover (33)\n"
+        "    Focused out style: InputFocused (34)\n"
+        "    Focused over style: InputFocusedHover (35)\n"
+        "    Pressed style: InputPressed (36)",
+        TestSuite::Compare::String);
+}
+
+void AbstractVisualLayerTest::debugIntegrationNoCallback() {
+    AbstractUserInterface ui{{100, 100}};
+    NodeHandle root = ui.createNode({}, {100, 100});
+    NodeHandle node = ui.createNode(root, {}, {100, 100});
+    NodeHandle nodeDynamic = ui.createNode({}, {100, 100});
+
+    StyleLayerShared shared{UnsignedInt(DebugIntegrationStyle::StyleCount), 6};
+    shared.setStyleTransition<DebugIntegrationStyle,
+        debugIntegrationStyleTransition<&DebugIntegrationStyleTransition::inactiveOut>,
+        debugIntegrationStyleTransition<&DebugIntegrationStyleTransition::inactiveOver>,
+        debugIntegrationStyleTransition<&DebugIntegrationStyleTransition::focusedOut>,
+        debugIntegrationStyleTransition<&DebugIntegrationStyleTransition::focusedOver>,
+        debugIntegrationStyleTransition<&DebugIntegrationStyleTransition::pressedOut>,
+        debugIntegrationStyleTransition<&DebugIntegrationStyleTransition::pressedOver>,
+        debugIntegrationStyleTransition<&DebugIntegrationStyleTransition::disabled>>();
+
+    /* Just to match the layer handle in debugIntegration() above */
+    ui.removeLayer(ui.createLayer());
+    ui.removeLayer(ui.createLayer());
+    StyleLayer& layer = ui.setLayerInstance(Containers::pointer<StyleLayer>(ui.createLayer(), shared));
+    /* ... and the data handle also */
+    layer.create(0);
+    layer.create(0);
+    layer.create(0);
+    layer.create(0);
+    layer.create(0);
+    layer.create(0);
+    layer.remove(layer.create(0));
+    layer.create(DebugIntegrationStyle::StrangeInput, node);
+    layer.create(DebugIntegrationStyle::Dynamic, nodeDynamic);
+
+    DebugLayer& debugLayer = ui.setLayerInstance(Containers::pointer<DebugLayer>(ui.createLayer(), DebugLayerSource::NodeDataAttachments, DebugLayerFlag::NodeHighlight));
+
+    debugLayer.setLayerName(layer, "Layarr", debugIntegrationStyleName);
+
+    /* Make the debug layer aware of everything */
+    ui.update();
+
+    /* Highlight the node for visual color verification */
+    {
+        Debug{} << "======================== visual color verification start =======================";
+
+        CORRADE_VERIFY(debugLayer.highlightNode(node));
+        CORRADE_VERIFY(debugLayer.highlightNode(nodeDynamic));
+
+        Debug{} << "======================== visual color verification end =========================";
+    }
+
+    /* Do the same, but this time with output redirection to verify the
+       contents. The internals automatically disable coloring if they detect
+       the output isn't a TTY. */
+    {
+        Containers::String out;
+        Debug redirectOutput{&out};
+        CORRADE_VERIFY(debugLayer.highlightNode(node));
+        /* The output always has a newline at the end which cannot be disabled
+           so strip it to have the comparison match the debugIntegration()
+           case */
+        CORRADE_COMPARE_AS(out,
+            "\n",
+            TestSuite::Compare::StringHasSuffix);
+        CORRADE_COMPARE_AS(out.exceptSuffix("\n"),
+            Containers::arrayView(DebugIntegrationData).back().expected,
+            TestSuite::Compare::String);
+    } {
+        Containers::String out;
+        Debug redirectOutput{&out};
+        CORRADE_VERIFY(debugLayer.highlightNode(nodeDynamic));
+        CORRADE_COMPARE_AS(out,
+            "Top-level node {0x2, 0x1}\n"
+            "  Data {0x7, 0x1} from layer {0x0, 0x3} Layarr with dynamic style 5\n",
+            TestSuite::Compare::String);
+    }
 }
 
 }}}}
