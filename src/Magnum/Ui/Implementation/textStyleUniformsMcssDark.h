@@ -31,6 +31,8 @@
    of this file in Style.cpp for actual uses. */
 
 #ifdef _c
+_c(Default, )
+
 /* Button text color is always --button-background-color. Compared to the
    background the text is fully opaque. Disabled text color is
    --background-color with 80% opacity. */

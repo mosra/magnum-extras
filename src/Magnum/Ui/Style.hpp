@@ -43,6 +43,10 @@ should be no need to use anything from this header from application code.
 namespace Magnum { namespace Ui { namespace Implementation {
 
 enum class BaseStyle: UnsignedShort {
+    /* All properties left at defaults. Not used by builtin widgets, meant to
+       be used by application code for ad-hoc drawing. */
+    Default,
+
     ButtonDefaultInactiveOut,
     ButtonDefaultInactiveOver,
     ButtonDefaultPressedOut,
@@ -126,6 +130,8 @@ MAGNUM_UI_EXPORT BaseStyle styleTransitionToPressedOver(BaseStyle index);
 MAGNUM_UI_EXPORT BaseStyle styleTransitionToDisabled(BaseStyle index);
 
 enum class TextStyleUniform: UnsignedInt {
+    Default,
+
     Button,
     ButtonDisabled,
 
@@ -165,6 +171,10 @@ enum class TextStyleUniform: UnsignedInt {
 };
 
 enum class TextStyle: UnsignedShort {
+    /* All properties left at defaults. Not used by builtin widgets, meant to
+       be used by application code for ad-hoc drawing. */
+    Default,
+
     ButtonIconOnly,
     ButtonTextOnly,
     ButtonIcon,
