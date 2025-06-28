@@ -89,6 +89,7 @@ struct AbstractVisualLayerTest: TestSuite::Tester {
     void debugIntegrationNoTransition();
     void debugIntegrationNoDisabledTransition();
     void debugIntegrationNoCallback();
+    void debugIntegrationLambdaStyleName();
 };
 
 using namespace Math::Literals;
@@ -500,7 +501,8 @@ AbstractVisualLayerTest::AbstractVisualLayerTest() {
 
     addTests({&AbstractVisualLayerTest::debugIntegrationNoTransition,
               &AbstractVisualLayerTest::debugIntegrationNoDisabledTransition,
-              &AbstractVisualLayerTest::debugIntegrationNoCallback});
+              &AbstractVisualLayerTest::debugIntegrationNoCallback,
+              &AbstractVisualLayerTest::debugIntegrationLambdaStyleName});
 }
 
 void AbstractVisualLayerTest::sharedConstruct() {
@@ -4573,6 +4575,38 @@ void AbstractVisualLayerTest::debugIntegrationNoCallback() {
             "  Data {0x7, 0x1} from layer {0x0, 0x3} Layarr with dynamic style 5\n",
             TestSuite::Compare::String);
     }
+}
+
+void AbstractVisualLayerTest::debugIntegrationLambdaStyleName() {
+    AbstractUserInterface ui{{100, 100}};
+    NodeHandle node = ui.createNode({}, {100, 100});
+
+    StyleLayerShared shared{12, 0};
+
+    StyleLayer& layer = ui.setLayerInstance(Containers::pointer<StyleLayer>(ui.createLayer(), shared));
+    layer.create(7, node);
+
+    DebugLayer& debugLayer = ui.setLayerInstance(Containers::pointer<DebugLayer>(ui.createLayer(), DebugLayerSource::NodeDataAttachmentDetails, DebugLayerFlag::NodeHighlight));
+    /* Somehow it doesn't "just work", the DebugIntegration has to have a
+       special template constructor to convert this to a pointer without having
+       to explicitly cast to a function pointer, use `+` to convert it to a
+       function pointer, or explicitly wrap the lambda in StyleLayer::DebugIntegration{} */
+    debugLayer.setLayerName(layer, "StyleLayer", [](UnsignedInt style) -> Containers::StringView {
+        return style == 7 ? "LambdaStyle" : "Wrong";
+    });
+
+    /* Make the debug layer aware of everything */
+    ui.update();
+
+    Containers::String out;
+    {
+        Debug redirectOutput{&out};
+        CORRADE_VERIFY(debugLayer.highlightNode(node));
+    }
+    CORRADE_COMPARE_AS(out,
+        "Top-level node {0x0, 0x1}\n"
+        "  Data {0x0, 0x1} from layer {0x0, 0x1} StyleLayer with style LambdaStyle (7)\n",
+        TestSuite::Compare::String);
 }
 
 }}}}
