@@ -71,7 +71,8 @@ enum class DebugLayerSource: UnsignedShort {
 
     /**
      * Track per-node layer data attachments with per-data details provided by
-     * layer-specific debug integrations. Implies
+     * layer-specific debug integrations as described in
+     * @ref Ui-DebugLayer-node-highlight-node-data-attachment-details. Implies
      * @ref DebugLayerSource::NodeDataAttachments.
      */
     NodeDataAttachmentDetails = NodeDataAttachments|(1 << 4),
@@ -161,6 +162,236 @@ MAGNUM_UI_EXPORT Debug& operator<<(Debug& debug, DebugLayerFlags value);
 /**
 @brief Debug layer
 @m_since_latest
+
+Provides a non-intrusive and extensible way to inspect node hierarchy and layer
+data attachments in any existing UI for debugging purposes. You can use either
+the @ref DebugLayer base for inspection alone, or the @ref DebugLayerGL
+subclass that provides also a way to visualize highlighted nodes directly in
+the inspected UI.
+
+@m_class{m-note m-success}
+
+@par
+    For a live example, full functionality of this layer including inspection
+    of all builtin layers and styles is exposed by the `--debug` option of the
+    @ref magnum-ui-gallery "magnum-ui-gallery" utility.
+
+@section Ui-DebugLayer-setup Setting up a debug layer instance
+
+A debug layer, either @ref DebugLayer or @ref DebugLayerGL, is constructed
+using a fresh @ref AbstractUserInterface::createLayer() handle, a combination
+of @ref DebugLayerSource values that the debug layer should track and a
+@ref DebugLayerFlag combination describing the actual behavior; and is
+subsequently passed to @ref AbstractUserInterface::setLayerInstance(). For
+correct behavior it should be added as the very last layer so it's drawn on top
+of all other layers and reacts to events first.
+
+@snippet Ui-gl.cpp DebugLayer-setup
+
+With this, assuming @ref AbstractUserInterface::draw() is called in an
+appropriate place, the layer is ready to use. You likely don't need to keep a
+reference to it as it will track changes in enabled sources without further
+involvement. In case of the base @ref DebugLayer that doesn't draw, or when
+inspecting the UI programmatically, calling just
+@ref AbstractUserInterface::update() (which is otherwise called from
+@relativeref{AbstractUserInterface,draw()}) is enough to make it aware of
+latest state changes.
+
+@m_class{m-note m-warning}
+
+@par Performance implications
+    Depending on what all @ref DebugLayerSource bits are enabled, the layer may
+    add extra node data attachments and perform various operations on every
+    update. While it isn't expected to have significant effects on performance,
+    the @ref DebugLayer is meant primarily for debugging purposes and enabling
+    it unconditionally in applications deployed to end users isn't recommended.
+    See the @ref Ui-DebugLayer-opt-in section for more information.
+
+@section Ui-DebugLayer-node-highlight Node highlight
+
+The setup shown above, in particular with @ref DebugLayerFlag::NodeHighlight
+together with at least @ref DebugLayerSource::Nodes enabled, makes it possible
+to highlight any node in the hierarchy and see its details.
+@relativeref{DebugLayerSource,NodeHierarchy} additionally shows info about
+parent and child nodes and @relativeref{DebugLayerSource,NodeDataAttachments}
+also lists data attachments. Let's say we have a @ref Ui::Button placed
+somewhere in the UI, reacting to a tap or click:
+
+@snippet ui-debuglayer.cpp button
+
+@image html ui-debuglayer-node.png width=128px
+
+With the @ref DebugLayer set up, clicking on this button with
+@m_class{m-label m-warning} **Ctrl**
+@m_class{m-label m-default} **right mouse button** (or
+@m_class{m-label m-warning} **Ctrl** @m_class{m-label m-default} **pen eraser**
+in case of a pen input) highlights the node, showing a magenta rectangle over,
+and prints details about it to the console like shown below. Clicking on any
+other node will highlight that one instead, clicking again on the highlighted
+node will remove the highlight.
+
+@image html ui-debuglayer-node-highlight.png width=128px
+
+@include ui-debuglayer-node-highlight.ansi
+
+@subsection Ui-DebugLayer-node-highlight-naming Naming nodes and layers
+
+In the details we can see that the node is placed somewhere and it has four
+data attachments. Because the widget is simple we can assume it's the
+background, the icon, the text and the event handler. It would be better if the
+layer could tell us that, but because naming various resources isn't essential
+to UI functionality, and because the @ref DebugLayer is designed to work with
+any custom user interface containing any custom layers, not just the builtin
+ones, it can't have any knowledge about layer names on its own.
+
+We have to supply those with @ref setLayerName(). In this case we'll name all
+layers exposed on the @ref UserInterface instance, you can do the same for any
+custom layer as well. Similarly, @ref setNodeName() allows to assign names to
+particular nodes.
+
+@snippet ui-debuglayer.cpp button-names
+
+Highlighting the same node then groups the data by layer, showing them in the
+order they're drawn. Besides the names now being listed in the printed details,
+you can query them back with @ref layerName() and @ref nodeName().
+
+@include ui-debuglayer-node-highlight-names.ansi
+
+@subsection Ui-DebugLayer-node-highlight-node-data-attachment-details Showing details about data attachments
+
+Enabling @ref DebugLayerSource::NodeDataAttachmentDetails in addition to
+@relativeref{DebugLayerSource,NodeDataAttachments} makes use of debug
+integration implemented by a particular layer. In case of @ref BaseLayer,
+@ref TextLayer and layers derived from @ref AbstractVisualLayer this makes the
+output show also style assignment as well as any style transitions, if present.
+In case of @ref EventLayer it shows the event that's being handled:
+
+@include ui-debuglayer-node-highlight-details.ansi
+
+The way this works is that by passing a concrete layer type, the
+@ref setLayerName(const T&, const Containers::StringView&) overload gets picked
+if the type contains a @ref DebugIntegration inner class. Instance of which
+then gets used to print additional details. The integration can take various
+optional parameters, such as a @ref Ui-AbstractVisualLayer-debug-integration "function to provide style names"
+in case of visual layers. Documentation of all builtin layers has information
+about what's provided in their debug integration. It's also possible to
+implement this integration for custom layers, see @ref Ui-DebugLayer-integration
+below for details.
+
+@subsection Ui-DebugLayer-node-highlight-options Node highlight options
+
+Node highlight has defaults chosen in a way that makes the highlight clearly
+visible on most backgrounds, and with the pointer gesture unique enough to not
+conflict with usual event handlers. You can change both with
+@ref setNodeHighlightColor() and @ref setNodeHighlightGesture().
+
+The default set of accepted gestures *does not* include touch input however, as
+on a touch device it usually isn't possible to press any modifier keys to
+distinguish a "debug tap" from a regular tap. It's however possible to use
+@ref addFlags() and @ref clearFlags() to enable
+@ref DebugLayerFlag::NodeHighlight only temporarily and during that time accept
+touches without any modifiers, for example in a response to some action in the
+UI that enables some sort of a debug mode:
+
+@snippet Ui.cpp DebugLayer-node-highlight-touch
+
+Besides visual highlighting using a pointer, @ref highlightNode() allows to
+highlight a node programmatically.
+
+Finally, while the highlighted node details are by default printed to
+@relativeref{Magnum,Debug}, a console might not be always accessible. In that
+case you can direct the message to a callback using
+@ref setNodeHighlightCallback(), and populate for example a @ref Label directly
+in the UI with it instead. The callback also gets called with an empty string
+when the highlight is removed, which can be used to hide the label again. For
+example:
+
+@snippet Ui.cpp DebugLayer-node-highlight-callback
+
+@subsection Ui-DebugLayer-node-highlight-limitations Limitations
+
+Currently, it's only possible to visually highlight nodes that are visible and
+are neither @ref NodeFlag::Disabled nor @ref NodeFlag::NoEvents, To help with
+their discovery a bit at least, clicking their (event-accepting) parent will
+list how many children are hidden, disabled or not accepting events.
+Highlighting such nodes is only possible by passing their handle to
+@ref highlightNode().
+
+Additionally, if a top-level node covers other nodes but is otherwise invisible
+and doesn't react to events in any way, with @ref DebugLayerFlag::NodeHighlight
+it will become highlightable and it won't be possible to highlight any nodes
+underneath. Presence of such a node in the UI is usually accidental, currently
+the workaround is to either restrict its size to cover only the necessary area,
+move it behind other nodes in the @ref Ui-AbstractUserInterface-nodes-order "top-level node hierarchy"
+or mark it with @ref NodeFlag::NoEvents if it doesn't have children that need
+to react to events.
+
+@section Ui-DebugLayer-opt-in Making the DebugLayer opt-in
+
+As mentioned above, having the layer always present may have unintended
+performance implications, and a node highlight can be confusing if triggered
+accidentally by an unsuspecting user. One possibility is to create it only with
+a certain startup option, such as is the case with `--debug` in
+@ref magnum-ui-gallery "magnum-ui-gallery".
+
+Another way is to create it with no @ref DebugLayerFlag present, and enable
+them temporarily only if some debug mode is activated, similarly to
+@ref Ui-DebugLayer-node-highlight-options "what was shown for touch input above".
+Such setup will however still make it track all enabled @ref DebugLayerSource
+bits all the time. To avoid this, it's also possible to defer the layer
+creation and setup to the point when it's actually needed, and then destroy it
+again after. Note that, as certain options involve iterating the whole node
+tree, with very complex UIs such on-the-fly setup might cause stalls.
+
+@section Ui-DebugLayer-integration DebugLayer integration for custom layers
+
+To make a custom layer provide detailed info for
+@ref DebugLayerSource::NodeDataAttachmentDetails, implement an inner type named
+@ref DebugIntegration containing at least a @relativeref{DebugIntegration,print()}
+function. In the following snippet, a layer that exposes per-data color has the
+color printed in the @ref DebugLayerFlag::NodeHighlight output. To make the
+output fit with the other text, it's expected to be indented and end with a
+newline:
+
+@snippet ui-debuglayer.cpp integration
+
+Assuming the concrete layer type is passed to @ref setLayerName(), nothing
+else needs to be done and the integration gets used automatically. If there's
+multiple data attached to the same node, the @relativeref{DebugIntegration,print()}
+gets called for each of them.
+
+@snippet ui-debuglayer.cpp integration-setLayerName
+
+@include ui-debuglayer-integration.ansi
+
+If the integration needs additional state, a constructor can be implemented,
+and the instance then passed to
+@ref DebugLayer::setLayerName(const T&, const Containers::StringView&, const typename T::DebugIntegration&)
+or @ref DebugLayer::setLayerName(const T&, const Containers::StringView&, typename T::DebugIntegration&&) "setLayerName(..., typename T::DebugIntegration&&)":
+
+@snippet Ui.cpp DebugLayer-integration-constructor
+
+If additional details can be provided even without supplying additional state,
+it's recommended to have the class default-constructible as well so at least
+some functionality can be used even if users aren't aware of the extra options.
+Additionally, in the above code the constructor isn't made @cpp explicit @ce,
+which allows the debug integration arguments to be passed directly to
+@ref setLayerName():
+
+@snippet Ui.cpp DebugLayer-integration-constructor-setLayerName
+
+@subsection Ui-DebugLayer-integration-override Overriding the integration in subclasses
+
+Any layer derived from layers that already have an integration, such as from
+@ref AbstractVisualLayer or @ref EventLayer, will implicitly inherit the base
+implementation. If the subclass wants to provide its own output, it can either
+provide a custom type and hide the original, or derive from it by calling the
+base @relativeref{DebugIntegration,print()} in its own implementation. Here the
+`ColorLayer` from above is made to derive from @ref AbstractVisualLayer now
+instead, and its `DebugIntegration` derives from
+@ref AbstractVisualLayer::DebugIntegration as well and inherits its output:
+
+@snippet Ui.cpp DebugLayer-integration-subclass
 */
 class MAGNUM_UI_EXPORT DebugLayer: public AbstractLayer {
     public:
@@ -517,7 +748,7 @@ If an inner type with this name is implemented on a layer that's passed to
 @ref DebugLayer::setLayerName(const T&, const Containers::StringView&), the
 @ref print() function is used by the @ref DebugLayerFlag::NodeHighlight
 functionality to provide additional details about all data attachments coming
-from given layer.
+from given layer. See @ref Ui-DebugLayer-integration for more information.
 */
 /* While it'd be significantly simpler both for the library and for layers to
    have this as a virtual base class that then gets subclassed with interfaces
