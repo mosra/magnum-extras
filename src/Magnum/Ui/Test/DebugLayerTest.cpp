@@ -58,6 +58,9 @@ struct DebugLayerTest: TestSuite::Tester {
         void constructCopy();
         void constructMove();
 
+        void flags();
+        void flagsInvalid();
+
         void nodeNameNoOp();
         void nodeName();
         void nodeNameInvalid();
@@ -224,6 +227,21 @@ const struct {
         "Top-level node {0x3, 0x1} A very nice node"},
     {"node name",
         DebugLayerSource::Nodes, DebugLayerFlag::NodeHighlight,
+        "A very nice node"_s, false, false, false,
+        {}, {}, PointerEventSource::Mouse, Pointer::MouseRight,
+        {}, true, false, false, false, false, false,
+        "Node {0x3, 0x1} A very nice node"},
+    /* Assuming node name will be always colored, testing the ColorOff /
+       ColorAlways flags with it */
+    {"node name, color off",
+        DebugLayerSource::Nodes, DebugLayerFlag::NodeHighlight|DebugLayerFlag::ColorOff,
+        "A very nice node"_s, false, false, false,
+        {}, {}, PointerEventSource::Mouse, Pointer::MouseRight,
+        {}, true, false, false, false, false, false,
+        "Node {0x3, 0x1} A very nice node"},
+    /* ColorOff gets a precedence */
+    {"node name, color always + color off",
+        DebugLayerSource::Nodes, DebugLayerFlag::NodeHighlight|DebugLayerFlag::ColorAlways|DebugLayerFlag::ColorOff,
         "A very nice node"_s, false, false, false,
         {}, {}, PointerEventSource::Mouse, Pointer::MouseRight,
         {}, true, false, false, false, false, false,
@@ -513,6 +531,9 @@ DebugLayerTest::DebugLayerTest() {
               &DebugLayerTest::constructCopy,
               &DebugLayerTest::constructMove,
 
+              &DebugLayerTest::flags,
+              &DebugLayerTest::flagsInvalid,
+
               &DebugLayerTest::nodeNameNoOp,
               &DebugLayerTest::nodeName,
               &DebugLayerTest::nodeNameInvalid,
@@ -620,8 +641,8 @@ void DebugLayerTest::debugFlag() {
 
 void DebugLayerTest::debugFlags() {
     Containers::String out;
-    Debug{&out} << (DebugLayerFlag::NodeHighlight|DebugLayerFlag(0x80)) << DebugLayerFlags{};
-    CORRADE_COMPARE(out, "Ui::DebugLayerFlag::NodeHighlight|Ui::DebugLayerFlag(0x80) Ui::DebugLayerFlags{}\n");
+    Debug{&out} << (DebugLayerFlag::NodeHighlight|DebugLayerFlag::ColorAlways|DebugLayerFlag(0x80)) << DebugLayerFlags{};
+    CORRADE_COMPARE(out, "Ui::DebugLayerFlag::NodeHighlight|Ui::DebugLayerFlag::ColorAlways|Ui::DebugLayerFlag(0x80) Ui::DebugLayerFlags{}\n");
 }
 
 void DebugLayerTest::construct() {
@@ -665,6 +686,46 @@ void DebugLayerTest::constructMove() {
 
     CORRADE_VERIFY(std::is_nothrow_move_constructible<DebugLayer>::value);
     CORRADE_VERIFY(std::is_nothrow_move_assignable<DebugLayer>::value);
+}
+
+void DebugLayerTest::flags() {
+    DebugLayer layer{layerHandle(0, 1), {}, {}};
+    CORRADE_COMPARE(layer.flags(), DebugLayerFlags{});
+    CORRADE_COMPARE(layer.state(), LayerStates{});
+
+    /* Verify that the set / add / clear works and that it doesn't trigger any
+       state update for these. For NodeHighlight it does, which is tested in nodeHighlightToggle(). */
+    layer.setFlags(DebugLayerFlags{0x80}|DebugLayerFlag::ColorAlways);
+    CORRADE_COMPARE(layer.flags(), DebugLayerFlags{0x80}|DebugLayerFlag::ColorAlways);
+    CORRADE_COMPARE(layer.state(), LayerStates{});
+
+    layer.addFlags(DebugLayerFlag::ColorOff);
+    CORRADE_COMPARE(layer.flags(), DebugLayerFlags{0x80}|DebugLayerFlag::ColorAlways|DebugLayerFlag::ColorOff);
+    CORRADE_COMPARE(layer.state(), LayerStates{});
+
+    layer.clearFlags(DebugLayerFlag::ColorAlways|DebugLayerFlag::ColorOff);
+    CORRADE_COMPARE(layer.flags(), DebugLayerFlags{0x80});
+    CORRADE_COMPARE(layer.state(), LayerStates{});
+}
+
+void DebugLayerTest::flagsInvalid() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    DebugLayer layer{layerHandle(0, 1), {}, {}};
+
+    /* Clearing a NodeHighlight flag that wasn't there before is fine even if
+       DebugLayerSource::Nodes isn't present */
+    layer.setFlags({});
+    layer.clearFlags(DebugLayerFlag::NodeHighlight);
+
+    Containers::String out;
+    Error redirectError{&out};
+    layer.setFlags(DebugLayerFlag::NodeHighlight);
+    layer.addFlags(DebugLayerFlag::NodeHighlight);
+    CORRADE_COMPARE_AS(out,
+        "Ui::DebugLayer::setFlags(): Ui::DebugLayerSource::Nodes has to be enabled for Ui::DebugLayerFlag::NodeHighlight\n"
+        "Ui::DebugLayer::setFlags(): Ui::DebugLayerSource::Nodes has to be enabled for Ui::DebugLayerFlag::NodeHighlight\n",
+        TestSuite::Compare::String);
 }
 
 void DebugLayerTest::nodeNameNoOp() {
@@ -2170,12 +2231,16 @@ void DebugLayerTest::nodeHighlightNoCallback() {
     {
         Debug{} << "======================== visual color verification start =======================";
 
+        layer.addFlags(DebugLayerFlag::ColorAlways);
+
         PointerEvent press1{{}, PointerEventSource::Mouse, Pointer::MouseRight, true, 0, Modifier::Ctrl};
         PointerEvent press2{{}, PointerEventSource::Mouse, Pointer::MouseRight, true, 0, Modifier::Ctrl};
         CORRADE_VERIFY(ui.pointerPressEvent({45, 35}, press1));
         CORRADE_COMPARE(layer.currentHighlightedNode(), node);
         CORRADE_VERIFY(ui.pointerPressEvent({80, 90}, press2));
         CORRADE_COMPARE(layer.currentHighlightedNode(), another);
+
+        layer.clearFlags(DebugLayerFlag::ColorAlways);
 
         Debug{} << "======================== visual color verification end =========================";
     }
@@ -2615,23 +2680,14 @@ void DebugLayerTest::nodeHighlightInvalid() {
     layerNoNodesNoHighlight.nodeHighlightColor();
     layerNoNodesNoHighlight.setNodeHighlightColor({});
 
-    /* Clearing a NodeHighlight flag that wasn't there before is fine even if
-       DebugLayerSource::Nodes isn't present */
-    layerNoNodesNoHighlight.setFlags({});
-    layerNoNodesNoHighlight.clearFlags(DebugLayerFlag::NodeHighlight);
-
     Containers::String out;
     Error redirectError{&out};
-    layerNoNodesNoHighlight.setFlags(DebugLayerFlag::NodeHighlight);
-    layerNoNodesNoHighlight.addFlags(DebugLayerFlag::NodeHighlight);
     layerNoNodesNoHighlight.setNodeHighlightGesture({}, Modifier::Ctrl);
     layerNoNodesNoHighlight.currentHighlightedNode();
     layerNoNodesNoHighlight.highlightNode({});
     layerNoUi.highlightNode({});
     layer.highlightNode(node);
     CORRADE_COMPARE_AS(out,
-        "Ui::DebugLayer::setFlags(): Ui::DebugLayerSource::Nodes has to be enabled for Ui::DebugLayerFlag::NodeHighlight\n"
-        "Ui::DebugLayer::setFlags(): Ui::DebugLayerSource::Nodes has to be enabled for Ui::DebugLayerFlag::NodeHighlight\n"
         "Ui::DebugLayer::setNodeHighlightGesture(): expected at least one pointer\n"
         "Ui::DebugLayer::currentHighlightedNode(): Ui::DebugLayerFlag::NodeHighlight not enabled\n"
         "Ui::DebugLayer::highlightNode(): Ui::DebugLayerFlag::NodeHighlight not enabled\n"

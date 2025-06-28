@@ -88,6 +88,8 @@ Debug& operator<<(Debug& debug, const DebugLayerFlag value) {
         /* LCOV_EXCL_START */
         #define _c(value) case DebugLayerFlag::value: return debug << "::" #value;
         _c(NodeHighlight)
+        _c(ColorOff)
+        _c(ColorAlways)
         #undef _c
         /* LCOV_EXCL_STOP */
     }
@@ -97,7 +99,9 @@ Debug& operator<<(Debug& debug, const DebugLayerFlag value) {
 
 Debug& operator<<(Debug& debug, const DebugLayerFlags value) {
     return Containers::enumSetDebugOutput(debug, value, "Ui::DebugLayerFlags{}", {
-        DebugLayerFlag::NodeHighlight
+        DebugLayerFlag::NodeHighlight,
+        DebugLayerFlag::ColorOff,
+        DebugLayerFlag::ColorAlways,
     });
 }
 
@@ -358,10 +362,17 @@ bool DebugLayer::highlightNode(const NodeHandle handle) {
        corruption issues if the callback attempts to print to Debug as well */
     Containers::String out;
     {
+        /* Disable colors if:
+            - ColorOff is set, which has the precedence over everything else
+            - ColorAlways isn't set, and
+                - Either we have a callback output (which obv. isn't a TTY)
+                - Or we have an output that isn't a TTY */
+        const Debug::Flags disableColors =
+            state.flags >= DebugLayerFlag::ColorOff || (!(state.flags >= DebugLayerFlag::ColorAlways) && (state.nodeHighlightCallback || !Debug::isTty())) ?
+                Debug::Flag::DisableColors : Debug::Flags{};
         Debug debug = state.nodeHighlightCallback ?
-            Debug{&out, Debug::Flag::NoNewlineAtTheEnd|Debug::Flag::DisableColors} :
-            Debug{Debug::Flag::NoNewlineAtTheEnd|(Debug::isTty() ?
-                Debug::Flags{} : Debug::Flag::DisableColors)};
+            Debug{&out, Debug::Flag::NoNewlineAtTheEnd|disableColors} :
+            Debug{Debug::Flag::NoNewlineAtTheEnd|disableColors};
         const Implementation::DebugLayerNode& node = state.nodes[nodeHandleId(handle)];
         CORRADE_INTERNAL_ASSERT(node.handle == handle);
         debug << Debug::boldColor(Debug::Color::Default) << (ui.isNodeTopLevel(handle) ? "Top-level node" : "Node") << Debug::resetColor << Debug::packed << handle;

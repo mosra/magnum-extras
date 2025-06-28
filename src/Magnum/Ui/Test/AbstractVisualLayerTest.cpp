@@ -4538,8 +4538,12 @@ void AbstractVisualLayerTest::debugIntegrationNoCallback() {
     {
         Debug{} << "======================== visual color verification start =======================";
 
+        debugLayer.addFlags(DebugLayerFlag::ColorAlways);
+
         CORRADE_VERIFY(debugLayer.highlightNode(node));
         CORRADE_VERIFY(debugLayer.highlightNode(nodeDynamic));
+
+        debugLayer.clearFlags(DebugLayerFlag::ColorAlways);
 
         Debug{} << "======================== visual color verification end =========================";
     }
