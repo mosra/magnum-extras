@@ -859,4 +859,53 @@ void EventLayer::doVisibilityLostEvent(const UnsignedInt dataId, VisibilityLostE
     }
 }
 
+void EventLayer::DebugIntegration::print(Debug& debug, const EventLayer& layer, const Containers::StringView& layerName, LayerDataHandle data) {
+    debug << "  Data" << Debug::packed << data << "from layer" << Debug::packed << layer.handle();
+    if(layerName)
+        debug << Debug::color(Debug::Color::Yellow) << layerName << Debug::resetColor;
+    debug << "reacting to";
+    switch(layer._state->data[layerDataHandleId(data)].eventType) {
+        case Implementation::EventType::Enter:
+            debug << "pointer enter";
+            break;
+        case Implementation::EventType::Leave:
+            debug << "pointer leave";
+            break;
+        case Implementation::EventType::Press:
+            debug << "pointer press";
+            break;
+        case Implementation::EventType::Release:
+            debug << "pointer release";
+            break;
+        case Implementation::EventType::Focus:
+            debug << "focus";
+            break;
+        case Implementation::EventType::Blur:
+            debug << "blur";
+            break;
+        case Implementation::EventType::TapOrClick:
+            debug << "tap or click";
+            break;
+        case Implementation::EventType::MiddleClick:
+            debug << "middle click";
+            break;
+        case Implementation::EventType::RightClick:
+            debug << "right click";
+            break;
+        case Implementation::EventType::Drag:
+            debug << "pointer drag";
+            break;
+        case Implementation::EventType::Scroll:
+            debug << "scroll";
+            break;
+        case Implementation::EventType::DragOrScroll:
+            debug << "pointer drag or scroll";
+            break;
+        case Implementation::EventType::Pinch:
+            debug << "a pinch gesture";
+            break;
+    }
+    debug << Debug::newline;
+}
+
 }}
