@@ -105,6 +105,16 @@ using namespace Math::Literals;
 const struct {
     const char* name;
     DebugLayerSources sources;
+    bool used;
+} LayerNameDebugIntegrationData[]{
+    {"layers", DebugLayerSource::Layers, false},
+    {"node data attachments", DebugLayerSource::NodeDataAttachments, false},
+    {"node data attachment details", DebugLayerSource::NodeDataAttachmentDetails, true},
+};
+
+const struct {
+    const char* name;
+    DebugLayerSources sources;
     DebugLayerFlags flags;
     bool expectNoState, expectNoNodes, expectNoLayers, expectNoData;
 } PreUpdateNoOpData[]{
@@ -346,11 +356,20 @@ const struct {
         {}, true, false, false, false, false, false,
         "Node {0x3, 0x1}\n"
         "  1 data from layer {0x1, 0x1} Second layer\n"
+        "  2 data from layer {0x4, 0x1} Layer no.3\n"
+        "  7 data from 2 other layers"},
+    {"data attachment details, some layer names",
+        DebugLayerSource::NodeDataAttachmentDetails, DebugLayerFlag::NodeHighlight,
+        {}, false, true, false,
+        {}, {}, PointerEventSource::Mouse, Pointer::MouseRight,
+        {}, true, false, false, false, false, false,
+        "Node {0x3, 0x1}\n"
+        "  1 data from layer {0x1, 0x1} Second layer\n"
         "  Layer no.3 (42069) data {0x0, 0x1} and a value of 1337\n"
         "  Layer no.3 (42069) data {0x1, 0x1} and a value of 1337\n"
         "  7 data from 2 other layers"},
-    {"data attachments, all layer names",
-        DebugLayerSource::NodeDataAttachments, DebugLayerFlag::NodeHighlight,
+    {"data attachment details, all layer names",
+        DebugLayerSource::NodeDataAttachmentDetails, DebugLayerFlag::NodeHighlight,
         {}, false, true, true,
         {}, {}, PointerEventSource::Mouse, Pointer::MouseRight,
         {}, true, false, false, false, false, false,
@@ -360,8 +379,8 @@ const struct {
         "  Layer no.3 (42069) data {0x0, 0x1} and a value of 1337\n"
         "  Layer no.3 (42069) data {0x1, 0x1} and a value of 1337\n"
         "  4 data from layer {0x5, 0x1} The last ever layer"},
-    {"data attachments, all layer names, reverse layer order",
-        DebugLayerSource::NodeDataAttachments, DebugLayerFlag::NodeHighlight,
+    {"data attachment details, all layer names, reverse layer order",
+        DebugLayerSource::NodeDataAttachmentDetails, DebugLayerFlag::NodeHighlight,
         {}, true, true, true,
         {}, {}, PointerEventSource::Mouse, Pointer::MouseRight,
         {}, true, false, false, false, false, false,
@@ -371,8 +390,8 @@ const struct {
         "  Layer no.3 (42069) data {0x0, 0x1} and a value of 1337\n"
         "  Layer no.3 (42069) data {0x1, 0x1} and a value of 1337\n"
         "  4 data from layer {0x0, 0x1} The last ever layer"},
-    {"node name, flags, nested top level, all hierarchy + data attachments, some layer names",
-        DebugLayerSource::NodeHierarchy|DebugLayerSource::NodeDataAttachments, DebugLayerFlag::NodeHighlight,
+    {"node name, flags, nested top level, all hierarchy + data attachment details, some layer names",
+        DebugLayerSource::NodeHierarchy|DebugLayerSource::NodeDataAttachmentDetails, DebugLayerFlag::NodeHighlight,
         "A very nice node"_s, false, true, false,
         {}, {}, PointerEventSource::Mouse, Pointer::MouseRight,
         NodeFlag::Clip|NodeFlag::Focusable, true, true, true, true, true, true,
@@ -541,9 +560,10 @@ DebugLayerTest::DebugLayerTest() {
               &DebugLayerTest::layerNameNoOp,
               &DebugLayerTest::layerName});
 
-    addTests({&DebugLayerTest::layerNameDebugIntegration,
-              &DebugLayerTest::layerNameDebugIntegrationExplicit,
-              &DebugLayerTest::layerNameDebugIntegrationExplicitRvalue},
+    addInstancedTests({&DebugLayerTest::layerNameDebugIntegration,
+                       &DebugLayerTest::layerNameDebugIntegrationExplicit,
+                       &DebugLayerTest::layerNameDebugIntegrationExplicitRvalue},
+        Containers::arraySize(LayerNameDebugIntegrationData),
         &DebugLayerTest::layerNameDebugIntegrationSetup,
         &DebugLayerTest::layerNameDebugIntegrationTeardown);
 
@@ -630,6 +650,20 @@ void DebugLayerTest::debugSourceSupersets() {
         Containers::String out;
         Debug{&out} << (DebugLayerSource::NodeHierarchy|DebugLayerSource::NodeDataAttachments);
         CORRADE_COMPARE(out, "Ui::DebugLayerSource::NodeHierarchy|Ui::DebugLayerSource::NodeDataAttachments\n");
+
+    /* NodeDataAttachmentDetails is a superset of NodeDataAttachments, so only
+       one should be printed */
+    } {
+        Containers::String out;
+        Debug{&out} << (DebugLayerSource::NodeDataAttachments|DebugLayerSource::NodeDataAttachmentDetails);
+        CORRADE_COMPARE(out, "Ui::DebugLayerSource::NodeDataAttachmentDetails\n");
+
+    /* NodeHierarchy and NodeDataAttachmentDetails are both a superset of
+       Nodes, so both should be printed */
+    } {
+        Containers::String out;
+        Debug{&out} << (DebugLayerSource::NodeHierarchy|DebugLayerSource::NodeDataAttachmentDetails);
+        CORRADE_COMPARE(out, "Ui::DebugLayerSource::NodeHierarchy|Ui::DebugLayerSource::NodeDataAttachmentDetails\n");
     }
 }
 
@@ -1051,6 +1085,9 @@ void DebugLayerTest::layerNameDebugIntegrationTeardown() {
 }
 
 void DebugLayerTest::layerNameDebugIntegration() {
+    auto&& data = LayerNameDebugIntegrationData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
     AbstractUserInterface ui{{100, 100}};
 
     struct Layer: DebugLayer {
@@ -1099,7 +1136,7 @@ void DebugLayerTest::layerNameDebugIntegration() {
 
     /* The debug layer itself has no integration as it's excluded from
        output */
-    Layer& layer = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer(), DebugLayerSource::Layers, DebugLayerFlags{}));
+    Layer& layer = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer(), data.sources, DebugLayerFlags{}));
     CORRADE_COMPARE(layer.stateData().layers.size(), 1);
     CORRADE_VERIFY(!layer.stateData().layers[0].integration);
     CORRADE_VERIFY(!layer.stateData().layers[0].deleter);
@@ -1125,31 +1162,33 @@ void DebugLayerTest::layerNameDebugIntegration() {
     CORRADE_COMPARE(layer.stateData().layers[2].name, "Integrated layer");
     CORRADE_COMPARE(layer.stateData().layers[3].name, "Integrated layer 2");
     CORRADE_COMPARE(layer.stateData().layers[4].name, "Integrated layer 3");
-    CORRADE_VERIFY(layer.stateData().layers[2].integration);
-    CORRADE_VERIFY(layer.stateData().layers[3].integration);
-    CORRADE_VERIFY(layer.stateData().layers[4].integration);
-    CORRADE_VERIFY(layer.stateData().layers[2].deleter);
-    CORRADE_VERIFY(layer.stateData().layers[3].deleter);
-    CORRADE_VERIFY(layer.stateData().layers[4].deleter);
-    CORRADE_VERIFY(layer.stateData().layers[2].print);
-    CORRADE_VERIFY(layer.stateData().layers[3].print);
-    CORRADE_VERIFY(layer.stateData().layers[4].print);
+    CORRADE_COMPARE(layer.stateData().layers[2].integration, data.used);
+    CORRADE_COMPARE(layer.stateData().layers[3].integration, data.used);
+    CORRADE_COMPARE(layer.stateData().layers[4].integration, data.used);
+    CORRADE_COMPARE(layer.stateData().layers[2].deleter, data.used);
+    CORRADE_COMPARE(layer.stateData().layers[3].deleter, data.used);
+    CORRADE_COMPARE(layer.stateData().layers[4].deleter, data.used);
+    CORRADE_COMPARE(layer.stateData().layers[2].print, data.used);
+    CORRADE_COMPARE(layer.stateData().layers[3].print, data.used);
+    CORRADE_COMPARE(layer.stateData().layers[4].print, data.used);
     /* It delegates to setLayerName(const DebugIntegration&), so it makes a
-       temporary instance that then gets copied */
-    CORRADE_COMPARE(debugIntegrationConstructed, 6);
-    CORRADE_COMPARE(debugIntegrationCopied, 3);
+       temporary instance that then gets copied. If not used, it gets only
+       copied a bunch of times but not allocated. */
+    CORRADE_COMPARE(debugIntegrationConstructed, data.used ? 6 : 3);
+    CORRADE_COMPARE(debugIntegrationCopied, data.used ? 3 : 0);
     CORRADE_COMPARE(debugIntegrationDestructed, 3);
 
-    /* Setting a layer name again deletes the old and allocates a new one */
+    /* Setting a layer name again deletes the old (if there is) and allocates a
+       new one */
     layer.setLayerName(integratedLayer1, "Integrated layer 1");
     CORRADE_COMPARE(layer.stateData().layers.size(), 5);
     CORRADE_COMPARE(layer.stateData().layers[2].name, "Integrated layer 1");
-    CORRADE_VERIFY(layer.stateData().layers[2].integration);
-    CORRADE_VERIFY(layer.stateData().layers[2].deleter);
-    CORRADE_VERIFY(layer.stateData().layers[2].print);
-    CORRADE_COMPARE(debugIntegrationConstructed, 8);
-    CORRADE_COMPARE(debugIntegrationCopied, 4);
-    CORRADE_COMPARE(debugIntegrationDestructed, 5);
+    CORRADE_COMPARE(layer.stateData().layers[2].integration, data.used);
+    CORRADE_COMPARE(layer.stateData().layers[2].deleter, data.used);
+    CORRADE_COMPARE(layer.stateData().layers[2].print, data.used);
+    CORRADE_COMPARE(debugIntegrationConstructed, data.used ? 8 : 4);
+    CORRADE_COMPARE(debugIntegrationCopied, data.used ? 4 : 0);
+    CORRADE_COMPARE(debugIntegrationDestructed, data.used ? 5 : 4);
 
     /* Adding a bunch more empty layers and setting name for the last will
        resize the internal storage, causing the integration allocation
@@ -1162,56 +1201,56 @@ void DebugLayerTest::layerNameDebugIntegration() {
     CORRADE_COMPARE(layer.stateData().layers[2].name, "Integrated layer 1");
     CORRADE_COMPARE(layer.stateData().layers[3].name, "Integrated layer 2");
     CORRADE_COMPARE(layer.stateData().layers[4].name, "Integrated layer 3");
-    CORRADE_VERIFY(layer.stateData().layers[2].integration);
-    CORRADE_VERIFY(layer.stateData().layers[3].integration);
-    CORRADE_VERIFY(layer.stateData().layers[4].integration);
-    CORRADE_VERIFY(layer.stateData().layers[2].deleter);
-    CORRADE_VERIFY(layer.stateData().layers[3].deleter);
-    CORRADE_VERIFY(layer.stateData().layers[4].deleter);
-    CORRADE_VERIFY(layer.stateData().layers[2].print);
-    CORRADE_VERIFY(layer.stateData().layers[3].print);
-    CORRADE_VERIFY(layer.stateData().layers[4].print);
-    CORRADE_COMPARE(debugIntegrationConstructed, 8);
-    CORRADE_COMPARE(debugIntegrationCopied, 4);
-    CORRADE_COMPARE(debugIntegrationDestructed, 5);
+    CORRADE_COMPARE(layer.stateData().layers[2].integration, data.used);
+    CORRADE_COMPARE(layer.stateData().layers[3].integration, data.used);
+    CORRADE_COMPARE(layer.stateData().layers[4].integration, data.used);
+    CORRADE_COMPARE(layer.stateData().layers[2].deleter, data.used);
+    CORRADE_COMPARE(layer.stateData().layers[3].deleter, data.used);
+    CORRADE_COMPARE(layer.stateData().layers[4].deleter, data.used);
+    CORRADE_COMPARE(layer.stateData().layers[2].print, data.used);
+    CORRADE_COMPARE(layer.stateData().layers[3].print, data.used);
+    CORRADE_COMPARE(layer.stateData().layers[4].print, data.used);
+    CORRADE_COMPARE(debugIntegrationConstructed, data.used ? 8 : 4);
+    CORRADE_COMPARE(debugIntegrationCopied, data.used ? 4 : 0);
+    CORRADE_COMPARE(debugIntegrationDestructed, data.used ? 5 : 4);
 
     /* Setting a different name with only the base type deletes the
-       integration */
+       integration, if there is */
     layer.setLayerName(static_cast<AbstractLayer&>(integratedLayer1), "No longer integrated layer 1");
     CORRADE_COMPARE(layer.stateData().layers.size(), 7);
     CORRADE_COMPARE(layer.stateData().layers[2].name, "No longer integrated layer 1");
     CORRADE_VERIFY(!layer.stateData().layers[2].integration);
     CORRADE_VERIFY(!layer.stateData().layers[2].deleter);
     CORRADE_VERIFY(!layer.stateData().layers[2].print);
-    CORRADE_COMPARE(debugIntegrationConstructed, 8);
-    CORRADE_COMPARE(debugIntegrationCopied, 4);
-    CORRADE_COMPARE(debugIntegrationDestructed, 6);
+    CORRADE_COMPARE(debugIntegrationConstructed, data.used ? 8 : 4);
+    CORRADE_COMPARE(debugIntegrationCopied, data.used ? 4 : 0);
+    CORRADE_COMPARE(debugIntegrationDestructed, data.used ? 6 : 4);
 
-    /* Setting it back recreates it */
+    /* Setting it back recreates it, if used */
     layer.setLayerName(integratedLayer1, "Integrated layer 1");
     CORRADE_COMPARE(layer.stateData().layers.size(), 7);
     CORRADE_COMPARE(layer.stateData().layers[2].name, "Integrated layer 1");
-    CORRADE_VERIFY(layer.stateData().layers[2].integration);
-    CORRADE_VERIFY(layer.stateData().layers[2].deleter);
-    CORRADE_VERIFY(layer.stateData().layers[2].print);
-    CORRADE_COMPARE(debugIntegrationConstructed, 10);
-    CORRADE_COMPARE(debugIntegrationCopied, 5);
-    CORRADE_COMPARE(debugIntegrationDestructed, 7);
+    CORRADE_COMPARE(layer.stateData().layers[2].integration, data.used);
+    CORRADE_COMPARE(layer.stateData().layers[2].deleter, data.used);
+    CORRADE_COMPARE(layer.stateData().layers[2].print, data.used);
+    CORRADE_COMPARE(debugIntegrationConstructed, data.used ? 10 : 5);
+    CORRADE_COMPARE(debugIntegrationCopied, data.used ? 5 : 0);
+    CORRADE_COMPARE(debugIntegrationDestructed, data.used ? 7 : 5);
 
     /* Removing an integrated layer and replacing with non-integrated deletes
-       the integration on next update() */
+       the integration on next update(), if there is */
     LayerHandle integratedLayer2Handle = integratedLayer2.handle();
     ui.removeLayer(integratedLayer2Handle);
     EmptyLayer& integratedLayer2NonIntegratedReplacement = ui.setLayerInstance(Containers::pointer<EmptyLayer>(ui.createLayer()));
     CORRADE_COMPARE(layerHandleId(integratedLayer2NonIntegratedReplacement.handle()), layerHandleId(integratedLayer2Handle));
     CORRADE_COMPARE(layer.stateData().layers[3].name, "Integrated layer 2");
-    CORRADE_VERIFY(layer.stateData().layers[3].integration);
-    CORRADE_VERIFY(layer.stateData().layers[3].deleter);
-    CORRADE_VERIFY(layer.stateData().layers[3].print);
+    CORRADE_COMPARE(layer.stateData().layers[3].integration, data.used);
+    CORRADE_COMPARE(layer.stateData().layers[3].deleter, data.used);
+    CORRADE_COMPARE(layer.stateData().layers[3].print, data.used);
     /* Not here yet ... */
-    CORRADE_COMPARE(debugIntegrationConstructed, 10);
-    CORRADE_COMPARE(debugIntegrationCopied, 5);
-    CORRADE_COMPARE(debugIntegrationDestructed, 7);
+    CORRADE_COMPARE(debugIntegrationConstructed, data.used ? 10 : 5);
+    CORRADE_COMPARE(debugIntegrationCopied, data.used ? 5 : 0);
+    CORRADE_COMPARE(debugIntegrationDestructed, data.used ? 7 : 5);
 
     ui.update();
     CORRADE_COMPARE(layer.stateData().layers.size(), 7);
@@ -1220,21 +1259,21 @@ void DebugLayerTest::layerNameDebugIntegration() {
     CORRADE_VERIFY(!layer.stateData().layers[3].deleter);
     CORRADE_VERIFY(!layer.stateData().layers[3].print);
     /* ... but here */
-    CORRADE_COMPARE(debugIntegrationConstructed, 10);
-    CORRADE_COMPARE(debugIntegrationCopied, 5);
-    CORRADE_COMPARE(debugIntegrationDestructed, 8);
+    CORRADE_COMPARE(debugIntegrationConstructed, data.used ? 10 : 5);
+    CORRADE_COMPARE(debugIntegrationCopied, data.used ? 5 : 0);
+    CORRADE_COMPARE(debugIntegrationDestructed, data.used ? 8 : 5);
 
     /* Removing an integrated layer w/o replacing deletes the integration on
-       next update() as well */
+       next update() as well, if there is */
     ui.removeLayer(integratedLayer3.handle());
     CORRADE_COMPARE(layer.stateData().layers[4].name, "Integrated layer 3");
-    CORRADE_VERIFY(layer.stateData().layers[4].integration);
-    CORRADE_VERIFY(layer.stateData().layers[4].deleter);
-    CORRADE_VERIFY(layer.stateData().layers[4].print);
+    CORRADE_COMPARE(layer.stateData().layers[4].integration, data.used);
+    CORRADE_COMPARE(layer.stateData().layers[4].deleter, data.used);
+    CORRADE_COMPARE(layer.stateData().layers[4].print, data.used);
     /* Not here yet ... */
-    CORRADE_COMPARE(debugIntegrationConstructed, 10);
-    CORRADE_COMPARE(debugIntegrationCopied, 5);
-    CORRADE_COMPARE(debugIntegrationDestructed, 8);
+    CORRADE_COMPARE(debugIntegrationConstructed, data.used ? 10 : 5);
+    CORRADE_COMPARE(debugIntegrationCopied, data.used ? 5 : 0);
+    CORRADE_COMPARE(debugIntegrationDestructed, data.used ? 8 : 5);
 
     ui.update();
     CORRADE_COMPARE(layer.stateData().layers.size(), 7);
@@ -1243,18 +1282,22 @@ void DebugLayerTest::layerNameDebugIntegration() {
     CORRADE_VERIFY(!layer.stateData().layers[4].deleter);
     CORRADE_VERIFY(!layer.stateData().layers[4].print);
     /* ... but here */
-    CORRADE_COMPARE(debugIntegrationConstructed, 10);
-    CORRADE_COMPARE(debugIntegrationCopied, 5);
-    CORRADE_COMPARE(debugIntegrationDestructed, 9);
+    CORRADE_COMPARE(debugIntegrationConstructed, data.used ? 10 : 5);
+    CORRADE_COMPARE(debugIntegrationCopied, data.used ? 5 : 0);
+    CORRADE_COMPARE(debugIntegrationDestructed, data.used ? 9 : 5);
 
-    /* Removing the whole debug layer deletes the remaining integration */
+    /* Removing the whole debug layer deletes the remaining integration, if
+       there is */
     ui.removeLayer(layer.handle());
-    CORRADE_COMPARE(debugIntegrationConstructed, 10);
-    CORRADE_COMPARE(debugIntegrationCopied, 5);
-    CORRADE_COMPARE(debugIntegrationDestructed, 10);
+    CORRADE_COMPARE(debugIntegrationConstructed, data.used ? 10 : 5);
+    CORRADE_COMPARE(debugIntegrationCopied, data.used ? 5 : 0);
+    CORRADE_COMPARE(debugIntegrationDestructed, data.used ? 10 : 5);
 }
 
 void DebugLayerTest::layerNameDebugIntegrationExplicit() {
+    auto&& data = LayerNameDebugIntegrationData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
     /* A subset of layerNameDebugIntegration() but with a DebugIntegration
        that only has a non-default constructor and gets copied */
 
@@ -1308,7 +1351,7 @@ void DebugLayerTest::layerNameDebugIntegrationExplicit() {
 
     /* The debug layer itself has no integration as it's excluded from
        output */
-    Layer& layer = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer(), DebugLayerSource::Layers, DebugLayerFlags{}));
+    Layer& layer = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer(), data.sources, DebugLayerFlags{}));
 
     /* Setting a layer name with a concrete type won't allocate the
        DebugIntegration instance as it doesn't have a default constructor.
@@ -1333,27 +1376,32 @@ void DebugLayerTest::layerNameDebugIntegrationExplicit() {
         layer.setLayerName(integratedLayer2, "Integrated layer 2", integration);
         CORRADE_COMPARE(layer.stateData().layers.size(), 3);
         CORRADE_COMPARE(layer.stateData().layers[2].name, "Integrated layer 2");
-        CORRADE_VERIFY(layer.stateData().layers[2].integration);
-        CORRADE_COMPARE(static_cast<IntegratedLayer::DebugIntegration*>(layer.stateData().layers[2].integration)->value, 1337);
-        CORRADE_VERIFY(layer.stateData().layers[2].deleter);
-        CORRADE_VERIFY(layer.stateData().layers[2].print);
+        CORRADE_COMPARE(layer.stateData().layers[2].integration, data.used);
+        if(data.used)
+            CORRADE_COMPARE(static_cast<IntegratedLayer::DebugIntegration*>(layer.stateData().layers[2].integration)->value, 1337);
+        CORRADE_COMPARE(layer.stateData().layers[2].deleter, data.used);
+        CORRADE_COMPARE(layer.stateData().layers[2].print, data.used);
     }
     /* A local instance gets constructed, copied to the function,
        then internally moved to allocate the instance (which calls the copy
-       constructor again) and then both temporaries get destructed */
-    CORRADE_COMPARE(debugIntegrationConstructed, 3);
-    CORRADE_COMPARE(debugIntegrationCopied, 2);
+       constructor again) and then both temporaries get destructed. If not
+       used, the final allocation isn't made. */
+    CORRADE_COMPARE(debugIntegrationConstructed, data.used ? 3 : 2);
+    CORRADE_COMPARE(debugIntegrationCopied, data.used ? 2 : 1);
     CORRADE_COMPARE(debugIntegrationDestructed, 2);
 
     /* Removing the whole debug layer deletes the integration in this case as
-       well */
+       well, if there is */
     ui.removeLayer(layer.handle());
-    CORRADE_COMPARE(debugIntegrationConstructed, 3);
-    CORRADE_COMPARE(debugIntegrationCopied, 2);
-    CORRADE_COMPARE(debugIntegrationDestructed, 3);
+    CORRADE_COMPARE(debugIntegrationConstructed, data.used ? 3 : 2);
+    CORRADE_COMPARE(debugIntegrationCopied, data.used ? 2 : 1);
+    CORRADE_COMPARE(debugIntegrationDestructed, data.used ? 3 : 2);
 }
 
 void DebugLayerTest::layerNameDebugIntegrationExplicitRvalue() {
+    auto&& data = LayerNameDebugIntegrationData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
     /* A subset of layerNameDebugIntegration() but with a DebugIntegration
        that only has a non-default constructor and gets moved */
 
@@ -1407,7 +1455,7 @@ void DebugLayerTest::layerNameDebugIntegrationExplicitRvalue() {
 
     /* The debug layer itself has no integration as it's excluded from
        output */
-    Layer& layer = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer(), DebugLayerSource::Layers, DebugLayerFlags{}));
+    Layer& layer = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer(), data.sources, DebugLayerFlags{}));
 
     /* Setting a layer name with a concrete type won't allocate the
        DebugIntegration instance, same reasoning as in
@@ -1427,22 +1475,23 @@ void DebugLayerTest::layerNameDebugIntegrationExplicitRvalue() {
     layer.setLayerName(integratedLayer2, "Integrated layer 2", IntegratedLayer::DebugIntegration{1337, 4.5f});
     CORRADE_COMPARE(layer.stateData().layers.size(), 3);
     CORRADE_COMPARE(layer.stateData().layers[2].name, "Integrated layer 2");
-    CORRADE_VERIFY(layer.stateData().layers[2].integration);
-    CORRADE_COMPARE(static_cast<IntegratedLayer::DebugIntegration*>(layer.stateData().layers[2].integration)->value, 1337);
-    CORRADE_VERIFY(layer.stateData().layers[2].deleter);
-    CORRADE_VERIFY(layer.stateData().layers[2].print);
+    CORRADE_COMPARE(layer.stateData().layers[2].integration, data.used);
+    if(data.used)
+        CORRADE_COMPARE(static_cast<IntegratedLayer::DebugIntegration*>(layer.stateData().layers[2].integration)->value, 1337);
+    CORRADE_COMPARE(layer.stateData().layers[2].deleter, data.used);
+    CORRADE_COMPARE(layer.stateData().layers[2].print, data.used);
     /* A local instance gets moved to the function, then internally moved again
        to allocate the instance and then the temporary get destructed */
-    CORRADE_COMPARE(debugIntegrationConstructed, 2);
-    CORRADE_COMPARE(debugIntegrationMoved, 1);
+    CORRADE_COMPARE(debugIntegrationConstructed, data.used ? 2 : 1);
+    CORRADE_COMPARE(debugIntegrationMoved, data.used ? 1 : 0);
     CORRADE_COMPARE(debugIntegrationDestructed, 1);
 
     /* Removing the whole debug layer deletes the integration in this case as
        well */
     ui.removeLayer(layer.handle());
-    CORRADE_COMPARE(debugIntegrationConstructed, 2);
-    CORRADE_COMPARE(debugIntegrationMoved, 1);
-    CORRADE_COMPARE(debugIntegrationDestructed, 2);
+    CORRADE_COMPARE(debugIntegrationConstructed, data.used ? 2 : 1);
+    CORRADE_COMPARE(debugIntegrationMoved, data.used ? 1 : 0);
+    CORRADE_COMPARE(debugIntegrationDestructed, data.used ? 2 : 1);
 }
 
 void DebugLayerTest::layerNameDebugIntegrationCopyConstructPlainStruct() {
@@ -1455,7 +1504,7 @@ void DebugLayerTest::layerNameDebugIntegrationCopyConstructPlainStruct() {
             return *_state;
         }
     };
-    Layer& layer = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer(), DebugLayerSource::Layers, DebugLayerFlags{}));
+    Layer& layer = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer(), DebugLayerSource::NodeDataAttachmentDetails, DebugLayerFlags{}));
 
     struct IntegratedLayer: AbstractLayer {
         using AbstractLayer::AbstractLayer;
@@ -1490,7 +1539,7 @@ void DebugLayerTest::layerNameDebugIntegrationMoveConstructPlainStruct() {
             return *_state;
         }
     };
-    Layer& layer = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer(), DebugLayerSource::Layers, DebugLayerFlags{}));
+    Layer& layer = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer(), DebugLayerSource::NodeDataAttachmentDetails, DebugLayerFlags{}));
 
     struct IntegratedLayer: AbstractLayer {
         using AbstractLayer::AbstractLayer;
@@ -1524,7 +1573,9 @@ void DebugLayerTest::layerNameInvalid() {
     AbstractUserInterface ui{{100, 100}};
     AbstractUserInterface uiAnother{{100, 100}};
 
-    DebugLayer& layer = ui.setLayerInstance(Containers::pointer<DebugLayer>(ui.createLayer(), DebugLayerSource::Layers, DebugLayerFlags{}));
+    /* Enabling NodeDataAttachmentDetails so the integration is used in full,
+       just in case */
+    DebugLayer& layer = ui.setLayerInstance(Containers::pointer<DebugLayer>(ui.createLayer(), DebugLayerSource::NodeDataAttachmentDetails, DebugLayerFlags{}));
     DebugLayer layerNoUi{layerHandle(0, 1), {}, {}};
 
     struct EmptyLayer: AbstractLayer {
@@ -2192,7 +2243,7 @@ void DebugLayerTest::nodeHighlightNoCallback() {
     /* Just to match the layer handles to the nodeHighlight() case */
     /*LayerHandle removedLayer =*/ ui.createLayer();
 
-    DebugLayer& layer = ui.setLayerInstance(Containers::pointer<DebugLayer>(ui.createLayer(), DebugLayerSource::NodeHierarchy|DebugLayerSource::NodeDataAttachments, DebugLayerFlag::NodeHighlight));
+    DebugLayer& layer = ui.setLayerInstance(Containers::pointer<DebugLayer>(ui.createLayer(), DebugLayerSource::NodeHierarchy|DebugLayerSource::NodeDataAttachmentDetails, DebugLayerFlag::NodeHighlight));
 
     struct IntegratedLayer: AbstractLayer {
         using AbstractLayer::AbstractLayer;
@@ -2353,7 +2404,7 @@ void DebugLayerTest::nodeHighlightDebugIntegrationExplicit() {
     integratedLayer.create(node);
     integratedLayer.create(node);
 
-    DebugLayer& layer = ui.setLayerInstance(Containers::pointer<DebugLayer>(ui.createLayer(), DebugLayerSource::NodeDataAttachments, DebugLayerFlag::NodeHighlight));
+    DebugLayer& layer = ui.setLayerInstance(Containers::pointer<DebugLayer>(ui.createLayer(), DebugLayerSource::NodeDataAttachmentDetails, DebugLayerFlag::NodeHighlight));
 
     IntegratedLayer::DebugIntegration integration{1337};
     layer.setLayerName(integratedLayer, "Layer no.2", integration);
@@ -2420,7 +2471,7 @@ void DebugLayerTest::nodeHighlightDebugIntegrationExplicitRvalue() {
     integratedLayer.create(node);
     integratedLayer.create(node);
 
-    DebugLayer& layer = ui.setLayerInstance(Containers::pointer<DebugLayer>(ui.createLayer(), DebugLayerSource::NodeDataAttachments, DebugLayerFlag::NodeHighlight));
+    DebugLayer& layer = ui.setLayerInstance(Containers::pointer<DebugLayer>(ui.createLayer(), DebugLayerSource::NodeDataAttachmentDetails, DebugLayerFlag::NodeHighlight));
 
     layer.setLayerName(integratedLayer, "Layer no.2", IntegratedLayer::DebugIntegration{1337});
 
@@ -2662,7 +2713,7 @@ void DebugLayerTest::nodeHighlightInvalid() {
     DebugLayer layerNoNodesNoHighlight{layerHandle(0, 1), {}, {}};
     DebugLayer layerNoUi{layerHandle(0, 1), DebugLayerSource::Nodes, DebugLayerFlag::NodeHighlight};
 
-    DebugLayer& layer = ui.setLayerInstance(Containers::pointer<DebugLayer>(ui.createLayer(), DebugLayerSource::NodeDataAttachments, DebugLayerFlag::NodeHighlight));
+    DebugLayer& layer = ui.setLayerInstance(Containers::pointer<DebugLayer>(ui.createLayer(), DebugLayerSource::NodeDataAttachmentDetails, DebugLayerFlag::NodeHighlight));
     layer.setLayerName(integratedLayer, "BrokenPrint");
     /* To silence the output */
     layer.setNodeHighlightCallback([](Containers::StringView) {});
