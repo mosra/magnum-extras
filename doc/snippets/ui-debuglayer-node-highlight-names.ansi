@@ -1,0 +1,5 @@
+[0;1;39mNode[0m {0x9, 0x2}[0;1;33m Accept button[0m
+  Nested at level 1 with 0 direct children
+  1 data from layer {0x0, 0x1}[0;33m Base[0m
+  2 data from layer {0x1, 0x1}[0;33m Text[0m
+  1 data from layer {0x2, 0x1}[0;33m Event[0m

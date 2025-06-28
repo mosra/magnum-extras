@@ -306,6 +306,15 @@ there's however just visual feedback, which is likely already handled by
 For nodes that have @ref NodeFlag::Focusable enabled, @ref onFocus() and
 @ref onBlur() can attach actions to an input being focused and blurred again,
 for example to open a keypad or an autocompletion popup.
+
+@section Ui-EventLayer-debug-integration Debug layer integration
+
+When using @ref Ui-DebugLayer-node-highlight "DebugLayer node highlight" and
+passing a layer derived from this class to
+@ref DebugLayer::setLayerName(const T&, const Containers::StringView&) "DebugLayer::setLayerName()",
+it will list the event type given data is reacting to. For example:
+
+@include ui-debuglayer-eventlayer.ansi
 */
 class MAGNUM_UI_EXPORT EventLayer: public AbstractLayer {
     public:
@@ -926,6 +935,10 @@ class MAGNUM_UI_EXPORT EventLayer: public AbstractLayer {
 
 /**
 @brief Debug layer integration
+
+Integrates the layer with @ref DebugLayer. See
+@ref Ui-EventLayer-debug-integration "EventLayer debug layer integration"
+for more information and example usage.
 */
 class MAGNUM_UI_EXPORT EventLayer::DebugIntegration {
     public:

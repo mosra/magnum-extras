@@ -1,0 +1,17 @@
+[0;1;39mNode[0m {0x9, 0x2}[0;1;33m Accept button[0m
+  Nested at level 1 with 0 direct children
+  Data {0x3, 0x2} from layer {0x0, 0x1}[0;33m Base[0m
+    Inactive out style: 1
+    Inactive over style: 2
+    Pressed out style: 3
+    Pressed over style: 4
+    Disabled style: 5
+  Data {0x6, 0x1} from layer {0x1, 0x1}[0;33m Text[0m
+    Inactive style: 3
+    Pressed style: 7
+    Disabled style: 11
+  Data {0x7, 0x1} from layer {0x1, 0x1}[0;33m Text[0m
+    Inactive style: 4
+    Pressed style: 8
+    Disabled style: 12
+  Data {0x0, 0x1} from layer {0x2, 0x1}[0;33m Event[0m reacting to tap or click

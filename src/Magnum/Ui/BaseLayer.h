@@ -841,6 +841,12 @@ issue, it's possible to draw even the untextured quads with the textured layer
 call @ref setDefaultTextureCoordinates() with its position. Then quads that
 don't set their own texture coordinates will be drawn as if there was no
 texturing happening.
+
+@section Ui-BaseLayer-debug-integration Debug layer integration
+
+When using @ref Ui-DebugLayer-node-highlight "DebugLayer node highlighting",
+this layer inherits @ref Ui-AbstractVisualLayer-debug-integration "debug integration from the AbstractVisualLayer".
+See its documentation for more information.
 */
 class MAGNUM_UI_EXPORT BaseLayer: public AbstractVisualLayer {
     public:

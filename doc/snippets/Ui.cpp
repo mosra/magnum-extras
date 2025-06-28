@@ -47,17 +47,21 @@
 
 #include "Magnum/Ui/AbstractUserInterface.h"
 #include "Magnum/Ui/AbstractVisualLayer.h"
+#include "Magnum/Ui/Anchor.h"
 #include "Magnum/Ui/BaseLayer.h"
 #include "Magnum/Ui/BaseLayerAnimator.h"
+#include "Magnum/Ui/DebugLayer.h"
 #include "Magnum/Ui/LineLayer.h"
 #include "Magnum/Ui/Event.h"
 #include "Magnum/Ui/EventLayer.h"
 #include "Magnum/Ui/GenericAnimator.h"
 #include "Magnum/Ui/Handle.h"
+#include "Magnum/Ui/Label.h"
 #include "Magnum/Ui/NodeFlags.h"
 #include "Magnum/Ui/TextLayer.h"
 #include "Magnum/Ui/TextLayerAnimator.h"
 #include "Magnum/Ui/TextProperties.h"
+#include "Magnum/Ui/UserInterface.h"
 
 #define DOXYGEN_ELLIPSIS(...) __VA_ARGS__
 #define DOXYGEN_IGNORE(...) __VA_ARGS__
@@ -250,6 +254,71 @@ Containers::StringView nodeName(Ui::NodeHandle node) {
     return {};
 }
 /* [AbstractUserInterface-handles-extract] */
+
+}
+
+namespace C {
+
+/* Used by DebugLayer-integration-constructor and
+   DebugLayer-integration-constructor-setLayerName below, needs to be here to
+   use CORRADE_ENUMSET_OPERATORS() (sigh) */
+/** @todo clean up once that macro isn't needed */
+struct ColorLayer: Ui::AbstractLayer {
+    class DebugIntegration;
+
+    enum class DebugFlag {
+        PrintColor,
+        ColorSwatch
+    };
+    typedef Containers::EnumSet<DebugFlag> DebugFlags;
+
+    using Ui::AbstractLayer::AbstractLayer;
+
+    Ui::LayerFeatures doFeatures() const override { return {}; }
+};
+
+CORRADE_ENUMSET_OPERATORS(ColorLayer::DebugFlags)
+
+/* [DebugLayer-integration-constructor] */
+class ColorLayer::DebugIntegration {
+    public:
+        /*implicit*/ DebugIntegration(DebugFlags flags = {}): _flags{flags} {}
+
+        void print(Debug& debug, const ColorLayer& layer,
+                   Containers::StringView layerName, Ui::LayerDataHandle data);
+
+    private:
+        DebugFlags _flags;
+};
+/* [DebugLayer-integration-constructor] */
+
+}
+
+namespace D {
+
+/* [DebugLayer-integration-subclass] */
+class ColorLayer: public Ui::AbstractVisualLayer {
+    public:
+        struct DebugIntegration;
+
+        DOXYGEN_ELLIPSIS(
+            using Ui::AbstractVisualLayer::AbstractVisualLayer;
+            using Ui::AbstractVisualLayer::create;
+            using Ui::AbstractVisualLayer::remove;
+
+            Ui::LayerFeatures doFeatures() const override { return {}; }
+        )
+};
+
+struct ColorLayer::DebugIntegration: Ui::AbstractVisualLayer::DebugIntegration {
+    void print(Debug& debug, const ColorLayer& layer,
+               Containers::StringView layerName, Ui::LayerDataHandle data) {
+        Ui::AbstractVisualLayer::DebugIntegration::print(debug, layer, layerName, data);
+
+        DOXYGEN_ELLIPSIS()
+    }
+};
+/* [DebugLayer-integration-subclass] */
 
 }
 
@@ -545,6 +614,55 @@ DOXYGEN_ELLIPSIS()
 baseLayer.recycleDynamicStyle(*dynamicStyleId);
 /* [BaseLayer-dynamic-styles-allocate] */
 }
+}
+
+{
+Ui::DebugLayer debugLayer{Ui::layerHandle(0, 1), {}, {}};
+/* [DebugLayer-node-highlight-touch] */
+/* Enable node highlighting with just a touch */
+debugLayer
+    .addFlags(Ui::DebugLayerFlag::NodeHighlight)
+    .setNodeHighlightGesture(Ui::Pointer::Finger, {});
+
+DOXYGEN_ELLIPSIS()
+
+/* Disable it again and revert to a safe gesture when not used anymore */
+debugLayer
+    .clearFlags(Ui::DebugLayerFlag::NodeHighlight)
+    .setNodeHighlightGesture(Ui::Pointer::MouseRight, Ui::Modifier::Ctrl);
+/* [DebugLayer-node-highlight-touch] */
+}
+
+{
+struct UserInterface: Ui::UserInterface {
+    explicit UserInterface(NoCreateT): Ui::UserInterface{NoCreate} {}
+} ui{NoCreate};
+Ui::DebugLayer debugLayer{Ui::layerHandle(0, 1), {}, {}};
+/* [DebugLayer-node-highlight-callback] */
+Ui::Label details{DOXYGEN_ELLIPSIS({ui, {}}, "")};
+
+DOXYGEN_ELLIPSIS()
+
+debugLayer.setNodeHighlightCallback([&details](Containers::StringView message) {
+    details
+        .setText(message)
+        .setHidden(!message);
+});
+/* [DebugLayer-node-highlight-callback] */
+}
+
+{
+using namespace C;
+ColorLayer colorLayer{Ui::layerHandle(0, 1)};
+Ui::DebugLayer debugLayer{Ui::layerHandle(0, 1), {}, {}};
+/* [DebugLayer-integration-constructor-setLayerName] */
+/* Default integration setup */
+debugLayer.setLayerName(colorLayer, "Shiny");
+
+/* Passing extra arguments */
+debugLayer.setLayerName(colorLayer, "Shiny",
+    ColorLayer::DebugFlag::PrintColor|ColorLayer::DebugFlag::ColorSwatch);
+/* [DebugLayer-integration-constructor-setLayerName] */
 }
 
 {

@@ -41,7 +41,40 @@ namespace Magnum { namespace Ui {
 
 Provides style management and style transitions depending on primary &
 non-fallthrough input events for builtin visual layers like @ref BaseLayer or
-@ref TextLayer.
+@ref TextLayer. Style management including style transitions and dynamic styles
+is described in full in the @ref BaseLayer documentation, as it's easier to
+explain with concrete examples rather than on an abstract class.
+
+@section Ui-AbstractVisualLayer-debug-integration Debug layer integration
+
+When using @ref Ui-DebugLayer-node-highlight "DebugLayer node highlight" and
+passing a layer derived from this class to
+@ref DebugLayer::setLayerName(const T&, const Containers::StringView&) "DebugLayer::setLayerName()",
+it will list style assignments of all data if
+@ref DebugLayerSource::NodeDataAttachmentDetails is enabled, along with their
+transitions. For example:
+
+@include ui-debuglayer-abstractvisuallayer.ansi
+
+By default only style IDs are shown, but the @ref DebugIntegration constructor
+accepts an optional function to map them from an @relativeref{Magnum,UnsignedInt}
+to a @relativeref{Corrade,Containers::StringView}. Assuming a `Style`
+@cpp enum @ce is used by given layer, the function could look like this,
+resulting in the output below:
+
+@snippet ui-debuglayer.cpp abstractvisuallayer-style-names
+
+@include ui-debuglayer-abstractvisuallayer-style-names.ansi
+
+<b></b>
+
+@m_class{m-note m-success}
+
+@par
+    Names and IDs of styles used by builtin widgets are considered an
+    implementation detail and thus aren't exposed, but they're included in the
+    @ref magnum-ui-gallery "magnum-ui-gallery" `--debug` output if you want to
+    have a peek.
 */
 class MAGNUM_UI_EXPORT AbstractVisualLayer: public AbstractLayer {
     public:
@@ -604,6 +637,10 @@ class MAGNUM_UI_EXPORT AbstractVisualLayer::Shared {
 
 /**
 @brief Debug layer integration
+
+Integrates the layer with @ref DebugLayer. See
+@ref Ui-AbstractVisualLayer-debug-integration "AbstractVisualLayer debug layer integration"
+for more information and example usage.
 */
 class MAGNUM_UI_EXPORT AbstractVisualLayer::DebugIntegration {
     public:

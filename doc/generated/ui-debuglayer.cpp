@@ -1,0 +1,367 @@
+/*
+    This file is part of Magnum.
+
+    Copyright © 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019,
+                2020, 2021, 2022, 2023, 2024, 2025
+              Vladimír Vondruš <mosra@centrum.cz>
+
+    Permission is hereby granted, free of charge, to any person obtaining a
+    copy of this software and associated documentation files (the "Software"),
+    to deal in the Software without restriction, including without limitation
+    the rights to use, copy, modify, merge, publish, distribute, sublicense,
+    and/or sell copies of the Software, and to permit persons to whom the
+    Software is furnished to do so, subject to the following conditions:
+
+    The above copyright notice and this permission notice shall be included
+    in all copies or substantial portions of the Software.
+
+    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+    FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+    THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+    FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+    DEALINGS IN THE SOFTWARE.
+*/
+
+#include <Corrade/Containers/Function.h>
+#include <Corrade/Containers/StridedArrayView.h>
+#include <Corrade/Containers/String.h>
+#include <Corrade/PluginManager/Manager.h>
+#include <Corrade/Utility/Path.h>
+#include <Magnum/Image.h>
+#include <Magnum/ImageView.h>
+#include <Magnum/PixelFormat.h>
+#ifdef CORRADE_TARGET_APPLE
+#include <Magnum/Platform/WindowlessCglApplication.h>
+#elif defined(CORRADE_TARGET_UNIX)
+#include <Magnum/Platform/WindowlessGlxApplication.h>
+#elif defined(CORRADE_TARGET_WINDOWS)
+#include <Magnum/Platform/WindowlessWglApplication.h>
+#else
+#error no windowless application available on this platform
+#endif
+#include <Magnum/GL/Framebuffer.h>
+#include <Magnum/GL/Renderer.h>
+#include <Magnum/Math/Color.h>
+#include <Magnum/Trade/AbstractImageConverter.h>
+
+#include "Magnum/Ui/Anchor.h"
+#include "Magnum/Ui/Button.h"
+#include "Magnum/Ui/BaseLayerGL.h"
+#include "Magnum/Ui/TextLayer.h"
+#include "Magnum/Ui/EventLayer.h"
+#include "Magnum/Ui/Handle.h"
+#include "Magnum/Ui/NodeFlags.h"
+#include "Magnum/Ui/RendererGL.h"
+#include "Magnum/Ui/SnapLayouter.h"
+#include "Magnum/Ui/Style.h"
+#include "Magnum/Ui/UserInterfaceGL.h"
+#include "Magnum/Ui/DebugLayerGL.h"
+
+#define DOXYGEN_ELLIPSIS(...) __VA_ARGS__
+
+using namespace Magnum;
+using namespace Math::Literals;
+
+namespace {
+
+struct UiDebugLayer: Platform::WindowlessApplication {
+    explicit UiDebugLayer(const Arguments& arguments): Platform::WindowlessApplication{arguments} {}
+
+    int exec() override;
+};
+
+constexpr Vector2i ImageSize{256, 96};
+
+/* [integration] */
+class ColorLayer: public Ui::AbstractLayer {
+    public:
+        struct DebugIntegration;
+
+        Color3 color(Ui::LayerDataHandle handle) const;
+
+        DOXYGEN_ELLIPSIS(
+            using Ui::AbstractLayer::AbstractLayer;
+            using Ui::AbstractLayer::create;
+            using Ui::AbstractLayer::remove;
+
+            Ui::LayerFeatures doFeatures() const override { return {}; }
+        )
+};
+
+struct ColorLayer::DebugIntegration {
+    void print(Debug& debug, const ColorLayer& layer,
+               Containers::StringView layerName, Ui::LayerDataHandle data) {
+        /* Convert to an 8-bit color for brevity */
+        Color3ub color8 = Math::pack<Color3ub>(layer.color(data));
+        debug << "  Data" << Debug::packed << data
+            << "from layer" << Debug::packed << layer.handle()
+            << Debug::color(Debug::Color::Yellow) << layerName << Debug::resetColor
+            << "with color" << Debug::color << color8 << color8 << Debug::newline;
+    }
+};
+/* [integration] */
+
+/* Used by abstractvisuallayer-style-names, needs to be defined here */
+enum Style {
+    Button = 13,
+    ButtonPressed = 7,
+    ButtonHovered = 11,
+    ButtonPressedHovered = 3,
+};
+struct Transition {
+    Style inactiveOut;
+    Style inactiveOver;
+    Style pressedOut;
+    Style pressedOver;
+};
+Transition transition(Style style) {
+    switch(style) {
+        case Style::Button:
+        case Style::ButtonHovered:
+        case Style::ButtonPressed:
+        case Style::ButtonPressedHovered:
+            return {Style::Button,
+                    Style::ButtonHovered,
+                    Style::ButtonPressed,
+                    Style::ButtonPressedHovered};
+        default:
+            return {style, style, style, style};
+    }
+}
+template<Style Transition::*member> Style to(Style style) {
+    return transition(style).*member;
+}
+
+Color3 ColorLayer::color(Ui::LayerDataHandle data) const {
+    return layerDataHandleId(data) == 7 ? 0x3bd267_rgbf : 0x2f83cc_rgbf;
+}
+
+/** @todo ffs, duplicated three times, make a batch utility in Magnum */
+Image2D unpremultiply(Image2D image) {
+    for(Containers::StridedArrayView1D<Color4ub> row: image.pixels<Color4ub>())
+        for(Color4ub& pixel: row)
+            pixel = pixel.unpremultiplied();
+
+    return image;
+}
+
+int UiDebugLayer::exec() {
+    GL::Renderer::setBlendFunction(GL::Renderer::BlendFunction::One, GL::Renderer::BlendFunction::OneMinusSourceAlpha);
+
+    PluginManager::Manager<Trade::AbstractImageConverter> converterManager;
+    Containers::Pointer<Trade::AbstractImageConverter> converter = converterManager.loadAndInstantiate("AnyImageConverter");
+    if(!converter)
+        return 1;
+
+    Ui::UserInterfaceGL ui{NoCreate};
+    /* Using a compositing framebuffer because it's easier than setting up a
+       custom framebuffer here */
+    ui
+        /** @todo uh, can't setting renderer flags be doable in some more
+            intuitive way? such as flags on the style? */
+        .setRendererInstance(Containers::pointer<Ui::RendererGL>(Ui::RendererGL::Flag::CompositingFramebuffer))
+        /* The actual framebuffer size is 2x the UI size */
+        .setSize({128.0f, 48.0f}, Vector2{ImageSize}, ImageSize)
+        .setStyle(Ui::McssDarkStyle{});
+
+    Ui::DebugLayer& debugLayer = ui.setLayerInstance(Containers::pointer<Ui::DebugLayerGL>(ui.createLayer(), Ui::DebugLayerSource::NodeDataAttachmentDetails|Ui::DebugLayerSource::NodeHierarchy, Ui::DebugLayerFlag::NodeHighlight|Ui::DebugLayerFlag::ColorAlways));
+
+    /* Button code, default visual state with no highlight. Adding some extra
+       nodes and data to have the listed handles non-trivial. */
+    ui.createNode({}, {});
+    ui.createNode({}, {});
+    ui.createNode({}, {});
+    ui.createNode({}, {});
+    Ui::NodeHandle root = Ui::snap(ui, Ui::Snap::Fill, {});
+    ui.removeNode(ui.createNode({}, {}));
+    Ui::NodeHandle hidden = Ui::snap(ui, Ui::Snap::Fill, {}, Ui::NodeFlag::Hidden);
+    Ui::button(Ui::snap(ui, {}, hidden, {}), Ui::Icon::Yes, "Accept");
+    Ui::button(Ui::snap(ui, {}, hidden, {}), Ui::Icon::Yes, "Accept");
+    Ui::button(Ui::snap(ui, {}, hidden, {}), Ui::Icon::Yes, "Accept");
+    /* Yeah this one deletes itself right away */
+    Ui::Button{Ui::snap(ui, {}, hidden, {}), ""};
+    ui.update();
+
+/* [button] */
+Ui::NodeHandle button = Ui::button(DOXYGEN_ELLIPSIS(Ui::snap(ui, {}, root, {112, 32})), Ui::Icon::Yes, "Accept");
+
+ui.eventLayer().onTapOrClick(button, []{
+    DOXYGEN_ELLIPSIS()
+});
+/* [button] */
+
+    ui.renderer().compositingFramebuffer().clearColor(0, 0x00000000_rgbaf);
+    ui.draw();
+    converter->convertToFile(unpremultiply(ui.renderer().compositingFramebuffer().read({{}, ImageSize}, {PixelFormat::RGBA8Unorm})), "ui-debuglayer-node.png");
+
+    /* Highlighted output and visual state */
+    Containers::String out;
+    {
+        Debug redirectOutput{&out};
+        CORRADE_INTERNAL_ASSERT(debugLayer.highlightNode(button));
+    }
+    Debug{} << out;
+    Utility::Path::write("ui-debuglayer-node-highlight.ansi", out);
+
+    ui.renderer().compositingFramebuffer().clearColor(0, 0x00000000_rgbaf);
+    ui.draw();
+    converter->convertToFile(unpremultiply(ui.renderer().compositingFramebuffer().read({{}, ImageSize}, {PixelFormat::RGBA8Unorm})), "ui-debuglayer-node-highlight.png");
+
+    /* Node and layer names. NodeDataAttachmentDetails is enabled so casting to
+       a base type to not have the integration picked yet */
+    /** @todo once the integration does something even without
+        NodeDataAttachmentDetails being set (such as showing layer flags), this
+        won't be enough and there needs to be multiple debug layers */
+    debugLayer.setLayerName(static_cast<Ui::AbstractLayer&>(ui.baseLayer()), "Base");
+    debugLayer.setLayerName(static_cast<Ui::AbstractLayer&>(ui.textLayer()), "Text");
+    debugLayer.setLayerName(static_cast<Ui::AbstractLayer&>(ui.eventLayer()), "Event");
+    debugLayer.setNodeName(button, "Accept button");
+
+    out = {};
+    {
+        Debug redirectOutput{&out};
+        CORRADE_INTERNAL_ASSERT(debugLayer.highlightNode(button));
+    }
+    Debug{} << out;
+    Utility::Path::write("ui-debuglayer-node-highlight-names.ansi", out);
+
+    /* Layer data attachment details. Deliberately set in order that doesn't
+       match the draw order, to hint that it doesn't matter. */
+
+/* [button-names] */
+debugLayer.setLayerName(ui.eventLayer(), "Event");
+debugLayer.setLayerName(ui.baseLayer(), "Base");
+debugLayer.setLayerName(ui.textLayer(), "Text");
+debugLayer.setNodeName(button, "Accept button");
+/* [button-names] */
+
+    out = {};
+    {
+        Debug redirectOutput{&out};
+        CORRADE_INTERNAL_ASSERT(debugLayer.highlightNode(button));
+    }
+    Debug{} << out;
+    Utility::Path::write("ui-debuglayer-node-highlight-details.ansi", out);
+
+    /* Custom integration. Creating some more nodes and unused data to not have
+       the listed handles too close to each other. */
+
+/* [integration-setLayerName] */
+ColorLayer& colorLayer = ui.setLayerInstance(DOXYGEN_ELLIPSIS(Containers::pointer<ColorLayer>(ui.createLayer())));
+DOXYGEN_ELLIPSIS()
+
+debugLayer.setLayerName(colorLayer, "Shiny");
+/* [integration-setLayerName] */
+
+    ui.createNode({}, {});
+    Ui::NodeHandle parent = ui.createNode(root, {}, {});
+    Ui::NodeHandle colorNode = ui.createNode(parent, {}, {});
+    colorLayer.create();
+    colorLayer.create();
+    colorLayer.create();
+    colorLayer.create();
+    colorLayer.remove(colorLayer.create());
+    colorLayer.remove(colorLayer.create());
+    colorLayer.create(colorNode);
+    colorLayer.create();
+    colorLayer.create();
+    colorLayer.create(colorNode);
+
+    ui.update();
+    out = {};
+    {
+        Debug redirectOutput{&out};
+        CORRADE_INTERNAL_ASSERT(debugLayer.highlightNode(colorNode));
+    }
+    Debug{} << out;
+    Utility::Path::write("ui-debuglayer-integration.ansi", out);
+
+    /* AbstractVisualLayer integration, default behavior */
+    Ui::BaseLayerGL::Shared baseLayerShared{
+        Ui::BaseLayerGL::Shared::Configuration{17}
+    };
+    baseLayerShared.setStyleTransition<Style,
+        to<&Transition::inactiveOut>,
+        to<&Transition::inactiveOver>,
+        to<&Transition::inactiveOut>,
+        to<&Transition::inactiveOver>,
+        to<&Transition::pressedOut>,
+        to<&Transition::pressedOver>,
+        nullptr>();
+    baseLayerShared.setStyle({}, {
+        {}, {}, {}, {}, {}, {}, {}, {},
+        {}, {}, {}, {}, {}, {}, {}, {},
+        {}
+    }, {});
+
+    Ui::BaseLayer& baseLayer = ui.setLayerInstance(Containers::pointer<Ui::BaseLayerGL>(ui.createLayer(), baseLayerShared));
+    debugLayer.setLayerName(baseLayer, "Styled");
+
+    ui.createNode({}, {});
+    ui.createNode({}, {});
+    Ui::NodeHandle baseNode = ui.createNode(parent, {}, {});
+    baseLayer.create(0);
+    baseLayer.create(0);
+    baseLayer.create(0);
+    baseLayer.create(0);
+    baseLayer.create(Style::ButtonHovered, baseNode);
+
+    ui.update();
+    out = {};
+    {
+        Debug redirectOutput{&out};
+        CORRADE_INTERNAL_ASSERT(debugLayer.highlightNode(baseNode));
+    }
+    Debug{} << out;
+    Utility::Path::write("ui-debuglayer-abstractvisuallayer.ansi", out);
+
+    /* AbstractVisualLayer integration with supplied style names */
+
+/* [abstractvisuallayer-style-names] */
+debugLayer.setLayerName(baseLayer, "Styled", [](UnsignedInt style) {
+    using namespace Containers::Literals;
+
+    switch(Style(style)) {
+        case Style::Button: return "Button"_s;
+        case Style::ButtonHovered: return "ButtonHovered"_s;
+        case Style::ButtonPressed: return "ButtonPressed"_s;
+        case Style::ButtonPressedHovered: return "ButtonPressedHovered"_s;
+        DOXYGEN_ELLIPSIS()
+    }
+
+    return ""_s;
+});
+/* [abstractvisuallayer-style-names] */
+
+    ui.update();
+    out = {};
+    {
+        Debug redirectOutput{&out};
+        CORRADE_INTERNAL_ASSERT(debugLayer.highlightNode(baseNode));
+    }
+    Debug{} << out;
+    Utility::Path::write("ui-debuglayer-abstractvisuallayer-style-names.ansi", out);
+
+    /* EventLayer integration */
+    ui.createNode({}, {});
+    ui.createNode({}, {});
+    Ui::NodeHandle eventNode = ui.createNode(parent, {}, {});
+    ui.eventLayer().onTapOrClick(eventNode, []{});
+
+    ui.update();
+    out = {};
+    {
+        Debug redirectOutput{&out};
+        CORRADE_INTERNAL_ASSERT(debugLayer.highlightNode(eventNode));
+    }
+    Debug{} << out;
+    Utility::Path::write("ui-debuglayer-eventlayer.ansi", out);
+
+    return 0;
+}
+
+}
+
+MAGNUM_WINDOWLESSAPPLICATION_MAIN(UiDebugLayer)

@@ -1540,6 +1540,12 @@ variants that include cursor and selection styles. Depending on the subset of
 editing styles you want to have for a particular dynamic style, use
 @ref setDynamicStyleWithCursor(), @ref setDynamicStyleWithSelection() or
 @ref setDynamicStyleWithCursorSelection() instead of @ref setDynamicStyle().
+
+@section Ui-TextLayer-debug-integration Debug layer integration
+
+When using @ref Ui-DebugLayer-node-highlight "DebugLayer node highlighting",
+this layer inherits @ref Ui-AbstractVisualLayer-debug-integration "debug integration from the AbstractVisualLayer".
+See its documentation for more information.
 */
 class MAGNUM_UI_EXPORT TextLayer: public AbstractVisualLayer {
     public:

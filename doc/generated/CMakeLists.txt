@@ -53,6 +53,13 @@ target_link_libraries(ui-baselayer PRIVATE
     Magnum::WindowlessApplication
     MagnumExtras::Ui)
 
+add_executable(ui-debuglayer ui-debuglayer.cpp)
+target_link_libraries(ui-debuglayer PRIVATE
+    Magnum::GL
+    Magnum::Trade
+    Magnum::WindowlessApplication
+    MagnumExtras::Ui)
+
 add_executable(ui-linelayer ui-linelayer.cpp)
 target_link_libraries(ui-linelayer PRIVATE
     Magnum::GL

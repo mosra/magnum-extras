@@ -35,6 +35,7 @@
 
 #include "Magnum/Ui/BaseLayerGL.h"
 #include "Magnum/Ui/BaseLayerAnimator.h"
+#include "Magnum/Ui/DebugLayerGL.h"
 #include "Magnum/Ui/EventLayer.h"
 #include "Magnum/Ui/Handle.h"
 #include "Magnum/Ui/LineLayerGL.h"
@@ -257,6 +258,16 @@ DOXYGEN_ELLIPSIS()
 
 baseLayer.assignAnimator(animator);
 /* [BaseLayerStyleAnimator-setup2] */
+}
+
+{
+Ui::AbstractUserInterface ui{{100, 100}};
+/* [DebugLayer-setup] */
+ui.setLayerInstance(Containers::pointer<Ui::DebugLayerGL>(
+    ui.createLayer(),
+    Ui::DebugLayerSource::NodeHierarchy|Ui::DebugLayerSource::NodeDataAttachments,
+    Ui::DebugLayerFlag::NodeHighlight));
+/* [DebugLayer-setup] */
 }
 
 {

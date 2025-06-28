@@ -714,6 +714,12 @@ for example when updating plotted values.
 Changing the point / index count is supported however and internally there's
 also no distinction between a strip, loop or an indexed line, so a strip can be
 safely changed to a loop etc.
+
+@section Ui-LineLayer-debug-integration Debug layer integration
+
+When using @ref Ui-DebugLayer-node-highlight "DebugLayer node highlighting",
+this layer inherits @ref Ui-AbstractVisualLayer-debug-integration "debug integration from the AbstractVisualLayer".
+See its documentation for more information.
 */
 class MAGNUM_UI_EXPORT LineLayer: public AbstractVisualLayer {
     public:
