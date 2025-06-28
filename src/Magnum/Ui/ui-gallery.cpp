@@ -39,14 +39,18 @@
 
 #include "Magnum/Ui/Anchor.h"
 #include "Magnum/Ui/Application.h"
+#include "Magnum/Ui/BaseLayer.h" /* for DebugLayer style names */
+#include "Magnum/Ui/EventLayer.h" /* for DebugLayer style names */
 #include "Magnum/Ui/Button.h"
+#include "Magnum/Ui/DebugLayerGL.h"
 #include "Magnum/Ui/Event.h"
 #include "Magnum/Ui/Input.h"
 #include "Magnum/Ui/Label.h"
 #include "Magnum/Ui/NodeFlags.h"
 #include "Magnum/Ui/SnapLayouter.h"
 #include "Magnum/Ui/Style.h"
-#include "Magnum/Ui/TextLayer.h" /** @todo remove once Input has cursor APIs */
+#include "Magnum/Ui/Style.hpp" /* for DebugLayer style names */
+#include "Magnum/Ui/TextLayer.h" /* for DebugLayer style names */
 #include "Magnum/Ui/TextProperties.h"
 #include "Magnum/Ui/UserInterfaceGL.h"
 
@@ -73,11 +77,20 @@ find_package(MagnumExtras REQUIRED ui-gallery)
 add_custom_command(OUTPUT ... COMMAND MagnumExtras::ui-gallery ...)
 @endcode
 
+@section magnum-ui-gallery-controls Controls
+
+-   @m_class{m-label m-warning} **Ctrl**
+    @m_class{m-label m-default} **right mouse button** (or
+    @m_class{m-label m-warning} **Ctrl** @m_class{m-label m-default} **pen eraser**
+    in case of a pen input) highlights a node under cursor using
+    @ref Ui::DebugLayer if the `--debug` option is enabled, printing its
+    details to the console
+
 @section magnum-ui-gallery-usage Usage
 
 @code{.sh}
 magnum-ui-gallery [--magnum-...] [-h|--help] [--subdivided-quads] [--profile]
-    [--no-vsync]
+    [--debug] [--no-vsync]
 @endcode
 
 Arguments:
@@ -87,6 +100,7 @@ Arguments:
     @ref Ui::BaseLayerSharedFlag::SubdividedQuads
 -   `--profile` --- enable frame profiling using
     @ref DebugTools::FrameProfilerGL printed to the console
+-   `--debug` --- enable @ref Ui::DebugLayer for node inspection
 -   `--no-vsync` --- disable VSync for frame profiling
 -   `--magnum-...` --- engine-specific options (see
     @ref GL-Context-usage-command-line for details)
@@ -125,6 +139,7 @@ UiGallery::UiGallery(const Arguments& arguments): Platform::Application{argument
     Utility::Arguments args;
     args.addBooleanOption("subdivided-quads").setHelp("subdivided-quads", "enable BaseLayerSharedFlag::SubdividedQuads")
         .addBooleanOption("profile").setHelp("profile", "enable frame profiling printed to the console")
+        .addBooleanOption("debug").setHelp("debug", "enable debug layer for node inspection")
         #ifndef CORRADE_TARGET_EMSCRIPTEN
         .addBooleanOption("no-vsync").setHelp("no-vsync", "disable VSync for frame profiling")
         #endif
@@ -304,6 +319,39 @@ UiGallery::UiGallery(const Arguments& arguments): Platform::Application{argument
     GL::Renderer::setClearColor(0x22272e_rgbf);
     GL::Renderer::enable(GL::Renderer::Feature::FaceCulling);
     GL::Renderer::setBlendFunction(GL::Renderer::BlendFunction::One, GL::Renderer::BlendFunction::OneMinusSourceAlpha);
+
+    /* Debug layer and a floating node for showing debug output, hidden by
+       default. Doxygen is confused about the includes, so exclude all this
+       from its prying eyes. */
+    #ifndef DOXYGEN_GENERATING_OUTPUT
+    if(args.isSet("debug")) {
+        Ui::DebugLayer& debugLayer = _ui.setLayerInstance(Containers::pointer<Ui::DebugLayerGL>(
+            _ui.createLayer(),
+            Ui::DebugLayerSource::NodeHierarchy|Ui::DebugLayerSource::NodeDataAttachmentDetails,
+            Ui::DebugLayerFlag::NodeHighlight));
+        debugLayer.setLayerName(_ui.baseLayer(), "BaseLayer", [](UnsignedInt style) -> Containers::StringView {
+            switch(Ui::Implementation::BaseStyle(style)) {
+                #define _c(name, ...) case Ui::Implementation::BaseStyle::name: return #name;
+                #include "Magnum/Ui/Implementation/baseStyleUniformsMcssDark.h"
+                #undef _c
+            }
+            CORRADE_INTERNAL_ASSERT_UNREACHABLE();
+        });
+        debugLayer.setLayerName(_ui.textLayer(), "TextLayer", [](UnsignedInt style) -> Containers::StringView {
+            switch(Ui::Implementation::TextStyle(style)) {
+                #define _c(name, suffix, ...) case Ui::Implementation::TextStyle::name##suffix: return #name #suffix;
+                #define _e _c
+                #define _s _c
+                #include "Magnum/Ui/Implementation/textStyleMcssDark.h"
+                #undef _c
+                #undef _e
+                #undef _s
+            }
+            CORRADE_INTERNAL_ASSERT_UNREACHABLE();
+        });
+        debugLayer.setLayerName(_ui.eventLayer(), "EventLayer");
+    }
+    #endif
 }
 
 void UiGallery::viewportEvent(ViewportEvent& event) {
