@@ -309,6 +309,8 @@ for example to open a keypad or an autocompletion popup.
 */
 class MAGNUM_UI_EXPORT EventLayer: public AbstractLayer {
     public:
+        class DebugIntegration;
+
         /**
          * @brief Constructor
          * @param handle    Layer handle returned from
@@ -896,6 +898,7 @@ class MAGNUM_UI_EXPORT EventLayer: public AbstractLayer {
         void remove(LayerDataHandle handle);
 
     private:
+        friend DebugIntegration;
         /* Updates usedScopedConnectionCount */
         friend EventConnection;
 
@@ -919,6 +922,17 @@ class MAGNUM_UI_EXPORT EventLayer: public AbstractLayer {
 
         struct State;
         Containers::Pointer<State> _state;
+};
+
+/**
+@brief Debug layer integration
+*/
+class MAGNUM_UI_EXPORT EventLayer::DebugIntegration {
+    public:
+        #ifndef DOXYGEN_GENERATING_OUTPUT
+        /* Used internally by DebugLayer, no point in documenting it here */
+        void print(Debug& out, const EventLayer& layer, const Containers::StringView& layerName, LayerDataHandle data);
+        #endif
 };
 
 inline EventConnection::~EventConnection()  {

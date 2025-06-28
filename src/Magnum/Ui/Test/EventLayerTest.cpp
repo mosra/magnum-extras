@@ -30,9 +30,11 @@
 #include <Corrade/Containers/String.h>
 #include <Corrade/TestSuite/Tester.h>
 #include <Corrade/TestSuite/Compare/Numeric.h>
+#include <Corrade/TestSuite/Compare/String.h>
 #include <Magnum/Math/Complex.h>
 
 #include "Magnum/Ui/AbstractUserInterface.h"
+#include "Magnum/Ui/DebugLayer.h" /* for debugIntegration() */
 #include "Magnum/Ui/EventLayer.h"
 #include "Magnum/Ui/Event.h"
 #include "Magnum/Ui/Handle.h"
@@ -111,6 +113,9 @@ struct EventLayerTest: TestSuite::Tester {
     void focus();
     void blur();
     void focusBlurFromUserInterface();
+
+    void debugIntegration();
+    void debugIntegrationNoCallback();
 };
 
 using namespace Math::Literals;
@@ -387,6 +392,46 @@ const struct {
         &EventLayer::onRightClick, PointerEventSource::Mouse, Pointer::MouseRight},
 };
 
+const struct {
+    const char* name;
+    bool layerName;
+    const char* expected;
+} DebugIntegrationData[]{
+    {"no layer name", false,
+        "Node {0x1, 0x1}\n"
+        "  Data {0x0, 0x1} from layer {0x0, 0x3} reacting to pointer enter\n"
+        "  Data {0x1, 0x1} from layer {0x0, 0x3} reacting to pointer leave\n"
+        "  Data {0x2, 0x1} from layer {0x0, 0x3} reacting to pointer press\n"
+        "  Data {0x3, 0x1} from layer {0x0, 0x3} reacting to pointer release\n"
+        "  Data {0x4, 0x1} from layer {0x0, 0x3} reacting to focus\n"
+        "  Data {0x5, 0x1} from layer {0x0, 0x3} reacting to blur\n"
+        "  Data {0x6, 0x1} from layer {0x0, 0x3} reacting to tap or click\n"
+        "  Data {0x7, 0x1} from layer {0x0, 0x3} reacting to middle click\n"
+        "  Data {0x8, 0x1} from layer {0x0, 0x3} reacting to right click\n"
+        "  Data {0x9, 0x1} from layer {0x0, 0x3} reacting to pointer drag\n"
+        "  Data {0xa, 0x1} from layer {0x0, 0x3} reacting to scroll\n"
+        "  Data {0xb, 0x1} from layer {0x0, 0x3} reacting to pointer drag or scroll\n"
+        "  Data {0xc, 0x1} from layer {0x0, 0x3} reacting to a pinch gesture"},
+    {"", true,
+        "Node {0x1, 0x1}\n"
+        "  Data {0x0, 0x1} from layer {0x0, 0x3} Layarr reacting to pointer enter\n"
+        "  Data {0x1, 0x1} from layer {0x0, 0x3} Layarr reacting to pointer leave\n"
+        "  Data {0x2, 0x1} from layer {0x0, 0x3} Layarr reacting to pointer press\n"
+        "  Data {0x3, 0x1} from layer {0x0, 0x3} Layarr reacting to pointer release\n"
+        "  Data {0x4, 0x1} from layer {0x0, 0x3} Layarr reacting to focus\n"
+        "  Data {0x5, 0x1} from layer {0x0, 0x3} Layarr reacting to blur\n"
+        "  Data {0x6, 0x1} from layer {0x0, 0x3} Layarr reacting to tap or click\n"
+        "  Data {0x7, 0x1} from layer {0x0, 0x3} Layarr reacting to middle click\n"
+        "  Data {0x8, 0x1} from layer {0x0, 0x3} Layarr reacting to right click\n"
+        "  Data {0x9, 0x1} from layer {0x0, 0x3} Layarr reacting to pointer drag\n"
+        "  Data {0xa, 0x1} from layer {0x0, 0x3} Layarr reacting to scroll\n"
+        "  Data {0xb, 0x1} from layer {0x0, 0x3} Layarr reacting to pointer drag or scroll\n"
+        "  Data {0xc, 0x1} from layer {0x0, 0x3} Layarr reacting to a pinch gesture"},
+    /* The last case here is used in debugIntegrationNoCallback() to verify
+       output w/o a callback and for visual color verification, it's expected
+       to be the most complete, executing all coloring code paths */
+};
+
 EventLayerTest::EventLayerTest() {
     addTests({&EventLayerTest::eventConnectionConstruct,
               &EventLayerTest::eventConnectionConstructCopy,
@@ -483,6 +528,11 @@ EventLayerTest::EventLayerTest() {
 
     addInstancedTests({&EventLayerTest::focusBlurFromUserInterface},
         Containers::arraySize(FromUserInterfaceData));
+
+    addInstancedTests({&EventLayerTest::debugIntegration},
+        Containers::arraySize(DebugIntegrationData));
+
+    addTests({&EventLayerTest::debugIntegrationNoCallback});
 }
 
 void EventLayerTest::eventConnectionConstruct() {
@@ -3998,6 +4048,115 @@ void EventLayerTest::focusBlurFromUserInterface() {
         CORRADE_COMPARE(focusCalled, 2);
         CORRADE_COMPARE(blurCalled, 2);
         CORRADE_COMPARE(belowCalled, 0);
+    }
+}
+
+void EventLayerTest::debugIntegration() {
+    auto&& data = DebugIntegrationData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
+    AbstractUserInterface ui{{100, 100}};
+    NodeHandle root = ui.createNode({}, {100, 100});
+    NodeHandle node = ui.createNode(root, {}, {100, 100});
+
+    /* Create and remove a bunch of layers first to have the handle with a
+       non-trivial value */
+    ui.removeLayer(ui.createLayer());
+    ui.removeLayer(ui.createLayer());
+    EventLayer& layer = ui.setLayerInstance(Containers::pointer<EventLayer>(ui.createLayer()));
+
+    /* Create all possible handlers, in order matching the enum */
+    layer.onEnter(node, []{});
+    layer.onLeave(node, []{});
+    layer.onPress(node, []{});
+    layer.onRelease(node, []{});
+    layer.onFocus(node, []{});
+    layer.onBlur(node, []{});
+    layer.onTapOrClick(node, []{});
+    layer.onMiddleClick(node, []{});
+    layer.onRightClick(node, []{});
+    layer.onDrag(node, [](const Vector2&){});
+    layer.onScroll(node, [](const Vector2&){});
+    layer.onDragOrScroll(node, [](const Vector2&){});
+    layer.onPinch(node, [](const Vector2&, const Vector2&, const Complex&, Float){});
+
+    DebugLayer& debugLayer = ui.setLayerInstance(Containers::pointer<DebugLayer>(ui.createLayer(), DebugLayerSource::NodeDataAttachmentDetails, DebugLayerFlag::NodeHighlight));
+
+    Containers::String out;
+    debugLayer.setNodeHighlightCallback([&out](Containers::StringView message) {
+        out = message;
+    });
+    debugLayer.setLayerName(layer, data.layerName ? "Layarr" : "");
+
+    /* Make the debug layer aware of everything */
+    ui.update();
+
+    CORRADE_VERIFY(debugLayer.highlightNode(node));
+    CORRADE_COMPARE_AS(out, data.expected, TestSuite::Compare::String);
+}
+
+void EventLayerTest::debugIntegrationNoCallback() {
+    AbstractUserInterface ui{{100, 100}};
+    NodeHandle root = ui.createNode({}, {100, 100});
+    NodeHandle node = ui.createNode(root, {}, {100, 100});
+
+    /* Create and remove a bunch of layers first to have the handle with a
+       non-trivial value */
+    ui.removeLayer(ui.createLayer());
+    ui.removeLayer(ui.createLayer());
+    EventLayer& layer = ui.setLayerInstance(Containers::pointer<EventLayer>(ui.createLayer()));
+
+    /* Create all possible handlers, in order matching the enum */
+    layer.onEnter(node, []{});
+    layer.onLeave(node, []{});
+    layer.onPress(node, []{});
+    layer.onRelease(node, []{});
+    layer.onFocus(node, []{});
+    layer.onBlur(node, []{});
+    layer.onTapOrClick(node, []{});
+    layer.onMiddleClick(node, []{});
+    layer.onRightClick(node, []{});
+    layer.onDrag(node, [](const Vector2&){});
+    layer.onScroll(node, [](const Vector2&){});
+    layer.onDragOrScroll(node, [](const Vector2&){});
+    layer.onPinch(node, [](const Vector2&, const Vector2&, const Complex&, Float){});
+
+    DebugLayer& debugLayer = ui.setLayerInstance(Containers::pointer<DebugLayer>(ui.createLayer(), DebugLayerSource::NodeDataAttachmentDetails, DebugLayerFlag::NodeHighlight));
+
+    debugLayer.setLayerName(layer, "Layarr");
+
+    /* Make the debug layer aware of everything */
+    ui.update();
+
+    /* Highlight the node for visual color verification */
+    {
+        Debug{} << "======================== visual color verification start =======================";
+
+        debugLayer.addFlags(DebugLayerFlag::ColorAlways);
+
+        CORRADE_VERIFY(debugLayer.highlightNode(node));
+
+        debugLayer.clearFlags(DebugLayerFlag::ColorAlways);
+
+        Debug{} << "======================== visual color verification end =========================";
+    }
+
+    /* Do the same, but this time with output redirection to verify the
+       contents. The internals automatically disable coloring if they detect
+       the output isn't a TTY. */
+    {
+        Containers::String out;
+        Debug redirectOutput{&out};
+        CORRADE_VERIFY(debugLayer.highlightNode(node));
+        /* The output always has a newline at the end which cannot be disabled
+           so strip it to have the comparison match the debugIntegration()
+           case */
+        CORRADE_COMPARE_AS(out,
+            "\n",
+            TestSuite::Compare::StringHasSuffix);
+        CORRADE_COMPARE_AS(out.exceptSuffix("\n"),
+            Containers::arrayView(DebugIntegrationData).back().expected,
+            TestSuite::Compare::String);
     }
 }
 
