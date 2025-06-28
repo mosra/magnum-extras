@@ -48,6 +48,9 @@ Debug& operator<<(Debug& debug, const DebugLayerSource value) {
        in the output. */
     if(value == DebugLayerSource(UnsignedShort(DebugLayerSource::NodeHierarchy|DebugLayerSource::NodeDataAttachments)))
         return debug << DebugLayerSource::NodeHierarchy << Debug::nospace << "|" << Debug::nospace << DebugLayerSource::NodeDataAttachments;
+    /* Similarly for a superset of NodeDataAttachments */
+    if(value == DebugLayerSource(UnsignedShort(DebugLayerSource::NodeHierarchy|DebugLayerSource::NodeDataAttachmentDetails)))
+        return debug << DebugLayerSource::NodeHierarchy << Debug::nospace << "|" << Debug::nospace << DebugLayerSource::NodeDataAttachmentDetails;
 
     debug << "Ui::DebugLayerSource" << Debug::nospace;
 
@@ -58,6 +61,7 @@ Debug& operator<<(Debug& debug, const DebugLayerSource value) {
         _c(Layers)
         _c(NodeHierarchy)
         _c(NodeDataAttachments)
+        _c(NodeDataAttachmentDetails)
         #undef _c
         /* LCOV_EXCL_STOP */
     }
@@ -67,12 +71,20 @@ Debug& operator<<(Debug& debug, const DebugLayerSource value) {
 
 Debug& operator<<(Debug& debug, const DebugLayerSources value) {
     return Containers::enumSetDebugOutput(debug, value, "Ui::DebugLayerSources{}", {
+        /* This one is a superset of NodeDataAttachments and NodeHierarchy,
+           meaning printing it regularly would result in
+           `DebugLayerSource::NodeHierarchy|DebugLayerSource::NodeDataAttachments|DebugLayerSource(0x10)`
+           in the output. So we pass both and let the DebugLayerSource printer
+           deail with that. */
+        DebugLayerSource(UnsignedShort(DebugLayerSource::NodeHierarchy|DebugLayerSource::NodeDataAttachmentDetails)),
         /* Both are a superset of Nodes, meaning printing just one would result
            in `DebugLayerSource::NodeHierarchy|DebugLayerSource::Layers|DebugLayerSource(0x8)`
            in the output. So we pass both and let the DebugLayerSource printer
            deail with that. */
         DebugLayerSource(UnsignedShort(DebugLayerSource::NodeHierarchy|DebugLayerSource::NodeDataAttachments)),
         DebugLayerSource::NodeHierarchy,
+        DebugLayerSource::NodeDataAttachmentDetails,
+        /* Implied by NodeDataAttachmentDetails, has to be after */
         DebugLayerSource::NodeDataAttachments,
         /* Implied by NodeHierarchy and NodeDataAttachments, has to be after */
         DebugLayerSource::Nodes,
@@ -283,10 +295,15 @@ void** DebugLayer::setLayerNameDebugIntegration(const AbstractLayer& instance, c
 
     Implementation::DebugLayerLayer& layer = state.layers[layerId];
     CORRADE_INTERNAL_DEBUG_ASSERT(!layer.integration && !layer.deleter && !layer.print);
-    layer.deleter = deleter;
-    layer.print = print;
 
-    return &layer.integration;
+    /* Save the integration only if node data attachment details are wanted (as
+       for example one might not want such amount of verbosity). If not, return
+       null so the instance doesn't get allocated at all. */
+    if(state.sources >= DebugLayerSource::NodeDataAttachmentDetails) {
+        layer.deleter = deleter;
+        layer.print = print;
+        return &layer.integration;
+    } else return nullptr;
 }
 
 Color4 DebugLayer::nodeHighlightColor() const {

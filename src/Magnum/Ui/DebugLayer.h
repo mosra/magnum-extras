@@ -68,6 +68,13 @@ enum class DebugLayerSource: UnsignedShort {
      * @ref DebugLayerSource::Nodes and @ref DebugLayerSource::Layers.
      */
     NodeDataAttachments = Nodes|Layers|(1 << 3),
+
+    /**
+     * Track per-node layer data attachments with per-data details provided by
+     * layer-specific debug integrations. Implies
+     * @ref DebugLayerSource::NodeDataAttachments.
+     */
+    NodeDataAttachmentDetails = NodeDataAttachments|(1 << 4),
 };
 
 /**
@@ -572,12 +579,10 @@ template<class T> DebugLayer& DebugLayer::setLayerName(const T& layer, const Con
         [](void* integration, Debug& out, const AbstractLayer& layer, const Containers::StringView& name, LayerDataHandle data) {
             static_cast<typename T::DebugIntegration*>(integration)->print(out, static_cast<const T&>(layer), name, data);
         });
-    /* Done this way so failing graceful asserts in tests don't cause a leak.
-       Yes, shitty, I know. */
-    #ifdef CORRADE_GRACEFUL_ASSERT
-    if(instance)
-    #endif
-    {
+    /* If the instance is null, either NodeDataAttachmentDetails isn't set, in
+       which case the instance wouldn't be used anyway, or a graceful assert
+       happened. Don't allocate anything in that case. */
+    if(instance) {
         #if defined(CORRADE_TARGET_GCC) && !defined(CORRADE_TARGET_CLANG) && __GNUC__ < 5
         /* Can't use {} because for plain structs it would attempt to
            initialize the first member with `integration` instead of calling
