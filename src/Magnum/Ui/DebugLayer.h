@@ -107,6 +107,26 @@ enum class DebugLayerFlag: UnsignedByte {
      *      @ref DebugLayer::setNodeHighlightCallback()
      */
     NodeHighlight = 1 << 0,
+
+    /**
+     * Print all messages without color, even if
+     * @relativeref{Corrade::Utility,Debug::isTty()} returns @cpp true @ce. By
+     * default, messages are printed colored if the output is detected to be a
+     * TTY, and strings passed to the callback specified in
+     * @ref DebugLayer::setNodeHighlightCallback() are without color. If
+     * @ref DebugLayerFlag::ColorAlways is specified as well, this flag has a
+     * priority.
+     */
+    ColorOff = 1 << 1,
+
+    /**
+     * Print all messages with color, even if
+     * @relativeref{Corrade::Utility,Debug::isTty()} returns @cpp false @ce and
+     * even in case the message is passed to the callback specified in
+     * @ref DebugLayer::setNodeHighlightCallback(). If
+     * @ref DebugLayerFlag::ColorOff is specified as well, it has a priority.
+     */
+    ColorAlways = 1 << 2,
 };
 
 /**
