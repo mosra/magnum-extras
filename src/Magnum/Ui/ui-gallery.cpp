@@ -76,7 +76,8 @@ add_custom_command(OUTPUT ... COMMAND MagnumExtras::ui-gallery ...)
 @section magnum-ui-gallery-usage Usage
 
 @code{.sh}
-magnum-ui-gallery [--magnum-...] [-h|--help] [--style STYLE]
+magnum-ui-gallery [--magnum-...] [-h|--help] [--subdivided-quads] [--profile]
+    [--no-vsync]
 @endcode
 
 Arguments:
