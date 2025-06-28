@@ -619,6 +619,12 @@ class MAGNUM_UI_EXPORT AbstractVisualLayer::DebugIntegration {
          * it's not called for dynamic styles which are considered temporary.
          */
         /*implicit*/ DebugIntegration(Containers::StringView(*styleName)(UnsignedInt style) = nullptr): _styleName{styleName} {}
+        #ifndef DOXYGEN_GENERATING_OUTPUT
+        /* Needed because while passing a lambda directly to the constructor
+           works, passing it to DebugLayer::setLayerName() doesn't, as there's
+           too many conversions or some such. Sigh, C++. */
+        template<class T, typename std::enable_if<std::is_convertible<T, Containers::StringView(*)(UnsignedInt)>::value, int>::type = 0> /*implicit*/ DebugIntegration(T styleName): DebugIntegration{static_cast<Containers::StringView(*)(UnsignedInt)>(styleName)} {}
+        #endif
 
         #ifndef DOXYGEN_GENERATING_OUTPUT
         /* Used internally by DebugLayer, no point in documenting it here */
