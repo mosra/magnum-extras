@@ -22,7 +22,7 @@ mkdir build && cd build
 cmake .. \
     -DCMAKE_CXX_FLAGS="$CMAKE_CXX_FLAGS" \
     -DCMAKE_INSTALL_PREFIX=$HOME/deps \
-    -DCMAKE_PREFIX_PATH="$HOME/sdl2;$HOME/swiftshader" \
+    -DCMAKE_PREFIX_PATH="$HOME/swiftshader" \
     -DCMAKE_INSTALL_RPATH="$HOME/deps/lib;$HOME/swiftshader/lib" \
     -DCMAKE_BUILD_TYPE=Debug \
     -DMAGNUM_TARGET_GLES=ON \
@@ -67,7 +67,7 @@ mkdir build && cd build
 cmake .. \
     -DCMAKE_CXX_FLAGS="$CMAKE_CXX_FLAGS" \
     -DCMAKE_INSTALL_PREFIX=$HOME/deps \
-    -DCMAKE_PREFIX_PATH="$HOME/deps;$HOME/sdl2;$HOME/swiftshader" \
+    -DCMAKE_PREFIX_PATH="$HOME/deps;$HOME/swiftshader" \
     -DCMAKE_INSTALL_RPATH="$HOME/deps/lib;$HOME/swiftshader/lib" \
     -DCMAKE_BUILD_TYPE=Debug \
     -DMAGNUM_WITH_PLAYER=$TARGET_GLES3 \
