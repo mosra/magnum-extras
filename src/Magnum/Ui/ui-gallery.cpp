@@ -372,49 +372,57 @@ void UiGallery::drawEvent() {
     _profiler.printStatistics(50);
 
     swapBuffers();
-    if(_ui.state() || _profiler.isEnabled()) redraw();
+    if(_ui.state() || _profiler.isEnabled())
+        redraw();
 }
 
 void UiGallery::pointerPressEvent(PointerEvent& event) {
     _ui.pointerPressEvent(event);
 
-    if(_ui.state()) redraw();
+    if(_ui.state())
+        redraw();
 }
 
 void UiGallery::pointerReleaseEvent(PointerEvent& event) {
     _ui.pointerReleaseEvent(event);
 
-    if(_ui.state()) redraw();
+    if(_ui.state())
+        redraw();
 }
 
 void UiGallery::pointerMoveEvent(PointerMoveEvent& event) {
     _ui.pointerMoveEvent(event);
 
-    if(_ui.state()) redraw();
+    if(_ui.state())
+        redraw();
 }
 
 void UiGallery::scrollEvent(ScrollEvent& event) {
     _ui.scrollEvent(event);
 
-    if(_ui.state()) redraw();
+    if(_ui.state())
+        redraw();
 }
 
 void UiGallery::keyPressEvent(KeyEvent& event) {
     _ui.keyPressEvent(event);
 
-    if(_ui.state()) redraw();
+    if(_ui.state())
+        redraw();
 }
 
 void UiGallery::keyReleaseEvent(KeyEvent& event) {
     _ui.keyReleaseEvent(event);
 
-    if(_ui.state()) redraw();
+    if(_ui.state())
+        redraw();
 }
 
 void UiGallery::textInputEvent(TextInputEvent& event) {
     _ui.textInputEvent(event);
 
-    if(_ui.state()) redraw();
+    if(_ui.state())
+        redraw();
 }
 
 }}
