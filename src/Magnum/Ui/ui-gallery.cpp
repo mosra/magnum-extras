@@ -170,7 +170,7 @@ UiGallery::UiGallery(const Arguments& arguments): Platform::Application{argument
                 ?
                     DebugTools::FrameProfilerGL::Value::GpuDuration : DebugTools::FrameProfilerGL::Values{}),
             50);
-    } else _profiler.disable(); /** @todo why this isn't a default? */
+    }
 
     Ui::NodeHandle root = _ui.createNode({}, _ui.size());
 
