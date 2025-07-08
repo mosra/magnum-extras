@@ -64,7 +64,13 @@ cmake .. \
     -G Ninja
 ninja $NINJA_JOBS
 
-ASAN_OPTIONS="color=always" LSAN_OPTIONS="color=always" CORRADE_TEST_COLOR=ON ctest -V -E "GLTest|GLBenchmark"
+export CORRADE_TEST_COLOR=ON
+# Sanitizer options are used only in sanitizer builds, they do nothing
+# elsewhere
+export ASAN_OPTIONS="color=always"
+export LSAN_OPTIONS="color=always"
+
+ctest -V -E "GLTest|GLBenchmark"
 
 # Test install, after running the tests as for them it shouldn't be needed
 ninja install
