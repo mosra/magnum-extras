@@ -49,9 +49,14 @@ check() {
     export CORRADE_TEST_SKIP_BENCHMARKS=ON
     export CORRADE_TEST_COLOR=ON
 
+    # The disabled extensions are a subset of what's tested in Magnum itself,
+    # covering just what is actually used here. Extensions for UBOs or explicit
+    # attribute locations are assumed to be present always by the UI library so
+    # disabling those isn't tested. Keep in sync with PKGBUILD-coverage.
     for config in Debug $_buildtype; do
         ctest -C $config --output-on-failure -j9
-        MAGNUM_DISABLE_EXTENSIONS="GL_ARB_shading_language_420pack GL_ARB_explicit_uniform_location" ctest -C $config --output-on-failure -j9 -R GLTest
+        MAGNUM_DISABLE_EXTENSIONS="GL_ARB_multi_bind GL_ARB_shading_language_420pack GL_ARB_explicit_uniform_location" ctest -C $config --output-on-failure -j9 -R GLTest
+        MAGNUM_DISABLE_EXTENSIONS="GL_ARB_direct_state_access GL_ARB_robustness" ctest -C $config --output-on-failure -j9 -R GLTest
     done
 }
 
