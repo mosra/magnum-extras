@@ -277,7 +277,6 @@ jobs:
       CMAKE_CXX_FLAGS: --coverage
       LCOV_EXTRA_OPTS: --gcov-tool /usr/bin/gcov-4.8
       CONFIGURATION: Debug
-      PLATFORM_GL_API: GLX
     steps:
     # libidn11 needed by CMake
     - install-base-linux:
@@ -297,7 +296,6 @@ jobs:
     environment:
       CMAKE_CXX_FLAGS: --coverage
       CONFIGURATION: Debug
-      PLATFORM_GL_API: GLX
     steps:
     # Not installing the old GCC 4.8 and CMake 3.5 to speed up. These are
     # tested more than enough on other jobs. Machine executors need sudo.
@@ -314,7 +312,6 @@ jobs:
       CMAKE_CXX_FLAGS: --coverage
       LCOV_EXTRA_OPTS: --gcov-tool /usr/bin/gcov-4.8
       CONFIGURATION: Debug
-      PLATFORM_GL_API: EGL
       # STUPID yml interprets unquoted ON as a boolean
       TARGET_GLES2: "ON"
     steps:
@@ -337,7 +334,6 @@ jobs:
       CMAKE_CXX_FLAGS: --coverage
       LCOV_EXTRA_OPTS: --gcov-tool /usr/bin/gcov-4.8
       CONFIGURATION: Debug
-      PLATFORM_GL_API: EGL
       # STUPID yml interprets unquoted OFF as a boolean
       TARGET_GLES2: "OFF"
     steps:
@@ -365,7 +361,6 @@ jobs:
       CMAKE_CXX_FLAGS: --coverage
       LCOV_EXTRA_OPTS: --gcov-tool /usr/bin/gcov-4.8
       CONFIGURATION: Debug
-      PLATFORM_GL_API: GLX
     steps:
     # libidn11 needed by CMake
     - install-base-linux:
@@ -387,7 +382,6 @@ jobs:
       BUILD_DEPRECATED: "OFF"
       CMAKE_CXX_FLAGS: -DCORRADE_NO_ASSERT
       CONFIGURATION: Release
-      PLATFORM_GL_API: GLX
     steps:
     # libidn11 needed by CMake
     - install-base-linux:
@@ -410,7 +404,6 @@ jobs:
       BUILD_APPLICATIONS: "OFF"
       CMAKE_CXX_FLAGS: -fsanitize=address
       CONFIGURATION: Debug
-      PLATFORM_GL_API: GLX
     steps:
     # libidn11 needed by CMake
     - install-base-linux:
@@ -426,7 +419,6 @@ jobs:
     environment:
       CMAKE_CXX_FLAGS: --coverage
       CONFIGURATION: Debug
-      PLATFORM_GL_API: CGL
     steps:
     - install-base-macos:
         extra: sdl2 glfw
@@ -439,7 +431,6 @@ jobs:
     environment:
       CMAKE_CXX_FLAGS: --coverage
       CONFIGURATION: Debug
-      PLATFORM_GL_API: EGL
       # STUPID yml interprets unquoted OFF as a boolean
       TARGET_GLES2: "OFF"
     steps:
@@ -458,7 +449,6 @@ jobs:
       BUILD_STATIC: "ON"
       CMAKE_CXX_FLAGS: --coverage
       CONFIGURATION: Debug
-      PLATFORM_GL_API: CGL
     steps:
     - install-base-macos:
         extra: sdl2 glfw
