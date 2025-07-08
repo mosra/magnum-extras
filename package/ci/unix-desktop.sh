@@ -39,7 +39,7 @@ cmake .. \
     -DMAGNUM_WITH_TEXT=ON \
     -DMAGNUM_WITH_TEXTURETOOLS=ON \
     -DMAGNUM_WITH_OPENGLTESTER=ON \
-    `# Application libraries needed by various Whee tests` \
+    `# Application libraries needed by various Ui tests` \
     -DMAGNUM_WITH_SDL2APPLICATION=ON \
     -DMAGNUM_WITH_GLFWAPPLICATION=ON \
     -DMAGNUM_BUILD_DEPRECATED=$BUILD_DEPRECATED \
