@@ -345,6 +345,14 @@ if(MAGNUM_BUILD_GL_TESTS)
         endif()
     endif()
 
+    corrade_add_test(UiBlurShaderGLBenchmark BlurShaderGLBenchmark.cpp
+        LIBRARIES
+            # There are no asserts used but we need to use a symbol that's only
+            # exported in the test lib
+            MagnumUiTestLib
+            Magnum::DebugTools
+            Magnum::OpenGLTester)
+
     corrade_add_test(UiDebugLayerGLTest DebugLayerGLTest.cpp
         LIBRARIES
             MagnumUi
