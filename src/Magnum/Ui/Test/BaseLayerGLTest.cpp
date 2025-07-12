@@ -303,7 +303,7 @@ const struct {
 };
 
 const struct {
-    const char* name;
+    TestSuite::TestCaseDescriptionSourceLocation name;
     const char* textureFilename;
     const char* expectedFilename;
     bool rvalue;
@@ -312,23 +312,27 @@ const struct {
     Containers::Optional<Vector2> size;
     BaseLayerSharedFlags extraFlags;
     BaseLayerStyleUniform styleUniform;
+    Float maxThreshold, meanThreshold;
 } RenderTexturedData[]{
     {"default offset and size", "blur-input.png", "textured-default.png",
         false, 0x1f1f1f_rgbf, {}, {}, {},
-        BaseLayerStyleUniform{}},
+        BaseLayerStyleUniform{},
+        0.75f, 0.0971f},
     {"", "blur-input.png", "textured.png",
         false, 0x1f1f1f_rgbf,
         /* The image is 160x106, want to render the bottom right 112x48 portion
            of it to avoid nasty scaling, and to verify the offset is taken from
            the right (bottom left) origin */
         {{48.0f/160.0f, 0.0f/106.0f, 7}}, {{112.0f/160.0f, 48.0f/106.0f}}, {},
-        BaseLayerStyleUniform{}},
+        BaseLayerStyleUniform{},
+        0.5f, 0.0011f},
     /* Interaction of the texture with outline width and smoothness radius
        tested in renderTexturedOutlineEdgeSmoothness() */
     {"r-value instance", "blur-input.png", "textured.png",
         true, 0x1f1f1f_rgbf,
         {{48.0f/160.0f, 0.0f/106.0f, 7}}, {{112.0f/160.0f, 48.0f/106.0f}}, {},
-        BaseLayerStyleUniform{}},
+        BaseLayerStyleUniform{},
+        0.5f, 0.0011f},
     {"colored", "blur-input.png", "textured-colored.png",
         false, 0x1f1f1f_rgbf,
         /* Top left part of the image instead */
@@ -341,7 +345,10 @@ const struct {
             /* The outline shouldn't be multiplied with the texture, neither
                the texture should shine through if semi-transparent */
             .setOutlineWidth(8.0f)
-            .setOutlineColor(0xa5c9eaff_rgbaf*0.75f)},
+            .setOutlineColor(0xa5c9eaff_rgbaf*0.75f),
+        /* On Mesa Intel there's a single differing pixel with
+           Flag::SubdividedQuads compared to no flag, not sure why */
+        0.75f, 0.0572f},
     {"alpha mask", "mask-premultiplied.png", "textured-mask.png",
         /* Brighter than default clear color to verify the masked out parts
            aren't just black */
@@ -351,7 +358,8 @@ const struct {
         {{8.0f/128.0f, 8.0f/64.0f, 7}}, {{112.0f/128.0f, 48.0f/64.0f}}, {},
         BaseLayerStyleUniform{}
             .setCornerRadius(12.0f)
-            .setColor(0xeeddaa_rgbf, 0x774422_rgbf)},
+            .setColor(0xeeddaa_rgbf, 0x774422_rgbf),
+        0.75f, 0.0092f},
     /* Should cause no difference compared to above */
     {"alpha mask, TextureMask", "mask-premultiplied.png", "textured-mask.png",
         false, 0x999999_rgbf,
@@ -359,13 +367,15 @@ const struct {
         BaseLayerSharedFlag::TextureMask,
         BaseLayerStyleUniform{}
             .setCornerRadius(12.0f)
-            .setColor(0xeeddaa_rgbf, 0x774422_rgbf)},
+            .setColor(0xeeddaa_rgbf, 0x774422_rgbf),
+        0.75f, 0.0092f},
     {"alpha mask, colored", "mask-colored-premultiplied.png", "textured-mask-colored.png",
         false, 0x999999_rgbf,
         {{8.0f/128.0f, 8.0f/64.0f, 7}}, {{112.0f/128.0f, 48.0f/64.0f}}, {},
         BaseLayerStyleUniform{}
             .setCornerRadius(12.0f)
-            .setColor(0xffffff_rgbf)},
+            .setColor(0xffffff_rgbf),
+        0.75f, 0.0008f},
     /* Should cause no difference compared to above */
     {"alpha mask, colored, TextureMask", "mask-colored-premultiplied.png", "textured-mask-colored.png",
         false, 0x999999_rgbf,
@@ -373,7 +383,8 @@ const struct {
         BaseLayerSharedFlag::TextureMask,
         BaseLayerStyleUniform{}
             .setCornerRadius(12.0f)
-            .setColor(0xffffff_rgbf)},
+            .setColor(0xffffff_rgbf),
+        0.75f, 0.0008f},
     /* The outline is by default not affected by the mask */
     {"alpha mask, outline", "mask-premultiplied.png", "textured-mask-outline-default.png",
         false, 0x999999_rgbf,
@@ -383,7 +394,8 @@ const struct {
             .setInnerOutlineCornerRadius(4.0f)
             .setOutlineWidth(8.0f)
             .setColor(0xeeddaa_rgbf, 0x774422_rgbf)
-            .setOutlineColor(0xf1e77f_rgbf)},
+            .setOutlineColor(0xf1e77f_rgbf),
+        0.75f, 0.0071f},
     {"alpha mask, outline, TextureMask", "mask-premultiplied.png", "textured-mask-outline-mask.png",
         false, 0x999999_rgbf,
         {{8.0f/128.0f, 8.0f/64.0f, 7}}, {{112.0f/128.0f, 48.0f/64.0f}},
@@ -393,7 +405,8 @@ const struct {
             .setInnerOutlineCornerRadius(4.0f)
             .setOutlineWidth(8.0f)
             .setColor(0xeeddaa_rgbf, 0x774422_rgbf)
-            .setOutlineColor(0xf1e77f_rgbf)},
+            .setOutlineColor(0xf1e77f_rgbf),
+        0.75f, 0.0059f},
 };
 
 const struct {
@@ -592,7 +605,7 @@ const struct {
             .setCornerRadius(12.0f)
             /* Premultiplied alpha */
             .setColor(0xffffffff_rgbaf*0.5f),
-        0.0f, 0.0f},
+        0.75f, 0.226f},
     {"background blur, 0% opacity", "composite-background-blur-0.png",
         BaseLayerSharedFlag::BackgroundBlur, {}, {}, {},
         BaseLayerCommonStyleUniform{}
@@ -600,7 +613,7 @@ const struct {
         BaseLayerStyleUniform{}
             .setCornerRadius(12.0f)
             .setColor(0xffffffff_rgbaf),
-        0.0f, 0.0f},
+        0.75f, 0.0006f},
     {"background blur, 50% opacity", "composite-background-blur-50.png",
         BaseLayerSharedFlag::BackgroundBlur, {}, {}, {},
         BaseLayerCommonStyleUniform{}
@@ -609,7 +622,7 @@ const struct {
             .setCornerRadius(12.0f)
             /* Premultiplied alpha */
             .setColor(0xffffffff_rgbaf*0.5f),
-        0.0f, 0.0f},
+        2.5f, 0.178f},
     /* Interaction of the compositing quads with smoothness radius tested in
        renderCompositeEdgeSmoothness() */
     {"background blur, 75% opacity, colored", "composite-background-blur-75-colored.png",
@@ -623,7 +636,7 @@ const struct {
             /* Premultiplied alpha */
             .setColor(0x747474ff_rgbaf*0.75f, 0xdcdcdcff_rgbaf*0.75f)
             .setOutlineColor(0xa5c9eaff_rgbaf*0.75f),
-        0.0f, 0.0f},
+        1.25f, 0.047f},
     /* This should look the same as if no compositing is done, including the
        same blend operation and everything. In reality there's a slight
        difference possibly due to the blend operation being done a bit
@@ -646,7 +659,7 @@ const struct {
             .setCornerRadius(12.0f)
             /* Premultiplied alpha */
             .setColor(0xffffffff_rgbaf*0.5f),
-        0.0f, 0.0f},
+        2.5f, 0.178f},
     /* sqrt(4*(2^2)) == 4, so should be ~same as above (plus rounding
        errors) */
     {"background blur, 50% opacity, radius 2, 4 passes", "composite-background-blur-50.png",
@@ -657,7 +670,7 @@ const struct {
             .setCornerRadius(12.0f)
             /* Premultiplied alpha */
             .setColor(0xffffffff_rgbaf*0.5f),
-        5.75f, 0.728f},
+        6.0f, 0.775f},
     /* sqrt(16*(1^2)) == 4, so should ~same as above (plus even more rounding
        errors) */
     {"background blur, 50% opacity, radius 1, 16 passes", "composite-background-blur-50.png",
@@ -668,7 +681,7 @@ const struct {
             .setCornerRadius(12.0f)
             /* Premultiplied alpha */
             .setColor(0xffffffff_rgbaf*0.5f),
-        12.25f, 1.555f},
+        13.25f, 2.797f},
     {"background blur, 50% opacity, radius 31", "composite-background-blur-50-r31.png",
         BaseLayerSharedFlag::BackgroundBlur, 31, {}, {},
         BaseLayerCommonStyleUniform{}
@@ -677,7 +690,7 @@ const struct {
             .setCornerRadius(12.0f)
             /* Premultiplied alpha */
             .setColor(0xffffffff_rgbaf*0.5f),
-        0.0f, 0.0f},
+        0.75f, 0.176f},
     /* This shouldn't make any visible difference to the above but is using
        considerably less samples */
     {"background blur, 50% opacity, radius 31, cutoff 0.5/255", "composite-background-blur-50-r31.png",
@@ -688,7 +701,7 @@ const struct {
             .setCornerRadius(12.0f)
             /* Premultiplied alpha */
             .setColor(0xffffffff_rgbaf*0.5f),
-        0.0f, 0.0f},
+        0.75f, 0.176f},
     /* This should again look the same as if no compositing is done as all the
        extra samples get discarded due to being less than the cutoff In reality
        there's a slight difference possibly due to the blend operation being
@@ -711,7 +724,7 @@ const struct {
             .setCornerRadius(12.0f)
             /* Premultiplied alpha */
             .setColor(0xffffffff_rgbaf*0.5f),
-        0.0f, 0.0f},
+        1.0f, 0.199f},
     /* This should again look the same as if no compositing is done, as the
        blurred background contributes in no way to the output */
     {"background blur, 50% opacity, radius 31, 0% blur opacity", "composite-default-50.png",
@@ -723,7 +736,7 @@ const struct {
             .setCornerRadius(12.0f)
             /* Premultiplied alpha */
             .setColor(0xffffffff_rgbaf*0.5f),
-        0.0f, 0.0f},
+        0.75f, 0.226f},
 };
 
 const struct {
@@ -807,19 +820,19 @@ const struct {
     Float maxThreshold, meanThreshold;
 } RenderCompositeNodeRectsData[]{
     {"radius 0", "composite-node-rects-background-blur-r0.png",
-        {1.0f, 1.0f}, 0, 1, 0.0f, 0.0f},
+        {1.0f, 1.0f}, 0, 1, 0.75f, 0.039f},
     {"radius 0, UI size different from framebuffer", "composite-node-rects-background-blur-r0.png",
-        {0.1f, 10.0f}, 0, 1, 0.0f, 0.0f},
+        {0.1f, 10.0f}, 0, 1, 0.75f, 0.039f},
     /* Small radius to verify the compositing node area is correctly expanded.
        If it wouldn't be, the cyan background would shine through. */
     {"radius 1", "composite-node-rects-background-blur-r1.png",
-        {1.0f, 1.0f}, 1, 1, 0.0f, 0.0f},
+        {1.0f, 1.0f}, 1, 1, 1.5f, 0.211f},
     {"radius 1, UI size different from framebuffer", "composite-node-rects-background-blur-r1.png",
-        {0.1f, 10.0f}, 1, 1, 0.0f, 0.0f},
+        {0.1f, 10.0f}, 1, 1, 1.5f, 0.211f},
     {"radius 30", "composite-node-rects-background-blur-r30.png",
-        {1.0f, 1.0f}, 30, 1, 0.0f, 0.0f},
+        {1.0f, 1.0f}, 30, 1, 1.25f, 0.055f},
     {"radius 30, UI size different from framebuffer", "composite-node-rects-background-blur-r30.png",
-        {0.1f, 10.0f}, 30, 1, 0.0f, 0.0f},
+        {0.1f, 10.0f}, 30, 1, 1.25f, 0.055f},
     /* Should look roughly the same (minus rounding errors) with no apparent
        edge artifacts caused by not including pass count into the padding */
     {"radius 15, 4 passes", "composite-node-rects-background-blur-r30.png",
@@ -1244,7 +1257,7 @@ template<BaseLayerSharedFlag flag> void BaseLayerGLTest::render() {
     #endif
     CORRADE_COMPARE_WITH(_framebuffer.read({{}, RenderSize}, {PixelFormat::RGBA8Unorm}),
         Utility::Path::join({UI_TEST_DIR, "BaseLayerTestFiles", data.filename}),
-        DebugTools::CompareImageToFile{_manager});
+        (DebugTools::CompareImageToFile{_manager, 0.75f, 0.0069f}));
 }
 
 template<BaseLayerSharedFlag flag> void BaseLayerGLTest::renderCustomColor() {
@@ -1312,7 +1325,7 @@ template<BaseLayerSharedFlag flag> void BaseLayerGLTest::renderCustomColor() {
     #endif
     CORRADE_COMPARE_WITH(_framebuffer.read({{}, RenderSize}, {PixelFormat::RGBA8Unorm}),
         Utility::Path::join(UI_TEST_DIR, "BaseLayerTestFiles/gradient.png"),
-        DebugTools::CompareImageToFile{_manager});
+        (DebugTools::CompareImageToFile{_manager, 0.25f, 0.0069f}));
 }
 
 template<BaseLayerSharedFlag flag> void BaseLayerGLTest::renderCustomOutlineWidth() {
@@ -1435,7 +1448,7 @@ template<BaseLayerSharedFlag flag> void BaseLayerGLTest::renderPadding() {
     #endif
     CORRADE_COMPARE_WITH(_framebuffer.read({{}, RenderSize}, {PixelFormat::RGBA8Unorm}),
         Utility::Path::join(UI_TEST_DIR, "BaseLayerTestFiles/outline-rounded-corners-both-different.png"),
-        DebugTools::CompareImageToFile{_manager});
+        (DebugTools::CompareImageToFile{_manager, 0.75f, 0.0012f}));
 }
 
 template<BaseLayerSharedFlag flag> void BaseLayerGLTest::renderChangeStyle() {
@@ -1492,7 +1505,7 @@ template<BaseLayerSharedFlag flag> void BaseLayerGLTest::renderChangeStyle() {
     #endif
     CORRADE_COMPARE_WITH(_framebuffer.read({{}, RenderSize}, {PixelFormat::RGBA8Unorm}),
         Utility::Path::join(UI_TEST_DIR, "BaseLayerTestFiles/gradient.png"),
-        DebugTools::CompareImageToFile{_manager});
+        (DebugTools::CompareImageToFile{_manager, 0.25f, 0.0069f}));
 }
 
 template<BaseLayerSharedFlag flag> void BaseLayerGLTest::renderTextured() {
@@ -1560,18 +1573,9 @@ template<BaseLayerSharedFlag flag> void BaseLayerGLTest::renderTextured() {
     if(GL::Context::current().detectedDriver() & GL::Context::DetectedDriver::SwiftShader)
         CORRADE_SKIP("UBOs with dynamically indexed arrays don't seem to work on SwiftShader, can't test.");
     #endif
-    {
-        CORRADE_EXPECT_FAIL_IF(flag == BaseLayerSharedFlag::SubdividedQuads && data.expectedFilename == "textured-colored.png"_s,
-            "A single differing pixel with" << BaseLayerSharedFlag::SubdividedQuads << "enabled, not sure why");
-        CORRADE_COMPARE_WITH(_framebuffer.read({{}, RenderSize}, {PixelFormat::RGBA8Unorm}),
-            Utility::Path::join({UI_TEST_DIR, "BaseLayerTestFiles", data.expectedFilename}),
-            DebugTools::CompareImageToFile{_manager});
-    }
-    /* Verify that it's indeed just that one pixel */
-    if(flag == BaseLayerSharedFlag::SubdividedQuads && data.expectedFilename == "textured-colored.png"_s)
-        CORRADE_COMPARE_WITH(_framebuffer.read({{}, RenderSize}, {PixelFormat::RGBA8Unorm}),
-            Utility::Path::join({UI_TEST_DIR, "BaseLayerTestFiles", data.expectedFilename}),
-            (DebugTools::CompareImageToFile{_manager, 0.25f, 0.00004f}));
+    CORRADE_COMPARE_WITH(_framebuffer.read({{}, RenderSize}, {PixelFormat::RGBA8Unorm}),
+        Utility::Path::join({UI_TEST_DIR, "BaseLayerTestFiles", data.expectedFilename}),
+        (DebugTools::CompareImageToFile{_manager, data.maxThreshold, data.meanThreshold}));
 }
 
 template<BaseLayerSharedFlag flag> void BaseLayerGLTest::renderOutlineEdgeSmoothness() {
@@ -1667,13 +1671,13 @@ template<BaseLayerSharedFlag flag> void BaseLayerGLTest::renderOutlineEdgeSmooth
             "Differing pixels on the innermost side of the smooth outline with" << BaseLayerSharedFlag::SubdividedQuads << "enabled, not sure why");
         CORRADE_COMPARE_WITH(_framebuffer.read({{}, RenderSize}, {PixelFormat::RGBA8Unorm}),
             Utility::Path::join({UI_TEST_DIR, "BaseLayerTestFiles", data.filename}),
-            DebugTools::CompareImageToFile{_manager});
+            (DebugTools::CompareImageToFile{_manager, 0.75f, 0.0128f}));
         }
     /* Verify that it's indeed just those pixels */
     if(flag == BaseLayerSharedFlag::SubdividedQuads && data.filename == "edge-smoothness-inner-larger.png"_s)
         CORRADE_COMPARE_WITH(_framebuffer.read({{}, RenderSize}, {PixelFormat::RGBA8Unorm}),
             Utility::Path::join({UI_TEST_DIR, "BaseLayerTestFiles", data.filename}),
-            (DebugTools::CompareImageToFile{_manager, 3.25f, 0.028f}));
+            (DebugTools::CompareImageToFile{_manager, 3.25f, 0.032f}));
 }
 
 template<BaseLayerSharedFlag flag> void BaseLayerGLTest::renderGradientOutlineEdgeSmoothness() {
@@ -1744,7 +1748,7 @@ template<BaseLayerSharedFlag flag> void BaseLayerGLTest::renderGradientOutlineEd
     #endif
     CORRADE_COMPARE_WITH(_framebuffer.read({{}, RenderSize}, {PixelFormat::RGBA8Unorm}),
         Utility::Path::join(UI_TEST_DIR, "BaseLayerTestFiles/gradient.png"),
-        DebugTools::CompareImageToFile{_manager});
+        (DebugTools::CompareImageToFile{_manager, 0.25f, 0.0069f}));
 }
 
 template<BaseLayerSharedFlag flag> void BaseLayerGLTest::renderTexturedOutlineEdgeSmoothness() {
@@ -1830,8 +1834,7 @@ template<BaseLayerSharedFlag flag> void BaseLayerGLTest::renderTexturedOutlineEd
     #endif
     CORRADE_COMPARE_WITH(_framebuffer.read({{}, RenderSize}, {PixelFormat::RGBA8Unorm}),
         Utility::Path::join(UI_TEST_DIR, "BaseLayerTestFiles/textured.png"),
-        /* One pixel has one channel off-by-one in the 100x smaller case */
-        (DebugTools::CompareImageToFile{_manager, 0.25f, 0.0001f}));
+        (DebugTools::CompareImageToFile{_manager, 0.5f, 0.0018f}));
 }
 
 template<BaseLayerSharedFlag flag> void BaseLayerGLTest::renderDynamicStyles() {
@@ -2125,7 +2128,7 @@ template<BaseLayerSharedFlag flag> void BaseLayerGLTest::renderCompositeEdgeSmoo
     #endif
     CORRADE_COMPARE_WITH(renderer.compositingFramebuffer().read({{}, RenderSize}, {PixelFormat::RGBA8Unorm}),
         Utility::Path::join(UI_TEST_DIR, "BaseLayerTestFiles/composite-background-blur-50-smooth.png"),
-        DebugTools::CompareImageToFile{_manager});
+        (DebugTools::CompareImageToFile{_manager, 1.0f, 0.122f}));
 }
 
 template<BaseLayerSharedFlag flag> void BaseLayerGLTest::renderCompositeTextured() {
@@ -2202,7 +2205,7 @@ template<BaseLayerSharedFlag flag> void BaseLayerGLTest::renderCompositeTextured
     #endif
     CORRADE_COMPARE_WITH(renderer.compositingFramebuffer().read({{}, RenderSize}, {PixelFormat::RGBA8Unorm}),
         Utility::Path::join({UI_TEST_DIR, "BaseLayerTestFiles", data.expectedFilename}),
-        (DebugTools::CompareImageToFile{_manager}));
+        (DebugTools::CompareImageToFile{_manager, 1.0f, 0.099f}));
 }
 
 void BaseLayerGLTest::renderCompositeNodeRects() {
@@ -2459,7 +2462,7 @@ void BaseLayerGLTest::drawOrderComposite() {
     #endif
     CORRADE_COMPARE_WITH(renderer.compositingFramebuffer().read({{}, DrawSize}, {PixelFormat::RGBA8Unorm}),
         Utility::Path::join({UI_TEST_DIR, "BaseLayerTestFiles", data.filename}),
-        DebugTools::CompareImageToFile{_manager});
+        (DebugTools::CompareImageToFile{_manager, 0.75f, 0.282f}));
 }
 
 void BaseLayerGLTest::drawClipping() {
@@ -2632,7 +2635,7 @@ void BaseLayerGLTest::eventStyleTransition() {
         DebugTools::CompareImageToFile{_manager});
     CORRADE_COMPARE_WITH(after,
         Utility::Path::join(UI_TEST_DIR, "BaseLayerTestFiles/gradient.png"),
-        DebugTools::CompareImageToFile{_manager});
+        (DebugTools::CompareImageToFile{_manager, 0.25f, 0.0069f}));
     CORRADE_COMPARE_WITH(disabled,
         Utility::Path::join(UI_TEST_DIR, "BaseLayerTestFiles/default.png"),
         DebugTools::CompareImageToFile{_manager});

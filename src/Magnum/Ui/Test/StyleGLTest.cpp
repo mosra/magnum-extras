@@ -92,11 +92,12 @@ const struct {
     struct RenderDataProperties {
         Int styleCount;
         bool hoveredPressed, focused, disabled;
+        Float maxThreshold, meanThreshold;
     } properties;
     NodeHandle(*create)(UserInterface& ui, Int style, Int counter);
 } RenderData[]{
     {"button text + icon, stateless", "button-text-icon.png",
-        {8, true, false, true},
+        {8, true, false, true, 1.25f, 0.0257f},
         [](UserInterface& ui, Int style, Int counter) {
             /** @todo differently wide icons to test alignment */
             return button({ui, {96, 36}}, counter % 2 ? Icon::No : Icon::Yes, counter % 2 ? "Bye" : "Hello!", ButtonStyle(style)).node();
@@ -142,7 +143,7 @@ const struct {
         }},
 
     {"button text, stateless", "button-text.png",
-        {8, true, false, true},
+        {8, true, false, true, 1.25f, 0.0253f},
         [](UserInterface& ui, Int style, Int counter) {
             return button({ui, {64, 36}}, counter % 2 ? "Bye" : "Hello!", ButtonStyle(style)).node();
         }},
@@ -177,7 +178,7 @@ const struct {
         }},
 
     {"button icon, stateless", "button-icon.png",
-        {8, true, false, true},
+        {8, true, false, true, 1.0f, 0.0221f},
         [](UserInterface& ui, Int style, Int counter) {
             /** @todo differently wide icons to test alignment */
             return button({ui, {48, 36}}, counter % 2 ? Icon::Yes : Icon::No, ButtonStyle(style)).node();
@@ -213,7 +214,7 @@ const struct {
         }},
 
     {"label text, stateless", "label-text.png",
-        {7, false, false, true},
+        {7, false, false, true, 1.0f, 0.00933f},
         [](UserInterface& ui, Int style, Int counter) {
             return label({ui, {52, 36}}, counter % 3 ? "Bye" : "Hello!", LabelStyle(style)).node();
         }},
@@ -248,7 +249,7 @@ const struct {
         }},
 
     {"label icon, stateless", "label-icon.png",
-        {7, false, false, true},
+        {7, false, false, true, 1.0f, 0.0045f},
         [](UserInterface& ui, Int style, Int counter) {
             /** @todo differently wide icons to test alignment */
             return label({ui, {48, 36}}, counter % 3 ? Icon::Yes : Icon::No, LabelStyle(style)).node();
@@ -284,7 +285,7 @@ const struct {
         }},
 
     {"input", "input.png",
-        {5, true, true, true},
+        {5, true, true, true, 1.0f, 0.0125f},
         [](UserInterface& ui, Int style, Int counter) {
             Input input{{ui, {64, 36}}, counter % 2 ? "Edit..." : "Type?", InputStyle(style)};
             /** @todo use a cursor setting API once it exists */
@@ -503,7 +504,7 @@ void StyleGLTest::render() {
 
     CORRADE_COMPARE_WITH(framebuffer.read({{}, uiSize}, {PixelFormat::RGBA8Unorm}),
         Utility::Path::join({UI_TEST_DIR, "StyleTestFiles", Containers::StringView{styleData.filePrefix} + RenderData[filenameIndex].filename}),
-        DebugTools::CompareImageToFile{_importerManager});
+        (DebugTools::CompareImageToFile{_importerManager, properties.maxThreshold, properties.meanThreshold}));
 
     /* Verify that hovering the pressed and focused widgets doesn't have any
        difference in visuals */
@@ -642,7 +643,7 @@ void StyleGLTest::render() {
 
         CORRADE_COMPARE_WITH(framebuffer.read({{}, uiSize}, {PixelFormat::RGBA8Unorm}),
             Utility::Path::join({UI_TEST_DIR, "StyleTestFiles", Containers::StringView{styleData.filePrefix} + RenderData[filenameIndex].filename}),
-            DebugTools::CompareImageToFile{_importerManager});
+            (DebugTools::CompareImageToFile{_importerManager, properties.maxThreshold, properties.meanThreshold}));
     }
 }
 

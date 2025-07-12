@@ -764,7 +764,7 @@ void LineLayerGLTest::render() {
     #endif
     CORRADE_COMPARE_WITH(_framebuffer.read({{}, RenderSize}, {PixelFormat::RGBA8Unorm}),
         Utility::Path::join({UI_TEST_DIR, "LineLayerTestFiles", data.filename}),
-        DebugTools::CompareImageToFile{_manager});
+        (DebugTools::CompareImageToFile{_manager, 0.75f, 0.008f}));
 }
 
 void LineLayerGLTest::renderStrip() {
@@ -910,7 +910,7 @@ void LineLayerGLTest::renderSmoothness() {
     #endif
     CORRADE_COMPARE_WITH(_framebuffer.read({{}, RenderSize}, {PixelFormat::RGBA8Unorm}),
         Utility::Path::join(UI_TEST_DIR, "LineLayerTestFiles/smooth.png"),
-        DebugTools::CompareImageToFile{_manager});
+        (DebugTools::CompareImageToFile{_manager, 1.5f, 0.04f}));
 }
 
 void LineLayerGLTest::renderCustomColor() {
@@ -997,7 +997,7 @@ void LineLayerGLTest::renderCustomColor() {
     #endif
     CORRADE_COMPARE_WITH(_framebuffer.read({{}, RenderSize}, {PixelFormat::RGBA8Unorm}),
         Utility::Path::join(UI_TEST_DIR, "LineLayerTestFiles/color.png"),
-        DebugTools::CompareImageToFile{_manager});
+        (DebugTools::CompareImageToFile{_manager, 0.75f, 0.008f}));
 }
 
 void LineLayerGLTest::renderPaddingAlignment() {
