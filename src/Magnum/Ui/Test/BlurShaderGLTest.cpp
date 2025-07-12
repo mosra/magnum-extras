@@ -109,43 +109,43 @@ const struct {
        brighter. */
     {"radius 3, limit 0", "blur-3.png",
         7, 0.0f, false, false, false,
-        /* NVidia has slight differences */
-        0.75f, 0.044f},
+        /* NVidia & llvmpipe have slight differences */
+        0.75f, 0.111f},
     {"radius 3, limit 0, flipped on X", "blur-3.png",
         7, 0.0f, true, false, false,
-        /* NVidia has slight differences */
-        0.75f, 0.044f},
+        /* NVidia & llvmpipe have slight differences */
+        0.75f, 0.111f},
     {"radius 3, limit 0, flipped on Y", "blur-3.png",
         7, 0.0f, false, true, false,
-        /* NVidia has slight differences */
-        0.75f, 0.044f},
+        /* NVidia & llvmpipe have slight differences */
+        0.75f, 0.111f},
     {"radius 3, limit 0, flipped on XY", "blur-3.png",
         7, 0.0f, true, true, false,
-        /* NVidia has slight differences */
-        0.75f, 0.044f},
+        /* NVidia & llvmpipe have slight differences */
+        0.75f, 0.111f},
     {"radius 3, limit 0, transparent", "blur-3.png",
         7, 0.0f, false, false, true,
-        /* NVidia has slight differences */
-        0.75f, 0.044f},
+        /* NVidia & llvmpipe have slight differences */
+        0.75f, 0.111f},
     /* This results in 17 discrete taps, so 9 interpolated taps with the first
        tap being (non-interpolated) center pixel */
     {"radius 16, limit 0", "blur-16.png",
         16, 0.0f, false, false, false,
-        /* NVidia has slight differences */
-        0.75f, 0.043f},
+        /* NVidia & llvmpipe have slight differences */
+        0.75f, 0.091f},
     /* Same sequence as for "radius 16" above, but with the ends clipped away
        (and then everything scaled accordingly, which is the main contribution
        factor to the difference). The result is almost the same, just with 8
        taps instead of 16 needed. */
     {"radius 16, limit 0.5/255", "blur-16.png",
         16, 0.5f/255.0f, false, false, false,
-        /* NVidia has slight differences */
+        /* NVidia & llvmpipe have slight differences */
         2.25f, 1.304f},
     /* Max possible radius value, verify it still compiles & runs correctly */
     {"radius 31, limit 0", "blur-31.png",
         31, 0.0f, false, false, false,
-        /* NVidia has slight differences */
-        0.5f, 0.044f},
+        /* NVidia & llvmpipe have slight differences */
+        0.75f, 0.077f},
 };
 
 const struct {
