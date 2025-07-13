@@ -26,6 +26,7 @@
 
 #include <new>
 #include <Corrade/Containers/BitArrayView.h>
+#include <Corrade/Containers/Function.h> /* for debugIntegration() */
 #include <Corrade/Containers/Optional.h>
 #include <Corrade/Containers/StridedArrayView.h>
 #include <Corrade/Containers/String.h>
@@ -33,8 +34,9 @@
 #include <Corrade/TestSuite/Compare/Container.h>
 #include <Corrade/TestSuite/Compare/String.h>
 
-#include "Magnum/Ui/AbstractUserInterface.h"
+#include "Magnum/Ui/AbstractUserInterface.h" /* for debugIntegration() */
 #include "Magnum/Ui/BaseLayer.h"
+#include "Magnum/Ui/DebugLayer.h" /* for debugIntegration() */
 #include "Magnum/Ui/Event.h"
 #include "Magnum/Ui/Handle.h"
 /* for dynamicStyle(), updateDataOrder() */
@@ -125,7 +127,13 @@ struct BaseLayerTest: TestSuite::Tester {
     void updateNoStyleSet();
 
     void sharedNeedsUpdateStatePropagatedToLayers();
+
+    void debugIntegration();
+    void debugIntegrationNoCallback();
+    void debugIntegrationLambdaStyleName();
 };
+
+using namespace Math::Literals;
 
 const struct {
     const char* name;
@@ -415,6 +423,66 @@ const struct {
     {"background blur", BaseLayerSharedFlag::BackgroundBlur, 0, LayerState::NeedsCompositeOffsetSizeUpdate}
 };
 
+const struct {
+    const char* name;
+    bool styleNames;
+    /* Default color is all 1s, while outline/padding is all 0s, so it's an
+       Optional unlike the other two */
+    Containers::Optional<Color4> color;
+    Vector4 outline, padding;
+    const char* expected;
+} DebugIntegrationData[]{
+    {"",
+        false, {}, {}, {},
+        "Node {0x1, 0x1}\n"
+        "  Data {0x6, 0x2} from layer {0x0, 0x3} with style 3"},
+    {"style name mapping",
+        true, {}, {}, {},
+        "Node {0x1, 0x1}\n"
+        "  Data {0x6, 0x2} from layer {0x0, 0x3} with style StyleName (3)"},
+    {"custom color",
+        false, 0x3bd26799_rgbaf, {}, {},
+        "Node {0x1, 0x1}\n"
+        "  Data {0x6, 0x2} from layer {0x0, 0x3} with style 3\n"
+        "    Color: #3bd26799"},
+    {"custom outline width",
+        false, {}, {0.5f, 2.0f, 1.5f, 1.0f}, {},
+        "Node {0x1, 0x1}\n"
+        "  Data {0x6, 0x2} from layer {0x0, 0x3} with style 3\n"
+        "    Outline width: {0.5, 2, 1.5, 1}"},
+    {"custom outline width, all edges same",
+        false, {}, Vector4{2.5f}, {},
+        "Node {0x1, 0x1}\n"
+        "  Data {0x6, 0x2} from layer {0x0, 0x3} with style 3\n"
+        "    Outline width: 2.5"},
+    {"custom padding",
+        false, {}, {}, {0.5f, 2.0f, 1.5f, 1.0f},
+        "Node {0x1, 0x1}\n"
+        "  Data {0x6, 0x2} from layer {0x0, 0x3} with style 3\n"
+        "    Padding: {0.5, 2, 1.5, 1}"},
+    {"custom padding, all edges same",
+        false, {}, {}, Vector4{2.5f},
+        "Node {0x1, 0x1}\n"
+        "  Data {0x6, 0x2} from layer {0x0, 0x3} with style 3\n"
+        "    Padding: 2.5"},
+    {"custom color + padding",
+        false, 0x3bd26799_rgbaf, {}, {0.5f, 2.0f, 1.5f, 1.0f},
+        "Node {0x1, 0x1}\n"
+        "  Data {0x6, 0x2} from layer {0x0, 0x3} with style 3\n"
+        "    Color: #3bd26799\n"
+        "    Padding: {0.5, 2, 1.5, 1}"},
+    {"style name mapping, custom color + outline width + padding",
+        true, 0x3bd26799_rgbaf, Vector4{2.5f}, {0.5f, 2.0f, 1.5f, 1.0f},
+        "Node {0x1, 0x1}\n"
+        "  Data {0x6, 0x2} from layer {0x0, 0x3} with style StyleName (3)\n"
+        "    Color: #3bd26799\n"
+        "    Outline width: 2.5\n"
+        "    Padding: {0.5, 2, 1.5, 1}"},
+    /* The last case here is used in debugIntegrationNoCallback() to verify
+       output w/o a callback and for visual color verification, it's expected
+       to be the most complete, executing all coloring code paths */
+};
+
 BaseLayerTest::BaseLayerTest() {
     addTests({&BaseLayerTest::styleUniformSizeAlignment<BaseLayerCommonStyleUniform>,
               &BaseLayerTest::styleUniformSizeAlignment<BaseLayerStyleUniform>,
@@ -511,9 +579,13 @@ BaseLayerTest::BaseLayerTest() {
 
     addInstancedTests({&BaseLayerTest::sharedNeedsUpdateStatePropagatedToLayers},
         Containers::arraySize(SharedNeedsUpdateStatePropagatedToLayersData));
-}
 
-using namespace Math::Literals;
+    addInstancedTests({&BaseLayerTest::debugIntegration},
+        Containers::arraySize(DebugIntegrationData));
+
+    addTests({&BaseLayerTest::debugIntegrationNoCallback,
+              &BaseLayerTest::debugIntegrationLambdaStyleName});
+}
 
 template<class> struct StyleTraits;
 template<> struct StyleTraits<BaseLayerCommonStyleUniform> {
@@ -2867,6 +2939,194 @@ void BaseLayerTest::sharedNeedsUpdateStatePropagatedToLayers() {
        present */
     CORRADE_COMPARE(layer3.state(), LayerState::NeedsDataUpdate|LayerState::NeedsSharedDataUpdate);
     CORRADE_COMPARE(layer4.state(), LayerState::NeedsDataUpdate|data.extraState);
+}
+
+Containers::StringView debugIntegrationStyleName(UnsignedInt style) {
+    return style == 3 ? "StyleName" : "Wrong";
+}
+
+void BaseLayerTest::debugIntegration() {
+    auto&& data = DebugIntegrationData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
+    AbstractUserInterface ui{{100, 100}};
+    NodeHandle root = ui.createNode({}, {100, 100});
+    NodeHandle node = ui.createNode(root, {}, {100, 100});
+
+    struct LayerShared: BaseLayer::Shared {
+        explicit LayerShared(const Configuration& configuration): BaseLayer::Shared{configuration} {}
+
+        void doSetStyle(const BaseLayerCommonStyleUniform&, Containers::ArrayView<const BaseLayerStyleUniform>) override {}
+    } shared{BaseLayer::Shared::Configuration{4}};
+    shared.setStyle(BaseLayerCommonStyleUniform{},
+        {BaseLayerStyleUniform{},
+         BaseLayerStyleUniform{},
+         BaseLayerStyleUniform{},
+         BaseLayerStyleUniform{}},
+        {});
+
+    struct Layer: BaseLayer {
+        explicit Layer(LayerHandle handle, Shared& shared): BaseLayer{handle, shared} {}
+    };
+
+    /* Create and remove a bunch of layers first to have the handle with a
+       non-trivial value */
+    ui.removeLayer(ui.createLayer());
+    ui.removeLayer(ui.createLayer());
+    BaseLayer& layer = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer(), shared));
+    /* And also some more data to not list a trivial data handle */
+    layer.create(0);
+    layer.create(0);
+    layer.create(0);
+    layer.create(0);
+    layer.create(0);
+    layer.create(0);
+    layer.remove(layer.create(0));
+    DataHandle layerData = layer.create(3, node);
+    if(data.color)
+        layer.setColor(layerData, *data.color);
+    layer.setOutlineWidth(layerData, data.outline);
+    layer.setPadding(layerData, data.padding);
+
+    DebugLayer& debugLayer = ui.setLayerInstance(Containers::pointer<DebugLayer>(ui.createLayer(), DebugLayerSource::NodeDataAttachmentDetails, DebugLayerFlag::NodeHighlight));
+
+    Containers::String out;
+    debugLayer.setNodeHighlightCallback([&out](Containers::StringView message) {
+        out = message;
+    });
+    if(data.styleNames)
+        debugLayer.setLayerName(layer, "", debugIntegrationStyleName);
+    else
+        debugLayer.setLayerName(layer, "");
+
+    /* Make the debug layer aware of everything */
+    ui.update();
+
+    CORRADE_VERIFY(debugLayer.highlightNode(node));
+    CORRADE_COMPARE_AS(out, data.expected, TestSuite::Compare::String);
+}
+
+void BaseLayerTest::debugIntegrationNoCallback() {
+    AbstractUserInterface ui{{100, 100}};
+    NodeHandle root = ui.createNode({}, {100, 100});
+    NodeHandle node = ui.createNode(root, {}, {100, 100});
+
+    struct LayerShared: BaseLayer::Shared {
+        explicit LayerShared(const Configuration& configuration): BaseLayer::Shared{configuration} {}
+
+        void doSetStyle(const BaseLayerCommonStyleUniform&, Containers::ArrayView<const BaseLayerStyleUniform>) override {}
+    } shared{BaseLayer::Shared::Configuration{4}};
+    shared.setStyle(BaseLayerCommonStyleUniform{},
+        {BaseLayerStyleUniform{},
+         BaseLayerStyleUniform{},
+         BaseLayerStyleUniform{},
+         BaseLayerStyleUniform{}},
+        {});
+
+    struct Layer: BaseLayer {
+        explicit Layer(LayerHandle handle, Shared& shared): BaseLayer{handle, shared} {}
+    };
+
+    /* Just to match the layer handle in debugIntegration() above */
+    ui.removeLayer(ui.createLayer());
+    ui.removeLayer(ui.createLayer());
+    BaseLayer& layer = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer(), shared));
+    /* ... and the data handle also */
+    layer.create(0);
+    layer.create(0);
+    layer.create(0);
+    layer.create(0);
+    layer.create(0);
+    layer.create(0);
+    layer.remove(layer.create(0));
+    DataHandle layerData = layer.create(3, node);
+    layer.setColor(layerData, 0x3bd26799_rgbaf);
+    layer.setOutlineWidth(layerData, 2.5f);
+    layer.setPadding(layerData, {0.5f, 2.0f, 1.5f, 1.0f});
+
+    DebugLayer& debugLayer = ui.setLayerInstance(Containers::pointer<DebugLayer>(ui.createLayer(), DebugLayerSource::NodeDataAttachmentDetails, DebugLayerFlag::NodeHighlight));
+
+    debugLayer.setLayerName(layer, "", debugIntegrationStyleName);
+
+    /* Make the debug layer aware of everything */
+    ui.update();
+
+    /* Highlight the node for visual color verification */
+    {
+        Debug{} << "======================== visual color verification start =======================";
+
+        debugLayer.addFlags(DebugLayerFlag::ColorAlways);
+
+        CORRADE_VERIFY(debugLayer.highlightNode(node));
+
+        debugLayer.clearFlags(DebugLayerFlag::ColorAlways);
+
+        Debug{} << "======================== visual color verification end =========================";
+    }
+
+    /* Do the same, but this time with output redirection to verify the
+       contents. The internals automatically disable coloring if they detect
+       the output isn't a TTY. */
+    {
+        Containers::String out;
+        Debug redirectOutput{&out};
+        CORRADE_VERIFY(debugLayer.highlightNode(node));
+        /* The output always has a newline at the end which cannot be disabled
+           so strip it to have the comparison match the debugIntegration()
+           case */
+        CORRADE_COMPARE_AS(out,
+            "\n",
+            TestSuite::Compare::StringHasSuffix);
+        CORRADE_COMPARE_AS(out.exceptSuffix("\n"),
+            Containers::arrayView(DebugIntegrationData).back().expected,
+            TestSuite::Compare::String);
+    }
+}
+
+void BaseLayerTest::debugIntegrationLambdaStyleName() {
+    /* Like AbstractVisualLayerTest::debugIntegrationLambdaStyleName(), just
+       verifying that the construction with a lambda works even with the
+       BaseLayer subclass of DebugIntegration */
+
+    AbstractUserInterface ui{{100, 100}};
+    NodeHandle node = ui.createNode({}, {100, 100});
+
+    struct LayerShared: BaseLayer::Shared {
+        explicit LayerShared(const Configuration& configuration): BaseLayer::Shared{configuration} {}
+
+        void doSetStyle(const BaseLayerCommonStyleUniform&, Containers::ArrayView<const BaseLayerStyleUniform>) override {}
+    } shared{BaseLayer::Shared::Configuration{4}};
+    shared.setStyle(BaseLayerCommonStyleUniform{},
+        {BaseLayerStyleUniform{},
+         BaseLayerStyleUniform{},
+         BaseLayerStyleUniform{},
+         BaseLayerStyleUniform{}},
+        {});
+
+    struct Layer: BaseLayer {
+        explicit Layer(LayerHandle handle, Shared& shared): BaseLayer{handle, shared} {}
+    };
+
+    BaseLayer& layer = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer(), shared));
+    layer.create(3, node);
+
+    DebugLayer& debugLayer = ui.setLayerInstance(Containers::pointer<DebugLayer>(ui.createLayer(), DebugLayerSource::NodeDataAttachmentDetails, DebugLayerFlag::NodeHighlight));
+    debugLayer.setLayerName(layer, "", [](UnsignedInt style) -> Containers::StringView {
+        return style == 3 ? "LambdaStyle" : "Wrong";
+    });
+
+    /* Make the debug layer aware of everything */
+    ui.update();
+
+    Containers::String out;
+    {
+        Debug redirectOutput{&out};
+        CORRADE_VERIFY(debugLayer.highlightNode(node));
+    }
+    CORRADE_COMPARE_AS(out,
+        "Top-level node {0x0, 0x1}\n"
+        "  Data {0x0, 0x1} from layer {0x0, 0x1} with style LambdaStyle (3)\n",
+        TestSuite::Compare::String);
 }
 
 }}}}

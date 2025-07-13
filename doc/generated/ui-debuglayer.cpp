@@ -46,24 +46,29 @@
 #include <Magnum/GL/Framebuffer.h>
 #include <Magnum/GL/Renderer.h>
 #include <Magnum/Math/Color.h>
+#include <Magnum/Text/GlyphCacheGL.h>
 #include <Magnum/Trade/AbstractImageConverter.h>
 
 #include "Magnum/Ui/Anchor.h"
 #include "Magnum/Ui/Button.h"
 #include "Magnum/Ui/BaseLayerGL.h"
 #include "Magnum/Ui/TextLayer.h"
+#include "Magnum/Ui/TextProperties.h"
 #include "Magnum/Ui/EventLayer.h"
 #include "Magnum/Ui/Handle.h"
+#include "Magnum/Ui/LineLayerGL.h"
 #include "Magnum/Ui/NodeFlags.h"
 #include "Magnum/Ui/RendererGL.h"
 #include "Magnum/Ui/SnapLayouter.h"
 #include "Magnum/Ui/Style.h"
+#include "Magnum/Ui/TextLayerGL.h"
 #include "Magnum/Ui/UserInterfaceGL.h"
 #include "Magnum/Ui/DebugLayerGL.h"
 
 #define DOXYGEN_ELLIPSIS(...) __VA_ARGS__
 
 using namespace Magnum;
+using namespace Containers::Literals;
 using namespace Math::Literals;
 
 namespace {
@@ -241,7 +246,8 @@ ui.eventLayer().onTapOrClick(button, []{
 /* [button-names] */
 debugLayer.setLayerName(ui.eventLayer(), "Event");
 debugLayer.setLayerName(ui.baseLayer(), "Base");
-debugLayer.setLayerName(ui.textLayer(), "Text");
+/* So it doesn't show the (arbitrary) padding from TextLayer */
+debugLayer.setLayerName(static_cast<Ui::AbstractVisualLayer&>(ui.textLayer()), "Text");
 debugLayer.setNodeName(button, "Accept button");
 /* [button-names] */
 
@@ -352,6 +358,84 @@ debugLayer.setLayerName(visualLayer, "Styled", [](UnsignedInt style) {
     }
     Debug{} << out;
     Utility::Path::write("ui-debuglayer-abstractvisuallayer-style-names.ansi", out);
+
+    /* BaseLayer integration */
+    Ui::BaseLayer& baseLayer = ui.setLayerInstance(Containers::pointer<Ui::BaseLayerGL>(ui.createLayer(), baseLayerShared));
+    debugLayer.setLayerName(baseLayer, "Base", [](UnsignedInt style) {
+        return style == 9 ? "ColorSwatch"_s : ""_s;
+    });
+    Ui::NodeHandle baseNodeCustom = ui.createNode(parent, {}, {});
+    Ui::DataHandle baseDataCustom = baseLayer.create(9, baseNodeCustom);
+    baseLayer.setColor(baseDataCustom, 0x3bd267_rgbf);
+    baseLayer.setPadding(baseDataCustom, {2.0f, 4.0f, 1.0f, 3.0f});
+
+    ui.update();
+    out = {};
+    {
+        Debug redirectOutput{&out};
+        CORRADE_INTERNAL_ASSERT(debugLayer.highlightNode(baseNodeCustom));
+    }
+    Debug{} << out;
+    Utility::Path::write("ui-debuglayer-baselayer.ansi", out);
+
+    /* LineLayer integration */
+    Ui::LineLayerGL::Shared lineLayerShared{
+        Ui::LineLayerGL::Shared::Configuration{4}
+    };
+    lineLayerShared.setStyle({}, {
+        {}, {}, {}, {},
+    }, {
+        {}, {}, {}, {}
+    }, {});
+    Ui::LineLayer& lineLayer = ui.setLayerInstance(Containers::pointer<Ui::LineLayerGL>(ui.createLayer(), lineLayerShared));
+    debugLayer.setLayerName(lineLayer, "Line", [](UnsignedInt style) {
+        return style == 2 ? "Graph"_s : ""_s;
+    });
+    Ui::NodeHandle lineNodeCustom = ui.createNode(parent, {}, {});
+    Ui::DataHandle lineDataCustom = lineLayer.createLoop(2, {{}}, {}, lineNodeCustom);
+    lineLayer.setAlignment(lineDataCustom, Ui::LineAlignment::BottomLeft);
+    lineLayer.setPadding(lineDataCustom, {3.0f, 1.0f, 4.0f, 2.0f});
+
+    ui.update();
+    out = {};
+    {
+        Debug redirectOutput{&out};
+        CORRADE_INTERNAL_ASSERT(debugLayer.highlightNode(lineNodeCustom));
+    }
+    Debug{} << out;
+    Utility::Path::write("ui-debuglayer-linelayer.ansi", out);
+
+    /* TextLayer integration */
+    Ui::TextLayerGL::Shared textLayerShared{
+        Text::GlyphCacheArrayGL{PixelFormat::RGBA8Unorm, {256, 256, 1}},
+        Ui::TextLayerGL::Shared::Configuration{4}
+    };
+    Ui::FontHandle font = textLayerShared.addInstancelessFont(textLayerShared.glyphCache().addFont(1), 1.0f);
+    textLayerShared.setStyle({}, {
+        {}, {}, {}, {},
+    }, {
+        {}, {}, {}, font
+    }, {
+        {}, {}, {}, {}
+    }, {}, {}, {}, {}, {}, {});
+    Ui::TextLayer& textLayer = ui.setLayerInstance(Containers::pointer<Ui::TextLayerGL>(ui.createLayer(), textLayerShared));
+    debugLayer.setLayerName(textLayer, "Text", [](UnsignedInt style) {
+        return style == 3 ? "Label"_s : ""_s;
+    });
+
+    Ui::NodeHandle textNodeCustom = ui.createNode(parent, {}, {});
+    Ui::DataHandle textDataCustom = textLayer.createGlyph(3, 0, {}, textNodeCustom);
+    textLayer.setColor(textDataCustom, 0x2f83cc_rgbf);
+    textLayer.setPadding(textDataCustom, 4.5f);
+
+    ui.update();
+    out = {};
+    {
+        Debug redirectOutput{&out};
+        CORRADE_INTERNAL_ASSERT(debugLayer.highlightNode(textNodeCustom));
+    }
+    Debug{} << out;
+    Utility::Path::write("ui-debuglayer-textlayer.ansi", out);
 
     /* EventLayer integration */
     ui.createNode({}, {});

@@ -2703,4 +2703,44 @@ void TextLayer::doTextInputEvent(const UnsignedInt dataId, TextInputEvent& event
     event.setAccepted();
 }
 
+void TextLayer::DebugIntegration::print(Debug& debug, const TextLayer& layer, const Containers::StringView& layerName, LayerDataHandle data) {
+    AbstractVisualLayer::DebugIntegration::print(debug, layer, layerName, data);
+
+    /* Flags, if any */
+    if(const TextDataFlags flags = layer.flags(data)) {
+        debug << "    Flags:" << Debug::color(Debug::Color::Cyan) << Debug::packed << flags << Debug::resetColor << Debug::newline;
+    }
+
+    /* Color, padding / transformation if differs from default, to distinguish
+       from a vanilla style */
+    {
+        const Color4 color = layer.color(data);
+        if(color != Color4{1.0f}) {
+            /** @todo use a sRGB conversion once we have an option for the UI
+                to be sRGB-aware (so far neither the builtin styles are) */
+            Color4ub color8 = Math::pack<Color4ub>(color);
+            debug << "    Color:";
+            if(!(debug.flags() & Debug::Flag::DisableColors))
+                debug << Debug::color << color8;
+            debug << color8 << Debug::newline;
+        }
+    }
+    if(layer.flags() >= TextLayerFlag::Transformable) {
+        const Containers::Pair<Vector2, Complex> transformation = layer.transformation(data);
+        if(transformation != Containers::pair(Vector2{}, Complex{})) {
+            debug << "    Translation:" << Debug::packed << transformation.first() << Debug::nospace << ", rotation:" << Debug::packed << Deg{transformation.second().angle()} << Debug::nospace << "°, scaling:" << transformation.second().length() << Debug::newline;
+        }
+    } else {
+        const Vector4 padding = layer.padding(data);
+        if(padding != Vector4{}) {
+            debug << "    Padding:";
+            if(padding == Vector4{padding.x()})
+                debug << padding.x();
+            else
+                debug << Debug::packed << padding;
+            debug << Debug::newline;
+        }
+    }
+}
+
 }}

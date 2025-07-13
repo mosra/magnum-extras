@@ -1544,11 +1544,17 @@ editing styles you want to have for a particular dynamic style, use
 
 When using @ref Ui-DebugLayer-node-highlight "DebugLayer node highlighting",
 this layer inherits @ref Ui-AbstractVisualLayer-debug-integration "debug integration from the AbstractVisualLayer".
-See its documentation for more information.
+See its documentation for more information. If
+@ref DebugLayerSource::NodeDataAttachmentDetails is enabled, for @ref TextLayer
+the output additionally shows if given data has custom color or padding, to
+clearly distinguish it from just a vanilla style. For example:
+
+@include ui-debuglayer-textlayer.ansi
 */
 class MAGNUM_UI_EXPORT TextLayer: public AbstractVisualLayer {
     public:
         class Shared;
+        class DebugIntegration;
 
         /**
          * @brief Shared state used by this layer
@@ -3728,6 +3734,33 @@ class MAGNUM_UI_EXPORT TextLayer::Shared::Configuration {
         UnsignedInt _dynamicStyleCount = 0;
         TextLayerSharedFlags _flags;
         bool _dynamicEditingStyles = false;
+};
+
+/**
+@brief Debug layer integration
+
+Integrates the layer with @ref DebugLayer. See
+@ref Ui-TextLayer-debug-integration "TextLayer debug layer integration" for
+more information and example usage.
+*/
+class MAGNUM_UI_EXPORT TextLayer::DebugIntegration: public AbstractVisualLayer::DebugIntegration {
+    public:
+        /**
+         * @brief Constructor
+         *
+         * Same as the @ref AbstractVisualLayer::DebugIntegration constructor,
+         * see its documentation for more information.
+         */
+        /*implicit*/ DebugIntegration(Containers::StringView(*styleName)(UnsignedInt style) = nullptr): AbstractVisualLayer::DebugIntegration{styleName} {}
+        #ifndef DOXYGEN_GENERATING_OUTPUT
+        /* Same as the workaround in AbstractVisualLayer::DebugIntegration */
+        template<class T, typename std::enable_if<std::is_convertible<T, Containers::StringView(*)(UnsignedInt)>::value, int>::type = 0> /*implicit*/ DebugIntegration(T styleName): AbstractVisualLayer::DebugIntegration{styleName} {}
+        #endif
+
+        #ifndef DOXYGEN_GENERATING_OUTPUT
+        /* Used internally by DebugLayer, no point in documenting it here */
+        void print(Debug& out, const TextLayer& layer, const Containers::StringView& layerName, LayerDataHandle data);
+        #endif
 };
 
 inline TextLayer::Shared& TextLayer::shared() {

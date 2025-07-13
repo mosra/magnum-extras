@@ -959,4 +959,42 @@ void BaseLayer::doUpdate(const LayerStates states, const Containers::StridedArra
         state.styleUpdateStamp = sharedState.styleUpdateStamp;
 }
 
+void BaseLayer::DebugIntegration::print(Debug& debug, const BaseLayer& layer, const Containers::StringView& layerName, LayerDataHandle data) {
+    AbstractVisualLayer::DebugIntegration::print(debug, layer, layerName, data);
+
+    /* Color, outline width, padding if differs from default */
+    {
+        const Color4 color = layer.color(data);
+        if(color != Color4{1.0f}) {
+            /** @todo use a sRGB conversion once we have an option for the UI
+                to be sRGB-aware (so far neither the builtin styles are) */
+            Color4ub color8 = Math::pack<Color4ub>(color);
+            debug << "    Color:";
+            if(!(debug.flags() & Debug::Flag::DisableColors))
+                debug << Debug::color << color8;
+            debug << color8 << Debug::newline;
+        }
+    } {
+        const Vector4 outlineWidth = layer.outlineWidth(data);
+        if(outlineWidth != Vector4{}) {
+            debug << "    Outline width:";
+            if(outlineWidth == Vector4{outlineWidth.x()})
+                debug << outlineWidth.x();
+            else
+                debug << Debug::packed << outlineWidth;
+            debug << Debug::newline;
+        }
+    } {
+        const Vector4 padding = layer.padding(data);
+        if(padding != Vector4{}) {
+            debug << "    Padding:";
+            if(padding == Vector4{padding.x()})
+                debug << padding.x();
+            else
+                debug << Debug::packed << padding;
+            debug << Debug::newline;
+        }
+    }
+}
+
 }}
