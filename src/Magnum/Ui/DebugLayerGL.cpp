@@ -104,10 +104,10 @@ DebugShaderGL::DebugShaderGL() {
     frag.addSource(rs.getString("compatibility.glsl"_s))
         .addSource(rs.getString("DebugShader.frag"_s));
 
-    CORRADE_INTERNAL_ASSERT(vert.compile() && frag.compile());
+    CORRADE_INTERNAL_ASSERT_OUTPUT(vert.compile() && frag.compile());
 
     attachShaders({vert, frag});
-    CORRADE_INTERNAL_ASSERT(link());
+    CORRADE_INTERNAL_ASSERT_OUTPUT(link());
 
     #ifndef MAGNUM_TARGET_GLES
     if(!context.isExtensionSupported<GL::Extensions::ARB::explicit_uniform_location>())

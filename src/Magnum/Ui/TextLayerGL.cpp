@@ -150,10 +150,10 @@ TextShaderGL::TextShaderGL(const Flags flags, const UnsignedInt styleCount) {
         .addSource(rs.getString("compatibility.glsl"_s))
         .addSource(rs.getString("TextShader.frag"_s));
 
-    CORRADE_INTERNAL_ASSERT(vert.compile() && frag.compile());
+    CORRADE_INTERNAL_ASSERT_OUTPUT(vert.compile() && frag.compile());
 
     attachShaders({vert, frag});
-    CORRADE_INTERNAL_ASSERT(link());
+    CORRADE_INTERNAL_ASSERT_OUTPUT(link());
 
     #ifndef MAGNUM_TARGET_GLES
     if(!context.isExtensionSupported<GL::Extensions::ARB::explicit_uniform_location>())
@@ -244,10 +244,10 @@ TextEditingShaderGL::TextEditingShaderGL(const UnsignedInt styleCount) {
         .addSource(rs.getString("compatibility.glsl"_s))
         .addSource(rs.getString("TextEditingShader.frag"_s));
 
-    CORRADE_INTERNAL_ASSERT(vert.compile() && frag.compile());
+    CORRADE_INTERNAL_ASSERT_OUTPUT(vert.compile() && frag.compile());
 
     attachShaders({vert, frag});
-    CORRADE_INTERNAL_ASSERT(link());
+    CORRADE_INTERNAL_ASSERT_OUTPUT(link());
 
     #ifndef MAGNUM_TARGET_GLES
     if(!context.isExtensionSupported<GL::Extensions::ARB::explicit_uniform_location>())
