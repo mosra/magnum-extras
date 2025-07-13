@@ -1555,7 +1555,7 @@ TextLayerGLTest::TextLayerGLTest() {
        them as four-channel */
     if(PluginManager::PluginMetadata* metadata = _importerManager.metadata("StbImageImporter")) {
         metadata->configuration().setValue("forceChannelCount", 4);
-            _importerManager.setPreferredPlugins("PngImporter", {"StbImageImporter"});
+        _importerManager.setPreferredPlugins("PngImporter", {"StbImageImporter"});
     }
 
     /* Open the font and pre-fill the glyph cache so each test iteration
