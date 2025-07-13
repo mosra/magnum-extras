@@ -21,23 +21,17 @@ executors:
     macos:
       xcode: 13.4.1
     resource_class: macos.m1.medium.gen1
-  emscripten1:
-    docker:
-    # 1.39.0 is the oldest on Docker. Anything before 1.39.2 is useless as emar
-    # randomly asserts: https://github.com/emscripten-core/emscripten/pull/9742
-    # Then, anything before 1.39.6 is useless as well because emar has a
-    # filesystem race and randomly complains that a file doesn't exist:
-    # https://github.com/mosra/magnum/issues/413,
-    # https://github.com/emscripten-core/emscripten/pull/10161
-    - image: emscripten/emsdk:1.39.6-upstream
   emscripten2:
     docker:
-    # 2.0.27 is then the first that adds timestamps to events, which are needed
+    # 2.0.27 is the first that adds timestamps to events, which are needed
     # internally by touch events. And, compared to the main Magnum repository
     # at least, I don't want to bother with #ifdef'ing those in magnum-player
     # internals. The Ui library is tested for absence of touch events as it's
     # built also with GlfwApplication that doesn't implement those.
     - image: emscripten/emsdk:2.0.27
+  emscripten3:
+    docker:
+    - image: emscripten/emsdk:3.0.0
   android-29:
     machine:
       image: android:2021.10.1
@@ -476,7 +470,7 @@ jobs:
     - lcov
 
   emscripten-webgl1:
-    executor: emscripten1
+    executor: emscripten2
     environment:
       # STUPID yml interprets unquoted ON as a boolean
       TARGET_GLES2: "ON"
@@ -487,7 +481,7 @@ jobs:
         script: emscripten.sh
 
   emscripten-webgl2:
-    executor: emscripten2
+    executor: emscripten3
     environment:
       # STUPID yml interprets unquoted OFF as a boolean
       TARGET_GLES2: "OFF"
