@@ -26,7 +26,7 @@
 
 #include <Corrade/Containers/Array.h>
 #include <Corrade/Containers/BitArrayView.h>
-#include <Corrade/Containers/Function.h>
+#include <Corrade/Containers/Function.h> /* for debugIntegration() */
 #include <Corrade/Containers/GrowableArray.h>
 #include <Corrade/Containers/Optional.h>
 #include <Corrade/Containers/StridedArrayView.h>

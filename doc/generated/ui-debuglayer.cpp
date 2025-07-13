@@ -280,7 +280,8 @@ debugLayer.setLayerName(colorLayer, "Shiny");
     Debug{} << out;
     Utility::Path::write("ui-debuglayer-integration.ansi", out);
 
-    /* AbstractVisualLayer integration, default behavior */
+    /* AbstractVisualLayer integration, default behavior. Using a BaseLayer to
+       not have to create an ad-hoc subclass. */
     Ui::BaseLayerGL::Shared baseLayerShared{
         Ui::BaseLayerGL::Shared::Configuration{17}
     };
@@ -298,17 +299,17 @@ debugLayer.setLayerName(colorLayer, "Shiny");
         {}
     }, {});
 
-    Ui::BaseLayer& baseLayer = ui.setLayerInstance(Containers::pointer<Ui::BaseLayerGL>(ui.createLayer(), baseLayerShared));
-    debugLayer.setLayerName(baseLayer, "Styled");
+    Ui::BaseLayer& visualLayer = ui.setLayerInstance(Containers::pointer<Ui::BaseLayerGL>(ui.createLayer(), baseLayerShared));
+    debugLayer.setLayerName(static_cast<Ui::AbstractVisualLayer&>(visualLayer), "Styled");
 
     ui.createNode({}, {});
     ui.createNode({}, {});
     Ui::NodeHandle baseNode = ui.createNode(parent, {}, {});
-    baseLayer.create(0);
-    baseLayer.create(0);
-    baseLayer.create(0);
-    baseLayer.create(0);
-    baseLayer.create(Style::ButtonHovered, baseNode);
+    visualLayer.create(0);
+    visualLayer.create(0);
+    visualLayer.create(0);
+    visualLayer.create(0);
+    visualLayer.create(Style::ButtonHovered, baseNode);
 
     ui.update();
     out = {};
@@ -322,7 +323,7 @@ debugLayer.setLayerName(colorLayer, "Shiny");
     /* AbstractVisualLayer integration with supplied style names */
 
 /* [abstractvisuallayer-style-names] */
-debugLayer.setLayerName(baseLayer, "Styled", [](UnsignedInt style) {
+debugLayer.setLayerName(visualLayer, "Styled", [](UnsignedInt style) {
     using namespace Containers::Literals;
 
     switch(Style(style)) {
