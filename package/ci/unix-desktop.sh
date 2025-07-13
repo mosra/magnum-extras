@@ -44,6 +44,8 @@ cmake .. \
     -DMAGNUM_WITH_GLFWAPPLICATION=ON \
     `# AnyImageImporter needed if GL texts are enabled (thus, targeting EGL)` \
     -DMAGNUM_WITH_ANYIMAGEIMPORTER=$TARGET_EGL \
+    `# AnyImageConverter so we can easier debug rendering failures on the CI` \
+    -DMAGNUM_WITH_ANYIMAGECONVERTER=$TARGET_EGL \
     -DMAGNUM_BUILD_DEPRECATED=$BUILD_DEPRECATED \
     -DMAGNUM_BUILD_STATIC=$BUILD_STATIC \
     -G Ninja
@@ -61,6 +63,8 @@ cmake .. \
     -DCMAKE_INSTALL_RPATH=$HOME/deps/lib \
     -DCMAKE_BUILD_TYPE=$CONFIGURATION \
     -DMAGNUM_WITH_STBIMAGEIMPORTER=$TARGET_EGL \
+    `# StbImageConverter so we can easier debug rendering failures on the CI` \
+    -DMAGNUM_WITH_STBIMAGECONVERTER=$TARGET_EGL \
     -DMAGNUM_WITH_STBTRUETYPEFONT=$TARGET_EGL \
     -G Ninja
 ninja install
