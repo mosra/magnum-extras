@@ -84,21 +84,24 @@ Debug& operator<<(Debug& debug, const TextLayerFlags value) {
 }
 
 Debug& operator<<(Debug& debug, const TextDataFlag value) {
-    debug << "Ui::TextDataFlag" << Debug::nospace;
+    const bool packed = debug.immediateFlags() >= Debug::Flag::Packed;
+
+    if(!packed)
+        debug << "Ui::TextDataFlag" << Debug::nospace;
 
     switch(value) {
         /* LCOV_EXCL_START */
-        #define _c(value) case TextDataFlag::value: return debug << "::" #value;
+        #define _c(value) case TextDataFlag::value: return debug << (packed ? "" : "::") << Debug::nospace << #value;
         _c(Editable)
         #undef _c
         /* LCOV_EXCL_STOP */
     }
 
-    return debug << "(" << Debug::nospace << Debug::hex << UnsignedByte(value) << Debug::nospace << ")";
+    return debug << (packed ? "" : "(") << Debug::nospace << Debug::hex << UnsignedByte(value) << Debug::nospace << (packed ? "" : ")");
 }
 
 Debug& operator<<(Debug& debug, const TextDataFlags value) {
-    return Containers::enumSetDebugOutput(debug, value, "Ui::TextDataFlags{}", {
+    return Containers::enumSetDebugOutput(debug, value, debug.immediateFlags() >= Debug::Flag::Packed ? "{}" : "Ui::TextDataFlags{}", {
         TextDataFlag::Editable
     });
 }

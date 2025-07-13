@@ -95,7 +95,9 @@ struct TextLayerTest: TestSuite::Tester {
     void debugLayerFlag();
     void debugLayerFlags();
     void debugDataFlag();
+    void debugDataFlagPacked();
     void debugDataFlags();
+    void debugDataFlagsPacked();
     void debugEdit();
 
     void sharedDebugFlag();
@@ -1351,7 +1353,9 @@ TextLayerTest::TextLayerTest() {
               &TextLayerTest::debugLayerFlag,
               &TextLayerTest::debugLayerFlags,
               &TextLayerTest::debugDataFlag,
+              &TextLayerTest::debugDataFlagPacked,
               &TextLayerTest::debugDataFlags,
+              &TextLayerTest::debugDataFlagsPacked,
               &TextLayerTest::debugEdit,
 
               &TextLayerTest::sharedDebugFlag,
@@ -1869,10 +1873,24 @@ void TextLayerTest::debugDataFlag() {
     CORRADE_COMPARE(out, "Ui::TextDataFlag::Editable Ui::TextDataFlag(0xbe)\n");
 }
 
+void TextLayerTest::debugDataFlagPacked() {
+    Containers::String out;
+    /* Last is not packed, ones before should not make any flags persistent */
+    Debug{&out} << Debug::packed << TextDataFlag::Editable << Debug::packed << TextDataFlag(0xbe) << TextDataFlag::Editable;
+    CORRADE_COMPARE(out, "Editable 0xbe Ui::TextDataFlag::Editable\n");
+}
+
 void TextLayerTest::debugDataFlags() {
     Containers::String out;
     Debug{&out} << (TextDataFlag::Editable|TextDataFlag(0xa0)) << TextDataFlags{};
     CORRADE_COMPARE(out, "Ui::TextDataFlag::Editable|Ui::TextDataFlag(0xa0) Ui::TextDataFlags{}\n");
+}
+
+void TextLayerTest::debugDataFlagsPacked() {
+    Containers::String out;
+    /* Last is not packed, ones before should not make any flags persistent */
+    Debug{&out} << Debug::packed << (TextDataFlag::Editable|TextDataFlag(0xa0)) << Debug::packed << TextDataFlags{} << (TextDataFlag::Editable|TextDataFlag(0xa0));
+    CORRADE_COMPARE(out, "Editable|0xa0 {} Ui::TextDataFlag::Editable|Ui::TextDataFlag(0xa0)\n");
 }
 
 void TextLayerTest::debugEdit() {
