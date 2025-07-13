@@ -2703,4 +2703,34 @@ void TextLayer::doTextInputEvent(const UnsignedInt dataId, TextInputEvent& event
     event.setAccepted();
 }
 
+void TextLayer::DebugIntegration::print(Debug& debug, const TextLayer& layer, const Containers::StringView& layerName, LayerDataHandle data) {
+    AbstractVisualLayer::DebugIntegration::print(debug, layer, layerName, data);
+
+    /* Flags, if any */
+    if(const TextDataFlags flags = layer.flags(data)) {
+        debug << "    Flags:" << Debug::color(Debug::Color::Cyan) << Debug::packed << flags << Debug::resetColor << Debug::newline;
+    }
+
+    /* Mention also which per-data style properties are present, which is
+       useful for debugging if something looks off */
+    const char* const custom[]{
+        layer.color(data) != Color4{1.0f} ? "color" : nullptr,
+        layer.flags() >= TextLayerFlag::Transformable ?
+            layer.transformation(data) != Containers::pair(Vector2{}, Complex{}) ? "transformation" : nullptr :
+            layer.padding(data) != Vector4{} ? "padding" : nullptr
+    };
+    Int counter = 0;
+    for(const char* i: custom) {
+        if(!i)
+            continue;
+        if(!counter++)
+            debug << "    Custom";
+        else
+            debug << Debug::nospace << ",";
+        debug << i;
+    }
+    if(counter)
+        debug << Debug::newline;
+}
+
 }}

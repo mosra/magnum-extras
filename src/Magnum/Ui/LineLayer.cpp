@@ -1137,4 +1137,28 @@ void LineLayer::doUpdate(const LayerStates states, const Containers::StridedArra
         state.styleUpdateStamp = sharedState.styleUpdateStamp;
 }
 
+void LineLayer::DebugIntegration::print(Debug& debug, const LineLayer& layer, const Containers::StringView& layerName, LayerDataHandle data) {
+    AbstractVisualLayer::DebugIntegration::print(debug, layer, layerName, data);
+
+    /* Mention also which per-data style properties are present, which is
+       useful for debugging if something looks off */
+    const char* custom[]{
+        layer.color(data) != Color4{1.0f} ? "color" : nullptr,
+        layer.alignment(data) ? "alignment" : nullptr,
+        layer.padding(data) != Vector4{} ? "padding" : nullptr
+    };
+    Int counter = 0;
+    for(const char* i: custom) {
+        if(!i)
+            continue;
+        if(!counter++)
+            debug << "    Custom";
+        else
+            debug << Debug::nospace << ",";
+        debug << i;
+    }
+    if(counter)
+        debug << Debug::newline;
+}
+
 }}

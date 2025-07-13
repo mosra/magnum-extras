@@ -25,7 +25,8 @@
 */
 
 #include <new>
-/* for keyTextEventSynthesizedFromPointerPress(), an "integration test" */
+/* for keyTextEventSynthesizedFromPointerPress(), an "integration test", for
+   debugIntegration() */
 #include <Corrade/Containers/Function.h>
 #include <Corrade/Containers/Optional.h>
 #include <Corrade/Containers/StridedArrayView.h>
@@ -47,6 +48,7 @@
 #include <Magnum/Text/Script.h>
 
 #include "Magnum/Ui/AbstractUserInterface.h"
+#include "Magnum/Ui/DebugLayer.h" /* for debugIntegration() */
 #include "Magnum/Ui/Event.h"
 /* for keyTextEventSynthesizedFromPointerPress(), an "integration test" */
 #include "Magnum/Ui/EventLayer.h"
@@ -213,6 +215,10 @@ struct TextLayerTest: TestSuite::Tester {
 
     void keyTextEvent();
     void keyTextEventSynthesizedFromPointerPress();
+
+    void debugIntegration();
+    void debugIntegrationNoCallback();
+    void debugIntegrationLambdaStyleName();
 };
 
 using namespace Math::Literals;
@@ -1318,6 +1324,66 @@ const struct {
     {"with explicit update", true},
 };
 
+const struct {
+    const char* name;
+    TextLayerFlags layerFlags;
+    TextDataFlags dataFlags;
+    bool styleNames, color, paddingOrTransformation;
+    const char* expected;
+} DebugIntegrationData[]{
+    {"",
+        {}, {}, false, false, false,
+        "Node {0x1, 0x1}\n"
+        "  Data {0x6, 0x2} from layer {0x0, 0x3} with style 3"},
+    {"style name mapping",
+        {}, {}, true, false, false,
+        "Node {0x1, 0x1}\n"
+        "  Data {0x6, 0x2} from layer {0x0, 0x3} with style StyleName (3)"},
+    {"editable",
+        {}, TextDataFlag::Editable, false, false, false,
+        "Node {0x1, 0x1}\n"
+        "  Data {0x6, 0x2} from layer {0x0, 0x3} with style 3\n"
+        "    Flags: Editable"},
+    {"custom color",
+        {}, {}, false, true, false,
+        "Node {0x1, 0x1}\n"
+        "  Data {0x6, 0x2} from layer {0x0, 0x3} with style 3\n"
+        "    Custom color"},
+    {"editable, custom padding",
+        {}, TextDataFlag::Editable, false, false, true,
+        "Node {0x1, 0x1}\n"
+        "  Data {0x6, 0x2} from layer {0x0, 0x3} with style 3\n"
+        "    Flags: Editable\n"
+        "    Custom padding"},
+    {"custom color + padding",
+        {}, {}, false, true, true,
+        "Node {0x1, 0x1}\n"
+        "  Data {0x6, 0x2} from layer {0x0, 0x3} with style 3\n"
+        "    Custom color, padding"},
+    /* The Transformable flag alone doesn't change the output, only if custom
+       transformation is used */
+    {"transformable",
+        TextLayerFlag::Transformable, {}, false, false, false,
+        "Node {0x1, 0x1}\n"
+        "  Data {0x6, 0x2} from layer {0x0, 0x3} with style 3"},
+    {"transformable, custom color",
+        TextLayerFlag::Transformable, {}, false, true, false,
+        "Node {0x1, 0x1}\n"
+        "  Data {0x6, 0x2} from layer {0x0, 0x3} with style 3\n"
+        "    Custom color"},
+    {"transformable, custom transformation",
+        TextLayerFlag::Transformable, {}, false, false, true,
+        "Node {0x1, 0x1}\n"
+        "  Data {0x6, 0x2} from layer {0x0, 0x3} with style 3\n"
+        "    Custom transformation"},
+    {"style name mapping, editable, custom color + padding",
+        {}, TextDataFlag::Editable, true, true, true,
+        "Node {0x1, 0x1}\n"
+        "  Data {0x6, 0x2} from layer {0x0, 0x3} with style StyleName (3)\n"
+        "    Flags: Editable\n"
+        "    Custom color, padding"},
+};
+
 TextLayerTest::TextLayerTest() {
     addTests({&TextLayerTest::styleUniformSizeAlignment<TextLayerCommonStyleUniform>,
               &TextLayerTest::styleUniformSizeAlignment<TextLayerStyleUniform>,
@@ -1510,6 +1576,12 @@ TextLayerTest::TextLayerTest() {
 
     addInstancedTests({&TextLayerTest::keyTextEventSynthesizedFromPointerPress},
         Containers::arraySize(KeyTextEventSynthesizedFromPointerPressData));
+
+    addInstancedTests({&TextLayerTest::debugIntegration},
+        Containers::arraySize(DebugIntegrationData));
+
+    addTests({&TextLayerTest::debugIntegrationNoCallback,
+              &TextLayerTest::debugIntegrationLambdaStyleName});
 }
 
 using namespace Containers::Literals;
@@ -11427,6 +11499,284 @@ void TextLayerTest::keyTextEventSynthesizedFromPointerPress() {
         ui.update();
         CORRADE_COMPARE(layer.state(), LayerStates{});
     }
+}
+
+Containers::StringView debugIntegrationStyleName(UnsignedInt style) {
+    return style == 3 ? "StyleName" : "Wrong";
+}
+
+void TextLayerTest::debugIntegration() {
+    auto&& data = DebugIntegrationData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
+    AbstractUserInterface ui{{100, 100}};
+    NodeHandle root = ui.createNode({}, {100, 100});
+    NodeHandle node = ui.createNode(root, {}, {100, 100});
+
+    struct: Text::AbstractFont {
+        Text::FontFeatures doFeatures() const override { return {}; }
+        bool doIsOpened() const override { return true; }
+        void doClose() override {}
+
+        void doGlyphIdsInto(const Containers::StridedArrayView1D<const char32_t>&, const Containers::StridedArrayView1D<UnsignedInt>&) override {}
+        Vector2 doGlyphSize(UnsignedInt) override { return {}; }
+        Vector2 doGlyphAdvance(UnsignedInt) override { return {}; }
+        Containers::Pointer<Text::AbstractShaper> doCreateShaper() override { return Containers::pointer<ThreeGlyphShaper>(*this); }
+    } font;
+
+    struct: Text::AbstractGlyphCache {
+        using Text::AbstractGlyphCache::AbstractGlyphCache;
+
+        Text::GlyphCacheFeatures doFeatures() const override { return {}; }
+        void doSetImage(const Vector2i&, const ImageView2D&) override {}
+    } cache{PixelFormat::R8Unorm, {32, 32, 2}};
+    cache.addFont(98, &font);
+
+    struct LayerShared: TextLayer::Shared {
+        explicit LayerShared(Text::AbstractGlyphCache& glyphCache, const Configuration& configuration): TextLayer::Shared{glyphCache, configuration} {}
+
+        void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
+        void doSetEditingStyle(const TextLayerCommonEditingStyleUniform&, Containers::ArrayView<const TextLayerEditingStyleUniform>) override {}
+    } shared{cache, TextLayer::Shared::Configuration{4}};
+    FontHandle fontHandle = shared.addFont(font, 1.0f);
+    shared.setStyle(TextLayerCommonStyleUniform{},
+        {TextLayerStyleUniform{},
+         TextLayerStyleUniform{},
+         TextLayerStyleUniform{},
+         TextLayerStyleUniform{}},
+        {fontHandle,
+         fontHandle,
+         fontHandle,
+         fontHandle},
+        {Text::Alignment::MiddleCenter,
+         Text::Alignment::MiddleCenter,
+         Text::Alignment::MiddleCenter,
+         Text::Alignment::MiddleCenter},
+        {}, {}, {}, {}, {}, {});
+
+    struct Layer: TextLayer {
+        explicit Layer(LayerHandle handle, Shared& shared, TextLayerFlags flags): TextLayer{handle, shared, flags} {}
+    };
+
+    /* Create and remove a bunch of layers first to have the handle with a
+       non-trivial value */
+    ui.removeLayer(ui.createLayer());
+    ui.removeLayer(ui.createLayer());
+    TextLayer& layer = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer(), shared, data.layerFlags));
+    /* And also some more data to not list a trivial data handle */
+    layer.create(0, "", {});
+    layer.create(0, "", {});
+    layer.create(0, "", {});
+    layer.create(0, "", {});
+    layer.create(0, "", {});
+    layer.create(0, "", {});
+    layer.remove(layer.create(0, "", {}));
+    DataHandle layerData = layer.create(3, "", {}, data.dataFlags, node);
+    if(data.color)
+        layer.setColor(layerData, 0xff3366_rgbf);
+    if(data.paddingOrTransformation) {
+        if(data.layerFlags >= TextLayerFlag::Transformable)
+            layer.translate(layerData, Vector2::yAxis(3.5f));
+        else
+            layer.setPadding(layerData, 3.5f);
+    }
+
+    DebugLayer& debugLayer = ui.setLayerInstance(Containers::pointer<DebugLayer>(ui.createLayer(), DebugLayerSource::NodeDataAttachmentDetails, DebugLayerFlag::NodeHighlight));
+
+    Containers::String out;
+    debugLayer.setNodeHighlightCallback([&out](Containers::StringView message) {
+        out = message;
+    });
+    if(data.styleNames)
+        debugLayer.setLayerName(layer, "", debugIntegrationStyleName);
+    else
+        debugLayer.setLayerName(layer, "");
+
+    /* Make the debug layer aware of everything */
+    ui.update();
+
+    CORRADE_VERIFY(debugLayer.highlightNode(node));
+    CORRADE_COMPARE_AS(out, data.expected, TestSuite::Compare::String);
+}
+
+void TextLayerTest::debugIntegrationNoCallback() {
+    AbstractUserInterface ui{{100, 100}};
+    NodeHandle root = ui.createNode({}, {100, 100});
+    NodeHandle node = ui.createNode(root, {}, {100, 100});
+
+    struct: Text::AbstractFont {
+        Text::FontFeatures doFeatures() const override { return {}; }
+        bool doIsOpened() const override { return true; }
+        void doClose() override {}
+
+        void doGlyphIdsInto(const Containers::StridedArrayView1D<const char32_t>&, const Containers::StridedArrayView1D<UnsignedInt>&) override {}
+        Vector2 doGlyphSize(UnsignedInt) override { return {}; }
+        Vector2 doGlyphAdvance(UnsignedInt) override { return {}; }
+        Containers::Pointer<Text::AbstractShaper> doCreateShaper() override { return Containers::pointer<ThreeGlyphShaper>(*this); }
+    } font;
+
+    struct: Text::AbstractGlyphCache {
+        using Text::AbstractGlyphCache::AbstractGlyphCache;
+
+        Text::GlyphCacheFeatures doFeatures() const override { return {}; }
+        void doSetImage(const Vector2i&, const ImageView2D&) override {}
+    } cache{PixelFormat::R8Unorm, {32, 32, 2}};
+    cache.addFont(98, &font);
+
+    struct LayerShared: TextLayer::Shared {
+        explicit LayerShared(Text::AbstractGlyphCache& glyphCache, const Configuration& configuration): TextLayer::Shared{glyphCache, configuration} {}
+
+        void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
+        void doSetEditingStyle(const TextLayerCommonEditingStyleUniform&, Containers::ArrayView<const TextLayerEditingStyleUniform>) override {}
+    } shared{cache, TextLayer::Shared::Configuration{4}};
+    FontHandle fontHandle = shared.addFont(font, 1.0f);
+    shared.setStyle(TextLayerCommonStyleUniform{},
+        {TextLayerStyleUniform{},
+         TextLayerStyleUniform{},
+         TextLayerStyleUniform{},
+         TextLayerStyleUniform{}},
+        {fontHandle,
+         fontHandle,
+         fontHandle,
+         fontHandle},
+        {Text::Alignment::MiddleCenter,
+         Text::Alignment::MiddleCenter,
+         Text::Alignment::MiddleCenter,
+         Text::Alignment::MiddleCenter},
+        {}, {}, {}, {}, {}, {});
+
+    struct Layer: TextLayer {
+        explicit Layer(LayerHandle handle, Shared& shared): TextLayer{handle, shared} {}
+    };
+
+    /* Just to match the layer handle in debugIntegration() above */
+    ui.removeLayer(ui.createLayer());
+    ui.removeLayer(ui.createLayer());
+    TextLayer& layer = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer(), shared));
+    /* ... and the data handle also */
+    layer.create(0, "", {});
+    layer.create(0, "", {});
+    layer.create(0, "", {});
+    layer.create(0, "", {});
+    layer.create(0, "", {});
+    layer.create(0, "", {});
+    layer.remove(layer.create(0, "", {}));
+    DataHandle layerData = layer.create(3, "", {}, TextDataFlag::Editable, node);
+    layer.setColor(layerData, 0xff3366_rgbf);
+    layer.setPadding(layerData, 3.5f);
+
+    DebugLayer& debugLayer = ui.setLayerInstance(Containers::pointer<DebugLayer>(ui.createLayer(), DebugLayerSource::NodeDataAttachmentDetails, DebugLayerFlag::NodeHighlight));
+
+    debugLayer.setLayerName(layer, "", debugIntegrationStyleName);
+
+    /* Make the debug layer aware of everything */
+    ui.update();
+
+    /* Highlight the node for visual color verification */
+    {
+        Debug{} << "======================== visual color verification start =======================";
+
+        debugLayer.addFlags(DebugLayerFlag::ColorAlways);
+
+        CORRADE_VERIFY(debugLayer.highlightNode(node));
+
+        debugLayer.clearFlags(DebugLayerFlag::ColorAlways);
+
+        Debug{} << "======================== visual color verification end =========================";
+    }
+
+    /* Do the same, but this time with output redirection to verify the
+       contents. The internals automatically disable coloring if they detect
+       the output isn't a TTY. */
+    {
+        Containers::String out;
+        Debug redirectOutput{&out};
+        CORRADE_VERIFY(debugLayer.highlightNode(node));
+        /* The output always has a newline at the end which cannot be disabled
+           so strip it to have the comparison match the debugIntegration()
+           case */
+        CORRADE_COMPARE_AS(out,
+            "\n",
+            TestSuite::Compare::StringHasSuffix);
+        CORRADE_COMPARE_AS(out.exceptSuffix("\n"),
+            Containers::arrayView(DebugIntegrationData).back().expected,
+            TestSuite::Compare::String);
+    }
+}
+
+void TextLayerTest::debugIntegrationLambdaStyleName() {
+    /* Like AbstractVisualLayerTest::debugIntegrationLambdaStyleName(), just
+       verifying that the construction with a lambda works even with the
+       BaseLayer subclass of DebugIntegration */
+
+    AbstractUserInterface ui{{100, 100}};
+    NodeHandle node = ui.createNode({}, {100, 100});
+
+    struct: Text::AbstractFont {
+        Text::FontFeatures doFeatures() const override { return {}; }
+        bool doIsOpened() const override { return true; }
+        void doClose() override {}
+
+        void doGlyphIdsInto(const Containers::StridedArrayView1D<const char32_t>&, const Containers::StridedArrayView1D<UnsignedInt>&) override {}
+        Vector2 doGlyphSize(UnsignedInt) override { return {}; }
+        Vector2 doGlyphAdvance(UnsignedInt) override { return {}; }
+        Containers::Pointer<Text::AbstractShaper> doCreateShaper() override { return Containers::pointer<ThreeGlyphShaper>(*this); }
+    } font;
+
+    struct: Text::AbstractGlyphCache {
+        using Text::AbstractGlyphCache::AbstractGlyphCache;
+
+        Text::GlyphCacheFeatures doFeatures() const override { return {}; }
+        void doSetImage(const Vector2i&, const ImageView2D&) override {}
+    } cache{PixelFormat::R8Unorm, {32, 32, 2}};
+    cache.addFont(98, &font);
+
+    struct LayerShared: TextLayer::Shared {
+        explicit LayerShared(Text::AbstractGlyphCache& glyphCache, const Configuration& configuration): TextLayer::Shared{glyphCache, configuration} {}
+
+        void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
+        void doSetEditingStyle(const TextLayerCommonEditingStyleUniform&, Containers::ArrayView<const TextLayerEditingStyleUniform>) override {}
+    } shared{cache, TextLayer::Shared::Configuration{4}};
+    FontHandle fontHandle = shared.addFont(font, 1.0f);
+    shared.setStyle(TextLayerCommonStyleUniform{},
+        {TextLayerStyleUniform{},
+         TextLayerStyleUniform{},
+         TextLayerStyleUniform{},
+         TextLayerStyleUniform{}},
+        {fontHandle,
+         fontHandle,
+         fontHandle,
+         fontHandle},
+        {Text::Alignment::MiddleCenter,
+         Text::Alignment::MiddleCenter,
+         Text::Alignment::MiddleCenter,
+         Text::Alignment::MiddleCenter},
+        {}, {}, {}, {}, {}, {});
+
+    struct Layer: TextLayer {
+        explicit Layer(LayerHandle handle, Shared& shared): TextLayer{handle, shared} {}
+    };
+
+    TextLayer& layer = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer(), shared));
+    layer.create(3, "", {}, node);
+
+    DebugLayer& debugLayer = ui.setLayerInstance(Containers::pointer<DebugLayer>(ui.createLayer(), DebugLayerSource::NodeDataAttachmentDetails, DebugLayerFlag::NodeHighlight));
+    debugLayer.setLayerName(layer, "", [](UnsignedInt style) -> Containers::StringView {
+        return style == 3 ? "LambdaStyle" : "Wrong";
+    });
+
+    /* Make the debug layer aware of everything */
+    ui.update();
+
+    Containers::String out;
+    {
+        Debug redirectOutput{&out};
+        CORRADE_VERIFY(debugLayer.highlightNode(node));
+    }
+    CORRADE_COMPARE_AS(out,
+        "Top-level node {0x0, 0x1}\n"
+        "  Data {0x0, 0x1} from layer {0x0, 0x1} with style LambdaStyle (3)\n",
+        TestSuite::Compare::String);
 }
 
 }}}}
