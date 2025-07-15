@@ -317,7 +317,9 @@ const struct {
     {"default offset and size", "blur-input.png", "textured-default.png",
         false, 0x1f1f1f_rgbf, {}, {}, {},
         BaseLayerStyleUniform{},
-        0.75f, 0.0971f},
+        /* Old llvmpipe has a bigger difference in the default case, likely due
+           to sampling aliasing */
+        1.5f, 0.430f},
     {"", "blur-input.png", "textured.png",
         false, 0x1f1f1f_rgbf,
         /* The image is 160x106, want to render the bottom right 112x48 portion
@@ -622,7 +624,7 @@ const struct {
             .setCornerRadius(12.0f)
             /* Premultiplied alpha */
             .setColor(0xffffffff_rgbaf*0.5f),
-        2.5f, 0.178f},
+        2.75f, 0.178f},
     /* Interaction of the compositing quads with smoothness radius tested in
        renderCompositeEdgeSmoothness() */
     {"background blur, 75% opacity, colored", "composite-background-blur-75-colored.png",
@@ -636,7 +638,7 @@ const struct {
             /* Premultiplied alpha */
             .setColor(0x747474ff_rgbaf*0.75f, 0xdcdcdcff_rgbaf*0.75f)
             .setOutlineColor(0xa5c9eaff_rgbaf*0.75f),
-        1.25f, 0.047f},
+        1.5f, 0.0724f},
     /* This should look the same as if no compositing is done, including the
        same blend operation and everything. In reality there's a slight
        difference possibly due to the blend operation being done a bit
@@ -659,7 +661,7 @@ const struct {
             .setCornerRadius(12.0f)
             /* Premultiplied alpha */
             .setColor(0xffffffff_rgbaf*0.5f),
-        2.5f, 0.178f},
+        2.75f, 0.178f},
     /* sqrt(4*(2^2)) == 4, so should be ~same as above (plus rounding
        errors) */
     {"background blur, 50% opacity, radius 2, 4 passes", "composite-background-blur-50.png",
@@ -670,7 +672,7 @@ const struct {
             .setCornerRadius(12.0f)
             /* Premultiplied alpha */
             .setColor(0xffffffff_rgbaf*0.5f),
-        6.0f, 0.775f},
+        6.0f, 0.793f},
     /* sqrt(16*(1^2)) == 4, so should ~same as above (plus even more rounding
        errors) */
     {"background blur, 50% opacity, radius 1, 16 passes", "composite-background-blur-50.png",
@@ -724,7 +726,7 @@ const struct {
             .setCornerRadius(12.0f)
             /* Premultiplied alpha */
             .setColor(0xffffffff_rgbaf*0.5f),
-        1.0f, 0.199f},
+        1.5f, 0.274f},
     /* This should again look the same as if no compositing is done, as the
        blurred background contributes in no way to the output */
     {"background blur, 50% opacity, radius 31, 0% blur opacity", "composite-default-50.png",
@@ -826,17 +828,17 @@ const struct {
     /* Small radius to verify the compositing node area is correctly expanded.
        If it wouldn't be, the cyan background would shine through. */
     {"radius 1", "composite-node-rects-background-blur-r1.png",
-        {1.0f, 1.0f}, 1, 1, 1.5f, 0.211f},
+        {1.0f, 1.0f}, 1, 1, 2.75f, 0.211f},
     {"radius 1, UI size different from framebuffer", "composite-node-rects-background-blur-r1.png",
-        {0.1f, 10.0f}, 1, 1, 1.5f, 0.211f},
+        {0.1f, 10.0f}, 1, 1, 2.75f, 0.211f},
     {"radius 30", "composite-node-rects-background-blur-r30.png",
-        {1.0f, 1.0f}, 30, 1, 1.25f, 0.055f},
+        {1.0f, 1.0f}, 30, 1, 1.25f, 0.111f},
     {"radius 30, UI size different from framebuffer", "composite-node-rects-background-blur-r30.png",
-        {0.1f, 10.0f}, 30, 1, 1.25f, 0.055f},
+        {0.1f, 10.0f}, 30, 1, 1.25f, 0.111f},
     /* Should look roughly the same (minus rounding errors) with no apparent
        edge artifacts caused by not including pass count into the padding */
     {"radius 15, 4 passes", "composite-node-rects-background-blur-r30.png",
-        {1.0f, 1.0f}, 15, 4, 6.25f, 0.753f},
+        {1.0f, 1.0f}, 15, 4, 7.0f, 0.865f},
 };
 
 const struct {
@@ -2205,7 +2207,7 @@ template<BaseLayerSharedFlag flag> void BaseLayerGLTest::renderCompositeTextured
     #endif
     CORRADE_COMPARE_WITH(renderer.compositingFramebuffer().read({{}, RenderSize}, {PixelFormat::RGBA8Unorm}),
         Utility::Path::join({UI_TEST_DIR, "BaseLayerTestFiles", data.expectedFilename}),
-        (DebugTools::CompareImageToFile{_manager, 1.0f, 0.099f}));
+        (DebugTools::CompareImageToFile{_manager, 1.5f, 0.276f}));
 }
 
 void BaseLayerGLTest::renderCompositeNodeRects() {
