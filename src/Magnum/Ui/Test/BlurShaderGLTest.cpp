@@ -86,53 +86,57 @@ const struct {
     Float limit;
     bool flippedX, flippedY, transparent;
     Float maxThreshold, meanThreshold;
+    /* If these are unset, the default gets used */
+    struct {
+        Float maxThreshold, meanThreshold;
+    } llvmpipe21;
 } RenderData[]{
     /* This should result in exactly the same image... */
     {"radius 0", "blur-input.png",
         0, 0.0f, false, false, false,
-        0.0f, 0.0f},
+        0.0f, 0.0f, {}},
     /* ... and axis flipping should not add any weird errors to it either */
     {"radius 0, flipped on X", "blur-input.png",
         0, 0.0f, true, false, false,
-        0.0f, 0.0f},
+        0.0f, 0.0f, {}},
     {"radius 0, flipped on Y", "blur-input.png",
         0, 0.0f, false, true, false,
-        0.0f, 0.0f},
+        0.0f, 0.0f, {}},
     {"radius 0, flipped on XY", "blur-input.png",
         0, 0.0f, true, true, false,
-        0.0f, 0.0f},
+        0.0f, 0.0f, {}},
     {"radius 0, transparent", "blur-input.png",
         0, 0.0f, true, true, true,
-        0.0f, 0.0f},
+        0.0f, 0.0f, {}},
     /* This results in 4 discrete taps, so 2 interpolated taps with the first
        tap taking the center pixel twice. Shouldn't cause the image to get any
        brighter. */
     {"radius 3, limit 0", "blur-3.png",
         7, 0.0f, false, false, false,
-        /* NVidia & llvmpipe have slight differences */
-        0.75f, 0.111f},
+        /* NVidia & llvmpipe have slight differences, older llvmpipe more */
+        0.75f, 0.111f, {1.5f, 0.657f}},
     {"radius 3, limit 0, flipped on X", "blur-3.png",
         7, 0.0f, true, false, false,
-        /* NVidia & llvmpipe have slight differences */
-        0.75f, 0.111f},
+        /* NVidia & llvmpipe have slight differences, older llvmpipe more */
+        0.75f, 0.111f, {1.5f, 0.657f}},
     {"radius 3, limit 0, flipped on Y", "blur-3.png",
         7, 0.0f, false, true, false,
-        /* NVidia & llvmpipe have slight differences */
-        0.75f, 0.111f},
+        /* NVidia & llvmpipe have slight differences, older llvmpipe more */
+        0.75f, 0.111f, {1.5f, 0.657f}},
     {"radius 3, limit 0, flipped on XY", "blur-3.png",
         7, 0.0f, true, true, false,
-        /* NVidia & llvmpipe have slight differences */
-        0.75f, 0.111f},
+        /* NVidia & llvmpipe have slight differences, older llvmpipe more */
+        0.75f, 0.111f, {1.5f, 0.657f}},
     {"radius 3, limit 0, transparent", "blur-3.png",
         7, 0.0f, false, false, true,
-        /* NVidia & llvmpipe have slight differences */
-        0.75f, 0.111f},
+        /* NVidia & llvmpipe have slight differences, older llvmpipe more */
+        0.75f, 0.111f, {1.5f, 0.657f}},
     /* This results in 17 discrete taps, so 9 interpolated taps with the first
        tap being (non-interpolated) center pixel */
     {"radius 16, limit 0", "blur-16.png",
         16, 0.0f, false, false, false,
-        /* NVidia & llvmpipe have slight differences */
-        0.75f, 0.091f},
+        /* NVidia & llvmpipe have slight differences, older llvmpipe more */
+        0.75f, 0.091f, {1.25f, 0.557f}},
     /* Same sequence as for "radius 16" above, but with the ends clipped away
        (and then everything scaled accordingly, which is the main contribution
        factor to the difference). The result is almost the same, just with 8
@@ -140,12 +144,12 @@ const struct {
     {"radius 16, limit 0.5/255", "blur-16.png",
         16, 0.5f/255.0f, false, false, false,
         /* NVidia & llvmpipe have slight differences */
-        2.25f, 1.304f},
+        2.25f, 1.304f, {}},
     /* Max possible radius value, verify it still compiles & runs correctly */
     {"radius 31, limit 0", "blur-31.png",
         31, 0.0f, false, false, false,
-        /* NVidia & llvmpipe have slight differences */
-        0.75f, 0.077f},
+        /* NVidia & llvmpipe have slight differences, older llvmpipe more */
+        0.75f, 0.077f, {1.25f, 0.645f}},
 };
 
 const struct {
@@ -535,9 +539,18 @@ void BlurShaderGLTest::render() {
     if(data.flippedX)
         pixels = pixels.flipped<1>();
 
-    CORRADE_COMPARE_WITH(pixels,
-        Utility::Path::join({UI_TEST_DIR, "BaseLayerTestFiles", data.filename}),
-        (DebugTools::CompareImageToFile{_importerManager, data.maxThreshold, data.meanThreshold}));
+    const bool llvmpipe21Different = data.llvmpipe21.maxThreshold && GL::Context::current().rendererString().contains("llvmpipe") && (GL::Context::current().versionString().contains("Mesa 21") || GL::Context::current().versionString().contains("Mesa 20"));
+    {
+        CORRADE_EXPECT_FAIL_IF(llvmpipe21Different,
+            "Mesa llvmpipe 21 and older has rounding errors resulting in significantly different blur output.");
+        CORRADE_COMPARE_WITH(pixels,
+            Utility::Path::join({UI_TEST_DIR, "BaseLayerTestFiles", data.filename}),
+            (DebugTools::CompareImageToFile{_importerManager, data.maxThreshold, data.meanThreshold}));
+    }
+    if(llvmpipe21Different)
+        CORRADE_COMPARE_WITH(pixels,
+            Utility::Path::join({UI_TEST_DIR, "BaseLayerTestFiles", data.filename}),
+            (DebugTools::CompareImageToFile{_importerManager, data.llvmpipe21.maxThreshold, data.llvmpipe21.meanThreshold}));
 
     /* Overal brightness of the blurred image shouldn't be same as of the
        input, i.e. a sum of the convolution weights being 1 */
@@ -558,9 +571,9 @@ void BlurShaderGLTest::render() {
     CORRADE_COMPARE_AS(inputBrightness, inputPixelsContiguous.size(),
         TestSuite::Compare::Less);
     /* Allow the blurred image brightness to differ by up to ~2.5% from the
-       original, but not more */
+       original, but not more. For older llvmpipe allow bigger difference. */
     CORRADE_COMPARE_WITH(outputBrightness, inputBrightness,
-        TestSuite::Compare::around(inputPixelsContiguous.size()*0.025f));
+        TestSuite::Compare::around(inputPixelsContiguous.size()*(llvmpipe21Different ? 0.05f : 0.025f)));
 }
 
 class BlurShaderCustomRadius8: public GL::AbstractShaderProgram {
