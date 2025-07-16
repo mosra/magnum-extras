@@ -741,6 +741,8 @@ void UserInterfaceGLTest::setStyleNoSizeSet() {
 }
 
 void UserInterfaceGLTest::setStyleBaseLayerAlreadyPresent() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
     BaseLayerGL::Shared shared{BaseLayer::Shared::Configuration{1}};
     UserInterfaceGL ui{NoCreate};
     ui.setSize({200, 300})
@@ -764,6 +766,8 @@ void UserInterfaceGLTest::setStyleBaseLayerAlreadyPresent() {
 }
 
 void UserInterfaceGLTest::setStyleTextLayerAlreadyPresent() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
     Text::GlyphCacheArrayGL cache{PixelFormat::R8Unorm, {32, 32, 1}};
 
     TextLayerGL::Shared shared{cache, TextLayer::Shared::Configuration{1}};
@@ -789,6 +793,8 @@ void UserInterfaceGLTest::setStyleTextLayerAlreadyPresent() {
 }
 
 void UserInterfaceGLTest::setStyleTextLayerImagesTextLayerNotPresentNotApplied() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
     UserInterfaceGL ui{NoCreate};
     ui.setSize({200, 300});
 
@@ -810,6 +816,8 @@ void UserInterfaceGLTest::setStyleTextLayerImagesTextLayerNotPresentNotApplied()
 }
 
 void UserInterfaceGLTest::setStyleEventLayerAlreadyPresent() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
     UserInterfaceGL ui{NoCreate};
     ui.setSize({200, 300})
       .setEventLayerInstance(Containers::pointer<EventLayer>(ui.createLayer()));
@@ -832,6 +840,8 @@ void UserInterfaceGLTest::setStyleEventLayerAlreadyPresent() {
 }
 
 void UserInterfaceGLTest::setStyleSnapLayouterAlreadyPresent() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
     UserInterfaceGL ui{NoCreate};
     ui.setSize({200, 300})
       .setSnapLayouterInstance(Containers::pointer<SnapLayouter>(ui.createLayouter()));
