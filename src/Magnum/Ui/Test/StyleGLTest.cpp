@@ -93,11 +93,12 @@ const struct {
         Int styleCount;
         bool hoveredPressed, focused, disabled;
         Float maxThreshold, meanThreshold;
+        bool xfailLlvmpipe20;
     } properties;
     NodeHandle(*create)(UserInterface& ui, Int style, Int counter);
 } RenderData[]{
     {"button text + icon, stateless", "button-text-icon.png",
-        {8, true, false, true, 2.0f, 0.0399f},
+        {8, true, false, true, 2.0f, 0.0399f, true},
         [](UserInterface& ui, Int style, Int counter) {
             /** @todo differently wide icons to test alignment */
             return button({ui, {96, 36}}, counter % 2 ? Icon::No : Icon::Yes, counter % 2 ? "Bye" : "Hello!", ButtonStyle(style)).node();
@@ -143,7 +144,7 @@ const struct {
         }},
 
     {"button text, stateless", "button-text.png",
-        {8, true, false, true, 2.0f, 0.0386f},
+        {8, true, false, true, 2.0f, 0.0386f, true},
         [](UserInterface& ui, Int style, Int counter) {
             return button({ui, {64, 36}}, counter % 2 ? "Bye" : "Hello!", ButtonStyle(style)).node();
         }},
@@ -178,7 +179,7 @@ const struct {
         }},
 
     {"button icon, stateless", "button-icon.png",
-        {8, true, false, true, 1.25f, 0.0278f},
+        {8, true, false, true, 1.25f, 0.0278f, true},
         [](UserInterface& ui, Int style, Int counter) {
             /** @todo differently wide icons to test alignment */
             return button({ui, {48, 36}}, counter % 2 ? Icon::Yes : Icon::No, ButtonStyle(style)).node();
@@ -214,7 +215,7 @@ const struct {
         }},
 
     {"label text, stateless", "label-text.png",
-        {7, false, false, true, 2.0f, 0.0248f},
+        {7, false, false, true, 2.0f, 0.0248f, false},
         [](UserInterface& ui, Int style, Int counter) {
             return label({ui, {52, 36}}, counter % 3 ? "Bye" : "Hello!", LabelStyle(style)).node();
         }},
@@ -249,7 +250,7 @@ const struct {
         }},
 
     {"label icon, stateless", "label-icon.png",
-        {7, false, false, true, 1.75f, 0.0099f},
+        {7, false, false, true, 1.75f, 0.0099f, false},
         [](UserInterface& ui, Int style, Int counter) {
             /** @todo differently wide icons to test alignment */
             return label({ui, {48, 36}}, counter % 3 ? Icon::Yes : Icon::No, LabelStyle(style)).node();
@@ -285,7 +286,7 @@ const struct {
         }},
 
     {"input", "input.png",
-        {5, true, true, true, 2.0f, 0.0229f},
+        {5, true, true, true, 2.0f, 0.0229f, true},
         [](UserInterface& ui, Int style, Int counter) {
             Input input{{ui, {64, 36}}, counter % 2 ? "Edit..." : "Type?", InputStyle(style)};
             /** @todo use a cursor setting API once it exists */
@@ -502,9 +503,13 @@ void StyleGLTest::render() {
 
     MAGNUM_VERIFY_NO_GL_ERROR();
 
-    CORRADE_COMPARE_WITH(framebuffer.read({{}, uiSize}, {PixelFormat::RGBA8Unorm}),
-        Utility::Path::join({UI_TEST_DIR, "StyleTestFiles", Containers::StringView{styleData.filePrefix} + RenderData[filenameIndex].filename}),
-        (DebugTools::CompareImageToFile{_importerManager, properties.maxThreshold, properties.meanThreshold}));
+    {
+        CORRADE_EXPECT_FAIL_IF(properties.xfailLlvmpipe20 && GL::Context::current().rendererString().contains("llvmpipe") && GL::Context::current().versionString().contains("Mesa 20"),
+            "Mesa llvmpipe 20 renders the text in a completely different color for some reason.");
+        CORRADE_COMPARE_WITH(framebuffer.read({{}, uiSize}, {PixelFormat::RGBA8Unorm}),
+            Utility::Path::join({UI_TEST_DIR, "StyleTestFiles", Containers::StringView{styleData.filePrefix} + RenderData[filenameIndex].filename}),
+            (DebugTools::CompareImageToFile{_importerManager, properties.maxThreshold, properties.meanThreshold}));
+    }
 
     /* Verify that hovering the pressed and focused widgets doesn't have any
        difference in visuals */
@@ -641,9 +646,13 @@ void StyleGLTest::render() {
 
         MAGNUM_VERIFY_NO_GL_ERROR();
 
-        CORRADE_COMPARE_WITH(framebuffer.read({{}, uiSize}, {PixelFormat::RGBA8Unorm}),
-            Utility::Path::join({UI_TEST_DIR, "StyleTestFiles", Containers::StringView{styleData.filePrefix} + RenderData[filenameIndex].filename}),
-            (DebugTools::CompareImageToFile{_importerManager, properties.maxThreshold, properties.meanThreshold}));
+        {
+            CORRADE_EXPECT_FAIL_IF(properties.xfailLlvmpipe20 && GL::Context::current().rendererString().contains("llvmpipe") && GL::Context::current().versionString().contains("Mesa 20"),
+                "Mesa llvmpipe 20 renders the text in a completely different color for some reason.");
+            CORRADE_COMPARE_WITH(framebuffer.read({{}, uiSize}, {PixelFormat::RGBA8Unorm}),
+                Utility::Path::join({UI_TEST_DIR, "StyleTestFiles", Containers::StringView{styleData.filePrefix} + RenderData[filenameIndex].filename}),
+                (DebugTools::CompareImageToFile{_importerManager, properties.maxThreshold, properties.meanThreshold}));
+        }
     }
 }
 
