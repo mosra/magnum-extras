@@ -33,7 +33,9 @@
 #include <Magnum/PixelFormat.h>
 #include <Magnum/GL/Framebuffer.h>
 #include <Magnum/GL/Renderer.h>
-#ifdef CORRADE_TARGET_APPLE
+#ifdef MAGNUM_TARGET_EGL
+#include <Magnum/Platform/WindowlessEglApplication.h>
+#elif defined(CORRADE_TARGET_APPLE)
 #include <Magnum/Platform/WindowlessCglApplication.h>
 #elif defined(CORRADE_TARGET_UNIX)
 #include <Magnum/Platform/WindowlessGlxApplication.h>
