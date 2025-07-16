@@ -38,7 +38,9 @@
 #include <Magnum/GL/Texture.h>
 #include <Magnum/GL/TextureArray.h>
 #include <Magnum/GL/TextureFormat.h>
-#ifdef CORRADE_TARGET_APPLE
+#ifdef MAGNUM_TARGET_EGL
+#include <Magnum/Platform/WindowlessEglApplication.h>
+#elif defined(CORRADE_TARGET_APPLE)
 #include <Magnum/Platform/WindowlessCglApplication.h>
 #elif defined(CORRADE_TARGET_UNIX)
 #include <Magnum/Platform/WindowlessGlxApplication.h>
