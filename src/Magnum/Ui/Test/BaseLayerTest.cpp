@@ -619,9 +619,11 @@ void BaseLayerTest::styleUniformCommonConstructNoInit() {
 
 void BaseLayerTest::styleUniformCommonSetters() {
     BaseLayerCommonStyleUniform a;
-    a.setSmoothness(34.0f, 12.0f);
+    a.setSmoothness(34.0f, 12.0f)
+     .setBackgroundBlurAlpha(0.75f);
     CORRADE_COMPARE(a.smoothness, 34.0f);
     CORRADE_COMPARE(a.innerOutlineSmoothness, 12.0f);
+    CORRADE_COMPARE(a.backgroundBlurAlpha, 0.75f);
 
     /* Convenience overload setting both smoothness values */
     a.setSmoothness(2.5f);
