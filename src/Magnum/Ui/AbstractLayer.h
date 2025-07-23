@@ -316,7 +316,8 @@ enum class LayerState: UnsignedShort {
      * @ref AbstractLayer::cleanData() is called with this flag present.
      *
      * If set on a layer, causes @ref UserInterfaceState::NeedsDataClean
-     * to be set on the user interface.
+     * to be set on the user interface. Doesn't get passed to
+     * @ref AbstractLayer::update().
      */
     NeedsDataClean = 1 << 9
 };

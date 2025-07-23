@@ -395,13 +395,13 @@ visual change and thus there's no need to redraw anything.
 
 @section Ui-AbstractUserInterface-handles Handles and resource ownership
 
-Unlike traditional UI toolkits, which commonly use pointer-like abstractions to
-reference data, all resources in the @ref Ui library are referenced by *handles*,
-such as a @ref NodeHandle or an @ref AnimatorHandle. Much like a raw pointer, a
-handle is a trivially copyable type (an @cpp enum @ce in this case), but
-compared to a pointer it's not usable on its own. Getting the actual resource
-means passing the handle to a corresponding interface that actually owns given
-resource.
+Unlike traditional toolkits, which commonly use pointers to UI elements
+individually allocated on heap, all resources in the @ref Ui library are
+referenced by *handles*, such as a @ref NodeHandle or an @ref AnimatorHandle.
+Much like a raw pointer, a handle is a trivially copyable type (an
+@cpp enum @ce in this case), but compared to a pointer it's not usable on its
+own. Getting the actual resource means passing the handle to a corresponding
+interface that actually owns given resource.
 
 The handle consists of an *index* and a *generation counter*. Internally, the
 index points into a contiguous array (or several arrays) containing data for
@@ -465,16 +465,17 @@ properties such as @ref setNodeOffset() or @ref setNodeSize().
 
 @htmlinclude ui-node-hierarchy.svg
 
-The first line creates a *root node*, which is positioned relatively to the UI
+The `panel` above is a *root node*, which is positioned relatively to the UI
 itself. The other nodes then specify it as a parent, and are positioned
 relatively to it, so e.g. `content` is at offset @cpp {60, 90} @ce. Besides
 positioning hierarchy, the parent/child relationship also has effect on
 lifetime. While a root node exists until @ref removeNode() is called on it or
 until the end of the UI instance lifetime, child nodes additionally get removed
-if their parent is removed. Continuing from the above, if you remove the
-`panel`, the `title` and `content` will get subsequently cleaned up as well.
-Currently, node parent is specified during creation and cannot be subsequently
-changed.
+if their parent is removed. Once a node is removed, either directly or
+indirectly, its @ref NodeHandle becomes invalid. Continuing from the above, if
+you remove the `panel`, the `title` and `content` will get subsequently cleaned
+up as well. Currently, node parent is specified during creation and cannot be
+subsequently changed.
 
 @subsection Ui-AbstractUserInterface-nodes-opacity Node opacity
 
@@ -491,7 +492,7 @@ update each and every individual UI element.
 @subsection Ui-AbstractUserInterface-nodes-order Top-level node hierarchies and visibility order
 
 A root node along with all its children --- in this case `panel` along with
-`title` and `contents` --- is called a *top-level node hierarchy*. Each
+`title` and `content` --- is called a *top-level node hierarchy*. Each
 top-level node hierarchy is ordered relatively to other top-level hierarchies,
 allowing stacking of various UI elements such as dialogs, tooltips and menus.
 When a root node is created, it's by default put in front of all other
@@ -1812,6 +1813,9 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
 
         /** @{
          * @name Node management
+         *
+         * See the @ref Ui-AbstractUserInterface-nodes "Node hierarchy" section
+         * of the class documentation for more information.
          */
 
         /**
@@ -1885,7 +1889,8 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
          * Calling this function causes @ref UserInterfaceState::NeedsNodeUpdate
          * to be set.
          * @see @ref isHandleValid(NodeHandle) const, @ref nodeCapacity(),
-         *      @ref nodeUsedCount(), @ref update()
+         *      @ref nodeUsedCount(), @ref update(),
+         *      @ref Ui-AbstractUserInterface-nodes
          */
         NodeHandle createNode(NodeHandle parent, const Vector2& offset, const Vector2& size, NodeFlags flags = {});
 
@@ -1935,7 +1940,8 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
          *
          * Calling this function causes
          * @ref UserInterfaceState::NeedsLayoutUpdate to be set.
-         * @see @ref isHandleValid(NodeHandle) const, @ref nodeParent()
+         * @see @ref isHandleValid(NodeHandle) const, @ref nodeParent(),
+         *      @ref Ui-AbstractUserInterface-nodes
          */
         void setNodeOffset(NodeHandle handle, const Vector2& offset);
 
@@ -1965,7 +1971,8 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
          *
          * Calling this function causes
          * @ref UserInterfaceState::NeedsLayoutUpdate to be set.
-         * @see @ref isHandleValid(NodeHandle) const
+         * @see @ref isHandleValid(NodeHandle) const,
+         *      @ref Ui-AbstractUserInterface-nodes
          */
         void setNodeSize(NodeHandle handle, const Vector2& size);
 
@@ -1993,7 +2000,8 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
          *
          * Calling this function causes
          * @ref UserInterfaceState::NeedsNodeOpacityUpdate to be set.
-         * @see @ref isHandleValid(NodeHandle) const
+         * @see @ref isHandleValid(NodeHandle) const,
+         *      @ref Ui-AbstractUserInterface-nodes-opacity
          */
         void setNodeOpacity(NodeHandle handle, Float opacity);
 
@@ -2025,7 +2033,8 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
          * this function, it causes
          * @ref UserInterfaceState::NeedsNodeEventMaskUpdate to be set.
          * @see @ref isHandleValid(NodeHandle) const, @ref addNodeFlags(),
-         *      @ref clearNodeFlags()
+         *      @ref clearNodeFlags(),
+         *      @ref Ui-AbstractUserInterface-nodes-flags
          */
         void setNodeFlags(NodeHandle handle, NodeFlags flags);
 
@@ -2062,7 +2071,8 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
          *
          * Calling this function causes @ref UserInterfaceState::NeedsNodeClean
          * to be set.
-         * @see @ref clean(), @ref nodeOrderLastNested()
+         * @see @ref clean(), @ref nodeOrderLastNested(),
+         *      @ref Ui-AbstractUserInterface-nodes
          */
         void removeNode(NodeHandle handle);
 
@@ -2072,12 +2082,15 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
 
         /** @{
          * @name Top-level node draw and event processing order management
+         *
+         * See the @ref Ui-AbstractUserInterface-nodes-order "Top-level node hierarchies"
+         * section of the class documentation for more information.
          */
 
         /**
          * @brief Capacity of the top-level node draw and event processing order storage
          *
-         * @ref nodeOrderUsedCount()
+         * @see @ref nodeOrderUsedCount()
          */
         std::size_t nodeOrderCapacity() const;
 
@@ -2104,7 +2117,8 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
          * The returned handle is always either valid or null.
          * @see @ref nodeOrderNext(), @ref nodeOrderLast(),
          *      @ref nodeOrderPrevious(), @ref nodeOrderLastNested(),
-         *      @ref isNodeTopLevel(), @ref isNodeOrdered()
+         *      @ref isNodeTopLevel(), @ref isNodeOrdered(),
+         *      @ref Ui-AbstractUserInterface-nodes-order
          */
         NodeHandle nodeOrderFirst() const;
 
@@ -2117,7 +2131,7 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
          * returned handle is always either valid or null.
          * @see @ref nodeOrderPrevious(), @ref nodeOrderFirst(),
          *      @ref nodeOrderNext(), @ref nodeOrderLastNested(),
-         *      @ref isNodeOrdered()
+         *      @ref isNodeOrdered(), @ref Ui-AbstractUserInterface-nodes-order
          */
         NodeHandle nodeOrderLast() const;
 
@@ -2135,7 +2149,8 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
          * the draw and event processing order or it could be hidden.
          * @see @ref isHandleValid(NodeHandle) const, @ref nodeOrderNext(),
          *      @ref setNodeOrder(), @ref clearNodeOrder(),
-         *      @ref flattenNodeOrder()
+         *      @ref flattenNodeOrder(),
+         *      @ref Ui-AbstractUserInterface-nodes-order
          */
         bool isNodeTopLevel(NodeHandle handle) const;
 
@@ -2154,7 +2169,8 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
          * be hidden.
          * @see @ref isHandleValid(NodeHandle) const, @ref nodeOrderNext(),
          *      @ref setNodeOrder(), @ref clearNodeOrder(),
-         *      @ref flattenNodeOrder()
+         *      @ref flattenNodeOrder(),
+         *      @ref Ui-AbstractUserInterface-nodes-order
          */
         bool isNodeOrdered(NodeHandle handle) const;
 
@@ -2170,7 +2186,7 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
          * returned handle is always either valid or null.
          * @see @ref isHandleValid(NodeHandle) const, @ref nodeOrderNext(),
          *      @ref nodeOrderFirst(), @ref nodeOrderLast(),
-         *      @ref isNodeOrdered()
+         *      @ref isNodeOrdered(), @ref Ui-AbstractUserInterface-nodes-order
          */
         NodeHandle nodeOrderPrevious(NodeHandle handle) const;
 
@@ -2186,7 +2202,8 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
          * is always either valid or null.
          * @see @ref isHandleValid(NodeHandle) const, @ref nodeOrderPrevious(),
          *      @ref nodeOrderLast(), @ref nodeOrderLastNested(),
-         *      @ref nodeOrderFirst(), @ref isNodeOrdered()
+         *      @ref nodeOrderFirst(), @ref isNodeOrdered(),
+         *      @ref Ui-AbstractUserInterface-nodes-order
          */
         NodeHandle nodeOrderNext(NodeHandle handle) const;
 
@@ -2202,7 +2219,8 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
          * relative to the @p handle gets preserved when modifying the
          * top-level draw and event processing order of @p handle using
          * @ref setNodeOrder() or @ref clearNodeOrder().
-         * @see @ref isHandleValid(NodeHandle) const
+         * @see @ref isHandleValid(NodeHandle) const,
+         *      @ref Ui-AbstractUserInterface-nodes-order
          */
         NodeHandle nodeOrderLastNested(NodeHandle handle) const;
 
@@ -2252,7 +2270,8 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
          * Calling this function causes @ref UserInterfaceState::NeedsNodeUpdate
          * to be set.
          * @see @ref isHandleValid(NodeHandle) const, @ref isNodeTopLevel(),
-         *      @ref nodeOrderNext(), @ref nodeOrderLastNested(), @ref update()
+         *      @ref nodeOrderNext(), @ref nodeOrderLastNested(),
+         *      @ref update(), @ref Ui-AbstractUserInterface-nodes-order
          */
         void setNodeOrder(NodeHandle handle, NodeHandle behind);
 
@@ -2280,7 +2299,8 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
          * If not a no-op, calling this function causes
          * @ref UserInterfaceState::NeedsNodeUpdate to be set.
          * @see @ref isHandleValid(NodeHandle) const,
-         *      @ref nodeOrderLastNested(), @ref update()
+         *      @ref nodeOrderLastNested(), @ref update(),
+         *      @ref Ui-AbstractUserInterface-nodes-order
          */
         void clearNodeOrder(NodeHandle handle);
 
@@ -2304,7 +2324,8 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
          *
          * If not a no-op, calling this function causes
          * @ref UserInterfaceState::NeedsNodeUpdate to be set.
-         * @see @ref isHandleValid(NodeHandle) const, @ref update()
+         * @see @ref isHandleValid(NodeHandle) const, @ref update(),
+         *      @ref Ui-AbstractUserInterface-nodes-order
          */
         void flattenNodeOrder(NodeHandle handle);
 

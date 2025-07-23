@@ -1001,9 +1001,8 @@ which makes the text blue:
 @snippet Ui.cpp TextLayer-create
 
 As with all other data, they're implicitly tied to lifetime of the node they're
-attached to. You can remember the @ref Ui::DataHandle returned by @ref create()
-to modify the data later, @ref attach() to a different node or @ref remove()
-it.
+attached to. You can remember the @ref DataHandle returned by @ref create() to
+modify the data later, @ref attach() to a different node or @ref remove() it.
 
 @section Ui-TextLayer-style Style, shaping and layout options
 

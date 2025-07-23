@@ -507,9 +507,8 @@ A quad is created by calling @ref create() with desired style index and a
 @snippet Ui.cpp BaseLayer-create
 
 As with all other data, they're implicitly tied to lifetime of the node they're
-attached to. You can remember the @ref Ui::DataHandle returned by @ref create()
-to modify the data later, @ref attach() to a different node or @ref remove()
-it.
+attached to. You can remember the @ref DataHandle returned by @ref create() to
+modify the data later, @ref attach() to a different node or @ref remove() it.
 
 @section Ui-BaseLayer-style-enums Using an enum for style indexing
 
@@ -1380,8 +1379,9 @@ enum class BaseLayerSharedFlag: UnsignedByte {
      * layer is used just to draw (alpha blended) images, or if a particular
      * widget style doesn't use rounded corners at all.
      *
-     * Mutually exclusive with the @ref BaseLayerSharedFlag::SubdividedQuads
-     * optimization.
+     * See @ref Ui-BaseLayer-performance-shaders "Configuring BaseLayer shader complexity"
+     * for more information. Mutually exclusive with the
+     * @ref BaseLayerSharedFlag::SubdividedQuads optimization.
      * @see @ref BaseLayerSharedFlag::NoOutline
      */
     NoRoundedCorners = 1 << 2,
@@ -1400,8 +1400,9 @@ enum class BaseLayerSharedFlag: UnsignedByte {
      * to draw (alpha blended) images, or if a particular widget style doesn't
      * use outlines at all.
      *
-     * Mutually exclusive with the @ref BaseLayerSharedFlag::SubdividedQuads
-     * optimization.
+     * See @ref Ui-BaseLayer-performance-shaders "Configuring BaseLayer shader complexity"
+     * for more information. Mutually exclusive with the
+     * @ref BaseLayerSharedFlag::SubdividedQuads optimization.
      * @see @ref BaseLayerSharedFlag::NoRoundedCorners
      */
     NoOutline = 1 << 3,
@@ -1444,8 +1445,12 @@ enum class BaseLayerSharedFlag: UnsignedByte {
      * extra bandwidth may have a negative effect on GPUs where the rendering
      * wasn't bottlenecked by fragment shading.
      *
-     * Mutually exclusive with the @ref BaseLayerSharedFlag::NoRoundedCorners
-     * and @relativeref{BaseLayerSharedFlag,NoOutline} optimizations.
+     * @htmlinclude ui-baselayer-subdivided-quads.svg
+     *
+     * See @ref Ui-BaseLayer-performance-shaders "Configuring BaseLayer shader complexity"
+     * for more information. Mutually exclusive with the
+     * @ref BaseLayerSharedFlag::NoRoundedCorners and
+     * @relativeref{BaseLayerSharedFlag,NoOutline} optimizations.
      */
     SubdividedQuads = 1 << 5,
 };

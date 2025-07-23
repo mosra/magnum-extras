@@ -354,9 +354,10 @@ ui.setNodeOpacity(title, 0.75f);
 /* [AbstractUserInterface-nodes-opacity] */
 
 /* [AbstractUserInterface-nodes-order] */
+/* A new top-level node is created implicitly on top */
 Ui::NodeHandle anotherPanel = ui.createNode({200, 130}, {120, 80});
 
-/* Put the new panel behind the first one, instead of being on top */
+/* Put it behind the first panel instead */
 ui.setNodeOrder(anotherPanel, panel);
 /* [AbstractUserInterface-nodes-order] */
 

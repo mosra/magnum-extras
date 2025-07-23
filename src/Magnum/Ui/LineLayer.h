@@ -535,9 +535,9 @@ and loops together. An indexed equivalent to the three calls to
 @snippet Ui.cpp LineLayer-create-indexed
 
 As with all other data, they're implicitly tied to lifetime of the node they're
-attached to. You can remember the @ref Ui::DataHandle returned by
-@ref create(), @ref createStrip() or @ref createLoop() to modify the data
-later, @ref attach() to a different node or @ref remove() it.
+attached to. You can remember the @ref DataHandle returned by @ref create(),
+@ref createStrip() or @ref createLoop() to modify the data later, @ref attach()
+to a different node or @ref remove() it.
 
 @section Ui-LineLayer-style Style options
 
