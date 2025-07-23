@@ -28,6 +28,7 @@
 #include <Corrade/Containers/GrowableArray.h>
 #include <Corrade/Containers/Reference.h>
 #include <Corrade/Containers/StridedArrayView.h>
+#include <Corrade/Utility/Algorithms.h>
 #include <Corrade/Utility/Arguments.h>
 #include <Magnum/Mesh.h>
 #include <Magnum/VertexFormat.h>
@@ -35,6 +36,7 @@
 #include <Magnum/DebugTools/FrameProfiler.h>
 #include <Magnum/GL/DefaultFramebuffer.h>
 #include <Magnum/GL/Mesh.h>
+#include <Magnum/GL/Renderer.h>
 #include <Magnum/Math/Matrix3.h>
 #include <Magnum/Math/Color.h>
 #include <Magnum/Math/ConfigurationValue.h>
@@ -141,19 +143,13 @@ void Layer::doUpdate(LayerStates, const Containers::StridedArrayView1D<const Uns
     if(_indices.size() != dataIds.size()*6 || !_skipIndexDataUpdate) {
         arrayResize(_indices, NoInit, dataIds.size()*6);
         for(UnsignedInt i = 0; i != dataIds.size(); ++i) {
-            const UnsignedInt v = dataIds[i];
-
-            /* 0---1 0---2 5
-               |   | |  / /|
-               |   | | / / |
-               |   | |/ /  |
-               2---3 1 3---4 */
-            _indices[i*6 + 0] = v*4 + 0;
-            _indices[i*6 + 1] = v*4 + 2;
-            _indices[i*6 + 2] = v*4 + 1;
-            _indices[i*6 + 3] = v*4 + 2;
-            _indices[i*6 + 4] = v*4 + 3;
-            _indices[i*6 + 5] = v*4 + 1;
+            /*           0--1          0-2 3
+               vertices: |  | indices: |/ /|
+                         2--3          1 4-5 */
+            UnsignedInt vertexId = dataIds[i]*4;
+            Utility::copy({vertexId + 0, vertexId + 2, vertexId + 1,
+                           vertexId + 1, vertexId + 2, vertexId + 3},
+                          _indices.sliceSize(i*6, 6));
         }
         _indexBuffer.setData(_indices);
         _mesh.setCount(_indices.size());
@@ -275,6 +271,8 @@ StressTest::StressTest(const Arguments& arguments): Platform::Application{argume
     #ifndef CORRADE_TARGET_EMSCRIPTEN
     setSwapInterval(0);
     #endif
+
+    GL::Renderer::enable(GL::Renderer::Feature::FaceCulling);
 }
 
 void StressTest::drawEvent() {
