@@ -319,6 +319,8 @@ care of by a @ref RendererGL instance internally.
 
 @snippet Ui-gl.cpp AbstractUserInterface-setup-draw
 
+@anchor Ui-AbstractUserInterface-redraw-on-demand
+
 <b></b>
 
 @m_class{m-block m-success}
@@ -574,6 +576,137 @@ finishes. Both of these again propagate to all nested nodes as well, so
 disabling a part of the UI can be done only on the enclosing node and not on
 each and every child.
 
+@section Ui-AbstractUserInterface-layers Data layers
+
+Next to the node hierarchy, the user interface contains a list of layers, which
+attach *data* to particular nodes. Each layer instance, derived from
+@ref AbstractLayer, defines what features its data have --- whether they draw,
+process input events, or for example act as just state storage. While nodes
+define placement and hierarchy, layers are what makes the node hierarchy
+actually draw and do something.
+
+While it's possible to implement all drawing and all event processing in a
+single layer, in practice a UI consists of several specialized layers. The
+following builtin layers are expected to cover most use cases, an application
+can then choose to implement a custom layer if none of the builtin layers
+satisfy its needs.
+
+-   @ref BaseLayer for drawing rounded rectangles, outlines and textured quads,
+-   @ref TextLayer for text rendering as well as editing,
+-   @ref LineLayer for antialiased line drawing,
+-   @ref EventLayer for attaching callbacks to input events like tap, click,
+    drag or key press,
+-   and @ref DebugLayer, a sort of a meta-layer for inspecting contents of the
+    UI itself.
+
+A particular node then gets data attached from zero or more layers. As an example, continuing with the node diagram from above and visualizing data
+attachments with colored outlines, the `panel` node could have attached a
+@m_class{m-label m-warning} **background** drawn by @ref BaseLayer, the `title`
+node then have attached a nested @m_class{m-label m-warning} **background**, a
+@m_class{m-label m-info} **text** from @ref TextLayer and an
+@m_class{m-label m-danger} **event handler** to be able to drag the panel
+around from @ref EventLayer, and the `content` node then being just a
+@m_class{m-label m-info} **text** again:
+
+@htmlinclude ui-node-data.svg
+
+A layer is created with @ref createLayer(), the resulting @ref LayerHandle is
+then passed to a constructor of a particular @ref AbstractLayer subclass, and
+the constructed layer instance is then passed to @ref setLayerInstance(). For
+example, as shown below with the @ref EventLayer. Because the layer instance is
+a @relativeref{Corrade,Containers::Pointer}, it won't get moved anywhere
+internally afterwards and it's safe to keep a reference to it for as long as it
+exists:
+
+@snippet Ui.cpp AbstractUserInterface-layers-create
+
+The instance can be also queried with a @ref LayerHandle using @ref layer(),
+but at that point it's your responsibility to ensure the type is correct:
+
+@snippet Ui.cpp AbstractUserInterface-layers-query
+
+Visual layers commonly require additional constructor arguments and have
+subclasses with GPU-API-specific implementations, the full setup is described
+in documentation of each class. Similarly, how actual layer data are created
+and attached to a node is specific to given layer. As another example, here's
+how a drag handler on the `title` node could be made with the above-created
+@ref EventLayer, resulting in the whole `panel` being moved on pointer drag:
+
+@snippet Ui.cpp AbstractUserInterface-layers-create-data
+
+A layer along with its instance implicitly stays alive until the end of the
+@ref AbstractUserInterface lifetime. It can be removed earlier with
+@ref removeLayer() if needed. If an instance has been set for it, it gets
+deleted, and all its data are thus removed as well. The @ref LayerHandle then
+becomes invalid. If you saved the reference to the instance, like shown above,
+it'll become dangling with no way to check if it's still valid, so if the layer
+may get removed early, be sure to always query it via its handle instead of
+keeping a reference.
+
+@subsection Ui-AbstractUserInterface-layers-order Layer visibility order
+
+Contents of a single layer are drawn in an order
+@ref Ui-AbstractUserInterface-nodes-order "defined by the node hierarchy"
+explained above --- first by top-level node order, then in each hierarchy each
+parent gets drawn before its children. But as multiple data from multiple
+layers can be added to the same node (such as is the case with
+the @m_class{m-label m-warning} **background** and
+@m_class{m-label m-info} **text** for the `title` above, where the background
+coming from @ref BaseLayer should be drawn under the text coming from
+@ref TextLayer), an order has to be specified for those as well.
+
+For performance reasons, it's desirable to draw as much from a single layer as
+possible at once --- ideally the whole layer --- and thus the order is defined
+between the whole layers, not between individual data. For example:
+
+1.  `baseLayer` with backgrounds from @ref BaseLayer
+2.  `lineLayer` for line art using @ref LineLayer
+3.  `textLayer` with @ref TextLayer
+
+If a certain piece of the UI needs a different order and
+@ref Ui-AbstractUserInterface-nodes-order-nested "adding a nested top-level node" doesn't solve the problem (for example if you need a highlight rectangle or a
+line *over* the text), a solution is to add extra instances of the same layer:
+
+1.  `baseLayer` with backgrounds from @ref BaseLayer
+2.  `lineLayer` for line art using @ref LineLayer
+3.  `textLayer` with @ref TextLayer
+4.  `overlayLayer` for highlight rectangles from @ref BaseLayer
+5.  `overlayLineLayer` for highlight lines from @ref LineLayer
+
+By default, the layers are drawn in the order @ref createLayer() is called, but
+you can pass an optional @ref LayerHandle saying *behind* which existing layer
+to put the new one. Unlike with top-level nodes, the layer order has to be
+specified upfront and cannot be changed afterwards. For example, inserting the
+`overlayLayer` between the `textLayer` and `overlayLayerLayer`:
+
+@snippet Ui.cpp AbstractUserInterface-layers-order
+
+@section Ui-AbstractUserInterface-renderer Renderer instance and compositing layers
+
+Layers that draw have an implementation in a concrete GPU API (in particular,
+for the builtin layers there's @ref BaseLayerGL, @ref TextLayerGL,
+@ref LineLayerGL and @ref DebugLayerGL that draw using OpenGL), and each of
+them may require different GPU state to be set for drawing, such as blending or
+scissor. Enabling such state at appropriate times is handled by a *renderer*,
+derived from @ref AbstractRenderer (and, in particular, @ref RendererGL for
+OpenGL). In order to draw anything, an instance is expected to be set. The
+@ref UserInterfaceGL class @ref Ui-UserInterfaceGL-setup-renderer "sets it up implicitly",
+otherwise you're expected to pass it to @ref setRendererInstance().
+
+@snippet Ui-gl.cpp AbstractUserInterface-renderer
+
+Besides state handling, the renderer is also responsible for compositing, for
+example if @ref Ui-BaseLayer-style-background-blur "background blur is enabled in BaseLayer".
+
+@m_class{m-note m-success}
+
+@par
+    The renderer is a separate instance instead of being handled directly in
+    the user interface internals as the @ref AbstractUserInterface is itself
+    GPU-API-agnostic. Only the choice of concrete layers and renderer
+    implementation defines what GPU API is actually used to put pixels on the
+    screen.
+
 @section Ui-AbstractUserInterface-events Event handling
 
 Commonly, the UI is visible on top of any other content in the application
@@ -593,11 +726,15 @@ concrete nodes based on their position. Top-level nodes get iterated in a
 front-to-back order, and if the (appropriately scaled) event position is within
 the rectangle of any of those, it recurses into given hierarchy, checking the
 position against a rectangle of each child. The search continues until a leaf
-node under given position is found, to which the event is directed. If given
-event is accepted on that node via @ref PointerEvent::setAccepted() etc., the
-event propagation stops there. If not, the propagation continues through
-sibling nodes that are under given position, then back up the hierarchy and
-then to other top-level node hierarchies until it's accepted. Example
+node under given position is found, to which the event is directed.
+
+On that node the user interface then iterates all data belonging to event
+handling layers, and passes the @ref PointerEvent etc. instances to
+corresponding layer interfaces. The layers can then *accept* the event on given
+node via @ref PointerEvent::setAccepted() etc. If the event is accepted by any
+layer, the event propagation stops there. If not, the propagation continues
+through sibling nodes that are under given position, then back up the hierarchy
+and then to other top-level node hierarchies until it's accepted. Example
 propagation of a pointer event marked @m_class{m-label m-info} **blue**:
 
 @m_class{m-row}
@@ -1072,6 +1209,9 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
 
         /** @{
          * @name Layer and data management
+         *
+         * See the @ref Ui-AbstractUserInterface-layers "Data layers" section
+         * of the class documentation for more information.
          */
 
         /**
@@ -1141,7 +1281,8 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
          * The first layer gets drawn first (thus is at the back) and reacts to
          * events after all others. Returns @ref LayerHandle::Null if there's
          * no layers yet. The returned handle is always either valid or null.
-         * @see @ref layerNext(), @ref layerLast(), @ref layerPrevious()
+         * @see @ref layerNext(), @ref layerLast(), @ref layerPrevious(),
+         *      @ref Ui-AbstractUserInterface-layers-order
          */
         LayerHandle layerFirst() const;
 
@@ -1151,7 +1292,8 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
          * The last layer gets drawn last (thus is at the front) and reacts to
          * event before all others. Returns @ref LayerHandle::Null if there's
          * no layers yet. The returned handle is always either valid or null.
-         * @see @ref layerPrevious(), @ref layerFirst(), @ref layerNext()
+         * @see @ref layerPrevious(), @ref layerFirst(), @ref layerNext(),
+         *      @ref Ui-AbstractUserInterface-layers-order
          */
         LayerHandle layerLast() const;
 
@@ -1163,7 +1305,8 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
          * @ref LayerHandle::Null if the layer is first. The returned handle
          * is always either valid or null.
          * @see @ref isHandleValid(LayerHandle) const, @ref layerNext(),
-         *      @ref layerFirst(), @ref layerLast()
+         *      @ref layerFirst(), @ref layerLast(),
+         *      @ref Ui-AbstractUserInterface-layers-order
          */
         LayerHandle layerPrevious(LayerHandle handle) const;
 
@@ -1175,7 +1318,8 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
          * @ref LayerHandle::Null if the layer is last. The returned handle is
          * always either valid or null.
          * @see @ref isHandleValid(LayerHandle) const, @ref layerPrevious(),
-         *      @ref layerLast(), @ref layerFirst()
+         *      @ref layerLast(), @ref layerFirst(),
+         *      @ref Ui-AbstractUserInterface-layers-order
          */
         LayerHandle layerNext(LayerHandle handle) const;
 
@@ -1194,7 +1338,8 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
          * passed to @ref setLayerInstance(). A layer can be removed again with
          * @ref removeLayer().
          * @see @ref isHandleValid(LayerHandle) const,
-         *      @ref layerCapacity(), @ref layerUsedCount()
+         *      @ref layerCapacity(), @ref layerUsedCount(),
+         *      @ref Ui-AbstractUserInterface-layers
          */
         LayerHandle createLayer(LayerHandle behind =
             #ifdef DOXYGEN_GENERATING_OUTPUT
@@ -1227,7 +1372,8 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
          * was called yet.
          * @see @ref AbstractLayer::handle(),
          *      @ref isHandleValid(LayerHandle) const,
-         *      @ref hasLayerInstance(LayerHandle const
+         *      @ref hasLayerInstance(LayerHandle const,
+         *      @ref Ui-AbstractUserInterface-layers
          */
         AbstractLayer& setLayerInstance(Containers::Pointer<AbstractLayer>&& instance);
         /** @overload */
@@ -1241,7 +1387,8 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
          * Expects that @p handle is valid and that @ref setLayerInstance() was
          * called for it.
          * @see @ref isHandleValid(LayerHandle) const,
-         *      @ref hasLayerInstance(LayerHandle) const
+         *      @ref hasLayerInstance(LayerHandle) const,
+         *      @ref Ui-AbstractUserInterface-layers
          */
         AbstractLayer& layer(LayerHandle handle);
         const AbstractLayer& layer(LayerHandle handle) const; /**< @overload */
@@ -1253,7 +1400,8 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
          * called for it. It's the user responsibility to ensure that @p T
          * matches the actual instance type.
          * @see @ref isHandleValid(LayerHandle) const,
-         *      @ref hasLayerInstance(LayerHandle) const
+         *      @ref hasLayerInstance(LayerHandle) const,
+         *      @ref Ui-AbstractUserInterface-layers
          */
         template<class T> T& layer(LayerHandle handle) {
             return static_cast<T&>(layer(handle));
@@ -1278,7 +1426,7 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
          *
          * Calling this function causes
          * @ref UserInterfaceState::NeedsDataAttachmentUpdate to be set.
-         * @see @ref clean()
+         * @see @ref update(), @ref Ui-AbstractUserInterface-layers
          */
         void removeLayer(LayerHandle handle);
 
@@ -1299,7 +1447,7 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
          * @ref UserInterfaceState::NeedsDataAttachmentUpdate to be set, which
          * is a consequence of @ref LayerState::NeedsAttachmentUpdate being set
          * by @ref AbstractLayer::attach().
-         * @see @ref update()
+         * @see @ref update(), @ref Ui-AbstractUserInterface-layers
          */
         void attachData(NodeHandle node, DataHandle data);
 

@@ -347,6 +347,537 @@ CORRADE_ENUMSET_OPERATORS(LayerStates)
 /**
 @brief Base for data layers
 @m_since_latest
+
+Attaches data to particular nodes in the UI hierarchy, providing rendering and
+event handling functionality. See the
+@ref Ui-AbstractUserInterface-layers "AbstractUserInterface class documentation"
+for introduction and overview of builtin layers. The following sections
+describe behavior common to all layers and provide a guide for implementing
+custom layers from scratch.
+
+@section Ui-AbstractLayer-handles Layer data creation and removal
+
+Layer data get created using @ref create() with an optional @ref NodeHandle to
+attach the data to, returning a @ref DataHandle. The @ref create() function is
+@cpp protected @ce on the @ref AbstractLayer, as concrete implementations
+require additional parameters. Such as @ref TextLayer::create() taking also the
+actual text to render, or for example @ref EventLayer having several
+differently named functions like @relativeref{EventLayer,onTapOrClick()} or
+@relativeref{EventLayer,onDrag()} for reacting to different events. As a
+special case the @ref DebugLayer then doesn't expose any data creation
+functionality at all, as it manages its data implicitly internally based on
+what sources it tracks.
+
+The @ref DataHandle is a combination of a @ref LayerHandle, identifying a
+particular layer the data is coming from, and a @ref LayerDataHandle
+identifying data within given layer, extractible using @ref dataHandleLayer()
+and @ref dataHandleData(), respectively. All builtin layer APIs taking a
+@ref DataHandle have overloads taking the smaller @ref LayerDataHandle type as
+well, which is useful to save space in case you're storing the handles and know
+which layer they come from.
+
+@snippet Ui.cpp AbstractLayer-handles
+
+Data lifetime is implicitly tied to a @ref NodeHandle they're attached to, if
+any, so if the node or any of its parents get removed, all data attached to it
+from all layers get removed. It's also possible to remove the data directly
+using @ref remove(), after which the @ref DataHandle (or @ref LayerDataHandle)
+becomes invalid. The @ref remove() function is again @cpp protected @ce as
+concrete layers may want to extend its behavior, such as in case of
+@ref TextLayer::remove() or @ref EventLayer::remove().
+
+@section Ui-AbstractLayer-attachments Node data attachments
+
+Besides attaching directly in @ref create() or its derivatives in subclasses,
+node attachment can be modified using @ref attach(). A data can be also
+detached from a node by passing @ref NodeHandle::Null, after which it's
+excluded from all updates and rendering until it's attached to a node again.
+This is useful for example to transfer some persistent state from one node to
+another, or when it's containing a heavy resource and it makes more sense to
+reattach an existing instance rather than remove and recreate it for a
+different node.
+
+@snippet Ui.cpp AbstractLayer-attachments
+
+@section Ui-AbstractLayer-custom Creating a custom drawing layer
+
+If none of the builtin layers provide desired functionality, it's possible to
+implement a custom layer that then gets added among others. At the very least,
+the @ref doFeatures() function needs to be implemented. Based on which
+@ref LayerFeature values it returns, other interfaces need to be implemented as
+well.
+
+As an example, let's assume we want to implement a simple layer that draws
+colored quads with OpenGL. In other words, a very small subset of what
+@ref BaseLayer provides. The initial setup could look like this, with
+@ref doFeatures() returning @ref LayerFeature::Draw and @ref create() along
+with @ref remove() made public, specifying quad `color` at creation time:
+
+@snippet Ui-gl.cpp AbstractLayer-custom
+
+Internally the layer contains a @cpp struct @ce definition describing vertex
+layout, @ref GL::Buffer for storing indices and vertices, a @ref GL::Mesh, and
+a @ref Shaders::FlatGL shader to draw the mesh with. The shader is set up with
+vertex colors enabled, and the mesh configured with a matching vertex layout.
+
+@snippet Ui-gl.cpp AbstractLayer-custom-constructor
+
+<b></b>
+
+@m_class{m-note m-info}
+
+@par
+    In comparison, @ref BaseLayer has OpenGL-specific code in a
+    @ref BaseLayerGL subclass instead, but such split is there for easier
+    testing and to allow implementation of Vulkan and other backends. Custom
+    layers don't need to follow this separation.
+
+A common pattern for storing data associated with UI handles, as shown in
+@ref Ui-AbstractUserInterface-handles, is to have a contiguous array indexed by
+the handle ID, which is the case with the `_colors` member above. Creating a
+data delegates to the base @ref create(), extracts the handle ID using
+@ref dataHandleId(), enlarges the array to fit it, and saves the color there:
+
+@snippet Ui-gl.cpp AbstractLayer-custom-create
+
+As the layer stores just plain data, there's nothing to be done when data get
+removed --- the color just stays unused in the array until it's overwritten by
+a different handle that reuses the same ID. Data removal thus simply delegates
+to the base @ref remove(), providing both a @ref DataHandle and a
+@ref LayerDataHandle overload for convenience. Dealing with
+@ref Ui-AbstractLayer-custom-resource-cleanup "resources that need explicit destruction"
+is described later.
+
+@snippet Ui-gl.cpp AbstractLayer-custom-remove
+
+@subsection Ui-AbstractLayer-custom-update Implementing an update function
+
+Each time @ref AbstractUserInterface::draw() is called and something in the UI
+changed since last draw, it delegates to @ref AbstractUserInterface::update()
+which then results in @ref doUpdate() being called with appropriate inputs on
+all layers that need updating. The @ref doUpdate() implementation prepares data
+for drawing; afterwards, depending on how many top-level node hierarchies the
+layer is used in, follow one or more @ref doDraw() calls where the layer draws
+a slice of data prepared in @ref doUpdate().
+
+The @ref doUpdate() function receives a broad set of inputs, initially we'll be
+interested in just the essential parameters to generate the quad mesh with,
+shown in the snippet below. The `dataIds` view is a list of data handle IDs
+attached to currently visible nodes, ordered back-to-front, so when they're
+drawn in this order, they overlap correctly. Each time @ref doUpdate() is
+called, the `dataIds` may have different size and contain different entries in
+different order, based on what's currently visible.
+
+@snippet Ui-gl.cpp AbstractLayer-custom-update-signature
+
+Next there are `nodeOffsets` and `nodeSizes`, containing final node offsets and
+sizes with node hierarchy and all layouts applied. The views contain offsets
+and sizes for all nodes in the UI and are indexed by node ID. In other words,
+they're *not* matching the order in `dataIds` --- instead, to get a
+@ref NodeHandle attachment for a particular data ID, the view returned from
+@ref nodes() is used, with @ref nodeHandleId() extracting the ID out of the
+handle. Nodes that are not visible have offsets and sizes left in an
+unspecified state, but as `dataIds` only contain IDs attached to currently
+visible nodes, it's guaranteed that the `nodes[dataId]` is never
+@ref NodeHandle::Null and both `nodeOffsets[nodeId]` and `nodeSizes[nodeId]`
+have a meaningful value.
+
+With the above inputs, the `vertexData` (containing @cpp 4 @ce vertices for
+each quad), and `indexData` (with @cpp 6 @ce indices corresponding to the two
+triangles) are filled, and then those are uploaded to the GPU mesh for drawing:
+
+@snippet Ui-gl.cpp AbstractLayer-custom-update
+
+@subsection Ui-AbstractLayer-custom-draw Drawing the data
+
+In the @ref doUpdate() implementation above, we filled the mesh with vertex
+positions in UI units. To apply a correct projection in the shader, we need to
+know how large the UI is. The UI size is passed to the @ref doSetSize()
+interface, which is called at least once before the first draw, and then each
+time the UI size changes. We'll use the `size` to form a projection matrix
+passed to @ref Shaders::FlatGL::setTransformationProjectionMatrix(), the second
+argument is framebuffer size in pixels that we don't need at the moment. The
+@ref Matrix3::projection() scales the size to the @f$ [-1, +1] @f$ unit square,
+additionally we convert from the UI library coordinate system with Y down and
+origin top left to OpenGL's Y up with origin in the center:
+
+@snippet Ui-gl.cpp AbstractLayer-custom-setsize
+
+<b></b>
+
+@m_class{m-note m-info}
+
+@par
+    Every @ref doSetSize() is followed by a @ref doUpdate(), so instead of
+    generating vertex data in the UI coordinates and setting up shader
+    projection, the implementation can also just save the projection properties
+    in @ref doSetSize() and then in @ref doUpdate() apply the projection
+    directly to the vertex data.
+
+Finally, the @ref doDraw() interface is called with almost the same inputs as
+@ref doUpdate(), but additionally an `offset` and `count` is supplied,
+describing the range of `dataIds` that is meant to be drawn. Since all setup
+and upload was done in @ref doUpdate() already, we don't need to use any other
+arguments and just use the appropriate index range, i.e. multiplying the
+`offset` and `count` by @cpp 6 @ce to get the quad index range corresponding to
+the data:
+
+@snippet Ui-gl.cpp AbstractLayer-custom-draw
+
+<b></b>
+
+@m_class{m-note m-success}
+
+@par
+    The @ref doDraw() interface gets the same arguments as @ref doUpdate() to
+    allow for convenient drawing in an immediate mode fashion, if desired. In
+    such case you'd perform all setup in @ref doDraw() and wouldn't even need
+    to implement @ref doUpdate(). For efficiency and avoiding GPU stalls it's
+    however better to perform data upload separately from actual drawing, and
+    by being in @ref doUpdate() the upload is only done if something actually
+    changes.
+
+@subsection Ui-AbstractLayer-custom-blending Drawing with alpha blending
+
+The above showed the simplest possible case of drawing a fully opaque mesh. In
+many cases you'll however want to have some sort of transparency, even if just
+for smooth edges. For that, the layer can advertise
+@ref Ui::LayerFeature::DrawUsesBlending in @ref doFeatures(), which makes the
+@ref Ui-AbstractUserInterface-renderer "user itnerface renderer instance"
+enable the corresponding state (such as @ref GL::Renderer::Feature::Blending in
+case of OpenGL) when needed. Together with using @ref Color4 and the matching
+@ref Shaders::FlatGL2D::Color4 attribute the `QuadLayer` would look like this
+instead:
+
+@snippet Ui-gl.cpp AbstractLayer-custom-blending
+
+Note that the rest of the @ref Ui library uses a [premultiplied alpha](https://developer.nvidia.com/content/alpha-blending-pre-or-not-pre)
+workflow and the custom layer should match that. Thus for example making a
+color with 50% transparency is @cpp rgba*0.5f @ce rather than
+@cpp {rgb, 0.5f} @ce. You can also use the @ref Color4::premultiplied() helper
+to convert non-premultiplied RGBA colors to premultiplied.
+
+@subsection Ui-AbstractLayer-custom-node-opacity-enabled Dealing with node opacity and disabled state
+
+Among the other inputs passed to @ref doUpdate() are `nodeOpacities` and
+`nodesEnabled`. They reflect presence of @ref NodeFlag::Disabled and values
+passed to @ref AbstractUserInterface::setNodeOpacity(), together with
+@ref Ui-AbstractUserInterface-nodes-opacity "propagation to child nodes".
+If we'd draw quads in disabled nodes grayscale and slightly darker, and apply
+the opacity in a premultiplied fashion, the relevant parts of the function
+would look like this:
+
+@snippet Ui-gl.cpp AbstractLayer-custom-node-opacity-enabled
+
+You're free to do anything else with these inputs --- for example have an
+entirely different "disabled look", or even ignore them altogether if given
+layer is not expected to be used on such nodes.
+
+@subsection Ui-AbstractLayer-custom-clip Taking clip rectangles into account
+
+If the layer may get used within nodes that have @ref NodeFlag::Clip enabled,
+such as various scroll areas, it should respect clip rectangles when drawing.
+The `clipRectOffsets` and `clipRectSizes` views passed to @ref doUpdate()
+describe clip rectangle placement, `clipRectIds` and `clipRectDataCounts` then
+specify which of the rectangles is used for which subrange of `dataIds`.
+There's always at least one clip rectangle present and the sum of
+`clipRectDataCounts` is equal to size of `dataIds`.
+
+As with node opacity and disabled state above, the actual implementation is
+entirely up to the layer itself. One option is to apply the clip rectangles
+directly to the vertex data, in this case performing an intersection of the
+quad with the clip rectangle using @ref Math::intersect():
+
+@snippet Ui-gl.cpp AbstractLayer-custom-clip
+
+@subsection Ui-AbstractLayer-custom-clip-scissor Clipping using GPU scissor rectangles
+
+It's not always possible or efficient to clip the vertex data directly. In such
+cases it's possible to make use of scissor rectangles instead. Similarly as
+with blending, the layer advertises @ref Ui::LayerFeature::DrawUsesScissor in
+@ref doFeatures() to make the @ref AbstractRenderer enable scissor state when
+drawing the layer. Clip rectangles are specified in framebuffer coordinates,
+thus @ref doSetSize() now needs to remember both the UI and the framebuffer
+size:
+
+@snippet Ui-gl.cpp AbstractLayer-custom-clip-scissor
+
+And then, instead of clipping inside @ref doUpdate(), the @ref doDraw()
+function performs not just a single draw, but one for each clip rectangle. To
+match OpenGL framebuffer coordinates that have origin bottom left and Y up, the
+clip rectangles get scaled, Y-flipped and converted to integers.
+
+@snippet Ui-gl.cpp AbstractLayer-custom-clip-scissor-draw
+
+You can assume that the list of clip rectangles is made in a way that minimizes
+the amount of extra draw calls this approach needs compared to culling
+CPU-side.
+
+@subsection Ui-AbstractLayer-custom-setters Setters and triggering data updates
+
+So far, all updates and drawing happened only in a response to the node
+hierarchy changing in some way --- nodes changing place, visibility, or data
+being attached / detached. Combined with the user interface
+@ref Ui-AbstractUserInterface-redraw-on-demand "only redrawing when needed" it
+means that any updates to the layer data, such as changing the color of a
+particular quad, need to notify the UI that an update and redraw is needed.
+This is done with @ref setNeedsUpdate(). A color setter would thus look like
+this:
+
+@snippet Ui-gl.cpp AbstractLayer-custom-setters
+
+As the snippet shows, it's a good practice to check for handle validity, to
+ensure stale handles don't accidentally change unrelated data. All builtin APIs
+have those checks, but in this case we're directly accessing our own data array
+and thus nothing else can check the validity for us. Additionally it makes
+sense to provide also a @ref LayerDataHandle overload so the setter can be
+called with the layer-specific handle type as well:
+
+@snippet Ui-gl.cpp AbstractLayer-custom-setters-layerdatahandle
+
+@subsection Ui-AbstractLayer-custom-update-in-data-order Populating the vertex data in data order instead of draw order
+
+So far, the @ref doUpdate() function populated the mesh with vertex data in
+order as drawn in that particular frame. While that makes the mesh always
+contain only exactly what's needed, it means reuploading also data that didn't
+change, such as the quad colors in our `QuadLayer`, just in a slightly
+different order.
+
+Putting aside node opacity and disabled state for now, an alternative approach
+could be to fill the vertex colors directly in @cpp create() @ce and
+@cpp setColor() @ce instead of managing a CPU-side `_colors` array and then
+copying from it. The @ref doUpdate() would then map the vertex buffer, update
+just the positions in it, and only the index buffer gets fully regenerated
+every time. We can use @ref capacity() to size the buffer mapping, as it's an
+upper bound for all data IDs:
+
+@snippet Ui-gl.cpp AbstractLayer-custom-update-in-data-order
+
+@subsection Ui-AbstractLayer-custom-update-states Partial updates
+
+The first argument to @ref doUpdate() is a set of @ref LayerState bits, which
+enumerates the reasons why an update needs to done. For example, in given frame
+only @ref LayerState::NeedsNodeOrderUpdate could be set due to a popup being
+brought to the front, but node positions and everything else would stay
+unchanged. Or it could be just @ref LayerState::NeedsDataUpdate being triggered
+through @ref setNeedsUpdate() from a setter, but the node hierarchy stays the
+same.
+
+The @ref doUpdate() implementation can make use of these states to perform just
+partial updates. This makes sense especially in the above case where the draw
+data are stored in a way that's independent from the actual draw order, because
+otherwise even changes in node visibility would require rebuilding all data in
+the new order. Note that there are various interactions between the states, see
+particular @ref LayerState values for more information.
+
+@snippet Ui-gl.cpp AbstractLayer-custom-update-states
+
+@subsection Ui-AbstractLayer-custom-update-states-common Explicitly and implicitly triggered updates
+
+In addition to @ref LayerState::NeedsDataUpdate, the @ref setNeedsUpdate()
+function can be called also with @relativeref{LayerState,NeedsCommonDataUpdate}
+and @relativeref{LayerState,NeedsSharedDataUpdate}. These two states are never
+triggered by the UI library but are meant to be used by the layer itself, to
+denote a need for updates that aren't tied to any concrete data ID.
+
+For example, in the @ref Ui-AbstractLayer-custom-update "original case of data being stored in draw order"
+the index buffer is always the same and only needs to be updated if it isn't
+large enough. For that, the @cpp create() @ce implementation would call
+@ref setNeedsUpdate() with @ref LayerState::NeedsCommonDataUpdate if the buffer needs to be enlarged, which then gets done in @ref doUpdate().
+
+@snippet Ui-gl.cpp AbstractLayer-custom-update-states-common
+
+It's of course possible to perform the index buffer upload directly in
+@cpp create() @ce as well, but when creating a lot of data the buffer could get
+reuploaded several times over. Deferring the update like this makes it updated
+at most once per frame.
+
+The @ref LayerState::NeedsSharedDataUpdate is then for differentiating updates
+of data that may be shared among multiple layers. This is what for example
+@ref BaseLayer uses to trigger updates of style data, which are stored in
+@ref BaseLayer::Shared, and for which it's enough to be updated just once for
+all layers that use the same shared instance.
+
+Finally, it might not always be possible to have @ref setNeedsUpdate() called
+in order to trigger an update. One such case is when the layer *polls* data
+from an external source, and there's no way for the source to explicitly notify
+the layer about updates. To solve this, the layer can implement the
+@ref doState() interface and return @ref LayerState::NeedsDataUpdate or similar
+in case an update was detected. A common pattern is for the external source to
+have some sort of a last update timestamp, or even just a counter that gets
+incremented on every update. The layer then compares its copy against it in
+@ref doState(), and refreshes the saved timestamp in @ref doUpdate():
+
+@snippet Ui-gl.cpp AbstractLayer-custom-update-states-timestamp
+
+@subsection Ui-AbstractLayer-custom-resource-cleanup Resource cleanup on data removal
+
+Besides plain data, it's possible for layers to store heavier resources. As an
+example, let's assume the quads are textured, with each such quad using a
+dedicated @ref GL::Texture2D. Putting aside the obvious downsides like each
+quad needing a separate draw call, we should ensure that the textures don't
+just stay in GPU memory after the data are removed. We hande that explicitly in
+the @ref remove() overrides:
+
+@snippet Ui-gl.cpp AbstractLayer-custom-resource-cleanup-remove
+
+More commonly however, instead of users explicitly calling @ref remove(), the
+data get removed as a consequence of node hierarchy removal. For that there's
+the @ref doClean() interface, which gets called as part of the regular update
+if any cascaded removes happened since last time. It gets a bitmask marking
+which data IDs got removed, which we use to perform a cleanup:
+
+@snippet Ui-gl.cpp AbstractLayer-custom-resource-cleanup-clean
+
+The @ref doClean() interface is designed like this instead of something like
+calling @ref remove() in a loop in order to allow implementations to batch the
+operations. For example, if the textures would be instead in some sort of an
+atlas that needs repacking afterwards, doing it just once for all removed
+textures would be more efficient than repacking after each removal.
+
+@section Ui-AbstractLayer-custom-event Custom event handling layers
+
+While the builtin @ref EventLayer allows attaching callbacks to various
+high-level events like taps, clicks or pinch gestures, you may need specialized
+behavior that can only be implemented by directly accessing the low-level event
+interfaces in a custom layer. Another use case is implementing event handling
+in addition to drawing, for example to implicitly handle hover and pressed
+state. While it could be done externally with @ref EventLayer::onEnter(),
+@relativeref{EventLayer,onLeave()} and such, implementing it directly on the
+custom drawing layer is often simpler and makes the layer more self-contained.
+
+@m_class{m-note m-info}
+
+@par
+    The high-level event input, handling and propagation is described in
+    @ref Ui-AbstractUserInterface-events "AbstractUserInterface event handling docs",
+    be sure to read that part first if you haven't already.
+
+A layer that wants to handle events advertises @ref LayerFeature::Event in
+@ref doFeatures() and implements one or more of the `do*Event()` interfaces,
+overview of which is below. As with drawing, an event handling layer doesn't
+* *need* to implement @ref doUpdate() or @ref doClean() --- if it has nothing
+to do on a per-data basis, it can contain only event handlers alone.
+
+@subsection Ui-AbstractLayer-custom-event-hover Reacting to hover
+
+For a simple introductory example, let's make the `QuadLayer` react to hover by
+making given quad brighter. The @ref doPointerMoveEvent() is called in a
+response to a pointer moving over area of a node that given `dataId` is
+attached to. With @ref PointerMoveEvent::setAccepted() we let the UI know that
+it's handling the event and the event shouldn't get propagated to further
+nodes. Here we want to handle a hover on all quads, so we call it regardless of
+the data ID the event happens on, but the layer can implement any behavior it
+wants. We however restrict it to just primary events, i.e. we don't want
+secondary fingers in a multi-touch event to highlight the node:
+
+@snippet Ui.cpp AbstractLayer-custom-event-hover
+
+If the move event gets accepted and the node wasn't hovered already,
+@ref doPointerEnterEvent() gets called next. Once the pointer moves outside of
+the node area, @ref doPointerLeaveEvent() gets called. We'll simply brighten
+the color in one and darken again in the other, and call @ref setNeedsUpdate()
+to let the UI know that we need an update and a redraw. Compared to
+@ref doPointerMoveEvent(), calling @relativeref{PointerMoveEvent,setAccepted()}
+isn't needed, as the enter and leave events don't propagate anywhere if not
+handled.
+
+@snippet Ui.cpp AbstractLayer-custom-event-hover-enter-leave
+
+The pair of enter / leave events deals with the common case of a pointer moving
+across the user interface, but it can also happen that the currently hovered
+nodes stops being visible or for example gets disabled, and at that point it
+should no longer show a hover state. We'll get notified about that and other
+cases in @ref doVisibilityLostEvent(), @ref VisibilityLostEvent::isNodeHovered()
+tells us if the node was hovered before and we should thus darken again:
+
+@m_class{m-console-wrap}
+
+@snippet Ui.cpp AbstractLayer-custom-event-hover-visibility-lost
+
+@subsection Ui-AbstractLayer-custom-event-press-release Pointer press and release, pointer capture
+
+The @ref doPointerPressEvent() and @ref doPointerReleaseEvent() interfaces are
+called when a pointer is pressed and released on a node. Compared to the
+@ref Ui-EventLayer-tap-click-press-release "EventLayer tap or click handler",
+there isn't any high-level tap or click event on the @ref AbstractLayer itself,
+that's up to the layer to implement if needed. The @ref PointerEvent exposes
+various state for this, allowing you to decide what a click should actually be,
+such as taking into distance between a press and a release, time between the
+events, pointers being pressed etc.
+
+Additionally, @ref Ui-AbstractUserInterface-events-capture "pointer capture" is
+implicitly enabled, meaning that all events following a press get sent to the
+originating node even if the pointer leaves its area. Furthermore, the event
+handlers can toggle the capture at any time, which can be used to implement
+advanced functionality.
+
+For example, we can use a press and a drag of a (primary mouse, pen or touch)
+pointer to change the color brightness, but dragging more than a certain
+distance will cancel the whole action, reverting back to the original color:
+
+@snippet Ui.cpp AbstractLayer-custom-event-drag-capture
+
+Finally, @ref doScrollEvent() handles scroll wheel and trackpad input. It's
+affected by pointer capture as well but there isn't anything specific to wheel
+events that would need a dedicated example.
+
+@m_class{m-note m-info}
+
+@par
+    See @ref AbstractUserInterface::pointerPressEvent(),
+    @relativeref{AbstractUserInterface,pointerReleaseEvent()},
+    @relativeref{AbstractUserInterface,pointerMoveEvent()} and
+    @relativeref{AbstractUserInterface,scrollEvent()} for a detailed
+    description of how pointer and scroll events are propagated to concrete
+    nodes and how pointer capture is handled.
+
+@subsection Ui-AbstractLayer-custom-event-keyboard Key events, node focus and text input
+
+The @ref doKeyPressEvent() and @ref doKeyReleaseEvent() interfaces are called
+in response to keyboard input. By default, if no node is focused, they're
+delivered the same way as pointer events, i.e. to a node under pointer or to
+the currently captured node. As an example, we could react to
+@m_class{m-label m-default} **R** being pressed to reset a color to some
+default. Important to note is that we check for @ref KeyEvent::modifiers() to
+be empty to not also react to @m_class{m-label m-warning} **Ctrl**
+@m_class{m-label m-default} **R** and such:
+
+@snippet Ui.cpp AbstractLayer-custom-event-keyboard
+
+Nodes that have @ref NodeFlag::Focusable enabled can be focused, after which
+they receive all key input as well as text input in @ref doTextInputEvent()
+regardless of pointer location or capture. Focusing is usually done in a
+response to an accepted pointer press, i.e. @ref doPointerPressEvent() has to
+accept a press first, and then a @ref doFocusEvent() allows the node to decide
+about the focus. When the node loses focus again, @ref doBlurEvent() is called.
+Besides a pointer press, @ref AbstractUserInterface::focusEvent() can be
+used to programmatically focus a node, which results in @ref doFocusEvent() /
+@ref doBlurEvent() being called directly.
+
+For a practical example, let's say we want to be able to type out a hexadecimal
+color to change a color of a focused quad --- assuming it was attached to a
+@ref NodeFlag::Focusable node. For simplicity, as soon as all six letters are
+typed, the color is changed and input starts over:
+
+@snippet Ui.cpp AbstractLayer-custom-event-text
+
+Note that @ref TextInputEvent::text() is allowed to contain more than one byte.
+If text input is active, regular key events still get sent as well, to allow
+the layer to perform other operations with them if needed, such as a backspace
+here. The @ref TextLayer implements more advanced text editing capabilities on
+top of these events, see the @ref TextEdit enum and @ref TextLayer::editText()
+for an overview of common editing behavior mapped to keyboard shortcuts.
+
+@m_class{m-note m-info}
+
+@par
+    See @ref AbstractUserInterface::keyPressEvent(),
+    @relativeref{AbstractUserInterface,keyReleaseEvent()} and
+    @relativeref{AbstractUserInterface,textInputEvent()} for a detailed
+    description of how key and text input events get propagated. Focus behavior
+    is described in @relativeref{AbstractUserInterface,pointerPressEvent()} and
+    @relativeref{AbstractUserInterface,focusEvent()}.
 */
 class MAGNUM_UI_EXPORT AbstractLayer {
     public:

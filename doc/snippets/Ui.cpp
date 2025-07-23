@@ -69,6 +69,204 @@
 using namespace Magnum;
 using namespace Magnum::Math::Literals;
 
+namespace A {
+
+class QuadLayer: public Ui::AbstractLayer {
+    private:
+        Ui::LayerFeatures doFeatures() const override;
+        void doPointerMoveEvent(UnsignedInt dataId, Ui::PointerMoveEvent& event) override;
+        void doPointerEnterEvent(UnsignedInt dataId, Ui::PointerMoveEvent& event) override;
+        void doPointerLeaveEvent(UnsignedInt dataId, Ui::PointerMoveEvent& event) override;
+        void doVisibilityLostEvent(UnsignedInt dataId, Ui::VisibilityLostEvent& event) override;
+
+        Containers::Array<Color3> _colors;
+};
+
+/* [AbstractLayer-custom-event-hover] */
+Ui::LayerFeatures QuadLayer::doFeatures() const {
+    return DOXYGEN_ELLIPSIS(Ui::LayerFeature{})|Ui::LayerFeature::Event;
+}
+
+void QuadLayer::doPointerMoveEvent(UnsignedInt, Ui::PointerMoveEvent& event) {
+    if(!event.isPrimary())
+        return;
+
+    event.setAccepted();
+}
+/* [AbstractLayer-custom-event-hover] */
+
+/* [AbstractLayer-custom-event-hover-enter-leave] */
+void QuadLayer::doPointerEnterEvent(UnsignedInt dataId, Ui::PointerMoveEvent&) {
+    _colors[dataId] *= 1.25f;
+
+    setNeedsUpdate(Ui::LayerState::NeedsDataUpdate);
+}
+
+void QuadLayer::doPointerLeaveEvent(UnsignedInt dataId, Ui::PointerMoveEvent&) {
+    _colors[dataId] /= 1.25f;
+
+    setNeedsUpdate(Ui::LayerState::NeedsDataUpdate);
+}
+/* [AbstractLayer-custom-event-hover-enter-leave] */
+
+/* [AbstractLayer-custom-event-hover-visibility-lost] */
+void QuadLayer::doVisibilityLostEvent(UnsignedInt dataId, Ui::VisibilityLostEvent& event) {
+    if(event.isNodeHovered()) {
+        _colors[dataId] /= 1.25f;
+
+        setNeedsUpdate(Ui::LayerState::NeedsDataUpdate);
+    }
+}
+/* [AbstractLayer-custom-event-hover-visibility-lost] */
+
+}
+
+namespace B {
+
+class QuadLayer: public Ui::AbstractLayer {
+    private:
+        void doPointerMoveEvent(UnsignedInt dataId, Ui::PointerMoveEvent& event) override;
+        void doPointerPressEvent(UnsignedInt dataId, Ui::PointerEvent& event) override;
+
+        Containers::Array<Color3> _colors;
+        Color3 _originalColor;
+};
+
+/* [AbstractLayer-custom-event-drag-capture] */
+void QuadLayer::doPointerPressEvent(UnsignedInt dataId, Ui::PointerEvent& event) {
+    /* If a primary pointer is pressed, remember the current color. No need for
+       setting NeedsDataUpdate as nothing visually changed. */
+    if(event.isPrimary() &&
+       (event.pointer() & (Ui::Pointer::MouseLeft|
+                           Ui::Pointer::Pen|
+                           Ui::Pointer::Finger))) {
+        _originalColor = _colors[dataId];
+        event.setAccepted();
+    }
+}
+
+void QuadLayer::doPointerMoveEvent(UnsignedInt dataId, Ui::PointerMoveEvent& event) {
+    /* If a primary pointer is among the ones currently pressed and it's
+       captured, i..e. it originated from a press on this node */
+    if(event.isPrimary() &&
+       (event.pointers() & (Ui::Pointer::MouseLeft|
+                            Ui::Pointer::Pen|
+                            Ui::Pointer::Finger)) &&
+       event.isCaptured())
+    {
+        /* Calculate distance from node center */
+        Vector2 distance = event.position() - event.nodeSize()*0.5f;
+
+        /* If further than 100 pixels, cancel pointer capture and reset the
+           color back */
+        if(distance.dot() >= Math::pow<2>(100.0f)) {
+            event.setCaptured(false);
+            _colors[dataId] = _originalColor;
+
+        /* Otherwise update the color based on the Y distance, brightening up
+           and darkening down */
+        } else {
+            _colors[dataId] = distance.y() > 0.0f ?
+                _originalColor/(1.0f + distance.y()/100.0f) :
+                _originalColor*(1.0f + distance.y()/100.0f);
+        }
+
+        event.setAccepted();
+        setNeedsUpdate(Ui::LayerState::NeedsDataUpdate);
+    }
+}
+/* [AbstractLayer-custom-event-drag-capture] */
+
+}
+
+namespace C {
+
+class QuadLayer: public Ui::AbstractLayer {
+    private:
+        void doKeyPressEvent(UnsignedInt dataId, Ui::KeyEvent& event) override;
+
+        Containers::Array<Color3> _colors;
+};
+
+/* [AbstractLayer-custom-event-keyboard] */
+void QuadLayer::doKeyPressEvent(UnsignedInt dataId, Ui::KeyEvent& event) {
+    if(event.key() == Ui::Key::R && event.modifiers() == Ui::Modifiers{}) {
+        _colors[dataId] = DOXYGEN_ELLIPSIS({});
+        event.setAccepted();
+        setNeedsUpdate(Ui::LayerState::NeedsDataUpdate);
+    }
+}
+/* [AbstractLayer-custom-event-keyboard] */
+
+}
+
+namespace D {
+
+class QuadLayer: public Ui::AbstractLayer {
+    private:
+        void doPointerPressEvent(UnsignedInt dataId, Ui::PointerEvent& event) override;
+        void doFocusEvent(UnsignedInt dataId, Ui::FocusEvent& event) override;
+        void doKeyPressEvent(UnsignedInt dataId, Ui::KeyEvent& event) override;
+        void doTextInputEvent(UnsignedInt dataId, Ui::TextInputEvent& event) override;
+
+        Containers::Array<Color3> _colors;
+        UnsignedInt _editedColor = 0;
+        Int _charCount = 0;
+};
+
+/* [AbstractLayer-custom-event-text] */
+void QuadLayer::doPointerPressEvent(UnsignedInt, Ui::PointerEvent& event) {
+    /* Accept press to get a focus */
+    event.setAccepted();
+}
+
+void QuadLayer::doFocusEvent(UnsignedInt, Ui::FocusEvent& event) {
+    /* Accept focus to get a text input */
+    event.setAccepted();
+}
+
+void QuadLayer::doKeyPressEvent(UnsignedInt, Ui::KeyEvent& event) {
+    /* If the node is focused (and thus we're editing the color), remove last
+       char on backspace */
+    if(event.isNodeFocused() &&
+       event.key() == Ui::Key::Backspace &&
+       event.modifiers() == Ui::Modifiers{})
+    {
+        _editedColor >>= 4;
+        if(_charCount)
+            --_charCount;
+        event.setAccepted();
+    }
+}
+
+void QuadLayer::doTextInputEvent(UnsignedInt dataId, Ui::TextInputEvent& event) {
+    for(char c: event.text()) {
+        char value;
+        if(c >= '0' && c <= '9')
+            value = c - 0;
+        else if((c >= 'a' && c <= 'f') ||
+                (c >= 'A' && c <= 'F'))
+            value = 10 + (c & ~0x20) - 'a';
+        /* Skip unknown chars for simplicity */
+        else continue;
+
+        _editedColor = (_editedColor << 4)|value;
+        ++_charCount;
+
+        /* Got exactly six chars, update the color and reset */
+        if(_charCount == 6) {
+            _colors[dataId] = Color3::fromLinearRgbInt(_editedColor);
+            _charCount = _editedColor = {};
+            setNeedsUpdate(Ui::LayerState::NeedsDataUpdate);
+        }
+    }
+
+    event.setAccepted();
+}
+/* [AbstractLayer-custom-event-text] */
+
+}
+
 Ui::AbstractVisualLayer::Shared& abstractVisualLayerShared();
 namespace {
 /* [AbstractVisualLayer-Shared-setStyleTransition] */
@@ -114,7 +312,7 @@ shared.setStyleTransition<StyleIndex,
 
 /* Anonymous namespace to avoid "no previous declaration" warnings, main() and
    main2() is then outside of it to avoid "unused function" warnings */
-namespace A { namespace {
+namespace E { namespace {
 /* [BaseLayer-style-transitions] */
 enum BaseLayerStyle {
     Button,
@@ -328,6 +526,47 @@ struct ColorLayer::DebugIntegration: Ui::AbstractVisualLayer::DebugIntegration {
 void mainUi();
 void mainUi() {
 {
+struct UserInterface: Ui::UserInterface {
+    explicit UserInterface(NoCreateT): Ui::UserInterface{NoCreate} {}
+} ui{NoCreate};
+/* [AbstractLayer-handles] */
+/* Query the node given data from an arbitrary layer is attached to */
+Ui::DataHandle data = DOXYGEN_ELLIPSIS({});
+Ui::NodeHandle node = ui.layer(dataHandleLayer(data)).node(data);
+
+/* Remembering a data handle from a known layer in order to update it later */
+Ui::LayerDataHandle bg = dataHandleData(ui.baseLayer().create(DOXYGEN_ELLIPSIS(0)));
+DOXYGEN_ELLIPSIS()
+ui.baseLayer().setColor(bg, 0x3bd267_rgbf);
+/* [AbstractLayer-handles] */
+static_cast<void>(node);
+}
+
+{
+struct Layer: Ui::AbstractLayer {
+    explicit Layer(Ui::LayerHandle handle): Ui::AbstractLayer{handle} {}
+
+    Ui::DataHandle create(int, Ui::NodeHandle node) {
+        return Ui::AbstractLayer::create(node);
+    }
+
+    Ui::LayerFeatures doFeatures() const override { return {}; }
+} textLayer{Ui::layerHandle(0, 1)};
+Ui::NodeHandle node{};
+/* [AbstractLayer-attachments] */
+Ui::DataHandle label = textLayer.create(DOXYGEN_ELLIPSIS(0), node);
+
+/* Stop showing the label but keep it instead of removing */
+textLayer.attach(label, Ui::NodeHandle::Null);
+
+DOXYGEN_ELLIPSIS()
+
+/* Show it again */
+textLayer.attach(label, node);
+/* [AbstractLayer-attachments] */
+}
+
+{
 Ui::AbstractUserInterface ui{{100, 100}};
 /* [AbstractUserInterface-setup-events] */
 Ui::PointerEvent event{{},
@@ -378,6 +617,50 @@ DOXYGEN_ELLIPSIS()
 /* Hide the tooltip when no longer meant to be visible */
 ui.clearNodeOrder(titleTooltip);
 /* [AbstractUserInterface-nodes-order-nested] */
+}
+
+{
+Ui::AbstractUserInterface ui{{100, 100}};
+/* [AbstractUserInterface-layers-create] */
+Ui::LayerHandle eventLayerHandle = ui.createLayer();
+Ui::EventLayer& eventLayer = ui.setLayerInstance(
+    Containers::pointer<Ui::EventLayer>(eventLayerHandle));
+/* [AbstractUserInterface-layers-create] */
+
+Ui::NodeHandle panel{}, title{};
+/* [AbstractUserInterface-layers-create-data] */
+eventLayer.onDrag(title, [panel, &ui](const Vector2& relativePosition) {
+    ui.setNodeOffset(panel, ui.nodeOffset(panel) + relativePosition);
+});
+/* [AbstractUserInterface-layers-create-data] */
+}
+
+{
+Ui::AbstractUserInterface ui{{100, 100}};
+Ui::LayerHandle eventLayerHandle{};
+/* [AbstractUserInterface-layers-query] */
+Ui::EventLayer& eventLayer = ui.layer<Ui::EventLayer>(eventLayerHandle);
+/* [AbstractUserInterface-layers-query] */
+static_cast<void>(eventLayer);
+}
+
+{
+struct Shared: Ui::BaseLayer::Shared {
+    explicit Shared(): Ui::BaseLayer::Shared::Shared{Configuration{1}} {}
+
+    void doSetStyle(const Ui::BaseLayerCommonStyleUniform&, Containers::ArrayView<const Ui::BaseLayerStyleUniform>) override {}
+} shared;
+struct BaseLayer: Ui::BaseLayer {
+    explicit BaseLayer(Ui::LayerHandle layer, Ui::BaseLayer::Shared& shared): Ui::BaseLayer{layer, shared} {}
+};
+Ui::AbstractUserInterface ui{{100, 100}};
+/* [AbstractUserInterface-layers-order] */
+Ui::LineLayer& overlayLineLayer = DOXYGEN_ELLIPSIS(ui.layer<Ui::LineLayer>({}));
+
+Ui::LayerHandle overlayLayerHandle = ui.createLayer(overlayLineLayer.handle());
+Ui::BaseLayer& overlayLayer = ui.setLayerInstance(DOXYGEN_ELLIPSIS(Containers::pointer<BaseLayer>(overlayLayerHandle, shared)));
+/* [AbstractUserInterface-layers-order] */
+static_cast<void>(overlayLayer);
 }
 
 {

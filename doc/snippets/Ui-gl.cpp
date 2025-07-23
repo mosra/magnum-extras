@@ -24,11 +24,21 @@
     DEALINGS IN THE SOFTWARE.
 */
 
+#include <Corrade/Containers/BitArrayView.h>
+#include <Corrade/Containers/GrowableArray.h>
+#include <Corrade/Containers/Optional.h>
+#include <Corrade/Containers/StridedArrayView.h>
 #include <Corrade/PluginManager/Manager.h>
+#include <Corrade/Utility/Algorithms.h>
 #include <Magnum/PixelFormat.h>
 #include <Magnum/GL/DefaultFramebuffer.h>
 #include <Magnum/GL/Renderer.h>
+#include <Magnum/GL/Buffer.h>
+#include <Magnum/GL/Mesh.h>
+#include <Magnum/GL/Texture.h>
 #include <Magnum/GL/TextureArray.h>
+#include <Magnum/Math/Matrix3.h>
+#include <Magnum/Shaders/FlatGL.h>
 #include <Magnum/Text/AbstractFont.h>
 #include <Magnum/Text/DistanceFieldGlyphCacheGL.h>
 #include <Magnum/Trade/AbstractImporter.h>
@@ -51,6 +61,596 @@
 
 using namespace Magnum;
 using namespace Math::Literals;
+
+namespace A {
+
+/* [AbstractLayer-custom] */
+class QuadLayer: public Ui::AbstractLayer {
+    public:
+        explicit QuadLayer(Ui::LayerHandle handle);
+
+        Ui::DataHandle create(const Color3& color,
+                              Ui::NodeHandle node = Ui::NodeHandle::Null);
+        void remove(Ui::DataHandle handle);
+        void remove(Ui::LayerDataHandle handle);DOXYGEN_IGNORE(
+            void setColor(Ui::DataHandle data, const Color3& color);
+            void setColor(Ui::LayerDataHandle data, const Color3& color);
+        )
+
+    private:
+        Ui::LayerFeatures doFeatures() const override {
+            return Ui::LayerFeature::Draw;
+        }
+        DOXYGEN_ELLIPSIS(
+            void doUpdate(Ui::LayerStates state, const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectDataCounts, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, const Containers::StridedArrayView1D<const Float>& nodeOpacities, Containers::BitArrayView nodesEnabled, const Containers::StridedArrayView1D<const Vector2>& clipRectOffsets, const Containers::StridedArrayView1D<const Vector2>& clipRectSizes, const Containers::StridedArrayView1D<const Vector2>& compositeRectOffsets, const Containers::StridedArrayView1D<const Vector2>& compositeRectSizes) override;
+            void doSetSize(const Vector2& size, const Vector2i& framebufferSize) override;
+            void doDraw(const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, std::size_t offset, std::size_t count, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectDataCounts, std::size_t clipRectOffset, std::size_t clipRectCount, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, const Containers::StridedArrayView1D<const Float>& nodeOpacities, Containers::BitArrayView nodesEnabled, const Containers::StridedArrayView1D<const Vector2>& clipRectOffsets, const Containers::StridedArrayView1D<const Vector2>& clipRectSizes) override;
+        )
+
+        struct Vertex {
+            Vector2 position;
+            Color3 color;
+        };
+        GL::Buffer _indices, _vertices;
+        GL::Mesh _mesh;
+        Shaders::FlatGL2D _shader{Shaders::FlatGL2D::Configuration{}
+            .setFlags(Shaders::FlatGL2D::Flag::VertexColor)};
+
+        Containers::Array<Color3> _colors;
+};
+/* [AbstractLayer-custom] */
+
+/* [AbstractLayer-custom-constructor] */
+QuadLayer::QuadLayer(Ui::LayerHandle handle): Ui::AbstractLayer{handle} {
+    _mesh.addVertexBuffer(_vertices, 0,
+            Shaders::FlatGL2D::Position{},
+            Shaders::FlatGL2D::Color3{})
+         .setIndexBuffer(_indices, 0, GL::MeshIndexType::UnsignedInt);
+}
+/* [AbstractLayer-custom-constructor] */
+
+/* [AbstractLayer-custom-create] */
+Ui::DataHandle QuadLayer::create(const Color3& color, Ui::NodeHandle node) {
+    Ui::DataHandle handle = Ui::AbstractLayer::create(node);
+    UnsignedInt dataId = dataHandleId(handle);
+    if(dataId >= _colors.size())
+        arrayResize(_colors, dataId + 1);
+
+    _colors[dataId] = color;
+    return handle;
+}
+/* [AbstractLayer-custom-create] */
+
+/* [AbstractLayer-custom-remove] */
+void QuadLayer::remove(Ui::DataHandle handle) {
+    Ui::AbstractLayer::remove(handle);
+}
+
+void QuadLayer::remove(Ui::LayerDataHandle handle) {
+    Ui::AbstractLayer::remove(handle);
+}
+/* [AbstractLayer-custom-remove] */
+
+/* [AbstractLayer-custom-update-signature] */
+void QuadLayer::doUpdate(Ui::LayerStates,
+    const Containers::StridedArrayView1D<const UnsignedInt>& dataIds,
+    const Containers::StridedArrayView1D<const UnsignedInt>&,
+    const Containers::StridedArrayView1D<const UnsignedInt>&,
+    const Containers::StridedArrayView1D<const Vector2>& nodeOffsets,
+    const Containers::StridedArrayView1D<const Vector2>& nodeSizes,
+    const Containers::StridedArrayView1D<const Float>&, Containers::BitArrayView,
+    const Containers::StridedArrayView1D<const Vector2>&,
+    const Containers::StridedArrayView1D<const Vector2>&,
+    const Containers::StridedArrayView1D<const Vector2>&,
+    const Containers::StridedArrayView1D<const Vector2>&)
+/* [AbstractLayer-custom-update-signature] */
+/* [AbstractLayer-custom-update] */
+{
+    Containers::Array<Vertex> vertexData{NoInit, dataIds.size()*4};
+    Containers::Array<UnsignedInt> indexData{NoInit, dataIds.size()*6};
+
+    Containers::StridedArrayView1D<const Ui::NodeHandle> nodes = this->nodes();
+    for(UnsignedInt i = 0; i != dataIds.size(); ++i) {
+        UnsignedInt dataId = dataIds[i];
+        UnsignedInt nodeId = nodeHandleId(nodes[dataId]);
+        Range2D rect = Range2D::fromSize(nodeOffsets[nodeId], nodeSizes[nodeId]);
+
+        /*           0--1          0-2 3
+           vertices: |  | indices: |/ /|
+                     2--3          1 4-5 */
+        for(UnsignedInt j = 0; j != 4; ++j) {
+            vertexData[i*4 + j].position = Math::lerp(rect.min(), rect.max(), j);
+            vertexData[i*4 + j].color = _colors[dataId];
+        }
+        Utility::copy({i*4 + 0, i*4 + 2, i*4 + 1,
+                       i*4 + 1, i*4 + 2, i*4 + 3},
+                      indexData.sliceSize(i*6, 6));
+    }
+
+    _vertices.setData(vertexData);
+    _indices.setData(indexData);
+    _mesh.setCount(indexData.size());
+}
+/* [AbstractLayer-custom-update] */
+
+/* [AbstractLayer-custom-setsize] */
+void QuadLayer::doSetSize(const Vector2& size, const Vector2i&) {
+    _shader.setTransformationProjectionMatrix(
+        Matrix3::scaling(Vector2::yScale(-1.0f))*
+        Matrix3::translation({-1.0f, -1.0f})*
+        Matrix3::projection(size));
+}
+/* [AbstractLayer-custom-setsize] */
+
+/* [AbstractLayer-custom-draw] */
+void QuadLayer::doDraw(
+    const Containers::StridedArrayView1D<const UnsignedInt>&,
+    std::size_t offset, std::size_t count,
+    const Containers::StridedArrayView1D<const UnsignedInt>&,
+    const Containers::StridedArrayView1D<const UnsignedInt>&,
+    std::size_t, std::size_t,
+    const Containers::StridedArrayView1D<const Vector2>&,
+    const Containers::StridedArrayView1D<const Vector2>&,
+    const Containers::StridedArrayView1D<const Float>&, Containers::BitArrayView,
+    const Containers::StridedArrayView1D<const Vector2>&,
+    const Containers::StridedArrayView1D<const Vector2>&)
+{
+    _mesh
+        .setIndexOffset(offset*6)
+        .setCount(count*6);
+    _shader.draw(_mesh);
+}
+/* [AbstractLayer-custom-draw] */
+
+/* [AbstractLayer-custom-setters] */
+void QuadLayer::setColor(Ui::DataHandle handle, const Color3& color) {
+    CORRADE_ASSERT(isHandleValid(handle),
+        "QuadLayer::setColor(): invalid handle" << handle, );
+    _colors[Ui::dataHandleId(handle)] = color;
+    setNeedsUpdate(Ui::LayerState::NeedsDataUpdate);
+}
+/* [AbstractLayer-custom-setters] */
+
+/* [AbstractLayer-custom-setters-layerdatahandle] */
+void QuadLayer::setColor(Ui::LayerDataHandle handle, const Color3& color) {
+    CORRADE_ASSERT(isHandleValid(handle),
+        "QuadLayer::setColor(): invalid handle" << handle, );
+    _colors[Ui::layerDataHandleId(handle)] = color;
+    setNeedsUpdate(Ui::LayerState::NeedsDataUpdate);
+}
+/* [AbstractLayer-custom-setters-layerdatahandle] */
+
+}
+
+namespace B {
+
+/* [AbstractLayer-custom-blending] */
+class QuadLayer: public Ui::AbstractLayer {
+    public:
+        explicit QuadLayer(Ui::LayerHandle handle): Ui::AbstractLayer{handle} {
+            _mesh.addVertexBuffer(_vertices, 0,
+                Shaders::FlatGL2D::Position{},
+                Shaders::FlatGL2D::Color4{});
+            DOXYGEN_ELLIPSIS()
+        }
+
+        Ui::DataHandle create(const Color4& color,
+                              Ui::NodeHandle node = Ui::NodeHandle::Null);
+        DOXYGEN_ELLIPSIS()
+
+    private:
+        Ui::LayerFeatures doFeatures() const override {
+            return Ui::LayerFeature::Draw|
+                   Ui::LayerFeature::DrawUsesBlending;
+        }
+        DOXYGEN_ELLIPSIS(
+            void doUpdate(Ui::LayerStates state, const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectDataCounts, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, const Containers::StridedArrayView1D<const Float>& nodeOpacities, Containers::BitArrayView nodesEnabled, const Containers::StridedArrayView1D<const Vector2>& clipRectOffsets, const Containers::StridedArrayView1D<const Vector2>& clipRectSizes, const Containers::StridedArrayView1D<const Vector2>& compositeRectOffsets, const Containers::StridedArrayView1D<const Vector2>& compositeRectSizes) override;
+        )
+
+        struct Vertex {
+            Vector2 position;
+            Color4 color;
+        };
+        DOXYGEN_ELLIPSIS(GL::Buffer _vertices; GL::Mesh _mesh;)
+
+        Containers::Array<Color4> _colors;
+};
+/* [AbstractLayer-custom-blending] */
+
+/* [AbstractLayer-custom-node-opacity-enabled] */
+void QuadLayer::doUpdate(Ui::LayerStates,
+    const Containers::StridedArrayView1D<const UnsignedInt>& dataIds,
+    const Containers::StridedArrayView1D<const UnsignedInt>&,
+    const Containers::StridedArrayView1D<const UnsignedInt>&,
+    const Containers::StridedArrayView1D<const Vector2>& nodeOffsets,
+    const Containers::StridedArrayView1D<const Vector2>& nodeSizes,
+    const Containers::StridedArrayView1D<const Float>& nodeOpacities,
+    Containers::BitArrayView nodesEnabled,
+    const Containers::StridedArrayView1D<const Vector2>&,
+    const Containers::StridedArrayView1D<const Vector2>&,
+    const Containers::StridedArrayView1D<const Vector2>&,
+    const Containers::StridedArrayView1D<const Vector2>&)
+{
+    DOXYGEN_ELLIPSIS(Containers::Array<Vertex> vertexData;)
+    for(UnsignedInt i = 0; i != dataIds.size(); ++i) {
+        DOXYGEN_ELLIPSIS(UnsignedInt dataId{}, nodeId{};)
+
+        Color4 color = _colors[dataId];
+        if(!nodesEnabled[nodeId])
+            color.rgb() = Color3{color.value()*0.75f};
+        color *= nodeOpacities[nodeId];
+        for(UnsignedInt j = 0; j != 4; ++j)
+            vertexData[i*4 + j].color = color;
+    }
+
+    DOXYGEN_ELLIPSIS(
+        static_cast<void>(nodeOffsets);
+        static_cast<void>(nodeSizes);
+    )
+}
+/* [AbstractLayer-custom-node-opacity-enabled] */
+
+}
+
+namespace C {
+
+class QuadLayer: public Ui::AbstractLayer {
+    public:
+        explicit QuadLayer(Ui::LayerHandle handle): Ui::AbstractLayer{handle} {}
+
+    private:
+        Ui::LayerFeatures doFeatures() const override { return {}; }
+        void doUpdate(Ui::LayerStates state, const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectDataCounts, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, const Containers::StridedArrayView1D<const Float>& nodeOpacities, Containers::BitArrayView nodesEnabled, const Containers::StridedArrayView1D<const Vector2>& clipRectOffsets, const Containers::StridedArrayView1D<const Vector2>& clipRectSizes, const Containers::StridedArrayView1D<const Vector2>& compositeRectOffsets, const Containers::StridedArrayView1D<const Vector2>& compositeRectSizes) override;
+
+        struct Vertex {
+            Vector2 position;
+        };
+};
+
+/* [AbstractLayer-custom-clip] */
+void QuadLayer::doUpdate(Ui::LayerStates,
+    const Containers::StridedArrayView1D<const UnsignedInt>& dataIds,
+    const Containers::StridedArrayView1D<const UnsignedInt>& clipRectIds,
+    const Containers::StridedArrayView1D<const UnsignedInt>& clipRectDataCounts,
+    const Containers::StridedArrayView1D<const Vector2>& nodeOffsets,
+    const Containers::StridedArrayView1D<const Vector2>& nodeSizes,
+    const Containers::StridedArrayView1D<const Float>&, Containers::BitArrayView,
+    const Containers::StridedArrayView1D<const Vector2>& clipRectOffsets,
+    const Containers::StridedArrayView1D<const Vector2>& clipRectSizes,
+    const Containers::StridedArrayView1D<const Vector2>&,
+    const Containers::StridedArrayView1D<const Vector2>&)
+{
+    DOXYGEN_ELLIPSIS(Containers::Array<Vertex> vertexData;)
+
+    UnsignedInt clipRect = 0;
+    UnsignedInt clipRectDataCount = 0;
+    for(UnsignedInt i = 0; i != dataIds.size(); ++i) {
+        DOXYGEN_ELLIPSIS(UnsignedInt nodeId{};)
+
+        /* If the clip rectangle is empty, no clipping is active */
+        Range2D rect = Range2D::fromSize(nodeOffsets[nodeId],
+                                         nodeSizes[nodeId]);
+        Range2D clip = Range2D::fromSize(clipRectOffsets[clipRectIds[clipRect]],
+                                         clipRectSizes[clipRectIds[clipRect]]);
+        if(!clip.size().isZero())
+            rect = Math::intersect(rect, clip);
+        for(UnsignedInt j = 0; j != 4; ++j)
+            vertexData[i*4 + j].position = Math::lerp(rect.min(), rect.max(), j);
+
+        /* The clip rect got applied to all data it affects, move to the next */
+        if(++clipRectDataCount == clipRectDataCounts[clipRect]) {
+            ++clipRect;
+            clipRectDataCount = 0;
+        }
+    }
+}
+/* [AbstractLayer-custom-clip] */
+
+}
+
+namespace D {
+
+class QuadLayer: public Ui::AbstractLayer {
+    public:
+        explicit QuadLayer(Ui::LayerHandle handle): Ui::AbstractLayer{handle} {}
+
+    private:
+        Ui::LayerFeatures doFeatures() const override;
+        void doSetSize(const Vector2& size, const Vector2i& framebufferSize) override;
+        void doDraw(const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, std::size_t offset, std::size_t count, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectDataCounts, std::size_t clipRectOffset, std::size_t clipRectCount, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, const Containers::StridedArrayView1D<const Float>& nodeOpacities, Containers::BitArrayView nodesEnabled, const Containers::StridedArrayView1D<const Vector2>& clipRectOffsets, const Containers::StridedArrayView1D<const Vector2>& clipRectSizes) override;
+
+        Vector2 _size;
+        Vector2i _framebufferSize;
+        GL::Mesh _mesh;
+        Shaders::FlatGL2D _shader;
+};
+
+/* [AbstractLayer-custom-clip-scissor] */
+Ui::LayerFeatures QuadLayer::doFeatures() const {
+    return DOXYGEN_ELLIPSIS(Ui::LayerFeatures{})|Ui::LayerFeature::DrawUsesScissor;
+}
+
+void QuadLayer::doSetSize(const Vector2& size, const Vector2i& framebufferSize) {
+    DOXYGEN_ELLIPSIS()
+    _size = size;
+    _framebufferSize = framebufferSize;
+}
+/* [AbstractLayer-custom-clip-scissor] */
+
+/* [AbstractLayer-custom-clip-scissor-draw] */
+void QuadLayer::doDraw(
+    const Containers::StridedArrayView1D<const UnsignedInt>&,
+    std::size_t offset, std::size_t,
+    const Containers::StridedArrayView1D<const UnsignedInt>& clipRectIds,
+    const Containers::StridedArrayView1D<const UnsignedInt>& clipRectDataCounts,
+    std::size_t clipRectOffset, std::size_t clipRectCount,
+    const Containers::StridedArrayView1D<const Vector2>&,
+    const Containers::StridedArrayView1D<const Vector2>&,
+    const Containers::StridedArrayView1D<const Float>&, Containers::BitArrayView,
+    const Containers::StridedArrayView1D<const Vector2>& clipRectOffsets,
+    const Containers::StridedArrayView1D<const Vector2>& clipRectSizes)
+{
+    std::size_t clipDataOffset = offset;
+    for(std::size_t i = 0; i != clipRectCount; ++i) {
+        UnsignedInt clipRectId = clipRectIds[clipRectOffset + i];
+        UnsignedInt clipRectDataCount = clipRectDataCounts[clipRectOffset + i];
+        Vector2i clipOffset = clipRectOffsets[clipRectId]*_framebufferSize/_size;
+        Vector2i clipSize = clipRectSizes[clipRectId]*_framebufferSize/_size;
+
+        /* If the clip rectangle is empty, not clipping anything, reset the
+           scissor back to the whole framebuffer */
+        GL::Renderer::setScissor(clipSize.isZero() ?
+            Range2Di::fromSize({}, _framebufferSize) :
+            Range2Di::fromSize(
+                {clipOffset.x(), _framebufferSize.y() - clipOffset.y() - clipSize.y()},
+                clipSize));
+
+        _mesh
+            .setIndexOffset(clipDataOffset*6)
+            .setCount(clipRectDataCount*6);
+        _shader.draw(_mesh);
+
+        clipDataOffset += clipRectDataCount;
+    }
+}
+/* [AbstractLayer-custom-clip-scissor-draw] */
+
+}
+
+namespace E {
+
+class QuadLayer: public Ui::AbstractLayer {
+    public:
+        explicit QuadLayer(Ui::LayerHandle handle);
+
+    private:
+        Ui::LayerFeatures doFeatures() const override { return {}; }
+        void doUpdate(Ui::LayerStates state, const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectDataCounts, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, const Containers::StridedArrayView1D<const Float>& nodeOpacities, Containers::BitArrayView nodesEnabled, const Containers::StridedArrayView1D<const Vector2>& clipRectOffsets, const Containers::StridedArrayView1D<const Vector2>& clipRectSizes, const Containers::StridedArrayView1D<const Vector2>& compositeRectOffsets, const Containers::StridedArrayView1D<const Vector2>& compositeRectSizes) override;
+
+        struct Vertex {
+            Vector2 position;
+        };
+        GL::Buffer _indices, _vertices;
+        GL::Mesh _mesh;
+};
+
+#ifndef MAGNUM_TARGET_WEBGL /* No buffer mapping on WebGL */
+/* [AbstractLayer-custom-update-in-data-order] */
+void QuadLayer::doUpdate(DOXYGEN_ELLIPSIS(Ui::LayerStates,
+    const Containers::StridedArrayView1D<const UnsignedInt>& dataIds,
+    const Containers::StridedArrayView1D<const UnsignedInt>&,
+    const Containers::StridedArrayView1D<const UnsignedInt>&,
+    const Containers::StridedArrayView1D<const Vector2>& nodeOffsets,
+    const Containers::StridedArrayView1D<const Vector2>& nodeSizes,
+    const Containers::StridedArrayView1D<const Float>&, Containers::BitArrayView,
+    const Containers::StridedArrayView1D<const Vector2>&,
+    const Containers::StridedArrayView1D<const Vector2>&,
+    const Containers::StridedArrayView1D<const Vector2>&,
+    const Containers::StridedArrayView1D<const Vector2>&)) {
+    /* vertices[i*4] to vertices[i*4 + 4] is a quad for data i */
+    Containers::ArrayView<Vertex> vertices = Containers::arrayCast<Vertex>(
+        _vertices.map(0, capacity()*sizeof(Vertex)*4, GL::Buffer::MapFlag::Write));
+    Containers::StridedArrayView1D<const Ui::NodeHandle> nodes = this->nodes();
+    for(UnsignedInt i = 0; i != dataIds.size(); ++i) {
+        UnsignedInt dataId = dataIds[i];
+        UnsignedInt nodeId = nodeHandleId(nodes[dataId]);
+        Range2D rect = Range2D::fromSize(nodeOffsets[nodeId], nodeSizes[nodeId]);
+        for(UnsignedInt j = 0; j != 4; ++j)
+            vertices[dataId*4 + j].position = Math::lerp(rect.min(), rect.max(), j);
+    }
+    _vertices.unmap();
+
+    /* indexData[i*6] to indexData[i*6 + 6] draws a quad for dataIds[i] */
+    Containers::Array<UnsignedInt> indexData{NoInit, dataIds.size()*6};
+    for(UnsignedInt i = 0; i != dataIds.size(); ++i) {
+        UnsignedInt dataId = dataIds[i];
+        Utility::copy({dataId*4 + 0, dataId*4 + 2, dataId*4 + 1,
+                       dataId*4 + 1, dataId*4 + 2, dataId*4 + 3},
+                      indexData.sliceSize(i*6, 6));
+    }
+    _indices.setData(indexData);
+
+    _mesh.setCount(indexData.size());
+}
+/* [AbstractLayer-custom-update-in-data-order] */
+#endif
+
+}
+
+namespace F {
+
+class QuadLayer: public Ui::AbstractLayer {
+    public:
+        explicit QuadLayer(Ui::LayerHandle handle);
+
+    private:
+        Ui::LayerFeatures doFeatures() const override { return {}; }
+        void doUpdate(Ui::LayerStates state, const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectDataCounts, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, const Containers::StridedArrayView1D<const Float>& nodeOpacities, Containers::BitArrayView nodesEnabled, const Containers::StridedArrayView1D<const Vector2>& clipRectOffsets, const Containers::StridedArrayView1D<const Vector2>& clipRectSizes, const Containers::StridedArrayView1D<const Vector2>& compositeRectOffsets, const Containers::StridedArrayView1D<const Vector2>& compositeRectSizes) override;
+};
+
+/* [AbstractLayer-custom-update-states] */
+void QuadLayer::doUpdate(Ui::LayerStates state, DOXYGEN_ELLIPSIS(
+    const Containers::StridedArrayView1D<const UnsignedInt>&,
+    const Containers::StridedArrayView1D<const UnsignedInt>&,
+    const Containers::StridedArrayView1D<const UnsignedInt>&,
+    const Containers::StridedArrayView1D<const Vector2>&,
+    const Containers::StridedArrayView1D<const Vector2>&,
+    const Containers::StridedArrayView1D<const Float>&, Containers::BitArrayView,
+    const Containers::StridedArrayView1D<const Vector2>&,
+    const Containers::StridedArrayView1D<const Vector2>&,
+    const Containers::StridedArrayView1D<const Vector2>&,
+    const Containers::StridedArrayView1D<const Vector2>&)) {
+    if(state & Ui::LayerState::NeedsNodeOffsetSizeUpdate) {
+        /* Perform updates to vertex positions */
+    }
+
+    if(state & (Ui::LayerState::NeedsNodeEnabledUpdate|
+                Ui::LayerState::NeedsNodeOpacityUpdate|
+                Ui::LayerState::NeedsDataUpdate)) {
+        /* Perform updates to vertex colors */
+    }
+
+    if(state & Ui::LayerState::NeedsNodeOrderUpdate) {
+        /* Perform updates to the index buffer */
+    }
+}
+/* [AbstractLayer-custom-update-states] */
+
+}
+
+namespace G {
+
+class QuadLayer: public Ui::AbstractLayer {
+    public:
+        explicit QuadLayer(Ui::LayerHandle handle);
+
+        Ui::DataHandle create(const Color3& color, Ui::NodeHandle node);
+
+    private:
+        Ui::LayerFeatures doFeatures() const override { return {}; }
+        Ui::LayerStates doState() const override;
+        void doUpdate(Ui::LayerStates state, const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectDataCounts, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, const Containers::StridedArrayView1D<const Float>& nodeOpacities, Containers::BitArrayView nodesEnabled, const Containers::StridedArrayView1D<const Vector2>& clipRectOffsets, const Containers::StridedArrayView1D<const Vector2>& clipRectSizes, const Containers::StridedArrayView1D<const Vector2>& compositeRectOffsets, const Containers::StridedArrayView1D<const Vector2>& compositeRectSizes) override;
+
+        GL::Buffer _indices;
+};
+
+/* [AbstractLayer-custom-update-states-common] */
+Ui::DataHandle QuadLayer::create(const Color3& color, Ui::NodeHandle node) {
+    UnsignedInt capacityBefore = capacity();
+    Ui::DataHandle handle = Ui::AbstractLayer::create(node);
+    UnsignedInt dataId = dataHandleId(handle);
+    if(dataId >= capacityBefore)
+        setNeedsUpdate(Ui::LayerState::NeedsCommonDataUpdate);
+
+    DOXYGEN_ELLIPSIS(static_cast<void>(color);)
+    return handle;
+}
+
+void QuadLayer::doUpdate(Ui::LayerStates state, DOXYGEN_ELLIPSIS(
+    const Containers::StridedArrayView1D<const UnsignedInt>&,
+    const Containers::StridedArrayView1D<const UnsignedInt>&,
+    const Containers::StridedArrayView1D<const UnsignedInt>&,
+    const Containers::StridedArrayView1D<const Vector2>&,
+    const Containers::StridedArrayView1D<const Vector2>&,
+    const Containers::StridedArrayView1D<const Float>&, Containers::BitArrayView,
+    const Containers::StridedArrayView1D<const Vector2>&,
+    const Containers::StridedArrayView1D<const Vector2>&,
+    const Containers::StridedArrayView1D<const Vector2>&,
+    const Containers::StridedArrayView1D<const Vector2>&)) {
+    if(state & Ui::LayerState::NeedsCommonDataUpdate) {
+        Containers::Array<UnsignedInt> indexData{NoInit, capacity()*6};
+        for(UnsignedInt i = 0; i != capacity(); ++i) {
+            Utility::copy({i*4 + 0, i*4 + 2, i*4 + 1,
+                           i*4 + 1, i*4 + 2, i*4 + 3},
+                          indexData.sliceSize(i*6, 6));
+        }
+        _indices.setData(indexData);
+    }
+
+    DOXYGEN_ELLIPSIS()
+}
+/* [AbstractLayer-custom-update-states-common] */
+
+}
+
+namespace H {
+
+class QuadLayer: public Ui::AbstractLayer {
+    public:
+        explicit QuadLayer(Ui::LayerHandle handle);
+
+    private:
+        Ui::LayerFeatures doFeatures() const override { return {}; }
+        Ui::LayerStates doState() const override;
+        void doUpdate(Ui::LayerStates state, const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectDataCounts, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, const Containers::StridedArrayView1D<const Float>& nodeOpacities, Containers::BitArrayView nodesEnabled, const Containers::StridedArrayView1D<const Vector2>& clipRectOffsets, const Containers::StridedArrayView1D<const Vector2>& clipRectSizes, const Containers::StridedArrayView1D<const Vector2>& compositeRectOffsets, const Containers::StridedArrayView1D<const Vector2>& compositeRectSizes) override;
+
+        struct {
+            Nanoseconds lastUpdate() const { return {}; }
+        } _externalColors;
+        Nanoseconds _lastUpdate;
+};
+
+
+/* [AbstractLayer-custom-update-states-timestamp] */
+Ui::LayerStates QuadLayer::doState() const {
+    if(_lastUpdate != _externalColors.lastUpdate())
+        return Ui::LayerState::NeedsDataUpdate;
+    return {};
+}
+
+void QuadLayer::doUpdate(Ui::LayerStates state,  DOXYGEN_ELLIPSIS(
+    const Containers::StridedArrayView1D<const UnsignedInt>&,
+    const Containers::StridedArrayView1D<const UnsignedInt>&,
+    const Containers::StridedArrayView1D<const UnsignedInt>&,
+    const Containers::StridedArrayView1D<const Vector2>&,
+    const Containers::StridedArrayView1D<const Vector2>&,
+    const Containers::StridedArrayView1D<const Float>&, Containers::BitArrayView,
+    const Containers::StridedArrayView1D<const Vector2>&,
+    const Containers::StridedArrayView1D<const Vector2>&,
+    const Containers::StridedArrayView1D<const Vector2>&,
+    const Containers::StridedArrayView1D<const Vector2>&)) {
+    if(state & Ui::LayerState::NeedsDataUpdate) {
+        _lastUpdate = _externalColors.lastUpdate();
+        DOXYGEN_ELLIPSIS()
+    }
+
+    DOXYGEN_ELLIPSIS()
+}
+/* [AbstractLayer-custom-update-states-timestamp] */
+
+}
+
+namespace I {
+
+/* [AbstractLayer-custom-resource-cleanup-remove] */
+class QuadLayer: public Ui::AbstractLayer {
+    DOXYGEN_ELLIPSIS(
+        explicit QuadLayer(Ui::LayerHandle handle);
+        void remove(Ui::DataHandle handle);
+        Ui::LayerFeatures doFeatures() const override { return {}; }
+        void doClean(Containers::BitArrayView dataIdsToRemove) override;
+    )
+
+    private:
+        Containers::Array<Containers::Optional<GL::Texture2D>> _textures;
+};
+
+void QuadLayer::remove(Ui::DataHandle handle) {
+    Ui::AbstractLayer::remove(handle);
+    _textures[dataHandleId(handle)] = Containers::NullOpt;
+}
+/* [AbstractLayer-custom-resource-cleanup-remove] */
+
+/* [AbstractLayer-custom-resource-cleanup-clean] */
+void QuadLayer::doClean(Containers::BitArrayView dataIdsToRemove) {
+    for(UnsignedInt i = 0; i != dataIdsToRemove.size(); ++i) {
+        if(i)
+            _textures[i] = Containers::NullOpt;
+    }
+}
+/* [AbstractLayer-custom-resource-cleanup-clean] */
+
+}
 
 /* Make sure the name doesn't conflict with any other snippets to avoid linker
    warnings, unlike with `int main()` there now has to be a declaration to
@@ -84,6 +684,13 @@ if(ui.state()) {
     ui.draw();
 }
 /* [AbstractUserInterface-setup-draw-ondemand] */
+}
+
+{
+Ui::AbstractUserInterface ui{{100, 100}};
+/* [AbstractUserInterface-renderer] */
+ui.setRendererInstance(Containers::pointer<Ui::RendererGL>());
+/* [AbstractUserInterface-renderer] */
 }
 
 {
