@@ -504,6 +504,7 @@ class ColorLayer: public Ui::AbstractVisualLayer {
             using Ui::AbstractVisualLayer::create;
             using Ui::AbstractVisualLayer::remove;
 
+            Color3 color(Ui::LayerDataHandle handle) const;
             Ui::LayerFeatures doFeatures() const override { return {}; }
         )
 };
@@ -513,7 +514,12 @@ struct ColorLayer::DebugIntegration: Ui::AbstractVisualLayer::DebugIntegration {
                Containers::StringView layerName, Ui::LayerDataHandle data) {
         Ui::AbstractVisualLayer::DebugIntegration::print(debug, layer, layerName, data);
 
-        DOXYGEN_ELLIPSIS()
+        /* Print just what isn't already provided by AbstractVisualLayer */
+        Color3ub color8 = Math::pack<Color3ub>(layer.color(data));
+        debug << "    Color:";
+        if(!(debug.flags() & Debug::Flag::DisableColors))
+            debug << Debug::color << color8;
+        debug << color8 << Debug::newline;
     }
 };
 /* [DebugLayer-integration-subclass] */

@@ -100,7 +100,13 @@ struct ColorLayer::DebugIntegration {
         debug << "  Data" << Debug::packed << data
             << "from layer" << Debug::packed << layer.handle()
             << Debug::color(Debug::Color::Yellow) << layerName << Debug::resetColor
-            << "with color" << Debug::color << color8 << color8 << Debug::newline;
+            << "with color";
+        /* If colors aren't disabled, print also a color swatch besides the
+           actual value. All other coloring will be automatically ignored if
+           DisableColors is set. */
+        if(!(debug.flags() & Debug::Flag::DisableColors))
+            debug << Debug::color << color8;
+        debug << color8 << Debug::newline;
     }
 };
 /* [integration] */
