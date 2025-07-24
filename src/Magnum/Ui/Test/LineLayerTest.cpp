@@ -63,6 +63,7 @@ struct LineLayerTest: TestSuite::Tester {
     void debugCapStyle();
     void debugJoinStyle();
     void debugAlignment();
+    void debugAlignmentPacked();
 
     void sharedConfigurationConstruct();
     void sharedConfigurationConstructSameStyleUniformCount();
@@ -248,6 +249,7 @@ LineLayerTest::LineLayerTest() {
     addTests({&LineLayerTest::debugCapStyle,
               &LineLayerTest::debugJoinStyle,
               &LineLayerTest::debugAlignment,
+              &LineLayerTest::debugAlignmentPacked,
 
               &LineLayerTest::sharedConfigurationConstruct,
               &LineLayerTest::sharedConfigurationConstructSameStyleUniformCount,
@@ -518,6 +520,13 @@ void LineLayerTest::debugAlignment() {
     Containers::String out;
     Debug{&out} << LineAlignment::MiddleRight << LineAlignment(0xb0);
     CORRADE_COMPARE(out, "Ui::LineAlignment::MiddleRight Ui::LineAlignment(0xb0)\n");
+}
+
+void LineLayerTest::debugAlignmentPacked() {
+    Containers::String out;
+    /* Last is not packed, ones before should not make any flags persistent */
+    Debug{&out} << Debug::packed << LineAlignment::MiddleRight << Debug::packed << LineAlignment(0xb0) << LineAlignment::BottomCenter;
+    CORRADE_COMPARE(out, "MiddleRight 0xb0 Ui::LineAlignment::BottomCenter\n");
 }
 
 void LineLayerTest::sharedConfigurationConstruct() {

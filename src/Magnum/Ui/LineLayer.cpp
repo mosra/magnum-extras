@@ -80,11 +80,14 @@ Debug& operator<<(Debug& debug, const LineJoinStyle value) {
 }
 
 Debug& operator<<(Debug& debug, const LineAlignment value) {
-    debug << "Ui::LineAlignment" << Debug::nospace;
+    const bool packed = debug.immediateFlags() >= Debug::Flag::Packed;
+
+    if(!packed)
+        debug << "Ui::LineAlignment" << Debug::nospace;
 
     switch(value) {
         /* LCOV_EXCL_START */
-        #define _c(v) case LineAlignment::v: return debug << "::" #v;
+        #define _c(v) case LineAlignment::v: return debug << (packed ? "" : "::") << Debug::nospace << #v;
         _c(TopLeft)
         _c(TopCenter)
         _c(TopRight)
@@ -98,7 +101,7 @@ Debug& operator<<(Debug& debug, const LineAlignment value) {
         /* LCOV_EXCL_STOP */
     }
 
-    return debug << "(" << Debug::nospace << Debug::hex << UnsignedByte(value) << Debug::nospace << ")";
+    return debug << (packed ? "" : "(") << Debug::nospace << Debug::hex << UnsignedByte(value) << Debug::nospace << (packed ? "" : ")");
 }
 
 LineLayer::Shared::State::State(Shared& self, const Configuration& configuration): AbstractVisualLayer::Shared::State{self, configuration.styleCount(), 0}, capStyle{configuration.capStyle()}, joinStyle{configuration.joinStyle()}, styleUniformCount{configuration.styleUniformCount()} {
