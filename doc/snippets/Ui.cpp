@@ -1198,6 +1198,29 @@ lineLayerShared.setStyle(DOXYGEN_ELLIPSIS(Ui::LineLayerCommonStyleUniform{}), {
 });
 /* [LineLayer-style-alignment-padding] */
 
+{
+/* [LineLayer-style-alignment-padding-struct-slice] */
+Ui::LineLayerStyleUniform uniforms[]{
+    Ui::LineLayerStyleUniform{}
+        .setWidth(5.0f),
+    DOXYGEN_ELLIPSIS()
+};
+
+struct Style {
+    Ui::LineAlignment alignment;
+    Vector4 padding;
+} styles[]{
+    {Ui::LineAlignment::BottomLeft, Vector4{2.5f}},
+    DOXYGEN_ELLIPSIS()
+};
+
+lineLayerShared.setStyle(DOXYGEN_ELLIPSIS(Ui::LineLayerCommonStyleUniform{}),
+    uniforms,
+    Containers::stridedArrayView(styles).slice(&Style::alignment),
+    Containers::stridedArrayView(styles).slice(&Style::padding));
+/* [LineLayer-style-alignment-padding-struct-slice] */
+}
+
 /* [LineLayer-style-width] */
 lineLayerShared.setStyle(DOXYGEN_ELLIPSIS(Ui::LineLayerCommonStyleUniform{}), {
     Ui::LineLayerStyleUniform{} /* 0 */
@@ -1277,6 +1300,32 @@ textLayerShared.setStyle(Ui::TextLayerCommonStyleUniform{}, {
     Text::Alignment::MiddleCenter   /* Alignment for style 2 */
 }, {}, {}, {}, {}, {}, {});
 /* [TextLayer-setup-style] */
+
+{
+/* [TextLayer-setup-style-struct-slice] */
+Ui::TextLayerStyleUniform uniforms[]{
+    Ui::TextLayerStyleUniform{},    /* Style 0 */
+    Ui::TextLayerStyleUniform{}     /* Style 1 */
+        .setColor(0x2f83cc_rgbf),
+    Ui::TextLayerStyleUniform{}     /* Style 2 */
+};
+
+struct Style {
+    Ui::FontHandle fontHandle;
+    Text::Alignment alignment;
+} styles[]{
+    {font16Handle, Text::Alignment{}},  /* Font & alignment for style 0 */
+    {font16Handle, Text::Alignment{}},  /* Font & alignment for style 1 */
+    {font12Handle, Text::Alignment::MiddleCenter},   /* ... for style 2 */
+};
+
+textLayerShared.setStyle(DOXYGEN_ELLIPSIS(Ui::TextLayerCommonStyleUniform{}),
+    uniforms,
+    Containers::stridedArrayView(styles).slice(&Style::fontHandle),
+    Containers::stridedArrayView(styles).slice(&Style::alignment),
+    {}, {}, {}, {}, {}, {});
+/* [TextLayer-setup-style-struct-slice] */
+}
 
 struct TextLayer: Ui::TextLayer {
     explicit TextLayer(Ui::LayerHandle layer, Ui::TextLayer::Shared& shared): Ui::TextLayer{layer, shared} {}

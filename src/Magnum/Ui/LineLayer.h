@@ -667,6 +667,15 @@ for each of four node edges, but often a single value for all is enough:
 
 @snippet Ui.cpp LineLayer-style-alignment-padding
 
+Similarly as with @ref BaseLayer or @ref TextLayer styles, to have it easier to
+match data belonging to the same style, you can make a custom @cpp struct @ce
+and make views on individual elements using
+@relativeref{Corrade,Containers::StridedArrayView::slice(U T::*) const}. The
+uniforms however still need to be in a contiguous array, because they're
+uploaded as-is directly to the GPU:
+
+@snippet Ui.cpp LineLayer-style-alignment-padding-struct-slice
+
 Finally, both alignment and padding can be overriden on a per-data basis with
 @ref setAlignment() and @ref setPadding(), which may be useful for example when
 aligning line art next to variable-width text. Note that, however, the draw

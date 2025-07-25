@@ -978,6 +978,15 @@ is the smaller font centered:
 
 @snippet Ui.cpp TextLayer-setup-style
 
+Similarly as with @ref BaseLayer styles, to have it easier to match data
+belonging to the same style, you can make a custom @cpp struct @ce and make
+views on individual elements using
+@relativeref{Corrade,Containers::StridedArrayView::slice(U T::*) const}. The
+uniforms however still need to be in a contiguous array, because they're
+uploaded as-is directly to the GPU:
+
+@snippet Ui.cpp TextLayer-setup-style-struct-slice
+
 With this, assuming @ref AbstractUserInterface::draw() is called in an
 appropriate place, the layer is ready to use. All style options are described
 in detail further below.
