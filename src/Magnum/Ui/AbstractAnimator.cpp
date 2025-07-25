@@ -1093,8 +1093,6 @@ Containers::Pair<bool, bool> AbstractAnimator::update(const Nanoseconds time, co
         /* AnimationState has 4 values so there should be 16 different cases */
         switch((UnsignedShort(stateBefore) << 8)|UnsignedShort(stateAfter)) {
             #define _c(before, after) case (UnsignedShort(AnimationState::before) << 8)|UnsignedShort(AnimationState::after):
-            /* The same calculation, together with dealing with a Scheduled
-               state, is in factorInternal() */
             _c(Scheduled,Playing)
             _c(Playing,Playing)
             _c(Scheduled,Paused)
