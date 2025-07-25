@@ -116,9 +116,13 @@ class MAGNUM_UI_EXPORT TextLayerGL: public TextLayer {
 /**
 @brief Shared state for the OpenGL implementation of the text layer
 
-Contains fonts, shader instances and style data. In order to use the layer it's
-expected that at least one font was added with @ref addFont(). In order to
-update or draw the layer it's expected that @ref setStyle() was called.
+Contains fonts, GPU shaders and style definitions. See the @ref TextLayer class
+documentation for information about setting up an instance of this layer and
+using it.
+
+In order to use the layer it's expected that at least one font was added with
+@ref addFont(). In order to update or draw the layer it's expected that
+@ref setStyle() was called.
 */
 class MAGNUM_UI_EXPORT TextLayerGL::Shared: public TextLayer::Shared {
     public:

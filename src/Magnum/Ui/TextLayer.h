@@ -3098,14 +3098,14 @@ MAGNUM_UI_EXPORT Debug& operator<<(Debug& debug, TextLayerSharedFlags value);
 /**
 @brief Shared state for the text layer
 
-Contains a set of fonts and a glyph cache used by all of them. In order to use
-the layer it's expected that at least one font was added with @ref addFont().
-In order to update or draw the layer it's expected that @ref setStyle() was
-called.
+Contains a set of fonts and a glyph cache used by all of them. See the
+@ref TextLayer class documentation for information about setting up an instance
+of this layer and using it.
 
-Pre-filling the glyph cache with appropriate glyphs for a particular font is
-the user responsibility, the implementation currently won't perform that on its
-own, neither it does any on-demand cache filling.
+You'll most likely instantiate the class through @ref TextLayerGL::Shared. In
+order to use the layer it's expected that at least one font was added with
+@ref addFont(). In order to update or draw the layer it's expected that
+@ref setStyle() was called.
 */
 class MAGNUM_UI_EXPORT TextLayer::Shared: public AbstractVisualLayer::Shared {
     public:

@@ -186,7 +186,7 @@ enum class Snap: UnsignedByte {
      * Alias to specifying both @ref Snap::NoPadX and @ref Snap::NoPadY.
      * @m_since_latest
      */
-    NoPad = NoPadX | NoPadY
+    NoPad = NoPadX|NoPadY
 };
 
 /**
