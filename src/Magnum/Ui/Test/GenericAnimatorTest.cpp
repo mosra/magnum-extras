@@ -237,7 +237,7 @@ void GenericAnimatorTest::createRemove() {
     }, Animation::Easing::bounceOut, 137_nsec, 277_nsec, 3, AnimationFlag::KeepOncePlayed);
     CORRADE_COMPARE(animator.usedCount(), 1);
     CORRADE_COMPARE(animator.usedAllocatedAnimationCount(), 0);
-    CORRADE_COMPARE(animator.played(trivial), 137_nsec);
+    CORRADE_COMPARE(animator.started(trivial), 137_nsec);
     CORRADE_COMPARE(animator.duration(trivial), 277_nsec);
     CORRADE_COMPARE(animator.repeatCount(trivial), 3);
     CORRADE_COMPARE(animator.flags(trivial), AnimationFlag::KeepOncePlayed);
@@ -247,7 +247,7 @@ void GenericAnimatorTest::createRemove() {
     AnimationHandle nonTrivial = animator.create(NonTrivial{destructedCount}, Animation::Easing::smootherstep, 226_nsec, 191_nsec, 0, AnimationFlags{0x80});
     CORRADE_COMPARE(animator.usedCount(), 2);
     CORRADE_COMPARE(animator.usedAllocatedAnimationCount(), 1);
-    CORRADE_COMPARE(animator.played(nonTrivial), 226_nsec);
+    CORRADE_COMPARE(animator.started(nonTrivial), 226_nsec);
     CORRADE_COMPARE(animator.duration(nonTrivial), 191_nsec);
     CORRADE_COMPARE(animator.repeatCount(nonTrivial), 0);
     CORRADE_COMPARE(animator.flags(nonTrivial), AnimationFlags{0x80});
@@ -289,7 +289,7 @@ void GenericAnimatorTest::createRemoveNode() {
     }, Animation::Easing::bounceOut, 137_nsec, 277_nsec, nodeHandle(0x12345, 0xabc), 3, AnimationFlag::KeepOncePlayed);
     CORRADE_COMPARE(animator.usedCount(), 1);
     CORRADE_COMPARE(animator.usedAllocatedAnimationCount(), 0);
-    CORRADE_COMPARE(animator.played(trivial), 137_nsec);
+    CORRADE_COMPARE(animator.started(trivial), 137_nsec);
     CORRADE_COMPARE(animator.duration(trivial), 277_nsec);
     CORRADE_COMPARE(animator.repeatCount(trivial), 3);
     CORRADE_COMPARE(animator.flags(trivial), AnimationFlag::KeepOncePlayed);
@@ -300,7 +300,7 @@ void GenericAnimatorTest::createRemoveNode() {
     AnimationHandle nonTrivial = animator.create(NonTrivial{destructedCount}, Animation::Easing::smootherstep, 226_nsec, 191_nsec, nodeHandle(0x67890, 0xdef), 0, AnimationFlags{0x80});
     CORRADE_COMPARE(animator.usedCount(), 2);
     CORRADE_COMPARE(animator.usedAllocatedAnimationCount(), 1);
-    CORRADE_COMPARE(animator.played(nonTrivial), 226_nsec);
+    CORRADE_COMPARE(animator.started(nonTrivial), 226_nsec);
     CORRADE_COMPARE(animator.duration(nonTrivial), 191_nsec);
     CORRADE_COMPARE(animator.repeatCount(nonTrivial), 0);
     CORRADE_COMPARE(animator.flags(nonTrivial), AnimationFlags{0x80});
@@ -350,7 +350,7 @@ void GenericAnimatorTest::createRemoveData() {
     }, Animation::Easing::bounceOut, 137_nsec, 277_nsec, dataHandle(layer.handle(), 0x12345, 0xabc), 3, AnimationFlag::KeepOncePlayed);
     CORRADE_COMPARE(animator.usedCount(), 1);
     CORRADE_COMPARE(animator.usedAllocatedAnimationCount(), 0);
-    CORRADE_COMPARE(animator.played(trivial), 137_nsec);
+    CORRADE_COMPARE(animator.started(trivial), 137_nsec);
     CORRADE_COMPARE(animator.duration(trivial), 277_nsec);
     CORRADE_COMPARE(animator.repeatCount(trivial), 3);
     CORRADE_COMPARE(animator.flags(trivial), AnimationFlag::KeepOncePlayed);
@@ -362,7 +362,7 @@ void GenericAnimatorTest::createRemoveData() {
     AnimationHandle nonTrivial = animator.create(NonTrivial{destructedCount}, Animation::Easing::smootherstep, 226_nsec, 191_nsec, layerDataHandle(0x67890, 0xdef), 0, AnimationFlags{0x80});
     CORRADE_COMPARE(animator.usedCount(), 2);
     CORRADE_COMPARE(animator.usedAllocatedAnimationCount(), 1);
-    CORRADE_COMPARE(animator.played(nonTrivial), 226_nsec);
+    CORRADE_COMPARE(animator.started(nonTrivial), 226_nsec);
     CORRADE_COMPARE(animator.duration(nonTrivial), 191_nsec);
     CORRADE_COMPARE(animator.repeatCount(nonTrivial), 0);
     CORRADE_COMPARE(animator.flags(nonTrivial), AnimationFlags{0x80});

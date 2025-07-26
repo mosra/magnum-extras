@@ -126,32 +126,32 @@ TextLayerStyleAnimator::~TextLayerStyleAnimator() = default;
 
 TextLayerStyleAnimator& TextLayerStyleAnimator::operator=(TextLayerStyleAnimator&&) noexcept = default;
 
-AnimationHandle TextLayerStyleAnimator::create(const UnsignedInt sourceStyle, const UnsignedInt targetStyle, Float(*const easing)(Float), const Nanoseconds played, const Nanoseconds duration, const DataHandle data, const UnsignedInt repeatCount, const AnimationFlags flags) {
+AnimationHandle TextLayerStyleAnimator::create(const UnsignedInt sourceStyle, const UnsignedInt targetStyle, Float(*const easing)(Float), const Nanoseconds start, const Nanoseconds duration, const DataHandle data, const UnsignedInt repeatCount, const AnimationFlags flags) {
     /* AbstractAnimator::create() DataHandle overload checks the layer
        internally too, but this message is less confusing */
     CORRADE_ASSERT(_state->layer,
         "Ui::TextLayerStyleAnimator::create(): no layer set", {});
-    const AnimationHandle handle = AbstractStyleAnimator::create(played, duration, data, repeatCount, flags);
+    const AnimationHandle handle = AbstractStyleAnimator::create(start, duration, data, repeatCount, flags);
     createInternal(handle, sourceStyle, targetStyle, easing);
     return handle;
 }
 
-AnimationHandle TextLayerStyleAnimator::create(const UnsignedInt sourceStyle, const UnsignedInt targetStyle, Float(*const easing)(Float), const Nanoseconds played, const Nanoseconds duration, const DataHandle data, const AnimationFlags flags) {
-    return create(sourceStyle, targetStyle, easing, played, duration, data, 1, flags);
+AnimationHandle TextLayerStyleAnimator::create(const UnsignedInt sourceStyle, const UnsignedInt targetStyle, Float(*const easing)(Float), const Nanoseconds start, const Nanoseconds duration, const DataHandle data, const AnimationFlags flags) {
+    return create(sourceStyle, targetStyle, easing, start, duration, data, 1, flags);
 }
 
-AnimationHandle TextLayerStyleAnimator::create(const UnsignedInt sourceStyle, const UnsignedInt targetStyle, Float(*const easing)(Float), const Nanoseconds played, const Nanoseconds duration, const LayerDataHandle data, const UnsignedInt repeatCount, const AnimationFlags flags) {
+AnimationHandle TextLayerStyleAnimator::create(const UnsignedInt sourceStyle, const UnsignedInt targetStyle, Float(*const easing)(Float), const Nanoseconds start, const Nanoseconds duration, const LayerDataHandle data, const UnsignedInt repeatCount, const AnimationFlags flags) {
     /* AbstractAnimator::create() DataHandle overload checks the layer
        internally too, but this message is less confusing */
     CORRADE_ASSERT(_state->layer,
         "Ui::TextLayerStyleAnimator::create(): no layer set", {});
-    const AnimationHandle handle = AbstractStyleAnimator::create(played, duration, data, repeatCount, flags);
+    const AnimationHandle handle = AbstractStyleAnimator::create(start, duration, data, repeatCount, flags);
     createInternal(handle, sourceStyle, targetStyle, easing);
     return handle;
 }
 
-AnimationHandle TextLayerStyleAnimator::create(const UnsignedInt sourceStyle, const UnsignedInt targetStyle, Float(*const easing)(Float), const Nanoseconds played, const Nanoseconds duration, const LayerDataHandle data, const AnimationFlags flags) {
-    return create(sourceStyle, targetStyle, easing, played, duration, data, 1, flags);
+AnimationHandle TextLayerStyleAnimator::create(const UnsignedInt sourceStyle, const UnsignedInt targetStyle, Float(*const easing)(Float), const Nanoseconds start, const Nanoseconds duration, const LayerDataHandle data, const AnimationFlags flags) {
+    return create(sourceStyle, targetStyle, easing, start, duration, data, 1, flags);
 }
 
 void TextLayerStyleAnimator::createInternal(const AnimationHandle handle, const UnsignedInt sourceStyle, const UnsignedInt targetStyle, Float(*const easing)(Float)) {

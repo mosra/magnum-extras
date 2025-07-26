@@ -63,7 +63,7 @@ implementation doesn't implicitly provide a @ref GenericAnimator instance.
 An animation is created by calling @ref create() with an appropriate function
 taking the interpolation factor as a single argument, an easing function from
 @ref Animation::BasicEasing "Animation::Easing" or a custom one, time at which
-it's meant to be played and its duration.
+it's meant to start and its duration.
 
 @snippet Ui.cpp GenericAnimator-create
 
@@ -133,7 +133,7 @@ class MAGNUM_UI_EXPORT GenericAnimator: public AbstractGenericAnimator {
          *      @cpp 1.0f @ce, applied to the @p factor passed to @p animation.
          *      Pick one from @ref Animation::BasicEasing "Animation::Easing"
          *      or supply a custom one.
-         * @param played        Time at which the animation is played. Use
+         * @param start         Time at which the animation starts. Use
          *      @ref Nanoseconds::max() for creating a stopped animation.
          * @param duration      Duration of a single play of the animation
          * @param repeatCount   Repeat count. Use @cpp 0 @ce for an
@@ -150,7 +150,7 @@ class MAGNUM_UI_EXPORT GenericAnimator: public AbstractGenericAnimator {
          * animation is stopped. Other than that, it may be an arbitrary value
          * from the @f$ [0, 1] @f$ range.
          */
-        AnimationHandle create(Containers::Function<void(Float factor)>&& animation, Float(*easing)(Float), Nanoseconds played, Nanoseconds duration, UnsignedInt repeatCount = 1, AnimationFlags flags = {});
+        AnimationHandle create(Containers::Function<void(Float factor)>&& animation, Float(*easing)(Float), Nanoseconds start, Nanoseconds duration, UnsignedInt repeatCount = 1, AnimationFlags flags = {});
 
         /**
          * @brief Remove an animation
@@ -226,9 +226,9 @@ implementation doesn't implicitly provide a @ref GenericNodeAnimator instance.
 An animation is created by calling @ref create() with an appropriate function
 taking the node handle and interpolation factor as arguments, an easing
 function from @ref Animation::BasicEasing "Animation::Easing" or a custom one,
-time at which it's meant to be played, its duration and the @ref NodeHandle
-it's attached to. For example, animating a dropdown opening by gradually
-enlarging its height and turning it from transparent to opaque:
+time at which it's meant to start, its duration and the @ref NodeHandle it's
+attached to. For example, animating a dropdown opening by gradually enlarging
+its height and turning it from transparent to opaque:
 
 @snippet Ui.cpp GenericNodeAnimator-create
 
@@ -298,7 +298,7 @@ class MAGNUM_UI_EXPORT GenericNodeAnimator: public AbstractGenericAnimator {
          *      @cpp 1.0f @ce, applied to the @p factor passed to @p animation.
          *      Pick one from @ref Animation::BasicEasing "Animation::Easing"
          *      or supply a custom one.
-         * @param played        Time at which the animation is played. Use
+         * @param start         Time at which the animation starts. Use
          *      @ref Nanoseconds::max() for creating a stopped animation.
          * @param duration      Duration of a single play of the animation
          * @param node          Node the animation is attached to. Use
@@ -318,7 +318,7 @@ class MAGNUM_UI_EXPORT GenericNodeAnimator: public AbstractGenericAnimator {
          * animation is stopped. Other than that, it may be an arbitrary value
          * from the @f$ [0, 1] @f$ range.
          */
-        AnimationHandle create(Containers::Function<void(NodeHandle node, Float factor)>&& animation, Float(*easing)(Float), Nanoseconds played, Nanoseconds duration, NodeHandle node, UnsignedInt repeatCount = 1, AnimationFlags flags = {});
+        AnimationHandle create(Containers::Function<void(NodeHandle node, Float factor)>&& animation, Float(*easing)(Float), Nanoseconds start, Nanoseconds duration, NodeHandle node, UnsignedInt repeatCount = 1, AnimationFlags flags = {});
 
         /**
          * @brief Remove an animation
@@ -395,9 +395,9 @@ implementation doesn't implicitly provide a @ref GenericDataAnimator instance.
 An animation is created by calling @ref create() with an appropriate function
 taking the data handle and interpolation factor as arguments, an easing
 function from @ref Animation::BasicEasing "Animation::Easing" or a custom one,
-time at which it's meant to be played, its duration and the @ref DataHandle
-it's attached to. For example, animating a progress bar change, where the value
-is visualized using custom @ref BaseLayer padding on the left side:
+time at which it's meant to start, its duration and the @ref DataHandle it's
+attached to. For example, animating a progress bar change, where the value is
+visualized using custom @ref BaseLayer padding on the left side:
 
 @snippet Ui.cpp GenericDataAnimator-create
 
@@ -477,7 +477,7 @@ class MAGNUM_UI_EXPORT GenericDataAnimator: public AbstractGenericAnimator {
          *      @cpp 1.0f @ce, applied to the @p factor passed to @p animation.
          *      Pick one from @ref Animation::BasicEasing "Animation::Easing"
          *      or supply a custom one.
-         * @param played        Time at which the animation is played. Use
+         * @param start         Time at which the animation starts. Use
          *      @ref Nanoseconds::max() for creating a stopped animation.
          * @param duration      Duration of a single play of the animation
          * @param data          Data the animation is attached to. Use
@@ -501,7 +501,7 @@ class MAGNUM_UI_EXPORT GenericDataAnimator: public AbstractGenericAnimator {
          * @cpp 1.0f @ce once the animation is stopped. Other than that, it may
          * be an arbitrary value from the @f$ [0, 1] @f$ range.
          */
-        AnimationHandle create(Containers::Function<void(DataHandle data, Float factor)>&& animation, Float(*easing)(Float), Nanoseconds played, Nanoseconds duration, DataHandle data, UnsignedInt repeatCount = 1, AnimationFlags flags = {});
+        AnimationHandle create(Containers::Function<void(DataHandle data, Float factor)>&& animation, Float(*easing)(Float), Nanoseconds start, Nanoseconds duration, DataHandle data, UnsignedInt repeatCount = 1, AnimationFlags flags = {});
 
         /**
          * @brief Create an animation assuming the data it's attached to belongs to the layer the animator is registered with
@@ -515,7 +515,7 @@ class MAGNUM_UI_EXPORT GenericDataAnimator: public AbstractGenericAnimator {
          * @ref DataHandle passed to @p animator is matching the layer handle
          * passed to @ref setLayer().
          */
-        AnimationHandle create(Containers::Function<void(DataHandle data, Float factor)>&& animator, Float(*easing)(Float), Nanoseconds played, Nanoseconds duration, LayerDataHandle data, UnsignedInt repeatCount = 1, AnimationFlags flags = {});
+        AnimationHandle create(Containers::Function<void(DataHandle data, Float factor)>&& animator, Float(*easing)(Float), Nanoseconds start, Nanoseconds duration, LayerDataHandle data, UnsignedInt repeatCount = 1, AnimationFlags flags = {});
 
         /**
          * @brief Remove an animation

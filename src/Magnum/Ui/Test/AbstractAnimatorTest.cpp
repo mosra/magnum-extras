@@ -151,7 +151,7 @@ const struct {
 
 const struct {
     TestSuite::TestCaseDescriptionSourceLocation name;
-    Nanoseconds duration, played;
+    Nanoseconds duration, start;
     Containers::Optional<Nanoseconds> paused;
     Containers::Optional<Nanoseconds> stopped;
     Containers::Optional<UnsignedInt> repeatCount;
@@ -296,8 +296,8 @@ const struct {
        40 */
     {"",
         {}, 50_nsec, 500_nsec, 460_nsec},
-    /* The animation was paused before it was played, resuming it should be
-       from the start */
+    /* The animation was paused before it started, resuming it should be from
+       the start */
     {"paused before a play",
         {}, -30_nsec, 500_nsec, 500_nsec},
     /* Resuming before a pause basically discards the pause that would happen
@@ -843,7 +843,7 @@ void AbstractAnimatorTest::createRemove() {
     CORRADE_COMPARE(animator.duration(first), 37588_nsec);
     CORRADE_COMPARE(animator.repeatCount(first), 1);
     CORRADE_COMPARE(animator.flags(first), AnimationFlags{});
-    CORRADE_COMPARE(animator.played(first), 1337_nsec);
+    CORRADE_COMPARE(animator.started(first), 1337_nsec);
     CORRADE_COMPARE(animator.paused(first), Nanoseconds::max());
     CORRADE_COMPARE(animator.stopped(first), Nanoseconds::max());
     if(data.features & AnimatorFeature::NodeAttachment)
@@ -865,7 +865,7 @@ void AbstractAnimatorTest::createRemove() {
     CORRADE_COMPARE(animator.duration(animationHandleData(second)), 3_nsec);
     CORRADE_COMPARE(animator.repeatCount(animationHandleData(second)), 666);
     CORRADE_COMPARE(animator.flags(animationHandleData(second)), AnimationFlags{0x10});
-    CORRADE_COMPARE(animator.played(animationHandleData(second)), -26_nsec);
+    CORRADE_COMPARE(animator.started(animationHandleData(second)), -26_nsec);
     CORRADE_COMPARE(animator.paused(animationHandleData(second)), Nanoseconds::max());
     CORRADE_COMPARE(animator.stopped(animationHandleData(second)), Nanoseconds::max());
     if(data.features & AnimatorFeature::NodeAttachment)
@@ -886,7 +886,7 @@ void AbstractAnimatorTest::createRemove() {
     CORRADE_COMPARE(animator.duration(third), 11_nsec);
     CORRADE_COMPARE(animator.repeatCount(third), 1);
     CORRADE_COMPARE(animator.flags(third), AnimationFlag::KeepOncePlayed);
-    CORRADE_COMPARE(animator.played(third), 111_nsec);
+    CORRADE_COMPARE(animator.started(third), 111_nsec);
     CORRADE_COMPARE(animator.paused(third), Nanoseconds::max());
     CORRADE_COMPARE(animator.stopped(third), Nanoseconds::max());
     if(data.features & AnimatorFeature::NodeAttachment)
@@ -964,25 +964,25 @@ void AbstractAnimatorTest::createRemoveHandleRecycle() {
     CORRADE_COMPARE(animator.duration(first), 12_nsec);
     CORRADE_COMPARE(animator.repeatCount(first), 0);
     CORRADE_COMPARE(animator.flags(first), AnimationFlag::KeepOncePlayed);
-    CORRADE_COMPARE(animator.played(first), 0_nsec);
+    CORRADE_COMPARE(animator.started(first), 0_nsec);
     CORRADE_COMPARE(animator.paused(first), Nanoseconds::max());
     CORRADE_COMPARE(animator.stopped(first), Nanoseconds::max());
     CORRADE_COMPARE(animator.duration(second), 1_nsec);
     CORRADE_COMPARE(animator.repeatCount(second), 1);
     CORRADE_COMPARE(animator.flags(second), AnimationFlags{});
-    CORRADE_COMPARE(animator.played(second), 2_nsec);
+    CORRADE_COMPARE(animator.started(second), 2_nsec);
     CORRADE_COMPARE(animator.paused(second), Nanoseconds::max());
     CORRADE_COMPARE(animator.stopped(second), Nanoseconds::max());
     CORRADE_COMPARE(animator.duration(third), 281698_nsec);
     CORRADE_COMPARE(animator.repeatCount(third), 666);
     CORRADE_COMPARE(animator.flags(third), AnimationFlags{});
-    CORRADE_COMPARE(animator.played(third), 2782_nsec);
+    CORRADE_COMPARE(animator.started(third), 2782_nsec);
     CORRADE_COMPARE(animator.paused(third), Nanoseconds::max());
     CORRADE_COMPARE(animator.stopped(third), Nanoseconds::max());
     CORRADE_COMPARE(animator.duration(fourth), 78888_nsec);
     CORRADE_COMPARE(animator.repeatCount(fourth), 1);
     CORRADE_COMPARE(animator.flags(fourth), AnimationFlags{});
-    CORRADE_COMPARE(animator.played(fourth), 166_nsec);
+    CORRADE_COMPARE(animator.started(fourth), 166_nsec);
     CORRADE_COMPARE(animator.paused(fourth), Nanoseconds::max());
     CORRADE_COMPARE(animator.stopped(fourth), Nanoseconds::max());
     if(data.features & AnimatorFeature::NodeAttachment) {
@@ -1037,7 +1037,7 @@ void AbstractAnimatorTest::createRemoveHandleRecycle() {
     CORRADE_COMPARE(animator.capacity(), 4);
     CORRADE_COMPARE(animator.usedCount(), 1);
     CORRADE_COMPARE(animator.duration(second), 1_nsec);
-    CORRADE_COMPARE(animator.played(second), 2_nsec);
+    CORRADE_COMPARE(animator.started(second), 2_nsec);
 
     /* Internally all attachments should be set to a null handle after
        deletion */
@@ -1086,25 +1086,25 @@ void AbstractAnimatorTest::createRemoveHandleRecycle() {
     CORRADE_COMPARE(animator.duration(first2), 14_nsec);
     CORRADE_COMPARE(animator.repeatCount(first2), 1);
     CORRADE_COMPARE(animator.flags(first2), AnimationFlags{});
-    CORRADE_COMPARE(animator.played(first2), 1_nsec);
+    CORRADE_COMPARE(animator.started(first2), 1_nsec);
     CORRADE_COMPARE(animator.paused(first2), Nanoseconds::max());
     CORRADE_COMPARE(animator.stopped(first2), Nanoseconds::max());
     CORRADE_COMPARE(animator.duration(second), 1_nsec);
     CORRADE_COMPARE(animator.repeatCount(second), 1);
     CORRADE_COMPARE(animator.flags(second), AnimationFlags{});
-    CORRADE_COMPARE(animator.played(second), 2_nsec);
+    CORRADE_COMPARE(animator.started(second), 2_nsec);
     CORRADE_COMPARE(animator.paused(second), Nanoseconds::max());
     CORRADE_COMPARE(animator.stopped(second), Nanoseconds::max());
     CORRADE_COMPARE(animator.duration(third2), 896182_nsec);
     CORRADE_COMPARE(animator.repeatCount(third2), 333);
     CORRADE_COMPARE(animator.flags(third2), AnimationFlags{0x40});
-    CORRADE_COMPARE(animator.played(third2), 2872_nsec);
+    CORRADE_COMPARE(animator.started(third2), 2872_nsec);
     CORRADE_COMPARE(animator.paused(third2), Nanoseconds::max());
     CORRADE_COMPARE(animator.stopped(third2), Nanoseconds::max());
     CORRADE_COMPARE(animator.duration(fourth2), 8999_nsec);
     CORRADE_COMPARE(animator.repeatCount(fourth2), 1);
     CORRADE_COMPARE(animator.flags(fourth2), AnimationFlags{});
-    CORRADE_COMPARE(animator.played(fourth2), 255_nsec);
+    CORRADE_COMPARE(animator.started(fourth2), 255_nsec);
     CORRADE_COMPARE(animator.paused(fourth2), Nanoseconds::max());
     CORRADE_COMPARE(animator.stopped(fourth2), Nanoseconds::max());
     if(data.features & AnimatorFeature::NodeAttachment) {
@@ -1141,7 +1141,7 @@ void AbstractAnimatorTest::createRemoveHandleRecycle() {
     CORRADE_COMPARE(animator.duration(third3), 26_nsec);
     CORRADE_COMPARE(animator.repeatCount(third3), 1);
     CORRADE_COMPARE(animator.flags(third3), AnimationFlags{});
-    CORRADE_COMPARE(animator.played(third3), 12_nsec);
+    CORRADE_COMPARE(animator.started(third3), 12_nsec);
     CORRADE_COMPARE(animator.paused(third3), Nanoseconds::max());
     CORRADE_COMPARE(animator.stopped(third3), Nanoseconds::max());
     if(data.features & AnimatorFeature::NodeAttachment)
@@ -1158,7 +1158,7 @@ void AbstractAnimatorTest::createRemoveHandleRecycle() {
     CORRADE_COMPARE(animator.duration(fifth), 8882_nsec);
     CORRADE_COMPARE(animator.repeatCount(fifth), 1);
     CORRADE_COMPARE(animator.flags(fifth), AnimationFlags{});
-    CORRADE_COMPARE(animator.played(fifth), 2888_nsec);
+    CORRADE_COMPARE(animator.started(fifth), 2888_nsec);
     CORRADE_COMPARE(animator.paused(fifth), Nanoseconds::max());
     CORRADE_COMPARE(animator.stopped(fifth), Nanoseconds::max());
     if(data.features & AnimatorFeature::NodeAttachment)
@@ -1280,7 +1280,7 @@ void AbstractAnimatorTest::createNodeAttachment() {
     CORRADE_COMPARE(animator.duration(first), 37_nsec);
     CORRADE_COMPARE(animator.repeatCount(first), 155);
     CORRADE_COMPARE(animator.flags(first), AnimationFlag::KeepOncePlayed);
-    CORRADE_COMPARE(animator.played(first), 15_nsec);
+    CORRADE_COMPARE(animator.started(first), 15_nsec);
     CORRADE_COMPARE(animator.paused(first), Nanoseconds::max());
     CORRADE_COMPARE(animator.stopped(first), Nanoseconds::max());
     CORRADE_COMPARE(animator.node(first), NodeHandle(0xabcde123));
@@ -1290,7 +1290,7 @@ void AbstractAnimatorTest::createNodeAttachment() {
     CORRADE_COMPARE(animator.duration(second), 12_nsec);
     CORRADE_COMPARE(animator.repeatCount(second), 1);
     CORRADE_COMPARE(animator.flags(second), AnimationFlag(0xe0));
-    CORRADE_COMPARE(animator.played(second), -655_nsec);
+    CORRADE_COMPARE(animator.started(second), -655_nsec);
     CORRADE_COMPARE(animator.paused(second), Nanoseconds::max());
     CORRADE_COMPARE(animator.stopped(second), Nanoseconds::max());
     CORRADE_COMPARE(animator.node(second), NodeHandle(0x12345abc));
@@ -1300,14 +1300,14 @@ void AbstractAnimatorTest::createNodeAttachment() {
     CORRADE_COMPARE(animator.duration(third), 24_nsec);
     CORRADE_COMPARE(animator.repeatCount(third), 0);
     CORRADE_COMPARE(animator.flags(third), AnimationFlags{});
-    CORRADE_COMPARE(animator.played(third), 12_nsec);
+    CORRADE_COMPARE(animator.started(third), 12_nsec);
     CORRADE_COMPARE(animator.node(third), NodeHandle::Null);
 
     AnimationHandle fourth = animator.create(0_nsec, 1_nsec, NodeHandle::Null, AnimationFlag(0x10));
     CORRADE_COMPARE(animator.duration(fourth), 1_nsec);
     CORRADE_COMPARE(animator.repeatCount(fourth), 1);
     CORRADE_COMPARE(animator.flags(fourth), AnimationFlag(0x10));
-    CORRADE_COMPARE(animator.played(fourth), 0_nsec);
+    CORRADE_COMPARE(animator.started(fourth), 0_nsec);
     CORRADE_COMPARE(animator.node(fourth), NodeHandle::Null);
 
     /* The node attachments should be reflected here as well */
@@ -1370,7 +1370,7 @@ void AbstractAnimatorTest::createDataAttachment() {
     CORRADE_COMPARE(animator.duration(first), 37_nsec);
     CORRADE_COMPARE(animator.repeatCount(first), 155);
     CORRADE_COMPARE(animator.flags(first), AnimationFlag::KeepOncePlayed);
-    CORRADE_COMPARE(animator.played(first), 15_nsec);
+    CORRADE_COMPARE(animator.started(first), 15_nsec);
     CORRADE_COMPARE(animator.paused(first), Nanoseconds::max());
     CORRADE_COMPARE(animator.stopped(first), Nanoseconds::max());
     CORRADE_COMPARE(animator.data(first), dataHandle(animator.layer(), LayerDataHandle(0xabcde123)));
@@ -1380,7 +1380,7 @@ void AbstractAnimatorTest::createDataAttachment() {
     CORRADE_COMPARE(animator.duration(second), 122_nsec);
     CORRADE_COMPARE(animator.repeatCount(second), 12);
     CORRADE_COMPARE(animator.flags(second), AnimationFlag(0xc0));
-    CORRADE_COMPARE(animator.played(second), -37_nsec);
+    CORRADE_COMPARE(animator.started(second), -37_nsec);
     CORRADE_COMPARE(animator.paused(second), Nanoseconds::max());
     CORRADE_COMPARE(animator.stopped(second), Nanoseconds::max());
     CORRADE_COMPARE(animator.data(second), dataHandle(animator.layer(), LayerDataHandle(0x123abcde)));
@@ -1390,7 +1390,7 @@ void AbstractAnimatorTest::createDataAttachment() {
     CORRADE_COMPARE(animator.duration(third), 12_nsec);
     CORRADE_COMPARE(animator.repeatCount(third), 1);
     CORRADE_COMPARE(animator.flags(third), AnimationFlag(0xe0));
-    CORRADE_COMPARE(animator.played(third), -655_nsec);
+    CORRADE_COMPARE(animator.started(third), -655_nsec);
     CORRADE_COMPARE(animator.paused(third), Nanoseconds::max());
     CORRADE_COMPARE(animator.stopped(third), Nanoseconds::max());
     CORRADE_COMPARE(animator.data(third), dataHandle(animator.layer(), LayerDataHandle(0x12345abc)));
@@ -1400,7 +1400,7 @@ void AbstractAnimatorTest::createDataAttachment() {
     CORRADE_COMPARE(animator.duration(fourth), 777_nsec);
     CORRADE_COMPARE(animator.repeatCount(fourth), 1);
     CORRADE_COMPARE(animator.flags(fourth), AnimationFlag(0x70));
-    CORRADE_COMPARE(animator.played(fourth), 3_nsec);
+    CORRADE_COMPARE(animator.started(fourth), 3_nsec);
     CORRADE_COMPARE(animator.paused(fourth), Nanoseconds::max());
     CORRADE_COMPARE(animator.stopped(fourth), Nanoseconds::max());
     CORRADE_COMPARE(animator.data(fourth), dataHandle(animator.layer(), LayerDataHandle(0xabc12345)));
@@ -1414,8 +1414,8 @@ void AbstractAnimatorTest::createDataAttachment() {
     CORRADE_COMPARE(animator.repeatCount(fifth2), 0);
     CORRADE_COMPARE(animator.flags(fifth1), AnimationFlags{});
     CORRADE_COMPARE(animator.flags(fifth2), AnimationFlags{});
-    CORRADE_COMPARE(animator.played(fifth1), 12_nsec);
-    CORRADE_COMPARE(animator.played(fifth2), 12_nsec);
+    CORRADE_COMPARE(animator.started(fifth1), 12_nsec);
+    CORRADE_COMPARE(animator.started(fifth2), 12_nsec);
     CORRADE_COMPARE(animator.data(fifth1), DataHandle::Null);
     CORRADE_COMPARE(animator.data(fifth2), DataHandle::Null);
 
@@ -1427,8 +1427,8 @@ void AbstractAnimatorTest::createDataAttachment() {
     CORRADE_COMPARE(animator.repeatCount(sixth2), 1);
     CORRADE_COMPARE(animator.flags(sixth1), AnimationFlag(0x10));
     CORRADE_COMPARE(animator.flags(sixth2), AnimationFlag(0x10));
-    CORRADE_COMPARE(animator.played(sixth1), 0_nsec);
-    CORRADE_COMPARE(animator.played(sixth2), 0_nsec);
+    CORRADE_COMPARE(animator.started(sixth1), 0_nsec);
+    CORRADE_COMPARE(animator.started(sixth2), 0_nsec);
     CORRADE_COMPARE(animator.data(sixth1), DataHandle::Null);
     CORRADE_COMPARE(animator.data(sixth2), DataHandle::Null);
 
@@ -1625,8 +1625,8 @@ void AbstractAnimatorTest::propertiesStateFactor() {
     Nanoseconds offset = 77777_nsec;
 
     AnimationHandle handle = data.repeatCount ?
-        animator.create(data.played*scale + offset, data.duration*scale, *data.repeatCount, AnimationFlag::KeepOncePlayed) :
-        animator.create(data.played*scale + offset, data.duration*scale, AnimationFlag::KeepOncePlayed);
+        animator.create(data.start*scale + offset, data.duration*scale, *data.repeatCount, AnimationFlag::KeepOncePlayed) :
+        animator.create(data.start*scale + offset, data.duration*scale, AnimationFlag::KeepOncePlayed);
     if(data.paused)
         animator.pause(handle, *data.paused*scale + offset);
     if(data.stopped)
@@ -1664,7 +1664,7 @@ void AbstractAnimatorTest::propertiesInvalid() {
     animator.setFlags(AnimationHandle::Null, {});
     animator.addFlags(AnimationHandle::Null, {});
     animator.clearFlags(AnimationHandle::Null, {});
-    animator.played(AnimationHandle::Null);
+    animator.started(AnimationHandle::Null);
     animator.paused(AnimationHandle::Null);
     animator.stopped(AnimationHandle::Null);
     animator.state(AnimationHandle::Null);
@@ -1677,7 +1677,7 @@ void AbstractAnimatorTest::propertiesInvalid() {
     animator.setFlags(animationHandle(animator.handle(), AnimatorDataHandle(0x123abcde)), {});
     animator.addFlags(animationHandle(animator.handle(), AnimatorDataHandle(0x123abcde)), {});
     animator.clearFlags(animationHandle(animator.handle(), AnimatorDataHandle(0x123abcde)), {});
-    animator.played(animationHandle(animator.handle(), AnimatorDataHandle(0x123abcde)));
+    animator.started(animationHandle(animator.handle(), AnimatorDataHandle(0x123abcde)));
     animator.paused(animationHandle(animator.handle(), AnimatorDataHandle(0x123abcde)));
     animator.stopped(animationHandle(animator.handle(), AnimatorDataHandle(0x123abcde)));
     animator.state(animationHandle(animator.handle(), AnimatorDataHandle(0x123abcde)));
@@ -1690,7 +1690,7 @@ void AbstractAnimatorTest::propertiesInvalid() {
     animator.setFlags(animationHandle(AnimatorHandle::Null, animationHandleData(handle)), {});
     animator.addFlags(animationHandle(AnimatorHandle::Null, animationHandleData(handle)), {});
     animator.clearFlags(animationHandle(AnimatorHandle::Null, animationHandleData(handle)), {});
-    animator.played(animationHandle(AnimatorHandle::Null, animationHandleData(handle)));
+    animator.started(animationHandle(AnimatorHandle::Null, animationHandleData(handle)));
     animator.paused(animationHandle(AnimatorHandle::Null, animationHandleData(handle)));
     animator.stopped(animationHandle(AnimatorHandle::Null, animationHandleData(handle)));
     animator.state(animationHandle(AnimatorHandle::Null, animationHandleData(handle)));
@@ -1703,7 +1703,7 @@ void AbstractAnimatorTest::propertiesInvalid() {
     animator.setFlags(AnimatorDataHandle(0x123abcde), {});
     animator.addFlags(AnimatorDataHandle(0x123abcde), {});
     animator.clearFlags(AnimatorDataHandle(0x123abcde), {});
-    animator.played(AnimatorDataHandle(0x123abcde));
+    animator.started(AnimatorDataHandle(0x123abcde));
     animator.paused(AnimatorDataHandle(0x123abcde));
     animator.stopped(AnimatorDataHandle(0x123abcde));
     animator.state(AnimatorDataHandle(0x123abcde));
@@ -1716,7 +1716,7 @@ void AbstractAnimatorTest::propertiesInvalid() {
         "Ui::AbstractAnimator::setFlags(): invalid handle Ui::AnimationHandle::Null\n"
         "Ui::AbstractAnimator::addFlags(): invalid handle Ui::AnimationHandle::Null\n"
         "Ui::AbstractAnimator::clearFlags(): invalid handle Ui::AnimationHandle::Null\n"
-        "Ui::AbstractAnimator::played(): invalid handle Ui::AnimationHandle::Null\n"
+        "Ui::AbstractAnimator::started(): invalid handle Ui::AnimationHandle::Null\n"
         "Ui::AbstractAnimator::paused(): invalid handle Ui::AnimationHandle::Null\n"
         "Ui::AbstractAnimator::stopped(): invalid handle Ui::AnimationHandle::Null\n"
         "Ui::AbstractAnimator::state(): invalid handle Ui::AnimationHandle::Null\n"
@@ -1729,7 +1729,7 @@ void AbstractAnimatorTest::propertiesInvalid() {
         "Ui::AbstractAnimator::setFlags(): invalid handle Ui::AnimationHandle({0x0, 0x1}, {0xabcde, 0x123})\n"
         "Ui::AbstractAnimator::addFlags(): invalid handle Ui::AnimationHandle({0x0, 0x1}, {0xabcde, 0x123})\n"
         "Ui::AbstractAnimator::clearFlags(): invalid handle Ui::AnimationHandle({0x0, 0x1}, {0xabcde, 0x123})\n"
-        "Ui::AbstractAnimator::played(): invalid handle Ui::AnimationHandle({0x0, 0x1}, {0xabcde, 0x123})\n"
+        "Ui::AbstractAnimator::started(): invalid handle Ui::AnimationHandle({0x0, 0x1}, {0xabcde, 0x123})\n"
         "Ui::AbstractAnimator::paused(): invalid handle Ui::AnimationHandle({0x0, 0x1}, {0xabcde, 0x123})\n"
         "Ui::AbstractAnimator::stopped(): invalid handle Ui::AnimationHandle({0x0, 0x1}, {0xabcde, 0x123})\n"
         "Ui::AbstractAnimator::state(): invalid handle Ui::AnimationHandle({0x0, 0x1}, {0xabcde, 0x123})\n"
@@ -1742,7 +1742,7 @@ void AbstractAnimatorTest::propertiesInvalid() {
         "Ui::AbstractAnimator::setFlags(): invalid handle Ui::AnimationHandle(Null, {0x0, 0x1})\n"
         "Ui::AbstractAnimator::addFlags(): invalid handle Ui::AnimationHandle(Null, {0x0, 0x1})\n"
         "Ui::AbstractAnimator::clearFlags(): invalid handle Ui::AnimationHandle(Null, {0x0, 0x1})\n"
-        "Ui::AbstractAnimator::played(): invalid handle Ui::AnimationHandle(Null, {0x0, 0x1})\n"
+        "Ui::AbstractAnimator::started(): invalid handle Ui::AnimationHandle(Null, {0x0, 0x1})\n"
         "Ui::AbstractAnimator::paused(): invalid handle Ui::AnimationHandle(Null, {0x0, 0x1})\n"
         "Ui::AbstractAnimator::stopped(): invalid handle Ui::AnimationHandle(Null, {0x0, 0x1})\n"
         "Ui::AbstractAnimator::state(): invalid handle Ui::AnimationHandle(Null, {0x0, 0x1})\n"
@@ -1755,7 +1755,7 @@ void AbstractAnimatorTest::propertiesInvalid() {
         "Ui::AbstractAnimator::setFlags(): invalid handle Ui::AnimatorDataHandle(0xabcde, 0x123)\n"
         "Ui::AbstractAnimator::addFlags(): invalid handle Ui::AnimatorDataHandle(0xabcde, 0x123)\n"
         "Ui::AbstractAnimator::clearFlags(): invalid handle Ui::AnimatorDataHandle(0xabcde, 0x123)\n"
-        "Ui::AbstractAnimator::played(): invalid handle Ui::AnimatorDataHandle(0xabcde, 0x123)\n"
+        "Ui::AbstractAnimator::started(): invalid handle Ui::AnimatorDataHandle(0xabcde, 0x123)\n"
         "Ui::AbstractAnimator::paused(): invalid handle Ui::AnimatorDataHandle(0xabcde, 0x123)\n"
         "Ui::AbstractAnimator::stopped(): invalid handle Ui::AnimatorDataHandle(0xabcde, 0x123)\n"
         "Ui::AbstractAnimator::state(): invalid handle Ui::AnimatorDataHandle(0xabcde, 0x123)\n"
@@ -2700,13 +2700,13 @@ void AbstractAnimatorTest::playPauseStop() {
     animator.create(10_nsec, 50_nsec);
 
     AnimationHandle handle = animator.create(1000_nsec, 10_nsec);
-    CORRADE_COMPARE(animator.played(handle), 1000_nsec);
+    CORRADE_COMPARE(animator.started(handle), 1000_nsec);
     CORRADE_COMPARE(animator.duration(handle), 10_nsec);
     CORRADE_COMPARE(animator.paused(handle), Nanoseconds::max());
     CORRADE_COMPARE(animator.stopped(handle), Nanoseconds::max());
 
     animator.pause(handle, 1005_nsec);
-    CORRADE_COMPARE(animator.played(handle), 1000_nsec);
+    CORRADE_COMPARE(animator.started(handle), 1000_nsec);
     CORRADE_COMPARE(animator.duration(handle), 10_nsec);
     CORRADE_COMPARE(animator.paused(handle), 1005_nsec);
     CORRADE_COMPARE(animator.stopped(handle), Nanoseconds::max());
@@ -2714,32 +2714,32 @@ void AbstractAnimatorTest::playPauseStop() {
     animator.stop(handle, 1007_nsec);
     /* NeedsAdvance is only reset by advance(), not if any animations get
        stopped */
-    CORRADE_COMPARE(animator.played(handle), 1000_nsec);
+    CORRADE_COMPARE(animator.started(handle), 1000_nsec);
     CORRADE_COMPARE(animator.duration(handle), 10_nsec);
     CORRADE_COMPARE(animator.paused(handle), 1005_nsec);
     CORRADE_COMPARE(animator.stopped(handle), 1007_nsec);
 
     animator.play(handle, 500_nsec);
-    CORRADE_COMPARE(animator.played(handle), 500_nsec);
+    CORRADE_COMPARE(animator.started(handle), 500_nsec);
     CORRADE_COMPARE(animator.duration(handle), 10_nsec);
     CORRADE_COMPARE(animator.paused(handle), Nanoseconds::max());
     CORRADE_COMPARE(animator.stopped(handle), Nanoseconds::max());
 
     /* Testing also the AnimatorDataHandle overloads */
     animator.pause(animationHandleData(handle), 990_nsec);
-    CORRADE_COMPARE(animator.played(handle), 500_nsec);
+    CORRADE_COMPARE(animator.started(handle), 500_nsec);
     CORRADE_COMPARE(animator.duration(handle), 10_nsec);
     CORRADE_COMPARE(animator.paused(handle), 990_nsec);
     CORRADE_COMPARE(animator.stopped(handle), Nanoseconds::max());
 
     animator.stop(animationHandleData(handle), 550_nsec);
-    CORRADE_COMPARE(animator.played(handle), 500_nsec);
+    CORRADE_COMPARE(animator.started(handle), 500_nsec);
     CORRADE_COMPARE(animator.duration(handle), 10_nsec);
     CORRADE_COMPARE(animator.paused(handle), 990_nsec);
     CORRADE_COMPARE(animator.stopped(handle), 550_nsec);
 
     animator.play(animationHandleData(handle), 400_nsec);
-    CORRADE_COMPARE(animator.played(handle), 400_nsec);
+    CORRADE_COMPARE(animator.started(handle), 400_nsec);
     CORRADE_COMPARE(animator.duration(handle), 10_nsec);
     CORRADE_COMPARE(animator.paused(handle), Nanoseconds::max());
     CORRADE_COMPARE(animator.stopped(handle), Nanoseconds::max());
@@ -2805,7 +2805,7 @@ void AbstractAnimatorTest::playPaused() {
     } animator{animatorHandle(0, 1)};
 
     AnimationHandle handle = animator.create(10_nsec, 100_nsec);
-    CORRADE_COMPARE(animator.played(handle), 10_nsec);
+    CORRADE_COMPARE(animator.started(handle), 10_nsec);
     CORRADE_COMPARE(animator.duration(handle), 100_nsec);
     CORRADE_COMPARE(animator.paused(handle), Nanoseconds::max());
     CORRADE_COMPARE(animator.stopped(handle), Nanoseconds::max());
@@ -2817,16 +2817,16 @@ void AbstractAnimatorTest::playPaused() {
     /* Pausing only records how long the animation have been playing, doesn't
        touch anything else */
     animator.pause(handle, data.paused);
-    CORRADE_COMPARE(animator.played(handle), 10_nsec);
+    CORRADE_COMPARE(animator.started(handle), 10_nsec);
     CORRADE_COMPARE(animator.duration(handle), 100_nsec);
     CORRADE_COMPARE(animator.paused(handle), data.paused);
     CORRADE_COMPARE(animator.stopped(handle), data.stopped ? *data.stopped : Nanoseconds::max());
 
-    /* Playing either adjusts the played time to resume from where it was
+    /* Playing either adjusts the started time to resume from where it was
        paused, or plays from the start. The paused and stopped time gets reset
        always, unconditionally. */
     animator.play(handle, data.resumed);
-    CORRADE_COMPARE(animator.played(handle), data.expectedPlayed);
+    CORRADE_COMPARE(animator.started(handle), data.expectedPlayed);
     CORRADE_COMPARE(animator.duration(handle), 100_nsec);
     CORRADE_COMPARE(animator.paused(handle), Nanoseconds::max());
     CORRADE_COMPARE(animator.stopped(handle), Nanoseconds::max());

@@ -154,7 +154,7 @@ Assuming an enum is used to index the styles defined in @ref TextLayer::Shared
 of the associated layer instance, an animation is created by calling
 @ref create() with the source and target style indices, an easing function from
 @ref Animation::BasicEasing "Animation::Easing" or a custom one, time at which
-it's meant to be played, its duration, and a @ref DataHandle which the style
+it's meant to start, its duration, and a @ref DataHandle which the style
 animation should affect. Here, for example, to fade out a button hover style
 over half a second:
 
@@ -170,10 +170,10 @@ style index is switched to the target ID specified in @ref create() and the
 dynamic style index is recycled with @ref TextLayer::recycleDynamicStyle() is
 called for the dynamic style.
 
-If the animator runs out of dynamic styles, newly played animations are left at
-the source style index until another dynamic style is recycled. If no dynamic
-style gets recycled until the animation ends, the data gets switched directly
-to the target style without animating.
+If the animator runs out of dynamic styles, newly started animations are left
+at the source style index until another dynamic style is recycled. If no
+dynamic style gets recycled until the animation ends, the data gets switched
+directly to the target style without animating.
 
 The animation interpolates all properties of @ref TextLayerStyleUniform as well
 as the style padding value. The font, alignment or text feature style
@@ -248,7 +248,7 @@ class MAGNUM_UI_EXPORT TextLayerStyleAnimator: public AbstractVisualLayerStyleAn
          *      @cpp 1.0f @ce, used for all style uniform values as well as the
          *      padding. Pick one from @ref Animation::BasicEasing "Animation::Easing"
          *      or supply a custom one.
-         * @param played        Time at which the animation is played. Use
+         * @param start         Time at which the animation starts. Use
          *      @ref Nanoseconds::max() for creating a stopped animation.
          * @param duration      Duration of a single play of the animation
          * @param data          Data the animation is attached to. Use
@@ -289,7 +289,7 @@ class MAGNUM_UI_EXPORT TextLayerStyleAnimator: public AbstractVisualLayerStyleAn
          * and the @ref TextLayerStyleUniform override for selected portions of
          * the text, if referenced.
          */
-        AnimationHandle create(UnsignedInt sourceStyle, UnsignedInt targetStyle, Float(*easing)(Float), Nanoseconds played, Nanoseconds duration, DataHandle data, UnsignedInt repeatCount = 1, AnimationFlags flags = {});
+        AnimationHandle create(UnsignedInt sourceStyle, UnsignedInt targetStyle, Float(*easing)(Float), Nanoseconds start, Nanoseconds duration, DataHandle data, UnsignedInt repeatCount = 1, AnimationFlags flags = {});
 
         /**
          * @brief Create an animation with a style index in a concrete enum type
@@ -302,8 +302,8 @@ class MAGNUM_UI_EXPORT TextLayerStyleAnimator: public AbstractVisualLayerStyleAn
             #ifndef DOXYGEN_GENERATING_OUTPUT
             , typename std::enable_if<std::is_enum<StyleIndex>::value, int>::type = 0
             #endif
-        > AnimationHandle create(StyleIndex sourceStyle, StyleIndex targetStyle, Float(*easing)(Float), Nanoseconds played, Nanoseconds duration, DataHandle data, UnsignedInt repeatCount = 1, AnimationFlags flags = {}) {
-            return create(UnsignedInt(sourceStyle), UnsignedInt(targetStyle), easing, played, duration, data, repeatCount, flags);
+        > AnimationHandle create(StyleIndex sourceStyle, StyleIndex targetStyle, Float(*easing)(Float), Nanoseconds start, Nanoseconds duration, DataHandle data, UnsignedInt repeatCount = 1, AnimationFlags flags = {}) {
+            return create(UnsignedInt(sourceStyle), UnsignedInt(targetStyle), easing, start, duration, data, repeatCount, flags);
         }
 
         /**
@@ -312,7 +312,7 @@ class MAGNUM_UI_EXPORT TextLayerStyleAnimator: public AbstractVisualLayerStyleAn
          * Same as calling @ref create(UnsignedInt, UnsignedInt, Float(*)(Float), Nanoseconds, Nanoseconds, DataHandle, UnsignedInt, AnimationFlags)
          * with @p repeatCount set to @cpp 1 @ce.
          */
-        AnimationHandle create(UnsignedInt sourceStyle, UnsignedInt targetStyle, Float(*easing)(Float), Nanoseconds played, Nanoseconds duration, DataHandle data, AnimationFlags flags);
+        AnimationHandle create(UnsignedInt sourceStyle, UnsignedInt targetStyle, Float(*easing)(Float), Nanoseconds start, Nanoseconds duration, DataHandle data, AnimationFlags flags);
 
         /**
          * @brief Create an animation with a style index in a concrete enum type
@@ -325,8 +325,8 @@ class MAGNUM_UI_EXPORT TextLayerStyleAnimator: public AbstractVisualLayerStyleAn
             #ifndef DOXYGEN_GENERATING_OUTPUT
             , typename std::enable_if<std::is_enum<StyleIndex>::value, int>::type = 0
             #endif
-        > AnimationHandle create(StyleIndex sourceStyle, StyleIndex targetStyle, Float(*easing)(Float), Nanoseconds played, Nanoseconds duration, DataHandle data, AnimationFlags flags) {
-            return create(UnsignedInt(sourceStyle), UnsignedInt(targetStyle), easing, played, duration, data, flags);
+        > AnimationHandle create(StyleIndex sourceStyle, StyleIndex targetStyle, Float(*easing)(Float), Nanoseconds start, Nanoseconds duration, DataHandle data, AnimationFlags flags) {
+            return create(UnsignedInt(sourceStyle), UnsignedInt(targetStyle), easing, start, duration, data, flags);
         }
 
         /**
@@ -336,7 +336,7 @@ class MAGNUM_UI_EXPORT TextLayerStyleAnimator: public AbstractVisualLayerStyleAn
          * delegates to @ref AbstractAnimator::create(Nanoseconds, Nanoseconds, LayerDataHandle, UnsignedInt, AnimationFlags)
          * instead.
          */
-        AnimationHandle create(UnsignedInt sourceStyle, UnsignedInt targetStyle, Float(*easing)(Float), Nanoseconds played, Nanoseconds duration, LayerDataHandle data, UnsignedInt repeatCount = 1, AnimationFlags flags = {});
+        AnimationHandle create(UnsignedInt sourceStyle, UnsignedInt targetStyle, Float(*easing)(Float), Nanoseconds start, Nanoseconds duration, LayerDataHandle data, UnsignedInt repeatCount = 1, AnimationFlags flags = {});
 
         /**
          * @brief Create an animation with a style index in a concrete enum type assuming the data it's attached to belongs to the layer the animator is registered with
@@ -349,8 +349,8 @@ class MAGNUM_UI_EXPORT TextLayerStyleAnimator: public AbstractVisualLayerStyleAn
             #ifndef DOXYGEN_GENERATING_OUTPUT
             , typename std::enable_if<std::is_enum<StyleIndex>::value, int>::type = 0
             #endif
-        > AnimationHandle create(StyleIndex sourceStyle, StyleIndex targetStyle, Float(*easing)(Float), Nanoseconds played, Nanoseconds duration, LayerDataHandle data, UnsignedInt repeatCount = 1, AnimationFlags flags = {}) {
-            return create(UnsignedInt(sourceStyle), UnsignedInt(targetStyle), easing, played, duration, data, repeatCount, flags);
+        > AnimationHandle create(StyleIndex sourceStyle, StyleIndex targetStyle, Float(*easing)(Float), Nanoseconds start, Nanoseconds duration, LayerDataHandle data, UnsignedInt repeatCount = 1, AnimationFlags flags = {}) {
+            return create(UnsignedInt(sourceStyle), UnsignedInt(targetStyle), easing, start, duration, data, repeatCount, flags);
         }
 
         /**
@@ -359,7 +359,7 @@ class MAGNUM_UI_EXPORT TextLayerStyleAnimator: public AbstractVisualLayerStyleAn
          * Same as calling @ref create(UnsignedInt, UnsignedInt, Float(*)(Float), Nanoseconds, Nanoseconds, LayerDataHandle, UnsignedInt, AnimationFlags)
          * with @p repeatCount set to @cpp 1 @ce.
          */
-        AnimationHandle create(UnsignedInt sourceStyle, UnsignedInt targetStyle, Float(*easing)(Float), Nanoseconds played, Nanoseconds duration, LayerDataHandle data, AnimationFlags flags);
+        AnimationHandle create(UnsignedInt sourceStyle, UnsignedInt targetStyle, Float(*easing)(Float), Nanoseconds start, Nanoseconds duration, LayerDataHandle data, AnimationFlags flags);
 
         /**
          * @brief Create an animation with a style index in a concrete enum type assuming the data it's attached to belongs to the layer the animator is registered with
@@ -372,8 +372,8 @@ class MAGNUM_UI_EXPORT TextLayerStyleAnimator: public AbstractVisualLayerStyleAn
             #ifndef DOXYGEN_GENERATING_OUTPUT
             , typename std::enable_if<std::is_enum<StyleIndex>::value, int>::type = 0
             #endif
-        > AnimationHandle create(StyleIndex sourceStyle, StyleIndex targetStyle, Float(*easing)(Float), Nanoseconds played, Nanoseconds duration, LayerDataHandle data, AnimationFlags flags) {
-            return create(UnsignedInt(sourceStyle), UnsignedInt(targetStyle), easing, played, duration, data, flags);
+        > AnimationHandle create(StyleIndex sourceStyle, StyleIndex targetStyle, Float(*easing)(Float), Nanoseconds start, Nanoseconds duration, LayerDataHandle data, AnimationFlags flags) {
+            return create(UnsignedInt(sourceStyle), UnsignedInt(targetStyle), easing, start, duration, data, flags);
         }
 
         /**

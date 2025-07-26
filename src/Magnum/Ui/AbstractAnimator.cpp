@@ -173,10 +173,10 @@ union Animation {
            positive. */
         Nanoseconds duration{NoInit};
 
-        /* Time at which the animation is played, paused, stopped. All these
+        /* Time at which the animation is started, paused, stopped. All these
            have to be re-filled every time a handle is recycled, so it doesn't
            make sense to initialize them to anything. */
-        Nanoseconds played{NoInit};
+        Nanoseconds started{NoInit};
         Nanoseconds paused{NoInit};
         Nanoseconds stopped{NoInit};
     } used;
@@ -328,28 +328,28 @@ bool AbstractAnimator::isHandleValid(const AnimationHandle handle) const {
 namespace {
 
 AnimationState animationState(const Animation& animation, const Nanoseconds time) {
-    /* The animation is stopped if the stopped time is before the played time.
+    /* The animation is stopped if the stopped time is before the started time.
        Not critically important for behavior as without it the animation would
        still work correctly, eventually transitioning from Scheduled to Stopped
        without any Playing or Paused in between, but this makes it Stopped
        already, potentially avoiding the need for AnimatorState::NeedsAdvance
        and useless UI redraw. */
-    if(animation.used.stopped > animation.used.played) {
-        /* The animation isn't playing yet if the played time is in the
+    if(animation.used.stopped > animation.used.started) {
+        /* The animation isn't playing yet if the started time is in the
            future */
-        if(animation.used.played > time) {
+        if(animation.used.started > time) {
             return AnimationState::Scheduled;
 
         /* The animation isn't playing anymore if the stopped time already
            happened */
         } else if(animation.used.stopped > time) {
-            CORRADE_INTERNAL_ASSERT(animation.used.played <= time);
+            CORRADE_INTERNAL_ASSERT(animation.used.started <= time);
 
             const Nanoseconds currentTime = Math::min(animation.used.paused, time);
 
             /* The animation isn't playing anymore if all repeats were already
                exhausted */
-            if(animation.used.repeatCount == 0 || animation.used.played + animation.used.duration*animation.used.repeatCount > currentTime) {
+            if(animation.used.repeatCount == 0 || animation.used.started + animation.used.duration*animation.used.repeatCount > currentTime) {
                 /* The animation isn't currently playing if the paused time
                    already happened */
                 if(animation.used.paused > time)
@@ -365,7 +365,7 @@ AnimationState animationState(const Animation& animation, const Nanoseconds time
 
 }
 
-AnimationHandle AbstractAnimator::create(const Nanoseconds played, const Nanoseconds duration, const UnsignedInt repeatCount, const AnimationFlags flags) {
+AnimationHandle AbstractAnimator::create(const Nanoseconds start, const Nanoseconds duration, const UnsignedInt repeatCount, const AnimationFlags flags) {
     CORRADE_ASSERT(duration > 0_nsec,
         "Ui::AbstractAnimator::create(): expected positive duration, got" << duration, {});
 
@@ -408,7 +408,7 @@ AnimationHandle AbstractAnimator::create(const Nanoseconds played, const Nanosec
     animation->used.flags = flags;
     animation->used.repeatCount = repeatCount;
     animation->used.duration = duration;
-    animation->used.played = played;
+    animation->used.started = start;
     animation->used.paused = Nanoseconds::max();
     animation->used.stopped = Nanoseconds::max();
     if(features() & AnimatorFeature::NodeAttachment)
@@ -417,9 +417,9 @@ AnimationHandle AbstractAnimator::create(const Nanoseconds played, const Nanosec
         state.layerData[id] = LayerDataHandle::Null;
 
     /* Mark the animator as needing an advance() call if the new animation
-       is being scheduled or played. Creation alone doesn't make it possible to
-       make the animation paused, but if the animation is already stopped, mark
-       it also to perform automatic removal. */
+       is being scheduled or is playing. Creation alone doesn't make it
+       possible to make the animation paused, but if the animation is already
+       stopped, mark it also to perform automatic removal. */
     const AnimationState animationState = Ui::animationState(*animation, state.time);
     CORRADE_INTERNAL_ASSERT(animationState != AnimationState::Paused);
     if(animationState == AnimationState::Scheduled ||
@@ -430,23 +430,23 @@ AnimationHandle AbstractAnimator::create(const Nanoseconds played, const Nanosec
     return animationHandle(state.handle, id, animation->used.generation);
 }
 
-AnimationHandle AbstractAnimator::create(const Nanoseconds played, const Nanoseconds duration, const AnimationFlags flags) {
-    return create(played, duration, 1, flags);
+AnimationHandle AbstractAnimator::create(const Nanoseconds start, const Nanoseconds duration, const AnimationFlags flags) {
+    return create(start, duration, 1, flags);
 }
 
-AnimationHandle AbstractAnimator::create(const Nanoseconds played, const Nanoseconds duration, const NodeHandle node, const UnsignedInt repeatCount, const AnimationFlags flags) {
+AnimationHandle AbstractAnimator::create(const Nanoseconds start, const Nanoseconds duration, const NodeHandle node, const UnsignedInt repeatCount, const AnimationFlags flags) {
     CORRADE_ASSERT(features() >= AnimatorFeature::NodeAttachment,
         "Ui::AbstractAnimator::create(): node attachment not supported", {});
-    const AnimationHandle handle = create(played, duration, repeatCount, flags);
+    const AnimationHandle handle = create(start, duration, repeatCount, flags);
     _state->nodes[animationHandleId(handle)] = node;
     return handle;
 }
 
-AnimationHandle AbstractAnimator::create(const Nanoseconds played, const Nanoseconds duration, const NodeHandle node, const AnimationFlags flags) {
-    return create(played, duration, node, 1, flags);
+AnimationHandle AbstractAnimator::create(const Nanoseconds start, const Nanoseconds duration, const NodeHandle node, const AnimationFlags flags) {
+    return create(start, duration, node, 1, flags);
 }
 
-AnimationHandle AbstractAnimator::create(const Nanoseconds played, const Nanoseconds duration, const DataHandle data, const UnsignedInt repeatCount, const AnimationFlags flags) {
+AnimationHandle AbstractAnimator::create(const Nanoseconds start, const Nanoseconds duration, const DataHandle data, const UnsignedInt repeatCount, const AnimationFlags flags) {
     CORRADE_ASSERT(features() >= AnimatorFeature::DataAttachment,
         "Ui::AbstractAnimator::create(): data attachment not supported", {});
     State& state = *_state;
@@ -454,28 +454,28 @@ AnimationHandle AbstractAnimator::create(const Nanoseconds played, const Nanosec
         "Ui::AbstractAnimator::create(): no layer set for data attachment", {});
     CORRADE_ASSERT(data == DataHandle::Null || state.layer == dataHandleLayer(data),
         "Ui::AbstractAnimator::create(): expected a data handle with" << state.layer << "but got" << data, {});
-    const AnimationHandle handle = create(played, duration, repeatCount, flags);
+    const AnimationHandle handle = create(start, duration, repeatCount, flags);
     state.layerData[animationHandleId(handle)] = dataHandleData(data);
     return handle;
 }
 
-AnimationHandle AbstractAnimator::create(const Nanoseconds played, const Nanoseconds duration, const DataHandle data, const AnimationFlags flags) {
-    return create(played, duration, data, 1, flags);
+AnimationHandle AbstractAnimator::create(const Nanoseconds start, const Nanoseconds duration, const DataHandle data, const AnimationFlags flags) {
+    return create(start, duration, data, 1, flags);
 }
 
-AnimationHandle AbstractAnimator::create(const Nanoseconds played, const Nanoseconds duration, const LayerDataHandle data, const UnsignedInt repeatCount, const AnimationFlags flags) {
+AnimationHandle AbstractAnimator::create(const Nanoseconds start, const Nanoseconds duration, const LayerDataHandle data, const UnsignedInt repeatCount, const AnimationFlags flags) {
     CORRADE_ASSERT(features() >= AnimatorFeature::DataAttachment,
         "Ui::AbstractAnimator::create(): data attachment not supported", {});
     State& state = *_state;
     CORRADE_ASSERT(state.layer != LayerHandle::Null,
         "Ui::AbstractAnimator::create(): no layer set for data attachment", {});
-    const AnimationHandle handle = create(played, duration, repeatCount, flags);
+    const AnimationHandle handle = create(start, duration, repeatCount, flags);
     state.layerData[animationHandleId(handle)] = data;
     return handle;
 }
 
-AnimationHandle AbstractAnimator::create(const Nanoseconds played, const Nanoseconds duration, const LayerDataHandle data, const AnimationFlags flags) {
-    return create(played, duration, data, 1, flags);
+AnimationHandle AbstractAnimator::create(const Nanoseconds start, const Nanoseconds duration, const LayerDataHandle data, const AnimationFlags flags) {
+    return create(start, duration, data, 1, flags);
 }
 
 void AbstractAnimator::remove(const AnimationHandle handle) {
@@ -632,16 +632,16 @@ void AbstractAnimator::setFlagsInternal(const UnsignedInt id, const AnimationFla
     _state->animations[id].used.flags = flags;
 }
 
-Nanoseconds AbstractAnimator::played(const AnimationHandle handle) const {
+Nanoseconds AbstractAnimator::started(const AnimationHandle handle) const {
     CORRADE_ASSERT(isHandleValid(handle),
-        "Ui::AbstractAnimator::played(): invalid handle" << handle, {});
-    return _state->animations[animationHandleId(handle)].used.played;
+        "Ui::AbstractAnimator::started(): invalid handle" << handle, {});
+    return _state->animations[animationHandleId(handle)].used.started;
 }
 
-Nanoseconds AbstractAnimator::played(const AnimatorDataHandle handle) const {
+Nanoseconds AbstractAnimator::started(const AnimatorDataHandle handle) const {
     CORRADE_ASSERT(isHandleValid(handle),
-        "Ui::AbstractAnimator::played(): invalid handle" << handle, {});
-    return _state->animations[animatorDataHandleId(handle)].used.played;
+        "Ui::AbstractAnimator::started(): invalid handle" << handle, {});
+    return _state->animations[animatorDataHandleId(handle)].used.started;
 }
 
 Nanoseconds AbstractAnimator::paused(const AnimationHandle handle) const {
@@ -806,9 +806,9 @@ AnimationState AbstractAnimator::state(const AnimatorDataHandle handle) const {
 
 namespace {
 
-inline Float animationFactor(const Nanoseconds duration, const Nanoseconds played, const Nanoseconds time) {
-    CORRADE_INTERNAL_ASSERT(time >= played);
-    const Nanoseconds difference = (time - played) % duration;
+inline Float animationFactor(const Nanoseconds duration, const Nanoseconds started, const Nanoseconds time) {
+    CORRADE_INTERNAL_ASSERT(time >= started);
+    const Nanoseconds difference = (time - started) % duration;
     /* Using doubles for the division to avoid precision loss even though
        floats seem to work even for the 292 year duration */
     return Double(Long(difference))/Double(Long(duration));
@@ -817,9 +817,9 @@ inline Float animationFactor(const Nanoseconds duration, const Nanoseconds playe
 /* Shared between factorInternal() and advance() */
 inline Float animationFactor(const Animation& animation, const Nanoseconds time, const AnimationState state) {
     if(state == AnimationState::Playing)
-        return animationFactor(animation.used.duration, animation.used.played, time);
+        return animationFactor(animation.used.duration, animation.used.started, time);
     if(state == AnimationState::Paused)
-        return animationFactor(animation.used.duration, animation.used.played, animation.used.paused);
+        return animationFactor(animation.used.duration, animation.used.started, animation.used.paused);
     if(state == AnimationState::Stopped)
         return 1.0f;
 
@@ -868,23 +868,23 @@ void AbstractAnimator::playInternal(const UnsignedInt id, const Nanoseconds time
     /* If the animation
         - wasn't paused before (paused time is Nanoseconds::max()),
         - was stopped earlier than paused (paused time is >= stopped time),
-        - was paused earlier than actually played,
+        - was paused earlier than actually started,
         - we resume before the actual pause happens,
         - or we resume after it was stopped,
        play it from the start */
     if(animation.used.paused >= animation.used.stopped ||
-       animation.used.played >= animation.used.paused ||
+       animation.used.started >= animation.used.paused ||
        animation.used.paused >= time ||
        time >= animation.used.stopped)
     {
-        animation.used.played = time;
+        animation.used.started = time;
 
-    /* Otherwise the played time is shortened by the duration for which it
-       already played, i.e. `played = time - (paused - played)`, and the
+    /* Otherwise the started time is shortened by the duration for which it
+       already played, i.e. `started = time - (paused - started)`, and the
        duration is non-negative */
     } else {
-        CORRADE_INTERNAL_ASSERT(animation.used.paused > animation.used.played);
-        animation.used.played += time - animation.used.paused;
+        CORRADE_INTERNAL_ASSERT(animation.used.paused > animation.used.started);
+        animation.used.started += time - animation.used.paused;
     }
 
     animation.used.paused = Nanoseconds::max();

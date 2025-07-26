@@ -315,8 +315,8 @@ void AbstractVisualLayerStyleAnimatorTest::clean() {
     struct Animator: AbstractVisualLayerStyleAnimator {
         explicit Animator(AnimatorHandle handle): AbstractVisualLayerStyleAnimator{handle} {}
 
-        AnimationHandle create(Nanoseconds played, Nanoseconds duration, DataHandle data) {
-            AnimationHandle handle = AbstractVisualLayerStyleAnimator::create(played, duration, data);
+        AnimationHandle create(Nanoseconds start, Nanoseconds duration, DataHandle data) {
+            AnimationHandle handle = AbstractVisualLayerStyleAnimator::create(start, duration, data);
             /* Have to satisfy the requirement of the view having the same size
                as capacity */
             _state->dynamicStyles = Containers::stridedArrayView(_dynamicStyles).broadcasted<0>(capacity());

@@ -487,7 +487,7 @@ template<class T> void TextLayerStyleAnimatorTest::createRemove() {
     CORRADE_COMPARE(animator.duration(first), 13_nsec);
     CORRADE_COMPARE(animator.repeatCount(first), 10);
     CORRADE_COMPARE(animator.flags(first), AnimationFlag::KeepOncePlayed);
-    CORRADE_COMPARE(animator.played(first), 12_nsec);
+    CORRADE_COMPARE(animator.started(first), 12_nsec);
     CORRADE_COMPARE(animator.data(first), data2);
     CORRADE_COMPARE(animator.targetStyle(first), 1);
     /* Can't use T, as the function restricts to enum types which would fail
@@ -515,7 +515,7 @@ template<class T> void TextLayerStyleAnimatorTest::createRemove() {
     CORRADE_COMPARE(animator.duration(second), 1_nsec);
     CORRADE_COMPARE(animator.repeatCount(second), 1);
     CORRADE_COMPARE(animator.flags(second), AnimationFlag(0x40));
-    CORRADE_COMPARE(animator.played(second), -15_nsec);
+    CORRADE_COMPARE(animator.started(second), -15_nsec);
     CORRADE_COMPARE(animator.data(second), DataHandle::Null);
     CORRADE_COMPARE(animator.targetStyle(second), 4);
     /* Can't use T, as the function restricts to enum types which would fail
@@ -547,7 +547,7 @@ template<class T> void TextLayerStyleAnimatorTest::createRemove() {
     CORRADE_COMPARE(animator.duration(animationHandleData(third)), 100_nsec);
     CORRADE_COMPARE(animator.repeatCount(animationHandleData(third)), 0);
     CORRADE_COMPARE(animator.flags(animationHandleData(third)), AnimationFlag(0x80));
-    CORRADE_COMPARE(animator.played(animationHandleData(third)), 0_nsec);
+    CORRADE_COMPARE(animator.started(animationHandleData(third)), 0_nsec);
     CORRADE_COMPARE(animator.data(animationHandleData(third)), data3);
     CORRADE_COMPARE(animator.targetStyle(animationHandleData(third)), 3);
     /* Can't use T, as the function restricts to enum types which would fail
@@ -576,7 +576,7 @@ template<class T> void TextLayerStyleAnimatorTest::createRemove() {
     CORRADE_COMPARE(animator.duration(fourth), 10_nsec);
     CORRADE_COMPARE(animator.repeatCount(fourth), 1);
     CORRADE_COMPARE(animator.flags(fourth), AnimationFlag::KeepOncePlayed);
-    CORRADE_COMPARE(animator.played(fourth), 20_nsec);
+    CORRADE_COMPARE(animator.started(fourth), 20_nsec);
     CORRADE_COMPARE(animator.data(fourth), data1);
     CORRADE_COMPARE(animator.targetStyle(fourth), 0);
     /* Can't use T, as the function restricts to enum types which would fail
@@ -1137,8 +1137,8 @@ void TextLayerStyleAnimatorTest::advance() {
     /* This one is a reverse of the first, scheduled later and not attached to
        any data, thus it never marks Style as changed */
     AnimationHandle scheduledNullData = animator.create(1, 3, Animation::Easing::linear, 15_nsec, 10_nsec, DataHandle::Null);
-    /* This one allocates a dynamic style once played, interpolates all the way
-       to 3 and stays */
+    /* This one allocates a dynamic style once started, interpolates all the
+       way to 3 and stays */
     AnimationHandle stoppedKept = animator.create(6, 3, Animation::Easing::cubicIn, 0_nsec, 1_nsec, data1, AnimationFlag::KeepOncePlayed);
     /* This one sets both Uniform and Padding when animated. It's a linear
        easing but reverted. */

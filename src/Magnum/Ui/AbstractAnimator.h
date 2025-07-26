@@ -204,8 +204,8 @@ enum class AnimationState: UnsignedByte {
     /**
      * The animation is scheduled to be played. Returned if
      * @ref AbstractAnimator::stopped() is greater than
-     * @ref AbstractAnimator::played() for given animation and the time the
-     * animation is played at is greater than current
+     * @ref AbstractAnimator::started() for given animation and the time the
+     * animation is started at is greater than current
      * @ref AbstractAnimator::time(). Can transition to
      * @ref AnimationState::Playing, @ref AnimationState::Paused or
      * @ref AnimationState::Stopped after the next
@@ -216,11 +216,11 @@ enum class AnimationState: UnsignedByte {
     /**
      * The animation is currently playing. Returned if
      * @ref AbstractAnimator::stopped() is greater than
-     * @ref AbstractAnimator::played() for given animation and than current
-     * @ref AbstractAnimator::time(), the time the animation is played at is
+     * @ref AbstractAnimator::started() for given animation and than current
+     * @ref AbstractAnimator::time(), the time the animation is started at is
      * less than or equal to current time, either
      * @ref AbstractAnimator::repeatCount() for given animation is @cpp 0 @ce
-     * or @cpp played + duration*repeatCount > time @ce, where `duration` is
+     * or @cpp started + duration*repeatCount > time @ce, where `duration` is
      * @ref AbstractAnimator::duration() for given animation, and
      * @ref AbstractAnimator::paused() for given animation is greater than
      * current time. Can transition to @ref AnimationState::Paused or
@@ -232,11 +232,11 @@ enum class AnimationState: UnsignedByte {
     /**
      * The animation is currently paused. Returned if
      * @ref AbstractAnimator::stopped() is greater than
-     * @ref AbstractAnimator::played() for given animation and than current
-     * @ref AbstractAnimator::time(), the time the animation is played at is
+     * @ref AbstractAnimator::started() for given animation and than current
+     * @ref AbstractAnimator::time(), the time the animation is started at is
      * less than or equal to current time, either
      * @ref AbstractAnimator::repeatCount() for given animation is @cpp 0 @ce
-     * or @cpp played + duration*repeatCount > time @ce, where `duration` is
+     * or @cpp started + duration*repeatCount > time @ce, where `duration` is
      * @ref AbstractAnimator::duration() for given animation, and
      * @ref AbstractAnimator::paused() for given animation is less than or
      * equal to current time. Can transition to @ref AnimationState::Playing or
@@ -248,11 +248,11 @@ enum class AnimationState: UnsignedByte {
     /**
      * The animation is currently stopped. Returned if
      * @ref AbstractAnimator::stopped() is less than or equal to
-     * @ref AbstractAnimator::played() for given animation, if the stopped
+     * @ref AbstractAnimator::started() for given animation, if the stopped
      * time is less than or equial to current @ref AbstractAnimator::time() or
-     * if @ref AbstractAnimator::played() for given animation is less than or
+     * if @ref AbstractAnimator::started() for given animation is less than or
      * equal to current time, @ref AbstractAnimator::repeatCount() for given
-     * animation is non-zero and @cpp played + duration*repeatCount <= time @ce,
+     * animation is non-zero and @cpp started + duration*repeatCount <= time @ce,
      * where `duration` is @ref AbstractAnimator::duration() for given
      * animation.
      *
@@ -390,7 +390,7 @@ class MAGNUM_UI_EXPORT AbstractAnimator {
          *
          * Expects that @p handle is valid. The duration is specified with
          * @ref create() and is always positive. The duration, together with
-         * @ref played(AnimationHandle) const,
+         * @ref started(AnimationHandle) const,
          * @ref paused(AnimationHandle) const,
          * @ref stopped(AnimationHandle) const,
          * @ref repeatCount(AnimationHandle) const and @ref time() is used to
@@ -421,7 +421,7 @@ class MAGNUM_UI_EXPORT AbstractAnimator {
          * @ref setRepeatCount(). Value of @cpp 0 @ce means the animation is
          * repeated indefinitely. The repeat count, together with
          * @ref duration(AnimationHandle) const,
-         * @ref played(AnimationHandle) const,
+         * @ref started(AnimationHandle) const,
          * @ref paused(AnimationHandle) const,
          * @ref stopped(AnimationHandle) const and @ref time() is used to
          * decide on a particular @ref AnimationState for given animation. See
@@ -449,7 +449,7 @@ class MAGNUM_UI_EXPORT AbstractAnimator {
          * Expects that @p handle is valid. Use @cpp 0 @ce for an indefinitely
          * repeating animation. The repeat count, together with
          * @ref duration(AnimationHandle) const,
-         * @ref played(AnimationHandle) const,
+         * @ref started(AnimationHandle) const,
          * @ref paused(AnimationHandle) const,
          * @ref stopped(AnimationHandle) const and @ref time() is subsequently
          * used to decide on a particular @ref AnimationState for given
@@ -574,9 +574,9 @@ class MAGNUM_UI_EXPORT AbstractAnimator {
         void clearFlags(AnimatorDataHandle handle, AnimationFlags flags);
 
         /**
-         * @brief Time at which an animation is played
+         * @brief Time at which an animation is started
          *
-         * Expects that @p handle is valid. The time an animation is played at
+         * Expects that @p handle is valid. The time an animation is started at
          * is specified with @ref create() and is subsequently affected by
          * calling @ref play() or @ref stop(). The specified time, together
          * with @ref duration(AnimationHandle) const,
@@ -584,23 +584,23 @@ class MAGNUM_UI_EXPORT AbstractAnimator {
          * @ref paused(AnimationHandle) const,
          * @ref stopped(AnimationHandle) const and @ref time() is used to
          * decide on a particular @ref AnimationState for given animation. See
-         * also @ref played(AnimatorDataHandle) const which is a simpler
+         * also @ref started(AnimatorDataHandle) const which is a simpler
          * operation if the animation is already known to belong to this
          * animator.
          * @see @ref isHandleValid(AnimationHandle) const,
          *      @ref state(AnimationHandle) const
          */
-        Nanoseconds played(AnimationHandle handle) const;
+        Nanoseconds started(AnimationHandle handle) const;
 
         /**
-         * @brief Time at which an animation is played assuming it belongs to this animator
+         * @brief Time at which an animation is started assuming it belongs to this animator
          *
-         * Like @ref played(AnimationHandle) const but without checking that
+         * Like @ref started(AnimationHandle) const but without checking that
          * @p handle indeed belongs to this animator. See its documentation for
          * more information.
          * @see @ref animationHandleData()
          */
-        Nanoseconds played(AnimatorDataHandle handle) const;
+        Nanoseconds started(AnimatorDataHandle handle) const;
 
         /**
          * @brief Animation paused time
@@ -610,7 +610,7 @@ class MAGNUM_UI_EXPORT AbstractAnimator {
          * @ref pause(). The paused time, together with
          * @ref duration(AnimationHandle) const,
          * @ref repeatCount(AnimationHandle) const,
-         * @ref played(AnimationHandle) const,
+         * @ref started(AnimationHandle) const,
          * @ref stopped(AnimationHandle) const and @ref time() is used to
          * decide on a particular @ref AnimationState for given animation. See
          * also @ref paused(AnimatorDataHandle) const which is a simpler
@@ -637,7 +637,7 @@ class MAGNUM_UI_EXPORT AbstractAnimator {
          * Expects that @p handle is valid. The stopped time is initially
          * @ref Nanoseconds::max() and is affected by calling @ref play() or
          * @ref stop(). The stopped time, together with
-         * @ref played(AnimationHandle) const,
+         * @ref started(AnimationHandle) const,
          * @ref paused(AnimationHandle) const,
          * @ref duration(AnimationHandle) const,
          * @ref repeatCount(AnimationHandle) const and @ref time() is used to
@@ -838,7 +838,7 @@ class MAGNUM_UI_EXPORT AbstractAnimator {
          * @ref time() recorded in last @ref update(),
          * @ref duration(AnimationHandle) const,
          * @ref repeatCount(AnimationHandle) const,
-         * @ref played(AnimationHandle) const,
+         * @ref started(AnimationHandle) const,
          * @ref paused(AnimationHandle) const and
          * @ref stopped(AnimationHandle) const for a particular animation. See
          * also @ref state(AnimatorDataHandle) const which is a simpler
@@ -865,7 +865,7 @@ class MAGNUM_UI_EXPORT AbstractAnimator {
          * @ref time() recorded in last @ref update(),
          * @ref duration(AnimationHandle) const,
          * @ref repeatCount(AnimationHandle) const,
-         * @ref played(AnimationHandle) const,
+         * @ref started(AnimationHandle) const,
          * @ref paused(AnimationHandle) const and
          * @ref stopped(AnimationHandle) const for a particular animation. The
          * returned value is always in the @f$ [0, 1] @f$ range and matches
@@ -890,7 +890,7 @@ class MAGNUM_UI_EXPORT AbstractAnimator {
          * @brief Play an animation or resume a paused one
          *
          * Expects that @p handle is valid. The function effectively just
-         * updates the value of @ref played(AnimationHandle) const and sets
+         * updates the value of @ref started(AnimationHandle) const and sets
          * both @ref paused(AnimationHandle) const and
          * @ref stopped(AnimationHandle) const to @ref Nanoseconds::max(). The
          * actual @ref AnimationState is then decided based on these three
@@ -923,7 +923,7 @@ class MAGNUM_UI_EXPORT AbstractAnimator {
          * @ref AnimationState is then decided based on the paused time
          * together with @ref duration(AnimationHandle) const,
          * @ref repeatCount(AnimationHandle) const,
-         * @ref played(AnimationHandle) const,
+         * @ref started(AnimationHandle) const,
          * @ref stopped(AnimationHandle) const and @ref time().
          *
          * If calling this function resulted in the animation being
@@ -954,7 +954,7 @@ class MAGNUM_UI_EXPORT AbstractAnimator {
          * @ref AnimationState is then decided based on the stopped time
          * together with @ref duration(AnimationHandle) const,
          * @ref repeatCount(AnimationHandle) const,
-         * @ref played(AnimationHandle) const,
+         * @ref started(AnimationHandle) const,
          * @ref paused(AnimationHandle) const and @ref time().
          *
          * Compared to @ref create(), @ref play() or @ref pause(), a change in
@@ -1095,7 +1095,7 @@ class MAGNUM_UI_EXPORT AbstractAnimator {
     protected:
         /**
          * @brief Create an animation
-         * @param played        Time at which the animation is played. Use
+         * @param start         Time at which the animation starts. Use
          *      @ref Nanoseconds::max() for creating a stopped animation.
          * @param duration      Duration of a single play of the animation
          * @param repeatCount   Repeat count. Use @cpp 0 @ce for an
@@ -1109,7 +1109,7 @@ class MAGNUM_UI_EXPORT AbstractAnimator {
          * removed again with @ref remove().
          *
          * The @p duration is expected to be a positive value. The value of
-         * @p played, @p duration and @p repeatCount together with @ref time()
+         * @p start, @p duration and @p repeatCount together with @ref time()
          * is then used to decide on a particular @ref AnimationState for given
          * animation; if it results in @ref AnimationState::Scheduled or
          * @ref AnimationState::Playing, the @ref AnimatorState::NeedsAdvance
@@ -1127,7 +1127,7 @@ class MAGNUM_UI_EXPORT AbstractAnimator {
          * @ref attach(AnimationHandle, DataHandle) to attach the animation
          * afterwards.
          */
-        AnimationHandle create(Nanoseconds played, Nanoseconds duration, UnsignedInt repeatCount = 1, AnimationFlags flags = {});
+        AnimationHandle create(Nanoseconds start, Nanoseconds duration, UnsignedInt repeatCount = 1, AnimationFlags flags = {});
 
         /**
          * @brief Create an animation
@@ -1135,11 +1135,11 @@ class MAGNUM_UI_EXPORT AbstractAnimator {
          * Same as calling @ref create(Nanoseconds, Nanoseconds, UnsignedInt, AnimationFlags)
          * with @p repeatCount set to @cpp 1 @ce.
          */
-        AnimationHandle create(Nanoseconds played, Nanoseconds duration, AnimationFlags flags);
+        AnimationHandle create(Nanoseconds start, Nanoseconds duration, AnimationFlags flags);
 
         /**
          * @brief Create an animation attached to a node
-         * @param played        Time at which the animation is played. Use
+         * @param start         Time at which the animation starts. Use
          *      @ref Nanoseconds::max() for creating a stopped animation.
          * @param node          Node the animation is attached to. Use
          *      @ref NodeHandle::Null to create an animation that isn't
@@ -1157,7 +1157,7 @@ class MAGNUM_UI_EXPORT AbstractAnimator {
          * @ref NodeHandle::Null, directly attaches the created animation to
          * given animation, equivalent to calling @ref attach(AnimationHandle, NodeHandle).
          */
-        AnimationHandle create(Nanoseconds played, Nanoseconds duration, NodeHandle node, UnsignedInt repeatCount = 1, AnimationFlags flags = {});
+        AnimationHandle create(Nanoseconds start, Nanoseconds duration, NodeHandle node, UnsignedInt repeatCount = 1, AnimationFlags flags = {});
 
         /**
          * @brief Create an animation attached to a node
@@ -1165,11 +1165,11 @@ class MAGNUM_UI_EXPORT AbstractAnimator {
          * Same as calling @ref create(Nanoseconds, Nanoseconds, NodeHandle, UnsignedInt, AnimationFlags)
          * with @p repeatCount set to @cpp 1 @ce.
          */
-        AnimationHandle create(Nanoseconds played, Nanoseconds duration, NodeHandle node, AnimationFlags flags);
+        AnimationHandle create(Nanoseconds start, Nanoseconds duration, NodeHandle node, AnimationFlags flags);
 
         /**
          * @brief Create an animation attached to a data
-         * @param played        Time at which the animation is played. Use
+         * @param start         Time at which the animation starts. Use
          *      @ref Nanoseconds::max() for creating a stopped animation.
          * @param duration      Duration of a single play of the animation
          * @param data          Data the animation is attached to. Use
@@ -1191,7 +1191,7 @@ class MAGNUM_UI_EXPORT AbstractAnimator {
          * given data, equivalent to calling @ref attach(AnimationHandle, DataHandle).
          * @see @ref dataHandleLayer()
          */
-        AnimationHandle create(Nanoseconds played, Nanoseconds duration, DataHandle data, UnsignedInt repeatCount = 1, AnimationFlags flags = {});
+        AnimationHandle create(Nanoseconds start, Nanoseconds duration, DataHandle data, UnsignedInt repeatCount = 1, AnimationFlags flags = {});
 
         /**
          * @brief Create an animation attached to a data
@@ -1199,7 +1199,7 @@ class MAGNUM_UI_EXPORT AbstractAnimator {
          * Same as calling @ref create(Nanoseconds, Nanoseconds, DataHandle, UnsignedInt, AnimationFlags)
          * with @p repeatCount set to @cpp 1 @ce.
          */
-        AnimationHandle create(Nanoseconds played, Nanoseconds duration, DataHandle data, AnimationFlags flags);
+        AnimationHandle create(Nanoseconds start, Nanoseconds duration, DataHandle data, AnimationFlags flags);
 
         /**
          * @brief Create an animation attached to a data assuming the data belongs to the layer the animator is registered with
@@ -1212,7 +1212,7 @@ class MAGNUM_UI_EXPORT AbstractAnimator {
          * @ref create(Nanoseconds, Nanoseconds, DataHandle, UnsignedInt, AnimationFlags)
          * with @ref DataHandle::Null.
          */
-        AnimationHandle create(Nanoseconds played, Nanoseconds duration, LayerDataHandle data, UnsignedInt repeatCount = 1, AnimationFlags flags = {});
+        AnimationHandle create(Nanoseconds start, Nanoseconds duration, LayerDataHandle data, UnsignedInt repeatCount = 1, AnimationFlags flags = {});
 
         /**
          * @brief Create an animation attached to a data assuming the data belongs to the layer the animator is registered with
@@ -1220,7 +1220,7 @@ class MAGNUM_UI_EXPORT AbstractAnimator {
          * Same as calling @ref create(Nanoseconds, Nanoseconds, LayerDataHandle, UnsignedInt, AnimationFlags)
          * with @p repeatCount set to @cpp 1 @ce.
          */
-        AnimationHandle create(Nanoseconds played, Nanoseconds duration, LayerDataHandle data, AnimationFlags flags);
+        AnimationHandle create(Nanoseconds start, Nanoseconds duration, LayerDataHandle data, AnimationFlags flags);
 
         /**
          * @brief Remove an animation

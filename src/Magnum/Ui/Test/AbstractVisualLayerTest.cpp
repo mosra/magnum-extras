@@ -698,8 +698,8 @@ struct StyleLayerStyleAnimator: AbstractVisualLayerStyleAnimator {
     explicit StyleLayerStyleAnimator(AnimatorHandle handle): AbstractVisualLayerStyleAnimator{handle} {}
 
     /* Just saves the target style index and sync's the style arrays */
-    template<class T> AnimationHandle create(T targetStyle, Nanoseconds played, Nanoseconds duration, DataHandle data, AnimationFlags flags = {}) {
-        AnimationHandle handle = AbstractVisualLayerStyleAnimator::create(played, duration, data, flags);
+    template<class T> AnimationHandle create(T targetStyle, Nanoseconds start, Nanoseconds duration, DataHandle data, AnimationFlags flags = {}) {
+        AnimationHandle handle = AbstractVisualLayerStyleAnimator::create(start, duration, data, flags);
         const UnsignedInt id = animationHandleId(handle);
         if(id >= styles.size()) {
             arrayAppend(styles, NoInit, id - styles.size() + 1);

@@ -62,14 +62,14 @@ UnsignedInt GenericAnimator::usedAllocatedAnimationCount() const {
     return count;
 }
 
-AnimationHandle GenericAnimator::create(Containers::Function<void(Float)>&& animation, Float(*const easing)(Float), const Nanoseconds played, const Nanoseconds duration, const UnsignedInt repeatCount, const AnimationFlags flags) {
+AnimationHandle GenericAnimator::create(Containers::Function<void(Float)>&& animation, Float(*const easing)(Float), const Nanoseconds start, const Nanoseconds duration, const UnsignedInt repeatCount, const AnimationFlags flags) {
     CORRADE_ASSERT(animation,
         "Ui::GenericAnimator::create(): animation is null", {});
     CORRADE_ASSERT(easing,
         "Ui::GenericAnimator::create(): easing is null", {});
 
     State& state = static_cast<State&>(*_state);
-    const AnimationHandle handle = AbstractGenericAnimator::create(played, duration, repeatCount, flags);
+    const AnimationHandle handle = AbstractGenericAnimator::create(start, duration, repeatCount, flags);
     const UnsignedInt id = animationHandleId(handle);
     if(id >= state.animations.size())
         arrayResize(state.animations, id + 1);
@@ -157,14 +157,14 @@ UnsignedInt GenericNodeAnimator::usedAllocatedAnimationCount() const {
     return count;
 }
 
-AnimationHandle GenericNodeAnimator::create(Containers::Function<void(NodeHandle, Float)>&& animation, Float(*const easing)(Float), const Nanoseconds played, const Nanoseconds duration, NodeHandle node, const UnsignedInt repeatCount, const AnimationFlags flags) {
+AnimationHandle GenericNodeAnimator::create(Containers::Function<void(NodeHandle, Float)>&& animation, Float(*const easing)(Float), const Nanoseconds start, const Nanoseconds duration, NodeHandle node, const UnsignedInt repeatCount, const AnimationFlags flags) {
     CORRADE_ASSERT(animation,
         "Ui::GenericNodeAnimator::create(): animation is null", {});
     CORRADE_ASSERT(easing,
         "Ui::GenericNodeAnimator::create(): easing is null", {});
 
     State& state = static_cast<State&>(*_state);
-    const AnimationHandle handle = AbstractGenericAnimator::create(played, duration, node, repeatCount, flags);
+    const AnimationHandle handle = AbstractGenericAnimator::create(start, duration, node, repeatCount, flags);
     const UnsignedInt id = animationHandleId(handle);
     if(id >= state.animations.size())
         arrayResize(state.animations, id + 1);
@@ -255,14 +255,14 @@ UnsignedInt GenericDataAnimator::usedAllocatedAnimationCount() const {
     return count;
 }
 
-AnimationHandle GenericDataAnimator::create(Containers::Function<void(DataHandle, Float)>&& animation, Float(*const easing)(Float), const Nanoseconds played, const Nanoseconds duration, DataHandle data, const UnsignedInt repeatCount, const AnimationFlags flags) {
-    const AnimationHandle handle = AbstractGenericAnimator::create(played, duration, data, repeatCount, flags);
+AnimationHandle GenericDataAnimator::create(Containers::Function<void(DataHandle, Float)>&& animation, Float(*const easing)(Float), const Nanoseconds start, const Nanoseconds duration, DataHandle data, const UnsignedInt repeatCount, const AnimationFlags flags) {
+    const AnimationHandle handle = AbstractGenericAnimator::create(start, duration, data, repeatCount, flags);
     createInternal(handle, Utility::move(animation), easing);
     return handle;
 }
 
-AnimationHandle GenericDataAnimator::create(Containers::Function<void(DataHandle, Float)>&& animation, Float(*const easing)(Float), const Nanoseconds played, const Nanoseconds duration, LayerDataHandle data, const UnsignedInt repeatCount, const AnimationFlags flags) {
-    const AnimationHandle handle = AbstractGenericAnimator::create(played, duration, data, repeatCount, flags);
+AnimationHandle GenericDataAnimator::create(Containers::Function<void(DataHandle, Float)>&& animation, Float(*const easing)(Float), const Nanoseconds start, const Nanoseconds duration, LayerDataHandle data, const UnsignedInt repeatCount, const AnimationFlags flags) {
+    const AnimationHandle handle = AbstractGenericAnimator::create(start, duration, data, repeatCount, flags);
     createInternal(handle, Utility::move(animation), easing);
     return handle;
 }
