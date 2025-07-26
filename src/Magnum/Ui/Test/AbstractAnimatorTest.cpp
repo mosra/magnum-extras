@@ -499,7 +499,7 @@ void AbstractAnimatorTest::constructGeneric() {
         AnimatorFeatures doFeatures() const override {
             return AnimatorFeatures{0xbc};
         }
-        void doAdvance(Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&) override {}
+        void doAdvance(Containers::BitArrayView, Containers::BitArrayView, Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&) override {}
     } animator{animatorHandle(0xab, 0x12)};
 
     CORRADE_COMPARE(animator.features(), AnimatorFeatures{0xbc});
@@ -511,7 +511,7 @@ void AbstractAnimatorTest::constructNode() {
     struct: AbstractNodeAnimator {
         using AbstractNodeAnimator::AbstractNodeAnimator;
 
-        NodeAnimations doAdvance(Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<NodeFlags>&, Containers::MutableBitArrayView) override {
+        NodeAnimations doAdvance(Containers::BitArrayView, Containers::BitArrayView, Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<NodeFlags>&, Containers::MutableBitArrayView) override {
             return {};
         }
     } animator{animatorHandle(0xab, 0x12)};
@@ -569,7 +569,7 @@ void AbstractAnimatorTest::constructCopyGeneric() {
         using AbstractGenericAnimator::AbstractGenericAnimator;
 
         AnimatorFeatures doFeatures() const override { return {}; }
-        void doAdvance(Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&) override {}
+        void doAdvance(Containers::BitArrayView, Containers::BitArrayView, Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&) override {}
     };
 
     CORRADE_VERIFY(!std::is_copy_constructible<Animator>{});
@@ -581,7 +581,7 @@ void AbstractAnimatorTest::constructCopyNode() {
         using AbstractNodeAnimator::AbstractNodeAnimator;
 
         AnimatorFeatures doFeatures() const override { return {}; }
-        NodeAnimations doAdvance(Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<NodeFlags>&, Containers::MutableBitArrayView) override {
+        NodeAnimations doAdvance(Containers::BitArrayView, Containers::BitArrayView, Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<NodeFlags>&, Containers::MutableBitArrayView) override {
             return {};
         }
     };
@@ -639,7 +639,7 @@ void AbstractAnimatorTest::constructMoveGeneric() {
         using AbstractGenericAnimator::AbstractGenericAnimator;
 
         AnimatorFeatures doFeatures() const override { return {}; }
-        void doAdvance(Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&) override {}
+        void doAdvance(Containers::BitArrayView, Containers::BitArrayView, Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&) override {}
     };
 
     /* Just verify that the subclass doesn't have the moves broken */
@@ -661,7 +661,7 @@ void AbstractAnimatorTest::constructMoveNode() {
         using AbstractNodeAnimator::AbstractNodeAnimator;
 
         AnimatorFeatures doFeatures() const override { return {}; }
-        NodeAnimations doAdvance(Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<NodeFlags>&, Containers::MutableBitArrayView) override {
+        NodeAnimations doAdvance(Containers::BitArrayView, Containers::BitArrayView, Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<NodeFlags>&, Containers::MutableBitArrayView) override {
             return {};
         }
     };
@@ -753,7 +753,7 @@ void AbstractAnimatorTest::genericSetLayer() {
         AnimatorFeatures doFeatures() const override {
             return AnimatorFeature::DataAttachment;
         }
-        void doAdvance(Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&) override {}
+        void doAdvance(Containers::BitArrayView, Containers::BitArrayView, Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&) override {}
     } animator{animatorHandle(0, 1)};
     CORRADE_COMPARE(animator.layer(), LayerHandle::Null);
 
@@ -771,7 +771,7 @@ void AbstractAnimatorTest::genericSetLayerInvalid() {
         AnimatorFeatures doFeatures() const override {
             return AnimatorFeature::DataAttachment;
         }
-        void doAdvance(Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&) override {}
+        void doAdvance(Containers::BitArrayView, Containers::BitArrayView, Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&) override {}
     } animator{animatorHandle(0, 1)};
 
     struct: AbstractLayer {
@@ -802,7 +802,7 @@ void AbstractAnimatorTest::genericSetLayerInvalidFeatures() {
             /* Not DataAttachment */
             return AnimatorFeature::NodeAttachment;
         }
-        void doAdvance(Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&) override {}
+        void doAdvance(Containers::BitArrayView, Containers::BitArrayView, Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&) override {}
     } animator{animatorHandle(0, 1)};
 
     struct: AbstractLayer {
@@ -934,7 +934,7 @@ void AbstractAnimatorTest::createRemoveHandleRecycle() {
         using AbstractAnimator::remove;
 
         AnimatorFeatures doFeatures() const override { return _features; }
-        void doAdvance(Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&) override {}
+        void doAdvance(Containers::BitArrayView, Containers::BitArrayView, Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&) override {}
 
         private:
             AnimatorFeatures _features;
@@ -1361,7 +1361,7 @@ void AbstractAnimatorTest::createDataAttachment() {
         AnimatorFeatures doFeatures() const override {
             return AnimatorFeature::DataAttachment;
         }
-        void doAdvance(Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&) override {}
+        void doAdvance(Containers::BitArrayView, Containers::BitArrayView, Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&) override {}
     } animator{animatorHandle(0, 1)};
     animator.setLayer(layer);
 
@@ -1485,7 +1485,7 @@ void AbstractAnimatorTest::createDataAttachmentInvalidLayer() {
         AnimatorFeatures doFeatures() const override {
             return AnimatorFeature::DataAttachment;
         }
-        void doAdvance(Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&) override {}
+        void doAdvance(Containers::BitArrayView, Containers::BitArrayView, Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&) override {}
     } animator{animatorHandle(0, 1)};
 
     struct: AbstractLayer {
@@ -1634,7 +1634,7 @@ void AbstractAnimatorTest::propertiesStateFactor() {
 
     Containers::BitArray mask{NoInit, 2};
     Float factors[2];
-    animator.update(offset, mask, factors, mask);
+    animator.update(offset, mask, mask, mask, factors, mask);
 
     CORRADE_COMPARE(animator.state(handle), data.expectedState);
     CORRADE_COMPARE(animator.factor(handle), data.expectedFactor);
@@ -1909,7 +1909,7 @@ void AbstractAnimatorTest::attachData() {
         AnimatorFeatures doFeatures() const override {
             return AnimatorFeature::DataAttachment;
         }
-        void doAdvance(Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&) override {}
+        void doAdvance(Containers::BitArrayView, Containers::BitArrayView, Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&) override {}
     } animator{animatorHandle(0xab, 0x12)};
 
     struct: AbstractLayer {
@@ -2091,7 +2091,7 @@ void AbstractAnimatorTest::attachDataInvalidLayer() {
         AnimatorFeatures doFeatures() const override {
             return AnimatorFeature::DataAttachment;
         }
-        void doAdvance(Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&) override {}
+        void doAdvance(Containers::BitArrayView, Containers::BitArrayView, Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&) override {}
     } animator{animatorHandle(0, 1)};
     animator.setLayer(layer);
 
@@ -2186,7 +2186,7 @@ void AbstractAnimatorTest::clean() {
                 true, false, true, false
             }).sliceBit(0), TestSuite::Compare::Container);
         }
-        void doAdvance(Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&) override {}
+        void doAdvance(Containers::BitArrayView, Containers::BitArrayView, Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&) override {}
 
         Int called = 0;
 
@@ -2503,7 +2503,7 @@ void AbstractAnimatorTest::cleanData() {
                 true, false, false, true, false, true, false
             }).sliceBit(0), TestSuite::Compare::Container);
         }
-        void doAdvance(Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&) override {}
+        void doAdvance(Containers::BitArrayView, Containers::BitArrayView, Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&) override {}
 
         Int called = 0;
     } animator{animatorHandle(0, 1)};
@@ -2600,7 +2600,7 @@ void AbstractAnimatorTest::cleanDataEmpty() {
         void doClean(Containers::BitArrayView) override {
             ++called;
         }
-        void doAdvance(Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&) override {}
+        void doAdvance(Containers::BitArrayView, Containers::BitArrayView, Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&) override {}
 
         Int called = 0;
     } animator{animatorHandle(0, 1)};
@@ -2631,7 +2631,7 @@ void AbstractAnimatorTest::cleanDataNotImplemented() {
         AnimatorFeatures doFeatures() const override {
             return AnimatorFeature::DataAttachment;
         }
-        void doAdvance(Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&) override {}
+        void doAdvance(Containers::BitArrayView, Containers::BitArrayView, Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&) override {}
     } animator{animatorHandle(0, 1)};
 
     /* Has to be called to actually be able to clean the data, but other than
@@ -2890,9 +2890,11 @@ void AbstractAnimatorTest::update() {
        changed their state compared to last time (i.e., time 0) */
     {
         Containers::BitArray active{NoInit, 13};
+        Containers::BitArray started{NoInit, 13};
+        Containers::BitArray stopped{NoInit, 13};
         Containers::StaticArray<13, Float> factors{DirectInit, unused};
         Containers::BitArray remove{NoInit, 13};
-        CORRADE_COMPARE(animator.update(10_nsec, active, factors, remove), Containers::pair(true, true));
+        CORRADE_COMPARE(animator.update(10_nsec, active, started, stopped, factors, remove), Containers::pair(true, true));
         CORRADE_COMPARE_AS(Containers::BitArrayView{active}, Containers::stridedArrayView({
             false,  /*  0 scheduledKeep */
             true,   /*  1 scheduledToPlayingBegin */
@@ -2906,6 +2908,36 @@ void AbstractAnimatorTest::update() {
             false,  /*  9 paused */
             true,   /* 10 pausedToStopped */
             false,  /* 11 stoppedRemove */
+            false,  /* 12 stoppedKeep */
+        }).sliceBit(0), TestSuite::Compare::Container);
+        CORRADE_COMPARE_AS(Containers::BitArrayView{started}, Containers::stridedArrayView({
+            false,  /*  0 scheduledKeep */
+            true,   /*  1 scheduledToPlayingBegin */
+            true,   /*  2 scheduledToPaused */
+            true,   /*  3 scheduledToStopped */
+            false,  /*  4 removed */
+            false,  /*  5 playingMiddleKeep */
+            false,  /*  6 playingToPausedKeep */
+            false,  /*  7 playingEndToStopped */
+            false,  /*  8 playingToStoppedKeep */
+            false,  /*  9 paused */
+            false,  /* 10 pausedToStopped */
+            false,  /* 11 stopped */
+            false,  /* 12 stoppedKeep */
+        }).sliceBit(0), TestSuite::Compare::Container);
+        CORRADE_COMPARE_AS(Containers::BitArrayView{stopped}, Containers::stridedArrayView({
+            false,  /*  0 scheduledKeep */
+            false,  /*  1 scheduledToPlayingBegin */
+            false,  /*  2 scheduledToPaused */
+            true,   /*  3 scheduledToStopped */
+            false,  /*  4 removed */
+            false,  /*  5 playingMiddleKeep */
+            false,  /*  6 playingToPausedKeep */
+            true,   /*  7 playingEndToStopped */
+            true,   /*  8 playingToStoppedKeep */
+            false,  /*  9 paused */
+            true,   /* 10 pausedToStopped */
+            false,  /* 11 stopped */
             false,  /* 12 stoppedKeep */
         }).sliceBit(0), TestSuite::Compare::Container);
         CORRADE_COMPARE_AS(factors, Containers::arrayView({
@@ -2975,13 +3007,15 @@ void AbstractAnimatorTest::update() {
 
     /* Call to update(10) again marks only the currently playing animations as
        active. As there's no difference in current and previous state and all
-       stopped animations got already removed, clean() isn't meant to be
-       called. */
+       stopped animations got already removed, started and stoppped are all 0s
+       and clean() isn't meant to be called. */
     {
         Containers::BitArray active{NoInit, 13};
+        Containers::BitArray started{NoInit, 13};
+        Containers::BitArray stopped{NoInit, 13};
         Containers::StaticArray<13, Float> factors{DirectInit, unused};
         Containers::BitArray remove{NoInit, 13};
-        CORRADE_COMPARE(animator.update(10_nsec, active, factors, remove), Containers::pair(true, false));
+        CORRADE_COMPARE(animator.update(10_nsec, active, started, stopped, factors, remove), Containers::pair(true, false));
         CORRADE_COMPARE_AS(Containers::BitArrayView{active}, Containers::stridedArrayView({
             false,  /*  0 scheduledKeep */
             true,   /*  1 scheduledToPlayingBegin */
@@ -2995,6 +3029,36 @@ void AbstractAnimatorTest::update() {
             false,  /*  9 paused */
             false,  /* 10 pausedToStopped */
             false,  /* 11 stoppedRemove */
+            false,  /* 12 stoppedKeep */
+        }).sliceBit(0), TestSuite::Compare::Container);
+        CORRADE_COMPARE_AS(Containers::BitArrayView{started}, Containers::stridedArrayView({
+            false,  /*  0 scheduledKeep */
+            false,  /*  1 scheduledToPlayingBegin */
+            false,  /*  2 scheduledToPaused */
+            false,  /*  3 scheduledToStopped */
+            false,  /*  4 removed */
+            false,  /*  5 playingMiddleKeep */
+            false,  /*  6 playingToPausedKeep */
+            false,  /*  7 playingEndToStopped */
+            false,  /*  8 playingToStoppedKeep */
+            false,  /*  9 paused */
+            false,  /* 10 pausedToStopped */
+            false,  /* 11 stopped */
+            false,  /* 12 stoppedKeep */
+        }).sliceBit(0), TestSuite::Compare::Container);
+        CORRADE_COMPARE_AS(Containers::BitArrayView{stopped}, Containers::stridedArrayView({
+            false,  /*  0 scheduledKeep */
+            false,  /*  1 scheduledToPlayingBegin */
+            false,  /*  2 scheduledToPaused */
+            false,  /*  3 scheduledToStopped */
+            false,  /*  4 removed */
+            false,  /*  5 playingMiddleKeep */
+            false,  /*  6 playingToPausedKeep */
+            false,  /*  7 playingEndToStopped */
+            false,  /*  8 playingToStoppedKeep */
+            false,  /*  9 paused */
+            false,  /* 10 pausedToStopped */
+            false,  /* 11 stopped */
             false,  /* 12 stoppedKeep */
         }).sliceBit(0), TestSuite::Compare::Container);
         CORRADE_COMPARE_AS(factors, Containers::arrayView({
@@ -3057,9 +3121,11 @@ void AbstractAnimatorTest::update() {
        10. */
     {
         Containers::BitArray active{NoInit, 13};
+        Containers::BitArray started{NoInit, 13};
+        Containers::BitArray stopped{NoInit, 13};
         Containers::StaticArray<13, Float> factors{DirectInit, unused};
         Containers::BitArray remove{NoInit, 13};
-        CORRADE_COMPARE(animator.update(20_nsec, active, factors, remove), Containers::pair(true, true));
+        CORRADE_COMPARE(animator.update(20_nsec, active, started, stopped, factors, remove), Containers::pair(true, true));
         CORRADE_COMPARE_AS(Containers::BitArrayView{active}, Containers::stridedArrayView({
             false,  /*  0 scheduledKeep */
             true,   /*  1 scheduledToPlayingBegin */
@@ -3073,6 +3139,36 @@ void AbstractAnimatorTest::update() {
             false,  /*  9 paused */
             false,  /* 10 pausedToStopped */
             false,  /* 11 stoppedRemove */
+            false,  /* 12 stoppedKeep */
+        }).sliceBit(0), TestSuite::Compare::Container);
+        CORRADE_COMPARE_AS(Containers::BitArrayView{started}, Containers::stridedArrayView({
+            false,  /*  0 scheduledKeep */
+            false,  /*  1 scheduledToPlayingBegin */
+            false,  /*  2 scheduledToPaused */
+            false,  /*  3 scheduledToStopped */
+            false,  /*  4 removed */
+            false,  /*  5 playingMiddleKeep */
+            false,  /*  6 playingToPausedKeep */
+            false,  /*  7 playingEndToStopped */
+            false,  /*  8 playingToStoppedKeep */
+            false,  /*  9 paused */
+            false,  /* 10 pausedToStopped */
+            false,  /* 11 stopped */
+            false,  /* 12 stoppedKeep */
+        }).sliceBit(0), TestSuite::Compare::Container);
+        CORRADE_COMPARE_AS(Containers::BitArrayView{stopped}, Containers::stridedArrayView({
+            false,  /*  0 scheduledKeep */
+            true,   /*  1 scheduledToPlayingBegin */
+            false,  /*  2 scheduledToPaused */
+            false,  /*  3 scheduledToStopped */
+            false,  /*  4 removed */
+            true,   /*  5 playingMiddleKeep */
+            false,  /*  6 playingToPausedKeep */
+            false,  /*  7 playingEndToStopped */
+            false,  /*  8 playingToStoppedKeep */
+            false,  /*  9 paused */
+            false,  /* 10 pausedToStopped */
+            false,  /* 11 stopped */
             false,  /* 12 stoppedKeep */
         }).sliceBit(0), TestSuite::Compare::Container);
         CORRADE_COMPARE_AS(factors, Containers::arrayView({
@@ -3149,9 +3245,11 @@ void AbstractAnimatorTest::update() {
     animator.stop(paused, 30_nsec);
     {
         Containers::BitArray active{NoInit, 13};
+        Containers::BitArray started{NoInit, 13};
+        Containers::BitArray stopped{NoInit, 13};
         Containers::StaticArray<13, Float> factors{DirectInit, unused};
         Containers::BitArray remove{NoInit, 13};
-        CORRADE_COMPARE(animator.update(30_nsec, active, factors, remove), Containers::pair(true, true));
+        CORRADE_COMPARE(animator.update(30_nsec, active, started, stopped, factors, remove), Containers::pair(true, true));
         CORRADE_COMPARE_AS(Containers::BitArrayView{active}, Containers::stridedArrayView({
             true,   /*  0 scheduledKeep */
             false,  /*  1 scheduledToPlayingBegin */
@@ -3165,6 +3263,36 @@ void AbstractAnimatorTest::update() {
             true,   /*  9 paused */
             false,  /* 10 pausedToStopped */
             false,  /* 11 stoppedRemove */
+            false,  /* 12 stoppedKeep */
+        }).sliceBit(0), TestSuite::Compare::Container);
+        CORRADE_COMPARE_AS(Containers::BitArrayView{started}, Containers::stridedArrayView({
+            true,   /*  0 scheduledKeep */
+            false,  /*  1 scheduledToPlayingBegin */
+            false,  /*  2 scheduledToPaused */
+            false,  /*  3 scheduledToStopped */
+            false,  /*  4 removed */
+            false,  /*  5 playingMiddleKeep */
+            false,  /*  6 playingToPausedKeep */
+            false,  /*  7 playingEndToStopped */
+            false,  /*  8 playingToStoppedKeep */
+            false,  /*  9 paused */
+            false,  /* 10 pausedToStopped */
+            false,  /* 11 stopped */
+            false,  /* 12 stoppedKeep */
+        }).sliceBit(0), TestSuite::Compare::Container);
+        CORRADE_COMPARE_AS(Containers::BitArrayView{stopped}, Containers::stridedArrayView({
+            false,  /*  0 scheduledKeep */
+            false,  /*  1 scheduledToPlayingBegin */
+            true,   /*  2 scheduledToPaused */
+            false,  /*  3 scheduledToStopped */
+            false,  /*  4 removed */
+            false,  /*  5 playingMiddleKeep */
+            true,   /*  6 playingToPausedKeep */
+            false,  /*  7 playingEndToStopped */
+            false,  /*  8 playingToStoppedKeep */
+            true,   /*  9 paused */
+            false,  /* 10 pausedToStopped */
+            false,  /* 11 stopped */
             false,  /* 12 stoppedKeep */
         }).sliceBit(0), TestSuite::Compare::Container);
         CORRADE_COMPARE_AS(factors, Containers::arrayView({
@@ -3237,9 +3365,11 @@ void AbstractAnimatorTest::update() {
     /* Call at 40 doesn't need to delegeate to clean() anymore */
     {
         Containers::BitArray active{NoInit, 13};
+        Containers::BitArray started{NoInit, 13};
+        Containers::BitArray stopped{NoInit, 13};
         Containers::StaticArray<13, Float> factors{DirectInit, unused};
         Containers::BitArray remove{NoInit, 13};
-        CORRADE_COMPARE(animator.update(40_nsec, active, factors, remove), Containers::pair(true, false));
+        CORRADE_COMPARE(animator.update(40_nsec, active, started, stopped, factors, remove), Containers::pair(true, false));
         CORRADE_COMPARE_AS(Containers::BitArrayView{active}, Containers::stridedArrayView({
             true,   /*  0 scheduledKeep */
             false,  /*  1 scheduledToPlayingBegin */
@@ -3253,6 +3383,36 @@ void AbstractAnimatorTest::update() {
             false,  /*  9 paused */
             false,  /* 10 pausedToStopped */
             false,  /* 11 stoppedRemove */
+            false,  /* 12 stoppedKeep */
+        }).sliceBit(0), TestSuite::Compare::Container);
+        CORRADE_COMPARE_AS(Containers::BitArrayView{started}, Containers::stridedArrayView({
+            false,  /*  0 scheduledKeep */
+            false,  /*  1 scheduledToPlayingBegin */
+            false,  /*  2 scheduledToPaused */
+            false,  /*  3 scheduledToStopped */
+            false,  /*  4 removed */
+            false,  /*  5 playingMiddleKeep */
+            false,  /*  6 playingToPausedKeep */
+            false,  /*  7 playingEndToStopped */
+            false,  /*  8 playingToStoppedKeep */
+            false,  /*  9 paused */
+            false,  /* 10 pausedToStopped */
+            false,  /* 11 stopped */
+            false,  /* 12 stoppedKeep */
+        }).sliceBit(0), TestSuite::Compare::Container);
+        CORRADE_COMPARE_AS(Containers::BitArrayView{stopped}, Containers::stridedArrayView({
+            true,   /*  0 scheduledKeep */
+            false,  /*  1 scheduledToPlayingBegin */
+            false,  /*  2 scheduledToPaused */
+            false,  /*  3 scheduledToStopped */
+            false,  /*  4 removed */
+            false,  /*  5 playingMiddleKeep */
+            false,  /*  6 playingToPausedKeep */
+            false,  /*  7 playingEndToStopped */
+            false,  /*  8 playingToStoppedKeep */
+            false,  /*  9 paused */
+            false,  /* 10 pausedToStopped */
+            false,  /* 11 stopped */
             false,  /* 12 stoppedKeep */
         }).sliceBit(0), TestSuite::Compare::Container);
         CORRADE_COMPARE_AS(factors, Containers::arrayView({
@@ -3311,10 +3471,18 @@ void AbstractAnimatorTest::update() {
     /* Call at 50 needs neither advance nor clean anymore */
     {
         Containers::BitArray active{NoInit, 13};
+        Containers::BitArray started{NoInit, 13};
+        Containers::BitArray stopped{NoInit, 13};
         Containers::StaticArray<13, Float> factors{DirectInit, unused};
         Containers::BitArray remove{NoInit, 13};
-        CORRADE_COMPARE(animator.update(50_nsec, active, factors, remove), Containers::pair(false, false));
+        CORRADE_COMPARE(animator.update(50_nsec, active, started, stopped, factors, remove), Containers::pair(false, false));
         CORRADE_COMPARE_AS(active,
+            (Containers::BitArray{DirectInit, 13, false}),
+            TestSuite::Compare::Container);
+        CORRADE_COMPARE_AS(started,
+            (Containers::BitArray{DirectInit, 13, false}),
+            TestSuite::Compare::Container);
+        CORRADE_COMPARE_AS(stopped,
             (Containers::BitArray{DirectInit, 13, false}),
             TestSuite::Compare::Container);
         CORRADE_COMPARE_AS(factors,
@@ -3368,7 +3536,7 @@ void AbstractAnimatorTest::updateEmpty() {
     CORRADE_COMPARE(animator.time(), 0_nsec);
     CORRADE_COMPARE(animator.state(), AnimatorStates{});
 
-    CORRADE_COMPARE(animator.update(56_nsec, {}, {}, {}), Containers::pair(false, false));
+    CORRADE_COMPARE(animator.update(56_nsec, {}, {}, {}, {}, {}), Containers::pair(false, false));
     CORRADE_COMPARE(animator.time(), 56_nsec);
     CORRADE_COMPARE(animator.state(), AnimatorStates{});
 }
@@ -3396,21 +3564,25 @@ void AbstractAnimatorTest::updateInvalid() {
     Float factorsIncorrect[4];
 
     /* Same time should be okay */
-    animator.update(46_nsec, mask, factors, mask);
-    animator.update(46_nsec, mask, factors, mask);
+    animator.update(46_nsec, mask, mask, mask, factors, mask);
+    animator.update(46_nsec, mask, mask, mask, factors, mask);
     CORRADE_COMPARE(animator.time(), 46_nsec);
 
     Containers::String out;
     Error redirectError{&out};
-    animator.update(45_nsec, mask, factors, mask);
-    animator.update(46_nsec, mask, factors, maskIncorrect);
-    animator.update(46_nsec, mask, factorsIncorrect, mask);
-    animator.update(46_nsec, maskIncorrect, factors, mask);
+    animator.update(45_nsec, mask, mask, mask, factors, mask);
+    animator.update(46_nsec, mask, mask, mask, factors, maskIncorrect);
+    animator.update(46_nsec, mask, mask, mask, factorsIncorrect, mask);
+    animator.update(46_nsec, mask, mask, maskIncorrect, factors, mask);
+    animator.update(46_nsec, mask, maskIncorrect, mask, factors, mask);
+    animator.update(46_nsec, maskIncorrect, mask, mask, factors, mask);
     CORRADE_COMPARE_AS(out,
         "Ui::AbstractAnimator::update(): expected a time at least Nanoseconds(46) but got Nanoseconds(45)\n"
-        "Ui::AbstractAnimator::update(): expected active, factors and remove views to have a size of 3 but got 3, 3 and 4\n"
-        "Ui::AbstractAnimator::update(): expected active, factors and remove views to have a size of 3 but got 3, 4 and 3\n"
-        "Ui::AbstractAnimator::update(): expected active, factors and remove views to have a size of 3 but got 4, 3 and 3\n",
+        "Ui::AbstractAnimator::update(): expected active, started, stopped, factors and remove views to have a size of 3 but got 3, 3, 3, 3 and 4\n"
+        "Ui::AbstractAnimator::update(): expected active, started, stopped, factors and remove views to have a size of 3 but got 3, 3, 3, 4 and 3\n"
+        "Ui::AbstractAnimator::update(): expected active, started, stopped, factors and remove views to have a size of 3 but got 3, 3, 4, 3 and 3\n"
+        "Ui::AbstractAnimator::update(): expected active, started, stopped, factors and remove views to have a size of 3 but got 3, 4, 3, 3 and 3\n"
+        "Ui::AbstractAnimator::update(): expected active, started, stopped, factors and remove views to have a size of 3 but got 4, 3, 3, 3 and 3\n",
         TestSuite::Compare::String);
 }
 
@@ -3420,10 +3592,20 @@ void AbstractAnimatorTest::advanceGeneric() {
         using AbstractGenericAnimator::create;
 
         AnimatorFeatures doFeatures() const override { return {}; }
-        void doAdvance(Containers::BitArrayView active, const Containers::StridedArrayView1D<const Float>& factors) override {
+        void doAdvance(Containers::BitArrayView active, Containers::BitArrayView started, Containers::BitArrayView stopped, const Containers::StridedArrayView1D<const Float>& factors) override {
             CORRADE_COMPARE_AS(active, Containers::stridedArrayView({
                 true,
                 false,
+                true
+            }).sliceBit(0), TestSuite::Compare::Container);
+            CORRADE_COMPARE_AS(started, Containers::stridedArrayView({
+                false,
+                false,
+                true
+            }).sliceBit(0), TestSuite::Compare::Container);
+            CORRADE_COMPARE_AS(stopped, Containers::stridedArrayView({
+                false,
+                true,
                 true
             }).sliceBit(0), TestSuite::Compare::Container);
             CORRADE_COMPARE_AS(factors, Containers::arrayView({
@@ -3444,13 +3626,17 @@ void AbstractAnimatorTest::advanceGeneric() {
     CORRADE_VERIFY(true);
 
     Containers::BitArray active{DirectInit, 3, true};
+    Containers::BitArray started{DirectInit, 3, false};
+    Containers::BitArray stopped{DirectInit, 3, true};
     active.reset(1);
+    started.set(2);
+    stopped.reset(0);
     Float factors[]{
         1.0f,
         0.5f,
         0.75f
     };
-    animator.advance(active, factors);
+    animator.advance(active, started, stopped, factors);
     CORRADE_COMPARE(animator.advanceCallCount, 1);
 }
 
@@ -3462,25 +3648,29 @@ void AbstractAnimatorTest::advanceGenericInvalid() {
         using AbstractGenericAnimator::create;
 
         AnimatorFeatures doFeatures() const override { return {}; }
-        void doAdvance(Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&) override {}
+        void doAdvance(Containers::BitArrayView, Containers::BitArrayView, Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&) override {}
     } animator{animatorHandle(0, 1)};
 
     animator.create(0_nsec, 1_nsec);
     animator.create(0_nsec, 1_nsec);
     animator.create(0_nsec, 1_nsec);
 
-    Containers::BitArray active{NoInit, 3};
-    Containers::BitArray activeInvalid{NoInit, 4};
+    Containers::BitArray mask{NoInit, 3};
+    Containers::BitArray maskInvalid{NoInit, 4};
     Float factors[3];
     Float factorsInvalid[4];
 
     Containers::String out;
     Error redirectError{&out};
-    animator.advance(active, factorsInvalid);
-    animator.advance(activeInvalid, factors);
+    animator.advance(mask, mask, mask, factorsInvalid);
+    animator.advance(mask, mask, maskInvalid, factors);
+    animator.advance(mask, maskInvalid, mask, factors);
+    animator.advance(maskInvalid, mask, mask, factors);
     CORRADE_COMPARE_AS(out,
-        "Ui::AbstractGenericAnimator::advance(): expected active and factors views to have a size of 3 but got 3 and 4\n"
-        "Ui::AbstractGenericAnimator::advance(): expected active and factors views to have a size of 3 but got 4 and 3\n",
+        "Ui::AbstractGenericAnimator::advance(): expected active, started, stopped and factors views to have a size of 3 but got 3, 3, 3 and 4\n"
+        "Ui::AbstractGenericAnimator::advance(): expected active, started, stopped and factors views to have a size of 3 but got 3, 3, 4 and 3\n"
+        "Ui::AbstractGenericAnimator::advance(): expected active, started, stopped and factors views to have a size of 3 but got 3, 4, 3 and 3\n"
+        "Ui::AbstractGenericAnimator::advance(): expected active, started, stopped and factors views to have a size of 3 but got 4, 3, 3 and 3\n",
         TestSuite::Compare::String);
 }
 
@@ -3490,10 +3680,20 @@ void AbstractAnimatorTest::advanceNode() {
         using AbstractNodeAnimator::create;
 
         AnimatorFeatures doFeatures() const override { return {}; }
-        NodeAnimations doAdvance(Containers::BitArrayView active, const Containers::StridedArrayView1D<const Float>& factors, const Containers::StridedArrayView1D<Vector2>& nodeOffsets, const Containers::StridedArrayView1D<Vector2>& nodeSizes, const Containers::StridedArrayView1D<NodeFlags>& nodeFlags, Containers::MutableBitArrayView nodesRemove) override {
+        NodeAnimations doAdvance(Containers::BitArrayView active, Containers::BitArrayView started, Containers::BitArrayView stopped, const Containers::StridedArrayView1D<const Float>& factors, const Containers::StridedArrayView1D<Vector2>& nodeOffsets, const Containers::StridedArrayView1D<Vector2>& nodeSizes, const Containers::StridedArrayView1D<NodeFlags>& nodeFlags, Containers::MutableBitArrayView nodesRemove) override {
             CORRADE_COMPARE_AS(active, Containers::stridedArrayView({
                 true,
                 false,
+                true
+            }).sliceBit(0), TestSuite::Compare::Container);
+            CORRADE_COMPARE_AS(started, Containers::stridedArrayView({
+                false,
+                false,
+                true
+            }).sliceBit(0), TestSuite::Compare::Container);
+            CORRADE_COMPARE_AS(stopped, Containers::stridedArrayView({
+                false,
+                true,
                 true
             }).sliceBit(0), TestSuite::Compare::Container);
             CORRADE_COMPARE_AS(factors, Containers::arrayView({
@@ -3532,7 +3732,11 @@ void AbstractAnimatorTest::advanceNode() {
     CORRADE_VERIFY(true);
 
     Containers::BitArray active{DirectInit, 3, true};
+    Containers::BitArray started{DirectInit, 3, false};
+    Containers::BitArray stopped{DirectInit, 3, true};
     active.reset(1);
+    started.set(2);
+    stopped.reset(0);
     Float factors[]{
         1.0f,
         0.5f,
@@ -3552,7 +3756,7 @@ void AbstractAnimatorTest::advanceNode() {
     };
     Containers::BitArray nodesRemove{ValueInit, 2};
     nodesRemove.set(1);
-    CORRADE_COMPARE(animator.advance(active, factors, nodeOffsets, nodeSizes, nodeFlags, nodesRemove), NodeAnimations{0xc0});
+    CORRADE_COMPARE(animator.advance(active, started, stopped, factors, nodeOffsets, nodeSizes, nodeFlags, nodesRemove), NodeAnimations{0xc0});
     CORRADE_COMPARE(animator.advanceCallCount, 1);
 }
 
@@ -3564,7 +3768,7 @@ void AbstractAnimatorTest::advanceNodeInvalid() {
         using AbstractNodeAnimator::create;
 
         AnimatorFeatures doFeatures() const override { return {}; }
-        NodeAnimations doAdvance(Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<NodeFlags>&, Containers::MutableBitArrayView) override {
+        NodeAnimations doAdvance(Containers::BitArrayView, Containers::BitArrayView, Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<NodeFlags>&, Containers::MutableBitArrayView) override {
             CORRADE_FAIL("This shouldn't be called.");
             return {};
         }
@@ -3573,8 +3777,8 @@ void AbstractAnimatorTest::advanceNodeInvalid() {
     animator.create(0_nsec, 1_nsec);
     animator.create(0_nsec, 1_nsec);
 
-    Containers::BitArray active{NoInit, 2};
-    Containers::BitArray activeInvalid{NoInit, 3};
+    Containers::BitArray mask{NoInit, 2};
+    Containers::BitArray maskInvalid{NoInit, 3};
     Float factors[2];
     Float factorsInvalid[3];
     Containers::BitArray nodesEnabled{NoInit, 3};
@@ -3586,15 +3790,19 @@ void AbstractAnimatorTest::advanceNodeInvalid() {
 
     Containers::String out;
     Error redirectError{&out};
-    animator.advance(active, factorsInvalid, nodeOffsetsSizes, nodeOffsetsSizes, nodeFlags, nodesEnabled);
-    animator.advance(activeInvalid, factors, nodeOffsetsSizes, nodeOffsetsSizes, nodeFlags, nodesEnabled);
-    animator.advance(active, factors, nodeOffsetsSizes, nodeOffsetsSizes, nodeFlags, nodesEnabledInvalid);
-    animator.advance(active, factors, nodeOffsetsSizes, nodeOffsetsSizes, nodeFlagsInvalid, nodesEnabled);
-    animator.advance(active, factors, nodeOffsetsSizes, nodeOffsetsSizesInvalid, nodeFlags, nodesEnabled);
-    animator.advance(active, factors, nodeOffsetsSizesInvalid, nodeOffsetsSizes, nodeFlags, nodesEnabled);
+    animator.advance(mask, mask, mask, factorsInvalid, nodeOffsetsSizes, nodeOffsetsSizes, nodeFlags, nodesEnabled);
+    animator.advance(mask, mask, maskInvalid, factors, nodeOffsetsSizes, nodeOffsetsSizes, nodeFlags, nodesEnabled);
+    animator.advance(mask, maskInvalid, mask, factors, nodeOffsetsSizes, nodeOffsetsSizes, nodeFlags, nodesEnabled);
+    animator.advance(maskInvalid, mask, mask, factors, nodeOffsetsSizes, nodeOffsetsSizes, nodeFlags, nodesEnabled);
+    animator.advance(mask, mask, mask, factors, nodeOffsetsSizes, nodeOffsetsSizes, nodeFlags, nodesEnabledInvalid);
+    animator.advance(mask, mask, mask, factors, nodeOffsetsSizes, nodeOffsetsSizes, nodeFlagsInvalid, nodesEnabled);
+    animator.advance(mask, mask, mask, factors, nodeOffsetsSizes, nodeOffsetsSizesInvalid, nodeFlags, nodesEnabled);
+    animator.advance(mask, mask, mask, factors, nodeOffsetsSizesInvalid, nodeOffsetsSizes, nodeFlags, nodesEnabled);
     CORRADE_COMPARE_AS(out,
-        "Ui::AbstractNodeAnimator::advance(): expected active and factors views to have a size of 2 but got 2 and 3\n"
-        "Ui::AbstractNodeAnimator::advance(): expected active and factors views to have a size of 2 but got 3 and 2\n"
+        "Ui::AbstractNodeAnimator::advance(): expected active, started, stopped and factors views to have a size of 2 but got 2, 2, 2 and 3\n"
+        "Ui::AbstractNodeAnimator::advance(): expected active, started, stopped and factors views to have a size of 2 but got 2, 2, 3 and 2\n"
+        "Ui::AbstractNodeAnimator::advance(): expected active, started, stopped and factors views to have a size of 2 but got 2, 3, 2 and 2\n"
+        "Ui::AbstractNodeAnimator::advance(): expected active, started, stopped and factors views to have a size of 2 but got 3, 2, 2 and 2\n"
         "Ui::AbstractNodeAnimator::advance(): expected node offset, size, flags and remove views to have the same size but got 3, 3, 3 and 4\n"
         "Ui::AbstractNodeAnimator::advance(): expected node offset, size, flags and remove views to have the same size but got 3, 3, 4 and 3\n"
         "Ui::AbstractNodeAnimator::advance(): expected node offset, size, flags and remove views to have the same size but got 3, 4, 3 and 3\n"
@@ -3622,7 +3830,7 @@ void AbstractAnimatorTest::state() {
         CORRADE_COMPARE(animator.state(animation), AnimationState::Scheduled);
         CORRADE_COMPARE(animator.state(), AnimatorState::NeedsAdvance);
         animator.remove(animation);
-        CORRADE_COMPARE(animator.update(0_nsec, mask, factors, mask), Containers::pair(false, false));
+        CORRADE_COMPARE(animator.update(0_nsec, mask, mask, mask, factors, mask), Containers::pair(false, false));
         CORRADE_COMPARE(animator.state(), AnimatorStates{});
 
     /* Animation that's created playing sets a state, removal & update()
@@ -3632,7 +3840,7 @@ void AbstractAnimatorTest::state() {
         CORRADE_COMPARE(animator.state(animation), AnimationState::Playing);
         CORRADE_COMPARE(animator.state(), AnimatorState::NeedsAdvance);
         animator.remove(animation);
-        CORRADE_COMPARE(animator.update(0_nsec, mask, factors, mask), Containers::pair(false, false));
+        CORRADE_COMPARE(animator.update(0_nsec, mask, mask, mask, factors, mask), Containers::pair(false, false));
         CORRADE_COMPARE(animator.state(), AnimatorStates{});
 
     /* Animation that's created stopped and with KeepOncePlayed doesn't set
@@ -3650,7 +3858,7 @@ void AbstractAnimatorTest::state() {
         CORRADE_COMPARE(animator.state(animation), AnimationState::Stopped);
         CORRADE_COMPARE(animator.state(), AnimatorState::NeedsAdvance);
         Containers::BitArray remove{NoInit, 1};
-        CORRADE_COMPARE(animator.update(0_nsec, mask, factors, remove), Containers::pair(false, true));
+        CORRADE_COMPARE(animator.update(0_nsec, mask, mask, mask, factors, remove), Containers::pair(false, true));
         CORRADE_COMPARE(remove[0], true);
         animator.remove(animation);
         CORRADE_VERIFY(!animator.isHandleValid(animation));
@@ -3667,7 +3875,7 @@ void AbstractAnimatorTest::state() {
         CORRADE_COMPARE(animator.state(animation), AnimationState::Scheduled);
         CORRADE_COMPARE(animator.state(), AnimatorState::NeedsAdvance);
         animator.remove(animation);
-        CORRADE_COMPARE(animator.update(0_nsec, mask, factors, mask), Containers::pair(false, false));
+        CORRADE_COMPARE(animator.update(0_nsec, mask, mask, mask, factors, mask), Containers::pair(false, false));
         CORRADE_COMPARE(animator.state(), AnimatorStates{});
 
     /* Animation that's playing after play() sets a state, removal & update()
@@ -3681,7 +3889,7 @@ void AbstractAnimatorTest::state() {
         CORRADE_COMPARE(animator.state(animation), AnimationState::Playing);
         CORRADE_COMPARE(animator.state(), AnimatorState::NeedsAdvance);
         animator.remove(animation);
-        CORRADE_COMPARE(animator.update(0_nsec, mask, factors, mask), Containers::pair(false, false));
+        CORRADE_COMPARE(animator.update(0_nsec, mask, mask, mask, factors, mask), Containers::pair(false, false));
         CORRADE_COMPARE(animator.state(), AnimatorStates{});
 
     /* Animation that's stopped after play() doesn't set anything */
@@ -3706,7 +3914,7 @@ void AbstractAnimatorTest::state() {
         CORRADE_COMPARE(animator.state(animation), AnimationState::Scheduled);
         CORRADE_COMPARE(animator.state(), AnimatorState::NeedsAdvance);
         animator.remove(animation);
-        CORRADE_COMPARE(animator.update(0_nsec, mask, factors, mask), Containers::pair(false, false));
+        CORRADE_COMPARE(animator.update(0_nsec, mask, mask, mask, factors, mask), Containers::pair(false, false));
         CORRADE_COMPARE(animator.state(), AnimatorStates{});
 
     /* Animation that stays playing after pause() keeps the state, removal &
@@ -3720,7 +3928,7 @@ void AbstractAnimatorTest::state() {
         CORRADE_COMPARE(animator.state(animation), AnimationState::Playing);
         CORRADE_COMPARE(animator.state(), AnimatorState::NeedsAdvance);
         animator.remove(animation);
-        CORRADE_COMPARE(animator.update(0_nsec, mask, factors, mask), Containers::pair(false, false));
+        CORRADE_COMPARE(animator.update(0_nsec, mask, mask, mask, factors, mask), Containers::pair(false, false));
         CORRADE_COMPARE(animator.state(), AnimatorStates{});
 
     /* Animation that's paused after pause() keeps the state, removal &
@@ -3734,7 +3942,7 @@ void AbstractAnimatorTest::state() {
         CORRADE_COMPARE(animator.state(animation), AnimationState::Paused);
         CORRADE_COMPARE(animator.state(), AnimatorState::NeedsAdvance);
         animator.remove(animation);
-        CORRADE_COMPARE(animator.update(0_nsec, mask, factors, mask), Containers::pair(false, false));
+        CORRADE_COMPARE(animator.update(0_nsec, mask, mask, mask, factors, mask), Containers::pair(false, false));
         CORRADE_COMPARE(animator.state(), AnimatorStates{});
 
     /* Animation that stays stopped after pause() doesn't set anything */
@@ -3759,7 +3967,7 @@ void AbstractAnimatorTest::state() {
         CORRADE_COMPARE(animator.state(animation), AnimationState::Scheduled);
         CORRADE_COMPARE(animator.state(), AnimatorState::NeedsAdvance);
         animator.remove(animation);
-        CORRADE_COMPARE(animator.update(0_nsec, mask, factors, mask), Containers::pair(false, false));
+        CORRADE_COMPARE(animator.update(0_nsec, mask, mask, mask, factors, mask), Containers::pair(false, false));
         CORRADE_COMPARE(animator.state(), AnimatorStates{});
 
     /* Animation that stays playing after stop() keeps the state, removal &
@@ -3773,7 +3981,7 @@ void AbstractAnimatorTest::state() {
         CORRADE_COMPARE(animator.state(animation), AnimationState::Playing);
         CORRADE_COMPARE(animator.state(), AnimatorState::NeedsAdvance);
         animator.remove(animation);
-        CORRADE_COMPARE(animator.update(0_nsec, mask, factors, mask), Containers::pair(false, false));
+        CORRADE_COMPARE(animator.update(0_nsec, mask, mask, mask, factors, mask), Containers::pair(false, false));
         CORRADE_COMPARE(animator.state(), AnimatorStates{});
 
     /* Animation that stays paused after stop() keeps the state, removal &
@@ -3788,7 +3996,7 @@ void AbstractAnimatorTest::state() {
         CORRADE_COMPARE(animator.state(animation), AnimationState::Paused);
         CORRADE_COMPARE(animator.state(), AnimatorState::NeedsAdvance);
         animator.remove(animation);
-        CORRADE_COMPARE(animator.update(0_nsec, mask, factors, mask), Containers::pair(false, false));
+        CORRADE_COMPARE(animator.update(0_nsec, mask, mask, mask, factors, mask), Containers::pair(false, false));
         CORRADE_COMPARE(animator.state(), AnimatorStates{});
 
     /* Animation that stays stopped after stop() doesn't set anything */

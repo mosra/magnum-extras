@@ -192,7 +192,7 @@ class MAGNUM_UI_EXPORT GenericAnimator: public AbstractGenericAnimator {
 
         MAGNUM_UI_LOCAL AnimatorFeatures doFeatures() const override;
         MAGNUM_UI_LOCAL void doClean(Containers::BitArrayView animationIdsToRemove) override;
-        MAGNUM_UI_LOCAL void doAdvance(Containers::BitArrayView active, const Containers::StridedArrayView1D<const Float>& factors) override;
+        MAGNUM_UI_LOCAL void doAdvance(Containers::BitArrayView active, Containers::BitArrayView started, Containers::BitArrayView stopped, const Containers::StridedArrayView1D<const Float>& factors) override;
 
         struct State;
         Containers::Pointer<State> _state;
@@ -360,7 +360,7 @@ class MAGNUM_UI_EXPORT GenericNodeAnimator: public AbstractGenericAnimator {
 
         MAGNUM_UI_LOCAL AnimatorFeatures doFeatures() const override;
         MAGNUM_UI_LOCAL void doClean(Containers::BitArrayView animationIdsToRemove) override;
-        MAGNUM_UI_LOCAL void doAdvance(Containers::BitArrayView active, const Containers::StridedArrayView1D<const Float>& factors) override;
+        MAGNUM_UI_LOCAL void doAdvance(Containers::BitArrayView active, Containers::BitArrayView started, Containers::BitArrayView stopped, const Containers::StridedArrayView1D<const Float>& factors) override;
 
         struct State;
         Containers::Pointer<State> _state;
@@ -558,7 +558,7 @@ class MAGNUM_UI_EXPORT GenericDataAnimator: public AbstractGenericAnimator {
 
         MAGNUM_UI_LOCAL AnimatorFeatures doFeatures() const override;
         MAGNUM_UI_LOCAL void doClean(Containers::BitArrayView animationIdsToRemove) override;
-        MAGNUM_UI_LOCAL void doAdvance(Containers::BitArrayView active, const Containers::StridedArrayView1D<const Float>& factors) override;
+        MAGNUM_UI_LOCAL void doAdvance(Containers::BitArrayView active, Containers::BitArrayView started, Containers::BitArrayView stopped, const Containers::StridedArrayView1D<const Float>& factors) override;
 
         struct State;
         Containers::Pointer<State> _state;

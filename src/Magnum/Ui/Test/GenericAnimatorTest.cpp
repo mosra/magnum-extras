@@ -806,10 +806,16 @@ void GenericAnimatorTest::advance() {
     /* Capture correct function name */
     CORRADE_VERIFY(true);
 
-    /* Should call just the first and third with given factors */
-    UnsignedByte data[]{(1 << 0)|(1 << 2)};
+    /* Should call just the first and third with given factors. The
+       started/stopped bits currently don't affect anything. */
+    UnsignedByte active[]{(1 << 0)|(1 << 2)};
+    UnsignedByte startedStopped[]{0xff};
     Float factors[]{0.75f, 0.42f, 0.25f};
-    animator.advance(Containers::BitArrayView{data, 0, 3}, factors);
+    animator.advance(
+        Containers::BitArrayView{active, 0, 3},
+        Containers::BitArrayView{startedStopped, 0, 3},
+        Containers::BitArrayView{startedStopped, 0, 3},
+        factors);
     CORRADE_COMPARE(first, 0.75f);
     CORRADE_COMPARE(third, 0.25f);
 }
@@ -836,10 +842,16 @@ void GenericAnimatorTest::advanceNode() {
     /* Capture correct function name */
     CORRADE_VERIFY(true);
 
-    /* Should call just the first and third with given factors */
-    UnsignedByte data[]{(1 << 0)|(1 << 2)};
+    /* Should call just the first and third with given factors. The
+       started/stopped bits currently don't affect anything. */
+    UnsignedByte active[]{(1 << 0)|(1 << 2)};
+    UnsignedByte startedStopped[]{0xff};
     Float factors[]{0.75f, 0.42f, 0.25f};
-    animator.advance(Containers::BitArrayView{data, 0, 3}, factors);
+    animator.advance(
+        Containers::BitArrayView{active, 0, 3},
+        Containers::BitArrayView{startedStopped, 0, 3},
+        Containers::BitArrayView{startedStopped, 0, 3},
+        factors);
     CORRADE_COMPARE(first, 0.75f);
     CORRADE_COMPARE(third, 0.25f);
 }
@@ -875,17 +887,23 @@ void GenericAnimatorTest::advanceData() {
     /* Capture correct function name */
     CORRADE_VERIFY(true);
 
-    /* Should call just the first and third with given factors */
-    UnsignedByte data[]{(1 << 0)|(1 << 2)};
+    /* Should call just the first and third with given factors. The
+       started/stopped bits currently don't affect anything. */
+    UnsignedByte active[]{(1 << 0)|(1 << 2)};
+    UnsignedByte startedStopped[]{0xff};
     Float factors[]{0.75f, 0.42f, 0.25f};
-    animator.advance(Containers::BitArrayView{data, 0, 3}, factors);
+    animator.advance(
+        Containers::BitArrayView{active, 0, 3},
+        Containers::BitArrayView{startedStopped, 0, 3},
+        Containers::BitArrayView{startedStopped, 0, 3},
+        factors);
     CORRADE_COMPARE(first, 0.75f);
     CORRADE_COMPARE(third, 0.25f);
 }
 
 void GenericAnimatorTest::advanceEmpty() {
     GenericAnimator animator{animatorHandle(0, 1)};
-    animator.advance({}, {});
+    animator.advance({}, {}, {}, {});
 
     /* Shouldn't crash or anything */
     CORRADE_VERIFY(true);
@@ -893,7 +911,7 @@ void GenericAnimatorTest::advanceEmpty() {
 
 void GenericAnimatorTest::advanceEmptyNode() {
     GenericNodeAnimator animator{animatorHandle(0, 1)};
-    animator.advance({}, {});
+    animator.advance({}, {}, {}, {});
 
     /* Shouldn't crash or anything */
     CORRADE_VERIFY(true);
@@ -902,7 +920,7 @@ void GenericAnimatorTest::advanceEmptyNode() {
 void GenericAnimatorTest::advanceEmptyData() {
     /* This should work even with no layer being set */
     GenericDataAnimator animator{animatorHandle(0, 1)};
-    animator.advance({}, {});
+    animator.advance({}, {}, {}, {});
 
     /* Shouldn't crash or anything */
     CORRADE_VERIFY(true);

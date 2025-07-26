@@ -652,11 +652,15 @@ void BaseLayerStyleAnimatorTest::advance() {
     const auto advance = [&](Nanoseconds time, Containers::ArrayView<BaseLayerStyleUniform> dynamicStyleUniforms, const Containers::StridedArrayView1D<Vector4>& dynamicStylePaddings, const Containers::StridedArrayView1D<UnsignedInt>& dataStyles) {
         UnsignedByte activeData[1];
         Containers::MutableBitArrayView active{activeData, 0, 5};
+        UnsignedByte startedData[1];
+        Containers::MutableBitArrayView started{startedData, 0, 5};
+        UnsignedByte stoppedData[1];
+        Containers::MutableBitArrayView stopped{stoppedData, 0, 5};
         Float factors[5];
         UnsignedByte removeData[1];
         Containers::MutableBitArrayView remove{removeData, 0, 5};
 
-        Containers::Pair<bool, bool> needsAdvanceClean = animator.update(time, active, factors, remove);
+        Containers::Pair<bool, bool> needsAdvanceClean = animator.update(time, active, started, stopped, factors, remove);
         BaseLayerStyleAnimations animations;
         if(needsAdvanceClean.first())
             animations = animator.advance(active, factors, remove, dynamicStyleUniforms, dynamicStylePaddings, dataStyles);
@@ -987,11 +991,15 @@ void BaseLayerStyleAnimatorTest::advanceProperties() {
     const auto advance = [&](Nanoseconds time, Containers::ArrayView<BaseLayerStyleUniform> dynamicStyleUniforms, const Containers::StridedArrayView1D<Vector4>& dynamicStylePaddings, const Containers::StridedArrayView1D<UnsignedInt>& dataStyles) {
         UnsignedByte activeData[1];
         Containers::MutableBitArrayView active{activeData, 0, 1};
+        UnsignedByte startedData[1];
+        Containers::MutableBitArrayView started{startedData, 0, 1};
+        UnsignedByte stoppedData[1];
+        Containers::MutableBitArrayView stopped{stoppedData, 0, 1};
         Float factors[1];
         UnsignedByte removeData[1];
         Containers::MutableBitArrayView remove{removeData, 0, 1};
 
-        Containers::Pair<bool, bool> needsAdvanceClean = animator.update(time, active, factors, remove);
+        Containers::Pair<bool, bool> needsAdvanceClean = animator.update(time, active, started, stopped, factors, remove);
         BaseLayerStyleAnimations animations;
         if(needsAdvanceClean.first()) {
             animations = animator.advance(
@@ -1084,11 +1092,15 @@ void BaseLayerStyleAnimatorTest::advanceNoFreeDynamicStyles() {
     const auto advance = [&](Nanoseconds time, Containers::ArrayView<BaseLayerStyleUniform> dynamicStyleUniforms, const Containers::StridedArrayView1D<UnsignedInt>& dataStyles) {
         UnsignedByte activeData[1];
         Containers::MutableBitArrayView active{activeData, 0, 2};
+        UnsignedByte startedData[1];
+        Containers::MutableBitArrayView started{startedData, 0, 2};
+        UnsignedByte stoppedData[1];
+        Containers::MutableBitArrayView stopped{stoppedData, 0, 2};
         Float factors[2];
         UnsignedByte removeData[1];
         Containers::MutableBitArrayView remove{removeData, 0, 2};
 
-        Containers::Pair<bool, bool> needsAdvanceClean = animator.update(time, active, factors, remove);
+        Containers::Pair<bool, bool> needsAdvanceClean = animator.update(time, active, started, stopped, factors, remove);
         BaseLayerStyleAnimations animations;
         if(needsAdvanceClean.first()) {
             Vector4 paddings[1];
@@ -1256,12 +1268,14 @@ void BaseLayerStyleAnimatorTest::layerAdvance() {
     /* The storage can be bigger than needed, the layer should slice it for
        each animator */
     Containers::BitArray activeStorage{NoInit, 7};
+    Containers::BitArray startedStorage{NoInit, 7};
+    Containers::BitArray stoppedStorage{NoInit, 7};
     Float factorStorage[7];
     Containers::BitArray removeStorage{NoInit, 7};
 
     /* Advancing just the first animation to 1/4, which sets the style,
        uniform and optionally padding */
-    layer.advanceAnimations(5_nsec, activeStorage, factorStorage, removeStorage, {animator2, animatorEmpty, animator1});
+    layer.advanceAnimations(5_nsec, activeStorage, startedStorage, stoppedStorage, factorStorage, removeStorage, {animator2, animatorEmpty, animator1});
     CORRADE_COMPARE(layer.dynamicStyleUsedCount(), 1);
     CORRADE_COMPARE(layer.style(data2), shared.styleCount() + 0);
     CORRADE_COMPARE(layer.dynamicStyleUniforms()[0].topColor, Color4{0.375f});
@@ -1273,7 +1287,7 @@ void BaseLayerStyleAnimatorTest::layerAdvance() {
        optionally padding */
     layer.update(LayerState::NeedsDataUpdate|LayerState::NeedsCommonDataUpdate, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
     layer.stateData().dynamicStyleChanged = false;
-    layer.advanceAnimations(10_nsec, activeStorage, factorStorage, removeStorage, {animator2, animatorEmpty, animator1});
+    layer.advanceAnimations(10_nsec, activeStorage, startedStorage, stoppedStorage, factorStorage, removeStorage, {animator2, animatorEmpty, animator1});
     CORRADE_COMPARE(layer.dynamicStyleUsedCount(), 1);
     CORRADE_COMPARE(layer.style(data2), shared.styleCount() + 0);
     CORRADE_COMPARE(layer.dynamicStyleUniforms()[0].topColor, Color4{0.5f});
@@ -1286,7 +1300,7 @@ void BaseLayerStyleAnimatorTest::layerAdvance() {
        change. */
     layer.update(LayerState::NeedsDataUpdate|LayerState::NeedsCommonDataUpdate, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
     layer.stateData().dynamicStyleChanged = false;
-    layer.advanceAnimations(15_nsec, activeStorage, factorStorage, removeStorage, {animator2, animatorEmpty, animator1});
+    layer.advanceAnimations(15_nsec, activeStorage, startedStorage, stoppedStorage, factorStorage, removeStorage, {animator2, animatorEmpty, animator1});
     CORRADE_COMPARE(layer.dynamicStyleUsedCount(), 1);
     CORRADE_COMPARE(layer.style(data1), 0);
     CORRADE_COMPARE(layer.style(data2), shared.styleCount() + 0);
@@ -1299,7 +1313,7 @@ void BaseLayerStyleAnimatorTest::layerAdvance() {
        style data is updated, no uniforms or paddings.  */
     layer.update(LayerState::NeedsDataUpdate|LayerState::NeedsCommonDataUpdate, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
     layer.stateData().dynamicStyleChanged = false;
-    layer.advanceAnimations(20_nsec, activeStorage, factorStorage, removeStorage, {animator2, animatorEmpty, animator1});
+    layer.advanceAnimations(20_nsec, activeStorage, startedStorage, stoppedStorage, factorStorage, removeStorage, {animator2, animatorEmpty, animator1});
     /* If clean() wouldn't be called, the dynamic style won't get recycled */
     CORRADE_COMPARE(layer.dynamicStyleUsedCount(), 0);
     CORRADE_COMPARE(layer.style(data2), 1);

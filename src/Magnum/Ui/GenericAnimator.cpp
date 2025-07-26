@@ -120,7 +120,7 @@ void GenericAnimator::doClean(const Containers::BitArrayView animationIdsToRemov
     }
 }
 
-void GenericAnimator::doAdvance(const Containers::BitArrayView active, const Containers::StridedArrayView1D<const Float>& factors) {
+void GenericAnimator::doAdvance(const Containers::BitArrayView active, Containers::BitArrayView, Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>& factors) {
     State& state = static_cast<State&>(*_state);
     /** @todo some way to iterate set bits */
     for(std::size_t i = 0; i != active.size(); ++i) {
@@ -217,7 +217,7 @@ void GenericNodeAnimator::doClean(const Containers::BitArrayView animationIdsToR
     }
 }
 
-void GenericNodeAnimator::doAdvance(const Containers::BitArrayView active, const Containers::StridedArrayView1D<const Float>& factors) {
+void GenericNodeAnimator::doAdvance(const Containers::BitArrayView active, Containers::BitArrayView, Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>& factors) {
     const Containers::StridedArrayView1D<const NodeHandle> nodes = this->nodes();
     State& state = static_cast<State&>(*_state);
     /** @todo some way to iterate set bits */
@@ -324,7 +324,7 @@ void GenericDataAnimator::doClean(const Containers::BitArrayView animationIdsToR
     }
 }
 
-void GenericDataAnimator::doAdvance(const Containers::BitArrayView active, const Containers::StridedArrayView1D<const Float>& factors) {
+void GenericDataAnimator::doAdvance(const Containers::BitArrayView active, Containers::BitArrayView, Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>& factors) {
     const Containers::StridedArrayView1D<const LayerDataHandle> layerData = this->layerData();
     State& state = static_cast<State&>(*_state);
     /** @todo some way to iterate set bits */

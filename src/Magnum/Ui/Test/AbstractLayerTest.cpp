@@ -1460,7 +1460,7 @@ void AbstractLayerTest::cleanDataAnimators() {
                 true, false, true, false, true
             }).sliceBit(0), TestSuite::Compare::Container);
         }
-        void doAdvance(Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&) override {}
+        void doAdvance(Containers::BitArrayView, Containers::BitArrayView, Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&) override {}
 
         Int called = 0;
     } animator1{animatorHandle(1, 1)};
@@ -1484,7 +1484,7 @@ void AbstractLayerTest::cleanDataAnimators() {
                 false, true, false, true
             }).sliceBit(0), TestSuite::Compare::Container);
         }
-        void doAdvance(Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&) override {}
+        void doAdvance(Containers::BitArrayView, Containers::BitArrayView, Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&) override {}
 
         Int called = 0;
     } animator2{animatorHandle(1, 1)};
@@ -1574,7 +1574,7 @@ void AbstractLayerTest::cleanDataAnimatorsInvalidFeatures() {
         AnimatorFeatures doFeatures() const override {
             return AnimatorFeature::DataAttachment;
         }
-        void doAdvance(Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&) override {}
+        void doAdvance(Containers::BitArrayView, Containers::BitArrayView, Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&) override {}
     } animator1{animatorHandle(0, 1)};
     animator1.setLayer(layer);
 
@@ -1608,7 +1608,7 @@ void AbstractLayerTest::cleanDataAnimatorsLayerNotSet() {
         AnimatorFeatures doFeatures() const override {
             return AnimatorFeature::DataAttachment;
         }
-        void doAdvance(Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&) override {}
+        void doAdvance(Containers::BitArrayView, Containers::BitArrayView, Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&) override {}
     } animator1{animatorHandle(0, 1)};
     animator1.setLayer(layer);
 
@@ -1643,7 +1643,7 @@ void AbstractLayerTest::cleanDataAnimatorsInvalidLayer() {
         AnimatorFeatures doFeatures() const override {
             return AnimatorFeature::DataAttachment;
         }
-        void doAdvance(Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&) override {}
+        void doAdvance(Containers::BitArrayView, Containers::BitArrayView, Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&) override {}
     } animator1{animatorHandle(0, 1)}, animator2{animatorHandle(1, 3)};
     animator1.setLayer(layer1);
     animator2.setLayer(layer2);
@@ -1663,9 +1663,11 @@ void AbstractLayerTest::advanceDataAnimations() {
             return LayerFeature::AnimateData;
         }
 
-        void doAdvanceAnimations(Nanoseconds time, Containers::MutableBitArrayView activeStorage, const Containers::StridedArrayView1D<Float>& factorStorage, Containers::MutableBitArrayView removeStorage, const Containers::Iterable<AbstractDataAnimator>& animators) override {
+        void doAdvanceAnimations(Nanoseconds time, Containers::MutableBitArrayView activeStorage, Containers::MutableBitArrayView startedStorage, Containers::MutableBitArrayView stoppedStorage, const Containers::StridedArrayView1D<Float>& factorStorage, Containers::MutableBitArrayView removeStorage, const Containers::Iterable<AbstractDataAnimator>& animators) override {
             CORRADE_COMPARE(time, 476_nsec);
             CORRADE_COMPARE(activeStorage.size(), 17);
+            CORRADE_COMPARE(startedStorage.size(), 17);
+            CORRADE_COMPARE(stoppedStorage.size(), 17);
             CORRADE_COMPARE(factorStorage.size(), 17);
             CORRADE_COMPARE(removeStorage.size(), 17);
             CORRADE_COMPARE(animators.size(), 2);
@@ -1694,7 +1696,7 @@ void AbstractLayerTest::advanceDataAnimations() {
     UnsignedInt maskData[1];
     Containers::MutableBitArrayView maskStorage{maskData, 0, 17};
     Float factorStorage[17];
-    layer.advanceAnimations(476_nsec, maskStorage, factorStorage, maskStorage, {animator1, animator2});
+    layer.advanceAnimations(476_nsec, maskStorage, maskStorage, maskStorage, factorStorage, maskStorage, {animator1, animator2});
     CORRADE_COMPARE(layer.advanceCalled, 1);
 }
 
@@ -1707,9 +1709,11 @@ void AbstractLayerTest::advanceStyleAnimations() {
             return LayerFeature::AnimateStyles;
         }
 
-        void doAdvanceAnimations(Nanoseconds time, Containers::MutableBitArrayView activeStorage, const Containers::StridedArrayView1D<Float>& factorStorage, Containers::MutableBitArrayView removeStorage, const Containers::Iterable<AbstractStyleAnimator>& animators) override {
+        void doAdvanceAnimations(Nanoseconds time, Containers::MutableBitArrayView activeStorage, Containers::MutableBitArrayView startedStorage, Containers::MutableBitArrayView stoppedStorage, const Containers::StridedArrayView1D<Float>& factorStorage, Containers::MutableBitArrayView removeStorage, const Containers::Iterable<AbstractStyleAnimator>& animators) override {
             CORRADE_COMPARE(time, 476_nsec);
             CORRADE_COMPARE(activeStorage.size(), 17);
+            CORRADE_COMPARE(startedStorage.size(), 17);
+            CORRADE_COMPARE(stoppedStorage.size(), 17);
             CORRADE_COMPARE(factorStorage.size(), 17);
             CORRADE_COMPARE(removeStorage.size(), 17);
             CORRADE_COMPARE(animators.size(), 2);
@@ -1738,7 +1742,7 @@ void AbstractLayerTest::advanceStyleAnimations() {
     UnsignedInt maskData[1];
     Containers::MutableBitArrayView maskStorage{maskData, 0, 17};
     Float factorStorage[17];
-    layer.advanceAnimations(476_nsec, maskStorage, factorStorage, maskStorage, {animator1, animator2});
+    layer.advanceAnimations(476_nsec, maskStorage, maskStorage, maskStorage, factorStorage, maskStorage, {animator1, animator2});
     CORRADE_COMPARE(layer.advanceCalled, 1);
 }
 
@@ -1749,11 +1753,11 @@ void AbstractLayerTest::advanceDataAnimationsEmpty() {
         LayerFeatures doFeatures() const override {
             return LayerFeature::AnimateData;
         }
-        void doAdvanceAnimations(Nanoseconds, Containers::MutableBitArrayView, const Containers::StridedArrayView1D<Float>&, Containers::MutableBitArrayView, const Containers::Iterable<AbstractDataAnimator>&) override {}
+        void doAdvanceAnimations(Nanoseconds, Containers::MutableBitArrayView, Containers::MutableBitArrayView, Containers::MutableBitArrayView, const Containers::StridedArrayView1D<Float>&, Containers::MutableBitArrayView, const Containers::Iterable<AbstractDataAnimator>&) override {}
     } layer{layerHandle(0, 1)};
 
     /* It shouldn't crash or anything */
-    layer.advanceAnimations(0_nsec, {}, {}, {}, Containers::Iterable<AbstractDataAnimator>{});
+    layer.advanceAnimations(0_nsec, {}, {}, {}, {}, {}, Containers::Iterable<AbstractDataAnimator>{});
     CORRADE_VERIFY(true);
 }
 
@@ -1764,11 +1768,11 @@ void AbstractLayerTest::advanceStyleAnimationsEmpty() {
         LayerFeatures doFeatures() const override {
             return LayerFeature::AnimateStyles;
         }
-        void doAdvanceAnimations(Nanoseconds, Containers::MutableBitArrayView, const Containers::StridedArrayView1D<Float>&, Containers::MutableBitArrayView, const Containers::Iterable<AbstractStyleAnimator>&) override {}
+        void doAdvanceAnimations(Nanoseconds, Containers::MutableBitArrayView, Containers::MutableBitArrayView, Containers::MutableBitArrayView, const Containers::StridedArrayView1D<Float>&, Containers::MutableBitArrayView, const Containers::Iterable<AbstractStyleAnimator>&) override {}
     } layer{layerHandle(0, 1)};
 
     /* It shouldn't crash or anything */
-    layer.advanceAnimations(0_nsec, {}, {}, {}, Containers::Iterable<AbstractStyleAnimator>{});
+    layer.advanceAnimations(0_nsec, {}, {}, {}, {}, {}, Containers::Iterable<AbstractStyleAnimator>{});
     CORRADE_VERIFY(true);
 }
 
@@ -1786,7 +1790,7 @@ void AbstractLayerTest::advanceDataAnimationsNotSupported() {
 
     Containers::String out;
     Error redirectError{&out};
-    layer.advanceAnimations(0_nsec, {}, {}, {}, Containers::Iterable<AbstractDataAnimator>{});
+    layer.advanceAnimations(0_nsec, {}, {}, {}, {}, {}, Containers::Iterable<AbstractDataAnimator>{});
     CORRADE_COMPARE(out, "Ui::AbstractLayer::advanceAnimations(): data animation not supported\n");
 }
 
@@ -1804,7 +1808,7 @@ void AbstractLayerTest::advanceStyleAnimationsNotSupported() {
 
     Containers::String out;
     Error redirectError{&out};
-    layer.advanceAnimations(0_nsec, {}, {}, {}, Containers::Iterable<AbstractStyleAnimator>{});
+    layer.advanceAnimations(0_nsec, {}, {}, {}, {}, {}, Containers::Iterable<AbstractStyleAnimator>{});
     CORRADE_COMPARE(out, "Ui::AbstractLayer::advanceAnimations(): style animation not supported\n");
 }
 
@@ -1817,14 +1821,14 @@ void AbstractLayerTest::advanceDataAnimationsNotImplemented() {
         LayerFeatures doFeatures() const override {
             return LayerFeature::AnimateData;
         }
-        void doAdvanceAnimations(Nanoseconds, Containers::MutableBitArrayView, const Containers::StridedArrayView1D<Float>&, Containers::MutableBitArrayView, const Containers::Iterable<AbstractStyleAnimator>&) override {
+        void doAdvanceAnimations(Nanoseconds, Containers::MutableBitArrayView, Containers::MutableBitArrayView, Containers::MutableBitArrayView, const Containers::StridedArrayView1D<Float>&, Containers::MutableBitArrayView, const Containers::Iterable<AbstractStyleAnimator>&) override {
             CORRADE_FAIL("This shouldn't be called");
         }
     } layer{layerHandle(0, 1)};
 
     Containers::String out;
     Error redirectError{&out};
-    layer.advanceAnimations(0_nsec, {}, {}, {}, Containers::Iterable<AbstractDataAnimator>{});
+    layer.advanceAnimations(0_nsec, {}, {}, {}, {}, {}, Containers::Iterable<AbstractDataAnimator>{});
     CORRADE_COMPARE(out, "Ui::AbstractLayer::advanceAnimations(): data animation advertised but not implemented\n");
 }
 
@@ -1837,14 +1841,14 @@ void AbstractLayerTest::advanceStyleAnimationsNotImplemented() {
         LayerFeatures doFeatures() const override {
             return LayerFeature::AnimateStyles;
         }
-        void doAdvanceAnimations(Nanoseconds, Containers::MutableBitArrayView, const Containers::StridedArrayView1D<Float>&, Containers::MutableBitArrayView, const Containers::Iterable<AbstractDataAnimator>&) override {
+        void doAdvanceAnimations(Nanoseconds, Containers::MutableBitArrayView, Containers::MutableBitArrayView, Containers::MutableBitArrayView, const Containers::StridedArrayView1D<Float>&, Containers::MutableBitArrayView, const Containers::Iterable<AbstractDataAnimator>&) override {
             CORRADE_FAIL("This shouldn't be called");
         }
     } layer{layerHandle(0, 1)};
 
     Containers::String out;
     Error redirectError{&out};
-    layer.advanceAnimations(0_nsec, {}, {}, {}, Containers::Iterable<AbstractStyleAnimator>{});
+    layer.advanceAnimations(0_nsec, {}, {}, {}, {}, {}, Containers::Iterable<AbstractStyleAnimator>{});
     CORRADE_COMPARE(out, "Ui::AbstractLayer::advanceAnimations(): style animation advertised but not implemented\n");
 }
 
@@ -1873,7 +1877,7 @@ void AbstractLayerTest::advanceDataAnimationsInvalidFeatures() {
 
     Containers::String out;
     Error redirectError{&out};
-    layer.advanceAnimations(0_nsec, {}, {}, {}, {animator1, animator2});
+    layer.advanceAnimations(0_nsec, {}, {}, {}, {}, {}, {animator1, animator2});
     CORRADE_COMPARE(out, "Ui::AbstractLayer::advanceAnimations(): data attachment not supported by an animator\n");
 }
 
@@ -1902,7 +1906,7 @@ void AbstractLayerTest::advanceStyleAnimationsInvalidFeatures() {
 
     Containers::String out;
     Error redirectError{&out};
-    layer.advanceAnimations(0_nsec, {}, {}, {}, {animator1, animator2});
+    layer.advanceAnimations(0_nsec, {}, {}, {}, {}, {}, {animator1, animator2});
     CORRADE_COMPARE(out, "Ui::AbstractLayer::advanceAnimations(): data attachment not supported by an animator\n");
 }
 
@@ -1930,7 +1934,7 @@ void AbstractLayerTest::advanceDataAnimationsLayerNotSet() {
 
     Containers::String out;
     Error redirectError{&out};
-    layer.advanceAnimations(0_nsec, {}, {}, {}, {animator1, animator2});
+    layer.advanceAnimations(0_nsec, {}, {}, {}, {}, {}, {animator1, animator2});
     CORRADE_COMPARE(out, "Ui::AbstractLayer::advanceAnimations(): animator has no layer set for data attachment\n");
 }
 
@@ -1958,7 +1962,7 @@ void AbstractLayerTest::advanceStyleAnimationsLayerNotSet() {
 
     Containers::String out;
     Error redirectError{&out};
-    layer.advanceAnimations(0_nsec, {}, {}, {}, {animator1, animator2});
+    layer.advanceAnimations(0_nsec, {}, {}, {}, {}, {}, {animator1, animator2});
     CORRADE_COMPARE(out, "Ui::AbstractLayer::advanceAnimations(): animator has no layer set for data attachment\n");
 }
 
@@ -1986,7 +1990,7 @@ void AbstractLayerTest::advanceDataAnimationsInvalidLayer() {
 
     Containers::String out;
     Error redirectError{&out};
-    layer1.advanceAnimations(0_nsec, {}, {}, {}, {animator1, animator2});
+    layer1.advanceAnimations(0_nsec, {}, {}, {}, {}, {}, {animator1, animator2});
     CORRADE_COMPARE(out, "Ui::AbstractLayer::advanceAnimations(): expected an animator assigned to Ui::LayerHandle(0xab, 0x12) but got Ui::LayerHandle(0xcd, 0x34)\n");
 }
 
@@ -2014,7 +2018,7 @@ void AbstractLayerTest::advanceStyleAnimationsInvalidLayer() {
 
     Containers::String out;
     Error redirectError{&out};
-    layer1.advanceAnimations(0_nsec, {}, {}, {}, {animator1, animator2});
+    layer1.advanceAnimations(0_nsec, {}, {}, {}, {}, {}, {animator1, animator2});
     CORRADE_COMPARE(out, "Ui::AbstractLayer::advanceAnimations(): expected an animator assigned to Ui::LayerHandle(0xab, 0x12) but got Ui::LayerHandle(0xcd, 0x34)\n");
 }
 
@@ -2066,15 +2070,19 @@ void AbstractLayerTest::advanceDataAnimationsInvalidSize() {
 
     Containers::String out;
     Error redirectError{&out};
-    layer.advanceAnimations(0_nsec, maskStorageLow, factorStorageLow, maskStorageLow, {animator1, animator2, animator3});
-    layer.advanceAnimations(0_nsec, maskStorage, factorStorage, maskStorageHigh, {animator1, animator2, animator3});
-    layer.advanceAnimations(0_nsec, maskStorage, factorStorageHigh, maskStorage, {animator1, animator2, animator3});
-    layer.advanceAnimations(0_nsec, maskStorageHigh, factorStorage, maskStorage, {animator1, animator2, animator3});
+    layer.advanceAnimations(0_nsec, maskStorageLow, maskStorageLow, maskStorageLow, factorStorageLow, maskStorageLow, {animator1, animator2, animator3});
+    layer.advanceAnimations(0_nsec, maskStorage, maskStorage, maskStorage, factorStorage, maskStorageHigh, {animator1, animator2, animator3});
+    layer.advanceAnimations(0_nsec, maskStorage, maskStorage, maskStorage, factorStorageHigh, maskStorage, {animator1, animator2, animator3});
+    layer.advanceAnimations(0_nsec, maskStorage, maskStorage, maskStorageHigh, factorStorage, maskStorage, {animator1, animator2, animator3});
+    layer.advanceAnimations(0_nsec, maskStorage, maskStorageHigh, maskStorage, factorStorage, maskStorage, {animator1, animator2, animator3});
+    layer.advanceAnimations(0_nsec, maskStorageHigh, maskStorage, maskStorage, factorStorage, maskStorage, {animator1, animator2, animator3});
     CORRADE_COMPARE_AS(out,
-        "Ui::AbstractLayer::advanceAnimations(): expected activeStorage, factorStorage and removeStorage views to have the same size of at least 6 elements but got 5, 5 and 5\n"
-        "Ui::AbstractLayer::advanceAnimations(): expected activeStorage, factorStorage and removeStorage views to have the same size of at least 6 elements but got 6, 6 and 7\n"
-        "Ui::AbstractLayer::advanceAnimations(): expected activeStorage, factorStorage and removeStorage views to have the same size of at least 6 elements but got 6, 7 and 6\n"
-        "Ui::AbstractLayer::advanceAnimations(): expected activeStorage, factorStorage and removeStorage views to have the same size of at least 6 elements but got 7, 6 and 6\n",
+        "Ui::AbstractLayer::advanceAnimations(): expected activeStorage, startedStorage, stoppedStorage, factorStorage and removeStorage views to have the same size of at least 6 elements but got 5, 5, 5, 5 and 5\n"
+        "Ui::AbstractLayer::advanceAnimations(): expected activeStorage, startedStorage, stoppedStorage, factorStorage and removeStorage views to have the same size of at least 6 elements but got 6, 6, 6, 6 and 7\n"
+        "Ui::AbstractLayer::advanceAnimations(): expected activeStorage, startedStorage, stoppedStorage, factorStorage and removeStorage views to have the same size of at least 6 elements but got 6, 6, 6, 7 and 6\n"
+        "Ui::AbstractLayer::advanceAnimations(): expected activeStorage, startedStorage, stoppedStorage, factorStorage and removeStorage views to have the same size of at least 6 elements but got 6, 6, 7, 6 and 6\n"
+        "Ui::AbstractLayer::advanceAnimations(): expected activeStorage, startedStorage, stoppedStorage, factorStorage and removeStorage views to have the same size of at least 6 elements but got 6, 7, 6, 6 and 6\n"
+        "Ui::AbstractLayer::advanceAnimations(): expected activeStorage, startedStorage, stoppedStorage, factorStorage and removeStorage views to have the same size of at least 6 elements but got 7, 6, 6, 6 and 6\n",
         TestSuite::Compare::String);
 }
 
@@ -2126,15 +2134,19 @@ void AbstractLayerTest::advanceStyleAnimationsInvalidSize() {
 
     Containers::String out;
     Error redirectError{&out};
-    layer.advanceAnimations(0_nsec, maskStorageLow, factorStorageLow, maskStorageLow, {animator1, animator2, animator3});
-    layer.advanceAnimations(0_nsec, maskStorage, factorStorage, maskStorageHigh, {animator1, animator2, animator3});
-    layer.advanceAnimations(0_nsec, maskStorage, factorStorageHigh, maskStorage, {animator1, animator2, animator3});
-    layer.advanceAnimations(0_nsec, maskStorageHigh, factorStorage, maskStorage, {animator1, animator2, animator3});
+    layer.advanceAnimations(0_nsec, maskStorageLow, maskStorageLow, maskStorageLow, factorStorageLow, maskStorageLow, {animator1, animator2, animator3});
+    layer.advanceAnimations(0_nsec, maskStorage, maskStorage, maskStorage, factorStorage, maskStorageHigh, {animator1, animator2, animator3});
+    layer.advanceAnimations(0_nsec, maskStorage, maskStorage, maskStorage, factorStorageHigh, maskStorage, {animator1, animator2, animator3});
+    layer.advanceAnimations(0_nsec, maskStorage, maskStorage, maskStorageHigh, factorStorage, maskStorage, {animator1, animator2, animator3});
+    layer.advanceAnimations(0_nsec, maskStorage, maskStorageHigh, maskStorage, factorStorage, maskStorage, {animator1, animator2, animator3});
+    layer.advanceAnimations(0_nsec, maskStorageHigh, maskStorage, maskStorage, factorStorage, maskStorage, {animator1, animator2, animator3});
     CORRADE_COMPARE_AS(out,
-        "Ui::AbstractLayer::advanceAnimations(): expected activeStorage, factorStorage and removeStorage views to have the same size of at least 6 elements but got 5, 5 and 5\n"
-        "Ui::AbstractLayer::advanceAnimations(): expected activeStorage, factorStorage and removeStorage views to have the same size of at least 6 elements but got 6, 6 and 7\n"
-        "Ui::AbstractLayer::advanceAnimations(): expected activeStorage, factorStorage and removeStorage views to have the same size of at least 6 elements but got 6, 7 and 6\n"
-        "Ui::AbstractLayer::advanceAnimations(): expected activeStorage, factorStorage and removeStorage views to have the same size of at least 6 elements but got 7, 6 and 6\n",
+        "Ui::AbstractLayer::advanceAnimations(): expected activeStorage, startedStorage, stoppedStorage, factorStorage and removeStorage views to have the same size of at least 6 elements but got 5, 5, 5, 5 and 5\n"
+        "Ui::AbstractLayer::advanceAnimations(): expected activeStorage, startedStorage, stoppedStorage, factorStorage and removeStorage views to have the same size of at least 6 elements but got 6, 6, 6, 6 and 7\n"
+        "Ui::AbstractLayer::advanceAnimations(): expected activeStorage, startedStorage, stoppedStorage, factorStorage and removeStorage views to have the same size of at least 6 elements but got 6, 6, 6, 7 and 6\n"
+        "Ui::AbstractLayer::advanceAnimations(): expected activeStorage, startedStorage, stoppedStorage, factorStorage and removeStorage views to have the same size of at least 6 elements but got 6, 6, 7, 6 and 6\n"
+        "Ui::AbstractLayer::advanceAnimations(): expected activeStorage, startedStorage, stoppedStorage, factorStorage and removeStorage views to have the same size of at least 6 elements but got 6, 7, 6, 6 and 6\n"
+        "Ui::AbstractLayer::advanceAnimations(): expected activeStorage, startedStorage, stoppedStorage, factorStorage and removeStorage views to have the same size of at least 6 elements but got 7, 6, 6, 6 and 6\n",
         TestSuite::Compare::String);
 }
 
