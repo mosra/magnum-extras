@@ -2858,7 +2858,7 @@ void AbstractAnimatorTest::update() {
     AnimationHandle playingToStoppedKeep = animator.create(0_nsec, 5_nsec, AnimationFlag::KeepOncePlayed);
     AnimationHandle paused = animator.create(-40_nsec, 10_nsec);
     AnimationHandle pausedToStopped = animator.create(-40_nsec, 10_nsec);
-    AnimationHandle stopped = animator.create(-40_nsec, 30_nsec);
+    AnimationHandle stoppedRemove = animator.create(-40_nsec, 30_nsec);
     AnimationHandle stoppedKeep = animator.create(-40_nsec, 30_nsec, AnimationFlag::KeepOncePlayed);
     animator.remove(removed);
     animator.pause(scheduledToPaused, 8_nsec); /* pauses at 3/10 */
@@ -2881,7 +2881,7 @@ void AbstractAnimatorTest::update() {
     CORRADE_COMPARE(animator.state(playingToStoppedKeep), AnimationState::Playing);
     CORRADE_COMPARE(animator.state(paused), AnimationState::Paused);
     CORRADE_COMPARE(animator.state(pausedToStopped), AnimationState::Paused);
-    CORRADE_COMPARE(animator.state(stopped), AnimationState::Stopped);
+    CORRADE_COMPARE(animator.state(stoppedRemove), AnimationState::Stopped);
     CORRADE_COMPARE(animator.state(stoppedKeep), AnimationState::Stopped);
 
     constexpr Float unused = Constants::inf();
@@ -2905,7 +2905,7 @@ void AbstractAnimatorTest::update() {
             true,   /*  8 playingToStoppedKeep */
             false,  /*  9 paused */
             true,   /* 10 pausedToStopped */
-            false,  /* 11 stopped */
+            false,  /* 11 stoppedRemove */
             false,  /* 12 stoppedKeep */
         }).sliceBit(0), TestSuite::Compare::Container);
         CORRADE_COMPARE_AS(factors, Containers::arrayView({
@@ -2920,7 +2920,7 @@ void AbstractAnimatorTest::update() {
             1.0f,   /*  8 playingToStoppedKeep */
             unused, /*  9 paused */
             1.0f,   /* 10 pausedToStopped */
-            unused, /* 11 stopped */
+            unused, /* 11 stoppedRemove */
             unused, /* 12 stoppedKeep */
         }), TestSuite::Compare::Container);
         CORRADE_COMPARE_AS(Containers::BitArrayView{remove}, Containers::stridedArrayView({
@@ -2935,7 +2935,7 @@ void AbstractAnimatorTest::update() {
             false,  /*  8 playingToStoppedKeep */
             false,  /*  9 paused */
             true,   /* 10 pausedToStopped */
-            true,   /* 11 stopped */
+            true,   /* 11 stoppedRemove */
             false,  /* 12 stoppedKeep */
         }).sliceBit(0), TestSuite::Compare::Container);
 
@@ -2956,7 +2956,7 @@ void AbstractAnimatorTest::update() {
     CORRADE_VERIFY(animator.isHandleValid(playingToStoppedKeep));
     CORRADE_VERIFY(animator.isHandleValid(paused));
     CORRADE_VERIFY(!animator.isHandleValid(pausedToStopped));
-    CORRADE_VERIFY(!animator.isHandleValid(stopped));
+    CORRADE_VERIFY(!animator.isHandleValid(stoppedRemove));
     CORRADE_VERIFY(animator.isHandleValid(stoppedKeep));
 
     CORRADE_COMPARE(animator.state(scheduledKeep), AnimationState::Scheduled);
@@ -2970,7 +2970,7 @@ void AbstractAnimatorTest::update() {
     CORRADE_COMPARE(animator.state(playingToStoppedKeep), AnimationState::Stopped);
     CORRADE_COMPARE(animator.state(paused), AnimationState::Paused);
     /* pausedToStopped is gone */
-    /* stopped is gone */
+    /* stoppedRemove is gone */
     CORRADE_COMPARE(animator.state(stoppedKeep), AnimationState::Stopped);
 
     /* Call to update(10) again marks only the currently playing animations as
@@ -2994,7 +2994,7 @@ void AbstractAnimatorTest::update() {
             false,  /*  8 playingToStoppedKeep */
             false,  /*  9 paused */
             false,  /* 10 pausedToStopped */
-            false,  /* 11 stopped */
+            false,  /* 11 stoppedRemove */
             false,  /* 12 stoppedKeep */
         }).sliceBit(0), TestSuite::Compare::Container);
         CORRADE_COMPARE_AS(factors, Containers::arrayView({
@@ -3009,7 +3009,7 @@ void AbstractAnimatorTest::update() {
             unused, /*  8 playingToStoppedKeep */
             unused, /*  9 paused */
             unused, /* 10 pausedToStopped */
-            unused, /* 11 stopped */
+            unused, /* 11 stoppedRemove */
             unused, /* 12 stoppedKeep */
         }), TestSuite::Compare::Container);
         CORRADE_COMPARE_AS(remove,
@@ -3034,7 +3034,7 @@ void AbstractAnimatorTest::update() {
     CORRADE_VERIFY(animator.isHandleValid(playingToStoppedKeep));
     CORRADE_VERIFY(animator.isHandleValid(paused));
     CORRADE_VERIFY(!animator.isHandleValid(pausedToStopped));
-    CORRADE_VERIFY(!animator.isHandleValid(stopped));
+    CORRADE_VERIFY(!animator.isHandleValid(stoppedRemove));
     CORRADE_VERIFY(animator.isHandleValid(stoppedKeep));
 
     /* Same as before */
@@ -3049,7 +3049,7 @@ void AbstractAnimatorTest::update() {
     CORRADE_COMPARE(animator.state(playingToStoppedKeep), AnimationState::Stopped);
     CORRADE_COMPARE(animator.state(paused), AnimationState::Paused);
     /* pausedToStopped is gone */
-    /* stopped is gone */
+    /* stoppedRemove is gone */
     CORRADE_COMPARE(animator.state(stoppedKeep), AnimationState::Stopped);
 
     /* Call at 20 advances only animations that weren't stopped and paused
@@ -3072,7 +3072,7 @@ void AbstractAnimatorTest::update() {
             false,  /*  8 playingToStoppedKeep */
             false,  /*  9 paused */
             false,  /* 10 pausedToStopped */
-            false,  /* 11 stopped */
+            false,  /* 11 stoppedRemove */
             false,  /* 12 stoppedKeep */
         }).sliceBit(0), TestSuite::Compare::Container);
         CORRADE_COMPARE_AS(factors, Containers::arrayView({
@@ -3087,7 +3087,7 @@ void AbstractAnimatorTest::update() {
             unused, /*  8 playingToStoppedKeep */
             unused, /*  9 paused */
             unused, /* 10 pausedToStopped */
-            unused, /* 11 stopped */
+            unused, /* 11 stoppedRemove */
             unused, /* 12 stoppedKeep */
         }), TestSuite::Compare::Container);
         CORRADE_COMPARE_AS(Containers::BitArrayView{remove}, Containers::stridedArrayView({
@@ -3102,7 +3102,7 @@ void AbstractAnimatorTest::update() {
             false,  /*  8 playingToStoppedKeep */
             false,  /*  9 paused */
             false,  /* 10 pausedToStopped */
-            false,  /* 11 stopped */
+            false,  /* 11 stoppedRemove */
             false,  /* 12 stoppedKeep */
         }).sliceBit(0), TestSuite::Compare::Container);
 
@@ -3125,7 +3125,7 @@ void AbstractAnimatorTest::update() {
     CORRADE_VERIFY(animator.isHandleValid(playingToStoppedKeep));
     CORRADE_VERIFY(animator.isHandleValid(paused));
     CORRADE_VERIFY(!animator.isHandleValid(pausedToStopped));
-    CORRADE_VERIFY(!animator.isHandleValid(stopped));
+    CORRADE_VERIFY(!animator.isHandleValid(stoppedRemove));
     CORRADE_VERIFY(animator.isHandleValid(stoppedKeep));
 
     CORRADE_COMPARE(animator.state(scheduledKeep), AnimationState::Scheduled);
@@ -3139,7 +3139,7 @@ void AbstractAnimatorTest::update() {
     CORRADE_COMPARE(animator.state(playingToStoppedKeep), AnimationState::Stopped);
     CORRADE_COMPARE(animator.state(paused), AnimationState::Paused);
     /* pausedToStopped is gone */
-    /* stopped is gone */
+    /* stoppedRemove is gone */
     CORRADE_COMPARE(animator.state(stoppedKeep), AnimationState::Stopped);
 
     /* After stopping what's paused, call at 30 advances the remaining
@@ -3164,7 +3164,7 @@ void AbstractAnimatorTest::update() {
             false,  /*  8 playingToStoppedKeep */
             true,   /*  9 paused */
             false,  /* 10 pausedToStopped */
-            false,  /* 11 stopped */
+            false,  /* 11 stoppedRemove */
             false,  /* 12 stoppedKeep */
         }).sliceBit(0), TestSuite::Compare::Container);
         CORRADE_COMPARE_AS(factors, Containers::arrayView({
@@ -3179,7 +3179,7 @@ void AbstractAnimatorTest::update() {
             unused, /*  8 playingToStoppedKeep */
             1.0f,   /*  9 paused */
             unused, /* 10 pausedToStopped */
-            unused, /* 11 stopped */
+            unused, /* 11 stoppedRemove */
             unused, /* 12 stoppedKeep */
         }), TestSuite::Compare::Container);
         CORRADE_COMPARE_AS(Containers::BitArrayView{remove}, Containers::stridedArrayView({
@@ -3194,7 +3194,7 @@ void AbstractAnimatorTest::update() {
             false,  /*  8 playingToStoppedKeep */
             true,   /*  9 paused */
             false,  /* 10 pausedToStopped */
-            false,  /* 11 stopped */
+            false,  /* 11 stoppedRemove */
             false,  /* 12 stoppedKeep */
         }).sliceBit(0), TestSuite::Compare::Container);
 
@@ -3217,7 +3217,7 @@ void AbstractAnimatorTest::update() {
     CORRADE_VERIFY(animator.isHandleValid(playingToStoppedKeep));
     CORRADE_VERIFY(!animator.isHandleValid(paused));
     CORRADE_VERIFY(!animator.isHandleValid(pausedToStopped));
-    CORRADE_VERIFY(!animator.isHandleValid(stopped));
+    CORRADE_VERIFY(!animator.isHandleValid(stoppedRemove));
     CORRADE_VERIFY(animator.isHandleValid(stoppedKeep));
 
     CORRADE_COMPARE(animator.state(scheduledKeep), AnimationState::Playing);
@@ -3231,7 +3231,7 @@ void AbstractAnimatorTest::update() {
     CORRADE_COMPARE(animator.state(playingToStoppedKeep), AnimationState::Stopped);
     /* paused is gone */
     /* pausedToStopped is gone */
-    /* stopped is gone */
+    /* stoppedRemove is gone */
     CORRADE_COMPARE(animator.state(stoppedKeep), AnimationState::Stopped);
 
     /* Call at 40 doesn't need to delegeate to clean() anymore */
@@ -3252,7 +3252,7 @@ void AbstractAnimatorTest::update() {
             false,  /*  8 playingToStoppedKeep */
             false,  /*  9 paused */
             false,  /* 10 pausedToStopped */
-            false,  /* 11 stopped */
+            false,  /* 11 stoppedRemove */
             false,  /* 12 stoppedKeep */
         }).sliceBit(0), TestSuite::Compare::Container);
         CORRADE_COMPARE_AS(factors, Containers::arrayView({
@@ -3267,7 +3267,7 @@ void AbstractAnimatorTest::update() {
             unused, /*  8 playingToStoppedKeep */
             unused, /*  9 paused */
             unused, /* 10 pausedToStopped */
-            unused, /* 11 stopped */
+            unused, /* 11 stoppedRemove */
             unused, /* 12 stoppedKeep */
         }), TestSuite::Compare::Container);
         CORRADE_COMPARE_AS(remove,
@@ -3291,7 +3291,7 @@ void AbstractAnimatorTest::update() {
     CORRADE_VERIFY(animator.isHandleValid(playingToStoppedKeep));
     CORRADE_VERIFY(!animator.isHandleValid(paused));
     CORRADE_VERIFY(!animator.isHandleValid(pausedToStopped));
-    CORRADE_VERIFY(!animator.isHandleValid(stopped));
+    CORRADE_VERIFY(!animator.isHandleValid(stoppedRemove));
     CORRADE_VERIFY(animator.isHandleValid(stoppedKeep));
 
     CORRADE_COMPARE(animator.state(scheduledKeep), AnimationState::Stopped);
@@ -3305,7 +3305,7 @@ void AbstractAnimatorTest::update() {
     CORRADE_COMPARE(animator.state(playingToStoppedKeep), AnimationState::Stopped);
     /* paused is gone */
     /* pausedToStopped is gone */
-    /* stopped is gone */
+    /* stoppedRemove is gone */
     CORRADE_COMPARE(animator.state(stoppedKeep), AnimationState::Stopped);
 
     /* Call at 50 needs neither advance nor clean anymore */
@@ -3340,7 +3340,7 @@ void AbstractAnimatorTest::update() {
     CORRADE_VERIFY(animator.isHandleValid(playingToStoppedKeep));
     CORRADE_VERIFY(!animator.isHandleValid(paused));
     CORRADE_VERIFY(!animator.isHandleValid(pausedToStopped));
-    CORRADE_VERIFY(!animator.isHandleValid(stopped));
+    CORRADE_VERIFY(!animator.isHandleValid(stoppedRemove));
     CORRADE_VERIFY(animator.isHandleValid(stoppedKeep));
 
     /* Same as before */
@@ -3355,7 +3355,7 @@ void AbstractAnimatorTest::update() {
     CORRADE_COMPARE(animator.state(playingToStoppedKeep), AnimationState::Stopped);
     /* paused is gone */
     /* pausedToStopped is gone */
-    /* stopped is gone */
+    /* stoppedRemove is gone */
     CORRADE_COMPARE(animator.state(stoppedKeep), AnimationState::Stopped);
 }
 
