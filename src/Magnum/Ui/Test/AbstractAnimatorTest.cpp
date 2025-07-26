@@ -3649,8 +3649,9 @@ void AbstractAnimatorTest::state() {
         AnimationHandle animation = animator.create(-10_nsec, 10_nsec);
         CORRADE_COMPARE(animator.state(animation), AnimationState::Stopped);
         CORRADE_COMPARE(animator.state(), AnimatorState::NeedsAdvance);
-        CORRADE_COMPARE(animator.update(0_nsec, mask, factors, mask), Containers::pair(false, true));
-        CORRADE_COMPARE(mask[0], true);
+        Containers::BitArray remove{NoInit, 1};
+        CORRADE_COMPARE(animator.update(0_nsec, mask, factors, remove), Containers::pair(false, true));
+        CORRADE_COMPARE(remove[0], true);
         animator.remove(animation);
         CORRADE_VERIFY(!animator.isHandleValid(animation));
         CORRADE_COMPARE(animator.state(), AnimatorStates{});
