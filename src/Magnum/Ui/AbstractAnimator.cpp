@@ -328,7 +328,9 @@ bool AbstractAnimator::isHandleValid(const AnimationHandle handle) const {
 namespace {
 
 AnimationState animationState(const Animation& animation, const Nanoseconds time) {
-    /* The animation is stopped if the stopped time is before the started time.
+    /* The animation is stopped if the stopped time is at or before the started
+       time, returning AnimationState::Stopped below.
+
        Not critically important for behavior as without it the animation would
        still work correctly, eventually transitioning from Scheduled to Stopped
        without any Playing or Paused in between, but this makes it Stopped
@@ -341,14 +343,14 @@ AnimationState animationState(const Animation& animation, const Nanoseconds time
             return AnimationState::Scheduled;
 
         /* The animation isn't playing anymore if the stopped time already
-           happened */
+           happened, falling through to AnimationState::Stopped below */
         } else if(animation.used.stopped > time) {
             CORRADE_INTERNAL_ASSERT(animation.used.started <= time);
 
             const Nanoseconds currentTime = Math::min(animation.used.paused, time);
 
             /* The animation isn't playing anymore if all repeats were already
-               exhausted */
+               exhausted, falling through to AnimationState::Stopped below */
             if(animation.used.repeatCount == 0 || animation.used.started + animation.used.duration*animation.used.repeatCount > currentTime) {
                 /* The animation isn't currently playing if the paused time
                    already happened */
@@ -866,10 +868,10 @@ void AbstractAnimator::playInternal(const UnsignedInt id, const Nanoseconds time
     Animation& animation = state.animations[id];
 
     /* If the animation
-        - wasn't paused before (paused time is Nanoseconds::max()),
-        - was stopped earlier than paused (paused time is >= stopped time),
-        - was paused earlier than actually started,
-        - we resume before the actual pause happens,
+        - wasn't paused before or was stopped earlier than paused (paused time
+          is Nanoseconds::max() or is >= stopped time),
+        - or was paused earlier than actually started,
+        - or we resume before the actual pause happens,
         - or we resume after it was stopped,
        play it from the start */
     if(animation.used.paused >= animation.used.stopped ||
@@ -895,7 +897,7 @@ void AbstractAnimator::playInternal(const UnsignedInt id, const Nanoseconds time
     const AnimationState animationStateAfter = animationState(animation, state.time);
     CORRADE_INTERNAL_ASSERT(animationStateAfter != AnimationState::Paused);
     if(animationStateAfter == AnimationState::Scheduled ||
-        animationStateAfter == AnimationState::Playing)
+       animationStateAfter == AnimationState::Playing)
         state.state |= AnimatorState::NeedsAdvance;
 }
 
