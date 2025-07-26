@@ -866,10 +866,10 @@ void AbstractAnimator::playInternal(const UnsignedInt id, const Nanoseconds time
     Animation& animation = state.animations[id];
 
     /* If the animation
-        - wasn't paused before (paused time is Nanoseconds::max()),
-        - was stopped earlier than paused (paused time is >= stopped time),
-        - was paused earlier than actually started,
-        - we resume before the actual pause happens,
+        - wasn't paused before or was stopped earlier than paused (paused time
+          is Nanoseconds::max() or is >= stopped time),
+        - or was paused earlier than actually started,
+        - or we resume before the actual pause happens,
         - or we resume after it was stopped,
        play it from the start */
     if(animation.used.paused >= animation.used.stopped ||
@@ -895,7 +895,7 @@ void AbstractAnimator::playInternal(const UnsignedInt id, const Nanoseconds time
     const AnimationState animationStateAfter = animationState(animation, state.time);
     CORRADE_INTERNAL_ASSERT(animationStateAfter != AnimationState::Paused);
     if(animationStateAfter == AnimationState::Scheduled ||
-        animationStateAfter == AnimationState::Playing)
+       animationStateAfter == AnimationState::Playing)
         state.state |= AnimatorState::NeedsAdvance;
 }
 
