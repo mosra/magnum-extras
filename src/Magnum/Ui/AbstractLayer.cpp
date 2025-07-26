@@ -489,7 +489,7 @@ void AbstractLayer::cleanData(const Containers::Iterable<AbstractAnimator>& anim
     state.state &= ~LayerState::NeedsDataClean;
 }
 
-void AbstractLayer::advanceAnimations(const Nanoseconds time, const Containers::MutableBitArrayView activeStorage, const Containers::StridedArrayView1D<Float>& factorStorage, const Containers::MutableBitArrayView removeStorage, const Containers::Iterable<AbstractDataAnimator>& animators) {
+void AbstractLayer::advanceAnimations(const Nanoseconds time, const Containers::MutableBitArrayView activeStorage, const Containers::MutableBitArrayView startedStorage, const Containers::MutableBitArrayView stoppedStorage, const Containers::StridedArrayView1D<Float>& factorStorage, const Containers::MutableBitArrayView removeStorage, const Containers::Iterable<AbstractDataAnimator>& animators) {
     CORRADE_ASSERT(features() & LayerFeature::AnimateData,
         "Ui::AbstractLayer::advanceAnimations(): data animation not supported", );
 
@@ -506,19 +506,21 @@ void AbstractLayer::advanceAnimations(const Nanoseconds time, const Containers::
     }
     CORRADE_ASSERT(
         activeStorage.size() >= maxCapacity &&
+        startedStorage.size() == activeStorage.size() &&
+        stoppedStorage.size() == activeStorage.size() &&
         factorStorage.size() == activeStorage.size() &&
         removeStorage.size() == activeStorage.size(),
-        "Ui::AbstractLayer::advanceAnimations(): expected activeStorage, factorStorage and removeStorage views to have the same size of at least" << maxCapacity << "elements but got" << activeStorage.size() << Debug::nospace << "," << factorStorage.size() << "and" << removeStorage.size(), );
+        "Ui::AbstractLayer::advanceAnimations(): expected activeStorage, startedStorage, stoppedStorage, factorStorage and removeStorage views to have the same size of at least" << maxCapacity << "elements but got" << activeStorage.size() << Debug::nospace << "," << startedStorage.size() << Debug::nospace << "," << stoppedStorage.size() << Debug::nospace << "," << factorStorage.size() << "and" << removeStorage.size(), );
     #endif
 
-    doAdvanceAnimations(time, activeStorage, factorStorage, removeStorage, animators);
+    doAdvanceAnimations(time, activeStorage, startedStorage, stoppedStorage, factorStorage, removeStorage, animators);
 }
 
-void AbstractLayer::doAdvanceAnimations(Nanoseconds, Containers::MutableBitArrayView, const Containers::StridedArrayView1D<Float>&, Containers::MutableBitArrayView, const Containers::Iterable<AbstractDataAnimator>&) {
+void AbstractLayer::doAdvanceAnimations(Nanoseconds, Containers::MutableBitArrayView, Containers::MutableBitArrayView, Containers::MutableBitArrayView, const Containers::StridedArrayView1D<Float>&, Containers::MutableBitArrayView, const Containers::Iterable<AbstractDataAnimator>&) {
     CORRADE_ASSERT_UNREACHABLE("Ui::AbstractLayer::advanceAnimations(): data animation advertised but not implemented", );
 }
 
-void AbstractLayer::advanceAnimations(const Nanoseconds time, const Containers::MutableBitArrayView activeStorage, const Containers::StridedArrayView1D<Float>& factorStorage, const Containers::MutableBitArrayView removeStorage, const Containers::Iterable<AbstractStyleAnimator>& animators) {
+void AbstractLayer::advanceAnimations(const Nanoseconds time, const Containers::MutableBitArrayView activeStorage, const Containers::MutableBitArrayView startedStorage, const Containers::MutableBitArrayView stoppedStorage, const Containers::StridedArrayView1D<Float>& factorStorage, const Containers::MutableBitArrayView removeStorage, const Containers::Iterable<AbstractStyleAnimator>& animators) {
     CORRADE_ASSERT(features() & LayerFeature::AnimateStyles,
         "Ui::AbstractLayer::advanceAnimations(): style animation not supported", );
 
@@ -535,15 +537,17 @@ void AbstractLayer::advanceAnimations(const Nanoseconds time, const Containers::
     }
     CORRADE_ASSERT(
         activeStorage.size() >= maxCapacity &&
+        startedStorage.size() == activeStorage.size() &&
+        stoppedStorage.size() == activeStorage.size() &&
         factorStorage.size() == activeStorage.size() &&
         removeStorage.size() == activeStorage.size(),
-        "Ui::AbstractLayer::advanceAnimations(): expected activeStorage, factorStorage and removeStorage views to have the same size of at least" << maxCapacity << "elements but got" << activeStorage.size() << Debug::nospace << "," << factorStorage.size() << "and" << removeStorage.size(), );
+        "Ui::AbstractLayer::advanceAnimations(): expected activeStorage, startedStorage, stoppedStorage, factorStorage and removeStorage views to have the same size of at least" << maxCapacity << "elements but got" << activeStorage.size() << Debug::nospace << "," << startedStorage.size() << Debug::nospace << "," << stoppedStorage.size() << Debug::nospace << "," << factorStorage.size() << "and" << removeStorage.size(), );
     #endif
 
-    doAdvanceAnimations(time, activeStorage, factorStorage, removeStorage, animators);
+    doAdvanceAnimations(time, activeStorage, startedStorage, stoppedStorage, factorStorage, removeStorage, animators);
 }
 
-void AbstractLayer::doAdvanceAnimations(Nanoseconds, Containers::MutableBitArrayView, const Containers::StridedArrayView1D<Float>&, Containers::MutableBitArrayView, const Containers::Iterable<AbstractStyleAnimator>&) {
+void AbstractLayer::doAdvanceAnimations(Nanoseconds, Containers::MutableBitArrayView, Containers::MutableBitArrayView, Containers::MutableBitArrayView, const Containers::StridedArrayView1D<Float>&, Containers::MutableBitArrayView, const Containers::Iterable<AbstractStyleAnimator>&) {
     CORRADE_ASSERT_UNREACHABLE("Ui::AbstractLayer::advanceAnimations(): style animation advertised but not implemented", );
 }
 

@@ -2540,11 +2540,15 @@ AbstractUserInterface& AbstractUserInterface::advanceAnimations(const Nanosecond
             maxCapacity = Math::max(instance->capacity(), maxCapacity);
     }
     Containers::MutableBitArrayView active;
+    Containers::MutableBitArrayView started;
+    Containers::MutableBitArrayView stopped;
     Containers::MutableBitArrayView remove;
     Containers::ArrayView<Float> factors;
     Containers::MutableBitArrayView nodesRemove;
     Containers::ArrayTuple storage{
         {NoInit, maxCapacity, active},
+        {NoInit, maxCapacity, started},
+        {NoInit, maxCapacity, stopped},
         {NoInit, maxCapacity, remove},
         {NoInit, maxCapacity, factors},
         {ValueInit, state.nodes.size(), nodesRemove}
@@ -2566,12 +2570,16 @@ AbstractUserInterface& AbstractUserInterface::advanceAnimations(const Nanosecond
             const std::size_t capacity = instance.capacity();
             const Containers::Pair<bool, bool> needsAdvanceClean = instance.update(time,
                 active.prefix(capacity),
+                started.prefix(capacity),
+                stopped.prefix(capacity),
                 factors.prefix(capacity),
                 remove.prefix(capacity));
 
             if(needsAdvanceClean.first())
                 static_cast<AbstractGenericAnimator&>(instance).advance(
                     active.prefix(capacity),
+                    started.prefix(capacity),
+                    stopped.prefix(capacity),
                     factors.prefix(capacity));
             if(needsAdvanceClean.second())
                 instance.clean(remove.prefix(capacity));
@@ -2607,12 +2615,16 @@ AbstractUserInterface& AbstractUserInterface::advanceAnimations(const Nanosecond
             const std::size_t capacity = instance.capacity();
             const Containers::Pair<bool, bool> needsAdvanceClean = instance.update(time,
                 active.prefix(capacity),
+                started.prefix(capacity),
+                stopped.prefix(capacity),
                 factors.prefix(capacity),
                 remove.prefix(capacity));
 
             if(needsAdvanceClean.first())
                 nodeAnimations |= static_cast<AbstractNodeAnimator&>(instance).advance(
                     active.prefix(capacity),
+                    started.prefix(capacity),
+                    stopped.prefix(capacity),
                     factors.prefix(capacity),
                     nodeOffsets,
                     nodeSizes,
@@ -2654,6 +2666,8 @@ AbstractUserInterface& AbstractUserInterface::advanceAnimations(const Nanosecond
                     /* Pass the whole arrays, the internals will slice them up
                        as needed before passing to individual animators */
                     active,
+                    started,
+                    stopped,
                     factors,
                     remove,
                     /* The cast is a bit ew, yeah */
@@ -2670,6 +2684,8 @@ AbstractUserInterface& AbstractUserInterface::advanceAnimations(const Nanosecond
                     /* Pass the whole arrays, the internals will slice them up
                        as needed before passing to individual animators */
                     active,
+                    started,
+                    stopped,
                     factors,
                     remove,
                     /* The cast is a bit ew, yeah */

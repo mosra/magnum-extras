@@ -45,7 +45,7 @@ Depending on which of these are returned from
 @ref TextLayerStyleAnimator::advance(), causes various @ref LayerState flags
 and other internal @ref AbstractLayer state to be set after an
 @ref AbstractUserInterface::advanceAnimations() (and transitively
-@ref AbstractLayer::advanceAnimations(Nanoseconds, Containers::MutableBitArrayView, const Containers::StridedArrayView1D<Float>&, Containers::MutableBitArrayView, const Containers::Iterable<AbstractStyleAnimator>&))
+@ref AbstractLayer::advanceAnimations(Nanoseconds, Containers::MutableBitArrayView, Containers::MutableBitArrayView, Containers::MutableBitArrayView, const Containers::StridedArrayView1D<Float>&, Containers::MutableBitArrayView, const Containers::Iterable<AbstractStyleAnimator>&))
 call.
 @see @ref TextLayerStyleAnimations
 */
@@ -599,7 +599,7 @@ class MAGNUM_UI_EXPORT TextLayerStyleAnimator: public AbstractVisualLayerStyleAn
          *      data indexed by data ID
          * @return Style properties that were affected by the animation
          *
-         * Used internally from @ref TextLayer::advanceAnimations(Nanoseconds, Containers::MutableBitArrayView, const Containers::StridedArrayView1D<Float>&, Containers::MutableBitArrayView, const Containers::Iterable<AbstractStyleAnimator>&),
+         * Used internally from @ref TextLayer::advanceAnimations(Nanoseconds, Containers::MutableBitArrayView, Containers::MutableBitArrayView, Containers::MutableBitArrayView, const Containers::StridedArrayView1D<Float>&, Containers::MutableBitArrayView, const Containers::Iterable<AbstractStyleAnimator>&),
          * which is called from @ref AbstractUserInterface::advanceAnimations().
          * Exposed just for testing purposes, there should be no need to call
          * this function directly and doing so may cause internal

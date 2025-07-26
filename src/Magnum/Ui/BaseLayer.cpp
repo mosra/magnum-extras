@@ -479,7 +479,7 @@ void BaseLayer::doSetSize(const Vector2& size, const Vector2i& framebufferSize) 
     state.framebufferSize = framebufferSize;
 }
 
-void BaseLayer::doAdvanceAnimations(const Nanoseconds time, const Containers::MutableBitArrayView activeStorage, const Containers::StridedArrayView1D<Float>& factorStorage, const Containers::MutableBitArrayView removeStorage, const Containers::Iterable<AbstractStyleAnimator>& animators) {
+void BaseLayer::doAdvanceAnimations(const Nanoseconds time, const Containers::MutableBitArrayView activeStorage, const Containers::MutableBitArrayView startedStorage, const Containers::MutableBitArrayView stoppedStorage, const Containers::StridedArrayView1D<Float>& factorStorage, const Containers::MutableBitArrayView removeStorage, const Containers::Iterable<AbstractStyleAnimator>& animators) {
     auto& state = static_cast<State&>(*_state);
 
     BaseLayerStyleAnimations animations;
@@ -490,6 +490,8 @@ void BaseLayer::doAdvanceAnimations(const Nanoseconds time, const Containers::Mu
         const std::size_t capacity = animator.capacity();
         const Containers::Pair<bool, bool> needsAdvanceClean = animator.update(time,
             activeStorage.prefix(capacity),
+            startedStorage.prefix(capacity),
+            stoppedStorage.prefix(capacity),
             factorStorage.prefix(capacity),
             removeStorage.prefix(capacity));
 

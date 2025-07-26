@@ -2097,7 +2097,7 @@ void TextLayer::doClean(const Containers::BitArrayView dataIdsToRemove) {
        remove(). See a comment there for more information. */
 }
 
-void TextLayer::doAdvanceAnimations(const Nanoseconds time, const Containers::MutableBitArrayView activeStorage, const Containers::StridedArrayView1D<Float>& factorStorage, const Containers::MutableBitArrayView removeStorage, const Containers::Iterable<AbstractStyleAnimator>& animators) {
+void TextLayer::doAdvanceAnimations(const Nanoseconds time, const Containers::MutableBitArrayView activeStorage, const Containers::MutableBitArrayView startedStorage, const Containers::MutableBitArrayView stoppedStorage, const Containers::StridedArrayView1D<Float>& factorStorage, const Containers::MutableBitArrayView removeStorage, const Containers::Iterable<AbstractStyleAnimator>& animators) {
     auto& state = static_cast<State&>(*_state);
 
     TextLayerStyleAnimations animations;
@@ -2108,6 +2108,8 @@ void TextLayer::doAdvanceAnimations(const Nanoseconds time, const Containers::Mu
         const std::size_t capacity = animator.capacity();
         const Containers::Pair<bool, bool> needsAdvanceClean = animator.update(time,
             activeStorage.prefix(capacity),
+            startedStorage.prefix(capacity),
+            stoppedStorage.prefix(capacity),
             factorStorage.prefix(capacity),
             removeStorage.prefix(capacity));
 

@@ -1054,6 +1054,10 @@ class MAGNUM_UI_EXPORT AbstractAnimator {
          * @brief Update the internal state and calculate factors for animation advance
          * @param[in]  time     Time to which to calculate the factors
          * @param[out] active   Where to put a mask of active animations
+         * @param[out] started  Where to put a mask of animations that started
+         *      playing since last time
+         * @param[out] stopped  Where to put a mask of animations that stopped
+         *      playing since last time
          * @param[out] factors  Where to put animation interpolation factors
          * @param[out] remove   Where to put a mask of animations to remove
          * @return Whether any bits are set in @p active and in @p remove
@@ -1062,21 +1066,38 @@ class MAGNUM_UI_EXPORT AbstractAnimator {
          * @ref AbstractLayer::advanceAnimations() implementations to generate
          * data to subsequently pass to animator implementations. Expects that
          * @p time is greater or equal to @ref time() and size of @p active,
-         * @p factors and @p remove is the same as @ref capacity().
+         * @p started, @p stopped, @p factors and @p remove is the same as
+         * @ref capacity().
          *
          * The @p active view gets filled with a mask of animations that are
          * @ref AnimationState::Playing at @p time or which changed to
          * @ref AnimationState::Paused or @ref AnimationState::Stopped at
-         * @p time compared to @ref time(), @p factors get filled with
+         * @p time compared to @ref time(), @p started gets filled with a mask
+         * of animations that were @ref AnimationState::Scheduled at
+         * @ref time() and are not at @p time, @p stopped gets filled with a
+         * mask of animations that were not @ref AnimationState::Stopped at
+         * @ref time() and are at @p time. The @p factors get filled with
          * interpolation factors for active animations and @p remove gets
          * filled with a mask of animations that are
          * @ref AnimationState::Stopped at @p time and don't have
          * @ref AnimationFlag::KeepOncePlayed. See documentation of
          * @ref AnimationState values for how the state transition behaves.
          *
+         * In particular, any animation that's @p started or @p stopped is
+         * @p active as well. An animation can be both @p started and
+         * @p stopped, in which case it played in full between @ref time() and
+         * @p time. The @p started bit is only set for animations that begun
+         * playing from the start, i.e. animations that transition from
+         * @ref AnimationState::Paused to @ref AnimationState::Playing don't
+         * have it set. Similarly, @p stopped isn't set for animations that
+         * transitioned from @ref AnimationState::Playing to
+         * @ref AnimationState::Paused. Animations that are repeated don't get
+         * @p started or @p stopped set when they restart.
+         *
          * If the first return value is @cpp true @ce, the @p active,
-         * @p factors and @p remove views are meant to be passed to subclass
-         * implementations such as @ref AbstractGenericAnimator::advance() or
+         * @p started, @p stopped and @p factors views are meant to be passed
+         * to subclass implementations such as
+         * @ref AbstractGenericAnimator::advance() or
          * @ref AbstractNodeAnimator::advance(), if the second return value is
          * @cpp true @ce, the @p remove view is then meant to be passed to
          * @ref clean().
@@ -1090,7 +1111,7 @@ class MAGNUM_UI_EXPORT AbstractAnimator {
          * flags are set.
          * @see @ref state(AnimationHandle) const
          */
-        Containers::Pair<bool, bool> update(Nanoseconds time, Containers::MutableBitArrayView active, const Containers::StridedArrayView1D<Float>& factors, Containers::MutableBitArrayView remove);
+        Containers::Pair<bool, bool> update(Nanoseconds time, Containers::MutableBitArrayView active, Containers::MutableBitArrayView started, Containers::MutableBitArrayView stopped, const Containers::StridedArrayView1D<Float>& factors, Containers::MutableBitArrayView remove);
 
     protected:
         /**
@@ -1368,12 +1389,12 @@ class MAGNUM_UI_EXPORT AbstractGenericAnimator: public AbstractAnimator {
          * this function directly and doing so may cause internal
          * @ref AbstractUserInterface state update to misbehave.
          *
-         * Expects that size of @p active and @p factors matches
-         * @ref capacity(), it's assumed that their contents were filled by
-         * @ref update() before. Delegates to @ref doAdvance(), see its
-         * documentation for more information.
+         * Expects that size of @p active, @p started, @p stopped and
+         * @p factors matches @ref capacity(), it's assumed that their contents
+         * were filled by @ref update() before. Delegates to @ref doAdvance(),
+         * see its documentation for more information.
          */
-        void advance(Containers::BitArrayView active, const Containers::StridedArrayView1D<const Float>& factors);
+        void advance(Containers::BitArrayView active, Containers::BitArrayView started, Containers::BitArrayView stopped, const Containers::StridedArrayView1D<const Float>& factors);
 
     protected:
         /**
@@ -1409,21 +1430,25 @@ class MAGNUM_UI_EXPORT AbstractGenericAnimator: public AbstractAnimator {
         /**
          * @brief Advance the animations
          * @param active        Animation IDs that are active
+         * @param started       Animation IDs that started playing since last
+         *      time
+         * @param stopped       Animation IDs that stopped playing since last
+         *      time
          * @param factors       Interpolation factors indexed by animation ID
          *
          * Implementation for @ref advance(), which is called from
          * @ref AbstractUserInterface::advanceAnimations() whenever
          * @ref AnimatorState::NeedsAdvance is present in @ref state().
          *
-         * The @p active and @p factors views are guaranteed to have the same
-         * size as @ref capacity(). The @p factors array is guaranteed to
-         * contain values in the @f$ [0, 1] @f$ range for animations that have
-         * a corresponding bit set in @p active, calculated equivalently to
-         * @ref factor(AnimationHandle) const, and may contain random or
-         * uninitialized values for others. This function is always called with
-         * at least one @p active bit set.
+         * The @p active, @p started, @p stopped and @p factors views are
+         * guaranteed to have the same size as @ref capacity(). The @p factors
+         * array is guaranteed to contain values in the @f$ [0, 1] @f$ range
+         * for animations that have a corresponding bit set in @p active,
+         * calculated equivalently to @ref factor(AnimationHandle) const, and
+         * may contain random or uninitialized values for others. This function
+         * is always called with at least one @p active bit set.
          */
-        virtual void doAdvance(Containers::BitArrayView active, const Containers::StridedArrayView1D<const Float>& factors) = 0;
+        virtual void doAdvance(Containers::BitArrayView active, Containers::BitArrayView started, Containers::BitArrayView stopped, const Containers::StridedArrayView1D<const Float>& factors) = 0;
 };
 
 /**
@@ -1526,14 +1551,15 @@ class MAGNUM_UI_EXPORT AbstractNodeAnimator: public AbstractAnimator {
          * this function directly and doing so may cause internal
          * @ref AbstractUserInterface state update to misbehave.
          *
-         * Expects that size of @p active and @p factors matches
-         * @ref capacity(), it's assumed that their contents were filled by
-         * @ref update() before. Expects that @p nodeOffsets, @p nodeSizes,
-         * @p nodeFlags and @p nodesRemove have the same size, the views should
-         * be large enough to contain any valid node ID. Delegates to
-         * @ref doAdvance(), see its documentation for more information.
+         * Expects that size of @p active, @p started, @p stopped and
+         * @p factors matches @ref capacity(), it's assumed that their contents
+         * were filled by @ref update() before. Expects that @p nodeOffsets,
+         * @p nodeSizes, @p nodeFlags and @p nodesRemove have the same size,
+         * the views should be large enough to contain any valid node ID.
+         * Delegates to @ref doAdvance(), see its documentation for more
+         * information.
          */
-        NodeAnimations advance(Containers::BitArrayView active, const Containers::StridedArrayView1D<const Float>& factors, const Containers::StridedArrayView1D<Vector2>& nodeOffsets, const Containers::StridedArrayView1D<Vector2>& nodeSizes, const Containers::StridedArrayView1D<NodeFlags>& nodeFlags, Containers::MutableBitArrayView nodesRemove);
+        NodeAnimations advance(Containers::BitArrayView active, Containers::BitArrayView started, Containers::BitArrayView stopped, const Containers::StridedArrayView1D<const Float>& factors, const Containers::StridedArrayView1D<Vector2>& nodeOffsets, const Containers::StridedArrayView1D<Vector2>& nodeSizes, const Containers::StridedArrayView1D<NodeFlags>& nodeFlags, Containers::MutableBitArrayView nodesRemove);
 
     protected:
         /**
@@ -1549,6 +1575,10 @@ class MAGNUM_UI_EXPORT AbstractNodeAnimator: public AbstractAnimator {
         /**
          * @brief Advance the animations
          * @param[in] active            Animation IDs that are active
+         * @param[in] started           Animation IDs that started playing
+         *      since last time
+         * @param[in] stopped           Animation IDs that stopped playing
+         *      since last time
          * @param[in] factors           Interpolation factors indexed by
          *      animation ID
          * @param[in,out] nodeOffsets   Node offsets to animate indexed by node
@@ -1565,13 +1595,13 @@ class MAGNUM_UI_EXPORT AbstractNodeAnimator: public AbstractAnimator {
          * @ref AbstractUserInterface::advanceAnimations() whenever
          * @ref AnimatorState::NeedsAdvance is present in @ref state().
          *
-         * The @p active and @p factors views are guaranteed to have the same
-         * size as @ref capacity(). The @p factors array is guaranteed to
-         * contain values in the @f$ [0, 1] @f$ range for animations that have
-         * a corresponding bit set in @p active, calculated equivalently to
-         * @ref factor(AnimationHandle) const, and may contain random or
-         * uninitialized values for others. This function is always called with
-         * at least one @p active bit set.
+         * The @p active, @p started, @p stopped and @p factors views are
+         * guaranteed to have the same size as @ref capacity(). The @p factors
+         * array is guaranteed to contain values in the @f$ [0, 1] @f$ range
+         * for animations that have a corresponding bit set in @p active,
+         * calculated equivalently to @ref factor(AnimationHandle) const, and
+         * may contain random or uninitialized values for others. This function
+         * is always called with at least one @p active bit set.
          *
          * Node handles corresponding to animation IDs are available in
          * @ref nodes(), node IDs can be then extracted from the handles using
@@ -1598,7 +1628,7 @@ class MAGNUM_UI_EXPORT AbstractNodeAnimator: public AbstractAnimator {
          * internal state update doing a lot of otherwise unnecessary work
          * every frame, negatively affecting performance.
          */
-        virtual NodeAnimations doAdvance(Containers::BitArrayView active, const Containers::StridedArrayView1D<const Float>& factors, const Containers::StridedArrayView1D<Vector2>& nodeOffsets, const Containers::StridedArrayView1D<Vector2>& nodeSizes, const Containers::StridedArrayView1D<NodeFlags>& nodeFlags, Containers::MutableBitArrayView nodesRemove) = 0;
+        virtual NodeAnimations doAdvance(Containers::BitArrayView active, Containers::BitArrayView started, Containers::BitArrayView stopped, const Containers::StridedArrayView1D<const Float>& factors, const Containers::StridedArrayView1D<Vector2>& nodeOffsets, const Containers::StridedArrayView1D<Vector2>& nodeSizes, const Containers::StridedArrayView1D<NodeFlags>& nodeFlags, Containers::MutableBitArrayView nodesRemove) = 0;
 };
 
 /**
@@ -1607,7 +1637,7 @@ class MAGNUM_UI_EXPORT AbstractNodeAnimator: public AbstractAnimator {
 
 @see @ref AbstractUserInterface::setDataAnimatorInstance(),
     @ref AbstractLayer::assignAnimator(AbstractDataAnimator&) const,
-    @ref AbstractLayer::advanceAnimations(Nanoseconds, Containers::MutableBitArrayView, const Containers::StridedArrayView1D<Float>&, Containers::MutableBitArrayView, const Containers::Iterable<AbstractDataAnimator>&)
+    @ref AbstractLayer::advanceAnimations(Nanoseconds, Containers::MutableBitArrayView, Containers::MutableBitArrayView, Containers::MutableBitArrayView, const Containers::StridedArrayView1D<Float>&, Containers::MutableBitArrayView, const Containers::Iterable<AbstractDataAnimator>&)
 */
 class MAGNUM_UI_EXPORT AbstractDataAnimator: public AbstractAnimator {
     public:
@@ -1649,7 +1679,7 @@ class MAGNUM_UI_EXPORT AbstractDataAnimator: public AbstractAnimator {
 
 @see @ref AbstractUserInterface::setStyleAnimatorInstance(),
     @ref AbstractLayer::assignAnimator(AbstractStyleAnimator&) const,
-    @ref AbstractLayer::advanceAnimations(Nanoseconds, Containers::MutableBitArrayView, const Containers::StridedArrayView1D<Float>&, Containers::MutableBitArrayView, const Containers::Iterable<AbstractStyleAnimator>&)
+    @ref AbstractLayer::advanceAnimations(Nanoseconds, Containers::MutableBitArrayView, Containers::MutableBitArrayView, Containers::MutableBitArrayView, const Containers::StridedArrayView1D<Float>&, Containers::MutableBitArrayView, const Containers::Iterable<AbstractStyleAnimator>&)
 */
 class MAGNUM_UI_EXPORT AbstractStyleAnimator: public AbstractAnimator {
     public:

@@ -1321,7 +1321,7 @@ class MAGNUM_UI_EXPORT BaseLayer: public AbstractVisualLayer {
         /* These can't be MAGNUM_UI_LOCAL otherwise deriving from this class
            in tests causes linker errors */
         LayerStates doState() const override;
-        void doAdvanceAnimations(Nanoseconds time, Containers::MutableBitArrayView activeStorage, const Containers::StridedArrayView1D<Float>& factorStorage, Containers::MutableBitArrayView removeStorage, const Containers::Iterable<AbstractStyleAnimator>& animators) override;
+        void doAdvanceAnimations(Nanoseconds time, Containers::MutableBitArrayView activeStorage, Containers::MutableBitArrayView startedStorage, Containers::MutableBitArrayView stoppedStorage, const Containers::StridedArrayView1D<Float>& factorStorage, Containers::MutableBitArrayView removeStorage, const Containers::Iterable<AbstractStyleAnimator>& animators) override;
 };
 
 /**

@@ -1064,19 +1064,23 @@ void AbstractAnimator::cleanData(const Containers::StridedArrayView1D<const Unsi
     doClean(animationIdsToRemove);
 }
 
-Containers::Pair<bool, bool> AbstractAnimator::update(const Nanoseconds time, const Containers::MutableBitArrayView active, const Containers::StridedArrayView1D<Float>& factors, const Containers::MutableBitArrayView remove) {
+Containers::Pair<bool, bool> AbstractAnimator::update(const Nanoseconds time, const Containers::MutableBitArrayView active, const Containers::MutableBitArrayView started, const Containers::MutableBitArrayView stopped, const Containers::StridedArrayView1D<Float>& factors, const Containers::MutableBitArrayView remove) {
     State& state = *_state;
     CORRADE_ASSERT(active.size() == state.animations.size() &&
+                   started.size() == state.animations.size() &&
+                   stopped.size() == state.animations.size() &&
                    factors.size() == state.animations.size() &&
                    remove.size() == state.animations.size(),
-        "Ui::AbstractAnimator::update(): expected active, factors and remove views to have a size of" << state.animations.size() << "but got" << active.size() << Debug::nospace << "," << factors.size() << "and" << remove.size(), {});
+        "Ui::AbstractAnimator::update(): expected active, started, stopped, factors and remove views to have a size of" << state.animations.size() << "but got" << active.size() << Debug::nospace << "," << started.size() << Debug::nospace << "," << stopped.size() << Debug::nospace << "," << factors.size() << "and" << remove.size(), {});
     CORRADE_ASSERT(time >= state.time,
         "Ui::AbstractAnimator::update(): expected a time at least" << state.time << "but got" << time, {});
 
-    /* Zero both bitmasks. AbstractUserInterface::advanceAnimations()
+    /* Zero all bitmasks. AbstractUserInterface::advanceAnimations()
        repeatedly reuses this memory, so without this it'd have to do an
        explicit clear in each case there otherwise. */
     active.resetAll();
+    started.resetAll();
+    stopped.resetAll();
     remove.resetAll();
 
     const Nanoseconds timeBefore = state.time;
@@ -1103,6 +1107,8 @@ Containers::Pair<bool, bool> AbstractAnimator::update(const Nanoseconds time, co
             _c(Playing,Stopped)
             _c(Paused,Stopped)
                 active.set(i);
+                started.set(i, stateBefore == AnimationState::Scheduled);
+                stopped.set(i, stateAfter == AnimationState::Stopped);
                 advanceNeeded = true;
                 factors[i] = animationFactor(animation, time, stateAfter);
                 break;
@@ -1170,11 +1176,13 @@ void AbstractGenericAnimator::setLayer(const AbstractLayer& layer) {
     setLayerInternal(layer);
 }
 
-void AbstractGenericAnimator::advance(const Containers::BitArrayView active, const Containers::StridedArrayView1D<const Float>& factors) {
+void AbstractGenericAnimator::advance(const Containers::BitArrayView active, const Containers::BitArrayView started, const Containers::BitArrayView stopped, const Containers::StridedArrayView1D<const Float>& factors) {
     CORRADE_ASSERT(active.size() == capacity() &&
+                   started.size() == capacity() &&
+                   stopped.size() == capacity() &&
                    factors.size() == capacity(),
-        "Ui::AbstractGenericAnimator::advance(): expected active and factors views to have a size of" << capacity() << "but got" << active.size() << "and" << factors.size(), );
-    doAdvance(active, factors);
+        "Ui::AbstractGenericAnimator::advance(): expected active, started, stopped and factors views to have a size of" << capacity() << "but got" << active.size() << Debug::nospace << "," << started.size() << Debug::nospace << "," << stopped.size() << "and" << factors.size(), );
+    doAdvance(active, started, stopped, factors);
 }
 
 AbstractNodeAnimator::AbstractNodeAnimator(AnimatorHandle handle): AbstractAnimator{handle} {}
@@ -1189,14 +1197,17 @@ AnimatorFeatures AbstractNodeAnimator::doFeatures() const {
     return AnimatorFeature::NodeAttachment;
 }
 
-NodeAnimations AbstractNodeAnimator::advance(const Containers::BitArrayView active, const Containers::StridedArrayView1D<const Float>& factors, const Containers::StridedArrayView1D<Vector2>& nodeOffsets, const Containers::StridedArrayView1D<Vector2>& nodeSizes, const Containers::StridedArrayView1D<NodeFlags>& nodeFlags, const Containers::MutableBitArrayView nodesRemove) {
-    CORRADE_ASSERT(active.size() == capacity() && factors.size() == capacity(),
-        "Ui::AbstractNodeAnimator::advance(): expected active and factors views to have a size of" << capacity() << "but got" << active.size() << "and" << factors.size(), {});
+NodeAnimations AbstractNodeAnimator::advance(const Containers::BitArrayView active, const Containers::BitArrayView started, const Containers::BitArrayView stopped, const Containers::StridedArrayView1D<const Float>& factors, const Containers::StridedArrayView1D<Vector2>& nodeOffsets, const Containers::StridedArrayView1D<Vector2>& nodeSizes, const Containers::StridedArrayView1D<NodeFlags>& nodeFlags, const Containers::MutableBitArrayView nodesRemove) {
+    CORRADE_ASSERT(active.size() == capacity() &&
+                   started.size() == capacity() &&
+                   stopped.size() == capacity() &&
+                   factors.size() == capacity(),
+        "Ui::AbstractNodeAnimator::advance(): expected active, started, stopped and factors views to have a size of" << capacity() << "but got" << active.size() << Debug::nospace << "," << started.size() << Debug::nospace << "," << stopped.size() << "and" << factors.size(), {});
     CORRADE_ASSERT(nodeOffsets.size() == nodeSizes.size() &&
                    nodeFlags.size() == nodeSizes.size() &&
                    nodesRemove.size() == nodeSizes.size(),
         "Ui::AbstractNodeAnimator::advance(): expected node offset, size, flags and remove views to have the same size but got" << nodeOffsets.size() << Debug::nospace << "," << nodeSizes.size() << Debug::nospace << "," << nodeFlags.size() << "and" << nodesRemove.size(), {});
-    return doAdvance(active, factors, nodeOffsets, nodeSizes, nodeFlags, nodesRemove);
+    return doAdvance(active, started, stopped, factors, nodeOffsets, nodeSizes, nodeFlags, nodesRemove);
 }
 
 AbstractDataAnimator::AbstractDataAnimator(AnimatorHandle handle): AbstractAnimator{handle} {}
