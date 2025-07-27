@@ -306,11 +306,11 @@ bool AbstractAnimator::isHandleValid(const AnimatorDataHandle handle) const {
     const UnsignedInt generation = animatorDataHandleGeneration(handle);
     const Animation& animation = state.animations[index];
     /* Zero generation handles (i.e., where it wrapped around from all bits
-       set) are expected to be expired and thus with duration being 0. In other
-       words, it shouldn't be needed to verify also that generation is
+       set) are expected to be expired and thus with duration being -max. In
+       other words, it shouldn't be needed to verify also that generation is
        non-zero. */
-    CORRADE_INTERNAL_DEBUG_ASSERT(generation || animation.used.duration == 0_nsec);
-    return animation.used.duration != 0_nsec && generation == animation.used.generation;
+    CORRADE_INTERNAL_DEBUG_ASSERT(generation || animation.used.duration == Nanoseconds::min());
+    return animation.used.duration != Nanoseconds::min() && generation == animation.used.generation;
 }
 
 bool AbstractAnimator::isHandleValid(const AnimationHandle handle) const {
@@ -360,9 +360,10 @@ AnimationState animationState(const Animation& animation, const Nanoseconds time
 }
 
 AnimationHandle AbstractAnimator::create(const Nanoseconds start, const Nanoseconds duration, const UnsignedInt repeatCount, const AnimationFlags flags) {
-    CORRADE_ASSERT(duration > 0_nsec,
-        "Ui::AbstractAnimator::create(): expected positive duration, got" << duration, {});
-
+    CORRADE_ASSERT(duration >= 0_nsec,
+        "Ui::AbstractAnimator::create(): expected non-negative duration, got" << duration, {});
+    CORRADE_ASSERT(duration != 0_nsec || repeatCount == 1,
+        "Ui::AbstractAnimator::create(): expected count to be 1 for an animation with zero duration but got" << repeatCount, {});
     State& state = *_state;
 
     /* Find the first free animation if there is, update the free index to
@@ -497,10 +498,10 @@ void AbstractAnimator::removeInternal(const UnsignedInt id) {
        bits. */
     ++animation.used.generation &= (1 << Implementation::AnimatorDataHandleGenerationBits) - 1;
 
-    /* Set the animation duration to 0 to avoid falsely recognizing this item
-       as used when directly iterating the list or in isHandleValid() if the
-       generation matches by accident */
-    animation.used.duration = 0_nsec;
+    /* Set the animation duration to -max to avoid falsely recognizing this
+       item as used when directly iterating the list or in isHandleValid() if
+       the generation matches by accident */
+    animation.used.duration = Nanoseconds::min();
 
     /* Clear the node attachment to have null handles in the nodes() list for
        freed animations */
@@ -556,16 +557,22 @@ UnsignedInt AbstractAnimator::repeatCount(const AnimatorDataHandle handle) const
 void AbstractAnimator::setRepeatCount(const AnimationHandle handle, const UnsignedInt count) {
     CORRADE_ASSERT(isHandleValid(handle),
         "Ui::AbstractAnimator::setRepeatCount(): invalid handle" << handle, );
-    _state->animations[animationHandleId(handle)].used.repeatCount = count;
-    /* No AnimatorState needs to be updated, it doesn't cause any
-       already-stopped animations to start playing */
+    setRepeatCountInternal(animationHandleId(handle), count);
 }
 
 void AbstractAnimator::setRepeatCount(const AnimatorDataHandle handle, const UnsignedInt count) {
     CORRADE_ASSERT(isHandleValid(handle),
         "Ui::AbstractAnimator::setRepeatCount(): invalid handle" << handle, );
-    _state->animations[animatorDataHandleId(handle)].used.repeatCount = count;
-    /* No AnimatorState needs to be updated */
+    setRepeatCountInternal(animatorDataHandleId(handle), count);
+}
+
+void AbstractAnimator::setRepeatCountInternal(const UnsignedInt id, const UnsignedInt count) {
+    const Animation& animation = _state->animations[id];
+    CORRADE_ASSERT(animation.used.duration != 0_nsec || count == 1,
+        "Ui::AbstractAnimator::setRepeatCount(): expected count to be 1 for an animation with zero duration but got" << count, );
+    _state->animations[id].used.repeatCount = count;
+    /* No AnimatorState needs to be updated, it doesn't cause any
+       already-stopped animations to start playing */
 }
 
 AnimationFlags AbstractAnimator::flags(const AnimationHandle handle) const {
@@ -799,7 +806,7 @@ AnimationState AbstractAnimator::state(const AnimatorDataHandle handle) const {
 namespace {
 
 inline Float animationFactor(const Nanoseconds duration, const Nanoseconds started, const Nanoseconds time) {
-    CORRADE_INTERNAL_ASSERT(time >= started);
+    CORRADE_INTERNAL_ASSERT(duration != 0_nsec && time >= started);
     const Nanoseconds difference = (time - started) % duration;
     /* Using doubles for the division to avoid precision loss even though
        floats seem to work even for the 292 year duration */
@@ -808,6 +815,8 @@ inline Float animationFactor(const Nanoseconds duration, const Nanoseconds start
 
 /* Shared between factorInternal() and advance() */
 inline Float animationFactor(const Animation& animation, const Nanoseconds time, const AnimationState state) {
+    /* Animations with zero duration should always resolve to Stopped state in
+       animationState(), returning 1 */
     if(state == AnimationState::Playing)
         return animationFactor(animation.used.duration, animation.used.started, time);
     if(state == AnimationState::Paused)
@@ -1078,9 +1087,9 @@ Containers::Pair<bool, bool> AbstractAnimator::update(const Nanoseconds time, co
     bool advanceNeeded = false;
     bool anotherAdvanceNeeded = false;
     for(std::size_t i = 0; i != state.animations.size(); ++i) {
-        /* Animations with zero duration are freed items, skip */
+        /* Animations with -max duration are freed items, skip */
         const Animation& animation = state.animations[i];
-        if(animation.used.duration == 0_nsec)
+        if(animation.used.duration == Nanoseconds::min())
             continue;
 
         const AnimationState stateBefore = animationState(animation, timeBefore);

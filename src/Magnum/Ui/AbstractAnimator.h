@@ -389,8 +389,8 @@ class MAGNUM_UI_EXPORT AbstractAnimator {
          * @brief Duration of one animation play
          *
          * Expects that @p handle is valid. The duration is specified with
-         * @ref create() and is always positive. The duration, together with
-         * @ref started(AnimationHandle) const,
+         * @ref create() and is always non-negative. The duration, together
+         * with @ref started(AnimationHandle) const,
          * @ref paused(AnimationHandle) const,
          * @ref stopped(AnimationHandle) const,
          * @ref repeatCount(AnimationHandle) const and @ref time() is used to
@@ -447,7 +447,8 @@ class MAGNUM_UI_EXPORT AbstractAnimator {
          * @brief Set animation repeat count
          *
          * Expects that @p handle is valid. Use @cpp 0 @ce for an indefinitely
-         * repeating animation. The repeat count, together with
+         * repeating animation. For an animation with zero duration expects
+         * that the @p count is @cpp 1 @ce. The repeat count, together with
          * @ref duration(AnimationHandle) const,
          * @ref started(AnimationHandle) const,
          * @ref paused(AnimationHandle) const,
@@ -1129,13 +1130,16 @@ class MAGNUM_UI_EXPORT AbstractAnimator {
          * there's at most 1048576 animations. The returned handle can be
          * removed again with @ref remove().
          *
-         * The @p duration is expected to be a positive value. The value of
-         * @p start, @p duration and @p repeatCount together with @ref time()
-         * is then used to decide on a particular @ref AnimationState for given
-         * animation; if it results in @ref AnimationState::Scheduled or
-         * @ref AnimationState::Playing, the @ref AnimatorState::NeedsAdvance
-         * flag is set. The subclass is meant to wrap this function in a public
-         * API and perform appropriate initialization work there.
+         * The @p duration is expected to be a non-negative value. If
+         * @p duration is zero, @p repeatCount is expected to be @cpp 1 @ce and
+         * the animation is advanced at most once before being stopped. The
+         * value of @p start, @p duration and @p repeatCount together with
+         * @ref time() is then used to decide on a particular
+         * @ref AnimationState for given animation; if it results in
+         * @ref AnimationState::Scheduled or @ref AnimationState::Playing, the
+         * @ref AnimatorState::NeedsAdvance flag is set. The subclass is meant
+         * to wrap this function in a public API and perform appropriate
+         * initialization work there.
          *
          * If the animator advertises @ref AnimatorFeature::NodeAttachment, the
          * node attachment is set to @ref NodeHandle::Null; if the animator
@@ -1337,6 +1341,7 @@ class MAGNUM_UI_EXPORT AbstractAnimator {
         /* Common implementations for foo(AnimationHandle) and
            foo(AnimatorDataHandle) */
         MAGNUM_UI_LOCAL void removeInternal(UnsignedInt id);
+        MAGNUM_UI_LOCAL void setRepeatCountInternal(UnsignedInt id, UnsignedInt count);
         MAGNUM_UI_LOCAL void setFlagsInternal(UnsignedInt id, AnimationFlags flags);
         MAGNUM_UI_LOCAL void attachInternal(UnsignedInt id, NodeHandle node);
         MAGNUM_UI_LOCAL NodeHandle nodeInternal(UnsignedInt id) const;
