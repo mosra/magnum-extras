@@ -96,7 +96,7 @@ struct AbstractAnimatorTest: TestSuite::Tester {
     void removeInvalid();
     void properties();
     void propertiesStateFactor();
-    void propertiesInvalid();
+    void propertiesInvalidHandle();
     void attachNode();
     void attachNodeInvalid();
     void attachNodeInvalidFeatures();
@@ -373,7 +373,7 @@ AbstractAnimatorTest::AbstractAnimatorTest() {
     addInstancedTests({&AbstractAnimatorTest::propertiesStateFactor},
         Containers::arraySize(PropertiesStateFactorData));
 
-    addTests({&AbstractAnimatorTest::propertiesInvalid,
+    addTests({&AbstractAnimatorTest::propertiesInvalidHandle,
               &AbstractAnimatorTest::attachNode,
               &AbstractAnimatorTest::attachNodeInvalid,
               &AbstractAnimatorTest::attachNodeInvalidFeatures,
@@ -1643,7 +1643,7 @@ void AbstractAnimatorTest::propertiesStateFactor() {
     CORRADE_COMPARE(animator.factor(animationHandleData(handle)), data.expectedFactor);
 }
 
-void AbstractAnimatorTest::propertiesInvalid() {
+void AbstractAnimatorTest::propertiesInvalidHandle() {
     CORRADE_SKIP_IF_NO_ASSERT();
 
     struct: AbstractAnimator {
