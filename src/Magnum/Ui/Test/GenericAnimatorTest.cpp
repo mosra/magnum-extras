@@ -786,22 +786,24 @@ void GenericAnimatorTest::cleanData() {
     CORRADE_VERIFY(!animator.isHandleValid(anotherNonTrivial));
 }
 
+Float hundredTimes(Float value) { return value*100; }
+
 void GenericAnimatorTest::advance() {
     GenericAnimator animator{animatorHandle(0, 1)};
 
     Float first = 0.0f;
     animator.create([&first](Float factor) {
         first += factor;
-    }, Animation::Easing::linear, 0_nsec, 10_nsec);
+    }, hundredTimes, 0_nsec, 10_nsec);
 
     animator.create([](Float) {
         CORRADE_FAIL("This shouldn't be called");
-    }, Animation::Easing::linear, 5_nsec, 15_nsec);
+    }, hundredTimes, 5_nsec, 15_nsec);
 
     Float third = 0.0f;
     animator.create([&third](Float factor) {
         third += factor;
-    }, Animation::Easing::linear, 10_nsec, 5_nsec);
+    }, hundredTimes, 10_nsec, 5_nsec);
 
     /* Capture correct function name */
     CORRADE_VERIFY(true);
@@ -816,8 +818,8 @@ void GenericAnimatorTest::advance() {
         Containers::BitArrayView{startedStopped, 0, 3},
         Containers::BitArrayView{startedStopped, 0, 3},
         factors);
-    CORRADE_COMPARE(first, 0.75f);
-    CORRADE_COMPARE(third, 0.25f);
+    CORRADE_COMPARE(first, 75.0f);
+    CORRADE_COMPARE(third, 25.0f);
 }
 
 void GenericAnimatorTest::advanceNode() {
@@ -827,17 +829,17 @@ void GenericAnimatorTest::advanceNode() {
     animator.create([&first](NodeHandle node, Float factor) {
         CORRADE_COMPARE(node, nodeHandle(0xabcde, 0x123));
         first += factor;
-    }, Animation::Easing::linear, 0_nsec, 10_nsec, nodeHandle(0xabcde, 0x123));
+    }, hundredTimes, 0_nsec, 10_nsec, nodeHandle(0xabcde, 0x123));
 
     animator.create([](NodeHandle, Float) {
         CORRADE_FAIL("This shouldn't be called");
-    }, Animation::Easing::linear, 5_nsec, 15_nsec, nodeHandle(0xedcba, 0x321));
+    }, hundredTimes, 5_nsec, 15_nsec, nodeHandle(0xedcba, 0x321));
 
     Float third = 0.0f;
     animator.create([&third](NodeHandle node, Float factor) {
         CORRADE_COMPARE(node, NodeHandle::Null);
         third += factor;
-    }, Animation::Easing::linear, 10_nsec, 5_nsec, NodeHandle::Null);
+    }, hundredTimes, 10_nsec, 5_nsec, NodeHandle::Null);
 
     /* Capture correct function name */
     CORRADE_VERIFY(true);
@@ -852,8 +854,8 @@ void GenericAnimatorTest::advanceNode() {
         Containers::BitArrayView{startedStopped, 0, 3},
         Containers::BitArrayView{startedStopped, 0, 3},
         factors);
-    CORRADE_COMPARE(first, 0.75f);
-    CORRADE_COMPARE(third, 0.25f);
+    CORRADE_COMPARE(first, 75.0f);
+    CORRADE_COMPARE(third, 25.0f);
 }
 
 void GenericAnimatorTest::advanceData() {
@@ -870,11 +872,11 @@ void GenericAnimatorTest::advanceData() {
     animator.create([&first](DataHandle data, Float factor) {
         CORRADE_COMPARE(data, dataHandle(layerHandle(0xab, 0xcd), 0xabcde, 0x123));
         first += factor;
-    }, Animation::Easing::linear, 0_nsec, 10_nsec, dataHandle(layer.handle(), 0xabcde, 0x123));
+    }, hundredTimes, 0_nsec, 10_nsec, dataHandle(layer.handle(), 0xabcde, 0x123));
 
     animator.create([](DataHandle, Float) {
         CORRADE_FAIL("This shouldn't be called");
-    }, Animation::Easing::linear, 5_nsec, 15_nsec, dataHandle(layer.handle(), 0xedcba, 0x321));
+    }, hundredTimes, 5_nsec, 15_nsec, dataHandle(layer.handle(), 0xedcba, 0x321));
 
     Float third = 0.0f;
     animator.create([&third](DataHandle data, Float factor) {
@@ -882,7 +884,7 @@ void GenericAnimatorTest::advanceData() {
            to the null LayerDataHandle */
         CORRADE_COMPARE(data, DataHandle::Null);
         third += factor;
-    }, Animation::Easing::linear, 10_nsec, 5_nsec, LayerDataHandle::Null);
+    }, hundredTimes, 10_nsec, 5_nsec, LayerDataHandle::Null);
 
     /* Capture correct function name */
     CORRADE_VERIFY(true);
@@ -897,8 +899,8 @@ void GenericAnimatorTest::advanceData() {
         Containers::BitArrayView{startedStopped, 0, 3},
         Containers::BitArrayView{startedStopped, 0, 3},
         factors);
-    CORRADE_COMPARE(first, 0.75f);
-    CORRADE_COMPARE(third, 0.25f);
+    CORRADE_COMPARE(first, 75.0f);
+    CORRADE_COMPARE(third, 25.0f);
 }
 
 void GenericAnimatorTest::advanceEmpty() {

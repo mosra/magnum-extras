@@ -127,7 +127,8 @@ void GenericAnimator::doAdvance(const Containers::BitArrayView active, Container
         if(!active[i])
             continue;
 
-        state.animations[i].animation(factors[i]);
+        Animation& animation = state.animations[i];
+        animation.animation(animation.easing(factors[i]));
     }
 }
 
@@ -225,7 +226,8 @@ void GenericNodeAnimator::doAdvance(const Containers::BitArrayView active, Conta
         if(!active[i])
             continue;
 
-        state.animations[i].animation(nodes[i], factors[i]);
+        AnimationNode& animation = state.animations[i];
+        animation.animation(nodes[i], animation.easing(factors[i]));
     }
 }
 
@@ -334,10 +336,11 @@ void GenericDataAnimator::doAdvance(const Containers::BitArrayView active, Conta
 
         /* If not associated with any data, pass a null instead of combining it
            with the layer handle */
-        state.animations[i].animation(
+        AnimationData& animation = state.animations[i];
+        animation.animation(
             layerData[i] == LayerDataHandle::Null ?
                 DataHandle::Null : dataHandle(layer(), layerData[i]),
-            factors[i]);
+            animation.easing(factors[i]));
     }
 }
 
