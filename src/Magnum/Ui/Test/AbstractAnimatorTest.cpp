@@ -2885,15 +2885,16 @@ void AbstractAnimatorTest::update() {
     CORRADE_COMPARE(animator.state(stoppedKeep), AnimationState::Stopped);
 
     constexpr Float unused = Constants::inf();
+    constexpr std::size_t animationCount = 13;
 
     /* Call to update(10) advances also stopped and paused animations that
        changed their state compared to last time (i.e., time 0) */
     {
-        Containers::BitArray active{NoInit, 13};
-        Containers::BitArray started{NoInit, 13};
-        Containers::BitArray stopped{NoInit, 13};
-        Containers::StaticArray<13, Float> factors{DirectInit, unused};
-        Containers::BitArray remove{NoInit, 13};
+        Containers::BitArray active{NoInit, animationCount};
+        Containers::BitArray started{NoInit, animationCount};
+        Containers::BitArray stopped{NoInit, animationCount};
+        Containers::StaticArray<animationCount, Float> factors{DirectInit, unused};
+        Containers::BitArray remove{NoInit, animationCount};
         CORRADE_COMPARE(animator.update(10_nsec, active, started, stopped, factors, remove), Containers::pair(true, true));
         CORRADE_COMPARE_AS(Containers::BitArrayView{active}, Containers::stridedArrayView({
             false,  /*  0 scheduledKeep */
@@ -3010,11 +3011,11 @@ void AbstractAnimatorTest::update() {
        stopped animations got already removed, started and stoppped are all 0s
        and clean() isn't meant to be called. */
     {
-        Containers::BitArray active{NoInit, 13};
-        Containers::BitArray started{NoInit, 13};
-        Containers::BitArray stopped{NoInit, 13};
-        Containers::StaticArray<13, Float> factors{DirectInit, unused};
-        Containers::BitArray remove{NoInit, 13};
+        Containers::BitArray active{NoInit, animationCount};
+        Containers::BitArray started{NoInit, animationCount};
+        Containers::BitArray stopped{NoInit, animationCount};
+        Containers::StaticArray<animationCount, Float> factors{DirectInit, unused};
+        Containers::BitArray remove{NoInit, animationCount};
         CORRADE_COMPARE(animator.update(10_nsec, active, started, stopped, factors, remove), Containers::pair(true, false));
         CORRADE_COMPARE_AS(Containers::BitArrayView{active}, Containers::stridedArrayView({
             false,  /*  0 scheduledKeep */
@@ -3077,7 +3078,7 @@ void AbstractAnimatorTest::update() {
             unused, /* 12 stoppedKeep */
         }), TestSuite::Compare::Container);
         CORRADE_COMPARE_AS(remove,
-            (Containers::BitArray{DirectInit, 13, false}),
+            (Containers::BitArray{DirectInit, animationCount, false}),
             TestSuite::Compare::Container);
 
         /* Need to call this ourselves to not have the removed animations
@@ -3120,11 +3121,11 @@ void AbstractAnimatorTest::update() {
        before as well. The active mask is thus the same as the second call at
        10. */
     {
-        Containers::BitArray active{NoInit, 13};
-        Containers::BitArray started{NoInit, 13};
-        Containers::BitArray stopped{NoInit, 13};
-        Containers::StaticArray<13, Float> factors{DirectInit, unused};
-        Containers::BitArray remove{NoInit, 13};
+        Containers::BitArray active{NoInit, animationCount};
+        Containers::BitArray started{NoInit, animationCount};
+        Containers::BitArray stopped{NoInit, animationCount};
+        Containers::StaticArray<animationCount, Float> factors{DirectInit, unused};
+        Containers::BitArray remove{NoInit, animationCount};
         CORRADE_COMPARE(animator.update(20_nsec, active, started, stopped, factors, remove), Containers::pair(true, true));
         CORRADE_COMPARE_AS(Containers::BitArrayView{active}, Containers::stridedArrayView({
             false,  /*  0 scheduledKeep */
@@ -3244,11 +3245,11 @@ void AbstractAnimatorTest::update() {
     animator.stop(playingToPausedKeep, 30_nsec);
     animator.stop(paused, 30_nsec);
     {
-        Containers::BitArray active{NoInit, 13};
-        Containers::BitArray started{NoInit, 13};
-        Containers::BitArray stopped{NoInit, 13};
-        Containers::StaticArray<13, Float> factors{DirectInit, unused};
-        Containers::BitArray remove{NoInit, 13};
+        Containers::BitArray active{NoInit, animationCount};
+        Containers::BitArray started{NoInit, animationCount};
+        Containers::BitArray stopped{NoInit, animationCount};
+        Containers::StaticArray<animationCount, Float> factors{DirectInit, unused};
+        Containers::BitArray remove{NoInit, animationCount};
         CORRADE_COMPARE(animator.update(30_nsec, active, started, stopped, factors, remove), Containers::pair(true, true));
         CORRADE_COMPARE_AS(Containers::BitArrayView{active}, Containers::stridedArrayView({
             true,   /*  0 scheduledKeep */
@@ -3364,11 +3365,11 @@ void AbstractAnimatorTest::update() {
 
     /* Call at 40 doesn't need to delegeate to clean() anymore */
     {
-        Containers::BitArray active{NoInit, 13};
-        Containers::BitArray started{NoInit, 13};
-        Containers::BitArray stopped{NoInit, 13};
-        Containers::StaticArray<13, Float> factors{DirectInit, unused};
-        Containers::BitArray remove{NoInit, 13};
+        Containers::BitArray active{NoInit, animationCount};
+        Containers::BitArray started{NoInit, animationCount};
+        Containers::BitArray stopped{NoInit, animationCount};
+        Containers::StaticArray<animationCount, Float> factors{DirectInit, unused};
+        Containers::BitArray remove{NoInit, animationCount};
         CORRADE_COMPARE(animator.update(40_nsec, active, started, stopped, factors, remove), Containers::pair(true, false));
         CORRADE_COMPARE_AS(Containers::BitArrayView{active}, Containers::stridedArrayView({
             true,   /*  0 scheduledKeep */
@@ -3431,7 +3432,7 @@ void AbstractAnimatorTest::update() {
             unused, /* 12 stoppedKeep */
         }), TestSuite::Compare::Container);
         CORRADE_COMPARE_AS(remove,
-            (Containers::BitArray{DirectInit, 13, false}),
+            (Containers::BitArray{DirectInit, animationCount, false}),
             TestSuite::Compare::Container);
 
         /* Nothing to remove, not calling clean() */
@@ -3470,26 +3471,26 @@ void AbstractAnimatorTest::update() {
 
     /* Call at 50 needs neither advance nor clean anymore */
     {
-        Containers::BitArray active{NoInit, 13};
-        Containers::BitArray started{NoInit, 13};
-        Containers::BitArray stopped{NoInit, 13};
-        Containers::StaticArray<13, Float> factors{DirectInit, unused};
-        Containers::BitArray remove{NoInit, 13};
+        Containers::BitArray active{NoInit, animationCount};
+        Containers::BitArray started{NoInit, animationCount};
+        Containers::BitArray stopped{NoInit, animationCount};
+        Containers::StaticArray<animationCount, Float> factors{DirectInit, unused};
+        Containers::BitArray remove{NoInit, animationCount};
         CORRADE_COMPARE(animator.update(50_nsec, active, started, stopped, factors, remove), Containers::pair(false, false));
         CORRADE_COMPARE_AS(active,
-            (Containers::BitArray{DirectInit, 13, false}),
+            (Containers::BitArray{DirectInit, animationCount, false}),
             TestSuite::Compare::Container);
         CORRADE_COMPARE_AS(started,
-            (Containers::BitArray{DirectInit, 13, false}),
+            (Containers::BitArray{DirectInit, animationCount, false}),
             TestSuite::Compare::Container);
         CORRADE_COMPARE_AS(stopped,
-            (Containers::BitArray{DirectInit, 13, false}),
+            (Containers::BitArray{DirectInit, animationCount, false}),
             TestSuite::Compare::Container);
         CORRADE_COMPARE_AS(factors,
-            (Containers::StaticArray<13, Float>{DirectInit, unused}),
+            (Containers::StaticArray<animationCount, Float>{DirectInit, unused}),
             TestSuite::Compare::Container);
         CORRADE_COMPARE_AS(remove,
-            (Containers::BitArray{DirectInit, 13, false}),
+            (Containers::BitArray{DirectInit, animationCount, false}),
             TestSuite::Compare::Container);
 
         /* Nothing to remove, not calling clean() */
