@@ -161,16 +161,13 @@ union Animation {
            disabled. */
         UnsignedShort generation = 1;
 
-        /* Distinguishes between used and freed for isHandleValid().
-           Deliberately put right next to the generation counter so both can be
-           loaded in a single instruction in isHandleValid(). */
-        bool used;
-
         AnimationFlags flags{NoInit};
+        /* One byte free */
         UnsignedInt repeatCount;
 
         /* Duration. 0 only when the animation is freed, otherwise it's always
-           positive. */
+           positive. isHandleValid() checks this field to correctly mark
+           invalid handles if the generation matches by accident. */
         Nanoseconds duration{NoInit};
 
         /* Time at which the animation is started, paused, stopped. All these
@@ -187,11 +184,7 @@ union Animation {
            next time it gets used */
         UnsignedShort generation;
 
-        /* Also has to be preserved in order to know whether the animation is
-           used or not even if it's in the free list */
-        bool used;
-
-        /* One byte free */
+        /* Two bytes free */
 
         /* See State::firstFree for more information */
         UnsignedInt next;
@@ -206,7 +199,6 @@ static_assert(std::is_trivially_copyable<Animation>::value, "Animation not trivi
 #endif
 static_assert(
     offsetof(Animation::Used, generation) == offsetof(Animation::Free, generation) &&
-    offsetof(Animation::Used, used) == offsetof(Animation::Free, used) &&
     offsetof(Animation::Used, duration) == offsetof(Animation::Free, duration),
     "Animation::Used and Free layout not compatible");
 
@@ -314,11 +306,11 @@ bool AbstractAnimator::isHandleValid(const AnimatorDataHandle handle) const {
     const UnsignedInt generation = animatorDataHandleGeneration(handle);
     const Animation& animation = state.animations[index];
     /* Zero generation handles (i.e., where it wrapped around from all bits
-       set) are expected to be expired and thus with `used` being false. In
-       other words, it shouldn't be needed to verify also that generation is
+       set) are expected to be expired and thus with duration being 0. In other
+       words, it shouldn't be needed to verify also that generation is
        non-zero. */
-    CORRADE_INTERNAL_DEBUG_ASSERT(generation || !animation.used.used);
-    return animation.used.used && generation == animation.used.generation;
+    CORRADE_INTERNAL_DEBUG_ASSERT(generation || animation.used.duration == 0_nsec);
+    return animation.used.duration != 0_nsec && generation == animation.used.generation;
 }
 
 bool AbstractAnimator::isHandleValid(const AnimationHandle handle) const {
@@ -406,7 +398,6 @@ AnimationHandle AbstractAnimator::create(const Nanoseconds start, const Nanoseco
     /* Fill the data. In both above cases the generation is already set
        appropriately, either initialized to 1, or incremented when it got
        remove()d (to mark existing handles as invalid) */
-    animation->used.used = true;
     animation->used.flags = flags;
     animation->used.repeatCount = repeatCount;
     animation->used.duration = duration;
@@ -503,13 +494,12 @@ void AbstractAnimator::removeInternal(const UnsignedInt id) {
 
     /* Increase the layout generation so existing handles pointing to this
        layout are invalidated. Wrap around to 0 if it goes over the generation
-       bits. Also mark it as not used so isHandleValid() doesn't return true if
-       the generation matches by accident. */
+       bits. */
     ++animation.used.generation &= (1 << Implementation::AnimatorDataHandleGenerationBits) - 1;
-    animation.used.used = false;
 
     /* Set the animation duration to 0 to avoid falsely recognizing this item
-       as used when directly iterating the list */
+       as used when directly iterating the list or in isHandleValid() if the
+       generation matches by accident */
     animation.used.duration = 0_nsec;
 
     /* Clear the node attachment to have null handles in the nodes() list for

@@ -73,16 +73,13 @@ union Layout {
            `1 << LayouterDataHandleGenerationBits` the handle gets disabled. */
         UnsignedShort generation = 1;
 
-        /* Distinguishes between used and freed for isHandleValid().
-           Deliberately put right next to the generation counter so both can be
-           loaded in a single instruction in isHandleValid(). */
-        bool used;
-
-        /* One byte free */
+        /* Two bytes free */
 
         /* Node the layout is assigned to. Is null only when the layout is
            freed. Has to be re-filled every time a handle is recycled, so it
-           doesn't make sense to initialize it to anything. */
+           doesn't make sense to initialize it to anything. isHandleValid()
+           checks this field to correctly mark invalid handles if the
+           generation matches by accident. */
         NodeHandle node;
 
         /* Four bytes free */
@@ -94,14 +91,9 @@ union Layout {
            next time it gets used */
         UnsignedShort generation;
 
-        /* Also has to be preserved in order to know whether the layout is used
-           or not even if it's in the free list */
-        bool used;
+        /* Two bytes free */
 
-        /* Three bytes free */
-
-        /* The node field is needed to discard free items when directly
-           iterating the list. */
+        /* If this is null, the layout is freed */
         /** @todo any idea how to better pack this? this is a bit awful */
         NodeHandle node;
 
@@ -115,7 +107,6 @@ static_assert(std::is_trivially_copyable<Layout>::value, "Layout not trivially c
 #endif
 static_assert(
     offsetof(Layout::Used, generation) == offsetof(Layout::Free, generation) &&
-    offsetof(Layout::Used, used) == offsetof(Layout::Free, used) &&
     offsetof(Layout::Used, node) == offsetof(Layout::Free, node),
     "Layout::Used and Free layout not compatible");
 
@@ -192,11 +183,11 @@ bool AbstractLayouter::isHandleValid(const LayouterDataHandle handle) const {
     const UnsignedInt generation = layouterDataHandleGeneration(handle);
     const Layout& layout = state.layouts[index];
     /* Zero generation handles (i.e., where it wrapped around from all bits
-       set) are expected to be expired and thus with `used` being false. In
-       other words, it shouldn't be needed to verify also that generation is
+       set) are expected to be expired and thus with node being null. In other
+       words, it shouldn't be needed to verify also that generation is
        non-zero. */
-    CORRADE_INTERNAL_DEBUG_ASSERT(generation || !layout.used.used);
-    return layout.used.used && generation == layout.used.generation;
+    CORRADE_INTERNAL_DEBUG_ASSERT(generation || layout.used.node == NodeHandle::Null);
+    return layout.used.node != NodeHandle::Null && generation == layout.used.generation;
 }
 
 bool AbstractLayouter::isHandleValid(const LayoutHandle handle) const {
@@ -232,7 +223,6 @@ LayoutHandle AbstractLayouter::add(const NodeHandle node) {
     /* Fill the data. In both above cases the generation is already set
        appropriately, either initialized to 1, or incremented when it got
        remove()d (to mark existing handles as invalid) */
-    layout->used.used = true;
     layout->used.node = node;
 
     /* Mark the layouter as needing an update() call */
@@ -269,13 +259,12 @@ void AbstractLayouter::removeInternal(const UnsignedInt id) {
 
     /* Increase the layout generation so existing handles pointing to this
        layout are invalidated. Wrap around to 0 if it goes over the generation
-       bits. Also mark it as not used so isHandleValid() doesn't return true if
-       the generation matches by accident. */
+       bits. */
     ++layout.used.generation &= (1 << Implementation::LayouterDataHandleGenerationBits) - 1;
-    layout.used.used = false;
 
     /* Set the node attachment to null to avoid falsely recognizing this item
-       as used when directly iterating the list */
+       as used when directly iterating the list or in isHandleValid() if the
+       generation matches by accident */
     layout.used.node = NodeHandle::Null;
 
     /* Put the layout at the end of the free list (while they're allocated from
