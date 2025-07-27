@@ -141,7 +141,7 @@ class MAGNUM_UI_EXPORT GenericAnimator: public AbstractGenericAnimator {
          * @param flags         Flags
          *
          * Expects that both @p animation and @p easing are not @cpp nullptr @ce.
-         * Delegates to @ref AbstractAnimator::create(Nanoseconds, Nanoseconds, DataHandle, UnsignedInt, AnimationFlags),
+         * Delegates to @ref AbstractAnimator::create(Nanoseconds, Nanoseconds, UnsignedInt, AnimationFlags),
          * see its documentation for more information.
          *
          * Assuming the @p easing function correctly maps @cpp 0.0f @ce and
@@ -309,7 +309,7 @@ class MAGNUM_UI_EXPORT GenericNodeAnimator: public AbstractGenericAnimator {
          * @param flags         Flags
          *
          * Expects that both @p animation and @p easing are not @cpp nullptr @ce.
-         * Delegates to @ref AbstractAnimator::create(Nanoseconds, Nanoseconds, DataHandle, UnsignedInt, AnimationFlags),
+         * Delegates to @ref AbstractAnimator::create(Nanoseconds, Nanoseconds, NodeHandle, UnsignedInt, AnimationFlags),
          * see its documentation for more information.
          *
          * Assuming the @p easing function correctly maps @cpp 0.0f @ce and
