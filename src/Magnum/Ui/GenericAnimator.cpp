@@ -37,6 +37,8 @@
 
 namespace Magnum { namespace Ui {
 
+using namespace Math::Literals;
+
 Debug& operator<<(Debug& debug, const GenericAnimationState value) {
     debug << "Ui::GenericAnimationState" << Debug::nospace;
 
@@ -132,6 +134,23 @@ AnimationHandle GenericAnimator::createInternal(const Nanoseconds start, const N
     const UnsignedInt id = animationHandleId(handle);
     if(id >= state.animations.size())
         arrayResize(state.animations, id + 1);
+    return handle;
+}
+
+AnimationHandle GenericAnimator::callOnce(Containers::Function<void()>&& callback, const Nanoseconds at, const AnimationFlags flags) {
+    CORRADE_ASSERT(callback,
+        "Ui::GenericAnimator::callOnce(): callback is null", {});
+
+    const AnimationHandle handle = createInternal(at, 0_nsec, 1, flags);
+
+    Animation& animationData = _state->animations[animationHandleId(handle)];
+    animationData.animation = Utility::move(callback);
+    animationData.easing = nullptr;
+    animationData.call = [](Animation& animation, NodeHandle, DataHandle, Float, GenericAnimationStates state) {
+        if(state & GenericAnimationState::Stopped)
+            static_cast<Containers::Function<void()>&>(animation.animation)();
+    };
+
     return handle;
 }
 
@@ -251,6 +270,23 @@ AnimationHandle GenericNodeAnimator::createInternal(const Nanoseconds start, con
     const UnsignedInt id = animationHandleId(handle);
     if(id >= state.animations.size())
         arrayResize(state.animations, id + 1);
+    return handle;
+}
+
+AnimationHandle GenericNodeAnimator::callOnce(Containers::Function<void(NodeHandle)>&& callback, const Nanoseconds at, const NodeHandle node, const AnimationFlags flags) {
+    CORRADE_ASSERT(callback,
+        "Ui::GenericNodeAnimator::callOnce(): callback is null", {});
+
+    const AnimationHandle handle = createInternal(at, 0_nsec, node, 1, flags);
+
+    Animation& animationData = _state->animations[animationHandleId(handle)];
+    animationData.animation = Utility::move(callback);
+    animationData.easing = nullptr;
+    animationData.call = [](Animation& animation, NodeHandle node, DataHandle, Float, GenericAnimationStates state) {
+        if(state & GenericAnimationState::Stopped)
+            static_cast<Containers::Function<void(NodeHandle)>&>(animation.animation)(node);
+    };
+
     return handle;
 }
 
@@ -391,6 +427,33 @@ void GenericDataAnimator::createInternal(const AnimationHandle handle, Container
     animationData.easing = easing;
     animationData.call = [](Animation& animation, NodeHandle, DataHandle data, Float factor, GenericAnimationStates state) {
         static_cast<Containers::Function<void(DataHandle, Float, GenericAnimationStates)>&>(animation.animation)(data, animation.easing(factor), state);
+    };
+}
+
+AnimationHandle GenericDataAnimator::callOnce(Containers::Function<void(DataHandle)>&& callback, const Nanoseconds at, const DataHandle data, const AnimationFlags flags) {
+    const AnimationHandle handle = AbstractGenericAnimator::create(at, 0_nsec, data, flags);
+    callOnceInternal(handle, Utility::move(callback));
+    return handle;
+}
+
+AnimationHandle GenericDataAnimator::callOnce(Containers::Function<void(DataHandle)>&& callback, const Nanoseconds at, const LayerDataHandle data, const AnimationFlags flags) {
+    const AnimationHandle handle = AbstractGenericAnimator::create(at, 0_nsec, data, flags);
+    callOnceInternal(handle, Utility::move(callback));
+    return handle;
+}
+
+void GenericDataAnimator::callOnceInternal(const AnimationHandle handle, Containers::Function<void(DataHandle)>&& callback) {
+    CORRADE_ASSERT(callback,
+        "Ui::GenericDataAnimator::callOnce(): callback is null", );
+
+    createInternal(handle);
+
+    Animation& animationData = _state->animations[animationHandleId(handle)];
+    animationData.animation = Utility::move(callback);
+    animationData.easing = nullptr;
+    animationData.call = [](Animation& animation, NodeHandle, DataHandle data, Float, GenericAnimationStates state) {
+        if(state & GenericAnimationState::Stopped)
+            static_cast<Containers::Function<void(DataHandle)>&>(animation.animation)(data);
     };
 }
 

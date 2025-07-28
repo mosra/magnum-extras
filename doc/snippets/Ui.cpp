@@ -1853,6 +1853,12 @@ animator.create([](Float factor, Ui::GenericAnimationStates state) {
     }
 }, Animation::Easing::cubicIn, now, 1.5_sec);
 /* [GenericAnimator-create-started-stopped] */
+
+/* [GenericAnimator-callOnce] */
+animator.callOnce([] {
+    DOXYGEN_ELLIPSIS()
+}, now + 10.0_sec);
+/* [GenericAnimator-callOnce] */
 }
 
 {
@@ -1886,6 +1892,14 @@ animator.create([&ui](Ui::NodeHandle dropdown, Float factor,
     }
 }, Animation::Easing::cubicIn, now, 0.5_sec, dropdown);
 /* [GenericNodeAnimator-create-started-stopped] */
+
+/* [GenericNodeAnimator-callOnce] */
+Ui::NodeHandle tooltip = DOXYGEN_ELLIPSIS({});
+
+animator.callOnce([&ui](Ui::NodeHandle tooltip) {
+    ui.setNodeFlags(tooltip, Ui::NodeFlag::Hidden);
+}, now + 10.0_sec, tooltip);
+/* [GenericNodeAnimator-callOnce] */
 }
 
 {
@@ -1924,5 +1938,14 @@ animator.create([&baseLayer, from, to](Ui::DataHandle progressbar, Float factor,
         baseLayer.setStyle(progressbar, Style::ProgressBarComplete);
 }, Animation::Easing::cubicIn, now, 0.5_sec, progressbar);
 /* [GenericDataAnimator-create-started-stopped] */
+
+/* [GenericDataAnimator-callOnce] */
+Ui::TextLayer& textLayer = DOXYGEN_ELLIPSIS(ui.layer<Ui::TextLayer>({}));
+Ui::DataHandle label = DOXYGEN_ELLIPSIS({});
+
+animator.callOnce([&textLayer](Ui::DataHandle label) {
+    textLayer.setText(label, "Timed out.", {});
+}, now + 10.0_sec, label);
+/* [GenericDataAnimator-callOnce] */
 }
 }

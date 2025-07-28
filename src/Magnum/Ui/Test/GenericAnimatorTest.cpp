@@ -77,6 +77,9 @@ struct GenericAnimatorTest: TestSuite::Tester {
     void advance();
     void advanceNode();
     void advanceData();
+    void advanceOnce();
+    void advanceOnceNode();
+    void advanceOnceData();
     void advanceEmpty();
     void advanceEmptyNode();
     void advanceEmptyData();
@@ -87,9 +90,11 @@ using namespace Math::Literals;
 const struct {
     const char* name;
     bool states;
+    bool once;
 } CreateRemoveCleanData[]{
-    {"", false},
-    {"state overload", true}
+    {"", false, false},
+    {"state overload", true, false},
+    {"call once variant", false, true},
 };
 
 const struct {
@@ -111,6 +116,21 @@ const struct {
     {"state overload, third started & stopped", true, 1 << 2, 1 << 2,
         {},
         GenericAnimationState::Started|GenericAnimationState::Stopped},
+};
+
+const struct {
+    const char* name;
+    UnsignedByte started, stopped;
+    Int expected;
+} AdvanceOnceData[]{
+    {"neither started or stopped", 0, 0, 1},
+    /* Second isn't advanced at all, so this affects nothing */
+    {"second started & stopped", 1 << 1, 1 << 1, 1},
+    /* It reacts only to the stopped bit, so only third is called */
+    {"first started, third stopped", 1 << 0, 1 << 2, 3},
+    /* Having both the started and stopped bit should work also */
+    {"first stopped, third started & stopped", 1 << 2, (1 << 0)|(1 << 2), 2*3},
+    {"first started & stopped, third started", (1 << 0)|(1 << 3), 1 << 0, 2},
 };
 
 GenericAnimatorTest::GenericAnimatorTest() {
@@ -151,6 +171,11 @@ GenericAnimatorTest::GenericAnimatorTest() {
                        &GenericAnimatorTest::advanceNode,
                        &GenericAnimatorTest::advanceData},
         Containers::arraySize(AdvanceData));
+
+    addInstancedTests({&GenericAnimatorTest::advanceOnce,
+                       &GenericAnimatorTest::advanceOnceNode,
+                       &GenericAnimatorTest::advanceOnceData},
+        Containers::arraySize(AdvanceOnceData));
 
     addTests({&GenericAnimatorTest::advanceEmpty,
               &GenericAnimatorTest::advanceEmptyNode,
@@ -281,6 +306,9 @@ void GenericAnimatorTest::createRemove() {
         void operator()(Float) const {
             CORRADE_FAIL("This should never be called.");
         }
+        void operator()() const { /* used for callOnce() */
+            CORRADE_FAIL("This should never be called.");
+        }
 
         Int* destructedCount;
     };
@@ -299,7 +327,11 @@ void GenericAnimatorTest::createRemove() {
     GenericAnimator animator{animatorHandle(0, 1)};
 
     AnimationHandle trivial;
-    if(data.states)
+    if(data.once)
+        trivial = animator.callOnce([]{
+            CORRADE_FAIL("This should never be called.");
+        }, 137_nsec, AnimationFlag::KeepOncePlayed);
+    else if(data.states)
         trivial = animator.create([](Float, GenericAnimationStates) {
             CORRADE_FAIL("This should never be called.");
         }, Animation::Easing::bounceOut, 137_nsec, 277_nsec, 3, AnimationFlag::KeepOncePlayed);
@@ -310,26 +342,28 @@ void GenericAnimatorTest::createRemove() {
     CORRADE_COMPARE(animator.usedCount(), 1);
     CORRADE_COMPARE(animator.usedAllocatedAnimationCount(), 0);
     CORRADE_COMPARE(animator.started(trivial), 137_nsec);
-    CORRADE_COMPARE(animator.duration(trivial), 277_nsec);
-    CORRADE_COMPARE(animator.repeatCount(trivial), 3);
+    CORRADE_COMPARE(animator.duration(trivial), data.once ? 0_nsec : 277_nsec);
+    CORRADE_COMPARE(animator.repeatCount(trivial), data.once ? 1 : 3);
     CORRADE_COMPARE(animator.flags(trivial), AnimationFlag::KeepOncePlayed);
-    CORRADE_COMPARE(animator.easing(trivial), Animation::Easing::bounceOut);
+    CORRADE_COMPARE(animator.easing(trivial), data.once ? nullptr : Animation::Easing::bounceOut);
 
     /* The temporary gets destructed right away */
     AnimationHandle nonTrivial;
-    if(data.states)
+    if(data.once)
+        nonTrivial = animator.callOnce(NonTrivial{destructedCount}, 226_nsec, AnimationFlags{0x80});
+    else if(data.states)
         nonTrivial = animator.create(NonTrivialStates{destructedCount}, Animation::Easing::smootherstep, 226_nsec, 191_nsec, 0, AnimationFlags{0x80});
     else
         nonTrivial = animator.create(NonTrivial{destructedCount}, Animation::Easing::smootherstep, 226_nsec, 191_nsec, 0, AnimationFlags{0x80});
     CORRADE_COMPARE(animator.usedCount(), 2);
     CORRADE_COMPARE(animator.usedAllocatedAnimationCount(), 1);
     CORRADE_COMPARE(animator.started(nonTrivial), 226_nsec);
-    CORRADE_COMPARE(animator.duration(nonTrivial), 191_nsec);
-    CORRADE_COMPARE(animator.repeatCount(nonTrivial), 0);
+    CORRADE_COMPARE(animator.duration(nonTrivial), data.once ? 0_nsec : 191_nsec);
+    CORRADE_COMPARE(animator.repeatCount(nonTrivial), data.once ? 1 : 0);
     CORRADE_COMPARE(animator.flags(nonTrivial), AnimationFlags{0x80});
     /* Testing also the other overload. The other getters are tested in
        AbstractAnimatorTest already. */
-    CORRADE_COMPARE(animator.easing(animationHandleData(nonTrivial)), Animation::Easing::smootherstep);
+    CORRADE_COMPARE(animator.easing(animationHandleData(nonTrivial)), data.once ? nullptr : Animation::Easing::smootherstep);
     CORRADE_COMPARE(destructedCount, 1);
 
     animator.remove(trivial);
@@ -358,6 +392,9 @@ void GenericAnimatorTest::createRemoveNode() {
         void operator()(NodeHandle, Float) const {
             CORRADE_FAIL("This should never be called.");
         }
+        void operator()(NodeHandle) const { /* used for callOnce() */
+            CORRADE_FAIL("This should never be called.");
+        }
 
         Int* destructedCount;
     };
@@ -376,7 +413,11 @@ void GenericAnimatorTest::createRemoveNode() {
     GenericNodeAnimator animator{animatorHandle(0, 1)};
 
     AnimationHandle trivial;
-    if(data.states)
+    if(data.once)
+        trivial = animator.callOnce([](NodeHandle) {
+            CORRADE_FAIL("This should never be called.");
+        }, 137_nsec, nodeHandle(0x12345, 0xabc), AnimationFlag::KeepOncePlayed);
+    else if(data.states)
         trivial = animator.create([](NodeHandle, Float, GenericAnimationStates) {
             CORRADE_FAIL("This should never be called.");
         }, Animation::Easing::bounceOut, 137_nsec, 277_nsec, nodeHandle(0x12345, 0xabc), 3, AnimationFlag::KeepOncePlayed);
@@ -387,28 +428,30 @@ void GenericAnimatorTest::createRemoveNode() {
     CORRADE_COMPARE(animator.usedCount(), 1);
     CORRADE_COMPARE(animator.usedAllocatedAnimationCount(), 0);
     CORRADE_COMPARE(animator.started(trivial), 137_nsec);
-    CORRADE_COMPARE(animator.duration(trivial), 277_nsec);
-    CORRADE_COMPARE(animator.repeatCount(trivial), 3);
+    CORRADE_COMPARE(animator.duration(trivial), data.once ? 0_nsec : 277_nsec);
+    CORRADE_COMPARE(animator.repeatCount(trivial), data.once ? 1 : 3);
     CORRADE_COMPARE(animator.flags(trivial), AnimationFlag::KeepOncePlayed);
     CORRADE_COMPARE(animator.node(trivial), nodeHandle(0x12345, 0xabc));
-    CORRADE_COMPARE(animator.easing(trivial), Animation::Easing::bounceOut);
+    CORRADE_COMPARE(animator.easing(trivial), data.once ? nullptr : Animation::Easing::bounceOut);
 
     /* The temporary gets destructed right away */
     AnimationHandle nonTrivial;
-    if(data.states)
+    if(data.once)
+        nonTrivial = animator.callOnce(NonTrivial{destructedCount}, 226_nsec, nodeHandle(0x67890, 0xdef), AnimationFlags{0x80});
+    else if(data.states)
         nonTrivial = animator.create(NonTrivialStates{destructedCount}, Animation::Easing::smootherstep, 226_nsec, 191_nsec, nodeHandle(0x67890, 0xdef), 0, AnimationFlags{0x80});
     else
         nonTrivial = animator.create(NonTrivial{destructedCount}, Animation::Easing::smootherstep, 226_nsec, 191_nsec, nodeHandle(0x67890, 0xdef), 0, AnimationFlags{0x80});
     CORRADE_COMPARE(animator.usedCount(), 2);
     CORRADE_COMPARE(animator.usedAllocatedAnimationCount(), 1);
     CORRADE_COMPARE(animator.started(nonTrivial), 226_nsec);
-    CORRADE_COMPARE(animator.duration(nonTrivial), 191_nsec);
-    CORRADE_COMPARE(animator.repeatCount(nonTrivial), 0);
+    CORRADE_COMPARE(animator.duration(nonTrivial), data.once ? 0_nsec : 191_nsec);
+    CORRADE_COMPARE(animator.repeatCount(nonTrivial), data.once ? 1 : 0);
     CORRADE_COMPARE(animator.flags(nonTrivial), AnimationFlags{0x80});
     CORRADE_COMPARE(animator.node(nonTrivial), nodeHandle(0x67890, 0xdef));
     /* Testing also the other overload. The other getters are tested in
        AbstractAnimatorTest already. */
-    CORRADE_COMPARE(animator.easing(animationHandleData(nonTrivial)), Animation::Easing::smootherstep);
+    CORRADE_COMPARE(animator.easing(animationHandleData(nonTrivial)), data.once ? nullptr : Animation::Easing::smootherstep);
     CORRADE_COMPARE(destructedCount, 1);
 
     animator.remove(trivial);
@@ -437,6 +480,9 @@ void GenericAnimatorTest::createRemoveData() {
         void operator()(DataHandle, Float) const {
             CORRADE_FAIL("This should never be called.");
         }
+        void operator()(DataHandle) const { /* used for callOnce() */
+            CORRADE_FAIL("This should never be called.");
+        }
 
         Int* destructedCount;
     };
@@ -462,7 +508,11 @@ void GenericAnimatorTest::createRemoveData() {
     animator.setLayer(layer);
 
     AnimationHandle trivial;
-    if(data.states)
+    if(data.once)
+        trivial = animator.callOnce([](DataHandle) {
+            CORRADE_FAIL("This should never be called.");
+        }, 137_nsec, dataHandle(layer.handle(), 0x12345, 0xabc), AnimationFlag::KeepOncePlayed);
+    else if(data.states)
         trivial = animator.create([](DataHandle, Float, GenericAnimationStates) {
             CORRADE_FAIL("This should never be called.");
         }, Animation::Easing::bounceOut, 137_nsec, 277_nsec, dataHandle(layer.handle(), 0x12345, 0xabc), 3, AnimationFlag::KeepOncePlayed);
@@ -473,29 +523,31 @@ void GenericAnimatorTest::createRemoveData() {
     CORRADE_COMPARE(animator.usedCount(), 1);
     CORRADE_COMPARE(animator.usedAllocatedAnimationCount(), 0);
     CORRADE_COMPARE(animator.started(trivial), 137_nsec);
-    CORRADE_COMPARE(animator.duration(trivial), 277_nsec);
-    CORRADE_COMPARE(animator.repeatCount(trivial), 3);
+    CORRADE_COMPARE(animator.duration(trivial), data.once ? 0_nsec : 277_nsec);
+    CORRADE_COMPARE(animator.repeatCount(trivial), data.once ? 1 : 3);
     CORRADE_COMPARE(animator.flags(trivial), AnimationFlag::KeepOncePlayed);
     CORRADE_COMPARE(animator.data(trivial), dataHandle(layer.handle(), 0x12345, 0xabc));
-    CORRADE_COMPARE(animator.easing(trivial), Animation::Easing::bounceOut);
+    CORRADE_COMPARE(animator.easing(trivial), data.once ? nullptr : Animation::Easing::bounceOut);
 
     /* The temporary gets destructed right away. Testing also the
        LayerDataHandle overload. */
     AnimationHandle nonTrivial;
-    if(data.states)
+    if(data.once)
+        nonTrivial = animator.callOnce(NonTrivial{destructedCount}, 226_nsec, layerDataHandle(0x67890, 0xdef), AnimationFlags{0x80});
+    else if(data.states)
         nonTrivial = animator.create(NonTrivialStates{destructedCount}, Animation::Easing::smootherstep, 226_nsec, 191_nsec, layerDataHandle(0x67890, 0xdef), 0, AnimationFlags{0x80});
     else
         nonTrivial = animator.create(NonTrivial{destructedCount}, Animation::Easing::smootherstep, 226_nsec, 191_nsec, layerDataHandle(0x67890, 0xdef), 0, AnimationFlags{0x80});
     CORRADE_COMPARE(animator.usedCount(), 2);
     CORRADE_COMPARE(animator.usedAllocatedAnimationCount(), 1);
     CORRADE_COMPARE(animator.started(nonTrivial), 226_nsec);
-    CORRADE_COMPARE(animator.duration(nonTrivial), 191_nsec);
-    CORRADE_COMPARE(animator.repeatCount(nonTrivial), 0);
+    CORRADE_COMPARE(animator.duration(nonTrivial), data.once ? 0_nsec : 191_nsec);
+    CORRADE_COMPARE(animator.repeatCount(nonTrivial), data.once ? 1 : 0);
     CORRADE_COMPARE(animator.flags(nonTrivial), AnimationFlags{0x80});
     CORRADE_COMPARE(animator.data(nonTrivial), dataHandle(layer.handle(), 0x67890, 0xdef));
     /* Testing also the other overload. The other getters are tested in
        AbstractAnimatorTest already. */
-    CORRADE_COMPARE(animator.easing(animationHandleData(nonTrivial)), Animation::Easing::smootherstep);
+    CORRADE_COMPARE(animator.easing(animationHandleData(nonTrivial)), data.once ? nullptr : Animation::Easing::smootherstep);
     CORRADE_COMPARE(destructedCount, 1);
 
     animator.remove(trivial);
@@ -523,6 +575,9 @@ void GenericAnimatorTest::createRemoveHandleRecycle() {
             ++*destructedCount;
         }
         void operator()(Float) const {
+            CORRADE_FAIL("This should never be called.");
+        }
+        void operator()() const { /* used for callOnce() */
             CORRADE_FAIL("This should never be called.");
         }
 
@@ -555,7 +610,9 @@ void GenericAnimatorTest::createRemoveHandleRecycle() {
     /* Animation that reuses a previous slot should not call the destructor
        on the previous function again or some such crazy stuff */
     AnimationHandle second2;
-    if(data.states)
+    if(data.once)
+        second2 = animator.callOnce(NonTrivial{destructedCount2}, 0_nsec);
+    else if(data.states)
         second2 = animator.create(NonTrivialStates{destructedCount2}, Animation::Easing::step, 0_nsec, 1_nsec);
     else
         second2 = animator.create(NonTrivial{destructedCount2}, Animation::Easing::step, 0_nsec, 1_nsec);
@@ -576,6 +633,9 @@ void GenericAnimatorTest::createRemoveHandleRecycleNode() {
             ++*destructedCount;
         }
         void operator()(NodeHandle, Float) const {
+            CORRADE_FAIL("This should never be called.");
+        }
+        void operator()(NodeHandle) const { /* used for callOnce() */
             CORRADE_FAIL("This should never be called.");
         }
 
@@ -608,7 +668,9 @@ void GenericAnimatorTest::createRemoveHandleRecycleNode() {
     /* Animation that reuses a previous slot should not call the destructor
        on the previous function again or some such crazy stuff */
     AnimationHandle second2;
-    if(data.states)
+    if(data.once)
+        second2 = animator.callOnce(NonTrivial{destructedCount2}, 0_nsec, NodeHandle::Null);
+    else if(data.states)
         second2 = animator.create(NonTrivialStates{destructedCount2}, Animation::Easing::step, 0_nsec, 1_nsec, NodeHandle::Null);
     else
         second2 = animator.create(NonTrivial{destructedCount2}, Animation::Easing::step, 0_nsec, 1_nsec, NodeHandle::Null);
@@ -629,6 +691,9 @@ void GenericAnimatorTest::createRemoveHandleRecycleData() {
             ++*destructedCount;
         }
         void operator()(DataHandle, Float) const {
+            CORRADE_FAIL("This should never be called.");
+        }
+        void operator()(DataHandle) const { /* used for callOnce() */
             CORRADE_FAIL("This should never be called.");
         }
 
@@ -669,7 +734,9 @@ void GenericAnimatorTest::createRemoveHandleRecycleData() {
     /* Animation that reuses a previous slot should not call the destructor
        on the previous function again or some such crazy stuff */
     AnimationHandle second2;
-    if(data.states)
+    if(data.once)
+        second2 = animator.callOnce(NonTrivial{destructedCount2}, 0_nsec, DataHandle::Null);
+    else if(data.states)
         second2 = animator.create(NonTrivialStates{destructedCount2}, Animation::Easing::step, 0_nsec, 1_nsec, DataHandle::Null);
     else
         second2 = animator.create(NonTrivial{destructedCount2}, Animation::Easing::step, 0_nsec, 1_nsec, DataHandle::Null);
@@ -687,11 +754,13 @@ void GenericAnimatorTest::createInvalid() {
     Error redirectError{&out};
     animator.create(static_cast<void(*)(Float)>(nullptr), Animation::Easing::linear, 0_nsec, 1_nsec);
     animator.create(static_cast<void(*)(Float, GenericAnimationStates)>(nullptr), Animation::Easing::linear, 0_nsec, 1_nsec);
+    animator.callOnce(nullptr, 0_nsec);
     animator.create([](Float) {}, nullptr, 0_nsec, 1_nsec);
     animator.create([](Float, GenericAnimationStates) {}, nullptr, 0_nsec, 1_nsec);
     CORRADE_COMPARE_AS(out,
         "Ui::GenericAnimator::create(): animation is null\n"
         "Ui::GenericAnimator::create(): animation is null\n"
+        "Ui::GenericAnimator::callOnce(): callback is null\n"
         "Ui::GenericAnimator::create(): easing is null\n"
         "Ui::GenericAnimator::create(): easing is null\n",
         TestSuite::Compare::String);
@@ -706,11 +775,13 @@ void GenericAnimatorTest::createInvalidNode() {
     Error redirectError{&out};
     animator.create(static_cast<void(*)(NodeHandle, Float)>(nullptr), Animation::Easing::linear, 0_nsec, 1_nsec, NodeHandle::Null);
     animator.create(static_cast<void(*)(NodeHandle, Float, GenericAnimationStates)>(nullptr), Animation::Easing::linear, 0_nsec, 1_nsec, NodeHandle::Null);
+    animator.callOnce(nullptr, 0_nsec, NodeHandle::Null);
     animator.create([](NodeHandle, Float) {}, nullptr, 0_nsec, 1_nsec, NodeHandle::Null);
     animator.create([](NodeHandle, Float, GenericAnimationStates) {}, nullptr, 0_nsec, 1_nsec, NodeHandle::Null);
     CORRADE_COMPARE_AS(out,
         "Ui::GenericNodeAnimator::create(): animation is null\n"
         "Ui::GenericNodeAnimator::create(): animation is null\n"
+        "Ui::GenericNodeAnimator::callOnce(): callback is null\n"
         "Ui::GenericNodeAnimator::create(): easing is null\n"
         "Ui::GenericNodeAnimator::create(): easing is null\n",
         TestSuite::Compare::String);
@@ -734,6 +805,8 @@ void GenericAnimatorTest::createInvalidData() {
     animator.create(static_cast<void(*)(DataHandle, Float, GenericAnimationStates)>(nullptr), Animation::Easing::linear, 0_nsec, 1_nsec, DataHandle::Null);
     animator.create(static_cast<void(*)(DataHandle, Float)>(nullptr), Animation::Easing::linear, 0_nsec, 1_nsec, LayerDataHandle::Null);
     animator.create(static_cast<void(*)(DataHandle, Float, GenericAnimationStates)>(nullptr), Animation::Easing::linear, 0_nsec, 1_nsec, LayerDataHandle::Null);
+    animator.callOnce(nullptr, 0_nsec, DataHandle::Null);
+    animator.callOnce(nullptr, 0_nsec, LayerDataHandle::Null);
     animator.create([](DataHandle, Float) {}, nullptr, 0_nsec, 1_nsec, DataHandle::Null);
     animator.create([](DataHandle, Float, GenericAnimationStates) {}, nullptr, 0_nsec, 1_nsec, DataHandle::Null);
     animator.create([](DataHandle, Float) {}, nullptr, 0_nsec, 1_nsec, LayerDataHandle::Null);
@@ -743,6 +816,8 @@ void GenericAnimatorTest::createInvalidData() {
         "Ui::GenericDataAnimator::create(): animation is null\n"
         "Ui::GenericDataAnimator::create(): animation is null\n"
         "Ui::GenericDataAnimator::create(): animation is null\n"
+        "Ui::GenericDataAnimator::callOnce(): callback is null\n"
+        "Ui::GenericDataAnimator::callOnce(): callback is null\n"
         "Ui::GenericDataAnimator::create(): easing is null\n"
         "Ui::GenericDataAnimator::create(): easing is null\n"
         "Ui::GenericDataAnimator::create(): easing is null\n"
@@ -843,6 +918,9 @@ void GenericAnimatorTest::clean() {
         void operator()(Float) const {
             CORRADE_FAIL("This should never be called.");
         }
+        void operator()() const { /* used for callOnce() */
+            CORRADE_FAIL("This should never be called.");
+        }
 
         Int* destructedCount;
     };
@@ -877,7 +955,9 @@ void GenericAnimatorTest::clean() {
 
     /* The temporary gets destructed right away */
     AnimationHandle anotherNonTrivial;
-    if(data.states)
+    if(data.once)
+        anotherNonTrivial = animator.callOnce(NonTrivial{anotherDestructedCount}, 226_nsec, AnimationFlags{0x80});
+    else if(data.states)
         anotherNonTrivial = animator.create(NonTrivialStates{anotherDestructedCount}, Animation::Easing::smootherstep, 226_nsec, 191_nsec, 0, AnimationFlags{0x80});
     else
         anotherNonTrivial = animator.create(NonTrivial{anotherDestructedCount}, Animation::Easing::smootherstep, 226_nsec, 191_nsec, 0, AnimationFlags{0x80});
@@ -910,6 +990,9 @@ void GenericAnimatorTest::cleanNode() {
             ++*destructedCount;
         }
         void operator()(NodeHandle, Float) const {
+            CORRADE_FAIL("This should never be called.");
+        }
+        void operator()(NodeHandle) const { /* used for callOnce() */
             CORRADE_FAIL("This should never be called.");
         }
 
@@ -946,7 +1029,9 @@ void GenericAnimatorTest::cleanNode() {
 
     /* The temporary gets destructed right away */
     AnimationHandle anotherNonTrivial;
-    if(data.states)
+    if(data.once)
+        anotherNonTrivial = animator.callOnce(NonTrivial{anotherDestructedCount}, 226_nsec, NodeHandle::Null, AnimationFlags{0x80});
+    else if(data.states)
         anotherNonTrivial = animator.create(NonTrivialStates{anotherDestructedCount}, Animation::Easing::smootherstep, 226_nsec, 191_nsec, NodeHandle::Null, 0, AnimationFlags{0x80});
     else
         anotherNonTrivial = animator.create(NonTrivial{anotherDestructedCount}, Animation::Easing::smootherstep, 226_nsec, 191_nsec, NodeHandle::Null, 0, AnimationFlags{0x80});
@@ -979,6 +1064,9 @@ void GenericAnimatorTest::cleanData() {
             ++*destructedCount;
         }
         void operator()(DataHandle, Float) const {
+            CORRADE_FAIL("This should never be called.");
+        }
+        void operator()(DataHandle) const { /* used for callOnce() */
             CORRADE_FAIL("This should never be called.");
         }
 
@@ -1022,7 +1110,9 @@ void GenericAnimatorTest::cleanData() {
 
     /* The temporary gets destructed right away */
     AnimationHandle anotherNonTrivial;
-    if(data.states)
+    if(data.once)
+        anotherNonTrivial = animator.callOnce(NonTrivial{anotherDestructedCount}, 226_nsec, DataHandle::Null, AnimationFlags{0x80});
+    else if(data.states)
         anotherNonTrivial = animator.create(NonTrivialStates{anotherDestructedCount}, Animation::Easing::smootherstep, 226_nsec, 191_nsec, DataHandle::Null, 0, AnimationFlags{0x80});
     else
         anotherNonTrivial = animator.create(NonTrivial{anotherDestructedCount}, Animation::Easing::smootherstep, 226_nsec, 191_nsec, DataHandle::Null, 0, AnimationFlags{0x80});
@@ -1238,6 +1328,121 @@ void GenericAnimatorTest::advanceData() {
        overloads as well */
     CORRADE_COMPARE(statesFirst, data.statesFirst);
     CORRADE_COMPARE(statesThird, data.statesThird);
+}
+
+void GenericAnimatorTest::advanceOnce() {
+    auto&& data = AdvanceOnceData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
+    GenericAnimator animator{animatorHandle(0, 1)};
+
+    Int called = 1;
+    animator.callOnce([&called]() {
+        called *= 2;
+    }, 9_nsec);
+
+    animator.callOnce([]() {
+        CORRADE_FAIL("This shouldn't be called");
+    }, 2_nsec);
+
+    animator.callOnce([&called]() {
+        called *= 3;
+    }, 7_nsec);
+
+    /* Capture correct function name */
+    CORRADE_VERIFY(true);
+
+    /* Should call just the first and third. Factors are not used, only the
+       started/stopped bits should affect the output. */
+    UnsignedByte active[]{(1 << 0)|(1 << 2)};
+    Float factors[3]{};
+    animator.advance(
+        Containers::BitArrayView{active, 0, 3},
+        Containers::BitArrayView{&data.started, 0, 3},
+        Containers::BitArrayView{&data.stopped, 0, 3},
+        factors);
+    CORRADE_COMPARE(called, data.expected);
+}
+
+void GenericAnimatorTest::advanceOnceNode() {
+    auto&& data = AdvanceOnceData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
+    GenericNodeAnimator animator{animatorHandle(0, 1)};
+
+    Int called = 1;
+    animator.callOnce([&called](NodeHandle node) {
+        CORRADE_COMPARE(node, nodeHandle(0xabcde, 0x123));
+        called *= 2;
+    }, 9_nsec, nodeHandle(0xabcde, 0x123));
+
+    animator.callOnce([](NodeHandle) {
+        CORRADE_FAIL("This shouldn't be called");
+    }, 2_nsec, nodeHandle(0xedcba, 0x321));
+
+    animator.callOnce([&called](NodeHandle node) {
+        CORRADE_COMPARE(node, NodeHandle::Null);
+        called *= 3;
+    }, 7_nsec, NodeHandle::Null);
+
+    /* Capture correct function name */
+    CORRADE_VERIFY(true);
+
+    /* Should call just the first and third. Factors are not used, only the
+       started/stopped bits should affect the output. */
+    UnsignedByte active[]{(1 << 0)|(1 << 2)};
+    Float factors[3]{};
+    animator.advance(
+        Containers::BitArrayView{active, 0, 3},
+        Containers::BitArrayView{&data.started, 0, 3},
+        Containers::BitArrayView{&data.stopped, 0, 3},
+        factors);
+    CORRADE_COMPARE(called, data.expected);
+}
+
+void GenericAnimatorTest::advanceOnceData() {
+    auto&& data = AdvanceOnceData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
+    GenericDataAnimator animator{animatorHandle(0, 1)};
+
+    struct: AbstractLayer {
+        using AbstractLayer::AbstractLayer;
+
+        LayerFeatures doFeatures() const override { return {}; }
+    } layer{layerHandle(0xab, 0xcd)};
+    animator.setLayer(layer);
+
+    Int called = 1;
+    animator.callOnce([&called](DataHandle data) {
+        CORRADE_COMPARE(data, dataHandle(layerHandle(0xab, 0xcd), 0xabcde, 0x123));
+        called *= 2;
+    }, 9_nsec, dataHandle(layer.handle(), 0xabcde, 0x123));
+
+    animator.callOnce([](DataHandle) {
+        CORRADE_FAIL("This shouldn't be called");
+    }, 2_nsec, dataHandle(layer.handle(), 0xedcba, 0x321));
+
+    animator.callOnce([&called](DataHandle data) {
+        /* If there's no associated data, the layer handle shouldn't be added
+           to the null LayerDataHandle */
+        CORRADE_COMPARE(data, DataHandle::Null);
+        called *= 3;
+    }, 7_nsec, LayerDataHandle::Null);
+
+    /* Capture correct function name */
+    CORRADE_VERIFY(true);
+
+    /* Should call just the first and third. Factors are not used, only the
+       started/stopped bits should affect the output. */
+    UnsignedByte active[]{(1 << 0)|(1 << 2)};
+    Float factors[3]{};
+    animator.advance(
+        Containers::BitArrayView{active, 0, 3},
+        Containers::BitArrayView{&data.started, 0, 3},
+        Containers::BitArrayView{&data.stopped, 0, 3},
+        factors);
+    CORRADE_COMPARE(called, data.expected);
 }
 
 void GenericAnimatorTest::advanceEmpty() {

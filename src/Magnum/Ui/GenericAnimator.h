@@ -132,6 +132,15 @@ to the animations themselves, such as playing, stopping, creating or removing
 them. This isn't checked or enforced in any way, but the behavior of doing so
 is undefined.
 
+@subsection Ui-GenericAnimator-call-once Calling a function once at specified time
+
+The @ref callOnce() function is a special case of @ref create() that causes
+given function to be called exactly once at specified time, which is useful for
+triggering delayed operations. Internally this is an animation with a zero
+duration, so you can pause or restart it like any other.
+
+@snippet Ui.cpp GenericAnimator-callOnce
+
 @section Ui-GenericAnimator-lifetime Animation lifetime
 
 As with all other animations, they're implicitly removed once they're played.
@@ -223,6 +232,20 @@ class MAGNUM_UI_EXPORT GenericAnimator: public AbstractGenericAnimator {
         AnimationHandle create(Containers::Function<void(Float factor, GenericAnimationStates state)>&& animation, Float(*easing)(Float), Nanoseconds start, Nanoseconds duration, UnsignedInt repeatCount = 1, AnimationFlags flags = {});
 
         /**
+         * @brief Call a function once at specified time
+         * @param callback      Function to call
+         * @param at            Time at which the callback gets called. Use
+         *      @ref Nanoseconds::max() for creating a stopped animation.
+         * @param flags         Flags
+         *
+         * Expects that @p callback is not @cpp nullptr @ce. Delegates to
+         * @ref AbstractAnimator::create(Nanoseconds, Nanoseconds, UnsignedInt, AnimationFlags)
+         * with @p duration set to @cpp 0_nsec @ce, see its documentation for
+         * more information.
+         */
+        AnimationHandle callOnce(Containers::Function<void()>&& callback, Nanoseconds at, AnimationFlags flags = {});
+
+        /**
          * @brief Remove an animation
          *
          * Expects that @p handle is valid. Delegates to
@@ -243,7 +266,8 @@ class MAGNUM_UI_EXPORT GenericAnimator: public AbstractGenericAnimator {
          * @brief Animation easing function
          *
          * Expects that @p handle is valid. The returned pointer is never
-         * @cpp nullptr @ce.
+         * @cpp nullptr @ce for animations created with @ref create(), and
+         * always @cpp nullptr @ce for animations created with @ref callOnce().
          */
         auto easing(AnimationHandle handle) const -> Float(*)(Float);
 
@@ -316,6 +340,16 @@ The animation function is free to do anything except for touching state related
 to the animations or associated nodes, such as playing or stopping the
 animations, or creating, removing animations or nodes. This isn't checked or
 enforced in any way, but the behavior of doing so is undefined.
+
+@subsection Ui-GenericNodeAnimator-call-once Calling a function once at specified time
+
+The @ref callOnce() function is a special case of @ref create() that causes
+given function to be called exactly once at specified time, which is useful for
+triggering delayed operations. Internally this is an animation with a zero
+duration, so you can pause or restart it like any other. For example, hiding a
+notification after a ten-second timeout:
+
+@snippet Ui.cpp GenericNodeAnimator-callOnce
 
 @section Ui-GenericNodeAnimator-lifetime Animation lifetime and node attachment
 
@@ -411,6 +445,23 @@ class MAGNUM_UI_EXPORT GenericNodeAnimator: public AbstractGenericAnimator {
         AnimationHandle create(Containers::Function<void(NodeHandle node, Float factor, GenericAnimationStates state)>&& animation, Float(*easing)(Float), Nanoseconds start, Nanoseconds duration, NodeHandle node, UnsignedInt repeatCount = 1, AnimationFlags flags = {});
 
         /**
+         * @brief Call a function once at specified time
+         * @param callback      Function to call
+         * @param at            Time at which the callback gets called. Use
+         *      @ref Nanoseconds::max() for creating a stopped animation.
+         * @param node          Node the animation is attached to. Use
+         *      @ref NodeHandle::Null to create an animation that isn't
+         *      attached to any node.
+         * @param flags         Flags
+         *
+         * Expects that @p callback is not @cpp nullptr @ce. Delegates to
+         * @ref AbstractAnimator::create(Nanoseconds, Nanoseconds, NodeHandle, UnsignedInt, AnimationFlags)
+         * with @p duration set to @cpp 0_nsec @ce, see its documentation for
+         * more information.
+         */
+        AnimationHandle callOnce(Containers::Function<void(NodeHandle node)>&& callback, Nanoseconds at, NodeHandle node, AnimationFlags flags = {});
+
+        /**
          * @brief Remove an animation
          *
          * Expects that @p handle is valid. Delegates to
@@ -431,7 +482,8 @@ class MAGNUM_UI_EXPORT GenericNodeAnimator: public AbstractGenericAnimator {
          * @brief Animation easing function
          *
          * Expects that @p handle is valid. The returned pointer is never
-         * @cpp nullptr @ce.
+         * @cpp nullptr @ce for animations created with @ref create(), and
+         * always @cpp nullptr @ce for animations created with @ref callOnce().
          */
         auto easing(AnimationHandle handle) const -> Float(*)(Float);
 
@@ -505,6 +557,16 @@ The animation function is free to do anything except for touching state related
 to the animations or associated data or nodes, such as playing or stopping the
 animations, or creating, removing animations, data or nodes. This isn't checked
 or enforced in any way, but the behavior of doing so is undefined.
+
+@subsection Ui-GenericDataAnimator-call-once Calling a function once at specified time
+
+The @ref callOnce() function is a special case of @ref create() that causes
+given function to be called exactly once at specified time, which is useful for
+triggering delayed operations. Internally this is an animation with a zero
+duration, so you can pause or restart it like any other animation. For example,
+updating a label after a ten-second timeout:
+
+@snippet Ui.cpp GenericDataAnimator-callOnce
 
 @section Ui-GenericDataAnimator-lifetime Animation lifetime and data attachment
 
@@ -641,6 +703,37 @@ class MAGNUM_UI_EXPORT GenericDataAnimator: public AbstractGenericAnimator {
         AnimationHandle create(Containers::Function<void(DataHandle data, Float factor, GenericAnimationStates state)>&& animator, Float(*easing)(Float), Nanoseconds start, Nanoseconds duration, LayerDataHandle data, UnsignedInt repeatCount = 1, AnimationFlags flags = {});
 
         /**
+         * @brief Call a function once at specified time
+         * @param callback      Function to call
+         * @param at            Time at which the callback gets called. Use
+         *      @ref Nanoseconds::max() for creating a stopped animation.
+         * @param data          Data the animation is attached to. Use
+         *      @ref DataHandle::Null to create an animation that isn't
+         *      attached to any data.
+         * @param flags         Flags
+         *
+         * Expects that @p callback is not @cpp nullptr @ce. Delegates to
+         * @ref AbstractAnimator::create(Nanoseconds, Nanoseconds, DataHandle, UnsignedInt, AnimationFlags)
+         * with @p duration set to @cpp 0_nsec @ce, see its documentation for
+         * more information.
+         */
+        AnimationHandle callOnce(Containers::Function<void(DataHandle data)>&& callback, Nanoseconds at, DataHandle data, AnimationFlags flags = {});
+
+        /**
+         * @brief Call a function once at specified time assuming the data it's attached to belongs to the layer the animator is registered with
+         *
+         * Compared to @ref callOnce(Containers::Function<void(DataHandle data)>&&, Nanoseconds, DataHandle, AnimationFlags)
+         * delegates to @ref AbstractAnimator::create(Nanoseconds, Nanoseconds, LayerDataHandle, UnsignedInt, AnimationFlags)
+         * instead.
+         *
+         * Unless @p data is @ref LayerDataHandle::Null or the animation is
+         * subsequently detached from the data, the layer portion of the
+         * @ref DataHandle passed to @p animator is matching the layer handle
+         * passed to @ref setLayer().
+         */
+        AnimationHandle callOnce(Containers::Function<void(DataHandle data)>&& callback, Nanoseconds at, LayerDataHandle data, AnimationFlags flags = {});
+
+        /**
          * @brief Remove an animation
          *
          * Expects that @p handle is valid. Delegates to
@@ -661,7 +754,8 @@ class MAGNUM_UI_EXPORT GenericDataAnimator: public AbstractGenericAnimator {
          * @brief Animation easing function
          *
          * Expects that @p handle is valid. The returned pointer is never
-         * @cpp nullptr @ce.
+         * @cpp nullptr @ce for animations created with @ref create(), and
+         * always @cpp nullptr @ce for animations created with @ref callOnce().
          */
         auto easing(AnimationHandle handle) const -> Float(*)(Float);
 
@@ -679,6 +773,7 @@ class MAGNUM_UI_EXPORT GenericDataAnimator: public AbstractGenericAnimator {
         MAGNUM_UI_LOCAL void createInternal(const AnimationHandle handle);
         MAGNUM_UI_LOCAL void createInternal(const AnimationHandle handle, Containers::Function<void(DataHandle, Float)>&& animation, Float(*const easing)(Float));
         MAGNUM_UI_LOCAL void createInternal(const AnimationHandle handle, Containers::Function<void(DataHandle, Float, GenericAnimationStates)>&& animation, Float(*const easing)(Float));
+        MAGNUM_UI_LOCAL void callOnceInternal(const AnimationHandle handle, Containers::Function<void(DataHandle)>&& animation);
         MAGNUM_UI_LOCAL void removeInternal(UnsignedInt id);
 
         MAGNUM_UI_LOCAL AnimatorFeatures doFeatures() const override;
