@@ -128,7 +128,6 @@ struct DebugLayerGL::State: DebugLayer::State {
 
     GL::Buffer vertexBuffer{GL::Buffer::TargetHint::Array};
     GL::Mesh mesh{GL::MeshPrimitive::TriangleStrip};
-
 };
 
 DebugLayerGL::DebugLayerGL(const LayerHandle handle, const DebugLayerSources sources, const DebugLayerFlags flags): DebugLayer{handle, Containers::pointer<State>(sources, flags)} {
