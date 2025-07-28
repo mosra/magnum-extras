@@ -27,6 +27,7 @@
 #include "GenericAnimator.h"
 
 #include <Corrade/Containers/BitArrayView.h>
+#include <Corrade/Containers/EnumSet.hpp>
 #include <Corrade/Containers/Function.h>
 #include <Corrade/Containers/GrowableArray.h>
 #include <Corrade/Containers/StridedArrayView.h>
@@ -36,6 +37,28 @@
 
 namespace Magnum { namespace Ui {
 
+Debug& operator<<(Debug& debug, const GenericAnimationState value) {
+    debug << "Ui::GenericAnimationState" << Debug::nospace;
+
+    switch(value) {
+        /* LCOV_EXCL_START */
+        #define _c(value) case GenericAnimationState::value: return debug << "::" #value;
+        _c(Started)
+        _c(Stopped)
+        #undef _c
+        /* LCOV_EXCL_STOP */
+    }
+
+    return debug << "(" << Debug::nospace << Debug::hex << UnsignedByte(value) << Debug::nospace << ")";
+}
+
+Debug& operator<<(Debug& debug, const GenericAnimationStates value) {
+    return Containers::enumSetDebugOutput(debug, value, debug.immediateFlags() >= Debug::Flag::Packed ? "{}" : "Ui::GenericAnimationStates{}", {
+        GenericAnimationState::Started,
+        GenericAnimationState::Stopped
+    });
+}
+
 struct Animation {
     Containers::FunctionData animation;
     Float(*easing)(Float);
@@ -43,7 +66,7 @@ struct Animation {
         somehow -- e.g. an extra template argument to Function that decouples
         the actual wrapped signature from the call signature. Same is in
         the EventLayer implementation. */
-    void(*call)(Animation&, NodeHandle, DataHandle, Float);
+    void(*call)(Animation&, NodeHandle, DataHandle, Float, GenericAnimationStates);
 };
 
 struct GenericAnimator::State {
@@ -78,8 +101,26 @@ AnimationHandle GenericAnimator::create(Containers::Function<void(Float)>&& anim
     Animation& animationData = _state->animations[animationHandleId(handle)];
     animationData.animation = Utility::move(animation);
     animationData.easing = easing;
-    animationData.call = [](Animation& animation, NodeHandle, DataHandle, Float factor) {
+    animationData.call = [](Animation& animation, NodeHandle, DataHandle, Float factor, GenericAnimationStates) {
         static_cast<Containers::Function<void(Float)>&>(animation.animation)(animation.easing(factor));
+    };
+
+    return handle;
+}
+
+AnimationHandle GenericAnimator::create(Containers::Function<void(Float, GenericAnimationStates)>&& animation, Float(*const easing)(Float), const Nanoseconds start, const Nanoseconds duration, const UnsignedInt repeatCount, const AnimationFlags flags) {
+    CORRADE_ASSERT(animation,
+        "Ui::GenericAnimator::create(): animation is null", {});
+    CORRADE_ASSERT(easing,
+        "Ui::GenericAnimator::create(): easing is null", {});
+
+    const AnimationHandle handle = createInternal(start, duration, repeatCount, flags);
+
+    Animation& animationData = _state->animations[animationHandleId(handle)];
+    animationData.animation = Utility::move(animation);
+    animationData.easing = easing;
+    animationData.call = [](Animation& animation, NodeHandle, DataHandle, Float factor, GenericAnimationStates state) {
+        static_cast<Containers::Function<void(Float, GenericAnimationStates)>&>(animation.animation)(animation.easing(factor), state);
     };
 
     return handle;
@@ -133,7 +174,7 @@ void GenericAnimator::doClean(const Containers::BitArrayView animationIdsToRemov
     }
 }
 
-void GenericAnimator::doAdvance(const Containers::BitArrayView active, Containers::BitArrayView, Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>& factors) {
+void GenericAnimator::doAdvance(const Containers::BitArrayView active, const Containers::BitArrayView started, const Containers::BitArrayView stopped, const Containers::StridedArrayView1D<const Float>& factors) {
     State& state = static_cast<State&>(*_state);
     /** @todo some way to iterate set bits */
     for(std::size_t i = 0; i != active.size(); ++i) {
@@ -141,7 +182,9 @@ void GenericAnimator::doAdvance(const Containers::BitArrayView active, Container
             continue;
 
         Animation& animation = state.animations[i];
-        animation.call(animation, {}, {}, factors[i]);
+        animation.call(animation, {}, {}, factors[i],
+            (started[i] ? GenericAnimationState::Started : GenericAnimationState{})|
+            (stopped[i] ? GenericAnimationState::Stopped : GenericAnimationState{}));
     }
 }
 
@@ -177,8 +220,26 @@ AnimationHandle GenericNodeAnimator::create(Containers::Function<void(NodeHandle
     Animation& animationData = _state->animations[animationHandleId(handle)];
     animationData.animation = Utility::move(animation);
     animationData.easing = easing;
-    animationData.call = [](Animation& animation, NodeHandle node, DataHandle, Float factor) {
+    animationData.call = [](Animation& animation, NodeHandle node, DataHandle, Float factor, GenericAnimationStates) {
         static_cast<Containers::Function<void(NodeHandle, Float)>&>(animation.animation)(node, animation.easing(factor));
+    };
+
+    return handle;
+}
+
+AnimationHandle GenericNodeAnimator::create(Containers::Function<void(NodeHandle, Float, GenericAnimationStates)>&& animation, Float(*const easing)(Float), const Nanoseconds start, const Nanoseconds duration, const NodeHandle node, const UnsignedInt repeatCount, const AnimationFlags flags) {
+    CORRADE_ASSERT(animation,
+        "Ui::GenericNodeAnimator::create(): animation is null", {});
+    CORRADE_ASSERT(easing,
+        "Ui::GenericNodeAnimator::create(): easing is null", {});
+
+    const AnimationHandle handle = createInternal(start, duration, node, repeatCount, flags);
+
+    Animation& animationData = _state->animations[animationHandleId(handle)];
+    animationData.animation = Utility::move(animation);
+    animationData.easing = easing;
+    animationData.call = [](Animation& animation, NodeHandle node, DataHandle, Float factor, GenericAnimationStates state) {
+        static_cast<Containers::Function<void(NodeHandle, Float, GenericAnimationStates)>&>(animation.animation)(node, animation.easing(factor), state);
     };
 
     return handle;
@@ -234,7 +295,7 @@ void GenericNodeAnimator::doClean(const Containers::BitArrayView animationIdsToR
     }
 }
 
-void GenericNodeAnimator::doAdvance(const Containers::BitArrayView active, Containers::BitArrayView, Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>& factors) {
+void GenericNodeAnimator::doAdvance(const Containers::BitArrayView active, const Containers::BitArrayView started, const Containers::BitArrayView stopped, const Containers::StridedArrayView1D<const Float>& factors) {
     const Containers::StridedArrayView1D<const NodeHandle> nodes = this->nodes();
     State& state = static_cast<State&>(*_state);
     /** @todo some way to iterate set bits */
@@ -243,7 +304,9 @@ void GenericNodeAnimator::doAdvance(const Containers::BitArrayView active, Conta
             continue;
 
         Animation& animation = state.animations[i];
-        animation.call(animation, nodes[i], {}, factors[i]);
+        animation.call(animation, nodes[i], {}, factors[i],
+            (started[i] ? GenericAnimationState::Started : GenericAnimationState{})|
+            (stopped[i] ? GenericAnimationState::Stopped : GenericAnimationState{}));
     }
 }
 
@@ -280,6 +343,18 @@ AnimationHandle GenericDataAnimator::create(Containers::Function<void(DataHandle
     return handle;
 }
 
+AnimationHandle GenericDataAnimator::create(Containers::Function<void(DataHandle, Float, GenericAnimationStates)>&& animation, Float(*const easing)(Float), const Nanoseconds start, const Nanoseconds duration, const DataHandle data, const UnsignedInt repeatCount, const AnimationFlags flags) {
+    const AnimationHandle handle = AbstractGenericAnimator::create(start, duration, data, repeatCount, flags);
+    createInternal(handle, Utility::move(animation), easing);
+    return handle;
+}
+
+AnimationHandle GenericDataAnimator::create(Containers::Function<void(DataHandle, Float, GenericAnimationStates)>&& animation, Float(*const easing)(Float), const Nanoseconds start, const Nanoseconds duration, const LayerDataHandle data, const UnsignedInt repeatCount, const AnimationFlags flags) {
+    const AnimationHandle handle = AbstractGenericAnimator::create(start, duration, data, repeatCount, flags);
+    createInternal(handle, Utility::move(animation), easing);
+    return handle;
+}
+
 void GenericDataAnimator::createInternal(const AnimationHandle handle) {
     State& state = static_cast<State&>(*_state);
     const UnsignedInt id = animationHandleId(handle);
@@ -298,8 +373,24 @@ void GenericDataAnimator::createInternal(const AnimationHandle handle, Container
     Animation& animationData = _state->animations[animationHandleId(handle)];
     animationData.animation = Utility::move(animation);
     animationData.easing = easing;
-    animationData.call = [](Animation& animation, NodeHandle, DataHandle data, Float factor) {
+    animationData.call = [](Animation& animation, NodeHandle, DataHandle data, Float factor, GenericAnimationStates) {
         static_cast<Containers::Function<void(DataHandle, Float)>&>(animation.animation)(data, animation.easing(factor));
+    };
+}
+
+void GenericDataAnimator::createInternal(const AnimationHandle handle, Containers::Function<void(DataHandle, Float, GenericAnimationStates)>&& animation, Float(*const easing)(Float)) {
+    CORRADE_ASSERT(animation,
+        "Ui::GenericDataAnimator::create(): animation is null", );
+    CORRADE_ASSERT(easing,
+        "Ui::GenericDataAnimator::create(): easing is null", );
+
+    createInternal(handle);
+
+    Animation& animationData = _state->animations[animationHandleId(handle)];
+    animationData.animation = Utility::move(animation);
+    animationData.easing = easing;
+    animationData.call = [](Animation& animation, NodeHandle, DataHandle data, Float factor, GenericAnimationStates state) {
+        static_cast<Containers::Function<void(DataHandle, Float, GenericAnimationStates)>&>(animation.animation)(data, animation.easing(factor), state);
     };
 }
 
@@ -344,7 +435,7 @@ void GenericDataAnimator::doClean(const Containers::BitArrayView animationIdsToR
     }
 }
 
-void GenericDataAnimator::doAdvance(const Containers::BitArrayView active, Containers::BitArrayView, Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>& factors) {
+void GenericDataAnimator::doAdvance(const Containers::BitArrayView active, const Containers::BitArrayView started, const Containers::BitArrayView stopped, const Containers::StridedArrayView1D<const Float>& factors) {
     const Containers::StridedArrayView1D<const LayerDataHandle> layerData = this->layerData();
     State& state = static_cast<State&>(*_state);
     /** @todo some way to iterate set bits */
@@ -360,7 +451,9 @@ void GenericDataAnimator::doAdvance(const Containers::BitArrayView active, Conta
             {},
             layerData[i] == LayerDataHandle::Null ?
                 DataHandle::Null : dataHandle(layer(), layerData[i]),
-            factors[i]);
+            factors[i],
+            (started[i] ? GenericAnimationState::Started : GenericAnimationState{})|
+            (stopped[i] ? GenericAnimationState::Stopped : GenericAnimationState{}));
     }
 }
 

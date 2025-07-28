@@ -27,13 +27,65 @@
 */
 
 /** @file
- * @brief Class @ref Magnum::Ui::GenericAnimator, @ref Magnum::Ui::GenericNodeAnimator, @ref Magnum::Ui::GenericDataAnimator
+ * @brief Class @ref Magnum::Ui::GenericAnimator, @ref Magnum::Ui::GenericNodeAnimator, @ref Magnum::Ui::GenericDataAnimator, enum @ref Magnum::Ui::GenericAnimationState, enum set @ref Magnum::Ui::GenericAnimationStates
  * @m_since_latest
  */
 
 #include "Magnum/Ui/AbstractAnimator.h"
 
 namespace Magnum { namespace Ui {
+
+/**
+@brief Generic animation state
+@m_since_latest
+
+@see @ref GenericAnimationStates, @ref GenericAnimator::create(),
+    @ref GenericNodeAnimator::create(), @ref GenericDataAnimator::create()
+*/
+enum class GenericAnimationState: UnsignedByte {
+    /**
+     * The animation started in this call. Guaranteed to be present in exactly
+     * one call during the animation being played. If neither
+     * @ref GenericAnimationState::Started nor
+     * @relativeref{GenericAnimationState,Stopped} is present, the animation is
+     * in the middle, if both are present at the same time the animation have
+     * played in full between subsequent calls.
+     */
+    Started = 1 << 0,
+
+    /**
+     * The animation stopped in this call. Guaranteed to be present in exactly
+     * one call during the animation being played. If neither
+     * @ref GenericAnimationState::Started nor
+     * @relativeref{GenericAnimationState,Stopped} is present, the animation is
+     * in the middle, if both are present at the same time the animation have
+     * played in full between subsequent calls.
+     */
+    Stopped = 1 << 1,
+};
+
+/**
+@debugoperatorenum{GenericAnimationState}
+@m_since_latest
+*/
+MAGNUM_UI_EXPORT Debug& operator<<(Debug& debug, GenericAnimationState value);
+
+/**
+@brief Generic animation states
+@m_since_latest
+
+@see @ref GenericAnimator::create(), @ref GenericNodeAnimator::create(),
+    @ref GenericDataAnimator::create()
+*/
+typedef Containers::EnumSet<GenericAnimationState> GenericAnimationStates;
+
+CORRADE_ENUMSET_OPERATORS(GenericAnimationStates)
+
+/**
+@debugoperatorenum{GenericAnimationStates}
+@m_since_latest
+*/
+MAGNUM_UI_EXPORT Debug& operator<<(Debug& debug, GenericAnimationStates value);
 
 /**
 @brief Generic animator
@@ -69,7 +121,11 @@ it's meant to start and its duration.
 @snippet Ui.cpp GenericAnimator-create
 
 If the function performs easing on its own, pass @ref Animation::Easing::linear
-as the easing function to have the animation factor passed unchanged.
+as the easing function to have the animation factor passed unchanged. There's
+also an overload taking an extra @ref GenericAnimationStates parameter to
+perform an action exactly once at animation start and stop:
+
+@snippet Ui.cpp GenericAnimator-create-started-stopped
 
 The animation function is free to do anything except for touching state related
 to the animations themselves, such as playing, stopping, creating or removing
@@ -149,9 +205,22 @@ class MAGNUM_UI_EXPORT GenericAnimator: public AbstractGenericAnimator {
          * @cpp 1.0f @ce to themselves, the animation function is guaranteed to
          * be called with @p factor being exactly @cpp 1.0f @ce once the
          * animation is stopped. Other than that, it may be an arbitrary value
-         * based on how the @p easing function is implemented.
+         * based on how the @p easing function is implemented. You can also use
+         * the @ref GenericAnimationStates overload below to hook directly to
+         * the start and stop.
          */
         AnimationHandle create(Containers::Function<void(Float factor)>&& animation, Float(*easing)(Float), Nanoseconds start, Nanoseconds duration, UnsignedInt repeatCount = 1, AnimationFlags flags = {});
+
+        /**
+         * @brief Create an animation with an extra state input
+         *
+         * Like @ref create() "create(Containers::Function<void(Float)>&&, Float(*)(Float), Nanoseconds, Nanoseconds, UnsignedInt, AnimationFlags)"
+         * but with an extra @p state argument that you can use to perform an
+         * operation exactly once at animation start or stop. See documentation
+         * of particular @ref GenericAnimationState values for detailed
+         * behavior description.
+         */
+        AnimationHandle create(Containers::Function<void(Float factor, GenericAnimationStates state)>&& animation, Float(*easing)(Float), Nanoseconds start, Nanoseconds duration, UnsignedInt repeatCount = 1, AnimationFlags flags = {});
 
         /**
          * @brief Remove an animation
@@ -235,7 +304,13 @@ its height and turning it from transparent to opaque:
 @snippet Ui.cpp GenericNodeAnimator-create
 
 If the function performs easing on its own, pass @ref Animation::Easing::linear
-as the easing function to have the animation factor passed unchanged.
+as the easing function to have the animation factor passed unchanged. There's
+also an overload taking an extra @ref GenericAnimationStates parameter to
+perform an action exactly once at animation start and stop. For example,
+assuming the node is initially hidden, at the start it could be made visible
+but not reacting to events, and made fully interactive only at the end:
+
+@snippet Ui.cpp GenericNodeAnimator-create-started-stopped
 
 The animation function is free to do anything except for touching state related
 to the animations or associated nodes, such as playing or stopping the
@@ -318,9 +393,22 @@ class MAGNUM_UI_EXPORT GenericNodeAnimator: public AbstractGenericAnimator {
          * @cpp 1.0f @ce to themselves, the animation function is guaranteed to
          * be called with @p factor being exactly @cpp 1.0f @ce once the
          * animation is stopped. Other than that, it may be an arbitrary value
-         * based on how the @p easing function is implemented.
+         * based on how the @p easing function is implemented. You can also use
+         * the @ref GenericAnimationStates overload below to hook directly to
+         * the start and stop.
          */
         AnimationHandle create(Containers::Function<void(NodeHandle node, Float factor)>&& animation, Float(*easing)(Float), Nanoseconds start, Nanoseconds duration, NodeHandle node, UnsignedInt repeatCount = 1, AnimationFlags flags = {});
+
+        /**
+         * @brief Create an animation with an extra state input
+         *
+         * Like @ref create() "create(Containers::Function<void(NodeHandle, Float)>&&, Float(*)(Float), Nanoseconds, Nanoseconds, NodeHandle, UnsignedInt, AnimationFlags)"
+         * but with an extra @p state argument that you can use to perform an
+         * operation exactly once at animation start or stop. See documentation
+         * of particular @ref GenericAnimationState values for detailed
+         * behavior description.
+         */
+        AnimationHandle create(Containers::Function<void(NodeHandle node, Float factor, GenericAnimationStates state)>&& animation, Float(*easing)(Float), Nanoseconds start, Nanoseconds duration, NodeHandle node, UnsignedInt repeatCount = 1, AnimationFlags flags = {});
 
         /**
          * @brief Remove an animation
@@ -405,7 +493,13 @@ visualized using custom @ref BaseLayer padding on the left side:
 @snippet Ui.cpp GenericDataAnimator-create
 
 If the function performs easing on its own, pass @ref Animation::Easing::linear
-as the easing function to have the animation factor passed unchanged.
+as the easing function to have the animation factor passed unchanged. There's
+also an overload taking an extra @ref GenericAnimationStates parameter to
+perform an action exactly once at animation start and stop. For example,
+assuming a custom style, setting a different one for the active and completion
+state:
+
+@snippet Ui.cpp GenericDataAnimator-create-started-stopped
 
 The animation function is free to do anything except for touching state related
 to the animations or associated data or nodes, such as playing or stopping the
@@ -498,14 +592,28 @@ class MAGNUM_UI_EXPORT GenericDataAnimator: public AbstractGenericAnimator {
          * Unless @p data is @ref DataHandle::Null or the animation is
          * subsequently detached from the data, the layer portion of the
          * @ref DataHandle passed to @p animator is matching the layer handle
-         * passed to @ref setLayer(). Assuming the @p easing function correctly
-         * maps @cpp 0.0f @ce and @cpp 1.0f @ce to themselves, the animation
-         * function is guaranteed to be called with @p factor being exactly
-         * @cpp 1.0f @ce once the animation is stopped. Other than that, it may
-         * be an arbitrary value based on how the @p easing function is
-         * implemented.
+         * passed to @ref setLayer().
+         *
+         * Assuming the @p easing function correctly maps @cpp 0.0f @ce and
+         * @cpp 1.0f @ce to themselves, the animation function is guaranteed to
+         * be called with @p factor being exactly @cpp 1.0f @ce once the
+         * animation is stopped. Other than that, it may be an arbitrary value
+         * based on how the @p easing function is implemented. You can also use
+         * the @ref GenericAnimationStates overload below to hook directly to
+         * the start and stop.
          */
         AnimationHandle create(Containers::Function<void(DataHandle data, Float factor)>&& animation, Float(*easing)(Float), Nanoseconds start, Nanoseconds duration, DataHandle data, UnsignedInt repeatCount = 1, AnimationFlags flags = {});
+
+        /**
+         * @brief Create an animation with an extra state input
+         *
+         * Like @ref create() "create(Containers::Function<void(DataHandle, Float)>&&, Float(*)(Float), Nanoseconds, Nanoseconds, DataHandle, UnsignedInt, AnimationFlags)"
+         * but with an extra @p state argument that you can use to perform an
+         * operation exactly once at animation start or stop. See documentation
+         * of particular @ref GenericAnimationState values for detailed
+         * behavior description.
+         */
+        AnimationHandle create(Containers::Function<void(DataHandle data, Float factor, GenericAnimationStates state)>&& animation, Float(*easing)(Float), Nanoseconds start, Nanoseconds duration, DataHandle data, UnsignedInt repeatCount = 1, AnimationFlags flags = {});
 
         /**
          * @brief Create an animation assuming the data it's attached to belongs to the layer the animator is registered with
@@ -520,6 +628,17 @@ class MAGNUM_UI_EXPORT GenericDataAnimator: public AbstractGenericAnimator {
          * passed to @ref setLayer().
          */
         AnimationHandle create(Containers::Function<void(DataHandle data, Float factor)>&& animator, Float(*easing)(Float), Nanoseconds start, Nanoseconds duration, LayerDataHandle data, UnsignedInt repeatCount = 1, AnimationFlags flags = {});
+
+        /**
+         * @brief Create an animation assuming the data it's attached to belongs to the layer the animator is registered with, with an extra state input
+         *
+         * Like @ref create() "create(Containers::Function<void(DataHandle, Float)>&&, Float(*)(Float), Nanoseconds, Nanoseconds, LayerDataHandle, UnsignedInt, AnimationFlags)"
+         * but with an extra @p state argument that you can use to perform an
+         * operation exactly once at animation start or stop. See documentation
+         * of particular @ref GenericAnimationState values for detailed
+         * behavior description.
+         */
+        AnimationHandle create(Containers::Function<void(DataHandle data, Float factor, GenericAnimationStates state)>&& animator, Float(*easing)(Float), Nanoseconds start, Nanoseconds duration, LayerDataHandle data, UnsignedInt repeatCount = 1, AnimationFlags flags = {});
 
         /**
          * @brief Remove an animation
@@ -559,6 +678,7 @@ class MAGNUM_UI_EXPORT GenericDataAnimator: public AbstractGenericAnimator {
     private:
         MAGNUM_UI_LOCAL void createInternal(const AnimationHandle handle);
         MAGNUM_UI_LOCAL void createInternal(const AnimationHandle handle, Containers::Function<void(DataHandle, Float)>&& animation, Float(*const easing)(Float));
+        MAGNUM_UI_LOCAL void createInternal(const AnimationHandle handle, Containers::Function<void(DataHandle, Float, GenericAnimationStates)>&& animation, Float(*const easing)(Float));
         MAGNUM_UI_LOCAL void removeInternal(UnsignedInt id);
 
         MAGNUM_UI_LOCAL AnimatorFeatures doFeatures() const override;

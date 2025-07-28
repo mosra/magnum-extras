@@ -1839,6 +1839,20 @@ animator.create([](Float factor) {
     DOXYGEN_ELLIPSIS(static_cast<void>(factor);)
 }, Animation::Easing::cubicIn, now, 1.5_sec);
 /* [GenericAnimator-create] */
+
+/* [GenericAnimator-create-started-stopped] */
+animator.create([](Float factor, Ui::GenericAnimationStates state) {
+    if(state & Ui::GenericAnimationState::Started) {
+        DOXYGEN_ELLIPSIS()
+    }
+
+    DOXYGEN_ELLIPSIS(static_cast<void>(factor);)
+
+    if(state & Ui::GenericAnimationState::Stopped) {
+        DOXYGEN_ELLIPSIS()
+    }
+}, Animation::Easing::cubicIn, now, 1.5_sec);
+/* [GenericAnimator-create-started-stopped] */
 }
 
 {
@@ -1857,6 +1871,21 @@ animator.create([&ui](Ui::NodeHandle dropdown, Float factor) {
     ui.setNodeOpacity(dropdown, 1.0f*factor);
 }, Animation::Easing::cubicIn, now, 0.5_sec, dropdown);
 /* [GenericNodeAnimator-create] */
+
+/* [GenericNodeAnimator-create-started-stopped] */
+animator.create([&ui](Ui::NodeHandle dropdown, Float factor,
+                      Ui::GenericAnimationStates state) {
+    if(state & Ui::GenericAnimationState::Started) {
+        ui.clearNodeFlags(dropdown, Ui::NodeFlag::Hidden);
+        ui.setNodeFlags(dropdown, Ui::NodeFlag::NoEvents);
+    }
+    ui.setNodeSize(dropdown, {ui.nodeSize(dropdown).x(), 150.0f*factor});
+    ui.setNodeOpacity(dropdown, 1.0f*factor);
+    if(state & Ui::GenericAnimationState::Stopped) {
+        ui.clearNodeFlags(dropdown, Ui::NodeFlag::NoEvents);
+    }
+}, Animation::Easing::cubicIn, now, 0.5_sec, dropdown);
+/* [GenericNodeAnimator-create-started-stopped] */
 }
 
 {
@@ -1880,5 +1909,20 @@ animator.create([&baseLayer, from, to](Ui::DataHandle progressbar, Float factor)
     baseLayer.setPadding(progressbar, {Math::lerp(from, to, factor), 0.0f, 0.0f, 0.0f});
 }, Animation::Easing::cubicIn, now, 0.5_sec, progressbar);
 /* [GenericDataAnimator-create] */
+
+enum class Style {
+    ProgressBarActive,
+    ProgressBarComplete
+};
+/* [GenericDataAnimator-create-started-stopped] */
+animator.create([&baseLayer, from, to](Ui::DataHandle progressbar, Float factor,
+                                       Ui::GenericAnimationStates state) {
+    if(state & Ui::GenericAnimationState::Started)
+        baseLayer.setStyle(progressbar, Style::ProgressBarActive);
+    baseLayer.setPadding(progressbar, {Math::lerp(from, to, factor), 0.0f, 0.0f, 0.0f});
+    if(state & Ui::GenericAnimationState::Stopped)
+        baseLayer.setStyle(progressbar, Style::ProgressBarComplete);
+}, Animation::Easing::cubicIn, now, 0.5_sec, progressbar);
+/* [GenericDataAnimator-create-started-stopped] */
 }
 }
