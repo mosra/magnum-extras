@@ -69,7 +69,8 @@ struct Data {
     /* 6+ bytes free */
     /** @todo ideally this would be inlined directly inside FunctionData.call,
         somehow -- e.g. an extra template argument to Function that decouples
-        the actual wrapped signature from the call signature */
+        the actual wrapped signature from the call signature. Same is in the
+        GenericAnimator implementation. */
     void(*call)();
 };
 

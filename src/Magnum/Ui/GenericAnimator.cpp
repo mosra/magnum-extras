@@ -37,8 +37,13 @@
 namespace Magnum { namespace Ui {
 
 struct Animation {
-    Containers::Function<void(Float)> animation;
+    Containers::FunctionData animation;
     Float(*easing)(Float);
+    /** @todo ideally this would be inlined directly inside FunctionData.call,
+        somehow -- e.g. an extra template argument to Function that decouples
+        the actual wrapped signature from the call signature. Same is in
+        the EventLayer implementation. */
+    void(*call)(Animation&, NodeHandle, DataHandle, Float);
 };
 
 struct GenericAnimator::State {
@@ -77,6 +82,9 @@ AnimationHandle GenericAnimator::create(Containers::Function<void(Float)>&& anim
     Animation& animationData = state.animations[id];
     animationData.animation = Utility::move(animation);
     animationData.easing = easing;
+    animationData.call = [](Animation& animation, NodeHandle, DataHandle, Float factor) {
+        static_cast<Containers::Function<void(Float)>&>(animation.animation)(animation.easing(factor));
+    };
 
     return handle;
 }
@@ -128,17 +136,12 @@ void GenericAnimator::doAdvance(const Containers::BitArrayView active, Container
             continue;
 
         Animation& animation = state.animations[i];
-        animation.animation(animation.easing(factors[i]));
+        animation.call(animation, {}, {}, factors[i]);
     }
 }
 
-struct AnimationNode {
-    Containers::Function<void(NodeHandle, Float)> animation;
-    Float(*easing)(Float);
-};
-
 struct GenericNodeAnimator::State {
-    Containers::Array<AnimationNode> animations;
+    Containers::Array<Animation> animations;
 };
 
 GenericNodeAnimator::GenericNodeAnimator(AnimatorHandle handle): AbstractGenericAnimator{handle}, _state{InPlaceInit} {}
@@ -151,7 +154,7 @@ GenericNodeAnimator& GenericNodeAnimator::operator=(GenericNodeAnimator&&) noexc
 
 UnsignedInt GenericNodeAnimator::usedAllocatedAnimationCount() const {
     UnsignedInt count = 0;
-    for(const AnimationNode& animation: _state->animations)
+    for(const Animation& animation: _state->animations)
         if(animation.animation.isAllocated())
             ++count;
 
@@ -170,9 +173,12 @@ AnimationHandle GenericNodeAnimator::create(Containers::Function<void(NodeHandle
     if(id >= state.animations.size())
         arrayResize(state.animations, id + 1);
 
-    AnimationNode& animationData = state.animations[id];
+    Animation& animationData = state.animations[id];
     animationData.animation = Utility::move(animation);
     animationData.easing = easing;
+    animationData.call = [](Animation& animation, NodeHandle node, DataHandle, Float factor) {
+        static_cast<Containers::Function<void(NodeHandle, Float)>&>(animation.animation)(node, animation.easing(factor));
+    };
 
     return handle;
 }
@@ -226,18 +232,13 @@ void GenericNodeAnimator::doAdvance(const Containers::BitArrayView active, Conta
         if(!active[i])
             continue;
 
-        AnimationNode& animation = state.animations[i];
-        animation.animation(nodes[i], animation.easing(factors[i]));
+        Animation& animation = state.animations[i];
+        animation.call(animation, nodes[i], {}, factors[i]);
     }
 }
 
-struct AnimationData {
-    Containers::Function<void(DataHandle, Float)> animation;
-    Float(*easing)(Float);
-};
-
 struct GenericDataAnimator::State {
-    Containers::Array<AnimationData> animations;
+    Containers::Array<Animation> animations;
 };
 
 GenericDataAnimator::GenericDataAnimator(AnimatorHandle handle): AbstractGenericAnimator{handle}, _state{InPlaceInit} {}
@@ -250,7 +251,7 @@ GenericDataAnimator& GenericDataAnimator::operator=(GenericDataAnimator&&) noexc
 
 UnsignedInt GenericDataAnimator::usedAllocatedAnimationCount() const {
     UnsignedInt count = 0;
-    for(const AnimationData& animation: _state->animations)
+    for(const Animation& animation: _state->animations)
         if(animation.animation.isAllocated())
             ++count;
 
@@ -280,9 +281,12 @@ void GenericDataAnimator::createInternal(const AnimationHandle handle, Container
     if(id >= state.animations.size())
         arrayResize(state.animations, id + 1);
 
-    AnimationData& animationData = state.animations[id];
+    Animation& animationData = state.animations[id];
     animationData.animation = Utility::move(animation);
     animationData.easing = easing;
+    animationData.call = [](Animation& animation, NodeHandle, DataHandle data, Float factor) {
+        static_cast<Containers::Function<void(DataHandle, Float)>&>(animation.animation)(data, animation.easing(factor));
+    };
 }
 
 void GenericDataAnimator::removeInternal(const UnsignedInt id) {
@@ -336,11 +340,13 @@ void GenericDataAnimator::doAdvance(const Containers::BitArrayView active, Conta
 
         /* If not associated with any data, pass a null instead of combining it
            with the layer handle */
-        AnimationData& animation = state.animations[i];
-        animation.animation(
+        Animation& animation = state.animations[i];
+        animation.call(
+            animation,
+            {},
             layerData[i] == LayerDataHandle::Null ?
                 DataHandle::Null : dataHandle(layer(), layerData[i]),
-            animation.easing(factors[i]));
+            factors[i]);
     }
 }
 
