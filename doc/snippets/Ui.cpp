@@ -1836,7 +1836,7 @@ Ui::GenericAnimator& animator = ui.setGenericAnimatorInstance(
 Nanoseconds now;
 /* [GenericAnimator-create] */
 animator.create([](Float factor) {
-    DOXYGEN_ELLIPSIS(static_cast<void>(factor));
+    DOXYGEN_ELLIPSIS(static_cast<void>(factor);)
 }, Animation::Easing::cubicIn, now, 1.5_sec);
 /* [GenericAnimator-create] */
 }

@@ -43,7 +43,8 @@ Each animation is a function that gets called with an animation factor in the
 @f$ [0, 1] @f$ range. The function can then call arbitrary setters on the UI
 instance, on layers or elsewhere. If an animation is associated with a
 particular node or layer data, you may want to use @ref GenericNodeAnimator or
-@ref GenericDataAnimator instead.
+@ref GenericDataAnimator instead, their documentation also shows actual
+practical examples of animating node or data properties.
 
 @section Ui-GenericAnimator-setup Setting up an animator instance
 
@@ -148,7 +149,7 @@ class MAGNUM_UI_EXPORT GenericAnimator: public AbstractGenericAnimator {
          * @cpp 1.0f @ce to themselves, the animation function is guaranteed to
          * be called with @p factor being exactly @cpp 1.0f @ce once the
          * animation is stopped. Other than that, it may be an arbitrary value
-         * from the @f$ [0, 1] @f$ range.
+         * based on how the @p easing function is implemented.
          */
         AnimationHandle create(Containers::Function<void(Float factor)>&& animation, Float(*easing)(Float), Nanoseconds start, Nanoseconds duration, UnsignedInt repeatCount = 1, AnimationFlags flags = {});
 
@@ -317,7 +318,7 @@ class MAGNUM_UI_EXPORT GenericNodeAnimator: public AbstractGenericAnimator {
          * @cpp 1.0f @ce to themselves, the animation function is guaranteed to
          * be called with @p factor being exactly @cpp 1.0f @ce once the
          * animation is stopped. Other than that, it may be an arbitrary value
-         * from the @f$ [0, 1] @f$ range.
+         * based on how the @p easing function is implemented.
          */
         AnimationHandle create(Containers::Function<void(NodeHandle node, Float factor)>&& animation, Float(*easing)(Float), Nanoseconds start, Nanoseconds duration, NodeHandle node, UnsignedInt repeatCount = 1, AnimationFlags flags = {});
 
@@ -501,14 +502,15 @@ class MAGNUM_UI_EXPORT GenericDataAnimator: public AbstractGenericAnimator {
          * maps @cpp 0.0f @ce and @cpp 1.0f @ce to themselves, the animation
          * function is guaranteed to be called with @p factor being exactly
          * @cpp 1.0f @ce once the animation is stopped. Other than that, it may
-         * be an arbitrary value from the @f$ [0, 1] @f$ range.
+         * be an arbitrary value based on how the @p easing function is
+         * implemented.
          */
         AnimationHandle create(Containers::Function<void(DataHandle data, Float factor)>&& animation, Float(*easing)(Float), Nanoseconds start, Nanoseconds duration, DataHandle data, UnsignedInt repeatCount = 1, AnimationFlags flags = {});
 
         /**
          * @brief Create an animation assuming the data it's attached to belongs to the layer the animator is registered with
          *
-         * Compared to @ref create(Containers::Function<void(DataHandle, Float)>&&, Float(*)(Float), Nanoseconds, Nanoseconds, DataHandle, UnsignedInt, AnimationFlags)
+         * Compared to @ref create() "create(Containers::Function<void(DataHandle, Float)>&&, Float(*)(Float), Nanoseconds, Nanoseconds, DataHandle, UnsignedInt, AnimationFlags)"
          * delegates to @ref AbstractAnimator::create(Nanoseconds, Nanoseconds, LayerDataHandle, UnsignedInt, AnimationFlags)
          * instead.
          *

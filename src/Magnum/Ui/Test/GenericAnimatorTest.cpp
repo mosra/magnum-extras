@@ -251,7 +251,8 @@ void GenericAnimatorTest::createRemove() {
     CORRADE_COMPARE(animator.duration(nonTrivial), 191_nsec);
     CORRADE_COMPARE(animator.repeatCount(nonTrivial), 0);
     CORRADE_COMPARE(animator.flags(nonTrivial), AnimationFlags{0x80});
-    /* Testing also the other overload */
+    /* Testing also the other overload. The other getters are tested in
+       AbstractAnimatorTest already. */
     CORRADE_COMPARE(animator.easing(animationHandleData(nonTrivial)), Animation::Easing::smootherstep);
     CORRADE_COMPARE(destructedCount, 1);
 
@@ -305,7 +306,8 @@ void GenericAnimatorTest::createRemoveNode() {
     CORRADE_COMPARE(animator.repeatCount(nonTrivial), 0);
     CORRADE_COMPARE(animator.flags(nonTrivial), AnimationFlags{0x80});
     CORRADE_COMPARE(animator.node(nonTrivial), nodeHandle(0x67890, 0xdef));
-    /* Testing also the other overload */
+    /* Testing also the other overload. The other getters are tested in
+       AbstractAnimatorTest already. */
     CORRADE_COMPARE(animator.easing(animationHandleData(nonTrivial)), Animation::Easing::smootherstep);
     CORRADE_COMPARE(destructedCount, 1);
 
@@ -367,7 +369,8 @@ void GenericAnimatorTest::createRemoveData() {
     CORRADE_COMPARE(animator.repeatCount(nonTrivial), 0);
     CORRADE_COMPARE(animator.flags(nonTrivial), AnimationFlags{0x80});
     CORRADE_COMPARE(animator.data(nonTrivial), dataHandle(layer.handle(), 0x67890, 0xdef));
-    /* Testing also the other overload */
+    /* Testing also the other overload. The other getters are tested in
+       AbstractAnimatorTest already. */
     CORRADE_COMPARE(animator.easing(animationHandleData(nonTrivial)), Animation::Easing::smootherstep);
     CORRADE_COMPARE(destructedCount, 1);
 
