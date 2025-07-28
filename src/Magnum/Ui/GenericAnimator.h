@@ -188,6 +188,7 @@ class MAGNUM_UI_EXPORT GenericAnimator: public AbstractGenericAnimator {
         auto easing(AnimatorDataHandle handle) const -> Float(*)(Float);
 
     private:
+        MAGNUM_UI_LOCAL AnimationHandle createInternal(Nanoseconds start, Nanoseconds duration, UnsignedInt repeatCount, AnimationFlags flags);
         MAGNUM_UI_LOCAL void removeInternal(UnsignedInt id);
 
         MAGNUM_UI_LOCAL AnimatorFeatures doFeatures() const override;
@@ -356,6 +357,7 @@ class MAGNUM_UI_EXPORT GenericNodeAnimator: public AbstractGenericAnimator {
         auto easing(AnimatorDataHandle handle) const -> Float(*)(Float);
 
     private:
+        MAGNUM_UI_LOCAL AnimationHandle createInternal(Nanoseconds start, Nanoseconds duration, NodeHandle node, UnsignedInt repeatCount, AnimationFlags flags);
         MAGNUM_UI_LOCAL void removeInternal(UnsignedInt id);
 
         MAGNUM_UI_LOCAL AnimatorFeatures doFeatures() const override;
@@ -553,6 +555,7 @@ class MAGNUM_UI_EXPORT GenericDataAnimator: public AbstractGenericAnimator {
         auto easing(AnimatorDataHandle handle) const -> Float(*)(Float);
 
     private:
+        MAGNUM_UI_LOCAL void createInternal(const AnimationHandle handle);
         MAGNUM_UI_LOCAL void createInternal(const AnimationHandle handle, Containers::Function<void(DataHandle, Float)>&& animation, Float(*const easing)(Float));
         MAGNUM_UI_LOCAL void removeInternal(UnsignedInt id);
 

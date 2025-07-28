@@ -73,19 +73,24 @@ AnimationHandle GenericAnimator::create(Containers::Function<void(Float)>&& anim
     CORRADE_ASSERT(easing,
         "Ui::GenericAnimator::create(): easing is null", {});
 
-    State& state = static_cast<State&>(*_state);
-    const AnimationHandle handle = AbstractGenericAnimator::create(start, duration, repeatCount, flags);
-    const UnsignedInt id = animationHandleId(handle);
-    if(id >= state.animations.size())
-        arrayResize(state.animations, id + 1);
+    const AnimationHandle handle = createInternal(start, duration, repeatCount, flags);
 
-    Animation& animationData = state.animations[id];
+    Animation& animationData = _state->animations[animationHandleId(handle)];
     animationData.animation = Utility::move(animation);
     animationData.easing = easing;
     animationData.call = [](Animation& animation, NodeHandle, DataHandle, Float factor) {
         static_cast<Containers::Function<void(Float)>&>(animation.animation)(animation.easing(factor));
     };
 
+    return handle;
+}
+
+AnimationHandle GenericAnimator::createInternal(const Nanoseconds start, const Nanoseconds duration, const UnsignedInt repeatCount, const AnimationFlags flags) {
+    State& state = static_cast<State&>(*_state);
+    const AnimationHandle handle = AbstractGenericAnimator::create(start, duration, repeatCount, flags);
+    const UnsignedInt id = animationHandleId(handle);
+    if(id >= state.animations.size())
+        arrayResize(state.animations, id + 1);
     return handle;
 }
 
@@ -167,19 +172,24 @@ AnimationHandle GenericNodeAnimator::create(Containers::Function<void(NodeHandle
     CORRADE_ASSERT(easing,
         "Ui::GenericNodeAnimator::create(): easing is null", {});
 
-    State& state = static_cast<State&>(*_state);
-    const AnimationHandle handle = AbstractGenericAnimator::create(start, duration, node, repeatCount, flags);
-    const UnsignedInt id = animationHandleId(handle);
-    if(id >= state.animations.size())
-        arrayResize(state.animations, id + 1);
+    const AnimationHandle handle = createInternal(start, duration, node, repeatCount, flags);
 
-    Animation& animationData = state.animations[id];
+    Animation& animationData = _state->animations[animationHandleId(handle)];
     animationData.animation = Utility::move(animation);
     animationData.easing = easing;
     animationData.call = [](Animation& animation, NodeHandle node, DataHandle, Float factor) {
         static_cast<Containers::Function<void(NodeHandle, Float)>&>(animation.animation)(node, animation.easing(factor));
     };
 
+    return handle;
+}
+
+AnimationHandle GenericNodeAnimator::createInternal(const Nanoseconds start, const Nanoseconds duration, const NodeHandle node, const UnsignedInt repeatCount, const AnimationFlags flags) {
+    State& state = static_cast<State&>(*_state);
+    const AnimationHandle handle = AbstractGenericAnimator::create(start, duration, node, repeatCount, flags);
+    const UnsignedInt id = animationHandleId(handle);
+    if(id >= state.animations.size())
+        arrayResize(state.animations, id + 1);
     return handle;
 }
 
@@ -270,18 +280,22 @@ AnimationHandle GenericDataAnimator::create(Containers::Function<void(DataHandle
     return handle;
 }
 
+void GenericDataAnimator::createInternal(const AnimationHandle handle) {
+    State& state = static_cast<State&>(*_state);
+    const UnsignedInt id = animationHandleId(handle);
+    if(id >= state.animations.size())
+        arrayResize(state.animations, id + 1);
+}
+
 void GenericDataAnimator::createInternal(const AnimationHandle handle, Containers::Function<void(DataHandle, Float)>&& animation, Float(*const easing)(Float)) {
     CORRADE_ASSERT(animation,
         "Ui::GenericDataAnimator::create(): animation is null", );
     CORRADE_ASSERT(easing,
         "Ui::GenericDataAnimator::create(): easing is null", );
 
-    State& state = static_cast<State&>(*_state);
-    const UnsignedInt id = animationHandleId(handle);
-    if(id >= state.animations.size())
-        arrayResize(state.animations, id + 1);
+    createInternal(handle);
 
-    Animation& animationData = state.animations[id];
+    Animation& animationData = _state->animations[animationHandleId(handle)];
     animationData.animation = Utility::move(animation);
     animationData.easing = easing;
     animationData.call = [](Animation& animation, NodeHandle, DataHandle data, Float factor) {
