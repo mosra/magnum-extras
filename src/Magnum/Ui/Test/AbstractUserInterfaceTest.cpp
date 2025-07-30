@@ -1246,6 +1246,34 @@ void AbstractUserInterfaceTest::debugStatesSupersets() {
         Debug{&out} << (UserInterfaceState::NeedsNodeOpacityUpdate|UserInterfaceState::NeedsDataAttachmentUpdate|UserInterfaceState::NeedsDataUpdate);
         CORRADE_COMPARE(out, "Ui::UserInterfaceState::NeedsDataAttachmentUpdate|Ui::UserInterfaceState::NeedsNodeOpacityUpdate\n");
 
+    /* NeedsOpacityUpdate and NeedsNodeEnabledUpdate are both a superset of
+       NeedsDataUpdate, so both should be printed */
+    } {
+        Containers::String out;
+        Debug{&out} << (UserInterfaceState::NeedsNodeOpacityUpdate|UserInterfaceState::NeedsNodeEnabledUpdate|UserInterfaceState::NeedsDataUpdate);
+        CORRADE_COMPARE(out, "Ui::UserInterfaceState::NeedsNodeEnabledUpdate|Ui::UserInterfaceState::NeedsNodeOpacityUpdate\n");
+
+    /* NeedsOpacityUpdate and NeedsNodeClipUpdate are both a superset of
+       NeedsDataUpdate, so both should be printed */
+    } {
+        Containers::String out;
+        Debug{&out} << (UserInterfaceState::NeedsNodeOpacityUpdate|UserInterfaceState::NeedsNodeClipUpdate|UserInterfaceState::NeedsDataUpdate);
+        CORRADE_COMPARE(out, "Ui::UserInterfaceState::NeedsNodeClipUpdate|Ui::UserInterfaceState::NeedsNodeOpacityUpdate\n");
+
+    /* NeedsOpacityUpdate and NeedsLayoutUpdate are both a superset of
+       NeedsDataUpdate, so both should be printed */
+    } {
+        Containers::String out;
+        Debug{&out} << (UserInterfaceState::NeedsNodeOpacityUpdate|UserInterfaceState::NeedsLayoutUpdate|UserInterfaceState::NeedsDataUpdate);
+        CORRADE_COMPARE(out, "Ui::UserInterfaceState::NeedsLayoutUpdate|Ui::UserInterfaceState::NeedsNodeOpacityUpdate\n");
+
+    /* NeedsOpacityUpdate and NeedsLayoutAssignmentUpdate are both a superset of
+       NeedsDataUpdate, so both should be printed */
+    } {
+        Containers::String out;
+        Debug{&out} << (UserInterfaceState::NeedsNodeOpacityUpdate|UserInterfaceState::NeedsLayoutAssignmentUpdate|UserInterfaceState::NeedsDataUpdate);
+        CORRADE_COMPARE(out, "Ui::UserInterfaceState::NeedsLayoutAssignmentUpdate|Ui::UserInterfaceState::NeedsNodeOpacityUpdate\n");
+
     /* NeedsNodeEnabledUpdate is a superset of NeedsNodeEventMaskUpdate, so
        only one should be printed */
     } {
@@ -1281,11 +1309,18 @@ void AbstractUserInterfaceTest::debugStatesSupersets() {
         Debug{&out} << (UserInterfaceState::NeedsLayoutAssignmentUpdate|UserInterfaceState::NeedsLayoutUpdate);
         CORRADE_COMPARE(out, "Ui::UserInterfaceState::NeedsLayoutAssignmentUpdate\n");
 
-    /* NeedsNodeUpdate is a superset of NeedsNodeLayoutAssignmentUpdate, so
-       only one should be printed */
+    /* NeedsNodeUpdate is a superset of NeedsLayoutAssignmentUpdate, so only
+       one should be printed */
     } {
         Containers::String out;
         Debug{&out} << (UserInterfaceState::NeedsNodeUpdate|UserInterfaceState::NeedsLayoutAssignmentUpdate);
+        CORRADE_COMPARE(out, "Ui::UserInterfaceState::NeedsNodeUpdate\n");
+
+    /* NeedsNodeUpdate is a superset of NeedsNodeOpacityUpdate, so only one
+       should be printed */
+    } {
+        Containers::String out;
+        Debug{&out} << (UserInterfaceState::NeedsNodeUpdate|UserInterfaceState::NeedsNodeOpacityUpdate);
         CORRADE_COMPARE(out, "Ui::UserInterfaceState::NeedsNodeUpdate\n");
 
     /* NeedsNodeClean is a superset of NeedsNodeUpdate, so only one should be

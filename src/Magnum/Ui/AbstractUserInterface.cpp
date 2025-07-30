@@ -51,12 +51,20 @@
 namespace Magnum { namespace Ui {
 
 Debug& operator<<(Debug& debug, const UserInterfaceState value) {
-    /* Special case coming from the UserInterfaceStates printer. As both are a
-       superset of NeedsDataUpdate, printing just one would result in
-       `UserInterfaceState::NeedsNodeOpacityUpdate|UserInterfaceState(0x2)` in
-       the output. */
+    /* Special case coming from the UserInterfaceStates printer. As both in
+       each pair are a superset of NeedsDataUpdate, printing just one would
+       result in `UserInterfaceState::NeedsNodeOpacityUpdate|UserInterfaceState(0x2)`
+       etc. in the output. */
     if(value == UserInterfaceState(UnsignedShort(UserInterfaceState::NeedsDataAttachmentUpdate|UserInterfaceState::NeedsNodeOpacityUpdate)))
         return debug << UserInterfaceState::NeedsDataAttachmentUpdate << Debug::nospace << "|" << Debug::nospace << UserInterfaceState::NeedsNodeOpacityUpdate;
+    if(value == UserInterfaceState(UnsignedShort(UserInterfaceState::NeedsNodeEnabledUpdate|UserInterfaceState::NeedsNodeOpacityUpdate)))
+        return debug << UserInterfaceState::NeedsNodeEnabledUpdate << Debug::nospace << "|" << Debug::nospace << UserInterfaceState::NeedsNodeOpacityUpdate;
+    if(value == UserInterfaceState(UnsignedShort(UserInterfaceState::NeedsNodeClipUpdate|UserInterfaceState::NeedsNodeOpacityUpdate)))
+        return debug << UserInterfaceState::NeedsNodeClipUpdate << Debug::nospace << "|" << Debug::nospace << UserInterfaceState::NeedsNodeOpacityUpdate;
+    if(value == UserInterfaceState(UnsignedShort(UserInterfaceState::NeedsLayoutUpdate|UserInterfaceState::NeedsNodeOpacityUpdate)))
+        return debug << UserInterfaceState::NeedsLayoutUpdate << Debug::nospace << "|" << Debug::nospace << UserInterfaceState::NeedsNodeOpacityUpdate;
+    if(value == UserInterfaceState(UnsignedShort(UserInterfaceState::NeedsLayoutAssignmentUpdate|UserInterfaceState::NeedsNodeOpacityUpdate)))
+        return debug << UserInterfaceState::NeedsLayoutAssignmentUpdate << Debug::nospace << "|" << Debug::nospace << UserInterfaceState::NeedsNodeOpacityUpdate;
 
     debug << "Ui::UserInterfaceState" << Debug::nospace;
 
@@ -89,11 +97,16 @@ Debug& operator<<(Debug& debug, const UserInterfaceStates value) {
         UserInterfaceState::NeedsDataClean,
         /* Implied by NeedsNodeClean, has to be after */
         UserInterfaceState::NeedsNodeUpdate,
-        /* Both are a superset of NeedsDataUpdate, meaning printing just one
-           would result in `UserInterfaceState::NeedsNodeOpacityUpdate|
-           UserInterfaceState(0x2)` in the output. So we pass both and let the
-           UserInterfaceState printer deal with that. This is also implied by
-           NeedsNodeUpdate, so has to be after. */
+        /* For each pair, both are a superset of NeedsDataUpdate, meaning
+           printing just one would result in `UserInterfaceState::NeedsNodeOpacityUpdate|
+           UserInterfaceState(0x2)`
+           etc in the output. So we pass both and let the UserInterfaceState
+           printer deal with that. These are all also implied by
+           NeedsNodeUpdate, so have to be after. */
+        UserInterfaceState(UnsignedShort(UserInterfaceState::NeedsLayoutAssignmentUpdate|UserInterfaceState::NeedsNodeOpacityUpdate)),
+        UserInterfaceState(UnsignedShort(UserInterfaceState::NeedsLayoutUpdate|UserInterfaceState::NeedsNodeOpacityUpdate)),
+        UserInterfaceState(UnsignedShort(UserInterfaceState::NeedsNodeClipUpdate|UserInterfaceState::NeedsNodeOpacityUpdate)),
+        UserInterfaceState(UnsignedShort(UserInterfaceState::NeedsNodeEnabledUpdate|UserInterfaceState::NeedsNodeOpacityUpdate)),
         UserInterfaceState(UnsignedShort(UserInterfaceState::NeedsDataAttachmentUpdate|UserInterfaceState::NeedsNodeOpacityUpdate)),
         /* Implied by NeedsNodeUpdate, has to be after */
         UserInterfaceState::NeedsNodeOpacityUpdate,
