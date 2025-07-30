@@ -357,24 +357,6 @@ class MAGNUM_UI_EXPORT BaseLayerStyleAnimator: public AbstractVisualLayerStyleAn
         void remove(AnimatorDataHandle handle);
 
         /**
-         * @brief Animation easing function
-         *
-         * Expects that @p handle is valid. The returned pointer is never
-         * @cpp nullptr @ce.
-         */
-        auto easing(AnimationHandle handle) const -> Float(*)(Float);
-
-        /**
-         * @brief Animation easing function assuming it belongs to this animator
-         *
-         * Like @ref easing(AnimationHandle) const but without checking that
-         * @p handle indeed belongs to this animator. See its documentation for
-         * more information.
-         * @see @ref animationHandleData()
-         */
-        auto easing(AnimatorDataHandle handle) const -> Float(*)(Float);
-
-        /**
          * @brief Animation source and target uniforms
          *
          * Expects that @p handle is valid. The uniforms are queried from
@@ -411,6 +393,24 @@ class MAGNUM_UI_EXPORT BaseLayerStyleAnimator: public AbstractVisualLayerStyleAn
          * @see @ref animationHandleData()
          */
         Containers::Pair<Vector4, Vector4> paddings(AnimatorDataHandle handle) const;
+
+        /**
+         * @brief Animation easing function
+         *
+         * Expects that @p handle is valid. The returned pointer is never
+         * @cpp nullptr @ce.
+         */
+        auto easing(AnimationHandle handle) const -> Float(*)(Float);
+
+        /**
+         * @brief Animation easing function assuming it belongs to this animator
+         *
+         * Like @ref easing(AnimationHandle) const but without checking that
+         * @p handle indeed belongs to this animator. See its documentation for
+         * more information.
+         * @see @ref animationHandleData()
+         */
+        auto easing(AnimatorDataHandle handle) const -> Float(*)(Float);
 
         /**
          * @brief Advance the animations

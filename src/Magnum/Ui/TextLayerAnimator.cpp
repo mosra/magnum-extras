@@ -256,18 +256,6 @@ void TextLayerStyleAnimator::remove(const AnimatorDataHandle handle) {
     removeInternal(animatorDataHandleId(handle));
 }
 
-auto TextLayerStyleAnimator::easing(const AnimationHandle handle) const -> Float(*)(Float) {
-    CORRADE_ASSERT(isHandleValid(handle),
-        "Ui::TextLayerStyleAnimator::easing(): invalid handle" << handle, {});
-    return static_cast<const State&>(*_state).animations[animationHandleId(handle)].easing;
-}
-
-auto TextLayerStyleAnimator::easing(const AnimatorDataHandle handle) const -> Float(*)(Float) {
-    CORRADE_ASSERT(isHandleValid(handle),
-        "Ui::TextLayerStyleAnimator::easing(): invalid handle" << handle, {});
-    return static_cast<const State&>(*_state).animations[animatorDataHandleId(handle)].easing;
-}
-
 Containers::Pair<TextLayerStyleUniform, TextLayerStyleUniform> TextLayerStyleAnimator::uniforms(const AnimationHandle handle) const {
     CORRADE_ASSERT(isHandleValid(handle),
         "Ui::TextLayerStyleAnimator::uniforms(): invalid handle" << handle, {});
@@ -389,6 +377,18 @@ Containers::Optional<Containers::Pair<TextLayerStyleUniform, TextLayerStyleUnifo
     if(!animation.hasSelectionStyle)
         return {};
     return Containers::pair(animation.sourceSelectionTextUniform, animation.targetSelectionTextUniform);
+}
+
+auto TextLayerStyleAnimator::easing(const AnimationHandle handle) const -> Float(*)(Float) {
+    CORRADE_ASSERT(isHandleValid(handle),
+        "Ui::TextLayerStyleAnimator::easing(): invalid handle" << handle, {});
+    return static_cast<const State&>(*_state).animations[animationHandleId(handle)].easing;
+}
+
+auto TextLayerStyleAnimator::easing(const AnimatorDataHandle handle) const -> Float(*)(Float) {
+    CORRADE_ASSERT(isHandleValid(handle),
+        "Ui::TextLayerStyleAnimator::easing(): invalid handle" << handle, {});
+    return static_cast<const State&>(*_state).animations[animatorDataHandleId(handle)].easing;
 }
 
 namespace {

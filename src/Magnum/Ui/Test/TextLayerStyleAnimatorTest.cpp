@@ -494,7 +494,6 @@ template<class T> void TextLayerStyleAnimatorTest::createRemove() {
        for T == UnsignedInt */
     CORRADE_COMPARE(animator.template targetStyle<Enum>(first), Enum(1));
     CORRADE_COMPARE(animator.dynamicStyle(first), Containers::NullOpt);
-    CORRADE_COMPARE(animator.easing(first), Animation::Easing::linear);
     /* Styles 0 and 1 are uniforms 4 and 1 */
     CORRADE_COMPARE(animator.uniforms(first).first().color, 0x9933ff_rgbf);
     CORRADE_COMPARE(animator.uniforms(first).second().color, 0xff3366_rgbf);
@@ -505,6 +504,7 @@ template<class T> void TextLayerStyleAnimatorTest::createRemove() {
     CORRADE_VERIFY(!animator.selectionUniforms(first));
     CORRADE_VERIFY(!animator.selectionPaddings(first));
     CORRADE_VERIFY(!animator.selectionTextUniforms(first));
+    CORRADE_COMPARE(animator.easing(first), Animation::Easing::linear);
     /* Dynamic style is only allocated and switched to during advance() */
     CORRADE_COMPARE(layer.dynamicStyleUsedCount(), 0);
     CORRADE_COMPARE(layer.style(data2), 2);
@@ -522,7 +522,6 @@ template<class T> void TextLayerStyleAnimatorTest::createRemove() {
        for T == UnsignedInt */
     CORRADE_COMPARE(animator.template targetStyle<Enum>(second), Enum(4));
     CORRADE_COMPARE(animator.dynamicStyle(second), Containers::NullOpt);
-    CORRADE_COMPARE(animator.easing(second), Animation::Easing::cubicIn);
     /* Styles 2 and 4 are uniforms 2 and 0 */
     CORRADE_COMPARE(animator.uniforms(second).first().color, 0xcc66aa_rgbf);
     CORRADE_COMPARE(animator.uniforms(second).second().color, 0x112233_rgbf);
@@ -540,6 +539,7 @@ template<class T> void TextLayerStyleAnimatorTest::createRemove() {
     CORRADE_VERIFY(animator.selectionTextUniforms(second));
     CORRADE_COMPARE(animator.selectionTextUniforms(second)->first().color, 0x111111_rgbf);
     CORRADE_COMPARE(animator.selectionTextUniforms(second)->second().color, 0x112233_rgbf);
+    CORRADE_COMPARE(animator.easing(second), Animation::Easing::cubicIn);
     CORRADE_COMPARE(layer.dynamicStyleUsedCount(), 0);
 
     /* LayerDataHandle overload, verify also with AnimatorDataHandle */
@@ -554,7 +554,6 @@ template<class T> void TextLayerStyleAnimatorTest::createRemove() {
        for T == UnsignedInt */
     CORRADE_COMPARE(animator.template targetStyle<Enum>(animationHandleData(third)), Enum(3));
     CORRADE_COMPARE(animator.dynamicStyle(animationHandleData(third)), Containers::NullOpt);
-    CORRADE_COMPARE(animator.easing(animationHandleData(third)), Animation::Easing::bounceInOut);
     /* Styles 5 and 3 are uniforms 1 and 4 */
     CORRADE_COMPARE(animator.uniforms(animationHandleData(third)).first().color, 0xff3366_rgbf);
     CORRADE_COMPARE(animator.uniforms(animationHandleData(third)).second().color, 0x9933ff_rgbf);
@@ -568,6 +567,7 @@ template<class T> void TextLayerStyleAnimatorTest::createRemove() {
     CORRADE_VERIFY(!animator.selectionUniforms(animationHandleData(third)));
     CORRADE_VERIFY(!animator.selectionPaddings(animationHandleData(third)));
     CORRADE_VERIFY(!animator.selectionTextUniforms(animationHandleData(third)));
+    CORRADE_COMPARE(animator.easing(animationHandleData(third)), Animation::Easing::bounceInOut);
     CORRADE_COMPARE(layer.dynamicStyleUsedCount(), 0);
     CORRADE_COMPARE(layer.style(data3), 0);
 
@@ -701,12 +701,12 @@ void TextLayerStyleAnimatorTest::createRemoveHandleRecycle() {
     AnimationHandle first = animator.create(0, 1, Animation::Easing::linear, 0_nsec, 13_nsec, layerData);
     CORRADE_COMPARE(animator.targetStyle(first), 1u);
     CORRADE_COMPARE(animator.dynamicStyle(first), Containers::NullOpt);
-    CORRADE_COMPARE(animator.easing(first), Animation::Easing::linear);
     CORRADE_COMPARE(animator.uniforms(first).first().color, 0xff3366_rgbf);
     CORRADE_COMPARE(animator.uniforms(first).second().color, 0x9933ff_rgbf);
     CORRADE_COMPARE(animator.paddings(first), Containers::pair(Vector4{1.0f}, Vector4{2.0f}));
     CORRADE_COMPARE(!!animator.cursorUniforms(first), data.cursorStyle);
     CORRADE_COMPARE(!!animator.selectionUniforms(first), data.selectionStyle);
+    CORRADE_COMPARE(animator.easing(first), Animation::Easing::linear);
     CORRADE_COMPARE(layer.dynamicStyleUsedCount(), 0);
 
     /* Let it advance to allocate the dynamic style */
@@ -749,7 +749,6 @@ void TextLayerStyleAnimatorTest::createRemoveHandleRecycle() {
     CORRADE_COMPARE(animationHandleId(first2), animationHandleId(first));
     CORRADE_COMPARE(animator.targetStyle(first2), 2);
     CORRADE_COMPARE(animator.dynamicStyle(first2), Containers::NullOpt);
-    CORRADE_COMPARE(animator.easing(first2), Animation::Easing::bounceInOut);
     CORRADE_COMPARE(animator.uniforms(first2).first().color, 0x112233_rgbf);
     CORRADE_COMPARE(animator.uniforms(first2).second().color, 0x337766_rgbf);
     CORRADE_COMPARE(animator.paddings(first2), Containers::pair(Vector4{4.0f}, Vector4{3.0f}));
@@ -757,6 +756,7 @@ void TextLayerStyleAnimatorTest::createRemoveHandleRecycle() {
        be reset as well */
     CORRADE_VERIFY(!animator.cursorUniforms(first2));
     CORRADE_VERIFY(!animator.selectionUniforms(first2));
+    CORRADE_COMPARE(animator.easing(first2), Animation::Easing::bounceInOut);
     CORRADE_COMPARE(layer.dynamicStyleUsedCount(), 0);
 }
 
@@ -903,7 +903,6 @@ void TextLayerStyleAnimatorTest::propertiesInvalid() {
 
     Containers::String out;
     Error redirectError{&out};
-    animator.easing(AnimationHandle::Null);
     animator.uniforms(AnimationHandle::Null);
     animator.paddings(AnimationHandle::Null);
     animator.cursorUniforms(AnimationHandle::Null);
@@ -911,8 +910,8 @@ void TextLayerStyleAnimatorTest::propertiesInvalid() {
     animator.selectionUniforms(AnimationHandle::Null);
     animator.selectionPaddings(AnimationHandle::Null);
     animator.selectionTextUniforms(AnimationHandle::Null);
+    animator.easing(AnimationHandle::Null);
     /* Valid animator, invalid data */
-    animator.easing(animationHandle(animator.handle(), AnimatorDataHandle(0x123abcde)));
     animator.uniforms(animationHandle(animator.handle(), AnimatorDataHandle(0x123abcde)));
     animator.paddings(animationHandle(animator.handle(), AnimatorDataHandle(0x123abcde)));
     animator.cursorUniforms(animationHandle(animator.handle(), AnimatorDataHandle(0x123abcde)));
@@ -920,8 +919,8 @@ void TextLayerStyleAnimatorTest::propertiesInvalid() {
     animator.selectionUniforms(animationHandle(animator.handle(), AnimatorDataHandle(0x123abcde)));
     animator.selectionPaddings(animationHandle(animator.handle(), AnimatorDataHandle(0x123abcde)));
     animator.selectionTextUniforms(animationHandle(animator.handle(), AnimatorDataHandle(0x123abcde)));
+    animator.easing(animationHandle(animator.handle(), AnimatorDataHandle(0x123abcde)));
     /* Invalid animator, valid data */
-    animator.easing(animationHandle(AnimatorHandle::Null, animationHandleData(handle)));
     animator.uniforms(animationHandle(AnimatorHandle::Null, animationHandleData(handle)));
     animator.paddings(animationHandle(AnimatorHandle::Null, animationHandleData(handle)));
     animator.cursorUniforms(animationHandle(AnimatorHandle::Null, animationHandleData(handle)));
@@ -929,8 +928,8 @@ void TextLayerStyleAnimatorTest::propertiesInvalid() {
     animator.selectionUniforms(animationHandle(AnimatorHandle::Null, animationHandleData(handle)));
     animator.selectionPaddings(animationHandle(AnimatorHandle::Null, animationHandleData(handle)));
     animator.selectionTextUniforms(animationHandle(AnimatorHandle::Null, animationHandleData(handle)));
+    animator.easing(animationHandle(AnimatorHandle::Null, animationHandleData(handle)));
     /* AnimatorDataHandle directly */
-    animator.easing(AnimatorDataHandle(0x123abcde));
     animator.uniforms(AnimatorDataHandle(0x123abcde));
     animator.paddings(AnimatorDataHandle(0x123abcde));
     animator.cursorUniforms(AnimatorDataHandle(0x123abcde));
@@ -938,8 +937,8 @@ void TextLayerStyleAnimatorTest::propertiesInvalid() {
     animator.selectionUniforms(AnimatorDataHandle(0x123abcde));
     animator.selectionPaddings(AnimatorDataHandle(0x123abcde));
     animator.selectionTextUniforms(AnimatorDataHandle(0x123abcde));
+    animator.easing(AnimatorDataHandle(0x123abcde));
     CORRADE_COMPARE_AS(out,
-        "Ui::TextLayerStyleAnimator::easing(): invalid handle Ui::AnimationHandle::Null\n"
         "Ui::TextLayerStyleAnimator::uniforms(): invalid handle Ui::AnimationHandle::Null\n"
         "Ui::TextLayerStyleAnimator::paddings(): invalid handle Ui::AnimationHandle::Null\n"
         "Ui::TextLayerStyleAnimator::cursorUniforms(): invalid handle Ui::AnimationHandle::Null\n"
@@ -947,8 +946,8 @@ void TextLayerStyleAnimatorTest::propertiesInvalid() {
         "Ui::TextLayerStyleAnimator::selectionUniforms(): invalid handle Ui::AnimationHandle::Null\n"
         "Ui::TextLayerStyleAnimator::selectionPaddings(): invalid handle Ui::AnimationHandle::Null\n"
         "Ui::TextLayerStyleAnimator::selectionTextUniforms(): invalid handle Ui::AnimationHandle::Null\n"
+        "Ui::TextLayerStyleAnimator::easing(): invalid handle Ui::AnimationHandle::Null\n"
 
-        "Ui::TextLayerStyleAnimator::easing(): invalid handle Ui::AnimationHandle({0x0, 0x1}, {0xabcde, 0x123})\n"
         "Ui::TextLayerStyleAnimator::uniforms(): invalid handle Ui::AnimationHandle({0x0, 0x1}, {0xabcde, 0x123})\n"
         "Ui::TextLayerStyleAnimator::paddings(): invalid handle Ui::AnimationHandle({0x0, 0x1}, {0xabcde, 0x123})\n"
         "Ui::TextLayerStyleAnimator::cursorUniforms(): invalid handle Ui::AnimationHandle({0x0, 0x1}, {0xabcde, 0x123})\n"
@@ -956,8 +955,8 @@ void TextLayerStyleAnimatorTest::propertiesInvalid() {
         "Ui::TextLayerStyleAnimator::selectionUniforms(): invalid handle Ui::AnimationHandle({0x0, 0x1}, {0xabcde, 0x123})\n"
         "Ui::TextLayerStyleAnimator::selectionPaddings(): invalid handle Ui::AnimationHandle({0x0, 0x1}, {0xabcde, 0x123})\n"
         "Ui::TextLayerStyleAnimator::selectionTextUniforms(): invalid handle Ui::AnimationHandle({0x0, 0x1}, {0xabcde, 0x123})\n"
+        "Ui::TextLayerStyleAnimator::easing(): invalid handle Ui::AnimationHandle({0x0, 0x1}, {0xabcde, 0x123})\n"
 
-        "Ui::TextLayerStyleAnimator::easing(): invalid handle Ui::AnimationHandle(Null, {0x0, 0x1})\n"
         "Ui::TextLayerStyleAnimator::uniforms(): invalid handle Ui::AnimationHandle(Null, {0x0, 0x1})\n"
         "Ui::TextLayerStyleAnimator::paddings(): invalid handle Ui::AnimationHandle(Null, {0x0, 0x1})\n"
         "Ui::TextLayerStyleAnimator::cursorUniforms(): invalid handle Ui::AnimationHandle(Null, {0x0, 0x1})\n"
@@ -965,15 +964,16 @@ void TextLayerStyleAnimatorTest::propertiesInvalid() {
         "Ui::TextLayerStyleAnimator::selectionUniforms(): invalid handle Ui::AnimationHandle(Null, {0x0, 0x1})\n"
         "Ui::TextLayerStyleAnimator::selectionPaddings(): invalid handle Ui::AnimationHandle(Null, {0x0, 0x1})\n"
         "Ui::TextLayerStyleAnimator::selectionTextUniforms(): invalid handle Ui::AnimationHandle(Null, {0x0, 0x1})\n"
+        "Ui::TextLayerStyleAnimator::easing(): invalid handle Ui::AnimationHandle(Null, {0x0, 0x1})\n"
 
-        "Ui::TextLayerStyleAnimator::easing(): invalid handle Ui::AnimatorDataHandle(0xabcde, 0x123)\n"
         "Ui::TextLayerStyleAnimator::uniforms(): invalid handle Ui::AnimatorDataHandle(0xabcde, 0x123)\n"
         "Ui::TextLayerStyleAnimator::paddings(): invalid handle Ui::AnimatorDataHandle(0xabcde, 0x123)\n"
         "Ui::TextLayerStyleAnimator::cursorUniforms(): invalid handle Ui::AnimatorDataHandle(0xabcde, 0x123)\n"
         "Ui::TextLayerStyleAnimator::cursorPaddings(): invalid handle Ui::AnimatorDataHandle(0xabcde, 0x123)\n"
         "Ui::TextLayerStyleAnimator::selectionUniforms(): invalid handle Ui::AnimatorDataHandle(0xabcde, 0x123)\n"
         "Ui::TextLayerStyleAnimator::selectionPaddings(): invalid handle Ui::AnimatorDataHandle(0xabcde, 0x123)\n"
-        "Ui::TextLayerStyleAnimator::selectionTextUniforms(): invalid handle Ui::AnimatorDataHandle(0xabcde, 0x123)\n",
+        "Ui::TextLayerStyleAnimator::selectionTextUniforms(): invalid handle Ui::AnimatorDataHandle(0xabcde, 0x123)\n"
+        "Ui::TextLayerStyleAnimator::easing(): invalid handle Ui::AnimatorDataHandle(0xabcde, 0x123)\n",
         TestSuite::Compare::String);
 }
 

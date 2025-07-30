@@ -278,13 +278,13 @@ template<class T> void BaseLayerStyleAnimatorTest::createRemove() {
        for T == UnsignedInt */
     CORRADE_COMPARE(animator.template targetStyle<Enum>(first), Enum(1));
     CORRADE_COMPARE(animator.dynamicStyle(first), Containers::NullOpt);
-    CORRADE_COMPARE(animator.easing(first), Animation::Easing::linear);
     /* Styles 0 and 1 are uniforms 4 and 1 */
     CORRADE_COMPARE(animator.uniforms(first).first().topColor, 0x9933ff_rgbf);
     CORRADE_COMPARE(animator.uniforms(first).second().topColor, 0xff3366_rgbf);
     CORRADE_COMPARE(animator.uniforms(first).first().outlineWidth, Vector4{2.0f});
     CORRADE_COMPARE(animator.uniforms(first).second().outlineWidth, Vector4{0.0f});
     CORRADE_COMPARE(animator.paddings(first), Containers::pair(Vector4{1.0f}, Vector4{2.0f, 3.0f, 4.0f, 5.0f}));
+    CORRADE_COMPARE(animator.easing(first), Animation::Easing::linear);
     /* Dynamic style is only allocated and switched to during advance() */
     CORRADE_COMPARE(layer.dynamicStyleUsedCount(), 0);
     CORRADE_COMPARE(layer.style(data2), 2);
@@ -302,13 +302,13 @@ template<class T> void BaseLayerStyleAnimatorTest::createRemove() {
        for T == UnsignedInt */
     CORRADE_COMPARE(animator.template targetStyle<Enum>(second), Enum(0));
     CORRADE_COMPARE(animator.dynamicStyle(second), Containers::NullOpt);
-    CORRADE_COMPARE(animator.easing(second), Animation::Easing::cubicIn);
     /* Styles 2 and 0 are uniforms 2 and 4 */
     CORRADE_COMPARE(animator.uniforms(second).first().topColor, 0xffffff_rgbf);
     CORRADE_COMPARE(animator.uniforms(second).second().topColor, 0x9933ff_rgbf);
     CORRADE_COMPARE(animator.uniforms(second).first().outlineWidth, Vector4{4.0f});
     CORRADE_COMPARE(animator.uniforms(second).second().outlineWidth, Vector4{2.0f});
     CORRADE_COMPARE(animator.paddings(second), Containers::pair(Vector4{0.0f}, Vector4{1.0f}));
+    CORRADE_COMPARE(animator.easing(second), Animation::Easing::cubicIn);
     CORRADE_COMPARE(layer.dynamicStyleUsedCount(), 0);
 
     /* LayerDataHandle overload, verify also with AnimatorDataHandle */
@@ -323,13 +323,13 @@ template<class T> void BaseLayerStyleAnimatorTest::createRemove() {
        for T == UnsignedInt */
     CORRADE_COMPARE(animator.template targetStyle<Enum>(animationHandleData(third)), Enum(2));
     CORRADE_COMPARE(animator.dynamicStyle(animationHandleData(third)), Containers::NullOpt);
-    CORRADE_COMPARE(animator.easing(animationHandleData(third)), Animation::Easing::bounceInOut);
     /* Styles 1 and 2 are uniforms 1 and 2 */
     CORRADE_COMPARE(animator.uniforms(animationHandleData(third)).first().topColor, 0xff3366_rgbf);
     CORRADE_COMPARE(animator.uniforms(animationHandleData(third)).second().topColor, 0xffffff_rgbf);
     CORRADE_COMPARE(animator.uniforms(animationHandleData(third)).first().outlineWidth, Vector4{0.0f});
     CORRADE_COMPARE(animator.uniforms(animationHandleData(third)).second().outlineWidth, Vector4{4.0f});
     CORRADE_COMPARE(animator.paddings(animationHandleData(third)), Containers::pair(Vector4{2.0f, 3.0f, 4.0f, 5.0f}, Vector4{0.0f}));
+    CORRADE_COMPARE(animator.easing(animationHandleData(third)), Animation::Easing::bounceInOut);
     CORRADE_COMPARE(layer.dynamicStyleUsedCount(), 0);
     CORRADE_COMPARE(layer.style(data3), 0);
 
@@ -345,13 +345,13 @@ template<class T> void BaseLayerStyleAnimatorTest::createRemove() {
        for T == UnsignedInt */
     CORRADE_COMPARE(animator.template targetStyle<Enum>(fourth), Enum(2));
     CORRADE_COMPARE(animator.dynamicStyle(fourth), Containers::NullOpt);
-    CORRADE_COMPARE(animator.easing(fourth), Animation::Easing::smoothstep);
     /* Styles 0 and 2 are uniforms 4 and 2 */
     CORRADE_COMPARE(animator.uniforms(fourth).first().topColor, 0x9933ff_rgbf);
     CORRADE_COMPARE(animator.uniforms(fourth).second().topColor, 0xffffff_rgbf);
     CORRADE_COMPARE(animator.uniforms(fourth).first().outlineWidth, Vector4{2.0f});
     CORRADE_COMPARE(animator.uniforms(fourth).second().outlineWidth, Vector4{4.0f});
     CORRADE_COMPARE(animator.paddings(fourth), Containers::pair(Vector4{1.0f}, Vector4{0.0f}));
+    CORRADE_COMPARE(animator.easing(fourth), Animation::Easing::smoothstep);
     CORRADE_COMPARE(layer.dynamicStyleUsedCount(), 0);
     CORRADE_COMPARE(layer.style(data1), 1);
 
@@ -405,10 +405,10 @@ void BaseLayerStyleAnimatorTest::createRemoveHandleRecycle() {
     AnimationHandle first = animator.create(0, 1, Animation::Easing::linear, 0_nsec, 13_nsec, data);
     CORRADE_COMPARE(animator.targetStyle(first), 1u);
     CORRADE_COMPARE(animator.dynamicStyle(first), Containers::NullOpt);
-    CORRADE_COMPARE(animator.easing(first), Animation::Easing::linear);
     CORRADE_COMPARE(animator.uniforms(first).first().topColor, 0xff3366_rgbf);
     CORRADE_COMPARE(animator.uniforms(first).second().topColor, 0x9933ff_rgbf);
     CORRADE_COMPARE(animator.paddings(first), Containers::pair(Vector4{1.0f}, Vector4{2.0f}));
+    CORRADE_COMPARE(animator.easing(first), Animation::Easing::linear);
     CORRADE_COMPARE(layer.dynamicStyleUsedCount(), 0);
 
     /* Let it advance to allocate the dynamic style */
@@ -441,10 +441,10 @@ void BaseLayerStyleAnimatorTest::createRemoveHandleRecycle() {
     CORRADE_COMPARE(animationHandleId(first2), animationHandleId(first));
     CORRADE_COMPARE(animator.targetStyle(first2), 0u);
     CORRADE_COMPARE(animator.dynamicStyle(first2), Containers::NullOpt);
-    CORRADE_COMPARE(animator.easing(first2), Animation::Easing::bounceInOut);
     CORRADE_COMPARE(animator.uniforms(first2).first().topColor, 0x9933ff_rgbf);
     CORRADE_COMPARE(animator.uniforms(first2).second().topColor, 0xff3366_rgbf);
     CORRADE_COMPARE(animator.paddings(first2), Containers::pair(Vector4{2.0f}, Vector4{1.0f}));
+    CORRADE_COMPARE(animator.easing(first2), Animation::Easing::bounceInOut);
     CORRADE_COMPARE(layer.dynamicStyleUsedCount(), 0);
 }
 
@@ -531,37 +531,37 @@ void BaseLayerStyleAnimatorTest::propertiesInvalid() {
 
     Containers::String out;
     Error redirectError{&out};
-    animator.easing(AnimationHandle::Null);
     animator.uniforms(AnimationHandle::Null);
     animator.paddings(AnimationHandle::Null);
+    animator.easing(AnimationHandle::Null);
     /* Valid animator, invalid data */
-    animator.easing(animationHandle(animator.handle(), AnimatorDataHandle(0x123abcde)));
     animator.uniforms(animationHandle(animator.handle(), AnimatorDataHandle(0x123abcde)));
     animator.paddings(animationHandle(animator.handle(), AnimatorDataHandle(0x123abcde)));
+    animator.easing(animationHandle(animator.handle(), AnimatorDataHandle(0x123abcde)));
     /* Invalid animator, valid data */
-    animator.easing(animationHandle(AnimatorHandle::Null, animationHandleData(handle)));
     animator.uniforms(animationHandle(AnimatorHandle::Null, animationHandleData(handle)));
     animator.paddings(animationHandle(AnimatorHandle::Null, animationHandleData(handle)));
+    animator.easing(animationHandle(AnimatorHandle::Null, animationHandleData(handle)));
     /* AnimatorDataHandle directly */
-    animator.easing(AnimatorDataHandle(0x123abcde));
     animator.uniforms(AnimatorDataHandle(0x123abcde));
     animator.paddings(AnimatorDataHandle(0x123abcde));
+    animator.easing(AnimatorDataHandle(0x123abcde));
     CORRADE_COMPARE_AS(out,
-        "Ui::BaseLayerStyleAnimator::easing(): invalid handle Ui::AnimationHandle::Null\n"
         "Ui::BaseLayerStyleAnimator::uniforms(): invalid handle Ui::AnimationHandle::Null\n"
         "Ui::BaseLayerStyleAnimator::paddings(): invalid handle Ui::AnimationHandle::Null\n"
+        "Ui::BaseLayerStyleAnimator::easing(): invalid handle Ui::AnimationHandle::Null\n"
 
-        "Ui::BaseLayerStyleAnimator::easing(): invalid handle Ui::AnimationHandle({0x0, 0x1}, {0xabcde, 0x123})\n"
         "Ui::BaseLayerStyleAnimator::uniforms(): invalid handle Ui::AnimationHandle({0x0, 0x1}, {0xabcde, 0x123})\n"
         "Ui::BaseLayerStyleAnimator::paddings(): invalid handle Ui::AnimationHandle({0x0, 0x1}, {0xabcde, 0x123})\n"
+        "Ui::BaseLayerStyleAnimator::easing(): invalid handle Ui::AnimationHandle({0x0, 0x1}, {0xabcde, 0x123})\n"
 
-        "Ui::BaseLayerStyleAnimator::easing(): invalid handle Ui::AnimationHandle(Null, {0x0, 0x1})\n"
         "Ui::BaseLayerStyleAnimator::uniforms(): invalid handle Ui::AnimationHandle(Null, {0x0, 0x1})\n"
         "Ui::BaseLayerStyleAnimator::paddings(): invalid handle Ui::AnimationHandle(Null, {0x0, 0x1})\n"
+        "Ui::BaseLayerStyleAnimator::easing(): invalid handle Ui::AnimationHandle(Null, {0x0, 0x1})\n"
 
-        "Ui::BaseLayerStyleAnimator::easing(): invalid handle Ui::AnimatorDataHandle(0xabcde, 0x123)\n"
         "Ui::BaseLayerStyleAnimator::uniforms(): invalid handle Ui::AnimatorDataHandle(0xabcde, 0x123)\n"
-        "Ui::BaseLayerStyleAnimator::paddings(): invalid handle Ui::AnimatorDataHandle(0xabcde, 0x123)\n",
+        "Ui::BaseLayerStyleAnimator::paddings(): invalid handle Ui::AnimatorDataHandle(0xabcde, 0x123)\n"
+        "Ui::BaseLayerStyleAnimator::easing(): invalid handle Ui::AnimatorDataHandle(0xabcde, 0x123)\n",
         TestSuite::Compare::String);
 }
 

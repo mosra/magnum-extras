@@ -170,18 +170,6 @@ void BaseLayerStyleAnimator::remove(const AnimatorDataHandle handle) {
     removeInternal(animatorDataHandleId(handle));
 }
 
-auto BaseLayerStyleAnimator::easing(const AnimationHandle handle) const -> Float(*)(Float) {
-    CORRADE_ASSERT(isHandleValid(handle),
-        "Ui::BaseLayerStyleAnimator::easing(): invalid handle" << handle, {});
-    return static_cast<const State&>(*_state).animations[animationHandleId(handle)].easing;
-}
-
-auto BaseLayerStyleAnimator::easing(const AnimatorDataHandle handle) const -> Float(*)(Float) {
-    CORRADE_ASSERT(isHandleValid(handle),
-        "Ui::BaseLayerStyleAnimator::easing(): invalid handle" << handle, {});
-    return static_cast<const State&>(*_state).animations[animatorDataHandleId(handle)].easing;
-}
-
 Containers::Pair<BaseLayerStyleUniform, BaseLayerStyleUniform> BaseLayerStyleAnimator::uniforms(const AnimationHandle handle) const {
     CORRADE_ASSERT(isHandleValid(handle),
         "Ui::BaseLayerStyleAnimator::uniforms(): invalid handle" << handle, {});
@@ -208,6 +196,18 @@ Containers::Pair<Vector4, Vector4> BaseLayerStyleAnimator::paddings(const Animat
         "Ui::BaseLayerStyleAnimator::paddings(): invalid handle" << handle, {});
     const Animation& animation = static_cast<const State&>(*_state).animations[animatorDataHandleId(handle)];
     return {animation.sourcePadding, animation.targetPadding};
+}
+
+auto BaseLayerStyleAnimator::easing(const AnimationHandle handle) const -> Float(*)(Float) {
+    CORRADE_ASSERT(isHandleValid(handle),
+        "Ui::BaseLayerStyleAnimator::easing(): invalid handle" << handle, {});
+    return static_cast<const State&>(*_state).animations[animationHandleId(handle)].easing;
+}
+
+auto BaseLayerStyleAnimator::easing(const AnimatorDataHandle handle) const -> Float(*)(Float) {
+    CORRADE_ASSERT(isHandleValid(handle),
+        "Ui::BaseLayerStyleAnimator::easing(): invalid handle" << handle, {});
+    return static_cast<const State&>(*_state).animations[animatorDataHandleId(handle)].easing;
 }
 
 BaseLayerStyleAnimations BaseLayerStyleAnimator::advance(const Containers::BitArrayView active, const Containers::StridedArrayView1D<const Float>& factors, const Containers::BitArrayView remove, const Containers::ArrayView<BaseLayerStyleUniform> dynamicStyleUniforms, const Containers::StridedArrayView1D<Vector4>& dynamicStylePaddings, const Containers::StridedArrayView1D<UnsignedInt>& dataStyles) {
