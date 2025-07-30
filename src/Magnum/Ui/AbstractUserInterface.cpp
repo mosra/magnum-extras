@@ -2619,6 +2619,7 @@ AbstractUserInterface& AbstractUserInterface::advanceAnimations(const Nanosecond
            they modified */
         const Containers::StridedArrayView1D<Vector2> nodeOffsets = stridedArrayView(state.nodes).slice(&Node::used).slice(&Node::Used::offset);
         const Containers::StridedArrayView1D<Vector2> nodeSizes = stridedArrayView(state.nodes).slice(&Node::used).slice(&Node::Used::size);
+        const Containers::StridedArrayView1D<Float> nodeOpacities = stridedArrayView(state.nodes).slice(&Node::used).slice(&Node::Used::opacity);
         const Containers::StridedArrayView1D<NodeFlags> nodeFlags = stridedArrayView(state.nodes).slice(&Node::used).slice(&Node::Used::flags);
         NodeAnimations nodeAnimations;
         for(AbstractAnimator& instance: Implementation::partitionedAnimatorsNodeNodeAttachment(state.animatorInstances, state.animatorInstancesNodeAttachmentOffset, state.animatorInstancesNodeOffset, dataAttachmentAnimatorOffsets)) {
@@ -2641,6 +2642,7 @@ AbstractUserInterface& AbstractUserInterface::advanceAnimations(const Nanosecond
                     factors.prefix(capacity),
                     nodeOffsets,
                     nodeSizes,
+                    nodeOpacities,
                     nodeFlags,
                     nodesRemove);
             if(needsAdvanceClean.second())
@@ -2650,6 +2652,8 @@ AbstractUserInterface& AbstractUserInterface::advanceAnimations(const Nanosecond
         /* Propagate to the global state */
         if(nodeAnimations >= NodeAnimation::OffsetSize)
             state.state |= UserInterfaceState::NeedsLayoutUpdate;
+        if(nodeAnimations >= NodeAnimation::Opacity)
+            state.state |= UserInterfaceState::NeedsNodeOpacityUpdate;
         if(nodeAnimations >= NodeAnimation::Enabled)
             state.state |= UserInterfaceState::NeedsNodeEnabledUpdate;
         if(nodeAnimations >= NodeAnimation::Clip)

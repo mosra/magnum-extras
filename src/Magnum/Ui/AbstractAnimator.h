@@ -1475,26 +1475,33 @@ enum class NodeAnimation: UnsignedByte {
     OffsetSize = 1 << 0,
 
     /**
+     * Node opacity. Equivalently to calling
+     * @ref AbstractUserInterface::setNodeOpacity(), causes
+     * @ref UserInterfaceState::NeedsNodeOpacityUpdate to be set.
+     */
+    Opacity = 1 << 1,
+
+    /**
      * @ref NodeFlag::NoEvents or @ref NodeFlag::Disabled being added or
      * cleared. Equivalently to calling
      * @ref AbstractUserInterface::setNodeFlags() with these, causes
      * @ref UserInterfaceState::NeedsNodeEnabledUpdate to be set.
      */
-    Enabled = 1 << 1,
+    Enabled = 1 << 2,
 
     /**
      * @ref NodeFlag::Clip being added or cleared. Equivalently to calling
      * @ref AbstractUserInterface::setNodeFlags() with that flag, causes
      * @ref UserInterfaceState::NeedsNodeClipUpdate to be set.
      */
-    Clip = 1 << 2,
+    Clip = 1 << 3,
 
     /**
      * Scheduling a node for removal. Equivalently to calling
      * @ref AbstractUserInterface::removeNode(), causes
      * @ref UserInterfaceState::NeedsNodeClean to be set.
      */
-    Removal = 1 << 3
+    Removal = 1 << 4
 };
 
 /**
@@ -1559,12 +1566,12 @@ class MAGNUM_UI_EXPORT AbstractNodeAnimator: public AbstractAnimator {
          * Expects that size of @p active, @p started, @p stopped and
          * @p factors matches @ref capacity(), it's assumed that their contents
          * were filled by @ref update() before. Expects that @p nodeOffsets,
-         * @p nodeSizes, @p nodeFlags and @p nodesRemove have the same size,
-         * the views should be large enough to contain any valid node ID.
-         * Delegates to @ref doAdvance(), see its documentation for more
-         * information.
+         * @p nodeSizes, @p nodeOpacities, @p nodeFlags and @p nodesRemove have
+         * the same size, the views should be large enough to contain any valid
+         * node ID. Delegates to @ref doAdvance(), see its documentation for
+         * more information.
          */
-        NodeAnimations advance(Containers::BitArrayView active, Containers::BitArrayView started, Containers::BitArrayView stopped, const Containers::StridedArrayView1D<const Float>& factors, const Containers::StridedArrayView1D<Vector2>& nodeOffsets, const Containers::StridedArrayView1D<Vector2>& nodeSizes, const Containers::StridedArrayView1D<NodeFlags>& nodeFlags, Containers::MutableBitArrayView nodesRemove);
+        NodeAnimations advance(Containers::BitArrayView active, Containers::BitArrayView started, Containers::BitArrayView stopped, const Containers::StridedArrayView1D<const Float>& factors, const Containers::StridedArrayView1D<Vector2>& nodeOffsets, const Containers::StridedArrayView1D<Vector2>& nodeSizes, const Containers::StridedArrayView1D<Float>& nodeOpacities, const Containers::StridedArrayView1D<NodeFlags>& nodeFlags, Containers::MutableBitArrayView nodesRemove);
 
     protected:
         /**
@@ -1590,6 +1597,8 @@ class MAGNUM_UI_EXPORT AbstractNodeAnimator: public AbstractAnimator {
          *      ID
          * @param[in,out] nodeSizes     Node sizes to animate indexed by node
          *      ID
+         * @param[in,out] nodeOpacities Node opacities to animate indexed by
+         *      node ID
          * @param[in,out] nodeFlags     Node flags to animate indexed by node
          *      ID
          * @param[out] nodesRemove      Which nodes to remove as a consequence
@@ -1611,14 +1620,16 @@ class MAGNUM_UI_EXPORT AbstractNodeAnimator: public AbstractAnimator {
          * Node handles corresponding to animation IDs are available in
          * @ref nodes(), node IDs can be then extracted from the handles using
          * @ref nodeHandleId(). The node IDs then index into the
-         * @p nodeOffsets, @p nodeSizes, @p nodeFlags and @p nodesRemove views.
-         * The @p nodeOffsets, @p nodeSizes, @p nodeFlags and @p nodesRemove
-         * have the same size and are guaranteed to contain any valid node ID.
+         * @p nodeOffsets, @p nodeSizes, @p nodeOpacities, @p nodeFlags and
+         * @p nodesRemove views. The @p nodeOffsets, @p nodeSizes,
+         * @p nodeOpacities, @p nodeFlags and @p nodesRemove views have the
+         * same size and are guaranteed to contain any valid node ID.
          *
-         * The @p nodeOffsets, @p nodeSizes and @p nodeFlags are views directly
-         * onto the actual node properties exposed by
+         * The @p nodeOffsets, @p nodeSizes, @p nodeOpacities and @p nodeFlags
+         * are views directly onto the actual node properties exposed by
          * @ref AbstractUserInterface::nodeOffset(),
-         * @relativeref{AbstractUserInterface,nodeSize()} and
+         * @relativeref{AbstractUserInterface,nodeSize()},
+         * @relativeref{AbstractUserInterface,nodeOpacity()} and
          * @relativeref{AbstractUserInterface,nodeFlags()}. The @p nodesRemove
          * is all zeros initially before getting passed to the first node
          * animator, subsequent animators get it in the state it was left in by
@@ -1633,7 +1644,7 @@ class MAGNUM_UI_EXPORT AbstractNodeAnimator: public AbstractAnimator {
          * internal state update doing a lot of otherwise unnecessary work
          * every frame, negatively affecting performance.
          */
-        virtual NodeAnimations doAdvance(Containers::BitArrayView active, Containers::BitArrayView started, Containers::BitArrayView stopped, const Containers::StridedArrayView1D<const Float>& factors, const Containers::StridedArrayView1D<Vector2>& nodeOffsets, const Containers::StridedArrayView1D<Vector2>& nodeSizes, const Containers::StridedArrayView1D<NodeFlags>& nodeFlags, Containers::MutableBitArrayView nodesRemove) = 0;
+        virtual NodeAnimations doAdvance(Containers::BitArrayView active, Containers::BitArrayView started, Containers::BitArrayView stopped, const Containers::StridedArrayView1D<const Float>& factors, const Containers::StridedArrayView1D<Vector2>& nodeOffsets, const Containers::StridedArrayView1D<Vector2>& nodeSizes, const Containers::StridedArrayView1D<Float>& nodeOpacities, const Containers::StridedArrayView1D<NodeFlags>& nodeFlags, Containers::MutableBitArrayView nodesRemove) = 0;
 };
 
 /**

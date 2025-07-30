@@ -128,6 +128,7 @@ Debug& operator<<(Debug& debug, const NodeAnimation value) {
         /* LCOV_EXCL_START */
         #define _c(value) case NodeAnimation::value: return debug << "::" #value;
         _c(OffsetSize)
+        _c(Opacity)
         _c(Enabled)
         _c(Clip)
         _c(Removal)
@@ -141,6 +142,7 @@ Debug& operator<<(Debug& debug, const NodeAnimation value) {
 Debug& operator<<(Debug& debug, const NodeAnimations value) {
     return Containers::enumSetDebugOutput(debug, value, "Ui::NodeAnimations{}", {
         NodeAnimation::OffsetSize,
+        NodeAnimation::Opacity,
         NodeAnimation::Enabled,
         NodeAnimation::Clip,
         NodeAnimation::Removal
@@ -1196,17 +1198,18 @@ AnimatorFeatures AbstractNodeAnimator::doFeatures() const {
     return AnimatorFeature::NodeAttachment;
 }
 
-NodeAnimations AbstractNodeAnimator::advance(const Containers::BitArrayView active, const Containers::BitArrayView started, const Containers::BitArrayView stopped, const Containers::StridedArrayView1D<const Float>& factors, const Containers::StridedArrayView1D<Vector2>& nodeOffsets, const Containers::StridedArrayView1D<Vector2>& nodeSizes, const Containers::StridedArrayView1D<NodeFlags>& nodeFlags, const Containers::MutableBitArrayView nodesRemove) {
+NodeAnimations AbstractNodeAnimator::advance(const Containers::BitArrayView active, const Containers::BitArrayView started, const Containers::BitArrayView stopped, const Containers::StridedArrayView1D<const Float>& factors, const Containers::StridedArrayView1D<Vector2>& nodeOffsets, const Containers::StridedArrayView1D<Vector2>& nodeSizes, const Containers::StridedArrayView1D<Float>& nodeOpacities, const Containers::StridedArrayView1D<NodeFlags>& nodeFlags, const Containers::MutableBitArrayView nodesRemove) {
     CORRADE_ASSERT(active.size() == capacity() &&
                    started.size() == capacity() &&
                    stopped.size() == capacity() &&
                    factors.size() == capacity(),
         "Ui::AbstractNodeAnimator::advance(): expected active, started, stopped and factors views to have a size of" << capacity() << "but got" << active.size() << Debug::nospace << "," << started.size() << Debug::nospace << "," << stopped.size() << "and" << factors.size(), {});
     CORRADE_ASSERT(nodeOffsets.size() == nodeSizes.size() &&
+                   nodeOpacities.size() == nodeSizes.size() &&
                    nodeFlags.size() == nodeSizes.size() &&
                    nodesRemove.size() == nodeSizes.size(),
-        "Ui::AbstractNodeAnimator::advance(): expected node offset, size, flags and remove views to have the same size but got" << nodeOffsets.size() << Debug::nospace << "," << nodeSizes.size() << Debug::nospace << "," << nodeFlags.size() << "and" << nodesRemove.size(), {});
-    return doAdvance(active, started, stopped, factors, nodeOffsets, nodeSizes, nodeFlags, nodesRemove);
+        "Ui::AbstractNodeAnimator::advance(): expected node offset, size, opacity, flags and remove views to have the same size but got" << nodeOffsets.size() << Debug::nospace << "," << nodeSizes.size() << Debug::nospace << "," << nodeOpacities.size() << Debug::nospace << "," << nodeFlags.size() << "and" << nodesRemove.size(), {});
+    return doAdvance(active, started, stopped, factors, nodeOffsets, nodeSizes, nodeOpacities, nodeFlags, nodesRemove);
 }
 
 AbstractDataAnimator::AbstractDataAnimator(AnimatorHandle handle): AbstractAnimator{handle} {}

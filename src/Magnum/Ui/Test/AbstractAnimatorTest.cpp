@@ -513,7 +513,7 @@ void AbstractAnimatorTest::constructNode() {
     struct: AbstractNodeAnimator {
         using AbstractNodeAnimator::AbstractNodeAnimator;
 
-        NodeAnimations doAdvance(Containers::BitArrayView, Containers::BitArrayView, Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<NodeFlags>&, Containers::MutableBitArrayView) override {
+        NodeAnimations doAdvance(Containers::BitArrayView, Containers::BitArrayView, Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Float>&, const Containers::StridedArrayView1D<NodeFlags>&, Containers::MutableBitArrayView) override {
             return {};
         }
     } animator{animatorHandle(0xab, 0x12)};
@@ -583,7 +583,7 @@ void AbstractAnimatorTest::constructCopyNode() {
         using AbstractNodeAnimator::AbstractNodeAnimator;
 
         AnimatorFeatures doFeatures() const override { return {}; }
-        NodeAnimations doAdvance(Containers::BitArrayView, Containers::BitArrayView, Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<NodeFlags>&, Containers::MutableBitArrayView) override {
+        NodeAnimations doAdvance(Containers::BitArrayView, Containers::BitArrayView, Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Float>&, const Containers::StridedArrayView1D<NodeFlags>&, Containers::MutableBitArrayView) override {
             return {};
         }
     };
@@ -663,7 +663,7 @@ void AbstractAnimatorTest::constructMoveNode() {
         using AbstractNodeAnimator::AbstractNodeAnimator;
 
         AnimatorFeatures doFeatures() const override { return {}; }
-        NodeAnimations doAdvance(Containers::BitArrayView, Containers::BitArrayView, Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<NodeFlags>&, Containers::MutableBitArrayView) override {
+        NodeAnimations doAdvance(Containers::BitArrayView, Containers::BitArrayView, Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Float>&, const Containers::StridedArrayView1D<NodeFlags>&, Containers::MutableBitArrayView) override {
             return {};
         }
     };
@@ -3790,7 +3790,7 @@ void AbstractAnimatorTest::advanceNode() {
         using AbstractNodeAnimator::create;
 
         AnimatorFeatures doFeatures() const override { return {}; }
-        NodeAnimations doAdvance(Containers::BitArrayView active, Containers::BitArrayView started, Containers::BitArrayView stopped, const Containers::StridedArrayView1D<const Float>& factors, const Containers::StridedArrayView1D<Vector2>& nodeOffsets, const Containers::StridedArrayView1D<Vector2>& nodeSizes, const Containers::StridedArrayView1D<NodeFlags>& nodeFlags, Containers::MutableBitArrayView nodesRemove) override {
+        NodeAnimations doAdvance(Containers::BitArrayView active, Containers::BitArrayView started, Containers::BitArrayView stopped, const Containers::StridedArrayView1D<const Float>& factors, const Containers::StridedArrayView1D<Vector2>& nodeOffsets, const Containers::StridedArrayView1D<Vector2>& nodeSizes, const Containers::StridedArrayView1D<Float>& nodeOpacities, const Containers::StridedArrayView1D<NodeFlags>& nodeFlags, Containers::MutableBitArrayView nodesRemove) override {
             CORRADE_COMPARE_AS(active, Containers::stridedArrayView({
                 true,
                 false,
@@ -3818,6 +3818,10 @@ void AbstractAnimatorTest::advanceNode() {
             CORRADE_COMPARE_AS(nodeSizes, Containers::stridedArrayView<Vector2>({
                 {5.0f, 6.0f},
                 {8.0f, 8.0f},
+            }), TestSuite::Compare::Container);
+            CORRADE_COMPARE_AS(nodeOpacities, Containers::stridedArrayView<Float>({
+                0.75f,
+                0.25f
             }), TestSuite::Compare::Container);
             CORRADE_COMPARE_AS(nodeFlags, Containers::stridedArrayView({
                 NodeFlags{},
@@ -3860,13 +3864,17 @@ void AbstractAnimatorTest::advanceNode() {
         {5.0f, 6.0f},
         {8.0f, 8.0f},
     };
+    Float nodeOpacities[]{
+        0.75f,
+        0.25f
+    };
     NodeFlags nodeFlags[]{
         {},
         NodeFlag::Clip|NodeFlag::Disabled,
     };
     Containers::BitArray nodesRemove{ValueInit, 2};
     nodesRemove.set(1);
-    CORRADE_COMPARE(animator.advance(active, started, stopped, factors, nodeOffsets, nodeSizes, nodeFlags, nodesRemove), NodeAnimations{0xc0});
+    CORRADE_COMPARE(animator.advance(active, started, stopped, factors, nodeOffsets, nodeSizes, nodeOpacities, nodeFlags, nodesRemove), NodeAnimations{0xc0});
     CORRADE_COMPARE(animator.advanceCallCount, 1);
 }
 
@@ -3878,7 +3886,7 @@ void AbstractAnimatorTest::advanceNodeInvalid() {
         using AbstractNodeAnimator::create;
 
         AnimatorFeatures doFeatures() const override { return {}; }
-        NodeAnimations doAdvance(Containers::BitArrayView, Containers::BitArrayView, Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<NodeFlags>&, Containers::MutableBitArrayView) override {
+        NodeAnimations doAdvance(Containers::BitArrayView, Containers::BitArrayView, Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Float>&, const Containers::StridedArrayView1D<NodeFlags>&, Containers::MutableBitArrayView) override {
             CORRADE_FAIL("This shouldn't be called.");
             return {};
         }
@@ -3895,28 +3903,32 @@ void AbstractAnimatorTest::advanceNodeInvalid() {
     Containers::BitArray nodesEnabledInvalid{NoInit, 4};
     Vector2 nodeOffsetsSizes[3];
     Vector2 nodeOffsetsSizesInvalid[4];
+    Float nodeOpacities[3];
+    Float nodeOpacitiesInvalid[4];
     NodeFlags nodeFlags[3];
     NodeFlags nodeFlagsInvalid[4];
 
     Containers::String out;
     Error redirectError{&out};
-    animator.advance(mask, mask, mask, factorsInvalid, nodeOffsetsSizes, nodeOffsetsSizes, nodeFlags, nodesEnabled);
-    animator.advance(mask, mask, maskInvalid, factors, nodeOffsetsSizes, nodeOffsetsSizes, nodeFlags, nodesEnabled);
-    animator.advance(mask, maskInvalid, mask, factors, nodeOffsetsSizes, nodeOffsetsSizes, nodeFlags, nodesEnabled);
-    animator.advance(maskInvalid, mask, mask, factors, nodeOffsetsSizes, nodeOffsetsSizes, nodeFlags, nodesEnabled);
-    animator.advance(mask, mask, mask, factors, nodeOffsetsSizes, nodeOffsetsSizes, nodeFlags, nodesEnabledInvalid);
-    animator.advance(mask, mask, mask, factors, nodeOffsetsSizes, nodeOffsetsSizes, nodeFlagsInvalid, nodesEnabled);
-    animator.advance(mask, mask, mask, factors, nodeOffsetsSizes, nodeOffsetsSizesInvalid, nodeFlags, nodesEnabled);
-    animator.advance(mask, mask, mask, factors, nodeOffsetsSizesInvalid, nodeOffsetsSizes, nodeFlags, nodesEnabled);
+    animator.advance(mask, mask, mask, factorsInvalid, nodeOffsetsSizes, nodeOffsetsSizes, nodeOpacities, nodeFlags, nodesEnabled);
+    animator.advance(mask, mask, maskInvalid, factors, nodeOffsetsSizes, nodeOffsetsSizes, nodeOpacities, nodeFlags, nodesEnabled);
+    animator.advance(mask, maskInvalid, mask, factors, nodeOffsetsSizes, nodeOffsetsSizes, nodeOpacities, nodeFlags, nodesEnabled);
+    animator.advance(maskInvalid, mask, mask, factors, nodeOffsetsSizes, nodeOffsetsSizes, nodeOpacities, nodeFlags, nodesEnabled);
+    animator.advance(mask, mask, mask, factors, nodeOffsetsSizes, nodeOffsetsSizes, nodeOpacities, nodeFlags, nodesEnabledInvalid);
+    animator.advance(mask, mask, mask, factors, nodeOffsetsSizes, nodeOffsetsSizes, nodeOpacities, nodeFlagsInvalid, nodesEnabled);
+    animator.advance(mask, mask, mask, factors, nodeOffsetsSizes, nodeOffsetsSizes, nodeOpacitiesInvalid, nodeFlags, nodesEnabled);
+    animator.advance(mask, mask, mask, factors, nodeOffsetsSizes, nodeOffsetsSizesInvalid, nodeOpacities, nodeFlags, nodesEnabled);
+    animator.advance(mask, mask, mask, factors, nodeOffsetsSizesInvalid, nodeOffsetsSizes, nodeOpacities, nodeFlags, nodesEnabled);
     CORRADE_COMPARE_AS(out,
         "Ui::AbstractNodeAnimator::advance(): expected active, started, stopped and factors views to have a size of 2 but got 2, 2, 2 and 3\n"
         "Ui::AbstractNodeAnimator::advance(): expected active, started, stopped and factors views to have a size of 2 but got 2, 2, 3 and 2\n"
         "Ui::AbstractNodeAnimator::advance(): expected active, started, stopped and factors views to have a size of 2 but got 2, 3, 2 and 2\n"
         "Ui::AbstractNodeAnimator::advance(): expected active, started, stopped and factors views to have a size of 2 but got 3, 2, 2 and 2\n"
-        "Ui::AbstractNodeAnimator::advance(): expected node offset, size, flags and remove views to have the same size but got 3, 3, 3 and 4\n"
-        "Ui::AbstractNodeAnimator::advance(): expected node offset, size, flags and remove views to have the same size but got 3, 3, 4 and 3\n"
-        "Ui::AbstractNodeAnimator::advance(): expected node offset, size, flags and remove views to have the same size but got 3, 4, 3 and 3\n"
-        "Ui::AbstractNodeAnimator::advance(): expected node offset, size, flags and remove views to have the same size but got 4, 3, 3 and 3\n",
+        "Ui::AbstractNodeAnimator::advance(): expected node offset, size, opacity, flags and remove views to have the same size but got 3, 3, 3, 3 and 4\n"
+        "Ui::AbstractNodeAnimator::advance(): expected node offset, size, opacity, flags and remove views to have the same size but got 3, 3, 3, 4 and 3\n"
+        "Ui::AbstractNodeAnimator::advance(): expected node offset, size, opacity, flags and remove views to have the same size but got 3, 3, 4, 3 and 3\n"
+        "Ui::AbstractNodeAnimator::advance(): expected node offset, size, opacity, flags and remove views to have the same size but got 3, 4, 3, 3 and 3\n"
+        "Ui::AbstractNodeAnimator::advance(): expected node offset, size, opacity, flags and remove views to have the same size but got 4, 3, 3, 3 and 3\n",
         TestSuite::Compare::String);
 }
 

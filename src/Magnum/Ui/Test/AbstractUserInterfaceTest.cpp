@@ -329,6 +329,7 @@ const struct {
     Containers::Optional<NodeAnimations> nodeAnimations1, nodeAnimations2;
     bool dataAnimations, styleAnimations;
     Vector2 expectedNodeOffsetsAnimator2[2], expectedNodeOffsetsLayer[2];
+    Float expectedNodeOpacitiesAnimator2[2], expectedNodeOpacitiesLayer[2];
     NodeFlags expectedNodeFlagsAnimator2[2];
     bool expectedNodesRemoveAnimator2[2], expectedNodesEnabledLayer[2];
     Containers::Array<Vector2> expectedClipRectOffsetsLayer;
@@ -341,6 +342,7 @@ const struct {
         {}, {}, false, false,
         {{1.0f, 2.0f}, {3.0f, 4.0f}},
         {{1.0f, 2.0f}, {3.0f, 4.0f}},
+        {0.75f, 0.25f}, {0.75f, 0.25f},
         {NodeFlag::Clip, NodeFlag::Disabled},
         {false, false}, {true, false},
         {InPlaceInit, {{1.0f, 2.0f}, {0.0f, 0.0f}}},
@@ -350,6 +352,7 @@ const struct {
         {}, {}, false, false,
         {{1.0f, 2.0f}, {3.0f, 4.0f}},
         {{1.0f, 2.0f}, {3.0f, 4.0f}},
+        {0.75f, 0.25f}, {0.75f, 0.25f},
         {NodeFlag::Clip, NodeFlag::Disabled},
         {false, false}, {true, false},
         {InPlaceInit, {{1.0f, 2.0f}, {0.0f, 0.0f}}},
@@ -359,6 +362,7 @@ const struct {
         {}, {}, false, false,
         {{1.0f, 2.0f}, {3.0f, 4.0f}},
         {{1.0f, 2.0f}, {3.0f, 4.0f}},
+        {0.75f, 0.25f}, {0.75f, 0.25f},
         {NodeFlag::Clip, NodeFlag::Disabled},
         {false, false}, {true, false},
         {InPlaceInit, {{1.0f, 2.0f}, {0.0f, 0.0f}}},
@@ -368,6 +372,7 @@ const struct {
         {}, {}, false, false,
         {{1.0f, 2.0f}, {3.0f, 4.0f}},
         {{1.0f, 2.0f}, {3.0f, 4.0f}},
+        {0.75f, 0.25f}, {0.75f, 0.25f},
         {NodeFlag::Clip, NodeFlag::Disabled},
         {false, false}, {true, false},
         {InPlaceInit, {{1.0f, 2.0f}, {0.0f, 0.0f}}},
@@ -377,6 +382,7 @@ const struct {
         {}, {}, false, false,
         {{1.0f, 2.0f}, {3.0f, 4.0f}},
         {{1.0f, 2.0f}, {3.0f, 4.0f}},
+        {0.75f, 0.25f}, {0.75f, 0.25f},
         {NodeFlag::Clip, NodeFlag::Disabled},
         {false, false}, {true, false},
         {InPlaceInit, {{1.0f, 2.0f}, {0.0f, 0.0f}}},
@@ -386,6 +392,7 @@ const struct {
         {}, {}, false, false,
         {{1.0f, 2.0f}, {3.0f, 4.0f}},
         {{1.0f, 2.0f}, {3.0f, 4.0f}},
+        {0.75f, 0.25f}, {0.75f, 0.25f},
         {NodeFlag::Clip, NodeFlag::Disabled},
         {false, false}, {true, false},
         {InPlaceInit, {{1.0f, 2.0f}, {0.0f, 0.0f}}},
@@ -395,6 +402,7 @@ const struct {
         {}, {}, false, false,
         {{1.0f, 2.0f}, {3.0f, 4.0f}},
         {{1.0f, 2.0f}, {3.0f, 4.0f}},
+        {0.75f, 0.25f}, {0.75f, 0.25f},
         {NodeFlag::Clip, NodeFlag::Disabled},
         {false, false}, {true, false},
         {InPlaceInit, {{1.0f, 2.0f}, {0.0f, 0.0f}}},
@@ -404,6 +412,7 @@ const struct {
         {}, {}, false, false,
         {{1.0f, 2.0f}, {3.0f, 4.0f}},
         {{1.0f, 2.0f}, {3.0f, 4.0f}},
+        {0.75f, 0.25f}, {0.75f, 0.25f},
         {NodeFlag::Clip, NodeFlag::Disabled},
         {false, false}, {true, false},
         {InPlaceInit, {{1.0f, 2.0f}, {0.0f, 0.0f}}},
@@ -413,6 +422,7 @@ const struct {
         NodeAnimations{}, NodeAnimations{}, false, false,
         {{1.0f, 2.0f}, {3.0f, 4.0f}},
         {{1.0f, 2.0f}, {3.0f, 4.0f}},
+        {0.75f, 0.25f}, {0.75f, 0.25f},
         {NodeFlag::Clip, NodeFlag::Disabled},
         {false, false}, {true, false},
         {InPlaceInit, {{1.0f, 2.0f}, {0.0f, 0.0f}}},
@@ -422,26 +432,39 @@ const struct {
         NodeAnimations{NodeAnimation::OffsetSize}, NodeAnimations{}, false, false,
         {{1.0f, 2.0f}, {2.0f, 3.0f}},
         {{1.0f, 2.0f}, {2.0f, 3.0f}},
+        {0.75f, 0.25f}, {0.75f, 0.25f},
         {NodeFlag::Clip, NodeFlag::Disabled},
         {false, false}, {true, false},
         {InPlaceInit, {{1.0f, 2.0f}, {0.0f, 0.0f}}},
         true, true, false,
         LayerState::NeedsNodeOrderUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsNodeOffsetSizeUpdate},
-    {"second node animator moving nodes",
-        true, false, false, {}, UserInterfaceState::NeedsLayoutUpdate,
-        NodeAnimations{}, NodeAnimations{NodeAnimation::OffsetSize}, false, false,
+    {"second node animator changing opacity",
+        true, false, false, {}, UserInterfaceState::NeedsNodeOpacityUpdate,
+        NodeAnimations{}, NodeAnimations{NodeAnimation::Opacity}, false, false,
+        {{1.0f, 2.0f}, {3.0f, 4.0f}},
+        {{1.0f, 2.0f}, {3.0f, 4.0f}},
+        {0.75f, 0.25f}, {0.65f, 0.25f},
+        {NodeFlag::Clip, NodeFlag::Disabled},
+        {false, false}, {true, false},
+        {InPlaceInit, {{1.0f, 2.0f}, {0.0f, 0.0f}}},
+        true, true, false, LayerState::NeedsNodeOpacityUpdate},
+    {"first node animator changing opacity, second node animator moving nodes",
+        true, false, false, {}, UserInterfaceState::NeedsNodeOpacityUpdate|UserInterfaceState::NeedsLayoutUpdate,
+        NodeAnimations{NodeAnimation::Opacity}, NodeAnimations{NodeAnimation::OffsetSize}, false, false,
         {{1.0f, 2.0f}, {3.0f, 4.0f}},
         {{0.0f, 1.0f}, {3.0f, 4.0f}},
+        {0.75f, 0.15f}, {0.75f, 0.15f},
         {NodeFlag::Clip, NodeFlag::Disabled},
         {false, false}, {true, false},
         {InPlaceInit, {{0.0f, 1.0f}, {0.0f, 0.0f}}},
         true, true, false,
-        LayerState::NeedsNodeOrderUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsNodeOffsetSizeUpdate},
+        LayerState::NeedsNodeOrderUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsNodeOffsetSizeUpdate|LayerState::NeedsNodeOpacityUpdate},
     {"first node animator changing node enablement, second doing nothing",
         true, false, false, {}, UserInterfaceState::NeedsNodeEnabledUpdate,
         NodeAnimations{NodeAnimation::Enabled}, NodeAnimations{}, false, false,
         {{1.0f, 2.0f}, {3.0f, 4.0f}},
         {{1.0f, 2.0f}, {3.0f, 4.0f}},
+        {0.75f, 0.25f}, {0.75f, 0.25f},
         {NodeFlag::Clip, {}},
         {false, false}, {true, true},
         {InPlaceInit, {{1.0f, 2.0f}, {0.0f, 0.0f}}},
@@ -454,6 +477,7 @@ const struct {
         NodeAnimations{NodeAnimation::Clip}, {}, false, false,
         {{1.0f, 2.0f}, {3.0f, 4.0f}},
         {{1.0f, 2.0f}, {3.0f, 4.0f}},
+        {0.75f, 0.25f}, {0.75f, 0.25f},
         {NodeFlag::Clip, NodeFlag::Disabled},
         {false, false}, {true, false},
         {InPlaceInit, {{1.0f, 2.0f}, {3.0f, 4.0f}}},
@@ -464,6 +488,7 @@ const struct {
         NodeAnimations{NodeAnimation::Removal}, {}, false, false,
         {{1.0f, 2.0f}, {3.0f, 4.0f}},
         {{1.0f, 2.0f}, {3.0f, 4.0f}},
+        {0.75f, 0.25f}, {0.75f, 0.25f},
         {NodeFlag::Clip, NodeFlag::Disabled},
         {false, true}, {true, false},
         {InPlaceInit, {{1.0f, 2.0f}}},
@@ -474,6 +499,7 @@ const struct {
         NodeAnimations{NodeAnimation::Removal}, {}, false, false,
         {{1.0f, 2.0f}, {3.0f, 4.0f}},
         {{1.0f, 2.0f}, {3.0f, 4.0f}},
+        {0.75f, 0.25f}, {0.75f, 0.25f},
         {NodeFlag::Clip, NodeFlag::Disabled},
         {false, true}, {true, false},
         {InPlaceInit, {{1.0f, 2.0f}}},
@@ -484,6 +510,7 @@ const struct {
         NodeAnimation::OffsetSize|NodeAnimation::Enabled|NodeAnimation::Clip, NodeAnimations{NodeAnimation::Removal}, false, false,
         {{1.0f, 2.0f}, {2.0f, 3.0f}},
         {{1.0f, 2.0f}, {2.0f, 3.0f}},
+        {0.75f, 0.25f}, {0.75f, 0.25f},
         {NodeFlag::Clip, NodeFlag::Clip},
         {false, false}, {false, true},
         {InPlaceInit, {{2.0f, 3.0f}}},
@@ -495,6 +522,7 @@ const struct {
         NodeAnimation::OffsetSize|NodeAnimation::Enabled|NodeAnimation::Clip, false, false,
         {{1.0f, 2.0f}, {3.0f, 4.0f}},
         {{0.0f, 1.0f}, {3.0f, 4.0f}},
+        {0.75f, 0.25f}, {0.75f, 0.25f},
         {NodeFlag::Clip, NodeFlag::Disabled},
         {false, true}, {false, false},
         {InPlaceInit, {{0.0f, 0.0f}}},
@@ -505,6 +533,7 @@ const struct {
         {}, {}, true, false,
         {{1.0f, 2.0f}, {3.0f, 4.0f}},
         {{1.0f, 2.0f}, {3.0f, 4.0f}},
+        {0.75f, 0.25f}, {0.75f, 0.25f},
         {NodeFlag::Clip, NodeFlag::Disabled},
         {false, false}, {true, false},
         {InPlaceInit, {{1.0f, 2.0f}, {0.0f, 0.0f}}},
@@ -515,6 +544,7 @@ const struct {
         {}, {}, true, false,
         {{1.0f, 2.0f}, {3.0f, 4.0f}},
         {{1.0f, 2.0f}, {3.0f, 4.0f}},
+        {0.75f, 0.25f}, {0.75f, 0.25f},
         {NodeFlag::Clip, NodeFlag::Disabled},
         {false, false}, {true, false},
         {InPlaceInit, {{1.0f, 2.0f}, {0.0f, 0.0f}}},
@@ -525,6 +555,7 @@ const struct {
         {}, {}, true, false,
         {{1.0f, 2.0f}, {3.0f, 4.0f}},
         {{1.0f, 2.0f}, {3.0f, 4.0f}},
+        {0.75f, 0.25f}, {0.75f, 0.25f},
         {NodeFlag::Clip, NodeFlag::Disabled},
         {false, false}, {true, false},
         {InPlaceInit, {{1.0f, 2.0f}, {0.0f, 0.0f}}},
@@ -535,6 +566,7 @@ const struct {
         {}, {}, false, true,
         {{1.0f, 2.0f}, {3.0f, 4.0f}},
         {{1.0f, 2.0f}, {3.0f, 4.0f}},
+        {0.75f, 0.25f}, {0.75f, 0.25f},
         {NodeFlag::Clip, NodeFlag::Disabled},
         {false, false}, {true, false},
         {InPlaceInit, {{1.0f, 2.0f}, {0.0f, 0.0f}}},
@@ -545,6 +577,7 @@ const struct {
         {}, {}, false, true,
         {{1.0f, 2.0f}, {3.0f, 4.0f}},
         {{1.0f, 2.0f}, {3.0f, 4.0f}},
+        {0.75f, 0.25f}, {0.75f, 0.25f},
         {NodeFlag::Clip, NodeFlag::Disabled},
         {false, false}, {true, false},
         {InPlaceInit, {{1.0f, 2.0f}, {0.0f, 0.0f}}},
@@ -555,6 +588,7 @@ const struct {
         {}, {}, false, true,
         {{1.0f, 2.0f}, {3.0f, 4.0f}},
         {{1.0f, 2.0f}, {3.0f, 4.0f}},
+        {0.75f, 0.25f}, {0.75f, 0.25f},
         {NodeFlag::Clip, NodeFlag::Disabled},
         {false, false}, {true, false},
         {InPlaceInit, {{1.0f, 2.0f}, {0.0f, 0.0f}}},
@@ -2865,7 +2899,7 @@ void AbstractUserInterfaceTest::animatorSetInstance() {
             AnimatorFeatures doFeatures() const override {
                 return AnimatorFeature::NodeAttachment;
             }
-            NodeAnimations doAdvance(Containers::BitArrayView, Containers::BitArrayView, Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<NodeFlags>&, Containers::MutableBitArrayView) override { return {}; }
+            NodeAnimations doAdvance(Containers::BitArrayView, Containers::BitArrayView, Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Float>&, const Containers::StridedArrayView1D<NodeFlags>&, Containers::MutableBitArrayView) override { return {}; }
 
             int& destructed;
         };
@@ -3003,7 +3037,7 @@ void AbstractUserInterfaceTest::animatorSetInstanceInvalid() {
         using AbstractNodeAnimator::AbstractNodeAnimator;
 
         AnimatorFeatures doFeatures() const override { return {}; }
-        NodeAnimations doAdvance(Containers::BitArrayView, Containers::BitArrayView, Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<NodeFlags>&, Containers::MutableBitArrayView) override {
+        NodeAnimations doAdvance(Containers::BitArrayView, Containers::BitArrayView, Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Float>&, const Containers::StridedArrayView1D<NodeFlags>&, Containers::MutableBitArrayView) override {
             return {};
         }
     };
@@ -6371,7 +6405,7 @@ void AbstractUserInterfaceTest::advanceAnimations() {
         void doClean(Containers::BitArrayView) override {
             arrayAppend(calls, InPlaceInit, handle(), Clean);
         }
-        NodeAnimations doAdvance(Containers::BitArrayView, Containers::BitArrayView, Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<NodeFlags>&, Containers::MutableBitArrayView) override {
+        NodeAnimations doAdvance(Containers::BitArrayView, Containers::BitArrayView, Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Float>&, const Containers::StridedArrayView1D<NodeFlags>&, Containers::MutableBitArrayView) override {
             arrayAppend(calls, InPlaceInit, handle(), Advance);
             return {};
         }
@@ -6911,7 +6945,7 @@ void AbstractUserInterfaceTest::advanceAnimationsNode() {
         AnimatorFeatures doFeatures() const override {
             return AnimatorFeature::NodeAttachment;
         }
-        NodeAnimations doAdvance(Containers::BitArrayView active, Containers::BitArrayView started, Containers::BitArrayView stopped, const Containers::StridedArrayView1D<const Float>& factors, const Containers::StridedArrayView1D<Vector2>& nodeOffsets, const Containers::StridedArrayView1D<Vector2>& nodeSizes, const Containers::StridedArrayView1D<NodeFlags>& nodeFlags, Containers::MutableBitArrayView nodesRemove) override {
+        NodeAnimations doAdvance(Containers::BitArrayView active, Containers::BitArrayView started, Containers::BitArrayView stopped, const Containers::StridedArrayView1D<const Float>& factors, const Containers::StridedArrayView1D<Vector2>& nodeOffsets, const Containers::StridedArrayView1D<Vector2>& nodeSizes, const Containers::StridedArrayView1D<Float>& nodeOpacities, const Containers::StridedArrayView1D<NodeFlags>& nodeFlags, Containers::MutableBitArrayView nodesRemove) override {
             CORRADE_COMPARE_AS(active,
                 expectedActive,
                 TestSuite::Compare::Container);
@@ -6934,6 +6968,10 @@ void AbstractUserInterfaceTest::advanceAnimationsNode() {
             CORRADE_COMPARE_AS(nodeSizes, Containers::stridedArrayView<Vector2>({
                 {5.0f, 6.0f},
                 {8.0f, 9.0f},
+            }), TestSuite::Compare::Container);
+            CORRADE_COMPARE_AS(nodeOpacities, Containers::stridedArrayView<Float>({
+                0.75f,
+                0.25f,
             }), TestSuite::Compare::Container);
             CORRADE_COMPARE_AS(nodeFlags, Containers::stridedArrayView({
                 NodeFlags{},
@@ -6963,8 +7001,10 @@ void AbstractUserInterfaceTest::advanceAnimationsNode() {
     };
     Animator& animator = ui.setNodeAnimatorInstance(Containers::pointer<Animator>(ui.createAnimator()));
 
-    ui.createNode({1.0f, 2.0f}, {5.0f, 6.0f});
-    ui.createNode({3.0f, 4.0f}, {8.0f, 9.0f}, NodeFlag::Clip|NodeFlag::Disabled);
+    NodeHandle node1 = ui.createNode({1.0f, 2.0f}, {5.0f, 6.0f});
+    NodeHandle node2 = ui.createNode({3.0f, 4.0f}, {8.0f, 9.0f}, NodeFlag::Clip|NodeFlag::Disabled);
+    ui.setNodeOpacity(node1, 0.75f);
+    ui.setNodeOpacity(node2, 0.25f);
 
     /* Call to advance(5) advances the first, nothing to clean */
     animator.create(0_nsec, 10_nsec);
@@ -11252,11 +11292,6 @@ void AbstractUserInterfaceTest::stateAnimations() {
                 {0.5f, 0.25f},
                 {0.75f, 1.0f}
             };
-            /** @todo this will be eventually animated also */
-            Float expectedNodeOpacities[]{
-                1.0f,
-                1.0f
-            };
             for(std::size_t i = 0; i != nodeOffsets.size(); ++i) {
                 if(!expectedNodesValid[i]) continue;
 
@@ -11293,6 +11328,7 @@ void AbstractUserInterfaceTest::stateAnimations() {
 
         LayerStates expectedState;
         Containers::StridedArrayView1D<const Vector2> expectedNodeOffsets;
+        Containers::StridedArrayView1D<const Float> expectedNodeOpacities;
         Containers::StridedArrayView1D<const bool> expectedNodesEnabled;
         Containers::StridedArrayView1D<const Vector2> expectedClipRectOffsets;
         Containers::ArrayView<const bool> expectedNodesValid;
@@ -11331,7 +11367,7 @@ void AbstractUserInterfaceTest::stateAnimations() {
         void doClean(Containers::BitArrayView) override {
             ++cleanCallCount;
         }
-        NodeAnimations doAdvance(Containers::BitArrayView active, Containers::BitArrayView started, Containers::BitArrayView stopped, const Containers::StridedArrayView1D<const Float>& factors, const Containers::StridedArrayView1D<Vector2>& nodeOffsets, const Containers::StridedArrayView1D<Vector2>& nodeSizes, const Containers::StridedArrayView1D<NodeFlags>& nodeFlags, Containers::MutableBitArrayView nodesRemove) override {
+        NodeAnimations doAdvance(Containers::BitArrayView active, Containers::BitArrayView started, Containers::BitArrayView stopped, const Containers::StridedArrayView1D<const Float>& factors, const Containers::StridedArrayView1D<Vector2>& nodeOffsets, const Containers::StridedArrayView1D<Vector2>& nodeSizes, const Containers::StridedArrayView1D<Float>& nodeOpacities, const Containers::StridedArrayView1D<NodeFlags>& nodeFlags, Containers::MutableBitArrayView nodesRemove) override {
             CORRADE_ITERATION(handle());
             CORRADE_COMPARE_AS(nodeOffsets,
                 expectedNodeOffsets,
@@ -11340,6 +11376,9 @@ void AbstractUserInterfaceTest::stateAnimations() {
                 {0.5f, 0.25f},
                 {0.75f, 1.0f}
             }), TestSuite::Compare::Container);
+            CORRADE_COMPARE_AS(nodeOpacities,
+                expectedNodeOpacities,
+                TestSuite::Compare::Container);
             CORRADE_COMPARE_AS(nodeFlags,
                 expectedNodeFlags,
                 TestSuite::Compare::Container);
@@ -11358,6 +11397,8 @@ void AbstractUserInterfaceTest::stateAnimations() {
 
                 if(_animations >= NodeAnimation::OffsetSize)
                     nodeOffsets[nodeHandleId(nodes()[i])] -= Vector2{1.0f};
+                if(_animations >= NodeAnimation::Opacity)
+                    nodeOpacities[nodeHandleId(nodes()[i])] -= 0.1f;
                 if(_animations >= NodeAnimation::Enabled) {
                     NodeFlags& flags = nodeFlags[nodeHandleId(nodes()[i])];
                     if(flags & NodeFlag::Disabled)
@@ -11381,6 +11422,7 @@ void AbstractUserInterfaceTest::stateAnimations() {
         }
 
         Containers::StridedArrayView1D<const Vector2> expectedNodeOffsets;
+        Containers::StridedArrayView1D<const Float> expectedNodeOpacities;
         Containers::StridedArrayView1D<const NodeFlags> expectedNodeFlags;
         Containers::StridedArrayView1D<const bool> expectedNodesRemove;
         Int cleanCallCount = 0;
@@ -11549,6 +11591,8 @@ void AbstractUserInterfaceTest::stateAnimations() {
        flags */
     NodeHandle node1 = ui.createNode({1.0f, 2.0f}, {0.5f, 0.25f}, NodeFlag::Clip);
     NodeHandle node2 = ui.createNode({3.0f, 4.0f}, {0.75f, 1.0f}, NodeFlag::Disabled);
+    ui.setNodeOpacity(node1, 0.75f);
+    ui.setNodeOpacity(node2, 0.25f);
     DataHandle data1 = layer.create(node1);
     DataHandle data2 = layer.create(node2);
     CORRADE_COMPARE(ui.state(), data.expectedInitialState|UserInterfaceState::NeedsNodeUpdate);
@@ -11558,6 +11602,10 @@ void AbstractUserInterfaceTest::stateAnimations() {
         Vector2 expectedNodeOffsets[]{
             {1.0f, 2.0f},
             {3.0f, 4.0f},
+        };
+        Float expectedNodeOpacities[]{
+            0.75f,
+            0.25f
         };
         bool expectedNodesEnabled[]{
             true, false
@@ -11571,6 +11619,7 @@ void AbstractUserInterfaceTest::stateAnimations() {
         };
         layer.expectedState = LayerState::NeedsNodeOrderUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsNodeOpacityUpdate|LayerState::NeedsNodeOffsetSizeUpdate|LayerState::NeedsDataUpdate;
         layer.expectedNodeOffsets = expectedNodeOffsets;
+        layer.expectedNodeOpacities = expectedNodeOpacities;
         layer.expectedNodesEnabled = expectedNodesEnabled;
         layer.expectedClipRectOffsets = expectedClipRectOffsets;
         layer.expectedNodesValid = expectedNodesValid;
@@ -11617,6 +11666,10 @@ void AbstractUserInterfaceTest::stateAnimations() {
             {1.0f, 2.0f},
             {3.0f, 4.0f},
         };
+        Float expectedNodeOpacitiesAnimator1[]{
+            0.75f,
+            0.25f
+        };
         NodeFlags expectedNodeFlagsAnimator1[]{
             NodeFlag::Clip,
             NodeFlag::Disabled
@@ -11626,11 +11679,13 @@ void AbstractUserInterfaceTest::stateAnimations() {
         };
         if(data.nodeAnimations1) {
             nodeAnimator1->expectedNodeOffsets = expectedNodeOffsetsAnimator1;
+            nodeAnimator1->expectedNodeOpacities = expectedNodeOpacitiesAnimator1;
             nodeAnimator1->expectedNodeFlags = expectedNodeFlagsAnimator1;
             nodeAnimator1->expectedNodesRemove = expectedNodesRemoveAnimator1;
         }
         if(data.nodeAnimations2) {
             nodeAnimator2->expectedNodeOffsets = data.expectedNodeOffsetsAnimator2;
+            nodeAnimator2->expectedNodeOpacities = data.expectedNodeOpacitiesAnimator2;
             nodeAnimator2->expectedNodeFlags = data.expectedNodeFlagsAnimator2;
             nodeAnimator2->expectedNodesRemove = data.expectedNodesRemoveAnimator2;
         }
@@ -11713,6 +11768,7 @@ void AbstractUserInterfaceTest::stateAnimations() {
         };
         layer.expectedState = data.expectedLayerUpdateState;
         layer.expectedNodeOffsets = data.expectedNodeOffsetsLayer;
+        layer.expectedNodeOpacities = data.expectedNodeOpacitiesLayer;
         layer.expectedNodesEnabled = data.expectedNodesEnabledLayer;
         layer.expectedClipRectOffsets = data.expectedClipRectOffsetsLayer;
         layer.expectedNodesValid = expectedNodesValid;
