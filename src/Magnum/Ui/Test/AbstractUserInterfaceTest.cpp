@@ -36,7 +36,6 @@
 #include <Corrade/TestSuite/Compare/Container.h>
 #include <Corrade/TestSuite/Compare/Numeric.h>
 #include <Corrade/TestSuite/Compare/String.h>
-#include <Corrade/Utility/Format.h>
 #include <Magnum/Math/Time.h>
 #include <Magnum/Math/Vector4.h>
 
@@ -6777,7 +6776,7 @@ void AbstractUserInterfaceTest::advanceAnimationsGeneric() {
     animator.create(-20_nsec, 10_nsec, AnimationFlag::KeepOncePlayed);
     animator.create(6_nsec, 4_nsec);
     {
-        CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
+        CORRADE_ITERATION(__FILE__ ":" CORRADE_LINE_STRING);
         bool active[]{
             true,
             false,
@@ -6812,7 +6811,7 @@ void AbstractUserInterfaceTest::advanceAnimationsGeneric() {
     /* Call to advance(10) advances the first and last to end, both get
        cleaned afterwards */
     {
-        CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
+        CORRADE_ITERATION(__FILE__ ":" CORRADE_LINE_STRING);
         bool active[]{
             true,
             false,
@@ -6850,7 +6849,7 @@ void AbstractUserInterfaceTest::advanceAnimationsGeneric() {
 
     /* Call to advance(20) does nothing */
     {
-        CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
+        CORRADE_ITERATION(__FILE__ ":" CORRADE_LINE_STRING);
         animator.expectedActive = {};
         animator.expectedStarted = {};
         animator.expectedStopped = {};
@@ -6937,7 +6936,7 @@ void AbstractUserInterfaceTest::advanceAnimationsNode() {
     animator.create(-20_nsec, 10_nsec, AnimationFlag::KeepOncePlayed);
     animator.create(6_nsec, 4_nsec);
     {
-        CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
+        CORRADE_ITERATION(__FILE__ ":" CORRADE_LINE_STRING);
         bool active[]{
             true,
             false,
@@ -6971,7 +6970,7 @@ void AbstractUserInterfaceTest::advanceAnimationsNode() {
     /* Call to advance(10) advances the first and last to end, both get
        cleaned afterwards */
     {
-        CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
+        CORRADE_ITERATION(__FILE__ ":" CORRADE_LINE_STRING);
         bool active[]{
             true,
             false,
@@ -7009,7 +7008,7 @@ void AbstractUserInterfaceTest::advanceAnimationsNode() {
 
     /* Call to advance(20) does nothing */
     {
-        CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
+        CORRADE_ITERATION(__FILE__ ":" CORRADE_LINE_STRING);
         animator.expectedActive = {};
         animator.expectedStarted = {};
         animator.expectedStopped = {};
@@ -7105,7 +7104,7 @@ void AbstractUserInterfaceTest::advanceAnimationsData() {
     animator.create(-20_nsec, 10_nsec, AnimationFlag::KeepOncePlayed);
     animator.create(6_nsec, 4_nsec);
     {
-        CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
+        CORRADE_ITERATION(__FILE__ ":" CORRADE_LINE_STRING);
         bool active[]{
             true,
             false,
@@ -7139,7 +7138,7 @@ void AbstractUserInterfaceTest::advanceAnimationsData() {
     /* Call to advance(10) advances the first and last to end, both get
        cleaned afterwards */
     {
-        CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
+        CORRADE_ITERATION(__FILE__ ":" CORRADE_LINE_STRING);
         bool active[]{
             true,
             false,
@@ -7177,7 +7176,7 @@ void AbstractUserInterfaceTest::advanceAnimationsData() {
 
     /* Call to advance(20) does nothing */
     {
-        CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
+        CORRADE_ITERATION(__FILE__ ":" CORRADE_LINE_STRING);
         animator.expectedActive = {};
         animator.expectedStarted = {};
         animator.expectedStopped = {};
@@ -7273,7 +7272,7 @@ void AbstractUserInterfaceTest::advanceAnimationsStyle() {
     animator.create(-20_nsec, 10_nsec, AnimationFlag::KeepOncePlayed);
     animator.create(6_nsec, 4_nsec);
     {
-        CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
+        CORRADE_ITERATION(__FILE__ ":" CORRADE_LINE_STRING);
         bool active[]{
             true,
             false,
@@ -7307,7 +7306,7 @@ void AbstractUserInterfaceTest::advanceAnimationsStyle() {
     /* Call to advance(10) advances the first and last to end, both get
        cleaned afterwards */
     {
-        CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
+        CORRADE_ITERATION(__FILE__ ":" CORRADE_LINE_STRING);
         bool active[]{
             true,
             false,
@@ -7345,7 +7344,7 @@ void AbstractUserInterfaceTest::advanceAnimationsStyle() {
 
     /* Call to advance(20) does nothing */
     {
-        CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
+        CORRADE_ITERATION(__FILE__ ":" CORRADE_LINE_STRING);
         animator.expectedActive = {};
         animator.expectedStarted = {};
         animator.expectedStopped = {};
@@ -7704,7 +7703,7 @@ void AbstractUserInterfaceTest::state() {
            layouters */
         if(data.clean && data.noOp) {
             {
-                CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
+                CORRADE_ITERATION(__FILE__ ":" CORRADE_LINE_STRING);
                 ui.clean();
             }
             CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
@@ -7719,7 +7718,7 @@ void AbstractUserInterfaceTest::state() {
            layouters */
         if(data.noOp) {
             {
-                CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
+                CORRADE_ITERATION(__FILE__ ":" CORRADE_LINE_STRING);
                 ui.update();
             }
             CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
@@ -7750,7 +7749,7 @@ void AbstractUserInterfaceTest::state() {
         /* Calling clean() should be a no-op */
         if(data.clean && data.noOp) {
             {
-                CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
+                CORRADE_ITERATION(__FILE__ ":" CORRADE_LINE_STRING);
                 ui.clean();
             }
             CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsLayoutAssignmentUpdate);
@@ -7764,7 +7763,7 @@ void AbstractUserInterfaceTest::state() {
         /* Calling update() rebuilds internal state, calls doUpdate() on the
            layouters, and resets the flag. */
         {
-            CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
+            CORRADE_ITERATION(__FILE__ ":" CORRADE_LINE_STRING);
             bool expectedLayoutIdsToUpdate1[]{
                 /* layout2Node and layout2Nested2 */
                 false, true, true, false, false
@@ -7933,7 +7932,7 @@ void AbstractUserInterfaceTest::state() {
        or layers */
     if(data.clean && data.noOp) {
         {
-            CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
+            CORRADE_ITERATION(__FILE__ ":" CORRADE_LINE_STRING);
             ui.clean();
         }
         CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
@@ -7950,7 +7949,7 @@ void AbstractUserInterfaceTest::state() {
        layouters or layers */
     if(data.noOp) {
         {
-            CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
+            CORRADE_ITERATION(__FILE__ ":" CORRADE_LINE_STRING);
             ui.update();
         }
         CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
@@ -7980,7 +7979,7 @@ void AbstractUserInterfaceTest::state() {
     /* Calling clean() should be a no-op */
     if(data.clean && data.noOp) {
         {
-            CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
+            CORRADE_ITERATION(__FILE__ ":" CORRADE_LINE_STRING);
             ui.clean();
         }
         CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataUpdate);
@@ -7997,7 +7996,7 @@ void AbstractUserInterfaceTest::state() {
        and resets the flag. Since nothing is attached, there are no IDs to
        draw and no rects to composite. It doesn't call the layouters either. */
     {
-        CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
+        CORRADE_ITERATION(__FILE__ ":" CORRADE_LINE_STRING);
         Containers::Triple<Vector2, Vector2, Float> expectedNodeOffsetsSizesOpacities[]{
             {{2.0f, 1.0f}, {3.0f, 5.0f}, 0.8f}, /* node */
             {{5.0f, 0.0f}, {1.0f, 2.0f}, 1.0f}, /* another1 */
@@ -8122,7 +8121,7 @@ void AbstractUserInterfaceTest::state() {
        layouters, layers or animators */
     if(data.clean && data.noOp) {
         {
-            CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
+            CORRADE_ITERATION(__FILE__ ":" CORRADE_LINE_STRING);
             ui.clean();
         }
         CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
@@ -8143,7 +8142,7 @@ void AbstractUserInterfaceTest::state() {
        layouters, layers or animators */
     if(data.noOp) {
         {
-            CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
+            CORRADE_ITERATION(__FILE__ ":" CORRADE_LINE_STRING);
             ui.update();
         }
         CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
@@ -8176,7 +8175,7 @@ void AbstractUserInterfaceTest::state() {
     /* Calling clean() should be a no-op */
     if(data.clean && data.noOp) {
         {
-            CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
+            CORRADE_ITERATION(__FILE__ ":" CORRADE_LINE_STRING);
             ui.clean();
         }
         CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataAttachmentUpdate);
@@ -8196,7 +8195,7 @@ void AbstractUserInterfaceTest::state() {
     /* Calling update() rebuilds internal state, calls doUpdate() on the layer,
        and resets the flag. It doesn't call the layouters. */
     {
-        CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
+        CORRADE_ITERATION(__FILE__ ":" CORRADE_LINE_STRING);
         UnsignedInt expectedDataIds[]{
             dataHandleId(dataNode),
             dataHandleId(dataNested1),
@@ -8307,7 +8306,7 @@ void AbstractUserInterfaceTest::state() {
     /* Calling clean() should be a no-op */
     if(data.clean && data.noOp) {
         {
-            CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
+            CORRADE_ITERATION(__FILE__ ":" CORRADE_LINE_STRING);
             ui.clean();
         }
         CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeClipUpdate);
@@ -8327,7 +8326,7 @@ void AbstractUserInterfaceTest::state() {
     /* Calling update() should refresh the cull state in all layers. It doesn't
        call anything in the layouters. */
     {
-        CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
+        CORRADE_ITERATION(__FILE__ ":" CORRADE_LINE_STRING);
         UnsignedInt expectedDataIds[]{
             dataHandleId(dataNode),
             dataHandleId(dataNested1)
@@ -8404,7 +8403,7 @@ void AbstractUserInterfaceTest::state() {
     /* Calling clean() should be a no-op */
     if(data.clean && data.noOp) {
         {
-            CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
+            CORRADE_ITERATION(__FILE__ ":" CORRADE_LINE_STRING);
             ui.clean();
         }
         CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeClipUpdate);
@@ -8424,7 +8423,7 @@ void AbstractUserInterfaceTest::state() {
     /* Calling update() resets back to the "everything visible" state like
        before. It doesn't call the layouters. */
     {
-        CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
+        CORRADE_ITERATION(__FILE__ ":" CORRADE_LINE_STRING);
         UnsignedInt expectedDataIds[]{
             dataHandleId(dataNode),
             dataHandleId(dataNested1),
@@ -8503,7 +8502,7 @@ void AbstractUserInterfaceTest::state() {
     /* Calling clean() should be a no-op */
     if(data.clean && data.noOp) {
         {
-            CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
+            CORRADE_ITERATION(__FILE__ ":" CORRADE_LINE_STRING);
             ui.clean();
         }
         CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataUpdate);
@@ -8525,7 +8524,7 @@ void AbstractUserInterfaceTest::state() {
        internally shouldn't do any other state rebuild. Nothing observable to
        verify that with, tho. It doesn't call layouters. */
     {
-        CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
+        CORRADE_ITERATION(__FILE__ ":" CORRADE_LINE_STRING);
         UnsignedInt expectedDataIds[]{
             dataHandleId(dataNode),
             dataHandleId(dataNested1),
@@ -8615,7 +8614,7 @@ void AbstractUserInterfaceTest::state() {
     /* Calling clean() should be a no-op */
     if(data.clean && data.noOp) {
         {
-            CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
+            CORRADE_ITERATION(__FILE__ ":" CORRADE_LINE_STRING);
             ui.clean();
         }
         CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsLayoutUpdate);
@@ -8637,7 +8636,7 @@ void AbstractUserInterfaceTest::state() {
        culled node, with a single size changed and resets the flag, but
        internally shouldn't do any other state rebuild */
     {
-        CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
+        CORRADE_ITERATION(__FILE__ ":" CORRADE_LINE_STRING);
 
         bool expectedLayoutIdsToUpdate1[]{
             /* layout2Node and layout2Nested2. Before calling layouters it's
@@ -8797,7 +8796,7 @@ void AbstractUserInterfaceTest::state() {
     /* Calling clean() should be a no-op */
     if(data.clean && data.noOp) {
         {
-            CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
+            CORRADE_ITERATION(__FILE__ ":" CORRADE_LINE_STRING);
             ui.clean();
         }
         CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsLayoutUpdate);
@@ -8818,7 +8817,7 @@ void AbstractUserInterfaceTest::state() {
     /* Calling update() calls layouters, recalculates absoute offsets, uploads
        the new data and resets the flag */
     {
-        CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
+        CORRADE_ITERATION(__FILE__ ":" CORRADE_LINE_STRING);
 
         bool expectedLayoutIdsToUpdate1[]{
             /* layout2Node and layout2Nested2. Again, before calling layouters
@@ -8964,7 +8963,7 @@ void AbstractUserInterfaceTest::state() {
     /* Calling clean() should be a no-op */
     if(data.clean && data.noOp) {
         {
-            CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
+            CORRADE_ITERATION(__FILE__ ":" CORRADE_LINE_STRING);
             ui.clean();
         }
         CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeUpdate);
@@ -8985,7 +8984,7 @@ void AbstractUserInterfaceTest::state() {
     /* Calling update() rebuilds internal state without the hidden hierarchy,
        calls layouters and uploads the data */
     {
-        CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
+        CORRADE_ITERATION(__FILE__ ":" CORRADE_LINE_STRING);
 
         bool expectedLayoutIdsToUpdate1[]{
             /* layout1Another1 */
@@ -9114,7 +9113,7 @@ void AbstractUserInterfaceTest::state() {
     /* Calling clean() should be a no-op */
     if(data.clean && data.noOp) {
         {
-            CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
+            CORRADE_ITERATION(__FILE__ ":" CORRADE_LINE_STRING);
             ui.clean();
         }
         CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeUpdate);
@@ -9135,7 +9134,7 @@ void AbstractUserInterfaceTest::state() {
     /* Calling update() calls layouters with previous data, reuploads the
        previous data again and resets the state flag */
     {
-        CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
+        CORRADE_ITERATION(__FILE__ ":" CORRADE_LINE_STRING);
 
         bool expectedLayoutIdsToUpdate1[]{
             /* layout2Node and layout2Nested2 */
@@ -9288,7 +9287,7 @@ void AbstractUserInterfaceTest::state() {
     /* Calling clean() should be a no-op */
     if(data.clean && data.noOp) {
         {
-            CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
+            CORRADE_ITERATION(__FILE__ ":" CORRADE_LINE_STRING);
             ui.clean();
         }
         CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeEnabledUpdate);
@@ -9310,7 +9309,7 @@ void AbstractUserInterfaceTest::state() {
     /* Calling update() rebuilds internal masks of enabled nodes. It doesn't
        call layouters. */
     {
-        CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
+        CORRADE_ITERATION(__FILE__ ":" CORRADE_LINE_STRING);
         UnsignedInt expectedDataIds[]{
             dataHandleId(dataNode),
             dataHandleId(dataNested1),
@@ -9399,7 +9398,7 @@ void AbstractUserInterfaceTest::state() {
     /* Calling clean() should be a no-op */
     if(data.clean && data.noOp) {
         {
-            CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
+            CORRADE_ITERATION(__FILE__ ":" CORRADE_LINE_STRING);
             ui.clean();
         }
         CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeEnabledUpdate);
@@ -9420,7 +9419,7 @@ void AbstractUserInterfaceTest::state() {
     /* Calling update() rebuilds internal masks of enabled nodes. It doesn't
        call layouters. */
     {
-        CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
+        CORRADE_ITERATION(__FILE__ ":" CORRADE_LINE_STRING);
         UnsignedInt expectedDataIds[]{
             dataHandleId(dataNode),
             dataHandleId(dataNested1),
@@ -9498,7 +9497,7 @@ void AbstractUserInterfaceTest::state() {
     /* Calling clean() should be a no-op */
     if(data.clean && data.noOp) {
         {
-            CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
+            CORRADE_ITERATION(__FILE__ ":" CORRADE_LINE_STRING);
             ui.clean();
         }
         CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeEnabledUpdate);
@@ -9520,7 +9519,7 @@ void AbstractUserInterfaceTest::state() {
        the state passed to doUpdate() is the same as above. It doesn't call
        layouters. */
     {
-        CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
+        CORRADE_ITERATION(__FILE__ ":" CORRADE_LINE_STRING);
         UnsignedInt expectedDataIds[]{
             dataHandleId(dataNode),
             dataHandleId(dataNested1),
@@ -9616,7 +9615,7 @@ void AbstractUserInterfaceTest::state() {
     /* Calling clean() should be a no-op */
     if(data.clean && data.noOp) {
         {
-            CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
+            CORRADE_ITERATION(__FILE__ ":" CORRADE_LINE_STRING);
             ui.clean();
         }
         CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeClipUpdate);
@@ -9637,7 +9636,7 @@ void AbstractUserInterfaceTest::state() {
     /* Calling update() uploads the full data including the no-longer-clipped
        nodes. It doesn't call layouters. */
     {
-        CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
+        CORRADE_ITERATION(__FILE__ ":" CORRADE_LINE_STRING);
         UnsignedInt expectedDataIds[]{
             dataHandleId(dataNode),
             dataHandleId(dataNested1),
@@ -9718,7 +9717,7 @@ void AbstractUserInterfaceTest::state() {
     /* Calling clean() should be a no-op */
     if(data.clean && data.noOp) {
         {
-            CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
+            CORRADE_ITERATION(__FILE__ ":" CORRADE_LINE_STRING);
             ui.clean();
         }
         CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeClipUpdate);
@@ -9739,7 +9738,7 @@ void AbstractUserInterfaceTest::state() {
     /* Calling update() reuploads the previous data again and resets the state
        flag. Doesn't call layouters. */
     {
-        CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
+        CORRADE_ITERATION(__FILE__ ":" CORRADE_LINE_STRING);
         UnsignedInt expectedDataIds[]{
             dataHandleId(dataNode),
             dataHandleId(dataNested1),
@@ -9813,7 +9812,7 @@ void AbstractUserInterfaceTest::state() {
     /* Calling clean() should be a no-op */
     if(data.clean && data.noOp) {
         {
-            CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
+            CORRADE_ITERATION(__FILE__ ":" CORRADE_LINE_STRING);
             ui.clean();
         }
         CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeUpdate);
@@ -9834,7 +9833,7 @@ void AbstractUserInterfaceTest::state() {
     /* Calling update() calls the one remaining layouter, uploads data in
        new order and resets the flag */
     {
-        CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
+        CORRADE_ITERATION(__FILE__ ":" CORRADE_LINE_STRING);
 
         bool expectedLayoutIdsToUpdate1[]{
             /* layout2Node and layout2Nested2 */
@@ -9941,7 +9940,7 @@ void AbstractUserInterfaceTest::state() {
     /* Calling clean() should be a no-op */
     if(data.clean && data.noOp) {
         {
-            CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
+            CORRADE_ITERATION(__FILE__ ":" CORRADE_LINE_STRING);
             ui.clean();
         }
         CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeUpdate);
@@ -9963,7 +9962,7 @@ void AbstractUserInterfaceTest::state() {
        node was removed from the order, uploads data in new order and resets
        the flag */
     {
-        CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
+        CORRADE_ITERATION(__FILE__ ":" CORRADE_LINE_STRING);
 
         bool expectedLayoutIdsToUpdate1[]{
             /* layout2Node and layout2Nested2 */
@@ -10107,7 +10106,7 @@ void AbstractUserInterfaceTest::state() {
     /* Calling clean() should be a no-op */
     if(data.clean && data.noOp) {
         {
-            CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
+            CORRADE_ITERATION(__FILE__ ":" CORRADE_LINE_STRING);
             ui.clean();
         }
         CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeUpdate);
@@ -10129,7 +10128,7 @@ void AbstractUserInterfaceTest::state() {
        has only an effect on the draw order, not on the layouters or on actual
        node offsets and sizes) */
     {
-        CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
+        CORRADE_ITERATION(__FILE__ ":" CORRADE_LINE_STRING);
 
         bool expectedLayoutIdsToUpdate1[]{
             /* layout2Node and layout2Nested2 */
@@ -10283,7 +10282,7 @@ void AbstractUserInterfaceTest::state() {
         /* Calling update() then calls the remaining layouter, uploads
            remaining data and resets the remaining state flag */
         {
-            CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
+            CORRADE_ITERATION(__FILE__ ":" CORRADE_LINE_STRING);
 
             bool expectedLayoutIdsToUpdate1[]{
                 /* layout2Node, layout2Nested2, layout2Another1 and
@@ -10410,7 +10409,7 @@ void AbstractUserInterfaceTest::state() {
     /* Calling clean() should be a no-op */
     if(data.clean && data.noOp) {
         {
-            CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
+            CORRADE_ITERATION(__FILE__ ":" CORRADE_LINE_STRING);
             ui.clean();
         }
         CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeOpacityUpdate);
@@ -10431,7 +10430,7 @@ void AbstractUserInterfaceTest::state() {
     /* Calling update() calls layers with recalculated opacities. It doesn't
        call layouters. */
     {
-        CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
+        CORRADE_ITERATION(__FILE__ ":" CORRADE_LINE_STRING);
 
         UnsignedInt expectedDataIds[]{
             dataHandleId(dataAnother1),
@@ -10528,7 +10527,7 @@ void AbstractUserInterfaceTest::state() {
        resets the states to not require clean() anymore */
     if(data.clean) {
         {
-            CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
+            CORRADE_ITERATION(__FILE__ ":" CORRADE_LINE_STRING);
 
             bool expectedAnimationIdsToRemove[]{
                 /* animation1 was attached to `dataNotAttached` */
@@ -10565,7 +10564,7 @@ void AbstractUserInterfaceTest::state() {
     /* Calling update() calls clean() if wasn't done above already but
        otherwise it's a no-op */
     {
-        CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
+        CORRADE_ITERATION(__FILE__ ":" CORRADE_LINE_STRING);
 
         bool expectedAnimationIdsToRemove[]{
             /* animation1 was attached to `dataNotAttached` */
@@ -10603,7 +10602,7 @@ void AbstractUserInterfaceTest::state() {
        require clean() anymore */
     if(data.clean) {
         {
-            CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
+            CORRADE_ITERATION(__FILE__ ":" CORRADE_LINE_STRING);
 
             bool expectedAnimationIdsToRemove[]{
                 false, false, false
@@ -10636,7 +10635,7 @@ void AbstractUserInterfaceTest::state() {
        state flag; also calls clean() if wasn't done above already. Layouts
        don't get updated. */
     {
-        CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
+        CORRADE_ITERATION(__FILE__ ":" CORRADE_LINE_STRING);
         UnsignedInt expectedDataIds[]{
             dataHandleId(dataAnother1),
             dataHandleId(dataNested1)
@@ -10753,7 +10752,7 @@ void AbstractUserInterfaceTest::state() {
        require clean() anymore */
     if(data.clean) {
         {
-            CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
+            CORRADE_ITERATION(__FILE__ ":" CORRADE_LINE_STRING);
 
             bool expectedLayoutIdsToRemove1[]{
                 /* Nothing changes in layouter1 */
@@ -10829,7 +10828,7 @@ void AbstractUserInterfaceTest::state() {
     /* Calling update() then calls the layouters, uploads remaining data and
        resets the remaining state flag */
     {
-        CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
+        CORRADE_ITERATION(__FILE__ ":" CORRADE_LINE_STRING);
 
         bool expectedLayoutIdsToRemove1[]{
             /* Nothing changes in layouter1 */
@@ -10994,7 +10993,7 @@ void AbstractUserInterfaceTest::state() {
         /* Calling clean() should be a no-op */
         if(data.clean && data.noOp) {
             {
-                CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
+                CORRADE_ITERATION(__FILE__ ":" CORRADE_LINE_STRING);
                 ui.clean();
             }
             CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsLayoutAssignmentUpdate);
@@ -11014,7 +11013,7 @@ void AbstractUserInterfaceTest::state() {
            visible layouts to update anymore, so no update() is called on
            them, only on the layer. */
         {
-            CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
+            CORRADE_ITERATION(__FILE__ ":" CORRADE_LINE_STRING);
 
             layouter1->expectedLayoutIdsToUpdate = {};
             layouter1->expectedTopLevelLayoutIds = {};
@@ -11096,7 +11095,7 @@ void AbstractUserInterfaceTest::state() {
     /* Calling clean() should be a no-op */
     if(data.clean && data.noOp) {
         {
-            CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
+            CORRADE_ITERATION(__FILE__ ":" CORRADE_LINE_STRING);
             ui.clean();
         }
         CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataAttachmentUpdate);
@@ -11123,7 +11122,7 @@ void AbstractUserInterfaceTest::state() {
        nodes for which offset/size and a corresponding clip rect offset/size is
        passed. */
     {
-        CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
+        CORRADE_ITERATION(__FILE__ ":" CORRADE_LINE_STRING);
         Containers::Triple<Vector2, Vector2, Float> expectedNodeOffsetsSizesOpacities[]{
             {},
             /* With all layouters for another1 and another2 gone, the sizes are
@@ -11407,7 +11406,7 @@ void AbstractUserInterfaceTest::stateAnimations() {
        layer or animators */
     if(data.clean && data.noOp) {
         {
-            CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
+            CORRADE_ITERATION(__FILE__ ":" CORRADE_LINE_STRING);
             ui.clean();
         }
         CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
@@ -11427,7 +11426,7 @@ void AbstractUserInterfaceTest::stateAnimations() {
        the layer or the animators */
     if(data.noOp) {
         {
-            CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
+            CORRADE_ITERATION(__FILE__ ":" CORRADE_LINE_STRING);
             ui.advanceAnimations(0_nsec);
         }
         CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
@@ -11467,7 +11466,7 @@ void AbstractUserInterfaceTest::stateAnimations() {
        and potentially advanceAnimations() */
     if(data.clean) {
         {
-            CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
+            CORRADE_ITERATION(__FILE__ ":" CORRADE_LINE_STRING);
             ui.clean();
         }
         CORRADE_COMPARE(ui.state(), data.expectedInitialState|UserInterfaceState::NeedsNodeUpdate);
@@ -11487,7 +11486,7 @@ void AbstractUserInterfaceTest::stateAnimations() {
        otherwise is a no-op if no animations are running -- the animators
        don't need advancing */
     {
-        CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
+        CORRADE_ITERATION(__FILE__ ":" CORRADE_LINE_STRING);
         ui.advanceAnimations(0_nsec);
     }
     CORRADE_COMPARE(ui.state(), data.expectedInitialState|UserInterfaceState::NeedsNodeUpdate);
@@ -11519,7 +11518,7 @@ void AbstractUserInterfaceTest::stateAnimations() {
     DataHandle data2 = layer.create(node2);
     CORRADE_COMPARE(ui.state(), data.expectedInitialState|UserInterfaceState::NeedsNodeUpdate);
     {
-        CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
+        CORRADE_ITERATION(__FILE__ ":" CORRADE_LINE_STRING);
 
         Vector2 expectedNodeOffsets[]{
             {1.0f, 2.0f},
@@ -11577,7 +11576,7 @@ void AbstractUserInterfaceTest::stateAnimations() {
 
     /* Advancing the animation then may set other flags */
     {
-        CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
+        CORRADE_ITERATION(__FILE__ ":" CORRADE_LINE_STRING);
 
         Vector2 expectedNodeOffsetsAnimator1[]{
             {1.0f, 2.0f},
@@ -11640,7 +11639,7 @@ void AbstractUserInterfaceTest::stateAnimations() {
        animations attached to invalid nodes */
     if(data.clean && (data.expectedCleanAfterAnimation || data.noOp)) {
         {
-            CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
+            CORRADE_ITERATION(__FILE__ ":" CORRADE_LINE_STRING);
             ui.clean();
         }
         CORRADE_COMPARE(ui.state(), data.expectedInitialState|UserInterfaceState::NeedsNodeUpdate|(data.nodeAnimations1 || data.nodeAnimations2 || data.dataAnimations ?
@@ -11672,7 +11671,7 @@ void AbstractUserInterfaceTest::stateAnimations() {
 
     /* An update() then performs appropriate update in the layer */
     {
-        CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
+        CORRADE_ITERATION(__FILE__ ":" CORRADE_LINE_STRING);
 
         bool expectedNodesValid[]{
             data.expectedNode1Valid, data.expectedNode2Valid
