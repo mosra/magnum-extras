@@ -296,7 +296,9 @@ class MAGNUM_UI_EXPORT TextLayerStyleAnimator: public AbstractVisualLayerStyleAn
          *
          * Casts @p sourceStyle and @p targetStyle to
          * @relativeref{Magnum,UnsignedInt} and delegates to
-         * @ref create(UnsignedInt, UnsignedInt, Float(*)(Float), Nanoseconds, Nanoseconds, DataHandle, UnsignedInt, AnimationFlags).
+         * @ref create() "create(UnsignedInt, UnsignedInt, Float(*)(Float), Nanoseconds, Nanoseconds, DataHandle, UnsignedInt, AnimationFlags)".
+         * @todoc fix the overload references once Doxygen can link to
+         *      functions taking function pointers
          */
         template<class StyleIndex
             #ifndef DOXYGEN_GENERATING_OUTPUT
@@ -309,7 +311,7 @@ class MAGNUM_UI_EXPORT TextLayerStyleAnimator: public AbstractVisualLayerStyleAn
         /**
          * @brief Create an animation
          *
-         * Same as calling @ref create(UnsignedInt, UnsignedInt, Float(*)(Float), Nanoseconds, Nanoseconds, DataHandle, UnsignedInt, AnimationFlags)
+         * Same as calling @ref create() "create(UnsignedInt, UnsignedInt, Float(*)(Float), Nanoseconds, Nanoseconds, DataHandle, UnsignedInt, AnimationFlags)"
          * with @p repeatCount set to @cpp 1 @ce.
          */
         AnimationHandle create(UnsignedInt sourceStyle, UnsignedInt targetStyle, Float(*easing)(Float), Nanoseconds start, Nanoseconds duration, DataHandle data, AnimationFlags flags);
@@ -319,7 +321,7 @@ class MAGNUM_UI_EXPORT TextLayerStyleAnimator: public AbstractVisualLayerStyleAn
          *
          * Casts @p sourceStyle and @p targetStyle to
          * @relativeref{Magnum,UnsignedInt} and delegates to
-         * @ref create(UnsignedInt, UnsignedInt, Float(*)(Float), Nanoseconds, Nanoseconds, DataHandle, AnimationFlags).
+         * @ref create() "create(UnsignedInt, UnsignedInt, Float(*)(Float), Nanoseconds, Nanoseconds, DataHandle, AnimationFlags)".
          */
         template<class StyleIndex
             #ifndef DOXYGEN_GENERATING_OUTPUT
@@ -332,7 +334,7 @@ class MAGNUM_UI_EXPORT TextLayerStyleAnimator: public AbstractVisualLayerStyleAn
         /**
          * @brief Create an animation assuming the data it's attached to belongs to the layer the animator is registered with
          *
-         * Compared to @ref create(UnsignedInt, UnsignedInt, Float(*)(Float), Nanoseconds, Nanoseconds, DataHandle, UnsignedInt, AnimationFlags)
+         * Compared to @ref create() "create(UnsignedInt, UnsignedInt, Float(*)(Float), Nanoseconds, Nanoseconds, DataHandle, UnsignedInt, AnimationFlags)"
          * delegates to @ref AbstractAnimator::create(Nanoseconds, Nanoseconds, LayerDataHandle, UnsignedInt, AnimationFlags)
          * instead.
          */
@@ -343,7 +345,7 @@ class MAGNUM_UI_EXPORT TextLayerStyleAnimator: public AbstractVisualLayerStyleAn
          *
          * Casts @p sourceStyle and @p targetStyle to
          * @relativeref{Magnum,UnsignedInt} and delegates to
-         * @ref create(UnsignedInt, UnsignedInt, Float(*)(Float), Nanoseconds, Nanoseconds, LayerDataHandle, UnsignedInt, AnimationFlags).
+         * @ref create() "create(UnsignedInt, UnsignedInt, Float(*)(Float), Nanoseconds, Nanoseconds, LayerDataHandle, UnsignedInt, AnimationFlags)".
          */
         template<class StyleIndex
             #ifndef DOXYGEN_GENERATING_OUTPUT
@@ -356,7 +358,7 @@ class MAGNUM_UI_EXPORT TextLayerStyleAnimator: public AbstractVisualLayerStyleAn
         /**
          * @brief Create an animation assuming the data it's attached to belongs to the layer the animator is registered with
          *
-         * Same as calling @ref create(UnsignedInt, UnsignedInt, Float(*)(Float), Nanoseconds, Nanoseconds, LayerDataHandle, UnsignedInt, AnimationFlags)
+         * Same as calling @ref create() "create(UnsignedInt, UnsignedInt, Float(*)(Float), Nanoseconds, Nanoseconds, LayerDataHandle, UnsignedInt, AnimationFlags)"
          * with @p repeatCount set to @cpp 1 @ce.
          */
         AnimationHandle create(UnsignedInt sourceStyle, UnsignedInt targetStyle, Float(*easing)(Float), Nanoseconds start, Nanoseconds duration, LayerDataHandle data, AnimationFlags flags);
@@ -366,7 +368,7 @@ class MAGNUM_UI_EXPORT TextLayerStyleAnimator: public AbstractVisualLayerStyleAn
          *
          * Casts @p sourceStyle and @p targetStyle to
          * @relativeref{Magnum,UnsignedInt} and delegates to
-         * @ref create(UnsignedInt, UnsignedInt, Float(*)(Float), Nanoseconds, Nanoseconds, LayerDataHandle, UnsignedInt, AnimationFlags).
+         * @ref create() "create(UnsignedInt, UnsignedInt, Float(*)(Float), Nanoseconds, Nanoseconds, LayerDataHandle, UnsignedInt, AnimationFlags)".
          */
         template<class StyleIndex
             #ifndef DOXYGEN_GENERATING_OUTPUT
@@ -387,16 +389,16 @@ class MAGNUM_UI_EXPORT TextLayerStyleAnimator: public AbstractVisualLayerStyleAn
          * @m_class{m-note m-warning}
          *
          * @par
-         *      Note that removing an animation with this function doesn't
-         *      cause any change to the style index of a @ref DataHandle it's
-         *      attached to, if any. In other words, given data will still keep
-         *      the original (dynamic) style index even after it's reused by a
-         *      different animation. To fix this, either call
-         *      @ref TextLayer::setStyle() to change the style to a different
-         *      one afterwards or @ref stop() the animation instead ---
-         *      assuming @ref AnimationFlag::KeepOncePlayed isn't set, it will
-         *      cause the animation to gracefully switch to the target style
-         *      during the next @ref advance(), and then be removed
+         *      Note that removing a currently playing animation with this
+         *      function doesn't cause any change to the style index of a
+         *      @ref DataHandle it's attached to, if any. In other words, given
+         *      data will still keep the original (dynamic) style index even
+         *      after it's reused by a different animation. To fix this, either
+         *      call @ref TextLayer::setStyle() to change the style to a
+         *      different one afterwards or @ref stop() the animation instead
+         *      --- assuming @ref AnimationFlag::KeepOncePlayed isn't set, it
+         *      will cause the animation to gracefully switch to the target
+         *      style during the next @ref advance(), and then be removed
          *      automatically.
          *
          * @see @ref isHandleValid(AnimationHandle) const

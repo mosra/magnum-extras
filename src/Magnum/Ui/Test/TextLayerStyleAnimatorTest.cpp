@@ -1407,7 +1407,7 @@ void TextLayerStyleAnimatorTest::advance() {
         }
     }
 
-    /* Advancing to 15 plays the also scheduled animation without a data
+    /* Advancing to 15 plays also the scheduled animation without a data
        attachment, allocating a new dynamic style but not switching to it.
        I.e., no Style is set, only Uniform and Padding. */
     {
