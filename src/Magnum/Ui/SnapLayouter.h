@@ -315,6 +315,24 @@ class MAGNUM_UI_EXPORT SnapLayouter: public AbstractLayouter {
         SnapLayouter& setMargin(Float margin);
 
         /**
+         * @brief Remove a layout
+         *
+         * Delegates to @ref AbstractLayouter::remove(LayoutHandle).
+         */
+        void remove(LayoutHandle handle) {
+            AbstractLayouter::remove(handle);
+        }
+
+        /**
+         * @brief Remove a layout assuming it belongs to this layer
+         *
+         * Delegates to @ref AbstractLayouter::remove(LayouterDataHandle).
+         */
+        void remove(LayouterDataHandle handle) {
+            AbstractLayouter::remove(handle);
+        }
+
+        /**
          * @brief Layout snap
          *
          * Expects that @p handle is valid. Note that if @ref target() is
@@ -360,24 +378,6 @@ class MAGNUM_UI_EXPORT SnapLayouter: public AbstractLayouter {
          * more information.
          */
         NodeHandle target(LayouterDataHandle handle) const;
-
-        /**
-         * @brief Remove a layout
-         *
-         * Delegates to @ref AbstractLayouter::remove(LayoutHandle).
-         */
-        void remove(LayoutHandle handle) {
-            AbstractLayouter::remove(handle);
-        }
-
-        /**
-         * @brief Remove a layout assuming it belongs to this layer
-         *
-         * Delegates to @ref AbstractLayouter::remove(LayouterDataHandle).
-         */
-        void remove(LayouterDataHandle handle) {
-            AbstractLayouter::remove(handle);
-        }
 
     private:
         friend AbstractSnapLayout;
