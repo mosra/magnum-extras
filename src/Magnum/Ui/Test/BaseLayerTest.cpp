@@ -54,6 +54,7 @@ struct BaseLayerTest: TestSuite::Tester {
     void styleUniformCommonConstructNoBlurParameters();
     void styleUniformCommonConstructNoBlurParametersSingleSmoothness();
     void styleUniformCommonConstructNoInit();
+    void styleUniformCommonConstructCopy();
     void styleUniformCommonSetters();
 
     void styleUniformConstructDefault();
@@ -66,6 +67,7 @@ struct BaseLayerTest: TestSuite::Tester {
     void styleUniformConstructNoGradientNoOutline();
     void styleUniformConstructNoGradientNoOutlineSingleRadius();
     void styleUniformConstructNoInit();
+    void styleUniformConstructCopy();
     void styleUniformSetters();
 
     void sharedDebugFlag();
@@ -492,6 +494,7 @@ BaseLayerTest::BaseLayerTest() {
               &BaseLayerTest::styleUniformCommonConstructNoBlurParameters,
               &BaseLayerTest::styleUniformCommonConstructNoBlurParametersSingleSmoothness,
               &BaseLayerTest::styleUniformCommonConstructNoInit,
+              &BaseLayerTest::styleUniformCommonConstructCopy,
               &BaseLayerTest::styleUniformCommonSetters,
 
               &BaseLayerTest::styleUniformConstructDefault,
@@ -504,6 +507,7 @@ BaseLayerTest::BaseLayerTest() {
               &BaseLayerTest::styleUniformConstructNoGradientNoOutline,
               &BaseLayerTest::styleUniformConstructNoGradientNoOutlineSingleRadius,
               &BaseLayerTest::styleUniformConstructNoInit,
+              &BaseLayerTest::styleUniformConstructCopy,
               &BaseLayerTest::styleUniformSetters,
 
               &BaseLayerTest::sharedDebugFlag,
@@ -687,6 +691,22 @@ void BaseLayerTest::styleUniformCommonConstructNoInit() {
 
     /* Implicit construction is not allowed */
     CORRADE_VERIFY(!std::is_convertible<NoInitT, BaseLayerCommonStyleUniform>::value);
+}
+
+void BaseLayerTest::styleUniformCommonConstructCopy() {
+    /* Testing only some fields, should be enough */
+    BaseLayerCommonStyleUniform a;
+    a.smoothness = 3.0f;
+    a.innerOutlineSmoothness = 20.0f;
+
+    BaseLayerCommonStyleUniform b = a;
+    CORRADE_COMPARE(b.smoothness, 3.0f);
+    CORRADE_COMPARE(b.innerOutlineSmoothness, 20.0f);
+
+    #ifndef CORRADE_NO_STD_IS_TRIVIALLY_TRAITS
+    CORRADE_VERIFY(std::is_trivially_copy_constructible<BaseLayerCommonStyleUniform>::value);
+    CORRADE_VERIFY(std::is_trivially_copy_assignable<BaseLayerCommonStyleUniform>::value);
+    #endif
 }
 
 void BaseLayerTest::styleUniformCommonSetters() {
@@ -905,6 +925,22 @@ void BaseLayerTest::styleUniformConstructNoInit() {
 
     /* Implicit construction is not allowed */
     CORRADE_VERIFY(!std::is_convertible<NoInitT, BaseLayerStyleUniform>::value);
+}
+
+void BaseLayerTest::styleUniformConstructCopy() {
+    /* Testing only some fields, should be enough */
+    BaseLayerStyleUniform a;
+    a.bottomColor = 0xff3366_rgbf;
+    a.innerOutlineCornerRadius = {1.0f, 2.0f, 3.0f, 4.0f};
+
+    BaseLayerStyleUniform b = a;
+    CORRADE_COMPARE(b.bottomColor, 0xff3366_rgbf);
+    CORRADE_COMPARE(b.innerOutlineCornerRadius, (Vector4{1.0f, 2.0f, 3.0f, 4.0f}));
+
+    #ifndef CORRADE_NO_STD_IS_TRIVIALLY_TRAITS
+    CORRADE_VERIFY(std::is_trivially_copy_constructible<BaseLayerStyleUniform>::value);
+    CORRADE_VERIFY(std::is_trivially_copy_assignable<BaseLayerStyleUniform>::value);
+    #endif
 }
 
 void BaseLayerTest::styleUniformSetters() {

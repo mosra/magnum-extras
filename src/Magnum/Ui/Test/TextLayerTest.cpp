@@ -71,22 +71,26 @@ struct TextLayerTest: TestSuite::Tester {
     void styleUniformCommonConstructDefault();
     void styleUniformCommonConstruct();
     void styleUniformCommonConstructNoInit();
+    void styleUniformCommonConstructCopy();
     void styleUniformCommonSetters();
 
     void styleUniformConstructDefault();
     void styleUniformConstruct();
     void styleUniformConstructDistanceField();
     void styleUniformConstructNoInit();
+    void styleUniformConstructCopy();
     void styleUniformSetters();
 
     void editingStyleUniformCommonConstructDefault();
     void editingStyleUniformCommonConstruct();
     void editingStyleUniformCommonConstructNoInit();
+    void editingStyleUniformCommonConstructCopy();
     void editingStyleUniformCommonSetters();
 
     void editingStyleUniformConstructDefault();
     void editingStyleUniformConstruct();
     void editingStyleUniformConstructNoInit();
+    void editingStyleUniformConstructCopy();
     void editingStyleUniformSetters();
 
     void fontHandle();
@@ -1423,22 +1427,26 @@ TextLayerTest::TextLayerTest() {
               &TextLayerTest::styleUniformCommonConstructDefault,
               &TextLayerTest::styleUniformCommonConstruct,
               &TextLayerTest::styleUniformCommonConstructNoInit,
+              &TextLayerTest::styleUniformCommonConstructCopy,
               &TextLayerTest::styleUniformCommonSetters,
 
               &TextLayerTest::styleUniformConstructDefault,
               &TextLayerTest::styleUniformConstruct,
               &TextLayerTest::styleUniformConstructDistanceField,
               &TextLayerTest::styleUniformConstructNoInit,
+              &TextLayerTest::styleUniformConstructCopy,
               &TextLayerTest::styleUniformSetters,
 
               &TextLayerTest::editingStyleUniformCommonConstructDefault,
               &TextLayerTest::editingStyleUniformCommonConstruct,
               &TextLayerTest::editingStyleUniformCommonConstructNoInit,
+              &TextLayerTest::editingStyleUniformCommonConstructCopy,
               &TextLayerTest::editingStyleUniformCommonSetters,
 
               &TextLayerTest::editingStyleUniformConstructDefault,
               &TextLayerTest::editingStyleUniformConstruct,
               &TextLayerTest::editingStyleUniformConstructNoInit,
+              &TextLayerTest::editingStyleUniformConstructCopy,
               &TextLayerTest::editingStyleUniformSetters,
 
               &TextLayerTest::fontHandle,
@@ -1690,6 +1698,20 @@ void TextLayerTest::styleUniformCommonConstructNoInit() {
     CORRADE_VERIFY(!std::is_convertible<NoInitT, TextLayerCommonStyleUniform>::value);
 }
 
+void TextLayerTest::styleUniformCommonConstructCopy() {
+    /* Testing only some fields, should be enough */
+    TextLayerCommonStyleUniform a;
+    a.smoothness = 3.0f;
+
+    TextLayerCommonStyleUniform b = a;
+    CORRADE_COMPARE(b.smoothness, 3.0f);
+
+    #ifndef CORRADE_NO_STD_IS_TRIVIALLY_TRAITS
+    CORRADE_VERIFY(std::is_trivially_copy_constructible<TextLayerCommonStyleUniform>::value);
+    CORRADE_VERIFY(std::is_trivially_copy_assignable<TextLayerCommonStyleUniform>::value);
+    #endif
+}
+
 void TextLayerTest::styleUniformCommonSetters() {
     TextLayerCommonStyleUniform a;
     a.setSmoothness(34.0f);
@@ -1784,6 +1806,22 @@ void TextLayerTest::styleUniformConstructNoInit() {
     CORRADE_VERIFY(!std::is_convertible<NoInitT, TextLayerStyleUniform>::value);
 }
 
+void TextLayerTest::styleUniformConstructCopy() {
+    /* Testing only some fields, should be enough */
+    TextLayerStyleUniform a;
+    a.color = 0xff3366_rgbf;
+    a.outlineWidth = 3.5f;
+
+    TextLayerStyleUniform b = a;
+    CORRADE_COMPARE(b.color, 0xff3366_rgbf);
+    CORRADE_COMPARE(b.outlineWidth, 3.5f);
+
+    #ifndef CORRADE_NO_STD_IS_TRIVIALLY_TRAITS
+    CORRADE_VERIFY(std::is_trivially_copy_constructible<TextLayerStyleUniform>::value);
+    CORRADE_VERIFY(std::is_trivially_copy_assignable<TextLayerStyleUniform>::value);
+    #endif
+}
+
 void TextLayerTest::styleUniformSetters() {
     TextLayerStyleUniform a;
     a.setColor(0xff336699_rgbaf)
@@ -1844,6 +1882,20 @@ void TextLayerTest::editingStyleUniformCommonConstructNoInit() {
     CORRADE_VERIFY(!std::is_convertible<NoInitT, TextLayerCommonEditingStyleUniform>::value);
 }
 
+void TextLayerTest::editingStyleUniformCommonConstructCopy() {
+    /* Testing only some fields, should be enough */
+    TextLayerCommonEditingStyleUniform a;
+    a.smoothness = 3.0f;
+
+    TextLayerCommonEditingStyleUniform b = a;
+    CORRADE_COMPARE(b.smoothness, 3.0f);
+
+    #ifndef CORRADE_NO_STD_IS_TRIVIALLY_TRAITS
+    CORRADE_VERIFY(std::is_trivially_copy_constructible<TextLayerCommonEditingStyleUniform>::value);
+    CORRADE_VERIFY(std::is_trivially_copy_assignable<TextLayerCommonEditingStyleUniform>::value);
+    #endif
+}
+
 void TextLayerTest::editingStyleUniformCommonSetters() {
     TextLayerCommonEditingStyleUniform a;
     a.setSmoothness(34.0f);
@@ -1902,6 +1954,22 @@ void TextLayerTest::editingStyleUniformConstructNoInit() {
 
     /* Implicit construction is not allowed */
     CORRADE_VERIFY(!std::is_convertible<NoInitT, TextLayerEditingStyleUniform>::value);
+}
+
+void TextLayerTest::editingStyleUniformConstructCopy() {
+    /* Testing only some fields, should be enough */
+    TextLayerEditingStyleUniform a;
+    a.backgroundColor = 0xff3366_rgbf;
+    a.cornerRadius = 34.0f;
+
+    TextLayerEditingStyleUniform b = a;
+    CORRADE_COMPARE(b.backgroundColor, 0xff3366_rgbf);
+    CORRADE_COMPARE(b.cornerRadius, 34.0f);
+
+    #ifndef CORRADE_NO_STD_IS_TRIVIALLY_TRAITS
+    CORRADE_VERIFY(std::is_trivially_copy_constructible<TextLayerEditingStyleUniform>::value);
+    CORRADE_VERIFY(std::is_trivially_copy_assignable<TextLayerEditingStyleUniform>::value);
+    #endif
 }
 
 void TextLayerTest::editingStyleUniformSetters() {

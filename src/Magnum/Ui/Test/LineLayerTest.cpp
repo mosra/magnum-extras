@@ -50,11 +50,13 @@ struct LineLayerTest: TestSuite::Tester {
     void styleUniformCommonConstructDefault();
     void styleUniformCommonConstruct();
     void styleUniformCommonConstructNoInit();
+    void styleUniformCommonConstructCopy();
     void styleUniformCommonSetters();
 
     void styleUniformConstructDefault();
     void styleUniformConstruct();
     void styleUniformConstructNoInit();
+    void styleUniformConstructCopy();
     void styleUniformSetters();
 
     /* Miter limit tests are copied verbatim between the Shaders and Ui
@@ -293,11 +295,13 @@ LineLayerTest::LineLayerTest() {
               &LineLayerTest::styleUniformCommonConstructDefault,
               &LineLayerTest::styleUniformCommonConstruct,
               &LineLayerTest::styleUniformCommonConstructNoInit,
+              &LineLayerTest::styleUniformCommonConstructCopy,
               &LineLayerTest::styleUniformCommonSetters,
 
               &LineLayerTest::styleUniformConstructDefault,
               &LineLayerTest::styleUniformConstruct,
               &LineLayerTest::styleUniformConstructNoInit,
+              &LineLayerTest::styleUniformConstructCopy,
               &LineLayerTest::styleUniformSetters,
 
               &LineLayerTest::styleUniformMiterLimit});
@@ -443,6 +447,20 @@ void LineLayerTest::styleUniformCommonConstructNoInit() {
     CORRADE_VERIFY(!std::is_convertible<NoInitT, LineLayerCommonStyleUniform>::value);
 }
 
+void LineLayerTest::styleUniformCommonConstructCopy() {
+    /* Testing only some fields, should be enough */
+    LineLayerCommonStyleUniform a;
+    a.smoothness = 3.0f;
+
+    LineLayerCommonStyleUniform b = a;
+    CORRADE_COMPARE(b.smoothness, 3.0f);
+
+    #ifndef CORRADE_NO_STD_IS_TRIVIALLY_TRAITS
+    CORRADE_VERIFY(std::is_trivially_copy_constructible<LineLayerCommonStyleUniform>::value);
+    CORRADE_VERIFY(std::is_trivially_copy_assignable<LineLayerCommonStyleUniform>::value);
+    #endif
+}
+
 void LineLayerTest::styleUniformCommonSetters() {
     LineLayerCommonStyleUniform a;
     a.setSmoothness(34.0f);
@@ -513,6 +531,22 @@ void LineLayerTest::styleUniformConstructNoInit() {
 
     /* Implicit construction is not allowed */
     CORRADE_VERIFY(!std::is_convertible<NoInitT, LineLayerStyleUniform>::value);
+}
+
+void LineLayerTest::styleUniformConstructCopy() {
+    /* Testing only some fields, should be enough */
+    LineLayerStyleUniform a;
+    a.color = 0xff336699_rgbaf;
+    a.smoothness = 3.0f;
+
+    LineLayerStyleUniform b = a;
+    CORRADE_COMPARE(b.color, 0xff336699_rgbaf);
+    CORRADE_COMPARE(b.smoothness, 3.0f);
+
+    #ifndef CORRADE_NO_STD_IS_TRIVIALLY_TRAITS
+    CORRADE_VERIFY(std::is_trivially_copy_constructible<LineLayerStyleUniform>::value);
+    CORRADE_VERIFY(std::is_trivially_copy_assignable<LineLayerStyleUniform>::value);
+    #endif
 }
 
 void LineLayerTest::styleUniformSetters() {
