@@ -326,7 +326,7 @@ const struct {
     bool noOp;
     bool runningAnimation;
     UserInterfaceStates expectedInitialState, expectedAdvanceState;
-    Containers::Optional<NodeAnimations> nodeAnimations1, nodeAnimations2;
+    Containers::Optional<NodeAnimatorUpdates> nodeAnimatorUpdates1, nodeAnimatorUpdates2;
     bool dataAnimations, styleAnimations;
     Vector2 expectedNodeOffsetsAnimator2[2], expectedNodeOffsetsLayer[2];
     Float expectedNodeOpacitiesAnimator2[2], expectedNodeOpacitiesLayer[2];
@@ -419,7 +419,7 @@ const struct {
         true, true, false, {}},
     {"two node animators doing nothing",
         true, false, false, {}, {},
-        NodeAnimations{}, NodeAnimations{}, false, false,
+        NodeAnimatorUpdates{}, NodeAnimatorUpdates{}, false, false,
         {{1.0f, 2.0f}, {3.0f, 4.0f}},
         {{1.0f, 2.0f}, {3.0f, 4.0f}},
         {0.75f, 0.25f}, {0.75f, 0.25f},
@@ -429,7 +429,7 @@ const struct {
         true, true, false, {}},
     {"first node animator moving nodes",
         true, false, false, {}, UserInterfaceState::NeedsLayoutUpdate,
-        NodeAnimations{NodeAnimation::OffsetSize}, NodeAnimations{}, false, false,
+        {NodeAnimatorUpdate::OffsetSize}, NodeAnimatorUpdates{}, false, false,
         {{1.0f, 2.0f}, {2.0f, 3.0f}},
         {{1.0f, 2.0f}, {2.0f, 3.0f}},
         {0.75f, 0.25f}, {0.75f, 0.25f},
@@ -440,7 +440,7 @@ const struct {
         LayerState::NeedsNodeOrderUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsNodeOffsetSizeUpdate},
     {"second node animator changing opacity",
         true, false, false, {}, UserInterfaceState::NeedsNodeOpacityUpdate,
-        NodeAnimations{}, NodeAnimations{NodeAnimation::Opacity}, false, false,
+        NodeAnimatorUpdates{}, {NodeAnimatorUpdate::Opacity}, false, false,
         {{1.0f, 2.0f}, {3.0f, 4.0f}},
         {{1.0f, 2.0f}, {3.0f, 4.0f}},
         {0.75f, 0.25f}, {0.65f, 0.25f},
@@ -450,7 +450,7 @@ const struct {
         true, true, false, LayerState::NeedsNodeOpacityUpdate},
     {"first node animator changing opacity, second node animator moving nodes",
         true, false, false, {}, UserInterfaceState::NeedsNodeOpacityUpdate|UserInterfaceState::NeedsLayoutUpdate,
-        NodeAnimations{NodeAnimation::Opacity}, NodeAnimations{NodeAnimation::OffsetSize}, false, false,
+        {NodeAnimatorUpdate::Opacity}, {NodeAnimatorUpdate::OffsetSize}, false, false,
         {{1.0f, 2.0f}, {3.0f, 4.0f}},
         {{0.0f, 1.0f}, {3.0f, 4.0f}},
         {0.75f, 0.15f}, {0.75f, 0.15f},
@@ -461,7 +461,7 @@ const struct {
         LayerState::NeedsNodeOrderUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsNodeOffsetSizeUpdate|LayerState::NeedsNodeOpacityUpdate},
     {"first node animator changing node enablement, second doing nothing",
         true, false, false, {}, UserInterfaceState::NeedsNodeEnabledUpdate,
-        NodeAnimations{NodeAnimation::Enabled}, NodeAnimations{}, false, false,
+        {NodeAnimatorUpdate::Enabled}, NodeAnimatorUpdates{}, false, false,
         {{1.0f, 2.0f}, {3.0f, 4.0f}},
         {{1.0f, 2.0f}, {3.0f, 4.0f}},
         {0.75f, 0.25f}, {0.75f, 0.25f},
@@ -474,7 +474,7 @@ const struct {
         LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsNodeOrderUpdate},
     {"node animator changing node clip state",
         true, false, false, {}, UserInterfaceState::NeedsNodeClipUpdate,
-        NodeAnimations{NodeAnimation::Clip}, {}, false, false,
+        {NodeAnimatorUpdate::Clip}, {}, false, false,
         {{1.0f, 2.0f}, {3.0f, 4.0f}},
         {{1.0f, 2.0f}, {3.0f, 4.0f}},
         {0.75f, 0.25f}, {0.75f, 0.25f},
@@ -485,7 +485,7 @@ const struct {
         LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsNodeOrderUpdate},
     {"node animator removing a node",
         true, false, false, {}, UserInterfaceState::NeedsNodeClean,
-        NodeAnimations{NodeAnimation::Removal}, {}, false, false,
+        {NodeAnimatorUpdate::Removal}, {}, false, false,
         {{1.0f, 2.0f}, {3.0f, 4.0f}},
         {{1.0f, 2.0f}, {3.0f, 4.0f}},
         {0.75f, 0.25f}, {0.75f, 0.25f},
@@ -496,7 +496,7 @@ const struct {
         LayerState::NeedsNodeOrderUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsNodeOpacityUpdate|LayerState::NeedsNodeOffsetSizeUpdate},
     {"node animator removing a node, with implicit clean",
         false, false, false, {}, UserInterfaceState::NeedsNodeClean,
-        NodeAnimations{NodeAnimation::Removal}, {}, false, false,
+        {NodeAnimatorUpdate::Removal}, {}, false, false,
         {{1.0f, 2.0f}, {3.0f, 4.0f}},
         {{1.0f, 2.0f}, {3.0f, 4.0f}},
         {0.75f, 0.25f}, {0.75f, 0.25f},
@@ -507,7 +507,7 @@ const struct {
         LayerState::NeedsNodeOrderUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsNodeOpacityUpdate|LayerState::NeedsNodeOffsetSizeUpdate},
     {"two node animators doing parts of everything",
         true, false, false, {}, UserInterfaceState::NeedsNodeClean,
-        NodeAnimation::OffsetSize|NodeAnimation::Enabled|NodeAnimation::Clip, NodeAnimations{NodeAnimation::Removal}, false, false,
+        NodeAnimatorUpdate::OffsetSize|NodeAnimatorUpdate::Enabled|NodeAnimatorUpdate::Clip, {NodeAnimatorUpdate::Removal}, false, false,
         {{1.0f, 2.0f}, {2.0f, 3.0f}},
         {{1.0f, 2.0f}, {2.0f, 3.0f}},
         {0.75f, 0.25f}, {0.75f, 0.25f},
@@ -518,8 +518,8 @@ const struct {
         LayerState::NeedsNodeOrderUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsNodeOpacityUpdate|LayerState::NeedsNodeOffsetSizeUpdate},
     {"two node animators doing parts of everything, the other way around",
         true, false, false, {}, UserInterfaceState::NeedsNodeClean,
-        NodeAnimations{NodeAnimation::Removal},
-        NodeAnimation::OffsetSize|NodeAnimation::Enabled|NodeAnimation::Clip, false, false,
+        {NodeAnimatorUpdate::Removal},
+        NodeAnimatorUpdate::OffsetSize|NodeAnimatorUpdate::Enabled|NodeAnimatorUpdate::Clip, false, false,
         {{1.0f, 2.0f}, {3.0f, 4.0f}},
         {{0.0f, 1.0f}, {3.0f, 4.0f}},
         {0.75f, 0.25f}, {0.75f, 0.25f},
@@ -2899,7 +2899,7 @@ void AbstractUserInterfaceTest::animatorSetInstance() {
             AnimatorFeatures doFeatures() const override {
                 return AnimatorFeature::NodeAttachment;
             }
-            NodeAnimations doAdvance(Containers::BitArrayView, Containers::BitArrayView, Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Float>&, const Containers::StridedArrayView1D<NodeFlags>&, Containers::MutableBitArrayView) override { return {}; }
+            NodeAnimatorUpdates doAdvance(Containers::BitArrayView, Containers::BitArrayView, Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Float>&, const Containers::StridedArrayView1D<NodeFlags>&, Containers::MutableBitArrayView) override { return {}; }
 
             int& destructed;
         };
@@ -3037,7 +3037,7 @@ void AbstractUserInterfaceTest::animatorSetInstanceInvalid() {
         using AbstractNodeAnimator::AbstractNodeAnimator;
 
         AnimatorFeatures doFeatures() const override { return {}; }
-        NodeAnimations doAdvance(Containers::BitArrayView, Containers::BitArrayView, Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Float>&, const Containers::StridedArrayView1D<NodeFlags>&, Containers::MutableBitArrayView) override {
+        NodeAnimatorUpdates doAdvance(Containers::BitArrayView, Containers::BitArrayView, Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Float>&, const Containers::StridedArrayView1D<NodeFlags>&, Containers::MutableBitArrayView) override {
             return {};
         }
     };
@@ -6405,7 +6405,7 @@ void AbstractUserInterfaceTest::advanceAnimations() {
         void doClean(Containers::BitArrayView) override {
             arrayAppend(calls, InPlaceInit, handle(), Clean);
         }
-        NodeAnimations doAdvance(Containers::BitArrayView, Containers::BitArrayView, Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Float>&, const Containers::StridedArrayView1D<NodeFlags>&, Containers::MutableBitArrayView) override {
+        NodeAnimatorUpdates doAdvance(Containers::BitArrayView, Containers::BitArrayView, Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Float>&, const Containers::StridedArrayView1D<NodeFlags>&, Containers::MutableBitArrayView) override {
             arrayAppend(calls, InPlaceInit, handle(), Advance);
             return {};
         }
@@ -6945,7 +6945,7 @@ void AbstractUserInterfaceTest::advanceAnimationsNode() {
         AnimatorFeatures doFeatures() const override {
             return AnimatorFeature::NodeAttachment;
         }
-        NodeAnimations doAdvance(Containers::BitArrayView active, Containers::BitArrayView started, Containers::BitArrayView stopped, const Containers::StridedArrayView1D<const Float>& factors, const Containers::StridedArrayView1D<Vector2>& nodeOffsets, const Containers::StridedArrayView1D<Vector2>& nodeSizes, const Containers::StridedArrayView1D<Float>& nodeOpacities, const Containers::StridedArrayView1D<NodeFlags>& nodeFlags, Containers::MutableBitArrayView nodesRemove) override {
+        NodeAnimatorUpdates doAdvance(Containers::BitArrayView active, Containers::BitArrayView started, Containers::BitArrayView stopped, const Containers::StridedArrayView1D<const Float>& factors, const Containers::StridedArrayView1D<Vector2>& nodeOffsets, const Containers::StridedArrayView1D<Vector2>& nodeSizes, const Containers::StridedArrayView1D<Float>& nodeOpacities, const Containers::StridedArrayView1D<NodeFlags>& nodeFlags, Containers::MutableBitArrayView nodesRemove) override {
             CORRADE_COMPARE_AS(active,
                 expectedActive,
                 TestSuite::Compare::Container);
@@ -11357,7 +11357,7 @@ void AbstractUserInterfaceTest::stateAnimations() {
         Int advanceCallCount = 0;
     };
     struct NodeAnimator: AbstractNodeAnimator {
-        explicit NodeAnimator(AnimatorHandle handle, NodeAnimations animations): AbstractNodeAnimator{handle}, _animations{animations} {}
+        explicit NodeAnimator(AnimatorHandle handle, NodeAnimatorUpdates animations): AbstractNodeAnimator{handle}, _animations{animations} {}
 
         using AbstractNodeAnimator::create;
 
@@ -11367,7 +11367,7 @@ void AbstractUserInterfaceTest::stateAnimations() {
         void doClean(Containers::BitArrayView) override {
             ++cleanCallCount;
         }
-        NodeAnimations doAdvance(Containers::BitArrayView active, Containers::BitArrayView started, Containers::BitArrayView stopped, const Containers::StridedArrayView1D<const Float>& factors, const Containers::StridedArrayView1D<Vector2>& nodeOffsets, const Containers::StridedArrayView1D<Vector2>& nodeSizes, const Containers::StridedArrayView1D<Float>& nodeOpacities, const Containers::StridedArrayView1D<NodeFlags>& nodeFlags, Containers::MutableBitArrayView nodesRemove) override {
+        NodeAnimatorUpdates doAdvance(Containers::BitArrayView active, Containers::BitArrayView started, Containers::BitArrayView stopped, const Containers::StridedArrayView1D<const Float>& factors, const Containers::StridedArrayView1D<Vector2>& nodeOffsets, const Containers::StridedArrayView1D<Vector2>& nodeSizes, const Containers::StridedArrayView1D<Float>& nodeOpacities, const Containers::StridedArrayView1D<NodeFlags>& nodeFlags, Containers::MutableBitArrayView nodesRemove) override {
             CORRADE_ITERATION(handle());
             CORRADE_COMPARE_AS(nodeOffsets,
                 expectedNodeOffsets,
@@ -11395,25 +11395,25 @@ void AbstractUserInterfaceTest::stateAnimations() {
                 CORRADE_VERIFY(!stopped[i]);
                 CORRADE_COMPARE(factors[i], 0.5f);
 
-                if(_animations >= NodeAnimation::OffsetSize)
+                if(_animations >= NodeAnimatorUpdate::OffsetSize)
                     nodeOffsets[nodeHandleId(nodes()[i])] -= Vector2{1.0f};
-                if(_animations >= NodeAnimation::Opacity)
+                if(_animations >= NodeAnimatorUpdate::Opacity)
                     nodeOpacities[nodeHandleId(nodes()[i])] -= 0.1f;
-                if(_animations >= NodeAnimation::Enabled) {
+                if(_animations >= NodeAnimatorUpdate::Enabled) {
                     NodeFlags& flags = nodeFlags[nodeHandleId(nodes()[i])];
                     if(flags & NodeFlag::Disabled)
                         flags &= ~NodeFlag::Disabled;
                     else
                         flags |= NodeFlag::Disabled;
                 }
-                if(_animations >= NodeAnimation::Clip) {
+                if(_animations >= NodeAnimatorUpdate::Clip) {
                     NodeFlags& flags = nodeFlags[nodeHandleId(nodes()[i])];
                     if(flags & NodeFlag::Clip)
                         flags &= ~NodeFlag::Clip;
                     else
                         flags |= NodeFlag::Clip;
                 }
-                if(_animations >= NodeAnimation::Removal)
+                if(_animations >= NodeAnimatorUpdate::Removal)
                     nodesRemove.set(nodeHandleId(nodes()[i]));
             }
 
@@ -11429,7 +11429,7 @@ void AbstractUserInterfaceTest::stateAnimations() {
         Int advanceCallCount = 0;
 
         private:
-            NodeAnimations _animations;
+            NodeAnimatorUpdates _animations;
     };
     struct DataAnimator: AbstractDataAnimator {
         using AbstractDataAnimator::AbstractDataAnimator;
@@ -11463,10 +11463,10 @@ void AbstractUserInterfaceTest::stateAnimations() {
     NodeAnimator *nodeAnimator1{}, *nodeAnimator2{};
     DataAnimator* dataAnimator{};
     StyleAnimator* styleAnimator{};
-    if(data.nodeAnimations1)
-        nodeAnimator1 = &ui.setNodeAnimatorInstance(Containers::pointer<NodeAnimator>(ui.createAnimator(), *data.nodeAnimations1));
-    if(data.nodeAnimations2)
-        nodeAnimator2 = &ui.setNodeAnimatorInstance(Containers::pointer<NodeAnimator>(ui.createAnimator(), *data.nodeAnimations2));
+    if(data.nodeAnimatorUpdates1)
+        nodeAnimator1 = &ui.setNodeAnimatorInstance(Containers::pointer<NodeAnimator>(ui.createAnimator(), *data.nodeAnimatorUpdates1));
+    if(data.nodeAnimatorUpdates2)
+        nodeAnimator2 = &ui.setNodeAnimatorInstance(Containers::pointer<NodeAnimator>(ui.createAnimator(), *data.nodeAnimatorUpdates2));
     if(data.dataAnimations) {
         Containers::Pointer<DataAnimator> instance{InPlaceInit, ui.createAnimator()};
         layer.assignAnimator(*instance);
@@ -11489,9 +11489,9 @@ void AbstractUserInterfaceTest::stateAnimations() {
         CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
         CORRADE_COMPARE(layer.cleanCallCount, 0);
         CORRADE_COMPARE(animator.cleanCallCount, 0);
-        if(data.nodeAnimations1)
+        if(data.nodeAnimatorUpdates1)
             CORRADE_COMPARE(nodeAnimator1->cleanCallCount, 0);
-        if(data.nodeAnimations2)
+        if(data.nodeAnimatorUpdates2)
             CORRADE_COMPARE(nodeAnimator2->cleanCallCount, 0);
         if(data.dataAnimations)
             CORRADE_COMPARE(dataAnimator->cleanCallCount, 0);
@@ -11510,11 +11510,11 @@ void AbstractUserInterfaceTest::stateAnimations() {
         CORRADE_COMPARE(layer.cleanCallCount, 0);
         CORRADE_COMPARE(animator.cleanCallCount, 0);
         CORRADE_COMPARE(animator.advanceCallCount, 0);
-        if(data.nodeAnimations1) {
+        if(data.nodeAnimatorUpdates1) {
             CORRADE_COMPARE(nodeAnimator1->cleanCallCount, 0);
             CORRADE_COMPARE(nodeAnimator1->advanceCallCount, 0);
         }
-        if(data.nodeAnimations2) {
+        if(data.nodeAnimatorUpdates2) {
             CORRADE_COMPARE(nodeAnimator2->cleanCallCount, 0);
             CORRADE_COMPARE(nodeAnimator2->advanceCallCount, 0);
         }
@@ -11549,9 +11549,9 @@ void AbstractUserInterfaceTest::stateAnimations() {
         CORRADE_COMPARE(ui.state(), data.expectedInitialState|UserInterfaceState::NeedsNodeUpdate);
         CORRADE_COMPARE(layer.cleanCallCount, 1);
         CORRADE_COMPARE(animator.cleanCallCount, 0);
-        if(data.nodeAnimations1)
+        if(data.nodeAnimatorUpdates1)
             CORRADE_COMPARE(nodeAnimator1->cleanCallCount, 1);
-        if(data.nodeAnimations2)
+        if(data.nodeAnimatorUpdates2)
             CORRADE_COMPARE(nodeAnimator2->cleanCallCount, 1);
         if(data.dataAnimations)
             CORRADE_COMPARE(dataAnimator->cleanCallCount, 1);
@@ -11570,11 +11570,11 @@ void AbstractUserInterfaceTest::stateAnimations() {
     CORRADE_COMPARE(layer.cleanCallCount, 1);
     CORRADE_COMPARE(animator.cleanCallCount, 0);
     CORRADE_COMPARE(animator.advanceCallCount, data.runningAnimation ? 1 : 0);
-    if(data.nodeAnimations1) {
+    if(data.nodeAnimatorUpdates1) {
         CORRADE_COMPARE(nodeAnimator1->cleanCallCount, 1);
         CORRADE_COMPARE(nodeAnimator1->advanceCallCount, 0);
     }
-    if(data.nodeAnimations2) {
+    if(data.nodeAnimatorUpdates2) {
         CORRADE_COMPARE(nodeAnimator2->cleanCallCount, 1);
         CORRADE_COMPARE(nodeAnimator2->advanceCallCount, 0);
     }
@@ -11630,9 +11630,9 @@ void AbstractUserInterfaceTest::stateAnimations() {
     CORRADE_COMPARE(layer.updateCallCount, 1);
     CORRADE_COMPARE(animator.cleanCallCount, 0);
     CORRADE_COMPARE(animator.advanceCallCount, data.runningAnimation ? 1 : 0);
-    if(data.nodeAnimations1)
+    if(data.nodeAnimatorUpdates1)
         CORRADE_COMPARE(nodeAnimator1->cleanCallCount, 1);
-    if(data.nodeAnimations2)
+    if(data.nodeAnimatorUpdates2)
         CORRADE_COMPARE(nodeAnimator2->cleanCallCount, 1);
     if(data.dataAnimations)
         CORRADE_COMPARE(dataAnimator->cleanCallCount, 1);
@@ -11643,9 +11643,9 @@ void AbstractUserInterfaceTest::stateAnimations() {
        trigger animation advance. GCC in Release mode complains that some of
        these may be used uninitialized, MSVC as well. They aren't. */
     AnimationHandle nodeAnimation1{}, nodeAnimation2{}, dataAnimation1{}, dataAnimation2{}, styleAnimation1{}, styleAnimation2{};
-    if(data.nodeAnimations1)
+    if(data.nodeAnimatorUpdates1)
         nodeAnimation1 = nodeAnimator1->create(0_nsec, 10_nsec, node2);
-    if(data.nodeAnimations2)
+    if(data.nodeAnimatorUpdates2)
         nodeAnimation2 = nodeAnimator2->create(0_nsec, 10_nsec, node1);
     if(data.dataAnimations) {
         dataAnimation1 = dataAnimator->create(0_nsec, 10_nsec, data1);
@@ -11655,7 +11655,7 @@ void AbstractUserInterfaceTest::stateAnimations() {
         styleAnimation2 = styleAnimator->create(0_nsec, 10_nsec, data1);
         styleAnimation1 = styleAnimator->create(0_nsec, 10_nsec, data2);
     }
-    CORRADE_COMPARE(ui.state(), data.expectedInitialState|(data.nodeAnimations1 || data.nodeAnimations2 || data.dataAnimations || data.styleAnimations ?
+    CORRADE_COMPARE(ui.state(), data.expectedInitialState|(data.nodeAnimatorUpdates1 || data.nodeAnimatorUpdates2 || data.dataAnimations || data.styleAnimations ?
         UserInterfaceState::NeedsAnimationAdvance : UserInterfaceStates{}));
 
     /* Advancing the animation then may set other flags */
@@ -11677,13 +11677,13 @@ void AbstractUserInterfaceTest::stateAnimations() {
         bool expectedNodesRemoveAnimator1[]{
             false, false
         };
-        if(data.nodeAnimations1) {
+        if(data.nodeAnimatorUpdates1) {
             nodeAnimator1->expectedNodeOffsets = expectedNodeOffsetsAnimator1;
             nodeAnimator1->expectedNodeOpacities = expectedNodeOpacitiesAnimator1;
             nodeAnimator1->expectedNodeFlags = expectedNodeFlagsAnimator1;
             nodeAnimator1->expectedNodesRemove = expectedNodesRemoveAnimator1;
         }
-        if(data.nodeAnimations2) {
+        if(data.nodeAnimatorUpdates2) {
             nodeAnimator2->expectedNodeOffsets = data.expectedNodeOffsetsAnimator2;
             nodeAnimator2->expectedNodeOpacities = data.expectedNodeOpacitiesAnimator2;
             nodeAnimator2->expectedNodeFlags = data.expectedNodeFlagsAnimator2;
@@ -11701,18 +11701,18 @@ void AbstractUserInterfaceTest::stateAnimations() {
         ui.advanceAnimations(5_nsec);
     }
     CORRADE_COMPARE(ui.state(), data.expectedAdvanceState|
-        (data.nodeAnimations1 || data.nodeAnimations2 || data.dataAnimations || data.styleAnimations ?
+        (data.nodeAnimatorUpdates1 || data.nodeAnimatorUpdates2 || data.dataAnimations || data.styleAnimations ?
             UserInterfaceState::NeedsAnimationAdvance : UserInterfaceStates{}));
     CORRADE_COMPARE(layer.cleanCallCount, 1);
     CORRADE_COMPARE(animator.cleanCallCount, 0);
     CORRADE_COMPARE(animator.advanceCallCount, data.runningAnimation ? 2 : 0);
     CORRADE_COMPARE(ui.isHandleValid(node1), data.expectedNode1Valid);
     CORRADE_COMPARE(ui.isHandleValid(node2), data.expectedNode2Valid);
-    if(data.nodeAnimations1) {
+    if(data.nodeAnimatorUpdates1) {
         CORRADE_COMPARE(nodeAnimator1->cleanCallCount, 1);
         CORRADE_COMPARE(nodeAnimator1->advanceCallCount, 1);
     }
-    if(data.nodeAnimations2) {
+    if(data.nodeAnimatorUpdates2) {
         CORRADE_COMPARE(nodeAnimator2->cleanCallCount, 1);
         CORRADE_COMPARE(nodeAnimator2->advanceCallCount, 1);
     }
@@ -11732,18 +11732,18 @@ void AbstractUserInterfaceTest::stateAnimations() {
             CORRADE_ITERATION(__FILE__ ":" CORRADE_LINE_STRING);
             ui.clean();
         }
-        CORRADE_COMPARE(ui.state(), data.expectedInitialState|UserInterfaceState::NeedsNodeUpdate|(data.nodeAnimations1 || data.nodeAnimations2 || data.dataAnimations ?
+        CORRADE_COMPARE(ui.state(), data.expectedInitialState|UserInterfaceState::NeedsNodeUpdate|(data.nodeAnimatorUpdates1 || data.nodeAnimatorUpdates2 || data.dataAnimations ?
             UserInterfaceState::NeedsAnimationAdvance : UserInterfaceStates{}));
         CORRADE_COMPARE(layer.cleanCallCount, 1 + data.expectedCleanAfterAnimation);
         CORRADE_COMPARE(animator.cleanCallCount, 0);
         CORRADE_COMPARE(animator.advanceCallCount, data.runningAnimation ? 2 : 0);
         CORRADE_COMPARE(ui.isHandleValid(node1), data.expectedNode1Valid);
         CORRADE_COMPARE(ui.isHandleValid(node2), data.expectedNode2Valid);
-        if(data.nodeAnimations1) {
+        if(data.nodeAnimatorUpdates1) {
             CORRADE_COMPARE(nodeAnimator1->cleanCallCount, 1 + data.expectedCleanAfterAnimation);
             CORRADE_COMPARE(ui.isHandleValid(nodeAnimation1), data.expectedNode2Valid);
         }
-        if(data.nodeAnimations2) {
+        if(data.nodeAnimatorUpdates2) {
             CORRADE_COMPARE(nodeAnimator2->cleanCallCount, 1 + data.expectedCleanAfterAnimation);
             CORRADE_COMPARE(ui.isHandleValid(nodeAnimation2), data.expectedNode1Valid);
         }
@@ -11775,7 +11775,7 @@ void AbstractUserInterfaceTest::stateAnimations() {
 
         ui.update();
     }
-    CORRADE_COMPARE(ui.state(), data.expectedInitialState|(data.nodeAnimations1 || data.nodeAnimations2 || data.dataAnimations || data.styleAnimations ?
+    CORRADE_COMPARE(ui.state(), data.expectedInitialState|(data.nodeAnimatorUpdates1 || data.nodeAnimatorUpdates2 || data.dataAnimations || data.styleAnimations ?
         UserInterfaceState::NeedsAnimationAdvance : UserInterfaceStates{}));
     CORRADE_COMPARE(layer.cleanCallCount, 1 + data.expectedCleanAfterAnimation);
     CORRADE_COMPARE(layer.updateCallCount, data.expectedLayerUpdateState ? 2 : 1);
@@ -11784,11 +11784,11 @@ void AbstractUserInterfaceTest::stateAnimations() {
     CORRADE_COMPARE(ui.isHandleValid(node2), data.expectedNode2Valid);
     CORRADE_COMPARE(ui.isHandleValid(data1), data.expectedNode1Valid);
     CORRADE_COMPARE(ui.isHandleValid(data2), data.expectedNode2Valid);
-    if(data.nodeAnimations1) {
+    if(data.nodeAnimatorUpdates1) {
         CORRADE_COMPARE(nodeAnimator1->cleanCallCount, 1 + data.expectedCleanAfterAnimation);
         CORRADE_COMPARE(ui.isHandleValid(nodeAnimation1), data.expectedNode2Valid);
     }
-    if(data.nodeAnimations2) {
+    if(data.nodeAnimatorUpdates2) {
         CORRADE_COMPARE(nodeAnimator2->cleanCallCount, 1 + data.expectedCleanAfterAnimation);
         CORRADE_COMPARE(ui.isHandleValid(nodeAnimation2), data.expectedNode1Valid);
     }

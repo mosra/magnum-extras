@@ -27,7 +27,7 @@
 */
 
 /** @file
- * @brief Class @ref Magnum::Ui::AbstractAnimator, @ref Magnum::Ui::AbstractGenericAnimator, @ref Magnum::Ui::AbstractNodeAnimator, @ref Magnum::Ui::AbstractDataAnimator, @ref Magnum::Ui::AbstractStyleAnimator, enum @ref Magnum::Ui::AnimatorFeature, @ref Magnum::Ui::AnimatorState, @ref Magnum::Ui::AnimationFlag, @ref Magnum::Ui::AnimationState, @ref Magnum::Ui::NodeAnimation, enum set @ref Magnum::Ui::AnimatorFeatures, @ref Magnum::Ui::AnimatorStates, @ref Magnum::Ui::AnimationFlags, @ref Magnum::Ui::NodeAnimations
+ * @brief Class @ref Magnum::Ui::AbstractAnimator, @ref Magnum::Ui::AbstractGenericAnimator, @ref Magnum::Ui::AbstractNodeAnimator, @ref Magnum::Ui::AbstractDataAnimator, @ref Magnum::Ui::AbstractStyleAnimator, enum @ref Magnum::Ui::AnimatorFeature, @ref Magnum::Ui::AnimatorState, @ref Magnum::Ui::AnimationFlag, @ref Magnum::Ui::AnimationState, @ref Magnum::Ui::NodeAnimatorUpdate, enum set @ref Magnum::Ui::AnimatorFeatures, @ref Magnum::Ui::AnimatorStates, @ref Magnum::Ui::AnimationFlags, @ref Magnum::Ui::NodeAnimatorUpdates
  * @m_since_latest
  */
 
@@ -1457,15 +1457,15 @@ class MAGNUM_UI_EXPORT AbstractGenericAnimator: public AbstractAnimator {
 };
 
 /**
-@brief Node properties that are being animated
+@brief Node properties updated by a node animator
 @m_since_latest
 
 Depending on which of these are returned from
 @ref AbstractNodeAnimator::advance(), causes various @ref UserInterfaceState
 flags to be set after an @ref AbstractUserInterface::advanceAnimations() call.
-@see @ref NodeAnimations
+@see @ref NodeAnimatorUpdates
 */
-enum class NodeAnimation: UnsignedByte {
+enum class NodeAnimatorUpdate: UnsignedByte {
     /**
      * Node offset or size. Equivalently to calling
      * @ref AbstractUserInterface::setNodeOffset() /
@@ -1505,26 +1505,26 @@ enum class NodeAnimation: UnsignedByte {
 };
 
 /**
-@debugoperatorenum{NodeAnimation}
+@debugoperatorenum{NodeAnimatorUpdate}
 @m_since_latest
 */
-MAGNUM_UI_EXPORT Debug& operator<<(Debug& debug, NodeAnimation value);
+MAGNUM_UI_EXPORT Debug& operator<<(Debug& debug, NodeAnimatorUpdate value);
 
 /**
-@brief Set of node properties that are being animated
+@brief Set of node properties updated by a node animator
 @m_since_latest
 
-@see @ref NodeAnimations, @ref AbstractNodeAnimator::advance()
+@see @ref AbstractNodeAnimator::advance()
 */
-typedef Containers::EnumSet<NodeAnimation> NodeAnimations;
+typedef Containers::EnumSet<NodeAnimatorUpdate> NodeAnimatorUpdates;
 
 /**
-@debugoperatorenum{NodeAnimations}
+@debugoperatorenum{NodeAnimatorUpdates}
 @m_since_latest
 */
-MAGNUM_UI_EXPORT Debug& operator<<(Debug& debug, NodeAnimations value);
+MAGNUM_UI_EXPORT Debug& operator<<(Debug& debug, NodeAnimatorUpdates value);
 
-CORRADE_ENUMSET_OPERATORS(NodeAnimations)
+CORRADE_ENUMSET_OPERATORS(NodeAnimatorUpdates)
 
 /**
 @brief Base for node animators
@@ -1571,7 +1571,7 @@ class MAGNUM_UI_EXPORT AbstractNodeAnimator: public AbstractAnimator {
          * node ID. Delegates to @ref doAdvance(), see its documentation for
          * more information.
          */
-        NodeAnimations advance(Containers::BitArrayView active, Containers::BitArrayView started, Containers::BitArrayView stopped, const Containers::StridedArrayView1D<const Float>& factors, const Containers::StridedArrayView1D<Vector2>& nodeOffsets, const Containers::StridedArrayView1D<Vector2>& nodeSizes, const Containers::StridedArrayView1D<Float>& nodeOpacities, const Containers::StridedArrayView1D<NodeFlags>& nodeFlags, Containers::MutableBitArrayView nodesRemove);
+        NodeAnimatorUpdates advance(Containers::BitArrayView active, Containers::BitArrayView started, Containers::BitArrayView stopped, const Containers::StridedArrayView1D<const Float>& factors, const Containers::StridedArrayView1D<Vector2>& nodeOffsets, const Containers::StridedArrayView1D<Vector2>& nodeSizes, const Containers::StridedArrayView1D<Float>& nodeOpacities, const Containers::StridedArrayView1D<NodeFlags>& nodeFlags, Containers::MutableBitArrayView nodesRemove);
 
     protected:
         /**
@@ -1603,7 +1603,7 @@ class MAGNUM_UI_EXPORT AbstractNodeAnimator: public AbstractAnimator {
          *      ID
          * @param[out] nodesRemove      Which nodes to remove as a consequence
          *      of the animation
-         * @return Node properties that were affected by the animation
+         * @return Node properties that were updated by the animation
          *
          * Implementation for @ref advance(), which is called from
          * @ref AbstractUserInterface::advanceAnimations() whenever
@@ -1644,7 +1644,7 @@ class MAGNUM_UI_EXPORT AbstractNodeAnimator: public AbstractAnimator {
          * internal state update doing a lot of otherwise unnecessary work
          * every frame, negatively affecting performance.
          */
-        virtual NodeAnimations doAdvance(Containers::BitArrayView active, Containers::BitArrayView started, Containers::BitArrayView stopped, const Containers::StridedArrayView1D<const Float>& factors, const Containers::StridedArrayView1D<Vector2>& nodeOffsets, const Containers::StridedArrayView1D<Vector2>& nodeSizes, const Containers::StridedArrayView1D<Float>& nodeOpacities, const Containers::StridedArrayView1D<NodeFlags>& nodeFlags, Containers::MutableBitArrayView nodesRemove) = 0;
+        virtual NodeAnimatorUpdates doAdvance(Containers::BitArrayView active, Containers::BitArrayView started, Containers::BitArrayView stopped, const Containers::StridedArrayView1D<const Float>& factors, const Containers::StridedArrayView1D<Vector2>& nodeOffsets, const Containers::StridedArrayView1D<Vector2>& nodeSizes, const Containers::StridedArrayView1D<Float>& nodeOpacities, const Containers::StridedArrayView1D<NodeFlags>& nodeFlags, Containers::MutableBitArrayView nodesRemove) = 0;
 };
 
 /**

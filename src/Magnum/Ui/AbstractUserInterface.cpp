@@ -2621,7 +2621,7 @@ AbstractUserInterface& AbstractUserInterface::advanceAnimations(const Nanosecond
         const Containers::StridedArrayView1D<Vector2> nodeSizes = stridedArrayView(state.nodes).slice(&Node::used).slice(&Node::Used::size);
         const Containers::StridedArrayView1D<Float> nodeOpacities = stridedArrayView(state.nodes).slice(&Node::used).slice(&Node::Used::opacity);
         const Containers::StridedArrayView1D<NodeFlags> nodeFlags = stridedArrayView(state.nodes).slice(&Node::used).slice(&Node::Used::flags);
-        NodeAnimations nodeAnimations;
+        NodeAnimatorUpdates nodeAnimatorUpdates;
         for(AbstractAnimator& instance: Implementation::partitionedAnimatorsNodeNodeAttachment(state.animatorInstances, state.animatorInstancesNodeAttachmentOffset, state.animatorInstancesNodeOffset, dataAttachmentAnimatorOffsets)) {
             if(!(instance.state() & AnimatorState::NeedsAdvance))
                 continue;
@@ -2635,7 +2635,7 @@ AbstractUserInterface& AbstractUserInterface::advanceAnimations(const Nanosecond
                 remove.prefix(capacity));
 
             if(needsAdvanceClean.first())
-                nodeAnimations |= static_cast<AbstractNodeAnimator&>(instance).advance(
+                nodeAnimatorUpdates |= static_cast<AbstractNodeAnimator&>(instance).advance(
                     active.prefix(capacity),
                     started.prefix(capacity),
                     stopped.prefix(capacity),
@@ -2650,15 +2650,15 @@ AbstractUserInterface& AbstractUserInterface::advanceAnimations(const Nanosecond
         }
 
         /* Propagate to the global state */
-        if(nodeAnimations >= NodeAnimation::OffsetSize)
+        if(nodeAnimatorUpdates >= NodeAnimatorUpdate::OffsetSize)
             state.state |= UserInterfaceState::NeedsLayoutUpdate;
-        if(nodeAnimations >= NodeAnimation::Opacity)
+        if(nodeAnimatorUpdates >= NodeAnimatorUpdate::Opacity)
             state.state |= UserInterfaceState::NeedsNodeOpacityUpdate;
-        if(nodeAnimations >= NodeAnimation::Enabled)
+        if(nodeAnimatorUpdates >= NodeAnimatorUpdate::Enabled)
             state.state |= UserInterfaceState::NeedsNodeEnabledUpdate;
-        if(nodeAnimations >= NodeAnimation::Clip)
+        if(nodeAnimatorUpdates >= NodeAnimatorUpdate::Clip)
             state.state |= UserInterfaceState::NeedsNodeClipUpdate;
-        if(nodeAnimations >= NodeAnimation::Removal) {
+        if(nodeAnimatorUpdates >= NodeAnimatorUpdate::Removal) {
             state.state |= UserInterfaceState::NeedsNodeClean;
             /** @todo some way to efficiently iterate set bits */
             for(std::size_t i = 0; i != nodesRemove.size(); ++i)

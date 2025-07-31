@@ -56,8 +56,8 @@ struct AbstractAnimatorTest: TestSuite::Tester {
     void debugAnimationFlag();
     void debugAnimationFlags();
     void debugAnimationState();
-    void debugNodeAnimation();
-    void debugNodeAnimations();
+    void debugNodeAnimatorUpdate();
+    void debugNodeAnimatorUpdates();
 
     void construct();
     void constructGeneric();
@@ -329,8 +329,8 @@ AbstractAnimatorTest::AbstractAnimatorTest() {
               &AbstractAnimatorTest::debugAnimationFlag,
               &AbstractAnimatorTest::debugAnimationFlags,
               &AbstractAnimatorTest::debugAnimationState,
-              &AbstractAnimatorTest::debugNodeAnimation,
-              &AbstractAnimatorTest::debugNodeAnimations,
+              &AbstractAnimatorTest::debugNodeAnimatorUpdate,
+              &AbstractAnimatorTest::debugNodeAnimatorUpdates,
 
               &AbstractAnimatorTest::construct,
               &AbstractAnimatorTest::constructGeneric,
@@ -463,16 +463,16 @@ void AbstractAnimatorTest::debugAnimationState() {
     CORRADE_COMPARE(out, "Ui::AnimationState::Paused Ui::AnimationState(0xbe)\n");
 }
 
-void AbstractAnimatorTest::debugNodeAnimation() {
+void AbstractAnimatorTest::debugNodeAnimatorUpdate() {
     Containers::String out;
-    Debug{&out} << NodeAnimation::Enabled << NodeAnimation(0xbe);
-    CORRADE_COMPARE(out, "Ui::NodeAnimation::Enabled Ui::NodeAnimation(0xbe)\n");
+    Debug{&out} << NodeAnimatorUpdate::Enabled << NodeAnimatorUpdate(0xbe);
+    CORRADE_COMPARE(out, "Ui::NodeAnimatorUpdate::Enabled Ui::NodeAnimatorUpdate(0xbe)\n");
 }
 
-void AbstractAnimatorTest::debugNodeAnimations() {
+void AbstractAnimatorTest::debugNodeAnimatorUpdates() {
     Containers::String out;
-    Debug{&out} << (NodeAnimation::OffsetSize|NodeAnimation(0xe0)) << NodeAnimations{};
-    CORRADE_COMPARE(out, "Ui::NodeAnimation::OffsetSize|Ui::NodeAnimation(0xe0) Ui::NodeAnimations{}\n");
+    Debug{&out} << (NodeAnimatorUpdate::OffsetSize|NodeAnimatorUpdate(0xe0)) << NodeAnimatorUpdates{};
+    CORRADE_COMPARE(out, "Ui::NodeAnimatorUpdate::OffsetSize|Ui::NodeAnimatorUpdate(0xe0) Ui::NodeAnimatorUpdates{}\n");
 }
 
 void AbstractAnimatorTest::construct() {
@@ -513,7 +513,7 @@ void AbstractAnimatorTest::constructNode() {
     struct: AbstractNodeAnimator {
         using AbstractNodeAnimator::AbstractNodeAnimator;
 
-        NodeAnimations doAdvance(Containers::BitArrayView, Containers::BitArrayView, Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Float>&, const Containers::StridedArrayView1D<NodeFlags>&, Containers::MutableBitArrayView) override {
+        NodeAnimatorUpdates doAdvance(Containers::BitArrayView, Containers::BitArrayView, Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Float>&, const Containers::StridedArrayView1D<NodeFlags>&, Containers::MutableBitArrayView) override {
             return {};
         }
     } animator{animatorHandle(0xab, 0x12)};
@@ -583,7 +583,7 @@ void AbstractAnimatorTest::constructCopyNode() {
         using AbstractNodeAnimator::AbstractNodeAnimator;
 
         AnimatorFeatures doFeatures() const override { return {}; }
-        NodeAnimations doAdvance(Containers::BitArrayView, Containers::BitArrayView, Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Float>&, const Containers::StridedArrayView1D<NodeFlags>&, Containers::MutableBitArrayView) override {
+        NodeAnimatorUpdates doAdvance(Containers::BitArrayView, Containers::BitArrayView, Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Float>&, const Containers::StridedArrayView1D<NodeFlags>&, Containers::MutableBitArrayView) override {
             return {};
         }
     };
@@ -663,7 +663,7 @@ void AbstractAnimatorTest::constructMoveNode() {
         using AbstractNodeAnimator::AbstractNodeAnimator;
 
         AnimatorFeatures doFeatures() const override { return {}; }
-        NodeAnimations doAdvance(Containers::BitArrayView, Containers::BitArrayView, Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Float>&, const Containers::StridedArrayView1D<NodeFlags>&, Containers::MutableBitArrayView) override {
+        NodeAnimatorUpdates doAdvance(Containers::BitArrayView, Containers::BitArrayView, Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Float>&, const Containers::StridedArrayView1D<NodeFlags>&, Containers::MutableBitArrayView) override {
             return {};
         }
     };
@@ -3790,7 +3790,7 @@ void AbstractAnimatorTest::advanceNode() {
         using AbstractNodeAnimator::create;
 
         AnimatorFeatures doFeatures() const override { return {}; }
-        NodeAnimations doAdvance(Containers::BitArrayView active, Containers::BitArrayView started, Containers::BitArrayView stopped, const Containers::StridedArrayView1D<const Float>& factors, const Containers::StridedArrayView1D<Vector2>& nodeOffsets, const Containers::StridedArrayView1D<Vector2>& nodeSizes, const Containers::StridedArrayView1D<Float>& nodeOpacities, const Containers::StridedArrayView1D<NodeFlags>& nodeFlags, Containers::MutableBitArrayView nodesRemove) override {
+        NodeAnimatorUpdates doAdvance(Containers::BitArrayView active, Containers::BitArrayView started, Containers::BitArrayView stopped, const Containers::StridedArrayView1D<const Float>& factors, const Containers::StridedArrayView1D<Vector2>& nodeOffsets, const Containers::StridedArrayView1D<Vector2>& nodeSizes, const Containers::StridedArrayView1D<Float>& nodeOpacities, const Containers::StridedArrayView1D<NodeFlags>& nodeFlags, Containers::MutableBitArrayView nodesRemove) override {
             CORRADE_COMPARE_AS(active, Containers::stridedArrayView({
                 true,
                 false,
@@ -3833,7 +3833,7 @@ void AbstractAnimatorTest::advanceNode() {
             }).sliceBit(0), TestSuite::Compare::Container);
             ++advanceCallCount;
 
-            return NodeAnimations{0xc0};
+            return NodeAnimatorUpdates{0xc0};
         }
         Int advanceCallCount = 0;
     } animator{animatorHandle(0, 1)};
@@ -3874,7 +3874,7 @@ void AbstractAnimatorTest::advanceNode() {
     };
     Containers::BitArray nodesRemove{ValueInit, 2};
     nodesRemove.set(1);
-    CORRADE_COMPARE(animator.advance(active, started, stopped, factors, nodeOffsets, nodeSizes, nodeOpacities, nodeFlags, nodesRemove), NodeAnimations{0xc0});
+    CORRADE_COMPARE(animator.advance(active, started, stopped, factors, nodeOffsets, nodeSizes, nodeOpacities, nodeFlags, nodesRemove), NodeAnimatorUpdates{0xc0});
     CORRADE_COMPARE(animator.advanceCallCount, 1);
 }
 
@@ -3886,7 +3886,7 @@ void AbstractAnimatorTest::advanceNodeInvalid() {
         using AbstractNodeAnimator::create;
 
         AnimatorFeatures doFeatures() const override { return {}; }
-        NodeAnimations doAdvance(Containers::BitArrayView, Containers::BitArrayView, Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Float>&, const Containers::StridedArrayView1D<NodeFlags>&, Containers::MutableBitArrayView) override {
+        NodeAnimatorUpdates doAdvance(Containers::BitArrayView, Containers::BitArrayView, Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Float>&, const Containers::StridedArrayView1D<NodeFlags>&, Containers::MutableBitArrayView) override {
             CORRADE_FAIL("This shouldn't be called.");
             return {};
         }
