@@ -1082,7 +1082,8 @@ class MAGNUM_UI_EXPORT BaseLayer: public AbstractVisualLayer {
          * @brief Custom quad base color assuming it belongs to this layer
          *
          * Expects that @p handle is valid.
-         * @see @ref isHandleValid(LayerDataHandle) const
+         * @see @ref isHandleValid(LayerDataHandle) const,
+         *      @ref dataHandleData()
          */
         Color4 color(LayerDataHandle handle) const;
 
@@ -1111,6 +1112,8 @@ class MAGNUM_UI_EXPORT BaseLayer: public AbstractVisualLayer {
          * Like @ref setColor(DataHandle, const Color4&) but without checking
          * that @p handle indeed belongs to this layer. See its documentation
          * for more information.
+         * @see @ref isHandleValid(LayerDataHandle) const,
+         *      @ref dataHandleData()
          */
         void setColor(LayerDataHandle handle, const Color4& color);
 
@@ -1129,6 +1132,8 @@ class MAGNUM_UI_EXPORT BaseLayer: public AbstractVisualLayer {
          * Like @ref outlineWidth(DataHandle) const but without checking that
          * @p handle indeed belongs to this layer. See its documentation for
          * more information.
+         * @see @ref isHandleValid(LayerDataHandle) const,
+         *      @ref dataHandleData()
          */
         Vector4 outlineWidth(LayerDataHandle handle) const;
 
@@ -1174,6 +1179,8 @@ class MAGNUM_UI_EXPORT BaseLayer: public AbstractVisualLayer {
          * Like @ref setOutlineWidth(DataHandle, Float) but without checking
          * that @p handle indeed belongs to this layer. See its documentation
          * for more information.
+         * @see @ref isHandleValid(LayerDataHandle) const,
+         *      @ref dataHandleData()
          */
         void setOutlineWidth(LayerDataHandle handle, Float width) {
             setOutlineWidth(handle, Vector4{width});
@@ -1194,6 +1201,8 @@ class MAGNUM_UI_EXPORT BaseLayer: public AbstractVisualLayer {
          * Like @ref padding(DataHandle) const but without checking that
          * @p handle indeed belongs to this layer. See its documentation for
          * more information.
+         * @see @ref isHandleValid(LayerDataHandle) const,
+         *      @ref dataHandleData()
          */
         Vector4 padding(LayerDataHandle handle) const;
 
@@ -1218,6 +1227,8 @@ class MAGNUM_UI_EXPORT BaseLayer: public AbstractVisualLayer {
          * Like @ref setPadding(DataHandle, const Vector4&) but without
          * checking that @p handle indeed belongs to this layer. See its
          * documentation for more information.
+         * @see @ref isHandleValid(LayerDataHandle) const,
+         *      @ref dataHandleData()
          */
         void setPadding(LayerDataHandle handle, const Vector4& padding);
 
@@ -1238,6 +1249,8 @@ class MAGNUM_UI_EXPORT BaseLayer: public AbstractVisualLayer {
          * Like @ref setPadding(DataHandle, Float) but without checking that
          * @p handle indeed belongs to this layer. See its documentation for
          * more information.
+         * @see @ref isHandleValid(LayerDataHandle) const,
+         *      @ref dataHandleData()
          */
         void setPadding(LayerDataHandle handle, Float padding) {
             setPadding(handle, Vector4{padding});
@@ -1259,7 +1272,8 @@ class MAGNUM_UI_EXPORT BaseLayer: public AbstractVisualLayer {
          * The third coordinate is array layer. Expects that @p handle is
          * valid and that @ref BaseLayerSharedFlag::Textured was enabled for
          * the shared state the layer was created with.
-         * @see @ref isHandleValid(LayerDataHandle) const
+         * @see @ref isHandleValid(LayerDataHandle) const,
+         *      @ref dataHandleData()
          */
         Containers::Pair<Vector3, Vector2> textureCoordinates(LayerDataHandle handle) const;
 
@@ -1276,7 +1290,8 @@ class MAGNUM_UI_EXPORT BaseLayer: public AbstractVisualLayer {
          *
          * Calling this function causes @ref LayerState::NeedsDataUpdate to be
          * set.
-         * @see @ref BaseLayerGL::setTexture()
+         * @see @ref BaseLayerGL::setTexture(),
+         *      @ref isHandleValid(DataHandle) const
          */
         void setTextureCoordinates(DataHandle handle, const Vector3& offset, const Vector2& size);
 
@@ -1286,6 +1301,8 @@ class MAGNUM_UI_EXPORT BaseLayer: public AbstractVisualLayer {
          * Like @ref setTextureCoordinates(DataHandle, const Vector3&, const Vector2&)
          * but without checking that @p handle indeed belongs to this layer.
          * See its documentation for more information.
+         * @see @ref isHandleValid(LayerDataHandle) const,
+         *      @ref dataHandleData()
          */
         void setTextureCoordinates(LayerDataHandle handle, const Vector3& offset, const Vector2& size);
 

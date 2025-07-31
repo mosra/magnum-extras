@@ -398,6 +398,8 @@ class MAGNUM_UI_EXPORT TextLayerStyleAnimator: public AbstractVisualLayerStyleAn
          *      cause the animation to gracefully switch to the target style
          *      during the next @ref advance(), and then be removed
          *      automatically.
+         *
+         * @see @ref isHandleValid(AnimationHandle) const
          */
         void remove(AnimationHandle handle);
 
@@ -415,7 +417,8 @@ class MAGNUM_UI_EXPORT TextLayerStyleAnimator: public AbstractVisualLayerStyleAn
          * Expects that @p handle is valid. The uniforms are queried from
          * @ref TextLayer::Shared based on style IDs passed to @ref create().
          * @see @ref paddings(), @ref cursorUniforms(),
-         *      @ref selectionUniforms(), @ref selectionTextUniforms()
+         *      @ref selectionUniforms(), @ref selectionTextUniforms(),
+         *      @ref isHandleValid(AnimatorDataHandle) const
          */
         Containers::Pair<TextLayerStyleUniform, TextLayerStyleUniform> uniforms(AnimationHandle handle) const;
 
@@ -425,7 +428,8 @@ class MAGNUM_UI_EXPORT TextLayerStyleAnimator: public AbstractVisualLayerStyleAn
          * Like @ref uniforms(AnimationHandle) const but without checking that
          * @p handle indeed belongs to this animator. See its documentation for
          * more information.
-         * @see @ref animationHandleData()
+         * @see @ref isHandleValid(AnimatorDataHandle) const,
+         *      @ref animationHandleData()
          */
         Containers::Pair<TextLayerStyleUniform, TextLayerStyleUniform> uniforms(AnimatorDataHandle handle) const;
 
@@ -435,7 +439,8 @@ class MAGNUM_UI_EXPORT TextLayerStyleAnimator: public AbstractVisualLayerStyleAn
          * Expects that @p handle is valid. The paddings are queried from
          * @ref TextLayer::Shared based on style IDs passed to @ref create().
          * @see @ref uniforms(), @ref cursorPaddings(),
-         *      @ref selectionPaddings()
+         *      @ref selectionPaddings(),
+         *      @ref isHandleValid(AnimatorDataHandle) const
          */
         Containers::Pair<Vector4, Vector4> paddings(AnimationHandle handle) const;
 
@@ -445,7 +450,8 @@ class MAGNUM_UI_EXPORT TextLayerStyleAnimator: public AbstractVisualLayerStyleAn
          * Like @ref paddings(AnimationHandle) const but without checking that
          * @p handle indeed belongs to this animator. See its documentation for
          * more information.
-         * @see @ref animationHandleData()
+         * @see @ref isHandleValid(AnimatorDataHandle) const,
+         *      @ref animationHandleData()
          */
         Containers::Pair<Vector4, Vector4> paddings(AnimatorDataHandle handle) const;
 
@@ -457,7 +463,8 @@ class MAGNUM_UI_EXPORT TextLayerStyleAnimator: public AbstractVisualLayerStyleAn
          * If given animated style doesn't have an associated cursor style,
          * returns @relativeref{Corrade,Containers::NullOpt}.
          * @see @ref cursorPaddings(), @ref selectionUniforms(),
-         *      @ref selectionTextUniforms(), @ref uniforms()
+         *      @ref selectionTextUniforms(), @ref uniforms(),
+         *      @ref isHandleValid(AnimatorDataHandle) const
          */
         Containers::Optional<Containers::Pair<TextLayerEditingStyleUniform, TextLayerEditingStyleUniform>> cursorUniforms(AnimationHandle handle) const;
 
@@ -467,7 +474,8 @@ class MAGNUM_UI_EXPORT TextLayerStyleAnimator: public AbstractVisualLayerStyleAn
          * Like @ref cursorUniforms(AnimationHandle) const but without checking
          * that @p handle indeed belongs to this animator. See its
          * documentation for more information.
-         * @see @ref animationHandleData()
+         * @see @ref isHandleValid(AnimatorDataHandle) const,
+         *      @ref animationHandleData()
          */
         Containers::Optional<Containers::Pair<TextLayerEditingStyleUniform, TextLayerEditingStyleUniform>> cursorUniforms(AnimatorDataHandle handle) const;
 
@@ -479,7 +487,7 @@ class MAGNUM_UI_EXPORT TextLayerStyleAnimator: public AbstractVisualLayerStyleAn
          * If given animated style doesn't have an associated cursor style,
          * returns @relativeref{Corrade,Containers::NullOpt}.
          * @see @ref cursorUniforms(), @ref selectionPaddings(),
-         *      @ref paddings()
+         *      @ref paddings(), @ref isHandleValid(AnimatorDataHandle) const
          */
         Containers::Optional<Containers::Pair<Vector4, Vector4>> cursorPaddings(AnimationHandle handle) const;
 
@@ -489,7 +497,8 @@ class MAGNUM_UI_EXPORT TextLayerStyleAnimator: public AbstractVisualLayerStyleAn
          * Like @ref cursorPaddings(AnimationHandle) const but without checking
          * that @p handle indeed belongs to this animator. See its
          * documentation for more information.
-         * @see @ref animationHandleData()
+         * @see @ref isHandleValid(AnimatorDataHandle) const,
+         *      @ref animationHandleData()
          */
         Containers::Optional<Containers::Pair<Vector4, Vector4>> cursorPaddings(AnimatorDataHandle handle) const;
 
@@ -501,7 +510,8 @@ class MAGNUM_UI_EXPORT TextLayerStyleAnimator: public AbstractVisualLayerStyleAn
          * If given animated style doesn't have an associated selection style,
          * returns @relativeref{Corrade,Containers::NullOpt}.
          * @see @ref selectionTextUniforms(), @ref selectionPaddings(),
-         *      @ref cursorUniforms(), @ref uniforms()
+         *      @ref cursorUniforms(), @ref uniforms(),
+         *      @ref isHandleValid(AnimatorDataHandle) const
          */
         Containers::Optional<Containers::Pair<TextLayerEditingStyleUniform, TextLayerEditingStyleUniform>> selectionUniforms(AnimationHandle handle) const;
 
@@ -511,7 +521,8 @@ class MAGNUM_UI_EXPORT TextLayerStyleAnimator: public AbstractVisualLayerStyleAn
          * Like @ref selectionUniforms(AnimationHandle) const but without
          * checking that @p handle indeed belongs to this animator. See its
          * documentation for more information.
-         * @see @ref animationHandleData()
+         * @see @ref isHandleValid(AnimatorDataHandle) const,
+         *      @ref animationHandleData()
          */
         Containers::Optional<Containers::Pair<TextLayerEditingStyleUniform, TextLayerEditingStyleUniform>> selectionUniforms(AnimatorDataHandle handle) const;
 
@@ -523,7 +534,8 @@ class MAGNUM_UI_EXPORT TextLayerStyleAnimator: public AbstractVisualLayerStyleAn
          * If given animated style doesn't have an associated selection style,
          * returns @relativeref{Corrade,Containers::NullOpt}.
          * @see @ref selectionUniforms(), @ref selectionTextUniforms(),
-         *      @ref cursorPaddings(), @ref paddings()
+         *      @ref cursorPaddings(), @ref paddings(),
+         *      @ref isHandleValid(AnimatorDataHandle) const
          */
         Containers::Optional<Containers::Pair<Vector4, Vector4>> selectionPaddings(AnimationHandle handle) const;
 
@@ -533,7 +545,8 @@ class MAGNUM_UI_EXPORT TextLayerStyleAnimator: public AbstractVisualLayerStyleAn
          * Like @ref selectionPaddings(AnimationHandle) const but without
          * checking that @p handle indeed belongs to this animator. See its
          * documentation for more information.
-         * @see @ref animationHandleData()
+         * @see @ref isHandleValid(AnimatorDataHandle) const,
+         *      @ref animationHandleData()
          */
         Containers::Optional<Containers::Pair<Vector4, Vector4>> selectionPaddings(AnimatorDataHandle handle) const;
 
@@ -545,7 +558,8 @@ class MAGNUM_UI_EXPORT TextLayerStyleAnimator: public AbstractVisualLayerStyleAn
          * If given animated style doesn't have an associated selection style,
          * returns @relativeref{Corrade,Containers::NullOpt}.
          * @see @ref selectionUniforms(), @ref selectionPaddings(),
-         *      @ref cursorUniforms(), @ref uniforms()
+         *      @ref cursorUniforms(), @ref uniforms(),
+         *      @ref isHandleValid(AnimatorDataHandle) const
          */
         Containers::Optional<Containers::Pair<TextLayerStyleUniform, TextLayerStyleUniform>> selectionTextUniforms(AnimationHandle handle) const;
 
@@ -555,7 +569,8 @@ class MAGNUM_UI_EXPORT TextLayerStyleAnimator: public AbstractVisualLayerStyleAn
          * Like @ref selectionTextUniforms(AnimationHandle) const but without
          * checking that @p handle indeed belongs to this animator. See its
          * documentation for more information.
-         * @see @ref animationHandleData()
+         * @see @ref isHandleValid(AnimatorDataHandle) const,
+         *      @ref animationHandleData()
          */
         Containers::Optional<Containers::Pair<TextLayerStyleUniform, TextLayerStyleUniform>> selectionTextUniforms(AnimatorDataHandle handle) const;
 
@@ -564,6 +579,7 @@ class MAGNUM_UI_EXPORT TextLayerStyleAnimator: public AbstractVisualLayerStyleAn
          *
          * Expects that @p handle is valid. The returned pointer is never
          * @cpp nullptr @ce.
+         * @see @ref isHandleValid(AnimatorDataHandle) const
          */
         auto easing(AnimationHandle handle) const -> Float(*)(Float);
 
@@ -573,7 +589,8 @@ class MAGNUM_UI_EXPORT TextLayerStyleAnimator: public AbstractVisualLayerStyleAn
          * Like @ref easing(AnimationHandle) const but without checking that
          * @p handle indeed belongs to this animator. See its documentation for
          * more information.
-         * @see @ref animationHandleData()
+         * @see @ref isHandleValid(AnimatorDataHandle) const,
+         *      @ref animationHandleData()
          */
         auto easing(AnimatorDataHandle handle) const -> Float(*)(Float);
 

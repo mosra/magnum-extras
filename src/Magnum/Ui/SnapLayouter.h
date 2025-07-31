@@ -351,6 +351,8 @@ class MAGNUM_UI_EXPORT SnapLayouter: public AbstractLayouter {
          * Like @ref snap(LayoutHandle) const but without checking that
          * @p handle indeed belongs to this layouter. See its documentation for
          * more information.
+         * @see @ref isHandleValid(LayouterDataHandle) const,
+         *      @ref layoutHandleData()
          */
         Snaps snap(LayouterDataHandle handle) const;
 
@@ -376,6 +378,8 @@ class MAGNUM_UI_EXPORT SnapLayouter: public AbstractLayouter {
          * Like @ref target(LayoutHandle) const but without checking that
          * @p handle indeed belongs to this layouter. See its documentation for
          * more information.
+         * @see @ref isHandleValid(LayouterDataHandle) const,
+         *      @ref layoutHandleData()
          */
         NodeHandle target(LayouterDataHandle handle) const;
 

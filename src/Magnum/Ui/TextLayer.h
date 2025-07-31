@@ -2228,17 +2228,20 @@ class MAGNUM_UI_EXPORT TextLayer: public AbstractVisualLayer {
         /**
          * @brief Remove a text
          *
-         * Delegates to @ref AbstractLayer::remove(DataHandle) and additionally
-         * marks the now-unused glyph run for removal in the next @ref update().
+         * Expects that @p handle is valid. Delegates to
+         * @ref AbstractLayer::remove(DataHandle) and additionally marks the
+         * now-unused glyph run for removal in the next @ref update().
+         * @see @ref isHandleValid(DataHandle) const
          */
         void remove(DataHandle handle);
 
         /**
          * @brief Remove a text assuming it belongs to this layer
          *
-         * Delegates to @ref AbstractLayer::remove(LayerDataHandle) and
-         * additionally marks the now-unused glyph run for removal in the next
-         * @ref update().
+         * Compared to @ref remove(DataHandle) delegates to
+         * @ref AbstractLayer::remove(LayerDataHandle) instead.
+         * @see @ref isHandleValid(LayerDataHandle) const,
+         *      @ref dataHandleData()
          */
         void remove(LayerDataHandle handle);
 
@@ -2251,8 +2254,8 @@ class MAGNUM_UI_EXPORT TextLayer: public AbstractVisualLayer {
          * and cannot be modified independently. Data created with
          * @ref createGlyph() or updated with @ref setGlyph() have the flags
          * always empty.
-         * @see @ref isHandleValid(DataHandle) const,
-         *      @ref flags(), @ref TextLayer::Shared::flags()
+         * @see @ref flags(), @ref TextLayer::Shared::flags(),
+         *      @ref isHandleValid(DataHandle) const
          */
         TextDataFlags flags(DataHandle handle) const;
 
@@ -2262,6 +2265,8 @@ class MAGNUM_UI_EXPORT TextLayer: public AbstractVisualLayer {
          * Like @ref flags(DataHandle) const but without checking that
          * @p handle indeed belongs to this layer. See its documentation for
          * more information.
+         * @see @ref isHandleValid(LayerDataHandle) const,
+         *      @ref dataHandleData()
          */
         TextDataFlags flags(LayerDataHandle handle) const;
 
@@ -2277,7 +2282,8 @@ class MAGNUM_UI_EXPORT TextLayer: public AbstractVisualLayer {
          * @brief Text glyph count assuming it belongs to this layer
          *
          * Expects that @p handle is valid.
-         * @see @ref isHandleValid(LayerDataHandle) const
+         * @see @ref isHandleValid(LayerDataHandle) const,
+         *      @ref dataHandleData()
          */
         UnsignedInt glyphCount(LayerDataHandle handle) const;
 
@@ -2303,6 +2309,8 @@ class MAGNUM_UI_EXPORT TextLayer: public AbstractVisualLayer {
          * Like @ref size(DataHandle) const but without checking that @p handle
          * indeed belongs to this layer. See its documentation for more
          * information.
+         * @see @ref isHandleValid(LayerDataHandle) const,
+         *      @ref dataHandleData()
          */
         Vector2 size(LayerDataHandle handle) const;
 
@@ -2326,6 +2334,8 @@ class MAGNUM_UI_EXPORT TextLayer: public AbstractVisualLayer {
          * Like @ref cursor(DataHandle) const but without checking that
          * @p handle indeed belongs to this layer. See its documentation for
          * more information.
+         * @see @ref isHandleValid(LayerDataHandle) const,
+         *      @ref dataHandleData()
          */
         Containers::Pair<UnsignedInt, UnsignedInt> cursor(LayerDataHandle handle) const;
 
@@ -2374,6 +2384,8 @@ class MAGNUM_UI_EXPORT TextLayer: public AbstractVisualLayer {
          * Like @ref setCursor(DataHandle, UnsignedInt, UnsignedInt) but
          * without checking that @p handle indeed belongs to this layer. See
          * its documentation for more information.
+         * @see @ref isHandleValid(LayerDataHandle) const,
+         *      @ref dataHandleData()
          */
         void setCursor(LayerDataHandle handle, UnsignedInt position, UnsignedInt selection);
 
@@ -2408,6 +2420,8 @@ class MAGNUM_UI_EXPORT TextLayer: public AbstractVisualLayer {
          * Like @ref textProperties(DataHandle) const but without checking that
          * @p handle indeed belongs to this layer. See its documentation for
          * more information.
+         * @see @ref isHandleValid(LayerDataHandle) const,
+         *      @ref dataHandleData()
          */
         TextProperties textProperties(LayerDataHandle handle) const;
 
@@ -2429,6 +2443,8 @@ class MAGNUM_UI_EXPORT TextLayer: public AbstractVisualLayer {
          * Like @ref text(DataHandle) const but without checking that @p handle
          * indeed belongs to this layer. See its documentation for more
          * information.
+         * @see @ref isHandleValid(LayerDataHandle) const,
+         *      @ref dataHandleData()
          */
         Containers::StringView text(LayerDataHandle handle) const;
 
@@ -2460,9 +2476,9 @@ class MAGNUM_UI_EXPORT TextLayer: public AbstractVisualLayer {
          *
          * Calling this function causes @ref LayerState::NeedsDataUpdate to be
          * set.
-         * @see @ref isHandleValid(DataHandle) const,
-         *      @ref Shared::isHandleValid(FontHandle) const, @ref setCursor(),
-         *      @ref updateText(), @ref editText()
+         * @see @ref setCursor(), @ref updateText(), @ref editText(),
+         *      @ref isHandleValid(DataHandle) const,
+         *      @ref Shared::isHandleValid(FontHandle) const
          */
         void setText(DataHandle handle, Containers::StringView text, const TextProperties& properties);
 
@@ -2483,6 +2499,8 @@ class MAGNUM_UI_EXPORT TextLayer: public AbstractVisualLayer {
          * Like @ref setText(DataHandle, Containers::StringView, const TextProperties&)
          * but without checking that @p handle indeed belongs to this layer.
          * See its documentation for more information.
+         * @see @ref isHandleValid(LayerDataHandle) const,
+         *      @ref dataHandleData()
          */
         void setText(LayerDataHandle handle, Containers::StringView text, const TextProperties& properties);
 
@@ -2492,6 +2510,8 @@ class MAGNUM_UI_EXPORT TextLayer: public AbstractVisualLayer {
          * Like @ref setText(DataHandle, Containers::StringView, const TextProperties&, TextDataFlags)
          * but without checking that @p handle indeed belongs to this layer.
          * See its documentation for more information.
+         * @see @ref isHandleValid(LayerDataHandle) const,
+         *      @ref dataHandleData()
          */
         void setText(LayerDataHandle handle, Containers::StringView text, const TextProperties& properties, TextDataFlags flags);
 
@@ -2530,8 +2550,8 @@ class MAGNUM_UI_EXPORT TextLayer: public AbstractVisualLayer {
          * set, unless the operation performed is a no-op, which is when both
          * @p removeSize and @p insertText size are both @cpp 0 @ce and
          * @p cursor is equal to @ref cursor().
-         * @see @ref isHandleValid(DataHandle) const,
-         *      @ref flags(DataHandle) const, @ref setText()
+         * @see @ref setText(), @ref isHandleValid(DataHandle) const,
+         *      @ref flags(DataHandle) const
          */
         void updateText(DataHandle handle, UnsignedInt removeOffset, UnsignedInt removeSize, UnsignedInt insertOffset, Containers::StringView insertText, UnsignedInt cursor, UnsignedInt selection);
 
@@ -2552,6 +2572,8 @@ class MAGNUM_UI_EXPORT TextLayer: public AbstractVisualLayer {
          * Like @ref updateText(DataHandle, UnsignedInt, UnsignedInt, UnsignedInt, Containers::StringView, UnsignedInt, UnsignedInt)
          * but without checking that @p handle indeed belongs to this layer.
          * See its documentation for more information.
+         * @see @ref isHandleValid(LayerDataHandle) const,
+         *      @ref dataHandleData()
          */
         void updateText(LayerDataHandle handle, UnsignedInt removeOffset, UnsignedInt removeSize, UnsignedInt insertOffset, Containers::StringView insertText, UnsignedInt cursor, UnsignedInt selection);
 
@@ -2582,8 +2604,8 @@ class MAGNUM_UI_EXPORT TextLayer: public AbstractVisualLayer {
          * set, unless the operation performed is a no-op such as inserting
          * empty text or moving a cursor / deleting a character with there
          * being no character to move over or delete.
-         * @see @ref isHandleValid(DataHandle) const,
-         *      @ref flags(DataHandle) const, @ref setText()
+         * @see @ref setText(), @ref flags(DataHandle) const,
+         *      @ref isHandleValid(DataHandle) const
          */
         void editText(DataHandle handle, TextEdit edit, Containers::StringView insert);
 
@@ -2593,6 +2615,8 @@ class MAGNUM_UI_EXPORT TextLayer: public AbstractVisualLayer {
          * Like @ref editText(DataHandle, TextEdit, Containers::StringView) but
          * without checking that @p handle indeed belongs to this layer. See
          * its documentation for more information.
+         * @see @ref isHandleValid(LayerDataHandle) const,
+         *      @ref dataHandleData()
          */
         void editText(LayerDataHandle handle, TextEdit edit, Containers::StringView insert);
 
@@ -2649,6 +2673,8 @@ class MAGNUM_UI_EXPORT TextLayer: public AbstractVisualLayer {
          * Like @ref setGlyph(DataHandle, UnsignedInt, const TextProperties&)
          * but without checking that @p handle indeed belongs to this layer.
          * See its documentation for more information.
+         * @see @ref isHandleValid(LayerDataHandle) const,
+         *      @ref dataHandleData()
          */
         void setGlyph(LayerDataHandle handle, UnsignedInt glyph, const TextProperties& properties);
 
@@ -2678,7 +2704,8 @@ class MAGNUM_UI_EXPORT TextLayer: public AbstractVisualLayer {
          * @brief Custom text base color assuming it belongs to this layer
          *
          * Expects that @p handle is valid.
-         * @see @ref isHandleValid(LayerDataHandle) const
+         * @see @ref isHandleValid(LayerDataHandle) const,
+         *      @ref dataHandleData()
          */
         Color4 color(LayerDataHandle handle) const;
 
@@ -2708,6 +2735,8 @@ class MAGNUM_UI_EXPORT TextLayer: public AbstractVisualLayer {
          * Like @ref setColor(DataHandle, const Color4&) but without checking
          * that @p handle indeed belongs to this layer. See its documentation
          * for more information.
+         * @see @ref isHandleValid(LayerDataHandle) const,
+         *      @ref dataHandleData()
          */
         void setColor(LayerDataHandle handle, const Color4& color);
 
@@ -2728,6 +2757,8 @@ class MAGNUM_UI_EXPORT TextLayer: public AbstractVisualLayer {
          * Like @ref padding(DataHandle) const but without checking that
          * @p handle indeed belongs to this layer. See its documentation for
          * more information.
+         * @see @ref isHandleValid(LayerDataHandle) const,
+         *      @ref dataHandleData()
          */
         Vector4 padding(LayerDataHandle handle) const;
 
@@ -2754,6 +2785,8 @@ class MAGNUM_UI_EXPORT TextLayer: public AbstractVisualLayer {
          * Like @ref setPadding(DataHandle, const Vector4&) but without
          * checking that @p handle indeed belongs to this layer. See its
          * documentation for more information.
+         * @see @ref isHandleValid(LayerDataHandle) const,
+         *      @ref dataHandleData()
          */
         void setPadding(LayerDataHandle handle, const Vector4& padding);
 
@@ -2774,6 +2807,8 @@ class MAGNUM_UI_EXPORT TextLayer: public AbstractVisualLayer {
          * Like @ref setPadding(DataHandle, Float) but without checking that
          * @p handle indeed belongs to this layer. See its documentation for
          * more information.
+         * @see @ref isHandleValid(LayerDataHandle) const,
+         *      @ref dataHandleData()
          */
         void setPadding(LayerDataHandle handle, Float padding) {
             setPadding(handle, Vector4{padding});
@@ -2797,6 +2832,8 @@ class MAGNUM_UI_EXPORT TextLayer: public AbstractVisualLayer {
          * Like @ref transformation(DataHandle) const but without checking that
          * @p handle indeed belongs to this layer. See its documentation for
          * more information.
+         * @see @ref isHandleValid(LayerDataHandle) const,
+         *      @ref dataHandleData()
          */
         Containers::Pair<Vector2, Complex> transformation(LayerDataHandle handle) const;
 
@@ -2824,6 +2861,7 @@ class MAGNUM_UI_EXPORT TextLayer: public AbstractVisualLayer {
          *
          * Calling this function causes @ref LayerState::NeedsDataUpdate to be
          * set.
+         * @see @ref isHandleValid(DataHandle) const
          */
         void setTransformation(DataHandle handle, const Vector2& translation, const Complex& rotation, Float scaling);
 
@@ -2833,6 +2871,8 @@ class MAGNUM_UI_EXPORT TextLayer: public AbstractVisualLayer {
          * Like @ref setTransformation(DataHandle, const Vector2&, const Complex&, Float)
          * but without checking that @p handle indeed belongs to this layer.
          * See its documentation for more information.
+         * @see @ref isHandleValid(LayerDataHandle) const,
+         *      @ref dataHandleData()
          */
         void setTransformation(LayerDataHandle handle, const Vector2& translation, const Complex& rotation, Float scaling);
 
@@ -2857,6 +2897,8 @@ class MAGNUM_UI_EXPORT TextLayer: public AbstractVisualLayer {
          * Like @ref setTransformation(DataHandle, const Vector2&, Rad, Float)
          * but without checking that @p handle indeed belongs to this layer.
          * See its documentation for more information.
+         * @see @ref isHandleValid(LayerDataHandle) const,
+         *      @ref dataHandleData()
          */
         void setTransformation(LayerDataHandle handle, const Vector2& translation, Rad rotation, Float scaling);
 
@@ -2875,7 +2917,8 @@ class MAGNUM_UI_EXPORT TextLayer: public AbstractVisualLayer {
          *
          * Calling this function causes @ref LayerState::NeedsDataUpdate to be
          * set.
-         * @see @ref rotate(), @ref scale()
+         * @see @ref rotate(), @ref scale(),
+         *      @ref isHandleValid(DataHandle) const
          */
         void translate(DataHandle handle, const Vector2& translation);
 
@@ -2885,6 +2928,8 @@ class MAGNUM_UI_EXPORT TextLayer: public AbstractVisualLayer {
          * Like @ref translate(DataHandle, const Vector2&) but without checking
          * that @p handle indeed belongs to this layer. See its documentation
          * for more information.
+         * @see @ref isHandleValid(LayerDataHandle) const,
+         *      @ref dataHandleData()
          */
         void translate(LayerDataHandle handle, const Vector2& translation);
 
@@ -2908,7 +2953,8 @@ class MAGNUM_UI_EXPORT TextLayer: public AbstractVisualLayer {
          *
          * Calling this function causes @ref LayerState::NeedsDataUpdate to be
          * set.
-         * @see @ref translate(), @ref scale()
+         * @see @ref translate(), @ref scale(),
+         *      @ref isHandleValid(DataHandle) const
          */
         void rotate(DataHandle handle, const Complex& rotation);
 
@@ -2918,6 +2964,8 @@ class MAGNUM_UI_EXPORT TextLayer: public AbstractVisualLayer {
          * Like @ref rotate(DataHandle, const Complex&) but without checking
          * that @p handle indeed belongs to this layer. See its documentation
          * for more information.
+         * @see @ref isHandleValid(LayerDataHandle) const,
+         *      @ref dataHandleData()
          */
         void rotate(LayerDataHandle handle, const Complex& rotation);
 
@@ -2942,6 +2990,8 @@ class MAGNUM_UI_EXPORT TextLayer: public AbstractVisualLayer {
          * Like @ref rotate(DataHandle, Rad) but without checking that
          * @p handle indeed belongs to this layer. See its documentation for
          * more information.
+         * @see @ref isHandleValid(LayerDataHandle) const,
+         *      @ref dataHandleData()
          */
         void rotate(LayerDataHandle handle, Rad rotation);
 
@@ -2957,7 +3007,8 @@ class MAGNUM_UI_EXPORT TextLayer: public AbstractVisualLayer {
          *
          * Calling this function causes @ref LayerState::NeedsDataUpdate to be
          * set.
-         * @see @ref translate(), @ref rotate()
+         * @see @ref translate(), @ref rotate(),
+         *      @ref isHandleValid(DataHandle) const
          */
         void scale(DataHandle handle, Float scaling);
 
@@ -2967,6 +3018,8 @@ class MAGNUM_UI_EXPORT TextLayer: public AbstractVisualLayer {
          * Like @ref scale(DataHandle, Float) but without checking that
          * @p handle indeed belongs to this layer. See its documentation for
          * more information.
+         * @see @ref isHandleValid(LayerDataHandle) const,
+         *      @ref dataHandleData()
          */
         void scale(LayerDataHandle handle, Float scaling);
 

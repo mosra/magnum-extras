@@ -251,6 +251,7 @@ class MAGNUM_UI_EXPORT GenericAnimator: public AbstractGenericAnimator {
          * Expects that @p handle is valid. Delegates to
          * @ref AbstractAnimator::remove(AnimationHandle), see its
          * documentation for more information.
+         * @see @ref isHandleValid(AnimationHandle) const
          */
         void remove(AnimationHandle handle);
 
@@ -259,6 +260,8 @@ class MAGNUM_UI_EXPORT GenericAnimator: public AbstractGenericAnimator {
          *
          * Compared to @ref remove(AnimationHandle) delegates to
          * @ref AbstractAnimator::remove(AnimatorDataHandle) instead.
+         * @see @ref isHandleValid(AnimatorDataHandle) const,
+         *      @ref animationHandleData()
          */
         void remove(AnimatorDataHandle handle);
 
@@ -268,6 +271,7 @@ class MAGNUM_UI_EXPORT GenericAnimator: public AbstractGenericAnimator {
          * Expects that @p handle is valid. The returned pointer is never
          * @cpp nullptr @ce for animations created with @ref create(), and
          * always @cpp nullptr @ce for animations created with @ref callOnce().
+         * @see @ref isHandleValid(AnimationHandle) const
          */
         auto easing(AnimationHandle handle) const -> Float(*)(Float);
 
@@ -277,7 +281,8 @@ class MAGNUM_UI_EXPORT GenericAnimator: public AbstractGenericAnimator {
          * Like @ref easing(AnimationHandle) const but without checking that
          * @p handle indeed belongs to this animator. See its documentation for
          * more information.
-         * @see @ref animationHandleData()
+         * @see @ref isHandleValid(AnimatorDataHandle) const,
+         *      @ref animationHandleData()
          */
         auto easing(AnimatorDataHandle handle) const -> Float(*)(Float);
 
@@ -467,6 +472,7 @@ class MAGNUM_UI_EXPORT GenericNodeAnimator: public AbstractGenericAnimator {
          * Expects that @p handle is valid. Delegates to
          * @ref AbstractAnimator::remove(AnimationHandle), see its
          * documentation for more information.
+         * @see @ref isHandleValid(AnimationHandle) const
          */
         void remove(AnimationHandle handle);
 
@@ -475,6 +481,8 @@ class MAGNUM_UI_EXPORT GenericNodeAnimator: public AbstractGenericAnimator {
          *
          * Compared to @ref remove(AnimationHandle) delegates to
          * @ref AbstractAnimator::remove(AnimatorDataHandle) instead.
+         * @see @ref isHandleValid(AnimatorDataHandle) const,
+         *      @ref animationHandleData()
          */
         void remove(AnimatorDataHandle handle);
 
@@ -484,6 +492,7 @@ class MAGNUM_UI_EXPORT GenericNodeAnimator: public AbstractGenericAnimator {
          * Expects that @p handle is valid. The returned pointer is never
          * @cpp nullptr @ce for animations created with @ref create(), and
          * always @cpp nullptr @ce for animations created with @ref callOnce().
+         * @see @ref isHandleValid(AnimationHandle) const
          */
         auto easing(AnimationHandle handle) const -> Float(*)(Float);
 
@@ -493,7 +502,8 @@ class MAGNUM_UI_EXPORT GenericNodeAnimator: public AbstractGenericAnimator {
          * Like @ref easing(AnimationHandle) const but without checking that
          * @p handle indeed belongs to this animator. See its documentation for
          * more information.
-         * @see @ref animationHandleData()
+         * @see @ref isHandleValid(AnimatorDataHandle) const,
+         *      @ref animationHandleData()
          */
         auto easing(AnimatorDataHandle handle) const -> Float(*)(Float);
 
@@ -739,6 +749,7 @@ class MAGNUM_UI_EXPORT GenericDataAnimator: public AbstractGenericAnimator {
          * Expects that @p handle is valid. Delegates to
          * @ref AbstractAnimator::remove(AnimationHandle), see its
          * documentation for more information.
+         * @see @ref isHandleValid(AnimationHandle) const
          */
         void remove(AnimationHandle handle);
 
@@ -747,6 +758,8 @@ class MAGNUM_UI_EXPORT GenericDataAnimator: public AbstractGenericAnimator {
          *
          * Compared to @ref remove(AnimationHandle) delegates to
          * @ref AbstractAnimator::remove(AnimatorDataHandle) instead.
+         * @see @ref isHandleValid(AnimatorDataHandle) const,
+         *      @ref animationHandleData()
          */
         void remove(AnimatorDataHandle handle);
 
@@ -756,6 +769,7 @@ class MAGNUM_UI_EXPORT GenericDataAnimator: public AbstractGenericAnimator {
          * Expects that @p handle is valid. The returned pointer is never
          * @cpp nullptr @ce for animations created with @ref create(), and
          * always @cpp nullptr @ce for animations created with @ref callOnce().
+         * @see @ref isHandleValid(AnimationHandle) const
          */
         auto easing(AnimationHandle handle) const -> Float(*)(Float);
 
@@ -765,7 +779,8 @@ class MAGNUM_UI_EXPORT GenericDataAnimator: public AbstractGenericAnimator {
          * Like @ref easing(AnimationHandle) const but without checking that
          * @p handle indeed belongs to this animator. See its documentation for
          * more information.
-         * @see @ref animationHandleData()
+         * @see @ref isHandleValid(AnimatorDataHandle) const,
+         *      @ref animationHandleData()
          */
         auto easing(AnimatorDataHandle handle) const -> Float(*)(Float);
 

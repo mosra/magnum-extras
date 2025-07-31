@@ -345,6 +345,8 @@ class MAGNUM_UI_EXPORT BaseLayerStyleAnimator: public AbstractVisualLayerStyleAn
          *      cause the animation to gracefully switch to the target style
          *      during the next @ref advance(), and then be removed
          *      automatically.
+         *
+         * @see @ref isHandleValid(AnimationHandle) const
          */
         void remove(AnimationHandle handle);
 
@@ -353,6 +355,8 @@ class MAGNUM_UI_EXPORT BaseLayerStyleAnimator: public AbstractVisualLayerStyleAn
          *
          * Compared to @ref remove(AnimationHandle) delegates to
          * @ref AbstractAnimator::remove(AnimatorDataHandle) instead.
+         * @see @ref isHandleValid(AnimatorDataHandle) const,
+         *      @ref animationHandleData()
          */
         void remove(AnimatorDataHandle handle);
 
@@ -361,7 +365,7 @@ class MAGNUM_UI_EXPORT BaseLayerStyleAnimator: public AbstractVisualLayerStyleAn
          *
          * Expects that @p handle is valid. The uniforms are queried from
          * @ref BaseLayer::Shared based on style IDs passed to @ref create().
-         * @see @ref paddings()
+         * @see @ref paddings(), @ref isHandleValid(AnimationHandle) const
          */
         Containers::Pair<BaseLayerStyleUniform, BaseLayerStyleUniform> uniforms(AnimationHandle handle) const;
 
@@ -371,7 +375,8 @@ class MAGNUM_UI_EXPORT BaseLayerStyleAnimator: public AbstractVisualLayerStyleAn
          * Like @ref uniforms(AnimationHandle) const but without checking that
          * @p handle indeed belongs to this animator. See its documentation for
          * more information.
-         * @see @ref animationHandleData()
+         * @see @ref isHandleValid(AnimatorDataHandle) const,
+         *      @ref animationHandleData()
          */
         Containers::Pair<BaseLayerStyleUniform, BaseLayerStyleUniform> uniforms(AnimatorDataHandle handle) const;
 
@@ -380,7 +385,7 @@ class MAGNUM_UI_EXPORT BaseLayerStyleAnimator: public AbstractVisualLayerStyleAn
          *
          * Expects that @p handle is valid. The paddings are queried from
          * @ref BaseLayer::Shared based on style IDs passed to @ref create().
-         * @see @ref uniforms()
+         * @see @ref uniforms(), @ref isHandleValid(AnimationHandle) const
          */
         Containers::Pair<Vector4, Vector4> paddings(AnimationHandle handle) const;
 
@@ -390,7 +395,8 @@ class MAGNUM_UI_EXPORT BaseLayerStyleAnimator: public AbstractVisualLayerStyleAn
          * Like @ref paddings(AnimationHandle) const but without checking that
          * @p handle indeed belongs to this animator. See its documentation for
          * more information.
-         * @see @ref animationHandleData()
+         * @see @ref isHandleValid(AnimatorDataHandle) const,
+         *      @ref animationHandleData()
          */
         Containers::Pair<Vector4, Vector4> paddings(AnimatorDataHandle handle) const;
 
@@ -399,6 +405,7 @@ class MAGNUM_UI_EXPORT BaseLayerStyleAnimator: public AbstractVisualLayerStyleAn
          *
          * Expects that @p handle is valid. The returned pointer is never
          * @cpp nullptr @ce.
+         * @see @ref isHandleValid(AnimationHandle) const
          */
         auto easing(AnimationHandle handle) const -> Float(*)(Float);
 
@@ -408,7 +415,8 @@ class MAGNUM_UI_EXPORT BaseLayerStyleAnimator: public AbstractVisualLayerStyleAn
          * Like @ref easing(AnimationHandle) const but without checking that
          * @p handle indeed belongs to this animator. See its documentation for
          * more information.
-         * @see @ref animationHandleData()
+         * @see @ref isHandleValid(AnimatorDataHandle) const,
+         *      @ref animationHandleData()
          */
         auto easing(AnimatorDataHandle handle) const -> Float(*)(Float);
 

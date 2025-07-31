@@ -1041,6 +1041,8 @@ class MAGNUM_UI_EXPORT LineLayer: public AbstractVisualLayer {
          * Like @ref indexCount(DataHandle) const but without checking that
          * @p handle indeed belongs to this layer. See its documentation for
          * more information.
+         * @see @ref isHandleValid(LayerDataHandle) const,
+         *      @ref dataHandleData()
          */
         UnsignedInt indexCount(LayerDataHandle handle) const;
 
@@ -1060,6 +1062,8 @@ class MAGNUM_UI_EXPORT LineLayer: public AbstractVisualLayer {
          * Like @ref pointCount(DataHandle) const but without checking that
          * @p handle indeed belongs to this layer. See its documentation for
          * more information.
+         * @see @ref isHandleValid(LayerDataHandle) const,
+         *      @ref dataHandleData()
          */
         UnsignedInt pointCount(LayerDataHandle handle) const;
 
@@ -1073,8 +1077,8 @@ class MAGNUM_UI_EXPORT LineLayer: public AbstractVisualLayer {
          *
          * Calling this function causes @ref LayerState::NeedsDataUpdate to be
          * set.
-         * @see @ref isHandleValid(DataHandle) const, @see @ref setLineStrip(),
-         *      @ref setLineLoop()
+         * @see @ref setLineStrip(), @ref setLineLoop(),
+         *      @ref isHandleValid(DataHandle) const
          */
         /* This one takes Vector4 instead of Color4 because color views are
            implicitly convertible to vectors but not the other way around */
@@ -1093,6 +1097,8 @@ class MAGNUM_UI_EXPORT LineLayer: public AbstractVisualLayer {
          * Like @ref setLine(DataHandle, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector4>&)
          * but without checking that @p handle indeed belongs to this layer.
          * See its documentation for more information.
+         * @see @ref isHandleValid(LayerDataHandle) const,
+         *      @ref dataHandleData()
          */
         void setLine(LayerDataHandle handle, const Containers::StridedArrayView1D<const UnsignedInt>& indices, const Containers::StridedArrayView1D<const Vector2>& points, const Containers::StridedArrayView1D<const Vector4>& colors);
         /** @overload */
@@ -1108,8 +1114,8 @@ class MAGNUM_UI_EXPORT LineLayer: public AbstractVisualLayer {
          *
          * Calling this function causes @ref LayerState::NeedsDataUpdate to be
          * set.
-         * @see @ref isHandleValid(DataHandle) const, @see @ref setLine(),
-         *      @ref setLineLoop()
+         * @see @ref setLine(), @ref setLineLoop(),
+         *      @ref isHandleValid(DataHandle) const
          */
         /* This one takes Vector4 instead of Color4 because color views are
            implicitly convertible to vectors but not the other way around */
@@ -1128,6 +1134,8 @@ class MAGNUM_UI_EXPORT LineLayer: public AbstractVisualLayer {
          * Like @ref setLineStrip(DataHandle, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector4>&)
          * but without checking that @p handle indeed belongs to this layer.
          * See its documentation for more information.
+         * @see @ref isHandleValid(LayerDataHandle) const,
+         *      @ref dataHandleData()
          */
         void setLineStrip(LayerDataHandle handle, const Containers::StridedArrayView1D<const Vector2>& points, const Containers::StridedArrayView1D<const Vector4>& colors);
         /** @overload */
@@ -1143,8 +1151,8 @@ class MAGNUM_UI_EXPORT LineLayer: public AbstractVisualLayer {
          *
          * Calling this function causes @ref LayerState::NeedsDataUpdate to be
          * set.
-         * @see @ref isHandleValid(DataHandle) const, @see @ref setLine(),
-         *      @ref setLineStrip()
+         * @see @ref setLine(), @ref setLineStrip(),
+         *      @ref isHandleValid(DataHandle) const
          */
         /* This one takes Vector4 instead of Color4 because color views are
            implicitly convertible to vectors but not the other way around */
@@ -1163,6 +1171,8 @@ class MAGNUM_UI_EXPORT LineLayer: public AbstractVisualLayer {
          * Like @ref setLineLoop(DataHandle, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector4>&)
          * but without checking that @p handle indeed belongs to this layer.
          * See its documentation for more information.
+         * @see @ref isHandleValid(LayerDataHandle) const,
+         *      @ref dataHandleData()
          */
         void setLineLoop(LayerDataHandle handle, const Containers::StridedArrayView1D<const Vector2>& points, const Containers::StridedArrayView1D<const Vector4>& colors);
         /** @overload */
@@ -1180,7 +1190,8 @@ class MAGNUM_UI_EXPORT LineLayer: public AbstractVisualLayer {
          * @brief Custom line color assuming it belongs to this layer
          *
          * Expects that @p handle is valid.
-         * @see @ref isHandleValid(LayerDataHandle) const
+         * @see @ref isHandleValid(LayerDataHandle) const,
+         *      @ref dataHandleData()
          */
         Color4 color(LayerDataHandle handle) const;
 
@@ -1208,6 +1219,8 @@ class MAGNUM_UI_EXPORT LineLayer: public AbstractVisualLayer {
          * Like @ref setColor(DataHandle, const Color4&) but without checking
          * that @p handle indeed belongs to this layer. See its documentation
          * for more information.
+         * @see @ref isHandleValid(LayerDataHandle) const,
+         *      @ref dataHandleData()
          */
         void setColor(LayerDataHandle handle, const Color4& color);
 
@@ -1227,7 +1240,8 @@ class MAGNUM_UI_EXPORT LineLayer: public AbstractVisualLayer {
          * Expects that @p handle is valid. If
          * @relativeref{Corrade,Containers::NullOpt}, alignment coming from the
          * style is used.
-         * @see @ref isHandleValid(LayerDataHandle) const
+         * @see @ref isHandleValid(LayerDataHandle) const,
+         *      @ref dataHandleData()
          */
         Containers::Optional<LineAlignment> alignment(LayerDataHandle handle) const;
 
@@ -1250,6 +1264,8 @@ class MAGNUM_UI_EXPORT LineLayer: public AbstractVisualLayer {
          * Like @ref setAlignment(DataHandle, Containers::Optional<LineAlignment>)
          * but without checking that @p handle indeed belongs to this layer.
          * See its documentation for more information.
+         * @see @ref isHandleValid(LayerDataHandle) const,
+         *      @ref dataHandleData()
          */
         void setAlignment(LayerDataHandle handle, Containers::Optional<LineAlignment> alignment);
 
@@ -1268,6 +1284,8 @@ class MAGNUM_UI_EXPORT LineLayer: public AbstractVisualLayer {
          * Like @ref padding(DataHandle) const but without checking that
          * @p handle indeed belongs to this layer. See its documentation for
          * more information.
+         * @see @ref isHandleValid(LayerDataHandle) const,
+         *      @ref dataHandleData()
          */
         Vector4 padding(LayerDataHandle handle) const;
 
@@ -1292,6 +1310,8 @@ class MAGNUM_UI_EXPORT LineLayer: public AbstractVisualLayer {
          * Like @ref setPadding(DataHandle, const Vector4&) but without
          * checking that @p handle indeed belongs to this layer. See its
          * documentation for more information.
+         * @see @ref isHandleValid(LayerDataHandle) const,
+         *      @ref dataHandleData()
          */
         void setPadding(LayerDataHandle handle, const Vector4& padding);
 
@@ -1312,6 +1332,8 @@ class MAGNUM_UI_EXPORT LineLayer: public AbstractVisualLayer {
          * Like @ref setPadding(DataHandle, Float) but without checking that
          * @p handle indeed belongs to this layer. See its documentation for
          * more information.
+         * @see @ref isHandleValid(LayerDataHandle) const,
+         *      @ref dataHandleData()
          */
         void setPadding(LayerDataHandle handle, Float padding) {
             setPadding(handle, Vector4{padding});
