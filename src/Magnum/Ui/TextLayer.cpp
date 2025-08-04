@@ -2100,7 +2100,7 @@ void TextLayer::doClean(const Containers::BitArrayView dataIdsToRemove) {
 void TextLayer::doAdvanceAnimations(const Nanoseconds time, const Containers::MutableBitArrayView activeStorage, const Containers::MutableBitArrayView startedStorage, const Containers::MutableBitArrayView stoppedStorage, const Containers::StridedArrayView1D<Float>& factorStorage, const Containers::MutableBitArrayView removeStorage, const Containers::Iterable<AbstractStyleAnimator>& animators) {
     auto& state = static_cast<State&>(*_state);
 
-    TextLayerStyleAnimations animations;
+    TextLayerStyleAnimatorUpdates updates;
     for(AbstractStyleAnimator& animator: animators) {
         if(!(animator.state() >= AnimatorState::NeedsAdvance))
             continue;
@@ -2114,7 +2114,7 @@ void TextLayer::doAdvanceAnimations(const Nanoseconds time, const Containers::Mu
             removeStorage.prefix(capacity));
 
         if(needsAdvanceClean.first())
-            animations |= static_cast<TextLayerStyleAnimator&>(animator).advance(
+            updates |= static_cast<TextLayerStyleAnimator&>(animator).advance(
                 activeStorage.prefix(capacity),
                 factorStorage.prefix(capacity),
                 removeStorage.prefix(capacity),
@@ -2129,13 +2129,13 @@ void TextLayer::doAdvanceAnimations(const Nanoseconds time, const Containers::Mu
             animator.clean(removeStorage.prefix(capacity));
     }
 
-    if(animations & (TextLayerStyleAnimation::Style|TextLayerStyleAnimation::Padding|TextLayerStyleAnimation::EditingPadding))
+    if(updates & (TextLayerStyleAnimatorUpdate::Style|TextLayerStyleAnimatorUpdate::Padding|TextLayerStyleAnimatorUpdate::EditingPadding))
         setNeedsUpdate(LayerState::NeedsDataUpdate);
-    if(animations >= TextLayerStyleAnimation::Uniform) {
+    if(updates >= TextLayerStyleAnimatorUpdate::Uniform) {
         setNeedsUpdate(LayerState::NeedsCommonDataUpdate);
         state.dynamicStyleChanged = true;
     }
-    if(animations >= TextLayerStyleAnimation::EditingUniform) {
+    if(updates >= TextLayerStyleAnimatorUpdate::EditingUniform) {
         setNeedsUpdate(LayerState::NeedsCommonDataUpdate);
         state.dynamicEditingStyleChanged = true;
     }

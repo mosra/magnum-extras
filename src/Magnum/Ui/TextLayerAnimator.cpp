@@ -41,12 +41,12 @@
 
 namespace Magnum { namespace Ui {
 
-Debug& operator<<(Debug& debug, const TextLayerStyleAnimation value) {
-    debug << "Ui::TextLayerStyleAnimation" << Debug::nospace;
+Debug& operator<<(Debug& debug, const TextLayerStyleAnimatorUpdate value) {
+    debug << "Ui::TextLayerStyleAnimatorUpdate" << Debug::nospace;
 
     switch(value) {
         /* LCOV_EXCL_START */
-        #define _c(value) case TextLayerStyleAnimation::value: return debug << "::" #value;
+        #define _c(value) case TextLayerStyleAnimatorUpdate::value: return debug << "::" #value;
         _c(Uniform)
         _c(Padding)
         _c(EditingUniform)
@@ -59,13 +59,13 @@ Debug& operator<<(Debug& debug, const TextLayerStyleAnimation value) {
     return debug << "(" << Debug::nospace << Debug::hex << UnsignedByte(value) << Debug::nospace << ")";
 }
 
-Debug& operator<<(Debug& debug, const TextLayerStyleAnimations value) {
-    return Containers::enumSetDebugOutput(debug, value, "Ui::TextLayerStyleAnimations{}", {
-        TextLayerStyleAnimation::Uniform,
-        TextLayerStyleAnimation::Padding,
-        TextLayerStyleAnimation::EditingUniform,
-        TextLayerStyleAnimation::EditingPadding,
-        TextLayerStyleAnimation::Style
+Debug& operator<<(Debug& debug, const TextLayerStyleAnimatorUpdates value) {
+    return Containers::enumSetDebugOutput(debug, value, "Ui::TextLayerStyleAnimatorUpdates{}", {
+        TextLayerStyleAnimatorUpdate::Uniform,
+        TextLayerStyleAnimatorUpdate::Padding,
+        TextLayerStyleAnimatorUpdate::EditingUniform,
+        TextLayerStyleAnimatorUpdate::EditingPadding,
+        TextLayerStyleAnimatorUpdate::Style
     });
 }
 
@@ -414,7 +414,7 @@ TextLayerEditingStyleUniform interpolateUniform(const TextLayerEditingStyleUnifo
 
 }
 
-TextLayerStyleAnimations TextLayerStyleAnimator::advance(const Containers::BitArrayView active, const Containers::StridedArrayView1D<const Float>& factors, const Containers::BitArrayView remove, const Containers::ArrayView<TextLayerStyleUniform> dynamicStyleUniforms, const Containers::MutableBitArrayView dynamicStyleCursorStyles, const Containers::MutableBitArrayView dynamicStyleSelectionStyles, const Containers::StridedArrayView1D<Vector4>& dynamicStylePaddings, const Containers::ArrayView<TextLayerEditingStyleUniform> dynamicEditingStyleUniforms, const Containers::StridedArrayView1D<Vector4>& dynamicEditingStylePaddings, const Containers::StridedArrayView1D<UnsignedInt>& dataStyles) {
+TextLayerStyleAnimatorUpdates TextLayerStyleAnimator::advance(const Containers::BitArrayView active, const Containers::StridedArrayView1D<const Float>& factors, const Containers::BitArrayView remove, const Containers::ArrayView<TextLayerStyleUniform> dynamicStyleUniforms, const Containers::MutableBitArrayView dynamicStyleCursorStyles, const Containers::MutableBitArrayView dynamicStyleSelectionStyles, const Containers::StridedArrayView1D<Vector4>& dynamicStylePaddings, const Containers::ArrayView<TextLayerEditingStyleUniform> dynamicEditingStyleUniforms, const Containers::StridedArrayView1D<Vector4>& dynamicEditingStylePaddings, const Containers::StridedArrayView1D<UnsignedInt>& dataStyles) {
     CORRADE_ASSERT(active.size() == capacity() &&
                    factors.size() == capacity() &&
                    remove.size() == capacity(),
@@ -447,7 +447,7 @@ TextLayerStyleAnimations TextLayerStyleAnimator::advance(const Containers::BitAr
     const TextLayer::Shared::State& layerSharedState = static_cast<const TextLayer::Shared::State&>(*state.layerSharedState);
     const Containers::StridedArrayView1D<const LayerDataHandle> layerData = this->layerData();
 
-    TextLayerStyleAnimations animations;
+    TextLayerStyleAnimatorUpdates updates;
     /** @todo some way to iterate set bits */
     for(std::size_t i = 0; i != active.size(); ++i) {
         if(!active[i]) continue;
@@ -465,7 +465,7 @@ TextLayerStyleAnimations TextLayerStyleAnimator::advance(const Containers::BitAr
             CORRADE_INTERNAL_ASSERT(factors[i] == 1.0f);
             if(data != LayerDataHandle::Null) {
                 dataStyles[layerDataHandleId(data)] = animation.targetStyle;
-                animations |= TextLayerStyleAnimation::Style;
+                updates |= TextLayerStyleAnimatorUpdate::Style;
             }
             continue;
         }
@@ -512,23 +512,23 @@ TextLayerStyleAnimations TextLayerStyleAnimator::advance(const Containers::BitAr
 
             if(data != LayerDataHandle::Null) {
                 dataStyles[layerDataHandleId(data)] = layerSharedState.styleCount + animation.dynamicStyle;
-                animations |= TextLayerStyleAnimation::Style;
+                updates |= TextLayerStyleAnimatorUpdate::Style;
                 /* If the uniform IDs are the same between the source and
                    target style, the uniform interpolation below won't happen.
                    We still need to upload it at least once though, so trigger
                    it here unconditionally. */
-                animations |= TextLayerStyleAnimation::Uniform;
+                updates |= TextLayerStyleAnimatorUpdate::Uniform;
                 /* Same for the editing uniform buffer, if there's an editing
                    style */
                 if(animation.hasCursorStyle || animation.hasSelectionStyle)
-                    animations |= TextLayerStyleAnimation::EditingUniform;
+                    updates |= TextLayerStyleAnimatorUpdate::EditingUniform;
             }
 
             /* If the animation is attached to some data, the above already
                triggers a Style update, which results in appropriate editing
                quads being made. If the animation isn't attached to any data,
                there's nothing to be done based on those so there's no reason
-               to set any TextLayerStyleAnimation. */
+               to set any TextLayerStyleAnimatorUpdate. */
             dynamicStyleCursorStyles.set(animation.dynamicStyle, animation.hasCursorStyle);
             dynamicStyleSelectionStyles.set(animation.dynamicStyle, animation.hasSelectionStyle);
         }
@@ -542,7 +542,7 @@ TextLayerStyleAnimations TextLayerStyleAnimator::advance(const Containers::BitAr
            the animation.styleDynamic allocation above. */
         if(animation.uniformDifferent) {
             dynamicStyleUniforms[animation.dynamicStyle] = interpolateUniform(animation.sourceUniform, animation.targetUniform, factor);
-            animations |= TextLayerStyleAnimation::Uniform;
+            updates |= TextLayerStyleAnimatorUpdate::Uniform;
         } else dynamicStyleUniforms[animation.dynamicStyle] = animation.targetUniform;
 
         /* Interpolate the padding. Compared to the uniforms, updated padding
@@ -552,7 +552,7 @@ TextLayerStyleAnimations TextLayerStyleAnimator::advance(const Containers::BitAr
                                            animation.targetPadding, factor);
         if(dynamicStylePaddings[animation.dynamicStyle] != padding) {
             dynamicStylePaddings[animation.dynamicStyle] = padding;
-            animations |= TextLayerStyleAnimation::Padding;
+            updates |= TextLayerStyleAnimatorUpdate::Padding;
         }
 
         /* If there's a cursor, interpolate it as well. Logic same as above. */
@@ -561,7 +561,7 @@ TextLayerStyleAnimations TextLayerStyleAnimator::advance(const Containers::BitAr
 
             if(animation.cursorUniformDifferent) {
                 dynamicEditingStyleUniforms[editingStyleId] = interpolateUniform(animation.sourceCursorUniform, animation.targetCursorUniform, factor);
-                animations |= TextLayerStyleAnimation::EditingUniform;
+                updates |= TextLayerStyleAnimatorUpdate::EditingUniform;
             } else dynamicEditingStyleUniforms[editingStyleId] = animation.targetCursorUniform;
 
             const Vector4 cursorPadding = Math::lerp(
@@ -569,7 +569,7 @@ TextLayerStyleAnimations TextLayerStyleAnimator::advance(const Containers::BitAr
                 animation.targetCursorPadding, factor);
             if(dynamicEditingStylePaddings[editingStyleId] != cursorPadding) {
                 dynamicEditingStylePaddings[editingStyleId] = cursorPadding;
-                animations |= TextLayerStyleAnimation::EditingPadding;
+                updates |= TextLayerStyleAnimatorUpdate::EditingPadding;
             }
         }
 
@@ -580,7 +580,7 @@ TextLayerStyleAnimations TextLayerStyleAnimator::advance(const Containers::BitAr
 
             if(animation.selectionUniformDifferent) {
                 dynamicEditingStyleUniforms[editingStyleId] = interpolateUniform(animation.sourceSelectionUniform, animation.targetSelectionUniform, factor);
-                animations |= TextLayerStyleAnimation::EditingUniform;
+                updates |= TextLayerStyleAnimatorUpdate::EditingUniform;
             } else dynamicEditingStyleUniforms[editingStyleId] = animation.targetSelectionUniform;
 
             const Vector4 selectionPadding = Math::lerp(
@@ -588,18 +588,18 @@ TextLayerStyleAnimations TextLayerStyleAnimator::advance(const Containers::BitAr
                 animation.targetSelectionPadding, factor);
             if(dynamicEditingStylePaddings[editingStyleId] != selectionPadding) {
                 dynamicEditingStylePaddings[editingStyleId] = selectionPadding;
-                animations |= TextLayerStyleAnimation::EditingPadding;
+                updates |= TextLayerStyleAnimatorUpdate::EditingPadding;
             }
 
             const UnsignedInt textStyleId = Implementation::selectionStyleTextUniformForDynamicStyle(layerSharedState.dynamicStyleCount, animation.dynamicStyle);
             if(animation.selectionTextUniformDifferent) {
                 dynamicStyleUniforms[textStyleId] = interpolateUniform(animation.sourceSelectionTextUniform, animation.targetSelectionTextUniform, factor);
-                animations |= TextLayerStyleAnimation::Uniform;
+                updates |= TextLayerStyleAnimatorUpdate::Uniform;
             } else dynamicStyleUniforms[textStyleId] = animation.targetSelectionTextUniform;
         }
     }
 
-    return animations;
+    return updates;
 }
 
 }}

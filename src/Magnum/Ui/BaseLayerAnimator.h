@@ -27,7 +27,7 @@
 */
 
 /** @file
- * @brief Class @ref Magnum::Ui::BaseLayerStyleAnimator, enum @ref Magnum::Ui::BaseLayerStyleAnimation, enum set @ref Magnum::Ui::BaseLayerStyleAnimations
+ * @brief Class @ref Magnum::Ui::BaseLayerStyleAnimator, enum @ref Magnum::Ui::BaseLayerStyleAnimatorUpdate, enum set @ref Magnum::Ui::BaseLayerStyleAnimatorUpdates
  * @m_since_latest
  */
 
@@ -47,9 +47,9 @@ and other internal @ref AbstractLayer state to be set after an
 @ref AbstractUserInterface::advanceAnimations() (and transitively
 @ref AbstractLayer::advanceAnimations(Nanoseconds, Containers::MutableBitArrayView, Containers::MutableBitArrayView, Containers::MutableBitArrayView, const Containers::StridedArrayView1D<Float>&, Containers::MutableBitArrayView, const Containers::Iterable<AbstractStyleAnimator>&))
 call.
-@see @ref BaseLayerStyleAnimations
+@see @ref BaseLayerStyleAnimatorUpdates
 */
-enum class BaseLayerStyleAnimation: UnsignedByte {
+enum class BaseLayerStyleAnimatorUpdate: UnsignedByte {
     /**
      * Style uniform data. Equivalently to calling
      * @ref BaseLayer::setDynamicStyle(), causes
@@ -72,10 +72,10 @@ enum class BaseLayerStyleAnimation: UnsignedByte {
 };
 
 /**
-@debugoperatorenum{BaseLayerStyleAnimation}
+@debugoperatorenum{BaseLayerStyleAnimatorUpdate}
 @m_since_latest
 */
-MAGNUM_UI_EXPORT Debug& operator<<(Debug& debug, BaseLayerStyleAnimation value);
+MAGNUM_UI_EXPORT Debug& operator<<(Debug& debug, BaseLayerStyleAnimatorUpdate value);
 
 /**
 @brief Set of base layer style properties that are being animated
@@ -83,15 +83,15 @@ MAGNUM_UI_EXPORT Debug& operator<<(Debug& debug, BaseLayerStyleAnimation value);
 
 @see @ref BaseLayerStyleAnimator::advance()
 */
-typedef Containers::EnumSet<BaseLayerStyleAnimation> BaseLayerStyleAnimations;
+typedef Containers::EnumSet<BaseLayerStyleAnimatorUpdate> BaseLayerStyleAnimatorUpdates;
 
 /**
-@debugoperatorenum{BaseLayerStyleAnimations}
+@debugoperatorenum{BaseLayerStyleAnimatorUpdates}
 @m_since_latest
 */
-MAGNUM_UI_EXPORT Debug& operator<<(Debug& debug, BaseLayerStyleAnimations value);
+MAGNUM_UI_EXPORT Debug& operator<<(Debug& debug, BaseLayerStyleAnimatorUpdates value);
 
-CORRADE_ENUMSET_OPERATORS(BaseLayerStyleAnimations)
+CORRADE_ENUMSET_OPERATORS(BaseLayerStyleAnimatorUpdates)
 
 /**
 @brief Base layer style animator
@@ -434,7 +434,7 @@ class MAGNUM_UI_EXPORT BaseLayerStyleAnimator: public AbstractVisualLayerStyleAn
          *      dynamic style ID
          * @param[in,out] dataStyles            Style assignments of all layer
          *      data indexed by data ID
-         * @return Style properties that were affected by the animation
+         * @return Style properties that were updated by the animation
          *
          * Used internally from @ref BaseLayer::advanceAnimations(Nanoseconds, Containers::MutableBitArrayView, Containers::MutableBitArrayView, Containers::MutableBitArrayView, const Containers::StridedArrayView1D<Float>&, Containers::MutableBitArrayView, const Containers::Iterable<AbstractStyleAnimator>&),
          * which is called from @ref AbstractUserInterface::advanceAnimations().
@@ -450,7 +450,7 @@ class MAGNUM_UI_EXPORT BaseLayerStyleAnimator: public AbstractVisualLayerStyleAn
          * @p dataStyles view should be large enough to contain any valid layer
          * data ID.
          */
-        BaseLayerStyleAnimations advance(Containers::BitArrayView active, const Containers::StridedArrayView1D<const Float>& factors, Containers::BitArrayView remove, Containers::ArrayView<BaseLayerStyleUniform> dynamicStyleUniforms, const Containers::StridedArrayView1D<Vector4>& dynamicStylePaddings, const Containers::StridedArrayView1D<UnsignedInt>& dataStyles);
+        BaseLayerStyleAnimatorUpdates advance(Containers::BitArrayView active, const Containers::StridedArrayView1D<const Float>& factors, Containers::BitArrayView remove, Containers::ArrayView<BaseLayerStyleUniform> dynamicStyleUniforms, const Containers::StridedArrayView1D<Vector4>& dynamicStylePaddings, const Containers::StridedArrayView1D<UnsignedInt>& dataStyles);
 
     private:
         struct State;

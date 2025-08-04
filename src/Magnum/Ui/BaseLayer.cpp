@@ -482,7 +482,7 @@ void BaseLayer::doSetSize(const Vector2& size, const Vector2i& framebufferSize) 
 void BaseLayer::doAdvanceAnimations(const Nanoseconds time, const Containers::MutableBitArrayView activeStorage, const Containers::MutableBitArrayView startedStorage, const Containers::MutableBitArrayView stoppedStorage, const Containers::StridedArrayView1D<Float>& factorStorage, const Containers::MutableBitArrayView removeStorage, const Containers::Iterable<AbstractStyleAnimator>& animators) {
     auto& state = static_cast<State&>(*_state);
 
-    BaseLayerStyleAnimations animations;
+    BaseLayerStyleAnimatorUpdates updates;
     for(AbstractStyleAnimator& animator: animators) {
         if(!(animator.state() >= AnimatorState::NeedsAdvance))
             continue;
@@ -496,7 +496,7 @@ void BaseLayer::doAdvanceAnimations(const Nanoseconds time, const Containers::Mu
             removeStorage.prefix(capacity));
 
         if(needsAdvanceClean.first())
-            animations |= static_cast<BaseLayerStyleAnimator&>(animator).advance(
+            updates |= static_cast<BaseLayerStyleAnimator&>(animator).advance(
                 activeStorage.prefix(capacity),
                 factorStorage.prefix(capacity),
                 removeStorage.prefix(capacity),
@@ -507,9 +507,9 @@ void BaseLayer::doAdvanceAnimations(const Nanoseconds time, const Containers::Mu
             animator.clean(removeStorage.prefix(capacity));
     }
 
-    if(animations & (BaseLayerStyleAnimation::Style|BaseLayerStyleAnimation::Padding))
+    if(updates & (BaseLayerStyleAnimatorUpdate::Style|BaseLayerStyleAnimatorUpdate::Padding))
         setNeedsUpdate(LayerState::NeedsDataUpdate);
-    if(animations >= BaseLayerStyleAnimation::Uniform) {
+    if(updates >= BaseLayerStyleAnimatorUpdate::Uniform) {
         setNeedsUpdate(LayerState::NeedsCommonDataUpdate);
         state.dynamicStyleChanged = true;
     }

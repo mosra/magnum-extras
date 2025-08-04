@@ -41,12 +41,12 @@
 
 namespace Magnum { namespace Ui {
 
-Debug& operator<<(Debug& debug, const BaseLayerStyleAnimation value) {
-    debug << "Ui::BaseLayerStyleAnimation" << Debug::nospace;
+Debug& operator<<(Debug& debug, const BaseLayerStyleAnimatorUpdate value) {
+    debug << "Ui::BaseLayerStyleAnimatorUpdate" << Debug::nospace;
 
     switch(value) {
         /* LCOV_EXCL_START */
-        #define _c(value) case BaseLayerStyleAnimation::value: return debug << "::" #value;
+        #define _c(value) case BaseLayerStyleAnimatorUpdate::value: return debug << "::" #value;
         _c(Uniform)
         _c(Padding)
         _c(Style)
@@ -57,11 +57,11 @@ Debug& operator<<(Debug& debug, const BaseLayerStyleAnimation value) {
     return debug << "(" << Debug::nospace << Debug::hex << UnsignedByte(value) << Debug::nospace << ")";
 }
 
-Debug& operator<<(Debug& debug, const BaseLayerStyleAnimations value) {
-    return Containers::enumSetDebugOutput(debug, value, "Ui::BaseLayerStyleAnimations{}", {
-        BaseLayerStyleAnimation::Uniform,
-        BaseLayerStyleAnimation::Padding,
-        BaseLayerStyleAnimation::Style
+Debug& operator<<(Debug& debug, const BaseLayerStyleAnimatorUpdates value) {
+    return Containers::enumSetDebugOutput(debug, value, "Ui::BaseLayerStyleAnimatorUpdates{}", {
+        BaseLayerStyleAnimatorUpdate::Uniform,
+        BaseLayerStyleAnimatorUpdate::Padding,
+        BaseLayerStyleAnimatorUpdate::Style
     });
 }
 
@@ -210,7 +210,7 @@ auto BaseLayerStyleAnimator::easing(const AnimatorDataHandle handle) const -> Fl
     return static_cast<const State&>(*_state).animations[animatorDataHandleId(handle)].easing;
 }
 
-BaseLayerStyleAnimations BaseLayerStyleAnimator::advance(const Containers::BitArrayView active, const Containers::StridedArrayView1D<const Float>& factors, const Containers::BitArrayView remove, const Containers::ArrayView<BaseLayerStyleUniform> dynamicStyleUniforms, const Containers::StridedArrayView1D<Vector4>& dynamicStylePaddings, const Containers::StridedArrayView1D<UnsignedInt>& dataStyles) {
+BaseLayerStyleAnimatorUpdates BaseLayerStyleAnimator::advance(const Containers::BitArrayView active, const Containers::StridedArrayView1D<const Float>& factors, const Containers::BitArrayView remove, const Containers::ArrayView<BaseLayerStyleUniform> dynamicStyleUniforms, const Containers::StridedArrayView1D<Vector4>& dynamicStylePaddings, const Containers::StridedArrayView1D<UnsignedInt>& dataStyles) {
     CORRADE_ASSERT(active.size() == capacity() &&
                    factors.size() == capacity() &&
                    remove.size() == capacity(),
@@ -226,7 +226,7 @@ BaseLayerStyleAnimations BaseLayerStyleAnimator::advance(const Containers::BitAr
     const BaseLayer::Shared::State& layerSharedState = static_cast<const BaseLayer::Shared::State&>(*state.layerSharedState);
     const Containers::StridedArrayView1D<const LayerDataHandle> layerData = this->layerData();
 
-    BaseLayerStyleAnimations animations;
+    BaseLayerStyleAnimatorUpdates updates;
     /** @todo some way to iterate set bits */
     for(std::size_t i = 0; i != active.size(); ++i) {
         if(!active[i]) continue;
@@ -244,7 +244,7 @@ BaseLayerStyleAnimations BaseLayerStyleAnimator::advance(const Containers::BitAr
             CORRADE_INTERNAL_ASSERT(factors[i] == 1.0f);
             if(data != LayerDataHandle::Null) {
                 dataStyles[layerDataHandleId(data)] = animation.targetStyle;
-                animations |= BaseLayerStyleAnimation::Style;
+                updates |= BaseLayerStyleAnimatorUpdate::Style;
             }
             continue;
         }
@@ -273,12 +273,12 @@ BaseLayerStyleAnimations BaseLayerStyleAnimator::advance(const Containers::BitAr
 
             if(data != LayerDataHandle::Null) {
                 dataStyles[layerDataHandleId(data)] = layerSharedState.styleCount + animation.dynamicStyle;
-                animations |= BaseLayerStyleAnimation::Style;
+                updates |= BaseLayerStyleAnimatorUpdate::Style;
                 /* If the uniform IDs are the same between the source and
                    target style, the uniform interpolation below won't happen.
                    We still need to upload it at least once though, so trigger
                    it here unconditionally. */
-                animations |= BaseLayerStyleAnimation::Uniform;
+                updates |= BaseLayerStyleAnimatorUpdate::Uniform;
             }
         }
 
@@ -302,7 +302,7 @@ BaseLayerStyleAnimations BaseLayerStyleAnimator::advance(const Containers::BitAr
             _c(innerOutlineCornerRadius)
             #undef _c
             dynamicStyleUniforms[animation.dynamicStyle] = uniform;
-            animations |= BaseLayerStyleAnimation::Uniform;
+            updates |= BaseLayerStyleAnimatorUpdate::Uniform;
         } else dynamicStyleUniforms[animation.dynamicStyle] = animation.targetUniform;
 
         /* Interpolate the padding. Compared to the uniforms, updated padding
@@ -312,11 +312,11 @@ BaseLayerStyleAnimations BaseLayerStyleAnimator::advance(const Containers::BitAr
                                            animation.targetPadding, factor);
         if(dynamicStylePaddings[animation.dynamicStyle] != padding) {
             dynamicStylePaddings[animation.dynamicStyle] = padding;
-            animations |= BaseLayerStyleAnimation::Padding;
+            updates |= BaseLayerStyleAnimatorUpdate::Padding;
         }
     }
 
-    return animations;
+    return updates;
 }
 
 }}

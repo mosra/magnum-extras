@@ -54,8 +54,8 @@ namespace Magnum { namespace Ui { namespace Test { namespace {
 struct TextLayerStyleAnimatorTest: TestSuite::Tester {
     explicit TextLayerStyleAnimatorTest();
 
-    void debugAnimation();
-    void debugAnimations();
+    void debugAnimatorUpdate();
+    void debugAnimatorUpdates();
 
     void construct();
     void constructCopy();
@@ -119,103 +119,103 @@ const struct {
     UnsignedInt editingUniform;
     Int editingTextUniform1, editingTextUniform2;
     Vector4 editingPadding;
-    TextLayerStyleAnimations expectedAnimations;
+    TextLayerStyleAnimatorUpdates expectedUpdates;
     UnsignedInt expectedEditingTextUniform1, expectedEditingTextUniform2;
 } AdvancePropertiesData[]{
     {"nothing changes, no editing styles",
         1, Vector4{2.0f},
         -1, -1, 0, -1, -1, {},
-        TextLayerStyleAnimation{}, 0, 0},
+        TextLayerStyleAnimatorUpdate{}, 0, 0},
     {"nothing changes, cursor style",
         1, Vector4{2.0f},
         1, -1, 0, -1, -1, Vector4{1.0f},
-        TextLayerStyleAnimation{}, 0, 0},
+        TextLayerStyleAnimatorUpdate{}, 0, 0},
     {"nothing changes, selection style",
         1, Vector4{2.0f},
         -1, 1, 2, 2, 2, Vector4{3.0f},
-        TextLayerStyleAnimation{}, 2, 2},
+        TextLayerStyleAnimatorUpdate{}, 2, 2},
     {"nothing changes, selection style with unset text editing style",
         1, Vector4{2.0f},
         /* Because the original uniform ID is unchanged, the text uniform ID
            (which falls back to the original uniform ID) is also unchanged */
         -1, 1, 2, -1, -1, Vector4{3.0f},
-        TextLayerStyleAnimation{}, 1, 1},
+        TextLayerStyleAnimatorUpdate{}, 1, 1},
     {"nothing changes, selection style with one unset text editing style",
         1, Vector4{2.0f},
         /* Same case */
         -1, 1, 2, 1, -1, Vector4{3.0f},
-        TextLayerStyleAnimation{}, 1, 1},
+        TextLayerStyleAnimatorUpdate{}, 1, 1},
     {"nothing changes, selection style with another unset text editing style",
         1, Vector4{2.0f},
         /* Same case */
         -1, 1, 2, -1, 1, Vector4{3.0f},
-        TextLayerStyleAnimation{}, 1, 1},
+        TextLayerStyleAnimatorUpdate{}, 1, 1},
 
     {"uniform ID changes",
         0, Vector4{2.0f},
         -1, -1, 0, -1, -1, {},
-        TextLayerStyleAnimation::Uniform, 0, 0},
+        TextLayerStyleAnimatorUpdate::Uniform, 0, 0},
     {"cursor uniform ID changes",
         1, Vector4{2.0f},
         1, -1, 3, -1, -1, Vector4{1.0f},
-        TextLayerStyleAnimation::EditingUniform, 0, 0},
+        TextLayerStyleAnimatorUpdate::EditingUniform, 0, 0},
     {"selection uniform ID changes",
         1, Vector4{2.0f},
         -1, 1, 3, 2, 2, Vector4{3.0f},
-        TextLayerStyleAnimation::EditingUniform, 2, 2},
+        TextLayerStyleAnimatorUpdate::EditingUniform, 2, 2},
     {"selection text uniform ID changes",
         1, Vector4{2.0f},
         -1, 1, 2, 2, 1, Vector4{3.0f},
-        TextLayerStyleAnimation::Uniform, 2, 1},
+        TextLayerStyleAnimatorUpdate::Uniform, 2, 1},
     {"selection text uniform ID changes, one unset",
         1, Vector4{2.0f},
         -1, 1, 2, 2, -1, Vector4{3.0f},
-        TextLayerStyleAnimation::Uniform, 2, 1},
+        TextLayerStyleAnimatorUpdate::Uniform, 2, 1},
 
     /* Still reports uniform change because comparing all values is unnecessary
        complexity */
     {"uniform ID changes but data stay the same",
         3, Vector4{2.0f},
         -1, -1, 0, -1, -1, {},
-        TextLayerStyleAnimation::Uniform, 0, 0},
+        TextLayerStyleAnimatorUpdate::Uniform, 0, 0},
     {"cursor uniform ID changes but data stay the same",
         1, Vector4{2.0f},
         1, -1, 4, -1, -1, Vector4{1.0f},
-        TextLayerStyleAnimation::EditingUniform, 0, 0},
+        TextLayerStyleAnimatorUpdate::EditingUniform, 0, 0},
     {"selection uniform ID changes but data stay the same",
         1, Vector4{2.0f},
         -1, 1, 3, 2, 2, Vector4{3.0f},
-        TextLayerStyleAnimation::EditingUniform, 2, 2},
+        TextLayerStyleAnimatorUpdate::EditingUniform, 2, 2},
     {"selection text uniform ID changes but data stay the same",
         1, Vector4{2.0f},
         -1, 1, 2, 2, 4, Vector4{3.0f},
-        TextLayerStyleAnimation::Uniform, 2, 2}, /* text uniform 4 is same as 2 */
+        TextLayerStyleAnimatorUpdate::Uniform, 2, 2}, /* text uniform 4 is same as 2 */
 
     {"padding changes",
         1, Vector4{4.0f},
         -1, -1, 0, -1, -1, {},
-        TextLayerStyleAnimation::Padding, 0, 0},
+        TextLayerStyleAnimatorUpdate::Padding, 0, 0},
     {"cursor padding changes",
         1, Vector4{2.0f},
         1, -1, 0, -1, -1, Vector4{3.0f},
-        TextLayerStyleAnimation::EditingPadding, 0, 0},
+        TextLayerStyleAnimatorUpdate::EditingPadding, 0, 0},
     {"selection padding changes",
         1, Vector4{2.0f},
         -1, 1, 2, 2, 2, Vector4{1.0f},
-        TextLayerStyleAnimation::EditingPadding, 2, 2},
+        TextLayerStyleAnimatorUpdate::EditingPadding, 2, 2},
 
     {"uniform ID + padding changes",
         0, Vector4{4.0f},
         -1, -1, 0, -1, -1, {},
-        TextLayerStyleAnimation::Padding|TextLayerStyleAnimation::Uniform, 0, 0},
+        TextLayerStyleAnimatorUpdate::Padding|TextLayerStyleAnimatorUpdate::Uniform, 0, 0},
     {"cursor uniform ID + cursor padding changes",
         1, Vector4{2.0f},
         1, -1, 3, -1, -1, Vector4{3.0f},
-        TextLayerStyleAnimation::EditingPadding|TextLayerStyleAnimation::EditingUniform, 0, 0},
+        TextLayerStyleAnimatorUpdate::EditingPadding|TextLayerStyleAnimatorUpdate::EditingUniform, 0, 0},
     {"selection uniform ID + selection padding + selection text uniform changes",
         1, Vector4{2.0f},
         -1, 1, 3, 2, 1, Vector4{1.0f},
-        TextLayerStyleAnimation::EditingPadding|TextLayerStyleAnimation::EditingUniform|TextLayerStyleAnimation::Uniform, 2, 1},
+        TextLayerStyleAnimatorUpdate::EditingPadding|TextLayerStyleAnimatorUpdate::EditingUniform|TextLayerStyleAnimatorUpdate::Uniform, 2, 1},
 
 };
 
@@ -241,8 +241,8 @@ const struct {
 };
 
 TextLayerStyleAnimatorTest::TextLayerStyleAnimatorTest() {
-    addTests({&TextLayerStyleAnimatorTest::debugAnimation,
-              &TextLayerStyleAnimatorTest::debugAnimations,
+    addTests({&TextLayerStyleAnimatorTest::debugAnimatorUpdate,
+              &TextLayerStyleAnimatorTest::debugAnimatorUpdates,
 
               &TextLayerStyleAnimatorTest::construct,
               &TextLayerStyleAnimatorTest::constructCopy,
@@ -274,16 +274,16 @@ TextLayerStyleAnimatorTest::TextLayerStyleAnimatorTest() {
         Containers::arraySize(LayerAdvanceData));
 }
 
-void TextLayerStyleAnimatorTest::debugAnimation() {
+void TextLayerStyleAnimatorTest::debugAnimatorUpdate() {
     Containers::String out;
-    Debug{&out} << TextLayerStyleAnimation::Style << TextLayerStyleAnimation(0xbe);
-    CORRADE_COMPARE(out, "Ui::TextLayerStyleAnimation::Style Ui::TextLayerStyleAnimation(0xbe)\n");
+    Debug{&out} << TextLayerStyleAnimatorUpdate::Style << TextLayerStyleAnimatorUpdate(0xbe);
+    CORRADE_COMPARE(out, "Ui::TextLayerStyleAnimatorUpdate::Style Ui::TextLayerStyleAnimatorUpdate(0xbe)\n");
 }
 
-void TextLayerStyleAnimatorTest::debugAnimations() {
+void TextLayerStyleAnimatorTest::debugAnimatorUpdates() {
     Containers::String out;
-    Debug{&out} << (TextLayerStyleAnimation::Uniform|TextLayerStyleAnimation(0xe0)) << TextLayerStyleAnimations{};
-    CORRADE_COMPARE(out, "Ui::TextLayerStyleAnimation::Uniform|Ui::TextLayerStyleAnimation(0xe0) Ui::TextLayerStyleAnimations{}\n");
+    Debug{&out} << (TextLayerStyleAnimatorUpdate::Uniform|TextLayerStyleAnimatorUpdate(0xe0)) << TextLayerStyleAnimatorUpdates{};
+    CORRADE_COMPARE(out, "Ui::TextLayerStyleAnimatorUpdate::Uniform|Ui::TextLayerStyleAnimatorUpdate(0xe0) Ui::TextLayerStyleAnimatorUpdates{}\n");
 }
 
 void TextLayerStyleAnimatorTest::construct() {
@@ -1170,12 +1170,12 @@ void TextLayerStyleAnimatorTest::advance() {
         Containers::MutableBitArrayView remove{removeData, 0, 5};
 
         Containers::Pair<bool, bool> needsAdvanceClean = animator.update(time, active, started, stopped, factors, remove);
-        TextLayerStyleAnimations animations;
+        TextLayerStyleAnimatorUpdates updates;
         if(needsAdvanceClean.first())
-            animations = animator.advance(active, factors, remove, dynamicStyleUniforms, dynamicStyleCursorStyles, dynamicStyleSelectionStyles, dynamicStylePaddings, dynamicEditingStyleUniforms, dynamicEditingStylePaddings, dataStyles);
+            updates = animator.advance(active, factors, remove, dynamicStyleUniforms, dynamicStyleCursorStyles, dynamicStyleSelectionStyles, dynamicStylePaddings, dynamicEditingStyleUniforms, dynamicEditingStylePaddings, dataStyles);
         if(needsAdvanceClean.second())
             animator.clean(remove);
-        return animations;
+        return updates;
     };
 
     /* The padding resulting from the animation gets checked against these
@@ -1217,8 +1217,8 @@ void TextLayerStyleAnimatorTest::advance() {
                 data.cursorStyles || data.selectionStyles ? Containers::arrayView(editingUniforms) : nullptr,
                 data.cursorStyles || data.selectionStyles ? Containers::arrayView(editingPaddings) : nullptr,
                 dataStyles),
-            TextLayerStyleAnimation::Uniform|TextLayerStyleAnimation::Style|TextLayerStyleAnimation::Padding|
-            (data.cursorStyles || data.selectionStyles ? TextLayerStyleAnimation::EditingUniform|TextLayerStyleAnimation::EditingPadding : TextLayerStyleAnimations{}));
+            TextLayerStyleAnimatorUpdate::Uniform|TextLayerStyleAnimatorUpdate::Style|TextLayerStyleAnimatorUpdate::Padding|
+            (data.cursorStyles || data.selectionStyles ? TextLayerStyleAnimatorUpdate::EditingUniform|TextLayerStyleAnimatorUpdate::EditingPadding : TextLayerStyleAnimatorUpdates{}));
         CORRADE_VERIFY(animator.isHandleValid(playing));
         CORRADE_VERIFY(!animator.isHandleValid(stopped));
         CORRADE_VERIFY(animator.isHandleValid(scheduledNullData));
@@ -1339,8 +1339,8 @@ void TextLayerStyleAnimatorTest::advance() {
                 data.cursorStyles || data.selectionStyles ? Containers::arrayView(editingUniforms) : nullptr,
                 data.cursorStyles || data.selectionStyles ? Containers::arrayView(editingPaddings) : nullptr,
                 dataStyles),
-            TextLayerStyleAnimation::Uniform|
-            (data.cursorStyles || data.selectionStyles ? TextLayerStyleAnimation::EditingUniform : TextLayerStyleAnimations{}));
+            TextLayerStyleAnimatorUpdate::Uniform|
+            (data.cursorStyles || data.selectionStyles ? TextLayerStyleAnimatorUpdate::EditingUniform : TextLayerStyleAnimatorUpdates{}));
         CORRADE_COMPARE(layer.dynamicStyleUsedCount(), 2);
         /* Font, alignment and features isn't modified compared to last time as
            no new style got allocated */
@@ -1424,8 +1424,8 @@ void TextLayerStyleAnimatorTest::advance() {
                 data.cursorStyles || data.selectionStyles ? Containers::arrayView(editingUniforms) : nullptr,
                 data.cursorStyles || data.selectionStyles ? Containers::arrayView(editingPaddings) : nullptr,
                 dataStyles),
-            TextLayerStyleAnimation::Uniform|TextLayerStyleAnimation::Padding|
-            (data.cursorStyles || data.selectionStyles ? TextLayerStyleAnimation::EditingUniform|TextLayerStyleAnimation::EditingPadding : TextLayerStyleAnimations{}));
+            TextLayerStyleAnimatorUpdate::Uniform|TextLayerStyleAnimatorUpdate::Padding|
+            (data.cursorStyles || data.selectionStyles ? TextLayerStyleAnimatorUpdate::EditingUniform|TextLayerStyleAnimatorUpdate::EditingPadding : TextLayerStyleAnimatorUpdates{}));
         CORRADE_COMPARE(animator.state(scheduledNullData), AnimationState::Playing);
         CORRADE_COMPARE(animator.dynamicStyle(scheduledNullData), 2);
         CORRADE_COMPARE(layer.dynamicStyleUsedCount(), 3);
@@ -1524,8 +1524,8 @@ void TextLayerStyleAnimatorTest::advance() {
                 data.cursorStyles || data.selectionStyles ? Containers::arrayView(editingUniforms) : nullptr,
                 data.cursorStyles || data.selectionStyles ? Containers::arrayView(editingPaddings) : nullptr,
                 dataStyles),
-            TextLayerStyleAnimation::Style|TextLayerStyleAnimation::Uniform|
-            (data.cursorStyles || data.selectionStyles ? TextLayerStyleAnimation::EditingUniform : TextLayerStyleAnimations{}));
+            TextLayerStyleAnimatorUpdate::Style|TextLayerStyleAnimatorUpdate::Uniform|
+            (data.cursorStyles || data.selectionStyles ? TextLayerStyleAnimatorUpdate::EditingUniform : TextLayerStyleAnimatorUpdates{}));
         CORRADE_VERIFY(!animator.isHandleValid(playing));
         CORRADE_VERIFY(animator.isHandleValid(stoppedKept));
         CORRADE_VERIFY(animator.isHandleValid(scheduledChangesPadding));
@@ -1637,7 +1637,7 @@ void TextLayerStyleAnimatorTest::advance() {
                 data.cursorStyles || data.selectionStyles ? Containers::arrayView(editingUniforms) : nullptr,
                 data.cursorStyles || data.selectionStyles ? Containers::arrayView(editingPaddings) : nullptr,
                 dataStyles),
-            TextLayerStyleAnimations{});
+            TextLayerStyleAnimatorUpdates{});
         CORRADE_VERIFY(!animator.isHandleValid(scheduledNullData));
         CORRADE_VERIFY(animator.isHandleValid(stoppedKept));
         CORRADE_VERIFY(animator.isHandleValid(scheduledChangesPadding));
@@ -1724,8 +1724,8 @@ void TextLayerStyleAnimatorTest::advance() {
                 data.cursorStyles || data.selectionStyles ? Containers::arrayView(editingUniforms) : nullptr,
                 data.cursorStyles || data.selectionStyles ? Containers::arrayView(editingPaddings) : nullptr,
                 dataStyles),
-            TextLayerStyleAnimation::Uniform|TextLayerStyleAnimation::Style|TextLayerStyleAnimation::Padding|
-            (data.cursorStyles || data.selectionStyles ? TextLayerStyleAnimation::EditingUniform|TextLayerStyleAnimation::EditingPadding : TextLayerStyleAnimations{}));
+            TextLayerStyleAnimatorUpdate::Uniform|TextLayerStyleAnimatorUpdate::Style|TextLayerStyleAnimatorUpdate::Padding|
+            (data.cursorStyles || data.selectionStyles ? TextLayerStyleAnimatorUpdate::EditingUniform|TextLayerStyleAnimatorUpdate::EditingPadding : TextLayerStyleAnimatorUpdates{}));
         CORRADE_VERIFY(animator.isHandleValid(stoppedKept));
         CORRADE_VERIFY(animator.isHandleValid(scheduledChangesPadding));
         CORRADE_COMPARE(animator.state(stoppedKept), AnimationState::Stopped);
@@ -1821,8 +1821,8 @@ void TextLayerStyleAnimatorTest::advance() {
                 data.cursorStyles || data.selectionStyles ? Containers::arrayView(editingUniforms) : nullptr,
                 data.cursorStyles || data.selectionStyles ? Containers::arrayView(editingPaddings) : nullptr,
                 dataStyles),
-            TextLayerStyleAnimation::Uniform|TextLayerStyleAnimation::Padding|
-            (data.cursorStyles || data.selectionStyles ? TextLayerStyleAnimation::EditingUniform|TextLayerStyleAnimation::EditingPadding : TextLayerStyleAnimations{}));
+            TextLayerStyleAnimatorUpdate::Uniform|TextLayerStyleAnimatorUpdate::Padding|
+            (data.cursorStyles || data.selectionStyles ? TextLayerStyleAnimatorUpdate::EditingUniform|TextLayerStyleAnimatorUpdate::EditingPadding : TextLayerStyleAnimatorUpdates{}));
         CORRADE_VERIFY(animator.isHandleValid(stoppedKept));
         CORRADE_VERIFY(animator.isHandleValid(scheduledChangesPadding));
         CORRADE_COMPARE(animator.state(stoppedKept), AnimationState::Stopped);
@@ -1923,7 +1923,7 @@ void TextLayerStyleAnimatorTest::advance() {
                 data.cursorStyles || data.selectionStyles ? Containers::arrayView(editingUniforms) : nullptr,
                 data.cursorStyles || data.selectionStyles ? Containers::arrayView(editingPaddings) : nullptr,
                 dataStyles),
-            TextLayerStyleAnimation::Style);
+            TextLayerStyleAnimatorUpdate::Style);
         CORRADE_VERIFY(!animator.isHandleValid(scheduledChangesPadding));
         CORRADE_COMPARE(layer.dynamicStyleUsedCount(), 0);
         CORRADE_COMPARE(layer.dynamicStyleAnimation(0), AnimationHandle::Null);
@@ -2097,13 +2097,13 @@ void TextLayerStyleAnimatorTest::advanceProperties() {
         Containers::MutableBitArrayView remove{removeData, 0, 1};
 
         Containers::Pair<bool, bool> needsAdvanceClean = animator.update(time, active, started, stopped, factors, remove);
-        TextLayerStyleAnimations animations;
+        TextLayerStyleAnimatorUpdates updates;
         if(needsAdvanceClean.first()) {
             /* Those two being set or not being set are tested thoroughly
                enough in advance() */
             char cursorStyles[1];
             char selectionStyles[1];
-            animations = animator.advance(
+            updates = animator.advance(
                 active, factors, remove, dynamicStyleUniforms,
                 Containers::MutableBitArrayView{cursorStyles, 0, 1},
                 Containers::MutableBitArrayView{selectionStyles, 0, 1},
@@ -2111,7 +2111,7 @@ void TextLayerStyleAnimatorTest::advanceProperties() {
         }
         if(needsAdvanceClean.second())
             animator.clean(remove);
-        return animations;
+        return updates;
     };
 
     /* The padding resulting from the animation gets checked against these.
@@ -2139,7 +2139,7 @@ void TextLayerStyleAnimatorTest::advanceProperties() {
                 editingUniforms,
                 editingPaddings,
                 dataStyles),
-            TextLayerStyleAnimation::Uniform|(data.cursorStyle != -1 || data.selectionStyle != -1 ? TextLayerStyleAnimation::EditingUniform : TextLayerStyleAnimations{})|TextLayerStyleAnimation::Style|data.expectedAnimations);
+            TextLayerStyleAnimatorUpdate::Uniform|(data.cursorStyle != -1 || data.selectionStyle != -1 ? TextLayerStyleAnimatorUpdate::EditingUniform : TextLayerStyleAnimatorUpdates{})|TextLayerStyleAnimatorUpdate::Style|data.expectedUpdates);
         CORRADE_COMPARE(animator.state(animation), AnimationState::Playing);
         CORRADE_COMPARE(animator.dynamicStyle(animation), 0);
         CORRADE_COMPARE(uniforms[0].color, Math::lerp(Color4{2.0f}, Color4{uniformColors[data.uniform]}, 0.25f));
@@ -2166,7 +2166,7 @@ void TextLayerStyleAnimatorTest::advanceProperties() {
                 editingUniforms,
                 editingPaddings,
                 dataStyles),
-            data.expectedAnimations);
+            data.expectedUpdates);
         CORRADE_COMPARE(animator.state(animation), AnimationState::Playing);
         CORRADE_COMPARE(animator.dynamicStyle(animation), 0);
         CORRADE_COMPARE(uniforms[0].color, Math::lerp(Color4{2.0f}, Color4{uniformColors[data.uniform]}, 0.75f));
@@ -2194,7 +2194,7 @@ void TextLayerStyleAnimatorTest::advanceProperties() {
                 editingUniforms,
                 editingPaddings,
                 dataStyles),
-        TextLayerStyleAnimation::Style);
+        TextLayerStyleAnimatorUpdate::Style);
         CORRADE_VERIFY(!animator.isHandleValid(animation));
         CORRADE_COMPARE(dataStyles[0], 0);
     }
@@ -2277,19 +2277,19 @@ void TextLayerStyleAnimatorTest::advanceNoFreeDynamicStyles() {
         Containers::MutableBitArrayView remove{removeData, 0, 2};
 
         Containers::Pair<bool, bool> needsAdvanceClean = animator.update(time, active, started, stopped, factors, remove);
-        TextLayerStyleAnimations animations;
+        TextLayerStyleAnimatorUpdates updates;
         if(needsAdvanceClean.first()) {
             char cursorStyles[1];
             char selectionStyles[1];
             Vector4 paddings[1];
-            animations = animator.advance(
+            updates = animator.advance(
                 active, factors, remove, dynamicStyleUniforms,
                 Containers::MutableBitArrayView{cursorStyles, 0, 1},
                 Containers::MutableBitArrayView{selectionStyles, 0, 1},
                 paddings, nullptr, nullptr, dataStyles);
         } if(needsAdvanceClean.second())
             animator.clean(remove);
-        return animations;
+        return updates;
     };
 
     TextLayerStyleUniform uniforms[1];
@@ -2297,7 +2297,7 @@ void TextLayerStyleAnimatorTest::advanceNoFreeDynamicStyles() {
 
     /* First advance takes the only dynamic style and switches to it */
     {
-        CORRADE_COMPARE(advance(5_nsec, uniforms, dataStyles), TextLayerStyleAnimation::Uniform|TextLayerStyleAnimation::Style);
+        CORRADE_COMPARE(advance(5_nsec, uniforms, dataStyles), TextLayerStyleAnimatorUpdate::Uniform|TextLayerStyleAnimatorUpdate::Style);
         CORRADE_COMPARE(animator.dynamicStyle(first), 0);
         CORRADE_COMPARE(layer.dynamicStyleUsedCount(), 1);
         CORRADE_COMPARE_AS(Containers::arrayView(dataStyles), Containers::arrayView({
@@ -2309,7 +2309,7 @@ void TextLayerStyleAnimatorTest::advanceNoFreeDynamicStyles() {
     /* Next advance plays the other animation also, but isn't able to take any
        other dynamic style, so it doesn't update any style index */
     } {
-        CORRADE_COMPARE(advance(10_nsec, uniforms, dataStyles), TextLayerStyleAnimation::Uniform);
+        CORRADE_COMPARE(advance(10_nsec, uniforms, dataStyles), TextLayerStyleAnimatorUpdate::Uniform);
         CORRADE_COMPARE(animator.dynamicStyle(first), 0);
         CORRADE_COMPARE(animator.dynamicStyle(second), Containers::NullOpt);
         CORRADE_COMPARE(layer.dynamicStyleUsedCount(), 1);
@@ -2323,7 +2323,7 @@ void TextLayerStyleAnimatorTest::advanceNoFreeDynamicStyles() {
        style. But the recycling is done after the allocation, so the second
        animation still isn't doing anything. */
     } {
-        CORRADE_COMPARE(advance(20_nsec, uniforms, dataStyles), TextLayerStyleAnimation::Style);
+        CORRADE_COMPARE(advance(20_nsec, uniforms, dataStyles), TextLayerStyleAnimatorUpdate::Style);
         CORRADE_VERIFY(!animator.isHandleValid(first));
         CORRADE_COMPARE(animator.dynamicStyle(second), Containers::NullOpt);
         CORRADE_COMPARE(layer.dynamicStyleUsedCount(), 0);
@@ -2335,7 +2335,7 @@ void TextLayerStyleAnimatorTest::advanceNoFreeDynamicStyles() {
 
     /* Advancing right after is finally able to allocate the recycled style */
     } {
-        CORRADE_COMPARE(advance(25_nsec, uniforms, dataStyles), TextLayerStyleAnimation::Uniform|TextLayerStyleAnimation::Style);
+        CORRADE_COMPARE(advance(25_nsec, uniforms, dataStyles), TextLayerStyleAnimatorUpdate::Uniform|TextLayerStyleAnimatorUpdate::Style);
         CORRADE_COMPARE(animator.dynamicStyle(second), 0);
         CORRADE_COMPARE(layer.dynamicStyleUsedCount(), 1);
         CORRADE_COMPARE_AS(Containers::arrayView(dataStyles), Containers::arrayView({

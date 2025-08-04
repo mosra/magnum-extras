@@ -27,7 +27,7 @@
 */
 
 /** @file
- * @brief Class @ref Magnum::Ui::TextLayerStyleAnimator, enum @ref Magnum::Ui::TextLayerStyleAnimation, enum set @ref Magnum::Ui::TextLayerStyleAnimations
+ * @brief Class @ref Magnum::Ui::TextLayerStyleAnimator, enum @ref Magnum::Ui::TextLayerStyleAnimatorUpdate, enum set @ref Magnum::Ui::TextLayerStyleAnimatorUpdates
  * @m_since_latest
  */
 
@@ -47,9 +47,9 @@ and other internal @ref AbstractLayer state to be set after an
 @ref AbstractUserInterface::advanceAnimations() (and transitively
 @ref AbstractLayer::advanceAnimations(Nanoseconds, Containers::MutableBitArrayView, Containers::MutableBitArrayView, Containers::MutableBitArrayView, const Containers::StridedArrayView1D<Float>&, Containers::MutableBitArrayView, const Containers::Iterable<AbstractStyleAnimator>&))
 call.
-@see @ref TextLayerStyleAnimations
+@see @ref TextLayerStyleAnimatorUpdates
 */
-enum class TextLayerStyleAnimation: UnsignedByte {
+enum class TextLayerStyleAnimatorUpdate: UnsignedByte {
     /**
      * Style uniform data. Equivalently to calling
      * @ref TextLayer::setDynamicStyle(), causes
@@ -91,10 +91,10 @@ enum class TextLayerStyleAnimation: UnsignedByte {
 };
 
 /**
-@debugoperatorenum{TextLayerStyleAnimation}
+@debugoperatorenum{TextLayerStyleAnimatorUpdate}
 @m_since_latest
 */
-MAGNUM_UI_EXPORT Debug& operator<<(Debug& debug, TextLayerStyleAnimation value);
+MAGNUM_UI_EXPORT Debug& operator<<(Debug& debug, TextLayerStyleAnimatorUpdate value);
 
 /**
 @brief Set of text layer style properties that are being animated
@@ -102,15 +102,15 @@ MAGNUM_UI_EXPORT Debug& operator<<(Debug& debug, TextLayerStyleAnimation value);
 
 @see @ref TextLayerStyleAnimator::advance()
 */
-typedef Containers::EnumSet<TextLayerStyleAnimation> TextLayerStyleAnimations;
+typedef Containers::EnumSet<TextLayerStyleAnimatorUpdate> TextLayerStyleAnimatorUpdates;
 
 /**
-@debugoperatorenum{TextLayerStyleAnimations}
+@debugoperatorenum{TextLayerStyleAnimatorUpdates}
 @m_since_latest
 */
-MAGNUM_UI_EXPORT Debug& operator<<(Debug& debug, TextLayerStyleAnimations value);
+MAGNUM_UI_EXPORT Debug& operator<<(Debug& debug, TextLayerStyleAnimatorUpdates value);
 
-CORRADE_ENUMSET_OPERATORS(TextLayerStyleAnimations)
+CORRADE_ENUMSET_OPERATORS(TextLayerStyleAnimatorUpdates)
 
 /**
 @brief Text layer style animator
@@ -639,7 +639,7 @@ class MAGNUM_UI_EXPORT TextLayerStyleAnimator: public AbstractVisualLayerStyleAn
          * others instead. The @p dataStyles view should be large enough to
          * contain any valid layer data ID.
          */
-        TextLayerStyleAnimations advance(Containers::BitArrayView active, const Containers::StridedArrayView1D<const Float>& factors, Containers::BitArrayView remove, Containers::ArrayView<TextLayerStyleUniform> dynamicStyleUniforms, Containers::MutableBitArrayView dynamicStyleCursorStyles, Containers::MutableBitArrayView dynamicStyleSelectionStyles, const Containers::StridedArrayView1D<Vector4>& dynamicStylePaddings, Containers::ArrayView<TextLayerEditingStyleUniform> dynamicEditingStyleUniforms, const Containers::StridedArrayView1D<Vector4>& dynamicEditingStylePaddings, const Containers::StridedArrayView1D<UnsignedInt>& dataStyles);
+        TextLayerStyleAnimatorUpdates advance(Containers::BitArrayView active, const Containers::StridedArrayView1D<const Float>& factors, Containers::BitArrayView remove, Containers::ArrayView<TextLayerStyleUniform> dynamicStyleUniforms, Containers::MutableBitArrayView dynamicStyleCursorStyles, Containers::MutableBitArrayView dynamicStyleSelectionStyles, const Containers::StridedArrayView1D<Vector4>& dynamicStylePaddings, Containers::ArrayView<TextLayerEditingStyleUniform> dynamicEditingStyleUniforms, const Containers::StridedArrayView1D<Vector4>& dynamicEditingStylePaddings, const Containers::StridedArrayView1D<UnsignedInt>& dataStyles);
 
     private:
         struct State;
