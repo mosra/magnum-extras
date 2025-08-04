@@ -129,8 +129,8 @@ Debug& operator<<(Debug& debug, const NodeAnimatorUpdate value) {
         #define _c(value) case NodeAnimatorUpdate::value: return debug << "::" #value;
         _c(OffsetSize)
         _c(Opacity)
-        _c(Enabled)
         _c(EventMask)
+        _c(Enabled)
         _c(Clip)
         _c(Visibility)
         _c(Removal)
@@ -145,6 +145,7 @@ Debug& operator<<(Debug& debug, const NodeAnimatorUpdates value) {
     return Containers::enumSetDebugOutput(debug, value, "Ui::NodeAnimatorUpdates{}", {
         NodeAnimatorUpdate::OffsetSize,
         NodeAnimatorUpdate::Opacity,
+        /* Superset of EventMask, has to be before */
         NodeAnimatorUpdate::Enabled,
         NodeAnimatorUpdate::EventMask,
         NodeAnimatorUpdate::Clip,

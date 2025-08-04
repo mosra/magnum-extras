@@ -57,6 +57,7 @@
 #include "Magnum/Ui/GenericAnimator.h"
 #include "Magnum/Ui/Handle.h"
 #include "Magnum/Ui/Label.h"
+#include "Magnum/Ui/NodeAnimator.h"
 #include "Magnum/Ui/NodeFlags.h"
 #include "Magnum/Ui/TextLayer.h"
 #include "Magnum/Ui/TextLayerAnimator.h"
@@ -1246,6 +1247,49 @@ lineLayer.createStrip(1, position, {}, pointOuter);
 lineLayer.createStrip(2, position, {}, point);
 /* [LineLayer-style-width] */
 }
+}
+
+{
+Ui::AbstractUserInterface ui{{100, 100}};
+/* [NodeAnimator-setup] */
+Ui::NodeAnimator& animator = ui.setNodeAnimatorInstance(
+    Containers::pointer<Ui::NodeAnimator>(ui.createAnimator()));
+/* [NodeAnimator-setup] */
+
+Nanoseconds now;
+/* [NodeAnimator-create-offset] */
+Ui::NodeHandle popup = DOXYGEN_ELLIPSIS({});
+Vector2 popupSize = ui.nodeSize(popup);
+
+animator.create(
+    Ui::NodeAnimation{}
+        .fromOffset({(ui.size().x() - popupSize.x())*0.5f, -popupSize.y()})
+        .toOffset((ui.size() - popupSize)*0.5f)
+        .addFlagsBegin(Ui::NodeFlag::NoEvents)
+        .clearFlagsEnd(Ui::NodeFlag::NoEvents),
+    Animation::Easing::cubicIn, now, 0.5_sec, popup);
+/* [NodeAnimator-create-offset] */
+
+/* [NodeAnimator-create-size] */
+Ui::NodeHandle contextMenu = DOXYGEN_ELLIPSIS({});
+
+animator.create(
+    Ui::NodeAnimation{}
+        .toSize({0.0f, 0.0f})
+        .addFlagsBegin(Ui::NodeFlag::Clip)
+        .addFlagsEnd(Ui::NodeFlag::Hidden),
+    Animation::Easing::backOut, now, 1.0_sec, contextMenu);
+/* [NodeAnimator-create-size] */
+
+/* [NodeAnimator-create-remove-node-after] */
+Ui::NodeHandle tooltip = DOXYGEN_ELLIPSIS({});
+
+animator.create(
+    Ui::NodeAnimation{}
+        .toOpacity(0.0f)
+        .setRemoveNodeAfter(true),
+    Animation::Easing::exponentialIn, now + 10.0_sec, 0.3_sec, tooltip);
+/* [NodeAnimator-create-remove-node-after] */
 }
 
 {

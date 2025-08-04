@@ -306,7 +306,10 @@ Each animation is a function that gets called with an associated node handle
 and an animation factor in the @f$ [0, 1] @f$ range. The function can then call
 arbitrary node-related setters on the UI instance or elsewhere. Use
 @ref GenericDataAnimator for animations associated with a particular layer
-data, @ref GenericAnimator is then for animations not tied to either.
+data, @ref GenericAnimator is then for animations not tied to either. If you
+only need to interpolate various node properties without calling arbitrary
+code, prefer to use @ref NodeAnimator which is better suited for running many
+animations at once.
 
 @section Ui-GenericNodeAnimator-setup Setting up an animator instance
 

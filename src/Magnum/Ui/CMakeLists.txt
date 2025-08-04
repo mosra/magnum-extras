@@ -69,6 +69,7 @@ set(MagnumUi_GracefulAssert_SRCS
     EventLayer.cpp
     GenericAnimator.cpp
     LineLayer.cpp
+    NodeAnimator.cpp
     SnapLayouter.cpp
     TextLayer.cpp
     TextLayerAnimator.cpp
@@ -98,6 +99,7 @@ set(MagnumUi_HEADERS
     Input.h
     Label.h
     LineLayer.h
+    NodeAnimator.h
     NodeFlags.h
     SnapLayouter.h
     Style.h

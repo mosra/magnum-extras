@@ -60,6 +60,7 @@ corrade_add_test(UiHandleTest HandleTest.cpp LIBRARIES MagnumUi)
 corrade_add_test(UiInputTest InputTest.cpp LIBRARIES MagnumUi)
 corrade_add_test(UiLabelTest LabelTest.cpp LIBRARIES MagnumUi)
 corrade_add_test(UiLineLayerTest LineLayerTest.cpp LIBRARIES MagnumUiTestLib)
+corrade_add_test(UiNodeAnimatorTest NodeAnimatorTest.cpp LIBRARIES MagnumUiTestLib)
 corrade_add_test(UiNodeFlagsTest NodeFlagsTest.cpp LIBRARIES MagnumUi)
 corrade_add_test(UiSnapLayouterTest SnapLayouterTest.cpp LIBRARIES MagnumUiTestLib)
 
@@ -177,10 +178,12 @@ if(NOT CMAKE_CXX_FLAGS MATCHES "-std=")
        (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC" AND NOT CMAKE_CXX_COMPILER_VERSION VERSION_LESS "19.10"))
         corrade_add_test(UiBaseLayerCpp14Test BaseLayerCpp14Test.cpp LIBRARIES MagnumUi)
         corrade_add_test(UiLineLayerCpp14Test LineLayerCpp14Test.cpp LIBRARIES MagnumUi)
+        corrade_add_test(UiNodeAnimatorCpp14Test NodeAnimatorCpp14Test.cpp LIBRARIES MagnumUi)
         corrade_add_test(UiTextLayerCpp14Test TextLayerCpp14Test.cpp LIBRARIES MagnumUi)
         set_target_properties(
             UiBaseLayerCpp14Test
             UiLineLayerCpp14Test
+            UiNodeAnimatorCpp14Test
             UiTextLayerCpp14Test
             PROPERTIES CORRADE_CXX_STANDARD 14)
    endif()

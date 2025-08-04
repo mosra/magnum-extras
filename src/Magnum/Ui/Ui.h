@@ -90,6 +90,8 @@ enum class LineCapStyle: UnsignedByte;
 enum class LineJoinStyle: UnsignedByte;
 enum class LineAlignment: UnsignedByte;
 
+class NodeAnimator;
+
 enum class FontHandle: UnsignedShort;
 class TextLayer;
 struct TextLayerCommonStyleUniform;

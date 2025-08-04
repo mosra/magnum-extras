@@ -47,7 +47,9 @@ namespace Magnum { namespace Ui {
     @ref AbstractUserInterface::nodeFlags(),
     @ref AbstractUserInterface::setNodeFlags(),
     @ref AbstractUserInterface::addNodeFlags(),
-    @ref AbstractUserInterface::clearNodeFlags()
+    @ref AbstractUserInterface::clearNodeFlags(),
+    @ref NodeAnimation::addFlagsBegin(), @ref NodeAnimation::addFlagsEnd(),
+    @ref NodeAnimation::clearFlagsBegin(), @ref NodeAnimation::clearFlagsEnd()
 */
 enum class NodeFlag: UnsignedByte {
     /**
