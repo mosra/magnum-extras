@@ -108,7 +108,8 @@ void AbstractVisualLayerStyleAnimator::doClean(const Containers::BitArrayView an
 
     /** @todo some way to iterate set bits */
     for(std::size_t i = 0; i != animationIdsToRemove.size(); ++i) {
-        if(!animationIdsToRemove[i]) continue;
+        if(!animationIdsToRemove[i])
+            continue;
 
         /* Recycle the dynamic style if it was allocated already. It might not
            be if advance() wasn't called for this animation yet or if it was

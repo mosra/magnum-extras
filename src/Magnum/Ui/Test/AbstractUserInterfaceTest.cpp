@@ -11293,7 +11293,8 @@ void AbstractUserInterfaceTest::stateAnimations() {
                 {0.75f, 1.0f}
             };
             for(std::size_t i = 0; i != nodeOffsets.size(); ++i) {
-                if(!expectedNodesValid[i]) continue;
+                if(!expectedNodesValid[i])
+                    continue;
 
                 CORRADE_ITERATION(i);
                 CORRADE_COMPARE(nodeOffsets[i], expectedNodeOffsets[i]);

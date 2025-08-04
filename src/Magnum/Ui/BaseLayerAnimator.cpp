@@ -229,7 +229,8 @@ BaseLayerStyleAnimatorUpdates BaseLayerStyleAnimator::advance(const Containers::
     BaseLayerStyleAnimatorUpdates updates;
     /** @todo some way to iterate set bits */
     for(std::size_t i = 0; i != active.size(); ++i) {
-        if(!active[i]) continue;
+        if(!active[i])
+            continue;
 
         Animation& animation = state.animations[i];
         /* The handle is assumed to be valid if not null, i.e. that appropriate
