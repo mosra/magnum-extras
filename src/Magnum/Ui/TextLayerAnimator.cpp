@@ -551,7 +551,7 @@ TextLayerStyleAnimations TextLayerStyleAnimator::advance(const Containers::BitAr
         const Vector4 padding = Math::lerp(animation.sourcePadding,
                                            animation.targetPadding, factor);
         if(dynamicStylePaddings[animation.dynamicStyle] != padding) {
-           dynamicStylePaddings[animation.dynamicStyle] = padding;
+            dynamicStylePaddings[animation.dynamicStyle] = padding;
             animations |= TextLayerStyleAnimation::Padding;
         }
 
@@ -568,7 +568,7 @@ TextLayerStyleAnimations TextLayerStyleAnimator::advance(const Containers::BitAr
                 animation.sourceCursorPadding,
                 animation.targetCursorPadding, factor);
             if(dynamicEditingStylePaddings[editingStyleId] != cursorPadding) {
-               dynamicEditingStylePaddings[editingStyleId] = cursorPadding;
+                dynamicEditingStylePaddings[editingStyleId] = cursorPadding;
                 animations |= TextLayerStyleAnimation::EditingPadding;
             }
         }
@@ -587,7 +587,7 @@ TextLayerStyleAnimations TextLayerStyleAnimator::advance(const Containers::BitAr
                 animation.sourceSelectionPadding,
                 animation.targetSelectionPadding, factor);
             if(dynamicEditingStylePaddings[editingStyleId] != selectionPadding) {
-               dynamicEditingStylePaddings[editingStyleId] = selectionPadding;
+                dynamicEditingStylePaddings[editingStyleId] = selectionPadding;
                 animations |= TextLayerStyleAnimation::EditingPadding;
             }
 

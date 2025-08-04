@@ -311,7 +311,7 @@ BaseLayerStyleAnimations BaseLayerStyleAnimator::advance(const Containers::BitAr
         const Vector4 padding = Math::lerp(animation.sourcePadding,
                                            animation.targetPadding, factor);
         if(dynamicStylePaddings[animation.dynamicStyle] != padding) {
-           dynamicStylePaddings[animation.dynamicStyle] = padding;
+            dynamicStylePaddings[animation.dynamicStyle] = padding;
             animations |= BaseLayerStyleAnimation::Padding;
         }
     }
