@@ -569,8 +569,7 @@ void AbstractAnimator::setRepeatCount(const AnimatorDataHandle handle, const Uns
 }
 
 void AbstractAnimator::setRepeatCountInternal(const UnsignedInt id, const UnsignedInt count) {
-    const Animation& animation = _state->animations[id];
-    CORRADE_ASSERT(animation.used.duration != 0_nsec || count == 1,
+    CORRADE_ASSERT(_state->animations[id].used.duration != 0_nsec || count == 1,
         "Ui::AbstractAnimator::setRepeatCount(): expected count to be 1 for an animation with zero duration but got" << count, );
     _state->animations[id].used.repeatCount = count;
     /* No AnimatorState needs to be updated, it doesn't cause any
