@@ -149,6 +149,7 @@ enum class NodeFlag: UnsignedByte {
      *
      * Changing this flag causes
      * @ref UserInterfaceState::NeedsNodeEventMaskUpdate to be set.
+     * @see @ref Ui-AbstractUserInterface-events-focus
      */
     NoBlur = 1 << 6
 };

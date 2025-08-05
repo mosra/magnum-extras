@@ -206,7 +206,8 @@ enum class UserInterfaceState: UnsignedShort {
      * @relativeref{AbstractUserInterface,clearNodeFlags()} call that changes
      * the presence of the @ref NodeFlag::Hidden flag; is reset next time
      * @ref AbstractUserInterface::update() is called. Implies
-     * @ref UserInterfaceState::NeedsLayoutAssignmentUpdate. Implied by
+     * @ref UserInterfaceState::NeedsLayoutAssignmentUpdate and
+     * @ref UserInterfaceState::NeedsNodeOpacityUpdate. Implied by
      * @relativeref{UserInterfaceState,NeedsNodeClean}, so it's also set by
      * everything that sets that flag.
      */
