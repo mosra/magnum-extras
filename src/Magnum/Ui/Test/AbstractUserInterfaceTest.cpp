@@ -333,7 +333,8 @@ const struct {
     NodeFlags expectedNodeFlagsAnimator2[2];
     bool expectedNodesRemoveAnimator2[2], expectedNodesEnabledLayer[2];
     Containers::Array<Vector2> expectedClipRectOffsetsLayer;
-    bool expectedNode1Valid, expectedNode2Valid;
+    bool expectedNodesValid[2];
+    bool expectedNodesVisible[2];
     bool expectedCleanAfterAnimation;
     LayerStates expectedLayerUpdateState;
 } StateAnimationsData[]{
@@ -346,7 +347,7 @@ const struct {
         {NodeFlag::Clip, NodeFlag::Disabled},
         {false, false}, {true, false},
         {InPlaceInit, {{1.0f, 2.0f}, {0.0f, 0.0f}}},
-        true, true, false, {}},
+        {true, true}, {true, true}, false, {}},
     {"with no-op calls",
         true, false, false, {}, {},
         {}, {}, false, false,
@@ -356,7 +357,7 @@ const struct {
         {NodeFlag::Clip, NodeFlag::Disabled},
         {false, false}, {true, false},
         {InPlaceInit, {{1.0f, 2.0f}, {0.0f, 0.0f}}},
-        true, true, false, {}},
+        {true, true}, {true, true}, false, {}},
     {"with implicit clean",
         false, false, false, {}, {},
         {}, {}, false, false,
@@ -366,7 +367,7 @@ const struct {
         {NodeFlag::Clip, NodeFlag::Disabled},
         {false, false}, {true, false},
         {InPlaceInit, {{1.0f, 2.0f}, {0.0f, 0.0f}}},
-        true, true, false, {}},
+        {true, true}, {true, true}, false, {}},
     {"with implicit clean and no-op calls",
         false, true, false, {}, {},
         {}, {}, false, false,
@@ -376,7 +377,7 @@ const struct {
         {NodeFlag::Clip, NodeFlag::Disabled},
         {false, false}, {true, false},
         {InPlaceInit, {{1.0f, 2.0f}, {0.0f, 0.0f}}},
-        true, true, false, {}},
+        {true, true}, {true, true}, false, {}},
     {"running animation",
         true, false, true, UserInterfaceState::NeedsAnimationAdvance, UserInterfaceState::NeedsAnimationAdvance,
         {}, {}, false, false,
@@ -386,7 +387,7 @@ const struct {
         {NodeFlag::Clip, NodeFlag::Disabled},
         {false, false}, {true, false},
         {InPlaceInit, {{1.0f, 2.0f}, {0.0f, 0.0f}}},
-        true, true, false, {}},
+        {true, true}, {true, true}, false, {}},
     {"running animation, with no-op calls",
         true, false, true, UserInterfaceState::NeedsAnimationAdvance, UserInterfaceState::NeedsAnimationAdvance,
         {}, {}, false, false,
@@ -396,7 +397,7 @@ const struct {
         {NodeFlag::Clip, NodeFlag::Disabled},
         {false, false}, {true, false},
         {InPlaceInit, {{1.0f, 2.0f}, {0.0f, 0.0f}}},
-        true, true, false, {}},
+        {true, true}, {true, true}, false, {}},
     {"running animation, with implicit clean",
         false, false, true, UserInterfaceState::NeedsAnimationAdvance, UserInterfaceState::NeedsAnimationAdvance,
         {}, {}, false, false,
@@ -406,7 +407,7 @@ const struct {
         {NodeFlag::Clip, NodeFlag::Disabled},
         {false, false}, {true, false},
         {InPlaceInit, {{1.0f, 2.0f}, {0.0f, 0.0f}}},
-        true, true, false, {}},
+        {true, true}, {true, true}, false, {}},
     {"running animation, with implicit clean and no-op calls",
         false, true, true, UserInterfaceState::NeedsAnimationAdvance, UserInterfaceState::NeedsAnimationAdvance,
         {}, {}, false, false,
@@ -416,7 +417,7 @@ const struct {
         {NodeFlag::Clip, NodeFlag::Disabled},
         {false, false}, {true, false},
         {InPlaceInit, {{1.0f, 2.0f}, {0.0f, 0.0f}}},
-        true, true, false, {}},
+        {true, true}, {true, true}, false, {}},
     {"two node animators doing nothing",
         true, false, false, {}, {},
         NodeAnimatorUpdates{}, NodeAnimatorUpdates{}, false, false,
@@ -426,7 +427,7 @@ const struct {
         {NodeFlag::Clip, NodeFlag::Disabled},
         {false, false}, {true, false},
         {InPlaceInit, {{1.0f, 2.0f}, {0.0f, 0.0f}}},
-        true, true, false, {}},
+        {true, true}, {true, true}, false, {}},
     {"first node animator moving nodes",
         true, false, false, {}, UserInterfaceState::NeedsLayoutUpdate,
         {NodeAnimatorUpdate::OffsetSize}, NodeAnimatorUpdates{}, false, false,
@@ -436,7 +437,7 @@ const struct {
         {NodeFlag::Clip, NodeFlag::Disabled},
         {false, false}, {true, false},
         {InPlaceInit, {{1.0f, 2.0f}, {0.0f, 0.0f}}},
-        true, true, false,
+        {true, true}, {true, true}, false,
         LayerState::NeedsNodeOrderUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsNodeOffsetSizeUpdate},
     {"second node animator changing opacity",
         true, false, false, {}, UserInterfaceState::NeedsNodeOpacityUpdate,
@@ -447,7 +448,7 @@ const struct {
         {NodeFlag::Clip, NodeFlag::Disabled},
         {false, false}, {true, false},
         {InPlaceInit, {{1.0f, 2.0f}, {0.0f, 0.0f}}},
-        true, true, false, LayerState::NeedsNodeOpacityUpdate},
+        {true, true}, {true, true}, false, LayerState::NeedsNodeOpacityUpdate},
     {"first node animator changing opacity, second node animator moving nodes",
         true, false, false, {}, UserInterfaceState::NeedsNodeOpacityUpdate|UserInterfaceState::NeedsLayoutUpdate,
         {NodeAnimatorUpdate::Opacity}, {NodeAnimatorUpdate::OffsetSize}, false, false,
@@ -457,7 +458,7 @@ const struct {
         {NodeFlag::Clip, NodeFlag::Disabled},
         {false, false}, {true, false},
         {InPlaceInit, {{0.0f, 1.0f}, {0.0f, 0.0f}}},
-        true, true, false,
+        {true, true}, {true, true}, false,
         LayerState::NeedsNodeOrderUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsNodeOffsetSizeUpdate|LayerState::NeedsNodeOpacityUpdate},
     {"first node animator changing node enablement, second doing nothing",
         true, false, false, {}, UserInterfaceState::NeedsNodeEnabledUpdate,
@@ -468,10 +469,21 @@ const struct {
         {NodeFlag::Clip, {}},
         {false, false}, {true, true},
         {InPlaceInit, {{1.0f, 2.0f}, {0.0f, 0.0f}}},
-        true, true, false,
+        {true, true}, {true, true}, false,
         /* The draw order needs an update as well due to the coarseness of
            UserInterfaceState bits */
         LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsNodeOrderUpdate},
+    {"first node animator changing node event mask, second doing nothing",
+        true, false, false, {}, UserInterfaceState::NeedsNodeEventMaskUpdate,
+        {NodeAnimatorUpdate::EventMask}, NodeAnimatorUpdates{}, false, false,
+        {{1.0f, 2.0f}, {3.0f, 4.0f}},
+        {{1.0f, 2.0f}, {3.0f, 4.0f}},
+        {0.75f, 0.25f}, {0.75f, 0.25f},
+        {NodeFlag::Clip, NodeFlag::NoBlur|NodeFlag::Disabled},
+        {false, false}, {true, true},
+        {InPlaceInit, {{1.0f, 2.0f}, {0.0f, 0.0f}}},
+        {true, true}, {true, true}, false,
+        LayerStates{}},
     {"node animator changing node clip state",
         true, false, false, {}, UserInterfaceState::NeedsNodeClipUpdate,
         {NodeAnimatorUpdate::Clip}, {}, false, false,
@@ -481,8 +493,23 @@ const struct {
         {NodeFlag::Clip, NodeFlag::Disabled},
         {false, false}, {true, false},
         {InPlaceInit, {{1.0f, 2.0f}, {3.0f, 4.0f}}},
-        true, true, false,
+        {true, true}, {true, true}, false,
         LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsNodeOrderUpdate},
+    {"first node animator changing node visibility state, second doing nothing",
+        true, false, false, {}, UserInterfaceState::NeedsNodeUpdate,
+        {NodeAnimatorUpdate::Visibility}, NodeAnimatorUpdates{}, false, false,
+        {{1.0f, 2.0f}, {3.0f, 4.0f}},
+        {{1.0f, 2.0f}, {3.0f, 4.0f}},
+        {0.75f, 0.25f}, {0.75f, 0.25f},
+        {NodeFlag::Clip, NodeFlag::Hidden|NodeFlag::Disabled},
+        {false, false}, {true, false},
+        {InPlaceInit, {{1.0f, 2.0f}}},
+        /* Second node becomes invisible */
+        {true, true}, {true, false}, false,
+        /* The offset/size and opacity needs an update as well, not just
+           NeedsNodeOrderUpdate, due to the coarseness of UserInterfaceState
+           bits */
+        LayerState::NeedsNodeOrderUpdate|LayerState::NeedsNodeOpacityUpdate|LayerState::NeedsNodeOffsetSizeUpdate},
     {"node animator removing a node",
         true, false, false, {}, UserInterfaceState::NeedsNodeClean,
         {NodeAnimatorUpdate::Removal}, {}, false, false,
@@ -492,7 +519,8 @@ const struct {
         {NodeFlag::Clip, NodeFlag::Disabled},
         {false, true}, {true, false},
         {InPlaceInit, {{1.0f, 2.0f}}},
-        true, false, true,
+        /* Second node becomes removed */
+        {true, false}, {true, false}, true,
         LayerState::NeedsNodeOrderUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsNodeOpacityUpdate|LayerState::NeedsNodeOffsetSizeUpdate},
     {"node animator removing a node, with implicit clean",
         false, false, false, {}, UserInterfaceState::NeedsNodeClean,
@@ -503,18 +531,20 @@ const struct {
         {NodeFlag::Clip, NodeFlag::Disabled},
         {false, true}, {true, false},
         {InPlaceInit, {{1.0f, 2.0f}}},
-        true, false, true,
+        /* Second node becomes removed */
+        {true, false}, {true, false}, true,
         LayerState::NeedsNodeOrderUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsNodeOpacityUpdate|LayerState::NeedsNodeOffsetSizeUpdate},
     {"two node animators doing parts of everything",
         true, false, false, {}, UserInterfaceState::NeedsNodeClean,
-        NodeAnimatorUpdate::OffsetSize|NodeAnimatorUpdate::Enabled|NodeAnimatorUpdate::Clip, {NodeAnimatorUpdate::Removal}, false, false,
+        NodeAnimatorUpdate::OffsetSize|NodeAnimatorUpdate::Enabled|NodeAnimatorUpdate::Clip|NodeAnimatorUpdate::EventMask, {NodeAnimatorUpdate::Removal}, false, false,
         {{1.0f, 2.0f}, {2.0f, 3.0f}},
         {{1.0f, 2.0f}, {2.0f, 3.0f}},
         {0.75f, 0.25f}, {0.75f, 0.25f},
         {NodeFlag::Clip, NodeFlag::Clip},
         {false, false}, {false, true},
         {InPlaceInit, {{2.0f, 3.0f}}},
-        false, true, true,
+        /* First node becomes removed */
+        {false, true}, {false, true}, true,
         LayerState::NeedsNodeOrderUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsNodeOpacityUpdate|LayerState::NeedsNodeOffsetSizeUpdate},
     {"two node animators doing parts of everything, the other way around",
         true, false, false, {}, UserInterfaceState::NeedsNodeClean,
@@ -526,7 +556,33 @@ const struct {
         {NodeFlag::Clip, NodeFlag::Disabled},
         {false, true}, {false, false},
         {InPlaceInit, {{0.0f, 0.0f}}},
-        true, false, true,
+        /* Second node becomes removed */
+        {true, false}, {true, false}, true,
+        LayerState::NeedsNodeOrderUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsNodeOpacityUpdate|LayerState::NeedsNodeOffsetSizeUpdate},
+    {"two node animators doing parts of everything, hide instead of remove",
+        true, false, false, {}, UserInterfaceState::NeedsNodeUpdate,
+        NodeAnimatorUpdate::OffsetSize|NodeAnimatorUpdate::Clip|NodeAnimatorUpdate::EventMask, {NodeAnimatorUpdate::Visibility}, false, false,
+        {{1.0f, 2.0f}, {2.0f, 3.0f}},
+        {{1.0f, 2.0f}, {2.0f, 3.0f}},
+        {0.75f, 0.25f}, {0.75f, 0.25f},
+        {NodeFlag::Clip, NodeFlag::Clip|NodeFlag::Disabled|NodeFlag::NoBlur},
+        {false, false}, {false, false},
+        {InPlaceInit, {{2.0f, 3.0f}}},
+        /* First node becomes hidden */
+        {true, true}, {false, true}, false,
+        LayerState::NeedsNodeOrderUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsNodeOpacityUpdate|LayerState::NeedsNodeOffsetSizeUpdate},
+    {"two node animators doing parts of everything, hide instead of remove, the other way around",
+        true, false, false, {}, UserInterfaceState::NeedsNodeUpdate,
+        {NodeAnimatorUpdate::Visibility},
+        NodeAnimatorUpdate::OffsetSize|NodeAnimatorUpdate::Clip|NodeAnimatorUpdate::EventMask, false, false,
+        {{1.0f, 2.0f}, {3.0f, 4.0f}},
+        {{0.0f, 1.0f}, {3.0f, 4.0f}},
+        {0.75f, 0.25f}, {0.75f, 0.25f},
+        {NodeFlag::Clip, NodeFlag::Disabled|NodeFlag::Hidden},
+        {false, false}, {true, false},
+        {InPlaceInit, {{0.0f, 0.0f}}},
+        /* Second node becomes hidden */
+        {true, true}, {true, false}, false,
         LayerState::NeedsNodeOrderUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsNodeOpacityUpdate|LayerState::NeedsNodeOffsetSizeUpdate},
     {"data animator",
         true, false, false, {}, UserInterfaceState::NeedsDataUpdate,
@@ -537,7 +593,7 @@ const struct {
         {NodeFlag::Clip, NodeFlag::Disabled},
         {false, false}, {true, false},
         {InPlaceInit, {{1.0f, 2.0f}, {0.0f, 0.0f}}},
-        true, true, false,
+        {true, true}, {true, true}, false,
         LayerState::NeedsDataUpdate},
     {"data animator, with implicit clean",
         false, false, false, {}, UserInterfaceState::NeedsDataUpdate,
@@ -548,7 +604,7 @@ const struct {
         {NodeFlag::Clip, NodeFlag::Disabled},
         {false, false}, {true, false},
         {InPlaceInit, {{1.0f, 2.0f}, {0.0f, 0.0f}}},
-        true, true, false,
+        {true, true}, {true, true}, false,
         LayerState::NeedsDataUpdate},
     {"data animator, with implicit clean and no-op calls",
         false, true, false, {}, UserInterfaceState::NeedsDataUpdate,
@@ -559,7 +615,7 @@ const struct {
         {NodeFlag::Clip, NodeFlag::Disabled},
         {false, false}, {true, false},
         {InPlaceInit, {{1.0f, 2.0f}, {0.0f, 0.0f}}},
-        true, true, false,
+        {true, true}, {true, true}, false,
         LayerState::NeedsDataUpdate},
     {"style animator",
         true, false, false, {}, UserInterfaceState::NeedsDataUpdate,
@@ -570,7 +626,7 @@ const struct {
         {NodeFlag::Clip, NodeFlag::Disabled},
         {false, false}, {true, false},
         {InPlaceInit, {{1.0f, 2.0f}, {0.0f, 0.0f}}},
-        true, true, false,
+        {true, true}, {true, true}, false,
         LayerState::NeedsCommonDataUpdate},
     {"style animator, with implicit clean",
         false, false, false, {}, UserInterfaceState::NeedsDataUpdate,
@@ -581,7 +637,7 @@ const struct {
         {NodeFlag::Clip, NodeFlag::Disabled},
         {false, false}, {true, false},
         {InPlaceInit, {{1.0f, 2.0f}, {0.0f, 0.0f}}},
-        true, true, false,
+        {true, true}, {true, true}, false,
         LayerState::NeedsCommonDataUpdate},
     {"style animator, with implicit clean and no-op calls",
         false, true, false, {}, UserInterfaceState::NeedsDataUpdate,
@@ -592,7 +648,7 @@ const struct {
         {NodeFlag::Clip, NodeFlag::Disabled},
         {false, false}, {true, false},
         {InPlaceInit, {{1.0f, 2.0f}, {0.0f, 0.0f}}},
-        true, true, false,
+        {true, true}, {true, true}, false,
         LayerState::NeedsCommonDataUpdate},
 };
 
@@ -11293,7 +11349,7 @@ void AbstractUserInterfaceTest::stateAnimations() {
                 {0.75f, 1.0f}
             };
             for(std::size_t i = 0; i != nodeOffsets.size(); ++i) {
-                if(!expectedNodesValid[i])
+                if(!expectedNodesValid[i] || !expectedNodesVisible[i])
                     continue;
 
                 CORRADE_ITERATION(i);
@@ -11333,6 +11389,7 @@ void AbstractUserInterfaceTest::stateAnimations() {
         Containers::StridedArrayView1D<const bool> expectedNodesEnabled;
         Containers::StridedArrayView1D<const Vector2> expectedClipRectOffsets;
         Containers::ArrayView<const bool> expectedNodesValid;
+        Containers::ArrayView<const bool> expectedNodesVisible;
         Int cleanCallCount = 0;
         Int updateCallCount = 0;
         Int advanceDataAnimationsCallCount = 0;
@@ -11402,10 +11459,27 @@ void AbstractUserInterfaceTest::stateAnimations() {
                     nodeOpacities[nodeHandleId(nodes()[i])] -= 0.1f;
                 if(_animations >= NodeAnimatorUpdate::Enabled) {
                     NodeFlags& flags = nodeFlags[nodeHandleId(nodes()[i])];
+                    /* Adding the Disabled flag, NoEvents is a subset of it and
+                       currently doesn't behave any different. Focusable also
+                       triggers NodeAnimatorUpdate::Enabled so it isn't handled
+                       separately. */
+                    /** @todo update once NoEvents / Focusable doesn't trigger
+                        NeedsNodeEnabledUpdate but rather
+                        NeedsNodeEventMaskUpdate */
                     if(flags & NodeFlag::Disabled)
                         flags &= ~NodeFlag::Disabled;
                     else
                         flags |= NodeFlag::Disabled;
+                /* EventMask is a subset of Enabled, so do just one or the
+                   other */
+                /** @todo ehh, might be worth reworking this to not be so
+                    implicitly depending on NodeAnimatorUpdate values ... */
+                } else if(_animations >= NodeAnimatorUpdate::EventMask) {
+                    NodeFlags& flags = nodeFlags[nodeHandleId(nodes()[i])];
+                    if(flags & NodeFlag::NoBlur)
+                        flags &= ~NodeFlag::NoBlur;
+                    else
+                        flags |= NodeFlag::NoBlur;
                 }
                 if(_animations >= NodeAnimatorUpdate::Clip) {
                     NodeFlags& flags = nodeFlags[nodeHandleId(nodes()[i])];
@@ -11413,6 +11487,13 @@ void AbstractUserInterfaceTest::stateAnimations() {
                         flags &= ~NodeFlag::Clip;
                     else
                         flags |= NodeFlag::Clip;
+                }
+                if(_animations >= NodeAnimatorUpdate::Visibility) {
+                    NodeFlags& flags = nodeFlags[nodeHandleId(nodes()[i])];
+                    if(flags & NodeFlag::Hidden)
+                        flags &= ~NodeFlag::Hidden;
+                    else
+                        flags |= NodeFlag::Hidden;
                 }
                 if(_animations >= NodeAnimatorUpdate::Removal)
                     nodesRemove.set(nodeHandleId(nodes()[i]));
@@ -11615,7 +11696,7 @@ void AbstractUserInterfaceTest::stateAnimations() {
             {1.0f, 2.0f},
             {0.0f, 0.0f}
         };
-        bool expectedNodesValid[]{
+        bool expectedNodesValidVisible[]{
             true, true
         };
         layer.expectedState = LayerState::NeedsNodeOrderUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsNodeOpacityUpdate|LayerState::NeedsNodeOffsetSizeUpdate|LayerState::NeedsDataUpdate;
@@ -11623,7 +11704,8 @@ void AbstractUserInterfaceTest::stateAnimations() {
         layer.expectedNodeOpacities = expectedNodeOpacities;
         layer.expectedNodesEnabled = expectedNodesEnabled;
         layer.expectedClipRectOffsets = expectedClipRectOffsets;
-        layer.expectedNodesValid = expectedNodesValid;
+        layer.expectedNodesValid = expectedNodesValidVisible;
+        layer.expectedNodesVisible = expectedNodesValidVisible;
 
         ui.update();
     }
@@ -11707,8 +11789,8 @@ void AbstractUserInterfaceTest::stateAnimations() {
     CORRADE_COMPARE(layer.cleanCallCount, 1);
     CORRADE_COMPARE(animator.cleanCallCount, 0);
     CORRADE_COMPARE(animator.advanceCallCount, data.runningAnimation ? 2 : 0);
-    CORRADE_COMPARE(ui.isHandleValid(node1), data.expectedNode1Valid);
-    CORRADE_COMPARE(ui.isHandleValid(node2), data.expectedNode2Valid);
+    CORRADE_COMPARE(ui.isHandleValid(node1), data.expectedNodesValid[0]);
+    CORRADE_COMPARE(ui.isHandleValid(node2), data.expectedNodesValid[1]);
     if(data.nodeAnimatorUpdates1) {
         CORRADE_COMPARE(nodeAnimator1->cleanCallCount, 1);
         CORRADE_COMPARE(nodeAnimator1->advanceCallCount, 1);
@@ -11738,25 +11820,25 @@ void AbstractUserInterfaceTest::stateAnimations() {
         CORRADE_COMPARE(layer.cleanCallCount, 1 + data.expectedCleanAfterAnimation);
         CORRADE_COMPARE(animator.cleanCallCount, 0);
         CORRADE_COMPARE(animator.advanceCallCount, data.runningAnimation ? 2 : 0);
-        CORRADE_COMPARE(ui.isHandleValid(node1), data.expectedNode1Valid);
-        CORRADE_COMPARE(ui.isHandleValid(node2), data.expectedNode2Valid);
+        CORRADE_COMPARE(ui.isHandleValid(node1), data.expectedNodesValid[0]);
+        CORRADE_COMPARE(ui.isHandleValid(node2), data.expectedNodesValid[1]);
         if(data.nodeAnimatorUpdates1) {
             CORRADE_COMPARE(nodeAnimator1->cleanCallCount, 1 + data.expectedCleanAfterAnimation);
-            CORRADE_COMPARE(ui.isHandleValid(nodeAnimation1), data.expectedNode2Valid);
+            CORRADE_COMPARE(ui.isHandleValid(nodeAnimation1), data.expectedNodesValid[1]);
         }
         if(data.nodeAnimatorUpdates2) {
             CORRADE_COMPARE(nodeAnimator2->cleanCallCount, 1 + data.expectedCleanAfterAnimation);
-            CORRADE_COMPARE(ui.isHandleValid(nodeAnimation2), data.expectedNode1Valid);
+            CORRADE_COMPARE(ui.isHandleValid(nodeAnimation2), data.expectedNodesValid[0]);
         }
         if(data.dataAnimations) {
             CORRADE_COMPARE(dataAnimator->cleanCallCount, 1 + data.expectedCleanAfterAnimation);
-            CORRADE_COMPARE(ui.isHandleValid(dataAnimation1), data.expectedNode1Valid);
-            CORRADE_COMPARE(ui.isHandleValid(dataAnimation2), data.expectedNode2Valid);
+            CORRADE_COMPARE(ui.isHandleValid(dataAnimation1), data.expectedNodesValid[0]);
+            CORRADE_COMPARE(ui.isHandleValid(dataAnimation2), data.expectedNodesValid[1]);
         }
         if(data.styleAnimations) {
             CORRADE_COMPARE(styleAnimator->cleanCallCount, 1 + data.expectedCleanAfterAnimation);
-            CORRADE_COMPARE(ui.isHandleValid(styleAnimation2), data.expectedNode1Valid);
-            CORRADE_COMPARE(ui.isHandleValid(styleAnimation1), data.expectedNode2Valid);
+            CORRADE_COMPARE(ui.isHandleValid(styleAnimation2), data.expectedNodesValid[0]);
+            CORRADE_COMPARE(ui.isHandleValid(styleAnimation1), data.expectedNodesValid[1]);
         }
     }
 
@@ -11764,15 +11846,13 @@ void AbstractUserInterfaceTest::stateAnimations() {
     {
         CORRADE_ITERATION(__FILE__ ":" CORRADE_LINE_STRING);
 
-        bool expectedNodesValid[]{
-            data.expectedNode1Valid, data.expectedNode2Valid
-        };
         layer.expectedState = data.expectedLayerUpdateState;
         layer.expectedNodeOffsets = data.expectedNodeOffsetsLayer;
         layer.expectedNodeOpacities = data.expectedNodeOpacitiesLayer;
         layer.expectedNodesEnabled = data.expectedNodesEnabledLayer;
         layer.expectedClipRectOffsets = data.expectedClipRectOffsetsLayer;
-        layer.expectedNodesValid = expectedNodesValid;
+        layer.expectedNodesValid = data.expectedNodesValid;
+        layer.expectedNodesVisible = data.expectedNodesVisible;
 
         ui.update();
     }
@@ -11781,27 +11861,27 @@ void AbstractUserInterfaceTest::stateAnimations() {
     CORRADE_COMPARE(layer.cleanCallCount, 1 + data.expectedCleanAfterAnimation);
     CORRADE_COMPARE(layer.updateCallCount, data.expectedLayerUpdateState ? 2 : 1);
     CORRADE_COMPARE(animator.cleanCallCount, 0);
-    CORRADE_COMPARE(ui.isHandleValid(node1), data.expectedNode1Valid);
-    CORRADE_COMPARE(ui.isHandleValid(node2), data.expectedNode2Valid);
-    CORRADE_COMPARE(ui.isHandleValid(data1), data.expectedNode1Valid);
-    CORRADE_COMPARE(ui.isHandleValid(data2), data.expectedNode2Valid);
+    CORRADE_COMPARE(ui.isHandleValid(node1), data.expectedNodesValid[0]);
+    CORRADE_COMPARE(ui.isHandleValid(node2), data.expectedNodesValid[1]);
+    CORRADE_COMPARE(ui.isHandleValid(data1), data.expectedNodesValid[0]);
+    CORRADE_COMPARE(ui.isHandleValid(data2), data.expectedNodesValid[1]);
     if(data.nodeAnimatorUpdates1) {
         CORRADE_COMPARE(nodeAnimator1->cleanCallCount, 1 + data.expectedCleanAfterAnimation);
-        CORRADE_COMPARE(ui.isHandleValid(nodeAnimation1), data.expectedNode2Valid);
+        CORRADE_COMPARE(ui.isHandleValid(nodeAnimation1), data.expectedNodesValid[1]);
     }
     if(data.nodeAnimatorUpdates2) {
         CORRADE_COMPARE(nodeAnimator2->cleanCallCount, 1 + data.expectedCleanAfterAnimation);
-        CORRADE_COMPARE(ui.isHandleValid(nodeAnimation2), data.expectedNode1Valid);
+        CORRADE_COMPARE(ui.isHandleValid(nodeAnimation2), data.expectedNodesValid[0]);
     }
     if(data.dataAnimations) {
         CORRADE_COMPARE(dataAnimator->cleanCallCount, 1 + data.expectedCleanAfterAnimation);
-        CORRADE_COMPARE(ui.isHandleValid(dataAnimation1), data.expectedNode1Valid);
-        CORRADE_COMPARE(ui.isHandleValid(dataAnimation2), data.expectedNode2Valid);
+        CORRADE_COMPARE(ui.isHandleValid(dataAnimation1), data.expectedNodesValid[0]);
+        CORRADE_COMPARE(ui.isHandleValid(dataAnimation2), data.expectedNodesValid[1]);
     }
     if(data.styleAnimations) {
         CORRADE_COMPARE(styleAnimator->cleanCallCount, 1 + data.expectedCleanAfterAnimation);
-        CORRADE_COMPARE(ui.isHandleValid(styleAnimation2), data.expectedNode1Valid);
-        CORRADE_COMPARE(ui.isHandleValid(styleAnimation1), data.expectedNode2Valid);
+        CORRADE_COMPARE(ui.isHandleValid(styleAnimation2), data.expectedNodesValid[0]);
+        CORRADE_COMPARE(ui.isHandleValid(styleAnimation1), data.expectedNodesValid[1]);
     }
 }
 

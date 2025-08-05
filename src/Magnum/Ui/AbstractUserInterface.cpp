@@ -2656,8 +2656,12 @@ AbstractUserInterface& AbstractUserInterface::advanceAnimations(const Nanosecond
             state.state |= UserInterfaceState::NeedsNodeOpacityUpdate;
         if(nodeAnimatorUpdates >= NodeAnimatorUpdate::Enabled)
             state.state |= UserInterfaceState::NeedsNodeEnabledUpdate;
+        if(nodeAnimatorUpdates >= NodeAnimatorUpdate::EventMask)
+            state.state |= UserInterfaceState::NeedsNodeEventMaskUpdate;
         if(nodeAnimatorUpdates >= NodeAnimatorUpdate::Clip)
             state.state |= UserInterfaceState::NeedsNodeClipUpdate;
+        if(nodeAnimatorUpdates >= NodeAnimatorUpdate::Visibility)
+            state.state |= UserInterfaceState::NeedsNodeUpdate;
         if(nodeAnimatorUpdates >= NodeAnimatorUpdate::Removal) {
             state.state |= UserInterfaceState::NeedsNodeClean;
             /** @todo some way to efficiently iterate set bits */

@@ -1482,26 +1482,42 @@ enum class NodeAnimatorUpdate: UnsignedByte {
     Opacity = 1 << 1,
 
     /**
-     * @ref NodeFlag::NoEvents or @ref NodeFlag::Disabled being added or
-     * cleared. Equivalently to calling
-     * @ref AbstractUserInterface::setNodeFlags() with these, causes
-     * @ref UserInterfaceState::NeedsNodeEnabledUpdate to be set.
+     * @ref NodeFlag::NoBlur being added or cleared. Equivalently to calling
+     * @ref AbstractUserInterface::setNodeFlags() with that flag, causes
+     * @ref UserInterfaceState::NeedsNodeEventMaskUpdate to be set. Subset of
+     * @ref NodeAnimatorUpdate::Enabled.
      */
-    Enabled = 1 << 2,
+    EventMask = 1 << 2,
+
+    /**
+     * @ref NodeFlag::NoEvents, @ref NodeFlag::Disabled or
+     * @ref NodeFlag::Focusable being added or cleared. Equivalently to calling
+     * @ref AbstractUserInterface::setNodeFlags() with these, causes
+     * @ref UserInterfaceState::NeedsNodeEnabledUpdate to be set. Superset of
+     * @ref NodeAnimatorUpdate::EventMask.
+     */
+    Enabled = EventMask|(1 << 3),
 
     /**
      * @ref NodeFlag::Clip being added or cleared. Equivalently to calling
      * @ref AbstractUserInterface::setNodeFlags() with that flag, causes
      * @ref UserInterfaceState::NeedsNodeClipUpdate to be set.
      */
-    Clip = 1 << 3,
+    Clip = 1 << 4,
+
+    /**
+     * @ref NodeFlag::Hidden being added or cleared. Equivalently to calling
+     * @ref AbstractUserInterface::setNodeFlags() with that flag, causes
+     * @ref UserInterfaceState::NeedsNodeUpdate to be set.
+     */
+    Visibility = 1 << 5,
 
     /**
      * Scheduling a node for removal. Equivalently to calling
      * @ref AbstractUserInterface::removeNode(), causes
      * @ref UserInterfaceState::NeedsNodeClean to be set.
      */
-    Removal = 1 << 4
+    Removal = 1 << 6
 };
 
 /**

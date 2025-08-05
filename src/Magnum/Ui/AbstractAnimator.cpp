@@ -130,7 +130,9 @@ Debug& operator<<(Debug& debug, const NodeAnimatorUpdate value) {
         _c(OffsetSize)
         _c(Opacity)
         _c(Enabled)
+        _c(EventMask)
         _c(Clip)
+        _c(Visibility)
         _c(Removal)
         #undef _c
         /* LCOV_EXCL_STOP */
@@ -144,7 +146,9 @@ Debug& operator<<(Debug& debug, const NodeAnimatorUpdates value) {
         NodeAnimatorUpdate::OffsetSize,
         NodeAnimatorUpdate::Opacity,
         NodeAnimatorUpdate::Enabled,
+        NodeAnimatorUpdate::EventMask,
         NodeAnimatorUpdate::Clip,
+        NodeAnimatorUpdate::Visibility,
         NodeAnimatorUpdate::Removal
     });
 }

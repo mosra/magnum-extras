@@ -58,6 +58,7 @@ struct AbstractAnimatorTest: TestSuite::Tester {
     void debugAnimationState();
     void debugNodeAnimatorUpdate();
     void debugNodeAnimatorUpdates();
+    void debugNodeAnimatorUpdatesSupersets();
 
     void construct();
     void constructGeneric();
@@ -331,6 +332,7 @@ AbstractAnimatorTest::AbstractAnimatorTest() {
               &AbstractAnimatorTest::debugAnimationState,
               &AbstractAnimatorTest::debugNodeAnimatorUpdate,
               &AbstractAnimatorTest::debugNodeAnimatorUpdates,
+              &AbstractAnimatorTest::debugNodeAnimatorUpdatesSupersets,
 
               &AbstractAnimatorTest::construct,
               &AbstractAnimatorTest::constructGeneric,
@@ -471,8 +473,17 @@ void AbstractAnimatorTest::debugNodeAnimatorUpdate() {
 
 void AbstractAnimatorTest::debugNodeAnimatorUpdates() {
     Containers::String out;
-    Debug{&out} << (NodeAnimatorUpdate::OffsetSize|NodeAnimatorUpdate(0xe0)) << NodeAnimatorUpdates{};
-    CORRADE_COMPARE(out, "Ui::NodeAnimatorUpdate::OffsetSize|Ui::NodeAnimatorUpdate(0xe0) Ui::NodeAnimatorUpdates{}\n");
+    Debug{&out} << (NodeAnimatorUpdate::OffsetSize|NodeAnimatorUpdate(0x80)) << NodeAnimatorUpdates{};
+    CORRADE_COMPARE(out, "Ui::NodeAnimatorUpdate::OffsetSize|Ui::NodeAnimatorUpdate(0x80) Ui::NodeAnimatorUpdates{}\n");
+}
+
+void AbstractAnimatorTest::debugNodeAnimatorUpdatesSupersets() {
+    /* Enabled is a superset of EventMask, so only one should be printed */
+    {
+        Containers::String out;
+        Debug{&out} << (NodeAnimatorUpdate::Enabled|NodeAnimatorUpdate::EventMask);
+        CORRADE_COMPARE(out, "Ui::NodeAnimatorUpdate::Enabled\n");
+    }
 }
 
 void AbstractAnimatorTest::construct() {
