@@ -157,193 +157,568 @@ const struct {
     Containers::Optional<Nanoseconds> paused;
     Containers::Optional<Nanoseconds> stopped;
     Containers::Optional<UnsignedInt> repeatCount;
+    AnimationFlags flags;
     AnimationState expectedState;
     Float expectedFactor;
 } PropertiesStateFactorData[]{
     {"scheduled",
-        10_nsec, 100_nsec, {}, {}, {},
+        10_nsec, 100_nsec, {}, {}, {}, {},
         AnimationState::Scheduled, 0.0f},
     {"scheduled, paused later",
-        10_nsec, 100_nsec, 108_nsec, {}, {},
+        10_nsec, 100_nsec, 108_nsec, {}, {}, {},
         AnimationState::Scheduled, 0.0f},
     {"scheduled, stopped later",
-        10_nsec, 100_nsec, {}, 109_nsec, {},
+        10_nsec, 100_nsec, {}, 109_nsec, {}, {},
         AnimationState::Scheduled, 0.0f},
     {"scheduled, paused + stopped later",
-        10_nsec, 100_nsec, 108_nsec, 109_nsec, {},
+        10_nsec, 100_nsec, 108_nsec, 109_nsec, {}, {},
         AnimationState::Scheduled, 0.0f},
     {"scheduled, repeat",
-        10_nsec, 100_nsec, {}, {}, 10,
+        10_nsec, 100_nsec, {}, {}, 10, {},
         AnimationState::Scheduled, 0.0f},
     {"playing begin",
-        10_nsec, 0_nsec, {}, {}, {},
+        10_nsec, 0_nsec, {}, {}, {}, {},
         AnimationState::Playing, 0.0f},
+    {"playing begin, reverse",
+        10_nsec, 0_nsec, {}, {}, {}, AnimationFlag::Reverse,
+        AnimationState::Playing, 1.0f},
+    {"playing begin, reverse every other",
+        10_nsec, 0_nsec, {}, {}, {}, AnimationFlag::ReverseEveryOther,
+        AnimationState::Playing, 0.0f},
+    {"playing begin, reverse + reverse every other",
+        10_nsec, 0_nsec, {}, {}, {}, AnimationFlag::Reverse|AnimationFlag::ReverseEveryOther,
+        AnimationState::Playing, 1.0f},
     {"playing begin, paused later",
-        10_nsec, 0_nsec, 3_nsec, {}, {},
+        10_nsec, 0_nsec, 3_nsec, {}, {}, {},
         AnimationState::Playing, 0.0f},
     {"playing begin, stopped later",
-        10_nsec, 0_nsec, {}, 4_nsec, {},
+        10_nsec, 0_nsec, {}, 4_nsec, {}, {},
         AnimationState::Playing, 0.0f},
     {"playing begin, paused + stopped later",
-        10_nsec, 0_nsec, 3_nsec, 4_nsec, {},
+        10_nsec, 0_nsec, 3_nsec, 4_nsec, {}, {},
         AnimationState::Playing, 0.0f},
+    /* Testing just one variant of reverse for the paused/stopped state, should
+       be enough */
+    {"playing begin, paused + stopped later, reverse + reverse every other",
+        10_nsec, 0_nsec, 3_nsec, 4_nsec, {}, AnimationFlag::Reverse|AnimationFlag::ReverseEveryOther,
+        AnimationState::Playing, 1.0f},
     {"playing begin, repeat",
-        10_nsec, -90_nsec, {}, {}, 10,
+        10_nsec, -90_nsec, {}, {}, 10, {},
         AnimationState::Playing, 0.0f},
+    {"playing begin, repeat, reverse",
+        10_nsec, -90_nsec, {}, {}, 10, AnimationFlag::Reverse,
+        AnimationState::Playing, 1.0f},
+    {"playing begin, repeat, even iteration, reverse every other",
+        10_nsec, -90_nsec, {}, {}, 10, AnimationFlag::ReverseEveryOther,
+        AnimationState::Playing, 1.0f},
+    {"playing begin, repeat, even iteration, reverse + reverse every other",
+        10_nsec, -90_nsec, {}, {}, 10, AnimationFlag::Reverse|AnimationFlag::ReverseEveryOther,
+        AnimationState::Playing, 0.0f},
+    {"playing begin, repeat, odd iteration, reverse every other",
+        10_nsec, -80_nsec, {}, {}, 10, AnimationFlag::ReverseEveryOther,
+        AnimationState::Playing, 0.0f},
+    {"playing begin, repeat, odd iteration, reverse + reverse every other",
+        10_nsec, -80_nsec, {}, {}, 10, AnimationFlag::Reverse|AnimationFlag::ReverseEveryOther,
+        AnimationState::Playing, 1.0f},
     {"playing middle",
-        10_nsec, -3_nsec, {}, {}, {},
+        10_nsec, -3_nsec, {}, {}, {}, {},
         AnimationState::Playing, 0.3f},
+    {"playing middle, reverse",
+        10_nsec, -3_nsec, {}, {}, {}, AnimationFlag::Reverse,
+        AnimationState::Playing, 0.7f},
+    {"playing middle, reverse every other",
+        10_nsec, -3_nsec, {}, {}, {}, AnimationFlag::ReverseEveryOther,
+        AnimationState::Playing, 0.3f},
+    {"playing middle, reverse + reverse every other",
+        10_nsec, -3_nsec, {}, {}, {}, AnimationFlag::Reverse|AnimationFlag::ReverseEveryOther,
+        AnimationState::Playing, 0.7f},
     {"playing middle, paused later",
-        10_nsec, -3_nsec, 8_nsec, {}, {},
+        10_nsec, -3_nsec, 8_nsec, {}, {}, {},
         AnimationState::Playing, 0.3f},
     {"playing middle, stopped later",
-        10_nsec, -3_nsec, {}, 9_nsec, {},
+        10_nsec, -3_nsec, {}, 9_nsec, {}, {},
         AnimationState::Playing, 0.3f},
     {"playing middle, paused + stopped later",
-        10_nsec, -3_nsec, 8_nsec, 9_nsec, {},
+        10_nsec, -3_nsec, 8_nsec, 9_nsec, {}, {},
         AnimationState::Playing, 0.3f},
-    {"playing middle, repeat",
-        10_nsec, -97_nsec, {}, {}, 10,
+    /* Again testing just one variant of reverse for the paused/stopped state,
+       should be enough */
+    {"playing middle, paused + stopped later, reverse + reverse every other",
+        10_nsec, -3_nsec, 8_nsec, 9_nsec, {}, AnimationFlag::Reverse|AnimationFlag::ReverseEveryOther,
         AnimationState::Playing, 0.7f},
+    {"playing middle, repeat",
+        10_nsec, -97_nsec, {}, {}, 10, {},
+        AnimationState::Playing, 0.7f},
+    {"playing middle, repeat, reverse",
+        10_nsec, -97_nsec, {}, {}, 10, AnimationFlag::Reverse,
+        AnimationState::Playing, 0.3f},
+    {"playing middle, repeat, even iteration, reverse every other",
+        10_nsec, -97_nsec, {}, {}, 10, AnimationFlag::ReverseEveryOther,
+        AnimationState::Playing, 0.3f},
+    {"playing middle, repeat, even iteration, reverse + reverse every other",
+        10_nsec, -97_nsec, {}, {}, 10, AnimationFlag::Reverse|AnimationFlag::ReverseEveryOther,
+        AnimationState::Playing, 0.7f},
+    {"playing middle, repeat, odd iteration, reverse every other",
+        10_nsec, -87_nsec, {}, {}, 10, AnimationFlag::ReverseEveryOther,
+        AnimationState::Playing, 0.7f},
+    {"playing middle, repeat, odd iteration, reverse + reverse every other",
+        10_nsec, -87_nsec, {}, {}, 10, AnimationFlag::Reverse|AnimationFlag::ReverseEveryOther,
+        AnimationState::Playing, 0.3f},
     {"playing end",
-        10_nsec, -10_nsec, {}, {}, {},
+        10_nsec, -10_nsec, {}, {}, {}, {},
         AnimationState::Stopped, 1.0f},
+    {"playing end, reverse",
+        10_nsec, -10_nsec, {}, {}, {}, AnimationFlag::Reverse,
+        AnimationState::Stopped, 0.0f},
+    {"playing end, reverse every other",
+        10_nsec, -10_nsec, {}, {}, {}, AnimationFlag::ReverseEveryOther,
+        AnimationState::Stopped, 1.0f},
+    {"playing end, reverse + reverse every other",
+        10_nsec, -10_nsec, {}, {}, {}, AnimationFlag::Reverse|AnimationFlag::ReverseEveryOther,
+        AnimationState::Stopped, 0.0f},
     {"playing end, repeat",
-        10_nsec, -90_nsec, {}, {}, 9,
+        10_nsec, -90_nsec, {}, {}, 9, {},
+        AnimationState::Stopped, 1.0f},
+    {"playing end, repeat, reverse",
+        10_nsec, -90_nsec, {}, {}, 9, AnimationFlag::Reverse,
+        AnimationState::Stopped, 0.0f},
+    {"playing end, repeat odd times, reverse every other",
+        10_nsec, -90_nsec, {}, {}, 9, AnimationFlag::ReverseEveryOther,
+        AnimationState::Stopped, 1.0f},
+    {"playing end, repeat odd times, reverse + reverse every other",
+        10_nsec, -90_nsec, {}, {}, 9, AnimationFlag::Reverse|AnimationFlag::ReverseEveryOther,
+        AnimationState::Stopped, 0.0f},
+    {"playing end, repeat even times, reverse every other",
+        10_nsec, -100_nsec, {}, {}, 10, AnimationFlag::ReverseEveryOther,
+        AnimationState::Stopped, 0.0f},
+    {"playing end, repeat even times, reverse + reverse every other",
+        10_nsec, -100_nsec, {}, {}, 10, AnimationFlag::Reverse|AnimationFlag::ReverseEveryOther,
         AnimationState::Stopped, 1.0f},
     {"paused begin",
-        10_nsec, -10_nsec, {-10_nsec}, {}, {},
+        10_nsec, -10_nsec, {-10_nsec}, {}, {}, {},
         AnimationState::Paused, 0.0f},
+    {"paused begin, reverse",
+        10_nsec, -10_nsec, {-10_nsec}, {}, {}, AnimationFlag::Reverse,
+        AnimationState::Paused, 1.0f},
+    {"paused begin, reverse every other",
+        10_nsec, -10_nsec, {-10_nsec}, {}, {}, AnimationFlag::ReverseEveryOther,
+        AnimationState::Paused, 0.0f},
+    {"paused begin, reverse + reverse every other",
+        10_nsec, -10_nsec, {-10_nsec}, {}, {}, AnimationFlag::Reverse|AnimationFlag::ReverseEveryOther,
+        AnimationState::Paused, 1.0f},
     {"paused begin, stopped later",
-        10_nsec, -10_nsec, {-10_nsec}, 3_nsec, {},
+        10_nsec, -10_nsec, {-10_nsec}, 3_nsec, {}, {},
         AnimationState::Paused, 0.0f},
+    /* Again testing just one variant of reverse for the paused + stopped
+       state, should be enough */
+    {"paused begin, stopped later, reverse",
+        10_nsec, -10_nsec, {-10_nsec}, 3_nsec, {}, AnimationFlag::Reverse|AnimationFlag::ReverseEveryOther,
+        AnimationState::Paused, 1.0f},
     {"paused begin, repeat",
-        10_nsec, -30_nsec, {-10_nsec}, {}, 3,
+        10_nsec, -30_nsec, {-10_nsec}, {}, 3, {},
+        AnimationState::Paused, 0.0f},
+    {"paused begin, repeat, reverse",
+        10_nsec, -30_nsec, {-10_nsec}, {}, 3, AnimationFlag::Reverse,
+        AnimationState::Paused, 1.0f},
+    {"paused begin, repeat, even iteration, reverse every other",
+        10_nsec, -30_nsec, {-10_nsec}, {}, 3, AnimationFlag::ReverseEveryOther,
+        AnimationState::Paused, 0.0f},
+    {"paused begin, repeat, even iteration, reverse + reverse every other",
+        10_nsec, -30_nsec, {-10_nsec}, {}, 3, AnimationFlag::Reverse|AnimationFlag::ReverseEveryOther,
+        AnimationState::Paused, 1.0f},
+    {"paused begin, repeat, odd iteration, reverse every other",
+        10_nsec, -30_nsec, {-20_nsec}, {}, 3, AnimationFlag::ReverseEveryOther,
+        AnimationState::Paused, 1.0f},
+    {"paused begin, repeat, odd iteration, reverse + reverse every other",
+        10_nsec, -30_nsec, {-20_nsec}, {}, 3, AnimationFlag::Reverse|AnimationFlag::ReverseEveryOther,
         AnimationState::Paused, 0.0f},
     {"paused middle",
-        10_nsec, -10_nsec, {-3_nsec}, {}, {},
+        10_nsec, -10_nsec, {-3_nsec}, {}, {}, {},
         AnimationState::Paused, 0.7f},
+    {"paused middle, reverse",
+        10_nsec, -10_nsec, {-3_nsec}, {}, {}, AnimationFlag::Reverse,
+        AnimationState::Paused, 0.3f},
+    {"paused middle, reverse every other",
+        10_nsec, -10_nsec, {-3_nsec}, {}, {}, AnimationFlag::ReverseEveryOther,
+        AnimationState::Paused, 0.7f},
+    {"paused middle, reverse + reverse every other",
+        10_nsec, -10_nsec, {-3_nsec}, {}, {}, AnimationFlag::Reverse|AnimationFlag::ReverseEveryOther,
+        AnimationState::Paused, 0.3f},
     {"paused middle, repeat",
-        10_nsec, -30_nsec, {-7_nsec}, {}, 3,
+        10_nsec, -30_nsec, {-7_nsec}, {}, 3, {},
+        AnimationState::Paused, 0.3f},
+    {"paused middle, repeat, reverse",
+        10_nsec, -30_nsec, {-7_nsec}, {}, 3, AnimationFlag::Reverse,
+        AnimationState::Paused, 0.7f},
+    {"paused middle, repeat, even iteration, reverse every other",
+        10_nsec, -30_nsec, {-7_nsec}, {}, 3, AnimationFlag::ReverseEveryOther,
+        AnimationState::Paused, 0.3f},
+    {"paused middle, repeat, even iteration, reverse + reverse every other",
+        10_nsec, -30_nsec, {-7_nsec}, {}, 3, AnimationFlag::Reverse|AnimationFlag::ReverseEveryOther,
+        AnimationState::Paused, 0.7f},
+    {"paused middle, repeat, odd iteration, reverse every other",
+        10_nsec, -30_nsec, {-17_nsec}, {}, 3, AnimationFlag::ReverseEveryOther,
+        AnimationState::Paused, 0.7f},
+    {"paused middle, repeat, odd iteration, reverse + reverse every other",
+        10_nsec, -30_nsec, {-17_nsec}, {}, 3, AnimationFlag::Reverse|AnimationFlag::ReverseEveryOther,
         AnimationState::Paused, 0.3f},
     {"paused end",
-        10_nsec, -10_nsec, 0_nsec, {}, {},
+        10_nsec, -10_nsec, 0_nsec, {}, {}, {},
         AnimationState::Stopped, 1.0f},
+    {"paused end, reverse",
+        10_nsec, -10_nsec, 0_nsec, {}, {}, AnimationFlag::Reverse,
+        AnimationState::Stopped, 0.0f},
+    {"paused end, reverse every other",
+        10_nsec, -10_nsec, 0_nsec, {}, {}, AnimationFlag::ReverseEveryOther,
+        AnimationState::Stopped, 1.0f},
+    {"paused end, reverse + reverse every other",
+        10_nsec, -10_nsec, 0_nsec, {}, {}, AnimationFlag::Reverse|AnimationFlag::ReverseEveryOther,
+        AnimationState::Stopped, 0.0f},
     {"paused end, repeat",
-        10_nsec, -80_nsec, 0_nsec, {}, 8,
+        10_nsec, -80_nsec, 0_nsec, {}, 8, {},
         AnimationState::Stopped, 1.0f},
+    {"paused end, repeat, reverse",
+        10_nsec, -80_nsec, 0_nsec, {}, 8, AnimationFlag::Reverse,
+        AnimationState::Stopped, 0.0f},
+    {"paused end, repeat even times, reverse every other",
+        10_nsec, -80_nsec, 0_nsec, {}, 8, AnimationFlag::ReverseEveryOther,
+        AnimationState::Stopped, 0.0f},
+    {"paused end, repeat even times, reverse + reverse every other",
+        10_nsec, -80_nsec, 0_nsec, {}, 8, AnimationFlag::Reverse|AnimationFlag::ReverseEveryOther,
+        AnimationState::Stopped, 1.0f},
+    {"paused end, repeat odd times, reverse every other",
+        10_nsec, -70_nsec, 0_nsec, {}, 7, AnimationFlag::ReverseEveryOther,
+        AnimationState::Stopped, 1.0f},
+    {"paused end, repeat odd times, reverse + reverse every other",
+        10_nsec, -70_nsec, 0_nsec, {}, 7, AnimationFlag::Reverse|AnimationFlag::ReverseEveryOther,
+        AnimationState::Stopped, 0.0f},
     /* The animation isn't considered paused yet but scheduled, as it'll be
        advanced (and thus calculated) only once it reaches the actual paused
        state */
     {"paused, scheduled later",
-        10_nsec, 100_nsec, 90_nsec, {}, {},
+        10_nsec, 100_nsec, 90_nsec, {}, {}, {},
         AnimationState::Scheduled, 0.0f},
     {"stopped",
-        10_nsec, -100_nsec, {}, {}, {},
+        10_nsec, -100_nsec, {}, {}, {}, {},
         AnimationState::Stopped, 1.0f},
+    {"stopped, reverse",
+        10_nsec, -100_nsec, {}, {}, {}, AnimationFlag::Reverse,
+        AnimationState::Stopped, 0.0f},
+    {"stopped, reverse every other",
+        10_nsec, -100_nsec, {}, {}, {}, AnimationFlag::ReverseEveryOther,
+        AnimationState::Stopped, 1.0f},
+    {"stopped, reverse + reverse every other",
+        10_nsec, -100_nsec, {}, {}, {}, AnimationFlag::Reverse|AnimationFlag::ReverseEveryOther,
+        AnimationState::Stopped, 0.0f},
+    /* The time since which the animation stopped shouldn't matter */
+    {"stopped, reverse every other, different time since stop",
+        10_nsec, -110_nsec, {}, {}, {}, AnimationFlag::ReverseEveryOther,
+        AnimationState::Stopped, 1.0f},
+    {"stopped, reverse + reverse every other, different time since stop",
+        10_nsec, -110_nsec, {}, {}, {}, AnimationFlag::Reverse|AnimationFlag::ReverseEveryOther,
+        AnimationState::Stopped, 0.0f},
     {"stopped, repeat",
-        10_nsec, -100_nsec, {}, {}, 9,
+        10_nsec, -100_nsec, {}, {}, 9, {},
+        AnimationState::Stopped, 1.0f},
+    {"stopped, repeat, reverse",
+        10_nsec, -100_nsec, {}, {}, 9, AnimationFlag::Reverse,
+        AnimationState::Stopped, 0.0f},
+    {"stopped, repeat odd times, reverse every other",
+        10_nsec, -100_nsec, {}, {}, 9, AnimationFlag::ReverseEveryOther,
+        AnimationState::Stopped, 1.0f},
+    {"stopped, repeat odd times, reverse + reverse every other",
+        10_nsec, -100_nsec, {}, {}, 9, AnimationFlag::Reverse|AnimationFlag::ReverseEveryOther,
+        AnimationState::Stopped, 0.0f},
+    {"stopped, repeat even times, reverse every other",
+        10_nsec, -100_nsec, {}, {}, 8, AnimationFlag::ReverseEveryOther,
+        AnimationState::Stopped, 0.0f},
+    {"stopped, repeat even times, reverse + reverse every other",
+        10_nsec, -100_nsec, {}, {}, 8, AnimationFlag::Reverse|AnimationFlag::ReverseEveryOther,
+        AnimationState::Stopped, 1.0f},
+    /* The time since which the animation stopped shouldn't matter */
+    {"stopped, repeat odd times, reverse every other, different time since stop",
+        10_nsec, -110_nsec, {}, {}, 9, AnimationFlag::ReverseEveryOther,
+        AnimationState::Stopped, 1.0f},
+    {"stopped, repeat odd times, reverse + reverse every other, different time since stop",
+        10_nsec, -110_nsec, {}, {}, 9, AnimationFlag::Reverse|AnimationFlag::ReverseEveryOther,
+        AnimationState::Stopped, 0.0f},
+    {"stopped, repeat even times, reverse every other, different time since stop",
+        10_nsec, -90_nsec, {}, {}, 8, AnimationFlag::ReverseEveryOther,
+        AnimationState::Stopped, 0.0f},
+    {"stopped, repeat even times, reverse + reverse every other, different time since stop",
+        10_nsec, -90_nsec, {}, {}, 8, AnimationFlag::Reverse|AnimationFlag::ReverseEveryOther,
         AnimationState::Stopped, 1.0f},
     {"stopped explicitly",
-        10_nsec, -100_nsec, {}, {-95_nsec}, {},
+        10_nsec, -100_nsec, {}, {-95_nsec}, {}, {},
         AnimationState::Stopped, 1.0f},
+    {"stopped explicitly, reverse",
+        10_nsec, -100_nsec, {}, {-95_nsec}, {}, AnimationFlag::Reverse,
+        AnimationState::Stopped, 0.0f},
+    {"stopped explicitly, reverse every other",
+        10_nsec, -100_nsec, {}, {-95_nsec}, {}, AnimationFlag::ReverseEveryOther,
+        AnimationState::Stopped, 1.0f},
+    {"stopped explicitly, reverse + reverse every other",
+        10_nsec, -100_nsec, {}, {-95_nsec}, {}, AnimationFlag::Reverse|AnimationFlag::ReverseEveryOther,
+        AnimationState::Stopped, 0.0f},
+    {"stopped explicitly, repeat",
+        10_nsec, -100_nsec, {}, {-55_nsec}, 20, {},
+        AnimationState::Stopped, 1.0f},
+    {"stopped explicitly, repeat, reverse",
+        10_nsec, -100_nsec, {}, {-55_nsec}, 20, AnimationFlag::Reverse,
+        AnimationState::Stopped, 0.0f},
+    {"stopped explicitly exactly at duration, repeat, even iteration, reverse every other",
+        10_nsec, -100_nsec, {}, {-60_nsec}, 20, AnimationFlag::ReverseEveryOther,
+        AnimationState::Stopped, 0.0f},
+    {"stopped explicitly right before duration, repeat, even iteration, reverse every other",
+        10_nsec, -100_nsec, {}, {-69_nsec}, 20, AnimationFlag::ReverseEveryOther,
+        AnimationState::Stopped, 0.0f},
+    {"stopped explicitly right after duration, repeat, even iteration, reverse every other",
+        10_nsec, -100_nsec, {}, {-61_nsec}, 20, AnimationFlag::ReverseEveryOther,
+        AnimationState::Stopped, 0.0f},
+    {"stopped explicitly, repeat, even iteration, reverse + reverse every other",
+        10_nsec, -100_nsec, {}, {-65_nsec}, 20, AnimationFlag::Reverse|AnimationFlag::ReverseEveryOther,
+        AnimationState::Stopped, 1.0f},
+    {"stopped explicitly exactly at duration, repeat, odd iteration, reverse every other",
+        10_nsec, -100_nsec, {}, {-50_nsec}, 20, AnimationFlag::ReverseEveryOther,
+        AnimationState::Stopped, 1.0f},
+    {"stopped explicitly right before duration, repeat, odd iteration, reverse every other",
+        10_nsec, -100_nsec, {}, {-59_nsec}, 20, AnimationFlag::ReverseEveryOther,
+        AnimationState::Stopped, 1.0f},
+    {"stopped explicitly right after duration, repeat, odd iteration, reverse every other",
+        10_nsec, -100_nsec, {}, {-51_nsec}, 20, AnimationFlag::ReverseEveryOther,
+        AnimationState::Stopped, 1.0f},
+    {"stopped explicitly, repeat, odd iteration, reverse + reverse every other",
+        10_nsec, -100_nsec, {}, {-55_nsec}, 20, AnimationFlag::Reverse|AnimationFlag::ReverseEveryOther,
+        AnimationState::Stopped, 0.0f},
+    /* Repeating infinite times should make no difference on reversing every
+       other */
+    {"stopped explicitly, repeat indefinitely, even iteration, reverse every other",
+        10_nsec, -100_nsec, {}, {-65_nsec}, 0, AnimationFlag::ReverseEveryOther,
+        AnimationState::Stopped, 0.0f},
+    {"stopped explicitly, repeat indefinitely, even iteration, reverse + reverse every other",
+        10_nsec, -100_nsec, {}, {-65_nsec}, 0, AnimationFlag::Reverse|AnimationFlag::ReverseEveryOther,
+        AnimationState::Stopped, 1.0f},
+    {"stopped explicitly, repeat indefinitely, odd iteration, reverse every other",
+        10_nsec, -100_nsec, {}, {-55_nsec}, 0, AnimationFlag::ReverseEveryOther,
+        AnimationState::Stopped, 1.0f},
+    {"stopped explicitly, repeat indefinitely, odd iteration, reverse + reverse every other",
+        10_nsec, -100_nsec, {}, {-55_nsec}, 0, AnimationFlag::Reverse|AnimationFlag::ReverseEveryOther,
+        AnimationState::Stopped, 0.0f},
+    /* The time since which the animation stopped shouldn't matter */
+    {"stopped explicitly, repeat, even iteration, reverse every other, different time since stop",
+        10_nsec, -110_nsec, {}, {-75_nsec}, 20, AnimationFlag::ReverseEveryOther,
+        AnimationState::Stopped, 0.0f},
+    {"stopped explicitly, repeat, even iteration, reverse + reverse every other, different time since stop",
+        10_nsec, -110_nsec, {}, {-75_nsec}, 20, AnimationFlag::Reverse|AnimationFlag::ReverseEveryOther,
+        AnimationState::Stopped, 1.0f},
+    {"stopped explicitly, repeat, odd iteration, reverse every other, different time since stop",
+        10_nsec, -110_nsec, {}, {-65_nsec}, 20, AnimationFlag::ReverseEveryOther,
+        AnimationState::Stopped, 1.0f},
+    {"stopped explicitly, repeat, odd iteration, reverse + reverse every other, different time since stop",
+        10_nsec, -110_nsec, {}, {-65_nsec}, 20, AnimationFlag::Reverse|AnimationFlag::ReverseEveryOther,
+        AnimationState::Stopped, 0.0f},
+    /* This verifies just that the stop is taken into account even if it's the
+       same as current time */
     {"stopped explicitly just now",
-        10_nsec, -5_nsec, {}, 0_nsec, {},
+        10_nsec, -5_nsec, {}, 0_nsec, {}, {},
         AnimationState::Stopped, 1.0f},
+    {"stopped explicitly just now, reverse",
+        10_nsec, -5_nsec, {}, 0_nsec, {}, AnimationFlag::Reverse,
+        AnimationState::Stopped, 0.0f},
+    {"stopped explicitly just now, reverse every other",
+        10_nsec, -5_nsec, {}, 0_nsec, {}, AnimationFlag::ReverseEveryOther,
+        AnimationState::Stopped, 1.0f},
+    {"stopped explicitly just now, reverse + reverse every other",
+        10_nsec, -5_nsec, {}, 0_nsec, {}, AnimationFlag::Reverse|AnimationFlag::ReverseEveryOther,
+        AnimationState::Stopped, 0.0f},
     {"stopped explicitly before the start",
-        10_nsec, -100_nsec, {}, {-110_nsec}, {},
+        10_nsec, -100_nsec, {}, {-110_nsec}, {}, {},
         AnimationState::Stopped, 1.0f},
+    {"stopped explicitly before the start, reverse",
+        10_nsec, -100_nsec, {}, {-110_nsec}, {}, AnimationFlag::Reverse,
+        AnimationState::Stopped, 0.0f},
+    /** @todo these two are treated as being stopped in the iteration before
+        the first one, and so if the first iteration is not reversed, this one
+        is and vice versa; same in the zero duration case below */
+    {"stopped explicitly before the start, reverse every other",
+        10_nsec, -100_nsec, {}, {-110_nsec}, {}, AnimationFlag::ReverseEveryOther,
+        AnimationState::Stopped, 0.0f},
+    {"stopped explicitly before the start, reverse + reverse every other",
+        10_nsec, -100_nsec, {}, {-110_nsec}, {}, AnimationFlag::Reverse|AnimationFlag::ReverseEveryOther,
+        AnimationState::Stopped, 1.0f},
+    /* These should take into account the actual duration end (so -90 / -50 ns,
+       not the explicit stop, to calculate even/odd reverse */
     {"stopped explicitly but after the whole duration",
-        10_nsec, -100_nsec, {}, {-85_nsec}, {},
+        10_nsec, -100_nsec, {}, {-85_nsec}, {}, {},
+        AnimationState::Stopped, 1.0f},
+    {"stopped explicitly but after the whole duration, reverse",
+        10_nsec, -100_nsec, {}, {-85_nsec}, {}, AnimationFlag::Reverse,
+        AnimationState::Stopped, 0.0f},
+    {"stopped explicitly but after the whole duration, reverse every other",
+        10_nsec, -100_nsec, {}, {-85_nsec}, {}, AnimationFlag::ReverseEveryOther,
+        AnimationState::Stopped, 1.0f},
+    {"stopped explicitly but after the whole duration, repeat",
+        10_nsec, -100_nsec, {}, {-45_nsec}, 5, {},
+        AnimationState::Stopped, 1.0f},
+    {"stopped explicitly but after the whole duration, repeat, reverse",
+        10_nsec, -100_nsec, {}, {-45_nsec}, 5, AnimationFlag::Reverse,
+        AnimationState::Stopped, 0.0f},
+    {"stopped explicitly but after the whole duration, repeat odd times, reverse every other",
+        10_nsec, -100_nsec, {}, {-45_nsec}, 5, AnimationFlag::ReverseEveryOther,
+        AnimationState::Stopped, 1.0f},
+    {"stopped explicitly but after the whole duration, repeat odd times, reverse + reverse every other",
+        10_nsec, -100_nsec, {}, {-45_nsec}, 5, AnimationFlag::Reverse|AnimationFlag::ReverseEveryOther,
+        AnimationState::Stopped, 0.0f},
+    {"stopped explicitly but after the whole duration, repeat even times, reverse every other",
+        10_nsec, -100_nsec, {}, {-55_nsec}, 4, AnimationFlag::ReverseEveryOther,
+        AnimationState::Stopped, 0.0f},
+    {"stopped explicitly but after the whole duration, repeat even times, reverse + reverse every other",
+        10_nsec, -100_nsec, {}, {-55_nsec}, 4, AnimationFlag::Reverse|AnimationFlag::ReverseEveryOther,
         AnimationState::Stopped, 1.0f},
     /* As this doesn't ever result in the animation running, it's Stopped
        already to not require a NeedsAdvance */
     {"stopped, scheduled later",
-        10_nsec, 100_nsec, {}, 90_nsec, {},
+        10_nsec, 100_nsec, {}, 90_nsec, {}, {},
         AnimationState::Stopped, 1.0f},
     {"playing begin, one day duration",
         24ll*60ll*60ll*1.0_sec,
-        0.0_sec, {}, {}, {},
+        0.0_sec, {}, {}, {}, {},
         AnimationState::Playing, 0.0f},
     {"playing middle, one day duration",
         24ll*60ll*60ll*1.0_sec,
-        -16ll*60ll*60ll*1.0_sec, {}, {}, {},
+        -16ll*60ll*60ll*1.0_sec, {}, {}, {}, {},
         AnimationState::Playing, 0.66667f},
     {"playing end, one day duration",
         24ll*60ll*60ll*1.0_sec,
-        -24ll*60ll*60ll*1.0_sec, {}, {}, {},
+        -24ll*60ll*60ll*1.0_sec, {}, {}, {}, {},
         AnimationState::Stopped, 1.0f},
     {"playing begin, one year duration",
         365ll*24ll*60ll*60ll*1.0_sec,
-        0.0_sec, {}, {}, {},
+        0.0_sec, {}, {}, {}, {},
         AnimationState::Playing, 0.0f},
     {"playing middle, one year duration",
         365ll*24ll*60ll*60ll*1.0_sec,
-        -365ll*16ll*60ll*60ll*1.0_sec, {}, {}, {},
+        -365ll*16ll*60ll*60ll*1.0_sec, {}, {}, {}, {},
         AnimationState::Playing, 0.66667f},
     {"playing end, one year duration",
         365ll*24ll*60ll*60ll*1.0_sec,
-        -365ll*24ll*60ll*60ll*1.0_sec, {}, {}, {},
+        -365ll*24ll*60ll*60ll*1.0_sec, {}, {}, {}, {},
         AnimationState::Stopped, 1.0f},
     /* The duration is scaled by 29 in the test case, which makes this 290
        years, which is near to the maximum representable (signed) range of 292
        years */
     {"playing begin, 10 year duration",
         10ll*365ll*24ll*60ll*60ll*1.0_sec,
-        0.0_sec, {}, {}, {},
+        0.0_sec, {}, {}, {}, {},
         AnimationState::Playing, 0.0f},
     {"playing middle, 10 year duration",
         10ll*365ll*24ll*60ll*60ll*1.0_sec,
-        -10ll*365ll*16ll*60ll*60ll*1.0_sec, {}, {}, {},
+        -10ll*365ll*16ll*60ll*60ll*1.0_sec, {}, {}, {}, {},
         AnimationState::Playing, 0.66667f},
     {"playing end, 10 year duration",
         10ll*365ll*24ll*60ll*60ll*1.0_sec,
-        -10ll*365ll*24ll*60ll*60ll*1.0_sec, {}, {}, {},
+        -10ll*365ll*24ll*60ll*60ll*1.0_sec, {}, {}, {}, {},
         AnimationState::Stopped, 1.0f},
     {"playing begin, 1 second duration, 100 millionth repeat",
         1.0_sec,
-        -100ll*1000ll*1000ll*1.0_sec, {}, {}, 0,
+        -100ll*1000ll*1000ll*1.0_sec, {}, {}, 0, {},
         AnimationState::Playing, 0.0f},
     {"playing middle, 1 second duration, 100 millionth repeat",
         1.0_sec,
-        -100ll*1000ll*1000ll*1.0_sec + 0.376_sec, {}, {}, 0,
+        -100ll*1000ll*1000ll*1.0_sec + 0.376_sec, {}, {}, 0, {},
         AnimationState::Playing, 1.0f - 0.376f},
     {"playing end, 1 second duration, 100 millionth repeat",
         1.0_sec,
-        -100ll*1000ll*1000ll*1.0_sec, {}, {}, 100*1000*1000,
+        -100ll*1000ll*1000ll*1.0_sec, {}, {}, 100*1000*1000, {},
         AnimationState::Stopped, 1.0f},
     /* Verify that evern repeat counts that go over 32 bits work correctly. Can
        only test begin & middle, not Stop, as there's no way to represent that
        many fixed repeats. */
     {"playing begin, 1 microsecond duration, 100 billionth repeat",
         1.0_usec,
-        -100ll*1000ll*1000ll*1000ll*1.0_usec, {}, {}, 0,
+        -100ll*1000ll*1000ll*1000ll*1.0_usec, {}, {}, 0, {},
         AnimationState::Playing, 0.0f},
     {"playing middle, 1 microsecond duration, 100 billionth repeat",
         1.0_usec,
-        -100ll*1000ll*1000ll*1000ll*1.0_usec + 0.376_usec, {}, {}, 0,
+        -100ll*1000ll*1000ll*1000ll*1.0_usec + 0.376_usec, {}, {}, 0, {},
         AnimationState::Playing, 1.0f - 0.376f},
+    /* This verifies that there's no underflow or whatever happening when
+       calculating even and odd repeats */
+    {"playing begin, 1 microsecond duration, 100 billionth repeat, reverse every other",
+        1.0_usec,
+        -100ll*1000ll*1000ll*1000ll*1.0_usec, {}, {}, 0, AnimationFlag::ReverseEveryOther,
+        AnimationState::Playing, 0.0f},
+    {"playing begin, 1 microsecond duration, 100 billionth repeat - 1, reverse every other",
+        1.0_usec,
+        -100ll*1000ll*1000ll*1000ll*1.0_usec - 1.0_usec, {}, {}, 0, AnimationFlag::ReverseEveryOther,
+        AnimationState::Playing, 1.0f},
+    {"playing middle, 1 microsecond duration, 100 billionth repeat, reverse every other",
+        1.0_usec,
+        -100ll*1000ll*1000ll*1000ll*1.0_usec + 0.376_usec, {}, {}, 0, AnimationFlag::ReverseEveryOther,
+        AnimationState::Playing, 0.376f},
+    {"playing middle, 1 microsecond duration, 100 billionth repeat - 1, reverse every other",
+        1.0_usec,
+        -100ll*1000ll*1000ll*1000ll*1.0_usec + 0.376_usec - 1.0_usec, {}, {}, 0, AnimationFlag::ReverseEveryOther,
+        AnimationState::Playing, 1.0f - 0.376f},
+    {"playing end, 1 microsecond duration, 100 billionth repeat, reverse every other",
+        1.0_usec,
+        -100ll*1000ll*1000ll*1000ll*1.0_usec, {}, {}, 100*1000*1000, AnimationFlag::ReverseEveryOther,
+        AnimationState::Stopped, 0.0f},
+    {"playing end, 1 microsecond duration, 100 billionth repeat - 1, reverse every other",
+        1.0_usec,
+        -100ll*1000ll*1000ll*1000ll*1.0_usec - 1.0_usec, {}, {}, 100*1000*1000 - 1, AnimationFlag::ReverseEveryOther,
+        AnimationState::Stopped, 1.0f},
     {"zero duration, scheduled",
-        0_nsec, 100_nsec, {}, {}, {},
+        0_nsec, 100_nsec, {}, {}, {}, {},
         AnimationState::Scheduled, 0.0f},
     {"zero duration, scheduled, paused later",
-        0_nsec, 100_nsec, 108_nsec, {}, {},
+        0_nsec, 100_nsec, 108_nsec, {}, {}, {},
         AnimationState::Scheduled, 0.0f},
     {"zero duration, scheduled, stopped later",
-        0_nsec, 100_nsec, {}, 109_nsec, {},
+        0_nsec, 100_nsec, {}, 109_nsec, {}, {},
         AnimationState::Scheduled, 0.0f},
     {"zero duration, scheduled, paused + stopped later",
-        0_nsec, 100_nsec, 108_nsec, 109_nsec, {},
+        0_nsec, 100_nsec, 108_nsec, 109_nsec, {}, {},
         AnimationState::Scheduled, 0.0f},
     {"zero duration, stopped",
-        0_nsec, -100_nsec, {}, {}, {},
+        0_nsec, -100_nsec, {}, {}, {}, {},
         AnimationState::Stopped, 1.0f},
+    {"zero duration, stopped, reverse",
+        0_nsec, -100_nsec, {}, {}, {}, AnimationFlag::Reverse,
+        AnimationState::Stopped, 0.0f},
+    {"zero duration, stopped, reverse every other",
+        0_nsec, -100_nsec, {}, {}, {}, AnimationFlag::ReverseEveryOther,
+        AnimationState::Stopped, 1.0f},
+    {"zero duration, stopped, reverse + reverse every other",
+        0_nsec, -100_nsec, {}, {}, {}, AnimationFlag::Reverse|AnimationFlag::ReverseEveryOther,
+        AnimationState::Stopped, 0.0f},
     {"zero duration, stopped explicitly before the start",
-        0_nsec, -100_nsec, {}, {-110_nsec}, {},
+        0_nsec, -100_nsec, {}, {-110_nsec}, {}, {},
+        AnimationState::Stopped, 1.0f},
+    {"zero duration, stopped explicitly before the start, reverse",
+        0_nsec, -100_nsec, {}, {-110_nsec}, {}, AnimationFlag::Reverse,
+        AnimationState::Stopped, 0.0f},
+    /** @todo these two are treated as being stopped in the iteration before
+        the first one, and so if the first iteration is not reversed, this one
+        is and vice versa; same in the non-zero duration case above */
+    {"zero duration, stopped explicitly before the start, reverse every other",
+        0_nsec, -100_nsec, {}, {-110_nsec}, {}, AnimationFlag::ReverseEveryOther,
+        AnimationState::Stopped, 0.0f},
+    {"zero duration, stopped explicitly before the start, reverse + reverse every other",
+        0_nsec, -100_nsec, {}, {-110_nsec}, {}, AnimationFlag::Reverse|AnimationFlag::ReverseEveryOther,
         AnimationState::Stopped, 1.0f},
     {"zero duration, stopped explicitly but after the whole duration",
-        0_nsec, -100_nsec, {}, {-50_nsec}, {},
+        0_nsec, -100_nsec, {}, {-50_nsec}, {}, {},
         AnimationState::Stopped, 1.0f},
+    {"zero duration, stopped explicitly but after the whole duration, reverse",
+        0_nsec, -100_nsec, {}, {-50_nsec}, {}, AnimationFlag::Reverse,
+        AnimationState::Stopped, 0.0f},
+    {"zero duration, stopped explicitly but after the whole duration, reverse every other",
+        0_nsec, -100_nsec, {}, {-50_nsec}, {}, AnimationFlag::ReverseEveryOther,
+        AnimationState::Stopped, 1.0f},
+    {"zero duration, stopped explicitly but after the whole duration, reverse + reverse every other",
+        0_nsec, -100_nsec, {}, {-50_nsec}, {}, AnimationFlag::Reverse|AnimationFlag::ReverseEveryOther,
+        AnimationState::Stopped, 0.0f},
 };
 
 const struct {
@@ -523,8 +898,8 @@ void AbstractAnimatorTest::debugAnimationFlag() {
 
 void AbstractAnimatorTest::debugAnimationFlags() {
     Containers::String out;
-    Debug{&out} << (AnimationFlag::KeepOncePlayed|AnimationFlag(0xe0)) << AnimationFlags{};
-    CORRADE_COMPARE(out, "Ui::AnimationFlag::KeepOncePlayed|Ui::AnimationFlag(0xe0) Ui::AnimationFlags{}\n");
+    Debug{&out} << (AnimationFlag::KeepOncePlayed|AnimationFlag::Reverse|AnimationFlag(0xe0)) << AnimationFlags{};
+    CORRADE_COMPARE(out, "Ui::AnimationFlag::KeepOncePlayed|Ui::AnimationFlag::Reverse|Ui::AnimationFlag(0xe0) Ui::AnimationFlags{}\n");
 }
 
 void AbstractAnimatorTest::debugAnimationState() {
@@ -1712,8 +2087,8 @@ void AbstractAnimatorTest::propertiesStateFactor() {
     Nanoseconds offset = 77777_nsec;
 
     AnimationHandle handle = data.repeatCount ?
-        animator.create(data.start*scale + offset, data.duration*scale, *data.repeatCount, AnimationFlag::KeepOncePlayed) :
-        animator.create(data.start*scale + offset, data.duration*scale, AnimationFlag::KeepOncePlayed);
+        animator.create(data.start*scale + offset, data.duration*scale, *data.repeatCount, AnimationFlag::KeepOncePlayed|data.flags) :
+        animator.create(data.start*scale + offset, data.duration*scale, AnimationFlag::KeepOncePlayed|data.flags);
     if(data.paused)
         animator.pause(handle, *data.paused*scale + offset);
     if(data.stopped)
@@ -2962,6 +3337,7 @@ void AbstractAnimatorTest::update() {
        in propertiesStateFactor(). */
     AnimationHandle scheduledKeep = animator.create(30_nsec, 10_nsec, AnimationFlag::KeepOncePlayed);
     AnimationHandle scheduledToPlayingBegin = animator.create(10_nsec, 10_nsec);
+    AnimationHandle scheduledToPlayingReverse = animator.create(5_nsec, 10_nsec, AnimationFlag::Reverse);
     AnimationHandle scheduledToPaused = animator.create(5_nsec, 10_nsec);
     AnimationHandle scheduledToStopped = animator.create(5_nsec, 10_nsec);
     AnimationHandle removed = animator.create(0_nsec, 6_nsec);
@@ -2970,11 +3346,13 @@ void AbstractAnimatorTest::update() {
     AnimationHandle playingEndToStopped = animator.create(0_nsec, 10_nsec);
     AnimationHandle playingToStoppedKeep = animator.create(0_nsec, 5_nsec, AnimationFlag::KeepOncePlayed);
     AnimationHandle playingRepeated = animator.create(-4_nsec, 10_nsec, 3);
+    AnimationHandle playingRepeatedReverseReverseEveryOther = animator.create(-3_nsec, 10_nsec, 3, AnimationFlag::Reverse|AnimationFlag::ReverseEveryOther);
     AnimationHandle paused = animator.create(-40_nsec, 10_nsec);
     AnimationHandle pausedToStopped = animator.create(-40_nsec, 10_nsec);
     AnimationHandle stoppedRemove = animator.create(-40_nsec, 30_nsec);
     AnimationHandle stoppedKeep = animator.create(-40_nsec, 30_nsec, AnimationFlag::KeepOncePlayed);
     AnimationHandle zeroDurationScheduled = animator.create(20_nsec, 0_nsec);
+    AnimationHandle zeroDurationScheduledReverseKeep = animator.create(20_nsec, 0_nsec, AnimationFlag::Reverse|AnimationFlag::KeepOncePlayed);
     AnimationHandle zeroDurationStopped = animator.create(-20_nsec, 0_nsec);
     animator.remove(removed);
     animator.pause(scheduledToPaused, 8_nsec); /* pauses at 3/10 */
@@ -2987,6 +3365,7 @@ void AbstractAnimatorTest::update() {
 
     CORRADE_COMPARE(animator.state(scheduledKeep), AnimationState::Scheduled);
     CORRADE_COMPARE(animator.state(scheduledToPlayingBegin), AnimationState::Scheduled);
+    CORRADE_COMPARE(animator.state(scheduledToPlayingReverse), AnimationState::Scheduled);
     CORRADE_COMPARE(animator.state(scheduledToPaused), AnimationState::Scheduled);
     CORRADE_COMPARE(animator.state(scheduledToStopped), AnimationState::Scheduled);
     /* removed is gone */
@@ -2996,15 +3375,17 @@ void AbstractAnimatorTest::update() {
     CORRADE_COMPARE(animator.state(playingEndToStopped), AnimationState::Playing);
     CORRADE_COMPARE(animator.state(playingToStoppedKeep), AnimationState::Playing);
     CORRADE_COMPARE(animator.state(playingRepeated), AnimationState::Playing);
+    CORRADE_COMPARE(animator.state(playingRepeatedReverseReverseEveryOther), AnimationState::Playing);
     CORRADE_COMPARE(animator.state(paused), AnimationState::Paused);
     CORRADE_COMPARE(animator.state(pausedToStopped), AnimationState::Paused);
     CORRADE_COMPARE(animator.state(stoppedRemove), AnimationState::Stopped);
     CORRADE_COMPARE(animator.state(stoppedKeep), AnimationState::Stopped);
     CORRADE_COMPARE(animator.state(zeroDurationScheduled), AnimationState::Scheduled);
+    CORRADE_COMPARE(animator.state(zeroDurationScheduledReverseKeep), AnimationState::Scheduled);
     CORRADE_COMPARE(animator.state(zeroDurationStopped), AnimationState::Stopped);
 
     constexpr Float unused = Constants::inf();
-    constexpr std::size_t animationCount = 16;
+    constexpr std::size_t animationCount = 19;
 
     /* Call to update(10) advances also stopped and paused animations that
        changed their state compared to last time (i.e., time 0) */
@@ -3018,92 +3399,107 @@ void AbstractAnimatorTest::update() {
         CORRADE_COMPARE_AS(Containers::BitArrayView{active}, Containers::stridedArrayView({
             false,  /*  0 scheduledKeep */
             true,   /*  1 scheduledToPlayingBegin */
-            true,   /*  2 scheduledToPaused */
-            true,   /*  3 scheduledToStopped */
-            false,  /*  4 removed */
-            true,   /*  5 playingMiddleKeep */
-            true,   /*  6 playingToPausedKeep */
-            true,   /*  7 playingEndToStopped */
-            true,   /*  8 playingToStoppedKeep */
-            true,   /*  9 playingRepeated */
-            false,  /* 10 paused */
-            true,   /* 11 pausedToStopped */
-            false,  /* 12 stoppedRemove */
-            false,  /* 13 stoppedKeep */
-            false,  /* 14 zeroDurationScheduled */
-            false,  /* 15 zeroDurationStopped */
+            true,   /*  2 scheduledToPlayingReverse */
+            true,   /*  3 scheduledToPaused */
+            true,   /*  4 scheduledToStopped */
+            false,  /*  5 removed */
+            true,   /*  6 playingMiddleKeep */
+            true,   /*  7 playingToPausedKeep */
+            true,   /*  8 playingEndToStopped */
+            true,   /*  9 playingToStoppedKeep */
+            true,   /* 10 playingRepeated */
+            true,   /* 11 playingRepeatedReverseReverseEveryOther */
+            false,  /* 12 paused */
+            true,   /* 13 pausedToStopped */
+            false,  /* 14 stoppedRemove */
+            false,  /* 15 stoppedKeep */
+            false,  /* 16 zeroDurationScheduled */
+            false,  /* 17 zeroDurationScheduledReverseKeep */
+            false,  /* 18 zeroDurationStopped */
         }).sliceBit(0), TestSuite::Compare::Container);
         CORRADE_COMPARE_AS(Containers::BitArrayView{started}, Containers::stridedArrayView({
             false,  /*  0 scheduledKeep */
             true,   /*  1 scheduledToPlayingBegin */
-            true,   /*  2 scheduledToPaused */
-            true,   /*  3 scheduledToStopped */
-            false,  /*  4 removed */
-            false,  /*  5 playingMiddleKeep */
-            false,  /*  6 playingToPausedKeep */
-            false,  /*  7 playingEndToStopped */
-            false,  /*  8 playingToStoppedKeep */
-            false,  /*  9 playingRepeated */
-            false,  /* 10 paused */
-            false,  /* 11 pausedToStopped */
-            false,  /* 12 stopped */
-            false,  /* 13 stoppedKeep */
-            false,  /* 14 zeroDurationScheduled */
-            false,  /* 15 zeroDurationStopped */
+            true,   /*  2 scheduledToPlayingReverse */
+            true,   /*  3 scheduledToPaused */
+            true,   /*  4 scheduledToStopped */
+            false,  /*  5 removed */
+            false,  /*  6 playingMiddleKeep */
+            false,  /*  7 playingToPausedKeep */
+            false,  /*  8 playingEndToStopped */
+            false,  /*  9 playingToStoppedKeep */
+            false,  /* 10 playingRepeated */
+            false,  /* 11 playingRepeatedReverseReverseEveryOther */
+            false,  /* 12 paused */
+            false,  /* 13 pausedToStopped */
+            false,  /* 14 stoppedRemove */
+            false,  /* 15 stoppedKeep */
+            false,  /* 16 zeroDurationScheduled */
+            false,  /* 17 zeroDurationScheduledReverseKeep */
+            false,  /* 18 zeroDurationStopped */
         }).sliceBit(0), TestSuite::Compare::Container);
         CORRADE_COMPARE_AS(Containers::BitArrayView{stopped}, Containers::stridedArrayView({
             false,  /*  0 scheduledKeep */
             false,  /*  1 scheduledToPlayingBegin */
-            false,  /*  2 scheduledToPaused */
-            true,   /*  3 scheduledToStopped */
-            false,  /*  4 removed */
-            false,  /*  5 playingMiddleKeep */
-            false,  /*  6 playingToPausedKeep */
-            true,   /*  7 playingEndToStopped */
-            true,   /*  8 playingToStoppedKeep */
-            false,  /*  9 playingRepeated */
-            false,  /* 10 paused */
-            true,   /* 11 pausedToStopped */
-            false,  /* 12 stopped */
-            false,  /* 13 stoppedKeep */
-            false,  /* 14 zeroDurationScheduled */
-            false,  /* 15 zeroDurationStopped */
+            false,  /*  2 scheduledToPlayingReverse */
+            false,  /*  3 scheduledToPaused */
+            true,   /*  4 scheduledToStopped */
+            false,  /*  5 removed */
+            false,  /*  6 playingMiddleKeep */
+            false,  /*  7 playingToPausedKeep */
+            true,   /*  8 playingEndToStopped */
+            true,   /*  9 playingToStoppedKeep */
+            false,  /* 10 playingRepeated */
+            false,  /* 11 playingRepeatedReverseReverseEveryOther */
+            false,  /* 12 paused */
+            true,   /* 13 pausedToStopped */
+            false,  /* 14 stoppedRemove */
+            false,  /* 15 stoppedKeep */
+            false,  /* 16 zeroDurationScheduled */
+            false,  /* 17 zeroDurationScheduledReverseKeep */
+            false,  /* 18 zeroDurationStopped */
         }).sliceBit(0), TestSuite::Compare::Container);
         CORRADE_COMPARE_AS(factors, Containers::arrayView({
             unused, /*  0 scheduledKeep */
             0.0f,   /*  1 scheduledToPlayingBegin */
-            0.3f,   /*  2 scheduledToPaused */
-            1.0f,   /*  3 scheduledToStopped */
-            unused, /*  4 removed */
-            0.75f,  /*  5 playingMiddleKeep */
-            0.75f,  /*  6 playingToPausedKeep */
-            1.0f,   /*  7 playingEndToStopped */
-            1.0f,   /*  8 playingToStoppedKeep */
-            0.4f,   /*  9 playingRepeated */
-            unused, /* 10 paused */
-            1.0f,   /* 11 pausedToStopped */
-            unused, /* 12 stoppedRemove */
-            unused, /* 13 stoppedKeep */
-            unused, /* 14 zeroDurationScheduled */
-            unused, /* 15 zeroDurationStopped */
+            0.5f,   /*  2 scheduledToPlayingReverse */
+            0.3f,   /*  3 scheduledToPaused */
+            1.0f,   /*  4 scheduledToStopped */
+            unused, /*  5 removed */
+            0.75f,  /*  6 playingMiddleKeep */
+            0.75f,  /*  7 playingToPausedKeep */
+            1.0f,   /*  8 playingEndToStopped */
+            1.0f,   /*  9 playingToStoppedKeep */
+            0.4f,   /* 10 playingRepeated */
+            0.3f,   /* 11 playingRepeatedReverseReverseEveryOther */
+            unused, /* 12 paused */
+            1.0f,   /* 13 pausedToStopped */
+            unused, /* 14 stoppedRemove */
+            unused, /* 15 stoppedKeep */
+            unused, /* 16 zeroDurationScheduled */
+            unused, /* 17 zeroDurationScheduledReverseKeep */
+            unused, /* 18 zeroDurationStopped */
         }), TestSuite::Compare::Container);
         CORRADE_COMPARE_AS(Containers::BitArrayView{remove}, Containers::stridedArrayView({
             false,  /*  0 scheduledKeep */
             false,  /*  1 scheduledToPlayingBegin */
-            false,  /*  2 scheduledToPaused */
-            true,   /*  3 scheduledToStopped */
-            false,  /*  4 removed */
-            false,  /*  5 playingMiddleKeep */
-            false,  /*  6 playingToPausedKeep */
-            true,   /*  7 playingEndToStopped */
-            false,  /*  8 playingToStoppedKeep */
-            false,  /*  9 playingRepeated */
-            false,  /* 10 paused */
-            true,   /* 11 pausedToStopped */
-            true,   /* 12 stoppedRemove */
-            false,  /* 13 stoppedKeep */
-            false,  /* 14 zeroDurationScheduled */
-            true,   /* 15 zeroDurationStopped */
+            false,  /*  2 scheduledToPlayingReverse */
+            false,  /*  3 scheduledToPaused */
+            true,   /*  4 scheduledToStopped */
+            false,  /*  5 removed */
+            false,  /*  6 playingMiddleKeep */
+            false,  /*  7 playingToPausedKeep */
+            true,   /*  8 playingEndToStopped */
+            false,  /*  9 playingToStoppedKeep */
+            false,  /* 10 playingRepeated */
+            false,  /* 11 playingRepeatedReverseReverseEveryOther */
+            false,  /* 12 paused */
+            true,   /* 13 pausedToStopped */
+            true,   /* 14 stoppedRemove */
+            false,  /* 15 stoppedKeep */
+            false,  /* 16 zeroDurationScheduled */
+            false,  /* 17 zeroDurationScheduledReverseKeep */
+            true,   /* 18 zeroDurationStopped */
         }).sliceBit(0), TestSuite::Compare::Container);
 
         /* Need to call this ourselves to not have the removed animations
@@ -3115,6 +3511,7 @@ void AbstractAnimatorTest::update() {
     /* All animations that stopped and aren't KeepOncePlayed are removed now */
     CORRADE_VERIFY(animator.isHandleValid(scheduledKeep));
     CORRADE_VERIFY(animator.isHandleValid(scheduledToPlayingBegin));
+    CORRADE_VERIFY(animator.isHandleValid(scheduledToPlayingReverse));
     CORRADE_VERIFY(animator.isHandleValid(scheduledToPaused));
     CORRADE_VERIFY(!animator.isHandleValid(scheduledToStopped));
     CORRADE_VERIFY(!animator.isHandleValid(removed));
@@ -3123,15 +3520,18 @@ void AbstractAnimatorTest::update() {
     CORRADE_VERIFY(!animator.isHandleValid(playingEndToStopped));
     CORRADE_VERIFY(animator.isHandleValid(playingToStoppedKeep));
     CORRADE_VERIFY(animator.isHandleValid(playingRepeated));
+    CORRADE_VERIFY(animator.isHandleValid(playingRepeatedReverseReverseEveryOther));
     CORRADE_VERIFY(animator.isHandleValid(paused));
     CORRADE_VERIFY(!animator.isHandleValid(pausedToStopped));
     CORRADE_VERIFY(!animator.isHandleValid(stoppedRemove));
     CORRADE_VERIFY(animator.isHandleValid(stoppedKeep));
     CORRADE_VERIFY(animator.isHandleValid(zeroDurationScheduled));
+    CORRADE_VERIFY(animator.isHandleValid(zeroDurationScheduledReverseKeep));
     CORRADE_VERIFY(!animator.isHandleValid(zeroDurationStopped));
 
     CORRADE_COMPARE(animator.state(scheduledKeep), AnimationState::Scheduled);
     CORRADE_COMPARE(animator.state(scheduledToPlayingBegin), AnimationState::Playing);
+    CORRADE_COMPARE(animator.state(scheduledToPlayingReverse), AnimationState::Playing);
     CORRADE_COMPARE(animator.state(scheduledToPaused), AnimationState::Paused);
     /* scheduledToStopped is gone */
     /* removed is gone */
@@ -3140,11 +3540,13 @@ void AbstractAnimatorTest::update() {
     /* playingEndToStopped is gone */
     CORRADE_COMPARE(animator.state(playingToStoppedKeep), AnimationState::Stopped);
     CORRADE_COMPARE(animator.state(playingRepeated), AnimationState::Playing);
+    CORRADE_COMPARE(animator.state(playingRepeatedReverseReverseEveryOther), AnimationState::Playing);
     CORRADE_COMPARE(animator.state(paused), AnimationState::Paused);
     /* pausedToStopped is gone */
     /* stoppedRemove is gone */
     CORRADE_COMPARE(animator.state(stoppedKeep), AnimationState::Stopped);
     CORRADE_COMPARE(animator.state(zeroDurationScheduled), AnimationState::Scheduled);
+    CORRADE_COMPARE(animator.state(zeroDurationScheduledReverseKeep), AnimationState::Scheduled);
     /* zeroDurationStopped is gone */
 
     /* Call to update(10) again marks only the currently playing animations as
@@ -3161,74 +3563,86 @@ void AbstractAnimatorTest::update() {
         CORRADE_COMPARE_AS(Containers::BitArrayView{active}, Containers::stridedArrayView({
             false,  /*  0 scheduledKeep */
             true,   /*  1 scheduledToPlayingBegin */
-            false,  /*  2 scheduledToPaused */
-            false,  /*  3 scheduledToStopped */
-            false,  /*  4 removed */
-            true,   /*  5 playingMiddleKeep */
-            false,  /*  6 playingToPausedKeep */
-            false,  /*  7 playingEndToStopped */
-            false,  /*  8 playingToStoppedKeep */
-            true,   /*  9 playingRepeated */
-            false,  /* 10 paused */
-            false,  /* 11 pausedToStopped */
-            false,  /* 12 stoppedRemove */
-            false,  /* 13 stoppedKeep */
-            false,  /* 14 zeroDurationScheduled */
-            false,  /* 15 zeroDurationStopped */
+            true,   /*  2 scheduledToPlayingReverse */
+            false,  /*  3 scheduledToPaused */
+            false,  /*  4 scheduledToStopped */
+            false,  /*  5 removed */
+            true,   /*  6 playingMiddleKeep */
+            false,  /*  7 playingToPausedKeep */
+            false,  /*  8 playingEndToStopped */
+            false,  /*  9 playingToStoppedKeep */
+            true,   /* 10 playingRepeated */
+            true,   /* 11 playingRepeatedReverseReverseEveryOther */
+            false,  /* 12 paused */
+            false,  /* 13 pausedToStopped */
+            false,  /* 14 stoppedRemove */
+            false,  /* 15 stoppedKeep */
+            false,  /* 16 zeroDurationScheduled */
+            false,  /* 17 zeroDurationScheduledReverseKeep */
+            false,  /* 18 zeroDurationStopped */
         }).sliceBit(0), TestSuite::Compare::Container);
         CORRADE_COMPARE_AS(Containers::BitArrayView{started}, Containers::stridedArrayView({
             false,  /*  0 scheduledKeep */
             false,  /*  1 scheduledToPlayingBegin */
-            false,  /*  2 scheduledToPaused */
-            false,  /*  3 scheduledToStopped */
-            false,  /*  4 removed */
-            false,  /*  5 playingMiddleKeep */
-            false,  /*  6 playingToPausedKeep */
-            false,  /*  7 playingEndToStopped */
-            false,  /*  8 playingToStoppedKeep */
-            false,  /*  9 playingRepeated */
-            false,  /* 10 paused */
-            false,  /* 11 pausedToStopped */
-            false,  /* 12 stopped */
-            false,  /* 13 stoppedKeep */
-            false,  /* 14 zeroDurationScheduled */
-            false,  /* 15 zeroDurationStopped */
+            false,  /*  2 scheduledToPlayingReverse */
+            false,  /*  3 scheduledToPaused */
+            false,  /*  4 scheduledToStopped */
+            false,  /*  5 removed */
+            false,  /*  6 playingMiddleKeep */
+            false,  /*  7 playingToPausedKeep */
+            false,  /*  8 playingEndToStopped */
+            false,  /*  9 playingToStoppedKeep */
+            false,  /* 10 playingRepeated */
+            false,  /* 11 playingRepeatedReverseReverseEveryOther */
+            false,  /* 12 paused */
+            false,  /* 13 pausedToStopped */
+            false,  /* 14 stoppedRemove */
+            false,  /* 15 stoppedKeep */
+            false,  /* 16 zeroDurationScheduled */
+            false,  /* 17 zeroDurationScheduledReverseKeep */
+            false,  /* 18 zeroDurationStopped */
         }).sliceBit(0), TestSuite::Compare::Container);
         CORRADE_COMPARE_AS(Containers::BitArrayView{stopped}, Containers::stridedArrayView({
             false,  /*  0 scheduledKeep */
             false,  /*  1 scheduledToPlayingBegin */
-            false,  /*  2 scheduledToPaused */
-            false,  /*  3 scheduledToStopped */
-            false,  /*  4 removed */
-            false,  /*  5 playingMiddleKeep */
-            false,  /*  6 playingToPausedKeep */
-            false,  /*  7 playingEndToStopped */
-            false,  /*  8 playingToStoppedKeep */
-            false,  /*  9 playingRepeated */
-            false,  /* 10 paused */
-            false,  /* 11 pausedToStopped */
-            false,  /* 12 stopped */
-            false,  /* 13 stoppedKeep */
-            false,  /* 14 zeroDurationScheduled */
-            false,  /* 15 zeroDurationStopped */
+            false,  /*  2 scheduledToPlayingReverse */
+            false,  /*  3 scheduledToPaused */
+            false,  /*  4 scheduledToStopped */
+            false,  /*  5 removed */
+            false,  /*  6 playingMiddleKeep */
+            false,  /*  7 playingToPausedKeep */
+            false,  /*  8 playingEndToStopped */
+            false,  /*  9 playingToStoppedKeep */
+            false,  /* 10 playingRepeated */
+            false,  /* 11 playingRepeatedReverseReverseEveryOther */
+            false,  /* 12 paused */
+            false,  /* 13 pausedToStopped */
+            false,  /* 14 stoppedRemove */
+            false,  /* 15 stoppedKeep */
+            false,  /* 16 zeroDurationScheduled */
+            false,  /* 17 zeroDurationScheduledReverseKeep */
+            false,  /* 18 zeroDurationStopped */
         }).sliceBit(0), TestSuite::Compare::Container);
         CORRADE_COMPARE_AS(factors, Containers::arrayView({
             unused, /*  0 scheduledKeep */
             0.0f,   /*  1 scheduledToPlayingBegin */
-            unused, /*  2 scheduledToPaused */
-            unused, /*  3 scheduledToStopped */
-            unused, /*  4 removed */
-            0.75f,  /*  5 playingMiddleKeep */
-            unused, /*  6 playingToPausedKeep */
-            unused, /*  7 playingEndToStopped */
-            unused, /*  8 playingToStoppedKeep */
-            0.4f,   /*  9 playingRepeated */
-            unused, /* 10 paused */
-            unused, /* 11 pausedToStopped */
-            unused, /* 12 stoppedRemove */
-            unused, /* 13 stoppedKeep */
-            unused, /* 14 zeroDurationScheduled */
-            unused, /* 15 zeroDurationStopped */
+            0.5f,   /*  2 scheduledToPlayingReverse */
+            unused, /*  3 scheduledToPaused */
+            unused, /*  4 scheduledToStopped */
+            unused, /*  5 removed */
+            0.75f,  /*  6 playingMiddleKeep */
+            unused, /*  7 playingToPausedKeep */
+            unused, /*  8 playingEndToStopped */
+            unused, /*  9 playingToStoppedKeep */
+            0.4f,   /* 10 playingRepeated */
+            0.3f,   /* 11 playingRepeatedReverseReverseEveryOther */
+            unused, /* 12 paused */
+            unused, /* 13 pausedToStopped */
+            unused, /* 14 stoppedRemove */
+            unused, /* 15 stoppedKeep */
+            unused, /* 16 zeroDurationScheduled */
+            unused, /* 17 zeroDurationScheduledReverseKeep */
+            unused, /* 18 zeroDurationStopped */
         }), TestSuite::Compare::Container);
         CORRADE_COMPARE_AS(remove,
             (Containers::BitArray{DirectInit, animationCount, false}),
@@ -3243,6 +3657,7 @@ void AbstractAnimatorTest::update() {
     /* Same as before */
     CORRADE_VERIFY(animator.isHandleValid(scheduledKeep));
     CORRADE_VERIFY(animator.isHandleValid(scheduledToPlayingBegin));
+    CORRADE_VERIFY(animator.isHandleValid(scheduledToPlayingReverse));
     CORRADE_VERIFY(animator.isHandleValid(scheduledToPaused));
     CORRADE_VERIFY(!animator.isHandleValid(scheduledToStopped));
     CORRADE_VERIFY(!animator.isHandleValid(removed));
@@ -3251,16 +3666,19 @@ void AbstractAnimatorTest::update() {
     CORRADE_VERIFY(!animator.isHandleValid(playingEndToStopped));
     CORRADE_VERIFY(animator.isHandleValid(playingToStoppedKeep));
     CORRADE_VERIFY(animator.isHandleValid(playingRepeated));
+    CORRADE_VERIFY(animator.isHandleValid(playingRepeatedReverseReverseEveryOther));
     CORRADE_VERIFY(animator.isHandleValid(paused));
     CORRADE_VERIFY(!animator.isHandleValid(pausedToStopped));
     CORRADE_VERIFY(!animator.isHandleValid(stoppedRemove));
     CORRADE_VERIFY(animator.isHandleValid(stoppedKeep));
     CORRADE_VERIFY(animator.isHandleValid(zeroDurationScheduled));
+    CORRADE_VERIFY(animator.isHandleValid(zeroDurationScheduledReverseKeep));
     CORRADE_VERIFY(!animator.isHandleValid(zeroDurationStopped));
 
     /* Same as before */
     CORRADE_COMPARE(animator.state(scheduledKeep), AnimationState::Scheduled);
     CORRADE_COMPARE(animator.state(scheduledToPlayingBegin), AnimationState::Playing);
+    CORRADE_COMPARE(animator.state(scheduledToPlayingReverse), AnimationState::Playing);
     CORRADE_COMPARE(animator.state(scheduledToPaused), AnimationState::Paused);
     /* scheduledToStopped is gone */
     /* removed is gone */
@@ -3269,17 +3687,19 @@ void AbstractAnimatorTest::update() {
     /* playingEndToStopped is gone */
     CORRADE_COMPARE(animator.state(playingToStoppedKeep), AnimationState::Stopped);
     CORRADE_COMPARE(animator.state(playingRepeated), AnimationState::Playing);
+    CORRADE_COMPARE(animator.state(playingRepeatedReverseReverseEveryOther), AnimationState::Playing);
     CORRADE_COMPARE(animator.state(paused), AnimationState::Paused);
     /* pausedToStopped is gone */
     /* stoppedRemove is gone */
     CORRADE_COMPARE(animator.state(stoppedKeep), AnimationState::Stopped);
     CORRADE_COMPARE(animator.state(zeroDurationScheduled), AnimationState::Scheduled);
+    CORRADE_COMPARE(animator.state(zeroDurationScheduledReverseKeep), AnimationState::Scheduled);
     /* zeroDurationStopped is gone */
 
     /* Call at 20 advances animations that weren't stopped and paused before as
        well. There's just zeroDurationScheduled now being active that wasn't
        before, and it's both started, stopped and removed in this frame. The
-       playingRepeated does *not* get the started / stopped bits set for
+       playingRepeated* do *not* get the started / stopped bits set for
        successive iterations. */
     {
         Containers::BitArray active{NoInit, animationCount};
@@ -3291,92 +3711,107 @@ void AbstractAnimatorTest::update() {
         CORRADE_COMPARE_AS(Containers::BitArrayView{active}, Containers::stridedArrayView({
             false,  /*  0 scheduledKeep */
             true,   /*  1 scheduledToPlayingBegin */
-            false,  /*  2 scheduledToPaused */
-            false,  /*  3 scheduledToStopped */
-            false,  /*  4 removed */
-            true,   /*  5 playingMiddleKeep */
-            false,  /*  6 playingToPausedKeep */
-            false,  /*  7 playingEndToStopped */
-            false,  /*  8 playingToStoppedKeep */
-            true,   /*  9 playingRepeated */
-            false,  /* 10 paused */
-            false,  /* 11 pausedToStopped */
-            false,  /* 12 stoppedRemove */
-            false,  /* 13 stoppedKeep */
-            true,   /* 14 zeroDurationScheduled */
-            false,  /* 15 zeroDurationStopped */
+            true,   /*  2 scheduledToPlayingReverse */
+            false,  /*  3 scheduledToPaused */
+            false,  /*  4 scheduledToStopped */
+            false,  /*  5 removed */
+            true,   /*  6 playingMiddleKeep */
+            false,  /*  7 playingToPausedKeep */
+            false,  /*  8 playingEndToStopped */
+            false,  /*  9 playingToStoppedKeep */
+            true,   /* 10 playingRepeated */
+            true,   /* 11 playingRepeatedReverseReverseEveryOther */
+            false,  /* 12 paused */
+            false,  /* 13 pausedToStopped */
+            false,  /* 14 stoppedRemove */
+            false,  /* 15 stoppedKeep */
+            true,   /* 16 zeroDurationScheduled */
+            true,   /* 17 zeroDurationScheduledReverseKeep */
+            false,  /* 18 zeroDurationStopped */
         }).sliceBit(0), TestSuite::Compare::Container);
         CORRADE_COMPARE_AS(Containers::BitArrayView{started}, Containers::stridedArrayView({
             false,  /*  0 scheduledKeep */
             false,  /*  1 scheduledToPlayingBegin */
-            false,  /*  2 scheduledToPaused */
-            false,  /*  3 scheduledToStopped */
-            false,  /*  4 removed */
-            false,  /*  5 playingMiddleKeep */
-            false,  /*  6 playingToPausedKeep */
-            false,  /*  7 playingEndToStopped */
-            false,  /*  8 playingToStoppedKeep */
-            false,  /*  9 playingRepeated */
-            false,  /* 10 paused */
-            false,  /* 11 pausedToStopped */
-            false,  /* 12 stopped */
-            false,  /* 13 stoppedKeep */
-            true,   /* 14 zeroDurationScheduled */
-            false,  /* 15 zeroDurationStopped */
+            false,  /*  2 scheduledToPlayingReverse */
+            false,  /*  3 scheduledToPaused */
+            false,  /*  4 scheduledToStopped */
+            false,  /*  5 removed */
+            false,  /*  6 playingMiddleKeep */
+            false,  /*  7 playingToPausedKeep */
+            false,  /*  8 playingEndToStopped */
+            false,  /*  9 playingToStoppedKeep */
+            false,  /* 10 playingRepeated */
+            false,  /* 11 playingRepeatedReverseReverseEveryOther */
+            false,  /* 12 paused */
+            false,  /* 13 pausedToStopped */
+            false,  /* 14 stoppedRemove */
+            false,  /* 15 stoppedKeep */
+            true,   /* 16 zeroDurationScheduled */
+            true,   /* 17 zeroDurationScheduledReverseKeep */
+            false,  /* 18 zeroDurationStopped */
         }).sliceBit(0), TestSuite::Compare::Container);
         CORRADE_COMPARE_AS(Containers::BitArrayView{stopped}, Containers::stridedArrayView({
             false,  /*  0 scheduledKeep */
             true,   /*  1 scheduledToPlayingBegin */
-            false,  /*  2 scheduledToPaused */
-            false,  /*  3 scheduledToStopped */
-            false,  /*  4 removed */
-            true,   /*  5 playingMiddleKeep */
-            false,  /*  6 playingToPausedKeep */
-            false,  /*  7 playingEndToStopped */
-            false,  /*  8 playingToStoppedKeep */
-            false,  /*  9 playingRepeated */
-            false,  /* 10 paused */
-            false,  /* 11 pausedToStopped */
-            false,  /* 12 stopped */
-            false,  /* 13 stoppedKeep */
-            true,   /* 14 zeroDurationScheduled */
-            false,  /* 15 zeroDurationStopped */
+            true,   /*  2 scheduledToPlayingReverse */
+            false,  /*  3 scheduledToPaused */
+            false,  /*  4 scheduledToStopped */
+            false,  /*  5 removed */
+            true,   /*  6 playingMiddleKeep */
+            false,  /*  7 playingToPausedKeep */
+            false,  /*  8 playingEndToStopped */
+            false,  /*  9 playingToStoppedKeep */
+            false,  /* 10 playingRepeated */
+            false,  /* 11 playingRepeatedReverseReverseEveryOther */
+            false,  /* 12 paused */
+            false,  /* 13 pausedToStopped */
+            false,  /* 14 stoppedRemove */
+            false,  /* 15 stoppedKeep */
+            true,   /* 16 zeroDurationScheduled */
+            true,   /* 17 zeroDurationScheduledReverseKeep */
+            false,  /* 18 zeroDurationStopped */
         }).sliceBit(0), TestSuite::Compare::Container);
         CORRADE_COMPARE_AS(factors, Containers::arrayView({
             unused, /*  0 scheduledKeep */
             1.0f,   /*  1 scheduledToPlayingBegin */
-            unused, /*  2 scheduledToPaused */
-            unused, /*  3 scheduledToStopped */
-            unused, /*  4 removed */
-            1.0f,   /*  5 playingMiddleKeep */
-            unused, /*  6 playingToPausedKeep */
-            unused, /*  7 playingEndToStopped */
-            unused, /*  8 playingToStoppedKeep */
-            0.4f,   /*  9 playingRepeated */
-            unused, /* 10 paused */
-            unused, /* 11 pausedToStopped */
-            unused, /* 12 stoppedRemove */
-            unused, /* 13 stoppedKeep */
-            1.0f,   /* 14 zeroDurationScheduled */
-            unused, /* 15 zeroDurationStopped */
+            0.0f,   /*  2 scheduledToPlayingReverse */
+            unused, /*  3 scheduledToPaused */
+            unused, /*  4 scheduledToStopped */
+            unused, /*  5 removed */
+            1.0f,   /*  6 playingMiddleKeep */
+            unused, /*  7 playingToPausedKeep */
+            unused, /*  8 playingEndToStopped */
+            unused, /*  9 playingToStoppedKeep */
+            0.4f,   /* 10 playingRepeated */
+            0.7f,   /* 11 playingRepeatedReverseReverseEveryOther */
+            unused, /* 12 paused */
+            unused, /* 13 pausedToStopped */
+            unused, /* 14 stoppedRemove */
+            unused, /* 15 stoppedKeep */
+            1.0f,   /* 16 zeroDurationScheduled */
+            0.0f,   /* 17 zeroDurationScheduledReverseKeep */
+            unused, /* 18 zeroDurationStopped */
         }), TestSuite::Compare::Container);
         CORRADE_COMPARE_AS(Containers::BitArrayView{remove}, Containers::stridedArrayView({
             false,  /*  0 scheduledKeep */
             true,   /*  1 scheduledToPlayingBegin */
-            false,  /*  2 scheduledToPaused */
-            false,  /*  3 scheduledToStopped */
-            false,  /*  4 removed */
-            false,  /*  5 playingMiddleKeep */
-            false,  /*  6 playingToPausedKeep */
-            false,  /*  7 playingEndToStopped */
-            false,  /*  8 playingToStoppedKeep */
-            false,  /*  9 playingRepeated */
-            false,  /* 10 paused */
-            false,  /* 11 pausedToStopped */
-            false,  /* 12 stoppedRemove */
-            false,  /* 13 stoppedKeep */
-            true,   /* 14 zeroDurationScheduled */
-            false,  /* 15 zeroDurationStopped */
+            true,   /*  2 scheduledToPlayingReverse */
+            false,  /*  3 scheduledToPaused */
+            false,  /*  4 scheduledToStopped */
+            false,  /*  5 removed */
+            false,  /*  6 playingMiddleKeep */
+            false,  /*  7 playingToPausedKeep */
+            false,  /*  8 playingEndToStopped */
+            false,  /*  9 playingToStoppedKeep */
+            false,  /* 10 playingRepeated */
+            false,  /* 11 playingRepeatedReverseReverseEveryOther */
+            false,  /* 12 paused */
+            false,  /* 13 pausedToStopped */
+            false,  /* 14 stoppedRemove */
+            false,  /* 15 stoppedKeep */
+            true,   /* 16 zeroDurationScheduled */
+            false,  /* 17 zeroDurationScheduledReverseKeep */
+            false,  /* 18 zeroDurationStopped */
         }).sliceBit(0), TestSuite::Compare::Container);
 
         /* Need to call this ourselves to not have the removed animations
@@ -3389,6 +3824,7 @@ void AbstractAnimatorTest::update() {
        playingMiddleKeep not because is marked as such */
     CORRADE_VERIFY(animator.isHandleValid(scheduledKeep));
     CORRADE_VERIFY(!animator.isHandleValid(scheduledToPlayingBegin));
+    CORRADE_VERIFY(!animator.isHandleValid(scheduledToPlayingReverse));
     CORRADE_VERIFY(animator.isHandleValid(scheduledToPaused));
     CORRADE_VERIFY(!animator.isHandleValid(scheduledToStopped));
     CORRADE_VERIFY(!animator.isHandleValid(removed));
@@ -3397,15 +3833,18 @@ void AbstractAnimatorTest::update() {
     CORRADE_VERIFY(!animator.isHandleValid(playingEndToStopped));
     CORRADE_VERIFY(animator.isHandleValid(playingToStoppedKeep));
     CORRADE_VERIFY(animator.isHandleValid(playingRepeated));
+    CORRADE_VERIFY(animator.isHandleValid(playingRepeatedReverseReverseEveryOther));
     CORRADE_VERIFY(animator.isHandleValid(paused));
     CORRADE_VERIFY(!animator.isHandleValid(pausedToStopped));
     CORRADE_VERIFY(!animator.isHandleValid(stoppedRemove));
     CORRADE_VERIFY(animator.isHandleValid(stoppedKeep));
     CORRADE_VERIFY(!animator.isHandleValid(zeroDurationScheduled));
+    CORRADE_VERIFY(animator.isHandleValid(zeroDurationScheduledReverseKeep));
     CORRADE_VERIFY(!animator.isHandleValid(zeroDurationStopped));
 
     CORRADE_COMPARE(animator.state(scheduledKeep), AnimationState::Scheduled);
     /* scheduledToPlayingBegin is gone */
+    /* scheduledToPlayingReverse is gone */
     CORRADE_COMPARE(animator.state(scheduledToPaused), AnimationState::Paused);
     /* scheduledToStopped is gone */
     /* removed is gone */
@@ -3414,15 +3853,17 @@ void AbstractAnimatorTest::update() {
     /* playingEndToStopped is gone */
     CORRADE_COMPARE(animator.state(playingToStoppedKeep), AnimationState::Stopped);
     CORRADE_COMPARE(animator.state(playingRepeated), AnimationState::Playing);
+    CORRADE_COMPARE(animator.state(playingRepeatedReverseReverseEveryOther), AnimationState::Playing);
     CORRADE_COMPARE(animator.state(paused), AnimationState::Paused);
     /* pausedToStopped is gone */
     /* stoppedRemove is gone */
     CORRADE_COMPARE(animator.state(stoppedKeep), AnimationState::Stopped);
     /* zeroDurationScheduled is gone */
+    CORRADE_COMPARE(animator.state(zeroDurationScheduledReverseKeep), AnimationState::Stopped);
     /* zeroDurationStopped is gone */
 
     /* After stopping what's paused, call at 30 advances the remaining
-       animations including the last iteration of the repeated one, after that
+       animations including the last iteration of the repeated ones, after that
        there's nothing to advance anymore */
     animator.stop(scheduledToPaused, 30_nsec);
     animator.stop(playingToPausedKeep, 30_nsec);
@@ -3437,92 +3878,107 @@ void AbstractAnimatorTest::update() {
         CORRADE_COMPARE_AS(Containers::BitArrayView{active}, Containers::stridedArrayView({
             true,   /*  0 scheduledKeep */
             false,  /*  1 scheduledToPlayingBegin */
-            true,   /*  2 scheduledToPaused */
-            false,  /*  3 scheduledToStopped */
-            false,  /*  4 removed */
-            false,  /*  5 playingMiddleKeep */
-            true,   /*  6 playingToPausedKeep */
-            false,  /*  7 playingEndToStopped */
-            false,  /*  8 playingToStoppedKeep */
-            true,   /*  9 playingRepeated */
-            true,   /* 10 paused */
-            false,  /* 11 pausedToStopped */
-            false,  /* 12 stoppedRemove */
-            false,  /* 13 stoppedKeep */
-            false,  /* 14 zeroDurationScheduled */
-            false,  /* 15 zeroDurationStopped */
+            false,  /*  2 scheduledToPlayingReverse */
+            true,   /*  3 scheduledToPaused */
+            false,  /*  4 scheduledToStopped */
+            false,  /*  5 removed */
+            false,  /*  6 playingMiddleKeep */
+            true,   /*  7 playingToPausedKeep */
+            false,  /*  8 playingEndToStopped */
+            false,  /*  9 playingToStoppedKeep */
+            true,   /* 10 playingRepeated */
+            true,   /* 11 playingRepeatedReverseReverseEveryOther */
+            true,   /* 12 paused */
+            false,  /* 13 pausedToStopped */
+            false,  /* 14 stoppedRemove */
+            false,  /* 15 stoppedKeep */
+            false,  /* 16 zeroDurationScheduled */
+            false,  /* 17 zeroDurationScheduledReverseKeep */
+            false,  /* 18 zeroDurationStopped */
         }).sliceBit(0), TestSuite::Compare::Container);
         CORRADE_COMPARE_AS(Containers::BitArrayView{started}, Containers::stridedArrayView({
             true,   /*  0 scheduledKeep */
             false,  /*  1 scheduledToPlayingBegin */
-            false,  /*  2 scheduledToPaused */
-            false,  /*  3 scheduledToStopped */
-            false,  /*  4 removed */
-            false,  /*  5 playingMiddleKeep */
-            false,  /*  6 playingToPausedKeep */
-            false,  /*  7 playingEndToStopped */
-            false,  /*  8 playingToStoppedKeep */
-            false,  /*  9 playingRepeated */
-            false,  /* 10 paused */
-            false,  /* 11 pausedToStopped */
-            false,  /* 12 stopped */
-            false,  /* 13 stoppedKeep */
-            false,  /* 14 zeroDurationScheduled */
-            false,  /* 15 zeroDurationStopped */
+            false,  /*  2 scheduledToPlayingReverse */
+            false,  /*  3 scheduledToPaused */
+            false,  /*  4 scheduledToStopped */
+            false,  /*  5 removed */
+            false,  /*  6 playingMiddleKeep */
+            false,  /*  7 playingToPausedKeep */
+            false,  /*  8 playingEndToStopped */
+            false,  /*  9 playingToStoppedKeep */
+            false,  /* 10 playingRepeated */
+            false,  /* 11 playingRepeatedReverseReverseEveryOther */
+            false,  /* 12 paused */
+            false,  /* 13 pausedToStopped */
+            false,  /* 14 stoppedRemove */
+            false,  /* 15 stoppedKeep */
+            false,  /* 16 zeroDurationScheduled */
+            false,  /* 17 zeroDurationScheduledReverseKeep */
+            false,  /* 18 zeroDurationStopped */
         }).sliceBit(0), TestSuite::Compare::Container);
         CORRADE_COMPARE_AS(Containers::BitArrayView{stopped}, Containers::stridedArrayView({
             false,  /*  0 scheduledKeep */
             false,  /*  1 scheduledToPlayingBegin */
-            true,   /*  2 scheduledToPaused */
-            false,  /*  3 scheduledToStopped */
-            false,  /*  4 removed */
-            false,  /*  5 playingMiddleKeep */
-            true,   /*  6 playingToPausedKeep */
-            false,  /*  7 playingEndToStopped */
-            false,  /*  8 playingToStoppedKeep */
-            true,   /*  9 playingRepeated */
-            true,   /* 10 paused */
-            false,  /* 11 pausedToStopped */
-            false,  /* 12 stopped */
-            false,  /* 13 stoppedKeep */
-            false,  /* 14 zeroDurationScheduled */
-            false,  /* 15 zeroDurationStopped */
+            false,  /*  2 scheduledToPlayingReverse */
+            true,   /*  3 scheduledToPaused */
+            false,  /*  4 scheduledToStopped */
+            false,  /*  5 removed */
+            false,  /*  6 playingMiddleKeep */
+            true,   /*  7 playingToPausedKeep */
+            false,  /*  8 playingEndToStopped */
+            false,  /*  9 playingToStoppedKeep */
+            true,   /* 10 playingRepeated */
+            true,   /* 11 playingRepeatedReverseReverseEveryOther */
+            true,   /* 12 paused */
+            false,  /* 13 pausedToStopped */
+            false,  /* 14 stoppedRemove */
+            false,  /* 15 stoppedKeep */
+            false,  /* 16 zeroDurationScheduled */
+            false,  /* 17 zeroDurationScheduledReverseKeep */
+            false,  /* 18 zeroDurationStopped */
         }).sliceBit(0), TestSuite::Compare::Container);
         CORRADE_COMPARE_AS(factors, Containers::arrayView({
             0.0f,   /*  0 scheduledKeep */
             unused, /*  1 scheduledToPlayingBegin */
-            1.0f,   /*  2 scheduledToPaused */
-            unused, /*  3 scheduledToStopped */
-            unused, /*  4 removed */
-            unused, /*  5 playingMiddleKeep */
-            1.0f,   /*  6 playingToPausedKeep */
-            unused, /*  7 playingEndToStopped */
-            unused, /*  8 playingToStoppedKeep */
-            1.0f,   /*  9 playingRepeated */
-            1.0f,   /* 10 paused */
-            unused, /* 11 pausedToStopped */
-            unused, /* 12 stoppedRemove */
-            unused, /* 13 stoppedKeep */
-            unused, /* 14 zeroDurationScheduled */
-            unused, /* 15 zeroDurationStopped */
+            unused, /*  2 scheduledToPlayingReverse */
+            1.0f,   /*  3 scheduledToPaused */
+            unused, /*  4 scheduledToStopped */
+            unused, /*  5 removed */
+            unused, /*  6 playingMiddleKeep */
+            1.0f,   /*  7 playingToPausedKeep */
+            unused, /*  8 playingEndToStopped */
+            unused, /*  9 playingToStoppedKeep */
+            1.0f,   /* 10 playingRepeated */
+            0.0f,   /* 11 playingRepeatedReverseReverseEveryOther */
+            1.0f,   /* 12 paused */
+            unused, /* 13 pausedToStopped */
+            unused, /* 14 stoppedRemove */
+            unused, /* 15 stoppedKeep */
+            unused, /* 16 zeroDurationScheduled */
+            unused, /* 17 zeroDurationScheduledReverseKeep */
+            unused, /* 18 zeroDurationStopped */
         }), TestSuite::Compare::Container);
         CORRADE_COMPARE_AS(Containers::BitArrayView{remove}, Containers::stridedArrayView({
             false,  /*  0 scheduledKeep */
             false,  /*  1 scheduledToPlayingBegin */
-            true,   /*  2 scheduledToPaused */
-            false,  /*  3 scheduledToStopped */
-            false,  /*  4 removed */
-            false,  /*  5 playingMiddleKeep */
-            false,  /*  6 playingToPausedKeep */
-            false,  /*  7 playingEndToStopped */
-            false,  /*  8 playingToStoppedKeep */
-            true,   /*  9 playingRepeated */
-            true,   /* 10 paused */
-            false,  /* 11 pausedToStopped */
-            false,  /* 12 stoppedRemove */
-            false,  /* 13 stoppedKeep */
-            false,  /* 14 zeroDurationScheduled */
-            false,  /* 15 zeroDurationStopped */
+            false,  /*  2 scheduledToPlayingReverse */
+            true,   /*  3 scheduledToPaused */
+            false,  /*  4 scheduledToStopped */
+            false,  /*  5 removed */
+            false,  /*  6 playingMiddleKeep */
+            false,  /*  7 playingToPausedKeep */
+            false,  /*  8 playingEndToStopped */
+            false,  /*  9 playingToStoppedKeep */
+            true,   /* 10 playingRepeated */
+            true,   /* 11 playingRepeatedReverseReverseEveryOther */
+            true,   /* 12 paused */
+            false,  /* 13 pausedToStopped */
+            false,  /* 14 stoppedRemove */
+            false,  /* 15 stoppedKeep */
+            false,  /* 16 zeroDurationScheduled */
+            false,  /* 17 zeroDurationScheduledReverseKeep */
+            false,  /* 18 zeroDurationStopped */
         }).sliceBit(0), TestSuite::Compare::Container);
 
         /* Need to call this ourselves to not have the removed animations
@@ -3535,6 +3991,7 @@ void AbstractAnimatorTest::update() {
        because is marked as such */
     CORRADE_VERIFY(animator.isHandleValid(scheduledKeep));
     CORRADE_VERIFY(!animator.isHandleValid(scheduledToPlayingBegin));
+    CORRADE_VERIFY(!animator.isHandleValid(scheduledToPlayingReverse));
     CORRADE_VERIFY(!animator.isHandleValid(scheduledToPaused));
     CORRADE_VERIFY(!animator.isHandleValid(scheduledToStopped));
     CORRADE_VERIFY(!animator.isHandleValid(removed));
@@ -3543,15 +4000,18 @@ void AbstractAnimatorTest::update() {
     CORRADE_VERIFY(!animator.isHandleValid(playingEndToStopped));
     CORRADE_VERIFY(animator.isHandleValid(playingToStoppedKeep));
     CORRADE_VERIFY(!animator.isHandleValid(playingRepeated));
+    CORRADE_VERIFY(!animator.isHandleValid(playingRepeatedReverseReverseEveryOther));
     CORRADE_VERIFY(!animator.isHandleValid(paused));
     CORRADE_VERIFY(!animator.isHandleValid(pausedToStopped));
     CORRADE_VERIFY(!animator.isHandleValid(stoppedRemove));
     CORRADE_VERIFY(animator.isHandleValid(stoppedKeep));
     CORRADE_VERIFY(!animator.isHandleValid(zeroDurationScheduled));
+    CORRADE_VERIFY(animator.isHandleValid(zeroDurationScheduledReverseKeep));
     CORRADE_VERIFY(!animator.isHandleValid(zeroDurationStopped));
 
     CORRADE_COMPARE(animator.state(scheduledKeep), AnimationState::Playing);
     /* scheduledToPlayingBegin is gone */
+    /* scheduledToPlayingReverse is gone */
     /* scheduledToPaused is gone */
     /* scheduledToStopped is gone */
     /* removed is gone */
@@ -3560,11 +4020,13 @@ void AbstractAnimatorTest::update() {
     /* playingEndToStopped is gone */
     CORRADE_COMPARE(animator.state(playingToStoppedKeep), AnimationState::Stopped);
     /* playingRepeated is gone */
+    /* playingRepeatedReverseReverseEveryOther is gone */
     /* paused is gone */
     /* pausedToStopped is gone */
     /* stoppedRemove is gone */
     CORRADE_COMPARE(animator.state(stoppedKeep), AnimationState::Stopped);
     /* zeroDurationScheduled is gone */
+    CORRADE_COMPARE(animator.state(zeroDurationScheduledReverseKeep), AnimationState::Stopped);
     /* zeroDurationStopped is gone */
 
     /* Call at 40 doesn't need to delegeate to clean() anymore */
@@ -3578,74 +4040,86 @@ void AbstractAnimatorTest::update() {
         CORRADE_COMPARE_AS(Containers::BitArrayView{active}, Containers::stridedArrayView({
             true,   /*  0 scheduledKeep */
             false,  /*  1 scheduledToPlayingBegin */
-            false,  /*  2 scheduledToPaused */
-            false,  /*  3 scheduledToStopped */
-            false,  /*  4 removed */
-            false,  /*  5 playingMiddleKeep */
-            false,  /*  6 playingToPausedKeep */
-            false,  /*  7 playingEndToStopped */
-            false,  /*  8 playingToStoppedKeep */
-            false,  /*  9 playingRepeated */
-            false,  /* 10 paused */
-            false,  /* 11 pausedToStopped */
-            false,  /* 12 stoppedRemove */
-            false,  /* 13 stoppedKeep */
-            false,  /* 14 zeroDurationScheduled */
-            false,  /* 15 zeroDurationStopped */
+            false,  /*  2 scheduledToPlayingReverse */
+            false,  /*  3 scheduledToPaused */
+            false,  /*  4 scheduledToStopped */
+            false,  /*  5 removed */
+            false,  /*  6 playingMiddleKeep */
+            false,  /*  7 playingToPausedKeep */
+            false,  /*  8 playingEndToStopped */
+            false,  /*  9 playingToStoppedKeep */
+            false,  /* 10 playingRepeated */
+            false,  /* 11 playingRepeatedReverseReverseEveryOther */
+            false,  /* 12 paused */
+            false,  /* 13 pausedToStopped */
+            false,  /* 14 stoppedRemove */
+            false,  /* 15 stoppedKeep */
+            false,  /* 16 zeroDurationScheduled */
+            false,  /* 17 zeroDurationScheduledReverseKeep */
+            false,  /* 18 zeroDurationStopped */
         }).sliceBit(0), TestSuite::Compare::Container);
         CORRADE_COMPARE_AS(Containers::BitArrayView{started}, Containers::stridedArrayView({
             false,  /*  0 scheduledKeep */
             false,  /*  1 scheduledToPlayingBegin */
-            false,  /*  2 scheduledToPaused */
-            false,  /*  3 scheduledToStopped */
-            false,  /*  4 removed */
-            false,  /*  5 playingMiddleKeep */
-            false,  /*  6 playingToPausedKeep */
-            false,  /*  7 playingEndToStopped */
-            false,  /*  8 playingToStoppedKeep */
-            false,  /*  9 playingRepeated */
-            false,  /* 10 paused */
-            false,  /* 11 pausedToStopped */
-            false,  /* 12 stopped */
-            false,  /* 13 stoppedKeep */
-            false,  /* 14 zeroDurationScheduled */
-            false,  /* 15 zeroDurationStopped */
+            false,  /*  2 scheduledToPlayingReverse */
+            false,  /*  3 scheduledToPaused */
+            false,  /*  4 scheduledToStopped */
+            false,  /*  5 removed */
+            false,  /*  6 playingMiddleKeep */
+            false,  /*  7 playingToPausedKeep */
+            false,  /*  8 playingEndToStopped */
+            false,  /*  9 playingToStoppedKeep */
+            false,  /* 10 playingRepeated */
+            false,  /* 11 playingRepeatedReverseReverseEveryOther */
+            false,  /* 12 paused */
+            false,  /* 13 pausedToStopped */
+            false,  /* 14 stoppedRemove */
+            false,  /* 15 stoppedKeep */
+            false,  /* 16 zeroDurationScheduled */
+            false,  /* 17 zeroDurationScheduledReverseKeep */
+            false,  /* 18 zeroDurationStopped */
         }).sliceBit(0), TestSuite::Compare::Container);
         CORRADE_COMPARE_AS(Containers::BitArrayView{stopped}, Containers::stridedArrayView({
             true,   /*  0 scheduledKeep */
             false,  /*  1 scheduledToPlayingBegin */
-            false,  /*  2 scheduledToPaused */
-            false,  /*  3 scheduledToStopped */
-            false,  /*  4 removed */
-            false,  /*  5 playingMiddleKeep */
-            false,  /*  6 playingToPausedKeep */
-            false,  /*  7 playingEndToStopped */
-            false,  /*  8 playingToStoppedKeep */
-            false,  /*  9 playingRepeated */
-            false,  /* 10 paused */
-            false,  /* 11 pausedToStopped */
-            false,  /* 12 stopped */
-            false,  /* 13 stoppedKeep */
-            false,  /* 14 zeroDurationScheduled */
-            false,  /* 15 zeroDurationStopped */
+            false,  /*  2 scheduledToPlayingReverse */
+            false,  /*  3 scheduledToPaused */
+            false,  /*  4 scheduledToStopped */
+            false,  /*  5 removed */
+            false,  /*  6 playingMiddleKeep */
+            false,  /*  7 playingToPausedKeep */
+            false,  /*  8 playingEndToStopped */
+            false,  /*  9 playingToStoppedKeep */
+            false,  /* 10 playingRepeated */
+            false,  /* 11 playingRepeatedReverseReverseEveryOther */
+            false,  /* 12 paused */
+            false,  /* 13 pausedToStopped */
+            false,  /* 14 stoppedRemove */
+            false,  /* 15 stoppedKeep */
+            false,  /* 16 zeroDurationScheduled */
+            false,  /* 17 zeroDurationScheduledReverseKeep */
+            false,  /* 18 zeroDurationStopped */
         }).sliceBit(0), TestSuite::Compare::Container);
         CORRADE_COMPARE_AS(factors, Containers::arrayView({
             1.0f,   /*  0 scheduledKeep */
             unused, /*  1 scheduledToPlayingBegin */
-            unused, /*  2 scheduledToPaused */
-            unused, /*  3 scheduledToStopped */
-            unused, /*  4 removed */
-            unused, /*  5 playingMiddleKeep */
-            unused, /*  6 playingToPausedKeep */
-            unused, /*  7 playingEndToStopped */
-            unused, /*  8 playingToStoppedKeep */
-            unused, /*  9 playingRepeated */
-            unused, /* 10 paused */
-            unused, /* 11 pausedToStopped */
-            unused, /* 12 stoppedRemove */
-            unused, /* 13 stoppedKeep */
-            unused, /* 14 zeroDurationScheduled */
-            unused, /* 15 zeroDurationStopped */
+            unused, /*  2 scheduledToPlayingReverse */
+            unused, /*  3 scheduledToPaused */
+            unused, /*  4 scheduledToStopped */
+            unused, /*  5 removed */
+            unused, /*  6 playingMiddleKeep */
+            unused, /*  7 playingToPausedKeep */
+            unused, /*  8 playingEndToStopped */
+            unused, /*  9 playingToStoppedKeep */
+            unused, /* 10 playingRepeated */
+            unused, /* 11 playingRepeatedReverseReverseEveryOther */
+            unused, /* 12 paused */
+            unused, /* 13 pausedToStopped */
+            unused, /* 14 stoppedRemove */
+            unused, /* 15 stoppedKeep */
+            unused, /* 16 zeroDurationScheduled */
+            unused, /* 17 zeroDurationScheduledReverseKeep */
+            unused, /* 18 zeroDurationStopped */
         }), TestSuite::Compare::Container);
         CORRADE_COMPARE_AS(remove,
             (Containers::BitArray{DirectInit, animationCount, false}),
@@ -3659,6 +4133,7 @@ void AbstractAnimatorTest::update() {
     /* Same as before */
     CORRADE_VERIFY(animator.isHandleValid(scheduledKeep));
     CORRADE_VERIFY(!animator.isHandleValid(scheduledToPlayingBegin));
+    CORRADE_VERIFY(!animator.isHandleValid(scheduledToPlayingReverse));
     CORRADE_VERIFY(!animator.isHandleValid(scheduledToPaused));
     CORRADE_VERIFY(!animator.isHandleValid(scheduledToStopped));
     CORRADE_VERIFY(!animator.isHandleValid(removed));
@@ -3667,15 +4142,18 @@ void AbstractAnimatorTest::update() {
     CORRADE_VERIFY(!animator.isHandleValid(playingEndToStopped));
     CORRADE_VERIFY(animator.isHandleValid(playingToStoppedKeep));
     CORRADE_VERIFY(!animator.isHandleValid(playingRepeated));
+    CORRADE_VERIFY(!animator.isHandleValid(playingRepeatedReverseReverseEveryOther));
     CORRADE_VERIFY(!animator.isHandleValid(paused));
     CORRADE_VERIFY(!animator.isHandleValid(pausedToStopped));
     CORRADE_VERIFY(!animator.isHandleValid(stoppedRemove));
     CORRADE_VERIFY(animator.isHandleValid(stoppedKeep));
     CORRADE_VERIFY(!animator.isHandleValid(zeroDurationScheduled));
+    CORRADE_VERIFY(animator.isHandleValid(zeroDurationScheduledReverseKeep));
     CORRADE_VERIFY(!animator.isHandleValid(zeroDurationStopped));
 
     CORRADE_COMPARE(animator.state(scheduledKeep), AnimationState::Stopped);
     /* scheduledToPlayingBegin is gone */
+    /* scheduledToPlayingReverse is gone */
     /* scheduledToPaused is gone */
     /* scheduledToStopped is gone */
     /* removed is gone */
@@ -3684,11 +4162,13 @@ void AbstractAnimatorTest::update() {
     /* playingEndToStopped is gone */
     CORRADE_COMPARE(animator.state(playingToStoppedKeep), AnimationState::Stopped);
     /* playingRepeated is gone */
+    /* playingRepeatedReverseReverseEveryOther is gone */
     /* paused is gone */
     /* pausedToStopped is gone */
     /* stoppedRemove is gone */
     CORRADE_COMPARE(animator.state(stoppedKeep), AnimationState::Stopped);
     /* zeroDurationScheduled is gone */
+    CORRADE_COMPARE(animator.state(zeroDurationScheduledReverseKeep), AnimationState::Stopped);
     /* zeroDurationStopped is gone */
 
     /* Call at 50 needs neither advance nor clean anymore */
@@ -3722,6 +4202,7 @@ void AbstractAnimatorTest::update() {
     /* Same as before */
     CORRADE_VERIFY(animator.isHandleValid(scheduledKeep));
     CORRADE_VERIFY(!animator.isHandleValid(scheduledToPlayingBegin));
+    CORRADE_VERIFY(!animator.isHandleValid(scheduledToPlayingReverse));
     CORRADE_VERIFY(!animator.isHandleValid(scheduledToPaused));
     CORRADE_VERIFY(!animator.isHandleValid(scheduledToStopped));
     CORRADE_VERIFY(!animator.isHandleValid(removed));
@@ -3730,16 +4211,19 @@ void AbstractAnimatorTest::update() {
     CORRADE_VERIFY(!animator.isHandleValid(playingEndToStopped));
     CORRADE_VERIFY(animator.isHandleValid(playingToStoppedKeep));
     CORRADE_VERIFY(!animator.isHandleValid(playingRepeated));
+    CORRADE_VERIFY(!animator.isHandleValid(playingRepeatedReverseReverseEveryOther));
     CORRADE_VERIFY(!animator.isHandleValid(paused));
     CORRADE_VERIFY(!animator.isHandleValid(pausedToStopped));
     CORRADE_VERIFY(!animator.isHandleValid(stoppedRemove));
     CORRADE_VERIFY(animator.isHandleValid(stoppedKeep));
     CORRADE_VERIFY(!animator.isHandleValid(zeroDurationScheduled));
+    CORRADE_VERIFY(animator.isHandleValid(zeroDurationScheduledReverseKeep));
     CORRADE_VERIFY(!animator.isHandleValid(zeroDurationStopped));
 
     /* Same as before */
     CORRADE_COMPARE(animator.state(scheduledKeep), AnimationState::Stopped);
     /* scheduledToPlayingBegin is gone */
+    /* scheduledToPlayingReverse is gone */
     /* scheduledToPaused is gone */
     /* scheduledToStopped is gone */
     /* removed is gone */
@@ -3748,11 +4232,13 @@ void AbstractAnimatorTest::update() {
     /* playingEndToStopped is gone */
     CORRADE_COMPARE(animator.state(playingToStoppedKeep), AnimationState::Stopped);
     /* playingRepeated is gone */
+    /* playingRepeatedReverseReverseEveryOther is gone */
     /* paused is gone */
     /* pausedToStopped is gone */
     /* stoppedRemove is gone */
     CORRADE_COMPARE(animator.state(stoppedKeep), AnimationState::Stopped);
     /* zeroDurationScheduled is gone */
+    CORRADE_COMPARE(animator.state(zeroDurationScheduledReverseKeep), AnimationState::Stopped);
     /* zeroDurationStopped is gone */
 }
 

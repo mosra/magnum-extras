@@ -165,7 +165,42 @@ enum class AnimationFlag: UnsignedByte {
      * kept and is only removable directly with
      * @ref AbstractAnimator::remove().
      */
-    KeepOncePlayed = 1 << 0
+    KeepOncePlayed = 1 << 0,
+
+    /**
+     * Play the animation in reverse direction. The interpolation
+     * @ref AbstractAnimator::factor() goes from @cpp 1.0f @ce to @cpp 0.0f @ce
+     * instead from @cpp 0.0f @ce to @cpp 1.0f @ce and the animation is
+     * guaranteed to be called with the factor being exactly @cpp 0.0f @ce when
+     * stopped. If both @ref AnimationFlag::Reverse and
+     * @relativeref{AnimationFlag,ReverseEveryOther} is set, only every first,
+     * third, ... repeat is reversed.
+     *
+     * Note that the `started` and `stopped` bits coming from
+     * @ref AbstractAnimator::update() are *not* reversed, the `started` bit is
+     * always set first time the animation is advanced and `stopped` the last
+     * time it's advanced when stopping. Concrete animator implementations such
+     * as @ref GenericAnimator or @ref NodeAnimator may expose modified
+     * behavior, see their documentation for more information.
+     */
+    Reverse = 1 << 1,
+
+    /**
+     * Play every other animation repeat in reverse direction. The
+     * interpolation @ref AbstractAnimator::factor() goes from @cpp 0.0f @ce to
+     * @cpp 1.0f @ce for the first repeat, from @cpp 1.0f @ce to @cpp 0.0f @ce
+     * for the second repeat, from from @cpp 0.0f @ce to @cpp 1.0f @ce for the
+     * third repeat, etc. If both @ref AnimationFlag::Reverse and
+     * @relativeref{AnimationFlag,ReverseEveryOther} is set, the reverse is
+     * applied on the odd repeats instead of even --- the factor goes from
+     * @cpp 1.0f @ce to @cpp 0.0f @ce for the first repeat, @cpp 0.0f @ce to
+     * @cpp 1.0f @ce for second, @cpp 1.0f @ce to @cpp 0.0f @ce for third, etc.
+     *
+     * As with @ref AnimationFlag::Reverse, the `started` and `stopped` bits
+     * coming from @ref AbstractAnimator::update() are *not* affected by
+     * presence of this flag.
+     */
+    ReverseEveryOther = 1 << 2,
 };
 
 /**
@@ -872,7 +907,10 @@ class MAGNUM_UI_EXPORT AbstractAnimator {
          * returned value is always in the @f$ [0, 1] @f$ range and matches
          * what would be returned from @ref update() for given animation at
          * @ref time(). For @ref AnimationState::Scheduled always returns
-         * @cpp 0.0f @ce, for @ref AnimationState::Stopped @cpp 1.0f @ce.
+         * @cpp 0.0f @ce, for @ref AnimationState::Stopped returns either
+         * @cpp 1.0f @ce or @cpp 0.0f @ce based on presence of the
+         * @ref AnimationFlag::Reverse and @relativeref{AnimationFlag,ReverseEveryOther}
+         * flags and, with the latter, also on repeat count.
          * @see @ref state(AnimationHandle) const
          */
         Float factor(AnimationHandle handle) const;
@@ -1088,12 +1126,17 @@ class MAGNUM_UI_EXPORT AbstractAnimator {
          * @p active as well. An animation can be both @p started and
          * @p stopped, in which case it played in full between @ref time() and
          * @p time. The @p started bit is only set for animations that begun
-         * playing from the start, i.e. animations that transition from
+         * playing, i.e. animations that transition from
          * @ref AnimationState::Paused to @ref AnimationState::Playing don't
          * have it set. Similarly, @p stopped isn't set for animations that
          * transitioned from @ref AnimationState::Playing to
          * @ref AnimationState::Paused. Animations that are repeated don't get
-         * @p started or @p stopped set when they restart.
+         * @p started or @p stopped set when they restart. Presence of
+         * @ref AnimationFlag::Reverse or
+         * @relativeref{AnimationFlag,ReverseEveryOther} doesn't affect the
+         * @p started / @p stopped bits in any way, @p started is always set
+         * first time the animation is advanced and @p stopped the last time
+         * it's advanced when stopping.
          *
          * If the first return value is @cpp true @ce, the @p active,
          * @p started, @p stopped and @p factors views are meant to be passed

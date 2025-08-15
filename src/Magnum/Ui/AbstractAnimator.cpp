@@ -91,6 +91,8 @@ Debug& operator<<(Debug& debug, const AnimationFlag value) {
         /* LCOV_EXCL_START */
         #define _c(value) case AnimationFlag::value: return debug << "::" #value;
         _c(KeepOncePlayed)
+        _c(Reverse)
+        _c(ReverseEveryOther)
         #undef _c
         /* LCOV_EXCL_STOP */
     }
@@ -100,7 +102,9 @@ Debug& operator<<(Debug& debug, const AnimationFlag value) {
 
 Debug& operator<<(Debug& debug, const AnimationFlags value) {
     return Containers::enumSetDebugOutput(debug, value, "Ui::AnimationFlags{}", {
-        AnimationFlag::KeepOncePlayed
+        AnimationFlag::KeepOncePlayed,
+        AnimationFlag::Reverse,
+        AnimationFlag::ReverseEveryOther,
     });
 }
 
@@ -811,24 +815,79 @@ AnimationState AbstractAnimator::state(const AnimatorDataHandle handle) const {
 
 namespace {
 
-inline Float animationFactor(const Nanoseconds duration, const Nanoseconds started, const Nanoseconds time) {
+inline Float animationFactor(const Nanoseconds duration, const Nanoseconds started, const AnimationFlags flags, const Nanoseconds time) {
     CORRADE_INTERNAL_DEBUG_ASSERT(duration != 0_nsec && time >= started);
-    const Nanoseconds difference = (time - started) % duration;
+    const Nanoseconds played = time - started;
     /* Using doubles for the division to avoid precision loss even though
        floats seem to work even for the 292 year duration */
-    return Double(Long(difference))/Double(Long(duration));
+    const Float factor = Double(Long(played % duration))/Double(Long(duration));
+    bool reverse = flags >= AnimationFlag::Reverse;
+    /* If ReverseEveryOther is set, the reverse status is reversed for every
+       other repeat */
+    if(flags >= AnimationFlag::ReverseEveryOther) {
+        const UnsignedLong repeat = played/duration;
+        reverse ^= (repeat & 1);
+    }
+    return reverse ? 1.0f - factor : factor;
 }
 
 /* Shared between factorInternal() and advance() */
 inline Float animationFactor(const Animation& animation, const Nanoseconds time, const AnimationState state) {
-    /* Animations with zero duration should always resolve to Stopped state in
-       animationState(), returning 1 */
     if(state == AnimationState::Playing)
-        return animationFactor(animation.used.duration, animation.used.started, time);
+        return animationFactor(animation.used.duration, animation.used.started, animation.used.flags, time);
     if(state == AnimationState::Paused)
-        return animationFactor(animation.used.duration, animation.used.started, animation.used.paused);
-    if(state == AnimationState::Stopped)
-        return 1.0f;
+        return animationFactor(animation.used.duration, animation.used.started, animation.used.flags, animation.used.paused);
+
+    /* Animations with zero duration should always resolve to Stopped state in
+       animationState(), so for them the division by duration in the above call
+       to animationFactor() doesn't happen. Moreover, they have repeats
+       disabled, so in case they're reversed, the `repeat` below would be
+       always 0, not dividing by duration either. */
+    if(state == AnimationState::Stopped) {
+        bool reverse = animation.used.flags >= AnimationFlag::Reverse;
+        /* If ReverseEveryOther is set, the reverse status is reversed for
+           every other repeat. Yes, that's a sentence I wrote. */
+        if(animation.used.flags >= AnimationFlag::ReverseEveryOther) {
+            /* Time at which the animation stops implicitly or. For zero
+               duration the implicit stop is equivalent to `started`. */
+            const Nanoseconds stoppedImplicit =
+                animation.used.repeatCount == 0 ? Nanoseconds::max() :
+                    animation.used.started +
+                    animation.used.duration*animation.used.repeatCount;
+
+            /* Calculate current repeat index and flip the `reverse` bit if
+               it's odd. If the implicit stop happens before the explicit one
+               (or there's no explicit stop, i.e. it's Nanoseconds::max()), the
+               repeat count is equivalent to the actual repeat count of the
+               animation. */
+            if(stoppedImplicit < animation.used.stopped) {
+                /* This can happen only if we're not repeating indefinitely.
+                   Zero-duration animations also always have repeat count equal
+                   to 1, meaning we never flip the `reverse` bit for those. */
+                CORRADE_INTERNAL_DEBUG_ASSERT(animation.used.repeatCount != 0 && (animation.used.duration != 0_nsec || animation.used.repeatCount == 1));
+                reverse ^= !(animation.used.repeatCount & 1);
+
+            /* If explicit stop happens earlier than implicit, stop at the end
+               of the repeat that's currently in progress. */
+            } else {
+                /* If the animation stopped before it actually started, there's
+                   no repeats so far. This is always the case for zero-duration animations. */
+                UnsignedLong repeat;
+                if(animation.used.stopped <= animation.used.started) {
+                    repeat = 0;
+
+                /* Otherwise the in-progress repeat is the distance between
+                   stopped and started time divided by duration and rounded
+                   up. */
+                } else {
+                    CORRADE_INTERNAL_DEBUG_ASSERT(animation.used.duration != 0_nsec);
+                    repeat = (animation.used.stopped + animation.used.duration - 1_nsec - animation.used.started)/animation.used.duration;
+                }
+                reverse ^= !(repeat & 1);
+            }
+        }
+        return reverse ? 0.0f: 1.0f;
+    }
 
     CORRADE_INTERNAL_DEBUG_ASSERT_UNREACHABLE(); /* LCOV_EXCL_LINE */
 }
