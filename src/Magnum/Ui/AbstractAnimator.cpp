@@ -812,7 +812,7 @@ AnimationState AbstractAnimator::state(const AnimatorDataHandle handle) const {
 namespace {
 
 inline Float animationFactor(const Nanoseconds duration, const Nanoseconds started, const Nanoseconds time) {
-    CORRADE_INTERNAL_ASSERT(duration != 0_nsec && time >= started);
+    CORRADE_INTERNAL_DEBUG_ASSERT(duration != 0_nsec && time >= started);
     const Nanoseconds difference = (time - started) % duration;
     /* Using doubles for the division to avoid precision loss even though
        floats seem to work even for the 292 year duration */
@@ -830,7 +830,7 @@ inline Float animationFactor(const Animation& animation, const Nanoseconds time,
     if(state == AnimationState::Stopped)
         return 1.0f;
 
-    CORRADE_INTERNAL_ASSERT_UNREACHABLE(); /* LCOV_EXCL_LINE */
+    CORRADE_INTERNAL_DEBUG_ASSERT_UNREACHABLE(); /* LCOV_EXCL_LINE */
 }
 
 }
