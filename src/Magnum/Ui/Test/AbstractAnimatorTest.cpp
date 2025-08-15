@@ -312,6 +312,17 @@ const struct {
         1.0_sec,
         -100ll*1000ll*1000ll*1.0_sec, {}, {}, 100*1000*1000,
         AnimationState::Stopped, 1.0f},
+    /* Verify that evern repeat counts that go over 32 bits work correctly. Can
+       only test begin & middle, not Stop, as there's no way to represent that
+       many fixed repeats. */
+    {"playing begin, 1 microsecond duration, 100 billionth repeat",
+        1.0_usec,
+        -100ll*1000ll*1000ll*1000ll*1.0_usec, {}, {}, 0,
+        AnimationState::Playing, 0.0f},
+    {"playing middle, 1 microsecond duration, 100 billionth repeat",
+        1.0_usec,
+        -100ll*1000ll*1000ll*1000ll*1.0_usec + 0.376_usec, {}, {}, 0,
+        AnimationState::Playing, 1.0f - 0.376f},
     {"zero duration, scheduled",
         0_nsec, 100_nsec, {}, {}, {},
         AnimationState::Scheduled, 0.0f},
