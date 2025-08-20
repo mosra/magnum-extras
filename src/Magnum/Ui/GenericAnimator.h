@@ -62,6 +62,16 @@ enum class GenericAnimationState: UnsignedByte {
      * played in full between subsequent calls.
      */
     Stopped = 1 << 1,
+
+    /**
+     * The animation started or stopped with @ref AnimationFlag::Reverse set,
+     * i.e. it started at the end and/or stopped at the beginning. This flag is
+     * only ever present in combination with @ref GenericAnimationState::Started
+     * or @ref GenericAnimationState::Stopped, never alone. Presence of
+     * @ref AnimationFlag::ReverseEveryOther is not affecting this behavior in
+     * any way.
+     */
+    Reverse = 1 << 2,
 };
 
 /**
@@ -126,6 +136,17 @@ also an overload taking an extra @ref GenericAnimationStates parameter to
 perform an action exactly once at animation start and stop:
 
 @snippet Ui.cpp GenericAnimator-create-started-stopped
+
+Note that it can happen that both @ref GenericAnimationState::Started and
+@relativeref{GenericAnimationState,Stopped} can be set at the same time, for
+example if the animation is very short. Animations that have
+@ref AnimationFlag::Reverse set will additionally get
+@ref GenericAnimationState::Reverse at start or stop, making it possible to
+distinguish whether the start or stop is the actual animation begin or end.
+Presence of @ref AnimationFlag::ReverseEveryOther doesn't affect this state,
+it's only reflected in the `factor` passed to the function.
+
+@snippet Ui.cpp GenericAnimator-create-begin-end
 
 The animation function is free to do anything except for touching state related
 to the animations themselves, such as playing, stopping, creating or removing
@@ -212,11 +233,14 @@ class MAGNUM_UI_EXPORT GenericAnimator: public AbstractGenericAnimator {
          *
          * Assuming the @p easing function correctly maps @cpp 0.0f @ce and
          * @cpp 1.0f @ce to themselves, the animation function is guaranteed to
-         * be called with @p factor being exactly @cpp 1.0f @ce once the
-         * animation is stopped. Other than that, it may be an arbitrary value
-         * based on how the @p easing function is implemented. You can also use
-         * the @ref GenericAnimationStates overload below to hook directly to
-         * the start and stop.
+         * be called with @p factor being exactly @cpp 1.0f @ce or
+         * @cpp 0.0f @ce once the animation is stopped based on presence of the
+         * @ref AnimationFlag::Reverse and
+         * @relativeref{AnimationFlag,ReverseEveryOther} flags and, with the
+         * latter, also on repeat count. Other than that, it may be an
+         * arbitrary value based on how the @p easing function is implemented.
+         * You can also use the @ref GenericAnimationStates overload below to
+         * hook directly to the start and stop.
          */
         AnimationHandle create(Containers::Function<void(Float factor)>&& animation, Float(*easing)(Float), Nanoseconds start, Nanoseconds duration, UnsignedInt repeatCount = 1, AnimationFlags flags = {});
 
@@ -364,6 +388,12 @@ but not reacting to events, and made fully interactive only at the end:
 
 @snippet Ui.cpp GenericNodeAnimator-create-started-stopped
 
+Note that it can happen that both @ref GenericAnimationState::Started and
+@relativeref{GenericAnimationState,Stopped} can be set at the same time, and
+animations that have @ref AnimationFlag::Reverse set will additionally get
+@ref GenericAnimationState::Reverse at start or stop. See the
+@ref Ui-GenericAnimator-create "GenericAnimator documentation" for an example.
+
 The animation function is free to do anything except for touching state related
 to the animations or associated nodes, such as playing or stopping the
 animations, or creating, removing animations or nodes. This isn't checked or
@@ -453,11 +483,14 @@ class MAGNUM_UI_EXPORT GenericNodeAnimator: public AbstractGenericAnimator {
          *
          * Assuming the @p easing function correctly maps @cpp 0.0f @ce and
          * @cpp 1.0f @ce to themselves, the animation function is guaranteed to
-         * be called with @p factor being exactly @cpp 1.0f @ce once the
-         * animation is stopped. Other than that, it may be an arbitrary value
-         * based on how the @p easing function is implemented. You can also use
-         * the @ref GenericAnimationStates overload below to hook directly to
-         * the start and stop.
+         * be called with @p factor being exactly @cpp 1.0f @ce or
+         * @cpp 0.0f @ce once the animation is stopped based on presence of the
+         * @ref AnimationFlag::Reverse and
+         * @relativeref{AnimationFlag,ReverseEveryOther} flags and, with the
+         * latter, also on repeat count. Other than that, it may be an
+         * arbitrary value based on how the @p easing function is implemented.
+         * You can also use the @ref GenericAnimationStates overload below to
+         * hook directly to the start and stop.
          */
         AnimationHandle create(Containers::Function<void(NodeHandle node, Float factor)>&& animation, Float(*easing)(Float), Nanoseconds start, Nanoseconds duration, NodeHandle node, UnsignedInt repeatCount = 1, AnimationFlags flags = {});
 
@@ -606,6 +639,12 @@ state:
 
 @snippet Ui.cpp GenericDataAnimator-create-started-stopped
 
+Note that it can happen that both @ref GenericAnimationState::Started and
+@relativeref{GenericAnimationState,Stopped} can be set at the same time, and
+animations that have @ref AnimationFlag::Reverse set will additionally get
+@ref GenericAnimationState::Reverse at start or stop. See the
+@ref Ui-GenericAnimator-create "GenericAnimator documentation" for an example.
+
 The animation function is free to do anything except for touching state related
 to the animations or associated data or nodes, such as playing or stopping the
 animations, or creating, removing animations, data or nodes. This isn't checked
@@ -711,11 +750,14 @@ class MAGNUM_UI_EXPORT GenericDataAnimator: public AbstractGenericAnimator {
          *
          * Assuming the @p easing function correctly maps @cpp 0.0f @ce and
          * @cpp 1.0f @ce to themselves, the animation function is guaranteed to
-         * be called with @p factor being exactly @cpp 1.0f @ce once the
-         * animation is stopped. Other than that, it may be an arbitrary value
-         * based on how the @p easing function is implemented. You can also use
-         * the @ref GenericAnimationStates overload below to hook directly to
-         * the start and stop.
+         * be called with @p factor being exactly @cpp 1.0f @ce or
+         * @cpp 0.0f @ce once the animation is stopped based on presence of the
+         * @ref AnimationFlag::Reverse and
+         * @relativeref{AnimationFlag,ReverseEveryOther} flags and, with the
+         * latter, also on repeat count. Other than that, it may be an
+         * arbitrary value based on how the @p easing function is implemented.
+         * You can also use the @ref GenericAnimationStates overload below to
+         * hook directly to the start and stop.
          */
         AnimationHandle create(Containers::Function<void(DataHandle data, Float factor)>&& animation, Float(*easing)(Float), Nanoseconds start, Nanoseconds duration, DataHandle data, UnsignedInt repeatCount = 1, AnimationFlags flags = {});
 

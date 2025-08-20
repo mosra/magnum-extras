@@ -47,6 +47,7 @@ Debug& operator<<(Debug& debug, const GenericAnimationState value) {
         #define _c(value) case GenericAnimationState::value: return debug << "::" #value;
         _c(Started)
         _c(Stopped)
+        _c(Reverse)
         #undef _c
         /* LCOV_EXCL_STOP */
     }
@@ -57,7 +58,8 @@ Debug& operator<<(Debug& debug, const GenericAnimationState value) {
 Debug& operator<<(Debug& debug, const GenericAnimationStates value) {
     return Containers::enumSetDebugOutput(debug, value, debug.immediateFlags() >= Debug::Flag::Packed ? "{}" : "Ui::GenericAnimationStates{}", {
         GenericAnimationState::Started,
-        GenericAnimationState::Stopped
+        GenericAnimationState::Stopped,
+        GenericAnimationState::Reverse,
     });
 }
 
@@ -201,7 +203,23 @@ void GenericAnimator::doClean(const Containers::BitArrayView animationIdsToRemov
     }
 }
 
+namespace {
+
+/* Used by GenericAnimator, GenericNodeAnimator and GenericDataAnimator */
+inline GenericAnimationStates animationStates(bool started, bool stopped, AnimationFlags flags) {
+    return
+        (started ? GenericAnimationState::Started : GenericAnimationState{})|
+        (stopped ? GenericAnimationState::Stopped : GenericAnimationState{})|
+        /* Don't add Reverse if Started or Stopped isn't present, to not have
+           to deal with ReverseEveryOther */
+        ((started || stopped) && flags >= AnimationFlag::Reverse ?
+            GenericAnimationState::Reverse : GenericAnimationState{});
+}
+
+}
+
 void GenericAnimator::doAdvance(const Containers::BitArrayView active, const Containers::BitArrayView started, const Containers::BitArrayView stopped, const Containers::StridedArrayView1D<const Float>& factors) {
+    const Containers::StridedArrayView1D<const AnimationFlags> flags = this->flags();
     State& state = static_cast<State&>(*_state);
     /** @todo some way to iterate set bits */
     for(std::size_t i = 0; i != active.size(); ++i) {
@@ -209,9 +227,10 @@ void GenericAnimator::doAdvance(const Containers::BitArrayView active, const Con
             continue;
 
         Animation& animation = state.animations[i];
-        animation.call(animation, {}, {}, factors[i],
-            (started[i] ? GenericAnimationState::Started : GenericAnimationState{})|
-            (stopped[i] ? GenericAnimationState::Stopped : GenericAnimationState{}));
+        animation.call(animation,
+            {}, {},
+            factors[i],
+            animationStates(started[i], stopped[i], flags[i]));
     }
 }
 
@@ -349,6 +368,7 @@ void GenericNodeAnimator::doClean(const Containers::BitArrayView animationIdsToR
 
 void GenericNodeAnimator::doAdvance(const Containers::BitArrayView active, const Containers::BitArrayView started, const Containers::BitArrayView stopped, const Containers::StridedArrayView1D<const Float>& factors) {
     const Containers::StridedArrayView1D<const NodeHandle> nodes = this->nodes();
+    const Containers::StridedArrayView1D<const AnimationFlags> flags = this->flags();
     State& state = static_cast<State&>(*_state);
     /** @todo some way to iterate set bits */
     for(std::size_t i = 0; i != active.size(); ++i) {
@@ -356,9 +376,10 @@ void GenericNodeAnimator::doAdvance(const Containers::BitArrayView active, const
             continue;
 
         Animation& animation = state.animations[i];
-        animation.call(animation, nodes[i], {}, factors[i],
-            (started[i] ? GenericAnimationState::Started : GenericAnimationState{})|
-            (stopped[i] ? GenericAnimationState::Stopped : GenericAnimationState{}));
+        animation.call(animation,
+            nodes[i], {},
+            factors[i],
+            animationStates(started[i], stopped[i], flags[i]));
     }
 }
 
@@ -532,6 +553,7 @@ void GenericDataAnimator::doClean(const Containers::BitArrayView animationIdsToR
 
 void GenericDataAnimator::doAdvance(const Containers::BitArrayView active, const Containers::BitArrayView started, const Containers::BitArrayView stopped, const Containers::StridedArrayView1D<const Float>& factors) {
     const Containers::StridedArrayView1D<const LayerDataHandle> layerData = this->layerData();
+    const Containers::StridedArrayView1D<const AnimationFlags> flags = this->flags();
     State& state = static_cast<State&>(*_state);
     /** @todo some way to iterate set bits */
     for(std::size_t i = 0; i != active.size(); ++i) {
@@ -541,14 +563,12 @@ void GenericDataAnimator::doAdvance(const Containers::BitArrayView active, const
         /* If not associated with any data, pass a null instead of combining it
            with the layer handle */
         Animation& animation = state.animations[i];
-        animation.call(
-            animation,
+        animation.call(animation,
             {},
             layerData[i] == LayerDataHandle::Null ?
                 DataHandle::Null : dataHandle(layer(), layerData[i]),
             factors[i],
-            (started[i] ? GenericAnimationState::Started : GenericAnimationState{})|
-            (stopped[i] ? GenericAnimationState::Stopped : GenericAnimationState{}));
+            animationStates(started[i], stopped[i], flags[i]));
     }
 }
 

@@ -102,38 +102,71 @@ const struct {
 
 const struct {
     const char* name;
+    AnimationFlags flags;
     bool states;
     UnsignedByte started, stopped;
     GenericAnimationStates statesFirst, statesThird;
 } AdvanceData[]{
-    {"", false, 0, 0, {}, {}},
-    {"state overload", true, 0, 0, {}, {}},
-    {"state overload, first stopped, third started", true, 1 << 2, 1 << 0,
+    {"",
+        {}, false, 0, 0, {}, {}},
+    {"state overload",
+        {}, true, 0, 0, {}, {}},
+    {"state overload, reverse",
+        AnimationFlag::Reverse, true, 0, 0, {}, {}},
+    {"state overload, first stopped, third started",
+        {}, true, 1 << 2, 1 << 0,
         GenericAnimationState::Stopped,
         GenericAnimationState::Started},
-    {"state overload, first started & stopped", true, 1 << 0, 1 << 0,
+    {"state overload, first stopped, third started, reverse",
+        AnimationFlag::Reverse, true, 1 << 2, 1 << 0,
+        GenericAnimationState::Stopped|GenericAnimationState::Reverse,
+        GenericAnimationState::Started|GenericAnimationState::Reverse},
+    {"state overload, first started & stopped",
+        {}, true, 1 << 0, 1 << 0,
         GenericAnimationState::Started|GenericAnimationState::Stopped,
         {}},
+    {"state overload, first started & stopped, reverse",
+        AnimationFlag::Reverse, true, 1 << 0, 1 << 0,
+        GenericAnimationState::Started|GenericAnimationState::Stopped|GenericAnimationState::Reverse,
+        {}},
     /* Second isn't advanced at all, so this affects nothing */
-    {"state overload, second started & stopped", true, 1 << 1, 1 << 1, {}, {}},
-    {"state overload, third started & stopped", true, 1 << 2, 1 << 2,
+    {"state overload, second started & stopped",
+        {}, true, 1 << 1, 1 << 1, {}, {}},
+    {"state overload, third started & stopped",
+        {}, true, 1 << 2, 1 << 2,
         {},
         GenericAnimationState::Started|GenericAnimationState::Stopped},
+    {"state overload, third started & stopped, reverse",
+        AnimationFlag::Reverse, true, 1 << 2, 1 << 2,
+        {},
+        GenericAnimationState::Started|GenericAnimationState::Stopped|GenericAnimationState::Reverse},
 };
 
 const struct {
     const char* name;
+    AnimationFlags flags;
     UnsignedByte started, stopped;
     Int expected;
 } AdvanceOnceData[]{
-    {"neither started or stopped", 0, 0, 1},
+    {"neither started or stopped",
+        {}, 0, 0, 1},
     /* Second isn't advanced at all, so this affects nothing */
-    {"second started & stopped", 1 << 1, 1 << 1, 1},
+    {"second started & stopped",
+        {}, 1 << 1, 1 << 1, 1},
     /* It reacts only to the stopped bit, so only third is called */
-    {"first started, third stopped", 1 << 0, 1 << 2, 3},
+    {"first started, third stopped",
+        {}, 1 << 0, 1 << 2, 3},
+    /* Reversing has no effect on anything, same as above */
+    {"first started, third stopped, reverse",
+        AnimationFlag::Reverse, 1 << 0, 1 << 2, 3},
     /* Having both the started and stopped bit should work also */
-    {"first stopped, third started & stopped", 1 << 2, (1 << 0)|(1 << 2), 2*3},
-    {"first started & stopped, third started", (1 << 0)|(1 << 3), 1 << 0, 2},
+    {"first stopped, third started & stopped",
+        {}, 1 << 2, (1 << 0)|(1 << 2), 2*3},
+    /* Reversing has no effect on anything, same as above */
+    {"first stopped, third started & stopped, reverse",
+        AnimationFlag::Reverse, 1 << 2, (1 << 0)|(1 << 2), 2*3},
+    {"first started & stopped, third started",
+        {}, (1 << 0)|(1 << 3), 1 << 0, 2},
 };
 
 GenericAnimatorTest::GenericAnimatorTest() {
@@ -1236,20 +1269,20 @@ void GenericAnimatorTest::advance() {
         animator.create([&first, &statesFirst](Float factor, GenericAnimationStates states) {
             first += factor;
             statesFirst |= states;
-        }, hundredTimes, 0_nsec, 10_nsec);
+        }, hundredTimes, 0_nsec, 10_nsec, data.flags);
     else
         animator.create([&first](Float factor) {
             first += factor;
-        }, hundredTimes, 0_nsec, 10_nsec);
+        }, hundredTimes, 0_nsec, 10_nsec, data.flags);
 
     if(data.states)
         animator.create([](Float, GenericAnimationStates) {
             CORRADE_FAIL("This shouldn't be called");
-        }, hundredTimes, 5_nsec, 15_nsec);
+        }, hundredTimes, 5_nsec, 15_nsec, data.flags);
     else
         animator.create([](Float) {
             CORRADE_FAIL("This shouldn't be called");
-        }, hundredTimes, 5_nsec, 15_nsec);
+        }, hundredTimes, 5_nsec, 15_nsec, data.flags);
 
     Float third = 0.0f;
     GenericAnimationStates statesThird;
@@ -1257,11 +1290,11 @@ void GenericAnimatorTest::advance() {
         animator.create([&third, &statesThird](Float factor, GenericAnimationStates states) {
             third += factor;
             statesThird |= states;
-        }, hundredTimes, 10_nsec, 5_nsec);
+        }, hundredTimes, 10_nsec, 5_nsec, data.flags);
     else
         animator.create([&third](Float factor) {
             third += factor;
-        }, hundredTimes, 10_nsec, 5_nsec);
+        }, hundredTimes, 10_nsec, 5_nsec, data.flags);
 
     /* Capture correct function name */
     CORRADE_VERIFY(true);
@@ -1295,21 +1328,21 @@ void GenericAnimatorTest::advanceNode() {
             CORRADE_COMPARE(node, nodeHandle(0xabcde, 0x123));
             first += factor;
             statesFirst |= states;
-        }, hundredTimes, 0_nsec, 10_nsec, nodeHandle(0xabcde, 0x123));
+        }, hundredTimes, 0_nsec, 10_nsec, nodeHandle(0xabcde, 0x123), data.flags);
     else
         animator.create([&first](NodeHandle node, Float factor) {
             CORRADE_COMPARE(node, nodeHandle(0xabcde, 0x123));
             first += factor;
-        }, hundredTimes, 0_nsec, 10_nsec, nodeHandle(0xabcde, 0x123));
+        }, hundredTimes, 0_nsec, 10_nsec, nodeHandle(0xabcde, 0x123), data.flags);
 
     if(data.states)
         animator.create([](NodeHandle, Float) {
             CORRADE_FAIL("This shouldn't be called");
-        }, hundredTimes, 5_nsec, 15_nsec, nodeHandle(0xedcba, 0x321));
+        }, hundredTimes, 5_nsec, 15_nsec, nodeHandle(0xedcba, 0x321), data.flags);
     else
         animator.create([](NodeHandle, Float) {
             CORRADE_FAIL("This shouldn't be called");
-        }, hundredTimes, 5_nsec, 15_nsec, nodeHandle(0xedcba, 0x321));
+        }, hundredTimes, 5_nsec, 15_nsec, nodeHandle(0xedcba, 0x321), data.flags);
 
     Float third = 0.0f;
     GenericAnimationStates statesThird;
@@ -1318,12 +1351,12 @@ void GenericAnimatorTest::advanceNode() {
             CORRADE_COMPARE(node, NodeHandle::Null);
             third += factor;
             statesThird |= states;
-        }, hundredTimes, 10_nsec, 5_nsec, NodeHandle::Null);
+        }, hundredTimes, 10_nsec, 5_nsec, NodeHandle::Null, data.flags);
     else
         animator.create([&third](NodeHandle node, Float factor) {
             CORRADE_COMPARE(node, NodeHandle::Null);
             third += factor;
-        }, hundredTimes, 10_nsec, 5_nsec, NodeHandle::Null);
+        }, hundredTimes, 10_nsec, 5_nsec, NodeHandle::Null, data.flags);
 
     /* Capture correct function name */
     CORRADE_VERIFY(true);
@@ -1365,21 +1398,21 @@ void GenericAnimatorTest::advanceData() {
             CORRADE_COMPARE(data, dataHandle(layerHandle(0xab, 0xcd), 0xabcde, 0x123));
             first += factor;
             statesFirst |= states;
-        }, hundredTimes, 0_nsec, 10_nsec, dataHandle(layer.handle(), 0xabcde, 0x123));
+        }, hundredTimes, 0_nsec, 10_nsec, dataHandle(layer.handle(), 0xabcde, 0x123), data.flags);
     else
         animator.create([&first](DataHandle data, Float factor) {
             CORRADE_COMPARE(data, dataHandle(layerHandle(0xab, 0xcd), 0xabcde, 0x123));
             first += factor;
-        }, hundredTimes, 0_nsec, 10_nsec, dataHandle(layer.handle(), 0xabcde, 0x123));
+        }, hundredTimes, 0_nsec, 10_nsec, dataHandle(layer.handle(), 0xabcde, 0x123), data.flags);
 
     if(data.states)
         animator.create([](DataHandle, Float, GenericAnimationStates) {
             CORRADE_FAIL("This shouldn't be called");
-        }, hundredTimes, 5_nsec, 15_nsec, dataHandle(layer.handle(), 0xedcba, 0x321));
+        }, hundredTimes, 5_nsec, 15_nsec, dataHandle(layer.handle(), 0xedcba, 0x321), data.flags);
     else
         animator.create([](DataHandle, Float) {
             CORRADE_FAIL("This shouldn't be called");
-        }, hundredTimes, 5_nsec, 15_nsec, dataHandle(layer.handle(), 0xedcba, 0x321));
+        }, hundredTimes, 5_nsec, 15_nsec, dataHandle(layer.handle(), 0xedcba, 0x321), data.flags);
 
     Float third = 0.0f;
     GenericAnimationStates statesThird;
@@ -1390,14 +1423,14 @@ void GenericAnimatorTest::advanceData() {
             CORRADE_COMPARE(data, DataHandle::Null);
             third += factor;
             statesThird |= states;
-        }, hundredTimes, 10_nsec, 5_nsec, LayerDataHandle::Null);
+        }, hundredTimes, 10_nsec, 5_nsec, LayerDataHandle::Null, data.flags);
     else
         animator.create([&third](DataHandle data, Float factor) {
             /* If there's no associated data, the layer handle shouldn't be
                added to the null LayerDataHandle */
             CORRADE_COMPARE(data, DataHandle::Null);
             third += factor;
-        }, hundredTimes, 10_nsec, 5_nsec, LayerDataHandle::Null);
+        }, hundredTimes, 10_nsec, 5_nsec, LayerDataHandle::Null, data.flags);
 
     /* Capture correct function name */
     CORRADE_VERIFY(true);
@@ -1428,15 +1461,15 @@ void GenericAnimatorTest::advanceOnce() {
     Int called = 1;
     animator.callOnce([&called]() {
         called *= 2;
-    }, 9_nsec);
+    }, 9_nsec, data.flags);
 
     animator.callOnce([]() {
         CORRADE_FAIL("This shouldn't be called");
-    }, 2_nsec);
+    }, 2_nsec, data.flags);
 
     animator.callOnce([&called]() {
         called *= 3;
-    }, 7_nsec);
+    }, 7_nsec, data.flags);
 
     /* Capture correct function name */
     CORRADE_VERIFY(true);
@@ -1463,16 +1496,16 @@ void GenericAnimatorTest::advanceOnceNode() {
     animator.callOnce([&called](NodeHandle node) {
         CORRADE_COMPARE(node, nodeHandle(0xabcde, 0x123));
         called *= 2;
-    }, 9_nsec, nodeHandle(0xabcde, 0x123));
+    }, 9_nsec, nodeHandle(0xabcde, 0x123), data.flags);
 
     animator.callOnce([](NodeHandle) {
         CORRADE_FAIL("This shouldn't be called");
-    }, 2_nsec, nodeHandle(0xedcba, 0x321));
+    }, 2_nsec, nodeHandle(0xedcba, 0x321), data.flags);
 
     animator.callOnce([&called](NodeHandle node) {
         CORRADE_COMPARE(node, NodeHandle::Null);
         called *= 3;
-    }, 7_nsec, NodeHandle::Null);
+    }, 7_nsec, NodeHandle::Null, data.flags);
 
     /* Capture correct function name */
     CORRADE_VERIFY(true);
@@ -1506,18 +1539,18 @@ void GenericAnimatorTest::advanceOnceData() {
     animator.callOnce([&called](DataHandle data) {
         CORRADE_COMPARE(data, dataHandle(layerHandle(0xab, 0xcd), 0xabcde, 0x123));
         called *= 2;
-    }, 9_nsec, dataHandle(layer.handle(), 0xabcde, 0x123));
+    }, 9_nsec, dataHandle(layer.handle(), 0xabcde, 0x123), data.flags);
 
     animator.callOnce([](DataHandle) {
         CORRADE_FAIL("This shouldn't be called");
-    }, 2_nsec, dataHandle(layer.handle(), 0xedcba, 0x321));
+    }, 2_nsec, dataHandle(layer.handle(), 0xedcba, 0x321), data.flags);
 
     animator.callOnce([&called](DataHandle data) {
         /* If there's no associated data, the layer handle shouldn't be added
            to the null LayerDataHandle */
         CORRADE_COMPARE(data, DataHandle::Null);
         called *= 3;
-    }, 7_nsec, LayerDataHandle::Null);
+    }, 7_nsec, LayerDataHandle::Null, data.flags);
 
     /* Capture correct function name */
     CORRADE_VERIFY(true);
