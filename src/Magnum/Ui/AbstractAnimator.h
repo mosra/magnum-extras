@@ -182,6 +182,16 @@ enum class AnimationFlag: UnsignedByte {
      * time it's advanced when stopping. Concrete animator implementations such
      * as @ref GenericAnimator or @ref NodeAnimator may expose modified
      * behavior, see their documentation for more information.
+     *
+     * It's possible to toggle this flag when the animation is playing using
+     * @ref AbstractAnimator::setFlags(AnimationHandle, AnimationFlags, Nanoseconds)
+     * and related flag APIs that take a time value. The function internally
+     * adjusts the start time to make the animation smoothly continue in the
+     * opposite direction from the point where it was at that time. In
+     * comparison, toggling this flag with
+     * @ref AbstractAnimator::setFlags(AnimationHandle, AnimationFlags) will
+     * cause it to abruptly skip to a point it would be at if it was playing
+     * reversed from the start.
      */
     Reverse = 1 << 1,
 
@@ -199,6 +209,11 @@ enum class AnimationFlag: UnsignedByte {
      * As with @ref AnimationFlag::Reverse, the `started` and `stopped` bits
      * coming from @ref AbstractAnimator::update() are *not* affected by
      * presence of this flag.
+     *
+     * Unlike with @ref AnimationFlag::Reverse, toggling this flag with
+     * @ref AbstractAnimator::setFlags(AnimationHandle, AnimationFlags, Nanoseconds)
+     * doesn't perform any adjustments to start time as there aren't any clear
+     * practical use cases for such behavior.
      */
     ReverseEveryOther = 1 << 2,
 };
@@ -542,6 +557,13 @@ class MAGNUM_UI_EXPORT AbstractAnimator {
          * @ref setFlags(AnimatorDataHandle, AnimationFlags) which is a simpler
          * operation if the animation is already known to belong to this
          * animator.
+         *
+         * Note that toggling @ref AnimationFlag::Reverse or
+         * @relativeref{AnimationFlag,ReverseEveryOther} with this function
+         * while the animation is playing will cause it to abruptly jump to a
+         * different point. Use @ref setFlags(AnimationHandle, AnimationFlags, Nanoseconds)
+         * to make the animation continue in the opposite direction from the
+         * point where it was at given time.
          *
          * Compared to @ref create(), @ref play() or @ref pause(), a change in
          * flags never causes the animation to become
@@ -1018,6 +1040,89 @@ class MAGNUM_UI_EXPORT AbstractAnimator {
         void stop(AnimatorDataHandle handle, Nanoseconds time);
 
         /**
+         * @brief Set animation flags at given time
+         *
+         * Expects that @p handle is valid. Compared to
+         * @ref setFlags(AnimationHandle, AnimationFlags), toggling
+         * @ref AnimationFlag::Reverse with this function while the animation
+         * is playing will adjust its start time to make it continue in the
+         * opposite direction from the point where it was at given @p time.
+         * With repeated animations only the time within a single iteration is
+         * adjusted, not the remaining repeat count. Toggling any other flags
+         * has no difference compared to @ref setFlags(AnimationHandle, AnimationFlags).
+         * See also @ref setFlags(AnimatorDataHandle, AnimationFlags, Nanoseconds)
+         * which is a simpler operation if the animation is already known to
+         * belong to this animator.
+         *
+         * Compared to @ref create(), @ref play() or @ref pause(), a change in
+         * flags never causes the animation to become
+         * @ref AnimationState::Scheduled, @ref AnimationState::Playing or
+         * @ref AnimationState::Paused if it wasn't before already, thus
+         * calling this function doesn't cause @ref AnimatorState::NeedsAdvance
+         * to be set.
+         * @see @ref isHandleValid(AnimationHandle) const,
+         *      @ref addFlags(AnimationHandle, AnimationFlags, Nanoseconds),
+         *      @ref clearFlags(AnimationHandle, AnimationFlags, Nanoseconds)
+         */
+        void setFlags(AnimationHandle handle, AnimationFlags flags, Nanoseconds time);
+
+        /**
+         * @brief Set animation flags at given time assuming it belongs to this animator
+         *
+         * Like @ref setFlags(AnimationHandle, AnimationFlags, Nanoseconds) but
+         * without checking that @p handle indeed belongs to this animator. See
+         * its documentation for more information.
+         * @see @ref animationHandleData()
+         */
+        void setFlags(AnimatorDataHandle handle, AnimationFlags flags, Nanoseconds time);
+
+        /**
+         * @brief Add animation flags at given time
+         *
+         * Calls @ref setFlags(AnimationHandle, AnimationFlags, Nanoseconds)
+         * with the existing flags ORed with @p flags. Useful for preserving
+         * previously set flags. See also
+         * @ref addFlags(AnimatorDataHandle, AnimationFlags, Nanoseconds) which
+         * is a simpler operation if the animation is already known to belong
+         * to this animator.
+         * @see @ref clearFlags(AnimationHandle, AnimationFlags, Nanoseconds)
+         */
+        void addFlags(AnimationHandle handle, AnimationFlags flags, Nanoseconds time);
+
+        /**
+         * @brief Add animation flags at given time assuming it belongs to this animator
+         *
+         * Like @ref addFlags(AnimationHandle, AnimationFlags, Nanoseconds) but
+         * without checking that @p handle indeed belongs to this animator. See
+         * its documentation for more information.
+         * @see @ref animationHandleData()
+         */
+        void addFlags(AnimatorDataHandle handle, AnimationFlags flags, Nanoseconds time);
+
+        /**
+         * @brief Clear animation flags at given time
+         *
+         * Calls @ref setFlags(AnimationHandle, AnimationFlags, Nanoseconds)
+         * with the existing flags ANDed with the inverse of @p flags. Useful
+         * for removing a subset of previously set flags. See also
+         * @ref clearFlags(AnimatorDataHandle, AnimationFlags, Nanoseconds)
+         * which is a simpler operation if the animation is already known to
+         * belong to this animator.
+         * @see @ref addFlags(AnimationHandle, AnimationFlags, Nanoseconds)
+         */
+        void clearFlags(AnimationHandle handle, AnimationFlags flags, Nanoseconds time);
+
+        /**
+         * @brief Clear animation flags at given time assuming it belongs to this animator
+         *
+         * Like @ref clearFlags(AnimationHandle, AnimationFlags, Nanoseconds)
+         * but without checking that @p handle indeed belongs to this animator.
+         * See its documentation for more information.
+         * @see @ref animationHandleData()
+         */
+        void clearFlags(AnimatorDataHandle handle, AnimationFlags flags, Nanoseconds time);
+
+        /**
          * @brief Generation counters for all data
          *
          * Meant to be used by code that only gets data IDs or masks but needs
@@ -1395,6 +1500,7 @@ class MAGNUM_UI_EXPORT AbstractAnimator {
         MAGNUM_UI_LOCAL void playInternal(UnsignedInt id, Nanoseconds time);
         MAGNUM_UI_LOCAL void pauseInternal(UnsignedInt id, Nanoseconds time);
         MAGNUM_UI_LOCAL void stopInternal(UnsignedInt id, Nanoseconds time);
+        MAGNUM_UI_LOCAL void setFlagsInternal(UnsignedInt id, AnimationFlags flags, Nanoseconds time);
 
         struct State;
         Containers::Pointer<State> _state;

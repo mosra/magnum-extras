@@ -1027,6 +1027,87 @@ void AbstractAnimator::stopInternal(const UnsignedInt id, const Nanoseconds time
     #endif
 }
 
+void AbstractAnimator::setFlags(const AnimationHandle handle, const AnimationFlags flags, const Nanoseconds time) {
+    CORRADE_ASSERT(isHandleValid(handle),
+        "Ui::AbstractAnimator::setFlags(): invalid handle" << handle, );
+    setFlagsInternal(animationHandleId(handle), flags, time);
+}
+
+void AbstractAnimator::setFlags(const AnimatorDataHandle handle, const AnimationFlags flags, const Nanoseconds time) {
+    CORRADE_ASSERT(isHandleValid(handle),
+        "Ui::AbstractAnimator::setFlags(): invalid handle" << handle, );
+    setFlagsInternal(animatorDataHandleId(handle), flags, time);
+}
+
+void AbstractAnimator::addFlags(const AnimationHandle handle, const AnimationFlags flags, const Nanoseconds time) {
+    CORRADE_ASSERT(isHandleValid(handle),
+        "Ui::AbstractAnimator::addFlags(): invalid handle" << handle, );
+    const UnsignedInt id = animationHandleId(handle);
+    setFlagsInternal(id, _state->animations[id].used.flags|flags, time);
+}
+
+void AbstractAnimator::addFlags(const AnimatorDataHandle handle, const AnimationFlags flags, const Nanoseconds time) {
+    CORRADE_ASSERT(isHandleValid(handle),
+        "Ui::AbstractAnimator::addFlags(): invalid handle" << handle, );
+    const UnsignedInt id = animatorDataHandleId(handle);
+    setFlagsInternal(id, _state->animations[id].used.flags|flags, time);
+}
+
+void AbstractAnimator::clearFlags(const AnimationHandle handle, const AnimationFlags flags, const Nanoseconds time) {
+    CORRADE_ASSERT(isHandleValid(handle),
+        "Ui::AbstractAnimator::clearFlags(): invalid handle" << handle, );
+    const UnsignedInt id = animationHandleId(handle);
+    setFlagsInternal(id, _state->animations[id].used.flags & ~flags, time);
+}
+
+void AbstractAnimator::clearFlags(const AnimatorDataHandle handle, const AnimationFlags flags, const Nanoseconds time) {
+    CORRADE_ASSERT(isHandleValid(handle),
+        "Ui::AbstractAnimator::clearFlags(): invalid handle" << handle, );
+    const UnsignedInt id = animatorDataHandleId(handle);
+    setFlagsInternal(id, _state->animations[id].used.flags & ~flags, time);
+}
+
+void AbstractAnimator::setFlagsInternal(const UnsignedInt id, const AnimationFlags flags, const Nanoseconds time) {
+    /* If the animation is playing or paused at given time and the Reverse flag
+       got toggled, adjust the start time so it continues from the same point
+       but in reverse */
+    Animation& animation = _state->animations[id];
+    if((animation.used.flags & AnimationFlag::Reverse) != (flags & AnimationFlag::Reverse)) {
+        const AnimationState state = animationState(animation, time);
+        if(state == AnimationState::Playing || state == AnimationState::Paused) {
+            /* Zero-duration animations are always either Scheduled or Stopped,
+               so division by zero won't happen here */
+            CORRADE_INTERNAL_DEBUG_ASSERT(animation.used.duration != 0_nsec);
+
+            /* Calculate how much of the duration got played for the current
+               iteration. If the animation is paused, it's relative to the
+               paused time and not the current time. */
+            const Nanoseconds durationPlayed = ((state == AnimationState::Playing ? time : animation.used.paused) - animation.used.started) % animation.used.duration;
+
+            /* Adjust the start time. We're at a `durationPlayed` distance from
+               `started`, and there's `duration - durationPlayed` remaining
+               until the end of the iteration. We want to have just
+               `durationPlayed` until the end, so the start time has to be
+               `started + durationPlayed - (duration - durationPlayed)`
+               instead.
+
+               If we're exactly at duration begin / end, this is basically just
+               `started -= duration`, which doesn't roundtrip when Reverse is
+               added and then cleared again, resulting in the animation
+               eventually exhausting all iterations and stopping too early. To
+               have this case roundtrip properly, *add* the duration if Reverse
+               is being cleared, and clear it otherwise. */
+            if(durationPlayed == 0_nsec && !(flags & AnimationFlag::Reverse))
+                animation.used.started += animation.used.duration;
+            else
+                animation.used.started += 2*durationPlayed - animation.used.duration;
+        }
+    }
+
+    /* Delegate to the non-time-dependent flag update that does the rest */
+    setFlagsInternal(id, flags);
+}
+
 Containers::StridedArrayView1D<const UnsignedShort> AbstractAnimator::generations() const {
     return stridedArrayView(_state->animations).slice(&Animation::used).slice(&Animation::Used::generation);
 }

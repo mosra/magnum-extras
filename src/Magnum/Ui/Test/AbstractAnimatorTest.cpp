@@ -125,7 +125,8 @@ struct AbstractAnimatorTest: TestSuite::Tester {
     void cleanDataNoLayerSet();
 
     void playPauseStop();
-    void playPauseStopInvalid();
+    void toggleFlagsAtTime();
+    void playPauseStopToggleFlagsInvalid();
     void playPaused();
 
     void update();
@@ -849,7 +850,8 @@ AbstractAnimatorTest::AbstractAnimatorTest() {
               &AbstractAnimatorTest::cleanDataNoLayerSet,
 
               &AbstractAnimatorTest::playPauseStop,
-              &AbstractAnimatorTest::playPauseStopInvalid});
+              &AbstractAnimatorTest::toggleFlagsAtTime,
+              &AbstractAnimatorTest::playPauseStopToggleFlagsInvalid});
 
     addInstancedTests({&AbstractAnimatorTest::playPaused},
         Containers::arraySize(PlayPausedData));
@@ -2065,6 +2067,27 @@ void AbstractAnimatorTest::properties() {
 
     animator.clearFlags(animationHandleData(handle), AnimationFlag::KeepOncePlayed|AnimationFlags{0xb0});
     CORRADE_COMPARE(animator.flags(animationHandleData(handle)), AnimationFlags{0x48});
+
+    /* The time-taking flag overloads should behave the same as above. Their
+       side effects are tested in toggleFlagsAtTime(). */
+    animator.setFlags(handle, AnimationFlag::KeepOncePlayed|AnimationFlags{0x20}, 0_nsec);
+    CORRADE_COMPARE(animator.flags(handle), AnimationFlag::KeepOncePlayed|AnimationFlags{0x20});
+
+    animator.addFlags(handle, AnimationFlags{0xe0}, 0_nsec);
+    CORRADE_COMPARE(animator.flags(handle), AnimationFlag::KeepOncePlayed|AnimationFlags{0xe0});
+
+    animator.clearFlags(handle, AnimationFlags{0xb0}, 0_nsec);
+    CORRADE_COMPARE(animator.flags(handle), AnimationFlag::KeepOncePlayed|AnimationFlags{0x40});
+
+    /* The AnimatorDataHandle overload of time-taking flags */
+    animator.setFlags(animationHandleData(handle), AnimationFlags{0x08}, 0_nsec);
+    CORRADE_COMPARE(animator.flags(animationHandleData(handle)), AnimationFlags{0x08});
+
+    animator.addFlags(animationHandleData(handle), AnimationFlag::KeepOncePlayed|AnimationFlags{0xe0}, 0_nsec);
+    CORRADE_COMPARE(animator.flags(animationHandleData(handle)), AnimationFlag::KeepOncePlayed|AnimationFlags{0xe8});
+
+    animator.clearFlags(animationHandleData(handle), AnimationFlag::KeepOncePlayed|AnimationFlags{0xb0}, 0_nsec);
+    CORRADE_COMPARE(animator.flags(animationHandleData(handle)), AnimationFlags{0x48});
 }
 
 void AbstractAnimatorTest::propertiesStateFactor() {
@@ -3233,7 +3256,233 @@ void AbstractAnimatorTest::playPauseStop() {
     CORRADE_COMPARE(animator.stopped(handle), Nanoseconds::max());
 }
 
-void AbstractAnimatorTest::playPauseStopInvalid() {
+void AbstractAnimatorTest::toggleFlagsAtTime() {
+    /* Tests behavior of time-taking setFlags() / addFlags() / clearFlags(),
+       especially with AnimationFlag::Repeat. The non-time-taking flag APIs are
+       tested in properties() instead. */
+
+    struct: AbstractAnimator {
+        using AbstractAnimator::AbstractAnimator;
+        using AbstractAnimator::create;
+
+        AnimatorFeatures doFeatures() const override { return {}; }
+    } animator{animatorHandle(0, 1)};
+
+    AnimationHandle start = animator.create(50_nsec, 20_nsec);
+    AnimationHandle startRepeat = animator.create(50_nsec, 20_nsec, 2);
+    AnimationHandle zeroDuration = animator.create(50_nsec, 0_nsec);
+    AnimationHandle quarter = animator.create(35_nsec, 20_nsec, AnimationFlag::Reverse);
+    AnimationHandle quarterPaused = animator.create(-25_nsec, 20_nsec);
+    animator.pause(quarterPaused, -20_nsec);
+    AnimationHandle quarterRepeated = animator.create(-15_nsec, 20_nsec, 0);
+    AnimationHandle quarterRepeatedReverseEveryOtherEven = animator.create(-35_nsec, 20_nsec, 0, AnimationFlag::ReverseEveryOther);
+    AnimationHandle quarterRepeatedReverseEveryOtherOdd = animator.create(-25_nsec, 20_nsec, 0, AnimationFlag::ReverseEveryOther);
+    AnimationHandle middle = animator.create(40_nsec, 20_nsec, AnimationFlag::ReverseEveryOther|AnimationFlag::Reverse);
+    AnimationHandle scheduled = animator.create(100_nsec, 10_nsec);
+    /* This one is stopped exactly at the point of the update() call */
+    AnimationHandle stop = animator.create(30_nsec, 20_nsec);
+    /* Also stopped but earlier, not exactly at 50_nsec */
+    AnimationHandle stopped = animator.create(-35_nsec, 20_nsec);
+    AnimationHandle stoppedReverse = animator.create(-35_nsec, 20_nsec, AnimationFlag::Reverse);
+
+    Containers::BitArray mask{NoInit, 13};
+    Containers::StaticArray<13, Float> factors{DirectInit, Constants::nan()};
+
+    /* Initial state. Just as a sanity check, factor() should return the same
+       as the result from update(), apart from values update() doesn't touch
+       at all. */
+    animator.update(50_nsec, mask, mask, mask, factors, mask);
+    CORRADE_COMPARE(factors[animationHandleId(start)], 0.0f);
+    CORRADE_COMPARE(factors[animationHandleId(startRepeat)], 0.0f);
+    CORRADE_COMPARE(factors[animationHandleId(zeroDuration)], 1.0f);
+    CORRADE_COMPARE(factors[animationHandleId(quarter)], 0.25f);
+    CORRADE_COMPARE(factors[animationHandleId(quarterRepeated)], 0.25f);
+    CORRADE_COMPARE(factors[animationHandleId(quarterRepeatedReverseEveryOtherEven)], 0.25f);
+    CORRADE_COMPARE(factors[animationHandleId(quarterRepeatedReverseEveryOtherOdd)], 0.25f);
+    CORRADE_COMPARE(factors[animationHandleId(quarterPaused)], Constants::nan());
+    CORRADE_COMPARE(factors[animationHandleId(middle)], 0.5f);
+    CORRADE_COMPARE(factors[animationHandleId(scheduled)], Constants::nan());
+    CORRADE_COMPARE(factors[animationHandleId(stop)], 1.0f);
+    CORRADE_COMPARE(factors[animationHandleId(stopped)], Constants::nan());
+    CORRADE_COMPARE(factors[animationHandleId(stoppedReverse)], Constants::nan());
+    CORRADE_COMPARE(animator.factor(start), 0.0f);
+    CORRADE_COMPARE(animator.factor(startRepeat), 0.0f);
+    CORRADE_COMPARE(animator.factor(zeroDuration), 1.0f);
+    CORRADE_COMPARE(animator.factor(quarter), 0.25f);
+    CORRADE_COMPARE(animator.factor(quarterRepeated), 0.25f);
+    CORRADE_COMPARE(animator.factor(quarterRepeatedReverseEveryOtherEven), 0.25f);
+    CORRADE_COMPARE(animator.factor(quarterRepeatedReverseEveryOtherOdd), 0.25f);
+    CORRADE_COMPARE(animator.factor(quarterPaused), 0.25f);
+    CORRADE_COMPARE(animator.factor(middle), 0.5f);
+    CORRADE_COMPARE(animator.factor(scheduled), 0.0f);
+    CORRADE_COMPARE(animator.factor(stop), 1.0f);
+    CORRADE_COMPARE(animator.factor(stopped), 1.0f);
+    CORRADE_COMPARE(animator.factor(stoppedReverse), 0.0f);
+
+    /* Flipping the Reverse flag at current time. Verify that the start time
+       adjustment is performed in all variants, independent of other flags
+       being present, and the AnimatorDataHandle overloads as well. */
+    animator.addFlags(start, AnimationFlag::Reverse, 50_nsec);
+    animator.addFlags(startRepeat, AnimationFlag::Reverse|AnimationFlag::KeepOncePlayed, 50_nsec);
+    animator.addFlags(animationHandleData(zeroDuration), AnimationFlag::Reverse, 50_nsec);
+    animator.clearFlags(quarter, AnimationFlag::Reverse, 50_nsec);
+    animator.setFlags(quarterRepeated, AnimationFlag::Reverse|AnimationFlag::KeepOncePlayed, 50_nsec);
+    animator.addFlags(quarterRepeatedReverseEveryOtherEven, AnimationFlag::Reverse, 50_nsec);
+    animator.addFlags(quarterRepeatedReverseEveryOtherOdd, AnimationFlag::Reverse, 50_nsec);
+    animator.setFlags(animationHandleData(quarterPaused), AnimationFlag::Reverse, 50_nsec);
+    animator.clearFlags(animationHandleData(middle), AnimationFlag::Reverse, 50_nsec);
+    animator.addFlags(scheduled, AnimationFlag::Reverse, 50_nsec);
+    animator.addFlags(stop, AnimationFlag::Reverse, 50_nsec);
+    animator.addFlags(stopped, AnimationFlag::Reverse, 50_nsec);
+    animator.clearFlags(stoppedReverse, AnimationFlag::Reverse, 50_nsec);
+    /* The animation that just started is now at the end of its play time (but
+       still at the same factor 0), and thus stoppped */
+    CORRADE_COMPARE(animator.started(start), 30_nsec);
+    CORRADE_COMPARE(animator.state(start), AnimationState::Stopped);
+    CORRADE_COMPARE(animator.factor(start), 0.0f);
+    /* In comparison, the animation that just started but has an additional
+       repeat gets the same start time adjustment but doesn't get stopped */
+    CORRADE_COMPARE(animator.started(startRepeat), 30_nsec);
+    CORRADE_COMPARE(animator.state(startRepeat), AnimationState::Playing);
+    CORRADE_COMPARE(animator.factor(startRepeat), 1.0f);
+    /* The zero duration animation gets stopped as well, but now it's at 0.0f
+       instead of 1.0f */
+    CORRADE_COMPARE(animator.started(zeroDuration), 50_nsec);
+    CORRADE_COMPARE(animator.state(zeroDuration), AnimationState::Stopped);
+    CORRADE_COMPARE(animator.factor(zeroDuration), 0.0f);
+    /* Quarter factor animation stays at the quarter factor, still playing */
+    CORRADE_COMPARE(animator.started(quarter), 45_nsec);
+    CORRADE_COMPARE(animator.state(quarter), AnimationState::Playing);
+    CORRADE_COMPARE(animator.factor(quarter), 0.25f);
+    /* With repeat the start time is adjusted just within a single iteration */
+    CORRADE_COMPARE(animator.started(quarterRepeated), -25_nsec);
+    CORRADE_COMPARE(animator.state(quarterRepeated), AnimationState::Playing);
+    CORRADE_COMPARE(animator.factor(quarterRepeated), 0.25f);
+    /* ReverseEveryOther being enabled doesn't have any effect on the
+       adjustment */
+    CORRADE_COMPARE(animator.started(quarterRepeatedReverseEveryOtherEven), -45_nsec);
+    CORRADE_COMPARE(animator.state(quarterRepeatedReverseEveryOtherEven), AnimationState::Playing);
+    CORRADE_COMPARE(animator.factor(quarterRepeatedReverseEveryOtherEven), 0.25f);
+    CORRADE_COMPARE(animator.started(quarterRepeatedReverseEveryOtherOdd), -15_nsec);
+    CORRADE_COMPARE(animator.state(quarterRepeatedReverseEveryOtherOdd), AnimationState::Playing);
+    CORRADE_COMPARE(animator.factor(quarterRepeatedReverseEveryOtherOdd), 0.25f);
+    /* Pause is still paused, just adjusted to be still at a quarter */
+    CORRADE_COMPARE(animator.started(quarterPaused), -35_nsec);
+    CORRADE_COMPARE(animator.state(quarterPaused), AnimationState::Paused);
+    CORRADE_COMPARE(animator.factor(quarterPaused), 0.25f);
+    /* Middle stays at the same start time as before */
+    CORRADE_COMPARE(animator.started(middle), 40_nsec); /* as before */
+    CORRADE_COMPARE(animator.state(middle), AnimationState::Playing);
+    CORRADE_COMPARE(animator.factor(middle), 0.5f);
+    /* For Scheduled there is no change in start time, state or factor */
+    CORRADE_COMPARE(animator.started(scheduled), 100_nsec);
+    CORRADE_COMPARE(animator.state(scheduled), AnimationState::Scheduled);
+    CORRADE_COMPARE(animator.factor(scheduled), 0.0f);
+    /* For Stopped the start time or state doesn't change but factor flips
+       between 0 and 1. This is the same behavior as if changing the flags
+       directly without time adjustment. */
+    CORRADE_COMPARE(animator.started(stop), 30_nsec);
+    CORRADE_COMPARE(animator.state(stop), AnimationState::Stopped);
+    CORRADE_COMPARE(animator.factor(stop), 0.0f); /* was 1 before */
+    CORRADE_COMPARE(animator.started(stopped), -35_nsec);
+    CORRADE_COMPARE(animator.state(stopped), AnimationState::Stopped);
+    CORRADE_COMPARE(animator.factor(stopped), 0.0f); /* was 1 before */
+    CORRADE_COMPARE(animator.started(stoppedReverse), -35_nsec);
+    CORRADE_COMPARE(animator.state(stoppedReverse), AnimationState::Stopped);
+    CORRADE_COMPARE(animator.factor(stoppedReverse), 1.0f); /* was 0 before */
+
+    /* Flipping the Reverse for playing and paused animations goes back to the
+       original time specified at creation */
+    animator.clearFlags(start, AnimationFlag::Reverse, 50_nsec);
+    animator.clearFlags(startRepeat, AnimationFlag::Reverse, 50_nsec);
+    animator.clearFlags(zeroDuration, AnimationFlag::Reverse, 50_nsec);
+    animator.addFlags(quarter, AnimationFlag::Reverse, 50_nsec);
+    animator.clearFlags(quarterPaused, AnimationFlag::Reverse, 50_nsec);
+    animator.clearFlags(quarterRepeated, AnimationFlag::Reverse, 50_nsec);
+    animator.clearFlags(quarterRepeatedReverseEveryOtherEven, AnimationFlag::Reverse, 50_nsec);
+    animator.clearFlags(quarterRepeatedReverseEveryOtherOdd, AnimationFlag::Reverse, 50_nsec);
+    animator.addFlags(middle, AnimationFlag::Reverse, 50_nsec);
+    /* The originally starting animation transitioned to Stopped so it doesn't
+       change anymore besides the factor flipping back to 1 */
+    CORRADE_COMPARE(animator.started(start), 30_nsec);
+    CORRADE_COMPARE(animator.state(start), AnimationState::Stopped);
+    CORRADE_COMPARE(animator.factor(start), 1.0f);
+    /* In this case, because there's another repeat iteration after, it doesn't
+       stop but goes back. For this there's a special case in the code to
+       ensure it properly roundtrips instead of the start time going to 10_nsec
+       and causing the animation to stop as well. */
+    CORRADE_COMPARE(animator.started(startRepeat), 50_nsec);
+    CORRADE_COMPARE(animator.state(startRepeat), AnimationState::Playing);
+    CORRADE_COMPARE(animator.factor(startRepeat), 0.0f);
+    /* The zero-duration is also Stopped and doesn't change besides the factor
+       flipping back to 1 */
+    CORRADE_COMPARE(animator.started(zeroDuration), 50_nsec);
+    CORRADE_COMPARE(animator.state(zeroDuration), AnimationState::Stopped);
+    CORRADE_COMPARE(animator.factor(zeroDuration), 1.0f);
+    /* These match what was passed to create() */
+    CORRADE_COMPARE(animator.started(quarter), 35_nsec);
+    CORRADE_COMPARE(animator.state(quarter), AnimationState::Playing);
+    CORRADE_COMPARE(animator.factor(quarter), 0.25f);
+    CORRADE_COMPARE(animator.started(quarterPaused), -25_nsec);
+    CORRADE_COMPARE(animator.state(quarterPaused), AnimationState::Paused);
+    CORRADE_COMPARE(animator.factor(quarterPaused), 0.25f);
+    CORRADE_COMPARE(animator.started(quarterRepeated), -15_nsec);
+    CORRADE_COMPARE(animator.state(quarterRepeated), AnimationState::Playing);
+    CORRADE_COMPARE(animator.factor(quarterRepeated), 0.25f);
+    CORRADE_COMPARE(animator.started(quarterRepeatedReverseEveryOtherEven), -35_nsec);
+    CORRADE_COMPARE(animator.state(quarterRepeatedReverseEveryOtherEven), AnimationState::Playing);
+    CORRADE_COMPARE(animator.factor(quarterRepeatedReverseEveryOtherEven), 0.25f);
+    CORRADE_COMPARE(animator.started(quarterRepeatedReverseEveryOtherOdd), -25_nsec);
+    CORRADE_COMPARE(animator.state(quarterRepeatedReverseEveryOtherOdd), AnimationState::Playing);
+    CORRADE_COMPARE(animator.factor(quarterRepeatedReverseEveryOtherOdd), 0.25f);
+    CORRADE_COMPARE(animator.started(middle), 40_nsec);
+    CORRADE_COMPARE(animator.state(middle), AnimationState::Playing);
+    CORRADE_COMPARE(animator.factor(middle), 0.5f);
+    /* The remaining scheduled and stopped animations aren't tested anymore as
+       they don't change */
+
+    /* Flipping the ReverseEveryOther flag (currently?) doesn't lead to any
+       time adjustment so the factor jumps (unless we're at an even iteration).
+       I.e., the behavior would be the same as if changing the flag directly. */
+    animator.clearFlags(quarterRepeatedReverseEveryOtherEven, AnimationFlag::ReverseEveryOther, 50_nsec);
+    animator.clearFlags(quarterRepeatedReverseEveryOtherOdd, AnimationFlag::ReverseEveryOther, 50_nsec);
+    CORRADE_COMPARE(animator.started(quarterRepeatedReverseEveryOtherEven), -35_nsec);
+    CORRADE_COMPARE(animator.state(quarterRepeatedReverseEveryOtherEven), AnimationState::Playing);
+    CORRADE_COMPARE(animator.factor(quarterRepeatedReverseEveryOtherEven), 0.25f);
+    CORRADE_COMPARE(animator.started(quarterRepeatedReverseEveryOtherOdd), -25_nsec);
+    CORRADE_COMPARE(animator.state(quarterRepeatedReverseEveryOtherOdd), AnimationState::Playing);
+    CORRADE_COMPARE(animator.factor(quarterRepeatedReverseEveryOtherOdd), 0.75f);
+
+    /* Flipping other flags doesn't do any adjustment */
+    animator.addFlags(quarter, AnimationFlag::KeepOncePlayed, 50_nsec);
+    CORRADE_COMPARE(animator.started(quarter), 35_nsec);
+    CORRADE_COMPARE(animator.state(quarter), AnimationState::Playing);
+    CORRADE_COMPARE(animator.factor(quarter), 0.25f);
+
+    /* Setting or clearing a flag that's already there doesn't do anything */
+    CORRADE_COMPARE(animator.started(quarter), 35_nsec);
+    CORRADE_COMPARE(animator.flags(quarter), AnimationFlag::KeepOncePlayed|AnimationFlag::Reverse);
+    animator.addFlags(quarter, AnimationFlag::Reverse, 50_nsec);
+    CORRADE_COMPARE(animator.started(quarter), 35_nsec);
+
+    CORRADE_COMPARE(animator.started(quarterRepeated), -15_nsec);
+    CORRADE_COMPARE(animator.flags(quarterRepeated), AnimationFlag::KeepOncePlayed);
+    animator.clearFlags(quarterRepeated, AnimationFlag::Reverse, 50_nsec);
+    CORRADE_COMPARE(animator.started(quarterRepeated), -15_nsec);
+
+    /* Flipping at a time different from the time at last update will make it
+       so the factor stays the same when it reaches given time. In this case,
+       the `quarter` reaches a factor of 0.15 at 52 nsec (so -0.2), so when
+       going back from there to 50 nsec it'd be 0.05. */
+    animator.clearFlags(quarter, AnimationFlag::Reverse, 52_nsec);
+    CORRADE_COMPARE(animator.started(quarter), 49_nsec);
+    CORRADE_COMPARE(animator.state(quarter), AnimationState::Playing);
+    CORRADE_COMPARE(animator.factor(quarter), 0.05f);
+    animator.update(52_nsec, mask, mask, mask, factors, mask);
+    CORRADE_COMPARE(animator.factor(quarter), 0.15f);
+}
+
+void AbstractAnimatorTest::playPauseStopToggleFlagsInvalid() {
     CORRADE_SKIP_IF_NO_ASSERT();
 
     struct: AbstractAnimator {
@@ -3250,34 +3499,58 @@ void AbstractAnimatorTest::playPauseStopInvalid() {
     animator.play(AnimationHandle::Null, 0_nsec);
     animator.pause(AnimationHandle::Null, 0_nsec);
     animator.stop(AnimationHandle::Null, 0_nsec);
+    animator.setFlags(AnimationHandle::Null, {}, 0_nsec);
+    animator.addFlags(AnimationHandle::Null, {}, 0_nsec);
+    animator.clearFlags(AnimationHandle::Null, {}, 0_nsec);
     /* Valid animator, invalid data */
     animator.play(animationHandle(animator.handle(), AnimatorDataHandle(0x123abcde)), 0_nsec);
     animator.pause(animationHandle(animator.handle(), AnimatorDataHandle(0x123abcde)), 0_nsec);
     animator.stop(animationHandle(animator.handle(), AnimatorDataHandle(0x123abcde)), 0_nsec);
+    animator.setFlags(animationHandle(animator.handle(), AnimatorDataHandle(0x123abcde)), {}, 0_nsec);
+    animator.addFlags(animationHandle(animator.handle(), AnimatorDataHandle(0x123abcde)), {}, 0_nsec);
+    animator.clearFlags(animationHandle(animator.handle(), AnimatorDataHandle(0x123abcde)), {}, 0_nsec);
     /* Invalid animator, valid data */
     animator.play(animationHandle(AnimatorHandle::Null, animationHandleData(handle)), 0_nsec);
     animator.pause(animationHandle(AnimatorHandle::Null, animationHandleData(handle)), 0_nsec);
     animator.stop(animationHandle(AnimatorHandle::Null, animationHandleData(handle)), 0_nsec);
+    animator.setFlags(animationHandle(AnimatorHandle::Null, animationHandleData(handle)), {}, 0_nsec);
+    animator.addFlags(animationHandle(AnimatorHandle::Null, animationHandleData(handle)), {}, 0_nsec);
+    animator.clearFlags(animationHandle(AnimatorHandle::Null, animationHandleData(handle)), {}, 0_nsec);
     /* AnimatorDataHandle directly */
     animator.play(AnimatorDataHandle(0x123abcde), 0_nsec);
     animator.pause(AnimatorDataHandle(0x123abcde), 0_nsec);
     animator.stop(AnimatorDataHandle(0x123abcde), 0_nsec);
+    animator.setFlags(AnimatorDataHandle(0x123abcde), {}, 0_nsec);
+    animator.addFlags(AnimatorDataHandle(0x123abcde), {}, 0_nsec);
+    animator.clearFlags(AnimatorDataHandle(0x123abcde), {}, 0_nsec);
     CORRADE_COMPARE_AS(out,
         "Ui::AbstractAnimator::play(): invalid handle Ui::AnimationHandle::Null\n"
         "Ui::AbstractAnimator::pause(): invalid handle Ui::AnimationHandle::Null\n"
         "Ui::AbstractAnimator::stop(): invalid handle Ui::AnimationHandle::Null\n"
+        "Ui::AbstractAnimator::setFlags(): invalid handle Ui::AnimationHandle::Null\n"
+        "Ui::AbstractAnimator::addFlags(): invalid handle Ui::AnimationHandle::Null\n"
+        "Ui::AbstractAnimator::clearFlags(): invalid handle Ui::AnimationHandle::Null\n"
 
         "Ui::AbstractAnimator::play(): invalid handle Ui::AnimationHandle({0x0, 0x1}, {0xabcde, 0x123})\n"
         "Ui::AbstractAnimator::pause(): invalid handle Ui::AnimationHandle({0x0, 0x1}, {0xabcde, 0x123})\n"
         "Ui::AbstractAnimator::stop(): invalid handle Ui::AnimationHandle({0x0, 0x1}, {0xabcde, 0x123})\n"
+        "Ui::AbstractAnimator::setFlags(): invalid handle Ui::AnimationHandle({0x0, 0x1}, {0xabcde, 0x123})\n"
+        "Ui::AbstractAnimator::addFlags(): invalid handle Ui::AnimationHandle({0x0, 0x1}, {0xabcde, 0x123})\n"
+        "Ui::AbstractAnimator::clearFlags(): invalid handle Ui::AnimationHandle({0x0, 0x1}, {0xabcde, 0x123})\n"
 
         "Ui::AbstractAnimator::play(): invalid handle Ui::AnimationHandle(Null, {0x0, 0x1})\n"
         "Ui::AbstractAnimator::pause(): invalid handle Ui::AnimationHandle(Null, {0x0, 0x1})\n"
         "Ui::AbstractAnimator::stop(): invalid handle Ui::AnimationHandle(Null, {0x0, 0x1})\n"
+        "Ui::AbstractAnimator::setFlags(): invalid handle Ui::AnimationHandle(Null, {0x0, 0x1})\n"
+        "Ui::AbstractAnimator::addFlags(): invalid handle Ui::AnimationHandle(Null, {0x0, 0x1})\n"
+        "Ui::AbstractAnimator::clearFlags(): invalid handle Ui::AnimationHandle(Null, {0x0, 0x1})\n"
 
         "Ui::AbstractAnimator::play(): invalid handle Ui::AnimatorDataHandle(0xabcde, 0x123)\n"
         "Ui::AbstractAnimator::pause(): invalid handle Ui::AnimatorDataHandle(0xabcde, 0x123)\n"
-        "Ui::AbstractAnimator::stop(): invalid handle Ui::AnimatorDataHandle(0xabcde, 0x123)\n",
+        "Ui::AbstractAnimator::stop(): invalid handle Ui::AnimatorDataHandle(0xabcde, 0x123)\n"
+        "Ui::AbstractAnimator::setFlags(): invalid handle Ui::AnimatorDataHandle(0xabcde, 0x123)\n"
+        "Ui::AbstractAnimator::addFlags(): invalid handle Ui::AnimatorDataHandle(0xabcde, 0x123)\n"
+        "Ui::AbstractAnimator::clearFlags(): invalid handle Ui::AnimatorDataHandle(0xabcde, 0x123)\n",
         TestSuite::Compare::String);
 }
 
