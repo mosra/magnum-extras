@@ -783,8 +783,11 @@ class MAGNUM_UI_EXPORT AbstractAnimator {
          *
          * Expects that the animator supports
          * @ref AnimatorFeature::NodeAttachment. Meant to be used by animator
-         * implementations to map animation IDs to node handles if needed. Size
-         * of the returned view is the same as @ref capacity(). Items that are
+         * implementations to query node attachments based on animation IDs or
+         * masks without knowing their full handles, application code should
+         * use @ref node(AnimationHandle) const /
+         * @ref node(AnimatorDataHandle) const instead. Size of the returned
+         * view is the same as @ref capacity(). Items that are
          * @ref NodeHandle::Null are either animations with no node attachments
          * or corresponding to animations that are freed.
          */
@@ -880,8 +883,11 @@ class MAGNUM_UI_EXPORT AbstractAnimator {
          *
          * Expects that the animator supports
          * @ref AnimatorFeature::DataAttachment. Meant to be used by animator
-         * implementations to map animation IDs to data handles if needed. Size
-         * of the returned view is the same as @ref capacity(). Items that are
+         * implementations to query layer data attachments based on animation
+         * IDs or masks without knowing their full handles, application code
+         * should use @ref data(AnimationHandle) const /
+         * @ref data(AnimatorDataHandle) const instead. Size of the returned
+         * view is the same as @ref capacity(). Items that are
          * @ref LayerDataHandle::Null are either animations with no data
          * attachments or corresponding to animations that are freed. Use
          * @ref dataHandle(LayerHandle, LayerDataHandle) with @ref layer() const
@@ -1123,15 +1129,15 @@ class MAGNUM_UI_EXPORT AbstractAnimator {
         void clearFlags(AnimatorDataHandle handle, AnimationFlags flags, Nanoseconds time);
 
         /**
-         * @brief Generation counters for all data
+         * @brief Generation counters for all animations
          *
-         * Meant to be used by code that only gets data IDs or masks but needs
-         * the full handle, or for various diagnostic purposes such as tracking
-         * handle recycling. Size of the returned view is the same as
+         * Meant to be used by code that only gets animation IDs or masks but
+         * needs the full handle, or for various diagnostic purposes such as
+         * tracking handle recycling. Size of the returned view is the same as
          * @ref capacity(), individual items correspond to generations of
-         * particular data IDs. All values fit into the @ref AnimationHandle /
-         * @ref AnimatorDataHandle generation bits, @cpp 0 @ce denotes an
-         * expired generation counter.
+         * particular animation IDs. All values fit into the
+         * @ref AnimationHandle / @ref AnimatorDataHandle generation bits,
+         * @cpp 0 @ce denotes an expired generation counter.
          *
          * Passing an ID along with the corresponding generation to
          * @ref animatorDataHandle() produces an @ref AnimatorDataHandle,

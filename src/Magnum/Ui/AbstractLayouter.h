@@ -233,20 +233,23 @@ class MAGNUM_UI_EXPORT AbstractLayouter {
         /**
          * @brief Nodes which the layouts are assigned to
          *
-         * To be used internally from @ref doUpdate(). Size of the returned
+         * Meant to be used by layouter implementations to query node
+         * assignments based on layout IDs or masks without knowing their full
+         * handles, application code should use @ref node(LayoutHandle) const /
+         * @ref node(LayouterDataHandle) const instead. Size of the returned
          * view is the same as @ref capacity(). Items that are
          * @ref NodeHandle::Null are corresponding to layouts that are freed.
          */
         Containers::StridedArrayView1D<const NodeHandle> nodes() const;
 
         /**
-         * @brief Generation counters for all data
+         * @brief Generation counters for all layouts
          *
-         * Meant to be used by code that only gets data IDs or masks but needs
-         * the full handle, or for various diagnostic purposes such as tracking
-         * handle recycling. Size of the returned view is the same as
+         * Meant to be used by code that only gets layout IDs or masks but
+         * needs the full handle, or for various diagnostic purposes such as
+         * tracking handle recycling. Size of the returned view is the same as
          * @ref capacity(), individual items correspond to generations of
-         * particular data IDs. All values fit into the @ref LayoutHandle /
+         * particular layout IDs. All values fit into the @ref LayoutHandle /
          * @ref LayouterDataHandle generation bits, @cpp 0 @ce denotes an
          * expired generation counter.
          *

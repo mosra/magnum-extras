@@ -1047,12 +1047,13 @@ class MAGNUM_UI_EXPORT AbstractLayer {
         /**
          * @brief Node attachments for all data
          *
-         * Used internally from @ref AbstractUserInterface::update(), meant to
-         * be also used by @ref doUpdate() implementations to map data IDs to
-         * node handles. Size of the returned view is the same as
-         * @ref capacity(). Items that are @ref NodeHandle::Null are either
-         * data with no node attachments or corresponding to data that are
-         * freed.
+         * Meant to be used by layer implementations to query node attachments
+         * based on data IDs or masks without knowing their full handles,
+         * application code should use @ref node(DataHandle) const /
+         * @ref node(LayerDataHandle) const instead. Size of the returned view
+         * is the same as @ref capacity(). Items that are @ref NodeHandle::Null
+         * are either data with no node attachments or corresponding to data
+         * that are freed.
          */
         Containers::StridedArrayView1D<const NodeHandle> nodes() const;
 
