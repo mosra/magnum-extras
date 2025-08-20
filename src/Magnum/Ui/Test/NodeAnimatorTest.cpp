@@ -1300,6 +1300,16 @@ void NodeAnimatorTest::advance() {
             .setRemoveNodeAfter(true),
         /* An easing that goes in reverse to verify it's being used */
         [](Float a) { return 1.0f - a; }, 5_nsec, 20_nsec, nodeHandle(2, 0xacf));
+    /* This one is repeated several times and is changing just flags, to verify
+       that the begin/end operations are not done each repeat. That should be
+       guaranteed by the AbstractAnimator already, just verifying that the
+       internals don't accidentally do something else that'd break that. */
+    AnimationHandle playingRepeated = animator.create(
+        NodeAnimation{}
+            .addFlagsBegin(NodeFlag::Focusable)
+            .addFlagsEnd(NodeFlag::Clip)
+            .setRemoveNodeAfter(true),
+        nullptr, 5_nsec, 2_nsec, nodeHandle(3, 0x113), 10);
     /* This one performs both begin and end flag adjustment at once, and sets
        opacity to the final value */
     AnimationHandle stopped = animator.create(
@@ -1343,14 +1353,14 @@ void NodeAnimatorTest::advance() {
        then tested in uiAdvance() below. */
     const auto advance = [&](Nanoseconds time, const Containers::StridedArrayView1D<Vector2>& nodeOffsets, const Containers::StridedArrayView1D<Vector2>& nodeSizes, const Containers::StridedArrayView1D<Float>& nodeOpacities, const Containers::StridedArrayView1D<NodeFlags>& nodeFlags, const Containers::MutableBitArrayView& nodesRemove) {
         UnsignedByte activeData[1];
-        Containers::MutableBitArrayView active{activeData, 0, 4};
+        Containers::MutableBitArrayView active{activeData, 0, 5};
         UnsignedByte startedData[1];
-        Containers::MutableBitArrayView started{startedData, 0, 4};
+        Containers::MutableBitArrayView started{startedData, 0, 5};
         UnsignedByte stoppedData[1];
-        Containers::MutableBitArrayView stopped{stoppedData, 0, 4};
-        Float factors[4];
+        Containers::MutableBitArrayView stopped{stoppedData, 0, 5};
+        Float factors[5];
         UnsignedByte removeData[1];
-        Containers::MutableBitArrayView remove{removeData, 0, 4};
+        Containers::MutableBitArrayView remove{removeData, 0, 5};
 
         Containers::Pair<bool, bool> needsAdvanceClean = animator.update(time, active, started, stopped, factors, remove);
         NodeAnimatorUpdates updates;
@@ -1362,9 +1372,11 @@ void NodeAnimatorTest::advance() {
     };
 
     /* Advancing to 10 sets begin flags for the playing animation and
-       interpolates its offset and size. For the stopped & removed animation it
-       performs both begin and end flag changes and sets the final opacity, for
-       the stopped & kept it uses just the final offset and size */
+       interpolates its offset and size. The repeated animation managed to
+       do several iterations already, but so far only the begin flags are set.
+       For the stopped & removed animation it performs both begin and end flag
+       changes and sets the final opacity, for the stopped & kept it uses just
+       the final offset and size */
     {
         Containers::StaticArray<5, Vector2> nodeOffsets{DirectInit, Vector2{-999.9f}};
         Containers::StaticArray<5, Vector2> nodeSizes{DirectInit, Vector2{-999.9f}};
@@ -1373,17 +1385,19 @@ void NodeAnimatorTest::advance() {
             ~NodeFlags{},
             ~NodeFlags{},
             {},
-            ~NodeFlags{},
+            {},
             ~NodeFlag::NoBlur,
         }};
         Containers::BitArray nodesRemove{ValueInit, 5};
 
         CORRADE_COMPARE(advance(10_nsec, nodeOffsets, nodeSizes, nodeOpacities, nodeFlags, nodesRemove), NodeAnimatorUpdate::OffsetSize|NodeAnimatorUpdate::Opacity|NodeAnimatorUpdate::Enabled|NodeAnimatorUpdate::EventMask|NodeAnimatorUpdate::Clip);
         CORRADE_VERIFY(animator.isHandleValid(playing));
+        CORRADE_VERIFY(animator.isHandleValid(playingRepeated));
         CORRADE_VERIFY(!animator.isHandleValid(stopped));
         CORRADE_VERIFY(animator.isHandleValid(scheduledNullNode));
         CORRADE_VERIFY(animator.isHandleValid(stoppedKept));
         CORRADE_COMPARE(animator.state(playing), AnimationState::Playing);
+        CORRADE_COMPARE(animator.state(playingRepeated), AnimationState::Playing);
         CORRADE_COMPARE(animator.state(scheduledNullNode), AnimationState::Scheduled);
         CORRADE_COMPARE(animator.state(stoppedKept), AnimationState::Stopped);
         CORRADE_COMPARE_AS(nodeOffsets, Containers::arrayView<Vector2>({
@@ -1410,8 +1424,8 @@ void NodeAnimatorTest::advance() {
         CORRADE_COMPARE_AS(nodeFlags, Containers::arrayView<NodeFlags>({
             ~NodeFlags{},
             ~NodeFlags{},
-            NodeFlag::Focusable|NodeFlag::Clip,
-            ~NodeFlags{},
+            NodeFlag::Focusable|NodeFlag::Clip, /* added by playing */
+            NodeFlag::Focusable, /* added by playingRepeated */
             ~NodeFlag::Focusable, /* replaced from ~NoBlur by stopped */
         }), TestSuite::Compare::Container);
         CORRADE_COMPARE_AS(Containers::BitArrayView{nodesRemove}, Containers::stridedArrayView({
@@ -1424,7 +1438,8 @@ void NodeAnimatorTest::advance() {
 
     /* Advancing to 15 changes just the offset/size to a 50% interpolation,
        nothing else. In particular, the flags or opacities aren't touched even
-       though they're now different. */
+       though they're now different, further repeats of the playingRepeated
+       animation also don't cause more flags to be set. */
     } {
         Containers::StaticArray<5, Vector2> nodeOffsets{DirectInit, Vector2{-999.9f}};
         Containers::StaticArray<5, Vector2> nodeSizes{DirectInit, Vector2{-999.9f}};
@@ -1433,16 +1448,18 @@ void NodeAnimatorTest::advance() {
             ~NodeFlags{},
             ~NodeFlags{},
             ~NodeFlags{},
-            ~NodeFlags{},
+            {},
             ~NodeFlags{},
         }};
         Containers::BitArray nodesRemove{ValueInit, 5};
 
         CORRADE_COMPARE(advance(15_nsec, nodeOffsets, nodeSizes, nodeOpacities, nodeFlags, nodesRemove), NodeAnimatorUpdate::OffsetSize);
         CORRADE_VERIFY(animator.isHandleValid(playing));
+        CORRADE_VERIFY(animator.isHandleValid(playingRepeated));
         CORRADE_VERIFY(animator.isHandleValid(scheduledNullNode));
         CORRADE_VERIFY(animator.isHandleValid(stoppedKept));
         CORRADE_COMPARE(animator.state(playing), AnimationState::Playing);
+        CORRADE_COMPARE(animator.state(playingRepeated), AnimationState::Playing);
         CORRADE_COMPARE(animator.state(scheduledNullNode), AnimationState::Scheduled);
         CORRADE_COMPARE(animator.state(stoppedKept), AnimationState::Stopped);
         CORRADE_COMPARE_AS(nodeOffsets, Containers::arrayView<Vector2>({
@@ -1470,7 +1487,7 @@ void NodeAnimatorTest::advance() {
             ~NodeFlags{},
             ~NodeFlags{},
             ~NodeFlags{},
-            ~NodeFlags{},
+            {},
             ~NodeFlags{},
         }), TestSuite::Compare::Container);
         CORRADE_COMPARE_AS(Containers::BitArrayView{nodesRemove}, Containers::stridedArrayView({
@@ -1492,16 +1509,18 @@ void NodeAnimatorTest::advance() {
             ~NodeFlags{},
             ~NodeFlags{},
             ~NodeFlags{},
-            ~NodeFlags{},
+            {},
             ~NodeFlags{},
         }};
         Containers::BitArray nodesRemove{ValueInit, 5};
 
         CORRADE_COMPARE(advance(20_nsec, nodeOffsets, nodeSizes, nodeOpacities, nodeFlags, nodesRemove), NodeAnimatorUpdate::OffsetSize);
         CORRADE_VERIFY(animator.isHandleValid(playing));
+        CORRADE_VERIFY(animator.isHandleValid(playingRepeated));
         CORRADE_VERIFY(animator.isHandleValid(scheduledNullNode));
         CORRADE_VERIFY(animator.isHandleValid(stoppedKept));
         CORRADE_COMPARE(animator.state(playing), AnimationState::Playing);
+        CORRADE_COMPARE(animator.state(playingRepeated), AnimationState::Playing);
         CORRADE_COMPARE(animator.state(scheduledNullNode), AnimationState::Playing);
         CORRADE_COMPARE(animator.state(stoppedKept), AnimationState::Stopped);
         CORRADE_COMPARE_AS(nodeOffsets, Containers::arrayView<Vector2>({
@@ -1529,7 +1548,7 @@ void NodeAnimatorTest::advance() {
             ~NodeFlags{},
             ~NodeFlags{},
             ~NodeFlags{},
-            ~NodeFlags{},
+            {},
             ~NodeFlags{},
         }), TestSuite::Compare::Container);
         CORRADE_COMPARE_AS(Containers::BitArrayView{nodesRemove}, Containers::stridedArrayView({
@@ -1540,8 +1559,8 @@ void NodeAnimatorTest::advance() {
             false,
         }).sliceBit(0), TestSuite::Compare::Container);
 
-    /* Advancing to 25 stops the first animation, applying the final flags. It
-       marks both the animation and the node for removal. */
+    /* Advancing to 25 stops the first and second animation, applying the final
+       flags. It marks both the animation and the node for removal. */
     } {
         Containers::StaticArray<5, Vector2> nodeOffsets{DirectInit, Vector2{-999.9f}};
         Containers::StaticArray<5, Vector2> nodeSizes{DirectInit, Vector2{-999.9f}};
@@ -1550,13 +1569,14 @@ void NodeAnimatorTest::advance() {
             ~NodeFlags{},
             ~NodeFlags{},
             ~NodeFlags{},
-            ~NodeFlags{},
+            {},
             ~NodeFlags{},
         }};
         Containers::BitArray nodesRemove{ValueInit, 5};
 
         CORRADE_COMPARE(advance(25_nsec, nodeOffsets, nodeSizes, nodeOpacities, nodeFlags, nodesRemove), NodeAnimatorUpdate::OffsetSize|NodeAnimatorUpdate::Enabled|NodeAnimatorUpdate::Clip|NodeAnimatorUpdate::Removal);
         CORRADE_VERIFY(!animator.isHandleValid(playing));
+        CORRADE_VERIFY(!animator.isHandleValid(playingRepeated));
         CORRADE_VERIFY(animator.isHandleValid(scheduledNullNode));
         CORRADE_VERIFY(animator.isHandleValid(stoppedKept));
         CORRADE_COMPARE(animator.state(scheduledNullNode), AnimationState::Playing);
@@ -1585,15 +1605,15 @@ void NodeAnimatorTest::advance() {
         CORRADE_COMPARE_AS(nodeFlags, Containers::arrayView<NodeFlags>({
             ~NodeFlags{},
             ~NodeFlags{},
-            ~(NodeFlag::Focusable|NodeFlag::Clip),
-            ~NodeFlags{},
+            ~(NodeFlag::Focusable|NodeFlag::Clip), /* cleared by playing */
+            NodeFlag::Clip, /* added by playingRepeated */
             ~NodeFlags{},
         }), TestSuite::Compare::Container);
         CORRADE_COMPARE_AS(Containers::BitArrayView{nodesRemove}, Containers::stridedArrayView({
             false,
             false,
             true,
-            false,
+            true,
             false,
         }).sliceBit(0), TestSuite::Compare::Container);
 
@@ -1608,7 +1628,7 @@ void NodeAnimatorTest::advance() {
             ~NodeFlags{},
             ~NodeFlags{},
             ~NodeFlags{},
-            ~NodeFlags{},
+            {},
             ~NodeFlags{},
         }};
         Containers::BitArray nodesRemove{ValueInit, 5};
@@ -1642,7 +1662,7 @@ void NodeAnimatorTest::advance() {
             ~NodeFlags{},
             ~NodeFlags{},
             ~NodeFlags{},
-            ~NodeFlags{},
+            {},
             ~NodeFlags{},
         }), TestSuite::Compare::Container);
         CORRADE_COMPARE_AS(Containers::BitArrayView{nodesRemove}, Containers::stridedArrayView({
@@ -1662,7 +1682,7 @@ void NodeAnimatorTest::advance() {
             ~NodeFlags{},
             ~NodeFlags{},
             ~NodeFlags{},
-            ~NodeFlags{},
+            {},
             ~NodeFlags{},
         }};
         Containers::BitArray nodesRemove{ValueInit, 5};
@@ -1696,7 +1716,7 @@ void NodeAnimatorTest::advance() {
             ~NodeFlags{},
             ~NodeFlags{},
             ~NodeFlags{},
-            ~NodeFlags{},
+            {},
             ~NodeFlags{},
         }), TestSuite::Compare::Container);
         CORRADE_COMPARE_AS(Containers::BitArrayView{nodesRemove}, Containers::stridedArrayView({
