@@ -1313,7 +1313,7 @@ void AbstractAnimatorTest::createRemove() {
 
     /* Specifying repeat count and flags, using the AnimatorDataHandle
        overload */
-    AnimationHandle second = animator.create(-26_nsec, 3_nsec, 666, AnimationFlags{0x10});
+    AnimationHandle second = animator.create(-26_nsec, 3_nsec, 666, AnimationFlag::Reverse|AnimationFlag::ReverseEveryOther);
     CORRADE_COMPARE(second, animationHandle(animator.handle(), 1, 1));
     CORRADE_VERIFY(animator.isHandleValid(second));
     /* Animator state() is tested thoroughly in state() */
@@ -1322,7 +1322,7 @@ void AbstractAnimatorTest::createRemove() {
     CORRADE_COMPARE(animator.usedCount(), 2);
     CORRADE_COMPARE(animator.duration(animationHandleData(second)), 3_nsec);
     CORRADE_COMPARE(animator.repeatCount(animationHandleData(second)), 666);
-    CORRADE_COMPARE(animator.flags(animationHandleData(second)), AnimationFlags{0x10});
+    CORRADE_COMPARE(animator.flags(animationHandleData(second)), AnimationFlag::Reverse|AnimationFlag::ReverseEveryOther);
     CORRADE_COMPARE(animator.started(animationHandleData(second)), -26_nsec);
     CORRADE_COMPARE(animator.paused(animationHandleData(second)), Nanoseconds::max());
     CORRADE_COMPARE(animator.stopped(animationHandleData(second)), Nanoseconds::max());
@@ -1353,6 +1353,15 @@ void AbstractAnimatorTest::createRemove() {
         CORRADE_COMPARE(animator.data(third), DataHandle::Null);
     /* Animation state() is tested thoroughly in animationState() */
     CORRADE_COMPARE(animator.state(third), AnimationState::Scheduled);
+
+    /* The flags should be reflected in the batch getter as well. The nodes()
+       and layerData() getters are tested in createNodeAttachment() and
+       createDataAttachment() below. */
+    CORRADE_COMPARE_AS(animator.flags(), Containers::arrayView<AnimationFlags>({
+        {},
+        AnimationFlag::Reverse|AnimationFlag::ReverseEveryOther,
+        AnimationFlag::KeepOncePlayed
+    }), TestSuite::Compare::Container);
 
     animator.remove(first);
     CORRADE_VERIFY(!animator.isHandleValid(first));

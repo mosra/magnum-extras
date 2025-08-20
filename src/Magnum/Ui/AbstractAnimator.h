@@ -551,6 +551,18 @@ class MAGNUM_UI_EXPORT AbstractAnimator {
         AnimationFlags flags(AnimatorDataHandle handle) const;
 
         /**
+         * @brief Flags for all animations
+         *
+         * Meant to be used by animator implementations to query flags based on
+         * animation IDs or masks without knowing their full handles,
+         * application code should use @ref flags(AnimationHandle) const /
+         * @ref flags(AnimatorDataHandle) const instead. Size of the returned
+         * view is the same as @ref capacity(). Items that don't correspond to
+         * valid handles have unspecified values.
+         */
+        Containers::StridedArrayView1D<const AnimationFlags> flags() const;
+
+        /**
          * @brief Set animation flags
          *
          * Expects that @p handle is valid. See also

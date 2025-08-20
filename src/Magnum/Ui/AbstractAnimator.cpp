@@ -597,6 +597,10 @@ AnimationFlags AbstractAnimator::flags(const AnimatorDataHandle handle) const {
     return _state->animations[animatorDataHandleId(handle)].used.flags;
 }
 
+Containers::StridedArrayView1D<const AnimationFlags> AbstractAnimator::flags() const {
+    return stridedArrayView(_state->animations).slice(&Animation::used).slice(&Animation::Used::flags);
+}
+
 void AbstractAnimator::setFlags(const AnimationHandle handle, const AnimationFlags flags) {
     CORRADE_ASSERT(isHandleValid(handle),
         "Ui::AbstractAnimator::setFlags(): invalid handle" << handle, );
