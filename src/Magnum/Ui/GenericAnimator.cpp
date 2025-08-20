@@ -110,6 +110,10 @@ AnimationHandle GenericAnimator::create(Containers::Function<void(Float)>&& anim
     return handle;
 }
 
+AnimationHandle GenericAnimator::create(Containers::Function<void(Float)>&& animation, Float(*const easing)(Float), const Nanoseconds start, const Nanoseconds duration, const AnimationFlags flags) {
+    return create(Utility::move(animation), easing, start, duration, 1, flags);
+}
+
 AnimationHandle GenericAnimator::create(Containers::Function<void(Float, GenericAnimationStates)>&& animation, Float(*const easing)(Float), const Nanoseconds start, const Nanoseconds duration, const UnsignedInt repeatCount, const AnimationFlags flags) {
     CORRADE_ASSERT(animation,
         "Ui::GenericAnimator::create(): animation is null", {});
@@ -126,6 +130,10 @@ AnimationHandle GenericAnimator::create(Containers::Function<void(Float, Generic
     };
 
     return handle;
+}
+
+AnimationHandle GenericAnimator::create(Containers::Function<void(Float, GenericAnimationStates)>&& animation, Float(*const easing)(Float), const Nanoseconds start, const Nanoseconds duration, const AnimationFlags flags) {
+    return create(Utility::move(animation), easing, start, duration, 1, flags);
 }
 
 AnimationHandle GenericAnimator::createInternal(const Nanoseconds start, const Nanoseconds duration, const UnsignedInt repeatCount, const AnimationFlags flags) {
@@ -246,6 +254,10 @@ AnimationHandle GenericNodeAnimator::create(Containers::Function<void(NodeHandle
     return handle;
 }
 
+AnimationHandle GenericNodeAnimator::create(Containers::Function<void(NodeHandle, Float)>&& animation, Float(*const easing)(Float), const Nanoseconds start, const Nanoseconds duration, const NodeHandle node, const AnimationFlags flags) {
+    return create(Utility::move(animation), easing, start, duration, node, 1, flags);
+}
+
 AnimationHandle GenericNodeAnimator::create(Containers::Function<void(NodeHandle, Float, GenericAnimationStates)>&& animation, Float(*const easing)(Float), const Nanoseconds start, const Nanoseconds duration, const NodeHandle node, const UnsignedInt repeatCount, const AnimationFlags flags) {
     CORRADE_ASSERT(animation,
         "Ui::GenericNodeAnimator::create(): animation is null", {});
@@ -262,6 +274,10 @@ AnimationHandle GenericNodeAnimator::create(Containers::Function<void(NodeHandle
     };
 
     return handle;
+}
+
+AnimationHandle GenericNodeAnimator::create(Containers::Function<void(NodeHandle, Float, GenericAnimationStates)>&& animation, Float(*const easing)(Float), const Nanoseconds start, const Nanoseconds duration, const NodeHandle node, const AnimationFlags flags) {
+    return create(Utility::move(animation), easing, start, duration, node, 1, flags);
 }
 
 AnimationHandle GenericNodeAnimator::createInternal(const Nanoseconds start, const Nanoseconds duration, const NodeHandle node, const UnsignedInt repeatCount, const AnimationFlags flags) {
@@ -373,10 +389,18 @@ AnimationHandle GenericDataAnimator::create(Containers::Function<void(DataHandle
     return handle;
 }
 
+AnimationHandle GenericDataAnimator::create(Containers::Function<void(DataHandle, Float)>&& animation, Float(*const easing)(Float), const Nanoseconds start, const Nanoseconds duration, const DataHandle data, const AnimationFlags flags) {
+    return create(Utility::move(animation), easing, start, duration, data, 1, flags);
+}
+
 AnimationHandle GenericDataAnimator::create(Containers::Function<void(DataHandle, Float)>&& animation, Float(*const easing)(Float), const Nanoseconds start, const Nanoseconds duration, const LayerDataHandle data, const UnsignedInt repeatCount, const AnimationFlags flags) {
     const AnimationHandle handle = AbstractGenericAnimator::create(start, duration, data, repeatCount, flags);
     createInternal(handle, Utility::move(animation), easing);
     return handle;
+}
+
+AnimationHandle GenericDataAnimator::create(Containers::Function<void(DataHandle, Float)>&& animation, Float(*const easing)(Float), const Nanoseconds start, const Nanoseconds duration, const LayerDataHandle data, const AnimationFlags flags) {
+    return create(Utility::move(animation), easing, start, duration, data, 1, flags);
 }
 
 AnimationHandle GenericDataAnimator::create(Containers::Function<void(DataHandle, Float, GenericAnimationStates)>&& animation, Float(*const easing)(Float), const Nanoseconds start, const Nanoseconds duration, const DataHandle data, const UnsignedInt repeatCount, const AnimationFlags flags) {
@@ -385,10 +409,18 @@ AnimationHandle GenericDataAnimator::create(Containers::Function<void(DataHandle
     return handle;
 }
 
+AnimationHandle GenericDataAnimator::create(Containers::Function<void(DataHandle, Float, GenericAnimationStates)>&& animation, Float(*const easing)(Float), const Nanoseconds start, const Nanoseconds duration, const DataHandle data, const AnimationFlags flags) {
+    return create(Utility::move(animation), easing, start, duration, data, 1, flags);
+}
+
 AnimationHandle GenericDataAnimator::create(Containers::Function<void(DataHandle, Float, GenericAnimationStates)>&& animation, Float(*const easing)(Float), const Nanoseconds start, const Nanoseconds duration, const LayerDataHandle data, const UnsignedInt repeatCount, const AnimationFlags flags) {
     const AnimationHandle handle = AbstractGenericAnimator::create(start, duration, data, repeatCount, flags);
     createInternal(handle, Utility::move(animation), easing);
     return handle;
+}
+
+AnimationHandle GenericDataAnimator::create(Containers::Function<void(DataHandle, Float, GenericAnimationStates)>&& animation, Float(*const easing)(Float), const Nanoseconds start, const Nanoseconds duration, const LayerDataHandle data, const AnimationFlags flags) {
+    return create(Utility::move(animation), easing, start, duration, data, 1, flags);
 }
 
 void GenericDataAnimator::createInternal(const AnimationHandle handle) {

@@ -221,6 +221,16 @@ class MAGNUM_UI_EXPORT GenericAnimator: public AbstractGenericAnimator {
         AnimationHandle create(Containers::Function<void(Float factor)>&& animation, Float(*easing)(Float), Nanoseconds start, Nanoseconds duration, UnsignedInt repeatCount = 1, AnimationFlags flags = {});
 
         /**
+         * @brief Create an animation
+         *
+         * Same as calling @ref create() "create(Containers::Function<void(Float)>&&, Float(*)(Float), Nanoseconds, Nanoseconds, UnsignedInt, AnimationFlags)"
+         * with @p repeatCount set to @cpp 1 @ce.
+         * @todoc fix the overload references once Doxygen can link to
+         *      functions taking function pointers
+         */
+        AnimationHandle create(Containers::Function<void(Float factor)>&& animation, Float(*easing)(Float), Nanoseconds start, Nanoseconds duration, AnimationFlags flags);
+
+        /**
          * @brief Create an animation with an extra state input
          *
          * Like @ref create() "create(Containers::Function<void(Float)>&&, Float(*)(Float), Nanoseconds, Nanoseconds, UnsignedInt, AnimationFlags)"
@@ -230,6 +240,16 @@ class MAGNUM_UI_EXPORT GenericAnimator: public AbstractGenericAnimator {
          * behavior description.
          */
         AnimationHandle create(Containers::Function<void(Float factor, GenericAnimationStates state)>&& animation, Float(*easing)(Float), Nanoseconds start, Nanoseconds duration, UnsignedInt repeatCount = 1, AnimationFlags flags = {});
+
+        /**
+         * @brief Create an animation with an extra state input
+         *
+         * Same as calling @ref create() "create(Containers::Function<void(Float, GenericAnimationState)>&&, Float(*)(Float), Nanoseconds, Nanoseconds, UnsignedInt, AnimationFlags)"
+         * with @p repeatCount set to @cpp 1 @ce.
+         * @todoc fix the overload references once Doxygen can link to
+         *      functions taking function pointers
+         */
+        AnimationHandle create(Containers::Function<void(Float factor, GenericAnimationStates state)>&& animation, Float(*easing)(Float), Nanoseconds start, Nanoseconds duration, AnimationFlags flags);
 
         /**
          * @brief Call a function once at specified time
@@ -442,6 +462,16 @@ class MAGNUM_UI_EXPORT GenericNodeAnimator: public AbstractGenericAnimator {
         AnimationHandle create(Containers::Function<void(NodeHandle node, Float factor)>&& animation, Float(*easing)(Float), Nanoseconds start, Nanoseconds duration, NodeHandle node, UnsignedInt repeatCount = 1, AnimationFlags flags = {});
 
         /**
+         * @brief Create an animation
+         *
+         * Same as calling @ref create() "create(Containers::Function<void(NodeHandle, Float)>&&, Float(*)(Float), Nanoseconds, Nanoseconds, NodeHandle, UnsignedInt, AnimationFlags)"
+         * with @p repeatCount set to @cpp 1 @ce.
+         * @todoc fix the overload references once Doxygen can link to
+         *      functions taking function pointers
+         */
+        AnimationHandle create(Containers::Function<void(NodeHandle node, Float factor)>&& animation, Float(*easing)(Float), Nanoseconds start, Nanoseconds duration, NodeHandle node, AnimationFlags flags);
+
+        /**
          * @brief Create an animation with an extra state input
          *
          * Like @ref create() "create(Containers::Function<void(NodeHandle, Float)>&&, Float(*)(Float), Nanoseconds, Nanoseconds, NodeHandle, UnsignedInt, AnimationFlags)"
@@ -451,6 +481,16 @@ class MAGNUM_UI_EXPORT GenericNodeAnimator: public AbstractGenericAnimator {
          * behavior description.
          */
         AnimationHandle create(Containers::Function<void(NodeHandle node, Float factor, GenericAnimationStates state)>&& animation, Float(*easing)(Float), Nanoseconds start, Nanoseconds duration, NodeHandle node, UnsignedInt repeatCount = 1, AnimationFlags flags = {});
+
+        /**
+         * @brief Create an animation with an extra state input
+         *
+         * Same as calling @ref create() "create(Containers::Function<void(NodeHandle, Float, GenericAnimationState)>&&, Float(*)(Float), Nanoseconds, Nanoseconds, NodeHandle, UnsignedInt, AnimationFlags)"
+         * with @p repeatCount set to @cpp 1 @ce.
+         * @todoc fix the overload references once Doxygen can link to
+         *      functions taking function pointers
+         */
+        AnimationHandle create(Containers::Function<void(NodeHandle node, Float factor, GenericAnimationStates state)>&& animation, Float(*easing)(Float), Nanoseconds start, Nanoseconds duration, NodeHandle node, AnimationFlags flags);
 
         /**
          * @brief Call a function once at specified time
@@ -680,6 +720,16 @@ class MAGNUM_UI_EXPORT GenericDataAnimator: public AbstractGenericAnimator {
         AnimationHandle create(Containers::Function<void(DataHandle data, Float factor)>&& animation, Float(*easing)(Float), Nanoseconds start, Nanoseconds duration, DataHandle data, UnsignedInt repeatCount = 1, AnimationFlags flags = {});
 
         /**
+         * @brief Create an animation
+         *
+         * Same as calling @ref create() "create(Containers::Function<void(DataHandle, Float)>&&, Float(*)(Float), Nanoseconds, Nanoseconds, DataHandle, UnsignedInt, AnimationFlags)"
+         * with @p repeatCount set to @cpp 1 @ce.
+         * @todoc fix the overload references once Doxygen can link to
+         *      functions taking function pointers
+         */
+        AnimationHandle create(Containers::Function<void(DataHandle data, Float factor)>&& animation, Float(*easing)(Float), Nanoseconds start, Nanoseconds duration, DataHandle data, AnimationFlags flags);
+
+        /**
          * @brief Create an animation with an extra state input
          *
          * Like @ref create() "create(Containers::Function<void(DataHandle, Float)>&&, Float(*)(Float), Nanoseconds, Nanoseconds, DataHandle, UnsignedInt, AnimationFlags)"
@@ -689,6 +739,16 @@ class MAGNUM_UI_EXPORT GenericDataAnimator: public AbstractGenericAnimator {
          * behavior description.
          */
         AnimationHandle create(Containers::Function<void(DataHandle data, Float factor, GenericAnimationStates state)>&& animation, Float(*easing)(Float), Nanoseconds start, Nanoseconds duration, DataHandle data, UnsignedInt repeatCount = 1, AnimationFlags flags = {});
+
+        /**
+         * @brief Create an animation with an extra state input
+         *
+         * Same as calling @ref create() "create(Containers::Function<void(DataHandle, Float, GenericAnimationState)>&&, Float(*)(Float), Nanoseconds, Nanoseconds, DataHandle, UnsignedInt, AnimationFlags)"
+         * with @p repeatCount set to @cpp 1 @ce.
+         * @todoc fix the overload references once Doxygen can link to
+         *      functions taking function pointers
+         */
+        AnimationHandle create(Containers::Function<void(DataHandle node, Float factor, GenericAnimationStates state)>&& animation, Float(*easing)(Float), Nanoseconds start, Nanoseconds duration, DataHandle data, AnimationFlags flags);
 
         /**
          * @brief Create an animation assuming the data it's attached to belongs to the layer the animator is registered with
@@ -705,6 +765,16 @@ class MAGNUM_UI_EXPORT GenericDataAnimator: public AbstractGenericAnimator {
         AnimationHandle create(Containers::Function<void(DataHandle data, Float factor)>&& animator, Float(*easing)(Float), Nanoseconds start, Nanoseconds duration, LayerDataHandle data, UnsignedInt repeatCount = 1, AnimationFlags flags = {});
 
         /**
+         * @brief Create an animation animation assuming the data it's attached to belongs to the layer the animator is registered with
+         *
+         * Same as calling @ref create() "create(Containers::Function<void(DataHandle, Float)>&&, Float(*)(Float), Nanoseconds, Nanoseconds, LayerDataHandle, UnsignedInt, AnimationFlags)"
+         * with @p repeatCount set to @cpp 1 @ce.
+         * @todoc fix the overload references once Doxygen can link to
+         *      functions taking function pointers
+         */
+        AnimationHandle create(Containers::Function<void(DataHandle data, Float factor)>&& animation, Float(*easing)(Float), Nanoseconds start, Nanoseconds duration, LayerDataHandle data, AnimationFlags flags);
+
+        /**
          * @brief Create an animation assuming the data it's attached to belongs to the layer the animator is registered with, with an extra state input
          *
          * Like @ref create() "create(Containers::Function<void(DataHandle, Float)>&&, Float(*)(Float), Nanoseconds, Nanoseconds, LayerDataHandle, UnsignedInt, AnimationFlags)"
@@ -715,6 +785,15 @@ class MAGNUM_UI_EXPORT GenericDataAnimator: public AbstractGenericAnimator {
          */
         AnimationHandle create(Containers::Function<void(DataHandle data, Float factor, GenericAnimationStates state)>&& animator, Float(*easing)(Float), Nanoseconds start, Nanoseconds duration, LayerDataHandle data, UnsignedInt repeatCount = 1, AnimationFlags flags = {});
 
+        /**
+         * @brief Create an animation assuming the data it's attached to belongs to the layer the animator is registered with, with an extra state input
+         *
+         * Same as calling @ref create() "create(Containers::Function<void(DataHandle, Float, GenericAnimationState)>&&, Float(*)(Float), Nanoseconds, Nanoseconds, LayerDataHandle, UnsignedInt, AnimationFlags)"
+         * with @p repeatCount set to @cpp 1 @ce.
+         * @todoc fix the overload references once Doxygen can link to
+         *      functions taking function pointers
+         */
+        AnimationHandle create(Containers::Function<void(DataHandle node, Float factor, GenericAnimationStates state)>&& animation, Float(*easing)(Float), Nanoseconds start, Nanoseconds duration, LayerDataHandle data, AnimationFlags flags);
         /**
          * @brief Call a function once at specified time
          * @param callback      Function to call
