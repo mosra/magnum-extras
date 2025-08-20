@@ -312,6 +312,7 @@ NodeAnimatorUpdates updatesForFlags(NodeFlags flagsBefore, NodeFlags flags) {
 NodeAnimatorUpdates NodeAnimator::doAdvance(const Containers::BitArrayView active, const Containers::BitArrayView started, const Containers::BitArrayView stopped, const Containers::StridedArrayView1D<const Float>& factors, const Containers::StridedArrayView1D<Vector2>& nodeOffsets, const Containers::StridedArrayView1D<Vector2>& nodeSizes, const Containers::StridedArrayView1D<Float>& nodeOpacities, const Containers::StridedArrayView1D<NodeFlags>& nodeFlags, const Containers::MutableBitArrayView nodesRemove) {
     State& state = static_cast<State&>(*_state);
     const Containers::StridedArrayView1D<const NodeHandle> nodes = this->nodes();
+    const Containers::StridedArrayView1D<const AnimationFlags> flags = this->flags();
 
     /** @todo some way to iterate set bits */
     NodeAnimatorUpdates updates;
@@ -323,6 +324,7 @@ NodeAnimatorUpdates NodeAnimator::doAdvance(const Containers::BitArrayView activ
 
         Animation& animation = state.animations[i];
         const UnsignedInt nodeId = nodeHandleId(nodes[i]);
+        const bool reverse = flags[i] >= AnimationFlag::Reverse;
 
         /* Operations to do only at animation start */
         if(started[i]) {
@@ -366,15 +368,23 @@ NodeAnimatorUpdates NodeAnimator::doAdvance(const Containers::BitArrayView activ
                   !(animation.flags >= NodeAnimationFlag::HasTargetOpacity))
                 animation.targetOpacity = nodeOpacities[nodeId];
 
-            /* Flags to add or clear at the start */
-            if(animation.flagsAddBegin || animation.flagsClearBegin) {
+            /* Flags to add or clear at the start. If the animation is
+               reversed, take the flags from the end instead of the begin and
+               swap the add and clear operations for those. So, for example, if
+               a NodeFlag::NoEvents is to be added at begin, it gets cleared
+               when the reversed animation stops. */
+            const NodeFlags flagsAddStart = reverse ?
+                animation.flagsClearEnd : animation.flagsAddBegin;
+            const NodeFlags flagsClearStart = reverse ?
+                animation.flagsAddEnd : animation.flagsClearBegin;
+            if(flagsAddStart || flagsClearStart) {
                 NodeFlags& flags = nodeFlags[nodeId];
                 const NodeFlags flagsBefore = flags;
 
                 /* Clear first so it's possible to implicitly clear all flags
                    and then add a subset back */
-                flags &= ~animation.flagsClearBegin;
-                flags |= animation.flagsAddBegin;
+                flags &= ~flagsClearStart;
+                flags |= flagsAddStart;
 
                 /* If presence of certain flags changed, reflect that in the
                    output NodeAnimatorUpdates */
@@ -434,17 +444,25 @@ NodeAnimatorUpdates NodeAnimator::doAdvance(const Containers::BitArrayView activ
 
         /* Operations to do only at animation stop */
         if(stopped[i]) {
-            /* Flags to add or clear at the stop */
+            /* Flags to add or clear at the stop. If the animation is
+               reversed, take the flags from the begin instead of the end and
+               swap the add and clear operations for those. So, for example, if
+               a NodeFlag::Hidden is to be added at end, it gets cleared when
+               the reversed animation starts. */
+            const NodeFlags flagsAddStop = reverse ?
+                animation.flagsClearBegin : animation.flagsAddEnd;
+            const NodeFlags flagsClearStop = reverse ?
+                animation.flagsAddBegin : animation.flagsClearEnd;
             /** @todo maybe skip this if the node is about to be removed? I.e.,
                 do all this before the interpolations? */
-            if(animation.flagsAddEnd || animation.flagsClearEnd) {
+            if(flagsAddStop || flagsClearStop) {
                 NodeFlags& flags = nodeFlags[nodeId];
                 const NodeFlags flagsBefore = flags;
 
                 /* Clear first so it's possible to implicitly clear all flags
                    and then add a subset back */
-                flags &= ~animation.flagsClearEnd;
-                flags |= animation.flagsAddEnd;
+                flags &= ~flagsClearStop;
+                flags |= flagsAddStop;
 
                 /* If presence of certain flags changed, reflect that in the
                    output NodeAnimatorUpdates */

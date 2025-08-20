@@ -69,6 +69,7 @@ struct NodeAnimatorTest: TestSuite::Tester {
     void advanceEmpty();
 
     void uiAdvance();
+    void uiAdvanceToggleReverse();
 };
 
 using namespace Math::Literals;
@@ -78,6 +79,7 @@ const struct {
     NodeAnimation animation;
     /* The animation always plays from 5_nsec to 25_nsec */
     Nanoseconds advance;
+    AnimationFlags flags;
     NodeAnimatorUpdates expectedUpdates;
     Vector2 expectedOffset;
     Vector2 expectedSize;
@@ -87,7 +89,7 @@ const struct {
 } AdvancePropertiesData[]{
     {"nothing",
         NodeAnimation{},
-        30_nsec, {},
+        30_nsec, {}, {},
         {100.0f, 100.0f},
         {10.0f, 10.0f},
         1.0f, false,
@@ -95,7 +97,17 @@ const struct {
     {"offset to, 75%",
         NodeAnimation{}
             .toOffset({0.0f, 200.0f}),
-        20_nsec, NodeAnimatorUpdate::OffsetSize,
+        20_nsec, {}, NodeAnimatorUpdate::OffsetSize,
+        {25.0f, 175.0f},
+        {10.0f, 10.0f},
+        1.0f, false,
+        {}, {}},
+    /* Same as above. In particular, it should still fetch the offset at start
+       even though the animation direction is reversed. */
+    {"offset to, 25%, reversed",
+        NodeAnimation{}
+            .toOffset({0.0f, 200.0f}),
+        10_nsec, AnimationFlag::Reverse, NodeAnimatorUpdate::OffsetSize,
         {25.0f, 175.0f},
         {10.0f, 10.0f},
         1.0f, false,
@@ -103,7 +115,17 @@ const struct {
     {"offset from, 25%",
         NodeAnimation{}
             .fromOffset({0.0f, 200.0f}),
-        10_nsec, NodeAnimatorUpdate::OffsetSize,
+        10_nsec, {}, NodeAnimatorUpdate::OffsetSize,
+        {25.0f, 175.0f},
+        {10.0f, 10.0f},
+        1.0f, false,
+        {}, {}},
+    /* Same as above. In particular, it should still fetch the offset at start
+       even though the animation direction is reversed. */
+    {"offset from, 75%, reversed",
+        NodeAnimation{}
+            .fromOffset({0.0f, 200.0f}),
+        20_nsec, AnimationFlag::Reverse, NodeAnimatorUpdate::OffsetSize,
         {25.0f, 175.0f},
         {10.0f, 10.0f},
         1.0f, false,
@@ -112,7 +134,7 @@ const struct {
         NodeAnimation{}
             .fromOffset({1000.0f, 10.0f})
             .toOffset({2000.0f, 20.0f}),
-        15_nsec, NodeAnimatorUpdate::OffsetSize,
+        15_nsec, {}, NodeAnimatorUpdate::OffsetSize,
         {1500.0f, 15.0f},
         {10.0f, 10.0f},
         1.0f, false,
@@ -120,7 +142,7 @@ const struct {
     {"offset X from, 25%",
         NodeAnimation{}
             .fromOffsetX(0.0f),
-        10_nsec, NodeAnimatorUpdate::OffsetSize,
+        10_nsec, {}, NodeAnimatorUpdate::OffsetSize,
         {25.0f, 100.0f},
         {10.0f, 10.0f},
         1.0f, false,
@@ -128,7 +150,7 @@ const struct {
     {"offset X to, 75%",
         NodeAnimation{}
             .toOffsetX(0.0f),
-        20_nsec, NodeAnimatorUpdate::OffsetSize,
+        20_nsec, {}, NodeAnimatorUpdate::OffsetSize,
         {25.0f, 100.0f},
         {10.0f, 10.0f},
         1.0f, false,
@@ -136,7 +158,7 @@ const struct {
     {"offset Y from, 25%",
         NodeAnimation{}
             .fromOffsetY(200.0f),
-        10_nsec, NodeAnimatorUpdate::OffsetSize,
+        10_nsec, {}, NodeAnimatorUpdate::OffsetSize,
         {100.0f, 175.0f},
         {10.0f, 10.0f},
         1.0f, false,
@@ -144,7 +166,7 @@ const struct {
     {"offset Y to, 75%",
         NodeAnimation{}
             .toOffsetY(200.0f),
-        20_nsec, NodeAnimatorUpdate::OffsetSize,
+        20_nsec, {}, NodeAnimatorUpdate::OffsetSize,
         {100.0f, 175.0f},
         {10.0f, 10.0f},
         1.0f, false,
@@ -153,7 +175,7 @@ const struct {
         NodeAnimation{}
             .fromOffsetX(0.0f)
             .toOffsetY(200.0f),
-        15_nsec, NodeAnimatorUpdate::OffsetSize,
+        15_nsec, {}, NodeAnimatorUpdate::OffsetSize,
         {50.0f, 150.0f},
         {10.0f, 10.0f},
         1.0f, false,
@@ -162,7 +184,7 @@ const struct {
         NodeAnimation{}
             .fromOffsetY(200.0f)
             .toOffsetX(0.0f),
-        15_nsec, NodeAnimatorUpdate::OffsetSize,
+        15_nsec, {}, NodeAnimatorUpdate::OffsetSize,
         {50.0f, 150.0f},
         {10.0f, 10.0f},
         1.0f, false,
@@ -170,7 +192,17 @@ const struct {
     {"size to, 75%",
         NodeAnimation{}
             .toSize({0.0f, 20.0f}),
-        20_nsec, NodeAnimatorUpdate::OffsetSize,
+        20_nsec, {}, NodeAnimatorUpdate::OffsetSize,
+        {100.0f, 100.0f},
+        {2.5f, 17.5f},
+        1.0f, false,
+        {}, {}},
+    /* Same as above. In particular, it should still fetch the size at start
+       even though the animation direction is reversed. */
+    {"size to, 25%, reversed",
+        NodeAnimation{}
+            .toSize({0.0f, 20.0f}),
+        10_nsec, AnimationFlag::Reverse, NodeAnimatorUpdate::OffsetSize,
         {100.0f, 100.0f},
         {2.5f, 17.5f},
         1.0f, false,
@@ -178,7 +210,17 @@ const struct {
     {"size from, 25%",
         NodeAnimation{}
             .fromSize({0.0f, 20.0f}),
-        10_nsec, NodeAnimatorUpdate::OffsetSize,
+        10_nsec, {}, NodeAnimatorUpdate::OffsetSize,
+        {100.0f, 100.0f},
+        {2.5f, 17.5f},
+        1.0f, false,
+        {}, {}},
+    /* Same as above. In particular, it should still fetch the size at start
+       even though the animation direction is reversed. */
+    {"size from, 75%, reversed",
+        NodeAnimation{}
+            .fromSize({0.0f, 20.0f}),
+        20_nsec, AnimationFlag::Reverse, NodeAnimatorUpdate::OffsetSize,
         {100.0f, 100.0f},
         {2.5f, 17.5f},
         1.0f, false,
@@ -187,7 +229,7 @@ const struct {
         NodeAnimation{}
             .fromSize({1000.0f, 10.0f})
             .toSize({2000.0f, 20.0f}),
-        15_nsec, NodeAnimatorUpdate::OffsetSize,
+        15_nsec, {}, NodeAnimatorUpdate::OffsetSize,
         {100.0f, 100.0f},
         {1500.0f, 15.0f},
         1.0f, false,
@@ -195,7 +237,7 @@ const struct {
     {"size X from, 25%",
         NodeAnimation{}
             .fromSizeX(0.0f),
-        10_nsec, NodeAnimatorUpdate::OffsetSize,
+        10_nsec, {}, NodeAnimatorUpdate::OffsetSize,
         {100.0f, 100.0f},
         {2.5f, 10.0f},
         1.0f, false,
@@ -203,7 +245,7 @@ const struct {
     {"size X to, 75%",
         NodeAnimation{}
             .toSizeX(0.0f),
-        20_nsec, NodeAnimatorUpdate::OffsetSize,
+        20_nsec, {}, NodeAnimatorUpdate::OffsetSize,
         {100.0f, 100.0f},
         {2.5f, 10.0f},
         1.0f, false,
@@ -211,7 +253,7 @@ const struct {
     {"size Y from, 25%",
         NodeAnimation{}
             .fromSizeY(20.0f),
-        10_nsec, NodeAnimatorUpdate::OffsetSize,
+        10_nsec, {}, NodeAnimatorUpdate::OffsetSize,
         {100.0f, 100.0f},
         {10.0f, 17.5f},
         1.0f, false,
@@ -219,7 +261,7 @@ const struct {
     {"size Y to, 75%",
         NodeAnimation{}
             .toSizeY(20.0f),
-        20_nsec, NodeAnimatorUpdate::OffsetSize,
+        20_nsec, {}, NodeAnimatorUpdate::OffsetSize,
         {100.0f, 100.0f},
         {10.0f, 17.5f},
         1.0f, false,
@@ -228,7 +270,7 @@ const struct {
         NodeAnimation{}
             .fromSizeX(0.0f)
             .toSizeY(20.0f),
-        15_nsec, NodeAnimatorUpdate::OffsetSize,
+        15_nsec, {}, NodeAnimatorUpdate::OffsetSize,
         {100.0f, 100.0f},
         {5.0f, 15.0f},
         1.0f, false,
@@ -237,7 +279,7 @@ const struct {
         NodeAnimation{}
             .fromSizeY(20.0f)
             .toSizeX(0.0f),
-        15_nsec, NodeAnimatorUpdate::OffsetSize,
+        15_nsec, {}, NodeAnimatorUpdate::OffsetSize,
         {100.0f, 100.0f},
         {5.0f, 15.0f},
         1.0f, false,
@@ -245,7 +287,17 @@ const struct {
     {"opacity to, 75%",
         NodeAnimation{}
             .toOpacity(0.0f),
-        20_nsec, NodeAnimatorUpdate::Opacity,
+        20_nsec, {}, NodeAnimatorUpdate::Opacity,
+        {100.0f, 100.0f},
+        {10.0f, 10.0f},
+        0.25f, false,
+        {}, {}},
+    /* Same as above. In particular, it should still fetch the opacity at start
+       even though the animation direction is reversed. */
+    {"opacity to, 25%, reversed",
+        NodeAnimation{}
+            .toOpacity(0.0f),
+        10_nsec, AnimationFlag::Reverse, NodeAnimatorUpdate::Opacity,
         {100.0f, 100.0f},
         {10.0f, 10.0f},
         0.25f, false,
@@ -253,7 +305,17 @@ const struct {
     {"opacity from, 25%",
         NodeAnimation{}
             .fromOpacity(0.0f),
-        10_nsec, NodeAnimatorUpdate::Opacity,
+        10_nsec, {}, NodeAnimatorUpdate::Opacity,
+        {100.0f, 100.0f},
+        {10.0f, 10.0f},
+        0.25f, false,
+        {}, {}},
+    /* Same as above. In particular, it should still fetch the opacity at start
+       even though the animation direction is reversed. */
+    {"opacity from, 75%, reversed",
+        NodeAnimation{}
+            .fromOpacity(0.0f),
+        20_nsec, AnimationFlag::Reverse, NodeAnimatorUpdate::Opacity,
         {100.0f, 100.0f},
         {10.0f, 10.0f},
         0.25f, false,
@@ -262,7 +324,7 @@ const struct {
         NodeAnimation{}
             .fromOpacity(0.9f)
             .toOpacity(0.3f),
-        15_nsec, NodeAnimatorUpdate::Opacity,
+        15_nsec, {}, NodeAnimatorUpdate::Opacity,
         {100.0f, 100.0f},
         {10.0f, 10.0f},
         0.6f, false,
@@ -270,7 +332,7 @@ const struct {
     {"add FallthroughPointerEvents flag begin, 25%",
         NodeAnimation{}
             .addFlagsBegin(NodeFlag::FallthroughPointerEvents),
-        10_nsec, NodeAnimatorUpdates{},
+        10_nsec, {}, NodeAnimatorUpdates{},
         {100.0f, 100.0f},
         {10.0f, 10.0f},
         1.0f, false,
@@ -278,7 +340,7 @@ const struct {
     {"add NoEvents flag begin, 25%",
         NodeAnimation{}
             .addFlagsBegin(NodeFlag::NoEvents),
-        10_nsec, NodeAnimatorUpdate::Enabled,
+        10_nsec, {}, NodeAnimatorUpdate::Enabled,
         {100.0f, 100.0f},
         {10.0f, 10.0f},
         1.0f, false,
@@ -286,7 +348,7 @@ const struct {
     {"add Disabled flag begin, 25%",
         NodeAnimation{}
             .addFlagsBegin(NodeFlag::Disabled),
-        10_nsec, NodeAnimatorUpdate::Enabled,
+        10_nsec, {}, NodeAnimatorUpdate::Enabled,
         {100.0f, 100.0f},
         {10.0f, 10.0f},
         1.0f, false,
@@ -294,7 +356,7 @@ const struct {
     {"add Focusable flag begin, 25%",
         NodeAnimation{}
             .addFlagsBegin(NodeFlag::Focusable),
-        10_nsec, NodeAnimatorUpdate::Enabled,
+        10_nsec, {}, NodeAnimatorUpdate::Enabled,
         {100.0f, 100.0f},
         {10.0f, 10.0f},
         1.0f, false,
@@ -302,7 +364,7 @@ const struct {
     {"add Hidden flag begin, 25%",
         NodeAnimation{}
             .addFlagsBegin(NodeFlag::Hidden),
-        10_nsec, NodeAnimatorUpdate::Visibility,
+        10_nsec, {}, NodeAnimatorUpdate::Visibility,
         {100.0f, 100.0f},
         {10.0f, 10.0f},
         1.0f, false,
@@ -310,23 +372,26 @@ const struct {
     {"add multiple flags begin, 25%",
         NodeAnimation{}
             .addFlagsBegin(NodeFlag::Disabled|NodeFlag::NoBlur|NodeFlag::Hidden),
-        10_nsec, NodeAnimatorUpdate::Enabled|NodeAnimatorUpdate::EventMask|NodeAnimatorUpdate::Visibility,
+        10_nsec, {}, NodeAnimatorUpdate::Enabled|NodeAnimatorUpdate::EventMask|NodeAnimatorUpdate::Visibility,
         {100.0f, 100.0f},
         {10.0f, 10.0f},
         1.0f, false,
         NodeFlag::Clip, NodeFlag::Clip|NodeFlag::Disabled|NodeFlag::NoBlur|NodeFlag::Hidden},
+    /* There should be no difference compared to above */
     {"add multiple flags begin, 125%",
         NodeAnimation{}
             .addFlagsBegin(NodeFlag::Disabled|NodeFlag::NoBlur|NodeFlag::Hidden),
-        30_nsec, NodeAnimatorUpdate::Enabled|NodeAnimatorUpdate::EventMask|NodeAnimatorUpdate::Visibility,
+        30_nsec, {}, NodeAnimatorUpdate::Enabled|NodeAnimatorUpdate::EventMask|NodeAnimatorUpdate::Visibility,
         {100.0f, 100.0f},
         {10.0f, 10.0f},
         1.0f, false,
         NodeFlag::Clip, NodeFlag::Clip|NodeFlag::Disabled|NodeFlag::NoBlur|NodeFlag::Hidden},
+    /* Just to verify the end flags aren't accidentally added at the begin
+       already */
     {"add multiple flags end, 25%",
         NodeAnimation{}
             .addFlagsEnd(NodeFlag::NoEvents|NodeFlag::NoBlur|NodeFlag::Hidden),
-        10_nsec, NodeAnimatorUpdates{},
+        10_nsec, {}, NodeAnimatorUpdates{},
         {100.0f, 100.0f},
         {10.0f, 10.0f},
         1.0f, false,
@@ -335,7 +400,7 @@ const struct {
     {"add FallthroughPointerEvents flag end, 125%",
         NodeAnimation{}
             .addFlagsEnd(NodeFlag::FallthroughPointerEvents),
-        30_nsec, NodeAnimatorUpdates{},
+        30_nsec, {}, NodeAnimatorUpdates{},
         {100.0f, 100.0f},
         {10.0f, 10.0f},
         1.0f, false,
@@ -343,7 +408,7 @@ const struct {
     {"add NoEvents flag end, 125%",
         NodeAnimation{}
             .addFlagsEnd(NodeFlag::NoEvents),
-        30_nsec, NodeAnimatorUpdate::Enabled,
+        30_nsec, {}, NodeAnimatorUpdate::Enabled,
         {100.0f, 100.0f},
         {10.0f, 10.0f},
         1.0f, false,
@@ -351,7 +416,7 @@ const struct {
     {"add Disabled flag end, 125%",
         NodeAnimation{}
             .addFlagsEnd(NodeFlag::Disabled),
-        30_nsec, NodeAnimatorUpdate::Enabled,
+        30_nsec, {}, NodeAnimatorUpdate::Enabled,
         {100.0f, 100.0f},
         {10.0f, 10.0f},
         1.0f, false,
@@ -359,7 +424,7 @@ const struct {
     {"add Focusable flag end, 125%",
         NodeAnimation{}
             .addFlagsEnd(NodeFlag::Focusable),
-        30_nsec, NodeAnimatorUpdate::Enabled,
+        30_nsec, {}, NodeAnimatorUpdate::Enabled,
         {100.0f, 100.0f},
         {10.0f, 10.0f},
         1.0f, false,
@@ -367,7 +432,7 @@ const struct {
     {"add Hidden flag end, 125%",
         NodeAnimation{}
             .addFlagsEnd(NodeFlag::Hidden),
-        30_nsec, NodeAnimatorUpdate::Visibility,
+        30_nsec, {}, NodeAnimatorUpdate::Visibility,
         {100.0f, 100.0f},
         {10.0f, 10.0f},
         1.0f, false,
@@ -375,15 +440,36 @@ const struct {
     {"add multiple flags end, 125%",
         NodeAnimation{}
             .addFlagsEnd(NodeFlag::NoEvents|NodeFlag::NoBlur|NodeFlag::Hidden),
-        30_nsec, NodeAnimatorUpdate::Enabled|NodeAnimatorUpdate::EventMask|NodeAnimatorUpdate::Visibility,
+        30_nsec, {}, NodeAnimatorUpdate::Enabled|NodeAnimatorUpdate::EventMask|NodeAnimatorUpdate::Visibility,
         {100.0f, 100.0f},
         {10.0f, 10.0f},
         1.0f, false,
         NodeFlag::Clip, NodeFlag::Clip|NodeFlag::NoEvents|NodeFlag::NoBlur|NodeFlag::Hidden},
+    /* With a reversed animation the begin / end is reversed and the operation
+       is reversed as well. Here the end flags get cleared at 25%. */
+    {"add flags at begin / end, 25%, reversed",
+        NodeAnimation{}
+            .addFlagsBegin(NodeFlag::Disabled)
+            .addFlagsEnd(NodeFlag::Hidden),
+        10_nsec, AnimationFlag::Reverse, NodeAnimatorUpdate::Visibility,
+        {100.0f, 100.0f},
+        {10.0f, 10.0f},
+        1.0f, false,
+        NodeFlag::Clip|NodeFlag::Hidden, NodeFlag::Clip},
+    /* And the begin flags are cleared at 125% */
+    {"add flags at begin / end, 125%, reversed",
+        NodeAnimation{}
+            .addFlagsBegin(NodeFlag::Disabled)
+            .addFlagsEnd(NodeFlag::Hidden),
+        30_nsec, AnimationFlag::Reverse, NodeAnimatorUpdate::Visibility|NodeAnimatorUpdate::Enabled,
+        {100.0f, 100.0f},
+        {10.0f, 10.0f},
+        1.0f, false,
+        NodeFlag::Clip|NodeFlag::Hidden|NodeFlag::Disabled, NodeFlag::Clip},
     {"clear FallthroughPointerEvents flag begin, 25%",
         NodeAnimation{}
             .clearFlagsBegin(NodeFlag::FallthroughPointerEvents),
-        10_nsec, NodeAnimatorUpdates{},
+        10_nsec, {}, NodeAnimatorUpdates{},
         {100.0f, 100.0f},
         {10.0f, 10.0f},
         1.0f, false,
@@ -391,7 +477,7 @@ const struct {
     {"clear NoEvents flag begin, 25%",
         NodeAnimation{}
             .clearFlagsBegin(NodeFlag::NoEvents),
-        10_nsec, NodeAnimatorUpdate::Enabled,
+        10_nsec, {}, NodeAnimatorUpdate::Enabled,
         {100.0f, 100.0f},
         {10.0f, 10.0f},
         1.0f, false,
@@ -399,7 +485,7 @@ const struct {
     {"clear Disabled flag begin, 25%",
         NodeAnimation{}
             .clearFlagsBegin(NodeFlag::Disabled),
-        10_nsec, NodeAnimatorUpdate::Enabled,
+        10_nsec, {}, NodeAnimatorUpdate::Enabled,
         {100.0f, 100.0f},
         {10.0f, 10.0f},
         1.0f, false,
@@ -407,7 +493,7 @@ const struct {
     {"clear Focusable flag begin, 25%",
         NodeAnimation{}
             .clearFlagsBegin(NodeFlag::Focusable),
-        10_nsec, NodeAnimatorUpdate::Enabled,
+        10_nsec, {}, NodeAnimatorUpdate::Enabled,
         {100.0f, 100.0f},
         {10.0f, 10.0f},
         1.0f, false,
@@ -415,7 +501,7 @@ const struct {
     {"clear Hidden flag begin, 25%",
         NodeAnimation{}
             .clearFlagsBegin(NodeFlag::Hidden),
-        10_nsec, NodeAnimatorUpdate::Visibility,
+        10_nsec, {}, NodeAnimatorUpdate::Visibility,
         {100.0f, 100.0f},
         {10.0f, 10.0f},
         1.0f, false,
@@ -423,7 +509,7 @@ const struct {
     {"clear multiple flags begin, 25%",
         NodeAnimation{}
             .clearFlagsBegin(NodeFlag::Disabled|NodeFlag::Hidden|NodeFlag::NoBlur),
-        10_nsec, NodeAnimatorUpdate::Enabled|NodeAnimatorUpdate::EventMask|NodeAnimatorUpdate::Visibility,
+        10_nsec, {}, NodeAnimatorUpdate::Enabled|NodeAnimatorUpdate::EventMask|NodeAnimatorUpdate::Visibility,
         {100.0f, 100.0f},
         {10.0f, 10.0f},
         1.0f, false,
@@ -431,15 +517,17 @@ const struct {
     {"clear multiple flags begin, 125%",
         NodeAnimation{}
             .clearFlagsBegin(NodeFlag::Disabled|NodeFlag::Hidden|NodeFlag::NoBlur),
-        30_nsec, NodeAnimatorUpdate::Enabled|NodeAnimatorUpdate::EventMask|NodeAnimatorUpdate::Visibility,
+        30_nsec, {}, NodeAnimatorUpdate::Enabled|NodeAnimatorUpdate::EventMask|NodeAnimatorUpdate::Visibility,
         {100.0f, 100.0f},
         {10.0f, 10.0f},
         1.0f, false,
         NodeFlag::Clip|NodeFlag::Hidden|NodeFlag::Disabled|NodeFlag::NoBlur, NodeFlag::Clip},
+    /* Just to verify the end flags aren't accidentally cleared at the begin
+       already */
     {"clear multiple flags end, 25%",
         NodeAnimation{}
             .clearFlagsEnd(NodeFlag::Focusable|NodeFlag::NoBlur|NodeFlag::Hidden),
-        10_nsec, NodeAnimatorUpdates{},
+        10_nsec, {}, NodeAnimatorUpdates{},
         {100.0f, 100.0f},
         {10.0f, 10.0f},
         1.0f, false,
@@ -448,7 +536,7 @@ const struct {
     {"clear FallthroughPointerEvents flag end, 125%",
         NodeAnimation{}
             .clearFlagsEnd(NodeFlag::FallthroughPointerEvents),
-        30_nsec, NodeAnimatorUpdates{},
+        30_nsec, {}, NodeAnimatorUpdates{},
         {100.0f, 100.0f},
         {10.0f, 10.0f},
         1.0f, false,
@@ -456,7 +544,7 @@ const struct {
     {"clear NoEvents flag end, 125%",
         NodeAnimation{}
             .clearFlagsEnd(NodeFlag::NoEvents),
-        30_nsec, NodeAnimatorUpdate::Enabled,
+        30_nsec, {}, NodeAnimatorUpdate::Enabled,
         {100.0f, 100.0f},
         {10.0f, 10.0f},
         1.0f, false,
@@ -464,7 +552,7 @@ const struct {
     {"clear Disabled flag end, 125%",
         NodeAnimation{}
             .clearFlagsEnd(NodeFlag::Disabled),
-        30_nsec, NodeAnimatorUpdate::Enabled,
+        30_nsec, {}, NodeAnimatorUpdate::Enabled,
         {100.0f, 100.0f},
         {10.0f, 10.0f},
         1.0f, false,
@@ -472,7 +560,7 @@ const struct {
     {"clear Focusable flag end, 125%",
         NodeAnimation{}
             .clearFlagsEnd(NodeFlag::Focusable),
-        30_nsec, NodeAnimatorUpdate::Enabled,
+        30_nsec, {}, NodeAnimatorUpdate::Enabled,
         {100.0f, 100.0f},
         {10.0f, 10.0f},
         1.0f, false,
@@ -480,7 +568,7 @@ const struct {
     {"clear Hidden flag end, 125%",
         NodeAnimation{}
             .clearFlagsEnd(NodeFlag::Hidden),
-        30_nsec, NodeAnimatorUpdate::Visibility,
+        30_nsec, {}, NodeAnimatorUpdate::Visibility,
         {100.0f, 100.0f},
         {10.0f, 10.0f},
         1.0f, false,
@@ -488,18 +576,39 @@ const struct {
     {"clear multiple flags end, 125%",
         NodeAnimation{}
             .clearFlagsEnd(NodeFlag::Focusable|NodeFlag::NoBlur|NodeFlag::Hidden),
-        30_nsec, NodeAnimatorUpdate::Enabled|NodeAnimatorUpdate::EventMask|NodeAnimatorUpdate::Visibility,
+        30_nsec, {}, NodeAnimatorUpdate::Enabled|NodeAnimatorUpdate::EventMask|NodeAnimatorUpdate::Visibility,
         {100.0f, 100.0f},
         {10.0f, 10.0f},
         1.0f, false,
         NodeFlag::Clip|NodeFlag::Focusable|NodeFlag::NoBlur|NodeFlag::Hidden, NodeFlag::Clip},
+    /* With a reversed animation the begin / end is reversed and the operation
+       is reversed as well. Here the end flags get added at 25%. */
+    {"clear flags at begin / end, 25%, reversed",
+        NodeAnimation{}
+            .clearFlagsBegin(NodeFlag::Disabled)
+            .clearFlagsEnd(NodeFlag::Hidden),
+        10_nsec, AnimationFlag::Reverse, NodeAnimatorUpdate::Visibility,
+        {100.0f, 100.0f},
+        {10.0f, 10.0f},
+        1.0f, false,
+        NodeFlag::Clip, NodeFlag::Clip|NodeFlag::Hidden},
+    /* And the begin flags added at 125% */
+    {"clear flags at begin / end, 125%, reversed",
+        NodeAnimation{}
+            .clearFlagsBegin(NodeFlag::Disabled)
+            .clearFlagsEnd(NodeFlag::Hidden),
+        30_nsec, AnimationFlag::Reverse, NodeAnimatorUpdate::Visibility|NodeAnimatorUpdate::Enabled,
+        {100.0f, 100.0f},
+        {10.0f, 10.0f},
+        1.0f, false,
+        NodeFlag::Clip, NodeFlag::Clip|NodeFlag::Hidden|NodeFlag::Disabled},
     /* These four should result in no NodeAnimatorUpdates being set */
     {"add flags that are already present at begin, 25%",
         NodeAnimation{}
             /* Only FallthroughPointerEvents is extra, which is the only that
                causes no NodeAnimatorUpdates to be set */
             .addFlagsBegin(NodeFlag::NoEvents|NodeFlag::Focusable|NodeFlag::Clip|NodeFlag::NoBlur|NodeFlag::FallthroughPointerEvents),
-        10_nsec, NodeAnimatorUpdates{},
+        10_nsec, {}, NodeAnimatorUpdates{},
         {100.0f, 100.0f},
         {10.0f, 10.0f},
         1.0f, false,
@@ -510,7 +619,7 @@ const struct {
             /* Only FallthroughPointerEvents is extra, which is the only that
                causes no NodeAnimatorUpdates to be set */
             .addFlagsEnd(NodeFlag::Disabled|NodeFlag::Focusable|NodeFlag::Clip|NodeFlag::NoBlur|NodeFlag::FallthroughPointerEvents),
-        30_nsec, NodeAnimatorUpdates{},
+        30_nsec, {}, NodeAnimatorUpdates{},
         {100.0f, 100.0f},
         {10.0f, 10.0f},
         1.0f, false,
@@ -521,7 +630,7 @@ const struct {
             /* Only FallthroughPointerEvents is removed, which is the only that
                causes no NodeAnimatorUpdates to be set */
             .clearFlagsBegin(NodeFlag::Disabled|NodeFlag::Focusable|NodeFlag::Clip|NodeFlag::NoBlur|NodeFlag::FallthroughPointerEvents),
-        10_nsec, NodeAnimatorUpdates{},
+        10_nsec, {}, NodeAnimatorUpdates{},
         {100.0f, 100.0f},
         {10.0f, 10.0f},
         1.0f, false,
@@ -532,7 +641,7 @@ const struct {
             /* Only FallthroughPointerEvents is removed, which is the only that
                causes no NodeAnimatorUpdates to be set */
             .clearFlagsEnd(NodeFlag::NoEvents|NodeFlag::Focusable|NodeFlag::Clip|NodeFlag::NoBlur|NodeFlag::FallthroughPointerEvents),
-        30_nsec, NodeAnimatorUpdates{},
+        30_nsec, {}, NodeAnimatorUpdates{},
         {100.0f, 100.0f},
         {10.0f, 10.0f},
         1.0f, false,
@@ -546,7 +655,7 @@ const struct {
             .addFlagsBegin(NodeFlag::Clip|NodeFlag::Disabled),
         /* Enabled isn't present for Disabled because it's cleared but then
            added back */
-        10_nsec, NodeAnimatorUpdate::EventMask|NodeAnimatorUpdate::Clip,
+        10_nsec, {}, NodeAnimatorUpdate::EventMask|NodeAnimatorUpdate::Clip,
         {100.0f, 100.0f},
         {10.0f, 10.0f},
         1.0f, false,
@@ -558,7 +667,7 @@ const struct {
             .addFlagsEnd(NodeFlag::Clip|NodeFlag::Disabled),
         /* Enabled isn't present for Focusable because it's cleared but then
            added back */
-        30_nsec, NodeAnimatorUpdate::EventMask|NodeAnimatorUpdate::Clip,
+        30_nsec, {}, NodeAnimatorUpdate::EventMask|NodeAnimatorUpdate::Clip,
         {100.0f, 100.0f},
         {10.0f, 10.0f},
         1.0f, false,
@@ -568,7 +677,7 @@ const struct {
         NodeAnimation{}
             .addFlagsBegin(NodeFlag::Disabled),
         /* It's now newly Disabled, before it was only NoEvents */
-        10_nsec, NodeAnimatorUpdate::Enabled,
+        10_nsec, {}, NodeAnimatorUpdate::Enabled,
         {100.0f, 100.0f},
         {10.0f, 10.0f},
         1.0f, false,
@@ -578,7 +687,7 @@ const struct {
         NodeAnimation{}
             .addFlagsEnd(NodeFlag::Disabled),
         /* It's now newly Disabled, before it was only NoEvents */
-        30_nsec, NodeAnimatorUpdate::Enabled,
+        30_nsec, {}, NodeAnimatorUpdate::Enabled,
         {100.0f, 100.0f},
         {10.0f, 10.0f},
         1.0f, false,
@@ -590,7 +699,7 @@ const struct {
             .addFlagsBegin(NodeFlag::NoEvents),
         /* It's now newly only NoEvents, before it was Disabled, which counts
            as an update */
-        10_nsec, NodeAnimatorUpdate::Enabled,
+        10_nsec, {}, NodeAnimatorUpdate::Enabled,
         {100.0f, 100.0f},
         {10.0f, 10.0f},
         1.0f, false,
@@ -602,7 +711,7 @@ const struct {
             .addFlagsEnd(NodeFlag::NoEvents),
         /* It's now newly only NoEvents, before it was Disabled, which counts
            as an update */
-        30_nsec, NodeAnimatorUpdate::Enabled,
+        30_nsec, {}, NodeAnimatorUpdate::Enabled,
         {100.0f, 100.0f},
         {10.0f, 10.0f},
         1.0f, false,
@@ -619,7 +728,7 @@ const struct {
             .addFlagsBegin(NodeFlag::NoEvents|NodeFlag::NoBlur)
             .clearFlagsEnd(NodeFlag::NoEvents|NodeFlag::Clip)
             .addFlagsEnd(NodeFlag::FallthroughPointerEvents|NodeFlag::Focusable),
-        30_nsec, NodeAnimatorUpdate::Enabled|NodeAnimatorUpdate::EventMask|NodeAnimatorUpdate::Clip,
+        30_nsec, {}, NodeAnimatorUpdate::Enabled|NodeAnimatorUpdate::EventMask|NodeAnimatorUpdate::Clip,
         {100.0f, 100.0f},
         {10.0f, 10.0f},
         1.0f, false,
@@ -628,7 +737,16 @@ const struct {
     {"remove a node at the end, 25%",
         NodeAnimation{}
             .setRemoveNodeAfter(true),
-        10_nsec, NodeAnimatorUpdates{},
+        10_nsec, {}, {},
+        {100.0f, 100.0f},
+        {10.0f, 10.0f},
+        1.0f, false,
+        {}, {}},
+    /* The removal is done at animation stop, so Reverse doesn't affect it */
+    {"remove a node at the end, 25%, reversed",
+        NodeAnimation{}
+            .setRemoveNodeAfter(true),
+        10_nsec, AnimationFlag::Reverse, {},
         {100.0f, 100.0f},
         {10.0f, 10.0f},
         1.0f, false,
@@ -636,7 +754,16 @@ const struct {
     {"remove a node at the end, 125%",
         NodeAnimation{}
             .setRemoveNodeAfter(true),
-        30_nsec, NodeAnimatorUpdate::Removal,
+        30_nsec, {}, NodeAnimatorUpdate::Removal,
+        {100.0f, 100.0f},
+        {10.0f, 10.0f},
+        1.0f, true,
+        {}, {}},
+    /* And, conversely, Reverse also doesn't make the removal skipped */
+    {"remove a node at the end, 125%, reversed",
+        NodeAnimation{}
+            .setRemoveNodeAfter(true),
+        30_nsec, AnimationFlag::Reverse, NodeAnimatorUpdate::Removal,
         {100.0f, 100.0f},
         {10.0f, 10.0f},
         1.0f, true,
@@ -709,6 +836,8 @@ NodeAnimatorTest::NodeAnimatorTest() {
 
     addInstancedTests({&NodeAnimatorTest::uiAdvance},
         Containers::arraySize(UiAdvanceData));
+
+    addTests({&NodeAnimatorTest::uiAdvanceToggleReverse});
 }
 
 void NodeAnimatorTest::animationConstruct() {
@@ -1734,7 +1863,7 @@ void NodeAnimatorTest::advanceProperties() {
     setTestCaseDescription(data.name);
 
     NodeAnimator animator{animatorHandle(0, 1)};
-    animator.create(data.animation, Animation::Easing::linear, 5_nsec, 20_nsec, nodeHandle(2, 0xcac));
+    animator.create(data.animation, Animation::Easing::linear, 5_nsec, 20_nsec, nodeHandle(2, 0xcac), data.flags);
 
     UnsignedByte activeData[1];
     Containers::MutableBitArrayView active{activeData, 0, 1};
@@ -1821,6 +1950,48 @@ void NodeAnimatorTest::uiAdvance() {
     if(!data.expectNodeRemovedEnd)
         CORRADE_COMPARE(ui.nodeFlags(node), data.expectedFlagsEnd);
     CORRADE_COMPARE(ui.state(), data.expectedStates|data.expectedExtraStatesEnd);
+}
+
+void NodeAnimatorTest::uiAdvanceToggleReverse() {
+    /* Testing with an UI instance to not have to duplicate the whole advancing
+       helper logic from NodeAnimatorTest::advance() here */
+
+    AbstractUserInterface ui{{100, 100}};
+
+    NodeHandle node1 = ui.createNode({}, {}, NodeFlag::NoBlur);
+    NodeHandle node2 = ui.createNode({}, {});
+
+    NodeAnimator& animator = ui.setNodeAnimatorInstance(Containers::pointer<NodeAnimator>(ui.createAnimator()));
+
+    AnimationHandle forward = animator.create(NodeAnimation{}
+        .addFlagsBegin(NodeFlag::Focusable)
+        .addFlagsEnd(NodeFlag::NoBlur), nullptr, 5_nsec, 20_nsec, node1);
+    AnimationHandle backward = animator.create(NodeAnimation{}
+        .clearFlagsBegin(NodeFlag::Disabled)
+        .clearFlagsEnd(NodeFlag::Clip), nullptr, 5_nsec, 20_nsec, node2, AnimationFlag::Reverse);
+
+    /* Advancing adds Focusable to the first node. The second animation is
+       meant to clear Clip at the end, and a reverse of that is adding Clip at
+       the begin. */
+    ui.advanceAnimations(15_nsec);
+    CORRADE_COMPARE(ui.nodeFlags(node1), NodeFlag::Focusable|NodeFlag::NoBlur);
+    CORRADE_COMPARE(ui.nodeFlags(node2), NodeFlag::Clip);
+
+    /* Reversing the animations and advancing further before the stop doesn't
+       change anything */
+    animator.addFlags(forward, AnimationFlag::Reverse);
+    animator.clearFlags(backward, AnimationFlag::Reverse);
+    ui.advanceAnimations(20_nsec);
+    CORRADE_COMPARE(ui.nodeFlags(node1), NodeFlag::Focusable|NodeFlag::NoBlur);
+    CORRADE_COMPARE(ui.nodeFlags(node2), NodeFlag::Clip);
+
+    /* Advancing beyond the end applies the initial flags again but inversely
+       because both animations went back to where they started */
+    ui.advanceAnimations(30_nsec);
+    CORRADE_VERIFY(!animator.isHandleValid(forward));
+    CORRADE_VERIFY(!animator.isHandleValid(backward));
+    CORRADE_COMPARE(ui.nodeFlags(node1), NodeFlag::NoBlur);
+    CORRADE_COMPARE(ui.nodeFlags(node2), NodeFlags{});
 }
 
 }}}}

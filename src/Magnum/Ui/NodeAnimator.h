@@ -99,6 +99,32 @@ after a ten-second delay:
 
 @snippet Ui.cpp NodeAnimator-create-remove-node-after
 
+@subsection Ui-NodeAnimation-create-reversible Reversible animations
+
+In cases where for example opening and closing a menu is animated the same way,
+just in reverse, it's possible to create a single animation and drive it either
+forward or backward. In the following case, the menu is initially
+@ref NodeFlag::Hidden, slides from the top and is not reacting to events until
+the animation stops:
+
+@snippet Ui.cpp NodeAnimator-create-reversible
+
+When @ref AnimationFlag::Reverse is added and the animation is played, it'll
+first add @ref NodeFlag::NoEvents, slide in the other direction and finally
+removes @relativeref{NodeFlag,NoEvents} again and makes the node hidden:
+
+@snippet Ui.cpp NodeAnimator-create-reversible-reverse
+
+Furthermore, such an animation can be reversed during the time it's played
+using the @ref addFlags(AnimationHandle, AnimationFlags, Nanoseconds) "addFlags()"
+/ @ref clearFlags(AnimationHandle, AnimationFlags, Nanoseconds) "clearFlags()"
+overloads that additionally take current time, which will make the animation
+continue back from where it ended up being at given time. The following code
+will first attempt to make the animation play backward assuming it's still
+playing, and if it's not it plays it from the start:
+
+@snippet Ui.cpp NodeAnimator-create-reversible-reverse-at-time
+
 @section Ui-NodeAnimator-lifetime Animation lifetime and node attachment
 
 As with all other animations, they're implicitly removed once they're played.
@@ -659,7 +685,12 @@ class MAGNUM_UI_EXPORT NodeAnimation {
          * the animation. If @ref clearFlagsBegin() is called as well, the
          * clear happens before the add. If none of @ref addFlagsBegin(),
          * @ref clearFlagsBegin(), @ref addFlagsEnd(), @ref clearFlagsEnd() is
-         * called, node flags stay unchanged.
+         * called, node flags stay unchanged. If the animation has
+         * @ref AnimationFlag::Reverse set, the flags are *cleared* at
+         * animation stop instead of being added at start. Presence of
+         * @ref AnimationFlag::ReverseEveryOther has no effect on this
+         * behavior. If the animation has multiple repeats, the flags are
+         * updated only for the very first / very last repeat.
          *
          * Note that, unlike with @ref AbstractUserInterface::addNodeFlags(),
          * calling this function multiple times *replaces* the set of flags to
@@ -677,7 +708,12 @@ class MAGNUM_UI_EXPORT NodeAnimation {
          * animation. If @ref clearFlagsEnd() is called as well, the clear
          * happens before adding @p flags. If none of @ref addFlagsBegin(),
          * @ref clearFlagsBegin(), @ref addFlagsEnd(), @ref clearFlagsEnd() is
-         * called, node flags stay unchanged.
+         * called, node flags stay unchanged. If the animation has
+         * @ref AnimationFlag::Reverse set, the flags are *cleared* at
+         * animation start instead of being added at stop. Presence of
+         * @ref AnimationFlag::ReverseEveryOther has no effect on this
+         * behavior. If the animation has multiple repeats, the flags are
+         * updated only for the very last / very first repeat.
          *
          * Note that, unlike with @ref AbstractUserInterface::addNodeFlags(),
          * calling this function multiple times *replaces* the set of flags to
@@ -698,7 +734,12 @@ class MAGNUM_UI_EXPORT NodeAnimation {
          * of the animation. If @ref addFlagsBegin() is called as well, the
          * clear happens before the add. If none of @ref addFlagsBegin(),
          * @ref clearFlagsBegin(), @ref addFlagsEnd(), @ref clearFlagsEnd() is
-         * called, node flags stay unchanged.
+         * called, node flags stay unchanged. If the animation has
+         * @ref AnimationFlag::Reverse set, the flags are *added* at animation
+         * stop instead of being cleared at start. Presence of
+         * @ref AnimationFlag::ReverseEveryOther has no effect on this
+         * behavior. If the animation has multiple repeats, the flags are
+         * updated only for the very first / very last repeat.
          *
          * Note that, unlike with @ref AbstractUserInterface::clearNodeFlags(),
          * calling this function multiple times *replaces* the set of flags to
@@ -716,7 +757,12 @@ class MAGNUM_UI_EXPORT NodeAnimation {
          * animation. If @ref addFlagsEnd() is called as well, the clear
          * happens before the add. If none of @ref addFlagsBegin(),
          * @ref clearFlagsBegin(), @ref addFlagsEnd(), @ref clearFlagsEnd() is
-         * called, node flags stay unchanged.
+         * called, node flags stay unchanged. If the animation has
+         * @ref AnimationFlag::Reverse set, the flags are *added* at animation
+         * start instead of being cleared at stop. Presence of
+         * @ref AnimationFlag::ReverseEveryOther has no effect on this
+         * behavior. If the animation has multiple repeats, the flags are
+         * updated only for the very last / very first repeat.
          *
          * Note that, unlike with @ref AbstractUserInterface::clearNodeFlags(),
          * calling this function multiple times *replaces* the set of flags to
@@ -738,7 +784,10 @@ class MAGNUM_UI_EXPORT NodeAnimation {
          * If @p remove is @cpp true @ce and the animation attachment isn't
          * @ref NodeHandle::Null, the node gets automatically removed once the
          * animation stops. If @cpp false @ce or if this function isn't called
-         * at all, the node doesn't get removed.
+         * at all, the node doesn't get removed. @ref AnimationFlag::Reverse
+         * and @ref AnimationFlag::ReverseEveryOther don't affect the behavior
+         * in any way, the removal is done once the animation stops regardless
+         * of these being present.
          *
          * Note that, if removal is enabled, since the animation is attached to
          * the node, it gets subsequently removed as well, regardless of

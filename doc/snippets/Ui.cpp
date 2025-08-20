@@ -1257,6 +1257,7 @@ Ui::NodeAnimator& animator = ui.setNodeAnimatorInstance(
 /* [NodeAnimator-setup] */
 
 Nanoseconds now;
+{
 /* [NodeAnimator-create-offset] */
 Ui::NodeHandle popup = DOXYGEN_ELLIPSIS({});
 Vector2 popupSize = ui.nodeSize(popup);
@@ -1269,7 +1270,9 @@ animator.create(
         .clearFlagsEnd(Ui::NodeFlag::NoEvents),
     Animation::Easing::cubicIn, now, 0.5_sec, popup);
 /* [NodeAnimator-create-offset] */
+}
 
+{
 /* [NodeAnimator-create-size] */
 Ui::NodeHandle contextMenu = DOXYGEN_ELLIPSIS({});
 
@@ -1280,7 +1283,9 @@ animator.create(
         .addFlagsEnd(Ui::NodeFlag::Hidden),
     Animation::Easing::backOut, now, 1.0_sec, contextMenu);
 /* [NodeAnimator-create-size] */
+}
 
+{
 /* [NodeAnimator-create-remove-node-after] */
 Ui::NodeHandle tooltip = DOXYGEN_ELLIPSIS({});
 
@@ -1290,6 +1295,31 @@ animator.create(
         .setRemoveNodeAfter(true),
     Animation::Easing::exponentialIn, now + 10.0_sec, 0.3_sec, tooltip);
 /* [NodeAnimator-create-remove-node-after] */
+}
+
+/* [NodeAnimator-create-reversible] */
+Ui::NodeHandle menu = ui.createNode(DOXYGEN_ELLIPSIS({}, {}), Ui::NodeFlag::Hidden);
+
+Ui::AnimationHandle menuAnimation = animator.create(
+    Ui::NodeAnimation{}
+        .fromOffsetY(-ui.nodeSize(menu).y())
+        .toOffsetY(0.0f)
+        .clearFlagsBegin(Ui::NodeFlag::Hidden)
+        .addFlagsBegin(Ui::NodeFlag::NoEvents)
+        .clearFlagsEnd(Ui::NodeFlag::NoEvents),
+    Animation::Easing::elasticIn, now, 0.5_sec, menu);
+/* [NodeAnimator-create-reversible] */
+
+/* [NodeAnimator-create-reversible-reverse] */
+animator.addFlags(menuAnimation, Ui::AnimationFlag::Reverse);
+animator.play(menuAnimation, now);
+/* [NodeAnimator-create-reversible-reverse] */
+
+/* [NodeAnimator-create-reversible-reverse-at-time] */
+animator.addFlags(menuAnimation, Ui::AnimationFlag::Reverse, now);
+if(animator.state(menuAnimation) != Ui::AnimationState::Playing)
+    animator.play(menuAnimation, now);
+/* [NodeAnimator-create-reversible-reverse-at-time] */
 }
 
 {
