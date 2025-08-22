@@ -105,7 +105,8 @@ In cases where for example opening and closing a menu is animated the same way,
 just in reverse, it's possible to create a single animation and drive it either
 forward or backward. In the following case, the menu is initially
 @ref NodeFlag::Hidden, slides from the top and is not reacting to events until
-the animation stops:
+the animation stops. To make the animation reusable, it's marked with
+@ref AnimationFlag::KeepOncePlayed so it doesn't get removed after first play.
 
 @snippet Ui.cpp NodeAnimator-create-reversible
 

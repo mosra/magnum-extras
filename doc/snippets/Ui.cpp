@@ -1307,7 +1307,8 @@ Ui::AnimationHandle menuAnimation = animator.create(
         .clearFlagsBegin(Ui::NodeFlag::Hidden)
         .addFlagsBegin(Ui::NodeFlag::NoEvents)
         .clearFlagsEnd(Ui::NodeFlag::NoEvents),
-    Animation::Easing::elasticIn, now, 0.5_sec, menu);
+    Animation::Easing::elasticIn, now, 0.5_sec, menu,
+    Ui::AnimationFlag::KeepOncePlayed);
 /* [NodeAnimator-create-reversible] */
 
 /* [NodeAnimator-create-reversible-reverse] */
