@@ -48,8 +48,11 @@ enum class GenericAnimationState: UnsignedByte {
      * one call during the animation being played. If neither
      * @ref GenericAnimationState::Started nor
      * @relativeref{GenericAnimationState,Stopped} is present, the animation is
-     * in the middle, if both are present at the same time the animation have
-     * played in full between subsequent calls.
+     * in the middle, if both are present at the same time, the animation has
+     * played in full between subsequent calls. If
+     * @ref GenericAnimationState::Reverse is present as well, the animation is
+     * at the end instead of begin. Use @ref GenericAnimationState::Begin to
+     * distinguish animation begin and end regardless of whether it's reversed.
      */
     Started = 1 << 0,
 
@@ -58,8 +61,11 @@ enum class GenericAnimationState: UnsignedByte {
      * one call during the animation being played. If neither
      * @ref GenericAnimationState::Started nor
      * @relativeref{GenericAnimationState,Stopped} is present, the animation is
-     * in the middle, if both are present at the same time the animation have
-     * played in full between subsequent calls.
+     * in the middle, if both are present at the same time, the animation has
+     * played in full between subsequent calls. If
+     * @ref GenericAnimationState::Reverse is present as well, the animation is
+     * at the begin instead of end. Use @ref GenericAnimationState::End to
+     * distinguish animation begin and end regardless of whether it's reversed.
      */
     Stopped = 1 << 1,
 
@@ -72,6 +78,32 @@ enum class GenericAnimationState: UnsignedByte {
      * any way.
      */
     Reverse = 1 << 2,
+
+    /**
+     * The animation is at the begin. A convenience value that's a shortand for
+     * either @ref GenericAnimationState::Started present without
+     * @relativeref{GenericAnimationState,Reverse}, or
+     * @relativeref{GenericAnimationState,Stopped} present together with
+     * @relativeref{GenericAnimationState,Reverse}. If neither
+     * @ref GenericAnimationState::Begin nor
+     * @relativeref{GenericAnimationState,End} is present, the
+     * animation is in the middle, if bothe are present at the same time, the
+     * animation has played in full between subsequent calls.
+     */
+    Begin = 1 << 3,
+
+    /**
+     * The animation is at the end. A convenience value that's a shortand for
+     * either @ref GenericAnimationState::Stopped present without
+     * @relativeref{GenericAnimationState,Reverse}, or
+     * @relativeref{GenericAnimationState,Started} present together with
+     * @relativeref{GenericAnimationState,Reverse}. If neither
+     * @ref GenericAnimationState::Begin nor
+     * @relativeref{GenericAnimationState,End} is present, the
+     * animation is in the middle, if bothe are present at the same time, the
+     * animation has played in full between subsequent calls.
+     */
+    End = 1 << 4,
 };
 
 /**
@@ -139,14 +171,7 @@ perform an action exactly once at animation start and stop:
 
 Note that it can happen that both @ref GenericAnimationState::Started and
 @relativeref{GenericAnimationState,Stopped} can be set at the same time, for
-example if the animation is very short. Animations that have
-@ref AnimationFlag::Reverse set will additionally get
-@ref GenericAnimationState::Reverse at start or stop, making it possible to
-distinguish whether the start or stop is the actual animation begin or end.
-Presence of @ref AnimationFlag::ReverseEveryOther doesn't affect this state,
-it's only reflected in the `factor` passed to the function.
-
-@snippet Ui.cpp GenericAnimator-create-begin-end
+example if the animation is very short.
 
 The animation function is free to do anything except for touching state related
 to the animations themselves, such as playing, stopping, creating or removing
@@ -161,6 +186,22 @@ triggering delayed operations. Internally this is an animation with a zero
 duration, so you can pause or restart it like any other.
 
 @snippet Ui.cpp GenericAnimator-callOnce
+
+@subsection Ui-GenericAnimator-create-reversible Reversible animations
+
+Animations that have @ref AnimationFlag::Reverse set will additionally get
+@ref GenericAnimationState::Reverse at start or stop. Presence of
+@ref AnimationFlag::ReverseEveryOther doesn't affect this state, it's only
+reflected in the `factor` passed to the function.
+
+For convenience there are @relativeref{GenericAnimationState,Begin} and
+@relativeref{GenericAnimationState,End} shorthands for distinguishing animation
+begin and end regardless of playback direction. This is useful for creating
+animations that are reversible --- if the following animation is played
+forward, it behaves the same as the @ref callOnce() usage shown above, if
+backwards, it reverses the order:
+
+@snippet Ui.cpp GenericAnimator-create-begin-end
 
 @section Ui-GenericAnimator-lifetime Animation lifetime
 
@@ -389,10 +430,9 @@ but not reacting to events, and made fully interactive only at the end:
 @snippet Ui.cpp GenericNodeAnimator-create-started-stopped
 
 Note that it can happen that both @ref GenericAnimationState::Started and
-@relativeref{GenericAnimationState,Stopped} can be set at the same time, and
-animations that have @ref AnimationFlag::Reverse set will additionally get
-@ref GenericAnimationState::Reverse at start or stop. See the
-@ref Ui-GenericAnimator-create "GenericAnimator documentation" for an example.
+@relativeref{GenericAnimationState,Stopped} can be set at the same time. See
+the @ref Ui-GenericAnimator-create-reversible "GenericAnimator documentation"
+for more information about other state values and reversible animations.
 
 The animation function is free to do anything except for touching state related
 to the animations or associated nodes, such as playing or stopping the
@@ -640,10 +680,9 @@ state:
 @snippet Ui.cpp GenericDataAnimator-create-started-stopped
 
 Note that it can happen that both @ref GenericAnimationState::Started and
-@relativeref{GenericAnimationState,Stopped} can be set at the same time, and
-animations that have @ref AnimationFlag::Reverse set will additionally get
-@ref GenericAnimationState::Reverse at start or stop. See the
-@ref Ui-GenericAnimator-create "GenericAnimator documentation" for an example.
+@relativeref{GenericAnimationState,Stopped} can be set at the same time. See
+the @ref Ui-GenericAnimator-create-reversible "GenericAnimator documentation"
+for more information about other state values and reversible animations.
 
 The animation function is free to do anything except for touching state related
 to the animations or associated data or nodes, such as playing or stopping the

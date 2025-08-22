@@ -1929,31 +1929,26 @@ animator.create([](Float factor, Ui::GenericAnimationStates state) {
 }, Animation::Easing::cubicIn, now, 1.5_sec);
 /* [GenericAnimator-create-started-stopped] */
 
-/* [GenericAnimator-create-begin-end] */
-animator.create([](Float factor, Ui::GenericAnimationStates state) {
-    bool reverse = !!(state & Ui::GenericAnimationState::Reverse);
-
-    /* Perform an action at animation begin */
-    if((state & Ui::GenericAnimationState::Started && !reverse) ||
-       (state & Ui::GenericAnimationState::Stopped && reverse)) {
-        DOXYGEN_ELLIPSIS()
-    }
-
-    DOXYGEN_ELLIPSIS(static_cast<void>(factor);)
-
-    /* Perform an action at animation end */
-    if((state & Ui::GenericAnimationState::Stopped && !reverse) ||
-       (state & Ui::GenericAnimationState::Started && reverse)) {
-        DOXYGEN_ELLIPSIS()
-    }
-}, Animation::Easing::cubicIn, now, 1.5_sec);
-/* [GenericAnimator-create-begin-end] */
-
 /* [GenericAnimator-callOnce] */
+DOXYGEN_ELLIPSIS() // do something now
+
 animator.callOnce([] {
-    DOXYGEN_ELLIPSIS()
+    DOXYGEN_ELLIPSIS() // do something ten seconds from now
 }, now + 10.0_sec);
 /* [GenericAnimator-callOnce] */
+
+/* [GenericAnimator-create-begin-end] */
+animator.create([](Float, Ui::GenericAnimationStates state) {
+    if(state & Ui::GenericAnimationState::Begin) {
+        DOXYGEN_ELLIPSIS() // do something now
+    }
+
+    if(state & Ui::GenericAnimationState::End) {
+        DOXYGEN_ELLIPSIS() // do something ten seconds from now
+    }
+}, Animation::Easing::cubicIn, now, 10.0_sec);
+/* [GenericAnimator-create-begin-end] */
+
 }
 
 {

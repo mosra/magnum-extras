@@ -48,6 +48,8 @@ Debug& operator<<(Debug& debug, const GenericAnimationState value) {
         _c(Started)
         _c(Stopped)
         _c(Reverse)
+        _c(Begin)
+        _c(End)
         #undef _c
         /* LCOV_EXCL_STOP */
     }
@@ -60,6 +62,8 @@ Debug& operator<<(Debug& debug, const GenericAnimationStates value) {
         GenericAnimationState::Started,
         GenericAnimationState::Stopped,
         GenericAnimationState::Reverse,
+        GenericAnimationState::Begin,
+        GenericAnimationState::End,
     });
 }
 
@@ -207,13 +211,26 @@ namespace {
 
 /* Used by GenericAnimator, GenericNodeAnimator and GenericDataAnimator */
 inline GenericAnimationStates animationStates(bool started, bool stopped, AnimationFlags flags) {
-    return
+    GenericAnimationStates states =
         (started ? GenericAnimationState::Started : GenericAnimationState{})|
-        (stopped ? GenericAnimationState::Stopped : GenericAnimationState{})|
-        /* Don't add Reverse if Started or Stopped isn't present, to not have
-           to deal with ReverseEveryOther */
-        ((started || stopped) && flags >= AnimationFlag::Reverse ?
-            GenericAnimationState::Reverse : GenericAnimationState{});
+        (stopped ? GenericAnimationState::Stopped : GenericAnimationState{});
+
+    /* Add Reverse only if Started or Stopped is present. Otherwise we'd have
+       to deal with ReverseEveryOther, figuring out whether a particular
+       iteration is reversed or not. */
+    if((started || stopped) && flags >= AnimationFlag::Reverse)
+        states |= GenericAnimationState::Reverse;
+
+    /* Shorthands for convenience, as checking for begin / end this way in
+       application code would be way too error-prone */
+    if((started && !(flags >= AnimationFlag::Reverse)) ||
+       (stopped && flags >= AnimationFlag::Reverse))
+        states |= GenericAnimationState::Begin;
+    if((stopped && !(flags >= AnimationFlag::Reverse)) ||
+       (started && flags >= AnimationFlag::Reverse))
+        states |= GenericAnimationState::End;
+
+    return states;
 }
 
 }
