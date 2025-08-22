@@ -1994,6 +1994,26 @@ animator.callOnce([&ui](Ui::NodeHandle tooltip) {
 
 {
 Ui::AbstractUserInterface ui{{100, 100}};
+Ui::NodeHandle dropdown{};
+Nanoseconds now;
+/* [GenericNodeAnimator-create-started-stopped-NodeAnimator] */
+Ui::NodeAnimator& nodeAnimator = DOXYGEN_ELLIPSIS(ui.animator<Ui::NodeAnimator>({}));
+
+nodeAnimator.create(
+    Ui::NodeAnimation{}
+        .clearFlagsBegin(Ui::NodeFlag::Hidden)
+        .addFlagsBegin(Ui::NodeFlag::NoEvents)
+        .fromSizeY(0.0f)
+        .toSizeY(150.0f)
+        .fromOpacity(0.0f)
+        .toOpacity(1.0f)
+        .clearFlagsEnd(Ui::NodeFlag::NoEvents),
+    Animation::Easing::cubicIn, now, 0.5_sec, dropdown);
+/* [GenericNodeAnimator-create-started-stopped-NodeAnimator] */
+}
+
+{
+Ui::AbstractUserInterface ui{{100, 100}};
 /* [GenericDataAnimator-setup] */
 Ui::AbstractLayer& layer = DOXYGEN_ELLIPSIS(ui.layer({}));
 

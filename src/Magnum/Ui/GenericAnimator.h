@@ -439,6 +439,16 @@ to the animations or associated nodes, such as playing or stopping the
 animations, or creating, removing animations or nodes. This isn't checked or
 enforced in any way, but the behavior of doing so is undefined.
 
+@m_class{m-block m-success}
+
+@par Comparison to NodeAnimator
+    If you don't need to call arbitrary code during the animation, it's
+    preferrable to use the @ref NodeAnimator, as it can animate most node
+    properties without the overhead from calling several setters on every
+    advance. This code performs an animation equivalent to the above:
+@par
+    @snippet Ui.cpp GenericNodeAnimator-create-started-stopped-NodeAnimator
+
 @subsection Ui-GenericNodeAnimator-call-once Calling a function once at specified time
 
 The @ref callOnce() function is a special case of @ref create() that causes
