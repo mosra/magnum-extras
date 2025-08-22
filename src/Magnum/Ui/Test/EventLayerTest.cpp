@@ -4065,12 +4065,16 @@ void EventLayerTest::debugIntegration() {
     ui.removeLayer(ui.createLayer());
     EventLayer& layer = ui.setLayerInstance(Containers::pointer<EventLayer>(ui.createLayer()));
 
-    char large[128]{};
+    /* MSVC 2015 can't copy this as a lambda capture below, have to wrap in a
+       struct */
+    struct {
+        char a[128];
+    } large{};
 
     /* Create all possible handlers, in order matching the enum. The second and
        second-to-last are allocated. */
     layer.onEnter(node, []{});
-    layer.onLeave(node, [large]{ Debug{} << large[0]; });
+    layer.onLeave(node, [large]{ Debug{} << large.a[0]; });
     layer.onPress(node, []{});
     layer.onRelease(node, []{});
     layer.onFocus(node, []{});
@@ -4080,7 +4084,7 @@ void EventLayerTest::debugIntegration() {
     layer.onRightClick(node, []{});
     layer.onDrag(node, [](const Vector2&){});
     layer.onScroll(node, [](const Vector2&){});
-    layer.onDragOrScroll(node, [large](const Vector2&){ Debug{} << large[0]; });
+    layer.onDragOrScroll(node, [large](const Vector2&){ Debug{} << large.a[0]; });
     layer.onPinch(node, [](const Vector2&, const Vector2&, const Complex&, Float){});
 
     DebugLayer& debugLayer = ui.setLayerInstance(Containers::pointer<DebugLayer>(ui.createLayer(), DebugLayerSource::NodeDataAttachmentDetails, DebugLayerFlag::NodeHighlight));
@@ -4109,11 +4113,15 @@ void EventLayerTest::debugIntegrationNoCallback() {
     ui.removeLayer(ui.createLayer());
     EventLayer& layer = ui.setLayerInstance(Containers::pointer<EventLayer>(ui.createLayer()));
 
-    char large[128]{};
+    /* MSVC 2015 can't copy this as a lambda capture below, have to wrap in a
+       struct */
+    struct {
+        char a[128];
+    } large{};
 
     /* Create all possible handlers, same as in debugIntegration() above */
     layer.onEnter(node, []{});
-    layer.onLeave(node, [large]{ Debug{} << large[0]; });
+    layer.onLeave(node, [large]{ Debug{} << large.a[0]; });
     layer.onPress(node, []{});
     layer.onRelease(node, []{});
     layer.onFocus(node, []{});
@@ -4123,7 +4131,7 @@ void EventLayerTest::debugIntegrationNoCallback() {
     layer.onRightClick(node, []{});
     layer.onDrag(node, [](const Vector2&){});
     layer.onScroll(node, [](const Vector2&){});
-    layer.onDragOrScroll(node, [large](const Vector2&){ Debug{} << large[0]; });
+    layer.onDragOrScroll(node, [large](const Vector2&){ Debug{} << large.a[0]; });
     layer.onPinch(node, [](const Vector2&, const Vector2&, const Complex&, Float){});
 
     DebugLayer& debugLayer = ui.setLayerInstance(Containers::pointer<DebugLayer>(ui.createLayer(), DebugLayerSource::NodeDataAttachmentDetails, DebugLayerFlag::NodeHighlight));
