@@ -1973,7 +1973,7 @@ animator.create([&ui](Ui::NodeHandle dropdown, Float factor,
                       Ui::GenericAnimationStates state) {
     if(state & Ui::GenericAnimationState::Started) {
         ui.clearNodeFlags(dropdown, Ui::NodeFlag::Hidden);
-        ui.setNodeFlags(dropdown, Ui::NodeFlag::NoEvents);
+        ui.addNodeFlags(dropdown, Ui::NodeFlag::NoEvents);
     }
     ui.setNodeSize(dropdown, {ui.nodeSize(dropdown).x(), 150.0f*factor});
     ui.setNodeOpacity(dropdown, 1.0f*factor);
@@ -1987,7 +1987,7 @@ animator.create([&ui](Ui::NodeHandle dropdown, Float factor,
 Ui::NodeHandle tooltip = DOXYGEN_ELLIPSIS({});
 
 animator.callOnce([&ui](Ui::NodeHandle tooltip) {
-    ui.setNodeFlags(tooltip, Ui::NodeFlag::Hidden);
+    ui.addNodeFlags(tooltip, Ui::NodeFlag::Hidden);
 }, now + 10.0_sec, tooltip);
 /* [GenericNodeAnimator-callOnce] */
 }
