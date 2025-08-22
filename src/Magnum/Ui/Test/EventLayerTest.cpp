@@ -400,7 +400,7 @@ const struct {
     {"no layer name", false,
         "Node {0x1, 0x1}\n"
         "  Data {0x0, 0x1} from layer {0x0, 0x3} reacting to pointer enter\n"
-        "  Data {0x1, 0x1} from layer {0x0, 0x3} reacting to pointer leave\n"
+        "  Data {0x1, 0x1} from layer {0x0, 0x3} reacting to pointer leave, allocated\n"
         "  Data {0x2, 0x1} from layer {0x0, 0x3} reacting to pointer press\n"
         "  Data {0x3, 0x1} from layer {0x0, 0x3} reacting to pointer release\n"
         "  Data {0x4, 0x1} from layer {0x0, 0x3} reacting to focus\n"
@@ -410,12 +410,12 @@ const struct {
         "  Data {0x8, 0x1} from layer {0x0, 0x3} reacting to right click\n"
         "  Data {0x9, 0x1} from layer {0x0, 0x3} reacting to pointer drag\n"
         "  Data {0xa, 0x1} from layer {0x0, 0x3} reacting to scroll\n"
-        "  Data {0xb, 0x1} from layer {0x0, 0x3} reacting to pointer drag or scroll\n"
+        "  Data {0xb, 0x1} from layer {0x0, 0x3} reacting to pointer drag or scroll, allocated\n"
         "  Data {0xc, 0x1} from layer {0x0, 0x3} reacting to a pinch gesture"},
     {"", true,
         "Node {0x1, 0x1}\n"
         "  Data {0x0, 0x1} from layer {0x0, 0x3} Layarr reacting to pointer enter\n"
-        "  Data {0x1, 0x1} from layer {0x0, 0x3} Layarr reacting to pointer leave\n"
+        "  Data {0x1, 0x1} from layer {0x0, 0x3} Layarr reacting to pointer leave, allocated\n"
         "  Data {0x2, 0x1} from layer {0x0, 0x3} Layarr reacting to pointer press\n"
         "  Data {0x3, 0x1} from layer {0x0, 0x3} Layarr reacting to pointer release\n"
         "  Data {0x4, 0x1} from layer {0x0, 0x3} Layarr reacting to focus\n"
@@ -425,7 +425,7 @@ const struct {
         "  Data {0x8, 0x1} from layer {0x0, 0x3} Layarr reacting to right click\n"
         "  Data {0x9, 0x1} from layer {0x0, 0x3} Layarr reacting to pointer drag\n"
         "  Data {0xa, 0x1} from layer {0x0, 0x3} Layarr reacting to scroll\n"
-        "  Data {0xb, 0x1} from layer {0x0, 0x3} Layarr reacting to pointer drag or scroll\n"
+        "  Data {0xb, 0x1} from layer {0x0, 0x3} Layarr reacting to pointer drag or scroll, allocated\n"
         "  Data {0xc, 0x1} from layer {0x0, 0x3} Layarr reacting to a pinch gesture"},
     /* The last case here is used in debugIntegrationNoCallback() to verify
        output w/o a callback and for visual color verification, it's expected
@@ -4065,9 +4065,12 @@ void EventLayerTest::debugIntegration() {
     ui.removeLayer(ui.createLayer());
     EventLayer& layer = ui.setLayerInstance(Containers::pointer<EventLayer>(ui.createLayer()));
 
-    /* Create all possible handlers, in order matching the enum */
+    char large[128]{};
+
+    /* Create all possible handlers, in order matching the enum. The second and
+       second-to-last are allocated. */
     layer.onEnter(node, []{});
-    layer.onLeave(node, []{});
+    layer.onLeave(node, [large]{ Debug{} << large[0]; });
     layer.onPress(node, []{});
     layer.onRelease(node, []{});
     layer.onFocus(node, []{});
@@ -4077,7 +4080,7 @@ void EventLayerTest::debugIntegration() {
     layer.onRightClick(node, []{});
     layer.onDrag(node, [](const Vector2&){});
     layer.onScroll(node, [](const Vector2&){});
-    layer.onDragOrScroll(node, [](const Vector2&){});
+    layer.onDragOrScroll(node, [large](const Vector2&){ Debug{} << large[0]; });
     layer.onPinch(node, [](const Vector2&, const Vector2&, const Complex&, Float){});
 
     DebugLayer& debugLayer = ui.setLayerInstance(Containers::pointer<DebugLayer>(ui.createLayer(), DebugLayerSource::NodeDataAttachmentDetails, DebugLayerFlag::NodeHighlight));
@@ -4106,9 +4109,11 @@ void EventLayerTest::debugIntegrationNoCallback() {
     ui.removeLayer(ui.createLayer());
     EventLayer& layer = ui.setLayerInstance(Containers::pointer<EventLayer>(ui.createLayer()));
 
-    /* Create all possible handlers, in order matching the enum */
+    char large[128]{};
+
+    /* Create all possible handlers, same as in debugIntegration() above */
     layer.onEnter(node, []{});
-    layer.onLeave(node, []{});
+    layer.onLeave(node, [large]{ Debug{} << large[0]; });
     layer.onPress(node, []{});
     layer.onRelease(node, []{});
     layer.onFocus(node, []{});
@@ -4118,7 +4123,7 @@ void EventLayerTest::debugIntegrationNoCallback() {
     layer.onRightClick(node, []{});
     layer.onDrag(node, [](const Vector2&){});
     layer.onScroll(node, [](const Vector2&){});
-    layer.onDragOrScroll(node, [](const Vector2&){});
+    layer.onDragOrScroll(node, [large](const Vector2&){ Debug{} << large[0]; });
     layer.onPinch(node, [](const Vector2&, const Vector2&, const Complex&, Float){});
 
     DebugLayer& debugLayer = ui.setLayerInstance(Containers::pointer<DebugLayer>(ui.createLayer(), DebugLayerSource::NodeDataAttachmentDetails, DebugLayerFlag::NodeHighlight));

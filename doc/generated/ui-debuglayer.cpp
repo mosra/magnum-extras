@@ -441,7 +441,10 @@ debugLayer.setLayerName(visualLayer, "Styled", [](UnsignedInt style) {
     ui.createNode({}, {});
     ui.createNode({}, {});
     Ui::NodeHandle eventNode = ui.createNode(parent, {}, {});
-    ui.eventLayer().onTapOrClick(eventNode, []{});
+    ui.eventLayer().onEnter(eventNode, []{});
+    /* This one should show that it's allocated */
+    char large[128]{};
+    ui.eventLayer().onTapOrClick(eventNode, [large]{ Debug{} << large[0]; });
 
     ui.update();
     out = {};

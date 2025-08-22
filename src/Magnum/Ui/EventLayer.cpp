@@ -865,7 +865,8 @@ void EventLayer::DebugIntegration::print(Debug& debug, const EventLayer& layer, 
     if(layerName)
         debug << Debug::color(Debug::Color::Yellow) << layerName << Debug::resetColor;
     debug << "reacting to";
-    switch(layer._state->data[layerDataHandleId(data)].eventType) {
+    const Data& dataInstance = layer._state->data[layerDataHandleId(data)];
+    switch(dataInstance.eventType) {
         case Implementation::EventType::Enter:
             debug << "pointer enter";
             break;
@@ -906,6 +907,8 @@ void EventLayer::DebugIntegration::print(Debug& debug, const EventLayer& layer, 
             debug << "a pinch gesture";
             break;
     }
+    if(dataInstance.slot.isAllocated())
+        debug << Debug::nospace << "," << Debug::color(Debug::Color::Magenta) << "allocated" << Debug::resetColor;
     debug << Debug::newline;
 }
 

@@ -312,7 +312,9 @@ for example to open a keypad or an autocompletion popup.
 When using @ref Ui-DebugLayer-node-highlight "DebugLayer node highlight" and
 passing a layer derived from this class to
 @ref DebugLayer::setLayerName(const T&, const Containers::StringView&) "DebugLayer::setLayerName()",
-it will list the event type given data is reacting to. For example:
+it will list the event type given data is reacting to, and marking complex
+callbacks that need an allocating @relativeref{Corrade,Containers::Function}
+instance. For example:
 
 @include ui-debuglayer-eventlayer.ansi
 */
