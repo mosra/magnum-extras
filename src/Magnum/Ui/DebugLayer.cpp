@@ -31,7 +31,6 @@
 #include <Corrade/Containers/GrowableArray.h>
 #include <Corrade/Containers/StridedArrayView.h>
 
-#include "Magnum/Ui/AbstractVisualLayer.h"
 #include "Magnum/Ui/Event.h"
 #include "Magnum/Ui/NodeFlags.h"
 #include "Magnum/Ui/UserInterface.h"
