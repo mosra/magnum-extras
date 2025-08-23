@@ -51,7 +51,7 @@ When using @ref Ui-DebugLayer-node-highlight "DebugLayer node highlight" and
 passing a layer derived from this class to
 @ref DebugLayer::setLayerName(const T&, const Containers::StringView&) "DebugLayer::setLayerName()",
 it will list style assignments of all data if
-@ref DebugLayerSource::NodeDataAttachmentDetails is enabled, along with their
+@ref DebugLayerSource::NodeDataDetails is enabled, along with their
 transitions. For example:
 
 @include ui-debuglayer-abstractvisuallayer.ansi

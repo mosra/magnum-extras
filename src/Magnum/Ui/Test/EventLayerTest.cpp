@@ -4087,7 +4087,7 @@ void EventLayerTest::debugIntegration() {
     layer.onDragOrScroll(node, [large](const Vector2&){ Debug{} << large.a[0]; });
     layer.onPinch(node, [](const Vector2&, const Vector2&, const Complex&, Float){});
 
-    DebugLayer& debugLayer = ui.setLayerInstance(Containers::pointer<DebugLayer>(ui.createLayer(), DebugLayerSource::NodeDataAttachmentDetails, DebugLayerFlag::NodeHighlight));
+    DebugLayer& debugLayer = ui.setLayerInstance(Containers::pointer<DebugLayer>(ui.createLayer(), DebugLayerSource::NodeDataDetails, DebugLayerFlag::NodeHighlight));
 
     Containers::String out;
     debugLayer.setNodeHighlightCallback([&out](Containers::StringView message) {
@@ -4134,7 +4134,7 @@ void EventLayerTest::debugIntegrationNoCallback() {
     layer.onDragOrScroll(node, [large](const Vector2&){ Debug{} << large.a[0]; });
     layer.onPinch(node, [](const Vector2&, const Vector2&, const Complex&, Float){});
 
-    DebugLayer& debugLayer = ui.setLayerInstance(Containers::pointer<DebugLayer>(ui.createLayer(), DebugLayerSource::NodeDataAttachmentDetails, DebugLayerFlag::NodeHighlight));
+    DebugLayer& debugLayer = ui.setLayerInstance(Containers::pointer<DebugLayer>(ui.createLayer(), DebugLayerSource::NodeDataDetails, DebugLayerFlag::NodeHighlight));
 
     debugLayer.setLayerName(layer, "Layarr");
 

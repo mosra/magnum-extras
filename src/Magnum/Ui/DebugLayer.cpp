@@ -45,11 +45,11 @@ Debug& operator<<(Debug& debug, const DebugLayerSource value) {
        superset of Nodes, printing just one would result in
        `DebugLayerSource::NodeHierarchy|DebugLayerSource::Layers|DebugLayerSource(0x8)`
        in the output. */
-    if(value == DebugLayerSource(UnsignedShort(DebugLayerSource::NodeHierarchy|DebugLayerSource::NodeDataAttachments)))
-        return debug << DebugLayerSource::NodeHierarchy << Debug::nospace << "|" << Debug::nospace << DebugLayerSource::NodeDataAttachments;
-    /* Similarly for a superset of NodeDataAttachments */
-    if(value == DebugLayerSource(UnsignedShort(DebugLayerSource::NodeHierarchy|DebugLayerSource::NodeDataAttachmentDetails)))
-        return debug << DebugLayerSource::NodeHierarchy << Debug::nospace << "|" << Debug::nospace << DebugLayerSource::NodeDataAttachmentDetails;
+    if(value == DebugLayerSource(UnsignedShort(DebugLayerSource::NodeHierarchy|DebugLayerSource::NodeData)))
+        return debug << DebugLayerSource::NodeHierarchy << Debug::nospace << "|" << Debug::nospace << DebugLayerSource::NodeData;
+    /* Similarly for a superset of NodeData */
+    if(value == DebugLayerSource(UnsignedShort(DebugLayerSource::NodeHierarchy|DebugLayerSource::NodeDataDetails)))
+        return debug << DebugLayerSource::NodeHierarchy << Debug::nospace << "|" << Debug::nospace << DebugLayerSource::NodeDataDetails;
 
     debug << "Ui::DebugLayerSource" << Debug::nospace;
 
@@ -59,8 +59,8 @@ Debug& operator<<(Debug& debug, const DebugLayerSource value) {
         _c(Nodes)
         _c(Layers)
         _c(NodeHierarchy)
-        _c(NodeDataAttachments)
-        _c(NodeDataAttachmentDetails)
+        _c(NodeData)
+        _c(NodeDataDetails)
         #undef _c
         /* LCOV_EXCL_STOP */
     }
@@ -70,24 +70,24 @@ Debug& operator<<(Debug& debug, const DebugLayerSource value) {
 
 Debug& operator<<(Debug& debug, const DebugLayerSources value) {
     return Containers::enumSetDebugOutput(debug, value, "Ui::DebugLayerSources{}", {
-        /* This one is a superset of NodeDataAttachments and NodeHierarchy,
-           meaning printing it regularly would result in
-           `DebugLayerSource::NodeHierarchy|DebugLayerSource::NodeDataAttachments|DebugLayerSource(0x10)`
+        /* This one is a superset of NodeData and NodeHierarchy, meaning
+           printing it regularly would result in
+           `DebugLayerSource::NodeHierarchy|DebugLayerSource::NodeData|DebugLayerSource(0x10)`
            in the output. So we pass both and let the DebugLayerSource printer
            deail with that. */
-        DebugLayerSource(UnsignedShort(DebugLayerSource::NodeHierarchy|DebugLayerSource::NodeDataAttachmentDetails)),
+        DebugLayerSource(UnsignedShort(DebugLayerSource::NodeHierarchy|DebugLayerSource::NodeDataDetails)),
         /* Both are a superset of Nodes, meaning printing just one would result
            in `DebugLayerSource::NodeHierarchy|DebugLayerSource::Layers|DebugLayerSource(0x8)`
            in the output. So we pass both and let the DebugLayerSource printer
            deail with that. */
-        DebugLayerSource(UnsignedShort(DebugLayerSource::NodeHierarchy|DebugLayerSource::NodeDataAttachments)),
+        DebugLayerSource(UnsignedShort(DebugLayerSource::NodeHierarchy|DebugLayerSource::NodeData)),
         DebugLayerSource::NodeHierarchy,
-        DebugLayerSource::NodeDataAttachmentDetails,
-        /* Implied by NodeDataAttachmentDetails, has to be after */
-        DebugLayerSource::NodeDataAttachments,
-        /* Implied by NodeHierarchy and NodeDataAttachments, has to be after */
+        DebugLayerSource::NodeDataDetails,
+        /* Implied by NodeDataDetails, has to be after */
+        DebugLayerSource::NodeData,
+        /* Implied by NodeHierarchy and NodeData, has to be after */
         DebugLayerSource::Nodes,
-        /* Implied by NodeDataAttachments, has to be after */
+        /* Implied by NodeData, has to be after */
         DebugLayerSource::Layers,
     });
 }
@@ -294,7 +294,7 @@ void** DebugLayer::setLayerNameDebugIntegration(const AbstractLayer& instance, c
     /* Save the integration only if node data attachment details are wanted (as
        for example one might not want such amount of verbosity). If not, return
        null so the instance doesn't get allocated at all. */
-    if(state.sources >= DebugLayerSource::NodeDataAttachmentDetails) {
+    if(state.sources >= DebugLayerSource::NodeDataDetails) {
         layer.deleter = deleter;
         layer.print = print;
         return &layer.integration;
@@ -453,7 +453,7 @@ bool DebugLayer::highlightNode(const NodeHandle handle) {
                 debug << "    of which" << noEventChildCount << Debug::color(Debug::Color::Cyan) << Debug::packed << NodeFlag::NoEvents << Debug::resetColor << Debug::newline;
         }
 
-        if(state.sources >= DebugLayerSource::NodeDataAttachments) {
+        if(state.sources >= DebugLayerSource::NodeData) {
             UnsignedInt otherLayerCount = 0;
             UnsignedInt otherDataCount = 0;
             bool hasNamedLayers = false;

@@ -46,14 +46,14 @@ enum class DebugLayerSource: UnsignedShort {
      * Track created nodes and make it possible to name them using
      * @ref DebugLayer::setNodeName(). Subset of
      * @ref DebugLayerSource::NodeHierarchy and
-     * @ref DebugLayerSource::NodeDataAttachments.
+     * @ref DebugLayerSource::NodeData.
      */
     Nodes = 1 << 0,
 
     /**
      * Track created layers and make it possible to name them using
      * @ref DebugLayer::setLayerName(). Subset of
-     * @ref DebugLayerSource::NodeDataAttachments.
+     * @ref DebugLayerSource::NodeData.
      */
     Layers = 1 << 1,
 
@@ -67,15 +67,15 @@ enum class DebugLayerSource: UnsignedShort {
      * Track per-node layer data attachments. Implies
      * @ref DebugLayerSource::Nodes and @ref DebugLayerSource::Layers.
      */
-    NodeDataAttachments = Nodes|Layers|(1 << 3),
+    NodeData = Nodes|Layers|(1 << 3),
 
     /**
      * Track per-node layer data attachments with per-data details provided by
      * layer-specific debug integrations as described in
-     * @ref Ui-DebugLayer-node-highlight-node-data-attachment-details. Implies
-     * @ref DebugLayerSource::NodeDataAttachments.
+     * @ref Ui-DebugLayer-node-highlight-node-data-details. Implies
+     * @ref DebugLayerSource::NodeData.
      */
-    NodeDataAttachmentDetails = NodeDataAttachments|(1 << 4),
+    NodeDataDetails = NodeData|(1 << 4),
 };
 
 /**
@@ -213,9 +213,9 @@ The setup shown above, in particular with @ref DebugLayerFlag::NodeHighlight
 together with at least @ref DebugLayerSource::Nodes enabled, makes it possible
 to highlight any node in the hierarchy and see its details.
 @relativeref{DebugLayerSource,NodeHierarchy} additionally shows info about
-parent and child nodes and @relativeref{DebugLayerSource,NodeDataAttachments}
-also lists data attachments. Let's say we have a @ref Ui::Button placed
-somewhere in the UI, reacting to a tap or click:
+parent and child nodes and @relativeref{DebugLayerSource,NodeData} also lists
+data attachments. Let's say we have a @ref Ui::Button placed somewhere in the
+UI, reacting to a tap or click:
 
 @snippet ui-debuglayer.cpp button
 
@@ -257,14 +257,14 @@ you can query them back with @ref layerName() and @ref nodeName().
 
 @include ui-debuglayer-node-highlight-names.ansi
 
-@subsection Ui-DebugLayer-node-highlight-node-data-attachment-details Showing details about data attachments
+@subsection Ui-DebugLayer-node-highlight-node-data-details Showing details about data attachments
 
-Enabling @ref DebugLayerSource::NodeDataAttachmentDetails in addition to
-@relativeref{DebugLayerSource,NodeDataAttachments} makes use of debug
-integration implemented by a particular layer. In case of @ref BaseLayer,
-@ref TextLayer and layers derived from @ref AbstractVisualLayer this makes the
-output show also style assignment as well as any style transitions, if present.
-In case of @ref EventLayer it shows the event that's being handled:
+Enabling @ref DebugLayerSource::NodeDataDetails in addition to
+@relativeref{DebugLayerSource,NodeData} makes use of debug integration
+implemented by a particular layer. In case of @ref BaseLayer, @ref TextLayer
+and layers derived from @ref AbstractVisualLayer this makes the output show
+also style assignment as well as any style transitions, if present. In case of
+@ref EventLayer it shows the event that's being handled:
 
 @include ui-debuglayer-node-highlight-details.ansi
 
@@ -346,7 +346,7 @@ tree, with very complex UIs such on-the-fly setup might cause stalls.
 @section Ui-DebugLayer-integration DebugLayer integration for custom layers
 
 To make a custom layer provide detailed info for
-@ref DebugLayerSource::NodeDataAttachmentDetails, implement an inner type named
+@ref DebugLayerSource::NodeDataDetails, implement an inner type named
 @ref DebugIntegration containing at least a @relativeref{DebugIntegration,print()}
 function. In the following snippet, a layer that exposes per-data color has the
 color printed in the @ref DebugLayerFlag::NodeHighlight output. To make the
@@ -810,9 +810,9 @@ template<class T> DebugLayer& DebugLayer::setLayerName(const T& layer, const Con
         [](void* integration, Debug& out, const AbstractLayer& layer, const Containers::StringView& name, LayerDataHandle data) {
             static_cast<typename T::DebugIntegration*>(integration)->print(out, static_cast<const T&>(layer), name, data);
         });
-    /* If the instance is null, either NodeDataAttachmentDetails isn't set, in
-       which case the instance wouldn't be used anyway, or a graceful assert
-       happened. Don't allocate anything in that case. */
+    /* If the instance is null, either NodeDataDetails isn't set, in which case
+       the instance wouldn't be used anyway, or a graceful assert happened.
+       Don't allocate anything in that case. */
     if(instance) {
         #if defined(CORRADE_TARGET_GCC) && !defined(CORRADE_TARGET_CLANG) && __GNUC__ < 5
         /* Can't use {} because for plain structs it would attempt to

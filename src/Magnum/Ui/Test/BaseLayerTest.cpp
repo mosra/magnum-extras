@@ -3024,7 +3024,7 @@ void BaseLayerTest::debugIntegration() {
     layer.setOutlineWidth(layerData, data.outline);
     layer.setPadding(layerData, data.padding);
 
-    DebugLayer& debugLayer = ui.setLayerInstance(Containers::pointer<DebugLayer>(ui.createLayer(), DebugLayerSource::NodeDataAttachmentDetails, DebugLayerFlag::NodeHighlight));
+    DebugLayer& debugLayer = ui.setLayerInstance(Containers::pointer<DebugLayer>(ui.createLayer(), DebugLayerSource::NodeDataDetails, DebugLayerFlag::NodeHighlight));
 
     Containers::String out;
     debugLayer.setNodeHighlightCallback([&out](Containers::StringView message) {
@@ -3080,7 +3080,7 @@ void BaseLayerTest::debugIntegrationNoCallback() {
     layer.setOutlineWidth(layerData, 2.5f);
     layer.setPadding(layerData, {0.5f, 2.0f, 1.5f, 1.0f});
 
-    DebugLayer& debugLayer = ui.setLayerInstance(Containers::pointer<DebugLayer>(ui.createLayer(), DebugLayerSource::NodeDataAttachmentDetails, DebugLayerFlag::NodeHighlight));
+    DebugLayer& debugLayer = ui.setLayerInstance(Containers::pointer<DebugLayer>(ui.createLayer(), DebugLayerSource::NodeDataDetails, DebugLayerFlag::NodeHighlight));
 
     debugLayer.setLayerName(layer, "", debugIntegrationStyleName);
 
@@ -3146,7 +3146,7 @@ void BaseLayerTest::debugIntegrationLambdaStyleName() {
     BaseLayer& layer = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer(), shared));
     layer.create(3, node);
 
-    DebugLayer& debugLayer = ui.setLayerInstance(Containers::pointer<DebugLayer>(ui.createLayer(), DebugLayerSource::NodeDataAttachmentDetails, DebugLayerFlag::NodeHighlight));
+    DebugLayer& debugLayer = ui.setLayerInstance(Containers::pointer<DebugLayer>(ui.createLayer(), DebugLayerSource::NodeDataDetails, DebugLayerFlag::NodeHighlight));
     debugLayer.setLayerName(layer, "", [](UnsignedInt style) -> Containers::StringView {
         return style == 3 ? "LambdaStyle" : "Wrong";
     });

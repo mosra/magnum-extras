@@ -327,7 +327,7 @@ UiGallery::UiGallery(const Arguments& arguments): Platform::Application{argument
     if(args.isSet("debug")) {
         Ui::DebugLayer& debugLayer = _ui.setLayerInstance(Containers::pointer<Ui::DebugLayerGL>(
             _ui.createLayer(),
-            Ui::DebugLayerSource::NodeHierarchy|Ui::DebugLayerSource::NodeDataAttachmentDetails,
+            Ui::DebugLayerSource::NodeHierarchy|Ui::DebugLayerSource::NodeDataDetails,
             Ui::DebugLayerFlag::NodeHighlight));
         debugLayer.setLayerName(_ui.baseLayer(), "BaseLayer", [](UnsignedInt style) -> Containers::StringView {
             switch(Ui::Implementation::BaseStyle(style)) {

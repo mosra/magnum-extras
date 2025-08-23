@@ -729,9 +729,9 @@ safely changed to a loop etc.
 When using @ref Ui-DebugLayer-node-highlight "DebugLayer node highlighting",
 this layer inherits @ref Ui-AbstractVisualLayer-debug-integration "debug integration from the AbstractVisualLayer".
 See its documentation for more information. If
-@ref DebugLayerSource::NodeDataAttachmentDetails is enabled, for @ref LineLayer
-the output additionally shows if given data has custom color, alignment or
-padding, to clearly distinguish it from just a vanilla style. For example:
+@ref DebugLayerSource::NodeDataDetails is enabled, for @ref LineLayer the
+output additionally shows if given data has custom color, alignment or padding,
+to clearly distinguish it from just a vanilla style. For example:
 
 @include ui-debuglayer-textlayer.ansi
 */
