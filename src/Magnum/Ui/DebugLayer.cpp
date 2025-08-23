@@ -284,7 +284,7 @@ void** DebugLayer::setLayerNameDebugIntegration(const AbstractLayer& instance, c
     /* This already enlarges _state->layers and frees previous integration
        instance if there's any, no need to do that here again. Well, unless it
        asserted, in which case bail. */
-    setLayerName(static_cast<const AbstractLayer&>(instance), name);
+    setLayerName(instance, name);
     const UnsignedInt layerId = layerHandleId(instance.handle());
     State& state = *_state;
     #ifdef CORRADE_GRACEFUL_ASSERT
