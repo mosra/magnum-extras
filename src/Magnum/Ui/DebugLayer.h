@@ -551,8 +551,8 @@ class MAGNUM_UI_EXPORT DebugLayer: public AbstractLayer {
          * If @p name is @relativeref{Corrade,Containers::StringViewFlag::Global}
          * and @relativeref{Corrade::Containers::StringViewFlag,NullTerminated},
          * no internal copy of the string is made. If
-         * @ref DebugLayerSource::NodeDataAttachments isn't enabled, the
-         * function does nothing.
+         * @ref DebugLayerSource::Layers isn't enabled, the function does
+         * nothing.
          *
          * If a concrete layer type gets passed instead of just
          * @ref AbstractLayer, the @ref setLayerName(const T&, const Containers::StringView&)

@@ -926,7 +926,7 @@ void DebugLayerTest::layerNameNoOp() {
         LayerFeatures doFeatures() const override { return {}; }
     };
     EmptyLayer& emptyLayer = ui.setLayerInstance(Containers::pointer<EmptyLayer>(ui.createLayer()));
-    /* Picking a source that isn't just empty */
+    /* Picking a source that isn't Layers but also isn't just empty */
     DebugLayer& layer = ui.setLayerInstance(Containers::pointer<DebugLayer>(ui.createLayer(), DebugLayerSource::NodeHierarchy, DebugLayerFlags{}));
     CORRADE_COMPARE(layer.layerName(emptyLayer.handle()), "");
     /* Not even the debug layer itself is named */
@@ -958,8 +958,8 @@ void DebugLayerTest::layerName() {
     Layer& layer = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer(), DebugLayerSource::Layers, DebugLayerFlags{}));
     EmptyLayer& emptyLayer2 = ui.setLayerInstance(Containers::pointer<EmptyLayer>(ui.createLayer()));
 
-    /* Initially the layer has only as many entries to store its own name, not
-       for all */
+    /* Initially the debug layer has only as many entries to store its own
+       name, not for all */
     CORRADE_COMPARE(layer.stateData().layers.size(), 2);
 
     /* By default, any layer has the name empty, just the debug layer itself
@@ -975,7 +975,8 @@ void DebugLayerTest::layerName() {
     CORRADE_COMPARE(layer.layerName(emptyLayer1.handle()), "First empty");
 
     /* A layer outside of any existing bounds will have an empty name as well;
-       a layer with known ID but wrong generation also, no null-terminated or global flags guaranteed in this case either */
+       a layer with known ID but wrong generation also, no null-terminated or
+       global flags guaranteed in this case either */
     CORRADE_COMPARE(layer.layerName(layerHandle(255, 1)), "");
     CORRADE_COMPARE(layer.layerName(layerHandle(layerHandleId(emptyLayer1.handle()), layerHandleGeneration(emptyLayer1.handle()) + 1)), "");
 
@@ -1808,7 +1809,7 @@ void DebugLayerTest::preUpdateTrackLayers() {
 
     /* Removing a layer clears the handle and anything else, like a name that
        has been set. Replacing a node with another in the same spot does the
-       same */
+       same. */
     layer.setLayerName(emptyLayer1, "Hello!");
     layer.setLayerName(emptyLayer2, "Hello?");
     CORRADE_COMPARE(layer.stateData().layers[0].name, "Hello!");

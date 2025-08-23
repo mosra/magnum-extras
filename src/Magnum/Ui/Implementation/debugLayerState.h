@@ -59,6 +59,7 @@ struct DebugLayerNode {
 struct DebugLayerLayer {
     explicit DebugLayerLayer() noexcept = default;
 
+    /** @todo clean this up once Pointer with a custom deleter is a thing */
     DebugLayerLayer(DebugLayerLayer&& other) noexcept: handle{other.handle}, name{Utility::move(other.name)}, integration{other.integration}, deleter{other.deleter}, print{other.print} {
         other.integration = nullptr;
         other.deleter = nullptr;
