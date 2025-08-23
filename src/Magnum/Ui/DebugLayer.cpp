@@ -138,7 +138,7 @@ DebugLayer::DebugLayer(const LayerHandle handle, Containers::Pointer<State>&& st
         const UnsignedInt layerId = layerHandleId(handle);
         arrayResize(state.layers, layerId + 1);
         state.layers[layerId].handle = handle;
-        state.layers[layerId].name = Containers::String::nullTerminatedGlobalView("DebugLayer"_s);
+        state.layers[layerId].name = Containers::String::nullTerminatedGlobalView("Debug"_s);
     }
 }
 

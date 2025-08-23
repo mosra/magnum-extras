@@ -355,8 +355,8 @@ const struct {
         {}, {}, PointerEventSource::Mouse, Pointer::MouseRight,
         {}, true, false, false, false, false, false,
         "Node {0x3, 0x1}\n"
-        "  1 data from layer {0x1, 0x1} Second layer\n"
-        "  2 data from layer {0x4, 0x1} Layer no.3\n"
+        "  1 data from layer {0x1, 0x1} Second\n"
+        "  2 data from layer {0x4, 0x1} No.3\n"
         "  7 data from 2 other layers"},
     {"data attachment details, some layer names",
         DebugLayerSource::NodeDataAttachmentDetails, DebugLayerFlag::NodeHighlight,
@@ -364,9 +364,9 @@ const struct {
         {}, {}, PointerEventSource::Mouse, Pointer::MouseRight,
         {}, true, false, false, false, false, false,
         "Node {0x3, 0x1}\n"
-        "  1 data from layer {0x1, 0x1} Second layer\n"
-        "  Layer no.3 (42069) data {0x0, 0x1} and a value of 1337\n"
-        "  Layer no.3 (42069) data {0x1, 0x1} and a value of 1337\n"
+        "  1 data from layer {0x1, 0x1} Second\n"
+        "  Layer No.3 (42069) data {0x0, 0x1} and a value of 1337\n"
+        "  Layer No.3 (42069) data {0x1, 0x1} and a value of 1337\n"
         "  7 data from 2 other layers"},
     {"data attachment details, all layer names",
         DebugLayerSource::NodeDataAttachmentDetails, DebugLayerFlag::NodeHighlight,
@@ -375,10 +375,10 @@ const struct {
         {}, true, false, false, false, false, false,
         "Node {0x3, 0x1}\n"
         "  3 data from layer {0x0, 0x1} A layer\n"
-        "  1 data from layer {0x1, 0x1} Second layer\n"
-        "  Layer no.3 (42069) data {0x0, 0x1} and a value of 1337\n"
-        "  Layer no.3 (42069) data {0x1, 0x1} and a value of 1337\n"
-        "  4 data from layer {0x5, 0x1} The last ever layer"},
+        "  1 data from layer {0x1, 0x1} Second\n"
+        "  Layer No.3 (42069) data {0x0, 0x1} and a value of 1337\n"
+        "  Layer No.3 (42069) data {0x1, 0x1} and a value of 1337\n"
+        "  4 data from layer {0x5, 0x1} The last ever"},
     {"data attachment details, all layer names, reverse layer order",
         DebugLayerSource::NodeDataAttachmentDetails, DebugLayerFlag::NodeHighlight,
         {}, true, true, true,
@@ -386,10 +386,10 @@ const struct {
         {}, true, false, false, false, false, false,
         "Node {0x3, 0x1}\n"
         "  3 data from layer {0x5, 0x1} A layer\n"
-        "  1 data from layer {0x4, 0x1} Second layer\n"
-        "  Layer no.3 (42069) data {0x0, 0x1} and a value of 1337\n"
-        "  Layer no.3 (42069) data {0x1, 0x1} and a value of 1337\n"
-        "  4 data from layer {0x0, 0x1} The last ever layer"},
+        "  1 data from layer {0x4, 0x1} Second\n"
+        "  Layer No.3 (42069) data {0x0, 0x1} and a value of 1337\n"
+        "  Layer No.3 (42069) data {0x1, 0x1} and a value of 1337\n"
+        "  4 data from layer {0x0, 0x1} The last ever"},
     {"node name, flags, nested top level, all hierarchy + data attachment details, some layer names",
         DebugLayerSource::NodeHierarchy|DebugLayerSource::NodeDataAttachmentDetails, DebugLayerFlag::NodeHighlight,
         "A very nice node"_s, false, true, false,
@@ -401,9 +401,9 @@ const struct {
         "    of which 3 Hidden\n"
         "    of which 2 Disabled\n"
         "    of which 1 NoEvents\n"
-        "  1 data from layer {0x1, 0x1} Second layer\n"
-        "  Layer no.3 (42069) data {0x0, 0x1} and a value of 1337\n"
-        "  Layer no.3 (42069) data {0x1, 0x1} and a value of 1337\n"
+        "  1 data from layer {0x1, 0x1} Second\n"
+        "  Layer No.3 (42069) data {0x0, 0x1} and a value of 1337\n"
+        "  Layer No.3 (42069) data {0x1, 0x1} and a value of 1337\n"
         "  7 data from 2 other layers"},
     /* The last case here is used in nodeHighlightNoCallback() to verify output
        w/o a callback and for visual color verification, it's expected to be
@@ -933,7 +933,7 @@ void DebugLayerTest::layerNameNoOp() {
     CORRADE_COMPARE(layer.layerName(layer.handle()), "");
 
     /* Setting a name doesn't remember anything */
-    layer.setLayerName(emptyLayer, "Empty layer");
+    layer.setLayerName(emptyLayer, "Empty");
     CORRADE_COMPARE(layer.layerName(emptyLayer.handle()), "");
 }
 
@@ -966,7 +966,7 @@ void DebugLayerTest::layerName() {
        has it set, and there it's a global string. The empty names have no
        null-terminated or global flags guaranteed */
     CORRADE_COMPARE(layer.layerName(emptyLayer1.handle()), "");
-    CORRADE_COMPARE(layer.layerName(layer.handle()), "DebugLayer");
+    CORRADE_COMPARE(layer.layerName(layer.handle()), "Debug");
     CORRADE_COMPARE(layer.layerName(layer.handle()).flags(), Containers::StringViewFlag::Global|Containers::StringViewFlag::NullTerminated);
     CORRADE_COMPARE(layer.layerName(emptyLayer2.handle()), "");
 
@@ -990,14 +990,14 @@ void DebugLayerTest::layerName() {
     CORRADE_COMPARE(layer.layerName(emptyLayer5.handle()), "");
 
     /* It enlarges only once setting a name of one of these */
-    layer.setLayerName(emptyLayer4, "Fourth layarr");
+    layer.setLayerName(emptyLayer4, "Fourth");
     CORRADE_COMPARE(layer.stateData().layers.size(), 5);
-    CORRADE_COMPARE(layer.layerName(emptyLayer4.handle()), "Fourth layarr");
+    CORRADE_COMPARE(layer.layerName(emptyLayer4.handle()), "Fourth");
 
     /* Update doesn't clear the layer names */
     ui.update();
     CORRADE_COMPARE(layer.layerName(emptyLayer1.handle()), "First empty");
-    CORRADE_COMPARE(layer.layerName(emptyLayer4.handle()), "Fourth layarr");
+    CORRADE_COMPARE(layer.layerName(emptyLayer4.handle()), "Fourth");
 
     /* Setting a global string keeps a reference to it, local or
        non-null-terminated string is copied */
@@ -1023,13 +1023,13 @@ void DebugLayerTest::layerName() {
        handle */
     LayerHandle emptyLayer4Handle = emptyLayer4.handle();
     ui.removeLayer(emptyLayer4Handle);
-    CORRADE_COMPARE(layer.layerName(emptyLayer4Handle), "Fourth layarr");
+    CORRADE_COMPARE(layer.layerName(emptyLayer4Handle), "Fourth");
 
     /* When creating a new layer in the same slot, the new layer doesn't have a
        name yet and the old still keeps it */
     EmptyLayer& emptyLayer4Replacement = ui.setLayerInstance(Containers::pointer<EmptyLayer>(ui.createLayer()));
     CORRADE_COMPARE(layerHandleId(emptyLayer4Replacement.handle()), layerHandleId(emptyLayer4Handle));
-    CORRADE_COMPARE(layer.layerName(emptyLayer4Handle), "Fourth layarr");
+    CORRADE_COMPARE(layer.layerName(emptyLayer4Handle), "Fourth");
     CORRADE_COMPARE(layer.layerName(emptyLayer4Replacement.handle()), "");
 
     /* Setting a name for the replacement layer makes the old one unknown */
@@ -1155,13 +1155,13 @@ void DebugLayerTest::layerNameDebugIntegration() {
     IntegratedLayer& integratedLayer1 = ui.setLayerInstance(Containers::pointer<IntegratedLayer>(ui.createLayer()));
     IntegratedLayer& integratedLayer2 = ui.setLayerInstance(Containers::pointer<IntegratedLayer>(ui.createLayer()));
     IntegratedLayer& integratedLayer3 = ui.setLayerInstance(Containers::pointer<IntegratedLayer>(ui.createLayer()));
-    layer.setLayerName(integratedLayer1, "Integrated layer");
-    layer.setLayerName(integratedLayer2, "Integrated layer 2");
-    layer.setLayerName(integratedLayer3, "Integrated layer 3");
+    layer.setLayerName(integratedLayer1, "Integrated");
+    layer.setLayerName(integratedLayer2, "Integrated 2");
+    layer.setLayerName(integratedLayer3, "Integrated 3");
     CORRADE_COMPARE(layer.stateData().layers.size(), 5);
-    CORRADE_COMPARE(layer.stateData().layers[2].name, "Integrated layer");
-    CORRADE_COMPARE(layer.stateData().layers[3].name, "Integrated layer 2");
-    CORRADE_COMPARE(layer.stateData().layers[4].name, "Integrated layer 3");
+    CORRADE_COMPARE(layer.stateData().layers[2].name, "Integrated");
+    CORRADE_COMPARE(layer.stateData().layers[3].name, "Integrated 2");
+    CORRADE_COMPARE(layer.stateData().layers[4].name, "Integrated 3");
     CORRADE_COMPARE(layer.stateData().layers[2].integration, data.used);
     CORRADE_COMPARE(layer.stateData().layers[3].integration, data.used);
     CORRADE_COMPARE(layer.stateData().layers[4].integration, data.used);
@@ -1180,9 +1180,9 @@ void DebugLayerTest::layerNameDebugIntegration() {
 
     /* Setting a layer name again deletes the old (if there is) and allocates a
        new one */
-    layer.setLayerName(integratedLayer1, "Integrated layer 1");
+    layer.setLayerName(integratedLayer1, "Integrated 1");
     CORRADE_COMPARE(layer.stateData().layers.size(), 5);
-    CORRADE_COMPARE(layer.stateData().layers[2].name, "Integrated layer 1");
+    CORRADE_COMPARE(layer.stateData().layers[2].name, "Integrated 1");
     CORRADE_COMPARE(layer.stateData().layers[2].integration, data.used);
     CORRADE_COMPARE(layer.stateData().layers[2].deleter, data.used);
     CORRADE_COMPARE(layer.stateData().layers[2].print, data.used);
@@ -1196,11 +1196,11 @@ void DebugLayerTest::layerNameDebugIntegration() {
        shouldn't get deleted. */
     /*EmptyLayer& emptyLayer2 =*/ ui.setLayerInstance(Containers::pointer<EmptyLayer>(ui.createLayer()));
     EmptyLayer& emptyLayer3 = ui.setLayerInstance(Containers::pointer<EmptyLayer>(ui.createLayer()));
-    layer.setLayerName(emptyLayer3, "Empty layer 3");
+    layer.setLayerName(emptyLayer3, "Empty 3");
     CORRADE_COMPARE(layer.stateData().layers.size(), 7);
-    CORRADE_COMPARE(layer.stateData().layers[2].name, "Integrated layer 1");
-    CORRADE_COMPARE(layer.stateData().layers[3].name, "Integrated layer 2");
-    CORRADE_COMPARE(layer.stateData().layers[4].name, "Integrated layer 3");
+    CORRADE_COMPARE(layer.stateData().layers[2].name, "Integrated 1");
+    CORRADE_COMPARE(layer.stateData().layers[3].name, "Integrated 2");
+    CORRADE_COMPARE(layer.stateData().layers[4].name, "Integrated 3");
     CORRADE_COMPARE(layer.stateData().layers[2].integration, data.used);
     CORRADE_COMPARE(layer.stateData().layers[3].integration, data.used);
     CORRADE_COMPARE(layer.stateData().layers[4].integration, data.used);
@@ -1216,9 +1216,9 @@ void DebugLayerTest::layerNameDebugIntegration() {
 
     /* Setting a different name with only the base type deletes the
        integration, if there is */
-    layer.setLayerName(static_cast<AbstractLayer&>(integratedLayer1), "No longer integrated layer 1");
+    layer.setLayerName(static_cast<AbstractLayer&>(integratedLayer1), "No longer integrated 1");
     CORRADE_COMPARE(layer.stateData().layers.size(), 7);
-    CORRADE_COMPARE(layer.stateData().layers[2].name, "No longer integrated layer 1");
+    CORRADE_COMPARE(layer.stateData().layers[2].name, "No longer integrated 1");
     CORRADE_VERIFY(!layer.stateData().layers[2].integration);
     CORRADE_VERIFY(!layer.stateData().layers[2].deleter);
     CORRADE_VERIFY(!layer.stateData().layers[2].print);
@@ -1227,9 +1227,9 @@ void DebugLayerTest::layerNameDebugIntegration() {
     CORRADE_COMPARE(debugIntegrationDestructed, data.used ? 6 : 4);
 
     /* Setting it back recreates it, if used */
-    layer.setLayerName(integratedLayer1, "Integrated layer 1");
+    layer.setLayerName(integratedLayer1, "Integrated 1");
     CORRADE_COMPARE(layer.stateData().layers.size(), 7);
-    CORRADE_COMPARE(layer.stateData().layers[2].name, "Integrated layer 1");
+    CORRADE_COMPARE(layer.stateData().layers[2].name, "Integrated 1");
     CORRADE_COMPARE(layer.stateData().layers[2].integration, data.used);
     CORRADE_COMPARE(layer.stateData().layers[2].deleter, data.used);
     CORRADE_COMPARE(layer.stateData().layers[2].print, data.used);
@@ -1243,7 +1243,7 @@ void DebugLayerTest::layerNameDebugIntegration() {
     ui.removeLayer(integratedLayer2Handle);
     EmptyLayer& integratedLayer2NonIntegratedReplacement = ui.setLayerInstance(Containers::pointer<EmptyLayer>(ui.createLayer()));
     CORRADE_COMPARE(layerHandleId(integratedLayer2NonIntegratedReplacement.handle()), layerHandleId(integratedLayer2Handle));
-    CORRADE_COMPARE(layer.stateData().layers[3].name, "Integrated layer 2");
+    CORRADE_COMPARE(layer.stateData().layers[3].name, "Integrated 2");
     CORRADE_COMPARE(layer.stateData().layers[3].integration, data.used);
     CORRADE_COMPARE(layer.stateData().layers[3].deleter, data.used);
     CORRADE_COMPARE(layer.stateData().layers[3].print, data.used);
@@ -1266,7 +1266,7 @@ void DebugLayerTest::layerNameDebugIntegration() {
     /* Removing an integrated layer w/o replacing deletes the integration on
        next update() as well, if there is */
     ui.removeLayer(integratedLayer3.handle());
-    CORRADE_COMPARE(layer.stateData().layers[4].name, "Integrated layer 3");
+    CORRADE_COMPARE(layer.stateData().layers[4].name, "Integrated 3");
     CORRADE_COMPARE(layer.stateData().layers[4].integration, data.used);
     CORRADE_COMPARE(layer.stateData().layers[4].deleter, data.used);
     CORRADE_COMPARE(layer.stateData().layers[4].print, data.used);
@@ -1360,9 +1360,9 @@ void DebugLayerTest::layerNameDebugIntegrationExplicit() {
        allowing to treat the layer as generic is better than failing to set a
        name at all. */
     IntegratedLayer& integratedLayer1 = ui.setLayerInstance(Containers::pointer<IntegratedLayer>(ui.createLayer()));
-    layer.setLayerName(integratedLayer1, "Integrated layer 1");
+    layer.setLayerName(integratedLayer1, "Integrated 1");
     CORRADE_COMPARE(layer.stateData().layers.size(), 2);
-    CORRADE_COMPARE(layer.stateData().layers[1].name, "Integrated layer 1");
+    CORRADE_COMPARE(layer.stateData().layers[1].name, "Integrated 1");
     CORRADE_VERIFY(!layer.stateData().layers[1].integration);
     CORRADE_VERIFY(!layer.stateData().layers[1].deleter);
     CORRADE_VERIFY(!layer.stateData().layers[1].print);
@@ -1373,9 +1373,9 @@ void DebugLayerTest::layerNameDebugIntegrationExplicit() {
     IntegratedLayer& integratedLayer2 = ui.setLayerInstance(Containers::pointer<IntegratedLayer>(ui.createLayer()));
     {
         IntegratedLayer::DebugIntegration integration{1337, 4.5f};
-        layer.setLayerName(integratedLayer2, "Integrated layer 2", integration);
+        layer.setLayerName(integratedLayer2, "Integrated 2", integration);
         CORRADE_COMPARE(layer.stateData().layers.size(), 3);
-        CORRADE_COMPARE(layer.stateData().layers[2].name, "Integrated layer 2");
+        CORRADE_COMPARE(layer.stateData().layers[2].name, "Integrated 2");
         CORRADE_COMPARE(layer.stateData().layers[2].integration, data.used);
         if(data.used)
             CORRADE_COMPARE(static_cast<IntegratedLayer::DebugIntegration*>(layer.stateData().layers[2].integration)->value, 1337);
@@ -1461,9 +1461,9 @@ void DebugLayerTest::layerNameDebugIntegrationExplicitRvalue() {
        DebugIntegration instance, same reasoning as in
        layerNameDebugIntegrationExplicit() */
     IntegratedLayer& integratedLayer1 = ui.setLayerInstance(Containers::pointer<IntegratedLayer>(ui.createLayer()));
-    layer.setLayerName(integratedLayer1, "Integrated layer 1");
+    layer.setLayerName(integratedLayer1, "Integrated 1");
     CORRADE_COMPARE(layer.stateData().layers.size(), 2);
-    CORRADE_COMPARE(layer.stateData().layers[1].name, "Integrated layer 1");
+    CORRADE_COMPARE(layer.stateData().layers[1].name, "Integrated 1");
     CORRADE_VERIFY(!layer.stateData().layers[1].integration);
     CORRADE_VERIFY(!layer.stateData().layers[1].deleter);
     CORRADE_VERIFY(!layer.stateData().layers[1].print);
@@ -1472,9 +1472,9 @@ void DebugLayerTest::layerNameDebugIntegrationExplicitRvalue() {
     CORRADE_COMPARE(debugIntegrationDestructed, 0);
 
     IntegratedLayer& integratedLayer2 = ui.setLayerInstance(Containers::pointer<IntegratedLayer>(ui.createLayer()));
-    layer.setLayerName(integratedLayer2, "Integrated layer 2", IntegratedLayer::DebugIntegration{1337, 4.5f});
+    layer.setLayerName(integratedLayer2, "Integrated 2", IntegratedLayer::DebugIntegration{1337, 4.5f});
     CORRADE_COMPARE(layer.stateData().layers.size(), 3);
-    CORRADE_COMPARE(layer.stateData().layers[2].name, "Integrated layer 2");
+    CORRADE_COMPARE(layer.stateData().layers[2].name, "Integrated 2");
     CORRADE_COMPARE(layer.stateData().layers[2].integration, data.used);
     if(data.used)
         CORRADE_COMPARE(static_cast<IntegratedLayer::DebugIntegration*>(layer.stateData().layers[2].integration)->value, 1337);
@@ -2030,7 +2030,7 @@ void DebugLayerTest::nodeHighlight() {
             void print(Debug& debug, const IntegratedLayer& layer, Containers::StringView name, LayerDataHandle data) {
                 /* Printing the name colored to verify the color is disabled
                    correctly here as well */
-                debug << " " << Debug::color(Debug::Color::Yellow) << name << Debug::resetColor << "(" << Debug::nospace << layer.value << Debug::nospace << ") data" << Debug::packed << data << "and a value of" << value << Debug::newline;
+                debug << "  Layer" << Debug::color(Debug::Color::Yellow) << name << Debug::resetColor << "(" << Debug::nospace << layer.value << Debug::nospace << ") data" << Debug::packed << data << "and a value of" << value << Debug::newline;
             }
 
             int value = 1337;
@@ -2065,13 +2065,13 @@ void DebugLayerTest::nodeHighlight() {
     });
 
     if(data.someLayerNames) {
-        layer.setLayerName(emptyLayer2, "Second layer");
-        layer.setLayerName(removedLayer, "Removed layer");
-        layer.setLayerName(integratedLayer, "Layer no.3");
+        layer.setLayerName(emptyLayer2, "Second");
+        layer.setLayerName(removedLayer, "Removed");
+        layer.setLayerName(integratedLayer, "No.3");
     }
     if(data.allLayerNames) {
         layer.setLayerName(emptyLayer1, "A layer");
-        layer.setLayerName(emptyLayer3, "The last ever layer");
+        layer.setLayerName(emptyLayer3, "The last ever");
     }
     if(data.acceptedPointers)
         layer.setNodeHighlightGesture(data.acceptedPointers, data.acceptedModifiers);
@@ -2253,7 +2253,7 @@ void DebugLayerTest::nodeHighlightNoCallback() {
             void print(Debug& debug, const IntegratedLayer& layer, const Containers::StringView& name, LayerDataHandle data) {
                 /* Printing the name colored to verify the color is used when
                    printing directly to the output and not when not */
-                debug << " " << Debug::color(Debug::Color::Yellow) << name << Debug::resetColor << "(" << Debug::nospace << layer.value << Debug::nospace << ") data" << Debug::packed << data << "and a value of" << value << Debug::newline;
+                debug << "  Layer" << Debug::color(Debug::Color::Yellow) << name << Debug::resetColor << "(" << Debug::nospace << layer.value << Debug::nospace << ") data" << Debug::packed << data << "and a value of" << value << Debug::newline;
             }
 
             int value = 1337;
@@ -2273,8 +2273,8 @@ void DebugLayerTest::nodeHighlightNoCallback() {
     emptyLayer3.create(node);
 
     layer.setNodeName(node, "A very nice node");
-    layer.setLayerName(emptyLayer2, "Second layer");
-    layer.setLayerName(integratedLayer, "Layer no.3");
+    layer.setLayerName(emptyLayer2, "Second");
+    layer.setLayerName(integratedLayer, "No.3");
 
     /* Highlight the node and then another unnamed one for visual color
        verification. Using events as they delegate to highlightNode() and thus
@@ -2390,7 +2390,7 @@ void DebugLayerTest::nodeHighlightDebugIntegrationExplicit() {
             void print(Debug& debug, const IntegratedLayer& layer, const Containers::StringView& name, LayerDataHandle data) {
                 /* Printing the name colored to verify the color is disabled
                    correctly here as well */
-                debug << " " << Debug::color(Debug::Color::Yellow) << name << Debug::resetColor << "(" << Debug::nospace << layer.value << Debug::nospace << ") data" << Debug::packed << data << "and a value of" << value << Debug::newline;
+                debug << "  Layer" << Debug::color(Debug::Color::Yellow) << name << Debug::resetColor << "(" << Debug::nospace << layer.value << Debug::nospace << ") data" << Debug::packed << data << "and a value of" << value << Debug::newline;
             }
 
             int value;
@@ -2407,7 +2407,7 @@ void DebugLayerTest::nodeHighlightDebugIntegrationExplicit() {
     DebugLayer& layer = ui.setLayerInstance(Containers::pointer<DebugLayer>(ui.createLayer(), DebugLayerSource::NodeDataAttachmentDetails, DebugLayerFlag::NodeHighlight));
 
     IntegratedLayer::DebugIntegration integration{1337};
-    layer.setLayerName(integratedLayer, "Layer no.2", integration);
+    layer.setLayerName(integratedLayer, "No.2", integration);
 
     ui.update();
 
@@ -2419,8 +2419,8 @@ void DebugLayerTest::nodeHighlightDebugIntegrationExplicit() {
     CORRADE_COMPARE(layer.currentHighlightedNode(), node);
     CORRADE_COMPARE_AS(out,
         "Top-level node {0x0, 0x1}\n"
-        "  Layer no.2 (42069) data {0x0, 0x1} and a value of 1337\n"
-        "  Layer no.2 (42069) data {0x1, 0x1} and a value of 1337\n",
+        "  Layer No.2 (42069) data {0x0, 0x1} and a value of 1337\n"
+        "  Layer No.2 (42069) data {0x1, 0x1} and a value of 1337\n",
         TestSuite::Compare::String);
 }
 
@@ -2452,7 +2452,7 @@ void DebugLayerTest::nodeHighlightDebugIntegrationExplicitRvalue() {
             void print(Debug& debug, const IntegratedLayerBase& layer, Containers::StringView name, LayerDataHandle data) {
                 /* Printing the name colored to verify the color is disabled
                    correctly here as well */
-                debug << " " << Debug::color(Debug::Color::Yellow) << name << Debug::resetColor << "(" << Debug::nospace << layer.value << Debug::nospace << ") data" << Debug::packed << data << "and a value of" << value << Debug::newline;
+                debug << "  Layer" << Debug::color(Debug::Color::Yellow) << name << Debug::resetColor << "(" << Debug::nospace << layer.value << Debug::nospace << ") data" << Debug::packed << data << "and a value of" << value << Debug::newline;
             }
 
             int value;
@@ -2473,7 +2473,7 @@ void DebugLayerTest::nodeHighlightDebugIntegrationExplicitRvalue() {
 
     DebugLayer& layer = ui.setLayerInstance(Containers::pointer<DebugLayer>(ui.createLayer(), DebugLayerSource::NodeDataAttachmentDetails, DebugLayerFlag::NodeHighlight));
 
-    layer.setLayerName(integratedLayer, "Layer no.2", IntegratedLayer::DebugIntegration{1337});
+    layer.setLayerName(integratedLayer, "No.2", IntegratedLayer::DebugIntegration{1337});
 
     ui.update();
 
@@ -2485,8 +2485,8 @@ void DebugLayerTest::nodeHighlightDebugIntegrationExplicitRvalue() {
     CORRADE_COMPARE(layer.currentHighlightedNode(), node);
     CORRADE_COMPARE_AS(out,
         "Top-level node {0x0, 0x1}\n"
-        "  Layer no.2 (42069) data {0x0, 0x1} and a value of 1337\n"
-        "  Layer no.2 (42069) data {0x1, 0x1} and a value of 1337\n",
+        "  Layer No.2 (42069) data {0x0, 0x1} and a value of 1337\n"
+        "  Layer No.2 (42069) data {0x1, 0x1} and a value of 1337\n",
         TestSuite::Compare::String);
 }
 

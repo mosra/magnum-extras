@@ -526,7 +526,7 @@ class MAGNUM_UI_EXPORT DebugLayer: public AbstractLayer {
          * isn't @ref LayerHandle::Null, @p handle doesn't have to be valid
          * however. If @ref DebugLayerSource::Layers isn't enabled or @p handle
          * isn't known, returns an empty string. For @ref handle() returns
-         * @cpp "DebugLayer" @ce if a different name wasn't set.
+         * @cpp "Debug" @ce if a different name wasn't set.
          *
          * If not empty, the returned string is always
          * @relativeref{Corrade,Containers::StringViewFlag::NullTerminated}.
