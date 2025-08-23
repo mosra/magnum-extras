@@ -1311,6 +1311,7 @@ void DebugLayerTest::layerNameDebugIntegrationExplicit() {
             return *_state;
         }
     };
+    Layer& layer = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer(), data.sources, DebugLayerFlags{}));
 
     struct EmptyLayer: AbstractLayer {
         using AbstractLayer::AbstractLayer;
@@ -1349,10 +1350,6 @@ void DebugLayerTest::layerNameDebugIntegrationExplicit() {
 
         LayerFeatures doFeatures() const override { return {}; }
     };
-
-    /* The debug layer itself has no integration as it's excluded from
-       output */
-    Layer& layer = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer(), data.sources, DebugLayerFlags{}));
 
     /* Setting a layer name with a concrete type won't allocate the
        DebugIntegration instance as it doesn't have a default constructor.
@@ -1415,6 +1412,7 @@ void DebugLayerTest::layerNameDebugIntegrationExplicitRvalue() {
             return *_state;
         }
     };
+    Layer& layer = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer(), data.sources, DebugLayerFlags{}));
 
     struct EmptyLayer: AbstractLayer {
         using AbstractLayer::AbstractLayer;
@@ -1453,10 +1451,6 @@ void DebugLayerTest::layerNameDebugIntegrationExplicitRvalue() {
 
         LayerFeatures doFeatures() const override { return {}; }
     };
-
-    /* The debug layer itself has no integration as it's excluded from
-       output */
-    Layer& layer = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer(), data.sources, DebugLayerFlags{}));
 
     /* Setting a layer name with a concrete type won't allocate the
        DebugIntegration instance, same reasoning as in
