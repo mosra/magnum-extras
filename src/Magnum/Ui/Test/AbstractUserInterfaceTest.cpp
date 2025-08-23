@@ -97,6 +97,7 @@ struct AbstractUserInterfaceTest: TestSuite::Tester {
     void animatorHandleDisable();
     void animatorHandleLastFree();
     void animatorSetInstance();
+    void animatorSetInstanceBeforeLayers();
     void animatorSetInstanceInvalid();
     void animatorGetInvalid();
     void animatorRemoveInvalid();
@@ -1100,6 +1101,7 @@ AbstractUserInterfaceTest::AbstractUserInterfaceTest() {
               &AbstractUserInterfaceTest::animatorHandleDisable,
               &AbstractUserInterfaceTest::animatorHandleLastFree,
               &AbstractUserInterfaceTest::animatorSetInstance,
+              &AbstractUserInterfaceTest::animatorSetInstanceBeforeLayers,
               &AbstractUserInterfaceTest::animatorSetInstanceInvalid,
               &AbstractUserInterfaceTest::animatorGetInvalid,
               &AbstractUserInterfaceTest::animatorRemoveInvalid,
@@ -3068,6 +3070,46 @@ void AbstractUserInterfaceTest::animatorSetInstance() {
     CORRADE_COMPARE(fourthDestructed, 1);
     CORRADE_COMPARE(fifthDestructed, 1);
     CORRADE_COMPARE(sixthDestructed, 1);
+}
+
+void AbstractUserInterfaceTest::animatorSetInstanceBeforeLayers() {
+    /* Regression test for a bug where creating the very first layer after an
+       animation is added led to the per-layer animator offsets not being
+       updated correctly due to an early return, causing an assertion later */
+
+    AbstractUserInterface ui{{100, 100}};
+
+    struct GenericAnimator: AbstractGenericAnimator {
+        using AbstractGenericAnimator::AbstractGenericAnimator;
+
+        AnimatorFeatures doFeatures() const override { return {}; }
+
+        void doAdvance(Containers::BitArrayView, Containers::BitArrayView, Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&) override {}
+    };
+    ui.setGenericAnimatorInstance(Containers::pointer<GenericAnimator>(ui.createAnimator()));
+
+    ui.createLayer();
+
+    /* Setting a node animator instance expects that the per-layer animator
+       offsets are larger than the offset at which the node animator should be
+       added, which is only done if createLayer() above correctly takes the
+       GenericAnimator instance into account. Using a NodeAnimator because a
+       GenericAnimator doesn't assert on this particular condition. */
+    struct NodeAnimator: AbstractNodeAnimator {
+        using AbstractNodeAnimator::AbstractNodeAnimator;
+
+        AnimatorFeatures doFeatures() const override {
+            return AnimatorFeature::NodeAttachment;
+        }
+        NodeAnimatorUpdates doAdvance(Containers::BitArrayView, Containers::BitArrayView, Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Float>&, const Containers::StridedArrayView1D<NodeFlags>&, Containers::MutableBitArrayView) override {
+            return {};
+        }
+    };
+    ui.setNodeAnimatorInstance(Containers::pointer<NodeAnimator>(ui.createAnimator()));
+
+    /* Cannot really verify the internals, so testing just something silly */
+    CORRADE_COMPARE(ui.layerCapacity(), 1);
+    CORRADE_COMPARE(ui.animatorCapacity(), 2);
 }
 
 void AbstractUserInterfaceTest::animatorSetInstanceInvalid() {
