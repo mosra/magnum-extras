@@ -1521,6 +1521,7 @@ void DebugLayerTest::layerNameDebugIntegrationCopyConstructPlainStruct() {
        fails miserably. Similar case is in Containers::Array etc. */
     IntegratedLayer::DebugIntegration integration;
     layer.setLayerName(integratedLayer, "Extremely Trivial", integration);
+    CORRADE_COMPARE(layer.stateData().layers.size(), 2);
     CORRADE_VERIFY(layer.stateData().layers[1].integration);
 }
 
@@ -1558,6 +1559,7 @@ void DebugLayerTest::layerNameDebugIntegrationMoveConstructPlainStruct() {
     layer.setLayerName(integratedLayer1, "Extremely Trivial", IntegratedLayer::DebugIntegration{});
     /* This case internally does the above, so verify it works there as well */
     layer.setLayerName(integratedLayer2, "Extremely Trivial");
+    CORRADE_COMPARE(layer.stateData().layers.size(), 3);
     CORRADE_VERIFY(layer.stateData().layers[1].integration);
     CORRADE_VERIFY(layer.stateData().layers[2].integration);
 }
@@ -1597,7 +1599,7 @@ void DebugLayerTest::layerNameInvalid() {
 
     Containers::String out;
     Error redirectError{&out};
-    layerNoUi.layerName({});
+    layerNoUi.layerName(LayerHandle::Null);
     layerNoUi.setLayerName(layer, {});
     layerNoUi.setLayerName(integratedLayer, {});
     layerNoUi.setLayerName(integratedLayer, {}, integration);
