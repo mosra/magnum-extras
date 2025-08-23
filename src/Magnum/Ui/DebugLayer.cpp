@@ -254,12 +254,8 @@ Containers::StringView DebugLayer::layerName(const LayerHandle handle) const {
 DebugLayer& DebugLayer::setLayerName(const AbstractLayer& instance, const Containers::StringView name) {
     CORRADE_ASSERT(hasUi(),
         "Ui::DebugLayer::setLayerName(): debug layer not part of a user interface", *this);
-    /* ui() is protected, so doing this weird cast to be able to call it
-       (sigh) */
-    CORRADE_ASSERT(&static_cast<const DebugLayer&>(instance).ui() == &ui(),
+    CORRADE_ASSERT(ui().isHandleValid(instance.handle()) && &ui().layer(instance.handle()) == &instance,
         "Ui::DebugLayer::setLayerName(): layer not part of the same user interface", *this);
-    /* This should hold if the above holds, but just in case */
-    CORRADE_INTERNAL_ASSERT(ui().isHandleValid(instance.handle()));
     State& state = *_state;
     /* If the feature isn't enabled, do nothing */
     if(!(state.sources >= DebugLayerSource::Layers))
