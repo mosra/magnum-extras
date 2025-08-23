@@ -4395,7 +4395,7 @@ void AbstractVisualLayerTest::debugIntegration() {
     layer.remove(layer.create(0));
     layer.create(data.style, node);
 
-    DebugLayer& debugLayer = ui.setLayerInstance(Containers::pointer<DebugLayer>(ui.createLayer(), DebugLayerSource::NodeDataAttachmentDetails, DebugLayerFlag::NodeHighlight));
+    DebugLayer& debugLayer = ui.setLayerInstance(Containers::pointer<DebugLayer>(ui.createLayer(), DebugLayerSource::NodeDataDetails, DebugLayerFlag::NodeHighlight));
 
     Containers::String out;
     debugLayer.setNodeHighlightCallback([&out](Containers::StringView message) {
@@ -4432,7 +4432,7 @@ void AbstractVisualLayerTest::debugIntegrationNoTransition() {
     StyleLayer& layer = ui.setLayerInstance(Containers::pointer<StyleLayer>(ui.createLayer(), shared));
     layer.create(DebugIntegrationStyle::InputFocusedHover, node);
 
-    DebugLayer& debugLayer = ui.setLayerInstance(Containers::pointer<DebugLayer>(ui.createLayer(), DebugLayerSource::NodeDataAttachmentDetails, DebugLayerFlag::NodeHighlight));
+    DebugLayer& debugLayer = ui.setLayerInstance(Containers::pointer<DebugLayer>(ui.createLayer(), DebugLayerSource::NodeDataDetails, DebugLayerFlag::NodeHighlight));
 
     Containers::String out;
     debugLayer.setNodeHighlightCallback([&out](Containers::StringView message) {
@@ -4475,7 +4475,7 @@ void AbstractVisualLayerTest::debugIntegrationNoDisabledTransition() {
        inactive out, it shouldn't be shown at all */
     layer.create(DebugIntegrationStyle::StrangeInput, node);
 
-    DebugLayer& debugLayer = ui.setLayerInstance(Containers::pointer<DebugLayer>(ui.createLayer(), DebugLayerSource::NodeDataAttachmentDetails, DebugLayerFlag::NodeHighlight));
+    DebugLayer& debugLayer = ui.setLayerInstance(Containers::pointer<DebugLayer>(ui.createLayer(), DebugLayerSource::NodeDataDetails, DebugLayerFlag::NodeHighlight));
 
     Containers::String out;
     debugLayer.setNodeHighlightCallback([&out](Containers::StringView message) {
@@ -4529,7 +4529,7 @@ void AbstractVisualLayerTest::debugIntegrationNoCallback() {
     layer.create(DebugIntegrationStyle::StrangeInput, node);
     layer.create(DebugIntegrationStyle::Dynamic, nodeDynamic);
 
-    DebugLayer& debugLayer = ui.setLayerInstance(Containers::pointer<DebugLayer>(ui.createLayer(), DebugLayerSource::NodeDataAttachmentDetails, DebugLayerFlag::NodeHighlight));
+    DebugLayer& debugLayer = ui.setLayerInstance(Containers::pointer<DebugLayer>(ui.createLayer(), DebugLayerSource::NodeDataDetails, DebugLayerFlag::NodeHighlight));
 
     debugLayer.setLayerName(layer, "Layarr", debugIntegrationStyleName);
 
@@ -4586,7 +4586,7 @@ void AbstractVisualLayerTest::debugIntegrationLambdaStyleName() {
     StyleLayer& layer = ui.setLayerInstance(Containers::pointer<StyleLayer>(ui.createLayer(), shared));
     layer.create(7, node);
 
-    DebugLayer& debugLayer = ui.setLayerInstance(Containers::pointer<DebugLayer>(ui.createLayer(), DebugLayerSource::NodeDataAttachmentDetails, DebugLayerFlag::NodeHighlight));
+    DebugLayer& debugLayer = ui.setLayerInstance(Containers::pointer<DebugLayer>(ui.createLayer(), DebugLayerSource::NodeDataDetails, DebugLayerFlag::NodeHighlight));
     /* Somehow it doesn't "just work", the DebugIntegration has to have a
        special template constructor to convert this to a pointer without having
        to explicitly cast to a function pointer, use `+` to convert it to a

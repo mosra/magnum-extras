@@ -179,7 +179,7 @@ int UiDebugLayer::exec() {
         .setSize({128.0f, 48.0f}, Vector2{ImageSize}, ImageSize)
         .setStyle(Ui::McssDarkStyle{});
 
-    Ui::DebugLayer& debugLayer = ui.setLayerInstance(Containers::pointer<Ui::DebugLayerGL>(ui.createLayer(), Ui::DebugLayerSource::NodeDataAttachmentDetails|Ui::DebugLayerSource::NodeHierarchy, Ui::DebugLayerFlag::NodeHighlight|Ui::DebugLayerFlag::ColorAlways));
+    Ui::DebugLayer& debugLayer = ui.setLayerInstance(Containers::pointer<Ui::DebugLayerGL>(ui.createLayer(), Ui::DebugLayerSource::NodeDataDetails|Ui::DebugLayerSource::NodeHierarchy, Ui::DebugLayerFlag::NodeHighlight|Ui::DebugLayerFlag::ColorAlways));
 
     /* Button code, default visual state with no highlight. Adding some extra
        nodes and data to have the listed handles non-trivial. */
@@ -222,11 +222,11 @@ ui.eventLayer().onTapOrClick(button, []{
     ui.draw();
     converter->convertToFile(unpremultiply(ui.renderer().compositingFramebuffer().read({{}, ImageSize}, {PixelFormat::RGBA8Unorm})), "ui-debuglayer-node-highlight.png");
 
-    /* Node and layer names. NodeDataAttachmentDetails is enabled so casting to
-       a base type to not have the integration picked yet */
-    /** @todo once the integration does something even without
-        NodeDataAttachmentDetails being set (such as showing layer flags), this
-        won't be enough and there needs to be multiple debug layers */
+    /* Node and layer names. NodeDataDetails is enabled so casting to a base
+       type to not have the integration picked yet */
+    /** @todo once the integration does something even without NodeDataDetails
+        being set (such as showing layer flags), this won't be enough and there
+        needs to be multiple debug layers */
     debugLayer.setLayerName(static_cast<Ui::AbstractLayer&>(ui.baseLayer()), "Base");
     debugLayer.setLayerName(static_cast<Ui::AbstractLayer&>(ui.textLayer()), "Text");
     debugLayer.setLayerName(static_cast<Ui::AbstractLayer&>(ui.eventLayer()), "Event");

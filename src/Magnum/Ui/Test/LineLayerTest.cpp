@@ -3588,7 +3588,7 @@ void LineLayerTest::debugIntegration() {
         layer.setAlignment(layerData, data.alignment);
     layer.setPadding(layerData, data.padding);
 
-    DebugLayer& debugLayer = ui.setLayerInstance(Containers::pointer<DebugLayer>(ui.createLayer(), DebugLayerSource::NodeDataAttachmentDetails, DebugLayerFlag::NodeHighlight));
+    DebugLayer& debugLayer = ui.setLayerInstance(Containers::pointer<DebugLayer>(ui.createLayer(), DebugLayerSource::NodeDataDetails, DebugLayerFlag::NodeHighlight));
 
     Containers::String out;
     debugLayer.setNodeHighlightCallback([&out](Containers::StringView message) {
@@ -3648,7 +3648,7 @@ void LineLayerTest::debugIntegrationNoCallback() {
     layer.setAlignment(layerData, LineAlignment::MiddleRight);
     layer.setPadding(layerData, {0.5f, 2.0f, 1.5f, 1.0f});
 
-    DebugLayer& debugLayer = ui.setLayerInstance(Containers::pointer<DebugLayer>(ui.createLayer(), DebugLayerSource::NodeDataAttachmentDetails, DebugLayerFlag::NodeHighlight));
+    DebugLayer& debugLayer = ui.setLayerInstance(Containers::pointer<DebugLayer>(ui.createLayer(), DebugLayerSource::NodeDataDetails, DebugLayerFlag::NodeHighlight));
 
     debugLayer.setLayerName(layer, "", debugIntegrationStyleName);
 
@@ -3718,7 +3718,7 @@ void LineLayerTest::debugIntegrationLambdaStyleName() {
     LineLayer& layer = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer(), shared));
     layer.createLoop(3, {{}}, {}, node);
 
-    DebugLayer& debugLayer = ui.setLayerInstance(Containers::pointer<DebugLayer>(ui.createLayer(), DebugLayerSource::NodeDataAttachmentDetails, DebugLayerFlag::NodeHighlight));
+    DebugLayer& debugLayer = ui.setLayerInstance(Containers::pointer<DebugLayer>(ui.createLayer(), DebugLayerSource::NodeDataDetails, DebugLayerFlag::NodeHighlight));
     debugLayer.setLayerName(layer, "", [](UnsignedInt style) -> Containers::StringView {
         return style == 3 ? "LambdaStyle" : "Wrong";
     });

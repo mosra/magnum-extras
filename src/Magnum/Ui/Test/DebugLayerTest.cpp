@@ -108,8 +108,8 @@ const struct {
     bool used;
 } LayerNameDebugIntegrationData[]{
     {"layers", DebugLayerSource::Layers, false},
-    {"node data attachments", DebugLayerSource::NodeDataAttachments, false},
-    {"node data attachment details", DebugLayerSource::NodeDataAttachmentDetails, true},
+    {"node data", DebugLayerSource::NodeData, false},
+    {"node data details", DebugLayerSource::NodeDataDetails, true},
 };
 
 const struct {
@@ -130,8 +130,8 @@ const struct {
     {"node hierarchy",
         DebugLayerSource::NodeHierarchy, {},
         false, false, true, true},
-    {"node data attachments",
-        DebugLayerSource::NodeDataAttachments, {},
+    {"node data",
+        DebugLayerSource::NodeData, {},
         false, false, false, true},
     {"node highlight",
         DebugLayerSource::Nodes, DebugLayerFlag::NodeHighlight,
@@ -146,8 +146,8 @@ const struct {
 } PreUpdateTrackNodesData[]{
     {"",
         DebugLayerSource::Nodes, {}, false},
-    {"node data attachments",
-        DebugLayerSource::NodeDataAttachments, {}, false},
+    {"node data",
+        DebugLayerSource::NodeData, {}, false},
     {"node highlight",
         DebugLayerSource::Nodes, DebugLayerFlag::NodeHighlight, true},
 };
@@ -158,8 +158,8 @@ const struct {
 } PreUpdateTrackLayersData[]{
     {"",
         DebugLayerSource::Layers},
-    {"node data attachments",
-        DebugLayerSource::NodeDataAttachments},
+    {"node data",
+        DebugLayerSource::NodeData},
 };
 
 const struct {
@@ -342,15 +342,15 @@ const struct {
         "    of which 3 Hidden\n"
         "    of which 2 Disabled\n"
         "    of which 1 NoEvents"},
-    {"data attachments",
-        DebugLayerSource::NodeDataAttachments, DebugLayerFlag::NodeHighlight,
+    {"data",
+        DebugLayerSource::NodeData, DebugLayerFlag::NodeHighlight,
         {}, false, false, false,
         {}, {}, PointerEventSource::Mouse, Pointer::MouseRight,
         {}, true, false, false, false, false, false,
         "Node {0x3, 0x1}\n"
         "  10 data from 4 layers"},
-    {"data attachments, some layer names",
-        DebugLayerSource::NodeDataAttachments, DebugLayerFlag::NodeHighlight,
+    {"data, some layer names",
+        DebugLayerSource::NodeData, DebugLayerFlag::NodeHighlight,
         {}, false, true, false,
         {}, {}, PointerEventSource::Mouse, Pointer::MouseRight,
         {}, true, false, false, false, false, false,
@@ -358,8 +358,8 @@ const struct {
         "  1 data from layer {0x1, 0x1} Second\n"
         "  2 data from layer {0x4, 0x1} No.3\n"
         "  7 data from 2 other layers"},
-    {"data attachment details, some layer names",
-        DebugLayerSource::NodeDataAttachmentDetails, DebugLayerFlag::NodeHighlight,
+    {"data details, some layer names",
+        DebugLayerSource::NodeDataDetails, DebugLayerFlag::NodeHighlight,
         {}, false, true, false,
         {}, {}, PointerEventSource::Mouse, Pointer::MouseRight,
         {}, true, false, false, false, false, false,
@@ -368,8 +368,8 @@ const struct {
         "  Layer No.3 (42069) data {0x0, 0x1} and a value of 1337\n"
         "  Layer No.3 (42069) data {0x1, 0x1} and a value of 1337\n"
         "  7 data from 2 other layers"},
-    {"data attachment details, all layer names",
-        DebugLayerSource::NodeDataAttachmentDetails, DebugLayerFlag::NodeHighlight,
+    {"data details, all layer names",
+        DebugLayerSource::NodeDataDetails, DebugLayerFlag::NodeHighlight,
         {}, false, true, true,
         {}, {}, PointerEventSource::Mouse, Pointer::MouseRight,
         {}, true, false, false, false, false, false,
@@ -379,8 +379,8 @@ const struct {
         "  Layer No.3 (42069) data {0x0, 0x1} and a value of 1337\n"
         "  Layer No.3 (42069) data {0x1, 0x1} and a value of 1337\n"
         "  4 data from layer {0x5, 0x1} The last ever"},
-    {"data attachment details, all layer names, reverse layer order",
-        DebugLayerSource::NodeDataAttachmentDetails, DebugLayerFlag::NodeHighlight,
+    {"data details, all layer names, reverse layer order",
+        DebugLayerSource::NodeDataDetails, DebugLayerFlag::NodeHighlight,
         {}, true, true, true,
         {}, {}, PointerEventSource::Mouse, Pointer::MouseRight,
         {}, true, false, false, false, false, false,
@@ -390,8 +390,8 @@ const struct {
         "  Layer No.3 (42069) data {0x0, 0x1} and a value of 1337\n"
         "  Layer No.3 (42069) data {0x1, 0x1} and a value of 1337\n"
         "  4 data from layer {0x0, 0x1} The last ever"},
-    {"node name, flags, nested top level, all hierarchy + data attachment details, some layer names",
-        DebugLayerSource::NodeHierarchy|DebugLayerSource::NodeDataAttachmentDetails, DebugLayerFlag::NodeHighlight,
+    {"node name, flags, nested top level, all hierarchy + data details, some layer names",
+        DebugLayerSource::NodeHierarchy|DebugLayerSource::NodeDataDetails, DebugLayerFlag::NodeHighlight,
         "A very nice node"_s, false, true, false,
         {}, {}, PointerEventSource::Mouse, Pointer::MouseRight,
         NodeFlag::Clip|NodeFlag::Focusable, true, true, true, true, true, true,
@@ -630,40 +630,38 @@ void DebugLayerTest::debugSourceSupersets() {
         Debug{&out} << (DebugLayerSource::Nodes|DebugLayerSource::NodeHierarchy);
         CORRADE_COMPARE(out, "Ui::DebugLayerSource::NodeHierarchy\n");
 
-    /* NodeDataAttachments is a superset of Nodes, so only one should be
+    /* NodeData is a superset of Nodes, so only one should be printed */
+    } {
+        Containers::String out;
+        Debug{&out} << (DebugLayerSource::Nodes|DebugLayerSource::NodeData);
+        CORRADE_COMPARE(out, "Ui::DebugLayerSource::NodeData\n");
+
+    /* NodeData is a superset of Layers, so only one should be printed */
+    } {
+        Containers::String out;
+        Debug{&out} << (DebugLayerSource::Layers|DebugLayerSource::NodeData);
+        CORRADE_COMPARE(out, "Ui::DebugLayerSource::NodeData\n");
+
+    /* NodeHierarchy and NodeData are both a superset of Nodes, so both should
+       be printed */
+    } {
+        Containers::String out;
+        Debug{&out} << (DebugLayerSource::NodeHierarchy|DebugLayerSource::NodeData);
+        CORRADE_COMPARE(out, "Ui::DebugLayerSource::NodeHierarchy|Ui::DebugLayerSource::NodeData\n");
+
+    /* NodeDataDetails is a superset of NodeData, so only one should be
        printed */
     } {
         Containers::String out;
-        Debug{&out} << (DebugLayerSource::Nodes|DebugLayerSource::NodeDataAttachments);
-        CORRADE_COMPARE(out, "Ui::DebugLayerSource::NodeDataAttachments\n");
+        Debug{&out} << (DebugLayerSource::NodeData|DebugLayerSource::NodeDataDetails);
+        CORRADE_COMPARE(out, "Ui::DebugLayerSource::NodeDataDetails\n");
 
-    /* NodeDataAttachments is a superset of Layers, so only one should be
-       printed */
+    /* NodeHierarchy and NodeDataDetails are both a superset of Nodes, so both
+       should be printed */
     } {
         Containers::String out;
-        Debug{&out} << (DebugLayerSource::Layers|DebugLayerSource::NodeDataAttachments);
-        CORRADE_COMPARE(out, "Ui::DebugLayerSource::NodeDataAttachments\n");
-
-    /* NodeHierarchy and NodeDataAttachments are both a superset of Nodes, so
-       both should be printed */
-    } {
-        Containers::String out;
-        Debug{&out} << (DebugLayerSource::NodeHierarchy|DebugLayerSource::NodeDataAttachments);
-        CORRADE_COMPARE(out, "Ui::DebugLayerSource::NodeHierarchy|Ui::DebugLayerSource::NodeDataAttachments\n");
-
-    /* NodeDataAttachmentDetails is a superset of NodeDataAttachments, so only
-       one should be printed */
-    } {
-        Containers::String out;
-        Debug{&out} << (DebugLayerSource::NodeDataAttachments|DebugLayerSource::NodeDataAttachmentDetails);
-        CORRADE_COMPARE(out, "Ui::DebugLayerSource::NodeDataAttachmentDetails\n");
-
-    /* NodeHierarchy and NodeDataAttachmentDetails are both a superset of
-       Nodes, so both should be printed */
-    } {
-        Containers::String out;
-        Debug{&out} << (DebugLayerSource::NodeHierarchy|DebugLayerSource::NodeDataAttachmentDetails);
-        CORRADE_COMPARE(out, "Ui::DebugLayerSource::NodeHierarchy|Ui::DebugLayerSource::NodeDataAttachmentDetails\n");
+        Debug{&out} << (DebugLayerSource::NodeHierarchy|DebugLayerSource::NodeDataDetails);
+        CORRADE_COMPARE(out, "Ui::DebugLayerSource::NodeHierarchy|Ui::DebugLayerSource::NodeDataDetails\n");
     }
 }
 
@@ -680,9 +678,9 @@ void DebugLayerTest::debugFlags() {
 }
 
 void DebugLayerTest::construct() {
-    DebugLayer layer{layerHandle(137, 0xfe), DebugLayerSource::NodeDataAttachments|DebugLayerSource::NodeHierarchy, DebugLayerFlag::NodeHighlight};
+    DebugLayer layer{layerHandle(137, 0xfe), DebugLayerSource::NodeData|DebugLayerSource::NodeHierarchy, DebugLayerFlag::NodeHighlight};
     CORRADE_COMPARE(layer.handle(), layerHandle(137, 0xfe));
-    CORRADE_COMPARE(layer.sources(), DebugLayerSource::NodeDataAttachments|DebugLayerSource::NodeHierarchy);
+    CORRADE_COMPARE(layer.sources(), DebugLayerSource::NodeData|DebugLayerSource::NodeHierarchy);
     CORRADE_COMPARE(layer.flags(), DebugLayerFlag::NodeHighlight);
 
     /* Defaults for flag-related setters are tested in setters*() */
@@ -705,17 +703,17 @@ void DebugLayerTest::constructCopy() {
 }
 
 void DebugLayerTest::constructMove() {
-    DebugLayer a{layerHandle(137, 0xfe), DebugLayerSource::NodeDataAttachments, DebugLayerFlag::NodeHighlight};
+    DebugLayer a{layerHandle(137, 0xfe), DebugLayerSource::NodeData, DebugLayerFlag::NodeHighlight};
 
     DebugLayer b{Utility::move(a)};
     CORRADE_COMPARE(b.handle(), layerHandle(137, 0xfe));
-    CORRADE_COMPARE(b.sources(), DebugLayerSource::NodeDataAttachments);
+    CORRADE_COMPARE(b.sources(), DebugLayerSource::NodeData);
     CORRADE_COMPARE(b.flags(), DebugLayerFlag::NodeHighlight);
 
     DebugLayer c{layerHandle(0, 2), DebugLayerSource::NodeHierarchy, {}};
     c = Utility::move(b);
     CORRADE_COMPARE(c.handle(), layerHandle(137, 0xfe));
-    CORRADE_COMPARE(c.sources(), DebugLayerSource::NodeDataAttachments);
+    CORRADE_COMPARE(c.sources(), DebugLayerSource::NodeData);
     CORRADE_COMPARE(c.flags(), DebugLayerFlag::NodeHighlight);
 
     CORRADE_VERIFY(std::is_nothrow_move_constructible<DebugLayer>::value);
@@ -794,7 +792,7 @@ void DebugLayerTest::nodeName() {
             return *_state;
         }
     };
-    Layer& layer = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer(), DebugLayerSource::NodeDataAttachments, DebugLayerFlags{}));
+    Layer& layer = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer(), DebugLayerSource::NodeData, DebugLayerFlags{}));
 
     /* Initially the layer has no node entries even though there already are
        some created */
@@ -1499,7 +1497,7 @@ void DebugLayerTest::layerNameDebugIntegrationCopyConstructPlainStruct() {
             return *_state;
         }
     };
-    Layer& layer = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer(), DebugLayerSource::NodeDataAttachmentDetails, DebugLayerFlags{}));
+    Layer& layer = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer(), DebugLayerSource::NodeDataDetails, DebugLayerFlags{}));
 
     struct IntegratedLayer: AbstractLayer {
         using AbstractLayer::AbstractLayer;
@@ -1535,7 +1533,7 @@ void DebugLayerTest::layerNameDebugIntegrationMoveConstructPlainStruct() {
             return *_state;
         }
     };
-    Layer& layer = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer(), DebugLayerSource::NodeDataAttachmentDetails, DebugLayerFlags{}));
+    Layer& layer = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer(), DebugLayerSource::NodeDataDetails, DebugLayerFlags{}));
 
     struct IntegratedLayer: AbstractLayer {
         using AbstractLayer::AbstractLayer;
@@ -1570,9 +1568,9 @@ void DebugLayerTest::layerNameInvalid() {
     AbstractUserInterface ui{{100, 100}};
     AbstractUserInterface uiAnother{{100, 100}};
 
-    /* Enabling NodeDataAttachmentDetails so the integration is used in full,
-       just in case */
-    DebugLayer& layer = ui.setLayerInstance(Containers::pointer<DebugLayer>(ui.createLayer(), DebugLayerSource::NodeDataAttachmentDetails, DebugLayerFlags{}));
+    /* Enabling NodeDataDetails so the integration is used in full, just in
+       case */
+    DebugLayer& layer = ui.setLayerInstance(Containers::pointer<DebugLayer>(ui.createLayer(), DebugLayerSource::NodeDataDetails, DebugLayerFlags{}));
     DebugLayer layerNoUi{layerHandle(0, 1), {}, {}};
 
     struct EmptyLayer: AbstractLayer {
@@ -2240,7 +2238,7 @@ void DebugLayerTest::nodeHighlightNoCallback() {
     /* Just to match the layer handles to the nodeHighlight() case */
     /*LayerHandle removedLayer =*/ ui.createLayer();
 
-    DebugLayer& layer = ui.setLayerInstance(Containers::pointer<DebugLayer>(ui.createLayer(), DebugLayerSource::NodeHierarchy|DebugLayerSource::NodeDataAttachmentDetails, DebugLayerFlag::NodeHighlight));
+    DebugLayer& layer = ui.setLayerInstance(Containers::pointer<DebugLayer>(ui.createLayer(), DebugLayerSource::NodeHierarchy|DebugLayerSource::NodeDataDetails, DebugLayerFlag::NodeHighlight));
 
     struct IntegratedLayer: AbstractLayer {
         using AbstractLayer::AbstractLayer;
@@ -2401,7 +2399,7 @@ void DebugLayerTest::nodeHighlightDebugIntegrationExplicit() {
     integratedLayer.create(node);
     integratedLayer.create(node);
 
-    DebugLayer& layer = ui.setLayerInstance(Containers::pointer<DebugLayer>(ui.createLayer(), DebugLayerSource::NodeDataAttachmentDetails, DebugLayerFlag::NodeHighlight));
+    DebugLayer& layer = ui.setLayerInstance(Containers::pointer<DebugLayer>(ui.createLayer(), DebugLayerSource::NodeDataDetails, DebugLayerFlag::NodeHighlight));
 
     IntegratedLayer::DebugIntegration integration{1337};
     layer.setLayerName(integratedLayer, "No.2", integration);
@@ -2468,7 +2466,7 @@ void DebugLayerTest::nodeHighlightDebugIntegrationExplicitRvalue() {
     integratedLayer.create(node);
     integratedLayer.create(node);
 
-    DebugLayer& layer = ui.setLayerInstance(Containers::pointer<DebugLayer>(ui.createLayer(), DebugLayerSource::NodeDataAttachmentDetails, DebugLayerFlag::NodeHighlight));
+    DebugLayer& layer = ui.setLayerInstance(Containers::pointer<DebugLayer>(ui.createLayer(), DebugLayerSource::NodeDataDetails, DebugLayerFlag::NodeHighlight));
 
     layer.setLayerName(integratedLayer, "No.2", IntegratedLayer::DebugIntegration{1337});
 
@@ -2710,7 +2708,7 @@ void DebugLayerTest::nodeHighlightInvalid() {
     DebugLayer layerNoNodesNoHighlight{layerHandle(0, 1), {}, {}};
     DebugLayer layerNoUi{layerHandle(0, 1), DebugLayerSource::Nodes, DebugLayerFlag::NodeHighlight};
 
-    DebugLayer& layer = ui.setLayerInstance(Containers::pointer<DebugLayer>(ui.createLayer(), DebugLayerSource::NodeDataAttachmentDetails, DebugLayerFlag::NodeHighlight));
+    DebugLayer& layer = ui.setLayerInstance(Containers::pointer<DebugLayer>(ui.createLayer(), DebugLayerSource::NodeDataDetails, DebugLayerFlag::NodeHighlight));
     layer.setLayerName(integratedLayer, "BrokenPrint");
     /* To silence the output */
     layer.setNodeHighlightCallback([](Containers::StringView) {});
