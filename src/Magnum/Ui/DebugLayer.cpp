@@ -265,8 +265,8 @@ DebugLayer& DebugLayer::setLayerName(const AbstractLayer& instance, const Contai
     if(!(state.sources >= DebugLayerSource::Layers))
         return *this;
 
-    /* If there are not enough tracked layers, add. Otherwise if replace the
-       instance to correctly free any existing debug integration */
+    /* If there are not enough tracked layers, add. Otherwise replace the
+       instance to correctly free any existing debug integration. */
     const UnsignedInt layerId = layerHandleId(instance.handle());
     if(state.layers.size() <= layerId)
         arrayResize(state.layers, ValueInit, layerId + 1);
