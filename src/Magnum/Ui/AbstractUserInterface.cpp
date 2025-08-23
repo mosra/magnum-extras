@@ -1012,20 +1012,21 @@ LayerHandle AbstractUserInterface::createLayer(const LayerHandle behind) {
         layer->used.previous = handle;
         layer->used.next = handle;
         state.firstLayer = handle;
-        return handle;
+
+    /* Otherwise connect with the previous and next */
+    } else {
+        const LayerHandle next = behind == LayerHandle::Null ?
+            state.firstLayer : behind;
+        const LayerHandle previous = state.layers[layerHandleId(next)].used.previous;
+        layer->used.previous = previous;
+        layer->used.next = next;
+        state.layers[layerHandleId(next)].used.previous = handle;
+        state.layers[layerHandleId(previous)].used.next = handle;
+
+        /* If the `before` layer was first, the new layer is now first */
+        if(state.firstLayer == behind)
+            state.firstLayer = handle;
     }
-
-    const LayerHandle next = behind == LayerHandle::Null ?
-        state.firstLayer : behind;
-    const LayerHandle previous = state.layers[layerHandleId(next)].used.previous;
-    layer->used.previous = previous;
-    layer->used.next = next;
-    state.layers[layerHandleId(next)].used.previous = handle;
-    state.layers[layerHandleId(previous)].used.next = handle;
-
-    /* If the `before` layer was first, the new layer is now first */
-    if(state.firstLayer == behind)
-        state.firstLayer = handle;
 
     /* (Re)initialize running offsets for attached data animators */
     Implementation::partitionedAnimatorsCreateLayer(state.animatorInstances,
