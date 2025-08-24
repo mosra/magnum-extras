@@ -378,15 +378,15 @@ const struct {
         "  1 data from layer {0x1, 0x1} Second\n"
         "  Layer No.3 (42069) data {0x0, 0x1} and a value of 1337\n"
         "  Layer No.3 (42069) data {0x1, 0x1} and a value of 1337\n"
-        "  4 data from layer {0x5, 0x1} The last ever"},
+        "  4 data from layer {0x6, 0x1} The last ever"},
     {"data details, all layer names, reverse layer order",
         DebugLayerSource::NodeDataDetails, DebugLayerFlag::NodeHighlight,
         {}, true, true, true,
         {}, {}, PointerEventSource::Mouse, Pointer::MouseRight,
         {}, true, false, false, false, false, false,
         "Node {0x3, 0x1}\n"
-        "  3 data from layer {0x5, 0x1} A layer\n"
-        "  1 data from layer {0x4, 0x1} Second\n"
+        "  3 data from layer {0x6, 0x1} A layer\n"
+        "  1 data from layer {0x5, 0x1} Second\n"
         "  Layer No.3 (42069) data {0x0, 0x1} and a value of 1337\n"
         "  Layer No.3 (42069) data {0x1, 0x1} and a value of 1337\n"
         "  4 data from layer {0x0, 0x1} The last ever"},
@@ -1974,16 +1974,18 @@ void DebugLayerTest::nodeHighlight() {
 
     /* The layers should always be printed in the draw order, regardless of the
        order they were created in */
-    LayerHandle layers[6];
+    LayerHandle layers[7];
     if(!data.reverseLayerOrder) {
         layers[0] = ui.createLayer();
         layers[1] = ui.createLayer();
         layers[2] = ui.createLayer();
         layers[3] = ui.createLayer();
         layers[4] = ui.createLayer();
-        layers[5] = ui.createLayer();
+        layers[5] = ui.createLayer(); /* doesn't have any instance set */
+        layers[6] = ui.createLayer();
     } else {
-        layers[5] = ui.createLayer();
+        layers[6] = ui.createLayer();
+        layers[5] = ui.createLayer(layers[6]); /* doesn't have any instance set */
         layers[4] = ui.createLayer(layers[5]);
         layers[3] = ui.createLayer(layers[4]);
         layers[2] = ui.createLayer(layers[3]);
@@ -2038,7 +2040,7 @@ void DebugLayerTest::nodeHighlight() {
     IntegratedLayer& integratedLayer = ui.setLayerInstance(Containers::pointer<IntegratedLayer>(layers[4]));
     integratedLayer.create(node);
     integratedLayer.create(node);
-    EmptyLayer& emptyLayer3 = ui.setLayerInstance(Containers::pointer<EmptyLayer>(layers[5]));
+    EmptyLayer& emptyLayer3 = ui.setLayerInstance(Containers::pointer<EmptyLayer>(layers[6]));
     emptyLayer3.create(node);
     emptyLayer3.create(node);
     emptyLayer3.create(node);
