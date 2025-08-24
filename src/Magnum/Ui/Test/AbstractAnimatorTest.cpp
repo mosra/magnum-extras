@@ -56,6 +56,7 @@ struct AbstractAnimatorTest: TestSuite::Tester {
     void debugAnimationFlag();
     void debugAnimationFlags();
     void debugAnimationState();
+    void debugAnimationStatePacked();
     void debugNodeAnimatorUpdate();
     void debugNodeAnimatorUpdates();
     void debugNodeAnimatorUpdatesSupersets();
@@ -774,6 +775,7 @@ AbstractAnimatorTest::AbstractAnimatorTest() {
               &AbstractAnimatorTest::debugAnimationFlag,
               &AbstractAnimatorTest::debugAnimationFlags,
               &AbstractAnimatorTest::debugAnimationState,
+              &AbstractAnimatorTest::debugAnimationStatePacked,
               &AbstractAnimatorTest::debugNodeAnimatorUpdate,
               &AbstractAnimatorTest::debugNodeAnimatorUpdates,
               &AbstractAnimatorTest::debugNodeAnimatorUpdatesSupersets,
@@ -908,6 +910,13 @@ void AbstractAnimatorTest::debugAnimationState() {
     Containers::String out;
     Debug{&out} << AnimationState::Paused << AnimationState(0xbe);
     CORRADE_COMPARE(out, "Ui::AnimationState::Paused Ui::AnimationState(0xbe)\n");
+}
+
+void AbstractAnimatorTest::debugAnimationStatePacked() {
+    Containers::String out;
+    /* Last is not packed, ones before should not make any flags persistent */
+    Debug{&out} << Debug::packed << AnimationState::Paused << Debug::packed << AnimationState(0xbe) << AnimationState::Stopped;
+    CORRADE_COMPARE(out, "Paused 0xbe Ui::AnimationState::Stopped\n");
 }
 
 void AbstractAnimatorTest::debugNodeAnimatorUpdate() {
