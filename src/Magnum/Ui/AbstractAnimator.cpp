@@ -823,6 +823,36 @@ AnimationState AbstractAnimator::state(const AnimatorDataHandle handle) const {
     return animationState(state.animations[animatorDataHandleId(handle)], state.time);
 }
 
+/** @todo These are de-inlined because otherwise MSVC complains about an
+    undefined reference to state() when compiling the
+    AbstractUserInterfaceImplementationTest, which includes AbstractAnimator
+    only to get access to the AnimatorFeatures, nothing else. Stupid fucking
+    compiler. Any ideas how to solve this better? */
+bool AbstractAnimator::isScheduled(AnimationHandle handle) const {
+    return state(handle) == AnimationState::Scheduled;
+}
+bool AbstractAnimator::isScheduled(AnimatorDataHandle handle) const {
+    return state(handle) == AnimationState::Scheduled;
+}
+bool AbstractAnimator::isPlaying(AnimationHandle handle) const {
+    return state(handle) == AnimationState::Playing;
+}
+bool AbstractAnimator::isPlaying(AnimatorDataHandle handle) const {
+    return state(handle) == AnimationState::Playing;
+}
+bool AbstractAnimator::isPaused(AnimationHandle handle) const {
+    return state(handle) == AnimationState::Paused;
+}
+bool AbstractAnimator::isPaused(AnimatorDataHandle handle) const {
+    return state(handle) == AnimationState::Paused;
+}
+bool AbstractAnimator::isStopped(AnimationHandle handle) const {
+    return state(handle) == AnimationState::Stopped;
+}
+bool AbstractAnimator::isStopped(AnimatorDataHandle handle) const {
+    return state(handle) == AnimationState::Stopped;
+}
+
 namespace {
 
 inline Float animationFactor(const Nanoseconds duration, const Nanoseconds started, const AnimationFlags flags, const Nanoseconds time) {

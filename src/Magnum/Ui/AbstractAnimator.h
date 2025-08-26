@@ -956,9 +956,7 @@ class MAGNUM_UI_EXPORT AbstractAnimator {
          * information.
          * @see @ref started()
          */
-        bool isScheduled(AnimationHandle handle) const {
-            return state(handle) == AnimationState::Scheduled;
-        }
+        bool isScheduled(AnimationHandle handle) const;
 
         /**
          * @brief Whether the animation is scheduled assuming it belongs to this animator
@@ -969,9 +967,7 @@ class MAGNUM_UI_EXPORT AbstractAnimator {
          * information.
          * @see @ref started()
          */
-        bool isScheduled(AnimatorDataHandle handle) const {
-            return state(handle) == AnimationState::Scheduled;
-        }
+        bool isScheduled(AnimatorDataHandle handle) const;
 
         /**
          * @brief Whether the animation is playing
@@ -982,9 +978,7 @@ class MAGNUM_UI_EXPORT AbstractAnimator {
          * information.
          * @see @ref started()
          */
-        bool isPlaying(AnimationHandle handle) const {
-            return state(handle) == AnimationState::Playing;
-        }
+        bool isPlaying(AnimationHandle handle) const;
 
         /**
          * @brief Whether the animation is playing assuming it belongs to this animator
@@ -995,9 +989,7 @@ class MAGNUM_UI_EXPORT AbstractAnimator {
          * information.
          * @see @ref started()
          */
-        bool isPlaying(AnimatorDataHandle handle) const {
-            return state(handle) == AnimationState::Playing;
-        }
+        bool isPlaying(AnimatorDataHandle handle) const;
 
         /**
          * @brief Whether the animation is paused
@@ -1008,9 +1000,7 @@ class MAGNUM_UI_EXPORT AbstractAnimator {
          * information.
          * @see @ref paused()
          */
-        bool isPaused(AnimationHandle handle) const {
-            return state(handle) == AnimationState::Paused;
-        }
+        bool isPaused(AnimationHandle handle) const;
 
         /**
          * @brief Whether the animation is paused assuming it belongs to this animator
@@ -1021,9 +1011,7 @@ class MAGNUM_UI_EXPORT AbstractAnimator {
          * information.
          * @see @ref paused()
          */
-        bool isPaused(AnimatorDataHandle handle) const {
-            return state(handle) == AnimationState::Paused;
-        }
+        bool isPaused(AnimatorDataHandle handle) const;
 
         /**
          * @brief Whether the animation is stopped
@@ -1034,9 +1022,7 @@ class MAGNUM_UI_EXPORT AbstractAnimator {
          * information.
          * @see @ref stopped()
          */
-        bool isStopped(AnimationHandle handle) const {
-            return state(handle) == AnimationState::Stopped;
-        }
+        bool isStopped(AnimationHandle handle) const;
 
         /**
          * @brief Whether the animation is stopped assuming it belongs to this animator
@@ -1047,9 +1033,7 @@ class MAGNUM_UI_EXPORT AbstractAnimator {
          * information.
          * @see @ref stopped()
          */
-        bool isStopped(AnimatorDataHandle handle) const {
-            return state(handle) == AnimationState::Stopped;
-        }
+        bool isStopped(AnimatorDataHandle handle) const;
 
         /**
          * @brief Animation interpolation factor
