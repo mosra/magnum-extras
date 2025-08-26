@@ -1610,7 +1610,7 @@ class MAGNUM_UI_EXPORT LineLayer::DebugIntegration: public AbstractVisualLayer::
 
         #ifndef DOXYGEN_GENERATING_OUTPUT
         /* Used internally by DebugLayer, no point in documenting it here */
-        void print(Debug& out, const LineLayer& layer, const Containers::StringView& layerName, LayerDataHandle data);
+        void print(Debug& debug, const LineLayer& layer, const Containers::StringView& layerName, LayerDataHandle data);
         #endif
 };
 
