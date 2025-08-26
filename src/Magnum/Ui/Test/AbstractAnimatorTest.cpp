@@ -54,7 +54,9 @@ struct AbstractAnimatorTest: TestSuite::Tester {
     void debugState();
     void debugStates();
     void debugAnimationFlag();
+    void debugAnimationFlagPacked();
     void debugAnimationFlags();
+    void debugAnimationFlagsPacked();
     void debugAnimationState();
     void debugAnimationStatePacked();
     void debugNodeAnimatorUpdate();
@@ -773,7 +775,9 @@ AbstractAnimatorTest::AbstractAnimatorTest() {
               &AbstractAnimatorTest::debugState,
               &AbstractAnimatorTest::debugStates,
               &AbstractAnimatorTest::debugAnimationFlag,
+              &AbstractAnimatorTest::debugAnimationFlagPacked,
               &AbstractAnimatorTest::debugAnimationFlags,
+              &AbstractAnimatorTest::debugAnimationFlagsPacked,
               &AbstractAnimatorTest::debugAnimationState,
               &AbstractAnimatorTest::debugAnimationStatePacked,
               &AbstractAnimatorTest::debugNodeAnimatorUpdate,
@@ -900,10 +904,24 @@ void AbstractAnimatorTest::debugAnimationFlag() {
     CORRADE_COMPARE(out, "Ui::AnimationFlag::KeepOncePlayed Ui::AnimationFlag(0xbe)\n");
 }
 
+void AbstractAnimatorTest::debugAnimationFlagPacked() {
+    Containers::String out;
+    /* Last is not packed, ones before should not make any flags persistent */
+    Debug{&out} << Debug::packed << AnimationFlag::KeepOncePlayed << Debug::packed << AnimationFlag(0xbe) << AnimationFlag::Reverse;
+    CORRADE_COMPARE(out, "KeepOncePlayed 0xbe Ui::AnimationFlag::Reverse\n");
+}
+
 void AbstractAnimatorTest::debugAnimationFlags() {
     Containers::String out;
     Debug{&out} << (AnimationFlag::KeepOncePlayed|AnimationFlag::Reverse|AnimationFlag(0xe0)) << AnimationFlags{};
     CORRADE_COMPARE(out, "Ui::AnimationFlag::KeepOncePlayed|Ui::AnimationFlag::Reverse|Ui::AnimationFlag(0xe0) Ui::AnimationFlags{}\n");
+}
+
+void AbstractAnimatorTest::debugAnimationFlagsPacked() {
+    Containers::String out;
+    /* Last is not packed, ones before should not make any flags persistent */
+    Debug{&out} << Debug::packed << (AnimationFlag::KeepOncePlayed|AnimationFlag::Reverse|AnimationFlag(0xe0)) << Debug::packed << AnimationFlags{} << (AnimationFlag::Reverse|AnimationFlag::ReverseEveryOther);
+    CORRADE_COMPARE(out, "KeepOncePlayed|Reverse|0xe0 {} Ui::AnimationFlag::Reverse|Ui::AnimationFlag::ReverseEveryOther\n");
 }
 
 void AbstractAnimatorTest::debugAnimationState() {

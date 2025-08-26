@@ -85,11 +85,14 @@ Debug& operator<<(Debug& debug, const AnimatorStates value) {
 }
 
 Debug& operator<<(Debug& debug, const AnimationFlag value) {
-    debug << "Ui::AnimationFlag" << Debug::nospace;
+    const bool packed = debug.immediateFlags() >= Debug::Flag::Packed;
+
+    if(!packed)
+        debug << "Ui::AnimationFlag" << Debug::nospace;
 
     switch(value) {
         /* LCOV_EXCL_START */
-        #define _c(value) case AnimationFlag::value: return debug << "::" #value;
+        #define _c(value) case AnimationFlag::value: return debug << (packed ? "" : "::") << Debug::nospace << #value;
         _c(KeepOncePlayed)
         _c(Reverse)
         _c(ReverseEveryOther)
@@ -97,11 +100,11 @@ Debug& operator<<(Debug& debug, const AnimationFlag value) {
         /* LCOV_EXCL_STOP */
     }
 
-    return debug << "(" << Debug::nospace << Debug::hex << UnsignedByte(value) << Debug::nospace << ")";
+    return debug << (packed ? "" : "(") << Debug::nospace << Debug::hex << UnsignedByte(value) << Debug::nospace << (packed ? "" : ")");
 }
 
 Debug& operator<<(Debug& debug, const AnimationFlags value) {
-    return Containers::enumSetDebugOutput(debug, value, "Ui::AnimationFlags{}", {
+    return Containers::enumSetDebugOutput(debug, value, debug.immediateFlags() >= Debug::Flag::Packed ? "{}" : "Ui::AnimationFlags{}", {
         AnimationFlag::KeepOncePlayed,
         AnimationFlag::Reverse,
         AnimationFlag::ReverseEveryOther,
