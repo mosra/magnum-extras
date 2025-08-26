@@ -2158,9 +2158,17 @@ void AbstractAnimatorTest::propertiesStateFactor() {
     animator.update(offset, mask, mask, mask, factors, mask);
 
     CORRADE_COMPARE(animator.state(handle), data.expectedState);
+    CORRADE_COMPARE(animator.isScheduled(handle), data.expectedState == AnimationState::Scheduled);
+    CORRADE_COMPARE(animator.isPlaying(handle), data.expectedState == AnimationState::Playing);
+    CORRADE_COMPARE(animator.isPaused(handle), data.expectedState == AnimationState::Paused);
+    CORRADE_COMPARE(animator.isStopped(handle), data.expectedState == AnimationState::Stopped);
     CORRADE_COMPARE(animator.factor(handle), data.expectedFactor);
     /* Using also the AnimatorDataHandle overload */
     CORRADE_COMPARE(animator.state(animationHandleData(handle)), data.expectedState);
+    CORRADE_COMPARE(animator.isScheduled(animationHandleData(handle)), data.expectedState == AnimationState::Scheduled);
+    CORRADE_COMPARE(animator.isPlaying(animationHandleData(handle)), data.expectedState == AnimationState::Playing);
+    CORRADE_COMPARE(animator.isPaused(animationHandleData(handle)), data.expectedState == AnimationState::Paused);
+    CORRADE_COMPARE(animator.isStopped(animationHandleData(handle)), data.expectedState == AnimationState::Stopped);
     CORRADE_COMPARE(animator.factor(animationHandleData(handle)), data.expectedFactor);
 }
 
@@ -2189,6 +2197,10 @@ void AbstractAnimatorTest::propertiesInvalidHandle() {
     animator.paused(AnimationHandle::Null);
     animator.stopped(AnimationHandle::Null);
     animator.state(AnimationHandle::Null);
+    animator.isScheduled(AnimationHandle::Null);
+    animator.isPlaying(AnimationHandle::Null);
+    animator.isPaused(AnimationHandle::Null);
+    animator.isStopped(AnimationHandle::Null);
     animator.factor(AnimationHandle::Null);
     /* Valid animator, invalid data */
     animator.duration(animationHandle(animator.handle(), AnimatorDataHandle(0x123abcde)));
@@ -2202,6 +2214,10 @@ void AbstractAnimatorTest::propertiesInvalidHandle() {
     animator.paused(animationHandle(animator.handle(), AnimatorDataHandle(0x123abcde)));
     animator.stopped(animationHandle(animator.handle(), AnimatorDataHandle(0x123abcde)));
     animator.state(animationHandle(animator.handle(), AnimatorDataHandle(0x123abcde)));
+    animator.isScheduled(animationHandle(animator.handle(), AnimatorDataHandle(0x123abcde)));
+    animator.isPlaying(animationHandle(animator.handle(), AnimatorDataHandle(0x123abcde)));
+    animator.isPaused(animationHandle(animator.handle(), AnimatorDataHandle(0x123abcde)));
+    animator.isStopped(animationHandle(animator.handle(), AnimatorDataHandle(0x123abcde)));
     animator.factor(animationHandle(animator.handle(), AnimatorDataHandle(0x123abcde)));
     /* Invalid animator, valid data */
     animator.duration(animationHandle(AnimatorHandle::Null, animationHandleData(handle)));
@@ -2215,6 +2231,10 @@ void AbstractAnimatorTest::propertiesInvalidHandle() {
     animator.paused(animationHandle(AnimatorHandle::Null, animationHandleData(handle)));
     animator.stopped(animationHandle(AnimatorHandle::Null, animationHandleData(handle)));
     animator.state(animationHandle(AnimatorHandle::Null, animationHandleData(handle)));
+    animator.isScheduled(animationHandle(AnimatorHandle::Null, animationHandleData(handle)));
+    animator.isPlaying(animationHandle(AnimatorHandle::Null, animationHandleData(handle)));
+    animator.isPaused(animationHandle(AnimatorHandle::Null, animationHandleData(handle)));
+    animator.isStopped(animationHandle(AnimatorHandle::Null, animationHandleData(handle)));
     animator.factor(animationHandle(AnimatorHandle::Null, animationHandleData(handle)));
     /* AnimatorDataHandle directly */
     animator.duration(AnimatorDataHandle(0x123abcde));
@@ -2228,6 +2248,10 @@ void AbstractAnimatorTest::propertiesInvalidHandle() {
     animator.paused(AnimatorDataHandle(0x123abcde));
     animator.stopped(AnimatorDataHandle(0x123abcde));
     animator.state(AnimatorDataHandle(0x123abcde));
+    animator.isScheduled(AnimatorDataHandle(0x123abcde));
+    animator.isPlaying(AnimatorDataHandle(0x123abcde));
+    animator.isPaused(AnimatorDataHandle(0x123abcde));
+    animator.isStopped(AnimatorDataHandle(0x123abcde));
     animator.factor(AnimatorDataHandle(0x123abcde));
     CORRADE_COMPARE_AS(out,
         "Ui::AbstractAnimator::duration(): invalid handle Ui::AnimationHandle::Null\n"
@@ -2240,6 +2264,12 @@ void AbstractAnimatorTest::propertiesInvalidHandle() {
         "Ui::AbstractAnimator::started(): invalid handle Ui::AnimationHandle::Null\n"
         "Ui::AbstractAnimator::paused(): invalid handle Ui::AnimationHandle::Null\n"
         "Ui::AbstractAnimator::stopped(): invalid handle Ui::AnimationHandle::Null\n"
+        "Ui::AbstractAnimator::state(): invalid handle Ui::AnimationHandle::Null\n"
+        /* The isScheduled(), isPlaying(), isPaused() and isStopped()
+           convenience helpers delegate to state(), inheriting its assert */
+        "Ui::AbstractAnimator::state(): invalid handle Ui::AnimationHandle::Null\n"
+        "Ui::AbstractAnimator::state(): invalid handle Ui::AnimationHandle::Null\n"
+        "Ui::AbstractAnimator::state(): invalid handle Ui::AnimationHandle::Null\n"
         "Ui::AbstractAnimator::state(): invalid handle Ui::AnimationHandle::Null\n"
         "Ui::AbstractAnimator::factor(): invalid handle Ui::AnimationHandle::Null\n"
 
@@ -2254,6 +2284,12 @@ void AbstractAnimatorTest::propertiesInvalidHandle() {
         "Ui::AbstractAnimator::paused(): invalid handle Ui::AnimationHandle({0x0, 0x1}, {0xabcde, 0x123})\n"
         "Ui::AbstractAnimator::stopped(): invalid handle Ui::AnimationHandle({0x0, 0x1}, {0xabcde, 0x123})\n"
         "Ui::AbstractAnimator::state(): invalid handle Ui::AnimationHandle({0x0, 0x1}, {0xabcde, 0x123})\n"
+        /* The isScheduled(), isPlaying(), isPaused() and isStopped()
+           convenience helpers delegate to state(), inheriting its assert */
+        "Ui::AbstractAnimator::state(): invalid handle Ui::AnimationHandle({0x0, 0x1}, {0xabcde, 0x123})\n"
+        "Ui::AbstractAnimator::state(): invalid handle Ui::AnimationHandle({0x0, 0x1}, {0xabcde, 0x123})\n"
+        "Ui::AbstractAnimator::state(): invalid handle Ui::AnimationHandle({0x0, 0x1}, {0xabcde, 0x123})\n"
+        "Ui::AbstractAnimator::state(): invalid handle Ui::AnimationHandle({0x0, 0x1}, {0xabcde, 0x123})\n"
         "Ui::AbstractAnimator::factor(): invalid handle Ui::AnimationHandle({0x0, 0x1}, {0xabcde, 0x123})\n"
 
         "Ui::AbstractAnimator::duration(): invalid handle Ui::AnimationHandle(Null, {0x0, 0x1})\n"
@@ -2267,6 +2303,12 @@ void AbstractAnimatorTest::propertiesInvalidHandle() {
         "Ui::AbstractAnimator::paused(): invalid handle Ui::AnimationHandle(Null, {0x0, 0x1})\n"
         "Ui::AbstractAnimator::stopped(): invalid handle Ui::AnimationHandle(Null, {0x0, 0x1})\n"
         "Ui::AbstractAnimator::state(): invalid handle Ui::AnimationHandle(Null, {0x0, 0x1})\n"
+        /* The isScheduled(), isPlaying(), isPaused() and isStopped()
+           convenience helpers delegate to state(), inheriting its assert */
+        "Ui::AbstractAnimator::state(): invalid handle Ui::AnimationHandle(Null, {0x0, 0x1})\n"
+        "Ui::AbstractAnimator::state(): invalid handle Ui::AnimationHandle(Null, {0x0, 0x1})\n"
+        "Ui::AbstractAnimator::state(): invalid handle Ui::AnimationHandle(Null, {0x0, 0x1})\n"
+        "Ui::AbstractAnimator::state(): invalid handle Ui::AnimationHandle(Null, {0x0, 0x1})\n"
         "Ui::AbstractAnimator::factor(): invalid handle Ui::AnimationHandle(Null, {0x0, 0x1})\n"
 
         "Ui::AbstractAnimator::duration(): invalid handle Ui::AnimatorDataHandle(0xabcde, 0x123)\n"
@@ -2279,6 +2321,12 @@ void AbstractAnimatorTest::propertiesInvalidHandle() {
         "Ui::AbstractAnimator::started(): invalid handle Ui::AnimatorDataHandle(0xabcde, 0x123)\n"
         "Ui::AbstractAnimator::paused(): invalid handle Ui::AnimatorDataHandle(0xabcde, 0x123)\n"
         "Ui::AbstractAnimator::stopped(): invalid handle Ui::AnimatorDataHandle(0xabcde, 0x123)\n"
+        "Ui::AbstractAnimator::state(): invalid handle Ui::AnimatorDataHandle(0xabcde, 0x123)\n"
+        /* The isScheduled(), isPlaying(), isPaused() and isStopped()
+           convenience helpers delegate to state(), inheriting its assert */
+        "Ui::AbstractAnimator::state(): invalid handle Ui::AnimatorDataHandle(0xabcde, 0x123)\n"
+        "Ui::AbstractAnimator::state(): invalid handle Ui::AnimatorDataHandle(0xabcde, 0x123)\n"
+        "Ui::AbstractAnimator::state(): invalid handle Ui::AnimatorDataHandle(0xabcde, 0x123)\n"
         "Ui::AbstractAnimator::state(): invalid handle Ui::AnimatorDataHandle(0xabcde, 0x123)\n"
         "Ui::AbstractAnimator::factor(): invalid handle Ui::AnimatorDataHandle(0xabcde, 0x123)\n",
         TestSuite::Compare::String);

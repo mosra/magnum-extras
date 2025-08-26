@@ -248,7 +248,9 @@ CORRADE_ENUMSET_OPERATORS(AnimationFlags)
 @brief Animation state
 @m_since_latest
 
-@see @ref AbstractAnimator::state()
+@see @ref AbstractAnimator::state(), @ref AbstractAnimator::isScheduled(),
+    @ref AbstractAnimator::isPlaying(), @ref AbstractAnimator::isPaused(),
+    @ref AbstractAnimator::isStopped()
 */
 enum class AnimationState: UnsignedByte {
     /**
@@ -657,8 +659,11 @@ class MAGNUM_UI_EXPORT AbstractAnimator {
          * also @ref started(AnimatorDataHandle) const which is a simpler
          * operation if the animation is already known to belong to this
          * animator.
-         * @see @ref isHandleValid(AnimationHandle) const,
-         *      @ref state(AnimationHandle) const
+         *
+         * Use @ref state(AnimationHandle) const, @ref isScheduled(),
+         * @ref isPlaying(), @ref isPaused() or @ref isStopped() for checking
+         * what state is the animation in at current @ref time().
+         * @see @ref isHandleValid(AnimationHandle) const
          */
         Nanoseconds started(AnimationHandle handle) const;
 
@@ -686,8 +691,11 @@ class MAGNUM_UI_EXPORT AbstractAnimator {
          * also @ref paused(AnimatorDataHandle) const which is a simpler
          * operation if the animation is already known to belong to this
          * animator.
-         * @see @ref isHandleValid(AnimationHandle) const,
-         *      @ref state(AnimationHandle) const
+         *
+         * Use @ref state(AnimationHandle) const, @ref isScheduled(),
+         * @ref isPlaying(), @ref isPaused() or @ref isStopped() for checking
+         * what state is the animation in at current @ref time().
+         * @see @ref isHandleValid(AnimationHandle) const
          */
         Nanoseconds paused(AnimationHandle handle) const;
 
@@ -715,8 +723,11 @@ class MAGNUM_UI_EXPORT AbstractAnimator {
          * also @ref stopped(AnimatorDataHandle) const which is a simpler
          * operation if the animation is already known to belong to this
          * animator.
-         * @see @ref isHandleValid(AnimationHandle) const,
-         *      @ref state(AnimationHandle) const
+         *
+         * Use @ref state(AnimationHandle) const, @ref isScheduled(),
+         * @ref isPlaying(), @ref isPaused() or @ref isStopped() for checking
+         * what state is the animation in at current @ref time().
+         * @see @ref isHandleValid(AnimationHandle) const
          */
         Nanoseconds stopped(AnimationHandle handle) const;
 
@@ -920,7 +931,9 @@ class MAGNUM_UI_EXPORT AbstractAnimator {
          * also @ref state(AnimatorDataHandle) const which is a simpler
          * operation if the animation is already known to belong to this
          * animator.
-         * @see @ref isHandleValid(AnimationHandle) const, @ref factor()
+         * @see @ref isHandleValid(AnimationHandle) const, @ref factor(),
+         *      @ref isScheduled(), @ref isPlaying(), @ref isPaused(),
+         *      @ref isStopped()
          */
         AnimationState state(AnimationHandle handle) const;
 
@@ -933,6 +946,110 @@ class MAGNUM_UI_EXPORT AbstractAnimator {
          * @see @ref animationHandleData()
          */
         AnimationState state(AnimatorDataHandle handle) const;
+
+        /**
+         * @brief Whether the animation is scheduled
+         *
+         * Convenience shorthand comparing the result of
+         * @ref state(AnimationHandle) const to @ref AnimationState::Scheduled.
+         * See documentation of @ref state(AnimationHandle) const for more
+         * information.
+         * @see @ref started()
+         */
+        bool isScheduled(AnimationHandle handle) const {
+            return state(handle) == AnimationState::Scheduled;
+        }
+
+        /**
+         * @brief Whether the animation is scheduled assuming it belongs to this animator
+         *
+         * Convenience shorthand comparing the result of
+         * @ref state(AnimatorDataHandle) const to @ref AnimationState::Scheduled.
+         * See documentation of @ref state(AnimatorDataHandle) const for more
+         * information.
+         * @see @ref started()
+         */
+        bool isScheduled(AnimatorDataHandle handle) const {
+            return state(handle) == AnimationState::Scheduled;
+        }
+
+        /**
+         * @brief Whether the animation is playing
+         *
+         * Convenience shorthand comparing the result of
+         * @ref state(AnimationHandle) const to @ref AnimationState::Playing.
+         * See documentation of @ref state(AnimationHandle) const for more
+         * information.
+         * @see @ref started()
+         */
+        bool isPlaying(AnimationHandle handle) const {
+            return state(handle) == AnimationState::Playing;
+        }
+
+        /**
+         * @brief Whether the animation is playing assuming it belongs to this animator
+         *
+         * Convenience shorthand comparing the result of
+         * @ref state(AnimatorDataHandle) const to @ref AnimationState::Playing.
+         * See documentation of @ref state(AnimatorDataHandle) const for more
+         * information.
+         * @see @ref started()
+         */
+        bool isPlaying(AnimatorDataHandle handle) const {
+            return state(handle) == AnimationState::Playing;
+        }
+
+        /**
+         * @brief Whether the animation is paused
+         *
+         * Convenience shorthand comparing the result of
+         * @ref state(AnimationHandle) const to @ref AnimationState::Paused.
+         * See documentation of @ref state(AnimationHandle) const for more
+         * information.
+         * @see @ref paused()
+         */
+        bool isPaused(AnimationHandle handle) const {
+            return state(handle) == AnimationState::Paused;
+        }
+
+        /**
+         * @brief Whether the animation is paused assuming it belongs to this animator
+         *
+         * Convenience shorthand comparing the result of
+         * @ref state(AnimatorDataHandle) const to @ref AnimationState::Paused.
+         * See documentation of @ref state(AnimatorDataHandle) const for more
+         * information.
+         * @see @ref paused()
+         */
+        bool isPaused(AnimatorDataHandle handle) const {
+            return state(handle) == AnimationState::Paused;
+        }
+
+        /**
+         * @brief Whether the animation is stopped
+         *
+         * Convenience shorthand comparing the result of
+         * @ref state(AnimationHandle) const to @ref AnimationState::Stopped.
+         * See documentation of @ref state(AnimationHandle) const for more
+         * information.
+         * @see @ref stopped()
+         */
+        bool isStopped(AnimationHandle handle) const {
+            return state(handle) == AnimationState::Stopped;
+        }
+
+        /**
+         * @brief Whether the animation is stopped assuming it belongs to this animator
+         *
+         * Convenience shorthand comparing the result of
+         * @ref state(AnimatorDataHandle) const to @ref AnimationState::Stopped.
+         * See documentation of @ref state(AnimatorDataHandle) const for more
+         * information.
+         * @see @ref stopped()
+         */
+        bool isStopped(AnimatorDataHandle handle) const {
+            return state(handle) == AnimationState::Stopped;
+        }
 
         /**
          * @brief Animation interpolation factor
