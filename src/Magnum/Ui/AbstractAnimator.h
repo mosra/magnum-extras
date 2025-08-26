@@ -966,7 +966,7 @@ class MAGNUM_UI_EXPORT AbstractAnimator {
         Float factor(AnimatorDataHandle handle) const;
 
         /**
-         * @brief Play an animation or resume a paused one
+         * @brief Play an animation from start or resume a paused one
          *
          * Expects that @p handle is valid. The function effectively just
          * updates the value of @ref started(AnimationHandle) const and sets
@@ -975,6 +975,9 @@ class MAGNUM_UI_EXPORT AbstractAnimator {
          * actual @ref AnimationState is then decided based on these three
          * times together with @ref duration(AnimationHandle) const,
          * @ref repeatCount(AnimationHandle) const and @ref time().
+         *
+         * If the animation is already playing, this functions makes it play
+         * from start.
          *
          * If calling this function resulted in the animation being
          * @ref AnimationState::Scheduled or @ref AnimationState::Playing, the
@@ -985,7 +988,7 @@ class MAGNUM_UI_EXPORT AbstractAnimator {
         void play(AnimationHandle handle, Nanoseconds time);
 
         /**
-         * @brief Play an animation or resume a paused one assuming it belongs to this animator
+         * @brief Play an animation from start or resume a paused one assuming it belongs to this animator
          *
          * Like @ref play(AnimationHandle, Nanoseconds) but without checking
          * that @p handle indeed belongs to this animator. See its

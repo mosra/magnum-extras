@@ -127,7 +127,7 @@ struct AbstractAnimatorTest: TestSuite::Tester {
     void cleanDataInvalidFeatures();
     void cleanDataNoLayerSet();
 
-    void playPauseStop();
+    void playResumePauseStop();
     void toggleFlagsAtTime();
     void playPauseStopToggleFlagsInvalid();
     void playPaused();
@@ -855,7 +855,7 @@ AbstractAnimatorTest::AbstractAnimatorTest() {
               &AbstractAnimatorTest::cleanDataInvalidFeatures,
               &AbstractAnimatorTest::cleanDataNoLayerSet,
 
-              &AbstractAnimatorTest::playPauseStop,
+              &AbstractAnimatorTest::playResumePauseStop,
               &AbstractAnimatorTest::toggleFlagsAtTime,
               &AbstractAnimatorTest::playPauseStopToggleFlagsInvalid});
 
@@ -3266,6 +3266,20 @@ void AbstractAnimatorTest::playPauseStop() {
     CORRADE_COMPARE(animator.paused(handle), 1005_nsec);
     CORRADE_COMPARE(animator.stopped(handle), 1007_nsec);
 
+    animator.play(handle, 400_nsec);
+    CORRADE_COMPARE(animator.started(handle), 400_nsec);
+    CORRADE_COMPARE(animator.duration(handle), 10_nsec);
+    CORRADE_COMPARE(animator.paused(handle), Nanoseconds::max());
+    CORRADE_COMPARE(animator.stopped(handle), Nanoseconds::max());
+
+    /* Calling play() with different time restarts from that time */
+    animator.play(handle, 700_nsec);
+    CORRADE_COMPARE(animator.started(handle), 700_nsec);
+    CORRADE_COMPARE(animator.duration(handle), 10_nsec);
+    CORRADE_COMPARE(animator.paused(handle), Nanoseconds::max());
+    CORRADE_COMPARE(animator.stopped(handle), Nanoseconds::max());
+
+    /* Same even if the time is in the past */
     animator.play(handle, 500_nsec);
     CORRADE_COMPARE(animator.started(handle), 500_nsec);
     CORRADE_COMPARE(animator.duration(handle), 10_nsec);
