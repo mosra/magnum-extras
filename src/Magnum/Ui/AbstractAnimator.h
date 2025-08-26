@@ -977,7 +977,8 @@ class MAGNUM_UI_EXPORT AbstractAnimator {
          * @ref repeatCount(AnimationHandle) const and @ref time().
          *
          * If the animation is already playing, this functions makes it play
-         * from start.
+         * from start. Use @ref resume() to start the animation only if it's
+         * not already playing.
          *
          * If calling this function resulted in the animation being
          * @ref AnimationState::Scheduled or @ref AnimationState::Playing, the
@@ -996,6 +997,27 @@ class MAGNUM_UI_EXPORT AbstractAnimator {
          * @see @ref animationHandleData()
          */
         void play(AnimatorDataHandle handle, Nanoseconds time);
+
+        /**
+         * @brief Resume an animation
+         *
+         * Expects that @p handle is valid. If the animation is already
+         * playing at @p time, does nothing. Otherwise delegates to
+         * @ref play(), see its documentation for more information.
+         * @see @ref isHandleValid(AnimationHandle) const,
+         *      @ref state(AnimationHandle) const
+         */
+        void resume(AnimationHandle handle, Nanoseconds time);
+
+        /**
+         * @brief Resume an animation assuming it belongs to this animator
+         *
+         * Like @ref resume(AnimationHandle, Nanoseconds) but without checking
+         * that @p handle indeed belongs to this animator. See its
+         * documentation for more information.
+         * @see @ref animationHandleData()
+         */
+        void resume(AnimatorDataHandle handle, Nanoseconds time);
 
         /**
          * @brief Pause an animation
@@ -1519,6 +1541,7 @@ class MAGNUM_UI_EXPORT AbstractAnimator {
         MAGNUM_UI_LOCAL DataHandle dataInternal(UnsignedInt id) const;
         MAGNUM_UI_LOCAL Float factorInternal(UnsignedInt id) const;
         MAGNUM_UI_LOCAL void playInternal(UnsignedInt id, Nanoseconds time);
+        MAGNUM_UI_LOCAL void resumeInternal(UnsignedInt id, Nanoseconds time);
         MAGNUM_UI_LOCAL void pauseInternal(UnsignedInt id, Nanoseconds time);
         MAGNUM_UI_LOCAL void stopInternal(UnsignedInt id, Nanoseconds time);
         MAGNUM_UI_LOCAL void setFlagsInternal(UnsignedInt id, AnimationFlags flags, Nanoseconds time);

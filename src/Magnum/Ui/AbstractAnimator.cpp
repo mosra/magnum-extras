@@ -975,6 +975,25 @@ void AbstractAnimator::playInternal(const UnsignedInt id, const Nanoseconds time
         state.state |= AnimatorState::NeedsAdvance;
 }
 
+void AbstractAnimator::resume(const AnimationHandle handle, const Nanoseconds time) {
+    CORRADE_ASSERT(isHandleValid(handle),
+        "Ui::AbstractAnimator::resume(): invalid handle" << handle, );
+    resumeInternal(animationHandleId(handle), time);
+}
+
+void AbstractAnimator::resume(const AnimatorDataHandle handle, const Nanoseconds time) {
+    CORRADE_ASSERT(isHandleValid(handle),
+        "Ui::AbstractAnimator::resume(): invalid handle" << handle, );
+    resumeInternal(animatorDataHandleId(handle), time);
+}
+
+void AbstractAnimator::resumeInternal(const UnsignedInt id, const Nanoseconds time) {
+    State& state = *_state;
+    Animation& animation = state.animations[id];
+    if(animationState(animation, time) != AnimationState::Playing)
+        playInternal(id, time);
+}
+
 void AbstractAnimator::pause(const AnimationHandle handle, const Nanoseconds time) {
     CORRADE_ASSERT(isHandleValid(handle),
         "Ui::AbstractAnimator::pause(): invalid handle" << handle, );

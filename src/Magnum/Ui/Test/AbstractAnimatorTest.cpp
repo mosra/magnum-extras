@@ -3230,7 +3230,7 @@ void AbstractAnimatorTest::cleanDataNoLayerSet() {
     CORRADE_COMPARE(out, "Ui::AbstractAnimator::cleanData(): no layer set for data attachment\n");
 }
 
-void AbstractAnimatorTest::playPauseStop() {
+void AbstractAnimatorTest::playResumePauseStop() {
     struct: AbstractAnimator {
         using AbstractAnimator::AbstractAnimator;
         using AbstractAnimator::create;
@@ -3280,7 +3280,45 @@ void AbstractAnimatorTest::playPauseStop() {
     CORRADE_COMPARE(animator.stopped(handle), Nanoseconds::max());
 
     /* Same even if the time is in the past */
-    animator.play(handle, 500_nsec);
+    animator.play(handle, -20_nsec);
+    CORRADE_COMPARE(animator.started(handle), -20_nsec);
+    CORRADE_COMPARE(animator.duration(handle), 10_nsec);
+    CORRADE_COMPARE(animator.paused(handle), Nanoseconds::max());
+    CORRADE_COMPARE(animator.stopped(handle), Nanoseconds::max());
+
+    /* Calling resume on an animation that's still playing at given time will
+       not touch it. Can't use state() for verification because it checks the
+       state at last animator update() time, which is 0_nsec here. */
+    animator.resume(handle, -15_nsec);
+    CORRADE_COMPARE(animator.started(handle), -20_nsec);
+    CORRADE_COMPARE(animator.duration(handle), 10_nsec);
+    CORRADE_COMPARE(animator.paused(handle), Nanoseconds::max());
+    CORRADE_COMPARE(animator.stopped(handle), Nanoseconds::max());
+
+    /* It's Stopped at -5 ns so it gets restarted */
+    animator.resume(handle, -5_nsec);
+    CORRADE_COMPARE(animator.started(handle), -5_nsec);
+    CORRADE_COMPARE(animator.duration(handle), 10_nsec);
+    CORRADE_COMPARE(animator.paused(handle), Nanoseconds::max());
+    CORRADE_COMPARE(animator.stopped(handle), Nanoseconds::max());
+
+    /* It will also restart if it's Paused ... */
+    animator.pause(handle, -2_nsec);
+    animator.resume(handle, 50_nsec);
+    CORRADE_COMPARE(animator.started(handle), 47_nsec); /* 3 ns already played */
+    CORRADE_COMPARE(animator.duration(handle), 10_nsec);
+    CORRADE_COMPARE(animator.paused(handle), Nanoseconds::max());
+    CORRADE_COMPARE(animator.stopped(handle), Nanoseconds::max());
+
+    /* Scheduled ... */
+    animator.resume(handle, -20_nsec);
+    CORRADE_COMPARE(animator.started(handle), -20_nsec);
+    CORRADE_COMPARE(animator.duration(handle), 10_nsec);
+    CORRADE_COMPARE(animator.paused(handle), Nanoseconds::max());
+    CORRADE_COMPARE(animator.stopped(handle), Nanoseconds::max());
+
+    /* ... or Stopped. Note that Here it's stopped already at 0_nsec, but */
+    animator.resume(handle, 500_nsec);
     CORRADE_COMPARE(animator.started(handle), 500_nsec);
     CORRADE_COMPARE(animator.duration(handle), 10_nsec);
     CORRADE_COMPARE(animator.paused(handle), Nanoseconds::max());
@@ -3301,6 +3339,20 @@ void AbstractAnimatorTest::playPauseStop() {
 
     animator.play(animationHandleData(handle), 400_nsec);
     CORRADE_COMPARE(animator.started(handle), 400_nsec);
+    CORRADE_COMPARE(animator.duration(handle), 10_nsec);
+    CORRADE_COMPARE(animator.paused(handle), Nanoseconds::max());
+    CORRADE_COMPARE(animator.stopped(handle), Nanoseconds::max());
+
+    /* No change here, still playing at that time */
+    animator.resume(animationHandleData(handle), 405_nsec);
+    CORRADE_COMPARE(animator.started(handle), 400_nsec);
+    CORRADE_COMPARE(animator.duration(handle), 10_nsec);
+    CORRADE_COMPARE(animator.paused(handle), Nanoseconds::max());
+    CORRADE_COMPARE(animator.stopped(handle), Nanoseconds::max());
+
+    /* Here it resumes */
+    animator.resume(animationHandleData(handle), 500_nsec);
+    CORRADE_COMPARE(animator.started(handle), 500_nsec);
     CORRADE_COMPARE(animator.duration(handle), 10_nsec);
     CORRADE_COMPARE(animator.paused(handle), Nanoseconds::max());
     CORRADE_COMPARE(animator.stopped(handle), Nanoseconds::max());
@@ -3547,6 +3599,7 @@ void AbstractAnimatorTest::playPauseStopToggleFlagsInvalid() {
     Containers::String out;
     Error redirectError{&out};
     animator.play(AnimationHandle::Null, 0_nsec);
+    animator.resume(AnimationHandle::Null, 0_nsec);
     animator.pause(AnimationHandle::Null, 0_nsec);
     animator.stop(AnimationHandle::Null, 0_nsec);
     animator.setFlags(AnimationHandle::Null, {}, 0_nsec);
@@ -3554,6 +3607,7 @@ void AbstractAnimatorTest::playPauseStopToggleFlagsInvalid() {
     animator.clearFlags(AnimationHandle::Null, {}, 0_nsec);
     /* Valid animator, invalid data */
     animator.play(animationHandle(animator.handle(), AnimatorDataHandle(0x123abcde)), 0_nsec);
+    animator.resume(animationHandle(animator.handle(), AnimatorDataHandle(0x123abcde)), 0_nsec);
     animator.pause(animationHandle(animator.handle(), AnimatorDataHandle(0x123abcde)), 0_nsec);
     animator.stop(animationHandle(animator.handle(), AnimatorDataHandle(0x123abcde)), 0_nsec);
     animator.setFlags(animationHandle(animator.handle(), AnimatorDataHandle(0x123abcde)), {}, 0_nsec);
@@ -3561,6 +3615,7 @@ void AbstractAnimatorTest::playPauseStopToggleFlagsInvalid() {
     animator.clearFlags(animationHandle(animator.handle(), AnimatorDataHandle(0x123abcde)), {}, 0_nsec);
     /* Invalid animator, valid data */
     animator.play(animationHandle(AnimatorHandle::Null, animationHandleData(handle)), 0_nsec);
+    animator.resume(animationHandle(AnimatorHandle::Null, animationHandleData(handle)), 0_nsec);
     animator.pause(animationHandle(AnimatorHandle::Null, animationHandleData(handle)), 0_nsec);
     animator.stop(animationHandle(AnimatorHandle::Null, animationHandleData(handle)), 0_nsec);
     animator.setFlags(animationHandle(AnimatorHandle::Null, animationHandleData(handle)), {}, 0_nsec);
@@ -3568,6 +3623,7 @@ void AbstractAnimatorTest::playPauseStopToggleFlagsInvalid() {
     animator.clearFlags(animationHandle(AnimatorHandle::Null, animationHandleData(handle)), {}, 0_nsec);
     /* AnimatorDataHandle directly */
     animator.play(AnimatorDataHandle(0x123abcde), 0_nsec);
+    animator.resume(AnimatorDataHandle(0x123abcde), 0_nsec);
     animator.pause(AnimatorDataHandle(0x123abcde), 0_nsec);
     animator.stop(AnimatorDataHandle(0x123abcde), 0_nsec);
     animator.setFlags(AnimatorDataHandle(0x123abcde), {}, 0_nsec);
@@ -3575,6 +3631,7 @@ void AbstractAnimatorTest::playPauseStopToggleFlagsInvalid() {
     animator.clearFlags(AnimatorDataHandle(0x123abcde), {}, 0_nsec);
     CORRADE_COMPARE_AS(out,
         "Ui::AbstractAnimator::play(): invalid handle Ui::AnimationHandle::Null\n"
+        "Ui::AbstractAnimator::resume(): invalid handle Ui::AnimationHandle::Null\n"
         "Ui::AbstractAnimator::pause(): invalid handle Ui::AnimationHandle::Null\n"
         "Ui::AbstractAnimator::stop(): invalid handle Ui::AnimationHandle::Null\n"
         "Ui::AbstractAnimator::setFlags(): invalid handle Ui::AnimationHandle::Null\n"
@@ -3582,6 +3639,7 @@ void AbstractAnimatorTest::playPauseStopToggleFlagsInvalid() {
         "Ui::AbstractAnimator::clearFlags(): invalid handle Ui::AnimationHandle::Null\n"
 
         "Ui::AbstractAnimator::play(): invalid handle Ui::AnimationHandle({0x0, 0x1}, {0xabcde, 0x123})\n"
+        "Ui::AbstractAnimator::resume(): invalid handle Ui::AnimationHandle({0x0, 0x1}, {0xabcde, 0x123})\n"
         "Ui::AbstractAnimator::pause(): invalid handle Ui::AnimationHandle({0x0, 0x1}, {0xabcde, 0x123})\n"
         "Ui::AbstractAnimator::stop(): invalid handle Ui::AnimationHandle({0x0, 0x1}, {0xabcde, 0x123})\n"
         "Ui::AbstractAnimator::setFlags(): invalid handle Ui::AnimationHandle({0x0, 0x1}, {0xabcde, 0x123})\n"
@@ -3589,6 +3647,7 @@ void AbstractAnimatorTest::playPauseStopToggleFlagsInvalid() {
         "Ui::AbstractAnimator::clearFlags(): invalid handle Ui::AnimationHandle({0x0, 0x1}, {0xabcde, 0x123})\n"
 
         "Ui::AbstractAnimator::play(): invalid handle Ui::AnimationHandle(Null, {0x0, 0x1})\n"
+        "Ui::AbstractAnimator::resume(): invalid handle Ui::AnimationHandle(Null, {0x0, 0x1})\n"
         "Ui::AbstractAnimator::pause(): invalid handle Ui::AnimationHandle(Null, {0x0, 0x1})\n"
         "Ui::AbstractAnimator::stop(): invalid handle Ui::AnimationHandle(Null, {0x0, 0x1})\n"
         "Ui::AbstractAnimator::setFlags(): invalid handle Ui::AnimationHandle(Null, {0x0, 0x1})\n"
@@ -3596,6 +3655,7 @@ void AbstractAnimatorTest::playPauseStopToggleFlagsInvalid() {
         "Ui::AbstractAnimator::clearFlags(): invalid handle Ui::AnimationHandle(Null, {0x0, 0x1})\n"
 
         "Ui::AbstractAnimator::play(): invalid handle Ui::AnimatorDataHandle(0xabcde, 0x123)\n"
+        "Ui::AbstractAnimator::resume(): invalid handle Ui::AnimatorDataHandle(0xabcde, 0x123)\n"
         "Ui::AbstractAnimator::pause(): invalid handle Ui::AnimatorDataHandle(0xabcde, 0x123)\n"
         "Ui::AbstractAnimator::stop(): invalid handle Ui::AnimatorDataHandle(0xabcde, 0x123)\n"
         "Ui::AbstractAnimator::setFlags(): invalid handle Ui::AnimatorDataHandle(0xabcde, 0x123)\n"
