@@ -504,8 +504,9 @@ bool DebugLayer::highlightNode(const NodeHandle handle) {
                     ++otherLayerCount;
             }
 
-            if(otherLayerCount)
+            if(otherDataCount)
                 debug << " " << otherDataCount << "data from" << otherLayerCount << (hasNamedLayers ? "other layers" : "layers") << Debug::newline;
+            else CORRADE_INTERNAL_ASSERT(otherLayerCount == 0);
         }
     }
 
