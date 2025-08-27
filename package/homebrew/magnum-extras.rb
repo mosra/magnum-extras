@@ -1,5 +1,5 @@
 class MagnumExtras < Formula
-  desc "Extras for the Magnum C++11/C++14 graphics engine"
+  desc "Extras for the Magnum C++11 graphics engine"
   homepage "https://magnum.graphics"
   # git describe origin/master, except the `v` prefix
   version "2020.06-865-g54669108e2"
