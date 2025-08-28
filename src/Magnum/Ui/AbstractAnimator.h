@@ -328,6 +328,10 @@ MAGNUM_UI_EXPORT Debug& operator<<(Debug& debug, AnimationState value);
 */
 class MAGNUM_UI_EXPORT AbstractAnimator {
     public:
+        #ifdef DOXYGEN_GENERATING_OUTPUT
+        class DebugIntegration; /* For documentation only */
+        #endif
+
         /**
          * @brief Constructor
          * @param handle    Handle returned by
@@ -1650,6 +1654,44 @@ class MAGNUM_UI_EXPORT AbstractAnimator {
         struct State;
         Containers::Pointer<State> _state;
 };
+
+#ifdef DOXYGEN_GENERATING_OUTPUT
+/**
+@brief Debug layer integration
+
+If an inner type with this name is implemented on an animator that's passed to
+@ref DebugLayer::setAnimatorName(const T&, const Containers::StringView&), the
+@ref print() function is used by the @ref DebugLayerFlag::NodeHighlight
+functionality to provide additional details about all animation attachments
+coming from given animator. See @ref Ui-DebugLayer-integration for more
+information.
+*/
+/* While it'd be significantly simpler both for the library and for animators
+   to have this as a virtual base class that then gets subclassed with
+   interfaces implemented, it's deliberately not done to avoid header
+   dependencies as well as make it possible to DCE all debug-layer-related code
+   if it isn't used. */
+class AbstractAnimator::DebugIntegration {
+    public:
+        /**
+         * @brief Print details about a particular animation
+         * @param debug     Debug output where to print
+         * @param animator  Animator associated with given @p animation. The
+         *      implementation can use either the animator type this class is
+         *      part of or any base type.
+         * @param animatorName  Animator name that was passed to
+         *      @ref DebugLayer::setAnimatorName(const T&, const Containers::StringView&)
+         * @param animation Animation to print info about. Guaranteed to be
+         *      valid.
+         *
+         * Used internally by @ref DebugLayer. To fit among other info provided
+         * by @ref DebugLayer itself, the implementation is expected to indent
+         * the output by at least two spaces and end with a newline (i.e.,
+         * @relativeref{Magnum,Debug::newline}).
+         */
+        void print(Debug& debug, const Animator& animator, Containers::StringView animatorName, AnimatorDataHandle animation);
+};
+#endif
 
 /**
 @brief Base for generic animators

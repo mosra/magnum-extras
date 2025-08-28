@@ -31,6 +31,7 @@
 #include <Corrade/Containers/GrowableArray.h>
 #include <Corrade/Containers/StridedArrayView.h>
 
+#include "Magnum/Ui/AbstractAnimator.h"
 #include "Magnum/Ui/Event.h"
 #include "Magnum/Ui/NodeFlags.h"
 #include "Magnum/Ui/UserInterface.h"
@@ -39,18 +40,9 @@
 namespace Magnum { namespace Ui {
 
 using namespace Containers::Literals;
+using namespace Math::Literals;
 
 Debug& operator<<(Debug& debug, const DebugLayerSource value) {
-    /* Special case coming from the DebugLayerSources printer. As both are a
-       superset of Nodes, printing just one would result in
-       `DebugLayerSource::NodeHierarchy|DebugLayerSource::Layers|DebugLayerSource(0x8)`
-       in the output. */
-    if(value == DebugLayerSource(UnsignedShort(DebugLayerSource::NodeHierarchy|DebugLayerSource::NodeData)))
-        return debug << DebugLayerSource::NodeHierarchy << Debug::nospace << "|" << Debug::nospace << DebugLayerSource::NodeData;
-    /* Similarly for a superset of NodeData */
-    if(value == DebugLayerSource(UnsignedShort(DebugLayerSource::NodeHierarchy|DebugLayerSource::NodeDataDetails)))
-        return debug << DebugLayerSource::NodeHierarchy << Debug::nospace << "|" << Debug::nospace << DebugLayerSource::NodeDataDetails;
-
     debug << "Ui::DebugLayerSource" << Debug::nospace;
 
     switch(value) {
@@ -58,9 +50,12 @@ Debug& operator<<(Debug& debug, const DebugLayerSource value) {
         #define _c(value) case DebugLayerSource::value: return debug << "::" #value;
         _c(Nodes)
         _c(Layers)
+        _c(Animators)
         _c(NodeHierarchy)
         _c(NodeData)
         _c(NodeDataDetails)
+        _c(NodeAnimations)
+        _c(NodeAnimationDetails)
         #undef _c
         /* LCOV_EXCL_STOP */
     }
@@ -69,26 +64,51 @@ Debug& operator<<(Debug& debug, const DebugLayerSource value) {
 }
 
 Debug& operator<<(Debug& debug, const DebugLayerSources value) {
+    /* All those are a superset of Nodes, so if at least two are present, print
+       them separately as printing the regular way one would result in
+       `Ui::DebugLayerSource::NodeHierarchy|Ui::DebugLayerSource::NodeData|Ui::DebugLayerSource::Animators|Ui::DebugLayerSource(0x40)`
+       and similar in the output. If more than two are present, it'll remove
+       them recursively one by one. */
+    {
+        DebugLayerSource exclude{};
+        UnsignedInt count = 0;
+        /* As the last matching one is taken, the list is in reverse order
+           compared to the enum */
+        for(DebugLayerSource i: {DebugLayerSource::NodeAnimations,
+                                 DebugLayerSource::NodeAnimationDetails,
+                                 DebugLayerSource::NodeData,
+                                 DebugLayerSource::NodeDataDetails,
+                                 DebugLayerSource::NodeHierarchy}) {
+            if(value >= i) {
+                /* Only increase the count if the value is not a superset of
+                   the previously remembered. Casting to DebugLayerSources as
+                   otherwise >= isn't checking for a superset but for an
+                   integer value. */
+                if(exclude == DebugLayerSource{} || !(i >= DebugLayerSources{exclude}))
+                    ++count;
+                exclude = i;
+            }
+        }
+
+        if(count >= 2) {
+            return debug << exclude << Debug::nospace << "|" << Debug::nospace << ((value & ~exclude)|DebugLayerSource::Nodes);
+        }
+    }
+
     return Containers::enumSetDebugOutput(debug, value, "Ui::DebugLayerSources{}", {
-        /* This one is a superset of NodeData and NodeHierarchy, meaning
-           printing it regularly would result in
-           `DebugLayerSource::NodeHierarchy|DebugLayerSource::NodeData|DebugLayerSource(0x10)`
-           in the output. So we pass both and let the DebugLayerSource printer
-           deail with that. */
-        DebugLayerSource(UnsignedShort(DebugLayerSource::NodeHierarchy|DebugLayerSource::NodeDataDetails)),
-        /* Both are a superset of Nodes, meaning printing just one would result
-           in `DebugLayerSource::NodeHierarchy|DebugLayerSource::Layers|DebugLayerSource(0x8)`
-           in the output. So we pass both and let the DebugLayerSource printer
-           deail with that. */
-        DebugLayerSource(UnsignedShort(DebugLayerSource::NodeHierarchy|DebugLayerSource::NodeData)),
         DebugLayerSource::NodeHierarchy,
         DebugLayerSource::NodeDataDetails,
         /* Implied by NodeDataDetails, has to be after */
         DebugLayerSource::NodeData,
+        DebugLayerSource::NodeAnimationDetails,
+        /* Implied by NodeAnimationDetails, has to be after */
+        DebugLayerSource::NodeAnimations,
         /* Implied by NodeHierarchy and NodeData, has to be after */
         DebugLayerSource::Nodes,
         /* Implied by NodeData, has to be after */
         DebugLayerSource::Layers,
+        /* Implied by NodeAnimations, has to be after */
+        DebugLayerSource::Animators,
     });
 }
 
@@ -301,6 +321,74 @@ void** DebugLayer::setLayerNameDebugIntegration(const AbstractLayer& instance, c
     } else return nullptr;
 }
 
+Containers::StringView DebugLayer::animatorName(const AnimatorHandle handle) const {
+    /* If we're not part of a UI, there's no way to track animators and so all
+       animators would be left at an empty name. Consider that an error. */
+    CORRADE_ASSERT(hasUi(),
+        "Ui::DebugLayer::animatorName(): debug layer not part of a user interface", {});
+    CORRADE_ASSERT(handle != AnimatorHandle::Null,
+        "Ui::DebugLayer::animatorName(): handle is null", {});
+    const State& state = *_state;
+    /* If the feature isn't enabled, do nothing */
+    if(!(state.sources >= DebugLayerSource::Animators))
+        return {};
+
+    const UnsignedInt animatorId = animatorHandleId(handle);
+    if(animatorId < state.animators.size() && state.animators[animatorId].handle == handle)
+        return state.animators[animatorId].name;
+    return {};
+}
+
+DebugLayer& DebugLayer::setAnimatorName(const AbstractAnimator& instance, const Containers::StringView name) {
+    CORRADE_ASSERT(hasUi(),
+        "Ui::DebugLayer::setAnimatorName(): debug layer not part of a user interface", *this);
+    CORRADE_ASSERT(ui().isHandleValid(instance.handle()) && &ui().animator(instance.handle()) == &instance,
+        "Ui::DebugLayer::setAnimatorName(): animator not part of the same user interface", *this);
+    State& state = *_state;
+    /* If the feature isn't enabled, do nothing */
+    if(!(state.sources >= DebugLayerSource::Animators))
+        return *this;
+
+    /* If there are not enough tracked layers, add. Otherwise replace the
+       instance to correctly free any existing debug integration. */
+    const UnsignedInt animatorId = animatorHandleId(instance.handle());
+    if(state.animators.size() <= animatorId)
+        arrayResize(state.animators, ValueInit, animatorId + 1);
+    else
+        state.animators[animatorId] = Implementation::DebugLayerAnimator{};
+
+    Implementation::DebugLayerAnimator& animator = state.animators[animatorId];
+    animator.handle = instance.handle();
+    animator.name = Containers::String::nullTerminatedGlobalView(name);
+
+    return *this;
+}
+
+void** DebugLayer::setAnimatorNameDebugIntegration(const AbstractAnimator& instance, const Containers::StringView& name, void(*const deleter)(void*), void(*const print)(void*, Debug&, const AbstractAnimator&, const Containers::StringView&, AnimatorDataHandle)) {
+    /* This already enlarges _state->animators and frees previous integration
+       instance if there's any, no need to do that here again. Well, unless it
+       asserted, in which case bail. */
+    setAnimatorName(instance, name);
+    const UnsignedInt animatorId = animatorHandleId(instance.handle());
+    State& state = *_state;
+    #ifdef CORRADE_GRACEFUL_ASSERT
+    if(animatorId >= state.animators.size())
+        return {};
+    #endif
+
+    Implementation::DebugLayerAnimator& animator = state.animators[animatorId];
+    CORRADE_INTERNAL_DEBUG_ASSERT(!animator.integration && !animator.deleter && !animator.print);
+
+    /* Save the integration only if node animation details are wanted (as for
+       example one might not want such amount of verbosity). If not, return
+       null so the instance doesn't get allocated at all. */
+    if(state.sources >= DebugLayerSource::NodeAnimationDetails) {
+        animator.deleter = deleter;
+        animator.print = print;
+        return &animator.integration;
+    } else return nullptr;
+}
+
 Color4 DebugLayer::nodeHighlightColor() const {
     return _state->nodeHighlightColor;
 }
@@ -508,6 +596,73 @@ bool DebugLayer::highlightNode(const NodeHandle handle) {
                 debug << " " << otherDataCount << "data from" << otherLayerCount << (hasNamedLayers ? "other layers" : "layers") << Debug::newline;
             else CORRADE_INTERNAL_ASSERT(otherLayerCount == 0);
         }
+
+        if(state.sources >= DebugLayerSource::NodeAnimations) {
+            /* Four entries, each for one AnimationState */
+            UnsignedInt otherAnimatorCount[4]{};
+            UnsignedInt otherAnimationCount[4]{};
+            bool hasNamedAnimators = false;
+            for(UnsignedInt animatorId = 0; animatorId != state.animators.size(); ++animatorId) {
+                /* Skip animators that are freed or that we don't know about
+                   yet (if highlightNode() is called, there may be animators
+                   that are yet unknown to the DebugLayer, either ones with IDs
+                   outside of the state.animators bounds or ones that got
+                   removed and the slot reused for others), and animators that
+                   have no instance */
+                const Implementation::DebugLayerAnimator& animator = state.animators[animatorId];
+                if(!ui.isHandleValid(animator.handle) ||
+                   !ui.hasAnimatorInstance(animator.handle))
+                    continue;
+
+                /* Query only animators that support node attachment */
+                /** @todo support also animations attached to data, do that in
+                    the loop above somehow? basically for each layer that has
+                    some data in given node it should go through animators
+                    attached to that layer and check which animations are
+                    attached to those */
+                const AbstractAnimator& animatorInstance = ui.animator(animator.handle);
+                if(!(animatorInstance.features() >= AnimatorFeature::NodeAttachment))
+                    continue;
+
+                const UnsignedInt dataCapacity = animatorInstance.capacity();
+                const Containers::StridedArrayView1D<const UnsignedShort> dataGenerations = animatorInstance.generations();
+                /* Four entries, each for one AnimationState */
+                bool hasOtherAnimationsFromThisAnimator[4]{};
+                UnsignedInt namedAnimatorDataCount[4]{};
+                for(UnsignedInt dataId = 0; dataId != dataCapacity; ++dataId) {
+                    const AnimatorDataHandle data = animatorDataHandle(dataId, dataGenerations[dataId]);
+                    if(animatorInstance.isHandleValid(data) && animatorInstance.node(data) == handle) {
+                        AnimationState state = animatorInstance.state(data);
+                        CORRADE_INTERNAL_ASSERT(UnsignedInt(state) < 4);
+                        if(animator.print) {
+                            hasNamedAnimators = true;
+                            animator.print(animator.integration, debug, animatorInstance, animator.name, data);
+                        } else if(animator.name) {
+                            hasNamedAnimators = true;
+                            ++namedAnimatorDataCount[UnsignedInt(state)];
+                        } else {
+                            hasOtherAnimationsFromThisAnimator[UnsignedInt(state)] = true;
+                            ++otherAnimationCount[UnsignedInt(state)];
+                        }
+                    }
+                }
+
+                for(UnsignedInt i = 0; i != Containers::arraySize(namedAnimatorDataCount); ++i) {
+                    if(namedAnimatorDataCount[i]) {
+                        debug << " " << namedAnimatorDataCount[i] << Debug::color(Debug::Color::Cyan) << Debug::packed << AnimationState(i) << Debug::resetColor << "animations from animator" << Debug::packed << animator.handle << Debug::color(Debug::Color::Yellow) << animator.name << Debug::resetColor << Debug::newline;
+                    }
+
+                    if(hasOtherAnimationsFromThisAnimator[i])
+                        ++otherAnimatorCount[i];
+                }
+            }
+
+            for(UnsignedInt i = 0; i != Containers::arraySize(otherAnimationCount); ++i) {
+                if(otherAnimationCount[i])
+                    debug << " " << otherAnimationCount[i] << Debug::color(Debug::Color::Cyan) << Debug::packed << AnimationState(i) << Debug::resetColor << "animations from" << otherAnimatorCount[i] << (hasNamedAnimators ? "other animators" : "animators") << Debug::newline;
+                else CORRADE_INTERNAL_ASSERT(otherAnimatorCount[i] == 0);
+            }
+        }
     }
 
     state.currentHighlightedNode = handle;
@@ -542,7 +697,7 @@ LayerFeatures DebugLayer::doFeatures() const {
 
 LayerStates DebugLayer::doState() const {
     const State& state = *_state;
-    return state.sources & (DebugLayerSource::Nodes|DebugLayerSource::Layers) ?
+    return state.sources & (DebugLayerSource::Nodes|DebugLayerSource::Layers|DebugLayerSource::Animators) ?
         LayerState::NeedsCommonDataUpdate : LayerStates{};
 }
 
@@ -633,6 +788,28 @@ void DebugLayer::doPreUpdate(LayerStates) {
                     layer = Implementation::DebugLayerLayer{};
                 if(ui.isHandleValid(handle))
                     layer.handle = handle;
+            }
+        }
+    }
+
+    if(state.sources >= DebugLayerSource::Animators) {
+        const UnsignedInt animatorCapacity = ui.animatorCapacity();
+        const Containers::StridedArrayView1D<const UnsignedByte> animatorGenerations = ui.animatorGenerations();
+        if(state.animators.size() < animatorCapacity)
+            arrayResize(state.animators, ValueInit, animatorCapacity);
+
+        for(std::size_t i = 0; i != state.animators.size(); ++i) {
+            const AnimatorHandle handle = animatorHandle(i, animatorGenerations[i]);
+
+            /* If the animator we remembered is different from the current one,
+               reset its properties. If the current one is valid, remember its
+               handle. */
+            Implementation::DebugLayerAnimator& animator = state.animators[i];
+            if(animator.handle != handle) {
+                if(animator.handle != AnimatorHandle::Null)
+                    animator = Implementation::DebugLayerAnimator{};
+                if(ui.isHandleValid(handle))
+                    animator.handle = handle;
             }
         }
     }

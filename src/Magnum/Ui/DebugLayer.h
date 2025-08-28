@@ -58,25 +58,47 @@ enum class DebugLayerSource: UnsignedShort {
     Layers = 1 << 1,
 
     /**
+     * Track created animators and make it possible to name them using
+     * @ref DebugLayer::setAnimatorName(). Subset of
+     * @ref DebugLayerSource::NodeAnimations.
+     */
+    Animators = 1 << 2,
+
+    /**
      * Track node parent and child relations. Implies
      * @ref DebugLayerSource::Nodes.
      */
-    NodeHierarchy = Nodes|(1 << 2),
+    NodeHierarchy = Nodes|(1 << 3),
 
     /**
      * Track per-node layer data attachments. Implies
      * @ref DebugLayerSource::Nodes and @ref DebugLayerSource::Layers, subset
      * of @ref DebugLayerSource::NodeDataDetails.
      */
-    NodeData = Nodes|Layers|(1 << 3),
+    NodeData = Nodes|Layers|(1 << 4),
 
     /**
      * Track per-node layer data attachments with per-data details provided by
      * layer-specific debug integrations as described in
-     * @ref Ui-DebugLayer-node-highlight-node-data-details. Implies
+     * @ref Ui-DebugLayer-node-highlight-node-details. Implies
      * @ref DebugLayerSource::NodeData.
      */
-    NodeDataDetails = NodeData|(1 << 4),
+    NodeDataDetails = NodeData|(1 << 5),
+
+    /**
+     * Track per-node animation attachments. Implies
+     * @ref DebugLayerSource::Nodes and @ref DebugLayerSource::Animators,
+     * subset of @ref DebugLayerSource::NodeAnimationDetails.
+     */
+    NodeAnimations = Nodes|Animators|(1 << 6),
+
+    /**
+     * Track per-node layer data attachments with per-data details provided by
+     * animator-specific debug integrations as described in
+     * @ref Ui-DebugLayer-node-highlight-node-details. Implies
+     * @ref DebugLayerSource::NodeAnimations.
+     */
+    NodeAnimationDetails = NodeAnimations|(1 << 7),
 };
 
 /**
@@ -235,7 +257,10 @@ node will remove the highlight.
 
 @include ui-debuglayer-node-highlight.ansi
 
-@subsection Ui-DebugLayer-node-highlight-naming Naming nodes and layers
+With @ref DebugLayerSource::NodeAnimations you can list also animations
+attached to particular nodes. The @ref Ui::Button doesn't have any by default.
+
+@subsection Ui-DebugLayer-node-highlight-naming Naming nodes, layers and animators
 
 In the details we can see that the node is placed somewhere and it has four
 data attachments. Because the widget is simple we can assume it's the
@@ -258,7 +283,9 @@ you can query them back with @ref layerName() and @ref nodeName().
 
 @include ui-debuglayer-node-highlight-names.ansi
 
-@subsection Ui-DebugLayer-node-highlight-node-data-details Showing details about data attachments
+Similarly to layers, @ref setAnimatorName() can name an animator.
+
+@subsection Ui-DebugLayer-node-highlight-node-details Showing details about node data and animations
 
 Enabling @ref DebugLayerSource::NodeDataDetails in addition to
 @relativeref{DebugLayerSource,NodeData} makes use of debug integration
@@ -279,6 +306,10 @@ in case of visual layers. Documentation of all builtin layers has information
 about what's provided in their debug integration. It's also possible to
 implement this integration for custom layers, see @ref Ui-DebugLayer-integration
 below for details.
+
+With @ref DebugLayerSource::NodeAnimationDetails, a similar functionality is
+available for animators that implement a @ref AbstractAnimator::DebugIntegration
+inner class.
 
 @subsection Ui-DebugLayer-node-highlight-options Node highlight options
 
@@ -345,7 +376,7 @@ creation and setup to the point when it's actually needed, and then destroy it
 again after. Note that, as certain options involve iterating the whole node
 tree, with very complex UIs such on-the-fly setup might cause stalls.
 
-@section Ui-DebugLayer-integration DebugLayer integration for custom layers
+@section Ui-DebugLayer-integration DebugLayer integration for custom layers and animators
 
 To make a custom layer provide detailed info for
 @ref DebugLayerSource::NodeDataDetails, implement an inner type named
@@ -382,15 +413,19 @@ which allows the debug integration arguments to be passed directly to
 
 @snippet Ui.cpp DebugLayer-integration-constructor-setLayerName
 
+For animators and @ref DebugLayerSource::NodeAnimationDetails the workflow is
+similar, just with a
+@ref AbstractAnimator::DebugIntegration::print() "slightly different signature for the print function".
+
 @subsection Ui-DebugLayer-integration-override Overriding the integration in subclasses
 
-Any layer derived from layers that already have an integration, such as from
-@ref AbstractVisualLayer or @ref EventLayer, will implicitly inherit the base
-implementation. If the subclass wants to provide its own output, it can either
-provide a custom type and hide the original, or derive from it by calling the
-base @relativeref{DebugIntegration,print()} in its own implementation. Here the
-`ColorLayer` from above is made to derive from @ref AbstractVisualLayer now
-instead, and its `DebugIntegration` derives from
+Any layer or animator derived from a base that already has an integration, such
+as from @ref AbstractVisualLayer or @ref EventLayer, will implicitly inherit
+the base implementation. If the subclass wants to provide its own output, it
+can either provide a custom type and hide the original, or derive from it by
+calling the base @relativeref{DebugIntegration,print()} in its own
+implementation. Here the `ColorLayer` from above is made to derive from
+@ref AbstractVisualLayer now instead, and its `DebugIntegration` derives from
 @ref AbstractVisualLayer::DebugIntegration as well and inherits its output:
 
 @snippet Ui.cpp DebugLayer-integration-subclass
@@ -594,6 +629,85 @@ class MAGNUM_UI_EXPORT DebugLayer: public AbstractLayer {
         /** @overload */
         template<class T> DebugLayer& setLayerName(const T& layer, const Containers::StringView& name, typename T::DebugIntegration&& integration);
 
+        /**
+         * @brief Animator name
+         *
+         * Expects that the debug layer has been already passed to
+         * @ref AbstractUserInterface::setLayerInstance() and that @p handle
+         * isn't @ref AnimatorHandle::Null, @p handle doesn't have to be valid
+         * however. If @ref DebugLayerSource::Animators isn't enabled or
+         * @p handle isn't known, returns an empty string.
+         *
+         * If not empty, the returned string is always
+         * @relativeref{Corrade,Containers::StringViewFlag::NullTerminated}.
+         * Unless @ref setAnimatorName() was called with a
+         * @relativeref{Corrade,Containers::StringViewFlag::Global} string, the
+         * returned view is only guaranteed to be valid until the next call to
+         * @ref setAnimatorName() or until the set of animators in the user
+         * interface changes.
+         */
+        Containers::StringView animatorName(AnimatorHandle handle) const;
+
+        /**
+         * @brief Set animator name
+         * @return Reference to self (for method chaining)
+         *
+         * Expects that the debug layer has been already passed to
+         * @ref AbstractUserInterface::setLayerInstance() and that @p animator
+         * is part of the same user interface. If @ref DebugLayerSource::Animators
+         * is enabled, the @p name will be used to annotate attachments from
+         * given @p animator, otherwise the function does nothing.
+         *
+         * If @p name is @relativeref{Corrade,Containers::StringViewFlag::Global}
+         * and @relativeref{Corrade::Containers::StringViewFlag,NullTerminated},
+         * no internal copy of the string is made. If
+         * @ref DebugLayerSource::Animators isn't enabled, the function does
+         * nothing.
+         *
+         * If a concrete animator type gets passed instead of just
+         * @ref AbstractAnimator, the @ref setAnimatorName(const T&, const Containers::StringView&)
+         * overload may get picked if given animator implements debug
+         * integration, allowing it to provide further details.
+         */
+        DebugLayer& setAnimatorName(const AbstractAnimator& animator, Containers::StringView name);
+
+        /**
+         * @brief Set name for an animator with @ref AbstractAnimator::DebugIntegration implemented
+         * @return Reference to self (for method chaining)
+         *
+         * In addition to @ref setAnimatorName(const AbstractAnimator&, Containers::StringView),
+         * if @ref DebugLayerSource::NodeAnimationDetails is enabled, the
+         * animator's @relativeref{AbstractAnimator,DebugIntegration}
+         * implementation gets called for each attachment, allowing it to
+         * provide further details. See documentation of a particular animator
+         * for more information. Use the
+         * @ref setAnimatorName(const T&, const Containers::StringView&, const typename T::DebugIntegration&)
+         * overload to pass additional arguments to the debug integration.
+         */
+        template<class T
+            #ifndef DOXYGEN_GENERATING_OUTPUT
+            , typename std::enable_if<std::is_default_constructible<typename T::DebugIntegration>::value, int>::type = 0
+            #endif
+        > DebugLayer& setAnimatorName(const T& animator, const Containers::StringView& name) {
+            /* Delegating to the r-value overload */
+            return setAnimatorName(animator, name, typename T::DebugIntegration{});
+        }
+
+        /**
+         * @brief Set name for an animator with @ref AbstractAnimator::DebugIntegration implemented
+         * @return Reference to self (for method chaining)
+         *
+         * In addition to @ref setAnimatorName(const AbstractAnimator&, Containers::StringView),
+         * if @ref DebugLayerSource::NodeAnimationDetails is enabled, the
+         * passed animator @relativeref{AbstractAnimator,DebugIntegration}
+         * instance gets called for each attachment, allowing it to provide
+         * further details. See documentation of a particular animator for more
+         * information.
+         */
+        template<class T> DebugLayer& setAnimatorName(const T& animator, const Containers::StringView& name, const typename T::DebugIntegration& integration);
+        /** @overload */
+        template<class T> DebugLayer& setAnimatorName(const T& animator, const Containers::StringView& name, typename T::DebugIntegration&& integration);
+
         /** @brief Node highlight color */
         Color4 nodeHighlightColor() const;
 
@@ -731,6 +845,7 @@ class MAGNUM_UI_EXPORT DebugLayer: public AbstractLayer {
         /* Returned value is a pointer where to save the allocated
            DebugIntegration instance */
         void** setLayerNameDebugIntegration(const AbstractLayer& instance, const Containers::StringView& name, void(*deleter)(void*), void(*print)(void*, Debug&, const AbstractLayer&, const Containers::StringView&, LayerDataHandle));
+        void** setAnimatorNameDebugIntegration(const AbstractAnimator& instance, const Containers::StringView& name, void(*deleter)(void*), void(*print)(void*, Debug&, const AbstractAnimator&, const Containers::StringView&, AnimatorDataHandle));
 
         /* These can't be MAGNUM_UI_LOCAL otherwise deriving from this class
            in tests causes linker errors */
@@ -784,6 +899,49 @@ template<class T> DebugLayer& DebugLayer::setLayerName(const T& layer, const Con
            initialize the first member with `integration` instead of calling
            the move constructor. Similar case is in Containers::Array etc., see
            layerNameDebugIntegrationMoveConstructPlainStruct() for details. */
+        *instance = new typename T::DebugIntegration(Utility::move(integration));
+        #else
+        *instance = new typename T::DebugIntegration{Utility::move(integration)};
+        #endif
+    }
+    return *this;
+}
+
+template<class T> DebugLayer& DebugLayer::setAnimatorName(const T& animator, const Containers::StringView& name, const typename T::DebugIntegration& integration) {
+    /* Like setLayerName(..., const DebugIntegration&), just for animators. See
+       above for comments about all the workarounds, sigh. */
+    #ifdef CORRADE_MSVC2017_COMPATIBILITY
+    typename T::DebugIntegration copy{integration};
+    return setAnimatorName(animator, name, Utility::move(copy));
+    #else
+    return setAnimatorName(animator, name,
+        #if defined(CORRADE_TARGET_GCC) && !defined(CORRADE_TARGET_CLANG) && __GNUC__ < 5
+        typename T::DebugIntegration(integration)
+        #else
+        typename T::DebugIntegration{integration}
+        #endif
+    );
+    #endif
+}
+
+template<class T> DebugLayer& DebugLayer::setAnimatorName(const T& animator, const Containers::StringView& name, typename T::DebugIntegration&& integration) {
+    /* Like setLayerName(..., DebugIntegration&&), just for animators. See
+       above for comments about all the workarounds, sigh. */
+    void** instance = setAnimatorNameDebugIntegration(
+        /* This cast isn't strictly necessary but it makes the error clearer in
+           case a completely unrelated type (such as a layer) is passed */
+        static_cast<const AbstractAnimator&>(animator), name,
+        [](void* integration) {
+            delete static_cast<typename T::DebugIntegration*>(integration);
+        },
+        [](void* integration, Debug& debug, const AbstractAnimator& animator, const Containers::StringView& animatorName, AnimatorDataHandle data) {
+            static_cast<typename T::DebugIntegration*>(integration)->print(debug, static_cast<const T&>(animator), animatorName, data);
+        });
+    /* If the instance is null, either NodeAnimationDetails isn't set, in which
+       case the instance wouldn't be used anyway, or a graceful assert
+       happened. Don't allocate anything in that case. */
+    if(instance) {
+        #if defined(CORRADE_TARGET_GCC) && !defined(CORRADE_TARGET_CLANG) && __GNUC__ < 5
         *instance = new typename T::DebugIntegration(Utility::move(integration));
         #else
         *instance = new typename T::DebugIntegration{Utility::move(integration)};
