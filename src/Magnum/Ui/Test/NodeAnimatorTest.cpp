@@ -27,6 +27,7 @@
 #include <Corrade/Containers/ArrayView.h> /* for arraySize() */
 #include <Corrade/Containers/BitArray.h>
 #include <Corrade/Containers/BitArrayView.h>
+#include <Corrade/Containers/Function.h> /* for debugIntegration() */
 #include <Corrade/Containers/StaticArray.h>
 #include <Corrade/Containers/StridedArrayView.h>
 #include <Corrade/Containers/StridedBitArrayView.h>
@@ -39,6 +40,7 @@
 #include <Magnum/Math/Time.h>
 
 #include "Magnum/Ui/AbstractUserInterface.h"
+#include "Magnum/Ui/DebugLayer.h" /* for debugIntegration() */
 #include "Magnum/Ui/Handle.h"
 #include "Magnum/Ui/NodeAnimator.h"
 #include "Magnum/Ui/NodeFlags.h"
@@ -70,6 +72,9 @@ struct NodeAnimatorTest: TestSuite::Tester {
 
     void uiAdvance();
     void uiAdvanceToggleReverse();
+
+    void debugIntegration();
+    void debugIntegrationNoCallback();
 };
 
 using namespace Math::Literals;
@@ -812,6 +817,475 @@ const struct {
         {}, UserInterfaceState::NeedsNodeClean, true},
 };
 
+const struct {
+    const char* name;
+    bool animatorName;
+    NodeAnimation animation;
+    AnimationFlags flags;
+    Nanoseconds start;
+    const char* expected;
+} DebugIntegrationData[]{
+    {"empty, playing", false,
+        NodeAnimation{}, {}, -10_nsec,
+        "Node {0x1, 0x1}\n"
+        "  Playing animation {0x6, 0x2} from animator {0x0, 0x3}"},
+    {"empty, scheduled, animator name", true,
+        NodeAnimation{}, {}, 10_nsec,
+        "Node {0x1, 0x1}\n"
+        "  Scheduled animation {0x6, 0x2} from animator {0x0, 0x3} Nodead"},
+    {"empty, stopped, flags", false,
+        NodeAnimation{},
+        AnimationFlag::KeepOncePlayed|AnimationFlag::Reverse, -30_nsec,
+        "Node {0x1, 0x1}\n"
+        "  Stopped animation {0x6, 0x2} from animator {0x0, 0x3}\n"
+        "    Animation flags: KeepOncePlayed|Reverse"},
+    {"from offset X", false,
+        NodeAnimation{}
+            .fromOffsetX(-15.0f),
+        {}, -10_nsec,
+        "Node {0x1, 0x1}\n"
+        "  Playing animation {0x6, 0x2} from animator {0x0, 0x3}\n"
+        "    Offset X: -15 -> ?"},
+    {"to offset X", false,
+        NodeAnimation{}
+            .toOffsetX(25.0f),
+        {}, -10_nsec,
+        "Node {0x1, 0x1}\n"
+        "  Playing animation {0x6, 0x2} from animator {0x0, 0x3}\n"
+        "    Offset X: ? -> 25"},
+    {"offset X", false,
+        NodeAnimation{}
+            .fromOffsetX(-15.0f)
+            .toOffsetX(25.0f),
+        {}, -10_nsec,
+        "Node {0x1, 0x1}\n"
+        "  Playing animation {0x6, 0x2} from animator {0x0, 0x3}\n"
+        "    Offset X: -15 -> 25"},
+    {"from offset Y", false,
+        NodeAnimation{}
+            .fromOffsetY(-15.0f),
+        {}, -10_nsec,
+        "Node {0x1, 0x1}\n"
+        "  Playing animation {0x6, 0x2} from animator {0x0, 0x3}\n"
+        "    Offset Y: -15 -> ?"},
+    {"to offset Y", false,
+        NodeAnimation{}
+            .toOffsetY(25.0f),
+        {}, -10_nsec,
+        "Node {0x1, 0x1}\n"
+        "  Playing animation {0x6, 0x2} from animator {0x0, 0x3}\n"
+        "    Offset Y: ? -> 25"},
+    {"offset Y", false,
+        NodeAnimation{}
+            .fromOffsetY(-15.0f)
+            .toOffsetY(25.0f),
+        {}, -10_nsec,
+        "Node {0x1, 0x1}\n"
+        "  Playing animation {0x6, 0x2} from animator {0x0, 0x3}\n"
+        "    Offset Y: -15 -> 25"},
+    {"from offset", false,
+        NodeAnimation{}
+            .fromOffset({-15.0f, 5.0f}),
+        {}, -10_nsec,
+        "Node {0x1, 0x1}\n"
+        "  Playing animation {0x6, 0x2} from animator {0x0, 0x3}\n"
+        "    Offset: {-15, 5} -> {?, ?}"},
+    {"to offset", false,
+        NodeAnimation{}
+            .toOffset({25.0f, -10.0f}),
+        {}, -10_nsec,
+        "Node {0x1, 0x1}\n"
+        "  Playing animation {0x6, 0x2} from animator {0x0, 0x3}\n"
+        "    Offset: {?, ?} -> {25, -10}"},
+    {"from offset X to offset Y", false,
+        NodeAnimation{}
+            .fromOffsetX(-15.0f)
+            .toOffsetY(25.0f),
+        {}, -10_nsec,
+        "Node {0x1, 0x1}\n"
+        "  Playing animation {0x6, 0x2} from animator {0x0, 0x3}\n"
+        "    Offset: {-15, ?} -> {?, 25}"},
+    {"from offset Y to offset X", false,
+        NodeAnimation{}
+            .fromOffsetY(-15.0f)
+            .toOffsetX(25.0f),
+        {}, -10_nsec,
+        "Node {0x1, 0x1}\n"
+        "  Playing animation {0x6, 0x2} from animator {0x0, 0x3}\n"
+        "    Offset: {?, -15} -> {25, ?}"},
+    {"offset", false,
+        NodeAnimation{}
+            .fromOffset({-15.0f, 5.0f})
+            .toOffset({25.0f, -10.0f}),
+        {}, -10_nsec,
+        "Node {0x1, 0x1}\n"
+        "  Playing animation {0x6, 0x2} from animator {0x0, 0x3}\n"
+        "    Offset: {-15, 5} -> {25, -10}"},
+    {"from size X", false,
+        NodeAnimation{}
+            .fromSizeX(-15.0f),
+        {}, -10_nsec,
+        "Node {0x1, 0x1}\n"
+        "  Playing animation {0x6, 0x2} from animator {0x0, 0x3}\n"
+        "    Size X: -15 -> ?"},
+    {"to size X", false,
+        NodeAnimation{}
+            .toSizeX(25.0f),
+        {}, -10_nsec,
+        "Node {0x1, 0x1}\n"
+        "  Playing animation {0x6, 0x2} from animator {0x0, 0x3}\n"
+        "    Size X: ? -> 25"},
+    {"size X", false,
+        NodeAnimation{}
+            .fromSizeX(-15.0f)
+            .toSizeX(25.0f),
+        {}, -10_nsec,
+        "Node {0x1, 0x1}\n"
+        "  Playing animation {0x6, 0x2} from animator {0x0, 0x3}\n"
+        "    Size X: -15 -> 25"},
+    {"from size Y", false,
+        NodeAnimation{}
+            .fromSizeY(-15.0f),
+        {}, -10_nsec,
+        "Node {0x1, 0x1}\n"
+        "  Playing animation {0x6, 0x2} from animator {0x0, 0x3}\n"
+        "    Size Y: -15 -> ?"},
+    {"to size Y", false,
+        NodeAnimation{}
+            .toSizeY(25.0f),
+        {}, -10_nsec,
+        "Node {0x1, 0x1}\n"
+        "  Playing animation {0x6, 0x2} from animator {0x0, 0x3}\n"
+        "    Size Y: ? -> 25"},
+    {"size Y", false,
+        NodeAnimation{}
+            .fromSizeY(-15.0f)
+            .toSizeY(25.0f),
+        {}, -10_nsec,
+        "Node {0x1, 0x1}\n"
+        "  Playing animation {0x6, 0x2} from animator {0x0, 0x3}\n"
+        "    Size Y: -15 -> 25"},
+    {"from size", false,
+        NodeAnimation{}
+            .fromSize({-15.0f, 5.0f}),
+        {}, -10_nsec,
+        "Node {0x1, 0x1}\n"
+        "  Playing animation {0x6, 0x2} from animator {0x0, 0x3}\n"
+        "    Size: {-15, 5} -> {?, ?}"},
+    {"to size", false,
+        NodeAnimation{}
+            .toSize({25.0f, -10.0f}),
+        {}, -10_nsec,
+        "Node {0x1, 0x1}\n"
+        "  Playing animation {0x6, 0x2} from animator {0x0, 0x3}\n"
+        "    Size: {?, ?} -> {25, -10}"},
+    {"from size X to size Y", false,
+        NodeAnimation{}
+            .fromSizeX(-15.0f)
+            .toSizeY(25.0f),
+        {}, -10_nsec,
+        "Node {0x1, 0x1}\n"
+        "  Playing animation {0x6, 0x2} from animator {0x0, 0x3}\n"
+        "    Size: {-15, ?} -> {?, 25}"},
+    {"from size Y to size X", false,
+        NodeAnimation{}
+            .fromSizeY(-15.0f)
+            .toSizeX(25.0f),
+        {}, -10_nsec,
+        "Node {0x1, 0x1}\n"
+        "  Playing animation {0x6, 0x2} from animator {0x0, 0x3}\n"
+        "    Size: {?, -15} -> {25, ?}"},
+    {"size", false,
+        NodeAnimation{}
+            .fromSize({-15.0f, 5.0f})
+            .toSize({25.0f, -10.0f}),
+        {}, -10_nsec,
+        "Node {0x1, 0x1}\n"
+        "  Playing animation {0x6, 0x2} from animator {0x0, 0x3}\n"
+        "    Size: {-15, 5} -> {25, -10}"},
+    {"from opacity", false,
+        NodeAnimation{}
+            .fromOpacity(0.25f),
+        {}, -10_nsec,
+        "Node {0x1, 0x1}\n"
+        "  Playing animation {0x6, 0x2} from animator {0x0, 0x3}\n"
+        "    Opacity: 0.25 -> ?"},
+    {"to opacity", false,
+        NodeAnimation{}
+            .toOpacity(0.75f),
+        {}, -10_nsec,
+        "Node {0x1, 0x1}\n"
+        "  Playing animation {0x6, 0x2} from animator {0x0, 0x3}\n"
+        "    Opacity: ? -> 0.75"},
+    {"opacity", false,
+        NodeAnimation{}
+            .fromOpacity(0.25f)
+            .toOpacity(0.75f),
+        {}, -10_nsec,
+        "Node {0x1, 0x1}\n"
+        "  Playing animation {0x6, 0x2} from animator {0x0, 0x3}\n"
+        "    Opacity: 0.25 -> 0.75"},
+    {"add flags begin", false,
+        NodeAnimation{}
+            .addFlagsBegin(NodeFlag::Clip|NodeFlag::NoEvents),
+        {}, -10_nsec,
+        "Node {0x1, 0x1}\n"
+        "  Playing animation {0x6, 0x2} from animator {0x0, 0x3}\n"
+        "    Add flags start: Clip|NoEvents"},
+    {"add flags end", false,
+        NodeAnimation{}
+            .addFlagsEnd(NodeFlag::Focusable|NodeFlag::NoBlur),
+        {}, -10_nsec,
+        "Node {0x1, 0x1}\n"
+        "  Playing animation {0x6, 0x2} from animator {0x0, 0x3}\n"
+        "    Add flags stop: Focusable|NoBlur"},
+    {"add flags begin & end", false,
+        NodeAnimation{}
+            .addFlagsBegin(NodeFlag::Clip|NodeFlag::NoEvents)
+            .addFlagsEnd(NodeFlag::Focusable|NodeFlag::NoBlur),
+        {}, -10_nsec,
+        "Node {0x1, 0x1}\n"
+        "  Playing animation {0x6, 0x2} from animator {0x0, 0x3}\n"
+        "    Add flags start: Clip|NoEvents, stop: Focusable|NoBlur"},
+    {"clear flags begin", false,
+        NodeAnimation{}
+            .clearFlagsBegin(NodeFlag::Clip|NodeFlag::NoEvents),
+        {}, -10_nsec,
+        "Node {0x1, 0x1}\n"
+        "  Playing animation {0x6, 0x2} from animator {0x0, 0x3}\n"
+        "    Clear flags start: Clip|NoEvents"},
+    {"clear flags end", false,
+        NodeAnimation{}
+            .clearFlagsEnd(NodeFlag::Focusable|NodeFlag::NoBlur),
+        {}, -10_nsec,
+        "Node {0x1, 0x1}\n"
+        "  Playing animation {0x6, 0x2} from animator {0x0, 0x3}\n"
+        "    Clear flags stop: Focusable|NoBlur"},
+    {"clear flags begin & end", false,
+        NodeAnimation{}
+            .clearFlagsBegin(NodeFlag::Clip|NodeFlag::NoEvents)
+            .clearFlagsEnd(NodeFlag::Focusable|NodeFlag::NoBlur),
+        {}, -10_nsec,
+        "Node {0x1, 0x1}\n"
+        "  Playing animation {0x6, 0x2} from animator {0x0, 0x3}\n"
+        "    Clear flags start: Clip|NoEvents, stop: Focusable|NoBlur"},
+    {"offset X, size Y, opacity begin, add flags begin, clear flags end", false,
+        NodeAnimation{}
+            .fromOffsetX(-25.0f)
+            .toOffsetX(15.0f)
+            .fromSizeY(5.0f)
+            .toSizeY(-10.0f)
+            .toOpacity(0.75f)
+            .addFlagsBegin(NodeFlag::Clip)
+            .clearFlagsEnd(NodeFlag::Disabled),
+        {}, -10_nsec,
+        "Node {0x1, 0x1}\n"
+        "  Playing animation {0x6, 0x2} from animator {0x0, 0x3}\n"
+        "    Offset X: -25 -> 15\n"
+        "    Size Y: 5 -> -10\n"
+        "    Opacity: ? -> 0.75\n"
+        "    Add flags start: Clip\n"
+        "    Clear flags stop: Disabled"},
+    /* Only the arrow changes compared to above, flags stay */
+    {"offset X, size Y, opacity begin, add flags begin, clear flags end, reverse every other", false,
+        NodeAnimation{}
+            .fromOffsetX(-25.0f)
+            .toOffsetX(15.0f)
+            .fromSizeY(5.0f)
+            .toSizeY(-10.0f)
+            .toOpacity(0.75f)
+            .addFlagsBegin(NodeFlag::Clip)
+            .clearFlagsEnd(NodeFlag::Disabled),
+        AnimationFlag::ReverseEveryOther, -10_nsec,
+        "Node {0x1, 0x1}\n"
+        "  Playing animation {0x6, 0x2} from animator {0x0, 0x3}\n"
+        "    Animation flags: ReverseEveryOther\n"
+        "    Offset X: -25 <-> 15\n"
+        "    Size Y: 5 <-> -10\n"
+        "    Opacity: ? <-> 0.75\n"
+        "    Add flags start: Clip\n"
+        "    Clear flags stop: Disabled"},
+    /* The arrow changes and the flag operation as well order get swapped */
+    {"offset X, size Y, opacity begin, add flags begin, clear flags end, reverse", false,
+        NodeAnimation{}
+            .fromOffsetX(-25.0f)
+            .toOffsetX(15.0f)
+            .fromSizeY(5.0f)
+            .toSizeY(-10.0f)
+            .toOpacity(0.75f)
+            .addFlagsBegin(NodeFlag::Clip)
+            .clearFlagsEnd(NodeFlag::Disabled),
+        AnimationFlag::Reverse, -10_nsec,
+        "Node {0x1, 0x1}\n"
+        "  Playing animation {0x6, 0x2} from animator {0x0, 0x3}\n"
+        "    Animation flags: Reverse\n"
+        "    Offset X: -25 <- 15\n"
+        "    Size Y: 5 <- -10\n"
+        "    Opacity: ? <- 0.75\n"
+        "    Add flags start: Disabled\n"
+        "    Clear flags stop: Clip"},
+    /* The arrow changes and the flag operation as well order get swapped */
+    {"offset X, size Y, opacity begin, add flags begin, clear flags end, reverse + reverse every other", false,
+        NodeAnimation{}
+            .fromOffsetX(-25.0f)
+            .toOffsetX(15.0f)
+            .fromSizeY(5.0f)
+            .toSizeY(-10.0f)
+            .toOpacity(0.75f)
+            .addFlagsBegin(NodeFlag::Clip)
+            .clearFlagsEnd(NodeFlag::Disabled),
+        AnimationFlag::Reverse|AnimationFlag::ReverseEveryOther, -10_nsec,
+        "Node {0x1, 0x1}\n"
+        "  Playing animation {0x6, 0x2} from animator {0x0, 0x3}\n"
+        "    Animation flags: Reverse|ReverseEveryOther\n"
+        "    Offset X: -25 <-> 15\n"
+        "    Size Y: 5 <-> -10\n"
+        "    Opacity: ? <-> 0.75\n"
+        "    Add flags start: Disabled\n"
+        "    Clear flags stop: Clip"},
+    {"offset, add flags begin + end, clear flags end", false,
+        NodeAnimation{}
+            .fromOffset({-25.0f, 15.0f})
+            .toOffset({5.0f, -10.0f})
+            .addFlagsBegin(NodeFlag::Clip)
+            .addFlagsEnd(NodeFlag::NoEvents)
+            .clearFlagsEnd(NodeFlag::Disabled),
+        {}, -10_nsec,
+        "Node {0x1, 0x1}\n"
+        "  Playing animation {0x6, 0x2} from animator {0x0, 0x3}\n"
+        "    Offset: {-25, 15} -> {5, -10}\n"
+        "    Add flags start: Clip, stop: NoEvents\n"
+        "    Clear flags stop: Disabled"},
+    /* Only the arrow changes, flags stay */
+    {"offset, add flags begin + end, clear flags end, reverse every other", false,
+        NodeAnimation{}
+            .fromOffset({-25.0f, 15.0f})
+            .toOffset({5.0f, -10.0f})
+            .addFlagsBegin(NodeFlag::Clip)
+            .addFlagsEnd(NodeFlag::NoEvents)
+            .clearFlagsEnd(NodeFlag::Disabled),
+        AnimationFlag::ReverseEveryOther, -10_nsec,
+        "Node {0x1, 0x1}\n"
+        "  Playing animation {0x6, 0x2} from animator {0x0, 0x3}\n"
+        "    Animation flags: ReverseEveryOther\n"
+        "    Offset: {-25, 15} <-> {5, -10}\n"
+        "    Add flags start: Clip, stop: NoEvents\n"
+        "    Clear flags stop: Disabled"},
+    /* The arrow changes and the flag operation as well order get swapped */
+    {"offset, add flags begin + end, clear flags end, reverse", false,
+        NodeAnimation{}
+            .fromOffset({-25.0f, 15.0f})
+            .toOffset({5.0f, -10.0f})
+            .addFlagsBegin(NodeFlag::Clip)
+            .addFlagsEnd(NodeFlag::NoEvents)
+            .clearFlagsEnd(NodeFlag::Disabled),
+        AnimationFlag::Reverse, -10_nsec,
+        "Node {0x1, 0x1}\n"
+        "  Playing animation {0x6, 0x2} from animator {0x0, 0x3}\n"
+        "    Animation flags: Reverse\n"
+        "    Offset: {-25, 15} <- {5, -10}\n"
+        "    Add flags start: Disabled\n"
+        "    Clear flags start: NoEvents, stop: Clip"},
+    /* The arrow changes and the flag operation as well order get swapped */
+    {"offset, add flags begin, clear flags end, reverse + reverse every other", false,
+        NodeAnimation{}
+            .fromOffset({-25.0f, 15.0f})
+            .toOffset({5.0f, -10.0f})
+            .addFlagsBegin(NodeFlag::Clip)
+            .addFlagsEnd(NodeFlag::NoEvents)
+            .clearFlagsEnd(NodeFlag::Disabled),
+        AnimationFlag::Reverse|AnimationFlag::ReverseEveryOther, -10_nsec,
+        "Node {0x1, 0x1}\n"
+        "  Playing animation {0x6, 0x2} from animator {0x0, 0x3}\n"
+        "    Animation flags: Reverse|ReverseEveryOther\n"
+        "    Offset: {-25, 15} <-> {5, -10}\n"
+        "    Add flags start: Disabled\n"
+        "    Clear flags start: NoEvents, stop: Clip"},
+    {"size, clear flags begin + end, add flags end", false,
+        NodeAnimation{}
+            .fromSize({-25.0f, 15.0f})
+            .toSize({5.0f, -10.0f})
+            .clearFlagsBegin(NodeFlag::Clip)
+            .clearFlagsEnd(NodeFlag::NoEvents)
+            .addFlagsEnd(NodeFlag::Disabled),
+        {}, -10_nsec,
+        "Node {0x1, 0x1}\n"
+        "  Playing animation {0x6, 0x2} from animator {0x0, 0x3}\n"
+        "    Size: {-25, 15} -> {5, -10}\n"
+        "    Add flags stop: Disabled\n"
+        "    Clear flags start: Clip, stop: NoEvents"},
+    /* Only the arrow changes, flags stay */
+    {"size, clear flags begin + end, add flags begin, reverse every other", false,
+        NodeAnimation{}
+            .fromSize({-25.0f, 15.0f})
+            .toSize({5.0f, -10.0f})
+            .clearFlagsBegin(NodeFlag::Clip)
+            .clearFlagsEnd(NodeFlag::NoEvents)
+            .addFlagsEnd(NodeFlag::Disabled),
+        AnimationFlag::ReverseEveryOther, -10_nsec,
+        "Node {0x1, 0x1}\n"
+        "  Playing animation {0x6, 0x2} from animator {0x0, 0x3}\n"
+        "    Animation flags: ReverseEveryOther\n"
+        "    Size: {-25, 15} <-> {5, -10}\n"
+        "    Add flags stop: Disabled\n"
+        "    Clear flags start: Clip, stop: NoEvents"},
+    /* The arrow changes and the flag operation as well order get swapped */
+    {"size, clear flags begin + end, add flags begin, reverse", false,
+        NodeAnimation{}
+            .fromSize({-25.0f, 15.0f})
+            .toSize({5.0f, -10.0f})
+            .clearFlagsBegin(NodeFlag::Clip)
+            .clearFlagsEnd(NodeFlag::NoEvents)
+            .addFlagsEnd(NodeFlag::Disabled),
+        AnimationFlag::Reverse, -10_nsec,
+        "Node {0x1, 0x1}\n"
+        "  Playing animation {0x6, 0x2} from animator {0x0, 0x3}\n"
+        "    Animation flags: Reverse\n"
+        "    Size: {-25, 15} <- {5, -10}\n"
+        "    Add flags start: NoEvents, stop: Clip\n"
+        "    Clear flags start: Disabled"},
+    /* The arrow changes and the flag operation as well order get swapped */
+    {"size, clear flags begin + end, add flags begin, reverse + reverse every other", false,
+        NodeAnimation{}
+            .fromSize({-25.0f, 15.0f})
+            .toSize({5.0f, -10.0f})
+            .clearFlagsBegin(NodeFlag::Clip)
+            .clearFlagsEnd(NodeFlag::NoEvents)
+            .addFlagsEnd(NodeFlag::Disabled),
+        AnimationFlag::Reverse|AnimationFlag::ReverseEveryOther, -10_nsec,
+        "Node {0x1, 0x1}\n"
+        "  Playing animation {0x6, 0x2} from animator {0x0, 0x3}\n"
+        "    Animation flags: Reverse|ReverseEveryOther\n"
+        "    Size: {-25, 15} <-> {5, -10}\n"
+        "    Add flags start: NoEvents, stop: Clip\n"
+        "    Clear flags start: Disabled"},
+    {"offset, size, opacity, all flags, remove node after, reverse every other, stopped, animator name", true,
+        NodeAnimation{}
+            .fromOffset({35.0f, -15.0f})
+            .toOffset({Constants::nan(), -40.0f})
+            .fromSize({-25.0f, Constants::nan()})
+            .toSize({5.0f, -10.0f})
+            .fromOpacity(0.25f)
+            .addFlagsBegin(NodeFlag::Focusable|NodeFlag::NoBlur)
+            .addFlagsEnd(NodeFlag::Disabled)
+            .clearFlagsBegin(NodeFlag::Hidden)
+            .clearFlagsEnd(NodeFlag::NoEvents|NodeFlag::Clip)
+            .setRemoveNodeAfter(true),
+        AnimationFlag::ReverseEveryOther|AnimationFlag::KeepOncePlayed, -100_nsec,
+        "Node {0x1, 0x1}\n"
+        "  Stopped animation {0x6, 0x2} from animator {0x0, 0x3} Nodead\n"
+        "    Animation flags: KeepOncePlayed|ReverseEveryOther\n"
+        "    Offset: {35, -15} <-> {?, -40}\n"
+        "    Size: {-25, ?} <-> {5, -10}\n"
+        "    Opacity: 0.25 <-> ?\n"
+        "    Add flags start: Focusable|NoBlur, stop: Disabled\n"
+        "    Clear flags start: Hidden, stop: Clip|NoEvents\n"
+        "    Remove node after"},
+    /* The last case here is used in debugIntegrationNoCallback() to verify
+       output w/o a callback and for visual color verification, it's expected
+       to be the most complete, executing all coloring code paths */
+};
+
 NodeAnimatorTest::NodeAnimatorTest() {
     addTests({&NodeAnimatorTest::animationConstruct,
               &NodeAnimatorTest::animationConstructCopy,
@@ -838,6 +1312,11 @@ NodeAnimatorTest::NodeAnimatorTest() {
         Containers::arraySize(UiAdvanceData));
 
     addTests({&NodeAnimatorTest::uiAdvanceToggleReverse});
+
+    addInstancedTests({&NodeAnimatorTest::debugIntegration},
+        Containers::arraySize(DebugIntegrationData));
+
+    addTests({&NodeAnimatorTest::debugIntegrationNoCallback});
 }
 
 void NodeAnimatorTest::animationConstruct() {
@@ -1992,6 +2471,115 @@ void NodeAnimatorTest::uiAdvanceToggleReverse() {
     CORRADE_VERIFY(!animator.isHandleValid(backward));
     CORRADE_COMPARE(ui.nodeFlags(node1), NodeFlag::NoBlur);
     CORRADE_COMPARE(ui.nodeFlags(node2), NodeFlags{});
+}
+
+void NodeAnimatorTest::debugIntegration() {
+    auto&& data = DebugIntegrationData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
+    AbstractUserInterface ui{{100, 100}};
+    NodeHandle root = ui.createNode({}, {100, 100});
+    NodeHandle node = ui.createNode(root, {}, {100, 100});
+
+    /* Create and remove a bunch of animators first to have the handle with a
+       non-trivial value */
+    ui.removeAnimator(ui.createAnimator());
+    ui.removeAnimator(ui.createAnimator());
+    NodeAnimator& animator = ui.setNodeAnimatorInstance(Containers::pointer<NodeAnimator>(ui.createAnimator()));
+    /* And also some more animations to not list a trivial handle */
+    animator.create(NodeAnimation{}, nullptr, {}, {}, NodeHandle::Null);
+    animator.create(NodeAnimation{}, nullptr, {}, {}, NodeHandle::Null);
+    animator.create(NodeAnimation{}, nullptr, {}, {}, NodeHandle::Null);
+    animator.create(NodeAnimation{}, nullptr, {}, {}, NodeHandle::Null);
+    animator.create(NodeAnimation{}, nullptr, {}, {}, NodeHandle::Null);
+    animator.create(NodeAnimation{}, nullptr, {}, {}, NodeHandle::Null);
+    animator.remove(animator.create(NodeAnimation{}, nullptr, {}, {}, NodeHandle::Null));
+    animator.create(data.animation, Animation::Easing::linear, data.start, 20_nsec, node, data.flags);
+
+    DebugLayer& debugLayer = ui.setLayerInstance(Containers::pointer<DebugLayer>(ui.createLayer(), DebugLayerSource::NodeAnimationDetails, DebugLayerFlag::NodeHighlight));
+
+    Containers::String out;
+    debugLayer.setNodeHighlightCallback([&out](Containers::StringView message) {
+        out = message;
+    });
+    debugLayer.setAnimatorName(animator, data.animatorName ? "Nodead" : "");
+
+    /* Make the debug layer aware of everything */
+    ui.update();
+
+    CORRADE_VERIFY(debugLayer.highlightNode(node));
+    CORRADE_COMPARE_AS(out, data.expected, TestSuite::Compare::String);
+}
+
+void NodeAnimatorTest::debugIntegrationNoCallback() {
+    AbstractUserInterface ui{{100, 100}};
+    NodeHandle root = ui.createNode({}, {100, 100});
+    NodeHandle node = ui.createNode(root, {}, {100, 100});
+
+    /* Just to match the animator handle in debugIntegration() above */
+    ui.removeAnimator(ui.createAnimator());
+    ui.removeAnimator(ui.createAnimator());
+    NodeAnimator& animator = ui.setNodeAnimatorInstance(Containers::pointer<NodeAnimator>(ui.createAnimator()));
+    /* ... and the data handle also */
+    animator.create(NodeAnimation{}, nullptr, {}, {}, NodeHandle::Null);
+    animator.create(NodeAnimation{}, nullptr, {}, {}, NodeHandle::Null);
+    animator.create(NodeAnimation{}, nullptr, {}, {}, NodeHandle::Null);
+    animator.create(NodeAnimation{}, nullptr, {}, {}, NodeHandle::Null);
+    animator.create(NodeAnimation{}, nullptr, {}, {}, NodeHandle::Null);
+    animator.create(NodeAnimation{}, nullptr, {}, {}, NodeHandle::Null);
+    animator.remove(animator.create(NodeAnimation{}, nullptr, {}, {}, NodeHandle::Null));
+    animator.create(
+        NodeAnimation{}
+            .fromOffset({35.0f, -15.0f})
+            .toOffset({Constants::nan(), -40.0f})
+            .fromSize({-25.0f, Constants::nan()})
+            .toSize({5.0f, -10.0f})
+            .fromOpacity(0.25f)
+            .addFlagsBegin(NodeFlag::Focusable|NodeFlag::NoBlur)
+            .addFlagsEnd(NodeFlag::Disabled)
+            .clearFlagsBegin(NodeFlag::Hidden)
+            .clearFlagsEnd(NodeFlag::NoEvents|NodeFlag::Clip)
+            .setRemoveNodeAfter(true),
+        Animation::Easing::linear, -100_nsec, 20_nsec, node,
+        AnimationFlag::KeepOncePlayed|AnimationFlag::ReverseEveryOther);
+
+    DebugLayer& debugLayer = ui.setLayerInstance(Containers::pointer<DebugLayer>(ui.createLayer(), DebugLayerSource::NodeAnimationDetails, DebugLayerFlag::NodeHighlight));
+
+    debugLayer.setAnimatorName(animator, "Nodead");
+
+    /* Make the debug layer aware of everything */
+    ui.update();
+
+    /* Highlight the node for visual color verification */
+    {
+        Debug{} << "======================== visual color verification start =======================";
+
+        debugLayer.addFlags(DebugLayerFlag::ColorAlways);
+
+        CORRADE_VERIFY(debugLayer.highlightNode(node));
+
+        debugLayer.clearFlags(DebugLayerFlag::ColorAlways);
+
+        Debug{} << "======================== visual color verification end =========================";
+    }
+
+    /* Do the same, but this time with output redirection to verify the
+       contents. The internals automatically disable coloring if they detect
+       the output isn't a TTY. */
+    {
+        Containers::String out;
+        Debug redirectOutput{&out};
+        CORRADE_VERIFY(debugLayer.highlightNode(node));
+        /* The output always has a newline at the end which cannot be disabled
+           so strip it to have the comparison match the debugIntegration()
+           case */
+        CORRADE_COMPARE_AS(out,
+            "\n",
+            TestSuite::Compare::StringHasSuffix);
+        CORRADE_COMPARE_AS(out.exceptSuffix("\n"),
+            Containers::arrayView(DebugIntegrationData).back().expected,
+            TestSuite::Compare::String);
+    }
 }
 
 }}}}

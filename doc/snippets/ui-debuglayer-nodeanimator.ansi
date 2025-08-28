@@ -1,0 +1,6 @@
+[0;1;39mNode[0m {0x16, 0x1}
+ [0;36m Playing[0m animation {0x4, 0x3} from animator {0x2, 0x2}[0;33m Node[0m
+    Offset X: ? -> 500
+    Opacity: 0 -> 1
+    Add flags start:[0;36m Clip|NoEvents[0m
+    Clear flags start:[0;36m Hidden[0m, stop:[0;36m Clip|NoEvents[0m

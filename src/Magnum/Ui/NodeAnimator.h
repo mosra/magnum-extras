@@ -160,9 +160,28 @@ animations are coming from @ref NodeAnimator. One practical use case is having
 a different easing function for each. There's however no way to guarantee this
 when the node animations are combined with @ref GenericNodeAnimator or custom
 animators.
+
+@section Ui-NodeAnimator-debug-integration Debug layer integration
+
+When using @ref Ui-DebugLayer-node-highlight "DebugLayer node highlight" and
+@ref DebugLayerSource::NodeAnimationDetails is enabled, passing this animator to
+@ref DebugLayer::setAnimatorName(const T&, const Containers::StringView&) "DebugLayer::setAnimatorName()"
+will make it list properties of a particular animation, with `?` denoting
+offset, size or opacity taken from the node at the time the animation is
+played. For example:
+
+@include ui-debuglayer-nodeanimator.ansi
+
+If given animation has @ref AnimationFlag::Reverse set, the output will be
+appropriately different for clarity. The above would thus look like this when
+the animation is reversed:
+
+@include ui-debuglayer-nodeanimator-reverse.ansi
 */
 class MAGNUM_UI_EXPORT NodeAnimator: public AbstractNodeAnimator {
     public:
+        class DebugIntegration;
+
         /**
          * @brief Constructor
          * @param handle    Handle returned by
@@ -818,6 +837,21 @@ class MAGNUM_UI_EXPORT NodeAnimation {
             _flagsClearEnd;
 
         bool _removeNodeAfter = false;
+};
+
+/**
+@brief Debug layer integration
+
+Integrates the animator with @ref DebugLayer. See
+@ref Ui-NodeAnimator-debug-integration "NodeAnimator debug layer integration"
+for more information and example usage.
+*/
+class MAGNUM_UI_EXPORT NodeAnimator::DebugIntegration {
+    public:
+        #ifndef DOXYGEN_GENERATING_OUTPUT
+        /* Used internally by DebugLayer, no point in documenting it here */
+        void print(Debug& debug, const NodeAnimator& animator, const Containers::StringView& animatorName, AnimatorDataHandle animation);
+        #endif
 };
 
 }}

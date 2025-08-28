@@ -336,7 +336,7 @@ With @ref DebugLayerSource::NodeLayoutDetails, a similar functionality is
 available for layouters that implement a @ref AbstractLayouter::DebugIntegration
 inner class. Then, @ref DebugLayerSource::NodeAnimationDetails enables this for
 for animators that implement a @ref AbstractAnimator::DebugIntegration inner
-class.
+class, which is the case for example with @ref NodeAnimator.
 
 @subsection Ui-DebugLayer-node-highlight-options Node highlight options
 

@@ -32,6 +32,7 @@
 #include <Magnum/Image.h>
 #include <Magnum/ImageView.h>
 #include <Magnum/PixelFormat.h>
+#include <Magnum/Animation/Easing.h>
 #ifdef MAGNUM_TARGET_EGL
 #include <Magnum/Platform/WindowlessEglApplication.h>
 #elif defined(CORRADE_TARGET_APPLE)
@@ -46,6 +47,7 @@
 #include <Magnum/GL/Framebuffer.h>
 #include <Magnum/GL/Renderer.h>
 #include <Magnum/Math/Color.h>
+#include <Magnum/Math/Time.h>
 #include <Magnum/Text/GlyphCacheGL.h>
 #include <Magnum/Trade/AbstractImageConverter.h>
 
@@ -57,6 +59,7 @@
 #include "Magnum/Ui/EventLayer.h"
 #include "Magnum/Ui/Handle.h"
 #include "Magnum/Ui/LineLayerGL.h"
+#include "Magnum/Ui/NodeAnimator.h"
 #include "Magnum/Ui/NodeFlags.h"
 #include "Magnum/Ui/RendererGL.h"
 #include "Magnum/Ui/SnapLayouter.h"
@@ -458,6 +461,49 @@ debugLayer.setLayerName(visualLayer, "Styled", [](UnsignedInt style) {
     }
     Debug{} << out;
     Utility::Path::write("ui-debuglayer-eventlayer.ansi", out);
+
+    /* NodeAnimator integration. Creating some more animators and animations to
+       have non-trivial handles. */
+    ui.createAnimator();
+    ui.createAnimator();
+    ui.removeAnimator(ui.createAnimator());
+    Ui::NodeAnimator& nodeAnimator = ui.setNodeAnimatorInstance(Containers::pointer<Ui::NodeAnimator>(ui.createAnimator()));
+    debugLayer.setAnimatorName(nodeAnimator, "Node");
+    Ui::NodeHandle nodeAnimatedNode = ui.createNode(parent, {}, {});
+    nodeAnimator.create(Ui::NodeAnimation{}, nullptr, -10_nsec, 20_nsec, Ui::NodeHandle::Null);
+    nodeAnimator.create(Ui::NodeAnimation{}, nullptr, -10_nsec, 20_nsec, Ui::NodeHandle::Null);
+    nodeAnimator.create(Ui::NodeAnimation{}, nullptr, -10_nsec, 20_nsec, Ui::NodeHandle::Null);
+    nodeAnimator.create(Ui::NodeAnimation{}, nullptr, -10_nsec, 20_nsec, Ui::NodeHandle::Null);
+    nodeAnimator.remove(nodeAnimator.create(Ui::NodeAnimation{}, nullptr, -10_nsec, 20_nsec, Ui::NodeHandle::Null));
+    nodeAnimator.remove(nodeAnimator.create(Ui::NodeAnimation{}, nullptr, -10_nsec, 20_nsec, Ui::NodeHandle::Null));
+    Ui::AnimationHandle nodeAnimatedNodeAnimation = nodeAnimator.create(
+        Ui::NodeAnimation{}
+            .toOffsetX(500.0f)
+            .fromOpacity(0.0f)
+            .toOpacity(1.0f)
+            .addFlagsBegin(Ui::NodeFlag::NoEvents|Ui::NodeFlag::Clip)
+            .clearFlagsBegin(Ui::NodeFlag::Hidden)
+            .clearFlagsEnd(Ui::NodeFlag::NoEvents|Ui::NodeFlag::Clip),
+        Animation::Easing::linear, -10_nsec, 20_nsec, nodeAnimatedNode);
+
+    ui.update();
+    out = {};
+    {
+        Debug redirectOutput{&out};
+        CORRADE_INTERNAL_ASSERT(debugLayer.highlightNode(nodeAnimatedNode));
+    }
+    Debug{} << out;
+    Utility::Path::write("ui-debuglayer-nodeanimator.ansi", out);
+
+    nodeAnimator.addFlags(nodeAnimatedNodeAnimation, Ui::AnimationFlag::Reverse);
+
+    out = {};
+    {
+        Debug redirectOutput{&out};
+        CORRADE_INTERNAL_ASSERT(debugLayer.highlightNode(nodeAnimatedNode));
+    }
+    Debug{} << out;
+    Utility::Path::write("ui-debuglayer-nodeanimator-reverse.ansi", out);
 
     return 0;
 }

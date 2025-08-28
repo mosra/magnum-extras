@@ -29,6 +29,7 @@
 #include <Corrade/Containers/BitArrayView.h>
 #include <Corrade/Containers/GrowableArray.h>
 #include <Corrade/Containers/StridedArrayView.h>
+#include <Corrade/Containers/StringView.h>
 #include <Magnum/Math/Functions.h>
 #include <Magnum/Math/Time.h>
 
@@ -498,6 +499,206 @@ Containers::Pair<NodeFlags, NodeFlags> NodeAnimation::flagsAdd() const {
 
 Containers::Pair<NodeFlags, NodeFlags> NodeAnimation::flagsClear() const {
     return {_flagsClearBegin, _flagsClearEnd};
+}
+
+void NodeAnimator::DebugIntegration::print(Debug& debug, const NodeAnimator& animator, const Containers::StringView& animatorName, AnimatorDataHandle animation) {
+    debug << " " << Debug::color(Debug::Color::Cyan) << Debug::packed << animator.state(animation) << Debug::resetColor << "animation" << Debug::packed << animation << "from animator" << Debug::packed << animator.handle();
+    if(animatorName)
+        debug << Debug::color(Debug::Color::Yellow) << animatorName << Debug::resetColor;
+    debug << Debug::newline;
+
+    const AnimationFlags flags = animator.flags(animation);
+    if(flags) {
+        debug << "    Animation flags:" << Debug::color(Debug::Color::Cyan) << Debug::packed << flags << Debug::resetColor << Debug::newline;
+    }
+
+    /* For offset, size and opacity the reversed direction is indicated by
+       different arrows instead of swapping the values, as with
+       ReverseEveryOther the direction changes every iteration and the order
+       could be already out of date when printed. There's also no special
+       indication for Reverse|ReverseEveryOther, but the animation flags are
+       printed at the top for the user to decide. */
+    const char* direction;
+    if(flags & AnimationFlag::ReverseEveryOther)
+        direction = "<->";
+    else if(flags & AnimationFlag::Reverse)
+        direction = "<-";
+    else
+        direction = "->";
+
+    /* Node offset */
+    {
+        const Containers::Pair<Vector2, Vector2> offsets = animator.offsets(animation);
+        if(!(Math::isNan(offsets.first()) &
+             Math::isNan(offsets.second())).any())
+        {
+            debug << "    Offset: {" << Debug::nospace;
+            if(Math::isNan(offsets.first().x()))
+                debug << "?";
+            else
+                debug << offsets.first().x();
+            debug << Debug::nospace << ",";
+            if(Math::isNan(offsets.first().y()))
+                debug << "?";
+            else
+                debug << offsets.first().y();
+            debug << Debug::nospace << "}" << direction << "{" << Debug::nospace;
+            if(Math::isNan(offsets.second().x()))
+                debug << "?";
+            else
+                debug << offsets.second().x();
+            debug << Debug::nospace << ",";
+            if(Math::isNan(offsets.second().y()))
+                debug << "?";
+            else
+                debug << offsets.second().y();
+            debug << Debug::nospace << "}" << Debug::newline;
+        } else if(!Math::isNan(offsets.first().x()) ||
+                  !Math::isNan(offsets.second().x()))
+        {
+            debug << "    Offset X:";
+            if(Math::isNan(offsets.first().x()))
+                debug << "?";
+            else
+                debug << offsets.first().x();
+            debug << direction;
+            if(Math::isNan(offsets.second().x()))
+                debug << "?";
+            else
+                debug << offsets.second().x();
+            debug << Debug::newline;
+        } else if(!Math::isNan(offsets.first().y()) ||
+                  !Math::isNan(offsets.second().y()))
+        {
+            debug << "    Offset Y:";
+            if(Math::isNan(offsets.first().y()))
+                debug << "?";
+            else
+                debug << offsets.first().y();
+            debug << direction;
+            if(Math::isNan(offsets.second().y()))
+                debug << "?";
+            else
+                debug << offsets.second().y();
+            debug << Debug::newline;
+        } else CORRADE_INTERNAL_ASSERT(Math::isNan(offsets.first()).all() &&
+                                       Math::isNan(offsets.second()).all());
+    }
+
+    /* Node size */
+    {
+        const Containers::Pair<Vector2, Vector2> sizes = animator.sizes(animation);
+        if(!(Math::isNan(sizes.first()) &
+             Math::isNan(sizes.second())).any())
+        {
+            debug << "    Size: {" << Debug::nospace;
+            if(Math::isNan(sizes.first().x()))
+                debug << "?";
+            else
+                debug << sizes.first().x();
+            debug << Debug::nospace << ",";
+            if(Math::isNan(sizes.first().y()))
+                debug << "?";
+            else
+                debug << sizes.first().y();
+            debug << Debug::nospace << "}" << direction << "{" << Debug::nospace;
+            if(Math::isNan(sizes.second().x()))
+                debug << "?";
+            else
+                debug << sizes.second().x();
+            debug << Debug::nospace << ",";
+            if(Math::isNan(sizes.second().y()))
+                debug << "?";
+            else
+                debug << sizes.second().y();
+            debug << Debug::nospace << "}" << Debug::newline;
+        } else if(!Math::isNan(sizes.first().x()) ||
+                  !Math::isNan(sizes.second().x()))
+        {
+            debug << "    Size X:";
+            if(Math::isNan(sizes.first().x()))
+                debug << "?";
+            else
+                debug << sizes.first().x();
+            debug << direction;
+            if(Math::isNan(sizes.second().x()))
+                debug << "?";
+            else
+                debug << sizes.second().x();
+            debug << Debug::newline;
+        } else if(!Math::isNan(sizes.first().y()) ||
+                  !Math::isNan(sizes.second().y()))
+        {
+            debug << "    Size Y:";
+            if(Math::isNan(sizes.first().y()))
+                debug << "?";
+            else
+                debug << sizes.first().y();
+            debug << direction;
+            if(Math::isNan(sizes.second().y()))
+                debug << "?";
+            else
+                debug << sizes.second().y();
+            debug << Debug::newline;
+        } else CORRADE_INTERNAL_ASSERT(Math::isNan(sizes.first()).all() &&
+                                       Math::isNan(sizes.second()).all());
+    }
+
+    /* Node opacity */
+    {
+        const Containers::Pair<Float, Float> opacities = animator.opacities(animation);
+        if(!Math::isNan(opacities.first()) ||
+           !Math::isNan(opacities.second()))
+        {
+            debug << "    Opacity:";
+            if(Math::isNan(opacities.first()))
+                debug << "?";
+            else
+                debug << opacities.first();
+            debug << direction;
+            if(Math::isNan(opacities.second()))
+                debug << "?";
+            else
+                debug << opacities.second();
+            debug << Debug::newline;
+        }
+    }
+
+    /* Node flags to add or clear */
+    {
+        /* If the animation is reversed, the flags are applied in reverse as
+           well -- cleared at the end instead of being added at the begin,
+           etc... */
+        Containers::Pair<NodeFlags, NodeFlags> flagsAdd = animator.flagsAdd(animation);
+        Containers::Pair<NodeFlags, NodeFlags> flagsClear = animator.flagsClear(animation);
+        if(flags & AnimationFlag::Reverse) {
+            Utility::swap(flagsAdd.first(), flagsAdd.second());
+            Utility::swap(flagsClear.first(), flagsClear.second());
+            Utility::swap(flagsAdd, flagsClear);
+        }
+
+        /* ... which is also why this is using start/stop and not begin/end,
+           because due to the swap above it describes what happens at start and
+           stop even if the animation is reversed */
+        if(flagsAdd.first() && flagsAdd.second()) {
+            debug << "    Add flags start:" << Debug::color(Debug::Color::Cyan) << Debug::packed << flagsAdd.first() << Debug::resetColor << Debug::nospace << ", stop:" << Debug::color(Debug::Color::Cyan) << Debug::packed << flagsAdd.second() << Debug::resetColor << Debug::newline;
+        } else if(flagsAdd.first()) {
+            debug << "    Add flags start:" << Debug::color(Debug::Color::Cyan) << Debug::packed << flagsAdd.first() << Debug::resetColor << Debug::newline;
+        } else if(flagsAdd.second()) {
+            debug << "    Add flags stop:" << Debug::color(Debug::Color::Cyan) << Debug::packed << flagsAdd.second() << Debug::resetColor << Debug::newline;
+        }
+        if(flagsClear.first() && flagsClear.second()) {
+            debug << "    Clear flags start:" << Debug::color(Debug::Color::Cyan) << Debug::packed << flagsClear.first() << Debug::resetColor << Debug::nospace << ", stop:" << Debug::color(Debug::Color::Cyan) << Debug::packed << flagsClear.second() << Debug::resetColor << Debug::newline;
+        } else if(flagsClear.first()) {
+            debug << "    Clear flags start:" << Debug::color(Debug::Color::Cyan) << Debug::packed << flagsClear.first() << Debug::resetColor << Debug::newline;
+        } else if(flagsClear.second()) {
+            debug << "    Clear flags stop:" << Debug::color(Debug::Color::Cyan) << Debug::packed << flagsClear.second() << Debug::resetColor << Debug::newline;
+        }
+    }
+
+    /* Remove node after */
+    if(animator.hasRemoveNodeAfter(animation))
+        debug << "    " << Debug::color(Debug::Color::Magenta) << Debug::nospace << "Remove node after" << Debug::resetColor << Debug::newline;
 }
 
 }}
