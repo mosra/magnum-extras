@@ -182,8 +182,8 @@ union Animation {
         /* One byte free */
         UnsignedInt repeatCount;
 
-        /* Duration. 0 only when the animation is freed, otherwise it's always
-           positive. isHandleValid() checks this field to correctly mark
+        /* Duration. Is -max when the animation is freed, otherwise it's always
+           non-negative. isHandleValid() checks this field to correctly mark
            invalid handles if the generation matches by accident. */
         Nanoseconds duration{NoInit};
 
@@ -206,7 +206,7 @@ union Animation {
         /* See State::firstFree for more information */
         UnsignedInt next;
 
-        /* If this is 0, the animation is freed */
+        /* If this is -max, the animation is freed */
         Nanoseconds duration;
     } free;
 };
