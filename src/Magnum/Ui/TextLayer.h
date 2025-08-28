@@ -1551,12 +1551,13 @@ editing styles you want to have for a particular dynamic style, use
 
 @section Ui-TextLayer-debug-integration Debug layer integration
 
-When using @ref Ui-DebugLayer-node-highlight "DebugLayer node highlighting",
-this layer inherits @ref Ui-AbstractVisualLayer-debug-integration "debug integration from the AbstractVisualLayer".
-See its documentation for more information. If
-@ref DebugLayerSource::NodeDataDetails is enabled, for @ref TextLayer the
-output additionally shows if given data has custom color or padding, to clearly
-distinguish it from just a vanilla style. For example:
+When using @ref Ui-DebugLayer-node-highlight "DebugLayer node highlighting" and
+@ref DebugLayerSource::NodeDataDetails is enabled, passing this layer to
+@ref DebugLayer::setLayerName(const T&, const Containers::StringView&) "DebugLayer::setLayerName()"
+will inherit @ref Ui-AbstractVisualLayer-debug-integration "debug integration from the AbstractVisualLayer",
+which shows style assignments. For @ref TextLayer the output additionally shows
+if given data has custom color or padding, to clearly distinguish it from just
+a vanilla style. For example:
 
 @include ui-debuglayer-textlayer.ansi
 */

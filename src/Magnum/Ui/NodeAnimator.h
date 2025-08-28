@@ -110,9 +110,11 @@ the animation stops. To make the animation reusable, it's marked with
 
 @snippet Ui.cpp NodeAnimator-create-reversible
 
-When @ref AnimationFlag::Reverse is added and the animation is played, it'll
-first add @ref NodeFlag::NoEvents, slide in the other direction and finally
-removes @relativeref{NodeFlag,NoEvents} again and makes the node hidden:
+When @ref AnimationFlag::Reverse is added and the animation is played, the
+offset, size and opacity expectedly animates in reverse. For flags both the
+* *order* and the *operation* is reversed --- here it'll first add
+@ref NodeFlag::NoEvents, slide in the opposite direction and finally removes
+@relativeref{NodeFlag,NoEvents} again and makes the node hidden:
 
 @snippet Ui.cpp NodeAnimator-create-reversible-reverse
 

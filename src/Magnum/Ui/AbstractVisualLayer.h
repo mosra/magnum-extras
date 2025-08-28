@@ -48,11 +48,10 @@ explain with concrete examples rather than on an abstract class.
 @section Ui-AbstractVisualLayer-debug-integration Debug layer integration
 
 When using @ref Ui-DebugLayer-node-highlight "DebugLayer node highlight" and
-passing a layer derived from this class to
-@ref DebugLayer::setLayerName(const T&, const Containers::StringView&) "DebugLayer::setLayerName()",
-it will list style assignments of all data if
-@ref DebugLayerSource::NodeDataDetails is enabled, along with their
-transitions. For example:
+@ref DebugLayerSource::NodeDataDetails is enabled, passing a layer derived from
+this class to @ref DebugLayer::setLayerName(const T&, const Containers::StringView&) "DebugLayer::setLayerName()"
+will make it list style assignments of all data, along with their transitions.
+For example:
 
 @include ui-debuglayer-abstractvisuallayer.ansi
 

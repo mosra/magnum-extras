@@ -1378,8 +1378,8 @@ void DebugLayerTest::layerNameDebugIntegrationExplicit() {
         CORRADE_COMPARE(layer.stateData().layers[2].deleter, data.used);
         CORRADE_COMPARE(layer.stateData().layers[2].print, data.used);
     }
-    /* A local instance gets constructed, copied to the function,
-       then internally moved to allocate the instance (which calls the copy
+    /* A local instance gets constructed, copied to the function, then
+       internally moved to allocate the instance (which calls the copy
        constructor again) and then both temporaries get destructed. If not
        used, the final allocation isn't made. */
     CORRADE_COMPARE(debugIntegrationConstructed, data.used ? 3 : 2);
@@ -2429,9 +2429,10 @@ void DebugLayerTest::nodeHighlightDebugIntegrationExplicitRvalue() {
 
     NodeHandle node = ui.createNode({40, 40}, {20, 20});
 
-    /* Compared to nodeHighlight() and nodeHighlightDebugIntegrationExplicit()
-       here the whole DebugIntegration type is defined in a base class which
-       should also be fine */
+    /* Compared to nodeHighlight() and
+       nodeHighlightLayerDebugIntegrationExplicit() here the whole
+       DebugIntegration type is defined in a base class which should also be
+       fine */
     struct IntegratedLayerBase: AbstractLayer {
         using AbstractLayer::AbstractLayer;
         using AbstractLayer::create;
@@ -2454,8 +2455,6 @@ void DebugLayerTest::nodeHighlightDebugIntegrationExplicitRvalue() {
 
             int value;
         };
-
-        LayerFeatures doFeatures() const override { return {}; }
 
         int value = 42069;
     };

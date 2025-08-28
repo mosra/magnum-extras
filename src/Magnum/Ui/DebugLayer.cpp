@@ -291,8 +291,8 @@ void** DebugLayer::setLayerNameDebugIntegration(const AbstractLayer& instance, c
     Implementation::DebugLayerLayer& layer = state.layers[layerId];
     CORRADE_INTERNAL_DEBUG_ASSERT(!layer.integration && !layer.deleter && !layer.print);
 
-    /* Save the integration only if node data attachment details are wanted (as
-       for example one might not want such amount of verbosity). If not, return
+    /* Save the integration only if node data details are wanted (as for
+       example one might not want such amount of verbosity). If not, return
        null so the instance doesn't get allocated at all. */
     if(state.sources >= DebugLayerSource::NodeDataDetails) {
         layer.deleter = deleter;

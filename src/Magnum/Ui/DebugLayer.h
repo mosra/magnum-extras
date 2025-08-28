@@ -65,7 +65,8 @@ enum class DebugLayerSource: UnsignedShort {
 
     /**
      * Track per-node layer data attachments. Implies
-     * @ref DebugLayerSource::Nodes and @ref DebugLayerSource::Layers.
+     * @ref DebugLayerSource::Nodes and @ref DebugLayerSource::Layers, subset
+     * of @ref DebugLayerSource::NodeDataDetails.
      */
     NodeData = Nodes|Layers|(1 << 3),
 
@@ -262,17 +263,18 @@ you can query them back with @ref layerName() and @ref nodeName().
 Enabling @ref DebugLayerSource::NodeDataDetails in addition to
 @relativeref{DebugLayerSource,NodeData} makes use of debug integration
 implemented by a particular layer. In case of @ref BaseLayer, @ref TextLayer
-and layers derived from @ref AbstractVisualLayer this makes the output show
-also style assignment as well as any style transitions, if present. In case of
-@ref EventLayer it shows the event that's being handled:
+and other layers derived from @ref AbstractVisualLayer this makes the output
+show also style assignment as well as any style transitions, if present. In
+case of @ref EventLayer it shows the event that's being handled:
 
 @include ui-debuglayer-node-highlight-details.ansi
 
 The way this works is that by passing a concrete layer type, the
 @ref setLayerName(const T&, const Containers::StringView&) overload gets picked
-if the type contains a @ref DebugIntegration inner class. Instance of which
-then gets used to print additional details. The integration can take various
-optional parameters, such as a @ref Ui-AbstractVisualLayer-debug-integration "function to provide style names"
+if the type contains an @ref AbstractLayer::DebugIntegration inner class.
+Instance of which then gets used to print additional details. The integration
+can take various optional parameters, such as a
+@ref Ui-AbstractVisualLayer-debug-integration "function to provide style names"
 in case of visual layers. Documentation of all builtin layers has information
 about what's provided in their debug integration. It's also possible to
 implement this integration for custom layers, see @ref Ui-DebugLayer-integration
@@ -347,11 +349,11 @@ tree, with very complex UIs such on-the-fly setup might cause stalls.
 
 To make a custom layer provide detailed info for
 @ref DebugLayerSource::NodeDataDetails, implement an inner type named
-@ref DebugIntegration containing at least a @relativeref{DebugIntegration,print()}
-function. In the following snippet, a layer that exposes per-data color has the
-color printed in the @ref DebugLayerFlag::NodeHighlight output. To make the
-output fit with the other text, it's expected to be indented and end with a
-newline:
+@relativeref{AbstractLayer,DebugIntegration} containing at least a
+@relativeref{DebugIntegration,print()} function. In the following snippet, a
+layer that exposes per-data color has the color printed in the
+@ref DebugLayerFlag::NodeHighlight output. To make the output fit with the
+other text, it's expected to be indented and end with a newline:
 
 @snippet ui-debuglayer.cpp integration
 
@@ -395,10 +397,6 @@ instead, and its `DebugIntegration` derives from
 */
 class MAGNUM_UI_EXPORT DebugLayer: public AbstractLayer {
     public:
-        #ifdef DOXYGEN_GENERATING_OUTPUT
-        class DebugIntegration; /* For documentation only */
-        #endif
-
         /**
          * @brief Constructor
          * @param handle    Layer handle returned from
@@ -562,14 +560,15 @@ class MAGNUM_UI_EXPORT DebugLayer: public AbstractLayer {
         DebugLayer& setLayerName(const AbstractLayer& layer, Containers::StringView name);
 
         /**
-         * @brief Set name for a layer with @ref DebugIntegration implemented
+         * @brief Set name for a layer with @ref AbstractLayer::DebugIntegration implemented
          * @return Reference to self (for method chaining)
          *
-         * In addition to @ref setLayerName(const AbstractLayer&, Containers::StringView)
-         * the layer's @ref DebugIntegration implementation gets called for
-         * each attachment, allowing it to provide further details. See
-         * documentation of a particular layer for more information. Use the
-         * @ref setLayerName(const T&, const Containers::StringView&, const typename T::DebugIntegration&)
+         * In addition to @ref setLayerName(const AbstractLayer&, Containers::StringView),
+         * if @ref DebugLayerSource::NodeDataDetails is enabled, the layer's
+         * @relativeref{AbstractLayer,DebugIntegration} implementation gets
+         * called for each attachment, allowing it to provide further details.
+         * See documentation of a particular layer for more information. Use
+         * the @ref setLayerName(const T&, const Containers::StringView&, const typename T::DebugIntegration&)
          * overload to pass additional arguments to the debug integration.
          */
         template<class T
@@ -582,13 +581,14 @@ class MAGNUM_UI_EXPORT DebugLayer: public AbstractLayer {
         }
 
         /**
-         * @brief Set name for a layer with @ref DebugIntegration implemented
+         * @brief Set name for a layer with @ref AbstractLayer::DebugIntegration implemented
          * @return Reference to self (for method chaining)
          *
          * In addition to @ref setLayerName(const AbstractLayer&, Containers::StringView)
-         * the passed layer @ref DebugIntegration instance gets called for
-         * each attachment, allowing it to provide further details. See
-         * documentation of a particular layer for more information.
+         * the passed layer @relativeref{AbstractLayer,DebugIntegration}
+         * instance gets called for each attachment, allowing it to provide
+         * further details. See documentation of a particular layer for more
+         * information.
          */
         template<class T> DebugLayer& setLayerName(const T& layer, const Containers::StringView& name, const typename T::DebugIntegration& integration);
         /** @overload */
@@ -739,41 +739,6 @@ class MAGNUM_UI_EXPORT DebugLayer: public AbstractLayer {
         void doPreUpdate(LayerStates state) override;
         void doPointerPressEvent(UnsignedInt dataId, PointerEvent& event) override;
 };
-
-#ifdef DOXYGEN_GENERATING_OUTPUT
-/**
-@brief Debug layer integration
-
-If an inner type with this name is implemented on a layer that's passed to
-@ref DebugLayer::setLayerName(const T&, const Containers::StringView&), the
-@ref print() function is used by the @ref DebugLayerFlag::NodeHighlight
-functionality to provide additional details about all data attachments coming
-from given layer. See @ref Ui-DebugLayer-integration for more information.
-*/
-/* While it'd be significantly simpler both for the library and for layers to
-   have this as a virtual base class that then gets subclassed with interfaces
-   implemented, it's deliberately not done to avoid header dependencies as well
-   as make it possible to DCE all debug-layer-related code if it isn't used. */
-class DebugLayer::DebugIntegration {
-    public:
-        /**
-         * @brief Print details about particular data
-         * @param debug     Debug output where to print
-         * @param layer     Layer associated with given @p data. The
-         *      implementation can use either the layer type this class is part
-         *      of or any base type.
-         * @param layerName Layer name that was passed to
-         *      @ref DebugLayer::setLayerName(const T&, const Containers::StringView&)
-         * @param data      Data to print info about. Guaranteed to be valid.
-         *
-         * Used internally by @ref DebugLayer. To fit among other info provided
-         * by @ref DebugLayer itself, the implementation is expected to indent
-         * the output by at least two spaces and end with a newline (i.e.,
-         * @relativeref{Magnum,Debug::newline}).
-         */
-        void print(Debug& debug, const Layer& layer, Containers::StringView layerName, LayerDataHandle data);
-};
-#endif
 
 template<class T> DebugLayer& DebugLayer::setLayerName(const T& layer, const Containers::StringView& name, const typename T::DebugIntegration& integration) {
     /* Delegating to the r-value overload. On MSVC 2015 and 2017 passing a

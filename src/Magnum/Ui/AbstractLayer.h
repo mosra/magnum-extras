@@ -881,6 +881,10 @@ for an overview of common editing behavior mapped to keyboard shortcuts.
 */
 class MAGNUM_UI_EXPORT AbstractLayer {
     public:
+        #ifdef DOXYGEN_GENERATING_OUTPUT
+        class DebugIntegration; /* For documentation only */
+        #endif
+
         /**
          * @brief Constructor
          * @param handle    Handle returned by
@@ -2358,6 +2362,41 @@ class MAGNUM_UI_EXPORT AbstractLayer {
         struct State;
         Containers::Pointer<State> _state;
 };
+
+#ifdef DOXYGEN_GENERATING_OUTPUT
+/**
+@brief Debug layer integration
+
+If an inner type with this name is implemented on a layer that's passed to
+@ref DebugLayer::setLayerName(const T&, const Containers::StringView&), the
+@ref print() function is used by the @ref DebugLayerFlag::NodeHighlight
+functionality to provide additional details about all data attachments coming
+from given layer. See @ref Ui-DebugLayer-integration for more information.
+*/
+/* While it'd be significantly simpler both for the library and for layers to
+   have this as a virtual base class that then gets subclassed with interfaces
+   implemented, it's deliberately not done to avoid header dependencies as well
+   as make it possible to DCE all debug-layer-related code if it isn't used. */
+class AbstractLayer::DebugIntegration {
+    public:
+        /**
+         * @brief Print details about a particular data
+         * @param debug     Debug output where to print
+         * @param layer     Layer associated with given @p data. The
+         *      implementation can use either the layer type this class is part
+         *      of or any base type.
+         * @param layerName Layer name that was passed to
+         *      @ref DebugLayer::setLayerName(const T&, const Containers::StringView&)
+         * @param data      Data to print info about. Guaranteed to be valid.
+         *
+         * Used internally by @ref DebugLayer. To fit among other info provided
+         * by @ref DebugLayer itself, the implementation is expected to indent
+         * the output by at least two spaces and end with a newline (i.e.,
+         * @relativeref{Magnum,Debug::newline}).
+         */
+        void print(Debug& debug, const Layer& layer, Containers::StringView layerName, LayerDataHandle data);
+};
+#endif
 
 }}
 
