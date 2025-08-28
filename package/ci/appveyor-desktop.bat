@@ -91,8 +91,9 @@ rem Gather and upload coverage on the clang-cl MSVC 2022 build. Keep in sync
 rem with circleci.yml, appveyor-desktop-mingw.bat and PKBUILD-coverage, please.
 rem
 rem Additionally, Clang-cl often reports empty lines containing just } as
-rem uncovered, possibly due to exception handling, similarly to MinGW. Exclude
-rem them, and feel free to expand the regex to catch more cases if needed.
+rem uncovered, possibly due to exception handling, similarly to MinGW, and same
+rem for both virtual and non-virtual destructor declarations. Exclude them, and
+rem feel free to expand the regex to catch more cases if needed.
 rem
 rem Also, partially due to the above, where, if a code isn't run through at
 rem all, a lot more uncovered lines is reported compared to Linux / Mac, any
@@ -101,5 +102,5 @@ rem built and tested where possible without an actual GL/Vk driver, but the
 rem false negatives far outweigh the benefits of having Windows-specific
 rem coverage reported for those -- there isn't any Windows-specific code for
 rem any of them, after all -- that it's not worth including them.
-if "%COMPILER%" == "msvc-clang" if "%APPVEYOR_BUILD_WORKER_IMAGE%" == "Visual Studio 2022" grcov build -t lcov --keep-only "*/src/Magnum*/*" --ignore "*/Test/*" --ignore "*/build/src/*" --ignore "*/ui-gallery.cpp" --ignore "*GL.cpp" --ignore "*GL.h" --ignore "*Vk.cpp" --ignore "*Vk.h" -o coverage.info --excl-line "(LCOV_EXCL_LINE|^\s*}$)" --excl-start LCOV_EXCL_START --excl-stop LCOV_EXCL_STOP || exit /b
+if "%COMPILER%" == "msvc-clang" if "%APPVEYOR_BUILD_WORKER_IMAGE%" == "Visual Studio 2022" grcov build -t lcov --keep-only "*/src/Magnum*/*" --ignore "*/Test/*" --ignore "*/build/src/*" --ignore "*/ui-gallery.cpp" --ignore "*GL.cpp" --ignore "*GL.h" --ignore "*Vk.cpp" --ignore "*Vk.h" -o coverage.info --excl-line "(LCOV_EXCL_LINE|^\s*}$|^\s+(virtual )?~[a-zA-Z0-9]+\(\);$)" --excl-start LCOV_EXCL_START --excl-stop LCOV_EXCL_STOP || exit /b
 if "%COMPILER%" == "msvc-clang" if "%APPVEYOR_BUILD_WORKER_IMAGE%" == "Visual Studio 2022" codecov -f ./coverage.info -t 14b2f31d-6cee-4ad3-9391-f60d4ba85612 -X gcov || exit /b
