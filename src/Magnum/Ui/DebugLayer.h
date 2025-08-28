@@ -807,8 +807,8 @@ template<class T> DebugLayer& DebugLayer::setLayerName(const T& layer, const Con
         [](void* integration) {
             delete static_cast<typename T::DebugIntegration*>(integration);
         },
-        [](void* integration, Debug& out, const AbstractLayer& layer, const Containers::StringView& name, LayerDataHandle data) {
-            static_cast<typename T::DebugIntegration*>(integration)->print(out, static_cast<const T&>(layer), name, data);
+        [](void* integration, Debug& debug, const AbstractLayer& layer, const Containers::StringView& layerName, LayerDataHandle data) {
+            static_cast<typename T::DebugIntegration*>(integration)->print(debug, static_cast<const T&>(layer), layerName, data);
         });
     /* If the instance is null, either NodeDataDetails isn't set, in which case
        the instance wouldn't be used anyway, or a graceful assert happened.

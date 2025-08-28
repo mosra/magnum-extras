@@ -2024,10 +2024,10 @@ void DebugLayerTest::nodeHighlight() {
         struct DebugIntegration {
             /* This is deliberately *not* passing the name via const& to verify
                that the signature doesn't have to match exactly */
-            void print(Debug& debug, const IntegratedLayer& layer, Containers::StringView name, LayerDataHandle data) {
+            void print(Debug& debug, const IntegratedLayer& layer, Containers::StringView layerName, LayerDataHandle data) {
                 /* Printing the name colored to verify the color is disabled
                    correctly here as well */
-                debug << "  Layer" << Debug::color(Debug::Color::Yellow) << name << Debug::resetColor << "(" << Debug::nospace << layer.value << Debug::nospace << ") data" << Debug::packed << data << "and a value of" << value << Debug::newline;
+                debug << "  Layer" << Debug::color(Debug::Color::Yellow) << layerName << Debug::resetColor << "(" << Debug::nospace << layer.value << Debug::nospace << ") data" << Debug::packed << data << "and a value of" << value << Debug::newline;
             }
 
             int value = 1337;
@@ -2247,10 +2247,10 @@ void DebugLayerTest::nodeHighlightNoCallback() {
         using AbstractLayer::create;
 
         struct DebugIntegration {
-            void print(Debug& debug, const IntegratedLayer& layer, const Containers::StringView& name, LayerDataHandle data) {
+            void print(Debug& debug, const IntegratedLayer& layer, const Containers::StringView& layerName, LayerDataHandle data) {
                 /* Printing the name colored to verify the color is used when
                    printing directly to the output and not when not */
-                debug << "  Layer" << Debug::color(Debug::Color::Yellow) << name << Debug::resetColor << "(" << Debug::nospace << layer.value << Debug::nospace << ") data" << Debug::packed << data << "and a value of" << value << Debug::newline;
+                debug << "  Layer" << Debug::color(Debug::Color::Yellow) << layerName << Debug::resetColor << "(" << Debug::nospace << layer.value << Debug::nospace << ") data" << Debug::packed << data << "and a value of" << value << Debug::newline;
             }
 
             int value = 1337;
@@ -2384,10 +2384,10 @@ void DebugLayerTest::nodeHighlightDebugIntegrationExplicit() {
             explicit DebugIntegration(int value): value{value} {}
 
             /* Compared to noodeHighlight(), here the signature does match */
-            void print(Debug& debug, const IntegratedLayer& layer, const Containers::StringView& name, LayerDataHandle data) {
+            void print(Debug& debug, const IntegratedLayer& layer, const Containers::StringView& layerName, LayerDataHandle data) {
                 /* Printing the name colored to verify the color is disabled
                    correctly here as well */
-                debug << "  Layer" << Debug::color(Debug::Color::Yellow) << name << Debug::resetColor << "(" << Debug::nospace << layer.value << Debug::nospace << ") data" << Debug::packed << data << "and a value of" << value << Debug::newline;
+                debug << "  Layer" << Debug::color(Debug::Color::Yellow) << layerName << Debug::resetColor << "(" << Debug::nospace << layer.value << Debug::nospace << ") data" << Debug::packed << data << "and a value of" << value << Debug::newline;
             }
 
             int value;
@@ -2446,10 +2446,10 @@ void DebugLayerTest::nodeHighlightDebugIntegrationExplicitRvalue() {
                that might happen if one of these isn't defined, tho. */
             CORRADE_UNUSED DebugIntegration& operator=(DebugIntegration&&) noexcept = default;
 
-            void print(Debug& debug, const IntegratedLayerBase& layer, Containers::StringView name, LayerDataHandle data) {
+            void print(Debug& debug, const IntegratedLayerBase& layer, Containers::StringView layerName, LayerDataHandle data) {
                 /* Printing the name colored to verify the color is disabled
                    correctly here as well */
-                debug << "  Layer" << Debug::color(Debug::Color::Yellow) << name << Debug::resetColor << "(" << Debug::nospace << layer.value << Debug::nospace << ") data" << Debug::packed << data << "and a value of" << value << Debug::newline;
+                debug << "  Layer" << Debug::color(Debug::Color::Yellow) << layerName << Debug::resetColor << "(" << Debug::nospace << layer.value << Debug::nospace << ") data" << Debug::packed << data << "and a value of" << value << Debug::newline;
             }
 
             int value;
