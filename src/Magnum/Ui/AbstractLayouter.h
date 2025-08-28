@@ -106,6 +106,10 @@ CORRADE_ENUMSET_OPERATORS(LayouterStates)
 */
 class MAGNUM_UI_EXPORT AbstractLayouter {
     public:
+        #ifdef DOXYGEN_GENERATING_OUTPUT
+        class DebugIntegration; /* For documentation only */
+        #endif
+
         /**
          * @brief Constructor
          * @param handle    Handle returned by
@@ -486,6 +490,42 @@ class MAGNUM_UI_EXPORT AbstractLayouter {
         struct State;
         Containers::Pointer<State> _state;
 };
+
+#ifdef DOXYGEN_GENERATING_OUTPUT
+/**
+@brief Debug layer integration
+
+If an inner type with this name is implemented on a layouter that's passed to
+@ref DebugLayer::setLayouterName(const T&, const Containers::StringView&), the
+@ref print() function is used by the @ref DebugLayerFlag::NodeHighlight
+functionality to provide additional details about all layout assignments coming
+from given layouter. See @ref Ui-DebugLayer-integration for more information.
+*/
+/* While it'd be significantly simpler both for the library and for layouters
+   to have this as a virtual base class that then gets subclassed with
+   interfaces implemented, it's deliberately not done to avoid header
+   dependencies as well as make it possible to DCE all debug-layer-related code
+   if it isn't used. */
+class AbstractLayouter::DebugIntegration {
+    public:
+        /**
+         * @brief Print details about a particular layout
+         * @param debug     Debug output where to print
+         * @param layouter  Layouter associated with given @p layout. The
+         *      implementation can use either the layouter type this class is
+         *      part of or any base type.
+         * @param layouterName  Layouter name that was passed to
+         *      @ref DebugLayer::setLayouterName(const T&, const Containers::StringView&)
+         * @param layout    Layout to print info about. Guaranteed to be valid.
+         *
+         * Used internally by @ref DebugLayer. To fit among other info provided
+         * by @ref DebugLayer itself, the implementation is expected to indent
+         * the output by at least two spaces and end with a newline (i.e.,
+         * @relativeref{Magnum,Debug::newline}).
+         */
+        void print(Debug& debug, const Layouter& layouter, Containers::StringView layouterName, LayouterDataHandle layout);
+};
+#endif
 
 }}
 

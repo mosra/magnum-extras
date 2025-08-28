@@ -126,6 +126,41 @@ struct DebugLayerAnimator {
     void(*print)(void*, Debug&, const AbstractAnimator&, const Containers::StringView&, AnimatorDataHandle) = nullptr;
 };
 
+struct DebugLayerLayouter {
+    explicit DebugLayerLayouter() noexcept = default;
+
+    /** @todo clean this up once Pointer with a custom deleter is a thing */
+    DebugLayerLayouter(DebugLayerLayouter&& other) noexcept: handle{other.handle}, name{Utility::move(other.name)}, integration{other.integration}, deleter{other.deleter}, print{other.print} {
+        other.integration = nullptr;
+        other.deleter = nullptr;
+        other.print = nullptr;
+    }
+
+    ~DebugLayerLayouter() {
+        if(deleter)
+            deleter(integration);
+    }
+
+    DebugLayerLayouter& operator=(DebugLayerLayouter&& other) {
+        Utility::swap(other.handle, handle);
+        Utility::swap(other.name, name);
+        Utility::swap(other.integration, integration);
+        Utility::swap(other.deleter, deleter);
+        Utility::swap(other.print, print);
+        return *this;
+    }
+
+    LayouterHandle handle = LayouterHandle::Null;
+
+    /* Name & debug layer integration that's associated with `handle`. If the
+       handle changes, the whole instance is expected to be replaced in
+       doPreUpdate(). */
+    Containers::String name;
+    void* integration = nullptr;
+    void(*deleter)(void*) = nullptr;
+    void(*print)(void*, Debug&, const AbstractLayouter&, const Containers::StringView&, LayouterDataHandle) = nullptr;
+};
+
 }
 
 struct DebugLayer::State {
@@ -165,6 +200,7 @@ struct DebugLayer::State {
 
     Containers::Array<Implementation::DebugLayerNode> nodes;
     Containers::Array<Implementation::DebugLayerLayer> layers;
+    Containers::Array<Implementation::DebugLayerLayouter> layouters;
     Containers::Array<Implementation::DebugLayerAnimator> animators;
 };
 

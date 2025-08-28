@@ -32,6 +32,7 @@
 #include <Corrade/Containers/StridedArrayView.h>
 
 #include "Magnum/Ui/AbstractAnimator.h"
+#include "Magnum/Ui/AbstractLayouter.h"
 #include "Magnum/Ui/Event.h"
 #include "Magnum/Ui/NodeFlags.h"
 #include "Magnum/Ui/UserInterface.h"
@@ -50,12 +51,15 @@ Debug& operator<<(Debug& debug, const DebugLayerSource value) {
         #define _c(value) case DebugLayerSource::value: return debug << "::" #value;
         _c(Nodes)
         _c(Layers)
+        _c(Layouters)
         _c(Animators)
         _c(NodeHierarchy)
         _c(NodeData)
         _c(NodeDataDetails)
         _c(NodeAnimations)
         _c(NodeAnimationDetails)
+        _c(NodeLayouts)
+        _c(NodeLayoutDetails)
         #undef _c
         /* LCOV_EXCL_STOP */
     }
@@ -76,6 +80,8 @@ Debug& operator<<(Debug& debug, const DebugLayerSources value) {
            compared to the enum */
         for(DebugLayerSource i: {DebugLayerSource::NodeAnimations,
                                  DebugLayerSource::NodeAnimationDetails,
+                                 DebugLayerSource::NodeLayouts,
+                                 DebugLayerSource::NodeLayoutDetails,
                                  DebugLayerSource::NodeData,
                                  DebugLayerSource::NodeDataDetails,
                                  DebugLayerSource::NodeHierarchy}) {
@@ -100,6 +106,9 @@ Debug& operator<<(Debug& debug, const DebugLayerSources value) {
         DebugLayerSource::NodeDataDetails,
         /* Implied by NodeDataDetails, has to be after */
         DebugLayerSource::NodeData,
+        DebugLayerSource::NodeLayoutDetails,
+        /* Implied by NodeLayoutDetails, has to be after */
+        DebugLayerSource::NodeLayouts,
         DebugLayerSource::NodeAnimationDetails,
         /* Implied by NodeAnimationDetails, has to be after */
         DebugLayerSource::NodeAnimations,
@@ -107,6 +116,8 @@ Debug& operator<<(Debug& debug, const DebugLayerSources value) {
         DebugLayerSource::Nodes,
         /* Implied by NodeData, has to be after */
         DebugLayerSource::Layers,
+        /* Implied by NodeLayouts, has to be after */
+        DebugLayerSource::Layouters,
         /* Implied by NodeAnimations, has to be after */
         DebugLayerSource::Animators,
     });
@@ -389,6 +400,74 @@ void** DebugLayer::setAnimatorNameDebugIntegration(const AbstractAnimator& insta
     } else return nullptr;
 }
 
+Containers::StringView DebugLayer::layouterName(const LayouterHandle handle) const {
+    /* If we're not part of a UI, there's no way to track layouters and so all
+       layouters would be left at an empty name. Consider that an error. */
+    CORRADE_ASSERT(hasUi(),
+        "Ui::DebugLayer::layouterName(): debug layer not part of a user interface", {});
+    CORRADE_ASSERT(handle != LayouterHandle::Null,
+        "Ui::DebugLayer::layouterName(): handle is null", {});
+    const State& state = *_state;
+    /* If the feature isn't enabled, do nothing */
+    if(!(state.sources >= DebugLayerSource::Layouters)) // TODO test
+        return {};
+
+    const UnsignedInt layouterId = layouterHandleId(handle);
+    if(layouterId < state.layouters.size() && state.layouters[layouterId].handle == handle)
+        return state.layouters[layouterId].name;
+    return {};
+}
+
+DebugLayer& DebugLayer::setLayouterName(const AbstractLayouter& instance, const Containers::StringView name) {
+    CORRADE_ASSERT(hasUi(),
+        "Ui::DebugLayer::setLayouterName(): debug layer not part of a user interface", *this);
+    CORRADE_ASSERT(ui().isHandleValid(instance.handle()) && &ui().layouter(instance.handle()) == &instance,
+        "Ui::DebugLayer::setLayouterName(): layouter not part of the same user interface", *this);
+    State& state = *_state;
+    /* If the feature isn't enabled, do nothing */
+    if(!(state.sources >= DebugLayerSource::Layouters)) // TODO test
+        return *this;
+
+    /* If there are not enough tracked layers, add. Otherwise replace the
+       instance to correctly free any existing debug integration. */
+    const UnsignedInt layouterId = layouterHandleId(instance.handle());
+    if(state.layouters.size() <= layouterId)
+        arrayResize(state.layouters, ValueInit, layouterId + 1);
+    else
+        state.layouters[layouterId] = Implementation::DebugLayerLayouter{};
+
+    Implementation::DebugLayerLayouter& layouter = state.layouters[layouterId];
+    layouter.handle = instance.handle();
+    layouter.name = Containers::String::nullTerminatedGlobalView(name);
+
+    return *this;
+}
+
+void** DebugLayer::setLayouterNameDebugIntegration(const AbstractLayouter& instance, const Containers::StringView& name, void(*const deleter)(void*), void(*const print)(void*, Debug&, const AbstractLayouter&, const Containers::StringView&, LayouterDataHandle)) {
+    /* This already enlarges _state->layouters and frees previous integration
+       instance if there's any, no need to do that here again. Well, unless it
+       asserted, in which case bail. */
+    setLayouterName(instance, name);
+    const UnsignedInt layouterId = layouterHandleId(instance.handle());
+    State& state = *_state;
+    #ifdef CORRADE_GRACEFUL_ASSERT
+    if(layouterId >= state.layouters.size())
+        return {};
+    #endif
+
+    Implementation::DebugLayerLayouter& layouter = state.layouters[layouterId];
+    CORRADE_INTERNAL_DEBUG_ASSERT(!layouter.integration && !layouter.deleter && !layouter.print);
+
+    /* Save the integration only if node layout details are wanted (as for
+       example one might not want such amount of verbosity). If not, return
+       null so the instance doesn't get allocated at all. */
+    if(state.sources >= DebugLayerSource::NodeLayoutDetails) {
+        layouter.deleter = deleter;
+        layouter.print = print;
+        return &layouter.integration;
+    } else return nullptr;
+}
+
 Color4 DebugLayer::nodeHighlightColor() const {
     return _state->nodeHighlightColor;
 }
@@ -597,6 +676,61 @@ bool DebugLayer::highlightNode(const NodeHandle handle) {
             else CORRADE_INTERNAL_ASSERT(otherLayerCount == 0);
         }
 
+        if(state.sources >= DebugLayerSource::NodeLayouts) {
+            UnsignedInt otherLayouterCount = 0;
+            UnsignedInt otherLayoutCount = 0;
+            bool hasNamedLayouters = false;
+            for(LayouterHandle layouterHandle = ui.layouterFirst(); layouterHandle != LayouterHandle::Null; layouterHandle = ui.layouterNext(layouterHandle)) {
+                /* Skip layouters that have no instance and layouters we don't
+                   know about yet (if highlightNode() is called, there may be
+                   layouters that are yet unknown to the DebugLayer, either
+                   ones with IDs outside of the state.layouters bounds or ones
+                   that got removed and the slot reused for others). Since
+                   we're iterating over UI's own layouter order the handles
+                   should be all valid. */
+                CORRADE_INTERNAL_DEBUG_ASSERT(ui.isHandleValid(layouterHandle));
+                const UnsignedInt layouterId = layouterHandleId(layouterHandle);
+                if(!ui.hasLayouterInstance(layouterHandle) ||
+                   layouterId >= state.layouters.size() ||
+                   state.layouters[layouterId].handle != layouterHandle)
+                    continue;
+
+                const Implementation::DebugLayerLayouter& layouter = state.layouters[layouterId];
+                const AbstractLayouter& layouterInstance = ui.layouter(layouterHandle);
+                bool hasOtherLayoutsFromThisLayouter = false;
+
+                const UnsignedInt dataCapacity = layouterInstance.capacity();
+                const Containers::StridedArrayView1D<const UnsignedShort> dataGenerations = layouterInstance.generations();
+                UnsignedInt namedLayouterDataCount = 0;
+                for(UnsignedInt dataId = 0; dataId != dataCapacity; ++dataId) {
+                    const LayouterDataHandle data = layouterDataHandle(dataId, dataGenerations[dataId]);
+                    if(layouterInstance.isHandleValid(data) && layouterInstance.node(data) == handle) {
+                        if(layouter.print) {
+                            hasNamedLayouters = true;
+                            layouter.print(layouter.integration, debug, layouterInstance, layouter.name, data);
+                        } else if(layouter.name) {
+                            hasNamedLayouters = true;
+                            ++namedLayouterDataCount;
+                        } else {
+                            hasOtherLayoutsFromThisLayouter = true;
+                            ++otherLayoutCount;
+                        }
+                    }
+                }
+
+                if(namedLayouterDataCount) {
+                    debug << " " << namedLayouterDataCount << "layouts from layouter" << Debug::packed << layouterHandle << Debug::color(Debug::Color::Yellow) << layouter.name << Debug::resetColor << Debug::newline;
+                }
+
+                if(hasOtherLayoutsFromThisLayouter)
+                    ++otherLayouterCount;
+            }
+
+            if(otherLayoutCount)
+                debug << " " << otherLayoutCount << "layouts from" << otherLayouterCount << (hasNamedLayouters ? "other layouters" : "layouters") << Debug::newline;
+            else CORRADE_INTERNAL_ASSERT(otherLayouterCount == 0);
+        }
+
         if(state.sources >= DebugLayerSource::NodeAnimations) {
             /* Four entries, each for one AnimationState */
             UnsignedInt otherAnimatorCount[4]{};
@@ -697,7 +831,10 @@ LayerFeatures DebugLayer::doFeatures() const {
 
 LayerStates DebugLayer::doState() const {
     const State& state = *_state;
-    return state.sources & (DebugLayerSource::Nodes|DebugLayerSource::Layers|DebugLayerSource::Animators) ?
+    return state.sources & (DebugLayerSource::Nodes|
+                            DebugLayerSource::Layers|
+                            DebugLayerSource::Layouters|
+                            DebugLayerSource::Animators) ?
         LayerState::NeedsCommonDataUpdate : LayerStates{};
 }
 
@@ -788,6 +925,28 @@ void DebugLayer::doPreUpdate(LayerStates) {
                     layer = Implementation::DebugLayerLayer{};
                 if(ui.isHandleValid(handle))
                     layer.handle = handle;
+            }
+        }
+    }
+
+    if(state.sources >= DebugLayerSource::Layouters) {
+        const UnsignedInt layouterCapacity = ui.layouterCapacity();
+        const Containers::StridedArrayView1D<const UnsignedByte> layouterGenerations = ui.layouterGenerations();
+        if(state.layouters.size() < layouterCapacity)
+            arrayResize(state.layouters, ValueInit, layouterCapacity);
+
+        for(std::size_t i = 0; i != state.layouters.size(); ++i) {
+            const LayouterHandle handle = layouterHandle(i, layouterGenerations[i]);
+
+            /* If the layouter we remembered is different from the current one,
+               reset its properties. If the current one is valid, remember its
+               handle. */
+            Implementation::DebugLayerLayouter& layouter = state.layouters[i];
+            if(layouter.handle != handle) {
+                if(layouter.handle != LayouterHandle::Null)
+                    layouter = Implementation::DebugLayerLayouter{};
+                if(ui.isHandleValid(handle))
+                    layouter.handle = handle;
             }
         }
     }

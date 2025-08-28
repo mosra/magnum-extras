@@ -35,6 +35,7 @@
 #include <Magnum/Math/Color.h>
 
 #include "Magnum/Ui/AbstractAnimator.h"
+#include "Magnum/Ui/AbstractLayouter.h"
 #include "Magnum/Ui/AbstractUserInterface.h"
 #include "Magnum/Ui/DebugLayer.h"
 #include "Magnum/Ui/Event.h"
@@ -66,8 +67,8 @@ struct DebugLayerTest: TestSuite::Tester {
         void nodeName();
         void nodeNameInvalid();
 
-        void layerAnimatorNameDebugIntegrationSetup();
-        void layerAnimatorNameDebugIntegrationTeardown();
+        void layerLayouterAnimatorNameDebugIntegrationSetup();
+        void layerLayouterAnimatorNameDebugIntegrationTeardown();
 
         void layerNameNoOp();
         void layerName();
@@ -77,6 +78,15 @@ struct DebugLayerTest: TestSuite::Tester {
         void layerNameDebugIntegrationCopyConstructPlainStruct();
         void layerNameDebugIntegrationMoveConstructPlainStruct();
         void layerNameInvalid();
+
+        void layouterNameNoOp();
+        void layouterName();
+        void layouterNameDebugIntegration();
+        void layouterNameDebugIntegrationExplicit();
+        void layouterNameDebugIntegrationExplicitRvalue();
+        void layouterNameDebugIntegrationCopyConstructPlainStruct();
+        void layouterNameDebugIntegrationMoveConstructPlainStruct();
+        void layouterNameInvalid();
 
         void animatorNameNoOp();
         void animatorName();
@@ -91,6 +101,7 @@ struct DebugLayerTest: TestSuite::Tester {
         void preUpdateNoOp();
         void preUpdateTrackNodes();
         void preUpdateTrackLayers();
+        void preUpdateTrackLayouters();
         void preUpdateTrackAnimators();
 
         void nodeHighlightSetters();
@@ -102,6 +113,8 @@ struct DebugLayerTest: TestSuite::Tester {
         void nodeHighlightNoCallback();
         void nodeHighlightLayerDebugIntegrationExplicit();
         void nodeHighlightLayerDebugIntegrationExplicitRvalue();
+        void nodeHighlightLayouterDebugIntegrationExplicit();
+        void nodeHighlightLayouterDebugIntegrationExplicitRvalue();
         void nodeHighlightAnimatorDebugIntegrationExplicit();
         void nodeHighlightAnimatorDebugIntegrationExplicitRvalue();
         void nodeHighlightInvalid();
@@ -130,6 +143,16 @@ const struct {
     const char* name;
     DebugLayerSources sources;
     bool used;
+} LayouterNameDebugIntegrationData[]{
+    {"layouters", DebugLayerSource::Layouters, false},
+    {"node layouts", DebugLayerSource::NodeLayouts, false},
+    {"node layout details", DebugLayerSource::NodeLayoutDetails, true},
+};
+
+const struct {
+    const char* name;
+    DebugLayerSources sources;
+    bool used;
 } AnimatorNameDebugIntegrationData[]{
     {"animators", DebugLayerSource::Animators, false},
     {"node animations", DebugLayerSource::NodeAnimations, false},
@@ -140,32 +163,38 @@ const struct {
     const char* name;
     DebugLayerSources sources;
     DebugLayerFlags flags;
-    bool expectNoState, expectNoNodes, expectNoLayers, expectNoAnimators, expectNoData;
+    bool expectNoState, expectNoNodes, expectNoLayers, expectNoLayouters, expectNoAnimators, expectNoData;
 } PreUpdateNoOpData[]{
     {"",
         {}, {},
-        true, true, true, true, true},
+        true, true, true, true, true, true},
     {"nodes alone",
         DebugLayerSource::Nodes, {},
-        false, false, true, true, true},
+        false, false, true, true, true, true},
     {"layers alone",
         DebugLayerSource::Layers, {},
-        false, true, false, true, true},
+        false, true, false, true, true, true},
+    {"layouters alone",
+        DebugLayerSource::Layouters, {},
+        false, true, true, false, true, true},
     {"animators alone",
         DebugLayerSource::Animators, {},
-        false, true, true, false, true},
+        false, true, true, true, false, true},
     {"node hierarchy",
         DebugLayerSource::NodeHierarchy, {},
-        false, false, true, true, true},
+        false, false, true, true, true, true},
     {"node data",
         DebugLayerSource::NodeData, {},
-        false, false, false, true, true},
+        false, false, false, true, true, true},
+    {"node layouts",
+        DebugLayerSource::NodeLayouts, {},
+        false, false, true, false, true, true},
     {"node animations",
         DebugLayerSource::NodeAnimations, {},
-        false, false, true, false, true},
+        false, false, true, true, false, true},
     {"node highlight",
         DebugLayerSource::Nodes, DebugLayerFlag::NodeHighlight,
-        false, false, true, true, false},
+        false, false, true, true, true, false},
 };
 
 const struct {
@@ -190,6 +219,16 @@ const struct {
         DebugLayerSource::Layers},
     {"node data",
         DebugLayerSource::NodeData},
+};
+
+const struct {
+    const char* name;
+    DebugLayerSources sources;
+} PreUpdateTrackLayoutersData[]{
+    {"",
+        DebugLayerSource::Layouters},
+    {"node layouts",
+        DebugLayerSource::NodeLayouts},
 };
 
 const struct {
@@ -241,7 +280,7 @@ const struct {
     DebugLayerSources sources;
     DebugLayerFlags flags;
     Containers::Optional<Containers::StringView> nodeName;
-    bool reverseLayerOrder, someLayerAnimatorNames, allLayerAnimatorNames;
+    bool reverseLayerLayouterOrder, someLayerLayouterAnimatorNames, allLayerLayouterAnimatorNames;
     Pointers acceptedPointers;
     Modifiers acceptedModifiers;
     PointerEventSource pointerSource;
@@ -430,6 +469,54 @@ const struct {
         "  Layer No.3 (42069) data {0x0, 0x1} and a value of 1337\n"
         "  Layer No.3 (42069) data {0x1, 0x1} and a value of 1337\n"
         "  4 data from layer {0x0, 0x1} The last ever"},
+    {"layouts",
+        DebugLayerSource::NodeLayouts, DebugLayerFlag::NodeHighlight,
+        {}, false, false, false,
+        {}, {}, PointerEventSource::Mouse, Pointer::MouseRight,
+        {}, true, false, false, false, false, false,
+        "Node {0x3, 0x1}\n"
+        "  10 layouts from 4 layouters"},
+    {"layouts, some layouter names",
+        DebugLayerSource::NodeLayouts, DebugLayerFlag::NodeHighlight,
+        {}, false, true, false,
+        {}, {}, PointerEventSource::Mouse, Pointer::MouseRight,
+        {}, true, false, false, false, false, false,
+        "Node {0x3, 0x1}\n"
+        "  1 layouts from layouter {0x1, 0x1} Supplementary\n"
+        "  2 layouts from layouter {0x3, 0x1} Tertiary\n"
+        "  7 layouts from 2 other layouters"},
+    {"layout details, some layouter names",
+        DebugLayerSource::NodeLayoutDetails, DebugLayerFlag::NodeHighlight,
+        {}, false, true, false,
+        {}, {}, PointerEventSource::Mouse, Pointer::MouseRight,
+        {}, true, false, false, false, false, false,
+        "Node {0x3, 0x1}\n"
+        "  1 layouts from layouter {0x1, 0x1} Supplementary\n"
+        "  Layouter Tertiary (96024) layout {0x0, 0x1} and a value of 7331\n"
+        "  Layouter Tertiary (96024) layout {0x1, 0x1} and a value of 7331\n"
+        "  7 layouts from 2 other layouters"},
+    {"layout details, all layouter names",
+        DebugLayerSource::NodeLayoutDetails, DebugLayerFlag::NodeHighlight,
+        {}, false, true, true,
+        {}, {}, PointerEventSource::Mouse, Pointer::MouseRight,
+        {}, true, false, false, false, false, false,
+        "Node {0x3, 0x1}\n"
+        "  3 layouts from layouter {0x0, 0x1} Primary\n"
+        "  1 layouts from layouter {0x1, 0x1} Supplementary\n"
+        "  Layouter Tertiary (96024) layout {0x0, 0x1} and a value of 7331\n"
+        "  Layouter Tertiary (96024) layout {0x1, 0x1} and a value of 7331\n"
+        "  4 layouts from layouter {0x5, 0x1} Fallback"},
+    {"layout details, all layouter names, reverse layouter order",
+        DebugLayerSource::NodeLayoutDetails, DebugLayerFlag::NodeHighlight,
+        {}, true, true, true,
+        {}, {}, PointerEventSource::Mouse, Pointer::MouseRight,
+        {}, true, false, false, false, false, false,
+        "Node {0x3, 0x1}\n"
+        "  3 layouts from layouter {0x5, 0x1} Primary\n"
+        "  1 layouts from layouter {0x4, 0x1} Supplementary\n"
+        "  Layouter Tertiary (96024) layout {0x0, 0x1} and a value of 7331\n"
+        "  Layouter Tertiary (96024) layout {0x1, 0x1} and a value of 7331\n"
+        "  4 layouts from layouter {0x0, 0x1} Fallback"},
     {"animations",
         DebugLayerSource::NodeAnimations, DebugLayerFlag::NodeHighlight,
         {}, false, false, false,
@@ -479,8 +566,8 @@ const struct {
         "  Animator No#3 (69420) Paused animation {0x2, 0x1} and a value of 1226\n"
         "  1 Playing animations from animator {0x7, 0x1} Termanimator\n"
         "  1 Stopped animations from animator {0x7, 0x1} Termanimator"},
-    {"node name, flags, nested top level, all hierarchy + data, animation details, some layer and animator names",
-        DebugLayerSource::NodeHierarchy|DebugLayerSource::NodeDataDetails|DebugLayerSource::NodeAnimationDetails, DebugLayerFlag::NodeHighlight,
+    {"node name, flags, nested top level, all hierarchy + data, layout, animation details, some layer and animator names",
+        DebugLayerSource::NodeHierarchy|DebugLayerSource::NodeDataDetails|DebugLayerSource::NodeLayoutDetails|DebugLayerSource::NodeAnimationDetails, DebugLayerFlag::NodeHighlight,
         "A very nice node"_s, false, true, false,
         {}, {}, PointerEventSource::Mouse, Pointer::MouseRight,
         NodeFlag::Clip|NodeFlag::Focusable, true, true, true, true, true, true,
@@ -494,6 +581,10 @@ const struct {
         "  Layer No.3 (42069) data {0x0, 0x1} and a value of 1337\n"
         "  Layer No.3 (42069) data {0x1, 0x1} and a value of 1337\n"
         "  7 data from 2 other layers\n"
+        "  1 layouts from layouter {0x1, 0x1} Supplementary\n"
+        "  Layouter Tertiary (96024) layout {0x0, 0x1} and a value of 7331\n"
+        "  Layouter Tertiary (96024) layout {0x1, 0x1} and a value of 7331\n"
+        "  7 layouts from 2 other layouters\n"
         "  1 Scheduled animations from animator {0x1, 0x1} 2nd\n"
         "  Animator No#3 (69420) Playing animation {0x0, 0x1} and a value of 1226\n"
         "  Animator No#3 (69420) Playing animation {0x1, 0x1} and a value of 1226\n"
@@ -660,12 +751,26 @@ DebugLayerTest::DebugLayerTest() {
                        &DebugLayerTest::layerNameDebugIntegrationExplicit,
                        &DebugLayerTest::layerNameDebugIntegrationExplicitRvalue},
         Containers::arraySize(LayerNameDebugIntegrationData),
-        &DebugLayerTest::layerAnimatorNameDebugIntegrationSetup,
-        &DebugLayerTest::layerAnimatorNameDebugIntegrationTeardown);
+        &DebugLayerTest::layerLayouterAnimatorNameDebugIntegrationSetup,
+        &DebugLayerTest::layerLayouterAnimatorNameDebugIntegrationTeardown);
 
     addTests({&DebugLayerTest::layerNameDebugIntegrationCopyConstructPlainStruct,
               &DebugLayerTest::layerNameDebugIntegrationMoveConstructPlainStruct,
               &DebugLayerTest::layerNameInvalid,
+
+              &DebugLayerTest::layouterNameNoOp,
+              &DebugLayerTest::layouterName});
+
+    addInstancedTests({&DebugLayerTest::layouterNameDebugIntegration,
+                       &DebugLayerTest::layouterNameDebugIntegrationExplicit,
+                       &DebugLayerTest::layouterNameDebugIntegrationExplicitRvalue},
+        Containers::arraySize(LayouterNameDebugIntegrationData),
+        &DebugLayerTest::layerLayouterAnimatorNameDebugIntegrationSetup,
+        &DebugLayerTest::layerLayouterAnimatorNameDebugIntegrationTeardown);
+
+    addTests({&DebugLayerTest::layouterNameDebugIntegrationCopyConstructPlainStruct,
+              &DebugLayerTest::layouterNameDebugIntegrationMoveConstructPlainStruct,
+              &DebugLayerTest::layouterNameInvalid,
 
               &DebugLayerTest::animatorNameNoOp,
               &DebugLayerTest::animatorName});
@@ -674,8 +779,8 @@ DebugLayerTest::DebugLayerTest() {
                        &DebugLayerTest::animatorNameDebugIntegrationExplicit,
                        &DebugLayerTest::animatorNameDebugIntegrationExplicitRvalue},
         Containers::arraySize(AnimatorNameDebugIntegrationData),
-        &DebugLayerTest::layerAnimatorNameDebugIntegrationSetup,
-        &DebugLayerTest::layerAnimatorNameDebugIntegrationTeardown);
+        &DebugLayerTest::layerLayouterAnimatorNameDebugIntegrationSetup,
+        &DebugLayerTest::layerLayouterAnimatorNameDebugIntegrationTeardown);
 
     addTests({&DebugLayerTest::animatorNameDebugIntegrationCopyConstructPlainStruct,
               &DebugLayerTest::animatorNameDebugIntegrationMoveConstructPlainStruct,
@@ -692,6 +797,9 @@ DebugLayerTest::DebugLayerTest() {
     addInstancedTests({&DebugLayerTest::preUpdateTrackLayers},
         Containers::arraySize(PreUpdateTrackLayersData));
 
+    addInstancedTests({&DebugLayerTest::preUpdateTrackLayouters},
+        Containers::arraySize(PreUpdateTrackLayoutersData));
+
     addInstancedTests({&DebugLayerTest::preUpdateTrackAnimators},
         Containers::arraySize(PreUpdateTrackAnimatorsData));
 
@@ -706,6 +814,8 @@ DebugLayerTest::DebugLayerTest() {
     addTests({&DebugLayerTest::nodeHighlightNoCallback,
               &DebugLayerTest::nodeHighlightLayerDebugIntegrationExplicit,
               &DebugLayerTest::nodeHighlightLayerDebugIntegrationExplicitRvalue,
+              &DebugLayerTest::nodeHighlightLayouterDebugIntegrationExplicit,
+              &DebugLayerTest::nodeHighlightLayouterDebugIntegrationExplicitRvalue,
               &DebugLayerTest::nodeHighlightAnimatorDebugIntegrationExplicit,
               &DebugLayerTest::nodeHighlightAnimatorDebugIntegrationExplicitRvalue,
               &DebugLayerTest::nodeHighlightInvalid});
@@ -751,6 +861,12 @@ void DebugLayerTest::debugSourceSupersets() {
         Debug{&out} << (DebugLayerSource::Nodes|DebugLayerSource::NodeData);
         CORRADE_COMPARE(out, "Ui::DebugLayerSource::NodeData\n");
 
+    /* NodeLayouts is a superset of Nodes, so only one should be printed */
+    } {
+        Containers::String out;
+        Debug{&out} << (DebugLayerSource::Nodes|DebugLayerSource::NodeLayouts);
+        CORRADE_COMPARE(out, "Ui::DebugLayerSource::NodeLayouts\n");
+
     /* NodeAnimations is a superset of Nodes, so only one should be printed */
     } {
         Containers::String out;
@@ -762,6 +878,12 @@ void DebugLayerTest::debugSourceSupersets() {
         Containers::String out;
         Debug{&out} << (DebugLayerSource::Layers|DebugLayerSource::NodeData);
         CORRADE_COMPARE(out, "Ui::DebugLayerSource::NodeData\n");
+
+    /* NodeLayouts is a superset of Layouters, so only one should be printed */
+    } {
+        Containers::String out;
+        Debug{&out} << (DebugLayerSource::Layouters|DebugLayerSource::NodeLayouts);
+        CORRADE_COMPARE(out, "Ui::DebugLayerSource::NodeLayouts\n");
 
     /* NodeAnimations is a superset of Animators, so only one should be
        printed */
@@ -777,6 +899,13 @@ void DebugLayerTest::debugSourceSupersets() {
         Debug{&out} << (DebugLayerSource::NodeHierarchy|DebugLayerSource::NodeData);
         CORRADE_COMPARE(out, "Ui::DebugLayerSource::NodeHierarchy|Ui::DebugLayerSource::NodeData\n");
 
+    /* NodeHierarchy and NodeLayouts are both a superset of Nodes, so both
+       should be printed */
+    } {
+        Containers::String out;
+        Debug{&out} << (DebugLayerSource::NodeHierarchy|DebugLayerSource::NodeLayouts);
+        CORRADE_COMPARE(out, "Ui::DebugLayerSource::NodeHierarchy|Ui::DebugLayerSource::NodeLayouts\n");
+
     /* NodeHierarchy and NodeAnimations are both a superset of Nodes, so both
        should be printed */
     } {
@@ -791,6 +920,21 @@ void DebugLayerTest::debugSourceSupersets() {
         Debug{&out} << (DebugLayerSource::NodeData|DebugLayerSource::NodeAnimations);
         CORRADE_COMPARE(out, "Ui::DebugLayerSource::NodeData|Ui::DebugLayerSource::NodeAnimations\n");
 
+    /* NodeData and NodeLayouts are both a superset of Nodes, so both should
+       be printed */
+    } {
+        Containers::String out;
+        Debug{&out} << (DebugLayerSource::NodeData|DebugLayerSource::NodeAnimations);
+        CORRADE_COMPARE(out, "Ui::DebugLayerSource::NodeData|Ui::DebugLayerSource::NodeAnimations\n");
+
+    /* NodeData, NodeLayouts and NodeAnimations are all a superset of Nodes, so
+       all should be printed. There are more combinations but all should be
+       handled by the same logic. */
+    } {
+        Containers::String out;
+        Debug{&out} << (DebugLayerSource::NodeData|DebugLayerSource::NodeAnimations|DebugLayerSource::NodeLayouts);
+        CORRADE_COMPARE(out, "Ui::DebugLayerSource::NodeData|Ui::DebugLayerSource::NodeLayouts|Ui::DebugLayerSource::NodeAnimations\n");
+
     /* NodeDataDetails and NodeAnimationDetails are both a superset of Nodes,
        so both should be printed. There are more combinations but all should be
        handled by the same logic. */
@@ -799,13 +943,21 @@ void DebugLayerTest::debugSourceSupersets() {
         Debug{&out} << (DebugLayerSource::NodeDataDetails|DebugLayerSource::NodeAnimationDetails);
         CORRADE_COMPARE(out, "Ui::DebugLayerSource::NodeDataDetails|Ui::DebugLayerSource::NodeAnimationDetails\n");
 
-    /* NodeData, NodeAnimationDetails and NodeHierarchy are all a superset of
-       Nodes, so all should be printed. There are more combinations but all
-       should be handled by the same logic. */
+    /* NodeDataDetails, NodeAnimationDetails and NodeLayoutDetails are all a
+       superset of Nodes, so all should be printed. There are more combinations
+       but all should be handled by the same logic. */
     } {
         Containers::String out;
-        Debug{&out} << (DebugLayerSource::NodeData|DebugLayerSource::NodeAnimationDetails|DebugLayerSource::NodeHierarchy);
-        CORRADE_COMPARE(out, "Ui::DebugLayerSource::NodeHierarchy|Ui::DebugLayerSource::NodeData|Ui::DebugLayerSource::NodeAnimationDetails\n");
+        Debug{&out} << (DebugLayerSource::NodeDataDetails|DebugLayerSource::NodeLayoutDetails|DebugLayerSource::NodeAnimationDetails);
+        CORRADE_COMPARE(out, "Ui::DebugLayerSource::NodeDataDetails|Ui::DebugLayerSource::NodeLayoutDetails|Ui::DebugLayerSource::NodeAnimationDetails\n");
+
+    /* NodeData, NodeLayouts, NodeAnimationDetails and NodeHierarchy are all a
+       superset of Nodes, so all should be printed. There are more combinations
+       but all should be handled by the same logic. */
+    } {
+        Containers::String out;
+        Debug{&out} << (DebugLayerSource::NodeData|DebugLayerSource::NodeLayouts|DebugLayerSource::NodeAnimationDetails|DebugLayerSource::NodeHierarchy);
+        CORRADE_COMPARE(out, "Ui::DebugLayerSource::NodeHierarchy|Ui::DebugLayerSource::NodeData|Ui::DebugLayerSource::NodeLayouts|Ui::DebugLayerSource::NodeAnimationDetails\n");
 
     /* NodeDataDetails is a superset of NodeData, so only one should be
        printed */
@@ -813,6 +965,13 @@ void DebugLayerTest::debugSourceSupersets() {
         Containers::String out;
         Debug{&out} << (DebugLayerSource::NodeData|DebugLayerSource::NodeDataDetails);
         CORRADE_COMPARE(out, "Ui::DebugLayerSource::NodeDataDetails\n");
+
+    /* NodeLayoutDetails is a superset of NodeLayouts, so only one should be
+       printed */
+    } {
+        Containers::String out;
+        Debug{&out} << (DebugLayerSource::NodeLayouts|DebugLayerSource::NodeLayoutDetails);
+        CORRADE_COMPARE(out, "Ui::DebugLayerSource::NodeLayoutDetails\n");
 
     /* NodeAnimationDetails is a superset of NodeAnimations, so only one should
        be printed */
@@ -827,6 +986,13 @@ void DebugLayerTest::debugSourceSupersets() {
         Containers::String out;
         Debug{&out} << (DebugLayerSource::NodeHierarchy|DebugLayerSource::NodeDataDetails);
         CORRADE_COMPARE(out, "Ui::DebugLayerSource::NodeHierarchy|Ui::DebugLayerSource::NodeDataDetails\n");
+
+    /* NodeHierarchy and NodeLayoutDetails are both a superset of Nodes, so
+       both should be printed */
+    } {
+        Containers::String out;
+        Debug{&out} << (DebugLayerSource::NodeHierarchy|DebugLayerSource::NodeLayoutDetails);
+        CORRADE_COMPARE(out, "Ui::DebugLayerSource::NodeHierarchy|Ui::DebugLayerSource::NodeLayoutDetails\n");
 
     /* NodeHierarchy and NodeAnimationDetails are both a superset of Nodes, so
        both should be printed */
@@ -1089,14 +1255,14 @@ int debugIntegrationCopied = 0;
 int debugIntegrationMoved = 0;
 int debugIntegrationDestructed = 0;
 
-void DebugLayerTest::layerAnimatorNameDebugIntegrationSetup() {
+void DebugLayerTest::layerLayouterAnimatorNameDebugIntegrationSetup() {
     debugIntegrationConstructed =
         debugIntegrationCopied =
             debugIntegrationMoved =
                 debugIntegrationDestructed = 0;
 }
 
-void DebugLayerTest::layerAnimatorNameDebugIntegrationTeardown() {
+void DebugLayerTest::layerLayouterAnimatorNameDebugIntegrationTeardown() {
     debugIntegrationConstructed =
         debugIntegrationCopied =
             debugIntegrationMoved =
@@ -1790,6 +1956,689 @@ void DebugLayerTest::layerNameInvalid() {
         "Ui::DebugLayer::setLayerName(): layer not part of the same user interface\n"
         "Ui::DebugLayer::setLayerName(): layer not part of the same user interface\n"
         "Ui::DebugLayer::setLayerName(): layer not part of the same user interface\n",
+        TestSuite::Compare::String);
+}
+
+void DebugLayerTest::layouterNameNoOp() {
+    /* If Layouters aren't enabled, the APIs don't assert but just don't do
+       anything */
+
+    AbstractUserInterface ui{{100, 100}};
+
+    struct EmptyLayouter: AbstractLayouter {
+        using AbstractLayouter::AbstractLayouter;
+
+        void doUpdate(Containers::BitArrayView, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const NodeHandle>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Vector2>&) override {}
+    };
+    EmptyLayouter& emptyLayouter = ui.setLayouterInstance(Containers::pointer<EmptyLayouter>(ui.createLayouter()));
+    /* Picking a source that isn't Layouters but also isn't just empty */
+    DebugLayer& layer = ui.setLayerInstance(Containers::pointer<DebugLayer>(ui.createLayer(), DebugLayerSource::NodeHierarchy, DebugLayerFlags{}));
+    CORRADE_COMPARE(layer.layouterName(emptyLayouter.handle()), "");
+
+    /* Setting a name doesn't remember anything */
+    layer.setLayouterName(emptyLayouter, "Empty");
+    CORRADE_COMPARE(layer.layouterName(emptyLayouter.handle()), "");
+}
+
+void DebugLayerTest::layouterName() {
+    AbstractUserInterface ui{{100, 100}};
+
+    struct EmptyLayouter: AbstractLayouter {
+        using AbstractLayouter::AbstractLayouter;
+
+        void doUpdate(Containers::BitArrayView, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const NodeHandle>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Vector2>&) override {}
+    };
+
+    struct Layer: DebugLayer {
+        using DebugLayer::DebugLayer;
+
+        const DebugLayer::State& stateData() {
+            return *_state;
+        }
+    };
+
+    EmptyLayouter& emptyLayouter1 = ui.setLayouterInstance(Containers::pointer<EmptyLayouter>(ui.createLayouter()));
+    Layer& layer = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer(), DebugLayerSource::Layouters, DebugLayerFlags{}));
+    EmptyLayouter& emptyLayouter2 = ui.setLayouterInstance(Containers::pointer<EmptyLayouter>(ui.createLayouter()));
+
+    /* Initially the debug layer has no layouter entries */
+    CORRADE_COMPARE(layer.stateData().layouters.size(), 0);
+
+    /* By default, any animator has the name empty. The empty names have no
+       null-terminated or global flags guaranteed. */
+    CORRADE_COMPARE(layer.layouterName(emptyLayouter1.handle()), "");
+    CORRADE_COMPARE(layer.layouterName(emptyLayouter2.handle()), "");
+
+    /* Setting a name of the first animator enlarges the array to fit it.
+       Compared to layers, which are resized to contain at least the debug
+       layer itself, the array is empty initially so there's no pre-existing
+       entry to update. */
+    layer.setLayouterName(emptyLayouter1, "First empty");
+    CORRADE_COMPARE(layer.stateData().layouters.size(), 1);
+    CORRADE_COMPARE(layer.layouterName(emptyLayouter1.handle()), "First empty");
+
+    /* A layouter outside of any existing bounds will have an empty name as
+       well; a layer with known ID but wrong generation also, no
+       null-terminated or global flags guaranteed in this case either */
+    CORRADE_COMPARE(layer.layouterName(layouterHandle(255, 1)), "");
+    CORRADE_COMPARE(layer.layouterName(layouterHandle(layouterHandleId(emptyLayouter1.handle()), layouterHandleGeneration(emptyLayouter1.handle()) + 1)), "");
+
+    /* Create more layouters, their names are empty again, and the size of the
+       internal storage doesn't update implicitly to fit those */
+    EmptyLayouter& emptyLayouter3 = ui.setLayouterInstance(Containers::pointer<EmptyLayouter>(ui.createLayouter()));
+    EmptyLayouter& emptyLayouter4 = ui.setLayouterInstance(Containers::pointer<EmptyLayouter>(ui.createLayouter()));
+    EmptyLayouter& emptyLayouter5 = ui.setLayouterInstance(Containers::pointer<EmptyLayouter>(ui.createLayouter()));
+    CORRADE_COMPARE(layer.stateData().layouters.size(), 1);
+    CORRADE_COMPARE(layer.layouterName(emptyLayouter3.handle()), "");
+    CORRADE_COMPARE(layer.layouterName(emptyLayouter4.handle()), "");
+    CORRADE_COMPARE(layer.layouterName(emptyLayouter5.handle()), "");
+
+    /* It enlarges only once setting a name of one of these */
+    layer.setLayouterName(emptyLayouter4, "Fourth");
+    CORRADE_COMPARE(layer.stateData().layouters.size(), 4);
+    CORRADE_COMPARE(layer.layouterName(emptyLayouter4.handle()), "Fourth");
+
+    /* Update doesn't clear the layouter names */
+    ui.update();
+    CORRADE_COMPARE(layer.layouterName(emptyLayouter1.handle()), "First empty");
+    CORRADE_COMPARE(layer.layouterName(emptyLayouter4.handle()), "Fourth");
+
+    /* Setting a global string keeps a reference to it, local or
+       non-null-terminated string is copied */
+    Containers::StringView global = "Global"_s;
+    layer.setLayouterName(emptyLayouter2, global);
+    CORRADE_COMPARE(layer.layouterName(emptyLayouter2.handle()), "Global");
+    CORRADE_COMPARE(layer.layouterName(emptyLayouter2.handle()).data(), global.data());
+    CORRADE_COMPARE(layer.layouterName(emptyLayouter2.handle()).flags(), Containers::StringViewFlag::Global|Containers::StringViewFlag::NullTerminated);
+
+    Containers::StringView globalNonNullTerminated = "Global non null!"_s.exceptSuffix(1);
+    layer.setLayouterName(emptyLayouter3, globalNonNullTerminated);
+    CORRADE_COMPARE(layer.layouterName(emptyLayouter3.handle()), "Global non null");
+    CORRADE_VERIFY(layer.layouterName(emptyLayouter3.handle()).data() != globalNonNullTerminated.data());
+    CORRADE_COMPARE(layer.layouterName(emptyLayouter3.handle()).flags(), Containers::StringViewFlag::NullTerminated);
+
+    Containers::StringView local = "Local";
+    layer.setLayouterName(emptyLayouter5, local);
+    CORRADE_COMPARE(layer.layouterName(emptyLayouter5.handle()), "Local");
+    CORRADE_VERIFY(layer.layouterName(emptyLayouter5.handle()).data() != local.data());
+    CORRADE_COMPARE(layer.layouterName(emptyLayouter5.handle()).flags(), Containers::StringViewFlag::NullTerminated);
+
+    /* Removing a layouter makes the old name still available with the old
+       handle */
+    LayouterHandle emptyLayouter4Handle = emptyLayouter4.handle();
+    ui.removeLayouter(emptyLayouter4Handle);
+    CORRADE_COMPARE(layer.layouterName(emptyLayouter4Handle), "Fourth");
+
+    /* When creating a new layouter in the same slot, the new layouter doesn't
+       have a name yet and the old still keeps it */
+    EmptyLayouter& emptyLayouter4Replacement = ui.setLayouterInstance(Containers::pointer<EmptyLayouter>(ui.createLayouter()));
+    CORRADE_COMPARE(layouterHandleId(emptyLayouter4Replacement.handle()), layouterHandleId(emptyLayouter4Handle));
+    CORRADE_COMPARE(layer.layouterName(emptyLayouter4Handle), "Fourth");
+    CORRADE_COMPARE(layer.layouterName(emptyLayouter4Replacement.handle()), "");
+
+    /* Setting a name for the replacement layouter makes the old one unknown */
+    layer.setLayouterName(emptyLayouter4Replacement, "Replacement");
+    CORRADE_COMPARE(layer.layouterName(emptyLayouter4Handle), "");
+    CORRADE_COMPARE(layer.layouterName(emptyLayouter4Replacement.handle()), "Replacement");
+
+    /* Updating after removing a layouter and creating a new one in the same
+       slot forgets the name -- the handle gets updated internally, so it
+       cannot keep the name */
+    LayouterHandle emptyLayouter4ReplacementHandle = emptyLayouter4Replacement.handle();
+    ui.removeLayouter(emptyLayouter4ReplacementHandle);
+    EmptyLayouter& emptyLayouter4Replacement2 = ui.setLayouterInstance(Containers::pointer<EmptyLayouter>(ui.createLayouter()));
+    CORRADE_COMPARE(layouterHandleId(emptyLayouter4Replacement2.handle()), layouterHandleId(emptyLayouter4ReplacementHandle));
+    ui.update();
+    CORRADE_COMPARE(layer.layouterName(emptyLayouter4ReplacementHandle), "");
+    CORRADE_COMPARE(layer.layouterName(emptyLayouter4Replacement2.handle()), "");
+
+    /* Updating after removing a layouter forgets the name as well */
+    layer.setLayouterName(emptyLayouter4Replacement2, "Replacement 2");
+    LayouterHandle emptyLayouter4Replacement2Handle = emptyLayouter4Replacement2.handle();
+    CORRADE_COMPARE(layer.layouterName(emptyLayouter4Replacement2Handle), "Replacement 2");
+    ui.removeLayouter(emptyLayouter4Replacement2Handle);
+    ui.update();
+    CORRADE_COMPARE(layer.layouterName(emptyLayouter4Replacement2Handle), "");
+}
+
+void DebugLayerTest::layouterNameDebugIntegration() {
+    auto&& data = LayouterNameDebugIntegrationData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
+    AbstractUserInterface ui{{100, 100}};
+
+    struct Layer: DebugLayer {
+        using DebugLayer::DebugLayer;
+
+        const DebugLayer::State& stateData() {
+            return *_state;
+        }
+    };
+
+    struct EmptyLayouter: AbstractLayouter {
+        using AbstractLayouter::AbstractLayouter;
+
+        void doUpdate(Containers::BitArrayView, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const NodeHandle>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Vector2>&) override {}
+    };
+
+    struct IntegratedLayouter: AbstractLayouter {
+        using AbstractLayouter::AbstractLayouter;
+
+        struct DebugIntegration {
+            DebugIntegration() {
+                ++debugIntegrationConstructed;
+            }
+
+            DebugIntegration(const DebugIntegration&) {
+                ++debugIntegrationConstructed;
+                ++debugIntegrationCopied;
+            }
+
+            DebugIntegration& operator=(const DebugIntegration&) {
+                ++debugIntegrationCopied;
+                return *this;
+            }
+
+            ~DebugIntegration() {
+                ++debugIntegrationDestructed;
+            }
+
+            void print(Debug&, const IntegratedLayouter&, const Containers::StringView&, LayouterDataHandle) {
+                CORRADE_FAIL("This shouldn't be called.");
+            }
+        };
+
+        void doUpdate(Containers::BitArrayView, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const NodeHandle>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Vector2>&) override {}
+    };
+
+    /* Initially there are no layouter entries */
+    Layer& layer = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer(), data.sources, DebugLayerFlags{}));
+    CORRADE_COMPARE(layer.stateData().layouters.size(), 0);
+
+    /* A layouter w/o DebugIntegration doesn't have any integration */
+    EmptyLayouter& emptyLayouter1 = ui.setLayouterInstance(Containers::pointer<EmptyLayouter>(ui.createLayouter()));
+    layer.setLayouterName(emptyLayouter1, "Empty layouter 1");
+    CORRADE_COMPARE(layer.stateData().layouters.size(), 1);
+    CORRADE_VERIFY(!layer.stateData().layouters[0].integration);
+    CORRADE_VERIFY(!layer.stateData().layouters[0].deleter);
+    CORRADE_VERIFY(!layer.stateData().layouters[0].print);
+
+    /* Setting a layouter name with a concrete type should allocate the
+       DebugIntegration instance */
+    IntegratedLayouter& integratedLayouter1 = ui.setLayouterInstance(Containers::pointer<IntegratedLayouter>(ui.createLayouter()));
+    IntegratedLayouter& integratedLayouter2 = ui.setLayouterInstance(Containers::pointer<IntegratedLayouter>(ui.createLayouter()));
+    IntegratedLayouter& integratedLayouter3 = ui.setLayouterInstance(Containers::pointer<IntegratedLayouter>(ui.createLayouter()));
+    layer.setLayouterName(integratedLayouter1, "Integrated");
+    layer.setLayouterName(integratedLayouter2, "Integrated 2");
+    layer.setLayouterName(integratedLayouter3, "Integrated 3");
+    CORRADE_COMPARE(layer.stateData().layouters.size(), 4);
+    CORRADE_COMPARE(layer.stateData().layouters[1].name, "Integrated");
+    CORRADE_COMPARE(layer.stateData().layouters[2].name, "Integrated 2");
+    CORRADE_COMPARE(layer.stateData().layouters[3].name, "Integrated 3");
+    CORRADE_COMPARE(layer.stateData().layouters[1].integration, data.used);
+    CORRADE_COMPARE(layer.stateData().layouters[2].integration, data.used);
+    CORRADE_COMPARE(layer.stateData().layouters[3].integration, data.used);
+    CORRADE_COMPARE(layer.stateData().layouters[1].deleter, data.used);
+    CORRADE_COMPARE(layer.stateData().layouters[2].deleter, data.used);
+    CORRADE_COMPARE(layer.stateData().layouters[3].deleter, data.used);
+    CORRADE_COMPARE(layer.stateData().layouters[1].print, data.used);
+    CORRADE_COMPARE(layer.stateData().layouters[2].print, data.used);
+    CORRADE_COMPARE(layer.stateData().layouters[3].print, data.used);
+    /* It delegates to setLayouterName(const DebugIntegration&), so it makes a
+       temporary instance that then gets copied. If not used, it gets only
+       copied a bunch of times but not allocated. */
+    CORRADE_COMPARE(debugIntegrationConstructed, data.used ? 6 : 3);
+    CORRADE_COMPARE(debugIntegrationCopied, data.used ? 3 : 0);
+    CORRADE_COMPARE(debugIntegrationDestructed, 3);
+
+    /* Setting a layouter name again deletes the old (if there is) and
+       allocates a new one */
+    layer.setLayouterName(integratedLayouter1, "Integrated 1");
+    CORRADE_COMPARE(layer.stateData().layouters.size(), 4);
+    CORRADE_COMPARE(layer.stateData().layouters[1].name, "Integrated 1");
+    CORRADE_COMPARE(layer.stateData().layouters[1].integration, data.used);
+    CORRADE_COMPARE(layer.stateData().layouters[1].deleter, data.used);
+    CORRADE_COMPARE(layer.stateData().layouters[1].print, data.used);
+    CORRADE_COMPARE(debugIntegrationConstructed, data.used ? 8 : 4);
+    CORRADE_COMPARE(debugIntegrationCopied, data.used ? 4 : 0);
+    CORRADE_COMPARE(debugIntegrationDestructed, data.used ? 5 : 4);
+
+    /* Adding a bunch more empty layouters and setting name for the last will
+       resize the internal storage, causing the integration allocation
+       references to get moved, but not the instances themselves. They
+       shouldn't get deleted. */
+    /*EmptyLayouter& emptyLayouter2 =*/ ui.setLayouterInstance(Containers::pointer<EmptyLayouter>(ui.createLayouter()));
+    EmptyLayouter& emptyLayouter3 = ui.setLayouterInstance(Containers::pointer<EmptyLayouter>(ui.createLayouter()));
+    layer.setLayouterName(emptyLayouter3, "Empty 3");
+    CORRADE_COMPARE(layer.stateData().layouters.size(), 6);
+    CORRADE_COMPARE(layer.stateData().layouters[1].name, "Integrated 1");
+    CORRADE_COMPARE(layer.stateData().layouters[2].name, "Integrated 2");
+    CORRADE_COMPARE(layer.stateData().layouters[3].name, "Integrated 3");
+    CORRADE_COMPARE(layer.stateData().layouters[1].integration, data.used);
+    CORRADE_COMPARE(layer.stateData().layouters[2].integration, data.used);
+    CORRADE_COMPARE(layer.stateData().layouters[3].integration, data.used);
+    CORRADE_COMPARE(layer.stateData().layouters[1].deleter, data.used);
+    CORRADE_COMPARE(layer.stateData().layouters[2].deleter, data.used);
+    CORRADE_COMPARE(layer.stateData().layouters[3].deleter, data.used);
+    CORRADE_COMPARE(layer.stateData().layouters[1].print, data.used);
+    CORRADE_COMPARE(layer.stateData().layouters[2].print, data.used);
+    CORRADE_COMPARE(layer.stateData().layouters[3].print, data.used);
+    CORRADE_COMPARE(debugIntegrationConstructed, data.used ? 8 : 4);
+    CORRADE_COMPARE(debugIntegrationCopied, data.used ? 4 : 0);
+    CORRADE_COMPARE(debugIntegrationDestructed, data.used ? 5 : 4);
+
+    /* Setting a different name with only the base type deletes the
+       integration, if there is */
+    layer.setLayouterName(static_cast<AbstractLayouter&>(integratedLayouter1), "No longer integrated 1");
+    CORRADE_COMPARE(layer.stateData().layouters.size(), 6);
+    CORRADE_COMPARE(layer.stateData().layouters[1].name, "No longer integrated 1");
+    CORRADE_VERIFY(!layer.stateData().layouters[1].integration);
+    CORRADE_VERIFY(!layer.stateData().layouters[1].deleter);
+    CORRADE_VERIFY(!layer.stateData().layouters[1].print);
+    CORRADE_COMPARE(debugIntegrationConstructed, data.used ? 8 : 4);
+    CORRADE_COMPARE(debugIntegrationCopied, data.used ? 4 : 0);
+    CORRADE_COMPARE(debugIntegrationDestructed, data.used ? 6 : 4);
+
+    /* Setting it back recreates it, if used */
+    layer.setLayouterName(integratedLayouter1, "Integrated 1");
+    CORRADE_COMPARE(layer.stateData().layouters.size(), 6);
+    CORRADE_COMPARE(layer.stateData().layouters[1].name, "Integrated 1");
+    CORRADE_COMPARE(layer.stateData().layouters[1].integration, data.used);
+    CORRADE_COMPARE(layer.stateData().layouters[1].deleter, data.used);
+    CORRADE_COMPARE(layer.stateData().layouters[1].print, data.used);
+    CORRADE_COMPARE(debugIntegrationConstructed, data.used ? 10 : 5);
+    CORRADE_COMPARE(debugIntegrationCopied, data.used ? 5 : 0);
+    CORRADE_COMPARE(debugIntegrationDestructed, data.used ? 7 : 5);
+
+    /* Removing an integrated layouter and replacing with non-integrated
+       deletes the integration on next update(), if there is */
+    LayouterHandle integratedLayouter2Handle = integratedLayouter2.handle();
+    ui.removeLayouter(integratedLayouter2Handle);
+    EmptyLayouter& integratedLayouter2NonIntegratedReplacement = ui.setLayouterInstance(Containers::pointer<EmptyLayouter>(ui.createLayouter()));
+    CORRADE_COMPARE(layouterHandleId(integratedLayouter2NonIntegratedReplacement.handle()), layouterHandleId(integratedLayouter2Handle));
+    CORRADE_COMPARE(layer.stateData().layouters[2].name, "Integrated 2");
+    CORRADE_COMPARE(layer.stateData().layouters[2].integration, data.used);
+    CORRADE_COMPARE(layer.stateData().layouters[2].deleter, data.used);
+    CORRADE_COMPARE(layer.stateData().layouters[2].print, data.used);
+    /* Not here yet ... */
+    CORRADE_COMPARE(debugIntegrationConstructed, data.used ? 10 : 5);
+    CORRADE_COMPARE(debugIntegrationCopied, data.used ? 5 : 0);
+    CORRADE_COMPARE(debugIntegrationDestructed, data.used ? 7 : 5);
+
+    ui.update();
+    CORRADE_COMPARE(layer.stateData().layouters.size(), 6);
+    CORRADE_COMPARE(layer.stateData().layouters[2].name, "");
+    CORRADE_VERIFY(!layer.stateData().layouters[2].integration);
+    CORRADE_VERIFY(!layer.stateData().layouters[2].deleter);
+    CORRADE_VERIFY(!layer.stateData().layouters[2].print);
+    /* ... but here */
+    CORRADE_COMPARE(debugIntegrationConstructed, data.used ? 10 : 5);
+    CORRADE_COMPARE(debugIntegrationCopied, data.used ? 5 : 0);
+    CORRADE_COMPARE(debugIntegrationDestructed, data.used ? 8 : 5);
+
+    /* Removing an integrated layouter w/o replacing deletes the integration on
+       next update() as well, if there is */
+    ui.removeLayouter(integratedLayouter3.handle());
+    CORRADE_COMPARE(layer.stateData().layouters[3].name, "Integrated 3");
+    CORRADE_COMPARE(layer.stateData().layouters[3].integration, data.used);
+    CORRADE_COMPARE(layer.stateData().layouters[3].deleter, data.used);
+    CORRADE_COMPARE(layer.stateData().layouters[3].print, data.used);
+    /* Not here yet ... */
+    CORRADE_COMPARE(debugIntegrationConstructed, data.used ? 10 : 5);
+    CORRADE_COMPARE(debugIntegrationCopied, data.used ? 5 : 0);
+    CORRADE_COMPARE(debugIntegrationDestructed, data.used ? 8 : 5);
+
+    ui.update();
+    CORRADE_COMPARE(layer.stateData().layouters.size(), 6);
+    CORRADE_COMPARE(layer.stateData().layouters[3].name, "");
+    CORRADE_VERIFY(!layer.stateData().layouters[3].integration);
+    CORRADE_VERIFY(!layer.stateData().layouters[3].deleter);
+    CORRADE_VERIFY(!layer.stateData().layouters[3].print);
+    /* ... but here */
+    CORRADE_COMPARE(debugIntegrationConstructed, data.used ? 10 : 5);
+    CORRADE_COMPARE(debugIntegrationCopied, data.used ? 5 : 0);
+    CORRADE_COMPARE(debugIntegrationDestructed, data.used ? 9 : 5);
+
+    /* Removing the whole debug layer deletes the remaining integration, if
+       there is */
+    ui.removeLayer(layer.handle());
+    CORRADE_COMPARE(debugIntegrationConstructed, data.used ? 10 : 5);
+    CORRADE_COMPARE(debugIntegrationCopied, data.used ? 5 : 0);
+    CORRADE_COMPARE(debugIntegrationDestructed, data.used ? 10 : 5);
+}
+
+void DebugLayerTest::layouterNameDebugIntegrationExplicit() {
+    auto&& data = LayouterNameDebugIntegrationData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
+    /* A subset of layouterNameDebugIntegration() but with a DebugIntegration
+       that only has a non-default constructor and gets copied */
+
+    AbstractUserInterface ui{{100, 100}};
+
+    struct Layer: DebugLayer {
+        using DebugLayer::DebugLayer;
+
+        const DebugLayer::State& stateData() {
+            return *_state;
+        }
+    };
+    Layer& layer = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer(), data.sources, DebugLayerFlags{}));
+
+    struct EmptyLayouter: AbstractLayouter {
+        using AbstractLayouter::AbstractLayouter;
+
+        void doUpdate(Containers::BitArrayView, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const NodeHandle>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Vector2>&) override {}
+    };
+
+    struct IntegratedLayouter: AbstractLayouter {
+        using AbstractLayouter::AbstractLayouter;
+
+        struct DebugIntegration {
+            DebugIntegration(int value, float): value{value} {
+                ++debugIntegrationConstructed;
+            }
+
+            DebugIntegration(const DebugIntegration& other): value{other.value} {
+                ++debugIntegrationConstructed;
+                ++debugIntegrationCopied;
+            }
+
+            /* This one shouldn't get used */
+            DebugIntegration& operator=(const DebugIntegration& other) = delete;
+
+            ~DebugIntegration() {
+                ++debugIntegrationDestructed;
+            }
+
+            /* Compared to layouterNameDebugIntegration(), here the signature does
+               match */
+            void print(Debug&, const IntegratedLayouter&, const Containers::StringView&, LayouterDataHandle) {
+                CORRADE_FAIL("This shouldn't be called.");
+            }
+
+            int value;
+        };
+
+        void doUpdate(Containers::BitArrayView, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const NodeHandle>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Vector2>&) override {}
+    };
+
+    /* Setting a layouter name with a concrete type won't allocate the
+       DebugIntegration instance, same reasoning as with layers in
+       layerNameDebugIntegrationExplicit() */
+    IntegratedLayouter& integratedLayouter1 = ui.setLayouterInstance(Containers::pointer<IntegratedLayouter>(ui.createLayouter()));
+    layer.setLayouterName(integratedLayouter1, "Integrated 1");
+    CORRADE_COMPARE(layer.stateData().layouters.size(), 1);
+    CORRADE_COMPARE(layer.stateData().layouters[0].name, "Integrated 1");
+    CORRADE_VERIFY(!layer.stateData().layouters[0].integration);
+    CORRADE_VERIFY(!layer.stateData().layouters[0].deleter);
+    CORRADE_VERIFY(!layer.stateData().layouters[0].print);
+    CORRADE_COMPARE(debugIntegrationConstructed, 0);
+    CORRADE_COMPARE(debugIntegrationCopied, 0);
+    CORRADE_COMPARE(debugIntegrationDestructed, 0);
+
+    IntegratedLayouter& integratedLayouter2 = ui.setLayouterInstance(Containers::pointer<IntegratedLayouter>(ui.createLayouter()));
+    {
+        IntegratedLayouter::DebugIntegration integration{1337, 4.5f};
+        layer.setLayouterName(integratedLayouter2, "Integrated 2", integration);
+        CORRADE_COMPARE(layer.stateData().layouters.size(), 2);
+        CORRADE_COMPARE(layer.stateData().layouters[1].name, "Integrated 2");
+        CORRADE_COMPARE(layer.stateData().layouters[1].integration, data.used);
+        if(data.used)
+            CORRADE_COMPARE(static_cast<IntegratedLayouter::DebugIntegration*>(layer.stateData().layouters[1].integration)->value, 1337);
+        CORRADE_COMPARE(layer.stateData().layouters[1].deleter, data.used);
+        CORRADE_COMPARE(layer.stateData().layouters[1].print, data.used);
+    }
+    /* A local instance gets constructed, copied to the function,
+       then internally moved to allocate the instance (which calls the copy
+       constructor again) and then both temporaries get destructed. If not
+       used, the final allocation isn't made. */
+    CORRADE_COMPARE(debugIntegrationConstructed, data.used ? 3 : 2);
+    CORRADE_COMPARE(debugIntegrationCopied, data.used ? 2 : 1);
+    CORRADE_COMPARE(debugIntegrationDestructed, 2);
+
+    /* Removing the whole debug layer deletes the integration in this case as
+       well, if there is */
+    ui.removeLayer(layer.handle());
+    CORRADE_COMPARE(debugIntegrationConstructed, data.used ? 3 : 2);
+    CORRADE_COMPARE(debugIntegrationCopied, data.used ? 2 : 1);
+    CORRADE_COMPARE(debugIntegrationDestructed, data.used ? 3 : 2);
+}
+
+void DebugLayerTest::layouterNameDebugIntegrationExplicitRvalue() {
+    auto&& data = LayouterNameDebugIntegrationData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
+    /* A subset of layouterNameDebugIntegration() but with a DebugIntegration
+       that only has a non-default constructor and gets moved */
+
+    AbstractUserInterface ui{{100, 100}};
+
+    struct Layer: DebugLayer {
+        using DebugLayer::DebugLayer;
+
+        const DebugLayer::State& stateData() {
+            return *_state;
+        }
+    };
+
+    Layer& layer = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer(), data.sources, DebugLayerFlags{}));
+
+    struct EmptyLayouter: AbstractLayouter {
+        using AbstractLayouter::AbstractLayouter;
+
+        void doUpdate(Containers::BitArrayView, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const NodeHandle>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Vector2>&) override {}
+    };
+
+    struct IntegratedLayouter: AbstractLayouter {
+        using AbstractLayouter::AbstractLayouter;
+
+        struct DebugIntegration {
+            DebugIntegration(int value, float): value{value} {
+                ++debugIntegrationConstructed;
+            }
+
+            DebugIntegration(const DebugIntegration& other) = delete;
+            DebugIntegration(DebugIntegration&& other): value{other.value} {
+                ++debugIntegrationConstructed;
+                ++debugIntegrationMoved;
+            }
+
+            DebugIntegration& operator=(const DebugIntegration& other) = delete;
+            /* This one shouldn't get used */
+            DebugIntegration& operator=(DebugIntegration&& other) = delete;
+
+            ~DebugIntegration() {
+                ++debugIntegrationDestructed;
+            }
+
+            void print(Debug&, const IntegratedLayouter&, const Containers::StringView&, LayouterDataHandle) {
+                CORRADE_FAIL("This shouldn't be called.");
+            }
+
+            int value;
+        };
+
+        void doUpdate(Containers::BitArrayView, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const NodeHandle>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Vector2>&) override {}
+    };
+
+    /* Setting a layouter name with a concrete type won't allocate the
+       DebugIntegration instance, same reasoning as with layers in
+       layerNameDebugIntegrationExplicit() */
+    IntegratedLayouter& integratedLayouter1 = ui.setLayouterInstance(Containers::pointer<IntegratedLayouter>(ui.createLayouter()));
+    layer.setLayouterName(integratedLayouter1, "Integrated 1");
+    CORRADE_COMPARE(layer.stateData().layouters.size(), 1);
+    CORRADE_COMPARE(layer.stateData().layouters[0].name, "Integrated 1");
+    CORRADE_VERIFY(!layer.stateData().layouters[0].integration);
+    CORRADE_VERIFY(!layer.stateData().layouters[0].deleter);
+    CORRADE_VERIFY(!layer.stateData().layouters[0].print);
+    CORRADE_COMPARE(debugIntegrationConstructed, 0);
+    CORRADE_COMPARE(debugIntegrationMoved, 0);
+    CORRADE_COMPARE(debugIntegrationDestructed, 0);
+
+    IntegratedLayouter& integratedLayouter2 = ui.setLayouterInstance(Containers::pointer<IntegratedLayouter>(ui.createLayouter()));
+    layer.setLayouterName(integratedLayouter2, "Integrated 2", IntegratedLayouter::DebugIntegration{1337, 4.5f});
+    CORRADE_COMPARE(layer.stateData().layouters.size(), 2);
+    CORRADE_COMPARE(layer.stateData().layouters[1].name, "Integrated 2");
+    CORRADE_COMPARE(layer.stateData().layouters[1].integration, data.used);
+    if(data.used)
+        CORRADE_COMPARE(static_cast<IntegratedLayouter::DebugIntegration*>(layer.stateData().layouters[1].integration)->value, 1337);
+    CORRADE_COMPARE(layer.stateData().layouters[1].deleter, data.used);
+    CORRADE_COMPARE(layer.stateData().layouters[1].print, data.used);
+    /* A local instance gets moved to the function, then internally moved again
+       to allocate the instance and then the temporary get destructed */
+    CORRADE_COMPARE(debugIntegrationConstructed, data.used ? 2 : 1);
+    CORRADE_COMPARE(debugIntegrationMoved, data.used ? 1 : 0);
+    CORRADE_COMPARE(debugIntegrationDestructed, 1);
+
+    /* Removing the whole debug layer deletes the integration in this case as
+       well */
+    ui.removeLayer(layer.handle());
+    CORRADE_COMPARE(debugIntegrationConstructed, data.used ? 2 : 1);
+    CORRADE_COMPARE(debugIntegrationMoved, data.used ? 1 : 0);
+    CORRADE_COMPARE(debugIntegrationDestructed, data.used ? 2 : 1);
+}
+
+void DebugLayerTest::layouterNameDebugIntegrationCopyConstructPlainStruct() {
+    /* Like layerNameDebugIntegrationCopyConstructPlainStruct() but for
+       layouters */
+
+    AbstractUserInterface ui{{100, 100}};
+
+    struct Layer: DebugLayer {
+        using DebugLayer::DebugLayer;
+
+        const DebugLayer::State& stateData() {
+            return *_state;
+        }
+    };
+
+    Layer& layer = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer(), DebugLayerSource::NodeLayoutDetails, DebugLayerFlags{}));
+
+    struct IntegratedLayouter: AbstractLayouter {
+        using AbstractLayouter::AbstractLayouter;
+
+        struct DebugIntegration {
+            void print(Debug&, const IntegratedLayouter&, Containers::StringView, LayouterDataHandle) {}
+
+            int a;
+            char b;
+        };
+
+        void doUpdate(Containers::BitArrayView, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const NodeHandle>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Vector2>&) override {}
+    };
+    IntegratedLayouter& integratedLayouter = ui.setLayouterInstance(Containers::pointer<IntegratedLayouter>(ui.createLayouter()));
+
+    /* This needs special handling on GCC 4.8, where
+       new DebugIntegration{integration} (copy-construction) attempts to
+       convert DebugIntegration to int to initialize the first member and
+       fails miserably. Similar case is in Containers::Array etc. */
+    IntegratedLayouter::DebugIntegration integration;
+    layer.setLayouterName(integratedLayouter, "Extremely Trivial", integration);
+    CORRADE_COMPARE(layer.stateData().layouters.size(), 1);
+    CORRADE_VERIFY(layer.stateData().layouters[0].integration);
+}
+
+void DebugLayerTest::layouterNameDebugIntegrationMoveConstructPlainStruct() {
+    /* Like layerNameDebugIntegrationMoveConstructPlainStruct() but for
+       layouters */
+
+    AbstractUserInterface ui{{100, 100}};
+
+    struct Layer: DebugLayer {
+        using DebugLayer::DebugLayer;
+
+        const DebugLayer::State& stateData() {
+            return *_state;
+        }
+    };
+
+    Layer& layer = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer(), DebugLayerSource::NodeLayoutDetails, DebugLayerFlags{}));
+
+    struct IntegratedLayouter: AbstractLayouter {
+        using AbstractLayouter::AbstractLayouter;
+
+        struct DebugIntegration {
+            void print(Debug&, const IntegratedLayouter&, Containers::StringView, LayouterDataHandle) {}
+
+            int a;
+            Containers::Pointer<char> b;
+        };
+
+        void doUpdate(Containers::BitArrayView, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const NodeHandle>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Vector2>&) override {}
+    };
+    IntegratedLayouter& integratedLayouter1 = ui.setLayouterInstance(Containers::pointer<IntegratedLayouter>(ui.createLayouter()));
+    IntegratedLayouter& integratedLayouter2 = ui.setLayouterInstance(Containers::pointer<IntegratedLayouter>(ui.createLayouter()));
+
+    /* This needs special handling on GCC 4.8, where
+       new DebugIntegration{Utility::move(integration)} attempts to convert
+       DebugIntegration to int to initialize the first member and fails
+       miserably. Similar case is in Containers::Array etc. */
+    layer.setLayouterName(integratedLayouter1, "Extremely Trivial", IntegratedLayouter::DebugIntegration{});
+    /* This case internally does the above, so verify it works there as well */
+    layer.setLayouterName(integratedLayouter2, "Extremely Trivial");
+    CORRADE_COMPARE(layer.stateData().layouters.size(), 2);
+    CORRADE_VERIFY(layer.stateData().layouters[0].integration);
+    CORRADE_VERIFY(layer.stateData().layouters[1].integration);
+}
+
+void DebugLayerTest::layouterNameInvalid() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    AbstractUserInterface ui{{100, 100}};
+    AbstractUserInterface uiAnother{{100, 100}};
+
+    /* Enabling NodeLayoutDetails so the integration is used in full, just in
+       case */
+    DebugLayer& layer = ui.setLayerInstance(Containers::pointer<DebugLayer>(ui.createLayer(), DebugLayerSource::NodeLayoutDetails, DebugLayerFlags{}));
+    DebugLayer layerNoUi{layerHandle(0, 1), {}, {}};
+
+    struct EmptyLayouter: AbstractLayouter {
+        using AbstractLayouter::AbstractLayouter;
+
+        void doUpdate(Containers::BitArrayView, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const NodeHandle>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Vector2>&) override {}
+    };
+    EmptyLayouter& layouter = ui.setLayouterInstance(Containers::pointer<EmptyLayouter>(ui.createLayouter()));
+    EmptyLayouter& layouterAnotherUi = uiAnother.setLayouterInstance(Containers::pointer<EmptyLayouter>(uiAnother.createLayouter()));
+
+    struct IntegratedLayouter: AbstractLayouter {
+        using AbstractLayouter::AbstractLayouter;
+
+        struct DebugIntegration {
+            void print(Debug&, const IntegratedLayouter&, const Containers::StringView&, LayouterDataHandle) {
+                CORRADE_FAIL("This shouldn't be called.");
+            }
+        };
+
+        void doUpdate(Containers::BitArrayView, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const NodeHandle>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Vector2>&) override {}
+    };
+    IntegratedLayouter& integratedLayouter = ui.setLayouterInstance(Containers::pointer<IntegratedLayouter>(ui.createLayouter()));
+    IntegratedLayouter& integratedLayouterAnotherUi = uiAnother.setLayouterInstance(Containers::pointer<IntegratedLayouter>(uiAnother.createLayouter()));
+    IntegratedLayouter::DebugIntegration integration;
+
+    Containers::String out;
+    Error redirectError{&out};
+    layerNoUi.layouterName(LayouterHandle::Null);
+    layerNoUi.setLayouterName(layouter, {});
+    layerNoUi.setLayouterName(integratedLayouter, {});
+    layerNoUi.setLayouterName(integratedLayouter, {}, integration);
+    layerNoUi.setLayouterName(integratedLayouter, {}, IntegratedLayouter::DebugIntegration{});
+    layer.layouterName(LayouterHandle::Null);
+    layer.setLayouterName(layouterAnotherUi, {});
+    layer.setLayouterName(integratedLayouterAnotherUi, {});
+    layer.setLayouterName(integratedLayouterAnotherUi, {}, integration);
+    layer.setLayouterName(integratedLayouterAnotherUi, {}, IntegratedLayouter::DebugIntegration{});
+    CORRADE_COMPARE_AS(out,
+        "Ui::DebugLayer::layouterName(): debug layer not part of a user interface\n"
+        "Ui::DebugLayer::setLayouterName(): debug layer not part of a user interface\n"
+        "Ui::DebugLayer::setLayouterName(): debug layer not part of a user interface\n"
+        "Ui::DebugLayer::setLayouterName(): debug layer not part of a user interface\n"
+        "Ui::DebugLayer::setLayouterName(): debug layer not part of a user interface\n"
+        "Ui::DebugLayer::layouterName(): handle is null\n"
+        "Ui::DebugLayer::setLayouterName(): layouter not part of the same user interface\n"
+        "Ui::DebugLayer::setLayouterName(): layouter not part of the same user interface\n"
+        "Ui::DebugLayer::setLayouterName(): layouter not part of the same user interface\n"
+        "Ui::DebugLayer::setLayouterName(): layouter not part of the same user interface\n",
         TestSuite::Compare::String);
 }
 
@@ -2532,6 +3381,13 @@ void DebugLayerTest::preUpdateNoOp() {
     };
     ui.setLayerInstance(Containers::pointer<EmptyLayer>(ui.createLayer()));
 
+    struct EmptyLayouter: AbstractLayouter {
+        using AbstractLayouter::AbstractLayouter;
+
+        void doUpdate(Containers::BitArrayView, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const NodeHandle>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Vector2>&) override {}
+    };
+    ui.setLayouterInstance(Containers::pointer<EmptyLayouter>(ui.createLayouter()));
+
     struct EmptyGenericAnimator: AbstractGenericAnimator {
         using AbstractGenericAnimator::AbstractGenericAnimator;
 
@@ -2557,6 +3413,7 @@ void DebugLayerTest::preUpdateNoOp() {
     /* Layers are pre-filled with the default name for the debug layer even
        before update() happens */
     CORRADE_COMPARE(layer.stateData().layers.isEmpty(), data.expectNoLayers);
+    CORRADE_VERIFY(layer.stateData().layouters.isEmpty());
     CORRADE_VERIFY(layer.stateData().animators.isEmpty());
 
     /* The layer has the NeedsCommonDataUpdate set always, so UI update() will
@@ -2566,6 +3423,7 @@ void DebugLayerTest::preUpdateNoOp() {
     CORRADE_COMPARE(!layer.usedCount(), data.expectNoData);
     CORRADE_COMPARE(layer.stateData().nodes.isEmpty(), data.expectNoNodes);
     CORRADE_COMPARE(layer.stateData().layers.isEmpty(), data.expectNoLayers);
+    CORRADE_COMPARE(layer.stateData().layouters.isEmpty(), data.expectNoLayouters);
     CORRADE_COMPARE(layer.stateData().animators.isEmpty(), data.expectNoAnimators);
 }
 
@@ -2713,6 +3571,77 @@ void DebugLayerTest::preUpdateTrackLayers() {
     CORRADE_COMPARE(layer.stateData().layers[0].name, "");
     CORRADE_COMPARE(layer.stateData().layers[2].handle, emptyLayer2Replacement.handle());
     CORRADE_COMPARE(layer.stateData().layers[2].name, "");
+}
+
+void DebugLayerTest::preUpdateTrackLayouters() {
+    auto&& data = PreUpdateTrackLayoutersData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
+    AbstractUserInterface ui{{100, 100}};
+
+    struct EmptyLayouter: AbstractLayouter {
+        using AbstractLayouter::AbstractLayouter;
+
+        void doUpdate(Containers::BitArrayView, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const NodeHandle>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Vector2>&) override {}
+    };
+    EmptyLayouter& emptyLayouter1 = ui.setLayouterInstance(Containers::pointer<EmptyLayouter>(ui.createLayouter()));
+
+    /* Initially the layer will have nothing even though there are some
+       layouters already, it'll however set a state to trigger population on
+       next update */
+    struct Layer: DebugLayer {
+        using DebugLayer::DebugLayer;
+
+        const DebugLayer::State& stateData() {
+            return *_state;
+        }
+    };
+    Layer& layer = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer(), data.sources, DebugLayerFlags{}));
+    CORRADE_COMPARE(layer.stateData().layouters.size(), 0);
+    CORRADE_COMPARE(layer.usedCount(), 0);
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsCommonDataUpdate);
+    CORRADE_COMPARE_AS(ui.state(),
+        UserInterfaceState::NeedsDataUpdate,
+        TestSuite::Compare::GreaterOrEqual);
+
+    /* Update will populate the layouters, the state will stay set even after.
+       No data are created for the layouters. */
+    ui.update();
+    CORRADE_COMPARE(layer.stateData().layouters.size(), 1);
+    CORRADE_COMPARE(layer.stateData().layouters[0].handle, emptyLayouter1.handle());
+    CORRADE_COMPARE(layer.usedCount(), 0);
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsCommonDataUpdate);
+    CORRADE_COMPARE_AS(ui.state(),
+        UserInterfaceState::NeedsDataUpdate,
+        TestSuite::Compare::GreaterOrEqual);
+
+    /* Adding more layouters resizes the internal storage after update */
+    EmptyLayouter& emptyLayouter2 = ui.setLayouterInstance(Containers::pointer<EmptyLayouter>(ui.createLayouter()));
+    EmptyLayouter& emptyLayouter3 = ui.setLayouterInstance(Containers::pointer<EmptyLayouter>(ui.createLayouter()));
+    ui.update();
+    CORRADE_COMPARE(layer.stateData().layouters.size(), 3);
+    CORRADE_COMPARE(layer.usedCount(), 0);
+    CORRADE_COMPARE(layer.stateData().layouters[1].handle, emptyLayouter2.handle());
+    CORRADE_COMPARE(layer.stateData().layouters[2].handle, emptyLayouter3.handle());
+
+    /* Removing a layer clears the handle and anything else, like a name that
+       has been set. Replacing a node with another in the same spot does the
+       same. */
+    layer.setLayouterName(emptyLayouter1, "Hello!");
+    layer.setLayouterName(emptyLayouter2, "Hello?");
+    CORRADE_COMPARE(layer.stateData().layouters[0].name, "Hello!");
+    CORRADE_COMPARE(layer.stateData().layouters[1].name, "Hello?");
+    LayouterHandle emptyLayouter2Handle = emptyLayouter2.handle();
+    ui.removeLayouter(emptyLayouter2Handle);
+    ui.removeLayouter(emptyLayouter1.handle());
+    EmptyLayouter& emptyLayouter2Replacement = ui.setLayouterInstance(Containers::pointer<EmptyLayouter>(ui.createLayouter()));
+    ui.update();
+    CORRADE_COMPARE(layouterHandleId(emptyLayouter2Replacement.handle()), layouterHandleId(emptyLayouter2Handle));
+    CORRADE_COMPARE(layer.stateData().layouters.size(), 3);
+    CORRADE_COMPARE(layer.stateData().layouters[0].handle, LayouterHandle::Null);
+    CORRADE_COMPARE(layer.stateData().layouters[0].name, "");
+    CORRADE_COMPARE(layer.stateData().layouters[1].handle, emptyLayouter2Replacement.handle());
+    CORRADE_COMPARE(layer.stateData().layouters[1].name, "");
 }
 
 void DebugLayerTest::preUpdateTrackAnimators() {
@@ -2949,7 +3878,7 @@ void DebugLayerTest::nodeHighlight() {
     /* The layers should always be printed in the draw order, regardless of the
        order they were created in */
     LayerHandle layers[7];
-    if(!data.reverseLayerOrder) {
+    if(!data.reverseLayerLayouterOrder) {
         layers[0] = ui.createLayer();
         layers[1] = ui.createLayer();
         layers[2] = ui.createLayer();
@@ -3014,6 +3943,7 @@ void DebugLayerTest::nodeHighlight() {
     IntegratedLayer& integratedLayer = ui.setLayerInstance(Containers::pointer<IntegratedLayer>(layers[4]));
     integratedLayer.create(node);
     integratedLayer.create(node);
+    /* layers[5] has no instance */
     /* This layer is associated with an animator but data animator contents
        aren't reflected in the output so far */
     EmptyLayer& emptyLayer3 = ui.setLayerInstance(Containers::pointer<EmptyLayer>(layers[6]));
@@ -3021,6 +3951,73 @@ void DebugLayerTest::nodeHighlight() {
     DataHandle emptyLayer3Data1 = emptyLayer3.create(node);
     DataHandle emptyLayer3Data2 = emptyLayer3.create(node);
     emptyLayer3.create(node);
+
+    /* The layouters should always be printed in the draw order, regardless of
+       the order they were created in */
+    LayouterHandle layouters[6];
+    if(!data.reverseLayerLayouterOrder) {
+        layouters[0] = ui.createLayouter();
+        layouters[1] = ui.createLayouter();
+        layouters[2] = ui.createLayouter();
+        layouters[3] = ui.createLayouter();
+        layouters[4] = ui.createLayouter(); /* doesn't have any instance set */
+        layouters[5] = ui.createLayouter();
+    } else {
+        layouters[5] = ui.createLayouter();
+        layouters[4] = ui.createLayouter(layouters[5]); /* doesn't have any instance set */
+        layouters[3] = ui.createLayouter(layouters[4]);
+        layouters[2] = ui.createLayouter(layouters[3]);
+        layouters[1] = ui.createLayouter(layouters[2]);
+        layouters[0] = ui.createLayouter(layouters[1]);
+    }
+
+    struct EmptyLayouter: AbstractLayouter {
+        using AbstractLayouter::AbstractLayouter;
+        using AbstractLayouter::add;
+
+        void doUpdate(Containers::BitArrayView, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const NodeHandle>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Vector2>&) override {}
+    };
+    struct IntegratedLayouter: AbstractLayouter {
+        using AbstractLayouter::AbstractLayouter;
+        using AbstractLayouter::add;
+
+        struct DebugIntegration {
+            /* This is deliberately *not* passing the name via const& to verify
+               that the signature doesn't have to match exactly */
+            void print(Debug& debug, const IntegratedLayouter& layouter, Containers::StringView layouterName, LayouterDataHandle data) {
+                /* Printing the name colored to verify the color is disabled
+                   correctly here as well */
+                debug << "  Layouter" << Debug::color(Debug::Color::Yellow) << layouterName << Debug::resetColor << "(" << Debug::nospace << layouter.value << Debug::nospace << ") layout" << Debug::packed << data << "and a value of" << value << Debug::newline;
+            }
+
+            int value = 7331;
+        };
+
+        void doUpdate(Containers::BitArrayView, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const NodeHandle>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Vector2>&) override {}
+
+        int value = 96024;
+    };
+
+    EmptyLayouter& emptyLayouter1 = ui.setLayouterInstance(Containers::pointer<EmptyLayouter>(layouters[0]));
+    emptyLayouter1.add(node);
+    emptyLayouter1.add(node);
+    emptyLayouter1.add(node);
+    EmptyLayouter& emptyLayouter2 = ui.setLayouterInstance(Containers::pointer<EmptyLayouter>(layouters[1]));
+    emptyLayouter2.add(node);
+    /* Layouter that gets subsequently removed and thus data from it shouldn't
+       be counted, neither the name should be used */
+    EmptyLayouter& removedLayouter = ui.setLayouterInstance(Containers::pointer<EmptyLayouter>(layouters[2]));
+    removedLayouter.add(node);
+    removedLayouter.add(node);
+    IntegratedLayouter& integratedLayouter = ui.setLayouterInstance(Containers::pointer<IntegratedLayouter>(layouters[3]));
+    integratedLayouter.add(node);
+    integratedLayouter.add(node);
+    /* layouters[4] has no instance */
+    EmptyLayouter& emptyLayouter3 = ui.setLayouterInstance(Containers::pointer<EmptyLayouter>(layouters[5]));
+    emptyLayouter3.add(node);
+    emptyLayouter3.add(node);
+    emptyLayouter3.add(node);
+    emptyLayouter3.add(node);
 
     struct EmptyNodeAnimator: AbstractNodeAnimator {
         using AbstractNodeAnimator::AbstractNodeAnimator;
@@ -3119,18 +4116,23 @@ void DebugLayerTest::nodeHighlight() {
         ++called;
     });
 
-    if(data.someLayerAnimatorNames) {
+    if(data.someLayerLayouterAnimatorNames) {
         layer.setLayerName(emptyLayer2, "Second");
         layer.setLayerName(removedLayer, "Removed");
         layer.setLayerName(integratedLayer, "No.3");
+        layer.setLayouterName(emptyLayouter2, "Supplementary");
+        layer.setLayouterName(removedLayouter, "Removed");
+        layer.setLayouterName(integratedLayouter, "Tertiary");
         layer.setAnimatorName(emptyAnimator2, "2nd");
         layer.setAnimatorName(removedAnimator1, "Removed");
         layer.setAnimatorName(dataAnimator, "Data");
         layer.setAnimatorName(integratedAnimator, "No#3");
     }
-    if(data.allLayerAnimatorNames) {
+    if(data.allLayerLayouterAnimatorNames) {
         layer.setLayerName(emptyLayer1, "A layer");
         layer.setLayerName(emptyLayer3, "The last ever");
+        layer.setLayouterName(emptyLayouter1, "Primary");
+        layer.setLayouterName(emptyLayouter3, "Fallback");
         layer.setAnimatorName(emptyAnimator1, "An animator");
         layer.setAnimatorName(emptyAnimator3, "Termanimator");
     }
@@ -3148,6 +4150,7 @@ void DebugLayerTest::nodeHighlight() {
        add layers, animators and nodes that aren't yet known by it and should
        thus be skipped */
     ui.removeLayer(removedLayer.handle());
+    ui.removeLayouter(removedLayouter.handle());
     ui.removeAnimator(removedAnimator1.handle());
     if(removedChild != NodeHandle::Null)
         ui.removeNode(removedChild);
@@ -3155,15 +4158,20 @@ void DebugLayerTest::nodeHighlight() {
     NodeHandle unknownNode1 = ui.createNode(node, {}, {});
     /* This one is new */
     NodeHandle unknownNode2 = ui.createNode(node, {}, {});
-    /* These are is in place of removedLayer / removedAnimator */
+    /* These are is in place of removedLayer / removedLayouter /
+       removedAnimator */
     EmptyLayer& unknownLayer1 = ui.setLayerInstance(Containers::pointer<EmptyLayer>(ui.createLayer()));
+    EmptyLayouter& unknownLayouter1 = ui.setLayouterInstance(Containers::pointer<EmptyLayouter>(ui.createLayouter()));
     EmptyNodeAnimator& unknownAnimator1 = ui.setNodeAnimatorInstance(Containers::pointer<EmptyNodeAnimator>(ui.createAnimator()));
     unknownLayer1.create(node);
+    unknownLayouter1.add(node);
     unknownAnimator1.create(50_nsec, 1_nsec, node);
     /* These are new */
     EmptyLayer& unknownLayer2 = ui.setLayerInstance(Containers::pointer<EmptyLayer>(ui.createLayer()));
+    EmptyLayouter& unknownLayouter2 = ui.setLayouterInstance(Containers::pointer<EmptyLayouter>(ui.createLayouter()));
     EmptyNodeAnimator& unknownAnimator2 = ui.setNodeAnimatorInstance(Containers::pointer<EmptyNodeAnimator>(ui.createAnimator()));
     unknownLayer2.create(node);
+    unknownLayouter2.add(node);
     unknownAnimator2.create(50_nsec, 1_nsec, node);
     /* Remove the other animator after adding others so there's a slot with an
        invalid handle */
@@ -3235,6 +4243,8 @@ void DebugLayerTest::nodeHighlight() {
     ui.removeNode(unknownNode2);
     ui.removeLayer(unknownLayer1.handle());
     ui.removeLayer(unknownLayer2.handle());
+    ui.removeLayouter(unknownLayouter1.handle());
+    ui.removeLayouter(unknownLayouter2.handle());
     ui.removeAnimator(unknownAnimator1.handle());
     ui.removeAnimator(unknownAnimator2.handle());
 
@@ -3315,7 +4325,7 @@ void DebugLayerTest::nodeHighlightNoCallback() {
     /* Just to match the layer handles to the nodeHighlight() case */
     /*LayerHandle removedLayer =*/ ui.createLayer();
 
-    DebugLayer& layer = ui.setLayerInstance(Containers::pointer<DebugLayer>(ui.createLayer(), DebugLayerSource::NodeHierarchy|DebugLayerSource::NodeDataDetails|DebugLayerSource::NodeAnimationDetails, DebugLayerFlag::NodeHighlight));
+    DebugLayer& layer = ui.setLayerInstance(Containers::pointer<DebugLayer>(ui.createLayer(), DebugLayerSource::NodeHierarchy|DebugLayerSource::NodeDataDetails|DebugLayerSource::NodeLayoutDetails|DebugLayerSource::NodeAnimationDetails, DebugLayerFlag::NodeHighlight));
 
     struct IntegratedLayer: AbstractLayer {
         using AbstractLayer::AbstractLayer;
@@ -3343,6 +4353,52 @@ void DebugLayerTest::nodeHighlightNoCallback() {
     emptyLayer3.create(node);
     emptyLayer3.create(node);
     emptyLayer3.create(node);
+
+    struct EmptyLayouter: AbstractLayouter {
+        using AbstractLayouter::AbstractLayouter;
+        using AbstractLayouter::add;
+
+        void doUpdate(Containers::BitArrayView, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const NodeHandle>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Vector2>&) override {}
+    };
+    struct IntegratedLayouter: AbstractLayouter {
+        using AbstractLayouter::AbstractLayouter;
+        using AbstractLayouter::add;
+
+        struct DebugIntegration {
+            /* This is deliberately *not* passing the name via const& to verify
+               that the signature doesn't have to match exactly */
+            void print(Debug& debug, const IntegratedLayouter& layouter, Containers::StringView layouterName, LayouterDataHandle data) {
+                /* Printing the name colored to verify the color is disabled
+                   correctly here as well */
+                debug << "  Layouter" << Debug::color(Debug::Color::Yellow) << layouterName << Debug::resetColor << "(" << Debug::nospace << layouter.value << Debug::nospace << ") layout" << Debug::packed << data << "and a value of" << value << Debug::newline;
+            }
+
+            int value = 7331;
+        };
+
+        void doUpdate(Containers::BitArrayView, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const NodeHandle>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Vector2>&) override {}
+
+        int value = 96024;
+    };
+
+    EmptyLayouter& emptyLayouter1 = ui.setLayouterInstance(Containers::pointer<EmptyLayouter>(ui.createLayouter()));
+    emptyLayouter1.add(node);
+    emptyLayouter1.add(node);
+    emptyLayouter1.add(node);
+    EmptyLayouter& emptyLayouter2 = ui.setLayouterInstance(Containers::pointer<EmptyLayouter>(ui.createLayouter()));
+    emptyLayouter2.add(node);
+    /* Layouter that was removed / w/o an instance in nodeHighlight() above */
+    ui.createLayouter();
+    IntegratedLayouter& integratedLayouter = ui.setLayouterInstance(Containers::pointer<IntegratedLayouter>(ui.createLayouter()));
+    integratedLayouter.add(node);
+    integratedLayouter.add(node);
+    /* Layouter that didn't have instance in nodeHighlight() above */
+    ui.createLayouter();
+    EmptyLayouter& emptyLayouter3 = ui.setLayouterInstance(Containers::pointer<EmptyLayouter>(ui.createLayouter()));
+    emptyLayouter3.add(node);
+    emptyLayouter3.add(node);
+    emptyLayouter3.add(node);
+    emptyLayouter3.add(node);
 
     struct EmptyNodeAnimator: AbstractNodeAnimator {
         using AbstractNodeAnimator::AbstractNodeAnimator;
@@ -3403,6 +4459,8 @@ void DebugLayerTest::nodeHighlightNoCallback() {
     layer.setNodeName(node, "A very nice node");
     layer.setLayerName(emptyLayer2, "Second");
     layer.setLayerName(integratedLayer, "No.3");
+    layer.setLayouterName(emptyLayouter2, "Supplementary");
+    layer.setLayouterName(integratedLayouter, "Tertiary");
     layer.setAnimatorName(emptyAnimator2, "2nd");
     layer.setAnimatorName(integratedAnimator, "No#3");
 
@@ -3616,6 +4674,124 @@ void DebugLayerTest::nodeHighlightLayerDebugIntegrationExplicitRvalue() {
         "Top-level node {0x0, 0x1}\n"
         "  Layer No.2 (42069) data {0x0, 0x1} and a value of 1337\n"
         "  Layer No.2 (42069) data {0x1, 0x1} and a value of 1337\n",
+        TestSuite::Compare::String);
+}
+
+void DebugLayerTest::nodeHighlightLayouterDebugIntegrationExplicit() {
+    /* Implicit integration tested in nodeHighlight() above, this verifies that
+       the explicitly passed instance does the right thing as well */
+
+    AbstractUserInterface ui{{100, 100}};
+
+    NodeHandle node = ui.createNode({40, 20}, {20, 30});
+
+    struct IntegratedLayouter: AbstractLayouter {
+        using AbstractLayouter::AbstractLayouter;
+        using AbstractLayouter::add;
+
+        struct DebugIntegration {
+            explicit DebugIntegration(int value): value{value} {}
+
+            /* Compared to noodeHighlight(), here the signature does match */
+            void print(Debug& debug, const IntegratedLayouter& layouter, const Containers::StringView& layouterName, LayouterDataHandle data) {
+                /* Printing the name colored to verify the color is disabled
+                   correctly here as well */
+                debug << "  Layouter" << Debug::color(Debug::Color::Yellow) << layouterName << Debug::resetColor << "(" << Debug::nospace << layouter.value << Debug::nospace << ") layout" << Debug::packed << data << "and a value of" << value << Debug::newline;
+            }
+
+            int value;
+        };
+
+        void doUpdate(Containers::BitArrayView, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const NodeHandle>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Vector2>&) override {}
+
+        int value = 96024;
+    };
+    IntegratedLayouter& integratedLayouter = ui.setLayouterInstance(Containers::pointer<IntegratedLayouter>(ui.createLayouter()));
+    integratedLayouter.add(node);
+    integratedLayouter.add(node);
+
+    DebugLayer& layer = ui.setLayerInstance(Containers::pointer<DebugLayer>(ui.createLayer(), DebugLayerSource::NodeLayoutDetails, DebugLayerFlag::NodeHighlight));
+
+    IntegratedLayouter::DebugIntegration integration{7331};
+    layer.setLayouterName(integratedLayouter, "Secondary", integration);
+
+    ui.update();
+
+    Containers::String out;
+    {
+        Debug redirectOutput{&out};
+        CORRADE_VERIFY(layer.highlightNode(node));
+    }
+    CORRADE_COMPARE(layer.currentHighlightedNode(), node);
+    CORRADE_COMPARE_AS(out,
+        "Top-level node {0x0, 0x1}\n"
+        "  Layouter Secondary (96024) layout {0x0, 0x1} and a value of 7331\n"
+        "  Layouter Secondary (96024) layout {0x1, 0x1} and a value of 7331\n",
+        TestSuite::Compare::String);
+}
+
+void DebugLayerTest::nodeHighlightLayouterDebugIntegrationExplicitRvalue() {
+    /* Like nodeHighlightLayerDebugIntegrationExplicit(), but passing a
+       move-only instance */
+
+    AbstractUserInterface ui{{100, 100}};
+
+    NodeHandle node = ui.createNode({40, 40}, {20, 20});
+
+    /* Compared to nodeHighlight() and
+       nodeHighlightLayouterDebugIntegrationExplicit() here the whole
+       DebugIntegration type is defined in a base class which should also be
+       fine */
+    struct IntegratedLayouterBase: AbstractLayouter {
+        using AbstractLayouter::AbstractLayouter;
+        using AbstractLayouter::add;
+
+        struct DebugIntegration {
+            explicit DebugIntegration(int value): value{value} {}
+
+            DebugIntegration(const DebugIntegration&) = delete;
+            DebugIntegration(DebugIntegration&&) noexcept = default;
+            DebugIntegration& operator=(const DebugIntegration&) = delete;
+            /* Clang complains this one is unused. I want to avoid weirdness
+               that might happen if one of these isn't defined, tho. */
+            CORRADE_UNUSED DebugIntegration& operator=(DebugIntegration&&) noexcept = default;
+
+            void print(Debug& debug, const IntegratedLayouterBase& layouter, Containers::StringView layouterName, LayouterDataHandle data) {
+                /* Printing the name colored to verify the color is disabled
+                   correctly here as well */
+                debug << "  Layouter" << Debug::color(Debug::Color::Yellow) << layouterName << Debug::resetColor << "(" << Debug::nospace << layouter.value << Debug::nospace << ") layout" << Debug::packed << data << "and a value of" << value << Debug::newline;
+            }
+
+            int value;
+        };
+
+        int value = 96024;
+    };
+    struct IntegratedLayouter: IntegratedLayouterBase {
+        using IntegratedLayouterBase::IntegratedLayouterBase;
+
+        void doUpdate(Containers::BitArrayView, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const NodeHandle>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Vector2>&) override {}
+    };
+    IntegratedLayouter& integratedLayouter = ui.setLayouterInstance(Containers::pointer<IntegratedLayouter>(ui.createLayouter()));
+    integratedLayouter.add(node);
+    integratedLayouter.add(node);
+
+    DebugLayer& layer = ui.setLayerInstance(Containers::pointer<DebugLayer>(ui.createLayer(), DebugLayerSource::NodeLayoutDetails, DebugLayerFlag::NodeHighlight));
+
+    layer.setLayouterName(integratedLayouter, "Secondary", IntegratedLayouter::DebugIntegration{7331});
+
+    ui.update();
+
+    Containers::String out;
+    {
+        Debug redirectOutput{&out};
+        CORRADE_VERIFY(layer.highlightNode(node));
+    }
+    CORRADE_COMPARE(layer.currentHighlightedNode(), node);
+    CORRADE_COMPARE_AS(out,
+        "Top-level node {0x0, 0x1}\n"
+        "  Layouter Secondary (96024) layout {0x0, 0x1} and a value of 7331\n"
+        "  Layouter Secondary (96024) layout {0x1, 0x1} and a value of 7331\n",
         TestSuite::Compare::String);
 }
 
