@@ -1,5 +1,4 @@
 [0;1;39mNode[0m {0x10, 0x1}
-  Nested at level 2 with 0 direct children
   Data {0x0, 0x1} from layer {0x6, 0x1}[0;33m Base[0m with style[0;33m ColorSwatch[0m (9)
     Color: [38;2;59;210;103m[48;2;59;210;103m██[0m #3bd267ff
     Padding: {2, 4, 1, 3}

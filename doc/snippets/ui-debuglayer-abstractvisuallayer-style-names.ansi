@@ -1,5 +1,4 @@
 [0;1;39mNode[0m {0xf, 0x1}
-  Nested at level 2 with 0 direct children
   Data {0x4, 0x1} from layer {0x5, 0x1}[0;33m Styled[0m
     Inactive out style:[0;33m Button[0m (13)
     Inactive over style:[0;33m ButtonHovered[0m (11)

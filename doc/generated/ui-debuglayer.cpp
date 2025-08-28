@@ -179,7 +179,7 @@ int UiDebugLayer::exec() {
         .setSize({128.0f, 48.0f}, Vector2{ImageSize}, ImageSize)
         .setStyle(Ui::McssDarkStyle{});
 
-    Ui::DebugLayer& debugLayer = ui.setLayerInstance(Containers::pointer<Ui::DebugLayerGL>(ui.createLayer(), Ui::DebugLayerSource::NodeDataDetails|Ui::DebugLayerSource::NodeHierarchy, Ui::DebugLayerFlag::NodeHighlight|Ui::DebugLayerFlag::ColorAlways));
+    Ui::DebugLayer& debugLayerHierarchy = ui.setLayerInstance(Containers::pointer<Ui::DebugLayerGL>(ui.createLayer(), Ui::DebugLayerSource::NodeDataDetails|Ui::DebugLayerSource::NodeHierarchy, Ui::DebugLayerFlag::NodeHighlight|Ui::DebugLayerFlag::ColorAlways));
 
     /* Button code, default visual state with no highlight. Adding some extra
        nodes and data to have the listed handles non-trivial. */
@@ -213,7 +213,7 @@ ui.eventLayer().onTapOrClick(button, []{
     Containers::String out;
     {
         Debug redirectOutput{&out};
-        CORRADE_INTERNAL_ASSERT(debugLayer.highlightNode(button));
+        CORRADE_INTERNAL_ASSERT(debugLayerHierarchy.highlightNode(button));
     }
     Debug{} << out;
     Utility::Path::write("ui-debuglayer-node-highlight.ansi", out);
@@ -227,15 +227,15 @@ ui.eventLayer().onTapOrClick(button, []{
     /** @todo once the integration does something even without NodeDataDetails
         being set (such as showing layer flags), this won't be enough and there
         needs to be multiple debug layers */
-    debugLayer.setLayerName(static_cast<Ui::AbstractLayer&>(ui.baseLayer()), "Base");
-    debugLayer.setLayerName(static_cast<Ui::AbstractLayer&>(ui.textLayer()), "Text");
-    debugLayer.setLayerName(static_cast<Ui::AbstractLayer&>(ui.eventLayer()), "Event");
-    debugLayer.setNodeName(button, "Accept button");
+    debugLayerHierarchy.setLayerName(static_cast<Ui::AbstractLayer&>(ui.baseLayer()), "Base");
+    debugLayerHierarchy.setLayerName(static_cast<Ui::AbstractLayer&>(ui.textLayer()), "Text");
+    debugLayerHierarchy.setLayerName(static_cast<Ui::AbstractLayer&>(ui.eventLayer()), "Event");
+    debugLayerHierarchy.setNodeName(button, "Accept button");
 
     out = {};
     {
         Debug redirectOutput{&out};
-        CORRADE_INTERNAL_ASSERT(debugLayer.highlightNode(button));
+        CORRADE_INTERNAL_ASSERT(debugLayerHierarchy.highlightNode(button));
     }
     Debug{} << out;
     Utility::Path::write("ui-debuglayer-node-highlight-names.ansi", out);
@@ -244,23 +244,27 @@ ui.eventLayer().onTapOrClick(button, []{
        match the draw order, to hint that it doesn't matter. */
 
 /* [button-names] */
-debugLayer.setLayerName(ui.eventLayer(), "Event");
-debugLayer.setLayerName(ui.baseLayer(), "Base");
+debugLayerHierarchy.setLayerName(ui.eventLayer(), "Event");
+debugLayerHierarchy.setLayerName(ui.baseLayer(), "Base");
 /* So it doesn't show the (arbitrary) padding from TextLayer */
-debugLayer.setLayerName(static_cast<Ui::AbstractVisualLayer&>(ui.textLayer()), "Text");
-debugLayer.setNodeName(button, "Accept button");
+debugLayerHierarchy.setLayerName(static_cast<Ui::AbstractVisualLayer&>(ui.textLayer()), "Text");
+debugLayerHierarchy.setNodeName(button, "Accept button");
 /* [button-names] */
 
     out = {};
     {
         Debug redirectOutput{&out};
-        CORRADE_INTERNAL_ASSERT(debugLayer.highlightNode(button));
+        CORRADE_INTERNAL_ASSERT(debugLayerHierarchy.highlightNode(button));
     }
     Debug{} << out;
     Utility::Path::write("ui-debuglayer-node-highlight-details.ansi", out);
 
-    /* Custom integration. Creating some more nodes and unused data to not have
-       the listed handles too close to each other. */
+    /* Custom integration, with a debug layer that has NodeHierarchy disabled
+       as that information is superfluous. Creating some more nodes and unused
+       data to not have the listed handles too close to each other. */
+    ui.removeLayer(debugLayerHierarchy.handle());
+    Ui::DebugLayer& debugLayer = ui.setLayerInstance(Containers::pointer<Ui::DebugLayerGL>(ui.createLayer(), Ui::DebugLayerSource::NodeDataDetails|Ui::DebugLayerSource::NodeAnimationDetails, Ui::DebugLayerFlag::NodeHighlight|Ui::DebugLayerFlag::ColorAlways));
+    debugLayer.setLayerName(ui.eventLayer(), "Event");
 
 /* [integration-setLayerName] */
 ColorLayer& colorLayer = ui.setLayerInstance(DOXYGEN_ELLIPSIS(Containers::pointer<ColorLayer>(ui.createLayer())));
