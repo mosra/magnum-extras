@@ -95,8 +95,7 @@ LineShaderGL::LineShaderGL(const UnsignedInt styleCount, const LineCapStyle capS
     #endif
 
     #ifdef MAGNUM_UI_BUILD_STATIC
-    if(!Utility::Resource::hasGroup("MagnumUi"_s))
-        importShaderResources();
+    importShaderResources();
     #endif
 
     Utility::Resource rs{"MagnumUi"_s};

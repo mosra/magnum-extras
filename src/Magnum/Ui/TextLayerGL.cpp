@@ -121,8 +121,7 @@ TextShaderGL::TextShaderGL(const Flags flags, const UnsignedInt styleCount) {
     #endif
 
     #ifdef MAGNUM_UI_BUILD_STATIC
-    if(!Utility::Resource::hasGroup("MagnumUi"_s))
-        importShaderResources();
+    importShaderResources();
     #endif
 
     Utility::Resource rs{"MagnumUi"_s};
@@ -217,8 +216,7 @@ TextEditingShaderGL::TextEditingShaderGL(const UnsignedInt styleCount) {
     #endif
 
     #ifdef MAGNUM_UI_BUILD_STATIC
-    if(!Utility::Resource::hasGroup("MagnumUi"_s))
-        importShaderResources();
+    importShaderResources();
     #endif
 
     Utility::Resource rs{"MagnumUi"_s};

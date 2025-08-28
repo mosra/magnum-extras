@@ -147,8 +147,7 @@ BaseShaderGL::BaseShaderGL(const Flags flags, const UnsignedInt styleCount): _fl
     #endif
 
     #ifdef MAGNUM_UI_BUILD_STATIC
-    if(!Utility::Resource::hasGroup("MagnumUi"_s))
-        importShaderResources();
+    importShaderResources();
     #endif
 
     Utility::Resource rs{"MagnumUi"_s};
@@ -225,8 +224,7 @@ BlurShaderGL::BlurShaderGL(UnsignedInt radius, Float limit) {
     #endif
 
     #ifdef MAGNUM_UI_BUILD_STATIC
-    if(!Utility::Resource::hasGroup("MagnumUi"_s))
-        importShaderResources();
+    importShaderResources();
     #endif
 
     Utility::Resource rs{"MagnumUi"_s};
