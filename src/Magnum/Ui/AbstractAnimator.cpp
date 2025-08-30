@@ -1355,7 +1355,7 @@ Containers::Pair<bool, bool> AbstractAnimator::update(const Nanoseconds time, co
             _c(Stopped,Playing)
             _c(Stopped,Paused)
             _c(Stopped,Stopped)
-                CORRADE_INTERNAL_ASSERT_UNREACHABLE();
+                CORRADE_INTERNAL_DEBUG_ASSERT_UNREACHABLE();
             /* LCOV_EXCL_STOP */
             #undef _c
         }
