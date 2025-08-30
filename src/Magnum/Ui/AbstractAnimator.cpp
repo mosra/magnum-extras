@@ -179,7 +179,13 @@ union Animation {
         UnsignedShort generation = 1;
 
         AnimationFlags flags{NoInit};
-        /* One byte free */
+
+        /* Used to decide about started/stopped bits in update() and whether
+           advance was called for a paused animation. Set to Scheduled upon
+           creation and to Stopped on removal, all animations that are Stopped
+           are skipped in update(). */
+        AnimationState previousState;
+
         UnsignedInt repeatCount;
 
         /* Duration. Is -max when the animation is freed, otherwise it's always
@@ -201,7 +207,8 @@ union Animation {
            next time it gets used */
         UnsignedShort generation;
 
-        /* Two bytes free */
+        UnsignedByte:8;
+        AnimationState previousState;
 
         /* See State::firstFree for more information */
         UnsignedInt next;
@@ -216,6 +223,7 @@ static_assert(std::is_trivially_copyable<Animation>::value, "Animation not trivi
 #endif
 static_assert(
     offsetof(Animation::Used, generation) == offsetof(Animation::Free, generation) &&
+    offsetof(Animation::Used, previousState) == offsetof(Animation::Free, previousState) &&
     offsetof(Animation::Used, duration) == offsetof(Animation::Free, duration),
     "Animation::Used and Free layout not compatible");
 
@@ -417,6 +425,10 @@ AnimationHandle AbstractAnimator::create(const Nanoseconds start, const Nanoseco
        appropriately, either initialized to 1, or incremented when it got
        remove()d (to mark existing handles as invalid) */
     animation->used.flags = flags;
+    /* Set the initial state to Scheduled. The current state is calculated in
+       update() and by comparing to this the started/stopped bits get properly
+       set. */
+    animation->used.previousState = AnimationState::Scheduled;
     animation->used.repeatCount = repeatCount;
     animation->used.duration = duration;
     animation->used.started = start;
@@ -515,9 +527,13 @@ void AbstractAnimator::removeInternal(const UnsignedInt id) {
        bits. */
     ++animation.used.generation &= (1 << Implementation::AnimatorDataHandleGenerationBits) - 1;
 
+    /* Set the previous state to Stopped to make the removed animation skipped
+       in the update() loop */
+    animation.used.previousState = AnimationState::Stopped;
+
     /* Set the animation duration to -max to avoid falsely recognizing this
-       item as used when directly iterating the list or in isHandleValid() if
-       the generation matches by accident */
+       item as valid in isHandleValid() if the generation matches by
+       accident */
     animation.used.duration = Nanoseconds::min();
 
     /* Clear the node attachment to have null handles in the nodes() list for
@@ -996,6 +1012,12 @@ void AbstractAnimator::playInternal(const UnsignedInt id, const Nanoseconds time
     animation.used.paused = Nanoseconds::max();
     animation.used.stopped = Nanoseconds::max();
 
+    /* Reset the state back to Scheduled so update() behaves the same as if the
+       animation was just create()d, with the started / stopped bits set
+       appropriately. Reset even if the animation is already playing as that
+       should trigger the started bit too. */
+    animation.used.previousState = AnimationState::Scheduled;
+
     /* Mark the animator as needing advance() if the animation is now scheduled
        or playing. Can't be paused because the paused time was reset above. */
     const AnimationState animationStateAfter = animationState(animation, state.time);
@@ -1287,17 +1309,18 @@ Containers::Pair<bool, bool> AbstractAnimator::update(const Nanoseconds time, co
     stopped.resetAll();
     remove.resetAll();
 
-    const Nanoseconds timeBefore = state.time;
     bool cleanNeeded = false;
     bool advanceNeeded = false;
     bool anotherAdvanceNeeded = false;
     for(std::size_t i = 0; i != state.animations.size(); ++i) {
-        /* Animations with -max duration are freed items, skip */
-        const Animation& animation = state.animations[i];
-        if(animation.used.duration == Nanoseconds::min())
+        /* Skip animations that were already stopped previously, as for those
+           there's nothing left to do. Freed items have the state set to
+           Stopped in removeInternal(). */
+        Animation& animation = state.animations[i];
+        if(animation.used.previousState == AnimationState::Stopped)
             continue;
 
-        const AnimationState stateBefore = animationState(animation, timeBefore);
+        const AnimationState stateBefore = animation.used.previousState;
         const AnimationState stateAfter = animationState(animation, time);
 
         /* AnimationState has 4 values so there should be 16 different cases */
@@ -1320,10 +1343,10 @@ Containers::Pair<bool, bool> AbstractAnimator::update(const Nanoseconds time, co
             /* These don't get advanced in any way */
             _c(Scheduled,Scheduled)
             _c(Paused,Paused)
-            _c(Stopped,Stopped)
                 break;
 
-            /* These transitions shouldn't happen */
+            /* These transitions shouldn't happen or were already skipped
+               above */
             /* LCOV_EXCL_START */
             _c(Playing,Scheduled)
             _c(Paused,Scheduled)
@@ -1331,6 +1354,7 @@ Containers::Pair<bool, bool> AbstractAnimator::update(const Nanoseconds time, co
             _c(Stopped,Scheduled)
             _c(Stopped,Playing)
             _c(Stopped,Paused)
+            _c(Stopped,Stopped)
                 CORRADE_INTERNAL_ASSERT_UNREACHABLE();
             /* LCOV_EXCL_STOP */
             #undef _c
@@ -1350,6 +1374,9 @@ Containers::Pair<bool, bool> AbstractAnimator::update(const Nanoseconds time, co
            stateAfter == AnimationState::Playing ||
            stateAfter == AnimationState::Paused)
             anotherAdvanceNeeded = true;
+
+        /* Save the current state for comparison in the next advance() */
+        animation.used.previousState = stateAfter;
     }
 
     /* Update current time, mark the animator as needing an advance() call only

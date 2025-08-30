@@ -1926,12 +1926,7 @@ void NodeAnimatorTest::advance() {
             .toOpacity(0.75f)
             .clearFlagsBegin(NodeFlag::Focusable)
             .addFlagsEnd(NodeFlag::NoBlur),
-        /** @todo In order to correctly have the animation marked as `started`
-            and properly have the start flags etc. applied, it currently has to
-            start at time that's greater than the UI animationTime() default
-            0_nsec. Revert back to 0_nsec once this is fixed in the UI
-            itself. */
-        Animation::Easing::cubicOut, 1_nsec, 1_nsec, nodeHandle(4, 0x113));
+        Animation::Easing::cubicOut, 0_nsec, 1_nsec, nodeHandle(4, 0x113));
     /* This one is a variant of the first, scheduled later and not attached to
        any node, thus it never marks any updates */
     AnimationHandle scheduledNullNode = animator.create(
@@ -1945,14 +1940,7 @@ void NodeAnimatorTest::advance() {
         NodeAnimation{}
             .toOffset({3.0f, 333.0f})
             .toSize({33.0f, 3333.0f}),
-        /** @todo Same as above, in order to correctly have the animation
-            marked as `started` and properly have the fromOffset / fromSize
-            fetched, it currently has to start at time that's greater than the
-            UI animationTime() default 0_nsec. Without that, the interpolation
-            is done from a random value, which could be a NaN, causing the test
-            to fail. Revert back to 0_nsec once this is fixed in the UI
-            itself. */
-        Animation::Easing::cubicIn, 1_nsec, 1_nsec, nodeHandle(1, 0xaca), AnimationFlag::KeepOncePlayed);
+        Animation::Easing::cubicIn, 0_nsec, 1_nsec, nodeHandle(1, 0xaca), AnimationFlag::KeepOncePlayed);
 
     /* Does what UI's advanceAnimations() is doing internally for all animators
        (as we need to test also the interaction with animation being removed,

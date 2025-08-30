@@ -6938,7 +6938,9 @@ void AbstractUserInterfaceTest::advanceAnimationsGeneric() {
     }
     Animator& animator = ui.setGenericAnimatorInstance(Utility::move(animatorInstance));
 
-    /* Call to advance(5) advances the first, nothing to clean */
+    /* Call to advance(5) advances the first. The second is already stopped so
+       it just advances it with the final state. There's nothing to clean at
+       this point. */
     animator.create(0_nsec, 10_nsec);
     animator.create(-20_nsec, 10_nsec, AnimationFlag::KeepOncePlayed);
     animator.create(6_nsec, 4_nsec);
@@ -6946,22 +6948,22 @@ void AbstractUserInterfaceTest::advanceAnimationsGeneric() {
         CORRADE_ITERATION(__FILE__ ":" CORRADE_LINE_STRING);
         bool active[]{
             true,
-            false,
+            true,
             false
         };
         bool started[]{
-            false, /* The first was already running at the (default) 0_nsec */
-            false,
+            true,
+            true,
             false
         };
         bool stopped[]{
             false,
-            false,
+            true,
             false
         };
         Float factors[]{
             0.5f,
-            0.0f, /* unused */
+            1.0f,
             0.0f, /* unused */
         };
         animator.expectedActive = Containers::stridedArrayView(active).sliceBit(0);
@@ -7104,7 +7106,9 @@ void AbstractUserInterfaceTest::advanceAnimationsNode() {
     ui.setNodeOpacity(node1, 0.75f);
     ui.setNodeOpacity(node2, 0.25f);
 
-    /* Call to advance(5) advances the first, nothing to clean */
+    /* Call to advance(5) advances the first. The second is already stopped so
+       it just advances it with the final state. There's nothing to clean at
+       this point. */
     animator.create(0_nsec, 10_nsec);
     animator.create(-20_nsec, 10_nsec, AnimationFlag::KeepOncePlayed);
     animator.create(6_nsec, 4_nsec);
@@ -7112,22 +7116,22 @@ void AbstractUserInterfaceTest::advanceAnimationsNode() {
         CORRADE_ITERATION(__FILE__ ":" CORRADE_LINE_STRING);
         bool active[]{
             true,
-            false,
+            true,
             false
         };
         bool started[]{
-            false, /* The first was already running at the (default) 0_nsec */
-            false,
+            true,
+            true,
             false
         };
         bool stopped[]{
             false,
-            false,
+            true,
             false
         };
         Float factors[]{
             0.5f,
-            0.0f, /* unused */
+            1.0f,
             0.0f, /* unused */
         };
         animator.expectedActive = Containers::stridedArrayView(active).sliceBit(0);
@@ -7272,7 +7276,9 @@ void AbstractUserInterfaceTest::advanceAnimationsData() {
     layer.assignAnimator(*animatorInstance);
     Animator& animator = ui.setDataAnimatorInstance(Utility::move(animatorInstance));
 
-    /* Call to advance(5) advances the first, nothing to clean */
+    /* Call to advance(5) advances the first. The second is already stopped so
+       it just advances it with the final state. There's nothing to clean at
+       this point. */
     animator.create(0_nsec, 10_nsec);
     animator.create(-20_nsec, 10_nsec, AnimationFlag::KeepOncePlayed);
     animator.create(6_nsec, 4_nsec);
@@ -7280,22 +7286,22 @@ void AbstractUserInterfaceTest::advanceAnimationsData() {
         CORRADE_ITERATION(__FILE__ ":" CORRADE_LINE_STRING);
         bool active[]{
             true,
-            false,
+            true,
             false
         };
         bool started[]{
-            false, /* The first was already running at the (default) 0_nsec */
-            false,
+            true,
+            true,
             false
         };
         bool stopped[]{
             false,
-            false,
+            true,
             false
         };
         Float factors[]{
             0.5f,
-            0.0f, /* unused */
+            1.0f,
             0.0f, /* unused */
         };
         animator.expectedActive = Containers::stridedArrayView(active).sliceBit(0);
@@ -7440,7 +7446,9 @@ void AbstractUserInterfaceTest::advanceAnimationsStyle() {
     layer.assignAnimator(*animatorInstance);
     Animator& animator = ui.setStyleAnimatorInstance(Utility::move(animatorInstance));
 
-    /* Call to advance(5) advances the first, nothing to clean */
+    /* Call to advance(5) advances the first. The second is already stopped so
+       it just advances it with the final state. There's nothing to clean at
+       this point. */
     animator.create(0_nsec, 10_nsec);
     animator.create(-20_nsec, 10_nsec, AnimationFlag::KeepOncePlayed);
     animator.create(6_nsec, 4_nsec);
@@ -7448,22 +7456,22 @@ void AbstractUserInterfaceTest::advanceAnimationsStyle() {
         CORRADE_ITERATION(__FILE__ ":" CORRADE_LINE_STRING);
         bool active[]{
             true,
-            false,
+            true,
             false
         };
         bool started[]{
-            false, /* The first was already running at the (default) 0_nsec */
-            false,
+            true,
+            true,
             false
         };
         bool stopped[]{
             false,
-            false,
+            true,
             false
         };
         Float factors[]{
             0.5f,
-            0.0f, /* unused */
+            1.0f,
             0.0f, /* unused */
         };
         animator.expectedActive = Containers::stridedArrayView(active).sliceBit(0);
@@ -11490,8 +11498,9 @@ void AbstractUserInterfaceTest::stateAnimations() {
             for(std::size_t i = 0; i != active.size(); ++i) {
                 CORRADE_ITERATION(i);
                 CORRADE_VERIFY(active[i]);
-                /* The animation should be already running from before */
-                CORRADE_VERIFY(!started[i]);
+                /* The animation should be already running, the started bit is
+                   thus set only on the very first call */
+                CORRADE_COMPARE(started[i], advanceCallCount == 0);
                 CORRADE_VERIFY(!stopped[i]);
                 CORRADE_COMPARE(factors[i], 0.5f);
 

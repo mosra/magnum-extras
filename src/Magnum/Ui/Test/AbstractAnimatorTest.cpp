@@ -133,6 +133,7 @@ struct AbstractAnimatorTest: TestSuite::Tester {
     void playPaused();
 
     void update();
+    void updatePreviousState();
     void updateEmpty();
     void updateInvalid();
 
@@ -863,6 +864,7 @@ AbstractAnimatorTest::AbstractAnimatorTest() {
         Containers::arraySize(PlayPausedData));
 
     addTests({&AbstractAnimatorTest::update,
+              &AbstractAnimatorTest::updatePreviousState,
               &AbstractAnimatorTest::updateEmpty,
               &AbstractAnimatorTest::updateInvalid,
 
@@ -3449,12 +3451,12 @@ void AbstractAnimatorTest::toggleFlagsAtTime() {
     CORRADE_COMPARE(factors[animationHandleId(quarterRepeated)], 0.25f);
     CORRADE_COMPARE(factors[animationHandleId(quarterRepeatedReverseEveryOtherEven)], 0.25f);
     CORRADE_COMPARE(factors[animationHandleId(quarterRepeatedReverseEveryOtherOdd)], 0.25f);
-    CORRADE_COMPARE(factors[animationHandleId(quarterPaused)], Constants::nan());
+    CORRADE_COMPARE(factors[animationHandleId(quarterPaused)], 0.25f);
     CORRADE_COMPARE(factors[animationHandleId(middle)], 0.5f);
     CORRADE_COMPARE(factors[animationHandleId(scheduled)], Constants::nan());
     CORRADE_COMPARE(factors[animationHandleId(stop)], 1.0f);
-    CORRADE_COMPARE(factors[animationHandleId(stopped)], Constants::nan());
-    CORRADE_COMPARE(factors[animationHandleId(stoppedReverse)], Constants::nan());
+    CORRADE_COMPARE(factors[animationHandleId(stopped)], 1.0f);
+    CORRADE_COMPARE(factors[animationHandleId(stoppedReverse)], 0.0f);
     CORRADE_COMPARE(animator.factor(start), 0.0f);
     CORRADE_COMPARE(animator.factor(startRepeat), 0.0f);
     CORRADE_COMPARE(animator.factor(zeroDuration), 1.0f);
@@ -3765,7 +3767,10 @@ void AbstractAnimatorTest::update() {
 
     /* State should change at 0, 10, 20, 30, 40. Tests mainly the interaction
        between previous and current state, the actual interpolation is tested
-       in propertiesStateFactor(). */
+       in propertiesStateFactor(). Especially verifying also behavior with
+       newly created animations being started / paused / stopped in the past,
+       which should still cause them to have the `started` and `stopped` bits
+       set appropriately and not missed. */
     AnimationHandle scheduledKeep = animator.create(30_nsec, 10_nsec, AnimationFlag::KeepOncePlayed);
     AnimationHandle scheduledToPlayingBegin = animator.create(10_nsec, 10_nsec);
     AnimationHandle scheduledToPlayingReverse = animator.create(5_nsec, 10_nsec, AnimationFlag::Reverse);
@@ -3819,7 +3824,8 @@ void AbstractAnimatorTest::update() {
     constexpr std::size_t animationCount = 19;
 
     /* Call to update(10) advances also stopped and paused animations that
-       changed their state compared to last time (i.e., time 0) */
+       changed their state compared to their initial state upon creation, which
+       is Scheduled */
     {
         Containers::BitArray active{NoInit, animationCount};
         Containers::BitArray started{NoInit, animationCount};
@@ -3840,13 +3846,13 @@ void AbstractAnimatorTest::update() {
             true,   /*  9 playingToStoppedKeep */
             true,   /* 10 playingRepeated */
             true,   /* 11 playingRepeatedReverseReverseEveryOther */
-            false,  /* 12 paused */
+            true,   /* 12 paused */
             true,   /* 13 pausedToStopped */
-            false,  /* 14 stoppedRemove */
-            false,  /* 15 stoppedKeep */
+            true,   /* 14 stoppedRemove */
+            true,   /* 15 stoppedKeep */
             false,  /* 16 zeroDurationScheduled */
             false,  /* 17 zeroDurationScheduledReverseKeep */
-            false,  /* 18 zeroDurationStopped */
+            true,   /* 18 zeroDurationStopped */
         }).sliceBit(0), TestSuite::Compare::Container);
         CORRADE_COMPARE_AS(Containers::BitArrayView{started}, Containers::stridedArrayView({
             false,  /*  0 scheduledKeep */
@@ -3855,19 +3861,19 @@ void AbstractAnimatorTest::update() {
             true,   /*  3 scheduledToPaused */
             true,   /*  4 scheduledToStopped */
             false,  /*  5 removed */
-            false,  /*  6 playingMiddleKeep */
-            false,  /*  7 playingToPausedKeep */
-            false,  /*  8 playingEndToStopped */
-            false,  /*  9 playingToStoppedKeep */
-            false,  /* 10 playingRepeated */
-            false,  /* 11 playingRepeatedReverseReverseEveryOther */
-            false,  /* 12 paused */
-            false,  /* 13 pausedToStopped */
-            false,  /* 14 stoppedRemove */
-            false,  /* 15 stoppedKeep */
+            true,   /*  6 playingMiddleKeep */
+            true,   /*  7 playingToPausedKeep */
+            true,   /*  8 playingEndToStopped */
+            true,   /*  9 playingToStoppedKeep */
+            true,   /* 10 playingRepeated */
+            true,   /* 11 playingRepeatedReverseReverseEveryOther */
+            true,   /* 12 paused */
+            true,   /* 13 pausedToStopped */
+            true,   /* 14 stoppedRemove */
+            true,   /* 15 stoppedKeep */
             false,  /* 16 zeroDurationScheduled */
             false,  /* 17 zeroDurationScheduledReverseKeep */
-            false,  /* 18 zeroDurationStopped */
+            true,   /* 18 zeroDurationStopped */
         }).sliceBit(0), TestSuite::Compare::Container);
         CORRADE_COMPARE_AS(Containers::BitArrayView{stopped}, Containers::stridedArrayView({
             false,  /*  0 scheduledKeep */
@@ -3884,11 +3890,11 @@ void AbstractAnimatorTest::update() {
             false,  /* 11 playingRepeatedReverseReverseEveryOther */
             false,  /* 12 paused */
             true,   /* 13 pausedToStopped */
-            false,  /* 14 stoppedRemove */
-            false,  /* 15 stoppedKeep */
+            true,   /* 14 stoppedRemove */
+            true,   /* 15 stoppedKeep */
             false,  /* 16 zeroDurationScheduled */
             false,  /* 17 zeroDurationScheduledReverseKeep */
-            false,  /* 18 zeroDurationStopped */
+            true,   /* 18 zeroDurationStopped */
         }).sliceBit(0), TestSuite::Compare::Container);
         CORRADE_COMPARE_AS(factors, Containers::arrayView({
             unused, /*  0 scheduledKeep */
@@ -3903,13 +3909,13 @@ void AbstractAnimatorTest::update() {
             1.0f,   /*  9 playingToStoppedKeep */
             0.4f,   /* 10 playingRepeated */
             0.3f,   /* 11 playingRepeatedReverseReverseEveryOther */
-            unused, /* 12 paused */
+            0.5f,   /* 12 paused */
             1.0f,   /* 13 pausedToStopped */
-            unused, /* 14 stoppedRemove */
-            unused, /* 15 stoppedKeep */
+            1.0f,   /* 14 stoppedRemove */
+            1.0f,   /* 15 stoppedKeep */
             unused, /* 16 zeroDurationScheduled */
             unused, /* 17 zeroDurationScheduledReverseKeep */
-            unused, /* 18 zeroDurationStopped */
+            1.0f,   /* 18 zeroDurationStopped */
         }), TestSuite::Compare::Container);
         CORRADE_COMPARE_AS(Containers::BitArrayView{remove}, Containers::stridedArrayView({
             false,  /*  0 scheduledKeep */
@@ -4673,6 +4679,144 @@ void AbstractAnimatorTest::update() {
     /* zeroDurationStopped is gone */
 }
 
+void AbstractAnimatorTest::updatePreviousState() {
+    /* Verifies that the remembered previousState gets properly reset on
+       play(), handle removal and recycling */
+
+    struct: AbstractAnimator {
+        using AbstractAnimator::AbstractAnimator;
+        using AbstractAnimator::create;
+        using AbstractAnimator::remove;
+
+        AnimatorFeatures doFeatures() const override { return {}; }
+        /* doClean() gets called by us, no need to check anything */
+    } animator{animatorHandle(0, 1)};
+    CORRADE_COMPARE(animator.time(), 0_nsec);
+    CORRADE_COMPARE(animator.state(), AnimatorStates{});
+
+    AnimationHandle stoppedPlaying = animator.create(-50_nsec, 40_nsec, AnimationFlag::KeepOncePlayed);
+    AnimationHandle playingRestart = animator.create(-20_nsec, 40_nsec, AnimationFlag::KeepOncePlayed);
+    AnimationHandle playingRemoveRecyclePlaying = animator.create(-20_nsec, 40_nsec);
+    AnimationHandle playingRemoveRecycleStopped = animator.create(-20_nsec, 40_nsec);
+    AnimationHandle playingRemove = animator.create(-20_nsec, 40_nsec);
+
+    constexpr std::size_t animationCount = 5;
+
+    /* Call update() for the first time, all animations should become Playing
+       with the active and started bits set */
+    {
+        Containers::BitArray active{NoInit, animationCount};
+        Containers::BitArray started{NoInit, animationCount};
+        Containers::BitArray stopped{NoInit, animationCount};
+        Containers::StaticArray<animationCount, Float> factors{DirectInit, Constants::inf()};
+        Containers::BitArray remove{NoInit, animationCount};
+        CORRADE_COMPARE(animator.update(10_nsec, active, started, stopped, factors, remove), Containers::pair(true, false));
+        CORRADE_COMPARE_AS(Containers::BitArrayView{active}, Containers::stridedArrayView({
+            true,  /* 0 stoppedPlaying */
+            true,  /* 1 playingRestart */
+            true,  /* 2 playingRemoveRecyclePlaying */
+            true,  /* 3 playingRemoveRecycleStopped */
+            true,  /* 4 playingRemove */
+        }).sliceBit(0), TestSuite::Compare::Container);
+        CORRADE_COMPARE_AS(Containers::BitArrayView{started}, Containers::stridedArrayView({
+            true,
+            true,
+            true,
+            true,
+            true,
+        }).sliceBit(0), TestSuite::Compare::Container);
+        CORRADE_COMPARE_AS(Containers::BitArrayView{stopped}, Containers::stridedArrayView({
+            true,
+            false,
+            false,
+            false,
+            false,
+        }).sliceBit(0), TestSuite::Compare::Container);
+        CORRADE_COMPARE_AS(factors, Containers::arrayView({
+            1.0f,
+            0.75f,
+            0.75f,
+            0.75f,
+            0.75f
+        }), TestSuite::Compare::Container);
+        CORRADE_COMPARE_AS(Containers::BitArrayView{remove}, Containers::stridedArrayView({
+            false,
+            false,
+            false,
+            false,
+            false,
+        }).sliceBit(0), TestSuite::Compare::Container);
+    }
+    CORRADE_COMPARE(animator.state(), AnimatorState::NeedsAdvance);
+
+    /* Restart the animation that stopped in this update() */
+    CORRADE_COMPARE(animator.state(stoppedPlaying), AnimationState::Stopped);
+    animator.play(stoppedPlaying, 10_nsec);
+
+    /* Restart the animation that's playing. It should make its `started` bit
+       set again. */
+    animator.play(playingRestart, 10_nsec);
+
+    /* Remove the other animations and recreate a subset */
+    animator.remove(playingRemoveRecyclePlaying);
+    animator.remove(playingRemoveRecycleStopped);
+    animator.remove(playingRemove);
+    AnimationHandle playing = animator.create(-20_nsec, 40_nsec);
+    AnimationHandle stopped = animator.create(-50_nsec, 10_nsec, AnimationFlag::KeepOncePlayed);
+    CORRADE_COMPARE(animationHandleId(playing), animationHandleId(playingRemoveRecyclePlaying));
+    CORRADE_COMPARE(animationHandleId(stopped), animationHandleId(playingRemoveRecycleStopped));
+
+    /* Call update() again. The animations that were recycled should have the
+       `started` bit set again, not being treated as already started
+       previously. The now-stopped animation should have `stopped` set as well,
+       even though before it was not about to stop yet. The removed animation
+       should not be active at all. */
+    {
+        Containers::BitArray active{NoInit, animationCount};
+        Containers::BitArray started{NoInit, animationCount};
+        Containers::BitArray stopped{NoInit, animationCount};
+        Containers::StaticArray<animationCount, Float> factors{DirectInit, Constants::inf()};
+        Containers::BitArray remove{NoInit, animationCount};
+        CORRADE_COMPARE(animator.update(15_nsec, active, started, stopped, factors, remove), Containers::pair(true, false));
+        CORRADE_COMPARE_AS(Containers::BitArrayView{active}, Containers::stridedArrayView({
+            true,  /* 0 stoppedPlaying */
+            true,  /* 1 playingRestart */
+            true,  /* 1 playing */
+            true,  /* 2 stopped */
+            false, /* 3 (unused) */
+        }).sliceBit(0), TestSuite::Compare::Container);
+        CORRADE_COMPARE_AS(Containers::BitArrayView{started}, Containers::stridedArrayView({
+            true,
+            true,
+            true,
+            true,
+            false,
+        }).sliceBit(0), TestSuite::Compare::Container);
+        CORRADE_COMPARE_AS(Containers::BitArrayView{stopped}, Containers::stridedArrayView({
+            false,
+            false,
+            false,
+            true,
+            false,
+        }).sliceBit(0), TestSuite::Compare::Container);
+        CORRADE_COMPARE_AS(factors, Containers::arrayView({
+            0.125f,
+            0.125f,
+            0.875f,
+            1.0f,
+            Constants::inf()
+        }), TestSuite::Compare::Container);
+        CORRADE_COMPARE_AS(Containers::BitArrayView{remove}, Containers::stridedArrayView({
+            false,
+            false,
+            false,
+            false,
+            false,
+        }).sliceBit(0), TestSuite::Compare::Container);
+    }
+    CORRADE_COMPARE(animator.state(), AnimatorState::NeedsAdvance);
+}
+
 void AbstractAnimatorTest::updateEmpty() {
     struct: AbstractAnimator {
         using AbstractAnimator::AbstractAnimator;
@@ -5016,7 +5160,7 @@ void AbstractAnimatorTest::state() {
         CORRADE_COMPARE(animator.state(animation), AnimationState::Stopped);
         CORRADE_COMPARE(animator.state(), AnimatorState::NeedsAdvance);
         Containers::BitArray remove{NoInit, 1};
-        CORRADE_COMPARE(animator.update(0_nsec, mask, mask, mask, factors, remove), Containers::pair(false, true));
+        CORRADE_COMPARE(animator.update(0_nsec, mask, mask, mask, factors, remove), Containers::pair(true, true));
         CORRADE_COMPARE(remove[0], true);
         animator.remove(animation);
         CORRADE_VERIFY(!animator.isHandleValid(animation));
