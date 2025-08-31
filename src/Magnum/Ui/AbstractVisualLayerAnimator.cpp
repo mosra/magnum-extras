@@ -50,9 +50,9 @@ void AbstractVisualLayerStyleAnimator::removeInternal(const UnsignedInt id) {
     State& state = *_state;
     CORRADE_INTERNAL_ASSERT(state.layer && state.dynamicStyles.size() == capacity());
 
-    /* Recycle the dynamic style if it was allocated already. It might not be
-       if advance() wasn't called for this animation yet or if it was already
-       stopped by the time it reached advance(). */
+    /* Recycle the dynamic style if it's allocated. It might not be if
+       advance() wasn't called for this animation yet or if it was already
+       stopped by the time it's removed. */
     if(state.dynamicStyles[id] != ~UnsignedInt{})
         state.layer->recycleDynamicStyle(state.dynamicStyles[id]);
 }
@@ -111,9 +111,9 @@ void AbstractVisualLayerStyleAnimator::doClean(const Containers::BitArrayView an
         if(!animationIdsToRemove[i])
             continue;
 
-        /* Recycle the dynamic style if it was allocated already. It might not
-           be if advance() wasn't called for this animation yet or if it was
-           already stopped by the time it reached advance(). */
+        /* Recycle the dynamic style if it's allocated. It might not be if
+           advance() wasn't called for this animation yet or if it was already
+           stopped by the time it's removed. */
         if(state.dynamicStyles[i] != ~UnsignedInt{})
             state.layer->recycleDynamicStyle(state.dynamicStyles[i]);
 

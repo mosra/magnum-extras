@@ -418,14 +418,14 @@ void BaseLayerStyleAnimatorTest::createRemoveHandleRecycle() {
     /* Let it advance to allocate the dynamic style */
     Containers::BitArray active{DirectInit, 1, true};
     Float factors[]{0.0f};
-    Containers::BitArray remove{DirectInit, 1, false};
+    Containers::BitArray stopped{DirectInit, 1, false};
     BaseLayerStyleUniform dynamicStyleUniforms[1];
     Vector4 dynamicStylePaddings[1];
     UnsignedInt dataStyles[1];
     animator.advance(
         active,
+        stopped,
         factors,
-        remove,
         dynamicStyleUniforms, dynamicStylePaddings, dataStyles);
     CORRADE_COMPARE(animator.dynamicStyle(first), 0);
     /* Verify the AnimatorDataHandle overload correctly detecting a valid style
@@ -575,7 +575,7 @@ void BaseLayerStyleAnimatorTest::advance() {
 
         void doSetStyle(const BaseLayerCommonStyleUniform&, Containers::ArrayView<const BaseLayerStyleUniform>) override {}
     } shared{BaseLayer::Shared::Configuration{4, 7}
-        .setDynamicStyleCount(3)
+        .setDynamicStyleCount(2)
     };
     shared.setStyle(
         BaseLayerCommonStyleUniform{},
@@ -632,9 +632,10 @@ void BaseLayerStyleAnimatorTest::advance() {
     /* This one is a reverse of the first, scheduled later and not attached to
        any data, thus it never marks Style as changed */
     AnimationHandle scheduledNullData = animator.create(1, 3, Animation::Easing::linear, 15_nsec, 10_nsec, DataHandle::Null);
-    /* This one allocates a dynamic style once started, interpolates all the
-       way to 3 and stays */
-    AnimationHandle stoppedKept = animator.create(6, 3, Animation::Easing::cubicIn, 0_nsec, 1_nsec, data1, AnimationFlag::KeepOncePlayed);
+    /* This one sets the data1 style to 3 and stays, without allocating a
+       dynamic style at all, or marking Uniform or Padding as changed. Later on
+       it's restarted and then it interpolates as usual. */
+    AnimationHandle stoppedKept = animator.create(6, 3, Animation::Easing::linear, -20_nsec, 15_nsec, data1, AnimationFlag::KeepOncePlayed);
     /* This one sets both Uniform and Padding when animated. It's a linear
        easing but reverted. */
     AnimationHandle scheduledChangesPadding = animator.create(3, 6, [](Float a) { return 1.0f - a; }, 30_nsec, 20_nsec, data3);
@@ -667,7 +668,7 @@ void BaseLayerStyleAnimatorTest::advance() {
         Containers::Pair<bool, bool> needsAdvanceClean = animator.update(time, active, started, stopped, factors, remove);
         BaseLayerStyleAnimatorUpdates updates;
         if(needsAdvanceClean.first())
-            updates = animator.advance(active, factors, remove, dynamicStyleUniforms, dynamicStylePaddings, dataStyles);
+            updates = animator.advance(active, stopped, factors, dynamicStyleUniforms, dynamicStylePaddings, dataStyles);
         if(needsAdvanceClean.second())
             animator.clean(remove);
         return updates;
@@ -678,17 +679,15 @@ void BaseLayerStyleAnimatorTest::advance() {
        updated */
     Vector4 paddings[]{
         Vector4{Constants::nan()},
-        Vector4{Constants::nan()},
         Vector4{Constants::nan()}
     };
 
     /* Advancing to 5 allocates a dynamic style for the playing animation,
        switches the style to it and fills the dynamic data. For the stopped
-       & removed animation it switches the style to the destination one, for
-       the stopped & kept it allocates a dynamic style, transitions to the
-       final style but doesn't recycle it. */
+       & removed and stopped & kept animations it switches the style to the
+       destination one. */
     {
-        BaseLayerStyleUniform uniforms[3];
+        BaseLayerStyleUniform uniforms[2];
         UnsignedInt dataStyles[]{666, 666, 666, 666, 666};
         CORRADE_COMPARE(advance(5_nsec, uniforms, paddings, dataStyles), BaseLayerStyleAnimatorUpdate::Uniform|BaseLayerStyleAnimatorUpdate::Style|BaseLayerStyleAnimatorUpdate::Padding);
         CORRADE_VERIFY(animator.isHandleValid(playing));
@@ -702,11 +701,11 @@ void BaseLayerStyleAnimatorTest::advance() {
         CORRADE_COMPARE(animator.state(scheduledChangesPadding), AnimationState::Scheduled);
         CORRADE_COMPARE(animator.dynamicStyle(playing), 0);
         CORRADE_COMPARE(animator.dynamicStyle(scheduledNullData), Containers::NullOpt);
-        CORRADE_COMPARE(animator.dynamicStyle(stoppedKept), 1);
+        CORRADE_COMPARE(animator.dynamicStyle(stoppedKept), Containers::NullOpt);
         CORRADE_COMPARE(animator.dynamicStyle(scheduledChangesPadding), Containers::NullOpt);
-        CORRADE_COMPARE(layer.dynamicStyleUsedCount(), 2);
+        CORRADE_COMPARE(layer.dynamicStyleUsedCount(), 1);
         CORRADE_COMPARE(layer.dynamicStyleAnimation(0), playing);
-        CORRADE_COMPARE(layer.dynamicStyleAnimation(1), stoppedKept);
+        CORRADE_COMPARE(layer.dynamicStyleAnimation(1), AnimationHandle::Null);
         /* Style IDs in the layer aren't changed, the passed array is instead,
            and only where dynamic styles got allocated or the animation
            stopped */
@@ -717,7 +716,7 @@ void BaseLayerStyleAnimatorTest::advance() {
         CORRADE_COMPARE(layer.style(data4), 5);
         CORRADE_COMPARE_AS(Containers::arrayView(dataStyles), Containers::arrayView({
             666u,
-            shared.styleCount() + 1u,
+            3u,
             shared.styleCount() + 0u,
             666u,
             3u,
@@ -731,15 +730,6 @@ void BaseLayerStyleAnimatorTest::advance() {
         CORRADE_COMPARE(uniforms[0].cornerRadius, Vector4{9.0f});
         CORRADE_COMPARE(uniforms[0].innerOutlineCornerRadius, Vector4{18.0f});
         CORRADE_COMPARE(paddings[0], Vector4{2.0f});
-        /* The stopped but kept style should get exactly the uniform 1 value,
-           and the constant padding */
-        CORRADE_COMPARE(uniforms[1].topColor, Color4{0.0f});
-        CORRADE_COMPARE(uniforms[1].bottomColor, Color4{1.0f});
-        CORRADE_COMPARE(uniforms[1].outlineColor, Color4{4.0f});
-        CORRADE_COMPARE(uniforms[1].outlineWidth, Vector4{32.0f});
-        CORRADE_COMPARE(uniforms[1].cornerRadius, Vector4{8.0f});
-        CORRADE_COMPARE(uniforms[1].innerOutlineCornerRadius, Vector4{16.0f});
-        CORRADE_COMPARE(paddings[1], Vector4{2.0f});
     }
 
     /* Reset the padding of the stopped & kept style to something else to
@@ -750,10 +740,10 @@ void BaseLayerStyleAnimatorTest::advance() {
        particular, the style values aren't touched even though they're now
        different. */
     {
-        BaseLayerStyleUniform uniforms[3];
+        BaseLayerStyleUniform uniforms[2];
         UnsignedInt dataStyles[]{666, 666, 666, 666, 666};
         CORRADE_COMPARE(advance(10_nsec, uniforms, paddings, dataStyles), BaseLayerStyleAnimatorUpdate::Uniform);
-        CORRADE_COMPARE(layer.dynamicStyleUsedCount(), 2);
+        CORRADE_COMPARE(layer.dynamicStyleUsedCount(), 1);
         CORRADE_COMPARE_AS(Containers::arrayView(dataStyles), Containers::arrayView({
             666u, 666u, 666u, 666u, 666u,
         }), TestSuite::Compare::Container);
@@ -761,52 +751,44 @@ void BaseLayerStyleAnimatorTest::advance() {
         CORRADE_COMPARE(uniforms[0].topColor, Color4{1.0f});
         CORRADE_COMPARE(uniforms[0].innerOutlineCornerRadius, Vector4{20.0f});
         CORRADE_COMPARE(paddings[0], Vector4{2.0f});
-        /* The stopped & kept style isn't touched anymore, staying at the reset
-           defaults */
-        CORRADE_COMPARE(uniforms[1].topColor, Color4{1.0f});
-        CORRADE_COMPARE(paddings[1], Vector4{0.0f});
     }
 
     /* Advancing to 15 plays also the scheduled animation without a data
        attachment, allocating a new dynamic style but not switching to it.
        I.e., no Style is set, only Uniform and Padding. */
     {
-        BaseLayerStyleUniform uniforms[3];
+        BaseLayerStyleUniform uniforms[2];
         UnsignedInt dataStyles[]{666, 666, 666, 666, 666};
         CORRADE_COMPARE(advance(15_nsec, uniforms, paddings, dataStyles), BaseLayerStyleAnimatorUpdate::Uniform|BaseLayerStyleAnimatorUpdate::Padding);
         CORRADE_COMPARE(animator.state(scheduledNullData), AnimationState::Playing);
-        CORRADE_COMPARE(animator.dynamicStyle(scheduledNullData), 2);
-        CORRADE_COMPARE(layer.dynamicStyleUsedCount(), 3);
-        CORRADE_COMPARE(layer.dynamicStyleAnimation(2), scheduledNullData);
+        CORRADE_COMPARE(animator.dynamicStyle(scheduledNullData), 1);
+        CORRADE_COMPARE(layer.dynamicStyleUsedCount(), 2);
+        CORRADE_COMPARE(layer.dynamicStyleAnimation(0), playing);
+        CORRADE_COMPARE(layer.dynamicStyleAnimation(1), scheduledNullData);
         CORRADE_COMPARE_AS(Containers::arrayView(dataStyles), Containers::arrayView({
             666u, 666u, 666u, 666u, 666u,
         }), TestSuite::Compare::Container);
         /* The playing animation is advanced to 3/4 */
         CORRADE_COMPARE(uniforms[0].topColor, Color4{1.5f});
         CORRADE_COMPARE(paddings[0], Vector4{2.0f});
-        /* The stopped & kept style isn't touched anymore, staying at the reset
-           defaults */
-        CORRADE_COMPARE(uniforms[1].topColor, Color4{1.0f});
-        CORRADE_COMPARE(paddings[1], Vector4{0.0f});
         /* The null data animation is set to the value of style 1 */
-        CORRADE_COMPARE(uniforms[2].topColor, Color4{2.0f});
-        CORRADE_COMPARE(paddings[2], Vector4{2.0f});
+        CORRADE_COMPARE(uniforms[1].topColor, Color4{2.0f});
+        CORRADE_COMPARE(paddings[1], Vector4{2.0f});
     }
 
     /* Advancing to 20 stops the first animation, recycling its dynamic style
        and changing the style to the target one. Uniform value is updated for
        the null data animation. */
     {
-        BaseLayerStyleUniform uniforms[3];
+        BaseLayerStyleUniform uniforms[2];
         UnsignedInt dataStyles[]{666, 666, 666, 666, 666};
         CORRADE_COMPARE(advance(20_nsec, uniforms, paddings, dataStyles), BaseLayerStyleAnimatorUpdate::Style|BaseLayerStyleAnimatorUpdate::Uniform);
         CORRADE_VERIFY(!animator.isHandleValid(playing));
         CORRADE_VERIFY(animator.isHandleValid(stoppedKept));
         CORRADE_VERIFY(animator.isHandleValid(scheduledChangesPadding));
-        CORRADE_COMPARE(layer.dynamicStyleUsedCount(), 2);
+        CORRADE_COMPARE(layer.dynamicStyleUsedCount(), 1);
         CORRADE_COMPARE(layer.dynamicStyleAnimation(0), AnimationHandle::Null);
-        CORRADE_COMPARE(layer.dynamicStyleAnimation(1), stoppedKept);
-        CORRADE_COMPARE(layer.dynamicStyleAnimation(2), scheduledNullData);
+        CORRADE_COMPARE(layer.dynamicStyleAnimation(1), scheduledNullData);
         CORRADE_COMPARE_AS(Containers::arrayView(dataStyles), Containers::arrayView({
             666u,
             666u,
@@ -816,44 +798,35 @@ void BaseLayerStyleAnimatorTest::advance() {
         }), TestSuite::Compare::Container);
         /* Uniform values of the recycled style aren't touched anymore */
         CORRADE_COMPARE(uniforms[0].topColor, Color4{1.0f});
-        /* The stopped & kept style isn't touched anymore, staying at the reset
-           defaults */
-        CORRADE_COMPARE(uniforms[1].topColor, Color4{1.0f});
-        CORRADE_COMPARE(paddings[1], Vector4{0.0f});
         /* The null data animation is advanced to 1/2 between style 1 and 3 */
-        CORRADE_COMPARE(uniforms[2].topColor, Color4{1.0f});
-        CORRADE_COMPARE(paddings[2], Vector4{2.0f});
+        CORRADE_COMPARE(uniforms[1].topColor, Color4{1.0f});
+        CORRADE_COMPARE(paddings[1], Vector4{2.0f});
     }
 
     /* Advancing to 25 stops the null data animation, recycling its dynamic
        style. Leads to no other change, i.e. no Style set. */
     {
-        BaseLayerStyleUniform uniforms[3];
+        BaseLayerStyleUniform uniforms[2];
         UnsignedInt dataStyles[]{666, 666, 666, 666, 666};
         CORRADE_COMPARE(advance(25_nsec, uniforms, paddings, dataStyles), BaseLayerStyleAnimatorUpdates{});
         CORRADE_VERIFY(!animator.isHandleValid(scheduledNullData));
         CORRADE_VERIFY(animator.isHandleValid(stoppedKept));
         CORRADE_VERIFY(animator.isHandleValid(scheduledChangesPadding));
-        CORRADE_COMPARE(layer.dynamicStyleUsedCount(), 1);
+        CORRADE_COMPARE(layer.dynamicStyleUsedCount(), 0);
         CORRADE_COMPARE(layer.dynamicStyleAnimation(0), AnimationHandle::Null);
-        CORRADE_COMPARE(layer.dynamicStyleAnimation(1), stoppedKept);
-        CORRADE_COMPARE(layer.dynamicStyleAnimation(2), AnimationHandle::Null);
+        CORRADE_COMPARE(layer.dynamicStyleAnimation(1), AnimationHandle::Null);
         CORRADE_COMPARE_AS(Containers::arrayView(dataStyles), Containers::arrayView({
             666u, 666u, 666u, 666u, 666u,
         }), TestSuite::Compare::Container);
         /* Uniform values of the recycled styles aren't touched anymore */
         CORRADE_COMPARE(uniforms[0].topColor, Color4{1.0f});
-        CORRADE_COMPARE(uniforms[2].topColor, Color4{1.0f});
-        /* The stopped & kept style isn't touched anymore, staying at the reset
-           defaults */
         CORRADE_COMPARE(uniforms[1].topColor, Color4{1.0f});
-        CORRADE_COMPARE(paddings[1], Vector4{0.0f});
     }
 
     /* Advancing to 35 plays the scheduled animation, allocating a new dynamic
        style and switching to it */
     {
-        BaseLayerStyleUniform uniforms[3];
+        BaseLayerStyleUniform uniforms[2];
         UnsignedInt dataStyles[]{666, 666, 666, 666, 666};
         CORRADE_COMPARE(advance(35_nsec, uniforms, paddings, dataStyles), BaseLayerStyleAnimatorUpdate::Uniform|BaseLayerStyleAnimatorUpdate::Style|BaseLayerStyleAnimatorUpdate::Padding);
         CORRADE_VERIFY(animator.isHandleValid(stoppedKept));
@@ -861,8 +834,9 @@ void BaseLayerStyleAnimatorTest::advance() {
         CORRADE_COMPARE(animator.state(stoppedKept), AnimationState::Stopped);
         CORRADE_COMPARE(animator.state(scheduledChangesPadding), AnimationState::Playing);
         CORRADE_COMPARE(animator.dynamicStyle(scheduledChangesPadding), 0);
-        CORRADE_COMPARE(layer.dynamicStyleUsedCount(), 2);
+        CORRADE_COMPARE(layer.dynamicStyleUsedCount(), 1);
         CORRADE_COMPARE(layer.dynamicStyleAnimation(0), scheduledChangesPadding);
+        CORRADE_COMPARE(layer.dynamicStyleAnimation(1), AnimationHandle::Null);
         CORRADE_COMPARE_AS(Containers::arrayView(dataStyles), Containers::arrayView({
             666u,
             666u,
@@ -874,23 +848,19 @@ void BaseLayerStyleAnimatorTest::advance() {
            reverted from 1/4) of uniforms 1 and 0 and padding 3 and 6 */
         CORRADE_COMPARE(uniforms[0].topColor, Color4{0.0f});
         CORRADE_COMPARE(paddings[0], Vector4{3.5f});
-        /* The stopped & kept style isn't touched anymore, staying at the reset
-           defaults */
-        CORRADE_COMPARE(uniforms[1].topColor, Color4{1.0f});
-        CORRADE_COMPARE(paddings[1], Vector4{0.0f});
     }
 
     /* Advancing to 45 advances the scheduled animation, changing both the
        uniform and the padding. No styles. */
     {
-        BaseLayerStyleUniform uniforms[3];
+        BaseLayerStyleUniform uniforms[2];
         UnsignedInt dataStyles[]{666, 666, 666, 666, 666};
         CORRADE_COMPARE(advance(45_nsec, uniforms, paddings, dataStyles), BaseLayerStyleAnimatorUpdate::Uniform|BaseLayerStyleAnimatorUpdate::Padding);
         CORRADE_VERIFY(animator.isHandleValid(stoppedKept));
         CORRADE_VERIFY(animator.isHandleValid(scheduledChangesPadding));
         CORRADE_COMPARE(animator.state(stoppedKept), AnimationState::Stopped);
         CORRADE_COMPARE(animator.state(scheduledChangesPadding), AnimationState::Playing);
-        CORRADE_COMPARE(layer.dynamicStyleUsedCount(), 2);
+        CORRADE_COMPARE(layer.dynamicStyleUsedCount(), 1);
         CORRADE_COMPARE_AS(Containers::arrayView(dataStyles), Containers::arrayView({
             666u, 666u, 666u, 666u, 666u,
         }), TestSuite::Compare::Container);
@@ -898,28 +868,13 @@ void BaseLayerStyleAnimatorTest::advance() {
            reverted from 3/4) of uniforms 1 and 0 and padding 3 and 6 */
         CORRADE_COMPARE(uniforms[0].topColor, Color4{0.0f});
         CORRADE_COMPARE(paddings[0], Vector4{2.5f});
-        /* The stopped & kept style isn't touched anymore, staying at the reset
-           defaults */
-        CORRADE_COMPARE(uniforms[1].topColor, Color4{1.0f});
-        CORRADE_COMPARE(paddings[1], Vector4{0.0f});
     }
-
-    /* Removing the stopped & kept animation recycles the dynamic style but
-       doesn't switch the data style in any way, not even directly in the
-       layer */
-    animator.remove(stoppedKept);
-    CORRADE_COMPARE(layer.dynamicStyleUsedCount(), 1);
-    CORRADE_COMPARE(layer.style(data0), 4);
-    CORRADE_COMPARE(layer.style(data1), 0);
-    CORRADE_COMPARE(layer.style(data2), 2);
-    CORRADE_COMPARE(layer.style(data3), 4);
-    CORRADE_COMPARE(layer.style(data4), 5);
 
     /* Stopping the remaining animation (even before it finishes at 50) makes
        it recycle the remaining dynamic style and switch to the target style at
        the next advance(). Not updating any uniforms or paddings. */
     {
-        BaseLayerStyleUniform uniforms[3];
+        BaseLayerStyleUniform uniforms[2];
         UnsignedInt dataStyles[]{666, 666, 666, 666, 666};
         animator.stop(scheduledChangesPadding, 46_nsec);
         CORRADE_COMPARE(advance(47_nsec, uniforms, paddings, dataStyles), BaseLayerStyleAnimatorUpdate::Style);
@@ -927,7 +882,6 @@ void BaseLayerStyleAnimatorTest::advance() {
         CORRADE_COMPARE(layer.dynamicStyleUsedCount(), 0);
         CORRADE_COMPARE(layer.dynamicStyleAnimation(0), AnimationHandle::Null);
         CORRADE_COMPARE(layer.dynamicStyleAnimation(1), AnimationHandle::Null);
-        CORRADE_COMPARE(layer.dynamicStyleAnimation(2), AnimationHandle::Null);
         CORRADE_COMPARE_AS(Containers::arrayView(dataStyles), Containers::arrayView({
             666u,
             666u,
@@ -937,7 +891,37 @@ void BaseLayerStyleAnimatorTest::advance() {
         }), TestSuite::Compare::Container);
     }
 
-    /* Final verification that styles in the layer aren't directly changed */
+    /* Restarting the stopped animation makes it allocate a new dynamic
+       style */
+    {
+        BaseLayerStyleUniform uniforms[2];
+        UnsignedInt dataStyles[]{666, 666, 666, 666, 666};
+        animator.play(stoppedKept, 45_nsec);
+        CORRADE_COMPARE(advance(50_nsec, uniforms, paddings, dataStyles), BaseLayerStyleAnimatorUpdate::Uniform|BaseLayerStyleAnimatorUpdate::Padding|BaseLayerStyleAnimatorUpdate::Style);
+        CORRADE_VERIFY(animator.isHandleValid(stoppedKept));
+        CORRADE_COMPARE(layer.dynamicStyleUsedCount(), 1);
+        CORRADE_COMPARE(layer.dynamicStyleAnimation(0), stoppedKept);
+        CORRADE_COMPARE(layer.dynamicStyleAnimation(1), AnimationHandle::Null);
+        CORRADE_COMPARE_AS(Containers::arrayView(dataStyles), Containers::arrayView({
+            666u,
+            shared.styleCount() + 0u,
+            666u,
+            666u,
+            666u
+        }), TestSuite::Compare::Container);
+        /* The first dynamic style should get a 1/3 interpolation of uniforms 0
+           and 1 and padding 6 and 3 */
+        CORRADE_COMPARE(uniforms[0].topColor, Color4{0.0f});
+        CORRADE_COMPARE(uniforms[0].bottomColor, Color4{1.0f/3.0f});
+        CORRADE_COMPARE(paddings[0], Vector4{10.0f/3.0f});
+    }
+
+    /* Removing the restarted animation recycles the dynamic style but doesn't
+       switch the data style in any way, not even directly in the layer.
+       Recycling inside AbstractVisualLayerStyleAnimator::doClean() is tested
+       in uiAdvance() below. */
+    animator.remove(stoppedKept);
+    CORRADE_COMPARE(layer.dynamicStyleUsedCount(), 0);
     CORRADE_COMPARE(layer.style(data0), 4);
     CORRADE_COMPARE(layer.style(data1), 0);
     CORRADE_COMPARE(layer.style(data2), 2);
@@ -1007,7 +991,7 @@ void BaseLayerStyleAnimatorTest::advanceProperties() {
         BaseLayerStyleAnimatorUpdates updates;
         if(needsAdvanceClean.first()) {
             updates = animator.advance(
-                active, factors, remove, dynamicStyleUniforms,
+                active, stopped, factors, dynamicStyleUniforms,
                 dynamicStylePaddings, dataStyles);
         }
         if(needsAdvanceClean.second())
@@ -1086,7 +1070,7 @@ void BaseLayerStyleAnimatorTest::advanceNoFreeDynamicStyles() {
     DataHandle data2 = layer.create(2);
 
     AnimationHandle first = animator.create(0, 1, Animation::Easing::linear, 0_nsec, 20_nsec, data2);
-    AnimationHandle second = animator.create(1, 0, Animation::Easing::linear, 10_nsec, 20_nsec, data1);
+    AnimationHandle second = animator.create(1, 0, Animation::Easing::linear, 10_nsec, 40_nsec, data1);
 
     /* Does what layer's advanceAnimations() is doing internally for all
        animators (as we need to test also the interaction with animation being
@@ -1108,7 +1092,7 @@ void BaseLayerStyleAnimatorTest::advanceNoFreeDynamicStyles() {
         BaseLayerStyleAnimatorUpdates updates;
         if(needsAdvanceClean.first()) {
             Vector4 paddings[1];
-            updates = animator.advance(active, factors, remove, dynamicStyleUniforms, paddings, dataStyles);
+            updates = animator.advance(active, stopped, factors, dynamicStyleUniforms, paddings, dataStyles);
         } if(needsAdvanceClean.second())
             animator.clean(remove);
         return updates;
@@ -1142,29 +1126,17 @@ void BaseLayerStyleAnimatorTest::advanceNoFreeDynamicStyles() {
         CORRADE_COMPARE(uniforms[0].topColor, Color4{0.5f});
 
     /* Next advance finishes the first animation and recycles its dynamic
-       style. But the recycling is done after the allocation, so the second
-       animation still isn't doing anything. */
+       style, which allows the second animation to take over it */
     } {
-        CORRADE_COMPARE(advance(20_nsec, uniforms, dataStyles), BaseLayerStyleAnimatorUpdate::Style);
+        CORRADE_COMPARE(advance(20_nsec, uniforms, dataStyles), BaseLayerStyleAnimatorUpdate::Uniform|BaseLayerStyleAnimatorUpdate::Style);
         CORRADE_VERIFY(!animator.isHandleValid(first));
-        CORRADE_COMPARE(animator.dynamicStyle(second), Containers::NullOpt);
-        CORRADE_COMPARE(layer.dynamicStyleUsedCount(), 0);
-        CORRADE_COMPARE_AS(Containers::arrayView(dataStyles), Containers::arrayView({
-            666u,
-            1u
-        }), TestSuite::Compare::Container);
-        /* No uniforms updated in this case */
-
-    /* Advancing right after is finally able to allocate the recycled style */
-    } {
-        CORRADE_COMPARE(advance(25_nsec, uniforms, dataStyles), BaseLayerStyleAnimatorUpdate::Uniform|BaseLayerStyleAnimatorUpdate::Style);
         CORRADE_COMPARE(animator.dynamicStyle(second), 0);
         CORRADE_COMPARE(layer.dynamicStyleUsedCount(), 1);
         CORRADE_COMPARE_AS(Containers::arrayView(dataStyles), Containers::arrayView({
             shared.styleCount() + 0u,
             1u
         }), TestSuite::Compare::Container);
-        CORRADE_COMPARE(uniforms[0].topColor, Color4{0.375f});
+        CORRADE_COMPARE(uniforms[0].topColor, Color4{0.625f});
     }
 }
 
@@ -1213,15 +1185,15 @@ void BaseLayerStyleAnimatorTest::advanceInvalid() {
 
     Containers::String out;
     Error redirectError{&out};
-    animator.advance(mask, factors, maskInvalid, dynamicStyleUniforms, dynamicStylePaddings, {});
-    animator.advance(mask, factorsInvalid, mask, dynamicStyleUniforms, dynamicStylePaddings, {});
-    animator.advance(maskInvalid, factors, mask, dynamicStyleUniforms, dynamicStylePaddings, {});
-    animator.advance(mask, factors, mask, dynamicStyleUniforms, dynamicStylePaddingsInvalid, {});
-    animator.advance(mask, factors, mask, dynamicStyleUniformsInvalid, dynamicStylePaddings, {});
+    animator.advance(mask, mask, factorsInvalid, dynamicStyleUniforms, dynamicStylePaddings, {});
+    animator.advance(mask, maskInvalid, factors, dynamicStyleUniforms, dynamicStylePaddings, {});
+    animator.advance(maskInvalid, mask, factors, dynamicStyleUniforms, dynamicStylePaddings, {});
+    animator.advance(mask, mask, factors, dynamicStyleUniforms, dynamicStylePaddingsInvalid, {});
+    animator.advance(mask, mask, factors, dynamicStyleUniformsInvalid, dynamicStylePaddings, {});
     CORRADE_COMPARE_AS(out,
-        "Ui::BaseLayerStyleAnimator::advance(): expected active, factors and remove views to have a size of 3 but got 3, 3 and 4\n"
-        "Ui::BaseLayerStyleAnimator::advance(): expected active, factors and remove views to have a size of 3 but got 3, 4 and 3\n"
-        "Ui::BaseLayerStyleAnimator::advance(): expected active, factors and remove views to have a size of 3 but got 4, 3 and 3\n"
+        "Ui::BaseLayerStyleAnimator::advance(): expected active, stopped and factors views to have a size of 3 but got 3, 3 and 4\n"
+        "Ui::BaseLayerStyleAnimator::advance(): expected active, stopped and factors views to have a size of 3 but got 3, 4 and 3\n"
+        "Ui::BaseLayerStyleAnimator::advance(): expected active, stopped and factors views to have a size of 3 but got 4, 3 and 3\n"
         "Ui::BaseLayerStyleAnimator::advance(): expected dynamic style uniform and padding views to have a size of 2 but got 2 and 3\n"
         "Ui::BaseLayerStyleAnimator::advance(): expected dynamic style uniform and padding views to have a size of 2 but got 3 and 2\n",
         TestSuite::Compare::String);
@@ -1269,7 +1241,7 @@ void BaseLayerStyleAnimatorTest::layerAdvance() {
     layer.assignAnimator(animatorEmpty);
     layer.assignAnimator(animator2);
 
-    animator1.create(0, 1, Animation::Easing::linear, 0_nsec, 20_nsec, data2);
+    animator1.create(0, 1, Animation::Easing::linear, 0_nsec, 20_nsec, data2, AnimationFlag::KeepOncePlayed);
     animator2.create(1, 0, Animation::Easing::linear, 13_nsec, 1_nsec, data1);
 
     /* The storage can be bigger than needed, the layer should slice it for
@@ -1321,7 +1293,6 @@ void BaseLayerStyleAnimatorTest::layerAdvance() {
     layer.update(LayerState::NeedsDataUpdate|LayerState::NeedsCommonDataUpdate, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
     layer.stateData().dynamicStyleChanged = false;
     layer.advanceAnimations(20_nsec, activeStorage, startedStorage, stoppedStorage, factorStorage, removeStorage, {animator2, animatorEmpty, animator1});
-    /* If clean() wouldn't be called, the dynamic style won't get recycled */
     CORRADE_COMPARE(layer.dynamicStyleUsedCount(), 0);
     CORRADE_COMPARE(layer.style(data2), 1);
     CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);

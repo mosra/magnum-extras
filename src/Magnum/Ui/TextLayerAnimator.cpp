@@ -414,11 +414,11 @@ TextLayerEditingStyleUniform interpolateUniform(const TextLayerEditingStyleUnifo
 
 }
 
-TextLayerStyleAnimatorUpdates TextLayerStyleAnimator::advance(const Containers::BitArrayView active, const Containers::StridedArrayView1D<const Float>& factors, const Containers::BitArrayView remove, const Containers::ArrayView<TextLayerStyleUniform> dynamicStyleUniforms, const Containers::MutableBitArrayView dynamicStyleCursorStyles, const Containers::MutableBitArrayView dynamicStyleSelectionStyles, const Containers::StridedArrayView1D<Vector4>& dynamicStylePaddings, const Containers::ArrayView<TextLayerEditingStyleUniform> dynamicEditingStyleUniforms, const Containers::StridedArrayView1D<Vector4>& dynamicEditingStylePaddings, const Containers::StridedArrayView1D<UnsignedInt>& dataStyles) {
+TextLayerStyleAnimatorUpdates TextLayerStyleAnimator::advance(const Containers::BitArrayView active, const Containers::BitArrayView stopped, const Containers::StridedArrayView1D<const Float>& factors, const Containers::ArrayView<TextLayerStyleUniform> dynamicStyleUniforms, const Containers::MutableBitArrayView dynamicStyleCursorStyles, const Containers::MutableBitArrayView dynamicStyleSelectionStyles, const Containers::StridedArrayView1D<Vector4>& dynamicStylePaddings, const Containers::ArrayView<TextLayerEditingStyleUniform> dynamicEditingStyleUniforms, const Containers::StridedArrayView1D<Vector4>& dynamicEditingStylePaddings, const Containers::StridedArrayView1D<UnsignedInt>& dataStyles) {
     CORRADE_ASSERT(active.size() == capacity() &&
-                   factors.size() == capacity() &&
-                   remove.size() == capacity(),
-        "Ui::TextLayerStyleAnimator::advance(): expected active, factors and remove views to have a size of" << capacity() << "but got" << active.size() << Debug::nospace << "," << factors.size() << "and" << remove.size(), {});
+                   stopped.size() == capacity() &&
+                   factors.size() == capacity(),
+        "Ui::TextLayerStyleAnimator::advance(): expected active, stopped and factors views to have a size of" << capacity() << "but got" << active.size() << Debug::nospace << "," << stopped.size() << "and" << factors.size(), {});
 
     /* If there are any running animations, create() had to be called
        already, which ensures the layer is already set. Otherwise just bail as
@@ -469,16 +469,24 @@ TextLayerStyleAnimatorUpdates TextLayerStyleAnimator::advance(const Containers::
            dataClean() got called before advance() */
         const LayerDataHandle data = layerData[i];
 
-        /* If the animation is scheduled for removal (and thus finished),
-           switch the data to the target style, if any. No need to animate
-           anything else as the dynamic style is going to get recycled right
-           away in clean() below. */
-        if(remove[i]) {
+        /* If the animation is stopped, switch the data to the target style, if
+           any. No need to animate anything else as the dynamic style is going
+           to get recycled right away. */
+        if(stopped[i]) {
             CORRADE_INTERNAL_ASSERT(factors[i] == 1.0f);
             if(data != LayerDataHandle::Null) {
                 dataStyles[layerDataHandleId(data)] = animation.targetStyle;
                 updates |= TextLayerStyleAnimatorUpdate::Style;
             }
+
+            /* Recycle the dynamic style if it was allocated already. It might
+               not be if advance() wasn't called for this animation yet or if
+               it was already stopped by the time it reached advance(). */
+            if(animation.dynamicStyle != ~UnsignedInt{}) {
+                state.layer->recycleDynamicStyle(animation.dynamicStyle);
+                animation.dynamicStyle = ~UnsignedInt{};
+            }
+
             continue;
         }
 

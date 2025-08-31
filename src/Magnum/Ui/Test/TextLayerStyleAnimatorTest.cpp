@@ -716,7 +716,7 @@ void TextLayerStyleAnimatorTest::createRemoveHandleRecycle() {
     /* Let it advance to allocate the dynamic style */
     Containers::BitArray active{DirectInit, 1, true};
     Float factors[]{0.0f};
-    Containers::BitArray remove{DirectInit, 1, false};
+    Containers::BitArray stopped{DirectInit, 1, false};
     TextLayerStyleUniform dynamicStyleUniforms[3];
     char dynamicStyleCursorStyles[1];
     char dynamicStyleSelectionStyles[1];
@@ -726,8 +726,8 @@ void TextLayerStyleAnimatorTest::createRemoveHandleRecycle() {
     UnsignedInt dataStyles[1];
     animator.advance(
         active,
+        stopped,
         factors,
-        remove,
         Containers::arrayView(dynamicStyleUniforms)
             .prefix(data.cursorStyle || data.selectionStyle ? 3 : 1),
         Containers::MutableBitArrayView{dynamicStyleCursorStyles, 0, 1},
@@ -1016,7 +1016,7 @@ void TextLayerStyleAnimatorTest::advance() {
         .setEditingStyleCount(
             data.cursorStyles || data.selectionStyles ? 4 : 0,
             data.cursorStyles || data.selectionStyles ? 5 : 0)
-        .setDynamicStyleCount(3)
+        .setDynamicStyleCount(2)
     };
 
     FontHandle fontHandle1 = shared.addFont(font, 1.0f);
@@ -1144,9 +1144,10 @@ void TextLayerStyleAnimatorTest::advance() {
     /* This one is a reverse of the first, scheduled later and not attached to
        any data, thus it never marks Style as changed */
     AnimationHandle scheduledNullData = animator.create(1, 3, Animation::Easing::linear, 15_nsec, 10_nsec, DataHandle::Null);
-    /* This one allocates a dynamic style once started, interpolates all the
-       way to 3 and stays */
-    AnimationHandle stoppedKept = animator.create(6, 3, Animation::Easing::cubicIn, 0_nsec, 1_nsec, data1, AnimationFlag::KeepOncePlayed);
+    /* This one sets the data1 style to 3 and stays, without allocating a
+       dynamic style at all, or marking Uniform or Padding as changed. Later on
+       it's restarted and then it interpolates as usual. */
+    AnimationHandle stoppedKept = animator.create(6, 3, Animation::Easing::linear, -20_nsec, 15_nsec, data1, AnimationFlag::KeepOncePlayed);
     /* This one sets both Uniform and Padding when animated. It's a linear
        easing but reverted. */
     AnimationHandle scheduledChangesPadding = animator.create(3, 6, [](Float a) { return 1.0f - a; }, 30_nsec, 20_nsec, data3);
@@ -1179,7 +1180,7 @@ void TextLayerStyleAnimatorTest::advance() {
         Containers::Pair<bool, bool> needsAdvanceClean = animator.update(time, active, started, stopped, factors, remove);
         TextLayerStyleAnimatorUpdates updates;
         if(needsAdvanceClean.first())
-            updates = animator.advance(active, factors, remove, dynamicStyleUniforms, dynamicStyleCursorStyles, dynamicStyleSelectionStyles, dynamicStylePaddings, dynamicEditingStyleUniforms, dynamicEditingStylePaddings, dataStyles);
+            updates = animator.advance(active, stopped, factors, dynamicStyleUniforms, dynamicStyleCursorStyles, dynamicStyleSelectionStyles, dynamicStylePaddings, dynamicEditingStyleUniforms, dynamicEditingStylePaddings, dataStyles);
         if(needsAdvanceClean.second())
             animator.clean(remove);
         return updates;
@@ -1190,12 +1191,9 @@ void TextLayerStyleAnimatorTest::advance() {
        updated */
     Vector4 paddings[]{
         Vector4{Constants::nan()},
-        Vector4{Constants::nan()},
         Vector4{Constants::nan()}
     };
     Vector4 editingPaddings[]{
-        Vector4{Constants::nan()},
-        Vector4{Constants::nan()},
         Vector4{Constants::nan()},
         Vector4{Constants::nan()},
         Vector4{Constants::nan()},
@@ -1204,20 +1202,18 @@ void TextLayerStyleAnimatorTest::advance() {
 
     /* Advancing to 5 allocates a dynamic style for the playing animation,
        sets its font, alignment and features, switches the style to it and
-       fills the dynamic data. For the stopped & removed animation it switches
-       the style to the destination one, for the stopped & kept it allocates a
-       dynamic style, sets its font, alignment and features as well,
-       transitions to the final style but doesn't recycle it. */
+       fills the dynamic data. For the stopped & removed and stopped & kept
+       animation it switches the style to the destination one. */
     {
-        TextLayerStyleUniform uniforms[9];
-        TextLayerEditingStyleUniform editingUniforms[6];
+        TextLayerStyleUniform uniforms[6];
+        TextLayerEditingStyleUniform editingUniforms[4];
         /* Set to all 1s if non.editing, all 0s if editing. The advance()
            should then flip them to the other value only where expected. */
-        Containers::BitArray cursorStyles{DirectInit, 3, data.cursorStyles ? false : true};
-        Containers::BitArray selectionStyles{DirectInit, 3, data.selectionStyles ? false : true};
+        Containers::BitArray cursorStyles{DirectInit, 2, data.cursorStyles ? false : true};
+        Containers::BitArray selectionStyles{DirectInit, 2, data.selectionStyles ? false : true};
         UnsignedInt dataStyles[]{666, 666, 666, 666, 666};
         CORRADE_COMPARE(advance(5_nsec,
-                Containers::arrayView(uniforms).prefix(data.cursorStyles || data.selectionStyles ? 9 : 3),
+                Containers::arrayView(uniforms).prefix(data.cursorStyles || data.selectionStyles ? 6 : 2),
                 cursorStyles,
                 selectionStyles,
                 paddings,
@@ -1237,27 +1233,22 @@ void TextLayerStyleAnimatorTest::advance() {
         CORRADE_COMPARE(animator.state(scheduledChangesPadding), AnimationState::Scheduled);
         CORRADE_COMPARE(animator.dynamicStyle(playing), 0);
         CORRADE_COMPARE(animator.dynamicStyle(scheduledNullData), Containers::NullOpt);
-        CORRADE_COMPARE(animator.dynamicStyle(stoppedKept), 1);
+        CORRADE_COMPARE(animator.dynamicStyle(stoppedKept), Containers::NullOpt);
         CORRADE_COMPARE(animator.dynamicStyle(scheduledChangesPadding), Containers::NullOpt);
-        CORRADE_COMPARE(layer.dynamicStyleUsedCount(), 2);
+        CORRADE_COMPARE(layer.dynamicStyleUsedCount(), 1);
         CORRADE_COMPARE(layer.dynamicStyleAnimation(0), playing);
-        CORRADE_COMPARE(layer.dynamicStyleAnimation(1), stoppedKept);
+        CORRADE_COMPARE(layer.dynamicStyleAnimation(1), AnimationHandle::Null);
         CORRADE_COMPARE_AS(layer.dynamicStyleFonts(), Containers::arrayView({
             fontHandle3,                    /* from style 3 */
-            fontHandle2,                    /* from style 6 */
             FontHandle::Null,
         }), TestSuite::Compare::Container);
         CORRADE_COMPARE_AS(layer.dynamicStyleAlignments(), Containers::arrayView({
             Text::Alignment::LineRight,     /* from style 3 */
-            Text::Alignment::BottomEnd,     /* from style 6 */
             Text::Alignment::MiddleCenter,
         }), TestSuite::Compare::Container);
         CORRADE_COMPARE_AS((Containers::arrayCast<const Containers::Pair<Text::Feature, UnsignedInt>>(layer.dynamicStyleFeatures(0))), (Containers::arrayView<const Containers::Pair<Text::Feature, UnsignedInt>>({
             {Text::Feature::TabularFigures, true},
             {Text::Feature::SlashedZero, true}
-        })), TestSuite::Compare::Container);
-        CORRADE_COMPARE_AS((Containers::arrayCast<const Containers::Pair<Text::Feature, UnsignedInt>>(layer.dynamicStyleFeatures(1))), (Containers::arrayView<const Containers::Pair<Text::Feature, UnsignedInt>>({
-            {Text::Feature::HistoricalLigatures, true}
         })), TestSuite::Compare::Container);
         /* Style IDs in the layer aren't changed, the passed array is instead,
            and only where dynamic styles got allocated or the animation
@@ -1267,20 +1258,18 @@ void TextLayerStyleAnimatorTest::advance() {
         CORRADE_COMPARE(layer.style(data2), 2);
         CORRADE_COMPARE(layer.style(data3), 4);
         CORRADE_COMPARE(layer.style(data4), 5);
-        /* Dynamic style 0 and 1 get the bits modified */
+        /* Dynamic style 0 gets the bits modified */
         CORRADE_COMPARE_AS(Containers::BitArrayView{cursorStyles}, Containers::stridedArrayView({
-            data.cursorStyles ? true : false,
             data.cursorStyles ? true : false,
             data.cursorStyles ? false : true,
         }).sliceBit(0), TestSuite::Compare::Container);
         CORRADE_COMPARE_AS(Containers::BitArrayView{selectionStyles}, Containers::stridedArrayView({
             data.selectionStyles ? true : false,
-            data.selectionStyles ? true : false,
             data.selectionStyles ? false : true,
         }).sliceBit(0), TestSuite::Compare::Container);
         CORRADE_COMPARE_AS(Containers::arrayView(dataStyles), Containers::arrayView({
             666u,
-            shared.styleCount() + 1u,
+            3u,
             shared.styleCount() + 0u,
             666u,
             3u,
@@ -1289,21 +1278,12 @@ void TextLayerStyleAnimatorTest::advance() {
            and 2 and the constant padding value */
         CORRADE_COMPARE(uniforms[0].color, Color4{3.5f});
         CORRADE_COMPARE(paddings[0], Vector4{2.0f});
-        /* The stopped but kept style should get exactly the uniform 1 value,
-           and the constant padding */
-        CORRADE_COMPARE(uniforms[1].color, Color4{4.0f});
-        CORRADE_COMPARE(paddings[1], Vector4{2.0f});
         if(data.cursorStyles) {
             /* For the cursor styles 1 and 2 it's 1/4 of uniforms 0 and 1,
                padding also constant */
             CORRADE_COMPARE(editingUniforms[0*2 + 1].backgroundColor, Color4{6.5f});
             CORRADE_COMPARE(editingUniforms[0*2 + 1].cornerRadius, 3.5f);
             CORRADE_COMPARE(editingPaddings[0*2 + 1], Vector4{32.0f});
-            /* The stopped but kept style gets exactly the uniform 0 value, and
-               the constant padding */
-            CORRADE_COMPARE(editingUniforms[1*2 + 1].backgroundColor, Color4{6.0f});
-            CORRADE_COMPARE(editingUniforms[1*2 + 1].cornerRadius, 3.0f);
-            CORRADE_COMPARE(editingPaddings[1*2 + 1], Vector4{32.0f});
         }
         if(data.selectionStyles) {
             /* For the selection styles 2 and 3 it's 1/4 of uniforms 1 and 2,
@@ -1313,13 +1293,6 @@ void TextLayerStyleAnimatorTest::advance() {
             CORRADE_COMPARE(editingPaddings[0*2 + 0], Vector4{32.0f});
             /* 1/4 of text uniforms 2 and 1 */
             CORRADE_COMPARE(uniforms[shared.dynamicStyleCount() + 0*2 + 0].color, Color4{2.5f});
-            /* The stopped but kept style gets exactly the uniform 1 value, and
-               the constant padding */
-            CORRADE_COMPARE(editingUniforms[1*2 + 0].backgroundColor, Color4{8.0f});
-            CORRADE_COMPARE(editingUniforms[1*2 + 0].cornerRadius, 5.0f);
-            CORRADE_COMPARE(editingPaddings[1*2 + 0], Vector4{32.0f});
-            /* Exactly text uniform 2 */
-            CORRADE_COMPARE(uniforms[shared.dynamicStyleCount() + 1*2 + 0].color, Color4{2.0f});
         }
     }
 
@@ -1333,13 +1306,13 @@ void TextLayerStyleAnimatorTest::advance() {
        particular, the style values aren't touched even though they're now
        different. */
     {
-        TextLayerStyleUniform uniforms[9];
-        Containers::BitArray cursorStyles{DirectInit, 3, data.cursorStyles ? false : true};
-        Containers::BitArray selectionStyles{DirectInit, 3, data.selectionStyles ? false : true};
-        TextLayerEditingStyleUniform editingUniforms[6];
+        TextLayerStyleUniform uniforms[6];
+        Containers::BitArray cursorStyles{DirectInit, 2, data.cursorStyles ? false : true};
+        Containers::BitArray selectionStyles{DirectInit, 2, data.selectionStyles ? false : true};
+        TextLayerEditingStyleUniform editingUniforms[4];
         UnsignedInt dataStyles[]{666, 666, 666, 666, 666};
         CORRADE_COMPARE(advance(10_nsec,
-                Containers::arrayView(uniforms).prefix(data.cursorStyles || data.selectionStyles ? 9 : 3),
+                Containers::arrayView(uniforms).prefix(data.cursorStyles || data.selectionStyles ? 6 : 2),
                 cursorStyles,
                 selectionStyles,
                 paddings,
@@ -1348,34 +1321,29 @@ void TextLayerStyleAnimatorTest::advance() {
                 dataStyles),
             TextLayerStyleAnimatorUpdate::Uniform|
             (data.cursorStyles || data.selectionStyles ? TextLayerStyleAnimatorUpdate::EditingUniform : TextLayerStyleAnimatorUpdates{}));
-        CORRADE_COMPARE(layer.dynamicStyleUsedCount(), 2);
+        CORRADE_COMPARE(layer.dynamicStyleUsedCount(), 1);
+        CORRADE_COMPARE(layer.dynamicStyleAnimation(0), playing);
+        CORRADE_COMPARE(layer.dynamicStyleAnimation(1), AnimationHandle::Null);
         /* Font, alignment and features isn't modified compared to last time as
            no new style got allocated */
         CORRADE_COMPARE_AS(layer.dynamicStyleFonts(), Containers::arrayView({
             fontHandle3,
-            fontHandle2,
             FontHandle::Null,
         }), TestSuite::Compare::Container);
         CORRADE_COMPARE_AS(layer.dynamicStyleAlignments(), Containers::arrayView({
             Text::Alignment::LineRight,
-            Text::Alignment::BottomEnd,
             Text::Alignment::MiddleCenter,
         }), TestSuite::Compare::Container);
         CORRADE_COMPARE_AS((Containers::arrayCast<const Containers::Pair<Text::Feature, UnsignedInt>>(layer.dynamicStyleFeatures(0))), (Containers::arrayView<const Containers::Pair<Text::Feature, UnsignedInt>>({
             {Text::Feature::TabularFigures, true},
             {Text::Feature::SlashedZero, true}
         })), TestSuite::Compare::Container);
-        CORRADE_COMPARE_AS((Containers::arrayCast<const Containers::Pair<Text::Feature, UnsignedInt>>(layer.dynamicStyleFeatures(1))), (Containers::arrayView<const Containers::Pair<Text::Feature, UnsignedInt>>({
-            {Text::Feature::HistoricalLigatures, true}
-        })), TestSuite::Compare::Container);
         /* No styles get the bits modified */
         CORRADE_COMPARE_AS(Containers::BitArrayView{cursorStyles}, Containers::stridedArrayView({
             data.cursorStyles ? false : true,
             data.cursorStyles ? false : true,
-            data.cursorStyles ? false : true,
         }).sliceBit(0), TestSuite::Compare::Container);
         CORRADE_COMPARE_AS(Containers::BitArrayView{selectionStyles}, Containers::stridedArrayView({
-            data.selectionStyles ? false : true,
             data.selectionStyles ? false : true,
             data.selectionStyles ? false : true,
         }).sliceBit(0), TestSuite::Compare::Container);
@@ -1385,19 +1353,11 @@ void TextLayerStyleAnimatorTest::advance() {
         /* Testing just a subset, assuming the rest is updated accordingly */
         CORRADE_COMPARE(uniforms[0].color, Color4{3.0f});
         CORRADE_COMPARE(paddings[0], Vector4{2.0f});
-        /* The stopped & kept style isn't touched anymore, staying at the reset
-           defaults */
-        CORRADE_COMPARE(uniforms[1].color, Color4{1.0f});
-        CORRADE_COMPARE(paddings[1], Vector4{0.0f});
         if(data.cursorStyles) {
             /* For the cursor styles 1 and 2 it's 1/2 of uniforms 0 and 1,
                padding also constant */
             CORRADE_COMPARE(editingUniforms[0*2 + 1].backgroundColor, Color4{7.0f});
             CORRADE_COMPARE(editingPaddings[0*2 + 1], Vector4{32.0f});
-            /* The stopped & kept style isn't touched anymore, staying at the
-               reset defaults */
-            CORRADE_COMPARE(editingUniforms[1*2 + 1].backgroundColor, Color4{1.0f});
-            CORRADE_COMPARE(editingPaddings[1*2 + 1], Vector4{0.0f});
         }
         if(data.selectionStyles) {
             /* For the selection styles 2 and 3 it's 1/2 of uniforms 1 and 2,
@@ -1406,11 +1366,6 @@ void TextLayerStyleAnimatorTest::advance() {
             CORRADE_COMPARE(editingPaddings[0*2 + 0], Vector4{32.0f});
             /* 1/2 of text uniforms 2 and 1 */
             CORRADE_COMPARE(uniforms[shared.dynamicStyleCount() + 0*2 + 0].color, Color4{3.0f});
-            /* The stopped & kept style isn't touched anymore, staying at the
-               reset defaults */
-            CORRADE_COMPARE(editingUniforms[1*2 + 0].backgroundColor, Color4{1.0f});
-            CORRADE_COMPARE(editingPaddings[1*2 + 0], Vector4{0.0f});
-            CORRADE_COMPARE(uniforms[shared.dynamicStyleCount() + 1*2 + 0].color, Color4{1.0f});
         }
     }
 
@@ -1418,13 +1373,13 @@ void TextLayerStyleAnimatorTest::advance() {
        attachment, allocating a new dynamic style but not switching to it.
        I.e., no Style is set, only Uniform and Padding. */
     {
-        TextLayerStyleUniform uniforms[9];
-        Containers::BitArray cursorStyles{DirectInit, 3, data.cursorStyles ? false : true};
-        Containers::BitArray selectionStyles{DirectInit, 3, data.selectionStyles ? false : true};
-        TextLayerEditingStyleUniform editingUniforms[6];
+        TextLayerStyleUniform uniforms[6];
+        Containers::BitArray cursorStyles{DirectInit, 2, data.cursorStyles ? false : true};
+        Containers::BitArray selectionStyles{DirectInit, 2, data.selectionStyles ? false : true};
+        TextLayerEditingStyleUniform editingUniforms[4];
         UnsignedInt dataStyles[]{666, 666, 666, 666, 666};
         CORRADE_COMPARE(advance(15_nsec,
-                Containers::arrayView(uniforms).prefix(data.cursorStyles || data.selectionStyles ? 9 : 3),
+                Containers::arrayView(uniforms).prefix(data.cursorStyles || data.selectionStyles ? 6 : 2),
                 cursorStyles,
                 selectionStyles,
                 paddings,
@@ -1434,17 +1389,16 @@ void TextLayerStyleAnimatorTest::advance() {
             TextLayerStyleAnimatorUpdate::Uniform|TextLayerStyleAnimatorUpdate::Padding|
             (data.cursorStyles || data.selectionStyles ? TextLayerStyleAnimatorUpdate::EditingUniform|TextLayerStyleAnimatorUpdate::EditingPadding : TextLayerStyleAnimatorUpdates{}));
         CORRADE_COMPARE(animator.state(scheduledNullData), AnimationState::Playing);
-        CORRADE_COMPARE(animator.dynamicStyle(scheduledNullData), 2);
-        CORRADE_COMPARE(layer.dynamicStyleUsedCount(), 3);
-        CORRADE_COMPARE(layer.dynamicStyleAnimation(2), scheduledNullData);
+        CORRADE_COMPARE(animator.dynamicStyle(scheduledNullData), 1);
+        CORRADE_COMPARE(layer.dynamicStyleUsedCount(), 2);
+        CORRADE_COMPARE(layer.dynamicStyleAnimation(0), playing);
+        CORRADE_COMPARE(layer.dynamicStyleAnimation(1), scheduledNullData);
         CORRADE_COMPARE_AS(layer.dynamicStyleFonts(), Containers::arrayView({
             fontHandle3,
-            fontHandle2,
             fontHandle2,                    /* from style 1 */
         }), TestSuite::Compare::Container);
         CORRADE_COMPARE_AS(layer.dynamicStyleAlignments(), Containers::arrayView({
             Text::Alignment::LineRight,
-            Text::Alignment::BottomEnd,
             Text::Alignment::TopLeft,       /* from style 1 */
         }), TestSuite::Compare::Container);
         CORRADE_COMPARE_AS((Containers::arrayCast<const Containers::Pair<Text::Feature, UnsignedInt>>(layer.dynamicStyleFeatures(0))), (Containers::arrayView<const Containers::Pair<Text::Feature, UnsignedInt>>({
@@ -1452,19 +1406,14 @@ void TextLayerStyleAnimatorTest::advance() {
             {Text::Feature::SlashedZero, true}
         })), TestSuite::Compare::Container);
         CORRADE_COMPARE_AS((Containers::arrayCast<const Containers::Pair<Text::Feature, UnsignedInt>>(layer.dynamicStyleFeatures(1))), (Containers::arrayView<const Containers::Pair<Text::Feature, UnsignedInt>>({
-            {Text::Feature::HistoricalLigatures, true}
-        })), TestSuite::Compare::Container);
-        CORRADE_COMPARE_AS((Containers::arrayCast<const Containers::Pair<Text::Feature, UnsignedInt>>(layer.dynamicStyleFeatures(2))), (Containers::arrayView<const Containers::Pair<Text::Feature, UnsignedInt>>({
             {Text::Feature::StandardLigatures, false}
         })), TestSuite::Compare::Container);
-        /* Style 2 gets the bits modified */
+        /* Style 1 gets the bits modified */
         CORRADE_COMPARE_AS(Containers::BitArrayView{cursorStyles}, Containers::stridedArrayView({
-            data.cursorStyles ? false : true,
             data.cursorStyles ? false : true,
             data.cursorStyles ? true : false,
         }).sliceBit(0), TestSuite::Compare::Container);
         CORRADE_COMPARE_AS(Containers::BitArrayView{selectionStyles}, Containers::stridedArrayView({
-            data.selectionStyles ? false : true,
             data.selectionStyles ? false : true,
             data.selectionStyles ? true : false,
         }).sliceBit(0), TestSuite::Compare::Container);
@@ -1474,25 +1423,17 @@ void TextLayerStyleAnimatorTest::advance() {
         /* The playing animation is advanced to 3/4 */
         CORRADE_COMPARE(uniforms[0].color, Color4{2.5f});
         CORRADE_COMPARE(paddings[0], Vector4{2.0f});
-        /* The stopped & kept style isn't touched anymore, staying at the reset
-           defaults */
-        CORRADE_COMPARE(uniforms[1].color, Color4{1.0f});
-        CORRADE_COMPARE(paddings[1], Vector4{0.0f});
         /* The null data animation is set to the value of style 1 */
-        CORRADE_COMPARE(uniforms[2].color, Color4{2.0f});
-        CORRADE_COMPARE(paddings[2], Vector4{2.0f});
+        CORRADE_COMPARE(uniforms[1].color, Color4{2.0f});
+        CORRADE_COMPARE(paddings[1], Vector4{2.0f});
         if(data.cursorStyles) {
             /* For the cursor styles 1 and 2 it's 3/4 of uniforms 0 and 1,
                padding also constant */
             CORRADE_COMPARE(editingUniforms[0*2 + 1].backgroundColor, Color4{7.5f});
             CORRADE_COMPARE(editingPaddings[0*2 + 1], Vector4{32.0f});
-            /* The stopped & kept style isn't touched anymore, staying at the
-               reset defaults */
-            CORRADE_COMPARE(editingUniforms[1*2 + 1].backgroundColor, Color4{1.0f});
-            CORRADE_COMPARE(editingPaddings[1*2 + 1], Vector4{0.0f});
             /* The null data animation is set to the value of editing style 2 */
-            CORRADE_COMPARE(editingUniforms[2*2 + 1].backgroundColor, Color4{8.0f});
-            CORRADE_COMPARE(editingPaddings[2*2 + 1], Vector4{32.0f});
+            CORRADE_COMPARE(editingUniforms[1*2 + 1].backgroundColor, Color4{8.0f});
+            CORRADE_COMPARE(editingPaddings[1*2 + 1], Vector4{32.0f});
         }
         if(data.selectionStyles) {
             /* For the selection styles 2 and 3 it's 3/4 of uniforms 1 and 2,
@@ -1501,16 +1442,11 @@ void TextLayerStyleAnimatorTest::advance() {
             CORRADE_COMPARE(editingPaddings[0*2 + 0], Vector4{32.0f});
             /* 3/4 of text uniforms 2 and 1 */
             CORRADE_COMPARE(uniforms[shared.dynamicStyleCount() + 0*2 + 0].color, Color4{3.5f});
-            /* The stopped & kept style isn't touched anymore, staying at the
-               reset defaults */
-            CORRADE_COMPARE(editingUniforms[1*2 + 0].backgroundColor, Color4{1.0f});
-            CORRADE_COMPARE(editingPaddings[1*2 + 0], Vector4{0.0f});
-            CORRADE_COMPARE(uniforms[shared.dynamicStyleCount() + 1*2 + 0].color, Color4{1.0f});
             /* The null data animation is set to the value of editing style 3 */
-            CORRADE_COMPARE(editingUniforms[2*2 + 0].backgroundColor, Color4{12.0f});
-            CORRADE_COMPARE(editingPaddings[2*2 + 0], Vector4{32.0f});
+            CORRADE_COMPARE(editingUniforms[1*2 + 0].backgroundColor, Color4{12.0f});
+            CORRADE_COMPARE(editingPaddings[1*2 + 0], Vector4{32.0f});
             /* Exactly text uniform 1 */
-            CORRADE_COMPARE(uniforms[shared.dynamicStyleCount() + 2*2 + 0].color, Color4{4.0f});
+            CORRADE_COMPARE(uniforms[shared.dynamicStyleCount() + 1*2 + 0].color, Color4{4.0f});
         }
     }
 
@@ -1518,13 +1454,13 @@ void TextLayerStyleAnimatorTest::advance() {
        and changing the style to the target one. Uniform value is updated for
        the null data animation. */
     {
-        TextLayerStyleUniform uniforms[9];
-        Containers::BitArray cursorStyles{DirectInit, 3, data.cursorStyles ? false : true};
-        Containers::BitArray selectionStyles{DirectInit, 3, data.selectionStyles ? false : true};
-        TextLayerEditingStyleUniform editingUniforms[6];
+        TextLayerStyleUniform uniforms[6];
+        Containers::BitArray cursorStyles{DirectInit, 2, data.cursorStyles ? false : true};
+        Containers::BitArray selectionStyles{DirectInit, 2, data.selectionStyles ? false : true};
+        TextLayerEditingStyleUniform editingUniforms[4];
         UnsignedInt dataStyles[]{666, 666, 666, 666, 666};
         CORRADE_COMPARE(advance(20_nsec,
-                Containers::arrayView(uniforms).prefix(data.cursorStyles || data.selectionStyles ? 9 : 3),
+                Containers::arrayView(uniforms).prefix(data.cursorStyles || data.selectionStyles ? 6 : 2),
                 cursorStyles,
                 selectionStyles,
                 paddings,
@@ -1536,10 +1472,9 @@ void TextLayerStyleAnimatorTest::advance() {
         CORRADE_VERIFY(!animator.isHandleValid(playing));
         CORRADE_VERIFY(animator.isHandleValid(stoppedKept));
         CORRADE_VERIFY(animator.isHandleValid(scheduledChangesPadding));
-        CORRADE_COMPARE(layer.dynamicStyleUsedCount(), 2);
+        CORRADE_COMPARE(layer.dynamicStyleUsedCount(), 1);
         CORRADE_COMPARE(layer.dynamicStyleAnimation(0), AnimationHandle::Null);
-        CORRADE_COMPARE(layer.dynamicStyleAnimation(1), stoppedKept);
-        CORRADE_COMPARE(layer.dynamicStyleAnimation(2), scheduledNullData);
+        CORRADE_COMPARE(layer.dynamicStyleAnimation(1), scheduledNullData);
         /* Font, alignment and features aren't modified compared to last time
            as no new style got allocated. In particular, the now-recycled
            dynamic style *isn't* changed to font, alignment and features of the
@@ -1547,11 +1482,9 @@ void TextLayerStyleAnimatorTest::advance() {
         CORRADE_COMPARE_AS(layer.dynamicStyleFonts(), Containers::arrayView({
             fontHandle3,
             fontHandle2,
-            fontHandle2,
         }), TestSuite::Compare::Container);
         CORRADE_COMPARE_AS(layer.dynamicStyleAlignments(), Containers::arrayView({
             Text::Alignment::LineRight,
-            Text::Alignment::BottomEnd,
             Text::Alignment::TopLeft,
         }), TestSuite::Compare::Container);
         CORRADE_COMPARE_AS((Containers::arrayCast<const Containers::Pair<Text::Feature, UnsignedInt>>(layer.dynamicStyleFeatures(0))), (Containers::arrayView<const Containers::Pair<Text::Feature, UnsignedInt>>({
@@ -1559,19 +1492,14 @@ void TextLayerStyleAnimatorTest::advance() {
             {Text::Feature::SlashedZero, true}
         })), TestSuite::Compare::Container);
         CORRADE_COMPARE_AS((Containers::arrayCast<const Containers::Pair<Text::Feature, UnsignedInt>>(layer.dynamicStyleFeatures(1))), (Containers::arrayView<const Containers::Pair<Text::Feature, UnsignedInt>>({
-            {Text::Feature::HistoricalLigatures, true}
-        })), TestSuite::Compare::Container);
-        CORRADE_COMPARE_AS((Containers::arrayCast<const Containers::Pair<Text::Feature, UnsignedInt>>(layer.dynamicStyleFeatures(2))), (Containers::arrayView<const Containers::Pair<Text::Feature, UnsignedInt>>({
             {Text::Feature::StandardLigatures, false}
         })), TestSuite::Compare::Container);
         /* No styles get the bits modified */
         CORRADE_COMPARE_AS(Containers::BitArrayView{cursorStyles}, Containers::stridedArrayView({
             data.cursorStyles ? false : true,
             data.cursorStyles ? false : true,
-            data.cursorStyles ? false : true,
         }).sliceBit(0), TestSuite::Compare::Container);
         CORRADE_COMPARE_AS(Containers::BitArrayView{selectionStyles}, Containers::stridedArrayView({
-            data.selectionStyles ? false : true,
             data.selectionStyles ? false : true,
             data.selectionStyles ? false : true,
         }).sliceBit(0), TestSuite::Compare::Container);
@@ -1584,39 +1512,26 @@ void TextLayerStyleAnimatorTest::advance() {
         }), TestSuite::Compare::Container);
         /* Uniform values of the recycled style aren't touched anymore */
         CORRADE_COMPARE(uniforms[0].color, Color4{1.0f});
-        /* The stopped & kept style isn't touched anymore, staying at the reset
-           defaults */
-        CORRADE_COMPARE(uniforms[1].color, Color4{1.0f});
-        CORRADE_COMPARE(paddings[1], Vector4{0.0f});
         /* The null data animation is advanced to 1/2 between style 1 and 3 */
-        CORRADE_COMPARE(uniforms[2].color, Color4{3.0f});
-        CORRADE_COMPARE(paddings[2], Vector4{2.0f});
+        CORRADE_COMPARE(uniforms[1].color, Color4{3.0f});
+        CORRADE_COMPARE(paddings[1], Vector4{2.0f});
         if(data.cursorStyles) {
             /* Uniform values of the recycled style aren't touched anymore */
             CORRADE_COMPARE(editingUniforms[0*2 + 1].backgroundColor, Color4{1.0f});
-            /* The stopped & kept style isn't touched anymore, staying at the
-               reset defaults */
-            CORRADE_COMPARE(editingUniforms[1*2 + 1].backgroundColor, Color4{1.0f});
-            CORRADE_COMPARE(editingPaddings[1*2 + 1], Vector4{0.0f});
             /* The null data animation is advanced to 1/2 between editing style
                2 and 1 */
-            CORRADE_COMPARE(editingUniforms[2*2 + 1].backgroundColor, Color4{7.0f});
-            CORRADE_COMPARE(editingPaddings[2*2 + 1], Vector4{32.0f});
+            CORRADE_COMPARE(editingUniforms[1*2 + 1].backgroundColor, Color4{7.0f});
+            CORRADE_COMPARE(editingPaddings[1*2 + 1], Vector4{32.0f});
         }
         if(data.selectionStyles) {
             /* Uniform values of the recycled style aren't touched anymore */
             CORRADE_COMPARE(editingUniforms[0*2 + 0].backgroundColor, Color4{1.0f});
-            /* The stopped & kept style isn't touched anymore, staying at the
-               reset defaults */
-            CORRADE_COMPARE(editingUniforms[1*2 + 0].backgroundColor, Color4{1.0f});
-            CORRADE_COMPARE(editingPaddings[1*2 + 0], Vector4{0.0f});
-            CORRADE_COMPARE(uniforms[shared.dynamicStyleCount() + 1*2 + 0].color, Color4{1.0f});
             /* The null data animation is advanced to 1/2 between editing style
                3 and 2 */
-            CORRADE_COMPARE(editingUniforms[2*2 + 0].backgroundColor, Color4{10.0f});
-            CORRADE_COMPARE(editingPaddings[2*2 + 0], Vector4{32.0f});
+            CORRADE_COMPARE(editingUniforms[1*2 + 0].backgroundColor, Color4{10.0f});
+            CORRADE_COMPARE(editingPaddings[1*2 + 0], Vector4{32.0f});
             /* And 1/2 of text uniform 1 and 2 */
-            CORRADE_COMPARE(uniforms[shared.dynamicStyleCount() + 2*2 + 0].color, Color4{3.0f});
+            CORRADE_COMPARE(uniforms[shared.dynamicStyleCount() + 1*2 + 0].color, Color4{3.0f});
         }
     }
 
@@ -1631,13 +1546,13 @@ void TextLayerStyleAnimatorTest::advance() {
     /* Advancing to 25 stops the null data animation, recycling its dynamic
        style. Leads to no other change, i.e. no Style set. */
     {
-        TextLayerStyleUniform uniforms[9];
-        Containers::BitArray cursorStyles{DirectInit, 3, data.cursorStyles ? false : true};
-        Containers::BitArray selectionStyles{DirectInit, 3, data.selectionStyles ? false : true};
-        TextLayerEditingStyleUniform editingUniforms[6];
+        TextLayerStyleUniform uniforms[6];
+        Containers::BitArray cursorStyles{DirectInit, 2, data.cursorStyles ? false : true};
+        Containers::BitArray selectionStyles{DirectInit, 2, data.selectionStyles ? false : true};
+        TextLayerEditingStyleUniform editingUniforms[4];
         UnsignedInt dataStyles[]{666, 666, 666, 666, 666};
         CORRADE_COMPARE(advance(25_nsec,
-                Containers::arrayView(uniforms).prefix(data.cursorStyles || data.selectionStyles ? 9 : 3),
+                Containers::arrayView(uniforms).prefix(data.cursorStyles || data.selectionStyles ? 6 : 2),
                 cursorStyles,
                 selectionStyles,
                 paddings,
@@ -1648,38 +1563,30 @@ void TextLayerStyleAnimatorTest::advance() {
         CORRADE_VERIFY(!animator.isHandleValid(scheduledNullData));
         CORRADE_VERIFY(animator.isHandleValid(stoppedKept));
         CORRADE_VERIFY(animator.isHandleValid(scheduledChangesPadding));
-        CORRADE_COMPARE(layer.dynamicStyleUsedCount(), 1);
+        CORRADE_COMPARE(layer.dynamicStyleUsedCount(), 0);
         CORRADE_COMPARE(layer.dynamicStyleAnimation(0), AnimationHandle::Null);
-        CORRADE_COMPARE(layer.dynamicStyleAnimation(1), stoppedKept);
-        CORRADE_COMPARE(layer.dynamicStyleAnimation(2), AnimationHandle::Null);
+        CORRADE_COMPARE(layer.dynamicStyleAnimation(1), AnimationHandle::Null);
         /* Again font, alignment and features aren't modified, thus the reset
            values from above are staying */
         CORRADE_COMPARE_AS(layer.dynamicStyleFonts(), Containers::arrayView({
             FontHandle::Null,
             fontHandle2,
-            fontHandle2,
         }), TestSuite::Compare::Container);
         CORRADE_COMPARE_AS(layer.dynamicStyleAlignments(), Containers::arrayView({
             Text::Alignment::MiddleCenterIntegral,
-            Text::Alignment::BottomEnd,
             Text::Alignment::TopLeft,
         }), TestSuite::Compare::Container);
         CORRADE_COMPARE_AS((Containers::arrayCast<const Containers::Pair<Text::Feature, UnsignedInt>>(layer.dynamicStyleFeatures(0))), (Containers::arrayView<const Containers::Pair<Text::Feature, UnsignedInt>>({
         })), TestSuite::Compare::Container);
         CORRADE_COMPARE_AS((Containers::arrayCast<const Containers::Pair<Text::Feature, UnsignedInt>>(layer.dynamicStyleFeatures(1))), (Containers::arrayView<const Containers::Pair<Text::Feature, UnsignedInt>>({
-            {Text::Feature::HistoricalLigatures, true}
-        })), TestSuite::Compare::Container);
-        CORRADE_COMPARE_AS((Containers::arrayCast<const Containers::Pair<Text::Feature, UnsignedInt>>(layer.dynamicStyleFeatures(2))), (Containers::arrayView<const Containers::Pair<Text::Feature, UnsignedInt>>({
             {Text::Feature::StandardLigatures, false}
         })), TestSuite::Compare::Container);
         /* No styles get the bits modified */
         CORRADE_COMPARE_AS(Containers::BitArrayView{cursorStyles}, Containers::stridedArrayView({
             data.cursorStyles ? false : true,
             data.cursorStyles ? false : true,
-            data.cursorStyles ? false : true,
         }).sliceBit(0), TestSuite::Compare::Container);
         CORRADE_COMPARE_AS(Containers::BitArrayView{selectionStyles}, Containers::stridedArrayView({
-            data.selectionStyles ? false : true,
             data.selectionStyles ? false : true,
             data.selectionStyles ? false : true,
         }).sliceBit(0), TestSuite::Compare::Container);
@@ -1689,28 +1596,15 @@ void TextLayerStyleAnimatorTest::advance() {
         /* Uniform values of the recycled styles aren't touched anymore */
         CORRADE_COMPARE(uniforms[0].color, Color4{1.0f});
         CORRADE_COMPARE(uniforms[2].color, Color4{1.0f});
-        /* The stopped & kept style isn't touched anymore, staying at the reset
-           defaults */
-        CORRADE_COMPARE(uniforms[1].color, Color4{1.0f});
-        CORRADE_COMPARE(paddings[1], Vector4{0.0f});
         if(data.cursorStyles) {
             /* Uniform values of the recycled style aren't touched anymore */
             CORRADE_COMPARE(editingUniforms[0*2 + 1].backgroundColor, Color4{1.0f});
-            CORRADE_COMPARE(editingUniforms[2*2 + 1].backgroundColor, Color4{1.0f});
-            /* The stopped & kept style isn't touched anymore, staying at the
-               reset defaults */
             CORRADE_COMPARE(editingUniforms[1*2 + 1].backgroundColor, Color4{1.0f});
-            CORRADE_COMPARE(editingPaddings[1*2 + 1], Vector4{0.0f});
         }
         if(data.selectionStyles) {
             /* Uniform values of the recycled style aren't touched anymore */
             CORRADE_COMPARE(editingUniforms[0*2 + 0].backgroundColor, Color4{1.0f});
-            CORRADE_COMPARE(editingUniforms[2*2 + 0].backgroundColor, Color4{1.0f});
-            CORRADE_COMPARE(uniforms[shared.dynamicStyleCount() + 2*2 + 0].color, Color4{1.0f});
-            /* The stopped & kept style isn't touched anymore, staying at the
-               reset defaults */
             CORRADE_COMPARE(editingUniforms[1*2 + 0].backgroundColor, Color4{1.0f});
-            CORRADE_COMPARE(editingPaddings[1*2 + 0], Vector4{0.0f});
             CORRADE_COMPARE(uniforms[shared.dynamicStyleCount() + 1*2 + 0].color, Color4{1.0f});
         }
     }
@@ -1718,13 +1612,13 @@ void TextLayerStyleAnimatorTest::advance() {
     /* Advancing to 35 plays the scheduled animation, allocating a new dynamic
        style and switching to it */
     {
-        TextLayerStyleUniform uniforms[9];
-        Containers::BitArray cursorStyles{DirectInit, 3, data.cursorStyles ? false : true};
-        Containers::BitArray selectionStyles{DirectInit, 3, data.selectionStyles ? false : true};
-        TextLayerEditingStyleUniform editingUniforms[6];
+        TextLayerStyleUniform uniforms[6];
+        Containers::BitArray cursorStyles{DirectInit, 2, data.cursorStyles ? false : true};
+        Containers::BitArray selectionStyles{DirectInit, 2, data.selectionStyles ? false : true};
+        TextLayerEditingStyleUniform editingUniforms[4];
         UnsignedInt dataStyles[]{666, 666, 666, 666, 666};
         CORRADE_COMPARE(advance(35_nsec,
-                Containers::arrayView(uniforms).prefix(data.cursorStyles || data.selectionStyles ? 9 : 3),
+                Containers::arrayView(uniforms).prefix(data.cursorStyles || data.selectionStyles ? 6 : 2),
                 cursorStyles,
                 selectionStyles,
                 paddings,
@@ -1738,19 +1632,18 @@ void TextLayerStyleAnimatorTest::advance() {
         CORRADE_COMPARE(animator.state(stoppedKept), AnimationState::Stopped);
         CORRADE_COMPARE(animator.state(scheduledChangesPadding), AnimationState::Playing);
         CORRADE_COMPARE(animator.dynamicStyle(scheduledChangesPadding), 0);
-        CORRADE_COMPARE(layer.dynamicStyleUsedCount(), 2);
+        CORRADE_COMPARE(layer.dynamicStyleUsedCount(), 1);
         CORRADE_COMPARE(layer.dynamicStyleAnimation(0), scheduledChangesPadding);
+        CORRADE_COMPARE(layer.dynamicStyleAnimation(1), AnimationHandle::Null);
         /* The newly allocated style is coincidentally again style 3 and again
            in slot 0, so this looks the same as before the setDynamicStyle()
            got called above */
         CORRADE_COMPARE_AS(layer.dynamicStyleFonts(), Containers::arrayView({
             fontHandle3,                    /* from style 3 again */
             fontHandle2,
-            fontHandle2,
         }), TestSuite::Compare::Container);
         CORRADE_COMPARE_AS(layer.dynamicStyleAlignments(), Containers::arrayView({
             Text::Alignment::LineRight,     /* from style 3 again */
-            Text::Alignment::BottomEnd,
             Text::Alignment::TopLeft,
         }), TestSuite::Compare::Container);
         CORRADE_COMPARE_AS((Containers::arrayCast<const Containers::Pair<Text::Feature, UnsignedInt>>(layer.dynamicStyleFeatures(0))), (Containers::arrayView<const Containers::Pair<Text::Feature, UnsignedInt>>({
@@ -1758,20 +1651,15 @@ void TextLayerStyleAnimatorTest::advance() {
             {Text::Feature::SlashedZero, true}
         })), TestSuite::Compare::Container);
         CORRADE_COMPARE_AS((Containers::arrayCast<const Containers::Pair<Text::Feature, UnsignedInt>>(layer.dynamicStyleFeatures(1))), (Containers::arrayView<const Containers::Pair<Text::Feature, UnsignedInt>>({
-            {Text::Feature::HistoricalLigatures, true}
-        })), TestSuite::Compare::Container);
-        CORRADE_COMPARE_AS((Containers::arrayCast<const Containers::Pair<Text::Feature, UnsignedInt>>(layer.dynamicStyleFeatures(2))), (Containers::arrayView<const Containers::Pair<Text::Feature, UnsignedInt>>({
             {Text::Feature::StandardLigatures, false}
         })), TestSuite::Compare::Container);
         /* Style 0 gets the bits modified */
         CORRADE_COMPARE_AS(Containers::BitArrayView{cursorStyles}, Containers::stridedArrayView({
             data.cursorStyles ? true : false,
             data.cursorStyles ? false : true,
-            data.cursorStyles ? false : true,
         }).sliceBit(0), TestSuite::Compare::Container);
         CORRADE_COMPARE_AS(Containers::BitArrayView{selectionStyles}, Containers::stridedArrayView({
             data.selectionStyles ? true : false,
-            data.selectionStyles ? false : true,
             data.selectionStyles ? false : true,
         }).sliceBit(0), TestSuite::Compare::Container);
         CORRADE_COMPARE_AS(Containers::arrayView(dataStyles), Containers::arrayView({
@@ -1785,18 +1673,10 @@ void TextLayerStyleAnimatorTest::advance() {
            reverted from 1/4) of uniforms 1 and 0 and padding 3 and 6 */
         CORRADE_COMPARE(uniforms[0].color, Color4{1.0f});
         CORRADE_COMPARE(paddings[0], Vector4{3.5f});
-        /* The stopped & kept style isn't touched anymore, staying at the reset
-           defaults */
-        CORRADE_COMPARE(uniforms[1].color, Color4{1.0f});
-        CORRADE_COMPARE(paddings[1], Vector4{0.0f});
         if(data.cursorStyles) {
             /* 3/4 interpolation of uniforms 0 and 3 and padding 1 and 0 */
             CORRADE_COMPARE(editingUniforms[0*2 + 1].backgroundColor, Color4{10.5f});
             CORRADE_COMPARE(editingPaddings[0*2 + 1], Vector4{20.0f});
-            /* The stopped & kept style isn't touched anymore, staying at the
-               reset defaults */
-            CORRADE_COMPARE(editingUniforms[1*2 + 1].backgroundColor, Color4{1.0f});
-            CORRADE_COMPARE(editingPaddings[1*2 + 1], Vector4{0.0f});
         }
         if(data.selectionStyles) {
             /* 3/4 interpolation of uniforms 1 and 0 and padding 2 and 4 */
@@ -1804,24 +1684,19 @@ void TextLayerStyleAnimatorTest::advance() {
             CORRADE_COMPARE(editingPaddings[0*2 + 0], Vector4{26.0f});
             /* 3/4 of text uniforms 2 and -1 resolved to 0 */
             CORRADE_COMPARE(uniforms[shared.dynamicStyleCount() + 0*2 + 0].color, Color4{0.5f});
-            /* The stopped & kept style isn't touched anymore, staying at the
-               reset defaults */
-            CORRADE_COMPARE(editingUniforms[1*2 + 0].backgroundColor, Color4{1.0f});
-            CORRADE_COMPARE(editingPaddings[1*2 + 0], Vector4{0.0f});
-            CORRADE_COMPARE(uniforms[shared.dynamicStyleCount() + 1*2 + 0].color, Color4{1.0f});
         }
     }
 
     /* Advancing to 45 advances the scheduled animation, changing both the
        uniform and the padding. No styles. */
     {
-        TextLayerStyleUniform uniforms[9];
-        Containers::BitArray cursorStyles{DirectInit, 3, data.cursorStyles ? false : true};
-        Containers::BitArray selectionStyles{DirectInit, 3, data.selectionStyles ? false : true};
-        TextLayerEditingStyleUniform editingUniforms[6];
+        TextLayerStyleUniform uniforms[6];
+        Containers::BitArray cursorStyles{DirectInit, 2, data.cursorStyles ? false : true};
+        Containers::BitArray selectionStyles{DirectInit, 2, data.selectionStyles ? false : true};
+        TextLayerEditingStyleUniform editingUniforms[4];
         UnsignedInt dataStyles[]{666, 666, 666, 666, 666};
         CORRADE_COMPARE(advance(45_nsec,
-                Containers::arrayView(uniforms).prefix(data.cursorStyles || data.selectionStyles ? 9 : 3),
+                Containers::arrayView(uniforms).prefix(data.cursorStyles || data.selectionStyles ? 6 : 2),
                 cursorStyles,
                 selectionStyles,
                 paddings,
@@ -1834,16 +1709,16 @@ void TextLayerStyleAnimatorTest::advance() {
         CORRADE_VERIFY(animator.isHandleValid(scheduledChangesPadding));
         CORRADE_COMPARE(animator.state(stoppedKept), AnimationState::Stopped);
         CORRADE_COMPARE(animator.state(scheduledChangesPadding), AnimationState::Playing);
-        CORRADE_COMPARE(layer.dynamicStyleUsedCount(), 2);
+        CORRADE_COMPARE(layer.dynamicStyleUsedCount(), 1);
+        CORRADE_COMPARE(layer.dynamicStyleAnimation(0), scheduledChangesPadding);
+        CORRADE_COMPARE(layer.dynamicStyleAnimation(1), AnimationHandle::Null);
         /* No change to any of these again */
         CORRADE_COMPARE_AS(layer.dynamicStyleFonts(), Containers::arrayView({
             fontHandle3,
             fontHandle2,
-            fontHandle2,
         }), TestSuite::Compare::Container);
         CORRADE_COMPARE_AS(layer.dynamicStyleAlignments(), Containers::arrayView({
             Text::Alignment::LineRight,
-            Text::Alignment::BottomEnd,
             Text::Alignment::TopLeft,
         }), TestSuite::Compare::Container);
         CORRADE_COMPARE_AS((Containers::arrayCast<const Containers::Pair<Text::Feature, UnsignedInt>>(layer.dynamicStyleFeatures(0))), (Containers::arrayView<const Containers::Pair<Text::Feature, UnsignedInt>>({
@@ -1851,19 +1726,14 @@ void TextLayerStyleAnimatorTest::advance() {
             {Text::Feature::SlashedZero, true}
         })), TestSuite::Compare::Container);
         CORRADE_COMPARE_AS((Containers::arrayCast<const Containers::Pair<Text::Feature, UnsignedInt>>(layer.dynamicStyleFeatures(1))), (Containers::arrayView<const Containers::Pair<Text::Feature, UnsignedInt>>({
-            {Text::Feature::HistoricalLigatures, true}
-        })), TestSuite::Compare::Container);
-        CORRADE_COMPARE_AS((Containers::arrayCast<const Containers::Pair<Text::Feature, UnsignedInt>>(layer.dynamicStyleFeatures(2))), (Containers::arrayView<const Containers::Pair<Text::Feature, UnsignedInt>>({
             {Text::Feature::StandardLigatures, false}
         })), TestSuite::Compare::Container);
         /* No styles get the bits modified */
         CORRADE_COMPARE_AS(Containers::BitArrayView{cursorStyles}, Containers::stridedArrayView({
             data.cursorStyles ? false : true,
             data.cursorStyles ? false : true,
-            data.cursorStyles ? false : true,
         }).sliceBit(0), TestSuite::Compare::Container);
         CORRADE_COMPARE_AS(Containers::BitArrayView{selectionStyles}, Containers::stridedArrayView({
-            data.selectionStyles ? false : true,
             data.selectionStyles ? false : true,
             data.selectionStyles ? false : true,
         }).sliceBit(0), TestSuite::Compare::Container);
@@ -1874,18 +1744,10 @@ void TextLayerStyleAnimatorTest::advance() {
            reverted from 3/4) of uniforms 1 and 0 and padding 3 and 6 */
         CORRADE_COMPARE(uniforms[0].color, Color4{3.0f});
         CORRADE_COMPARE(paddings[0], Vector4{2.5f});
-        /* The stopped & kept style isn't touched anymore, staying at the reset
-           defaults */
-        CORRADE_COMPARE(uniforms[1].color, Color4{1.0f});
-        CORRADE_COMPARE(paddings[1], Vector4{0.0f});
         if(data.cursorStyles) {
             /* 1/4 interpolation of uniforms 0 and 3 and padding 1 and 0 */
             CORRADE_COMPARE(editingUniforms[0*2 + 1].backgroundColor, Color4{7.5f});
             CORRADE_COMPARE(editingPaddings[0*2 + 1], Vector4{28.0f});
-            /* The stopped & kept style isn't touched anymore, staying at the
-               reset defaults */
-            CORRADE_COMPARE(editingUniforms[1*2 + 1].backgroundColor, Color4{1.0f});
-            CORRADE_COMPARE(editingPaddings[1*2 + 1], Vector4{0.0f});
         }
         if(data.selectionStyles) {
             /* 1/4 interpolation of uniforms 1 and 0 and padding 2 and 4 */
@@ -1893,37 +1755,21 @@ void TextLayerStyleAnimatorTest::advance() {
             CORRADE_COMPARE(editingPaddings[0*2 + 0], Vector4{30.0f});
             /* 1/4 of text uniforms 2 and -1 resolved to 0 */
             CORRADE_COMPARE(uniforms[shared.dynamicStyleCount() + 0*2 + 0].color, Color4{1.5f});
-            /* The stopped & kept style isn't touched anymore, staying at the
-               reset defaults */
-            CORRADE_COMPARE(editingUniforms[1*2 + 0].backgroundColor, Color4{1.0f});
-            CORRADE_COMPARE(editingPaddings[1*2 + 0], Vector4{0.0f});
-            CORRADE_COMPARE(uniforms[shared.dynamicStyleCount() + 1*2 + 0].color, Color4{1.0f});
         }
     }
-
-    /* Removing the stopped & kept animation recycles the dynamic style but
-       doesn't switch the data style in any way, not even directly in the
-       layer */
-    animator.remove(stoppedKept);
-    CORRADE_COMPARE(layer.dynamicStyleUsedCount(), 1);
-    CORRADE_COMPARE(layer.style(data0), 4);
-    CORRADE_COMPARE(layer.style(data1), 0);
-    CORRADE_COMPARE(layer.style(data2), 2);
-    CORRADE_COMPARE(layer.style(data3), 4);
-    CORRADE_COMPARE(layer.style(data4), 5);
 
     /* Stopping the remaining animation (even before it finishes at 50) makes
        it recycle the remaining dynamic style and switch to the target style at
        the next advance(). Not updating any uniforms or paddings. */
     {
-        TextLayerStyleUniform uniforms[9];
-        Containers::BitArray cursorStyles{DirectInit, 3, data.cursorStyles ? false : true};
-        Containers::BitArray selectionStyles{DirectInit, 3, data.selectionStyles ? false : true};
-        TextLayerEditingStyleUniform editingUniforms[6];
+        TextLayerStyleUniform uniforms[6];
+        Containers::BitArray cursorStyles{DirectInit, 2, data.cursorStyles ? false : true};
+        Containers::BitArray selectionStyles{DirectInit, 2, data.selectionStyles ? false : true};
+        TextLayerEditingStyleUniform editingUniforms[4];
         UnsignedInt dataStyles[]{666, 666, 666, 666, 666};
         animator.stop(scheduledChangesPadding, 46_nsec);
         CORRADE_COMPARE(advance(47_nsec,
-                Containers::arrayView(uniforms).prefix(data.cursorStyles || data.selectionStyles ? 9 : 3),
+                Containers::arrayView(uniforms).prefix(data.cursorStyles || data.selectionStyles ? 6 : 2),
                 cursorStyles,
                 selectionStyles,
                 paddings,
@@ -1935,17 +1781,14 @@ void TextLayerStyleAnimatorTest::advance() {
         CORRADE_COMPARE(layer.dynamicStyleUsedCount(), 0);
         CORRADE_COMPARE(layer.dynamicStyleAnimation(0), AnimationHandle::Null);
         CORRADE_COMPARE(layer.dynamicStyleAnimation(1), AnimationHandle::Null);
-        CORRADE_COMPARE(layer.dynamicStyleAnimation(2), AnimationHandle::Null);
         /* No change to any of these again -- none of them are used anymore,
            and they stay at whatever they were before */
         CORRADE_COMPARE_AS(layer.dynamicStyleFonts(), Containers::arrayView({
             fontHandle3,
             fontHandle2,
-            fontHandle2,
         }), TestSuite::Compare::Container);
         CORRADE_COMPARE_AS(layer.dynamicStyleAlignments(), Containers::arrayView({
             Text::Alignment::LineRight,
-            Text::Alignment::BottomEnd,
             Text::Alignment::TopLeft,
         }), TestSuite::Compare::Container);
         CORRADE_COMPARE_AS((Containers::arrayCast<const Containers::Pair<Text::Feature, UnsignedInt>>(layer.dynamicStyleFeatures(0))), (Containers::arrayView<const Containers::Pair<Text::Feature, UnsignedInt>>({
@@ -1953,19 +1796,14 @@ void TextLayerStyleAnimatorTest::advance() {
             {Text::Feature::SlashedZero, true}
         })), TestSuite::Compare::Container);
         CORRADE_COMPARE_AS((Containers::arrayCast<const Containers::Pair<Text::Feature, UnsignedInt>>(layer.dynamicStyleFeatures(1))), (Containers::arrayView<const Containers::Pair<Text::Feature, UnsignedInt>>({
-            {Text::Feature::HistoricalLigatures, true}
-        })), TestSuite::Compare::Container);
-        CORRADE_COMPARE_AS((Containers::arrayCast<const Containers::Pair<Text::Feature, UnsignedInt>>(layer.dynamicStyleFeatures(2))), (Containers::arrayView<const Containers::Pair<Text::Feature, UnsignedInt>>({
             {Text::Feature::StandardLigatures, false}
         })), TestSuite::Compare::Container);
         /* No styles get the bits modified */
         CORRADE_COMPARE_AS(Containers::BitArrayView{cursorStyles}, Containers::stridedArrayView({
             data.cursorStyles ? false : true,
             data.cursorStyles ? false : true,
-            data.cursorStyles ? false : true,
         }).sliceBit(0), TestSuite::Compare::Container);
         CORRADE_COMPARE_AS(Containers::BitArrayView{selectionStyles}, Containers::stridedArrayView({
-            data.selectionStyles ? false : true,
             data.selectionStyles ? false : true,
             data.selectionStyles ? false : true,
         }).sliceBit(0), TestSuite::Compare::Container);
@@ -1978,7 +1816,83 @@ void TextLayerStyleAnimatorTest::advance() {
         }), TestSuite::Compare::Container);
     }
 
-    /* Final verification that styles in the layer aren't directly changed */
+    /* Restarting the stopped animation makes it allocate a new dynamic
+       style */
+    {
+        TextLayerStyleUniform uniforms[6];
+        Containers::BitArray cursorStyles{DirectInit, 2, data.cursorStyles ? false : true};
+        Containers::BitArray selectionStyles{DirectInit, 2, data.selectionStyles ? false : true};
+        TextLayerEditingStyleUniform editingUniforms[4];
+        UnsignedInt dataStyles[]{666, 666, 666, 666, 666};
+        animator.play(stoppedKept, 45_nsec);
+        CORRADE_COMPARE(advance(50_nsec,
+                Containers::arrayView(uniforms).prefix(data.cursorStyles || data.selectionStyles ? 6 : 2),
+                cursorStyles,
+                selectionStyles,
+                paddings,
+                data.cursorStyles || data.selectionStyles ? Containers::arrayView(editingUniforms) : nullptr,
+                data.cursorStyles || data.selectionStyles ? Containers::arrayView(editingPaddings) : nullptr,
+                dataStyles),
+            TextLayerStyleAnimatorUpdate::Uniform|TextLayerStyleAnimatorUpdate::Padding|TextLayerStyleAnimatorUpdate::Style|
+            (data.cursorStyles || data.selectionStyles ? TextLayerStyleAnimatorUpdate::EditingUniform|TextLayerStyleAnimatorUpdate::EditingPadding : TextLayerStyleAnimatorUpdates{}));
+        CORRADE_VERIFY(!animator.isHandleValid(scheduledChangesPadding));
+        CORRADE_COMPARE(layer.dynamicStyleUsedCount(), 1);
+        CORRADE_COMPARE(layer.dynamicStyleAnimation(0), stoppedKept);
+        CORRADE_COMPARE(layer.dynamicStyleAnimation(1), AnimationHandle::Null);
+        CORRADE_COMPARE_AS(layer.dynamicStyleFonts(), Containers::arrayView({
+            fontHandle2,
+            fontHandle2,
+        }), TestSuite::Compare::Container);
+        CORRADE_COMPARE_AS(layer.dynamicStyleAlignments(), Containers::arrayView({
+            Text::Alignment::BottomEnd,
+            Text::Alignment::TopLeft,
+        }), TestSuite::Compare::Container);
+        CORRADE_COMPARE_AS((Containers::arrayCast<const Containers::Pair<Text::Feature, UnsignedInt>>(layer.dynamicStyleFeatures(0))), (Containers::arrayView<const Containers::Pair<Text::Feature, UnsignedInt>>({
+            {Text::Feature::HistoricalLigatures, true},
+        })), TestSuite::Compare::Container);
+        CORRADE_COMPARE_AS((Containers::arrayCast<const Containers::Pair<Text::Feature, UnsignedInt>>(layer.dynamicStyleFeatures(1))), (Containers::arrayView<const Containers::Pair<Text::Feature, UnsignedInt>>({
+            {Text::Feature::StandardLigatures, false}
+        })), TestSuite::Compare::Container);
+        /* No styles get the bits modified */
+        CORRADE_COMPARE_AS(Containers::BitArrayView{cursorStyles}, Containers::stridedArrayView({
+            data.cursorStyles ? true : false,
+            data.cursorStyles ? false : true,
+        }).sliceBit(0), TestSuite::Compare::Container);
+        CORRADE_COMPARE_AS(Containers::BitArrayView{selectionStyles}, Containers::stridedArrayView({
+            data.selectionStyles ? true : false,
+            data.selectionStyles ? false : true,
+        }).sliceBit(0), TestSuite::Compare::Container);
+        CORRADE_COMPARE_AS(Containers::arrayView(dataStyles), Containers::arrayView({
+            666u,
+            shared.styleCount() + 0u,
+            666u,
+            666u,
+            666u
+        }), TestSuite::Compare::Container);
+        /* The first dynamic style should get a 1/3 interpolation of uniforms 0
+           and 1 and padding 6 and 3 */
+        CORRADE_COMPARE(uniforms[0].color, Color4{4.0f/3.0f});
+        CORRADE_COMPARE(paddings[0], Vector4{10.0f/3.0f});
+        if(data.cursorStyles) {
+            /* 1/3 interpolation of uniforms 3 and 0 and padding 0 and 1 */
+            CORRADE_COMPARE(editingUniforms[0*2 + 1].backgroundColor, Color4{10.0f});
+            CORRADE_COMPARE(editingPaddings[0*2 + 1], Vector4{64.0f/3.0f});
+        }
+        if(data.selectionStyles) {
+            /* 1/3 interpolation of uniforms 0 and 1 and padding 4 and 2 */
+            CORRADE_COMPARE(editingUniforms[0*2 + 0].backgroundColor, Color4{20.0f/3.0f});
+            CORRADE_COMPARE(editingPaddings[0*2 + 0], Vector4{80.0f/3.0f});
+            /* 1/3 of text uniforms -1 resolved to 0 and 2 */
+            CORRADE_COMPARE(uniforms[shared.dynamicStyleCount() + 0*2 + 0].color, Color4{2.0f/3.0f});
+        }
+    }
+
+    /* Removing the restarted animation recycles the dynamic style but doesn't
+       switch the data style in any way, not even directly in the layer.
+       Recycling inside AbstractVisualLayerStyleAnimator::doClean() is tested
+       in uiAdvance() below. */
+    animator.remove(stoppedKept);
+    CORRADE_COMPARE(layer.dynamicStyleUsedCount(), 0);
     CORRADE_COMPARE(layer.style(data0), 4);
     CORRADE_COMPARE(layer.style(data1), 0);
     CORRADE_COMPARE(layer.style(data2), 2);
@@ -2111,7 +2025,7 @@ void TextLayerStyleAnimatorTest::advanceProperties() {
             char cursorStyles[1];
             char selectionStyles[1];
             updates = animator.advance(
-                active, factors, remove, dynamicStyleUniforms,
+                active, stopped, factors, dynamicStyleUniforms,
                 Containers::MutableBitArrayView{cursorStyles, 0, 1},
                 Containers::MutableBitArrayView{selectionStyles, 0, 1},
                 dynamicStylePaddings, dynamicEditingStyleUniforms, dynamicEditingStylePaddings, dataStyles);
@@ -2265,7 +2179,7 @@ void TextLayerStyleAnimatorTest::advanceNoFreeDynamicStyles() {
     DataHandle data2 = layer.create(2, "", {});
 
     AnimationHandle first = animator.create(0, 1, Animation::Easing::linear, 0_nsec, 20_nsec, data2);
-    AnimationHandle second = animator.create(1, 0, Animation::Easing::linear, 10_nsec, 20_nsec, data1);
+    AnimationHandle second = animator.create(1, 0, Animation::Easing::linear, 10_nsec, 40_nsec, data1);
 
     /* Does what layer's advanceAnimations() is doing internally for all
        animators (as we need to test also the interaction with animation being
@@ -2290,7 +2204,7 @@ void TextLayerStyleAnimatorTest::advanceNoFreeDynamicStyles() {
             char selectionStyles[1];
             Vector4 paddings[1];
             updates = animator.advance(
-                active, factors, remove, dynamicStyleUniforms,
+                active, stopped, factors, dynamicStyleUniforms,
                 Containers::MutableBitArrayView{cursorStyles, 0, 1},
                 Containers::MutableBitArrayView{selectionStyles, 0, 1},
                 paddings, nullptr, nullptr, dataStyles);
@@ -2327,29 +2241,17 @@ void TextLayerStyleAnimatorTest::advanceNoFreeDynamicStyles() {
         CORRADE_COMPARE(uniforms[0].color, Color4{0.5f});
 
     /* Next advance finishes the first animation and recycles its dynamic
-       style. But the recycling is done after the allocation, so the second
-       animation still isn't doing anything. */
+       style, which allows the second animation to take over it */
     } {
-        CORRADE_COMPARE(advance(20_nsec, uniforms, dataStyles), TextLayerStyleAnimatorUpdate::Style);
+        CORRADE_COMPARE(advance(20_nsec, uniforms, dataStyles), TextLayerStyleAnimatorUpdate::Uniform|TextLayerStyleAnimatorUpdate::Style);
         CORRADE_VERIFY(!animator.isHandleValid(first));
-        CORRADE_COMPARE(animator.dynamicStyle(second), Containers::NullOpt);
-        CORRADE_COMPARE(layer.dynamicStyleUsedCount(), 0);
-        CORRADE_COMPARE_AS(Containers::arrayView(dataStyles), Containers::arrayView({
-            666u,
-            1u
-        }), TestSuite::Compare::Container);
-        /* No uniforms updated in this case */
-
-    /* Advancing right after is finally able to allocate the recycled style */
-    } {
-        CORRADE_COMPARE(advance(25_nsec, uniforms, dataStyles), TextLayerStyleAnimatorUpdate::Uniform|TextLayerStyleAnimatorUpdate::Style);
         CORRADE_COMPARE(animator.dynamicStyle(second), 0);
         CORRADE_COMPARE(layer.dynamicStyleUsedCount(), 1);
         CORRADE_COMPARE_AS(Containers::arrayView(dataStyles), Containers::arrayView({
             shared.styleCount() + 0u,
             1u
         }), TestSuite::Compare::Container);
-        CORRADE_COMPARE(uniforms[0].color, Color4{0.375f});
+        CORRADE_COMPARE(uniforms[0].color, Color4{0.625f});
     }
 }
 
@@ -2454,65 +2356,65 @@ void TextLayerStyleAnimatorTest::advanceInvalid() {
 
     Containers::String out;
     Error redirectError{&out};
-    animator.advance(mask, factors, maskInvalid,
+    animator.advance(mask, mask, factorsInvalid,
         dynamicStyleUniforms,
         Containers::MutableBitArrayView{dynamicStyleCursorStyles, 0, 2},
         Containers::MutableBitArrayView{dynamicStyleSelectionStyles, 0, 2},
         dynamicStylePaddings,
         {}, {}, {});
-    animator.advance(mask, factorsInvalid, mask,
+    animator.advance(mask, maskInvalid, factors,
         dynamicStyleUniforms,
         Containers::MutableBitArrayView{dynamicStyleCursorStyles, 0, 2},
         Containers::MutableBitArrayView{dynamicStyleSelectionStyles, 0, 2},
         dynamicStylePaddings,
         {}, {}, {});
-    animator.advance(maskInvalid, factors, mask,
+    animator.advance(maskInvalid, mask, factors,
         dynamicStyleUniforms,
         Containers::MutableBitArrayView{dynamicStyleCursorStyles, 0, 2},
         Containers::MutableBitArrayView{dynamicStyleSelectionStyles, 0, 2},
         dynamicStylePaddings,
         {}, {}, {});
     /* Non-editing case */
-    animator.advance(mask, factors, mask,
+    animator.advance(mask, mask, factors,
         dynamicStyleUniformsInvalid,
         Containers::MutableBitArrayView{dynamicStyleCursorStyles, 0, 2},
         Containers::MutableBitArrayView{dynamicStyleSelectionStyles, 0, 2},
         dynamicStylePaddings,
         {}, {}, {});
-    animator.advance(mask, factors, mask,
+    animator.advance(mask, mask, factors,
         dynamicStyleUniforms,
         Containers::MutableBitArrayView{dynamicStyleCursorStyles, 0, 3},
         Containers::MutableBitArrayView{dynamicStyleSelectionStyles, 0, 2},
         dynamicStylePaddings,
         {}, {}, {});
-    animator.advance(mask, factors, mask,
+    animator.advance(mask, mask, factors,
         dynamicStyleUniforms,
         Containers::MutableBitArrayView{dynamicStyleCursorStyles, 0, 2},
         Containers::MutableBitArrayView{dynamicStyleSelectionStyles, 0, 3},
         dynamicStylePaddings,
         {}, {}, {});
-    animator.advance(mask, factors, mask,
+    animator.advance(mask, mask, factors,
         dynamicStyleUniforms,
         Containers::MutableBitArrayView{dynamicStyleCursorStyles, 0, 2},
         Containers::MutableBitArrayView{dynamicStyleSelectionStyles, 0, 2},
         dynamicStylePaddingsInvalid,
         {}, {}, {});
     /* Non-editing getting editing styles passed by accident */
-    animator.advance(mask, factors, mask,
+    animator.advance(mask, mask, factors,
         dynamicStyleUniforms,
         Containers::MutableBitArrayView{dynamicStyleCursorStyles, 0, 2},
         Containers::MutableBitArrayView{dynamicStyleSelectionStyles, 0, 2},
         dynamicStylePaddings,
         {},
         dynamicEditingStylePaddings, {});
-    animator.advance(mask, factors, mask,
+    animator.advance(mask, mask, factors,
         dynamicStyleUniforms,
         Containers::MutableBitArrayView{dynamicStyleCursorStyles, 0, 2},
         Containers::MutableBitArrayView{dynamicStyleSelectionStyles, 0, 2},
         dynamicStylePaddings,
         dynamicEditingStyleUniforms,
         {}, {});
-    animator.advance(mask, factors, mask,
+    animator.advance(mask, mask, factors,
         dynamicStyleUniforms,
         Containers::MutableBitArrayView{dynamicStyleCursorStyles, 0, 2},
         Containers::MutableBitArrayView{dynamicStyleSelectionStyles, 0, 2},
@@ -2520,42 +2422,42 @@ void TextLayerStyleAnimatorTest::advanceInvalid() {
         dynamicEditingStyleUniforms,
         dynamicEditingStylePaddings, {});
     /* Editing case */
-    animatorEditing.advance(mask, factors, mask,
+    animatorEditing.advance(mask, mask, factors,
         dynamicStyleUniformsEditingInvalid,
         Containers::MutableBitArrayView{dynamicStyleCursorStyles, 0, 2},
         Containers::MutableBitArrayView{dynamicStyleSelectionStyles, 0, 2},
         dynamicStylePaddings,
         dynamicEditingStyleUniforms,
         dynamicEditingStylePaddings, {});
-    animatorEditing.advance(mask, factors, mask,
+    animatorEditing.advance(mask, mask, factors,
         dynamicStyleUniformsEditing,
         Containers::MutableBitArrayView{dynamicStyleCursorStyles, 0, 3},
         Containers::MutableBitArrayView{dynamicStyleSelectionStyles, 0, 2},
         dynamicStylePaddings,
         dynamicEditingStyleUniforms,
         dynamicEditingStylePaddings, {});
-    animatorEditing.advance(mask, factors, mask,
+    animatorEditing.advance(mask, mask, factors,
         dynamicStyleUniformsEditing,
         Containers::MutableBitArrayView{dynamicStyleCursorStyles, 0, 2},
         Containers::MutableBitArrayView{dynamicStyleSelectionStyles, 0, 3},
         dynamicStylePaddings,
         dynamicEditingStyleUniforms,
         dynamicEditingStylePaddings, {});
-    animatorEditing.advance(mask, factors, mask,
+    animatorEditing.advance(mask, mask, factors,
         dynamicStyleUniformsEditing,
         Containers::MutableBitArrayView{dynamicStyleCursorStyles, 0, 2},
         Containers::MutableBitArrayView{dynamicStyleSelectionStyles, 0, 2},
         dynamicStylePaddingsInvalid,
         dynamicEditingStyleUniforms,
         dynamicEditingStylePaddings, {});
-    animatorEditing.advance(mask, factors, mask,
+    animatorEditing.advance(mask, mask, factors,
         dynamicStyleUniformsEditing,
         Containers::MutableBitArrayView{dynamicStyleCursorStyles, 0, 2},
         Containers::MutableBitArrayView{dynamicStyleSelectionStyles, 0, 2},
         dynamicStylePaddings,
         dynamicEditingStyleUniformsInvalid,
         dynamicEditingStylePaddings, {});
-    animatorEditing.advance(mask, factors, mask,
+    animatorEditing.advance(mask, mask, factors,
         dynamicStyleUniformsEditing,
         Containers::MutableBitArrayView{dynamicStyleCursorStyles, 0, 2},
         Containers::MutableBitArrayView{dynamicStyleSelectionStyles, 0, 2},
@@ -2563,7 +2465,7 @@ void TextLayerStyleAnimatorTest::advanceInvalid() {
         dynamicEditingStyleUniforms,
         dynamicEditingStylePaddingsInvalid, {});
     /* Editing not getting editing styles passed by accident */
-    animatorEditing.advance(mask, factors, mask,
+    animatorEditing.advance(mask, mask, factors,
         dynamicStyleUniformsEditing,
         Containers::MutableBitArrayView{dynamicStyleCursorStyles, 0, 2},
         Containers::MutableBitArrayView{dynamicStyleSelectionStyles, 0, 2},
@@ -2571,9 +2473,9 @@ void TextLayerStyleAnimatorTest::advanceInvalid() {
         {}, {}, {});
 
     CORRADE_COMPARE_AS(out,
-        "Ui::TextLayerStyleAnimator::advance(): expected active, factors and remove views to have a size of 3 but got 3, 3 and 4\n"
-        "Ui::TextLayerStyleAnimator::advance(): expected active, factors and remove views to have a size of 3 but got 3, 4 and 3\n"
-        "Ui::TextLayerStyleAnimator::advance(): expected active, factors and remove views to have a size of 3 but got 4, 3 and 3\n"
+        "Ui::TextLayerStyleAnimator::advance(): expected active, stopped and factors views to have a size of 3 but got 3, 3 and 4\n"
+        "Ui::TextLayerStyleAnimator::advance(): expected active, stopped and factors views to have a size of 3 but got 3, 4 and 3\n"
+        "Ui::TextLayerStyleAnimator::advance(): expected active, stopped and factors views to have a size of 3 but got 4, 3 and 3\n"
 
         "Ui::TextLayerStyleAnimator::advance(): expected dynamic style uniform, cursor style, selection style and padding views to have a size of 2, and the dynamic editing style uniform and paddings empty, but got 3, 2, 2, 2; 0 and 0\n"
         "Ui::TextLayerStyleAnimator::advance(): expected dynamic style uniform, cursor style, selection style and padding views to have a size of 2, and the dynamic editing style uniform and paddings empty, but got 2, 3, 2, 2; 0 and 0\n"
@@ -2678,7 +2580,7 @@ void TextLayerStyleAnimatorTest::layerAdvance() {
     layer.assignAnimator(animatorEmpty);
     layer.assignAnimator(animator2);
 
-    animator1.create(0, 1, Animation::Easing::linear, 0_nsec, 20_nsec, data2);
+    animator1.create(0, 1, Animation::Easing::linear, 0_nsec, 20_nsec, data2, AnimationFlag::KeepOncePlayed);
     animator2.create(1, 0, Animation::Easing::linear, 13_nsec, 1_nsec, data1);
 
     /* The storage can be bigger than needed, the layer should slice it for
@@ -2745,7 +2647,6 @@ void TextLayerStyleAnimatorTest::layerAdvance() {
     layer.stateData().dynamicStyleChanged = false;
     layer.stateData().dynamicEditingStyleChanged = false;
     layer.advanceAnimations(20_nsec, activeStorage, startedStorage, stoppedStorage, factorStorage, removeStorage, {animator2, animatorEmpty, animator1});
-    /* If clean() wouldn't be called, the dynamic style won't get recycled */
     CORRADE_COMPARE(layer.dynamicStyleUsedCount(), 0);
     CORRADE_COMPARE(layer.style(data2), 1);
     CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);

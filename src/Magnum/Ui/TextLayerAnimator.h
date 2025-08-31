@@ -599,9 +599,10 @@ class MAGNUM_UI_EXPORT TextLayerStyleAnimator: public AbstractVisualLayerStyleAn
         /**
          * @brief Advance the animations
          * @param[in] active                    Animation IDs that are active
+         * @param[in] stopped                   Animation IDs that stopped
+         *      playing since last time
          * @param[in] factors                   Interpolation factors indexed
          *      by animation ID
-         * @param[in] remove                    Animation IDs to be removed
          * @param[in,out] dynamicStyleUniforms  Uniforms to animate indexed by
          *      dynamic style ID or dynamic editing style text uniform ID
          * @param[in,out] dynamicStyleCursorStyles  Cursor style association to
@@ -624,7 +625,7 @@ class MAGNUM_UI_EXPORT TextLayerStyleAnimator: public AbstractVisualLayerStyleAn
          * this function directly and doing so may cause internal
          * @ref AbstractUserInterface state update to misbehave.
          *
-         * Expects that size of @p active,  @p factors and @p remove matches
+         * Expects that size of @p active,  @p stopped and @p factors matches
          * @ref capacity(), it's assumed that their contents were filled by
          * @ref update() before. If the layer the animator is associated with
          * doesn't contain editing styles, the @p dynamicStyleUniforms,
@@ -640,7 +641,7 @@ class MAGNUM_UI_EXPORT TextLayerStyleAnimator: public AbstractVisualLayerStyleAn
          * instead. The @p dataStyles view should be large enough to contain
          * any valid layer data ID.
          */
-        TextLayerStyleAnimatorUpdates advance(Containers::BitArrayView active, const Containers::StridedArrayView1D<const Float>& factors, Containers::BitArrayView remove, Containers::ArrayView<TextLayerStyleUniform> dynamicStyleUniforms, Containers::MutableBitArrayView dynamicStyleCursorStyles, Containers::MutableBitArrayView dynamicStyleSelectionStyles, const Containers::StridedArrayView1D<Vector4>& dynamicStylePaddings, Containers::ArrayView<TextLayerEditingStyleUniform> dynamicEditingStyleUniforms, const Containers::StridedArrayView1D<Vector4>& dynamicEditingStylePaddings, const Containers::StridedArrayView1D<UnsignedInt>& dataStyles);
+        TextLayerStyleAnimatorUpdates advance(Containers::BitArrayView active, Containers::BitArrayView stopped, const Containers::StridedArrayView1D<const Float>& factors, Containers::ArrayView<TextLayerStyleUniform> dynamicStyleUniforms, Containers::MutableBitArrayView dynamicStyleCursorStyles, Containers::MutableBitArrayView dynamicStyleSelectionStyles, const Containers::StridedArrayView1D<Vector4>& dynamicStylePaddings, Containers::ArrayView<TextLayerEditingStyleUniform> dynamicEditingStyleUniforms, const Containers::StridedArrayView1D<Vector4>& dynamicEditingStylePaddings, const Containers::StridedArrayView1D<UnsignedInt>& dataStyles);
 
     private:
         struct State;

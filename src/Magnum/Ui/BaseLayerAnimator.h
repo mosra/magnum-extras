@@ -425,9 +425,10 @@ class MAGNUM_UI_EXPORT BaseLayerStyleAnimator: public AbstractVisualLayerStyleAn
         /**
          * @brief Advance the animations
          * @param[in] active                    Animation IDs that are active
+         * @param[in] stopped                   Animation IDs that stopped
+         *      playing since last time
          * @param[in] factors                   Interpolation factors indexed
          *      by animation ID
-         * @param[in] remove                    Animation IDs to be removed
          * @param[in,out] dynamicStyleUniforms  Uniforms to animate indexed by
          *      dynamic style ID
          * @param[in,out] dynamicStylePaddings  Paddings to animate indexed by
@@ -442,14 +443,14 @@ class MAGNUM_UI_EXPORT BaseLayerStyleAnimator: public AbstractVisualLayerStyleAn
          * this function directly and doing so may cause internal
          * @ref AbstractUserInterface state update to misbehave.
          *
-         * Expects that size of @p active, @p factors and @p remove matches
+         * Expects that size of @p active, @p stopped and @p factors matches
          * @ref capacity(), it's assumed that their contents were filled by
          * @ref update() before. Expects that @p dynamicStyleUniforms and
          * @p dynamicStylePaddings have a size of
          * @ref BaseLayer::Shared::dynamicStyleCount(). The @p dataStyles view
          * should be large enough to contain any valid layer data ID.
          */
-        BaseLayerStyleAnimatorUpdates advance(Containers::BitArrayView active, const Containers::StridedArrayView1D<const Float>& factors, Containers::BitArrayView remove, Containers::ArrayView<BaseLayerStyleUniform> dynamicStyleUniforms, const Containers::StridedArrayView1D<Vector4>& dynamicStylePaddings, const Containers::StridedArrayView1D<UnsignedInt>& dataStyles);
+        BaseLayerStyleAnimatorUpdates advance(Containers::BitArrayView active, Containers::BitArrayView stopped, const Containers::StridedArrayView1D<const Float>& factors, Containers::ArrayView<BaseLayerStyleUniform> dynamicStyleUniforms, const Containers::StridedArrayView1D<Vector4>& dynamicStylePaddings, const Containers::StridedArrayView1D<UnsignedInt>& dataStyles);
 
     private:
         struct State;

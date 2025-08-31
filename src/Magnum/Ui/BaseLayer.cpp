@@ -498,8 +498,8 @@ void BaseLayer::doAdvanceAnimations(const Nanoseconds time, const Containers::Mu
         if(needsAdvanceClean.first())
             updates |= static_cast<BaseLayerStyleAnimator&>(animator).advance(
                 activeStorage.prefix(capacity),
+                stoppedStorage.prefix(capacity),
                 factorStorage.prefix(capacity),
-                removeStorage.prefix(capacity),
                 state.dynamicStyleUniforms,
                 state.dynamicStylePaddings,
                 stridedArrayView(state.data).slice(&Implementation::BaseLayerData::style));
