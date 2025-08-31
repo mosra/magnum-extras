@@ -409,7 +409,7 @@ Containers::StringView DebugLayer::layouterName(const LayouterHandle handle) con
         "Ui::DebugLayer::layouterName(): handle is null", {});
     const State& state = *_state;
     /* If the feature isn't enabled, do nothing */
-    if(!(state.sources >= DebugLayerSource::Layouters)) // TODO test
+    if(!(state.sources >= DebugLayerSource::Layouters))
         return {};
 
     const UnsignedInt layouterId = layouterHandleId(handle);
@@ -425,7 +425,7 @@ DebugLayer& DebugLayer::setLayouterName(const AbstractLayouter& instance, const 
         "Ui::DebugLayer::setLayouterName(): layouter not part of the same user interface", *this);
     State& state = *_state;
     /* If the feature isn't enabled, do nothing */
-    if(!(state.sources >= DebugLayerSource::Layouters)) // TODO test
+    if(!(state.sources >= DebugLayerSource::Layouters))
         return *this;
 
     /* If there are not enough tracked layers, add. Otherwise replace the
