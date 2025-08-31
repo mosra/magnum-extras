@@ -419,32 +419,43 @@ TextLayerStyleAnimatorUpdates TextLayerStyleAnimator::advance(const Containers::
                    factors.size() == capacity() &&
                    remove.size() == capacity(),
         "Ui::TextLayerStyleAnimator::advance(): expected active, factors and remove views to have a size of" << capacity() << "but got" << active.size() << Debug::nospace << "," << factors.size() << "and" << remove.size(), {});
+
+    /* If there are any running animations, create() had to be called
+       already, which ensures the layer is already set. Otherwise just bail as
+       there's nothing to do. The view size assert isn't executed in that case
+       but it's better that way than to not check against the dynamic style
+       count at all. */
+    State& state = static_cast<State&>(*_state);
+    if(!state.layerSharedState) {
+        CORRADE_INTERNAL_ASSERT(!capacity());
+        return {};
+    }
+
+    const TextLayer::Shared::State& layerSharedState = static_cast<const TextLayer::Shared::State&>(*state.layerSharedState);
     #ifndef CORRADE_NO_ASSERT
     /* If there are no editing styles, the base style views are all required to
-       have the same size */
-    if(dynamicEditingStyleUniforms.isEmpty() && dynamicEditingStylePaddings.isEmpty()) {
+       have the same size, and the editing views empty */
+    if(!layerSharedState.hasEditingStyles) {
         CORRADE_ASSERT(
-            dynamicStyleCursorStyles.size() == dynamicStyleUniforms.size() &&
-            dynamicStyleSelectionStyles.size() == dynamicStyleUniforms.size() &&
-            dynamicStylePaddings.size() == dynamicStyleUniforms.size(),
-            "Ui::TextLayerStyleAnimator::advance(): expected dynamic style uniform, cursor style, selection style and padding views to have the same size but got" << dynamicStyleUniforms.size() << Debug::nospace << "," << dynamicStyleCursorStyles.size() << Debug::nospace << "," << dynamicStyleSelectionStyles.size() << "and" << dynamicStylePaddings.size(), {});
+            dynamicStyleUniforms.size() == layerSharedState.dynamicStyleCount &&
+            dynamicStyleCursorStyles.size() == layerSharedState.dynamicStyleCount &&
+            dynamicStyleSelectionStyles.size() == layerSharedState.dynamicStyleCount &&
+            dynamicStylePaddings.size() == layerSharedState.dynamicStyleCount &&
+            dynamicEditingStyleUniforms.isEmpty() &&
+            dynamicEditingStylePaddings.isEmpty(),
+            "Ui::TextLayerStyleAnimator::advance(): expected dynamic style uniform, cursor style, selection style and padding views to have a size of" << layerSharedState.dynamicStyleCount << Debug::nospace << ", and the dynamic editing style uniform and paddings empty, but got" << dynamicStyleUniforms.size() << Debug::nospace << "," << dynamicStyleCursorStyles.size() << Debug::nospace << "," << dynamicStyleSelectionStyles.size() << Debug::nospace << "," << dynamicStylePaddings.size() << Debug::nospace << ";" << dynamicEditingStyleUniforms.size() << "and" << dynamicEditingStylePaddings.size(), {});
     } else {
         CORRADE_ASSERT(
-            dynamicStyleUniforms.size() == dynamicStyleCursorStyles.size()*3 &&
-            dynamicStyleSelectionStyles.size() == dynamicStyleCursorStyles.size() &&
-            dynamicStylePaddings.size() == dynamicStyleCursorStyles.size() &&
-            dynamicEditingStyleUniforms.size() == dynamicStyleCursorStyles.size()*2 &&
-            dynamicEditingStylePaddings.size() == dynamicStyleCursorStyles.size()*2,
-            "Ui::TextLayerStyleAnimator::advance(): expected dynamic style cursor style, selection style and padding views to have the same size, the dynamic style uniform view three times bigger, and the dynamic editing style uniform and padding views two times bigger, but got" << dynamicStyleCursorStyles.size() << Debug::nospace << "," << dynamicStyleSelectionStyles.size() << Debug::nospace << "," << dynamicStylePaddings.size() << Debug::nospace << ";" << dynamicStyleUniforms.size() << Debug::nospace << ";"  << dynamicEditingStyleUniforms.size() << "and" << dynamicEditingStylePaddings.size(), {});
+            dynamicStyleCursorStyles.size() == layerSharedState.dynamicStyleCount &&
+            dynamicStyleSelectionStyles.size() == layerSharedState.dynamicStyleCount &&
+            dynamicStylePaddings.size() == layerSharedState.dynamicStyleCount &&
+            dynamicStyleUniforms.size() == layerSharedState.dynamicStyleCount*3 &&
+            dynamicEditingStyleUniforms.size() == layerSharedState.dynamicStyleCount*2 &&
+            dynamicEditingStylePaddings.size() == layerSharedState.dynamicStyleCount*2,
+            "Ui::TextLayerStyleAnimator::advance(): expected dynamic style cursor style, selection style and padding views to have a size of" << layerSharedState.dynamicStyleCount << Debug::nospace << ", the dynamic style uniform view a size of" << layerSharedState.dynamicStyleCount*3 << Debug::nospace << ", and the dynamic editing style uniform and padding views a size of" << layerSharedState.dynamicStyleCount*2 << Debug::nospace << ", but got" << dynamicStyleCursorStyles.size() << Debug::nospace << "," << dynamicStyleSelectionStyles.size() << Debug::nospace << "," << dynamicStylePaddings.size() << Debug::nospace << ";" << dynamicStyleUniforms.size() << Debug::nospace << ";" << dynamicEditingStyleUniforms.size() << "and" << dynamicEditingStylePaddings.size(), {});
     }
     #endif
 
-    State& state = static_cast<State&>(*_state);
-
-    /* If there are any running animations, create() had to be called already,
-       which ensures the layer is already set */
-    CORRADE_INTERNAL_ASSERT(!capacity() || state.layerSharedState);
-    const TextLayer::Shared::State& layerSharedState = static_cast<const TextLayer::Shared::State&>(*state.layerSharedState);
     const Containers::StridedArrayView1D<const LayerDataHandle> layerData = this->layerData();
 
     TextLayerStyleAnimatorUpdates updates;

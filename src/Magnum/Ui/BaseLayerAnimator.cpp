@@ -215,15 +215,24 @@ BaseLayerStyleAnimatorUpdates BaseLayerStyleAnimator::advance(const Containers::
                    factors.size() == capacity() &&
                    remove.size() == capacity(),
         "Ui::BaseLayerStyleAnimator::advance(): expected active, factors and remove views to have a size of" << capacity() << "but got" << active.size() << Debug::nospace << "," << factors.size() << "and" << remove.size(), {});
-    CORRADE_ASSERT(dynamicStylePaddings.size() == dynamicStyleUniforms.size(),
-        "Ui::BaseLayerStyleAnimator::advance(): expected dynamic style uniform and padding views to have the same size but got" << dynamicStyleUniforms.size() << "and" << dynamicStylePaddings.size(), {});
-
-    State& state = static_cast<State&>(*_state);
 
     /* If there are any running animations, create() had to be called
-       already, which ensures the layer is already set */
-    CORRADE_INTERNAL_ASSERT(!capacity() || state.layerSharedState);
+       already, which ensures the layer is already set. Otherwise just bail as
+       there's nothing to do. The view size assert isn't executed in that case
+       but it's better that way than to not check against the dynamic style
+       count at all. */
+    State& state = static_cast<State&>(*_state);
+    if(!state.layerSharedState) {
+        CORRADE_INTERNAL_ASSERT(!capacity());
+        return {};
+    }
+
     const BaseLayer::Shared::State& layerSharedState = static_cast<const BaseLayer::Shared::State&>(*state.layerSharedState);
+    CORRADE_ASSERT(
+        dynamicStyleUniforms.size() == layerSharedState.dynamicStyleCount &&
+        dynamicStylePaddings.size() == layerSharedState.dynamicStyleCount,
+        "Ui::BaseLayerStyleAnimator::advance(): expected dynamic style uniform and padding views to have a size of" << layerSharedState.dynamicStyleCount << "but got" << dynamicStyleUniforms.size() << "and" << dynamicStylePaddings.size(), {});
+
     const Containers::StridedArrayView1D<const LayerDataHandle> layerData = this->layerData();
 
     BaseLayerStyleAnimatorUpdates updates;

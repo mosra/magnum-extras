@@ -728,12 +728,15 @@ void TextLayerStyleAnimatorTest::createRemoveHandleRecycle() {
         active,
         factors,
         remove,
-        dynamicStyleUniforms,
+        Containers::arrayView(dynamicStyleUniforms)
+            .prefix(data.cursorStyle || data.selectionStyle ? 3 : 1),
         Containers::MutableBitArrayView{dynamicStyleCursorStyles, 0, 1},
         Containers::MutableBitArrayView{dynamicStyleSelectionStyles, 0, 1},
         dynamicStylePaddings,
-        dynamicEditingStyleUniforms,
-        dynamicEditingStylePaddings,
+        data.cursorStyle || data.selectionStyle ?
+            Containers::arrayView(dynamicEditingStyleUniforms) : nullptr,
+        data.cursorStyle || data.selectionStyle ?
+            Containers::arrayView(dynamicEditingStylePaddings) : nullptr,
         dataStyles);
     CORRADE_COMPARE(animator.dynamicStyle(first), 0);
     /* Verify the AnimatorDataHandle overload correctly detecting a valid style
@@ -2386,10 +2389,14 @@ void TextLayerStyleAnimatorTest::advanceInvalid() {
         void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
         void doSetEditingStyle(const TextLayerCommonEditingStyleUniform&, Containers::ArrayView<const TextLayerEditingStyleUniform>) override {}
     } shared{cache, TextLayer::Shared::Configuration{2}
-        .setDynamicStyleCount(1)
+        .setDynamicStyleCount(2)
+    }, sharedEditing{cache, TextLayer::Shared::Configuration{2}
+        .setEditingStyleCount(1)
+        .setDynamicStyleCount(2)
     };
 
     FontHandle fontHandle = shared.addFont(font, 1.0f);
+    FontHandle fontHandleEditing = sharedEditing.addFont(font, 1.0f);
 
     shared.setStyle(
         TextLayerCommonStyleUniform{},
@@ -2397,18 +2404,36 @@ void TextLayerStyleAnimatorTest::advanceInvalid() {
         {fontHandle, fontHandle},
         {Text::Alignment{}, Text::Alignment{}},
         {}, {}, {}, {}, {}, {});
+    sharedEditing.setStyle(
+        TextLayerCommonStyleUniform{},
+        {TextLayerStyleUniform{}, TextLayerStyleUniform{}},
+        {fontHandleEditing, fontHandleEditing},
+        {Text::Alignment{}, Text::Alignment{}},
+        {}, {}, {}, {}, {}, {});
+    sharedEditing.setEditingStyle(
+        TextLayerCommonEditingStyleUniform{},
+        {TextLayerEditingStyleUniform{}},
+        {}, {{}});
 
     struct Layer: TextLayer {
         explicit Layer(LayerHandle handle, Shared& shared): TextLayer{handle, shared} {}
-    } layer{layerHandle(0, 1), shared};
+    } layer{layerHandle(0, 1), shared},
+      layerEditing{layerHandle(0, 1), sharedEditing};
 
     TextLayerStyleAnimator animator{animatorHandle(0, 1)};
+    TextLayerStyleAnimator animatorEditing{animatorHandle(0, 1)};
     layer.assignAnimator(animator);
+    layerEditing.assignAnimator(animatorEditing);
 
     DataHandle data = layer.createGlyph(0, 0, {});
     animator.create(0, 1, Animation::Easing::linear, 0_nsec, 1_nsec, data);
     animator.create(0, 1, Animation::Easing::linear, 0_nsec, 1_nsec, data);
     animator.create(0, 1, Animation::Easing::linear, 0_nsec, 1_nsec, data);
+
+    DataHandle dataEditing = layerEditing.createGlyph(0, 0, {});
+    animatorEditing.create(0, 1, Animation::Easing::linear, 0_nsec, 1_nsec, dataEditing);
+    animatorEditing.create(0, 1, Animation::Easing::linear, 0_nsec, 1_nsec, dataEditing);
+    animatorEditing.create(0, 1, Animation::Easing::linear, 0_nsec, 1_nsec, dataEditing);
 
     Containers::BitArray mask{NoInit, 3};
     Containers::BitArray maskInvalid{NoInit, 4};
@@ -2472,65 +2497,99 @@ void TextLayerStyleAnimatorTest::advanceInvalid() {
         Containers::MutableBitArrayView{dynamicStyleSelectionStyles, 0, 2},
         dynamicStylePaddingsInvalid,
         {}, {}, {});
-    /* Editing case */
+    /* Non-editing getting editing styles passed by accident */
     animator.advance(mask, factors, mask,
+        dynamicStyleUniforms,
+        Containers::MutableBitArrayView{dynamicStyleCursorStyles, 0, 2},
+        Containers::MutableBitArrayView{dynamicStyleSelectionStyles, 0, 2},
+        dynamicStylePaddings,
+        {},
+        dynamicEditingStylePaddings, {});
+    animator.advance(mask, factors, mask,
+        dynamicStyleUniforms,
+        Containers::MutableBitArrayView{dynamicStyleCursorStyles, 0, 2},
+        Containers::MutableBitArrayView{dynamicStyleSelectionStyles, 0, 2},
+        dynamicStylePaddings,
+        dynamicEditingStyleUniforms,
+        {}, {});
+    animator.advance(mask, factors, mask,
+        dynamicStyleUniforms,
+        Containers::MutableBitArrayView{dynamicStyleCursorStyles, 0, 2},
+        Containers::MutableBitArrayView{dynamicStyleSelectionStyles, 0, 2},
+        dynamicStylePaddings,
+        dynamicEditingStyleUniforms,
+        dynamicEditingStylePaddings, {});
+    /* Editing case */
+    animatorEditing.advance(mask, factors, mask,
         dynamicStyleUniformsEditingInvalid,
         Containers::MutableBitArrayView{dynamicStyleCursorStyles, 0, 2},
         Containers::MutableBitArrayView{dynamicStyleSelectionStyles, 0, 2},
         dynamicStylePaddings,
         dynamicEditingStyleUniforms,
         dynamicEditingStylePaddings, {});
-    animator.advance(mask, factors, mask,
+    animatorEditing.advance(mask, factors, mask,
         dynamicStyleUniformsEditing,
         Containers::MutableBitArrayView{dynamicStyleCursorStyles, 0, 3},
         Containers::MutableBitArrayView{dynamicStyleSelectionStyles, 0, 2},
         dynamicStylePaddings,
         dynamicEditingStyleUniforms,
         dynamicEditingStylePaddings, {});
-    animator.advance(mask, factors, mask,
+    animatorEditing.advance(mask, factors, mask,
         dynamicStyleUniformsEditing,
         Containers::MutableBitArrayView{dynamicStyleCursorStyles, 0, 2},
         Containers::MutableBitArrayView{dynamicStyleSelectionStyles, 0, 3},
         dynamicStylePaddings,
         dynamicEditingStyleUniforms,
         dynamicEditingStylePaddings, {});
-    animator.advance(mask, factors, mask,
+    animatorEditing.advance(mask, factors, mask,
         dynamicStyleUniformsEditing,
         Containers::MutableBitArrayView{dynamicStyleCursorStyles, 0, 2},
         Containers::MutableBitArrayView{dynamicStyleSelectionStyles, 0, 2},
         dynamicStylePaddingsInvalid,
         dynamicEditingStyleUniforms,
         dynamicEditingStylePaddings, {});
-    animator.advance(mask, factors, mask,
+    animatorEditing.advance(mask, factors, mask,
         dynamicStyleUniformsEditing,
         Containers::MutableBitArrayView{dynamicStyleCursorStyles, 0, 2},
         Containers::MutableBitArrayView{dynamicStyleSelectionStyles, 0, 2},
         dynamicStylePaddings,
         dynamicEditingStyleUniformsInvalid,
         dynamicEditingStylePaddings, {});
-    animator.advance(mask, factors, mask,
+    animatorEditing.advance(mask, factors, mask,
         dynamicStyleUniformsEditing,
         Containers::MutableBitArrayView{dynamicStyleCursorStyles, 0, 2},
         Containers::MutableBitArrayView{dynamicStyleSelectionStyles, 0, 2},
         dynamicStylePaddings,
         dynamicEditingStyleUniforms,
         dynamicEditingStylePaddingsInvalid, {});
+    /* Editing not getting editing styles passed by accident */
+    animatorEditing.advance(mask, factors, mask,
+        dynamicStyleUniformsEditing,
+        Containers::MutableBitArrayView{dynamicStyleCursorStyles, 0, 2},
+        Containers::MutableBitArrayView{dynamicStyleSelectionStyles, 0, 2},
+        dynamicStylePaddings,
+        {}, {}, {});
+
     CORRADE_COMPARE_AS(out,
         "Ui::TextLayerStyleAnimator::advance(): expected active, factors and remove views to have a size of 3 but got 3, 3 and 4\n"
         "Ui::TextLayerStyleAnimator::advance(): expected active, factors and remove views to have a size of 3 but got 3, 4 and 3\n"
         "Ui::TextLayerStyleAnimator::advance(): expected active, factors and remove views to have a size of 3 but got 4, 3 and 3\n"
 
-        "Ui::TextLayerStyleAnimator::advance(): expected dynamic style uniform, cursor style, selection style and padding views to have the same size but got 3, 2, 2 and 2\n"
-        "Ui::TextLayerStyleAnimator::advance(): expected dynamic style uniform, cursor style, selection style and padding views to have the same size but got 2, 3, 2 and 2\n"
-        "Ui::TextLayerStyleAnimator::advance(): expected dynamic style uniform, cursor style, selection style and padding views to have the same size but got 2, 2, 3 and 2\n"
-        "Ui::TextLayerStyleAnimator::advance(): expected dynamic style uniform, cursor style, selection style and padding views to have the same size but got 2, 2, 2 and 3\n"
+        "Ui::TextLayerStyleAnimator::advance(): expected dynamic style uniform, cursor style, selection style and padding views to have a size of 2, and the dynamic editing style uniform and paddings empty, but got 3, 2, 2, 2; 0 and 0\n"
+        "Ui::TextLayerStyleAnimator::advance(): expected dynamic style uniform, cursor style, selection style and padding views to have a size of 2, and the dynamic editing style uniform and paddings empty, but got 2, 3, 2, 2; 0 and 0\n"
+        "Ui::TextLayerStyleAnimator::advance(): expected dynamic style uniform, cursor style, selection style and padding views to have a size of 2, and the dynamic editing style uniform and paddings empty, but got 2, 2, 3, 2; 0 and 0\n"
+        "Ui::TextLayerStyleAnimator::advance(): expected dynamic style uniform, cursor style, selection style and padding views to have a size of 2, and the dynamic editing style uniform and paddings empty, but got 2, 2, 2, 3; 0 and 0\n"
+        "Ui::TextLayerStyleAnimator::advance(): expected dynamic style uniform, cursor style, selection style and padding views to have a size of 2, and the dynamic editing style uniform and paddings empty, but got 2, 2, 2, 2; 0 and 4\n"
+        "Ui::TextLayerStyleAnimator::advance(): expected dynamic style uniform, cursor style, selection style and padding views to have a size of 2, and the dynamic editing style uniform and paddings empty, but got 2, 2, 2, 2; 4 and 0\n"
+        "Ui::TextLayerStyleAnimator::advance(): expected dynamic style uniform, cursor style, selection style and padding views to have a size of 2, and the dynamic editing style uniform and paddings empty, but got 2, 2, 2, 2; 4 and 4\n"
 
-        "Ui::TextLayerStyleAnimator::advance(): expected dynamic style cursor style, selection style and padding views to have the same size, the dynamic style uniform view three times bigger, and the dynamic editing style uniform and padding views two times bigger, but got 2, 2, 2; 5; 4 and 4\n"
-        "Ui::TextLayerStyleAnimator::advance(): expected dynamic style cursor style, selection style and padding views to have the same size, the dynamic style uniform view three times bigger, and the dynamic editing style uniform and padding views two times bigger, but got 3, 2, 2; 6; 4 and 4\n"
-        "Ui::TextLayerStyleAnimator::advance(): expected dynamic style cursor style, selection style and padding views to have the same size, the dynamic style uniform view three times bigger, and the dynamic editing style uniform and padding views two times bigger, but got 2, 3, 2; 6; 4 and 4\n"
-        "Ui::TextLayerStyleAnimator::advance(): expected dynamic style cursor style, selection style and padding views to have the same size, the dynamic style uniform view three times bigger, and the dynamic editing style uniform and padding views two times bigger, but got 2, 2, 3; 6; 4 and 4\n"
-        "Ui::TextLayerStyleAnimator::advance(): expected dynamic style cursor style, selection style and padding views to have the same size, the dynamic style uniform view three times bigger, and the dynamic editing style uniform and padding views two times bigger, but got 2, 2, 2; 6; 3 and 4\n"
-        "Ui::TextLayerStyleAnimator::advance(): expected dynamic style cursor style, selection style and padding views to have the same size, the dynamic style uniform view three times bigger, and the dynamic editing style uniform and padding views two times bigger, but got 2, 2, 2; 6; 4 and 3\n",
+        "Ui::TextLayerStyleAnimator::advance(): expected dynamic style cursor style, selection style and padding views to have a size of 2, the dynamic style uniform view a size of 6, and the dynamic editing style uniform and padding views a size of 4, but got 2, 2, 2; 5; 4 and 4\n"
+        "Ui::TextLayerStyleAnimator::advance(): expected dynamic style cursor style, selection style and padding views to have a size of 2, the dynamic style uniform view a size of 6, and the dynamic editing style uniform and padding views a size of 4, but got 3, 2, 2; 6; 4 and 4\n"
+        "Ui::TextLayerStyleAnimator::advance(): expected dynamic style cursor style, selection style and padding views to have a size of 2, the dynamic style uniform view a size of 6, and the dynamic editing style uniform and padding views a size of 4, but got 2, 3, 2; 6; 4 and 4\n"
+        "Ui::TextLayerStyleAnimator::advance(): expected dynamic style cursor style, selection style and padding views to have a size of 2, the dynamic style uniform view a size of 6, and the dynamic editing style uniform and padding views a size of 4, but got 2, 2, 3; 6; 4 and 4\n"
+        "Ui::TextLayerStyleAnimator::advance(): expected dynamic style cursor style, selection style and padding views to have a size of 2, the dynamic style uniform view a size of 6, and the dynamic editing style uniform and padding views a size of 4, but got 2, 2, 2; 6; 3 and 4\n"
+        "Ui::TextLayerStyleAnimator::advance(): expected dynamic style cursor style, selection style and padding views to have a size of 2, the dynamic style uniform view a size of 6, and the dynamic editing style uniform and padding views a size of 4, but got 2, 2, 2; 6; 4 and 3\n"
+        "Ui::TextLayerStyleAnimator::advance(): expected dynamic style cursor style, selection style and padding views to have a size of 2, the dynamic style uniform view a size of 6, and the dynamic editing style uniform and padding views a size of 4, but got 2, 2, 2; 6; 0 and 0\n",
         TestSuite::Compare::String);
 }
 

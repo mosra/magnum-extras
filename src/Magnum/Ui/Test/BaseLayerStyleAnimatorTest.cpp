@@ -954,7 +954,7 @@ void BaseLayerStyleAnimatorTest::advanceProperties() {
 
         void doSetStyle(const BaseLayerCommonStyleUniform&, Containers::ArrayView<const BaseLayerStyleUniform>) override {}
     } shared{BaseLayer::Shared::Configuration{4, 3}
-        .setDynamicStyleCount(3)
+        .setDynamicStyleCount(1)
     };
 
     Float uniformColors[]{
@@ -1184,7 +1184,7 @@ void BaseLayerStyleAnimatorTest::advanceInvalid() {
 
         void doSetStyle(const BaseLayerCommonStyleUniform&, Containers::ArrayView<const BaseLayerStyleUniform>) override {}
     } shared{BaseLayer::Shared::Configuration{2}
-        .setDynamicStyleCount(1)
+        .setDynamicStyleCount(2)
     };
     shared.setStyle(BaseLayerCommonStyleUniform{},
         {BaseLayerStyleUniform{}, BaseLayerStyleUniform{}},
@@ -1207,6 +1207,7 @@ void BaseLayerStyleAnimatorTest::advanceInvalid() {
     Float factors[3];
     Float factorsInvalid[4];
     BaseLayerStyleUniform dynamicStyleUniforms[2];
+    BaseLayerStyleUniform dynamicStyleUniformsInvalid[3];
     Vector4 dynamicStylePaddings[2];
     Vector4 dynamicStylePaddingsInvalid[3];
 
@@ -1216,11 +1217,13 @@ void BaseLayerStyleAnimatorTest::advanceInvalid() {
     animator.advance(mask, factorsInvalid, mask, dynamicStyleUniforms, dynamicStylePaddings, {});
     animator.advance(maskInvalid, factors, mask, dynamicStyleUniforms, dynamicStylePaddings, {});
     animator.advance(mask, factors, mask, dynamicStyleUniforms, dynamicStylePaddingsInvalid, {});
+    animator.advance(mask, factors, mask, dynamicStyleUniformsInvalid, dynamicStylePaddings, {});
     CORRADE_COMPARE_AS(out,
         "Ui::BaseLayerStyleAnimator::advance(): expected active, factors and remove views to have a size of 3 but got 3, 3 and 4\n"
         "Ui::BaseLayerStyleAnimator::advance(): expected active, factors and remove views to have a size of 3 but got 3, 4 and 3\n"
         "Ui::BaseLayerStyleAnimator::advance(): expected active, factors and remove views to have a size of 3 but got 4, 3 and 3\n"
-        "Ui::BaseLayerStyleAnimator::advance(): expected dynamic style uniform and padding views to have the same size but got 2 and 3\n",
+        "Ui::BaseLayerStyleAnimator::advance(): expected dynamic style uniform and padding views to have a size of 2 but got 2 and 3\n"
+        "Ui::BaseLayerStyleAnimator::advance(): expected dynamic style uniform and padding views to have a size of 2 but got 3 and 2\n",
         TestSuite::Compare::String);
 }
 

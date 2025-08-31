@@ -626,18 +626,19 @@ class MAGNUM_UI_EXPORT TextLayerStyleAnimator: public AbstractVisualLayerStyleAn
          *
          * Expects that size of @p active,  @p factors and @p remove matches
          * @ref capacity(), it's assumed that their contents were filled by
-         * @ref update() before. Assuming the layer the animator is associated
-         * with doesn't contain editing styles, the @p dynamicStyleUniforms,
+         * @ref update() before. If the layer the animator is associated with
+         * doesn't contain editing styles, the @p dynamicStyleUniforms,
          * @p dynamicStyleCursorStyles, @p dynamicStyleSelectionStyles and
-         * @p dynamicStylePaddings, are expected to all have the same size and
-         * should be large enough to contain any valid dynamic style ID, the
+         * @p dynamicStylePaddings, are expected to have a size of
+         * @ref TextLayer::Shared::dynamicStyleCount() and the
          * @p dynamicEditingStyleUniforms and @p dynamicEditingStylePaddings
-         * views are then expected to be empty. Assuming the layer contains
-         * editing styles, the @p dynamicStyleUniforms is expected to be three
-         * times as large as the others, and the @p dynamicEditingStyleUniforms
-         * and @p dynamicEditingStylePaddings views twice as large as the
-         * others instead. The @p dataStyles view should be large enough to
-         * contain any valid layer data ID.
+         * views are expected to be empty. If the layer contains editing
+         * styles, the @p dynamicStyleUniforms is expected to be three times as
+         * large as @ref TextLayer::Shared::dynamicStyleCount(), and the
+         * @p dynamicEditingStyleUniforms and @p dynamicEditingStylePaddings
+         * views twice as large as @ref TextLayer::Shared::dynamicStyleCount()
+         * instead. The @p dataStyles view should be large enough to contain
+         * any valid layer data ID.
          */
         TextLayerStyleAnimatorUpdates advance(Containers::BitArrayView active, const Containers::StridedArrayView1D<const Float>& factors, Containers::BitArrayView remove, Containers::ArrayView<TextLayerStyleUniform> dynamicStyleUniforms, Containers::MutableBitArrayView dynamicStyleCursorStyles, Containers::MutableBitArrayView dynamicStyleSelectionStyles, const Containers::StridedArrayView1D<Vector4>& dynamicStylePaddings, Containers::ArrayView<TextLayerEditingStyleUniform> dynamicEditingStyleUniforms, const Containers::StridedArrayView1D<Vector4>& dynamicEditingStylePaddings, const Containers::StridedArrayView1D<UnsignedInt>& dataStyles);
 
