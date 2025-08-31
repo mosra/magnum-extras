@@ -37,6 +37,7 @@
 #include <Magnum/Animation/Easing.h>
 #include <Magnum/Math/Time.h>
 
+#include "Magnum/Ui/AbstractUserInterface.h" /* for uiAdvance() */
 #include "Magnum/Ui/BaseLayer.h"
 #include "Magnum/Ui/BaseLayerAnimator.h"
 #include "Magnum/Ui/Handle.h"
@@ -74,6 +75,7 @@ struct BaseLayerStyleAnimatorTest: TestSuite::Tester {
     void advanceInvalid();
 
     void layerAdvance();
+    void uiAdvance();
 };
 
 using namespace Math::Literals;
@@ -140,6 +142,8 @@ BaseLayerStyleAnimatorTest::BaseLayerStyleAnimatorTest() {
 
     addInstancedTests({&BaseLayerStyleAnimatorTest::layerAdvance},
         Containers::arraySize(LayerAdvanceData));
+
+    addTests({&BaseLayerStyleAnimatorTest::uiAdvance});
 }
 
 void BaseLayerStyleAnimatorTest::debugAnimatorUpdate() {
@@ -1319,6 +1323,62 @@ void BaseLayerStyleAnimatorTest::layerAdvance() {
     CORRADE_COMPARE(layer.style(data2), 1);
     CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
     CORRADE_VERIFY(!layer.stateData().dynamicStyleChanged);
+}
+
+void BaseLayerStyleAnimatorTest::uiAdvance() {
+    /* Verifies that removing a data with an animation attached properly cleans
+       the attached dynamic style (if there's any) in
+       AbstractVisualLayerStyleAnimator::doClean() */
+
+    struct LayerShared: BaseLayer::Shared {
+        explicit LayerShared(const Configuration& configuration): BaseLayer::Shared{configuration} {}
+
+        void doSetStyle(const BaseLayerCommonStyleUniform&, Containers::ArrayView<const BaseLayerStyleUniform>) override {}
+    } shared{BaseLayer::Shared::Configuration{3}
+        .setDynamicStyleCount(1)
+    };
+    shared.setStyle(
+        BaseLayerCommonStyleUniform{},
+        {BaseLayerStyleUniform{}
+            .setColor(Color4{0.25f}),
+         BaseLayerStyleUniform{}
+            .setColor(Color4{0.75f}),
+         BaseLayerStyleUniform{}},
+         {});
+
+    struct Layer: BaseLayer {
+        explicit Layer(LayerHandle handle, Shared& shared): BaseLayer{handle, shared} {}
+    };
+
+    AbstractUserInterface ui{{100, 100}};
+
+    BaseLayer& layer = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer(), shared));
+
+    Containers::Pointer<BaseLayerStyleAnimator> animatorInstance{InPlaceInit, ui.createAnimator()};
+    layer.assignAnimator(*animatorInstance);
+    BaseLayerStyleAnimator& animator = ui.setStyleAnimatorInstance(Utility::move(animatorInstance));
+
+    DataHandle data = layer.create(2);
+
+    /* Creating animations doesn't allocate dynamic styles just yet, only
+       advance() does */
+    AnimationHandle withoutDynamicStyle = animator.create(0, 1, Animation::Easing::linear, 10_nsec, 10_nsec, data);
+    AnimationHandle withDynamicStyle = animator.create(1, 0, Animation::Easing::linear, 0_nsec, 10_nsec, data);
+    CORRADE_COMPARE(layer.dynamicStyleUsedCount(), 0);
+    CORRADE_COMPARE(animator.usedCount(), 2);
+
+    ui.advanceAnimations(5_nsec);
+    CORRADE_COMPARE(layer.dynamicStyleUsedCount(), 1);
+    CORRADE_COMPARE(animator.usedCount(), 2);
+    CORRADE_COMPARE(animator.dynamicStyle(withoutDynamicStyle), Containers::NullOpt);
+    CORRADE_COMPARE(animator.dynamicStyle(withDynamicStyle), 0);
+
+    /* Removing data and then advancing again calls appropriate clean() to
+       recycle the used dynamic style */
+    layer.remove(data);
+    ui.advanceAnimations(6_nsec);
+    CORRADE_COMPARE(layer.dynamicStyleUsedCount(), 0);
+    CORRADE_COMPARE(animator.usedCount(), 0);
 }
 
 }}}}

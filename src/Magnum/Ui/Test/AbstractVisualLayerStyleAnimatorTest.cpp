@@ -26,6 +26,7 @@
 
 #include <Corrade/Containers/BitArrayView.h>
 #include <Corrade/Containers/Optional.h>
+#include <Corrade/Containers/StaticArray.h>
 #include <Corrade/Containers/String.h>
 #include <Corrade/TestSuite/Tester.h>
 #include <Corrade/TestSuite/Compare/String.h>
@@ -319,12 +320,11 @@ void AbstractVisualLayerStyleAnimatorTest::clean() {
             AnimationHandle handle = AbstractVisualLayerStyleAnimator::create(start, duration, data);
             /* Have to satisfy the requirement of the view having the same size
                as capacity */
-            _state->dynamicStyles = Containers::stridedArrayView(_dynamicStyles).broadcasted<0>(capacity());
+            _state->dynamicStyles = Containers::stridedArrayView(dynamicStyles).prefix(capacity());
             return handle;
         }
 
-        private:
-            UnsignedInt _dynamicStyles[1]{~UnsignedInt{}};
+        Containers::StaticArray<4, UnsignedInt> dynamicStyles{DirectInit, ~UnsignedInt{}};
     } animator{animatorHandle(0, 1)};
     layer.assignAnimator(animator);
 
@@ -333,18 +333,41 @@ void AbstractVisualLayerStyleAnimatorTest::clean() {
     AnimationHandle first = animator.create(12_nsec, 13_nsec, DataHandle::Null);
     AnimationHandle second = animator.create(12_nsec, 13_nsec, DataHandle::Null);
     AnimationHandle third = animator.create(12_nsec, 13_nsec, DataHandle::Null);
-    CORRADE_COMPARE(animator.usedCount(), 3);
+    AnimationHandle fourth = animator.create(12_nsec, 13_nsec, DataHandle::Null);
+    CORRADE_COMPARE(animator.usedCount(), 4);
     CORRADE_COMPARE(layer.dynamicStyleUsedCount(), 0);
 
-    /* So cleaning them shouldn't try to recycle them either. Cleaning
-       animations with allocated dynamic styles is tested in advance(). */
-    UnsignedByte animationIdsToRemove[]{0x05}; /* 0b101 */
-    animator.clean(Containers::BitArrayView{animationIdsToRemove, 0, 3});
-    CORRADE_COMPARE(animator.usedCount(), 1);
+    /* So cleaning them shouldn't try to recycle them either */
+    UnsignedByte animationIdsToRemove[]{0x05}; /* 0b0101 */
+    animator.clean(Containers::BitArrayView{animationIdsToRemove, 0, 4});
+    CORRADE_COMPARE(animator.usedCount(), 2);
     CORRADE_COMPARE(layer.dynamicStyleUsedCount(), 0);
     CORRADE_VERIFY(!animator.isHandleValid(first));
     CORRADE_VERIFY(animator.isHandleValid(second));
     CORRADE_VERIFY(!animator.isHandleValid(third));
+    CORRADE_VERIFY(animator.isHandleValid(fourth));
+
+    /* Fake-allocate dynamic styles. Real dynamic styles allocation and
+       recycling is tested in BaseLayerStyleAnimatorTest::uiAdvance() and other
+       subclasses, removeInternal() in particular cannot be tested here because
+       it's not an exported symbol.
+
+       Passing the animation handle to allocateDynamicStyle() isn't strictly
+       needed here but doing that just to be as close to the real use as
+       possible. */
+    animator.dynamicStyles[1] = *layer.allocateDynamicStyle(second);
+    CORRADE_COMPARE(layer.dynamicStyleUsedCount(), 1);
+    CORRADE_COMPARE(animator.dynamicStyle(second), 0);
+
+    /* Cleaning the animations will now recycle as well */
+    UnsignedByte animationIdsToRemove2[]{0x02}; /* 0b0010 */
+    animator.clean(Containers::BitArrayView{animationIdsToRemove2, 0, 4});
+    CORRADE_COMPARE(animator.usedCount(), 1);
+    CORRADE_COMPARE(layer.dynamicStyleUsedCount(), 0);
+    CORRADE_VERIFY(!animator.isHandleValid(first));
+    CORRADE_VERIFY(!animator.isHandleValid(second));
+    CORRADE_VERIFY(!animator.isHandleValid(third));
+    CORRADE_VERIFY(animator.isHandleValid(fourth));
 }
 
 void AbstractVisualLayerStyleAnimatorTest::cleanEmpty() {

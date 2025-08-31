@@ -43,6 +43,7 @@
 #include <Magnum/Text/Alignment.h>
 #include <Magnum/Text/Feature.h>
 
+#include "Magnum/Ui/AbstractUserInterface.h" /* for uiAdvance() */
 #include "Magnum/Ui/Handle.h"
 #include "Magnum/Ui/TextLayer.h"
 #include "Magnum/Ui/TextLayerAnimator.h"
@@ -81,6 +82,7 @@ struct TextLayerStyleAnimatorTest: TestSuite::Tester {
     void advanceInvalid();
 
     void layerAdvance();
+    void uiAdvance();
 };
 
 using namespace Math::Literals;
@@ -272,6 +274,8 @@ TextLayerStyleAnimatorTest::TextLayerStyleAnimatorTest() {
 
     addInstancedTests({&TextLayerStyleAnimatorTest::layerAdvance},
         Containers::arraySize(LayerAdvanceData));
+
+    addTests({&TextLayerStyleAnimatorTest::uiAdvance});
 }
 
 void TextLayerStyleAnimatorTest::debugAnimatorUpdate() {
@@ -2688,6 +2692,89 @@ void TextLayerStyleAnimatorTest::layerAdvance() {
     CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
     CORRADE_VERIFY(!layer.stateData().dynamicStyleChanged);
     CORRADE_VERIFY(!layer.stateData().dynamicEditingStyleChanged);
+}
+
+void TextLayerStyleAnimatorTest::uiAdvance() {
+    /* Verifies that removing a data with an animation attached properly cleans
+       the attached dynamic style (if there's any) in
+       AbstractVisualLayerStyleAnimator::doClean() */
+
+    struct: Text::AbstractFont {
+        Text::FontFeatures doFeatures() const override { return {}; }
+        bool doIsOpened() const override { return true; }
+        void doClose() override {}
+
+        void doGlyphIdsInto(const Containers::StridedArrayView1D<const char32_t>&, const Containers::StridedArrayView1D<UnsignedInt>&) override {}
+        Vector2 doGlyphSize(UnsignedInt) override { return {}; }
+        Vector2 doGlyphAdvance(UnsignedInt) override { return {}; }
+        Containers::Pointer<Text::AbstractShaper> doCreateShaper() override { return Containers::pointer<EmptyShaper>(*this); }
+    } font;
+
+    struct: Text::AbstractGlyphCache {
+        using Text::AbstractGlyphCache::AbstractGlyphCache;
+
+        Text::GlyphCacheFeatures doFeatures() const override { return {}; }
+        void doSetImage(const Vector2i&, const ImageView2D&) override {}
+    } cache{PixelFormat::R8Unorm, {32, 32, 2}};
+    cache.addFont(67, &font);
+
+    struct LayerShared: TextLayer::Shared {
+        explicit LayerShared(Text::AbstractGlyphCache& glyphCache, const Configuration& configuration): TextLayer::Shared{glyphCache, configuration} {}
+
+        void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
+        void doSetEditingStyle(const TextLayerCommonEditingStyleUniform&, Containers::ArrayView<const TextLayerEditingStyleUniform>) override {}
+    } shared{cache, TextLayer::Shared::Configuration{3}
+        .setDynamicStyleCount(1)
+    };
+
+    FontHandle fontHandle = shared.addFont(font, 1.0f);
+
+    shared.setStyle(
+        TextLayerCommonStyleUniform{},
+        {TextLayerStyleUniform{}
+            .setColor(Color4{0.75f}),
+         TextLayerStyleUniform{},
+         TextLayerStyleUniform{}
+            .setColor(Color4{0.25f})},
+        {fontHandle, fontHandle, fontHandle},
+        {Text::Alignment::MiddleCenter,
+         Text::Alignment::MiddleCenter,
+         Text::Alignment::MiddleCenter},
+        {}, {}, {}, {}, {}, {});
+
+    struct Layer: TextLayer {
+        explicit Layer(LayerHandle handle, Shared& shared): TextLayer{handle, shared} {}
+    };
+
+    AbstractUserInterface ui{{100, 100}};
+
+    TextLayer& layer = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer(), shared));
+
+    Containers::Pointer<TextLayerStyleAnimator> animatorInstance{InPlaceInit, ui.createAnimator()};
+    layer.assignAnimator(*animatorInstance);
+    TextLayerStyleAnimator& animator = ui.setStyleAnimatorInstance(Utility::move(animatorInstance));
+
+    DataHandle data = layer.create(2, "", {});
+
+    /* Creating animations doesn't allocate dynamic styles just yet, only
+       advance() does */
+    AnimationHandle withoutDynamicStyle = animator.create(0, 1, Animation::Easing::linear, 10_nsec, 10_nsec, data);
+    AnimationHandle withDynamicStyle = animator.create(1, 0, Animation::Easing::linear, 0_nsec, 10_nsec, data);
+    CORRADE_COMPARE(layer.dynamicStyleUsedCount(), 0);
+    CORRADE_COMPARE(animator.usedCount(), 2);
+
+    ui.advanceAnimations(5_nsec);
+    CORRADE_COMPARE(layer.dynamicStyleUsedCount(), 1);
+    CORRADE_COMPARE(animator.usedCount(), 2);
+    CORRADE_COMPARE(animator.dynamicStyle(withoutDynamicStyle), Containers::NullOpt);
+    CORRADE_COMPARE(animator.dynamicStyle(withDynamicStyle), 0);
+
+    /* Removing data and then advancing again calls appropriate clean() to
+       recycle the used dynamic style */
+    layer.remove(data);
+    ui.advanceAnimations(6_nsec);
+    CORRADE_COMPARE(layer.dynamicStyleUsedCount(), 0);
+    CORRADE_COMPARE(animator.usedCount(), 0);
 }
 
 }}}}
