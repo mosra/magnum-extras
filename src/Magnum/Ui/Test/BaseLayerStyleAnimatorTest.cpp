@@ -88,6 +88,14 @@ Debug& operator<<(Debug& debug, Enum value) {
 
 const struct {
     const char* name;
+    bool samePaddingAfter;
+} CreateRemoveHandleRecycleData[]{
+    {"", false},
+    {"same paddings in recycled", true},
+};
+
+const struct {
+    const char* name;
     UnsignedInt uniform;
     Vector4 padding;
     BaseLayerStyleAnimatorUpdates expected;
@@ -126,9 +134,12 @@ BaseLayerStyleAnimatorTest::BaseLayerStyleAnimatorTest() {
               &BaseLayerStyleAnimatorTest::setDefaultStyleAnimator,
 
               &BaseLayerStyleAnimatorTest::createRemove<UnsignedInt>,
-              &BaseLayerStyleAnimatorTest::createRemove<Enum>,
-              &BaseLayerStyleAnimatorTest::createRemoveHandleRecycle,
-              &BaseLayerStyleAnimatorTest::createInvalid,
+              &BaseLayerStyleAnimatorTest::createRemove<Enum>});
+
+    addInstancedTests({&BaseLayerStyleAnimatorTest::createRemoveHandleRecycle},
+        Containers::arraySize(CreateRemoveHandleRecycleData));
+
+    addTests({&BaseLayerStyleAnimatorTest::createInvalid,
               &BaseLayerStyleAnimatorTest::propertiesInvalid,
 
               &BaseLayerStyleAnimatorTest::advance});
@@ -240,23 +251,6 @@ template<class T> void BaseLayerStyleAnimatorTest::createRemove() {
         .setDynamicStyleCount(1)
     };
 
-    /* Have more uniforms that are sparsely indexed into to verify the data get
-       correctly fetched */
-    shared.setStyle(BaseLayerCommonStyleUniform{},
-        {BaseLayerStyleUniform{},               /* 0 */
-         BaseLayerStyleUniform{}                /* 1 */
-            .setColor(0xff3366_rgbf),
-         BaseLayerStyleUniform{}                /* 2 */
-            .setOutlineWidth(Vector4{4.0f}),
-         BaseLayerStyleUniform{},               /* 3 */
-         BaseLayerStyleUniform{}                /* 4 */
-            .setColor(0x9933ff_rgbf)
-            .setOutlineWidth(Vector4{2.0f})},
-        {4, 1, 2},
-        {Vector4{1.0f},
-         {2.0f, 3.0f, 4.0f, 5.0f},
-         {}});
-
     struct Layer: BaseLayer {
         explicit Layer(LayerHandle handle, Shared& shared): BaseLayer{handle, shared} {}
     } layer{layerHandle(0, 1), shared};
@@ -282,12 +276,6 @@ template<class T> void BaseLayerStyleAnimatorTest::createRemove() {
        for T == UnsignedInt */
     CORRADE_COMPARE(animator.template styles<Enum>(first), Containers::pair(Enum(0), Enum(1)));
     CORRADE_COMPARE(animator.dynamicStyle(first), Containers::NullOpt);
-    /* Styles 0 and 1 are uniforms 4 and 1 */
-    CORRADE_COMPARE(animator.uniforms(first).first().topColor, 0x9933ff_rgbf);
-    CORRADE_COMPARE(animator.uniforms(first).second().topColor, 0xff3366_rgbf);
-    CORRADE_COMPARE(animator.uniforms(first).first().outlineWidth, Vector4{2.0f});
-    CORRADE_COMPARE(animator.uniforms(first).second().outlineWidth, Vector4{0.0f});
-    CORRADE_COMPARE(animator.paddings(first), Containers::pair(Vector4{1.0f}, Vector4{2.0f, 3.0f, 4.0f, 5.0f}));
     CORRADE_COMPARE(animator.easing(first), Animation::Easing::linear);
     /* Dynamic style is only allocated and switched to during advance() */
     CORRADE_COMPARE(layer.dynamicStyleUsedCount(), 0);
@@ -306,12 +294,6 @@ template<class T> void BaseLayerStyleAnimatorTest::createRemove() {
        for T == UnsignedInt */
     CORRADE_COMPARE(animator.template styles<Enum>(second), Containers::pair(Enum(2), Enum(0)));
     CORRADE_COMPARE(animator.dynamicStyle(second), Containers::NullOpt);
-    /* Styles 2 and 0 are uniforms 2 and 4 */
-    CORRADE_COMPARE(animator.uniforms(second).first().topColor, 0xffffff_rgbf);
-    CORRADE_COMPARE(animator.uniforms(second).second().topColor, 0x9933ff_rgbf);
-    CORRADE_COMPARE(animator.uniforms(second).first().outlineWidth, Vector4{4.0f});
-    CORRADE_COMPARE(animator.uniforms(second).second().outlineWidth, Vector4{2.0f});
-    CORRADE_COMPARE(animator.paddings(second), Containers::pair(Vector4{0.0f}, Vector4{1.0f}));
     CORRADE_COMPARE(animator.easing(second), Animation::Easing::cubicIn);
     CORRADE_COMPARE(layer.dynamicStyleUsedCount(), 0);
 
@@ -327,12 +309,6 @@ template<class T> void BaseLayerStyleAnimatorTest::createRemove() {
        for T == UnsignedInt */
     CORRADE_COMPARE(animator.template styles<Enum>(animationHandleData(third)), Containers::pair(Enum(1), Enum(2)));
     CORRADE_COMPARE(animator.dynamicStyle(animationHandleData(third)), Containers::NullOpt);
-    /* Styles 1 and 2 are uniforms 1 and 2 */
-    CORRADE_COMPARE(animator.uniforms(animationHandleData(third)).first().topColor, 0xff3366_rgbf);
-    CORRADE_COMPARE(animator.uniforms(animationHandleData(third)).second().topColor, 0xffffff_rgbf);
-    CORRADE_COMPARE(animator.uniforms(animationHandleData(third)).first().outlineWidth, Vector4{0.0f});
-    CORRADE_COMPARE(animator.uniforms(animationHandleData(third)).second().outlineWidth, Vector4{4.0f});
-    CORRADE_COMPARE(animator.paddings(animationHandleData(third)), Containers::pair(Vector4{2.0f, 3.0f, 4.0f, 5.0f}, Vector4{0.0f}));
     CORRADE_COMPARE(animator.easing(animationHandleData(third)), Animation::Easing::bounceInOut);
     CORRADE_COMPARE(layer.dynamicStyleUsedCount(), 0);
     CORRADE_COMPARE(layer.style(data3), 0);
@@ -349,12 +325,6 @@ template<class T> void BaseLayerStyleAnimatorTest::createRemove() {
        for T == UnsignedInt */
     CORRADE_COMPARE(animator.template styles<Enum>(fourth), Containers::pair(Enum(0), Enum(2)));
     CORRADE_COMPARE(animator.dynamicStyle(fourth), Containers::NullOpt);
-    /* Styles 0 and 2 are uniforms 4 and 2 */
-    CORRADE_COMPARE(animator.uniforms(fourth).first().topColor, 0x9933ff_rgbf);
-    CORRADE_COMPARE(animator.uniforms(fourth).second().topColor, 0xffffff_rgbf);
-    CORRADE_COMPARE(animator.uniforms(fourth).first().outlineWidth, Vector4{2.0f});
-    CORRADE_COMPARE(animator.uniforms(fourth).second().outlineWidth, Vector4{4.0f});
-    CORRADE_COMPARE(animator.paddings(fourth), Containers::pair(Vector4{1.0f}, Vector4{0.0f}));
     CORRADE_COMPARE(animator.easing(fourth), Animation::Easing::smoothstep);
     CORRADE_COMPARE(layer.dynamicStyleUsedCount(), 0);
     CORRADE_COMPARE(layer.style(data1), 1);
@@ -380,21 +350,16 @@ template<class T> void BaseLayerStyleAnimatorTest::createRemove() {
 }
 
 void BaseLayerStyleAnimatorTest::createRemoveHandleRecycle() {
+    auto&& data = CreateRemoveHandleRecycleData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
     struct LayerShared: BaseLayer::Shared {
         explicit LayerShared(const Configuration& configuration): BaseLayer::Shared{configuration} {}
 
         void doSetStyle(const BaseLayerCommonStyleUniform&, Containers::ArrayView<const BaseLayerStyleUniform>) override {}
-    } shared{BaseLayer::Shared::Configuration{2}
+    } shared{BaseLayer::Shared::Configuration{4}
         .setDynamicStyleCount(1)
     };
-
-    shared.setStyle(BaseLayerCommonStyleUniform{},
-        {BaseLayerStyleUniform{}
-            .setColor(0xff3366_rgbf),
-         BaseLayerStyleUniform{}
-            .setColor(0x9933ff_rgbf)},
-        {Vector4{1.0f},
-         Vector4{2.0f}});
 
     struct Layer: BaseLayer {
         explicit Layer(LayerHandle handle, Shared& shared): BaseLayer{handle, shared} {}
@@ -403,30 +368,48 @@ void BaseLayerStyleAnimatorTest::createRemoveHandleRecycle() {
     BaseLayerStyleAnimator animator{animatorHandle(0, 1)};
     layer.assignAnimator(animator);
 
-    DataHandle data = layer.create(1);
+    DataHandle layerData = layer.create(1);
 
     /* Allocate an animation */
-    AnimationHandle first = animator.create(0, 1, Animation::Easing::linear, 0_nsec, 13_nsec, data);
+    AnimationHandle first = animator.create(0, 1, Animation::Easing::linear, 0_nsec, 13_nsec, layerData);
     CORRADE_COMPARE(animator.styles(first), Containers::pair(0u, 1u));
     CORRADE_COMPARE(animator.dynamicStyle(first), Containers::NullOpt);
-    CORRADE_COMPARE(animator.uniforms(first).first().topColor, 0xff3366_rgbf);
-    CORRADE_COMPARE(animator.uniforms(first).second().topColor, 0x9933ff_rgbf);
-    CORRADE_COMPARE(animator.paddings(first), Containers::pair(Vector4{1.0f}, Vector4{2.0f}));
     CORRADE_COMPARE(animator.easing(first), Animation::Easing::linear);
     CORRADE_COMPARE(layer.dynamicStyleUsedCount(), 0);
 
-    /* Let it advance to allocate the dynamic style */
+    /* Set the style after animation creation to verify it isn't needed
+       earlier */
+    shared.setStyle(BaseLayerCommonStyleUniform{},
+        {BaseLayerStyleUniform{}
+            .setColor(0xff3366_rgbf),
+         BaseLayerStyleUniform{}
+            .setColor(0x9933ff_rgbf),
+         BaseLayerStyleUniform{}
+            .setColor(0x663399_rgbf),
+         BaseLayerStyleUniform{}
+            .setColor(0x996633_rgbf)},
+        {Vector4{1.0f},
+         Vector4{2.0f},
+         Vector4{3.0f},
+         Vector4{data.samePaddingAfter ? 3.0f : 4.0f}});
+
+    /* Let it advance to allocate the dynamic style and copy over style data */
     Containers::BitArray active{DirectInit, 1, true};
-    Float factors[]{0.0f};
+    Float factors[]{0.5f};
+    Containers::BitArray started{DirectInit, 1, true};
     Containers::BitArray stopped{DirectInit, 1, false};
     BaseLayerStyleUniform dynamicStyleUniforms[1];
     Vector4 dynamicStylePaddings[1];
     UnsignedInt dataStyles[1];
-    animator.advance(
-        active,
-        stopped,
-        factors,
-        dynamicStyleUniforms, dynamicStylePaddings, dataStyles);
+    CORRADE_COMPARE(animator.advance(
+            active,
+            started,
+            stopped,
+            factors,
+            dynamicStyleUniforms, dynamicStylePaddings, dataStyles),
+        BaseLayerStyleAnimatorUpdate::Uniform|
+        BaseLayerStyleAnimatorUpdate::Padding|
+        BaseLayerStyleAnimatorUpdate::Style);
     CORRADE_COMPARE(animator.dynamicStyle(first), 0);
     /* Verify the AnimatorDataHandle overload correctly detecting a valid style
        also */
@@ -441,15 +424,27 @@ void BaseLayerStyleAnimatorTest::createRemoveHandleRecycle() {
        everything including the dynamic style index. What's handled by
        AbstractAnimator is tested well enough in
        AbstractAnimatorTest::createRemoveHandleRecycle(). */
-    AnimationHandle first2 = animator.create(1, 0, Animation::Easing::bounceInOut, -10_nsec, 100_nsec, data);
+    AnimationHandle first2 = animator.create(2, 3, Animation::Easing::bounceInOut, -10_nsec, 100_nsec, layerData);
     CORRADE_COMPARE(animationHandleId(first2), animationHandleId(first));
-    CORRADE_COMPARE(animator.styles(first2), Containers::pair(1u, 0u));
+    CORRADE_COMPARE(animator.styles(first2), Containers::pair(2u, 3u));
     CORRADE_COMPARE(animator.dynamicStyle(first2), Containers::NullOpt);
-    CORRADE_COMPARE(animator.uniforms(first2).first().topColor, 0x9933ff_rgbf);
-    CORRADE_COMPARE(animator.uniforms(first2).second().topColor, 0xff3366_rgbf);
-    CORRADE_COMPARE(animator.paddings(first2), Containers::pair(Vector4{2.0f}, Vector4{1.0f}));
     CORRADE_COMPARE(animator.easing(first2), Animation::Easing::bounceInOut);
     CORRADE_COMPARE(layer.dynamicStyleUsedCount(), 0);
+
+    /* The recycled animation shouldn't inherit any info about uniform or
+       padding style animations. The padding is however checked against the
+       current value, so update it to the expected new (constant) value
+       first. */
+    dynamicStylePaddings[0] = Vector4{3.0f};
+    CORRADE_COMPARE(animator.advance(
+            active,
+            started,
+            stopped,
+            factors,
+            dynamicStyleUniforms, dynamicStylePaddings, dataStyles),
+        BaseLayerStyleAnimatorUpdate::Uniform|
+        (data.samePaddingAfter ? BaseLayerStyleAnimatorUpdates{} : BaseLayerStyleAnimatorUpdate::Padding)|
+        BaseLayerStyleAnimatorUpdate::Style);
 }
 
 void BaseLayerStyleAnimatorTest::createInvalid() {
@@ -459,26 +454,14 @@ void BaseLayerStyleAnimatorTest::createInvalid() {
         explicit LayerShared(const Configuration& configuration): BaseLayer::Shared{configuration} {}
 
         void doSetStyle(const BaseLayerCommonStyleUniform&, Containers::ArrayView<const BaseLayerStyleUniform>) override {}
-    } sharedNoStyleSet{BaseLayer::Shared::Configuration{5}
-        .setDynamicStyleCount(1)},
-      shared{BaseLayer::Shared::Configuration{1, 5}
+    } shared{BaseLayer::Shared::Configuration{1, 5}
         .setDynamicStyleCount(1)};
-
-    shared.setStyle(
-        BaseLayerCommonStyleUniform{},
-        {BaseLayerStyleUniform{}},
-        {0, 0, 0, 0, 0},
-        {});
 
     struct Layer: BaseLayer {
         explicit Layer(LayerHandle handle, Shared& shared): BaseLayer{handle, shared} {}
-    } layerNoStyleSet{layerHandle(0, 1), sharedNoStyleSet},
-      layer{layerHandle(0, 1), shared};
+    } layer{layerHandle(0, 1), shared};
 
     BaseLayerStyleAnimator animatorNoLayerSet{animatorHandle(0, 1)};
-
-    BaseLayerStyleAnimator animatorNoLayerStyleSet{animatorHandle(0, 1)};
-    layerNoStyleSet.assignAnimator(animatorNoLayerStyleSet);
 
     BaseLayerStyleAnimator animator{animatorHandle(0, 1)};
     layer.assignAnimator(animator);
@@ -491,7 +474,6 @@ void BaseLayerStyleAnimatorTest::createInvalid() {
     animatorNoLayerSet.create(0, 1, Animation::Easing::linear, 12_nsec, 13_nsec, DataHandle::Null, AnimationFlags{});
     animatorNoLayerSet.create(0, 1, Animation::Easing::linear, 12_nsec, 13_nsec, LayerDataHandle::Null, 1, AnimationFlags{});
     animatorNoLayerSet.create(0, 1, Animation::Easing::linear, 12_nsec, 13_nsec, LayerDataHandle::Null, AnimationFlags{});
-    animatorNoLayerStyleSet.create(0, 1, Animation::Easing::linear, 12_nsec, 13_nsec, DataHandle::Null);
     animator.create(0, 5, Animation::Easing::linear, 12_nsec, 13_nsec, DataHandle::Null);
     animator.create(5, 0, Animation::Easing::linear, 12_nsec, 13_nsec, DataHandle::Null);
     animator.create(0, 1, nullptr, 12_nsec, 13_nsec, DataHandle::Null);
@@ -502,7 +484,6 @@ void BaseLayerStyleAnimatorTest::createInvalid() {
         "Ui::BaseLayerStyleAnimator::create(): no layer set\n"
         "Ui::BaseLayerStyleAnimator::create(): no layer set\n"
         "Ui::BaseLayerStyleAnimator::create(): no layer set\n"
-        "Ui::BaseLayerStyleAnimator::create(): no style data was set on the layer\n"
         "Ui::BaseLayerStyleAnimator::create(): expected source and target style to be in range for 5 styles but got 0 and 5\n"
         "Ui::BaseLayerStyleAnimator::create(): expected source and target style to be in range for 5 styles but got 5 and 0\n"
         "Ui::BaseLayerStyleAnimator::create(): easing is null\n",
@@ -519,10 +500,6 @@ void BaseLayerStyleAnimatorTest::propertiesInvalid() {
     } shared{BaseLayer::Shared::Configuration{2}
         .setDynamicStyleCount(1)
     };
-    shared.setStyle(
-        BaseLayerCommonStyleUniform{},
-        {BaseLayerStyleUniform{}, BaseLayerStyleUniform{}},
-        {});
 
     struct Layer: BaseLayer {
         explicit Layer(LayerHandle handle, Shared& shared): BaseLayer{handle, shared} {}
@@ -535,36 +512,20 @@ void BaseLayerStyleAnimatorTest::propertiesInvalid() {
 
     Containers::String out;
     Error redirectError{&out};
-    animator.uniforms(AnimationHandle::Null);
-    animator.paddings(AnimationHandle::Null);
     animator.easing(AnimationHandle::Null);
     /* Valid animator, invalid data */
-    animator.uniforms(animationHandle(animator.handle(), AnimatorDataHandle(0x123abcde)));
-    animator.paddings(animationHandle(animator.handle(), AnimatorDataHandle(0x123abcde)));
     animator.easing(animationHandle(animator.handle(), AnimatorDataHandle(0x123abcde)));
     /* Invalid animator, valid data */
-    animator.uniforms(animationHandle(AnimatorHandle::Null, animationHandleData(handle)));
-    animator.paddings(animationHandle(AnimatorHandle::Null, animationHandleData(handle)));
     animator.easing(animationHandle(AnimatorHandle::Null, animationHandleData(handle)));
     /* AnimatorDataHandle directly */
-    animator.uniforms(AnimatorDataHandle(0x123abcde));
-    animator.paddings(AnimatorDataHandle(0x123abcde));
     animator.easing(AnimatorDataHandle(0x123abcde));
     CORRADE_COMPARE_AS(out,
-        "Ui::BaseLayerStyleAnimator::uniforms(): invalid handle Ui::AnimationHandle::Null\n"
-        "Ui::BaseLayerStyleAnimator::paddings(): invalid handle Ui::AnimationHandle::Null\n"
         "Ui::BaseLayerStyleAnimator::easing(): invalid handle Ui::AnimationHandle::Null\n"
 
-        "Ui::BaseLayerStyleAnimator::uniforms(): invalid handle Ui::AnimationHandle({0x0, 0x1}, {0xabcde, 0x123})\n"
-        "Ui::BaseLayerStyleAnimator::paddings(): invalid handle Ui::AnimationHandle({0x0, 0x1}, {0xabcde, 0x123})\n"
         "Ui::BaseLayerStyleAnimator::easing(): invalid handle Ui::AnimationHandle({0x0, 0x1}, {0xabcde, 0x123})\n"
 
-        "Ui::BaseLayerStyleAnimator::uniforms(): invalid handle Ui::AnimationHandle(Null, {0x0, 0x1})\n"
-        "Ui::BaseLayerStyleAnimator::paddings(): invalid handle Ui::AnimationHandle(Null, {0x0, 0x1})\n"
         "Ui::BaseLayerStyleAnimator::easing(): invalid handle Ui::AnimationHandle(Null, {0x0, 0x1})\n"
 
-        "Ui::BaseLayerStyleAnimator::uniforms(): invalid handle Ui::AnimatorDataHandle(0xabcde, 0x123)\n"
-        "Ui::BaseLayerStyleAnimator::paddings(): invalid handle Ui::AnimatorDataHandle(0xabcde, 0x123)\n"
         "Ui::BaseLayerStyleAnimator::easing(): invalid handle Ui::AnimatorDataHandle(0xabcde, 0x123)\n",
         TestSuite::Compare::String);
 }
@@ -577,37 +538,6 @@ void BaseLayerStyleAnimatorTest::advance() {
     } shared{BaseLayer::Shared::Configuration{4, 7}
         .setDynamicStyleCount(2)
     };
-    shared.setStyle(
-        BaseLayerCommonStyleUniform{},
-        /* Assuming the lerp works component-wise, just set them to mutually
-           exclusive ranges to verify that correct values get interpolated */
-        {BaseLayerStyleUniform{}    /* 0, used by style 6. All zeros. */
-            .setColor(Color4{0.0f})
-            .setOutlineColor(Color4{0.0f}),
-         BaseLayerStyleUniform{}    /* 1, used by style 3 */
-            .setColor(Color4{0.0f}, Color4{1.0f})
-            .setOutlineColor(Color4{4.0f})
-            .setOutlineWidth(Vector4{32.0f})
-            .setCornerRadius(Vector4{8.0f})
-            .setInnerOutlineCornerRadius(Vector4{16.0f}),
-         BaseLayerStyleUniform{}    /* 2, used by style 1 */
-            .setColor(Color4{2.0f}, Color4{0.5f})
-            .setOutlineColor(Color4{8.0f})
-            .setOutlineWidth(Vector4{16.0f})
-            .setCornerRadius(Vector4{12.0f})
-            .setInnerOutlineCornerRadius(Vector4{24.0f}),
-         BaseLayerStyleUniform{}},  /* 3, not used for animation */
-        {3, 2, 3, 1, 3, 3, 0},
-        /* Paddings should not change between style 1 and 3 and should between
-           style 3 and 6 */
-        {{},                /* 0, not used for animation */
-         Vector4{2.0f},     /* 1 */
-         {},                /* 2, not used for animation */
-         Vector4{2.0f},     /* 3 */
-         {},                /* 4, not used for animation */
-         {},                /* 5, not used for animation */
-         Vector4{4.0f}}     /* 6 */
-    );
 
     struct Layer: BaseLayer {
         explicit Layer(LayerHandle handle, Shared& shared): BaseLayer{handle, shared} {}
@@ -649,6 +579,40 @@ void BaseLayerStyleAnimatorTest::advance() {
     CORRADE_COMPARE(layer.style(data4), 5);
     CORRADE_COMPARE(layer.dynamicStyleUsedCount(), 0);
 
+    /* Set the style after animation creation to verify it isn't needed
+       earlier */
+    shared.setStyle(
+        BaseLayerCommonStyleUniform{},
+        /* Assuming the lerp works component-wise, just set them to mutually
+           exclusive ranges to verify that correct values get interpolated */
+        {BaseLayerStyleUniform{}    /* 0, used by style 6. All zeros. */
+            .setColor(Color4{0.0f})
+            .setOutlineColor(Color4{0.0f}),
+         BaseLayerStyleUniform{}    /* 1, used by style 3 */
+            .setColor(Color4{0.0f}, Color4{1.0f})
+            .setOutlineColor(Color4{4.0f})
+            .setOutlineWidth(Vector4{32.0f})
+            .setCornerRadius(Vector4{8.0f})
+            .setInnerOutlineCornerRadius(Vector4{16.0f}),
+         BaseLayerStyleUniform{}    /* 2, used by style 1 */
+            .setColor(Color4{2.0f}, Color4{0.5f})
+            .setOutlineColor(Color4{8.0f})
+            .setOutlineWidth(Vector4{16.0f})
+            .setCornerRadius(Vector4{12.0f})
+            .setInnerOutlineCornerRadius(Vector4{24.0f}),
+         BaseLayerStyleUniform{}},  /* 3, not used for animation */
+        {3, 2, 3, 1, 3, 3, 0},
+        /* Paddings should not change between style 1 and 3 and should between
+           style 3 and 6 */
+        {{},                /* 0, not used for animation */
+         Vector4{2.0f},     /* 1 */
+         {},                /* 2, not used for animation */
+         Vector4{2.0f},     /* 3 */
+         {},                /* 4, not used for animation */
+         {},                /* 5, not used for animation */
+         Vector4{4.0f}}     /* 6 */
+    );
+
     /* Does what layer's advanceAnimations() is doing internally for all
        animators (as we need to test also the interaction with animation being
        removed, etc.), but with an ability to peek into the filled data to
@@ -668,7 +632,7 @@ void BaseLayerStyleAnimatorTest::advance() {
         Containers::Pair<bool, bool> needsAdvanceClean = animator.update(time, active, started, stopped, factors, remove);
         BaseLayerStyleAnimatorUpdates updates;
         if(needsAdvanceClean.first())
-            updates = animator.advance(active, stopped, factors, dynamicStyleUniforms, dynamicStylePaddings, dataStyles);
+            updates = animator.advance(active, started, stopped, factors, dynamicStyleUniforms, dynamicStylePaddings, dataStyles);
         if(needsAdvanceClean.second())
             animator.clean(remove);
         return updates;
@@ -941,6 +905,20 @@ void BaseLayerStyleAnimatorTest::advanceProperties() {
         .setDynamicStyleCount(1)
     };
 
+    struct Layer: BaseLayer {
+        explicit Layer(LayerHandle handle, Shared& shared): BaseLayer{handle, shared} {}
+    } layer{layerHandle(0, 1), shared};
+
+    /* Assign data to a style that isn't used for animation */
+    DataHandle layerData = layer.create(1);
+
+    BaseLayerStyleAnimator animator{animatorHandle(0, 1)};
+    layer.assignAnimator(animator);
+
+    AnimationHandle animation = animator.create(2, 0, Animation::Easing::linear, 0_nsec, 20_nsec, layerData);
+
+    /* Set the style after animation creation to verify it isn't needed
+       earlier */
     Float uniformColors[]{
         4.0f, 2.0f, 0.0f, 2.0f
     };
@@ -958,18 +936,6 @@ void BaseLayerStyleAnimatorTest::advanceProperties() {
         {data.padding,
          Vector4{4.0f},
          Vector4{2.0f}});
-
-    struct Layer: BaseLayer {
-        explicit Layer(LayerHandle handle, Shared& shared): BaseLayer{handle, shared} {}
-    } layer{layerHandle(0, 1), shared};
-
-    /* Assign data to a style that isn't used for animation */
-    DataHandle layerData = layer.create(1);
-
-    BaseLayerStyleAnimator animator{animatorHandle(0, 1)};
-    layer.assignAnimator(animator);
-
-    AnimationHandle animation = animator.create(2, 0, Animation::Easing::linear, 0_nsec, 20_nsec, layerData);
 
     /* Does what layer's advanceAnimations() is doing internally for all
        animators (as we need to test also the interaction with animation being
@@ -991,7 +957,7 @@ void BaseLayerStyleAnimatorTest::advanceProperties() {
         BaseLayerStyleAnimatorUpdates updates;
         if(needsAdvanceClean.first()) {
             updates = animator.advance(
-                active, stopped, factors, dynamicStyleUniforms,
+                active, started, stopped, factors, dynamicStyleUniforms,
                 dynamicStylePaddings, dataStyles);
         }
         if(needsAdvanceClean.second())
@@ -1050,14 +1016,6 @@ void BaseLayerStyleAnimatorTest::advanceNoFreeDynamicStyles() {
     } shared{BaseLayer::Shared::Configuration{3}
         .setDynamicStyleCount(1)
     };
-    shared.setStyle(
-        BaseLayerCommonStyleUniform{},
-        {BaseLayerStyleUniform{}
-            .setColor(Color4{0.25f}),
-         BaseLayerStyleUniform{}
-            .setColor(Color4{0.75f}),
-         BaseLayerStyleUniform{}},
-        {});
 
     struct Layer: BaseLayer {
         explicit Layer(LayerHandle handle, Shared& shared): BaseLayer{handle, shared} {}
@@ -1071,6 +1029,17 @@ void BaseLayerStyleAnimatorTest::advanceNoFreeDynamicStyles() {
 
     AnimationHandle first = animator.create(0, 1, Animation::Easing::linear, 0_nsec, 20_nsec, data2);
     AnimationHandle second = animator.create(1, 0, Animation::Easing::linear, 10_nsec, 40_nsec, data1);
+
+    /* Set the style after animation creation to verify it isn't needed
+       earlier */
+    shared.setStyle(
+        BaseLayerCommonStyleUniform{},
+        {BaseLayerStyleUniform{}
+            .setColor(Color4{0.25f}),
+         BaseLayerStyleUniform{}
+            .setColor(Color4{0.75f}),
+         BaseLayerStyleUniform{}},
+        {});
 
     /* Does what layer's advanceAnimations() is doing internally for all
        animators (as we need to test also the interaction with animation being
@@ -1092,7 +1061,7 @@ void BaseLayerStyleAnimatorTest::advanceNoFreeDynamicStyles() {
         BaseLayerStyleAnimatorUpdates updates;
         if(needsAdvanceClean.first()) {
             Vector4 paddings[1];
-            updates = animator.advance(active, stopped, factors, dynamicStyleUniforms, paddings, dataStyles);
+            updates = animator.advance(active, started, stopped, factors, dynamicStyleUniforms, paddings, dataStyles);
         } if(needsAdvanceClean.second())
             animator.clean(remove);
         return updates;
@@ -1143,7 +1112,7 @@ void BaseLayerStyleAnimatorTest::advanceNoFreeDynamicStyles() {
 void BaseLayerStyleAnimatorTest::advanceEmpty() {
     /* This should work even with no layer being set */
     BaseLayerStyleAnimator animator{animatorHandle(0, 1)};
-    animator.advance({}, {}, {}, {}, {}, {});
+    animator.advance({}, {}, {}, {}, {}, {}, {});
 
     CORRADE_VERIFY(true);
 }
@@ -1158,9 +1127,6 @@ void BaseLayerStyleAnimatorTest::advanceInvalid() {
     } shared{BaseLayer::Shared::Configuration{2}
         .setDynamicStyleCount(2)
     };
-    shared.setStyle(BaseLayerCommonStyleUniform{},
-        {BaseLayerStyleUniform{}, BaseLayerStyleUniform{}},
-        {});
 
     struct Layer: BaseLayer {
         explicit Layer(LayerHandle handle, Shared& shared): BaseLayer{handle, shared} {}
@@ -1185,17 +1151,22 @@ void BaseLayerStyleAnimatorTest::advanceInvalid() {
 
     Containers::String out;
     Error redirectError{&out};
-    animator.advance(mask, mask, factorsInvalid, dynamicStyleUniforms, dynamicStylePaddings, {});
-    animator.advance(mask, maskInvalid, factors, dynamicStyleUniforms, dynamicStylePaddings, {});
-    animator.advance(maskInvalid, mask, factors, dynamicStyleUniforms, dynamicStylePaddings, {});
-    animator.advance(mask, mask, factors, dynamicStyleUniforms, dynamicStylePaddingsInvalid, {});
-    animator.advance(mask, mask, factors, dynamicStyleUniformsInvalid, dynamicStylePaddings, {});
+    animator.advance(mask, mask, mask, factorsInvalid, dynamicStyleUniforms, dynamicStylePaddings, {});
+    animator.advance(mask, mask, maskInvalid, factors, dynamicStyleUniforms, dynamicStylePaddings, {});
+    animator.advance(mask, maskInvalid, mask, factors, dynamicStyleUniforms, dynamicStylePaddings, {});
+    animator.advance(maskInvalid, mask, mask, factors, dynamicStyleUniforms, dynamicStylePaddings, {});
+    animator.advance(mask, mask, mask, factors, dynamicStyleUniforms, dynamicStylePaddingsInvalid, {});
+    animator.advance(mask, mask, mask, factors, dynamicStyleUniformsInvalid, dynamicStylePaddings, {});
+    /* All views correct but the layer doesn't have styles set */
+    animator.advance(mask, mask, mask, factors, dynamicStyleUniforms, dynamicStylePaddings, {});
     CORRADE_COMPARE_AS(out,
-        "Ui::BaseLayerStyleAnimator::advance(): expected active, stopped and factors views to have a size of 3 but got 3, 3 and 4\n"
-        "Ui::BaseLayerStyleAnimator::advance(): expected active, stopped and factors views to have a size of 3 but got 3, 4 and 3\n"
-        "Ui::BaseLayerStyleAnimator::advance(): expected active, stopped and factors views to have a size of 3 but got 4, 3 and 3\n"
+        "Ui::BaseLayerStyleAnimator::advance(): expected active, started, stopped and factors views to have a size of 3 but got 3, 3, 3 and 4\n"
+        "Ui::BaseLayerStyleAnimator::advance(): expected active, started, stopped and factors views to have a size of 3 but got 3, 3, 4 and 3\n"
+        "Ui::BaseLayerStyleAnimator::advance(): expected active, started, stopped and factors views to have a size of 3 but got 3, 4, 3 and 3\n"
+        "Ui::BaseLayerStyleAnimator::advance(): expected active, started, stopped and factors views to have a size of 3 but got 4, 3, 3 and 3\n"
         "Ui::BaseLayerStyleAnimator::advance(): expected dynamic style uniform and padding views to have a size of 2 but got 2 and 3\n"
-        "Ui::BaseLayerStyleAnimator::advance(): expected dynamic style uniform and padding views to have a size of 2 but got 3 and 2\n",
+        "Ui::BaseLayerStyleAnimator::advance(): expected dynamic style uniform and padding views to have a size of 2 but got 3 and 2\n"
+        "Ui::BaseLayerStyleAnimator::advance(): no style data was set on the layer\n",
         TestSuite::Compare::String);
 }
 
@@ -1210,15 +1181,6 @@ void BaseLayerStyleAnimatorTest::layerAdvance() {
     } shared{BaseLayer::Shared::Configuration{3}
         .setDynamicStyleCount(1)
     };
-    shared.setStyle(
-        BaseLayerCommonStyleUniform{},
-        {BaseLayerStyleUniform{}
-            .setColor(Color4{0.25f}),
-         BaseLayerStyleUniform{}
-            .setColor(Color4{0.75f}),
-         BaseLayerStyleUniform{}},
-        {{}, Vector4{data.padding}, {}});
-
     struct Layer: BaseLayer {
         explicit Layer(LayerHandle handle, Shared& shared): BaseLayer{handle, shared} {}
 
@@ -1243,6 +1205,17 @@ void BaseLayerStyleAnimatorTest::layerAdvance() {
 
     animator1.create(0, 1, Animation::Easing::linear, 0_nsec, 20_nsec, data2, AnimationFlag::KeepOncePlayed);
     animator2.create(1, 0, Animation::Easing::linear, 13_nsec, 1_nsec, data1);
+
+    /* Set the style after animation creation to verify it isn't needed
+       earlier */
+    shared.setStyle(
+        BaseLayerCommonStyleUniform{},
+        {BaseLayerStyleUniform{}
+            .setColor(Color4{0.25f}),
+         BaseLayerStyleUniform{}
+            .setColor(Color4{0.75f}),
+         BaseLayerStyleUniform{}},
+        {{}, Vector4{data.padding}, {}});
 
     /* The storage can be bigger than needed, the layer should slice it for
        each animator */
@@ -1311,15 +1284,6 @@ void BaseLayerStyleAnimatorTest::uiAdvance() {
     } shared{BaseLayer::Shared::Configuration{3}
         .setDynamicStyleCount(1)
     };
-    shared.setStyle(
-        BaseLayerCommonStyleUniform{},
-        {BaseLayerStyleUniform{}
-            .setColor(Color4{0.25f}),
-         BaseLayerStyleUniform{}
-            .setColor(Color4{0.75f}),
-         BaseLayerStyleUniform{}},
-         {});
-
     struct Layer: BaseLayer {
         explicit Layer(LayerHandle handle, Shared& shared): BaseLayer{handle, shared} {}
     };
@@ -1340,6 +1304,17 @@ void BaseLayerStyleAnimatorTest::uiAdvance() {
     AnimationHandle withDynamicStyle = animator.create(1, 0, Animation::Easing::linear, 0_nsec, 10_nsec, data);
     CORRADE_COMPARE(layer.dynamicStyleUsedCount(), 0);
     CORRADE_COMPARE(animator.usedCount(), 2);
+
+    /* Set the style after animation creation to verify it isn't needed
+       earlier */
+    shared.setStyle(
+        BaseLayerCommonStyleUniform{},
+        {BaseLayerStyleUniform{}
+            .setColor(Color4{0.25f}),
+         BaseLayerStyleUniform{}
+            .setColor(Color4{0.75f}),
+         BaseLayerStyleUniform{}},
+         {});
 
     ui.advanceAnimations(5_nsec);
     CORRADE_COMPARE(layer.dynamicStyleUsedCount(), 1);

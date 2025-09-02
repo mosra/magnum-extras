@@ -159,12 +159,6 @@ void TextLayerStyleAnimator::createInternal(const AnimationHandle handle, const 
     /* Layer being set had to be checked in create() already */
     CORRADE_INTERNAL_ASSERT(state.layerSharedState);
     const TextLayer::Shared::State& layerSharedState = static_cast<const TextLayer::Shared::State&>(*state.layerSharedState);
-    CORRADE_ASSERT(layerSharedState.setStyleCalled,
-        "Ui::TextLayerStyleAnimator::create(): no style data was set on the layer", );
-    /* Like in TextLayer::doUpdate(), technically needed only if there's any
-       actual editable style to animate, but require it always for consistency */
-    CORRADE_ASSERT(!layerSharedState.hasEditingStyles || layerSharedState.setEditingStyleCalled,
-        "Ui::TextLayerStyleAnimator::create(): no editing style data was set on the layer", );
     CORRADE_ASSERT(
         sourceStyle < layerSharedState.styleCount &&
         targetStyle < layerSharedState.styleCount,
@@ -184,67 +178,6 @@ void TextLayerStyleAnimator::createInternal(const AnimationHandle handle, const 
     animation.targetStyle = targetStyle;
     animation.dynamicStyle = ~UnsignedInt{};
     animation.easing = easing;
-
-    const Implementation::TextLayerStyle& sourceStyleData = layerSharedState.styles[sourceStyle];
-    const Implementation::TextLayerStyle& targetStyleData = layerSharedState.styles[targetStyle];
-    animation.sourcePadding = sourceStyleData.padding;
-    animation.targetPadding = targetStyleData.padding;
-
-    /* Remember also if the actual uniform ID is different, if not, we don't
-       need to interpolate (or upload) it. The uniform *data* may still be the
-       same even if the ID is different, but checking for that is too much work
-       and any reasonable style should deduplicate those anyway. */
-    animation.sourceUniform = layerSharedState.styleUniforms[sourceStyleData.uniform];
-    animation.targetUniform = layerSharedState.styleUniforms[targetStyleData.uniform];
-    animation.uniformDifferent = sourceStyleData.uniform != targetStyleData.uniform;
-
-    /* Animate also cursor style, if present */
-    if(sourceStyleData.cursorStyle != -1 || targetStyleData.cursorStyle != -1) {
-        CORRADE_ASSERT(sourceStyleData.cursorStyle != -1 && targetStyleData.cursorStyle != -1,
-            "Ui::TextLayerStyleAnimator::create(): expected style" << targetStyle << (targetStyleData.cursorStyle == -1 ? "to" : "to not") << "reference a cursor style like style" << sourceStyle, );
-
-        const Implementation::TextLayerEditingStyle& sourceEditingStyleData = layerSharedState.editingStyles[sourceStyleData.cursorStyle];
-        const Implementation::TextLayerEditingStyle& targetEditingStyleData = layerSharedState.editingStyles[targetStyleData.cursorStyle];
-        animation.sourceCursorPadding = sourceEditingStyleData.padding;
-        animation.targetCursorPadding = targetEditingStyleData.padding;
-
-        /* Like with the base, remember if the actual uniform ID is different
-           to skip the interpolation */
-        animation.sourceCursorUniform = layerSharedState.editingStyleUniforms[sourceEditingStyleData.uniform];
-        animation.targetCursorUniform = layerSharedState.editingStyleUniforms[targetEditingStyleData.uniform];
-        animation.cursorUniformDifferent = sourceEditingStyleData.uniform != targetEditingStyleData.uniform;
-
-        animation.hasCursorStyle = true;
-    } else animation.hasCursorStyle = false;
-
-    /* Animate also selection style, if present */
-    if(sourceStyleData.selectionStyle != -1 || targetStyleData.selectionStyle != -1) {
-        CORRADE_ASSERT(sourceStyleData.selectionStyle != -1 && targetStyleData.selectionStyle != -1,
-            "Ui::TextLayerStyleAnimator::create(): expected style" << targetStyle << (targetStyleData.selectionStyle == -1 ? "to" : "to not") << "reference a selection style like style" << sourceStyle, );
-
-        const Implementation::TextLayerEditingStyle& sourceEditingStyleData = layerSharedState.editingStyles[sourceStyleData.selectionStyle];
-        const Implementation::TextLayerEditingStyle& targetEditingStyleData = layerSharedState.editingStyles[targetStyleData.selectionStyle];
-        animation.sourceSelectionPadding = sourceEditingStyleData.padding;
-        animation.targetSelectionPadding = targetEditingStyleData.padding;
-
-        /* Like with the base, remember if the actual uniform ID is different
-           to skip the interpolation. OR that with the difference from the
-           cursor, as both lead to upload of the same uniform buffer. */
-        animation.sourceSelectionUniform = layerSharedState.editingStyleUniforms[sourceEditingStyleData.uniform];
-        animation.targetSelectionUniform = layerSharedState.editingStyleUniforms[targetEditingStyleData.uniform];
-        animation.selectionUniformDifferent = sourceEditingStyleData.uniform != targetEditingStyleData.uniform;
-
-        /* Finally, if the selection style references an override for the text
-           uniform, save that too, and again remember if it's different, ORing
-           with the base style uniform difference. */
-        const UnsignedInt sourceTextUniform = sourceEditingStyleData.textUniform != -1 ? sourceEditingStyleData.textUniform : sourceStyleData.uniform;
-        const UnsignedInt targetTextUniform = targetEditingStyleData.textUniform != -1 ? targetEditingStyleData.textUniform : targetStyleData.uniform;
-        animation.sourceSelectionTextUniform = layerSharedState.styleUniforms[sourceTextUniform];
-        animation.targetSelectionTextUniform = layerSharedState.styleUniforms[targetTextUniform];
-        animation.selectionTextUniformDifferent = sourceTextUniform != targetTextUniform;
-
-        animation.hasSelectionStyle = true;
-    } else animation.hasSelectionStyle = false;
 }
 
 void TextLayerStyleAnimator::remove(const AnimationHandle handle) {
@@ -255,129 +188,6 @@ void TextLayerStyleAnimator::remove(const AnimationHandle handle) {
 void TextLayerStyleAnimator::remove(const AnimatorDataHandle handle) {
     AbstractAnimator::remove(handle);
     removeInternal(animatorDataHandleId(handle));
-}
-
-Containers::Pair<TextLayerStyleUniform, TextLayerStyleUniform> TextLayerStyleAnimator::uniforms(const AnimationHandle handle) const {
-    CORRADE_ASSERT(isHandleValid(handle),
-        "Ui::TextLayerStyleAnimator::uniforms(): invalid handle" << handle, {});
-    const Animation& animation = static_cast<const State&>(*_state).animations[animationHandleId(handle)];
-    return {animation.sourceUniform, animation.targetUniform};
-}
-
-Containers::Pair<TextLayerStyleUniform, TextLayerStyleUniform> TextLayerStyleAnimator::uniforms(const AnimatorDataHandle handle) const {
-    CORRADE_ASSERT(isHandleValid(handle),
-        "Ui::TextLayerStyleAnimator::uniforms(): invalid handle" << handle, {});
-    const Animation& animation = static_cast<const State&>(*_state).animations[animatorDataHandleId(handle)];
-    return {animation.sourceUniform, animation.targetUniform};
-}
-
-Containers::Pair<Vector4, Vector4> TextLayerStyleAnimator::paddings(const AnimationHandle handle) const {
-    CORRADE_ASSERT(isHandleValid(handle),
-        "Ui::TextLayerStyleAnimator::paddings(): invalid handle" << handle, {});
-    const Animation& animation = static_cast<const State&>(*_state).animations[animationHandleId(handle)];
-    return {animation.sourcePadding, animation.targetPadding};
-}
-
-Containers::Pair<Vector4, Vector4> TextLayerStyleAnimator::paddings(const AnimatorDataHandle handle) const {
-    CORRADE_ASSERT(isHandleValid(handle),
-        "Ui::TextLayerStyleAnimator::paddings(): invalid handle" << handle, {});
-    const Animation& animation = static_cast<const State&>(*_state).animations[animatorDataHandleId(handle)];
-    return {animation.sourcePadding, animation.targetPadding};
-}
-
-Containers::Optional<Containers::Pair<TextLayerEditingStyleUniform, TextLayerEditingStyleUniform>> TextLayerStyleAnimator::cursorUniforms(const AnimationHandle handle) const {
-    CORRADE_ASSERT(isHandleValid(handle),
-        "Ui::TextLayerStyleAnimator::cursorUniforms(): invalid handle" << handle, {});
-    return cursorUniformsInternal(animationHandleId(handle));
-}
-
-Containers::Optional<Containers::Pair<TextLayerEditingStyleUniform, TextLayerEditingStyleUniform>> TextLayerStyleAnimator::cursorUniforms(const AnimatorDataHandle handle) const {
-    CORRADE_ASSERT(isHandleValid(handle),
-        "Ui::TextLayerStyleAnimator::cursorUniforms(): invalid handle" << handle, {});
-    return cursorUniformsInternal(animatorDataHandleId(handle));
-}
-
-Containers::Optional<Containers::Pair<TextLayerEditingStyleUniform, TextLayerEditingStyleUniform>> TextLayerStyleAnimator::cursorUniformsInternal(const UnsignedInt id) const {
-    const Animation& animation = static_cast<const State&>(*_state).animations[id];
-    if(!animation.hasCursorStyle)
-        return {};
-    return Containers::pair(animation.sourceCursorUniform, animation.targetCursorUniform);
-}
-
-Containers::Optional<Containers::Pair<Vector4, Vector4>> TextLayerStyleAnimator::cursorPaddings(const AnimationHandle handle) const {
-    CORRADE_ASSERT(isHandleValid(handle),
-        "Ui::TextLayerStyleAnimator::cursorPaddings(): invalid handle" << handle, {});
-    return cursorPaddingsInternal(animationHandleId(handle));
-}
-
-Containers::Optional<Containers::Pair<Vector4, Vector4>> TextLayerStyleAnimator::cursorPaddings(const AnimatorDataHandle handle) const {
-    CORRADE_ASSERT(isHandleValid(handle),
-        "Ui::TextLayerStyleAnimator::cursorPaddings(): invalid handle" << handle, {});
-    return cursorPaddingsInternal(animatorDataHandleId(handle));
-}
-
-Containers::Optional<Containers::Pair<Vector4, Vector4>> TextLayerStyleAnimator::cursorPaddingsInternal(const UnsignedInt id) const {
-    const Animation& animation = static_cast<const State&>(*_state).animations[id];
-    if(!animation.hasCursorStyle)
-        return {};
-    return Containers::pair(animation.sourceCursorPadding, animation.targetCursorPadding);
-}
-
-Containers::Optional<Containers::Pair<TextLayerEditingStyleUniform, TextLayerEditingStyleUniform>> TextLayerStyleAnimator::selectionUniforms(const AnimationHandle handle) const {
-    CORRADE_ASSERT(isHandleValid(handle),
-        "Ui::TextLayerStyleAnimator::selectionUniforms(): invalid handle" << handle, {});
-    return selectionUniformsInternal(animationHandleId(handle));
-}
-
-Containers::Optional<Containers::Pair<TextLayerEditingStyleUniform, TextLayerEditingStyleUniform>> TextLayerStyleAnimator::selectionUniforms(const AnimatorDataHandle handle) const {
-    CORRADE_ASSERT(isHandleValid(handle),
-        "Ui::TextLayerStyleAnimator::selectionUniforms(): invalid handle" << handle, {});
-    return selectionUniformsInternal(animatorDataHandleId(handle));
-}
-
-Containers::Optional<Containers::Pair<TextLayerEditingStyleUniform, TextLayerEditingStyleUniform>> TextLayerStyleAnimator::selectionUniformsInternal(const UnsignedInt id) const {
-    const Animation& animation = static_cast<const State&>(*_state).animations[id];
-    if(!animation.hasSelectionStyle)
-        return {};
-    return Containers::pair(animation.sourceSelectionUniform, animation.targetSelectionUniform);
-}
-
-Containers::Optional<Containers::Pair<Vector4, Vector4>> TextLayerStyleAnimator::selectionPaddings(const AnimationHandle handle) const {
-    CORRADE_ASSERT(isHandleValid(handle),
-        "Ui::TextLayerStyleAnimator::selectionPaddings(): invalid handle" << handle, {});
-    return selectionPaddingsInternal(animationHandleId(handle));
-}
-
-Containers::Optional<Containers::Pair<Vector4, Vector4>> TextLayerStyleAnimator::selectionPaddings(const AnimatorDataHandle handle) const {
-    CORRADE_ASSERT(isHandleValid(handle),
-        "Ui::TextLayerStyleAnimator::selectionPaddings(): invalid handle" << handle, {});
-    return selectionPaddingsInternal(animatorDataHandleId(handle));
-}
-
-Containers::Optional<Containers::Pair<Vector4, Vector4>> TextLayerStyleAnimator::selectionPaddingsInternal(const UnsignedInt id) const {
-    const Animation& animation = static_cast<const State&>(*_state).animations[id];
-    if(!animation.hasSelectionStyle)
-        return {};
-    return Containers::pair(animation.sourceSelectionPadding, animation.targetSelectionPadding);
-}
-
-Containers::Optional<Containers::Pair<TextLayerStyleUniform, TextLayerStyleUniform>> TextLayerStyleAnimator::selectionTextUniforms(const AnimationHandle handle) const {
-    CORRADE_ASSERT(isHandleValid(handle),
-        "Ui::TextLayerStyleAnimator::selectionTextUniforms(): invalid handle" << handle, {});
-    return selectionTextUniformsInternal(animationHandleId(handle));
-}
-
-Containers::Optional<Containers::Pair<TextLayerStyleUniform, TextLayerStyleUniform>> TextLayerStyleAnimator::selectionTextUniforms(const AnimatorDataHandle handle) const {
-    CORRADE_ASSERT(isHandleValid(handle),
-        "Ui::TextLayerStyleAnimator::selectionTextUniforms(): invalid handle" << handle, {});
-    return selectionTextUniformsInternal(animatorDataHandleId(handle));
-}
-
-Containers::Optional<Containers::Pair<TextLayerStyleUniform, TextLayerStyleUniform>> TextLayerStyleAnimator::selectionTextUniformsInternal(const UnsignedInt id) const {
-    const Animation& animation = static_cast<const State&>(*_state).animations[id];
-    if(!animation.hasSelectionStyle)
-        return {};
-    return Containers::pair(animation.sourceSelectionTextUniform, animation.targetSelectionTextUniform);
 }
 
 auto TextLayerStyleAnimator::easing(const AnimationHandle handle) const -> Float(*)(Float) {
@@ -415,11 +225,12 @@ TextLayerEditingStyleUniform interpolateUniform(const TextLayerEditingStyleUnifo
 
 }
 
-TextLayerStyleAnimatorUpdates TextLayerStyleAnimator::advance(const Containers::BitArrayView active, const Containers::BitArrayView stopped, const Containers::StridedArrayView1D<const Float>& factors, const Containers::ArrayView<TextLayerStyleUniform> dynamicStyleUniforms, const Containers::MutableBitArrayView dynamicStyleCursorStyles, const Containers::MutableBitArrayView dynamicStyleSelectionStyles, const Containers::StridedArrayView1D<Vector4>& dynamicStylePaddings, const Containers::ArrayView<TextLayerEditingStyleUniform> dynamicEditingStyleUniforms, const Containers::StridedArrayView1D<Vector4>& dynamicEditingStylePaddings, const Containers::StridedArrayView1D<UnsignedInt>& dataStyles) {
+TextLayerStyleAnimatorUpdates TextLayerStyleAnimator::advance(const Containers::BitArrayView active, const Containers::BitArrayView started, const Containers::BitArrayView stopped, const Containers::StridedArrayView1D<const Float>& factors, const Containers::ArrayView<TextLayerStyleUniform> dynamicStyleUniforms, const Containers::MutableBitArrayView dynamicStyleCursorStyles, const Containers::MutableBitArrayView dynamicStyleSelectionStyles, const Containers::StridedArrayView1D<Vector4>& dynamicStylePaddings, const Containers::ArrayView<TextLayerEditingStyleUniform> dynamicEditingStyleUniforms, const Containers::StridedArrayView1D<Vector4>& dynamicEditingStylePaddings, const Containers::StridedArrayView1D<UnsignedInt>& dataStyles) {
     CORRADE_ASSERT(active.size() == capacity() &&
+                   started.size() == capacity() &&
                    stopped.size() == capacity() &&
                    factors.size() == capacity(),
-        "Ui::TextLayerStyleAnimator::advance(): expected active, stopped and factors views to have a size of" << capacity() << "but got" << active.size() << Debug::nospace << "," << stopped.size() << "and" << factors.size(), {});
+        "Ui::TextLayerStyleAnimator::advance(): expected active, started, stopped and factors views to have a size of" << capacity() << "but got" << active.size() << Debug::nospace << "," << started.size() << Debug::nospace << "," << stopped.size() << "and" << factors.size(), {});
 
     /* If there are any running animations, create() had to be called
        already, which ensures the layer is already set. Otherwise just bail as
@@ -456,6 +267,12 @@ TextLayerStyleAnimatorUpdates TextLayerStyleAnimator::advance(const Containers::
             "Ui::TextLayerStyleAnimator::advance(): expected dynamic style cursor style, selection style and padding views to have a size of" << layerSharedState.dynamicStyleCount << Debug::nospace << ", the dynamic style uniform view a size of" << layerSharedState.dynamicStyleCount*3 << Debug::nospace << ", and the dynamic editing style uniform and padding views a size of" << layerSharedState.dynamicStyleCount*2 << Debug::nospace << ", but got" << dynamicStyleCursorStyles.size() << Debug::nospace << "," << dynamicStyleSelectionStyles.size() << Debug::nospace << "," << dynamicStylePaddings.size() << Debug::nospace << ";" << dynamicStyleUniforms.size() << Debug::nospace << ";" << dynamicEditingStyleUniforms.size() << "and" << dynamicEditingStylePaddings.size(), {});
     }
     #endif
+    CORRADE_ASSERT(layerSharedState.setStyleCalled,
+        "Ui::TextLayerStyleAnimator::advance(): no style data was set on the layer", {});
+    /* Like in TextLayer::doUpdate(), technically needed only if there's any
+       actual editable style to animate, but require it always for consistency */
+    CORRADE_ASSERT(!layerSharedState.hasEditingStyles || layerSharedState.setEditingStyleCalled,
+        "Ui::TextLayerStyleAnimator::advance(): no editing style data was set on the layer", {});
 
     const Containers::StridedArrayView1D<const LayerDataHandle> layerData = this->layerData();
 
@@ -469,6 +286,74 @@ TextLayerStyleAnimatorUpdates TextLayerStyleAnimator::advance(const Containers::
         /* The handle is assumed to be valid if not null, i.e. that appropriate
            dataClean() got called before advance() */
         const LayerDataHandle data = layerData[i];
+
+        /* If the animation is started, fetch the style data. This is done here
+           and not in create() to make it possible to reuse created animations
+           even after a style is updated. */
+        if(started[i]) {
+            const Implementation::TextLayerStyle& sourceStyleData = layerSharedState.styles[animation.sourceStyle];
+            const Implementation::TextLayerStyle& targetStyleData = layerSharedState.styles[animation.targetStyle];
+            animation.sourcePadding = sourceStyleData.padding;
+            animation.targetPadding = targetStyleData.padding;
+
+            /* Remember also if the actual uniform ID is different, if not, we
+               don't need to interpolate (or upload) it. The uniform *data* may
+               still be the same even if the ID is different, but checking for
+               that is too much work and any reasonable style should
+               deduplicate those anyway. */
+            animation.sourceUniform = layerSharedState.styleUniforms[sourceStyleData.uniform];
+            animation.targetUniform = layerSharedState.styleUniforms[targetStyleData.uniform];
+            animation.uniformDifferent = sourceStyleData.uniform != targetStyleData.uniform;
+
+            /* Animate also cursor style, if present */
+            if(sourceStyleData.cursorStyle != -1 || targetStyleData.cursorStyle != -1) {
+                CORRADE_ASSERT(sourceStyleData.cursorStyle != -1 && targetStyleData.cursorStyle != -1,
+                    "Ui::TextLayerStyleAnimator::advance(): expected style" << animation.targetStyle << (targetStyleData.cursorStyle == -1 ? "to" : "to not") << "reference a cursor style like style" << animation.sourceStyle << "for" << animationHandle(handle(), i, generations()[i]), {});
+
+                const Implementation::TextLayerEditingStyle& sourceEditingStyleData = layerSharedState.editingStyles[sourceStyleData.cursorStyle];
+                const Implementation::TextLayerEditingStyle& targetEditingStyleData = layerSharedState.editingStyles[targetStyleData.cursorStyle];
+                animation.sourceCursorPadding = sourceEditingStyleData.padding;
+                animation.targetCursorPadding = targetEditingStyleData.padding;
+
+                /* Like with the base, remember if the actual uniform ID is
+                   different to skip the interpolation */
+                animation.sourceCursorUniform = layerSharedState.editingStyleUniforms[sourceEditingStyleData.uniform];
+                animation.targetCursorUniform = layerSharedState.editingStyleUniforms[targetEditingStyleData.uniform];
+                animation.cursorUniformDifferent = sourceEditingStyleData.uniform != targetEditingStyleData.uniform;
+
+                animation.hasCursorStyle = true;
+            } else animation.hasCursorStyle = false;
+
+            /* Animate also selection style, if present */
+            if(sourceStyleData.selectionStyle != -1 || targetStyleData.selectionStyle != -1) {
+                CORRADE_ASSERT(sourceStyleData.selectionStyle != -1 && targetStyleData.selectionStyle != -1,
+                    "Ui::TextLayerStyleAnimator::advance(): expected style" << animation.targetStyle << (targetStyleData.selectionStyle == -1 ? "to" : "to not") << "reference a selection style like style" << animation.sourceStyle << "for" << animationHandle(handle(), i, generations()[i]), {});
+
+                const Implementation::TextLayerEditingStyle& sourceEditingStyleData = layerSharedState.editingStyles[sourceStyleData.selectionStyle];
+                const Implementation::TextLayerEditingStyle& targetEditingStyleData = layerSharedState.editingStyles[targetStyleData.selectionStyle];
+                animation.sourceSelectionPadding = sourceEditingStyleData.padding;
+                animation.targetSelectionPadding = targetEditingStyleData.padding;
+
+                /* Like with the base, remember if the actual uniform ID is
+                   different to skip the interpolation. OR that with the
+                   difference from the cursor, as both lead to upload of the
+                   same uniform buffer. */
+                animation.sourceSelectionUniform = layerSharedState.editingStyleUniforms[sourceEditingStyleData.uniform];
+                animation.targetSelectionUniform = layerSharedState.editingStyleUniforms[targetEditingStyleData.uniform];
+                animation.selectionUniformDifferent = sourceEditingStyleData.uniform != targetEditingStyleData.uniform;
+
+                /* Finally, if the selection style references an override for
+                   the text uniform, save that too, and again remember if it's
+                   different, ORing with the base style uniform difference. */
+                const UnsignedInt sourceTextUniform = sourceEditingStyleData.textUniform != -1 ? sourceEditingStyleData.textUniform : sourceStyleData.uniform;
+                const UnsignedInt targetTextUniform = targetEditingStyleData.textUniform != -1 ? targetEditingStyleData.textUniform : targetStyleData.uniform;
+                animation.sourceSelectionTextUniform = layerSharedState.styleUniforms[sourceTextUniform];
+                animation.targetSelectionTextUniform = layerSharedState.styleUniforms[targetTextUniform];
+                animation.selectionTextUniformDifferent = sourceTextUniform != targetTextUniform;
+
+                animation.hasSelectionStyle = true;
+            } else animation.hasSelectionStyle = false;
+        }
 
         /* If the animation is stopped, switch the data to the target style, if
            any. No need to animate anything else as the dynamic style is going

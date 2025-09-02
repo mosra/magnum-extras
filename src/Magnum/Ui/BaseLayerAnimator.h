@@ -158,6 +158,8 @@ directly to the target style without animating.
 
 The animation interpolates all properties of @ref BaseLayerStyleUniform
 including outline width and corner radius, as well as the style padding value.
+All style data are fetched from @ref BaseLayer::Shared at animation start,
+meaning that you can reuse existing animations even after the style is updated.
 At the moment, only animation between predefined styles is possible.
 
 @section Ui-BaseLayerStyleAnimator-lifetime Animation lifetime and data attachment
@@ -235,6 +237,11 @@ class MAGNUM_UI_EXPORT BaseLayerStyleAnimator: public AbstractVisualLayerStyleAn
          *
          * The animation affects the @ref BaseLayerStyleUniform and the padding
          * value, if it differs between the styles.
+         *
+         * The actually animated style values are queried from
+         * @ref BaseLayer::Shared only when the animation starts, thus it isn't
+         * needed for @ref BaseLayer::Shared::setStyle() to be called at
+         * animation creation time.
          */
         AnimationHandle create(UnsignedInt sourceStyle, UnsignedInt targetStyle, Float(*easing)(Float), Nanoseconds start, Nanoseconds duration, DataHandle data, UnsignedInt repeatCount = 1, AnimationFlags flags = {});
 
@@ -363,46 +370,6 @@ class MAGNUM_UI_EXPORT BaseLayerStyleAnimator: public AbstractVisualLayerStyleAn
         void remove(AnimatorDataHandle handle);
 
         /**
-         * @brief Animation source and target uniforms
-         *
-         * Expects that @p handle is valid. The uniforms are queried from
-         * @ref BaseLayer::Shared based on style IDs passed to @ref create().
-         * @see @ref paddings(), @ref isHandleValid(AnimationHandle) const
-         */
-        Containers::Pair<BaseLayerStyleUniform, BaseLayerStyleUniform> uniforms(AnimationHandle handle) const;
-
-        /**
-         * @brief Animation source and target uniforms assuming it belongs to this animator
-         *
-         * Like @ref uniforms(AnimationHandle) const but without checking that
-         * @p handle indeed belongs to this animator. See its documentation for
-         * more information.
-         * @see @ref isHandleValid(AnimatorDataHandle) const,
-         *      @ref animationHandleData()
-         */
-        Containers::Pair<BaseLayerStyleUniform, BaseLayerStyleUniform> uniforms(AnimatorDataHandle handle) const;
-
-        /**
-         * @brief Animation source and target paddings
-         *
-         * Expects that @p handle is valid. The paddings are queried from
-         * @ref BaseLayer::Shared based on style IDs passed to @ref create().
-         * @see @ref uniforms(), @ref isHandleValid(AnimationHandle) const
-         */
-        Containers::Pair<Vector4, Vector4> paddings(AnimationHandle handle) const;
-
-        /**
-         * @brief Animation source and target paddings assuming it belongs to this animator
-         *
-         * Like @ref paddings(AnimationHandle) const but without checking that
-         * @p handle indeed belongs to this animator. See its documentation for
-         * more information.
-         * @see @ref isHandleValid(AnimatorDataHandle) const,
-         *      @ref animationHandleData()
-         */
-        Containers::Pair<Vector4, Vector4> paddings(AnimatorDataHandle handle) const;
-
-        /**
          * @brief Animation easing function
          *
          * Expects that @p handle is valid. The returned pointer is never
@@ -425,6 +392,8 @@ class MAGNUM_UI_EXPORT BaseLayerStyleAnimator: public AbstractVisualLayerStyleAn
         /**
          * @brief Advance the animations
          * @param[in] active                    Animation IDs that are active
+         * @param[in] started                   Animation IDs that started
+         *      playing since last time
          * @param[in] stopped                   Animation IDs that stopped
          *      playing since last time
          * @param[in] factors                   Interpolation factors indexed
@@ -443,14 +412,16 @@ class MAGNUM_UI_EXPORT BaseLayerStyleAnimator: public AbstractVisualLayerStyleAn
          * this function directly and doing so may cause internal
          * @ref AbstractUserInterface state update to misbehave.
          *
-         * Expects that size of @p active, @p stopped and @p factors matches
-         * @ref capacity(), it's assumed that their contents were filled by
-         * @ref update() before. Expects that @p dynamicStyleUniforms and
-         * @p dynamicStylePaddings have a size of
+         * Expects that size of @p active, @p started, @p stopped and
+         * @p factors matches @ref capacity(), it's assumed that their contents
+         * were filled by @ref update() before. Expects that
+         * @p dynamicStyleUniforms and @p dynamicStylePaddings have a size of
          * @ref BaseLayer::Shared::dynamicStyleCount(). The @p dataStyles view
          * should be large enough to contain any valid layer data ID.
+         * @ref BaseLayer::Shared::setStyle() is expected to be already called
+         * for the layer this animator is assigned to.
          */
-        BaseLayerStyleAnimatorUpdates advance(Containers::BitArrayView active, Containers::BitArrayView stopped, const Containers::StridedArrayView1D<const Float>& factors, Containers::ArrayView<BaseLayerStyleUniform> dynamicStyleUniforms, const Containers::StridedArrayView1D<Vector4>& dynamicStylePaddings, const Containers::StridedArrayView1D<UnsignedInt>& dataStyles);
+        BaseLayerStyleAnimatorUpdates advance(Containers::BitArrayView active, Containers::BitArrayView started, Containers::BitArrayView stopped, const Containers::StridedArrayView1D<const Float>& factors, Containers::ArrayView<BaseLayerStyleUniform> dynamicStyleUniforms, const Containers::StridedArrayView1D<Vector4>& dynamicStylePaddings, const Containers::StridedArrayView1D<UnsignedInt>& dataStyles);
 
     private:
         struct State;

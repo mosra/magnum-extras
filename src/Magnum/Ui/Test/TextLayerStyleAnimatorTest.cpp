@@ -80,6 +80,7 @@ struct TextLayerStyleAnimatorTest: TestSuite::Tester {
     void advanceNoFreeDynamicStyles();
     void advanceEmpty();
     void advanceInvalid();
+    void advanceInvalidCursorSelection();
 
     void layerAdvance();
     void uiAdvance();
@@ -95,12 +96,22 @@ Debug& operator<<(Debug& debug, Enum value) {
 
 const struct {
     const char* name;
-    bool cursorStyle, selectionStyle;
+    bool samePaddingAfter, cursorStyleBefore, selectionStyleBefore, cursorSelectionStyleAfter;
 } CreateRemoveHandleRecycleData[]{
-    {"", false, false},
-    {"cursor style", true, false},
-    {"selection style", false, true},
-    {"cursor + selection style", true, true},
+    {"",
+        false, false, false, false},
+    {"same paddings in recycled",
+        true, false, false, false},
+    {"cursor style before but not after",
+        false, true, false, false},
+    {"selection style before but not after",
+        false, false, true, false},
+    {"cursor + selection style before but not after",
+        false, true, true, false},
+    {"cursor + selection style after but not before",
+        false, false, false, true},
+    {"cursor + selection style after but not before, same paddings",
+        true, false, false, true},
 };
 
 const struct {
@@ -270,7 +281,8 @@ TextLayerStyleAnimatorTest::TextLayerStyleAnimatorTest() {
 
     addTests({&TextLayerStyleAnimatorTest::advanceNoFreeDynamicStyles,
               &TextLayerStyleAnimatorTest::advanceEmpty,
-              &TextLayerStyleAnimatorTest::advanceInvalid});
+              &TextLayerStyleAnimatorTest::advanceInvalid,
+              &TextLayerStyleAnimatorTest::advanceInvalidCursorSelection});
 
     addInstancedTests({&TextLayerStyleAnimatorTest::layerAdvance},
         Containers::arraySize(LayerAdvanceData));
@@ -423,7 +435,9 @@ template<class T> void TextLayerStyleAnimatorTest::createRemove() {
     FontHandle fontHandle = shared.addFont(font, 1.0f);
 
     /* Have non-trivial uniform mapping to verify the data get correctly
-       fetched */
+       fetched. Has to be set early in order to call TextLayer::create() to
+       attach the animation somewhere. TextLayerStyleAnimator::create() alone
+       doesn't need the style to be set, which is tested elsewhere. */
     shared.setStyle(TextLayerCommonStyleUniform{},
         {TextLayerStyleUniform{}                /* 0 */
             .setColor(0x112233_rgbf),
@@ -498,16 +512,6 @@ template<class T> void TextLayerStyleAnimatorTest::createRemove() {
        for T == UnsignedInt */
     CORRADE_COMPARE(animator.template styles<Enum>(first), Containers::pair(Enum(0), Enum(1)));
     CORRADE_COMPARE(animator.dynamicStyle(first), Containers::NullOpt);
-    /* Styles 0 and 1 are uniforms 4 and 1 */
-    CORRADE_COMPARE(animator.uniforms(first).first().color, 0x9933ff_rgbf);
-    CORRADE_COMPARE(animator.uniforms(first).second().color, 0xff3366_rgbf);
-    CORRADE_COMPARE(animator.paddings(first), Containers::pair(Vector4{1.0f}, Vector4{2.0f, 3.0f, 4.0f, 5.0f}));
-    /* No associated selection or cursor styles */
-    CORRADE_VERIFY(!animator.cursorUniforms(first));
-    CORRADE_VERIFY(!animator.cursorPaddings(first));
-    CORRADE_VERIFY(!animator.selectionUniforms(first));
-    CORRADE_VERIFY(!animator.selectionPaddings(first));
-    CORRADE_VERIFY(!animator.selectionTextUniforms(first));
     CORRADE_COMPARE(animator.easing(first), Animation::Easing::linear);
     /* Dynamic style is only allocated and switched to during advance() */
     CORRADE_COMPARE(layer.dynamicStyleUsedCount(), 0);
@@ -526,23 +530,6 @@ template<class T> void TextLayerStyleAnimatorTest::createRemove() {
        for T == UnsignedInt */
     CORRADE_COMPARE(animator.template styles<Enum>(second), Containers::pair(Enum(2), Enum(4)));
     CORRADE_COMPARE(animator.dynamicStyle(second), Containers::NullOpt);
-    /* Styles 2 and 4 are uniforms 2 and 0 */
-    CORRADE_COMPARE(animator.uniforms(second).first().color, 0xcc66aa_rgbf);
-    CORRADE_COMPARE(animator.uniforms(second).second().color, 0x112233_rgbf);
-    CORRADE_COMPARE(animator.paddings(second), Containers::pair(Vector4{0.0f}, Vector4{2.0f}));
-    /* Associated selection style */
-    CORRADE_VERIFY(!animator.cursorUniforms(second));
-    CORRADE_VERIFY(!animator.cursorPaddings(second));
-    /* Editing styles 1 and 3 are uniforms 0 and 4 */
-    CORRADE_VERIFY(animator.selectionUniforms(second));
-    CORRADE_COMPARE(animator.selectionUniforms(second)->first().cornerRadius, 4.0f);
-    CORRADE_COMPARE(animator.selectionUniforms(second)->second().cornerRadius, 5.0f);
-    CORRADE_COMPARE(animator.selectionPaddings(second), Containers::pair(Vector4{3.0f}, Vector4{5.0f}));
-    /* Editing style 1 overrides text style uniform to 3, editing style 3 stays
-       the same (style 4, thus uniform 0) */
-    CORRADE_VERIFY(animator.selectionTextUniforms(second));
-    CORRADE_COMPARE(animator.selectionTextUniforms(second)->first().color, 0x111111_rgbf);
-    CORRADE_COMPARE(animator.selectionTextUniforms(second)->second().color, 0x112233_rgbf);
     CORRADE_COMPARE(animator.easing(second), Animation::Easing::cubicIn);
     CORRADE_COMPARE(layer.dynamicStyleUsedCount(), 0);
 
@@ -558,19 +545,6 @@ template<class T> void TextLayerStyleAnimatorTest::createRemove() {
        for T == UnsignedInt */
     CORRADE_COMPARE(animator.template styles<Enum>(animationHandleData(third)), Containers::pair(Enum(5), Enum(3)));
     CORRADE_COMPARE(animator.dynamicStyle(animationHandleData(third)), Containers::NullOpt);
-    /* Styles 5 and 3 are uniforms 1 and 4 */
-    CORRADE_COMPARE(animator.uniforms(animationHandleData(third)).first().color, 0xff3366_rgbf);
-    CORRADE_COMPARE(animator.uniforms(animationHandleData(third)).second().color, 0x9933ff_rgbf);
-    CORRADE_COMPARE(animator.paddings(animationHandleData(third)), Containers::pair(Vector4{4.0f}, Vector4{0.0f}));
-    /* Associated cursor style */
-    /* Editing styles 0 and 2 are uniforms 3 and 2 */
-    CORRADE_VERIFY(animator.cursorUniforms(animationHandleData(third)));
-    CORRADE_COMPARE(animator.cursorUniforms(animationHandleData(third))->first().backgroundColor, 0x337766_rgbf);
-    CORRADE_COMPARE(animator.cursorUniforms(animationHandleData(third))->second().backgroundColor, 0x119900_rgbf);
-    CORRADE_COMPARE(animator.cursorPaddings(animationHandleData(third)), Containers::pair(Vector4{0.0f}, Vector4{6.0f, 7.0f, 8.0f, 9.0f}));
-    CORRADE_VERIFY(!animator.selectionUniforms(animationHandleData(third)));
-    CORRADE_VERIFY(!animator.selectionPaddings(animationHandleData(third)));
-    CORRADE_VERIFY(!animator.selectionTextUniforms(animationHandleData(third)));
     CORRADE_COMPARE(animator.easing(animationHandleData(third)), Animation::Easing::bounceInOut);
     CORRADE_COMPARE(layer.dynamicStyleUsedCount(), 0);
     CORRADE_COMPARE(layer.style(data3), 0);
@@ -588,16 +562,6 @@ template<class T> void TextLayerStyleAnimatorTest::createRemove() {
     CORRADE_COMPARE(animator.template styles<Enum>(fourth), Containers::pair(Enum(1), Enum(0)));
     CORRADE_COMPARE(animator.dynamicStyle(fourth), Containers::NullOpt);
     CORRADE_COMPARE(animator.easing(fourth), Animation::Easing::smoothstep);
-    /* Styles 1 and 0 are uniforms 1 and 4 */
-    CORRADE_COMPARE(animator.uniforms(fourth).first().color, 0xff3366_rgbf);
-    CORRADE_COMPARE(animator.uniforms(fourth).second().color, 0x9933ff_rgbf);
-    CORRADE_COMPARE(animator.paddings(fourth), Containers::pair(Vector4{2.0f, 3.0f, 4.0f, 5.0f}, Vector4{1.0f}));
-    /* No associated selection or cursor styles */
-    CORRADE_VERIFY(!animator.cursorUniforms(first));
-    CORRADE_VERIFY(!animator.cursorPaddings(first));
-    CORRADE_VERIFY(!animator.selectionUniforms(first));
-    CORRADE_VERIFY(!animator.selectionPaddings(first));
-    CORRADE_VERIFY(!animator.selectionTextUniforms(first));
     CORRADE_COMPARE(layer.dynamicStyleUsedCount(), 0);
     CORRADE_COMPARE(layer.style(data1), 1);
 
@@ -650,12 +614,16 @@ void TextLayerStyleAnimatorTest::createRemoveHandleRecycle() {
         void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
         void doSetEditingStyle(const TextLayerCommonEditingStyleUniform&, Containers::ArrayView<const TextLayerEditingStyleUniform>) override {}
     } shared{cache, TextLayer::Shared::Configuration{4}
-        .setEditingStyleCount(data.cursorStyle || data.selectionStyle ? 2 : 0)
+        .setEditingStyleCount(data.cursorStyleBefore || data.selectionStyleBefore || data.cursorSelectionStyleAfter ? 2 : 0)
         .setDynamicStyleCount(1)
     };
 
     FontHandle fontHandle = shared.addFont(font, 1.0f);
 
+    /* Has to be called early to be able to call TextLayer::create() which we
+       want to ensure there's nothing accidentally skipped when recycling
+       internally, TextLayerStyleAnimator::create() itself doesn't need
+       setStyle() to be called */
     shared.setStyle(TextLayerCommonStyleUniform{},
         {TextLayerStyleUniform{}
             .setColor(0xff3366_rgbf),
@@ -671,26 +639,27 @@ void TextLayerStyleAnimatorTest::createRemoveHandleRecycle() {
          Text::Alignment::MiddleCenter,
          Text::Alignment::MiddleCenter},
         {}, {}, {},
-        {data.cursorStyle ? 0 : -1,
-         data.cursorStyle ? 1 : -1,
-         -1,
-         -1},
-        {data.selectionStyle ? 1 : -1,
-         data.selectionStyle ? 0 : -1,
-         -1,
-         -1},
+        {data.cursorStyleBefore ? 0 : -1,
+         data.cursorStyleBefore ? 1 : -1,
+         data.cursorSelectionStyleAfter ? 0 : -1,
+         data.cursorSelectionStyleAfter ? 1 : -1},
+        {data.selectionStyleBefore ? 1 : -1,
+         data.selectionStyleBefore ? 0 : -1,
+         data.cursorSelectionStyleAfter ? 1 : -1,
+         data.cursorSelectionStyleAfter ? 0 : -1},
         {Vector4{1.0f},
          Vector4{2.0f},
          Vector4{3.0f},
-         Vector4{4.0f}});
-    if(data.cursorStyle || data.selectionStyle)
+         Vector4{data.samePaddingAfter ? 3.0f : 4.0f}});
+    if(data.cursorStyleBefore || data.selectionStyleBefore || data.cursorSelectionStyleAfter)
         shared.setEditingStyle(TextLayerCommonEditingStyleUniform{},
             {TextLayerEditingStyleUniform{}
                 .setBackgroundColor(0x119900_rgbf),
              TextLayerEditingStyleUniform{}
                 .setBackgroundColor(0xaabbcc_rgbf)},
             {},
-            {{}, {}});
+            {Vector4{2.0f},
+             Vector4{data.samePaddingAfter ? 2.0f : 3.0f}});
 
     struct Layer: TextLayer {
         explicit Layer(LayerHandle handle, Shared& shared): TextLayer{handle, shared} {}
@@ -705,17 +674,14 @@ void TextLayerStyleAnimatorTest::createRemoveHandleRecycle() {
     AnimationHandle first = animator.create(0, 1, Animation::Easing::linear, 0_nsec, 13_nsec, layerData);
     CORRADE_COMPARE(animator.styles(first), Containers::pair(0u, 1u));
     CORRADE_COMPARE(animator.dynamicStyle(first), Containers::NullOpt);
-    CORRADE_COMPARE(animator.uniforms(first).first().color, 0xff3366_rgbf);
-    CORRADE_COMPARE(animator.uniforms(first).second().color, 0x9933ff_rgbf);
-    CORRADE_COMPARE(animator.paddings(first), Containers::pair(Vector4{1.0f}, Vector4{2.0f}));
-    CORRADE_COMPARE(!!animator.cursorUniforms(first), data.cursorStyle);
-    CORRADE_COMPARE(!!animator.selectionUniforms(first), data.selectionStyle);
     CORRADE_COMPARE(animator.easing(first), Animation::Easing::linear);
     CORRADE_COMPARE(layer.dynamicStyleUsedCount(), 0);
 
-    /* Let it advance to allocate the dynamic style */
+    /* Let it advance to allocate the dynamic style and copy over style data.
+       It should make use of all TextLayerStyleAnimatorUpdates. */
     Containers::BitArray active{DirectInit, 1, true};
-    Float factors[]{0.0f};
+    Float factors[]{0.5f};
+    Containers::BitArray started{DirectInit, 1, true};
     Containers::BitArray stopped{DirectInit, 1, false};
     TextLayerStyleUniform dynamicStyleUniforms[3];
     char dynamicStyleCursorStyles[1];
@@ -724,20 +690,28 @@ void TextLayerStyleAnimatorTest::createRemoveHandleRecycle() {
     TextLayerEditingStyleUniform dynamicEditingStyleUniforms[2];
     Vector4 dynamicEditingStylePaddings[2];
     UnsignedInt dataStyles[1];
-    animator.advance(
-        active,
-        stopped,
-        factors,
-        Containers::arrayView(dynamicStyleUniforms)
-            .prefix(data.cursorStyle || data.selectionStyle ? 3 : 1),
-        Containers::MutableBitArrayView{dynamicStyleCursorStyles, 0, 1},
-        Containers::MutableBitArrayView{dynamicStyleSelectionStyles, 0, 1},
-        dynamicStylePaddings,
-        data.cursorStyle || data.selectionStyle ?
-            Containers::arrayView(dynamicEditingStyleUniforms) : nullptr,
-        data.cursorStyle || data.selectionStyle ?
-            Containers::arrayView(dynamicEditingStylePaddings) : nullptr,
-        dataStyles);
+    CORRADE_COMPARE(animator.advance(
+            active,
+            started,
+            stopped,
+            factors,
+            Containers::arrayView(dynamicStyleUniforms)
+                .prefix(data.cursorStyleBefore || data.selectionStyleBefore || data.cursorSelectionStyleAfter ? 3 : 1),
+            Containers::MutableBitArrayView{dynamicStyleCursorStyles, 0, 1},
+            Containers::MutableBitArrayView{dynamicStyleSelectionStyles, 0, 1},
+            dynamicStylePaddings,
+            data.cursorStyleBefore || data.selectionStyleBefore || data.cursorSelectionStyleAfter ?
+                Containers::arrayView(dynamicEditingStyleUniforms) : nullptr,
+            data.cursorStyleBefore || data.selectionStyleBefore || data.cursorSelectionStyleAfter ?
+                Containers::arrayView(dynamicEditingStylePaddings) : nullptr,
+            dataStyles),
+        TextLayerStyleAnimatorUpdate::Uniform|
+        TextLayerStyleAnimatorUpdate::Padding|
+        TextLayerStyleAnimatorUpdate::Style|
+        (data.cursorStyleBefore || data.selectionStyleBefore ?
+            TextLayerStyleAnimatorUpdate::EditingUniform|
+            TextLayerStyleAnimatorUpdate::EditingPadding :
+            TextLayerStyleAnimatorUpdates{}));
     CORRADE_COMPARE(animator.dynamicStyle(first), 0);
     /* Verify the AnimatorDataHandle overload correctly detecting a valid style
        also */
@@ -756,15 +730,36 @@ void TextLayerStyleAnimatorTest::createRemoveHandleRecycle() {
     CORRADE_COMPARE(animationHandleId(first2), animationHandleId(first));
     CORRADE_COMPARE(animator.styles(first2), Containers::pair(3u, 2u));
     CORRADE_COMPARE(animator.dynamicStyle(first2), Containers::NullOpt);
-    CORRADE_COMPARE(animator.uniforms(first2).first().color, 0x112233_rgbf);
-    CORRADE_COMPARE(animator.uniforms(first2).second().color, 0x337766_rgbf);
-    CORRADE_COMPARE(animator.paddings(first2), Containers::pair(Vector4{4.0f}, Vector4{3.0f}));
-    /* The new animation doesn't have cursor or selection style, so it should
-       be reset as well */
-    CORRADE_VERIFY(!animator.cursorUniforms(first2));
-    CORRADE_VERIFY(!animator.selectionUniforms(first2));
     CORRADE_COMPARE(animator.easing(first2), Animation::Easing::bounceInOut);
     CORRADE_COMPARE(layer.dynamicStyleUsedCount(), 0);
+
+    /* The recycled animation shouldn't inherit any info about uniform, padding
+       or editing style animations. The padding is however checked against the
+       current value, so update it to the expected new (constant) value
+       first. */
+    dynamicStylePaddings[0] = Vector4{3.0f};
+    dynamicEditingStylePaddings[0] = Vector4{2.0f};
+    dynamicEditingStylePaddings[1] = Vector4{2.0f};
+    CORRADE_COMPARE(animator.advance(
+            active,
+            started,
+            stopped,
+            factors,
+            Containers::arrayView(dynamicStyleUniforms)
+                .prefix(data.cursorStyleBefore || data.selectionStyleBefore || data.cursorSelectionStyleAfter ? 3 : 1),
+            Containers::MutableBitArrayView{dynamicStyleCursorStyles, 0, 1},
+            Containers::MutableBitArrayView{dynamicStyleSelectionStyles, 0, 1},
+            dynamicStylePaddings,
+            data.cursorStyleBefore || data.selectionStyleBefore || data.cursorSelectionStyleAfter ?
+                Containers::arrayView(dynamicEditingStyleUniforms) : nullptr,
+            data.cursorStyleBefore || data.selectionStyleBefore || data.cursorSelectionStyleAfter ?
+                Containers::arrayView(dynamicEditingStylePaddings) : nullptr,
+            dataStyles),
+        TextLayerStyleAnimatorUpdate::Uniform|
+        (data.samePaddingAfter ? TextLayerStyleAnimatorUpdates{} : TextLayerStyleAnimatorUpdate::Padding)|
+        (data.cursorSelectionStyleAfter ? TextLayerStyleAnimatorUpdate::EditingUniform : TextLayerStyleAnimatorUpdates{})|
+        (data.cursorSelectionStyleAfter && !data.samePaddingAfter ? TextLayerStyleAnimatorUpdate::EditingPadding : TextLayerStyleAnimatorUpdates{})|
+        TextLayerStyleAnimatorUpdate::Style);
 }
 
 void TextLayerStyleAnimatorTest::createInvalid() {
@@ -782,56 +777,16 @@ void TextLayerStyleAnimatorTest::createInvalid() {
 
         void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
         void doSetEditingStyle(const TextLayerCommonEditingStyleUniform&, Containers::ArrayView<const TextLayerEditingStyleUniform>) override {}
-    } sharedNoStyleSet{cache, TextLayer::Shared::Configuration{5}
-        .setDynamicStyleCount(1)
-    }, sharedNoEditingStyleSet{cache, TextLayer::Shared::Configuration{2}
-        .setEditingStyleCount(1)
-        .setDynamicStyleCount(1)
-    }, shared{cache, TextLayer::Shared::Configuration{1, 5}
+    } shared{cache, TextLayer::Shared::Configuration{1, 5}
         .setEditingStyleCount(1)
         .setDynamicStyleCount(1)
     };
 
-    sharedNoEditingStyleSet.setStyle(
-        TextLayerCommonStyleUniform{},
-        {TextLayerStyleUniform{}, TextLayerStyleUniform{}},
-        {FontHandle::Null, FontHandle::Null},
-        {Text::Alignment{}, Text::Alignment{}},
-        {}, {}, {},
-        /* There is deliberately no editing style referenced but it should
-           still trigger an assert for less surprising behavior */
-        {-1, -1}, {-1, -1},
-        {});
-    shared.setStyle(
-        TextLayerCommonStyleUniform{},
-        {TextLayerStyleUniform{}},
-        {0, 0, 0, 0, 0},
-        {FontHandle::Null, FontHandle::Null, FontHandle::Null, FontHandle::Null, FontHandle::Null},
-        {Text::Alignment{}, Text::Alignment{}, Text::Alignment{}, Text::Alignment{}, Text::Alignment{}},
-        {}, {}, {},
-        /* Style 2 references both cursor and selection styles, 3 just
-           selection, 4 just cursor */
-        {-1, -1, 0, -1, 0}, {-1, -1, 0, 0, -1},
-        {});
-    shared.setEditingStyle(
-        TextLayerCommonEditingStyleUniform{},
-        {TextLayerEditingStyleUniform{}},
-        {},
-        {{}});
-
     struct Layer: TextLayer {
         explicit Layer(LayerHandle handle, Shared& shared): TextLayer{handle, shared} {}
-    } layerNoStyleSet{layerHandle(0, 1), sharedNoStyleSet},
-      layerNoEditingStyleSet{layerHandle(0, 1), sharedNoEditingStyleSet},
-      layer{layerHandle(0, 1), shared};
+    } layer{layerHandle(0, 1), shared};
 
     TextLayerStyleAnimator animatorNoLayerSet{animatorHandle(0, 1)};
-
-    TextLayerStyleAnimator animatorNoLayerStyleSet{animatorHandle(0, 1)};
-    layerNoStyleSet.assignAnimator(animatorNoLayerStyleSet);
-
-    TextLayerStyleAnimator animatorNoLayerEditingStyleSet{animatorHandle(0, 1)};
-    layerNoEditingStyleSet.assignAnimator(animatorNoLayerEditingStyleSet);
 
     TextLayerStyleAnimator animator{animatorHandle(0, 1)};
     layer.assignAnimator(animator);
@@ -844,15 +799,9 @@ void TextLayerStyleAnimatorTest::createInvalid() {
     animatorNoLayerSet.create(0, 1, Animation::Easing::linear, 12_nsec, 13_nsec, DataHandle::Null, AnimationFlags{});
     animatorNoLayerSet.create(0, 1, Animation::Easing::linear, 12_nsec, 13_nsec, LayerDataHandle::Null, 1, AnimationFlags{});
     animatorNoLayerSet.create(0, 1, Animation::Easing::linear, 12_nsec, 13_nsec, LayerDataHandle::Null, AnimationFlags{});
-    animatorNoLayerStyleSet.create(0, 1, Animation::Easing::linear, 12_nsec, 13_nsec, DataHandle::Null);
-    animatorNoLayerEditingStyleSet.create(0, 1, Animation::Easing::linear, 12_nsec, 13_nsec, DataHandle::Null);
     animator.create(0, 5, Animation::Easing::linear, 12_nsec, 13_nsec, DataHandle::Null);
     animator.create(5, 0, Animation::Easing::linear, 12_nsec, 13_nsec, DataHandle::Null);
     animator.create(0, 1, nullptr, 12_nsec, 13_nsec, DataHandle::Null);
-    animator.create(2, 3, Animation::Easing::linear, 12_nsec, 13_nsec, DataHandle::Null);
-    animator.create(3, 2, Animation::Easing::linear, 12_nsec, 13_nsec, DataHandle::Null);
-    animator.create(2, 4, Animation::Easing::linear, 12_nsec, 13_nsec, DataHandle::Null);
-    animator.create(4, 2, Animation::Easing::linear, 12_nsec, 13_nsec, DataHandle::Null);
     /* Other things like data handle layer part not matching etc. tested in
        AbstractAnimatorTest already */
     CORRADE_COMPARE_AS(out,
@@ -860,15 +809,9 @@ void TextLayerStyleAnimatorTest::createInvalid() {
         "Ui::TextLayerStyleAnimator::create(): no layer set\n"
         "Ui::TextLayerStyleAnimator::create(): no layer set\n"
         "Ui::TextLayerStyleAnimator::create(): no layer set\n"
-        "Ui::TextLayerStyleAnimator::create(): no style data was set on the layer\n"
-        "Ui::TextLayerStyleAnimator::create(): no editing style data was set on the layer\n"
         "Ui::TextLayerStyleAnimator::create(): expected source and target style to be in range for 5 styles but got 0 and 5\n"
         "Ui::TextLayerStyleAnimator::create(): expected source and target style to be in range for 5 styles but got 5 and 0\n"
-        "Ui::TextLayerStyleAnimator::create(): easing is null\n"
-        "Ui::TextLayerStyleAnimator::create(): expected style 3 to reference a cursor style like style 2\n"
-        "Ui::TextLayerStyleAnimator::create(): expected style 2 to not reference a cursor style like style 3\n"
-        "Ui::TextLayerStyleAnimator::create(): expected style 4 to reference a selection style like style 2\n"
-        "Ui::TextLayerStyleAnimator::create(): expected style 2 to not reference a selection style like style 4\n",
+        "Ui::TextLayerStyleAnimator::create(): easing is null\n",
         TestSuite::Compare::String);
 }
 
@@ -890,14 +833,6 @@ void TextLayerStyleAnimatorTest::propertiesInvalid() {
     } shared{cache, TextLayer::Shared::Configuration{2}
         .setDynamicStyleCount(1)
     };
-    shared.setStyle(
-        TextLayerCommonStyleUniform{},
-        {TextLayerStyleUniform{}, TextLayerStyleUniform{}},
-        {FontHandle::Null, FontHandle::Null},
-        {Text::Alignment{}, Text::Alignment{}},
-        {}, {}, {}, {},
-        /* Editing styles don't need to be present to verify their accessors */
-        {}, {});
 
     struct Layer: TextLayer {
         explicit Layer(LayerHandle handle, Shared& shared): TextLayer{handle, shared} {}
@@ -910,76 +845,20 @@ void TextLayerStyleAnimatorTest::propertiesInvalid() {
 
     Containers::String out;
     Error redirectError{&out};
-    animator.uniforms(AnimationHandle::Null);
-    animator.paddings(AnimationHandle::Null);
-    animator.cursorUniforms(AnimationHandle::Null);
-    animator.cursorPaddings(AnimationHandle::Null);
-    animator.selectionUniforms(AnimationHandle::Null);
-    animator.selectionPaddings(AnimationHandle::Null);
-    animator.selectionTextUniforms(AnimationHandle::Null);
     animator.easing(AnimationHandle::Null);
     /* Valid animator, invalid data */
-    animator.uniforms(animationHandle(animator.handle(), AnimatorDataHandle(0x123abcde)));
-    animator.paddings(animationHandle(animator.handle(), AnimatorDataHandle(0x123abcde)));
-    animator.cursorUniforms(animationHandle(animator.handle(), AnimatorDataHandle(0x123abcde)));
-    animator.cursorPaddings(animationHandle(animator.handle(), AnimatorDataHandle(0x123abcde)));
-    animator.selectionUniforms(animationHandle(animator.handle(), AnimatorDataHandle(0x123abcde)));
-    animator.selectionPaddings(animationHandle(animator.handle(), AnimatorDataHandle(0x123abcde)));
-    animator.selectionTextUniforms(animationHandle(animator.handle(), AnimatorDataHandle(0x123abcde)));
     animator.easing(animationHandle(animator.handle(), AnimatorDataHandle(0x123abcde)));
     /* Invalid animator, valid data */
-    animator.uniforms(animationHandle(AnimatorHandle::Null, animationHandleData(handle)));
-    animator.paddings(animationHandle(AnimatorHandle::Null, animationHandleData(handle)));
-    animator.cursorUniforms(animationHandle(AnimatorHandle::Null, animationHandleData(handle)));
-    animator.cursorPaddings(animationHandle(AnimatorHandle::Null, animationHandleData(handle)));
-    animator.selectionUniforms(animationHandle(AnimatorHandle::Null, animationHandleData(handle)));
-    animator.selectionPaddings(animationHandle(AnimatorHandle::Null, animationHandleData(handle)));
-    animator.selectionTextUniforms(animationHandle(AnimatorHandle::Null, animationHandleData(handle)));
     animator.easing(animationHandle(AnimatorHandle::Null, animationHandleData(handle)));
     /* AnimatorDataHandle directly */
-    animator.uniforms(AnimatorDataHandle(0x123abcde));
-    animator.paddings(AnimatorDataHandle(0x123abcde));
-    animator.cursorUniforms(AnimatorDataHandle(0x123abcde));
-    animator.cursorPaddings(AnimatorDataHandle(0x123abcde));
-    animator.selectionUniforms(AnimatorDataHandle(0x123abcde));
-    animator.selectionPaddings(AnimatorDataHandle(0x123abcde));
-    animator.selectionTextUniforms(AnimatorDataHandle(0x123abcde));
     animator.easing(AnimatorDataHandle(0x123abcde));
     CORRADE_COMPARE_AS(out,
-        "Ui::TextLayerStyleAnimator::uniforms(): invalid handle Ui::AnimationHandle::Null\n"
-        "Ui::TextLayerStyleAnimator::paddings(): invalid handle Ui::AnimationHandle::Null\n"
-        "Ui::TextLayerStyleAnimator::cursorUniforms(): invalid handle Ui::AnimationHandle::Null\n"
-        "Ui::TextLayerStyleAnimator::cursorPaddings(): invalid handle Ui::AnimationHandle::Null\n"
-        "Ui::TextLayerStyleAnimator::selectionUniforms(): invalid handle Ui::AnimationHandle::Null\n"
-        "Ui::TextLayerStyleAnimator::selectionPaddings(): invalid handle Ui::AnimationHandle::Null\n"
-        "Ui::TextLayerStyleAnimator::selectionTextUniforms(): invalid handle Ui::AnimationHandle::Null\n"
         "Ui::TextLayerStyleAnimator::easing(): invalid handle Ui::AnimationHandle::Null\n"
 
-        "Ui::TextLayerStyleAnimator::uniforms(): invalid handle Ui::AnimationHandle({0x0, 0x1}, {0xabcde, 0x123})\n"
-        "Ui::TextLayerStyleAnimator::paddings(): invalid handle Ui::AnimationHandle({0x0, 0x1}, {0xabcde, 0x123})\n"
-        "Ui::TextLayerStyleAnimator::cursorUniforms(): invalid handle Ui::AnimationHandle({0x0, 0x1}, {0xabcde, 0x123})\n"
-        "Ui::TextLayerStyleAnimator::cursorPaddings(): invalid handle Ui::AnimationHandle({0x0, 0x1}, {0xabcde, 0x123})\n"
-        "Ui::TextLayerStyleAnimator::selectionUniforms(): invalid handle Ui::AnimationHandle({0x0, 0x1}, {0xabcde, 0x123})\n"
-        "Ui::TextLayerStyleAnimator::selectionPaddings(): invalid handle Ui::AnimationHandle({0x0, 0x1}, {0xabcde, 0x123})\n"
-        "Ui::TextLayerStyleAnimator::selectionTextUniforms(): invalid handle Ui::AnimationHandle({0x0, 0x1}, {0xabcde, 0x123})\n"
         "Ui::TextLayerStyleAnimator::easing(): invalid handle Ui::AnimationHandle({0x0, 0x1}, {0xabcde, 0x123})\n"
 
-        "Ui::TextLayerStyleAnimator::uniforms(): invalid handle Ui::AnimationHandle(Null, {0x0, 0x1})\n"
-        "Ui::TextLayerStyleAnimator::paddings(): invalid handle Ui::AnimationHandle(Null, {0x0, 0x1})\n"
-        "Ui::TextLayerStyleAnimator::cursorUniforms(): invalid handle Ui::AnimationHandle(Null, {0x0, 0x1})\n"
-        "Ui::TextLayerStyleAnimator::cursorPaddings(): invalid handle Ui::AnimationHandle(Null, {0x0, 0x1})\n"
-        "Ui::TextLayerStyleAnimator::selectionUniforms(): invalid handle Ui::AnimationHandle(Null, {0x0, 0x1})\n"
-        "Ui::TextLayerStyleAnimator::selectionPaddings(): invalid handle Ui::AnimationHandle(Null, {0x0, 0x1})\n"
-        "Ui::TextLayerStyleAnimator::selectionTextUniforms(): invalid handle Ui::AnimationHandle(Null, {0x0, 0x1})\n"
         "Ui::TextLayerStyleAnimator::easing(): invalid handle Ui::AnimationHandle(Null, {0x0, 0x1})\n"
 
-        "Ui::TextLayerStyleAnimator::uniforms(): invalid handle Ui::AnimatorDataHandle(0xabcde, 0x123)\n"
-        "Ui::TextLayerStyleAnimator::paddings(): invalid handle Ui::AnimatorDataHandle(0xabcde, 0x123)\n"
-        "Ui::TextLayerStyleAnimator::cursorUniforms(): invalid handle Ui::AnimatorDataHandle(0xabcde, 0x123)\n"
-        "Ui::TextLayerStyleAnimator::cursorPaddings(): invalid handle Ui::AnimatorDataHandle(0xabcde, 0x123)\n"
-        "Ui::TextLayerStyleAnimator::selectionUniforms(): invalid handle Ui::AnimatorDataHandle(0xabcde, 0x123)\n"
-        "Ui::TextLayerStyleAnimator::selectionPaddings(): invalid handle Ui::AnimatorDataHandle(0xabcde, 0x123)\n"
-        "Ui::TextLayerStyleAnimator::selectionTextUniforms(): invalid handle Ui::AnimatorDataHandle(0xabcde, 0x123)\n"
         "Ui::TextLayerStyleAnimator::easing(): invalid handle Ui::AnimatorDataHandle(0xabcde, 0x123)\n",
         TestSuite::Compare::String);
 }
@@ -1023,6 +902,9 @@ void TextLayerStyleAnimatorTest::advance() {
     FontHandle fontHandle2 = shared.addFont(font, 2.0f);
     FontHandle fontHandle3 = shared.addFont(font, 3.0f);
 
+    /* Has to be called early to be able to call TextLayer::create() which we
+       need to to verify style ID updates, TextLayerStyleAnimator::create()
+       itself doesn't need setStyle() to be called */
     shared.setStyle(
         TextLayerCommonStyleUniform{},
         /* Assuming the lerp works component-wise, just set them to mutually
@@ -1180,7 +1062,7 @@ void TextLayerStyleAnimatorTest::advance() {
         Containers::Pair<bool, bool> needsAdvanceClean = animator.update(time, active, started, stopped, factors, remove);
         TextLayerStyleAnimatorUpdates updates;
         if(needsAdvanceClean.first())
-            updates = animator.advance(active, stopped, factors, dynamicStyleUniforms, dynamicStyleCursorStyles, dynamicStyleSelectionStyles, dynamicStylePaddings, dynamicEditingStyleUniforms, dynamicEditingStylePaddings, dataStyles);
+            updates = animator.advance(active, started, stopped, factors, dynamicStyleUniforms, dynamicStyleCursorStyles, dynamicStyleSelectionStyles, dynamicStylePaddings, dynamicEditingStyleUniforms, dynamicEditingStylePaddings, dataStyles);
         if(needsAdvanceClean.second())
             animator.clean(remove);
         return updates;
@@ -1935,6 +1817,9 @@ void TextLayerStyleAnimatorTest::advanceProperties() {
 
     FontHandle fontHandle = shared.addFont(font, 1.0f);
 
+    /* Has to be called early to be able to call TextLayer::create() which we
+       need to to verify style ID updates, TextLayerStyleAnimator::create()
+       itself doesn't need setStyle() to be called */
     Float uniformColors[]{
         4.0f, 2.0f, 0.0f, 2.0f, 0.0f
     };
@@ -2025,7 +1910,7 @@ void TextLayerStyleAnimatorTest::advanceProperties() {
             char cursorStyles[1];
             char selectionStyles[1];
             updates = animator.advance(
-                active, stopped, factors, dynamicStyleUniforms,
+                active, started, stopped, factors, dynamicStyleUniforms,
                 Containers::MutableBitArrayView{cursorStyles, 0, 1},
                 Containers::MutableBitArrayView{selectionStyles, 0, 1},
                 dynamicStylePaddings, dynamicEditingStyleUniforms, dynamicEditingStylePaddings, dataStyles);
@@ -2152,6 +2037,9 @@ void TextLayerStyleAnimatorTest::advanceNoFreeDynamicStyles() {
 
     FontHandle fontHandle = shared.addFont(font, 1.0f);
 
+    /* Has to be called early to be able to call TextLayer::create() which we
+       need to to verify style ID updates, TextLayerStyleAnimator::create()
+       itself doesn't need setStyle() to be called */
     shared.setStyle(
         TextLayerCommonStyleUniform{},
         {TextLayerStyleUniform{}
@@ -2204,7 +2092,7 @@ void TextLayerStyleAnimatorTest::advanceNoFreeDynamicStyles() {
             char selectionStyles[1];
             Vector4 paddings[1];
             updates = animator.advance(
-                active, stopped, factors, dynamicStyleUniforms,
+                active, started, stopped, factors, dynamicStyleUniforms,
                 Containers::MutableBitArrayView{cursorStyles, 0, 1},
                 Containers::MutableBitArrayView{selectionStyles, 0, 1},
                 paddings, nullptr, nullptr, dataStyles);
@@ -2258,7 +2146,7 @@ void TextLayerStyleAnimatorTest::advanceNoFreeDynamicStyles() {
 void TextLayerStyleAnimatorTest::advanceEmpty() {
     /* This should work even with no layer being set */
     TextLayerStyleAnimator animator{animatorHandle(0, 1)};
-    animator.advance({}, {}, {}, {}, {}, {}, {}, {}, {}, {});
+    animator.advance({}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
 
     CORRADE_VERIFY(true);
 }
@@ -2297,25 +2185,15 @@ void TextLayerStyleAnimatorTest::advanceInvalid() {
         .setDynamicStyleCount(2)
     };
 
-    FontHandle fontHandle = shared.addFont(font, 1.0f);
+    /* The editing layer has only the non-editing style set to check both
+       style assertions. The non-editing layer has no style set. */
     FontHandle fontHandleEditing = sharedEditing.addFont(font, 1.0f);
-
-    shared.setStyle(
-        TextLayerCommonStyleUniform{},
-        {TextLayerStyleUniform{}, TextLayerStyleUniform{}},
-        {fontHandle, fontHandle},
-        {Text::Alignment{}, Text::Alignment{}},
-        {}, {}, {}, {}, {}, {});
     sharedEditing.setStyle(
         TextLayerCommonStyleUniform{},
         {TextLayerStyleUniform{}, TextLayerStyleUniform{}},
         {fontHandleEditing, fontHandleEditing},
         {Text::Alignment{}, Text::Alignment{}},
         {}, {}, {}, {}, {}, {});
-    sharedEditing.setEditingStyle(
-        TextLayerCommonEditingStyleUniform{},
-        {TextLayerEditingStyleUniform{}},
-        {}, {{}});
 
     struct Layer: TextLayer {
         explicit Layer(LayerHandle handle, Shared& shared): TextLayer{handle, shared} {}
@@ -2327,15 +2205,13 @@ void TextLayerStyleAnimatorTest::advanceInvalid() {
     layer.assignAnimator(animator);
     layerEditing.assignAnimator(animatorEditing);
 
-    DataHandle data = layer.createGlyph(0, 0, {});
-    animator.create(0, 1, Animation::Easing::linear, 0_nsec, 1_nsec, data);
-    animator.create(0, 1, Animation::Easing::linear, 0_nsec, 1_nsec, data);
-    animator.create(0, 1, Animation::Easing::linear, 0_nsec, 1_nsec, data);
+    animator.create(0, 1, Animation::Easing::linear, 0_nsec, 1_nsec, DataHandle::Null);
+    animator.create(0, 1, Animation::Easing::linear, 0_nsec, 1_nsec, DataHandle::Null);
+    animator.create(0, 1, Animation::Easing::linear, 0_nsec, 1_nsec, DataHandle::Null);
 
-    DataHandle dataEditing = layerEditing.createGlyph(0, 0, {});
-    animatorEditing.create(0, 1, Animation::Easing::linear, 0_nsec, 1_nsec, dataEditing);
-    animatorEditing.create(0, 1, Animation::Easing::linear, 0_nsec, 1_nsec, dataEditing);
-    animatorEditing.create(0, 1, Animation::Easing::linear, 0_nsec, 1_nsec, dataEditing);
+    animatorEditing.create(0, 1, Animation::Easing::linear, 0_nsec, 1_nsec, DataHandle::Null);
+    animatorEditing.create(0, 1, Animation::Easing::linear, 0_nsec, 1_nsec, DataHandle::Null);
+    animatorEditing.create(0, 1, Animation::Easing::linear, 0_nsec, 1_nsec, DataHandle::Null);
 
     Containers::BitArray mask{NoInit, 3};
     Containers::BitArray maskInvalid{NoInit, 4};
@@ -2356,65 +2232,71 @@ void TextLayerStyleAnimatorTest::advanceInvalid() {
 
     Containers::String out;
     Error redirectError{&out};
-    animator.advance(mask, mask, factorsInvalid,
+    animator.advance(mask, mask, mask, factorsInvalid,
         dynamicStyleUniforms,
         Containers::MutableBitArrayView{dynamicStyleCursorStyles, 0, 2},
         Containers::MutableBitArrayView{dynamicStyleSelectionStyles, 0, 2},
         dynamicStylePaddings,
         {}, {}, {});
-    animator.advance(mask, maskInvalid, factors,
+    animator.advance(mask, mask, maskInvalid, factors,
         dynamicStyleUniforms,
         Containers::MutableBitArrayView{dynamicStyleCursorStyles, 0, 2},
         Containers::MutableBitArrayView{dynamicStyleSelectionStyles, 0, 2},
         dynamicStylePaddings,
         {}, {}, {});
-    animator.advance(maskInvalid, mask, factors,
+    animator.advance(mask, maskInvalid, mask, factors,
+        dynamicStyleUniforms,
+        Containers::MutableBitArrayView{dynamicStyleCursorStyles, 0, 2},
+        Containers::MutableBitArrayView{dynamicStyleSelectionStyles, 0, 2},
+        dynamicStylePaddings,
+        {}, {}, {});
+    animator.advance(maskInvalid, mask, mask, factors,
         dynamicStyleUniforms,
         Containers::MutableBitArrayView{dynamicStyleCursorStyles, 0, 2},
         Containers::MutableBitArrayView{dynamicStyleSelectionStyles, 0, 2},
         dynamicStylePaddings,
         {}, {}, {});
     /* Non-editing case */
-    animator.advance(mask, mask, factors,
+    animator.advance(mask, mask, mask, factors,
         dynamicStyleUniformsInvalid,
         Containers::MutableBitArrayView{dynamicStyleCursorStyles, 0, 2},
         Containers::MutableBitArrayView{dynamicStyleSelectionStyles, 0, 2},
         dynamicStylePaddings,
         {}, {}, {});
-    animator.advance(mask, mask, factors,
+    animator.advance(mask, mask, mask, factors,
         dynamicStyleUniforms,
         Containers::MutableBitArrayView{dynamicStyleCursorStyles, 0, 3},
         Containers::MutableBitArrayView{dynamicStyleSelectionStyles, 0, 2},
         dynamicStylePaddings,
         {}, {}, {});
-    animator.advance(mask, mask, factors,
+    animator.advance(mask, mask, mask, factors,
         dynamicStyleUniforms,
         Containers::MutableBitArrayView{dynamicStyleCursorStyles, 0, 2},
         Containers::MutableBitArrayView{dynamicStyleSelectionStyles, 0, 3},
         dynamicStylePaddings,
         {}, {}, {});
-    animator.advance(mask, mask, factors,
+    animator.advance(mask, mask, mask, factors,
         dynamicStyleUniforms,
         Containers::MutableBitArrayView{dynamicStyleCursorStyles, 0, 2},
         Containers::MutableBitArrayView{dynamicStyleSelectionStyles, 0, 2},
         dynamicStylePaddingsInvalid,
         {}, {}, {});
     /* Non-editing getting editing styles passed by accident */
-    animator.advance(mask, mask, factors,
+    animator.advance(mask, mask, mask, factors,
         dynamicStyleUniforms,
         Containers::MutableBitArrayView{dynamicStyleCursorStyles, 0, 2},
         Containers::MutableBitArrayView{dynamicStyleSelectionStyles, 0, 2},
         dynamicStylePaddings,
         {},
         dynamicEditingStylePaddings, {});
-    animator.advance(mask, mask, factors,
+    animator.advance(mask, mask, mask, factors,
         dynamicStyleUniforms,
         Containers::MutableBitArrayView{dynamicStyleCursorStyles, 0, 2},
         Containers::MutableBitArrayView{dynamicStyleSelectionStyles, 0, 2},
         dynamicStylePaddings,
         dynamicEditingStyleUniforms,
         {}, {});
-    animator.advance(mask, mask, factors,
+    animator.advance(mask, mask, mask, factors,
         dynamicStyleUniforms,
         Containers::MutableBitArrayView{dynamicStyleCursorStyles, 0, 2},
         Containers::MutableBitArrayView{dynamicStyleSelectionStyles, 0, 2},
@@ -2422,42 +2304,42 @@ void TextLayerStyleAnimatorTest::advanceInvalid() {
         dynamicEditingStyleUniforms,
         dynamicEditingStylePaddings, {});
     /* Editing case */
-    animatorEditing.advance(mask, mask, factors,
+    animatorEditing.advance(mask, mask, mask, factors,
         dynamicStyleUniformsEditingInvalid,
         Containers::MutableBitArrayView{dynamicStyleCursorStyles, 0, 2},
         Containers::MutableBitArrayView{dynamicStyleSelectionStyles, 0, 2},
         dynamicStylePaddings,
         dynamicEditingStyleUniforms,
         dynamicEditingStylePaddings, {});
-    animatorEditing.advance(mask, mask, factors,
+    animatorEditing.advance(mask, mask, mask, factors,
         dynamicStyleUniformsEditing,
         Containers::MutableBitArrayView{dynamicStyleCursorStyles, 0, 3},
         Containers::MutableBitArrayView{dynamicStyleSelectionStyles, 0, 2},
         dynamicStylePaddings,
         dynamicEditingStyleUniforms,
         dynamicEditingStylePaddings, {});
-    animatorEditing.advance(mask, mask, factors,
+    animatorEditing.advance(mask, mask, mask, factors,
         dynamicStyleUniformsEditing,
         Containers::MutableBitArrayView{dynamicStyleCursorStyles, 0, 2},
         Containers::MutableBitArrayView{dynamicStyleSelectionStyles, 0, 3},
         dynamicStylePaddings,
         dynamicEditingStyleUniforms,
         dynamicEditingStylePaddings, {});
-    animatorEditing.advance(mask, mask, factors,
+    animatorEditing.advance(mask, mask, mask, factors,
         dynamicStyleUniformsEditing,
         Containers::MutableBitArrayView{dynamicStyleCursorStyles, 0, 2},
         Containers::MutableBitArrayView{dynamicStyleSelectionStyles, 0, 2},
         dynamicStylePaddingsInvalid,
         dynamicEditingStyleUniforms,
         dynamicEditingStylePaddings, {});
-    animatorEditing.advance(mask, mask, factors,
+    animatorEditing.advance(mask, mask, mask, factors,
         dynamicStyleUniformsEditing,
         Containers::MutableBitArrayView{dynamicStyleCursorStyles, 0, 2},
         Containers::MutableBitArrayView{dynamicStyleSelectionStyles, 0, 2},
         dynamicStylePaddings,
         dynamicEditingStyleUniformsInvalid,
         dynamicEditingStylePaddings, {});
-    animatorEditing.advance(mask, mask, factors,
+    animatorEditing.advance(mask, mask, mask, factors,
         dynamicStyleUniformsEditing,
         Containers::MutableBitArrayView{dynamicStyleCursorStyles, 0, 2},
         Containers::MutableBitArrayView{dynamicStyleSelectionStyles, 0, 2},
@@ -2465,17 +2347,33 @@ void TextLayerStyleAnimatorTest::advanceInvalid() {
         dynamicEditingStyleUniforms,
         dynamicEditingStylePaddingsInvalid, {});
     /* Editing not getting editing styles passed by accident */
-    animatorEditing.advance(mask, mask, factors,
+    animatorEditing.advance(mask, mask, mask, factors,
         dynamicStyleUniformsEditing,
         Containers::MutableBitArrayView{dynamicStyleCursorStyles, 0, 2},
         Containers::MutableBitArrayView{dynamicStyleSelectionStyles, 0, 2},
         dynamicStylePaddings,
         {}, {}, {});
+    /* All views correct but the layer doesn't have styles set */
+    animator.advance(mask, mask, mask, factors,
+        dynamicStyleUniforms,
+        Containers::MutableBitArrayView{dynamicStyleCursorStyles, 0, 2},
+        Containers::MutableBitArrayView{dynamicStyleSelectionStyles, 0, 2},
+        dynamicStylePaddings,
+        {}, {}, {});
+    /* This one doesn't have just editing styles set */
+    animatorEditing.advance(mask, mask, mask, factors,
+        dynamicStyleUniformsEditing,
+        Containers::MutableBitArrayView{dynamicStyleCursorStyles, 0, 2},
+        Containers::MutableBitArrayView{dynamicStyleSelectionStyles, 0, 2},
+        dynamicStylePaddings,
+        dynamicEditingStyleUniforms,
+        dynamicEditingStylePaddings, {});
 
     CORRADE_COMPARE_AS(out,
-        "Ui::TextLayerStyleAnimator::advance(): expected active, stopped and factors views to have a size of 3 but got 3, 3 and 4\n"
-        "Ui::TextLayerStyleAnimator::advance(): expected active, stopped and factors views to have a size of 3 but got 3, 4 and 3\n"
-        "Ui::TextLayerStyleAnimator::advance(): expected active, stopped and factors views to have a size of 3 but got 4, 3 and 3\n"
+        "Ui::TextLayerStyleAnimator::advance(): expected active, started, stopped and factors views to have a size of 3 but got 3, 3, 3 and 4\n"
+        "Ui::TextLayerStyleAnimator::advance(): expected active, started, stopped and factors views to have a size of 3 but got 3, 3, 4 and 3\n"
+        "Ui::TextLayerStyleAnimator::advance(): expected active, started, stopped and factors views to have a size of 3 but got 3, 4, 3 and 3\n"
+        "Ui::TextLayerStyleAnimator::advance(): expected active, started, stopped and factors views to have a size of 3 but got 4, 3, 3 and 3\n"
 
         "Ui::TextLayerStyleAnimator::advance(): expected dynamic style uniform, cursor style, selection style and padding views to have a size of 2, and the dynamic editing style uniform and paddings empty, but got 3, 2, 2, 2; 0 and 0\n"
         "Ui::TextLayerStyleAnimator::advance(): expected dynamic style uniform, cursor style, selection style and padding views to have a size of 2, and the dynamic editing style uniform and paddings empty, but got 2, 3, 2, 2; 0 and 0\n"
@@ -2491,7 +2389,148 @@ void TextLayerStyleAnimatorTest::advanceInvalid() {
         "Ui::TextLayerStyleAnimator::advance(): expected dynamic style cursor style, selection style and padding views to have a size of 2, the dynamic style uniform view a size of 6, and the dynamic editing style uniform and padding views a size of 4, but got 2, 2, 3; 6; 4 and 4\n"
         "Ui::TextLayerStyleAnimator::advance(): expected dynamic style cursor style, selection style and padding views to have a size of 2, the dynamic style uniform view a size of 6, and the dynamic editing style uniform and padding views a size of 4, but got 2, 2, 2; 6; 3 and 4\n"
         "Ui::TextLayerStyleAnimator::advance(): expected dynamic style cursor style, selection style and padding views to have a size of 2, the dynamic style uniform view a size of 6, and the dynamic editing style uniform and padding views a size of 4, but got 2, 2, 2; 6; 4 and 3\n"
-        "Ui::TextLayerStyleAnimator::advance(): expected dynamic style cursor style, selection style and padding views to have a size of 2, the dynamic style uniform view a size of 6, and the dynamic editing style uniform and padding views a size of 4, but got 2, 2, 2; 6; 0 and 0\n",
+        "Ui::TextLayerStyleAnimator::advance(): expected dynamic style cursor style, selection style and padding views to have a size of 2, the dynamic style uniform view a size of 6, and the dynamic editing style uniform and padding views a size of 4, but got 2, 2, 2; 6; 0 and 0\n"
+
+        "Ui::TextLayerStyleAnimator::advance(): no style data was set on the layer\n"
+        "Ui::TextLayerStyleAnimator::advance(): no editing style data was set on the layer\n",
+        TestSuite::Compare::String);
+}
+
+void TextLayerStyleAnimatorTest::advanceInvalidCursorSelection() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct: Text::AbstractFont {
+        Text::FontFeatures doFeatures() const override { return {}; }
+        bool doIsOpened() const override { return true; }
+        void doClose() override {}
+
+        void doGlyphIdsInto(const Containers::StridedArrayView1D<const char32_t>&, const Containers::StridedArrayView1D<UnsignedInt>&) override {}
+        Vector2 doGlyphSize(UnsignedInt) override { return {}; }
+        Vector2 doGlyphAdvance(UnsignedInt) override { return {}; }
+        Containers::Pointer<Text::AbstractShaper> doCreateShaper() override { return Containers::pointer<EmptyShaper>(*this); }
+    } font;
+
+    struct: Text::AbstractGlyphCache {
+        using Text::AbstractGlyphCache::AbstractGlyphCache;
+
+        Text::GlyphCacheFeatures doFeatures() const override { return {}; }
+        void doSetImage(const Vector2i&, const ImageView2D&) override {}
+    } cache{PixelFormat::R8Unorm, {32, 32, 2}};
+    cache.addFont(67, &font);
+
+    struct LayerShared: TextLayer::Shared {
+        explicit LayerShared(Text::AbstractGlyphCache& glyphCache, const Configuration& configuration): TextLayer::Shared{glyphCache, configuration} {}
+
+        void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
+        void doSetEditingStyle(const TextLayerCommonEditingStyleUniform&, Containers::ArrayView<const TextLayerEditingStyleUniform>) override {}
+    } shared{cache, TextLayer::Shared::Configuration{2, 5}
+        .setEditingStyleCount(1)
+        .setDynamicStyleCount(2)
+    };
+
+    struct Layer: TextLayer {
+        explicit Layer(LayerHandle handle, Shared& shared): TextLayer{handle, shared} {}
+    } layer{layerHandle(0, 1), shared};
+
+    TextLayerStyleAnimator animator{animatorHandle(0, 1)};
+    layer.assignAnimator(animator);
+
+    animator.create(0, 1, Animation::Easing::linear, 12_nsec, 13_nsec, DataHandle::Null);
+    animator.create(2, 3, Animation::Easing::linear, 12_nsec, 13_nsec, DataHandle::Null);
+    animator.create(3, 2, Animation::Easing::linear, 12_nsec, 13_nsec, DataHandle::Null);
+    animator.create(2, 4, Animation::Easing::linear, 12_nsec, 13_nsec, DataHandle::Null);
+    animator.create(4, 2, Animation::Easing::linear, 12_nsec, 13_nsec, DataHandle::Null);
+
+    /* Set the style after animation creation to verify it isn't needed
+       earlier */
+    FontHandle fontHandle = shared.addFont(font, 1.0f);
+    shared.setStyle(
+        TextLayerCommonStyleUniform{},
+        {TextLayerStyleUniform{}, TextLayerStyleUniform{}},
+        {0, 1, 0, 0, 0},
+        {fontHandle, fontHandle, fontHandle, fontHandle, fontHandle},
+        {Text::Alignment{}, Text::Alignment{}, Text::Alignment{}, Text::Alignment{}, Text::Alignment{}},
+        {}, {}, {},
+        /* Style 2 references both cursor and selection styles, 3 just
+           selection, 4 just cursor */
+        {-1, -1, 0, -1, 0}, {-1, -1, 0, 0, -1},
+        {});
+    shared.setEditingStyle(
+        TextLayerCommonEditingStyleUniform{},
+        {TextLayerEditingStyleUniform{}},
+        {}, {{}});
+
+    Containers::BitArray maskZeros{ValueInit, 5};
+    Float factors[5];
+    TextLayerStyleUniform dynamicStyleUniforms[6];
+    char dynamicStyleCursorStyles[1];
+    char dynamicStyleSelectionStyles[1];
+    Vector4 dynamicStylePaddings[2];
+    TextLayerEditingStyleUniform dynamicEditingStyleUniforms[4];
+    Vector4 dynamicEditingStylePaddings[4];
+
+    /* This advance() should be fine, the views are all sized properly and the
+       first animation is correct */
+    {
+        Containers::BitArray mask{ValueInit, 5};
+        mask.set(0);
+        CORRADE_COMPARE(animator.advance(mask, mask, maskZeros, factors,
+            dynamicStyleUniforms,
+            Containers::MutableBitArrayView{dynamicStyleCursorStyles, 0, 2},
+            Containers::MutableBitArrayView{dynamicStyleSelectionStyles, 0, 2},
+            dynamicStylePaddings,
+            dynamicEditingStyleUniforms,
+            dynamicEditingStylePaddings, {}), TextLayerStyleAnimatorUpdate::Uniform);
+    }
+
+    Containers::String out;
+    Error redirectError{&out};
+    {
+        Containers::BitArray mask{ValueInit, 5};
+        mask.set(1);
+        animator.advance(mask, mask, maskZeros, factors,
+            dynamicStyleUniforms,
+            Containers::MutableBitArrayView{dynamicStyleCursorStyles, 0, 2},
+            Containers::MutableBitArrayView{dynamicStyleSelectionStyles, 0, 2},
+            dynamicStylePaddings,
+            dynamicEditingStyleUniforms,
+            dynamicEditingStylePaddings, {});
+    } {
+        Containers::BitArray mask{ValueInit, 5};
+        mask.set(2);
+        animator.advance(mask, mask, maskZeros, factors,
+            dynamicStyleUniforms,
+            Containers::MutableBitArrayView{dynamicStyleCursorStyles, 0, 2},
+            Containers::MutableBitArrayView{dynamicStyleSelectionStyles, 0, 2},
+            dynamicStylePaddings,
+            dynamicEditingStyleUniforms,
+            dynamicEditingStylePaddings, {});
+    } {
+        Containers::BitArray mask{ValueInit, 5};
+        mask.set(3);
+        animator.advance(mask, mask, maskZeros, factors,
+            dynamicStyleUniforms,
+            Containers::MutableBitArrayView{dynamicStyleCursorStyles, 0, 2},
+            Containers::MutableBitArrayView{dynamicStyleSelectionStyles, 0, 2},
+            dynamicStylePaddings,
+            dynamicEditingStyleUniforms,
+            dynamicEditingStylePaddings, {});
+    } {
+        Containers::BitArray mask{ValueInit, 5};
+        mask.set(4);
+        animator.advance(mask, mask, maskZeros, factors,
+            dynamicStyleUniforms,
+            Containers::MutableBitArrayView{dynamicStyleCursorStyles, 0, 2},
+            Containers::MutableBitArrayView{dynamicStyleSelectionStyles, 0, 2},
+            dynamicStylePaddings,
+            dynamicEditingStyleUniforms,
+            dynamicEditingStylePaddings, {});
+    }
+    CORRADE_COMPARE_AS(out,
+        "Ui::TextLayerStyleAnimator::advance(): expected style 3 to reference a cursor style like style 2 for Ui::AnimationHandle({0x0, 0x1}, {0x1, 0x1})\n"
+        "Ui::TextLayerStyleAnimator::advance(): expected style 2 to not reference a cursor style like style 3 for Ui::AnimationHandle({0x0, 0x1}, {0x2, 0x1})\n"
+        "Ui::TextLayerStyleAnimator::advance(): expected style 4 to reference a selection style like style 2 for Ui::AnimationHandle({0x0, 0x1}, {0x3, 0x1})\n"
+        "Ui::TextLayerStyleAnimator::advance(): expected style 2 to not reference a selection style like style 4 for Ui::AnimationHandle({0x0, 0x1}, {0x4, 0x1})\n",
         TestSuite::Compare::String);
 }
 
@@ -2530,6 +2569,9 @@ void TextLayerStyleAnimatorTest::layerAdvance() {
 
     FontHandle fontHandle = shared.addFont(font, 1.0f);
 
+    /* Has to be called early to be able to call TextLayer::create() which we
+       need to to verify style ID updates, TextLayerStyleAnimator::create()
+       itself doesn't need setStyle() to be called */
     shared.setStyle(
         TextLayerCommonStyleUniform{},
         {TextLayerStyleUniform{}
@@ -2689,6 +2731,9 @@ void TextLayerStyleAnimatorTest::uiAdvance() {
 
     FontHandle fontHandle = shared.addFont(font, 1.0f);
 
+    /* Has to be called early to be able to call TextLayer::create() which we
+       need to to verify style ID updates, TextLayerStyleAnimator::create()
+       itself doesn't need setStyle() to be called */
     shared.setStyle(
         TextLayerCommonStyleUniform{},
         {TextLayerStyleUniform{}

@@ -2116,6 +2116,7 @@ void TextLayer::doAdvanceAnimations(const Nanoseconds time, const Containers::Mu
         if(needsAdvanceClean.first())
             updates |= static_cast<TextLayerStyleAnimator&>(animator).advance(
                 activeStorage.prefix(capacity),
+                startedStorage.prefix(capacity),
                 stoppedStorage.prefix(capacity),
                 factorStorage.prefix(capacity),
                 state.dynamicStyleUniforms,

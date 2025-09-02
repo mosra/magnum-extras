@@ -126,8 +126,6 @@ void BaseLayerStyleAnimator::createInternal(const AnimationHandle handle, const 
     /* Layer being set had to be checked in create() already */
     CORRADE_INTERNAL_ASSERT(state.layerSharedState);
     const BaseLayer::Shared::State& layerSharedState = static_cast<const BaseLayer::Shared::State&>(*state.layerSharedState);
-    CORRADE_ASSERT(layerSharedState.setStyleCalled,
-        "Ui::BaseLayerStyleAnimator::create(): no style data was set on the layer", );
     CORRADE_ASSERT(
         sourceStyle < layerSharedState.styleCount &&
         targetStyle < layerSharedState.styleCount,
@@ -147,19 +145,6 @@ void BaseLayerStyleAnimator::createInternal(const AnimationHandle handle, const 
     animation.targetStyle = targetStyle;
     animation.dynamicStyle = ~UnsignedInt{};
     animation.easing = easing;
-
-    const Implementation::BaseLayerStyle& sourceStyleData = layerSharedState.styles[sourceStyle];
-    const Implementation::BaseLayerStyle& targetStyleData = layerSharedState.styles[targetStyle];
-    animation.sourcePadding = sourceStyleData.padding;
-    animation.targetPadding = targetStyleData.padding;
-
-    /* Remember also if the actual uniform ID is different, if not, we don't
-       need to interpolate (or upload) it. The uniform *data* may still be the
-       same even if the ID is different, but checking for that is too much work
-       and any reasonable style should deduplicate those anyway. */
-    animation.sourceUniform = layerSharedState.styleUniforms[sourceStyleData.uniform];
-    animation.targetUniform = layerSharedState.styleUniforms[targetStyleData.uniform];
-    animation.uniformDifferent = sourceStyleData.uniform != targetStyleData.uniform;
 }
 
 void BaseLayerStyleAnimator::remove(const AnimationHandle handle) {
@@ -170,34 +155,6 @@ void BaseLayerStyleAnimator::remove(const AnimationHandle handle) {
 void BaseLayerStyleAnimator::remove(const AnimatorDataHandle handle) {
     AbstractAnimator::remove(handle);
     removeInternal(animatorDataHandleId(handle));
-}
-
-Containers::Pair<BaseLayerStyleUniform, BaseLayerStyleUniform> BaseLayerStyleAnimator::uniforms(const AnimationHandle handle) const {
-    CORRADE_ASSERT(isHandleValid(handle),
-        "Ui::BaseLayerStyleAnimator::uniforms(): invalid handle" << handle, {});
-    const Animation& animation = static_cast<const State&>(*_state).animations[animationHandleId(handle)];
-    return {animation.sourceUniform, animation.targetUniform};
-}
-
-Containers::Pair<BaseLayerStyleUniform, BaseLayerStyleUniform> BaseLayerStyleAnimator::uniforms(const AnimatorDataHandle handle) const {
-    CORRADE_ASSERT(isHandleValid(handle),
-        "Ui::BaseLayerStyleAnimator::uniforms(): invalid handle" << handle, {});
-    const Animation& animation = static_cast<const State&>(*_state).animations[animatorDataHandleId(handle)];
-    return {animation.sourceUniform, animation.targetUniform};
-}
-
-Containers::Pair<Vector4, Vector4> BaseLayerStyleAnimator::paddings(const AnimationHandle handle) const {
-    CORRADE_ASSERT(isHandleValid(handle),
-        "Ui::BaseLayerStyleAnimator::paddings(): invalid handle" << handle, {});
-    const Animation& animation = static_cast<const State&>(*_state).animations[animationHandleId(handle)];
-    return {animation.sourcePadding, animation.targetPadding};
-}
-
-Containers::Pair<Vector4, Vector4> BaseLayerStyleAnimator::paddings(const AnimatorDataHandle handle) const {
-    CORRADE_ASSERT(isHandleValid(handle),
-        "Ui::BaseLayerStyleAnimator::paddings(): invalid handle" << handle, {});
-    const Animation& animation = static_cast<const State&>(*_state).animations[animatorDataHandleId(handle)];
-    return {animation.sourcePadding, animation.targetPadding};
 }
 
 auto BaseLayerStyleAnimator::easing(const AnimationHandle handle) const -> Float(*)(Float) {
@@ -212,11 +169,12 @@ auto BaseLayerStyleAnimator::easing(const AnimatorDataHandle handle) const -> Fl
     return static_cast<const State&>(*_state).animations[animatorDataHandleId(handle)].easing;
 }
 
-BaseLayerStyleAnimatorUpdates BaseLayerStyleAnimator::advance(const Containers::BitArrayView active, const Containers::BitArrayView stopped, const Containers::StridedArrayView1D<const Float>& factors, const Containers::ArrayView<BaseLayerStyleUniform> dynamicStyleUniforms, const Containers::StridedArrayView1D<Vector4>& dynamicStylePaddings, const Containers::StridedArrayView1D<UnsignedInt>& dataStyles) {
+BaseLayerStyleAnimatorUpdates BaseLayerStyleAnimator::advance(const Containers::BitArrayView active, const Containers::BitArrayView started, const Containers::BitArrayView stopped, const Containers::StridedArrayView1D<const Float>& factors, const Containers::ArrayView<BaseLayerStyleUniform> dynamicStyleUniforms, const Containers::StridedArrayView1D<Vector4>& dynamicStylePaddings, const Containers::StridedArrayView1D<UnsignedInt>& dataStyles) {
     CORRADE_ASSERT(active.size() == capacity() &&
+                   started.size() == capacity() &&
                    stopped.size() == capacity() &&
                    factors.size() == capacity(),
-        "Ui::BaseLayerStyleAnimator::advance(): expected active, stopped and factors views to have a size of" << capacity() << "but got" << active.size() << Debug::nospace << "," << stopped.size() << "and" << factors.size(), {});
+        "Ui::BaseLayerStyleAnimator::advance(): expected active, started, stopped and factors views to have a size of" << capacity() << "but got" << active.size() << Debug::nospace << "," << started.size() << Debug::nospace << "," << stopped.size() << "and" << factors.size(), {});
 
     /* If there are any running animations, create() had to be called
        already, which ensures the layer is already set. Otherwise just bail as
@@ -234,6 +192,8 @@ BaseLayerStyleAnimatorUpdates BaseLayerStyleAnimator::advance(const Containers::
         dynamicStyleUniforms.size() == layerSharedState.dynamicStyleCount &&
         dynamicStylePaddings.size() == layerSharedState.dynamicStyleCount,
         "Ui::BaseLayerStyleAnimator::advance(): expected dynamic style uniform and padding views to have a size of" << layerSharedState.dynamicStyleCount << "but got" << dynamicStyleUniforms.size() << "and" << dynamicStylePaddings.size(), {});
+    CORRADE_ASSERT(layerSharedState.setStyleCalled,
+        "Ui::BaseLayerStyleAnimator::advance(): no style data was set on the layer", {});
 
     const Containers::StridedArrayView1D<const LayerDataHandle> layerData = this->layerData();
 
@@ -247,6 +207,25 @@ BaseLayerStyleAnimatorUpdates BaseLayerStyleAnimator::advance(const Containers::
         /* The handle is assumed to be valid if not null, i.e. that appropriate
            dataClean() got called before advance() */
         const LayerDataHandle data = layerData[i];
+
+        /* If the animation is started, fetch the style data. This is done here
+           and not in create() to make it possible to reuse created animations
+           even after a style is updated. */
+        if(started[i]) {
+            const Implementation::BaseLayerStyle& sourceStyleData = layerSharedState.styles[animation.sourceStyle];
+            const Implementation::BaseLayerStyle& targetStyleData = layerSharedState.styles[animation.targetStyle];
+            animation.sourcePadding = sourceStyleData.padding;
+            animation.targetPadding = targetStyleData.padding;
+
+            /* Remember also if the actual uniform ID is different, if not, we
+               don't need to interpolate (or upload) it. The uniform *data* may
+               still be the same even if the ID is different, but checking for
+               that is too much work and any reasonable style should
+               deduplicate those anyway. */
+            animation.sourceUniform = layerSharedState.styleUniforms[sourceStyleData.uniform];
+            animation.targetUniform = layerSharedState.styleUniforms[targetStyleData.uniform];
+            animation.uniformDifferent = sourceStyleData.uniform != targetStyleData.uniform;
+        }
 
         /* If the animation is stopped, switch the data to the target style, if
            any. No need to animate anything else as the dynamic style is going

@@ -181,6 +181,8 @@ properties cannot be animated and thus are set to properties of source style at
 the beginning. If the styles reference a cursor or editing style, the
 corresponding @ref TextLayerEditingStyleUniform including its padding value,
 and the selection @ref TextLayerStyleUniform override is animated as well.
+All style data are fetched from @ref TextLayer::Shared at animation start,
+meaning that you can reuse existing animations even after the style is updated.
 
 @m_class{m-note m-warning}
 
@@ -265,17 +267,6 @@ class MAGNUM_UI_EXPORT TextLayerStyleAnimator: public AbstractVisualLayerStyleAn
          * animation is not allowed to use the dynamic style indices) and that
          * @p easing is not @cpp nullptr @ce.
          *
-         * @m_class{m-note m-warning}
-         *
-         * @par
-         *      If either of the styles references a cursor or a selection
-         *      style, the other is expected to reference a cursor or a
-         *      selection as well. The reason is that there's several possible
-         *      ways how to perform a fade-in / fade-out of the cursor or
-         *      selection, be it the quad changing size, or transparency, or
-         *      any other way, and the animator just picking something would be
-         *      too arbitrary.
-         *
          * Delegates to @ref AbstractAnimator::create(Nanoseconds, Nanoseconds, DataHandle, UnsignedInt, AnimationFlags),
          * see its documentation for more information.
          *
@@ -288,6 +279,24 @@ class MAGNUM_UI_EXPORT TextLayerStyleAnimator: public AbstractVisualLayerStyleAn
          * the editing padding value, if it differs between the editing styles,
          * and the @ref TextLayerStyleUniform override for selected portions of
          * the text, if referenced.
+         *
+         * The actually animated style values are queried from
+         * @ref TextLayer::Shared only when the animation starts, thus it isn't
+         * needed for @ref TextLayer::Shared::setStyle() /
+         * @relativeref{TextLayer::Shared,setEditingStyle()} to be called at
+         * animation creation time. Calling @ref TextLayer::create() to have a
+         * @p data to attach to however requires a style to be set.
+         *
+         * @m_class{m-note m-warning}
+         *
+         * @par
+         *      If either of the styles references a cursor or a selection
+         *      style, the other is expected to reference a cursor or a
+         *      selection as well. The reason is that there's several possible
+         *      ways how to perform a fade-in / fade-out of the cursor or
+         *      selection, be it the quad changing size, or transparency, or
+         *      any other way, and the animator just picking something would be
+         *      too arbitrary.
          */
         AnimationHandle create(UnsignedInt sourceStyle, UnsignedInt targetStyle, Float(*easing)(Float), Nanoseconds start, Nanoseconds duration, DataHandle data, UnsignedInt repeatCount = 1, AnimationFlags flags = {});
 
@@ -414,169 +423,6 @@ class MAGNUM_UI_EXPORT TextLayerStyleAnimator: public AbstractVisualLayerStyleAn
         void remove(AnimatorDataHandle handle);
 
         /**
-         * @brief Animation source and target uniforms
-         *
-         * Expects that @p handle is valid. The uniforms are queried from
-         * @ref TextLayer::Shared based on style IDs passed to @ref create().
-         * @see @ref paddings(), @ref cursorUniforms(),
-         *      @ref selectionUniforms(), @ref selectionTextUniforms(),
-         *      @ref isHandleValid(AnimatorDataHandle) const
-         */
-        Containers::Pair<TextLayerStyleUniform, TextLayerStyleUniform> uniforms(AnimationHandle handle) const;
-
-        /**
-         * @brief Animation source and target uniforms assuming it belongs to this animator
-         *
-         * Like @ref uniforms(AnimationHandle) const but without checking that
-         * @p handle indeed belongs to this animator. See its documentation for
-         * more information.
-         * @see @ref isHandleValid(AnimatorDataHandle) const,
-         *      @ref animationHandleData()
-         */
-        Containers::Pair<TextLayerStyleUniform, TextLayerStyleUniform> uniforms(AnimatorDataHandle handle) const;
-
-        /**
-         * @brief Animation source and target paddings
-         *
-         * Expects that @p handle is valid. The paddings are queried from
-         * @ref TextLayer::Shared based on style IDs passed to @ref create().
-         * @see @ref uniforms(), @ref cursorPaddings(),
-         *      @ref selectionPaddings(),
-         *      @ref isHandleValid(AnimatorDataHandle) const
-         */
-        Containers::Pair<Vector4, Vector4> paddings(AnimationHandle handle) const;
-
-        /**
-         * @brief Animation source and target paddings assuming it belongs to this animator
-         *
-         * Like @ref paddings(AnimationHandle) const but without checking that
-         * @p handle indeed belongs to this animator. See its documentation for
-         * more information.
-         * @see @ref isHandleValid(AnimatorDataHandle) const,
-         *      @ref animationHandleData()
-         */
-        Containers::Pair<Vector4, Vector4> paddings(AnimatorDataHandle handle) const;
-
-        /**
-         * @brief Animation source and destination cursor uniforms
-         *
-         * Expects that @p handle is valid. The uniforms are queried from
-         * @ref TextLayer::Shared based on style IDs passed to @ref create().
-         * If given animated style doesn't have an associated cursor style,
-         * returns @relativeref{Corrade,Containers::NullOpt}.
-         * @see @ref cursorPaddings(), @ref selectionUniforms(),
-         *      @ref selectionTextUniforms(), @ref uniforms(),
-         *      @ref isHandleValid(AnimatorDataHandle) const
-         */
-        Containers::Optional<Containers::Pair<TextLayerEditingStyleUniform, TextLayerEditingStyleUniform>> cursorUniforms(AnimationHandle handle) const;
-
-        /**
-         * @brief Animation source and destination cursor uniforms assuming it belongs to this animator
-         *
-         * Like @ref cursorUniforms(AnimationHandle) const but without checking
-         * that @p handle indeed belongs to this animator. See its
-         * documentation for more information.
-         * @see @ref isHandleValid(AnimatorDataHandle) const,
-         *      @ref animationHandleData()
-         */
-        Containers::Optional<Containers::Pair<TextLayerEditingStyleUniform, TextLayerEditingStyleUniform>> cursorUniforms(AnimatorDataHandle handle) const;
-
-        /**
-         * @brief Animation source and destination cursor paddings
-         *
-         * Expects that @p handle is valid. The paddings are queried from
-         * @ref TextLayer::Shared based on style IDs passed to @ref create().
-         * If given animated style doesn't have an associated cursor style,
-         * returns @relativeref{Corrade,Containers::NullOpt}.
-         * @see @ref cursorUniforms(), @ref selectionPaddings(),
-         *      @ref paddings(), @ref isHandleValid(AnimatorDataHandle) const
-         */
-        Containers::Optional<Containers::Pair<Vector4, Vector4>> cursorPaddings(AnimationHandle handle) const;
-
-        /**
-         * @brief Animation source and destination cursor paddings assuming it belongs to this animator
-         *
-         * Like @ref cursorPaddings(AnimationHandle) const but without checking
-         * that @p handle indeed belongs to this animator. See its
-         * documentation for more information.
-         * @see @ref isHandleValid(AnimatorDataHandle) const,
-         *      @ref animationHandleData()
-         */
-        Containers::Optional<Containers::Pair<Vector4, Vector4>> cursorPaddings(AnimatorDataHandle handle) const;
-
-        /**
-         * @brief Animation source and destination selection uniforms
-         *
-         * Expects that @p handle is valid. The uniforms are queried from
-         * @ref TextLayer::Shared based on style IDs passed to @ref create().
-         * If given animated style doesn't have an associated selection style,
-         * returns @relativeref{Corrade,Containers::NullOpt}.
-         * @see @ref selectionTextUniforms(), @ref selectionPaddings(),
-         *      @ref cursorUniforms(), @ref uniforms(),
-         *      @ref isHandleValid(AnimatorDataHandle) const
-         */
-        Containers::Optional<Containers::Pair<TextLayerEditingStyleUniform, TextLayerEditingStyleUniform>> selectionUniforms(AnimationHandle handle) const;
-
-        /**
-         * @brief Animation source and destination selection uniforms assuming it belongs to this animator
-         *
-         * Like @ref selectionUniforms(AnimationHandle) const but without
-         * checking that @p handle indeed belongs to this animator. See its
-         * documentation for more information.
-         * @see @ref isHandleValid(AnimatorDataHandle) const,
-         *      @ref animationHandleData()
-         */
-        Containers::Optional<Containers::Pair<TextLayerEditingStyleUniform, TextLayerEditingStyleUniform>> selectionUniforms(AnimatorDataHandle handle) const;
-
-        /**
-         * @brief Animation source and destination selection paddings
-         *
-         * Expects that @p handle is valid. The paddings are queried from
-         * @ref TextLayer::Shared based on style IDs passed to @ref create().
-         * If given animated style doesn't have an associated selection style,
-         * returns @relativeref{Corrade,Containers::NullOpt}.
-         * @see @ref selectionUniforms(), @ref selectionTextUniforms(),
-         *      @ref cursorPaddings(), @ref paddings(),
-         *      @ref isHandleValid(AnimatorDataHandle) const
-         */
-        Containers::Optional<Containers::Pair<Vector4, Vector4>> selectionPaddings(AnimationHandle handle) const;
-
-        /**
-         * @brief Animation source and destination selection paddings assuming it belongs to this animator
-         *
-         * Like @ref selectionPaddings(AnimationHandle) const but without
-         * checking that @p handle indeed belongs to this animator. See its
-         * documentation for more information.
-         * @see @ref isHandleValid(AnimatorDataHandle) const,
-         *      @ref animationHandleData()
-         */
-        Containers::Optional<Containers::Pair<Vector4, Vector4>> selectionPaddings(AnimatorDataHandle handle) const;
-
-        /**
-         * @brief Animation source and destination selection text uniforms
-         *
-         * Expects that @p handle is valid. The uniforms are queried from
-         * @ref TextLayer::Shared based on style IDs passed to @ref create().
-         * If given animated style doesn't have an associated selection style,
-         * returns @relativeref{Corrade,Containers::NullOpt}.
-         * @see @ref selectionUniforms(), @ref selectionPaddings(),
-         *      @ref cursorUniforms(), @ref uniforms(),
-         *      @ref isHandleValid(AnimatorDataHandle) const
-         */
-        Containers::Optional<Containers::Pair<TextLayerStyleUniform, TextLayerStyleUniform>> selectionTextUniforms(AnimationHandle handle) const;
-
-        /**
-         * @brief Animation source and destination selection text uniforms assuming it belongs to this animator
-         *
-         * Like @ref selectionTextUniforms(AnimationHandle) const but without
-         * checking that @p handle indeed belongs to this animator. See its
-         * documentation for more information.
-         * @see @ref isHandleValid(AnimatorDataHandle) const,
-         *      @ref animationHandleData()
-         */
-        Containers::Optional<Containers::Pair<TextLayerStyleUniform, TextLayerStyleUniform>> selectionTextUniforms(AnimatorDataHandle handle) const;
-
-        /**
          * @brief Animation easing function
          *
          * Expects that @p handle is valid. The returned pointer is never
@@ -599,6 +445,8 @@ class MAGNUM_UI_EXPORT TextLayerStyleAnimator: public AbstractVisualLayerStyleAn
         /**
          * @brief Advance the animations
          * @param[in] active                    Animation IDs that are active
+         * @param[in] started                   Animation IDs that started
+         *      playing since last time
          * @param[in] stopped                   Animation IDs that stopped
          *      playing since last time
          * @param[in] factors                   Interpolation factors indexed
@@ -625,12 +473,13 @@ class MAGNUM_UI_EXPORT TextLayerStyleAnimator: public AbstractVisualLayerStyleAn
          * this function directly and doing so may cause internal
          * @ref AbstractUserInterface state update to misbehave.
          *
-         * Expects that size of @p active,  @p stopped and @p factors matches
-         * @ref capacity(), it's assumed that their contents were filled by
-         * @ref update() before. If the layer the animator is associated with
-         * doesn't contain editing styles, the @p dynamicStyleUniforms,
-         * @p dynamicStyleCursorStyles, @p dynamicStyleSelectionStyles and
-         * @p dynamicStylePaddings, are expected to have a size of
+         * Expects that size of @p active,  @p started, @p stopped and
+         * @p factors matches @ref capacity(), it's assumed that their contents
+         * were filled by @ref update() before. If the layer the animator is
+         * associated with doesn't contain editing styles, the
+         * @p dynamicStyleUniforms, @p dynamicStyleCursorStyles,
+         * @p dynamicStyleSelectionStyles and @p dynamicStylePaddings, are
+         * expected to have a size of
          * @ref TextLayer::Shared::dynamicStyleCount() and the
          * @p dynamicEditingStyleUniforms and @p dynamicEditingStylePaddings
          * views are expected to be empty. If the layer contains editing
@@ -639,9 +488,12 @@ class MAGNUM_UI_EXPORT TextLayerStyleAnimator: public AbstractVisualLayerStyleAn
          * @p dynamicEditingStyleUniforms and @p dynamicEditingStylePaddings
          * views twice as large as @ref TextLayer::Shared::dynamicStyleCount()
          * instead. The @p dataStyles view should be large enough to contain
-         * any valid layer data ID.
+         * any valid layer data ID. @ref TextLayer::Shared::setStyle(), and
+         * also @ref TextLayer::Shared::setEditingStyle() if editing styles are
+         * enabled, is expected to be already called for the layer this
+         * animator is assigned to.
          */
-        TextLayerStyleAnimatorUpdates advance(Containers::BitArrayView active, Containers::BitArrayView stopped, const Containers::StridedArrayView1D<const Float>& factors, Containers::ArrayView<TextLayerStyleUniform> dynamicStyleUniforms, Containers::MutableBitArrayView dynamicStyleCursorStyles, Containers::MutableBitArrayView dynamicStyleSelectionStyles, const Containers::StridedArrayView1D<Vector4>& dynamicStylePaddings, Containers::ArrayView<TextLayerEditingStyleUniform> dynamicEditingStyleUniforms, const Containers::StridedArrayView1D<Vector4>& dynamicEditingStylePaddings, const Containers::StridedArrayView1D<UnsignedInt>& dataStyles);
+        TextLayerStyleAnimatorUpdates advance(Containers::BitArrayView active, Containers::BitArrayView started, Containers::BitArrayView stopped, const Containers::StridedArrayView1D<const Float>& factors, Containers::ArrayView<TextLayerStyleUniform> dynamicStyleUniforms, Containers::MutableBitArrayView dynamicStyleCursorStyles, Containers::MutableBitArrayView dynamicStyleSelectionStyles, const Containers::StridedArrayView1D<Vector4>& dynamicStylePaddings, Containers::ArrayView<TextLayerEditingStyleUniform> dynamicEditingStyleUniforms, const Containers::StridedArrayView1D<Vector4>& dynamicEditingStylePaddings, const Containers::StridedArrayView1D<UnsignedInt>& dataStyles);
 
     private:
         struct State;
