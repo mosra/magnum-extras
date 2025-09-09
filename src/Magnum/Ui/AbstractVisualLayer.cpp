@@ -376,9 +376,13 @@ UnsignedInt AbstractVisualLayer::styleOrAnimationTargetStyle(const UnsignedInt s
         const AnimationHandle animation = state.dynamicStyleAnimations[style - sharedState.styleCount];
         /* The target style is useful only if the animation is from our default
            style animator. If it's some other animator, better not touch it at
-           all. */
-        if(animation != AnimationHandle::Null && state.styleAnimator && animationHandleAnimator(animation) == state.styleAnimator->handle())
-            return state.styleAnimator->styles(animation).second();
+           all. If the animation is Reverse, then it's being switched to the
+           source style instead. */
+        if(animation != AnimationHandle::Null && state.styleAnimator && animationHandleAnimator(animation) == state.styleAnimator->handle()) {
+            const Containers::Pair<UnsignedInt, UnsignedInt> styles = state.styleAnimator->styles(animation);
+            return state.styleAnimator->flags(animation) >= AnimationFlag::Reverse ?
+                styles.first() : styles.second();
+        }
     }
 
     /* Otherwise return the original style verbatim */

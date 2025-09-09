@@ -168,20 +168,25 @@ corresponding interpolation between the source and target styles, equivalent to
 calling @ref TextLayer::setDynamicStyle(). When the animation stops, the data
 style index is switched to the target ID specified in @ref create() and the
 dynamic style index is recycled with @ref TextLayer::recycleDynamicStyle().
+Animations that have @ref AnimationFlag::Reverse set animate in the other
+direction and get switched to the *source* ID on animation stop instead.
 
 If the animator runs out of dynamic styles, newly started animations are left
 with their style index untouched until a dynamic style is recycled. If no
 dynamic style gets recycled until the animation stops, the data gets switched
-directly to the target style at the animation stop with no animation.
+directly to the target style at the animation stop with no animation. Again, in
+case of @ref AnimationFlag::Reverse animations the source and target style is
+swapped in this case.
 
 The animation interpolates all properties of @ref TextLayerStyleUniform as well
 as the style padding value. The font, alignment or text feature style
 properties cannot be animated and thus are set to properties of source style at
-the beginning. If the styles reference a cursor or editing style, the
-corresponding @ref TextLayerEditingStyleUniform including its padding value,
-and the selection @ref TextLayerStyleUniform override is animated as well.
-All style data are fetched from @ref TextLayer::Shared at animation start,
-meaning that you can reuse existing animations even after the style is updated.
+the start (and *target* style for @ref AnimationFlag::Reverse animations). If
+the styles reference a cursor or editing style, the corresponding
+@ref TextLayerEditingStyleUniform including its padding value, and the
+selection @ref TextLayerStyleUniform override is animated as well. All style
+data are fetched from @ref TextLayer::Shared at animation start, meaning that
+you can reuse existing animations even after the style is updated.
 
 @m_class{m-note m-warning}
 

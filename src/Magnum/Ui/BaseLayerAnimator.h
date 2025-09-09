@@ -149,11 +149,15 @@ corresponding interpolation between the source and target styles, equivalent to
 calling @ref BaseLayer::setDynamicStyle(). When the animation stops, the data
 style index is switched to the target ID specified in @ref create() and the
 dynamic style index is recycled with @ref BaseLayer::recycleDynamicStyle().
+Animations that have @ref AnimationFlag::Reverse set animate in the other
+direction and get switched to the *source* ID on animation stop instead.
 
 If the animator runs out of dynamic styles, newly started animations are left
 with their style index untouched until a dynamic style is recycled. If no
 dynamic style gets recycled until the animation stops, the data gets switched
-directly to the target style at the animation stop with no animation.
+directly to the target style at the animation stop with no animation. Again, in
+case of @ref AnimationFlag::Reverse animations the source and target style is
+swapped in this case.
 
 The animation interpolates all properties of @ref BaseLayerStyleUniform
 including outline width and corner radius, as well as the style padding value.

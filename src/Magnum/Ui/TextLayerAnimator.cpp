@@ -275,6 +275,7 @@ TextLayerStyleAnimatorUpdates TextLayerStyleAnimator::advance(const Containers::
         "Ui::TextLayerStyleAnimator::advance(): no editing style data was set on the layer", {});
 
     const Containers::StridedArrayView1D<const LayerDataHandle> layerData = this->layerData();
+    const Containers::StridedArrayView1D<const AnimationFlags> flags = this->flags();
 
     TextLayerStyleAnimatorUpdates updates;
     /** @todo some way to iterate set bits */
@@ -289,7 +290,12 @@ TextLayerStyleAnimatorUpdates TextLayerStyleAnimator::advance(const Containers::
 
         /* If the animation is started, fetch the style data. This is done here
            and not in create() to make it possible to reuse created animations
-           even after a style is updated. */
+           even after a style is updated.
+
+           Unlike below in the setDynamicStyle() call and in the stopped case,
+           there's no difference for Reverse animations -- for those, the
+           factor will go from 1 to 0, causing the source and target to be
+           swapped already. */
         if(started[i]) {
             const Implementation::TextLayerStyle& sourceStyleData = layerSharedState.styles[animation.sourceStyle];
             const Implementation::TextLayerStyle& targetStyleData = layerSharedState.styles[animation.targetStyle];
@@ -356,12 +362,13 @@ TextLayerStyleAnimatorUpdates TextLayerStyleAnimator::advance(const Containers::
         }
 
         /* If the animation is stopped, switch the data to the target style, if
-           any. No need to animate anything else as the dynamic style is going
-           to get recycled right away. */
+           any, or source style if the animation is Reverse. No need to
+           animate anything else as the dynamic style is going to get recycled
+           right away. */
         if(stopped[i]) {
-            CORRADE_INTERNAL_ASSERT(factors[i] == 1.0f);
             if(data != LayerDataHandle::Null) {
-                dataStyles[layerDataHandleId(data)] = animation.targetStyle;
+                dataStyles[layerDataHandleId(data)] = flags[i] >= AnimationFlag::Reverse ?
+                    animation.sourceStyle : animation.targetStyle;
                 updates |= TextLayerStyleAnimatorUpdate::Style;
             }
 
@@ -398,15 +405,17 @@ TextLayerStyleAnimatorUpdates TextLayerStyleAnimator::advance(const Containers::
                 continue;
 
             /* Initialize the dynamic style font, alignment and features from
-               the source style. Those can't reasonably get animated in any
-               way, but the dynamic style has to contain them so calls to
-               setText(), updateText() and editText() while the style is being
-               animated don't behave differently. The uniform and padding is
-               left at the default-constructed state as it's filled through the
+               the source style, or target style if the animation is Reverse.
+               Those can't reasonably get animated in any way, but the dynamic
+               style has to contain them so calls to setText(), updateText()
+               and editText() while the style is being animated don't behave
+               differently. The uniform and padding is left at the
+               default-constructed state as it's filled through the
                `dynamicStyleUniforms` and `dynamicStylePaddings` views right
                after. */
             {
-                const Implementation::TextLayerStyle& styleData = layerSharedState.styles[animation.sourceStyle];
+                const Implementation::TextLayerStyle& styleData = layerSharedState.styles[flags[i] >= AnimationFlag::Reverse ?
+                    animation.targetStyle : animation.sourceStyle];
                 static_cast<TextLayer&>(*state.layer).setDynamicStyle(*style,
                     TextLayerStyleUniform{},
                     styleData.font,

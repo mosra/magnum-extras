@@ -196,6 +196,7 @@ BaseLayerStyleAnimatorUpdates BaseLayerStyleAnimator::advance(const Containers::
         "Ui::BaseLayerStyleAnimator::advance(): no style data was set on the layer", {});
 
     const Containers::StridedArrayView1D<const LayerDataHandle> layerData = this->layerData();
+    const Containers::StridedArrayView1D<const AnimationFlags> flags = this->flags();
 
     BaseLayerStyleAnimatorUpdates updates;
     /** @todo some way to iterate set bits */
@@ -210,7 +211,11 @@ BaseLayerStyleAnimatorUpdates BaseLayerStyleAnimator::advance(const Containers::
 
         /* If the animation is started, fetch the style data. This is done here
            and not in create() to make it possible to reuse created animations
-           even after a style is updated. */
+           even after a style is updated.
+
+           Unlike below in the stopped case, there's no difference for Reverse
+           animations -- for those, the factor will go from 1 to 0, causing the
+           source and target to be swapped already. */
         if(started[i]) {
             const Implementation::BaseLayerStyle& sourceStyleData = layerSharedState.styles[animation.sourceStyle];
             const Implementation::BaseLayerStyle& targetStyleData = layerSharedState.styles[animation.targetStyle];
@@ -228,12 +233,13 @@ BaseLayerStyleAnimatorUpdates BaseLayerStyleAnimator::advance(const Containers::
         }
 
         /* If the animation is stopped, switch the data to the target style, if
-           any. No need to animate anything else as the dynamic style is going
-           to get recycled right away. */
+           any, or source style if the animation is Reverse. No need to
+           animate anything else as the dynamic style is going to get recycled
+           right away. */
         if(stopped[i]) {
-            CORRADE_INTERNAL_ASSERT(factors[i] == 1.0f);
             if(data != LayerDataHandle::Null) {
-                dataStyles[layerDataHandleId(data)] = animation.targetStyle;
+                dataStyles[layerDataHandleId(data)] = flags[i] >= AnimationFlag::Reverse ?
+                    animation.sourceStyle : animation.targetStyle;
                 updates |= BaseLayerStyleAnimatorUpdate::Style;
             }
 

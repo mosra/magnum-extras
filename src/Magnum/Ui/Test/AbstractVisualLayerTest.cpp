@@ -176,9 +176,14 @@ const struct {
 const struct {
     const char* name;
     bool dynamicAnimated;
+    AnimationFlags animationFlags;
 } EventStyleTransitionNoOpData[]{
-    {"", false},
-    {"dynamic animated style with target being the same", true},
+    {"",
+        false, {}},
+    {"dynamic animated style with target being the same",
+        true, {}},
+    {"dynamic animated style with source being the same, reverse",
+        true, AnimationFlag::Reverse},
 };
 
 const struct {
@@ -186,17 +191,25 @@ const struct {
     bool update;
     bool templated;
     bool dynamicAnimated;
+    AnimationFlags animationFlags;
     Modifiers modifiers;
 } EventStyleTransitionData[]{
-    {"update before", true, false, false, {}},
-    {"", false, false, false, {}},
-    {"with keyboard modifiers", false, false, false, Modifier::Shift|Modifier::Ctrl},
-    {"templated, update before", true, true, false, {}},
-    {"templated", false, true, false, {}},
+    {"update before",
+        true, false, false, {}, {}},
+    {"",
+        false, false, false, {}, {}},
+    {"with keyboard modifiers",
+        false, false, false, {}, Modifier::Shift|Modifier::Ctrl},
+    {"templated, update before",
+        true, true, false, {}, {}},
+    {"templated",
+        false, true, false, {}, {}},
     {"dynamic animated style with target style being set, update before",
-        true, false, true, {}},
+        true, false, true, {}, {}},
     {"dynamic animated style with target style being set",
-        false, false, true, {}},
+        false, false, true, {}, {}},
+    {"dynamic animated style with target style being set, reverse",
+        false, false, true, AnimationFlag::Reverse, {}},
 };
 
 const struct {
@@ -1778,10 +1791,18 @@ void AbstractVisualLayerTest::eventStyleTransitionNoOp() {
         layer.assignAnimator(*animator);
         layer.setDefaultStyleAnimator(animator.get());
 
-        AnimationHandle nodeDataAnimation = animator->create(StyleIndex{}, StyleIndex::GreenPressedHover, 0_nsec, 1_nsec, DataHandle::Null);
+        AnimationHandle nodeDataAnimation = animator->create(
+            data.animationFlags >= AnimationFlag::Reverse ?
+                StyleIndex::GreenPressedHover : StyleIndex{},
+            data.animationFlags >= AnimationFlag::Reverse ?
+                StyleIndex{} : StyleIndex::GreenPressedHover,
+            0_nsec, 1_nsec, DataHandle::Null, data.animationFlags);
         nodeData = layer.create(StyleCount + *layer.allocateDynamicStyle(nodeDataAnimation), node);
         CORRADE_COMPARE(layer.style(nodeData), StyleCount + 0);
-        CORRADE_COMPARE(animator->styles<StyleIndex>(nodeDataAnimation).second(), StyleIndex::GreenPressedHover);
+        CORRADE_COMPARE(animator->styles<StyleIndex>(nodeDataAnimation),
+            data.animationFlags >= AnimationFlag::Reverse ?
+                Containers::pair(StyleIndex::GreenPressedHover, StyleIndex{}) :
+                Containers::pair(StyleIndex{}, StyleIndex::GreenPressedHover));
         /* The dynamic style isn't backreferenced from the animation, but
            that's fine, the layer needs only the other direction */
         CORRADE_COMPARE(animator->dynamicStyle(nodeDataAnimation), Containers::NullOpt);
@@ -2271,13 +2292,18 @@ void AbstractVisualLayerTest::eventStyleTransition() {
         layer.setDefaultStyleAnimator(animatorInstance.get());
         animator = &ui.setStyleAnimatorInstance(Utility::move(animatorInstance));
     }
-    auto moveStyleToDynamic = [&](DataHandle data) {
+    auto moveStyleToDynamic = [&](DataHandle dataHandle) {
         if(layer.dynamicStyleUsedCount() == 1)
             layer.recycleDynamicStyle(0);
         /* No need to attach the animation to the data */
-        AnimationHandle animation = animator->create(0u, layer.style(data), 0_nsec, 1_nsec, DataHandle::Null);
-        layer.setStyle(data, StyleCount + *layer.allocateDynamicStyle(animation));
-        CORRADE_COMPARE(layer.style(data), StyleCount + 0);
+        AnimationHandle animation = animator->create(
+            data.animationFlags >= AnimationFlag::Reverse ?
+                layer.style(dataHandle) : 0u,
+            data.animationFlags >= AnimationFlag::Reverse ?
+                0u : layer.style(dataHandle),
+            0_nsec, 1_nsec, DataHandle::Null, data.animationFlags);
+        layer.setStyle(dataHandle, StyleCount + *layer.allocateDynamicStyle(animation));
+        CORRADE_COMPARE(layer.style(dataHandle), StyleCount + 0);
     };
 
     ui.update();
