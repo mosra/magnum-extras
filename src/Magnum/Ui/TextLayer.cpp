@@ -719,11 +719,14 @@ void TextLayer::setDynamicStyleInternal(
         and moving the recompacting to doUpdate() instead */
     if(style.featureCount != features.size()) {
         arrayRemove(state.dynamicStyleFeatures, style.featureOffset, style.featureCount);
-        /* The >= will change the feature offset for the style itself as well,
-           so compare to a copy */
+        /* The > will change the feature offset for the style itself as well,
+           so compare to a copy. It's not >= because that could cause offsets
+           of empty feature ranges right before the modified one to
+           underflow. See TextLayerTest::dynamicStyleFeatureAllocation() for a
+           repro case. */
         const UnsignedInt originalFeatureOffset = style.featureOffset;
         for(Implementation::TextLayerDynamicStyle& i: state.dynamicStyles)
-            if(i.featureOffset >= originalFeatureOffset)
+            if(i.featureOffset > originalFeatureOffset)
                 i.featureOffset -= style.featureCount;
         style.featureOffset = state.dynamicStyleFeatures.size();
         style.featureCount = features.size();
