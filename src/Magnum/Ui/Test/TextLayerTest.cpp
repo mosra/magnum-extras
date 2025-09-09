@@ -5413,6 +5413,46 @@ void TextLayerTest::dynamicStyleFeatureAllocation() {
     CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().dynamicStyles).slice(&Implementation::TextLayerDynamicStyle::featureCount), Containers::stridedArrayView({
         0u, 1u, 3u
     }), TestSuite::Compare::Container);
+
+    /* Set another style to different feature count so it's at the same offset
+       as the empty one */
+    layer.setDynamicStyle(2, TextLayerStyleUniform{}, FontHandle::Null, Text::Alignment{}, {
+        {Text::Feature::SmallCapitals, false},
+        {Text::Feature::SlashedZero, false},
+    }, {});
+    CORRADE_COMPARE_AS((Containers::arrayCast<const Containers::Pair<Text::Feature, UnsignedInt>>(layer.stateData().dynamicStyleFeatures)), (Containers::arrayView<Containers::Pair<Text::Feature, UnsignedInt>>({
+        /* Style 1 */
+        {Text::Feature::TabularFigures, true},
+        /* Style 0, changed */
+        /* Style 2, changed */
+        {Text::Feature::SmallCapitals, false},
+        {Text::Feature::SlashedZero, false},
+    })), TestSuite::Compare::Container);
+    CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().dynamicStyles).slice(&Implementation::TextLayerDynamicStyle::featureOffset), Containers::stridedArrayView({
+        1u, 0u, 1u
+    }), TestSuite::Compare::Container);
+    CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().dynamicStyles).slice(&Implementation::TextLayerDynamicStyle::featureCount), Containers::stridedArrayView({
+        0u, 1u, 2u
+    }), TestSuite::Compare::Container);
+
+    /* Updating that style to different item count then shouldn't cause the
+       empty style right before to change offset in any way */
+    layer.setDynamicStyle(2, TextLayerStyleUniform{}, FontHandle::Null, Text::Alignment{}, {
+        {Text::Feature::Kerning, false},
+    }, {});
+    CORRADE_COMPARE_AS((Containers::arrayCast<const Containers::Pair<Text::Feature, UnsignedInt>>(layer.stateData().dynamicStyleFeatures)), (Containers::arrayView<Containers::Pair<Text::Feature, UnsignedInt>>({
+        /* Style 1 */
+        {Text::Feature::TabularFigures, true},
+        /* Style 0, changed */
+        /* Style 2, changed */
+        {Text::Feature::Kerning, false},
+    })), TestSuite::Compare::Container);
+    CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().dynamicStyles).slice(&Implementation::TextLayerDynamicStyle::featureOffset), Containers::stridedArrayView({
+        1u, 0u, 1u
+    }), TestSuite::Compare::Container);
+    CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().dynamicStyles).slice(&Implementation::TextLayerDynamicStyle::featureCount), Containers::stridedArrayView({
+        0u, 1u, 1u
+    }), TestSuite::Compare::Container);
 }
 
 void TextLayerTest::dynamicStyleEditingStyles() {
