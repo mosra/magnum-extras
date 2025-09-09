@@ -167,13 +167,12 @@ the style index of given @ref DataHandle to the allocated dynamic style with
 corresponding interpolation between the source and target styles, equivalent to
 calling @ref TextLayer::setDynamicStyle(). When the animation stops, the data
 style index is switched to the target ID specified in @ref create() and the
-dynamic style index is recycled with @ref TextLayer::recycleDynamicStyle() is
-called for the dynamic style.
+dynamic style index is recycled with @ref TextLayer::recycleDynamicStyle().
 
 If the animator runs out of dynamic styles, newly started animations are left
-at the source style index until another dynamic style is recycled. If no
-dynamic style gets recycled until the animation ends, the data gets switched
-directly to the target style without animating.
+with their style index untouched until a dynamic style is recycled. If no
+dynamic style gets recycled until the animation stops, the data gets switched
+directly to the target style at the animation stop with no animation.
 
 The animation interpolates all properties of @ref TextLayerStyleUniform as well
 as the style padding value. The font, alignment or text feature style

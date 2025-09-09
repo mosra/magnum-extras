@@ -295,8 +295,8 @@ class MAGNUM_UI_EXPORT AbstractVisualLayer: public AbstractLayer {
          * @ref AbstractVisualLayerStyleAnimator::styles(), instead of
          * leaving them untouched. Which means that for example, if there's an
          * animation that has a hovered style as the target, and a press
-         * happens, it'll trigger a transition the hovered style to a pressed
-         * one, instead of leaving the dynamic style untouched.
+         * happens, it'll trigger a transition from the hovered style to a
+         * pressed one, instead of leaving the dynamic style untouched.
          * @see @ref dynamicStyleUsedCount(), @ref Shared::dynamicStyleCount()
          */
         Containers::Optional<UnsignedInt> allocateDynamicStyle(AnimationHandle animation =

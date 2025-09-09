@@ -1089,7 +1089,7 @@ void TextLayerStyleAnimatorTest::advance() {
     {
         TextLayerStyleUniform uniforms[6];
         TextLayerEditingStyleUniform editingUniforms[4];
-        /* Set to all 1s if non.editing, all 0s if editing. The advance()
+        /* Set to all 1s if non-editing, all 0s if editing. The advance()
            should then flip them to the other value only where expected. */
         Containers::BitArray cursorStyles{DirectInit, 2, data.cursorStyles ? false : true};
         Containers::BitArray selectionStyles{DirectInit, 2, data.selectionStyles ? false : true};
