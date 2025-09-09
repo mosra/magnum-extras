@@ -31,6 +31,8 @@
  * @m_since_latest
  */
 
+#include <Corrade/Containers/Pair.h> /* for styles<T>() */
+
 #include "Magnum/Ui/AbstractAnimator.h"
 
 namespace Magnum { namespace Ui {
@@ -59,49 +61,48 @@ class MAGNUM_UI_EXPORT AbstractVisualLayerStyleAnimator: public AbstractStyleAni
         AbstractVisualLayerStyleAnimator& operator=(AbstractVisualLayerStyleAnimator&&) noexcept;
 
         /**
-         * @brief Target animation style ID
+         * @brief Animation source and target style IDs
          *
-         * Expects that @p handle is valid. The returned value is always less
+         * Expects that @p handle is valid. The returned values are always less
          * than @ref AbstractVisualLayer::Shared::styleCount() of the layer
          * associated with this animator.
-         * @see @ref dynamicStyle()
+         * @see @ref isHandleValid(AnimationHandle) const
          */
-        UnsignedInt targetStyle(AnimationHandle handle) const;
+        Containers::Pair<UnsignedInt, UnsignedInt> styles(AnimationHandle handle) const;
 
         /**
-         * @brief Target animation style ID in a concrete enum type
+         * @brief Animation source and target style IDs in a concrete enum type
          *
-         * Expects that @p handle is valid. The returned value is always less
-         * than @ref AbstractVisualLayer::Shared::styleCount() of the layer
-         * associated with this animator.
-         * @see @ref dynamicStyle()
+         * Like @ref styles(AnimationHandle) const but returning a concrete
+         * enum type. See its documentation for more information.
          */
-        template<class StyleIndex> StyleIndex targetStyle(AnimationHandle handle) const {
+        template<class StyleIndex> Containers::Pair<StyleIndex, StyleIndex> styles(AnimationHandle handle) const {
             static_assert(std::is_enum<StyleIndex>::value, "expected an enum type");
-            return StyleIndex(targetStyle(handle));
+            Containers::Pair<UnsignedInt, UnsignedInt> out = styles(handle);
+            return {StyleIndex(out.first()), StyleIndex(out.second())};
         }
 
         /**
-         * @brief Target animation style ID assuming it belongs to this animator
+         * @brief Animation source and target styles assuming it belongs to this animator
          *
-         * Like @ref targetStyle(AnimationHandle) const but without checking
-         * that @p handle indeed belongs to this animator. See its
-         * documentation for more information.
-         * @see @ref animationHandleData()
+         * Like @ref styles(AnimationHandle) const but without checking that
+         * @p handle indeed belongs to this animator. See its documentation for
+         * more information.
+         * @see @ref isHandleValid(AnimatorDataHandle) const,
+         *      @ref animationHandleData()
          */
-        UnsignedInt targetStyle(AnimatorDataHandle handle) const;
+        Containers::Pair<UnsignedInt, UnsignedInt> styles(AnimatorDataHandle handle) const;
 
         /**
-         * @brief Target animation style ID in a concrete enum type assuming it belongs to this layer
+         * @brief Animation source and target style IDs in a concrete enum type assuming it belongs to this animator
          *
-         * Like @ref targetStyle(AnimationHandle) const but without checking
-         * that @p handle indeed belongs to this animator. See its
-         * documentation for more information.
-         * @see @ref animationHandleData()
+         * Like @ref styles(AnimatorDataHandle) const but returning a concrete
+         * enum type. See its documentation for more information.
          */
-        template<class StyleIndex> StyleIndex targetStyle(AnimatorDataHandle handle) const {
+        template<class StyleIndex> Containers::Pair<StyleIndex, StyleIndex> styles(AnimatorDataHandle handle) const {
             static_assert(std::is_enum<StyleIndex>::value, "expected an enum type");
-            return StyleIndex(targetStyle(handle));
+            Containers::Pair<UnsignedInt, UnsignedInt> out = styles(handle);
+            return {StyleIndex(out.first()), StyleIndex(out.second())};
         }
 
         /**
@@ -116,7 +117,7 @@ class MAGNUM_UI_EXPORT AbstractVisualLayerStyleAnimator: public AbstractStyleAni
          * wasn't allocated yet, either due to the animation not being advanced
          * yet or due to no free dynamic styles being available, returns
          * @relativeref{Corrade,Containers::NullOpt}.
-         * @see @ref targetStyle()
+         * @see @ref styles()
          */
         Containers::Optional<UnsignedInt> dynamicStyle(AnimationHandle handle) const;
 

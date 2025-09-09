@@ -277,10 +277,10 @@ template<class T> void BaseLayerStyleAnimatorTest::createRemove() {
     CORRADE_COMPARE(animator.flags(first), AnimationFlag::KeepOncePlayed);
     CORRADE_COMPARE(animator.started(first), 12_nsec);
     CORRADE_COMPARE(animator.data(first), data2);
-    CORRADE_COMPARE(animator.targetStyle(first), 1);
+    CORRADE_COMPARE(animator.styles(first), Containers::pair(0u, 1u));
     /* Can't use T, as the function restricts to enum types which would fail
        for T == UnsignedInt */
-    CORRADE_COMPARE(animator.template targetStyle<Enum>(first), Enum(1));
+    CORRADE_COMPARE(animator.template styles<Enum>(first), Containers::pair(Enum(0), Enum(1)));
     CORRADE_COMPARE(animator.dynamicStyle(first), Containers::NullOpt);
     /* Styles 0 and 1 are uniforms 4 and 1 */
     CORRADE_COMPARE(animator.uniforms(first).first().topColor, 0x9933ff_rgbf);
@@ -301,10 +301,10 @@ template<class T> void BaseLayerStyleAnimatorTest::createRemove() {
     CORRADE_COMPARE(animator.flags(second), AnimationFlag(0x40));
     CORRADE_COMPARE(animator.started(second), -15_nsec);
     CORRADE_COMPARE(animator.data(second), DataHandle::Null);
-    CORRADE_COMPARE(animator.targetStyle(second), 0);
+    CORRADE_COMPARE(animator.styles(second), Containers::pair(2u, 0u));
     /* Can't use T, as the function restricts to enum types which would fail
        for T == UnsignedInt */
-    CORRADE_COMPARE(animator.template targetStyle<Enum>(second), Enum(0));
+    CORRADE_COMPARE(animator.template styles<Enum>(second), Containers::pair(Enum(2), Enum(0)));
     CORRADE_COMPARE(animator.dynamicStyle(second), Containers::NullOpt);
     /* Styles 2 and 0 are uniforms 2 and 4 */
     CORRADE_COMPARE(animator.uniforms(second).first().topColor, 0xffffff_rgbf);
@@ -322,10 +322,10 @@ template<class T> void BaseLayerStyleAnimatorTest::createRemove() {
     CORRADE_COMPARE(animator.flags(animationHandleData(third)), AnimationFlag(0x80));
     CORRADE_COMPARE(animator.started(animationHandleData(third)), 0_nsec);
     CORRADE_COMPARE(animator.data(animationHandleData(third)), data3);
-    CORRADE_COMPARE(animator.targetStyle(animationHandleData(third)), 2);
+    CORRADE_COMPARE(animator.styles(animationHandleData(third)), Containers::pair(1u, 2u));
     /* Can't use T, as the function restricts to enum types which would fail
        for T == UnsignedInt */
-    CORRADE_COMPARE(animator.template targetStyle<Enum>(animationHandleData(third)), Enum(2));
+    CORRADE_COMPARE(animator.template styles<Enum>(animationHandleData(third)), Containers::pair(Enum(1), Enum(2)));
     CORRADE_COMPARE(animator.dynamicStyle(animationHandleData(third)), Containers::NullOpt);
     /* Styles 1 and 2 are uniforms 1 and 2 */
     CORRADE_COMPARE(animator.uniforms(animationHandleData(third)).first().topColor, 0xff3366_rgbf);
@@ -344,10 +344,10 @@ template<class T> void BaseLayerStyleAnimatorTest::createRemove() {
     CORRADE_COMPARE(animator.flags(fourth), AnimationFlag::KeepOncePlayed);
     CORRADE_COMPARE(animator.started(fourth), 20_nsec);
     CORRADE_COMPARE(animator.data(fourth), data1);
-    CORRADE_COMPARE(animator.targetStyle(fourth), 2u);
+    CORRADE_COMPARE(animator.styles(fourth), Containers::pair(0u, 2u));
     /* Can't use T, as the function restricts to enum types which would fail
        for T == UnsignedInt */
-    CORRADE_COMPARE(animator.template targetStyle<Enum>(fourth), Enum(2));
+    CORRADE_COMPARE(animator.template styles<Enum>(fourth), Containers::pair(Enum(0), Enum(2)));
     CORRADE_COMPARE(animator.dynamicStyle(fourth), Containers::NullOpt);
     /* Styles 0 and 2 are uniforms 4 and 2 */
     CORRADE_COMPARE(animator.uniforms(fourth).first().topColor, 0x9933ff_rgbf);
@@ -407,7 +407,7 @@ void BaseLayerStyleAnimatorTest::createRemoveHandleRecycle() {
 
     /* Allocate an animation */
     AnimationHandle first = animator.create(0, 1, Animation::Easing::linear, 0_nsec, 13_nsec, data);
-    CORRADE_COMPARE(animator.targetStyle(first), 1u);
+    CORRADE_COMPARE(animator.styles(first), Containers::pair(0u, 1u));
     CORRADE_COMPARE(animator.dynamicStyle(first), Containers::NullOpt);
     CORRADE_COMPARE(animator.uniforms(first).first().topColor, 0xff3366_rgbf);
     CORRADE_COMPARE(animator.uniforms(first).second().topColor, 0x9933ff_rgbf);
@@ -443,7 +443,7 @@ void BaseLayerStyleAnimatorTest::createRemoveHandleRecycle() {
        AbstractAnimatorTest::createRemoveHandleRecycle(). */
     AnimationHandle first2 = animator.create(1, 0, Animation::Easing::bounceInOut, -10_nsec, 100_nsec, data);
     CORRADE_COMPARE(animationHandleId(first2), animationHandleId(first));
-    CORRADE_COMPARE(animator.targetStyle(first2), 0u);
+    CORRADE_COMPARE(animator.styles(first2), Containers::pair(1u, 0u));
     CORRADE_COMPARE(animator.dynamicStyle(first2), Containers::NullOpt);
     CORRADE_COMPARE(animator.uniforms(first2).first().topColor, 0x9933ff_rgbf);
     CORRADE_COMPARE(animator.uniforms(first2).second().topColor, 0xff3366_rgbf);

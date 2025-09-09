@@ -52,6 +52,7 @@ struct AbstractVisualLayerStyleAnimator::State {
     const AbstractVisualLayer::Shared::State* layerSharedState = nullptr;
     /* These views are assumed to point to subclass own data and maintained to
        have its size always match layer capacity */
+    Containers::StridedArrayView1D<UnsignedInt> sourceStyles;
     Containers::StridedArrayView1D<UnsignedInt> targetStyles;
     Containers::StridedArrayView1D<UnsignedInt> dynamicStyles;
 };

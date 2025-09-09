@@ -57,20 +57,18 @@ void AbstractVisualLayerStyleAnimator::removeInternal(const UnsignedInt id) {
         state.layer->recycleDynamicStyle(state.dynamicStyles[id]);
 }
 
-UnsignedInt AbstractVisualLayerStyleAnimator::targetStyle(const AnimationHandle handle) const {
+Containers::Pair<UnsignedInt, UnsignedInt> AbstractVisualLayerStyleAnimator::styles(const AnimationHandle handle) const {
     CORRADE_ASSERT(isHandleValid(handle),
-        "Ui::AbstractVisualLayerStyleAnimator::targetStyle(): invalid handle" << handle, {});
+        "Ui::AbstractVisualLayerStyleAnimator::styles(): invalid handle" << handle, {});
     const State& state = *_state;
-    CORRADE_INTERNAL_ASSERT(state.targetStyles.size() == capacity());
-    return state.targetStyles[animationHandleId(handle)];
+    return {state.sourceStyles[animationHandleId(handle)], state.targetStyles[animationHandleId(handle)]};
 }
 
-UnsignedInt AbstractVisualLayerStyleAnimator::targetStyle(const AnimatorDataHandle handle) const {
+Containers::Pair<UnsignedInt, UnsignedInt> AbstractVisualLayerStyleAnimator::styles(const AnimatorDataHandle handle) const {
     CORRADE_ASSERT(isHandleValid(handle),
-        "Ui::AbstractVisualLayerStyleAnimator::targetStyle(): invalid handle" << handle, {});
+        "Ui::AbstractVisualLayerStyleAnimator::styles(): invalid handle" << handle, {});
     const State& state = *_state;
-    CORRADE_INTERNAL_ASSERT(state.targetStyles.size() == capacity());
-    return state.targetStyles[animatorDataHandleId(handle)];
+    return {state.sourceStyles[animatorDataHandleId(handle)], state.targetStyles[animatorDataHandleId(handle)]};
 }
 
 Containers::Optional<UnsignedInt> AbstractVisualLayerStyleAnimator::dynamicStyle(const AnimationHandle handle) const {

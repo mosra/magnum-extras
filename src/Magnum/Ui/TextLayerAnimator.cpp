@@ -175,6 +175,7 @@ void TextLayerStyleAnimator::createInternal(const AnimationHandle handle, const 
     const UnsignedInt id = animationHandleId(handle);
     if(id >= state.animations.size()) {
         arrayResize(state.animations, NoInit, id + 1);
+        state.sourceStyles = stridedArrayView(state.animations).slice(&Animation::sourceStyle);
         state.targetStyles = stridedArrayView(state.animations).slice(&Animation::targetStyle);
         state.dynamicStyles = stridedArrayView(state.animations).slice(&Animation::dynamicStyle);
     }

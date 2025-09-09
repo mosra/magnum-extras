@@ -291,8 +291,8 @@ class MAGNUM_UI_EXPORT AbstractVisualLayer: public AbstractLayer {
          * an animator that's set with @ref BaseLayer::setDefaultStyleAnimator()
          * / @ref TextLayer::setDefaultStyleAnimator(), style transitions in
          * response to events will treat data using given dynamic style as if
-         * they had the style set to
-         * @ref AbstractVisualLayerStyleAnimator::targetStyle(), instead of
+         * they had the style set to the target style from
+         * @ref AbstractVisualLayerStyleAnimator::styles(), instead of
          * leaving them untouched. Which means that for example, if there's an
          * animation that has a hovered style as the target, and a press
          * happens, it'll trigger a transition the hovered style to a pressed

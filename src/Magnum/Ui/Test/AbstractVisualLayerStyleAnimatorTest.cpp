@@ -51,7 +51,7 @@ struct AbstractVisualLayerStyleAnimatorTest: TestSuite::Tester {
     void setDefaultStyleAnimator();
     void setDefaultStyleAnimatorInvalid();
 
-    /* targetStyle() and dynamicStyle() properties tested in
+    /* styles() and dynamicStyle() properties tested in
        BaseLayerStyleAnimatorTest and TextLayerStyleAnimatorTest, as those
        depend on the subclass correctly updating the views */
     void propertiesInvalid();
@@ -268,32 +268,42 @@ void AbstractVisualLayerStyleAnimatorTest::propertiesInvalid() {
     } animator{animatorHandle(0, 1)};
     layer.assignAnimator(animator);
 
+    enum class Enum {};
+
     AnimationHandle handle = animator.create(12_nsec, 13_nsec, DataHandle::Null);
 
     Containers::String out;
     Error redirectError{&out};
-    animator.targetStyle(AnimationHandle::Null);
+    animator.styles(AnimationHandle::Null);
+    animator.styles<Enum>(AnimationHandle::Null);
     animator.dynamicStyle(AnimationHandle::Null);
     /* Valid animator, invalid data */
-    animator.targetStyle(animationHandle(animator.handle(), AnimatorDataHandle(0x123abcde)));
+    animator.styles(animationHandle(animator.handle(), AnimatorDataHandle(0x123abcde)));
+    animator.styles<Enum>(animationHandle(animator.handle(), AnimatorDataHandle(0x123abcde)));
     animator.dynamicStyle(animationHandle(animator.handle(), AnimatorDataHandle(0x123abcde)));
     /* Invalid animator, valid data */
-    animator.targetStyle(animationHandle(AnimatorHandle::Null, animationHandleData(handle)));
+    animator.styles(animationHandle(AnimatorHandle::Null, animationHandleData(handle)));
+    animator.styles<Enum>(animationHandle(AnimatorHandle::Null, animationHandleData(handle)));
     animator.dynamicStyle(animationHandle(AnimatorHandle::Null, animationHandleData(handle)));
     /* AnimatorDataHandle directly */
-    animator.targetStyle(AnimatorDataHandle(0x123abcde));
+    animator.styles(AnimatorDataHandle(0x123abcde));
+    animator.styles<Enum>(AnimatorDataHandle(0x123abcde));
     animator.dynamicStyle(AnimatorDataHandle(0x123abcde));
     CORRADE_COMPARE_AS(out,
-        "Ui::AbstractVisualLayerStyleAnimator::targetStyle(): invalid handle Ui::AnimationHandle::Null\n"
+        "Ui::AbstractVisualLayerStyleAnimator::styles(): invalid handle Ui::AnimationHandle::Null\n"
+        "Ui::AbstractVisualLayerStyleAnimator::styles(): invalid handle Ui::AnimationHandle::Null\n"
         "Ui::AbstractVisualLayerStyleAnimator::dynamicStyle(): invalid handle Ui::AnimationHandle::Null\n"
 
-        "Ui::AbstractVisualLayerStyleAnimator::targetStyle(): invalid handle Ui::AnimationHandle({0x0, 0x1}, {0xabcde, 0x123})\n"
+        "Ui::AbstractVisualLayerStyleAnimator::styles(): invalid handle Ui::AnimationHandle({0x0, 0x1}, {0xabcde, 0x123})\n"
+        "Ui::AbstractVisualLayerStyleAnimator::styles(): invalid handle Ui::AnimationHandle({0x0, 0x1}, {0xabcde, 0x123})\n"
         "Ui::AbstractVisualLayerStyleAnimator::dynamicStyle(): invalid handle Ui::AnimationHandle({0x0, 0x1}, {0xabcde, 0x123})\n"
 
-        "Ui::AbstractVisualLayerStyleAnimator::targetStyle(): invalid handle Ui::AnimationHandle(Null, {0x0, 0x1})\n"
+        "Ui::AbstractVisualLayerStyleAnimator::styles(): invalid handle Ui::AnimationHandle(Null, {0x0, 0x1})\n"
+        "Ui::AbstractVisualLayerStyleAnimator::styles(): invalid handle Ui::AnimationHandle(Null, {0x0, 0x1})\n"
         "Ui::AbstractVisualLayerStyleAnimator::dynamicStyle(): invalid handle Ui::AnimationHandle(Null, {0x0, 0x1})\n"
 
-        "Ui::AbstractVisualLayerStyleAnimator::targetStyle(): invalid handle Ui::AnimatorDataHandle(0xabcde, 0x123)\n"
+        "Ui::AbstractVisualLayerStyleAnimator::styles(): invalid handle Ui::AnimatorDataHandle(0xabcde, 0x123)\n"
+        "Ui::AbstractVisualLayerStyleAnimator::styles(): invalid handle Ui::AnimatorDataHandle(0xabcde, 0x123)\n"
         "Ui::AbstractVisualLayerStyleAnimator::dynamicStyle(): invalid handle Ui::AnimatorDataHandle(0xabcde, 0x123)\n",
         TestSuite::Compare::String);
 }

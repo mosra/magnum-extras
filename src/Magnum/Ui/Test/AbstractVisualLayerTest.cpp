@@ -31,6 +31,7 @@
 #include <Corrade/Containers/Optional.h>
 #include <Corrade/Containers/StridedArrayView.h>
 #include <Corrade/Containers/String.h>
+#include <Corrade/Containers/Triple.h>
 #include <Corrade/TestSuite/Tester.h>
 #include <Corrade/TestSuite/Compare/String.h>
 #include <Corrade/Utility/Format.h>
@@ -697,21 +698,22 @@ struct StyleLayer: AbstractVisualLayer {
 struct StyleLayerStyleAnimator: AbstractVisualLayerStyleAnimator {
     explicit StyleLayerStyleAnimator(AnimatorHandle handle): AbstractVisualLayerStyleAnimator{handle} {}
 
-    /* Just saves the target style index and sync's the style arrays */
-    template<class T> AnimationHandle create(T targetStyle, Nanoseconds start, Nanoseconds duration, DataHandle data, AnimationFlags flags = {}) {
+    /* Just saves the source/target style index and sync's the style arrays */
+    template<class T> AnimationHandle create(T sourceStyle, T targetStyle, Nanoseconds start, Nanoseconds duration, DataHandle data, AnimationFlags flags = {}) {
         AnimationHandle handle = AbstractVisualLayerStyleAnimator::create(start, duration, data, flags);
         const UnsignedInt id = animationHandleId(handle);
-        if(id >= styles.size()) {
-            arrayAppend(styles, NoInit, id - styles.size() + 1);
-            _state->targetStyles = stridedArrayView(styles).slice(&decltype(styles)::Type::first);
-            _state->dynamicStyles = stridedArrayView(styles).slice(&decltype(styles)::Type::second);
+        if(id >= _styles.size()) {
+            arrayAppend(_styles, NoInit, id - _styles.size() + 1);
+            _state->sourceStyles = stridedArrayView(_styles).slice(&decltype(_styles)::Type::first);
+            _state->targetStyles = stridedArrayView(_styles).slice(&decltype(_styles)::Type::second);
+            _state->dynamicStyles = stridedArrayView(_styles).slice(&decltype(_styles)::Type::third);
         }
-        styles[id].first() = UnsignedInt(targetStyle);
-        styles[id].second() = ~UnsignedInt{};
+        _styles[id] = {UnsignedInt(sourceStyle), UnsignedInt(targetStyle), ~UnsignedInt{}};
         return handle;
     }
 
-    Containers::Array<Containers::Pair<UnsignedInt, UnsignedInt>> styles;
+    private:
+        Containers::Array<Containers::Triple<UnsignedInt, UnsignedInt, UnsignedInt>> _styles;
 };
 
 template<class T> void AbstractVisualLayerTest::setStyle() {
@@ -1776,10 +1778,10 @@ void AbstractVisualLayerTest::eventStyleTransitionNoOp() {
         layer.assignAnimator(*animator);
         layer.setDefaultStyleAnimator(animator.get());
 
-        AnimationHandle nodeDataAnimation = animator->create(StyleIndex::GreenPressedHover, 0_nsec, 1_nsec, DataHandle::Null);
+        AnimationHandle nodeDataAnimation = animator->create(StyleIndex{}, StyleIndex::GreenPressedHover, 0_nsec, 1_nsec, DataHandle::Null);
         nodeData = layer.create(StyleCount + *layer.allocateDynamicStyle(nodeDataAnimation), node);
         CORRADE_COMPARE(layer.style(nodeData), StyleCount + 0);
-        CORRADE_COMPARE(animator->targetStyle<StyleIndex>(nodeDataAnimation), StyleIndex::GreenPressedHover);
+        CORRADE_COMPARE(animator->styles<StyleIndex>(nodeDataAnimation).second(), StyleIndex::GreenPressedHover);
         /* The dynamic style isn't backreferenced from the animation, but
            that's fine, the layer needs only the other direction */
         CORRADE_COMPARE(animator->dynamicStyle(nodeDataAnimation), Containers::NullOpt);
@@ -2273,7 +2275,7 @@ void AbstractVisualLayerTest::eventStyleTransition() {
         if(layer.dynamicStyleUsedCount() == 1)
             layer.recycleDynamicStyle(0);
         /* No need to attach the animation to the data */
-        AnimationHandle animation = animator->create(layer.style(data), 0_nsec, 1_nsec, DataHandle::Null);
+        AnimationHandle animation = animator->create(0u, layer.style(data), 0_nsec, 1_nsec, DataHandle::Null);
         layer.setStyle(data, StyleCount + *layer.allocateDynamicStyle(animation));
         CORRADE_COMPARE(layer.style(data), StyleCount + 0);
     };
@@ -3676,9 +3678,9 @@ void AbstractVisualLayerTest::eventStyleTransitionOutOfRange() {
         layer.setDefaultStyleAnimator(animatorInstance.get());
         animator = &ui.setStyleAnimatorInstance(Utility::move(animatorInstance));
 
-        AnimationHandle nodeDataAnimation = animator->create(StyleIndex::Red, -100_nsec, 1_nsec, DataHandle::Null, AnimationFlag::KeepOncePlayed);
+        AnimationHandle nodeDataAnimation = animator->create(StyleIndex{}, StyleIndex::Red, -100_nsec, 1_nsec, DataHandle::Null, AnimationFlag::KeepOncePlayed);
         nodeData = layer.create(StyleCount + *layer.allocateDynamicStyle(nodeDataAnimation), node);
-        CORRADE_COMPARE(animator->targetStyle<StyleIndex>(nodeDataAnimation), StyleIndex::Red);
+        CORRADE_COMPARE(animator->styles<StyleIndex>(nodeDataAnimation).second(), StyleIndex::Red);
 
     } else nodeData = layer.create(StyleIndex::Red, node);
 
@@ -3727,9 +3729,9 @@ void AbstractVisualLayerTest::eventStyleTransitionOutOfRange() {
         ui.pointerMoveEvent({1.5f, 2.0f}, moveEvent);
         if(data.dynamicAnimated) {
             layer.recycleDynamicStyle(0);
-            AnimationHandle nodeDataAnimation = animator->create(StyleIndex::RedHover, -100_nsec, 1_nsec, DataHandle::Null, AnimationFlag::KeepOncePlayed);
+            AnimationHandle nodeDataAnimation = animator->create(StyleIndex{}, StyleIndex::RedHover, -100_nsec, 1_nsec, DataHandle::Null, AnimationFlag::KeepOncePlayed);
             layer.setStyle(nodeData, StyleCount + *layer.allocateDynamicStyle(nodeDataAnimation));
-            CORRADE_COMPARE(animator->targetStyle<StyleIndex>(nodeDataAnimation), StyleIndex::RedHover);
+            CORRADE_COMPARE(animator->styles<StyleIndex>(nodeDataAnimation).second(), StyleIndex::RedHover);
         }
 
         PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
@@ -3930,7 +3932,9 @@ void AbstractVisualLayerTest::eventStyleTransitionDynamicStyle() {
     if(data.animation1 || data.animation2) {
         CORRADE_INTERNAL_ASSERT(data.animation1 != data.animation2);
 
-        AnimationHandle nodeDataDynamicAnimation = (data.animation1 ? animator1 : animator2)->create(StyleIndex::Green, -100_nsec, 1_nsec, DataHandle::Null, AnimationFlag::KeepOncePlayed);
+        /* StyleIndex{} is Green, so picking some other value for the source
+           style */
+        AnimationHandle nodeDataDynamicAnimation = (data.animation1 ? animator1 : animator2)->create(StyleIndex::Red, StyleIndex::Green, -100_nsec, 1_nsec, DataHandle::Null, AnimationFlag::KeepOncePlayed);
         nodeDataDynamic = layer.create(StyleCount + *layer.allocateDynamicStyle(data.dynamicStyleAssociatedAnimation ? nodeDataDynamicAnimation : AnimationHandle::Null), node);
     } else {
         CORRADE_INTERNAL_ASSERT(!data.dynamicStyleAssociatedAnimation);

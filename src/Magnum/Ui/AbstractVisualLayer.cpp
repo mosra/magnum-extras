@@ -378,7 +378,7 @@ UnsignedInt AbstractVisualLayer::styleOrAnimationTargetStyle(const UnsignedInt s
            style animator. If it's some other animator, better not touch it at
            all. */
         if(animation != AnimationHandle::Null && state.styleAnimator && animationHandleAnimator(animation) == state.styleAnimator->handle())
-            return state.styleAnimator->targetStyle(animation);
+            return state.styleAnimator->styles(animation).second();
     }
 
     /* Otherwise return the original style verbatim */
