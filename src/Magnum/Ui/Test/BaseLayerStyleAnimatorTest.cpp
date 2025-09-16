@@ -101,7 +101,7 @@ const struct {
     BaseLayerStyleAnimatorUpdates expected;
 } AdvancePropertiesData[]{
     {"nothing changes", 1, Vector4{2.0f},
-        BaseLayerStyleAnimatorUpdate{}},
+        {}},
     {"uniform ID changes", 0, Vector4{2.0f},
         BaseLayerStyleAnimatorUpdate::Uniform},
     /* Still reports uniform change because comparing all values is unnecessary
@@ -1119,7 +1119,8 @@ void BaseLayerStyleAnimatorTest::advanceNoFreeDynamicStyles() {
         if(needsAdvanceClean.first()) {
             Vector4 paddings[1];
             updates = animator.advance(active, started, stopped, factors, dynamicStyleUniforms, paddings, dataStyles);
-        } if(needsAdvanceClean.second())
+        }
+        if(needsAdvanceClean.second())
             animator.clean(remove);
         return updates;
     };

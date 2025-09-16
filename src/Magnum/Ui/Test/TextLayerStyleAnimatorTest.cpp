@@ -138,31 +138,31 @@ const struct {
     {"nothing changes, no editing styles",
         1, Vector4{2.0f},
         -1, -1, 0, -1, -1, {},
-        TextLayerStyleAnimatorUpdate{}, 0, 0},
+        {}, 0, 0},
     {"nothing changes, cursor style",
         1, Vector4{2.0f},
         1, -1, 0, -1, -1, Vector4{1.0f},
-        TextLayerStyleAnimatorUpdate{}, 0, 0},
+        {}, 0, 0},
     {"nothing changes, selection style",
         1, Vector4{2.0f},
         -1, 1, 2, 2, 2, Vector4{3.0f},
-        TextLayerStyleAnimatorUpdate{}, 2, 2},
+        {}, 2, 2},
     {"nothing changes, selection style with unset text editing style",
         1, Vector4{2.0f},
         /* Because the original uniform ID is unchanged, the text uniform ID
            (which falls back to the original uniform ID) is also unchanged */
         -1, 1, 2, -1, -1, Vector4{3.0f},
-        TextLayerStyleAnimatorUpdate{}, 1, 1},
+        {}, 1, 1},
     {"nothing changes, selection style with one unset text editing style",
         1, Vector4{2.0f},
         /* Same case */
         -1, 1, 2, 1, -1, Vector4{3.0f},
-        TextLayerStyleAnimatorUpdate{}, 1, 1},
+        {}, 1, 1},
     {"nothing changes, selection style with another unset text editing style",
         1, Vector4{2.0f},
         /* Same case */
         -1, 1, 2, -1, 1, Vector4{3.0f},
-        TextLayerStyleAnimatorUpdate{}, 1, 1},
+        {}, 1, 1},
 
     {"uniform ID changes",
         0, Vector4{2.0f},
@@ -2313,7 +2313,8 @@ void TextLayerStyleAnimatorTest::advanceNoFreeDynamicStyles() {
                 Containers::MutableBitArrayView{cursorStyles, 0, 1},
                 Containers::MutableBitArrayView{selectionStyles, 0, 1},
                 paddings, nullptr, nullptr, dataStyles);
-        } if(needsAdvanceClean.second())
+        }
+        if(needsAdvanceClean.second())
             animator.clean(remove);
         return updates;
     };
