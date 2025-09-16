@@ -116,8 +116,15 @@ if(CORRADE_TARGET_EMSCRIPTEN)
     # Emscripten 2.0.18
     if(EMSCRIPTEN_VERSION VERSION_LESS 2.0.18)
         target_link_options(magnum-player PRIVATE "SHELL:-s EXTRA_EXPORTED_RUNTIME_METHODS=[\"ccall\"]")
-    else()
+    # In 3.1.55+, one can explicitly include HEAPXX in order to access it
+    # from outside (player.html in this case), and in 4.0.7+ it was made not
+    # exported by default.
+    # https://github.com/emscripten-core/emscripten/pull/21439
+    # https://github.com/emscripten-core/emscripten/pull/24079
+    elseif(EMSCRIPTEN_VERSION VERSION_LESS 3.1.55)
         target_link_options(magnum-player PRIVATE "SHELL:-s EXPORTED_RUNTIME_METHODS=[\"ccall\"]")
+    else()
+        target_link_options(magnum-player PRIVATE "SHELL:-s EXPORTED_RUNTIME_METHODS=[\"ccall\",\"HEAPU8\"]")
     endif()
     target_link_options(magnum-player PRIVATE
         "SHELL:$<$<CONFIG:Release>:--closure 1>"
