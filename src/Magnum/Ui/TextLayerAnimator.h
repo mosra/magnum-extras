@@ -200,6 +200,29 @@ you can reuse existing animations even after the style is updated.
 
 At the moment, only animation between predefined styles is possible.
 
+@section Ui-TextLayerStyleAnimator-robustness Resolving style conflicts
+
+In case of styles transitioning in response to input events, it may often
+happen that a transition happens while another transition is still being
+animated. To avoid visual artifacts and seemingly random behavior, the animator
+updates the style assignment only if it didn't change since the animation
+started.
+
+For example, if a different style is assigned while an animation is playing ---
+either by a different animation or directly with @ref TextLayer::setStyle() ---
+the allocated dynamic style still gets interpolated until the end, but it's no
+longer assigned to the original data, and once the animation stops, given data
+isn't switched to the target style either.
+
+From the other side, if external code encounters a dynamic style being assigned
+to a particular data, it can query @ref TextLayer::dynamicStyleAnimation() to
+get a corresponding @ref AnimationHandle, and pass it to @ref styles() to know
+which styles the animation is transitioning between.
+
+The animator doesn't give any ordering guarantees for multiple style animations
+affecting the same data starting at the same time. Such cases should be rather
+rare in practice, however.
+
 @section Ui-TextLayerStyleAnimator-lifetime Animation lifetime and data attachment
 
 As with all other animations, they're implicitly removed once they're played.
@@ -220,8 +243,6 @@ Note that in this case you're also responsible also for switching to the target
 style once the animation finishes --- once the dynamic style is recycled, the
 same index may get used for arbitrary other style either by this animator or
 any other code, causing visual bugs.
-
-@todoc update this section once there's robustness against switching styles
 */
 class MAGNUM_UI_EXPORT TextLayerStyleAnimator: public AbstractVisualLayerStyleAnimator {
     public:

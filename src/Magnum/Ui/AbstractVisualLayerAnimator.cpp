@@ -89,13 +89,14 @@ Containers::Optional<UnsignedInt> AbstractVisualLayerStyleAnimator::dynamicStyle
     return style == ~UnsignedInt{} ? Containers::NullOpt : Containers::optional(style);
 }
 
-Containers::Pair<bool, bool> AbstractVisualLayerStyleAnimator::advance(const Containers::BitArrayView active, const Containers::BitArrayView stopped, const Containers::StridedArrayView1D<UnsignedInt>& dataStyles) {
+Containers::Pair<bool, bool> AbstractVisualLayerStyleAnimator::advance(const Containers::BitArrayView active, const Containers::BitArrayView started, const Containers::BitArrayView stopped, const Containers::StridedArrayView1D<UnsignedInt>& dataStyles) {
     /* This function should only be called if there's a layer set already. The
        sizes should be already checked by subclasses along with factors and
        other layer-specific inputs. */
     State& state = *_state;
     CORRADE_INTERNAL_DEBUG_ASSERT(state.layerSharedState &&
         active.size() == capacity() &&
+        started.size() == capacity() &&
         stopped.size() == capacity());
 
     const Containers::StridedArrayView1D<const LayerDataHandle> layerData = this->layerData();
@@ -113,14 +114,50 @@ Containers::Pair<bool, bool> AbstractVisualLayerStyleAnimator::advance(const Con
            dataClean() got called before advance() */
         const LayerDataHandle data = layerData[i];
 
+        /* If the animation is started, remember what style ID the data has
+           now. It gets compared against once the dynamic style is about to be
+           allocated (which can happen either immediately or at a later time if
+           there are no free styles), ensuring a stale animation isn't going to
+           get played if the style changed in the meantime.
+
+           As the animation can become started at any point, such as when an
+           already playing animation is being restarted, the previous value of
+           expectedStyle can be just anything and thus no consistency asserts
+           are here. */
+        if(started[i]) {
+            if(data != LayerDataHandle::Null)
+                state.expectedStyles[i] = dataStyles[layerDataHandleId(data)];
+            /* If the data is null, no style ID is going to be switched
+               anywhere and so we don't need to remember the style. Reset the
+               variable so it doesn't contain a stale value in case it's a
+               recycled / restarted slot, which could lead to accidentally
+               switching styles that should stay untouched. */
+            else
+                state.expectedStyles[i] = ~UnsignedInt{};
+        }
+
         /* If the animation is stopped, switch the data to the target style, if
            any. No need to animate anything else as the dynamic style is going
            to get recycled right away. */
         if(stopped[i]) {
             if(data != LayerDataHandle::Null) {
-                dataStyles[layerDataHandleId(data)] = flags[i] >= AnimationFlag::Reverse ?
-                    state.sourceStyles[i] : state.targetStyles[i];
-                updatedStyle = true;
+                /* Switch to the target style only if the style didn't change
+                   from the expected one, as we'd break animations and style
+                   changes that happened since this animation started. The
+                   expectedStyles[i] is usually equal to dynamicStyle, but
+                   could be also the original style if there was no free
+                   dynamic style to use during the whole animation duration.
+
+                   The expectedStyles[i] can also be ~UnsignedInt{} in case the
+                   animation got attached to a data only later after it
+                   started. In that case this branch will never be taken,
+                   resulting in the animation never actually applied to the
+                   data it got attached to. */
+                if(dataStyles[layerDataHandleId(data)] == state.expectedStyles[i]) {
+                    dataStyles[layerDataHandleId(data)] = flags[i] >= AnimationFlag::Reverse ?
+                        state.sourceStyles[i] : state.targetStyles[i];
+                    updatedStyle = true;
+                }
             }
 
             /* Recycle the dynamic style if it was allocated already. It might
@@ -139,6 +176,20 @@ Containers::Pair<bool, bool> AbstractVisualLayerStyleAnimator::advance(const Con
            unnecessary pressure on peak used count of dynamic styles,
            especially when there's a lot of animations scheduled. */
         if(dynamicStyle == ~UnsignedInt{}) {
+            /* If we're attached to data and its style assignment changed since
+               start, bail without allocating a dynamic style. Same as in the
+               stopped case above, if we'd switch the style we'd break
+               animations and style changes that happened since this
+               animation started.
+
+               Also reset the expected style to ensure the animation doesn't
+               get suddenly revived when the data coincidentally happens to
+               switch to the previously expected style. */
+            if(data != LayerDataHandle::Null && state.expectedStyles[i] != dataStyles[layerDataHandleId(data)]) {
+                state.expectedStyles[i] = ~UnsignedInt{};
+                continue;
+            }
+
             /* If dynamic style allocation fails (for example because there's
                too many animations running at the same time), do nothing -- the
                data stays at the original style, causing no random visual
@@ -158,6 +209,7 @@ Containers::Pair<bool, bool> AbstractVisualLayerStyleAnimator::advance(const Con
 
             if(data != LayerDataHandle::Null) {
                 dataStyles[layerDataHandleId(data)] = state.layerSharedState->styleCount + dynamicStyle;
+                state.expectedStyles[i] = state.layerSharedState->styleCount + dynamicStyle;
                 updatedStyle = true;
             }
 

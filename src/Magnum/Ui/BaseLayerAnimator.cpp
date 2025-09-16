@@ -73,9 +73,9 @@ struct Animation {
        construction either */
     BaseLayerStyleUniform sourceUniform{NoInit}, targetUniform{NoInit};
     Vector4 sourcePadding{NoInit}, targetPadding{NoInit};
-    UnsignedInt sourceStyle, targetStyle, dynamicStyle;
+    UnsignedInt expectedStyle, sourceStyle, targetStyle, dynamicStyle;
     bool uniformDifferent;
-    /* 3 bytes free */
+    /* 7/3 bytes free */
     Float(*easing)(Float);
 };
 
@@ -136,11 +136,14 @@ void BaseLayerStyleAnimator::createInternal(const AnimationHandle handle, const 
     const UnsignedInt id = animationHandleId(handle);
     if(id >= state.animations.size()) {
         arrayResize(state.animations, NoInit, id + 1);
+        state.expectedStyles = stridedArrayView(state.animations).slice(&Animation::expectedStyle);
         state.sourceStyles = stridedArrayView(state.animations).slice(&Animation::sourceStyle);
         state.targetStyles = stridedArrayView(state.animations).slice(&Animation::targetStyle);
         state.dynamicStyles = stridedArrayView(state.animations).slice(&Animation::dynamicStyle);
     }
     Animation& animation = state.animations[id];
+    /* expectedStyle is filled by AbstractVisualLayerStyleAnimator::advance()
+       on started[i], no point in setting it here */
     animation.sourceStyle = sourceStyle;
     animation.targetStyle = targetStyle;
     animation.dynamicStyle = ~UnsignedInt{};
@@ -197,7 +200,7 @@ BaseLayerStyleAnimatorUpdates BaseLayerStyleAnimator::advance(const Containers::
 
     /* The base implementation deals with style switching and dynamic style
        allocation, which is common for all builtin style animators */
-    const Containers::Pair<bool, bool> updatesBase = AbstractVisualLayerStyleAnimator::advance(active, stopped, dataStyles);
+    const Containers::Pair<bool, bool> updatesBase = AbstractVisualLayerStyleAnimator::advance(active, started, stopped, dataStyles);
     BaseLayerStyleAnimatorUpdates updates;
     if(updatesBase.first())
         updates |= BaseLayerStyleAnimatorUpdate::Style;
