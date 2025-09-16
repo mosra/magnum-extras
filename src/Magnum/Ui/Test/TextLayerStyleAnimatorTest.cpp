@@ -126,110 +126,152 @@ const struct {
 
 const struct {
     const char* name;
+    bool noAttachment;
     UnsignedInt uniform;
     Vector4 padding;
     Int cursorStyle, selectionStyle;
     UnsignedInt editingUniform;
     Int editingTextUniform1, editingTextUniform2;
     Vector4 editingPadding;
-    TextLayerStyleAnimatorUpdates expectedUpdates;
+    TextLayerStyleAnimatorUpdates expectedUpdatesStart, expectedUpdatesMiddle;
     UnsignedInt expectedEditingTextUniform1, expectedEditingTextUniform2;
 } AdvancePropertiesData[]{
     {"nothing changes, no editing styles",
-        1, Vector4{2.0f},
+        false, 1, Vector4{2.0f},
         -1, -1, 0, -1, -1, {},
+        TextLayerStyleAnimatorUpdate::Uniform|TextLayerStyleAnimatorUpdate::Style,
+        {}, 0, 0},
+    {"nothing changes, no editing styles, no attachment",
+        true, 1, Vector4{2.0f},
+        -1, -1, 0, -1, -1, {},
+        /* Uniform should be still set to trigger at least one upload of the
+           dynamic style */
+        TextLayerStyleAnimatorUpdate::Uniform,
         {}, 0, 0},
     {"nothing changes, cursor style",
-        1, Vector4{2.0f},
+        false, 1, Vector4{2.0f},
         1, -1, 0, -1, -1, Vector4{1.0f},
+        TextLayerStyleAnimatorUpdate::Uniform|TextLayerStyleAnimatorUpdate::EditingUniform|TextLayerStyleAnimatorUpdate::Style,
+        {}, 0, 0},
+    {"nothing changes, cursor style, no attachment",
+        true, 1, Vector4{2.0f},
+        1, -1, 0, -1, -1, Vector4{1.0f},
+        /* [Editing]Uniform should be still set to trigger at least one upload
+           of the dynamic style */
+        TextLayerStyleAnimatorUpdate::Uniform|TextLayerStyleAnimatorUpdate::EditingUniform,
         {}, 0, 0},
     {"nothing changes, selection style",
-        1, Vector4{2.0f},
+        false, 1, Vector4{2.0f},
         -1, 1, 2, 2, 2, Vector4{3.0f},
+        TextLayerStyleAnimatorUpdate::Uniform|TextLayerStyleAnimatorUpdate::EditingUniform|TextLayerStyleAnimatorUpdate::Style,
+        {}, 2, 2},
+    {"nothing changes, selection style, no attachment",
+        true, 1, Vector4{2.0f},
+        -1, 1, 2, 2, 2, Vector4{3.0f},
+        /* [Editing]Uniform should be still set to trigger at least one upload
+           of the dynamic style */
+        TextLayerStyleAnimatorUpdate::Uniform|TextLayerStyleAnimatorUpdate::EditingUniform,
         {}, 2, 2},
     {"nothing changes, selection style with unset text editing style",
-        1, Vector4{2.0f},
+        false, 1, Vector4{2.0f},
         /* Because the original uniform ID is unchanged, the text uniform ID
            (which falls back to the original uniform ID) is also unchanged */
         -1, 1, 2, -1, -1, Vector4{3.0f},
+        TextLayerStyleAnimatorUpdate::Uniform|TextLayerStyleAnimatorUpdate::EditingUniform|TextLayerStyleAnimatorUpdate::Style,
         {}, 1, 1},
     {"nothing changes, selection style with one unset text editing style",
-        1, Vector4{2.0f},
+        false, 1, Vector4{2.0f},
         /* Same case */
         -1, 1, 2, 1, -1, Vector4{3.0f},
+        TextLayerStyleAnimatorUpdate::Uniform|TextLayerStyleAnimatorUpdate::EditingUniform|TextLayerStyleAnimatorUpdate::Style,
         {}, 1, 1},
     {"nothing changes, selection style with another unset text editing style",
-        1, Vector4{2.0f},
+        false, 1, Vector4{2.0f},
         /* Same case */
         -1, 1, 2, -1, 1, Vector4{3.0f},
+        TextLayerStyleAnimatorUpdate::Uniform|TextLayerStyleAnimatorUpdate::EditingUniform|TextLayerStyleAnimatorUpdate::Style,
         {}, 1, 1},
 
     {"uniform ID changes",
-        0, Vector4{2.0f},
+        false, 0, Vector4{2.0f},
         -1, -1, 0, -1, -1, {},
+        TextLayerStyleAnimatorUpdate::Uniform|TextLayerStyleAnimatorUpdate::Style,
         TextLayerStyleAnimatorUpdate::Uniform, 0, 0},
     {"cursor uniform ID changes",
-        1, Vector4{2.0f},
+        false, 1, Vector4{2.0f},
         1, -1, 3, -1, -1, Vector4{1.0f},
+        TextLayerStyleAnimatorUpdate::Uniform|TextLayerStyleAnimatorUpdate::EditingUniform|TextLayerStyleAnimatorUpdate::Style,
         TextLayerStyleAnimatorUpdate::EditingUniform, 0, 0},
     {"selection uniform ID changes",
-        1, Vector4{2.0f},
+        false, 1, Vector4{2.0f},
         -1, 1, 3, 2, 2, Vector4{3.0f},
+        TextLayerStyleAnimatorUpdate::Uniform|TextLayerStyleAnimatorUpdate::EditingUniform|TextLayerStyleAnimatorUpdate::Style,
         TextLayerStyleAnimatorUpdate::EditingUniform, 2, 2},
     {"selection text uniform ID changes",
-        1, Vector4{2.0f},
+        false, 1, Vector4{2.0f},
         -1, 1, 2, 2, 1, Vector4{3.0f},
+        TextLayerStyleAnimatorUpdate::Uniform|TextLayerStyleAnimatorUpdate::EditingUniform|TextLayerStyleAnimatorUpdate::Style,
         TextLayerStyleAnimatorUpdate::Uniform, 2, 1},
     {"selection text uniform ID changes, one unset",
-        1, Vector4{2.0f},
+        false, 1, Vector4{2.0f},
         -1, 1, 2, 2, -1, Vector4{3.0f},
+        TextLayerStyleAnimatorUpdate::Uniform|TextLayerStyleAnimatorUpdate::EditingUniform|TextLayerStyleAnimatorUpdate::Style,
         TextLayerStyleAnimatorUpdate::Uniform, 2, 1},
 
     /* Still reports uniform change because comparing all values is unnecessary
        complexity */
     {"uniform ID changes but data stay the same",
-        3, Vector4{2.0f},
+        false, 3, Vector4{2.0f},
         -1, -1, 0, -1, -1, {},
+        TextLayerStyleAnimatorUpdate::Uniform|TextLayerStyleAnimatorUpdate::Style,
         TextLayerStyleAnimatorUpdate::Uniform, 0, 0},
     {"cursor uniform ID changes but data stay the same",
-        1, Vector4{2.0f},
+        false, 1, Vector4{2.0f},
         1, -1, 4, -1, -1, Vector4{1.0f},
+        TextLayerStyleAnimatorUpdate::Uniform|TextLayerStyleAnimatorUpdate::EditingUniform|TextLayerStyleAnimatorUpdate::Style,
         TextLayerStyleAnimatorUpdate::EditingUniform, 0, 0},
     {"selection uniform ID changes but data stay the same",
-        1, Vector4{2.0f},
+        false, 1, Vector4{2.0f},
         -1, 1, 3, 2, 2, Vector4{3.0f},
+        TextLayerStyleAnimatorUpdate::Uniform|TextLayerStyleAnimatorUpdate::EditingUniform|TextLayerStyleAnimatorUpdate::Style,
         TextLayerStyleAnimatorUpdate::EditingUniform, 2, 2},
     {"selection text uniform ID changes but data stay the same",
-        1, Vector4{2.0f},
+        false, 1, Vector4{2.0f},
         -1, 1, 2, 2, 4, Vector4{3.0f},
+        TextLayerStyleAnimatorUpdate::Uniform|TextLayerStyleAnimatorUpdate::EditingUniform|TextLayerStyleAnimatorUpdate::Style,
         TextLayerStyleAnimatorUpdate::Uniform, 2, 2}, /* text uniform 4 is same as 2 */
 
     {"padding changes",
-        1, Vector4{4.0f},
+        false, 1, Vector4{4.0f},
         -1, -1, 0, -1, -1, {},
+        TextLayerStyleAnimatorUpdate::Uniform|TextLayerStyleAnimatorUpdate::Padding|TextLayerStyleAnimatorUpdate::Style,
         TextLayerStyleAnimatorUpdate::Padding, 0, 0},
     {"cursor padding changes",
-        1, Vector4{2.0f},
+        false, 1, Vector4{2.0f},
         1, -1, 0, -1, -1, Vector4{3.0f},
+        TextLayerStyleAnimatorUpdate::Uniform|TextLayerStyleAnimatorUpdate::EditingUniform|TextLayerStyleAnimatorUpdate::EditingPadding|TextLayerStyleAnimatorUpdate::Style,
         TextLayerStyleAnimatorUpdate::EditingPadding, 0, 0},
     {"selection padding changes",
-        1, Vector4{2.0f},
+        false, 1, Vector4{2.0f},
         -1, 1, 2, 2, 2, Vector4{1.0f},
+        TextLayerStyleAnimatorUpdate::Uniform|TextLayerStyleAnimatorUpdate::EditingUniform|TextLayerStyleAnimatorUpdate::EditingPadding|TextLayerStyleAnimatorUpdate::Style,
         TextLayerStyleAnimatorUpdate::EditingPadding, 2, 2},
 
     {"uniform ID + padding changes",
-        0, Vector4{4.0f},
+        false, 0, Vector4{4.0f},
         -1, -1, 0, -1, -1, {},
-        TextLayerStyleAnimatorUpdate::Padding|TextLayerStyleAnimatorUpdate::Uniform, 0, 0},
+        TextLayerStyleAnimatorUpdate::Uniform|TextLayerStyleAnimatorUpdate::Padding|TextLayerStyleAnimatorUpdate::Style,
+        TextLayerStyleAnimatorUpdate::Uniform|TextLayerStyleAnimatorUpdate::Padding, 0, 0},
     {"cursor uniform ID + cursor padding changes",
-        1, Vector4{2.0f},
+        false, 1, Vector4{2.0f},
         1, -1, 3, -1, -1, Vector4{3.0f},
-        TextLayerStyleAnimatorUpdate::EditingPadding|TextLayerStyleAnimatorUpdate::EditingUniform, 0, 0},
+        TextLayerStyleAnimatorUpdate::Uniform|TextLayerStyleAnimatorUpdate::EditingUniform|TextLayerStyleAnimatorUpdate::EditingPadding|TextLayerStyleAnimatorUpdate::Style,
+        TextLayerStyleAnimatorUpdate::EditingUniform|TextLayerStyleAnimatorUpdate::EditingPadding, 0, 0},
     {"selection uniform ID + selection padding + selection text uniform changes",
-        1, Vector4{2.0f},
+        false, 1, Vector4{2.0f},
         -1, 1, 3, 2, 1, Vector4{1.0f},
-        TextLayerStyleAnimatorUpdate::EditingPadding|TextLayerStyleAnimatorUpdate::EditingUniform|TextLayerStyleAnimatorUpdate::Uniform, 2, 1},
-
+        TextLayerStyleAnimatorUpdate::Uniform|TextLayerStyleAnimatorUpdate::EditingUniform|TextLayerStyleAnimatorUpdate::EditingPadding|TextLayerStyleAnimatorUpdate::Style,
+        TextLayerStyleAnimatorUpdate::EditingUniform|TextLayerStyleAnimatorUpdate::EditingPadding|TextLayerStyleAnimatorUpdate::Uniform, 2, 1},
 };
 
 const struct {
@@ -2101,7 +2143,7 @@ void TextLayerStyleAnimatorTest::advanceProperties() {
     TextLayerStyleAnimator animator{animatorHandle(0, 1)};
     layer.assignAnimator(animator);
 
-    AnimationHandle animation = animator.create(2, 0, Animation::Easing::linear, 0_nsec, 20_nsec, layerData);
+    AnimationHandle animation = animator.create(2, 0, Animation::Easing::linear, 0_nsec, 20_nsec, data.noAttachment ? DataHandle::Null : layerData);
 
     /* Does what layer's advanceAnimations() is doing internally for all
        animators (as we need to test also the interaction with animation being
@@ -2162,7 +2204,7 @@ void TextLayerStyleAnimatorTest::advanceProperties() {
                 editingUniforms,
                 editingPaddings,
                 dataStyles),
-            TextLayerStyleAnimatorUpdate::Uniform|(data.cursorStyle != -1 || data.selectionStyle != -1 ? TextLayerStyleAnimatorUpdate::EditingUniform : TextLayerStyleAnimatorUpdates{})|TextLayerStyleAnimatorUpdate::Style|data.expectedUpdates);
+            data.expectedUpdatesStart);
         CORRADE_COMPARE(animator.state(animation), AnimationState::Playing);
         CORRADE_COMPARE(animator.dynamicStyle(animation), 0);
         CORRADE_COMPARE(uniforms[0].color, Math::lerp(Color4{2.0f}, Color4{uniformColors[data.uniform]}, 0.25f));
@@ -2176,7 +2218,7 @@ void TextLayerStyleAnimatorTest::advanceProperties() {
             CORRADE_COMPARE(editingPaddings[0], Math::lerp(Vector4{3.0f}, data.editingPadding, 0.25f));
             CORRADE_COMPARE(uniforms[shared.dynamicStyleCount() + 0*2 + 0].color, Math::lerp(Color4{uniformColors[data.expectedEditingTextUniform1]}, Color4{uniformColors[data.expectedEditingTextUniform2]}, 0.25f));
         }
-        CORRADE_COMPARE(dataStyles[0], 3);
+        CORRADE_COMPARE(dataStyles[0], data.noAttachment ? 666 : 3);
 
     /* Advancing to 15 changes only what's expected */
     } {
@@ -2189,7 +2231,7 @@ void TextLayerStyleAnimatorTest::advanceProperties() {
                 editingUniforms,
                 editingPaddings,
                 dataStyles),
-            data.expectedUpdates);
+            data.expectedUpdatesMiddle);
         CORRADE_COMPARE(animator.state(animation), AnimationState::Playing);
         CORRADE_COMPARE(animator.dynamicStyle(animation), 0);
         CORRADE_COMPARE(uniforms[0].color, Math::lerp(Color4{2.0f}, Color4{uniformColors[data.uniform]}, 0.75f));
@@ -2205,8 +2247,8 @@ void TextLayerStyleAnimatorTest::advanceProperties() {
         }
         CORRADE_COMPARE(dataStyles[0], 666);
 
-    /* Advancing to 25 changes only the Style, the dynamic style values are
-       unused now */
+    /* Advancing to 25 changes only the Style if attached, the dynamic style
+       values are unused now */
     } {
         TextLayerStyleUniform uniforms[3];
         TextLayerEditingStyleUniform editingUniforms[2];
@@ -2217,9 +2259,9 @@ void TextLayerStyleAnimatorTest::advanceProperties() {
                 editingUniforms,
                 editingPaddings,
                 dataStyles),
-        TextLayerStyleAnimatorUpdate::Style);
+        data.noAttachment ? TextLayerStyleAnimatorUpdates{} : TextLayerStyleAnimatorUpdate::Style);
         CORRADE_VERIFY(!animator.isHandleValid(animation));
-        CORRADE_COMPARE(dataStyles[0], 0);
+        CORRADE_COMPARE(dataStyles[0], data.noAttachment ? 666 : 0);
     }
 }
 

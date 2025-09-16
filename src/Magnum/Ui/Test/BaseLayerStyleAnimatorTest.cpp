@@ -96,22 +96,39 @@ const struct {
 
 const struct {
     const char* name;
+    bool noAttachment;
     UnsignedInt uniform;
     Vector4 padding;
-    BaseLayerStyleAnimatorUpdates expected;
+    BaseLayerStyleAnimatorUpdates expectedStart, expectedMiddle;
 } AdvancePropertiesData[]{
-    {"nothing changes", 1, Vector4{2.0f},
+    {"nothing changes",
+        false, 1, Vector4{2.0f},
+        BaseLayerStyleAnimatorUpdate::Uniform|BaseLayerStyleAnimatorUpdate::Style,
         {}},
-    {"uniform ID changes", 0, Vector4{2.0f},
+    {"nothing changes, no attachment",
+        true, 1, Vector4{2.0f},
+        /* Uniform should be still set to trigger at least one upload of the
+           dynamic style */
+        BaseLayerStyleAnimatorUpdate::Uniform,
+        {}},
+    {"uniform ID changes",
+        false, 0, Vector4{2.0f},
+        BaseLayerStyleAnimatorUpdate::Uniform|BaseLayerStyleAnimatorUpdate::Style,
         BaseLayerStyleAnimatorUpdate::Uniform},
     /* Still reports uniform change because comparing all values is unnecessary
        complexity */
-    {"uniform ID changes but data stay the same", 3, Vector4{2.0f},
+    {"uniform ID changes but data stay the same",
+        false, 3, Vector4{2.0f},
+        BaseLayerStyleAnimatorUpdate::Uniform|BaseLayerStyleAnimatorUpdate::Style,
         BaseLayerStyleAnimatorUpdate::Uniform},
-    {"padding changes", 1, Vector4{4.0f},
+    {"padding changes",
+        false, 1, Vector4{4.0f},
+        BaseLayerStyleAnimatorUpdate::Uniform|BaseLayerStyleAnimatorUpdate::Padding|BaseLayerStyleAnimatorUpdate::Style,
         BaseLayerStyleAnimatorUpdate::Padding},
-    {"uniform ID + padding changes", 0, Vector4{4.0f},
-        BaseLayerStyleAnimatorUpdate::Padding|BaseLayerStyleAnimatorUpdate::Uniform},
+    {"uniform ID + padding changes",
+        false, 0, Vector4{4.0f},
+        BaseLayerStyleAnimatorUpdate::Uniform|BaseLayerStyleAnimatorUpdate::Padding|BaseLayerStyleAnimatorUpdate::Style,
+        BaseLayerStyleAnimatorUpdate::Uniform|BaseLayerStyleAnimatorUpdate::Padding},
 };
 
 const struct {
@@ -972,7 +989,7 @@ void BaseLayerStyleAnimatorTest::advanceProperties() {
     BaseLayerStyleAnimator animator{animatorHandle(0, 1)};
     layer.assignAnimator(animator);
 
-    AnimationHandle animation = animator.create(2, 0, Animation::Easing::linear, 0_nsec, 20_nsec, layerData);
+    AnimationHandle animation = animator.create(2, 0, Animation::Easing::linear, 0_nsec, 20_nsec, data.noAttachment ? DataHandle::Null : layerData);
 
     /* Set the style after animation creation to verify it isn't needed
        earlier */
@@ -1036,32 +1053,32 @@ void BaseLayerStyleAnimatorTest::advanceProperties() {
     {
         BaseLayerStyleUniform uniforms[1];
         UnsignedInt dataStyles[]{666};
-        CORRADE_COMPARE(advance(5_nsec, uniforms, paddings, dataStyles), BaseLayerStyleAnimatorUpdate::Uniform|BaseLayerStyleAnimatorUpdate::Style|data.expected);
+        CORRADE_COMPARE(advance(5_nsec, uniforms, paddings, dataStyles), data.expectedStart);
         CORRADE_COMPARE(animator.state(animation), AnimationState::Playing);
         CORRADE_COMPARE(animator.dynamicStyle(animation), 0);
         CORRADE_COMPARE(uniforms[0].topColor, Math::lerp(Color4{2.0f}, Color4{uniformColors[data.uniform]}, 0.25f));
         CORRADE_COMPARE(paddings[0], Math::lerp(Vector4{2.0f}, data.padding, 0.25f));
-        CORRADE_COMPARE(dataStyles[0], 3);
+        CORRADE_COMPARE(dataStyles[0], data.noAttachment ? 666 : 3);
 
     /* Advancing to 15 changes only what's expected */
     } {
         BaseLayerStyleUniform uniforms[1];
         UnsignedInt dataStyles[]{666};
-        CORRADE_COMPARE(advance(15_nsec, uniforms, paddings, dataStyles), data.expected);
+        CORRADE_COMPARE(advance(15_nsec, uniforms, paddings, dataStyles), data.expectedMiddle);
         CORRADE_COMPARE(animator.state(animation), AnimationState::Playing);
         CORRADE_COMPARE(animator.dynamicStyle(animation), 0);
         CORRADE_COMPARE(uniforms[0].topColor, Math::lerp(Color4{2.0f}, Color4{uniformColors[data.uniform]}, 0.75f));
         CORRADE_COMPARE(paddings[0], Math::lerp(Vector4{2.0f}, data.padding, 0.75f));
         CORRADE_COMPARE(dataStyles[0], 666);
 
-    /* Advancing to 25 changes only the Style, the dynamic style values are
-       unused now */
+    /* Advancing to 25 changes only the Style if attached, the dynamic style
+       values are unused now */
     } {
         BaseLayerStyleUniform uniforms[1];
         UnsignedInt dataStyles[]{666};
-        CORRADE_COMPARE(advance(25_nsec, uniforms, paddings, dataStyles), BaseLayerStyleAnimatorUpdate::Style);
+        CORRADE_COMPARE(advance(25_nsec, uniforms, paddings, dataStyles), data.noAttachment ? BaseLayerStyleAnimatorUpdates{} : BaseLayerStyleAnimatorUpdate::Style);
         CORRADE_VERIFY(!animator.isHandleValid(animation));
-        CORRADE_COMPARE(dataStyles[0], 0);
+        CORRADE_COMPARE(dataStyles[0], data.noAttachment ? 666 : 0);
     }
 }
 

@@ -159,12 +159,14 @@ Containers::Pair<bool, bool> AbstractVisualLayerStyleAnimator::advance(const Con
             if(data != LayerDataHandle::Null) {
                 dataStyles[layerDataHandleId(data)] = state.layerSharedState->styleCount + dynamicStyle;
                 updatedStyle = true;
-                /* If the uniform IDs are the same between the source and
-                   target style, the uniform interpolation below won't happen.
-                   We still need to upload it at least once though, so trigger
-                   it here unconditionally. */
-                updatedUniform = true;
             }
+
+            /* If the uniform IDs are the same between the source and target
+               style, the uniform interpolation below won't happen. We still
+               need to upload it at least once though, so trigger it here
+               unconditionally, and do it even with no attachment, as the
+               dynamic style can be used in some way in that case as well. */
+            updatedUniform = true;
         }
     }
 
