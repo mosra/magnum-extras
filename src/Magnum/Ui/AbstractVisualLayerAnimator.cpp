@@ -89,6 +89,88 @@ Containers::Optional<UnsignedInt> AbstractVisualLayerStyleAnimator::dynamicStyle
     return style == ~UnsignedInt{} ? Containers::NullOpt : Containers::optional(style);
 }
 
+Containers::Pair<bool, bool> AbstractVisualLayerStyleAnimator::advance(const Containers::BitArrayView active, const Containers::BitArrayView stopped, const Containers::StridedArrayView1D<UnsignedInt>& dataStyles) {
+    /* This function should only be called if there's a layer set already. The
+       sizes should be already checked by subclasses along with factors and
+       other layer-specific inputs. */
+    State& state = *_state;
+    CORRADE_INTERNAL_DEBUG_ASSERT(state.layerSharedState &&
+        active.size() == capacity() &&
+        stopped.size() == capacity());
+
+    const Containers::StridedArrayView1D<const LayerDataHandle> layerData = this->layerData();
+    const Containers::StridedArrayView1D<const AnimationFlags> flags = this->flags();
+
+    bool updatedStyle = false;
+    bool updatedUniform = false;
+    /** @todo some way to iterate set bits */
+    for(std::size_t i = 0; i != active.size(); ++i) {
+        if(!active[i])
+            continue;
+
+        UnsignedInt& dynamicStyle = state.dynamicStyles[i];
+        /* The handle is assumed to be valid if not null, i.e. that appropriate
+           dataClean() got called before advance() */
+        const LayerDataHandle data = layerData[i];
+
+        /* If the animation is stopped, switch the data to the target style, if
+           any. No need to animate anything else as the dynamic style is going
+           to get recycled right away. */
+        if(stopped[i]) {
+            if(data != LayerDataHandle::Null) {
+                dataStyles[layerDataHandleId(data)] = flags[i] >= AnimationFlag::Reverse ?
+                    state.sourceStyles[i] : state.targetStyles[i];
+                updatedStyle = true;
+            }
+
+            /* Recycle the dynamic style if it was allocated already. It might
+               not be if advance() wasn't called for this animation yet or if
+               it was already stopped by the time it reached advance(). */
+            if(dynamicStyle != ~UnsignedInt{}) {
+                state.layer->recycleDynamicStyle(dynamicStyle);
+                dynamicStyle = ~UnsignedInt{};
+            }
+
+            continue;
+        }
+
+        /* The animation is running, allocate a dynamic style if it isn't yet
+           and switch to it. Doing it here instead of in create() avoids
+           unnecessary pressure on peak used count of dynamic styles,
+           especially when there's a lot of animations scheduled. */
+        if(dynamicStyle == ~UnsignedInt{}) {
+            /* If dynamic style allocation fails (for example because there's
+               too many animations running at the same time), do nothing -- the
+               data stays at the original style, causing no random visual
+               glitches, and we'll try in next advance() again (where some
+               animations may already be finished, freeing up some slots, and
+               there we'll also advance to a later point in the animation).
+
+               A better way would be to recycle the oldest running animations,
+               but there's no logic for that so far, so do the second best
+               thing at least. One could also just let it assert when there's
+               no free slots anymore, but letting a program assert just because
+               it couldn't animate feels silly. */
+            const Containers::Optional<UnsignedInt> style = state.layer->allocateDynamicStyle(animationHandle(handle(), i, generations()[i]));
+            if(!style)
+                continue;
+            dynamicStyle = *style;
+
+            if(data != LayerDataHandle::Null) {
+                dataStyles[layerDataHandleId(data)] = state.layerSharedState->styleCount + dynamicStyle;
+                updatedStyle = true;
+                /* If the uniform IDs are the same between the source and
+                   target style, the uniform interpolation below won't happen.
+                   We still need to upload it at least once though, so trigger
+                   it here unconditionally. */
+                updatedUniform = true;
+            }
+        }
+    }
+
+    return {updatedStyle, updatedUniform};
+}
+
 void AbstractVisualLayerStyleAnimator::setLayerInstance(AbstractVisualLayer& instance, const void* sharedState) {
     /* This is called from AbstractVisualLayer::assignAnimator(), which should
        itself prevent the layer from being set more than once */

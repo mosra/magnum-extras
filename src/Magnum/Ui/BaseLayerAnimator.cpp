@@ -195,19 +195,21 @@ BaseLayerStyleAnimatorUpdates BaseLayerStyleAnimator::advance(const Containers::
     CORRADE_ASSERT(layerSharedState.setStyleCalled,
         "Ui::BaseLayerStyleAnimator::advance(): no style data was set on the layer", {});
 
-    const Containers::StridedArrayView1D<const LayerDataHandle> layerData = this->layerData();
-    const Containers::StridedArrayView1D<const AnimationFlags> flags = this->flags();
-
+    /* The base implementation deals with style switching and dynamic style
+       allocation, which is common for all builtin style animators */
+    const Containers::Pair<bool, bool> updatesBase = AbstractVisualLayerStyleAnimator::advance(active, stopped, dataStyles);
     BaseLayerStyleAnimatorUpdates updates;
+    if(updatesBase.first())
+        updates |= BaseLayerStyleAnimatorUpdate::Style;
+    if(updatesBase.second())
+        updates |= BaseLayerStyleAnimatorUpdate::Uniform;
+
     /** @todo some way to iterate set bits */
     for(std::size_t i = 0; i != active.size(); ++i) {
         if(!active[i])
             continue;
 
         Animation& animation = state.animations[i];
-        /* The handle is assumed to be valid if not null, i.e. that appropriate
-           dataClean() got called before advance() */
-        const LayerDataHandle data = layerData[i];
 
         /* If the animation is started, fetch the style data. This is done here
            and not in create() to make it possible to reuse created animations
@@ -232,60 +234,14 @@ BaseLayerStyleAnimatorUpdates BaseLayerStyleAnimator::advance(const Containers::
             animation.uniformDifferent = sourceStyleData.uniform != targetStyleData.uniform;
         }
 
-        /* If the animation is stopped, switch the data to the target style, if
-           any, or source style if the animation is Reverse. No need to
-           animate anything else as the dynamic style is going to get recycled
-           right away. */
-        if(stopped[i]) {
-            if(data != LayerDataHandle::Null) {
-                dataStyles[layerDataHandleId(data)] = flags[i] >= AnimationFlag::Reverse ?
-                    animation.sourceStyle : animation.targetStyle;
-                updates |= BaseLayerStyleAnimatorUpdate::Style;
-            }
-
-            /* Recycle the dynamic style if it was allocated already. It might
-               not be if advance() wasn't called for this animation yet or if
-               it was already stopped by the time it reached advance(). */
-            if(animation.dynamicStyle != ~UnsignedInt{}) {
-                state.layer->recycleDynamicStyle(animation.dynamicStyle);
-                animation.dynamicStyle = ~UnsignedInt{};
-            }
-
+        /* If the animation is stopped or we have no dynamic style to
+           interpolate to, continue to next animation. Everything else was done
+           by the base advance() implementation called above. Branches kept
+           separate to ensure they both stay tested. */
+        if(stopped[i])
             continue;
-        }
-
-        /* The animation is running, allocate a dynamic style if it isn't yet
-           and switch to it. Doing it here instead of in create() avoids
-           unnecessary pressure on peak used count of dynamic styles,
-           especially when there's a lot of animations scheduled. */
-        if(animation.dynamicStyle == ~UnsignedInt{}) {
-            /* If dynamic style allocation fails (for example because there's
-               too many animations running at the same time), do nothing -- the
-               data stays at the original style, causing no random visual
-               glitches, and we'll try in next advance() again (where some
-               animations may already be finished, freeing up some slots, and
-               there we'll also advance to a later point in the animation).
-
-               A better way would be to recycle the oldest running animations,
-               but there's no logic for that so far, so do the second best
-               thing at least. One could also just let it assert when there's
-               no free slots anymore, but letting a program assert just because
-               it couldn't animate feels silly. */
-            const Containers::Optional<UnsignedInt> style = state.layer->allocateDynamicStyle(animationHandle(handle(), i, generations()[i]));
-            if(!style)
-                continue;
-            animation.dynamicStyle = *style;
-
-            if(data != LayerDataHandle::Null) {
-                dataStyles[layerDataHandleId(data)] = layerSharedState.styleCount + animation.dynamicStyle;
-                updates |= BaseLayerStyleAnimatorUpdate::Style;
-                /* If the uniform IDs are the same between the source and
-                   target style, the uniform interpolation below won't happen.
-                   We still need to upload it at least once though, so trigger
-                   it here unconditionally. */
-                updates |= BaseLayerStyleAnimatorUpdate::Uniform;
-            }
-        }
+        if(animation.dynamicStyle == ~UnsignedInt{})
+            continue;
 
         const Float factor = animation.easing(factors[i]);
 
