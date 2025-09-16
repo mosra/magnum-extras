@@ -52,6 +52,8 @@ struct AbstractVisualLayerStyleAnimator::State {
     const AbstractVisualLayer::Shared::State* layerSharedState = nullptr;
     /* These views are assumed to point to subclass own data and maintained to
        have its size always match layer capacity */
+    /** @todo maybe have a base struct containing these four to not need to
+        sync (and then iterate) four distinct views? */
     Containers::StridedArrayView1D<UnsignedInt> expectedStyles;
     Containers::StridedArrayView1D<UnsignedInt> sourceStyles;
     Containers::StridedArrayView1D<UnsignedInt> targetStyles;

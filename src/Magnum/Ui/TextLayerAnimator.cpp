@@ -381,6 +381,9 @@ TextLayerStyleAnimatorUpdates TextLayerStyleAnimator::advance(const Containers::
            separate to ensure they both stay tested. */
         if(stopped[i])
             continue;
+        /** @todo expose options to (1) switch to the initial style, (2) switch
+            to the target style and stop, or (3) don't do anything in case the
+            dynamic style cannot be allocated */
         if(animation.dynamicStyle == ~UnsignedInt{})
             continue;
 
