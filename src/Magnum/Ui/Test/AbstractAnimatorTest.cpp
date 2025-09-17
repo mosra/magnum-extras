@@ -169,6 +169,11 @@ const struct {
     {"scheduled",
         10_nsec, 100_nsec, {}, {}, {}, {},
         AnimationState::Scheduled, 0.0f},
+    {"scheduled to never",
+        /* The max() is special-cased in propertiesStateFactor() and no offset
+           or scale is applied to it to ensure it stays at the max value */
+        10_nsec, Nanoseconds::max(), {}, {}, {}, {},
+        AnimationState::Reserved, 0.0f},
     {"scheduled, paused later",
         10_nsec, 100_nsec, 108_nsec, {}, {}, {},
         AnimationState::Scheduled, 0.0f},
@@ -2146,10 +2151,12 @@ void AbstractAnimatorTest::propertiesStateFactor() {
        cases. The resulting factors should be still same with it. */
     Long scale = 29;
     Nanoseconds offset = 77777_nsec;
+    Nanoseconds start = data.start == Nanoseconds::max() ? Nanoseconds::max() :
+        data.start*scale + offset;
 
     AnimationHandle handle = data.repeatCount ?
-        animator.create(data.start*scale + offset, data.duration*scale, *data.repeatCount, AnimationFlag::KeepOncePlayed|data.flags) :
-        animator.create(data.start*scale + offset, data.duration*scale, AnimationFlag::KeepOncePlayed|data.flags);
+        animator.create(start, data.duration*scale, *data.repeatCount, AnimationFlag::KeepOncePlayed|data.flags) :
+        animator.create(start, data.duration*scale, AnimationFlag::KeepOncePlayed|data.flags);
     if(data.paused)
         animator.pause(handle, *data.paused*scale + offset);
     if(data.stopped)
@@ -3776,6 +3783,8 @@ void AbstractAnimatorTest::update() {
     AnimationHandle scheduledToPlayingReverse = animator.create(5_nsec, 10_nsec, AnimationFlag::Reverse);
     AnimationHandle scheduledToPaused = animator.create(5_nsec, 10_nsec);
     AnimationHandle scheduledToStopped = animator.create(5_nsec, 10_nsec);
+    AnimationHandle scheduledToLate = animator.create(100_nsec, 10_nsec);
+    AnimationHandle scheduledToNever = animator.create(Nanoseconds::max(), 10_nsec);
     AnimationHandle removed = animator.create(0_nsec, 6_nsec);
     AnimationHandle playingMiddleKeep = animator.create(-20_nsec, 40_nsec, AnimationFlag::KeepOncePlayed);
     AnimationHandle playingToPausedKeep = animator.create(-10_nsec, 20_nsec, AnimationFlag::KeepOncePlayed);
@@ -3804,6 +3813,8 @@ void AbstractAnimatorTest::update() {
     CORRADE_COMPARE(animator.state(scheduledToPlayingReverse), AnimationState::Scheduled);
     CORRADE_COMPARE(animator.state(scheduledToPaused), AnimationState::Scheduled);
     CORRADE_COMPARE(animator.state(scheduledToStopped), AnimationState::Scheduled);
+    CORRADE_COMPARE(animator.state(scheduledToLate), AnimationState::Scheduled);
+    CORRADE_COMPARE(animator.state(scheduledToNever), AnimationState::Reserved);
     /* removed is gone */
     CORRADE_COMPARE(animator.state(playingMiddleKeep), AnimationState::Playing);
     CORRADE_COMPARE(animator.state(playingToPausedKeep), AnimationState::Playing);
@@ -3821,7 +3832,7 @@ void AbstractAnimatorTest::update() {
     CORRADE_COMPARE(animator.state(zeroDurationStopped), AnimationState::Stopped);
 
     constexpr Float unused = Constants::inf();
-    constexpr std::size_t animationCount = 19;
+    constexpr std::size_t animationCount = 21;
 
     /* Call to update(10) advances also stopped and paused animations that
        changed their state compared to their initial state upon creation, which
@@ -3839,20 +3850,22 @@ void AbstractAnimatorTest::update() {
             true,   /*  2 scheduledToPlayingReverse */
             true,   /*  3 scheduledToPaused */
             true,   /*  4 scheduledToStopped */
-            false,  /*  5 removed */
-            true,   /*  6 playingMiddleKeep */
-            true,   /*  7 playingToPausedKeep */
-            true,   /*  8 playingEndToStopped */
-            true,   /*  9 playingToStoppedKeep */
-            true,   /* 10 playingRepeated */
-            true,   /* 11 playingRepeatedReverseReverseEveryOther */
-            true,   /* 12 paused */
-            true,   /* 13 pausedToStopped */
-            true,   /* 14 stoppedRemove */
-            true,   /* 15 stoppedKeep */
-            false,  /* 16 zeroDurationScheduled */
-            false,  /* 17 zeroDurationScheduledReverseKeep */
-            true,   /* 18 zeroDurationStopped */
+            false,  /*  5 scheduledToLate */
+            false,  /*  6 scheduledToNever */
+            false,  /*  7 removed */
+            true,   /*  8 playingMiddleKeep */
+            true,   /*  9 playingToPausedKeep */
+            true,   /* 10 playingEndToStopped */
+            true,   /* 11 playingToStoppedKeep */
+            true,   /* 12 playingRepeated */
+            true,   /* 13 playingRepeatedReverseReverseEveryOther */
+            true,   /* 14 paused */
+            true,   /* 15 pausedToStopped */
+            true,   /* 16 stoppedRemove */
+            true,   /* 17 stoppedKeep */
+            false,  /* 18 zeroDurationScheduled */
+            false,  /* 19 zeroDurationScheduledReverseKeep */
+            true,   /* 20 zeroDurationStopped */
         }).sliceBit(0), TestSuite::Compare::Container);
         CORRADE_COMPARE_AS(Containers::BitArrayView{started}, Containers::stridedArrayView({
             false,  /*  0 scheduledKeep */
@@ -3860,20 +3873,22 @@ void AbstractAnimatorTest::update() {
             true,   /*  2 scheduledToPlayingReverse */
             true,   /*  3 scheduledToPaused */
             true,   /*  4 scheduledToStopped */
-            false,  /*  5 removed */
-            true,   /*  6 playingMiddleKeep */
-            true,   /*  7 playingToPausedKeep */
-            true,   /*  8 playingEndToStopped */
-            true,   /*  9 playingToStoppedKeep */
-            true,   /* 10 playingRepeated */
-            true,   /* 11 playingRepeatedReverseReverseEveryOther */
-            true,   /* 12 paused */
-            true,   /* 13 pausedToStopped */
-            true,   /* 14 stoppedRemove */
-            true,   /* 15 stoppedKeep */
-            false,  /* 16 zeroDurationScheduled */
-            false,  /* 17 zeroDurationScheduledReverseKeep */
-            true,   /* 18 zeroDurationStopped */
+            false,  /*  5 scheduledToLate */
+            false,  /*  6 scheduledToNever */
+            false,  /*  7 removed */
+            true,   /*  8 playingMiddleKeep */
+            true,   /*  9 playingToPausedKeep */
+            true,   /* 10 playingEndToStopped */
+            true,   /* 11 playingToStoppedKeep */
+            true,   /* 12 playingRepeated */
+            true,   /* 13 playingRepeatedReverseReverseEveryOther */
+            true,   /* 14 paused */
+            true,   /* 15 pausedToStopped */
+            true,   /* 16 stoppedRemove */
+            true,   /* 17 stoppedKeep */
+            false,  /* 18 zeroDurationScheduled */
+            false,  /* 19 zeroDurationScheduledReverseKeep */
+            true,   /* 20 zeroDurationStopped */
         }).sliceBit(0), TestSuite::Compare::Container);
         CORRADE_COMPARE_AS(Containers::BitArrayView{stopped}, Containers::stridedArrayView({
             false,  /*  0 scheduledKeep */
@@ -3881,20 +3896,22 @@ void AbstractAnimatorTest::update() {
             false,  /*  2 scheduledToPlayingReverse */
             false,  /*  3 scheduledToPaused */
             true,   /*  4 scheduledToStopped */
-            false,  /*  5 removed */
-            false,  /*  6 playingMiddleKeep */
-            false,  /*  7 playingToPausedKeep */
-            true,   /*  8 playingEndToStopped */
-            true,   /*  9 playingToStoppedKeep */
-            false,  /* 10 playingRepeated */
-            false,  /* 11 playingRepeatedReverseReverseEveryOther */
-            false,  /* 12 paused */
-            true,   /* 13 pausedToStopped */
-            true,   /* 14 stoppedRemove */
-            true,   /* 15 stoppedKeep */
-            false,  /* 16 zeroDurationScheduled */
-            false,  /* 17 zeroDurationScheduledReverseKeep */
-            true,   /* 18 zeroDurationStopped */
+            false,  /*  5 scheduledToLate */
+            false,  /*  6 scheduledToNever */
+            false,  /*  7 removed */
+            false,  /*  8 playingMiddleKeep */
+            false,  /*  9 playingToPausedKeep */
+            true,   /* 10 playingEndToStopped */
+            true,   /* 11 playingToStoppedKeep */
+            false,  /* 12 playingRepeated */
+            false,  /* 13 playingRepeatedReverseReverseEveryOther */
+            false,  /* 14 paused */
+            true,   /* 15 pausedToStopped */
+            true,   /* 16 stoppedRemove */
+            true,   /* 17 stoppedKeep */
+            false,  /* 18 zeroDurationScheduled */
+            false,  /* 19 zeroDurationScheduledReverseKeep */
+            true,   /* 20 zeroDurationStopped */
         }).sliceBit(0), TestSuite::Compare::Container);
         CORRADE_COMPARE_AS(factors, Containers::arrayView({
             unused, /*  0 scheduledKeep */
@@ -3902,20 +3919,22 @@ void AbstractAnimatorTest::update() {
             0.5f,   /*  2 scheduledToPlayingReverse */
             0.3f,   /*  3 scheduledToPaused */
             1.0f,   /*  4 scheduledToStopped */
-            unused, /*  5 removed */
-            0.75f,  /*  6 playingMiddleKeep */
-            0.75f,  /*  7 playingToPausedKeep */
-            1.0f,   /*  8 playingEndToStopped */
-            1.0f,   /*  9 playingToStoppedKeep */
-            0.4f,   /* 10 playingRepeated */
-            0.3f,   /* 11 playingRepeatedReverseReverseEveryOther */
-            0.5f,   /* 12 paused */
-            1.0f,   /* 13 pausedToStopped */
-            1.0f,   /* 14 stoppedRemove */
-            1.0f,   /* 15 stoppedKeep */
-            unused, /* 16 zeroDurationScheduled */
-            unused, /* 17 zeroDurationScheduledReverseKeep */
-            1.0f,   /* 18 zeroDurationStopped */
+            unused, /*  5 scheduledToLate */
+            unused, /*  6 scheduledToNever */
+            unused, /*  7 removed */
+            0.75f,  /*  8 playingMiddleKeep */
+            0.75f,  /*  9 playingToPausedKeep */
+            1.0f,   /* 10 playingEndToStopped */
+            1.0f,   /* 11 playingToStoppedKeep */
+            0.4f,   /* 12 playingRepeated */
+            0.3f,   /* 13 playingRepeatedReverseReverseEveryOther */
+            0.5f,   /* 14 paused */
+            1.0f,   /* 15 pausedToStopped */
+            1.0f,   /* 16 stoppedRemove */
+            1.0f,   /* 17 stoppedKeep */
+            unused, /* 18 zeroDurationScheduled */
+            unused, /* 19 zeroDurationScheduledReverseKeep */
+            1.0f,   /* 20 zeroDurationStopped */
         }), TestSuite::Compare::Container);
         CORRADE_COMPARE_AS(Containers::BitArrayView{remove}, Containers::stridedArrayView({
             false,  /*  0 scheduledKeep */
@@ -3923,20 +3942,22 @@ void AbstractAnimatorTest::update() {
             false,  /*  2 scheduledToPlayingReverse */
             false,  /*  3 scheduledToPaused */
             true,   /*  4 scheduledToStopped */
-            false,  /*  5 removed */
-            false,  /*  6 playingMiddleKeep */
-            false,  /*  7 playingToPausedKeep */
-            true,   /*  8 playingEndToStopped */
-            false,  /*  9 playingToStoppedKeep */
-            false,  /* 10 playingRepeated */
-            false,  /* 11 playingRepeatedReverseReverseEveryOther */
-            false,  /* 12 paused */
-            true,   /* 13 pausedToStopped */
-            true,   /* 14 stoppedRemove */
-            false,  /* 15 stoppedKeep */
-            false,  /* 16 zeroDurationScheduled */
-            false,  /* 17 zeroDurationScheduledReverseKeep */
-            true,   /* 18 zeroDurationStopped */
+            false,  /*  5 scheduledToLate */
+            false,  /*  6 scheduledToNever */
+            false,  /*  7 removed */
+            false,  /*  8 playingMiddleKeep */
+            false,  /*  9 playingToPausedKeep */
+            true,   /* 10 playingEndToStopped */
+            false,  /* 11 playingToStoppedKeep */
+            false,  /* 12 playingRepeated */
+            false,  /* 13 playingRepeatedReverseReverseEveryOther */
+            false,  /* 14 paused */
+            true,   /* 15 pausedToStopped */
+            true,   /* 16 stoppedRemove */
+            false,  /* 17 stoppedKeep */
+            false,  /* 18 zeroDurationScheduled */
+            false,  /* 19 zeroDurationScheduledReverseKeep */
+            true,   /* 20 zeroDurationStopped */
         }).sliceBit(0), TestSuite::Compare::Container);
 
         /* Need to call this ourselves to not have the removed animations
@@ -3951,6 +3972,8 @@ void AbstractAnimatorTest::update() {
     CORRADE_VERIFY(animator.isHandleValid(scheduledToPlayingReverse));
     CORRADE_VERIFY(animator.isHandleValid(scheduledToPaused));
     CORRADE_VERIFY(!animator.isHandleValid(scheduledToStopped));
+    CORRADE_VERIFY(animator.isHandleValid(scheduledToLate));
+    CORRADE_VERIFY(animator.isHandleValid(scheduledToNever));
     CORRADE_VERIFY(!animator.isHandleValid(removed));
     CORRADE_VERIFY(animator.isHandleValid(playingMiddleKeep));
     CORRADE_VERIFY(animator.isHandleValid(playingToPausedKeep));
@@ -3971,6 +3994,8 @@ void AbstractAnimatorTest::update() {
     CORRADE_COMPARE(animator.state(scheduledToPlayingReverse), AnimationState::Playing);
     CORRADE_COMPARE(animator.state(scheduledToPaused), AnimationState::Paused);
     /* scheduledToStopped is gone */
+    CORRADE_COMPARE(animator.state(scheduledToLate), AnimationState::Scheduled);
+    CORRADE_COMPARE(animator.state(scheduledToNever), AnimationState::Reserved);
     /* removed is gone */
     CORRADE_COMPARE(animator.state(playingMiddleKeep), AnimationState::Playing);
     CORRADE_COMPARE(animator.state(playingToPausedKeep), AnimationState::Paused);
@@ -4003,20 +4028,22 @@ void AbstractAnimatorTest::update() {
             true,   /*  2 scheduledToPlayingReverse */
             false,  /*  3 scheduledToPaused */
             false,  /*  4 scheduledToStopped */
-            false,  /*  5 removed */
-            true,   /*  6 playingMiddleKeep */
-            false,  /*  7 playingToPausedKeep */
-            false,  /*  8 playingEndToStopped */
-            false,  /*  9 playingToStoppedKeep */
-            true,   /* 10 playingRepeated */
-            true,   /* 11 playingRepeatedReverseReverseEveryOther */
-            false,  /* 12 paused */
-            false,  /* 13 pausedToStopped */
-            false,  /* 14 stoppedRemove */
-            false,  /* 15 stoppedKeep */
-            false,  /* 16 zeroDurationScheduled */
-            false,  /* 17 zeroDurationScheduledReverseKeep */
-            false,  /* 18 zeroDurationStopped */
+            false,  /*  5 scheduledToLate */
+            false,  /*  6 scheduledToNever */
+            false,  /*  7 removed */
+            true,   /*  8 playingMiddleKeep */
+            false,  /*  9 playingToPausedKeep */
+            false,  /* 10 playingEndToStopped */
+            false,  /* 11 playingToStoppedKeep */
+            true,   /* 12 playingRepeated */
+            true,   /* 13 playingRepeatedReverseReverseEveryOther */
+            false,  /* 14 paused */
+            false,  /* 15 pausedToStopped */
+            false,  /* 16 stoppedRemove */
+            false,  /* 17 stoppedKeep */
+            false,  /* 18 zeroDurationScheduled */
+            false,  /* 19 zeroDurationScheduledReverseKeep */
+            false,  /* 20 zeroDurationStopped */
         }).sliceBit(0), TestSuite::Compare::Container);
         CORRADE_COMPARE_AS(Containers::BitArrayView{started}, Containers::stridedArrayView({
             false,  /*  0 scheduledKeep */
@@ -4024,20 +4051,22 @@ void AbstractAnimatorTest::update() {
             false,  /*  2 scheduledToPlayingReverse */
             false,  /*  3 scheduledToPaused */
             false,  /*  4 scheduledToStopped */
-            false,  /*  5 removed */
-            false,  /*  6 playingMiddleKeep */
-            false,  /*  7 playingToPausedKeep */
-            false,  /*  8 playingEndToStopped */
-            false,  /*  9 playingToStoppedKeep */
-            false,  /* 10 playingRepeated */
-            false,  /* 11 playingRepeatedReverseReverseEveryOther */
-            false,  /* 12 paused */
-            false,  /* 13 pausedToStopped */
-            false,  /* 14 stoppedRemove */
-            false,  /* 15 stoppedKeep */
-            false,  /* 16 zeroDurationScheduled */
-            false,  /* 17 zeroDurationScheduledReverseKeep */
-            false,  /* 18 zeroDurationStopped */
+            false,  /*  5 scheduledToLate */
+            false,  /*  6 scheduledToNever */
+            false,  /*  7 removed */
+            false,  /*  8 playingMiddleKeep */
+            false,  /*  9 playingToPausedKeep */
+            false,  /* 10 playingEndToStopped */
+            false,  /* 11 playingToStoppedKeep */
+            false,  /* 12 playingRepeated */
+            false,  /* 13 playingRepeatedReverseReverseEveryOther */
+            false,  /* 14 paused */
+            false,  /* 15 pausedToStopped */
+            false,  /* 16 stoppedRemove */
+            false,  /* 17 stoppedKeep */
+            false,  /* 18 zeroDurationScheduled */
+            false,  /* 19 zeroDurationScheduledReverseKeep */
+            false,  /* 20 zeroDurationStopped */
         }).sliceBit(0), TestSuite::Compare::Container);
         CORRADE_COMPARE_AS(Containers::BitArrayView{stopped}, Containers::stridedArrayView({
             false,  /*  0 scheduledKeep */
@@ -4045,20 +4074,22 @@ void AbstractAnimatorTest::update() {
             false,  /*  2 scheduledToPlayingReverse */
             false,  /*  3 scheduledToPaused */
             false,  /*  4 scheduledToStopped */
-            false,  /*  5 removed */
-            false,  /*  6 playingMiddleKeep */
-            false,  /*  7 playingToPausedKeep */
-            false,  /*  8 playingEndToStopped */
-            false,  /*  9 playingToStoppedKeep */
-            false,  /* 10 playingRepeated */
-            false,  /* 11 playingRepeatedReverseReverseEveryOther */
-            false,  /* 12 paused */
-            false,  /* 13 pausedToStopped */
-            false,  /* 14 stoppedRemove */
-            false,  /* 15 stoppedKeep */
-            false,  /* 16 zeroDurationScheduled */
-            false,  /* 17 zeroDurationScheduledReverseKeep */
-            false,  /* 18 zeroDurationStopped */
+            false,  /*  5 scheduledToLate */
+            false,  /*  6 scheduledToNever */
+            false,  /*  7 removed */
+            false,  /*  8 playingMiddleKeep */
+            false,  /*  9 playingToPausedKeep */
+            false,  /* 10 playingEndToStopped */
+            false,  /* 11 playingToStoppedKeep */
+            false,  /* 12 playingRepeated */
+            false,  /* 13 playingRepeatedReverseReverseEveryOther */
+            false,  /* 14 paused */
+            false,  /* 15 pausedToStopped */
+            false,  /* 16 stoppedRemove */
+            false,  /* 17 stoppedKeep */
+            false,  /* 18 zeroDurationScheduled */
+            false,  /* 19 zeroDurationScheduledReverseKeep */
+            false,  /* 20 zeroDurationStopped */
         }).sliceBit(0), TestSuite::Compare::Container);
         CORRADE_COMPARE_AS(factors, Containers::arrayView({
             unused, /*  0 scheduledKeep */
@@ -4066,20 +4097,22 @@ void AbstractAnimatorTest::update() {
             0.5f,   /*  2 scheduledToPlayingReverse */
             unused, /*  3 scheduledToPaused */
             unused, /*  4 scheduledToStopped */
-            unused, /*  5 removed */
-            0.75f,  /*  6 playingMiddleKeep */
-            unused, /*  7 playingToPausedKeep */
-            unused, /*  8 playingEndToStopped */
-            unused, /*  9 playingToStoppedKeep */
-            0.4f,   /* 10 playingRepeated */
-            0.3f,   /* 11 playingRepeatedReverseReverseEveryOther */
-            unused, /* 12 paused */
-            unused, /* 13 pausedToStopped */
-            unused, /* 14 stoppedRemove */
-            unused, /* 15 stoppedKeep */
-            unused, /* 16 zeroDurationScheduled */
-            unused, /* 17 zeroDurationScheduledReverseKeep */
-            unused, /* 18 zeroDurationStopped */
+            unused, /*  5 scheduledToLate */
+            unused, /*  6 scheduledToNever */
+            unused, /*  7 removed */
+            0.75f,  /*  8 playingMiddleKeep */
+            unused, /*  9 playingToPausedKeep */
+            unused, /* 10 playingEndToStopped */
+            unused, /* 11 playingToStoppedKeep */
+            0.4f,   /* 12 playingRepeated */
+            0.3f,   /* 13 playingRepeatedReverseReverseEveryOther */
+            unused, /* 14 paused */
+            unused, /* 15 pausedToStopped */
+            unused, /* 16 stoppedRemove */
+            unused, /* 17 stoppedKeep */
+            unused, /* 18 zeroDurationScheduled */
+            unused, /* 19 zeroDurationScheduledReverseKeep */
+            unused, /* 20 zeroDurationStopped */
         }), TestSuite::Compare::Container);
         CORRADE_COMPARE_AS(remove,
             (Containers::BitArray{DirectInit, animationCount, false}),
@@ -4097,6 +4130,8 @@ void AbstractAnimatorTest::update() {
     CORRADE_VERIFY(animator.isHandleValid(scheduledToPlayingReverse));
     CORRADE_VERIFY(animator.isHandleValid(scheduledToPaused));
     CORRADE_VERIFY(!animator.isHandleValid(scheduledToStopped));
+    CORRADE_VERIFY(animator.isHandleValid(scheduledToLate));
+    CORRADE_VERIFY(animator.isHandleValid(scheduledToNever));
     CORRADE_VERIFY(!animator.isHandleValid(removed));
     CORRADE_VERIFY(animator.isHandleValid(playingMiddleKeep));
     CORRADE_VERIFY(animator.isHandleValid(playingToPausedKeep));
@@ -4118,6 +4153,8 @@ void AbstractAnimatorTest::update() {
     CORRADE_COMPARE(animator.state(scheduledToPlayingReverse), AnimationState::Playing);
     CORRADE_COMPARE(animator.state(scheduledToPaused), AnimationState::Paused);
     /* scheduledToStopped is gone */
+    CORRADE_COMPARE(animator.state(scheduledToLate), AnimationState::Scheduled);
+    CORRADE_COMPARE(animator.state(scheduledToNever), AnimationState::Reserved);
     /* removed is gone */
     CORRADE_COMPARE(animator.state(playingMiddleKeep), AnimationState::Playing);
     CORRADE_COMPARE(animator.state(playingToPausedKeep), AnimationState::Paused);
@@ -4151,20 +4188,22 @@ void AbstractAnimatorTest::update() {
             true,   /*  2 scheduledToPlayingReverse */
             false,  /*  3 scheduledToPaused */
             false,  /*  4 scheduledToStopped */
-            false,  /*  5 removed */
-            true,   /*  6 playingMiddleKeep */
-            false,  /*  7 playingToPausedKeep */
-            false,  /*  8 playingEndToStopped */
-            false,  /*  9 playingToStoppedKeep */
-            true,   /* 10 playingRepeated */
-            true,   /* 11 playingRepeatedReverseReverseEveryOther */
-            false,  /* 12 paused */
-            false,  /* 13 pausedToStopped */
-            false,  /* 14 stoppedRemove */
-            false,  /* 15 stoppedKeep */
-            true,   /* 16 zeroDurationScheduled */
-            true,   /* 17 zeroDurationScheduledReverseKeep */
-            false,  /* 18 zeroDurationStopped */
+            false,  /*  5 scheduledToLate */
+            false,  /*  6 scheduledToNever */
+            false,  /*  7 removed */
+            true,   /*  8 playingMiddleKeep */
+            false,  /*  9 playingToPausedKeep */
+            false,  /* 10 playingEndToStopped */
+            false,  /* 11 playingToStoppedKeep */
+            true,   /* 12 playingRepeated */
+            true,   /* 13 playingRepeatedReverseReverseEveryOther */
+            false,  /* 14 paused */
+            false,  /* 15 pausedToStopped */
+            false,  /* 16 stoppedRemove */
+            false,  /* 17 stoppedKeep */
+            true,   /* 18 zeroDurationScheduled */
+            true,   /* 19 zeroDurationScheduledReverseKeep */
+            false,  /* 20 zeroDurationStopped */
         }).sliceBit(0), TestSuite::Compare::Container);
         CORRADE_COMPARE_AS(Containers::BitArrayView{started}, Containers::stridedArrayView({
             false,  /*  0 scheduledKeep */
@@ -4172,20 +4211,22 @@ void AbstractAnimatorTest::update() {
             false,  /*  2 scheduledToPlayingReverse */
             false,  /*  3 scheduledToPaused */
             false,  /*  4 scheduledToStopped */
-            false,  /*  5 removed */
-            false,  /*  6 playingMiddleKeep */
-            false,  /*  7 playingToPausedKeep */
-            false,  /*  8 playingEndToStopped */
-            false,  /*  9 playingToStoppedKeep */
-            false,  /* 10 playingRepeated */
-            false,  /* 11 playingRepeatedReverseReverseEveryOther */
-            false,  /* 12 paused */
-            false,  /* 13 pausedToStopped */
-            false,  /* 14 stoppedRemove */
-            false,  /* 15 stoppedKeep */
-            true,   /* 16 zeroDurationScheduled */
-            true,   /* 17 zeroDurationScheduledReverseKeep */
-            false,  /* 18 zeroDurationStopped */
+            false,  /*  5 scheduledToLate */
+            false,  /*  6 scheduledToNever */
+            false,  /*  7 removed */
+            false,  /*  8 playingMiddleKeep */
+            false,  /*  9 playingToPausedKeep */
+            false,  /* 10 playingEndToStopped */
+            false,  /* 11 playingToStoppedKeep */
+            false,  /* 12 playingRepeated */
+            false,  /* 13 playingRepeatedReverseReverseEveryOther */
+            false,  /* 14 paused */
+            false,  /* 15 pausedToStopped */
+            false,  /* 16 stoppedRemove */
+            false,  /* 17 stoppedKeep */
+            true,   /* 18 zeroDurationScheduled */
+            true,   /* 19 zeroDurationScheduledReverseKeep */
+            false,  /* 20 zeroDurationStopped */
         }).sliceBit(0), TestSuite::Compare::Container);
         CORRADE_COMPARE_AS(Containers::BitArrayView{stopped}, Containers::stridedArrayView({
             false,  /*  0 scheduledKeep */
@@ -4193,20 +4234,22 @@ void AbstractAnimatorTest::update() {
             true,   /*  2 scheduledToPlayingReverse */
             false,  /*  3 scheduledToPaused */
             false,  /*  4 scheduledToStopped */
-            false,  /*  5 removed */
-            true,   /*  6 playingMiddleKeep */
-            false,  /*  7 playingToPausedKeep */
-            false,  /*  8 playingEndToStopped */
-            false,  /*  9 playingToStoppedKeep */
-            false,  /* 10 playingRepeated */
-            false,  /* 11 playingRepeatedReverseReverseEveryOther */
-            false,  /* 12 paused */
-            false,  /* 13 pausedToStopped */
-            false,  /* 14 stoppedRemove */
-            false,  /* 15 stoppedKeep */
-            true,   /* 16 zeroDurationScheduled */
-            true,   /* 17 zeroDurationScheduledReverseKeep */
-            false,  /* 18 zeroDurationStopped */
+            false,  /*  5 scheduledToLate */
+            false,  /*  6 scheduledToNever */
+            false,  /*  7 removed */
+            true,   /*  8 playingMiddleKeep */
+            false,  /*  9 playingToPausedKeep */
+            false,  /* 10 playingEndToStopped */
+            false,  /* 11 playingToStoppedKeep */
+            false,  /* 12 playingRepeated */
+            false,  /* 13 playingRepeatedReverseReverseEveryOther */
+            false,  /* 14 paused */
+            false,  /* 15 pausedToStopped */
+            false,  /* 16 stoppedRemove */
+            false,  /* 17 stoppedKeep */
+            true,   /* 18 zeroDurationScheduled */
+            true,   /* 19 zeroDurationScheduledReverseKeep */
+            false,  /* 20 zeroDurationStopped */
         }).sliceBit(0), TestSuite::Compare::Container);
         CORRADE_COMPARE_AS(factors, Containers::arrayView({
             unused, /*  0 scheduledKeep */
@@ -4214,20 +4257,22 @@ void AbstractAnimatorTest::update() {
             0.0f,   /*  2 scheduledToPlayingReverse */
             unused, /*  3 scheduledToPaused */
             unused, /*  4 scheduledToStopped */
-            unused, /*  5 removed */
-            1.0f,   /*  6 playingMiddleKeep */
-            unused, /*  7 playingToPausedKeep */
-            unused, /*  8 playingEndToStopped */
-            unused, /*  9 playingToStoppedKeep */
-            0.4f,   /* 10 playingRepeated */
-            0.7f,   /* 11 playingRepeatedReverseReverseEveryOther */
-            unused, /* 12 paused */
-            unused, /* 13 pausedToStopped */
-            unused, /* 14 stoppedRemove */
-            unused, /* 15 stoppedKeep */
-            1.0f,   /* 16 zeroDurationScheduled */
-            0.0f,   /* 17 zeroDurationScheduledReverseKeep */
-            unused, /* 18 zeroDurationStopped */
+            unused, /*  5 scheduledToLate */
+            unused, /*  6 scheduledToNever */
+            unused, /*  7 removed */
+            1.0f,   /*  8 playingMiddleKeep */
+            unused, /*  9 playingToPausedKeep */
+            unused, /* 10 playingEndToStopped */
+            unused, /* 11 playingToStoppedKeep */
+            0.4f,   /* 12 playingRepeated */
+            0.7f,   /* 13 playingRepeatedReverseReverseEveryOther */
+            unused, /* 14 paused */
+            unused, /* 15 pausedToStopped */
+            unused, /* 16 stoppedRemove */
+            unused, /* 17 stoppedKeep */
+            1.0f,   /* 18 zeroDurationScheduled */
+            0.0f,   /* 19 zeroDurationScheduledReverseKeep */
+            unused, /* 20 zeroDurationStopped */
         }), TestSuite::Compare::Container);
         CORRADE_COMPARE_AS(Containers::BitArrayView{remove}, Containers::stridedArrayView({
             false,  /*  0 scheduledKeep */
@@ -4235,20 +4280,22 @@ void AbstractAnimatorTest::update() {
             true,   /*  2 scheduledToPlayingReverse */
             false,  /*  3 scheduledToPaused */
             false,  /*  4 scheduledToStopped */
-            false,  /*  5 removed */
-            false,  /*  6 playingMiddleKeep */
-            false,  /*  7 playingToPausedKeep */
-            false,  /*  8 playingEndToStopped */
-            false,  /*  9 playingToStoppedKeep */
-            false,  /* 10 playingRepeated */
-            false,  /* 11 playingRepeatedReverseReverseEveryOther */
-            false,  /* 12 paused */
-            false,  /* 13 pausedToStopped */
-            false,  /* 14 stoppedRemove */
-            false,  /* 15 stoppedKeep */
-            true,   /* 16 zeroDurationScheduled */
-            false,  /* 17 zeroDurationScheduledReverseKeep */
-            false,  /* 18 zeroDurationStopped */
+            false,  /*  5 scheduledToLate */
+            false,  /*  6 scheduledToNever */
+            false,  /*  7 removed */
+            false,  /*  8 playingMiddleKeep */
+            false,  /*  9 playingToPausedKeep */
+            false,  /* 10 playingEndToStopped */
+            false,  /* 11 playingToStoppedKeep */
+            false,  /* 12 playingRepeated */
+            false,  /* 13 playingRepeatedReverseReverseEveryOther */
+            false,  /* 14 paused */
+            false,  /* 15 pausedToStopped */
+            false,  /* 16 stoppedRemove */
+            false,  /* 17 stoppedKeep */
+            true,   /* 18 zeroDurationScheduled */
+            false,  /* 19 zeroDurationScheduledReverseKeep */
+            false,  /* 20 zeroDurationStopped */
         }).sliceBit(0), TestSuite::Compare::Container);
 
         /* Need to call this ourselves to not have the removed animations
@@ -4264,6 +4311,8 @@ void AbstractAnimatorTest::update() {
     CORRADE_VERIFY(!animator.isHandleValid(scheduledToPlayingReverse));
     CORRADE_VERIFY(animator.isHandleValid(scheduledToPaused));
     CORRADE_VERIFY(!animator.isHandleValid(scheduledToStopped));
+    CORRADE_VERIFY(animator.isHandleValid(scheduledToLate));
+    CORRADE_VERIFY(animator.isHandleValid(scheduledToNever));
     CORRADE_VERIFY(!animator.isHandleValid(removed));
     CORRADE_VERIFY(animator.isHandleValid(playingMiddleKeep));
     CORRADE_VERIFY(animator.isHandleValid(playingToPausedKeep));
@@ -4284,6 +4333,8 @@ void AbstractAnimatorTest::update() {
     /* scheduledToPlayingReverse is gone */
     CORRADE_COMPARE(animator.state(scheduledToPaused), AnimationState::Paused);
     /* scheduledToStopped is gone */
+    CORRADE_COMPARE(animator.state(scheduledToLate), AnimationState::Scheduled);
+    CORRADE_COMPARE(animator.state(scheduledToNever), AnimationState::Reserved);
     /* removed is gone */
     CORRADE_COMPARE(animator.state(playingMiddleKeep), AnimationState::Stopped);
     CORRADE_COMPARE(animator.state(playingToPausedKeep), AnimationState::Paused);
@@ -4299,10 +4350,13 @@ void AbstractAnimatorTest::update() {
     CORRADE_COMPARE(animator.state(zeroDurationScheduledReverseKeep), AnimationState::Stopped);
     /* zeroDurationStopped is gone */
 
-    /* After stopping what's paused, call at 30 advances the remaining
-       animations including the last iteration of the repeated ones, after that
-       there's nothing to advance anymore */
+    /* After stopping what's paused / scheduled later, call at 30 advances the
+       remaining animations including the last iteration of the repeated ones,
+       after that there's nothing to advance anymore. The scheduledToNever
+       animation is never going to be advanced so it doesn't trigger
+       NeedsAdvance. */
     animator.stop(scheduledToPaused, 30_nsec);
+    animator.stop(scheduledToLate, 30_nsec);
     animator.stop(playingToPausedKeep, 30_nsec);
     animator.stop(paused, 30_nsec);
     {
@@ -4318,20 +4372,22 @@ void AbstractAnimatorTest::update() {
             false,  /*  2 scheduledToPlayingReverse */
             true,   /*  3 scheduledToPaused */
             false,  /*  4 scheduledToStopped */
-            false,  /*  5 removed */
-            false,  /*  6 playingMiddleKeep */
-            true,   /*  7 playingToPausedKeep */
-            false,  /*  8 playingEndToStopped */
-            false,  /*  9 playingToStoppedKeep */
-            true,   /* 10 playingRepeated */
-            true,   /* 11 playingRepeatedReverseReverseEveryOther */
-            true,   /* 12 paused */
-            false,  /* 13 pausedToStopped */
-            false,  /* 14 stoppedRemove */
-            false,  /* 15 stoppedKeep */
-            false,  /* 16 zeroDurationScheduled */
-            false,  /* 17 zeroDurationScheduledReverseKeep */
-            false,  /* 18 zeroDurationStopped */
+            false,  /*  5 scheduledToLate */
+            false,  /*  6 scheduledToNever */
+            false,  /*  7 removed */
+            false,  /*  8 playingMiddleKeep */
+            true,   /*  9 playingToPausedKeep */
+            false,  /* 10 playingEndToStopped */
+            false,  /* 11 playingToStoppedKeep */
+            true,   /* 12 playingRepeated */
+            true,   /* 13 playingRepeatedReverseReverseEveryOther */
+            true,   /* 14 paused */
+            false,  /* 15 pausedToStopped */
+            false,  /* 16 stoppedRemove */
+            false,  /* 17 stoppedKeep */
+            false,  /* 18 zeroDurationScheduled */
+            false,  /* 19 zeroDurationScheduledReverseKeep */
+            false,  /* 20 zeroDurationStopped */
         }).sliceBit(0), TestSuite::Compare::Container);
         CORRADE_COMPARE_AS(Containers::BitArrayView{started}, Containers::stridedArrayView({
             true,   /*  0 scheduledKeep */
@@ -4339,20 +4395,22 @@ void AbstractAnimatorTest::update() {
             false,  /*  2 scheduledToPlayingReverse */
             false,  /*  3 scheduledToPaused */
             false,  /*  4 scheduledToStopped */
-            false,  /*  5 removed */
-            false,  /*  6 playingMiddleKeep */
-            false,  /*  7 playingToPausedKeep */
-            false,  /*  8 playingEndToStopped */
-            false,  /*  9 playingToStoppedKeep */
-            false,  /* 10 playingRepeated */
-            false,  /* 11 playingRepeatedReverseReverseEveryOther */
-            false,  /* 12 paused */
-            false,  /* 13 pausedToStopped */
-            false,  /* 14 stoppedRemove */
-            false,  /* 15 stoppedKeep */
-            false,  /* 16 zeroDurationScheduled */
-            false,  /* 17 zeroDurationScheduledReverseKeep */
-            false,  /* 18 zeroDurationStopped */
+            false,  /*  5 scheduledToLate */
+            false,  /*  6 scheduledToNever */
+            false,  /*  7 removed */
+            false,  /*  8 playingMiddleKeep */
+            false,  /*  9 playingToPausedKeep */
+            false,  /* 10 playingEndToStopped */
+            false,  /* 11 playingToStoppedKeep */
+            false,  /* 12 playingRepeated */
+            false,  /* 13 playingRepeatedReverseReverseEveryOther */
+            false,  /* 14 paused */
+            false,  /* 15 pausedToStopped */
+            false,  /* 16 stoppedRemove */
+            false,  /* 17 stoppedKeep */
+            false,  /* 18 zeroDurationScheduled */
+            false,  /* 19 zeroDurationScheduledReverseKeep */
+            false,  /* 20 zeroDurationStopped */
         }).sliceBit(0), TestSuite::Compare::Container);
         CORRADE_COMPARE_AS(Containers::BitArrayView{stopped}, Containers::stridedArrayView({
             false,  /*  0 scheduledKeep */
@@ -4360,20 +4418,22 @@ void AbstractAnimatorTest::update() {
             false,  /*  2 scheduledToPlayingReverse */
             true,   /*  3 scheduledToPaused */
             false,  /*  4 scheduledToStopped */
-            false,  /*  5 removed */
-            false,  /*  6 playingMiddleKeep */
-            true,   /*  7 playingToPausedKeep */
-            false,  /*  8 playingEndToStopped */
-            false,  /*  9 playingToStoppedKeep */
-            true,   /* 10 playingRepeated */
-            true,   /* 11 playingRepeatedReverseReverseEveryOther */
-            true,   /* 12 paused */
-            false,  /* 13 pausedToStopped */
-            false,  /* 14 stoppedRemove */
-            false,  /* 15 stoppedKeep */
-            false,  /* 16 zeroDurationScheduled */
-            false,  /* 17 zeroDurationScheduledReverseKeep */
-            false,  /* 18 zeroDurationStopped */
+            false,  /*  5 scheduledToLate */
+            false,  /*  6 scheduledToNever */
+            false,  /*  7 removed */
+            false,  /*  8 playingMiddleKeep */
+            true,   /*  9 playingToPausedKeep */
+            false,  /* 10 playingEndToStopped */
+            false,  /* 11 playingToStoppedKeep */
+            true,   /* 12 playingRepeated */
+            true,   /* 13 playingRepeatedReverseReverseEveryOther */
+            true,   /* 14 paused */
+            false,  /* 15 pausedToStopped */
+            false,  /* 16 stoppedRemove */
+            false,  /* 17 stoppedKeep */
+            false,  /* 18 zeroDurationScheduled */
+            false,  /* 19 zeroDurationScheduledReverseKeep */
+            false,  /* 20 zeroDurationStopped */
         }).sliceBit(0), TestSuite::Compare::Container);
         CORRADE_COMPARE_AS(factors, Containers::arrayView({
             0.0f,   /*  0 scheduledKeep */
@@ -4381,20 +4441,22 @@ void AbstractAnimatorTest::update() {
             unused, /*  2 scheduledToPlayingReverse */
             1.0f,   /*  3 scheduledToPaused */
             unused, /*  4 scheduledToStopped */
-            unused, /*  5 removed */
-            unused, /*  6 playingMiddleKeep */
-            1.0f,   /*  7 playingToPausedKeep */
-            unused, /*  8 playingEndToStopped */
-            unused, /*  9 playingToStoppedKeep */
-            1.0f,   /* 10 playingRepeated */
-            0.0f,   /* 11 playingRepeatedReverseReverseEveryOther */
-            1.0f,   /* 12 paused */
-            unused, /* 13 pausedToStopped */
-            unused, /* 14 stoppedRemove */
-            unused, /* 15 stoppedKeep */
-            unused, /* 16 zeroDurationScheduled */
-            unused, /* 17 zeroDurationScheduledReverseKeep */
-            unused, /* 18 zeroDurationStopped */
+            unused, /*  5 scheduledToLate */
+            unused, /*  6 scheduledToNever */
+            unused, /*  7 removed */
+            unused, /*  8 playingMiddleKeep */
+            1.0f,   /*  9 playingToPausedKeep */
+            unused, /* 10 playingEndToStopped */
+            unused, /* 11 playingToStoppedKeep */
+            1.0f,   /* 12 playingRepeated */
+            0.0f,   /* 13 playingRepeatedReverseReverseEveryOther */
+            1.0f,   /* 14 paused */
+            unused, /* 15 pausedToStopped */
+            unused, /* 16 stoppedRemove */
+            unused, /* 17 stoppedKeep */
+            unused, /* 18 zeroDurationScheduled */
+            unused, /* 19 zeroDurationScheduledReverseKeep */
+            unused, /* 20 zeroDurationStopped */
         }), TestSuite::Compare::Container);
         CORRADE_COMPARE_AS(Containers::BitArrayView{remove}, Containers::stridedArrayView({
             false,  /*  0 scheduledKeep */
@@ -4402,20 +4464,22 @@ void AbstractAnimatorTest::update() {
             false,  /*  2 scheduledToPlayingReverse */
             true,   /*  3 scheduledToPaused */
             false,  /*  4 scheduledToStopped */
-            false,  /*  5 removed */
-            false,  /*  6 playingMiddleKeep */
-            false,  /*  7 playingToPausedKeep */
-            false,  /*  8 playingEndToStopped */
-            false,  /*  9 playingToStoppedKeep */
-            true,   /* 10 playingRepeated */
-            true,   /* 11 playingRepeatedReverseReverseEveryOther */
-            true,   /* 12 paused */
-            false,  /* 13 pausedToStopped */
-            false,  /* 14 stoppedRemove */
-            false,  /* 15 stoppedKeep */
-            false,  /* 16 zeroDurationScheduled */
-            false,  /* 17 zeroDurationScheduledReverseKeep */
-            false,  /* 18 zeroDurationStopped */
+            true,   /*  5 scheduledToLate */
+            false,  /*  6 scheduledToNever */
+            false,  /*  7 removed */
+            false,  /*  8 playingMiddleKeep */
+            false,  /*  9 playingToPausedKeep */
+            false,  /* 10 playingEndToStopped */
+            false,  /* 11 playingToStoppedKeep */
+            true,   /* 12 playingRepeated */
+            true,   /* 13 playingRepeatedReverseReverseEveryOther */
+            true,   /* 14 paused */
+            false,  /* 15 pausedToStopped */
+            false,  /* 16 stoppedRemove */
+            false,  /* 17 stoppedKeep */
+            false,  /* 18 zeroDurationScheduled */
+            false,  /* 19 zeroDurationScheduledReverseKeep */
+            false,  /* 20 zeroDurationStopped */
         }).sliceBit(0), TestSuite::Compare::Container);
 
         /* Need to call this ourselves to not have the removed animations
@@ -4431,6 +4495,8 @@ void AbstractAnimatorTest::update() {
     CORRADE_VERIFY(!animator.isHandleValid(scheduledToPlayingReverse));
     CORRADE_VERIFY(!animator.isHandleValid(scheduledToPaused));
     CORRADE_VERIFY(!animator.isHandleValid(scheduledToStopped));
+    CORRADE_VERIFY(!animator.isHandleValid(scheduledToLate));
+    CORRADE_VERIFY(animator.isHandleValid(scheduledToNever));
     CORRADE_VERIFY(!animator.isHandleValid(removed));
     CORRADE_VERIFY(animator.isHandleValid(playingMiddleKeep));
     CORRADE_VERIFY(animator.isHandleValid(playingToPausedKeep));
@@ -4451,6 +4517,8 @@ void AbstractAnimatorTest::update() {
     /* scheduledToPlayingReverse is gone */
     /* scheduledToPaused is gone */
     /* scheduledToStopped is gone */
+    /* scheduledToLate is gone */
+    CORRADE_COMPARE(animator.state(scheduledToNever), AnimationState::Reserved);
     /* removed is gone */
     CORRADE_COMPARE(animator.state(playingMiddleKeep), AnimationState::Stopped);
     CORRADE_COMPARE(animator.state(playingToPausedKeep), AnimationState::Stopped);
@@ -4480,20 +4548,22 @@ void AbstractAnimatorTest::update() {
             false,  /*  2 scheduledToPlayingReverse */
             false,  /*  3 scheduledToPaused */
             false,  /*  4 scheduledToStopped */
-            false,  /*  5 removed */
-            false,  /*  6 playingMiddleKeep */
-            false,  /*  7 playingToPausedKeep */
-            false,  /*  8 playingEndToStopped */
-            false,  /*  9 playingToStoppedKeep */
-            false,  /* 10 playingRepeated */
-            false,  /* 11 playingRepeatedReverseReverseEveryOther */
-            false,  /* 12 paused */
-            false,  /* 13 pausedToStopped */
-            false,  /* 14 stoppedRemove */
-            false,  /* 15 stoppedKeep */
-            false,  /* 16 zeroDurationScheduled */
-            false,  /* 17 zeroDurationScheduledReverseKeep */
-            false,  /* 18 zeroDurationStopped */
+            false,  /*  5 scheduledToLate */
+            false,  /*  6 scheduledToNever */
+            false,  /*  7 removed */
+            false,  /*  8 playingMiddleKeep */
+            false,  /*  9 playingToPausedKeep */
+            false,  /* 10 playingEndToStopped */
+            false,  /* 11 playingToStoppedKeep */
+            false,  /* 12 playingRepeated */
+            false,  /* 13 playingRepeatedReverseReverseEveryOther */
+            false,  /* 14 paused */
+            false,  /* 15 pausedToStopped */
+            false,  /* 16 stoppedRemove */
+            false,  /* 17 stoppedKeep */
+            false,  /* 18 zeroDurationScheduled */
+            false,  /* 19 zeroDurationScheduledReverseKeep */
+            false,  /* 20 zeroDurationStopped */
         }).sliceBit(0), TestSuite::Compare::Container);
         CORRADE_COMPARE_AS(Containers::BitArrayView{started}, Containers::stridedArrayView({
             false,  /*  0 scheduledKeep */
@@ -4501,20 +4571,22 @@ void AbstractAnimatorTest::update() {
             false,  /*  2 scheduledToPlayingReverse */
             false,  /*  3 scheduledToPaused */
             false,  /*  4 scheduledToStopped */
-            false,  /*  5 removed */
-            false,  /*  6 playingMiddleKeep */
-            false,  /*  7 playingToPausedKeep */
-            false,  /*  8 playingEndToStopped */
-            false,  /*  9 playingToStoppedKeep */
-            false,  /* 10 playingRepeated */
-            false,  /* 11 playingRepeatedReverseReverseEveryOther */
-            false,  /* 12 paused */
-            false,  /* 13 pausedToStopped */
-            false,  /* 14 stoppedRemove */
-            false,  /* 15 stoppedKeep */
-            false,  /* 16 zeroDurationScheduled */
-            false,  /* 17 zeroDurationScheduledReverseKeep */
-            false,  /* 18 zeroDurationStopped */
+            false,  /*  5 scheduledToLate */
+            false,  /*  6 scheduledToNever */
+            false,  /*  7 removed */
+            false,  /*  8 playingMiddleKeep */
+            false,  /*  9 playingToPausedKeep */
+            false,  /* 10 playingEndToStopped */
+            false,  /* 11 playingToStoppedKeep */
+            false,  /* 12 playingRepeated */
+            false,  /* 13 playingRepeatedReverseReverseEveryOther */
+            false,  /* 14 paused */
+            false,  /* 15 pausedToStopped */
+            false,  /* 16 stoppedRemove */
+            false,  /* 17 stoppedKeep */
+            false,  /* 18 zeroDurationScheduled */
+            false,  /* 19 zeroDurationScheduledReverseKeep */
+            false,  /* 20 zeroDurationStopped */
         }).sliceBit(0), TestSuite::Compare::Container);
         CORRADE_COMPARE_AS(Containers::BitArrayView{stopped}, Containers::stridedArrayView({
             true,   /*  0 scheduledKeep */
@@ -4522,20 +4594,22 @@ void AbstractAnimatorTest::update() {
             false,  /*  2 scheduledToPlayingReverse */
             false,  /*  3 scheduledToPaused */
             false,  /*  4 scheduledToStopped */
-            false,  /*  5 removed */
-            false,  /*  6 playingMiddleKeep */
-            false,  /*  7 playingToPausedKeep */
-            false,  /*  8 playingEndToStopped */
-            false,  /*  9 playingToStoppedKeep */
-            false,  /* 10 playingRepeated */
-            false,  /* 11 playingRepeatedReverseReverseEveryOther */
-            false,  /* 12 paused */
-            false,  /* 13 pausedToStopped */
-            false,  /* 14 stoppedRemove */
-            false,  /* 15 stoppedKeep */
-            false,  /* 16 zeroDurationScheduled */
-            false,  /* 17 zeroDurationScheduledReverseKeep */
-            false,  /* 18 zeroDurationStopped */
+            false,  /*  5 scheduledToLate */
+            false,  /*  6 scheduledToNever */
+            false,  /*  7 removed */
+            false,  /*  8 playingMiddleKeep */
+            false,  /*  9 playingToPausedKeep */
+            false,  /* 10 playingEndToStopped */
+            false,  /* 11 playingToStoppedKeep */
+            false,  /* 12 playingRepeated */
+            false,  /* 13 playingRepeatedReverseReverseEveryOther */
+            false,  /* 14 paused */
+            false,  /* 15 pausedToStopped */
+            false,  /* 16 stoppedRemove */
+            false,  /* 17 stoppedKeep */
+            false,  /* 18 zeroDurationScheduled */
+            false,  /* 19 zeroDurationScheduledReverseKeep */
+            false,  /* 20 zeroDurationStopped */
         }).sliceBit(0), TestSuite::Compare::Container);
         CORRADE_COMPARE_AS(factors, Containers::arrayView({
             1.0f,   /*  0 scheduledKeep */
@@ -4543,20 +4617,22 @@ void AbstractAnimatorTest::update() {
             unused, /*  2 scheduledToPlayingReverse */
             unused, /*  3 scheduledToPaused */
             unused, /*  4 scheduledToStopped */
-            unused, /*  5 removed */
-            unused, /*  6 playingMiddleKeep */
-            unused, /*  7 playingToPausedKeep */
-            unused, /*  8 playingEndToStopped */
-            unused, /*  9 playingToStoppedKeep */
-            unused, /* 10 playingRepeated */
-            unused, /* 11 playingRepeatedReverseReverseEveryOther */
-            unused, /* 12 paused */
-            unused, /* 13 pausedToStopped */
-            unused, /* 14 stoppedRemove */
-            unused, /* 15 stoppedKeep */
-            unused, /* 16 zeroDurationScheduled */
-            unused, /* 17 zeroDurationScheduledReverseKeep */
-            unused, /* 18 zeroDurationStopped */
+            unused, /*  5 scheduledToLate */
+            unused, /*  6 scheduledToNever */
+            unused, /*  7 removed */
+            unused, /*  8 playingMiddleKeep */
+            unused, /*  9 playingToPausedKeep */
+            unused, /* 10 playingEndToStopped */
+            unused, /* 11 playingToStoppedKeep */
+            unused, /* 12 playingRepeated */
+            unused, /* 13 playingRepeatedReverseReverseEveryOther */
+            unused, /* 14 paused */
+            unused, /* 15 pausedToStopped */
+            unused, /* 16 stoppedRemove */
+            unused, /* 17 stoppedKeep */
+            unused, /* 18 zeroDurationScheduled */
+            unused, /* 19 zeroDurationScheduledReverseKeep */
+            unused, /* 20 zeroDurationStopped */
         }), TestSuite::Compare::Container);
         CORRADE_COMPARE_AS(remove,
             (Containers::BitArray{DirectInit, animationCount, false}),
@@ -4573,6 +4649,8 @@ void AbstractAnimatorTest::update() {
     CORRADE_VERIFY(!animator.isHandleValid(scheduledToPlayingReverse));
     CORRADE_VERIFY(!animator.isHandleValid(scheduledToPaused));
     CORRADE_VERIFY(!animator.isHandleValid(scheduledToStopped));
+    CORRADE_VERIFY(!animator.isHandleValid(scheduledToLate));
+    CORRADE_VERIFY(animator.isHandleValid(scheduledToNever));
     CORRADE_VERIFY(!animator.isHandleValid(removed));
     CORRADE_VERIFY(animator.isHandleValid(playingMiddleKeep));
     CORRADE_VERIFY(animator.isHandleValid(playingToPausedKeep));
@@ -4593,6 +4671,8 @@ void AbstractAnimatorTest::update() {
     /* scheduledToPlayingReverse is gone */
     /* scheduledToPaused is gone */
     /* scheduledToStopped is gone */
+    /* scheduledToLate is gone */
+    CORRADE_COMPARE(animator.state(scheduledToNever), AnimationState::Reserved);
     /* removed is gone */
     CORRADE_COMPARE(animator.state(playingMiddleKeep), AnimationState::Stopped);
     CORRADE_COMPARE(animator.state(playingToPausedKeep), AnimationState::Stopped);
@@ -4642,6 +4722,8 @@ void AbstractAnimatorTest::update() {
     CORRADE_VERIFY(!animator.isHandleValid(scheduledToPlayingReverse));
     CORRADE_VERIFY(!animator.isHandleValid(scheduledToPaused));
     CORRADE_VERIFY(!animator.isHandleValid(scheduledToStopped));
+    CORRADE_VERIFY(!animator.isHandleValid(scheduledToLate));
+    CORRADE_VERIFY(animator.isHandleValid(scheduledToNever));
     CORRADE_VERIFY(!animator.isHandleValid(removed));
     CORRADE_VERIFY(animator.isHandleValid(playingMiddleKeep));
     CORRADE_VERIFY(animator.isHandleValid(playingToPausedKeep));
@@ -4663,6 +4745,8 @@ void AbstractAnimatorTest::update() {
     /* scheduledToPlayingReverse is gone */
     /* scheduledToPaused is gone */
     /* scheduledToStopped is gone */
+    /* scheduledToLate is gone */
+    CORRADE_COMPARE(animator.state(scheduledToNever), AnimationState::Reserved);
     /* removed is gone */
     CORRADE_COMPARE(animator.state(playingMiddleKeep), AnimationState::Stopped);
     CORRADE_COMPARE(animator.state(playingToPausedKeep), AnimationState::Stopped);
@@ -5135,6 +5219,45 @@ void AbstractAnimatorTest::state() {
         CORRADE_COMPARE(animator.update(0_nsec, mask, mask, mask, factors, mask), Containers::pair(false, false));
         CORRADE_COMPARE(animator.state(), AnimatorStates{});
 
+    /* Animation that's created scheduled and then stopped before it starts
+       doesn't set anything */
+    } {
+        AnimationHandle animation = animator.create(10_nsec, 10_nsec, AnimationFlag::KeepOncePlayed);
+        CORRADE_COMPARE(animator.state(animation), AnimationState::Scheduled);
+        CORRADE_COMPARE(animator.state(), AnimatorState::NeedsAdvance);
+
+        animator.stop(animation, 0_nsec);
+        CORRADE_COMPARE(animator.update(0_nsec, mask, mask, mask, factors, mask), Containers::pair(false, false));
+        CORRADE_COMPARE(animator.state(), AnimatorStates{});
+        animator.remove(animation);
+
+    /* Animation that's created reserved doesn't set anything at create() nor
+       update(), because there's no point in waiting 262 years for it to
+       start. */
+    } {
+        AnimationHandle animation = animator.create(Nanoseconds::max(), 10_nsec);
+        CORRADE_COMPARE(animator.state(animation), AnimationState::Reserved);
+        CORRADE_COMPARE(animator.state(), AnimatorStates{});
+
+        CORRADE_COMPARE(animator.update(0_nsec, mask, mask, mask, factors, mask), Containers::pair(false, false));
+        CORRADE_COMPARE(animator.state(), AnimatorStates{});
+        animator.remove(animation);
+
+    /* Animation that's created scheduled and then turned into reserved doesn't
+       set anything at update() anymore, because there's no point in waiting
+       262 years for it to start. */
+    } {
+        AnimationHandle animation = animator.create(10_nsec, 10_nsec);
+        CORRADE_COMPARE(animator.state(animation), AnimationState::Scheduled);
+        CORRADE_COMPARE(animator.state(), AnimatorState::NeedsAdvance);
+
+        animator.play(animation, Nanoseconds::max());
+        CORRADE_COMPARE(animator.state(animation), AnimationState::Reserved);
+        CORRADE_COMPARE(animator.state(), AnimatorState::NeedsAdvance);
+        CORRADE_COMPARE(animator.update(0_nsec, mask, mask, mask, factors, mask), Containers::pair(false, false));
+        CORRADE_COMPARE(animator.state(), AnimatorStates{});
+        animator.remove(animation);
+
     /* Animation that's created playing sets a state, removal & update()
        clears it */
     } {
@@ -5150,6 +5273,16 @@ void AbstractAnimatorTest::state() {
     } {
         AnimationHandle animation = animator.create(-10_nsec, 10_nsec, AnimationFlag::KeepOncePlayed);
         CORRADE_COMPARE(animator.state(animation), AnimationState::Stopped);
+        CORRADE_COMPARE(animator.state(), AnimatorStates{});
+        animator.remove(animation);
+
+    /* Animation that's zero-length and scheduled right at update() triggers
+       an advance & removal but doesn't set NeedsAdvance after */
+    } {
+        AnimationHandle animation = animator.create(0_nsec, 0_nsec);
+        CORRADE_COMPARE(animator.state(animation), AnimationState::Stopped);
+        CORRADE_COMPARE(animator.state(), AnimatorState::NeedsAdvance);
+        CORRADE_COMPARE(animator.update(0_nsec, mask, mask, mask, factors, mask), Containers::pair(true, true));
         CORRADE_COMPARE(animator.state(), AnimatorStates{});
         animator.remove(animation);
 

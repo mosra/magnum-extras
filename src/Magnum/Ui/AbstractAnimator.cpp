@@ -120,6 +120,7 @@ Debug& operator<<(Debug& debug, const AnimationState value) {
     switch(value) {
         /* LCOV_EXCL_START */
         #define _c(value) case AnimationState::value: return debug << (packed ? "" : "::") << Debug::nospace << #value;
+        _c(Reserved)
         _c(Scheduled)
         _c(Playing)
         _c(Paused)
@@ -345,6 +346,12 @@ bool AbstractAnimator::isHandleValid(const AnimationHandle handle) const {
 namespace {
 
 AnimationState animationState(const Animation& animation, const Nanoseconds time) {
+    /* In case both start and stop time is max(), the animation is reserved,
+       i.e. not being affected by update() in any way */
+    if(animation.used.started == Nanoseconds::max() &&
+       animation.used.stopped == Nanoseconds::max())
+        return AnimationState::Reserved;
+
     /* The animation is stopped if the stopped time is at or before the started
        time, returning AnimationState::Stopped below.
 
@@ -966,7 +973,8 @@ Float AbstractAnimator::factorInternal(const UnsignedInt id) const {
     const State& state = *_state;
     const Animation& animation = state.animations[id];
     const AnimationState animationState = Ui::animationState(animation, state.time);
-    if(animationState == AnimationState::Scheduled)
+    if(animationState == AnimationState::Reserved ||
+       animationState == AnimationState::Scheduled)
         return 0.0f;
     return animationFactor(animation, state.time, animationState);
 }
@@ -1323,14 +1331,13 @@ Containers::Pair<bool, bool> AbstractAnimator::update(const Nanoseconds time, co
         const AnimationState stateBefore = animation.used.previousState;
         const AnimationState stateAfter = animationState(animation, time);
 
-        /* AnimationState has 4 values so there should be 16 different cases */
+        /* AnimationState has 5 values so there should be 25 different cases */
         switch((UnsignedShort(stateBefore) << 8)|UnsignedShort(stateAfter)) {
             #define _c(before, after) case (UnsignedShort(AnimationState::before) << 8)|UnsignedShort(AnimationState::after):
             _c(Scheduled,Playing)
             _c(Playing,Playing)
             _c(Scheduled,Paused)
             _c(Playing,Paused)
-            _c(Scheduled,Stopped)
             _c(Playing,Stopped)
             _c(Paused,Stopped)
                 active.set(i);
@@ -1340,7 +1347,24 @@ Containers::Pair<bool, bool> AbstractAnimator::update(const Nanoseconds time, co
                 factors[i] = animationFactor(animation, time, stateAfter);
                 break;
 
+            /* An animation transitioning from scheduled to stopped could
+               either have been played in full since last time, or not played
+               at all yet, in which case it's not going to be advanced. */
+            _c(Scheduled,Stopped)
+                /* Using <= and not < so zero-length animations scheduled at
+                   exactly `time` get properly advanced as well */
+                if(animation.used.started <= time) {
+                    active.set(i);
+                    started.set(i);
+                    stopped.set(i);
+                    advanceNeeded = true;
+                    factors[i] = animationFactor(animation, time, stateAfter);
+                }
+                break;
+
             /* These don't get advanced in any way */
+            _c(Reserved,Reserved)
+            _c(Scheduled,Reserved)
             _c(Scheduled,Scheduled)
             _c(Paused,Paused)
                 break;
@@ -1348,9 +1372,16 @@ Containers::Pair<bool, bool> AbstractAnimator::update(const Nanoseconds time, co
             /* These transitions shouldn't happen or were already skipped
                above */
             /* LCOV_EXCL_START */
+            _c(Reserved,Scheduled)
+            _c(Reserved,Playing)
+            _c(Reserved,Paused)
+            _c(Reserved,Stopped)
+            _c(Playing,Reserved)
             _c(Playing,Scheduled)
+            _c(Paused,Reserved)
             _c(Paused,Scheduled)
             _c(Paused,Playing)
+            _c(Stopped,Reserved)
             _c(Stopped,Scheduled)
             _c(Stopped,Playing)
             _c(Stopped,Paused)

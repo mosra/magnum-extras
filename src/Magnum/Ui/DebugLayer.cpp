@@ -733,8 +733,9 @@ bool DebugLayer::highlightNode(const NodeHandle handle) {
 
         if(state.sources >= DebugLayerSource::NodeAnimations) {
             /* Four entries, each for one AnimationState */
-            UnsignedInt otherAnimatorCount[4]{};
-            UnsignedInt otherAnimationCount[4]{};
+            constexpr UnsignedInt animationStateCount = 5;
+            UnsignedInt otherAnimatorCount[animationStateCount]{};
+            UnsignedInt otherAnimationCount[animationStateCount]{};
             bool hasNamedAnimators = false;
             for(UnsignedInt animatorId = 0; animatorId != state.animators.size(); ++animatorId) {
                 /* Skip animators that are freed or that we don't know about
@@ -761,13 +762,13 @@ bool DebugLayer::highlightNode(const NodeHandle handle) {
                 const UnsignedInt dataCapacity = animatorInstance.capacity();
                 const Containers::StridedArrayView1D<const UnsignedShort> dataGenerations = animatorInstance.generations();
                 /* Four entries, each for one AnimationState */
-                bool hasOtherAnimationsFromThisAnimator[4]{};
-                UnsignedInt namedAnimatorDataCount[4]{};
+                bool hasOtherAnimationsFromThisAnimator[animationStateCount]{};
+                UnsignedInt namedAnimatorDataCount[animationStateCount]{};
                 for(UnsignedInt dataId = 0; dataId != dataCapacity; ++dataId) {
                     const AnimatorDataHandle data = animatorDataHandle(dataId, dataGenerations[dataId]);
                     if(animatorInstance.isHandleValid(data) && animatorInstance.node(data) == handle) {
                         AnimationState state = animatorInstance.state(data);
-                        CORRADE_INTERNAL_ASSERT(UnsignedInt(state) < 4);
+                        CORRADE_INTERNAL_ASSERT(UnsignedInt(state) < animationStateCount);
                         if(animator.print) {
                             hasNamedAnimators = true;
                             animator.print(animator.integration, debug, animatorInstance, animator.name, data);
@@ -781,7 +782,7 @@ bool DebugLayer::highlightNode(const NodeHandle handle) {
                     }
                 }
 
-                for(UnsignedInt i = 0; i != Containers::arraySize(namedAnimatorDataCount); ++i) {
+                for(UnsignedInt i = 0; i != animationStateCount; ++i) {
                     if(namedAnimatorDataCount[i]) {
                         debug << " " << namedAnimatorDataCount[i] << Debug::color(Debug::Color::Cyan) << Debug::packed << AnimationState(i) << Debug::resetColor << "animations from animator" << Debug::packed << animator.handle << Debug::color(Debug::Color::Yellow) << animator.name << Debug::resetColor << Debug::newline;
                     }
@@ -791,7 +792,7 @@ bool DebugLayer::highlightNode(const NodeHandle handle) {
                 }
             }
 
-            for(UnsignedInt i = 0; i != Containers::arraySize(otherAnimationCount); ++i) {
+            for(UnsignedInt i = 0; i != animationStateCount; ++i) {
                 if(otherAnimationCount[i])
                     debug << " " << otherAnimationCount[i] << Debug::color(Debug::Color::Cyan) << Debug::packed << AnimationState(i) << Debug::resetColor << "animations from" << otherAnimatorCount[i] << (hasNamedAnimators ? "other animators" : "animators") << Debug::newline;
                 else CORRADE_INTERNAL_ASSERT(otherAnimatorCount[i] == 0);

@@ -523,10 +523,11 @@ const struct {
         {}, {}, PointerEventSource::Mouse, Pointer::MouseRight,
         {}, true, false, false, false, false, false,
         "Node {0x3, 0x1}\n"
+        "  1 Reserved animations from 1 animators\n"
         "  2 Scheduled animations from 2 animators\n"
         "  3 Playing animations from 2 animators\n"
         "  1 Paused animations from 1 animators\n"
-        "  4 Stopped animations from 2 animators"},
+        "  3 Stopped animations from 2 animators"},
     {"animations, some animator names",
         DebugLayerSource::NodeAnimations, DebugLayerFlag::NodeHighlight,
         {}, false, true, false,
@@ -536,9 +537,10 @@ const struct {
         "  1 Scheduled animations from animator {0x1, 0x1} 2nd\n"
         "  2 Playing animations from animator {0x5, 0x1} No#3\n"
         "  1 Paused animations from animator {0x5, 0x1} No#3\n"
+        "  1 Reserved animations from 1 other animators\n"
         "  1 Scheduled animations from 1 other animators\n"
         "  1 Playing animations from 1 other animators\n"
-        "  4 Stopped animations from 2 other animators"},
+        "  3 Stopped animations from 2 other animators"},
     {"animation details, some animator names",
         DebugLayerSource::NodeAnimationDetails, DebugLayerFlag::NodeHighlight,
         {}, false, true, false,
@@ -549,17 +551,19 @@ const struct {
         "  Animator No#3 (69420) Playing animation {0x0, 0x1} and a value of 1226\n"
         "  Animator No#3 (69420) Playing animation {0x1, 0x1} and a value of 1226\n"
         "  Animator No#3 (69420) Paused animation {0x2, 0x1} and a value of 1226\n"
+        "  1 Reserved animations from 1 other animators\n"
         "  1 Scheduled animations from 1 other animators\n"
         "  1 Playing animations from 1 other animators\n"
-        "  4 Stopped animations from 2 other animators"},
+        "  3 Stopped animations from 2 other animators"},
     {"animation details, all animator names",
         DebugLayerSource::NodeAnimationDetails, DebugLayerFlag::NodeHighlight,
         {}, false, true, true,
         {}, {}, PointerEventSource::Mouse, Pointer::MouseRight,
         {}, true, false, false, false, false, false,
         "Node {0x3, 0x1}\n"
+        "  1 Reserved animations from animator {0x0, 0x1} An animator\n"
         "  1 Scheduled animations from animator {0x0, 0x1} An animator\n"
-        "  3 Stopped animations from animator {0x0, 0x1} An animator\n"
+        "  2 Stopped animations from animator {0x0, 0x1} An animator\n"
         "  1 Scheduled animations from animator {0x1, 0x1} 2nd\n"
         "  Animator No#3 (69420) Playing animation {0x0, 0x1} and a value of 1226\n"
         "  Animator No#3 (69420) Playing animation {0x1, 0x1} and a value of 1226\n"
@@ -589,9 +593,10 @@ const struct {
         "  Animator No#3 (69420) Playing animation {0x0, 0x1} and a value of 1226\n"
         "  Animator No#3 (69420) Playing animation {0x1, 0x1} and a value of 1226\n"
         "  Animator No#3 (69420) Paused animation {0x2, 0x1} and a value of 1226\n"
+        "  1 Reserved animations from 1 other animators\n"
         "  1 Scheduled animations from 1 other animators\n"
         "  1 Playing animations from 1 other animators\n"
-        "  4 Stopped animations from 2 other animators"},
+        "  3 Stopped animations from 2 other animators"},
     /* The last case here is used in nodeHighlightNoCallback() to verify output
        w/o a callback and for visual color verification, it's expected to be
        the most complete, executing all coloring code paths */
@@ -4069,7 +4074,7 @@ void DebugLayerTest::nodeHighlight() {
     emptyAnimator1.create(50_nsec, 10_nsec, node); /* scheduled */
     emptyAnimator1.create(-50_nsec, 10_nsec, node, AnimationFlag::KeepOncePlayed); /* stopped */
     emptyAnimator1.create(-50_nsec, 10_nsec, node, AnimationFlag::KeepOncePlayed); /* stopped */
-    emptyAnimator1.create(-50_nsec, 10_nsec, node, AnimationFlag::KeepOncePlayed); /* stopped */
+    emptyAnimator1.create(Nanoseconds::max(), 10_nsec, node, AnimationFlag::KeepOncePlayed); /* reserved */
     EmptyNodeAnimator& emptyAnimator2 = ui.setNodeAnimatorInstance(Containers::pointer<EmptyNodeAnimator>(ui.createAnimator()));
     emptyAnimator2.create(50_nsec, 10_nsec, node); /* scheduled */
     /* Animator that gets subsequently removed and replaced with another, and
@@ -4438,7 +4443,7 @@ void DebugLayerTest::nodeHighlightNoCallback() {
     emptyAnimator1.create(50_nsec, 10_nsec, node); /* scheduled */
     emptyAnimator1.create(-50_nsec, 10_nsec, node, AnimationFlag::KeepOncePlayed); /* stopped */
     emptyAnimator1.create(-50_nsec, 10_nsec, node, AnimationFlag::KeepOncePlayed); /* stopped */
-    emptyAnimator1.create(-50_nsec, 10_nsec, node, AnimationFlag::KeepOncePlayed); /* stopped */
+    emptyAnimator1.create(Nanoseconds::max(), 10_nsec, node, AnimationFlag::KeepOncePlayed); /* reserved */
     EmptyNodeAnimator& emptyAnimator2 = ui.setNodeAnimatorInstance(Containers::pointer<EmptyNodeAnimator>(ui.createAnimator()));
     emptyAnimator2.create(50_nsec, 10_nsec, node); /* scheduled */
     /* Animators that were removed / w/o an instance in nodeHighlight() above */

@@ -254,6 +254,15 @@ CORRADE_ENUMSET_OPERATORS(AnimationFlags)
 */
 enum class AnimationState: UnsignedByte {
     /**
+     * The animation is reserved to be played, but without any scheduled time.
+     * Returned if both @ref AbstractAnimator::started() and
+     * @ref AbstractAnimator::stopped() for given animation are
+     * @ref Nanoseconds::max(). Does not transition to any other state in
+     * @ref AbstractAnimator::update().
+     */
+    Reserved,
+
+    /**
      * The animation is scheduled to be played. Returned if
      * @ref AbstractAnimator::stopped() is greater than
      * @ref AbstractAnimator::started() for given animation and the time the
@@ -1051,11 +1060,12 @@ class MAGNUM_UI_EXPORT AbstractAnimator {
          * @ref stopped(AnimationHandle) const for a particular animation. The
          * returned value is always in the @f$ [0, 1] @f$ range and matches
          * what would be returned from @ref update() for given animation at
-         * @ref time(). For @ref AnimationState::Scheduled always returns
-         * @cpp 0.0f @ce, for @ref AnimationState::Stopped returns either
-         * @cpp 1.0f @ce or @cpp 0.0f @ce based on presence of the
-         * @ref AnimationFlag::Reverse and @relativeref{AnimationFlag,ReverseEveryOther}
-         * flags and, with the latter, also on repeat count.
+         * @ref time(). For @ref AnimationState::Reserved and
+         * @relativeref{AnimationState,Scheduled} always returns @cpp 0.0f @ce,
+         * for @ref AnimationState::Stopped returns either @cpp 1.0f @ce or
+         * @cpp 0.0f @ce based on presence of the @ref AnimationFlag::Reverse
+         * and @relativeref{AnimationFlag,ReverseEveryOther} flags and, with
+         * the latter, also on repeat count.
          * @see @ref state(AnimationHandle) const
          */
         Float factor(AnimationHandle handle) const;
@@ -1491,7 +1501,8 @@ class MAGNUM_UI_EXPORT AbstractAnimator {
         /**
          * @brief Create an animation attached to a data
          * @param start         Time at which the animation starts. Use
-         *      @ref Nanoseconds::max() for creating a stopped animation.
+         *      @ref Nanoseconds::max() for reserving an animation that
+         *      doesn't get played until @ref play() is called on it.
          * @param duration      Duration of a single play of the animation
          * @param data          Data the animation is attached to. Use
          *      @ref DataHandle::Null to create an animation that isn't

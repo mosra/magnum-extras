@@ -262,7 +262,8 @@ class MAGNUM_UI_EXPORT GenericAnimator: public AbstractGenericAnimator {
          *      Pick one from @ref Animation::BasicEasing "Animation::Easing"
          *      or supply a custom one.
          * @param start         Time at which the animation starts. Use
-         *      @ref Nanoseconds::max() for creating a stopped animation.
+         *      @ref Nanoseconds::max() for reserving an animation that
+         *      doesn't get played until @ref play() is called on it.
          * @param duration      Duration of a single play of the animation
          * @param repeatCount   Repeat count. Use @cpp 0 @ce for an
          *      indefinitely repeating animation.
@@ -518,7 +519,8 @@ class MAGNUM_UI_EXPORT GenericNodeAnimator: public AbstractGenericAnimator {
          *      Pick one from @ref Animation::BasicEasing "Animation::Easing"
          *      or supply a custom one.
          * @param start         Time at which the animation starts. Use
-         *      @ref Nanoseconds::max() for creating a stopped animation.
+         *      @ref Nanoseconds::max() for reserving an animation that
+         *      doesn't get played until @ref play() is called on it.
          * @param duration      Duration of a single play of the animation
          * @param node          Node the animation is attached to. Use
          *      @ref NodeHandle::Null to create an animation that isn't
@@ -778,7 +780,8 @@ class MAGNUM_UI_EXPORT GenericDataAnimator: public AbstractGenericAnimator {
          *      Pick one from @ref Animation::BasicEasing "Animation::Easing"
          *      or supply a custom one.
          * @param start         Time at which the animation starts. Use
-         *      @ref Nanoseconds::max() for creating a stopped animation.
+         *      @ref Nanoseconds::max() for reserving an animation that
+         *      doesn't get played until @ref play() is called on it.
          * @param duration      Duration of a single play of the animation
          * @param data          Data the animation is attached to. Use
          *      @ref DataHandle::Null to create an animation that isn't
