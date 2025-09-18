@@ -2358,7 +2358,7 @@ void TextLayerStyleAnimatorTest::advanceNoFreeDynamicStyles() {
 
         void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
         void doSetEditingStyle(const TextLayerCommonEditingStyleUniform&, Containers::ArrayView<const TextLayerEditingStyleUniform>) override {}
-    } shared{cache, TextLayer::Shared::Configuration{3}
+    } shared{cache, TextLayer::Shared::Configuration{4}
         .setDynamicStyleCount(1)
     };
 
@@ -2373,9 +2373,12 @@ void TextLayerStyleAnimatorTest::advanceNoFreeDynamicStyles() {
             .setColor(Color4{0.25f}),
          TextLayerStyleUniform{}
             .setColor(Color4{0.75f}),
+         TextLayerStyleUniform{}
+            .setColor(Color4{1.25f}),
          TextLayerStyleUniform{}},
-        {fontHandle, fontHandle, fontHandle},
+        {fontHandle, fontHandle, fontHandle, fontHandle},
         {Text::Alignment::MiddleCenter,
+         Text::Alignment::MiddleCenter,
          Text::Alignment::MiddleCenter,
          Text::Alignment::MiddleCenter},
         {}, {}, {},
@@ -2394,7 +2397,7 @@ void TextLayerStyleAnimatorTest::advanceNoFreeDynamicStyles() {
     DataHandle data2 = layer.create(2, "", {});
 
     AnimationHandle first = animator.create(0, 1, Animation::Easing::linear, 0_nsec, 20_nsec, data2);
-    AnimationHandle second = animator.create(1, 0, Animation::Easing::linear, 10_nsec, 40_nsec, data1);
+    AnimationHandle second = animator.create(2, 1, Animation::Easing::linear, 10_nsec, 40_nsec, data1);
 
     /* Does what layer's advanceAnimations() is doing internally for all
        animators (as we need to test also the interaction with animation being
@@ -2433,42 +2436,38 @@ void TextLayerStyleAnimatorTest::advanceNoFreeDynamicStyles() {
     UnsignedInt dataStyles[]{666, 666};
 
     /* First advance takes the only dynamic style and switches to it */
-    {
-        CORRADE_COMPARE(advance(5_nsec, uniforms, dataStyles), TextLayerStyleAnimatorUpdate::Uniform|TextLayerStyleAnimatorUpdate::Style);
-        CORRADE_COMPARE(animator.dynamicStyle(first), 0);
-        CORRADE_COMPARE(layer.dynamicStyleUsedCount(), 1);
-        CORRADE_COMPARE_AS(Containers::arrayView(dataStyles), Containers::arrayView({
-            666u,
-            shared.styleCount() + 0u
-        }), TestSuite::Compare::Container);
-        CORRADE_COMPARE(uniforms[0].color, Color4{0.375f});
+    CORRADE_COMPARE(advance(5_nsec, uniforms, dataStyles), TextLayerStyleAnimatorUpdate::Uniform|TextLayerStyleAnimatorUpdate::Style);
+    CORRADE_COMPARE(animator.dynamicStyle(first), 0);
+    CORRADE_COMPARE(layer.dynamicStyleUsedCount(), 1);
+    CORRADE_COMPARE_AS(Containers::arrayView(dataStyles), Containers::arrayView({
+        666u,
+        shared.styleCount() + 0u
+    }), TestSuite::Compare::Container);
+    CORRADE_COMPARE(uniforms[0].color, Color4{0.375f});
 
     /* Next advance plays the other animation also, but isn't able to take any
        other dynamic style, so it doesn't update any style index */
-    } {
-        CORRADE_COMPARE(advance(10_nsec, uniforms, dataStyles), TextLayerStyleAnimatorUpdate::Uniform);
-        CORRADE_COMPARE(animator.dynamicStyle(first), 0);
-        CORRADE_COMPARE(animator.dynamicStyle(second), Containers::NullOpt);
-        CORRADE_COMPARE(layer.dynamicStyleUsedCount(), 1);
-        CORRADE_COMPARE_AS(Containers::arrayView(dataStyles), Containers::arrayView({
-            666u,
-            shared.styleCount() + 0u
-        }), TestSuite::Compare::Container);
-        CORRADE_COMPARE(uniforms[0].color, Color4{0.5f});
+    CORRADE_COMPARE(advance(10_nsec, uniforms, dataStyles), TextLayerStyleAnimatorUpdate::Uniform);
+    CORRADE_COMPARE(animator.dynamicStyle(first), 0);
+    CORRADE_COMPARE(animator.dynamicStyle(second), Containers::NullOpt);
+    CORRADE_COMPARE(layer.dynamicStyleUsedCount(), 1);
+    CORRADE_COMPARE_AS(Containers::arrayView(dataStyles), Containers::arrayView({
+        666u,
+        shared.styleCount() + 0u
+    }), TestSuite::Compare::Container);
+    CORRADE_COMPARE(uniforms[0].color, Color4{0.5f});
 
     /* Next advance finishes the first animation and recycles its dynamic
        style, which allows the second animation to take over it */
-    } {
-        CORRADE_COMPARE(advance(20_nsec, uniforms, dataStyles), TextLayerStyleAnimatorUpdate::Uniform|TextLayerStyleAnimatorUpdate::Style);
-        CORRADE_VERIFY(!animator.isHandleValid(first));
-        CORRADE_COMPARE(animator.dynamicStyle(second), 0);
-        CORRADE_COMPARE(layer.dynamicStyleUsedCount(), 1);
-        CORRADE_COMPARE_AS(Containers::arrayView(dataStyles), Containers::arrayView({
-            shared.styleCount() + 0u,
-            1u
-        }), TestSuite::Compare::Container);
-        CORRADE_COMPARE(uniforms[0].color, Color4{0.625f});
-    }
+    CORRADE_COMPARE(advance(20_nsec, uniforms, dataStyles), TextLayerStyleAnimatorUpdate::Uniform|TextLayerStyleAnimatorUpdate::Style);
+    CORRADE_VERIFY(!animator.isHandleValid(first));
+    CORRADE_COMPARE(animator.dynamicStyle(second), 0);
+    CORRADE_COMPARE(layer.dynamicStyleUsedCount(), 1);
+    CORRADE_COMPARE_AS(Containers::arrayView(dataStyles), Containers::arrayView({
+        shared.styleCount() + 0u,
+        1u
+    }), TestSuite::Compare::Container);
+    CORRADE_COMPARE(uniforms[0].color, Color4{1.125f});
 }
 
 void TextLayerStyleAnimatorTest::advanceEmpty() {
