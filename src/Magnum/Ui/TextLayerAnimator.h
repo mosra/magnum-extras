@@ -171,8 +171,8 @@ dynamic style index is recycled with @ref TextLayer::recycleDynamicStyle().
 Animations that have @ref AnimationFlag::Reverse set animate in the other
 direction and get switched to the *source* ID on animation stop instead.
 
-If the animator runs out of dynamic styles, newly started animations are left
-with their style index untouched until a dynamic style is recycled. If no
+If the animator runs out of dynamic styles, newly started animations are
+switched to the source style index until a dynamic style is recycled. If no
 dynamic style gets recycled until the animation stops, the data gets switched
 directly to the target style at the animation stop with no animation. Again, in
 case of @ref AnimationFlag::Reverse animations the source and target style is

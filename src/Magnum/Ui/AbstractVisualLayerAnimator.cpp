@@ -125,15 +125,31 @@ Containers::Pair<bool, bool> AbstractVisualLayerStyleAnimator::advance(const Con
            expectedStyle can be just anything and thus no consistency asserts
            are here. */
         if(started[i]) {
-            if(data != LayerDataHandle::Null)
+            /* Switch the style to the source index. With enough free dynamic
+               styles the style will be subsequently replaced with a dynamic
+               one right below. But in case there are no free dynamic styles we
+               still want any existing style animations to stop affecting the
+               data, which is what switching the style achieves. Without this,
+               starting an animation while another one is still playing would
+               mean the other animation's dynamic style is remembered as
+               expected. Then, if the other animation finishes and switches the
+               style, the new animation would treat that as the style being
+               changed from the expected one and bailing without actually
+               animating anything. */
+            if(data != LayerDataHandle::Null) {
+                dataStyles[layerDataHandleId(data)] = flags[i] >= AnimationFlag::Reverse ?
+                    state.targetStyles[i] : state.sourceStyles[i];
+                updatedStyle = true;
                 state.expectedStyles[i] = dataStyles[layerDataHandleId(data)];
+
             /* If the data is null, no style ID is going to be switched
                anywhere and so we don't need to remember the style. Reset the
                variable so it doesn't contain a stale value in case it's a
                recycled / restarted slot, which could lead to accidentally
                switching styles that should stay untouched. */
-            else
+            } else {
                 state.expectedStyles[i] = ~UnsignedInt{};
+            }
         }
 
         /* If the animation is stopped, switch the data to the target style, if
