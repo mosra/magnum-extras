@@ -86,7 +86,7 @@ export CORRADE_TEST_COLOR=ON
 # Not running GL benchmarks because I'm not interested in knowing speed of a
 # random software GPU emulation, further offset by inherent randomness of a CI
 # VM.
-CORRADE_TEST_COLOR=ON ctest -V -E GLBenchmark
+ctest -V -E GLBenchmark
 if [ "$TARGET_GLES2" == "ON" ]; then
     MAGNUM_DISABLE_EXTENSIONS="OES_vertex_array_object" ctest -V -R GLTest
 fi
