@@ -136,10 +136,28 @@ const struct {
 
 const struct {
     const char* name;
+    AnimationFlags firstAnimationFlags;
+    UnsignedInt firstAnimationRepeatCount;
     bool noFreeDynamicStyles;
+    Containers::Optional<UnsignedInt> expectedSecondDynamicStyle;
+    UnsignedInt expectedDynamicStyleCount;
 } AdvanceConflictingAnimationsData[]{
-    {"", false},
-    {"no free dynamic styles", true},
+    {"",
+        {}, 1, false, 1, 1},
+    {"no free dynamic styles",
+        {}, 1, true, 0, 2},
+    {"first animation KeepOncePlayed",
+        AnimationFlag::KeepOncePlayed, 1, false, 1, 1},
+    {"first animation KeepOncePlayed, no free dynamic styles",
+        AnimationFlag::KeepOncePlayed, 1, true, 0, 2},
+    {"first animation endlessly repeating",
+        {}, 0, false, 1, 1},
+    {"first animation endlessly repeating, no free dynamic styles",
+        {}, 0, true, 0, 2},
+    {"first animation endlessly repeating, KeepOncePlayed",
+        AnimationFlag::KeepOncePlayed, 0, false, 1, 2},
+    {"first animation endlessly repeating, KeepOncePlayed, no free dynamic styles",
+        AnimationFlag::KeepOncePlayed, 0, true, {}, 2},
 };
 
 const struct {
@@ -1386,7 +1404,7 @@ void BaseLayerStyleAnimatorTest::advanceConflictingAnimations() {
     DataHandle data2 = layer.create(3);
 
     AnimationHandle first, second;
-    first = animator.create(0, 1, Animation::Easing::linear, 0_nsec, 20_nsec, data2);
+    first = animator.create(0, 1, Animation::Easing::linear, 0_nsec, 20_nsec, data2, data.firstAnimationRepeatCount, data.firstAnimationFlags);
     second = animator.create(2, 1, Animation::Easing::linear, 10_nsec, 40_nsec, data2);
 
     /* Set the style after animation creation to verify it isn't needed
@@ -1454,18 +1472,23 @@ void BaseLayerStyleAnimatorTest::advanceConflictingAnimations() {
     }), TestSuite::Compare::Container);
     CORRADE_COMPARE(uniforms[0].topColor, Color4{0.5f});
 
-    /* Next advance finishes the first animation and recycles its dynamic
-       style, which allows the second animation to take over if it didn't have
-       a dynamic style already. */
-    CORRADE_COMPARE(advance(20_nsec, uniforms, dataStyles), BaseLayerStyleAnimatorUpdate::Uniform|(data.noFreeDynamicStyles ? BaseLayerStyleAnimatorUpdate::Style : BaseLayerStyleAnimatorUpdates{}));
-    CORRADE_VERIFY(!animator.isHandleValid(first));
-    CORRADE_COMPARE(animator.dynamicStyle(second), data.noFreeDynamicStyles ? 0 : 1);
-    CORRADE_COMPARE(layer.dynamicStyleUsedCount(), data.noFreeDynamicStyles ? 2 : 1);
+    /* Next advance either finishes or discards & removes the first animation
+       and recycles its dynamic style, which allows the second animation to
+       take over if it didn't have a dynamic style already. If the first
+       animation isn't finishing yet and it's KeepOncePlayed, it's left
+       untouched including its dynamic style. */
+    CORRADE_COMPARE(advance(20_nsec, uniforms, dataStyles), BaseLayerStyleAnimatorUpdate::Uniform|(data.noFreeDynamicStyles && data.expectedSecondDynamicStyle ? BaseLayerStyleAnimatorUpdate::Style : BaseLayerStyleAnimatorUpdate{}));
+    CORRADE_COMPARE(animator.isHandleValid(first), data.firstAnimationFlags >= AnimationFlag::KeepOncePlayed);
+    if(data.firstAnimationRepeatCount == 0 && data.firstAnimationFlags >= AnimationFlag::KeepOncePlayed)
+        CORRADE_COMPARE(animator.dynamicStyle(first), 0);
+    CORRADE_COMPARE(animator.dynamicStyle(second), data.expectedSecondDynamicStyle);
+    CORRADE_COMPARE(layer.dynamicStyleUsedCount(), data.expectedDynamicStyleCount);
     CORRADE_COMPARE_AS(Containers::arrayView(dataStyles), Containers::arrayView({
         666u,
-        shared.styleCount() + (data.noFreeDynamicStyles ? 0u : 1u)
+        data.expectedSecondDynamicStyle ? shared.styleCount() + *data.expectedSecondDynamicStyle : 2u
     }), TestSuite::Compare::Container);
-    CORRADE_COMPARE(uniforms[data.noFreeDynamicStyles ? 0u : 1u].topColor, Color4{1.125f});
+    if(data.expectedSecondDynamicStyle)
+        CORRADE_COMPARE(uniforms[*data.expectedSecondDynamicStyle].topColor, Color4{1.125f});
 }
 
 void BaseLayerStyleAnimatorTest::advanceExternalStyleChanges() {

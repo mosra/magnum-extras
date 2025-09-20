@@ -200,6 +200,12 @@ well. If you want to preserve the animation when the data is removed, call
 @ref attach(AnimationHandle, DataHandle) with @ref DataHandle::Null to detach
 it from the data before removing.
 
+Additionally the animation is removed also if a different style is assigned to
+data the animation is attached to while it's playing, and the animation doesn't
+have @ref AnimationFlag::KeepOncePlayed set. This allows you to create & forget
+long-running and even infinitely repeating animations and they'll get cleaned
+up right once they stop affecting data they're attached to.
+
 If you call @ref create() with @ref DataHandle::Null, the animation will still
 allocate and interpolate a dynamic style, but the style won't be used anywhere.
 You can then retrieve the dynamic style index with @ref dynamicStyle() and use

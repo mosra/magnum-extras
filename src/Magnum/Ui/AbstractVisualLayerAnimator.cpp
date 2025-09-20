@@ -27,6 +27,7 @@
 #include "AbstractVisualLayerAnimator.h"
 
 #include <Corrade/Containers/Optional.h>
+#include <Corrade/Containers/Triple.h>
 
 #include "Magnum/Ui/AbstractVisualLayer.h"
 #include "Magnum/Ui/Handle.h"
@@ -89,7 +90,7 @@ Containers::Optional<UnsignedInt> AbstractVisualLayerStyleAnimator::dynamicStyle
     return style == ~UnsignedInt{} ? Containers::NullOpt : Containers::optional(style);
 }
 
-Containers::Pair<bool, bool> AbstractVisualLayerStyleAnimator::advance(const Containers::BitArrayView active, const Containers::BitArrayView started, const Containers::BitArrayView stopped, const Containers::StridedArrayView1D<UnsignedInt>& dataStyles) {
+Containers::Triple<bool, bool, bool> AbstractVisualLayerStyleAnimator::advance(const Containers::BitArrayView active, const Containers::BitArrayView started, const Containers::BitArrayView stopped, const Containers::MutableBitArrayView remove, const Containers::StridedArrayView1D<UnsignedInt>& dataStyles) {
     /* This function should only be called if there's a layer set already. The
        sizes should be already checked by subclasses along with factors and
        other layer-specific inputs. */
@@ -97,13 +98,15 @@ Containers::Pair<bool, bool> AbstractVisualLayerStyleAnimator::advance(const Con
     CORRADE_INTERNAL_DEBUG_ASSERT(state.layerSharedState &&
         active.size() == capacity() &&
         started.size() == capacity() &&
-        stopped.size() == capacity());
+        stopped.size() == capacity() &&
+        remove.size() == capacity());
 
     const Containers::StridedArrayView1D<const LayerDataHandle> layerData = this->layerData();
     const Containers::StridedArrayView1D<const AnimationFlags> flags = this->flags();
 
     bool updatedStyle = false;
     bool updatedUniform = false;
+    bool animationRemove = false;
     /** @todo some way to iterate set bits */
     for(std::size_t i = 0; i != active.size(); ++i) {
         if(!active[i])
@@ -187,6 +190,27 @@ Containers::Pair<bool, bool> AbstractVisualLayerStyleAnimator::advance(const Con
             continue;
         }
 
+        /* If we're not marked as KeepOncePlayed, attached to data, and its
+           style assignment changed since last advance, mark the animation for
+           removal as it no longer has any visual effect. Animations that have
+           KeepOncePlayed set are assumed to be referenced from somewhere and
+           removing them at arbitrary points in time wouldn't be nice. */
+        if(!(flags[i] >= AnimationFlag::KeepOncePlayed) && data != LayerDataHandle::Null && state.expectedStyles[i] != dataStyles[layerDataHandleId(data)]) {
+            remove.set(i);
+            animationRemove = true;
+
+            /* Recycle the dynamic style if it was allocated already. This
+               would be done in doClean() below anyway, but doing it here could
+               allow other animations to pick up the freed dynamic style right
+               away, and not only at the next advance(). */
+            if(dynamicStyle != ~UnsignedInt{}) {
+                state.layer->recycleDynamicStyle(dynamicStyle);
+                dynamicStyle = ~UnsignedInt{};
+            }
+
+            continue;
+        }
+
         /* The animation is running, allocate a dynamic style if it isn't yet
            and switch to it. Doing it here instead of in create() avoids
            unnecessary pressure on peak used count of dynamic styles,
@@ -196,12 +220,15 @@ Containers::Pair<bool, bool> AbstractVisualLayerStyleAnimator::advance(const Con
                start, bail without allocating a dynamic style. Same as in the
                stopped case above, if we'd switch the style we'd break
                animations and style changes that happened since this
-               animation started.
+               animation started. Note that the branch gets entered here only
+               for KeepOncePlayed animations, other animations got removed
+               above already.
 
                Also reset the expected style to ensure the animation doesn't
                get suddenly revived when the data coincidentally happens to
                switch to the previously expected style. */
             if(data != LayerDataHandle::Null && state.expectedStyles[i] != dataStyles[layerDataHandleId(data)]) {
+                CORRADE_INTERNAL_DEBUG_ASSERT(flags[i] >= AnimationFlag::KeepOncePlayed);
                 state.expectedStyles[i] = ~UnsignedInt{};
                 continue;
             }
@@ -238,7 +265,7 @@ Containers::Pair<bool, bool> AbstractVisualLayerStyleAnimator::advance(const Con
         }
     }
 
-    return {updatedStyle, updatedUniform};
+    return {updatedStyle, updatedUniform, animationRemove};
 }
 
 void AbstractVisualLayerStyleAnimator::setLayerInstance(AbstractVisualLayer& instance, const void* sharedState) {

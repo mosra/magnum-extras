@@ -149,8 +149,9 @@ class MAGNUM_UI_EXPORT AbstractVisualLayerStyleAnimator: public AbstractStyleAni
         /* Called from subclass advance() implementations, manages style
            switching and dynamic style allocation. First returned bool is
            whether style assignments were updated by this function, second is
-           whether uniform data are meant to be updated by the subclass. */
-        MAGNUM_UI_LOCAL Containers::Pair<bool, bool> advance(Containers::BitArrayView active, Containers::BitArrayView started, Containers::BitArrayView stopped, const Containers::StridedArrayView1D<UnsignedInt>& dataStyles);
+           whether uniform data are meant to be updated by the subclass, third
+           is whether there are any animations marked for removal. */
+        MAGNUM_UI_LOCAL Containers::Triple<bool, bool, bool> advance(Containers::BitArrayView active, Containers::BitArrayView started, Containers::BitArrayView stopped, Containers::MutableBitArrayView remove, const Containers::StridedArrayView1D<UnsignedInt>& dataStyles);
 
         Containers::Pointer<State> _state;
 

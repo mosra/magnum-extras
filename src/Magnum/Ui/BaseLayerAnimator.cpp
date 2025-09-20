@@ -32,6 +32,7 @@
 #include <Corrade/Containers/GrowableArray.h>
 #include <Corrade/Containers/Optional.h>
 #include <Corrade/Containers/StridedArrayView.h>
+#include <Corrade/Containers/Triple.h>
 #include <Magnum/Math/Time.h>
 
 #include "Magnum/Ui/BaseLayer.h"
@@ -196,6 +197,7 @@ BaseLayerStyleAnimatorUpdates BaseLayerStyleAnimator::advance(const Nanoseconds 
     }
 
     BaseLayerStyleAnimatorUpdates updates;
+    Containers::Triple<bool, bool, bool> updatesBase;
     if(needsAdvanceClean.first()) {
         const BaseLayer::Shared::State& layerSharedState = static_cast<const BaseLayer::Shared::State&>(*state.layerSharedState);
         CORRADE_ASSERT(
@@ -207,7 +209,7 @@ BaseLayerStyleAnimatorUpdates BaseLayerStyleAnimator::advance(const Nanoseconds 
 
         /* The base implementation deals with style switching and dynamic style
            allocation, which is common for all builtin style animators */
-        const Containers::Pair<bool, bool> updatesBase = AbstractVisualLayerStyleAnimator::advance(active, started, stopped, dataStyles);
+        updatesBase = AbstractVisualLayerStyleAnimator::advance(active, started, stopped, remove, dataStyles);
         if(updatesBase.first())
             updates |= BaseLayerStyleAnimatorUpdate::Style;
         if(updatesBase.second())
@@ -292,7 +294,10 @@ BaseLayerStyleAnimatorUpdates BaseLayerStyleAnimator::advance(const Nanoseconds 
         }
     }
 
-    if(needsAdvanceClean.second())
+    /* Perform a clean either if the update() itself has stopped animations to
+       remove, or if the base advance() additionally marked animations that no
+       longer affect their data for removal */
+    if(needsAdvanceClean.second() || updatesBase.third())
         clean(remove);
 
     return updates;
