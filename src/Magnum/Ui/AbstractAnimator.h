@@ -1352,6 +1352,7 @@ class MAGNUM_UI_EXPORT AbstractAnimator {
          */
         void cleanData(const Containers::StridedArrayView1D<const UnsignedShort>& dataHandleGenerations);
 
+    protected:
         /**
          * @brief Update the internal state and calculate factors for animation advance
          * @param[in]  time     Time to which to calculate the factors
@@ -1419,7 +1420,6 @@ class MAGNUM_UI_EXPORT AbstractAnimator {
          */
         Containers::Pair<bool, bool> update(Nanoseconds time, Containers::MutableBitArrayView active, Containers::MutableBitArrayView started, Containers::MutableBitArrayView stopped, const Containers::StridedArrayView1D<Float>& factors, Containers::MutableBitArrayView remove);
 
-    protected:
         /**
          * @brief Create an animation
          * @param start         Time at which the animation starts. Use

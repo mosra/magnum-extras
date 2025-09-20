@@ -2140,6 +2140,7 @@ void AbstractAnimatorTest::propertiesStateFactor() {
     struct: AbstractAnimator {
         using AbstractAnimator::AbstractAnimator;
         using AbstractAnimator::create;
+        using AbstractAnimator::update;
 
         AnimatorFeatures doFeatures() const override { return {}; }
     } animator{animatorHandle(0, 1)};
@@ -3423,6 +3424,7 @@ void AbstractAnimatorTest::toggleFlagsAtTime() {
     struct: AbstractAnimator {
         using AbstractAnimator::AbstractAnimator;
         using AbstractAnimator::create;
+        using AbstractAnimator::update;
 
         AnimatorFeatures doFeatures() const override { return {}; }
     } animator{animatorHandle(0, 1)};
@@ -3765,6 +3767,7 @@ void AbstractAnimatorTest::update() {
         using AbstractAnimator::AbstractAnimator;
         using AbstractAnimator::create;
         using AbstractAnimator::remove;
+        using AbstractAnimator::update;
 
         AnimatorFeatures doFeatures() const override { return {}; }
         /* doClean() gets called by us, no need to check anything */
@@ -4771,6 +4774,7 @@ void AbstractAnimatorTest::updatePreviousState() {
         using AbstractAnimator::AbstractAnimator;
         using AbstractAnimator::create;
         using AbstractAnimator::remove;
+        using AbstractAnimator::update;
 
         AnimatorFeatures doFeatures() const override { return {}; }
         /* doClean() gets called by us, no need to check anything */
@@ -4904,6 +4908,7 @@ void AbstractAnimatorTest::updatePreviousState() {
 void AbstractAnimatorTest::updateEmpty() {
     struct: AbstractAnimator {
         using AbstractAnimator::AbstractAnimator;
+        using AbstractAnimator::update;
 
         AnimatorFeatures doFeatures() const override { return {}; }
     } animator{animatorHandle(0, 1)};
@@ -4922,6 +4927,7 @@ void AbstractAnimatorTest::updateInvalid() {
         using AbstractAnimator::AbstractAnimator;
         using AbstractAnimator::create;
         using AbstractAnimator::remove;
+        using AbstractAnimator::update;
 
         AnimatorFeatures doFeatures() const override { return {}; }
     } animator{animatorHandle(0, 1)};
@@ -5426,6 +5432,7 @@ void AbstractAnimatorTest::state() {
         using AbstractAnimator::AbstractAnimator;
         using AbstractAnimator::create;
         using AbstractAnimator::remove;
+        using AbstractAnimator::update;
 
         AnimatorFeatures doFeatures() const override { return {}; }
     } animator{animatorHandle(0, 1)};
