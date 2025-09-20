@@ -1416,6 +1416,12 @@ class MAGNUM_UI_EXPORT AbstractAnimator {
          * behavior of this function is independent of @ref state() --- it
          * performs the update and fills the output views regardless of what
          * flags are set.
+         *
+         * The implementation calling this function is allowed to set
+         * additional bits in @p remove, for example to mark animations that
+         * are no longer needed. It then however has to make sure to call
+         * @ref clean() even if this function returned @cpp false @ce in the
+         * second value.
          * @see @ref state(AnimationHandle) const
          */
         Containers::Pair<bool, bool> update(Nanoseconds time, Containers::MutableBitArrayView active, Containers::MutableBitArrayView started, Containers::MutableBitArrayView stopped, const Containers::StridedArrayView1D<Float>& factors, Containers::MutableBitArrayView remove);
