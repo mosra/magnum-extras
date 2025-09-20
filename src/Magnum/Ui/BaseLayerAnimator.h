@@ -416,13 +416,17 @@ class MAGNUM_UI_EXPORT BaseLayerStyleAnimator: public AbstractVisualLayerStyleAn
 
         /**
          * @brief Advance the animations
-         * @param[in] active                    Animation IDs that are active
-         * @param[in] started                   Animation IDs that started
-         *      playing since last time
-         * @param[in] stopped                   Animation IDs that stopped
-         *      playing since last time
-         * @param[in] factors                   Interpolation factors indexed
-         *      by animation ID
+         * @param[in] time                      Time to which to advance
+         * @param[in,out] activeStorage         Storage for the animator to put
+         *      a mask of active animations into
+         * @param[in,out] startedStorage        Storage for the animator to put
+         *      a mask of started animations into
+         * @param[in,out] stoppedStorage        Storage for the animator to put
+         *      a mask of stopped animations into
+         * @param[in,out] factorStorage         Storage for the animator to put
+         *      animation interpolation factors into
+         * @param[in,out] removeStorage         Storage for the animator to put
+         *      a mask of animations to remove into
          * @param[in,out] dynamicStyleUniforms  Uniforms to animate indexed by
          *      dynamic style ID
          * @param[in,out] dynamicStylePaddings  Paddings to animate indexed by
@@ -437,16 +441,17 @@ class MAGNUM_UI_EXPORT BaseLayerStyleAnimator: public AbstractVisualLayerStyleAn
          * this function directly and doing so may cause internal
          * @ref AbstractUserInterface state update to misbehave.
          *
-         * Expects that size of @p active, @p started, @p stopped and
-         * @p factors matches @ref capacity(), it's assumed that their contents
-         * were filled by @ref update() before. Expects that
-         * @p dynamicStyleUniforms and @p dynamicStylePaddings have a size of
+         * Expects that size of @p activeStorage, @p startedStorage,
+         * @p stoppedStorage, @p factorStorage and @p removeStorage matches
+         * @ref capacity(), their contents get filled by @ref update()
+         * internally. Expects that @p dynamicStyleUniforms and
+         * @p dynamicStylePaddings have a size of
          * @ref BaseLayer::Shared::dynamicStyleCount(). The @p dataStyles view
          * should be large enough to contain any valid layer data ID.
          * @ref BaseLayer::Shared::setStyle() is expected to be already called
          * for the layer this animator is assigned to.
          */
-        BaseLayerStyleAnimatorUpdates advance(Containers::BitArrayView active, Containers::BitArrayView started, Containers::BitArrayView stopped, const Containers::StridedArrayView1D<const Float>& factors, Containers::ArrayView<BaseLayerStyleUniform> dynamicStyleUniforms, const Containers::StridedArrayView1D<Vector4>& dynamicStylePaddings, const Containers::StridedArrayView1D<UnsignedInt>& dataStyles);
+        BaseLayerStyleAnimatorUpdates advance(Nanoseconds time, Containers::MutableBitArrayView activeStorage, Containers::MutableBitArrayView startedStorage, Containers::MutableBitArrayView stoppedStorage, const Containers::StridedArrayView1D<Float>& factorStorage, Containers::MutableBitArrayView removeStorage, Containers::ArrayView<BaseLayerStyleUniform> dynamicStyleUniforms, const Containers::StridedArrayView1D<Vector4>& dynamicStylePaddings, const Containers::StridedArrayView1D<UnsignedInt>& dataStyles);
 
     private:
         struct State;

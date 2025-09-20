@@ -172,12 +172,17 @@ auto BaseLayerStyleAnimator::easing(const AnimatorDataHandle handle) const -> Fl
     return static_cast<const State&>(*_state).animations[animatorDataHandleId(handle)].easing;
 }
 
-BaseLayerStyleAnimatorUpdates BaseLayerStyleAnimator::advance(const Containers::BitArrayView active, const Containers::BitArrayView started, const Containers::BitArrayView stopped, const Containers::StridedArrayView1D<const Float>& factors, const Containers::ArrayView<BaseLayerStyleUniform> dynamicStyleUniforms, const Containers::StridedArrayView1D<Vector4>& dynamicStylePaddings, const Containers::StridedArrayView1D<UnsignedInt>& dataStyles) {
-    CORRADE_ASSERT(active.size() == capacity() &&
-                   started.size() == capacity() &&
-                   stopped.size() == capacity() &&
-                   factors.size() == capacity(),
-        "Ui::BaseLayerStyleAnimator::advance(): expected active, started, stopped and factors views to have a size of" << capacity() << "but got" << active.size() << Debug::nospace << "," << started.size() << Debug::nospace << "," << stopped.size() << "and" << factors.size(), {});
+BaseLayerStyleAnimatorUpdates BaseLayerStyleAnimator::advance(const Nanoseconds time, const Containers::MutableBitArrayView active, const Containers::MutableBitArrayView started, const Containers::MutableBitArrayView stopped, const Containers::StridedArrayView1D<Float>& factors, const Containers::MutableBitArrayView remove, const Containers::ArrayView<BaseLayerStyleUniform> dynamicStyleUniforms, const Containers::StridedArrayView1D<Vector4>& dynamicStylePaddings, const Containers::StridedArrayView1D<UnsignedInt>& dataStyles) {
+    /* The time...remove fields are checked inside update() right below, no
+       need to repeat the check here again, especially since it's an internal
+       API */
+
+    const Containers::Pair<bool, bool> needsAdvanceClean = update(time,
+        active,
+        started,
+        stopped,
+        factors,
+        remove);
 
     /* If there are any running animations, create() had to be called
        already, which ensures the layer is already set. Otherwise just bail as
@@ -186,102 +191,109 @@ BaseLayerStyleAnimatorUpdates BaseLayerStyleAnimator::advance(const Containers::
        count at all. */
     State& state = static_cast<State&>(*_state);
     if(!state.layerSharedState) {
-        CORRADE_INTERNAL_ASSERT(!capacity());
+        CORRADE_INTERNAL_ASSERT(!capacity() && needsAdvanceClean == Containers::pair(false, false));
         return {};
     }
 
-    const BaseLayer::Shared::State& layerSharedState = static_cast<const BaseLayer::Shared::State&>(*state.layerSharedState);
-    CORRADE_ASSERT(
-        dynamicStyleUniforms.size() == layerSharedState.dynamicStyleCount &&
-        dynamicStylePaddings.size() == layerSharedState.dynamicStyleCount,
-        "Ui::BaseLayerStyleAnimator::advance(): expected dynamic style uniform and padding views to have a size of" << layerSharedState.dynamicStyleCount << "but got" << dynamicStyleUniforms.size() << "and" << dynamicStylePaddings.size(), {});
-    CORRADE_ASSERT(layerSharedState.setStyleCalled,
-        "Ui::BaseLayerStyleAnimator::advance(): no style data was set on the layer", {});
-
-    /* The base implementation deals with style switching and dynamic style
-       allocation, which is common for all builtin style animators */
-    const Containers::Pair<bool, bool> updatesBase = AbstractVisualLayerStyleAnimator::advance(active, started, stopped, dataStyles);
     BaseLayerStyleAnimatorUpdates updates;
-    if(updatesBase.first())
-        updates |= BaseLayerStyleAnimatorUpdate::Style;
-    if(updatesBase.second())
-        updates |= BaseLayerStyleAnimatorUpdate::Uniform;
+    if(needsAdvanceClean.first()) {
+        const BaseLayer::Shared::State& layerSharedState = static_cast<const BaseLayer::Shared::State&>(*state.layerSharedState);
+        CORRADE_ASSERT(
+            dynamicStyleUniforms.size() == layerSharedState.dynamicStyleCount &&
+            dynamicStylePaddings.size() == layerSharedState.dynamicStyleCount,
+            "Ui::BaseLayerStyleAnimator::advance(): expected dynamic style uniform and padding views to have a size of" << layerSharedState.dynamicStyleCount << "but got" << dynamicStyleUniforms.size() << "and" << dynamicStylePaddings.size(), {});
+        CORRADE_ASSERT(layerSharedState.setStyleCalled,
+            "Ui::BaseLayerStyleAnimator::advance(): no style data was set on the layer", {});
 
-    /** @todo some way to iterate set bits */
-    for(std::size_t i = 0; i != active.size(); ++i) {
-        if(!active[i])
-            continue;
-
-        Animation& animation = state.animations[i];
-
-        /* If the animation is started, fetch the style data. This is done here
-           and not in create() to make it possible to reuse created animations
-           even after a style is updated.
-
-           Unlike below in the stopped case, there's no difference for Reverse
-           animations -- for those, the factor will go from 1 to 0, causing the
-           source and target to be swapped already. */
-        if(started[i]) {
-            const Implementation::BaseLayerStyle& sourceStyleData = layerSharedState.styles[animation.sourceStyle];
-            const Implementation::BaseLayerStyle& targetStyleData = layerSharedState.styles[animation.targetStyle];
-            animation.sourcePadding = sourceStyleData.padding;
-            animation.targetPadding = targetStyleData.padding;
-
-            /* Remember also if the actual uniform ID is different, if not, we
-               don't need to interpolate (or upload) it. The uniform *data* may
-               still be the same even if the ID is different, but checking for
-               that is too much work and any reasonable style should
-               deduplicate those anyway. */
-            animation.sourceUniform = layerSharedState.styleUniforms[sourceStyleData.uniform];
-            animation.targetUniform = layerSharedState.styleUniforms[targetStyleData.uniform];
-            animation.uniformDifferent = sourceStyleData.uniform != targetStyleData.uniform;
-        }
-
-        /* If the animation is stopped or we have no dynamic style to
-           interpolate to, continue to next animation. Everything else was done
-           by the base advance() implementation called above. Branches kept
-           separate to ensure they both stay tested. */
-        if(stopped[i])
-            continue;
-        /** @todo expose options to (1) switch to the initial style, (2) switch
-            to the target style and stop, or (3) don't do anything in case the
-            dynamic style cannot be allocated */
-        if(animation.dynamicStyle == ~UnsignedInt{})
-            continue;
-
-        const Float factor = animation.easing(factors[i]);
-
-        /* Interpolate the uniform. If the source and target uniforms were the
-           same, just copy one of them and don't report that the uniforms got
-           changed. The only exception is the first ever switch to the dynamic
-           uniform in which case the data has to be uploaded. That's handled in
-           the animation.styleDynamic allocation above. */
-        if(animation.uniformDifferent) {
-            BaseLayerStyleUniform uniform{NoInit};
-            #define _c(member) uniform.member = Math::lerp(             \
-                animation.sourceUniform.member,                         \
-                animation.targetUniform.member, factor);
-            _c(topColor)
-            _c(bottomColor)
-            _c(outlineColor)
-            _c(outlineWidth)
-            _c(cornerRadius)
-            _c(innerOutlineCornerRadius)
-            #undef _c
-            dynamicStyleUniforms[animation.dynamicStyle] = uniform;
+        /* The base implementation deals with style switching and dynamic style
+           allocation, which is common for all builtin style animators */
+        const Containers::Pair<bool, bool> updatesBase = AbstractVisualLayerStyleAnimator::advance(active, started, stopped, dataStyles);
+        if(updatesBase.first())
+            updates |= BaseLayerStyleAnimatorUpdate::Style;
+        if(updatesBase.second())
             updates |= BaseLayerStyleAnimatorUpdate::Uniform;
-        } else dynamicStyleUniforms[animation.dynamicStyle] = animation.targetUniform;
 
-        /* Interpolate the padding. Compared to the uniforms, updated padding
-           causes doUpdate() to be triggered on the layer, which is expensive,
-           thus trigger it only if there's actually anything changing. */
-        const Vector4 padding = Math::lerp(animation.sourcePadding,
-                                           animation.targetPadding, factor);
-        if(dynamicStylePaddings[animation.dynamicStyle] != padding) {
-            dynamicStylePaddings[animation.dynamicStyle] = padding;
-            updates |= BaseLayerStyleAnimatorUpdate::Padding;
+        /** @todo some way to iterate set bits */
+        for(std::size_t i = 0; i != active.size(); ++i) {
+            if(!active[i])
+                continue;
+
+            Animation& animation = state.animations[i];
+
+            /* If the animation is started, fetch the style data. This is done
+               here and not in create() to make it possible to reuse created
+               animations even after a style is updated.
+
+               Unlike below in the stopped case, there's no difference for
+               Reverse animations -- for those, the factor will go from 1 to 0,
+               causing the source and target to be swapped already. */
+            if(started[i]) {
+                const Implementation::BaseLayerStyle& sourceStyleData = layerSharedState.styles[animation.sourceStyle];
+                const Implementation::BaseLayerStyle& targetStyleData = layerSharedState.styles[animation.targetStyle];
+                animation.sourcePadding = sourceStyleData.padding;
+                animation.targetPadding = targetStyleData.padding;
+
+                /* Remember also if the actual uniform ID is different, if not,
+                   we don't need to interpolate (or upload) it. The uniform
+                   *data* may still be the same even if the ID is different,
+                   but checking for that is too much work and any reasonable
+                   style should deduplicate those anyway. */
+                animation.sourceUniform = layerSharedState.styleUniforms[sourceStyleData.uniform];
+                animation.targetUniform = layerSharedState.styleUniforms[targetStyleData.uniform];
+                animation.uniformDifferent = sourceStyleData.uniform != targetStyleData.uniform;
+            }
+
+            /* If the animation is stopped or we have no dynamic style to
+               interpolate to, continue to next animation. Everything else was
+               done by the base advance() implementation called above. Branches
+               kept separate to ensure they both stay tested. */
+            if(stopped[i])
+                continue;
+            /** @todo expose options to (1) switch to the initial style, (2)
+                switch to the target style and stop, or (3) don't do anything
+                in case the dynamic style cannot be allocated */
+            if(animation.dynamicStyle == ~UnsignedInt{})
+                continue;
+
+            const Float factor = animation.easing(factors[i]);
+
+            /* Interpolate the uniform. If the source and target uniforms were
+               the same, just copy one of them and don't report that the
+               uniforms got changed. The only exception is the first ever
+               switch to the dynamic uniform in which case the data has to be
+               uploaded. That's handled in the animation.styleDynamic
+               allocation above. */
+            if(animation.uniformDifferent) {
+                BaseLayerStyleUniform uniform{NoInit};
+                #define _c(member) uniform.member = Math::lerp(             \
+                    animation.sourceUniform.member,                         \
+                    animation.targetUniform.member, factor);
+                _c(topColor)
+                _c(bottomColor)
+                _c(outlineColor)
+                _c(outlineWidth)
+                _c(cornerRadius)
+                _c(innerOutlineCornerRadius)
+                #undef _c
+                dynamicStyleUniforms[animation.dynamicStyle] = uniform;
+                updates |= BaseLayerStyleAnimatorUpdate::Uniform;
+            } else dynamicStyleUniforms[animation.dynamicStyle] = animation.targetUniform;
+
+            /* Interpolate the padding. Compared to the uniforms, updated
+               padding causes doUpdate() to be triggered on the layer, which is
+               expensive, thus trigger it only if there's actually anything
+               changing. */
+            const Vector4 padding = Math::lerp(animation.sourcePadding,
+                                               animation.targetPadding, factor);
+            if(dynamicStylePaddings[animation.dynamicStyle] != padding) {
+                dynamicStylePaddings[animation.dynamicStyle] = padding;
+                updates |= BaseLayerStyleAnimatorUpdate::Padding;
+            }
         }
     }
+
+    if(needsAdvanceClean.second())
+        clean(remove);
 
     return updates;
 }

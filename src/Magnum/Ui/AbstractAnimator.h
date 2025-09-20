@@ -1364,9 +1364,8 @@ class MAGNUM_UI_EXPORT AbstractAnimator {
          * @param[out] remove   Where to put a mask of animations to remove
          * @return Whether any bits are set in @p active and in @p remove
          *
-         * Used by @ref AbstractUserInterface::advanceAnimations() and by
-         * @ref AbstractLayer::advanceAnimations() implementations to generate
-         * data to subsequently pass to animator implementations. Expects that
+         * Meant to be called by animator implementations to generate data to
+         * subsequently advance the animations and clean them. Expects that
          * @p time is greater or equal to @ref time() and size of @p active,
          * @p started, @p stopped, @p factors and @p remove is the same as
          * @ref capacity().
@@ -1741,12 +1740,13 @@ class MAGNUM_UI_EXPORT AbstractGenericAnimator: public AbstractAnimator {
          * this function directly and doing so may cause internal
          * @ref AbstractUserInterface state update to misbehave.
          *
-         * Expects that size of @p active, @p started, @p stopped and
-         * @p factors matches @ref capacity(), it's assumed that their contents
-         * were filled by @ref update() before. Delegates to @ref doAdvance(),
-         * see its documentation for more information.
+         * Expects that size of @p activeStorage, @p startedStorage,
+         * @p stoppedStorage, @p factorStorage and @p removeStorage matches
+         * @ref capacity(), their contents get filled by @ref update()
+         * internally. Delegates to @ref doAdvance(), see its documentation for
+         * more information.
          */
-        void advance(Containers::BitArrayView active, Containers::BitArrayView started, Containers::BitArrayView stopped, const Containers::StridedArrayView1D<const Float>& factors);
+        void advance(Nanoseconds time, Containers::MutableBitArrayView activeStorage, Containers::MutableBitArrayView startedStorage, Containers::MutableBitArrayView stoppedStorage, const Containers::StridedArrayView1D<Float>& factorStorage, Containers::MutableBitArrayView removeStorage);
 
     protected:
         /**
@@ -1926,15 +1926,16 @@ class MAGNUM_UI_EXPORT AbstractNodeAnimator: public AbstractAnimator {
          * this function directly and doing so may cause internal
          * @ref AbstractUserInterface state update to misbehave.
          *
-         * Expects that size of @p active, @p started, @p stopped and
-         * @p factors matches @ref capacity(), it's assumed that their contents
-         * were filled by @ref update() before. Expects that @p nodeOffsets,
-         * @p nodeSizes, @p nodeOpacities, @p nodeFlags and @p nodesRemove have
-         * the same size, the views should be large enough to contain any valid
-         * node ID. Delegates to @ref doAdvance(), see its documentation for
-         * more information.
+         * Expects that size of @p activeStorage, @p startedStorage,
+         * @p stoppedStorage, @p factorStorage and @p removeStorage matches
+         * @ref capacity(), their contents get filled by @ref update()
+         * internally. Expects that @p nodeOffsets, @p nodeSizes,
+         * @p nodeOpacities, @p nodeFlags and @p nodesRemove have the same
+         * size, the views should be large enough to contain any valid node ID.
+         * Delegates to @ref doAdvance(), see its documentation for more
+         * information.
          */
-        NodeAnimatorUpdates advance(Containers::BitArrayView active, Containers::BitArrayView started, Containers::BitArrayView stopped, const Containers::StridedArrayView1D<const Float>& factors, const Containers::StridedArrayView1D<Vector2>& nodeOffsets, const Containers::StridedArrayView1D<Vector2>& nodeSizes, const Containers::StridedArrayView1D<Float>& nodeOpacities, const Containers::StridedArrayView1D<NodeFlags>& nodeFlags, Containers::MutableBitArrayView nodesRemove);
+        NodeAnimatorUpdates advance(Nanoseconds time, Containers::MutableBitArrayView activeStorage, Containers::MutableBitArrayView startedStorage, Containers::MutableBitArrayView stoppedStorage, const Containers::StridedArrayView1D<Float>& factorStorage, Containers::MutableBitArrayView removeStorage, const Containers::StridedArrayView1D<Vector2>& nodeOffsets, const Containers::StridedArrayView1D<Vector2>& nodeSizes, const Containers::StridedArrayView1D<Float>& nodeOpacities, const Containers::StridedArrayView1D<NodeFlags>& nodeFlags, Containers::MutableBitArrayView nodesRemove);
 
     protected:
         /**

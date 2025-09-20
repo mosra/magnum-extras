@@ -2109,28 +2109,19 @@ void TextLayer::doAdvanceAnimations(const Nanoseconds time, const Containers::Mu
             continue;
 
         const std::size_t capacity = animator.capacity();
-        const Containers::Pair<bool, bool> needsAdvanceClean = animator.update(time,
+        updates |= static_cast<TextLayerStyleAnimator&>(animator).advance(time,
             activeStorage.prefix(capacity),
             startedStorage.prefix(capacity),
             stoppedStorage.prefix(capacity),
             factorStorage.prefix(capacity),
-            removeStorage.prefix(capacity));
-
-        if(needsAdvanceClean.first())
-            updates |= static_cast<TextLayerStyleAnimator&>(animator).advance(
-                activeStorage.prefix(capacity),
-                startedStorage.prefix(capacity),
-                stoppedStorage.prefix(capacity),
-                factorStorage.prefix(capacity),
-                state.dynamicStyleUniforms,
-                state.dynamicStyleCursorStyles,
-                state.dynamicStyleSelectionStyles,
-                stridedArrayView(state.dynamicStyles).slice(&Implementation::TextLayerDynamicStyle::padding),
-                state.dynamicEditingStyleUniforms,
-                state.dynamicEditingStylePaddings,
-                stridedArrayView(state.data).slice(&Implementation::TextLayerData::style));
-        if(needsAdvanceClean.second())
-            animator.clean(removeStorage.prefix(capacity));
+            removeStorage.prefix(capacity),
+            state.dynamicStyleUniforms,
+            state.dynamicStyleCursorStyles,
+            state.dynamicStyleSelectionStyles,
+            stridedArrayView(state.dynamicStyles).slice(&Implementation::TextLayerDynamicStyle::padding),
+            state.dynamicEditingStyleUniforms,
+            state.dynamicEditingStylePaddings,
+            stridedArrayView(state.data).slice(&Implementation::TextLayerData::style));
     }
 
     if(updates & (TextLayerStyleAnimatorUpdate::Style|TextLayerStyleAnimatorUpdate::Padding|TextLayerStyleAnimatorUpdate::EditingPadding))

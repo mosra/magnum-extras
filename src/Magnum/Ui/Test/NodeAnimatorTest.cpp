@@ -1948,23 +1948,19 @@ void NodeAnimatorTest::advance() {
        they're written only when they should be. UI's advanceAnimations() is
        then tested in uiAdvance() below. */
     const auto advance = [&](Nanoseconds time, const Containers::StridedArrayView1D<Vector2>& nodeOffsets, const Containers::StridedArrayView1D<Vector2>& nodeSizes, const Containers::StridedArrayView1D<Float>& nodeOpacities, const Containers::StridedArrayView1D<NodeFlags>& nodeFlags, const Containers::MutableBitArrayView& nodesRemove) {
-        UnsignedByte activeData[1];
-        Containers::MutableBitArrayView active{activeData, 0, 5};
-        UnsignedByte startedData[1];
-        Containers::MutableBitArrayView started{startedData, 0, 5};
-        UnsignedByte stoppedData[1];
-        Containers::MutableBitArrayView stopped{stoppedData, 0, 5};
-        Float factors[5];
-        UnsignedByte removeData[1];
-        Containers::MutableBitArrayView remove{removeData, 0, 5};
+        UnsignedByte activeStorage[1];
+        UnsignedByte startedStorage[1];
+        UnsignedByte stoppedStorage[1];
+        Float factorStorage[5];
+        UnsignedByte removeStorage[1];
 
-        Containers::Pair<bool, bool> needsAdvanceClean = animator.update(time, active, started, stopped, factors, remove);
-        NodeAnimatorUpdates updates;
-        if(needsAdvanceClean.first())
-            updates = animator.advance(active, started, stopped, factors, nodeOffsets, nodeSizes, nodeOpacities, nodeFlags, nodesRemove);
-        if(needsAdvanceClean.second())
-            animator.clean(remove);
-        return updates;
+        return animator.advance(time,
+            Containers::MutableBitArrayView{activeStorage, 0, 5},
+            Containers::MutableBitArrayView{startedStorage, 0, 5},
+            Containers::MutableBitArrayView{stoppedStorage, 0, 5},
+            factorStorage,
+            Containers::MutableBitArrayView{removeStorage, 0, 5},
+            nodeOffsets, nodeSizes, nodeOpacities, nodeFlags, nodesRemove);
     };
 
     /* Advancing to 10 sets begin flags for the playing animation and
@@ -2332,17 +2328,11 @@ void NodeAnimatorTest::advanceProperties() {
     NodeAnimator animator{animatorHandle(0, 1)};
     animator.create(data.animation, Animation::Easing::linear, 5_nsec, 20_nsec, nodeHandle(2, 0xcac), data.flags);
 
-    UnsignedByte activeData[1];
-    Containers::MutableBitArrayView active{activeData, 0, 1};
-    UnsignedByte startedData[1];
-    Containers::MutableBitArrayView started{startedData, 0, 1};
-    UnsignedByte stoppedData[1];
-    Containers::MutableBitArrayView stopped{stoppedData, 0, 1};
-    Float factors[1];
-    UnsignedByte removeData[1];
-    Containers::MutableBitArrayView remove{removeData, 0, 1};
-    CORRADE_VERIFY(animator.update(data.advance, active, started, stopped, factors, remove).first());
-
+    UnsignedByte activeStorage[1];
+    UnsignedByte startedStorage[1];
+    UnsignedByte stoppedStorage[1];
+    Float factorStorage[1];
+    UnsignedByte removeStorage[1];
     Vector2 nodeOffsets[]{
         {},
         {},
@@ -2364,7 +2354,14 @@ void NodeAnimatorTest::advanceProperties() {
         data.initialFlags
     };
     Containers::BitArray nodesRemove{ValueInit, 3};
-    CORRADE_COMPARE(animator.advance(active, started, stopped, factors, nodeOffsets, nodeSizes, nodeOpacities, nodeFlags, nodesRemove), data.expectedUpdates);
+    CORRADE_COMPARE(animator.advance(data.advance,
+            Containers::MutableBitArrayView{activeStorage, 0, 1},
+            Containers::MutableBitArrayView{startedStorage, 0, 1},
+            Containers::MutableBitArrayView{stoppedStorage, 0, 1},
+            factorStorage,
+            Containers::MutableBitArrayView{removeStorage, 0, 1},
+            nodeOffsets, nodeSizes, nodeOpacities, nodeFlags, nodesRemove),
+        data.expectedUpdates);
     CORRADE_COMPARE(nodeOffsets[2], data.expectedOffset);
     CORRADE_COMPARE(nodeSizes[2], data.expectedSize);
     CORRADE_COMPARE(nodeOpacities[2], data.expectedOpacity);
@@ -2375,7 +2372,7 @@ void NodeAnimatorTest::advanceProperties() {
 void NodeAnimatorTest::advanceEmpty() {
     /* This should work */
     NodeAnimator animator{animatorHandle(0, 1)};
-    animator.advance({}, {}, {}, {}, {}, {}, {}, {}, {});
+    animator.advance({}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
 
     CORRADE_VERIFY(true);
 }

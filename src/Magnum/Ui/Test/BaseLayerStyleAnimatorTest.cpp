@@ -513,7 +513,7 @@ void BaseLayerStyleAnimatorTest::createRemoveHandleRecycle() {
     DataHandle layerData = layer.create(1);
 
     /* Allocate an animation */
-    AnimationHandle first = animator.create(0, 1, Animation::Easing::linear, 0_nsec, 13_nsec, layerData);
+    AnimationHandle first = animator.create(0, 1, Animation::Easing::linear, 0_nsec, 10_nsec, layerData);
     CORRADE_COMPARE(animator.styles(first), Containers::pair(0u, 1u));
     CORRADE_COMPARE(animator.dynamicStyle(first), Containers::NullOpt);
     CORRADE_COMPARE(animator.easing(first), Animation::Easing::linear);
@@ -536,18 +536,20 @@ void BaseLayerStyleAnimatorTest::createRemoveHandleRecycle() {
          Vector4{data.samePaddingAfter ? 3.0f : 4.0f}});
 
     /* Let it advance to allocate the dynamic style and copy over style data */
-    Containers::BitArray active{DirectInit, 1, true};
-    Float factors[]{0.5f};
-    Containers::BitArray started{DirectInit, 1, true};
-    Containers::BitArray stopped{DirectInit, 1, false};
+    Containers::BitArray activeStorage{NoInit, 1};
+    Containers::BitArray startedStorage{NoInit, 1};
+    Containers::BitArray stoppedStorage{NoInit, 1};
+    Float factorStorage[1];
+    Containers::BitArray removedStorage{NoInit, 1};
     BaseLayerStyleUniform dynamicStyleUniforms[1];
     Vector4 dynamicStylePaddings[1];
     UnsignedInt dataStyles[1];
-    CORRADE_COMPARE(animator.advance(
-            active,
-            started,
-            stopped,
-            factors,
+    CORRADE_COMPARE(animator.advance(5_nsec,
+            activeStorage,
+            startedStorage,
+            stoppedStorage,
+            factorStorage,
+            removedStorage,
             dynamicStyleUniforms, dynamicStylePaddings, dataStyles),
         BaseLayerStyleAnimatorUpdate::Uniform|
         BaseLayerStyleAnimatorUpdate::Padding|
@@ -567,7 +569,7 @@ void BaseLayerStyleAnimatorTest::createRemoveHandleRecycle() {
        everything including the dynamic style index. What's handled by
        AbstractAnimator is tested well enough in
        AbstractAnimatorTest::createRemoveHandleRecycle(). */
-    AnimationHandle first2 = animator.create(2, 3, Animation::Easing::bounceInOut, -10_nsec, 100_nsec, data.attachLaterAfter ? DataHandle::Null : layerData);
+    AnimationHandle first2 = animator.create(2, 3, Animation::Easing::bounceInOut, -10_nsec, 30_nsec, data.attachLaterAfter ? DataHandle::Null : layerData);
     CORRADE_COMPARE(animationHandleId(first2), animationHandleId(first));
     CORRADE_COMPARE(animator.styles(first2), Containers::pair(2u, 3u));
     CORRADE_COMPARE(animator.dynamicStyle(first2), Containers::NullOpt);
@@ -579,11 +581,12 @@ void BaseLayerStyleAnimatorTest::createRemoveHandleRecycle() {
        current value, so update it to the expected new (constant) value
        first. */
     dynamicStylePaddings[0] = Vector4{3.0f};
-    CORRADE_COMPARE(animator.advance(
-            active,
-            started,
-            stopped,
-            factors,
+    CORRADE_COMPARE(animator.advance(10_nsec,
+            activeStorage,
+            startedStorage,
+            stoppedStorage,
+            factorStorage,
+            removedStorage,
             dynamicStyleUniforms, dynamicStylePaddings, dataStyles),
         BaseLayerStyleAnimatorUpdate::Uniform|
         (data.samePaddingAfter ? BaseLayerStyleAnimatorUpdates{} : BaseLayerStyleAnimatorUpdate::Padding)|
@@ -594,19 +597,18 @@ void BaseLayerStyleAnimatorTest::createRemoveHandleRecycle() {
        but rather not switch at all */
     if(data.attachLaterAfter) {
         animator.attach(first2, layerData);
-        /* The animation will stop now */
-        started.reset(0);
-        stopped.set(0);
         /* The last remembered expected style is the dynamic one allocated
            previously. Set the data to it. */
         dataStyles[0] = 4;
-        /* The animator should not update any styles as there was no attachment
-           when it started and so it cannot know what's the expected style */
-        CORRADE_COMPARE(animator.advance(
-                active,
-                started,
-                stopped,
-                factors,
+        /* The animation will stop now. The animator should not update any
+           styles as there was no attachment when it started and so it cannot
+           know what's the expected style */
+        CORRADE_COMPARE(animator.advance(30_nsec,
+                activeStorage,
+                startedStorage,
+                stoppedStorage,
+                factorStorage,
+                removedStorage,
                 dynamicStyleUniforms, dynamicStylePaddings, dataStyles),
             BaseLayerStyleAnimatorUpdates{});
         CORRADE_COMPARE(dataStyles[0], 4);
@@ -793,23 +795,19 @@ void BaseLayerStyleAnimatorTest::advance() {
        verify they're written only when they should be. Layer's
        advanceAnimations() is then tested in layerAdvance() below. */
     const auto advance = [&](Nanoseconds time, Containers::ArrayView<BaseLayerStyleUniform> dynamicStyleUniforms, const Containers::StridedArrayView1D<Vector4>& dynamicStylePaddings, const Containers::StridedArrayView1D<UnsignedInt>& dataStyles) {
-        UnsignedByte activeData[1];
-        Containers::MutableBitArrayView active{activeData, 0, 7};
-        UnsignedByte startedData[1];
-        Containers::MutableBitArrayView started{startedData, 0, 7};
-        UnsignedByte stoppedData[1];
-        Containers::MutableBitArrayView stopped{stoppedData, 0, 7};
-        Float factors[7];
-        UnsignedByte removeData[1];
-        Containers::MutableBitArrayView remove{removeData, 0, 7};
+        UnsignedByte activeStorage[1];
+        UnsignedByte startedStorage[1];
+        UnsignedByte stoppedStorage[1];
+        Float factorStorage[7];
+        UnsignedByte removeStorage[1];
 
-        Containers::Pair<bool, bool> needsAdvanceClean = animator.update(time, active, started, stopped, factors, remove);
-        BaseLayerStyleAnimatorUpdates updates;
-        if(needsAdvanceClean.first())
-            updates = animator.advance(active, started, stopped, factors, dynamicStyleUniforms, dynamicStylePaddings, dataStyles);
-        if(needsAdvanceClean.second())
-            animator.clean(remove);
-        return updates;
+        return animator.advance(time,
+            Containers::MutableBitArrayView{activeStorage, 0, 7},
+            Containers::MutableBitArrayView{startedStorage, 0, 7},
+            Containers::MutableBitArrayView{stoppedStorage, 0, 7},
+            factorStorage,
+            Containers::MutableBitArrayView{removeStorage, 0, 7},
+            dynamicStyleUniforms, dynamicStylePaddings, dataStyles);
     };
 
     /* The padding resulting from the animation gets checked against these
@@ -1193,26 +1191,19 @@ void BaseLayerStyleAnimatorTest::advanceProperties() {
        verify they're written only when they should be. Compared to the helper
        in advance() above it's not exposing all data. */
     const auto advance = [&](Nanoseconds time, Containers::ArrayView<BaseLayerStyleUniform> dynamicStyleUniforms, const Containers::StridedArrayView1D<Vector4>& dynamicStylePaddings, const Containers::StridedArrayView1D<UnsignedInt>& dataStyles) {
-        UnsignedByte activeData[1];
-        Containers::MutableBitArrayView active{activeData, 0, 1};
-        UnsignedByte startedData[1];
-        Containers::MutableBitArrayView started{startedData, 0, 1};
-        UnsignedByte stoppedData[1];
-        Containers::MutableBitArrayView stopped{stoppedData, 0, 1};
-        Float factors[1];
-        UnsignedByte removeData[1];
-        Containers::MutableBitArrayView remove{removeData, 0, 1};
+        UnsignedByte activeStorage[1];
+        UnsignedByte startedStorage[1];
+        UnsignedByte stoppedStorage[1];
+        Float factorStorage[1];
+        UnsignedByte removeStorage[1];
 
-        Containers::Pair<bool, bool> needsAdvanceClean = animator.update(time, active, started, stopped, factors, remove);
-        BaseLayerStyleAnimatorUpdates updates;
-        if(needsAdvanceClean.first()) {
-            updates = animator.advance(
-                active, started, stopped, factors, dynamicStyleUniforms,
-                dynamicStylePaddings, dataStyles);
-        }
-        if(needsAdvanceClean.second())
-            animator.clean(remove);
-        return updates;
+        return animator.advance(time,
+            Containers::MutableBitArrayView{activeStorage, 0, 1},
+            Containers::MutableBitArrayView{startedStorage, 0, 1},
+            Containers::MutableBitArrayView{stoppedStorage, 0, 1},
+            factorStorage,
+            Containers::MutableBitArrayView{removeStorage, 0, 1},
+            dynamicStyleUniforms, dynamicStylePaddings, dataStyles);
     };
 
     /* The padding resulting from the animation gets checked against these.
@@ -1304,25 +1295,19 @@ void BaseLayerStyleAnimatorTest::advanceNoFreeDynamicStyles() {
        verify they're written only when they should be. Compared to the helper
        in advance() above it exposes only some data. */
     const auto advance = [&](Nanoseconds time, Containers::ArrayView<BaseLayerStyleUniform> dynamicStyleUniforms, const Containers::StridedArrayView1D<UnsignedInt>& dataStyles) {
-        UnsignedByte activeData[1];
-        Containers::MutableBitArrayView active{activeData, 0, 2};
-        UnsignedByte startedData[1];
-        Containers::MutableBitArrayView started{startedData, 0, 2};
-        UnsignedByte stoppedData[1];
-        Containers::MutableBitArrayView stopped{stoppedData, 0, 2};
-        Float factors[2];
-        UnsignedByte removeData[1];
-        Containers::MutableBitArrayView remove{removeData, 0, 2};
+        UnsignedByte activeStorage[1];
+        UnsignedByte startedStorage[1];
+        UnsignedByte stoppedStorage[1];
+        Float factorStorage[2];
+        UnsignedByte removeStorage[1];
+        Vector4 paddings[1];
 
-        Containers::Pair<bool, bool> needsAdvanceClean = animator.update(time, active, started, stopped, factors, remove);
-        BaseLayerStyleAnimatorUpdates updates;
-        if(needsAdvanceClean.first()) {
-            Vector4 paddings[1];
-            updates = animator.advance(active, started, stopped, factors, dynamicStyleUniforms, paddings, dataStyles);
-        }
-        if(needsAdvanceClean.second())
-            animator.clean(remove);
-        return updates;
+        return animator.advance(time,
+            Containers::MutableBitArrayView{activeStorage, 0, 2},
+            Containers::MutableBitArrayView{startedStorage, 0, 2},
+            Containers::MutableBitArrayView{stoppedStorage, 0, 2},
+            factorStorage,
+            Containers::MutableBitArrayView{removeStorage, 0, 2}, dynamicStyleUniforms, paddings, dataStyles);
     };
 
     BaseLayerStyleUniform uniforms[1];
@@ -1423,25 +1408,19 @@ void BaseLayerStyleAnimatorTest::advanceConflictingAnimations() {
        verify they're written only when they should be. Compared to the helper
        in advance() above it exposes only some data. */
     const auto advance = [&](Nanoseconds time, Containers::ArrayView<BaseLayerStyleUniform> dynamicStyleUniforms, const Containers::StridedArrayView1D<UnsignedInt>& dataStyles) {
-        UnsignedByte activeData[1];
-        Containers::MutableBitArrayView active{activeData, 0, 2};
-        UnsignedByte startedData[1];
-        Containers::MutableBitArrayView started{startedData, 0, 2};
-        UnsignedByte stoppedData[1];
-        Containers::MutableBitArrayView stopped{stoppedData, 0, 2};
-        Float factors[2];
-        UnsignedByte removeData[1];
-        Containers::MutableBitArrayView remove{removeData, 0, 2};
+        UnsignedByte activeStorage[1];
+        UnsignedByte startedStorage[1];
+        UnsignedByte stoppedStorage[1];
+        Float factorStorage[2];
+        UnsignedByte removeStorage[1];
+        Vector4 paddings[2];
 
-        Containers::Pair<bool, bool> needsAdvanceClean = animator.update(time, active, started, stopped, factors, remove);
-        BaseLayerStyleAnimatorUpdates updates;
-        if(needsAdvanceClean.first()) {
-            Vector4 paddings[2];
-            updates = animator.advance(active, started, stopped, factors, dynamicStyleUniforms, paddings, dataStyles);
-        }
-        if(needsAdvanceClean.second())
-            animator.clean(remove);
-        return updates;
+        return animator.advance(time,
+            Containers::MutableBitArrayView{activeStorage, 0, 2},
+            Containers::MutableBitArrayView{startedStorage, 0, 2},
+            Containers::MutableBitArrayView{stoppedStorage, 0, 2},
+            factorStorage,
+            Containers::MutableBitArrayView{removeStorage, 0, 2}, dynamicStyleUniforms, paddings, dataStyles);
     };
 
     BaseLayerStyleUniform uniforms[2];
@@ -1540,25 +1519,21 @@ void BaseLayerStyleAnimatorTest::advanceExternalStyleChanges() {
        verify they're written only when they should be. Compared to the helper
        in advance() above it exposes only style IDs. */
     const auto advance = [&](Nanoseconds time, const Containers::StridedArrayView1D<UnsignedInt>& dataStyles) {
-        UnsignedByte activeData[1];
-        Containers::MutableBitArrayView active{activeData, 0, 2};
-        UnsignedByte startedData[1];
-        Containers::MutableBitArrayView started{startedData, 0, 2};
-        UnsignedByte stoppedData[1];
-        Containers::MutableBitArrayView stopped{stoppedData, 0, 2};
-        Float factors[2];
-        UnsignedByte removeData[1];
-        Containers::MutableBitArrayView remove{removeData, 0, 2};
+        UnsignedByte activeStorage[1];
+        UnsignedByte startedStorage[1];
+        UnsignedByte stoppedStorage[1];
+        Float factorStorage[2];
+        UnsignedByte removeStorage[1];
+        Vector4 paddings[1];
+        BaseLayerStyleUniform uniforms[1];
 
-        Containers::Pair<bool, bool> needsAdvanceClean = animator.update(time, active, started, stopped, factors, remove);
-        BaseLayerStyleAnimatorUpdates updates;
-        if(needsAdvanceClean.first()) {
-            Vector4 paddings[1];
-            BaseLayerStyleUniform uniforms[1];
-            updates = animator.advance(active, started, stopped, factors, uniforms, paddings, dataStyles);
-        }
-        CORRADE_INTERNAL_ASSERT(!needsAdvanceClean.second());
-        return updates;
+        return animator.advance(time,
+            Containers::MutableBitArrayView{activeStorage, 0, 2},
+            Containers::MutableBitArrayView{startedStorage, 0, 2},
+            Containers::MutableBitArrayView{stoppedStorage, 0, 2},
+            factorStorage,
+            Containers::MutableBitArrayView{removeStorage, 0, 2},
+            uniforms, paddings, dataStyles);
     };
 
     Containers::Optional<UnsignedInt> dynamicStyle;
@@ -1652,7 +1627,7 @@ void BaseLayerStyleAnimatorTest::advanceExternalStyleChanges() {
 void BaseLayerStyleAnimatorTest::advanceEmpty() {
     /* This should work even with no layer being set */
     BaseLayerStyleAnimator animator{animatorHandle(0, 1)};
-    animator.advance({}, {}, {}, {}, {}, {}, {});
+    animator.advance({}, {}, {}, {}, {}, {}, {}, {}, {});
 
     CORRADE_VERIFY(true);
 }
@@ -1691,19 +1666,26 @@ void BaseLayerStyleAnimatorTest::advanceInvalid() {
 
     Containers::String out;
     Error redirectError{&out};
-    animator.advance(mask, mask, mask, factorsInvalid, dynamicStyleUniforms, dynamicStylePaddings, {});
-    animator.advance(mask, mask, maskInvalid, factors, dynamicStyleUniforms, dynamicStylePaddings, {});
-    animator.advance(mask, maskInvalid, mask, factors, dynamicStyleUniforms, dynamicStylePaddings, {});
-    animator.advance(maskInvalid, mask, mask, factors, dynamicStyleUniforms, dynamicStylePaddings, {});
-    animator.advance(mask, mask, mask, factors, dynamicStyleUniforms, dynamicStylePaddingsInvalid, {});
-    animator.advance(mask, mask, mask, factors, dynamicStyleUniformsInvalid, dynamicStylePaddings, {});
+    animator.advance({}, mask, mask, mask, factors, maskInvalid, dynamicStyleUniforms, dynamicStylePaddings, {});
+    animator.advance({}, mask, mask, mask, factorsInvalid, mask, dynamicStyleUniforms, dynamicStylePaddings, {});
+    animator.advance({}, mask, mask, maskInvalid, factors, mask, dynamicStyleUniforms, dynamicStylePaddings, {});
+    animator.advance({}, mask, maskInvalid, mask, factors, mask, dynamicStyleUniforms, dynamicStylePaddings, {});
+    animator.advance({}, maskInvalid, mask, mask, factors, mask, dynamicStyleUniforms, dynamicStylePaddings, {});
+
+    animator.advance({}, mask, mask, mask, factors, mask, dynamicStyleUniforms, dynamicStylePaddingsInvalid, {});
+    animator.advance({}, mask, mask, mask, factors, mask, dynamicStyleUniformsInvalid, dynamicStylePaddings, {});
     /* All views correct but the layer doesn't have styles set */
-    animator.advance(mask, mask, mask, factors, dynamicStyleUniforms, dynamicStylePaddings, {});
+    animator.advance({}, mask, mask, mask, factors, mask, dynamicStyleUniforms, dynamicStylePaddings, {});
     CORRADE_COMPARE_AS(out,
-        "Ui::BaseLayerStyleAnimator::advance(): expected active, started, stopped and factors views to have a size of 3 but got 3, 3, 3 and 4\n"
-        "Ui::BaseLayerStyleAnimator::advance(): expected active, started, stopped and factors views to have a size of 3 but got 3, 3, 4 and 3\n"
-        "Ui::BaseLayerStyleAnimator::advance(): expected active, started, stopped and factors views to have a size of 3 but got 3, 4, 3 and 3\n"
-        "Ui::BaseLayerStyleAnimator::advance(): expected active, started, stopped and factors views to have a size of 3 but got 4, 3, 3 and 3\n"
+        /* These are caught by update() already, no need to repeat the
+           assertion for the subclass. Verifying them here to ensure it doesn't
+           accidentally blow up something earlier. */
+        "Ui::AbstractAnimator::update(): expected active, started, stopped, factors and remove views to have a size of 3 but got 3, 3, 3, 3 and 4\n"
+        "Ui::AbstractAnimator::update(): expected active, started, stopped, factors and remove views to have a size of 3 but got 3, 3, 3, 4 and 3\n"
+        "Ui::AbstractAnimator::update(): expected active, started, stopped, factors and remove views to have a size of 3 but got 3, 3, 4, 3 and 3\n"
+        "Ui::AbstractAnimator::update(): expected active, started, stopped, factors and remove views to have a size of 3 but got 3, 4, 3, 3 and 3\n"
+        "Ui::AbstractAnimator::update(): expected active, started, stopped, factors and remove views to have a size of 3 but got 4, 3, 3, 3 and 3\n"
+
         "Ui::BaseLayerStyleAnimator::advance(): expected dynamic style uniform and padding views to have a size of 2 but got 2 and 3\n"
         "Ui::BaseLayerStyleAnimator::advance(): expected dynamic style uniform and padding views to have a size of 2 but got 3 and 2\n"
         "Ui::BaseLayerStyleAnimator::advance(): no style data was set on the layer\n",

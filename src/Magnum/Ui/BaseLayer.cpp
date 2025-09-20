@@ -488,24 +488,15 @@ void BaseLayer::doAdvanceAnimations(const Nanoseconds time, const Containers::Mu
             continue;
 
         const std::size_t capacity = animator.capacity();
-        const Containers::Pair<bool, bool> needsAdvanceClean = animator.update(time,
+        updates |= static_cast<BaseLayerStyleAnimator&>(animator).advance(time,
             activeStorage.prefix(capacity),
             startedStorage.prefix(capacity),
             stoppedStorage.prefix(capacity),
             factorStorage.prefix(capacity),
-            removeStorage.prefix(capacity));
-
-        if(needsAdvanceClean.first())
-            updates |= static_cast<BaseLayerStyleAnimator&>(animator).advance(
-                activeStorage.prefix(capacity),
-                startedStorage.prefix(capacity),
-                stoppedStorage.prefix(capacity),
-                factorStorage.prefix(capacity),
-                state.dynamicStyleUniforms,
-                state.dynamicStylePaddings,
-                stridedArrayView(state.data).slice(&Implementation::BaseLayerData::style));
-        if(needsAdvanceClean.second())
-            animator.clean(removeStorage.prefix(capacity));
+            removeStorage.prefix(capacity),
+            state.dynamicStyleUniforms,
+            state.dynamicStylePaddings,
+            stridedArrayView(state.data).slice(&Implementation::BaseLayerData::style));
     }
 
     if(updates & (BaseLayerStyleAnimatorUpdate::Style|BaseLayerStyleAnimatorUpdate::Padding))

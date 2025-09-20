@@ -6524,8 +6524,19 @@ void AbstractUserInterfaceTest::advanceAnimations() {
         }
         /* Called by the layer. Not strictly necessary in order to test things
            but shows how a real implementation would look like. */
-        void advance() {
-            arrayAppend(calls, InPlaceInit, handle(), Advance);
+        void advance(Nanoseconds time, Containers::MutableBitArrayView activeStorage, Containers::MutableBitArrayView startedStorage, Containers::MutableBitArrayView stoppedStorage, const Containers::StridedArrayView1D<Float>& factorStorage, Containers::MutableBitArrayView removeStorage) {
+            CORRADE_COMPARE(capacity(), 1);
+            CORRADE_COMPARE(activeStorage.size(), 1);
+            CORRADE_COMPARE(startedStorage.size(), 1);
+            CORRADE_COMPARE(stoppedStorage.size(), 1);
+            CORRADE_COMPARE(factorStorage.size(), 1);
+            CORRADE_COMPARE(removeStorage.size(), 1);
+            Containers::Pair<bool, bool> advanceCleanNeeded = update(time, activeStorage, startedStorage, stoppedStorage, factorStorage, removeStorage);
+
+            if(advanceCleanNeeded.first())
+                arrayAppend(calls, InPlaceInit, handle(), Advance);
+            if(advanceCleanNeeded.second())
+                clean(removeStorage);
         }
 
         Containers::Array<Containers::Pair<AnimatorHandle, Call>>& calls;
@@ -6543,8 +6554,19 @@ void AbstractUserInterfaceTest::advanceAnimations() {
         }
         /* Called by the layer. Not strictly necessary in order to test things
            but shows how a real implementation would look like. */
-        void advance() {
-            arrayAppend(calls, InPlaceInit, handle(), Advance);
+        void advance(Nanoseconds time, Containers::MutableBitArrayView activeStorage, Containers::MutableBitArrayView startedStorage, Containers::MutableBitArrayView stoppedStorage, const Containers::StridedArrayView1D<Float>& factorStorage, Containers::MutableBitArrayView removeStorage) {
+            CORRADE_COMPARE(capacity(), 1);
+            CORRADE_COMPARE(activeStorage.size(), 1);
+            CORRADE_COMPARE(startedStorage.size(), 1);
+            CORRADE_COMPARE(stoppedStorage.size(), 1);
+            CORRADE_COMPARE(factorStorage.size(), 1);
+            CORRADE_COMPARE(removeStorage.size(), 1);
+            Containers::Pair<bool, bool> advanceCleanNeeded = update(time, activeStorage, startedStorage, stoppedStorage, factorStorage, removeStorage);
+
+            if(advanceCleanNeeded.first())
+                arrayAppend(calls, InPlaceInit, handle(), Advance);
+            if(advanceCleanNeeded.second())
+                clean(removeStorage);
         }
 
         Containers::Array<Containers::Pair<AnimatorHandle, Call>>& calls;
@@ -6569,18 +6591,7 @@ void AbstractUserInterfaceTest::advanceAnimations() {
 
                 /* Not strictly necessary in order to test things but shows how
                    a real implementation would look like */
-                CORRADE_COMPARE(animator.capacity(), 1);
-                CORRADE_COMPARE(activeStorage.size(), 1);
-                CORRADE_COMPARE(startedStorage.size(), 1);
-                CORRADE_COMPARE(stoppedStorage.size(), 1);
-                CORRADE_COMPARE(factorStorage.size(), 1);
-                CORRADE_COMPARE(removeStorage.size(), 1);
-                Containers::Pair<bool, bool> advanceCleanNeeded = animator.update(time, activeStorage, startedStorage, stoppedStorage, factorStorage, removeStorage);
-
-                if(advanceCleanNeeded.first())
-                    static_cast<DataAnimator&>(animator).advance();
-                if(advanceCleanNeeded.second())
-                    animator.clean(removeStorage);
+                static_cast<DataAnimator&>(animator).advance(time, activeStorage, startedStorage, stoppedStorage, factorStorage, removeStorage);
             }
         }
         void doAdvanceAnimations(Nanoseconds time, Containers::MutableBitArrayView activeStorage, Containers::MutableBitArrayView startedStorage, Containers::MutableBitArrayView stoppedStorage, const Containers::StridedArrayView1D<Float>& factorStorage, Containers::MutableBitArrayView removeStorage, const Containers::Iterable<AbstractStyleAnimator>& animators) override {
@@ -6590,18 +6601,7 @@ void AbstractUserInterfaceTest::advanceAnimations() {
 
                 /* Not strictly necessary in order to test things but shows how
                    a real implementation would look like */
-                CORRADE_COMPARE(animator.capacity(), 1);
-                CORRADE_COMPARE(activeStorage.size(), 1);
-                CORRADE_COMPARE(startedStorage.size(), 1);
-                CORRADE_COMPARE(stoppedStorage.size(), 1);
-                CORRADE_COMPARE(factorStorage.size(), 1);
-                CORRADE_COMPARE(removeStorage.size(), 1);
-                Containers::Pair<bool, bool> advanceCleanNeeded = animator.update(time, activeStorage, startedStorage, stoppedStorage, factorStorage, removeStorage);
-
-                if(advanceCleanNeeded.first())
-                    static_cast<StyleAnimator&>(animator).advance();
-                if(advanceCleanNeeded.second())
-                    animator.clean(removeStorage);
+                static_cast<StyleAnimator&>(animator).advance(time, activeStorage, startedStorage, stoppedStorage, factorStorage, removeStorage);
             }
         }
 
@@ -7212,21 +7212,28 @@ void AbstractUserInterfaceTest::advanceAnimationsData() {
         AnimatorFeatures doFeatures() const override {
             return AnimatorFeature::DataAttachment;
         }
-        void advance(Containers::BitArrayView active, Containers::BitArrayView started, Containers::BitArrayView stopped, const Containers::StridedArrayView1D<const Float>& factors) {
-            CORRADE_COMPARE_AS(active,
-                expectedActive,
-                TestSuite::Compare::Container);
-            CORRADE_COMPARE_AS(started,
-                expectedStarted,
-                TestSuite::Compare::Container);
-            CORRADE_COMPARE_AS(stopped,
-                expectedStopped,
-                TestSuite::Compare::Container);
-            for(std::size_t i = 0; i != active.size(); ++i) if(active[i]) {
-                CORRADE_ITERATION(i);
-                CORRADE_COMPARE(factors[i], expectedFactors[i]);
+        void advance(Nanoseconds time, Containers::MutableBitArrayView activeStorage, Containers::MutableBitArrayView startedStorage, Containers::MutableBitArrayView stoppedStorage, const Containers::StridedArrayView1D<Float>& factorStorage, Containers::MutableBitArrayView removeStorage) {
+            Containers::Pair<bool, bool> advanceCleanNeeded = update(time, activeStorage, startedStorage, stoppedStorage, factorStorage, removeStorage);
+
+            if(advanceCleanNeeded.first()) {
+                CORRADE_COMPARE_AS(activeStorage,
+                    expectedActive,
+                    TestSuite::Compare::Container);
+                CORRADE_COMPARE_AS(startedStorage,
+                    expectedStarted,
+                    TestSuite::Compare::Container);
+                CORRADE_COMPARE_AS(stoppedStorage,
+                    expectedStopped,
+                    TestSuite::Compare::Container);
+                for(std::size_t i = 0; i != activeStorage.size(); ++i) if(activeStorage[i]) {
+                    CORRADE_ITERATION(i);
+                    CORRADE_COMPARE(factorStorage[i], expectedFactors[i]);
+                }
+                ++advanceCallCount;
             }
-            ++advanceCallCount;
+
+            if(advanceCleanNeeded.second())
+                clean(removeStorage);
         }
         void doClean(Containers::BitArrayView animationIdsToRemove) override {
             CORRADE_COMPARE_AS(animationIdsToRemove,
@@ -7264,11 +7271,7 @@ void AbstractUserInterfaceTest::advanceAnimationsData() {
 
                 /* Not strictly necessary in order to test things but shows how
                    a real implementation would look like. */
-                Containers::Pair<bool, bool> advanceCleanNeeded = animator.update(time, activeStorage, startedStorage, stoppedStorage, factorStorage, removeStorage);
-                if(advanceCleanNeeded.first())
-                    static_cast<Animator&>(animator).advance(activeStorage, startedStorage, stoppedStorage, factorStorage);
-                if(advanceCleanNeeded.second())
-                    animator.clean(removeStorage);
+                static_cast<Animator&>(animator).advance(time, activeStorage, startedStorage, stoppedStorage, factorStorage, removeStorage);
             }
         }
     };
@@ -7382,21 +7385,28 @@ void AbstractUserInterfaceTest::advanceAnimationsStyle() {
         AnimatorFeatures doFeatures() const override {
             return AnimatorFeature::DataAttachment;
         }
-        void advance(Containers::BitArrayView active, Containers::BitArrayView started, Containers::BitArrayView stopped, const Containers::StridedArrayView1D<const Float>& factors) {
-            CORRADE_COMPARE_AS(active,
-                expectedActive,
-                TestSuite::Compare::Container);
-            CORRADE_COMPARE_AS(started,
-                expectedStarted,
-                TestSuite::Compare::Container);
-            CORRADE_COMPARE_AS(stopped,
-                expectedStopped,
-                TestSuite::Compare::Container);
-            for(std::size_t i = 0; i != active.size(); ++i) if(active[i]) {
-                CORRADE_ITERATION(i);
-                CORRADE_COMPARE(factors[i], expectedFactors[i]);
+        void advance(Nanoseconds time, Containers::MutableBitArrayView activeStorage, Containers::MutableBitArrayView startedStorage, Containers::MutableBitArrayView stoppedStorage, const Containers::StridedArrayView1D<Float>& factorStorage, Containers::MutableBitArrayView removeStorage) {
+            Containers::Pair<bool, bool> advanceCleanNeeded = update(time, activeStorage, startedStorage, stoppedStorage, factorStorage, removeStorage);
+
+            if(advanceCleanNeeded.first()) {
+                CORRADE_COMPARE_AS(activeStorage,
+                    expectedActive,
+                    TestSuite::Compare::Container);
+                CORRADE_COMPARE_AS(startedStorage,
+                    expectedStarted,
+                    TestSuite::Compare::Container);
+                CORRADE_COMPARE_AS(stoppedStorage,
+                    expectedStopped,
+                    TestSuite::Compare::Container);
+                for(std::size_t i = 0; i != activeStorage.size(); ++i) if(activeStorage[i]) {
+                    CORRADE_ITERATION(i);
+                    CORRADE_COMPARE(factorStorage[i], expectedFactors[i]);
+                }
+                ++advanceCallCount;
             }
-            ++advanceCallCount;
+
+            if(advanceCleanNeeded.second())
+                clean(removeStorage);
         }
         void doClean(Containers::BitArrayView animationIdsToRemove) override {
             CORRADE_COMPARE_AS(animationIdsToRemove,
@@ -7434,11 +7444,7 @@ void AbstractUserInterfaceTest::advanceAnimationsStyle() {
 
                 /* Not strictly necessary in order to test things but shows how
                    a real implementation would look like. */
-                Containers::Pair<bool, bool> advanceCleanNeeded = animator.update(time, activeStorage, startedStorage, stoppedStorage, factorStorage, removeStorage);
-                if(advanceCleanNeeded.first())
-                    static_cast<Animator&>(animator).advance(activeStorage, startedStorage, stoppedStorage, factorStorage);
-                if(advanceCleanNeeded.second())
-                    animator.clean(removeStorage);
+                static_cast<Animator&>(animator).advance(time, activeStorage, startedStorage, stoppedStorage, factorStorage, removeStorage);
             }
         }
     };

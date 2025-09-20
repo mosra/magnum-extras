@@ -4963,55 +4963,161 @@ void AbstractAnimatorTest::updateInvalid() {
 void AbstractAnimatorTest::advanceGeneric() {
     struct: AbstractGenericAnimator {
         using AbstractGenericAnimator::AbstractGenericAnimator;
+        using AbstractGenericAnimator::setLayer;
         using AbstractGenericAnimator::create;
 
         AnimatorFeatures doFeatures() const override { return {}; }
         void doAdvance(Containers::BitArrayView active, Containers::BitArrayView started, Containers::BitArrayView stopped, const Containers::StridedArrayView1D<const Float>& factors) override {
-            CORRADE_COMPARE_AS(active, Containers::stridedArrayView({
-                true,
-                false,
-                true
-            }).sliceBit(0), TestSuite::Compare::Container);
-            CORRADE_COMPARE_AS(started, Containers::stridedArrayView({
-                false,
-                false,
-                true
-            }).sliceBit(0), TestSuite::Compare::Container);
-            CORRADE_COMPARE_AS(stopped, Containers::stridedArrayView({
-                false,
-                true,
-                true
-            }).sliceBit(0), TestSuite::Compare::Container);
-            CORRADE_COMPARE_AS(factors, Containers::arrayView({
-                1.0f,
-                0.5f,
-                0.75f
-            }), TestSuite::Compare::Container);
+            CORRADE_COMPARE_AS(active,
+                expectedActive,
+                TestSuite::Compare::Container);
+            CORRADE_COMPARE_AS(started,
+                expectedStarted,
+                TestSuite::Compare::Container);
+            CORRADE_COMPARE_AS(stopped,
+                expectedStopped,
+                TestSuite::Compare::Container);
+            for(std::size_t i = 0; i != active.size(); ++i) if(active[i]) {
+                CORRADE_ITERATION(i);
+                CORRADE_COMPARE(factors[i], expectedFactors[i]);
+            }
             ++advanceCallCount;
         }
+        void doClean(Containers::BitArrayView animationIdsToRemove) override {
+            CORRADE_COMPARE_AS(animationIdsToRemove,
+                expectedAnimationIdsToRemove,
+                TestSuite::Compare::Container);
+            ++cleanCallCount;
+        }
+
+        Containers::StridedBitArrayView1D expectedActive, expectedStarted, expectedStopped;
+        Containers::StridedBitArrayView1D expectedAnimationIdsToRemove;
+        Containers::StridedArrayView1D<const Float> expectedFactors;
         Int advanceCallCount = 0;
+        Int cleanCallCount = 0;
     } animator{animatorHandle(0, 1)};
 
-    animator.create(0_nsec, 1_nsec);
-    animator.create(0_nsec, 1_nsec);
-    animator.create(0_nsec, 1_nsec);
+    animator.create(0_nsec, 10_nsec);
+    animator.create(-20_nsec, 10_nsec, AnimationFlag::KeepOncePlayed);
+    animator.create(6_nsec, 4_nsec);
 
-    /* Capture correct function name */
-    CORRADE_VERIFY(true);
+    /* Call to advance(5) advances the first. The second is already stopped so
+       it just advances it with the final state. There's nothing to clean at
+       this point. */
+    {
+        CORRADE_ITERATION(__FILE__ ":" CORRADE_LINE_STRING);
+        bool active[]{
+            true,
+            true,
+            false
+        };
+        bool started[]{
+            true,
+            true,
+            false
+        };
+        bool stopped[]{
+            false,
+            true,
+            false
+        };
+        Float factors[]{
+            0.5f,
+            1.0f,
+            666.0f
+        };
+        animator.expectedActive = Containers::stridedArrayView(active).sliceBit(0);
+        animator.expectedStarted = Containers::stridedArrayView(started).sliceBit(0);
+        animator.expectedStopped = Containers::stridedArrayView(stopped).sliceBit(0);
+        animator.expectedActive = Containers::stridedArrayView(active).sliceBit(0);
+        animator.expectedFactors = factors;
+        animator.expectedAnimationIdsToRemove = {};
 
-    Containers::BitArray active{DirectInit, 3, true};
-    Containers::BitArray started{DirectInit, 3, false};
-    Containers::BitArray stopped{DirectInit, 3, true};
-    active.reset(1);
-    started.set(2);
-    stopped.reset(0);
-    Float factors[]{
-        1.0f,
-        0.5f,
-        0.75f
-    };
-    animator.advance(active, started, stopped, factors);
+        Containers::BitArray activeStorage{NoInit, 3};
+        Containers::BitArray startedStorage{NoInit, 3};
+        Containers::BitArray stoppedStorage{NoInit, 3};
+        Float factorStorage[]{
+            666.0f,
+            666.0f,
+            666.0f
+        };
+        Containers::BitArray removeStorage{NoInit, 3};
+        animator.advance(5_nsec, activeStorage, startedStorage, stoppedStorage, factorStorage, removeStorage);
+    }
     CORRADE_COMPARE(animator.advanceCallCount, 1);
+    CORRADE_COMPARE(animator.cleanCallCount, 0);
+
+    /* Call to advance(10) advances the first and last to end, both get
+       cleaned afterwards */
+    {
+        CORRADE_ITERATION(__FILE__ ":" CORRADE_LINE_STRING);
+        bool active[]{
+            true,
+            false,
+            true
+        };
+        bool started[]{
+            false,
+            false,
+            true
+        };
+        bool stopped[]{
+            true,
+            false,
+            true
+        };
+        Float factors[]{
+            1.0f,
+            666.0f,
+            1.0f
+        };
+        bool animationIdsToRemove[]{
+            true,
+            false,
+            true
+        };
+        animator.expectedActive = Containers::stridedArrayView(active).sliceBit(0);
+        animator.expectedStarted = Containers::stridedArrayView(started).sliceBit(0);
+        animator.expectedStopped = Containers::stridedArrayView(stopped).sliceBit(0);
+        animator.expectedFactors = factors;
+        animator.expectedAnimationIdsToRemove = Containers::stridedArrayView(animationIdsToRemove).sliceBit(0);
+
+        Containers::BitArray activeStorage{NoInit, 3};
+        Containers::BitArray startedStorage{NoInit, 3};
+        Containers::BitArray stoppedStorage{NoInit, 3};
+        Float factorStorage[]{
+            666.0f,
+            666.0f,
+            666.0f
+        };
+        Containers::BitArray removeStorage{NoInit, 3};
+        animator.advance(10_nsec, activeStorage, startedStorage, stoppedStorage, factorStorage, removeStorage);
+    }
+    CORRADE_COMPARE(animator.advanceCallCount, 2);
+    CORRADE_COMPARE(animator.cleanCallCount, 1);
+
+    /* Call to advance(20) does nothing */
+    {
+        CORRADE_ITERATION(__FILE__ ":" CORRADE_LINE_STRING);
+        animator.expectedActive = {};
+        animator.expectedStarted = {};
+        animator.expectedStopped = {};
+        animator.expectedFactors = {};
+        animator.expectedAnimationIdsToRemove = {};
+
+        Containers::BitArray activeStorage{NoInit, 3};
+        Containers::BitArray startedStorage{NoInit, 3};
+        Containers::BitArray stoppedStorage{NoInit, 3};
+        Float factorStorage[]{
+            666.0f,
+            666.0f,
+            666.0f
+        };
+        Containers::BitArray removeStorage{NoInit, 3};
+        animator.advance(10_nsec, activeStorage, startedStorage, stoppedStorage, factorStorage, removeStorage);
+    }
+    CORRADE_COMPARE(animator.advanceCallCount, 2);
+    CORRADE_COMPARE(animator.cleanCallCount, 1);
 }
 
 void AbstractAnimatorTest::advanceGenericInvalid() {
@@ -5036,15 +5142,20 @@ void AbstractAnimatorTest::advanceGenericInvalid() {
 
     Containers::String out;
     Error redirectError{&out};
-    animator.advance(mask, mask, mask, factorsInvalid);
-    animator.advance(mask, mask, maskInvalid, factors);
-    animator.advance(mask, maskInvalid, mask, factors);
-    animator.advance(maskInvalid, mask, mask, factors);
+    animator.advance({}, mask, mask, mask, factors, maskInvalid);
+    animator.advance({}, mask, mask, mask, factorsInvalid, mask);
+    animator.advance({}, mask, mask, maskInvalid, factors, mask);
+    animator.advance({}, mask, maskInvalid, mask, factors, mask);
+    animator.advance({}, maskInvalid, mask, mask, factors, mask);
     CORRADE_COMPARE_AS(out,
-        "Ui::AbstractGenericAnimator::advance(): expected active, started, stopped and factors views to have a size of 3 but got 3, 3, 3 and 4\n"
-        "Ui::AbstractGenericAnimator::advance(): expected active, started, stopped and factors views to have a size of 3 but got 3, 3, 4 and 3\n"
-        "Ui::AbstractGenericAnimator::advance(): expected active, started, stopped and factors views to have a size of 3 but got 3, 4, 3 and 3\n"
-        "Ui::AbstractGenericAnimator::advance(): expected active, started, stopped and factors views to have a size of 3 but got 4, 3, 3 and 3\n",
+        /* These are caught by update() already, no need to repeat the
+           assertion for the subclass. Verifying them here to ensure it doesn't
+           accidentally blow up something earlier. */
+        "Ui::AbstractAnimator::update(): expected active, started, stopped, factors and remove views to have a size of 3 but got 3, 3, 3, 3 and 4\n"
+        "Ui::AbstractAnimator::update(): expected active, started, stopped, factors and remove views to have a size of 3 but got 3, 3, 3, 4 and 3\n"
+        "Ui::AbstractAnimator::update(): expected active, started, stopped, factors and remove views to have a size of 3 but got 3, 3, 4, 3 and 3\n"
+        "Ui::AbstractAnimator::update(): expected active, started, stopped, factors and remove views to have a size of 3 but got 3, 4, 3, 3 and 3\n"
+        "Ui::AbstractAnimator::update(): expected active, started, stopped, factors and remove views to have a size of 3 but got 4, 3, 3, 3 and 3\n",
         TestSuite::Compare::String);
 }
 
@@ -5055,26 +5166,21 @@ void AbstractAnimatorTest::advanceNode() {
 
         AnimatorFeatures doFeatures() const override { return {}; }
         NodeAnimatorUpdates doAdvance(Containers::BitArrayView active, Containers::BitArrayView started, Containers::BitArrayView stopped, const Containers::StridedArrayView1D<const Float>& factors, const Containers::StridedArrayView1D<Vector2>& nodeOffsets, const Containers::StridedArrayView1D<Vector2>& nodeSizes, const Containers::StridedArrayView1D<Float>& nodeOpacities, const Containers::StridedArrayView1D<NodeFlags>& nodeFlags, Containers::MutableBitArrayView nodesRemove) override {
-            CORRADE_COMPARE_AS(active, Containers::stridedArrayView({
-                true,
-                false,
-                true
-            }).sliceBit(0), TestSuite::Compare::Container);
-            CORRADE_COMPARE_AS(started, Containers::stridedArrayView({
-                false,
-                false,
-                true
-            }).sliceBit(0), TestSuite::Compare::Container);
-            CORRADE_COMPARE_AS(stopped, Containers::stridedArrayView({
-                false,
-                true,
-                true
-            }).sliceBit(0), TestSuite::Compare::Container);
-            CORRADE_COMPARE_AS(factors, Containers::arrayView({
-                1.0f,
-                0.5f,
-                0.75f
-            }), TestSuite::Compare::Container);
+            CORRADE_COMPARE_AS(active,
+                expectedActive,
+                TestSuite::Compare::Container);
+            CORRADE_COMPARE_AS(started,
+                expectedStarted,
+                TestSuite::Compare::Container);
+            CORRADE_COMPARE_AS(stopped,
+                expectedStopped,
+                TestSuite::Compare::Container);
+            for(std::size_t i = 0; i != active.size(); ++i) if(active[i]) {
+                CORRADE_ITERATION(i);
+                CORRADE_COMPARE(factors[i], expectedFactors[i]);
+            }
+            /* We're not touching the output in any way, just verify it was
+               passed through correctly */
             CORRADE_COMPARE_AS(nodeOffsets, Containers::stridedArrayView<Vector2>({
                 {1.0f, 2.0f},
                 {3.0f, 4.0f},
@@ -5099,27 +5205,24 @@ void AbstractAnimatorTest::advanceNode() {
 
             return NodeAnimatorUpdates{0xc0};
         }
+        void doClean(Containers::BitArrayView animationIdsToRemove) override {
+            CORRADE_COMPARE_AS(animationIdsToRemove,
+                expectedAnimationIdsToRemove,
+                TestSuite::Compare::Container);
+            ++cleanCallCount;
+        }
+
+        Containers::StridedBitArrayView1D expectedActive, expectedStarted, expectedStopped;
+        Containers::StridedBitArrayView1D expectedAnimationIdsToRemove;
+        Containers::StridedArrayView1D<const Float> expectedFactors;
         Int advanceCallCount = 0;
+        Int cleanCallCount = 0;
     } animator{animatorHandle(0, 1)};
 
-    animator.create(0_nsec, 1_nsec);
-    animator.create(0_nsec, 1_nsec);
-    animator.create(0_nsec, 1_nsec);
+    animator.create(0_nsec, 10_nsec);
+    animator.create(-20_nsec, 10_nsec, AnimationFlag::KeepOncePlayed);
+    animator.create(6_nsec, 4_nsec);
 
-    /* Capture correct function name */
-    CORRADE_VERIFY(true);
-
-    Containers::BitArray active{DirectInit, 3, true};
-    Containers::BitArray started{DirectInit, 3, false};
-    Containers::BitArray stopped{DirectInit, 3, true};
-    active.reset(1);
-    started.set(2);
-    stopped.reset(0);
-    Float factors[]{
-        1.0f,
-        0.5f,
-        0.75f
-    };
     Vector2 nodeOffsets[]{
         {1.0f, 2.0f},
         {3.0f, 4.0f},
@@ -5138,8 +5241,123 @@ void AbstractAnimatorTest::advanceNode() {
     };
     Containers::BitArray nodesRemove{ValueInit, 2};
     nodesRemove.set(1);
-    CORRADE_COMPARE(animator.advance(active, started, stopped, factors, nodeOffsets, nodeSizes, nodeOpacities, nodeFlags, nodesRemove), NodeAnimatorUpdates{0xc0});
+
+    /* Call to advance(5) advances the first. The second is already stopped so
+       it just advances it with the final state. There's nothing to clean at
+       this point. */
+    {
+        CORRADE_ITERATION(__FILE__ ":" CORRADE_LINE_STRING);
+        bool active[]{
+            true,
+            true,
+            false
+        };
+        bool started[]{
+            true,
+            true,
+            false
+        };
+        bool stopped[]{
+            false,
+            true,
+            false
+        };
+        Float factors[]{
+            0.5f,
+            1.0f,
+            0.0f, /* unused */
+        };
+        animator.expectedActive = Containers::stridedArrayView(active).sliceBit(0);
+        animator.expectedStarted = Containers::stridedArrayView(started).sliceBit(0);
+        animator.expectedStopped = Containers::stridedArrayView(stopped).sliceBit(0);
+        animator.expectedFactors = factors;
+        animator.expectedAnimationIdsToRemove = {};
+
+        Containers::BitArray activeStorage{NoInit, 3};
+        Containers::BitArray startedStorage{NoInit, 3};
+        Containers::BitArray stoppedStorage{NoInit, 3};
+        Float factorStorage[]{
+            666.0f,
+            666.0f,
+            666.0f
+        };
+        Containers::BitArray removeStorage{NoInit, 3};
+        animator.advance(5_nsec, activeStorage, startedStorage, stoppedStorage, factorStorage, removeStorage, nodeOffsets, nodeSizes, nodeOpacities, nodeFlags, nodesRemove);
+    }
     CORRADE_COMPARE(animator.advanceCallCount, 1);
+    CORRADE_COMPARE(animator.cleanCallCount, 0);
+
+    /* Call to advance(10) advances the first and last to end, both get
+       cleaned afterwards */
+    {
+        CORRADE_ITERATION(__FILE__ ":" CORRADE_LINE_STRING);
+        bool active[]{
+            true,
+            false,
+            true
+        };
+        bool started[]{
+            false,
+            false,
+            true
+        };
+        bool stopped[]{
+            true,
+            false,
+            true
+        };
+        Float factors[]{
+            1.0f,
+            0.0f, /* unused */
+            1.0f,
+        };
+        bool animationIdsToRemove[]{
+            true,
+            false,
+            true
+        };
+        animator.expectedActive = Containers::stridedArrayView(active).sliceBit(0);
+        animator.expectedStarted = Containers::stridedArrayView(started).sliceBit(0);
+        animator.expectedStopped = Containers::stridedArrayView(stopped).sliceBit(0);
+        animator.expectedFactors = factors;
+        animator.expectedAnimationIdsToRemove = Containers::stridedArrayView(animationIdsToRemove).sliceBit(0);
+
+        Containers::BitArray activeStorage{NoInit, 3};
+        Containers::BitArray startedStorage{NoInit, 3};
+        Containers::BitArray stoppedStorage{NoInit, 3};
+        Float factorStorage[]{
+            666.0f,
+            666.0f,
+            666.0f
+        };
+        Containers::BitArray removeStorage{NoInit, 3};
+        animator.advance(10_nsec, activeStorage, startedStorage, stoppedStorage, factorStorage, removeStorage, nodeOffsets, nodeSizes, nodeOpacities, nodeFlags, nodesRemove);
+    }
+    CORRADE_COMPARE(animator.advanceCallCount, 2);
+    CORRADE_COMPARE(animator.cleanCallCount, 1);
+
+    /* Call to advance(20) does nothing */
+    {
+        CORRADE_ITERATION(__FILE__ ":" CORRADE_LINE_STRING);
+        animator.expectedActive = {};
+        animator.expectedStarted = {};
+        animator.expectedStopped = {};
+        animator.expectedFactors = {};
+        animator.expectedAnimationIdsToRemove = {};
+
+        Containers::BitArray activeStorage{NoInit, 3};
+        Containers::BitArray startedStorage{NoInit, 3};
+        Containers::BitArray stoppedStorage{NoInit, 3};
+        Float factorStorage[]{
+            666.0f,
+            666.0f,
+            666.0f
+        };
+        Containers::BitArray removeStorage{NoInit, 3};
+        animator.advance(20_nsec, activeStorage, startedStorage, stoppedStorage, factorStorage, removeStorage, nodeOffsets, nodeSizes, nodeOpacities, nodeFlags, nodesRemove);
+    }
+    CORRADE_COMPARE(animator.advanceCallCount, 2);
+    CORRADE_COMPARE(animator.cleanCallCount, 1);
 }
 
 void AbstractAnimatorTest::advanceNodeInvalid() {
@@ -5174,20 +5392,27 @@ void AbstractAnimatorTest::advanceNodeInvalid() {
 
     Containers::String out;
     Error redirectError{&out};
-    animator.advance(mask, mask, mask, factorsInvalid, nodeOffsetsSizes, nodeOffsetsSizes, nodeOpacities, nodeFlags, nodesEnabled);
-    animator.advance(mask, mask, maskInvalid, factors, nodeOffsetsSizes, nodeOffsetsSizes, nodeOpacities, nodeFlags, nodesEnabled);
-    animator.advance(mask, maskInvalid, mask, factors, nodeOffsetsSizes, nodeOffsetsSizes, nodeOpacities, nodeFlags, nodesEnabled);
-    animator.advance(maskInvalid, mask, mask, factors, nodeOffsetsSizes, nodeOffsetsSizes, nodeOpacities, nodeFlags, nodesEnabled);
-    animator.advance(mask, mask, mask, factors, nodeOffsetsSizes, nodeOffsetsSizes, nodeOpacities, nodeFlags, nodesEnabledInvalid);
-    animator.advance(mask, mask, mask, factors, nodeOffsetsSizes, nodeOffsetsSizes, nodeOpacities, nodeFlagsInvalid, nodesEnabled);
-    animator.advance(mask, mask, mask, factors, nodeOffsetsSizes, nodeOffsetsSizes, nodeOpacitiesInvalid, nodeFlags, nodesEnabled);
-    animator.advance(mask, mask, mask, factors, nodeOffsetsSizes, nodeOffsetsSizesInvalid, nodeOpacities, nodeFlags, nodesEnabled);
-    animator.advance(mask, mask, mask, factors, nodeOffsetsSizesInvalid, nodeOffsetsSizes, nodeOpacities, nodeFlags, nodesEnabled);
+    animator.advance({}, mask, mask, mask, factors, maskInvalid, nodeOffsetsSizes, nodeOffsetsSizes, nodeOpacities, nodeFlags, nodesEnabled);
+    animator.advance({}, mask, mask, mask, factorsInvalid, mask, nodeOffsetsSizes, nodeOffsetsSizes, nodeOpacities, nodeFlags, nodesEnabled);
+    animator.advance({}, mask, mask, maskInvalid, factors, mask, nodeOffsetsSizes, nodeOffsetsSizes, nodeOpacities, nodeFlags, nodesEnabled);
+    animator.advance({}, mask, maskInvalid, mask, factors, mask, nodeOffsetsSizes, nodeOffsetsSizes, nodeOpacities, nodeFlags, nodesEnabled);
+    animator.advance({}, maskInvalid, mask, mask, factors, mask, nodeOffsetsSizes, nodeOffsetsSizes, nodeOpacities, nodeFlags, nodesEnabled);
+
+    animator.advance({}, mask, mask, mask, factors, mask, nodeOffsetsSizes, nodeOffsetsSizes, nodeOpacities, nodeFlags, nodesEnabledInvalid);
+    animator.advance({}, mask, mask, mask, factors, mask, nodeOffsetsSizes, nodeOffsetsSizes, nodeOpacities, nodeFlagsInvalid, nodesEnabled);
+    animator.advance({}, mask, mask, mask, factors, mask, nodeOffsetsSizes, nodeOffsetsSizes, nodeOpacitiesInvalid, nodeFlags, nodesEnabled);
+    animator.advance({}, mask, mask, mask, factors, mask, nodeOffsetsSizes, nodeOffsetsSizesInvalid, nodeOpacities, nodeFlags, nodesEnabled);
+    animator.advance({}, mask, mask, mask, factors, mask, nodeOffsetsSizesInvalid, nodeOffsetsSizes, nodeOpacities, nodeFlags, nodesEnabled);
     CORRADE_COMPARE_AS(out,
-        "Ui::AbstractNodeAnimator::advance(): expected active, started, stopped and factors views to have a size of 2 but got 2, 2, 2 and 3\n"
-        "Ui::AbstractNodeAnimator::advance(): expected active, started, stopped and factors views to have a size of 2 but got 2, 2, 3 and 2\n"
-        "Ui::AbstractNodeAnimator::advance(): expected active, started, stopped and factors views to have a size of 2 but got 2, 3, 2 and 2\n"
-        "Ui::AbstractNodeAnimator::advance(): expected active, started, stopped and factors views to have a size of 2 but got 3, 2, 2 and 2\n"
+        /* These are caught by update() already, no need to repeat the
+           assertion for the subclass. Verifying them here to ensure it doesn't
+           accidentally blow up something earlier. */
+        "Ui::AbstractAnimator::update(): expected active, started, stopped, factors and remove views to have a size of 2 but got 2, 2, 2, 2 and 3\n"
+        "Ui::AbstractAnimator::update(): expected active, started, stopped, factors and remove views to have a size of 2 but got 2, 2, 2, 3 and 2\n"
+        "Ui::AbstractAnimator::update(): expected active, started, stopped, factors and remove views to have a size of 2 but got 2, 2, 3, 2 and 2\n"
+        "Ui::AbstractAnimator::update(): expected active, started, stopped, factors and remove views to have a size of 2 but got 2, 3, 2, 2 and 2\n"
+        "Ui::AbstractAnimator::update(): expected active, started, stopped, factors and remove views to have a size of 2 but got 3, 2, 2, 2 and 2\n"
+
         "Ui::AbstractNodeAnimator::advance(): expected node offset, size, opacity, flags and remove views to have the same size but got 3, 3, 3, 3 and 4\n"
         "Ui::AbstractNodeAnimator::advance(): expected node offset, size, opacity, flags and remove views to have the same size but got 3, 3, 3, 4 and 3\n"
         "Ui::AbstractNodeAnimator::advance(): expected node offset, size, opacity, flags and remove views to have the same size but got 3, 3, 4, 3 and 3\n"

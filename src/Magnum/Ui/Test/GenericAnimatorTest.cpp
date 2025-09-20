@@ -24,6 +24,7 @@
     DEALINGS IN THE SOFTWARE.
 */
 
+#include <Corrade/Containers/BitArray.h>
 #include <Corrade/Containers/BitArrayView.h>
 #include <Corrade/Containers/Function.h>
 #include <Corrade/Containers/StridedArrayView.h>
@@ -104,69 +105,77 @@ const struct {
     const char* name;
     AnimationFlags flags;
     bool states;
-    UnsignedByte started, stopped;
-    GenericAnimationStates statesFirst, statesThird;
+    Nanoseconds startFirst, durationFirst;
+    Float expectedFactorFirst;
+    GenericAnimationStates expectedStatesFirst;
+    Nanoseconds startThird, durationThird;
+    Float expectedFactorThird;
+    GenericAnimationStates expectedStatesThird;
 } AdvanceData[]{
     {"",
-        {}, false, 0, 0, {}, {}},
+        {}, false,
+        0_nsec, 20_nsec, 75.0f, {},
+        0_nsec, 60_nsec, 25.0f, {}},
     {"state overload",
-        {}, true, 0, 0, {}, {}},
+        {}, true,
+        0_nsec, 20_nsec, 75.0f, {},
+        0_nsec, 60_nsec, 25.0f, {}},
     {"state overload, reverse",
-        AnimationFlag::Reverse, true, 0, 0, {}, {}},
+        AnimationFlag::Reverse, true,
+        0_nsec, 20_nsec, 25.0f, {},
+        0_nsec, 60_nsec, 75.0f, {}},
     {"state overload, first stopped, third started",
-        {}, true, 1 << 2, 1 << 0,
-        GenericAnimationState::Stopped|GenericAnimationState::End,
-        GenericAnimationState::Started|GenericAnimationState::Begin},
+        {}, true,
+        0_nsec, 10_nsec, 100.0f, GenericAnimationState::Stopped|GenericAnimationState::End,
+        10_nsec, 20_nsec, 25.0f, GenericAnimationState::Started|GenericAnimationState::Begin},
     {"state overload, first stopped, third started, reverse",
-        AnimationFlag::Reverse, true, 1 << 2, 1 << 0,
-        GenericAnimationState::Stopped|GenericAnimationState::Reverse|GenericAnimationState::Begin,
-        GenericAnimationState::Started|GenericAnimationState::Reverse|GenericAnimationState::End},
+        AnimationFlag::Reverse, true,
+        0_nsec, 10_nsec, 0.0f, GenericAnimationState::Stopped|GenericAnimationState::Reverse|GenericAnimationState::Begin,
+        10_nsec, 20_nsec, 75.0f, GenericAnimationState::Started|GenericAnimationState::Reverse|GenericAnimationState::End},
     {"state overload, first started & stopped",
-        {}, true, 1 << 0, 1 << 0,
+        {}, true,
+        5_nsec, 5_nsec, 100.0f,
         GenericAnimationState::Started|GenericAnimationState::Stopped|GenericAnimationState::Begin|GenericAnimationState::End,
-        {}},
+        0_nsec, 60_nsec, 25.0f, {}},
     {"state overload, first started & stopped, reverse",
-        AnimationFlag::Reverse, true, 1 << 0, 1 << 0,
-        GenericAnimationState::Started|GenericAnimationState::Stopped|GenericAnimationState::Reverse|GenericAnimationState::Begin|GenericAnimationState::End,
-        {}},
-    /* Second isn't advanced at all, so this affects nothing */
-    {"state overload, second started & stopped",
-        {}, true, 1 << 1, 1 << 1, {}, {}},
+        AnimationFlag::Reverse, true,
+        5_nsec, 5_nsec, 0.0f, GenericAnimationState::Started|GenericAnimationState::Stopped|GenericAnimationState::Reverse|GenericAnimationState::Begin|GenericAnimationState::End,
+        0_nsec, 60_nsec, 75.0f, {}},
     {"state overload, third started & stopped",
-        {}, true, 1 << 2, 1 << 2,
-        {},
-        GenericAnimationState::Started|GenericAnimationState::Stopped|GenericAnimationState::Begin|GenericAnimationState::End},
+        {}, true,
+        0_nsec, 20_nsec, 75.0f, {},
+        5_nsec, 5_nsec, 100.0f, GenericAnimationState::Started|GenericAnimationState::Stopped|GenericAnimationState::Begin|GenericAnimationState::End},
     {"state overload, third started & stopped, reverse",
-        AnimationFlag::Reverse, true, 1 << 2, 1 << 2,
-        {},
-        GenericAnimationState::Started|GenericAnimationState::Stopped|GenericAnimationState::Reverse|GenericAnimationState::Begin|GenericAnimationState::End},
+        AnimationFlag::Reverse, true,
+        0_nsec, 20_nsec, 25.0f, {},
+        5_nsec, 5_nsec, 0.0f, GenericAnimationState::Started|GenericAnimationState::Stopped|GenericAnimationState::Reverse|GenericAnimationState::Begin|GenericAnimationState::End},
 };
 
 const struct {
     const char* name;
     AnimationFlags flags;
-    UnsignedByte started, stopped;
+    Nanoseconds startFirst, startThird;
     Int expected;
 } AdvanceOnceData[]{
     {"neither started or stopped",
-        {}, 0, 0, 1},
-    /* Second isn't advanced at all, so this affects nothing */
-    {"second started & stopped",
-        {}, 1 << 1, 1 << 1, 1},
-    /* It reacts only to the stopped bit, so only third is called */
-    {"first started, third stopped",
-        {}, 1 << 0, 1 << 2, 3},
+        {}, 20_nsec, 30_nsec, 1},
+    /* Since the animation is zero-length, there's no way to have an animation
+       just started or just stopped */
+    {"first started & stopped",
+        {}, 5_nsec, 30_nsec, 2},
+    /* Reversing has no effect on anything */
+    {"first started & stopped, reverse",
+        AnimationFlag::Reverse, 5_nsec, 30_nsec, 2},
+    {"third started & stopped",
+        {}, 20_nsec, 5_nsec, 3},
     /* Reversing has no effect on anything, same as above */
-    {"first started, third stopped, reverse",
-        AnimationFlag::Reverse, 1 << 0, 1 << 2, 3},
-    /* Having both the started and stopped bit should work also */
-    {"first stopped, third started & stopped",
-        {}, 1 << 2, (1 << 0)|(1 << 2), 2*3},
+    {"third started & stopped, reverse",
+        AnimationFlag::Reverse, 20_nsec, 5_nsec, 3},
+    {"first & third started & stopped",
+        {}, 5_nsec, 10_nsec, 6},
     /* Reversing has no effect on anything, same as above */
-    {"first stopped, third started & stopped, reverse",
-        AnimationFlag::Reverse, 1 << 2, (1 << 0)|(1 << 2), 2*3},
-    {"first started & stopped, third started",
-        {}, (1 << 0)|(1 << 3), 1 << 0, 2},
+    {"first & third started & stopped, reverse",
+        AnimationFlag::Reverse, 5_nsec, 10_nsec, 6},
 };
 
 GenericAnimatorTest::GenericAnimatorTest() {
@@ -1269,20 +1278,20 @@ void GenericAnimatorTest::advance() {
         animator.create([&first, &statesFirst](Float factor, GenericAnimationStates states) {
             first += factor;
             statesFirst |= states;
-        }, hundredTimes, 0_nsec, 10_nsec, data.flags);
+        }, hundredTimes, data.startFirst, data.durationFirst, data.flags);
     else
         animator.create([&first](Float factor) {
             first += factor;
-        }, hundredTimes, 0_nsec, 10_nsec, data.flags);
+        }, hundredTimes, data.startFirst, data.durationFirst, data.flags);
 
     if(data.states)
         animator.create([](Float, GenericAnimationStates) {
             CORRADE_FAIL("This shouldn't be called");
-        }, hundredTimes, 5_nsec, 15_nsec, data.flags);
+        }, hundredTimes, 20_nsec, 10_nsec, data.flags);
     else
         animator.create([](Float) {
             CORRADE_FAIL("This shouldn't be called");
-        }, hundredTimes, 5_nsec, 15_nsec, data.flags);
+        }, hundredTimes, 20_nsec, 10_nsec, data.flags);
 
     Float third = 0.0f;
     GenericAnimationStates statesThird;
@@ -1290,29 +1299,47 @@ void GenericAnimatorTest::advance() {
         animator.create([&third, &statesThird](Float factor, GenericAnimationStates states) {
             third += factor;
             statesThird |= states;
-        }, hundredTimes, 10_nsec, 5_nsec, data.flags);
+        }, hundredTimes, data.startThird, data.durationThird, data.flags);
     else
         animator.create([&third](Float factor) {
             third += factor;
-        }, hundredTimes, 10_nsec, 5_nsec, data.flags);
+        }, hundredTimes, data.startThird, data.durationThird, data.flags);
 
     /* Capture correct function name */
     CORRADE_VERIFY(true);
 
-    /* Should call just the first and third with given factors */
-    UnsignedByte active[]{(1 << 0)|(1 << 2)};
-    Float factors[]{0.75f, 0.42f, 0.25f};
-    animator.advance(
-        Containers::BitArrayView{active, 0, 3},
-        Containers::BitArrayView{&data.started, 0, 3},
-        Containers::BitArrayView{&data.stopped, 0, 3},
-        factors);
-    CORRADE_COMPARE(first, 75.0f);
-    CORRADE_COMPARE(third, 25.0f);
+    Containers::BitArray activeStorage{NoInit, 3};
+    Containers::BitArray startedStorage{NoInit, 3};
+    Containers::BitArray stoppedStorage{NoInit, 3};
+    Float factorStorage[3];
+    Containers::BitArray removeStorage{NoInit, 3};
+
+    /* Advance at 0 so it's possible to even have a state that has neither
+       Started nor Stopped set, clean everything after */
+    animator.advance(0_nsec,
+        activeStorage,
+        startedStorage,
+        stoppedStorage,
+        factorStorage,
+        removeStorage);
+    first = 0.0f;
+    third = 0.0f;
+    statesFirst = {};
+    statesThird = {};
+
+    /* Should call just the first and third with appropriate factors */
+    animator.advance(15_nsec,
+        activeStorage,
+        startedStorage,
+        stoppedStorage,
+        factorStorage,
+        removeStorage);
+    CORRADE_COMPARE(first, data.expectedFactorFirst);
+    CORRADE_COMPARE(third, data.expectedFactorThird);
     /* Comparing unconditionally to verify that we actually use the other
        overloads as well */
-    CORRADE_COMPARE(statesFirst, data.statesFirst);
-    CORRADE_COMPARE(statesThird, data.statesThird);
+    CORRADE_COMPARE(statesFirst, data.expectedStatesFirst);
+    CORRADE_COMPARE(statesThird, data.expectedStatesThird);
 }
 
 void GenericAnimatorTest::advanceNode() {
@@ -1328,21 +1355,21 @@ void GenericAnimatorTest::advanceNode() {
             CORRADE_COMPARE(node, nodeHandle(0xabcde, 0x123));
             first += factor;
             statesFirst |= states;
-        }, hundredTimes, 0_nsec, 10_nsec, nodeHandle(0xabcde, 0x123), data.flags);
+        }, hundredTimes, data.startFirst, data.durationFirst, nodeHandle(0xabcde, 0x123), data.flags);
     else
         animator.create([&first](NodeHandle node, Float factor) {
             CORRADE_COMPARE(node, nodeHandle(0xabcde, 0x123));
             first += factor;
-        }, hundredTimes, 0_nsec, 10_nsec, nodeHandle(0xabcde, 0x123), data.flags);
+        }, hundredTimes, data.startFirst, data.durationFirst, nodeHandle(0xabcde, 0x123), data.flags);
 
     if(data.states)
         animator.create([](NodeHandle, Float) {
             CORRADE_FAIL("This shouldn't be called");
-        }, hundredTimes, 5_nsec, 15_nsec, nodeHandle(0xedcba, 0x321), data.flags);
+        }, hundredTimes, 20_nsec, 10_nsec, nodeHandle(0xedcba, 0x321), data.flags);
     else
         animator.create([](NodeHandle, Float) {
             CORRADE_FAIL("This shouldn't be called");
-        }, hundredTimes, 5_nsec, 15_nsec, nodeHandle(0xedcba, 0x321), data.flags);
+        }, hundredTimes, 20_nsec, 10_nsec, nodeHandle(0xedcba, 0x321), data.flags);
 
     Float third = 0.0f;
     GenericAnimationStates statesThird;
@@ -1351,31 +1378,48 @@ void GenericAnimatorTest::advanceNode() {
             CORRADE_COMPARE(node, NodeHandle::Null);
             third += factor;
             statesThird |= states;
-        }, hundredTimes, 10_nsec, 5_nsec, NodeHandle::Null, data.flags);
+        }, hundredTimes, data.startThird, data.durationThird, NodeHandle::Null, data.flags);
     else
         animator.create([&third](NodeHandle node, Float factor) {
             CORRADE_COMPARE(node, NodeHandle::Null);
             third += factor;
-        }, hundredTimes, 10_nsec, 5_nsec, NodeHandle::Null, data.flags);
+        }, hundredTimes, data.startThird, data.durationThird, NodeHandle::Null, data.flags);
 
     /* Capture correct function name */
     CORRADE_VERIFY(true);
 
-    /* Should call just the first and third with given factors. The
-       started/stopped bits currently don't affect anything. */
-    UnsignedByte active[]{(1 << 0)|(1 << 2)};
-    Float factors[]{0.75f, 0.42f, 0.25f};
-    animator.advance(
-        Containers::BitArrayView{active, 0, 3},
-        Containers::BitArrayView{&data.started, 0, 3},
-        Containers::BitArrayView{&data.stopped, 0, 3},
-        factors);
-    CORRADE_COMPARE(first, 75.0f);
-    CORRADE_COMPARE(third, 25.0f);
+    Containers::BitArray activeStorage{NoInit, 3};
+    Containers::BitArray startedStorage{NoInit, 3};
+    Containers::BitArray stoppedStorage{NoInit, 3};
+    Float factorStorage[3];
+    Containers::BitArray removeStorage{NoInit, 3};
+
+    /* Advance at 0 so it's possible to even have a state that has neither
+       Started nor Stopped set, clean everything after */
+    animator.advance(0_nsec,
+        activeStorage,
+        startedStorage,
+        stoppedStorage,
+        factorStorage,
+        removeStorage);
+    first = 0.0f;
+    third = 0.0f;
+    statesFirst = {};
+    statesThird = {};
+
+    /* Should call just the first and third with appropriate factors */
+    animator.advance(15_nsec,
+        activeStorage,
+        startedStorage,
+        stoppedStorage,
+        factorStorage,
+        removeStorage);
+    CORRADE_COMPARE(first, data.expectedFactorFirst);
+    CORRADE_COMPARE(third, data.expectedFactorThird);
     /* Comparing unconditionally to verify that we actually use the other
        overloads as well */
-    CORRADE_COMPARE(statesFirst, data.statesFirst);
-    CORRADE_COMPARE(statesThird, data.statesThird);
+    CORRADE_COMPARE(statesFirst, data.expectedStatesFirst);
+    CORRADE_COMPARE(statesThird, data.expectedStatesThird);
 }
 
 void GenericAnimatorTest::advanceData() {
@@ -1398,21 +1442,21 @@ void GenericAnimatorTest::advanceData() {
             CORRADE_COMPARE(data, dataHandle(layerHandle(0xab, 0xcd), 0xabcde, 0x123));
             first += factor;
             statesFirst |= states;
-        }, hundredTimes, 0_nsec, 10_nsec, dataHandle(layer.handle(), 0xabcde, 0x123), data.flags);
+        }, hundredTimes, data.startFirst, data.durationFirst, dataHandle(layer.handle(), 0xabcde, 0x123), data.flags);
     else
         animator.create([&first](DataHandle data, Float factor) {
             CORRADE_COMPARE(data, dataHandle(layerHandle(0xab, 0xcd), 0xabcde, 0x123));
             first += factor;
-        }, hundredTimes, 0_nsec, 10_nsec, dataHandle(layer.handle(), 0xabcde, 0x123), data.flags);
+        }, hundredTimes, data.startFirst, data.durationFirst, dataHandle(layer.handle(), 0xabcde, 0x123), data.flags);
 
     if(data.states)
         animator.create([](DataHandle, Float, GenericAnimationStates) {
             CORRADE_FAIL("This shouldn't be called");
-        }, hundredTimes, 5_nsec, 15_nsec, dataHandle(layer.handle(), 0xedcba, 0x321), data.flags);
+        }, hundredTimes, 20_nsec, 10_nsec, dataHandle(layer.handle(), 0xedcba, 0x321), data.flags);
     else
         animator.create([](DataHandle, Float) {
             CORRADE_FAIL("This shouldn't be called");
-        }, hundredTimes, 5_nsec, 15_nsec, dataHandle(layer.handle(), 0xedcba, 0x321), data.flags);
+        }, hundredTimes, 20_nsec, 10_nsec, dataHandle(layer.handle(), 0xedcba, 0x321), data.flags);
 
     Float third = 0.0f;
     GenericAnimationStates statesThird;
@@ -1423,33 +1467,50 @@ void GenericAnimatorTest::advanceData() {
             CORRADE_COMPARE(data, DataHandle::Null);
             third += factor;
             statesThird |= states;
-        }, hundredTimes, 10_nsec, 5_nsec, LayerDataHandle::Null, data.flags);
+        }, hundredTimes, data.startThird, data.durationThird, LayerDataHandle::Null, data.flags);
     else
         animator.create([&third](DataHandle data, Float factor) {
             /* If there's no associated data, the layer handle shouldn't be
                added to the null LayerDataHandle */
             CORRADE_COMPARE(data, DataHandle::Null);
             third += factor;
-        }, hundredTimes, 10_nsec, 5_nsec, LayerDataHandle::Null, data.flags);
+        }, hundredTimes, data.startThird, data.durationThird, LayerDataHandle::Null, data.flags);
 
     /* Capture correct function name */
     CORRADE_VERIFY(true);
 
-    /* Should call just the first and third with given factors. The
-       started/stopped bits currently don't affect anything. */
-    UnsignedByte active[]{(1 << 0)|(1 << 2)};
-    Float factors[]{0.75f, 0.42f, 0.25f};
-    animator.advance(
-        Containers::BitArrayView{active, 0, 3},
-        Containers::BitArrayView{&data.started, 0, 3},
-        Containers::BitArrayView{&data.stopped, 0, 3},
-        factors);
-    CORRADE_COMPARE(first, 75.0f);
-    CORRADE_COMPARE(third, 25.0f);
+    Containers::BitArray activeStorage{NoInit, 3};
+    Containers::BitArray startedStorage{NoInit, 3};
+    Containers::BitArray stoppedStorage{NoInit, 3};
+    Float factorStorage[3];
+    Containers::BitArray removeStorage{NoInit, 3};
+
+    /* Advance at 0 so it's possible to even have a state that has neither
+       Started nor Stopped set, clean everything after */
+    animator.advance(0_nsec,
+        activeStorage,
+        startedStorage,
+        stoppedStorage,
+        factorStorage,
+        removeStorage);
+    first = 0.0f;
+    third = 0.0f;
+    statesFirst = {};
+    statesThird = {};
+
+    /* Should call just the first and third with appropriate factors */
+    animator.advance(15_nsec,
+        activeStorage,
+        startedStorage,
+        stoppedStorage,
+        factorStorage,
+        removeStorage);
+    CORRADE_COMPARE(first, data.expectedFactorFirst);
+    CORRADE_COMPARE(third, data.expectedFactorThird);
     /* Comparing unconditionally to verify that we actually use the other
        overloads as well */
-    CORRADE_COMPARE(statesFirst, data.statesFirst);
-    CORRADE_COMPARE(statesThird, data.statesThird);
+    CORRADE_COMPARE(statesFirst, data.expectedStatesFirst);
+    CORRADE_COMPARE(statesThird, data.expectedStatesThird);
 }
 
 void GenericAnimatorTest::advanceOnce() {
@@ -1461,28 +1522,43 @@ void GenericAnimatorTest::advanceOnce() {
     Int called = 1;
     animator.callOnce([&called]() {
         called *= 2;
-    }, 9_nsec, data.flags);
+    }, data.startFirst, data.flags);
 
     animator.callOnce([]() {
         CORRADE_FAIL("This shouldn't be called");
-    }, 2_nsec, data.flags);
+    }, 20_nsec, data.flags);
 
     animator.callOnce([&called]() {
         called *= 3;
-    }, 7_nsec, data.flags);
+    }, data.startThird, data.flags);
 
     /* Capture correct function name */
     CORRADE_VERIFY(true);
 
+    Containers::BitArray activeStorage{NoInit, 3};
+    Containers::BitArray startedStorage{NoInit, 3};
+    Containers::BitArray stoppedStorage{NoInit, 3};
+    Float factorStorage[3];
+    Containers::BitArray removeStorage{NoInit, 3};
+
+    /* Advance at 0 so it's possible to even have a state that has neither
+       Started nor Stopped set, clean everything after */
+    animator.advance(0_nsec,
+        activeStorage,
+        startedStorage,
+        stoppedStorage,
+        factorStorage,
+        removeStorage);
+    called = 1;
+
     /* Should call just the first and third. Factors are not used, only the
        started/stopped bits should affect the output. */
-    UnsignedByte active[]{(1 << 0)|(1 << 2)};
-    Float factors[3]{};
-    animator.advance(
-        Containers::BitArrayView{active, 0, 3},
-        Containers::BitArrayView{&data.started, 0, 3},
-        Containers::BitArrayView{&data.stopped, 0, 3},
-        factors);
+    animator.advance(15_nsec,
+        activeStorage,
+        startedStorage,
+        stoppedStorage,
+        factorStorage,
+        removeStorage);
     CORRADE_COMPARE(called, data.expected);
 }
 
@@ -1496,29 +1572,44 @@ void GenericAnimatorTest::advanceOnceNode() {
     animator.callOnce([&called](NodeHandle node) {
         CORRADE_COMPARE(node, nodeHandle(0xabcde, 0x123));
         called *= 2;
-    }, 9_nsec, nodeHandle(0xabcde, 0x123), data.flags);
+    }, data.startFirst, nodeHandle(0xabcde, 0x123), data.flags);
 
     animator.callOnce([](NodeHandle) {
         CORRADE_FAIL("This shouldn't be called");
-    }, 2_nsec, nodeHandle(0xedcba, 0x321), data.flags);
+    }, 20_nsec, nodeHandle(0xedcba, 0x321), data.flags);
 
     animator.callOnce([&called](NodeHandle node) {
         CORRADE_COMPARE(node, NodeHandle::Null);
         called *= 3;
-    }, 7_nsec, NodeHandle::Null, data.flags);
+    }, data.startThird, NodeHandle::Null, data.flags);
 
     /* Capture correct function name */
     CORRADE_VERIFY(true);
 
+    Containers::BitArray activeStorage{NoInit, 3};
+    Containers::BitArray startedStorage{NoInit, 3};
+    Containers::BitArray stoppedStorage{NoInit, 3};
+    Float factorStorage[3];
+    Containers::BitArray removeStorage{NoInit, 3};
+
+    /* Advance at 0 so it's possible to even have a state that has neither
+       Started nor Stopped set, clean everything after */
+    animator.advance(0_nsec,
+        activeStorage,
+        startedStorage,
+        stoppedStorage,
+        factorStorage,
+        removeStorage);
+    called = 1;
+
     /* Should call just the first and third. Factors are not used, only the
        started/stopped bits should affect the output. */
-    UnsignedByte active[]{(1 << 0)|(1 << 2)};
-    Float factors[3]{};
-    animator.advance(
-        Containers::BitArrayView{active, 0, 3},
-        Containers::BitArrayView{&data.started, 0, 3},
-        Containers::BitArrayView{&data.stopped, 0, 3},
-        factors);
+    animator.advance(15_nsec,
+        activeStorage,
+        startedStorage,
+        stoppedStorage,
+        factorStorage,
+        removeStorage);
     CORRADE_COMPARE(called, data.expected);
 }
 
@@ -1539,37 +1630,52 @@ void GenericAnimatorTest::advanceOnceData() {
     animator.callOnce([&called](DataHandle data) {
         CORRADE_COMPARE(data, dataHandle(layerHandle(0xab, 0xcd), 0xabcde, 0x123));
         called *= 2;
-    }, 9_nsec, dataHandle(layer.handle(), 0xabcde, 0x123), data.flags);
+    }, data.startFirst, dataHandle(layer.handle(), 0xabcde, 0x123), data.flags);
 
     animator.callOnce([](DataHandle) {
         CORRADE_FAIL("This shouldn't be called");
-    }, 2_nsec, dataHandle(layer.handle(), 0xedcba, 0x321), data.flags);
+    }, 20_nsec, dataHandle(layer.handle(), 0xedcba, 0x321), data.flags);
 
     animator.callOnce([&called](DataHandle data) {
         /* If there's no associated data, the layer handle shouldn't be added
            to the null LayerDataHandle */
         CORRADE_COMPARE(data, DataHandle::Null);
         called *= 3;
-    }, 7_nsec, LayerDataHandle::Null, data.flags);
+    }, data.startThird, LayerDataHandle::Null, data.flags);
 
     /* Capture correct function name */
     CORRADE_VERIFY(true);
 
+    Containers::BitArray activeStorage{NoInit, 3};
+    Containers::BitArray startedStorage{NoInit, 3};
+    Containers::BitArray stoppedStorage{NoInit, 3};
+    Float factorStorage[3];
+    Containers::BitArray removeStorage{NoInit, 3};
+
+    /* Advance at 0 so it's possible to even have a state that has neither
+       Started nor Stopped set, clean everything after */
+    animator.advance(0_nsec,
+        activeStorage,
+        startedStorage,
+        stoppedStorage,
+        factorStorage,
+        removeStorage);
+    called = 1;
+
     /* Should call just the first and third. Factors are not used, only the
        started/stopped bits should affect the output. */
-    UnsignedByte active[]{(1 << 0)|(1 << 2)};
-    Float factors[3]{};
-    animator.advance(
-        Containers::BitArrayView{active, 0, 3},
-        Containers::BitArrayView{&data.started, 0, 3},
-        Containers::BitArrayView{&data.stopped, 0, 3},
-        factors);
+    animator.advance(15_nsec,
+        activeStorage,
+        startedStorage,
+        stoppedStorage,
+        factorStorage,
+        removeStorage);
     CORRADE_COMPARE(called, data.expected);
 }
 
 void GenericAnimatorTest::advanceEmpty() {
     GenericAnimator animator{animatorHandle(0, 1)};
-    animator.advance({}, {}, {}, {});
+    animator.advance({}, {}, {}, {}, {}, {});
 
     /* Shouldn't crash or anything */
     CORRADE_VERIFY(true);
@@ -1577,7 +1683,7 @@ void GenericAnimatorTest::advanceEmpty() {
 
 void GenericAnimatorTest::advanceEmptyNode() {
     GenericNodeAnimator animator{animatorHandle(0, 1)};
-    animator.advance({}, {}, {}, {});
+    animator.advance({}, {}, {}, {}, {}, {});
 
     /* Shouldn't crash or anything */
     CORRADE_VERIFY(true);
@@ -1586,7 +1692,7 @@ void GenericAnimatorTest::advanceEmptyNode() {
 void GenericAnimatorTest::advanceEmptyData() {
     /* This should work even with no layer being set */
     GenericDataAnimator animator{animatorHandle(0, 1)};
-    animator.advance({}, {}, {}, {});
+    animator.advance({}, {}, {}, {}, {}, {});
 
     /* Shouldn't crash or anything */
     CORRADE_VERIFY(true);

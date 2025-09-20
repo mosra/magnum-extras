@@ -1438,13 +1438,21 @@ void AbstractGenericAnimator::setLayer(const AbstractLayer& layer) {
     setLayerInternal(layer);
 }
 
-void AbstractGenericAnimator::advance(const Containers::BitArrayView active, const Containers::BitArrayView started, const Containers::BitArrayView stopped, const Containers::StridedArrayView1D<const Float>& factors) {
-    CORRADE_ASSERT(active.size() == capacity() &&
-                   started.size() == capacity() &&
-                   stopped.size() == capacity() &&
-                   factors.size() == capacity(),
-        "Ui::AbstractGenericAnimator::advance(): expected active, started, stopped and factors views to have a size of" << capacity() << "but got" << active.size() << Debug::nospace << "," << started.size() << Debug::nospace << "," << stopped.size() << "and" << factors.size(), );
-    doAdvance(active, started, stopped, factors);
+void AbstractGenericAnimator::advance(const Nanoseconds time, const Containers::MutableBitArrayView activeStorage, const Containers::MutableBitArrayView startedStorage, const Containers::MutableBitArrayView stoppedStorage, const Containers::StridedArrayView1D<Float>& factorStorage, const Containers::MutableBitArrayView removeStorage) {
+    /* The time and *Storage fields are checked inside update(), no need to
+       repeat the check here again, especially since it's an internal API */
+
+    const Containers::Pair<bool, bool> needsAdvanceClean = update(time,
+        activeStorage,
+        startedStorage,
+        stoppedStorage,
+        factorStorage,
+        removeStorage);
+
+    if(needsAdvanceClean.first())
+        doAdvance(activeStorage, startedStorage, stoppedStorage, factorStorage);
+    if(needsAdvanceClean.second())
+        clean(removeStorage);
 }
 
 AbstractNodeAnimator::AbstractNodeAnimator(AnimatorHandle handle): AbstractAnimator{handle} {}
@@ -1459,18 +1467,28 @@ AnimatorFeatures AbstractNodeAnimator::doFeatures() const {
     return AnimatorFeature::NodeAttachment;
 }
 
-NodeAnimatorUpdates AbstractNodeAnimator::advance(const Containers::BitArrayView active, const Containers::BitArrayView started, const Containers::BitArrayView stopped, const Containers::StridedArrayView1D<const Float>& factors, const Containers::StridedArrayView1D<Vector2>& nodeOffsets, const Containers::StridedArrayView1D<Vector2>& nodeSizes, const Containers::StridedArrayView1D<Float>& nodeOpacities, const Containers::StridedArrayView1D<NodeFlags>& nodeFlags, const Containers::MutableBitArrayView nodesRemove) {
-    CORRADE_ASSERT(active.size() == capacity() &&
-                   started.size() == capacity() &&
-                   stopped.size() == capacity() &&
-                   factors.size() == capacity(),
-        "Ui::AbstractNodeAnimator::advance(): expected active, started, stopped and factors views to have a size of" << capacity() << "but got" << active.size() << Debug::nospace << "," << started.size() << Debug::nospace << "," << stopped.size() << "and" << factors.size(), {});
+NodeAnimatorUpdates AbstractNodeAnimator::advance(const Nanoseconds time, const Containers::MutableBitArrayView activeStorage, const Containers::MutableBitArrayView startedStorage, const Containers::MutableBitArrayView stoppedStorage, const Containers::StridedArrayView1D<Float>& factorStorage, const Containers::MutableBitArrayView removeStorage, const Containers::StridedArrayView1D<Vector2>& nodeOffsets, const Containers::StridedArrayView1D<Vector2>& nodeSizes, const Containers::StridedArrayView1D<Float>& nodeOpacities, const Containers::StridedArrayView1D<NodeFlags>& nodeFlags, const Containers::MutableBitArrayView nodesRemove) {
+    /* The time and *Storage fields are checked inside update(), no need to
+       repeat the check here again, especially since it's an internal API */
     CORRADE_ASSERT(nodeOffsets.size() == nodeSizes.size() &&
                    nodeOpacities.size() == nodeSizes.size() &&
                    nodeFlags.size() == nodeSizes.size() &&
                    nodesRemove.size() == nodeSizes.size(),
         "Ui::AbstractNodeAnimator::advance(): expected node offset, size, opacity, flags and remove views to have the same size but got" << nodeOffsets.size() << Debug::nospace << "," << nodeSizes.size() << Debug::nospace << "," << nodeOpacities.size() << Debug::nospace << "," << nodeFlags.size() << "and" << nodesRemove.size(), {});
-    return doAdvance(active, started, stopped, factors, nodeOffsets, nodeSizes, nodeOpacities, nodeFlags, nodesRemove);
+
+    const Containers::Pair<bool, bool> needsAdvanceClean = update(time,
+        activeStorage,
+        startedStorage,
+        stoppedStorage,
+        factorStorage,
+        removeStorage);
+
+    NodeAnimatorUpdates updates;
+    if(needsAdvanceClean.first())
+        updates = doAdvance(activeStorage, startedStorage, stoppedStorage, factorStorage, nodeOffsets, nodeSizes, nodeOpacities, nodeFlags, nodesRemove);
+    if(needsAdvanceClean.second())
+        clean(removeStorage);
+    return updates;
 }
 
 AbstractDataAnimator::AbstractDataAnimator(AnimatorHandle handle): AbstractAnimator{handle} {}

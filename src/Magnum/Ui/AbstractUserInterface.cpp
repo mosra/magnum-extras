@@ -2582,21 +2582,12 @@ AbstractUserInterface& AbstractUserInterface::advanceAnimations(const Nanosecond
                 return;
 
             const std::size_t capacity = instance.capacity();
-            const Containers::Pair<bool, bool> needsAdvanceClean = instance.update(time,
+            static_cast<AbstractGenericAnimator&>(instance).advance(time,
                 active.prefix(capacity),
                 started.prefix(capacity),
                 stopped.prefix(capacity),
                 factors.prefix(capacity),
                 remove.prefix(capacity));
-
-            if(needsAdvanceClean.first())
-                static_cast<AbstractGenericAnimator&>(instance).advance(
-                    active.prefix(capacity),
-                    started.prefix(capacity),
-                    stopped.prefix(capacity),
-                    factors.prefix(capacity));
-            if(needsAdvanceClean.second())
-                instance.clean(remove.prefix(capacity));
         };
 
         /* Go through all generic animators with neither NodeAttachment nor
@@ -2628,26 +2619,17 @@ AbstractUserInterface& AbstractUserInterface::advanceAnimations(const Nanosecond
                 continue;
 
             const std::size_t capacity = instance.capacity();
-            const Containers::Pair<bool, bool> needsAdvanceClean = instance.update(time,
+            nodeAnimatorUpdates |= static_cast<AbstractNodeAnimator&>(instance).advance(time,
                 active.prefix(capacity),
                 started.prefix(capacity),
                 stopped.prefix(capacity),
                 factors.prefix(capacity),
-                remove.prefix(capacity));
-
-            if(needsAdvanceClean.first())
-                nodeAnimatorUpdates |= static_cast<AbstractNodeAnimator&>(instance).advance(
-                    active.prefix(capacity),
-                    started.prefix(capacity),
-                    stopped.prefix(capacity),
-                    factors.prefix(capacity),
-                    nodeOffsets,
-                    nodeSizes,
-                    nodeOpacities,
-                    nodeFlags,
-                    nodesRemove);
-            if(needsAdvanceClean.second())
-                instance.clean(remove.prefix(capacity));
+                remove.prefix(capacity),
+                nodeOffsets,
+                nodeSizes,
+                nodeOpacities,
+                nodeFlags,
+                nodesRemove);
         }
 
         /* Propagate to the global state */
