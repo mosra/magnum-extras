@@ -138,26 +138,30 @@ const struct {
     const char* name;
     AnimationFlags firstAnimationFlags;
     UnsignedInt firstAnimationRepeatCount;
-    bool noFreeDynamicStyles;
+    bool secondAnimationReverse, noFreeDynamicStyles;
     Containers::Optional<UnsignedInt> expectedSecondDynamicStyle;
     UnsignedInt expectedDynamicStyleCount;
 } AdvanceConflictingAnimationsData[]{
     {"",
-        {}, 1, false, 1, 1},
+        {}, 1, false, false, 1, 1},
     {"no free dynamic styles",
-        {}, 1, true, 0, 2},
+        {}, 1, false, true, 0, 2},
+    {"second animation reversed",
+        {}, 1, true, false, 1, 1},
+    {"second animation reversed, no free dynamic styles",
+        {}, 1, true, true, 0, 2},
     {"first animation KeepOncePlayed",
-        AnimationFlag::KeepOncePlayed, 1, false, 1, 1},
+        AnimationFlag::KeepOncePlayed, 1, false, false, 1, 1},
     {"first animation KeepOncePlayed, no free dynamic styles",
-        AnimationFlag::KeepOncePlayed, 1, true, 0, 2},
+        AnimationFlag::KeepOncePlayed, 1, false, true, 0, 2},
     {"first animation endlessly repeating",
-        {}, 0, false, 1, 1},
+        {}, 0, false, false, 1, 1},
     {"first animation endlessly repeating, no free dynamic styles",
-        {}, 0, true, 0, 2},
+        {}, 0, false, true, 0, 2},
     {"first animation endlessly repeating, KeepOncePlayed",
-        AnimationFlag::KeepOncePlayed, 0, false, 1, 2},
+        AnimationFlag::KeepOncePlayed, 0, false, false, 1, 2},
     {"first animation endlessly repeating, KeepOncePlayed, no free dynamic styles",
-        AnimationFlag::KeepOncePlayed, 0, true, {}, 2},
+        AnimationFlag::KeepOncePlayed, 0, false, true, {}, 2},
 };
 
 const struct {
@@ -1403,9 +1407,14 @@ void BaseLayerStyleAnimatorTest::advanceConflictingAnimations() {
     layer.create(3);
     DataHandle data2 = layer.create(3);
 
-    AnimationHandle first, second;
-    first = animator.create(0, 1, Animation::Easing::linear, 0_nsec, 20_nsec, data2, data.firstAnimationRepeatCount, data.firstAnimationFlags);
-    second = animator.create(2, 1, Animation::Easing::linear, 10_nsec, 40_nsec, data2);
+    AnimationHandle first = animator.create(0, 1, Animation::Easing::linear, 0_nsec, 20_nsec, data2, data.firstAnimationRepeatCount, data.firstAnimationFlags);
+    /* If there are no free dynamic styles, the data should get style 2 both in
+       the forward and reverse case */
+    AnimationHandle second = animator.create(
+        data.secondAnimationReverse ? 1 : 2,
+        data.secondAnimationReverse ? 2 : 1,
+        Animation::Easing::linear, 10_nsec, 40_nsec, data2,
+        data.secondAnimationReverse ? AnimationFlag::Reverse : AnimationFlags{});
 
     /* Set the style after animation creation to verify it isn't needed
        earlier */
