@@ -362,6 +362,11 @@ class MAGNUM_UI_EXPORT AbstractVisualLayer: public AbstractLayer {
         MAGNUM_UI_LOCAL void setStyleInternal(UnsignedInt id, UnsignedInt style);
         MAGNUM_UI_LOCAL void setTransitionedStyleInternal(const AbstractUserInterface& ui, LayerDataHandle handle, UnsignedInt style);
         MAGNUM_UI_LOCAL UnsignedInt styleOrAnimationTargetStyle(UnsignedInt style) const;
+        MAGNUM_UI_LOCAL void transitionStyle(
+            #ifndef CORRADE_NO_ASSERT
+            const char* messagePrefix,
+            #endif
+            UnsignedInt dataId, UnsignedInt(*const transition)(UnsignedInt));
 
         /* Can't be MAGNUM_UI_LOCAL otherwise deriving from this class in
            tests causes linker errors */

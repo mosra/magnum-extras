@@ -3692,7 +3692,7 @@ void AbstractVisualLayerTest::eventStyleTransitionOutOfRange() {
 
     AbstractUserInterface ui{{100, 100}};
 
-    NodeHandle node = ui.createNode({1.0f, 1.0f}, {2.0f, 2.0f}, NodeFlag::Focusable);
+    NodeHandle node = ui.createNode({1.0f, 1.0f}, {2.0f, 2.0f});
 
     StyleLayer& layer = ui.setLayerInstance(Containers::pointer<StyleLayer>(ui.createLayer(), shared));
 
@@ -3748,9 +3748,12 @@ void AbstractVisualLayerTest::eventStyleTransitionOutOfRange() {
         styleIndexTransitionOutOfRange,
         styleIndexTransitionToDisabledDoNotCall>();
     {
-        /* Doing a (non-asserting) move before so the hovered node is properly
-           registered. Which then for dynamic animated styles needs to be
-           followed by an animation that puts it back into the targetStyle. */
+        /* Doing a (non-asserting) release & move before so the node is
+           properly registered as not pressed but hovered. Which then for
+           dynamic animated styles needs to be followed by an animation that
+           puts it back into the targetStyle. */
+        PointerEvent releaseEvent{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
+        ui.pointerReleaseEvent({2.0f, 2.0f}, releaseEvent);
         PointerMoveEvent moveEvent{{}, PointerEventSource::Mouse, {}, {}, true, 0, {}};
         ui.pointerMoveEvent({1.5f, 2.0f}, moveEvent);
         if(data.dynamicAnimated) {
@@ -3778,12 +3781,25 @@ void AbstractVisualLayerTest::eventStyleTransitionOutOfRange() {
         styleIndexTransitionToPressedOver,
         styleIndexTransitionToDisabledDoNotCall>();
     {
+        /* Doing a (non-asserting) press before so the node is properly
+           registered as pressed and hovered. Which then for dynamic animated
+           styles needs to be followed by an animation that puts it back into
+           the targetStyle. */
+        PointerEvent pressEvent{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
+        ui.pointerPressEvent({2.0f, 2.0f}, pressEvent);
+        if(data.dynamicAnimated) {
+            layer.recycleDynamicStyle(0);
+            AnimationHandle nodeDataAnimation = animator->create(StyleIndex{}, StyleIndex::RedPressedHover, -100_nsec, 1_nsec, DataHandle::Null, AnimationFlag::KeepOncePlayed);
+            layer.setStyle(nodeData, StyleCount + *layer.allocateDynamicStyle(nodeDataAnimation));
+            CORRADE_COMPARE(animator->styles<StyleIndex>(nodeDataAnimation).second(), StyleIndex::RedPressedHover);
+        }
+
         PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
 
         Containers::String out;
         Error redirectError{&out};
         ui.pointerReleaseEvent({1.5f, 2.5f}, event);
-        CORRADE_COMPARE(out, Utility::format("Ui::AbstractVisualLayer::pointerReleaseEvent(): style transition from {0} to {1} out of range for {1} styles\n", UnsignedInt(StyleIndex::RedHover), StyleCount));
+        CORRADE_COMPARE(out, Utility::format("Ui::AbstractVisualLayer::pointerReleaseEvent(): style transition from {0} to {1} out of range for {1} styles\n", UnsignedInt(StyleIndex::RedPressedHover), StyleCount));
     }
 
     /* OOB toInactiveOut transition in the leave event */
@@ -3801,7 +3817,7 @@ void AbstractVisualLayerTest::eventStyleTransitionOutOfRange() {
         Containers::String out;
         Error redirectError{&out};
         ui.pointerMoveEvent({8.5f, 2.0f}, event);
-        CORRADE_COMPARE(out, Utility::format("Ui::AbstractVisualLayer::pointerLeaveEvent(): style transition from {0} to {1} out of range for {1} styles\n", UnsignedInt(StyleIndex::RedHover), StyleCount));
+        CORRADE_COMPARE(out, Utility::format("Ui::AbstractVisualLayer::pointerLeaveEvent(): style transition from {0} to {1} out of range for {1} styles\n", UnsignedInt(StyleIndex::RedPressedHover), StyleCount));
     }
 
     /* OOB toInactiveOver transition in the enter event */
@@ -3819,8 +3835,10 @@ void AbstractVisualLayerTest::eventStyleTransitionOutOfRange() {
         Containers::String out;
         Error redirectError{&out};
         ui.pointerMoveEvent({1.5f, 2.0f}, event);
-        CORRADE_COMPARE(out, Utility::format("Ui::AbstractVisualLayer::pointerEnterEvent(): style transition from {0} to {1} out of range for {1} styles\n", UnsignedInt(StyleIndex::RedHover), StyleCount));
+        CORRADE_COMPARE(out, Utility::format("Ui::AbstractVisualLayer::pointerEnterEvent(): style transition from {0} to {1} out of range for {1} styles\n", UnsignedInt(StyleIndex::RedPressedHover), StyleCount));
     }
+
+    ui.addNodeFlags(node, NodeFlag::Focusable);
 
     /* OOB toFocusedOver transition in the focus event */
     shared.setStyleTransition<StyleIndex,
@@ -3837,7 +3855,7 @@ void AbstractVisualLayerTest::eventStyleTransitionOutOfRange() {
         Containers::String out;
         Error redirectError{&out};
         ui.focusEvent(node, event);
-        CORRADE_COMPARE(out, Utility::format("Ui::AbstractVisualLayer::focusEvent(): style transition from {0} to {1} out of range for {1} styles\n", UnsignedInt(StyleIndex::RedHover), StyleCount));
+        CORRADE_COMPARE(out, Utility::format("Ui::AbstractVisualLayer::focusEvent(): style transition from {0} to {1} out of range for {1} styles\n", UnsignedInt(StyleIndex::RedPressedHover), StyleCount));
     }
 
     /* OOB toInactiveOver transition in the blur event. Doing a

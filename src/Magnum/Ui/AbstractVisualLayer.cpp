@@ -319,6 +319,8 @@ void AbstractVisualLayer::doUpdate(const LayerStates states, const Containers::S
             const Containers::StridedArrayView1D<const NodeHandle> nodes = this->nodes();
             const UnsignedInt styleCount = sharedState.styleCount;
             for(const UnsignedInt id: dataIds) {
+                /* Can't use the transitionStyle() helper here as it updates
+                   state.styles and not state.calculatedStyles */
                 const UnsignedInt style = state.styles[id];
 
                 /* If the style is dynamic, maybe it has an animation with a
@@ -389,6 +391,36 @@ UnsignedInt AbstractVisualLayer::styleOrAnimationTargetStyle(const UnsignedInt s
     return style;
 }
 
+void AbstractVisualLayer::transitionStyle(
+    #ifndef CORRADE_NO_ASSERT
+    const char* messagePrefix,
+    #endif
+    const UnsignedInt dataId, UnsignedInt(*const transition)(UnsignedInt)
+) {
+    const State& state = *_state;
+    const Shared::State& sharedState = state.shared;
+    CORRADE_INTERNAL_DEBUG_ASSERT(state.styles.size() == capacity());
+    UnsignedInt& style = state.styles[dataId];
+
+    /* If the style is dynamic, maybe it has an animation with a target style
+       index assigned, which we can use as the (soon-to-be-)current style index
+       to transition from. If not, there's nothing to transition. */
+    const UnsignedInt currentStyle = styleOrAnimationTargetStyle(style);
+    if(currentStyle >= sharedState.styleCount)
+        return;
+
+    const UnsignedInt nextStyle = transition(currentStyle);
+    CORRADE_ASSERT(nextStyle < sharedState.styleCount,
+        messagePrefix << "style transition from" << currentStyle << "to" << nextStyle << "out of range for" << sharedState.styleCount << "styles", );
+
+    /* If the next style is the same as the current, nothing left to do */
+    if(nextStyle == currentStyle)
+        return;
+
+    style = nextStyle;
+    setNeedsUpdate(LayerState::NeedsDataUpdate);
+}
+
 void AbstractVisualLayer::doPointerPressEvent(const UnsignedInt dataId, PointerEvent& event) {
     /* Not dealing with fallthrough events; only reacting to primary pointer
        types typically used to click/tap on things */
@@ -398,36 +430,20 @@ void AbstractVisualLayer::doPointerPressEvent(const UnsignedInt dataId, PointerE
          event.pointer() != Pointer::Pen))
         return;
 
-    const State& state = *_state;
-    const Shared::State& sharedState = state.shared;
-    CORRADE_INTERNAL_DEBUG_ASSERT(state.styles.size() == capacity());
-    UnsignedInt& style = state.styles[dataId];
-
-    /* If the style is dynamic, maybe it has an animation with a target style
-       index assigned, which we can use as the (soon-to-be-)current style index
-       to transition from. */
-    const UnsignedInt currentStyle = styleOrAnimationTargetStyle(style);
-
-    /* Transition the style to pressed if it's not dynamic */
-    if(currentStyle < sharedState.styleCount) {
-        /* A press can be not hovering if it happened without a preceding move
-           event (such as for pointer types that don't support hover like
-           touches, or if move events aren't propagated from the
-           application). Pressed state has a priority over focused state, so
-           isNodeFocused() is ignored in this case. */
-        UnsignedInt(*const transition)(UnsignedInt) = event.isNodeHovered() ?
-            sharedState.styleTransitionToPressedOver :
-            sharedState.styleTransitionToPressedOut;
-        const UnsignedInt nextStyle = transition(currentStyle);
-        CORRADE_ASSERT(nextStyle < sharedState.styleCount,
-            "Ui::AbstractVisualLayer::pointerPressEvent(): style transition from" << currentStyle << "to" << nextStyle << "out of range for" << sharedState.styleCount << "styles", );
-        /* If the transitioned style is different from the current one (or the
-           one that's the animation target), update it */
-        if(nextStyle != currentStyle) {
-            style = nextStyle;
-            setNeedsUpdate(LayerState::NeedsDataUpdate);
-        }
-    }
+    /* Transition the style to pressed. A press can be not hovering if it
+       happened without a preceding move event (such as for pointer types that
+       don't support hover like touches, or if move events aren't propagated
+       from the application). Pressed state has a priority over focused state,
+       so isNodeFocused() is ignored in this case. */
+    const Shared::State& sharedState = _state->shared;
+    UnsignedInt(*const transition)(UnsignedInt) = event.isNodeHovered() ?
+        sharedState.styleTransitionToPressedOver :
+        sharedState.styleTransitionToPressedOut;
+    transitionStyle(
+        #ifndef CORRADE_NO_ASSERT
+        "Ui::AbstractVisualLayer::pointerPressEvent():",
+        #endif
+        dataId, transition);
 
     event.setAccepted();
 }
@@ -441,39 +457,23 @@ void AbstractVisualLayer::doPointerReleaseEvent(const UnsignedInt dataId, Pointe
          event.pointer() != Pointer::Pen))
         return;
 
-    const State& state = *_state;
-    const Shared::State& sharedState = state.shared;
-    CORRADE_INTERNAL_DEBUG_ASSERT(state.styles.size() == capacity());
-    UnsignedInt& style = state.styles[dataId];
-
-    /* If the style is dynamic, maybe it has an animation with a target style
-       index assigned, which we can use as the (soon-to-be-)current style index
-       to transition from. */
-    const UnsignedInt currentStyle = styleOrAnimationTargetStyle(style);
-
-    /* Transition the style to released if it's not dynamic */
-    if(currentStyle < sharedState.styleCount) {
-        /* A release can be not hovering if it happened without a preceding
-           move event (such as for pointer types that don't support hover like
-           touches, or if move events aren't propagated from the
-           application) */
-        UnsignedInt(*const transition)(UnsignedInt) = event.isNodeFocused() ?
-            event.isNodeHovered() ?
-                sharedState.styleTransitionToFocusedOver :
-                sharedState.styleTransitionToFocusedOut :
-            event.isNodeHovered() ?
-                sharedState.styleTransitionToInactiveOver :
-                sharedState.styleTransitionToInactiveOut;
-        const UnsignedInt nextStyle = transition(currentStyle);
-        CORRADE_ASSERT(nextStyle < sharedState.styleCount,
-            "Ui::AbstractVisualLayer::pointerReleaseEvent(): style transition from" << currentStyle << "to" << nextStyle << "out of range for" << sharedState.styleCount << "styles", );
-        /* If the transitioned style is different from the current one (or the
-           one that's the animation target), update it */
-        if(nextStyle != currentStyle) {
-            style = nextStyle;
-            setNeedsUpdate(LayerState::NeedsDataUpdate);
-        }
-    }
+    /* Transition the style to released. A release can be not hovering if it
+       happened without a preceding move event (such as for pointer types that
+       don't support hover like touches, or if move events aren't propagated
+       from the application) */
+    const Shared::State& sharedState = _state->shared;
+    UnsignedInt(*const transition)(UnsignedInt) = event.isNodeFocused() ?
+        event.isNodeHovered() ?
+            sharedState.styleTransitionToFocusedOver :
+            sharedState.styleTransitionToFocusedOut :
+        event.isNodeHovered() ?
+            sharedState.styleTransitionToInactiveOver :
+            sharedState.styleTransitionToInactiveOut;
+    transitionStyle(
+        #ifndef CORRADE_NO_ASSERT
+        "Ui::AbstractVisualLayer::pointerReleaseEvent():",
+        #endif
+        dataId, transition);
 
     event.setAccepted();
 }
@@ -493,32 +493,17 @@ void AbstractVisualLayer::doPointerEnterEvent(const UnsignedInt dataId, PointerM
        just assume they never arrive */
     CORRADE_INTERNAL_DEBUG_ASSERT(!event.isFallthrough());
 
-    const State& state = *_state;
-    const Shared::State& sharedState = state.shared;
-    CORRADE_INTERNAL_DEBUG_ASSERT(state.styles.size() == capacity());
-    UnsignedInt& style = state.styles[dataId];
-
-    /* If the style is dynamic, maybe it has an animation with a target style
-       index assigned, which we can use as the (soon-to-be-)current style index
-       to transition from. */
-    const UnsignedInt currentStyle = styleOrAnimationTargetStyle(style);
-
-    /* Transition the style to over if it's not dynamic */
-    if(currentStyle < sharedState.styleCount) {
-        UnsignedInt(*const transition)(UnsignedInt) = event.isCaptured() ?
-            sharedState.styleTransitionToPressedOver : event.isNodeFocused() ?
-                sharedState.styleTransitionToFocusedOver :
-                sharedState.styleTransitionToInactiveOver;
-        const UnsignedInt nextStyle = transition(currentStyle);
-        CORRADE_ASSERT(nextStyle < sharedState.styleCount,
-            "Ui::AbstractVisualLayer::pointerEnterEvent(): style transition from" << currentStyle << "to" << nextStyle << "out of range for" << sharedState.styleCount << "styles", );
-        /* If the transitioned style is different from the current one (or the
-           one that's the animation target), update it */
-        if(nextStyle != currentStyle) {
-            style = nextStyle;
-            setNeedsUpdate(LayerState::NeedsDataUpdate);
-        }
-    }
+    /* Transition the style to over */
+    const Shared::State& sharedState = _state->shared;
+    UnsignedInt(*const transition)(UnsignedInt) = event.isCaptured() ?
+        sharedState.styleTransitionToPressedOver : event.isNodeFocused() ?
+            sharedState.styleTransitionToFocusedOver :
+            sharedState.styleTransitionToInactiveOver;
+    transitionStyle(
+        #ifndef CORRADE_NO_ASSERT
+        "Ui::AbstractVisualLayer::pointerEnterEvent():",
+        #endif
+        dataId, transition);
 }
 
 void AbstractVisualLayer::doPointerLeaveEvent(const UnsignedInt dataId, PointerMoveEvent& event) {
@@ -526,116 +511,59 @@ void AbstractVisualLayer::doPointerLeaveEvent(const UnsignedInt dataId, PointerM
        just assume they never arrive */
     CORRADE_INTERNAL_DEBUG_ASSERT(!event.isFallthrough());
 
-    const State& state = *_state;
-    const Shared::State& sharedState = state.shared;
-    CORRADE_INTERNAL_DEBUG_ASSERT(state.styles.size() == capacity());
-    UnsignedInt& style = state.styles[dataId];
-
-    /* If the style is dynamic, maybe it has an animation with a target style
-       index assigned, which we can use as the (soon-to-be-)current style index
-       to transition from. */
-    const UnsignedInt currentStyle = styleOrAnimationTargetStyle(style);
-
-    /* Transition the style to out if it's not dynamic */
-    if(currentStyle < sharedState.styleCount) {
-        UnsignedInt(*const transition)(UnsignedInt) = event.isCaptured() ?
-            sharedState.styleTransitionToPressedOut : event.isNodeFocused() ?
-                sharedState.styleTransitionToFocusedOut :
-                sharedState.styleTransitionToInactiveOut;
-        const UnsignedInt nextStyle = transition(currentStyle);
-        CORRADE_ASSERT(nextStyle < sharedState.styleCount,
-            "Ui::AbstractVisualLayer::pointerLeaveEvent(): style transition from" << currentStyle << "to" << nextStyle << "out of range for" << sharedState.styleCount << "styles", );
-        /* If the transitioned style is different from the current one (or the
-           one that's the animation target), update it */
-        if(nextStyle != currentStyle) {
-            style = nextStyle;
-            setNeedsUpdate(LayerState::NeedsDataUpdate);
-        }
-    }
+    /* Transition the style to out */
+    const Shared::State& sharedState = _state->shared;
+    UnsignedInt(*const transition)(UnsignedInt) = event.isCaptured() ?
+        sharedState.styleTransitionToPressedOut : event.isNodeFocused() ?
+            sharedState.styleTransitionToFocusedOut :
+            sharedState.styleTransitionToInactiveOut;
+    transitionStyle(
+        #ifndef CORRADE_NO_ASSERT
+        "Ui::AbstractVisualLayer::pointerLeaveEvent():",
+        #endif
+        dataId, transition);
 }
 
 void AbstractVisualLayer::doPointerCancelEvent(const UnsignedInt dataId, PointerCancelEvent&) {
-    const State& state = *_state;
-    const Shared::State& sharedState = state.shared;
-    CORRADE_INTERNAL_DEBUG_ASSERT(state.styles.size() == capacity());
-    UnsignedInt& style = state.styles[dataId];
-
-    /* If the style is dynamic, maybe it has an animation with a target style
-       index assigned, which we can use as the (soon-to-be-)current style index
-       to transition from. */
-    const UnsignedInt currentStyle = styleOrAnimationTargetStyle(style);
-
-    /* Transition the style to inactive out if it's not dynamic */
-    if(currentStyle < sharedState.styleCount) {
-        const UnsignedInt nextStyle = sharedState.styleTransitionToInactiveOut(currentStyle);
-        CORRADE_ASSERT(nextStyle < sharedState.styleCount,
-            "Ui::AbstractVisualLayer::pointerCancelEvent(): style transition from" << currentStyle << "to" << nextStyle << "out of range for" << sharedState.styleCount << "styles", );
-        /* If the transitioned style is different from the current one (or the
-           one that's the animation target), update it */
-        if(nextStyle != currentStyle) {
-            style = nextStyle;
-            setNeedsUpdate(LayerState::NeedsDataUpdate);
-        }
-    }
+    /* Transition the style to inactive out */
+    transitionStyle(
+        #ifndef CORRADE_NO_ASSERT
+        "Ui::AbstractVisualLayer::pointerCancelEvent():",
+        #endif
+        dataId, _state->shared.styleTransitionToInactiveOut);
 }
 
 void AbstractVisualLayer::doFocusEvent(const UnsignedInt dataId, FocusEvent& event) {
-    const State& state = *_state;
-    const Shared::State& sharedState = state.shared;
-    CORRADE_INTERNAL_DEBUG_ASSERT(state.styles.size() == capacity());
-    UnsignedInt& style = state.styles[dataId];
-
-    /* If the style is dynamic, maybe it has an animation with a target style
-       index assigned, which we can use as the (soon-to-be-)current style index
-       to transition from. */
-    const UnsignedInt currentStyle = styleOrAnimationTargetStyle(style);
-
-    /* Transition the style to focused if it's not dynamic and only if it's not
-       pressed as well, as pressed style gets a priority. */
-    if(currentStyle < sharedState.styleCount && !event.isNodePressed()) {
+    /* Transition the style to focused if it's not pressed as well, as pressed
+       style gets a priority */
+    if(!event.isNodePressed()) {
+        const Shared::State& sharedState = _state->shared;
         UnsignedInt(*const transition)(UnsignedInt) = event.isNodeHovered() ?
             sharedState.styleTransitionToFocusedOver :
             sharedState.styleTransitionToFocusedOut;
-        const UnsignedInt nextStyle = transition(currentStyle);
-        CORRADE_ASSERT(nextStyle < sharedState.styleCount,
-            "Ui::AbstractVisualLayer::focusEvent(): style transition from" << currentStyle << "to" << nextStyle << "out of range for" << sharedState.styleCount << "styles", );
-        /* If the transitioned style is different from the current one (or the
-           one that's the animation target), update it */
-        if(nextStyle != currentStyle) {
-            style = nextStyle;
-            setNeedsUpdate(LayerState::NeedsDataUpdate);
-        }
+        transitionStyle(
+            #ifndef CORRADE_NO_ASSERT
+            "Ui::AbstractVisualLayer::focusEvent():",
+            #endif
+            dataId, transition);
     }
 
     event.setAccepted();
 }
 
 void AbstractVisualLayer::doBlurEvent(const UnsignedInt dataId, FocusEvent& event) {
-    const State& state = *_state;
-    const Shared::State& sharedState = state.shared;
-    CORRADE_INTERNAL_DEBUG_ASSERT(state.styles.size() == capacity());
-    UnsignedInt& style = state.styles[dataId];
-
-    /* If the style is dynamic, maybe it has an animation with a target style
-       index assigned, which we can use as the (soon-to-be-)current style index
-       to transition from. */
-    const UnsignedInt currentStyle = styleOrAnimationTargetStyle(style);
-
-    /* Transition the style to blurred if it's not dynamic and only if it's not
-       pressed as well, as pressed style gets a priority. */
-    if(currentStyle < sharedState.styleCount && !event.isNodePressed()) {
+    /* Transition the style to blurred if it's not pressed as well, as pressed
+       style gets a priority */
+    if(!event.isNodePressed()) {
+        const Shared::State& sharedState = _state->shared;
         UnsignedInt(*const transition)(UnsignedInt) = event.isNodeHovered() ?
             sharedState.styleTransitionToInactiveOver :
             sharedState.styleTransitionToInactiveOut;
-        const UnsignedInt nextStyle = transition(currentStyle);
-        CORRADE_ASSERT(nextStyle < sharedState.styleCount,
-            "Ui::AbstractVisualLayer::blurEvent(): style transition from" << currentStyle << "to" << nextStyle << "out of range for" << sharedState.styleCount << "styles", );
-        /* If the transitioned style is different from the current one (or the
-           one that's the animation target), update it */
-        if(nextStyle != currentStyle) {
-            style = nextStyle;
-            setNeedsUpdate(LayerState::NeedsDataUpdate);
-        }
+        transitionStyle(
+            #ifndef CORRADE_NO_ASSERT
+            "Ui::AbstractVisualLayer::blurEvent():",
+            #endif
+            dataId, transition);
     }
 
     event.setAccepted();
@@ -659,6 +587,8 @@ void AbstractVisualLayer::doVisibilityLostEvent(const UnsignedInt dataId, Visibi
         UnsignedInt(*const transition)(UnsignedInt) = event.isNodeHovered() ?
             sharedState.styleTransitionToInactiveOver :
             sharedState.styleTransitionToInactiveOut;
+        /* Not using transitionStyle() in this case because this function is
+           called from within update() */
         const UnsignedInt nextStyle = transition(currentStyle);
         CORRADE_ASSERT(nextStyle < sharedState.styleCount,
             "Ui::AbstractVisualLayer::visibilityLostEvent(): style transition from" << currentStyle << "to" << nextStyle << "out of range for" << sharedState.styleCount << "styles", );
