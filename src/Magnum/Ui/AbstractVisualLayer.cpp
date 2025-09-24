@@ -132,6 +132,17 @@ auto AbstractVisualLayer::Shared::styleTransitionToDisabled() const -> UnsignedI
     return _state->styleTransitionToDisabled;
 }
 
+AbstractVisualLayer::Shared& AbstractVisualLayer::Shared::setStyleAnimation(AnimationHandle(*onEnter)(AbstractVisualLayerStyleAnimator&, UnsignedInt, UnsignedInt, Nanoseconds, LayerDataHandle, AnimatorDataHandle), AnimationHandle(*onLeave)(AbstractVisualLayerStyleAnimator&, UnsignedInt, UnsignedInt, Nanoseconds, LayerDataHandle, AnimatorDataHandle), AnimationHandle(*onFocus)(AbstractVisualLayerStyleAnimator&, UnsignedInt, UnsignedInt, Nanoseconds, LayerDataHandle, AnimatorDataHandle), AnimationHandle(*onBlur)(AbstractVisualLayerStyleAnimator&, UnsignedInt, UnsignedInt, Nanoseconds, LayerDataHandle, AnimatorDataHandle), AnimationHandle(*onPress)(AbstractVisualLayerStyleAnimator&, UnsignedInt, UnsignedInt, Nanoseconds, LayerDataHandle, AnimatorDataHandle), AnimationHandle(*onRelease)(AbstractVisualLayerStyleAnimator&, UnsignedInt, UnsignedInt, Nanoseconds, LayerDataHandle, AnimatorDataHandle), AnimationHandle(*persistent)(AbstractVisualLayerStyleAnimator&, UnsignedInt, Nanoseconds, LayerDataHandle, AnimatorDataHandle)) {
+    _state->styleAnimationOnEnter = onEnter;
+    _state->styleAnimationOnLeave = onLeave;
+    _state->styleAnimationOnFocus = onFocus;
+    _state->styleAnimationOnBlur = onBlur;
+    _state->styleAnimationOnPress = onPress;
+    _state->styleAnimationOnRelease = onRelease;
+    _state->styleAnimationPersistent = persistent;
+    return *this;
+}
+
 AbstractVisualLayer::State::State(Shared::State& shared): shared(shared), styleTransitionToDisabledUpdateStamp{shared.styleTransitionToDisabledUpdateStamp} {
     dynamicStyleStorage = Containers::ArrayTuple{
         {ValueInit, shared.dynamicStyleCount, dynamicStylesUsed},
@@ -325,8 +336,10 @@ void AbstractVisualLayer::doUpdate(const LayerStates states, const Containers::S
 
                 /* If the style is dynamic, maybe it has an animation with a
                    target style index assigned, which we can use as the
-                   (soon-to-be-)current style index to transition from. */
-                const UnsignedInt currentStyle = styleOrAnimationTargetStyle(style);
+                   (soon-to-be-)current style index to transition from. We're
+                   not animating here, so the second return value is
+                   ignored. */
+                const UnsignedInt currentStyle = styleOrAnimationTargetStyle(style).first();
 
                 /** @todo Doing a function call for all data may be a bit
                     horrible, also especially if the code inside is a giant
@@ -367,7 +380,7 @@ void AbstractVisualLayer::doUpdate(const LayerStates states, const Containers::S
     }
 }
 
-UnsignedInt AbstractVisualLayer::styleOrAnimationTargetStyle(const UnsignedInt style) const {
+Containers::Pair<UnsignedInt, AnimatorDataHandle> AbstractVisualLayer::styleOrAnimationTargetStyle(const UnsignedInt style) const {
     const State& state = *_state;
     const Shared::State& sharedState = state.shared;
 
@@ -382,20 +395,23 @@ UnsignedInt AbstractVisualLayer::styleOrAnimationTargetStyle(const UnsignedInt s
            source style instead. */
         if(animation != AnimationHandle::Null && state.styleAnimator && animationHandleAnimator(animation) == state.styleAnimator->handle()) {
             const Containers::Pair<UnsignedInt, UnsignedInt> styles = state.styleAnimator->styles(animation);
-            return state.styleAnimator->flags(animation) >= AnimationFlag::Reverse ?
-                styles.first() : styles.second();
+            return {
+                state.styleAnimator->flags(animation) >= AnimationFlag::Reverse ?
+                    styles.first() : styles.second(),
+                animationHandleData(animation)
+            };
         }
     }
 
-    /* Otherwise return the original style verbatim */
-    return style;
+    /* Otherwise return the original style verbatim, and no animation */
+    return {style, AnimatorDataHandle::Null};
 }
 
 void AbstractVisualLayer::transitionStyle(
     #ifndef CORRADE_NO_ASSERT
     const char* messagePrefix,
     #endif
-    const UnsignedInt dataId, UnsignedInt(*const transition)(UnsignedInt)
+    const UnsignedInt dataId, UnsignedInt(*const transition)(UnsignedInt), const Nanoseconds time, AnimationHandle(*transitionAnimation)(AbstractVisualLayerStyleAnimator&, UnsignedInt, UnsignedInt, Nanoseconds, LayerDataHandle, AnimatorDataHandle)
 ) {
     const State& state = *_state;
     const Shared::State& sharedState = state.shared;
@@ -405,20 +421,76 @@ void AbstractVisualLayer::transitionStyle(
     /* If the style is dynamic, maybe it has an animation with a target style
        index assigned, which we can use as the (soon-to-be-)current style index
        to transition from. If not, there's nothing to transition. */
-    const UnsignedInt currentStyle = styleOrAnimationTargetStyle(style);
-    if(currentStyle >= sharedState.styleCount)
+    const Containers::Pair<UnsignedInt, AnimatorDataHandle> currentStyleAnimation = styleOrAnimationTargetStyle(style);
+    if(currentStyleAnimation.first() >= sharedState.styleCount)
         return;
 
-    const UnsignedInt nextStyle = transition(currentStyle);
+    const UnsignedInt nextStyle = transition(currentStyleAnimation.first());
     CORRADE_ASSERT(nextStyle < sharedState.styleCount,
-        messagePrefix << "style transition from" << currentStyle << "to" << nextStyle << "out of range for" << sharedState.styleCount << "styles", );
+        messagePrefix << "style transition from" << currentStyleAnimation.first() << "to" << nextStyle << "out of range for" << sharedState.styleCount << "styles", );
 
     /* If the next style is the same as the current, nothing left to do */
-    if(nextStyle == currentStyle)
+    if(nextStyle == currentStyleAnimation.first())
         return;
 
-    style = nextStyle;
-    setNeedsUpdate(LayerState::NeedsDataUpdate);
+    /* If we have a default style animator, we can animate the style */
+    AnimationHandle animation = AnimationHandle::Null;
+    AnimationHandle persistentAnimation = AnimationHandle::Null;
+    if(state.styleAnimator) {
+        /* Try animating the style transition first */
+        if(transitionAnimation)
+            animation = transitionAnimation(*state.styleAnimator, currentStyleAnimation.first(), nextStyle, time, layerDataHandle(dataId, generations()[dataId]), currentStyleAnimation.second());
+
+        /* All of those are debug-only assertions because it's quite a lot
+            of checking */
+        #ifndef CORRADE_NO_DEBUG_ASSERT
+        if(animation != AnimationHandle::Null) {
+            CORRADE_DEBUG_ASSERT(state.styleAnimator->isHandleValid(animation),
+                messagePrefix << "expected style transition animation to be either null or valid and coming from" << state.styleAnimator->handle() << "but got" << animation, );
+            CORRADE_DEBUG_ASSERT(state.styleAnimator->styles(animation).second() == nextStyle,
+                messagePrefix << "expected style transition animation to have" << nextStyle << "as target style but got" << state.styleAnimator->styles(animation).second(), );
+            CORRADE_DEBUG_ASSERT(state.styleAnimator->started(animation) == time,
+                messagePrefix << "expected style transition animation to start at" << time << "but got" << state.styleAnimator->started(animation), );
+            CORRADE_DEBUG_ASSERT(dataHandleId(state.styleAnimator->data(animation)) == dataId,
+                messagePrefix << "expected style transition animation to be attached to" << layerDataHandle(dataId, generations()[dataId]) << "but got" << dataHandleData(state.styleAnimator->data(animation)), );
+            CORRADE_DEBUG_ASSERT(!(state.styleAnimator->flags(animation) & (AnimationFlag::KeepOncePlayed|AnimationFlag::Reverse)),
+                messagePrefix << "style transition animation cannot have" << (state.styleAnimator->flags(animation) & (AnimationFlag::KeepOncePlayed|AnimationFlag::Reverse)) << "set", );
+        }
+        #endif
+
+        /* Then try a persistent animation for given style */
+        if(sharedState.styleAnimationPersistent)
+            persistentAnimation = sharedState.styleAnimationPersistent(*state.styleAnimator, nextStyle, time, layerDataHandle(dataId, generations()[dataId]), animationHandleData(animation));
+
+        /* Again all of those are debug-only assertions because it's quite a
+           lot of checking */
+        #ifndef CORRADE_NO_DEBUG_ASSERT
+        if(persistentAnimation != AnimationHandle::Null) {
+            CORRADE_DEBUG_ASSERT(state.styleAnimator->isHandleValid(persistentAnimation),
+                messagePrefix << "expected persistent style animation to be either null or valid and coming from" << state.styleAnimator->handle() << "but got" << persistentAnimation, );
+            CORRADE_DEBUG_ASSERT(state.styleAnimator->styles(persistentAnimation).second() == nextStyle,
+                messagePrefix << "expected persistent style animation to have" << nextStyle << "as target style but got" << state.styleAnimator->styles(persistentAnimation).second(), );
+            CORRADE_DEBUG_ASSERT(state.styleAnimator->started(persistentAnimation) == time,
+                messagePrefix << "expected persistent style animation to start at" << time << "but got" << state.styleAnimator->started(persistentAnimation), );
+            CORRADE_DEBUG_ASSERT(dataHandleId(state.styleAnimator->data(persistentAnimation)) == dataId,
+                messagePrefix << "expected persistent style animation to be attached to" << layerDataHandle(dataId, generations()[dataId]) << "but got" << dataHandleData(state.styleAnimator->data(persistentAnimation)), );
+            CORRADE_DEBUG_ASSERT(!(state.styleAnimator->flags(persistentAnimation) & (AnimationFlag::KeepOncePlayed|AnimationFlag::Reverse)),
+                messagePrefix << "persistent style animation cannot have" << (state.styleAnimator->flags(persistentAnimation) & (AnimationFlag::KeepOncePlayed|AnimationFlag::Reverse)) << "set", );
+            CORRADE_DEBUG_ASSERT(animation == AnimationHandle::Null || !state.styleAnimator->isHandleValid(animation),
+                messagePrefix << "persistent style animation is expected to remove the transition animation to avoid conflicts", );
+        } else CORRADE_DEBUG_ASSERT(animation == AnimationHandle::Null || state.styleAnimator->isHandleValid(animation),
+            messagePrefix << "persistent style animation is only expected to remove the transition animation if replacing it", );
+        #endif
+    }
+
+    /* If there's neither a transition animation nor a persistent animation,
+       switch the style directly. The above asserts ensure that the transition
+       animation gets removed if and only if a persistent animation is created,
+       so if any of them is non-null it means it's valid. */
+    if(animation == AnimationHandle::Null && persistentAnimation == AnimationHandle::Null) {
+        style = nextStyle;
+        setNeedsUpdate(LayerState::NeedsDataUpdate);
+    }
 }
 
 void AbstractVisualLayer::doPointerPressEvent(const UnsignedInt dataId, PointerEvent& event) {
@@ -443,7 +515,7 @@ void AbstractVisualLayer::doPointerPressEvent(const UnsignedInt dataId, PointerE
         #ifndef CORRADE_NO_ASSERT
         "Ui::AbstractVisualLayer::pointerPressEvent():",
         #endif
-        dataId, transition);
+        dataId, transition, event.time(), sharedState.styleAnimationOnPress);
 
     event.setAccepted();
 }
@@ -473,7 +545,7 @@ void AbstractVisualLayer::doPointerReleaseEvent(const UnsignedInt dataId, Pointe
         #ifndef CORRADE_NO_ASSERT
         "Ui::AbstractVisualLayer::pointerReleaseEvent():",
         #endif
-        dataId, transition);
+        dataId, transition, event.time(), sharedState.styleAnimationOnRelease);
 
     event.setAccepted();
 }
@@ -503,7 +575,7 @@ void AbstractVisualLayer::doPointerEnterEvent(const UnsignedInt dataId, PointerM
         #ifndef CORRADE_NO_ASSERT
         "Ui::AbstractVisualLayer::pointerEnterEvent():",
         #endif
-        dataId, transition);
+        dataId, transition, event.time(), sharedState.styleAnimationOnEnter);
 }
 
 void AbstractVisualLayer::doPointerLeaveEvent(const UnsignedInt dataId, PointerMoveEvent& event) {
@@ -521,16 +593,18 @@ void AbstractVisualLayer::doPointerLeaveEvent(const UnsignedInt dataId, PointerM
         #ifndef CORRADE_NO_ASSERT
         "Ui::AbstractVisualLayer::pointerLeaveEvent():",
         #endif
-        dataId, transition);
+        dataId, transition, event.time(), sharedState.styleAnimationOnLeave);
 }
 
-void AbstractVisualLayer::doPointerCancelEvent(const UnsignedInt dataId, PointerCancelEvent&) {
-    /* Transition the style to inactive out */
+void AbstractVisualLayer::doPointerCancelEvent(const UnsignedInt dataId, PointerCancelEvent& event) {
+    /* Transition the style to inactive out. This transition has no associated
+       animation but the inactive out style may still have a persistent
+       animation. */
     transitionStyle(
         #ifndef CORRADE_NO_ASSERT
         "Ui::AbstractVisualLayer::pointerCancelEvent():",
         #endif
-        dataId, _state->shared.styleTransitionToInactiveOut);
+        dataId, _state->shared.styleTransitionToInactiveOut, event.time(), nullptr);
 }
 
 void AbstractVisualLayer::doFocusEvent(const UnsignedInt dataId, FocusEvent& event) {
@@ -545,7 +619,7 @@ void AbstractVisualLayer::doFocusEvent(const UnsignedInt dataId, FocusEvent& eve
             #ifndef CORRADE_NO_ASSERT
             "Ui::AbstractVisualLayer::focusEvent():",
             #endif
-            dataId, transition);
+            dataId, transition, event.time(), sharedState.styleAnimationOnFocus);
     }
 
     event.setAccepted();
@@ -563,7 +637,7 @@ void AbstractVisualLayer::doBlurEvent(const UnsignedInt dataId, FocusEvent& even
             #ifndef CORRADE_NO_ASSERT
             "Ui::AbstractVisualLayer::blurEvent():",
             #endif
-            dataId, transition);
+            dataId, transition, event.time(), sharedState.styleAnimationOnBlur);
     }
 
     event.setAccepted();
@@ -577,8 +651,9 @@ void AbstractVisualLayer::doVisibilityLostEvent(const UnsignedInt dataId, Visibi
 
     /* If the style is dynamic, maybe it has an animation with a target style
        index assigned, which we can use as the (soon-to-be-)current style index
-       to transition from. */
-    const UnsignedInt currentStyle = styleOrAnimationTargetStyle(style);
+       to transition from. We're not animating here, so the second return value
+       is ignored. */
+    const UnsignedInt currentStyle = styleOrAnimationTargetStyle(style).first();
 
     /* Transition the style to inactive if it's not dynamic and only if it's
        not a formerly focused node that's now pressed, in which case it stays
@@ -588,7 +663,8 @@ void AbstractVisualLayer::doVisibilityLostEvent(const UnsignedInt dataId, Visibi
             sharedState.styleTransitionToInactiveOver :
             sharedState.styleTransitionToInactiveOut;
         /* Not using transitionStyle() in this case because this function is
-           called from within update() */
+           called from within update(), meaning one can't just fire animations
+           like a madman in the middle of _that_ */
         const UnsignedInt nextStyle = transition(currentStyle);
         CORRADE_ASSERT(nextStyle < sharedState.styleCount,
             "Ui::AbstractVisualLayer::visibilityLostEvent(): style transition from" << currentStyle << "to" << nextStyle << "out of range for" << sharedState.styleCount << "styles", );

@@ -268,6 +268,8 @@ void QuadLayer::doTextInputEvent(UnsignedInt dataId, Ui::TextInputEvent& event) 
 
 }
 
+namespace E {
+
 Ui::AbstractVisualLayer::Shared& abstractVisualLayerShared();
 namespace {
 /* [AbstractVisualLayer-Shared-setStyleTransition] */
@@ -297,7 +299,7 @@ StyleIndex styleIndexTransitionToDisabled(StyleIndex index) {
     DOXYGEN_ELLIPSIS(return index;)
 }
 
-DOXYGEN_ELLIPSIS(} int main() {)
+DOXYGEN_ELLIPSIS(} void foo(); void foo() {)
 
 Ui::AbstractVisualLayer::Shared& shared = DOXYGEN_ELLIPSIS(abstractVisualLayerShared());
 shared.setStyleTransition<StyleIndex,
@@ -311,9 +313,58 @@ shared.setStyleTransition<StyleIndex,
 /* [AbstractVisualLayer-Shared-setStyleTransition] */
 }
 
+}
+
+namespace F {
+
+Ui::BaseLayer::Shared& abstractVisualLayerShared();
+namespace {
+/* [AbstractVisualLayer-Shared-setStyleAnimation] */
+enum StyleIndex {
+    DOXYGEN_ELLIPSIS()
+};
+
+Ui::AnimationHandle styleIndexAnimationOnEnter(Ui::BaseLayerStyleAnimator& animator, StyleIndex sourceStyle, StyleIndex targetStyle, Nanoseconds time, Ui::LayerDataHandle data, Ui::AnimatorDataHandle currentAnimation) {
+    DOXYGEN_ELLIPSIS(static_cast<void>(animator); static_cast<void>(sourceStyle); static_cast<void>(targetStyle); static_cast<void>(time); static_cast<void>(data); static_cast<void>(currentAnimation); return {};)
+}
+Ui::AnimationHandle styleIndexAnimationOnLeave(Ui::BaseLayerStyleAnimator& animator, StyleIndex sourceStyle, StyleIndex targetStyle, Nanoseconds time, Ui::LayerDataHandle data, Ui::AnimatorDataHandle currentAnimation) {
+    DOXYGEN_ELLIPSIS(static_cast<void>(animator); static_cast<void>(sourceStyle); static_cast<void>(targetStyle); static_cast<void>(time); static_cast<void>(data); static_cast<void>(currentAnimation); return {};)
+}
+Ui::AnimationHandle styleIndexAnimationOnFocus(Ui::BaseLayerStyleAnimator& animator, StyleIndex sourceStyle, StyleIndex targetStyle, Nanoseconds time, Ui::LayerDataHandle data, Ui::AnimatorDataHandle currentAnimation) {
+    DOXYGEN_ELLIPSIS(static_cast<void>(animator); static_cast<void>(sourceStyle); static_cast<void>(targetStyle); static_cast<void>(time); static_cast<void>(data); static_cast<void>(currentAnimation); return {};)
+}
+Ui::AnimationHandle styleIndexAnimationOnBlur(Ui::BaseLayerStyleAnimator& animator, StyleIndex sourceStyle, StyleIndex targetStyle, Nanoseconds time, Ui::LayerDataHandle data, Ui::AnimatorDataHandle currentAnimation) {
+    DOXYGEN_ELLIPSIS(static_cast<void>(animator); static_cast<void>(sourceStyle); static_cast<void>(targetStyle); static_cast<void>(time); static_cast<void>(data); static_cast<void>(currentAnimation); return {};)
+}
+Ui::AnimationHandle styleIndexAnimationOnPress(Ui::BaseLayerStyleAnimator& animator, StyleIndex sourceStyle, StyleIndex targetStyle, Nanoseconds time, Ui::LayerDataHandle data, Ui::AnimatorDataHandle currentAnimation) {
+    DOXYGEN_ELLIPSIS(static_cast<void>(animator); static_cast<void>(sourceStyle); static_cast<void>(targetStyle); static_cast<void>(time); static_cast<void>(data); static_cast<void>(currentAnimation); return {};)
+}
+Ui::AnimationHandle styleIndexAnimationOnRelease(Ui::BaseLayerStyleAnimator& animator, StyleIndex sourceStyle, StyleIndex targetStyle, Nanoseconds time, Ui::LayerDataHandle data, Ui::AnimatorDataHandle currentAnimation) {
+    DOXYGEN_ELLIPSIS(static_cast<void>(animator); static_cast<void>(sourceStyle); static_cast<void>(targetStyle); static_cast<void>(time); static_cast<void>(data); static_cast<void>(currentAnimation); return {};)
+}
+Ui::AnimationHandle styleIndexAnimationPersistent(Ui::BaseLayerStyleAnimator& animator, StyleIndex style, Nanoseconds time, Ui::LayerDataHandle data, Ui::AnimatorDataHandle currentAnimation) {
+    DOXYGEN_ELLIPSIS(static_cast<void>(animator); static_cast<void>(style); static_cast<void>(time); static_cast<void>(data); static_cast<void>(currentAnimation); return {};)
+}
+
+DOXYGEN_ELLIPSIS(} void foo(); void foo() {)
+
+Ui::BaseLayer::Shared& shared = DOXYGEN_ELLIPSIS(abstractVisualLayerShared());
+shared.setStyleAnimation<StyleIndex,
+    styleIndexAnimationOnEnter,
+    styleIndexAnimationOnLeave,
+    styleIndexAnimationOnFocus,
+    styleIndexAnimationOnBlur,
+    styleIndexAnimationOnPress,
+    styleIndexAnimationOnRelease,
+    styleIndexAnimationPersistent>();
+/* [AbstractVisualLayer-Shared-setStyleAnimation] */
+}
+
+}
+
 /* Anonymous namespace to avoid "no previous declaration" warnings, main() and
    main2() is then outside of it to avoid "unused function" warnings */
-namespace E { namespace {
+namespace G { namespace {
 /* [BaseLayer-style-transitions] */
 enum BaseLayerStyle {
     Button,
@@ -423,7 +474,7 @@ baseLayerShared.setStyleTransition<BaseLayerStyle,
 }
 }
 
-namespace B {
+namespace H {
 
 /* Declarations to avoid -Wmisssing-prototypes */
 void setNodeName(Ui::NodeHandle node, Containers::StringView name);
@@ -456,7 +507,7 @@ Containers::StringView nodeName(Ui::NodeHandle node) {
 
 }
 
-namespace C {
+namespace I {
 
 /* Used by DebugLayer-integration-constructor and
    DebugLayer-integration-constructor-setLayerName below, needs to be here to
@@ -493,7 +544,7 @@ class ColorLayer::DebugIntegration {
 
 }
 
-namespace D {
+namespace J {
 
 /* [DebugLayer-integration-subclass] */
 class ColorLayer: public Ui::AbstractVisualLayer {
@@ -943,7 +994,7 @@ debugLayer.setNodeHighlightCallback([&details](Containers::StringView message) {
 }
 
 {
-using namespace C;
+using namespace I;
 ColorLayer colorLayer{Ui::layerHandle(0, 1)};
 Ui::DebugLayer debugLayer{Ui::layerHandle(0, 1), {}, {}};
 /* [DebugLayer-integration-constructor-setLayerName] */

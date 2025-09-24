@@ -40,6 +40,7 @@
 #include "Magnum/Ui/AbstractUserInterface.h" /* for uiAdvance() */
 #include "Magnum/Ui/BaseLayer.h"
 #include "Magnum/Ui/BaseLayerAnimator.h"
+#include "Magnum/Ui/Event.h" /* for uiAdvanceEventTransition() */
 #include "Magnum/Ui/Handle.h"
 #include "Magnum/Ui/Implementation/baseLayerState.h" /* for layerAdvance() */
 
@@ -78,6 +79,7 @@ struct BaseLayerStyleAnimatorTest: TestSuite::Tester {
 
     void layerAdvance();
     void uiAdvance();
+    void uiAdvanceEventTransition();
 };
 
 using namespace Math::Literals;
@@ -318,7 +320,8 @@ BaseLayerStyleAnimatorTest::BaseLayerStyleAnimatorTest() {
     addInstancedTests({&BaseLayerStyleAnimatorTest::layerAdvance},
         Containers::arraySize(LayerAdvanceData));
 
-    addTests({&BaseLayerStyleAnimatorTest::uiAdvance});
+    addTests({&BaseLayerStyleAnimatorTest::uiAdvance,
+              &BaseLayerStyleAnimatorTest::uiAdvanceEventTransition});
 }
 
 void BaseLayerStyleAnimatorTest::debugAnimatorUpdate() {
@@ -1882,6 +1885,76 @@ void BaseLayerStyleAnimatorTest::uiAdvance() {
     ui.advanceAnimations(6_nsec);
     CORRADE_COMPARE(layer.dynamicStyleUsedCount(), 0);
     CORRADE_COMPARE(animator.usedCount(), 0);
+}
+
+AnimationHandle styleAnimationOnEnterFocusPress(BaseLayerStyleAnimator& animator, Enum, Enum targetStyle, Nanoseconds time, LayerDataHandle data, AnimatorDataHandle) {
+    return animator.create(Enum(2), targetStyle, Animation::Easing::linear, time, 5_nsec, data);
+}
+
+void BaseLayerStyleAnimatorTest::uiAdvanceEventTransition() {
+    /* Verifies mainly just that BaseLayer::Shared contains animator-specific
+       setStyleAnimation() variants at all. Their overloads are tested
+       thoroughly in AbstractVisualLayerStyleAnimatorTest already. */
+
+    struct LayerShared: BaseLayer::Shared {
+        explicit LayerShared(const Configuration& configuration): BaseLayer::Shared{configuration} {}
+
+        void doSetStyle(const BaseLayerCommonStyleUniform&, Containers::ArrayView<const BaseLayerStyleUniform>) override {}
+    } shared{BaseLayer::Shared::Configuration{1, 3}
+        .setDynamicStyleCount(1)
+    };
+
+    shared.setStyle(
+        BaseLayerCommonStyleUniform{},
+        {BaseLayerStyleUniform{}},
+        {0, 0, 0},
+        {});
+    shared.setStyleTransition(
+        nullptr,
+        nullptr,
+        nullptr,
+        nullptr,
+        [](UnsignedInt style) { return style ? 0u : 1u; },
+        nullptr,
+        nullptr);
+    /* It only returns the correct type if the overloads are added with the
+       macro */
+    BaseLayer::Shared* chaining = &shared.setStyleAnimation<Enum,
+        styleAnimationOnEnterFocusPress,
+        nullptr,
+        nullptr>();
+    CORRADE_COMPARE(chaining, &shared);
+
+    struct Layer: BaseLayer {
+        explicit Layer(LayerHandle handle, Shared& shared): BaseLayer{handle, shared} {}
+    };
+
+    AbstractUserInterface ui{{100, 100}};
+
+    BaseLayer& layer = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer(), shared));
+
+    Containers::Pointer<BaseLayerStyleAnimator> animatorInstance{InPlaceInit, ui.createAnimator()};
+    layer
+        .assignAnimator(*animatorInstance)
+        .setDefaultStyleAnimator(animatorInstance.get());
+    BaseLayerStyleAnimator& animator = ui.setStyleAnimatorInstance(Utility::move(animatorInstance));
+
+    NodeHandle node = ui.createNode({}, {50, 50});
+    DataHandle data = layer.create(1, node);
+
+    /* Right after a press the style won't change, as it's animated */
+    PointerEvent event{667_nsec, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
+    CORRADE_VERIFY(ui.pointerPressEvent({25, 35}, event));
+    CORRADE_COMPARE(layer.style(data), 1);
+    CORRADE_COMPARE(animator.usedCount(), 1);
+
+    /* Beginning of the animation will switch to a dynamic style */
+    ui.advanceAnimations(667_nsec);
+    CORRADE_COMPARE(layer.style(data), 3);
+
+    /* End will switch to the target style */
+    ui.advanceAnimations(700_nsec);
+    CORRADE_COMPARE(layer.style(data), 0);
 }
 
 }}}}
