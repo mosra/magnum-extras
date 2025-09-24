@@ -214,6 +214,17 @@ const struct {
 
 const struct {
     const char* name;
+    bool update;
+    bool templated;
+} EventStyleTransitionNoHoverData[]{
+    {"update before", true, false},
+    {"", false, false},
+    {"templated, update before", true, true},
+    {"templated", false, true},
+};
+
+const struct {
+    const char* name;
     bool templated;
 } EventStyleTransitionDisabledData[]{
     {"", false},
@@ -488,7 +499,7 @@ AbstractVisualLayerTest::AbstractVisualLayerTest() {
         Containers::arraySize(EventStyleTransitionData));
 
     addInstancedTests({&AbstractVisualLayerTest::eventStyleTransitionNoHover},
-        Containers::arraySize(EventStyleTransitionData));
+        Containers::arraySize(EventStyleTransitionNoHoverData));
 
     addInstancedTests({&AbstractVisualLayerTest::eventStyleTransitionDisabled},
         Containers::arraySize(EventStyleTransitionDisabledData));
@@ -3026,7 +3037,7 @@ void AbstractVisualLayerTest::eventStyleTransition() {
 }
 
 void AbstractVisualLayerTest::eventStyleTransitionNoHover() {
-    auto&& data = EventStyleTransitionData[testCaseInstanceId()];
+    auto&& data = EventStyleTransitionNoHoverData[testCaseInstanceId()];
     setTestCaseDescription(data.name);
 
     /* Transition for dynamic styles tested in
@@ -3078,7 +3089,7 @@ void AbstractVisualLayerTest::eventStyleTransitionNoHover() {
 
     auto testPressRelease = [&]{
         {
-            PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, data.modifiers};
+            PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
             CORRADE_VERIFY(ui.pointerPressEvent({2.5f, 2.0f}, event));
             CORRADE_COMPARE(layer.style<StyleIndex>(layerData), StyleIndex::GreenPressed);
             CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
@@ -3090,7 +3101,7 @@ void AbstractVisualLayerTest::eventStyleTransitionNoHover() {
         }
 
         {
-            PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, data.modifiers};
+            PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
             CORRADE_VERIFY(ui.pointerReleaseEvent({2.5f, 2.5f}, event));
             CORRADE_COMPARE(layer.style<StyleIndex>(layerData), StyleIndex::Green);
             CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
@@ -3107,7 +3118,7 @@ void AbstractVisualLayerTest::eventStyleTransitionNoHover() {
 
     /* Moving onto the node should do nothing */
     {
-        PointerMoveEvent event{{}, PointerEventSource::Mouse, {}, {}, true, 0, data.modifiers};
+        PointerMoveEvent event{{}, PointerEventSource::Mouse, {}, {}, true, 0, {}};
         CORRADE_VERIFY(ui.pointerMoveEvent({2.0f, 2.0f}, event));
         CORRADE_COMPARE(ui.currentHoveredNode(), node);
         CORRADE_COMPARE(layer.style<StyleIndex>(layerData), StyleIndex::Green);
@@ -3119,7 +3130,7 @@ void AbstractVisualLayerTest::eventStyleTransitionNoHover() {
 
     /* Moving away should do nothing again */
     {
-        PointerMoveEvent event{{}, PointerEventSource::Mouse, {}, {}, true, 0, data.modifiers};
+        PointerMoveEvent event{{}, PointerEventSource::Mouse, {}, {}, true, 0, {}};
         CORRADE_VERIFY(!ui.pointerMoveEvent({100.0f, 100.0f}, event));
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
         CORRADE_COMPARE(layer.style<StyleIndex>(layerData), StyleIndex::Green);
@@ -3156,7 +3167,7 @@ void AbstractVisualLayerTest::eventStyleTransitionNoHover() {
 
     /* Moving onto the node should do nothing */
     {
-        PointerMoveEvent event{{}, PointerEventSource::Mouse, {}, {}, true, 0, data.modifiers};
+        PointerMoveEvent event{{}, PointerEventSource::Mouse, {}, {}, true, 0, {}};
         CORRADE_VERIFY(ui.pointerMoveEvent({2.0f, 2.0f}, event));
         CORRADE_COMPARE(ui.currentHoveredNode(), node);
         CORRADE_COMPARE(layer.style<StyleIndex>(layerData), StyleIndex::Green);
@@ -3168,7 +3179,7 @@ void AbstractVisualLayerTest::eventStyleTransitionNoHover() {
 
     /* Moving away should do nothing again */
     {
-        PointerMoveEvent event{{}, PointerEventSource::Mouse, {}, {}, true, 0, data.modifiers};
+        PointerMoveEvent event{{}, PointerEventSource::Mouse, {}, {}, true, 0, {}};
         CORRADE_VERIFY(!ui.pointerMoveEvent({100.0f, 100.0f}, event));
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
         CORRADE_COMPARE(layer.style<StyleIndex>(layerData), StyleIndex::Green);
