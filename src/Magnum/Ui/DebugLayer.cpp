@@ -767,17 +767,17 @@ bool DebugLayer::highlightNode(const NodeHandle handle) {
                 for(UnsignedInt dataId = 0; dataId != dataCapacity; ++dataId) {
                     const AnimatorDataHandle data = animatorDataHandle(dataId, dataGenerations[dataId]);
                     if(animatorInstance.isHandleValid(data) && animatorInstance.node(data) == handle) {
-                        AnimationState state = animatorInstance.state(data);
-                        CORRADE_INTERNAL_ASSERT(UnsignedInt(state) < animationStateCount);
+                        AnimationState animationState = animatorInstance.state(data);
+                        CORRADE_INTERNAL_ASSERT(UnsignedInt(animationState) < animationStateCount);
                         if(animator.print) {
                             hasNamedAnimators = true;
                             animator.print(animator.integration, debug, animatorInstance, animator.name, data);
                         } else if(animator.name) {
                             hasNamedAnimators = true;
-                            ++namedAnimatorDataCount[UnsignedInt(state)];
+                            ++namedAnimatorDataCount[UnsignedInt(animationState)];
                         } else {
-                            hasOtherAnimationsFromThisAnimator[UnsignedInt(state)] = true;
-                            ++otherAnimationCount[UnsignedInt(state)];
+                            hasOtherAnimationsFromThisAnimator[UnsignedInt(animationState)] = true;
+                            ++otherAnimationCount[UnsignedInt(animationState)];
                         }
                     }
                 }

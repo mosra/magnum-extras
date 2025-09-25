@@ -379,17 +379,17 @@ NodeAnimatorUpdates NodeAnimator::doAdvance(const Containers::BitArrayView activ
             const NodeFlags flagsClearStart = reverse ?
                 animation.flagsAddEnd : animation.flagsClearBegin;
             if(flagsAddStart || flagsClearStart) {
-                NodeFlags& flags = nodeFlags[nodeId];
-                const NodeFlags flagsBefore = flags;
+                NodeFlags& nodeFlags_ = nodeFlags[nodeId];
+                const NodeFlags flagsBefore = nodeFlags_;
 
                 /* Clear first so it's possible to implicitly clear all flags
                    and then add a subset back */
-                flags &= ~flagsClearStart;
-                flags |= flagsAddStart;
+                nodeFlags_ &= ~flagsClearStart;
+                nodeFlags_ |= flagsAddStart;
 
                 /* If presence of certain flags changed, reflect that in the
                    output NodeAnimatorUpdates */
-                updates |= updatesForFlags(flagsBefore, flags);
+                updates |= updatesForFlags(flagsBefore, nodeFlags_);
             }
         }
 
@@ -457,17 +457,17 @@ NodeAnimatorUpdates NodeAnimator::doAdvance(const Containers::BitArrayView activ
             /** @todo maybe skip this if the node is about to be removed? I.e.,
                 do all this before the interpolations? */
             if(flagsAddStop || flagsClearStop) {
-                NodeFlags& flags = nodeFlags[nodeId];
-                const NodeFlags flagsBefore = flags;
+                NodeFlags& nodeFlags_ = nodeFlags[nodeId];
+                const NodeFlags flagsBefore = nodeFlags_;
 
                 /* Clear first so it's possible to implicitly clear all flags
                    and then add a subset back */
-                flags &= ~flagsClearStop;
-                flags |= flagsAddStop;
+                nodeFlags_ &= ~flagsClearStop;
+                nodeFlags_ |= flagsAddStop;
 
                 /* If presence of certain flags changed, reflect that in the
                    output NodeAnimatorUpdates */
-                updates |= updatesForFlags(flagsBefore, flags);
+                updates |= updatesForFlags(flagsBefore, nodeFlags_);
             }
 
             /* Remove the node afterwards if requested */
