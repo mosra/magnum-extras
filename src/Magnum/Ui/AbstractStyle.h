@@ -410,9 +410,9 @@ class MAGNUM_UI_EXPORT AbstractStyle {
          * Expects that @p ui has user interface size already set, either using
          * the constructor or by calling @ref UserInterface::setSize(). Expects
          * that @p features are a subset of @ref features() and contain at
-         * least one feature, that @p ui already contains all layers
-         * corresponding to @p features, that their shared state style uniform
-         * and style count matches the subset of
+         * least one feature, that @p ui already contains all layers and
+         * layouters corresponding to @p features, that their shared state
+         * style uniform and style count matches the subset of
          * @ref baseLayerStyleUniformCount(), @ref baseLayerStyleCount(),
          * @ref textLayerStyleUniformCount(), @ref textLayerStyleCount(),
          * @ref textLayerEditingStyleUniformCount(),
@@ -575,8 +575,8 @@ class MAGNUM_UI_EXPORT AbstractStyle {
          * use to calculate font rasterization and icon sizes, for example. The
          * @p features are guaranteed to be a subset of @ref features() and
          * contain at least one feature, that @p ui already contains all layers
-         * corresponding to @p features, that their shared state style uniform
-         * and style count matches the subset of
+         * and layouters corresponding to @p features, that their shared state
+         * style uniform and style count matches the subset of
          * @ref baseLayerStyleUniformCount(), @ref baseLayerStyleCount(),
          * @ref textLayerStyleUniformCount(), @ref textLayerStyleCount()
          * matching @p features and their shared state dynamic style count is

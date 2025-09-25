@@ -497,13 +497,16 @@ class MAGNUM_UI_EXPORT UserInterfaceGL: public UserInterface {
          * @return Reference to self (for method chaining)
          *
          * If a renderer isn't present yet, sets its instance. Then creates
-         * layer instances corresponding to all @p features with style uniform
-         * count, style count and other parameters coming from @p style. If
-         * @p features contain @ref StyleFeature::TextLayer and @p fontManager
-         * is @cpp nullptr @ce, an internal font plugin manager instance is
+         * layer and layouter instances corresponding to all @p features with
+         * style uniform count, style count and other parameters coming from
+         * @p style. If @p features contain @ref StyleFeature::TextLayer and
+         * @p fontManager is @cpp nullptr @ce, an internal font plugin manager
+         * instance is created; if @p features contain
+         * @ref StyleFeature::TextLayerImages and @p importerManager is
+         * @cpp nullptr @ce, an internal importer plugin manager instance is
          * created. The function then calls @ref AbstractStyle::apply() to
-         * apply the style to those layers. If it fails, the program exits, see
-         * @ref trySetStyle() for an alternative.
+         * apply the style to those layers and layouters. If it fails, the
+         * program exits, see @ref trySetStyle() for an alternative.
          *
          * Expects that user interface size is already set, either using the
          * constructor or by calling @ref setSize(). Expects that @p features
