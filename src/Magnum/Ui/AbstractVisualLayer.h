@@ -677,7 +677,7 @@ class MAGNUM_UI_EXPORT AbstractVisualLayer::DebugIntegration {
 };
 
 #ifndef DOXYGEN_GENERATING_OUTPUT
-#define MAGNUMEXTRAS_UI_ABSTRACTVISUALLAYER_SHARED_SUBCLASS_IMPLEMENTATION() \
+#define _MAGNUMEXTRAS_UI_ABSTRACTVISUALLAYER_SHARED_SUBCLASS_IMPLEMENTATION() \
     Shared& setStyleTransition(UnsignedInt(*toInactiveOut)(UnsignedInt), UnsignedInt(*toInactiveOver)(UnsignedInt), UnsignedInt(*toFocusedOut)(UnsignedInt), UnsignedInt(*toFocusedOver)(UnsignedInt), UnsignedInt(*toPressedOut)(UnsignedInt), UnsignedInt(*toPressedOver)(UnsignedInt), UnsignedInt(*toDisabled)(UnsignedInt)) { \
         return static_cast<Shared&>(AbstractVisualLayer::Shared::setStyleTransition(toInactiveOut, toInactiveOver, toFocusedOut, toFocusedOver, toPressedOut, toPressedOver, toDisabled)); \
     }                                                                       \
