@@ -622,16 +622,16 @@ void UserInterfaceGLTest::setStyle() {
        if not already */
     CORRADE_VERIFY(ui.hasRendererInstance());
 
-    if(data.expectedFeatures & StyleFeature::BaseLayer) {
-        CORRADE_VERIFY(ui.hasBaseLayer());
+    CORRADE_COMPARE(ui.hasBaseLayer(), data.expectedFeatures >= StyleFeature::BaseLayer);
+    if(data.expectedFeatures >= StyleFeature::BaseLayer) {
         CORRADE_COMPARE(ui.baseLayer().shared().styleUniformCount(), 3);
         CORRADE_COMPARE(ui.baseLayer().shared().styleCount(), 5);
         CORRADE_COMPARE(ui.baseLayer().shared().dynamicStyleCount(), 11);
         CORRADE_COMPARE(ui.baseLayer().shared().flags(), BaseLayerSharedFlag::NoRoundedCorners);
     }
 
-    if(data.expectedFeatures & StyleFeature::TextLayer) {
-        CORRADE_VERIFY(ui.hasTextLayer());
+    CORRADE_COMPARE(ui.hasTextLayer(), data.expectedFeatures >= StyleFeature::TextLayer);
+    if(data.expectedFeatures >= StyleFeature::TextLayer) {
         CORRADE_COMPARE(ui.textLayer().shared().styleUniformCount(), 2);
         CORRADE_COMPARE(ui.textLayer().shared().styleCount(), 4);
         CORRADE_COMPARE(ui.textLayer().shared().editingStyleUniformCount(), 6);
@@ -643,13 +643,9 @@ void UserInterfaceGLTest::setStyle() {
         CORRADE_COMPARE(ui.textLayer().shared().glyphCache().padding(), (Vector2i{3, 1}));
     }
 
-    if(data.expectedFeatures & StyleFeature::EventLayer) {
-        CORRADE_VERIFY(ui.hasEventLayer());
-    }
+    CORRADE_COMPARE(ui.hasEventLayer(), data.expectedFeatures >= StyleFeature::EventLayer);
 
-    if(data.expectedFeatures & StyleFeature::SnapLayouter) {
-        CORRADE_VERIFY(ui.hasSnapLayouter());
-    }
+    CORRADE_COMPARE(ui.hasSnapLayouter(), data.expectedFeatures >= StyleFeature::SnapLayouter);
 }
 
 void UserInterfaceGLTest::setStyleRendererAlreadyPresent() {
