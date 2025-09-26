@@ -197,6 +197,10 @@ you can reuse existing animations even after the style is updated.
     the cursor or selection, be it the quad changing size, or transparency, or
     any other way, and the animator just picking something would be too
     arbitrary.
+@par
+    One way to satisfy this requirement is to use a zero-width cursor style or
+    a transparent selection color instead of a style without a cursor or
+    selection.
 
 At the moment, only animation between predefined styles is possible.
 

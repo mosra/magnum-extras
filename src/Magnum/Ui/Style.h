@@ -66,7 +66,7 @@ namespace Implementation {
         BaseStyleUniformCount = BaseStyleCount,
         TextStyleCount = 86,
         TextStyleUniformCount = 33,
-        TextEditingStyleCount = 15,
+        TextEditingStyleCount = 16,
         TextEditingStyleUniformCount = TextEditingStyleCount,
         IconCount = 2
     };

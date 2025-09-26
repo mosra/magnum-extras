@@ -270,6 +270,8 @@ enum class TextStyle: UnsignedShort {
 };
 
 enum class TextEditingStyle: UnsignedShort {
+    InputCursorNone,
+
     InputCursorDefault,
     InputCursorFocusedDefault,
     InputSelectionDefault,

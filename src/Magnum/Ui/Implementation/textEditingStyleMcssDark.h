@@ -39,6 +39,10 @@
    ()s, _c is expected to take all four values of it separately. */
 
 #if defined(_c) && defined(_s)
+/* No cursor. Used to have all Input* styles with both selection and cursor
+   style so the animations can transition between them without problems. */
+_c(InputCursorNone,                     {0.0f, 0.0f, 0.0f, 0.0f}, {}, {})
+
 /* Input cursor is always --*-link-active-color. 80% opacity when hovered,
    fully opaque when focused, apart from the 80% opacity matching the outline
    and left edge color. Selection is --*-color with 40% opacity. */
