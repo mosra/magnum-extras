@@ -27,15 +27,18 @@
 #include <Corrade/Containers/ArrayView.h>
 #include <Corrade/Containers/String.h>
 #include <Corrade/TestSuite/Tester.h>
+#include <Corrade/TestSuite/Compare/String.h>
 #include <Magnum/PixelFormat.h>
 #include <Magnum/Math/Vector2.h>
 #include <Magnum/Text/AbstractGlyphCache.h>
 
 #include "Magnum/Ui/BaseLayer.h"
+#include "Magnum/Ui/BaseLayerAnimator.h"
 #include "Magnum/Ui/EventLayer.h"
 #include "Magnum/Ui/Handle.h"
 #include "Magnum/Ui/SnapLayouter.h"
 #include "Magnum/Ui/TextLayer.h"
+#include "Magnum/Ui/TextLayerAnimator.h"
 #include "Magnum/Ui/UserInterface.h"
 
 namespace Magnum { namespace Ui { namespace Test { namespace {
@@ -52,9 +55,17 @@ struct UserInterfaceTest: TestSuite::Tester {
     void setBaseLayerInstanceInvalid();
     void baseLayerInvalid();
 
+    void setBaseLayerStyleAnimatorInstance();
+    void setBaseLayerStyleAnimatorInstanceInvalid();
+    void baseLayerStyleAnimatorInvalid();
+
     void setTextLayerInstance();
     void setTextLayerInstanceInvalid();
     void textLayerInvalid();
+
+    void setTextLayerStyleAnimatorInstance();
+    void setTextLayerStyleAnimatorInstanceInvalid();
+    void textLayerStyleAnimatorInvalid();
 
     void setEventLayerInstance();
     void setEventLayerInstanceInvalid();
@@ -65,6 +76,14 @@ struct UserInterfaceTest: TestSuite::Tester {
     void snapLayouterInvalid();
 };
 
+const struct {
+    const char* name;
+    bool defaultAnimatorAlreadyExists;
+} SetStyleAnimatorInstanceData[]{
+    {"", false},
+    {"default animator already exists", true}
+};
+
 UserInterfaceTest::UserInterfaceTest() {
     addTests({&UserInterfaceTest::construct,
               &UserInterfaceTest::constructNoCreate,
@@ -73,11 +92,23 @@ UserInterfaceTest::UserInterfaceTest() {
 
               &UserInterfaceTest::setBaseLayerInstance,
               &UserInterfaceTest::setBaseLayerInstanceInvalid,
-              &UserInterfaceTest::baseLayerInvalid,
+              &UserInterfaceTest::baseLayerInvalid});
+
+    addInstancedTests({&UserInterfaceTest::setBaseLayerStyleAnimatorInstance},
+        Containers::arraySize(SetStyleAnimatorInstanceData));
+
+    addTests({&UserInterfaceTest::setBaseLayerStyleAnimatorInstanceInvalid,
+              &UserInterfaceTest::baseLayerStyleAnimatorInvalid,
 
               &UserInterfaceTest::setTextLayerInstance,
               &UserInterfaceTest::setTextLayerInstanceInvalid,
-              &UserInterfaceTest::textLayerInvalid,
+              &UserInterfaceTest::textLayerInvalid});
+
+    addInstancedTests({&UserInterfaceTest::setTextLayerStyleAnimatorInstance},
+        Containers::arraySize(SetStyleAnimatorInstanceData));
+
+    addTests({&UserInterfaceTest::setTextLayerStyleAnimatorInstanceInvalid,
+              &UserInterfaceTest::textLayerStyleAnimatorInvalid,
 
               &UserInterfaceTest::setEventLayerInstance,
               &UserInterfaceTest::setEventLayerInstanceInvalid,
@@ -221,6 +252,113 @@ void UserInterfaceTest::baseLayerInvalid() {
     CORRADE_COMPARE(out, "Ui::UserInterface::baseLayer(): no instance set\n");
 }
 
+void UserInterfaceTest::setBaseLayerStyleAnimatorInstance() {
+    auto&& data = SetStyleAnimatorInstanceData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
+    struct LayerShared: BaseLayer::Shared {
+        explicit LayerShared(const Configuration& configuration): BaseLayer::Shared{configuration} {}
+
+        void doSetStyle(const BaseLayerCommonStyleUniform&, Containers::ArrayView<const BaseLayerStyleUniform>) override {}
+    } shared{BaseLayer::Shared::Configuration{1, 3}
+        .setDynamicStyleCount(1)
+    };
+
+    struct Layer: BaseLayer {
+        explicit Layer(LayerHandle handle, Shared& shared): BaseLayer{handle, shared} {}
+    };
+
+    struct Interface: UserInterface {
+        explicit Interface(NoCreateT): UserInterface{NoCreate} {}
+    } ui{NoCreate};
+    CORRADE_COMPARE(ui.animatorCapacity(), 0);
+    CORRADE_COMPARE(ui.animatorUsedCount(), 0);
+    CORRADE_VERIFY(!ui.hasBaseLayerStyleAnimator());
+    CORRADE_VERIFY(!ui.hasTextLayerStyleAnimator());
+
+    ui.setBaseLayerInstance(Containers::pointer<Layer>(ui.createLayer(), shared));
+
+    BaseLayerStyleAnimator anotherAnimator{animatorHandle(0, 1)};
+    if(data.defaultAnimatorAlreadyExists) {
+        ui.baseLayer().assignAnimator(anotherAnimator);
+        ui.baseLayer().setDefaultStyleAnimator(&anotherAnimator);
+    }
+
+    AnimatorHandle handle = ui.createAnimator();
+    Containers::Pointer<BaseLayerStyleAnimator> animator{InPlaceInit, handle};
+    BaseLayerStyleAnimator* pointer = animator.get();
+    ui.setBaseLayerStyleAnimatorInstance(Utility::move(animator));
+    CORRADE_COMPARE(ui.animatorCapacity(), 1);
+    CORRADE_COMPARE(ui.animatorUsedCount(), 1);
+    CORRADE_VERIFY(ui.hasBaseLayerStyleAnimator());
+    CORRADE_VERIFY(!ui.hasTextLayerStyleAnimator());
+    CORRADE_COMPARE(&ui.animator(handle), pointer);
+    CORRADE_COMPARE(&ui.baseLayerStyleAnimator(), pointer);
+    /* The default animator gets set even if it already exists */
+    CORRADE_COMPARE(ui.baseLayer().defaultStyleAnimator(), pointer);
+}
+
+void UserInterfaceTest::setBaseLayerStyleAnimatorInstanceInvalid() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct LayerShared: BaseLayer::Shared {
+        explicit LayerShared(const Configuration& configuration): BaseLayer::Shared{configuration} {}
+
+        void doSetStyle(const BaseLayerCommonStyleUniform&, Containers::ArrayView<const BaseLayerStyleUniform>) override {}
+    } sharedNoDynamicStyles{BaseLayer::Shared::Configuration{3, 5}},
+      shared{BaseLayer::Shared::Configuration{3, 5}
+        .setDynamicStyleCount(1)};
+
+    struct Layer: BaseLayer {
+        explicit Layer(LayerHandle handle, Shared& shared): BaseLayer{handle, shared} {}
+    };
+
+    struct Interface: UserInterface {
+        explicit Interface(NoCreateT): UserInterface{NoCreate} {}
+    } ui{NoCreate},
+      uiInstanceAlreadySet{NoCreate},
+      uiNoBaseLayer{NoCreate},
+      uiNoDynamicStyles{NoCreate};
+    ui.setBaseLayerInstance(Containers::pointer<Layer>(ui.createLayer(), shared));
+    uiInstanceAlreadySet.setBaseLayerInstance(Containers::pointer<Layer>(uiInstanceAlreadySet.createLayer(), shared));
+    uiInstanceAlreadySet.setBaseLayerStyleAnimatorInstance(Containers::pointer<BaseLayerStyleAnimator>(uiInstanceAlreadySet.createAnimator()));
+    uiNoDynamicStyles.setBaseLayerInstance(Containers::pointer<Layer>(uiNoDynamicStyles.createLayer(), sharedNoDynamicStyles));
+
+    BaseLayer& anotherLayer = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer(), shared));
+
+    Containers::Pointer<BaseLayerStyleAnimator> alreadyAssigned{InPlaceInit, animatorHandle(0, 1)};
+    anotherLayer.assignAnimator(*alreadyAssigned);
+
+    Containers::String out;
+    Error redirectError{&out};
+    ui.setBaseLayerStyleAnimatorInstance(nullptr);
+    uiInstanceAlreadySet.setBaseLayerStyleAnimatorInstance(Containers::pointer<BaseLayerStyleAnimator>(ui.createAnimator()));
+    uiNoBaseLayer.setBaseLayerStyleAnimatorInstance(Containers::pointer<BaseLayerStyleAnimator>(uiNoBaseLayer.createAnimator()));
+    uiNoDynamicStyles.setBaseLayerStyleAnimatorInstance(Containers::pointer<BaseLayerStyleAnimator>(uiNoDynamicStyles.createAnimator()));
+    ui.setBaseLayerStyleAnimatorInstance(Utility::move(alreadyAssigned));
+    CORRADE_COMPARE_AS(out,
+        "Ui::UserInterface::setBaseLayerStyleAnimatorInstance(): instance is null\n"
+        "Ui::UserInterface::setBaseLayerStyleAnimatorInstance(): instance already set\n"
+        "Ui::UserInterface::setBaseLayerStyleAnimatorInstance(): base layer instance not set\n"
+        "Ui::UserInterface::setBaseLayerStyleAnimatorInstance(): can't animate a base layer with zero dynamic styles\n"
+        "Ui::UserInterface::setBaseLayerStyleAnimatorInstance(): instance already assigned to Ui::LayerHandle(0x1, 0x1)\n",
+        TestSuite::Compare::String);
+}
+
+void UserInterfaceTest::baseLayerStyleAnimatorInvalid() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct Interface: UserInterface {
+        explicit Interface(NoCreateT): UserInterface{NoCreate} {}
+    } ui{NoCreate};
+    CORRADE_VERIFY(!ui.hasBaseLayerStyleAnimator());
+
+    Containers::String out;
+    Error redirectError{&out};
+    ui.baseLayerStyleAnimator();
+    CORRADE_COMPARE(out, "Ui::UserInterface::baseLayerStyleAnimator(): no instance set\n");
+}
+
 void UserInterfaceTest::setTextLayerInstance() {
     struct: Text::AbstractGlyphCache {
         using Text::AbstractGlyphCache::AbstractGlyphCache;
@@ -308,6 +446,129 @@ void UserInterfaceTest::textLayerInvalid() {
     Error redirectError{&out};
     ui.textLayer();
     CORRADE_COMPARE(out, "Ui::UserInterface::textLayer(): no instance set\n");
+}
+
+void UserInterfaceTest::setTextLayerStyleAnimatorInstance() {
+    auto&& data = SetStyleAnimatorInstanceData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
+    struct: Text::AbstractGlyphCache {
+        using Text::AbstractGlyphCache::AbstractGlyphCache;
+
+        Text::GlyphCacheFeatures doFeatures() const override { return {}; }
+        void doSetImage(const Vector2i&, const ImageView2D&) override {}
+    } cache{PixelFormat::R8Unorm, {32, 32}};
+
+    struct LayerShared: TextLayer::Shared {
+        explicit LayerShared(Text::AbstractGlyphCache& glyphCache, const Configuration& configuration): TextLayer::Shared{glyphCache, configuration} {}
+
+        void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
+        void doSetEditingStyle(const TextLayerCommonEditingStyleUniform&, Containers::ArrayView<const TextLayerEditingStyleUniform>) override {}
+    } shared{cache, TextLayer::Shared::Configuration{1, 3}
+        .setDynamicStyleCount(1)
+    };
+
+    struct Layer: TextLayer {
+        explicit Layer(LayerHandle handle, Shared& shared): TextLayer{handle, shared} {}
+    };
+
+    struct Interface: UserInterface {
+        explicit Interface(NoCreateT): UserInterface{NoCreate} {}
+    } ui{NoCreate};
+    CORRADE_COMPARE(ui.animatorCapacity(), 0);
+    CORRADE_COMPARE(ui.animatorUsedCount(), 0);
+    CORRADE_VERIFY(!ui.hasBaseLayerStyleAnimator());
+    CORRADE_VERIFY(!ui.hasTextLayerStyleAnimator());
+
+    ui.setTextLayerInstance(Containers::pointer<Layer>(ui.createLayer(), shared));
+
+    TextLayerStyleAnimator anotherAnimator{animatorHandle(0, 1)};
+    if(data.defaultAnimatorAlreadyExists) {
+        ui.textLayer().assignAnimator(anotherAnimator);
+        ui.textLayer().setDefaultStyleAnimator(&anotherAnimator);
+    }
+
+    AnimatorHandle handle = ui.createAnimator();
+    Containers::Pointer<TextLayerStyleAnimator> animator{InPlaceInit, handle};
+    TextLayerStyleAnimator* pointer = animator.get();
+    ui.setTextLayerStyleAnimatorInstance(Utility::move(animator));
+    CORRADE_COMPARE(ui.animatorCapacity(), 1);
+    CORRADE_COMPARE(ui.animatorUsedCount(), 1);
+    CORRADE_VERIFY(!ui.hasBaseLayerStyleAnimator());
+    CORRADE_VERIFY(ui.hasTextLayerStyleAnimator());
+    CORRADE_COMPARE(&ui.animator(handle), pointer);
+    CORRADE_COMPARE(&ui.textLayerStyleAnimator(), pointer);
+    /* The default animator gets set even if it already exists */
+    CORRADE_COMPARE(ui.textLayer().defaultStyleAnimator(), pointer);
+}
+
+void UserInterfaceTest::setTextLayerStyleAnimatorInstanceInvalid() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct: Text::AbstractGlyphCache {
+        using Text::AbstractGlyphCache::AbstractGlyphCache;
+
+        Text::GlyphCacheFeatures doFeatures() const override { return {}; }
+        void doSetImage(const Vector2i&, const ImageView2D&) override {}
+    } cache{PixelFormat::R8Unorm, {32, 32}};
+
+    struct LayerShared: TextLayer::Shared {
+        explicit LayerShared(Text::AbstractGlyphCache& glyphCache, const Configuration& configuration): TextLayer::Shared{glyphCache, configuration} {}
+
+        void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
+        void doSetEditingStyle(const TextLayerCommonEditingStyleUniform&, Containers::ArrayView<const TextLayerEditingStyleUniform>) override {}
+    } sharedNoDynamicStyles{cache, TextLayer::Shared::Configuration{1, 3}},
+      shared{cache, TextLayer::Shared::Configuration{1, 3}
+        .setDynamicStyleCount(1)};
+
+    struct Layer: TextLayer {
+        explicit Layer(LayerHandle handle, Shared& shared): TextLayer{handle, shared} {}
+    };
+
+    struct Interface: UserInterface {
+        explicit Interface(NoCreateT): UserInterface{NoCreate} {}
+    } ui{NoCreate},
+      uiInstanceAlreadySet{NoCreate},
+      uiNoTextLayer{NoCreate},
+      uiNoDynamicStyles{NoCreate};
+    ui.setTextLayerInstance(Containers::pointer<Layer>(ui.createLayer(), shared));
+    uiInstanceAlreadySet.setTextLayerInstance(Containers::pointer<Layer>(uiInstanceAlreadySet.createLayer(), shared));
+    uiInstanceAlreadySet.setTextLayerStyleAnimatorInstance(Containers::pointer<TextLayerStyleAnimator>(uiInstanceAlreadySet.createAnimator()));
+    uiNoDynamicStyles.setTextLayerInstance(Containers::pointer<Layer>(uiNoDynamicStyles.createLayer(), sharedNoDynamicStyles));
+
+    TextLayer& anotherLayer = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer(), shared));
+
+    Containers::Pointer<TextLayerStyleAnimator> alreadyAssigned{InPlaceInit, animatorHandle(0, 1)};
+    anotherLayer.assignAnimator(*alreadyAssigned);
+
+    Containers::String out;
+    Error redirectError{&out};
+    ui.setTextLayerStyleAnimatorInstance(nullptr);
+    uiInstanceAlreadySet.setTextLayerStyleAnimatorInstance(Containers::pointer<TextLayerStyleAnimator>(ui.createAnimator()));
+    uiNoTextLayer.setTextLayerStyleAnimatorInstance(Containers::pointer<TextLayerStyleAnimator>(ui.createAnimator()));
+    uiNoDynamicStyles.setTextLayerStyleAnimatorInstance(Containers::pointer<TextLayerStyleAnimator>(uiNoDynamicStyles.createAnimator()));
+    ui.setTextLayerStyleAnimatorInstance(Utility::move(alreadyAssigned));
+    CORRADE_COMPARE_AS(out,
+        "Ui::UserInterface::setTextLayerStyleAnimatorInstance(): instance is null\n"
+        "Ui::UserInterface::setTextLayerStyleAnimatorInstance(): instance already set\n"
+        "Ui::UserInterface::setTextLayerStyleAnimatorInstance(): text layer instance not set\n"
+        "Ui::UserInterface::setTextLayerStyleAnimatorInstance(): can't animate a text layer with zero dynamic styles\n"
+        "Ui::UserInterface::setTextLayerStyleAnimatorInstance(): instance already assigned to Ui::LayerHandle(0x1, 0x1)\n",
+        TestSuite::Compare::String);
+}
+
+void UserInterfaceTest::textLayerStyleAnimatorInvalid() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct Interface: UserInterface {
+        explicit Interface(NoCreateT): UserInterface{NoCreate} {}
+    } ui{NoCreate};
+    CORRADE_VERIFY(!ui.hasTextLayerStyleAnimator());
+
+    Containers::String out;
+    Error redirectError{&out};
+    ui.textLayerStyleAnimator();
+    CORRADE_COMPARE(out, "Ui::UserInterface::textLayerStyleAnimator(): no instance set\n");
 }
 
 void UserInterfaceTest::setEventLayerInstance() {

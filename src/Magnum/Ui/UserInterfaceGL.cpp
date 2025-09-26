@@ -33,10 +33,12 @@
 
 #include "Magnum/Ui/AbstractStyle.h"
 #include "Magnum/Ui/BaseLayerGL.h"
+#include "Magnum/Ui/BaseLayerAnimator.h"
 #include "Magnum/Ui/EventLayer.h"
 #include "Magnum/Ui/RendererGL.h"
 #include "Magnum/Ui/SnapLayouter.h"
 #include "Magnum/Ui/TextLayerGL.h"
+#include "Magnum/Ui/TextLayerAnimator.h"
 #include "Magnum/Ui/Implementation/userInterfaceState.h"
 
 namespace Magnum { namespace Ui {
@@ -76,6 +78,8 @@ bool UserInterfaceGL::tryCreateInternal(const AbstractStyle& style, const StyleF
     #ifndef CORRADE_NO_ASSERT
     State& state = static_cast<State&>(*_state);
     #endif
+    /* No need to test for baseLayerStyleAnimator / textLayerStyleAnimator as
+       those can be present only if baseLayer / styleLayer is there already */
     CORRADE_ASSERT(!hasRendererInstance() && !state.baseLayer && !state.textLayer && !state.eventLayer && !state.snapLayouter,
         "Ui::UserInterfaceGL::tryCreate(): user interface already created",
         /* Has to return true with CORRADE_GRACEFUL_ASSERT so when tested
@@ -137,6 +141,19 @@ bool UserInterfaceGL::trySetStyle(const AbstractStyle& style, const StyleFeature
                 .addFlags(style.baseLayerFlags())};
         setBaseLayerInstance(Containers::pointer<BaseLayerGL>(createLayer(), state.baseLayerShared));
     }
+    if(features >= StyleFeature::BaseLayerAnimations) {
+        CORRADE_ASSERT(!state.baseLayerStyleAnimator,
+            "Ui::UserInterfaceGL::trySetStyle(): base layer style animator already present", {});
+        /* If features contain StyleFeature::BaseLayer, state.baseLayer was
+           already added above, so it's enough to check state.baseLayer alone.
+           However, mention the StateFeature as well to hint that they can be
+           also applied both together. */
+        CORRADE_ASSERT(state.baseLayer,
+            "Ui::UserInterfaceGL::trySetStyle(): base layer not present and" << StyleFeature::BaseLayer << "isn't being applied as well for" << StyleFeature::BaseLayerAnimations, {});
+        CORRADE_ASSERT(state.baseLayer->shared().dynamicStyleCount(),
+            "Ui::UserInterfaceGL::trySetStyle():" << StyleFeature::BaseLayerAnimations << "requires the base layer to have least one dynamic style", {});
+        setBaseLayerStyleAnimatorInstance(Containers::pointer<BaseLayerStyleAnimator>(createAnimator()));
+    }
     if(features >= StyleFeature::TextLayer) {
         CORRADE_ASSERT(!state.textLayer,
             "Ui::UserInterfaceGL::trySetStyle(): text layer already present", {});
@@ -169,7 +186,7 @@ bool UserInterfaceGL::trySetStyle(const AbstractStyle& style, const StyleFeature
            However, mention the StateFeature as well to hint that they can be
            also applied both together. */
         CORRADE_ASSERT(state.textLayer,
-            "Ui::UserInterfaceGL::trySetStyle(): text layer not present and" << StyleFeature::TextLayer << "isn't being applied as well", {});
+            "Ui::UserInterfaceGL::trySetStyle(): text layer not present and" << StyleFeature::TextLayer << "isn't being applied as well for" << StyleFeature::TextLayerImages, {});
 
         /* Create a local importer plugin manager if external wasn't passed. If
            the text layer isn't present, the manager shouldn't be present
@@ -181,6 +198,19 @@ bool UserInterfaceGL::trySetStyle(const AbstractStyle& style, const StyleFeature
             _state->importerManagerStorage.emplace();
             _state->importerManager = &*_state->importerManagerStorage;
         }
+    }
+    if(features >= StyleFeature::TextLayerAnimations) {
+        CORRADE_ASSERT(!state.textLayerStyleAnimator,
+            "Ui::UserInterfaceGL::trySetStyle(): text layer style animator already present", {});
+        /* If features contain StyleFeature::TextLayer, state.textLayer was
+           already added above, so it's enough to check state.textLayer alone.
+           However, mention the StateFeature as well to hint that they can be
+           also applied both together. */
+        CORRADE_ASSERT(state.textLayer,
+            "Ui::UserInterfaceGL::trySetStyle(): text layer not present and" << StyleFeature::TextLayer << "isn't being applied as well for" << StyleFeature::TextLayerAnimations, {});
+        CORRADE_ASSERT(state.textLayer->shared().dynamicStyleCount(),
+            "Ui::UserInterfaceGL::trySetStyle():" << StyleFeature::TextLayerAnimations << "requires the text layer to have least one dynamic style", {});
+        setTextLayerStyleAnimatorInstance(Containers::pointer<TextLayerStyleAnimator>(createAnimator()));
     }
     if(features >= StyleFeature::EventLayer) {
         CORRADE_ASSERT(!state.eventLayer,

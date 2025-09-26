@@ -600,6 +600,12 @@ class MAGNUM_UI_EXPORT UserInterfaceGL: public UserInterface {
         UserInterfaceGL& setSize(const Vector2i& size) {
             return static_cast<UserInterfaceGL&>(UserInterface::setSize(size));
         }
+        UserInterfaceGL& setBaseLayerStyleAnimatorInstance(Containers::Pointer<BaseLayerStyleAnimator>&& instance) {
+            return static_cast<UserInterfaceGL&>(UserInterface::setBaseLayerStyleAnimatorInstance(Utility::move(instance)));
+        }
+        UserInterfaceGL& setTextLayerStyleAnimatorInstance(Containers::Pointer<TextLayerStyleAnimator>&& instance) {
+            return static_cast<UserInterfaceGL&>(UserInterface::setTextLayerStyleAnimatorInstance(Utility::move(instance)));
+        }
         UserInterfaceGL& setEventLayerInstance(Containers::Pointer<EventLayer>&& instance) {
             return static_cast<UserInterfaceGL&>(UserInterface::setEventLayerInstance(Utility::move(instance)));
         }

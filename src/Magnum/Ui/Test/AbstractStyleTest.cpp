@@ -35,9 +35,11 @@
 
 #include "Magnum/Ui/AbstractStyle.h"
 #include "Magnum/Ui/BaseLayer.h"
+#include "Magnum/Ui/BaseLayerAnimator.h"
 #include "Magnum/Ui/EventLayer.h"
 #include "Magnum/Ui/SnapLayouter.h"
 #include "Magnum/Ui/TextLayer.h"
+#include "Magnum/Ui/TextLayerAnimator.h"
 #include "Magnum/Ui/UserInterface.h"
 
 namespace Magnum { namespace Ui { namespace Test { namespace {
@@ -58,12 +60,14 @@ struct AbstractStyleTest: TestSuite::Tester {
     void styleCountNotImplemented();
     void styleCountNotImplementedDefaults();
 
+    void baseLayerDynamicStyleCountInvalid();
     void setBaseLayerDynamicStyleCount();
 
     void baseLayerFlags();
     void baseLayerFlagsNotImplementedDefaults();
     void baseLayerFlagsInvalid();
 
+    void textLayerDynamicStyleCountInvalid();
     void setTextLayerDynamicStyleCount();
 
     void textLayerGlyphCacheProperties();
@@ -80,12 +84,14 @@ struct AbstractStyleTest: TestSuite::Tester {
     void applyFeaturesNotSupported();
     void applyBaseLayerNotPresent();
     void applyBaseLayerDifferentStyleCount();
+    void applyBaseLayerStyleAnimatorNotPresent();
     void applyTextLayerNotPresent();
     void applyTextLayerDifferentStyleCount();
     void applyTextLayerDifferentGlyphCache();
     void applyTextLayerNoFontManager();
     void applyTextLayerImagesTextLayerNotPresent();
     void applyTextLayerImagesNoImporterManager();
+    void applyTextLayerStyleAnimatorNotPresent();
     void applyEventLayerNotPresent();
     void applySnapLayouterNotPresent();
 
@@ -96,27 +102,76 @@ struct AbstractStyleTest: TestSuite::Tester {
 
 const struct {
     const char* name;
-    bool baseLayerPresent, textLayerPresent, eventLayerPresent, snapLayouterPresent;
+    bool baseLayerPresent, baseLayerStyleAnimatorPresent;
+    bool textLayerPresent, textLayerStyleAnimatorPresent;
+    bool eventLayerPresent, snapLayouterPresent;
     StyleFeatures features;
     bool succeed;
 } ApplyData[]{
-    {"base layer only", true, false, false, false,
+    {"base layer only",
+        true, false,
+        false, false,
+        false, false,
         StyleFeature::BaseLayer, true},
-    {"text layer only", false, true, false, false,
+    {"base layer animations only",
+        true, true,
+        false, false,
+        false, false,
+        StyleFeature::BaseLayerAnimations, true},
+    {"base layer + base layer animations",
+        true, true,
+        false, false,
+        false, false,
+        StyleFeature::BaseLayer|StyleFeature::BaseLayerAnimations, true},
+    {"text layer only",
+        false, false,
+        true, false,
+        false, false,
         StyleFeature::TextLayer, true},
-    {"text layer images only", false, true, false, false,
+    {"text layer images only",
+        false, false,
+        true, false,
+        false, false,
         StyleFeature::TextLayerImages, true},
-    {"text layer + text layer images", false, true, false, false,
+    {"text layer + text layer images",
+        false, false,
+        true, false,
+        false, false,
         StyleFeature::TextLayer|StyleFeature::TextLayerImages, true},
-    {"event layer only", false, false, true, false,
+    {"text layer animations only",
+        false, false,
+        true, true,
+        false, false,
+        StyleFeature::TextLayerAnimations, true},
+    {"text layer + text layer animations",
+        false, false,
+        true, true,
+        false, false,
+        StyleFeature::TextLayer|StyleFeature::TextLayerAnimations, true},
+    {"event layer only",
+        false, false,
+        false, false,
+        true, false,
         StyleFeature::EventLayer, true},
-    {"snap layouter only", false, false, false, true,
+    {"snap layouter only",
+        false, false,
+        false, false,
+        false, true,
         StyleFeature::SnapLayouter, true},
-    {"everything except base layer", false, true, true, true,
-        ~StyleFeature::BaseLayer, true},
-    {"everything", true, true, true, true,
+    {"everything except base layer (and its animations)",
+        false, false,
+        true, true,
+        true, true,
+        ~(StyleFeature::BaseLayer|StyleFeature::BaseLayerAnimations), true},
+    {"everything",
+        true, true,
+        true, true,
+        true, true,
         ~StyleFeatures{}, true},
-    {"application failed", true, false, false, false,
+    {"application failed",
+        true, false,
+        false, false,
+        false, false,
         StyleFeature::BaseLayer, false}
 };
 
@@ -134,12 +189,14 @@ AbstractStyleTest::AbstractStyleTest() {
               &AbstractStyleTest::styleCountNotImplemented,
               &AbstractStyleTest::styleCountNotImplementedDefaults,
 
+              &AbstractStyleTest::baseLayerDynamicStyleCountInvalid,
               &AbstractStyleTest::setBaseLayerDynamicStyleCount,
 
               &AbstractStyleTest::baseLayerFlags,
               &AbstractStyleTest::baseLayerFlagsNotImplementedDefaults,
               &AbstractStyleTest::baseLayerFlagsInvalid,
 
+              &AbstractStyleTest::textLayerDynamicStyleCountInvalid,
               &AbstractStyleTest::setTextLayerDynamicStyleCount,
 
               &AbstractStyleTest::textLayerGlyphCacheProperties,
@@ -158,12 +215,14 @@ AbstractStyleTest::AbstractStyleTest() {
               &AbstractStyleTest::applyNoSizeSet,
               &AbstractStyleTest::applyBaseLayerNotPresent,
               &AbstractStyleTest::applyBaseLayerDifferentStyleCount,
+              &AbstractStyleTest::applyBaseLayerStyleAnimatorNotPresent,
               &AbstractStyleTest::applyTextLayerNotPresent,
               &AbstractStyleTest::applyTextLayerDifferentStyleCount,
               &AbstractStyleTest::applyTextLayerDifferentGlyphCache,
               &AbstractStyleTest::applyTextLayerNoFontManager,
               &AbstractStyleTest::applyTextLayerImagesTextLayerNotPresent,
               &AbstractStyleTest::applyTextLayerImagesNoImporterManager,
+              &AbstractStyleTest::applyTextLayerStyleAnimatorNotPresent,
               &AbstractStyleTest::applyEventLayerNotPresent,
               &AbstractStyleTest::applySnapLayouterNotPresent});
 }
@@ -176,8 +235,8 @@ void AbstractStyleTest::debugFeature() {
 
 void AbstractStyleTest::debugFeatures() {
     Containers::String out;
-    Debug{&out} << (StyleFeature::TextLayer|StyleFeature(0xe0)) << StyleFeatures{};
-    CORRADE_COMPARE(out, "Ui::StyleFeature::TextLayer|Ui::StyleFeature(0xe0) Ui::StyleFeatures{}\n");
+    Debug{&out} << (StyleFeature::TextLayer|StyleFeature(0x80)) << StyleFeatures{};
+    CORRADE_COMPARE(out, "Ui::StyleFeature::TextLayer|Ui::StyleFeature(0x80) Ui::StyleFeatures{}\n");
 }
 
 void AbstractStyleTest::construct() {
@@ -371,6 +430,25 @@ void AbstractStyleTest::styleCountNotImplementedDefaults() {
     CORRADE_COMPARE(style.textLayerStyleUniformCount(), 35);
 }
 
+void AbstractStyleTest::baseLayerDynamicStyleCountInvalid() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct: AbstractStyle {
+        StyleFeatures doFeatures() const override {
+            return StyleFeature::BaseLayer|StyleFeature::BaseLayerAnimations;
+        }
+        UnsignedInt doTextLayerDynamicStyleCount() const override { return 9; }
+        /* Text layer dynamic styles set instead of base layer, to verify the
+           correct interface is checked */
+        bool doApply(UserInterface&, StyleFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override { return {}; }
+    } style;
+
+    Containers::String out;
+    Error redirectError{&out};
+    style.baseLayerDynamicStyleCount();
+    CORRADE_COMPARE(out, "Ui::AbstractStyle::baseLayerDynamicStyleCount(): implementation advertises Ui::StyleFeature::BaseLayerAnimations but zero dynamic styles\n");
+}
+
 void AbstractStyleTest::setBaseLayerDynamicStyleCount() {
     struct: AbstractStyle {
         StyleFeatures doFeatures() const override {
@@ -481,6 +559,25 @@ void AbstractStyleTest::baseLayerFlagsInvalid() {
         "Ui::AbstractStyle::setBaseLayerFlags(): Ui::BaseLayerSharedFlag::Textured|Ui::BaseLayerSharedFlag::NoOutline isn't allowed to be added\n"
         "Ui::AbstractStyle::setBaseLayerFlags(): Ui::BaseLayerSharedFlag::Textured|Ui::BaseLayerSharedFlag::SubdividedQuads isn't allowed to be cleared\n",
         TestSuite::Compare::String);
+}
+
+void AbstractStyleTest::textLayerDynamicStyleCountInvalid() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct: AbstractStyle {
+        StyleFeatures doFeatures() const override {
+            return StyleFeature::TextLayer|StyleFeature::TextLayerAnimations;
+        }
+        UnsignedInt doBaseLayerDynamicStyleCount() const override { return 9; }
+        /* Base layer dynamic styles set instead of text layer, to verify the
+           correct interface is checked */
+        bool doApply(UserInterface&, StyleFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override { return {}; }
+    } style;
+
+    Containers::String out;
+    Error redirectError{&out};
+    style.textLayerDynamicStyleCount();
+    CORRADE_COMPARE(out, "Ui::AbstractStyle::textLayerDynamicStyleCount(): implementation advertises Ui::StyleFeature::TextLayerAnimations but zero dynamic styles\n");
 }
 
 void AbstractStyleTest::setTextLayerDynamicStyleCount() {
@@ -611,8 +708,8 @@ void AbstractStyleTest::textLayerGlyphCacheSizeNoTextFeature() {
 
     Containers::String out;
     Error redirectError{&out};
-    style.textLayerGlyphCacheSize(StyleFeature::BaseLayer|StyleFeature(0x40));
-    CORRADE_COMPARE(out, "Ui::AbstractStyle::textLayerGlyphCacheSize(): expected a superset of Ui::StyleFeature::TextLayer but got Ui::StyleFeature::BaseLayer|Ui::StyleFeature(0x40)\n");
+    style.textLayerGlyphCacheSize(StyleFeature::BaseLayer|StyleFeature(0x80));
+    CORRADE_COMPARE(out, "Ui::AbstractStyle::textLayerGlyphCacheSize(): expected a superset of Ui::StyleFeature::TextLayer but got Ui::StyleFeature::BaseLayer|Ui::StyleFeature(0x80)\n");
 }
 
 void AbstractStyleTest::textLayerGlyphCacheSizeFeaturesNotSupported() {
@@ -730,8 +827,12 @@ void AbstractStyleTest::apply() {
     ui.setSize({200, 300});
     if(data.baseLayerPresent)
         ui.setBaseLayerInstance(Containers::pointer<LayerBase>(ui.createLayer(), sharedBase));
+    if(data.baseLayerStyleAnimatorPresent)
+        ui.setBaseLayerStyleAnimatorInstance(Containers::pointer<BaseLayerStyleAnimator>(ui.createAnimator()));
     if(data.textLayerPresent)
         ui.setTextLayerInstance(Containers::pointer<LayerText>(ui.createLayer(), sharedText));
+    if(data.textLayerStyleAnimatorPresent)
+        ui.setTextLayerStyleAnimatorInstance(Containers::pointer<TextLayerStyleAnimator>(ui.createAnimator()));
     if(data.eventLayerPresent)
         ui.setEventLayerInstance(Containers::pointer<EventLayer>(ui.createLayer()));
     if(data.snapLayouterPresent)
@@ -742,7 +843,10 @@ void AbstractStyleTest::apply() {
         Style(Int& applyCalled, StyleFeatures expectedFeatures, bool succeed): _applyCalled(applyCalled), _expectedFeatures{expectedFeatures}, _succeed{succeed} {}
 
         StyleFeatures doFeatures() const override {
-            return StyleFeature::BaseLayer|StyleFeature::TextLayer|StyleFeature::TextLayerImages|StyleFeature::EventLayer|StyleFeature::SnapLayouter;
+            return
+                StyleFeature::BaseLayer|StyleFeature::BaseLayerAnimations|
+                StyleFeature::TextLayer|StyleFeature::TextLayerImages|StyleFeature::TextLayerAnimations|
+                StyleFeature::EventLayer|StyleFeature::SnapLayouter;
         }
         UnsignedInt doBaseLayerStyleUniformCount() const override { return 3; }
         UnsignedInt doBaseLayerStyleCount() const override { return 5; }
@@ -954,6 +1058,44 @@ void AbstractStyleTest::applyBaseLayerDifferentStyleCount() {
         "Ui::AbstractStyle::apply(): style wants 3 uniforms, 4 styles and at least 11 dynamic styles but the base layer has 3, 5 and 11\n"
         "Ui::AbstractStyle::apply(): style wants 3 uniforms, 5 styles and at least 12 dynamic styles but the base layer has 3, 5 and 11\n",
         TestSuite::Compare::String);
+}
+
+void AbstractStyleTest::applyBaseLayerStyleAnimatorNotPresent() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct LayerShared: BaseLayer::Shared {
+        explicit LayerShared(const Configuration& configuration): BaseLayer::Shared{configuration} {}
+
+        void doSetStyle(const BaseLayerCommonStyleUniform&, Containers::ArrayView<const BaseLayerStyleUniform>) override {}
+    } shared{BaseLayer::Shared::Configuration{3, 5}
+        .setDynamicStyleCount(11)
+    };
+
+    struct Layer: BaseLayer {
+        explicit Layer(LayerHandle handle, Shared& shared): BaseLayer{handle, shared} {}
+    };
+
+    struct Interface: UserInterface {
+        explicit Interface(NoCreateT): UserInterface{NoCreate} {}
+    } ui{NoCreate};
+    ui.setSize({200, 300})
+      .setBaseLayerInstance(Containers::pointer<Layer>(ui.createLayer(), shared));
+
+    struct: AbstractStyle {
+        StyleFeatures doFeatures() const override { return StyleFeature::BaseLayerAnimations; }
+        bool doApply(UserInterface&, StyleFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override {
+            CORRADE_FAIL("This shouldn't get called.");
+            return {};
+        }
+    } style;
+
+    /* Capture correct function name */
+    CORRADE_VERIFY(true);
+
+    Containers::String out;
+    Error redirectError{&out};
+    style.apply(ui, StyleFeature::BaseLayerAnimations, nullptr, nullptr);
+    CORRADE_COMPARE(out, "Ui::AbstractStyle::apply(): base layer style animator not present in the user interface\n");
 }
 
 void AbstractStyleTest::applyTextLayerNotPresent() {
@@ -1284,6 +1426,50 @@ void AbstractStyleTest::applyTextLayerImagesNoImporterManager() {
     Error redirectError{&out};
     style.apply(ui, StyleFeature::TextLayerImages, nullptr, &_fontManager);
     CORRADE_COMPARE(out, "Ui::AbstractStyle::apply(): importerManager has to be specified for applying text layer style images\n");
+}
+
+void AbstractStyleTest::applyTextLayerStyleAnimatorNotPresent() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct: Text::AbstractGlyphCache {
+        using Text::AbstractGlyphCache::AbstractGlyphCache;
+
+        Text::GlyphCacheFeatures doFeatures() const override { return {}; }
+        void doSetImage(const Vector2i&, const ImageView2D&) override {}
+    } cache{PixelFormat::R8Unorm, {16, 16}};
+
+    struct LayerShared: TextLayer::Shared {
+        explicit LayerShared(Text::AbstractGlyphCache& glyphCache, const Configuration& configuration): TextLayer::Shared{glyphCache, configuration} {}
+
+        void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
+        void doSetEditingStyle(const TextLayerCommonEditingStyleUniform&, Containers::ArrayView<const TextLayerEditingStyleUniform>) override {}
+    } shared{cache, TextLayer::Shared::Configuration{1}};
+
+    struct Layer: TextLayer {
+        explicit Layer(LayerHandle handle, Shared& shared): TextLayer{handle, shared} {}
+    };
+
+    struct Interface: UserInterface {
+        explicit Interface(NoCreateT): UserInterface{NoCreate} {}
+    } ui{NoCreate};
+    ui.setSize({200, 300})
+      .setTextLayerInstance(Containers::pointer<Layer>(ui.createLayer(), shared));
+
+    struct: AbstractStyle {
+        StyleFeatures doFeatures() const override { return StyleFeature::TextLayerAnimations; }
+        bool doApply(UserInterface&, StyleFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override {
+            CORRADE_FAIL("This shouldn't get called.");
+            return {};
+        }
+    } style;
+
+    /* Capture correct function name */
+    CORRADE_VERIFY(true);
+
+    Containers::String out;
+    Error redirectError{&out};
+    style.apply(ui, StyleFeature::TextLayerAnimations, nullptr, nullptr);
+    CORRADE_COMPARE(out, "Ui::AbstractStyle::apply(): text layer style animator not present in the user interface\n");
 }
 
 void AbstractStyleTest::applyEventLayerNotPresent() {

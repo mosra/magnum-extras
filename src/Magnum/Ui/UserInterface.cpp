@@ -30,9 +30,12 @@
 #include <Magnum/Math/Time.h>
 
 #include "Magnum/Ui/BaseLayer.h"
+#include "Magnum/Ui/BaseLayerAnimator.h"
 #include "Magnum/Ui/EventLayer.h"
+#include "Magnum/Ui/Handle.h"
 #include "Magnum/Ui/SnapLayouter.h"
 #include "Magnum/Ui/TextLayer.h"
+#include "Magnum/Ui/TextLayerAnimator.h"
 #include "Magnum/Ui/Implementation/userInterfaceState.h"
 
 namespace Magnum { namespace Ui {
@@ -57,6 +60,25 @@ UserInterface& UserInterface::setBaseLayerInstance(Containers::Pointer<BaseLayer
     return *this;
 }
 
+UserInterface& UserInterface::setBaseLayerStyleAnimatorInstance(Containers::Pointer<BaseLayerStyleAnimator>&& instance) {
+    CORRADE_ASSERT(instance,
+        "Ui::UserInterface::setBaseLayerStyleAnimatorInstance(): instance is null", *this);
+    CORRADE_ASSERT(!_state->baseLayerStyleAnimator,
+        "Ui::UserInterface::setBaseLayerStyleAnimatorInstance(): instance already set", *this);
+    CORRADE_ASSERT(_state->baseLayer,
+        "Ui::UserInterface::setBaseLayerStyleAnimatorInstance(): base layer instance not set", *this);
+    CORRADE_ASSERT(_state->baseLayer->shared().dynamicStyleCount(),
+        "Ui::UserInterface::setBaseLayerStyleAnimatorInstance(): can't animate a base layer with zero dynamic styles", *this);
+    CORRADE_ASSERT(instance->layer() == LayerHandle::Null,
+        "Ui::UserInterface::setBaseLayerStyleAnimatorInstance(): instance already assigned to" << instance->layer(), *this);
+    _state->baseLayerStyleAnimator = instance.get();
+    (*_state->baseLayer)
+        .assignAnimator(*instance)
+        .setDefaultStyleAnimator(instance.get());
+    setStyleAnimatorInstance(Utility::move(instance));
+    return *this;
+}
+
 UserInterface& UserInterface::setTextLayerInstance(Containers::Pointer<TextLayer>&& instance) {
     CORRADE_ASSERT(instance,
         "Ui::UserInterface::setTextLayerInstance(): instance is null", *this);
@@ -64,6 +86,25 @@ UserInterface& UserInterface::setTextLayerInstance(Containers::Pointer<TextLayer
         "Ui::UserInterface::setTextLayerInstance(): instance already set", *this);
     _state->textLayer = instance.get();
     setLayerInstance(Utility::move(instance));
+    return *this;
+}
+
+UserInterface& UserInterface::setTextLayerStyleAnimatorInstance(Containers::Pointer<TextLayerStyleAnimator>&& instance) {
+    CORRADE_ASSERT(instance,
+        "Ui::UserInterface::setTextLayerStyleAnimatorInstance(): instance is null", *this);
+    CORRADE_ASSERT(!_state->textLayerStyleAnimator,
+        "Ui::UserInterface::setTextLayerStyleAnimatorInstance(): instance already set", *this);
+    CORRADE_ASSERT(_state->textLayer,
+        "Ui::UserInterface::setTextLayerStyleAnimatorInstance(): text layer instance not set", *this);
+    CORRADE_ASSERT(_state->textLayer->shared().dynamicStyleCount(),
+        "Ui::UserInterface::setTextLayerStyleAnimatorInstance(): can't animate a text layer with zero dynamic styles", *this);
+    CORRADE_ASSERT(instance->layer() == LayerHandle::Null,
+        "Ui::UserInterface::setTextLayerStyleAnimatorInstance(): instance already assigned to" << instance->layer(), *this);
+    _state->textLayerStyleAnimator = instance.get();
+    (*_state->textLayer)
+        .assignAnimator(*instance)
+        .setDefaultStyleAnimator(instance.get());
+    setStyleAnimatorInstance(Utility::move(instance));
     return *this;
 }
 
@@ -101,6 +142,20 @@ BaseLayer& UserInterface::baseLayer() {
     return const_cast<BaseLayer&>(const_cast<const UserInterface&>(*this).baseLayer());
 }
 
+bool UserInterface::hasBaseLayerStyleAnimator() const {
+    return _state->baseLayerStyleAnimator;
+}
+
+const BaseLayerStyleAnimator& UserInterface::baseLayerStyleAnimator() const {
+    CORRADE_ASSERT(_state->baseLayerStyleAnimator,
+        "Ui::UserInterface::baseLayerStyleAnimator(): no instance set", *_state->baseLayerStyleAnimator);
+    return *_state->baseLayerStyleAnimator;
+}
+
+BaseLayerStyleAnimator& UserInterface::baseLayerStyleAnimator() {
+    return const_cast<BaseLayerStyleAnimator&>(const_cast<const UserInterface&>(*this).baseLayerStyleAnimator());
+}
+
 bool UserInterface::hasTextLayer() const {
     return _state->textLayer;
 }
@@ -113,6 +168,20 @@ const TextLayer& UserInterface::textLayer() const {
 
 TextLayer& UserInterface::textLayer() {
     return const_cast<TextLayer&>(const_cast<const UserInterface&>(*this).textLayer());
+}
+
+bool UserInterface::hasTextLayerStyleAnimator() const {
+    return _state->textLayerStyleAnimator;
+}
+
+const TextLayerStyleAnimator& UserInterface::textLayerStyleAnimator() const {
+    CORRADE_ASSERT(_state->textLayerStyleAnimator,
+        "Ui::UserInterface::textLayerStyleAnimator(): no instance set", *_state->textLayerStyleAnimator);
+    return *_state->textLayerStyleAnimator;
+}
+
+TextLayerStyleAnimator& UserInterface::textLayerStyleAnimator() {
+    return const_cast<TextLayerStyleAnimator&>(const_cast<const UserInterface&>(*this).textLayerStyleAnimator());
 }
 
 bool UserInterface::hasEventLayer() const {

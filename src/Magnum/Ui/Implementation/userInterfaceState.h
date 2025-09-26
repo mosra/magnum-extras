@@ -53,7 +53,9 @@ struct UserInterface::State {
     PluginManager::Manager<Trade::AbstractImporter>* importerManager;
 
     BaseLayer* baseLayer{};
+    BaseLayerStyleAnimator* baseLayerStyleAnimator{};
     TextLayer* textLayer{};
+    TextLayerStyleAnimator* textLayerStyleAnimator{};
     EventLayer* eventLayer{};
     SnapLayouter* snapLayouter{};
 };

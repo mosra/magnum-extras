@@ -104,6 +104,47 @@ class MAGNUM_UI_EXPORT UserInterface: public AbstractUserInterface {
         UserInterface& setBaseLayerInstance(Containers::Pointer<BaseLayer>&& instance);
 
         /**
+         * @brief Whether a base layer style animator instance has been set
+         *
+         * @see @ref baseLayerStyleAnimator(),
+         *      @ref setBaseLayerStyleAnimatorInstance()
+         */
+        bool hasBaseLayerStyleAnimator() const;
+
+        /**
+         * @brief Base layer style animator instance
+         *
+         * Expects that an instance has been set, either by
+         * @ref setBaseLayerStyleAnimatorInstance() or transitively by
+         * @ref UserInterfaceGL::setStyle(),
+         * @relativeref{UserInterfaceGL,create()} or a @ref UserInterfaceGL
+         * constructor taking a style instance.
+         * @see @ref StyleFeature::BaseLayerAnimations
+         */
+        BaseLayerStyleAnimator& baseLayerStyleAnimator();
+        const BaseLayerStyleAnimator& baseLayerStyleAnimator() const; /**< @overload */
+
+        /**
+         * @brief Set a base layer style animator instance
+         * @return Reference to self (for method chaining)
+         *
+         * Expects that a @ref BaseLayer instance is present but the animator
+         * instance hasn't been set yet, either by this function or
+         * transitively either by @ref UserInterfaceGL::setStyle(),
+         * @relativeref{UserInterfaceGL,create()} or a @ref UserInterfaceGL
+         * constructor taking a style instance.
+         *
+         * The instance is internally passed to @ref BaseLayer::assignAnimator(BaseLayerStyleAnimator&)
+         * and made default with @ref BaseLayer::setDefaultStyleAnimator().
+         * It's subsequently available through @ref baseLayerStyleAnimator(),
+         * and also @ref BaseLayer::defaultStyleAnimator() unless some other
+         * animator becomes set as default.
+         * @see @ref hasBaseLayerStyleAnimator(),
+         *      @ref StyleFeature::BaseLayerAnimations
+         */
+        UserInterface& setBaseLayerStyleAnimatorInstance(Containers::Pointer<BaseLayerStyleAnimator>&& instance);
+
+        /**
          * @brief Whether a text layer instance has been set
          *
          * @see @ref textLayer(), @ref setTextLayerInstance()
@@ -134,6 +175,47 @@ class MAGNUM_UI_EXPORT UserInterface: public AbstractUserInterface {
          * @see @ref hasTextLayer(), @ref StyleFeature::TextLayer
          */
         UserInterface& setTextLayerInstance(Containers::Pointer<TextLayer>&& instance);
+
+        /**
+         * @brief Whether a text layer style animator instance has been set
+         *
+         * @see @ref textLayerStyleAnimator(),
+         *      @ref setTextLayerStyleAnimatorInstance()
+         */
+        bool hasTextLayerStyleAnimator() const;
+
+        /**
+         * @brief Text layer style animator instance
+         *
+         * Expects that an instance has been set, either by
+         * @ref setTextLayerStyleAnimatorInstance() or transitively by
+         * @ref UserInterfaceGL::setStyle(),
+         * @relativeref{UserInterfaceGL,create()} or a @ref UserInterfaceGL
+         * constructor taking a style instance.
+         * @see @ref StyleFeature::TextLayerAnimations
+         */
+        TextLayerStyleAnimator& textLayerStyleAnimator();
+        const TextLayerStyleAnimator& textLayerStyleAnimator() const; /**< @overload */
+
+        /**
+         * @brief Set a text layer style animator instance
+         * @return Reference to self (for method chaining)
+         *
+         * Expects that a @ref TextLayer instance is present but the animator
+         * instance hasn't been set yet, either by this function or
+         * transitively either by @ref UserInterfaceGL::setStyle(),
+         * @relativeref{UserInterfaceGL,create()} or a @ref UserInterfaceGL
+         * constructor taking a style instance.
+         *
+         * The instance is internally passed to @ref TextLayer::assignAnimator(TextLayerStyleAnimator&)
+         * and made default with @ref BaseLayer::setDefaultStyleAnimator().
+         * It's subsequently available through @ref textLayerStyleAnimator(),
+         * and also @ref TextLayer::defaultStyleAnimator() unless some other
+         * animator becomes set as default.
+         * @see @ref hasTextLayerStyleAnimator(),
+         *      @ref StyleFeature::TextLayerAnimations
+         */
+        UserInterface& setTextLayerStyleAnimatorInstance(Containers::Pointer<TextLayerStyleAnimator>&& instance);
 
         /**
          * @brief Whether an event layer instance has been set

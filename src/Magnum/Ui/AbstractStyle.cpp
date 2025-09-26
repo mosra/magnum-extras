@@ -44,8 +44,10 @@ Debug& operator<<(Debug& debug, const StyleFeature value) {
         /* LCOV_EXCL_START */
         #define _c(value) case StyleFeature::value: return debug << "::" #value;
         _c(BaseLayer)
+        _c(BaseLayerAnimations)
         _c(TextLayer)
         _c(TextLayerImages)
+        _c(TextLayerAnimations)
         _c(EventLayer)
         _c(SnapLayouter)
         #undef _c
@@ -58,8 +60,10 @@ Debug& operator<<(Debug& debug, const StyleFeature value) {
 Debug& operator<<(Debug& debug, const StyleFeatures value) {
     return Containers::enumSetDebugOutput(debug, value, "Ui::StyleFeatures{}", {
         StyleFeature::BaseLayer,
+        StyleFeature::BaseLayerAnimations,
         StyleFeature::TextLayer,
         StyleFeature::TextLayerImages,
+        StyleFeature::TextLayerAnimations,
         StyleFeature::EventLayer,
         StyleFeature::SnapLayouter,
     });
@@ -99,6 +103,8 @@ UnsignedInt AbstractStyle::doBaseLayerStyleCount() const {
 UnsignedInt AbstractStyle::baseLayerDynamicStyleCount() const {
     CORRADE_ASSERT(features() >= StyleFeature::BaseLayer,
         "Ui::AbstractStyle::baseLayerDynamicStyleCount(): feature not supported", {});
+    CORRADE_ASSERT(!(features() >= StyleFeature::BaseLayerAnimations) || doBaseLayerDynamicStyleCount(),
+        "Ui::AbstractStyle::baseLayerDynamicStyleCount(): implementation advertises" << StyleFeature::BaseLayerAnimations << "but zero dynamic styles", {});
     return Math::max(doBaseLayerDynamicStyleCount(), _baseLayerDynamicStyleCount);
 }
 
@@ -177,6 +183,8 @@ UnsignedInt AbstractStyle::doTextLayerEditingStyleCount() const {
 UnsignedInt AbstractStyle::textLayerDynamicStyleCount() const {
     CORRADE_ASSERT(features() >= StyleFeature::TextLayer,
         "Ui::AbstractStyle::textLayerDynamicStyleCount(): feature not supported", {});
+    CORRADE_ASSERT(!(features() >= StyleFeature::TextLayerAnimations) || doTextLayerDynamicStyleCount(),
+        "Ui::AbstractStyle::textLayerDynamicStyleCount(): implementation advertises" << StyleFeature::TextLayerAnimations << "but zero dynamic styles", {});
     return Math::max(doTextLayerDynamicStyleCount(), _textLayerDynamicStyleCount);
 }
 
@@ -247,6 +255,10 @@ bool AbstractStyle::apply(UserInterface& ui, const StyleFeatures features, Plugi
             shared.dynamicStyleCount() >= baseLayerDynamicStyleCount(),
             "Ui::AbstractStyle::apply(): style wants" << baseLayerStyleUniformCount() << "uniforms," << baseLayerStyleCount() << "styles and at least" << baseLayerDynamicStyleCount() << "dynamic styles but the base layer has" << shared.styleUniformCount() << Debug::nospace << "," << shared.styleCount() << "and" << shared.dynamicStyleCount(), {});
     }
+    if(features >= StyleFeature::BaseLayerAnimations) {
+        CORRADE_ASSERT(ui.hasBaseLayerStyleAnimator(),
+            "Ui::AbstractStyle::apply(): base layer style animator not present in the user interface", {});
+    }
     if(features >= StyleFeature::TextLayer) {
         CORRADE_ASSERT(ui.hasTextLayer(),
             "Ui::AbstractStyle::apply(): text layer not present in the user interface", {});
@@ -275,6 +287,10 @@ bool AbstractStyle::apply(UserInterface& ui, const StyleFeatures features, Plugi
             "Ui::AbstractStyle::apply(): text layer not present in the user interface", {});
         CORRADE_ASSERT(importerManager,
             "Ui::AbstractStyle::apply(): importerManager has to be specified for applying text layer style images", {});
+    }
+    if(features >= StyleFeature::TextLayerAnimations) {
+        CORRADE_ASSERT(ui.hasTextLayerStyleAnimator(),
+            "Ui::AbstractStyle::apply(): text layer style animator not present in the user interface", {});
     }
     if(features >= StyleFeature::EventLayer) {
         CORRADE_ASSERT(ui.hasEventLayer(),

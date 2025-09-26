@@ -112,7 +112,7 @@ class GenericDataAnimator;
 class RendererGL;
 
 enum class StyleFeature: UnsignedByte;
-typedef Containers::EnumSet<StyleFeature, 31> StyleFeatures;
+typedef Containers::EnumSet<StyleFeature, 127> StyleFeatures;
 class AbstractStyle;
 
 enum class Icon: UnsignedInt;

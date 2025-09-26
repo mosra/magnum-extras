@@ -62,6 +62,19 @@ enum class StyleFeature: UnsignedByte {
     BaseLayer = 1 << 0,
 
     /**
+     * @ref BaseLayer animations using @ref BaseLayerStyleAnimator. Can only be
+     * used with @ref AbstractStyle::apply() if a @ref BaseLayerStyleAnimator
+     * instance is already set up on the @ref UserInterface; can only be used
+     * with @ref UserInterfaceGL::setStyle() /
+     * @relativeref{UserInterfaceGL,trySetStyle()} if set together with
+     * @ref StyleFeature::BaseLayer or if a @ref BaseLayerStyleAnimator
+     * instance is already set up on the @ref UserInterface.
+     * @see @ref UserInterface::baseLayerStyleAnimator(),
+     *      @ref UserInterface::hasBaseLayerStyleAnimator()
+     */
+    BaseLayerAnimations = 1 << 1,
+
+    /**
      * @ref TextLayer style and fonts. Ensures a @ref TextLayer instance with a
      * compatible @ref TextLayer::Shared state is set up on the
      * @ref UserInterface, the style implementation then calls
@@ -70,7 +83,7 @@ enum class StyleFeature: UnsignedByte {
      * @relativeref{TextLayer::Shared,setStyleTransition()} on it.
      * @see @ref UserInterface::textLayer(), @ref UserInterface::hasTextLayer()
      */
-    TextLayer = 1 << 1,
+    TextLayer = 1 << 2,
 
     /**
      * Additional images such as icons for use with
@@ -82,7 +95,20 @@ enum class StyleFeature: UnsignedByte {
      * @ref StyleFeature::TextLayer or if a @ref TextLayer instance is already
      * set up on the @ref UserInterface.
      */
-    TextLayerImages = 1 << 2,
+    TextLayerImages = 1 << 3,
+
+    /**
+     * @ref TextLayer animations using @ref TextLayerStyleAnimator. Can only be
+     * used with @ref AbstractStyle::apply() if a @ref TextLayerStyleAnimator
+     * instance is already set up on the @ref UserInterface; can only be used
+     * with @ref UserInterfaceGL::setStyle() /
+     * @relativeref{UserInterfaceGL,trySetStyle()} if set together with
+     * @ref StyleFeature::TextLayer or if a @ref TextLayerStyleAnimator
+     * instance is already set up on the @ref UserInterface.
+     * @see @ref UserInterface::textLayerStyleAnimator(),
+     *      @ref UserInterface::hasTextLayerStyleAnimator()
+     */
+    TextLayerAnimations = 1 << 4,
 
     /**
      * @ref EventLayer style. Ensures an @ref EventLayer instance is set up on
@@ -90,7 +116,7 @@ enum class StyleFeature: UnsignedByte {
      * @see @ref UserInterface::eventLayer(),
      *      @ref UserInterface::hasEventLayer()
      */
-    EventLayer = 1 << 3,
+    EventLayer = 1 << 5,
 
     /**
      * @ref SnapLayouter style. Ensures a @ref SnapLayouter instance is set up
@@ -100,7 +126,7 @@ enum class StyleFeature: UnsignedByte {
      * @see @ref UserInterface::snapLayouter(),
      *      @ref UserInterface::hasSnapLayouter()
      */
-    SnapLayouter = 1 << 4
+    SnapLayouter = 1 << 6
 };
 
 /**
@@ -119,8 +145,10 @@ MAGNUM_UI_EXPORT Debug& operator<<(Debug& debug, StyleFeature value);
 typedef Containers::EnumSet<StyleFeature
     #ifndef DOXYGEN_GENERATING_OUTPUT
     , UnsignedInt(StyleFeature::BaseLayer)|
+      UnsignedInt(StyleFeature::BaseLayerAnimations)|
       UnsignedInt(StyleFeature::TextLayer)|
       UnsignedInt(StyleFeature::TextLayerImages)|
+      UnsignedInt(StyleFeature::TextLayerAnimations)|
       UnsignedInt(StyleFeature::EventLayer)|
       UnsignedInt(StyleFeature::SnapLayouter)
     #endif
@@ -410,13 +438,13 @@ class MAGNUM_UI_EXPORT AbstractStyle {
          * Expects that @p ui has user interface size already set, either using
          * the constructor or by calling @ref UserInterface::setSize(). Expects
          * that @p features are a subset of @ref features() and contain at
-         * least one feature, that @p ui already contains all layers and
-         * layouters corresponding to @p features, that their shared state
-         * style uniform and style count matches the subset of
+         * least one feature, that @p ui already contains all layers, layouters
+         * and animators corresponding to @p features, that the layer shared
+         * state style uniform and style count matches the subset of
          * @ref baseLayerStyleUniformCount(), @ref baseLayerStyleCount(),
          * @ref textLayerStyleUniformCount(), @ref textLayerStyleCount(),
          * @ref textLayerEditingStyleUniformCount(),
-         * @ref textLayerEditingStyleCount() matching @p features and their
+         * @ref textLayerEditingStyleCount() matching @p features and the layer
          * shared state dynamic style count is at least the subset of
          * @ref baseLayerDynamicStyleCount(), @ref textLayerDynamicStyleCount()
          * matching @p features. Additionally, if @ref StyleFeature::TextLayer
@@ -468,7 +496,9 @@ class MAGNUM_UI_EXPORT AbstractStyle {
          *
          * Guaranteed to be called only if @ref doFeatures() contains
          * @ref StyleFeature::BaseLayer. Default implementation returns
-         * @cpp 0 @ce.
+         * @cpp 0 @ce. If @ref StyleFeature::BaseLayerAnimations is present in
+         * @ref doFeatures(), expects that the implementation returns at least
+         * one dynamic style.
          */
         virtual UnsignedInt doBaseLayerDynamicStyleCount() const;
 
@@ -524,7 +554,9 @@ class MAGNUM_UI_EXPORT AbstractStyle {
          *
          * Guaranteed to be called only if @ref doFeatures() contains
          * @ref StyleFeature::TextLayer. Default implementation returns
-         * @cpp 0 @ce.
+         * @cpp 0 @ce. If @ref StyleFeature::TextLayerAnimations is present in
+         * @ref doFeatures(), expects that the implementation returns at least
+         * one dynamic style.
          */
         virtual UnsignedInt doTextLayerDynamicStyleCount() const;
 
@@ -564,9 +596,11 @@ class MAGNUM_UI_EXPORT AbstractStyle {
          *
          * Should call @ref BaseLayer::Shared::setStyle(),
          * @ref BaseLayer::Shared::setStyleTransition(),
+         * @ref BaseLayer::Shared::setStyleAnimation(),
          * @ref TextLayer::Shared::addFont(),
-         * @ref TextLayer::Shared::setStyle() and
-         * @ref TextLayer::Shared::setStyleTransition() with style contents
+         * @ref TextLayer::Shared::setStyle(),
+         * @ref TextLayer::Shared::setStyleTransition() and
+         * @ref TextLayer::Shared::setStyleAnimation() with style contents
          * based on what @p features are passed and return @cpp true @ce. If
          * some runtime error happens, should print a message to
          * @relativeref{Magnum,Error} and return @cpp false @ce.
@@ -574,17 +608,17 @@ class MAGNUM_UI_EXPORT AbstractStyle {
          * The @p ui is guaranteed to have user interface set for the style to
          * use to calculate font rasterization and icon sizes, for example. The
          * @p features are guaranteed to be a subset of @ref features() and
-         * contain at least one feature, that @p ui already contains all layers
-         * and layouters corresponding to @p features, that their shared state
-         * style uniform and style count matches the subset of
-         * @ref baseLayerStyleUniformCount(), @ref baseLayerStyleCount(),
-         * @ref textLayerStyleUniformCount(), @ref textLayerStyleCount()
-         * matching @p features and their shared state dynamic style count is
-         * at least the subset of @ref baseLayerDynamicStyleCount(),
-         * @ref textLayerDynamicStyleCount() matching @p features.
-         * Additionally, if @ref StyleFeature::TextLayer is present in
-         * @p features, the @ref TextLayer::Shared instance is guaranteed to
-         * have a glyph cache set that matches
+         * contain at least one feature, that @p ui already contains all
+         * layers, layouters and animators corresponding to @p features, that
+         * the layer shared state style uniform and style count matches the
+         * subset of @ref baseLayerStyleUniformCount(),
+         * @ref baseLayerStyleCount(), @ref textLayerStyleUniformCount(),
+         * @ref textLayerStyleCount() matching @p features and the layer shared
+         * state dynamic style count is at least the subset of
+         * @ref baseLayerDynamicStyleCount(), @ref textLayerDynamicStyleCount()
+         * matching @p features. Additionally, if @ref StyleFeature::TextLayer
+         * is present in @p features, the @ref TextLayer::Shared instance is
+         * guaranteed to have a glyph cache set that matches
          * @ref textLayerGlyphCacheFormat(), with a size at least
          * @ref textLayerGlyphCacheSize() for @p features and padding at least
          * @ref textLayerGlyphCachePadding(), and @p fontManager is guaranteed
