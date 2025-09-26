@@ -64,13 +64,14 @@ struct AbstractStyleTest: TestSuite::Tester {
     void baseLayerFlagsNotImplementedDefaults();
     void baseLayerFlagsInvalid();
 
+    void setTextLayerDynamicStyleCount();
+
     void textLayerGlyphCacheProperties();
     void textLayerGlyphCachePropertiesNotSupported();
     void textLayerGlyphCachePropertiesNotImplemented();
     void textLayerGlyphCachePropertiesNotImplementedDefaults();
     void textLayerGlyphCacheSizeNoTextFeature();
     void textLayerGlyphCacheSizeFeaturesNotSupported();
-    void setTextLayerDynamicStyleCount();
     void setTextLayerGlyphCacheSize();
 
     void apply();
@@ -139,13 +140,14 @@ AbstractStyleTest::AbstractStyleTest() {
               &AbstractStyleTest::baseLayerFlagsNotImplementedDefaults,
               &AbstractStyleTest::baseLayerFlagsInvalid,
 
+              &AbstractStyleTest::setTextLayerDynamicStyleCount,
+
               &AbstractStyleTest::textLayerGlyphCacheProperties,
               &AbstractStyleTest::textLayerGlyphCachePropertiesNotSupported,
               &AbstractStyleTest::textLayerGlyphCachePropertiesNotImplemented,
               &AbstractStyleTest::textLayerGlyphCachePropertiesNotImplementedDefaults,
               &AbstractStyleTest::textLayerGlyphCacheSizeNoTextFeature,
               &AbstractStyleTest::textLayerGlyphCacheSizeFeaturesNotSupported,
-              &AbstractStyleTest::setTextLayerDynamicStyleCount,
               &AbstractStyleTest::setTextLayerGlyphCacheSize});
 
     addInstancedTests({&AbstractStyleTest::apply},
@@ -481,6 +483,31 @@ void AbstractStyleTest::baseLayerFlagsInvalid() {
         TestSuite::Compare::String);
 }
 
+void AbstractStyleTest::setTextLayerDynamicStyleCount() {
+    struct: AbstractStyle {
+        StyleFeatures doFeatures() const override {
+            return StyleFeature::TextLayer;
+        }
+        UnsignedInt doTextLayerDynamicStyleCount() const override { return 9; }
+        bool doApply(UserInterface&, StyleFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override { return {}; }
+    } style;
+
+    /* By default it returns what the style says */
+    CORRADE_COMPARE(style.textLayerDynamicStyleCount(), 9);
+
+    /* Setting a new value */
+    style.setTextLayerDynamicStyleCount(11);
+    CORRADE_COMPARE(style.textLayerDynamicStyleCount(), 11);
+
+    /* Setting a new but smaller value than before */
+    style.setTextLayerDynamicStyleCount(10);
+    CORRADE_COMPARE(style.textLayerDynamicStyleCount(), 10);
+
+    /* Setting a value smaller than what style says picks the style instead */
+    style.setTextLayerDynamicStyleCount(3);
+    CORRADE_COMPARE(style.textLayerDynamicStyleCount(), 9);
+}
+
 void AbstractStyleTest::textLayerGlyphCacheProperties() {
     struct: AbstractStyle {
         StyleFeatures doFeatures() const override {
@@ -602,31 +629,6 @@ void AbstractStyleTest::textLayerGlyphCacheSizeFeaturesNotSupported() {
     Error redirectError{&out};
     style.textLayerGlyphCacheSize(StyleFeature::TextLayer|StyleFeature::BaseLayer);
     CORRADE_COMPARE(out, "Ui::AbstractStyle::textLayerGlyphCacheSize(): Ui::StyleFeature::BaseLayer|Ui::StyleFeature::TextLayer not a subset of supported Ui::StyleFeature::TextLayer\n");
-}
-
-void AbstractStyleTest::setTextLayerDynamicStyleCount() {
-    struct: AbstractStyle {
-        StyleFeatures doFeatures() const override {
-            return StyleFeature::TextLayer;
-        }
-        UnsignedInt doTextLayerDynamicStyleCount() const override { return 9; }
-        bool doApply(UserInterface&, StyleFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override { return {}; }
-    } style;
-
-    /* By default it returns what the style says */
-    CORRADE_COMPARE(style.textLayerDynamicStyleCount(), 9);
-
-    /* Setting a new value */
-    style.setTextLayerDynamicStyleCount(11);
-    CORRADE_COMPARE(style.textLayerDynamicStyleCount(), 11);
-
-    /* Setting a new but smaller value than before */
-    style.setTextLayerDynamicStyleCount(10);
-    CORRADE_COMPARE(style.textLayerDynamicStyleCount(), 10);
-
-    /* Setting a value smaller than what style says picks the style instead */
-    style.setTextLayerDynamicStyleCount(3);
-    CORRADE_COMPARE(style.textLayerDynamicStyleCount(), 9);
 }
 
 void AbstractStyleTest::setTextLayerGlyphCacheSize() {
