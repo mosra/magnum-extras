@@ -27,6 +27,7 @@
 #include <Corrade/Utility/Arguments.h>
 #include <Magnum/DebugTools/FrameProfiler.h>
 #include <Magnum/Math/Color.h>
+#include <Magnum/Math/TimeStl.h>
 #include <Magnum/GL/DefaultFramebuffer.h>
 #include <Magnum/GL/Extensions.h>
 #include <Magnum/GL/Renderer.h>
@@ -98,6 +99,8 @@ Arguments:
 -   `-h`, `--help` --- display this help message and exit
 -   `--subdivided-quads` --- enable
     @ref Ui::BaseLayerSharedFlag::SubdividedQuads
+-   `--animations` --- enable `all`, `essential` or `none` animations (default:
+    `all`)
 -   `--profile` --- enable frame profiling using
     @ref DebugTools::FrameProfilerGL printed to the console
 -   `--debug` --- enable @ref Ui::DebugLayer for node inspection
@@ -135,9 +138,14 @@ constexpr const Float WidgetHeight = 36.0f;
 constexpr const Float LabelHeight = 24.0f;
 constexpr const Vector2 LabelSize{72.0f, LabelHeight};
 
+Nanoseconds now() {
+    return Nanoseconds{std::chrono::steady_clock::now()};
+}
+
 UiGallery::UiGallery(const Arguments& arguments): Platform::Application{arguments, NoCreate} {
     Utility::Arguments args;
     args.addBooleanOption("subdivided-quads").setHelp("subdivided-quads", "enable BaseLayerSharedFlag::SubdividedQuads")
+        .addOption("animations", "all").setHelp("animations", "enable all|essential|none animations")
         .addBooleanOption("profile").setHelp("profile", "enable frame profiling printed to the console")
         .addBooleanOption("debug").setHelp("debug", "enable debug layer for node inspection")
         #ifndef CORRADE_TARGET_EMSCRIPTEN
@@ -146,6 +154,17 @@ UiGallery::UiGallery(const Arguments& arguments): Platform::Application{argument
         .addSkippedPrefix("magnum", "engine-specific options")
         .parse(arguments.argc, arguments.argv);
 
+    Ui::McssDarkStyle::Features features;
+    {
+        const Containers::StringView animations = args.value<Containers::StringView>("animations");
+        if(animations == "all"_s)
+            features |= Ui::McssDarkStyle::Feature::Animations;
+        else if(animations == "essential"_s)
+            features |= Ui::McssDarkStyle::Feature::EssentialAnimations;
+        else if(animations != "none"_s)
+            Fatal{} << "Expected --animations to be all, essential or none but got" << animations;
+    }
+
     /* Create a GL context and the UI after the arguments were parsed to not
        have a flickering window and console noise if --help is requested,
        parsing fails, etc. */
@@ -153,7 +172,7 @@ UiGallery::UiGallery(const Arguments& arguments): Platform::Application{argument
         .setTitle("Magnum::Ui Gallery"_s)
         .setWindowFlags(Configuration::WindowFlag::Resizable));
 
-    _ui.create(*this, Ui::McssDarkStyle{});
+    _ui.create(*this, Ui::McssDarkStyle{features});
 
     /* Set up the profiler, if enabled */
     if(args.isSet("profile")) {
@@ -365,7 +384,9 @@ void UiGallery::drawEvent() {
 
     _profiler.beginFrame();
 
-    _ui.draw();
+    _ui
+        .advanceAnimations(now())
+        .draw();
 
     _profiler.endFrame();
 
@@ -377,49 +398,49 @@ void UiGallery::drawEvent() {
 }
 
 void UiGallery::pointerPressEvent(PointerEvent& event) {
-    _ui.pointerPressEvent(event);
+    _ui.pointerPressEvent(event, now());
 
     if(_ui.state())
         redraw();
 }
 
 void UiGallery::pointerReleaseEvent(PointerEvent& event) {
-    _ui.pointerReleaseEvent(event);
+    _ui.pointerReleaseEvent(event, now());
 
     if(_ui.state())
         redraw();
 }
 
 void UiGallery::pointerMoveEvent(PointerMoveEvent& event) {
-    _ui.pointerMoveEvent(event);
+    _ui.pointerMoveEvent(event, now());
 
     if(_ui.state())
         redraw();
 }
 
 void UiGallery::scrollEvent(ScrollEvent& event) {
-    _ui.scrollEvent(event);
+    _ui.scrollEvent(event, now());
 
     if(_ui.state())
         redraw();
 }
 
 void UiGallery::keyPressEvent(KeyEvent& event) {
-    _ui.keyPressEvent(event);
+    _ui.keyPressEvent(event, now());
 
     if(_ui.state())
         redraw();
 }
 
 void UiGallery::keyReleaseEvent(KeyEvent& event) {
-    _ui.keyReleaseEvent(event);
+    _ui.keyReleaseEvent(event, now());
 
     if(_ui.state())
         redraw();
 }
 
 void UiGallery::textInputEvent(TextInputEvent& event) {
-    _ui.textInputEvent(event);
+    _ui.textInputEvent(event, now());
 
     if(_ui.state())
         redraw();
