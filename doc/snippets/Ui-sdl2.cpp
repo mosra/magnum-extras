@@ -78,7 +78,11 @@ DOXYGEN_ELLIPSIS()
 class MyApplication: public Platform::Application {
     public:
         explicit MyApplication(const Arguments& arguments):
-            Platform::Application{arguments}, _ui{*this, DOXYGEN_ELLIPSIS(Ui::McssDarkStyle{})} { DOXYGEN_ELLIPSIS() }
+            Platform::Application{arguments},
+            _ui{*this, Ui::McssDarkStyle{}}
+        {
+            DOXYGEN_ELLIPSIS()
+        }
 
         void viewportEvent(ViewportEvent& event) override {
             _ui.setSize(event);
