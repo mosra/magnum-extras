@@ -357,10 +357,12 @@ void StyleTest::apply() {
     McssDarkStyle style;
 
     CORRADE_VERIFY(style.apply(ui, data.features, &importerManager, &_fontManager));
-    if(data.features >= StyleFeature::BaseLayer) {
-        /* No way to check the contents. Widget visuals tested in
-           StyleGLTest. */
-    }
+
+    /* Style transition for disabled functions should be set if base / text
+       layer style is set and not if not */
+    CORRADE_COMPARE(ui.baseLayer().shared().styleTransitionToDisabled(), data.features >= StyleFeature::BaseLayer);
+    CORRADE_COMPARE(ui.textLayer().shared().styleTransitionToDisabled(), data.features >= StyleFeature::TextLayer);
+
     if(data.features >= StyleFeature::TextLayer) {
         CORRADE_COMPARE(ui.textLayer().shared().fontCount(), 2);
         CORRADE_COMPARE(ui.textLayer().shared().glyphCache().fontCount(), 2);
