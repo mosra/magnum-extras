@@ -366,7 +366,7 @@ shared.setStyleAnimation<StyleIndex,
    main2() is then outside of it to avoid "unused function" warnings */
 namespace G { namespace {
 /* [BaseLayer-style-transitions] */
-enum BaseLayerStyle {
+enum class BaseLayerStyle {
     Button,
     ButtonHovered,
     ButtonPressed,
