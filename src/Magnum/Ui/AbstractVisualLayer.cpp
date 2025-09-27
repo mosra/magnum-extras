@@ -80,30 +80,6 @@ UnsignedInt AbstractVisualLayer::Shared::totalStyleCount() const {
     return state.styleCount + state.dynamicStyleCount;
 }
 
-AbstractVisualLayer::Shared& AbstractVisualLayer::Shared::setStyleTransition(UnsignedInt(*const toInactiveOut)(UnsignedInt), UnsignedInt(*const toInactiveOver)(UnsignedInt), UnsignedInt(*const toFocusedOut)(UnsignedInt), UnsignedInt(*const toFocusedOver)(UnsignedInt), UnsignedInt(*const toPressedOut)(UnsignedInt), UnsignedInt(*const toPressedOver)(UnsignedInt), UnsignedInt(*const toDisabled)(UnsignedInt)) {
-    _state->styleTransitionToInactiveOut = toInactiveOut ? toInactiveOut :
-        Implementation::styleTransitionPassthrough;
-    _state->styleTransitionToInactiveOver = toInactiveOver ? toInactiveOver :
-        Implementation::styleTransitionPassthrough;
-    _state->styleTransitionToFocusedOut = toFocusedOut ? toFocusedOut :
-        Implementation::styleTransitionPassthrough;
-    _state->styleTransitionToFocusedOver = toFocusedOver ? toFocusedOver :
-        Implementation::styleTransitionPassthrough;
-    _state->styleTransitionToPressedOut = toPressedOut ? toPressedOut :
-        Implementation::styleTransitionPassthrough;
-    _state->styleTransitionToPressedOver = toPressedOver ? toPressedOver :
-        Implementation::styleTransitionPassthrough;
-    /* Unlike the others, this one can be nullptr, in which case the whole
-       transitioning logic in doUpdate() gets replaced with a simple copy.
-       Setting it to a different function then causes doState() in all layers
-       sharing this state return NeedsDataUpdate. */
-    if(_state->styleTransitionToDisabled != toDisabled) {
-        _state->styleTransitionToDisabled = toDisabled;
-        ++_state->styleTransitionToDisabledUpdateStamp;
-    }
-    return *this;
-}
-
 auto AbstractVisualLayer::Shared::styleTransitionToInactiveOut() const -> UnsignedInt(*)(UnsignedInt) {
     return _state->styleTransitionToInactiveOut;
 }
@@ -130,6 +106,30 @@ auto AbstractVisualLayer::Shared::styleTransitionToPressedOver() const -> Unsign
 
 auto AbstractVisualLayer::Shared::styleTransitionToDisabled() const -> UnsignedInt(*)(UnsignedInt) {
     return _state->styleTransitionToDisabled;
+}
+
+AbstractVisualLayer::Shared& AbstractVisualLayer::Shared::setStyleTransition(UnsignedInt(*const toInactiveOut)(UnsignedInt), UnsignedInt(*const toInactiveOver)(UnsignedInt), UnsignedInt(*const toFocusedOut)(UnsignedInt), UnsignedInt(*const toFocusedOver)(UnsignedInt), UnsignedInt(*const toPressedOut)(UnsignedInt), UnsignedInt(*const toPressedOver)(UnsignedInt), UnsignedInt(*const toDisabled)(UnsignedInt)) {
+    _state->styleTransitionToInactiveOut = toInactiveOut ? toInactiveOut :
+        Implementation::styleTransitionPassthrough;
+    _state->styleTransitionToInactiveOver = toInactiveOver ? toInactiveOver :
+        Implementation::styleTransitionPassthrough;
+    _state->styleTransitionToFocusedOut = toFocusedOut ? toFocusedOut :
+        Implementation::styleTransitionPassthrough;
+    _state->styleTransitionToFocusedOver = toFocusedOver ? toFocusedOver :
+        Implementation::styleTransitionPassthrough;
+    _state->styleTransitionToPressedOut = toPressedOut ? toPressedOut :
+        Implementation::styleTransitionPassthrough;
+    _state->styleTransitionToPressedOver = toPressedOver ? toPressedOver :
+        Implementation::styleTransitionPassthrough;
+    /* Unlike the others, this one can be nullptr, in which case the whole
+       transitioning logic in doUpdate() gets replaced with a simple copy.
+       Setting it to a different function then causes doState() in all layers
+       sharing this state return NeedsDataUpdate. */
+    if(_state->styleTransitionToDisabled != toDisabled) {
+        _state->styleTransitionToDisabled = toDisabled;
+        ++_state->styleTransitionToDisabledUpdateStamp;
+    }
+    return *this;
 }
 
 AbstractVisualLayer::Shared& AbstractVisualLayer::Shared::setStyleAnimation(AnimationHandle(*onEnter)(AbstractVisualLayerStyleAnimator&, UnsignedInt, UnsignedInt, Nanoseconds, LayerDataHandle, AnimatorDataHandle), AnimationHandle(*onLeave)(AbstractVisualLayerStyleAnimator&, UnsignedInt, UnsignedInt, Nanoseconds, LayerDataHandle, AnimatorDataHandle), AnimationHandle(*onFocus)(AbstractVisualLayerStyleAnimator&, UnsignedInt, UnsignedInt, Nanoseconds, LayerDataHandle, AnimatorDataHandle), AnimationHandle(*onBlur)(AbstractVisualLayerStyleAnimator&, UnsignedInt, UnsignedInt, Nanoseconds, LayerDataHandle, AnimatorDataHandle), AnimationHandle(*onPress)(AbstractVisualLayerStyleAnimator&, UnsignedInt, UnsignedInt, Nanoseconds, LayerDataHandle, AnimatorDataHandle), AnimationHandle(*onRelease)(AbstractVisualLayerStyleAnimator&, UnsignedInt, UnsignedInt, Nanoseconds, LayerDataHandle, AnimatorDataHandle), AnimationHandle(*persistent)(AbstractVisualLayerStyleAnimator&, UnsignedInt, Nanoseconds, LayerDataHandle, AnimatorDataHandle)) {
