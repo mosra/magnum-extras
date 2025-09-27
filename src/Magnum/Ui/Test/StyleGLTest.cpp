@@ -299,7 +299,7 @@ const struct {
     {"input", "input.png",
         /* Input cursor blinking lasts 0.55 sec and is reversed every other
            iteration, so it'll be fully visible at twice as much */
-        {5, true, true, true, 0.55_sec*2, 2.0f, 0.0229f, true},
+        {5, true, true, true, 0.55_sec*2, 2.0f, 0.02292f, true},
         [](UserInterface& ui, Int style, Int counter) {
             Input input{{ui, {64, 36}}, counter % 2 ? "Edit..." : "Type?", InputStyle(style)};
             /** @todo use a cursor setting API once it exists */

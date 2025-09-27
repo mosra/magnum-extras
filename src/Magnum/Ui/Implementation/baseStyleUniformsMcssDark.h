@@ -83,65 +83,68 @@ _c(ButtonDimDisabled,           0x747474ff_rgbaf*0.3f, 4.0f)
 
 /* Flat button outline matches the text color, styled the same as links
    (--link-color, --link-active-color). Disabled state is --dim-link-color with
-   80% opacity. */
+   80% opacity. Make sure the inner outline radius is same as outer if the
+   outline has zero width, to not have fade out animations look weird. */
 /* Color, outline color, outline width, corner radius, inner corner radius */
-_c(ButtonFlatInactiveOut,       {}, {}, {}, 0.0f, 4.0f, 0.0f)
+_c(ButtonFlatInactiveOut,       {}, {}, {}, 0.0f, 4.0f, 4.0f)
 _c(ButtonFlatInactiveOver,      {}, {}, 0xa5c9ea_rgbf, 1.5f, 4.0f, 2.5f)
 _c(ButtonFlatPressedOut,        {}, {}, 0x5b9dd9_rgbf, 1.5f, 4.0f, 2.5f)
 _c(ButtonFlatPressedOver,       {}, {}, 0xa5c9ea_rgbf, 1.5f, 4.0f, 2.5f)
-_c(ButtonFlatDisabled,          {}, {}, {}, 0.0f, 4.0f, 0.0f)
+_c(ButtonFlatDisabled,          {}, {}, {}, 0.0f, 4.0f, 4.0f)
 
 /* Input is --*-filled-background-color for background, --*-color for left edge
    if not hovered or focused, --*-link-active-color for left edge and outline
-   if hovered or focused */
+   if hovered or focused. Make sure the inner outline radius is same as outer
+   if the outline has zero width, to not have fade out animations look
+   weird. */
 /* Color, outline color, (left, top, right, bottom) outline width, corner
    radius, inner corner radius (top left, bottom left, top right, bottom
    right) */
 _c(InputDefaultInactiveOut,     0x34424dff_rgbaf*0.8f, 0xdcdcdcff_rgbaf*0.8f,
-    {4.0f, 0.0f, 0.0f, 0.0f}, Vector4{4.0f}, {})
+    {4.0f, 0.0f, 0.0f, 0.0f}, Vector4{4.0f}, {0.0f, 0.0f, 4.0f, 4.0f})
 _c(InputDefaultInactiveOver,    0x34424dff_rgbaf*0.8f, 0xa5c9eaff_rgbaf*0.8f,
-    {4.0f, 0.0f, 0.0f, 0.0f}, Vector4{4.0f}, {})
+    {4.0f, 0.0f, 0.0f, 0.0f}, Vector4{4.0f}, {0.0f, 0.0f, 4.0f, 4.0f})
 _c(InputDefaultFocused,         0x34424dff_rgbaf*0.8f, 0xa5c9eaff_rgbaf*0.8f,
     {4.0f, 1.0f, 1.0f, 1.0f}, Vector4{4.0f}, {1.0f, 1.0f, 3.0f, 3.0f})
 _c(InputDefaultDisabled,        0x34424dff_rgbaf*0.3f, 0xdcdcdcff_rgbaf*0.3f,
-    {4.0f, 0.0f, 0.0f, 0.0f}, Vector4{4.0f}, {})
+    {4.0f, 0.0f, 0.0f, 0.0f}, Vector4{4.0f}, {0.0f, 0.0f, 4.0f, 4.0f})
 
 _c(InputSuccessInactiveOut,     0x2a703fff_rgbaf*0.8f, 0x3bd267ff_rgbaf*0.8f,
-    {4.0f, 0.0f, 0.0f, 0.0f}, Vector4{4.0f}, {})
+    {4.0f, 0.0f, 0.0f, 0.0f}, Vector4{4.0f}, {0.0f, 0.0f, 4.0f, 4.0f})
 _c(InputSuccessInactiveOver,    0x2a703fff_rgbaf*0.8f, 0xacecbeff_rgbaf*0.8f,
-    {4.0f, 0.0f, 0.0f, 0.0f}, Vector4{4.0f}, {})
+    {4.0f, 0.0f, 0.0f, 0.0f}, Vector4{4.0f}, {0.0f, 0.0f, 4.0f, 4.0f})
 _c(InputSuccessFocused,         0x2a703fff_rgbaf*0.8f, 0xacecbeff_rgbaf*0.8f,
     {4.0f, 1.0f, 1.0f, 1.0f}, Vector4{4.0f}, {1.0f, 1.0f, 3.0f, 3.0f})
 _c(InputSuccessDisabled,        0x2a703fff_rgbaf*0.3f, 0x3bd267ff_rgbaf*0.3f,
-    {4.0f, 0.0f, 0.0f, 0.0f}, Vector4{4.0f}, {})
+    {4.0f, 0.0f, 0.0f, 0.0f}, Vector4{4.0f}, {0.0f, 0.0f, 4.0f, 4.0f})
 
 _c(InputWarningInactiveOut,     0x6d702aff_rgbaf*0.8f, 0xc7cf2fff_rgbaf*0.8f,
-    {4.0f, 0.0f, 0.0f, 0.0f}, Vector4{4.0f}, {})
+    {4.0f, 0.0f, 0.0f, 0.0f}, Vector4{4.0f}, {0.0f, 0.0f, 4.0f, 4.0f})
 _c(InputWarningInactiveOver,    0x6d702aff_rgbaf*0.8f, 0xe9ecaeff_rgbaf*0.8f,
-    {4.0f, 0.0f, 0.0f, 0.0f}, Vector4{4.0f}, {})
+    {4.0f, 0.0f, 0.0f, 0.0f}, Vector4{4.0f}, {0.0f, 0.0f, 4.0f, 4.0f})
 _c(InputWarningFocused,         0x6d702aff_rgbaf*0.8f, 0xe9ecaeff_rgbaf*0.8f,
     {4.0f, 1.0f, 1.0f, 1.0f}, Vector4{4.0f}, {1.0f, 1.0f, 3.0f, 3.0f})
 _c(InputWarningDisabled,        0x6d702aff_rgbaf*0.3f, 0xc7cf2fff_rgbaf*0.3f,
-    {4.0f, 0.0f, 0.0f, 0.0f}, Vector4{4.0f}, {})
+    {4.0f, 0.0f, 0.0f, 0.0f}, Vector4{4.0f}, {0.0f, 0.0f, 4.0f, 4.0f})
 
 _c(InputDangerInactiveOut,      0x702b2aff_rgbaf*0.8f, 0xcd3431ff_rgbaf*0.8f,
-    {4.0f, 0.0f, 0.0f, 0.0f}, Vector4{4.0f}, {})
+    {4.0f, 0.0f, 0.0f, 0.0f}, Vector4{4.0f}, {0.0f, 0.0f, 4.0f, 4.0f})
 _c(InputDangerInactiveOver,     0x702b2aff_rgbaf*0.8f, 0xff9391ff_rgbaf*0.8f,
-    {4.0f, 0.0f, 0.0f, 0.0f}, Vector4{4.0f}, {})
+    {4.0f, 0.0f, 0.0f, 0.0f}, Vector4{4.0f}, {0.0f, 0.0f, 4.0f, 4.0f})
 _c(InputDangerFocused,          0x702b2aff_rgbaf*0.8f, 0xff9391ff_rgbaf*0.8f,
     {4.0f, 1.0f, 1.0f, 1.0f}, Vector4{4.0f}, {1.0f, 1.0f, 3.0f, 3.0f})
 _c(InputDangerDisabled,         0x702b2aff_rgbaf*0.3f, 0xcd3431ff_rgbaf*0.3f,
-    {4.0f, 0.0f, 0.0f, 0.0f}, Vector4{4.0f}, {})
+    {4.0f, 0.0f, 0.0f, 0.0f}, Vector4{4.0f}, {0.0f, 0.0f, 4.0f, 4.0f})
 
 /* Flat input has --link-color outline when hovered, to distinguish from
    --link-active-color of a hovered button, and --link-active-color outline
    when pressed or focused. When focused, it matches the text color. */
 _c(InputFlatInactiveOut,        {}, {},
-    {0.0f, 0.0f, 0.0f, 0.0f}, Vector4{4.0f}, {})
+    {0.0f, 0.0f, 0.0f, 0.0f}, Vector4{4.0f}, {4.0f, 4.0f, 4.0f, 4.0f})
 _c(InputFlatInactiveOver,       {}, 0x5b9dd9_rgbf,
     {4.0f, 1.0f, 1.0f, 1.0f}, Vector4{4.0f}, {1.0f, 1.0f, 3.0f, 3.0f})
 _c(InputFlatFocused,            {}, 0xa5c9ea_rgbf,
     {4.0f, 1.0f, 1.0f, 1.0f}, Vector4{4.0f}, {1.0f, 1.0f, 3.0f, 3.0f})
 _c(InputFlatDisabled,           {}, {},
-    {0.0f, 0.0f, 0.0f, 0.0f}, Vector4{4.0f}, {})
+    {0.0f, 0.0f, 0.0f, 0.0f}, Vector4{4.0f}, {4.0f, 4.0f, 4.0f, 4.0f})
 #endif
