@@ -804,8 +804,7 @@ bool McssDarkStyle::doApply(UserInterface& ui, const StyleFeatures features, Plu
     Ui::FontHandle iconFont{};
     if(features & (StyleFeature::TextLayer|StyleFeature::TextLayerImages)) {
         #ifdef MAGNUM_UI_BUILD_STATIC
-        if(!Utility::Resource::hasGroup("MagnumUi"_s))
-            importShaderResources();
+        importShaderResources();
         #endif
 
         TextLayer::Shared& shared = ui.textLayer().shared();
