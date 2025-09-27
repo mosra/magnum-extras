@@ -5593,6 +5593,21 @@ void AbstractVisualLayerTest::eventStyleTransitionInvalidAnimation() {
         nullptr,
         nullptr);
 
+    /* Using a time in the past is fine, only in the future is not */
+    {
+        shared.setStyleAnimation([](AbstractVisualLayerStyleAnimator& animator, UnsignedInt, UnsignedInt targetStyle, Nanoseconds, LayerDataHandle data, AnimatorDataHandle) {
+            return static_cast<StyleLayerStyleAnimator&>(animator).create(0u, targetStyle, 666_nsec, 0_nsec, data);
+        }, nullptr, nullptr);
+        FocusEvent event{1226_nsec};
+        ui.focusEvent(node, event);
+    } {
+        shared.setStyleAnimation(nullptr, nullptr, [](AbstractVisualLayerStyleAnimator& animator, UnsignedInt style, Nanoseconds, LayerDataHandle data, AnimatorDataHandle) {
+            return static_cast<StyleLayerStyleAnimator&>(animator).create(0u, style, 666_nsec, 0_nsec, data);
+        });
+        FocusEvent event{1226_nsec};
+        ui.focusEvent(node, event);
+    }
+
     Containers::String out;
     Error redirectError{&out};
     {
@@ -5621,9 +5636,9 @@ void AbstractVisualLayerTest::eventStyleTransitionInvalidAnimation() {
         ui.focusEvent(node, event);
     } {
         shared.setStyleAnimation([](AbstractVisualLayerStyleAnimator& animator, UnsignedInt, UnsignedInt targetStyle, Nanoseconds, LayerDataHandle data, AnimatorDataHandle) {
-            return static_cast<StyleLayerStyleAnimator&>(animator).create(0u, targetStyle, 666_nsec, 0_nsec, data);
+            return static_cast<StyleLayerStyleAnimator&>(animator).create(0u, targetStyle, 1226_nsec, 0_nsec, data);
         }, nullptr, nullptr);
-        FocusEvent event{1226_nsec};
+        FocusEvent event{666_nsec};
         ui.focusEvent(node, event);
     } {
         shared.setStyleAnimation(nullptr, nullptr, [](AbstractVisualLayerStyleAnimator& animator, UnsignedInt style, Nanoseconds, LayerDataHandle data, AnimatorDataHandle) {
@@ -5708,8 +5723,8 @@ void AbstractVisualLayerTest::eventStyleTransitionInvalidAnimation() {
         "Ui::AbstractVisualLayer::focusEvent(): expected style transition animation to have 1 as target style but got 2\n"
         "Ui::AbstractVisualLayer::focusEvent(): expected persistent style animation to have 1 as target style but got 2\n"
 
-        "Ui::AbstractVisualLayer::focusEvent(): expected style transition animation to start at Nanoseconds(1226) but got Nanoseconds(666)\n"
-        "Ui::AbstractVisualLayer::focusEvent(): expected persistent style animation to start at Nanoseconds(666) but got Nanoseconds(1226)\n"
+        "Ui::AbstractVisualLayer::focusEvent(): expected style transition animation to start at Nanoseconds(666) or earlier but got Nanoseconds(1226)\n"
+        "Ui::AbstractVisualLayer::focusEvent(): expected persistent style animation to start at Nanoseconds(666) or earlier but got Nanoseconds(1226)\n"
 
         "Ui::AbstractVisualLayer::focusEvent(): expected style transition animation to be attached to Ui::LayerDataHandle(0x0, 0x1) but got Ui::LayerDataHandle(0x12345, 0xabc)\n"
         "Ui::AbstractVisualLayer::focusEvent(): expected persistent style animation to be attached to Ui::LayerDataHandle(0x0, 0x1) but got Ui::LayerDataHandle(0x12345, 0xabc)\n"

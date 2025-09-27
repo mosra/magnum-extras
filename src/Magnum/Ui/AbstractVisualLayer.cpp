@@ -449,8 +449,8 @@ void AbstractVisualLayer::transitionStyle(
                 messagePrefix << "expected style transition animation to be either null or valid and coming from" << state.styleAnimator->handle() << "but got" << animation, );
             CORRADE_DEBUG_ASSERT(state.styleAnimator->styles(animation).second() == nextStyle,
                 messagePrefix << "expected style transition animation to have" << nextStyle << "as target style but got" << state.styleAnimator->styles(animation).second(), );
-            CORRADE_DEBUG_ASSERT(state.styleAnimator->started(animation) == time,
-                messagePrefix << "expected style transition animation to start at" << time << "but got" << state.styleAnimator->started(animation), );
+            CORRADE_DEBUG_ASSERT(state.styleAnimator->started(animation) <= time,
+                messagePrefix << "expected style transition animation to start at" << time << "or earlier but got" << state.styleAnimator->started(animation), );
             CORRADE_DEBUG_ASSERT(dataHandleId(state.styleAnimator->data(animation)) == dataId,
                 messagePrefix << "expected style transition animation to be attached to" << layerDataHandle(dataId, generations()[dataId]) << "but got" << dataHandleData(state.styleAnimator->data(animation)), );
             CORRADE_DEBUG_ASSERT(!(state.styleAnimator->flags(animation) & (AnimationFlag::KeepOncePlayed|AnimationFlag::Reverse)),
@@ -470,8 +470,8 @@ void AbstractVisualLayer::transitionStyle(
                 messagePrefix << "expected persistent style animation to be either null or valid and coming from" << state.styleAnimator->handle() << "but got" << persistentAnimation, );
             CORRADE_DEBUG_ASSERT(state.styleAnimator->styles(persistentAnimation).second() == nextStyle,
                 messagePrefix << "expected persistent style animation to have" << nextStyle << "as target style but got" << state.styleAnimator->styles(persistentAnimation).second(), );
-            CORRADE_DEBUG_ASSERT(state.styleAnimator->started(persistentAnimation) == time,
-                messagePrefix << "expected persistent style animation to start at" << time << "but got" << state.styleAnimator->started(persistentAnimation), );
+            CORRADE_DEBUG_ASSERT(state.styleAnimator->started(persistentAnimation) <= time,
+                messagePrefix << "expected persistent style animation to start at" << time << "or earlier but got" << state.styleAnimator->started(persistentAnimation), );
             CORRADE_DEBUG_ASSERT(dataHandleId(state.styleAnimator->data(persistentAnimation)) == dataId,
                 messagePrefix << "expected persistent style animation to be attached to" << layerDataHandle(dataId, generations()[dataId]) << "but got" << dataHandleData(state.styleAnimator->data(persistentAnimation)), );
             CORRADE_DEBUG_ASSERT(!(state.styleAnimator->flags(persistentAnimation) & (AnimationFlag::KeepOncePlayed|AnimationFlag::Reverse)),

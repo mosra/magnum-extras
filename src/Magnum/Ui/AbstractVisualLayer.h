@@ -690,11 +690,11 @@ class MAGNUM_UI_EXPORT AbstractVisualLayer::Shared {
          * If the functions return a non-null animation handle, the animation
          * is expected to come from the passed @p animator, have @p targetStyle
          * (or @p style in case of the @p persistent animation) as the target
-         * style, start at @p time, be attached to @p data and have neither
-         * @ref AnimationFlag::Reverse nor @ref AnimationFlag::KeepOncePlayed
-         * set. The animations are then automatically discarded when another
-         * style transition happens, as described in each
-         * @ref Ui-BaseLayerStyleAnimator-robustness "style animator documentation".
+         * style, start at @p time or earlier, be attached to @p data and have
+         * neither @ref AnimationFlag::Reverse nor
+         * @ref AnimationFlag::KeepOncePlayed set. The animations are then
+         * automatically discarded when another style transition happens, as
+         * described in each @ref Ui-BaseLayerStyleAnimator-robustness "style animator documentation".
          * In particular, the requirement to start at @p time is needed for
          * ensuring correct animation order when transitions happen rapidly
          * after each other.
