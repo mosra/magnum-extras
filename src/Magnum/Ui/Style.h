@@ -64,7 +64,7 @@ namespace Implementation {
     enum: UnsignedInt {
         BaseStyleCount = 61,
         BaseStyleUniformCount = BaseStyleCount,
-        TextStyleCount = 86,
+        TextStyleCount = 91,
         TextStyleUniformCount = 33,
         TextEditingStyleCount = 16,
         TextEditingStyleUniformCount = TextEditingStyleCount,
@@ -83,17 +83,69 @@ or @relativeref{UserInterfaceGL,setStyle()}. See the
 step-by-step guide for setting up an user interface.
 */
 class MAGNUM_UI_EXPORT McssDarkStyle: public AbstractStyle {
+    public:
+        /**
+         * @brief Style feature
+         *
+         * @see @ref Features, @ref McssDarkStyle()
+         */
+        enum class Feature: UnsignedByte {
+            /**
+             * Enable just essential animations, which is currently a blinking
+             * cursor for text editing. Subset of @ref Feature::Animations.
+             */
+            EssentialAnimations = 1 << 0,
+
+            /**
+             * Enable all animations, which include fade out on pointer out,
+             * release and blur, as well as an animated text editing cursor.
+             * Superset of @ref Feature::EssentialAnimations.
+             */
+            Animations = EssentialAnimations|(1 << 1)
+        };
+
+        /**
+         * @brief Style features
+         *
+         * @see @ref McssDarkStyle()
+         */
+        typedef Containers::EnumSet<Feature> Features;
+
+        /**
+         * @brief Constructor
+         * @param features  Style features to enable
+         */
+        explicit McssDarkStyle(Features features = {});
+
     private:
         MAGNUM_UI_LOCAL StyleFeatures doFeatures() const override;
         MAGNUM_UI_LOCAL UnsignedInt doBaseLayerStyleUniformCount() const override;
         MAGNUM_UI_LOCAL UnsignedInt doBaseLayerStyleCount() const override;
+        MAGNUM_UI_LOCAL UnsignedInt doBaseLayerDynamicStyleCount() const override;
         MAGNUM_UI_LOCAL UnsignedInt doTextLayerStyleUniformCount() const override;
         MAGNUM_UI_LOCAL UnsignedInt doTextLayerStyleCount() const override;
+        MAGNUM_UI_LOCAL UnsignedInt doTextLayerDynamicStyleCount() const override;
         MAGNUM_UI_LOCAL UnsignedInt doTextLayerEditingStyleUniformCount() const override;
         MAGNUM_UI_LOCAL UnsignedInt doTextLayerEditingStyleCount() const override;
         MAGNUM_UI_LOCAL Vector3i doTextLayerGlyphCacheSize(StyleFeatures features) const override;
         MAGNUM_UI_LOCAL bool doApply(UserInterface& ui, StyleFeatures features, PluginManager::Manager<Trade::AbstractImporter>* importerManager, PluginManager::Manager<Text::AbstractFont>* fontManager) const override;
+
+        Features _features;
 };
+
+/**
+@debugoperatorclassenum{McssDarkStyle,McssDarkStyle::Feature}
+@m_since_latest
+*/
+MAGNUM_UI_EXPORT Debug& operator<<(Debug& debug, McssDarkStyle::Feature value);
+
+/**
+@debugoperatorclassenum{McssDarkStyle,McssDarkStyle::Features}
+@m_since_latest
+*/
+MAGNUM_UI_EXPORT Debug& operator<<(Debug& debug, McssDarkStyle::Features value);
+
+CORRADE_ENUMSET_OPERATORS(McssDarkStyle::Features)
 
 }}
 

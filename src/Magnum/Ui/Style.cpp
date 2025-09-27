@@ -27,6 +27,7 @@
 #include "Style.h"
 #include "Style.hpp"
 
+#include <Corrade/Containers/EnumSet.hpp>
 #include <Corrade/Containers/Optional.h>
 #include <Corrade/Containers/StaticArray.h>
 #include <Corrade/Containers/StridedArrayView.h>
@@ -34,6 +35,7 @@
 #include <Corrade/Utility/Resource.h>
 #include <Magnum/ImageView.h>
 #include <Magnum/PixelFormat.h>
+#include <Magnum/Animation/Easing.h>
 #include <Magnum/Math/Color.h>
 #include <Magnum/Math/Range.h>
 #include <Magnum/Text/AbstractFont.h>
@@ -44,9 +46,12 @@
 #include <Magnum/Trade/ImageData.h>
 
 #include "Magnum/Ui/BaseLayer.h"
+#include "Magnum/Ui/BaseLayerAnimator.h"
 #include "Magnum/Ui/EventLayer.h"
+#include "Magnum/Ui/Handle.h"
 #include "Magnum/Ui/SnapLayouter.h"
 #include "Magnum/Ui/TextLayer.h"
+#include "Magnum/Ui/TextLayerAnimator.h"
 #include "Magnum/Ui/UserInterface.h"
 
 #ifdef MAGNUM_UI_BUILD_STATIC
@@ -56,6 +61,8 @@ static void importShaderResources() {
 #endif
 
 namespace Magnum { namespace Ui {
+
+using namespace Math::Literals;
 
 namespace Implementation {
 
@@ -482,10 +489,15 @@ Containers::StaticArray<7, TextStyle> styleTransition(const TextStyle index) {
         case TextStyle::LabelInfoDisabledText:
         case TextStyle::LabelDimDisabledIcon:
         case TextStyle::LabelDimDisabledText:
+        case TextStyle::InputDefaultFocusedBlink:
         case TextStyle::InputDefaultDisabled:
+        case TextStyle::InputSuccessFocusedBlink:
         case TextStyle::InputSuccessDisabled:
+        case TextStyle::InputWarningFocusedBlink:
         case TextStyle::InputWarningDisabled:
+        case TextStyle::InputDangerFocusedBlink:
         case TextStyle::InputDangerDisabled:
+        case TextStyle::InputFlatFocusedBlink:
         case TextStyle::InputFlatDisabled:
             CORRADE_INTERNAL_ASSERT_UNREACHABLE();
     }
@@ -518,6 +530,63 @@ TextStyle styleTransitionToDisabled(const TextStyle index) {
     return styleTransition(index)[6];
 }
 
+namespace {
+
+AnimationHandle styleAnimationOnLeaveBlurRelease(BaseLayerStyleAnimator& animator, const BaseStyle sourceStyle, const BaseStyle targetStyle, const Nanoseconds time, const LayerDataHandle data, AnimatorDataHandle) {
+    return animator.create(sourceStyle, targetStyle, Animation::Easing::smootherstep, time, 0.5_sec, data);
+}
+
+AnimationHandle styleAnimationOnLeaveBlurRelease(TextLayerStyleAnimator& animator, const TextStyle sourceStyle, const TextStyle targetStyle, const Nanoseconds time, const LayerDataHandle data, AnimatorDataHandle) {
+    return animator.create(sourceStyle, targetStyle, Animation::Easing::smootherstep, time, 0.5_sec, data);
+}
+
+/** @todo split this function up once some of these are not belonging to
+    Feature::EssentialAnimations */
+template<Float(*cursorBlinkEasing)(Float)> AnimationHandle styleAnimationPersistent(TextLayerStyleAnimator& animator, const TextStyle style, const Nanoseconds time, const LayerDataHandle data, const AnimatorDataHandle currentAnimation) {
+    if(style == TextStyle::InputDefaultFocused ||
+       style == TextStyle::InputSuccessFocused ||
+       style == TextStyle::InputWarningFocused ||
+       style == TextStyle::InputDangerFocused ||
+       style == TextStyle::InputFlatFocused)
+    {
+        /* It's just +1 but let's not have it too cryptic here. The compiler
+           hopefully optimizes this? */
+        TextStyle sourceStyle;
+        switch(style) {
+            case TextStyle::InputDefaultFocused:
+                sourceStyle = TextStyle::InputDefaultFocusedBlink;
+                break;
+            case TextStyle::InputSuccessFocused:
+                sourceStyle = TextStyle::InputSuccessFocusedBlink;
+                break;
+            case TextStyle::InputWarningFocused:
+                sourceStyle = TextStyle::InputWarningFocusedBlink;
+                break;
+            case TextStyle::InputDangerFocused:
+                sourceStyle = TextStyle::InputDangerFocusedBlink;
+                break;
+            case TextStyle::InputFlatFocused:
+                sourceStyle = TextStyle::InputFlatFocusedBlink;
+                break;
+            /* LCOV_EXCL_START */
+            default:
+                CORRADE_INTERNAL_ASSERT_UNREACHABLE();
+            /* LCOV_EXCL_STOP */
+        }
+
+        if(currentAnimation != AnimatorDataHandle::Null)
+            animator.remove(currentAnimation);
+        /* Start one iteration before so it's initially at the Focused style
+           already, with cursor shown. Otherwise there's a very quick blink
+           right after releasing the pointer, which doesn't look nice. */
+        return animator.create(sourceStyle, style, cursorBlinkEasing, time - 0.55_sec, 0.55_sec, data, 0, AnimationFlag::ReverseEveryOther);
+    }
+
+    return {};
+}
+
+}
+
 }
 
 Debug& operator<<(Debug& debug, const Icon value) {
@@ -534,6 +603,29 @@ Debug& operator<<(Debug& debug, const Icon value) {
     }
 
     return debug << "(" << Debug::nospace << Debug::hex << UnsignedInt(value) << Debug::nospace << ")";
+}
+
+Debug& operator<<(Debug& debug, const McssDarkStyle::Feature value) {
+    debug << "Ui::McssDarkStyle::Feature" << Debug::nospace;
+
+    switch(value) {
+        /* LCOV_EXCL_START */
+        #define _c(value) case McssDarkStyle::Feature::value: return debug << "::" #value;
+        _c(EssentialAnimations)
+        _c(Animations)
+        #undef _c
+        /* LCOV_EXCL_STOP */
+    }
+
+    return debug << "(" << Debug::nospace << Debug::hex << UnsignedByte(value) << Debug::nospace << ")";
+}
+
+Debug& operator<<(Debug& debug, const McssDarkStyle::Features value) {
+    return Containers::enumSetDebugOutput(debug, value, "Ui::McssDarkStyle::Features{}", {
+        McssDarkStyle::Feature::Animations,
+        /* Implied by Animations, has to be after */
+        McssDarkStyle::Feature::EssentialAnimations,
+    });
 }
 
 using namespace Containers::Literals;
@@ -621,12 +713,18 @@ static_assert(Implementation::TextEditingStyleCount == Containers::arraySize(Tex
 
 }
 
+McssDarkStyle::McssDarkStyle(const Features features): _features{features} {}
+
 StyleFeatures McssDarkStyle::doFeatures() const {
     return StyleFeature::BaseLayer|
            StyleFeature::TextLayer|
            StyleFeature::TextLayerImages|
            StyleFeature::EventLayer|
-           StyleFeature::SnapLayouter;
+           StyleFeature::SnapLayouter|
+           /* Essential animations are currently just (text layer) cursor
+              blinking */
+           (_features >= Feature::Animations ? StyleFeature::BaseLayerAnimations|StyleFeature::TextLayerAnimations : StyleFeatures{})|
+           (_features >= Feature::EssentialAnimations ? StyleFeature::TextLayerAnimations : StyleFeatures{});
 }
 
 UnsignedInt McssDarkStyle::doBaseLayerStyleUniformCount() const {
@@ -637,12 +735,23 @@ UnsignedInt McssDarkStyle::doBaseLayerStyleCount() const {
     return Implementation::BaseStyleUniformCount;
 }
 
+UnsignedInt McssDarkStyle::doBaseLayerDynamicStyleCount() const {
+    return _features >= Feature::Animations ? 10 : 0;
+}
+
 UnsignedInt McssDarkStyle::doTextLayerStyleUniformCount() const {
     return Implementation::TextStyleUniformCount;
 }
 
 UnsignedInt McssDarkStyle::doTextLayerStyleCount() const {
     return Implementation::TextStyleCount;
+}
+
+UnsignedInt McssDarkStyle::doTextLayerDynamicStyleCount() const {
+    /* For essential animations, assuming there's just one blinking cursor at a
+       time, add one dynamic style, and one more for safety */
+    return _features >= Feature::Animations ? 10 :
+        _features >= Feature::EssentialAnimations ? 2 : 0;
 }
 
 UnsignedInt McssDarkStyle::doTextLayerEditingStyleUniformCount() const {
@@ -675,6 +784,16 @@ bool McssDarkStyle::doApply(UserInterface& ui, const StyleFeatures features, Plu
                 Implementation::styleTransitionToPressedOut,
                 Implementation::styleTransitionToPressedOver,
                 Implementation::styleTransitionToDisabled>();
+    }
+
+    /* Animations for the base layer. Advertised only if they were enabled
+       during construction. */
+    if(features >= StyleFeature::BaseLayerAnimations) {
+        CORRADE_INTERNAL_ASSERT(_features >= Feature::Animations);
+        ui.baseLayer().shared().setStyleAnimation<BaseStyle,
+            nullptr,
+            Implementation::styleAnimationOnLeaveBlurRelease,
+            nullptr>();
     }
 
     /* Icon font. Add also if just the text layer style is applied (where it
@@ -833,6 +952,22 @@ bool McssDarkStyle::doApply(UserInterface& ui, const StyleFeatures features, Plu
 
         /* Reflect the image data update to the actual GPU-side texture */
         glyphCache.flushImage(updated);
+    }
+
+    /* Animations for the text layer. Advertised only if they were enabled
+       during construction. */
+    if(features >= StyleFeature::TextLayerAnimations) {
+        if(_features >= Feature::Animations)
+            ui.textLayer().shared().setStyleAnimation<TextStyle,
+                nullptr,
+                Implementation::styleAnimationOnLeaveBlurRelease,
+                Implementation::styleAnimationPersistent<Animation::Easing::exponentialInOut>>();
+        else if(_features >= Feature::EssentialAnimations)
+            ui.textLayer().shared().setStyleAnimation<TextStyle,
+                nullptr,
+                nullptr,
+                Implementation::styleAnimationPersistent<Animation::Easing::step>>();
+        else CORRADE_INTERNAL_ASSERT_UNREACHABLE(); /* LCOV_EXCL_LINE */
     }
 
     /* Event layer */
