@@ -472,6 +472,97 @@ baseLayerShared.setStyleTransition<BaseLayerStyle,
     nullptr>();
 /* [BaseLayer-style-transitions-deduplicated] */
 }
+
+namespace {
+/* [BaseLayer-style-animations] */
+Ui::AnimationHandle styleAnimationOnEnterFocusPress(
+    Ui::BaseLayerStyleAnimator& animator,
+    BaseLayerStyle sourceStyle, BaseLayerStyle targetStyle,
+    Nanoseconds now, Ui::LayerDataHandle data, Ui::AnimatorDataHandle)
+{
+    return animator.create(sourceStyle, targetStyle,
+        Animation::Easing::exponentialOut, now, 0.1_sec, data);
+}
+
+Ui::AnimationHandle styleAnimationOnLeaveBlurRelease(
+    Ui::BaseLayerStyleAnimator& animator,
+    BaseLayerStyle sourceStyle, BaseLayerStyle targetStyle,
+    Nanoseconds now, Ui::LayerDataHandle data, Ui::AnimatorDataHandle)
+{
+    return animator.create(sourceStyle, targetStyle,
+        Animation::Easing::smootherstep, now, 0.5_sec, data);
+}
+
+DOXYGEN_ELLIPSIS(} void main3(); void main3() { struct Shared: Ui::BaseLayer::Shared {
+    explicit Shared(): Ui::BaseLayer::Shared::Shared{Configuration{1}} {}
+    void doSetStyle(const Ui::BaseLayerCommonStyleUniform&, Containers::ArrayView<const Ui::BaseLayerStyleUniform>) override {}
+} baseLayerShared;)
+
+baseLayerShared.setStyleAnimation<BaseLayerStyle,
+    styleAnimationOnEnterFocusPress,
+    styleAnimationOnLeaveBlurRelease,
+    nullptr>();
+/* [BaseLayer-style-animations] */
+
+struct BaseLayer: Ui::BaseLayer {
+    explicit BaseLayer(Ui::LayerHandle layer, Ui::BaseLayer::Shared& shared): Ui::BaseLayer{layer, shared} {}
+} baseLayer{Ui::layerHandle(0, 1), baseLayerShared};
+Ui::AbstractUserInterface ui{{100, 100}};
+/* [BaseLayer-style-animations-animator] */
+Ui::BaseLayerStyleAnimator& animator = ui.setStyleAnimatorInstance(
+    Containers::pointer<Ui::BaseLayerStyleAnimator>(ui.createAnimator()));
+baseLayer
+    .assignAnimator(animator)
+    .setDefaultStyleAnimator(&animator);
+/* [BaseLayer-style-animations-animator] */
+}
+
+namespace {
+/* [TextLayer-style-animations] */
+enum class TextLayerStyle {
+    Input,
+    InputFocused,
+    InputFocusedBlink,
+    DOXYGEN_ELLIPSIS()
+};
+
+Ui::AnimationHandle styleAnimationPersistent(
+    Ui::TextLayerStyleAnimator& animator,
+    TextLayerStyle style, Nanoseconds now, Ui::LayerDataHandle data,
+    Ui::AnimatorDataHandle currentAnimation)
+{
+    if(style == TextLayerStyle::InputFocused) {
+        /* If there's a current animation, the function is required to remove
+           it in order to create a different one */
+        if(currentAnimation != Ui::AnimatorDataHandle::Null)
+            animator.remove(currentAnimation);
+        return animator.create(
+            TextLayerStyle::InputFocusedBlink, TextLayerStyle::InputFocused,
+            Animation::Easing::step, now, 0.5_sec, data, 0,
+            Ui::AnimationFlag::ReverseEveryOther);
+    }
+
+    return {};
+}
+
+DOXYGEN_ELLIPSIS(} void main4(); void main4() {
+struct GlyphCache: Text::AbstractGlyphCache {
+    explicit GlyphCache(): Text::AbstractGlyphCache{PixelFormat{}, Vector2i{}} {}
+    Text::GlyphCacheFeatures doFeatures() const override { return {}; }
+} glyphCache;
+struct Shared: Ui::TextLayer::Shared {
+    explicit Shared(Text::AbstractGlyphCache& glyphCache): Ui::TextLayer::Shared::Shared{glyphCache, Configuration{1}} {}
+
+    void doSetStyle(const Ui::TextLayerCommonStyleUniform&, Containers::ArrayView<const Ui::TextLayerStyleUniform>) override {}
+    void doSetEditingStyle(const Ui::TextLayerCommonEditingStyleUniform&, Containers::ArrayView<const Ui::TextLayerEditingStyleUniform>) override {}
+} textLayerShared{glyphCache};)
+
+textLayerShared.setStyleAnimation<TextLayerStyle,
+    nullptr,
+    nullptr,
+    styleAnimationPersistent>();
+/* [TextLayer-style-animations] */
+}
 }
 
 namespace H {
@@ -1101,10 +1192,17 @@ layer.onPinch(canvas, [&ui, canvas](const Vector2&, const Vector2& relativeTrans
 
 {
 Ui::AbstractUserInterface ui{{100, 100}};
-/* [BaseLayerStyleAnimator-setup1] */
-Ui::BaseLayerStyleAnimator& animator = ui.setStyleAnimatorInstance(
-    Containers::pointer<Ui::BaseLayerStyleAnimator>(ui.createAnimator()));
-/* [BaseLayerStyleAnimator-setup1] */
+Containers::Pointer<Ui::BaseLayerStyleAnimator> animatorInstance;
+Ui::BaseLayer& baseLayer = ui.layer<Ui::BaseLayer>({});
+/* [BaseLayerStyleAnimator-setup2] */
+baseLayer.assignAnimator(*animatorInstance);
+Ui::BaseLayerStyleAnimator& animator =
+    ui.setStyleAnimatorInstance(Utility::move(animatorInstance));
+/* [BaseLayerStyleAnimator-setup2] */
+
+/* [BaseLayerStyleAnimator-setup-default] */
+baseLayer.setDefaultStyleAnimator(&animator);
+/* [BaseLayerStyleAnimator-setup-default] */
 
 Nanoseconds now;
 /* [BaseLayerStyleAnimator-create] */
@@ -1931,10 +2029,17 @@ static_cast<void>(fontHandle);
 
 {
 Ui::AbstractUserInterface ui{{100, 100}};
-/* [TextLayerStyleAnimator-setup1] */
-Ui::TextLayerStyleAnimator& animator = ui.setStyleAnimatorInstance(
-    Containers::pointer<Ui::TextLayerStyleAnimator>(ui.createAnimator()));
-/* [TextLayerStyleAnimator-setup1] */
+Containers::Pointer<Ui::TextLayerStyleAnimator> animatorInstance;
+Ui::TextLayer& textLayer = ui.layer<Ui::TextLayer>({});
+/* [TextLayerStyleAnimator-setup2] */
+textLayer.assignAnimator(*animatorInstance);
+Ui::TextLayerStyleAnimator& animator =
+    ui.setStyleAnimatorInstance(Utility::move(animatorInstance));
+/* [TextLayerStyleAnimator-setup2] */
+
+/* [TextLayerStyleAnimator-setup-default] */
+textLayer.setDefaultStyleAnimator(&animator);
+/* [TextLayerStyleAnimator-setup-default] */
 
 Nanoseconds now;
 /* [TextLayerStyleAnimator-create] */

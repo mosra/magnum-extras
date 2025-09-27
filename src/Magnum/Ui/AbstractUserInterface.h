@@ -396,6 +396,54 @@ was accepted by it, so the checks are separate --- for example a
 but if the cursor is already at the begin of the text, it doesn't cause any
 visual change and thus there's no need to redraw anything.
 
+@section Ui-AbstractUserInterface-animations Setup for UI animations
+
+In order to have animations working, @ref advanceAnimations() needs to be
+called right before @ref draw(). The UI library itself doesn't have any notion
+of current time and the time is meant to be passed externally instead, which
+allows for more flexibility especially when testing and debugging animations.
+
+The time value can be either absolute or relative to the application start, but
+it should be coming from a monotonic clock as the internal animation logic
+expects the time to never go backward, such as when system clock is adjusted or
+if it's periodically synchronized over the network. Generally the
+@ref Platform::Sdl2Application "Platform::*Application" classes don't expose
+any timer provided by the toolkits, so the most portable choice is
+@ref std::chrono::steady_clock (as opposed to @ref std::chrono::system_clock,
+for example). With @ref Magnum/Math/TimeStl.h it can convert to a
+@ref Nanoseconds value:
+
+@snippet Ui-sdl2.cpp AbstractUserInterface-animations-advance
+
+<b></b>
+
+@m_class{m-block m-success}
+
+@par Animations and on-demand redrawing
+    Note that, as shown in the snippet, to have animations working you don't
+    need to constantly redraw either. The library keeps track of whether any
+    animations are currently playing or are scheduled to be played in the
+    future, and returns @ref UserInterfaceState::NeedsAnimationAdvance in
+    @ref state() in that case, which the snippet uses to trigger a redraw. Once
+    all animations stop, @ref state() becomes empty, causing the application to
+    again just wait for another input event.
+
+Animations can happen also in response to input events. To equip them with a
+time value that matches what's passed to @ref advanceAnimations(), pass it as a
+second argument to the @ref pointerPressEvent(Event& event, Args&&... args)
+etc. functions. If you don't pass a time value to an event, given animation
+will behave as if it started at time @cpp 0 @ce, thus being already stopped at
+the time next animation advance happens.
+
+@snippet Ui-sdl2.cpp AbstractUserInterface-animations-events
+
+With everything set up, you can enable @ref McssDarkStyle::Feature::Animations
+in the builtin style, which will perform various fade out animations as well as
+a blinking cursor in text input fields. The builtin style has more animation
+options, see @ref Ui-McssDarkStyle-animations for details.
+
+@snippet Ui-sdl2.cpp AbstractUserInterface-animations-style-features
+
 @section Ui-AbstractUserInterface-handles Handles and resource ownership
 
 Unlike traditional toolkits, which commonly use pointers to UI elements

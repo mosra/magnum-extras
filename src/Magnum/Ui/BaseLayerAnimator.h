@@ -103,31 +103,37 @@ individual properties interpolated with an easing function.
 
 @section Ui-BaseLayerStyleAnimator-setup Setting up an animator instance
 
-The animator doesn't have any shared state or configuration, so it's just about
-constructing it from a fresh @ref AbstractUserInterface::createAnimator()
-handle and passing it to @relativeref{AbstractUserInterface,setStyleAnimatorInstance()}.
+If you create a @ref UserInterfaceGL with a style containing
+@ref McssDarkStyle::Feature::Animations or equivalent and don't exclude
+@ref StyleFeature::BaseLayerAnimations, an implicit instance of the class,
+configured for use with builtin widgets, is already provided and available
+through @ref UserInterface::baseLayerStyleAnimator().
 
-@snippet Ui.cpp BaseLayerStyleAnimator-setup1
+For a custom animator, first create an instance from a fresh
+@ref AbstractUserInterface::createAnimator() handle. After that, the animator
+has to be assigned to a concrete layer instance. The animations make use of
+dynamic styles, so the base layer is expected to have at least one dynamic
+style enabled with @ref BaseLayer::Shared::Configuration::setDynamicStyleCount().
+The more dynamic styles are enabled, the more style animations can be running
+for given layer at the same time, but also more data need to get uploaded to
+the GPU every frame.
 
-After that, the animator has to be registered with a concrete layer instance.
-The animations make use of dynamic styles, so the base layer is expected to
-have at least one dynamic style enabled with
-@ref BaseLayer::Shared::Configuration::setDynamicStyleCount(). The more dynamic
-styles are enabled, the more style animations can be running for given layer at
-the same time, but also more data need to get uploaded to the GPU every frame.
-Finally, call @ref BaseLayer::assignAnimator(BaseLayerStyleAnimator&) to assign
-the animator to the layer instance. Then, assuming
-@ref AbstractUserInterface::advanceAnimations() is called in an appropriate
-place, the animator is ready to use.
+@snippet Ui-gl.cpp BaseLayerStyleAnimator-setup1
 
-@snippet Ui-gl.cpp BaseLayerStyleAnimator-setup2
+With the layer ready, call @ref BaseLayer::assignAnimator(BaseLayerStyleAnimator&)
+to assign the animator instance to the layer and then pass the animator to
+@relativeref{AbstractUserInterface,setStyleAnimatorInstance()}. Then, assuming
+@ref Ui-AbstractUserInterface-animations "the user interface is set up for animations", the animator is ready to use.
 
-Unlike builtin layers or layouters, the default @ref UserInterface
-implementation doesn't implicitly provide a @ref BaseLayerStyleAnimator
-instance.
+@snippet Ui.cpp BaseLayerStyleAnimator-setup2
 
-@todoc setDefaultStyleAnimator(), once it's actually used by styles; then also
-    update the sentence about UserInterface not having any animator instance
+To have the animator instance used for @ref Ui-BaseLayer-style-animations "animating styles and style transitions",
+pass it to @ref BaseLayer::setDefaultStyleAnimator(). Afterwards, calling
+@relativeref{BaseLayer,setDefaultStyleAnimator()} with @cpp nullptr @ce will
+effectively disable implicit style animations until some animator is made
+default again.
+
+@snippet Ui.cpp BaseLayerStyleAnimator-setup-default
 
 @section Ui-BaseLayerStyleAnimator-create Creating animations
 

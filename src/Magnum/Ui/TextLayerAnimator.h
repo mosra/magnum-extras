@@ -122,31 +122,42 @@ individual properties interpolated with an easing function.
 
 @section Ui-TextLayerStyleAnimator-setup Setting up an animator instance
 
-The animator doesn't have any shared state or configuration, so it's just about
-constructing it from a fresh @ref AbstractUserInterface::createAnimator()
-handle and passing it to @relativeref{AbstractUserInterface,setStyleAnimatorInstance()}.
+If you create a @ref UserInterfaceGL with a style containing
+@ref McssDarkStyle::Feature::Animations or equivalent and don't exclude
+@ref StyleFeature::TextLayerAnimations, an implicit instance of the class,
+configured for use with builtin widgets, is already provided and available
+through @ref UserInterface::textLayerStyleAnimator().
 
-@snippet Ui.cpp TextLayerStyleAnimator-setup1
+For a custom animator, first create an instance from a fresh
+@ref AbstractUserInterface::createAnimator() handle. After that, the animator
+has to be assigned to a concrete layer instance. The animations make use of
+dynamic styles, so the text layer is expected to have at least one dynamic
+style enabled with @ref TextLayer::Shared::Configuration::setDynamicStyleCount().
+The more dynamic styles are enabled, the more style animations can be running
+for given layer at the same time, but also more data need to get uploaded to
+the GPU every frame.
 
-After that, the animator has to be registered with a concrete layer instance.
-The animations make use of dynamic styles, so the text layer is expected to
-have at least one dynamic style enabled with
-@ref TextLayer::Shared::Configuration::setDynamicStyleCount(). The more dynamic
-styles are enabled, the more style animations can be running for given layer at
-the same time, but also more data need to get uploaded to the GPU every frame.
-Finally, call @ref TextLayer::assignAnimator(TextLayerStyleAnimator&) to assign
-the animator to the layer instance. Then, assuming
-@ref AbstractUserInterface::advanceAnimations() is called in an appropriate
-place, the animator is ready to use.
+@snippet Ui-gl.cpp TextLayerStyleAnimator-setup1
 
-@snippet Ui-gl.cpp TextLayerStyleAnimator-setup2
+With the layer ready, call @ref TextLayer::assignAnimator(TextLayerStyleAnimator&)
+to assign the animator instance to the layer and then pass the animator to
+@relativeref{AbstractUserInterface,setStyleAnimatorInstance()}. Then, assuming
+@ref Ui-AbstractUserInterface-animations "the user interface is set up for animations", the animator is ready to use.
 
-Unlike builtin layers or layouters, the default @ref UserInterface
-implementation doesn't implicitly provide a @ref TextLayerStyleAnimator
-instance.
+@snippet Ui.cpp TextLayerStyleAnimator-setup2
 
-@todoc setDefaultStyleAnimator(), once it's actually used by styles; then also
-    update the sentence about UserInterface not having any animator instance
+To have the animator instance used for @ref Ui-TextLayer-style-animations "animating styles and style transitions",
+pass it to @ref TextLayer::setDefaultStyleAnimator(). Afterwards, calling
+@relativeref{TextLayer,setDefaultStyleAnimator()} with @cpp nullptr @ce will
+effectively disable implicit style animations until some animator is made
+default again.
+
+@snippet Ui.cpp TextLayerStyleAnimator-setup-default
+
+To have the animator instance used for default style animations, pass it to
+@ref TextLayer::setDefaultStyleAnimator(). The style animation workflow is
+similar as with @ref BaseLayer, see @ref Ui-TextLayer-style-animations for an
+example of animating a blinking cursor.
 
 @section Ui-TextLayerStyleAnimator-create Creating animations
 

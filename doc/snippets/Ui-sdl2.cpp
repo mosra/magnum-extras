@@ -29,6 +29,7 @@
 #include <Magnum/Platform/Sdl2Application.h>
 
 #include "Magnum/Math/Functions.h"
+#include "Magnum/Math/TimeStl.h"
 #include "Magnum/Ui/Application.h"
 #include "Magnum/Ui/RendererGL.h"
 #include "Magnum/Ui/Style.h"
@@ -161,6 +162,61 @@ void MyApplication::textInputEvent(TextInputEvent& event) {
 namespace B {
 
 struct MyApplication: Platform::Application {
+    explicit MyApplication(const Arguments& arguments);
+
+    void drawEvent() override;
+    void pointerPressEvent(PointerEvent& event) override;
+
+    Ui::UserInterfaceGL _ui;
+};
+
+/* The include is already above, so doing it again here should be harmless */
+/* [AbstractUserInterface-animations-advance] */
+#include <Magnum/Math/TimeStl.h>
+
+DOXYGEN_ELLIPSIS(Nanoseconds now();)
+
+Nanoseconds now() {
+    return Nanoseconds{std::chrono::steady_clock::now()};
+}
+
+void MyApplication::drawEvent() {
+    GL::defaultFramebuffer.clear(GL::FramebufferClear::Color);
+
+    _ui
+        .advanceAnimations(now())
+        .draw();
+
+    swapBuffers();
+    if(_ui.state())
+        redraw();
+}
+/* [AbstractUserInterface-animations-advance] */
+
+/* [AbstractUserInterface-animations-events] */
+void MyApplication::pointerPressEvent(PointerEvent& event) {
+    if(!_ui.pointerPressEvent(event, now())) {
+        DOXYGEN_ELLIPSIS()
+    }
+    if(_ui.state()) redraw();
+}
+DOXYGEN_ELLIPSIS()
+/* [AbstractUserInterface-animations-events] */
+
+/* [AbstractUserInterface-animations-style-features] */
+MyApplication::MyApplication(const Arguments& arguments):
+    Platform::Application{arguments},
+    _ui{*this, Ui::McssDarkStyle{Ui::McssDarkStyle::Feature::Animations}}
+{
+    DOXYGEN_ELLIPSIS()
+}
+/* [AbstractUserInterface-animations-style-features] */
+
+}
+
+namespace C {
+
+struct MyApplication: Platform::Application {
     void pointerMoveEvent(PointerMoveEvent& event) override;
 
     Ui::AbstractUserInterface _ui;
@@ -185,7 +241,7 @@ void MyApplication::pointerMoveEvent(PointerMoveEvent& event) {
 
 }
 
-namespace C {
+namespace D {
 
 /* [UserInterfaceGL-setup-delayed] */
 class MyApplication: public Platform::Application {
@@ -207,7 +263,7 @@ MyApplication::MyApplication(const Arguments& arguments):
 
 }
 
-namespace D {
+namespace E {
 
 /* [RendererGL-compositing-framebuffer] */
 class MyApplication: public Platform::Application {

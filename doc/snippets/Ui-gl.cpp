@@ -851,8 +851,10 @@ blurLayer.create(0, background);
 
 {
 Ui::AbstractUserInterface ui{{100, 100}};
-Ui::BaseLayerStyleAnimator animator{Ui::animatorHandle(0, 1)};
-/* [BaseLayerStyleAnimator-setup2] */
+/* [BaseLayerStyleAnimator-setup1] */
+Containers::Pointer<Ui::BaseLayerStyleAnimator> animatorInstance{InPlaceInit,
+    ui.createAnimator()};
+
 Ui::BaseLayerGL::Shared baseLayerShared{
     Ui::BaseLayer::Shared::Configuration{DOXYGEN_ELLIPSIS(0)}
         DOXYGEN_ELLIPSIS()
@@ -860,11 +862,8 @@ Ui::BaseLayerGL::Shared baseLayerShared{
 };
 Ui::BaseLayer& baseLayer = ui.setLayerInstance(
     Containers::pointer<Ui::BaseLayerGL>(ui.createLayer(), baseLayerShared));
-
-DOXYGEN_ELLIPSIS()
-
-baseLayer.assignAnimator(animator);
-/* [BaseLayerStyleAnimator-setup2] */
+/* [BaseLayerStyleAnimator-setup1] */
+static_cast<void>(baseLayer);
 }
 
 {
@@ -1001,8 +1000,10 @@ Ui::TextLayerGL::Shared textLayerShared{glyphCache,
 {
 Ui::AbstractUserInterface ui{{100, 100}};
 Text::GlyphCacheArrayGL glyphCache{PixelFormat::R8Unorm, {8, 8, 1}};
-Ui::TextLayerStyleAnimator animator{Ui::animatorHandle(0, 1)};
-/* [TextLayerStyleAnimator-setup2] */
+/* [TextLayerStyleAnimator-setup1] */
+Containers::Pointer<Ui::TextLayerStyleAnimator> animatorInstance{InPlaceInit,
+    ui.createAnimator()};
+
 Ui::TextLayerGL::Shared textLayerShared{glyphCache,
     Ui::TextLayer::Shared::Configuration{DOXYGEN_ELLIPSIS(0)}
         DOXYGEN_ELLIPSIS()
@@ -1010,11 +1011,8 @@ Ui::TextLayerGL::Shared textLayerShared{glyphCache,
 };
 Ui::TextLayer& textLayer = ui.setLayerInstance(
     Containers::pointer<Ui::TextLayerGL>(ui.createLayer(), textLayerShared));
-
-DOXYGEN_ELLIPSIS()
-
-textLayer.assignAnimator(animator);
-/* [TextLayerStyleAnimator-setup2] */
+/* [TextLayerStyleAnimator-setup1] */
+static_cast<void>(textLayer);
 }
 
 {

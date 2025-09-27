@@ -81,6 +81,16 @@ constructor, to @ref UserInterfaceGL::create(), @relativeref{UserInterfaceGL,try
 or @relativeref{UserInterfaceGL,setStyle()}. See the
 @ref AbstractUserInterface "AbstractUserInterface introduction docs" for a
 step-by-step guide for setting up an user interface.
+
+@section Ui-McssDarkStyle-animations Style animations
+
+By default the style is created without any animations to make the initial UI
+setup easier. Once the application is @ref Ui-AbstractUserInterface-animations "set up for animations",
+you can pass @ref Feature::Animations to the constructor to enable fade out
+animations in certain style transitions and an animated cursor in text editing
+fields. In comparison, for a distraction-less behavior,
+@ref Feature::EssentialAnimations is just the text editing cursor alone,
+blinking without any smooth transition.
 */
 class MAGNUM_UI_EXPORT McssDarkStyle: public AbstractStyle {
     public:

@@ -787,6 +787,36 @@ time:
     Note that, at the moment, the whole node area reacts to the event, thus
     even the padding and rounded corner area.
 
+@section Ui-BaseLayer-style-animations Animating styles and style transitions
+
+Style transitions specified with @ref BaseLayer::Shared::setStyleTransition()
+can be also animated instead of happening immediately. Similarly to
+transitions, @ref BaseLayer::Shared::setStyleAnimation() and its overloads
+accept a set of functions that get called in response to various events. In the
+following snippet we specify two animations, a faster one for animating
+transitions that happen on pointer enter, press or node focus --- as a longer
+animation could make the UI feel sluggish ---, and a slower fade out animation
+on pointer leave, release or blur:
+
+@snippet Ui.cpp BaseLayer-style-animations
+
+In addition to setting these up, the layer that wants to make use of these
+animations needs to have a @ref BaseLayerStyleAnimator assigned and made
+default. See its documentation for a step-by-step guide.
+
+You can also use the full seven-argument variant of
+@ref BaseLayer::Shared::setStyleAnimation() to specify a different function for
+each event type. It's of course also possible to branch on the style values to
+add specialized animations for certain styles, or to return
+@ref AnimationHandle::Null not animate a certain transition. See the function
+documentation for detailed behavior description.
+
+The last argument to the function is for specifying persistent animations, i.e.
+animations that run for as long as given style is set. A prime use case is
+animating a blinking cursor when an input field is focused, see the
+@ref Ui-TextLayer-style-animations "corresponding section in TextLayer documentation"
+for an example.
+
 @section Ui-BaseLayer-performance Options affecting performance
 
 @subsection Ui-BaseLayer-performance-shaders Configuring shader complexity

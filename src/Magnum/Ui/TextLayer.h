@@ -1549,6 +1549,29 @@ editing styles you want to have for a particular dynamic style, use
 @ref setDynamicStyleWithCursor(), @ref setDynamicStyleWithSelection() or
 @ref setDynamicStyleWithCursorSelection() instead of @ref setDynamicStyle().
 
+@section Ui-TextLayer-style-animations Animating styles and style transitions
+
+Similarly to @ref Ui-BaseLayer-style-animations "BaseLayer style animations",
+style transitions can be animated in @ref TextLayer as well. The workflow is
+pretty much the same for both, just with @ref TextLayerStyleAnimator being used
+instead.
+
+A common use case for animations in the text layer is a blinking cursor, which
+is what persistent style animations can be used for. In the following snippet,
+@ref TextLayer::Shared::setStyleAnimation() is supplied just the `persistent`
+function that is called each time a style is switched. Assuming an input field
+style is switched to `InputFocused` when focused, the function will create an
+animation stepping between `InputFocusedBlink` and `InputFocused` that'll run
+for as long as the focused style is set. The `InputFocusedBlink` style could
+for example have the cursor made transparent, or different size, to
+differentiate from `InputFocused`.
+
+Once focus is lost, the layer switches the style to another, causing the
+animation to be subsequently automatically discarded again, as described in
+@ref TextLayerStyleAnimator docs.
+
+@snippet Ui.cpp TextLayer-style-animations
+
 @section Ui-TextLayer-debug-integration Debug layer integration
 
 When using @ref Ui-DebugLayer-node-highlight "DebugLayer node highlighting" and
