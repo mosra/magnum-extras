@@ -132,6 +132,34 @@ AbstractVisualLayer::Shared& AbstractVisualLayer::Shared::setStyleTransition(Uns
     return *this;
 }
 
+auto AbstractVisualLayer::Shared::styleAnimationOnEnter() const -> AnimationHandle(*)(AbstractVisualLayerStyleAnimator&, UnsignedInt, UnsignedInt, Nanoseconds, LayerDataHandle, AnimatorDataHandle) {
+    return _state->styleAnimationOnEnter;
+}
+
+auto AbstractVisualLayer::Shared::styleAnimationOnLeave() const -> AnimationHandle(*)(AbstractVisualLayerStyleAnimator&, UnsignedInt, UnsignedInt, Nanoseconds, LayerDataHandle, AnimatorDataHandle) {
+    return _state->styleAnimationOnLeave;
+}
+
+auto AbstractVisualLayer::Shared::styleAnimationOnFocus() const -> AnimationHandle(*)(AbstractVisualLayerStyleAnimator&, UnsignedInt, UnsignedInt, Nanoseconds, LayerDataHandle, AnimatorDataHandle) {
+    return _state->styleAnimationOnFocus;
+}
+
+auto AbstractVisualLayer::Shared::styleAnimationOnBlur() const -> AnimationHandle(*)(AbstractVisualLayerStyleAnimator&, UnsignedInt, UnsignedInt, Nanoseconds, LayerDataHandle, AnimatorDataHandle) {
+    return _state->styleAnimationOnBlur;
+}
+
+auto AbstractVisualLayer::Shared::styleAnimationOnPress() const -> AnimationHandle(*)(AbstractVisualLayerStyleAnimator&, UnsignedInt, UnsignedInt, Nanoseconds, LayerDataHandle, AnimatorDataHandle) {
+    return _state->styleAnimationOnPress;
+}
+
+auto AbstractVisualLayer::Shared::styleAnimationOnRelease() const -> AnimationHandle(*)(AbstractVisualLayerStyleAnimator&, UnsignedInt, UnsignedInt, Nanoseconds, LayerDataHandle, AnimatorDataHandle) {
+    return _state->styleAnimationOnRelease;
+}
+
+auto AbstractVisualLayer::Shared::styleAnimationPersistent() const -> AnimationHandle(*)(AbstractVisualLayerStyleAnimator&, UnsignedInt, Nanoseconds, LayerDataHandle, AnimatorDataHandle) {
+    return _state->styleAnimationPersistent;
+}
+
 AbstractVisualLayer::Shared& AbstractVisualLayer::Shared::setStyleAnimation(AnimationHandle(*onEnter)(AbstractVisualLayerStyleAnimator&, UnsignedInt, UnsignedInt, Nanoseconds, LayerDataHandle, AnimatorDataHandle), AnimationHandle(*onLeave)(AbstractVisualLayerStyleAnimator&, UnsignedInt, UnsignedInt, Nanoseconds, LayerDataHandle, AnimatorDataHandle), AnimationHandle(*onFocus)(AbstractVisualLayerStyleAnimator&, UnsignedInt, UnsignedInt, Nanoseconds, LayerDataHandle, AnimatorDataHandle), AnimationHandle(*onBlur)(AbstractVisualLayerStyleAnimator&, UnsignedInt, UnsignedInt, Nanoseconds, LayerDataHandle, AnimatorDataHandle), AnimationHandle(*onPress)(AbstractVisualLayerStyleAnimator&, UnsignedInt, UnsignedInt, Nanoseconds, LayerDataHandle, AnimatorDataHandle), AnimationHandle(*onRelease)(AbstractVisualLayerStyleAnimator&, UnsignedInt, UnsignedInt, Nanoseconds, LayerDataHandle, AnimatorDataHandle), AnimationHandle(*persistent)(AbstractVisualLayerStyleAnimator&, UnsignedInt, Nanoseconds, LayerDataHandle, AnimatorDataHandle)) {
     _state->styleAnimationOnEnter = onEnter;
     _state->styleAnimationOnLeave = onLeave;

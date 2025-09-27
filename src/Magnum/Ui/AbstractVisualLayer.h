@@ -622,6 +622,57 @@ class MAGNUM_UI_EXPORT AbstractVisualLayer::Shared {
         }
 
         /**
+         * @brief Style animation on pointer enter
+         * @todoc without the trailing return, Doxygen thinks it's a variable,
+         *      now it thinks the return type is auto, sigh; same below
+         *
+         * Is @cpp nullptr @ce if not set.
+         */
+        auto styleAnimationOnEnter() const -> AnimationHandle(*)(AbstractVisualLayerStyleAnimator&, UnsignedInt, UnsignedInt, Nanoseconds, LayerDataHandle, AnimatorDataHandle);
+
+        /**
+         * @brief Style animation on pointer leave
+         *
+         * Is @cpp nullptr @ce if not set.
+         */
+        auto styleAnimationOnLeave() const -> AnimationHandle(*)(AbstractVisualLayerStyleAnimator&, UnsignedInt, UnsignedInt, Nanoseconds, LayerDataHandle, AnimatorDataHandle);
+
+        /**
+         * @brief Style animation on focus
+         *
+         * Is @cpp nullptr @ce if not set.
+         */
+        auto styleAnimationOnFocus() const -> AnimationHandle(*)(AbstractVisualLayerStyleAnimator&, UnsignedInt, UnsignedInt, Nanoseconds, LayerDataHandle, AnimatorDataHandle);
+
+        /**
+         * @brief Style animation on blur
+         *
+         * Is @cpp nullptr @ce if not set.
+         */
+        auto styleAnimationOnBlur() const -> AnimationHandle(*)(AbstractVisualLayerStyleAnimator&, UnsignedInt, UnsignedInt, Nanoseconds, LayerDataHandle, AnimatorDataHandle);
+
+        /**
+         * @brief Style animation on pointer press
+         *
+         * Is @cpp nullptr @ce if not set.
+         */
+        auto styleAnimationOnPress() const -> AnimationHandle(*)(AbstractVisualLayerStyleAnimator&, UnsignedInt, UnsignedInt, Nanoseconds, LayerDataHandle, AnimatorDataHandle);
+
+        /**
+         * @brief Style animation on pointer release
+         *
+         * Is @cpp nullptr @ce if not set.
+         */
+        auto styleAnimationOnRelease() const -> AnimationHandle(*)(AbstractVisualLayerStyleAnimator&, UnsignedInt, UnsignedInt, Nanoseconds, LayerDataHandle, AnimatorDataHandle);
+
+        /**
+         * @brief Persistent style animation
+         *
+         * Is @cpp nullptr @ce if not set.
+         */
+        auto styleAnimationPersistent() const -> AnimationHandle(*)(AbstractVisualLayerStyleAnimator&, UnsignedInt, Nanoseconds, LayerDataHandle, AnimatorDataHandle);
+
+        /**
          * @brief Set style animation functions
          * @return Reference to self (for method chaining)
          *

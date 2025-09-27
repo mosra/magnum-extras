@@ -2047,11 +2047,18 @@ void AbstractVisualLayerTest::eventStyleTransitionNoOp() {
     }
     CORRADE_VERIFY(!shared.styleTransitionToDisabled());
 
+    /* In comparison, animation functions are all null by default */
+    CORRADE_VERIFY(!shared.styleAnimationOnEnter());
+    CORRADE_VERIFY(!shared.styleAnimationOnLeave());
+    CORRADE_VERIFY(!shared.styleAnimationOnFocus());
+    CORRADE_VERIFY(!shared.styleAnimationOnBlur());
+    CORRADE_VERIFY(!shared.styleAnimationOnPress());
+    CORRADE_VERIFY(!shared.styleAnimationOnRelease());
+    CORRADE_VERIFY(!shared.styleAnimationPersistent());
+
     /* Set up style animation functions if desired. As all transitions are
        no-op and the persistent animations are currently not used outside of
-       transitions either, those should never get called. Compared to
-       transition functions above, animation functions currently don't have any
-       getters. */
+       transitions either, those should never get called. */
     if(data.transitionPersistentAnimation) {
         shared.setStyleAnimation<StyleIndex,
             styleIndexAnimationDoNotCall,
@@ -2061,6 +2068,15 @@ void AbstractVisualLayerTest::eventStyleTransitionNoOp() {
             styleIndexAnimationDoNotCall,
             styleIndexAnimationDoNotCall,
             styleIndexPersistentAnimationDoNotCall>();
+        /* Cannot really test for equality because of the wrapping. And calling
+           those has a side effect, so just verify they're all set. */
+        CORRADE_VERIFY(shared.styleAnimationOnEnter());
+        CORRADE_VERIFY(shared.styleAnimationOnLeave());
+        CORRADE_VERIFY(shared.styleAnimationOnFocus());
+        CORRADE_VERIFY(shared.styleAnimationOnBlur());
+        CORRADE_VERIFY(shared.styleAnimationOnPress());
+        CORRADE_VERIFY(shared.styleAnimationOnRelease());
+        CORRADE_VERIFY(shared.styleAnimationPersistent());
     }
 
     AbstractUserInterface ui{{100, 100}};
@@ -2844,6 +2860,16 @@ void AbstractVisualLayerTest::eventStyleTransition() {
         else CORRADE_INTERNAL_ASSERT_UNREACHABLE();
         CORRADE_COMPARE(animationChaining, &shared);
     } else CORRADE_INTERNAL_ASSERT(!data.transitionAnimation && !data.persistentAnimation);
+
+    /* Cannot really test for equality because of the wrapping, so just verify
+       they're set if they should be */
+    CORRADE_COMPARE(shared.styleAnimationOnEnter(), data.transitionAnimation);
+    CORRADE_COMPARE(shared.styleAnimationOnLeave(), data.transitionAnimation);
+    CORRADE_COMPARE(shared.styleAnimationOnFocus(), data.transitionAnimation);
+    CORRADE_COMPARE(shared.styleAnimationOnBlur(), data.transitionAnimation);
+    CORRADE_COMPARE(shared.styleAnimationOnPress(), data.transitionAnimation);
+    CORRADE_COMPARE(shared.styleAnimationOnRelease(), data.transitionAnimation);
+    CORRADE_COMPARE(shared.styleAnimationPersistent(), data.persistentAnimation);
 
     AbstractUserInterface ui{{100, 100}};
 
