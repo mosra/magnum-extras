@@ -75,11 +75,10 @@ using namespace Math::Literals;
 const struct {
     const char* name;
     const char* filePrefix;
-    UnsignedInt index;
     Containers::Pointer<AbstractStyle> style;
 } StyleData[]{
-    {"m.css dark", "mcss-dark-", 0, Containers::pointer<McssDarkStyle>()},
-    {"m.css dark SubdividedQuads", "mcss-dark-", 1, []{
+    {"m.css dark", "mcss-dark-", Containers::pointer<McssDarkStyle>()},
+    {"m.css dark SubdividedQuads", "mcss-dark-", []{
         Containers::Pointer<McssDarkStyle> style{InPlaceInit};
         style->setBaseLayerFlags(BaseLayerSharedFlag::SubdividedQuads, {});
         return style;
@@ -336,14 +335,15 @@ StyleGLTest::StyleGLTest() {
     {
         _styleUis = Containers::Array<UserInterfaceGL>{DirectInit, Containers::arraySize(StyleData), NoCreate};
         for(std::size_t i = 0; i != _styleUis.size(); ++i)
-            _styleUis[StyleData[i].index].create({1024, 1024}, *StyleData[i].style, &_importerManager, &_fontManager);
+            _styleUis[i].create({1024, 1024}, *StyleData[i].style, &_importerManager, &_fontManager);
     }
 }
 
 void StyleGLTest::render() {
     UnsignedInt dataIndex = testCaseInstanceId() / Containers::arraySize(StyleData);
     auto&& data = RenderData[dataIndex];
-    auto&& styleData = StyleData[testCaseInstanceId() % Containers::arraySize(StyleData)];
+    UnsignedInt styleDataIndex = testCaseInstanceId() % Containers::arraySize(StyleData);
+    auto&& styleData = StyleData[styleDataIndex];
     setTestCaseDescription(Utility::format("{}, {}", styleData.name, data.name));
 
     if(!(_importerManager.load("AnyImageImporter") & PluginManager::LoadState::Loaded) ||
@@ -393,8 +393,8 @@ void StyleGLTest::render() {
            mean each instance would get its own, horrible inefficiency */
         /** @todo allow a setting non-owned renderer instance maybe? */
         .setRendererInstance(Containers::pointer<RendererGL>())
-        .setBaseLayerInstance(Containers::pointer<BaseLayerGL>(ui.createLayer(), static_cast<BaseLayerGL::Shared&>(_styleUis[styleData.index].baseLayer().shared())))
-        .setTextLayerInstance(Containers::pointer<TextLayerGL>(ui.createLayer(), static_cast<TextLayerGL::Shared&>(_styleUis[styleData.index].textLayer().shared())));
+        .setBaseLayerInstance(Containers::pointer<BaseLayerGL>(ui.createLayer(), static_cast<BaseLayerGL::Shared&>(_styleUis[styleDataIndex].baseLayer().shared())))
+        .setTextLayerInstance(Containers::pointer<TextLayerGL>(ui.createLayer(), static_cast<TextLayerGL::Shared&>(_styleUis[styleDataIndex].textLayer().shared())));
         /* Event layer not needed for anything yet */
 
     const Vector2 padding{8.0f};
