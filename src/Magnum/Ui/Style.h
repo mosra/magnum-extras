@@ -75,6 +75,12 @@ namespace Implementation {
 /**
 @brief Style for builtin widgets based on the [m.css](https://mcss.mosra.cz) dark theme
 @m_since_latest
+
+An instance of this class is meant to be passed to the @ref UserInterfaceGL
+constructor, to @ref UserInterfaceGL::create(), @relativeref{UserInterfaceGL,tryCreate()}
+or @relativeref{UserInterfaceGL,setStyle()}. See the
+@ref AbstractUserInterface "AbstractUserInterface introduction docs" for a
+step-by-step guide for setting up an user interface.
 */
 class MAGNUM_UI_EXPORT McssDarkStyle: public AbstractStyle {
     private:
