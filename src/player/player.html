@@ -37,15 +37,49 @@
         event.stopPropagation();
         event.preventDefault();
 
-        const files = event.dataTransfer.files;
-        if(!files) {
+        const items = event.dataTransfer.items;
+        if(!items) {
             console.error("No files dropped.");
             return;
         }
 
-        /* Pass all files through to the player. Memory is allocated on the
-           JS side and freed on the C++ side to avoid needless copies. */
-        for(let i = 0; i != files.length; ++i) {
+        /* Unrecurse the bag of dropped files and directories and then pass all
+           files through to the player. Memory is allocated on the JS side and
+           freed on the C++ side to avoid needless copies. The
+           webkitGetAsEntry() is Chrome-specific and Firefox with Edge were
+           forced to implement it, despite the name. Safari and IE don't know
+           that, so we need to be careful. */
+        var files = [];
+        var traverseFiles = function(fileOrDirectory, path/*, files*/) {
+            if(fileOrDirectory.isFile) {
+//                 console.log(files);
+                files.push([fileOrDirectory, path]);
+            } else if(fileOrDirectory.isDirectory) {
+                let dirReader = fileOrDirectory.createReader();
+                let getE = function() {
+                dirReader.readEntries(function(entries) {
+                    for(let i = 0; i != entries.length; ++i) {
+                        traverseFiles(entries[i], path + fileOrDirectory.name + "/"/*, files*/);
+                    }
+                });
+                }
+
+                getE();
+            }
+        };
+        for(let i = 0; i != items.length; ++i) {
+            /* TODO: this might get renamed to getAsEntry() in 2027 or so */
+            if(typeof items[i].webkitGetAsEntry === "function") {
+                traverseFiles(items[i].webkitGetAsEntry(), ""/*, files*/);
+                continue;
+            }
+
+            /* If webkitGetAsEntry() is not supported or the dumpster is on
+               fire some other way, simply push the file directly (it will fail
+               later if directories are involved). This is duplicated below
+               for the case of webkitGetAsEntry() supported -- it uses a
+               different variable for total count and adds file path to the
+               filename. */
             (function(file) {
                 const fileReader = new FileReader();
                 fileReader.onload = function(event) {
@@ -54,13 +88,34 @@
                     const pointer = Module._malloc(fileData.length);
                     const data = new Uint8Array(Module.HEAPU8.buffer, pointer, fileData.length);
                     data.set(fileData);
-                    Module.ccall('loadFile', null, ['number', 'string', 'number', 'number'], [files.length, file.name, pointer, fileData.length]);
+                    Module.ccall('loadFile', null, ['number', 'string', 'number', 'number'], [items.length, file.name, pointer, fileData.length]);
                 };
                 fileReader.onerror = function() {
                     console.error("Unable to read file " + file.name);
                 };
                 fileReader.readAsArrayBuffer(file);
-            })(files[i]); /* this is how you do a capturing lambda?! ugh */
+            })(items[i]); /* this is how you do a capturing lambda?! ugh */
+        }
+        console.log(files.length);
+        for(let i = 0; i != files.length; ++i) {
+            console.log("ugh", i);
+        (function(file, path) {
+            file.file(function(file) {
+                const fileReader = new FileReader();
+                fileReader.onload = function(event) {
+                    /* TODO: but still, isn't here way too much copying? */
+                    const fileData = new Uint8Array(event.target.result);
+                    const pointer = Module._malloc(fileData.length);
+                    const data = new Uint8Array(Module.HEAPU8.buffer, pointer, fileData.length);
+                    data.set(fileData);
+                    Module.ccall('loadFile', null, ['number', 'string', 'number', 'number'], [files.length, path + file.name, pointer, fileData.length]);
+                };
+                fileReader.onerror = function() {
+                    console.error("Unable to read file " + file.name);
+                };
+                fileReader.readAsArrayBuffer(file);
+            });
+        })(files[i][0], files[i][1]); /* insane?! is this needed? */
         }
     });
     Module.canvas.addEventListener('mousedown', function(event) {
