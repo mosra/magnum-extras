@@ -1781,8 +1781,8 @@ class MAGNUM_UI_EXPORT BaseLayer::Shared::Configuration {
          *
          * Initial @p radius is @cpp 4 @ce and @p cutoff is
          * @cpp 0.5f/255.0f @ce, i.e. weights that don't contribute any value
-         * even when combined from both sides of the blur circle for a 8bpp
-         * render target are ignored.
+         * even when combined from both sides of the blur circle for an
+         * 8-bit-per-channel render target are ignored.
          */
         Configuration& setBackgroundBlurRadius(UnsignedInt radius, Float cutoff = 0.5f/255.0f);
 

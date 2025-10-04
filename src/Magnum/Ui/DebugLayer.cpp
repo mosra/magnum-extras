@@ -112,7 +112,8 @@ Debug& operator<<(Debug& debug, const DebugLayerSources value) {
         DebugLayerSource::NodeAnimationDetails,
         /* Implied by NodeAnimationDetails, has to be after */
         DebugLayerSource::NodeAnimations,
-        /* Implied by NodeHierarchy and NodeData, has to be after */
+        /* Implied by NodeHierarchy, NodeData, NodeLayouts and NodeAnimations,
+           has to be after */
         DebugLayerSource::Nodes,
         /* Implied by NodeData, has to be after */
         DebugLayerSource::Layers,
@@ -525,8 +526,8 @@ bool DebugLayer::highlightNode(const NodeHandle handle) {
         setNeedsUpdate(LayerState::NeedsDataUpdate);
 
     /* If the handle is null or unknown, reset the currently highlighted node
-       call the callback with an empty string. Return true only for null, false
-       indicates unknown node. */
+       and call the callback with an empty string. Return true only for null,
+       false indicates unknown node. */
     if(handle == NodeHandle::Null || nodeHandleId(handle) >= state.nodes.size() || state.nodes[nodeHandleId(handle)].handle != handle) {
         if(state.currentHighlightedNode != NodeHandle::Null) {
             state.currentHighlightedNode = NodeHandle::Null;
