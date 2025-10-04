@@ -53,6 +53,7 @@ Debug& operator<<(Debug& debug, const DebugLayerSource value) {
         _c(Layers)
         _c(Layouters)
         _c(Animators)
+        _c(NodeOffsetSize)
         _c(NodeHierarchy)
         _c(NodeData)
         _c(NodeDataDetails)
@@ -84,7 +85,8 @@ Debug& operator<<(Debug& debug, const DebugLayerSources value) {
                                  DebugLayerSource::NodeLayoutDetails,
                                  DebugLayerSource::NodeData,
                                  DebugLayerSource::NodeDataDetails,
-                                 DebugLayerSource::NodeHierarchy}) {
+                                 DebugLayerSource::NodeHierarchy,
+                                 DebugLayerSource::NodeOffsetSize}) {
             if(value >= i) {
                 /* Only increase the count if the value is not a superset of
                    the previously remembered. Casting to DebugLayerSources as
@@ -102,6 +104,7 @@ Debug& operator<<(Debug& debug, const DebugLayerSources value) {
     }
 
     return Containers::enumSetDebugOutput(debug, value, "Ui::DebugLayerSources{}", {
+        DebugLayerSource::NodeOffsetSize,
         DebugLayerSource::NodeHierarchy,
         DebugLayerSource::NodeDataDetails,
         /* Implied by NodeDataDetails, has to be after */
@@ -112,8 +115,8 @@ Debug& operator<<(Debug& debug, const DebugLayerSources value) {
         DebugLayerSource::NodeAnimationDetails,
         /* Implied by NodeAnimationDetails, has to be after */
         DebugLayerSource::NodeAnimations,
-        /* Implied by NodeHierarchy, NodeData, NodeLayouts and NodeAnimations,
-           has to be after */
+        /* Implied by NodeOffsetSize, NodeHierarchy, NodeData, NodeLayouts and
+           NodeAnimations, has to be after */
         DebugLayerSource::Nodes,
         /* Implied by NodeData, has to be after */
         DebugLayerSource::Layers,
@@ -565,6 +568,11 @@ bool DebugLayer::highlightNode(const NodeHandle handle) {
         if(node.name)
             debug << Debug::boldColor(Debug::Color::Yellow) << node.name << Debug::resetColor;
         debug << Debug::newline;
+
+        if(state.sources >= DebugLayerSource::NodeOffsetSize) {
+            debug << "  Offset:" << Debug::packed << ui.nodeOffset(handle) << Debug::nospace << ", size:" << Debug::packed << ui.nodeSize(handle) << Debug::newline;
+        }
+
         if(const NodeFlags flags = ui.nodeFlags(handle))
             debug << "  Flags:" << Debug::color(Debug::Color::Cyan) << Debug::packed << flags << Debug::resetColor << Debug::newline;
 

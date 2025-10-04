@@ -28,6 +28,7 @@
 #include <Corrade/Containers/BitArrayView.h>
 #include <Corrade/Containers/Optional.h>
 #include <Corrade/Containers/StridedArrayView.h>
+#include <Corrade/Containers/StringIterable.h>
 #include <Corrade/TestSuite/Tester.h>
 #include <Corrade/TestSuite/Compare/Container.h>
 #include <Corrade/TestSuite/Compare/Numeric.h>
@@ -421,6 +422,13 @@ const struct {
         "    of which 3 Hidden\n"
         "    of which 2 Disabled\n"
         "    of which 1 NoEvents"},
+    {"offset and size",
+        DebugLayerSource::NodeOffsetSize, DebugLayerFlag::NodeHighlight,
+        {}, false, false, false,
+        {}, {}, PointerEventSource::Mouse, Pointer::MouseRight,
+        {}, true, false, false, false, false, false,
+        "Node {0x3, 0x1}\n"
+        "  Offset: {5, 10}, size: {20, 30}"},
     {"data",
         DebugLayerSource::NodeData, DebugLayerFlag::NodeHighlight,
         {}, false, false, false,
@@ -570,12 +578,13 @@ const struct {
         "  Animator No#3 (69420) Paused animation {0x2, 0x1} and a value of 1226\n"
         "  1 Playing animations from animator {0x7, 0x1} Termanimator\n"
         "  1 Stopped animations from animator {0x7, 0x1} Termanimator"},
-    {"node name, flags, nested top level, all hierarchy + data, layout, animation details, some layer and animator names",
-        DebugLayerSource::NodeHierarchy|DebugLayerSource::NodeDataDetails|DebugLayerSource::NodeLayoutDetails|DebugLayerSource::NodeAnimationDetails, DebugLayerFlag::NodeHighlight,
+    {"node name, flags, nested top level, all hierarchy, offset and size + data, layout, animation details, some layer and animator names",
+        DebugLayerSource::NodeHierarchy|DebugLayerSource::NodeOffsetSize|DebugLayerSource::NodeDataDetails|DebugLayerSource::NodeLayoutDetails|DebugLayerSource::NodeAnimationDetails, DebugLayerFlag::NodeHighlight,
         "A very nice node"_s, false, true, false,
         {}, {}, PointerEventSource::Mouse, Pointer::MouseRight,
         NodeFlag::Clip|NodeFlag::Focusable, true, true, true, true, true, true,
         "Top-level node {0x3, 0x1} A very nice node\n"
+        "  Offset: {5, 10}, size: {20, 30}\n"
         "  Flags: Clip|Focusable\n"
         "  Nested at level 3 with 9 direct children\n"
         "    of which 3 Hidden\n"
@@ -860,6 +869,12 @@ void DebugLayerTest::debugSourceSupersets() {
         Debug{&out} << (DebugLayerSource::Nodes|DebugLayerSource::NodeHierarchy);
         CORRADE_COMPARE(out, "Ui::DebugLayerSource::NodeHierarchy\n");
 
+    /* NodeOffsetSize is a superset of Nodes, so only one should be printed */
+    } {
+        Containers::String out;
+        Debug{&out} << (DebugLayerSource::Nodes|DebugLayerSource::NodeOffsetSize);
+        CORRADE_COMPARE(out, "Ui::DebugLayerSource::NodeOffsetSize\n");
+
     /* NodeData is a superset of Nodes, so only one should be printed */
     } {
         Containers::String out;
@@ -897,6 +912,13 @@ void DebugLayerTest::debugSourceSupersets() {
         Debug{&out} << (DebugLayerSource::Animators|DebugLayerSource::NodeAnimations);
         CORRADE_COMPARE(out, "Ui::DebugLayerSource::NodeAnimations\n");
 
+    /* NodeOffsetSize and NodeHierarchy are both a superset of Nodes, so both
+       should be printed */
+    } {
+        Containers::String out;
+        Debug{&out} << (DebugLayerSource::NodeOffsetSize|DebugLayerSource::NodeHierarchy);
+        CORRADE_COMPARE(out, "Ui::DebugLayerSource::NodeOffsetSize|Ui::DebugLayerSource::NodeHierarchy\n");
+
     /* NodeHierarchy and NodeData are both a superset of Nodes, so both should
        be printed */
     } {
@@ -918,6 +940,13 @@ void DebugLayerTest::debugSourceSupersets() {
         Debug{&out} << (DebugLayerSource::NodeHierarchy|DebugLayerSource::NodeAnimations);
         CORRADE_COMPARE(out, "Ui::DebugLayerSource::NodeHierarchy|Ui::DebugLayerSource::NodeAnimations\n");
 
+    /* NodeOffsetSize and NodeAnimations are both a superset of Nodes, so both
+       should be printed */
+    } {
+        Containers::String out;
+        Debug{&out} << (DebugLayerSource::NodeOffsetSize|DebugLayerSource::NodeAnimations);
+        CORRADE_COMPARE(out, "Ui::DebugLayerSource::NodeOffsetSize|Ui::DebugLayerSource::NodeAnimations\n");
+
     /* NodeData and NodeAnimations are both a superset of Nodes, so both should
        be printed */
     } {
@@ -932,13 +961,13 @@ void DebugLayerTest::debugSourceSupersets() {
         Debug{&out} << (DebugLayerSource::NodeData|DebugLayerSource::NodeAnimations);
         CORRADE_COMPARE(out, "Ui::DebugLayerSource::NodeData|Ui::DebugLayerSource::NodeAnimations\n");
 
-    /* NodeData, NodeLayouts and NodeAnimations are all a superset of Nodes, so
-       all should be printed. There are more combinations but all should be
-       handled by the same logic. */
+    /* NodeOffsetSize, NodeData, NodeLayouts and NodeAnimations are all a
+       superset of Nodes, so all should be printed. There are more combinations
+       but all should be handled by the same logic. */
     } {
         Containers::String out;
-        Debug{&out} << (DebugLayerSource::NodeData|DebugLayerSource::NodeAnimations|DebugLayerSource::NodeLayouts);
-        CORRADE_COMPARE(out, "Ui::DebugLayerSource::NodeData|Ui::DebugLayerSource::NodeLayouts|Ui::DebugLayerSource::NodeAnimations\n");
+        Debug{&out} << (DebugLayerSource::NodeOffsetSize|DebugLayerSource::NodeData|DebugLayerSource::NodeAnimations|DebugLayerSource::NodeLayouts);
+        CORRADE_COMPARE(out, "Ui::DebugLayerSource::NodeOffsetSize|Ui::DebugLayerSource::NodeData|Ui::DebugLayerSource::NodeLayouts|Ui::DebugLayerSource::NodeAnimations\n");
 
     /* NodeDataDetails and NodeAnimationDetails are both a superset of Nodes,
        so both should be printed. There are more combinations but all should be
@@ -3827,7 +3856,7 @@ void DebugLayerTest::nodeHighlight() {
 
     /* The node is at an absolute offset {40, 20} in both cases */
     NodeHandle node = data.nested ?
-        ui.createNode(parent3, {5, 5}, {20, 30}) :
+        ui.createNode(parent3, {5, 10}, {20, 30}) :
         ui.createNode({40, 20}, {20, 30});
     /* If a node isn't nested, it's top-level implicitly, and the test instance
        should reflect that */
@@ -4211,10 +4240,13 @@ void DebugLayerTest::nodeHighlight() {
     CORRADE_COMPARE_AS(out, data.expected, TestSuite::Compare::String);
 
     /* Highlighting another node */
-    const char* anotherExpected = data.sources >= DebugLayerSource::NodeHierarchy ?
-        "Top-level node {0x4, 0x1}\n"
-        "  Root node with 0 direct children" :
-        "Top-level node {0x4, 0x1}";
+    Containers::String anotherExpected = "\n"_s.joinWithoutEmptyParts({
+        "Top-level node {0x4, 0x1}",
+        data.sources >= DebugLayerSource::NodeOffsetSize ?
+            "  Offset: {70, 80}, size: {20, 20}" : "",
+        data.sources >= DebugLayerSource::NodeHierarchy ?
+            "  Root node with 0 direct children" : ""
+    });
     out = {};
     CORRADE_VERIFY(layer.highlightNode(another));
     CORRADE_COMPARE(layer.currentHighlightedNode(), another);
@@ -4299,7 +4331,7 @@ void DebugLayerTest::nodeHighlightNoCallback() {
     NodeHandle parent1 = ui.createNode({20, 10}, {50, 50});
     NodeHandle parent2 = ui.createNode(parent1, {0, 5}, {40, 40});
     NodeHandle parent3 = ui.createNode(parent2, {15, 0}, {25, 35});
-    NodeHandle node = ui.createNode(parent3, {5, 5}, {20, 30});
+    NodeHandle node = ui.createNode(parent3, {5, 10}, {20, 30});
     NodeHandle another = ui.createNode({70, 80}, {20, 20});
     ui.setNodeOrder(node, NodeHandle::Null);
     ui.setNodeFlags(node, NodeFlag::Clip|NodeFlag::Focusable);
@@ -4330,7 +4362,7 @@ void DebugLayerTest::nodeHighlightNoCallback() {
     /* Just to match the layer handles to the nodeHighlight() case */
     /*LayerHandle removedLayer =*/ ui.createLayer();
 
-    DebugLayer& layer = ui.setLayerInstance(Containers::pointer<DebugLayer>(ui.createLayer(), DebugLayerSource::NodeHierarchy|DebugLayerSource::NodeDataDetails|DebugLayerSource::NodeLayoutDetails|DebugLayerSource::NodeAnimationDetails, DebugLayerFlag::NodeHighlight));
+    DebugLayer& layer = ui.setLayerInstance(Containers::pointer<DebugLayer>(ui.createLayer(), DebugLayerSource::NodeOffsetSize|DebugLayerSource::NodeHierarchy|DebugLayerSource::NodeDataDetails|DebugLayerSource::NodeLayoutDetails|DebugLayerSource::NodeAnimationDetails, DebugLayerFlag::NodeHighlight));
 
     struct IntegratedLayer: AbstractLayer {
         using AbstractLayer::AbstractLayer;
@@ -4515,6 +4547,7 @@ void DebugLayerTest::nodeHighlightNoCallback() {
         CORRADE_COMPARE(layer.currentHighlightedNode(), another);
         CORRADE_COMPARE_AS(out,
             "Top-level node {0x4, 0x1}\n"
+            "  Offset: {70, 80}, size: {20, 20}\n"
             "  Root node with 0 direct children\n",
             TestSuite::Compare::String);
 
@@ -4551,6 +4584,7 @@ void DebugLayerTest::nodeHighlightNoCallback() {
         CORRADE_COMPARE(layer.currentHighlightedNode(), another);
         CORRADE_COMPARE_AS(out,
             "Top-level node {0x4, 0x1}\n"
+            "  Offset: {70, 80}, size: {20, 20}\n"
             "  Root node with 0 direct children\n",
             TestSuite::Compare::String);
 

@@ -72,17 +72,27 @@ enum class DebugLayerSource: UnsignedShort {
     Animators = 1 << 3,
 
     /**
+     * Track node offsets and sizes. Implies
+     * @ref DebugLayerSource::Nodes.
+     *
+     * Note that this shows only the raw offset and size properties relative to
+     * the parent node and before any layouters are run. Layout properties can
+     * be shown using using @ref DebugLayerSource::NodeLayoutDetails.
+     */
+    NodeOffsetSize = Nodes|(1 << 4),
+
+    /**
      * Track node parent and child relations. Implies
      * @ref DebugLayerSource::Nodes.
      */
-    NodeHierarchy = Nodes|(1 << 4),
+    NodeHierarchy = Nodes|(1 << 5),
 
     /**
      * Track per-node layer data attachments. Implies
      * @ref DebugLayerSource::Nodes and @ref DebugLayerSource::Layers, subset
      * of @ref DebugLayerSource::NodeDataDetails.
      */
-    NodeData = Nodes|Layers|(1 << 5),
+    NodeData = Nodes|Layers|(1 << 6),
 
     /**
      * Track per-node layer data attachments with per-data details provided by
@@ -90,14 +100,14 @@ enum class DebugLayerSource: UnsignedShort {
      * @ref Ui-DebugLayer-node-highlight-node-details. Implies
      * @ref DebugLayerSource::NodeData.
      */
-    NodeDataDetails = NodeData|(1 << 6),
+    NodeDataDetails = NodeData|(1 << 7),
 
     /**
      * Track per-node layout assignments. Implies @ref DebugLayerSource::Nodes
      * and @ref DebugLayerSource::Layouters, subset of
      * @ref DebugLayerSource::NodeLayoutDetails.
      */
-    NodeLayouts = Nodes|Layouters|(1 << 7),
+    NodeLayouts = Nodes|Layouters|(1 << 8),
 
     /**
      * Track per-node layout assignments with per-layout details provided by
@@ -105,14 +115,14 @@ enum class DebugLayerSource: UnsignedShort {
      * @ref Ui-DebugLayer-node-highlight-node-details. Implies
      * @ref DebugLayerSource::NodeLayouts.
      */
-    NodeLayoutDetails = NodeLayouts|(1 << 8),
+    NodeLayoutDetails = NodeLayouts|(1 << 9),
 
     /**
      * Track per-node animation attachments. Implies
      * @ref DebugLayerSource::Nodes and @ref DebugLayerSource::Animators,
      * subset of @ref DebugLayerSource::NodeAnimationDetails.
      */
-    NodeAnimations = Nodes|Animators|(1 << 9),
+    NodeAnimations = Nodes|Animators|(1 << 10),
 
     /**
      * Track per-node layer data attachments with per-data details provided by
@@ -120,7 +130,7 @@ enum class DebugLayerSource: UnsignedShort {
      * @ref Ui-DebugLayer-node-highlight-node-details. Implies
      * @ref DebugLayerSource::NodeAnimations.
      */
-    NodeAnimationDetails = NodeAnimations|(1 << 10),
+    NodeAnimationDetails = NodeAnimations|(1 << 11),
 };
 
 /**
@@ -257,10 +267,12 @@ latest state changes.
 The setup shown above, in particular with @ref DebugLayerFlag::NodeHighlight
 together with at least @ref DebugLayerSource::Nodes enabled, makes it possible
 to highlight any node in the hierarchy and see its details.
-@relativeref{DebugLayerSource,NodeHierarchy} additionally shows info about
-parent and child nodes and @relativeref{DebugLayerSource,NodeData} also lists
-data attachments. Let's say we have a @ref Ui::Button placed somewhere in the
-UI, reacting to a tap or click:
+@relativeref{DebugLayerSource,NodeOffsetSize} lists raw node offset and size
+before any layouters are run, @relativeref{DebugLayerSource,NodeHierarchy}
+additionally shows info about parent and child nodes and
+@relativeref{DebugLayerSource,NodeData} also lists data attachments. Let's say
+we have a @ref Ui::Button placed somewhere in the UI, reacting to a tap or
+click:
 
 @snippet ui-debuglayer.cpp button
 
