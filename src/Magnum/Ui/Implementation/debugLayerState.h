@@ -46,14 +46,14 @@ namespace Implementation {
 struct DebugLayerNode {
     NodeHandle handle = NodeHandle::Null;
 
-    /* Name that's associated with `handle`. If the handle changes, the whole
-       instance is expected to be replaced. */
-    Containers::String name;
-
     /* If null, the node doesn't have any data associated. If the node gets
        removed, this briefly becomes invalid after clean(), after that the
        whole instance gets replaced in doPreUpdate(). */
     LayerDataHandle highlightData = LayerDataHandle::Null;
+
+    /* Name that's associated with `handle`. If the handle changes, the whole
+       instance is expected to be replaced. */
+    Containers::String name;
 };
 
 struct DebugLayerLayer {
@@ -81,6 +81,7 @@ struct DebugLayerLayer {
     }
 
     LayerHandle handle = LayerHandle::Null;
+    /* 6 bytes free */
 
     /* Name & debug layer integration that's associated with `handle`. If the
        handle changes, the whole instance is expected to be replaced in
@@ -116,6 +117,7 @@ struct DebugLayerAnimator {
     }
 
     AnimatorHandle handle = AnimatorHandle::Null;
+    /* 6 bytes free */
 
     /* Name & debug layer integration that's associated with `handle`. If the
        handle changes, the whole instance is expected to be replaced in
@@ -151,6 +153,7 @@ struct DebugLayerLayouter {
     }
 
     LayouterHandle handle = LayouterHandle::Null;
+    /* 6 bytes free */
 
     /* Name & debug layer integration that's associated with `handle`. If the
        handle changes, the whole instance is expected to be replaced in
