@@ -215,9 +215,6 @@ DebugLayer& DebugLayer::setFlags(const DebugLayerFlags flags) {
 
     state.flags = flags;
 
-    /* If a node was highlighted and NodeHighlight isn't enabled anymore, call
-       the callback */
-
     return *this;
 }
 
