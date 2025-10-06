@@ -987,27 +987,28 @@ void DebugLayer::doPreUpdate(LayerStates) {
 void DebugLayer::doUpdate(const LayerStates states, const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, const Containers::StridedArrayView1D<const Float>&, Containers::BitArrayView, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&) {
     /* NeedsCommonDataUpdate is handled in doPreUpdate() above */
 
+    /* If we're not meant to draw, there's nothing to do */
+    if(!(doFeatures() >= LayerFeature::Draw))
+        return;
+
     State& state = *_state;
 
-    /* If we're meant to draw... */
-    if(doFeatures() >= LayerFeature::Draw) {
-        /* If there's no current highlighted node, there's nothing to draw */
-        if(state.currentHighlightedNode == NodeHandle::Null) {
-            state.highlightedNodeDrawOffset = ~std::size_t{};
+    /* If there's no current highlighted node, there's nothing to draw */
+    if(state.currentHighlightedNode == NodeHandle::Null) {
+        state.highlightedNodeDrawOffset = ~std::size_t{};
 
-        /* Otherwise, if anything that affects the current highlighted node
-           needs to be updated, find the highlighted node among the data IDs
-           (if there at all) and remember its index to know when to draw */
-        } else if(states >= LayerState::NeedsDataUpdate ||
-                  states >= LayerState::NeedsNodeOffsetSizeUpdate ||
-                  states >= LayerState::NeedsNodeOrderUpdate)
-        {
-            const UnsignedInt highlightedDataId = layerDataHandleId(state.nodes[nodeHandleId(state.currentHighlightedNode)].highlightData);
-            state.highlightedNodeDrawOffset = ~std::size_t{};
-            for(std::size_t i = 0; i != dataIds.size(); ++i) if(dataIds[i] == highlightedDataId) {
-                state.highlightedNodeDrawOffset = i;
-                break;
-            }
+    /* Otherwise, if anything that affects the current highlighted node needs
+       to be updated, find the highlighted node among the data IDs (if there at
+       all) and remember its index to know when to draw */
+    } else if(states >= LayerState::NeedsDataUpdate ||
+              states >= LayerState::NeedsNodeOffsetSizeUpdate ||
+              states >= LayerState::NeedsNodeOrderUpdate)
+    {
+        const UnsignedInt highlightedDataId = layerDataHandleId(state.nodes[nodeHandleId(state.currentHighlightedNode)].highlightData);
+        state.highlightedNodeDrawOffset = ~std::size_t{};
+        for(std::size_t i = 0; i != dataIds.size(); ++i) if(dataIds[i] == highlightedDataId) {
+            state.highlightedNodeDrawOffset = i;
+            break;
         }
     }
 
