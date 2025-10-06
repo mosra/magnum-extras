@@ -88,18 +88,18 @@ template<class ApplicationOrEvent> struct ApplicationSizeConverter<ApplicationOr
    returns false if given enum value is not available. A similar trick is
    used in ImGuiIntegration. */
 
-#define MAGNUM_UI_OPTIONAL_POINTER_EVENT_SOURCE(source)                     \
+#define _MAGNUMEXTRAS_UI_OPTIONAL_POINTER_EVENT_SOURCE(source)              \
     template<class ApplicationPointerEventSource> constexpr bool is##source##PointerEventSource(ApplicationPointerEventSource p, decltype(ApplicationPointerEventSource::source)* = nullptr) { \
         return p == ApplicationPointerEventSource::source;                  \
     }                                                                       \
     constexpr bool is##source##PointerEventSource(...) {                    \
         return false;                                                       \
     }
-MAGNUM_UI_OPTIONAL_POINTER_EVENT_SOURCE(Touch)
-MAGNUM_UI_OPTIONAL_POINTER_EVENT_SOURCE(Pen)
-#undef MAGNUM_UI_OPTIONAL_POINTER_EVENT_SOURCE
+_MAGNUMEXTRAS_UI_OPTIONAL_POINTER_EVENT_SOURCE(Touch)
+_MAGNUMEXTRAS_UI_OPTIONAL_POINTER_EVENT_SOURCE(Pen)
+#undef _MAGNUMEXTRAS_UI_OPTIONAL_POINTER_EVENT_SOURCE
 
-#define MAGNUM_UI_OPTIONAL_POINTER(pointer)                                 \
+#define _MAGNUMEXTRAS_UI_OPTIONAL_POINTER(pointer)                          \
     template<class ApplicationPointer> constexpr bool is##pointer##Pointer(ApplicationPointer p, decltype(ApplicationPointer::pointer)* = nullptr) { \
         return p == ApplicationPointer::pointer;                            \
     }                                                                       \
@@ -112,10 +112,10 @@ MAGNUM_UI_OPTIONAL_POINTER_EVENT_SOURCE(Pen)
     constexpr bool has##pointer##Pointer(...) {                             \
         return false;                                                       \
     }
-MAGNUM_UI_OPTIONAL_POINTER(Finger)
-MAGNUM_UI_OPTIONAL_POINTER(Pen)
-MAGNUM_UI_OPTIONAL_POINTER(Eraser)
-#undef MAGNUM_UI_OPTIONAL_POINTER
+_MAGNUMEXTRAS_UI_OPTIONAL_POINTER(Finger)
+_MAGNUMEXTRAS_UI_OPTIONAL_POINTER(Pen)
+_MAGNUMEXTRAS_UI_OPTIONAL_POINTER(Eraser)
+#undef _MAGNUMEXTRAS_UI_OPTIONAL_POINTER
 
 template<class ApplicationPointerEventSource> PointerEventSource pointerEventSourceFor(const ApplicationPointerEventSource source) {
     /* Not a switch because this makes it easier to check for the not always
@@ -421,8 +421,8 @@ template<class Event> struct PointerMoveEventConverter<Event, typename std::enab
    otherwise. A similar trick is used in AssimpImporter to skip aiTextureType
    values not available in earlier versions. Make sure to add an explicit test
    for each. */
-#define UI_OPTIONAL_APPLICATION_KEY(name)                                   \
-    template<class U> struct UiOptionalApplicationKey_ ## name {            \
+#define _MAGNUMEXTRAS_UI_OPTIONAL_APPLICATION_KEY(name)                     \
+    template<class U> struct OptionalApplicationKey_ ## name {              \
         template<class T> constexpr static U get(T*, decltype(T::name)* = nullptr) { \
             return T::name;                                                 \
         }                                                                   \
@@ -431,10 +431,10 @@ template<class Event> struct PointerMoveEventConverter<Event, typename std::enab
         }                                                                   \
         constexpr static U Value = get(static_cast<U*>(nullptr));           \
     };
-
-UI_OPTIONAL_APPLICATION_KEY(World1)
-UI_OPTIONAL_APPLICATION_KEY(World2)
-UI_OPTIONAL_APPLICATION_KEY(AltGr)
+_MAGNUMEXTRAS_UI_OPTIONAL_APPLICATION_KEY(World1)
+_MAGNUMEXTRAS_UI_OPTIONAL_APPLICATION_KEY(World2)
+_MAGNUMEXTRAS_UI_OPTIONAL_APPLICATION_KEY(AltGr)
+#undef _MAGNUMEXTRAS_UI_OPTIONAL_APPLICATION_KEY
 
 template<class ApplicationKey> Key keyFor(ApplicationKey key) {
     switch(key) {
@@ -560,7 +560,7 @@ template<class ApplicationKey> Key keyFor(ApplicationKey key) {
            not available in earlier versions. Right now all those are skipped
            because it's unclear what they actually map to. Make sure to add an
            explicit test for each. */
-        #define _s(key) case UiOptionalApplicationKey_ ## key <ApplicationKey>::Value:
+        #define _s(key) case OptionalApplicationKey_ ## key <ApplicationKey>::Value:
         #ifdef CORRADE_TARGET_GCC
         #pragma GCC diagnostic push
         #pragma GCC diagnostic ignored "-Wswitch" /* case value not in enum */
@@ -584,8 +584,6 @@ template<class ApplicationKey> Key keyFor(ApplicationKey key) {
        i.e. don't propagate the event at all */
     return {};
 }
-
-#undef UI_OPTIONAL_APPLICATION_KEY
 
 template<class Event> struct KeyEventConverter<Event,
     /* Clang (16, but probably others too) is only able to match this with the
