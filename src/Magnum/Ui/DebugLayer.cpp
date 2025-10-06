@@ -523,11 +523,6 @@ bool DebugLayer::highlightNode(const NodeHandle handle) {
         "Ui::DebugLayer::highlightNode(): layer not part of a user interface", {});
     const AbstractUserInterface& ui = this->ui();
 
-    /* If this is a subclass that draws, trigger an update so the highlight
-       rectangle is shown or hidden as appropriate */
-    if(doFeatures() >= LayerFeature::Draw)
-        setNeedsUpdate(LayerState::NeedsDataUpdate);
-
     /* If the handle is null or unknown, reset the currently highlighted node
        and call the callback with an empty string. Return true only for null,
        false indicates unknown node. */
@@ -536,6 +531,10 @@ bool DebugLayer::highlightNode(const NodeHandle handle) {
             state.currentHighlightedNode = NodeHandle::Null;
             if(state.nodeHighlightCallback)
                 state.nodeHighlightCallback({});
+            /* If this is a subclass that draws, trigger an update so the
+               highlight rectangle is hidden as appropriate */
+            if(doFeatures() >= LayerFeature::Draw)
+                setNeedsUpdate(LayerState::NeedsDataUpdate);
         }
         return handle == NodeHandle::Null;
     }
@@ -809,7 +808,14 @@ bool DebugLayer::highlightNode(const NodeHandle handle) {
         }
     }
 
-    state.currentHighlightedNode = handle;
+    if(state.currentHighlightedNode != handle) {
+        state.currentHighlightedNode = handle;
+        /* If this is a subclass that draws and the handle differs, trigger an
+           update so the highlight rectangle is shown or hidden as
+           appropriate */
+        if(doFeatures() >= LayerFeature::Draw)
+            setNeedsUpdate(LayerState::NeedsDataUpdate);
+    }
 
     /* At this point the debug output redirection is no longer active so we can
        pass the result to the callback without the redirection being active

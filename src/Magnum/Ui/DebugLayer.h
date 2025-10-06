@@ -937,7 +937,8 @@ class MAGNUM_UI_EXPORT DebugLayer: public AbstractLayer {
          * @ref AbstractUserInterface::update(). As such, for example nodes or
          * layers added since the last update won't be included in the output.
          *
-         * If the layer is instantiated as @ref DebugLayerGL, calling this
+         * If the layer is instantiated as @ref DebugLayerGL and @p node is
+         * different from the previously highlighted node, calling this
          * function causes @ref LayerState::NeedsDataUpdate to be set.
          * @see @ref setNodeHighlightColor()
          *      @ref setNodeHighlightGesture(),

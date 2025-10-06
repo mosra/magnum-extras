@@ -665,12 +665,17 @@ const struct {
     const char* name;
     LayerFeatures features;
     bool callback;
+    LayerStates expectedState;
     bool expectDrawData;
 } NodeHighlightToggleData[]{
-    {"", {}, false, false},
-    {"layer with Draw", LayerFeature::Draw, false, true},
-    {"with callback", {}, true, false},
-    {"with callback, layer with Draw", LayerFeature::Draw, true, true},
+    {"",
+        {}, false, {}, false},
+    {"layer with Draw",
+        LayerFeature::Draw, false, LayerState::NeedsDataUpdate, true},
+    {"with callback",
+        {}, true, {}, false},
+    {"with callback, layer with Draw",
+        LayerFeature::Draw, true, LayerState::NeedsDataUpdate, true},
 };
 
 const struct {
@@ -5265,6 +5270,16 @@ void DebugLayerTest::nodeHighlightToggle() {
     layer.addFlags(DebugLayerFlag::NodeHighlight);
     CORRADE_COMPARE(layer.flags(), DebugLayerFlags{0x80}|DebugLayerFlag::NodeHighlight);
     CORRADE_COMPARE(layer.currentHighlightedNode(), NodeHandle::Null);
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsCommonDataUpdate);
+    if(data.callback)
+        CORRADE_COMPARE(called, 0);
+    CORRADE_COMPARE(out, "");
+
+    /* Highlighting a null node if there's no node currently highligted does
+       not set NeedsDataUpdate and doesn't call the callback either */
+    CORRADE_VERIFY(layer.highlightNode(NodeHandle::Null));
+    CORRADE_COMPARE(layer.currentHighlightedNode(), NodeHandle::Null);
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsCommonDataUpdate);
     if(data.callback)
         CORRADE_COMPARE(called, 0);
     CORRADE_COMPARE(out, "");
@@ -5279,14 +5294,30 @@ void DebugLayerTest::nodeHighlightToggle() {
         CORRADE_COMPARE(called, 1);
         CORRADE_COMPARE(out, "Node {0x2, 0x1}");
     }
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsCommonDataUpdate|data.expectedState);
     if(data.expectDrawData) {
         /* The draw offset gets calculated only after update() */
-        CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate|LayerState::NeedsCommonDataUpdate);
         ui.update();
         CORRADE_COMPARE(layer.stateData().highlightedNodeDrawOffset, 2);
-    } else {
-        CORRADE_COMPARE(layer.state(), LayerState::NeedsCommonDataUpdate);
     }
+
+    /* Update to clear the NeedsDataUpdate flag */
+    ui.update();
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsCommonDataUpdate);
+
+    /* Highlighting the same node only prints the callback again, but does not
+       set NeedsDataUpdate */
+    {
+        /* Don't care about the output if callback isn't set */
+        Debug redirectOutput{nullptr};
+        CORRADE_VERIFY(layer.highlightNode(node));
+    }
+    CORRADE_COMPARE(layer.currentHighlightedNode(), node);
+    if(data.callback) {
+        CORRADE_COMPARE(called, 2);
+        CORRADE_COMPARE(out, "Node {0x2, 0x1}");
+    }
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsCommonDataUpdate);
 
     /* Removing the flag calls the callback to remove the node. It isn't
        possible to query the current highlighted node anymore, but the internal
@@ -5294,19 +5325,16 @@ void DebugLayerTest::nodeHighlightToggle() {
     layer.clearFlags(DebugLayerFlag::NodeHighlight);
     CORRADE_COMPARE(layer.stateData().currentHighlightedNode, NodeHandle::Null);
     if(data.callback) {
-        CORRADE_COMPARE(called, 2);
+        CORRADE_COMPARE(called, 3);
         CORRADE_COMPARE(out, "");
     }
+    /* The state wouldn't need to include NeedsDataUpdate as the only thing
+       that changes is the draw offset being cleared, affecting just the draw.
+       We however need to trigger redraw somehow, so it's being set. */
+    /** @todo clean up once NeedsDraw or some such is a thing */
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsCommonDataUpdate|data.expectedState);
     if(data.expectDrawData) {
-        /* The state wouldn't need to include NeedsDataUpdate as the only thing
-           that changes is the draw offset being cleared, affecting just the
-           draw. We however need to trigger redraw somehow, so it's being
-           set. */
-        /** @todo clean up once NeedsDraw or some such is a thing */
-        CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate|LayerState::NeedsCommonDataUpdate);
         CORRADE_COMPARE(layer.stateData().highlightedNodeDrawOffset, ~std::size_t{});
-    } else {
-        CORRADE_COMPARE(layer.state(), LayerState::NeedsCommonDataUpdate);
     }
 
     /* Update to clear the NeedsDataUpdate flag */
@@ -5321,7 +5349,7 @@ void DebugLayerTest::nodeHighlightToggle() {
     CORRADE_COMPARE(layer.currentHighlightedNode(), NodeHandle::Null);
     CORRADE_COMPARE(layer.state(), LayerState::NeedsCommonDataUpdate);
     if(data.callback)
-        CORRADE_COMPARE(called, 2);
+        CORRADE_COMPARE(called, 3);
 
     /* Removing the flag with nothing highlighted also doesn't trigger
        anything */
@@ -5329,7 +5357,40 @@ void DebugLayerTest::nodeHighlightToggle() {
     CORRADE_COMPARE(layer.flags(), DebugLayerFlags{});
     CORRADE_COMPARE(layer.state(), LayerState::NeedsCommonDataUpdate);
     if(data.callback)
-        CORRADE_COMPARE(called, 2);
+        CORRADE_COMPARE(called, 3);
+
+    /* Add the flag, highlight & update to clear the flags */
+    layer.setFlags(DebugLayerFlag::NodeHighlight);
+    {
+        /* Don't care about the output if callback isn't set */
+        Debug redirectOutput{nullptr};
+        CORRADE_VERIFY(layer.highlightNode(node));
+    }
+    CORRADE_COMPARE(layer.currentHighlightedNode(), node);
+    if(data.callback) {
+        CORRADE_COMPARE(called, 4);
+        CORRADE_COMPARE(out, "Node {0x2, 0x1}");
+    }
+    ui.update();
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsCommonDataUpdate);
+
+    /* Inspecting a null node with a node currently higlighted calls the
+       callback with an empty string and sets NeedsDataUpdate if drawing to not
+       render the highlight anymore */
+    {
+        /* Don't care about the output if callback isn't set */
+        Debug redirectOutput{nullptr};
+        CORRADE_VERIFY(layer.highlightNode(NodeHandle::Null));
+    }
+    CORRADE_COMPARE(layer.currentHighlightedNode(), NodeHandle::Null);
+    if(data.callback) {
+        CORRADE_COMPARE(called, 5);
+        CORRADE_COMPARE(out, "");
+    }
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsCommonDataUpdate|data.expectedState);
+    ui.update();
+    if(data.expectDrawData)
+        CORRADE_COMPARE(layer.stateData().highlightedNodeDrawOffset, ~std::size_t{});
 }
 
 void DebugLayerTest::updateEmpty() {
