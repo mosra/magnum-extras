@@ -118,9 +118,9 @@ struct DebugLayerTest: TestSuite::Tester {
         void nodeInspectLayouterDebugIntegrationExplicitRvalue();
         void nodeInspectAnimatorDebugIntegrationExplicit();
         void nodeInspectAnimatorDebugIntegrationExplicitRvalue();
-        void nodeInspectInvalid();
         void nodeInspectDraw();
         void nodeInspectNodeRemoved();
+        void nodeInspectInvalid();
         void nodeInspectToggle();
 
         void updateEmpty();
@@ -836,14 +836,15 @@ DebugLayerTest::DebugLayerTest() {
               &DebugLayerTest::nodeInspectLayouterDebugIntegrationExplicit,
               &DebugLayerTest::nodeInspectLayouterDebugIntegrationExplicitRvalue,
               &DebugLayerTest::nodeInspectAnimatorDebugIntegrationExplicit,
-              &DebugLayerTest::nodeInspectAnimatorDebugIntegrationExplicitRvalue,
-              &DebugLayerTest::nodeInspectInvalid});
+              &DebugLayerTest::nodeInspectAnimatorDebugIntegrationExplicitRvalue});
 
     addInstancedTests({&DebugLayerTest::nodeInspectDraw},
         Containers::arraySize(NodeInspectDrawData));
 
     addInstancedTests({&DebugLayerTest::nodeInspectNodeRemoved},
         Containers::arraySize(NodeInspectNodeRemovedData));
+
+    addTests({&DebugLayerTest::nodeInspectInvalid});
 
     addInstancedTests({&DebugLayerTest::nodeInspectToggle},
         Containers::arraySize(NodeInspectToggleData));
