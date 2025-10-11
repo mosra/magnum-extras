@@ -244,6 +244,15 @@ const struct {
 
 const struct {
     const char* name;
+    LayerFeatures features;
+    LayerStates expectedState;
+} LayerDrawData[]{
+    {"", {}, {}},
+    {"layer with Draw", LayerFeature::Draw, LayerState::NeedsDataUpdate}
+};
+
+const struct {
+    const char* name;
     DebugLayerSources sources;
     DebugLayerFlags flags;
     Pointers acceptedPointers;
@@ -680,14 +689,6 @@ const struct {
 
 const struct {
     const char* name;
-    LayerFeatures features;
-} UpdateEmptyData[]{
-    {"", {}},
-    {"layer with Draw", LayerFeature::Draw}
-};
-
-const struct {
-    const char* name;
     LayerStates states;
     /* Only items until the first ~UnsignedInt{} are used. ID 2 is the
        inspected node. */
@@ -822,7 +823,8 @@ DebugLayerTest::DebugLayerTest() {
     addInstancedTests({&DebugLayerTest::preUpdateTrackAnimators},
         Containers::arraySize(PreUpdateTrackAnimatorsData));
 
-    addTests({&DebugLayerTest::nodeInspectSetters});
+    addInstancedTests({&DebugLayerTest::nodeInspectSetters},
+        Containers::arraySize(LayerDrawData));
 
     addInstancedTests({&DebugLayerTest::nodeInspectNoOp},
         Containers::arraySize(NodeInspectNoOpData));
@@ -850,7 +852,7 @@ DebugLayerTest::DebugLayerTest() {
         Containers::arraySize(NodeInspectToggleData));
 
     addInstancedTests({&DebugLayerTest::updateEmpty},
-        Containers::arraySize(UpdateEmptyData));
+        Containers::arraySize(LayerDrawData));
 
     addInstancedTests({&DebugLayerTest::updateDataOrder},
         Containers::arraySize(UpdateDataOrderData));
@@ -3766,27 +3768,59 @@ void DebugLayerTest::preUpdateTrackAnimators() {
 }
 
 void DebugLayerTest::nodeInspectSetters() {
+    auto&& data = LayerDrawData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
     /* These should work even with NodeInspect not set, so user code can set
        all those independently of deciding what to actually use */
-    DebugLayer layer{layerHandle(0, 1), {}, {}};
+    struct Layer: DebugLayer {
+        explicit Layer(LayerHandle handle, LayerFeatures features): DebugLayer{handle, {}, {}}, _features{features} {}
+
+        LayerFeatures doFeatures() const override {
+            return DebugLayer::doFeatures()|_features;
+        }
+
+        private:
+            LayerFeatures _features;
+    } layer{layerHandle(0, 1), data.features};
+
+    /* Required to be called before update() (because AbstractUserInterface
+       guarantees the same on a higher level), not needed for anything here */
+    if(data.features >= LayerFeature::Draw)
+        layer.setSize({1, 1}, {1, 1});
+
+    CORRADE_COMPARE(layer.state(), LayerStates{});
 
     /* Defaults */
     CORRADE_COMPARE(layer.nodeInspectColor(), 0xff00ffff_rgbaf*0.5f);
     CORRADE_COMPARE(layer.nodeInspectGesture(), Containers::pair(Pointer::MouseRight|Pointer::Eraser, ~~Modifier::Ctrl));
     CORRADE_VERIFY(!layer.hasNodeInspectCallback());
 
-    /* Use of this one is further tested in update() and in DebugLayerGLTest */
+    /* Use of this one is further tested in update() and in DebugLayerGLTest.
+       Changing the color causes NeedsDataUpdate to be set, but only if the
+       layer draws anything. */
     layer.setNodeInspectColor(0x3399ff66_rgbaf);
     CORRADE_COMPARE(layer.nodeInspectColor(), 0x3399ff66_rgbaf);
+    CORRADE_COMPARE(layer.state(), data.expectedState);
+
+    /* Clear the state flags */
+    layer.update(LayerState::NeedsDataUpdate, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
+    CORRADE_COMPARE(layer.state(), LayerStates{});
 
     layer.setNodeInspectGesture(Pointer::MouseMiddle|Pointer::Finger, Modifier::Alt|Modifier::Shift);
     CORRADE_COMPARE(layer.nodeInspectGesture(), Containers::pair(Pointer::MouseMiddle|Pointer::Finger, Modifier::Alt|Modifier::Shift));
+    /* Setting the gesture doesn't need any update */
+    CORRADE_COMPARE(layer.state(), LayerStates{});
 
     layer.setNodeInspectCallback([](Containers::StringView){});
     CORRADE_VERIFY(layer.hasNodeInspectCallback());
+    /* Setting the callback doesn't need any update */
+    CORRADE_COMPARE(layer.state(), LayerStates{});
 
     layer.setNodeInspectCallback(nullptr);
     CORRADE_VERIFY(!layer.hasNodeInspectCallback());
+    /* Setting the callback doesn't need any update */
+    CORRADE_COMPARE(layer.state(), LayerStates{});
 }
 
 void DebugLayerTest::nodeInspectNoOp() {
@@ -5000,21 +5034,12 @@ void DebugLayerTest::nodeInspectDraw() {
     /* Just to silence the output */
     layer.setNodeInspectCallback([](Containers::StringView){});
 
+    if(data.inspectColor)
+        layer.setNodeInspectColor(*data.inspectColor);
+
     if(data.partialUpdate) {
         ui.update();
         CORRADE_COMPARE(layer.state(), LayerState::NeedsCommonDataUpdate);
-    }
-
-    /* Setting an inspect color marks the layer data as dirty */
-    if(data.inspectColor) {
-        layer.setNodeInspectColor(*data.inspectColor);
-        /* NeedsDataUpdate is set only if something is actually drawn */
-        CORRADE_COMPARE(layer.state(), LayerState::NeedsCommonDataUpdate|(data.expected ? LayerState::NeedsDataUpdate : LayerStates{}));
-
-        if(data.partialUpdate) {
-            ui.update();
-            CORRADE_COMPARE(layer.state(), LayerState::NeedsCommonDataUpdate);
-        }
     }
 
     /* Inspect the node */
@@ -5395,7 +5420,7 @@ void DebugLayerTest::nodeInspectToggle() {
 }
 
 void DebugLayerTest::updateEmpty() {
-    auto&& data = UpdateEmptyData[testCaseInstanceId()];
+    auto&& data = LayerDrawData[testCaseInstanceId()];
     setTestCaseDescription(data.name);
 
     struct Layer: DebugLayer {
