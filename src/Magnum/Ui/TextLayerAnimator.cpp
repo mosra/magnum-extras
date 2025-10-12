@@ -160,7 +160,9 @@ void TextLayerStyleAnimator::createInternal(const AnimationHandle handle, const 
     State& state = static_cast<State&>(*_state);
     /* Layer being set had to be checked in create() already */
     CORRADE_INTERNAL_ASSERT(state.layerSharedState);
+    #ifndef CORRADE_NO_ASSERT
     const TextLayer::Shared::State& layerSharedState = static_cast<const TextLayer::Shared::State&>(*state.layerSharedState);
+    #endif
     CORRADE_ASSERT(
         sourceStyle < layerSharedState.styleCount &&
         targetStyle < layerSharedState.styleCount,

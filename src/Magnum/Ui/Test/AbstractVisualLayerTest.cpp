@@ -917,8 +917,7 @@ struct StyleLayerStyleAnimator: AbstractVisualLayerStyleAnimator {
             /* It should only switch style indices (because of which we
                unconditionally call setNeedsUpdate()), nothing else, not even
                removal of animations that no longer affect anything */
-            Containers::Triple<bool, bool, bool> updatesBase = AbstractVisualLayerStyleAnimator::advance(active, started, stopped, remove, dataStyles);
-            CORRADE_INTERNAL_ASSERT(updatesBase == Containers::triple(true, false, false));
+            CORRADE_INTERNAL_ASSERT_OUTPUT(AbstractVisualLayerStyleAnimator::advance(active, started, stopped, remove, dataStyles) == Containers::triple(true, false, false));
         }
         if(needsAdvanceClean.second())
             clean(remove);
