@@ -362,11 +362,10 @@ if(MAGNUM_BUILD_GL_TESTS)
             Magnum::DebugTools
             Magnum::OpenGLTester
         FILES
-            DebugLayerTestFiles/draw-order-blue.png
-            DebugLayerTestFiles/draw-order-green.png
             DebugLayerTestFiles/empty.png
+            DebugLayerTestFiles/node-highlight.png
             DebugLayerTestFiles/node-inspect.png
-            DebugLayerTestFiles/node-inspect-color.png
+            DebugLayerTestFiles/node-inspect-highlight-color.png
             # Yes, reusing BaseLayer test file for draw order
             BaseLayerTestFiles/draw-order.png)
     target_include_directories(UiDebugLayerGLTest PRIVATE ${CMAKE_CURRENT_BINARY_DIR})

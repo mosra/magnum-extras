@@ -28,6 +28,7 @@
 #include <Corrade/Containers/BitArrayView.h>
 #include <Corrade/Containers/Optional.h>
 #include <Corrade/Containers/StridedArrayView.h>
+#include <Corrade/Containers/StridedBitArrayView.h>
 #include <Corrade/Containers/StringIterable.h>
 #include <Corrade/TestSuite/Tester.h>
 #include <Corrade/TestSuite/Compare/Container.h>
@@ -121,6 +122,12 @@ struct DebugLayerTest: TestSuite::Tester {
         void nodeInspectNodeRemoved();
         void nodeInspectInvalid();
         void nodeInspectToggle();
+
+        void nodeHighlightSetters();
+        /* Tests also currentHighlightedNodes() and clearHighlightedNodes() */
+        void nodeHighlight();
+        void nodeHighlightNodeRemoved();
+        void nodeHighlightInvalid();
 
         void updateEmpty();
         void updateDataOrder();
@@ -622,7 +629,7 @@ const struct {
 const struct {
     const char* name;
     bool removeParent;
-} NodeInspectNodeRemovedData[]{
+} NodeInspectHighlightNodeRemovedData[]{
     {"", false},
     {"remove parent node", true},
 };
@@ -647,63 +654,34 @@ const struct {
     const char* name;
     LayerFeatures features;
     LayerStates states;
-    /* Only items until the first ~UnsignedInt{} are used. ID 2 is the
-       inspected node. */
-    UnsignedInt dataIds[4];
-    std::size_t expectedDrawOffset1, expectedDrawOffset2;
-    bool expectVertexDataUpdated1, expectVertexDataUpdated2;
+    bool emptyUpdate, expectDataUpdated;
 } UpdateDataOrderData[]{
     {"empty update",
         LayerFeature::Draw, LayerState::NeedsDataUpdate,
-        {~UnsignedInt{}},
-        ~std::size_t{}, ~std::size_t{}, false, false},
-    {"data drawn at offset 1 and then none",
-        LayerFeature::Draw, LayerState::NeedsDataUpdate,
-        {3, 2, ~UnsignedInt{}},
-        1, ~std::size_t{}, true, false},
-    {"data drawn at offset 3 and then 1",
-        LayerFeature::Draw, LayerState::NeedsDataUpdate,
-        {3, 1, 0, 2},
-        3, 1, true, true},
-    {"data drawn at offset 0 and then none",
-        LayerFeature::Draw, LayerState::NeedsDataUpdate,
-        {2, ~UnsignedInt{}},
-        0, ~std::size_t{}, true, false},
-    {"data not drawn",
-        LayerFeature::Draw, LayerState::NeedsDataUpdate,
-        {3, 0, ~UnsignedInt{}},
-        ~std::size_t{}, ~std::size_t{}, false, false},
+        true, false},
     {"node offset/size update only",
         LayerFeature::Draw, LayerState::NeedsNodeOffsetSizeUpdate,
-        {3, 2, 0, 1},
-        1, 3, true, true},
+        false, true},
     {"node order update only",
         LayerFeature::Draw, LayerState::NeedsNodeOrderUpdate,
-        {3, 2, 0, 1},
-        1, 3, false, false},
-    /* These five shouldn't cause anything to be done in update(), retaining
-       the artificially set draw offset (i.e., keeping it exactly at what it
-       was set to before) */
+        false, true},
+    /* These five shouldn't cause anything to be done in update(), resulting in
+       the draw offset array to be empty */
     {"no Draw feature",
         {}, LayerState::NeedsDataUpdate,
-        {3, 1, 0, 2},
-        666, 666, false, false},
+        false, false},
     {"node enabled update only",
         LayerFeature::Draw, LayerState::NeedsNodeEnabledUpdate,
-        {3, 2, 0, 1},
-        666, 666, false, false},
+        false, false},
     {"node opacity update only",
         LayerFeature::Draw, LayerState::NeedsNodeOpacityUpdate,
-        {3, 2, 0, 1},
-        666, 666, false, false},
+        false, false},
     {"shared data update only",
         LayerFeature::Draw, LayerState::NeedsSharedDataUpdate,
-        {3, 2, 0, 1},
-        666, 666, false, false},
+        false, false},
     {"common data update only",
         LayerFeature::Draw, LayerState::NeedsCommonDataUpdate,
-        {3, 0, 2, 1},
-        666, 666, false, false},
+        false, false},
 };
 
 DebugLayerTest::DebugLayerTest() {
@@ -802,12 +780,21 @@ DebugLayerTest::DebugLayerTest() {
               &DebugLayerTest::nodeInspectAnimatorDebugIntegrationExplicitRvalue});
 
     addInstancedTests({&DebugLayerTest::nodeInspectNodeRemoved},
-        Containers::arraySize(NodeInspectNodeRemovedData));
+        Containers::arraySize(NodeInspectHighlightNodeRemovedData));
 
     addTests({&DebugLayerTest::nodeInspectInvalid});
 
     addInstancedTests({&DebugLayerTest::nodeInspectToggle},
         Containers::arraySize(NodeInspectToggleData));
+
+    addInstancedTests({&DebugLayerTest::nodeHighlightSetters,
+                       &DebugLayerTest::nodeHighlight},
+        Containers::arraySize(LayerDrawData));
+
+    addInstancedTests({&DebugLayerTest::nodeHighlightNodeRemoved},
+        Containers::arraySize(NodeInspectHighlightNodeRemovedData));
+
+    addTests({&DebugLayerTest::nodeHighlightInvalid});
 
     addInstancedTests({&DebugLayerTest::updateEmpty},
         Containers::arraySize(LayerDrawData));
@@ -4963,7 +4950,7 @@ void DebugLayerTest::nodeInspectAnimatorDebugIntegrationExplicitRvalue() {
 }
 
 void DebugLayerTest::nodeInspectNodeRemoved() {
-    auto&& data = NodeInspectNodeRemovedData[testCaseInstanceId()];
+    auto&& data = NodeInspectHighlightNodeRemovedData[testCaseInstanceId()];
     setTestCaseDescription(data.name);
 
     AbstractUserInterface ui{{100, 100}};
@@ -5215,6 +5202,364 @@ void DebugLayerTest::nodeInspectToggle() {
     CORRADE_COMPARE(layer.state(), LayerState::NeedsCommonDataUpdate|data.expectedState);
 }
 
+void DebugLayerTest::nodeHighlightSetters() {
+    auto&& data = LayerDrawData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
+    /* These should work even with DebugLayerSource::Nodes not set, so user
+       code can set all those independently of deciding what to actually use */
+    struct Layer: DebugLayer {
+        explicit Layer(LayerHandle handle, LayerFeatures features): DebugLayer{handle, {}, {}}, _features{features} {}
+
+        LayerFeatures doFeatures() const override {
+            return DebugLayer::doFeatures()|_features;
+        }
+
+        private:
+            LayerFeatures _features;
+    } layer{layerHandle(0, 1), data.features};
+
+    /* Required to be called before update() (because AbstractUserInterface
+       guarantees the same on a higher level), not needed for anything here */
+    if(data.features >= LayerFeature::Draw)
+        layer.setSize({1, 1}, {1, 1});
+
+    CORRADE_COMPARE(layer.state(), LayerStates{});
+
+    /* Defaults */
+    CORRADE_COMPARE_AS(layer.nodeHighlightColorMap(), Containers::arrayView({
+        0x00ffff_rgb
+    }), TestSuite::Compare::Container);
+    CORRADE_COMPARE(layer.nodeHighlightColorMapAlpha(), 0.25f);
+
+    /* Changing the color map causes NeedsDataUpdate to be set, but only if the
+       layer draws anything. The data are just referenced, not copied
+       anywhere. */
+    Color3ub colormap[]{
+        0xff00ff_rgb,
+        0x00ff00_rgb
+    };
+    layer.setNodeHighlightColorMap(colormap, 0.75f);
+    CORRADE_COMPARE_AS(layer.nodeHighlightColorMap(), Containers::arrayView({
+        0xff00ff_rgb,
+        0x00ff00_rgb
+    }), TestSuite::Compare::Container);
+    CORRADE_COMPARE(layer.nodeHighlightColorMap().data(), colormap);
+    CORRADE_COMPARE(layer.nodeHighlightColorMapAlpha(), 0.75f);
+    CORRADE_COMPARE(layer.state(), data.expectedState);
+
+    /* Clear the state flags */
+    layer.update(LayerState::NeedsDataUpdate, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
+    CORRADE_COMPARE(layer.state(), LayerStates{});
+
+    /* Default alpha */
+    Color3ub colormap2[]{
+        0xffff00_rgb
+    };
+    layer.setNodeHighlightColorMap(colormap2);
+    CORRADE_COMPARE_AS(layer.nodeHighlightColorMap(), Containers::arrayView({
+        0xffff00_rgb
+    }), TestSuite::Compare::Container);
+    CORRADE_COMPARE(layer.nodeHighlightColorMap().data(), colormap2);
+    CORRADE_COMPARE(layer.nodeHighlightColorMapAlpha(), 0.25f);
+    CORRADE_COMPARE(layer.state(), data.expectedState);
+}
+
+void DebugLayerTest::nodeHighlight() {
+    auto&& data = LayerDrawData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
+    AbstractUserInterface ui{{100, 100}};
+
+    struct Layer: DebugLayer {
+        explicit Layer(LayerHandle handle, LayerFeatures features): DebugLayer{handle, DebugLayerSource::Nodes, {}}, _features{features} {}
+
+        LayerFeatures doFeatures() const override {
+            return DebugLayer::doFeatures()|_features;
+        }
+
+        private:
+            LayerFeatures _features;
+    };
+    DebugLayer& layer = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer(), data.features));
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsCommonDataUpdate);
+
+    /* A bunch of nodes to highlight, some with a non-trivial generation */
+    NodeHandle node0 = ui.createNode({}, {});
+    NodeHandle node1 = ui.createNode({}, {});
+    ui.removeNode(ui.createNode({}, {}));
+    ui.removeNode(ui.createNode({}, {}));
+    NodeHandle node2 = ui.createNode({}, {});
+
+    /* By default the layer knows about no nodes and highlighting isn't
+       possible */
+    CORRADE_COMPARE_AS(layer.currentHighlightedNodes(), Containers::stridedArrayView<bool>({
+    }).sliceBit(0), TestSuite::Compare::Container);
+    CORRADE_VERIFY(!layer.highlightNode(node0));
+    CORRADE_VERIFY(!layer.highlightNode(node2));
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsCommonDataUpdate);
+    CORRADE_COMPARE_AS(layer.currentHighlightedNodes(), Containers::stridedArrayView<bool>({
+        /* empty */
+    }).sliceBit(0), TestSuite::Compare::Container);
+
+    /* Updating fills the mask for all nodes */
+    ui.update();
+    CORRADE_COMPARE_AS(layer.currentHighlightedNodes(), Containers::stridedArrayView<bool>({
+        false,
+        false,
+        false,
+    }).sliceBit(0), TestSuite::Compare::Container);
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsCommonDataUpdate);
+
+    /* Highlighting a known node works and sets NeedsDataUpdate if the layer
+       draws anything */
+    CORRADE_VERIFY(layer.highlightNode(node1));
+    CORRADE_COMPARE_AS(layer.currentHighlightedNodes(), Containers::stridedArrayView<bool>({
+        false,
+        true,
+        false,
+    }).sliceBit(0), TestSuite::Compare::Container);
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsCommonDataUpdate|data.expectedState);
+
+    /* Update to reset the state */
+    ui.update();
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsCommonDataUpdate);
+
+    /* Highlighting a node that's already highligted returns true but doesn't
+       set NeedsDataUpdate */
+    CORRADE_VERIFY(layer.highlightNode(node1));
+    CORRADE_COMPARE_AS(layer.currentHighlightedNodes(), Containers::stridedArrayView<bool>({
+        false,
+        true,
+        false,
+    }).sliceBit(0), TestSuite::Compare::Container);
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsCommonDataUpdate);
+
+    /* Create more nodes, the layer isn't aware of them yet so cannot highlight
+       them */
+    NodeHandle node3 = ui.createNode({}, {});
+    ui.removeNode(ui.createNode({}, {}));
+    ui.removeNode(ui.createNode({}, {}));
+    NodeHandle node4 = ui.createNode({}, {});
+    NodeHandle node5 = ui.createNode({}, {});
+    CORRADE_VERIFY(!layer.highlightNode(node5));
+    CORRADE_COMPARE_AS(layer.currentHighlightedNodes(), Containers::stridedArrayView<bool>({
+        false,
+        true,
+        false,
+    }).sliceBit(0), TestSuite::Compare::Container);
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsCommonDataUpdate);
+
+    /* Setting a node name makes the layer aware of that particular node so
+       it's then possible to highlight it. Not any other yet, tho. */
+    layer.setNodeName(node4, "hello");
+    CORRADE_VERIFY(!layer.highlightNode(node3));
+    CORRADE_VERIFY(layer.highlightNode(node4));
+    CORRADE_COMPARE_AS(layer.currentHighlightedNodes(), Containers::stridedArrayView<bool>({
+        false,
+        true,
+        false,
+        false,
+        true,
+    }).sliceBit(0), TestSuite::Compare::Container);
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsCommonDataUpdate|data.expectedState);
+
+    /* Update to reset the state. This makes the layer aware of node5 as
+       well. */
+    ui.update();
+    CORRADE_COMPARE_AS(layer.currentHighlightedNodes(), Containers::stridedArrayView<bool>({
+        false,
+        true,
+        false,
+        false,
+        true,
+        false, /* node5 */
+    }).sliceBit(0), TestSuite::Compare::Container);
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsCommonDataUpdate);
+
+    /* Highlighting a node with a generation different from the one that is
+       known to the layer doesn't highlight it, even though it's a node that's
+       valid. Similarly, highlighting a node that has an ID larger than what's
+       known by the layer doesn't work even though the handle is valid. Neither
+       operation results in anything that'd warrant NeedsDataUpdate. */
+    ui.removeNode(node2);
+    NodeHandle node2Replacement = ui.createNode({}, {});
+    NodeHandle node6 = ui.createNode({}, {});
+    CORRADE_COMPARE(nodeHandleId(node2Replacement), nodeHandleId(node2));
+    CORRADE_VERIFY(!layer.highlightNode(node2Replacement));
+    CORRADE_VERIFY(!layer.highlightNode(node6));
+    CORRADE_COMPARE_AS(layer.currentHighlightedNodes(), Containers::stridedArrayView<bool>({
+        false,
+        true,
+        false,
+        false,
+        true,
+        false,
+    }).sliceBit(0), TestSuite::Compare::Container);
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsCommonDataUpdate);
+
+    /* Clearing highlighted nodes results in NeedsDataUpdate if the layer draws
+       anything */
+    layer.clearHighlightedNodes();
+    CORRADE_COMPARE_AS(layer.currentHighlightedNodes(), Containers::stridedArrayView<bool>({
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+    }).sliceBit(0), TestSuite::Compare::Container);
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsCommonDataUpdate|data.expectedState);
+
+    /* Update to reset the state. This makes the layer aware of node6 as
+       well. */
+    ui.update();
+    CORRADE_COMPARE_AS(layer.currentHighlightedNodes(), Containers::stridedArrayView<bool>({
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false, /* node6 */
+    }).sliceBit(0), TestSuite::Compare::Container);
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsCommonDataUpdate);
+
+    /* Clearing if there's nothing to clear sets it too, because that's a
+       simpler operation than counting set bits */
+    /** @todo update once BitArrayView implements any() */
+    layer.clearHighlightedNodes();
+    CORRADE_COMPARE_AS(layer.currentHighlightedNodes(), Containers::stridedArrayView<bool>({
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+    }).sliceBit(0), TestSuite::Compare::Container);
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsCommonDataUpdate|data.expectedState);
+}
+
+void DebugLayerTest::nodeHighlightNodeRemoved() {
+    auto&& data = NodeInspectHighlightNodeRemovedData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
+    AbstractUserInterface ui{{100, 100}};
+
+    DebugLayer& layer = ui.setLayerInstance(Containers::pointer<DebugLayer>(ui.createLayer(), DebugLayerSource::Nodes, DebugLayerFlags{}));
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsCommonDataUpdate);
+
+    /* A bunch of nodes to highlight */
+    NodeHandle parent = ui.createNode({}, {});
+    NodeHandle parent2 = ui.createNode(parent, {}, {});
+    NodeHandle node2 = ui.createNode(parent2, {}, {});
+    /*NodeHandle node3 =*/ ui.createNode({}, {});
+    NodeHandle node4 = ui.createNode({}, {});
+    NodeHandle node5 = ui.createNode({}, {});
+
+    /* Updating fills the mask for all nodes */
+    ui.update();
+    CORRADE_COMPARE_AS(layer.currentHighlightedNodes(), Containers::stridedArrayView<bool>({
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+    }).sliceBit(0), TestSuite::Compare::Container);
+
+    /* Remove one node, remove & recycle another, then highlight the
+       now-removed as well as another one that isn't removed. All of that
+       should work. */
+    ui.removeNode(node4);
+    ui.removeNode(data.removeParent ? parent : node2);
+    NodeHandle node4Replacement = ui.createNode({}, {});
+    CORRADE_COMPARE(nodeHandleId(node4Replacement), nodeHandleId(node4));
+    CORRADE_VERIFY(layer.highlightNode(node2));
+    CORRADE_VERIFY(layer.highlightNode(node4));
+    CORRADE_VERIFY(layer.highlightNode(node5));
+    CORRADE_COMPARE_AS(layer.currentHighlightedNodes(), Containers::stridedArrayView<bool>({
+        false,
+        false,
+        true,
+        false,
+        true,
+        true,
+    }).sliceBit(0), TestSuite::Compare::Container);
+    CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeClean);
+
+    /* Updating clears the now-removed but keeps the remaining selected */
+    /** @todo change to just clean() once that's done there */
+    ui.update();
+    CORRADE_COMPARE_AS(layer.currentHighlightedNodes(), Containers::stridedArrayView<bool>({
+        false,
+        false,
+        false,
+        false,
+        false,
+        true,
+    }).sliceBit(0), TestSuite::Compare::Container);
+    CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataUpdate);
+
+    /* Highlighting the original node doesn't work anymore, but the replacement
+       does */
+    CORRADE_VERIFY(!layer.highlightNode(node4));
+    CORRADE_VERIFY(layer.highlightNode(node4Replacement));
+    CORRADE_COMPARE_AS(layer.currentHighlightedNodes(), Containers::stridedArrayView<bool>({
+        false,
+        false,
+        false,
+        false,
+        true,
+        true,
+    }).sliceBit(0), TestSuite::Compare::Container);
+}
+
+void DebugLayerTest::nodeHighlightInvalid() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    AbstractUserInterface ui{{100, 100}};
+    DebugLayer layerNoNodes{layerHandle(0, 1), {}, {}};
+    DebugLayer layerNoUi{layerHandle(0, 1), DebugLayerSource::Nodes, {}};
+    DebugLayer& layer = ui.setLayerInstance(Containers::pointer<DebugLayer>(ui.createLayer(), DebugLayerSource::Nodes, DebugLayerFlags{}));
+
+    /* Calling functionality getters / setters is valid on a layer that doesn't
+       have the feature enabled or isn't part of the UI. The actual state
+       queries and updates can't be called tho. */
+    layerNoNodes.nodeHighlightColorMap();
+    layerNoNodes.nodeHighlightColorMapAlpha();
+    Color3ub colormap[1];
+    layerNoNodes.setNodeHighlightColorMap(colormap);
+
+    Containers::String out;
+    Error redirectError{&out};
+    layerNoNodes.setNodeHighlightColorMap({});
+
+    layerNoNodes.currentHighlightedNodes();
+    layerNoUi.currentHighlightedNodes();
+
+    layerNoNodes.clearHighlightedNodes();
+    layerNoUi.clearHighlightedNodes();
+
+    layerNoNodes.highlightNode(nodeHandle(0, 1));
+    layerNoUi.highlightNode(nodeHandle(0, 1));
+    layer.highlightNode(NodeHandle::Null);
+    CORRADE_COMPARE_AS(out,
+        "Ui::DebugLayer::setNodeHighlightColorMap(): expected colormap to have at least one element\n"
+
+        "Ui::DebugLayer::currentHighlightedNodes(): Ui::DebugLayerSource::Nodes not enabled\n"
+        "Ui::DebugLayer::currentHighlightedNodes(): layer not part of a user interface\n"
+
+        "Ui::DebugLayer::clearHighlightedNodes(): Ui::DebugLayerSource::Nodes not enabled\n"
+        "Ui::DebugLayer::clearHighlightedNodes(): layer not part of a user interface\n"
+
+        "Ui::DebugLayer::highlightNode(): Ui::DebugLayerSource::Nodes not enabled\n"
+        "Ui::DebugLayer::highlightNode(): layer not part of a user interface\n"
+        "Ui::DebugLayer::highlightNode(): handle is null\n",
+        TestSuite::Compare::String);
+}
+
 void DebugLayerTest::updateEmpty() {
     auto&& data = LayerDrawData[testCaseInstanceId()];
     setTestCaseDescription(data.name);
@@ -5266,103 +5611,379 @@ void DebugLayerTest::updateDataOrder() {
     /* Just to verify the color is actually used */
     layer.setNodeInspectColor(0xff3366cc_rgbaf);
 
-    /* Create nodes in a way that node with ID 3 is the one we'll inspect and
-       it's associated with debug layer data ID 2, which the crafted data
-       passed to update() depend on. Node 1, which is highlighted second, is
-       associated with data 1. */
+    /* Colormap so every node below is interpolated _exactly_ on a dedicated
+       entry */
+    Color3ub colormap[]{
+        0xff0000_rgb,
+        0x00ff00_rgb, /* node1 */
+        0x0000ff_rgb,
+        0x00ffff_rgb, /* node3 */
+        0xff00ff_rgb,
+        0xffff00_rgb,
+        0xffffff_rgb, /* node6 */
+        0x000000_rgb
+    };
+    layer.setNodeHighlightColorMap(colormap, 0.5f);
+
+    /* Create nodes in a way that there's a non-trivial mapping from node IDs
+       to debug layer data IDs, as checked below */
     ui.createNode({}, {});
     NodeHandle node1 = ui.createNode({}, {});
-    NodeHandle removedNode = ui.createNode({}, {});
+    NodeHandle removedNode2 = ui.createNode({}, {});
     NodeHandle node3 = ui.createNode({}, {});
-    ui.removeNode(removedNode);
+    NodeHandle removedNode4 = ui.createNode({}, {});
+    ui.createNode({}, {});
+    NodeHandle node6 = ui.createNode({}, {});
+    NodeHandle node7 = ui.createNode({}, {});
+    ui.removeNode(removedNode2);
+    ui.removeNode(removedNode4);
     ui.update();
+    CORRADE_COMPARE(nodeHandleId(node1), 1);
     CORRADE_COMPARE(nodeHandleId(node3), 3);
-    CORRADE_COMPARE(layer.usedCount(), 3);
+    CORRADE_COMPARE(nodeHandleId(node6), 6);
+    CORRADE_COMPARE(layer.usedCount(), 6);
+    CORRADE_COMPARE(layer.node(layerDataHandle(1, 1)), node1);
     CORRADE_COMPARE(layer.node(layerDataHandle(2, 1)), node3);
-
-    /* Inspect the node */
-    CORRADE_VERIFY(layer.inspectNode(node3));
-    CORRADE_COMPARE(layer.currentInspectedNode(), node3);
-
-    /* Figure out the actual count of data IDs to send */
-    std::size_t dataCount = 0;
-    for(UnsignedInt i: data.dataIds) {
-        if(i == ~UnsignedInt{})
-            break;
-        ++dataCount;
-    }
+    CORRADE_COMPARE(layer.node(layerDataHandle(4, 1)), node6);
 
     /* Opacities and node enablement status are not used by the layer */
-    Vector2 nodeOffsets[4];
-    Vector2 nodeSizes[4];
-    Float nodeOpacities[4];
+    Vector2 nodeOffsets[7];
+    Vector2 nodeSizes[7];
+    Float nodeOpacities[7];
     UnsignedByte nodesEnabledData[1];
-    Containers::MutableBitArrayView nodesEnabled{nodesEnabledData, 0, 4};
+    Containers::MutableBitArrayView nodesEnabled{nodesEnabledData, 0, 7};
     nodeOffsets[1] = {10.0f, 20.0f};
     nodeOffsets[3] = {20.0f, 10.0f};
+    nodeOffsets[6] = {30.0f, 0.0f};
     nodeSizes[1] = {30.0f, 40.0f};
     nodeSizes[3] = {40.0f, 30.0f};
+    nodeSizes[6] = {50.0f, 20.0f};
 
-    /* Set the draw offset to a silly value to detect if doUpdate() changed it
-       at all. Initially it should be all 1s. */
-    CORRADE_COMPARE(layer.stateData().highlightedNodeDrawOffset, ~std::size_t{});
-    layer.stateData().highlightedNodeDrawOffset = 666;
+    /* Data ID 5, attached to node 7, is not passed, thus its quad isn't
+       present even if highlighted */
+    UnsignedInt dataIds[]{
+        3,
+        2, /* node 3 */
+        4, /* node 6 */
+        1, /* node 1 */
+        0,
+    };
 
-    layer.update(data.states, Containers::arrayView(data.dataIds).prefix(dataCount), {}, {}, nodeOffsets, nodeSizes, nodeOpacities, nodesEnabled, {}, {}, {}, {});
+    /* Highlight two nodes that are among dataIds, produces two quads */
+    CORRADE_VERIFY(layer.highlightNode(node1));
+    CORRADE_VERIFY(layer.highlightNode(node3));
+    CORRADE_COMPARE_AS(layer.currentHighlightedNodes(), Containers::stridedArrayView({
+        false,
+        true,
+        false,
+        true,
+        false,
+        false,
+        false,
+        false,
+    }).sliceBit(0), TestSuite::Compare::Container);
 
-    CORRADE_COMPARE(layer.stateData().highlightedNodeDrawOffset, data.expectedDrawOffset1);
-    if(data.expectVertexDataUpdated1) {
+    /* An empty update should generate empty draw offsets and everything else */
+    if(data.emptyUpdate) {
+        CORRADE_COMPARE_AS(layer.stateData().highlightedNodeDrawOffsets,
+            Containers::arrayView<UnsignedInt>({}),
+            TestSuite::Compare::Container);
+        CORRADE_COMPARE_AS(layer.stateData().highlightedNodeIndices,
+            Containers::arrayView<UnsignedInt>({}),
+            TestSuite::Compare::Container);
+        auto vertices = Containers::stridedArrayView(layer.stateData().highlightedNodeVertices);
+        CORRADE_COMPARE_AS(vertices.slice(&decltype(vertices)::Type::position),
+            Containers::stridedArrayView<Vector2>({}),
+            TestSuite::Compare::Container);
+        CORRADE_COMPARE_AS(vertices.slice(&decltype(vertices)::Type::color),
+            Containers::stridedArrayView<Color4>({}),
+            TestSuite::Compare::Container);
+
+        return;
+    }
+
+    layer.update(data.states, dataIds, {}, {}, nodeOffsets, nodeSizes, nodeOpacities, nodesEnabled, {}, {}, {}, {});
+    if(data.expectDataUpdated) {
+        CORRADE_COMPARE_AS(layer.stateData().highlightedNodeDrawOffsets, Containers::arrayView<UnsignedInt>({
+            0,
+            0, /* quad for node 3 */
+            1,
+            1, /* quad for node 1 */
+            2,
+            2, /* sentinel */
+        }), TestSuite::Compare::Container);
+
+        /* Indices are always the same, just different count of them */
+        CORRADE_COMPARE_AS(layer.stateData().highlightedNodeIndices, Containers::arrayView<UnsignedInt>({
+            0, 2, 1,
+            2, 3, 1,
+
+            4, 6, 5,
+            6, 7, 5
+        }), TestSuite::Compare::Container);
+
         auto vertices = Containers::stridedArrayView(layer.stateData().highlightedNodeVertices);
         CORRADE_COMPARE_AS(vertices.slice(&decltype(vertices)::Type::position), Containers::stridedArrayView<Vector2>({
-            /* 2--3
-               |\ | Made in a way that the triangle strip (012 123) has
-               | \| counterclockwise winding.
-               0--1 */
+            {20.0f, 10.0f}, /* node3 */
+            {60.0f, 10.0f},
             {20.0f, 40.0f},
             {60.0f, 40.0f},
-            {20.0f, 10.0f},
-            {60.0f, 10.0f}
-        }), TestSuite::Compare::Container);
-        CORRADE_COMPARE_AS(vertices.slice(&decltype(vertices)::Type::color), Containers::stridedArrayView<Color4>({
-            0xff3366cc_rgbaf,
-            0xff3366cc_rgbaf,
-            0xff3366cc_rgbaf,
-            0xff3366cc_rgbaf
-        }), TestSuite::Compare::Container);
-    }
 
-    /* Inspect a different node, just to verify the update goes as expected */
-    CORRADE_VERIFY(layer.inspectNode(node1));
-    CORRADE_COMPARE(layer.currentInspectedNode(), node1);
-
-    /* The other node should have a quad now, which has the X and Y offset and
-       size swapped */
-    layer.update(data.states, Containers::arrayView(data.dataIds).prefix(dataCount), {}, {}, nodeOffsets, nodeSizes, nodeOpacities, nodesEnabled, {}, {}, {}, {});
-    CORRADE_COMPARE(layer.stateData().highlightedNodeDrawOffset, data.expectedDrawOffset2);
-    if(data.expectVertexDataUpdated2) {
-        auto vertices = Containers::stridedArrayView(layer.stateData().highlightedNodeVertices);
-        CORRADE_COMPARE_AS(vertices.slice(&decltype(vertices)::Type::position), Containers::stridedArrayView<Vector2>({
+            {10.0f, 20.0f}, /* node1 */
+            {40.0f, 20.0f},
             {10.0f, 60.0f},
             {40.0f, 60.0f},
-            {10.0f, 20.0f},
-            {40.0f, 20.0f}
         }), TestSuite::Compare::Container);
         CORRADE_COMPARE_AS(vertices.slice(&decltype(vertices)::Type::color), Containers::stridedArrayView<Color4>({
-            0xff3366cc_rgbaf,
-            0xff3366cc_rgbaf,
-            0xff3366cc_rgbaf,
-            0xff3366cc_rgbaf
-        }), TestSuite::Compare::Container);
-    }
+            0x00ffffff_rgbaf*0.5f, /* node3 */
+            0x00ffffff_rgbaf*0.5f,
+            0x00ffffff_rgbaf*0.5f,
+            0x00ffffff_rgbaf*0.5f,
 
-    /* Remove the highlight, the draw offset should be gone now */
+            0x00ff00ff_rgbaf*0.5f, /* node1 */
+            0x00ff00ff_rgbaf*0.5f,
+            0x00ff00ff_rgbaf*0.5f,
+            0x00ff00ff_rgbaf*0.5f,
+        }), TestSuite::Compare::Container);
+    } else CORRADE_COMPARE_AS(layer.stateData().highlightedNodeDrawOffsets,
+        Containers::arrayView<UnsignedInt>({}),
+        TestSuite::Compare::Container);
+
+    /* Inspect a node that isn't among dataIds, results in no difference in
+       actually drawn data */
+    CORRADE_VERIFY(layer.inspectNode(node7));
+    layer.update(data.states, dataIds, {}, {}, nodeOffsets, nodeSizes, nodeOpacities, nodesEnabled, {}, {}, {}, {});
+    if(data.expectDataUpdated) {
+        CORRADE_COMPARE_AS(layer.stateData().highlightedNodeDrawOffsets, Containers::arrayView<UnsignedInt>({
+            0,
+            0, /* quad for node 3 */
+            1,
+            1, /* quad for node 1 */
+            2,
+            2, /* sentinel */
+        }), TestSuite::Compare::Container);
+
+        /* Indices are always the same, just different count of them */
+        CORRADE_COMPARE_AS(layer.stateData().highlightedNodeIndices, Containers::arrayView<UnsignedInt>({
+            0, 2, 1,
+            2, 3, 1,
+
+            4, 6, 5,
+            6, 7, 5
+        }), TestSuite::Compare::Container);
+
+        /* The vertex buffer gets longer however, with the last quad
+           unreferenced from highlightedNodeDrawOffsets and thus not drawn */
+        CORRADE_COMPARE(layer.stateData().highlightedNodeVertices.size(), 3*4);
+        auto vertices = Containers::stridedArrayView(layer.stateData().highlightedNodeVertices).prefix(layer.stateData().highlightedNodeDrawOffsets.back()*4);
+
+        CORRADE_COMPARE_AS(vertices.slice(&decltype(vertices)::Type::position), Containers::stridedArrayView<Vector2>({
+            {20.0f, 10.0f}, /* node3 */
+            {60.0f, 10.0f},
+            {20.0f, 40.0f},
+            {60.0f, 40.0f},
+
+            {10.0f, 20.0f}, /* node1 */
+            {40.0f, 20.0f},
+            {10.0f, 60.0f},
+            {40.0f, 60.0f},
+        }), TestSuite::Compare::Container);
+        CORRADE_COMPARE_AS(vertices.slice(&decltype(vertices)::Type::color), Containers::stridedArrayView<Color4>({
+            0x00ffffff_rgbaf*0.5f, /* node3 */
+            0x00ffffff_rgbaf*0.5f,
+            0x00ffffff_rgbaf*0.5f,
+            0x00ffffff_rgbaf*0.5f,
+
+            0x00ff00ff_rgbaf*0.5f, /* node1 */
+            0x00ff00ff_rgbaf*0.5f,
+            0x00ff00ff_rgbaf*0.5f,
+            0x00ff00ff_rgbaf*0.5f,
+        }), TestSuite::Compare::Container);
+    } else CORRADE_COMPARE_AS(layer.stateData().highlightedNodeDrawOffsets,
+        Containers::arrayView<UnsignedInt>({}),
+        TestSuite::Compare::Container);
+
+    /* Inspect one of the present nodes, should result just in color change,
+       everything else the same */
+    CORRADE_VERIFY(layer.inspectNode(node1));
+    layer.update(data.states, dataIds, {}, {}, nodeOffsets, nodeSizes, nodeOpacities, nodesEnabled, {}, {}, {}, {});
+    if(data.expectDataUpdated) {
+        CORRADE_COMPARE_AS(layer.stateData().highlightedNodeDrawOffsets, Containers::arrayView<UnsignedInt>({
+            0,
+            0, /* quad for node 3 */
+            1,
+            1, /* quad for node 1 */
+            2,
+            2, /* sentinel */
+        }), TestSuite::Compare::Container);
+
+        CORRADE_COMPARE_AS(layer.stateData().highlightedNodeIndices, Containers::arrayView<UnsignedInt>({
+            0, 2, 1,
+            2, 3, 1,
+
+            4, 6, 5,
+            6, 7, 5
+        }), TestSuite::Compare::Container);
+
+        auto vertices = Containers::stridedArrayView(layer.stateData().highlightedNodeVertices);
+        CORRADE_COMPARE_AS(vertices.slice(&decltype(vertices)::Type::position), Containers::stridedArrayView<Vector2>({
+            {20.0f, 10.0f}, /* node3 */
+            {60.0f, 10.0f},
+            {20.0f, 40.0f},
+            {60.0f, 40.0f},
+
+            {10.0f, 20.0f}, /* node1 */
+            {40.0f, 20.0f},
+            {10.0f, 60.0f},
+            {40.0f, 60.0f},
+        }), TestSuite::Compare::Container);
+        CORRADE_COMPARE_AS(vertices.slice(&decltype(vertices)::Type::color), Containers::stridedArrayView<Color4>({
+            0x00ffffff_rgbaf*0.5f, /* node3 */
+            0x00ffffff_rgbaf*0.5f,
+            0x00ffffff_rgbaf*0.5f,
+            0x00ffffff_rgbaf*0.5f,
+
+            0xff3366cc_rgbaf, /* node1, changed */
+            0xff3366cc_rgbaf,
+            0xff3366cc_rgbaf,
+            0xff3366cc_rgbaf,
+        }), TestSuite::Compare::Container);
+    } else CORRADE_COMPARE_AS(layer.stateData().highlightedNodeDrawOffsets,
+        Containers::arrayView<UnsignedInt>({}),
+        TestSuite::Compare::Container);
+
+    /* Inspect a node that isn't highlighted, the color of the previously
+       inspected should change back and the index buffer grow by one quad */
+    CORRADE_VERIFY(layer.inspectNode(node6));
+    layer.update(data.states, dataIds, {}, {}, nodeOffsets, nodeSizes, nodeOpacities, nodesEnabled, {}, {}, {}, {});
+    if(data.expectDataUpdated) {
+        CORRADE_COMPARE_AS(layer.stateData().highlightedNodeDrawOffsets, Containers::arrayView<UnsignedInt>({
+            0,
+            0, /* quad for node 3 */
+            1, /* quad for node 6 */
+            2, /* quad for node 1 */
+            3,
+            3, /* sentinel */
+        }), TestSuite::Compare::Container);
+
+        CORRADE_COMPARE_AS(layer.stateData().highlightedNodeIndices, Containers::arrayView<UnsignedInt>({
+            0, 2, 1,
+            2, 3, 1,
+
+            4, 6, 5,
+            6, 7, 5,
+
+            8, 10, 9,
+            10, 11, 9
+        }), TestSuite::Compare::Container);
+
+        auto vertices = Containers::stridedArrayView(layer.stateData().highlightedNodeVertices);
+        CORRADE_COMPARE_AS(vertices.slice(&decltype(vertices)::Type::position), Containers::stridedArrayView<Vector2>({
+            {20.0f, 10.0f}, /* node3 */
+            {60.0f, 10.0f},
+            {20.0f, 40.0f},
+            {60.0f, 40.0f},
+
+            {30.0f,  0.0f}, /* node6 */
+            {80.0f,  0.0f},
+            {30.0f, 20.0f},
+            {80.0f, 20.0f},
+
+            {10.0f, 20.0f}, /* node1 */
+            {40.0f, 20.0f},
+            {10.0f, 60.0f},
+            {40.0f, 60.0f},
+        }), TestSuite::Compare::Container);
+        CORRADE_COMPARE_AS(vertices.slice(&decltype(vertices)::Type::color), Containers::stridedArrayView<Color4>({
+            0x00ffffff_rgbaf*0.5f, /* node3 */
+            0x00ffffff_rgbaf*0.5f,
+            0x00ffffff_rgbaf*0.5f,
+            0x00ffffff_rgbaf*0.5f,
+
+            0xff3366cc_rgbaf, /* node6 */
+            0xff3366cc_rgbaf,
+            0xff3366cc_rgbaf,
+            0xff3366cc_rgbaf,
+
+            0x00ff00ff_rgbaf*0.5f, /* node1 */
+            0x00ff00ff_rgbaf*0.5f,
+            0x00ff00ff_rgbaf*0.5f,
+            0x00ff00ff_rgbaf*0.5f,
+        }), TestSuite::Compare::Container);
+    } else CORRADE_COMPARE_AS(layer.stateData().highlightedNodeDrawOffsets,
+        Containers::arrayView<UnsignedInt>({}),
+        TestSuite::Compare::Container);
+
+    /* Remove all highlights, there should be just the highlighted node alone,
+       the index buffer should stay at the original size */
+    layer.clearHighlightedNodes();
+    layer.update(data.states, dataIds, {}, {}, nodeOffsets, nodeSizes, nodeOpacities, nodesEnabled, {}, {}, {}, {});
+    if(data.expectDataUpdated) {
+        CORRADE_COMPARE_AS(layer.stateData().highlightedNodeDrawOffsets, Containers::arrayView<UnsignedInt>({
+            0,
+            0,
+            0, /* quad for node 6 */
+            1,
+            1,
+            1, /* sentinel */
+        }), TestSuite::Compare::Container);
+
+        /* Unchanged */
+        CORRADE_COMPARE_AS(layer.stateData().highlightedNodeIndices, Containers::arrayView<UnsignedInt>({
+            0, 2, 1,
+            2, 3, 1,
+
+            4, 6, 5,
+            6, 7, 5,
+
+            8, 10, 9,
+            10, 11, 9
+        }), TestSuite::Compare::Container);
+
+        auto vertices = Containers::stridedArrayView(layer.stateData().highlightedNodeVertices);
+        CORRADE_COMPARE_AS(vertices.slice(&decltype(vertices)::Type::position), Containers::stridedArrayView<Vector2>({
+            {30.0f,  0.0f}, /* node6 */
+            {80.0f,  0.0f},
+            {30.0f, 20.0f},
+            {80.0f, 20.0f},
+        }), TestSuite::Compare::Container);
+        CORRADE_COMPARE_AS(vertices.slice(&decltype(vertices)::Type::color), Containers::stridedArrayView<Color4>({
+            0xff3366cc_rgbaf, /* node6 */
+            0xff3366cc_rgbaf,
+            0xff3366cc_rgbaf,
+            0xff3366cc_rgbaf,
+        }), TestSuite::Compare::Container);
+    } else CORRADE_COMPARE_AS(layer.stateData().highlightedNodeDrawOffsets,
+        Containers::arrayView<UnsignedInt>({}),
+        TestSuite::Compare::Container);
+
+    /* Inspect nothing, the draw offset and vertex array should be gone now,
+       indices again untouched */
     CORRADE_VERIFY(layer.inspectNode(NodeHandle::Null));
     CORRADE_COMPARE(layer.currentInspectedNode(), NodeHandle::Null);
-    layer.update(data.states, Containers::arrayView(data.dataIds).prefix(dataCount), {}, {}, nodeOffsets, nodeSizes, nodeOpacities, nodesEnabled, {}, {}, {}, {});
-    /* In case the Draw feature isn't present at all, the function exits early,
-       without touching highlightedNodeDrawOffset at all, so it's left at the
-       overriden 666 in that case */
-    CORRADE_COMPARE(layer.stateData().highlightedNodeDrawOffset, data.features >= LayerFeature::Draw ? ~std::size_t{} : 666);
+    layer.update(data.states, dataIds, {}, {}, nodeOffsets, nodeSizes, nodeOpacities, nodesEnabled, {}, {}, {}, {});
+    CORRADE_COMPARE_AS(layer.stateData().highlightedNodeDrawOffsets,
+        Containers::arrayView<UnsignedInt>({}),
+        TestSuite::Compare::Container);
+    if(data.expectDataUpdated) {
+        CORRADE_COMPARE_AS(layer.stateData().highlightedNodeIndices, Containers::arrayView<UnsignedInt>({
+            0, 2, 1,
+            2, 3, 1,
+
+            4, 6, 5,
+            6, 7, 5,
+
+            8, 10, 9,
+            10, 11, 9
+        }), TestSuite::Compare::Container);
+    }
+    auto vertices = Containers::stridedArrayView(layer.stateData().highlightedNodeVertices);
+    CORRADE_COMPARE_AS(vertices.slice(&decltype(vertices)::Type::position),
+        Containers::stridedArrayView<Vector2>({}),
+        TestSuite::Compare::Container);
+    CORRADE_COMPARE_AS(vertices.slice(&decltype(vertices)::Type::color),
+        Containers::stridedArrayView<Color4>({}),
+        TestSuite::Compare::Container);
 }
 
 }}}}

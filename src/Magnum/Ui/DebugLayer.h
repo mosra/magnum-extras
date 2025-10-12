@@ -842,7 +842,8 @@ class MAGNUM_UI_EXPORT DebugLayer: public AbstractLayer {
          *
          * If the layer is instantiated as @ref DebugLayerGL, calling this
          * function causes @ref LayerState::NeedsDataUpdate to be set.
-         * @see @ref setNodeInspectGesture(), @ref setNodeInspectCallback()
+         * @see @ref setNodeInspectGesture(), @ref setNodeInspectCallback(),
+         *      @ref setNodeHighlightColorMap()
          */
         DebugLayer& setNodeInspectColor(const Color4& color);
 
@@ -936,6 +937,9 @@ class MAGNUM_UI_EXPORT DebugLayer: public AbstractLayer {
          * @ref AbstractUserInterface::update(). As such, for example nodes or
          * layers added since the last update won't be included in the output.
          *
+         * See @ref highlightNode() for a way to just highlight particular
+         * nodes in the UI without inspecting them.
+         *
          * If the layer is instantiated as @ref DebugLayerGL and @p node is
          * different from the previously inspected node, calling this function
          * causes @ref LayerState::NeedsDataUpdate to be set.
@@ -944,6 +948,92 @@ class MAGNUM_UI_EXPORT DebugLayer: public AbstractLayer {
          *      @ref setNodeInspectCallback()
          */
         bool inspectNode(NodeHandle node);
+
+        /** @brief Node highlight color map */
+        Containers::ArrayView<const Vector3ub> nodeHighlightColorMap() const;
+
+        /** @brief Node highlight color map alpha */
+        Float nodeHighlightColorMapAlpha() const;
+
+        /**
+         * @brief Set node highlight color map
+         * @return Reference to self (for method chaining)
+         *
+         * Used only if @ref DebugLayerSource::Nodes is enbaled and the layer
+         * is instantiated as @ref DebugLayerGL to be able to draw the
+         * highlight rectangles, ignored otherwise. The @p colors are expected
+         * to have at least one element and the caller has to ensure the memory
+         * stays scope for the whole layer lifetime or until
+         * @ref setNodeHighlightColorMap() is called with a different color
+         * map.
+         *
+         * The first element from @p colors is used to highlight a node with ID
+         * @cpp 0 @ce, the last element for a node with ID right below
+         * @ref AbstractUserInterface::nodeCapacity(), IDs in between get a
+         * linear interpolation between nearest elements. All @p colors are
+         * made four-component and premultiplied with @p alpha when applied.
+         * Default is a map with a single @cpp 0x00ffff_rgb @ce color, i.e. the
+         * same color used for all nodes.
+         *
+         * If the layer is instantiated as @ref DebugLayerGL, calling this
+         * function causes @ref LayerState::NeedsDataUpdate to be set.
+         * @see @ref DebugTools::ColorMap, @ref setNodeInspectColor()
+         */
+        DebugLayer& setNodeHighlightColorMap(Containers::ArrayView<const Vector3ub> colors, Float alpha = 0.25f);
+
+        /**
+         * @brief Currently highlighted nodes
+         *
+         * Expects that @ref DebugLayerSource::Nodes is enabled. Reflects the
+         * result of @ref highlightNode() calls, a particular bit being set if
+         * a node with given handle ID is highlighted, Size of the returned
+         * array matches @ref AbstractUserInterface::nodeCapacity() at the last
+         * time @ref AbstractUserInterface::update() or
+         * @relativeref{AbstractUserInterface,draw()} has been called, bits get
+         * reset for any previously highlighted nodes that become invalid at
+         * that point.
+         */
+        Containers::BitArrayView currentHighlightedNodes() const;
+
+        /**
+         * @brief Clear all highlighted nodes
+         * @return Reference to self (for method chaining)
+         *
+         * Expects that @ref DebugLayerSource::Nodes is enabled. Clears all
+         * nodes highlighted by @ref highlightNode(). Note that the
+         * @ref currentInspectedNode() isn't affected by this function.
+         * @see @ref currentHighlightedNodes()
+         */
+        DebugLayer& clearHighlightedNodes();
+
+        /**
+         * @brief Highlight a node
+         *
+         * Expects that @ref DebugLayerSource::Nodes is enabled, the layer has
+         * been already passed to @ref AbstractUserInterface::setLayerInstance()
+         * and that @p node isn't @ref NodeHandle::Null.
+         *
+         * If @p node is a known handle, the node is visually highlighted if
+         * this is a @ref DebugLayerGL instance, and the function returns
+         * @cpp true @ce.
+         *
+         * If @p node is not a known handle (for example an invalid handle of a
+         * now-removed node, or a handle of a newly created node but
+         * @ref AbstractUserInterface::update() wasn't called since), the
+         * function does nothing and returns @cpp false @ce.
+         *
+         * The highlights are additive, meaning calling this function multiple
+         * times will make more nodes highlighted. Use
+         * @ref clearHighlightedNodes() to clear all highlights. See also
+         * @ref inspectNode() for highlighting a node and printing its details.
+         *
+         * If the layer is instantiated as @ref DebugLayerGL and @p node wasn't
+         * already highlighted before, calling this function causes
+         * @ref LayerState::NeedsDataUpdate to be set.
+         * @see @ref setNodeHighlightColorMap(),
+         *      @ref clearHighlightedNodes()
+         */
+        bool highlightNode(NodeHandle node);
 
     #ifdef DOXYGEN_GENERATING_OUTPUT
     private:

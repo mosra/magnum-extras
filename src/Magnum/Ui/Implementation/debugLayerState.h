@@ -31,6 +31,7 @@
    published) eventually possibly also 3rd party renderer implementations */
 
 #include <Corrade/Containers/Array.h>
+#include <Corrade/Containers/BitArrayView.h>
 #include <Corrade/Containers/Function.h>
 #include <Corrade/Containers/String.h>
 #include <Magnum/Math/Color.h>
@@ -189,17 +190,24 @@ struct DebugLayer::State {
     Color4 nodeInspectColor{0.5f, 0.0f, 0.5f, 0.5f};
     Pointers nodeInspectPointers = Pointer::MouseRight|Pointer::Eraser;
     Modifiers nodeInspectModifiers = Modifier::Ctrl;
-    /* 6 bytes free */
+    Float nodeHighlightColorMapAlpha = 0.25f;
+    /* 2 bytes free */
     Containers::Function<void(Containers::StringView)> nodeInspectCallback;
 
     /* Used only if the layer advertises LayerFeature::Draw (i.e.,
-       DebugLayerGL). The offset is an index into the dataIds array passed to
-       doUpdate() and doDraw(). */
-    std::size_t highlightedNodeDrawOffset = ~std::size_t{};
-    struct {
+       DebugLayerGL) */
+    Containers::Array<char> nodesToHighlightStorage;
+    /** @todo clean this up once BitArray can grow */
+    Containers::MutableBitArrayView currentHighlightedNodes;
+    Containers::Array<UnsignedInt> highlightedNodeDrawOffsets;
+    struct Vertex {
         Vector2 position;
         Color4 color;
-    } highlightedNodeVertices[4];
+    };
+    Containers::Array<Vertex> highlightedNodeVertices;
+    Containers::Array<UnsignedInt> highlightedNodeIndices;
+    /* Initialized to a single entry inside the State() constructor */
+    Containers::ArrayView<const Vector3ub> nodeHighlightColorMap;
 
     Containers::Array<Implementation::DebugLayerNode> nodes;
     Containers::Array<Implementation::DebugLayerLayer> layers;

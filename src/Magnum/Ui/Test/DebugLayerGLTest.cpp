@@ -26,15 +26,19 @@
 
 #include <Corrade/Containers/Function.h>
 #include <Corrade/Containers/Optional.h>
+#include <Corrade/Containers/StridedArrayView.h>
+#include <Corrade/Containers/StridedBitArrayView.h>
 #include <Corrade/Containers/StringIterable.h>
 #include <Corrade/PluginManager/Manager.h>
 #include <Corrade/PluginManager/PluginMetadata.h>
+#include <Corrade/TestSuite/Compare/Container.h>
 #include <Corrade/TestSuite/Compare/Numeric.h>
 #include <Corrade/Utility/ConfigurationGroup.h>
 #include <Corrade/Utility/Path.h>
 #include <Magnum/Image.h>
 #include <Magnum/ImageView.h>
 #include <Magnum/DebugTools/CompareImage.h>
+#include <Magnum/Math/Color.h>
 #include <Magnum/GL/Framebuffer.h>
 #include <Magnum/GL/OpenGLTester.h>
 #include <Magnum/GL/Texture.h>
@@ -42,7 +46,6 @@
 #include <Magnum/Trade/AbstractImporter.h>
 
 #include "Magnum/Ui/AbstractUserInterface.h"
-#include "Magnum/Ui/BaseLayerGL.h" /* used in drawOrder() */
 #include "Magnum/Ui/DebugLayerGL.h"
 #include "Magnum/Ui/Event.h"
 #include "Magnum/Ui/Handle.h"
@@ -83,28 +86,42 @@ const struct {
     DebugLayerSources sources;
     DebugLayerFlags flags;
     bool partialUpdate;
-    bool inspectNode;
+    bool inspectNode, highlightNode;
     Float nodeOffset;
     Containers::Optional<Color4> inspectColor;
+    Containers::Optional<Containers::Pair<Color3ub, Float>> highlightColor;
 } RenderData[]{
     /* Just to verify that no garbage is accidentally drawn by default */
     {"nothing", "empty.png",
-        {}, {}, false, false, 0.0f, {}},
+        {}, {}, false, false, false, 0.0f, {}, {}},
     {"node inspect", "node-inspect.png",
         DebugLayerSource::Nodes, DebugLayerFlag::NodeInspect,
-        false, true, 0.0f, {}},
+        false, true, false, 0.0f, {}, {}},
     {"node inspect, partial update", "node-inspect.png",
         DebugLayerSource::Nodes, DebugLayerFlag::NodeInspect,
-        true, true, 0.0f, {}},
+        true, true, false, 0.0f, {}, {}},
     {"node inspect, partial update, node offset change", "node-inspect.png",
         DebugLayerSource::Nodes, DebugLayerFlag::NodeInspect,
-        true, true, 35.0f, {}},
-    {"node inspect, custom inspect color", "node-inspect-color.png",
+        true, true, false, 35.0f, {}, {}},
+    {"node inspect, custom inspect color", "node-inspect-highlight-color.png",
         DebugLayerSource::Nodes, DebugLayerFlag::NodeInspect,
-        false, true, 0.0f, 0x3bd267ff_rgbaf*0.5f},
-    {"node inspect, custom inspect color, partial update", "node-inspect-color.png",
+        false, true, false, 0.0f, 0x3bd267ff_rgbaf*0.5f, {}},
+    {"node inspect, custom inspect color, partial update", "node-inspect-highlight-color.png",
         DebugLayerSource::Nodes, DebugLayerFlag::NodeInspect,
-        true, true, 0.0f, 0x3bd267ff_rgbaf*0.5f},
+        true, true, false, 0.0f, 0x3bd267ff_rgbaf*0.5f, {}},
+    {"node highlight", "node-highlight.png",
+        DebugLayerSource::Nodes, DebugLayerFlag::NodeInspect,
+        false, false, true, 0.0f, {}, {}},
+    {"node highlight, custom highlight color", "node-inspect-highlight-color.png",
+        DebugLayerSource::Nodes, DebugLayerFlag::NodeInspect,
+        false, false, true, 0.0f, {}, {{0x3bd267_rgb, 0.5f}}},
+    {"node highlight, custom highlight color, partial update", "node-inspect-highlight-color.png",
+        DebugLayerSource::Nodes, DebugLayerFlag::NodeInspect,
+        true, false, true, 0.0f, {}, {{0x3bd267_rgb, 0.5f}}},
+    /* The inspect color wins */
+    {"node inspect and highlight", "node-inspect.png",
+        DebugLayerSource::Nodes, DebugLayerFlag::NodeInspect,
+        false, true, true, 0.0f, {}, {}},
 };
 
 const struct {
@@ -206,7 +223,13 @@ void DebugLayerGLTest::render() {
     /* Just to silence the output */
     layer.setNodeInspectCallback([](Containers::StringView){});
 
+    /* The node is third out of four, so it should use the color map color at
+       index 2. The other nodes are present but not highlighted, should result
+       in nothing else being drawn. */
+    ui.createNode({}, {100, 100});
+    ui.createNode({50, 0}, {50, 100});
     NodeHandle node = ui.createNode({8.0f + data.nodeOffset, 8.0f}, {112.0f, 48.0f});
+    ui.createNode({0, 50}, {100, 50});
 
     if(data.partialUpdate) {
         ui.update();
@@ -222,11 +245,38 @@ void DebugLayerGLTest::render() {
         CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate|LayerState::NeedsCommonDataUpdate);
     }
 
-    if(data.inspectNode) {
-        /* Otherwise inspectNode() wouldn't know about the node yet */
+    Color3ub colorMap[]{
+        0xff0000_rgb,
+        0x00ff00_rgb,
+        data.highlightColor ? data.highlightColor->first() : 0xffffff_rgb,
+        0x0000ff_rgb,
+    };
+    if(data.highlightColor && data.highlightNode) {
+        layer.setNodeHighlightColorMap(colorMap, data.highlightColor->second());
+        CORRADE_COMPARE_AS(ui.state(),
+            UserInterfaceState::NeedsDataUpdate,
+            TestSuite::Compare::GreaterOrEqual);
+        CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate|LayerState::NeedsCommonDataUpdate);
+    }
+
+    /* Otherwise inspectNode() / highlightNode() wouldn't know about the node
+       yet */
+    if(data.inspectNode || data.highlightNode)
         ui.update();
+
+    if(data.inspectNode) {
         CORRADE_VERIFY(layer.inspectNode(node));
         CORRADE_COMPARE(layer.currentInspectedNode(), node);
+    }
+
+    if(data.highlightNode) {
+        CORRADE_VERIFY(layer.highlightNode(node));
+        CORRADE_COMPARE_AS(layer.currentHighlightedNodes(), Containers::stridedArrayView({
+            false,
+            false,
+            true,
+            false,
+        }).sliceBit(0), TestSuite::Compare::Container);
     }
 
     /* Updating node offset/size later should still get correctly propagated */
@@ -283,26 +333,8 @@ void DebugLayerGLTest::drawOrder() {
     auto&& data = DrawOrderData[testCaseInstanceId()];
     setTestCaseDescription(data.name);
 
-    /* Since the DebugLayer currently draws just one rectangle at a time, it
-       has to be combined with another layer to verify it's actually done in
-       correct order respective to other draws. Thus picking the contents of
-       BaseLayerGLTest::drawOrder(), inspecting each node and setting the color
-       in a way that the blend between the two matches the original
-       output from BaseLayerGLTest */
-
     AbstractUserInterface ui{DrawSize};
     ui.setRendererInstance(Containers::pointer<RendererGL>());
-    BaseLayerGL::Shared layerShared{BaseLayer::Shared::Configuration{3}};
-    layerShared.setStyle(BaseLayerCommonStyleUniform{}, {
-        BaseLayerStyleUniform{}         /* 0, red */
-            .setColor(0xff0000_rgbf),
-        BaseLayerStyleUniform{}         /* 1, green */
-            .setColor(0x00ff00_rgbf),
-        BaseLayerStyleUniform{}         /* 2, blue */
-            .setColor(0x0000ff_rgbf)
-    }, {});
-
-    BaseLayer& baseLayer = ui.setLayerInstance(Containers::pointer<BaseLayerGL>(ui.createLayer(), layerShared));
 
     DebugLayer& debugLayer = ui.setLayerInstance(Containers::pointer<DebugLayerGL>(ui.createLayer(), DebugLayerSource::Nodes, DebugLayerFlag::NodeInspect));
     /* Just to silence the output */
@@ -335,75 +367,46 @@ void DebugLayerGLTest::drawOrder() {
     NodeHandle childBelowBlue = ui.createNode(topLevelOnTopGreen, {12.0f, 4.0f}, {16.0f, 16.0f});
     NodeHandle childAboveRed = ui.createNode(childBelowBlue, {-8.0f, 8.0f}, {16.0f, 16.0f});
 
-    DataHandle topLevelBelowRedData = baseLayer.create(0, topLevelBelowRed);
-    DataHandle topLevelOnTopGreenData = baseLayer.create(1, topLevelOnTopGreen);
-    /*DataHandle topLevelHiddenBlueData =*/ baseLayer.create(2, topLevelHiddenBlue);
-    DataHandle childBelowBlueData = baseLayer.create(2, childBelowBlue);
-    DataHandle childAboveRedData = baseLayer.create(0, childAboveRed);
-
-    /* So inspectNode() is aware of the added nodes */
-    ui.update();
-
-    struct {
-        NodeHandle node;
-        DataHandle baseLayerData;
-        Color3 color;
-        const char* expected;
-    } nodes[]{
-        {topLevelBelowRed, topLevelBelowRedData, 0xff0000_rgbf, "BaseLayerTestFiles/draw-order.png"},
-        /* In this case the highlight is drawn over the two children (as it
-           should) so it results in them having a different color as well */
-        {topLevelOnTopGreen, topLevelOnTopGreenData, 0x00ff00_rgbf, "DebugLayerTestFiles/draw-order-green.png"},
-        /* This isn't shown so no data need to get updated */
-        {topLevelHiddenBlue, DataHandle::Null, {}, "BaseLayerTestFiles/draw-order.png"},
-        /* In this case the highlight is drawn over the overlapping neighbor
-           (as it should) so it results in it having a different color also */
-        {childBelowBlue, childBelowBlueData, 0x0000ff_rgbf, "DebugLayerTestFiles/draw-order-blue.png"},
-        {childAboveRed, childAboveRedData, 0xff0000_rgbf, "BaseLayerTestFiles/draw-order.png"},
+    /* Color maps. For sequential node order it's the colors from the above
+       node handle names. */
+    Color3ub colorMapSequentialNodeOrder[]{
+        0x00ff00_rgb, /* 0, topLevelOnTopGreen */
+        0xff0000_rgb, /* 1, topLevelBelowRed */
+        0xff00ff_rgb, /* 2, topLevelHiddenBlue, unused */
+        0x0000ff_rgb, /* 3, childBelowBlue */
+        0xff0000_rgb, /* 4, childAboveRed */
     };
-    for(const auto& node: nodes) {
-        CORRADE_ITERATION(node.baseLayerData);
+    /* In the other case they're shuffled, matching the numeric order in which
+       the nodes were removed. */
+    Color3ub colorMap[]{
+        0x0000ff_rgb, /* 0, childBelowBlue */
+        0xff0000_rgb, /* 1, topLevelBelowRed */
+        0xff00ff_rgb, /* 2, topLevelHiddenBlue, unused */
+        0x00ff00_rgb, /* 3, topLevelOnTopGreen */
+        0xff0000_rgb, /* 4, childAboveRed */
+    };
+    debugLayer.setNodeHighlightColorMap(data.sequentialNodeOrder ?
+        colorMapSequentialNodeOrder : colorMap, 1.0f);
 
-        /* Premultiplied alpha blending works in a way that results in
-            baseColor*(1 - alpha) + inspectColor
-           being written to the output. Thus we need to pick the base and
-           inspect color in a way that is equal to the original if the colors
-           get blended together, *and* is different from the original if the
-           highlight isn't rendered at all or is rendered in a wrong place.
+    /* So highlightNode() is aware of the added nodes */
+    ui.update();
+    debugLayer.highlightNode(topLevelOnTopGreen);
+    debugLayer.highlightNode(topLevelBelowRed);
+    debugLayer.highlightNode(topLevelHiddenBlue);
+    debugLayer.highlightNode(childBelowBlue);
+    debugLayer.highlightNode(childAboveRed);
 
-           By making the base color half the alpha it gets rendered wrong
-           without highlight. The highlight also has half the alpha, which then
-           makes the base color quarter the alpha, and so its RGB channels need
-           to be 0.75, i.e. larger than the alpha. */
-        debugLayer.setNodeInspectColor({node.color*0.75f, 0.5f});
-        /* Just a color multiplier that affects the color coming from style */
-        if(node.baseLayerData != DataHandle::Null)
-            baseLayer.setColor(node.baseLayerData, Color3{0.5f});
-        CORRADE_VERIFY(debugLayer.inspectNode(node.node));
+    ui.draw();
 
-        _framebuffer.clear(GL::FramebufferClear::Color);
-        ui.draw();
+    MAGNUM_VERIFY_NO_GL_ERROR();
 
-        /* Set the color multiplier back to not affect subsequent draws */if(node.baseLayerData != DataHandle::Null)
-            baseLayer.setColor(node.baseLayerData, Color4{1.0f});
+    if(!(_manager.load("AnyImageImporter") & PluginManager::LoadState::Loaded) ||
+        !(_manager.load("StbImageImporter") & PluginManager::LoadState::Loaded))
+        CORRADE_SKIP("AnyImageImporter / StbImageImporter plugins not found.");
 
-        MAGNUM_VERIFY_NO_GL_ERROR();
-
-        if(!(_manager.load("AnyImageImporter") & PluginManager::LoadState::Loaded) ||
-           !(_manager.load("StbImageImporter") & PluginManager::LoadState::Loaded))
-            CORRADE_SKIP("AnyImageImporter / StbImageImporter plugins not found.");
-
-        #if defined(MAGNUM_TARGET_GLES) && !defined(MAGNUM_TARGET_WEBGL)
-        /* While DebugLayer doesn't suffer from this, BaseLayer does. Same
-           problem is with all builtin shaders, so this doesn't seem to be a
-           bug in the base layer shader code. */
-        if(GL::Context::current().detectedDriver() & GL::Context::DetectedDriver::SwiftShader)
-            CORRADE_SKIP("UBOs with dynamically indexed arrays don't seem to work on SwiftShader, can't test.");
-        #endif
-        CORRADE_COMPARE_WITH(_framebuffer.read({{}, DrawSize}, {PixelFormat::RGBA8Unorm}),
-            Utility::Path::join(UI_TEST_DIR, node.expected),
-            DebugTools::CompareImageToFile{_manager});
-    }
+    CORRADE_COMPARE_WITH(_framebuffer.read({{}, DrawSize}, {PixelFormat::RGBA8Unorm}),
+        Utility::Path::join(UI_TEST_DIR, "BaseLayerTestFiles/draw-order.png"),
+        DebugTools::CompareImageToFile{_manager});
 }
 
 }}}}

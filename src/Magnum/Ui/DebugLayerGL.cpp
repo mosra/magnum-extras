@@ -126,7 +126,8 @@ struct DebugLayerGL::State: DebugLayer::State {
     DebugShaderGL shader;
 
     GL::Buffer vertexBuffer{GL::Buffer::TargetHint::Array};
-    GL::Mesh mesh{GL::MeshPrimitive::TriangleStrip};
+    GL::Buffer indexBuffer{GL::Buffer::TargetHint::ElementArray};
+    GL::Mesh mesh;
 };
 
 DebugLayerGL::DebugLayerGL(const LayerHandle handle, const DebugLayerSources sources, const DebugLayerFlags flags): DebugLayer{handle, Containers::pointer<State>(sources, flags)} {
@@ -135,7 +136,7 @@ DebugLayerGL::DebugLayerGL(const LayerHandle handle, const DebugLayerSources sou
         .addVertexBuffer(state.vertexBuffer, 0,
             DebugShaderGL::Position{},
             DebugShaderGL::Color4{})
-        .setCount(4);
+        .setIndexBuffer(state.indexBuffer, 0, GL::MeshIndexType::UnsignedInt);
 }
 
 LayerFeatures DebugLayerGL::doFeatures() const {
@@ -154,24 +155,31 @@ void DebugLayerGL::doUpdate(const LayerStates states, const Containers::StridedA
 
     /* The branching here mirrors how DebugLayer::doUpdate() restricts the
        updates. Keep in sync. */
-    if(state.highlightedNodeDrawOffset != ~std::size_t{} &&
+    if(!state.highlightedNodeVertices.isEmpty() &&
        (states >= LayerState::NeedsDataUpdate ||
-        states >= LayerState::NeedsNodeOffsetSizeUpdate))
+        states >= LayerState::NeedsNodeOffsetSizeUpdate ||
+        states >= LayerState::NeedsNodeOrderUpdate))
+    {
         state.vertexBuffer.setData(state.highlightedNodeVertices);
+        state.indexBuffer.setData(state.highlightedNodeIndices);
+    }
 }
 
 void DebugLayerGL::doDraw(const Containers::StridedArrayView1D<const UnsignedInt>&, std::size_t offset, std::size_t count, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const UnsignedInt>&, std::size_t, std::size_t, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Float>&, Containers::BitArrayView, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&) {
     State& state = static_cast<State&>(*_state);
 
-    /* There's exactly one node to highlight, so draw it when it's included in
-       the range defined by offset + count */
+    /* The drawCount is empty if given range of data doesn't contain any
+       highlighting quad */
     /** @todo this would however completely prevent draw call merging (once
         that's done), figure out a way for the layer to signal that not all
         data are actually meant to be drawn (per-data features? uh...) */
-    if(state.highlightedNodeDrawOffset >= offset &&
-       state.highlightedNodeDrawOffset < offset + count) {
-        state.shader.draw(state.mesh);
-    }
+
+    const UnsignedInt drawOffset = state.highlightedNodeDrawOffsets[offset];
+    const UnsignedInt drawCount = state.highlightedNodeDrawOffsets[offset + count] - drawOffset;
+    state.mesh
+        .setIndexOffset(drawOffset*6)
+        .setCount(drawCount*6);
+    state.shader.draw(state.mesh);
 }
 
 }}

@@ -26,10 +26,10 @@
 
 #include "DebugLayer.h"
 
-#include <Corrade/Containers/BitArrayView.h>
 #include <Corrade/Containers/EnumSet.hpp>
 #include <Corrade/Containers/GrowableArray.h>
 #include <Corrade/Containers/StridedArrayView.h>
+#include <Magnum/TextureTools/Sample.h>
 
 #include "Magnum/Ui/AbstractAnimator.h"
 #include "Magnum/Ui/AbstractLayouter.h"
@@ -151,7 +151,13 @@ Debug& operator<<(Debug& debug, const DebugLayerFlags value) {
     });
 }
 
-DebugLayer::State::State(const DebugLayerSources sources, const DebugLayerFlags flags): sources{sources}, flags{flags} {
+namespace {
+
+constexpr Color3ub DefaultNodeHighlightColorMap[]{0x00ffff_rgb};
+
+}
+
+DebugLayer::State::State(const DebugLayerSources sources, const DebugLayerFlags flags): sources{sources}, flags{flags}, nodeHighlightColorMap{DefaultNodeHighlightColorMap} {
     CORRADE_ASSERT(!(flags >= DebugLayerFlag::NodeInspect) || sources >= DebugLayerSource::Nodes,
         "Ui::DebugLayer:" << DebugLayerSource::Nodes << "has to be enabled for" << DebugLayerFlag::NodeInspect, );
 }
@@ -253,8 +259,14 @@ DebugLayer& DebugLayer::setNodeName(const NodeHandle handle, Containers::StringV
         return *this;
 
     const UnsignedInt nodeId = nodeHandleId(handle);
-    if(state.nodes.size() <= nodeId)
+    if(state.nodes.size() <= nodeId) {
+        /** @todo ugh, this is duplicated between here and doPreUpdate(), unify
+            somehow */
+        CORRADE_INTERNAL_ASSERT(state.currentHighlightedNodes.size() == state.nodes.size());
         arrayResize(state.nodes, ValueInit, nodeId + 1);
+        arrayResize(state.nodesToHighlightStorage, ValueInit, (nodeId + 8)/8);
+        state.currentHighlightedNodes = Containers::MutableBitArrayView{state.nodesToHighlightStorage, 0, nodeId + 1};
+    }
 
     Implementation::DebugLayerNode& node = state.nodes[nodeId];
     node.handle = handle;
@@ -833,6 +845,88 @@ bool DebugLayer::inspectNode(const NodeHandle handle) {
     return true;
 }
 
+Containers::ArrayView<const Vector3ub> DebugLayer::nodeHighlightColorMap() const {
+    return _state->nodeHighlightColorMap;
+}
+
+Float DebugLayer::nodeHighlightColorMapAlpha() const {
+    return _state->nodeHighlightColorMapAlpha;
+}
+
+DebugLayer& DebugLayer::setNodeHighlightColorMap(const Containers::ArrayView<const Vector3ub> colormap, const Float alpha) {
+    CORRADE_ASSERT(!colormap.isEmpty(),
+        "Ui::DebugLayer::setNodeHighlightColorMap(): expected colormap to have at least one element", *this);
+
+    State& state = *_state;
+    state.nodeHighlightColorMap = colormap;
+    state.nodeHighlightColorMapAlpha = alpha;
+
+    /* If this is a subclass that draws, trigger an update so the colors are
+       recalculated */
+    /** @todo do only if anything set, once any() exists on BitArrayView */
+    if(doFeatures() >= LayerFeature::Draw)
+        setNeedsUpdate(LayerState::NeedsDataUpdate);
+
+    return *this;
+}
+
+Containers::BitArrayView DebugLayer::currentHighlightedNodes() const {
+    const State& state = *_state;
+    CORRADE_ASSERT(state.sources >= DebugLayerSource::Nodes,
+        "Ui::DebugLayer::currentHighlightedNodes():" << DebugLayerSource::Nodes << "not enabled", {});
+    /* Technically not required (currentInspectedNode() doesn't have it), but
+       without access to the UI the layer will never be able to size the
+       bitmask properly, which could lead to unwanted OOB access in user
+       code */
+    CORRADE_ASSERT(hasUi(),
+        "Ui::DebugLayer::currentHighlightedNodes(): layer not part of a user interface", {});
+    return state.currentHighlightedNodes;
+}
+
+DebugLayer& DebugLayer::clearHighlightedNodes() {
+    const State& state = *_state;
+    CORRADE_ASSERT(state.sources >= DebugLayerSource::Nodes,
+        "Ui::DebugLayer::clearHighlightedNodes():" << DebugLayerSource::Nodes << "not enabled", *this);
+    CORRADE_ASSERT(hasUi(),
+        "Ui::DebugLayer::clearHighlightedNodes(): layer not part of a user interface", *this);
+
+    state.currentHighlightedNodes.resetAll();
+
+    /* If this is a subclass that draws, trigger an update so the highlights
+       are hidden */
+    /** @todo do only if anything set, once any() exists on BitArrayView */
+    if(doFeatures() >= LayerFeature::Draw)
+        setNeedsUpdate(LayerState::NeedsDataUpdate);
+
+    return *this;
+}
+
+bool DebugLayer::highlightNode(const NodeHandle node) {
+    State& state = *_state;
+    CORRADE_ASSERT(node != NodeHandle::Null,
+        "Ui::DebugLayer::highlightNode(): handle is null", {});
+    CORRADE_ASSERT(state.sources >= DebugLayerSource::Nodes,
+        "Ui::DebugLayer::highlightNode():" << DebugLayerSource::Nodes << "not enabled", {});
+    CORRADE_ASSERT(hasUi(),
+        "Ui::DebugLayer::highlightNode(): layer not part of a user interface", {});
+
+    const UnsignedInt nodeId = nodeHandleId(node);
+    if(nodeId < state.nodes.size() && node == state.nodes[nodeId].handle) {
+        if(!state.currentHighlightedNodes[nodeId]) {
+            state.currentHighlightedNodes.set(nodeId);
+
+            /* If this is a subclass that draws, trigger an update so the
+               colors are recalculated */
+            if(doFeatures() >= LayerFeature::Draw)
+                setNeedsUpdate(LayerState::NeedsDataUpdate);
+        }
+
+        return true;
+    }
+
+    return false;
+}
+
 LayerFeatures DebugLayer::doFeatures() const {
     /* The events are used only if NodeInspect is enabled, but while that can
        be toggled at runtime, the value returned from features() shouldn't
@@ -891,8 +985,14 @@ void DebugLayer::doPreUpdate(LayerStates) {
     if(state.sources >= DebugLayerSource::Nodes) {
         const UnsignedInt nodeCapacity = ui.nodeCapacity();
         const Containers::StridedArrayView1D<const UnsignedShort> nodeGenerations = ui.nodeGenerations();
-        if(state.nodes.size() < nodeCapacity)
+        if(state.nodes.size() < nodeCapacity) {
+            /** @todo ugh, this is duplicated between here and setNodeName(),
+                unify somehow */
+            CORRADE_INTERNAL_ASSERT(state.currentHighlightedNodes.size() == state.nodes.size());
             arrayResize(state.nodes, ValueInit, nodeCapacity);
+            arrayResize(state.nodesToHighlightStorage, ValueInit, (nodeCapacity + 7)/8);
+            state.currentHighlightedNodes = Containers::MutableBitArrayView{state.nodesToHighlightStorage, 0, nodeCapacity};
+        }
 
         for(std::size_t i = 0; i != state.nodes.size(); ++i) {
             const NodeHandle handle = nodeHandle(i, nodeGenerations[i]);
@@ -902,9 +1002,25 @@ void DebugLayer::doPreUpdate(LayerStates) {
                handle. */
             Implementation::DebugLayerNode& node = state.nodes[i];
             if(node.handle != handle) {
-                /* Reset only if we actually remembered something before */
-                if(node.handle != NodeHandle::Null)
+                /* Reset only if we actually remembered something before, reset
+                   also the highlight if there was any. Currently inspected
+                   node got reset in doClean() already. */
+                if(node.handle != NodeHandle::Null) {
                     node = {};
+                    state.currentHighlightedNodes.reset(i);
+                    /* Same as with doClean(), this "just works" without having
+                       to explicitly trigger NeedsDataUpdate, because if given
+                       highlighted node is removed, the data containing the
+                       highlight quad for it are removed too, which on its own
+                       triggers NeedsDataUpdate. However the
+                       currentHighlightedNodes bit needs to be reset to avoid
+                       marking any future node that recycles given index. */
+                    /** @todo ideally this would be done in doClean() already,
+                        however that function is cleaned only once the node
+                        attachments are already lost for the removed data, thus
+                        it's not possible to know which nodes should get the
+                        highlights removed */
+                }
                 if(ui.isHandleValid(handle))
                     node.handle = handle;
             }
@@ -992,50 +1108,107 @@ void DebugLayer::doPreUpdate(LayerStates) {
 void DebugLayer::doUpdate(const LayerStates states, const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, const Containers::StridedArrayView1D<const Float>&, Containers::BitArrayView, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&) {
     /* NeedsCommonDataUpdate is handled in doPreUpdate() above */
 
-    /* If we're not meant to draw, there's nothing to do */
-    if(!(doFeatures() >= LayerFeature::Draw))
+    /* If we're not meant to draw, there's nothing to do. There's also nothing
+       to do if nothing relevant needs to be updated -- if the set of
+       higlighted nodes would change, NeedsDataUpdate gets set, and if anything
+       that affects the quad offset/size or order would change, the other two
+       would. We don't care about opacity or any other changes.
+
+       Compared to BaseLayer, TextLayer etc., the vertex buffer is filled in
+       the order the data are drawn, and the index buffer remains static, only
+       potentially getting larger. This is done because the DebugLayer data are
+       attached to *all* existing nodes, but usually only a very small subset
+       of them actually draws a higlight quad. Filling up a vertex buffer for
+       all nodes would thus be an unnecessary waste of memory.
+
+       The LayerState checks should be kept in sync with DebugLayerGL's
+       doUpdate(). */
+    if(!(doFeatures() >= LayerFeature::Draw) ||
+       (!(states >= LayerState::NeedsDataUpdate) &&
+        !(states >= LayerState::NeedsNodeOffsetSizeUpdate) &&
+        !(states >= LayerState::NeedsNodeOrderUpdate)))
         return;
 
     State& state = *_state;
 
-    /* If there's no currently inspected node, there's nothing to draw */
-    if(state.currentInspectedNode == NodeHandle::Null) {
-        state.highlightedNodeDrawOffset = ~std::size_t{};
+    /* Resize the vertex buffer for the count of nodes marked for higlighting,
+       plus one more if the currently inspected node isn't among those already.
+       In general not all marked nodes will be visible so this is an upper
+       bound. */
+    const UnsignedInt maxHighlightCount = state.currentHighlightedNodes.count() +
+        (state.currentInspectedNode != NodeHandle::Null && !state.currentHighlightedNodes[nodeHandleId(state.currentInspectedNode)] ? 1 : 0);
+    arrayResize(state.highlightedNodeVertices, NoInit, maxHighlightCount*4);
 
-    /* Otherwise, if anything that affects the current inspected node needs to
-       be updated, find the highlighted node among the data IDs (if there at
-       all) and remember its index to know when to draw */
-    } else if(states >= LayerState::NeedsDataUpdate ||
-              states >= LayerState::NeedsNodeOffsetSizeUpdate ||
-              states >= LayerState::NeedsNodeOrderUpdate)
-    {
-        const UnsignedInt highlightedDataId = layerDataHandleId(state.nodes[nodeHandleId(state.currentInspectedNode)].highlightData);
-        state.highlightedNodeDrawOffset = ~std::size_t{};
-        for(std::size_t i = 0; i != dataIds.size(); ++i) if(dataIds[i] == highlightedDataId) {
-            state.highlightedNodeDrawOffset = i;
-            break;
-        }
+    /* If there are no nodes to highlight, there's nothing to do. Make the
+       draw offsets empty to signalize that to doDraw() in DebugLayerGL. */
+    if(!maxHighlightCount) {
+        arrayClear(state.highlightedNodeDrawOffsets);
+        return;
     }
 
-    /* If there's any inspected node and anything changed for it, regenerate
-       vertex data. In particular, if only NeedsNodeOrderUpdate is set, only
-       the inspectedNodeDrawOffset changes, vertex data don't need any
-       update. */
-    if(state.highlightedNodeDrawOffset != ~std::size_t{} &&
-       (states >= LayerState::NeedsDataUpdate ||
-        states >= LayerState::NeedsNodeOffsetSizeUpdate))
-    {
-        /* We'll be drawing a triangle strip, which is ordered 012 123 and thus
-           the usual lerp()'d winding would be clockwise. Flip the Y coordinate
-           to make it CCW. */
-        const UnsignedInt highlightedNodeId = nodeHandleId(state.currentInspectedNode);
-        Vector2 min = nodeOffsets[highlightedNodeId];
-        Vector2 max = min + nodeSizes[highlightedNodeId];
-        Utility::swap(min.y(), max.y());
+    /* Generate quad vertices for all highlighted nodes and remember running
+       offsets for each data ID. Data that don't draw anything will have the
+       corresponding range empty. */
+    arrayResize(state.highlightedNodeDrawOffsets, NoInit, dataIds.size() + 1);
+    const Containers::StridedArrayView1D<const NodeHandle> nodes = this->nodes();
+    UnsignedInt offset = 0;
+    for(std::size_t i = 0; i != dataIds.size(); ++i) {
+        state.highlightedNodeDrawOffsets[i] = offset;
+
+        /* If the node isn't inspected or highlighted, nothing to do besides
+           saving the offset above */
+        const NodeHandle node = nodes[dataIds[i]];
+        const UnsignedInt nodeId = nodeHandleId(node);
+        if(node != state.currentInspectedNode && !state.currentHighlightedNodes[nodeId])
+            continue;
+
+        /* Use the node highlight color if it's the currently highlighted node.
+           Otherwise sample the RGB colormap and premultiply the result with
+           the common alpha. */
+        const Color4 color = node == state.currentInspectedNode ?
+            state.nodeInspectColor :
+            /** @todo might want to switch to sampleSrgb() once everything is
+                sRGB-ready */
+            Color4{
+                TextureTools::sampleLinear(state.nodeHighlightColorMap,
+                    Float(nodeId)/(state.nodes.size() - 1)),
+                state.nodeHighlightColorMapAlpha
+            }.premultiplied();
+
+        const Vector2 min = nodeOffsets[nodeId];
+        const Vector2 max = min + nodeSizes[nodeId];
         for(UnsignedByte i = 0; i != 4; ++i) {
             /* ✨ */
-            state.highlightedNodeVertices[i].position = Math::lerp(min, max, BitVector2{i});
-            state.highlightedNodeVertices[i].color = state.nodeInspectColor;
+            state.highlightedNodeVertices[offset*4 + i].position = Math::lerp(min, max, BitVector2{i});
+            state.highlightedNodeVertices[offset*4 + i].color = color;
+        }
+
+        ++offset;
+    }
+    CORRADE_INTERNAL_ASSERT(offset <= maxHighlightCount);
+
+    /* Remember the total quad count so doDraw() can query two offsets for
+       the draw range without any special casing */
+    state.highlightedNodeDrawOffsets[dataIds.size()] = offset;
+
+    /* If there isn't enough vertices for how much we're drawing, add more */
+    if(state.highlightedNodeIndices.size() < offset*6) {
+        UnsignedInt quadOffset = state.highlightedNodeIndices.size()/6;
+        arrayResize(state.highlightedNodeIndices, NoInit, offset*6);
+
+        /* Quad vertices ordered the same way as in BaseLayer */
+        for(; quadOffset != offset; ++quadOffset) {
+            /* 0---1 0---2 5
+               |   | |  / /|
+               |   | | / / |
+               |   | |/ /  |
+               2---3 1 3---4 */
+            state.highlightedNodeIndices[quadOffset*6 + 0] = quadOffset*4 + 0;
+            state.highlightedNodeIndices[quadOffset*6 + 1] = quadOffset*4 + 2;
+            state.highlightedNodeIndices[quadOffset*6 + 2] = quadOffset*4 + 1;
+            state.highlightedNodeIndices[quadOffset*6 + 3] = quadOffset*4 + 2;
+            state.highlightedNodeIndices[quadOffset*6 + 4] = quadOffset*4 + 3;
+            state.highlightedNodeIndices[quadOffset*6 + 5] = quadOffset*4 + 1;
         }
     }
 }
