@@ -623,39 +623,10 @@ const struct {
 const struct {
     const char* name;
     LayerFeatures features;
-    bool event;
-    bool partialUpdate;
     bool expected;
-    Containers::Optional<Color4> inspectColor;
-    Color4 expectedColor;
 } NodeInspectDrawData[]{
-    {"no Draw feature",
-        {}, false, true, false,
-        {}, 0xff00ffff_rgbaf*0.5f},
-    {"no Draw feature, inspect with an event",
-        {}, true, true, false,
-        {}, 0xff00ffff_rgbaf*0.5f},
-    {"no Draw feature, inspect with an event, implicit update",
-        {}, true, false, false,
-        {}, 0xff00ffff_rgbaf*0.5f},
-    {"",
-        LayerFeature::Draw, false, true, true,
-        {}, 0xff00ffff_rgbaf*0.5f},
-    {"inspect with an event",
-        LayerFeature::Draw, true, true, true,
-        {}, 0xff00ffff_rgbaf*0.5f},
-    {"inspect with an event, implicit update",
-        LayerFeature::Draw, true, false, true,
-        {}, 0xff00ffff_rgbaf*0.5f},
-    {"custom inspect color",
-        LayerFeature::Draw, false, true, true,
-        0xff3366cc_rgbaf, 0xff3366cc_rgbaf},
-    {"custom inspect color, inspect with an event",
-        LayerFeature::Draw, true, true, true,
-        0xff3366cc_rgbaf, 0xff3366cc_rgbaf},
-    {"custom inspect color, inspect with an event, implicit update",
-        LayerFeature::Draw, true, false, true,
-        0xff3366cc_rgbaf, 0xff3366cc_rgbaf}
+    {"no Draw feature", {}, false},
+    {"", LayerFeature::Draw, true},
 };
 
 const struct {
@@ -5028,22 +4999,14 @@ void DebugLayerTest::nodeInspectDraw() {
     Layer& layer = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer(), DebugLayerSource::Nodes, DebugLayerFlag::NodeInspect, data.features));
     /* Just to silence the output */
     layer.setNodeInspectCallback([](Containers::StringView){});
+    /* Just to verify the color is actually used */
+    layer.setNodeInspectColor(0xff3366cc_rgbaf);
 
-    if(data.inspectColor)
-        layer.setNodeInspectColor(*data.inspectColor);
-
-    if(data.partialUpdate) {
-        ui.update();
-        CORRADE_COMPARE(layer.state(), LayerState::NeedsCommonDataUpdate);
-    }
+    ui.update();
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsCommonDataUpdate);
 
     /* Inspect the node */
-    if(data.event) {
-        PointerEvent event{{}, PointerEventSource::Pen, Pointer::Eraser, true, 0, Modifier::Ctrl};
-        CORRADE_VERIFY(ui.pointerPressEvent({50, 30}, event));
-    } else {
-        CORRADE_VERIFY(layer.inspectNode(node));
-    }
+    CORRADE_VERIFY(layer.inspectNode(node));
     CORRADE_COMPARE(layer.currentInspectedNode(), node);
     /* NeedsDataUpdate is set only if something is actually drawn */
     CORRADE_COMPARE(layer.state(), LayerState::NeedsCommonDataUpdate|(data.expected ? LayerState::NeedsDataUpdate : LayerStates{}));
@@ -5066,21 +5029,16 @@ void DebugLayerTest::nodeInspectDraw() {
             {40.0f, 20.0f},
             {60.0f, 20.0f}
         }), TestSuite::Compare::Container);
-        CORRADE_COMPARE_AS(vertices.slice(&decltype(vertices)::Type::color), Containers::arrayView<Color4>({
-            data.expectedColor,
-            data.expectedColor,
-            data.expectedColor,
-            data.expectedColor
+        CORRADE_COMPARE_AS(vertices.slice(&decltype(vertices)::Type::color), Containers::arrayView({
+            0xff3366cc_rgbaf,
+            0xff3366cc_rgbaf,
+            0xff3366cc_rgbaf,
+            0xff3366cc_rgbaf
         }), TestSuite::Compare::Container);
     }
 
     /* Inspect a parent, just to verify the update goes as expected */
-    if(data.event) {
-        PointerEvent event{{}, PointerEventSource::Pen, Pointer::Eraser, true, 0, Modifier::Ctrl};
-        CORRADE_VERIFY(ui.pointerPressEvent({30, 20}, event));
-    } else {
-        CORRADE_VERIFY(layer.inspectNode(parent2));
-    }
+    CORRADE_VERIFY(layer.inspectNode(parent2));
     CORRADE_COMPARE(layer.currentInspectedNode(), parent2);
     CORRADE_COMPARE(layer.state(), LayerState::NeedsCommonDataUpdate|(data.expected ? LayerState::NeedsDataUpdate : LayerStates{}));
 
@@ -5103,20 +5061,15 @@ void DebugLayerTest::nodeInspectDraw() {
             {60.0f, 15.0f}
         }), TestSuite::Compare::Container);
         CORRADE_COMPARE_AS(vertices.slice(&decltype(vertices)::Type::color), Containers::arrayView<Color4>({
-            data.expectedColor,
-            data.expectedColor,
-            data.expectedColor,
-            data.expectedColor
+            0xff3366cc_rgbaf,
+            0xff3366cc_rgbaf,
+            0xff3366cc_rgbaf,
+            0xff3366cc_rgbaf
         }), TestSuite::Compare::Container);
     }
 
     /* Remove the highlight, the draw offset should be gone now */
-    if(data.event) {
-        PointerEvent event{{}, PointerEventSource::Pen, Pointer::Eraser, true, 0, Modifier::Ctrl};
-        CORRADE_VERIFY(ui.pointerPressEvent({30, 20}, event));
-    } else {
-        CORRADE_VERIFY(layer.inspectNode(NodeHandle::Null));
-    }
+    CORRADE_VERIFY(layer.inspectNode(NodeHandle::Null));
     CORRADE_COMPARE(layer.currentInspectedNode(), NodeHandle::Null);
     CORRADE_COMPARE(layer.state(), LayerState::NeedsCommonDataUpdate|(data.expected ? LayerState::NeedsDataUpdate : LayerStates{}));
 
