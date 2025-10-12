@@ -661,13 +661,9 @@ const struct {
 const struct {
     const char* name;
     bool removeParent;
-    LayerFeatures features;
-    bool expectDrawData;
 } NodeInspectNodeRemovedData[]{
-    {"", false, {}, false},
-    {"remove parent node", true, {}, false},
-    {"layer with Draw", false, LayerFeature::Draw, true},
-    {"layer with Draw, remove parent node", true, LayerFeature::Draw, true},
+    {"", false},
+    {"remove parent node", true},
 };
 
 const struct {
@@ -675,16 +671,15 @@ const struct {
     LayerFeatures features;
     bool callback;
     LayerStates expectedState;
-    bool expectDrawData;
 } NodeInspectToggleData[]{
     {"",
-        {}, false, {}, false},
+        {}, false, {}},
     {"layer with Draw",
-        LayerFeature::Draw, false, LayerState::NeedsDataUpdate, true},
+        LayerFeature::Draw, false, LayerState::NeedsDataUpdate},
     {"with callback",
-        {}, true, {}, false},
+        {}, true, {}},
     {"with callback, layer with Draw",
-        LayerFeature::Draw, true, LayerState::NeedsDataUpdate, true},
+        LayerFeature::Draw, true, LayerState::NeedsDataUpdate},
 };
 
 const struct {
@@ -5148,30 +5143,19 @@ void DebugLayerTest::nodeInspectNodeRemoved() {
     NodeHandle node = ui.createNode(parent2, {}, {100, 100});
 
     struct Layer: DebugLayer {
-        explicit Layer(LayerHandle handle, DebugLayerSources sources, DebugLayerFlags flags, LayerFeatures features): DebugLayer{handle, sources, flags}, _features{features} {}
+        using DebugLayer::DebugLayer;
+
         const DebugLayer::State& stateData() {
             return *_state;
         }
-
-        LayerFeatures doFeatures() const override {
-            return DebugLayer::doFeatures()|_features;
-        }
-
-        private:
-            LayerFeatures _features;
     };
-    Layer& layer = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer(), DebugLayerSource::Nodes, DebugLayerFlag::NodeInspect, data.features));
+    Layer& layer = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer(), DebugLayerSource::Nodes, DebugLayerFlag::NodeInspect));
     /* Just to silence the output */
     layer.setNodeInspectCallback([](Containers::StringView){});
 
     PointerEvent press{{}, PointerEventSource::Mouse, Pointer::MouseRight, true, 0, Modifier::Ctrl};
     CORRADE_VERIFY(ui.pointerPressEvent({50, 50}, press));
     CORRADE_COMPARE(layer.currentInspectedNode(), node);
-    if(data.expectDrawData) {
-        /* The draw offset gets calculated only after update() */
-        ui.update();
-        CORRADE_COMPARE(layer.stateData().highlightedNodeDrawOffset, 2);
-    }
 
     /* Right after removal it still reports the node as inspected */
     ui.removeNode(data.removeParent ? parent : node);
@@ -5179,19 +5163,11 @@ void DebugLayerTest::nodeInspectNodeRemoved() {
     CORRADE_COMPARE_AS(ui.state(),
         UserInterfaceState::NeedsDataUpdate,
         TestSuite::Compare::GreaterOrEqual);
-    if(data.expectDrawData) {
-        /* The draw offset gets updated in the doUpdate() call right before
-           a draw due to NeedsDataUpdate being set, so it doesn't need to be
-           cleared here as well */
-        CORRADE_COMPARE(layer.stateData().highlightedNodeDrawOffset, 2);
-    }
     CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeClean);
 
     /* Only after an update it gets cleaned */
     ui.update();
     CORRADE_COMPARE(layer.currentInspectedNode(), NodeHandle::Null);
-    if(data.expectDrawData)
-        CORRADE_COMPARE(layer.stateData().highlightedNodeDrawOffset, ~std::size_t{});
 }
 
 void DebugLayerTest::nodeInspectInvalid() {
@@ -5321,11 +5297,6 @@ void DebugLayerTest::nodeInspectToggle() {
         CORRADE_COMPARE(out, "Node {0x2, 0x1}");
     }
     CORRADE_COMPARE(layer.state(), LayerState::NeedsCommonDataUpdate|data.expectedState);
-    if(data.expectDrawData) {
-        /* The draw offset gets calculated only after update() */
-        ui.update();
-        CORRADE_COMPARE(layer.stateData().highlightedNodeDrawOffset, 2);
-    }
 
     /* Update to clear the NeedsDataUpdate flag */
     ui.update();
@@ -5359,9 +5330,6 @@ void DebugLayerTest::nodeInspectToggle() {
        We however need to trigger redraw somehow, so it's being set. */
     /** @todo clean up once NeedsDraw or some such is a thing */
     CORRADE_COMPARE(layer.state(), LayerState::NeedsCommonDataUpdate|data.expectedState);
-    if(data.expectDrawData) {
-        CORRADE_COMPARE(layer.stateData().highlightedNodeDrawOffset, ~std::size_t{});
-    }
 
     /* Update to clear the NeedsDataUpdate flag */
     ui.update();
@@ -5414,9 +5382,6 @@ void DebugLayerTest::nodeInspectToggle() {
         CORRADE_COMPARE(out, "");
     }
     CORRADE_COMPARE(layer.state(), LayerState::NeedsCommonDataUpdate|data.expectedState);
-    ui.update();
-    if(data.expectDrawData)
-        CORRADE_COMPARE(layer.stateData().highlightedNodeDrawOffset, ~std::size_t{});
 }
 
 void DebugLayerTest::updateEmpty() {

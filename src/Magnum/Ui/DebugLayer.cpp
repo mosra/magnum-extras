@@ -207,10 +207,8 @@ DebugLayer& DebugLayer::setFlags(const DebugLayerFlags flags) {
         /** @todo once NeedsDraw or some such exists, only the
             inspectedNodeDrawOffset needs to be cleared, update() doesn't need
             to be called */
-        if(doFeatures() >= LayerFeature::Draw) {
-            state.highlightedNodeDrawOffset = ~std::size_t{};
+        if(doFeatures() >= LayerFeature::Draw)
             setNeedsUpdate(LayerState::NeedsDataUpdate);
-        }
     }
 
     state.flags = flags;
