@@ -866,6 +866,10 @@ void DebugLayer::doClean(const Containers::BitArrayView dataIdsToRemove) {
         if(data != LayerDataHandle::Null) {
             if(dataIdsToRemove[layerDataHandleId(data)]) {
                 state.currentInspectedNode = NodeHandle::Null;
+                /* This "just works" without having to explicitly trigger
+                   NeedsDataUpdate, because if given inspected node is removed,
+                   the data containing the highlight quad for it are removed
+                   too, which on its own triggers NeedsDataUpdate */
             }
             CORRADE_INTERNAL_ASSERT(isHandleValid(data) == !dataIdsToRemove[layerDataHandleId(data)]);
         }
