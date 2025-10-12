@@ -118,7 +118,6 @@ struct DebugLayerTest: TestSuite::Tester {
         void nodeInspectLayouterDebugIntegrationExplicitRvalue();
         void nodeInspectAnimatorDebugIntegrationExplicit();
         void nodeInspectAnimatorDebugIntegrationExplicitRvalue();
-        void nodeInspectDraw();
         void nodeInspectNodeRemoved();
         void nodeInspectInvalid();
         void nodeInspectToggle();
@@ -622,15 +621,6 @@ const struct {
 
 const struct {
     const char* name;
-    LayerFeatures features;
-    bool expected;
-} NodeInspectDrawData[]{
-    {"no Draw feature", {}, false},
-    {"", LayerFeature::Draw, true},
-};
-
-const struct {
-    const char* name;
     bool removeParent;
 } NodeInspectNodeRemovedData[]{
     {"", false},
@@ -655,60 +645,65 @@ const struct {
 
 const struct {
     const char* name;
+    LayerFeatures features;
     LayerStates states;
     /* Only items until the first ~UnsignedInt{} are used. ID 2 is the
        inspected node. */
     UnsignedInt dataIds[4];
-    std::size_t expectedDrawOffset;
-    bool expectVertexDataUpdated;
+    std::size_t expectedDrawOffset1, expectedDrawOffset2;
+    bool expectVertexDataUpdated1, expectVertexDataUpdated2;
 } UpdateDataOrderData[]{
     {"empty update",
-        LayerState::NeedsDataUpdate,
+        LayerFeature::Draw, LayerState::NeedsDataUpdate,
         {~UnsignedInt{}},
-        ~std::size_t{}, false},
-    {"data drawn at offset 1",
-        LayerState::NeedsDataUpdate,
+        ~std::size_t{}, ~std::size_t{}, false, false},
+    {"data drawn at offset 1 and then none",
+        LayerFeature::Draw, LayerState::NeedsDataUpdate,
         {3, 2, ~UnsignedInt{}},
-        1, true},
-    {"data drawn at offset 3",
-        LayerState::NeedsDataUpdate,
+        1, ~std::size_t{}, true, false},
+    {"data drawn at offset 3 and then 1",
+        LayerFeature::Draw, LayerState::NeedsDataUpdate,
         {3, 1, 0, 2},
-        3, true},
-    {"data drawn at offset 0",
-        LayerState::NeedsDataUpdate,
+        3, 1, true, true},
+    {"data drawn at offset 0 and then none",
+        LayerFeature::Draw, LayerState::NeedsDataUpdate,
         {2, ~UnsignedInt{}},
-        0, true},
+        0, ~std::size_t{}, true, false},
     {"data not drawn",
-        LayerState::NeedsDataUpdate,
-        {3, 1, ~UnsignedInt{}},
-        ~std::size_t{}, false},
+        LayerFeature::Draw, LayerState::NeedsDataUpdate,
+        {3, 0, ~UnsignedInt{}},
+        ~std::size_t{}, ~std::size_t{}, false, false},
     {"node offset/size update only",
-        LayerState::NeedsNodeOffsetSizeUpdate,
+        LayerFeature::Draw, LayerState::NeedsNodeOffsetSizeUpdate,
         {3, 2, 0, 1},
-        1, true},
+        1, 3, true, true},
     {"node order update only",
-        LayerState::NeedsNodeOrderUpdate,
+        LayerFeature::Draw, LayerState::NeedsNodeOrderUpdate,
         {3, 2, 0, 1},
-        1, false},
-    /* These four shouldn't cause anything to be done in update(), retaining the
-       artificially set draw offset (i.e., keeping it exactly at what it was
-       set to before) */
+        1, 3, false, false},
+    /* These five shouldn't cause anything to be done in update(), retaining
+       the artificially set draw offset (i.e., keeping it exactly at what it
+       was set to before) */
+    {"no Draw feature",
+        {}, LayerState::NeedsDataUpdate,
+        {3, 1, 0, 2},
+        666, 666, false, false},
     {"node enabled update only",
-        LayerState::NeedsNodeEnabledUpdate,
+        LayerFeature::Draw, LayerState::NeedsNodeEnabledUpdate,
         {3, 2, 0, 1},
-        666, false},
+        666, 666, false, false},
     {"node opacity update only",
-        LayerState::NeedsNodeOpacityUpdate,
+        LayerFeature::Draw, LayerState::NeedsNodeOpacityUpdate,
         {3, 2, 0, 1},
-        666, false},
+        666, 666, false, false},
     {"shared data update only",
-        LayerState::NeedsSharedDataUpdate,
+        LayerFeature::Draw, LayerState::NeedsSharedDataUpdate,
         {3, 2, 0, 1},
-        666, false},
+        666, 666, false, false},
     {"common data update only",
-        LayerState::NeedsCommonDataUpdate,
+        LayerFeature::Draw, LayerState::NeedsCommonDataUpdate,
         {3, 0, 2, 1},
-        666, false},
+        666, 666, false, false},
 };
 
 DebugLayerTest::DebugLayerTest() {
@@ -805,9 +800,6 @@ DebugLayerTest::DebugLayerTest() {
               &DebugLayerTest::nodeInspectLayouterDebugIntegrationExplicitRvalue,
               &DebugLayerTest::nodeInspectAnimatorDebugIntegrationExplicit,
               &DebugLayerTest::nodeInspectAnimatorDebugIntegrationExplicitRvalue});
-
-    addInstancedTests({&DebugLayerTest::nodeInspectDraw},
-        Containers::arraySize(NodeInspectDrawData));
 
     addInstancedTests({&DebugLayerTest::nodeInspectNodeRemoved},
         Containers::arraySize(NodeInspectNodeRemovedData));
@@ -4970,120 +4962,6 @@ void DebugLayerTest::nodeInspectAnimatorDebugIntegrationExplicitRvalue() {
         TestSuite::Compare::String);
 }
 
-void DebugLayerTest::nodeInspectDraw() {
-    auto&& data = NodeInspectDrawData[testCaseInstanceId()];
-    setTestCaseDescription(data.name);
-
-    AbstractUserInterface ui{{100, 100}};
-
-    NodeHandle parent1 = ui.createNode({20, 10}, {50, 50});
-    NodeHandle parent2 = ui.createNode(parent1, {0, 5}, {40, 40});
-    NodeHandle parent3 = ui.createNode(parent2, {15, 0}, {25, 35});
-
-    /* The node is at an absolute offset {40, 20} */
-    NodeHandle node = ui.createNode(parent3, {5, 5}, {20, 30});
-
-    struct Layer: DebugLayer {
-        explicit Layer(LayerHandle handle, DebugLayerSources sources, DebugLayerFlags flags, LayerFeatures features): DebugLayer{handle, sources, flags}, _features{features} {}
-        const DebugLayer::State& stateData() {
-            return *_state;
-        }
-
-        LayerFeatures doFeatures() const override {
-            return DebugLayer::doFeatures()|_features;
-        }
-
-        private:
-            LayerFeatures _features;
-    };
-    Layer& layer = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer(), DebugLayerSource::Nodes, DebugLayerFlag::NodeInspect, data.features));
-    /* Just to silence the output */
-    layer.setNodeInspectCallback([](Containers::StringView){});
-    /* Just to verify the color is actually used */
-    layer.setNodeInspectColor(0xff3366cc_rgbaf);
-
-    ui.update();
-    CORRADE_COMPARE(layer.state(), LayerState::NeedsCommonDataUpdate);
-
-    /* Inspect the node */
-    CORRADE_VERIFY(layer.inspectNode(node));
-    CORRADE_COMPARE(layer.currentInspectedNode(), node);
-    /* NeedsDataUpdate is set only if something is actually drawn */
-    CORRADE_COMPARE(layer.state(), LayerState::NeedsCommonDataUpdate|(data.expected ? LayerState::NeedsDataUpdate : LayerStates{}));
-
-    ui.update();
-    CORRADE_COMPARE(layer.state(), LayerState::NeedsCommonDataUpdate);
-
-    if(data.expected) {
-        /* The node is drawn after all its parents */
-        CORRADE_COMPARE(layer.stateData().highlightedNodeDrawOffset, 3);
-
-        auto vertices = Containers::stridedArrayView(layer.stateData().highlightedNodeVertices);
-        CORRADE_COMPARE_AS(vertices.slice(&decltype(vertices)::Type::position), Containers::arrayView<Vector2>({
-            /* 2--3
-               |\ | Made in a way that the triangle strip (012 123) has
-               | \| counterclockwise winding.
-               0--1 */
-            {40.0f, 50.0f},
-            {60.0f, 50.0f},
-            {40.0f, 20.0f},
-            {60.0f, 20.0f}
-        }), TestSuite::Compare::Container);
-        CORRADE_COMPARE_AS(vertices.slice(&decltype(vertices)::Type::color), Containers::arrayView({
-            0xff3366cc_rgbaf,
-            0xff3366cc_rgbaf,
-            0xff3366cc_rgbaf,
-            0xff3366cc_rgbaf
-        }), TestSuite::Compare::Container);
-    }
-
-    /* Inspect a parent, just to verify the update goes as expected */
-    CORRADE_VERIFY(layer.inspectNode(parent2));
-    CORRADE_COMPARE(layer.currentInspectedNode(), parent2);
-    CORRADE_COMPARE(layer.state(), LayerState::NeedsCommonDataUpdate|(data.expected ? LayerState::NeedsDataUpdate : LayerStates{}));
-
-    ui.update();
-    CORRADE_COMPARE(layer.state(), LayerState::NeedsCommonDataUpdate);
-
-    if(data.expected) {
-        /* The node is drawn after all its parents */
-        CORRADE_COMPARE(layer.stateData().highlightedNodeDrawOffset, 1);
-
-        auto vertices = Containers::stridedArrayView(layer.stateData().highlightedNodeVertices);
-        CORRADE_COMPARE_AS(vertices.slice(&decltype(vertices)::Type::position), Containers::arrayView<Vector2>({
-            /* 2--3
-               |\ | Made in a way that the triangle strip (012 123) has
-               | \| counterclockwise winding.
-               0--1 */
-            {20.0f, 55.0f},
-            {60.0f, 55.0f},
-            {20.0f, 15.0f},
-            {60.0f, 15.0f}
-        }), TestSuite::Compare::Container);
-        CORRADE_COMPARE_AS(vertices.slice(&decltype(vertices)::Type::color), Containers::arrayView<Color4>({
-            0xff3366cc_rgbaf,
-            0xff3366cc_rgbaf,
-            0xff3366cc_rgbaf,
-            0xff3366cc_rgbaf
-        }), TestSuite::Compare::Container);
-    }
-
-    /* Remove the highlight, the draw offset should be gone now */
-    CORRADE_VERIFY(layer.inspectNode(NodeHandle::Null));
-    CORRADE_COMPARE(layer.currentInspectedNode(), NodeHandle::Null);
-    CORRADE_COMPARE(layer.state(), LayerState::NeedsCommonDataUpdate|(data.expected ? LayerState::NeedsDataUpdate : LayerStates{}));
-
-    ui.update();
-    CORRADE_COMPARE(layer.state(), LayerState::NeedsCommonDataUpdate);
-
-    if(data.expected) {
-        CORRADE_COMPARE(layer.stateData().highlightedNodeDrawOffset, ~std::size_t{});
-
-        /* The vertices stay set to whatever was there before, as they're not
-           drawn anyway. Nothing to test for those. */
-    }
-}
-
 void DebugLayerTest::nodeInspectNodeRemoved() {
     auto&& data = NodeInspectNodeRemovedData[testCaseInstanceId()];
     setTestCaseDescription(data.name);
@@ -5369,25 +5247,31 @@ void DebugLayerTest::updateDataOrder() {
     AbstractUserInterface ui{{100, 100}};
 
     struct Layer: DebugLayer {
-        using DebugLayer::DebugLayer;
+        explicit Layer(LayerHandle handle, DebugLayerSources sources, DebugLayerFlags flags, LayerFeatures features): DebugLayer{handle, sources, flags}, _features{features} {}
 
         DebugLayer::State& stateData() {
             return *_state;
         }
 
         LayerFeatures doFeatures() const override {
-            return DebugLayer::doFeatures()|LayerFeature::Draw;
+            return DebugLayer::doFeatures()|_features;
         }
+
+        private:
+            LayerFeatures _features;
     };
-    Layer& layer = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer(), DebugLayerSource::Nodes, DebugLayerFlag::NodeInspect));
+    Layer& layer = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer(), DebugLayerSource::Nodes, DebugLayerFlag::NodeInspect, data.features));
     /* Just to silence the output */
     layer.setNodeInspectCallback([](Containers::StringView){});
+    /* Just to verify the color is actually used */
+    layer.setNodeInspectColor(0xff3366cc_rgbaf);
 
     /* Create nodes in a way that node with ID 3 is the one we'll inspect and
        it's associated with debug layer data ID 2, which the crafted data
-       passed to update() depend on */
+       passed to update() depend on. Node 1, which is highlighted second, is
+       associated with data 1. */
     ui.createNode({}, {});
-    ui.createNode({}, {});
+    NodeHandle node1 = ui.createNode({}, {});
     NodeHandle removedNode = ui.createNode({}, {});
     NodeHandle node3 = ui.createNode({}, {});
     ui.removeNode(removedNode);
@@ -5398,6 +5282,7 @@ void DebugLayerTest::updateDataOrder() {
 
     /* Inspect the node */
     CORRADE_VERIFY(layer.inspectNode(node3));
+    CORRADE_COMPARE(layer.currentInspectedNode(), node3);
 
     /* Figure out the actual count of data IDs to send */
     std::size_t dataCount = 0;
@@ -5407,12 +5292,15 @@ void DebugLayerTest::updateDataOrder() {
         ++dataCount;
     }
 
+    /* Opacities and node enablement status are not used by the layer */
     Vector2 nodeOffsets[4];
     Vector2 nodeSizes[4];
     Float nodeOpacities[4];
     UnsignedByte nodesEnabledData[1];
     Containers::MutableBitArrayView nodesEnabled{nodesEnabledData, 0, 4};
+    nodeOffsets[1] = {10.0f, 20.0f};
     nodeOffsets[3] = {20.0f, 10.0f};
+    nodeSizes[1] = {30.0f, 40.0f};
     nodeSizes[3] = {40.0f, 30.0f};
 
     /* Set the draw offset to a silly value to detect if doUpdate() changed it
@@ -5422,22 +5310,59 @@ void DebugLayerTest::updateDataOrder() {
 
     layer.update(data.states, Containers::arrayView(data.dataIds).prefix(dataCount), {}, {}, nodeOffsets, nodeSizes, nodeOpacities, nodesEnabled, {}, {}, {}, {});
 
-    CORRADE_COMPARE(layer.stateData().highlightedNodeDrawOffset, data.expectedDrawOffset);
-    if(data.expectVertexDataUpdated) {
+    CORRADE_COMPARE(layer.stateData().highlightedNodeDrawOffset, data.expectedDrawOffset1);
+    if(data.expectVertexDataUpdated1) {
         auto vertices = Containers::stridedArrayView(layer.stateData().highlightedNodeVertices);
         CORRADE_COMPARE_AS(vertices.slice(&decltype(vertices)::Type::position), Containers::stridedArrayView<Vector2>({
+            /* 2--3
+               |\ | Made in a way that the triangle strip (012 123) has
+               | \| counterclockwise winding.
+               0--1 */
             {20.0f, 40.0f},
             {60.0f, 40.0f},
             {20.0f, 10.0f},
             {60.0f, 10.0f}
         }), TestSuite::Compare::Container);
         CORRADE_COMPARE_AS(vertices.slice(&decltype(vertices)::Type::color), Containers::stridedArrayView<Color4>({
-            0xff00ffff_rgbaf*0.5f,
-            0xff00ffff_rgbaf*0.5f,
-            0xff00ffff_rgbaf*0.5f,
-            0xff00ffff_rgbaf*0.5f
+            0xff3366cc_rgbaf,
+            0xff3366cc_rgbaf,
+            0xff3366cc_rgbaf,
+            0xff3366cc_rgbaf
         }), TestSuite::Compare::Container);
     }
+
+    /* Inspect a different node, just to verify the update goes as expected */
+    CORRADE_VERIFY(layer.inspectNode(node1));
+    CORRADE_COMPARE(layer.currentInspectedNode(), node1);
+
+    /* The other node should have a quad now, which has the X and Y offset and
+       size swapped */
+    layer.update(data.states, Containers::arrayView(data.dataIds).prefix(dataCount), {}, {}, nodeOffsets, nodeSizes, nodeOpacities, nodesEnabled, {}, {}, {}, {});
+    CORRADE_COMPARE(layer.stateData().highlightedNodeDrawOffset, data.expectedDrawOffset2);
+    if(data.expectVertexDataUpdated2) {
+        auto vertices = Containers::stridedArrayView(layer.stateData().highlightedNodeVertices);
+        CORRADE_COMPARE_AS(vertices.slice(&decltype(vertices)::Type::position), Containers::stridedArrayView<Vector2>({
+            {10.0f, 60.0f},
+            {40.0f, 60.0f},
+            {10.0f, 20.0f},
+            {40.0f, 20.0f}
+        }), TestSuite::Compare::Container);
+        CORRADE_COMPARE_AS(vertices.slice(&decltype(vertices)::Type::color), Containers::stridedArrayView<Color4>({
+            0xff3366cc_rgbaf,
+            0xff3366cc_rgbaf,
+            0xff3366cc_rgbaf,
+            0xff3366cc_rgbaf
+        }), TestSuite::Compare::Container);
+    }
+
+    /* Remove the highlight, the draw offset should be gone now */
+    CORRADE_VERIFY(layer.inspectNode(NodeHandle::Null));
+    CORRADE_COMPARE(layer.currentInspectedNode(), NodeHandle::Null);
+    layer.update(data.states, Containers::arrayView(data.dataIds).prefix(dataCount), {}, {}, nodeOffsets, nodeSizes, nodeOpacities, nodesEnabled, {}, {}, {}, {});
+    /* In case the Draw feature isn't present at all, the function exits early,
+       without touching highlightedNodeDrawOffset at all, so it's left at the
+       overriden 666 in that case */
+    CORRADE_COMPARE(layer.stateData().highlightedNodeDrawOffset, data.features >= LayerFeature::Draw ? ~std::size_t{} : 666);
 }
 
 }}}}
