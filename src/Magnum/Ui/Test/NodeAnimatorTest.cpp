@@ -2481,10 +2481,10 @@ void NodeAnimatorTest::debugIntegration() {
     animator.remove(animator.create(NodeAnimation{}, nullptr, {}, {}, NodeHandle::Null));
     animator.create(data.animation, Animation::Easing::linear, data.start, 20_nsec, node, data.flags);
 
-    DebugLayer& debugLayer = ui.setLayerInstance(Containers::pointer<DebugLayer>(ui.createLayer(), DebugLayerSource::NodeAnimationDetails, DebugLayerFlag::NodeHighlight));
+    DebugLayer& debugLayer = ui.setLayerInstance(Containers::pointer<DebugLayer>(ui.createLayer(), DebugLayerSource::NodeAnimationDetails, DebugLayerFlag::NodeInspect));
 
     Containers::String out;
-    debugLayer.setNodeHighlightCallback([&out](Containers::StringView message) {
+    debugLayer.setNodeInspectCallback([&out](Containers::StringView message) {
         out = message;
     });
     debugLayer.setAnimatorName(animator, data.animatorName ? "Nodead" : "");
@@ -2492,7 +2492,7 @@ void NodeAnimatorTest::debugIntegration() {
     /* Make the debug layer aware of everything */
     ui.update();
 
-    CORRADE_VERIFY(debugLayer.highlightNode(node));
+    CORRADE_VERIFY(debugLayer.inspectNode(node));
     CORRADE_COMPARE_AS(out, data.expected, TestSuite::Compare::String);
 }
 
@@ -2528,20 +2528,20 @@ void NodeAnimatorTest::debugIntegrationNoCallback() {
         Animation::Easing::linear, -100_nsec, 20_nsec, node,
         AnimationFlag::KeepOncePlayed|AnimationFlag::ReverseEveryOther);
 
-    DebugLayer& debugLayer = ui.setLayerInstance(Containers::pointer<DebugLayer>(ui.createLayer(), DebugLayerSource::NodeAnimationDetails, DebugLayerFlag::NodeHighlight));
+    DebugLayer& debugLayer = ui.setLayerInstance(Containers::pointer<DebugLayer>(ui.createLayer(), DebugLayerSource::NodeAnimationDetails, DebugLayerFlag::NodeInspect));
 
     debugLayer.setAnimatorName(animator, "Nodead");
 
     /* Make the debug layer aware of everything */
     ui.update();
 
-    /* Highlight the node for visual color verification */
+    /* Inspect the node for visual color verification */
     {
         Debug{} << "======================== visual color verification start =======================";
 
         debugLayer.addFlags(DebugLayerFlag::ColorAlways);
 
-        CORRADE_VERIFY(debugLayer.highlightNode(node));
+        CORRADE_VERIFY(debugLayer.inspectNode(node));
 
         debugLayer.clearFlags(DebugLayerFlag::ColorAlways);
 
@@ -2554,7 +2554,7 @@ void NodeAnimatorTest::debugIntegrationNoCallback() {
     {
         Containers::String out;
         Debug redirectOutput{&out};
-        CORRADE_VERIFY(debugLayer.highlightNode(node));
+        CORRADE_VERIFY(debugLayer.inspectNode(node));
         /* The output always has a newline at the end which cannot be disabled
            so strip it to have the comparison match the debugIntegration()
            case */

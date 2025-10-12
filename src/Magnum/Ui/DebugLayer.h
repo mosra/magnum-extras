@@ -97,7 +97,7 @@ enum class DebugLayerSource: UnsignedShort {
     /**
      * Track per-node layer data attachments with per-data details provided by
      * layer-specific debug integrations as described in
-     * @ref Ui-DebugLayer-node-highlight-node-details. Implies
+     * @ref Ui-DebugLayer-node-inspect-node-details. Implies
      * @ref DebugLayerSource::NodeData.
      */
     NodeDataDetails = NodeData|(1 << 7),
@@ -112,7 +112,7 @@ enum class DebugLayerSource: UnsignedShort {
     /**
      * Track per-node layout assignments with per-layout details provided by
      * layouter-specific debug integrations as described in
-     * @ref Ui-DebugLayer-node-highlight-node-details. Implies
+     * @ref Ui-DebugLayer-node-inspect-node-details. Implies
      * @ref DebugLayerSource::NodeLayouts.
      */
     NodeLayoutDetails = NodeLayouts|(1 << 9),
@@ -127,7 +127,7 @@ enum class DebugLayerSource: UnsignedShort {
     /**
      * Track per-node layer data attachments with per-data details provided by
      * animator-specific debug integrations as described in
-     * @ref Ui-DebugLayer-node-highlight-node-details. Implies
+     * @ref Ui-DebugLayer-node-inspect-node-details. Implies
      * @ref DebugLayerSource::NodeAnimations.
      */
     NodeAnimationDetails = NodeAnimations|(1 << 11),
@@ -165,18 +165,18 @@ enum class DebugLayerFlag: UnsignedByte {
     /**
      * Highlight and show details of a node on pointer press. Expects that at
      * least @ref DebugLayerSource::Nodes is enabled.
-     * @see @ref DebugLayer::setNodeHighlightColor(),
-     *      @ref DebugLayer::setNodeHighlightGesture(),
-     *      @ref DebugLayer::setNodeHighlightCallback()
+     * @see @ref DebugLayer::setNodeInspectColor(),
+     *      @ref DebugLayer::setNodeInspectGesture(),
+     *      @ref DebugLayer::setNodeInspectCallback()
      */
-    NodeHighlight = 1 << 0,
+    NodeInspect = 1 << 0,
 
     /**
      * Print all messages without color, even if
      * @relativeref{Corrade::Utility,Debug::isTty()} returns @cpp true @ce. By
      * default, messages are printed colored if the output is detected to be a
      * TTY, and strings passed to the callback specified in
-     * @ref DebugLayer::setNodeHighlightCallback() are without color. If
+     * @ref DebugLayer::setNodeInspectCallback() are without color. If
      * @ref DebugLayerFlag::ColorAlways is specified as well, this flag has a
      * priority.
      */
@@ -186,7 +186,7 @@ enum class DebugLayerFlag: UnsignedByte {
      * Print all messages with color, even if
      * @relativeref{Corrade::Utility,Debug::isTty()} returns @cpp false @ce and
      * even in case the message is passed to the callback specified in
-     * @ref DebugLayer::setNodeHighlightCallback(). If
+     * @ref DebugLayer::setNodeInspectCallback(). If
      * @ref DebugLayerFlag::ColorOff is specified as well, it has a priority.
      */
     ColorAlways = 1 << 2,
@@ -262,9 +262,9 @@ latest state changes.
     it unconditionally in applications deployed to end users isn't recommended.
     See the @ref Ui-DebugLayer-opt-in section for more information.
 
-@section Ui-DebugLayer-node-highlight Node highlight
+@section Ui-DebugLayer-node-inspect Inspecting nodes
 
-The setup shown above, in particular with @ref DebugLayerFlag::NodeHighlight
+The setup shown above, in particular with @ref DebugLayerFlag::NodeInspect
 together with at least @ref DebugLayerSource::Nodes enabled, makes it possible
 to highlight any node in the hierarchy and see its details.
 @relativeref{DebugLayerSource,NodeOffsetSize} lists raw node offset and size
@@ -284,19 +284,19 @@ With the @ref DebugLayer set up, clicking on this button with
 @m_class{m-label m-warning} **Ctrl** @m_class{m-label m-default} **pen eraser**
 in case of a pen input) highlights the node, showing a magenta rectangle over,
 and prints details about it to the console like shown below. Clicking on any
-other node will highlight that one instead, clicking again on the highlighted
+other node will inspect that one instead, clicking again on the highlighted
 node will remove the highlight.
 
-@image html ui-debuglayer-node-highlight.png width=128px
+@image html ui-debuglayer-node-inspect.png width=128px
 
-@include ui-debuglayer-node-highlight.ansi
+@include ui-debuglayer-node-inspect.ansi
 
 With @ref DebugLayerSource::NodeLayouts and
 @relativeref{DebugLayerSource,NodeAnimations} you can list also layouts and
 animations attached to particular nodes. The @ref Ui::Button doesn't have any
 by default.
 
-@subsection Ui-DebugLayer-node-highlight-naming Naming nodes, layers, layouters and animators
+@subsection Ui-DebugLayer-node-inspect-naming Naming nodes, layers, layouters and animators
 
 In the details we can see that the node is placed somewhere and it has four
 data attachments. Because the widget is simple we can assume it's the
@@ -313,16 +313,16 @@ particular nodes.
 
 @snippet ui-debuglayer.cpp button-names
 
-Highlighting the same node then groups the data by layer, showing them in the
+Inspecting the same node then groups the data by layer, showing them in the
 order they're drawn. Besides the names now being listed in the printed details,
 you can query them back with @ref layerName() and @ref nodeName().
 
-@include ui-debuglayer-node-highlight-names.ansi
+@include ui-debuglayer-node-inspect-names.ansi
 
 Similarly to layers, @ref setLayouterName() and @ref setAnimatorName() can name
 layouters and animators.
 
-@subsection Ui-DebugLayer-node-highlight-node-details Showing details about node data, layouts and animations
+@subsection Ui-DebugLayer-node-inspect-node-details Showing details about node data, layouts and animations
 
 Enabling @ref DebugLayerSource::NodeDataDetails in addition to
 @relativeref{DebugLayerSource,NodeData} makes use of debug integration
@@ -331,7 +331,7 @@ and other layers derived from @ref AbstractVisualLayer this makes the output
 show also style assignment as well as any style transitions, if present. In
 case of @ref EventLayer it shows the event that's being handled:
 
-@include ui-debuglayer-node-highlight-details.ansi
+@include ui-debuglayer-node-inspect-details.ansi
 
 The way this works is that by passing a concrete layer type, the
 @ref setLayerName(const T&, const Containers::StringView&) overload gets picked
@@ -350,48 +350,48 @@ inner class. Then, @ref DebugLayerSource::NodeAnimationDetails enables this for
 for animators that implement a @ref AbstractAnimator::DebugIntegration inner
 class, which is the case for example with @ref NodeAnimator.
 
-@subsection Ui-DebugLayer-node-highlight-options Node highlight options
+@subsection Ui-DebugLayer-node-inspect-options Node inspect options
 
-Node highlight has defaults chosen in a way that makes the highlight clearly
+Node inspect has defaults chosen in a way that makes the highlight clearly
 visible on most backgrounds, and with the pointer gesture unique enough to not
 conflict with usual event handlers. You can change both with
-@ref setNodeHighlightColor() and @ref setNodeHighlightGesture().
+@ref setNodeInspectColor() and @ref setNodeInspectGesture().
 
 The default set of accepted gestures *does not* include touch input however, as
 on a touch device it usually isn't possible to press any modifier keys to
 distinguish a "debug tap" from a regular tap. It's however possible to use
 @ref addFlags() and @ref clearFlags() to enable
-@ref DebugLayerFlag::NodeHighlight only temporarily and during that time accept
+@ref DebugLayerFlag::NodeInspect only temporarily and during that time accept
 touches without any modifiers, for example in a response to some action in the
 UI that enables some sort of a debug mode:
 
-@snippet Ui.cpp DebugLayer-node-highlight-touch
+@snippet Ui.cpp DebugLayer-node-inspect-touch
 
-Besides visual highlighting using a pointer, @ref highlightNode() allows to
-highlight a node programmatically.
+Besides visual inspection using a pointer, @ref inspectNode() allows to
+inspect a node programmatically.
 
-Finally, while the highlighted node details are by default printed to
+Finally, while the inspected node details are by default printed to
 @relativeref{Magnum,Debug}, a console might not be always accessible. In that
 case you can direct the message to a callback using
-@ref setNodeHighlightCallback(), and populate for example a @ref Label directly
+@ref setNodeInspectCallback(), and populate for example a @ref Label directly
 in the UI with it instead. The callback also gets called with an empty string
 when the highlight is removed, which can be used to hide the label again. For
 example:
 
-@snippet Ui.cpp DebugLayer-node-highlight-callback
+@snippet Ui.cpp DebugLayer-node-inspect-callback
 
-@subsection Ui-DebugLayer-node-highlight-limitations Limitations
+@subsection Ui-DebugLayer-node-inspect-limitations Limitations
 
-Currently, it's only possible to visually highlight nodes that are visible and
+Currently, it's only possible to visually inspect nodes that are visible and
 are neither @ref NodeFlag::Disabled nor @ref NodeFlag::NoEvents, To help with
 their discovery a bit at least, clicking their (event-accepting) parent will
 list how many children are hidden, disabled or not accepting events.
-Highlighting such nodes is only possible by passing their handle to
-@ref highlightNode().
+Inspecting such nodes is only possible by passing their handle to
+@ref inspectNode().
 
 Additionally, if a top-level node covers other nodes but is otherwise invisible
-and doesn't react to events in any way, with @ref DebugLayerFlag::NodeHighlight
-it will become highlightable and it won't be possible to highlight any nodes
+and doesn't react to events in any way, with @ref DebugLayerFlag::NodeInspect
+it will become inspectable and it won't be possible to inspect any nodes
 underneath. Presence of such a node in the UI is usually accidental, currently
 the workaround is to either restrict its size to cover only the necessary area,
 move it behind other nodes in the @ref Ui-AbstractUserInterface-nodes-order "top-level node hierarchy"
@@ -408,7 +408,7 @@ a certain startup option, such as is the case with `--debug` in
 
 Another way is to create it with no @ref DebugLayerFlag present, and enable
 them temporarily only if some debug mode is activated, similarly to
-@ref Ui-DebugLayer-node-highlight-options "what was shown for touch input above".
+@ref Ui-DebugLayer-node-inspect-options "what was shown for touch input above".
 Such setup will however still make it track all enabled @ref DebugLayerSource
 bits all the time. To avoid this, it's also possible to defer the layer
 creation and setup to the point when it's actually needed, and then destroy it
@@ -422,7 +422,7 @@ To make a custom layer provide detailed info for
 @relativeref{AbstractLayer,DebugIntegration} containing at least a
 @relativeref{DebugIntegration,print()} function. In the following snippet, a
 layer that exposes per-data color has the color printed in the
-@ref DebugLayerFlag::NodeHighlight output. To make the output fit with the
+@ref DebugLayerFlag::NodeInspect output. To make the output fit with the
 other text, it's expected to be indented and end with a newline:
 
 @snippet ui-debuglayer.cpp integration
@@ -524,7 +524,7 @@ class MAGNUM_UI_EXPORT DebugLayer: public AbstractLayer {
          * which @ref DebugLayerSource is expected to be enabled for a
          * particular feature.
          *
-         * If a node was highlighted and @ref DebugLayerFlag::NodeHighlight was
+         * If a node was inspect and @ref DebugLayerFlag::NodeInspect was
          * cleared by calling this function, the highlight gets removed.  The
          * function doesn't print anything, but if a callback is set, it's
          * called with an empty string. Additionally, if the layer is
@@ -828,123 +828,122 @@ class MAGNUM_UI_EXPORT DebugLayer: public AbstractLayer {
         /** @overload */
         template<class T> DebugLayer& setAnimatorName(const T& animator, const Containers::StringView& name, typename T::DebugIntegration&& integration);
 
-        /** @brief Node highlight color */
-        Color4 nodeHighlightColor() const;
+        /** @brief Node inspect color */
+        Color4 nodeInspectColor() const;
 
         /**
-         * @brief Set node highlight color
+         * @brief Set node inspect color
          * @return Reference to self (for method chaining)
          *
-         * Used only if @ref DebugLayerFlag::NodeHighlight is enabled and if
-         * the layer is instantiated as @ref DebugLayerGL to be able to draw
-         * the highlight rectangle, ignored otherwise. Default is
+         * Used only if @ref DebugLayerFlag::NodeInspect is enabled and if the
+         * layer is instantiated as @ref DebugLayerGL to be able to draw the
+         * highlight rectangle, ignored otherwise. Default is
          * @cpp 0xff00ffff_rgbaf*0.5f @ce.
          *
          * If the layer is instantiated as @ref DebugLayerGL, calling this
          * function causes @ref LayerState::NeedsDataUpdate to be set.
-         * @see @ref setNodeHighlightGesture(),
-         *      @ref setNodeHighlightCallback()
+         * @see @ref setNodeInspectGesture(), @ref setNodeInspectCallback()
          */
-        DebugLayer& setNodeHighlightColor(const Color4& color);
+        DebugLayer& setNodeInspectColor(const Color4& color);
 
-        /** @brief Node highlight gesture */
-        Containers::Pair<Pointers, Modifiers> nodeHighlightGesture() const;
+        /** @brief Node inspect gesture */
+        Containers::Pair<Pointers, Modifiers> nodeInspectGesture() const;
 
         /**
-         * @brief Set node highlight gesture
+         * @brief Set node inspect gesture
          * @return Reference to self (for method chaining)
          *
-         * Used only if @ref DebugLayerFlag::NodeHighlight is enabled, ignored
-         * otherwise. A highlight happens on a press of a pointer that's among
+         * Used only if @ref DebugLayerFlag::NodeInspect is enabled, ignored
+         * otherwise. An inspect happens on a press of a pointer that's among
          * @p pointers with modifiers being exactly @p modifiers. Pressing on a
          * different node moves the highlight to the other node, pressing on a
-         * node that's currently highlighted removes the highlight. Expects
+         * node that's currently being inspected removes the highlight. Expects
          * that @p pointers are non-empty. Default is a combination of
          * @ref Pointer::MouseRight and @ref Pointer::Eraser, and
          * @ref Modifier::Ctrl, i.e. pressing either
          * @m_class{m-label m-warning} **Ctrl**
          * @m_class{m-label m-default} **right mouse button** or
          * @m_class{m-label m-warning} **Ctrl**
-         * @m_class{m-label m-default} **pen eraser** will highlight a node under
-         * the pointer. The currently highlighted node is available in
-         * @ref currentHighlightedNode(), you can also use @ref highlightNode()
-         * to perform a node highlight programmatically.
-         * @see @ref setNodeHighlightColor(),
-         *      @ref setNodeHighlightCallback()
+         * @m_class{m-label m-default} **pen eraser** will inspect a node under
+         * the pointer. The currently inspected node is available in
+         * @ref currentInspectedNode(), you can also use @ref inspectNode() to
+         * perform a node inspect programmatically.
+         * @see @ref setNodeInspectColor(),
+         *      @ref setNodeInspectCallback()
          */
-        DebugLayer& setNodeHighlightGesture(Pointers pointers, Modifiers modifiers);
+        DebugLayer& setNodeInspectGesture(Pointers pointers, Modifiers modifiers);
 
-        /** @brief Whether a node highlight callback is set */
-        bool hasNodeHighlightCallback() const;
+        /** @brief Whether a node inspect callback is set */
+        bool hasNodeInspectCallback() const;
 
         /**
-         * @brief Set node highlight callback
+         * @brief Set node inspect callback
          * @return Reference to self (for method chaining)
          *
-         * Used only if @ref DebugLayerFlag::NodeHighlight is enabled, ignored
+         * Used only if @ref DebugLayerFlag::NodeInspect is enabled, ignored
          * otherwise. The @p callback receives a UTF-8 @p message with details
          * when a highlight happens on a pointer press, and an empty string if
          * a highlight is removed again. If not empty, the @p message is
          * guaranteed to be @relativeref{Corrade,Containers::StringViewFlag::NullTerminated}.
          *
          * If the callback is not set or if set to @cpp nullptr @ce, details
-         * about the highlighted node are printed to @relativeref{Magnum,Debug}
+         * about the inspected node are printed to @relativeref{Magnum,Debug}
          * instead.
-         * @see @ref setNodeHighlightColor(),
-         *      @ref setNodeHighlightGesture()
+         * @see @ref setNodeInspectColor(),
+         *      @ref setNodeInspectGesture()
          */
-        DebugLayer& setNodeHighlightCallback(Containers::Function<void(Containers::StringView message)>&& callback);
+        DebugLayer& setNodeInspectCallback(Containers::Function<void(Containers::StringView message)>&& callback);
 
         /**
-         * @brief Node highlighted by last pointer press
+         * @brief Node inspected by last pointer press
          *
-         * Expects that @ref DebugLayerFlag::NodeHighlight is enabled. If no
-         * node is currently highlighted, returns @ref NodeHandle::Null.
+         * Expects that @ref DebugLayerFlag::NodeInspect is enabled. If no node
+         * is currently being inspected, returns @ref NodeHandle::Null.
          *
          * The returned handle may be invalid if the node or any of its parents
          * were removed and @ref AbstractUserInterface::clean() wasn't called
          * since.
          */
-        NodeHandle currentHighlightedNode() const;
+        NodeHandle currentInspectedNode() const;
 
         /**
-         * @brief Highlight a node
+         * @brief Inspect a node
          *
-         * Expects that @ref DebugLayerFlag::NodeHighlight is enabled and the
+         * Expects that @ref DebugLayerFlag::NodeInspect is enabled and the
          * layer has been already passed to
          * @ref AbstractUserInterface::setLayerInstance().
          *
          * If @p node is a known handle, the function performs similarly to the
-         * node highlight gesture using a pointer press ---
-         * @ref currentHighlightedNode() is set to @p node, details about the
+         * node inspect gesture using a pointer press ---
+         * @ref currentInspectedNode() is set to @p node, details about the
          * node are printed to @relativeref{Magnum,Debug} or passed to a
-         * callback if set, the node is visually higlighted if this is a
+         * callback if set, the node is visually highlighted if this is a
          * @ref DebugLayerGL instance, and the function returns @cpp true @ce.
          *
          * If @p node is @ref NodeHandle::Null or it's not a known handle (for
          * example an invalid handle of a now-removed node, or a handle of a
          * newly created node but @ref AbstractUserInterface::update() wasn't
-         * called since) and there's a current highlight, it's removed. The
-         * function doesn't print anything, but if a callback is set, it's
-         * called with an empty string. If there's no current highlight, the
-         * callback isn't called. The functions returns @cpp true @ce if
-         * @p node is @ref NodeHandle::Null and @cpp false @ce if the handle is
-         * unknown.
+         * called since) and there's a currently inspected node, its highlight
+         * is removed. The function doesn't print anything, but if a callback
+         * is set, it's called with an empty string. If there's no currently
+         * inspected node, the  callback isn't called. The functions returns
+         * @cpp true @ce if @p node is @ref NodeHandle::Null and @cpp false @ce
+         * if the handle is unknown.
          *
-         * Note that, compared to the node highlight gesture, where the node
+         * Note that, compared to the node inspect gesture, where the node
          * details are always extracted from an up-to-date UI state, this
          * function only operates with the state known at the last call to
          * @ref AbstractUserInterface::update(). As such, for example nodes or
          * layers added since the last update won't be included in the output.
          *
          * If the layer is instantiated as @ref DebugLayerGL and @p node is
-         * different from the previously highlighted node, calling this
-         * function causes @ref LayerState::NeedsDataUpdate to be set.
-         * @see @ref setNodeHighlightColor()
-         *      @ref setNodeHighlightGesture(),
-         *      @ref setNodeHighlightCallback()
+         * different from the previously inspected node, calling this function
+         * causes @ref LayerState::NeedsDataUpdate to be set.
+         * @see @ref setNodeInspectColor()
+         *      @ref setNodeInspectGesture(),
+         *      @ref setNodeInspectCallback()
          */
-        bool highlightNode(NodeHandle node);
+        bool inspectNode(NodeHandle node);
 
     #ifdef DOXYGEN_GENERATING_OUTPUT
     private:

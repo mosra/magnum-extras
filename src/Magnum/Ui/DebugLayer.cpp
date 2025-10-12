@@ -133,7 +133,7 @@ Debug& operator<<(Debug& debug, const DebugLayerFlag value) {
     switch(value) {
         /* LCOV_EXCL_START */
         #define _c(value) case DebugLayerFlag::value: return debug << "::" #value;
-        _c(NodeHighlight)
+        _c(NodeInspect)
         _c(ColorOff)
         _c(ColorAlways)
         #undef _c
@@ -145,15 +145,15 @@ Debug& operator<<(Debug& debug, const DebugLayerFlag value) {
 
 Debug& operator<<(Debug& debug, const DebugLayerFlags value) {
     return Containers::enumSetDebugOutput(debug, value, "Ui::DebugLayerFlags{}", {
-        DebugLayerFlag::NodeHighlight,
+        DebugLayerFlag::NodeInspect,
         DebugLayerFlag::ColorOff,
         DebugLayerFlag::ColorAlways,
     });
 }
 
 DebugLayer::State::State(const DebugLayerSources sources, const DebugLayerFlags flags): sources{sources}, flags{flags} {
-    CORRADE_ASSERT(!(flags >= DebugLayerFlag::NodeHighlight) || sources >= DebugLayerSource::Nodes,
-        "Ui::DebugLayer:" << DebugLayerSource::Nodes << "has to be enabled for" << DebugLayerFlag::NodeHighlight, );
+    CORRADE_ASSERT(!(flags >= DebugLayerFlag::NodeInspect) || sources >= DebugLayerSource::Nodes,
+        "Ui::DebugLayer:" << DebugLayerSource::Nodes << "has to be enabled for" << DebugLayerFlag::NodeInspect, );
 }
 
 /** @todo could also not allocate any state if no flags are set, to make it
@@ -189,24 +189,24 @@ DebugLayerFlags DebugLayer::flags() const { return _state->flags; }
 
 DebugLayer& DebugLayer::setFlags(const DebugLayerFlags flags) {
     State& state = *_state;
-    CORRADE_ASSERT(!(flags >= DebugLayerFlag::NodeHighlight) || state.sources >= DebugLayerSource::Nodes,
-        "Ui::DebugLayer::setFlags():" << DebugLayerSource::Nodes << "has to be enabled for" << DebugLayerFlag::NodeHighlight, *this);
+    CORRADE_ASSERT(!(flags >= DebugLayerFlag::NodeInspect) || state.sources >= DebugLayerSource::Nodes,
+        "Ui::DebugLayer::setFlags():" << DebugLayerSource::Nodes << "has to be enabled for" << DebugLayerFlag::NodeInspect, *this);
 
-    /* If a node is highlighted and NodeHighlight was cleared from flags,
-       remove the highlight */
-    if(state.currentHighlightedNode != NodeHandle::Null && (state.flags & DebugLayerFlag::NodeHighlight) && !(flags & DebugLayerFlag::NodeHighlight)) {
-        state.currentHighlightedNode = NodeHandle::Null;
+    /* If a node is inspected and NodeInspect was cleared from flags, remove
+       the highlight */
+    if(state.currentInspectedNode != NodeHandle::Null && (state.flags & DebugLayerFlag::NodeInspect) && !(flags & DebugLayerFlag::NodeInspect)) {
+        state.currentInspectedNode = NodeHandle::Null;
 
-        /* If a highlight callback is set up, call it with an empty string to
+        /* If an inspect callback is set up, call it with an empty string to
            signal that the highlight is removed */
-        if(state.nodeHighlightCallback)
-            state.nodeHighlightCallback({});
+        if(state.nodeInspectCallback)
+            state.nodeInspectCallback({});
 
         /* If we're drawing the highlight, trigger an update. No actual data
            upload needs to happen, it's just to schedule a redraw */
         /** @todo once NeedsDraw or some such exists, only the
-            highlightedNodeDrawOffset needs to be cleared, update() doesn't
-            need to be called */
+            inspectedNodeDrawOffset needs to be cleared, update() doesn't need
+            to be called */
         if(doFeatures() >= LayerFeature::Draw) {
             state.highlightedNodeDrawOffset = ~std::size_t{};
             setNeedsUpdate(LayerState::NeedsDataUpdate);
@@ -469,12 +469,12 @@ void** DebugLayer::setLayouterNameDebugIntegration(const AbstractLayouter& insta
     } else return nullptr;
 }
 
-Color4 DebugLayer::nodeHighlightColor() const {
-    return _state->nodeHighlightColor;
+Color4 DebugLayer::nodeInspectColor() const {
+    return _state->nodeInspectColor;
 }
 
-DebugLayer& DebugLayer::setNodeHighlightColor(const Color4& color) {
-    _state->nodeHighlightColor = color;
+DebugLayer& DebugLayer::setNodeInspectColor(const Color4& color) {
+    _state->nodeInspectColor = color;
 
     /* If this is a subclass that draws, trigger an update so the highlight
        rectangle is shown or hidden as appropriate */
@@ -484,50 +484,50 @@ DebugLayer& DebugLayer::setNodeHighlightColor(const Color4& color) {
     return *this;
 }
 
-Containers::Pair<Pointers, Modifiers> DebugLayer::nodeHighlightGesture() const {
-    return {_state->nodeHighlightPointers, _state->nodeHighlightModifiers};
+Containers::Pair<Pointers, Modifiers> DebugLayer::nodeInspectGesture() const {
+    return {_state->nodeInspectPointers, _state->nodeInspectModifiers};
 }
 
-DebugLayer& DebugLayer::setNodeHighlightGesture(const Pointers pointers, const Modifiers modifiers) {
+DebugLayer& DebugLayer::setNodeInspectGesture(const Pointers pointers, const Modifiers modifiers) {
     CORRADE_ASSERT(pointers,
-        "Ui::DebugLayer::setNodeHighlightGesture(): expected at least one pointer", *this);
-    _state->nodeHighlightPointers = pointers;
-    _state->nodeHighlightModifiers = modifiers;
+        "Ui::DebugLayer::setNodeInspectGesture(): expected at least one pointer", *this);
+    _state->nodeInspectPointers = pointers;
+    _state->nodeInspectModifiers = modifiers;
     return *this;
 }
 
-bool DebugLayer::hasNodeHighlightCallback() const {
-    return !!_state->nodeHighlightCallback;
+bool DebugLayer::hasNodeInspectCallback() const {
+    return !!_state->nodeInspectCallback;
 }
 
-DebugLayer& DebugLayer::setNodeHighlightCallback(Containers::Function<void(Containers::StringView)>&& callback) {
-    _state->nodeHighlightCallback = Utility::move(callback);
+DebugLayer& DebugLayer::setNodeInspectCallback(Containers::Function<void(Containers::StringView)>&& callback) {
+    _state->nodeInspectCallback = Utility::move(callback);
     return *this;
 }
 
-NodeHandle DebugLayer::currentHighlightedNode() const {
+NodeHandle DebugLayer::currentInspectedNode() const {
     const State& state = *_state;
-    CORRADE_ASSERT(state.flags >= DebugLayerFlag::NodeHighlight,
-        "Ui::DebugLayer::currentHighlightedNode():" << DebugLayerFlag::NodeHighlight << "not enabled", {});
-    return state.currentHighlightedNode;
+    CORRADE_ASSERT(state.flags >= DebugLayerFlag::NodeInspect,
+        "Ui::DebugLayer::currentInspectedNode():" << DebugLayerFlag::NodeInspect << "not enabled", {});
+    return state.currentInspectedNode;
 }
 
-bool DebugLayer::highlightNode(const NodeHandle handle) {
+bool DebugLayer::inspectNode(const NodeHandle handle) {
     State& state = *_state;
-    CORRADE_ASSERT(state.flags >= DebugLayerFlag::NodeHighlight,
-        "Ui::DebugLayer::highlightNode():" << DebugLayerFlag::NodeHighlight << "not enabled", {});
+    CORRADE_ASSERT(state.flags >= DebugLayerFlag::NodeInspect,
+        "Ui::DebugLayer::inspectNode():" << DebugLayerFlag::NodeInspect << "not enabled", {});
     CORRADE_ASSERT(hasUi(),
-        "Ui::DebugLayer::highlightNode(): layer not part of a user interface", {});
+        "Ui::DebugLayer::inspectNode(): layer not part of a user interface", {});
     const AbstractUserInterface& ui = this->ui();
 
-    /* If the handle is null or unknown, reset the currently highlighted node
-       and call the callback with an empty string. Return true only for null,
-       false indicates unknown node. */
+    /* If the handle is null or unknown, reset the currently inspected node and
+       call the callback with an empty string. Return true only for null, false
+       indicates unknown node. */
     if(handle == NodeHandle::Null || nodeHandleId(handle) >= state.nodes.size() || state.nodes[nodeHandleId(handle)].handle != handle) {
-        if(state.currentHighlightedNode != NodeHandle::Null) {
-            state.currentHighlightedNode = NodeHandle::Null;
-            if(state.nodeHighlightCallback)
-                state.nodeHighlightCallback({});
+        if(state.currentInspectedNode != NodeHandle::Null) {
+            state.currentInspectedNode = NodeHandle::Null;
+            if(state.nodeInspectCallback)
+                state.nodeInspectCallback({});
             /* If this is a subclass that draws, trigger an update so the
                highlight rectangle is hidden as appropriate */
             if(doFeatures() >= LayerFeature::Draw)
@@ -547,9 +547,9 @@ bool DebugLayer::highlightNode(const NodeHandle handle) {
                 - Either we have a callback output (which obv. isn't a TTY)
                 - Or we have an output that isn't a TTY */
         const Debug::Flags disableColors =
-            state.flags >= DebugLayerFlag::ColorOff || (!(state.flags >= DebugLayerFlag::ColorAlways) && (state.nodeHighlightCallback || !Debug::isTty())) ?
+            state.flags >= DebugLayerFlag::ColorOff || (!(state.flags >= DebugLayerFlag::ColorAlways) && (state.nodeInspectCallback || !Debug::isTty())) ?
                 Debug::Flag::DisableColors : Debug::Flags{};
-        Debug debug = state.nodeHighlightCallback ?
+        Debug debug = state.nodeInspectCallback ?
             Debug{&out, Debug::Flag::NoNewlineAtTheEnd|disableColors} :
             Debug{Debug::Flag::NoNewlineAtTheEnd|disableColors};
         const Implementation::DebugLayerNode& node = state.nodes[nodeHandleId(handle)];
@@ -594,10 +594,10 @@ bool DebugLayer::highlightNode(const NodeHandle handle) {
             UnsignedInt noEventChildCount = 0;
             for(const Implementation::DebugLayerNode& childNode: state.nodes) {
                 /* Skip nodes that are null (i.e., free slots after removed
-                   nodes), nodes that aren't valid (if highlightNode() is
-                   called, there may be nodes that are already removed but
-                   DebugLayer doesn't know about that yet), and nodes that
-                   aren't children of this node */
+                   nodes), nodes that aren't valid (if inspectNode() is called,
+                   there may be nodes that are already removed but DebugLayer
+                   doesn't know about that yet), and nodes that aren't children
+                   of this node */
                 if(childNode.handle == NodeHandle::Null ||
                    !ui.isHandleValid(childNode.handle) ||
                    ui.nodeParent(childNode.handle) != handle)
@@ -631,7 +631,7 @@ bool DebugLayer::highlightNode(const NodeHandle handle) {
             bool hasNamedLayers = false;
             for(LayerHandle layerHandle = ui.layerFirst(); layerHandle != LayerHandle::Null; layerHandle = ui.layerNext(layerHandle)) {
                 /* Skip the debug layer itself, layers that have no instance
-                   and layers we don't know about yet (if highlightNode() is
+                   and layers we don't know about yet (if inspectNode() is
                    called, there may be layers that are yet unknown to the
                    DebugLayer, either ones with IDs outside of the state.layers
                    bounds or ones that got removed and the slot reused for
@@ -687,7 +687,7 @@ bool DebugLayer::highlightNode(const NodeHandle handle) {
             bool hasNamedLayouters = false;
             for(LayouterHandle layouterHandle = ui.layouterFirst(); layouterHandle != LayouterHandle::Null; layouterHandle = ui.layouterNext(layouterHandle)) {
                 /* Skip layouters that have no instance and layouters we don't
-                   know about yet (if highlightNode() is called, there may be
+                   know about yet (if inspectNode() is called, there may be
                    layouters that are yet unknown to the DebugLayer, either
                    ones with IDs outside of the state.layouters bounds or ones
                    that got removed and the slot reused for others). Since
@@ -744,8 +744,8 @@ bool DebugLayer::highlightNode(const NodeHandle handle) {
             bool hasNamedAnimators = false;
             for(UnsignedInt animatorId = 0; animatorId != state.animators.size(); ++animatorId) {
                 /* Skip animators that are freed or that we don't know about
-                   yet (if highlightNode() is called, there may be animators
-                   that are yet unknown to the DebugLayer, either ones with IDs
+                   yet (if inspectNode() is called, there may be animators that
+                   are yet unknown to the DebugLayer, either ones with IDs
                    outside of the state.animators bounds or ones that got
                    removed and the slot reused for others), and animators that
                    have no instance */
@@ -805,8 +805,8 @@ bool DebugLayer::highlightNode(const NodeHandle handle) {
         }
     }
 
-    if(state.currentHighlightedNode != handle) {
-        state.currentHighlightedNode = handle;
+    if(state.currentInspectedNode != handle) {
+        state.currentInspectedNode = handle;
         /* If this is a subclass that draws and the handle differs, trigger an
            update so the highlight rectangle is shown or hidden as
            appropriate */
@@ -817,7 +817,7 @@ bool DebugLayer::highlightNode(const NodeHandle handle) {
     /* At this point the debug output redirection is no longer active so we can
        pass the result to the callback without the redirection being active
        even in the callback */
-    if(state.nodeHighlightCallback) {
+    if(state.nodeInspectCallback) {
         /* Be nice and make the output null-terminated and without the trailing
            newline. Ideally we wouldn't print the newline at all but it's hard
            to achieve, especially with externally supplied DebugIntegration
@@ -829,14 +829,14 @@ bool DebugLayer::highlightNode(const NodeHandle handle) {
         CORRADE_ASSERT(out.hasSuffix("\n"),
             "Ui::DebugLayer: expected DebugIntegration::print() to end with a newline but got" << out.suffix(out.findLast('\n').end()).trimmedPrefix(), {});
         out.back() = '\0';
-        state.nodeHighlightCallback({out.exceptSuffix("\0"_s), Containers::StringViewFlag::NullTerminated});
+        state.nodeInspectCallback({out.exceptSuffix("\0"_s), Containers::StringViewFlag::NullTerminated});
     }
 
     return true;
 }
 
 LayerFeatures DebugLayer::doFeatures() const {
-    /* The events are used only if NodeHighlight is enabled, but while that can
+    /* The events are used only if NodeInspect is enabled, but while that can
        be toggled at runtime, the value returned from features() shouldn't
        change so they're reported always */
     return LayerFeature::Event;
@@ -852,10 +852,10 @@ LayerStates DebugLayer::doState() const {
 }
 
 void DebugLayer::doClean(const Containers::BitArrayView dataIdsToRemove) {
-    /* Clear the currently highlighted node if there is one and it's among the
+    /* Clear the currently inspected node if there is one and it's among the
        data IDs to remove */
     State& state = *_state;
-    if(state.currentHighlightedNode != NodeHandle::Null) {
+    if(state.currentInspectedNode != NodeHandle::Null) {
         /* At this point the `highlightData` is valid if and only if it's not
            present in `dataIdsToRemove`. The doClean() gets called only once
            AbstractLayer already removes the marked data, thus for all set bits
@@ -864,10 +864,10 @@ void DebugLayer::doClean(const Containers::BitArrayView dataIdsToRemove) {
            for node removal / creation, so it should never contain handles that
            became invalid earlier than in the immediately preceding clean
            call. */
-        const LayerDataHandle data = state.nodes[nodeHandleId(state.currentHighlightedNode)].highlightData;
+        const LayerDataHandle data = state.nodes[nodeHandleId(state.currentInspectedNode)].highlightData;
         if(data != LayerDataHandle::Null) {
             if(dataIdsToRemove[layerDataHandleId(data)]) {
-                state.currentHighlightedNode = NodeHandle::Null;
+                state.currentInspectedNode = NodeHandle::Null;
             }
             CORRADE_INTERNAL_ASSERT(isHandleValid(data) == !dataIdsToRemove[layerDataHandleId(data)]);
         }
@@ -907,12 +907,12 @@ void DebugLayer::doPreUpdate(LayerStates) {
                     node.handle = handle;
             }
 
-            /* If node highlight is enabled, create new data if the node
-               doesn't have it yet. Data for removed nodes are pruned
-               automatically in clean() and we're replacing the whole
-               DebugLayerNode contents above so the highlightData handle is
-               always either valid or null. */
-            if(state.flags >= DebugLayerFlag::NodeHighlight && node.handle != NodeHandle::Null && node.highlightData == LayerDataHandle::Null) {
+            /* If node inspect is enabled, create new data if the node doesn't
+               have it yet. Data for removed nodes are pruned automatically in
+               clean() and we're replacing the whole DebugLayerNode contents
+               above so the highlightData handle is always either valid or
+               null. */
+            if(state.flags >= DebugLayerFlag::NodeInspect && node.handle != NodeHandle::Null && node.highlightData == LayerDataHandle::Null) {
                 CORRADE_INTERNAL_DEBUG_ASSERT(ui.isHandleValid(handle));
                 node.handle = handle;
                 node.highlightData = dataHandleData(create(handle));
@@ -996,18 +996,18 @@ void DebugLayer::doUpdate(const LayerStates states, const Containers::StridedArr
 
     State& state = *_state;
 
-    /* If there's no current highlighted node, there's nothing to draw */
-    if(state.currentHighlightedNode == NodeHandle::Null) {
+    /* If there's no currently inspected node, there's nothing to draw */
+    if(state.currentInspectedNode == NodeHandle::Null) {
         state.highlightedNodeDrawOffset = ~std::size_t{};
 
-    /* Otherwise, if anything that affects the current highlighted node needs
-       to be updated, find the highlighted node among the data IDs (if there at
+    /* Otherwise, if anything that affects the current inspected node needs to
+       be updated, find the highlighted node among the data IDs (if there at
        all) and remember its index to know when to draw */
     } else if(states >= LayerState::NeedsDataUpdate ||
               states >= LayerState::NeedsNodeOffsetSizeUpdate ||
               states >= LayerState::NeedsNodeOrderUpdate)
     {
-        const UnsignedInt highlightedDataId = layerDataHandleId(state.nodes[nodeHandleId(state.currentHighlightedNode)].highlightData);
+        const UnsignedInt highlightedDataId = layerDataHandleId(state.nodes[nodeHandleId(state.currentInspectedNode)].highlightData);
         state.highlightedNodeDrawOffset = ~std::size_t{};
         for(std::size_t i = 0; i != dataIds.size(); ++i) if(dataIds[i] == highlightedDataId) {
             state.highlightedNodeDrawOffset = i;
@@ -1015,9 +1015,9 @@ void DebugLayer::doUpdate(const LayerStates states, const Containers::StridedArr
         }
     }
 
-    /* If there's any highlighted node and anything changed for it, regenerate
+    /* If there's any inspected node and anything changed for it, regenerate
        vertex data. In particular, if only NeedsNodeOrderUpdate is set, only
-       the highlightedNodeDrawOffset changes, vertex data don't need any
+       the inspectedNodeDrawOffset changes, vertex data don't need any
        update. */
     if(state.highlightedNodeDrawOffset != ~std::size_t{} &&
        (states >= LayerState::NeedsDataUpdate ||
@@ -1026,37 +1026,37 @@ void DebugLayer::doUpdate(const LayerStates states, const Containers::StridedArr
         /* We'll be drawing a triangle strip, which is ordered 012 123 and thus
            the usual lerp()'d winding would be clockwise. Flip the Y coordinate
            to make it CCW. */
-        const UnsignedInt highlightedNodeId = nodeHandleId(state.currentHighlightedNode);
+        const UnsignedInt highlightedNodeId = nodeHandleId(state.currentInspectedNode);
         Vector2 min = nodeOffsets[highlightedNodeId];
         Vector2 max = min + nodeSizes[highlightedNodeId];
         Utility::swap(min.y(), max.y());
         for(UnsignedByte i = 0; i != 4; ++i) {
             /* ✨ */
             state.highlightedNodeVertices[i].position = Math::lerp(min, max, BitVector2{i});
-            state.highlightedNodeVertices[i].color = state.nodeHighlightColor;
+            state.highlightedNodeVertices[i].color = state.nodeInspectColor;
         }
     }
 }
 
 void DebugLayer::doPointerPressEvent(const UnsignedInt dataId, PointerEvent& event) {
-    /* Accept presses only if node highlight is enabled, the pointer is among
-       one of the expected, is primary and the modifiers match exactly */
+    /* Accept presses only if node inspect is enabled, the pointer is among one
+       of the expected, is primary and the modifiers match exactly */
     State& state = *_state;
-    if(!(state.flags >= DebugLayerFlag::NodeHighlight) ||
+    if(!(state.flags >= DebugLayerFlag::NodeInspect) ||
        !event.isPrimary() ||
-       !(event.pointer() <= state.nodeHighlightPointers) ||
-       event.modifiers() != state.nodeHighlightModifiers)
+       !(event.pointer() <= state.nodeInspectPointers) ||
+       event.modifiers() != state.nodeInspectModifiers)
         return;
 
-    /* If the node that's clicked on is currently highlighted, remove the
+    /* If the node that's clicked on is currently being inspected, remove the
        highlight and exit. In case a callback is set, call it with an empty
        string to notify it that it's no longer desirable to show the
        details. */
     const NodeHandle nodeHandle = nodes()[dataId];
-    if(state.currentHighlightedNode == nodeHandle)
-        highlightNode(NodeHandle::Null);
+    if(state.currentInspectedNode == nodeHandle)
+        inspectNode(NodeHandle::Null);
     else
-        highlightNode(nodeHandle);
+        inspectNode(nodeHandle);
 
     /* Accept the event to prevent it from propagating to other nodes, even in
        case we're clicking second time to remove the highlight */

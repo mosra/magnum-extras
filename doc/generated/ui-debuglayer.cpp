@@ -182,7 +182,7 @@ int UiDebugLayer::exec() {
         .setSize({128.0f, 48.0f}, Vector2{ImageSize}, ImageSize)
         .setStyle(Ui::McssDarkStyle{});
 
-    Ui::DebugLayer& debugLayerHierarchy = ui.setLayerInstance(Containers::pointer<Ui::DebugLayerGL>(ui.createLayer(), Ui::DebugLayerSource::NodeDataDetails|Ui::DebugLayerSource::NodeHierarchy, Ui::DebugLayerFlag::NodeHighlight|Ui::DebugLayerFlag::ColorAlways));
+    Ui::DebugLayer& debugLayerHierarchy = ui.setLayerInstance(Containers::pointer<Ui::DebugLayerGL>(ui.createLayer(), Ui::DebugLayerSource::NodeDataDetails|Ui::DebugLayerSource::NodeHierarchy, Ui::DebugLayerFlag::NodeInspect|Ui::DebugLayerFlag::ColorAlways));
 
     /* Button code, default visual state with no highlight. Adding some extra
        nodes and data to have the listed handles non-trivial. */
@@ -216,14 +216,14 @@ ui.eventLayer().onTapOrClick(button, []{
     Containers::String out;
     {
         Debug redirectOutput{&out};
-        CORRADE_INTERNAL_ASSERT(debugLayerHierarchy.highlightNode(button));
+        CORRADE_INTERNAL_ASSERT(debugLayerHierarchy.inspectNode(button));
     }
     Debug{} << out;
-    Utility::Path::write("ui-debuglayer-node-highlight.ansi", out);
+    Utility::Path::write("ui-debuglayer-node-inspect.ansi", out);
 
     ui.renderer().compositingFramebuffer().clearColor(0, 0x00000000_rgbaf);
     ui.draw();
-    converter->convertToFile(unpremultiply(ui.renderer().compositingFramebuffer().read({{}, ImageSize}, {PixelFormat::RGBA8Unorm})), "ui-debuglayer-node-highlight.png");
+    converter->convertToFile(unpremultiply(ui.renderer().compositingFramebuffer().read({{}, ImageSize}, {PixelFormat::RGBA8Unorm})), "ui-debuglayer-node-inspect.png");
 
     /* Node and layer names. NodeDataDetails is enabled so casting to a base
        type to not have the integration picked yet */
@@ -238,10 +238,10 @@ ui.eventLayer().onTapOrClick(button, []{
     out = {};
     {
         Debug redirectOutput{&out};
-        CORRADE_INTERNAL_ASSERT(debugLayerHierarchy.highlightNode(button));
+        CORRADE_INTERNAL_ASSERT(debugLayerHierarchy.inspectNode(button));
     }
     Debug{} << out;
-    Utility::Path::write("ui-debuglayer-node-highlight-names.ansi", out);
+    Utility::Path::write("ui-debuglayer-node-inspect-names.ansi", out);
 
     /* Layer data attachment details. Deliberately set in order that doesn't
        match the draw order, to hint that it doesn't matter. */
@@ -257,16 +257,16 @@ debugLayerHierarchy.setNodeName(button, "Accept button");
     out = {};
     {
         Debug redirectOutput{&out};
-        CORRADE_INTERNAL_ASSERT(debugLayerHierarchy.highlightNode(button));
+        CORRADE_INTERNAL_ASSERT(debugLayerHierarchy.inspectNode(button));
     }
     Debug{} << out;
-    Utility::Path::write("ui-debuglayer-node-highlight-details.ansi", out);
+    Utility::Path::write("ui-debuglayer-node-inspect-details.ansi", out);
 
     /* Custom integration, with a debug layer that has NodeHierarchy disabled
        as that information is superfluous. Creating some more nodes and unused
        data to not have the listed handles too close to each other. */
     ui.removeLayer(debugLayerHierarchy.handle());
-    Ui::DebugLayer& debugLayer = ui.setLayerInstance(Containers::pointer<Ui::DebugLayerGL>(ui.createLayer(), Ui::DebugLayerSource::NodeDataDetails|Ui::DebugLayerSource::NodeAnimationDetails, Ui::DebugLayerFlag::NodeHighlight|Ui::DebugLayerFlag::ColorAlways));
+    Ui::DebugLayer& debugLayer = ui.setLayerInstance(Containers::pointer<Ui::DebugLayerGL>(ui.createLayer(), Ui::DebugLayerSource::NodeDataDetails|Ui::DebugLayerSource::NodeAnimationDetails, Ui::DebugLayerFlag::NodeInspect|Ui::DebugLayerFlag::ColorAlways));
     debugLayer.setLayerName(ui.eventLayer(), "Event");
 
 /* [integration-setLayerName] */
@@ -294,7 +294,7 @@ debugLayer.setLayerName(colorLayer, "Shiny");
     out = {};
     {
         Debug redirectOutput{&out};
-        CORRADE_INTERNAL_ASSERT(debugLayer.highlightNode(colorNode));
+        CORRADE_INTERNAL_ASSERT(debugLayer.inspectNode(colorNode));
     }
     Debug{} << out;
     Utility::Path::write("ui-debuglayer-integration.ansi", out);
@@ -334,7 +334,7 @@ debugLayer.setLayerName(colorLayer, "Shiny");
     out = {};
     {
         Debug redirectOutput{&out};
-        CORRADE_INTERNAL_ASSERT(debugLayer.highlightNode(baseNode));
+        CORRADE_INTERNAL_ASSERT(debugLayer.inspectNode(baseNode));
     }
     Debug{} << out;
     Utility::Path::write("ui-debuglayer-abstractvisuallayer.ansi", out);
@@ -361,7 +361,7 @@ debugLayer.setLayerName(visualLayer, "Styled", [](UnsignedInt style) {
     out = {};
     {
         Debug redirectOutput{&out};
-        CORRADE_INTERNAL_ASSERT(debugLayer.highlightNode(baseNode));
+        CORRADE_INTERNAL_ASSERT(debugLayer.inspectNode(baseNode));
     }
     Debug{} << out;
     Utility::Path::write("ui-debuglayer-abstractvisuallayer-style-names.ansi", out);
@@ -380,7 +380,7 @@ debugLayer.setLayerName(visualLayer, "Styled", [](UnsignedInt style) {
     out = {};
     {
         Debug redirectOutput{&out};
-        CORRADE_INTERNAL_ASSERT(debugLayer.highlightNode(baseNodeCustom));
+        CORRADE_INTERNAL_ASSERT(debugLayer.inspectNode(baseNodeCustom));
     }
     Debug{} << out;
     Utility::Path::write("ui-debuglayer-baselayer.ansi", out);
@@ -407,7 +407,7 @@ debugLayer.setLayerName(visualLayer, "Styled", [](UnsignedInt style) {
     out = {};
     {
         Debug redirectOutput{&out};
-        CORRADE_INTERNAL_ASSERT(debugLayer.highlightNode(lineNodeCustom));
+        CORRADE_INTERNAL_ASSERT(debugLayer.inspectNode(lineNodeCustom));
     }
     Debug{} << out;
     Utility::Path::write("ui-debuglayer-linelayer.ansi", out);
@@ -439,7 +439,7 @@ debugLayer.setLayerName(visualLayer, "Styled", [](UnsignedInt style) {
     out = {};
     {
         Debug redirectOutput{&out};
-        CORRADE_INTERNAL_ASSERT(debugLayer.highlightNode(textNodeCustom));
+        CORRADE_INTERNAL_ASSERT(debugLayer.inspectNode(textNodeCustom));
     }
     Debug{} << out;
     Utility::Path::write("ui-debuglayer-textlayer.ansi", out);
@@ -457,7 +457,7 @@ debugLayer.setLayerName(visualLayer, "Styled", [](UnsignedInt style) {
     out = {};
     {
         Debug redirectOutput{&out};
-        CORRADE_INTERNAL_ASSERT(debugLayer.highlightNode(eventNode));
+        CORRADE_INTERNAL_ASSERT(debugLayer.inspectNode(eventNode));
     }
     Debug{} << out;
     Utility::Path::write("ui-debuglayer-eventlayer.ansi", out);
@@ -490,7 +490,7 @@ debugLayer.setLayerName(visualLayer, "Styled", [](UnsignedInt style) {
     out = {};
     {
         Debug redirectOutput{&out};
-        CORRADE_INTERNAL_ASSERT(debugLayer.highlightNode(nodeAnimatedNode));
+        CORRADE_INTERNAL_ASSERT(debugLayer.inspectNode(nodeAnimatedNode));
     }
     Debug{} << out;
     Utility::Path::write("ui-debuglayer-nodeanimator.ansi", out);
@@ -500,7 +500,7 @@ debugLayer.setLayerName(visualLayer, "Styled", [](UnsignedInt style) {
     out = {};
     {
         Debug redirectOutput{&out};
-        CORRADE_INTERNAL_ASSERT(debugLayer.highlightNode(nodeAnimatedNode));
+        CORRADE_INTERNAL_ASSERT(debugLayer.inspectNode(nodeAnimatedNode));
     }
     Debug{} << out;
     Utility::Path::write("ui-debuglayer-nodeanimator-reverse.ansi", out);

@@ -2369,7 +2369,7 @@ class MAGNUM_UI_EXPORT AbstractLayer {
 
 If an inner type with this name is implemented on a layer that's passed to
 @ref DebugLayer::setLayerName(const T&, const Containers::StringView&), the
-@ref print() function is used by the @ref DebugLayerFlag::NodeHighlight
+@ref print() function is used by the @ref DebugLayerFlag::NodeInspect
 functionality to provide additional details about all data attachments coming
 from given layer. See @ref Ui-DebugLayer-integration for more information.
 */

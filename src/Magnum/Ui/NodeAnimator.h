@@ -163,7 +163,7 @@ animators.
 
 @section Ui-NodeAnimator-debug-integration Debug layer integration
 
-When using @ref Ui-DebugLayer-node-highlight "DebugLayer node highlight" and
+When using @ref Ui-DebugLayer-node-inspect "DebugLayer node inspect" and
 @ref DebugLayerSource::NodeAnimationDetails is enabled, passing this animator to
 @ref DebugLayer::setAnimatorName(const T&, const Containers::StringView&) "DebugLayer::setAnimatorName()"
 will make it list properties of a particular animation, with `?` denoting

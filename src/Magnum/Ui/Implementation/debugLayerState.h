@@ -185,12 +185,12 @@ struct DebugLayer::State {
     DebugLayerFlags flags;
     /* 1 byte free */
 
-    NodeHandle currentHighlightedNode = NodeHandle::Null;
-    Color4 nodeHighlightColor{0.5f, 0.0f, 0.5f, 0.5f};
-    Pointers nodeHighlightPointers = Pointer::MouseRight|Pointer::Eraser;
-    Modifiers nodeHighlightModifiers = Modifier::Ctrl;
+    NodeHandle currentInspectedNode = NodeHandle::Null;
+    Color4 nodeInspectColor{0.5f, 0.0f, 0.5f, 0.5f};
+    Pointers nodeInspectPointers = Pointer::MouseRight|Pointer::Eraser;
+    Modifiers nodeInspectModifiers = Modifier::Ctrl;
     /* 6 bytes free */
-    Containers::Function<void(Containers::StringView)> nodeHighlightCallback;
+    Containers::Function<void(Containers::StringView)> nodeInspectCallback;
 
     /* Used only if the layer advertises LayerFeature::Draw (i.e.,
        DebugLayerGL). The offset is an index into the dataIds array passed to

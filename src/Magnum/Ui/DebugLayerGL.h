@@ -42,12 +42,12 @@ namespace Magnum { namespace Ui {
 @brief OpenGL implementation of the debug layer
 @m_since_latest
 
-Implements visual feedback for @ref DebugLayerFlag::NodeHighlight. See the
+Implements visual feedback for @ref DebugLayerFlag::NodeInspect. See the
 @ref DebugLayer base class documentation for information about setting up an
 instance of this layer and using it. The base class contains the whole
 interface you'll be interacting with, thus you don't need to subsequently
 access the derived type for anything. If you don't use
-@ref DebugLayerFlag::NodeHighlight or don't need the visual feedback, you can
+@ref DebugLayerFlag::NodeInspect or don't need the visual feedback, you can
 instantiate just the @ref DebugLayer base class instead.
 
 The layer assumes @ref RendererGL is set on the user interface (or

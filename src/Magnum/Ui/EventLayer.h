@@ -309,7 +309,7 @@ for example to open a keypad or an autocompletion popup.
 
 @section Ui-EventLayer-debug-integration Debug layer integration
 
-When using @ref Ui-DebugLayer-node-highlight "DebugLayer node highlight" and
+When using @ref Ui-DebugLayer-node-inspect "DebugLayer node inspect" and
 @ref DebugLayerSource::NodeDataDetails is enabled, passing this layer to
 @ref DebugLayer::setLayerName(const T&, const Containers::StringView&) "DebugLayer::setLayerName()"
 will make it list the event type given data is reacting to and mark complex

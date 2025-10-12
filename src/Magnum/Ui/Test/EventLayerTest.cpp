@@ -4087,10 +4087,10 @@ void EventLayerTest::debugIntegration() {
     layer.onDragOrScroll(node, [large](const Vector2&){ Debug{} << large.a[0]; });
     layer.onPinch(node, [](const Vector2&, const Vector2&, const Complex&, Float){});
 
-    DebugLayer& debugLayer = ui.setLayerInstance(Containers::pointer<DebugLayer>(ui.createLayer(), DebugLayerSource::NodeDataDetails, DebugLayerFlag::NodeHighlight));
+    DebugLayer& debugLayer = ui.setLayerInstance(Containers::pointer<DebugLayer>(ui.createLayer(), DebugLayerSource::NodeDataDetails, DebugLayerFlag::NodeInspect));
 
     Containers::String out;
-    debugLayer.setNodeHighlightCallback([&out](Containers::StringView message) {
+    debugLayer.setNodeInspectCallback([&out](Containers::StringView message) {
         out = message;
     });
     debugLayer.setLayerName(layer, data.layerName ? "Layarr" : "");
@@ -4098,7 +4098,7 @@ void EventLayerTest::debugIntegration() {
     /* Make the debug layer aware of everything */
     ui.update();
 
-    CORRADE_VERIFY(debugLayer.highlightNode(node));
+    CORRADE_VERIFY(debugLayer.inspectNode(node));
     CORRADE_COMPARE_AS(out, data.expected, TestSuite::Compare::String);
 }
 
@@ -4134,20 +4134,20 @@ void EventLayerTest::debugIntegrationNoCallback() {
     layer.onDragOrScroll(node, [large](const Vector2&){ Debug{} << large.a[0]; });
     layer.onPinch(node, [](const Vector2&, const Vector2&, const Complex&, Float){});
 
-    DebugLayer& debugLayer = ui.setLayerInstance(Containers::pointer<DebugLayer>(ui.createLayer(), DebugLayerSource::NodeDataDetails, DebugLayerFlag::NodeHighlight));
+    DebugLayer& debugLayer = ui.setLayerInstance(Containers::pointer<DebugLayer>(ui.createLayer(), DebugLayerSource::NodeDataDetails, DebugLayerFlag::NodeInspect));
 
     debugLayer.setLayerName(layer, "Layarr");
 
     /* Make the debug layer aware of everything */
     ui.update();
 
-    /* Highlight the node for visual color verification */
+    /* Inspect the node for visual color verification */
     {
         Debug{} << "======================== visual color verification start =======================";
 
         debugLayer.addFlags(DebugLayerFlag::ColorAlways);
 
-        CORRADE_VERIFY(debugLayer.highlightNode(node));
+        CORRADE_VERIFY(debugLayer.inspectNode(node));
 
         debugLayer.clearFlags(DebugLayerFlag::ColorAlways);
 
@@ -4160,7 +4160,7 @@ void EventLayerTest::debugIntegrationNoCallback() {
     {
         Containers::String out;
         Debug redirectOutput{&out};
-        CORRADE_VERIFY(debugLayer.highlightNode(node));
+        CORRADE_VERIFY(debugLayer.inspectNode(node));
         /* The output always has a newline at the end which cannot be disabled
            so strip it to have the comparison match the debugIntegration()
            case */

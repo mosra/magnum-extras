@@ -1574,7 +1574,7 @@ animation to be subsequently automatically discarded again, as described in
 
 @section Ui-TextLayer-debug-integration Debug layer integration
 
-When using @ref Ui-DebugLayer-node-highlight "DebugLayer node highlighting" and
+When using @ref Ui-DebugLayer-node-inspect "DebugLayer node inspect" and
 @ref DebugLayerSource::NodeDataDetails is enabled, passing this layer to
 @ref DebugLayer::setLayerName(const T&, const Containers::StringView&) "DebugLayer::setLayerName()"
 will inherit @ref Ui-AbstractVisualLayer-debug-integration "debug integration from the AbstractVisualLayer",

@@ -1677,7 +1677,7 @@ class MAGNUM_UI_EXPORT AbstractAnimator {
 
 If an inner type with this name is implemented on an animator that's passed to
 @ref DebugLayer::setAnimatorName(const T&, const Containers::StringView&), the
-@ref print() function is used by the @ref DebugLayerFlag::NodeHighlight
+@ref print() function is used by the @ref DebugLayerFlag::NodeInspect
 functionality to provide additional details about all animation attachments
 coming from given animator. See @ref Ui-DebugLayer-integration for more
 information.

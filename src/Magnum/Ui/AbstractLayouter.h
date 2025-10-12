@@ -497,7 +497,7 @@ class MAGNUM_UI_EXPORT AbstractLayouter {
 
 If an inner type with this name is implemented on a layouter that's passed to
 @ref DebugLayer::setLayouterName(const T&, const Containers::StringView&), the
-@ref print() function is used by the @ref DebugLayerFlag::NodeHighlight
+@ref print() function is used by the @ref DebugLayerFlag::NodeInspect
 functionality to provide additional details about all layout assignments coming
 from given layouter. See @ref Ui-DebugLayer-integration for more information.
 */

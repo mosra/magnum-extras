@@ -1051,19 +1051,19 @@ baseLayer.recycleDynamicStyle(*dynamicStyleId);
 
 {
 Ui::DebugLayer debugLayer{Ui::layerHandle(0, 1), {}, {}};
-/* [DebugLayer-node-highlight-touch] */
-/* Enable node highlighting with just a touch */
+/* [DebugLayer-node-inspect-touch] */
+/* Enable node inspection with just a touch */
 debugLayer
-    .addFlags(Ui::DebugLayerFlag::NodeHighlight)
-    .setNodeHighlightGesture(Ui::Pointer::Finger, {});
+    .addFlags(Ui::DebugLayerFlag::NodeInspect)
+    .setNodeInspectGesture(Ui::Pointer::Finger, {});
 
 DOXYGEN_ELLIPSIS()
 
 /* Disable it again and revert to a safe gesture when not used anymore */
 debugLayer
-    .clearFlags(Ui::DebugLayerFlag::NodeHighlight)
-    .setNodeHighlightGesture(Ui::Pointer::MouseRight, Ui::Modifier::Ctrl);
-/* [DebugLayer-node-highlight-touch] */
+    .clearFlags(Ui::DebugLayerFlag::NodeInspect)
+    .setNodeInspectGesture(Ui::Pointer::MouseRight, Ui::Modifier::Ctrl);
+/* [DebugLayer-node-inspect-touch] */
 }
 
 {
@@ -1071,17 +1071,17 @@ struct UserInterface: Ui::UserInterface {
     explicit UserInterface(NoCreateT): Ui::UserInterface{NoCreate} {}
 } ui{NoCreate};
 Ui::DebugLayer debugLayer{Ui::layerHandle(0, 1), {}, {}};
-/* [DebugLayer-node-highlight-callback] */
+/* [DebugLayer-node-inspect-callback] */
 Ui::Label details{DOXYGEN_ELLIPSIS({ui, {}}, "")};
 
 DOXYGEN_ELLIPSIS()
 
-debugLayer.setNodeHighlightCallback([&details](Containers::StringView message) {
+debugLayer.setNodeInspectCallback([&details](Containers::StringView message) {
     details
         .setText(message)
         .setHidden(!message);
 });
-/* [DebugLayer-node-highlight-callback] */
+/* [DebugLayer-node-inspect-callback] */
 }
 
 {

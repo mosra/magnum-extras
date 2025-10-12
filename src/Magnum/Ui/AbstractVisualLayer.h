@@ -47,7 +47,7 @@ explain with concrete examples rather than on an abstract class.
 
 @section Ui-AbstractVisualLayer-debug-integration Debug layer integration
 
-When using @ref Ui-DebugLayer-node-highlight "DebugLayer node highlight" and
+When using @ref Ui-DebugLayer-node-inspect "DebugLayer node inspect" and
 @ref DebugLayerSource::NodeDataDetails is enabled, passing a layer derived from
 this class to @ref DebugLayer::setLayerName(const T&, const Containers::StringView&) "DebugLayer::setLayerName()"
 will make it list style assignments of all data, along with their transitions.

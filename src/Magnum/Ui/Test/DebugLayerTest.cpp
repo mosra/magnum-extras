@@ -105,23 +105,23 @@ struct DebugLayerTest: TestSuite::Tester {
         void preUpdateTrackLayouters();
         void preUpdateTrackAnimators();
 
-        void nodeHighlightSetters();
-        /* No nodeHighlightNoUi() as pointer press to highlight a node can only
+        void nodeInspectSetters();
+        /* No nodeInspectNoUi() as pointer press to inspect a node can only
            happen if there's any data, which is only done if preUpdate() is
            called, which already checks that the layer is part of a UI */
-        void nodeHighlightNoOp();
-        void nodeHighlight();
-        void nodeHighlightNoCallback();
-        void nodeHighlightLayerDebugIntegrationExplicit();
-        void nodeHighlightLayerDebugIntegrationExplicitRvalue();
-        void nodeHighlightLayouterDebugIntegrationExplicit();
-        void nodeHighlightLayouterDebugIntegrationExplicitRvalue();
-        void nodeHighlightAnimatorDebugIntegrationExplicit();
-        void nodeHighlightAnimatorDebugIntegrationExplicitRvalue();
-        void nodeHighlightInvalid();
-        void nodeHighlightDraw();
-        void nodeHighlightNodeRemoved();
-        void nodeHighlightToggle();
+        void nodeInspectNoOp();
+        void nodeInspect();
+        void nodeInspectNoCallback();
+        void nodeInspectLayerDebugIntegrationExplicit();
+        void nodeInspectLayerDebugIntegrationExplicitRvalue();
+        void nodeInspectLayouterDebugIntegrationExplicit();
+        void nodeInspectLayouterDebugIntegrationExplicitRvalue();
+        void nodeInspectAnimatorDebugIntegrationExplicit();
+        void nodeInspectAnimatorDebugIntegrationExplicitRvalue();
+        void nodeInspectInvalid();
+        void nodeInspectDraw();
+        void nodeInspectNodeRemoved();
+        void nodeInspectToggle();
 
         void updateEmpty();
         void updateDataOrder();
@@ -193,8 +193,8 @@ const struct {
     {"node animations",
         DebugLayerSource::NodeAnimations, {},
         false, false, true, true, false, true},
-    {"node highlight",
-        DebugLayerSource::Nodes, DebugLayerFlag::NodeHighlight,
+    {"node inspect",
+        DebugLayerSource::Nodes, DebugLayerFlag::NodeInspect,
         false, false, true, true, true, false},
 };
 
@@ -208,8 +208,8 @@ const struct {
         DebugLayerSource::Nodes, {}, false},
     {"node data",
         DebugLayerSource::NodeData, {}, false},
-    {"node highlight",
-        DebugLayerSource::Nodes, DebugLayerFlag::NodeHighlight, true},
+    {"node inspect",
+        DebugLayerSource::Nodes, DebugLayerFlag::NodeInspect, true},
 };
 
 const struct {
@@ -251,27 +251,27 @@ const struct {
     Pointer pointer;
     Modifiers modifiers;
     bool primary;
-} NodeHighlightNoOpData[]{
+} NodeInspectNoOpData[]{
     {"nothing enabled",
         {}, {}, {},
         PointerEventSource::Mouse, Pointer::MouseRight, Modifier::Ctrl, true},
-    {"node highlight not enabled",
+    {"node inspect not enabled",
         DebugLayerSource::Nodes, {}, {},
         PointerEventSource::Mouse, Pointer::MouseRight, Modifier::Ctrl, true},
     {"different mouse pointer",
-        DebugLayerSource::Nodes, DebugLayerFlag::NodeHighlight, {},
+        DebugLayerSource::Nodes, DebugLayerFlag::NodeInspect, {},
         PointerEventSource::Mouse, Pointer::MouseMiddle, Modifier::Ctrl, true},
     {"different pen pointer",
-        DebugLayerSource::Nodes, DebugLayerFlag::NodeHighlight, {},
+        DebugLayerSource::Nodes, DebugLayerFlag::NodeInspect, {},
         PointerEventSource::Pen, Pointer::Pen, Modifier::Ctrl, true},
     {"too little modifiers",
-        DebugLayerSource::Nodes, DebugLayerFlag::NodeHighlight, {},
+        DebugLayerSource::Nodes, DebugLayerFlag::NodeInspect, {},
         PointerEventSource::Mouse, Pointer::MouseRight, {}, true},
     {"too many modifiers",
-        DebugLayerSource::Nodes, DebugLayerFlag::NodeHighlight, {},
+        DebugLayerSource::Nodes, DebugLayerFlag::NodeInspect, {},
         PointerEventSource::Mouse, Pointer::MouseRight, Modifier::Ctrl|Modifier::Shift, true},
     {"accepting also touches, but the touch is not primary",
-        DebugLayerSource::Nodes, DebugLayerFlag::NodeHighlight,
+        DebugLayerSource::Nodes, DebugLayerFlag::NodeInspect,
         Pointer::Finger|Pointer::MouseRight,
         PointerEventSource::Touch, Pointer::Finger, Modifier::Ctrl, false},
 };
@@ -289,34 +289,34 @@ const struct {
     NodeFlags nodeFlags;
     bool nested, nestedTopLevel, children, hiddenChildren, disabledChildren, noEventsChildren;
     const char* expected;
-} NodeHighlightData[]{
+} NodeInspectData[]{
     {"",
-        DebugLayerSource::Nodes, DebugLayerFlag::NodeHighlight,
+        DebugLayerSource::Nodes, DebugLayerFlag::NodeInspect,
         {}, false, false, false,
         {}, {}, PointerEventSource::Mouse, Pointer::MouseRight,
         {}, true, false, false, false, false, false,
         "Node {0x3, 0x1}"},
     {"different used pointer",
-        DebugLayerSource::Nodes, DebugLayerFlag::NodeHighlight,
+        DebugLayerSource::Nodes, DebugLayerFlag::NodeInspect,
         {}, false, false, false,
         {}, {}, PointerEventSource::Pen, Pointer::Eraser,
         {}, true, false, false, false, false, false,
         "Node {0x3, 0x1}"},
     {"different accepted and used pointer",
-        DebugLayerSource::Nodes, DebugLayerFlag::NodeHighlight,
+        DebugLayerSource::Nodes, DebugLayerFlag::NodeInspect,
         {}, false, false, false,
         Pointer::Finger|Pointer::Pen, Modifier::Ctrl|Modifier::Shift|Modifier::Alt,
         PointerEventSource::Pen, Pointer::Pen,
         {}, true, false, false, false, false, false,
         "Node {0x3, 0x1}"},
     {"nested top-level node",
-        DebugLayerSource::Nodes, DebugLayerFlag::NodeHighlight,
+        DebugLayerSource::Nodes, DebugLayerFlag::NodeInspect,
         "A very nice node"_s, false, false, false,
         {}, {}, PointerEventSource::Mouse, Pointer::MouseRight,
         {}, true, true, false, false, false, false,
         "Top-level node {0x3, 0x1} A very nice node"},
     {"node name",
-        DebugLayerSource::Nodes, DebugLayerFlag::NodeHighlight,
+        DebugLayerSource::Nodes, DebugLayerFlag::NodeInspect,
         "A very nice node"_s, false, false, false,
         {}, {}, PointerEventSource::Mouse, Pointer::MouseRight,
         {}, true, false, false, false, false, false,
@@ -324,26 +324,26 @@ const struct {
     /* Assuming node name will be always colored, testing the ColorOff /
        ColorAlways flags with it */
     {"node name, color off",
-        DebugLayerSource::Nodes, DebugLayerFlag::NodeHighlight|DebugLayerFlag::ColorOff,
+        DebugLayerSource::Nodes, DebugLayerFlag::NodeInspect|DebugLayerFlag::ColorOff,
         "A very nice node"_s, false, false, false,
         {}, {}, PointerEventSource::Mouse, Pointer::MouseRight,
         {}, true, false, false, false, false, false,
         "Node {0x3, 0x1} A very nice node"},
     /* ColorOff gets a precedence */
     {"node name, color always + color off",
-        DebugLayerSource::Nodes, DebugLayerFlag::NodeHighlight|DebugLayerFlag::ColorAlways|DebugLayerFlag::ColorOff,
+        DebugLayerSource::Nodes, DebugLayerFlag::NodeInspect|DebugLayerFlag::ColorAlways|DebugLayerFlag::ColorOff,
         "A very nice node"_s, false, false, false,
         {}, {}, PointerEventSource::Mouse, Pointer::MouseRight,
         {}, true, false, false, false, false, false,
         "Node {0x3, 0x1} A very nice node"},
     {"empty node name",
-        DebugLayerSource::Nodes, DebugLayerFlag::NodeHighlight,
+        DebugLayerSource::Nodes, DebugLayerFlag::NodeInspect,
         ""_s, false, false, false,
         {}, {}, PointerEventSource::Mouse, Pointer::MouseRight,
         {}, true, false, false, false, false, false,
         "Node {0x3, 0x1}"},
     {"node flags",
-        DebugLayerSource::Nodes, DebugLayerFlag::NodeHighlight,
+        DebugLayerSource::Nodes, DebugLayerFlag::NodeInspect,
         {}, false, false, false,
         {}, {}, PointerEventSource::Mouse, Pointer::MouseRight,
         NodeFlag::Clip|NodeFlag::FallthroughPointerEvents|NodeFlag::NoBlur,
@@ -351,35 +351,35 @@ const struct {
         "Node {0x3, 0x1}\n"
         "  Flags: Clip|FallthroughPointerEvents|NoBlur"},
     {"hierarchy, root",
-        DebugLayerSource::NodeHierarchy, DebugLayerFlag::NodeHighlight,
+        DebugLayerSource::NodeHierarchy, DebugLayerFlag::NodeInspect,
         {}, false, false, false,
         {}, {}, PointerEventSource::Mouse, Pointer::MouseRight,
         {}, false, true, false, false, false, false,
         "Top-level node {0x3, 0x1}\n"
         "  Root node with 0 direct children"},
     {"hierarchy, nested",
-        DebugLayerSource::NodeHierarchy, DebugLayerFlag::NodeHighlight,
+        DebugLayerSource::NodeHierarchy, DebugLayerFlag::NodeInspect,
         {}, false, false, false,
         {}, {}, PointerEventSource::Mouse, Pointer::MouseRight,
         {}, true, false, false, false, false, false,
         "Node {0x3, 0x1}\n"
         "  Nested at level 3 with 0 direct children"},
     {"hierarchy, nested top-level",
-        DebugLayerSource::NodeHierarchy, DebugLayerFlag::NodeHighlight,
+        DebugLayerSource::NodeHierarchy, DebugLayerFlag::NodeInspect,
         {}, false, false, false,
         {}, {}, PointerEventSource::Mouse, Pointer::MouseRight,
         {}, true, true, false, false, false, false,
         "Top-level node {0x3, 0x1}\n"
         "  Nested at level 3 with 0 direct children"},
     {"hierarchy, children",
-        DebugLayerSource::NodeHierarchy, DebugLayerFlag::NodeHighlight,
+        DebugLayerSource::NodeHierarchy, DebugLayerFlag::NodeInspect,
         {}, false, false, false,
         {}, {}, PointerEventSource::Mouse, Pointer::MouseRight,
         {}, false, true, true, false, false, false,
         "Top-level node {0x3, 0x1}\n"
         "  Root node with 9 direct children"},
     {"hierarchy, nested, children, node flags",
-        DebugLayerSource::NodeHierarchy, DebugLayerFlag::NodeHighlight,
+        DebugLayerSource::NodeHierarchy, DebugLayerFlag::NodeInspect,
         {}, false, false, false,
         {}, {}, PointerEventSource::Mouse, Pointer::MouseRight,
         NodeFlag::Clip|NodeFlag::FallthroughPointerEvents|NodeFlag::NoBlur,
@@ -388,7 +388,7 @@ const struct {
         "  Flags: Clip|FallthroughPointerEvents|NoBlur\n"
         "  Nested at level 3 with 9 direct children"},
     {"hierarchy, hidden children",
-        DebugLayerSource::NodeHierarchy, DebugLayerFlag::NodeHighlight,
+        DebugLayerSource::NodeHierarchy, DebugLayerFlag::NodeInspect,
         {}, false, false, false,
         {}, {}, PointerEventSource::Mouse, Pointer::MouseRight,
         {}, false, true, true, true, false, false,
@@ -396,7 +396,7 @@ const struct {
         "  Root node with 9 direct children\n"
         "    of which 3 Hidden"},
     {"hierarchy, hidden and no events children",
-        DebugLayerSource::NodeHierarchy, DebugLayerFlag::NodeHighlight,
+        DebugLayerSource::NodeHierarchy, DebugLayerFlag::NodeInspect,
         {}, false, false, false,
         {}, {}, PointerEventSource::Mouse, Pointer::MouseRight,
         {}, false, true, true, true, false, true,
@@ -405,7 +405,7 @@ const struct {
         "    of which 3 Hidden\n"
         "    of which 1 NoEvents"},
     {"hierarchy, nested node and disabled children",
-        DebugLayerSource::NodeHierarchy, DebugLayerFlag::NodeHighlight,
+        DebugLayerSource::NodeHierarchy, DebugLayerFlag::NodeInspect,
         {}, false, false, false,
         {}, {}, PointerEventSource::Mouse, Pointer::MouseRight,
         {}, true, false, true, false, true, false,
@@ -413,7 +413,7 @@ const struct {
         "  Nested at level 3 with 9 direct children\n"
         "    of which 3 Disabled"},
     {"hierarchy, hidden, disabled and no events children",
-        DebugLayerSource::NodeHierarchy, DebugLayerFlag::NodeHighlight,
+        DebugLayerSource::NodeHierarchy, DebugLayerFlag::NodeInspect,
         {}, false, false, false,
         {}, {}, PointerEventSource::Mouse, Pointer::MouseRight,
         {}, false, true, true, true, true, true,
@@ -423,21 +423,21 @@ const struct {
         "    of which 2 Disabled\n"
         "    of which 1 NoEvents"},
     {"offset and size",
-        DebugLayerSource::NodeOffsetSize, DebugLayerFlag::NodeHighlight,
+        DebugLayerSource::NodeOffsetSize, DebugLayerFlag::NodeInspect,
         {}, false, false, false,
         {}, {}, PointerEventSource::Mouse, Pointer::MouseRight,
         {}, true, false, false, false, false, false,
         "Node {0x3, 0x1}\n"
         "  Offset: {5, 10}, size: {20, 30}"},
     {"data",
-        DebugLayerSource::NodeData, DebugLayerFlag::NodeHighlight,
+        DebugLayerSource::NodeData, DebugLayerFlag::NodeInspect,
         {}, false, false, false,
         {}, {}, PointerEventSource::Mouse, Pointer::MouseRight,
         {}, true, false, false, false, false, false,
         "Node {0x3, 0x1}\n"
         "  10 data from 4 layers"},
     {"data, some layer names",
-        DebugLayerSource::NodeData, DebugLayerFlag::NodeHighlight,
+        DebugLayerSource::NodeData, DebugLayerFlag::NodeInspect,
         {}, false, true, false,
         {}, {}, PointerEventSource::Mouse, Pointer::MouseRight,
         {}, true, false, false, false, false, false,
@@ -446,7 +446,7 @@ const struct {
         "  2 data from layer {0x4, 0x1} No.3\n"
         "  7 data from 2 other layers"},
     {"data details, some layer names",
-        DebugLayerSource::NodeDataDetails, DebugLayerFlag::NodeHighlight,
+        DebugLayerSource::NodeDataDetails, DebugLayerFlag::NodeInspect,
         {}, false, true, false,
         {}, {}, PointerEventSource::Mouse, Pointer::MouseRight,
         {}, true, false, false, false, false, false,
@@ -456,7 +456,7 @@ const struct {
         "  Layer No.3 (42069) data {0x1, 0x1} and a value of 1337\n"
         "  7 data from 2 other layers"},
     {"data details, all layer names",
-        DebugLayerSource::NodeDataDetails, DebugLayerFlag::NodeHighlight,
+        DebugLayerSource::NodeDataDetails, DebugLayerFlag::NodeInspect,
         {}, false, true, true,
         {}, {}, PointerEventSource::Mouse, Pointer::MouseRight,
         {}, true, false, false, false, false, false,
@@ -467,7 +467,7 @@ const struct {
         "  Layer No.3 (42069) data {0x1, 0x1} and a value of 1337\n"
         "  4 data from layer {0x6, 0x1} The last ever"},
     {"data details, all layer names, reverse layer order",
-        DebugLayerSource::NodeDataDetails, DebugLayerFlag::NodeHighlight,
+        DebugLayerSource::NodeDataDetails, DebugLayerFlag::NodeInspect,
         {}, true, true, true,
         {}, {}, PointerEventSource::Mouse, Pointer::MouseRight,
         {}, true, false, false, false, false, false,
@@ -478,14 +478,14 @@ const struct {
         "  Layer No.3 (42069) data {0x1, 0x1} and a value of 1337\n"
         "  4 data from layer {0x0, 0x1} The last ever"},
     {"layouts",
-        DebugLayerSource::NodeLayouts, DebugLayerFlag::NodeHighlight,
+        DebugLayerSource::NodeLayouts, DebugLayerFlag::NodeInspect,
         {}, false, false, false,
         {}, {}, PointerEventSource::Mouse, Pointer::MouseRight,
         {}, true, false, false, false, false, false,
         "Node {0x3, 0x1}\n"
         "  10 layouts from 4 layouters"},
     {"layouts, some layouter names",
-        DebugLayerSource::NodeLayouts, DebugLayerFlag::NodeHighlight,
+        DebugLayerSource::NodeLayouts, DebugLayerFlag::NodeInspect,
         {}, false, true, false,
         {}, {}, PointerEventSource::Mouse, Pointer::MouseRight,
         {}, true, false, false, false, false, false,
@@ -494,7 +494,7 @@ const struct {
         "  2 layouts from layouter {0x3, 0x1} Tertiary\n"
         "  7 layouts from 2 other layouters"},
     {"layout details, some layouter names",
-        DebugLayerSource::NodeLayoutDetails, DebugLayerFlag::NodeHighlight,
+        DebugLayerSource::NodeLayoutDetails, DebugLayerFlag::NodeInspect,
         {}, false, true, false,
         {}, {}, PointerEventSource::Mouse, Pointer::MouseRight,
         {}, true, false, false, false, false, false,
@@ -504,7 +504,7 @@ const struct {
         "  Layouter Tertiary (96024) layout {0x1, 0x1} and a value of 7331\n"
         "  7 layouts from 2 other layouters"},
     {"layout details, all layouter names",
-        DebugLayerSource::NodeLayoutDetails, DebugLayerFlag::NodeHighlight,
+        DebugLayerSource::NodeLayoutDetails, DebugLayerFlag::NodeInspect,
         {}, false, true, true,
         {}, {}, PointerEventSource::Mouse, Pointer::MouseRight,
         {}, true, false, false, false, false, false,
@@ -515,7 +515,7 @@ const struct {
         "  Layouter Tertiary (96024) layout {0x1, 0x1} and a value of 7331\n"
         "  4 layouts from layouter {0x5, 0x1} Fallback"},
     {"layout details, all layouter names, reverse layouter order",
-        DebugLayerSource::NodeLayoutDetails, DebugLayerFlag::NodeHighlight,
+        DebugLayerSource::NodeLayoutDetails, DebugLayerFlag::NodeInspect,
         {}, true, true, true,
         {}, {}, PointerEventSource::Mouse, Pointer::MouseRight,
         {}, true, false, false, false, false, false,
@@ -526,7 +526,7 @@ const struct {
         "  Layouter Tertiary (96024) layout {0x1, 0x1} and a value of 7331\n"
         "  4 layouts from layouter {0x0, 0x1} Fallback"},
     {"animations",
-        DebugLayerSource::NodeAnimations, DebugLayerFlag::NodeHighlight,
+        DebugLayerSource::NodeAnimations, DebugLayerFlag::NodeInspect,
         {}, false, false, false,
         {}, {}, PointerEventSource::Mouse, Pointer::MouseRight,
         {}, true, false, false, false, false, false,
@@ -537,7 +537,7 @@ const struct {
         "  1 Paused animations from 1 animators\n"
         "  3 Stopped animations from 2 animators"},
     {"animations, some animator names",
-        DebugLayerSource::NodeAnimations, DebugLayerFlag::NodeHighlight,
+        DebugLayerSource::NodeAnimations, DebugLayerFlag::NodeInspect,
         {}, false, true, false,
         {}, {}, PointerEventSource::Mouse, Pointer::MouseRight,
         {}, true, false, false, false, false, false,
@@ -550,7 +550,7 @@ const struct {
         "  1 Playing animations from 1 other animators\n"
         "  3 Stopped animations from 2 other animators"},
     {"animation details, some animator names",
-        DebugLayerSource::NodeAnimationDetails, DebugLayerFlag::NodeHighlight,
+        DebugLayerSource::NodeAnimationDetails, DebugLayerFlag::NodeInspect,
         {}, false, true, false,
         {}, {}, PointerEventSource::Mouse, Pointer::MouseRight,
         {}, true, false, false, false, false, false,
@@ -564,7 +564,7 @@ const struct {
         "  1 Playing animations from 1 other animators\n"
         "  3 Stopped animations from 2 other animators"},
     {"animation details, all animator names",
-        DebugLayerSource::NodeAnimationDetails, DebugLayerFlag::NodeHighlight,
+        DebugLayerSource::NodeAnimationDetails, DebugLayerFlag::NodeInspect,
         {}, false, true, true,
         {}, {}, PointerEventSource::Mouse, Pointer::MouseRight,
         {}, true, false, false, false, false, false,
@@ -579,7 +579,7 @@ const struct {
         "  1 Playing animations from animator {0x7, 0x1} Termanimator\n"
         "  1 Stopped animations from animator {0x7, 0x1} Termanimator"},
     {"node name, flags, nested top level, all hierarchy, offset and size + data, layout, animation details, some layer and animator names",
-        DebugLayerSource::NodeHierarchy|DebugLayerSource::NodeOffsetSize|DebugLayerSource::NodeDataDetails|DebugLayerSource::NodeLayoutDetails|DebugLayerSource::NodeAnimationDetails, DebugLayerFlag::NodeHighlight,
+        DebugLayerSource::NodeHierarchy|DebugLayerSource::NodeOffsetSize|DebugLayerSource::NodeDataDetails|DebugLayerSource::NodeLayoutDetails|DebugLayerSource::NodeAnimationDetails, DebugLayerFlag::NodeInspect,
         "A very nice node"_s, false, true, false,
         {}, {}, PointerEventSource::Mouse, Pointer::MouseRight,
         NodeFlag::Clip|NodeFlag::Focusable, true, true, true, true, true, true,
@@ -606,7 +606,7 @@ const struct {
         "  1 Scheduled animations from 1 other animators\n"
         "  1 Playing animations from 1 other animators\n"
         "  3 Stopped animations from 2 other animators"},
-    /* The last case here is used in nodeHighlightNoCallback() to verify output
+    /* The last case here is used in nodeInspectNoCallback() to verify output
        w/o a callback and for visual color verification, it's expected to be
        the most complete, executing all coloring code paths */
 };
@@ -617,34 +617,34 @@ const struct {
     bool event;
     bool partialUpdate;
     bool expected;
-    Containers::Optional<Color4> highlightColor;
+    Containers::Optional<Color4> inspectColor;
     Color4 expectedColor;
-} NodeHighlightDrawData[]{
+} NodeInspectDrawData[]{
     {"no Draw feature",
         {}, false, true, false,
         {}, 0xff00ffff_rgbaf*0.5f},
-    {"no Draw feature, highlight with an event",
+    {"no Draw feature, inspect with an event",
         {}, true, true, false,
         {}, 0xff00ffff_rgbaf*0.5f},
-    {"no Draw feature, highlight with an event, implicit update",
+    {"no Draw feature, inspect with an event, implicit update",
         {}, true, false, false,
         {}, 0xff00ffff_rgbaf*0.5f},
     {"",
         LayerFeature::Draw, false, true, true,
         {}, 0xff00ffff_rgbaf*0.5f},
-    {"highlight with an event",
+    {"inspect with an event",
         LayerFeature::Draw, true, true, true,
         {}, 0xff00ffff_rgbaf*0.5f},
-    {"highlight with an event, implicit update",
+    {"inspect with an event, implicit update",
         LayerFeature::Draw, true, false, true,
         {}, 0xff00ffff_rgbaf*0.5f},
-    {"custom highlight color",
+    {"custom inspect color",
         LayerFeature::Draw, false, true, true,
         0xff3366cc_rgbaf, 0xff3366cc_rgbaf},
-    {"custom highlight color, highlight with an event",
+    {"custom inspect color, inspect with an event",
         LayerFeature::Draw, true, true, true,
         0xff3366cc_rgbaf, 0xff3366cc_rgbaf},
-    {"custom highlight color, highlight with an event, implicit update",
+    {"custom inspect color, inspect with an event, implicit update",
         LayerFeature::Draw, true, false, true,
         0xff3366cc_rgbaf, 0xff3366cc_rgbaf}
 };
@@ -654,7 +654,7 @@ const struct {
     bool removeParent;
     LayerFeatures features;
     bool expectDrawData;
-} NodeHighlightNodeRemovedData[]{
+} NodeInspectNodeRemovedData[]{
     {"", false, {}, false},
     {"remove parent node", true, {}, false},
     {"layer with Draw", false, LayerFeature::Draw, true},
@@ -667,7 +667,7 @@ const struct {
     bool callback;
     LayerStates expectedState;
     bool expectDrawData;
-} NodeHighlightToggleData[]{
+} NodeInspectToggleData[]{
     {"",
         {}, false, {}, false},
     {"layer with Draw",
@@ -690,7 +690,7 @@ const struct {
     const char* name;
     LayerStates states;
     /* Only items until the first ~UnsignedInt{} are used. ID 2 is the
-       highligted node. */
+       inspected node. */
     UnsignedInt dataIds[4];
     std::size_t expectedDrawOffset;
     bool expectVertexDataUpdated;
@@ -822,31 +822,31 @@ DebugLayerTest::DebugLayerTest() {
     addInstancedTests({&DebugLayerTest::preUpdateTrackAnimators},
         Containers::arraySize(PreUpdateTrackAnimatorsData));
 
-    addTests({&DebugLayerTest::nodeHighlightSetters});
+    addTests({&DebugLayerTest::nodeInspectSetters});
 
-    addInstancedTests({&DebugLayerTest::nodeHighlightNoOp},
-        Containers::arraySize(NodeHighlightNoOpData));
+    addInstancedTests({&DebugLayerTest::nodeInspectNoOp},
+        Containers::arraySize(NodeInspectNoOpData));
 
-    addInstancedTests({&DebugLayerTest::nodeHighlight},
-        Containers::arraySize(NodeHighlightData));
+    addInstancedTests({&DebugLayerTest::nodeInspect},
+        Containers::arraySize(NodeInspectData));
 
-    addTests({&DebugLayerTest::nodeHighlightNoCallback,
-              &DebugLayerTest::nodeHighlightLayerDebugIntegrationExplicit,
-              &DebugLayerTest::nodeHighlightLayerDebugIntegrationExplicitRvalue,
-              &DebugLayerTest::nodeHighlightLayouterDebugIntegrationExplicit,
-              &DebugLayerTest::nodeHighlightLayouterDebugIntegrationExplicitRvalue,
-              &DebugLayerTest::nodeHighlightAnimatorDebugIntegrationExplicit,
-              &DebugLayerTest::nodeHighlightAnimatorDebugIntegrationExplicitRvalue,
-              &DebugLayerTest::nodeHighlightInvalid});
+    addTests({&DebugLayerTest::nodeInspectNoCallback,
+              &DebugLayerTest::nodeInspectLayerDebugIntegrationExplicit,
+              &DebugLayerTest::nodeInspectLayerDebugIntegrationExplicitRvalue,
+              &DebugLayerTest::nodeInspectLayouterDebugIntegrationExplicit,
+              &DebugLayerTest::nodeInspectLayouterDebugIntegrationExplicitRvalue,
+              &DebugLayerTest::nodeInspectAnimatorDebugIntegrationExplicit,
+              &DebugLayerTest::nodeInspectAnimatorDebugIntegrationExplicitRvalue,
+              &DebugLayerTest::nodeInspectInvalid});
 
-    addInstancedTests({&DebugLayerTest::nodeHighlightDraw},
-        Containers::arraySize(NodeHighlightDrawData));
+    addInstancedTests({&DebugLayerTest::nodeInspectDraw},
+        Containers::arraySize(NodeInspectDrawData));
 
-    addInstancedTests({&DebugLayerTest::nodeHighlightNodeRemoved},
-        Containers::arraySize(NodeHighlightNodeRemovedData));
+    addInstancedTests({&DebugLayerTest::nodeInspectNodeRemoved},
+        Containers::arraySize(NodeInspectNodeRemovedData));
 
-    addInstancedTests({&DebugLayerTest::nodeHighlightToggle},
-        Containers::arraySize(NodeHighlightToggleData));
+    addInstancedTests({&DebugLayerTest::nodeInspectToggle},
+        Containers::arraySize(NodeInspectToggleData));
 
     addInstancedTests({&DebugLayerTest::updateEmpty},
         Containers::arraySize(UpdateEmptyData));
@@ -1044,21 +1044,21 @@ void DebugLayerTest::debugSourceSupersets() {
 
 void DebugLayerTest::debugFlag() {
     Containers::String out;
-    Debug{&out} << DebugLayerFlag::NodeHighlight << DebugLayerFlag(0xef);
-    CORRADE_COMPARE(out, "Ui::DebugLayerFlag::NodeHighlight Ui::DebugLayerFlag(0xef)\n");
+    Debug{&out} << DebugLayerFlag::NodeInspect << DebugLayerFlag(0xef);
+    CORRADE_COMPARE(out, "Ui::DebugLayerFlag::NodeInspect Ui::DebugLayerFlag(0xef)\n");
 }
 
 void DebugLayerTest::debugFlags() {
     Containers::String out;
-    Debug{&out} << (DebugLayerFlag::NodeHighlight|DebugLayerFlag::ColorAlways|DebugLayerFlag(0x80)) << DebugLayerFlags{};
-    CORRADE_COMPARE(out, "Ui::DebugLayerFlag::NodeHighlight|Ui::DebugLayerFlag::ColorAlways|Ui::DebugLayerFlag(0x80) Ui::DebugLayerFlags{}\n");
+    Debug{&out} << (DebugLayerFlag::NodeInspect|DebugLayerFlag::ColorAlways|DebugLayerFlag(0x80)) << DebugLayerFlags{};
+    CORRADE_COMPARE(out, "Ui::DebugLayerFlag::NodeInspect|Ui::DebugLayerFlag::ColorAlways|Ui::DebugLayerFlag(0x80) Ui::DebugLayerFlags{}\n");
 }
 
 void DebugLayerTest::construct() {
-    DebugLayer layer{layerHandle(137, 0xfe), DebugLayerSource::NodeData|DebugLayerSource::NodeHierarchy, DebugLayerFlag::NodeHighlight};
+    DebugLayer layer{layerHandle(137, 0xfe), DebugLayerSource::NodeData|DebugLayerSource::NodeHierarchy, DebugLayerFlag::NodeInspect};
     CORRADE_COMPARE(layer.handle(), layerHandle(137, 0xfe));
     CORRADE_COMPARE(layer.sources(), DebugLayerSource::NodeData|DebugLayerSource::NodeHierarchy);
-    CORRADE_COMPARE(layer.flags(), DebugLayerFlag::NodeHighlight);
+    CORRADE_COMPARE(layer.flags(), DebugLayerFlag::NodeInspect);
 
     /* Defaults for flag-related setters are tested in setters*() */
 }
@@ -1068,9 +1068,9 @@ void DebugLayerTest::constructInvalid() {
 
     Containers::String out;
     Error redirectError{&out};
-    DebugLayer{layerHandle(0, 1), DebugLayerSource::Layers, DebugLayerFlag::NodeHighlight};
+    DebugLayer{layerHandle(0, 1), DebugLayerSource::Layers, DebugLayerFlag::NodeInspect};
     CORRADE_COMPARE_AS(out,
-        "Ui::DebugLayer: Ui::DebugLayerSource::Nodes has to be enabled for Ui::DebugLayerFlag::NodeHighlight\n",
+        "Ui::DebugLayer: Ui::DebugLayerSource::Nodes has to be enabled for Ui::DebugLayerFlag::NodeInspect\n",
         TestSuite::Compare::String);
 }
 
@@ -1080,18 +1080,18 @@ void DebugLayerTest::constructCopy() {
 }
 
 void DebugLayerTest::constructMove() {
-    DebugLayer a{layerHandle(137, 0xfe), DebugLayerSource::NodeData, DebugLayerFlag::NodeHighlight};
+    DebugLayer a{layerHandle(137, 0xfe), DebugLayerSource::NodeData, DebugLayerFlag::NodeInspect};
 
     DebugLayer b{Utility::move(a)};
     CORRADE_COMPARE(b.handle(), layerHandle(137, 0xfe));
     CORRADE_COMPARE(b.sources(), DebugLayerSource::NodeData);
-    CORRADE_COMPARE(b.flags(), DebugLayerFlag::NodeHighlight);
+    CORRADE_COMPARE(b.flags(), DebugLayerFlag::NodeInspect);
 
     DebugLayer c{layerHandle(0, 2), DebugLayerSource::NodeHierarchy, {}};
     c = Utility::move(b);
     CORRADE_COMPARE(c.handle(), layerHandle(137, 0xfe));
     CORRADE_COMPARE(c.sources(), DebugLayerSource::NodeData);
-    CORRADE_COMPARE(c.flags(), DebugLayerFlag::NodeHighlight);
+    CORRADE_COMPARE(c.flags(), DebugLayerFlag::NodeInspect);
 
     CORRADE_VERIFY(std::is_nothrow_move_constructible<DebugLayer>::value);
     CORRADE_VERIFY(std::is_nothrow_move_assignable<DebugLayer>::value);
@@ -1103,7 +1103,8 @@ void DebugLayerTest::flags() {
     CORRADE_COMPARE(layer.state(), LayerStates{});
 
     /* Verify that the set / add / clear works and that it doesn't trigger any
-       state update for these. For NodeHighlight it does, which is tested in nodeHighlightToggle(). */
+       state update for these. For NodeInspect it does, which is tested in
+       nodeInspectToggle(). */
     layer.setFlags(DebugLayerFlags{0x80}|DebugLayerFlag::ColorAlways);
     CORRADE_COMPARE(layer.flags(), DebugLayerFlags{0x80}|DebugLayerFlag::ColorAlways);
     CORRADE_COMPARE(layer.state(), LayerStates{});
@@ -1122,18 +1123,18 @@ void DebugLayerTest::flagsInvalid() {
 
     DebugLayer layer{layerHandle(0, 1), {}, {}};
 
-    /* Clearing a NodeHighlight flag that wasn't there before is fine even if
+    /* Clearing a NodeInspect flag that wasn't there before is fine even if
        DebugLayerSource::Nodes isn't present */
     layer.setFlags({});
-    layer.clearFlags(DebugLayerFlag::NodeHighlight);
+    layer.clearFlags(DebugLayerFlag::NodeInspect);
 
     Containers::String out;
     Error redirectError{&out};
-    layer.setFlags(DebugLayerFlag::NodeHighlight);
-    layer.addFlags(DebugLayerFlag::NodeHighlight);
+    layer.setFlags(DebugLayerFlag::NodeInspect);
+    layer.addFlags(DebugLayerFlag::NodeInspect);
     CORRADE_COMPARE_AS(out,
-        "Ui::DebugLayer::setFlags(): Ui::DebugLayerSource::Nodes has to be enabled for Ui::DebugLayerFlag::NodeHighlight\n"
-        "Ui::DebugLayer::setFlags(): Ui::DebugLayerSource::Nodes has to be enabled for Ui::DebugLayerFlag::NodeHighlight\n",
+        "Ui::DebugLayer::setFlags(): Ui::DebugLayerSource::Nodes has to be enabled for Ui::DebugLayerFlag::NodeInspect\n"
+        "Ui::DebugLayer::setFlags(): Ui::DebugLayerSource::Nodes has to be enabled for Ui::DebugLayerFlag::NodeInspect\n",
         TestSuite::Compare::String);
 }
 
@@ -3763,32 +3764,32 @@ void DebugLayerTest::preUpdateTrackAnimators() {
     CORRADE_COMPARE(layer.stateData().animators[1].name, "");
 }
 
-void DebugLayerTest::nodeHighlightSetters() {
-    /* These should work even with NodeHighlight not set, so user code can set
+void DebugLayerTest::nodeInspectSetters() {
+    /* These should work even with NodeInspect not set, so user code can set
        all those independently of deciding what to actually use */
     DebugLayer layer{layerHandle(0, 1), {}, {}};
 
     /* Defaults */
-    CORRADE_COMPARE(layer.nodeHighlightColor(), 0xff00ffff_rgbaf*0.5f);
-    CORRADE_COMPARE(layer.nodeHighlightGesture(), Containers::pair(Pointer::MouseRight|Pointer::Eraser, ~~Modifier::Ctrl));
-    CORRADE_VERIFY(!layer.hasNodeHighlightCallback());
+    CORRADE_COMPARE(layer.nodeInspectColor(), 0xff00ffff_rgbaf*0.5f);
+    CORRADE_COMPARE(layer.nodeInspectGesture(), Containers::pair(Pointer::MouseRight|Pointer::Eraser, ~~Modifier::Ctrl));
+    CORRADE_VERIFY(!layer.hasNodeInspectCallback());
 
     /* Use of this one is further tested in update() and in DebugLayerGLTest */
-    layer.setNodeHighlightColor(0x3399ff66_rgbaf);
-    CORRADE_COMPARE(layer.nodeHighlightColor(), 0x3399ff66_rgbaf);
+    layer.setNodeInspectColor(0x3399ff66_rgbaf);
+    CORRADE_COMPARE(layer.nodeInspectColor(), 0x3399ff66_rgbaf);
 
-    layer.setNodeHighlightGesture(Pointer::MouseMiddle|Pointer::Finger, Modifier::Alt|Modifier::Shift);
-    CORRADE_COMPARE(layer.nodeHighlightGesture(), Containers::pair(Pointer::MouseMiddle|Pointer::Finger, Modifier::Alt|Modifier::Shift));
+    layer.setNodeInspectGesture(Pointer::MouseMiddle|Pointer::Finger, Modifier::Alt|Modifier::Shift);
+    CORRADE_COMPARE(layer.nodeInspectGesture(), Containers::pair(Pointer::MouseMiddle|Pointer::Finger, Modifier::Alt|Modifier::Shift));
 
-    layer.setNodeHighlightCallback([](Containers::StringView){});
-    CORRADE_VERIFY(layer.hasNodeHighlightCallback());
+    layer.setNodeInspectCallback([](Containers::StringView){});
+    CORRADE_VERIFY(layer.hasNodeInspectCallback());
 
-    layer.setNodeHighlightCallback(nullptr);
-    CORRADE_VERIFY(!layer.hasNodeHighlightCallback());
+    layer.setNodeInspectCallback(nullptr);
+    CORRADE_VERIFY(!layer.hasNodeInspectCallback());
 }
 
-void DebugLayerTest::nodeHighlightNoOp() {
-    auto&& data = NodeHighlightNoOpData[testCaseInstanceId()];
+void DebugLayerTest::nodeInspectNoOp() {
+    auto&& data = NodeInspectNoOpData[testCaseInstanceId()];
     setTestCaseDescription(data.name);
 
     AbstractUserInterface ui{{100, 100}};
@@ -3817,9 +3818,9 @@ void DebugLayerTest::nodeHighlightNoOp() {
     /* Debug layer on top */
     DebugLayer& layer = ui.setLayerInstance(Containers::pointer<DebugLayer>(ui.createLayer(), data.sources, data.flags));
     if(data.acceptedPointers)
-        layer.setNodeHighlightGesture(data.acceptedPointers, Modifier::Ctrl);
+        layer.setNodeInspectGesture(data.acceptedPointers, Modifier::Ctrl);
     Int callbackCalled = 0;
-    layer.setNodeHighlightCallback([&callbackCalled](Containers::StringView string) {
+    layer.setNodeInspectCallback([&callbackCalled](Containers::StringView string) {
         ++callbackCalled;
         CORRADE_VERIFY(string);
     });
@@ -3828,7 +3829,7 @@ void DebugLayerTest::nodeHighlightNoOp() {
        sole node */
     ui.update();
     CORRADE_COMPARE(ui.state(), data.sources >= DebugLayerSource::Nodes ? UserInterfaceState::NeedsDataUpdate : UserInterfaceStates{});
-    CORRADE_COMPARE(layer.usedCount(), data.flags >= DebugLayerFlag::NodeHighlight ? 1 : 0);
+    CORRADE_COMPARE(layer.usedCount(), data.flags >= DebugLayerFlag::NodeInspect ? 1 : 0);
 
     /* The event should not be accepted, should produce no callback, but should
        fall through to the data under on the same node */
@@ -3839,7 +3840,7 @@ void DebugLayerTest::nodeHighlightNoOp() {
 
     /* If the feature is enabled and we provide a correct gesture, it should
        work. (All test case instances are expected to allow Ctrl+RMB.) */
-    if(data.flags >= DebugLayerFlag::NodeHighlight) {
+    if(data.flags >= DebugLayerFlag::NodeInspect) {
         PointerEvent another{{}, PointerEventSource::Mouse, Pointer::MouseRight, true, 0, Modifier::Ctrl};
         CORRADE_VERIFY(ui.pointerPressEvent({50, 50}, another));
         CORRADE_COMPARE(callbackCalled, 1);
@@ -3847,8 +3848,8 @@ void DebugLayerTest::nodeHighlightNoOp() {
     }
 }
 
-void DebugLayerTest::nodeHighlight() {
-    auto&& data = NodeHighlightData[testCaseInstanceId()];
+void DebugLayerTest::nodeInspect() {
+    auto&& data = NodeInspectData[testCaseInstanceId()];
     setTestCaseDescription(data.name);
 
     AbstractUserInterface ui{{100, 100}};
@@ -4143,7 +4144,7 @@ void DebugLayerTest::nodeHighlight() {
     Int called = 0;
     Containers::String out;
     const std::ostream* const defaultOutput = Debug::output();
-    layer.setNodeHighlightCallback([&out, defaultOutput, &called](Containers::StringView message) {
+    layer.setNodeInspectCallback([&out, defaultOutput, &called](Containers::StringView message) {
         /* There should be no output redirection anymore when calling this
            function */
         CORRADE_COMPARE(Debug::output(), defaultOutput);
@@ -4176,11 +4177,11 @@ void DebugLayerTest::nodeHighlight() {
         layer.setAnimatorName(emptyAnimator3, "Termanimator");
     }
     if(data.acceptedPointers)
-        layer.setNodeHighlightGesture(data.acceptedPointers, data.acceptedModifiers);
+        layer.setNodeInspectGesture(data.acceptedPointers, data.acceptedModifiers);
     if(data.nodeName)
         layer.setNodeName(node, *data.nodeName);
-    /* No node is highlighted by default */
-    CORRADE_COMPARE(layer.currentHighlightedNode(), NodeHandle::Null);
+    /* No node is inspected by default */
+    CORRADE_COMPARE(layer.currentInspectedNode(), NodeHandle::Null);
 
     /* Update to trigger DebugLayer population */
     ui.update();
@@ -4216,35 +4217,35 @@ void DebugLayerTest::nodeHighlight() {
        invalid handle */
     ui.removeAnimator(removedAnimator2.handle());
 
-    /* Highlighting a Null node if nothing is highlighted does nothing but
-       returns true, as that's a valid scenario */
-    CORRADE_VERIFY(layer.highlightNode(NodeHandle::Null));
-    CORRADE_COMPARE(layer.currentHighlightedNode(), NodeHandle::Null);
+    /* Inspecting a Null node if nothing is inspected does nothing but returns
+       true, as that's a valid scenario */
+    CORRADE_VERIFY(layer.inspectNode(NodeHandle::Null));
+    CORRADE_COMPARE(layer.currentInspectedNode(), NodeHandle::Null);
     CORRADE_COMPARE(called, 0);
 
-    /* Highlighting a known node ID but with an invalid generation if nothing
-       is highlighted does nothing and returns false; same for ID clearly out
-       of bounds */
-    CORRADE_VERIFY(!layer.highlightNode(nodeHandle(nodeHandleId(node), nodeHandleGeneration(node) + 1)));
-    CORRADE_VERIFY(!layer.highlightNode(nodeHandle(100000, 1)));
-    CORRADE_COMPARE(layer.currentHighlightedNode(), NodeHandle::Null);
+    /* Inspecting a known node ID but with an invalid generation if nothing is
+       inspected does nothing and returns false; same for ID clearly out of
+       bounds */
+    CORRADE_VERIFY(!layer.inspectNode(nodeHandle(nodeHandleId(node), nodeHandleGeneration(node) + 1)));
+    CORRADE_VERIFY(!layer.inspectNode(nodeHandle(100000, 1)));
+    CORRADE_COMPARE(layer.currentInspectedNode(), NodeHandle::Null);
     CORRADE_COMPARE(called, 0);
 
-    /* Highlight the main node */
-    CORRADE_VERIFY(layer.highlightNode(node));
-    CORRADE_COMPARE(layer.currentHighlightedNode(), node);
+    /* Inspect the main node */
+    CORRADE_VERIFY(layer.inspectNode(node));
+    CORRADE_COMPARE(layer.currentInspectedNode(), node);
     CORRADE_COMPARE(called, 1);
     CORRADE_COMPARE_AS(out, data.expected, TestSuite::Compare::String);
 
-    /* Highlighting it again does exactly the same (doesn't remove the
+    /* Inspecting it again does exactly the same (doesn't remove the
        highlight) */
     out = {};
-    CORRADE_VERIFY(layer.highlightNode(node));
-    CORRADE_COMPARE(layer.currentHighlightedNode(), node);
+    CORRADE_VERIFY(layer.inspectNode(node));
+    CORRADE_COMPARE(layer.currentInspectedNode(), node);
     CORRADE_COMPARE(called, 2);
     CORRADE_COMPARE_AS(out, data.expected, TestSuite::Compare::String);
 
-    /* Highlighting another node */
+    /* Inspecting another node */
     Containers::String anotherExpected = "\n"_s.joinWithoutEmptyParts({
         "Top-level node {0x4, 0x1}",
         data.sources >= DebugLayerSource::NodeOffsetSize ?
@@ -4253,29 +4254,29 @@ void DebugLayerTest::nodeHighlight() {
             "  Root node with 0 direct children" : ""
     });
     out = {};
-    CORRADE_VERIFY(layer.highlightNode(another));
-    CORRADE_COMPARE(layer.currentHighlightedNode(), another);
+    CORRADE_VERIFY(layer.inspectNode(another));
+    CORRADE_COMPARE(layer.currentInspectedNode(), another);
     CORRADE_COMPARE(called, 3);
     CORRADE_COMPARE_AS(out, anotherExpected, TestSuite::Compare::String);
 
-    /* Highlighting Null removes the highlight and fires the callback with an
+    /* Inspecting Null removes the highlight and fires the callback with an
        empty string. Deliberately setting out to non-empty to verify that it
        gets emptied. */
     out = "this gonna be replaced";
-    CORRADE_VERIFY(layer.highlightNode(NodeHandle::Null));
-    CORRADE_COMPARE(layer.currentHighlightedNode(), NodeHandle::Null);
+    CORRADE_VERIFY(layer.inspectNode(NodeHandle::Null));
+    CORRADE_COMPARE(layer.currentInspectedNode(), NodeHandle::Null);
     CORRADE_COMPARE(called, 4);
     CORRADE_COMPARE(out, "");
 
-    /* Highlightin invalid node with another node highlighted behaves almost
-       the same, except that the function returns false. Again deliberately
-       setting out to non-empty to verify that it gets emptied. */
-    CORRADE_VERIFY(layer.highlightNode(another));
-    CORRADE_COMPARE(layer.currentHighlightedNode(), another);
+    /* Inspecting invalid node with another node inspected behaves almost the
+       same, except that the function returns false. Again deliberately setting
+       out to non-empty to verify that it gets emptied. */
+    CORRADE_VERIFY(layer.inspectNode(another));
+    CORRADE_COMPARE(layer.currentInspectedNode(), another);
     out = "this gonna be replaced";
-    CORRADE_VERIFY(!layer.highlightNode(nodeHandle(100000, 1)));
-    CORRADE_COMPARE(layer.currentHighlightedNode(), NodeHandle::Null);
-    CORRADE_COMPARE(called, 6); /* highlightNode() called twice in this case */
+    CORRADE_VERIFY(!layer.inspectNode(nodeHandle(100000, 1)));
+    CORRADE_COMPARE(layer.currentInspectedNode(), NodeHandle::Null);
+    CORRADE_COMPARE(called, 6); /* inspectNode() called twice in this case */
     CORRADE_COMPARE(out, "");
 
     /* The events implicitly call update(), meaning that the yet-unknown nodes,
@@ -4290,19 +4291,19 @@ void DebugLayerTest::nodeHighlight() {
     ui.removeAnimator(unknownAnimator1.handle());
     ui.removeAnimator(unknownAnimator2.handle());
 
-    /* Highlight the node by an event */
+    /* Inspect the node by an event */
     out = {};
     PointerEvent press1{{}, data.pointerSource, data.pointer, true, 0, data.acceptedPointers ? data.acceptedModifiers : Modifier::Ctrl};
     CORRADE_VERIFY(ui.pointerPressEvent({45, 35}, press1));
-    CORRADE_COMPARE(layer.currentHighlightedNode(), node);
+    CORRADE_COMPARE(layer.currentInspectedNode(), node);
     CORRADE_COMPARE(called, 7);
     CORRADE_COMPARE_AS(out, data.expected, TestSuite::Compare::String);
 
-    /* Highlight another node by an event */
+    /* Inspect another node by an event */
     out = {};
     PointerEvent press2{{}, data.pointerSource, data.pointer, true, 0, data.acceptedPointers ? data.acceptedModifiers : Modifier::Ctrl};
     CORRADE_VERIFY(ui.pointerPressEvent({80, 90}, press2));
-    CORRADE_COMPARE(layer.currentHighlightedNode(), another);
+    CORRADE_COMPARE(layer.currentInspectedNode(), another);
     CORRADE_COMPARE(called, 8);
     CORRADE_COMPARE_AS(out, anotherExpected, TestSuite::Compare::String);
 
@@ -4312,7 +4313,7 @@ void DebugLayerTest::nodeHighlight() {
     out = "this is gonna stay";
     PointerEvent press3{{}, data.pointerSource, data.pointer, true, 0, data.acceptedPointers ? data.acceptedModifiers : Modifier::Ctrl};
     CORRADE_VERIFY(!ui.pointerPressEvent({100, 100}, press3));
-    CORRADE_COMPARE(layer.currentHighlightedNode(), another);
+    CORRADE_COMPARE(layer.currentInspectedNode(), another);
     CORRADE_COMPARE(called, 8);
     CORRADE_COMPARE(out, "this is gonna stay");
 
@@ -4322,13 +4323,13 @@ void DebugLayerTest::nodeHighlight() {
     out = "this gonna be replaced";
     PointerEvent press4{{}, data.pointerSource, data.pointer, true, 0, data.acceptedPointers ? data.acceptedModifiers : Modifier::Ctrl};
     CORRADE_VERIFY(ui.pointerPressEvent({80, 90}, press4));
-    CORRADE_COMPARE(layer.currentHighlightedNode(), NodeHandle::Null);
+    CORRADE_COMPARE(layer.currentInspectedNode(), NodeHandle::Null);
     CORRADE_COMPARE(called, 9);
     CORRADE_COMPARE(out, "");
 }
 
-void DebugLayerTest::nodeHighlightNoCallback() {
-    /* A trimmed down variant of nodeHighlight() verifying behavior without a
+void DebugLayerTest::nodeInspectNoCallback() {
+    /* A trimmed down variant of nodeInspect() verifying behavior without a
        callback and for visual color verification */
 
     AbstractUserInterface ui{{100, 100}};
@@ -4364,10 +4365,10 @@ void DebugLayerTest::nodeHighlightNoCallback() {
     EmptyLayer& emptyLayer2 = ui.setLayerInstance(Containers::pointer<EmptyLayer>(ui.createLayer()));
     emptyLayer2.create(node);
 
-    /* Just to match the layer handles to the nodeHighlight() case */
+    /* Just to match the layer handles to the nodeInspect() case */
     /*LayerHandle removedLayer =*/ ui.createLayer();
 
-    DebugLayer& layer = ui.setLayerInstance(Containers::pointer<DebugLayer>(ui.createLayer(), DebugLayerSource::NodeOffsetSize|DebugLayerSource::NodeHierarchy|DebugLayerSource::NodeDataDetails|DebugLayerSource::NodeLayoutDetails|DebugLayerSource::NodeAnimationDetails, DebugLayerFlag::NodeHighlight));
+    DebugLayer& layer = ui.setLayerInstance(Containers::pointer<DebugLayer>(ui.createLayer(), DebugLayerSource::NodeOffsetSize|DebugLayerSource::NodeHierarchy|DebugLayerSource::NodeDataDetails|DebugLayerSource::NodeLayoutDetails|DebugLayerSource::NodeAnimationDetails, DebugLayerFlag::NodeInspect));
 
     struct IntegratedLayer: AbstractLayer {
         using AbstractLayer::AbstractLayer;
@@ -4429,12 +4430,12 @@ void DebugLayerTest::nodeHighlightNoCallback() {
     emptyLayouter1.add(node);
     EmptyLayouter& emptyLayouter2 = ui.setLayouterInstance(Containers::pointer<EmptyLayouter>(ui.createLayouter()));
     emptyLayouter2.add(node);
-    /* Layouter that was removed / w/o an instance in nodeHighlight() above */
+    /* Layouter that was removed / w/o an instance in nodeInspect() above */
     ui.createLayouter();
     IntegratedLayouter& integratedLayouter = ui.setLayouterInstance(Containers::pointer<IntegratedLayouter>(ui.createLayouter()));
     integratedLayouter.add(node);
     integratedLayouter.add(node);
-    /* Layouter that didn't have instance in nodeHighlight() above */
+    /* Layouter that didn't have instance in nodeInspect() above */
     ui.createLayouter();
     EmptyLayouter& emptyLayouter3 = ui.setLayouterInstance(Containers::pointer<EmptyLayouter>(ui.createLayouter()));
     emptyLayouter3.add(node);
@@ -4483,7 +4484,7 @@ void DebugLayerTest::nodeHighlightNoCallback() {
     emptyAnimator1.create(Nanoseconds::max(), 10_nsec, node, AnimationFlag::KeepOncePlayed); /* reserved */
     EmptyNodeAnimator& emptyAnimator2 = ui.setNodeAnimatorInstance(Containers::pointer<EmptyNodeAnimator>(ui.createAnimator()));
     emptyAnimator2.create(50_nsec, 10_nsec, node); /* scheduled */
-    /* Animators that were removed / w/o an instance in nodeHighlight() above */
+    /* Animators that were removed / w/o an instance in nodeInspect() above */
     ui.createAnimator();
     ui.createAnimator();
     ui.createAnimator();
@@ -4492,7 +4493,7 @@ void DebugLayerTest::nodeHighlightNoCallback() {
     integratedAnimator.create(-1_nsec, 10_nsec, node); /* playing */
     AnimationHandle integratedAnimatorPaused = integratedAnimator.create(-1_nsec, 10_nsec, node); /* paused */
     integratedAnimator.pause(integratedAnimatorPaused, -25_nsec);
-    /* Data animator that was unused in nodeHighlight() above */
+    /* Data animator that was unused in nodeInspect() above */
     ui.createAnimator();
     EmptyNodeAnimator& emptyAnimator3 = ui.setNodeAnimatorInstance(Containers::pointer<EmptyNodeAnimator>(ui.createAnimator()));
     emptyAnimator3.create(-1_nsec, 10_nsec, node); /* playing */
@@ -4506,8 +4507,8 @@ void DebugLayerTest::nodeHighlightNoCallback() {
     layer.setAnimatorName(emptyAnimator2, "2nd");
     layer.setAnimatorName(integratedAnimator, "No#3");
 
-    /* Highlight the node and then another unnamed one for visual color
-       verification. Using events as they delegate to highlightNode() and thus
+    /* Inspect the node and then another unnamed one for visual color
+       verification. Using events as they delegate to inspectNode() and thus
        test the whole stack for color output. */
     {
         Debug{} << "======================== visual color verification start =======================";
@@ -4517,9 +4518,9 @@ void DebugLayerTest::nodeHighlightNoCallback() {
         PointerEvent press1{{}, PointerEventSource::Mouse, Pointer::MouseRight, true, 0, Modifier::Ctrl};
         PointerEvent press2{{}, PointerEventSource::Mouse, Pointer::MouseRight, true, 0, Modifier::Ctrl};
         CORRADE_VERIFY(ui.pointerPressEvent({45, 35}, press1));
-        CORRADE_COMPARE(layer.currentHighlightedNode(), node);
+        CORRADE_COMPARE(layer.currentInspectedNode(), node);
         CORRADE_VERIFY(ui.pointerPressEvent({80, 90}, press2));
-        CORRADE_COMPARE(layer.currentHighlightedNode(), another);
+        CORRADE_COMPARE(layer.currentInspectedNode(), another);
 
         layer.clearFlags(DebugLayerFlag::ColorAlways);
 
@@ -4534,59 +4535,59 @@ void DebugLayerTest::nodeHighlightNoCallback() {
         Debug redirectOutput{&out};
         PointerEvent press{{}, PointerEventSource::Mouse, Pointer::MouseRight, true, 0, Modifier::Ctrl};
         CORRADE_VERIFY(ui.pointerPressEvent({45, 35}, press));
-        CORRADE_COMPARE(layer.currentHighlightedNode(), node);
+        CORRADE_COMPARE(layer.currentInspectedNode(), node);
         /* The output always has a newline at the end which cannot be disabled
-           so strip it here to have the comparison match the nodeHighlight()
+           so strip it here to have the comparison match the nodeInspect()
            case */
         CORRADE_COMPARE_AS(out,
             "\n",
             TestSuite::Compare::StringHasSuffix);
         CORRADE_COMPARE_AS(out.exceptSuffix("\n"),
-            Containers::arrayView(NodeHighlightData).back().expected,
+            Containers::arrayView(NodeInspectData).back().expected,
             TestSuite::Compare::String);
     } {
         Containers::String out;
         Debug redirectOutput{&out};
         PointerEvent press{{}, PointerEventSource::Mouse, Pointer::MouseRight, true, 0, Modifier::Ctrl};
         CORRADE_VERIFY(ui.pointerPressEvent({80, 90}, press));
-        CORRADE_COMPARE(layer.currentHighlightedNode(), another);
+        CORRADE_COMPARE(layer.currentInspectedNode(), another);
         CORRADE_COMPARE_AS(out,
             "Top-level node {0x4, 0x1}\n"
             "  Offset: {70, 80}, size: {20, 20}\n"
             "  Root node with 0 direct children\n",
             TestSuite::Compare::String);
 
-    /* Clicking the highlighted node again removes the highlight, and nothing
+    /* Clicking the inspected node again removes the highlight, and nothing
        gets printed */
     } {
         Containers::String out;
         Debug redirectOutput{&out};
         PointerEvent press{{}, PointerEventSource::Mouse, Pointer::MouseRight, true, 0, Modifier::Ctrl};
         CORRADE_VERIFY(ui.pointerPressEvent({80, 90}, press));
-        CORRADE_COMPARE(layer.currentHighlightedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(layer.currentInspectedNode(), NodeHandle::Null);
         CORRADE_COMPARE(out, "");
     }
 
-    /* The same again, but with highlightNode() instead of events */
+    /* The same again, but with inspectNode() instead of events */
     {
         Containers::String out;
         Debug redirectOutput{&out};
-        CORRADE_VERIFY(layer.highlightNode(node));
-        CORRADE_COMPARE(layer.currentHighlightedNode(), node);
+        CORRADE_VERIFY(layer.inspectNode(node));
+        CORRADE_COMPARE(layer.currentInspectedNode(), node);
         /* The output always has a newline at the end which cannot be disabled
-           so strip it here to have the comparison match the nodeHighlight()
+           so strip it here to have the comparison match the nodeInspect()
            case */
         CORRADE_COMPARE_AS(out,
             "\n",
             TestSuite::Compare::StringHasSuffix);
         CORRADE_COMPARE_AS(out.exceptSuffix("\n"),
-            Containers::arrayView(NodeHighlightData).back().expected,
+            Containers::arrayView(NodeInspectData).back().expected,
             TestSuite::Compare::String);
     } {
         Containers::String out;
         Debug redirectOutput{&out};
-        CORRADE_VERIFY(layer.highlightNode(another));
-        CORRADE_COMPARE(layer.currentHighlightedNode(), another);
+        CORRADE_VERIFY(layer.inspectNode(another));
+        CORRADE_COMPARE(layer.currentInspectedNode(), another);
         CORRADE_COMPARE_AS(out,
             "Top-level node {0x4, 0x1}\n"
             "  Offset: {70, 80}, size: {20, 20}\n"
@@ -4597,14 +4598,14 @@ void DebugLayerTest::nodeHighlightNoCallback() {
     } {
         Containers::String out;
         Debug redirectOutput{&out};
-        CORRADE_VERIFY(layer.highlightNode(NodeHandle::Null));
-        CORRADE_COMPARE(layer.currentHighlightedNode(), NodeHandle::Null);
+        CORRADE_VERIFY(layer.inspectNode(NodeHandle::Null));
+        CORRADE_COMPARE(layer.currentInspectedNode(), NodeHandle::Null);
         CORRADE_COMPARE(out, "");
     }
 }
 
-void DebugLayerTest::nodeHighlightLayerDebugIntegrationExplicit() {
-    /* Implicit integration tested in nodeHighlight() above, this verifies that
+void DebugLayerTest::nodeInspectLayerDebugIntegrationExplicit() {
+    /* Implicit integration tested in nodeInspect() above, this verifies that
        the explicitly passed instance does the right thing as well */
 
     AbstractUserInterface ui{{100, 100}};
@@ -4618,7 +4619,7 @@ void DebugLayerTest::nodeHighlightLayerDebugIntegrationExplicit() {
         struct DebugIntegration {
             explicit DebugIntegration(int value): value{value} {}
 
-            /* Compared to noodeHighlight(), here the signature does match */
+            /* Compared to noodeInspect(), here the signature does match */
             void print(Debug& debug, const IntegratedLayer& layer, const Containers::StringView& layerName, LayerDataHandle data) {
                 /* Printing the name colored to verify the color is disabled
                    correctly here as well */
@@ -4636,7 +4637,7 @@ void DebugLayerTest::nodeHighlightLayerDebugIntegrationExplicit() {
     integratedLayer.create(node);
     integratedLayer.create(node);
 
-    DebugLayer& layer = ui.setLayerInstance(Containers::pointer<DebugLayer>(ui.createLayer(), DebugLayerSource::NodeDataDetails, DebugLayerFlag::NodeHighlight));
+    DebugLayer& layer = ui.setLayerInstance(Containers::pointer<DebugLayer>(ui.createLayer(), DebugLayerSource::NodeDataDetails, DebugLayerFlag::NodeInspect));
 
     IntegratedLayer::DebugIntegration integration{1337};
     layer.setLayerName(integratedLayer, "No.2", integration);
@@ -4646,9 +4647,9 @@ void DebugLayerTest::nodeHighlightLayerDebugIntegrationExplicit() {
     Containers::String out;
     {
         Debug redirectOutput{&out};
-        CORRADE_VERIFY(layer.highlightNode(node));
+        CORRADE_VERIFY(layer.inspectNode(node));
     }
-    CORRADE_COMPARE(layer.currentHighlightedNode(), node);
+    CORRADE_COMPARE(layer.currentInspectedNode(), node);
     CORRADE_COMPARE_AS(out,
         "Top-level node {0x0, 0x1}\n"
         "  Layer No.2 (42069) data {0x0, 0x1} and a value of 1337\n"
@@ -4656,18 +4657,17 @@ void DebugLayerTest::nodeHighlightLayerDebugIntegrationExplicit() {
         TestSuite::Compare::String);
 }
 
-void DebugLayerTest::nodeHighlightLayerDebugIntegrationExplicitRvalue() {
-    /* Like nodeHighlightLayerDebugIntegrationExplicit(), but passing a
+void DebugLayerTest::nodeInspectLayerDebugIntegrationExplicitRvalue() {
+    /* Like nodeInspectLayerDebugIntegrationExplicit(), but passing a
        move-only instance */
 
     AbstractUserInterface ui{{100, 100}};
 
     NodeHandle node = ui.createNode({40, 40}, {20, 20});
 
-    /* Compared to nodeHighlight() and
-       nodeHighlightLayerDebugIntegrationExplicit() here the whole
-       DebugIntegration type is defined in a base class which should also be
-       fine */
+    /* Compared to nodeInspect() and nodeInspectLayerDebugIntegrationExplicit()
+       here the whole DebugIntegration type is defined in a base class which
+       should also be fine */
     struct IntegratedLayerBase: AbstractLayer {
         using AbstractLayer::AbstractLayer;
         using AbstractLayer::create;
@@ -4702,7 +4702,7 @@ void DebugLayerTest::nodeHighlightLayerDebugIntegrationExplicitRvalue() {
     integratedLayer.create(node);
     integratedLayer.create(node);
 
-    DebugLayer& layer = ui.setLayerInstance(Containers::pointer<DebugLayer>(ui.createLayer(), DebugLayerSource::NodeDataDetails, DebugLayerFlag::NodeHighlight));
+    DebugLayer& layer = ui.setLayerInstance(Containers::pointer<DebugLayer>(ui.createLayer(), DebugLayerSource::NodeDataDetails, DebugLayerFlag::NodeInspect));
 
     layer.setLayerName(integratedLayer, "No.2", IntegratedLayer::DebugIntegration{1337});
 
@@ -4711,9 +4711,9 @@ void DebugLayerTest::nodeHighlightLayerDebugIntegrationExplicitRvalue() {
     Containers::String out;
     {
         Debug redirectOutput{&out};
-        CORRADE_VERIFY(layer.highlightNode(node));
+        CORRADE_VERIFY(layer.inspectNode(node));
     }
-    CORRADE_COMPARE(layer.currentHighlightedNode(), node);
+    CORRADE_COMPARE(layer.currentInspectedNode(), node);
     CORRADE_COMPARE_AS(out,
         "Top-level node {0x0, 0x1}\n"
         "  Layer No.2 (42069) data {0x0, 0x1} and a value of 1337\n"
@@ -4721,8 +4721,8 @@ void DebugLayerTest::nodeHighlightLayerDebugIntegrationExplicitRvalue() {
         TestSuite::Compare::String);
 }
 
-void DebugLayerTest::nodeHighlightLayouterDebugIntegrationExplicit() {
-    /* Implicit integration tested in nodeHighlight() above, this verifies that
+void DebugLayerTest::nodeInspectLayouterDebugIntegrationExplicit() {
+    /* Implicit integration tested in nodeInspect() above, this verifies that
        the explicitly passed instance does the right thing as well */
 
     AbstractUserInterface ui{{100, 100}};
@@ -4736,7 +4736,7 @@ void DebugLayerTest::nodeHighlightLayouterDebugIntegrationExplicit() {
         struct DebugIntegration {
             explicit DebugIntegration(int value): value{value} {}
 
-            /* Compared to noodeHighlight(), here the signature does match */
+            /* Compared to noodeInspect(), here the signature does match */
             void print(Debug& debug, const IntegratedLayouter& layouter, const Containers::StringView& layouterName, LayouterDataHandle data) {
                 /* Printing the name colored to verify the color is disabled
                    correctly here as well */
@@ -4754,7 +4754,7 @@ void DebugLayerTest::nodeHighlightLayouterDebugIntegrationExplicit() {
     integratedLayouter.add(node);
     integratedLayouter.add(node);
 
-    DebugLayer& layer = ui.setLayerInstance(Containers::pointer<DebugLayer>(ui.createLayer(), DebugLayerSource::NodeLayoutDetails, DebugLayerFlag::NodeHighlight));
+    DebugLayer& layer = ui.setLayerInstance(Containers::pointer<DebugLayer>(ui.createLayer(), DebugLayerSource::NodeLayoutDetails, DebugLayerFlag::NodeInspect));
 
     IntegratedLayouter::DebugIntegration integration{7331};
     layer.setLayouterName(integratedLayouter, "Secondary", integration);
@@ -4764,9 +4764,9 @@ void DebugLayerTest::nodeHighlightLayouterDebugIntegrationExplicit() {
     Containers::String out;
     {
         Debug redirectOutput{&out};
-        CORRADE_VERIFY(layer.highlightNode(node));
+        CORRADE_VERIFY(layer.inspectNode(node));
     }
-    CORRADE_COMPARE(layer.currentHighlightedNode(), node);
+    CORRADE_COMPARE(layer.currentInspectedNode(), node);
     CORRADE_COMPARE_AS(out,
         "Top-level node {0x0, 0x1}\n"
         "  Layouter Secondary (96024) layout {0x0, 0x1} and a value of 7331\n"
@@ -4774,16 +4774,16 @@ void DebugLayerTest::nodeHighlightLayouterDebugIntegrationExplicit() {
         TestSuite::Compare::String);
 }
 
-void DebugLayerTest::nodeHighlightLayouterDebugIntegrationExplicitRvalue() {
-    /* Like nodeHighlightLayerDebugIntegrationExplicit(), but passing a
+void DebugLayerTest::nodeInspectLayouterDebugIntegrationExplicitRvalue() {
+    /* Like nodeInspectLayerDebugIntegrationExplicit(), but passing a
        move-only instance */
 
     AbstractUserInterface ui{{100, 100}};
 
     NodeHandle node = ui.createNode({40, 40}, {20, 20});
 
-    /* Compared to nodeHighlight() and
-       nodeHighlightLayouterDebugIntegrationExplicit() here the whole
+    /* Compared to nodeInspect() and
+       nodeInspectLayouterDebugIntegrationExplicit() here the whole
        DebugIntegration type is defined in a base class which should also be
        fine */
     struct IntegratedLayouterBase: AbstractLayouter {
@@ -4820,7 +4820,7 @@ void DebugLayerTest::nodeHighlightLayouterDebugIntegrationExplicitRvalue() {
     integratedLayouter.add(node);
     integratedLayouter.add(node);
 
-    DebugLayer& layer = ui.setLayerInstance(Containers::pointer<DebugLayer>(ui.createLayer(), DebugLayerSource::NodeLayoutDetails, DebugLayerFlag::NodeHighlight));
+    DebugLayer& layer = ui.setLayerInstance(Containers::pointer<DebugLayer>(ui.createLayer(), DebugLayerSource::NodeLayoutDetails, DebugLayerFlag::NodeInspect));
 
     layer.setLayouterName(integratedLayouter, "Secondary", IntegratedLayouter::DebugIntegration{7331});
 
@@ -4829,9 +4829,9 @@ void DebugLayerTest::nodeHighlightLayouterDebugIntegrationExplicitRvalue() {
     Containers::String out;
     {
         Debug redirectOutput{&out};
-        CORRADE_VERIFY(layer.highlightNode(node));
+        CORRADE_VERIFY(layer.inspectNode(node));
     }
-    CORRADE_COMPARE(layer.currentHighlightedNode(), node);
+    CORRADE_COMPARE(layer.currentInspectedNode(), node);
     CORRADE_COMPARE_AS(out,
         "Top-level node {0x0, 0x1}\n"
         "  Layouter Secondary (96024) layout {0x0, 0x1} and a value of 7331\n"
@@ -4839,15 +4839,15 @@ void DebugLayerTest::nodeHighlightLayouterDebugIntegrationExplicitRvalue() {
         TestSuite::Compare::String);
 }
 
-void DebugLayerTest::nodeHighlightAnimatorDebugIntegrationExplicit() {
-    /* Implicit integration tested in nodeHighlight() above, this verifies that
+void DebugLayerTest::nodeInspectAnimatorDebugIntegrationExplicit() {
+    /* Implicit integration tested in nodeInspect() above, this verifies that
        the explicitly passed instance does the right thing as well */
 
     AbstractUserInterface ui{{100, 100}};
 
     NodeHandle node = ui.createNode({40, 20}, {20, 30});
 
-    DebugLayer& layer = ui.setLayerInstance(Containers::pointer<DebugLayer>(ui.createLayer(), DebugLayerSource::NodeAnimationDetails, DebugLayerFlag::NodeHighlight));
+    DebugLayer& layer = ui.setLayerInstance(Containers::pointer<DebugLayer>(ui.createLayer(), DebugLayerSource::NodeAnimationDetails, DebugLayerFlag::NodeInspect));
 
     struct IntegratedAnimator: AbstractGenericAnimator {
         using AbstractGenericAnimator::AbstractGenericAnimator;
@@ -4887,9 +4887,9 @@ void DebugLayerTest::nodeHighlightAnimatorDebugIntegrationExplicit() {
     Containers::String out;
     {
         Debug redirectOutput{&out};
-        CORRADE_VERIFY(layer.highlightNode(node));
+        CORRADE_VERIFY(layer.inspectNode(node));
     }
-    CORRADE_COMPARE(layer.currentHighlightedNode(), node);
+    CORRADE_COMPARE(layer.currentInspectedNode(), node);
     CORRADE_COMPARE_AS(out,
         "Top-level node {0x0, 0x1}\n"
         "  Animator No#2 (69420) Playing animation {0x0, 0x1} and a value of 1226\n"
@@ -4897,18 +4897,18 @@ void DebugLayerTest::nodeHighlightAnimatorDebugIntegrationExplicit() {
         TestSuite::Compare::String);
 }
 
-void DebugLayerTest::nodeHighlightAnimatorDebugIntegrationExplicitRvalue() {
-    /* Implicit integration tested in nodeHighlight() above, this verifies that
+void DebugLayerTest::nodeInspectAnimatorDebugIntegrationExplicitRvalue() {
+    /* Implicit integration tested in nodeInspect() above, this verifies that
        the explicitly passed instance does the right thing as well */
 
     AbstractUserInterface ui{{100, 100}};
 
     NodeHandle node = ui.createNode({40, 20}, {20, 30});
 
-    DebugLayer& layer = ui.setLayerInstance(Containers::pointer<DebugLayer>(ui.createLayer(), DebugLayerSource::NodeAnimationDetails, DebugLayerFlag::NodeHighlight));
+    DebugLayer& layer = ui.setLayerInstance(Containers::pointer<DebugLayer>(ui.createLayer(), DebugLayerSource::NodeAnimationDetails, DebugLayerFlag::NodeInspect));
 
-    /* Compared to nodeHighlight() and
-       nodeHighlightAnimatorDebugIntegrationExplicit() here the whole
+    /* Compared to nodeInspect() and
+       nodeInspectAnimatorDebugIntegrationExplicit() here the whole
        DebugIntegration type is defined in a base class which should also be
        fine */
     struct IntegratedAnimatorBase: AbstractGenericAnimator {
@@ -4959,9 +4959,9 @@ void DebugLayerTest::nodeHighlightAnimatorDebugIntegrationExplicitRvalue() {
     Containers::String out;
     {
         Debug redirectOutput{&out};
-        CORRADE_VERIFY(layer.highlightNode(node));
+        CORRADE_VERIFY(layer.inspectNode(node));
     }
-    CORRADE_COMPARE(layer.currentHighlightedNode(), node);
+    CORRADE_COMPARE(layer.currentInspectedNode(), node);
     CORRADE_COMPARE_AS(out,
         "Top-level node {0x0, 0x1}\n"
         "  Animator No#2 (69420) Playing animation {0x0, 0x1} and a value of 1226\n"
@@ -4969,8 +4969,8 @@ void DebugLayerTest::nodeHighlightAnimatorDebugIntegrationExplicitRvalue() {
         TestSuite::Compare::String);
 }
 
-void DebugLayerTest::nodeHighlightDraw() {
-    auto&& data = NodeHighlightDrawData[testCaseInstanceId()];
+void DebugLayerTest::nodeInspectDraw() {
+    auto&& data = NodeInspectDrawData[testCaseInstanceId()];
     setTestCaseDescription(data.name);
 
     AbstractUserInterface ui{{100, 100}};
@@ -4995,18 +4995,18 @@ void DebugLayerTest::nodeHighlightDraw() {
         private:
             LayerFeatures _features;
     };
-    Layer& layer = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer(), DebugLayerSource::Nodes, DebugLayerFlag::NodeHighlight, data.features));
+    Layer& layer = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer(), DebugLayerSource::Nodes, DebugLayerFlag::NodeInspect, data.features));
     /* Just to silence the output */
-    layer.setNodeHighlightCallback([](Containers::StringView){});
+    layer.setNodeInspectCallback([](Containers::StringView){});
 
     if(data.partialUpdate) {
         ui.update();
         CORRADE_COMPARE(layer.state(), LayerState::NeedsCommonDataUpdate);
     }
 
-    /* Setting a highlight color marks the layer data as dirty */
-    if(data.highlightColor) {
-        layer.setNodeHighlightColor(*data.highlightColor);
+    /* Setting an inspect color marks the layer data as dirty */
+    if(data.inspectColor) {
+        layer.setNodeInspectColor(*data.inspectColor);
         /* NeedsDataUpdate is set only if something is actually drawn */
         CORRADE_COMPARE(layer.state(), LayerState::NeedsCommonDataUpdate|(data.expected ? LayerState::NeedsDataUpdate : LayerStates{}));
 
@@ -5016,14 +5016,14 @@ void DebugLayerTest::nodeHighlightDraw() {
         }
     }
 
-    /* Highlight the node */
+    /* Inspect the node */
     if(data.event) {
         PointerEvent event{{}, PointerEventSource::Pen, Pointer::Eraser, true, 0, Modifier::Ctrl};
         CORRADE_VERIFY(ui.pointerPressEvent({50, 30}, event));
     } else {
-        CORRADE_VERIFY(layer.highlightNode(node));
+        CORRADE_VERIFY(layer.inspectNode(node));
     }
-    CORRADE_COMPARE(layer.currentHighlightedNode(), node);
+    CORRADE_COMPARE(layer.currentInspectedNode(), node);
     /* NeedsDataUpdate is set only if something is actually drawn */
     CORRADE_COMPARE(layer.state(), LayerState::NeedsCommonDataUpdate|(data.expected ? LayerState::NeedsDataUpdate : LayerStates{}));
 
@@ -5053,14 +5053,14 @@ void DebugLayerTest::nodeHighlightDraw() {
         }), TestSuite::Compare::Container);
     }
 
-    /* Highlight a parent, just to verify the update goes as expected */
+    /* Inspect a parent, just to verify the update goes as expected */
     if(data.event) {
         PointerEvent event{{}, PointerEventSource::Pen, Pointer::Eraser, true, 0, Modifier::Ctrl};
         CORRADE_VERIFY(ui.pointerPressEvent({30, 20}, event));
     } else {
-        CORRADE_VERIFY(layer.highlightNode(parent2));
+        CORRADE_VERIFY(layer.inspectNode(parent2));
     }
-    CORRADE_COMPARE(layer.currentHighlightedNode(), parent2);
+    CORRADE_COMPARE(layer.currentInspectedNode(), parent2);
     CORRADE_COMPARE(layer.state(), LayerState::NeedsCommonDataUpdate|(data.expected ? LayerState::NeedsDataUpdate : LayerStates{}));
 
     ui.update();
@@ -5094,9 +5094,9 @@ void DebugLayerTest::nodeHighlightDraw() {
         PointerEvent event{{}, PointerEventSource::Pen, Pointer::Eraser, true, 0, Modifier::Ctrl};
         CORRADE_VERIFY(ui.pointerPressEvent({30, 20}, event));
     } else {
-        CORRADE_VERIFY(layer.highlightNode(NodeHandle::Null));
+        CORRADE_VERIFY(layer.inspectNode(NodeHandle::Null));
     }
-    CORRADE_COMPARE(layer.currentHighlightedNode(), NodeHandle::Null);
+    CORRADE_COMPARE(layer.currentInspectedNode(), NodeHandle::Null);
     CORRADE_COMPARE(layer.state(), LayerState::NeedsCommonDataUpdate|(data.expected ? LayerState::NeedsDataUpdate : LayerStates{}));
 
     ui.update();
@@ -5110,8 +5110,8 @@ void DebugLayerTest::nodeHighlightDraw() {
     }
 }
 
-void DebugLayerTest::nodeHighlightNodeRemoved() {
-    auto&& data = NodeHighlightNodeRemovedData[testCaseInstanceId()];
+void DebugLayerTest::nodeInspectNodeRemoved() {
+    auto&& data = NodeInspectNodeRemovedData[testCaseInstanceId()];
     setTestCaseDescription(data.name);
 
     AbstractUserInterface ui{{100, 100}};
@@ -5134,22 +5134,22 @@ void DebugLayerTest::nodeHighlightNodeRemoved() {
         private:
             LayerFeatures _features;
     };
-    Layer& layer = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer(), DebugLayerSource::Nodes, DebugLayerFlag::NodeHighlight, data.features));
+    Layer& layer = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer(), DebugLayerSource::Nodes, DebugLayerFlag::NodeInspect, data.features));
     /* Just to silence the output */
-    layer.setNodeHighlightCallback([](Containers::StringView){});
+    layer.setNodeInspectCallback([](Containers::StringView){});
 
     PointerEvent press{{}, PointerEventSource::Mouse, Pointer::MouseRight, true, 0, Modifier::Ctrl};
     CORRADE_VERIFY(ui.pointerPressEvent({50, 50}, press));
-    CORRADE_COMPARE(layer.currentHighlightedNode(), node);
+    CORRADE_COMPARE(layer.currentInspectedNode(), node);
     if(data.expectDrawData) {
         /* The draw offset gets calculated only after update() */
         ui.update();
         CORRADE_COMPARE(layer.stateData().highlightedNodeDrawOffset, 2);
     }
 
-    /* Right after removal it still reports the node as highlighted */
+    /* Right after removal it still reports the node as inspected */
     ui.removeNode(data.removeParent ? parent : node);
-    CORRADE_COMPARE(layer.currentHighlightedNode(), node);
+    CORRADE_COMPARE(layer.currentInspectedNode(), node);
     CORRADE_COMPARE_AS(ui.state(),
         UserInterfaceState::NeedsDataUpdate,
         TestSuite::Compare::GreaterOrEqual);
@@ -5163,12 +5163,12 @@ void DebugLayerTest::nodeHighlightNodeRemoved() {
 
     /* Only after an update it gets cleaned */
     ui.update();
-    CORRADE_COMPARE(layer.currentHighlightedNode(), NodeHandle::Null);
+    CORRADE_COMPARE(layer.currentInspectedNode(), NodeHandle::Null);
     if(data.expectDrawData)
         CORRADE_COMPARE(layer.stateData().highlightedNodeDrawOffset, ~std::size_t{});
 }
 
-void DebugLayerTest::nodeHighlightInvalid() {
+void DebugLayerTest::nodeInspectInvalid() {
     CORRADE_SKIP_IF_NO_ASSERT();
 
     AbstractUserInterface ui{{100, 100}};
@@ -5189,13 +5189,13 @@ void DebugLayerTest::nodeHighlightInvalid() {
     IntegratedLayer& integratedLayer = ui.setLayerInstance(Containers::pointer<IntegratedLayer>(ui.createLayer()));
     integratedLayer.create(node);
 
-    DebugLayer layerNoNodesNoHighlight{layerHandle(0, 1), {}, {}};
-    DebugLayer layerNoUi{layerHandle(0, 1), DebugLayerSource::Nodes, DebugLayerFlag::NodeHighlight};
+    DebugLayer layerNoNodesNoInspect{layerHandle(0, 1), {}, {}};
+    DebugLayer layerNoUi{layerHandle(0, 1), DebugLayerSource::Nodes, DebugLayerFlag::NodeInspect};
 
-    DebugLayer& layer = ui.setLayerInstance(Containers::pointer<DebugLayer>(ui.createLayer(), DebugLayerSource::NodeDataDetails, DebugLayerFlag::NodeHighlight));
+    DebugLayer& layer = ui.setLayerInstance(Containers::pointer<DebugLayer>(ui.createLayer(), DebugLayerSource::NodeDataDetails, DebugLayerFlag::NodeInspect));
     layer.setLayerName(integratedLayer, "BrokenPrint");
     /* To silence the output */
-    layer.setNodeHighlightCallback([](Containers::StringView) {});
+    layer.setNodeInspectCallback([](Containers::StringView) {});
 
     /* Make the layer aware of the node */
     ui.update();
@@ -5203,33 +5203,33 @@ void DebugLayerTest::nodeHighlightInvalid() {
     /* Calling functionality getters / setters is valid on a layer that doesn't
        have the feature enabled. The actual state queries and updates can't be
        called tho. */
-    layerNoNodesNoHighlight.hasNodeHighlightCallback();
-    layerNoNodesNoHighlight.setNodeHighlightCallback(nullptr);
-    layerNoNodesNoHighlight.nodeHighlightGesture();
-    layerNoNodesNoHighlight.setNodeHighlightGesture(Pointer::MouseRight, {});
-    layerNoNodesNoHighlight.nodeHighlightColor();
-    layerNoNodesNoHighlight.setNodeHighlightColor({});
+    layerNoNodesNoInspect.hasNodeInspectCallback();
+    layerNoNodesNoInspect.setNodeInspectCallback(nullptr);
+    layerNoNodesNoInspect.nodeInspectGesture();
+    layerNoNodesNoInspect.setNodeInspectGesture(Pointer::MouseRight, {});
+    layerNoNodesNoInspect.nodeInspectColor();
+    layerNoNodesNoInspect.setNodeInspectColor({});
 
     Containers::String out;
     Error redirectError{&out};
-    layerNoNodesNoHighlight.setNodeHighlightGesture({}, Modifier::Ctrl);
-    layerNoNodesNoHighlight.currentHighlightedNode();
-    layerNoNodesNoHighlight.highlightNode({});
-    layerNoUi.highlightNode({});
-    layer.highlightNode(node);
+    layerNoNodesNoInspect.setNodeInspectGesture({}, Modifier::Ctrl);
+    layerNoNodesNoInspect.currentInspectedNode();
+    layerNoNodesNoInspect.inspectNode({});
+    layerNoUi.inspectNode({});
+    layer.inspectNode(node);
     CORRADE_COMPARE_AS(out,
-        "Ui::DebugLayer::setNodeHighlightGesture(): expected at least one pointer\n"
-        "Ui::DebugLayer::currentHighlightedNode(): Ui::DebugLayerFlag::NodeHighlight not enabled\n"
-        "Ui::DebugLayer::highlightNode(): Ui::DebugLayerFlag::NodeHighlight not enabled\n"
-        "Ui::DebugLayer::highlightNode(): layer not part of a user interface\n"
+        "Ui::DebugLayer::setNodeInspectGesture(): expected at least one pointer\n"
+        "Ui::DebugLayer::currentInspectedNode(): Ui::DebugLayerFlag::NodeInspect not enabled\n"
+        "Ui::DebugLayer::inspectNode(): Ui::DebugLayerFlag::NodeInspect not enabled\n"
+        "Ui::DebugLayer::inspectNode(): layer not part of a user interface\n"
         /* Looks a bit weird but should hopefully contain enough info to
            discover where this happened */
         "Ui::DebugLayer: expected DebugIntegration::print() to end with a newline but got Hello this is broken\n",
         TestSuite::Compare::String);
 }
 
-void DebugLayerTest::nodeHighlightToggle() {
-    auto&& data = NodeHighlightToggleData[testCaseInstanceId()];
+void DebugLayerTest::nodeInspectToggle() {
+    auto&& data = NodeInspectToggleData[testCaseInstanceId()];
     setTestCaseDescription(data.name);
 
     AbstractUserInterface ui{{100, 100}};
@@ -5257,7 +5257,7 @@ void DebugLayerTest::nodeHighlightToggle() {
     Int called = 0;
     Containers::String out;
     if(data.callback)
-        layer.setNodeHighlightCallback([&called, &out](Containers::StringView message){
+        layer.setNodeInspectCallback([&called, &out](Containers::StringView message){
             out = message;
             ++called;
         });
@@ -5265,20 +5265,20 @@ void DebugLayerTest::nodeHighlightToggle() {
     /* Make the DebugLayer aware of all nodes */
     ui.update();
 
-    /* Adding the flag makes it possible to query the highlighted node, but
+    /* Adding the flag makes it possible to query the inspected node, but
        there's none */
-    layer.addFlags(DebugLayerFlag::NodeHighlight);
-    CORRADE_COMPARE(layer.flags(), DebugLayerFlags{0x80}|DebugLayerFlag::NodeHighlight);
-    CORRADE_COMPARE(layer.currentHighlightedNode(), NodeHandle::Null);
+    layer.addFlags(DebugLayerFlag::NodeInspect);
+    CORRADE_COMPARE(layer.flags(), DebugLayerFlags{0x80}|DebugLayerFlag::NodeInspect);
+    CORRADE_COMPARE(layer.currentInspectedNode(), NodeHandle::Null);
     CORRADE_COMPARE(layer.state(), LayerState::NeedsCommonDataUpdate);
     if(data.callback)
         CORRADE_COMPARE(called, 0);
     CORRADE_COMPARE(out, "");
 
-    /* Highlighting a null node if there's no node currently highligted does
-       not set NeedsDataUpdate and doesn't call the callback either */
-    CORRADE_VERIFY(layer.highlightNode(NodeHandle::Null));
-    CORRADE_COMPARE(layer.currentHighlightedNode(), NodeHandle::Null);
+    /* Inspecting a null node if there's no node currently inspected does not
+       set NeedsDataUpdate and doesn't call the callback either */
+    CORRADE_VERIFY(layer.inspectNode(NodeHandle::Null));
+    CORRADE_COMPARE(layer.currentInspectedNode(), NodeHandle::Null);
     CORRADE_COMPARE(layer.state(), LayerState::NeedsCommonDataUpdate);
     if(data.callback)
         CORRADE_COMPARE(called, 0);
@@ -5287,9 +5287,9 @@ void DebugLayerTest::nodeHighlightToggle() {
     {
         /* Don't care about the output if callback isn't set */
         Debug redirectOutput{nullptr};
-        CORRADE_VERIFY(layer.highlightNode(node));
+        CORRADE_VERIFY(layer.inspectNode(node));
     }
-    CORRADE_COMPARE(layer.currentHighlightedNode(), node);
+    CORRADE_COMPARE(layer.currentInspectedNode(), node);
     if(data.callback) {
         CORRADE_COMPARE(called, 1);
         CORRADE_COMPARE(out, "Node {0x2, 0x1}");
@@ -5305,14 +5305,14 @@ void DebugLayerTest::nodeHighlightToggle() {
     ui.update();
     CORRADE_COMPARE(layer.state(), LayerState::NeedsCommonDataUpdate);
 
-    /* Highlighting the same node only prints the callback again, but does not
+    /* Inspecting the same node only prints the callback again, but does not
        set NeedsDataUpdate */
     {
         /* Don't care about the output if callback isn't set */
         Debug redirectOutput{nullptr};
-        CORRADE_VERIFY(layer.highlightNode(node));
+        CORRADE_VERIFY(layer.inspectNode(node));
     }
-    CORRADE_COMPARE(layer.currentHighlightedNode(), node);
+    CORRADE_COMPARE(layer.currentInspectedNode(), node);
     if(data.callback) {
         CORRADE_COMPARE(called, 2);
         CORRADE_COMPARE(out, "Node {0x2, 0x1}");
@@ -5320,10 +5320,10 @@ void DebugLayerTest::nodeHighlightToggle() {
     CORRADE_COMPARE(layer.state(), LayerState::NeedsCommonDataUpdate);
 
     /* Removing the flag calls the callback to remove the node. It isn't
-       possible to query the current highlighted node anymore, but the internal
+       possible to query the current inspected node anymore, but the internal
        state has it unset. */
-    layer.clearFlags(DebugLayerFlag::NodeHighlight);
-    CORRADE_COMPARE(layer.stateData().currentHighlightedNode, NodeHandle::Null);
+    layer.clearFlags(DebugLayerFlag::NodeInspect);
+    CORRADE_COMPARE(layer.stateData().currentInspectedNode, NodeHandle::Null);
     if(data.callback) {
         CORRADE_COMPARE(called, 3);
         CORRADE_COMPARE(out, "");
@@ -5344,14 +5344,14 @@ void DebugLayerTest::nodeHighlightToggle() {
     /* Adding the flag back makes it possible to query it again, it's null. The
        callback doesn't get called this time as nothing changed, no state
        update is triggered either. */
-    layer.setFlags(DebugLayerFlag::NodeHighlight);
-    CORRADE_COMPARE(layer.flags(), DebugLayerFlag::NodeHighlight);
-    CORRADE_COMPARE(layer.currentHighlightedNode(), NodeHandle::Null);
+    layer.setFlags(DebugLayerFlag::NodeInspect);
+    CORRADE_COMPARE(layer.flags(), DebugLayerFlag::NodeInspect);
+    CORRADE_COMPARE(layer.currentInspectedNode(), NodeHandle::Null);
     CORRADE_COMPARE(layer.state(), LayerState::NeedsCommonDataUpdate);
     if(data.callback)
         CORRADE_COMPARE(called, 3);
 
-    /* Removing the flag with nothing highlighted also doesn't trigger
+    /* Removing the flag with nothing inspected also doesn't trigger
        anything */
     layer.setFlags({});
     CORRADE_COMPARE(layer.flags(), DebugLayerFlags{});
@@ -5360,13 +5360,13 @@ void DebugLayerTest::nodeHighlightToggle() {
         CORRADE_COMPARE(called, 3);
 
     /* Add the flag, highlight & update to clear the flags */
-    layer.setFlags(DebugLayerFlag::NodeHighlight);
+    layer.setFlags(DebugLayerFlag::NodeInspect);
     {
         /* Don't care about the output if callback isn't set */
         Debug redirectOutput{nullptr};
-        CORRADE_VERIFY(layer.highlightNode(node));
+        CORRADE_VERIFY(layer.inspectNode(node));
     }
-    CORRADE_COMPARE(layer.currentHighlightedNode(), node);
+    CORRADE_COMPARE(layer.currentInspectedNode(), node);
     if(data.callback) {
         CORRADE_COMPARE(called, 4);
         CORRADE_COMPARE(out, "Node {0x2, 0x1}");
@@ -5380,9 +5380,9 @@ void DebugLayerTest::nodeHighlightToggle() {
     {
         /* Don't care about the output if callback isn't set */
         Debug redirectOutput{nullptr};
-        CORRADE_VERIFY(layer.highlightNode(NodeHandle::Null));
+        CORRADE_VERIFY(layer.inspectNode(NodeHandle::Null));
     }
-    CORRADE_COMPARE(layer.currentHighlightedNode(), NodeHandle::Null);
+    CORRADE_COMPARE(layer.currentInspectedNode(), NodeHandle::Null);
     if(data.callback) {
         CORRADE_COMPARE(called, 5);
         CORRADE_COMPARE(out, "");
@@ -5406,7 +5406,7 @@ void DebugLayerTest::updateEmpty() {
 
         private:
             LayerFeatures _features;
-    } layer{layerHandle(0, 1), DebugLayerSource::Nodes, DebugLayerFlag::NodeHighlight, data.features};
+    } layer{layerHandle(0, 1), DebugLayerSource::Nodes, DebugLayerFlag::NodeInspect, data.features};
 
     /* Required to be called before update() (because AbstractUserInterface
        guarantees the same on a higher level), not needed for anything here */
@@ -5435,11 +5435,11 @@ void DebugLayerTest::updateDataOrder() {
             return DebugLayer::doFeatures()|LayerFeature::Draw;
         }
     };
-    Layer& layer = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer(), DebugLayerSource::Nodes, DebugLayerFlag::NodeHighlight));
+    Layer& layer = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer(), DebugLayerSource::Nodes, DebugLayerFlag::NodeInspect));
     /* Just to silence the output */
-    layer.setNodeHighlightCallback([](Containers::StringView){});
+    layer.setNodeInspectCallback([](Containers::StringView){});
 
-    /* Create nodes in a way that node with ID 3 is the one we'll highlight and
+    /* Create nodes in a way that node with ID 3 is the one we'll inspect and
        it's associated with debug layer data ID 2, which the crafted data
        passed to update() depend on */
     ui.createNode({}, {});
@@ -5452,8 +5452,8 @@ void DebugLayerTest::updateDataOrder() {
     CORRADE_COMPARE(layer.usedCount(), 3);
     CORRADE_COMPARE(layer.node(layerDataHandle(2, 1)), node3);
 
-    /* Highlight the node */
-    CORRADE_VERIFY(layer.highlightNode(node3));
+    /* Inspect the node */
+    CORRADE_VERIFY(layer.inspectNode(node3));
 
     /* Figure out the actual count of data IDs to send */
     std::size_t dataCount = 0;

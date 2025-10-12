@@ -3024,10 +3024,10 @@ void BaseLayerTest::debugIntegration() {
     layer.setOutlineWidth(layerData, data.outline);
     layer.setPadding(layerData, data.padding);
 
-    DebugLayer& debugLayer = ui.setLayerInstance(Containers::pointer<DebugLayer>(ui.createLayer(), DebugLayerSource::NodeDataDetails, DebugLayerFlag::NodeHighlight));
+    DebugLayer& debugLayer = ui.setLayerInstance(Containers::pointer<DebugLayer>(ui.createLayer(), DebugLayerSource::NodeDataDetails, DebugLayerFlag::NodeInspect));
 
     Containers::String out;
-    debugLayer.setNodeHighlightCallback([&out](Containers::StringView message) {
+    debugLayer.setNodeInspectCallback([&out](Containers::StringView message) {
         out = message;
     });
     if(data.styleNames)
@@ -3038,7 +3038,7 @@ void BaseLayerTest::debugIntegration() {
     /* Make the debug layer aware of everything */
     ui.update();
 
-    CORRADE_VERIFY(debugLayer.highlightNode(node));
+    CORRADE_VERIFY(debugLayer.inspectNode(node));
     CORRADE_COMPARE_AS(out, data.expected, TestSuite::Compare::String);
 }
 
@@ -3080,20 +3080,20 @@ void BaseLayerTest::debugIntegrationNoCallback() {
     layer.setOutlineWidth(layerData, 2.5f);
     layer.setPadding(layerData, {0.5f, 2.0f, 1.5f, 1.0f});
 
-    DebugLayer& debugLayer = ui.setLayerInstance(Containers::pointer<DebugLayer>(ui.createLayer(), DebugLayerSource::NodeDataDetails, DebugLayerFlag::NodeHighlight));
+    DebugLayer& debugLayer = ui.setLayerInstance(Containers::pointer<DebugLayer>(ui.createLayer(), DebugLayerSource::NodeDataDetails, DebugLayerFlag::NodeInspect));
 
     debugLayer.setLayerName(layer, "", debugIntegrationStyleName);
 
     /* Make the debug layer aware of everything */
     ui.update();
 
-    /* Highlight the node for visual color verification */
+    /* Inspect the node for visual color verification */
     {
         Debug{} << "======================== visual color verification start =======================";
 
         debugLayer.addFlags(DebugLayerFlag::ColorAlways);
 
-        CORRADE_VERIFY(debugLayer.highlightNode(node));
+        CORRADE_VERIFY(debugLayer.inspectNode(node));
 
         debugLayer.clearFlags(DebugLayerFlag::ColorAlways);
 
@@ -3106,7 +3106,7 @@ void BaseLayerTest::debugIntegrationNoCallback() {
     {
         Containers::String out;
         Debug redirectOutput{&out};
-        CORRADE_VERIFY(debugLayer.highlightNode(node));
+        CORRADE_VERIFY(debugLayer.inspectNode(node));
         /* The output always has a newline at the end which cannot be disabled
            so strip it to have the comparison match the debugIntegration()
            case */
@@ -3146,7 +3146,7 @@ void BaseLayerTest::debugIntegrationLambdaStyleName() {
     BaseLayer& layer = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer(), shared));
     layer.create(3, node);
 
-    DebugLayer& debugLayer = ui.setLayerInstance(Containers::pointer<DebugLayer>(ui.createLayer(), DebugLayerSource::NodeDataDetails, DebugLayerFlag::NodeHighlight));
+    DebugLayer& debugLayer = ui.setLayerInstance(Containers::pointer<DebugLayer>(ui.createLayer(), DebugLayerSource::NodeDataDetails, DebugLayerFlag::NodeInspect));
     debugLayer.setLayerName(layer, "", [](UnsignedInt style) -> Containers::StringView {
         return style == 3 ? "LambdaStyle" : "Wrong";
     });
@@ -3157,7 +3157,7 @@ void BaseLayerTest::debugIntegrationLambdaStyleName() {
     Containers::String out;
     {
         Debug redirectOutput{&out};
-        CORRADE_VERIFY(debugLayer.highlightNode(node));
+        CORRADE_VERIFY(debugLayer.inspectNode(node));
     }
     CORRADE_COMPARE_AS(out,
         "Top-level node {0x0, 0x1}\n"

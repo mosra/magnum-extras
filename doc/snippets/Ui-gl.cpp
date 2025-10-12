@@ -872,7 +872,7 @@ Ui::AbstractUserInterface ui{{100, 100}};
 ui.setLayerInstance(Containers::pointer<Ui::DebugLayerGL>(
     ui.createLayer(),
     Ui::DebugLayerSource::NodeHierarchy|Ui::DebugLayerSource::NodeData,
-    Ui::DebugLayerFlag::NodeHighlight));
+    Ui::DebugLayerFlag::NodeInspect));
 /* [DebugLayer-setup] */
 }
 

@@ -6280,10 +6280,10 @@ void AbstractVisualLayerTest::debugIntegration() {
     layer.remove(layer.create(0));
     layer.create(data.style, node);
 
-    DebugLayer& debugLayer = ui.setLayerInstance(Containers::pointer<DebugLayer>(ui.createLayer(), DebugLayerSource::NodeDataDetails, DebugLayerFlag::NodeHighlight));
+    DebugLayer& debugLayer = ui.setLayerInstance(Containers::pointer<DebugLayer>(ui.createLayer(), DebugLayerSource::NodeDataDetails, DebugLayerFlag::NodeInspect));
 
     Containers::String out;
-    debugLayer.setNodeHighlightCallback([&out](Containers::StringView message) {
+    debugLayer.setNodeInspectCallback([&out](Containers::StringView message) {
         out = message;
     });
     if(data.styleNames)
@@ -6294,7 +6294,7 @@ void AbstractVisualLayerTest::debugIntegration() {
     /* Make the debug layer aware of everything */
     ui.update();
 
-    CORRADE_VERIFY(debugLayer.highlightNode(node));
+    CORRADE_VERIFY(debugLayer.inspectNode(node));
     CORRADE_COMPARE_AS(out, data.expected, TestSuite::Compare::String);
 }
 
@@ -6317,10 +6317,10 @@ void AbstractVisualLayerTest::debugIntegrationNoTransition() {
     StyleLayer& layer = ui.setLayerInstance(Containers::pointer<StyleLayer>(ui.createLayer(), shared));
     layer.create(DebugIntegrationStyle::InputFocusedHover, node);
 
-    DebugLayer& debugLayer = ui.setLayerInstance(Containers::pointer<DebugLayer>(ui.createLayer(), DebugLayerSource::NodeDataDetails, DebugLayerFlag::NodeHighlight));
+    DebugLayer& debugLayer = ui.setLayerInstance(Containers::pointer<DebugLayer>(ui.createLayer(), DebugLayerSource::NodeDataDetails, DebugLayerFlag::NodeInspect));
 
     Containers::String out;
-    debugLayer.setNodeHighlightCallback([&out](Containers::StringView message) {
+    debugLayer.setNodeInspectCallback([&out](Containers::StringView message) {
         out = message;
     });
     debugLayer.setLayerName(layer, "", debugIntegrationStyleName);
@@ -6328,7 +6328,7 @@ void AbstractVisualLayerTest::debugIntegrationNoTransition() {
     /* Make the debug layer aware of everything */
     ui.update();
 
-    CORRADE_VERIFY(debugLayer.highlightNode(node));
+    CORRADE_VERIFY(debugLayer.inspectNode(node));
     CORRADE_COMPARE_AS(out,
         "Node {0x1, 0x1}\n"
         "  Data {0x0, 0x1} from layer {0x0, 0x1}\n"
@@ -6360,10 +6360,10 @@ void AbstractVisualLayerTest::debugIntegrationNoDisabledTransition() {
        inactive out, it shouldn't be shown at all */
     layer.create(DebugIntegrationStyle::StrangeInput, node);
 
-    DebugLayer& debugLayer = ui.setLayerInstance(Containers::pointer<DebugLayer>(ui.createLayer(), DebugLayerSource::NodeDataDetails, DebugLayerFlag::NodeHighlight));
+    DebugLayer& debugLayer = ui.setLayerInstance(Containers::pointer<DebugLayer>(ui.createLayer(), DebugLayerSource::NodeDataDetails, DebugLayerFlag::NodeInspect));
 
     Containers::String out;
-    debugLayer.setNodeHighlightCallback([&out](Containers::StringView message) {
+    debugLayer.setNodeInspectCallback([&out](Containers::StringView message) {
         out = message;
     });
     debugLayer.setLayerName(layer, "", debugIntegrationStyleName);
@@ -6371,7 +6371,7 @@ void AbstractVisualLayerTest::debugIntegrationNoDisabledTransition() {
     /* Make the debug layer aware of everything */
     ui.update();
 
-    CORRADE_VERIFY(debugLayer.highlightNode(node));
+    CORRADE_VERIFY(debugLayer.inspectNode(node));
     CORRADE_COMPARE_AS(out,
         "Node {0x1, 0x1}\n"
         "  Data {0x0, 0x1} from layer {0x0, 0x1} with style StrangeInput (38)\n"
@@ -6414,21 +6414,21 @@ void AbstractVisualLayerTest::debugIntegrationNoCallback() {
     layer.create(DebugIntegrationStyle::StrangeInput, node);
     layer.create(DebugIntegrationStyle::Dynamic, nodeDynamic);
 
-    DebugLayer& debugLayer = ui.setLayerInstance(Containers::pointer<DebugLayer>(ui.createLayer(), DebugLayerSource::NodeDataDetails, DebugLayerFlag::NodeHighlight));
+    DebugLayer& debugLayer = ui.setLayerInstance(Containers::pointer<DebugLayer>(ui.createLayer(), DebugLayerSource::NodeDataDetails, DebugLayerFlag::NodeInspect));
 
     debugLayer.setLayerName(layer, "Layarr", debugIntegrationStyleName);
 
     /* Make the debug layer aware of everything */
     ui.update();
 
-    /* Highlight the node for visual color verification */
+    /* Inspect the node for visual color verification */
     {
         Debug{} << "======================== visual color verification start =======================";
 
         debugLayer.addFlags(DebugLayerFlag::ColorAlways);
 
-        CORRADE_VERIFY(debugLayer.highlightNode(node));
-        CORRADE_VERIFY(debugLayer.highlightNode(nodeDynamic));
+        CORRADE_VERIFY(debugLayer.inspectNode(node));
+        CORRADE_VERIFY(debugLayer.inspectNode(nodeDynamic));
 
         debugLayer.clearFlags(DebugLayerFlag::ColorAlways);
 
@@ -6441,7 +6441,7 @@ void AbstractVisualLayerTest::debugIntegrationNoCallback() {
     {
         Containers::String out;
         Debug redirectOutput{&out};
-        CORRADE_VERIFY(debugLayer.highlightNode(node));
+        CORRADE_VERIFY(debugLayer.inspectNode(node));
         /* The output always has a newline at the end which cannot be disabled
            so strip it to have the comparison match the debugIntegration()
            case */
@@ -6454,7 +6454,7 @@ void AbstractVisualLayerTest::debugIntegrationNoCallback() {
     } {
         Containers::String out;
         Debug redirectOutput{&out};
-        CORRADE_VERIFY(debugLayer.highlightNode(nodeDynamic));
+        CORRADE_VERIFY(debugLayer.inspectNode(nodeDynamic));
         CORRADE_COMPARE_AS(out,
             "Top-level node {0x2, 0x1}\n"
             "  Data {0x7, 0x1} from layer {0x0, 0x3} Layarr with dynamic style 5\n",
@@ -6471,7 +6471,7 @@ void AbstractVisualLayerTest::debugIntegrationLambdaStyleName() {
     StyleLayer& layer = ui.setLayerInstance(Containers::pointer<StyleLayer>(ui.createLayer(), shared));
     layer.create(7, node);
 
-    DebugLayer& debugLayer = ui.setLayerInstance(Containers::pointer<DebugLayer>(ui.createLayer(), DebugLayerSource::NodeDataDetails, DebugLayerFlag::NodeHighlight));
+    DebugLayer& debugLayer = ui.setLayerInstance(Containers::pointer<DebugLayer>(ui.createLayer(), DebugLayerSource::NodeDataDetails, DebugLayerFlag::NodeInspect));
     /* Somehow it doesn't "just work", the DebugIntegration has to have a
        special template constructor to convert this to a pointer without having
        to explicitly cast to a function pointer, use `+` to convert it to a
@@ -6486,7 +6486,7 @@ void AbstractVisualLayerTest::debugIntegrationLambdaStyleName() {
     Containers::String out;
     {
         Debug redirectOutput{&out};
-        CORRADE_VERIFY(debugLayer.highlightNode(node));
+        CORRADE_VERIFY(debugLayer.inspectNode(node));
     }
     CORRADE_COMPARE_AS(out,
         "Top-level node {0x0, 0x1}\n"

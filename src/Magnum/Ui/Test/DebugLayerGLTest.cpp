@@ -83,27 +83,27 @@ const struct {
     DebugLayerSources sources;
     DebugLayerFlags flags;
     bool partialUpdate;
-    bool highlightNode;
+    bool inspectNode;
     Float nodeOffset;
-    Containers::Optional<Color4> highlightColor;
+    Containers::Optional<Color4> inspectColor;
 } RenderData[]{
     /* Just to verify that no garbage is accidentally drawn by default */
     {"nothing", "empty.png",
         {}, {}, false, false, 0.0f, {}},
-    {"node highlight", "node-highlight.png",
-        DebugLayerSource::Nodes, DebugLayerFlag::NodeHighlight,
+    {"node inspect", "node-inspect.png",
+        DebugLayerSource::Nodes, DebugLayerFlag::NodeInspect,
         false, true, 0.0f, {}},
-    {"node highlight, partial update", "node-highlight.png",
-        DebugLayerSource::Nodes, DebugLayerFlag::NodeHighlight,
+    {"node inspect, partial update", "node-inspect.png",
+        DebugLayerSource::Nodes, DebugLayerFlag::NodeInspect,
         true, true, 0.0f, {}},
-    {"node highlight, partial update, node offset change", "node-highlight.png",
-        DebugLayerSource::Nodes, DebugLayerFlag::NodeHighlight,
+    {"node inspect, partial update, node offset change", "node-inspect.png",
+        DebugLayerSource::Nodes, DebugLayerFlag::NodeInspect,
         true, true, 35.0f, {}},
-    {"node highlight, custom highlight color", "node-highlight-color.png",
-        DebugLayerSource::Nodes, DebugLayerFlag::NodeHighlight,
+    {"node inspect, custom inspect color", "node-inspect-color.png",
+        DebugLayerSource::Nodes, DebugLayerFlag::NodeInspect,
         false, true, 0.0f, 0x3bd267ff_rgbaf*0.5f},
-    {"node highlight, custom highlight color, partial update", "node-highlight-color.png",
-        DebugLayerSource::Nodes, DebugLayerFlag::NodeHighlight,
+    {"node inspect, custom inspect color, partial update", "node-inspect-color.png",
+        DebugLayerSource::Nodes, DebugLayerFlag::NodeInspect,
         true, true, 0.0f, 0x3bd267ff_rgbaf*0.5f},
 };
 
@@ -139,10 +139,10 @@ DebugLayerGLTest::DebugLayerGLTest() {
 }
 
 void DebugLayerGLTest::construct() {
-    DebugLayerGL layer{layerHandle(137, 0xfe), DebugLayerSource::NodeHierarchy, DebugLayerFlag::NodeHighlight};
+    DebugLayerGL layer{layerHandle(137, 0xfe), DebugLayerSource::NodeHierarchy, DebugLayerFlag::NodeInspect};
     CORRADE_COMPARE(layer.handle(), layerHandle(137, 0xfe));
     CORRADE_COMPARE(layer.sources(), DebugLayerSource::NodeHierarchy);
-    CORRADE_COMPARE(layer.flags(), DebugLayerFlag::NodeHighlight);
+    CORRADE_COMPARE(layer.flags(), DebugLayerFlag::NodeInspect);
 }
 
 void DebugLayerGLTest::constructCopy() {
@@ -151,18 +151,18 @@ void DebugLayerGLTest::constructCopy() {
 }
 
 void DebugLayerGLTest::constructMove() {
-    DebugLayerGL a{layerHandle(137, 0xfe), DebugLayerSource::NodeHierarchy, DebugLayerFlag::NodeHighlight};
+    DebugLayerGL a{layerHandle(137, 0xfe), DebugLayerSource::NodeHierarchy, DebugLayerFlag::NodeInspect};
 
     DebugLayerGL b{Utility::move(a)};
     CORRADE_COMPARE(b.handle(), layerHandle(137, 0xfe));
     CORRADE_COMPARE(b.sources(), DebugLayerSource::NodeHierarchy);
-    CORRADE_COMPARE(b.flags(), DebugLayerFlag::NodeHighlight);
+    CORRADE_COMPARE(b.flags(), DebugLayerFlag::NodeInspect);
 
     DebugLayerGL c{layerHandle(0, 2), DebugLayerSource::Nodes, DebugLayerFlags{}};
     c = Utility::move(b);
     CORRADE_COMPARE(c.handle(), layerHandle(137, 0xfe));
     CORRADE_COMPARE(c.sources(), DebugLayerSource::NodeHierarchy);
-    CORRADE_COMPARE(c.flags(), DebugLayerFlag::NodeHighlight);
+    CORRADE_COMPARE(c.flags(), DebugLayerFlag::NodeInspect);
 
     CORRADE_VERIFY(std::is_nothrow_move_constructible<DebugLayerGL>::value);
     CORRADE_VERIFY(std::is_nothrow_move_assignable<DebugLayerGL>::value);
@@ -204,7 +204,7 @@ void DebugLayerGLTest::render() {
 
     DebugLayer& layer = ui.setLayerInstance(Containers::pointer<DebugLayerGL>(ui.createLayer(), data.sources, data.flags));
     /* Just to silence the output */
-    layer.setNodeHighlightCallback([](Containers::StringView){});
+    layer.setNodeInspectCallback([](Containers::StringView){});
 
     NodeHandle node = ui.createNode({8.0f + data.nodeOffset, 8.0f}, {112.0f, 48.0f});
 
@@ -214,19 +214,19 @@ void DebugLayerGLTest::render() {
         CORRADE_COMPARE(layer.state(), LayerState::NeedsCommonDataUpdate);
     }
 
-    if(data.highlightColor) {
-        layer.setNodeHighlightColor(*data.highlightColor);
+    if(data.inspectColor) {
+        layer.setNodeInspectColor(*data.inspectColor);
         CORRADE_COMPARE_AS(ui.state(),
             UserInterfaceState::NeedsDataUpdate,
             TestSuite::Compare::GreaterOrEqual);
         CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate|LayerState::NeedsCommonDataUpdate);
     }
 
-    if(data.highlightNode) {
-        /* Otherwise highlightNode() wouldn't know about the node yet */
+    if(data.inspectNode) {
+        /* Otherwise inspectNode() wouldn't know about the node yet */
         ui.update();
-        CORRADE_VERIFY(layer.highlightNode(node));
-        CORRADE_COMPARE(layer.currentHighlightedNode(), node);
+        CORRADE_VERIFY(layer.inspectNode(node));
+        CORRADE_COMPARE(layer.currentInspectedNode(), node);
     }
 
     /* Updating node offset/size later should still get correctly propagated */
@@ -286,8 +286,8 @@ void DebugLayerGLTest::drawOrder() {
     /* Since the DebugLayer currently draws just one rectangle at a time, it
        has to be combined with another layer to verify it's actually done in
        correct order respective to other draws. Thus picking the contents of
-       BaseLayerGLTest::drawOrder(), highlighting each node and setting the
-       color in a way that the blend between the two matches the original
+       BaseLayerGLTest::drawOrder(), inspecting each node and setting the color
+       in a way that the blend between the two matches the original
        output from BaseLayerGLTest */
 
     AbstractUserInterface ui{DrawSize};
@@ -304,9 +304,9 @@ void DebugLayerGLTest::drawOrder() {
 
     BaseLayer& baseLayer = ui.setLayerInstance(Containers::pointer<BaseLayerGL>(ui.createLayer(), layerShared));
 
-    DebugLayer& debugLayer = ui.setLayerInstance(Containers::pointer<DebugLayerGL>(ui.createLayer(), DebugLayerSource::Nodes, DebugLayerFlag::NodeHighlight));
+    DebugLayer& debugLayer = ui.setLayerInstance(Containers::pointer<DebugLayerGL>(ui.createLayer(), DebugLayerSource::Nodes, DebugLayerFlag::NodeInspect));
     /* Just to silence the output */
-    debugLayer.setNodeHighlightCallback([](Containers::StringView){});
+    debugLayer.setNodeInspectCallback([](Containers::StringView){});
 
     /* For drawing in order that doesn't match the node ID, create and then
        remove the nodes in random order to make the next ones created with
@@ -341,7 +341,7 @@ void DebugLayerGLTest::drawOrder() {
     DataHandle childBelowBlueData = baseLayer.create(2, childBelowBlue);
     DataHandle childAboveRedData = baseLayer.create(0, childAboveRed);
 
-    /* So highlightNode() is aware of the added nodes */
+    /* So inspectNode() is aware of the added nodes */
     ui.update();
 
     struct {
@@ -365,9 +365,9 @@ void DebugLayerGLTest::drawOrder() {
         CORRADE_ITERATION(node.baseLayerData);
 
         /* Premultiplied alpha blending works in a way that results in
-            baseColor*(1 - alpha) + highlightColor
+            baseColor*(1 - alpha) + inspectColor
            being written to the output. Thus we need to pick the base and
-           highlight color in a way that is equal to the original if the colors
+           inspect color in a way that is equal to the original if the colors
            get blended together, *and* is different from the original if the
            highlight isn't rendered at all or is rendered in a wrong place.
 
@@ -375,11 +375,11 @@ void DebugLayerGLTest::drawOrder() {
            without highlight. The highlight also has half the alpha, which then
            makes the base color quarter the alpha, and so its RGB channels need
            to be 0.75, i.e. larger than the alpha. */
-        debugLayer.setNodeHighlightColor({node.color*0.75f, 0.5f});
+        debugLayer.setNodeInspectColor({node.color*0.75f, 0.5f});
         /* Just a color multiplier that affects the color coming from style */
         if(node.baseLayerData != DataHandle::Null)
             baseLayer.setColor(node.baseLayerData, Color3{0.5f});
-        CORRADE_VERIFY(debugLayer.highlightNode(node.node));
+        CORRADE_VERIFY(debugLayer.inspectNode(node.node));
 
         _framebuffer.clear(GL::FramebufferClear::Color);
         ui.draw();
