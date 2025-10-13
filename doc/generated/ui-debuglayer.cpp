@@ -182,8 +182,6 @@ int UiDebugLayer::exec() {
         .setSize({128.0f, 48.0f}, Vector2{ImageSize}, ImageSize)
         .setStyle(Ui::McssDarkStyle{});
 
-    Ui::DebugLayer& debugLayerHierarchy = ui.setLayerInstance(Containers::pointer<Ui::DebugLayerGL>(ui.createLayer(), Ui::DebugLayerSource::NodeDataDetails|Ui::DebugLayerSource::NodeHierarchy, Ui::DebugLayerFlag::NodeInspect|Ui::DebugLayerFlag::ColorAlways));
-
     /* Button code, default visual state with no highlight. Adding some extra
        nodes and data to have the listed handles non-trivial. */
     ui.createNode({}, {});
@@ -198,7 +196,16 @@ int UiDebugLayer::exec() {
     Ui::button(Ui::snap(ui, {}, hidden, {}), Ui::Icon::Yes, "Accept");
     /* Yeah this one deletes itself right away */
     Ui::Button{Ui::snap(ui, {}, hidden, {}), ""};
-    ui.update();
+
+    Containers::String out;
+
+    /* Debug layer with hierarchy enabled, for the DebugLayer snippet
+       generation. Scoped because later on there's the same debugLayer variable
+       with different setup. */
+    {
+        Ui::DebugLayer& debugLayer = ui.setLayerInstance(Containers::pointer<Ui::DebugLayerGL>(ui.createLayer(), Ui::DebugLayerSource::NodeDataDetails|Ui::DebugLayerSource::NodeHierarchy, Ui::DebugLayerFlag::NodeInspect|Ui::DebugLayerFlag::ColorAlways));
+
+        ui.update();
 
 /* [button] */
 Ui::NodeHandle button = Ui::button(DOXYGEN_ELLIPSIS(Ui::snap(ui, {}, root, {112, 32})), Ui::Icon::Yes, "Accept");
@@ -208,66 +215,70 @@ ui.eventLayer().onTapOrClick(button, []{
 });
 /* [button] */
 
-    ui.renderer().compositingFramebuffer().clearColor(0, 0x00000000_rgbaf);
-    ui.draw();
-    converter->convertToFile(unpremultiply(ui.renderer().compositingFramebuffer().read({{}, ImageSize}, {PixelFormat::RGBA8Unorm})), "ui-debuglayer-node.png");
+        ui.renderer().compositingFramebuffer().clearColor(0, 0x00000000_rgbaf);
+        ui.draw();
+        converter->convertToFile(unpremultiply(ui.renderer().compositingFramebuffer().read({{}, ImageSize}, {PixelFormat::RGBA8Unorm})), "ui-debuglayer-node.png");
 
-    /* Highlighted output and visual state */
-    Containers::String out;
-    {
-        Debug redirectOutput{&out};
-        CORRADE_INTERNAL_ASSERT(debugLayerHierarchy.inspectNode(button));
-    }
-    Debug{} << out;
-    Utility::Path::write("ui-debuglayer-node-inspect.ansi", out);
+        /* Highlighted output and visual state */
+        {
+            Debug redirectOutput{&out};
+            CORRADE_INTERNAL_ASSERT(debugLayer.inspectNode(button));
+        }
+        Debug{} << out;
+        Utility::Path::write("ui-debuglayer-node-inspect.ansi", out);
 
-    ui.renderer().compositingFramebuffer().clearColor(0, 0x00000000_rgbaf);
-    ui.draw();
-    converter->convertToFile(unpremultiply(ui.renderer().compositingFramebuffer().read({{}, ImageSize}, {PixelFormat::RGBA8Unorm})), "ui-debuglayer-node-inspect.png");
+        ui.renderer().compositingFramebuffer().clearColor(0, 0x00000000_rgbaf);
+        ui.draw();
+        converter->convertToFile(unpremultiply(ui.renderer().compositingFramebuffer().read({{}, ImageSize}, {PixelFormat::RGBA8Unorm})), "ui-debuglayer-node-inspect.png");
 
-    /* Node and layer names. NodeDataDetails is enabled so casting to a base
-       type to not have the integration picked yet */
-    /** @todo once the integration does something even without NodeDataDetails
-        being set (such as showing layer flags), this won't be enough and there
-        needs to be multiple debug layers */
-    debugLayerHierarchy.setLayerName(static_cast<Ui::AbstractLayer&>(ui.baseLayer()), "Base");
-    debugLayerHierarchy.setLayerName(static_cast<Ui::AbstractLayer&>(ui.textLayer()), "Text");
-    debugLayerHierarchy.setLayerName(static_cast<Ui::AbstractLayer&>(ui.eventLayer()), "Event");
-    debugLayerHierarchy.setNodeName(button, "Accept button");
+        /* Node and layer names. NodeDataDetails is enabled so casting to a
+           base type to not have the integration picked yet */
+        /** @todo once the integration does something even without NodeDataDetails
+            being set (such as showing layer flags), this won't be enough and there
+            needs to be multiple debug layers */
+        debugLayer.setLayerName(static_cast<Ui::AbstractLayer&>(ui.baseLayer()), "Base");
+        debugLayer.setLayerName(static_cast<Ui::AbstractLayer&>(ui.textLayer()), "Text");
+        debugLayer.setLayerName(static_cast<Ui::AbstractLayer&>(ui.eventLayer()), "Event");
+        debugLayer.setNodeName(button, "Accept button");
 
-    out = {};
-    {
-        Debug redirectOutput{&out};
-        CORRADE_INTERNAL_ASSERT(debugLayerHierarchy.inspectNode(button));
-    }
-    Debug{} << out;
-    Utility::Path::write("ui-debuglayer-node-inspect-names.ansi", out);
+        out = {};
+        {
+            Debug redirectOutput{&out};
+            CORRADE_INTERNAL_ASSERT(debugLayer.inspectNode(button));
+        }
+        Debug{} << out;
+        Utility::Path::write("ui-debuglayer-node-inspect-names.ansi", out);
 
-    /* Layer data attachment details. Deliberately set in order that doesn't
-       match the draw order, to hint that it doesn't matter. */
+        /* Layer data attachment details. Deliberately set in order that
+           doesn't match the draw order, to hint that it doesn't matter. */
 
 /* [button-names] */
-debugLayerHierarchy.setLayerName(ui.eventLayer(), "Event");
-debugLayerHierarchy.setLayerName(ui.baseLayer(), "Base");
-/* So it doesn't show the (arbitrary) padding from TextLayer */
-debugLayerHierarchy.setLayerName(static_cast<Ui::AbstractVisualLayer&>(ui.textLayer()), "Text");
-debugLayerHierarchy.setNodeName(button, "Accept button");
+debugLayer.setLayerName(ui.eventLayer(), "Event");
+debugLayer.setLayerName(ui.baseLayer(), "Base");
+debugLayer.setLayerName(ui.textLayer(), "Text");
+debugLayer.setNodeName(button, "Accept button");
 /* [button-names] */
 
-    out = {};
-    {
-        Debug redirectOutput{&out};
-        CORRADE_INTERNAL_ASSERT(debugLayerHierarchy.inspectNode(button));
+        /* Reset with a base class so it doesn't show the (arbitrary) padding
+           from TextLayer */
+        debugLayer.setLayerName(static_cast<Ui::AbstractVisualLayer&>(ui.textLayer()), "Text");
+
+        out = {};
+        {
+            Debug redirectOutput{&out};
+            CORRADE_INTERNAL_ASSERT(debugLayer.inspectNode(button));
+        }
+        Debug{} << out;
+        Utility::Path::write("ui-debuglayer-node-inspect-details.ansi", out);
+        ui.removeLayer(debugLayer.handle());
     }
-    Debug{} << out;
-    Utility::Path::write("ui-debuglayer-node-inspect-details.ansi", out);
 
     /* Custom integration, with a debug layer that has NodeHierarchy disabled
        as that information is superfluous. Creating some more nodes and unused
        data to not have the listed handles too close to each other. */
-    ui.removeLayer(debugLayerHierarchy.handle());
-    Ui::DebugLayer& debugLayer = ui.setLayerInstance(Containers::pointer<Ui::DebugLayerGL>(ui.createLayer(), Ui::DebugLayerSource::NodeDataDetails|Ui::DebugLayerSource::NodeAnimationDetails, Ui::DebugLayerFlag::NodeInspect|Ui::DebugLayerFlag::ColorAlways));
-    debugLayer.setLayerName(ui.eventLayer(), "Event");
+    {
+        Ui::DebugLayer& debugLayer = ui.setLayerInstance(Containers::pointer<Ui::DebugLayerGL>(ui.createLayer(), Ui::DebugLayerSource::NodeDataDetails|Ui::DebugLayerSource::NodeAnimationDetails, Ui::DebugLayerFlag::NodeInspect|Ui::DebugLayerFlag::ColorAlways));
+        debugLayer.setLayerName(ui.eventLayer(), "Event");
 
 /* [integration-setLayerName] */
 ColorLayer& colorLayer = ui.setLayerInstance(DOXYGEN_ELLIPSIS(Containers::pointer<ColorLayer>(ui.createLayer())));
@@ -276,70 +287,70 @@ DOXYGEN_ELLIPSIS()
 debugLayer.setLayerName(colorLayer, "Shiny");
 /* [integration-setLayerName] */
 
-    ui.createNode({}, {});
-    Ui::NodeHandle parent = ui.createNode(root, {}, {});
-    Ui::NodeHandle colorNode = ui.createNode(parent, {}, {});
-    colorLayer.create();
-    colorLayer.create();
-    colorLayer.create();
-    colorLayer.create();
-    colorLayer.remove(colorLayer.create());
-    colorLayer.remove(colorLayer.create());
-    colorLayer.create(colorNode);
-    colorLayer.create();
-    colorLayer.create();
-    colorLayer.create(colorNode);
+        ui.createNode({}, {});
+        Ui::NodeHandle parent = ui.createNode(root, {}, {});
+        Ui::NodeHandle colorNode = ui.createNode(parent, {}, {});
+        colorLayer.create();
+        colorLayer.create();
+        colorLayer.create();
+        colorLayer.create();
+        colorLayer.remove(colorLayer.create());
+        colorLayer.remove(colorLayer.create());
+        colorLayer.create(colorNode);
+        colorLayer.create();
+        colorLayer.create();
+        colorLayer.create(colorNode);
 
-    ui.update();
-    out = {};
-    {
-        Debug redirectOutput{&out};
-        CORRADE_INTERNAL_ASSERT(debugLayer.inspectNode(colorNode));
-    }
-    Debug{} << out;
-    Utility::Path::write("ui-debuglayer-integration.ansi", out);
+        ui.update();
+        out = {};
+        {
+            Debug redirectOutput{&out};
+            CORRADE_INTERNAL_ASSERT(debugLayer.inspectNode(colorNode));
+        }
+        Debug{} << out;
+        Utility::Path::write("ui-debuglayer-integration.ansi", out);
 
-    /* AbstractVisualLayer integration, default behavior. Using a BaseLayer to
-       not have to create an ad-hoc subclass. */
-    Ui::BaseLayerGL::Shared baseLayerShared{
-        Ui::BaseLayerGL::Shared::Configuration{17}
-    };
-    baseLayerShared.setStyleTransition<Style,
-        to<&Transition::inactiveOut>,
-        to<&Transition::inactiveOver>,
-        to<&Transition::inactiveOut>,
-        to<&Transition::inactiveOver>,
-        to<&Transition::pressedOut>,
-        to<&Transition::pressedOver>,
-        nullptr>();
-    baseLayerShared.setStyle({}, {
-        {}, {}, {}, {}, {}, {}, {}, {},
-        {}, {}, {}, {}, {}, {}, {}, {},
-        {}
-    }, {});
+        /* AbstractVisualLayer integration, default behavior. Using a BaseLayer to
+        not have to create an ad-hoc subclass. */
+        Ui::BaseLayerGL::Shared baseLayerShared{
+            Ui::BaseLayerGL::Shared::Configuration{17}
+        };
+        baseLayerShared.setStyleTransition<Style,
+            to<&Transition::inactiveOut>,
+            to<&Transition::inactiveOver>,
+            to<&Transition::inactiveOut>,
+            to<&Transition::inactiveOver>,
+            to<&Transition::pressedOut>,
+            to<&Transition::pressedOver>,
+            nullptr>();
+        baseLayerShared.setStyle({}, {
+            {}, {}, {}, {}, {}, {}, {}, {},
+            {}, {}, {}, {}, {}, {}, {}, {},
+            {}
+        }, {});
 
-    Ui::BaseLayer& visualLayer = ui.setLayerInstance(Containers::pointer<Ui::BaseLayerGL>(ui.createLayer(), baseLayerShared));
-    debugLayer.setLayerName(static_cast<Ui::AbstractVisualLayer&>(visualLayer), "Styled");
+        Ui::BaseLayer& visualLayer = ui.setLayerInstance(Containers::pointer<Ui::BaseLayerGL>(ui.createLayer(), baseLayerShared));
+        debugLayer.setLayerName(static_cast<Ui::AbstractVisualLayer&>(visualLayer), "Styled");
 
-    ui.createNode({}, {});
-    ui.createNode({}, {});
-    Ui::NodeHandle baseNode = ui.createNode(parent, {}, {});
-    visualLayer.create(0);
-    visualLayer.create(0);
-    visualLayer.create(0);
-    visualLayer.create(0);
-    visualLayer.create(Style::ButtonHovered, baseNode);
+        ui.createNode({}, {});
+        ui.createNode({}, {});
+        Ui::NodeHandle baseNode = ui.createNode(parent, {}, {});
+        visualLayer.create(0);
+        visualLayer.create(0);
+        visualLayer.create(0);
+        visualLayer.create(0);
+        visualLayer.create(Style::ButtonHovered, baseNode);
 
-    ui.update();
-    out = {};
-    {
-        Debug redirectOutput{&out};
-        CORRADE_INTERNAL_ASSERT(debugLayer.inspectNode(baseNode));
-    }
-    Debug{} << out;
-    Utility::Path::write("ui-debuglayer-abstractvisuallayer.ansi", out);
+        ui.update();
+        out = {};
+        {
+            Debug redirectOutput{&out};
+            CORRADE_INTERNAL_ASSERT(debugLayer.inspectNode(baseNode));
+        }
+        Debug{} << out;
+        Utility::Path::write("ui-debuglayer-abstractvisuallayer.ansi", out);
 
-    /* AbstractVisualLayer integration with supplied style names */
+        /* AbstractVisualLayer integration with supplied style names */
 
 /* [abstractvisuallayer-style-names] */
 debugLayer.setLayerName(visualLayer, "Styled", [](UnsignedInt style) {
@@ -357,153 +368,154 @@ debugLayer.setLayerName(visualLayer, "Styled", [](UnsignedInt style) {
 });
 /* [abstractvisuallayer-style-names] */
 
-    ui.update();
-    out = {};
-    {
-        Debug redirectOutput{&out};
-        CORRADE_INTERNAL_ASSERT(debugLayer.inspectNode(baseNode));
+        ui.update();
+        out = {};
+        {
+            Debug redirectOutput{&out};
+            CORRADE_INTERNAL_ASSERT(debugLayer.inspectNode(baseNode));
+        }
+        Debug{} << out;
+        Utility::Path::write("ui-debuglayer-abstractvisuallayer-style-names.ansi", out);
+
+        /* BaseLayer integration */
+        Ui::BaseLayer& baseLayer = ui.setLayerInstance(Containers::pointer<Ui::BaseLayerGL>(ui.createLayer(), baseLayerShared));
+        debugLayer.setLayerName(baseLayer, "Base", [](UnsignedInt style) {
+            return style == 9 ? "ColorSwatch"_s : ""_s;
+        });
+        Ui::NodeHandle baseNodeCustom = ui.createNode(parent, {}, {});
+        Ui::DataHandle baseDataCustom = baseLayer.create(9, baseNodeCustom);
+        baseLayer.setColor(baseDataCustom, 0x3bd267_rgbf);
+        baseLayer.setPadding(baseDataCustom, {2.0f, 4.0f, 1.0f, 3.0f});
+
+        ui.update();
+        out = {};
+        {
+            Debug redirectOutput{&out};
+            CORRADE_INTERNAL_ASSERT(debugLayer.inspectNode(baseNodeCustom));
+        }
+        Debug{} << out;
+        Utility::Path::write("ui-debuglayer-baselayer.ansi", out);
+
+        /* LineLayer integration */
+        Ui::LineLayerGL::Shared lineLayerShared{
+            Ui::LineLayerGL::Shared::Configuration{4}
+        };
+        lineLayerShared.setStyle({}, {
+            {}, {}, {}, {},
+        }, {
+            {}, {}, {}, {}
+        }, {});
+        Ui::LineLayer& lineLayer = ui.setLayerInstance(Containers::pointer<Ui::LineLayerGL>(ui.createLayer(), lineLayerShared));
+        debugLayer.setLayerName(lineLayer, "Line", [](UnsignedInt style) {
+            return style == 2 ? "Graph"_s : ""_s;
+        });
+        Ui::NodeHandle lineNodeCustom = ui.createNode(parent, {}, {});
+        Ui::DataHandle lineDataCustom = lineLayer.createLoop(2, {{}}, {}, lineNodeCustom);
+        lineLayer.setAlignment(lineDataCustom, Ui::LineAlignment::BottomLeft);
+        lineLayer.setPadding(lineDataCustom, {3.0f, 1.0f, 4.0f, 2.0f});
+
+        ui.update();
+        out = {};
+        {
+            Debug redirectOutput{&out};
+            CORRADE_INTERNAL_ASSERT(debugLayer.inspectNode(lineNodeCustom));
+        }
+        Debug{} << out;
+        Utility::Path::write("ui-debuglayer-linelayer.ansi", out);
+
+        /* TextLayer integration */
+        Ui::TextLayerGL::Shared textLayerShared{
+            Text::GlyphCacheArrayGL{PixelFormat::RGBA8Unorm, {256, 256, 1}},
+            Ui::TextLayerGL::Shared::Configuration{4}
+        };
+        Ui::FontHandle font = textLayerShared.addInstancelessFont(textLayerShared.glyphCache().addFont(1), 1.0f);
+        textLayerShared.setStyle({}, {
+            {}, {}, {}, {},
+        }, {
+            {}, {}, {}, font
+        }, {
+            {}, {}, {}, {}
+        }, {}, {}, {}, {}, {}, {});
+        Ui::TextLayer& textLayer = ui.setLayerInstance(Containers::pointer<Ui::TextLayerGL>(ui.createLayer(), textLayerShared));
+        debugLayer.setLayerName(textLayer, "Text", [](UnsignedInt style) {
+            return style == 3 ? "Label"_s : ""_s;
+        });
+
+        Ui::NodeHandle textNodeCustom = ui.createNode(parent, {}, {});
+        Ui::DataHandle textDataCustom = textLayer.createGlyph(3, 0, {}, textNodeCustom);
+        textLayer.setColor(textDataCustom, 0x2f83cc_rgbf);
+        textLayer.setPadding(textDataCustom, 4.5f);
+
+        ui.update();
+        out = {};
+        {
+            Debug redirectOutput{&out};
+            CORRADE_INTERNAL_ASSERT(debugLayer.inspectNode(textNodeCustom));
+        }
+        Debug{} << out;
+        Utility::Path::write("ui-debuglayer-textlayer.ansi", out);
+
+        /* EventLayer integration */
+        ui.createNode({}, {});
+        ui.createNode({}, {});
+        Ui::NodeHandle eventNode = ui.createNode(parent, {}, {});
+        ui.eventLayer().onEnter(eventNode, []{});
+        /* This one should show that it's allocated */
+        char large[128]{};
+        ui.eventLayer().onTapOrClick(eventNode, [large]{ Debug{} << large[0]; });
+
+        ui.update();
+        out = {};
+        {
+            Debug redirectOutput{&out};
+            CORRADE_INTERNAL_ASSERT(debugLayer.inspectNode(eventNode));
+        }
+        Debug{} << out;
+        Utility::Path::write("ui-debuglayer-eventlayer.ansi", out);
+
+        /* NodeAnimator integration. Creating some more animators and animations to
+        have non-trivial handles. */
+        ui.createAnimator();
+        ui.createAnimator();
+        ui.removeAnimator(ui.createAnimator());
+        Ui::NodeAnimator& nodeAnimator = ui.setNodeAnimatorInstance(Containers::pointer<Ui::NodeAnimator>(ui.createAnimator()));
+        debugLayer.setAnimatorName(nodeAnimator, "Node");
+        Ui::NodeHandle nodeAnimatedNode = ui.createNode(parent, {}, {});
+        nodeAnimator.create(Ui::NodeAnimation{}, nullptr, -10_nsec, 20_nsec, Ui::NodeHandle::Null);
+        nodeAnimator.create(Ui::NodeAnimation{}, nullptr, -10_nsec, 20_nsec, Ui::NodeHandle::Null);
+        nodeAnimator.create(Ui::NodeAnimation{}, nullptr, -10_nsec, 20_nsec, Ui::NodeHandle::Null);
+        nodeAnimator.create(Ui::NodeAnimation{}, nullptr, -10_nsec, 20_nsec, Ui::NodeHandle::Null);
+        nodeAnimator.remove(nodeAnimator.create(Ui::NodeAnimation{}, nullptr, -10_nsec, 20_nsec, Ui::NodeHandle::Null));
+        nodeAnimator.remove(nodeAnimator.create(Ui::NodeAnimation{}, nullptr, -10_nsec, 20_nsec, Ui::NodeHandle::Null));
+        Ui::AnimationHandle nodeAnimatedNodeAnimation = nodeAnimator.create(
+            Ui::NodeAnimation{}
+                .toOffsetX(500.0f)
+                .fromOpacity(0.0f)
+                .toOpacity(1.0f)
+                .addFlagsBegin(Ui::NodeFlag::NoEvents|Ui::NodeFlag::Clip)
+                .clearFlagsBegin(Ui::NodeFlag::Hidden)
+                .clearFlagsEnd(Ui::NodeFlag::NoEvents|Ui::NodeFlag::Clip),
+            Animation::Easing::linear, -10_nsec, 20_nsec, nodeAnimatedNode);
+
+        ui.update();
+        out = {};
+        {
+            Debug redirectOutput{&out};
+            CORRADE_INTERNAL_ASSERT(debugLayer.inspectNode(nodeAnimatedNode));
+        }
+        Debug{} << out;
+        Utility::Path::write("ui-debuglayer-nodeanimator.ansi", out);
+
+        nodeAnimator.addFlags(nodeAnimatedNodeAnimation, Ui::AnimationFlag::Reverse);
+
+        out = {};
+        {
+            Debug redirectOutput{&out};
+            CORRADE_INTERNAL_ASSERT(debugLayer.inspectNode(nodeAnimatedNode));
+        }
+        Debug{} << out;
+        Utility::Path::write("ui-debuglayer-nodeanimator-reverse.ansi", out);
     }
-    Debug{} << out;
-    Utility::Path::write("ui-debuglayer-abstractvisuallayer-style-names.ansi", out);
-
-    /* BaseLayer integration */
-    Ui::BaseLayer& baseLayer = ui.setLayerInstance(Containers::pointer<Ui::BaseLayerGL>(ui.createLayer(), baseLayerShared));
-    debugLayer.setLayerName(baseLayer, "Base", [](UnsignedInt style) {
-        return style == 9 ? "ColorSwatch"_s : ""_s;
-    });
-    Ui::NodeHandle baseNodeCustom = ui.createNode(parent, {}, {});
-    Ui::DataHandle baseDataCustom = baseLayer.create(9, baseNodeCustom);
-    baseLayer.setColor(baseDataCustom, 0x3bd267_rgbf);
-    baseLayer.setPadding(baseDataCustom, {2.0f, 4.0f, 1.0f, 3.0f});
-
-    ui.update();
-    out = {};
-    {
-        Debug redirectOutput{&out};
-        CORRADE_INTERNAL_ASSERT(debugLayer.inspectNode(baseNodeCustom));
-    }
-    Debug{} << out;
-    Utility::Path::write("ui-debuglayer-baselayer.ansi", out);
-
-    /* LineLayer integration */
-    Ui::LineLayerGL::Shared lineLayerShared{
-        Ui::LineLayerGL::Shared::Configuration{4}
-    };
-    lineLayerShared.setStyle({}, {
-        {}, {}, {}, {},
-    }, {
-        {}, {}, {}, {}
-    }, {});
-    Ui::LineLayer& lineLayer = ui.setLayerInstance(Containers::pointer<Ui::LineLayerGL>(ui.createLayer(), lineLayerShared));
-    debugLayer.setLayerName(lineLayer, "Line", [](UnsignedInt style) {
-        return style == 2 ? "Graph"_s : ""_s;
-    });
-    Ui::NodeHandle lineNodeCustom = ui.createNode(parent, {}, {});
-    Ui::DataHandle lineDataCustom = lineLayer.createLoop(2, {{}}, {}, lineNodeCustom);
-    lineLayer.setAlignment(lineDataCustom, Ui::LineAlignment::BottomLeft);
-    lineLayer.setPadding(lineDataCustom, {3.0f, 1.0f, 4.0f, 2.0f});
-
-    ui.update();
-    out = {};
-    {
-        Debug redirectOutput{&out};
-        CORRADE_INTERNAL_ASSERT(debugLayer.inspectNode(lineNodeCustom));
-    }
-    Debug{} << out;
-    Utility::Path::write("ui-debuglayer-linelayer.ansi", out);
-
-    /* TextLayer integration */
-    Ui::TextLayerGL::Shared textLayerShared{
-        Text::GlyphCacheArrayGL{PixelFormat::RGBA8Unorm, {256, 256, 1}},
-        Ui::TextLayerGL::Shared::Configuration{4}
-    };
-    Ui::FontHandle font = textLayerShared.addInstancelessFont(textLayerShared.glyphCache().addFont(1), 1.0f);
-    textLayerShared.setStyle({}, {
-        {}, {}, {}, {},
-    }, {
-        {}, {}, {}, font
-    }, {
-        {}, {}, {}, {}
-    }, {}, {}, {}, {}, {}, {});
-    Ui::TextLayer& textLayer = ui.setLayerInstance(Containers::pointer<Ui::TextLayerGL>(ui.createLayer(), textLayerShared));
-    debugLayer.setLayerName(textLayer, "Text", [](UnsignedInt style) {
-        return style == 3 ? "Label"_s : ""_s;
-    });
-
-    Ui::NodeHandle textNodeCustom = ui.createNode(parent, {}, {});
-    Ui::DataHandle textDataCustom = textLayer.createGlyph(3, 0, {}, textNodeCustom);
-    textLayer.setColor(textDataCustom, 0x2f83cc_rgbf);
-    textLayer.setPadding(textDataCustom, 4.5f);
-
-    ui.update();
-    out = {};
-    {
-        Debug redirectOutput{&out};
-        CORRADE_INTERNAL_ASSERT(debugLayer.inspectNode(textNodeCustom));
-    }
-    Debug{} << out;
-    Utility::Path::write("ui-debuglayer-textlayer.ansi", out);
-
-    /* EventLayer integration */
-    ui.createNode({}, {});
-    ui.createNode({}, {});
-    Ui::NodeHandle eventNode = ui.createNode(parent, {}, {});
-    ui.eventLayer().onEnter(eventNode, []{});
-    /* This one should show that it's allocated */
-    char large[128]{};
-    ui.eventLayer().onTapOrClick(eventNode, [large]{ Debug{} << large[0]; });
-
-    ui.update();
-    out = {};
-    {
-        Debug redirectOutput{&out};
-        CORRADE_INTERNAL_ASSERT(debugLayer.inspectNode(eventNode));
-    }
-    Debug{} << out;
-    Utility::Path::write("ui-debuglayer-eventlayer.ansi", out);
-
-    /* NodeAnimator integration. Creating some more animators and animations to
-       have non-trivial handles. */
-    ui.createAnimator();
-    ui.createAnimator();
-    ui.removeAnimator(ui.createAnimator());
-    Ui::NodeAnimator& nodeAnimator = ui.setNodeAnimatorInstance(Containers::pointer<Ui::NodeAnimator>(ui.createAnimator()));
-    debugLayer.setAnimatorName(nodeAnimator, "Node");
-    Ui::NodeHandle nodeAnimatedNode = ui.createNode(parent, {}, {});
-    nodeAnimator.create(Ui::NodeAnimation{}, nullptr, -10_nsec, 20_nsec, Ui::NodeHandle::Null);
-    nodeAnimator.create(Ui::NodeAnimation{}, nullptr, -10_nsec, 20_nsec, Ui::NodeHandle::Null);
-    nodeAnimator.create(Ui::NodeAnimation{}, nullptr, -10_nsec, 20_nsec, Ui::NodeHandle::Null);
-    nodeAnimator.create(Ui::NodeAnimation{}, nullptr, -10_nsec, 20_nsec, Ui::NodeHandle::Null);
-    nodeAnimator.remove(nodeAnimator.create(Ui::NodeAnimation{}, nullptr, -10_nsec, 20_nsec, Ui::NodeHandle::Null));
-    nodeAnimator.remove(nodeAnimator.create(Ui::NodeAnimation{}, nullptr, -10_nsec, 20_nsec, Ui::NodeHandle::Null));
-    Ui::AnimationHandle nodeAnimatedNodeAnimation = nodeAnimator.create(
-        Ui::NodeAnimation{}
-            .toOffsetX(500.0f)
-            .fromOpacity(0.0f)
-            .toOpacity(1.0f)
-            .addFlagsBegin(Ui::NodeFlag::NoEvents|Ui::NodeFlag::Clip)
-            .clearFlagsBegin(Ui::NodeFlag::Hidden)
-            .clearFlagsEnd(Ui::NodeFlag::NoEvents|Ui::NodeFlag::Clip),
-        Animation::Easing::linear, -10_nsec, 20_nsec, nodeAnimatedNode);
-
-    ui.update();
-    out = {};
-    {
-        Debug redirectOutput{&out};
-        CORRADE_INTERNAL_ASSERT(debugLayer.inspectNode(nodeAnimatedNode));
-    }
-    Debug{} << out;
-    Utility::Path::write("ui-debuglayer-nodeanimator.ansi", out);
-
-    nodeAnimator.addFlags(nodeAnimatedNodeAnimation, Ui::AnimationFlag::Reverse);
-
-    out = {};
-    {
-        Debug redirectOutput{&out};
-        CORRADE_INTERNAL_ASSERT(debugLayer.inspectNode(nodeAnimatedNode));
-    }
-    Debug{} << out;
-    Utility::Path::write("ui-debuglayer-nodeanimator-reverse.ansi", out);
 
     return 0;
 }

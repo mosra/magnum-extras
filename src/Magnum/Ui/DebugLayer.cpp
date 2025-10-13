@@ -744,7 +744,7 @@ bool DebugLayer::inspectNode(const NodeHandle handle) {
         }
 
         if(state.sources >= DebugLayerSource::NodeAnimations) {
-            /* Four entries, each for one AnimationState */
+            /* Five entries, each for one AnimationState */
             constexpr UnsignedInt animationStateCount = 5;
             UnsignedInt otherAnimatorCount[animationStateCount]{};
             UnsignedInt otherAnimationCount[animationStateCount]{};
@@ -773,7 +773,7 @@ bool DebugLayer::inspectNode(const NodeHandle handle) {
 
                 const UnsignedInt dataCapacity = animatorInstance.capacity();
                 const Containers::StridedArrayView1D<const UnsignedShort> dataGenerations = animatorInstance.generations();
-                /* Four entries, each for one AnimationState */
+                /* Five entries, each for one AnimationState */
                 bool hasOtherAnimationsFromThisAnimator[animationStateCount]{};
                 UnsignedInt namedAnimatorDataCount[animationStateCount]{};
                 for(UnsignedInt dataId = 0; dataId != dataCapacity; ++dataId) {

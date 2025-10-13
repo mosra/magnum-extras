@@ -163,8 +163,10 @@ MAGNUM_UI_EXPORT Debug& operator<<(Debug& debug, DebugLayerSources value);
 */
 enum class DebugLayerFlag: UnsignedByte {
     /**
-     * Highlight and show details of a node on pointer press. Expects that at
-     * least @ref DebugLayerSource::Nodes is enabled.
+     * Highlight and show details of a node on pointer press or after calling
+     * @ref DebugLayer::inspectNode() programmatically. Expects that at least
+     * @ref DebugLayerSource::Nodes is enabled. See
+     * @ref Ui-DebugLayer-node-inspect for more information.
      * @see @ref DebugLayer::setNodeInspectColor(),
      *      @ref DebugLayer::setNodeInspectGesture(),
      *      @ref DebugLayer::setNodeInspectCallback()
@@ -244,12 +246,11 @@ of all other layers and reacts to events first.
 @snippet Ui-gl.cpp DebugLayer-setup
 
 With this, assuming @ref AbstractUserInterface::draw() is called in an
-appropriate place, the layer is ready to use. You likely don't need to keep a
-reference to it as it will track changes in enabled sources without further
-involvement. In case of the base @ref DebugLayer that doesn't draw, or when
-inspecting the UI programmatically, calling just
-@ref AbstractUserInterface::update() (which is otherwise called from
-@relativeref{AbstractUserInterface,draw()}) is enough to make it aware of
+appropriate place, the layer is ready to use and it will track changes in
+enabled sources without further involvement. In case of the base
+@ref DebugLayer that doesn't draw, or when inspecting the UI programmatically,
+calling just @ref AbstractUserInterface::update() (which is otherwise called
+from @relativeref{AbstractUserInterface,draw()}) is enough to make it aware of
 latest state changes.
 
 @m_class{m-note m-warning}
@@ -284,8 +285,8 @@ With the @ref DebugLayer set up, clicking on this button with
 @m_class{m-label m-warning} **Ctrl** @m_class{m-label m-default} **pen eraser**
 in case of a pen input) highlights the node, showing a magenta rectangle over,
 and prints details about it to the console like shown below. Clicking on any
-other node will inspect that one instead, clicking again on the highlighted
-node will remove the highlight.
+other node will inspect that one instead, clicking again on the inspected node
+will remove the highlight.
 
 @image html ui-debuglayer-node-inspect.png width=128px
 
@@ -963,7 +964,7 @@ class MAGNUM_UI_EXPORT DebugLayer: public AbstractLayer {
          * is instantiated as @ref DebugLayerGL to be able to draw the
          * highlight rectangles, ignored otherwise. The @p colors are expected
          * to have at least one element and the caller has to ensure the memory
-         * stays scope for the whole layer lifetime or until
+         * stays in scope for the whole layer lifetime or until
          * @ref setNodeHighlightColorMap() is called with a different color
          * map.
          *
