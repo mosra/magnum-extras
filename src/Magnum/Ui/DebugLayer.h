@@ -216,6 +216,33 @@ MAGNUM_UI_EXPORT Debug& operator<<(Debug& debug, DebugLayerFlag value);
 */
 MAGNUM_UI_EXPORT Debug& operator<<(Debug& debug, DebugLayerFlags value);
 
+namespace Implementation {
+
+/* Uses the void_t trick, explained at https://stackoverflow.com/a/27688405,
+   where the basic premise is that when `DebugLayerConditionSignature<Foo>` is
+   in code, `DebugLayerConditionSignature<Foo, void>` gets looked for, because
+   the second template argument wasn't specified and `void` was the default.
+   The compiler then looks for the most specialized variant of
+   `DebugLayerConditionSignature<Foo, void>` and falls back to the
+   unspecialized version if nothing else matches, triggering an error because
+   it's not defined. */
+template<class> using DebugLayerConditionSignatureVoidT = void;
+template<class Handle, class F, class = void> struct DebugLayerConditionSignature;
+
+/* Matches a function pointer with an arbitrary type as the first argument */
+template<class Handle, class T> struct DebugLayerConditionSignature<Handle, bool(*)(const T&, Handle)> {
+    typedef bool(*Type)(const T&, Handle);
+};
+
+/* Matches a lambda  with an arbitrary type as the first argument */
+template<class Handle, class F> struct DebugLayerConditionSignatureMember;
+template<class Handle, class C, class T> struct DebugLayerConditionSignatureMember<Handle, bool(C::*)(const T&, Handle) const> {
+    typedef bool(*Type)(const T&, Handle);
+};
+template<class Handle, class F> struct DebugLayerConditionSignature<Handle, F, DebugLayerConditionSignatureVoidT<decltype(&F::operator())>>: DebugLayerConditionSignatureMember<Handle, decltype(&F::operator())> {};
+
+}
+
 /**
 @brief Debug layer
 @m_since_latest
@@ -398,6 +425,53 @@ the workaround is to either restrict its size to cover only the necessary area,
 move it behind other nodes in the @ref Ui-AbstractUserInterface-nodes-order "top-level node hierarchy"
 or mark it with @ref NodeFlag::NoEvents if it doesn't have children that need
 to react to events.
+
+@section Ui-DebugLayer-node-highlight Highlighting nodes
+
+Besides inspecting a single individual node to see details about what's all
+attached to it, it's possible to programmatically highlight nodes in the UI by
+passing their handle to @ref highlightNode(). This is useful for example in
+case you have a node in the code and want to see where it appears in the UI.
+In the following snippet, the `button` from above would get highlighted like
+this, resulting in it having a cyan overlay. The function returns @cpp false @ce
+in case given node handle is unknown to the debug layer, which you can use for
+various sanity checks:
+
+@snippet ui-debuglayer.cpp button-highlight
+
+@image html ui-debuglayer-node-highlight.png width=128px
+
+The highlights are additive, meaning additional calls to @ref highlightNode()
+will highlight more nodes. The set of currently highlighted node IDs can be
+queried with @ref currentHighlightedNodes() and all highlights cleared with
+@ref clearHighlightedNodes(). To better distinguish multiple highlighted nodes
+from each other, a color map can be supplied with @ref setNodeHighlightColorMap(),
+where different colors get used based on node ID. The @ref DebugTools::ColorMap
+namespace contains several builtin ones or you can supply any arbitrary array
+of 8-bit colors:
+
+@snippet Ui.cpp DebugLayer-node-highlight-colormap
+
+The @ref highlightNodes() overloads then allow highlighting nodes based on
+various conditions either on the nodes themselves or on data, layouts and
+animations attached to those. Each of these overloads accepts a function which
+if returns @cpp true @ce, causes given node (or node given data / layout /
+animation is attached to) to be highlighted. For example, highlighting all
+top-level nodes in the UI to discover unnecessary extra draw calls:
+
+@snippet Ui.cpp DebugLayer-node-highlight-condition-node
+
+Or highlighting all nodes that have base and text data with custom colors, to
+discover pieces of the UI that might have their styling hardcoded. The
+highlights will be combined from these two calls:
+
+@snippet Ui.cpp DebugLayer-node-highlight-condition-layer
+
+Node highlight is orthogonal to node inspection, so if you have
+@ref DebugLayerFlag::NodeInspect enabled as well, you can then inspect the
+highlighted nodes one by one. Inspection has a priority over the highlight, so
+it displays a magenta overlay instead, and when it's removed, the original
+highlight is shown on given node again.
 
 @section Ui-DebugLayer-opt-in Making the DebugLayer opt-in
 
@@ -938,8 +1012,8 @@ class MAGNUM_UI_EXPORT DebugLayer: public AbstractLayer {
          * @ref AbstractUserInterface::update(). As such, for example nodes or
          * layers added since the last update won't be included in the output.
          *
-         * See @ref highlightNode() for a way to just highlight particular
-         * nodes in the UI without inspecting them.
+         * See @ref highlightNode() and @ref highlightNodes() for a way to just
+         * highlight particular nodes in the UI without inspecting them.
          *
          * If the layer is instantiated as @ref DebugLayerGL and @p node is
          * different from the previously inspected node, calling this function
@@ -986,10 +1060,11 @@ class MAGNUM_UI_EXPORT DebugLayer: public AbstractLayer {
          * @brief Currently highlighted nodes
          *
          * Expects that @ref DebugLayerSource::Nodes is enabled. Reflects the
-         * result of @ref highlightNode() calls, a particular bit being set if
-         * a node with given handle ID is highlighted, Size of the returned
-         * array matches @ref AbstractUserInterface::nodeCapacity() at the last
-         * time @ref AbstractUserInterface::update() or
+         * result of @ref highlightNode() and @ref highlightNodes() calls, a
+         * particular bit being set if a node with given handle ID is
+         * highlighted, Size of the returned array matches
+         * @ref AbstractUserInterface::nodeCapacity() at the last time
+         * @ref AbstractUserInterface::update() or
          * @relativeref{AbstractUserInterface,draw()} has been called, bits get
          * reset for any previously highlighted nodes that become invalid at
          * that point.
@@ -1001,8 +1076,9 @@ class MAGNUM_UI_EXPORT DebugLayer: public AbstractLayer {
          * @return Reference to self (for method chaining)
          *
          * Expects that @ref DebugLayerSource::Nodes is enabled. Clears all
-         * nodes highlighted by @ref highlightNode(). Note that the
-         * @ref currentInspectedNode() isn't affected by this function.
+         * nodes highlighted by @ref highlightNode() and @ref highlightNodes().
+         * Note that the @ref currentInspectedNode() isn't affected by this
+         * function.
          * @see @ref currentHighlightedNodes()
          */
         DebugLayer& clearHighlightedNodes();
@@ -1025,8 +1101,11 @@ class MAGNUM_UI_EXPORT DebugLayer: public AbstractLayer {
          *
          * The highlights are additive, meaning calling this function multiple
          * times will make more nodes highlighted. Use
-         * @ref clearHighlightedNodes() to clear all highlights. See also
-         * @ref inspectNode() for highlighting a node and printing its details.
+         * @ref clearHighlightedNodes() to clear all highlights. You can use
+         * the @ref highlightNodes() variants to highlight nodes based on
+         * various conditions queried on the nodes themselves or on data,
+         * layouts and animations attached to those. See also @ref inspectNode()
+         * for highlighting a node and printing its details.
          *
          * If the layer is instantiated as @ref DebugLayerGL and @p node wasn't
          * already highlighted before, calling this function causes
@@ -1035,6 +1114,155 @@ class MAGNUM_UI_EXPORT DebugLayer: public AbstractLayer {
          *      @ref clearHighlightedNodes()
          */
         bool highlightNode(NodeHandle node);
+
+        /**
+         * @brief Highlight nodes based on a condition
+         *
+         * Expects that @ref DebugLayerSource::Nodes is enabled, the layer has
+         * been already passed to @ref AbstractUserInterface::setLayerInstance()
+         * and that @p condition isn't @cpp nullptr @ce.
+         *
+         * The function goes through all known and valid nodes and calls
+         * @p condition with the user interface instance and a @ref NodeHandle.
+         * If @p condition returns @cpp true @ce, given node is highlighted.
+         *
+         * The passed handles are all guaranteed to be valid, however note that
+         * not yet known nodes (such as nodes that were newly created since the
+         * last call to @ref AbstractUserInterface::update()) will not be taken
+         * into account. The function returns @cpp false @ce if the debug layer
+         * doesn't know any valid nodes (such as when calling this function
+         * before any @ref AbstractUserInterface::update() call) and thus
+         * @p condition was never called. The function returns @cpp true @ce if
+         * there was at least one node to call @p condition on, regardless of
+         * whether any node was actually highlighted by it.
+         *
+         * If the layer is instantiated as @ref DebugLayerGL and nodes for
+         * which @p condition returned @cpp true @ce weren't already
+         * highlighted, calling this function causes
+         * @ref LayerState::NeedsDataUpdate to be set.
+         */
+        bool highlightNodes(bool(*condition)(const AbstractUserInterface& ui, NodeHandle node));
+
+        /**
+         * @brief Highlight nodes based on a condition queried on data attachments
+         * @return Reference to self (for method chaining)
+         *
+         * Expects that @ref DebugLayerSource::Nodes and
+         * @relativeref{DebugLayerSource,Layers} is enabled, that the debug
+         * layer has been already passed to
+         * @ref AbstractUserInterface::setLayerInstance(), that @p layer is
+         * part of the same user interface and is not the debug layer itself
+         * and that @p condition isn't @cpp nullptr @ce.
+         *
+         * If @p layer is known to the debug layer, the function goes through
+         * all its data that are attached to known and valid nodes and calls
+         * @p condition with the layer instance and a @ref LayerDataHandle. If
+         * @p condition returns @cpp true @ce, the node the data is attached to
+         * is highlighted.
+         *
+         * The passed handles are all guaranteed to be valid in given layer,
+         * however note that data attached to not yet known nodes (such as
+         * nodes that were newly created since the last call to
+         * @ref AbstractUserInterface::update()) will not be taken into
+         * account. The function returns @cpp false @ce if the debug layer
+         * doesn't know @p layer or none of its data are attached to known and
+         * valid nodes (such as when calling this function before any
+         * @ref AbstractUserInterface::update() call) and thus @p condition was
+         * never called. The function returns @cpp true @ce if there was at
+         * least one data to call @p condition on, regardless of whether any
+         * node was actually highlighted by it.
+         *
+         * If the layer is instantiated as @ref DebugLayerGL and nodes for
+         * which @p condition returned @cpp true @ce weren't already
+         * highlighted, calling this function causes
+         * @ref LayerState::NeedsDataUpdate to be set.
+         */
+        #ifdef DOXYGEN_GENERATING_OUTPUT
+        template<class T, class U> bool highlightNodes(const T& layer, bool(*condition)(const U& layer, LayerDataHandle data));
+        #else
+        template<class T, class U, typename std::enable_if<std::is_convertible<const T&, const AbstractLayer&>::value, int>::type = 0> bool highlightNodes(const T& layer, U condition);
+        #endif
+
+        /**
+         * @brief Highlight nodes based on a condition queried on layout assignments
+         * @return Reference to self (for method chaining)
+         *
+         * Expects that @ref DebugLayerSource::Nodes and
+         * @relativeref{DebugLayerSource,Layouters} is enabled, that the debug
+         * layer has been already passed to
+         * @ref AbstractUserInterface::setLayerInstance(), that @p layouter is
+         * part of the same user interface and that @p condition isn't
+         * @cpp nullptr @ce.
+         *
+         * If @p layouter is known to the debug layer, the function goes
+         * through all its layouts that are assigned to known and valid nodes
+         * and calls @p condition with the layouter instance and a
+         * @ref LayouterDataHandle. If @p condition returns @cpp true @ce, the
+         * node the layout is assigned to is highlighted.
+         *
+         * The passed handles are all guaranteed to be valid in given layouter,
+         * however note that layouts assigned to not yet known nodes (such as
+         * nodes that were newly created since the last call to
+         * @ref AbstractUserInterface::update()) will not be taken into
+         * account. The function returns @cpp false @ce if the debug layer
+         * doesn't know @p layouter or none of its layouts are assigned to
+         * known and valid nodes (such as when calling this function before any
+         * @ref AbstractUserInterface::update() call) and thus @p condition was
+         * never called. The function returns @cpp true @ce if there was at
+         * least one layout to call @p condition on, regardless of whether any
+         * node was actually highlighted by it.
+         *
+         * If the layer is instantiated as @ref DebugLayerGL and nodes for
+         * which @p condition returned @cpp true @ce weren't already
+         * highlighted, calling this function causes
+         * @ref LayerState::NeedsDataUpdate to be set.
+         */
+        #ifdef DOXYGEN_GENERATING_OUTPUT
+        template<class T, class U> bool highlightNodes(const T& layouter, bool(*condition)(const U& layouter, LayouterDataHandle data));
+        #else
+        template<class T, class U, typename std::enable_if<std::is_convertible<const T&, const AbstractLayouter&>::value, int>::type = 0> bool highlightNodes(const T& layouter, U condition);
+        #endif
+
+        /**
+         * @brief Highlight nodes based on a condition queried on animation attachments
+         * @return Reference to self (for method chaining)
+         *
+         * Expects that @ref DebugLayerSource::Nodes and
+         * @relativeref{DebugLayerSource,Animators} is enabled, that the debug
+         * layer has been already passed to
+         * @ref AbstractUserInterface::setLayerInstance(), that @p animator is
+         * part of the same user interface and supports
+         * @ref AnimatorFeature::NodeAttachment and that @p condition isn't
+         * @cpp nullptr @ce.
+         *
+         * If @p animator is known to the debug layer, the function goes
+         * through all its animations that are attached to known and valid
+         * nodes and calls @p condition with the animator instance and an
+         * @ref AnimatorDataHandle. If @p condition returns @cpp true @ce, the
+         * node the animation is attached to is highlighted.
+         *
+         * The passed handles are all guaranteed to be valid in given animator,
+         * however note that animations attached to not yet known nodes (such
+         * as nodes that were newly created since the last call to
+         * @ref AbstractUserInterface::update()) will not be taken into
+         * account. The function returns @cpp false @ce if the debug layer
+         * doesn't know @p animator or none of its data are attached to known
+         * and valid nodes (such as when calling this function before any
+         * @ref AbstractUserInterface::update() call) and thus @p condition was
+         * never called. The function returns @cpp true @ce if there was at
+         * least one animation to call @p condition on, regardless of whether
+         * any node was actually highlighted by it.
+         *
+         * If the layer is instantiated as @ref DebugLayerGL and nodes for
+         * which @p condition returned @cpp true @ce weren't already
+         * highlighted, calling this function causes
+         * @ref LayerState::NeedsDataUpdate to be set.
+         */
+        #ifdef DOXYGEN_GENERATING_OUTPUT
+        template<class T, class U> bool highlightNodes(const T& animator, bool(*condition)(const U& animator, AnimatorDataHandle data));
+        #else
+        template<class T, class U, typename std::enable_if<std::is_convertible<const T&, const AbstractAnimator&>::value, int>::type = 0> bool highlightNodes(const T& animator, U condition);
+        #endif
 
     #ifdef DOXYGEN_GENERATING_OUTPUT
     private:
@@ -1058,6 +1286,10 @@ class MAGNUM_UI_EXPORT DebugLayer: public AbstractLayer {
         void** setLayerNameDebugIntegration(const AbstractLayer& instance, const Containers::StringView& name, void(*deleter)(void*), void(*print)(void*, Debug&, const AbstractLayer&, const Containers::StringView&, LayerDataHandle));
         void** setLayouterNameDebugIntegration(const AbstractLayouter& instance, const Containers::StringView& name, void(*deleter)(void*), void(*print)(void*, Debug&, const AbstractLayouter&, const Containers::StringView&, LayouterDataHandle));
         void** setAnimatorNameDebugIntegration(const AbstractAnimator& instance, const Containers::StringView& name, void(*deleter)(void*), void(*print)(void*, Debug&, const AbstractAnimator&, const Containers::StringView&, AnimatorDataHandle));
+
+        bool highlightNodesInternal(const AbstractLayer& layer, bool(*condition)(const AbstractLayer&, void(*)(), LayerDataHandle), void(*functor)());
+        bool highlightNodesInternal(const AbstractLayouter& layouter, bool(*condition)(const AbstractLayouter&, void(*)(), LayouterDataHandle), void(*functor)());
+        bool highlightNodesInternal(const AbstractAnimator& animator, bool(*condition)(const AbstractAnimator&, void(*)(), AnimatorDataHandle), void(*functor)());
 
         /* These can't be MAGNUM_UI_LOCAL otherwise deriving from this class
            in tests causes linker errors */
@@ -1204,6 +1436,26 @@ template<class T> DebugLayer& DebugLayer::setAnimatorName(const T& animator, con
     }
     return *this;
 }
+
+#ifndef DOXYGEN_GENERATING_OUTPUT
+template<class T, class U, typename std::enable_if<std::is_convertible<const T&, const AbstractLayer&>::value, int>::type> bool DebugLayer::highlightNodes(const T& layer, U condition) {
+    return highlightNodesInternal(layer, [](const AbstractLayer& layer, void(*functor)(), LayerDataHandle data) {
+        return reinterpret_cast<typename Implementation::DebugLayerConditionSignature<LayerDataHandle, U>::Type>(functor)(static_cast<const T&>(layer), data);
+    }, reinterpret_cast<void(*)()>(static_cast<typename Implementation::DebugLayerConditionSignature<LayerDataHandle, U>::Type>(condition)));
+}
+
+template<class T, class U, typename std::enable_if<std::is_convertible<const T&, const AbstractLayouter&>::value, int>::type> bool DebugLayer::highlightNodes(const T& layouter, U condition) {
+    return highlightNodesInternal(layouter, [](const AbstractLayouter& layouter, void(*functor)(), LayouterDataHandle data) {
+        return reinterpret_cast<typename Implementation::DebugLayerConditionSignature<LayouterDataHandle, U>::Type>(functor)(static_cast<const T&>(layouter), data);
+    }, reinterpret_cast<void(*)()>(static_cast<typename Implementation::DebugLayerConditionSignature<LayouterDataHandle, U>::Type>(condition)));
+}
+
+template<class T, class U, typename std::enable_if<std::is_convertible<const T&, const AbstractAnimator&>::value, int>::type> bool DebugLayer::highlightNodes(const T& animator, U condition) {
+    return highlightNodesInternal(animator, [](const AbstractAnimator& animator, void(*functor)(), AnimatorDataHandle data) {
+        return reinterpret_cast<typename Implementation::DebugLayerConditionSignature<AnimatorDataHandle, U>::Type>(functor)(static_cast<const T&>(animator), data);
+    }, reinterpret_cast<void(*)()>(static_cast<typename Implementation::DebugLayerConditionSignature<AnimatorDataHandle, U>::Type>(condition)));
+}
+#endif
 
 }}
 

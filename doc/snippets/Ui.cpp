@@ -34,6 +34,7 @@
 #include <Magnum/ImageView.h>
 #include <Magnum/PixelFormat.h>
 #include <Magnum/Animation/Easing.h>
+#include <Magnum/DebugTools/ColorMap.h>
 #include <Magnum/Math/Range.h>
 #include <Magnum/Text/AbstractFont.h>
 #include <Magnum/Text/AbstractGlyphCache.h>
@@ -1082,6 +1083,37 @@ debugLayer.setNodeInspectCallback([&details](Containers::StringView message) {
         .setHidden(!message);
 });
 /* [DebugLayer-node-inspect-callback] */
+}
+
+{
+Ui::DebugLayer debugLayer{Ui::layerHandle(0, 1), {}, {}};
+/* [DebugLayer-node-highlight-colormap] */
+debugLayer.setNodeHighlightColorMap(DebugTools::ColorMap::turbo());
+/* [DebugLayer-node-highlight-colormap] */
+}
+
+{
+struct UserInterface: Ui::UserInterface {
+    explicit UserInterface(NoCreateT): Ui::UserInterface{NoCreate} {}
+} ui{NoCreate};
+Ui::DebugLayer debugLayer{Ui::layerHandle(0, 1), {}, {}};
+/* [DebugLayer-node-highlight-condition-node] */
+debugLayer.highlightNodes(
+    [](const Ui::AbstractUserInterface& ui, Ui::NodeHandle node) {
+        return ui.isNodeTopLevel(node);
+    });
+/* [DebugLayer-node-highlight-condition-node] */
+
+/* [DebugLayer-node-highlight-condition-layer] */
+debugLayer.highlightNodes(ui.baseLayer(),
+    [](const Ui::BaseLayer& layer, Ui::LayerDataHandle data) {
+        return layer.color(data) != Color4{1.0f};
+    });
+debugLayer.highlightNodes(ui.textLayer(),
+    [](const Ui::TextLayer& layer, Ui::LayerDataHandle data) {
+        return layer.color(data) != Color4{1.0f};
+    });
+/* [DebugLayer-node-highlight-condition-layer] */
 }
 
 {

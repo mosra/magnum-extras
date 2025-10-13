@@ -924,6 +924,216 @@ bool DebugLayer::highlightNode(const NodeHandle node) {
     return false;
 }
 
+bool DebugLayer::highlightNodes(bool(*const condition)(const AbstractUserInterface&, NodeHandle)) {
+    State& state = *_state;
+    CORRADE_ASSERT(condition,
+        "Ui::DebugLayer::highlightNodes(): condition is null", {});
+    CORRADE_ASSERT(state.sources >= DebugLayerSource::Nodes,
+        "Ui::DebugLayer::highlightNodes():" << DebugLayerSource::Nodes << "not enabled", {});
+    CORRADE_ASSERT(hasUi(),
+        "Ui::DebugLayer::highlightNodes(): debug layer not part of a user interface", {});
+    CORRADE_INTERNAL_ASSERT(state.currentHighlightedNodes.size() == state.nodes.size());
+
+    bool called = false, updated = false;
+    for(const Implementation::DebugLayerNode& node: state.nodes) {
+        /* If the node we know about isn't actually valid anymore, skip */
+        if(!ui().isHandleValid(node.handle))
+            continue;
+
+        /* Return true from the function even if we didn't actually call the
+           condition because given node is already highlighted */
+        called = true;
+        const UnsignedInt nodeId = nodeHandleId(node.handle);
+        if(!state.currentHighlightedNodes[nodeId] && condition(ui(), node.handle)) {
+            state.currentHighlightedNodes.set(nodeId);
+            updated = true;
+        }
+    }
+
+    /* Mark the layer as needing an update only if this is a subclass that
+       draws and we actually set at least one bit */
+    if(updated && doFeatures() >= LayerFeature::Draw)
+        setNeedsUpdate(LayerState::NeedsDataUpdate);
+
+    return called;
+}
+
+bool DebugLayer::highlightNodesInternal(const AbstractLayer& layer, bool(*condition)(const AbstractLayer&, void(*)(), LayerDataHandle), void(*functor)()) {
+    const State& state = *_state;
+    CORRADE_ASSERT(functor, /* condition is a wrapper lambda, never null */
+        "Ui::DebugLayer::highlightNodes(): condition is null", {});
+    CORRADE_ASSERT(state.sources >= (DebugLayerSource::Nodes|DebugLayerSource::Layers),
+        "Ui::DebugLayer::highlightNodes():" << ((DebugLayerSource::Nodes|DebugLayerSource::Layers) & ~state.sources) << "not enabled", {});
+    CORRADE_ASSERT(hasUi(),
+        "Ui::DebugLayer::highlightNodes(): debug layer not part of a user interface", {});
+    CORRADE_ASSERT(ui().isHandleValid(layer.handle()) && &ui().layer(layer.handle()) == &layer,
+        "Ui::DebugLayer::highlightNodes(): layer not part of the same user interface", {});
+    CORRADE_ASSERT(&layer != this,
+        "Ui::DebugLayer::highlightNodes(): can't highlight with a condition on the debug layer itself", {});
+    CORRADE_INTERNAL_ASSERT(state.currentHighlightedNodes.size() == state.nodes.size());
+
+    /* If this is a layer we don't know about yet, don't do anything. This is a
+       valid use (such as highlighting too early, similarly as with nodes being
+       skipped if not yet known) so it isn't an assert. */
+    if(layerHandleId(layer.handle()) >= state.layers.size() ||
+       layer.handle() != state.layers[layerHandleId(layer.handle())].handle)
+        return false;
+
+    const UnsignedInt capacity = layer.capacity();
+    const Containers::StridedArrayView1D<const UnsignedShort> generations = layer.generations();
+    bool called = false, updated = false;
+    for(UnsignedInt dataId = 0; dataId != capacity; ++dataId) {
+        /* If given slot doesn't actually contain a valid data, skip */
+        const LayerDataHandle data = layerDataHandle(dataId, generations[dataId]);
+        if(!layer.isHandleValid(data))
+            continue;
+
+        /* If the data is not attached anywhere, is attached to a node with
+           index we don't know about yet, is attached to a node which has a
+           different generation from what we remembered, or if it matches the
+           handle we know but is actually not valid anymore, skip */
+        const NodeHandle node = layer.node(data);
+        if(node == NodeHandle::Null ||
+           nodeHandleId(node) >= state.nodes.size() ||
+           node != state.nodes[nodeHandleId(node)].handle ||
+           !ui().isHandleValid(node))
+            continue;
+
+        /* Return true from the function even if we didn't actually call the
+           condition because given node is already highlighted */
+        called = true;
+        const UnsignedInt nodeId = nodeHandleId(node);
+        if(!state.currentHighlightedNodes[nodeId] && condition(layer, functor, data)) {
+            state.currentHighlightedNodes.set(nodeId);
+            updated = true;
+        }
+    }
+
+    /* Mark the layer as needing an update only if this is a subclass that
+       draws and we actually set at least one bit */
+    if(updated && doFeatures() >= LayerFeature::Draw)
+        setNeedsUpdate(LayerState::NeedsDataUpdate);
+
+    return called;
+}
+
+bool DebugLayer::highlightNodesInternal(const AbstractLayouter& layouter, bool(*condition)(const AbstractLayouter&, void(*)(), LayouterDataHandle), void(*functor)()) {
+    const State& state = *_state;
+    CORRADE_ASSERT(functor, /* condition is a wrapper lambda, never null */
+        "Ui::DebugLayer::highlightNodes(): condition is null", {});
+    CORRADE_ASSERT(state.sources >= (DebugLayerSource::Nodes|DebugLayerSource::Layouters),
+        "Ui::DebugLayer::highlightNodes():" << ((DebugLayerSource::Nodes|DebugLayerSource::Layouters) & ~state.sources) << "not enabled", {});
+    CORRADE_ASSERT(hasUi(),
+        "Ui::DebugLayer::highlightNodes(): debug layer not part of a user interface", {});
+    CORRADE_ASSERT(ui().isHandleValid(layouter.handle()) && &ui().layouter(layouter.handle()) == &layouter,
+        "Ui::DebugLayer::highlightNodes(): layouter not part of the same user interface", {});
+    CORRADE_INTERNAL_ASSERT(state.currentHighlightedNodes.size() == state.nodes.size());
+
+    /* If this is a layouter we don't know about yet, don't do anything. This
+       is a valid use (such as highlighting too early, similarly as with nodes
+       being skipped if not yet known) so it isn't an assert. */
+    if(layouterHandleId(layouter.handle()) >= state.layouters.size() ||
+       layouter.handle() != state.layouters[layouterHandleId(layouter.handle())].handle)
+        return false;
+
+    const UnsignedInt capacity = layouter.capacity();
+    const Containers::StridedArrayView1D<const UnsignedShort> generations = layouter.generations();
+    bool called = false, updated = false;
+    for(UnsignedInt dataId = 0; dataId != capacity; ++dataId) {
+        /* If given slot doesn't actually contain a valid data, skip */
+        const LayouterDataHandle data = layouterDataHandle(dataId, generations[dataId]);
+        if(!layouter.isHandleValid(data))
+            continue;
+
+        /* If the data is assigned to a node with index we don't know about
+           yet, is attached to a node which has a different generation from
+           what we remembered, or if it matches the handle we know but is
+           actually not valid anymore, skip. Layouts can't be not assigned, so
+           there's one less check compared to layer data above. */
+        const NodeHandle node = layouter.node(data);
+        CORRADE_INTERNAL_DEBUG_ASSERT(node != NodeHandle::Null);
+        if(nodeHandleId(node) >= state.nodes.size() ||
+           node != state.nodes[nodeHandleId(node)].handle ||
+           !ui().isHandleValid(node))
+            continue;
+
+        /* Return true from the function even if we didn't actually call the
+           condition because given node is already highlighted */
+        called = true;
+        const UnsignedInt nodeId = nodeHandleId(node);
+        if(!state.currentHighlightedNodes[nodeId] && condition(layouter, functor, data)) {
+            state.currentHighlightedNodes.set(nodeId);
+            updated = true;
+        }
+    }
+
+    /* Mark the layer as needing an update only if this is a subclass that
+       draws and we actually set at least one bit */
+    if(updated && doFeatures() >= LayerFeature::Draw)
+        setNeedsUpdate(LayerState::NeedsDataUpdate);
+
+    return called;
+}
+
+bool DebugLayer::highlightNodesInternal(const AbstractAnimator& animator, bool(*condition)(const AbstractAnimator&, void(*)(), AnimatorDataHandle), void(*functor)()) {
+    const State& state = *_state;
+    CORRADE_ASSERT(functor, /* condition is a wrapper lambda, never null */
+        "Ui::DebugLayer::highlightNodes(): condition is null", {});
+    CORRADE_ASSERT(state.sources >= (DebugLayerSource::Nodes|DebugLayerSource::Animators),
+        "Ui::DebugLayer::highlightNodes():" << ((DebugLayerSource::Nodes|DebugLayerSource::Animators) & ~state.sources) << "not enabled", {});
+    CORRADE_ASSERT(hasUi(),
+        "Ui::DebugLayer::highlightNodes(): debug layer not part of a user interface", {});
+    CORRADE_ASSERT(ui().isHandleValid(animator.handle()) && &ui().animator(animator.handle()) == &animator,
+        "Ui::DebugLayer::highlightNodes(): animator not part of the same user interface", {});
+    CORRADE_ASSERT(animator.features() >= AnimatorFeature::NodeAttachment,
+        "Ui::DebugLayer::highlightNodes(): only animators with" << AnimatorFeature::NodeAttachment << "can be used", {});
+    CORRADE_INTERNAL_ASSERT(state.currentHighlightedNodes.size() == state.nodes.size());
+
+    /* If this is an animator we don't know about yet, don't do anything. This
+       is a valid use (such as highlighting too early, similarly as with nodes
+       being skipped if not yet known) so it isn't an assert. */
+    if(animatorHandleId(animator.handle()) >= state.animators.size() ||
+       animator.handle() != state.animators[animatorHandleId(animator.handle())].handle)
+        return false;
+
+    const UnsignedInt capacity = animator.capacity();
+    const Containers::StridedArrayView1D<const UnsignedShort> generations = animator.generations();
+    bool called = false, updated = false;
+    for(UnsignedInt dataId = 0; dataId != capacity; ++dataId) {
+        /* If given slot doesn't actually contain a valid data, skip */
+        const AnimatorDataHandle data = animatorDataHandle(dataId, generations[dataId]);
+        if(!animator.isHandleValid(data))
+            continue;
+
+        /* If the data is not attached anywhere, is attached to a node with
+           index we don't know about yet, is attached to a node which has a
+           different generation from what we remembered, or if it matches the
+           handle we know but is actually not valid anymore, skip */
+        const NodeHandle node = animator.node(data);
+        if(node == NodeHandle::Null ||
+           nodeHandleId(node) >= state.nodes.size() ||
+           node != state.nodes[nodeHandleId(node)].handle ||
+           !ui().isHandleValid(node))
+            continue;
+
+        /* Return true from the function even if we didn't actually call the
+           condition because given node is already highlighted */
+        called = true;
+        const UnsignedInt nodeId = nodeHandleId(node);
+        if(!state.currentHighlightedNodes[nodeId] && condition(animator, functor, data)) {
+            state.currentHighlightedNodes.set(nodeId);
+            updated = true;
+        }
+    }
+
+    /* Mark the layer as needing an update only if this is a subclass that
+       draws and we actually set at least one bit */
+    if(updated && doFeatures() >= LayerFeature::Draw)
+        setNeedsUpdate(LayerState::NeedsDataUpdate);
+
+    return called;
+}
+
 LayerFeatures DebugLayer::doFeatures() const {
     /* The events are used only if NodeInspect is enabled, but while that can
        be toggled at runtime, the value returned from features() shouldn't

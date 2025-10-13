@@ -126,6 +126,10 @@ struct DebugLayerTest: TestSuite::Tester {
         void nodeHighlightSetters();
         /* Tests also currentHighlightedNodes() and clearHighlightedNodes() */
         void nodeHighlight();
+        void nodeHighlightConditionResetCounters();
+        void nodeHighlightConditionNodes();
+        void nodeHighlightConditionData();
+        void nodeHighlightConditionDataFunctions();
         void nodeHighlightNodeRemoved();
         void nodeHighlightInvalid();
 
@@ -652,6 +656,46 @@ const struct {
 
 const struct {
     const char* name;
+    DebugLayerSources sources;
+    bool layer, layouter, animator;
+    LayerFeatures features;
+    LayerStates expectedState;
+} NodeHighlightConditionDataData[]{
+    {"layer",
+        DebugLayerSource::Layers, true, false, false,
+        {}, {}},
+    {"layer, debug layer with Draw",
+        DebugLayerSource::Layers, true, false, false,
+        LayerFeature::Draw, LayerState::NeedsDataUpdate},
+    {"layouter",
+        DebugLayerSource::Layouters, false, true, false,
+        {}, {}},
+    {"layouter, debug layer with Draw",
+        DebugLayerSource::Layouters, false, true, false,
+        LayerFeature::Draw, LayerState::NeedsDataUpdate},
+    {"animator",
+        DebugLayerSource::Animators, false, false, true,
+        {}, {}},
+    {"animator, debug layer with Draw",
+        DebugLayerSource::Animators, false, false, true,
+        LayerFeature::Draw, LayerState::NeedsDataUpdate},
+};
+
+const struct {
+    const char* name;
+    DebugLayerSources sources;
+    bool layer, layouter, animator;
+} NodeHighlightConditionDataFunctionsData[]{
+    {"layer",
+        DebugLayerSource::Layers, true, false, false},
+    {"layouter",
+        DebugLayerSource::Layouters, false, true, false},
+    {"animator",
+        DebugLayerSource::Animators, false, false, true},
+};
+
+const struct {
+    const char* name;
     LayerFeatures features;
     DebugLayerFlags flags;
     LayerStates states;
@@ -799,6 +843,21 @@ DebugLayerTest::DebugLayerTest() {
     addInstancedTests({&DebugLayerTest::nodeHighlightSetters,
                        &DebugLayerTest::nodeHighlight},
         Containers::arraySize(LayerDrawData));
+
+    addInstancedTests({&DebugLayerTest::nodeHighlightConditionNodes},
+        Containers::arraySize(LayerDrawData),
+        &DebugLayerTest::nodeHighlightConditionResetCounters,
+        &DebugLayerTest::nodeHighlightConditionResetCounters);
+
+    addInstancedTests({&DebugLayerTest::nodeHighlightConditionData},
+        Containers::arraySize(NodeHighlightConditionDataData),
+        &DebugLayerTest::nodeHighlightConditionResetCounters,
+        &DebugLayerTest::nodeHighlightConditionResetCounters);
+
+    addInstancedTests({&DebugLayerTest::nodeHighlightConditionDataFunctions},
+        Containers::arraySize(NodeHighlightConditionDataFunctionsData),
+        &DebugLayerTest::nodeHighlightConditionResetCounters,
+        &DebugLayerTest::nodeHighlightConditionResetCounters);
 
     addInstancedTests({&DebugLayerTest::nodeHighlightNodeRemoved},
         Containers::arraySize(NodeInspectHighlightNodeRemovedData));
@@ -5448,6 +5507,724 @@ void DebugLayerTest::nodeHighlight() {
     CORRADE_COMPARE(layer.state(), LayerState::NeedsCommonDataUpdate|data.expectedState);
 }
 
+Int conditionCalled = 0;
+
+void DebugLayerTest::nodeHighlightConditionResetCounters() {
+    conditionCalled = 0;
+}
+
+void DebugLayerTest::nodeHighlightConditionNodes() {
+    auto&& data = LayerDrawData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
+    AbstractUserInterface ui{{100, 100}};
+
+    struct Layer: DebugLayer {
+        explicit Layer(LayerHandle handle, LayerFeatures features): DebugLayer{handle, DebugLayerSource::Nodes, {}}, _features{features} {}
+
+        LayerFeatures doFeatures() const override {
+            return DebugLayer::doFeatures()|_features;
+        }
+
+        private:
+            LayerFeatures _features;
+    };
+    DebugLayer& layer = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer(), data.features));
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsCommonDataUpdate);
+
+    /* Before the layer knows about any node, the condition doesn't get called
+       at all and the function returns false to indicate that */
+    CORRADE_VERIFY(!layer.highlightNodes([](const AbstractUserInterface&, NodeHandle) {
+        CORRADE_FAIL("This is expected to not be called.");
+        return true;
+    }));
+    CORRADE_COMPARE_AS(layer.currentHighlightedNodes(), Containers::stridedArrayView<bool>({
+        /* empty */
+    }).sliceBit(0), TestSuite::Compare::Container);
+
+    /* A bunch of nodes to highlight, some with a non-trivial generation,
+       some removed */
+    NodeHandle node0 = ui.createNode({}, {}, NodeFlag::Focusable);
+    NodeHandle node1 = ui.createNode({}, {20, 10});
+    ui.removeNode(ui.createNode({}, {}));
+    ui.removeNode(ui.createNode({}, {}));
+    NodeHandle node2Removed = ui.createNode({}, {});
+    NodeHandle node3 = ui.createNode({}, {0, 10});
+    ui.removeNode(ui.createNode({}, {}));
+    NodeHandle node4 = ui.createNode({}, {30, 10}, NodeFlag::Focusable);
+    NodeHandle node5 = ui.createNode({}, {});
+    ui.removeNode(node2Removed);
+
+    /* After an update, the condition gets called and the function returns
+       true even if the condition failed for all nodes. Because nothing got
+       highlighted, NeedsDataUpdate isn't set. */
+    ui.update();
+    CORRADE_VERIFY(layer.highlightNodes([](const AbstractUserInterface& ui, NodeHandle node) {
+        ++conditionCalled;
+        CORRADE_VERIFY(ui.isHandleValid(node));
+        return false;
+    }));
+    CORRADE_COMPARE(conditionCalled, 5); /* Not called for the removed node */
+    CORRADE_COMPARE_AS(layer.currentHighlightedNodes(), Containers::stridedArrayView<bool>({
+        false,
+        false,
+        false, /* removed */
+        false,
+        false,
+        false,
+    }).sliceBit(0), TestSuite::Compare::Container);
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsCommonDataUpdate);
+
+    /* Highlighting a subset of nodes sets NeedsDataUpdate if the layer is
+       drawing anything */
+    CORRADE_VERIFY(layer.highlightNodes([](const AbstractUserInterface& ui, NodeHandle node) {
+        ++conditionCalled;
+        return ui.nodeSize(node).y() == 10.0f;
+    }));
+    CORRADE_COMPARE(conditionCalled, 5*2);
+    CORRADE_COMPARE_AS(layer.currentHighlightedNodes(), Containers::stridedArrayView<bool>({
+        false,
+        true,
+        false, /* removed */
+        true,
+        true,
+        false,
+    }).sliceBit(0), TestSuite::Compare::Container);
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsCommonDataUpdate|data.expectedState);
+
+    /* Update to reset the state */
+    ui.update();
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsCommonDataUpdate);
+
+    /* Highlighting nodes that are already marked returns true but doesn't set
+       NeedsDataUpdate */
+    CORRADE_VERIFY(layer.highlightNodes([](const AbstractUserInterface& ui, NodeHandle node) {
+        ++conditionCalled;
+        return ui.nodeSize(node).x() > 0.0f;
+    }));
+    /* The condition isn't called for the already highlighted nodes because
+       it'd not affect anything. Besides the removed node, there are just
+       remaining two that aren't yet marked, for which it's called. */
+    CORRADE_COMPARE(conditionCalled, 5*2 + 2);
+    CORRADE_COMPARE_AS(layer.currentHighlightedNodes(), Containers::stridedArrayView<bool>({
+        false, /* called */
+        true,
+        false, /* removed */
+        true,
+        true,
+        false, /* called */
+    }).sliceBit(0), TestSuite::Compare::Container);
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsCommonDataUpdate);
+
+    /* Highlighting a disjoint set marks the layer with NeedsDataUpdate if it
+       draws anything */
+    CORRADE_VERIFY(layer.highlightNodes([](const AbstractUserInterface& ui, NodeHandle node) {
+        ++conditionCalled;
+        return ui.nodeFlags(node) >= NodeFlag::Focusable;
+    }));
+    /* Again there are just 2 which are not yet highlighted, of which one now
+       becomes higlighted */
+    CORRADE_COMPARE(conditionCalled, 5*2 + 2*2);
+    CORRADE_COMPARE_AS(layer.currentHighlightedNodes(), Containers::stridedArrayView<bool>({
+        true, /* called, newly highlighted */
+        true,
+        false, /* removed */
+        true,
+        true,
+        false, /* called */
+    }).sliceBit(0), TestSuite::Compare::Container);
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsCommonDataUpdate|data.expectedState);
+
+    /* Update to reset the state */
+    ui.update();
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsCommonDataUpdate);
+
+    /* Remove all nodes except one that's currently highlighted and update so
+       there's exactly one highlighted node left for the next test */
+    ui.removeNode(node0);
+    ui.removeNode(node1);
+    ui.removeNode(node4);
+    ui.removeNode(node5);
+    ui.update();
+    CORRADE_COMPARE_AS(layer.currentHighlightedNodes(), Containers::stridedArrayView<bool>({
+        false, /* removed */
+        false, /* removed */
+        false, /* removed previously */
+        true,
+        false, /* removed */
+        false, /* removed */
+    }).sliceBit(0), TestSuite::Compare::Container);
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsCommonDataUpdate);
+
+    /* Remove the remaining node and create a new node, with both yet unknown
+       to the layer. Highlighting now has no known & valid nodes to go through
+       and so the condition is never called, the function returns false and
+       there's no need for NeedsDataUpdate to be set either. */
+    ui.removeNode(node3);
+    ui.createNode({}, {});
+    CORRADE_VERIFY(!layer.highlightNodes([](const AbstractUserInterface&, NodeHandle) {
+        CORRADE_FAIL("This is expected to not be called.");
+        return true;
+    }));
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsCommonDataUpdate);
+}
+
+void DebugLayerTest::nodeHighlightConditionData() {
+    auto&& data = NodeHighlightConditionDataData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
+    AbstractUserInterface ui{{100, 100}};
+
+    struct Layer: DebugLayer {
+        explicit Layer(LayerHandle handle, DebugLayerSources sources, LayerFeatures features): DebugLayer{handle, DebugLayerSource::Nodes|sources, {}}, _features{features} {}
+
+        LayerFeatures doFeatures() const override {
+            return DebugLayer::doFeatures()|_features;
+        }
+
+        private:
+            LayerFeatures _features;
+    };
+    DebugLayer& layer = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer(), data.sources, data.features));
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsCommonDataUpdate);
+
+    /* A bunch of nodes to highlight, some with a non-trivial generation,
+       some to be removed */
+    /*NodeHandle node0 =*/ ui.createNode({}, {});
+    NodeHandle node1 = ui.createNode({}, {});
+    ui.removeNode(ui.createNode({}, {}));
+    ui.removeNode(ui.createNode({}, {}));
+    NodeHandle node2EventuallyRemoved = ui.createNode({}, {});
+    NodeHandle node3 = ui.createNode({}, {});
+    ui.removeNode(ui.createNode({}, {}));
+    NodeHandle node4 = ui.createNode({}, {});
+    NodeHandle node5 = ui.createNode({}, {});
+
+    /* Make the debug layer aware of the nodes. This alone isn't enough because
+       the debug layer isn't aware of the layer / layouter / animator yet. */
+    ui.update();
+
+    /* Data from a layer / layouter / animator. Some not attached to any node,
+       some removed, some attached to a node that's eventually removed. */
+    struct CustomLayer: AbstractLayer {
+        using AbstractLayer::AbstractLayer;
+        using AbstractLayer::remove;
+
+        DataHandle create(UnsignedInt id, NodeHandle node) {
+            DataHandle handle = AbstractLayer::create(node);
+            _ids[dataHandleId(handle)] = id;
+            return handle;
+        }
+
+        UnsignedInt id(LayerDataHandle data) const {
+            CORRADE_INTERNAL_ASSERT(isHandleValid(data));
+            return _ids[layerDataHandleId(data)];
+        }
+
+        LayerFeatures doFeatures() const override { return {}; }
+
+        private:
+            UnsignedInt _ids[10]{};
+    };
+    struct CustomLayouter: AbstractLayouter {
+        using AbstractLayouter::AbstractLayouter;
+        using AbstractLayouter::remove;
+
+        LayoutHandle add(UnsignedInt id, NodeHandle node) {
+            LayoutHandle handle = AbstractLayouter::add(node);
+            _ids[layoutHandleId(handle)] = id;
+            return handle;
+        }
+
+        UnsignedInt id(LayouterDataHandle data) const {
+            CORRADE_INTERNAL_ASSERT(isHandleValid(data));
+            return _ids[layouterDataHandleId(data)];
+        }
+
+        void doUpdate(Containers::BitArrayView, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const NodeHandle>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Vector2>&) override {}
+
+        private:
+            UnsignedInt _ids[10]{};
+    };
+    struct CustomAnimator: AbstractGenericAnimator {
+        using AbstractGenericAnimator::AbstractGenericAnimator;
+        using AbstractGenericAnimator::remove;
+
+        AnimationHandle create(UnsignedInt id, NodeHandle node) {
+            AnimationHandle handle = AbstractAnimator::create({}, {}, node);
+            _ids[animationHandleId(handle)] = id;
+            return handle;
+        }
+
+        UnsignedInt id(AnimatorDataHandle data) const {
+            CORRADE_INTERNAL_ASSERT(isHandleValid(data));
+            return _ids[animatorDataHandleId(data)];
+        }
+
+        AnimatorFeatures doFeatures() const override {
+            return AnimatorFeature::NodeAttachment;
+        }
+        void doAdvance(Containers::BitArrayView, Containers::BitArrayView, Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&) override {}
+
+        private:
+            UnsignedInt _ids[10]{};
+    };
+
+    CustomLayer* customLayer{};
+    CustomLayouter* customLayouter{};
+    CustomAnimator* customAnimator{};
+    if(data.layer) {
+        customLayer = &ui.setLayerInstance(Containers::pointer<CustomLayer>(ui.createLayer()));
+        customLayer->create(12, node3);
+        customLayer->create(3, node1);
+        customLayer->create(7, node2EventuallyRemoved);
+        customLayer->create(16, node4);
+        DataHandle removed = customLayer->create(12, node5);
+        customLayer->create(8, node2EventuallyRemoved);
+        customLayer->create(6, node4);
+        customLayer->create(12, NodeHandle::Null);
+        customLayer->create(9, node1);
+        customLayer->remove(removed);
+    } else if(data.layouter) {
+        customLayouter = &ui.setLayouterInstance(Containers::pointer<CustomLayouter>(ui.createLayouter()));
+        customLayouter->add(12, node3);
+        customLayouter->add(3, node1);
+        customLayouter->add(7, node2EventuallyRemoved);
+        customLayouter->add(16, node4);
+        LayoutHandle removed = customLayouter->add(12, node5);
+        customLayouter->add(8, node2EventuallyRemoved);
+        customLayouter->add(6, node4);
+        /* Layouters don't allow creating layouts that aren't assigned
+           anywhere */
+        customLayouter->add(9, node1);
+        customLayouter->remove(removed);
+    } else if(data.animator) {
+        customAnimator = &ui.setGenericAnimatorInstance(Containers::pointer<CustomAnimator>(ui.createAnimator()));
+        customAnimator->create(12, node3);
+        customAnimator->create(3, node1);
+        customAnimator->create(7, node2EventuallyRemoved);
+        customAnimator->create(16, node4);
+        AnimationHandle removed = customAnimator->create(12, node5);
+        customAnimator->create(8, node2EventuallyRemoved);
+        customAnimator->create(6, node4);
+        customAnimator->create(12, NodeHandle::Null);
+        customAnimator->create(9, node1);
+        customAnimator->remove(removed);
+    } else CORRADE_INTERNAL_ASSERT_UNREACHABLE();
+
+    /* Before the debug layer knows about the layer / layouter / animator, the
+       condition doesn't get called at all and the function returns false to
+       indicate that. It doesn't matter that it knows about the nodes at that
+       point already. */
+    if(data.layer)
+        CORRADE_VERIFY(!layer.highlightNodes(*customLayer, [](const CustomLayer&, LayerDataHandle) {
+            CORRADE_FAIL("This is expected to not be called.");
+            return true;
+        }));
+    else if(data.layouter)
+        CORRADE_VERIFY(!layer.highlightNodes(*customLayouter, [](const CustomLayouter&, LayouterDataHandle) {
+            CORRADE_FAIL("This is expected to not be called.");
+            return true;
+        }));
+    else if(data.animator)
+        CORRADE_VERIFY(!layer.highlightNodes(*customAnimator, [](const CustomAnimator&, AnimatorDataHandle) {
+            CORRADE_FAIL("This is expected to not be called.");
+            return true;
+        }));
+    else CORRADE_INTERNAL_ASSERT_UNREACHABLE();
+    CORRADE_COMPARE_AS(layer.currentHighlightedNodes(), Containers::stridedArrayView<bool>({
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+    }).sliceBit(0), TestSuite::Compare::Container);
+
+    /* After an update, the condition gets called and the function returns true
+       even if the condition failed for all data. Because nothing got
+       highlighted, NeedsDataUpdate isn't set. */
+    ui.update();
+    if(data.layer)
+        CORRADE_VERIFY(layer.highlightNodes(*customLayer, [](const CustomLayer& layer, LayerDataHandle data) {
+            ++conditionCalled;
+            CORRADE_VERIFY(layer.isHandleValid(data));
+            return false;
+        }));
+    else if(data.layouter)
+        CORRADE_VERIFY(layer.highlightNodes(*customLayouter, [](const CustomLayouter& layouter, LayouterDataHandle layout) {
+            ++conditionCalled;
+            CORRADE_VERIFY(layouter.isHandleValid(layout));
+            return false;
+        }));
+    else if(data.animator)
+        CORRADE_VERIFY(layer.highlightNodes(*customAnimator, [](const CustomAnimator& animator, AnimatorDataHandle animation) {
+            ++conditionCalled;
+            CORRADE_VERIFY(animator.isHandleValid(animation));
+            return false;
+        }));
+    else CORRADE_INTERNAL_ASSERT_UNREACHABLE();
+    /* Not called for the no-attachment and removed data / layouts /
+       animations. (Layouts aren't allowed to not be attached, so for them
+       there's one less in total.) */
+    CORRADE_COMPARE(conditionCalled, 7);
+    CORRADE_COMPARE_AS(layer.currentHighlightedNodes(), Containers::stridedArrayView<bool>({
+        false, /* no data attached */
+        false,
+        false,
+        false,
+        false,
+        false, /* only removed data attached */
+    }).sliceBit(0), TestSuite::Compare::Container);
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsCommonDataUpdate);
+
+    /* Highlighting a subset of nodes sets NeedsDataUpdate if the layer is
+       drawing anything */
+    if(data.layer)
+        CORRADE_VERIFY(layer.highlightNodes(*customLayer, [](const CustomLayer& layer, LayerDataHandle data) {
+            ++conditionCalled;
+            return layer.id(data) % 3 == 0;
+        }));
+    else if(data.layouter)
+        CORRADE_VERIFY(layer.highlightNodes(*customLayouter, [](const CustomLayouter& layouter, LayouterDataHandle layout) {
+            ++conditionCalled;
+            return layouter.id(layout) % 3 == 0;
+        }));
+    else if(data.animator)
+        CORRADE_VERIFY(layer.highlightNodes(*customAnimator, [](const CustomAnimator& animator, AnimatorDataHandle animation) {
+            ++conditionCalled;
+            return animator.id(animation) % 3 == 0;
+        }));
+    else CORRADE_INTERNAL_ASSERT_UNREACHABLE();
+    /* Additionally not called for the second data / layout / animation
+       attached to node 1, because at that point it's already highlighted */
+    CORRADE_COMPARE(conditionCalled, 7 + 6);
+    CORRADE_COMPARE_AS(layer.currentHighlightedNodes(), Containers::stridedArrayView<bool>({
+        false, /* no data attached */
+        true,
+        false,
+        true,
+        true,
+        false, /* only removed data attached */
+    }).sliceBit(0), TestSuite::Compare::Container);
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsCommonDataUpdate|data.expectedState);
+
+    /* Update to reset the state */
+    ui.update();
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsCommonDataUpdate);
+
+    /* Highlighting nodes that are already marked returns true but doesn't set
+       NeedsDataUpdate */
+    if(data.layer)
+        CORRADE_VERIFY(layer.highlightNodes(*customLayer, [](const CustomLayer& layer, LayerDataHandle data) {
+            ++conditionCalled;
+            return layer.id(data) % 6 == 0;
+        }));
+    else if(data.layouter)
+        CORRADE_VERIFY(layer.highlightNodes(*customLayouter, [](const CustomLayouter& layouter, LayouterDataHandle layout) {
+            ++conditionCalled;
+            return layouter.id(layout) % 6 == 0;
+        }));
+    else if(data.animator)
+        CORRADE_VERIFY(layer.highlightNodes(*customAnimator, [](const CustomAnimator& animator, AnimatorDataHandle animation) {
+            ++conditionCalled;
+            return animator.id(animation) % 6 == 0;
+        }));
+    else CORRADE_INTERNAL_ASSERT_UNREACHABLE();
+    /* The condition isn't called for the already highlighted nodes because
+       it'd not affect anything. Besides the removed data, there is just two
+       remaining data attached to a node that isn't yet marked, for which it's
+       called. */
+    CORRADE_COMPARE(conditionCalled, 7 + 6 + 2);
+    CORRADE_COMPARE_AS(layer.currentHighlightedNodes(), Containers::stridedArrayView<bool>({
+        false, /* no data attached */
+        true,
+        false, /* called twice, neither returned true */
+        true,
+        true,
+        false, /* only removed data attached */
+    }).sliceBit(0), TestSuite::Compare::Container);
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsCommonDataUpdate);
+
+    /* Highlighting a disjoint set marks the layer with NeedsDataUpdate if it
+       draws anything */
+    if(data.layer)
+        CORRADE_VERIFY(layer.highlightNodes(*customLayer, [](const CustomLayer& layer, LayerDataHandle data) {
+            ++conditionCalled;
+            return layer.id(data) % 4 == 0;
+        }));
+    else if(data.layouter)
+        CORRADE_VERIFY(layer.highlightNodes(*customLayouter, [](const CustomLayouter& layouter, LayouterDataHandle layout) {
+            ++conditionCalled;
+            return layouter.id(layout) % 4 == 0;
+        }));
+    else if(data.animator)
+        CORRADE_VERIFY(layer.highlightNodes(*customAnimator, [](const CustomAnimator& animator, AnimatorDataHandle animation) {
+            ++conditionCalled;
+            return animator.id(animation) % 4 == 0;
+        }));
+    else CORRADE_INTERNAL_ASSERT_UNREACHABLE();
+    /* Again there's two data attached to a node that isn't yet highlighted, of
+       which only the second return true */
+    CORRADE_COMPARE(conditionCalled, 7 + 6 + 2 + 2);
+    CORRADE_COMPARE_AS(layer.currentHighlightedNodes(), Containers::stridedArrayView<bool>({
+        false, /* no data attached */
+        true,
+        true, /* called twice, first false, second true */
+        true,
+        true,
+        false, /* only removed data attached */
+    }).sliceBit(0), TestSuite::Compare::Container);
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsCommonDataUpdate|data.expectedState);
+
+    /* Update to reset the state */
+    ui.update();
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsCommonDataUpdate);
+
+    /* Remove all nodes that have data attached except one that's currently
+       highlighted and update so there's exactly one highlighted node with two
+       data attached left for the next test */
+    ui.removeNode(node1);
+    ui.removeNode(node3);
+    ui.removeNode(node4);
+    ui.update();
+    CORRADE_COMPARE_AS(layer.currentHighlightedNodes(), Containers::stridedArrayView<bool>({
+        false, /* no data attached */
+        false, /* removed */
+        true,
+        false, /* removed */
+        false, /* removed */
+        false, /* only removed data attached */
+    }).sliceBit(0), TestSuite::Compare::Container);
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsCommonDataUpdate);
+
+    /* Remove the remaining node and create a new node with data attached, with
+       both yet unknown to the debug layer. Highlighting now has:
+       - one data not attached anywhere
+       - two data attached to known but no longer valid node
+       - one data attached to a node with known index but unknown generation
+       - one data attached to a node with not yet known index
+       and so the condition is never called, the function returns false and
+       there's no need for NeedsDataUpdate to be set either. */
+    ui.removeNode(node2EventuallyRemoved);
+    ui.createNode({}, {});
+    ui.createNode({}, {});
+    ui.createNode({}, {});
+    NodeHandle node2Replacement = ui.createNode({}, {});
+    NodeHandle nodeUnknownId = ui.createNode({}, {});
+    CORRADE_COMPARE(nodeHandleId(node2Replacement), nodeHandleId(node2EventuallyRemoved));
+    CORRADE_COMPARE(nodeHandleId(nodeUnknownId), nodeHandleId(node5) + 1);
+    if(data.layer) {
+        customLayer->create(0, node2Replacement);
+        customLayer->create(0, nodeUnknownId);
+        CORRADE_VERIFY(!layer.highlightNodes(*customLayer, [](const CustomLayer&, LayerDataHandle) {
+            CORRADE_FAIL("This is expected to not be called.");
+            return true;
+        }));
+    } else if(data.layouter) {
+        customLayouter->add(0, node2Replacement);
+        customLayouter->add(0, nodeUnknownId);
+        CORRADE_VERIFY(!layer.highlightNodes(*customLayouter, [](const CustomLayouter&, LayouterDataHandle) {
+            CORRADE_FAIL("This is expected to not be called.");
+            return true;
+        }));
+    } else if(data.animator) {
+        customAnimator->create(0, node2Replacement);
+        customAnimator->create(0, nodeUnknownId);
+        CORRADE_VERIFY(!layer.highlightNodes(*customAnimator, [](const CustomAnimator&, AnimatorDataHandle) {
+            CORRADE_FAIL("This is expected to not be called.");
+            return true;
+        }));
+    } else CORRADE_INTERNAL_ASSERT_UNREACHABLE();
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsCommonDataUpdate);
+
+    /* Removing the layer and adding a new layer the debug layer isn't aware
+       of, along with data attached to still known nodes, and highlighting with
+       that, also won't work until an update */
+    if(data.layer) {
+        LayerHandle customLayerHandle = customLayer->handle();
+        ui.removeLayer(customLayerHandle);
+        CustomLayer& customLayerReplacement = ui.setLayerInstance(Containers::pointer<CustomLayer>(ui.createLayer()));
+        CORRADE_COMPARE(layerHandleId(customLayerReplacement.handle()), layerHandleId(customLayerHandle));
+        customLayerReplacement.create(0, node5);
+        CORRADE_VERIFY(!layer.highlightNodes(customLayerReplacement, [](const CustomLayer&, LayerDataHandle) {
+            CORRADE_FAIL("This is expected to not be called.");
+            return true;
+        }));
+    } else if(data.layouter) {
+        LayouterHandle customLayouterHandle = customLayouter->handle();
+        ui.removeLayouter(customLayouterHandle);
+        CustomLayouter& customLayouterReplacement = ui.setLayouterInstance(Containers::pointer<CustomLayouter>(ui.createLayouter()));
+        CORRADE_COMPARE(layouterHandleId(customLayouterReplacement.handle()), layouterHandleId(customLayouterHandle));
+        customLayouterReplacement.add(0, node5);
+        CORRADE_VERIFY(!layer.highlightNodes(customLayouterReplacement, [](const CustomLayouter&, LayouterDataHandle) {
+            CORRADE_FAIL("This is expected to not be called.");
+            return true;
+        }));
+    } else if(data.animator) {
+        AnimatorHandle customAnimatorHandle = customAnimator->handle();
+        ui.removeAnimator(customAnimatorHandle);
+        CustomAnimator& customAnimatorReplacement = ui.setGenericAnimatorInstance(Containers::pointer<CustomAnimator>(ui.createAnimator()));
+        CORRADE_COMPARE(animatorHandleId(customAnimatorReplacement.handle()), animatorHandleId(customAnimatorHandle));
+        customAnimatorReplacement.create(0, node5);
+        CORRADE_VERIFY(!layer.highlightNodes(customAnimatorReplacement, [](const CustomAnimator&, AnimatorDataHandle) {
+            CORRADE_FAIL("This is expected to not be called.");
+            return true;
+        }));
+    } else CORRADE_INTERNAL_ASSERT_UNREACHABLE();
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsCommonDataUpdate);
+}
+
+bool layerCondition(const AbstractLayer& layer, LayerDataHandle data) {
+    ++conditionCalled;
+    return layerDataHandleId(data) == nodeHandleId(layer.node(data));
+}
+bool layouterCondition(const AbstractLayouter& layouter, LayouterDataHandle layout) {
+    ++conditionCalled;
+    return layouterDataHandleId(layout) == nodeHandleId(layouter.node(layout));
+}
+bool animatorCondition(const AbstractAnimator& animator, AnimatorDataHandle animation) {
+    ++conditionCalled;
+    return animatorDataHandleId(animation) == nodeHandleId(animator.node(animation));
+}
+
+void DebugLayerTest::nodeHighlightConditionDataFunctions() {
+    auto&& data = NodeHighlightConditionDataFunctionsData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
+    AbstractUserInterface ui{{100, 100}};
+
+    DebugLayer& layer = ui.setLayerInstance(Containers::pointer<DebugLayer>(ui.createLayer(), DebugLayerSource::Nodes|data.sources, DebugLayerFlags{}));
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsCommonDataUpdate);
+
+    /*NodeHandle node0 =*/ ui.createNode({}, {});
+    NodeHandle node1 = ui.createNode({}, {});
+    NodeHandle node2 = ui.createNode({}, {});
+    NodeHandle node3 = ui.createNode({}, {});
+
+    struct EmptyLayer: AbstractLayer {
+        using AbstractLayer::AbstractLayer;
+        using AbstractLayer::create;
+
+        LayerFeatures doFeatures() const override { return {}; }
+    };
+    struct EmptyLayouter: AbstractLayouter {
+        using AbstractLayouter::AbstractLayouter;
+        using AbstractLayouter::add;
+
+        void doUpdate(Containers::BitArrayView, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const NodeHandle>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Vector2>&) override {}
+    };
+    struct EmptyAnimator: AbstractGenericAnimator {
+        using AbstractGenericAnimator::AbstractGenericAnimator;
+        using AbstractGenericAnimator::create;
+
+        AnimatorFeatures doFeatures() const override { return AnimatorFeature::NodeAttachment; }
+        void doAdvance(Containers::BitArrayView, Containers::BitArrayView, Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&) override {}
+    };
+
+    EmptyLayer* emptyLayer{};
+    EmptyLayouter* emptyLayouter{};
+    EmptyAnimator* emptyAnimator{};
+    if(data.layer) {
+        emptyLayer = &ui.setLayerInstance(Containers::pointer<EmptyLayer>(ui.createLayer()));
+        emptyLayer->create(node3);
+        emptyLayer->create(node1);
+        emptyLayer->create(node2);
+    } else if(data.layouter) {
+        emptyLayouter = &ui.setLayouterInstance(Containers::pointer<EmptyLayouter>(ui.createLayouter()));
+        emptyLayouter->add(node3);
+        emptyLayouter->add(node1);
+        emptyLayouter->add(node2);
+    } else if(data.animator) {
+        emptyAnimator = &ui.setGenericAnimatorInstance(Containers::pointer<EmptyAnimator>(ui.createAnimator()));
+        emptyAnimator->create({}, {}, node3);
+        emptyAnimator->create({}, {}, node1);
+        emptyAnimator->create({}, {}, node2);
+    } else CORRADE_INTERNAL_ASSERT_UNREACHABLE();
+
+    /* Function taking a base class, selects node1 and node3 */
+    ui.update();
+    if(data.layer)
+        CORRADE_VERIFY(layer.highlightNodes(*emptyLayer, [](const AbstractLayer& layer, LayerDataHandle data) {
+            ++conditionCalled;
+            return nodeHandleId(layer.node(data)) % 2 != 0;
+        }));
+    else if(data.layouter)
+        CORRADE_VERIFY(layer.highlightNodes(*emptyLayouter, [](const AbstractLayouter& layouter, LayouterDataHandle layout) {
+            ++conditionCalled;
+            return nodeHandleId(layouter.node(layout)) % 2 != 0;
+        }));
+    else if(data.animator)
+        CORRADE_VERIFY(layer.highlightNodes(*emptyAnimator, [](const AbstractAnimator& animator, AnimatorDataHandle animation) {
+            ++conditionCalled;
+            return nodeHandleId(animator.node(animation)) % 2 != 0;
+        }));
+    else CORRADE_INTERNAL_ASSERT_UNREACHABLE();
+    CORRADE_COMPARE(conditionCalled, 3);
+    CORRADE_COMPARE_AS(layer.currentHighlightedNodes(), Containers::stridedArrayView<bool>({
+        false,
+        true,
+        false,
+        true,
+    }).sliceBit(0), TestSuite::Compare::Container);
+
+    /* Raw function pointer, selects node2 and node3 */
+    layer.clearHighlightedNodes();
+    if(data.layer) {
+        bool(*condition)(const EmptyLayer&, LayerDataHandle) = [](const EmptyLayer&, LayerDataHandle data) {
+            ++conditionCalled;
+            return layerDataHandleId(data) % 2 == 0;
+        };
+        CORRADE_VERIFY(layer.highlightNodes(*emptyLayer, condition));
+    } else if(data.layouter) {
+        bool(*condition)(const EmptyLayouter&, LayouterDataHandle) = [](const EmptyLayouter&, LayouterDataHandle layout) {
+            ++conditionCalled;
+            return layouterDataHandleId(layout) % 2 == 0;
+        };
+        CORRADE_VERIFY(layer.highlightNodes(*emptyLayouter, condition));
+    } else if(data.animator) {
+        bool(*condition)(const EmptyAnimator&, AnimatorDataHandle) = [](const EmptyAnimator&, AnimatorDataHandle animation) {
+            ++conditionCalled;
+            return animatorDataHandleId(animation) % 2 == 0;
+        };
+        CORRADE_VERIFY(layer.highlightNodes(*emptyAnimator, condition));
+    } else CORRADE_INTERNAL_ASSERT_UNREACHABLE();
+    CORRADE_COMPARE(conditionCalled, 3*2);
+    CORRADE_COMPARE_AS(layer.currentHighlightedNodes(), Containers::stridedArrayView<bool>({
+        false,
+        false,
+        true,
+        true,
+    }).sliceBit(0), TestSuite::Compare::Container);
+
+    /* Plain function, taking a base class again, selects node1 and node2 */
+    layer.clearHighlightedNodes();
+    if(data.layer)
+        CORRADE_VERIFY(layer.highlightNodes(*emptyLayer, layerCondition));
+    else if(data.layouter)
+        CORRADE_VERIFY(layer.highlightNodes(*emptyLayouter, layouterCondition));
+    else if(data.animator)
+        CORRADE_VERIFY(layer.highlightNodes(*emptyAnimator, animatorCondition));
+    else CORRADE_INTERNAL_ASSERT_UNREACHABLE();
+    CORRADE_COMPARE(conditionCalled, 3*3);
+    CORRADE_COMPARE_AS(layer.currentHighlightedNodes(), Containers::stridedArrayView<bool>({
+        false,
+        true,
+        true,
+        false,
+    }).sliceBit(0), TestSuite::Compare::Container);
+
+    /* Functions taking derived classes should not compile */
+    #if 0
+    struct DerivedLayer: EmptyLayer {};
+    struct DerivedLayouter: EmptyLayouter {};
+    struct DerivedAnimator: EmptyAnimator {};
+    layer.highlightNodes(*emptyLayer, [](const DerivedLayer&, LayerDataHandle) { return true; });
+    layer.highlightNodes(*emptyLayouter, [](const DerivedLayouter&, LayouterDataHandle) { return true; });
+    layer.highlightNodes(*emptyAnimator, [](const DerivedAnimator&, AnimatorDataHandle) { return true; });
+    #endif
+}
+
 void DebugLayerTest::nodeHighlightNodeRemoved() {
     auto&& data = NodeInspectHighlightNodeRemovedData[testCaseInstanceId()];
     setTestCaseDescription(data.name);
@@ -5527,9 +6304,46 @@ void DebugLayerTest::nodeHighlightInvalid() {
     CORRADE_SKIP_IF_NO_ASSERT();
 
     AbstractUserInterface ui{{100, 100}};
+    AbstractUserInterface uiAnother{{100, 100}};
     DebugLayer layerNoNodes{layerHandle(0, 1), {}, {}};
-    DebugLayer layerNoUi{layerHandle(0, 1), DebugLayerSource::Nodes, {}};
-    DebugLayer& layer = ui.setLayerInstance(Containers::pointer<DebugLayer>(ui.createLayer(), DebugLayerSource::Nodes, DebugLayerFlags{}));
+    DebugLayer& layerOnlyNodes = ui.setLayerInstance(Containers::pointer<DebugLayer>(ui.createLayer(), DebugLayerSource::Nodes, DebugLayerFlags{}));
+    DebugLayer& layerOnlyLayers = ui.setLayerInstance(Containers::pointer<DebugLayer>(ui.createLayer(), DebugLayerSource::Layers, DebugLayerFlags{}));
+    DebugLayer& layerOnlyLayouters = ui.setLayerInstance(Containers::pointer<DebugLayer>(ui.createLayer(), DebugLayerSource::Layouters, DebugLayerFlags{}));
+    DebugLayer& layerOnlyAnimators = ui.setLayerInstance(Containers::pointer<DebugLayer>(ui.createLayer(), DebugLayerSource::Animators, DebugLayerFlags{}));
+    DebugLayer layerNoUi{layerHandle(0, 1), DebugLayerSource::Nodes|DebugLayerSource::Layers|DebugLayerSource::Layouters|DebugLayerSource::Animators, {}};
+    DebugLayer& layer = ui.setLayerInstance(Containers::pointer<DebugLayer>(ui.createLayer(), DebugLayerSource::Nodes|DebugLayerSource::Layers|DebugLayerSource::Layouters|DebugLayerSource::Animators, DebugLayerFlags{}));
+
+    struct EmptyLayer: AbstractLayer {
+        using AbstractLayer::AbstractLayer;
+
+        LayerFeatures doFeatures() const override { return {}; }
+    };
+    EmptyLayer& emptyLayer = ui.setLayerInstance(Containers::pointer<EmptyLayer>(ui.createLayer()));
+    EmptyLayer& layerAnotherUi = uiAnother.setLayerInstance(Containers::pointer<EmptyLayer>(uiAnother.createLayer()));
+    EmptyLayer layerArtificialHandle{layerHandle(0xab, 0x12)};
+
+    struct EmptyLayouter: AbstractLayouter {
+        using AbstractLayouter::AbstractLayouter;
+
+        void doUpdate(Containers::BitArrayView, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const NodeHandle>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Vector2>&) override {}
+    };
+    EmptyLayouter& emptyLayouter = ui.setLayouterInstance(Containers::pointer<EmptyLayouter>(ui.createLayouter()));
+    EmptyLayouter& layouterAnotherUi = uiAnother.setLayouterInstance(Containers::pointer<EmptyLayouter>(uiAnother.createLayouter()));
+    EmptyLayouter layouterArtificialHandle{layouterHandle(0xab, 0x12)};
+
+    struct EmptyAnimator: AbstractGenericAnimator {
+        explicit EmptyAnimator(AnimatorHandle handle, AnimatorFeatures features): AbstractGenericAnimator{handle}, _features{features} {}
+
+        AnimatorFeatures doFeatures() const override { return _features; }
+        void doAdvance(Containers::BitArrayView, Containers::BitArrayView, Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&) override {}
+
+        private:
+            AnimatorFeatures _features;
+    };
+    EmptyAnimator& emptyAnimator = ui.setGenericAnimatorInstance(Containers::pointer<EmptyAnimator>(ui.createAnimator(), AnimatorFeature::NodeAttachment));
+    EmptyAnimator& animatorAnotherUi = uiAnother.setGenericAnimatorInstance(Containers::pointer<EmptyAnimator>(uiAnother.createAnimator(), AnimatorFeature::NodeAttachment));
+    EmptyAnimator animatorArtificialHandle{animatorHandle(0xab, 0x12), AnimatorFeature::NodeAttachment};
+    EmptyAnimator& animatorNoNodeAttachments = ui.setGenericAnimatorInstance(Containers::pointer<EmptyAnimator>(ui.createAnimator(), AnimatorFeatures{}));
 
     /* Calling functionality getters / setters is valid on a layer that doesn't
        have the feature enabled or isn't part of the UI. The actual state
@@ -5552,6 +6366,81 @@ void DebugLayerTest::nodeHighlightInvalid() {
     layerNoNodes.highlightNode(nodeHandle(0, 1));
     layerNoUi.highlightNode(nodeHandle(0, 1));
     layer.highlightNode(NodeHandle::Null);
+
+    layerNoNodes.highlightNodes([](const AbstractUserInterface&, NodeHandle) {
+        return false;
+    });
+    layerNoNodes.highlightNodes(emptyLayer, [](const EmptyLayer&, LayerDataHandle) {
+        return false;
+    });
+    layerNoNodes.highlightNodes(emptyLayouter, [](const EmptyLayouter&, LayouterDataHandle) {
+        return false;
+    });
+    layerNoNodes.highlightNodes(emptyAnimator, [](const EmptyAnimator&, AnimatorDataHandle) {
+        return false;
+    });
+    layerOnlyLayers.highlightNodes(emptyLayer, [](const EmptyLayer&, LayerDataHandle) {
+        return false;
+    });
+    layerOnlyLayouters.highlightNodes(emptyLayouter, [](const EmptyLayouter&, LayouterDataHandle) {
+        return false;
+    });
+    layerOnlyAnimators.highlightNodes(emptyAnimator, [](const EmptyAnimator&, AnimatorDataHandle) {
+        return false;
+    });
+    layerOnlyNodes.highlightNodes(emptyLayer, [](const EmptyLayer&, LayerDataHandle) {
+        return false;
+    });
+    layerOnlyNodes.highlightNodes(emptyLayouter, [](const EmptyLayouter&, LayouterDataHandle) {
+        return false;
+    });
+    layerOnlyNodes.highlightNodes(emptyAnimator, [](const EmptyAnimator&, AnimatorDataHandle) {
+        return false;
+    });
+
+    layerNoUi.highlightNodes([](const AbstractUserInterface&, NodeHandle) {
+        return false;
+    });
+    layerNoUi.highlightNodes(emptyLayer, [](const EmptyLayer&, LayerDataHandle) {
+        return false;
+    });
+    layerNoUi.highlightNodes(emptyLayouter, [](const EmptyLayouter&, LayouterDataHandle) {
+        return false;
+    });
+    layerNoUi.highlightNodes(emptyAnimator, [](const EmptyAnimator&, AnimatorDataHandle) {
+        return false;
+    });
+
+    layer.highlightNodes(layerAnotherUi, [](const EmptyLayer&, LayerDataHandle) {
+        return false;
+    });
+    layer.highlightNodes(layerArtificialHandle, [](const EmptyLayer&, LayerDataHandle) {
+        return false;
+    });
+    layer.highlightNodes(layouterAnotherUi, [](const EmptyLayouter&, LayouterDataHandle) {
+        return false;
+    });
+    layer.highlightNodes(layouterArtificialHandle, [](const EmptyLayouter&, LayouterDataHandle) {
+        return false;
+    });
+    layer.highlightNodes(animatorAnotherUi, [](const EmptyAnimator&, AnimatorDataHandle) {
+        return false;
+    });
+    layer.highlightNodes(animatorArtificialHandle, [](const EmptyAnimator&, AnimatorDataHandle) {
+        return false;
+    });
+
+    layer.highlightNodes(layer, [](const DebugLayer&, LayerDataHandle) {
+        return false;
+    });
+    layer.highlightNodes(animatorNoNodeAttachments, [](const EmptyAnimator&, AnimatorDataHandle) {
+        return false;
+    });
+
+    layer.highlightNodes(nullptr);
+    layer.highlightNodes(emptyLayer, static_cast<bool(*)(const EmptyLayer&, LayerDataHandle)>(nullptr));
+    layer.highlightNodes(emptyLayouter, static_cast<bool(*)(const EmptyLayouter&, LayouterDataHandle)>(nullptr));
+    layer.highlightNodes(emptyAnimator, static_cast<bool(*)(const EmptyAnimator&, AnimatorDataHandle)>(nullptr));
     CORRADE_COMPARE_AS(out,
         "Ui::DebugLayer::setNodeHighlightColorMap(): expected colormap to have at least one element\n"
 
@@ -5563,7 +6452,38 @@ void DebugLayerTest::nodeHighlightInvalid() {
 
         "Ui::DebugLayer::highlightNode(): Ui::DebugLayerSource::Nodes not enabled\n"
         "Ui::DebugLayer::highlightNode(): layer not part of a user interface\n"
-        "Ui::DebugLayer::highlightNode(): handle is null\n",
+        "Ui::DebugLayer::highlightNode(): handle is null\n"
+
+        "Ui::DebugLayer::highlightNodes(): Ui::DebugLayerSource::Nodes not enabled\n"
+        "Ui::DebugLayer::highlightNodes(): Ui::DebugLayerSource::Nodes|Ui::DebugLayerSource::Layers not enabled\n"
+        "Ui::DebugLayer::highlightNodes(): Ui::DebugLayerSource::Nodes|Ui::DebugLayerSource::Layouters not enabled\n"
+        "Ui::DebugLayer::highlightNodes(): Ui::DebugLayerSource::Nodes|Ui::DebugLayerSource::Animators not enabled\n"
+        "Ui::DebugLayer::highlightNodes(): Ui::DebugLayerSource::Nodes not enabled\n"
+        "Ui::DebugLayer::highlightNodes(): Ui::DebugLayerSource::Nodes not enabled\n"
+        "Ui::DebugLayer::highlightNodes(): Ui::DebugLayerSource::Nodes not enabled\n"
+        "Ui::DebugLayer::highlightNodes(): Ui::DebugLayerSource::Layers not enabled\n"
+        "Ui::DebugLayer::highlightNodes(): Ui::DebugLayerSource::Layouters not enabled\n"
+        "Ui::DebugLayer::highlightNodes(): Ui::DebugLayerSource::Animators not enabled\n"
+
+        "Ui::DebugLayer::highlightNodes(): debug layer not part of a user interface\n"
+        "Ui::DebugLayer::highlightNodes(): debug layer not part of a user interface\n"
+        "Ui::DebugLayer::highlightNodes(): debug layer not part of a user interface\n"
+        "Ui::DebugLayer::highlightNodes(): debug layer not part of a user interface\n"
+
+        "Ui::DebugLayer::highlightNodes(): layer not part of the same user interface\n"
+        "Ui::DebugLayer::highlightNodes(): layer not part of the same user interface\n"
+        "Ui::DebugLayer::highlightNodes(): layouter not part of the same user interface\n"
+        "Ui::DebugLayer::highlightNodes(): layouter not part of the same user interface\n"
+        "Ui::DebugLayer::highlightNodes(): animator not part of the same user interface\n"
+        "Ui::DebugLayer::highlightNodes(): animator not part of the same user interface\n"
+
+        "Ui::DebugLayer::highlightNodes(): can't highlight with a condition on the debug layer itself\n"
+        "Ui::DebugLayer::highlightNodes(): only animators with Ui::AnimatorFeature::NodeAttachment can be used\n"
+
+        "Ui::DebugLayer::highlightNodes(): condition is null\n"
+        "Ui::DebugLayer::highlightNodes(): condition is null\n"
+        "Ui::DebugLayer::highlightNodes(): condition is null\n"
+        "Ui::DebugLayer::highlightNodes(): condition is null\n",
         TestSuite::Compare::String);
 }
 

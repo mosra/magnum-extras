@@ -270,6 +270,21 @@ debugLayer.setNodeName(button, "Accept button");
         }
         Debug{} << out;
         Utility::Path::write("ui-debuglayer-node-inspect-details.ansi", out);
+
+        /* Highlight instead of inspect */
+        {
+            Debug redirectOutput{nullptr};
+            CORRADE_INTERNAL_ASSERT(debugLayer.inspectNode(Ui::NodeHandle::Null));
+        }
+
+/* [button-highlight] */
+CORRADE_INTERNAL_ASSERT(debugLayer.highlightNode(button));
+/* [button-highlight] */
+
+        ui.renderer().compositingFramebuffer().clearColor(0, 0x00000000_rgbaf);
+        ui.draw();
+        converter->convertToFile(unpremultiply(ui.renderer().compositingFramebuffer().read({{}, ImageSize}, {PixelFormat::RGBA8Unorm})), "ui-debuglayer-node-highlight.png");
+
         ui.removeLayer(debugLayer.handle());
     }
 
