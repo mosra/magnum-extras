@@ -161,6 +161,7 @@ void DebugLayerGL::doUpdate(const LayerStates states, const Containers::StridedA
         states >= LayerState::NeedsNodeOrderUpdate))
     {
         state.vertexBuffer.setData(state.highlightedNodeVertices);
+        /** @todo upload only if it grows, would need tracking the size */
         state.indexBuffer.setData(state.highlightedNodeIndices);
     }
 }
