@@ -5761,11 +5761,7 @@ void DebugLayerTest::updateDataOrder() {
             6, 7, 5
         }), TestSuite::Compare::Container);
 
-        /* The vertex buffer gets longer however, with the last quad
-           unreferenced from highlightedNodeDrawOffsets and thus not drawn */
-        CORRADE_COMPARE(layer.stateData().highlightedNodeVertices.size(), 3*4);
-        auto vertices = Containers::stridedArrayView(layer.stateData().highlightedNodeVertices).prefix(layer.stateData().highlightedNodeDrawOffsets.back()*4);
-
+        auto vertices = Containers::stridedArrayView(layer.stateData().highlightedNodeVertices);
         CORRADE_COMPARE_AS(vertices.slice(&decltype(vertices)::Type::position), Containers::stridedArrayView<Vector2>({
             {20.0f, 10.0f}, /* node3 */
             {60.0f, 10.0f},

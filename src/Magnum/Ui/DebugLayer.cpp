@@ -1182,7 +1182,11 @@ void DebugLayer::doUpdate(const LayerStates states, const Containers::StridedArr
 
         ++offset;
     }
+
+    /* Shrink the vertex buffer to contain only what's already drawn to not
+       needlessly upload garbage in the unused suffix to the GPU */
     CORRADE_INTERNAL_ASSERT(offset <= maxHighlightCount);
+    arrayRemoveSuffix(state.highlightedNodeVertices, (maxHighlightCount - offset)*4);
 
     /* Remember the total quad count so doDraw() can query two offsets for
        the draw range without any special casing */
