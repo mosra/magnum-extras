@@ -4985,8 +4985,8 @@ void DebugLayerTest::nodeInspectNodeRemoved() {
         TestSuite::Compare::GreaterOrEqual);
     CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeClean);
 
-    /* Only after an update it gets cleaned */
-    ui.update();
+    /* Only after a clean it gets cleaned */
+    ui.clean();
     CORRADE_COMPARE(layer.currentInspectedNode(), NodeHandle::Null);
 }
 
