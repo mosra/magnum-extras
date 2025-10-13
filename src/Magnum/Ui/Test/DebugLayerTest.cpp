@@ -5674,6 +5674,7 @@ void DebugLayerTest::updateDataOrder() {
 
     /* An empty update should generate empty draw offsets and everything else */
     if(data.emptyUpdate) {
+        layer.update(data.states, {}, {}, {}, nodeOffsets, nodeSizes, nodeOpacities, nodesEnabled, {}, {}, {}, {});
         CORRADE_COMPARE_AS(layer.stateData().highlightedNodeDrawOffsets,
             Containers::arrayView<UnsignedInt>({}),
             TestSuite::Compare::Container);

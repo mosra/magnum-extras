@@ -1136,13 +1136,6 @@ void DebugLayer::doUpdate(const LayerStates states, const Containers::StridedArr
         (state.currentInspectedNode != NodeHandle::Null && !state.currentHighlightedNodes[nodeHandleId(state.currentInspectedNode)] ? 1 : 0);
     arrayResize(state.highlightedNodeVertices, NoInit, maxHighlightCount*4);
 
-    /* If there are no nodes to highlight, there's nothing to do. Make the
-       draw offsets empty to signalize that to doDraw() in DebugLayerGL. */
-    if(!maxHighlightCount) {
-        arrayClear(state.highlightedNodeDrawOffsets);
-        return;
-    }
-
     /* Generate quad vertices for all highlighted nodes and remember running
        offsets for each data ID. Data that don't draw anything will have the
        corresponding range empty. */
@@ -1187,6 +1180,13 @@ void DebugLayer::doUpdate(const LayerStates states, const Containers::StridedArr
        needlessly upload garbage in the unused suffix to the GPU */
     CORRADE_INTERNAL_ASSERT(offset <= maxHighlightCount);
     arrayRemoveSuffix(state.highlightedNodeVertices, (maxHighlightCount - offset)*4);
+
+    /* If there are no nodes to highlight, there's nothing to do. Make the
+       draw offsets empty to signalize that to doDraw() in DebugLayerGL. */
+    if(!offset) {
+        arrayClear(state.highlightedNodeDrawOffsets);
+        return;
+    }
 
     /* Remember the total quad count so doDraw() can query two offsets for
        the draw range without any special casing */
