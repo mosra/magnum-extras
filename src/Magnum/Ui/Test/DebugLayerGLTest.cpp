@@ -343,8 +343,6 @@ void DebugLayerGLTest::drawOrder() {
     ui.setRendererInstance(Containers::pointer<RendererGL>());
 
     DebugLayer& debugLayer = ui.setLayerInstance(Containers::pointer<DebugLayerGL>(ui.createLayer(), DebugLayerSource::Nodes, DebugLayerFlag::NodeInspect));
-    /* Just to silence the output */
-    debugLayer.setNodeInspectCallback([](Containers::StringView){});
 
     /* For drawing in order that doesn't match the node ID, create and then
        remove the nodes in random order to make the next ones created with

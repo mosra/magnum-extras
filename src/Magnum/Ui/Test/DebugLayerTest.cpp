@@ -4960,14 +4960,7 @@ void DebugLayerTest::nodeInspectNodeRemoved() {
     NodeHandle parent2 = ui.createNode(parent, {}, {100, 100});
     NodeHandle node = ui.createNode(parent2, {}, {100, 100});
 
-    struct Layer: DebugLayer {
-        using DebugLayer::DebugLayer;
-
-        const DebugLayer::State& stateData() {
-            return *_state;
-        }
-    };
-    Layer& layer = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer(), DebugLayerSource::Nodes, DebugLayerFlag::NodeInspect));
+    DebugLayer& layer = ui.setLayerInstance(Containers::pointer<DebugLayer>(ui.createLayer(), DebugLayerSource::Nodes, DebugLayerFlag::NodeInspect));
     /* Just to silence the output */
     layer.setNodeInspectCallback([](Containers::StringView){});
 
@@ -5143,10 +5136,6 @@ void DebugLayerTest::nodeInspectToggle() {
         CORRADE_COMPARE(called, 3);
         CORRADE_COMPARE(out, "");
     }
-    /* The state wouldn't need to include NeedsDataUpdate as the only thing
-       that changes is the draw offset being cleared, affecting just the draw.
-       We however need to trigger redraw somehow, so it's being set. */
-    /** @todo clean up once NeedsDraw or some such is a thing */
     CORRADE_COMPARE(layer.state(), LayerState::NeedsCommonDataUpdate|data.expectedState);
 
     /* Update to clear the NeedsDataUpdate flag */
@@ -5914,7 +5903,7 @@ void DebugLayerTest::updateDataOrder() {
         Containers::arrayView<UnsignedInt>({}),
         TestSuite::Compare::Container);
 
-    /* Remove all highlights, there should be just the highlighted node alone,
+    /* Remove all highlights, there should be just the inspected node alone,
        the index buffer should stay at the original size */
     layer.clearHighlightedNodes();
     layer.update(data.states, dataIds, {}, {}, nodeOffsets, nodeSizes, nodeOpacities, nodesEnabled, {}, {}, {}, {});

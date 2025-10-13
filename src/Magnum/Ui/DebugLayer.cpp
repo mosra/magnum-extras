@@ -208,11 +208,8 @@ DebugLayer& DebugLayer::setFlags(const DebugLayerFlags flags) {
         if(state.nodeInspectCallback)
             state.nodeInspectCallback({});
 
-        /* If we're drawing the highlight, trigger an update. No actual data
-           upload needs to happen, it's just to schedule a redraw */
-        /** @todo once NeedsDraw or some such exists, only the
-            inspectedNodeDrawOffset needs to be cleared, update() doesn't need
-            to be called */
+        /* If we're drawing the highlight, trigger an update to remove the
+           highlight from the draw data */
         if(doFeatures() >= LayerFeature::Draw)
             setNeedsUpdate(LayerState::NeedsDataUpdate);
     }
@@ -1224,9 +1221,7 @@ void DebugLayer::doPointerPressEvent(const UnsignedInt dataId, PointerEvent& eve
         return;
 
     /* If the node that's clicked on is currently being inspected, remove the
-       highlight and exit. In case a callback is set, call it with an empty
-       string to notify it that it's no longer desirable to show the
-       details. */
+       highlight */
     const NodeHandle nodeHandle = nodes()[dataId];
     if(state.currentInspectedNode == nodeHandle)
         inspectNode(NodeHandle::Null);
