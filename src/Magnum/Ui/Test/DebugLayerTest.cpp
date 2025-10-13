@@ -653,35 +653,44 @@ const struct {
 const struct {
     const char* name;
     LayerFeatures features;
+    DebugLayerFlags flags;
     LayerStates states;
     bool emptyUpdate, expectDataUpdated;
 } UpdateDataOrderData[]{
-    {"empty update",
-        LayerFeature::Draw, LayerState::NeedsDataUpdate,
-        true, false},
-    {"node offset/size update only",
-        LayerFeature::Draw, LayerState::NeedsNodeOffsetSizeUpdate,
-        false, true},
-    {"node order update only",
-        LayerFeature::Draw, LayerState::NeedsNodeOrderUpdate,
-        false, true},
+    {"node inspect, empty update",
+        LayerFeature::Draw, DebugLayerFlag::NodeInspect,
+        LayerState::NeedsDataUpdate, true, false},
+    {"node inspect, node offset/size update only",
+        LayerFeature::Draw, DebugLayerFlag::NodeInspect,
+        LayerState::NeedsNodeOffsetSizeUpdate, false, true},
+    {"node inspect, node order update only",
+        LayerFeature::Draw, DebugLayerFlag::NodeInspect,
+        LayerState::NeedsNodeOrderUpdate, false, true},
     /* These five shouldn't cause anything to be done in update(), resulting in
        the draw offset array to be empty */
-    {"no Draw feature",
-        {}, LayerState::NeedsDataUpdate,
-        false, false},
-    {"node enabled update only",
-        LayerFeature::Draw, LayerState::NeedsNodeEnabledUpdate,
-        false, false},
-    {"node opacity update only",
-        LayerFeature::Draw, LayerState::NeedsNodeOpacityUpdate,
-        false, false},
-    {"shared data update only",
-        LayerFeature::Draw, LayerState::NeedsSharedDataUpdate,
-        false, false},
-    {"common data update only",
-        LayerFeature::Draw, LayerState::NeedsCommonDataUpdate,
-        false, false},
+    {"node inspect, no Draw feature",
+        {}, DebugLayerFlag::NodeInspect,
+        LayerState::NeedsDataUpdate, false, false},
+    {"node inspect, node enabled update only",
+        LayerFeature::Draw, DebugLayerFlag::NodeInspect,
+        LayerState::NeedsNodeEnabledUpdate, false, false},
+    {"node inspect, node opacity update only",
+        LayerFeature::Draw, DebugLayerFlag::NodeInspect,
+        LayerState::NeedsNodeOpacityUpdate, false, false},
+    {"node inspect, shared data update only",
+        LayerFeature::Draw, DebugLayerFlag::NodeInspect,
+        LayerState::NeedsSharedDataUpdate, false, false},
+    {"node inspect, common data update only",
+        LayerFeature::Draw, DebugLayerFlag::NodeInspect,
+        LayerState::NeedsCommonDataUpdate, false, false},
+    /* This creates data on-demand for just the highlighted nodes, not
+       implicitly for all */
+    {"node highlight, empty update",
+        LayerFeature::Draw, DebugLayerFlags{},
+        LayerState::NeedsDataUpdate, true, false},
+    {"node highlight, node offset/size update",
+        LayerFeature::Draw, DebugLayerFlags{},
+        LayerState::NeedsNodeOffsetSizeUpdate, false, true},
 };
 
 DebugLayerTest::DebugLayerTest() {
@@ -5594,7 +5603,7 @@ void DebugLayerTest::updateDataOrder() {
         private:
             LayerFeatures _features;
     };
-    Layer& layer = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer(), DebugLayerSource::Nodes, DebugLayerFlag::NodeInspect, data.features));
+    Layer& layer = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer(), DebugLayerSource::Nodes, data.flags, data.features));
     /* Just to silence the output */
     layer.setNodeInspectCallback([](Containers::StringView){});
     /* Just to verify the color is actually used */
@@ -5626,14 +5635,39 @@ void DebugLayerTest::updateDataOrder() {
     NodeHandle node7 = ui.createNode({}, {});
     ui.removeNode(removedNode2);
     ui.removeNode(removedNode4);
-    ui.update();
     CORRADE_COMPARE(nodeHandleId(node1), 1);
     CORRADE_COMPARE(nodeHandleId(node3), 3);
     CORRADE_COMPARE(nodeHandleId(node6), 6);
-    CORRADE_COMPARE(layer.usedCount(), 6);
-    CORRADE_COMPARE(layer.node(layerDataHandle(1, 1)), node1);
-    CORRADE_COMPARE(layer.node(layerDataHandle(2, 1)), node3);
-    CORRADE_COMPARE(layer.node(layerDataHandle(4, 1)), node6);
+
+    /* Update to make the debug layer aware of all nodes, highlight two nodes
+       that are among dataIds */
+    layer.preUpdate(LayerState::NeedsCommonDataUpdate);
+    CORRADE_VERIFY(layer.highlightNode(node1));
+    CORRADE_VERIFY(layer.highlightNode(node3));
+    CORRADE_COMPARE_AS(layer.currentHighlightedNodes(), Containers::stridedArrayView({
+        false,
+        true,
+        false,
+        true,
+        false,
+        false,
+        false,
+        false,
+    }).sliceBit(0), TestSuite::Compare::Container);
+
+    /* For NodeInspect all known nodes get a matching data, for node highlight
+       only those that are highlighted */
+    layer.preUpdate(LayerState::NeedsCommonDataUpdate);
+    if(data.flags >= DebugLayerFlag::NodeInspect) {
+        CORRADE_COMPARE(layer.usedCount(), 6);
+        CORRADE_COMPARE(layer.node(layerDataHandle(1, 1)), node1);
+        CORRADE_COMPARE(layer.node(layerDataHandle(2, 1)), node3);
+        CORRADE_COMPARE(layer.node(layerDataHandle(4, 1)), node6);
+    } else {
+        CORRADE_COMPARE(layer.usedCount(), 2);
+        CORRADE_COMPARE(layer.node(layerDataHandle(0, 1)), node1);
+        CORRADE_COMPARE(layer.node(layerDataHandle(1, 1)), node3);
+    }
 
     /* Opacities and node enablement status are not used by the layer */
     Vector2 nodeOffsets[7];
@@ -5647,30 +5681,6 @@ void DebugLayerTest::updateDataOrder() {
     nodeSizes[1] = {30.0f, 40.0f};
     nodeSizes[3] = {40.0f, 30.0f};
     nodeSizes[6] = {50.0f, 20.0f};
-
-    /* Data ID 5, attached to node 7, is not passed, thus its quad isn't
-       present even if highlighted */
-    UnsignedInt dataIds[]{
-        3,
-        2, /* node 3 */
-        4, /* node 6 */
-        1, /* node 1 */
-        0,
-    };
-
-    /* Highlight two nodes that are among dataIds, produces two quads */
-    CORRADE_VERIFY(layer.highlightNode(node1));
-    CORRADE_VERIFY(layer.highlightNode(node3));
-    CORRADE_COMPARE_AS(layer.currentHighlightedNodes(), Containers::stridedArrayView({
-        false,
-        true,
-        false,
-        true,
-        false,
-        false,
-        false,
-        false,
-    }).sliceBit(0), TestSuite::Compare::Container);
 
     /* An empty update should generate empty draw offsets and everything else */
     if(data.emptyUpdate) {
@@ -5692,16 +5702,44 @@ void DebugLayerTest::updateDataOrder() {
         return;
     }
 
+    /* In case of node inspect, data ID 5, attached to node 7, is not passed,
+       thus its quad isn't present even if highlighted. In case of just node
+       highlight, we have only exactly the data for nodes we want to highlight
+       so far. */
+    UnsignedInt dataIdsInspect[]{
+        3,
+        2, /* node 3 */
+        4, /* node 6 */
+        1, /* node 1 */
+        0,
+    };
+    UnsignedInt dataIdsHighlight[]{
+        1, /* node 3 */
+        0, /* node 1 */
+    };
+    Containers::ArrayView<const UnsignedInt> dataIds =
+        data.flags >= DebugLayerFlag::NodeInspect ?
+            Containers::arrayView(dataIdsInspect) :
+            Containers::arrayView(dataIdsHighlight);
+
+    /* The initial highlight produces two quads */
     layer.update(data.states, dataIds, {}, {}, nodeOffsets, nodeSizes, nodeOpacities, nodesEnabled, {}, {}, {}, {});
     if(data.expectDataUpdated) {
-        CORRADE_COMPARE_AS(layer.stateData().highlightedNodeDrawOffsets, Containers::arrayView<UnsignedInt>({
-            0,
-            0, /* quad for node 3 */
-            1,
-            1, /* quad for node 1 */
-            2,
-            2, /* sentinel */
-        }), TestSuite::Compare::Container);
+        if(data.flags >= DebugLayerFlag::NodeInspect)
+            CORRADE_COMPARE_AS(layer.stateData().highlightedNodeDrawOffsets, Containers::arrayView<UnsignedInt>({
+                0,
+                0, /* quad for node 3 */
+                1,
+                1, /* quad for node 1 */
+                2,
+                2, /* sentinel */
+            }), TestSuite::Compare::Container);
+        else
+            CORRADE_COMPARE_AS(layer.stateData().highlightedNodeDrawOffsets, Containers::arrayView<UnsignedInt>({
+                0, /* quad for node 3 */
+                1, /* quad for node 1 */
+                2, /* sentinel */
+            }), TestSuite::Compare::Container);
 
         /* Indices are always the same, just different count of them */
         CORRADE_COMPARE_AS(layer.stateData().highlightedNodeIndices, Containers::arrayView<UnsignedInt>({
@@ -5739,21 +5777,33 @@ void DebugLayerTest::updateDataOrder() {
         Containers::arrayView<UnsignedInt>({}),
         TestSuite::Compare::Container);
 
-    /* Inspect a node that isn't among dataIds, results in no difference in
-       actually drawn data */
-    CORRADE_VERIFY(layer.inspectNode(node7));
+    /* Highlight a node that isn't among dataIds, results in no difference in
+       actually drawn data. If we're not inspecting, it however results in one
+       extra data being created for it in doPreUpdate(). */
+    CORRADE_VERIFY(layer.highlightNode(node7));
+    layer.preUpdate(LayerState::NeedsCommonDataUpdate);
     layer.update(data.states, dataIds, {}, {}, nodeOffsets, nodeSizes, nodeOpacities, nodesEnabled, {}, {}, {}, {});
+    if(!(data.flags >= DebugLayerFlag::NodeInspect)) {
+        CORRADE_COMPARE(layer.usedCount(), 3);
+        CORRADE_COMPARE(layer.node(layerDataHandle(2, 1)), node7);
+    }
     if(data.expectDataUpdated) {
-        CORRADE_COMPARE_AS(layer.stateData().highlightedNodeDrawOffsets, Containers::arrayView<UnsignedInt>({
-            0,
-            0, /* quad for node 3 */
-            1,
-            1, /* quad for node 1 */
-            2,
-            2, /* sentinel */
-        }), TestSuite::Compare::Container);
+        if(data.flags >= DebugLayerFlag::NodeInspect)
+            CORRADE_COMPARE_AS(layer.stateData().highlightedNodeDrawOffsets, Containers::arrayView<UnsignedInt>({
+                0,
+                0, /* quad for node 3 */
+                1,
+                1, /* quad for node 1 */
+                2,
+                2, /* sentinel */
+            }), TestSuite::Compare::Container);
+        else
+            CORRADE_COMPARE_AS(layer.stateData().highlightedNodeDrawOffsets, Containers::arrayView<UnsignedInt>({
+                0, /* quad for node 3 */
+                1, /* quad for node 1 */
+                2, /* sentinel */
+            }), TestSuite::Compare::Container);
 
-        /* Indices are always the same, just different count of them */
         CORRADE_COMPARE_AS(layer.stateData().highlightedNodeIndices, Containers::arrayView<UnsignedInt>({
             0, 2, 1,
             2, 3, 1,
@@ -5789,164 +5839,176 @@ void DebugLayerTest::updateDataOrder() {
         Containers::arrayView<UnsignedInt>({}),
         TestSuite::Compare::Container);
 
-    /* Inspect one of the present nodes, should result just in color change,
-       everything else the same */
-    CORRADE_VERIFY(layer.inspectNode(node1));
-    layer.update(data.states, dataIds, {}, {}, nodeOffsets, nodeSizes, nodeOpacities, nodesEnabled, {}, {}, {}, {});
-    if(data.expectDataUpdated) {
-        CORRADE_COMPARE_AS(layer.stateData().highlightedNodeDrawOffsets, Containers::arrayView<UnsignedInt>({
-            0,
-            0, /* quad for node 3 */
-            1,
-            1, /* quad for node 1 */
-            2,
-            2, /* sentinel */
-        }), TestSuite::Compare::Container);
+    /* If we're inspecting, test also inspecting vs highlight */
+    if(data.flags >= DebugLayerFlag::NodeInspect) {
+        /* Inspect one of the present nodes, should result just in color
+           change, everything else the same */
+        CORRADE_VERIFY(layer.inspectNode(node1));
+        layer.update(data.states, dataIds, {}, {}, nodeOffsets, nodeSizes, nodeOpacities, nodesEnabled, {}, {}, {}, {});
+        if(data.expectDataUpdated) {
+            CORRADE_COMPARE_AS(layer.stateData().highlightedNodeDrawOffsets, Containers::arrayView<UnsignedInt>({
+                0,
+                0, /* quad for node 3 */
+                1,
+                1, /* quad for node 1 */
+                2,
+                2, /* sentinel */
+            }), TestSuite::Compare::Container);
 
-        CORRADE_COMPARE_AS(layer.stateData().highlightedNodeIndices, Containers::arrayView<UnsignedInt>({
-            0, 2, 1,
-            2, 3, 1,
+            CORRADE_COMPARE_AS(layer.stateData().highlightedNodeIndices, Containers::arrayView<UnsignedInt>({
+                0, 2, 1,
+                2, 3, 1,
 
-            4, 6, 5,
-            6, 7, 5
-        }), TestSuite::Compare::Container);
+                4, 6, 5,
+                6, 7, 5
+            }), TestSuite::Compare::Container);
 
-        auto vertices = Containers::stridedArrayView(layer.stateData().highlightedNodeVertices);
-        CORRADE_COMPARE_AS(vertices.slice(&decltype(vertices)::Type::position), Containers::stridedArrayView<Vector2>({
-            {20.0f, 10.0f}, /* node3 */
-            {60.0f, 10.0f},
-            {20.0f, 40.0f},
-            {60.0f, 40.0f},
+            auto vertices = Containers::stridedArrayView(layer.stateData().highlightedNodeVertices);
+            CORRADE_COMPARE_AS(vertices.slice(&decltype(vertices)::Type::position), Containers::stridedArrayView<Vector2>({
+                {20.0f, 10.0f}, /* node3 */
+                {60.0f, 10.0f},
+                {20.0f, 40.0f},
+                {60.0f, 40.0f},
 
-            {10.0f, 20.0f}, /* node1 */
-            {40.0f, 20.0f},
-            {10.0f, 60.0f},
-            {40.0f, 60.0f},
-        }), TestSuite::Compare::Container);
-        CORRADE_COMPARE_AS(vertices.slice(&decltype(vertices)::Type::color), Containers::stridedArrayView<Color4>({
-            0x00ffffff_rgbaf*0.5f, /* node3 */
-            0x00ffffff_rgbaf*0.5f,
-            0x00ffffff_rgbaf*0.5f,
-            0x00ffffff_rgbaf*0.5f,
+                {10.0f, 20.0f}, /* node1 */
+                {40.0f, 20.0f},
+                {10.0f, 60.0f},
+                {40.0f, 60.0f},
+            }), TestSuite::Compare::Container);
+            CORRADE_COMPARE_AS(vertices.slice(&decltype(vertices)::Type::color), Containers::stridedArrayView<Color4>({
+                0x00ffffff_rgbaf*0.5f, /* node3 */
+                0x00ffffff_rgbaf*0.5f,
+                0x00ffffff_rgbaf*0.5f,
+                0x00ffffff_rgbaf*0.5f,
 
-            0xff3366cc_rgbaf, /* node1, changed */
-            0xff3366cc_rgbaf,
-            0xff3366cc_rgbaf,
-            0xff3366cc_rgbaf,
-        }), TestSuite::Compare::Container);
-    } else CORRADE_COMPARE_AS(layer.stateData().highlightedNodeDrawOffsets,
-        Containers::arrayView<UnsignedInt>({}),
-        TestSuite::Compare::Container);
+                0xff3366cc_rgbaf, /* node1, changed */
+                0xff3366cc_rgbaf,
+                0xff3366cc_rgbaf,
+                0xff3366cc_rgbaf,
+            }), TestSuite::Compare::Container);
+        } else CORRADE_COMPARE_AS(layer.stateData().highlightedNodeDrawOffsets,
+            Containers::arrayView<UnsignedInt>({}),
+            TestSuite::Compare::Container);
 
-    /* Inspect a node that isn't highlighted, the color of the previously
-       inspected should change back and the index buffer grow by one quad */
-    CORRADE_VERIFY(layer.inspectNode(node6));
-    layer.update(data.states, dataIds, {}, {}, nodeOffsets, nodeSizes, nodeOpacities, nodesEnabled, {}, {}, {}, {});
-    if(data.expectDataUpdated) {
-        CORRADE_COMPARE_AS(layer.stateData().highlightedNodeDrawOffsets, Containers::arrayView<UnsignedInt>({
-            0,
-            0, /* quad for node 3 */
-            1, /* quad for node 6 */
-            2, /* quad for node 1 */
-            3,
-            3, /* sentinel */
-        }), TestSuite::Compare::Container);
+        /* Inspect a node that isn't highlighted, the color of the previously
+           inspected should change back and the index buffer grow by one
+           quad */
+        CORRADE_VERIFY(layer.inspectNode(node6));
+        layer.update(data.states, dataIds, {}, {}, nodeOffsets, nodeSizes, nodeOpacities, nodesEnabled, {}, {}, {}, {});
+        if(data.expectDataUpdated) {
+            CORRADE_COMPARE_AS(layer.stateData().highlightedNodeDrawOffsets, Containers::arrayView<UnsignedInt>({
+                0,
+                0, /* quad for node 3 */
+                1, /* quad for node 6 */
+                2, /* quad for node 1 */
+                3,
+                3, /* sentinel */
+            }), TestSuite::Compare::Container);
 
-        CORRADE_COMPARE_AS(layer.stateData().highlightedNodeIndices, Containers::arrayView<UnsignedInt>({
-            0, 2, 1,
-            2, 3, 1,
+            CORRADE_COMPARE_AS(layer.stateData().highlightedNodeIndices, Containers::arrayView<UnsignedInt>({
+                0, 2, 1,
+                2, 3, 1,
 
-            4, 6, 5,
-            6, 7, 5,
+                4, 6, 5,
+                6, 7, 5,
 
-            8, 10, 9,
-            10, 11, 9
-        }), TestSuite::Compare::Container);
+                8, 10, 9,
+                10, 11, 9
+            }), TestSuite::Compare::Container);
 
-        auto vertices = Containers::stridedArrayView(layer.stateData().highlightedNodeVertices);
-        CORRADE_COMPARE_AS(vertices.slice(&decltype(vertices)::Type::position), Containers::stridedArrayView<Vector2>({
-            {20.0f, 10.0f}, /* node3 */
-            {60.0f, 10.0f},
-            {20.0f, 40.0f},
-            {60.0f, 40.0f},
+            auto vertices = Containers::stridedArrayView(layer.stateData().highlightedNodeVertices);
+            CORRADE_COMPARE_AS(vertices.slice(&decltype(vertices)::Type::position), Containers::stridedArrayView<Vector2>({
+                {20.0f, 10.0f}, /* node3 */
+                {60.0f, 10.0f},
+                {20.0f, 40.0f},
+                {60.0f, 40.0f},
 
-            {30.0f,  0.0f}, /* node6 */
-            {80.0f,  0.0f},
-            {30.0f, 20.0f},
-            {80.0f, 20.0f},
+                {30.0f,  0.0f}, /* node6 */
+                {80.0f,  0.0f},
+                {30.0f, 20.0f},
+                {80.0f, 20.0f},
 
-            {10.0f, 20.0f}, /* node1 */
-            {40.0f, 20.0f},
-            {10.0f, 60.0f},
-            {40.0f, 60.0f},
-        }), TestSuite::Compare::Container);
-        CORRADE_COMPARE_AS(vertices.slice(&decltype(vertices)::Type::color), Containers::stridedArrayView<Color4>({
-            0x00ffffff_rgbaf*0.5f, /* node3 */
-            0x00ffffff_rgbaf*0.5f,
-            0x00ffffff_rgbaf*0.5f,
-            0x00ffffff_rgbaf*0.5f,
+                {10.0f, 20.0f}, /* node1 */
+                {40.0f, 20.0f},
+                {10.0f, 60.0f},
+                {40.0f, 60.0f},
+            }), TestSuite::Compare::Container);
+            CORRADE_COMPARE_AS(vertices.slice(&decltype(vertices)::Type::color), Containers::stridedArrayView<Color4>({
+                0x00ffffff_rgbaf*0.5f, /* node3 */
+                0x00ffffff_rgbaf*0.5f,
+                0x00ffffff_rgbaf*0.5f,
+                0x00ffffff_rgbaf*0.5f,
 
-            0xff3366cc_rgbaf, /* node6 */
-            0xff3366cc_rgbaf,
-            0xff3366cc_rgbaf,
-            0xff3366cc_rgbaf,
+                0xff3366cc_rgbaf, /* node6 */
+                0xff3366cc_rgbaf,
+                0xff3366cc_rgbaf,
+                0xff3366cc_rgbaf,
 
-            0x00ff00ff_rgbaf*0.5f, /* node1 */
-            0x00ff00ff_rgbaf*0.5f,
-            0x00ff00ff_rgbaf*0.5f,
-            0x00ff00ff_rgbaf*0.5f,
-        }), TestSuite::Compare::Container);
-    } else CORRADE_COMPARE_AS(layer.stateData().highlightedNodeDrawOffsets,
-        Containers::arrayView<UnsignedInt>({}),
-        TestSuite::Compare::Container);
+                0x00ff00ff_rgbaf*0.5f, /* node1 */
+                0x00ff00ff_rgbaf*0.5f,
+                0x00ff00ff_rgbaf*0.5f,
+                0x00ff00ff_rgbaf*0.5f,
+            }), TestSuite::Compare::Container);
+        } else CORRADE_COMPARE_AS(layer.stateData().highlightedNodeDrawOffsets,
+            Containers::arrayView<UnsignedInt>({}),
+            TestSuite::Compare::Container);
+    }
 
-    /* Remove all highlights, there should be just the inspected node alone,
-       the index buffer should stay at the original size */
+    /* Remove all highlights, there should be just the inspected node alone
+       if there is, the index buffer should stay at the original size */
     layer.clearHighlightedNodes();
-    layer.update(data.states, dataIds, {}, {}, nodeOffsets, nodeSizes, nodeOpacities, nodesEnabled, {}, {}, {}, {});
-    if(data.expectDataUpdated) {
-        CORRADE_COMPARE_AS(layer.stateData().highlightedNodeDrawOffsets, Containers::arrayView<UnsignedInt>({
-            0,
-            0,
-            0, /* quad for node 6 */
-            1,
-            1,
-            1, /* sentinel */
-        }), TestSuite::Compare::Container);
 
-        /* Unchanged */
-        CORRADE_COMPARE_AS(layer.stateData().highlightedNodeIndices, Containers::arrayView<UnsignedInt>({
-            0, 2, 1,
-            2, 3, 1,
+    /* If we're inspecting, there's just the inspected quad left */
+    if(data.flags >= DebugLayerFlag::NodeInspect) {
+        layer.update(data.states, dataIds, {}, {}, nodeOffsets, nodeSizes, nodeOpacities, nodesEnabled, {}, {}, {}, {});
+        if(data.expectDataUpdated) {
+            CORRADE_COMPARE_AS(layer.stateData().highlightedNodeDrawOffsets, Containers::arrayView<UnsignedInt>({
+                0,
+                0,
+                0, /* quad for node 6 */
+                1,
+                1,
+                1, /* sentinel */
+            }), TestSuite::Compare::Container);
 
-            4, 6, 5,
-            6, 7, 5,
+            /* Unchanged */
+            CORRADE_COMPARE_AS(layer.stateData().highlightedNodeIndices, Containers::arrayView<UnsignedInt>({
+                0, 2, 1,
+                2, 3, 1,
 
-            8, 10, 9,
-            10, 11, 9
-        }), TestSuite::Compare::Container);
+                4, 6, 5,
+                6, 7, 5,
 
-        auto vertices = Containers::stridedArrayView(layer.stateData().highlightedNodeVertices);
-        CORRADE_COMPARE_AS(vertices.slice(&decltype(vertices)::Type::position), Containers::stridedArrayView<Vector2>({
-            {30.0f,  0.0f}, /* node6 */
-            {80.0f,  0.0f},
-            {30.0f, 20.0f},
-            {80.0f, 20.0f},
-        }), TestSuite::Compare::Container);
-        CORRADE_COMPARE_AS(vertices.slice(&decltype(vertices)::Type::color), Containers::stridedArrayView<Color4>({
-            0xff3366cc_rgbaf, /* node6 */
-            0xff3366cc_rgbaf,
-            0xff3366cc_rgbaf,
-            0xff3366cc_rgbaf,
-        }), TestSuite::Compare::Container);
-    } else CORRADE_COMPARE_AS(layer.stateData().highlightedNodeDrawOffsets,
-        Containers::arrayView<UnsignedInt>({}),
-        TestSuite::Compare::Container);
+                8, 10, 9,
+                10, 11, 9
+            }), TestSuite::Compare::Container);
 
-    /* Inspect nothing, the draw offset and vertex array should be gone now,
-       indices again untouched */
-    CORRADE_VERIFY(layer.inspectNode(NodeHandle::Null));
-    CORRADE_COMPARE(layer.currentInspectedNode(), NodeHandle::Null);
+            auto vertices = Containers::stridedArrayView(layer.stateData().highlightedNodeVertices);
+            CORRADE_COMPARE_AS(vertices.slice(&decltype(vertices)::Type::position), Containers::stridedArrayView<Vector2>({
+                {30.0f,  0.0f}, /* node6 */
+                {80.0f,  0.0f},
+                {30.0f, 20.0f},
+                {80.0f, 20.0f},
+            }), TestSuite::Compare::Container);
+            CORRADE_COMPARE_AS(vertices.slice(&decltype(vertices)::Type::color), Containers::stridedArrayView<Color4>({
+                0xff3366cc_rgbaf, /* node6 */
+                0xff3366cc_rgbaf,
+                0xff3366cc_rgbaf,
+                0xff3366cc_rgbaf,
+            }), TestSuite::Compare::Container);
+        } else CORRADE_COMPARE_AS(layer.stateData().highlightedNodeDrawOffsets,
+            Containers::arrayView<UnsignedInt>({}),
+            TestSuite::Compare::Container);
+    }
+
+    /* If we're inspecting, inspect nothing, the draw offset and vertex array
+       should be gone now, indices again untouched. If we're not inspecting,
+       the final state is now also empty as we cleared all highlights above. */
+    if(data.flags >= DebugLayerFlag::NodeInspect) {
+        CORRADE_VERIFY(layer.inspectNode(NodeHandle::Null));
+        CORRADE_COMPARE(layer.currentInspectedNode(), NodeHandle::Null);
+    }
+
     layer.update(data.states, dataIds, {}, {}, nodeOffsets, nodeSizes, nodeOpacities, nodesEnabled, {}, {}, {}, {});
     CORRADE_COMPARE_AS(layer.stateData().highlightedNodeDrawOffsets,
         Containers::arrayView<UnsignedInt>({}),
@@ -5961,7 +6023,11 @@ void DebugLayerTest::updateDataOrder() {
 
             8, 10, 9,
             10, 11, 9
-        }), TestSuite::Compare::Container);
+        }).exceptSuffix(
+            /* If we're inspecting, at most three quads got drawn. If not, at
+               most two. */
+            data.flags >= DebugLayerFlag::NodeInspect ? 0 : 6
+        ), TestSuite::Compare::Container);
     }
     auto vertices = Containers::stridedArrayView(layer.stateData().highlightedNodeVertices);
     CORRADE_COMPARE_AS(vertices.slice(&decltype(vertices)::Type::position),

@@ -113,16 +113,16 @@ const struct {
         DebugLayerSource::Nodes, DebugLayerFlag::NodeInspect,
         true, true, false, 0.0f, 0x3bd267ff_rgbaf*0.5f, {}},
     {"node highlight enabled but nothing highlighted", "empty.png",
-        DebugLayerSource::Nodes, DebugLayerFlag::NodeInspect,
+        DebugLayerSource::Nodes, {},
         false, false, false, 0.0f, {}, {}},
     {"node highlight", "node-highlight.png",
-        DebugLayerSource::Nodes, DebugLayerFlag::NodeInspect,
+        DebugLayerSource::Nodes, {},
         false, false, true, 0.0f, {}, {}},
     {"node highlight, custom highlight color", "node-inspect-highlight-color.png",
-        DebugLayerSource::Nodes, DebugLayerFlag::NodeInspect,
+        DebugLayerSource::Nodes, {},
         false, false, true, 0.0f, {}, {{0x3bd267_rgb, 0.5f}}},
     {"node highlight, custom highlight color, partial update", "node-inspect-highlight-color.png",
-        DebugLayerSource::Nodes, DebugLayerFlag::NodeInspect,
+        DebugLayerSource::Nodes, {},
         true, false, true, 0.0f, {}, {{0x3bd267_rgb, 0.5f}}},
     /* The inspect color wins */
     {"node inspect and highlight", "node-inspect.png",
@@ -342,7 +342,7 @@ void DebugLayerGLTest::drawOrder() {
     AbstractUserInterface ui{DrawSize};
     ui.setRendererInstance(Containers::pointer<RendererGL>());
 
-    DebugLayer& debugLayer = ui.setLayerInstance(Containers::pointer<DebugLayerGL>(ui.createLayer(), DebugLayerSource::Nodes, DebugLayerFlag::NodeInspect));
+    DebugLayer& debugLayer = ui.setLayerInstance(Containers::pointer<DebugLayerGL>(ui.createLayer(), DebugLayerSource::Nodes, DebugLayerFlags{}));
 
     /* For drawing in order that doesn't match the node ID, create and then
        remove the nodes in random order to make the next ones created with

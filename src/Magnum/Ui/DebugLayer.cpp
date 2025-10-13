@@ -1022,12 +1022,12 @@ void DebugLayer::doPreUpdate(LayerStates) {
                     node.handle = handle;
             }
 
-            /* If node inspect is enabled, create new data if the node doesn't
-               have it yet. Data for removed nodes are pruned automatically in
-               clean() and we're replacing the whole DebugLayerNode contents
-               above so the highlightData handle is always either valid or
-               null. */
-            if(state.flags >= DebugLayerFlag::NodeInspect && node.handle != NodeHandle::Null && node.highlightData == LayerDataHandle::Null) {
+            /* If node inspect is enabled or the node is among highlighted,
+               create new data if the node doesn't have it yet. Data for
+               removed nodes are pruned automatically in clean() and we're
+               replacing the whole DebugLayerNode contents above so the
+               highlightData handle is always either valid or null. */
+            if((state.flags >= DebugLayerFlag::NodeInspect || state.currentHighlightedNodes[i]) && node.handle != NodeHandle::Null && node.highlightData == LayerDataHandle::Null) {
                 CORRADE_INTERNAL_DEBUG_ASSERT(ui.isHandleValid(handle));
                 node.handle = handle;
                 node.highlightData = dataHandleData(create(handle));
