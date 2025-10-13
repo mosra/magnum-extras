@@ -168,12 +168,17 @@ void DebugLayerGL::doUpdate(const LayerStates states, const Containers::StridedA
 void DebugLayerGL::doDraw(const Containers::StridedArrayView1D<const UnsignedInt>&, std::size_t offset, std::size_t count, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const UnsignedInt>&, std::size_t, std::size_t, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Float>&, Containers::BitArrayView, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&) {
     State& state = static_cast<State&>(*_state);
 
+    /** @todo both of these completely prevent draw call merging (once that's
+        done), figure out a way for the layer to signal that not all data are
+        actually meant to be drawn (per-data features? uh...) */
+
+    /* The offsets array is empty if there's nothing to highlight at all,
+       nothing to do in that case */
+    if(state.highlightedNodeDrawOffsets.isEmpty())
+        return;
+
     /* The drawCount is empty if given range of data doesn't contain any
        highlighting quad */
-    /** @todo this would however completely prevent draw call merging (once
-        that's done), figure out a way for the layer to signal that not all
-        data are actually meant to be drawn (per-data features? uh...) */
-
     const UnsignedInt drawOffset = state.highlightedNodeDrawOffsets[offset];
     const UnsignedInt drawCount = state.highlightedNodeDrawOffsets[offset + count] - drawOffset;
     state.mesh
