@@ -1914,6 +1914,7 @@ void DebugLayerTest::layerNameInvalid() {
         LayerFeatures doFeatures() const override { return {}; }
     };
     EmptyLayer& layerAnotherUi = uiAnother.setLayerInstance(Containers::pointer<EmptyLayer>(uiAnother.createLayer()));
+    EmptyLayer layerArtificialHandle{layerHandle(0xab, 0x12)};
 
     struct IntegratedLayer: AbstractLayer {
         using AbstractLayer::AbstractLayer;
@@ -1939,6 +1940,7 @@ void DebugLayerTest::layerNameInvalid() {
     layerNoUi.setLayerName(integratedLayer, {}, IntegratedLayer::DebugIntegration{});
     layer.layerName(LayerHandle::Null);
     layer.setLayerName(layerAnotherUi, {});
+    layer.setLayerName(layerArtificialHandle, {});
     layer.setLayerName(integratedLayerAnotherUi, {});
     layer.setLayerName(integratedLayerAnotherUi, {}, integration);
     layer.setLayerName(integratedLayerAnotherUi, {}, IntegratedLayer::DebugIntegration{});
@@ -1949,6 +1951,7 @@ void DebugLayerTest::layerNameInvalid() {
         "Ui::DebugLayer::setLayerName(): debug layer not part of a user interface\n"
         "Ui::DebugLayer::setLayerName(): debug layer not part of a user interface\n"
         "Ui::DebugLayer::layerName(): handle is null\n"
+        "Ui::DebugLayer::setLayerName(): layer not part of the same user interface\n"
         "Ui::DebugLayer::setLayerName(): layer not part of the same user interface\n"
         "Ui::DebugLayer::setLayerName(): layer not part of the same user interface\n"
         "Ui::DebugLayer::setLayerName(): layer not part of the same user interface\n"
@@ -2597,6 +2600,7 @@ void DebugLayerTest::layouterNameInvalid() {
     };
     EmptyLayouter& layouter = ui.setLayouterInstance(Containers::pointer<EmptyLayouter>(ui.createLayouter()));
     EmptyLayouter& layouterAnotherUi = uiAnother.setLayouterInstance(Containers::pointer<EmptyLayouter>(uiAnother.createLayouter()));
+    EmptyLayouter layouterArtificialHandle{layouterHandle(0xab, 0x12)};
 
     struct IntegratedLayouter: AbstractLayouter {
         using AbstractLayouter::AbstractLayouter;
@@ -2622,6 +2626,7 @@ void DebugLayerTest::layouterNameInvalid() {
     layerNoUi.setLayouterName(integratedLayouter, {}, IntegratedLayouter::DebugIntegration{});
     layer.layouterName(LayouterHandle::Null);
     layer.setLayouterName(layouterAnotherUi, {});
+    layer.setLayouterName(layouterArtificialHandle, {});
     layer.setLayouterName(integratedLayouterAnotherUi, {});
     layer.setLayouterName(integratedLayouterAnotherUi, {}, integration);
     layer.setLayouterName(integratedLayouterAnotherUi, {}, IntegratedLayouter::DebugIntegration{});
@@ -2632,6 +2637,7 @@ void DebugLayerTest::layouterNameInvalid() {
         "Ui::DebugLayer::setLayouterName(): debug layer not part of a user interface\n"
         "Ui::DebugLayer::setLayouterName(): debug layer not part of a user interface\n"
         "Ui::DebugLayer::layouterName(): handle is null\n"
+        "Ui::DebugLayer::setLayouterName(): layouter not part of the same user interface\n"
         "Ui::DebugLayer::setLayouterName(): layouter not part of the same user interface\n"
         "Ui::DebugLayer::setLayouterName(): layouter not part of the same user interface\n"
         "Ui::DebugLayer::setLayouterName(): layouter not part of the same user interface\n"
@@ -3306,6 +3312,7 @@ void DebugLayerTest::animatorNameInvalid() {
     };
     EmptyAnimator& animator = ui.setGenericAnimatorInstance(Containers::pointer<EmptyAnimator>(ui.createAnimator()));
     EmptyAnimator& animatorAnotherUi = uiAnother.setGenericAnimatorInstance(Containers::pointer<EmptyAnimator>(uiAnother.createAnimator()));
+    EmptyAnimator animatorArtificialHandle{animatorHandle(0xab, 0x12)};
 
     struct IntegratedAnimator: AbstractGenericAnimator {
         using AbstractGenericAnimator::AbstractGenericAnimator;
@@ -3332,6 +3339,7 @@ void DebugLayerTest::animatorNameInvalid() {
     layerNoUi.setAnimatorName(integratedAnimator, {}, IntegratedAnimator::DebugIntegration{});
     layer.animatorName(AnimatorHandle::Null);
     layer.setAnimatorName(animatorAnotherUi, {});
+    layer.setAnimatorName(animatorArtificialHandle, {});
     layer.setAnimatorName(integratedAnimatorAnotherUi, {});
     layer.setAnimatorName(integratedAnimatorAnotherUi, {}, integration);
     layer.setAnimatorName(integratedAnimatorAnotherUi, {}, IntegratedAnimator::DebugIntegration{});
@@ -3342,6 +3350,7 @@ void DebugLayerTest::animatorNameInvalid() {
         "Ui::DebugLayer::setAnimatorName(): debug layer not part of a user interface\n"
         "Ui::DebugLayer::setAnimatorName(): debug layer not part of a user interface\n"
         "Ui::DebugLayer::animatorName(): handle is null\n"
+        "Ui::DebugLayer::setAnimatorName(): animator not part of the same user interface\n"
         "Ui::DebugLayer::setAnimatorName(): animator not part of the same user interface\n"
         "Ui::DebugLayer::setAnimatorName(): animator not part of the same user interface\n"
         "Ui::DebugLayer::setAnimatorName(): animator not part of the same user interface\n"
