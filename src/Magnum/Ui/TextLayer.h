@@ -1580,7 +1580,8 @@ When using @ref Ui-DebugLayer-node-inspect "DebugLayer node inspect" and
 will inherit @ref Ui-AbstractVisualLayer-debug-integration "debug integration from the AbstractVisualLayer",
 which shows style assignments. For @ref TextLayer the output additionally shows
 if given data has custom color or padding, to clearly distinguish it from just
-a vanilla style. For example:
+a vanilla style, as well as custom transformation if
+@ref TextLayerFlag::Transformable is enabled. For example:
 
 @include ui-debuglayer-textlayer.ansi
 */
