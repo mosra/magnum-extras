@@ -879,7 +879,8 @@ When using @ref Ui-DebugLayer-node-inspect "DebugLayer node inspect" and
 will inherit @ref Ui-AbstractVisualLayer-debug-integration "debug integration from the AbstractVisualLayer",
 which shows style assignments. For @ref BaseLayer the output additionally shows
 if given data has custom color, outline width or padding, to clearly
-distinguish it from just a vanilla style. For example:
+distinguish it from just a vanilla style, as well as texture coordinates if
+@ref BaseLayerSharedFlag::Textured is enabled. For example:
 
 @include ui-debuglayer-baselayer.ansi
 */

@@ -428,6 +428,7 @@ const struct {
 const struct {
     const char* name;
     bool styleNames;
+    BaseLayerSharedFlags flags;
     /* Default color is all 1s, while outline/padding is all 0s, so it's an
        Optional unlike the other two */
     Containers::Optional<Color4> color;
@@ -435,51 +436,57 @@ const struct {
     const char* expected;
 } DebugIntegrationData[]{
     {"",
-        false, {}, {}, {},
+        false, {}, {}, {}, {},
         "Node {0x1, 0x1}\n"
         "  Data {0x6, 0x2} from layer {0x0, 0x3} with style 3"},
     {"style name mapping",
-        true, {}, {}, {},
+        true, {}, {}, {}, {},
         "Node {0x1, 0x1}\n"
         "  Data {0x6, 0x2} from layer {0x0, 0x3} with style StyleName (3)"},
     {"custom color",
-        false, 0x3bd26799_rgbaf, {}, {},
+        false, {}, 0x3bd26799_rgbaf, {}, {},
         "Node {0x1, 0x1}\n"
         "  Data {0x6, 0x2} from layer {0x0, 0x3} with style 3\n"
         "    Color: #3bd26799"},
     {"custom outline width",
-        false, {}, {0.5f, 2.0f, 1.5f, 1.0f}, {},
+        false, {}, {}, {0.5f, 2.0f, 1.5f, 1.0f}, {},
         "Node {0x1, 0x1}\n"
         "  Data {0x6, 0x2} from layer {0x0, 0x3} with style 3\n"
         "    Outline width: {0.5, 2, 1.5, 1}"},
     {"custom outline width, all edges same",
-        false, {}, Vector4{2.5f}, {},
+        false, {}, {}, Vector4{2.5f}, {},
         "Node {0x1, 0x1}\n"
         "  Data {0x6, 0x2} from layer {0x0, 0x3} with style 3\n"
         "    Outline width: 2.5"},
     {"custom padding",
-        false, {}, {}, {0.5f, 2.0f, 1.5f, 1.0f},
+        false, {}, {}, {}, {0.5f, 2.0f, 1.5f, 1.0f},
         "Node {0x1, 0x1}\n"
         "  Data {0x6, 0x2} from layer {0x0, 0x3} with style 3\n"
         "    Padding: {0.5, 2, 1.5, 1}"},
     {"custom padding, all edges same",
-        false, {}, {}, Vector4{2.5f},
+        false, {}, {}, {}, Vector4{2.5f},
         "Node {0x1, 0x1}\n"
         "  Data {0x6, 0x2} from layer {0x0, 0x3} with style 3\n"
         "    Padding: 2.5"},
     {"custom color + padding",
-        false, 0x3bd26799_rgbaf, {}, {0.5f, 2.0f, 1.5f, 1.0f},
+        false, {}, 0x3bd26799_rgbaf, {}, {0.5f, 2.0f, 1.5f, 1.0f},
         "Node {0x1, 0x1}\n"
         "  Data {0x6, 0x2} from layer {0x0, 0x3} with style 3\n"
         "    Color: #3bd26799\n"
         "    Padding: {0.5, 2, 1.5, 1}"},
-    {"style name mapping, custom color + outline width + padding",
-        true, 0x3bd26799_rgbaf, Vector4{2.5f}, {0.5f, 2.0f, 1.5f, 1.0f},
+    {"textured",
+        false, BaseLayerSharedFlag::Textured, {}, {}, {},
+        "Node {0x1, 0x1}\n"
+        "  Data {0x6, 0x2} from layer {0x0, 0x3} with style 3\n"
+        "    Texture offset: {0.5, 0.25, 7}, size: {0.25, 0.5}"},
+    {"style name mapping, custom color + outline width + padding + textured",
+        true, BaseLayerSharedFlag::Textured, 0x3bd26799_rgbaf, Vector4{2.5f}, {0.5f, 2.0f, 1.5f, 1.0f},
         "Node {0x1, 0x1}\n"
         "  Data {0x6, 0x2} from layer {0x0, 0x3} with style StyleName (3)\n"
         "    Color: #3bd26799\n"
         "    Outline width: 2.5\n"
-        "    Padding: {0.5, 2, 1.5, 1}"},
+        "    Padding: {0.5, 2, 1.5, 1}\n"
+        "    Texture offset: {0.5, 0.25, 7}, size: {0.25, 0.5}"},
     /* The last case here is used in debugIntegrationNoCallback() to verify
        output w/o a callback and for visual color verification, it's expected
        to be the most complete, executing all coloring code paths */
@@ -2993,7 +3000,9 @@ void BaseLayerTest::debugIntegration() {
         explicit LayerShared(const Configuration& configuration): BaseLayer::Shared{configuration} {}
 
         void doSetStyle(const BaseLayerCommonStyleUniform&, Containers::ArrayView<const BaseLayerStyleUniform>) override {}
-    } shared{BaseLayer::Shared::Configuration{4}};
+    } shared{BaseLayer::Shared::Configuration{4}
+        .addFlags(data.flags)
+    };
     shared.setStyle(BaseLayerCommonStyleUniform{},
         {BaseLayerStyleUniform{},
          BaseLayerStyleUniform{},
@@ -3021,6 +3030,8 @@ void BaseLayerTest::debugIntegration() {
     DataHandle layerData = layer.create(3, node);
     if(data.color)
         layer.setColor(layerData, *data.color);
+    if(data.flags >= BaseLayerSharedFlag::Textured)
+        layer.setTextureCoordinates(layerData, {0.5f, 0.25f, 7.0f}, {0.25f, 0.5f});
     layer.setOutlineWidth(layerData, data.outline);
     layer.setPadding(layerData, data.padding);
 
@@ -3051,7 +3062,9 @@ void BaseLayerTest::debugIntegrationNoCallback() {
         explicit LayerShared(const Configuration& configuration): BaseLayer::Shared{configuration} {}
 
         void doSetStyle(const BaseLayerCommonStyleUniform&, Containers::ArrayView<const BaseLayerStyleUniform>) override {}
-    } shared{BaseLayer::Shared::Configuration{4}};
+    } shared{BaseLayer::Shared::Configuration{4}
+        .addFlags(BaseLayerSharedFlag::Textured)
+    };
     shared.setStyle(BaseLayerCommonStyleUniform{},
         {BaseLayerStyleUniform{},
          BaseLayerStyleUniform{},
@@ -3077,6 +3090,7 @@ void BaseLayerTest::debugIntegrationNoCallback() {
     layer.remove(layer.create(0));
     DataHandle layerData = layer.create(3, node);
     layer.setColor(layerData, 0x3bd26799_rgbaf);
+    layer.setTextureCoordinates(layerData, {0.5f, 0.25f, 7.0f}, {0.25f, 0.5f});
     layer.setOutlineWidth(layerData, 2.5f);
     layer.setPadding(layerData, {0.5f, 2.0f, 1.5f, 1.0f});
 

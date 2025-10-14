@@ -989,6 +989,10 @@ void BaseLayer::DebugIntegration::print(Debug& debug, const BaseLayer& layer, co
             debug << Debug::newline;
         }
     }
+    if(layer.shared().flags() >= BaseLayerSharedFlag::Textured) {
+        const Containers::Pair<Vector3, Vector2> textureCoordinates = layer.textureCoordinates(data);
+        debug << "    Texture offset:" << Debug::packed << textureCoordinates.first() << Debug::nospace << ", size:" << Debug::packed << textureCoordinates.second() << Debug::newline;
+    }
 }
 
 }}
