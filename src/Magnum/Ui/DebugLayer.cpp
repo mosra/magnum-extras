@@ -543,6 +543,88 @@ bool DebugLayer::inspectNode(const NodeHandle handle) {
         return handle == NodeHandle::Null;
     }
 
+    /* Collect all data, layout and animation assignments before any printing
+       to know whether there are any at all */
+    Containers::Array<DataHandle> data;
+    Containers::Array<LayoutHandle> layouts;
+    Containers::Array<AnimationHandle> animations;
+    if(state.sources >= DebugLayerSource::NodeData) for(LayerHandle layerHandle = ui.layerFirst(); layerHandle != LayerHandle::Null; layerHandle = ui.layerNext(layerHandle)) {
+        /* Skip the debug layer itself, layers that have no instance and layers
+           we don't know about yet (if inspectNode() is called, there may be
+           layers that are yet unknown to the DebugLayer, either ones with IDs
+           outside of the state.layers bounds or ones that got removed and the
+           slot reused for others). Since we're iterating over UI's own layer
+           order the handles should be all valid. */
+        CORRADE_INTERNAL_DEBUG_ASSERT(ui.isHandleValid(layerHandle));
+        const UnsignedInt layerId = layerHandleId(layerHandle);
+        if(layerHandle == this->handle() ||
+           !ui.hasLayerInstance(layerHandle) ||
+           layerId >= state.layers.size() ||
+           state.layers[layerId].handle != layerHandle)
+            continue;
+
+        const AbstractLayer& layer = ui.layer(layerHandle);
+        const UnsignedInt dataCapacity = layer.capacity();
+        const Containers::StridedArrayView1D<const UnsignedShort> dataGenerations = layer.generations();
+        for(UnsignedInt dataId = 0; dataId != dataCapacity; ++dataId) {
+            const LayerDataHandle dataHandle = layerDataHandle(dataId, dataGenerations[dataId]);
+            if(layer.isHandleValid(dataHandle) && layer.node(dataHandle) == handle)
+                arrayAppend(data, Ui::dataHandle(layerHandle, dataHandle));
+        }
+    }
+    if(state.sources >= DebugLayerSource::NodeLayouts) for(LayouterHandle layouterHandle = ui.layouterFirst(); layouterHandle != LayouterHandle::Null; layouterHandle = ui.layouterNext(layouterHandle)) {
+        /* Skip layouters that have no instance and layouters we don't know
+           about yet (if inspectNode() is called, there may be layouters that
+           are yet unknown to the DebugLayer, either ones with IDs outside of
+           the state.layouters bounds or ones that got removed and the slot
+           reused for others). Since we're iterating over UI's own layouter
+           order the handles should be all valid. */
+        CORRADE_INTERNAL_DEBUG_ASSERT(ui.isHandleValid(layouterHandle));
+        const UnsignedInt layouterId = layouterHandleId(layouterHandle);
+        if(!ui.hasLayouterInstance(layouterHandle) ||
+           layouterId >= state.layouters.size() ||
+           state.layouters[layouterId].handle != layouterHandle)
+            continue;
+
+        const AbstractLayouter& layouter = ui.layouter(layouterHandle);
+        const UnsignedInt dataCapacity = layouter.capacity();
+        const Containers::StridedArrayView1D<const UnsignedShort> dataGenerations = layouter.generations();
+        for(UnsignedInt dataId = 0; dataId != dataCapacity; ++dataId) {
+            const LayouterDataHandle dataHandle = layouterDataHandle(dataId, dataGenerations[dataId]);
+            if(layouter.isHandleValid(dataHandle) && layouter.node(dataHandle) == handle)
+                arrayAppend(layouts, layoutHandle(layouterHandle, dataHandle));
+        }
+    }
+    if(state.sources >= DebugLayerSource::NodeAnimations) for(UnsignedInt animatorId = 0; animatorId != state.animators.size(); ++animatorId) {
+        /* Skip animators that are freed or that we don't know about yet (if
+           inspectNode() is called, there may be animators that are yet unknown
+           to the DebugLayer, either ones with IDs outside of the
+           state.animators bounds or ones that got removed and the slot reused
+           for others), and animators that have no instance */
+        const Implementation::DebugLayerAnimator& animator = state.animators[animatorId];
+        if(!ui.isHandleValid(animator.handle) ||
+            !ui.hasAnimatorInstance(animator.handle))
+            continue;
+
+        /* Query only animators that support node attachment */
+        /** @todo support also animations attached to data, basically for each
+            layer that has some data in given node it should go through
+            animators attached to that layer and check which animations are
+            attached to those */
+        const AbstractAnimator& animatorInstance = ui.animator(animator.handle);
+        if(!(animatorInstance.features() >= AnimatorFeature::NodeAttachment))
+            continue;
+
+        const AnimatorHandle animatorHandle = animatorInstance.handle();
+        const UnsignedInt dataCapacity = animatorInstance.capacity();
+        const Containers::StridedArrayView1D<const UnsignedShort> dataGenerations = animatorInstance.generations();
+        for(UnsignedInt dataId = 0; dataId != dataCapacity; ++dataId) {
+            const AnimatorDataHandle dataHandle = animatorDataHandle(dataId, dataGenerations[dataId]);
+            if(animatorInstance.isHandleValid(dataHandle) && animatorInstance.node(dataHandle) == handle)
+                arrayAppend(animations, animationHandle(animatorHandle, dataHandle));
+        }
+    }
+
     /* Scope the (optional) output redirection to prevent it from being active
        even during the callback at the end, which could cause strange memory
        corruption issues if the callback attempts to print to Debug as well */
@@ -632,175 +714,167 @@ bool DebugLayer::inspectNode(const NodeHandle handle) {
                 debug << "    of which" << noEventChildCount << Debug::color(Debug::Color::Cyan) << Debug::packed << NodeFlag::NoEvents << Debug::resetColor << Debug::newline;
         }
 
-        if(state.sources >= DebugLayerSource::NodeData) {
+        /* Layer data. If DebugLayerSource::NodeData isn't enabled, the `data`
+           array wasn't filled above so this is a no-op. */
+        {
             UnsignedInt otherLayerCount = 0;
             UnsignedInt otherDataCount = 0;
             bool hasNamedLayers = false;
-            for(LayerHandle layerHandle = ui.layerFirst(); layerHandle != LayerHandle::Null; layerHandle = ui.layerNext(layerHandle)) {
-                /* Skip the debug layer itself, layers that have no instance
-                   and layers we don't know about yet (if inspectNode() is
-                   called, there may be layers that are yet unknown to the
-                   DebugLayer, either ones with IDs outside of the state.layers
-                   bounds or ones that got removed and the slot reused for
-                   others). Since we're iterating over UI's own layer order the
-                   handles should be all valid. */
-                CORRADE_INTERNAL_DEBUG_ASSERT(ui.isHandleValid(layerHandle));
-                const UnsignedInt layerId = layerHandleId(layerHandle);
-                if(layerHandle == this->handle() ||
-                   !ui.hasLayerInstance(layerHandle) ||
-                   layerId >= state.layers.size() ||
-                   state.layers[layerId].handle != layerHandle)
-                    continue;
 
-                const Implementation::DebugLayerLayer& layer = state.layers[layerId];
-                const AbstractLayer& layerInstance = ui.layer(layerHandle);
-                bool hasOtherDataFromThisLayer = false;
+            LayerHandle layerHandle = LayerHandle::Null;
+            const Implementation::DebugLayerLayer* layer = nullptr;
+            const AbstractLayer* layerInstance = nullptr;
+            bool hasOtherDataFromThisLayer = false;
+            UnsignedInt namedLayerDataCount = 0;
+            for(std::size_t i = 0; i != data.size(); ) {
+                /* New layer, fetch its data and reset counters */
+                const DataHandle dataHandle = data[i];
+                if(dataHandleLayer(dataHandle) != layerHandle) {
+                    layerHandle = dataHandleLayer(dataHandle);
+                    layer = &state.layers[layerHandleId(layerHandle)];
+                    layerInstance = &ui.layer(layerHandle);
+                    hasOtherDataFromThisLayer = false;
+                    namedLayerDataCount = 0;
+                }
 
-                const UnsignedInt dataCapacity = layerInstance.capacity();
-                const Containers::StridedArrayView1D<const UnsignedShort> dataGenerations = layerInstance.generations();
-                UnsignedInt namedLayerDataCount = 0;
-                for(UnsignedInt dataId = 0; dataId != dataCapacity; ++dataId) {
-                    const LayerDataHandle data = layerDataHandle(dataId, dataGenerations[dataId]);
-                    if(layerInstance.isHandleValid(data) && layerInstance.node(data) == handle) {
-                        if(layer.print) {
-                            hasNamedLayers = true;
-                            layer.print(layer.integration, debug, layerInstance, layer.name, data);
-                        } else if(layer.name) {
-                            hasNamedLayers = true;
-                            ++namedLayerDataCount;
-                        } else {
-                            hasOtherDataFromThisLayer = true;
-                            ++otherDataCount;
-                        }
+                /* Print detailed data properties or increment their counter */
+                if(layer->print) {
+                    hasNamedLayers = true;
+                    layer->print(layer->integration, debug, *layerInstance, layer->name, dataHandleData(dataHandle));
+                } else if(layer->name) {
+                    hasNamedLayers = true;
+                    ++namedLayerDataCount;
+                } else {
+                    hasOtherDataFromThisLayer = true;
+                    ++otherDataCount;
+                }
+
+                /* Increment for the next iteration. If layer of the next data
+                   is different from the current or we're at the end, print
+                   summary for the current one */
+                ++i;
+                if(i == data.size() || dataHandleLayer(data[i]) != layerHandle) {
+                    if(namedLayerDataCount) {
+                        debug << " " << namedLayerDataCount << "data from layer" << Debug::packed << layerHandle << Debug::color(Debug::Color::Yellow) << layer->name << Debug::resetColor << Debug::newline;
                     }
-                }
 
-                if(namedLayerDataCount) {
-                    debug << " " << namedLayerDataCount << "data from layer" << Debug::packed << layerHandle << Debug::color(Debug::Color::Yellow) << layer.name << Debug::resetColor << Debug::newline;
+                    if(hasOtherDataFromThisLayer)
+                        ++otherLayerCount;
                 }
-
-                if(hasOtherDataFromThisLayer)
-                    ++otherLayerCount;
             }
 
             if(otherDataCount)
                 debug << " " << otherDataCount << "data from" << otherLayerCount << (hasNamedLayers ? "other layers" : "layers") << Debug::newline;
             else CORRADE_INTERNAL_ASSERT(otherLayerCount == 0);
-        }
 
-        if(state.sources >= DebugLayerSource::NodeLayouts) {
+        /* Layouts. If DebugLayerSource::NodeLayouts isn't enabled, the
+           `layouts` array wasn't filled above so this is a no-op. */
+        } {
             UnsignedInt otherLayouterCount = 0;
             UnsignedInt otherLayoutCount = 0;
             bool hasNamedLayouters = false;
-            for(LayouterHandle layouterHandle = ui.layouterFirst(); layouterHandle != LayouterHandle::Null; layouterHandle = ui.layouterNext(layouterHandle)) {
-                /* Skip layouters that have no instance and layouters we don't
-                   know about yet (if inspectNode() is called, there may be
-                   layouters that are yet unknown to the DebugLayer, either
-                   ones with IDs outside of the state.layouters bounds or ones
-                   that got removed and the slot reused for others). Since
-                   we're iterating over UI's own layouter order the handles
-                   should be all valid. */
-                CORRADE_INTERNAL_DEBUG_ASSERT(ui.isHandleValid(layouterHandle));
-                const UnsignedInt layouterId = layouterHandleId(layouterHandle);
-                if(!ui.hasLayouterInstance(layouterHandle) ||
-                   layouterId >= state.layouters.size() ||
-                   state.layouters[layouterId].handle != layouterHandle)
-                    continue;
 
-                const Implementation::DebugLayerLayouter& layouter = state.layouters[layouterId];
-                const AbstractLayouter& layouterInstance = ui.layouter(layouterHandle);
-                bool hasOtherLayoutsFromThisLayouter = false;
+            LayouterHandle layouterHandle = LayouterHandle::Null;
+            const Implementation::DebugLayerLayouter* layouter = nullptr;
+            const AbstractLayouter* layouterInstance = nullptr;
+            bool hasOtherLayoutsFromThisLayouter = false;
+            UnsignedInt namedLayouterDataCount = 0;
+            for(std::size_t i = 0; i != layouts.size(); ) {
+                /* New layouter, fetch its data and reset counters */
+                const LayoutHandle layoutHandle = layouts[i];
+                if(layoutHandleLayouter(layoutHandle) != layouterHandle) {
+                    layouterHandle = layoutHandleLayouter(layoutHandle);
+                    layouter = &state.layouters[layouterHandleId(layouterHandle)];
+                    layouterInstance = &ui.layouter(layouterHandle);
+                    hasOtherLayoutsFromThisLayouter = false;
+                    namedLayouterDataCount = 0;
+                }
 
-                const UnsignedInt dataCapacity = layouterInstance.capacity();
-                const Containers::StridedArrayView1D<const UnsignedShort> dataGenerations = layouterInstance.generations();
-                UnsignedInt namedLayouterDataCount = 0;
-                for(UnsignedInt dataId = 0; dataId != dataCapacity; ++dataId) {
-                    const LayouterDataHandle data = layouterDataHandle(dataId, dataGenerations[dataId]);
-                    if(layouterInstance.isHandleValid(data) && layouterInstance.node(data) == handle) {
-                        if(layouter.print) {
-                            hasNamedLayouters = true;
-                            layouter.print(layouter.integration, debug, layouterInstance, layouter.name, data);
-                        } else if(layouter.name) {
-                            hasNamedLayouters = true;
-                            ++namedLayouterDataCount;
-                        } else {
-                            hasOtherLayoutsFromThisLayouter = true;
-                            ++otherLayoutCount;
-                        }
+                /* Print detailed data properties or increment their counter */
+                if(layouter->print) {
+                    hasNamedLayouters = true;
+                    layouter->print(layouter->integration, debug, *layouterInstance, layouter->name, layoutHandleData(layoutHandle));
+                } else if(layouter->name) {
+                    hasNamedLayouters = true;
+                    ++namedLayouterDataCount;
+                } else {
+                    hasOtherLayoutsFromThisLayouter = true;
+                    ++otherLayoutCount;
+                }
+
+                /* Increment for the next iteration. If layouter of the next
+                   layout is different from the current or we're at the end,
+                   print summary for the current one */
+                ++i;
+                if(i == layouts.size() || layoutHandleLayouter(layouts[i]) != layouterHandle) {
+                    if(namedLayouterDataCount) {
+                        debug << " " << namedLayouterDataCount << "layouts from layouter" << Debug::packed << layouterHandle << Debug::color(Debug::Color::Yellow) << layouter->name << Debug::resetColor << Debug::newline;
                     }
-                }
 
-                if(namedLayouterDataCount) {
-                    debug << " " << namedLayouterDataCount << "layouts from layouter" << Debug::packed << layouterHandle << Debug::color(Debug::Color::Yellow) << layouter.name << Debug::resetColor << Debug::newline;
+                    if(hasOtherLayoutsFromThisLayouter)
+                        ++otherLayouterCount;
                 }
-
-                if(hasOtherLayoutsFromThisLayouter)
-                    ++otherLayouterCount;
             }
 
             if(otherLayoutCount)
                 debug << " " << otherLayoutCount << "layouts from" << otherLayouterCount << (hasNamedLayouters ? "other layouters" : "layouters") << Debug::newline;
             else CORRADE_INTERNAL_ASSERT(otherLayouterCount == 0);
-        }
 
-        if(state.sources >= DebugLayerSource::NodeAnimations) {
+        /* Animations. If DebugLayerSource::NodeAnimations isn't enabled, the
+           `animations` array wasn't filled above so this is a no-op. */
+        } {
             /* Five entries, each for one AnimationState */
             constexpr UnsignedInt animationStateCount = 5;
             UnsignedInt otherAnimatorCount[animationStateCount]{};
             UnsignedInt otherAnimationCount[animationStateCount]{};
             bool hasNamedAnimators = false;
-            for(UnsignedInt animatorId = 0; animatorId != state.animators.size(); ++animatorId) {
-                /* Skip animators that are freed or that we don't know about
-                   yet (if inspectNode() is called, there may be animators that
-                   are yet unknown to the DebugLayer, either ones with IDs
-                   outside of the state.animators bounds or ones that got
-                   removed and the slot reused for others), and animators that
-                   have no instance */
-                const Implementation::DebugLayerAnimator& animator = state.animators[animatorId];
-                if(!ui.isHandleValid(animator.handle) ||
-                   !ui.hasAnimatorInstance(animator.handle))
-                    continue;
 
-                /* Query only animators that support node attachment */
-                /** @todo support also animations attached to data, do that in
-                    the loop above somehow? basically for each layer that has
-                    some data in given node it should go through animators
-                    attached to that layer and check which animations are
-                    attached to those */
-                const AbstractAnimator& animatorInstance = ui.animator(animator.handle);
-                if(!(animatorInstance.features() >= AnimatorFeature::NodeAttachment))
-                    continue;
-
-                const UnsignedInt dataCapacity = animatorInstance.capacity();
-                const Containers::StridedArrayView1D<const UnsignedShort> dataGenerations = animatorInstance.generations();
-                /* Five entries, each for one AnimationState */
-                bool hasOtherAnimationsFromThisAnimator[animationStateCount]{};
-                UnsignedInt namedAnimatorDataCount[animationStateCount]{};
-                for(UnsignedInt dataId = 0; dataId != dataCapacity; ++dataId) {
-                    const AnimatorDataHandle data = animatorDataHandle(dataId, dataGenerations[dataId]);
-                    if(animatorInstance.isHandleValid(data) && animatorInstance.node(data) == handle) {
-                        AnimationState animationState = animatorInstance.state(data);
-                        CORRADE_INTERNAL_ASSERT(UnsignedInt(animationState) < animationStateCount);
-                        if(animator.print) {
-                            hasNamedAnimators = true;
-                            animator.print(animator.integration, debug, animatorInstance, animator.name, data);
-                        } else if(animator.name) {
-                            hasNamedAnimators = true;
-                            ++namedAnimatorDataCount[UnsignedInt(animationState)];
-                        } else {
-                            hasOtherAnimationsFromThisAnimator[UnsignedInt(animationState)] = true;
-                            ++otherAnimationCount[UnsignedInt(animationState)];
-                        }
+            AnimatorHandle animatorHandle = AnimatorHandle::Null;
+            const Implementation::DebugLayerAnimator* animator = nullptr;
+            const AbstractAnimator* animatorInstance = nullptr;
+            /* Five entries, each for one AnimationState */
+            bool hasOtherAnimationsFromThisAnimator[animationStateCount]{};
+            UnsignedInt namedAnimatorDataCount[animationStateCount]{};
+            for(std::size_t i = 0; i != animations.size(); ) {
+                /* New animator, fetch its data and reset counters */
+                const AnimationHandle animationHandle = animations[i];
+                if(animationHandleAnimator(animationHandle) != animatorHandle) {
+                    animatorHandle = animationHandleAnimator(animationHandle);
+                    animator = &state.animators[animatorHandleId(animatorHandle)];
+                    animatorInstance = &ui.animator(animatorHandle);
+                    for(std::size_t i = 0; i != animationStateCount; ++i) {
+                        hasOtherAnimationsFromThisAnimator[i] = false;
+                        namedAnimatorDataCount[i] = 0;
                     }
                 }
 
-                for(UnsignedInt i = 0; i != animationStateCount; ++i) {
-                    if(namedAnimatorDataCount[i]) {
-                        debug << " " << namedAnimatorDataCount[i] << Debug::color(Debug::Color::Cyan) << Debug::packed << AnimationState(i) << Debug::resetColor << "animations from animator" << Debug::packed << animator.handle << Debug::color(Debug::Color::Yellow) << animator.name << Debug::resetColor << Debug::newline;
-                    }
+                /* Print detailed data properties or increment their counter */
+                const UnsignedInt animationStateId = UnsignedInt(animatorInstance->state(animationHandle));
+                CORRADE_INTERNAL_ASSERT(animationStateId < animationStateCount);
+                if(animator->print) {
+                    hasNamedAnimators = true;
+                    animator->print(animator->integration, debug, *animatorInstance, animator->name, animationHandleData(animationHandle));
+                } else if(animator->name) {
+                    hasNamedAnimators = true;
+                    ++namedAnimatorDataCount[animationStateId];
+                } else {
+                    hasOtherAnimationsFromThisAnimator[animationStateId] = true;
+                    ++otherAnimationCount[animationStateId];
+                }
 
-                    if(hasOtherAnimationsFromThisAnimator[i])
-                        ++otherAnimatorCount[i];
+                /* Increment for the next iteration. If animator of the next
+                   animation is different from the current or we're at the end,
+                   print summary for the current one */
+                ++i;
+                if(i == animations.size() || animationHandleAnimator(animations[i]) != animatorHandle) {
+                    for(UnsignedInt i = 0; i != animationStateCount; ++i) {
+                        if(namedAnimatorDataCount[i]) {
+                            debug << " " << namedAnimatorDataCount[i] << Debug::color(Debug::Color::Cyan) << Debug::packed << AnimationState(i) << Debug::resetColor << "animations from animator" << Debug::packed << animator->handle << Debug::color(Debug::Color::Yellow) << animator->name << Debug::resetColor << Debug::newline;
+                        }
+
+                        if(hasOtherAnimationsFromThisAnimator[i])
+                            ++otherAnimatorCount[i];
+                    }
                 }
             }
 
