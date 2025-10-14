@@ -165,13 +165,29 @@ enum class DebugLayerFlag: UnsignedByte {
     /**
      * Highlight and show details of a node on pointer press or after calling
      * @ref DebugLayer::inspectNode() programmatically. Expects that at least
-     * @ref DebugLayerSource::Nodes is enabled. See
+     * @ref DebugLayerSource::Nodes is enabled, subset of
+     * @ref DebugLayerFlag::NodeInspectSkipNoData. See
      * @ref Ui-DebugLayer-node-inspect for more information.
      * @see @ref DebugLayer::setNodeInspectColor(),
      *      @ref DebugLayer::setNodeInspectGesture(),
      *      @ref DebugLayer::setNodeInspectCallback()
      */
     NodeInspect = 1 << 0,
+
+    /**
+     * Like @ref DebugLayerFlag::NodeInspect, but pointer press skips nodes
+     * that have no data attachments, i.e. invisible and not reacting to
+     * events. Has no effect when calling @ref DebugLayer::inspectNode()
+     * programmatically. Expects that @ref DebugLayerSource::NodeData is
+     * enabled, superset of @ref DebugLayerFlag::NodeInspect.
+     *
+     * Useful in case the UI errorneously contains nodes covering large
+     * portions of the screen, making it impossible to inspect nodes
+     * underneath. Note that number of children, layout assignments or
+     * animation attachments has no effect on this, as those don't directly
+     * affect given node visibility and interactivity.
+     */
+    NodeInspectSkipNoData = NodeInspect|(1 << 1),
 
     /**
      * Print all messages without color, even if
@@ -182,7 +198,7 @@ enum class DebugLayerFlag: UnsignedByte {
      * @ref DebugLayerFlag::ColorAlways is specified as well, this flag has a
      * priority.
      */
-    ColorOff = 1 << 1,
+    ColorOff = 1 << 2,
 
     /**
      * Print all messages with color, even if
@@ -191,7 +207,7 @@ enum class DebugLayerFlag: UnsignedByte {
      * @ref DebugLayer::setNodeInspectCallback(). If
      * @ref DebugLayerFlag::ColorOff is specified as well, it has a priority.
      */
-    ColorAlways = 1 << 2,
+    ColorAlways = 1 << 3,
 };
 
 /**
@@ -322,7 +338,9 @@ will remove the highlight.
 With @ref DebugLayerSource::NodeLayouts and
 @relativeref{DebugLayerSource,NodeAnimations} you can list also layouts and
 animations attached to particular nodes. The @ref Ui::Button doesn't have any
-by default.
+by default. Finally, @ref DebugLayerFlag::NodeInspectSkipNoData makes the click
+ignore nodes with no data attachments, which is useful if the UI contains
+invisible nodes that otherwise make it impossible to inspect what's underneath.
 
 @subsection Ui-DebugLayer-node-inspect-naming Naming nodes, layers, layouters and animators
 
@@ -1286,6 +1304,8 @@ class MAGNUM_UI_EXPORT DebugLayer: public AbstractLayer {
         void** setLayerNameDebugIntegration(const AbstractLayer& instance, const Containers::StringView& name, void(*deleter)(void*), void(*print)(void*, Debug&, const AbstractLayer&, const Containers::StringView&, LayerDataHandle));
         void** setLayouterNameDebugIntegration(const AbstractLayouter& instance, const Containers::StringView& name, void(*deleter)(void*), void(*print)(void*, Debug&, const AbstractLayouter&, const Containers::StringView&, LayouterDataHandle));
         void** setAnimatorNameDebugIntegration(const AbstractAnimator& instance, const Containers::StringView& name, void(*deleter)(void*), void(*print)(void*, Debug&, const AbstractAnimator&, const Containers::StringView&, AnimatorDataHandle));
+
+        MAGNUM_UI_LOCAL bool inspectNodeInternal(NodeHandle node, DebugLayerFlags flags);
 
         bool highlightNodesInternal(const AbstractLayer& layer, bool(*condition)(const AbstractLayer&, void(*)(), LayerDataHandle), void(*functor)());
         bool highlightNodesInternal(const AbstractLayouter& layouter, bool(*condition)(const AbstractLayouter&, void(*)(), LayouterDataHandle), void(*functor)());

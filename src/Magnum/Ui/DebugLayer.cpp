@@ -134,6 +134,7 @@ Debug& operator<<(Debug& debug, const DebugLayerFlag value) {
         /* LCOV_EXCL_START */
         #define _c(value) case DebugLayerFlag::value: return debug << "::" #value;
         _c(NodeInspect)
+        _c(NodeInspectSkipNoData)
         _c(ColorOff)
         _c(ColorAlways)
         #undef _c
@@ -145,6 +146,8 @@ Debug& operator<<(Debug& debug, const DebugLayerFlag value) {
 
 Debug& operator<<(Debug& debug, const DebugLayerFlags value) {
     return Containers::enumSetDebugOutput(debug, value, "Ui::DebugLayerFlags{}", {
+        DebugLayerFlag::NodeInspectSkipNoData,
+        /* Implied by NodeInspectSkipNoData, has to be after */
         DebugLayerFlag::NodeInspect,
         DebugLayerFlag::ColorOff,
         DebugLayerFlag::ColorAlways,
@@ -158,8 +161,12 @@ constexpr Color3ub DefaultNodeHighlightColorMap[]{0x00ffff_rgb};
 }
 
 DebugLayer::State::State(const DebugLayerSources sources, const DebugLayerFlags flags): sources{sources}, flags{flags}, nodeHighlightColorMap{DefaultNodeHighlightColorMap} {
+    /* Same checks are in setFlags(), make sure to keep them in sync, including
+       tests */
     CORRADE_ASSERT(!(flags >= DebugLayerFlag::NodeInspect) || sources >= DebugLayerSource::Nodes,
         "Ui::DebugLayer:" << DebugLayerSource::Nodes << "has to be enabled for" << DebugLayerFlag::NodeInspect, );
+    CORRADE_ASSERT(!(flags >= DebugLayerFlag::NodeInspectSkipNoData) || sources >= DebugLayerSource::NodeData,
+        "Ui::DebugLayer:" << DebugLayerSource::NodeData << "has to be enabled for" << DebugLayerFlag::NodeInspectSkipNoData, );
 }
 
 /** @todo could also not allocate any state if no flags are set, to make it
@@ -195,8 +202,12 @@ DebugLayerFlags DebugLayer::flags() const { return _state->flags; }
 
 DebugLayer& DebugLayer::setFlags(const DebugLayerFlags flags) {
     State& state = *_state;
+    /* Same checks are in the State constructor, make sure to keep them in
+       sync, including tests */
     CORRADE_ASSERT(!(flags >= DebugLayerFlag::NodeInspect) || state.sources >= DebugLayerSource::Nodes,
         "Ui::DebugLayer::setFlags():" << DebugLayerSource::Nodes << "has to be enabled for" << DebugLayerFlag::NodeInspect, *this);
+    CORRADE_ASSERT(!(flags >= DebugLayerFlag::NodeInspectSkipNoData) || state.sources >= DebugLayerSource::NodeData,
+        "Ui::DebugLayer::setFlags():" << DebugLayerSource::NodeData << "has to be enabled for" << DebugLayerFlag::NodeInspectSkipNoData, *this);
 
     /* If a node is inspected and NodeInspect was cleared from flags, remove
        the highlight */
@@ -520,6 +531,14 @@ NodeHandle DebugLayer::currentInspectedNode() const {
 }
 
 bool DebugLayer::inspectNode(const NodeHandle handle) {
+    return inspectNodeInternal(handle, {});
+}
+
+/* Is called from doPointerPressEvent() with
+   DebugLayerFlag::NodeInspectSkipEmpty optionally set to allow skipping empty
+   nodes from a UI interaction but not from a programmatic inspectNode()
+   call */
+bool DebugLayer::inspectNodeInternal(const NodeHandle handle, const DebugLayerFlags flags) {
     State& state = *_state;
     CORRADE_ASSERT(state.flags >= DebugLayerFlag::NodeInspect,
         "Ui::DebugLayer::inspectNode():" << DebugLayerFlag::NodeInspect << "not enabled", {});
@@ -531,6 +550,13 @@ bool DebugLayer::inspectNode(const NodeHandle handle) {
        call the callback with an empty string. Return true only for null, false
        indicates unknown node. */
     if(handle == NodeHandle::Null || nodeHandleId(handle) >= state.nodes.size() || state.nodes[nodeHandleId(handle)].handle != handle) {
+        /* This can only happen when called from inspectNode(), not from
+           doPointerPressEvent(), as there update() is called before and the
+           handle is always valid. In other words, that function can assume
+           `false` is returned only if NodeInspectSkipEmpty is set and given
+           node is indeed empty. */
+        CORRADE_INTERNAL_ASSERT(!flags);
+
         if(state.currentInspectedNode != NodeHandle::Null) {
             state.currentInspectedNode = NodeHandle::Null;
             if(state.nodeInspectCallback)
@@ -623,6 +649,20 @@ bool DebugLayer::inspectNode(const NodeHandle handle) {
             if(animatorInstance.isHandleValid(dataHandle) && animatorInstance.node(dataHandle) == handle)
                 arrayAppend(animations, animationHandle(animatorHandle, dataHandle));
         }
+    }
+
+    /* If we're instructed to skip empty nodes and there are no data, layout or
+       animation attachments, exit. This can only happen when called from
+       doPointerPressEvent(), when called from inspectNode() the `flags` are
+       always empty. */
+    /** @todo might eventually be useful to do this also if there are data but
+        none of them are from a visual or event handling layer? */
+    if(flags >= DebugLayerFlag::NodeInspectSkipNoData && data.isEmpty()) {
+        /* The data array is empty also if NodeData isn't enabled, but the
+           constructor and setFlags() should have checked that NodeData is set
+           for NodeInspectSkipNoData to be enabled. */
+        CORRADE_INTERNAL_ASSERT(state.sources >= DebugLayerSource::NodeData);
+        return false;
     }
 
     /* Scope the (optional) output redirection to prevent it from being active
@@ -1512,9 +1552,14 @@ void DebugLayer::doPointerPressEvent(const UnsignedInt dataId, PointerEvent& eve
        highlight */
     const NodeHandle nodeHandle = nodes()[dataId];
     if(state.currentInspectedNode == nodeHandle)
-        inspectNode(NodeHandle::Null);
-    else
-        inspectNode(nodeHandle);
+        inspectNodeInternal(NodeHandle::Null, {});
+
+    /* Otherwise inspect the node. If NodeInspectSkipEmpty is enabled in flags,
+       the function doesn't print anything and returns false if there's no
+       data, layout or animation attached. In that case return without
+       accepting the event so it propagates further. */
+    else if(!inspectNodeInternal(nodeHandle, state.flags & DebugLayerFlag::NodeInspectSkipNoData))
+        return;
 
     /* Accept the event to prevent it from propagating to other nodes, even in
        case we're clicking second time to remove the highlight */

@@ -56,6 +56,7 @@ struct DebugLayerTest: TestSuite::Tester {
         void debugSourceSupersets();
         void debugFlag();
         void debugFlags();
+        void debugFlagsSupersets();
 
         void construct();
         void constructInvalid();
@@ -122,6 +123,7 @@ struct DebugLayerTest: TestSuite::Tester {
         void nodeInspectNodeRemoved();
         void nodeInspectInvalid();
         void nodeInspectToggle();
+        void nodeInspectSkipNoData();
 
         void nodeHighlightSetters();
         /* Tests also currentHighlightedNodes() and clearHighlightedNodes() */
@@ -657,6 +659,30 @@ const struct {
 const struct {
     const char* name;
     DebugLayerSources sources;
+    DebugLayerFlags flags;
+    bool belowData, event;
+    bool expectAbove, expectBelow;
+} NodeInspectSkipNoDataData[]{
+    {"default",
+        DebugLayerSource::NodeLayouts|DebugLayerSource::NodeAnimations,
+        {}, true, true, true, false},
+    {"skip no data to below",
+        DebugLayerSource::NodeLayouts|DebugLayerSource::NodeAnimations,
+        DebugLayerFlag::NodeInspectSkipNoData, true, true, false, true},
+    {"skip no data to nowhere",
+        DebugLayerSource::NodeLayouts|DebugLayerSource::NodeAnimations,
+        DebugLayerFlag::NodeInspectSkipNoData, false, true, false, false},
+    {"skip no data, programmatically",
+        DebugLayerSource::NodeLayouts|DebugLayerSource::NodeAnimations,
+        DebugLayerFlag::NodeInspectSkipNoData, true, false, true, false},
+    {"skip no data, no layouts or animations",
+        {},
+        DebugLayerFlag::NodeInspectSkipNoData, true, true, false, true},
+};
+
+const struct {
+    const char* name;
+    DebugLayerSources sources;
     bool layer, layouter, animator;
     LayerFeatures features;
     LayerStates expectedState;
@@ -743,6 +769,7 @@ DebugLayerTest::DebugLayerTest() {
               &DebugLayerTest::debugSourceSupersets,
               &DebugLayerTest::debugFlag,
               &DebugLayerTest::debugFlags,
+              &DebugLayerTest::debugFlagsSupersets,
 
               &DebugLayerTest::construct,
               &DebugLayerTest::constructInvalid,
@@ -839,6 +866,9 @@ DebugLayerTest::DebugLayerTest() {
 
     addInstancedTests({&DebugLayerTest::nodeInspectToggle},
         Containers::arraySize(NodeInspectToggleData));
+
+    addInstancedTests({&DebugLayerTest::nodeInspectSkipNoData},
+        Containers::arraySize(NodeInspectSkipNoDataData));
 
     addInstancedTests({&DebugLayerTest::nodeHighlightSetters,
                        &DebugLayerTest::nodeHighlight},
@@ -1070,6 +1100,16 @@ void DebugLayerTest::debugFlags() {
     CORRADE_COMPARE(out, "Ui::DebugLayerFlag::NodeInspect|Ui::DebugLayerFlag::ColorAlways|Ui::DebugLayerFlag(0x80) Ui::DebugLayerFlags{}\n");
 }
 
+void DebugLayerTest::debugFlagsSupersets() {
+    /* NodeInspectSkipNoData is a superset of NodeInspect, so only one should
+       be printed */
+    {
+        Containers::String out;
+        Debug{&out} << (DebugLayerFlag::NodeInspect|DebugLayerFlag::NodeInspectSkipNoData);
+        CORRADE_COMPARE(out, "Ui::DebugLayerFlag::NodeInspectSkipNoData\n");
+    }
+}
+
 void DebugLayerTest::construct() {
     DebugLayer layer{layerHandle(137, 0xfe), DebugLayerSource::NodeData|DebugLayerSource::NodeHierarchy, DebugLayerFlag::NodeInspect};
     CORRADE_COMPARE(layer.handle(), layerHandle(137, 0xfe));
@@ -1085,8 +1125,10 @@ void DebugLayerTest::constructInvalid() {
     Containers::String out;
     Error redirectError{&out};
     DebugLayer{layerHandle(0, 1), DebugLayerSource::Layers, DebugLayerFlag::NodeInspect};
+    DebugLayer{layerHandle(0, 1), DebugLayerSource::Nodes|DebugLayerSource::Layers, DebugLayerFlag::NodeInspectSkipNoData};
     CORRADE_COMPARE_AS(out,
-        "Ui::DebugLayer: Ui::DebugLayerSource::Nodes has to be enabled for Ui::DebugLayerFlag::NodeInspect\n",
+        "Ui::DebugLayer: Ui::DebugLayerSource::Nodes has to be enabled for Ui::DebugLayerFlag::NodeInspect\n"
+        "Ui::DebugLayer: Ui::DebugLayerSource::NodeData has to be enabled for Ui::DebugLayerFlag::NodeInspectSkipNoData\n",
         TestSuite::Compare::String);
 }
 
@@ -1137,20 +1179,28 @@ void DebugLayerTest::flags() {
 void DebugLayerTest::flagsInvalid() {
     CORRADE_SKIP_IF_NO_ASSERT();
 
-    DebugLayer layer{layerHandle(0, 1), {}, {}};
+    DebugLayer layerNoNodes{layerHandle(0, 1), {}, {}};
+    DebugLayer layerOnlyNodesLayers{layerHandle(0, 1), DebugLayerSource::Nodes|DebugLayerSource::Layers, {}};
 
-    /* Clearing a NodeInspect flag that wasn't there before is fine even if
-       DebugLayerSource::Nodes isn't present */
-    layer.setFlags({});
-    layer.clearFlags(DebugLayerFlag::NodeInspect);
+    /* Clearing a NodeInspect / NodeInspectSkipNoData flag that wasn't there
+       before is fine even if DebugLayerSource::Nodes / NodeData isn't
+       present */
+    layerNoNodes.setFlags({});
+    layerOnlyNodesLayers.setFlags({});
+    layerNoNodes.clearFlags(DebugLayerFlag::NodeInspect);
+    layerOnlyNodesLayers.clearFlags(DebugLayerFlag::NodeInspectSkipNoData);
 
     Containers::String out;
     Error redirectError{&out};
-    layer.setFlags(DebugLayerFlag::NodeInspect);
-    layer.addFlags(DebugLayerFlag::NodeInspect);
+    layerNoNodes.setFlags(DebugLayerFlag::NodeInspect);
+    layerNoNodes.addFlags(DebugLayerFlag::NodeInspect);
+    layerOnlyNodesLayers.setFlags(DebugLayerFlag::NodeInspectSkipNoData);
+    layerOnlyNodesLayers.addFlags(DebugLayerFlag::NodeInspectSkipNoData);
     CORRADE_COMPARE_AS(out,
         "Ui::DebugLayer::setFlags(): Ui::DebugLayerSource::Nodes has to be enabled for Ui::DebugLayerFlag::NodeInspect\n"
-        "Ui::DebugLayer::setFlags(): Ui::DebugLayerSource::Nodes has to be enabled for Ui::DebugLayerFlag::NodeInspect\n",
+        "Ui::DebugLayer::setFlags(): Ui::DebugLayerSource::Nodes has to be enabled for Ui::DebugLayerFlag::NodeInspect\n"
+        "Ui::DebugLayer::setFlags(): Ui::DebugLayerSource::NodeData has to be enabled for Ui::DebugLayerFlag::NodeInspectSkipNoData\n"
+        "Ui::DebugLayer::setFlags(): Ui::DebugLayerSource::NodeData has to be enabled for Ui::DebugLayerFlag::NodeInspectSkipNoData\n",
         TestSuite::Compare::String);
 }
 
@@ -5266,6 +5316,84 @@ void DebugLayerTest::nodeInspectToggle() {
         CORRADE_COMPARE(out, "");
     }
     CORRADE_COMPARE(layer.state(), LayerState::NeedsCommonDataUpdate|data.expectedState);
+}
+
+void DebugLayerTest::nodeInspectSkipNoData() {
+    auto&& data = NodeInspectSkipNoDataData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
+    AbstractUserInterface ui{{100, 100}};
+
+    DebugLayer& layer = ui.setLayerInstance(Containers::pointer<DebugLayer>(ui.createLayer(), DebugLayerSource::NodeData|data.sources, DebugLayerFlag::NodeInspect|data.flags));
+
+    struct EmptyLayer: AbstractLayer {
+        using AbstractLayer::AbstractLayer;
+        using AbstractLayer::create;
+
+        LayerFeatures doFeatures() const override { return {}; }
+    };
+    struct EmptyLayouter: AbstractLayouter {
+        using AbstractLayouter::AbstractLayouter;
+        using AbstractLayouter::add;
+
+        void doUpdate(Containers::BitArrayView, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const NodeHandle>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Vector2>&) override {}
+    };
+    struct EmptyAnimator: AbstractGenericAnimator {
+        using AbstractGenericAnimator::AbstractGenericAnimator;
+        using AbstractGenericAnimator::create;
+
+        AnimatorFeatures doFeatures() const override {
+            return AnimatorFeature::NodeAttachment;
+        }
+        void doAdvance(Containers::BitArrayView, Containers::BitArrayView, Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&) override {}
+    };
+    EmptyLayer& emptyLayer = ui.setLayerInstance(Containers::pointer<EmptyLayer>(ui.createLayer()));
+    EmptyLayouter& emptyLayouter = ui.setLayouterInstance(Containers::pointer<EmptyLayouter>(ui.createLayouter()));
+    EmptyAnimator& emptyAnimator = ui.setGenericAnimatorInstance(Containers::pointer<EmptyAnimator>(ui.createAnimator()));
+
+    /* A node below, optionally with a single data attached */
+    NodeHandle below = ui.createNode({}, {100, 100});
+    if(data.belowData)
+        emptyLayer.create(below);
+
+    /* A node above, with children, layout and animation, none of which should
+       affect the condition to skip it */
+    NodeHandle above = ui.createNode({}, {100, 100});
+    /*NodeHandle aboveChild =*/ ui.createNode(above, {80, 80}, {10, 10});
+    emptyLayouter.add(above);
+    emptyAnimator.create({}, {}, above);
+
+    /* Update to trigger DebugLayer population */
+    ui.update();
+
+    Containers::String out;
+    {
+        Debug redirectOutput{&out};
+        if(data.event) {
+            PointerEvent press{{}, PointerEventSource::Mouse, Pointer::MouseRight, true, 0, Modifier::Ctrl};
+            CORRADE_COMPARE(ui.pointerPressEvent({45, 35}, press), data.expectAbove || data.expectBelow);
+        } else {
+            CORRADE_COMPARE(layer.inspectNode(above), data.expectAbove);
+        }
+    }
+
+    if(data.expectAbove) {
+        CORRADE_COMPARE(layer.currentInspectedNode(), above);
+        CORRADE_COMPARE_AS(out,
+            "Top-level node {0x1, 0x1}\n"
+            "  1 layouts from 1 layouters\n"
+            "  1 Stopped animations from 1 animators\n",
+            TestSuite::Compare::String);
+    } else if(data.expectBelow) {
+        CORRADE_COMPARE(layer.currentInspectedNode(), below);
+        CORRADE_COMPARE_AS(out,
+            "Top-level node {0x0, 0x1}\n"
+            "  1 data from 1 layers\n",
+            TestSuite::Compare::String);
+    } else {
+        CORRADE_COMPARE(layer.currentInspectedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(out, "");
+    }
 }
 
 void DebugLayerTest::nodeHighlightSetters() {
