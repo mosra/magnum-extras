@@ -41,6 +41,12 @@ namespace Magnum {
     removed. This is a conservative change, as there are no known supported
     distributions which would have anything older than 3.5.
 
+@subsection changelog-extras-latest-new New features
+
+-   The @ref Ui library has been reworked completely from scratch. It now
+    supports flexible styling, animations, custom rendering, custom layouter
+    implementation and many other features.
+
 @subsection changelog-extras-latest-changes Changes and improvements
 
 -   @ref magnum-player "magnum-player" now makes use of the
