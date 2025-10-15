@@ -28,7 +28,7 @@
 
 /** @file
  * @brief Class @ref Magnum::Ui::LineLayer, struct @ref Magnum::Ui::LineLayerCommonStyleUniform, @ref Magnum::Ui::LineLayerStyleUniform, enum @ref Magnum::Ui::LineCapStyle, @ref Magnum::Ui::LineJoinStyle, @ref Magnum::Ui::LineAlignment
- * @m_since_latest
+ * @m_since_latest_{extras}
  */
 
 #include <initializer_list>
@@ -40,7 +40,7 @@ namespace Magnum { namespace Ui {
 
 /**
 @brief Properties common to all @ref LineLayer style uniforms
-@m_since_latest
+@m_since_latest_{extras}
 
 See the @ref LineLayer class documentation for information about setting up an
 instance of the line layer and using it.
@@ -111,7 +111,7 @@ struct LineLayerCommonStyleUniform {
 
 /**
 @brief @ref LineLayer style uniform
-@m_since_latest
+@m_since_latest_{extras}
 
 See the @ref LineLayer class documentation for information about setting up an
 instance of the line layer and using it.
@@ -270,7 +270,7 @@ struct MAGNUM_UI_EXPORT LineLayerStyleUniform {
 
 /**
 @brief Line cap style
-@m_since_latest
+@m_since_latest_{extras}
 
 @see @ref LineLayer::Shared::capStyle(),
     @ref LineLayer::Shared::Configuration::setCapStyle(), @ref LineJoinStyle
@@ -317,13 +317,13 @@ enum class LineCapStyle: UnsignedByte {
 
 /**
 @debugoperatorenum{LineCapStyle}
-@m_since_latest
+@m_since_latest_{extras}
 */
 MAGNUM_UI_EXPORT Debug& operator<<(Debug& debug, LineCapStyle value);
 
 /**
 @brief Line join style
-@m_since_latest
+@m_since_latest_{extras}
 
 @see @ref LineLayer::Shared::joinStyle(),
     @ref LineLayer::Shared::Configuration::setJoinStyle(), @ref LineCapStyle
@@ -361,7 +361,7 @@ enum class LineJoinStyle: UnsignedByte {
 
 /**
 @debugoperatorenum{LineJoinStyle}
-@m_since_latest
+@m_since_latest_{extras}
 */
 MAGNUM_UI_EXPORT Debug& operator<<(Debug& debug, LineJoinStyle value);
 
@@ -384,7 +384,7 @@ namespace Implementation {
 
 /**
 @brief Line alignment
-@m_since_latest
+@m_since_latest_{extras}
 
 @see @ref LineLayer::setAlignment()
 */
@@ -446,13 +446,13 @@ enum class LineAlignment: UnsignedByte {
 
 /**
 @debugoperatorenum{LineAlignment}
-@m_since_latest
+@m_since_latest_{extras}
 */
 MAGNUM_UI_EXPORT Debug& operator<<(Debug& debug, LineAlignment value);
 
 /**
 @brief Line layer
-@m_since_latest
+@m_since_latest_{extras}
 
 Draws smooth wide lines with configurable caps and joins and per-point colors.
 Based on the same internal implementation as @ref Shaders::LineGL.

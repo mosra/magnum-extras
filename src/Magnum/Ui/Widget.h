@@ -28,7 +28,7 @@
 
 /** @file
  * @brief Class @ref Magnum::Ui::AbstractWidget, @ref Magnum::Ui::BasicWidget, typedef @ref Magnum::Ui::Widget
- * @m_since_latest
+ * @m_since_latest_{extras}
  */
 
 #include <Corrade/Containers/Reference.h>
@@ -42,7 +42,7 @@ namespace Magnum { namespace Ui {
 
 /**
 @brief Abstract base for stateful widgets
-@m_since_latest
+@m_since_latest_{extras}
 
 A move-only owning wrapper over a @ref NodeHandle. The @ref BasicWidget
 template and the @ref Widget typedef then restrict the type to a concrete user
@@ -203,7 +203,7 @@ class MAGNUM_UI_EXPORT AbstractWidget {
 
 /**
 @brief Templated abstract base for stateful widgets
-@m_since_latest
+@m_since_latest_{extras}
 
 Restricts @ref AbstractWidget to a concrete user interface instance. See the
 base class documentation for more information.
@@ -251,7 +251,7 @@ template<class UserInterface> class BasicWidget: public AbstractWidget {
 
 /**
 @brief Base for stateful widgets for use with @ref UserInterface
-@m_since_latest
+@m_since_latest_{extras}
 
 See the @ref AbstractWidget class documentation for more information.
 */

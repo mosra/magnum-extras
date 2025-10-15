@@ -28,7 +28,7 @@
 
 /** @file
  * @brief Class @ref Magnum::Ui::AbstractVisualLayerStyleAnimator
- * @m_since_latest
+ * @m_since_latest_{extras}
  */
 
 #include <Corrade/Containers/Pair.h> /* for styles<T>() */
@@ -39,7 +39,7 @@ namespace Magnum { namespace Ui {
 
 /**
 @brief Base for @ref AbstractVisualLayer style animators
-@m_since_latest
+@m_since_latest_{extras}
 
 Provides common code for visual layer style animators like
 @ref BaseLayerStyleAnimator or @ref TextLayerStyleAnimator.

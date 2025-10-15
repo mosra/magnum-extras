@@ -28,7 +28,7 @@
 
 /** @file
  * @brief Class @ref Magnum::Ui::LineLayerGL
- * @m_since_latest
+ * @m_since_latest_{extras}
  */
 
 #include "Magnum/configure.h"
@@ -42,7 +42,7 @@ namespace Magnum { namespace Ui {
 
 /**
 @brief OpenGL implementation of the line layer
-@m_since_latest
+@m_since_latest_{extras}
 
 See the @ref LineLayer base class documentation for information about setting
 up an instance of this layer and using it. The base class contains the whole

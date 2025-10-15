@@ -28,7 +28,7 @@
 
 /** @file
  * @brief Class @ref Magnum::Ui::BaseLayer, struct @ref Magnum::Ui::BaseLayerCommonStyleUniform, @ref Magnum::Ui::BaseLayerStyleUniform, enum @ref Magnum::Ui::BaseLayerSharedFlag, enum set @ref Magnum::Ui::BaseLayerSharedFlags
- * @m_since_latest
+ * @m_since_latest_{extras}
  */
 
 #include <initializer_list>
@@ -40,7 +40,7 @@ namespace Magnum { namespace Ui {
 
 /**
 @brief Properties common to all @ref BaseLayer style uniforms
-@m_since_latest
+@m_since_latest_{extras}
 
 See the @ref BaseLayer class documentation for information about setting up an
 instance of the base layer and using it.
@@ -179,7 +179,7 @@ struct BaseLayerCommonStyleUniform {
 
 /**
 @brief @ref BaseLayer style uniform
-@m_since_latest
+@m_since_latest_{extras}
 
 See the @ref BaseLayer class documentation for information about setting up an
 instance of the base layer and using it.
@@ -443,7 +443,7 @@ struct BaseLayerStyleUniform {
 
 /**
 @brief Base layer
-@m_since_latest
+@m_since_latest_{extras}
 
 Draws quads with a color gradient, variable rounded corners and outline,
 optionally with texturing and background blur.
@@ -1375,7 +1375,7 @@ class MAGNUM_UI_EXPORT BaseLayer: public AbstractVisualLayer {
 
 /**
 @brief Base layer shared state flag
-@m_since_latest
+@m_since_latest_{extras}
 
 @see @ref BaseLayerSharedFlags,
     @ref BaseLayer::Shared::Configuration::setFlags(),
@@ -1512,7 +1512,7 @@ enum class BaseLayerSharedFlag: UnsignedByte {
 
 /**
 @brief Base layer shared state flag
-@m_since_latest
+@m_since_latest_{extras}
 
 @see @ref BaseLayer::Shared::Configuration::setFlags(),
     @ref BaseLayer::Shared::flags()
@@ -1523,13 +1523,13 @@ CORRADE_ENUMSET_OPERATORS(BaseLayerSharedFlags)
 
 /**
 @debugoperatorenum{BaseLayerSharedFlag}
-@m_since_latest
+@m_since_latest_{extras}
 */
 MAGNUM_UI_EXPORT Debug& operator<<(Debug& debug, BaseLayerSharedFlag value);
 
 /**
 @debugoperatorenum{BaseLayerSharedFlags}
-@m_since_latest
+@m_since_latest_{extras}
 */
 MAGNUM_UI_EXPORT Debug& operator<<(Debug& debug, BaseLayerSharedFlags value);
 

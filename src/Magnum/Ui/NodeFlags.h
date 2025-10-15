@@ -28,7 +28,7 @@
 
 /** @file
  * @brief Enum @ref Magnum::Ui::NodeFlag, enum set @ref Magnum::Ui::NodeFlags
- * @m_since_latest
+ * @m_since_latest_{extras}
  */
 
 #include <Corrade/Containers/EnumSet.h>
@@ -40,7 +40,7 @@ namespace Magnum { namespace Ui {
 
 /**
 @brief Node behavior flag
-@m_since_latest
+@m_since_latest_{extras}
 
 @see @ref NodeFlags, @ref Ui-AbstractUserInterface-nodes-flags,
     @ref AbstractUserInterface::createNode(),
@@ -158,13 +158,13 @@ enum class NodeFlag: UnsignedByte {
 
 /**
 @debugoperatorenum{NodeFlag}
-@m_since_latest
+@m_since_latest_{extras}
 */
 MAGNUM_UI_EXPORT Debug& operator<<(Debug& debug, NodeFlag value);
 
 /**
 @brief Node behavior flags
-@m_since_latest
+@m_since_latest_{extras}
 
 @see @ref AbstractUserInterface::createNode()
 */
@@ -172,7 +172,7 @@ typedef Containers::EnumSet<NodeFlag> NodeFlags;
 
 /**
 @debugoperatorenum{NodeFlags}
-@m_since_latest
+@m_since_latest_{extras}
 */
 MAGNUM_UI_EXPORT Debug& operator<<(Debug& debug, NodeFlags value);
 

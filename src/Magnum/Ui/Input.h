@@ -28,7 +28,7 @@
 
 /** @file
  * @brief Class @ref Magnum::Ui::Input, enum @ref Magnum::Ui::InputStyle
- * @m_since_latest
+ * @m_since_latest_{extras}
  */
 
 #include "Magnum/Ui/Widget.h"
@@ -37,7 +37,7 @@ namespace Magnum { namespace Ui {
 
 /**
 @brief Input style
-@m_since_latest
+@m_since_latest_{extras}
 
 @see @ref Input
 */
@@ -51,13 +51,13 @@ enum class InputStyle: UnsignedByte {
 
 /**
 @debugoperatorenum{InputStyle}
-@m_since_latest
+@m_since_latest_{extras}
 */
 MAGNUM_UI_EXPORT Debug& operator<<(Debug& debug, InputStyle value);
 
 /**
 @brief Input widget
-@m_since_latest
+@m_since_latest_{extras}
 */
 class MAGNUM_UI_EXPORT Input: public Widget {
     public:

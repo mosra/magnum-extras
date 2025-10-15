@@ -28,7 +28,7 @@
 
 /** @file
  * @brief Class @ref Magnum::Ui::AbstractRenderer, enum @ref Magnum::Ui::RendererFeature, @ref Magnum::Ui::RendererTargetState, @ref Magnum::Ui::RendererDrawState, enum set @ref Magnum::Ui::RendererFeatures, @ref Magnum::Ui::RendererDrawStates
- * @m_since_latest
+ * @m_since_latest_{extras}
  */
 
 #include <Corrade/Containers/EnumSet.h>
@@ -41,7 +41,7 @@ namespace Magnum { namespace Ui {
 
 /**
 @brief Renderer feature
-@m_since_latest
+@m_since_latest_{extras}
 
 @see @ref RendererFeatures, @ref AbstractRenderer::features()
 */
@@ -59,13 +59,13 @@ enum class RendererFeature {
 
 /**
 @debugoperatorenum{RendererFeature}
-@m_since_latest
+@m_since_latest_{extras}
 */
 MAGNUM_UI_EXPORT Debug& operator<<(Debug& debug, RendererFeature value);
 
 /**
 @brief Renderer features
-@m_since_latest
+@m_since_latest_{extras}
 
 @see @ref AbstractRenderer::features()
 */
@@ -73,7 +73,7 @@ typedef Containers::EnumSet<RendererFeature> RendererFeatures;
 
 /**
 @debugoperatorenum{RendererFeatures}
-@m_since_latest
+@m_since_latest_{extras}
 */
 MAGNUM_UI_EXPORT Debug& operator<<(Debug& debug, RendererFeatures value);
 
@@ -81,7 +81,7 @@ CORRADE_ENUMSET_OPERATORS(RendererFeatures)
 
 /**
 @brief Renderer target state
-@m_since_latest
+@m_since_latest_{extras}
 
 @see @ref AbstractRenderer::currentTargetState(),
     @ref AbstractRenderer::transition(), @ref RendererDrawState
@@ -154,13 +154,13 @@ enum class RendererTargetState {
 
 /**
 @debugoperatorenum{RendererTargetState}
-@m_since_latest
+@m_since_latest_{extras}
 */
 MAGNUM_UI_EXPORT Debug& operator<<(Debug& debug, RendererTargetState value);
 
 /**
 @brief Renderer draw state
-@m_since_latest
+@m_since_latest_{extras}
 
 @see @ref RendererDrawStates, @ref AbstractRenderer::currentDrawStates(),
     @ref AbstractRenderer::transition()
@@ -183,13 +183,13 @@ enum class RendererDrawState {
 
 /**
 @debugoperatorenum{RendererDrawState}
-@m_since_latest
+@m_since_latest_{extras}
 */
 MAGNUM_UI_EXPORT Debug& operator<<(Debug& debug, RendererDrawState value);
 
 /**
 @brief Renderer draw states
-@m_since_latest
+@m_since_latest_{extras}
 
 @see @ref AbstractRenderer::currentDrawStates(),
     @ref AbstractRenderer::transition()
@@ -198,7 +198,7 @@ typedef Containers::EnumSet<RendererDrawState> RendererDrawStates;
 
 /**
 @debugoperatorenum{RendererDrawStates}
-@m_since_latest
+@m_since_latest_{extras}
 */
 MAGNUM_UI_EXPORT Debug& operator<<(Debug& debug, RendererDrawStates value);
 
@@ -206,7 +206,7 @@ CORRADE_ENUMSET_OPERATORS(RendererDrawStates)
 
 /**
 @brief Base for renderer implementations
-@m_since_latest
+@m_since_latest_{extras}
 
 A renderer implementation handles GPU-API-specific framebuffer switching,
 clearing and draw state setup. You'll most likely instantiate the class through

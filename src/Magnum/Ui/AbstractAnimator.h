@@ -28,7 +28,7 @@
 
 /** @file
  * @brief Class @ref Magnum::Ui::AbstractAnimator, @ref Magnum::Ui::AbstractGenericAnimator, @ref Magnum::Ui::AbstractNodeAnimator, @ref Magnum::Ui::AbstractDataAnimator, @ref Magnum::Ui::AbstractStyleAnimator, enum @ref Magnum::Ui::AnimatorFeature, @ref Magnum::Ui::AnimatorState, @ref Magnum::Ui::AnimationFlag, @ref Magnum::Ui::AnimationState, @ref Magnum::Ui::NodeAnimatorUpdate, enum set @ref Magnum::Ui::AnimatorFeatures, @ref Magnum::Ui::AnimatorStates, @ref Magnum::Ui::AnimationFlags, @ref Magnum::Ui::NodeAnimatorUpdates
- * @m_since_latest
+ * @m_since_latest_{extras}
  */
 
 #include <Corrade/Containers/Pointer.h>
@@ -40,7 +40,7 @@ namespace Magnum { namespace Ui {
 
 /**
 @brief Features supported by an animator
-@m_since_latest
+@m_since_latest_{extras}
 
 @see @ref AnimatorFeatures, @ref AbstractAnimator::features()
 */
@@ -72,13 +72,13 @@ enum class AnimatorFeature: UnsignedByte {
 
 /**
 @debugoperatorenum{AnimatorFeature}
-@m_since_latest
+@m_since_latest_{extras}
 */
 MAGNUM_UI_EXPORT Debug& operator<<(Debug& debug, AnimatorFeature value);
 
 /**
 @brief Set of features supported by an animator
-@m_since_latest
+@m_since_latest_{extras}
 
 @see @ref AbstractAnimator::features()
 */
@@ -86,7 +86,7 @@ typedef Containers::EnumSet<AnimatorFeature> AnimatorFeatures;
 
 /**
 @debugoperatorenum{AnimatorFeatures}
-@m_since_latest
+@m_since_latest_{extras}
 */
 MAGNUM_UI_EXPORT Debug& operator<<(Debug& debug, AnimatorFeatures value);
 
@@ -94,7 +94,7 @@ CORRADE_ENUMSET_OPERATORS(AnimatorFeatures)
 
 /**
 @brief Animator state
-@m_since_latest
+@m_since_latest_{extras}
 
 Used to decide whether @ref AbstractGenericAnimator::advance(),
 @ref AbstractNodeAnimator::advance(), @ref BaseLayerStyleAnimator::advance() or
@@ -126,13 +126,13 @@ enum class AnimatorState: UnsignedByte {
 
 /**
 @debugoperatorenum{AnimatorState}
-@m_since_latest
+@m_since_latest_{extras}
 */
 MAGNUM_UI_EXPORT Debug& operator<<(Debug& debug, AnimatorState value);
 
 /**
 @brief Animator states
-@m_since_latest
+@m_since_latest_{extras}
 
 @see @ref AbstractAnimator::state() const
 */
@@ -140,7 +140,7 @@ typedef Containers::EnumSet<AnimatorState> AnimatorStates;
 
 /**
 @debugoperatorenum{AnimatorStates}
-@m_since_latest
+@m_since_latest_{extras}
 */
 MAGNUM_UI_EXPORT Debug& operator<<(Debug& debug, AnimatorStates value);
 
@@ -148,7 +148,7 @@ CORRADE_ENUMSET_OPERATORS(AnimatorStates)
 
 /**
 @brief Animation flag
-@m_since_latest
+@m_since_latest_{extras}
 
 @see @ref AnimationFlags, @ref AbstractAnimator::create(),
     @ref AbstractAnimator::flags(AnimationHandle) const,
@@ -220,13 +220,13 @@ enum class AnimationFlag: UnsignedByte {
 
 /**
 @debugoperatorenum{AnimationFlag}
-@m_since_latest
+@m_since_latest_{extras}
 */
 MAGNUM_UI_EXPORT Debug& operator<<(Debug& debug, AnimationFlag value);
 
 /**
 @brief Animation flags
-@m_since_latest
+@m_since_latest_{extras}
 
 @see @ref AbstractAnimator::create(),
     @ref AbstractAnimator::flags(AnimationHandle) const,
@@ -238,7 +238,7 @@ typedef Containers::EnumSet<AnimationFlag> AnimationFlags;
 
 /**
 @debugoperatorenum{AnimationFlags}
-@m_since_latest
+@m_since_latest_{extras}
 */
 MAGNUM_UI_EXPORT Debug& operator<<(Debug& debug, AnimationFlags value);
 
@@ -246,7 +246,7 @@ CORRADE_ENUMSET_OPERATORS(AnimationFlags)
 
 /**
 @brief Animation state
-@m_since_latest
+@m_since_latest_{extras}
 
 @see @ref AbstractAnimator::state(), @ref AbstractAnimator::isScheduled(),
     @ref AbstractAnimator::isPlaying(), @ref AbstractAnimator::isPaused(),
@@ -327,13 +327,13 @@ enum class AnimationState: UnsignedByte {
 
 /**
 @debugoperatorenum{AnimationState}
-@m_since_latest
+@m_since_latest_{extras}
 */
 MAGNUM_UI_EXPORT Debug& operator<<(Debug& debug, AnimationState value);
 
 /**
 @brief Base for animators
-@m_since_latest
+@m_since_latest_{extras}
 */
 class MAGNUM_UI_EXPORT AbstractAnimator {
     public:
@@ -1711,7 +1711,7 @@ class AbstractAnimator::DebugIntegration {
 
 /**
 @brief Base for generic animators
-@m_since_latest
+@m_since_latest_{extras}
 
 @see @ref AbstractUserInterface::setGenericAnimatorInstance()
 */
@@ -1811,7 +1811,7 @@ class MAGNUM_UI_EXPORT AbstractGenericAnimator: public AbstractAnimator {
 
 /**
 @brief Node properties updated by a node animator
-@m_since_latest
+@m_since_latest_{extras}
 
 Depending on which of these are returned from
 @ref AbstractNodeAnimator::advance(), causes various @ref UserInterfaceState
@@ -1875,13 +1875,13 @@ enum class NodeAnimatorUpdate: UnsignedByte {
 
 /**
 @debugoperatorenum{NodeAnimatorUpdate}
-@m_since_latest
+@m_since_latest_{extras}
 */
 MAGNUM_UI_EXPORT Debug& operator<<(Debug& debug, NodeAnimatorUpdate value);
 
 /**
 @brief Set of node properties updated by a node animator
-@m_since_latest
+@m_since_latest_{extras}
 
 @see @ref AbstractNodeAnimator::advance()
 */
@@ -1889,7 +1889,7 @@ typedef Containers::EnumSet<NodeAnimatorUpdate> NodeAnimatorUpdates;
 
 /**
 @debugoperatorenum{NodeAnimatorUpdates}
-@m_since_latest
+@m_since_latest_{extras}
 */
 MAGNUM_UI_EXPORT Debug& operator<<(Debug& debug, NodeAnimatorUpdates value);
 
@@ -1897,7 +1897,7 @@ CORRADE_ENUMSET_OPERATORS(NodeAnimatorUpdates)
 
 /**
 @brief Base for node animators
-@m_since_latest
+@m_since_latest_{extras}
 
 @see @ref AbstractUserInterface::setNodeAnimatorInstance()
 */
@@ -2019,7 +2019,7 @@ class MAGNUM_UI_EXPORT AbstractNodeAnimator: public AbstractAnimator {
 
 /**
 @brief Base for data animators
-@m_since_latest
+@m_since_latest_{extras}
 
 @see @ref AbstractUserInterface::setDataAnimatorInstance(),
     @ref AbstractLayer::assignAnimator(AbstractDataAnimator&) const,
@@ -2061,7 +2061,7 @@ class MAGNUM_UI_EXPORT AbstractDataAnimator: public AbstractAnimator {
 
 /**
 @brief Base for style animators
-@m_since_latest
+@m_since_latest_{extras}
 
 @see @ref AbstractUserInterface::setStyleAnimatorInstance(),
     @ref AbstractLayer::assignAnimator(AbstractStyleAnimator&) const,

@@ -28,7 +28,7 @@
 
 /** @file
  * @brief Class @ref Magnum::Ui::EventLayer, @ref Magnum::Ui::EventConnection
- * @m_since_latest
+ * @m_since_latest_{extras}
  */
 
 #include <Corrade/Containers/Reference.h>
@@ -39,7 +39,7 @@ namespace Magnum { namespace Ui {
 
 /**
 @brief Connection in the @ref EventLayer
-@m_since_latest
+@m_since_latest_{extras}
 
 Performs automatic removal of a connection on destruction. Each instance with
 non-null @ref data() counts towards @ref EventLayer::usedScopedConnectionCount().
@@ -119,7 +119,7 @@ namespace Implementation {
 
 /**
 @brief Event handling layer
-@m_since_latest
+@m_since_latest_{extras}
 
 Provides signal/slot-like functionality, connecting events happening on nodes
 with arbitrary functions handling them.

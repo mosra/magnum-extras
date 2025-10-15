@@ -28,7 +28,7 @@
 
 /** @file
  * @brief Class @ref Magnum::Ui::PointerEvent, @ref Magnum::Ui::PointerMoveEvent, @ref Magnum::Ui::PointerCancelEvent, @ref Magnum::Ui::ScrollEvent, @ref Magnum::Ui::FocusEvent, @ref Magnum::Ui::KeyEvent, @ref Magnum::Ui::TextInputEvent, @ref Magnum::Ui::VisibilityLostEvent, enum @ref Magnum::Ui::Pointer, @ref Magnum::Ui::Key, @ref Magnum::Ui::Modifier, enum set @ref Magnum::Ui::Pointers, @ref Magnum::Ui::Modifiers
- * @m_since_latest
+ * @m_since_latest_{extras}
  */
 
 #include <Corrade/Containers/StringView.h>
@@ -42,7 +42,7 @@ namespace Magnum { namespace Ui {
 
 /**
 @brief Pointer event source
-@m_since_latest
+@m_since_latest_{extras}
 
 @see @ref Pointer, @ref PointerEvent, @ref PointerMoveEvent
 */
@@ -71,13 +71,13 @@ enum class PointerEventSource: UnsignedByte {
 
 /**
 @debugoperatorenum{PointerEventSource}
-@m_since_latest
+@m_since_latest_{extras}
 */
 MAGNUM_UI_EXPORT Debug& operator<<(Debug& debug, PointerEventSource value);
 
 /**
 @brief Pointer type
-@m_since_latest
+@m_since_latest_{extras}
 
 @see @ref PointerEvent, @ref PointerMoveEvent
 */
@@ -95,13 +95,13 @@ enum class Pointer: UnsignedByte {
 
 /**
 @debugoperatorenum{Pointer}
-@m_since_latest
+@m_since_latest_{extras}
 */
 MAGNUM_UI_EXPORT Debug& operator<<(Debug& debug, Pointer value);
 
 /**
 @brief Pointer types
-@m_since_latest
+@m_since_latest_{extras}
 
 @see @ref PointerMoveEvent
 */
@@ -109,7 +109,7 @@ typedef Containers::EnumSet<Pointer> Pointers;
 
 /**
 @debugoperatorenum{Pointers}
-@m_since_latest
+@m_since_latest_{extras}
 */
 MAGNUM_UI_EXPORT Debug& operator<<(Debug& debug, Pointers value);
 
@@ -117,7 +117,7 @@ CORRADE_ENUMSET_OPERATORS(Pointers)
 
 /**
 @brief Pointer press or release event
-@m_since_latest
+@m_since_latest_{extras}
 
 @see @ref AbstractUserInterface::pointerPressEvent(),
     @ref AbstractUserInterface::pointerReleaseEvent(),
@@ -375,7 +375,7 @@ class MAGNUM_UI_EXPORT PointerEvent {
 
 /**
 @brief Pointer move event
-@m_since_latest
+@m_since_latest_{extras}
 
 @see @ref AbstractUserInterface::pointerMoveEvent(),
     @ref AbstractLayer::pointerMoveEvent(),
@@ -657,7 +657,7 @@ class MAGNUM_UI_EXPORT PointerMoveEvent {
 
 /**
 @brief Pointer cancel event
-@m_since_latest
+@m_since_latest_{extras}
 
 @see @ref AbstractUserInterface::pointerPressEvent(),
     @ref AbstractUserInterface::pointerReleaseEvent(),
@@ -686,7 +686,7 @@ class PointerCancelEvent {
 
 /**
 @brief Scroll event
-@m_since_latest
+@m_since_latest_{extras}
 
 @see @ref AbstractUserInterface::scrollEvent(),
     @ref AbstractLayer::scrollEvent()
@@ -827,7 +827,7 @@ class ScrollEvent {
 
 /**
 @brief Focus or blur event
-@m_since_latest
+@m_since_latest_{extras}
 
 @see @ref AbstractUserInterface::pointerPressEvent(),
     @ref AbstractUserInterface::focusEvent(), @ref AbstractLayer::focusEvent(),
@@ -899,7 +899,7 @@ class FocusEvent {
 
 /**
 @brief Keyboard key
-@m_since_latest
+@m_since_latest_{extras}
 
 @see @ref KeyEvent
 */
@@ -1111,13 +1111,13 @@ enum class Key: UnsignedShort {
 
 /**
 @debugoperatorenum{Key}
-@m_since_latest
+@m_since_latest_{extras}
 */
 MAGNUM_UI_EXPORT Debug& operator<<(Debug& debug, Key value);
 
 /**
 @brief Keyboard modifier
-@m_since_latest
+@m_since_latest_{extras}
 
 @see @ref Modifiers, @ref KeyEvent, @ref Key
 */
@@ -1153,13 +1153,13 @@ enum class Modifier: UnsignedByte {
 
 /**
 @debugoperatorenum{Modifier}
-@m_since_latest
+@m_since_latest_{extras}
 */
 MAGNUM_UI_EXPORT Debug& operator<<(Debug& debug, Modifier value);
 
 /**
 @brief Set of keyboard modifiers
-@m_since_latest
+@m_since_latest_{extras}
 
 @see @ref KeyEvent
 */
@@ -1167,7 +1167,7 @@ typedef Containers::EnumSet<Modifier> Modifiers;
 
 /**
 @debugoperatorenum{Modifiers}
-@m_since_latest
+@m_since_latest_{extras}
 */
 MAGNUM_UI_EXPORT Debug& operator<<(Debug& debug, Modifiers value);
 
@@ -1175,7 +1175,7 @@ CORRADE_ENUMSET_OPERATORS(Modifiers)
 
 /**
 @brief Key press or release event
-@m_since_latest
+@m_since_latest_{extras}
 
 @see @ref AbstractUserInterface::keyPressEvent(),
     @ref AbstractUserInterface::keyReleaseEvent(),
@@ -1320,7 +1320,7 @@ class MAGNUM_UI_EXPORT KeyEvent {
 
 /**
 @brief Text input event
-@m_since_latest
+@m_since_latest_{extras}
 
 @see @ref AbstractUserInterface::textInputEvent(),
     @ref AbstractLayer::textInputEvent(), @ref KeyEvent, @ref FocusEvent
@@ -1371,7 +1371,7 @@ class TextInputEvent {
 
 /**
 @brief Visibility lost event
-@m_since_latest
+@m_since_latest_{extras}
 
 Unlike all other events, this event is fired from
 @ref AbstractUserInterface::update() and is without any relation to events

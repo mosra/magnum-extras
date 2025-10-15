@@ -28,7 +28,7 @@
 
 /** @file
  * @brief Class @ref Magnum::Ui::AbstractLayouter, enum @ref Magnum::Ui::LayouterState, enum set @ref Magnum::Ui::LayouterStates
- * @m_since_latest
+ * @m_since_latest_{extras}
  */
 
 #include <Corrade/Containers/Pointer.h>
@@ -41,7 +41,7 @@ namespace Magnum { namespace Ui {
 
 /**
 @brief Layouter state
-@m_since_latest
+@m_since_latest_{extras}
 
 Used to decide whether @ref AbstractLayouter::update() (called from
 @ref AbstractUserInterface::update()) need to be called to relayout the nodes
@@ -80,13 +80,13 @@ enum class LayouterState: UnsignedByte {
 
 /**
 @debugoperatorenum{LayouterState}
-@m_since_latest
+@m_since_latest_{extras}
 */
 MAGNUM_UI_EXPORT Debug& operator<<(Debug& debug, LayouterState value);
 
 /**
 @brief Layouter states
-@m_since_latest
+@m_since_latest_{extras}
 
 @see @ref AbstractLayouter::state()
 */
@@ -94,7 +94,7 @@ typedef Containers::EnumSet<LayouterState> LayouterStates;
 
 /**
 @debugoperatorenum{LayouterStates}
-@m_since_latest
+@m_since_latest_{extras}
 */
 MAGNUM_UI_EXPORT Debug& operator<<(Debug& debug, LayouterStates value);
 
@@ -102,7 +102,7 @@ CORRADE_ENUMSET_OPERATORS(LayouterStates)
 
 /**
 @brief Base for layouters
-@m_since_latest
+@m_since_latest_{extras}
 */
 class MAGNUM_UI_EXPORT AbstractLayouter {
     public:

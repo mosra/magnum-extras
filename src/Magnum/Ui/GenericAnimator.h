@@ -28,7 +28,7 @@
 
 /** @file
  * @brief Class @ref Magnum::Ui::GenericAnimator, @ref Magnum::Ui::GenericNodeAnimator, @ref Magnum::Ui::GenericDataAnimator, enum @ref Magnum::Ui::GenericAnimationState, enum set @ref Magnum::Ui::GenericAnimationStates
- * @m_since_latest
+ * @m_since_latest_{extras}
  */
 
 #include "Magnum/Ui/AbstractAnimator.h"
@@ -37,7 +37,7 @@ namespace Magnum { namespace Ui {
 
 /**
 @brief Generic animation state
-@m_since_latest
+@m_since_latest_{extras}
 
 @see @ref GenericAnimationStates, @ref GenericAnimator::create(),
     @ref GenericNodeAnimator::create(), @ref GenericDataAnimator::create()
@@ -108,13 +108,13 @@ enum class GenericAnimationState: UnsignedByte {
 
 /**
 @debugoperatorenum{GenericAnimationState}
-@m_since_latest
+@m_since_latest_{extras}
 */
 MAGNUM_UI_EXPORT Debug& operator<<(Debug& debug, GenericAnimationState value);
 
 /**
 @brief Generic animation states
-@m_since_latest
+@m_since_latest_{extras}
 
 @see @ref GenericAnimator::create(), @ref GenericNodeAnimator::create(),
     @ref GenericDataAnimator::create()
@@ -125,13 +125,13 @@ CORRADE_ENUMSET_OPERATORS(GenericAnimationStates)
 
 /**
 @debugoperatorenum{GenericAnimationStates}
-@m_since_latest
+@m_since_latest_{extras}
 */
 MAGNUM_UI_EXPORT Debug& operator<<(Debug& debug, GenericAnimationStates value);
 
 /**
 @brief Generic animator
-@m_since_latest
+@m_since_latest_{extras}
 
 Each animation is a function that gets called with an animation factor in the
 @f$ [0, 1] @f$ range. The function can then call arbitrary setters on the UI
@@ -386,7 +386,7 @@ class MAGNUM_UI_EXPORT GenericAnimator: public AbstractGenericAnimator {
 
 /**
 @brief Generic animator with animations attached to nodes
-@m_since_latest
+@m_since_latest_{extras}
 
 Each animation is a function that gets called with an associated node handle
 and an animation factor in the @f$ [0, 1] @f$ range. The function can then call
@@ -649,7 +649,7 @@ class MAGNUM_UI_EXPORT GenericNodeAnimator: public AbstractGenericAnimator {
 
 /**
 @brief Generic animator with animations attached to layer data
-@m_since_latest
+@m_since_latest_{extras}
 
 Each animation is a function that gets called with an associated node handle
 and an animation factor in the @f$ [0, 1] @f$ range. The function can then call

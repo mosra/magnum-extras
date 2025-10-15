@@ -28,7 +28,7 @@
 
 /** @file
  * @brief Class @ref Magnum::Ui::UserInterface
- * @m_since_latest
+ * @m_since_latest_{extras}
  */
 
 #include "Magnum/Ui/AbstractUserInterface.h"
@@ -37,7 +37,7 @@ namespace Magnum { namespace Ui {
 
 /**
 @brief Main user interface
-@m_since_latest
+@m_since_latest_{extras}
 
 Owns the whole user interface, providing everything from input event handling
 to animation and drawing. Compared to @ref AbstractUserInterface provides

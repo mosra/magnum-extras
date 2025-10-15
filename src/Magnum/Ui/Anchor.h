@@ -28,7 +28,7 @@
 
 /** @file
  * @brief Class @ref Magnum::Ui::AbstractAnchor, @ref Magnum::Ui::BasicAnchor, typedef @ref Magnum::Ui::Anchor
- * @m_since_latest
+ * @m_since_latest_{extras}
  */
 
 #include <Corrade/Containers/EnumSet.h>
@@ -42,7 +42,7 @@ namespace Magnum { namespace Ui {
 
 /**
 @brief Base for widget positioning anchors
-@m_since_latest
+@m_since_latest_{extras}
 
 Wraps an @ref AbstractUserInterface reference, @ref NodeHandle and optional
 @ref LayoutHandle. The @ref BasicAnchor template and the @ref Anchor typedef
@@ -143,7 +143,7 @@ class MAGNUM_UI_EXPORT AbstractAnchor {
 
 /**
 @brief Templated base for widget positioning anchors
-@m_since_latest
+@m_since_latest_{extras}
 
 Restricts @ref AbstractAnchor to a concrete user interface instance. See the
 base class documentation for more information.
@@ -200,7 +200,7 @@ template<class UserInterface> class BasicAnchor: public AbstractAnchor {
 
 /**
 @brief Widget positioning anchor for use with @ref UserInterface
-@m_since_latest
+@m_since_latest_{extras}
 
 See the @ref AbstractAnchor class documentation for more information.
 */

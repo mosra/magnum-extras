@@ -28,7 +28,7 @@
 
 /**
  * @brief Class @ref Magnum::Ui::DebugLayerGL
- * @m_since_latest
+ * @m_since_latest_{extras}
  */
 
 #include "Magnum/configure.h"
@@ -40,7 +40,7 @@ namespace Magnum { namespace Ui {
 
 /**
 @brief OpenGL implementation of the debug layer
-@m_since_latest
+@m_since_latest_{extras}
 
 Implements visual feedback for @ref DebugLayerFlag::NodeInspect. See the
 @ref DebugLayer base class documentation for information about setting up an

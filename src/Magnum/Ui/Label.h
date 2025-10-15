@@ -28,7 +28,7 @@
 
 /** @file
  * @brief Class @ref Magnum::Ui::Label, function @ref Magnum::Ui::label(), enum @ref Magnum::Ui::LabelStyle
- * @m_since_latest
+ * @m_since_latest_{extras}
  */
 
 #include "Magnum/Ui/Widget.h"
@@ -37,7 +37,7 @@ namespace Magnum { namespace Ui {
 
 /**
 @brief Label style
-@m_since_latest
+@m_since_latest_{extras}
 
 @see @ref Label, @ref label()
 */
@@ -53,13 +53,13 @@ enum class LabelStyle: UnsignedByte {
 
 /**
 @debugoperatorenum{LabelStyle}
-@m_since_latest
+@m_since_latest_{extras}
 */
 MAGNUM_UI_EXPORT Debug& operator<<(Debug& debug, LabelStyle value);
 
 /**
 @brief Label widget
-@m_since_latest
+@m_since_latest_{extras}
 */
 class MAGNUM_UI_EXPORT Label: public Widget {
     public:
@@ -174,7 +174,7 @@ class MAGNUM_UI_EXPORT Label: public Widget {
     empty.
 @param style            Label style
 @return The @p anchor verbatim
-@m_since_latest
+@m_since_latest_{extras}
 
 Compared to @ref Label::Label(const Anchor&, Icon, LabelStyle)
 this creates a stateless label that doesn't have any class instance that would
@@ -192,7 +192,7 @@ MAGNUM_UI_EXPORT Anchor label(const Anchor& anchor, Icon icon, LabelStyle style 
 @param textProperties   Text shaping and layouting properties
 @param style            Label style
 @return The @p anchor verbatim
-@m_since_latest
+@m_since_latest_{extras}
 
 Compared to @ref Label::Label(const Anchor&, Containers::StringView, const TextProperties&, LabelStyle)
 this creates a stateless label that doesn't have any class instance that would
@@ -203,7 +203,7 @@ is removed only when the node or its parent get removed.
 MAGNUM_UI_EXPORT Anchor label(const Anchor& anchor, Containers::StringView text, const TextProperties& textProperties, LabelStyle style = LabelStyle::Default);
 /**
 @overload
-@m_since_latest
+@m_since_latest_{extras}
 */
 MAGNUM_UI_EXPORT Anchor label(const Anchor& anchor, Containers::StringView text, LabelStyle style = LabelStyle::Default);
 

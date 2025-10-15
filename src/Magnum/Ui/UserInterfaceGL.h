@@ -28,7 +28,7 @@
 
 /** @file
  * @brief Class @ref Magnum::Ui::UserInterfaceGL
- * @m_since_latest
+ * @m_since_latest_{extras}
  */
 
 #include "Magnum/configure.h"
@@ -44,7 +44,7 @@ namespace Magnum { namespace Ui {
 
 /**
 @brief OpenGL implementation of the main user interface
-@m_since_latest
+@m_since_latest_{extras}
 
 Owns the whole user interface, providing everything from input event handling
 to animation and drawing. Compared to @ref AbstractUserInterface includes

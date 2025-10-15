@@ -28,7 +28,7 @@
 
 /** @file
  * @brief Class @ref Magnum::Ui::SnapLayouter, @ref Magnum::Ui::AbstractSnapLayout, @ref Magnum::Ui::BasicSnapLayout, typedef @ref Magnum::Ui::SnapLayout, enum @ref Magnum::Ui::Snap, enum set @ref Magnum::Ui::Snaps, function @ref Magnum::Ui::snap()
- * @m_since_latest
+ * @m_since_latest_{extras}
  */
 
 #include <Corrade/Containers/Reference.h>
@@ -102,37 +102,37 @@ enum class Snap: UnsignedByte {
 
     /**
      * Alias to specifying both @ref Snap::Top and @ref Snap::Left.
-     * @m_since_latest
+     * @m_since_latest_{extras}
      */
     TopLeft = Top|Left,
 
     /**
      * Alias to specifying both @ref Snap::Bottom and @ref Snap::Left.
-     * @m_since_latest
+     * @m_since_latest_{extras}
      */
     BottomLeft = Bottom|Left,
 
     /**
      * Alias to specifying both @ref Snap::Top and @ref Snap::Right.
-     * @m_since_latest
+     * @m_since_latest_{extras}
      */
     TopRight = Top|Right,
 
     /**
      * Alias to specifying both @ref Snap::Bottom and @ref Snap::Right.
-     * @m_since_latest
+     * @m_since_latest_{extras}
      */
     BottomRight = Bottom|Right,
 
     /**
      * Alias to specifying both @ref Snap::Left and @ref Snap::Right.
-     * @m_since_latest
+     * @m_since_latest_{extras}
      */
     FillX = Left|Right,
 
     /**
      * Alias to specifying both @ref Snap::Top and @ref Snap::Bottom.
-     * @m_since_latest
+     * @m_since_latest_{extras}
      */
     FillY = Top|Bottom,
 
@@ -140,7 +140,7 @@ enum class Snap: UnsignedByte {
      * Alias to specifying both @ref Snap::FillX and @ref Snap::FillY, or all
      * of @ref Snap::Left, @ref Snap::Right, @ref Snap::Top and
      * @ref Snap::Bottom.
-     * @m_since_latest
+     * @m_since_latest_{extras}
      */
     Fill = FillX|FillY,
 
@@ -164,34 +164,34 @@ enum class Snap: UnsignedByte {
 
     /**
      * Alias to specifying both @ref Snap::InsideX and @ref Snap::InsideY.
-     * @m_since_latest
+     * @m_since_latest_{extras}
      */
     Inside = InsideX|InsideY,
 
     /**
      * Ignore horizontal @ref SnapLayouter::padding() and
      * @ref SnapLayouter::margin().
-     * @m_since_latest
+     * @m_since_latest_{extras}
      */
     NoPadX = 1 << 6,
 
     /**
      * Ignore vertical @ref SnapLayouter::padding() and
      * @ref SnapLayouter::margin().
-     * @m_since_latest
+     * @m_since_latest_{extras}
      */
     NoPadY = 1 << 7,
 
     /**
      * Alias to specifying both @ref Snap::NoPadX and @ref Snap::NoPadY.
-     * @m_since_latest
+     * @m_since_latest_{extras}
      */
     NoPad = NoPadX|NoPadY
 };
 
 /**
 @debugoperatorenum{Snap}
-@m_since_latest
+@m_since_latest_{extras}
 */
 MAGNUM_UI_EXPORT Debug& operator<<(Debug& debug, Snap value);
 
@@ -204,7 +204,7 @@ typedef Containers::EnumSet<Snap> Snaps;
 
 /**
 @debugoperatorenum{Snaps}
-@m_since_latest
+@m_since_latest_{extras}
 */
 MAGNUM_UI_EXPORT Debug& operator<<(Debug& debug, Snaps value);
 
@@ -212,7 +212,7 @@ CORRADE_ENUMSET_OPERATORS(Snaps)
 
 /**
 @brief Snap layouter
-@m_since_latest
+@m_since_latest_{extras}
 
 The actual layout creation is done through the @ref AbstractSnapLayout helper,
 or its derived @ref BasicSnapLayout template and the @ref SnapLayout typedef
@@ -399,7 +399,7 @@ class MAGNUM_UI_EXPORT SnapLayouter: public AbstractLayouter {
 
 /**
 @brief Base for @ref SnapLayouter layout creation helpers
-@m_since_latest
+@m_since_latest_{extras}
 
 Combines @ref SnapLayouter together with a reference to
 @ref AbstractUserInterface in order to create @ref AbstractAnchor instances to
@@ -535,7 +535,7 @@ class MAGNUM_UI_EXPORT AbstractSnapLayout {
 
 /**
 @brief Templated base for @ref SnapLayouter layout creation helpers
-@m_since_latest
+@m_since_latest_{extras}
 
 Restricts @ref AbstractSnapLayout to a concrete user interface instance. See
 the base class documentation for more information.
@@ -584,7 +584,7 @@ template<class UserInterface> class BasicSnapLayout: public AbstractSnapLayout {
 
 /**
 @brief @ref SnapLayouter layout creation helper for use with @ref UserInterface
-@m_since_latest
+@m_since_latest_{extras}
 
 See the @ref AbstractSnapLayout class documentation for more information.
 */
@@ -599,7 +599,7 @@ typedef BasicSnapLayout<UserInterface> SnapLayout;
 @param size         Desired node size
 @param flags        Flags to create the node with
 @return Anchor containing the new node and associated layout
-@m_since_latest
+@m_since_latest_{extras}
 
 If @p target is @ref NodeHandle::Null, creates a root node and interprets
 @p snap relative to the whole user interface, with it implicitly treated as if
@@ -622,13 +622,13 @@ each other.
 MAGNUM_UI_EXPORT AbstractAnchor snap(AbstractUserInterface& ui, SnapLayouter& layouter, Snaps snap, NodeHandle target, const Vector2& size, NodeFlags flags = {});
 /**
 @overload
-@m_since_latest
+@m_since_latest_{extras}
 */
 MAGNUM_UI_EXPORT Anchor snap(UserInterface& ui, SnapLayouter& layouter, Snaps snap, NodeHandle target, const Vector2& size, NodeFlags flags = {});
 
 /**
 @brief Create a node layouted with the default @ref SnapLayouter
-@m_since_latest
+@m_since_latest_{extras}
 
 Delegates into @ref snap(UserInterface&, SnapLayouter&, Snaps, NodeHandle, const Vector2&, NodeFlags)
 with the instance coming from @ref UserInterface::snapLayouter().
@@ -637,7 +637,7 @@ MAGNUM_UI_EXPORT Anchor snap(UserInterface& ui, Snaps snap, NodeHandle target, c
 
 /**
 @brief Create a node layouted with @ref SnapLayouter with custom offset
-@m_since_latest
+@m_since_latest_{extras}
 
 Compared to @ref snap(AbstractUserInterface&, SnapLayouter&, Snaps, NodeHandle, const Vector2&, NodeFlags)
 the @p offset is added to the offset calculated by the layout.
@@ -645,13 +645,13 @@ the @p offset is added to the offset calculated by the layout.
 MAGNUM_UI_EXPORT AbstractAnchor snap(AbstractUserInterface& ui, SnapLayouter& layouter, Snaps snap, NodeHandle target, const Vector2& offset, const Vector2& size, NodeFlags flags = {});
 /**
 @overload
-@m_since_latest
+@m_since_latest_{extras}
 */
 MAGNUM_UI_EXPORT Anchor snap(UserInterface& ui, SnapLayouter& layouter, Snaps snap, NodeHandle target, const Vector2& offset, const Vector2& size, NodeFlags flags = {});
 
 /**
 @brief Create a node layouted with the default @ref SnapLayouter with custom offset
-@m_since_latest
+@m_since_latest_{extras}
 
 Delegates into @ref snap(UserInterface&, SnapLayouter&, Snaps, NodeHandle, const Vector2&, const Vector2&, NodeFlags)
 with the instance coming from @ref UserInterface::snapLayouter().
@@ -660,7 +660,7 @@ MAGNUM_UI_EXPORT Anchor snap(UserInterface& ui, Snaps snap, NodeHandle target, c
 
 /**
 @brief Create a root node layouted with @ref SnapLayouter
-@m_since_latest
+@m_since_latest_{extras}
 
 Equivalent to calling @ref snap(AbstractUserInterface&, SnapLayouter&, Snaps, NodeHandle, const Vector2&, NodeFlags)
 with @p target being @ref NodeHandle::Null.
@@ -668,13 +668,13 @@ with @p target being @ref NodeHandle::Null.
 MAGNUM_UI_EXPORT AbstractAnchor snap(AbstractUserInterface& ui, SnapLayouter& layouter, Snaps snap, const Vector2& size, NodeFlags flags = {});
 /**
 @overload
-@m_since_latest
+@m_since_latest_{extras}
 */
 MAGNUM_UI_EXPORT Anchor snap(UserInterface& ui, SnapLayouter& layouter, Snaps snap, const Vector2& size, NodeFlags flags = {});
 
 /**
 @brief Create a root node layouted with the default @ref SnapLayouter
-@m_since_latest
+@m_since_latest_{extras}
 
 Delegates into @ref snap(UserInterface&, SnapLayouter&, Snaps, const Vector2&, NodeFlags)
 with the instance coming from @ref UserInterface::snapLayouter().
@@ -683,7 +683,7 @@ MAGNUM_UI_EXPORT Anchor snap(UserInterface& ui, Snaps snap, const Vector2& size,
 
 /**
 @brief Create a root node layouted with @ref SnapLayouter with custom offset
-@m_since_latest
+@m_since_latest_{extras}
 
 Compared to @ref snap(AbstractUserInterface&, SnapLayouter&, Snaps, const Vector2&, NodeFlags)
 the @p offset is added to the offset calculated by the layout.
@@ -691,13 +691,13 @@ the @p offset is added to the offset calculated by the layout.
 MAGNUM_UI_EXPORT AbstractAnchor snap(AbstractUserInterface& ui, SnapLayouter& layouter, Snaps snap, const Vector2& offset, const Vector2& size, NodeFlags flags = {});
 /**
 @overload
-@m_since_latest
+@m_since_latest_{extras}
 */
 MAGNUM_UI_EXPORT Anchor snap(UserInterface& ui, SnapLayouter& layouter, Snaps snap, const Vector2& offset, const Vector2& size, NodeFlags flags = {});
 
 /**
 @brief Create a root node layouted with the default @ref SnapLayouter with custom offset
-@m_since_latest
+@m_since_latest_{extras}
 
 Delegates into @ref snap(UserInterface&, SnapLayouter&, Snaps, const Vector2&, const Vector2&, NodeFlags)
 with the instance coming from @ref UserInterface::snapLayouter().

@@ -28,7 +28,7 @@
 
 /** @file
  * @brief Class @ref Magnum::Ui::AbstractStyle, enum @ref Magnum::Ui::StyleFeature, enum set @ref Magnum::Ui::StyleFeatures
- * @m_since_latest
+ * @m_since_latest_{extras}
  */
 
 #include <Corrade/Containers/EnumSet.h>
@@ -44,7 +44,7 @@ namespace Magnum { namespace Ui {
 
 /**
 @brief Feature supplied by a style
-@m_since_latest
+@m_since_latest_{extras}
 
 @see @ref StyleFeatures, @ref AbstractStyle::features(),
     @ref AbstractStyle::apply(), @ref UserInterfaceGL::setStyle(),
@@ -131,13 +131,13 @@ enum class StyleFeature: UnsignedByte {
 
 /**
 @debugoperatorenum{StyleFeature}
-@m_since_latest
+@m_since_latest_{extras}
 */
 MAGNUM_UI_EXPORT Debug& operator<<(Debug& debug, StyleFeature value);
 
 /**
 @brief Features supplied by a style
-@m_since_latest
+@m_since_latest_{extras}
 
 @see @ref AbstractStyle::features(), @ref AbstractStyle::apply(),
     @ref UserInterfaceGL::setStyle(), @ref UserInterfaceGL::trySetStyle()
@@ -158,13 +158,13 @@ CORRADE_ENUMSET_OPERATORS(StyleFeatures)
 
 /**
 @debugoperatorenum{StyleFeatures}
-@m_since_latest
+@m_since_latest_{extras}
 */
 MAGNUM_UI_EXPORT Debug& operator<<(Debug& debug, StyleFeatures value);
 
 /**
 @brief Base for @ref UserInterface styles
-@m_since_latest
+@m_since_latest_{extras}
 
 @section Ui-AbstractStyle-subclassing Subclassing
 

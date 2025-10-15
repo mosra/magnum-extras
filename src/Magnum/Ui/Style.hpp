@@ -28,7 +28,7 @@
 
 /** @file
 @brief Style IDs for builtin widgets
-@m_since_latest
+@m_since_latest_{extras}
 
 Exposed for purposes of creating derived variants of builtin widgets. There
 should be no need to use anything from this header from application code.

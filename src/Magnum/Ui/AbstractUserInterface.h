@@ -28,7 +28,7 @@
 
 /** @file
  * @brief Class @ref Magnum::Ui::AbstractUserInterface, enum @ref Magnum::Ui::UserInterfaceState, enum set @ref Magnum::Ui::UserInterfaceStates
- * @m_since_latest
+ * @m_since_latest_{extras}
  */
 
 #include <Corrade/Containers/EnumSet.h>
@@ -42,7 +42,7 @@ namespace Magnum { namespace Ui {
 
 /**
 @brief User interface state
-@m_since_latest
+@m_since_latest_{extras}
 
 Used to decide whether @ref AbstractUserInterface::clean() or
 @ref AbstractUserInterface::update() need to be called to refresh the internal
@@ -248,13 +248,13 @@ enum class UserInterfaceState: UnsignedShort {
 
 /**
 @debugoperatorenum{UserInterfaceState}
-@m_since_latest
+@m_since_latest_{extras}
 */
 MAGNUM_UI_EXPORT Debug& operator<<(Debug& debug, UserInterfaceState value);
 
 /**
 @brief User interface states
-@m_since_latest
+@m_since_latest_{extras}
 
 @see @ref AbstractUserInterface::state()
 */
@@ -262,7 +262,7 @@ typedef Containers::EnumSet<UserInterfaceState> UserInterfaceStates;
 
 /**
 @debugoperatorenum{UserInterfaceStates}
-@m_since_latest
+@m_since_latest_{extras}
 */
 MAGNUM_UI_EXPORT Debug& operator<<(Debug& debug, UserInterfaceStates value);
 
@@ -279,7 +279,7 @@ namespace Implementation {
 
 /**
 @brief Base implementation of the main user interface
-@m_since_latest
+@m_since_latest_{extras}
 
 Owns the whole user interface, providing everything from input event handling
 to animation and drawing.

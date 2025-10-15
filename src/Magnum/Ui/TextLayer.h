@@ -28,7 +28,7 @@
 
 /** @file
  * @brief Class @ref Magnum::Ui::TextLayer, struct @ref Magnum::Ui::TextLayerCommonStyleUniform, @ref Magnum::Ui::TextLayerStyleUniform, enum @ref Magnum::Ui::FontHandle, @ref Magnum::Ui::TextDataFlag, @ref Magnum::Ui::TextEdit, enum set @ref Magnum::Ui::TextDataFlags, function @ref Magnum::Ui::fontHandle(), @ref Magnum::Ui::fontHandleId(), @ref Magnum::Ui::fontHandleGeneration()
- * @m_since_latest
+ * @m_since_latest_{extras}
  */
 
 #include <initializer_list>
@@ -43,7 +43,7 @@ namespace Magnum { namespace Ui {
 
 /**
 @brief Properties common to all @ref TextLayer style uniforms
-@m_since_latest
+@m_since_latest_{extras}
 
 See the @ref TextLayer class documentation for information about setting up an
 instance of the text layer and using it.
@@ -119,7 +119,7 @@ struct TextLayerCommonStyleUniform {
 
 /**
 @brief @ref TextLayer style uniform
-@m_since_latest
+@m_since_latest_{extras}
 
 See the @ref TextLayer class documentation for information about setting up an
 instance of the text layer and using it.
@@ -287,7 +287,7 @@ struct TextLayerStyleUniform {
 
 /**
 @brief Properties common to all @ref TextLayer editing style uniforms
-@m_since_latest
+@m_since_latest_{extras}
 
 See the @ref TextLayer class documentation for information about setting up an
 instance of the text layer and using it, and @ref Ui-TextLayer-editing in
@@ -358,7 +358,7 @@ struct TextLayerCommonEditingStyleUniform {
 
 /**
 @brief @ref TextLayer editing style uniform
-@m_since_latest
+@m_since_latest_{extras}
 
 See the @ref TextLayer class documentation for information about setting up an
 instance of the text layer and using it, and @ref Ui-TextLayer-editing in
@@ -463,7 +463,7 @@ namespace Implementation {
 
 /**
 @brief Font handle
-@m_since_latest
+@m_since_latest_{extras}
 
 Used for identifying fonts in the @ref TextLayer. See its documentation for
 information about setting up an instance of the text layer and using it.
@@ -478,13 +478,13 @@ enum class FontHandle: UnsignedShort {
 
 /**
 @debugoperatorenum{FontHandle}
-@m_since_latest
+@m_since_latest_{extras}
 */
 MAGNUM_UI_EXPORT Debug& operator<<(Debug& debug, FontHandle value);
 
 /**
 @brief Compose a font handle from an ID and a generation
-@m_since_latest
+@m_since_latest_{extras}
 
 Expects that the ID fits into 20 bits and the generation into 12 bits. Use
 @ref fontHandleId() and @ref fontHandleGeneration() for an inverse operation.
@@ -496,7 +496,7 @@ constexpr FontHandle fontHandle(UnsignedInt id, UnsignedInt generation) {
 
 /**
 @brief Extract ID from a font handle
-@m_since_latest
+@m_since_latest_{extras}
 
 Expects that @p handle is not @ref FontHandle::Null. Use
 @ref fontHandleGeneration() for extracting the generation and @ref fontHandle()
@@ -510,7 +510,7 @@ constexpr UnsignedInt fontHandleId(FontHandle handle) {
 
 /**
 @brief Extract generation from a font handle
-@m_since_latest
+@m_since_latest_{extras}
 
 For @ref FontHandle::Null returns @cpp 0 @ce. A valid handle has always a
 non-zero generation. Use @ref fontHandleId() for extracting the ID and
@@ -522,7 +522,7 @@ constexpr UnsignedInt fontHandleGeneration(FontHandle handle) {
 
 /**
 @brief Text layer flag
-@m_since_latest
+@m_since_latest_{extras}
 
 @see @ref TextLayerFlags, @ref TextLayer::flags()
 */
@@ -555,13 +555,13 @@ enum class TextLayerFlag: UnsignedByte {
 
 /**
 @debugoperatorenum{TextLayerFlag}
-@m_since_latest
+@m_since_latest_{extras}
 */
 MAGNUM_UI_EXPORT Debug& operator<<(Debug& debug, TextLayerFlag value);
 
 /**
 @brief Text layer data flags
-@m_since_latest
+@m_since_latest_{extras}
 
 @see @ref TextLayer::flags()
 */
@@ -571,13 +571,13 @@ CORRADE_ENUMSET_OPERATORS(TextLayerFlags)
 
 /**
 @debugoperatorenum{TextLayerFlags}
-@m_since_latest
+@m_since_latest_{extras}
 */
 MAGNUM_UI_EXPORT Debug& operator<<(Debug& debug, TextLayerFlags value);
 
 /**
 @brief Text layer data flag
-@m_since_latest
+@m_since_latest_{extras}
 
 @see @ref Ui-TextLayer-editing, @ref TextDataFlags, @ref TextLayer::create(),
     @ref TextLayer::flags(DataHandle) const
@@ -599,13 +599,13 @@ enum class TextDataFlag: UnsignedByte {
 
 /**
 @debugoperatorenum{TextDataFlag}
-@m_since_latest
+@m_since_latest_{extras}
 */
 MAGNUM_UI_EXPORT Debug& operator<<(Debug& debug, TextDataFlag value);
 
 /**
 @brief Text layer data flags
-@m_since_latest
+@m_since_latest_{extras}
 
 @see @ref TextLayer::create(), @ref TextLayer::flags(DataHandle) const
 */
@@ -615,13 +615,13 @@ CORRADE_ENUMSET_OPERATORS(TextDataFlags)
 
 /**
 @debugoperatorenum{TextDataFlags}
-@m_since_latest
+@m_since_latest_{extras}
 */
 MAGNUM_UI_EXPORT Debug& operator<<(Debug& debug, TextDataFlags value);
 
 /**
 @brief Text edit operation
-@m_since_latest
+@m_since_latest_{extras}
 
 @see @ref Ui-TextLayer-editing, @ref TextLayer::editText()
 */
@@ -876,13 +876,13 @@ enum class TextEdit: UnsignedByte {
 
 /**
 @debugoperatorenum{TextEdit}
-@m_since_latest
+@m_since_latest_{extras}
 */
 MAGNUM_UI_EXPORT Debug& operator<<(Debug& debug, TextEdit value);
 
 /**
 @brief Text layer
-@m_since_latest
+@m_since_latest_{extras}
 
 Draws text laid out using the @ref Text library, including editing
 capabilities.
@@ -3125,7 +3125,7 @@ class MAGNUM_UI_EXPORT TextLayer: public AbstractVisualLayer {
 
 /**
 @brief Text layer shared state flag
-@m_since_latest
+@m_since_latest_{extras}
 
 @see @ref TextLayerSharedFlags,
     @ref TextLayer::Shared::Configuration::setFlags(),
@@ -3152,7 +3152,7 @@ enum class TextLayerSharedFlag: UnsignedByte {
 
 /**
 @brief Text layer shared state flag
-@m_since_latest
+@m_since_latest_{extras}
 
 @see @ref TextLayer::Shared::Configuration::setFlags(),
     @ref TextLayer::Shared::flags()
@@ -3163,13 +3163,13 @@ CORRADE_ENUMSET_OPERATORS(TextLayerSharedFlags)
 
 /**
 @debugoperatorenum{TextLayerSharedFlag}
-@m_since_latest
+@m_since_latest_{extras}
 */
 MAGNUM_UI_EXPORT Debug& operator<<(Debug& debug, TextLayerSharedFlag value);
 
 /**
 @debugoperatorenum{TextLayerSharedFlags}
-@m_since_latest
+@m_since_latest_{extras}
 */
 MAGNUM_UI_EXPORT Debug& operator<<(Debug& debug, TextLayerSharedFlags value);
 

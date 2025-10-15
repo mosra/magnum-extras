@@ -28,7 +28,7 @@
 
 /** @file
  * @brief Class @ref Magnum::Ui::RendererGL
- * @m_since_latest
+ * @m_since_latest_{extras}
  */
 
 #include "Magnum/configure.h"
@@ -42,7 +42,7 @@ namespace Magnum { namespace Ui {
 
 /**
 @brief OpenGL renderer implementation
-@m_since_latest
+@m_since_latest_{extras}
 
 Performs renderer state management for OpenGL layer implementations such as
 @ref BaseLayerGL or @ref TextLayerGL.
@@ -205,13 +205,13 @@ CORRADE_ENUMSET_OPERATORS(RendererGL::Flags)
 
 /**
 @debugoperatorclassenum{RendererGL,RendererGL::Flag}
-@m_since_latest
+@m_since_latest_{extras}
 */
 MAGNUM_UI_EXPORT Debug& operator<<(Debug& debug, RendererGL::Flag value);
 
 /**
 @debugoperatorclassenum{RendererGL,RendererGL::Flags}
-@m_since_latest
+@m_since_latest_{extras}
 */
 MAGNUM_UI_EXPORT Debug& operator<<(Debug& debug, RendererGL::Flags value);
 

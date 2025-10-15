@@ -28,7 +28,7 @@
 
 /** @file
  * @brief Class @ref Magnum::Ui::AbstractLayer, enum @ref Magnum::Ui::LayerFeature, @ref Magnum::Ui::LayerState, enum set @ref Magnum::Ui::LayerFeatures, @ref Magnum::Ui::LayerStates
- * @m_since_latest
+ * @m_since_latest_{extras}
  */
 
 #include <Corrade/Containers/EnumSet.h>
@@ -42,7 +42,7 @@ namespace Magnum { namespace Ui {
 
 /**
 @brief Features supported by a layer
-@m_since_latest
+@m_since_latest_{extras}
 
 @see @ref LayerFeatures, @ref AbstractLayer::features()
 */
@@ -101,13 +101,13 @@ enum class LayerFeature: UnsignedByte {
 
 /**
 @debugoperatorenum{LayerFeature}
-@m_since_latest
+@m_since_latest_{extras}
 */
 MAGNUM_UI_EXPORT Debug& operator<<(Debug& debug, LayerFeature value);
 
 /**
 @brief Set of features supported by a layer
-@m_since_latest
+@m_since_latest_{extras}
 
 @see @ref AbstractLayer::features()
 */
@@ -115,7 +115,7 @@ typedef Containers::EnumSet<LayerFeature> LayerFeatures;
 
 /**
 @debugoperatorenum{LayerFeatures}
-@m_since_latest
+@m_since_latest_{extras}
 */
 MAGNUM_UI_EXPORT Debug& operator<<(Debug& debug, LayerFeatures value);
 
@@ -123,7 +123,7 @@ CORRADE_ENUMSET_OPERATORS(LayerFeatures)
 
 /**
 @brief Layer state
-@m_since_latest
+@m_since_latest_{extras}
 
 Used to decide whether @ref AbstractLayer::cleanData() (called from
 @ref AbstractUserInterface::clean()) or @ref AbstractLayer::update() (called
@@ -324,13 +324,13 @@ enum class LayerState: UnsignedShort {
 
 /**
 @debugoperatorenum{LayerState}
-@m_since_latest
+@m_since_latest_{extras}
 */
 MAGNUM_UI_EXPORT Debug& operator<<(Debug& debug, LayerState value);
 
 /**
 @brief Layer states
-@m_since_latest
+@m_since_latest_{extras}
 
 @see @ref AbstractLayer::state()
 */
@@ -338,7 +338,7 @@ typedef Containers::EnumSet<LayerState> LayerStates;
 
 /**
 @debugoperatorenum{LayerStates}
-@m_since_latest
+@m_since_latest_{extras}
 */
 MAGNUM_UI_EXPORT Debug& operator<<(Debug& debug, LayerStates value);
 
@@ -346,7 +346,7 @@ CORRADE_ENUMSET_OPERATORS(LayerStates)
 
 /**
 @brief Base for data layers
-@m_since_latest
+@m_since_latest_{extras}
 
 Attaches data to particular nodes in the UI hierarchy, providing rendering and
 event handling functionality. See the

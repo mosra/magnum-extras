@@ -28,7 +28,7 @@
 
 /** @file
  * @brief Class @ref Magnum::Ui::TextLayerGL
- * @m_since_latest
+ * @m_since_latest_{extras}
  */
 
 #include "Magnum/configure.h"
@@ -40,7 +40,7 @@ namespace Magnum { namespace Ui {
 
 /**
 @brief OpenGL implementation of the text layer
-@m_since_latest
+@m_since_latest_{extras}
 
 See the @ref TextLayer base class documentation for information about setting
 up an instance of this layer and using it. The base class contains most of the

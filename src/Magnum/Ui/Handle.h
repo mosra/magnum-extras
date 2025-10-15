@@ -28,7 +28,7 @@
 
 /** @file
  * @brief Handle @ref Magnum::Ui::LayerHandle, @ref Magnum::Ui::LayerDataHandle, @ref Magnum::Ui::DataHandle, @ref Magnum::Ui::NodeHandle, @ref Magnum::Ui::LayouterHandle, @ref Magnum::Ui::LayouterDataHandle, @ref Magnum::Ui::LayoutHandle, @ref Magnum::Ui::AnimatorHandle, @ref Magnum::Ui::AnimatorDataHandle, @ref Magnum::Ui::AnimationHandle, function @ref Magnum::Ui::layerHandle(), @ref Magnum::Ui::layerHandleId(), @ref Magnum::Ui::layerHandleGeneration(), @ref Magnum::Ui::layerDataHandle(), @ref Magnum::Ui::layerDataHandleId(), @ref Magnum::Ui::layerDataHandleGeneration(), @ref Magnum::Ui::dataHandle(), @ref Magnum::Ui::dataHandleLayer(), @ref Magnum::Ui::dataHandleData(), @ref Magnum::Ui::dataHandleLayerId(), @ref Magnum::Ui::dataHandleLayerGeneration(), @ref Magnum::Ui::dataHandleId(), @ref Magnum::Ui::dataHandleGeneration(), @ref Magnum::Ui::nodeHandle(), @ref Magnum::Ui::nodeHandleId(), @ref Magnum::Ui::nodeHandleGeneration(), @ref Magnum::Ui::layouterHandle(), @ref Magnum::Ui::layouterHandleId(), @ref Magnum::Ui::layouterHandleGeneration(), @ref Magnum::Ui::layouterDataHandle(), @ref Magnum::Ui::layouterDataHandleId(), @ref Magnum::Ui::layouterDataHandleGeneration(), @ref Magnum::Ui::layoutHandle(), @ref Magnum::Ui::layoutHandleLayouter(), @ref Magnum::Ui::layoutHandleData(), @ref Magnum::Ui::layoutHandleLayouterId(), @ref Magnum::Ui::layoutHandleLayouterGeneration(), @ref Magnum::Ui::layoutHandleId(), @ref Magnum::Ui::layoutHandleGeneration(), @ref Magnum::Ui::animatorHandle(), @ref Magnum::Ui::animatorHandleId(), @ref Magnum::Ui::animatorHandleGeneration(), @ref Magnum::Ui::animatorDataHandle(), @ref Magnum::Ui::animatorDataHandleId(), @ref Magnum::Ui::animatorDataHandleGeneration(), @ref Magnum::Ui::animationHandle(), @ref Magnum::Ui::animationHandleAnimator(), @ref Magnum::Ui::animationHandleData(), @ref Magnum::Ui::animationHandleAnimatorId(), @ref Magnum::Ui::animationHandleAnimatorGeneration(), @ref Magnum::Ui::animationHandleId(), @ref Magnum::Ui::animationHandleGeneration()
- * @m_since_latest
+ * @m_since_latest_{extras}
  */
 
 #include <Corrade/Utility/DebugAssert.h>
@@ -48,7 +48,7 @@ namespace Implementation {
 
 /**
 @brief Layer handle
-@m_since_latest
+@m_since_latest_{extras}
 
 Uses 8 bits for storing an ID and 8 bits for a generation.
 @see @ref AbstractUserInterface::createLayer(),
@@ -61,13 +61,13 @@ enum class LayerHandle: UnsignedShort {
 
 /**
 @debugoperatorenum{LayerHandle}
-@m_since_latest
+@m_since_latest_{extras}
 */
 MAGNUM_UI_EXPORT Debug& operator<<(Debug& debug, LayerHandle value);
 
 /**
 @brief Compose a layer handle from an ID and a generation
-@m_since_latest
+@m_since_latest_{extras}
 
 Expects that the ID fits into 8 bits and the generation into 8 bits. Use
 @ref layerHandleId() and @ref layerHandleGeneration() for an inverse operation.
@@ -79,7 +79,7 @@ constexpr LayerHandle layerHandle(UnsignedInt id, UnsignedInt generation) {
 
 /**
 @brief Extract ID from a layer handle
-@m_since_latest
+@m_since_latest_{extras}
 
 Expects that @p handle is not @ref LayerHandle::Null. Use
 @ref layerHandleGeneration() for extracting the generation and
@@ -93,7 +93,7 @@ constexpr UnsignedInt layerHandleId(LayerHandle handle) {
 
 /**
 @brief Extract generation from a layer handle
-@m_since_latest
+@m_since_latest_{extras}
 
 For @ref LayerHandle::Null returns @cpp 0 @ce. A valid handle has always a
 non-zero generation. Use @ref layerHandleId() for extracting the ID and
@@ -112,7 +112,7 @@ namespace Implementation {
 
 /**
 @brief Layer data handle
-@m_since_latest
+@m_since_latest_{extras}
 
 Uses 20 bits for storing an ID and 12 bits for a generation.
 @see @ref AbstractLayer::create(), @ref AbstractLayer::remove(),
@@ -125,13 +125,13 @@ enum class LayerDataHandle: UnsignedInt {
 
 /**
 @debugoperatorenum{LayerDataHandle}
-@m_since_latest
+@m_since_latest_{extras}
 */
 MAGNUM_UI_EXPORT Debug& operator<<(Debug& debug, LayerDataHandle value);
 
 /**
 @brief Compose a layer data handle from an ID and a generation
-@m_since_latest
+@m_since_latest_{extras}
 
 Expects that the ID fits into 20 bits and the generation into 12 bits. Use
 @ref layerDataHandleId() and @ref layerDataHandleGeneration() for an inverse
@@ -144,7 +144,7 @@ constexpr LayerDataHandle layerDataHandle(UnsignedInt id, UnsignedInt generation
 
 /**
 @brief Extract ID from a layer data handle
-@m_since_latest
+@m_since_latest_{extras}
 
 Expects that @p handle is not @ref LayerDataHandle::Null. Use
 @ref layerDataHandleGeneration() for extracting the generation and
@@ -158,7 +158,7 @@ constexpr UnsignedInt layerDataHandleId(LayerDataHandle handle) {
 
 /**
 @brief Extract generation from a layer data handle
-@m_since_latest
+@m_since_latest_{extras}
 
 For @ref LayerDataHandle::Null returns @cpp 0 @ce. A valid handle has always a
 non-zero generation. Use @ref layerDataHandleId() for extracting the ID and
@@ -170,7 +170,7 @@ constexpr UnsignedInt layerDataHandleGeneration(LayerDataHandle handle) {
 
 /**
 @brief Layer data handle
-@m_since_latest
+@m_since_latest_{extras}
 
 A combination of a @ref LayerHandle and a @ref LayerDataHandle. Uses 8 bits for
 storing a layer ID, 8 bits for a layer generation, 20 bits for storing a data
@@ -185,13 +185,13 @@ enum class DataHandle: UnsignedLong {
 
 /**
 @debugoperatorenum{DataHandle}
-@m_since_latest
+@m_since_latest_{extras}
 */
 MAGNUM_UI_EXPORT Debug& operator<<(Debug& debug, DataHandle value);
 
 /**
 @brief Compose a data handle from a layer handle, a data ID and a data generation
-@m_since_latest
+@m_since_latest_{extras}
 
 Expects that the ID fits into 20 bits and the generation into 12 bits. Use
 @ref dataHandleLayer(), @ref dataHandleId() and @ref dataHandleGeneration() for
@@ -206,7 +206,7 @@ constexpr DataHandle dataHandle(LayerHandle layerHandle, UnsignedInt id, Unsigne
 
 /**
 @brief Compose a data handle from a layer handle and a layer data handle
-@m_since_latest
+@m_since_latest_{extras}
 
 Use @ref dataHandleLayer() and @ref dataHandleData() for the inverse operation.
 @see @ref dataHandle(LayerHandle, LayerDataHandle), @ref dataHandleLayerId(),
@@ -219,7 +219,7 @@ constexpr DataHandle dataHandle(LayerHandle layerHandle, LayerDataHandle layerDa
 
 /**
 @brief Extract layer handle from a data handle
-@m_since_latest
+@m_since_latest_{extras}
 
 Use @ref dataHandleData() for extracting the layer data handle and
 @ref dataHandle(LayerHandle, LayerDataHandle) for an inverse operation.
@@ -230,7 +230,7 @@ constexpr LayerHandle dataHandleLayer(DataHandle handle) {
 
 /**
 @brief Extract layer data handle from a data handle
-@m_since_latest
+@m_since_latest_{extras}
 
 Use @ref dataHandleLayer() for extracting the layer handle and
 @ref dataHandle(LayerHandle, LayerDataHandle) for an inverse operation.
@@ -241,7 +241,7 @@ constexpr LayerDataHandle dataHandleData(DataHandle handle) {
 
 /**
 @brief Extract layer ID from a data handle
-@m_since_latest
+@m_since_latest_{extras}
 
 Expects that the layer portion of @p handle is not @ref LayerHandle::Null. Use
 @ref dataHandleLayerGeneration() for extracting the layer generation and
@@ -256,7 +256,7 @@ constexpr UnsignedInt dataHandleLayerId(DataHandle handle) {
 
 /**
 @brief Extract layer generation from a data handle
-@m_since_latest
+@m_since_latest_{extras}
 
 If the layer portion of the handle is @ref LayerHandle::Null, returns
 @cpp 0 @ce. A valid handle has always a non-zero generation. Use
@@ -270,7 +270,7 @@ constexpr UnsignedInt dataHandleLayerGeneration(DataHandle handle) {
 
 /**
 @brief Extract ID from a data handle
-@m_since_latest
+@m_since_latest_{extras}
 
 Expects that the data portion of @p handle is not @ref LayerDataHandle::Null.
 Use @ref dataHandleGeneration() for extracting the generation and
@@ -286,7 +286,7 @@ constexpr UnsignedInt dataHandleId(DataHandle handle) {
 
 /**
 @brief Extract generation from a data handle
-@m_since_latest
+@m_since_latest_{extras}
 
 If the data portion of @p handle is @ref LayerDataHandle::Null, returns
 @cpp 0 @ce. A valid handle has always a non-zero generation. Use
@@ -308,7 +308,7 @@ namespace Implementation {
 
 /**
 @brief Node handle
-@m_since_latest
+@m_since_latest_{extras}
 
 Uses 20 bits for storing an ID and 12 bits for a generation.
 @see @ref AbstractUserInterface::createNode(),
@@ -321,13 +321,13 @@ enum class NodeHandle: UnsignedInt {
 
 /**
 @debugoperatorenum{NodeHandle}
-@m_since_latest
+@m_since_latest_{extras}
 */
 MAGNUM_UI_EXPORT Debug& operator<<(Debug& debug, NodeHandle value);
 
 /**
 @brief Compose a node handle from an ID and a generation
-@m_since_latest
+@m_since_latest_{extras}
 
 Expects that the ID fits into 20 bits and the generation into 12 bits. Use
 @ref nodeHandleId() and @ref nodeHandleGeneration() for an inverse operation.
@@ -339,7 +339,7 @@ constexpr NodeHandle nodeHandle(UnsignedInt id, UnsignedInt generation) {
 
 /**
 @brief Extract ID from a node handle
-@m_since_latest
+@m_since_latest_{extras}
 
 Expects that @p handle is not @ref NodeHandle::Null. Use
 @ref nodeHandleGeneration() for extracting the generation and @ref nodeHandle()
@@ -353,7 +353,7 @@ constexpr UnsignedInt nodeHandleId(NodeHandle handle) {
 
 /**
 @brief Extract generation from a node handle
-@m_since_latest
+@m_since_latest_{extras}
 
 For @ref NodeHandle::Null returns @cpp 0 @ce. A valid handle has always a
 non-zero generation. Use @ref nodeHandleId() for extracting the ID and
@@ -372,7 +372,7 @@ namespace Implementation {
 
 /**
 @brief Layouter handle
-@m_since_latest
+@m_since_latest_{extras}
 
 Uses 8 bits for storing an ID and 8 bits for a generation.
 @see @ref AbstractUserInterface::createLayouter(),
@@ -386,13 +386,13 @@ enum class LayouterHandle: UnsignedShort {
 
 /**
 @debugoperatorenum{LayouterHandle}
-@m_since_latest
+@m_since_latest_{extras}
 */
 MAGNUM_UI_EXPORT Debug& operator<<(Debug& debug, LayouterHandle value);
 
 /**
 @brief Compose a layouter handle from an ID and a generation
-@m_since_latest
+@m_since_latest_{extras}
 
 Expects that the ID fits into 8 bits and the generation into 8 bits. Use
 @ref layouterHandleId() and @ref layouterHandleGeneration() for an inverse
@@ -405,7 +405,7 @@ constexpr LayouterHandle layouterHandle(UnsignedInt id, UnsignedInt generation) 
 
 /**
 @brief Extract ID from a layouter handle
-@m_since_latest
+@m_since_latest_{extras}
 
 Expects that @p handle is not @ref LayouterHandle::Null. Use
 @ref layouterHandleGeneration() for extracting the generation and
@@ -419,7 +419,7 @@ constexpr UnsignedInt layouterHandleId(LayouterHandle handle) {
 
 /**
 @brief Extract generation from a layouter handle
-@m_since_latest
+@m_since_latest_{extras}
 
 For @ref LayouterHandle::Null returns @cpp 0 @ce. A valid handle has always a
 non-zero generation. Use @ref layouterHandleId() for extracting the ID and
@@ -438,7 +438,7 @@ namespace Implementation {
 
 /**
 @brief Layouter data handle
-@m_since_latest
+@m_since_latest_{extras}
 
 Uses 20 bits for storing an ID and 12 bits for a generation.
 @see @ref AbstractLayouter::add(), @ref AbstractLayouter::remove(),
@@ -451,13 +451,13 @@ enum class LayouterDataHandle: UnsignedInt {
 
 /**
 @debugoperatorenum{LayouterDataHandle}
-@m_since_latest
+@m_since_latest_{extras}
 */
 MAGNUM_UI_EXPORT Debug& operator<<(Debug& debug, LayouterDataHandle value);
 
 /**
 @brief Compose a layouter data handle from an ID and a generation
-@m_since_latest
+@m_since_latest_{extras}
 
 Expects that the ID fits into 20 bits and the generation into 12 bits. Use
 @ref layouterDataHandleId() and @ref layouterDataHandleGeneration() for an
@@ -470,7 +470,7 @@ constexpr LayouterDataHandle layouterDataHandle(UnsignedInt id, UnsignedInt gene
 
 /**
 @brief Extract ID from a layouter data handle
-@m_since_latest
+@m_since_latest_{extras}
 
 Expects that @p handle is not @ref LayouterDataHandle::Null. Use
 @ref layouterDataHandleGeneration() for extracting the generation and
@@ -484,7 +484,7 @@ constexpr UnsignedInt layouterDataHandleId(LayouterDataHandle handle) {
 
 /**
 @brief Extract generation from a layouter data handle
-@m_since_latest
+@m_since_latest_{extras}
 
 For @ref LayouterDataHandle::Null returns @cpp 0 @ce. A valid handle has always
 a non-zero generation. Use @ref layouterDataHandleId() for extracting the ID
@@ -496,7 +496,7 @@ constexpr UnsignedInt layouterDataHandleGeneration(LayouterDataHandle handle) {
 
 /**
 @brief Layout handle
-@m_since_latest
+@m_since_latest_{extras}
 
 A combination of a @ref LayouterHandle and a @ref LayouterDataHandle. Uses 8
 bits for storing a layouter ID, 8 bits for a layouter generation, 20 bits for
@@ -511,13 +511,13 @@ enum class LayoutHandle: UnsignedLong {
 
 /**
 @debugoperatorenum{LayoutHandle}
-@m_since_latest
+@m_since_latest_{extras}
 */
 MAGNUM_UI_EXPORT Debug& operator<<(Debug& debug, LayoutHandle value);
 
 /**
 @brief Compose a layout handle from a layouter handle, a layouter data ID and a layouter data generation
-@m_since_latest
+@m_since_latest_{extras}
 
 Expects that the ID fits into 20 bits and the generation into 12 bits. Use
 @ref layoutHandleLayouter(), @ref layoutHandleId() and
@@ -533,7 +533,7 @@ constexpr LayoutHandle layoutHandle(LayouterHandle layouterHandle, UnsignedInt i
 
 /**
 @brief Compose a layout handle from a layouter handle and a layouter data handle
-@m_since_latest
+@m_since_latest_{extras}
 
 Use @ref layoutHandleLayouter() and @ref layoutHandleData() for the inverse
 operation.
@@ -547,7 +547,7 @@ constexpr LayoutHandle layoutHandle(LayouterHandle layouterHandle, LayouterDataH
 
 /**
 @brief Extract layouter handle from a layout handle
-@m_since_latest
+@m_since_latest_{extras}
 
 Use @ref layoutHandleData() for extracting the layouter data handle and
 @ref layoutHandle(LayouterHandle, LayouterDataHandle) for an inverse operation.
@@ -558,7 +558,7 @@ constexpr LayouterHandle layoutHandleLayouter(LayoutHandle handle) {
 
 /**
 @brief Extract layouter data handle from a layout handle
-@m_since_latest
+@m_since_latest_{extras}
 
 Use @ref layoutHandleLayouter() for extracting the layouter handle and
 @ref layoutHandle(LayouterHandle, LayouterDataHandle) for an inverse operation.
@@ -569,7 +569,7 @@ constexpr LayouterDataHandle layoutHandleData(LayoutHandle handle) {
 
 /**
 @brief Extract layouter ID from a layout handle
-@m_since_latest
+@m_since_latest_{extras}
 
 Expects that the layouter portion of @p handle is @ref LayouterHandle::Null.
 Use @ref layoutHandleLayouterGeneration() for extracting the layouter
@@ -585,7 +585,7 @@ constexpr UnsignedInt layoutHandleLayouterId(LayoutHandle handle) {
 
 /**
 @brief Extract layouter generation from a layout handle
-@m_since_latest
+@m_since_latest_{extras}
 
 If the layouter portion of the handle is @ref LayouterHandle::Null, returns
 @cpp 0 @ce. A valid handle has always a non-zero generation. Use
@@ -599,7 +599,7 @@ constexpr UnsignedInt layoutHandleLayouterGeneration(LayoutHandle handle) {
 
 /**
 @brief Extract ID from a layout handle
-@m_since_latest
+@m_since_latest_{extras}
 
 Expects that the data portion of @p handle is not @ref LayouterDataHandle::Null.
 Use @ref layoutHandleGeneration() for extracting the generation and
@@ -615,7 +615,7 @@ constexpr UnsignedInt layoutHandleId(LayoutHandle handle) {
 
 /**
 @brief Extract generation from a layout handle
-@m_since_latest
+@m_since_latest_{extras}
 
 If the layouter data portion of the handle is @ref LayouterDataHandle::Null,
 returns @cpp 0 @ce. A valid handle has always a non-zero generation. Use
@@ -637,7 +637,7 @@ namespace Implementation {
 
 /**
 @brief Animator handle
-@m_since_latest
+@m_since_latest_{extras}
 
 Uses 8 bits for storing an ID and 8 bits for a generation.
 @see @ref AbstractUserInterface::createAnimator(),
@@ -651,13 +651,13 @@ enum class AnimatorHandle: UnsignedShort {
 
 /**
 @debugoperatorenum{AnimatorHandle}
-@m_since_latest
+@m_since_latest_{extras}
 */
 MAGNUM_UI_EXPORT Debug& operator<<(Debug& debug, AnimatorHandle value);
 
 /**
 @brief Compose an animator handle from an ID and a generation
-@m_since_latest
+@m_since_latest_{extras}
 
 Expects that the ID fits into 8 bits and the generation into 8 bits. Use
 @ref animatorHandleId() and @ref animatorHandleGeneration() for an inverse
@@ -670,7 +670,7 @@ constexpr AnimatorHandle animatorHandle(UnsignedInt id, UnsignedInt generation) 
 
 /**
 @brief Extract ID from an animator handle
-@m_since_latest
+@m_since_latest_{extras}
 
 Expects that @p handle is not @ref AnimatorHandle::Null. Use
 @ref animatorHandleGeneration() for extracting the generation and
@@ -684,7 +684,7 @@ constexpr UnsignedInt animatorHandleId(AnimatorHandle handle) {
 
 /**
 @brief Extract generation from an animator handle
-@m_since_latest
+@m_since_latest_{extras}
 
 For @ref AnimatorHandle::Null returns @cpp 0 @ce. A valid handle has always a
 non-zero generation. Use @ref animatorHandleId() for extracting the ID and
@@ -703,7 +703,7 @@ namespace Implementation {
 
 /**
 @brief Animator data handle
-@m_since_latest
+@m_since_latest_{extras}
 
 Uses 20 bits for storing an ID and 12 bits for a generation.
 @see @ref AbstractAnimator::create(), @ref AbstractAnimator::remove(),
@@ -716,13 +716,13 @@ enum class AnimatorDataHandle: UnsignedInt {
 
 /**
 @debugoperatorenum{AnimatorDataHandle}
-@m_since_latest
+@m_since_latest_{extras}
 */
 MAGNUM_UI_EXPORT Debug& operator<<(Debug& debug, AnimatorDataHandle value);
 
 /**
 @brief Compose an animator data handle from an ID and a generation
-@m_since_latest
+@m_since_latest_{extras}
 
 Expects that the ID fits into 20 bits and the generation into 12 bits. Use
 @ref animatorDataHandleId() and @ref animatorDataHandleGeneration() for an
@@ -735,7 +735,7 @@ constexpr AnimatorDataHandle animatorDataHandle(UnsignedInt id, UnsignedInt gene
 
 /**
 @brief Extract ID from an animator data handle
-@m_since_latest
+@m_since_latest_{extras}
 
 Expects that @p handle is not @ref AnimatorDataHandle::Null. Use
 @ref animatorDataHandleGeneration() for extracting the generation and
@@ -749,7 +749,7 @@ constexpr UnsignedInt animatorDataHandleId(AnimatorDataHandle handle) {
 
 /**
 @brief Extract generation from an animator data handle
-@m_since_latest
+@m_since_latest_{extras}
 
 For @ref AnimatorDataHandle::Null returns @cpp 0 @ce. A valid handle has always
 a non-zero generation. Use @ref animatorDataHandleId() for extracting the ID
@@ -761,7 +761,7 @@ constexpr UnsignedInt animatorDataHandleGeneration(AnimatorDataHandle handle) {
 
 /**
 @brief Animation handle
-@m_since_latest
+@m_since_latest_{extras}
 
 A combination of an @ref AnimatorHandle and an @ref AnimatorDataHandle.
 Uses 8 bits for storing an animator ID, 8 bits for an animator generation, 20
@@ -777,13 +777,13 @@ enum class AnimationHandle: UnsignedLong {
 
 /**
 @debugoperatorenum{AnimationHandle}
-@m_since_latest
+@m_since_latest_{extras}
 */
 MAGNUM_UI_EXPORT Debug& operator<<(Debug& debug, AnimationHandle value);
 
 /**
 @brief Compose an animation handle from an animator handle, an animator data ID and an animator data generation
-@m_since_latest
+@m_since_latest_{extras}
 
 Expects that the ID fits into 20 bits and the generation into 12 bits. Use
 @ref animationHandleAnimator(), @ref animationHandleId() and
@@ -799,7 +799,7 @@ constexpr AnimationHandle animationHandle(AnimatorHandle animatorHandle, Unsigne
 
 /**
 @brief Compose a animation handle from an animator handle and an animator data handle
-@m_since_latest
+@m_since_latest_{extras}
 
 Use @ref animationHandleAnimator() and @ref animationHandleData() for the
 inverse operation.
@@ -813,7 +813,7 @@ constexpr AnimationHandle animationHandle(AnimatorHandle animatorHandle, Animato
 
 /**
 @brief Extract animator handle from an animation handle
-@m_since_latest
+@m_since_latest_{extras}
 
 Use @ref animationHandleData() for extracting the animator data handle and
 @ref animationHandle(AnimatorHandle, AnimatorDataHandle) for an inverse
@@ -825,7 +825,7 @@ constexpr AnimatorHandle animationHandleAnimator(AnimationHandle handle) {
 
 /**
 @brief Extract animator data handle from an animation handle
-@m_since_latest
+@m_since_latest_{extras}
 
 Use @ref animationHandleAnimator() for extracting the animator handle and
 @ref animationHandle(AnimatorHandle, AnimatorDataHandle) for an inverse
@@ -837,7 +837,7 @@ constexpr AnimatorDataHandle animationHandleData(AnimationHandle handle) {
 
 /**
 @brief Extract animator ID from an animation handle
-@m_since_latest
+@m_since_latest_{extras}
 
 Expects that the animator portion of @p handle is not @ref AnimatorHandle::Null.
 Use @ref animationHandleAnimatorGeneration() for extracting the animator
@@ -853,7 +853,7 @@ constexpr UnsignedInt animationHandleAnimatorId(AnimationHandle handle) {
 
 /**
 @brief Extract animator generation from an animation handle
-@m_since_latest
+@m_since_latest_{extras}
 
 If the animator portion of the handle is @ref AnimatorHandle::Null, returns
 @cpp 0 @ce. A valid handle has always a non-zero generation. Use
@@ -868,7 +868,7 @@ constexpr UnsignedInt animationHandleAnimatorGeneration(AnimationHandle handle) 
 
 /**
 @brief Extract ID from an animation handle
-@m_since_latest
+@m_since_latest_{extras}
 
 Expects that the data portion of @p handle is not @ref AnimatorDataHandle::Null.
 Use @ref animationHandleGeneration() for extracting the generation and
@@ -884,7 +884,7 @@ constexpr UnsignedInt animationHandleId(AnimationHandle handle) {
 
 /**
 @brief Extract generation from an animation handle
-@m_since_latest
+@m_since_latest_{extras}
 
 If the animator data portion of the handle is @ref AnimatorDataHandle::Null,
 returns @cpp 0 @ce. A valid handle has always a non-zero generation. Use

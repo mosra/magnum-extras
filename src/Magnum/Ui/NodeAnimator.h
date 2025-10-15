@@ -28,7 +28,7 @@
 
 /** @file
  * @brief Class @ref Magnum::Ui::NodeAnimator, @ref Magnum::Ui::NodeAnimation
- * @m_since_latest
+ * @m_since_latest_{extras}
  */
 
 #include <Magnum/Math/Vector2.h> /* for NodeAnimation members */
@@ -41,7 +41,7 @@ class NodeAnimation;
 
 /**
 @brief Node animator
-@m_since_latest
+@m_since_latest_{extras}
 
 Each animation interpolates between given node offset, size and opacity
 endpoints, optionally modifying node flags and allowing to automatically remove
@@ -433,7 +433,7 @@ class MAGNUM_UI_EXPORT NodeAnimator: public AbstractNodeAnimator {
 
 /**
 @brief Node animation properties
-@m_since_latest
+@m_since_latest_{extras}
 
 Used to pass arguments to @ref NodeAnimator::create(). See the
 @ref NodeAnimator class documentation for more information and usage examples.

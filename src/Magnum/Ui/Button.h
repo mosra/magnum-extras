@@ -28,7 +28,7 @@
 
 /** @file
  * @brief Class @ref Magnum::Ui::Button, function @ref Magnum::Ui::button(), enum @ref Magnum::Ui::ButtonStyle
- * @m_since_latest
+ * @m_since_latest_{extras}
  */
 
 #include "Magnum/Ui/Widget.h"
@@ -37,7 +37,7 @@ namespace Magnum { namespace Ui {
 
 /**
 @brief Button style
-@m_since_latest
+@m_since_latest_{extras}
 
 @see @ref Button, @ref button()
 */
@@ -54,13 +54,13 @@ enum class ButtonStyle: UnsignedByte {
 
 /**
 @debugoperatorenum{ButtonStyle}
-@m_since_latest
+@m_since_latest_{extras}
 */
 MAGNUM_UI_EXPORT Debug& operator<<(Debug& debug, ButtonStyle value);
 
 /**
 @brief Button widget
-@m_since_latest
+@m_since_latest_{extras}
 */
 class MAGNUM_UI_EXPORT Button: public Widget {
     public:
@@ -202,7 +202,7 @@ class MAGNUM_UI_EXPORT Button: public Widget {
     empty.
 @param style            Button style
 @return The @p anchor verbatim
-@m_since_latest
+@m_since_latest_{extras}
 
 Compared to @ref Button::Button(const Anchor&, Icon, ButtonStyle)
 this creates a stateless button that doesn't have any class instance that would
@@ -220,7 +220,7 @@ MAGNUM_UI_EXPORT Anchor button(const Anchor& anchor, Icon icon, ButtonStyle styl
 @param style            Button style
 @param textProperties   Text shaping and layouting properties
 @return The @p anchor verbatim
-@m_since_latest
+@m_since_latest_{extras}
 
 Compared to @ref Button::Button(const Anchor&, Containers::StringView, const TextProperties&, ButtonStyle)
 this creates a stateless button that doesn't have any class instance that would
@@ -231,7 +231,7 @@ is removed only when the node or its parent get removed.
 MAGNUM_UI_EXPORT Anchor button(const Anchor& anchor, Containers::StringView text, const TextProperties& textProperties, ButtonStyle style = ButtonStyle::Default);
 /**
 @overload
-@m_since_latest
+@m_since_latest_{extras}
 */
 MAGNUM_UI_EXPORT Anchor button(const Anchor& anchor, Containers::StringView text, ButtonStyle style = ButtonStyle::Default);
 
@@ -245,7 +245,7 @@ MAGNUM_UI_EXPORT Anchor button(const Anchor& anchor, Containers::StringView text
 @param textProperties   Text shaping and layouting properties
 @param style            Button style
 @return The @p anchor verbatim
-@m_since_latest
+@m_since_latest_{extras}
 
 Compared to @ref Button::Button(const Anchor&, Icon, Containers::StringView, const TextProperties&, ButtonStyle)
 this creates a stateless button that doesn't have any class instance that would
@@ -256,7 +256,7 @@ is removed only when the node or its parent get removed.
 MAGNUM_UI_EXPORT Anchor button(const Anchor& anchor, Icon icon, Containers::StringView text, const TextProperties& textProperties, ButtonStyle style = ButtonStyle::Default);
 /**
 @overload
-@m_since_latest
+@m_since_latest_{extras}
 */
 MAGNUM_UI_EXPORT Anchor button(const Anchor& anchor, Icon icon, Containers::StringView text, ButtonStyle style = ButtonStyle::Default);
 

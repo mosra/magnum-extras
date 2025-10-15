@@ -28,7 +28,7 @@
 
 /** @file
  * @brief Class @ref Magnum::Ui::TextLayerStyleAnimator, enum @ref Magnum::Ui::TextLayerStyleAnimatorUpdate, enum set @ref Magnum::Ui::TextLayerStyleAnimatorUpdates
- * @m_since_latest
+ * @m_since_latest_{extras}
  */
 
 #include <Magnum/Math/Time.h>
@@ -39,7 +39,7 @@ namespace Magnum { namespace Ui {
 
 /**
 @brief Text layer style properties that are being animated
-@m_since_latest
+@m_since_latest_{extras}
 
 Depending on which of these are returned from
 @ref TextLayerStyleAnimator::advance(), causes various @ref LayerState flags
@@ -92,13 +92,13 @@ enum class TextLayerStyleAnimatorUpdate: UnsignedByte {
 
 /**
 @debugoperatorenum{TextLayerStyleAnimatorUpdate}
-@m_since_latest
+@m_since_latest_{extras}
 */
 MAGNUM_UI_EXPORT Debug& operator<<(Debug& debug, TextLayerStyleAnimatorUpdate value);
 
 /**
 @brief Set of text layer style properties that are being animated
-@m_since_latest
+@m_since_latest_{extras}
 
 @see @ref TextLayerStyleAnimator::advance()
 */
@@ -106,7 +106,7 @@ typedef Containers::EnumSet<TextLayerStyleAnimatorUpdate> TextLayerStyleAnimator
 
 /**
 @debugoperatorenum{TextLayerStyleAnimatorUpdates}
-@m_since_latest
+@m_since_latest_{extras}
 */
 MAGNUM_UI_EXPORT Debug& operator<<(Debug& debug, TextLayerStyleAnimatorUpdates value);
 
@@ -114,7 +114,7 @@ CORRADE_ENUMSET_OPERATORS(TextLayerStyleAnimatorUpdates)
 
 /**
 @brief Text layer style animator
-@m_since_latest
+@m_since_latest_{extras}
 
 Each animation is a transition between two @ref TextLayer styles, with
 individual properties interpolated with an easing function.

@@ -28,7 +28,7 @@
 
 /**
  * @brief Class @ref Magnum::Ui::DebugLayer, enum @ref Magnum::Ui::DebugLayerSource, @ref Magnum::Ui::DebugLayerFlag, enum set @ref Magnum::Ui::DebugLayerSources, @ref Magnum::Ui::DebugLayerFlags
- * @m_since_latest
+ * @m_since_latest_{extras}
  */
 
 #include "Magnum/Ui/AbstractLayer.h"
@@ -37,7 +37,7 @@ namespace Magnum { namespace Ui {
 
 /**
 @brief Debug layer data source to track
-@m_since_latest
+@m_since_latest_{extras}
 
 @see @ref DebugLayerSources, @ref DebugLayer, @ref DebugLayer::sources()
 */
@@ -135,7 +135,7 @@ enum class DebugLayerSource: UnsignedShort {
 
 /**
 @brief Debug layer data sources to track
-@m_since_latest
+@m_since_latest_{extras}
 
 @see @ref DebugLayer, @ref DebugLayer::sources()
 */
@@ -145,19 +145,19 @@ CORRADE_ENUMSET_OPERATORS(DebugLayerSources)
 
 /**
 @debugoperatorenum{DebugLayerSource}
-@m_since_latest
+@m_since_latest_{extras}
 */
 MAGNUM_UI_EXPORT Debug& operator<<(Debug& debug, DebugLayerSource value);
 
 /**
 @debugoperatorenum{DebugLayerSources}
-@m_since_latest
+@m_since_latest_{extras}
 */
 MAGNUM_UI_EXPORT Debug& operator<<(Debug& debug, DebugLayerSources value);
 
 /**
 @brief Debug layer flag
-@m_since_latest
+@m_since_latest_{extras}
 
 @see @ref DebugLayerFlags, @ref DebugLayer, @ref DebugLayer::flags()
 */
@@ -212,7 +212,7 @@ enum class DebugLayerFlag: UnsignedByte {
 
 /**
 @brief Debug layer flags
-@m_since_latest
+@m_since_latest_{extras}
 
 @see @ref DebugLayer, @ref DebugLayer::flags()
 */
@@ -222,13 +222,13 @@ CORRADE_ENUMSET_OPERATORS(DebugLayerFlags)
 
 /**
 @debugoperatorenum{DebugLayerFlag}
-@m_since_latest
+@m_since_latest_{extras}
 */
 MAGNUM_UI_EXPORT Debug& operator<<(Debug& debug, DebugLayerFlag value);
 
 /**
 @debugoperatorenum{DebugLayerFlags}
-@m_since_latest
+@m_since_latest_{extras}
 */
 MAGNUM_UI_EXPORT Debug& operator<<(Debug& debug, DebugLayerFlags value);
 
@@ -261,7 +261,7 @@ template<class Handle, class F> struct DebugLayerConditionSignature<Handle, F, D
 
 /**
 @brief Debug layer
-@m_since_latest
+@m_since_latest_{extras}
 
 Provides a non-intrusive and extensible way to inspect node hierarchy and layer
 data attachments in any existing UI for debugging purposes. You can use either

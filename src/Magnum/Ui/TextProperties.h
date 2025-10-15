@@ -28,7 +28,7 @@
 
 /** @file
  * @brief Class @ref Magnum::Ui::TextFeatureValue, @ref Magnum::Ui::TextProperties
- * @m_since_latest
+ * @m_since_latest_{extras}
  */
 
 #include <initializer_list>
@@ -42,7 +42,7 @@ namespace Magnum { namespace Ui {
 
 /**
 @brief OpenType feature value
-@m_since_latest
+@m_since_latest_{extras}
 
 A subset of @ref Text::FeatureRange that always affects the whole text. Meant
 to be used to supply default features for a style in
@@ -87,7 +87,7 @@ class MAGNUM_UI_EXPORT TextFeatureValue {
 
 /**
 @brief Text properties
-@m_since_latest
+@m_since_latest_{extras}
 
 Overrides and customization affecting text layout and shaping in
 @ref TextLayer::create() and @ref TextLayer::setText(). See the @ref TextLayer

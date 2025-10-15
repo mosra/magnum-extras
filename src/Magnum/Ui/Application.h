@@ -28,7 +28,7 @@
 
 /** @file
 @brief @ref Magnum::Platform::Sdl2Application "Magnum::Platform::*Application" compatibility for @ref Magnum::Ui::AbstractUserInterface
-@m_since_latest
+@m_since_latest_{extras}
 
 Including this header allows you to pass a @ref Magnum::Platform::Sdl2Application "Magnum::Platform::*Application" to
 @ref Magnum::Ui::AbstractUserInterface constructors and

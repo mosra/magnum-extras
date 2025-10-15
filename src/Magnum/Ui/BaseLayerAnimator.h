@@ -28,7 +28,7 @@
 
 /** @file
  * @brief Class @ref Magnum::Ui::BaseLayerStyleAnimator, enum @ref Magnum::Ui::BaseLayerStyleAnimatorUpdate, enum set @ref Magnum::Ui::BaseLayerStyleAnimatorUpdates
- * @m_since_latest
+ * @m_since_latest_{extras}
  */
 
 #include <Magnum/Math/Time.h>
@@ -39,7 +39,7 @@ namespace Magnum { namespace Ui {
 
 /**
 @brief Base layer style properties that are being animated
-@m_since_latest
+@m_since_latest_{extras}
 
 Depending on which of these are returned from
 @ref BaseLayerStyleAnimator::advance(), causes various @ref LayerState flags
@@ -73,13 +73,13 @@ enum class BaseLayerStyleAnimatorUpdate: UnsignedByte {
 
 /**
 @debugoperatorenum{BaseLayerStyleAnimatorUpdate}
-@m_since_latest
+@m_since_latest_{extras}
 */
 MAGNUM_UI_EXPORT Debug& operator<<(Debug& debug, BaseLayerStyleAnimatorUpdate value);
 
 /**
 @brief Set of base layer style properties that are being animated
-@m_since_latest
+@m_since_latest_{extras}
 
 @see @ref BaseLayerStyleAnimator::advance()
 */
@@ -87,7 +87,7 @@ typedef Containers::EnumSet<BaseLayerStyleAnimatorUpdate> BaseLayerStyleAnimator
 
 /**
 @debugoperatorenum{BaseLayerStyleAnimatorUpdates}
-@m_since_latest
+@m_since_latest_{extras}
 */
 MAGNUM_UI_EXPORT Debug& operator<<(Debug& debug, BaseLayerStyleAnimatorUpdates value);
 
@@ -95,7 +95,7 @@ CORRADE_ENUMSET_OPERATORS(BaseLayerStyleAnimatorUpdates)
 
 /**
 @brief Base layer style animator
-@m_since_latest
+@m_since_latest_{extras}
 
 Each animation is a transition between two @ref BaseLayer styles, with
 individual properties interpolated with an easing function.

@@ -28,7 +28,7 @@
 
 /** @file
  * @brief Class @ref Magnum::Ui::McssDarkStyle, enum @ref Magnum::Ui::Icon
- * @m_since_latest
+ * @m_since_latest_{extras}
  */
 
 #include "Magnum/Ui/AbstractStyle.h"
@@ -37,7 +37,7 @@ namespace Magnum { namespace Ui {
 
 /**
 @brief Icon
-@m_since_latest
+@m_since_latest_{extras}
 
 For use in @ref Button and other widgets.
 */
@@ -54,7 +54,7 @@ enum class Icon: UnsignedInt {
 
 /**
 @debugoperatorenum{Icon}
-@m_since_latest
+@m_since_latest_{extras}
 */
 MAGNUM_UI_EXPORT Debug& operator<<(Debug& debug, Icon value);
 
@@ -74,7 +74,7 @@ namespace Implementation {
 
 /**
 @brief Style for builtin widgets based on the [m.css](https://mcss.mosra.cz) dark theme
-@m_since_latest
+@m_since_latest_{extras}
 
 An instance of this class is meant to be passed to the @ref UserInterfaceGL
 constructor, to @ref UserInterfaceGL::create(), @relativeref{UserInterfaceGL,tryCreate()}
@@ -145,13 +145,13 @@ class MAGNUM_UI_EXPORT McssDarkStyle: public AbstractStyle {
 
 /**
 @debugoperatorclassenum{McssDarkStyle,McssDarkStyle::Feature}
-@m_since_latest
+@m_since_latest_{extras}
 */
 MAGNUM_UI_EXPORT Debug& operator<<(Debug& debug, McssDarkStyle::Feature value);
 
 /**
 @debugoperatorclassenum{McssDarkStyle,McssDarkStyle::Features}
-@m_since_latest
+@m_since_latest_{extras}
 */
 MAGNUM_UI_EXPORT Debug& operator<<(Debug& debug, McssDarkStyle::Features value);
 

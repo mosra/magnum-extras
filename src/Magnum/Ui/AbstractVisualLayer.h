@@ -28,7 +28,7 @@
 
 /** @file
  * @brief Class @ref Magnum::Ui::AbstractVisualLayer
- * @m_since_latest
+ * @m_since_latest_{extras}
  */
 
 #include "Magnum/Ui/AbstractLayer.h"
@@ -37,7 +37,7 @@ namespace Magnum { namespace Ui {
 
 /**
 @brief Base for visual data layers
-@m_since_latest
+@m_since_latest_{extras}
 
 Provides style management and style transitions depending on primary &
 non-fallthrough input events for builtin visual layers like @ref BaseLayer or
