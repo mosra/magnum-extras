@@ -2769,7 +2769,7 @@ AbstractUserInterface& AbstractUserInterface::update() {
     CORRADE_ASSERT(!state.size.isZero(),
         "Ui::AbstractUserInterface::update(): user interface size wasn't set", *this);
 
-    /* If layout attachment update is desired, calculate the total conservative
+    /* If layout assignment update is desired, calculate the total conservative
        count of layouts in all layouters to size the output arrays.
        Conservative as it includes also freed layouts, however the assumption
        is that in majority cases there will be very little freed layouts. */
