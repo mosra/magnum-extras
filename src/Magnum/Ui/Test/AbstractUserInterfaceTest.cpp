@@ -162,7 +162,7 @@ struct AbstractUserInterfaceTest: TestSuite::Tester {
     void advanceAnimationsStyle();
     void advanceAnimationsInvalidTime();
 
-    void updateOrder();
+    void updateLayerOrder();
     void updateRecycledLayerWithoutInstance();
 
     /* Tests update() and clean() calls on AbstractLayer, AbstractLayouter and
@@ -273,7 +273,7 @@ const struct {
 const struct {
     const char* name;
     bool shuffle;
-} UpdateOrderData[]{
+} UpdateLayerOrderData[]{
     {"created in layer order", false},
     {"created in shuffled order", true}
 };
@@ -1195,8 +1195,8 @@ AbstractUserInterfaceTest::AbstractUserInterfaceTest() {
               &AbstractUserInterfaceTest::advanceAnimationsStyle,
               &AbstractUserInterfaceTest::advanceAnimationsInvalidTime});
 
-    addInstancedTests({&AbstractUserInterfaceTest::updateOrder},
-        Containers::arraySize(UpdateOrderData));
+    addInstancedTests({&AbstractUserInterfaceTest::updateLayerOrder},
+        Containers::arraySize(UpdateLayerOrderData));
 
     addTests({&AbstractUserInterfaceTest::updateRecycledLayerWithoutInstance});
 
@@ -7733,8 +7733,8 @@ void AbstractUserInterfaceTest::advanceAnimationsInvalidTime() {
     CORRADE_COMPARE(out, "Ui::AbstractUserInterface::advanceAnimations(): expected a time at least Nanoseconds(56) but got Nanoseconds(55)\n");
 }
 
-void AbstractUserInterfaceTest::updateOrder() {
-    auto&& data = UpdateOrderData[testCaseInstanceId()];
+void AbstractUserInterfaceTest::updateLayerOrder() {
+    auto&& data = UpdateLayerOrderData[testCaseInstanceId()];
     setTestCaseDescription(data.name);
 
     AbstractUserInterface ui{{100, 100}};
