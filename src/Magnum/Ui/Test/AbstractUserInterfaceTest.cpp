@@ -91,6 +91,7 @@ struct AbstractUserInterfaceTest: TestSuite::Tester {
     void layouterGetInvalid();
     void layouterRemoveInvalid();
     void layouterNoHandlesLeft();
+    void layouterUserInterfaceReference();
 
     void animator();
     void animatorHandleRecycle();
@@ -1095,6 +1096,7 @@ AbstractUserInterfaceTest::AbstractUserInterfaceTest() {
               &AbstractUserInterfaceTest::layouterGetInvalid,
               &AbstractUserInterfaceTest::layouterRemoveInvalid,
               &AbstractUserInterfaceTest::layouterNoHandlesLeft,
+              &AbstractUserInterfaceTest::layouterUserInterfaceReference,
 
               &AbstractUserInterfaceTest::animator,
               &AbstractUserInterfaceTest::animatorHandleRecycle,
@@ -2171,6 +2173,8 @@ void AbstractUserInterfaceTest::layerNoHandlesLeft() {
 }
 
 void AbstractUserInterfaceTest::layerUserInterfaceReference() {
+    /* This is mirrored to layerUserInterfaceReference(), keep in sync */
+
     AbstractUserInterface ui{{100, 100}};
 
     struct Layer: AbstractLayer {
@@ -2690,6 +2694,75 @@ void AbstractUserInterfaceTest::layouterNoHandlesLeft() {
        to give a heads-up when modifying the handle ID bit count */
     CORRADE_COMPARE(out,
         "Ui::AbstractUserInterface::createLayouter(): can only have at most 256 layouters\n");
+}
+
+void AbstractUserInterfaceTest::layouterUserInterfaceReference() {
+    /* Same as layerUserInterfaceReference(), just adapted to layouters */
+
+    AbstractUserInterface ui{{100, 100}};
+
+    struct Layouter: AbstractLayouter {
+        using AbstractLayouter::AbstractLayouter;
+        using AbstractLayouter::hasUi;
+        using AbstractLayouter::ui;
+
+        void doUpdate(Containers::BitArrayView, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const NodeHandle>&, const Containers::StridedArrayView1D<Vector2>&, const  Containers::StridedArrayView1D<Vector2>&) override {}
+    };
+
+    Containers::Pointer<Layouter> layouter1Instance{InPlaceInit, ui.createLayouter()};
+    LayouterHandle layouterRemoved = ui.createLayouter();
+    Containers::Pointer<Layouter> layouter2Instance{InPlaceInit, ui.createLayouter()};
+    /*LayouterHandle layouterWithNoInstance =*/ ui.createLayouter();
+    ui.removeLayouter(layouterRemoved);
+
+    /* Initially the layouters are not part of a user interface */
+    CORRADE_VERIFY(!layouter1Instance->hasUi());
+    CORRADE_VERIFY(!layouter2Instance->hasUi());
+
+    /* They are after setting them */
+    Layouter& layouter1 = ui.setLayouterInstance(Utility::move(layouter1Instance));
+    Layouter& layouter2 = ui.setLayouterInstance(Utility::move(layouter2Instance));
+    CORRADE_VERIFY(layouter1.hasUi());
+    CORRADE_VERIFY(layouter2.hasUi());
+    CORRADE_COMPARE(&layouter1.ui(), &ui);
+    CORRADE_COMPARE(&layouter2.ui(), &ui);
+
+    /* Move-constructing the UI updates the references accordingly, skipping
+       layouters that are removed or have no instance */
+    AbstractUserInterface ui2 = Utility::move(ui);
+    CORRADE_VERIFY(layouter1.hasUi());
+    CORRADE_VERIFY(layouter2.hasUi());
+    CORRADE_COMPARE(&layouter1.ui(), &ui2);
+    CORRADE_COMPARE(&layouter2.ui(), &ui2);
+
+    /* Another UI instance with another layouter */
+    AbstractUserInterface ui3{{100, 100}};
+    Layouter& layouter3 = ui3.setLayouterInstance(Containers::pointer<Layouter>(ui3.createLayouter()));
+    CORRADE_VERIFY(layouter3.hasUi());
+    CORRADE_COMPARE(&layouter3.ui(), &ui3);
+
+    /* Move assignment updates the references for both sides */
+    ui3 = Utility::move(ui2);
+    CORRADE_VERIFY(layouter1.hasUi());
+    CORRADE_VERIFY(layouter2.hasUi());
+    CORRADE_VERIFY(layouter3.hasUi());
+    CORRADE_COMPARE(&layouter1.ui(), &ui3);
+    CORRADE_COMPARE(&layouter2.ui(), &ui3);
+    CORRADE_COMPARE(&layouter3.ui(), &ui2);
+
+    /* Move-constructing a moved-out instance shouldn't crash trying to access
+       empty internal state */
+    AbstractUserInterface ui4 = Utility::move(ui);
+
+    /* Move-assigning to or from a moved-out instance shouldn't crash either.
+       The comparison is to verify which instance is *not* moved out, if it
+       crashes in it, it's all wrong and we're testing some bullshit. */
+    CORRADE_COMPARE(ui3.layouterCapacity(), 4);
+    ui = Utility::move(ui3);
+    ui3 = Utility::move(ui);
+
+    /* No way to check anything in the above */
+    CORRADE_VERIFY(true);
 }
 
 void AbstractUserInterfaceTest::animator() {

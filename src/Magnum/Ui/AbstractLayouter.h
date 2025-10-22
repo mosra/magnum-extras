@@ -319,6 +319,30 @@ class MAGNUM_UI_EXPORT AbstractLayouter {
 
     protected:
         /**
+         * @brief Whether the layouter is a part of an user interface instance
+         *
+         * Returns @cpp true @ce if the layouter has been already passed to
+         * @ref AbstractUserInterface::setLayouterInstance(), @cpp false @ce
+         * otherwise. The function isn't public as it's intended to be used
+         * only by the layouter implementation itself, not user code.
+         * @see @ref ui()
+         */
+        bool hasUi() const;
+
+        /**
+         * @brief User interface instance the layouter is part of
+         *
+         * Expects that the layouter has been already passed to
+         * @ref AbstractUserInterface::setLayerInstance(). The function isn't
+         * public as it's intended to be used only by the layouter
+         * implementation itself, not user code. Additionally, to prevent
+         * undesirable usage patterns, only a const reference is exposed,
+         * intended just for querying UI state, not modifying it.
+         * @see @ref hasUi()
+         */
+        const AbstractUserInterface& ui() const;
+
+        /**
          * @brief Add a layout assigned to given node
          * @param node      Node to assign the layout to
          * @return New layout handle
@@ -376,6 +400,8 @@ class MAGNUM_UI_EXPORT AbstractLayouter {
         void remove(LayouterDataHandle handle);
 
     private:
+        friend AbstractUserInterface; /* for the ui() reference */
+
         /**
          * @brief Set user interface size
          * @param size              Size of the user interface to which

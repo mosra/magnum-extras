@@ -26,6 +26,9 @@
     DEALINGS IN THE SOFTWARE.
 */
 
+/* Definition of the AbstractLayouter::State struct that's also used by
+   AbstractUserInterface internals to manage the UI reference stored in it */
+
 #include <Corrade/Containers/Array.h>
 
 #include "Magnum/Ui/AbstractLayouter.h"
@@ -92,6 +95,10 @@ struct AbstractLayouter::State {
     bool setSizeCalled = false;
     #endif
     /* 0/4 bytes free, 1/5 on a no-assert build */
+
+    /* Gets set by AbstractUserInterface::setLayouterInstance() and further
+       updated on every UI move */
+    const AbstractUserInterface* ui = nullptr;
 
     Containers::Array<Implementation::Layout> layouts;
     /* Indices in the `layouts` array. The Layout then has a nextFree member

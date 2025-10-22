@@ -49,6 +49,8 @@ struct AbstractLayouterTest: TestSuite::Tester {
     void constructCopy();
     void constructMove();
 
+    void uiInvalid();
+
     void addRemove();
     void addRemoveHandleRecycle();
     void addRemoveHandleDisable();
@@ -82,6 +84,8 @@ AbstractLayouterTest::AbstractLayouterTest() {
               &AbstractLayouterTest::constructInvalidHandle,
               &AbstractLayouterTest::constructCopy,
               &AbstractLayouterTest::constructMove,
+
+              &AbstractLayouterTest::uiInvalid,
 
               &AbstractLayouterTest::addRemove,
               &AbstractLayouterTest::addRemoveHandleRecycle,
@@ -132,6 +136,7 @@ void AbstractLayouterTest::debugStatesSupersets() {
 void AbstractLayouterTest::construct() {
     struct: AbstractLayouter {
         using AbstractLayouter::AbstractLayouter;
+        using AbstractLayouter::hasUi;
 
         void doUpdate(Containers::BitArrayView, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const NodeHandle>&, const Containers::StridedArrayView1D<Vector2>&, const  Containers::StridedArrayView1D<Vector2>&) override {}
     } layouter{layouterHandle(0xab, 0x12)};
@@ -142,6 +147,11 @@ void AbstractLayouterTest::construct() {
     CORRADE_COMPARE(layouter.usedCount(), 0);
     CORRADE_VERIFY(!layouter.isHandleValid(LayouterDataHandle::Null));
     CORRADE_VERIFY(!layouter.isHandleValid(LayoutHandle::Null));
+    CORRADE_VERIFY(!layouter.hasUi());
+
+    /* ui() and hasUi() tested thoroughly in
+       AbstractUserInterfaceTest::layouterUserInterfaceReference(), invalid
+       access in uiInvalid() below */
 }
 
 void AbstractLayouterTest::constructInvalidHandle() {
@@ -185,6 +195,25 @@ void AbstractLayouterTest::constructMove() {
 
     CORRADE_VERIFY(std::is_nothrow_move_constructible<Layouter>::value);
     CORRADE_VERIFY(std::is_nothrow_move_assignable<Layouter>::value);
+}
+
+void AbstractLayouterTest::uiInvalid() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct Layouter: AbstractLayouter {
+        using AbstractLayouter::AbstractLayouter;
+        using AbstractLayouter::hasUi;
+        using AbstractLayouter::ui;
+
+        void doUpdate(Containers::BitArrayView, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const NodeHandle>&, const Containers::StridedArrayView1D<Vector2>&, const  Containers::StridedArrayView1D<Vector2>&) override {}
+    } layouter{layouterHandle(0, 1)};
+
+    CORRADE_VERIFY(!layouter.hasUi());
+
+    Containers::String out;
+    Error redirectError{&out};
+    layouter.ui();
+    CORRADE_COMPARE(out, "Ui::AbstractLayouter::ui(): layouter not part of a user interface\n");
 }
 
 void AbstractLayouterTest::addRemove() {

@@ -73,6 +73,17 @@ AbstractLayouter::~AbstractLayouter() = default;
 
 AbstractLayouter& AbstractLayouter::operator=(AbstractLayouter&&) noexcept = default;
 
+bool AbstractLayouter::hasUi() const {
+    return _state->ui;
+}
+
+const AbstractUserInterface& AbstractLayouter::ui() const {
+    const State& state = *_state;
+    CORRADE_ASSERT(state.ui,
+        "Ui::AbstractLayouter::ui(): layouter not part of a user interface", *state.ui);
+    return *state.ui;
+}
+
 LayouterHandle AbstractLayouter::handle() const {
     return _state->handle;
 }

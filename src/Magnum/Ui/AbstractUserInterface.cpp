@@ -45,6 +45,7 @@
 #include "Magnum/Ui/Handle.h"
 #include "Magnum/Ui/NodeFlags.h"
 #include "Magnum/Ui/Implementation/abstractLayerState.h"
+#include "Magnum/Ui/Implementation/abstractLayouterState.h"
 #include "Magnum/Ui/Implementation/abstractUserInterface.h"
 #include "Magnum/Ui/Implementation/orderNodesBreadthFirstInto.h"
 
@@ -652,10 +653,14 @@ AbstractUserInterface::AbstractUserInterface(NoCreateT): _state{InPlaceInit} {}
 AbstractUserInterface::AbstractUserInterface(const Vector2i& size): AbstractUserInterface{Vector2{size}, Vector2{size}, size} {}
 
 AbstractUserInterface::AbstractUserInterface(AbstractUserInterface&& other) noexcept: _state{Utility::move(other._state)} {
-    /* Update UI references in all layer instances to point to the new
-       location, unless this is a moved-out instance */
-    if(State* const state = _state.get()) for(Layer& layer: state->layers) {
-        if(AbstractLayer* const instance = layer.used.instance.get()) {
+    /* Update UI references in all layer / layouter instances to point to the
+       new location, unless this is a moved-out instance */
+    if(State* const state = _state.get()) {
+        for(Layer& layer: state->layers) if(AbstractLayer* const instance = layer.used.instance.get()) {
+            CORRADE_INTERNAL_ASSERT(instance->_state->ui == &other);
+            instance->_state->ui = this;
+        }
+        for(Layouter& layouter: state->layouters) if(AbstractLayouter* const instance = layouter.used.instance.get()) {
             CORRADE_INTERNAL_ASSERT(instance->_state->ui == &other);
             instance->_state->ui = this;
         }
@@ -665,16 +670,24 @@ AbstractUserInterface::AbstractUserInterface(AbstractUserInterface&& other) noex
 AbstractUserInterface& AbstractUserInterface::operator=(AbstractUserInterface&& other) noexcept {
     Utility::swap(other._state, _state);
 
-    /* Update UI references in all layer instances to point to the new
-       locations, on both sides, unless either is a moved-out instance */
-    if(State* const state = _state.get()) for(Layer& layer: state->layers) {
-        if(AbstractLayer* const instance = layer.used.instance.get()) {
+    /* Update UI references in all layer / layouter instances to point to the
+       new locations, on both sides, unless either is a moved-out instance */
+    if(State* const state = _state.get()) {
+        for(Layer& layer: state->layers) if(AbstractLayer* const instance = layer.used.instance.get()) {
+            CORRADE_INTERNAL_ASSERT(instance->_state->ui == &other);
+            instance->_state->ui = this;
+        }
+        for(Layouter& layouter: state->layouters) if(AbstractLayouter* const instance = layouter.used.instance.get()) {
             CORRADE_INTERNAL_ASSERT(instance->_state->ui == &other);
             instance->_state->ui = this;
         }
     }
-    if(State* const state = other._state.get()) for(Layer& layer: state->layers) {
-        if(AbstractLayer* const instance = layer.used.instance.get()) {
+    if(State* const state = other._state.get()) {
+        for(Layer& layer: state->layers) if(AbstractLayer* const instance = layer.used.instance.get()) {
+            CORRADE_INTERNAL_ASSERT(instance->_state->ui == this);
+            instance->_state->ui = &other;
+        }
+        for(Layouter& layouter: state->layouters) if(AbstractLayouter* const instance = layouter.used.instance.get()) {
             CORRADE_INTERNAL_ASSERT(instance->_state->ui == this);
             instance->_state->ui = &other;
         }
@@ -683,8 +696,8 @@ AbstractUserInterface& AbstractUserInterface::operator=(AbstractUserInterface&& 
     return *this;
 }
 
-/** @todo once/if setLayerInstance() allows non-owning layers, the destructor
-    needs to update the UI references in them as well */
+/** @todo once/if setLay{,out}erInstance() allows non-owning lay{,out}ers, the
+    destructor needs to update the UI references in them as well */
 AbstractUserInterface::~AbstractUserInterface() = default;
 
 Vector2 AbstractUserInterface::size() const {
@@ -1346,6 +1359,7 @@ AbstractLayouter& AbstractUserInterface::setLayouterInstance(Containers::Pointer
         "Ui::AbstractUserInterface::setLayouterInstance(): instance for" << handle << "already set", *state.layouters[0].used.instance);
     Layouter& layouter = state.layouters[id];
     layouter.used.instance = Utility::move(instance);
+    layouter.used.instance->_state->ui = this;
 
     /* If the size is already set, immediately proxy it to the layouter. If it
        isn't, it gets done during the next setSize() call. */
