@@ -34,6 +34,7 @@
 #include <Magnum/Math/Vector2.h>
 
 #include "Magnum/Ui/Handle.h"
+#include "Magnum/Ui/Implementation/abstractLayouterState.h"
 
 namespace Magnum { namespace Ui {
 
@@ -59,76 +60,6 @@ Debug& operator<<(Debug& debug, const LayouterStates value) {
         LayouterState::NeedsUpdate
     });
 }
-
-namespace {
-
-union Layout {
-    explicit Layout() noexcept: used{} {}
-
-    struct Used {
-        /* Together with index of this item in `layouts` used for creating a
-           LayouterDataHandle. Increased every time a handle reaches remove().
-           Has to be initially non-zero to differentiate the first ever handle
-           (with index 0) from LayouterDataHandle::Null. Once becomes
-           `1 << LayouterDataHandleGenerationBits` the handle gets disabled. */
-        UnsignedShort generation = 1;
-
-        /* Two bytes free */
-
-        /* Node the layout is assigned to. Is null only when the layout is
-           freed. Has to be re-filled every time a handle is recycled, so it
-           doesn't make sense to initialize it to anything. isHandleValid()
-           checks this field to correctly mark invalid handles if the
-           generation matches by accident. */
-        NodeHandle node;
-
-        /* Four bytes free */
-    } used;
-
-    /* Used only if the Layout is among free ones */
-    struct Free {
-        /* The generation value has to be preserved in order to increment it
-           next time it gets used */
-        UnsignedShort generation;
-
-        /* Two bytes free */
-
-        /* If this is null, the layout is freed */
-        /** @todo any idea how to better pack this? this is a bit awful */
-        NodeHandle node;
-
-        /* See State::firstFree for more information */
-        UnsignedInt next;
-    } free;
-};
-
-#ifndef CORRADE_NO_STD_IS_TRIVIALLY_TRAITS
-static_assert(std::is_trivially_copyable<Layout>::value, "Layout not trivially copyable");
-#endif
-static_assert(
-    offsetof(Layout::Used, generation) == offsetof(Layout::Free, generation) &&
-    offsetof(Layout::Used, node) == offsetof(Layout::Free, node),
-    "Layout::Used and Free layout not compatible");
-
-}
-
-struct AbstractLayouter::State {
-    LayouterHandle handle;
-    LayouterStates state;
-
-    #ifndef CORRADE_NO_ASSERT
-    bool setSizeCalled = false;
-    #endif
-    /* 0/4 bytes free, 1/5 on a no-assert build */
-
-    Containers::Array<Layout> layouts;
-    /* Indices in the `layouts` array. The Layout then has a nextFree member
-       containing the next free index. New layouts get taken from the front,
-       removed are put at the end. A value of ~UnsignedInt{} means there's no
-       (first/next/last) free layout. */
-    UnsignedInt firstFree = ~UnsignedInt{};
-    UnsignedInt lastFree = ~UnsignedInt{};
-};
 
 AbstractLayouter::AbstractLayouter(const LayouterHandle handle): _state{InPlaceInit} {
     CORRADE_ASSERT(handle != LayouterHandle::Null,
@@ -181,7 +112,7 @@ bool AbstractLayouter::isHandleValid(const LayouterDataHandle handle) const {
     if(index >= state.layouts.size())
         return false;
     const UnsignedInt generation = layouterDataHandleGeneration(handle);
-    const Layout& layout = state.layouts[index];
+    const Implementation::Layout& layout = state.layouts[index];
     /* Zero generation handles (i.e., where it wrapped around from all bits
        set) are expected to be expired and thus with node being null. In other
        words, it shouldn't be needed to verify also that generation is
@@ -202,7 +133,7 @@ LayoutHandle AbstractLayouter::add(const NodeHandle node) {
 
     /* Find the first free layout if there is, update the free index to point
        to the next one (or none) */
-    Layout* layout;
+    Implementation::Layout* layout;
     if(state.firstFree!= ~UnsignedInt{}) {
         layout = &state.layouts[state.firstFree];
 
@@ -255,7 +186,7 @@ void AbstractLayouter::remove(const LayouterDataHandle handle) {
 
 void AbstractLayouter::removeInternal(const UnsignedInt id) {
     State& state = *_state;
-    Layout& layout = state.layouts[id];
+    Implementation::Layout& layout = state.layouts[id];
 
     /* Increase the layout generation so existing handles pointing to this
        layout are invalidated. Wrap around to 0 if it goes over the generation
@@ -303,11 +234,11 @@ NodeHandle AbstractLayouter::node(LayouterDataHandle layout) const {
 }
 
 Containers::StridedArrayView1D<const NodeHandle> AbstractLayouter::nodes() const {
-    return stridedArrayView(_state->layouts).slice(&Layout::used).slice(&Layout::Used::node);
+    return stridedArrayView(_state->layouts).slice(&Implementation::Layout::used).slice(&Implementation::Layout::Used::node);
 }
 
 Containers::StridedArrayView1D<const UnsignedShort> AbstractLayouter::generations() const {
-    return stridedArrayView(_state->layouts).slice(&Layout::used).slice(&Layout::Used::generation);
+    return stridedArrayView(_state->layouts).slice(&Implementation::Layout::used).slice(&Implementation::Layout::Used::generation);
 }
 
 void AbstractLayouter::setSize(const Vector2& size) {
@@ -327,7 +258,7 @@ void AbstractLayouter::cleanNodes(const Containers::StridedArrayView1D<const Uns
     Containers::BitArray layoutIdsToRemove{ValueInit, state.layouts.size()};
 
     for(std::size_t i = 0; i != state.layouts.size(); ++i) {
-        const Layout& layout = state.layouts[i];
+        const Implementation::Layout& layout = state.layouts[i];
 
         /* Skip layouts that are free */
         if(layout.used.node == NodeHandle::Null)
