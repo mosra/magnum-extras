@@ -33,10 +33,31 @@
 #include <Corrade/Containers/StridedArrayView.h>
 #include <Magnum/Math/Vector2.h>
 
+#include "Magnum/Ui/AbstractUserInterface.h" /* used in add() and remove() */
 #include "Magnum/Ui/Handle.h"
 #include "Magnum/Ui/Implementation/abstractLayouterState.h"
 
 namespace Magnum { namespace Ui {
+
+Debug& operator<<(Debug& debug, const LayouterFeature value) {
+    debug << "Ui::LayouterFeature" << Debug::nospace;
+
+    switch(value) {
+        /* LCOV_EXCL_START */
+        #define _c(value) case LayouterFeature::value: return debug << "::" #value;
+        _c(UniqueLayouts)
+        #undef _c
+        /* LCOV_EXCL_STOP */
+    }
+
+    return debug << "(" << Debug::nospace << Debug::hex << UnsignedByte(value) << Debug::nospace << ")";
+}
+
+Debug& operator<<(Debug& debug, const LayouterFeatures value) {
+    return Containers::enumSetDebugOutput(debug, value, "Ui::LayouterFeatures{}", {
+        LayouterFeature::UniqueLayouts
+    });
+}
 
 Debug& operator<<(Debug& debug, const LayouterState value) {
     debug << "Ui::LayouterState" << Debug::nospace;
@@ -141,9 +162,6 @@ bool AbstractLayouter::isHandleValid(const LayoutHandle handle) const {
 }
 
 LayoutHandle AbstractLayouter::add(const NodeHandle node) {
-    CORRADE_ASSERT(node != NodeHandle::Null,
-        "Ui::AbstractLayouter::add(): invalid handle" << node, {});
-
     State& state = *_state;
 
     /* Find the first free layout if there is, update the free index to point
@@ -166,6 +184,24 @@ LayoutHandle AbstractLayouter::add(const NodeHandle node) {
         layout = &arrayAppend(state.layouts, InPlaceInit);
     }
 
+    const LayoutHandle handle = layoutHandle(state.handle, (layout - state.layouts), layout->used.generation);
+
+    /* If this layouter has unique layouts, add this as unique layout to given
+       node. It requires the layouter to be added to the user interface and the
+       node being valid. */
+    if(doFeatures() >= LayouterFeature::UniqueLayouts) {
+        CORRADE_ASSERT(state.ui,
+            "Ui::AbstractLayouter::add(): layouter not part of a user interface", {});
+        /* The remaining checks for node validity and uniqueness are done
+           inside addUniqueLayoutToNode() as it's simpler to do there */
+        state.ui->addUniqueLayoutToNode(handle, node);
+
+    /* Otherwise the node is just required to be non-null. Requiring access to
+       the UI just to verify it's valid seems like an unnecessary
+       complication. */
+    } else CORRADE_ASSERT(node != NodeHandle::Null,
+        "Ui::AbstractLayouter::add(): invalid handle" << node, {});
+
     /* Fill the data. In both above cases the generation is already set
        appropriately, either initialized to 1, or incremented when it got
        remove()d (to mark existing handles as invalid) */
@@ -174,7 +210,7 @@ LayoutHandle AbstractLayouter::add(const NodeHandle node) {
     /* Mark the layouter as needing an update() call */
     state.state |= LayouterState::NeedsAssignmentUpdate;
 
-    return layoutHandle(state.handle, (layout - state.layouts), layout->used.generation);
+    return handle;
 }
 
 void AbstractLayouter::remove(const LayoutHandle handle) {
@@ -187,7 +223,7 @@ void AbstractLayouter::remove(const LayoutHandle handle) {
        doesn't check just the layouter portion of the handle and delegate to
        avoid a confusing assertion message if the data portion would be
        invalid */
-    removeInternal(layoutHandleId(handle));
+    removeWithUniqueLayoutInternal(layoutHandleId(handle));
 }
 
 void AbstractLayouter::remove(const LayouterDataHandle handle) {
@@ -196,7 +232,26 @@ void AbstractLayouter::remove(const LayouterDataHandle handle) {
 
     _state->state |= LayouterState::NeedsAssignmentUpdate;
 
-    removeInternal(layouterDataHandleId(handle));
+    removeWithUniqueLayoutInternal(layouterDataHandleId(handle));
+}
+
+void AbstractLayouter::removeWithUniqueLayoutInternal(const UnsignedInt id) {
+    /* If this layouter has unique layouts, remove the unique layout from given
+       node. The layouter being part of the user interface was checked during
+       add() already, so here it's just a debug-only sanity check. */
+    if(doFeatures() >= LayouterFeature::UniqueLayouts) {
+        State& state = *_state;
+        CORRADE_INTERNAL_DEBUG_ASSERT(state.ui);
+
+        const Implementation::Layout& layout = state.layouts[id];
+        state.ui->removeUniqueLayoutFromNode(state.handle, layout.used.node
+            #ifndef CORRADE_NO_DEBUG_ASSERT
+            , layouterDataHandle(id, layout.used.generation)
+            #endif
+        );
+    }
+
+    removeInternal(id);
 }
 
 void AbstractLayouter::removeInternal(const UnsignedInt id) {
@@ -231,6 +286,10 @@ void AbstractLayouter::removeInternal(const UnsignedInt id) {
         }
         state.lastFree = id;
     }
+
+    /* This function is called from doClean(), where removing unique layouts
+       was already taken care of when the node itself got removed. Not doing
+       that here. */
 
     /* Updating LayouterState (or not) is caller's responsibility. For example,
        clean() below doesn't set any state after calling removeInternal(). */
@@ -288,6 +347,9 @@ void AbstractLayouter::cleanNodes(const Containers::StridedArrayView1D<const Uns
         if(nodeHandleGeneration(layout.used.node) != nodeHandleGenerations[nodeHandleId(layout.used.node)]) {
             removeInternal(i);
             layoutIdsToRemove.set(i);
+
+            /* Not removing unique layouts in this case as node removal already
+               took care of that */
         }
     }
 

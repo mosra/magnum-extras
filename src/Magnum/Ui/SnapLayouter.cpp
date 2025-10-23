@@ -193,6 +193,10 @@ LayoutHandle SnapLayouter::add(const NodeHandle node, const Snaps snap, const No
     return handle;
 }
 
+LayouterFeatures SnapLayouter::doFeatures() const {
+    return {};
+}
+
 void SnapLayouter::doSetSize(const Vector2& size) {
     State& state = *_state;
     state.uiSize = size;

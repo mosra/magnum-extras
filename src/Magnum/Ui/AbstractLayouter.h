@@ -27,7 +27,7 @@
 */
 
 /** @file
- * @brief Class @ref Magnum::Ui::AbstractLayouter, enum @ref Magnum::Ui::LayouterState, enum set @ref Magnum::Ui::LayouterStates
+ * @brief Class @ref Magnum::Ui::AbstractLayouter, enum @ref Magnum::Ui::LayouterFeature, @ref Magnum::Ui::LayouterState, enum set @ref Magnum::Ui::LayouterFeatures @ref Magnum::Ui::LayouterStates
  * @m_since_latest_{extras}
  */
 
@@ -38,6 +38,45 @@
 #include "Magnum/Ui/visibility.h"
 
 namespace Magnum { namespace Ui {
+
+/**
+@brief Features supported by a layouter
+@m_since_latest_{extras}
+
+@see @ref LayouterFeatures, @ref AbstractLayouter::features()
+*/
+enum class LayouterFeature: UnsignedByte {
+    /**
+     * The layouter has always at most one layout assigned to a particular
+     * node. Such layouts can be then queried with
+     * @ref AbstractUserInterface::nodeUniqueLayout(), and
+     * @ref AbstractLayouter::add() expects that given node doesn't have a
+     * layout from given layouter assigned yet.
+     */
+    UniqueLayouts = 1 << 0,
+};
+
+/**
+@debugoperatorenum{LayouterFeature}
+@m_since_latest_{extras}
+*/
+MAGNUM_UI_EXPORT Debug& operator<<(Debug& debug, LayouterFeature value);
+
+/**
+@brief Set of features supported by a layouter
+@m_since_latest_{extras}
+
+@see @ref AbstractLayouter::features()
+*/
+typedef Containers::EnumSet<LayouterFeature> LayouterFeatures;
+
+/**
+@debugoperatorenum{LayouterFeatures}
+@m_since_latest_{extras}
+*/
+MAGNUM_UI_EXPORT Debug& operator<<(Debug& debug, LayouterFeatures value);
+
+CORRADE_ENUMSET_OPERATORS(LayouterFeatures)
 
 /**
 @brief Layouter state
@@ -150,6 +189,9 @@ class MAGNUM_UI_EXPORT AbstractLayouter {
          * directly to APIs accepting just a @ref LayouterHandle.
          */
         /*implicit*/ operator LayouterHandle() const;
+
+        /** @brief Features exposed by a layouter */
+        LayouterFeatures features() const { return doFeatures(); }
 
         /**
          * @brief Layouter state
@@ -360,10 +402,18 @@ class MAGNUM_UI_EXPORT AbstractLayouter {
          * there's at most 1048576 layouts. The returned handle can be removed
          * again with @ref remove().
          *
-         * Expects that @p node is not @ref NodeHandle::Null. The same node
-         * shouldn't be added multiple times to the same layouter, doing so
-         * will cause the layout to be arbitrary picked for given node when
-         * performing the calculation.
+         * If the layouter advertises @ref LayouterFeature::UniqueLayouts, the
+         * function expects that the layouter has been already passed to
+         * @ref AbstractUserInterface::setLayouterInstance(), that @p node is
+         * valid and doesn't have a layout from this layouter assigned yet,
+         * i.e. that @ref AbstractUserInterface::nodeUniqueLayout(NodeHandle, LayouterHandle) const
+         * returns @ref LayouterDataHandle::Null for @p node and @ref handle().
+         *
+         * If the layouter doesn't advertise
+         * @ref LayouterFeature::UniqueLayouts, the function only expects the
+         * @p node to not be @ref NodeHandle::Null and the same node is allowed
+         * to be added multiple times to the same layouter. The concrete
+         * behavior depends on a particular layouter implementation.
          *
          * Calling this function causes
          * @ref LayouterState::NeedsAssignmentUpdate to be set. The subclass is
@@ -409,6 +459,14 @@ class MAGNUM_UI_EXPORT AbstractLayouter {
 
     private:
         friend AbstractUserInterface; /* for the ui() reference */
+
+        /**
+         * @brief Implementation for @ref features()
+         *
+         * Note that the value returned by this function is assumed to stay
+         * constant during the whole layouter lifetime.
+         */
+        virtual LayouterFeatures doFeatures() const = 0;
 
         /**
          * @brief Set user interface size
@@ -519,6 +577,9 @@ class MAGNUM_UI_EXPORT AbstractLayouter {
 
         /* Common implementation for remove(LayoutHandle) and
            remove(LayouterDataHandle) */
+        MAGNUM_UI_LOCAL void removeWithUniqueLayoutInternal(UnsignedInt id);
+        /* Common implementation for removeWithUniqueLayoutInternal() and
+           doClean(), as doClean() doesn't need to deal with unique layouts */
         MAGNUM_UI_LOCAL void removeInternal(UnsignedInt id);
 
         struct State;

@@ -422,6 +422,11 @@ union Node {
         /* Initial node opacity. The actual value passed to layers is
            multiplied with opacity of all parents. */
         Float opacity;
+
+        /* Points to `_state->nodeUniqueLayouts`, which contains a layout
+           handle. A value with all bits set means there are no unique layouts
+           associated with this node. */
+        UnsignedInt firstUniqueLayout;
     } used;
 
     /* Used only if the Node is among the free ones */
@@ -486,6 +491,44 @@ union NodeOrder {
 
 #ifndef CORRADE_NO_STD_IS_TRIVIALLY_TRAITS
 static_assert(std::is_trivially_copyable<NodeOrder>::value, "NodeOrder not trivially copyable");
+#endif
+
+/* Unlike with NodeOrder, the assumption is that there will be at most two or
+   three unique layouts used per node, in 99% cases just zero or one. Thus the
+   list is only singly-linked and it's fine that lookup and removal from this
+   list is O(n). Order thus doesn't matter, and insertion is O(1). */
+union NodeUniqueLayout {
+    struct Used {
+        /* Both always meant to be non-null and valid. Using separate handles
+           instead of a LayoutHandle to circumvent the need for a 8-byte
+           alignment and thus 4 extra free bytes. */
+        LayouterHandle layouter;
+        /* 2 bytes free. Could also pack 8-bit layouter ID, 20-bit layout ID
+           and then a 32-bit `next` (which basically has to be at least as many
+           bits as layouter + layout IDs together) to make this just 8 bytes
+           instead of 12, but it's an extra complication and the lack of handle
+           generations could cause various bugs to stay unnoticed. */
+        LayouterDataHandle data;
+        /* To make insert/remove operations easier the list is cyclic, so the
+           last layout's `next` is the same as node's `firstUniqueLayout` */
+        UnsignedInt next;
+
+        static_assert(Implementation::LayouterHandleIdBits + Implementation::LayouterDataHandleIdBits <= sizeof(next)*8,
+            "not enough bits to fit all layouts from all possible layouters into the NodeUniqueLayout array");
+    } used;
+
+    /* Used only if the NodeUniqueLayout is among the free ones */
+    struct Free {
+        /* See State::firstFreeNodeUniqueLayout for more information */
+        UnsignedInt next;
+
+        static_assert(Implementation::LayouterHandleIdBits + Implementation::LayouterDataHandleIdBits <= sizeof(next)*8,
+            "not enough bits to fit all layouts from all possible layouters into the NodeUniqueLayout array");
+    } free;
+};
+
+#ifndef CORRADE_NO_STD_IS_TRIVIALLY_TRAITS
+static_assert(std::is_trivially_copyable<NodeUniqueLayout>::value, "NodeUniqueLayout not trivially copyable");
 #endif
 
 }
@@ -570,6 +613,17 @@ struct AbstractUserInterface::State {
        doesn't need to be made from the opposite side. A value with all bits
        set means there's no (first/next) free node order. */
     UnsignedInt firstFreeNodeOrder = ~UnsignedInt{};
+
+    /* Pointed to from `firstUniqueLayout` of a particular Node, and then the
+       `next` field in NodeUniqueLayout itself */
+    Containers::Array<NodeUniqueLayout> nodeUniqueLayouts;
+    /* Index into the `nodeUniqueLayouts` array. The `NodeUniqueLayout` then
+       has a `free.next` member containing the next free index. Like with node
+       order, no handles are exposed for these, thus there's no problem with
+       generation exhausting and the recycling doesn't need to be made from the
+       opposite side. A value with all bits set means there's no (first/next)
+       free node unique layout. */
+    UnsignedInt firstFreeNodeUniqueLayout = ~UnsignedInt{};
 
     /* Set by setSize(), checked in update(), used for event scaling and
        passing to layers */
@@ -1395,6 +1449,26 @@ void AbstractUserInterface::removeLayouter(const LayouterHandle handle) {
     const LayouterHandle originalNext = layouter.used.next;
     CORRADE_INTERNAL_ASSERT(isHandleValid(originalPrevious) && isHandleValid(originalNext));
 
+    /* If the layouter has an instance and advertises UniqueLayouts, remove all
+       node unique layouts associated with it */
+    if(layouter.used.instance && layouter.used.instance->features() >= LayouterFeature::UniqueLayouts) {
+        /* The assumption is that a particular layouter has always less layouts
+           than there is entries in nodeUniqueLayouts and so it makes sense to
+           go over its node attachments rather than through the whole
+           nodeUniqueLayouts array.
+
+           It's still a rather heavy operation, however removing a layouter
+           full of layouts in the middle of an application lifetime shouldn't
+           be too common for this to be a showstopper. */
+        const Containers::StridedArrayView1D<const NodeHandle> nodes = layouter.used.instance->nodes();
+        for(const NodeHandle node: nodes) if(node != NodeHandle::Null)
+            removeUniqueLayoutFromNode(handle, node
+                #ifndef CORRADE_NO_DEBUG_ASSERT
+                , LayouterDataHandle::Null
+                #endif
+            );
+    }
+
     /* This works correctly also in case of there being just a single item in
        the list (i.e., originalPrevious == originalNext == handle), as the item
        gets unused after */
@@ -1839,6 +1913,7 @@ NodeHandle AbstractUserInterface::createNode(const NodeHandle parent, const Vect
     node->used.offset = offset;
     node->used.size = size;
     node->used.opacity = 1.0f;
+    node->used.firstUniqueLayout = ~UnsignedInt{};
     const NodeHandle handle = nodeHandle(node - state.nodes, node->used.generation);
 
     /* If a root node, implicitly mark it as last in the node order, so
@@ -2007,6 +2082,29 @@ inline void AbstractUserInterface::removeNodeInternal(const UnsignedInt id) {
         /* NeedsNodeUpdate gets set by either removeNode() (implied by
            NeedsNodeClean) or is already set (again as a consequence of
            NeedsNodeClean) in order to even enter clean(), which calls here */
+    }
+
+    /* Remove all unique layouts associated with this node. This is a linear
+       operation but the assumption is that there will be at most two or three
+       unique layouts used per node, in 99% cases just zero or one, so this
+       shouldn't cause a problem. */
+    const UnsignedInt firstUniqueLayoutId = node.used.firstUniqueLayout;
+    if(firstUniqueLayoutId != ~UnsignedInt{}) {
+        /* The list is cyclic, so if there's at least one unique layout,
+           iterate at least once until we're back at the first again */
+        UnsignedInt uniqueLayoutId = firstUniqueLayoutId;
+        do {
+            NodeUniqueLayout& uniqueLayout = state.nodeUniqueLayouts[uniqueLayoutId];
+            const UnsignedInt nextUniqueLayoutId = uniqueLayout.used.next;
+
+            /* Put the layout on the free list. No need to disconnect from
+               anywhere else as the whole list associated with this node is
+               going to get removed */
+            uniqueLayout.free.next = state.firstFreeNodeUniqueLayout;
+            state.firstFreeNodeUniqueLayout = uniqueLayoutId;
+
+            uniqueLayoutId = nextUniqueLayoutId;
+        } while(uniqueLayoutId != firstUniqueLayoutId);
     }
 
     /* Increase the node generation so existing handles pointing to this node
@@ -2454,6 +2552,186 @@ void AbstractUserInterface::flattenNodeOrder(const NodeHandle handle) {
         nothing that would affect layouters or cause node offsets/sizes to
         change -- is there a better state flag that would cover this? */
     state.state |= UserInterfaceState::NeedsNodeUpdate;
+}
+
+std::size_t AbstractUserInterface::nodeUniqueLayoutCapacity() const {
+    return _state->nodeUniqueLayouts.size();
+}
+
+std::size_t AbstractUserInterface::nodeUniqueLayoutUsedCount() const {
+    /* In general we can assume that the amount of free node unique layout
+       entries is always either zero or significantly less than the capacity,
+       and thus iterating the (presumably small) free list should be faster,
+       even though it involves jumping around in memory. */
+    std::size_t free = 0;
+    const State& state = *_state;
+    UnsignedInt index = state.firstFreeNodeUniqueLayout;
+    while(index != ~UnsignedInt{}) {
+        index = state.nodeUniqueLayouts[index].free.next;
+        ++free;
+    }
+    return state.nodeUniqueLayouts.size() - free;
+}
+
+LayouterDataHandle AbstractUserInterface::nodeUniqueLayout(const NodeHandle node, const LayouterHandle layouter) const {
+    CORRADE_ASSERT(isHandleValid(node),
+        "Ui::AbstractUserInterface::nodeUniqueLayout(): invalid handle" << node, {});
+    CORRADE_ASSERT(isHandleValid(layouter),
+        "Ui::AbstractUserInterface::nodeUniqueLayout(): invalid handle" << layouter, {});
+
+    const State& state = *_state;
+
+    /* These two checks aren't strictly needed, but if the function would just
+       return Null in such cases, it'd silently hide API usage errors */
+    #ifndef CORRADE_NO_ASSERT
+    const Layouter& layouterData = state.layouters[layouterHandleId(layouter)];
+    #endif
+    CORRADE_ASSERT(layouterData.used.instance,
+        "Ui::AbstractUserInterface::nodeUniqueLayout():" << layouter << "has no instance set", {});
+    CORRADE_ASSERT(layouterData.used.instance->features() >= LayouterFeature::UniqueLayouts,
+        "Ui::AbstractUserInterface::nodeUniqueLayout():" << layouter << "doesn't advertise" << LayouterFeature::UniqueLayouts, {});
+
+    /* Iterate the layout list associated with given node and find a layout
+       coming from given layouter. If the list is empty, there aren't any
+       unique layouts. */
+    const UnsignedInt firstUniqueLayoutId = state.nodes[nodeHandleId(node)].used.firstUniqueLayout;
+    if(firstUniqueLayoutId == ~UnsignedInt{})
+        return {};
+
+    /* The list is cyclic, so if there's at least one unique layout, iterate at
+       least once until we're back at the first again */
+    UnsignedInt uniqueLayoutId = firstUniqueLayoutId;
+    do {
+        const NodeUniqueLayout& uniqueLayout = state.nodeUniqueLayouts[uniqueLayoutId];
+        if(uniqueLayout.used.layouter == layouter)
+            return uniqueLayout.used.data;
+
+        uniqueLayoutId = uniqueLayout.used.next;
+    } while(uniqueLayoutId != firstUniqueLayoutId);
+
+    return {};
+}
+
+void AbstractUserInterface::addUniqueLayoutToNode(const LayoutHandle layout, const NodeHandle node) {
+    State& state = *_state;
+
+    /* This function is called from AbstractLayouter::add() so the prefix
+       matches that. It's easier to do the checks here than from
+       AbstractLayouter. */
+    CORRADE_ASSERT(isHandleValid(node),
+        "Ui::AbstractLayouter::add(): invalid handle" << node, );
+    const LayouterHandle layouter = layoutHandleLayouter(layout);
+    Node& nodeData = state.nodes[nodeHandleId(node)];
+    const UnsignedInt firstUniqueLayoutId = nodeData.used.firstUniqueLayout;
+    #ifndef CORRADE_NO_ASSERT
+    if(firstUniqueLayoutId != ~UnsignedInt{}) {
+        UnsignedInt uniqueLayoutId = firstUniqueLayoutId;
+        do {
+            const NodeUniqueLayout& uniqueLayout = state.nodeUniqueLayouts[uniqueLayoutId];
+            CORRADE_ASSERT(uniqueLayout.used.layouter != layouter,
+                "Ui::AbstractLayouter::add():" << node << "already has" << layoutHandle(layouter, uniqueLayout.used.data) << "from this layouter", );
+            uniqueLayoutId = uniqueLayout.used.next;
+        } while(uniqueLayoutId != firstUniqueLayoutId);
+    }
+    #endif
+
+    /* If there's a free NodeUniqueLayout slot, take it, and update the free
+       index to point to the next one (or none) */
+    UnsignedInt uniqueLayoutId;
+    if(state.firstFreeNodeUniqueLayout != ~UnsignedInt{}) {
+        uniqueLayoutId = state.firstFreeNodeUniqueLayout;
+        state.firstFreeNodeUniqueLayout = state.nodeUniqueLayouts[state.firstFreeNodeUniqueLayout].free.next;
+
+    /* If there isn't, allocate a new one */
+    } else {
+        uniqueLayoutId = state.nodeUniqueLayouts.size();
+        arrayAppend(state.nodeUniqueLayouts, NoInit, 1);
+    }
+
+    /* Fill in the unique handle parts. Stored separately to circumvent the
+       need for a 8-byte alignment and thus 4 wasted bytes in the
+       NodeUniqueLayout struct. */
+    NodeUniqueLayout& uniqueLayout = state.nodeUniqueLayouts[uniqueLayoutId];
+    uniqueLayout.used.layouter = layouter;
+    uniqueLayout.used.data = layoutHandleData(layout);
+
+    /* If there are no unique layouts for given node yet, wire this as the
+       first one, circularly connecting to itself */
+    if(firstUniqueLayoutId == ~UnsignedInt{}) {
+        nodeData.used.firstUniqueLayout = uniqueLayoutId;
+        uniqueLayout.used.next = uniqueLayoutId;
+
+    /* Otherwise insert it right after the first one. Order doesn't matter,
+       and as the list is cyclic there are no special cases. */
+    } else {
+        NodeUniqueLayout& prevUniqueLayout = state.nodeUniqueLayouts[firstUniqueLayoutId];
+        uniqueLayout.used.next = prevUniqueLayout.used.next;
+        prevUniqueLayout.used.next = uniqueLayoutId;
+    }
+}
+
+void AbstractUserInterface::removeUniqueLayoutFromNode(const LayouterHandle layouter, const NodeHandle node
+    #ifndef CORRADE_NO_DEBUG_ASSERT
+    , const LayouterDataHandle data
+    #endif
+) {
+    /* If the node isn't valid, it means it was already removed along with all
+       unique layout assignments. Nothing left to do in this case. */
+    if(!isHandleValid(node))
+        return;
+
+    State& state = *_state;
+
+    /* Iterate the layout list associated with given node and find a layout
+       coming from given layouter. The assumption is that such a layout is
+       present in the list, so it shouldn't be empty. */
+    Node& nodeData = state.nodes[nodeHandleId(node)];
+    const UnsignedInt firstUniqueLayoutId = nodeData.used.firstUniqueLayout;
+    CORRADE_INTERNAL_DEBUG_ASSERT(firstUniqueLayoutId != ~UnsignedInt{});
+
+    /* Iterate the list until we find matching layouter. The list is cyclic so
+       stop as soon as we reach the begin. But as the layout should be there,
+       we should exit the loop early. */
+    UnsignedInt uniqueLayoutId = firstUniqueLayoutId;
+    do {
+        NodeUniqueLayout& uniqueLayout = state.nodeUniqueLayouts[uniqueLayoutId];
+        const UnsignedInt nextUniqueLayoutId = uniqueLayout.used.next;
+        NodeUniqueLayout& nextUniqueLayout = state.nodeUniqueLayouts[nextUniqueLayoutId];
+
+        /* If the layouter matches, the data handle should too, if specified by
+           the caller */
+        if(nextUniqueLayout.used.layouter == layouter) {
+            CORRADE_INTERNAL_DEBUG_ASSERT(data == LayouterDataHandle::Null || nextUniqueLayout.used.data == data);
+
+            /* If the layout points to itself, it was the only one attached to
+               the node, which means there are now none attached */
+            if(nextUniqueLayoutId == uniqueLayoutId) {
+                CORRADE_INTERNAL_DEBUG_ASSERT(nodeData.used.firstUniqueLayout == nextUniqueLayoutId);
+                nodeData.used.firstUniqueLayout = ~UnsignedInt{};
+
+            /* Otherwise disconnect it from the list by pointing the previous
+               one to the next */
+            } else {
+                uniqueLayout.used.next = nextUniqueLayout.used.next;
+
+                /* If this was the layout referenced from the node, point it
+                   to the next one as well */
+                if(nodeData.used.firstUniqueLayout == nextUniqueLayoutId)
+                    nodeData.used.firstUniqueLayout = nextUniqueLayout.used.next;
+            }
+
+            /* Put the layout on the free list and we're done here */
+            nextUniqueLayout.free.next = state.firstFreeNodeUniqueLayout;
+            state.firstFreeNodeUniqueLayout = nextUniqueLayoutId;
+            return;
+        }
+
+        uniqueLayoutId = uniqueLayout.used.next;
+    } while(uniqueLayoutId != firstUniqueLayoutId);
+
+    /* The above loop should return early, so if it gets here, it means the
+       layout wasn't present, which is an error */
+    CORRADE_INTERNAL_DEBUG_ASSERT_UNREACHABLE(); /* LCOV_EXCL_LINE */
 }
 
 AbstractUserInterface& AbstractUserInterface::clean() {

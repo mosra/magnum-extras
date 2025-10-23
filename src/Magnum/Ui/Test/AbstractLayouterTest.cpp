@@ -33,6 +33,7 @@
 #include <Magnum/Math/Vector2.h>
 
 #include "Magnum/Ui/AbstractLayouter.h"
+#include "Magnum/Ui/AbstractUserInterface.h" /* for UniqueLayouts */
 #include "Magnum/Ui/Handle.h"
 
 namespace Magnum { namespace Ui { namespace Test { namespace {
@@ -40,6 +41,8 @@ namespace Magnum { namespace Ui { namespace Test { namespace {
 struct AbstractLayouterTest: TestSuite::Tester {
     explicit AbstractLayouterTest();
 
+    void debugFeature();
+    void debugFeatures();
     void debugState();
     void debugStates();
     void debugStatesSupersets();
@@ -52,10 +55,13 @@ struct AbstractLayouterTest: TestSuite::Tester {
     void uiInvalid();
 
     void addRemove();
+    void addRemoveUniqueLayouts();
     void addRemoveHandleRecycle();
     void addRemoveHandleDisable();
-    void addNullNode();
+    void addInvalid();
+    void addInvalidUniqueLayouts();
     void addNoHandlesLeft();
+    void removeUniqueLayoutInvalidNode();
     void removeInvalid();
     void nodeInvalid();
 
@@ -76,7 +82,9 @@ struct AbstractLayouterTest: TestSuite::Tester {
 };
 
 AbstractLayouterTest::AbstractLayouterTest() {
-    addTests({&AbstractLayouterTest::debugState,
+    addTests({&AbstractLayouterTest::debugFeature,
+              &AbstractLayouterTest::debugFeatures,
+              &AbstractLayouterTest::debugState,
               &AbstractLayouterTest::debugStates,
               &AbstractLayouterTest::debugStatesSupersets,
 
@@ -88,10 +96,13 @@ AbstractLayouterTest::AbstractLayouterTest() {
               &AbstractLayouterTest::uiInvalid,
 
               &AbstractLayouterTest::addRemove,
+              &AbstractLayouterTest::addRemoveUniqueLayouts,
               &AbstractLayouterTest::addRemoveHandleRecycle,
               &AbstractLayouterTest::addRemoveHandleDisable,
-              &AbstractLayouterTest::addNullNode,
+              &AbstractLayouterTest::addInvalid,
+              &AbstractLayouterTest::addInvalidUniqueLayouts,
               &AbstractLayouterTest::addNoHandlesLeft,
+              &AbstractLayouterTest::removeUniqueLayoutInvalidNode,
               &AbstractLayouterTest::removeInvalid,
               &AbstractLayouterTest::nodeInvalid,
 
@@ -109,6 +120,18 @@ AbstractLayouterTest::AbstractLayouterTest() {
               &AbstractLayouterTest::updateNoSizeSet,
 
               &AbstractLayouterTest::state});
+}
+
+void AbstractLayouterTest::debugFeature() {
+    Containers::String out;
+    Debug{&out} << LayouterFeature::UniqueLayouts << LayouterFeature(0xbe);
+    CORRADE_COMPARE(out, "Ui::LayouterFeature::UniqueLayouts Ui::LayouterFeature(0xbe)\n");
+}
+
+void AbstractLayouterTest::debugFeatures() {
+    Containers::String out;
+    Debug{&out} << (LayouterFeature::UniqueLayouts|LayouterFeature(0x80)) << LayouterFeatures{};
+    CORRADE_COMPARE(out, "Ui::LayouterFeature::UniqueLayouts|Ui::LayouterFeature(0x80) Ui::LayouterFeatures{}\n");
 }
 
 void AbstractLayouterTest::debugState() {
@@ -138,12 +161,14 @@ void AbstractLayouterTest::construct() {
         using AbstractLayouter::AbstractLayouter;
         using AbstractLayouter::hasUi;
 
+        LayouterFeatures doFeatures() const override { return LayouterFeatures{0xe0}; }
         void doUpdate(Containers::BitArrayView, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const NodeHandle>&, const Containers::StridedArrayView1D<Vector2>&, const  Containers::StridedArrayView1D<Vector2>&) override {}
     } layouter{layouterHandle(0xab, 0x12)};
 
     CORRADE_COMPARE(layouter.handle(), layouterHandle(0xab, 0x12));
     /* Tests the implicit LayouterHandle conversion */
     CORRADE_COMPARE(layouter, layouterHandle(0xab, 0x12));
+    CORRADE_COMPARE(layouter.features(), LayouterFeatures(0xe0));
     CORRADE_COMPARE(layouter.state(), LayouterStates{});
     CORRADE_COMPARE(layouter.capacity(), 0);
     CORRADE_COMPARE(layouter.usedCount(), 0);
@@ -162,6 +187,7 @@ void AbstractLayouterTest::constructInvalidHandle() {
     struct Layouter: AbstractLayouter {
         using AbstractLayouter::AbstractLayouter;
 
+        LayouterFeatures doFeatures() const override { return {}; }
         void doUpdate(Containers::BitArrayView, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const NodeHandle>&, const Containers::StridedArrayView1D<Vector2>&, const  Containers::StridedArrayView1D<Vector2>&) override {}
     };
 
@@ -181,6 +207,7 @@ void AbstractLayouterTest::constructMove() {
     struct Layouter: AbstractLayouter {
         using AbstractLayouter::AbstractLayouter;
 
+        LayouterFeatures doFeatures() const override { return {}; }
         void doUpdate(Containers::BitArrayView, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const NodeHandle>&, const Containers::StridedArrayView1D<Vector2>&, const  Containers::StridedArrayView1D<Vector2>&) override {}
     };
 
@@ -207,6 +234,7 @@ void AbstractLayouterTest::uiInvalid() {
         using AbstractLayouter::hasUi;
         using AbstractLayouter::ui;
 
+        LayouterFeatures doFeatures() const override { return {}; }
         void doUpdate(Containers::BitArrayView, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const NodeHandle>&, const Containers::StridedArrayView1D<Vector2>&, const  Containers::StridedArrayView1D<Vector2>&) override {}
     } layouter{layouterHandle(0, 1)};
 
@@ -224,6 +252,7 @@ void AbstractLayouterTest::addRemove() {
         using AbstractLayouter::add;
         using AbstractLayouter::remove;
 
+        LayouterFeatures doFeatures() const override { return {}; }
         void doUpdate(Containers::BitArrayView, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const NodeHandle>&, const Containers::StridedArrayView1D<Vector2>&, const  Containers::StridedArrayView1D<Vector2>&) override {}
     } layouter{layouterHandle(0xab, 0x12)};
 
@@ -260,12 +289,221 @@ void AbstractLayouterTest::addRemove() {
     CORRADE_COMPARE(layouter.usedCount(), 0);
 }
 
+void AbstractLayouterTest::addRemoveUniqueLayouts() {
+    /* By default the node unique layout storage is empty */
+    AbstractUserInterface ui{{100, 100}};
+    CORRADE_COMPARE(ui.nodeUniqueLayoutCapacity(), 0);
+    CORRADE_COMPARE(ui.nodeUniqueLayoutUsedCount(), 0);
+
+    /* Adding unique layouters doesn't change anything for the unique layout
+       storage. Removing some of the layouters to have non-trivial handles. */
+    struct Layouter: AbstractLayouter {
+        explicit Layouter(LayouterHandle handle, LayouterFeatures features): AbstractLayouter{handle}, _features{features} {}
+
+        using AbstractLayouter::add;
+        using AbstractLayouter::remove;
+
+        LayouterFeatures doFeatures() const override { return _features; }
+        void doUpdate(Containers::BitArrayView, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const NodeHandle>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Vector2>&) override {}
+
+        private:
+            LayouterFeatures _features;
+    };
+    ui.createLayouter();
+    ui.removeLayouter(ui.createLayouter());
+    ui.removeLayouter(ui.createLayouter());
+    Layouter& layouter1 = ui.setLayouterInstance(Containers::pointer<Layouter>(ui.createLayouter(), LayouterFeature::UniqueLayouts));
+    Layouter& layouterNonUnique = ui.setLayouterInstance(Containers::pointer<Layouter>(ui.createLayouter(), LayouterFeatures{}));
+    ui.removeLayouter(ui.createLayouter());
+    ui.createLayouter();
+    Layouter& layouter2 = ui.setLayouterInstance(Containers::pointer<Layouter>(ui.createLayouter(), LayouterFeature::UniqueLayouts));
+    CORRADE_COMPARE(ui.nodeUniqueLayoutCapacity(), 0);
+    CORRADE_COMPARE(ui.nodeUniqueLayoutUsedCount(), 0);
+
+    /* Neither does adding nodes, and those initially report no unique
+       layouts. Removing some of the nodes to have non-trivial handles. */
+    ui.createNode({}, {});
+    ui.createNode({}, {});
+    ui.removeNode(ui.createNode({}, {}));
+    ui.removeNode(ui.createNode({}, {}));
+    NodeHandle node1 = ui.createNode({}, {});
+    NodeHandle node2Parent = ui.createNode({}, {});
+    NodeHandle node2 = ui.createNode(node2Parent, {}, {});
+    ui.removeNode(ui.createNode({}, {}));
+    NodeHandle node3 = ui.createNode({}, {});
+    CORRADE_COMPARE(ui.nodeUniqueLayoutCapacity(), 0);
+    CORRADE_COMPARE(ui.nodeUniqueLayoutUsedCount(), 0);
+    CORRADE_COMPARE(ui.nodeUniqueLayout(node1, layouter1), LayouterDataHandle::Null);
+    CORRADE_COMPARE(ui.nodeUniqueLayout(node1, layouter2), LayouterDataHandle::Null);
+    CORRADE_COMPARE(ui.nodeUniqueLayout(node2, layouter1), LayouterDataHandle::Null);
+    CORRADE_COMPARE(ui.nodeUniqueLayout(node2, layouter2), LayouterDataHandle::Null);
+    CORRADE_COMPARE(ui.nodeUniqueLayout(node3, layouter1), LayouterDataHandle::Null);
+    CORRADE_COMPARE(ui.nodeUniqueLayout(node3, layouter2), LayouterDataHandle::Null);
+
+    /* Creating the first few unique layouts enlarges the capacity. So far
+       at most one layout per node. */
+    LayoutHandle node1Layout1 = layouter1.add(node1);
+    LayoutHandle node3Layout1 = layouter1.add(node3);
+    LayoutHandle node2Layout2 = layouter2.add(node2);
+    CORRADE_COMPARE(ui.nodeUniqueLayoutCapacity(), 3);
+    CORRADE_COMPARE(ui.nodeUniqueLayoutUsedCount(), 3);
+    CORRADE_COMPARE(ui.nodeUniqueLayout(node1, layouter1), layoutHandleData(node1Layout1));
+    CORRADE_COMPARE(ui.nodeUniqueLayout(node1, layouter2), LayouterDataHandle::Null);
+    CORRADE_COMPARE(ui.nodeUniqueLayout(node2, layouter1), LayouterDataHandle::Null);
+    CORRADE_COMPARE(ui.nodeUniqueLayout(node2, layouter2), layoutHandleData(node2Layout2));
+    CORRADE_COMPARE(ui.nodeUniqueLayout(node3, layouter1), layoutHandleData(node3Layout1));
+    CORRADE_COMPARE(ui.nodeUniqueLayout(node3, layouter2), LayouterDataHandle::Null);
+
+    /* Adding a non-unique layout doesn't change anything in these */
+    /*LayoutHandle node3LayoutNonUnique =*/ layouterNonUnique.add(node3);
+    CORRADE_COMPARE(ui.nodeUniqueLayoutCapacity(), 3);
+    CORRADE_COMPARE(ui.nodeUniqueLayoutUsedCount(), 3);
+    CORRADE_COMPARE(ui.nodeUniqueLayout(node2, layouter1), LayouterDataHandle::Null);
+    CORRADE_COMPARE(ui.nodeUniqueLayout(node2, layouter2), layoutHandleData(node2Layout2));
+
+    /* Add a layout to a node that already has a unique layout from another
+       layouter should work too */
+    LayoutHandle node1Layout2 = layouter2.add(node1);
+    LayoutHandle node2Layout1 = layouter1.add(node2);
+    CORRADE_COMPARE(ui.nodeUniqueLayoutCapacity(), 5);
+    CORRADE_COMPARE(ui.nodeUniqueLayoutUsedCount(), 5);
+    CORRADE_COMPARE(ui.nodeUniqueLayout(node1, layouter1), layoutHandleData(node1Layout1));
+    CORRADE_COMPARE(ui.nodeUniqueLayout(node1, layouter2), layoutHandleData(node1Layout2));
+    CORRADE_COMPARE(ui.nodeUniqueLayout(node2, layouter1), layoutHandleData(node2Layout1));
+    CORRADE_COMPARE(ui.nodeUniqueLayout(node2, layouter2), layoutHandleData(node2Layout2));
+
+    /* Adding yet another layouter and a third layout to a node isn't any
+       different from adding a second */
+    Layouter& layouter3 = ui.setLayouterInstance(Containers::pointer<Layouter>(ui.createLayouter(), LayouterFeature::UniqueLayouts));
+    LayoutHandle node1Layout3 = layouter3.add(node1);
+    CORRADE_COMPARE(ui.nodeUniqueLayoutCapacity(), 6);
+    CORRADE_COMPARE(ui.nodeUniqueLayoutUsedCount(), 6);
+    CORRADE_COMPARE(ui.nodeUniqueLayout(node1, layouter1), layoutHandleData(node1Layout1));
+    CORRADE_COMPARE(ui.nodeUniqueLayout(node1, layouter2), layoutHandleData(node1Layout2));
+    CORRADE_COMPARE(ui.nodeUniqueLayout(node1, layouter3), layoutHandleData(node1Layout3));
+
+    /* Remove one layout out of the three assigned to node1. The two remaining
+       should still be circularly connected to each other. */
+    layouter1.remove(node1Layout1);
+    CORRADE_COMPARE(ui.nodeUniqueLayoutCapacity(), 6);
+    CORRADE_COMPARE(ui.nodeUniqueLayoutUsedCount(), 5);
+    CORRADE_COMPARE(ui.nodeUniqueLayout(node1, layouter1), LayouterDataHandle::Null);
+    CORRADE_COMPARE(ui.nodeUniqueLayout(node1, layouter2), layoutHandleData(node1Layout2));
+    CORRADE_COMPARE(ui.nodeUniqueLayout(node1, layouter3), layoutHandleData(node1Layout3));
+
+    /* Remove another layout, now it's just one left connected to itself */
+    layouter2.remove(node1Layout2);
+    CORRADE_COMPARE(ui.nodeUniqueLayoutCapacity(), 6);
+    CORRADE_COMPARE(ui.nodeUniqueLayoutUsedCount(), 4);
+    CORRADE_COMPARE(ui.nodeUniqueLayout(node1, layouter1), LayouterDataHandle::Null);
+    CORRADE_COMPARE(ui.nodeUniqueLayout(node1, layouter2), LayouterDataHandle::Null);
+    CORRADE_COMPARE(ui.nodeUniqueLayout(node1, layouter3), layoutHandleData(node1Layout3));
+
+    /* Remove the last layout assigned to node1, now the node is the same as in
+       the initial state, just the free list is now non-empty */
+    layouter3.remove(node1Layout3);
+    CORRADE_COMPARE(ui.nodeUniqueLayoutCapacity(), 6);
+    CORRADE_COMPARE(ui.nodeUniqueLayoutUsedCount(), 3);
+    CORRADE_COMPARE(ui.nodeUniqueLayout(node1, layouter1), LayouterDataHandle::Null);
+    CORRADE_COMPARE(ui.nodeUniqueLayout(node1, layouter2), LayouterDataHandle::Null);
+    CORRADE_COMPARE(ui.nodeUniqueLayout(node1, layouter3), LayouterDataHandle::Null);
+
+    /* Adding new layouts should pick items from the free list */
+    LayoutHandle node1Layout3Replacement = layouter3.add(node1);
+    LayoutHandle node1Layout2Replacement = layouter2.add(node1);
+    LayoutHandle node1Layout1Replacement = layouter1.add(node1);
+    CORRADE_COMPARE(ui.nodeUniqueLayoutCapacity(), 6);
+    CORRADE_COMPARE(ui.nodeUniqueLayoutUsedCount(), 6);
+    CORRADE_COMPARE(ui.nodeUniqueLayout(node1, layouter1), layoutHandleData(node1Layout1Replacement));
+    CORRADE_COMPARE(ui.nodeUniqueLayout(node1, layouter2), layoutHandleData(node1Layout2Replacement));
+    CORRADE_COMPARE(ui.nodeUniqueLayout(node1, layouter3), layoutHandleData(node1Layout3Replacement));
+
+    /* Adding one more layout grows the storage capacity again */
+    LayoutHandle node3Layout3 = layouter3.add(node3);
+    CORRADE_COMPARE(ui.nodeUniqueLayoutCapacity(), 7);
+    CORRADE_COMPARE(ui.nodeUniqueLayoutUsedCount(), 7);
+    CORRADE_COMPARE(ui.nodeUniqueLayout(node3, layouter1), layoutHandleData(node3Layout1));
+    CORRADE_COMPARE(ui.nodeUniqueLayout(node3, layouter2), LayouterDataHandle::Null);
+    CORRADE_COMPARE(ui.nodeUniqueLayout(node3, layouter3), layoutHandleData(node3Layout3));
+
+    /* Removing a node removes its unique layout assignments from the storage.
+       The layouts are not touched, only their internal node unique layout
+       references are cleared. */
+    ui.removeNode(node1);
+    CORRADE_COMPARE(ui.nodeUniqueLayoutCapacity(), 7);
+    CORRADE_COMPARE(ui.nodeUniqueLayoutUsedCount(), 4);
+    CORRADE_VERIFY(ui.isHandleValid(node1Layout1Replacement));
+    CORRADE_VERIFY(ui.isHandleValid(node1Layout2Replacement));
+    CORRADE_VERIFY(ui.isHandleValid(node1Layout3Replacement));
+    CORRADE_COMPARE(layouter1.node(node1Layout1Replacement), node1);
+    CORRADE_COMPARE(layouter2.node(node1Layout2Replacement), node1);
+    CORRADE_COMPARE(layouter3.node(node1Layout3Replacement), node1);
+
+    /* Only after update() they get removed as well. Nothing else changes for
+       the node unique layout storage. */
+    ui.update();
+    CORRADE_COMPARE(ui.nodeUniqueLayoutCapacity(), 7);
+    CORRADE_COMPARE(ui.nodeUniqueLayoutUsedCount(), 4);
+    CORRADE_VERIFY(!ui.isHandleValid(node1Layout1Replacement));
+    CORRADE_VERIFY(!ui.isHandleValid(node1Layout2Replacement));
+    CORRADE_VERIFY(!ui.isHandleValid(node1Layout3Replacement));
+
+    /* Removing a parent of a node containing two unique layouts does nothing */
+    ui.removeNode(node2Parent);
+    CORRADE_COMPARE(ui.nodeUniqueLayoutCapacity(), 7);
+    CORRADE_COMPARE(ui.nodeUniqueLayoutUsedCount(), 4);
+    CORRADE_VERIFY(ui.isHandleValid(node2Layout1));
+    CORRADE_VERIFY(ui.isHandleValid(node2Layout2));
+
+    /* But after update() it gets cleaned up as well */
+    ui.update();
+    CORRADE_COMPARE(ui.nodeUniqueLayoutCapacity(), 7);
+    CORRADE_COMPARE(ui.nodeUniqueLayoutUsedCount(), 2);
+    CORRADE_VERIFY(!ui.isHandleValid(node2Layout1));
+    CORRADE_VERIFY(!ui.isHandleValid(node2Layout2));
+
+    /* Removing a layouter that has no layouts anymore does nothing to the node
+       unique layout storage */
+    CORRADE_COMPARE(layouter2.usedCount(), 0);
+    ui.removeLayouter(layouter2);
+    CORRADE_COMPARE(ui.nodeUniqueLayoutCapacity(), 7);
+    CORRADE_COMPARE(ui.nodeUniqueLayoutUsedCount(), 2);
+
+    /* Add back a bunch of nodes & layouts so we don't have just one node with
+       two layouts */
+    NodeHandle node4 = ui.createNode({}, {});
+    NodeHandle node5 = ui.createNode({}, {});
+    LayoutHandle node4Layout1 = layouter1.add(node4);
+    LayoutHandle node4Layout3 = layouter3.add(node4);
+    LayoutHandle node5Layout1 = layouter1.add(node5);
+    CORRADE_COMPARE(ui.nodeUniqueLayoutCapacity(), 7);
+    CORRADE_COMPARE(ui.nodeUniqueLayoutUsedCount(), 5);
+    CORRADE_COMPARE(ui.nodeUniqueLayout(node3, layouter1), layoutHandleData(node3Layout1));
+    CORRADE_COMPARE(ui.nodeUniqueLayout(node3, layouter3), layoutHandleData(node3Layout3));
+    CORRADE_COMPARE(ui.nodeUniqueLayout(node4, layouter1), layoutHandleData(node4Layout1));
+    CORRADE_COMPARE(ui.nodeUniqueLayout(node4, layouter3), layoutHandleData(node4Layout3));
+    CORRADE_COMPARE(ui.nodeUniqueLayout(node5, layouter1), layoutHandleData(node5Layout1));
+
+    /* Removing a layouter removes all unique layout assignments from it */
+    ui.removeLayouter(layouter1);
+    CORRADE_COMPARE(ui.nodeUniqueLayoutCapacity(), 7);
+    CORRADE_COMPARE(ui.nodeUniqueLayoutUsedCount(), 2);
+    CORRADE_COMPARE(ui.nodeUniqueLayout(node3, layouter3), layoutHandleData(node3Layout3));
+    CORRADE_COMPARE(ui.nodeUniqueLayout(node4, layouter3), layoutHandleData(node4Layout3));
+
+    /* Removing even the last layouter makes the whole storage unused */
+    ui.removeLayouter(layouter3);
+    CORRADE_COMPARE(ui.nodeUniqueLayoutCapacity(), 7);
+    CORRADE_COMPARE(ui.nodeUniqueLayoutUsedCount(), 0);
+}
+
 void AbstractLayouterTest::addRemoveHandleRecycle() {
     struct: AbstractLayouter {
         using AbstractLayouter::AbstractLayouter;
         using AbstractLayouter::add;
         using AbstractLayouter::remove;
 
+        LayouterFeatures doFeatures() const override { return {}; }
         void doUpdate(Containers::BitArrayView, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const NodeHandle>&, const Containers::StridedArrayView1D<Vector2>&, const  Containers::StridedArrayView1D<Vector2>&) override {}
     } layouter{layouterHandle(0xab, 0x12)};
 
@@ -392,6 +630,7 @@ void AbstractLayouterTest::addRemoveHandleDisable() {
         using AbstractLayouter::add;
         using AbstractLayouter::remove;
 
+        LayouterFeatures doFeatures() const override { return {}; }
         void doUpdate(Containers::BitArrayView, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const NodeHandle>&, const Containers::StridedArrayView1D<Vector2>&, const  Containers::StridedArrayView1D<Vector2>&) override {}
     } layouter{layouterHandle(0xab, 0x12)};
 
@@ -427,13 +666,14 @@ void AbstractLayouterTest::addRemoveHandleDisable() {
     }), TestSuite::Compare::Container);
 }
 
-void AbstractLayouterTest::addNullNode() {
+void AbstractLayouterTest::addInvalid() {
     CORRADE_SKIP_IF_NO_ASSERT();
 
     struct: AbstractLayouter {
         using AbstractLayouter::AbstractLayouter;
         using AbstractLayouter::add;
 
+        LayouterFeatures doFeatures() const override { return {}; }
         void doUpdate(Containers::BitArrayView, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const NodeHandle>&, const Containers::StridedArrayView1D<Vector2>&, const  Containers::StridedArrayView1D<Vector2>&) override {}
     } layouter{layouterHandle(0, 1)};
 
@@ -444,6 +684,54 @@ void AbstractLayouterTest::addNullNode() {
         "Ui::AbstractLayouter::add(): invalid handle Ui::NodeHandle::Null\n");
 }
 
+void AbstractLayouterTest::addInvalidUniqueLayouts() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    AbstractUserInterface ui{{100, 100}};
+
+    /* Just to have a non-trivial node handle */
+    NodeHandle node1 = ui.createNode({}, {});
+    NodeHandle node2 = ui.createNode({}, {});
+    ui.removeNode(ui.createNode({}, {}));
+    NodeHandle node3 = ui.createNode({}, {});
+
+    struct Layouter: AbstractLayouter {
+        using AbstractLayouter::AbstractLayouter;
+        using AbstractLayouter::add;
+        using AbstractLayouter::remove;
+
+        LayouterFeatures doFeatures() const override {
+            return LayouterFeature::UniqueLayouts;
+        }
+        void doUpdate(Containers::BitArrayView, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const NodeHandle>&, const Containers::StridedArrayView1D<Vector2>&, const  Containers::StridedArrayView1D<Vector2>&) override {}
+    } layouterNoUi{layouterHandle(0, 1)};
+
+    /* ... and a non-trivial layouter handle */
+    ui.createLayouter();
+    ui.createLayouter();
+    ui.createLayouter();
+    Layouter& layouter = ui.setLayouterInstance(Containers::pointer<Layouter>(ui.createLayouter()));
+
+    /* ... and a non-trivial layout handle */
+    layouter.add(node1);
+    layouter.remove(layouter.add(node2));
+    LayoutHandle layout = layouter.add(node3);
+    CORRADE_COMPARE(ui.nodeUniqueLayout(node3, layouter), layoutHandleData(layout));
+
+    Containers::String out;
+    Error redirectError{&out};
+    layouterNoUi.add(node3);
+    layouter.add(NodeHandle::Null);
+    layouter.add(nodeHandle(0x12345, 0xabc));
+    layouter.add(node3);
+    CORRADE_COMPARE_AS(out,
+        "Ui::AbstractLayouter::add(): layouter not part of a user interface\n"
+        "Ui::AbstractLayouter::add(): invalid handle Ui::NodeHandle::Null\n"
+        "Ui::AbstractLayouter::add(): invalid handle Ui::NodeHandle(0x12345, 0xabc)\n"
+        "Ui::AbstractLayouter::add(): Ui::NodeHandle(0x2, 0x2) already has Ui::LayoutHandle({0x3, 0x1}, {0x1, 0x2}) from this layouter\n",
+        TestSuite::Compare::String);
+}
+
 void AbstractLayouterTest::addNoHandlesLeft() {
     CORRADE_SKIP_IF_NO_ASSERT();
 
@@ -451,6 +739,7 @@ void AbstractLayouterTest::addNoHandlesLeft() {
         using AbstractLayouter::AbstractLayouter;
         using AbstractLayouter::add;
 
+        LayouterFeatures doFeatures() const override { return {}; }
         void doUpdate(Containers::BitArrayView, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const NodeHandle>&, const Containers::StridedArrayView1D<Vector2>&, const  Containers::StridedArrayView1D<Vector2>&) override {}
     } layouter{layouterHandle(0, 1)};
 
@@ -469,6 +758,41 @@ void AbstractLayouterTest::addNoHandlesLeft() {
         "Ui::AbstractLayouter::add(): can only have at most 1048576 layouts\n");
 }
 
+void AbstractLayouterTest::removeUniqueLayoutInvalidNode() {
+    AbstractUserInterface ui{{100, 100}};
+
+    struct Layouter: AbstractLayouter {
+        using AbstractLayouter::AbstractLayouter;
+        using AbstractLayouter::add;
+        using AbstractLayouter::remove;
+
+        LayouterFeatures doFeatures() const override {
+            return LayouterFeature::UniqueLayouts;
+        }
+        void doUpdate(Containers::BitArrayView, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const NodeHandle>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Vector2>&) override {}
+    };
+    Layouter& layouter = ui.setLayouterInstance(Containers::pointer<Layouter>(ui.createLayouter()));
+
+    NodeHandle node = ui.createNode({}, {});
+    LayoutHandle layout = layouter.add(node);
+    CORRADE_COMPARE(ui.nodeUniqueLayoutCapacity(), 1);
+    CORRADE_COMPARE(ui.nodeUniqueLayoutUsedCount(), 1);
+    CORRADE_COMPARE(ui.nodeUniqueLayout(node, layouter), layoutHandleData(layout));
+
+    /* Removing the node removes the node unique layout assignment already, but
+       the layout itself still is assigned to it */
+    ui.removeNode(node);
+    CORRADE_COMPARE(ui.nodeUniqueLayoutCapacity(), 1);
+    CORRADE_COMPARE(ui.nodeUniqueLayoutUsedCount(), 0);
+    CORRADE_COMPARE(layouter.node(layout), node);
+
+    /* Now removing the layout should not attempt to remove the node unique
+       layout anymore, as it's gone already */
+    layouter.remove(layout);
+    CORRADE_COMPARE(ui.nodeUniqueLayoutCapacity(), 1);
+    CORRADE_COMPARE(ui.nodeUniqueLayoutUsedCount(), 0);
+}
+
 void AbstractLayouterTest::removeInvalid() {
     CORRADE_SKIP_IF_NO_ASSERT();
 
@@ -477,6 +801,7 @@ void AbstractLayouterTest::removeInvalid() {
         using AbstractLayouter::add;
         using AbstractLayouter::remove;
 
+        LayouterFeatures doFeatures() const override { return {}; }
         void doUpdate(Containers::BitArrayView, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const NodeHandle>&, const Containers::StridedArrayView1D<Vector2>&, const  Containers::StridedArrayView1D<Vector2>&) override {}
     } layouter{layouterHandle(0, 1)};
 
@@ -506,6 +831,7 @@ void AbstractLayouterTest::nodeInvalid() {
         using AbstractLayouter::AbstractLayouter;
         using AbstractLayouter::add;
 
+        LayouterFeatures doFeatures() const override { return {}; }
         void doUpdate(Containers::BitArrayView, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const NodeHandle>&, const Containers::StridedArrayView1D<Vector2>&, const  Containers::StridedArrayView1D<Vector2>&) override {}
     } layouter{layouterHandle(0xab, 0x12)};
 
@@ -532,11 +858,11 @@ void AbstractLayouterTest::setSize() {
     struct: AbstractLayouter {
         using AbstractLayouter::AbstractLayouter;
 
+        LayouterFeatures doFeatures() const override { return {}; }
         void doSetSize(const Vector2& size) override {
             ++called;
             CORRADE_COMPARE(size, (Vector2{1.0f, 2.0f}));
         }
-
         void doUpdate(Containers::BitArrayView, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const NodeHandle>&, const Containers::StridedArrayView1D<Vector2>&, const  Containers::StridedArrayView1D<Vector2>&) override {}
 
         Int called = 0;
@@ -555,6 +881,7 @@ void AbstractLayouterTest::setSizeZero() {
     struct: AbstractLayouter {
         using AbstractLayouter::AbstractLayouter;
 
+        LayouterFeatures doFeatures() const override { return {}; }
         void doUpdate(Containers::BitArrayView, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const NodeHandle>&, const Containers::StridedArrayView1D<Vector2>&, const  Containers::StridedArrayView1D<Vector2>&) override {}
     } layouter{layouterHandle(0, 1)};
 
@@ -572,6 +899,7 @@ void AbstractLayouterTest::setSizeNotImplemented() {
     struct: AbstractLayouter {
         using AbstractLayouter::AbstractLayouter;
 
+        LayouterFeatures doFeatures() const override { return {}; }
         void doUpdate(Containers::BitArrayView, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const NodeHandle>&, const Containers::StridedArrayView1D<Vector2>&, const  Containers::StridedArrayView1D<Vector2>&) override {}
     } layouter{layouterHandle(0, 1)};
 
@@ -587,6 +915,7 @@ void AbstractLayouterTest::cleanNodes() {
         using AbstractLayouter::add;
         using AbstractLayouter::remove;
 
+        LayouterFeatures doFeatures() const override { return {}; }
         void doClean(Containers::BitArrayView dataIdsToRemove) override {
             ++called;
             CORRADE_COMPARE_AS(dataIdsToRemove, Containers::stridedArrayView({
@@ -656,6 +985,7 @@ void AbstractLayouterTest::cleanNodesEmpty() {
     struct: AbstractLayouter {
         using AbstractLayouter::AbstractLayouter;
 
+        LayouterFeatures doFeatures() const override { return {}; }
         void doClean(Containers::BitArrayView) override {
             ++called;
         }
@@ -673,6 +1003,7 @@ void AbstractLayouterTest::cleanNodesNotImplemented() {
     struct: AbstractLayouter {
         using AbstractLayouter::AbstractLayouter;
 
+        LayouterFeatures doFeatures() const override { return {}; }
         void doUpdate(Containers::BitArrayView, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const NodeHandle>&, const Containers::StridedArrayView1D<Vector2>&, const  Containers::StridedArrayView1D<Vector2>&) override {}
     } layouter{layouterHandle(0, 1)};
 
@@ -687,6 +1018,7 @@ void AbstractLayouterTest::update() {
         using AbstractLayouter::AbstractLayouter;
         using AbstractLayouter::add;
 
+        LayouterFeatures doFeatures() const override { return {}; }
         void doUpdate(Containers::BitArrayView layoutIdsToUpdate, const Containers::StridedArrayView1D<const UnsignedInt>& topLevelLayoutIds, const Containers::StridedArrayView1D<const NodeHandle>& nodeParents, const Containers::StridedArrayView1D<Vector2>& nodeOffsets, const  Containers::StridedArrayView1D<Vector2>& nodeSizes) override {
             ++called;
             CORRADE_COMPARE_AS(layoutIdsToUpdate, Containers::stridedArrayView({
@@ -763,6 +1095,7 @@ void AbstractLayouterTest::updateEmpty() {
     struct: AbstractLayouter {
         using AbstractLayouter::AbstractLayouter;
 
+        LayouterFeatures doFeatures() const override { return {}; }
         void doUpdate(Containers::BitArrayView, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const NodeHandle>&, const Containers::StridedArrayView1D<Vector2>&, const  Containers::StridedArrayView1D<Vector2>&) override {
             ++called;
         }
@@ -786,6 +1119,7 @@ void AbstractLayouterTest::updateInvalidSizes() {
         using AbstractLayouter::AbstractLayouter;
         using AbstractLayouter::add;
 
+        LayouterFeatures doFeatures() const override { return {}; }
         void doUpdate(Containers::BitArrayView, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const NodeHandle>&, const Containers::StridedArrayView1D<Vector2>&, const  Containers::StridedArrayView1D<Vector2>&) override {}
     } layouter{layouterHandle(0, 1)};
 
@@ -821,6 +1155,7 @@ void AbstractLayouterTest::updateNoSizeSet() {
     struct: AbstractLayouter {
         using AbstractLayouter::AbstractLayouter;
 
+        LayouterFeatures doFeatures() const override { return {}; }
         void doUpdate(Containers::BitArrayView, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const NodeHandle>&, const Containers::StridedArrayView1D<Vector2>&, const  Containers::StridedArrayView1D<Vector2>&) override {
             ++called;
         }
@@ -840,6 +1175,7 @@ void AbstractLayouterTest::state() {
         using AbstractLayouter::add;
         using AbstractLayouter::remove;
 
+        LayouterFeatures doFeatures() const override { return {}; }
         void doUpdate(Containers::BitArrayView, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const NodeHandle>&, const Containers::StridedArrayView1D<Vector2>&, const  Containers::StridedArrayView1D<Vector2>&) override {}
     } layouter{layouterHandle(0, 1)};
 

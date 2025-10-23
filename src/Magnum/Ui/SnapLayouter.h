@@ -390,6 +390,7 @@ class MAGNUM_UI_EXPORT SnapLayouter: public AbstractLayouter {
         /* Used only through SnapLayout, which ensures parenting consistency */
         MAGNUM_UI_LOCAL LayoutHandle add(NodeHandle node, Snaps snap, NodeHandle target);
 
+        MAGNUM_UI_LOCAL LayouterFeatures doFeatures() const override;
         MAGNUM_UI_LOCAL void doSetSize(const Vector2& size) override;
         MAGNUM_UI_LOCAL void doUpdate(Containers::BitArrayView layoutIdsToUpdate, const Containers::StridedArrayView1D<const UnsignedInt>& topLevelLayoutIds, const Containers::StridedArrayView1D<const NodeHandle>& nodeParents, const Containers::StridedArrayView1D<Vector2>& nodeOffsets, const Containers::StridedArrayView1D<Vector2>& nodeSizes) override;
 

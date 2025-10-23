@@ -1108,6 +1108,7 @@ void SnapLayouterTest::updateDataOrder() {
         using AbstractLayouter::AbstractLayouter;
         using AbstractLayouter::add;
 
+        LayouterFeatures doFeatures() const override { return {}; }
         void doUpdate(Containers::BitArrayView, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const NodeHandle>&, const Containers::StridedArrayView1D<Vector2>& nodeOffsets, const Containers::StridedArrayView1D<Vector2>& nodeSizes) override {
             CORRADE_COMPARE_AS(nodeOffsets, Containers::stridedArrayView<Vector2>({
                 /* (6, 5) is right and bottom padding */

@@ -2077,6 +2077,7 @@ void DebugLayerTest::layouterNameNoOp() {
     struct EmptyLayouter: AbstractLayouter {
         using AbstractLayouter::AbstractLayouter;
 
+        LayouterFeatures doFeatures() const override { return {}; }
         void doUpdate(Containers::BitArrayView, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const NodeHandle>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Vector2>&) override {}
     };
     EmptyLayouter& emptyLayouter = ui.setLayouterInstance(Containers::pointer<EmptyLayouter>(ui.createLayouter()));
@@ -2095,6 +2096,7 @@ void DebugLayerTest::layouterName() {
     struct EmptyLayouter: AbstractLayouter {
         using AbstractLayouter::AbstractLayouter;
 
+        LayouterFeatures doFeatures() const override { return {}; }
         void doUpdate(Containers::BitArrayView, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const NodeHandle>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Vector2>&) override {}
     };
 
@@ -2227,6 +2229,7 @@ void DebugLayerTest::layouterNameDebugIntegration() {
     struct EmptyLayouter: AbstractLayouter {
         using AbstractLayouter::AbstractLayouter;
 
+        LayouterFeatures doFeatures() const override { return {}; }
         void doUpdate(Containers::BitArrayView, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const NodeHandle>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Vector2>&) override {}
     };
 
@@ -2257,6 +2260,7 @@ void DebugLayerTest::layouterNameDebugIntegration() {
             }
         };
 
+        LayouterFeatures doFeatures() const override { return {}; }
         void doUpdate(Containers::BitArrayView, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const NodeHandle>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Vector2>&) override {}
     };
 
@@ -2437,6 +2441,7 @@ void DebugLayerTest::layouterNameDebugIntegrationExplicit() {
     struct EmptyLayouter: AbstractLayouter {
         using AbstractLayouter::AbstractLayouter;
 
+        LayouterFeatures doFeatures() const override { return {}; }
         void doUpdate(Containers::BitArrayView, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const NodeHandle>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Vector2>&) override {}
     };
 
@@ -2469,6 +2474,7 @@ void DebugLayerTest::layouterNameDebugIntegrationExplicit() {
             int value;
         };
 
+        LayouterFeatures doFeatures() const override { return {}; }
         void doUpdate(Containers::BitArrayView, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const NodeHandle>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Vector2>&) override {}
     };
 
@@ -2536,6 +2542,7 @@ void DebugLayerTest::layouterNameDebugIntegrationExplicitRvalue() {
     struct EmptyLayouter: AbstractLayouter {
         using AbstractLayouter::AbstractLayouter;
 
+        LayouterFeatures doFeatures() const override { return {}; }
         void doUpdate(Containers::BitArrayView, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const NodeHandle>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Vector2>&) override {}
     };
 
@@ -2568,6 +2575,7 @@ void DebugLayerTest::layouterNameDebugIntegrationExplicitRvalue() {
             int value;
         };
 
+        LayouterFeatures doFeatures() const override { return {}; }
         void doUpdate(Containers::BitArrayView, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const NodeHandle>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Vector2>&) override {}
     };
 
@@ -2634,6 +2642,7 @@ void DebugLayerTest::layouterNameDebugIntegrationCopyConstructPlainStruct() {
             char b;
         };
 
+        LayouterFeatures doFeatures() const override { return {}; }
         void doUpdate(Containers::BitArrayView, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const NodeHandle>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Vector2>&) override {}
     };
     IntegratedLayouter& integratedLayouter = ui.setLayouterInstance(Containers::pointer<IntegratedLayouter>(ui.createLayouter()));
@@ -2674,6 +2683,7 @@ void DebugLayerTest::layouterNameDebugIntegrationMoveConstructPlainStruct() {
             Containers::Pointer<char> b;
         };
 
+        LayouterFeatures doFeatures() const override { return {}; }
         void doUpdate(Containers::BitArrayView, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const NodeHandle>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Vector2>&) override {}
     };
     IntegratedLayouter& integratedLayouter1 = ui.setLayouterInstance(Containers::pointer<IntegratedLayouter>(ui.createLayouter()));
@@ -2705,6 +2715,7 @@ void DebugLayerTest::layouterNameInvalid() {
     struct EmptyLayouter: AbstractLayouter {
         using AbstractLayouter::AbstractLayouter;
 
+        LayouterFeatures doFeatures() const override { return {}; }
         void doUpdate(Containers::BitArrayView, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const NodeHandle>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Vector2>&) override {}
     };
     EmptyLayouter& layouter = ui.setLayouterInstance(Containers::pointer<EmptyLayouter>(ui.createLayouter()));
@@ -2720,6 +2731,7 @@ void DebugLayerTest::layouterNameInvalid() {
             }
         };
 
+        LayouterFeatures doFeatures() const override { return {}; }
         void doUpdate(Containers::BitArrayView, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const NodeHandle>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Vector2>&) override {}
     };
     IntegratedLayouter& integratedLayouter = ui.setLayouterInstance(Containers::pointer<IntegratedLayouter>(ui.createLayouter()));
@@ -3499,6 +3511,7 @@ void DebugLayerTest::preUpdateNoOp() {
     struct EmptyLayouter: AbstractLayouter {
         using AbstractLayouter::AbstractLayouter;
 
+        LayouterFeatures doFeatures() const override { return {}; }
         void doUpdate(Containers::BitArrayView, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const NodeHandle>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Vector2>&) override {}
     };
     ui.setLayouterInstance(Containers::pointer<EmptyLayouter>(ui.createLayouter()));
@@ -3697,6 +3710,7 @@ void DebugLayerTest::preUpdateTrackLayouters() {
     struct EmptyLayouter: AbstractLayouter {
         using AbstractLayouter::AbstractLayouter;
 
+        LayouterFeatures doFeatures() const override { return {}; }
         void doUpdate(Containers::BitArrayView, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const NodeHandle>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Vector2>&) override {}
     };
     EmptyLayouter& emptyLayouter1 = ui.setLayouterInstance(Containers::pointer<EmptyLayouter>(ui.createLayouter()));
@@ -4122,6 +4136,7 @@ void DebugLayerTest::nodeInspect() {
         using AbstractLayouter::AbstractLayouter;
         using AbstractLayouter::add;
 
+        LayouterFeatures doFeatures() const override { return {}; }
         void doUpdate(Containers::BitArrayView, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const NodeHandle>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Vector2>&) override {}
     };
     struct IntegratedLayouter: AbstractLayouter {
@@ -4140,6 +4155,7 @@ void DebugLayerTest::nodeInspect() {
             int value = 7331;
         };
 
+        LayouterFeatures doFeatures() const override { return {}; }
         void doUpdate(Containers::BitArrayView, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const NodeHandle>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Vector2>&) override {}
 
         int value = 96024;
@@ -4508,6 +4524,7 @@ void DebugLayerTest::nodeInspectNoCallback() {
         using AbstractLayouter::AbstractLayouter;
         using AbstractLayouter::add;
 
+        LayouterFeatures doFeatures() const override { return {}; }
         void doUpdate(Containers::BitArrayView, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const NodeHandle>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Vector2>&) override {}
     };
     struct IntegratedLayouter: AbstractLayouter {
@@ -4526,6 +4543,7 @@ void DebugLayerTest::nodeInspectNoCallback() {
             int value = 7331;
         };
 
+        LayouterFeatures doFeatures() const override { return {}; }
         void doUpdate(Containers::BitArrayView, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const NodeHandle>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Vector2>&) override {}
 
         int value = 96024;
@@ -4853,6 +4871,7 @@ void DebugLayerTest::nodeInspectLayouterDebugIntegrationExplicit() {
             int value;
         };
 
+        LayouterFeatures doFeatures() const override { return {}; }
         void doUpdate(Containers::BitArrayView, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const NodeHandle>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Vector2>&) override {}
 
         int value = 96024;
@@ -4921,6 +4940,7 @@ void DebugLayerTest::nodeInspectLayouterDebugIntegrationExplicitRvalue() {
     struct IntegratedLayouter: IntegratedLayouterBase {
         using IntegratedLayouterBase::IntegratedLayouterBase;
 
+        LayouterFeatures doFeatures() const override { return {}; }
         void doUpdate(Containers::BitArrayView, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const NodeHandle>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Vector2>&) override {}
     };
     IntegratedLayouter& integratedLayouter = ui.setLayouterInstance(Containers::pointer<IntegratedLayouter>(ui.createLayouter()));
@@ -5336,6 +5356,7 @@ void DebugLayerTest::nodeInspectSkipNoData() {
         using AbstractLayouter::AbstractLayouter;
         using AbstractLayouter::add;
 
+        LayouterFeatures doFeatures() const override { return {}; }
         void doUpdate(Containers::BitArrayView, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const NodeHandle>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Vector2>&) override {}
     };
     struct EmptyAnimator: AbstractGenericAnimator {
@@ -5869,6 +5890,7 @@ void DebugLayerTest::nodeHighlightConditionData() {
             return _ids[layouterDataHandleId(data)];
         }
 
+        LayouterFeatures doFeatures() const override { return {}; }
         void doUpdate(Containers::BitArrayView, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const NodeHandle>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Vector2>&) override {}
 
         private:
@@ -6240,6 +6262,7 @@ void DebugLayerTest::nodeHighlightConditionDataFunctions() {
         using AbstractLayouter::AbstractLayouter;
         using AbstractLayouter::add;
 
+        LayouterFeatures doFeatures() const override { return {}; }
         void doUpdate(Containers::BitArrayView, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const NodeHandle>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Vector2>&) override {}
     };
     struct EmptyAnimator: AbstractGenericAnimator {
@@ -6453,6 +6476,7 @@ void DebugLayerTest::nodeHighlightInvalid() {
     struct EmptyLayouter: AbstractLayouter {
         using AbstractLayouter::AbstractLayouter;
 
+        LayouterFeatures doFeatures() const override { return {}; }
         void doUpdate(Containers::BitArrayView, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const NodeHandle>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Vector2>&) override {}
     };
     EmptyLayouter& emptyLayouter = ui.setLayouterInstance(Containers::pointer<EmptyLayouter>(ui.createLayouter()));

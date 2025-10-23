@@ -2530,6 +2530,53 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
          * @}
          */
 
+        /** @{
+         * @name Node unique layout management
+         *
+         * Queries for unique layouts assigned to particular nodes from
+         * @ref AbstractLayouter instances that advertise
+         * @ref LayouterFeature::UniqueLayouts.
+         */
+
+        /**
+         * @brief Capacity of the node unique layout storage
+         *
+         * @see @ref nodeUniqueLayoutUsedCount()
+         */
+        std::size_t nodeUniqueLayoutCapacity() const;
+
+        /**
+         * @brief Count of used items in the node unique layout storage
+         *
+         * Always at most @ref nodeUniqueLayoutCapacity(). The operation is
+         * done with a @f$ \mathcal{O}(n) @f$ complexity where @f$ n @f$ is
+         * @ref nodeUniqueLayoutCapacity(). When @ref AbstractLayouter::add()
+         * is called on a layouter that advertises
+         * @ref LayouterFeature::UniqueLayouts, a slot in the node unique
+         * layout storage is used to maintain a reference from the node to
+         * given layout, and gets recycled when the layout, the layouter or
+         * the node the layout is assigned to is removed again.
+         * @see @ref AbstractLayouter::features()
+         */
+        std::size_t nodeUniqueLayoutUsedCount() const;
+
+        /**
+         * @brief Unique layout assigned to a node from given layouter
+         *
+         * Expects that both @p node and @p layouter are valid and that given
+         * layouter advertises @ref LayouterFeature::UniqueLayouts. If the
+         * layouter contains a layout assigned to @p node, returns its handle,
+         * otherwise returns @ref LayouterDataHandle::Null. The operation is
+         * done with a @f$ \mathcal{O}(n) @f$ complexity where @f$ n @f$ is
+         * count of unique layouts assigned to given node, which is at most
+         * @ref layouterCapacity().
+         */
+        LayouterDataHandle nodeUniqueLayout(NodeHandle node, LayouterHandle layouter) const;
+
+        /**
+         * @}
+         */
+
         /**
          * @brief Clean orphaned nodes, data and no longer valid data attachments
          * @return Reference to self (for method chaining)
@@ -3335,6 +3382,9 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
         Containers::Optional<Vector2> currentGlobalPointerPosition() const;
 
     private:
+        friend AbstractLayouter; /* so it can call addUniqueLayoutToNode(),
+            removeUniqueLayoutFromNode() */
+
         /* Used by set*AnimatorInstance() */
         MAGNUM_UI_LOCAL AbstractAnimator& setAnimatorInstanceInternal(
             #ifndef CORRADE_NO_ASSERT
@@ -3360,6 +3410,16 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
         template<class Event, void(AbstractLayer::*function)(UnsignedInt, Event&)> MAGNUM_UI_LOCAL NodeHandle callEvent(const Vector2& globalPositionScaled, Event& event);
         template<class Event, void(AbstractLayer::*function)(UnsignedInt, Event&)> MAGNUM_UI_LOCAL void callFallthroughPointerEvents(NodeHandle node, const Vector2& globalPositionScaled, Event& event, bool allowCapture);
         template<void(AbstractLayer::*function)(UnsignedInt, KeyEvent&)> MAGNUM_UI_LOCAL bool keyPressOrReleaseEvent(KeyEvent& event);
+
+        /* Called from AbstractLayouter::add() */
+        MAGNUM_UI_LOCAL void addUniqueLayoutToNode(LayoutHandle layout, NodeHandle node);
+        /* Called from AbstractLayouter::remove(), used also internally in
+           removeLayouter() */
+        MAGNUM_UI_LOCAL void removeUniqueLayoutFromNode(LayouterHandle layouter, NodeHandle node
+            #ifndef CORRADE_NO_DEBUG_ASSERT
+            , LayouterDataHandle data
+            #endif
+        );
 
         struct State;
         Containers::Pointer<State> _state;

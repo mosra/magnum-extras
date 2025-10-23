@@ -97,8 +97,10 @@ struct AbstractLayouter::State {
     /* 0/4 bytes free, 1/5 on a no-assert build */
 
     /* Gets set by AbstractUserInterface::setLayouterInstance() and further
-       updated on every UI move */
-    const AbstractUserInterface* ui = nullptr;
+       updated on every UI move. Used internally in add() and remove() to
+       manage per-node unique layouts if the layouter advertises
+       LayouterFeature::UniqueLayouts. */
+    AbstractUserInterface* ui = nullptr;
 
     Containers::Array<Implementation::Layout> layouts;
     /* Indices in the `layouts` array. The Layout then has a nextFree member
