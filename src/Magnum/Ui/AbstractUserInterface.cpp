@@ -500,7 +500,7 @@ struct AbstractUserInterface::State {
        draw order. To make insert/remove operations easier the list is cyclic,
        so the last layer's `next` is the same as `firstLayer`. */
     LayerHandle firstLayer = LayerHandle::Null;
-    /* Indices into the `layers` array. The `Layer` then has a `nextFree`
+    /* Indices into the `layers` array. The `Layer` then has a `free.next`
        member containing the next free index. To avoid repeatedly reusing the
        same handles and exhausting their generation counter too soon, new
        layers get taken from the front and removed are put at the end. A value
@@ -517,22 +517,22 @@ struct AbstractUserInterface::State {
        the draw order. To make insert/remove operations easier the list is
        cyclic, so the last layouter's `next` is the same as `firstLayouter`. */
     LayouterHandle firstLayouter = LayouterHandle::Null;
-    /* Indices into the `layouters` array. The `Layouter` then has a `nextFree`
-       member containing the next free index. To avoid repeatedly reusing the
-       same handles and exhausting their generation counter too soon, new
-       layouters get taken from the front and removed are put at the end. A
-       value with all bits set means there's no (first/next/last) free
+    /* Indices into the `layouters` array. The `Layouter` then has a
+       `free.next` member containing the next free index. To avoid repeatedly
+       reusing the same handles and exhausting their generation counter too
+       soon, new layouters get taken from the front and removed are put at the
+       end. A value with all bits set means there's no (first/next/last) free
        layouter. */
     UnsignedShort firstFreeLayouter = 0xffffu;
     UnsignedShort lastFreeLayouter = 0xffffu;
 
     /* Animators, indexed by AnimatorHandle */
     Containers::Array<Animator> animators;
-    /* Indices into the `animators` array. The `Animator` then has a `nextFree`
-       member containing the next free index. To avoid repeatedly reusing the
-       same handles and exhausting their generation counter too soon, new
-       animators get taken from the front and removed are put at the end. A
-       value with all bits set means there's no (first/next/last) free
+    /* Indices into the `animators` array. The `Animator` then has a
+       `free.next` member containing the next free index. To avoid repeatedly
+       reusing the same handles and exhausting their generation counter too
+       soon, new animators get taken from the front and removed are put at the
+       end. A value with all bits set means there's no (first/next/last) free
        animator. */
     UnsignedShort firstFreeAnimator = 0xffffu;
     UnsignedShort lastFreeAnimator = 0xffffu;
@@ -551,11 +551,11 @@ struct AbstractUserInterface::State {
 
     /* Nodes, indexed by NodeHandle */
     Containers::Array<Node> nodes;
-    /* Indices into the `nodes` array. The `Node` then has a `nextFree`
-       member containing the next free index. To avoid repeatedly reusing the
-       same handles and exhausting their generation counter too soon, new
-       nodes get taken from the front and removed are put at the end. A value
-       with all bits set means there's no (first/next/last) free node. */
+    /* Indices into the `nodes` array. The `Node` then has a `free.next` member
+       containing the next free index. To avoid repeatedly reusing the same
+       handles and exhausting their generation counter too soon, new nodes get
+       taken from the front and removed are put at the end. A value with all
+       bits set means there's no (first/next/last) free node. */
     UnsignedInt firstFreeNode = ~UnsignedInt{};
     UnsignedInt lastFreeNode = ~UnsignedInt{};
 
@@ -564,11 +564,11 @@ struct AbstractUserInterface::State {
        which then then `Node::order` points into the `nodeOrder` array. If
        null, there's no nodes to process at all. */
     NodeHandle firstNodeOrder = NodeHandle::Null;
-    /* Index into the `nodeOrder` array. The `NodeOrder` then has a
-       `nextFree` member containing the next free index. No handles are exposed
-       for these, thus there's no problem with generation exhausing and the
-       recycling doesn't need to be made from the opposite side. A value with
-       all bits set means there's no (first/next) free node order. */
+    /* Index into the `nodeOrder` array. The `NodeOrder` then has a `free.next`
+       member containing the next free index. No handles are exposed for these,
+       thus there's no problem with generation exhausting and the recycling
+       doesn't need to be made from the opposite side. A value with all bits
+       set means there's no (first/next) free node order. */
     UnsignedInt firstFreeNodeOrder = ~UnsignedInt{};
 
     /* Set by setSize(), checked in update(), used for event scaling and
@@ -1768,12 +1768,10 @@ std::size_t AbstractUserInterface::nodeCapacity() const {
 }
 
 std::size_t AbstractUserInterface::nodeUsedCount() const {
-    /* The "pointer" chasing in here is a bit nasty, but there's no other way
-       to know which nodes are actually used and which not. The parent is Null
-       for unused nodes, yes, but it's also Null for top-level nodes, and
-       changing it to some other bit pattern such as generation being 0 would
-       mean orphaned node removal in clean() has to do a more complex check
-       than just comparing against Null. */
+    /* In general we can assume that the amount of free nodes is always either
+       zero or significantly less than the capacity, and thus iterating the
+       (presumably small) free list should be faster, even though it involves
+       jumping around in memory. */
     const State& state = *_state;
     std::size_t free = 0;
     UnsignedInt index = state.firstFreeNode;
@@ -2051,10 +2049,10 @@ std::size_t AbstractUserInterface::nodeOrderCapacity() const {
 }
 
 std::size_t AbstractUserInterface::nodeOrderUsedCount() const {
-    /* The "pointer" chasing in here is a bit nasty, but there's no other way
-       to know which node order items are used and which not, and adding such
-       field would inflate the data size for little advantage -- this function
-       isn't meant to be used that often, and no other code needs this info. */
+    /* In general we can assume that the amount of free node order entries is
+       always either zero or significantly less than the capacity, and thus
+       iterating the (presumably small) free list should be faster, even though
+       it involves jumping around in memory. */
     std::size_t free = 0;
     const State& state = *_state;
     UnsignedInt index = state.firstFreeNodeOrder;
