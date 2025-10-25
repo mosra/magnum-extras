@@ -1823,8 +1823,9 @@ void AbstractUserInterfaceImplementationTest::orderVisibleNodeData() {
         {12, 0},
     };
 
-    /* Node data assignments. Node generations don't matter in any way, the
-       same node ID can even have different generations. */
+    /* Node data assignments. Node generations don't matter in any way (but
+       have to be non-zero if not Null), the same node ID can even have
+       different generations. */
     const NodeHandle layer1NodeAttachments[]{
         nodeHandle(7, 0xeee),  /* data handle ID 0 */
         nodeHandle(2, 0xaba),  /* data handle ID 1 */
@@ -1837,7 +1838,7 @@ void AbstractUserInterfaceImplementationTest::orderVisibleNodeData() {
         nodeHandle(12, 0xccc), /* 4 */
         NodeHandle{},          /* 5 */
         nodeHandle(2, 0xddd),  /* 6 */
-        nodeHandle(2, 0x000),  /* 7 */
+        nodeHandle(2, 0x111),  /* 7 */
     };
     const NodeHandle layer3NodeAttachments[]{
         nodeHandle(2, 0xefe),  /* 0 */

@@ -260,8 +260,14 @@ struct AbstractAnimator::State {
 };
 
 AbstractAnimator::AbstractAnimator(const AnimatorHandle handle): _state{InPlaceInit} {
-    CORRADE_ASSERT(handle != AnimatorHandle::Null,
-        "Ui::AbstractAnimator: handle is null", );
+    /* Handles with zero generation are never valid, and their bit pattern
+       might get internally abused to store other information, so disallow
+       them. OTOH I feel this isn't important to mention in constructor docs,
+       as it's a low-level property most users don't need to be aware of. This
+       check is also a superset of a check for AnimatorHandle::Null, which is
+       not allowed either. */
+    CORRADE_ASSERT(animatorHandleGeneration(handle),
+        "Ui::AbstractAnimator: invalid handle" << handle, );
     _state->handle = handle;
 }
 
@@ -327,19 +333,20 @@ std::size_t AbstractAnimator::usedCount() const {
 }
 
 bool AbstractAnimator::isHandleValid(const AnimatorDataHandle handle) const {
-    if(handle == AnimatorDataHandle::Null)
+    /* animatorDataHandleId() below expects generation to be non-zero, check
+       for that first. This is also a superset of a check for
+       AnimatorDataHandle::Null. */
+    const UnsignedInt generation = animatorDataHandleGeneration(handle);
+    if(!generation)
         return false;
     const State& state = *_state;
     const UnsignedInt index = animatorDataHandleId(handle);
     if(index >= state.animations.size())
         return false;
-    const UnsignedInt generation = animatorDataHandleGeneration(handle);
     const Animation& animation = state.animations[index];
     /* Zero generation handles (i.e., where it wrapped around from all bits
-       set) are expected to be expired and thus with duration being -max. In
-       other words, it shouldn't be needed to verify also that generation is
-       non-zero. */
-    CORRADE_INTERNAL_DEBUG_ASSERT(generation || animation.used.duration == Nanoseconds::min());
+       set) are expected to be expired and thus with duration being -max */
+    CORRADE_INTERNAL_DEBUG_ASSERT(animation.used.generation || animation.used.duration == Nanoseconds::min());
     return animation.used.duration != Nanoseconds::min() && generation == animation.used.generation;
 }
 
@@ -471,6 +478,12 @@ AnimationHandle AbstractAnimator::create(const Nanoseconds start, const Nanoseco
 AnimationHandle AbstractAnimator::create(const Nanoseconds start, const Nanoseconds duration, const NodeHandle node, const UnsignedInt repeatCount, const AnimationFlags flags) {
     CORRADE_ASSERT(features() >= AnimatorFeature::NodeAttachment,
         "Ui::AbstractAnimator::create(): node attachment not supported", {});
+    /* Handles with zero generation are never valid, and their bit pattern
+       might get internally abused to store other information, so disallow
+       them. OTOH I feel this isn't important to mention in create() docs, as
+       it's a low-level property most users don't need to be aware of. */
+    CORRADE_ASSERT(node == NodeHandle::Null || nodeHandleGeneration(node),
+        "Ui::AbstractAnimator::create(): invalid handle" << node, {});
     const AnimationHandle handle = create(start, duration, repeatCount, flags);
     _state->nodes[animationHandleId(handle)] = node;
     return handle;
@@ -486,6 +499,12 @@ AnimationHandle AbstractAnimator::create(const Nanoseconds start, const Nanoseco
     State& state = *_state;
     CORRADE_ASSERT(state.layer != LayerHandle::Null,
         "Ui::AbstractAnimator::create(): no layer set for data attachment", {});
+    /* Handles with zero generation are never valid, and their bit pattern
+       might get internally abused to store other information, so disallow
+       them. OTOH I feel this isn't important to mention in create() docs, as
+       it's a low-level property most users don't need to be aware of. */
+    CORRADE_ASSERT(data == DataHandle::Null || dataHandleGeneration(data),
+        "Ui::AbstractAnimator::create(): invalid handle" << data, {});
     CORRADE_ASSERT(data == DataHandle::Null || state.layer == dataHandleLayer(data),
         "Ui::AbstractAnimator::create(): expected a data handle with" << state.layer << "but got" << data, {});
     const AnimationHandle handle = create(start, duration, repeatCount, flags);
@@ -503,6 +522,12 @@ AnimationHandle AbstractAnimator::create(const Nanoseconds start, const Nanoseco
     State& state = *_state;
     CORRADE_ASSERT(state.layer != LayerHandle::Null,
         "Ui::AbstractAnimator::create(): no layer set for data attachment", {});
+    /* Handles with zero generation are never valid, and their bit pattern
+       might get internally abused to store other information, so disallow
+       them. OTOH I feel this isn't important to mention in create() docs, as
+       it's a low-level property most users don't need to be aware of. */
+    CORRADE_ASSERT(data == LayerDataHandle::Null || layerDataHandleGeneration(data),
+        "Ui::AbstractAnimator::create(): invalid handle" << data, {});
     const AnimationHandle handle = create(start, duration, repeatCount, flags);
     state.layerData[animationHandleId(handle)] = data;
     return handle;
@@ -729,6 +754,12 @@ void AbstractAnimator::attach(const AnimatorDataHandle animation, const NodeHand
 void AbstractAnimator::attachInternal(const UnsignedInt id, const NodeHandle node) {
     CORRADE_ASSERT(features() >= AnimatorFeature::NodeAttachment,
         "Ui::AbstractAnimator::attach(): node attachment not supported", );
+    /* Handles with zero generation are never valid, and their bit pattern
+       might get internally abused to store other information, so disallow
+       them. OTOH I feel this isn't important to mention in attach() docs, as
+       it's a low-level property most users don't need to be aware of. */
+    CORRADE_ASSERT(node == NodeHandle::Null || nodeHandleGeneration(node),
+        "Ui::AbstractAnimator::attach(): invalid handle" << node, );
     _state->nodes[id] = node;
 }
 
@@ -776,6 +807,12 @@ void AbstractAnimator::attachInternal(const UnsignedInt id, const DataHandle dat
     State& state = *_state;
     CORRADE_ASSERT(state.layer != LayerHandle::Null,
         "Ui::AbstractAnimator::attach(): no layer set for data attachment", );
+    /* Handles with zero generation are never valid, and their bit pattern
+       might get internally abused to store other information, so disallow
+       them. OTOH I feel this isn't important to mention in attach() docs, as
+       it's a low-level property most users don't need to be aware of. */
+    CORRADE_ASSERT(data == DataHandle::Null || dataHandleGeneration(data),
+        "Ui::AbstractAnimator::attach(): invalid handle" << data, );
     CORRADE_ASSERT(data == DataHandle::Null || state.layer == dataHandleLayer(data),
         "Ui::AbstractAnimator::attach(): expected a data handle with" << state.layer << "but got" << data, );
     state.layerData[id] = dataHandleData(data);
@@ -799,6 +836,12 @@ void AbstractAnimator::attachInternal(const UnsignedInt id, const LayerDataHandl
     State& state = *_state;
     CORRADE_ASSERT(state.layer != LayerHandle::Null,
         "Ui::AbstractAnimator::attach(): no layer set for data attachment", );
+    /* Handles with zero generation are never valid, and their bit pattern
+       might get internally abused to store other information, so disallow
+       them. OTOH I feel this isn't important to mention in attach() docs, as
+       it's a low-level property most users don't need to be aware of. */
+    CORRADE_ASSERT(data == LayerDataHandle::Null || layerDataHandleGeneration(data),
+        "Ui::AbstractAnimator::attach(): invalid handle" << data, );
     state.layerData[id] = data;
 }
 

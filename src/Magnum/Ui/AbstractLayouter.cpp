@@ -83,8 +83,14 @@ Debug& operator<<(Debug& debug, const LayouterStates value) {
 }
 
 AbstractLayouter::AbstractLayouter(const LayouterHandle handle): _state{InPlaceInit} {
-    CORRADE_ASSERT(handle != LayouterHandle::Null,
-        "Ui::AbstractLayouter: handle is null", );
+    /* Handles with zero generation are never valid, and their bit pattern
+       might get internally abused to store other information, so disallow
+       them. OTOH I feel this isn't important to mention in constructor docs,
+       as it's a low-level property most users don't need to be aware of. This
+       check is also a superset of a check for LayouterHandle::Null, which is
+       not allowed either. */
+    CORRADE_ASSERT(layouterHandleGeneration(handle),
+        "Ui::AbstractLayouter: invalid handle" << handle, );
     _state->handle = handle;
 }
 
@@ -141,19 +147,20 @@ std::size_t AbstractLayouter::usedCount() const {
 }
 
 bool AbstractLayouter::isHandleValid(const LayouterDataHandle handle) const {
-    if(handle == LayouterDataHandle::Null)
+    /* layouterDataHandleId() below expects generation to be non-zero, check
+       for that first. This is also a superset of a check for
+       LayouterDataHandle::Null. */
+    const UnsignedInt generation = layouterDataHandleGeneration(handle);
+    if(!generation)
         return false;
     const State& state = *_state;
     const UnsignedInt index = layouterDataHandleId(handle);
     if(index >= state.layouts.size())
         return false;
-    const UnsignedInt generation = layouterDataHandleGeneration(handle);
     const Implementation::Layout& layout = state.layouts[index];
     /* Zero generation handles (i.e., where it wrapped around from all bits
-       set) are expected to be expired and thus with node being null. In other
-       words, it shouldn't be needed to verify also that generation is
-       non-zero. */
-    CORRADE_INTERNAL_DEBUG_ASSERT(generation || layout.used.node == NodeHandle::Null);
+       set) are expected to be expired and thus with node being null */
+    CORRADE_INTERNAL_DEBUG_ASSERT(layout.used.generation || layout.used.node == NodeHandle::Null);
     return layout.used.node != NodeHandle::Null && generation == layout.used.generation;
 }
 
@@ -196,10 +203,15 @@ LayoutHandle AbstractLayouter::add(const NodeHandle node) {
            inside addUniqueLayoutToNode() as it's simpler to do there */
         state.ui->addUniqueLayoutToNode(handle, node);
 
-    /* Otherwise the node is just required to be non-null. Requiring access to
-       the UI just to verify it's valid seems like an unnecessary
-       complication. */
-    } else CORRADE_ASSERT(node != NodeHandle::Null,
+    /* Otherwise the node is just required to be not clearly invalid. Requiring
+       access to the UI just to verify it's valid seems like an unnecessary
+       complication. Furthermore, handles with zero generation are never valid,
+       and their bit pattern might get internally abused to store other
+       information, so disallow them. OTOH I feel this isn't important to
+       mention in add() docs, as it's a low-level property most users don't
+       need to be aware of. This check is also a superset of a check for
+       NodeHandle::Null, which is not allowed either. */
+    } else CORRADE_ASSERT(nodeHandleGeneration(node),
         "Ui::AbstractLayouter::add(): invalid handle" << node, {});
 
     /* Fill the data. In both above cases the generation is already set

@@ -1347,12 +1347,16 @@ void DebugLayerTest::nodeNameInvalid() {
     layerNoUi.nodeName({});
     layerNoUi.setNodeName({}, {});
     layer.nodeName(NodeHandle::Null);
+    layer.nodeName(nodeHandle(0xabcde, 0));
     layer.setNodeName(NodeHandle::Null, {});
+    layer.setNodeName(nodeHandle(0xabcde, 0), {});
     CORRADE_COMPARE_AS(out,
         "Ui::DebugLayer::nodeName(): layer not part of a user interface\n"
         "Ui::DebugLayer::setNodeName(): layer not part of a user interface\n"
-        "Ui::DebugLayer::nodeName(): handle is null\n"
-        "Ui::DebugLayer::setNodeName(): handle is null\n",
+        "Ui::DebugLayer::nodeName(): invalid handle Ui::NodeHandle::Null\n"
+        "Ui::DebugLayer::nodeName(): invalid handle Ui::NodeHandle(0xabcde, 0x0)\n"
+        "Ui::DebugLayer::setNodeName(): invalid handle Ui::NodeHandle::Null\n"
+        "Ui::DebugLayer::setNodeName(): invalid handle Ui::NodeHandle(0xabcde, 0x0)\n",
         TestSuite::Compare::String);
 }
 
@@ -2048,6 +2052,7 @@ void DebugLayerTest::layerNameInvalid() {
     layerNoUi.setLayerName(integratedLayer, {}, integration);
     layerNoUi.setLayerName(integratedLayer, {}, IntegratedLayer::DebugIntegration{});
     layer.layerName(LayerHandle::Null);
+    layer.layerName(layerHandle(0xab, 0));
     layer.setLayerName(layerAnotherUi, {});
     layer.setLayerName(layerArtificialHandle, {});
     layer.setLayerName(integratedLayerAnotherUi, {});
@@ -2059,7 +2064,8 @@ void DebugLayerTest::layerNameInvalid() {
         "Ui::DebugLayer::setLayerName(): debug layer not part of a user interface\n"
         "Ui::DebugLayer::setLayerName(): debug layer not part of a user interface\n"
         "Ui::DebugLayer::setLayerName(): debug layer not part of a user interface\n"
-        "Ui::DebugLayer::layerName(): handle is null\n"
+        "Ui::DebugLayer::layerName(): invalid handle Ui::LayerHandle::Null\n"
+        "Ui::DebugLayer::layerName(): invalid handle Ui::LayerHandle(0xab, 0x0)\n"
         "Ui::DebugLayer::setLayerName(): layer not part of the same user interface\n"
         "Ui::DebugLayer::setLayerName(): layer not part of the same user interface\n"
         "Ui::DebugLayer::setLayerName(): layer not part of the same user interface\n"
@@ -2746,6 +2752,7 @@ void DebugLayerTest::layouterNameInvalid() {
     layerNoUi.setLayouterName(integratedLayouter, {}, integration);
     layerNoUi.setLayouterName(integratedLayouter, {}, IntegratedLayouter::DebugIntegration{});
     layer.layouterName(LayouterHandle::Null);
+    layer.layouterName(layouterHandle(0xab, 0));
     layer.setLayouterName(layouterAnotherUi, {});
     layer.setLayouterName(layouterArtificialHandle, {});
     layer.setLayouterName(integratedLayouterAnotherUi, {});
@@ -2757,7 +2764,8 @@ void DebugLayerTest::layouterNameInvalid() {
         "Ui::DebugLayer::setLayouterName(): debug layer not part of a user interface\n"
         "Ui::DebugLayer::setLayouterName(): debug layer not part of a user interface\n"
         "Ui::DebugLayer::setLayouterName(): debug layer not part of a user interface\n"
-        "Ui::DebugLayer::layouterName(): handle is null\n"
+        "Ui::DebugLayer::layouterName(): invalid handle Ui::LayouterHandle::Null\n"
+        "Ui::DebugLayer::layouterName(): invalid handle Ui::LayouterHandle(0xab, 0x0)\n"
         "Ui::DebugLayer::setLayouterName(): layouter not part of the same user interface\n"
         "Ui::DebugLayer::setLayouterName(): layouter not part of the same user interface\n"
         "Ui::DebugLayer::setLayouterName(): layouter not part of the same user interface\n"
@@ -3459,6 +3467,7 @@ void DebugLayerTest::animatorNameInvalid() {
     layerNoUi.setAnimatorName(integratedAnimator, {}, integration);
     layerNoUi.setAnimatorName(integratedAnimator, {}, IntegratedAnimator::DebugIntegration{});
     layer.animatorName(AnimatorHandle::Null);
+    layer.animatorName(animatorHandle(0xab, 0));
     layer.setAnimatorName(animatorAnotherUi, {});
     layer.setAnimatorName(animatorArtificialHandle, {});
     layer.setAnimatorName(integratedAnimatorAnotherUi, {});
@@ -3470,7 +3479,8 @@ void DebugLayerTest::animatorNameInvalid() {
         "Ui::DebugLayer::setAnimatorName(): debug layer not part of a user interface\n"
         "Ui::DebugLayer::setAnimatorName(): debug layer not part of a user interface\n"
         "Ui::DebugLayer::setAnimatorName(): debug layer not part of a user interface\n"
-        "Ui::DebugLayer::animatorName(): handle is null\n"
+        "Ui::DebugLayer::animatorName(): invalid handle Ui::AnimatorHandle::Null\n"
+        "Ui::DebugLayer::animatorName(): invalid handle Ui::AnimatorHandle(0xab, 0x0)\n"
         "Ui::DebugLayer::setAnimatorName(): animator not part of the same user interface\n"
         "Ui::DebugLayer::setAnimatorName(): animator not part of the same user interface\n"
         "Ui::DebugLayer::setAnimatorName(): animator not part of the same user interface\n"
@@ -5176,12 +5186,14 @@ void DebugLayerTest::nodeInspectInvalid() {
     layerNoNodesNoInspect.currentInspectedNode();
     layerNoNodesNoInspect.inspectNode({});
     layerNoUi.inspectNode({});
+    layer.inspectNode(nodeHandle(0xabcde, 0));
     layer.inspectNode(node);
     CORRADE_COMPARE_AS(out,
         "Ui::DebugLayer::setNodeInspectGesture(): expected at least one pointer\n"
         "Ui::DebugLayer::currentInspectedNode(): Ui::DebugLayerFlag::NodeInspect not enabled\n"
         "Ui::DebugLayer::inspectNode(): Ui::DebugLayerFlag::NodeInspect not enabled\n"
         "Ui::DebugLayer::inspectNode(): layer not part of a user interface\n"
+        "Ui::DebugLayer::inspectNode(): invalid handle Ui::NodeHandle(0xabcde, 0x0)\n"
         /* Looks a bit weird but should hopefully contain enough info to
            discover where this happened */
         "Ui::DebugLayer: expected DebugIntegration::print() to end with a newline but got Hello this is broken\n",
@@ -6518,6 +6530,7 @@ void DebugLayerTest::nodeHighlightInvalid() {
     layerNoNodes.highlightNode(nodeHandle(0, 1));
     layerNoUi.highlightNode(nodeHandle(0, 1));
     layer.highlightNode(NodeHandle::Null);
+    layer.highlightNode(nodeHandle(0xabcde, 0x0));
 
     layerNoNodes.highlightNodes([](const AbstractUserInterface&, NodeHandle) {
         return false;
@@ -6604,7 +6617,8 @@ void DebugLayerTest::nodeHighlightInvalid() {
 
         "Ui::DebugLayer::highlightNode(): Ui::DebugLayerSource::Nodes not enabled\n"
         "Ui::DebugLayer::highlightNode(): layer not part of a user interface\n"
-        "Ui::DebugLayer::highlightNode(): handle is null\n"
+        "Ui::DebugLayer::highlightNode(): invalid handle Ui::NodeHandle::Null\n"
+        "Ui::DebugLayer::highlightNode(): invalid handle Ui::NodeHandle(0xabcde, 0x0)\n"
 
         "Ui::DebugLayer::highlightNodes(): Ui::DebugLayerSource::Nodes not enabled\n"
         "Ui::DebugLayer::highlightNodes(): Ui::DebugLayerSource::Nodes|Ui::DebugLayerSource::Layers not enabled\n"

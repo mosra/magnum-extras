@@ -243,8 +243,14 @@ Containers::StringView DebugLayer::nodeName(const NodeHandle handle) const {
        nodes would be left at an empty name. Consider that an error. */
     CORRADE_ASSERT(hasUi(),
         "Ui::DebugLayer::nodeName(): layer not part of a user interface", {});
-    CORRADE_ASSERT(handle != NodeHandle::Null,
-        "Ui::DebugLayer::nodeName(): handle is null", {});
+    /* Handles with zero generation are never valid, and their bit pattern
+       might get internally abused to store other information, so disallow
+       them. OTOH I feel this isn't important to mention in nodeName() docs, as
+       it's a low-level property most users don't need to be aware of. This
+       check is also a superset of a check for NodeHandle::Null, which is not
+       allowed either. */
+    CORRADE_ASSERT(nodeHandleGeneration(handle),
+        "Ui::DebugLayer::nodeName(): invalid handle" << handle, {});
     const State& state = *_state;
     /* If the feature isn't enabled, do nothing */
     if(!(state.sources >= DebugLayerSource::Nodes))
@@ -259,8 +265,14 @@ Containers::StringView DebugLayer::nodeName(const NodeHandle handle) const {
 DebugLayer& DebugLayer::setNodeName(const NodeHandle handle, Containers::StringView name) {
     CORRADE_ASSERT(hasUi(),
         "Ui::DebugLayer::setNodeName(): layer not part of a user interface", *this);
-    CORRADE_ASSERT(handle != NodeHandle::Null,
-        "Ui::DebugLayer::setNodeName(): handle is null", *this);
+    /* Handles with zero generation are never valid, and their bit pattern
+       might get internally abused to store other information, so disallow
+       them. OTOH I feel this isn't important to mention in setNodeName() docs,
+       as it's a low-level property most users don't need to be aware of. This
+       check is also a superset of a check for NodeHandle::Null, which is not
+       allowed either. */
+    CORRADE_ASSERT(nodeHandleGeneration(handle),
+        "Ui::DebugLayer::setNodeName(): invalid handle" << handle, *this);
     State& state = *_state;
     /* If the feature isn't enabled, do nothing */
     if(!(state.sources >= DebugLayerSource::Nodes))
@@ -288,8 +300,14 @@ Containers::StringView DebugLayer::layerName(const LayerHandle handle) const {
        layers would be left at an empty name. Consider that an error. */
     CORRADE_ASSERT(hasUi(),
         "Ui::DebugLayer::layerName(): debug layer not part of a user interface", {});
-    CORRADE_ASSERT(handle != LayerHandle::Null,
-        "Ui::DebugLayer::layerName(): handle is null", {});
+    /* Handles with zero generation are never valid, and their bit pattern
+       might get internally abused to store other information, so disallow
+       them. OTOH I feel this isn't important to mention in layerName() docs,
+       as it's a low-level property most users don't need to be aware of. This
+       check is also a superset of a check for LayerHandle::Null, which is not
+       allowed either. */
+    CORRADE_ASSERT(layerHandleGeneration(handle),
+        "Ui::DebugLayer::layerName(): invalid handle" << handle, {});
     const State& state = *_state;
     /* If the feature isn't enabled, do nothing */
     if(!(state.sources >= DebugLayerSource::Layers))
@@ -356,8 +374,14 @@ Containers::StringView DebugLayer::animatorName(const AnimatorHandle handle) con
        animators would be left at an empty name. Consider that an error. */
     CORRADE_ASSERT(hasUi(),
         "Ui::DebugLayer::animatorName(): debug layer not part of a user interface", {});
-    CORRADE_ASSERT(handle != AnimatorHandle::Null,
-        "Ui::DebugLayer::animatorName(): handle is null", {});
+    /* Handles with zero generation are never valid, and their bit pattern
+       might get internally abused to store other information, so disallow
+       them. OTOH I feel this isn't important to mention in animatorName()
+       docs, as it's a low-level property most users don't need to be aware of.
+       This check is also a superset of a check for AnimatorHandle::Null, which
+       is not allowed either. */
+    CORRADE_ASSERT(animatorHandleGeneration(handle),
+        "Ui::DebugLayer::animatorName(): invalid handle" << handle, {});
     const State& state = *_state;
     /* If the feature isn't enabled, do nothing */
     if(!(state.sources >= DebugLayerSource::Animators))
@@ -424,8 +448,14 @@ Containers::StringView DebugLayer::layouterName(const LayouterHandle handle) con
        layouters would be left at an empty name. Consider that an error. */
     CORRADE_ASSERT(hasUi(),
         "Ui::DebugLayer::layouterName(): debug layer not part of a user interface", {});
-    CORRADE_ASSERT(handle != LayouterHandle::Null,
-        "Ui::DebugLayer::layouterName(): handle is null", {});
+    /* Handles with zero generation are never valid, and their bit pattern
+       might get internally abused to store other information, so disallow
+       them. OTOH I feel this isn't important to mention in layouterName()
+       docs, as it's a low-level property most users don't need to be aware of.
+       This check is also a superset of a check for LayouterHandle::Null, which
+       is not allowed either. */
+    CORRADE_ASSERT(layouterHandleGeneration(handle),
+        "Ui::DebugLayer::layouterName(): invalid handle" << handle, {});
     const State& state = *_state;
     /* If the feature isn't enabled, do nothing */
     if(!(state.sources >= DebugLayerSource::Layouters))
@@ -531,6 +561,16 @@ NodeHandle DebugLayer::currentInspectedNode() const {
 }
 
 bool DebugLayer::inspectNode(const NodeHandle handle) {
+    /* Handles with zero generation are never valid, and their bit pattern
+       might get internally abused to store other information, so disallow
+       them. OTOH I feel this isn't important to mention in nodeName() docs, as
+       it's a low-level property most users don't need to be aware of.
+
+       This is only done here and not in inspectNodeInternal(), that function
+       is only called from an event handler which should get the node handle
+       correct. */
+    CORRADE_ASSERT(handle == NodeHandle::Null || nodeHandleGeneration(handle),
+        "Ui::DebugLayer::inspectNode(): invalid handle" << handle, {});
     return inspectNodeInternal(handle, {});
 }
 
@@ -1014,8 +1054,14 @@ DebugLayer& DebugLayer::clearHighlightedNodes() {
 
 bool DebugLayer::highlightNode(const NodeHandle node) {
     State& state = *_state;
-    CORRADE_ASSERT(node != NodeHandle::Null,
-        "Ui::DebugLayer::highlightNode(): handle is null", {});
+    /* Handles with zero generation are never valid, and their bit pattern
+       might get internally abused to store other information, so disallow
+       them. OTOH I feel this isn't important to mention in nodeName() docs, as
+       it's a low-level property most users don't need to be aware of. This
+       check is also a superset of a check for NodeHandle::Null, which is not
+       allowed either. */
+    CORRADE_ASSERT(nodeHandleGeneration(node),
+        "Ui::DebugLayer::highlightNode(): invalid handle" << node, {});
     CORRADE_ASSERT(state.sources >= DebugLayerSource::Nodes,
         "Ui::DebugLayer::highlightNode():" << DebugLayerSource::Nodes << "not enabled", {});
     CORRADE_ASSERT(hasUi(),

@@ -138,8 +138,14 @@ Debug& operator<<(Debug& debug, const LayerStates value) {
 }
 
 AbstractLayer::AbstractLayer(const LayerHandle handle): _state{InPlaceInit} {
-    CORRADE_ASSERT(handle != LayerHandle::Null,
-        "Ui::AbstractLayer: handle is null", );
+    /* Handles with zero generation are never valid, and their bit pattern
+       might get internally abused to store other information, so disallow
+       them. OTOH I feel this isn't important to mention in constructor docs,
+       as it's a low-level property most users don't need to be aware of. This
+       check is also a superset of a check for LayerHandle::Null, which is not
+       allowed either. */
+    CORRADE_ASSERT(layerHandleGeneration(handle),
+        "Ui::AbstractLayer: invalid handle" << handle, );
     _state->handle = handle;
 }
 
@@ -217,19 +223,20 @@ std::size_t AbstractLayer::usedCount() const {
 }
 
 bool AbstractLayer::isHandleValid(const LayerDataHandle handle) const {
-    if(handle == LayerDataHandle::Null)
+    /* layerDataHandleId() below expects generation to be non-zero, check for
+       that first. This is also a superset of a check for
+       LayerDataHandle::Null. */
+    const UnsignedInt generation = layerDataHandleGeneration(handle);
+    if(!generation)
         return false;
     const State& state = *_state;
     const UnsignedInt index = layerDataHandleId(handle);
     if(index >= state.data.size())
         return false;
-    const UnsignedInt generation = layerDataHandleGeneration(handle);
     const Implementation::AbstractLayerData& data = state.data[index];
     /* Zero generation handles (i.e., where it wrapped around from all bits
-       set) are expected to be expired and thus with `used` being false. In
-       other words, it shouldn't be needed to verify also that generation is
-       non-zero. */
-    CORRADE_INTERNAL_DEBUG_ASSERT(generation || !data.used.used);
+       set) are expected to be expired and thus with `used` being false */
+    CORRADE_INTERNAL_DEBUG_ASSERT(data.used.generation || !data.used.used);
     return data.used.used && generation == data.used.generation;
 }
 
@@ -238,6 +245,13 @@ bool AbstractLayer::isHandleValid(const DataHandle handle) const {
 }
 
 DataHandle AbstractLayer::create(const NodeHandle node) {
+    /* Handles with zero generation are never valid, and their bit pattern
+       might get internally abused to store other information, so disallow
+       them. OTOH I feel this isn't important to mention in create() docs, as
+       it's a low-level property most users don't need to be aware of. */
+    CORRADE_ASSERT(node == NodeHandle::Null || nodeHandleGeneration(node),
+        "Ui::AbstractLayer::create(): invalid handle" << node, {});
+
     State& state = *_state;
 
     /* Find the first free data if there is, update the free index to point to
@@ -391,6 +405,13 @@ void AbstractLayer::attach(LayerDataHandle data, NodeHandle node) {
 }
 
 void AbstractLayer::attachInternal(const UnsignedInt id, const NodeHandle node) {
+    /* Handles with zero generation are never valid, and their bit pattern
+       might get internally abused to store other information, so disallow
+       them. OTOH I feel this isn't important to mention in attach() docs, as
+       it's a low-level property most users don't need to be aware of. */
+    CORRADE_ASSERT(node == NodeHandle::Null || nodeHandleGeneration(node),
+        "Ui::AbstractLayer::attach(): invalid handle" << node, );
+
     State& state = *_state;
 
     /* If the data is already attached to the same node, this does nothing */

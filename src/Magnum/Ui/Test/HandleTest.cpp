@@ -158,15 +158,21 @@ void HandleTest::layer() {
 void HandleTest::layerInvalid() {
     CORRADE_SKIP_IF_NO_DEBUG_ASSERT();
 
+    /* Verify the zero generation check isn't off by a bit */
+    layerHandleId(layerHandle(0, 1));
+    layerHandleId(layerHandle(0, 1 << (Implementation::LayerHandleGenerationBits - 1)));
+
     Containers::String out;
     Error redirectError{&out};
     layerHandle(0x100, 0x1);
     layerHandle(0x1, 0x100);
     layerHandleId(LayerHandle::Null);
+    layerHandleId(layerHandle(0xab, 0));
     CORRADE_COMPARE_AS(out,
         "Ui::layerHandle(): expected index to fit into 8 bits and generation into 8, got 0x100 and 0x1\n"
         "Ui::layerHandle(): expected index to fit into 8 bits and generation into 8, got 0x1 and 0x100\n"
-        "Ui::layerHandleId(): the handle is null\n",
+        "Ui::layerHandleId(): invalid handle Ui::LayerHandle::Null\n"
+        "Ui::layerHandleId(): invalid handle Ui::LayerHandle(0xab, 0x0)\n",
         TestSuite::Compare::String);
 }
 
@@ -203,15 +209,21 @@ void HandleTest::layerData() {
 void HandleTest::layerDataInvalid() {
     CORRADE_SKIP_IF_NO_DEBUG_ASSERT();
 
+    /* Verify the zero generation check isn't off by a bit */
+    layerDataHandleId(layerDataHandle(0, 1));
+    layerDataHandleId(layerDataHandle(0, 1 << (Implementation::LayerDataHandleGenerationBits - 1)));
+
     Containers::String out;
     Error redirectError{&out};
     layerDataHandle(0x100000, 0x1);
     layerDataHandle(0x1, 0x1000);
     layerDataHandleId(LayerDataHandle::Null);
+    layerDataHandleId(layerDataHandle(0xabcde, 0));
     CORRADE_COMPARE_AS(out,
         "Ui::layerDataHandle(): expected index to fit into 20 bits and generation into 12, got 0x100000 and 0x1\n"
         "Ui::layerDataHandle(): expected index to fit into 20 bits and generation into 12, got 0x1 and 0x1000\n"
-        "Ui::layerDataHandleId(): the handle is null\n",
+        "Ui::layerDataHandleId(): invalid handle Ui::LayerDataHandle::Null\n"
+        "Ui::layerDataHandleId(): invalid handle Ui::LayerDataHandle(0xabcde, 0x0)\n",
         TestSuite::Compare::String);
 }
 
@@ -267,21 +279,32 @@ void HandleTest::data() {
 void HandleTest::dataInvalid() {
     CORRADE_SKIP_IF_NO_DEBUG_ASSERT();
 
+    /* Verify the zero generation check isn't off by a bit. The other
+       generation being zero shouldn't matter. */
+    dataHandleLayerId(dataHandle(layerHandle(0, 1), LayerDataHandle::Null));
+    dataHandleLayerId(dataHandle(layerHandle(0, 1 << (Implementation::LayerHandleGenerationBits - 1)), LayerDataHandle::Null));
+    dataHandleId(dataHandle(LayerHandle::Null, 0, 1));
+    dataHandleId(dataHandle(LayerHandle::Null, 0, 1 << (Implementation::LayerDataHandleGenerationBits - 1)));
+
     Containers::String out;
     Error redirectError{&out};
     dataHandle(LayerHandle::Null, 0x100000, 0x1);
     dataHandle(LayerHandle::Null, 0x1, 0x1000);
-    dataHandleLayerId(dataHandle(LayerHandle::Null, 0x1, 0x1));
     dataHandleLayerId(DataHandle::Null);
-    dataHandleId(dataHandle(layerHandle(0x1, 0x1), LayerDataHandle::Null));
+    dataHandleLayerId(dataHandle(LayerHandle::Null, 0x1, 0x1));
+    dataHandleLayerId(dataHandle(layerHandle(0xab, 0), 0x1, 0x1));
     dataHandleId(DataHandle::Null);
+    dataHandleId(dataHandle(layerHandle(0x1, 0x1), LayerDataHandle::Null));
+    dataHandleId(dataHandle(layerHandle(0x1, 0x1), layerDataHandle(0xabcde, 0)));
     CORRADE_COMPARE_AS(out,
         "Ui::dataHandle(): expected index to fit into 20 bits and generation into 12, got 0x100000 and 0x1\n"
         "Ui::dataHandle(): expected index to fit into 20 bits and generation into 12, got 0x1 and 0x1000\n"
-        "Ui::dataHandleLayerId(): the layer portion of Ui::DataHandle(Null, {0x1, 0x1}) is null\n"
-        "Ui::dataHandleLayerId(): the layer portion of Ui::DataHandle::Null is null\n"
-        "Ui::dataHandleId(): the data portion of Ui::DataHandle({0x1, 0x1}, Null) is null\n"
-        "Ui::dataHandleId(): the data portion of Ui::DataHandle::Null is null\n",
+        "Ui::dataHandleLayerId(): invalid layer portion of Ui::DataHandle::Null\n"
+        "Ui::dataHandleLayerId(): invalid layer portion of Ui::DataHandle(Null, {0x1, 0x1})\n"
+        "Ui::dataHandleLayerId(): invalid layer portion of Ui::DataHandle({0xab, 0x0}, {0x1, 0x1})\n"
+        "Ui::dataHandleId(): invalid data portion of Ui::DataHandle::Null\n"
+        "Ui::dataHandleId(): invalid data portion of Ui::DataHandle({0x1, 0x1}, Null)\n"
+        "Ui::dataHandleId(): invalid data portion of Ui::DataHandle({0x1, 0x1}, {0xabcde, 0x0})\n",
         TestSuite::Compare::String);
 }
 
@@ -318,15 +341,21 @@ void HandleTest::node() {
 void HandleTest::nodeInvalid() {
     CORRADE_SKIP_IF_NO_DEBUG_ASSERT();
 
+    /* Verify the zero generation check isn't off by a bit */
+    nodeHandleId(nodeHandle(0, 1));
+    nodeHandleId(nodeHandle(0, 1 << (Implementation::NodeHandleGenerationBits - 1)));
+
     Containers::String out;
     Error redirectError{&out};
     nodeHandle(0x100000, 0x1);
     nodeHandle(0x1, 0x1000);
     nodeHandleId(NodeHandle::Null);
+    nodeHandleId(nodeHandle(0xabcde, 0));
     CORRADE_COMPARE_AS(out,
         "Ui::nodeHandle(): expected index to fit into 20 bits and generation into 12, got 0x100000 and 0x1\n"
         "Ui::nodeHandle(): expected index to fit into 20 bits and generation into 12, got 0x1 and 0x1000\n"
-        "Ui::nodeHandleId(): the handle is null\n",
+        "Ui::nodeHandleId(): invalid handle Ui::NodeHandle::Null\n"
+        "Ui::nodeHandleId(): invalid handle Ui::NodeHandle(0xabcde, 0x0)\n",
         TestSuite::Compare::String);
 }
 
@@ -363,15 +392,21 @@ void HandleTest::layouter() {
 void HandleTest::layouterInvalid() {
     CORRADE_SKIP_IF_NO_DEBUG_ASSERT();
 
+    /* Verify the zero generation check isn't off by a bit */
+    layouterHandleId(layouterHandle(0, 1));
+    layouterHandleId(layouterHandle(0, 1 << (Implementation::LayouterHandleGenerationBits - 1)));
+
     Containers::String out;
     Error redirectError{&out};
     layouterHandle(0x100, 0x1);
     layouterHandle(0x1, 0x100);
     layouterHandleId(LayouterHandle::Null);
+    layouterHandleId(layouterHandle(0xab, 0));
     CORRADE_COMPARE_AS(out,
         "Ui::layouterHandle(): expected index to fit into 8 bits and generation into 8, got 0x100 and 0x1\n"
         "Ui::layouterHandle(): expected index to fit into 8 bits and generation into 8, got 0x1 and 0x100\n"
-        "Ui::layouterHandleId(): the handle is null\n",
+        "Ui::layouterHandleId(): invalid handle Ui::LayouterHandle::Null\n"
+        "Ui::layouterHandleId(): invalid handle Ui::LayouterHandle(0xab, 0x0)\n",
         TestSuite::Compare::String);
 }
 
@@ -408,15 +443,21 @@ void HandleTest::layouterData() {
 void HandleTest::layouterDataInvalid() {
     CORRADE_SKIP_IF_NO_DEBUG_ASSERT();
 
+    /* Verify the zero generation check isn't off by a bit */
+    layouterDataHandleId(layouterDataHandle(0, 1));
+    layouterDataHandleId(layouterDataHandle(0, 1 << (Implementation::LayouterDataHandleGenerationBits - 1)));
+
     Containers::String out;
     Error redirectError{&out};
     layouterDataHandle(0x100000, 0x1);
     layouterDataHandle(0x1, 0x1000);
     layouterDataHandleId(LayouterDataHandle::Null);
+    layouterDataHandleId(layouterDataHandle(0xabcde, 0));
     CORRADE_COMPARE_AS(out,
         "Ui::layouterDataHandle(): expected index to fit into 20 bits and generation into 12, got 0x100000 and 0x1\n"
         "Ui::layouterDataHandle(): expected index to fit into 20 bits and generation into 12, got 0x1 and 0x1000\n"
-        "Ui::layouterDataHandleId(): the handle is null\n",
+        "Ui::layouterDataHandleId(): invalid handle Ui::LayouterDataHandle::Null\n"
+        "Ui::layouterDataHandleId(): invalid handle Ui::LayouterDataHandle(0xabcde, 0x0)\n",
         TestSuite::Compare::String);
 }
 
@@ -472,21 +513,32 @@ void HandleTest::layout() {
 void HandleTest::layoutInvalid() {
     CORRADE_SKIP_IF_NO_DEBUG_ASSERT();
 
+    /* Verify the zero generation check isn't off by a bit. The other
+       generation being zero shouldn't matter. */
+    layoutHandleLayouterId(layoutHandle(layouterHandle(0, 1), LayouterDataHandle::Null));
+    layoutHandleLayouterId(layoutHandle(layouterHandle(0, 1 << (Implementation::LayouterHandleGenerationBits - 1)), LayouterDataHandle::Null));
+    layoutHandleId(layoutHandle(LayouterHandle::Null, 0, 1));
+    layoutHandleId(layoutHandle(LayouterHandle::Null, 0, 1 << (Implementation::LayouterDataHandleGenerationBits - 1)));
+
     Containers::String out;
     Error redirectError{&out};
     layoutHandle(LayouterHandle::Null, 0x100000, 0x1);
     layoutHandle(LayouterHandle::Null, 0x1, 0x1000);
-    layoutHandleLayouterId(layoutHandle(LayouterHandle::Null, 0x1, 0x1));
     layoutHandleLayouterId(LayoutHandle::Null);
-    layoutHandleId(layoutHandle(layouterHandle(0x1, 0x1), LayouterDataHandle::Null));
+    layoutHandleLayouterId(layoutHandle(LayouterHandle::Null, 0x1, 0x1));
+    layoutHandleLayouterId(layoutHandle(layouterHandle(0xab, 0), 0x1, 0x1));
     layoutHandleId(LayoutHandle::Null);
+    layoutHandleId(layoutHandle(layouterHandle(0x1, 0x1), LayouterDataHandle::Null));
+    layoutHandleId(layoutHandle(layouterHandle(0x1, 0x1), layouterDataHandle(0xabcde, 0)));
     CORRADE_COMPARE_AS(out,
         "Ui::layoutHandle(): expected index to fit into 20 bits and generation into 12, got 0x100000 and 0x1\n"
         "Ui::layoutHandle(): expected index to fit into 20 bits and generation into 12, got 0x1 and 0x1000\n"
-        "Ui::layoutHandleLayouterId(): the layouter portion of Ui::LayoutHandle(Null, {0x1, 0x1}) is null\n"
-        "Ui::layoutHandleLayouterId(): the layouter portion of Ui::LayoutHandle::Null is null\n"
-        "Ui::layoutHandleId(): the data portion of Ui::LayoutHandle({0x1, 0x1}, Null) is null\n"
-        "Ui::layoutHandleId(): the data portion of Ui::LayoutHandle::Null is null\n",
+        "Ui::layoutHandleLayouterId(): invalid layouter portion of Ui::LayoutHandle::Null\n"
+        "Ui::layoutHandleLayouterId(): invalid layouter portion of Ui::LayoutHandle(Null, {0x1, 0x1})\n"
+        "Ui::layoutHandleLayouterId(): invalid layouter portion of Ui::LayoutHandle({0xab, 0x0}, {0x1, 0x1})\n"
+        "Ui::layoutHandleId(): invalid data portion of Ui::LayoutHandle::Null\n"
+        "Ui::layoutHandleId(): invalid data portion of Ui::LayoutHandle({0x1, 0x1}, Null)\n"
+        "Ui::layoutHandleId(): invalid data portion of Ui::LayoutHandle({0x1, 0x1}, {0xabcde, 0x0})\n",
         TestSuite::Compare::String);
 }
 
@@ -523,15 +575,21 @@ void HandleTest::animator() {
 void HandleTest::animatorInvalid() {
     CORRADE_SKIP_IF_NO_DEBUG_ASSERT();
 
+    /* Verify the zero generation check isn't off by a bit */
+    animatorHandleId(animatorHandle(0, 1));
+    animatorHandleId(animatorHandle(0, 1 << (Implementation::AnimatorHandleGenerationBits - 1)));
+
     Containers::String out;
     Error redirectError{&out};
     animatorHandle(0x100, 0x1);
     animatorHandle(0x1, 0x100);
     animatorHandleId(AnimatorHandle::Null);
+    animatorHandleId(animatorHandle(0xab, 0));
     CORRADE_COMPARE_AS(out,
         "Ui::animatorHandle(): expected index to fit into 8 bits and generation into 8, got 0x100 and 0x1\n"
         "Ui::animatorHandle(): expected index to fit into 8 bits and generation into 8, got 0x1 and 0x100\n"
-        "Ui::animatorHandleId(): the handle is null\n",
+        "Ui::animatorHandleId(): invalid handle Ui::AnimatorHandle::Null\n"
+        "Ui::animatorHandleId(): invalid handle Ui::AnimatorHandle(0xab, 0x0)\n",
         TestSuite::Compare::String);
 }
 
@@ -568,15 +626,21 @@ void HandleTest::animatorData() {
 void HandleTest::animatorDataInvalid() {
     CORRADE_SKIP_IF_NO_DEBUG_ASSERT();
 
+    /* Verify the zero generation check isn't off by a bit */
+    animatorDataHandleId(animatorDataHandle(0, 1));
+    animatorDataHandleId(animatorDataHandle(0, 1 << (Implementation::AnimatorDataHandleGenerationBits - 1)));
+
     Containers::String out;
     Error redirectError{&out};
     animatorDataHandle(0x100000, 0x1);
     animatorDataHandle(0x1, 0x1000);
     animatorDataHandleId(AnimatorDataHandle::Null);
+    animatorDataHandleId(animatorDataHandle(0xabcde, 0));
     CORRADE_COMPARE_AS(out,
         "Ui::animatorDataHandle(): expected index to fit into 20 bits and generation into 12, got 0x100000 and 0x1\n"
         "Ui::animatorDataHandle(): expected index to fit into 20 bits and generation into 12, got 0x1 and 0x1000\n"
-        "Ui::animatorDataHandleId(): the handle is null\n",
+        "Ui::animatorDataHandleId(): invalid handle Ui::AnimatorDataHandle::Null\n"
+        "Ui::animatorDataHandleId(): invalid handle Ui::AnimatorDataHandle(0xabcde, 0x0)\n",
         TestSuite::Compare::String);
 }
 
@@ -632,21 +696,32 @@ void HandleTest::animation() {
 void HandleTest::animationInvalid() {
     CORRADE_SKIP_IF_NO_DEBUG_ASSERT();
 
+    /* Verify the zero generation check isn't off by a bit. The other
+       generation being zero shouldn't matter. */
+    animationHandleAnimatorId(animationHandle(animatorHandle(0, 1), AnimatorDataHandle::Null));
+    animationHandleAnimatorId(animationHandle(animatorHandle(0, 1 << (Implementation::AnimatorHandleGenerationBits - 1)), AnimatorDataHandle::Null));
+    animationHandleId(animationHandle(AnimatorHandle::Null, 0, 1));
+    animationHandleId(animationHandle(AnimatorHandle::Null, 0, 1 << (Implementation::AnimatorDataHandleGenerationBits - 1)));
+
     Containers::String out;
     Error redirectError{&out};
     animationHandle(AnimatorHandle::Null, 0x100000, 0x1);
     animationHandle(AnimatorHandle::Null, 0x1, 0x1000);
-    animationHandleAnimatorId(animationHandle(AnimatorHandle::Null, 0x1, 0x1));
     animationHandleAnimatorId(AnimationHandle::Null);
-    animationHandleId(animationHandle(animatorHandle(0x1, 0x1), AnimatorDataHandle::Null));
+    animationHandleAnimatorId(animationHandle(AnimatorHandle::Null, 0x1, 0x1));
+    animationHandleAnimatorId(animationHandle(animatorHandle(0xab, 0), 0x1, 0x1));
     animationHandleId(AnimationHandle::Null);
+    animationHandleId(animationHandle(animatorHandle(0x1, 0x1), AnimatorDataHandle::Null));
+    animationHandleId(animationHandle(animatorHandle(0x1, 0x1), animatorDataHandle(0xabcde, 0)));
     CORRADE_COMPARE_AS(out,
         "Ui::animationHandle(): expected index to fit into 20 bits and generation into 12, got 0x100000 and 0x1\n"
         "Ui::animationHandle(): expected index to fit into 20 bits and generation into 12, got 0x1 and 0x1000\n"
-        "Ui::animationHandleAnimatorId(): the animator portion of Ui::AnimationHandle(Null, {0x1, 0x1}) is null\n"
-        "Ui::animationHandleAnimatorId(): the animator portion of Ui::AnimationHandle::Null is null\n"
-        "Ui::animationHandleId(): the data portion of Ui::AnimationHandle({0x1, 0x1}, Null) is null\n"
-        "Ui::animationHandleId(): the data portion of Ui::AnimationHandle::Null is null\n",
+        "Ui::animationHandleAnimatorId(): invalid animator portion of Ui::AnimationHandle::Null\n"
+        "Ui::animationHandleAnimatorId(): invalid animator portion of Ui::AnimationHandle(Null, {0x1, 0x1})\n"
+        "Ui::animationHandleAnimatorId(): invalid animator portion of Ui::AnimationHandle({0xab, 0x0}, {0x1, 0x1})\n"
+        "Ui::animationHandleId(): invalid data portion of Ui::AnimationHandle::Null\n"
+        "Ui::animationHandleId(): invalid data portion of Ui::AnimationHandle({0x1, 0x1}, Null)\n"
+        "Ui::animationHandleId(): invalid data portion of Ui::AnimationHandle({0x1, 0x1}, {0xabcde, 0x0})\n",
         TestSuite::Compare::String);
 }
 

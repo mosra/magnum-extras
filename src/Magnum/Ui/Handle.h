@@ -81,13 +81,14 @@ constexpr LayerHandle layerHandle(UnsignedInt id, UnsignedInt generation) {
 @brief Extract ID from a layer handle
 @m_since_latest_{extras}
 
-Expects that @p handle is not @ref LayerHandle::Null. Use
-@ref layerHandleGeneration() for extracting the generation and
-@ref layerHandle() for an inverse operation.
+Expects that @p handle generation is not @cpp 0 @ce, which is the case only for
+@ref LayerHandle::Null and invalid handles. Use @ref layerHandleGeneration()
+for extracting the generation and @ref layerHandle() for an inverse operation.
 */
 constexpr UnsignedInt layerHandleId(LayerHandle handle) {
-    return (CORRADE_CONSTEXPR_DEBUG_ASSERT(handle != LayerHandle::Null,
-        "Ui::layerHandleId(): the handle is null"),
+    /* Copy of layerHandleGeneration() to avoid a call on debug builds */
+    return (CORRADE_CONSTEXPR_DEBUG_ASSERT(UnsignedInt(handle) >> Implementation::LayerHandleIdBits,
+        "Ui::layerHandleId(): invalid handle" << handle),
         UnsignedInt(handle) & ((1 << Implementation::LayerHandleIdBits) - 1));
 }
 
@@ -146,13 +147,15 @@ constexpr LayerDataHandle layerDataHandle(UnsignedInt id, UnsignedInt generation
 @brief Extract ID from a layer data handle
 @m_since_latest_{extras}
 
-Expects that @p handle is not @ref LayerDataHandle::Null. Use
+Expects that @p handle generation is not @cpp 0 @ce, which is the case only for
+@ref LayerDataHandle::Null and invalid handles. Use
 @ref layerDataHandleGeneration() for extracting the generation and
 @ref layerDataHandle() for an inverse operation.
 */
 constexpr UnsignedInt layerDataHandleId(LayerDataHandle handle) {
-    return (CORRADE_CONSTEXPR_DEBUG_ASSERT(handle != LayerDataHandle::Null,
-        "Ui::layerDataHandleId(): the handle is null"),
+    /* Copy of layerDataHandleGeneration() to avoid a call on debug builds */
+    return (CORRADE_CONSTEXPR_DEBUG_ASSERT(UnsignedInt(handle) >> Implementation::LayerDataHandleIdBits,
+        "Ui::layerDataHandleId(): invalid handle" << handle),
         UnsignedInt(handle) & ((1 << Implementation::LayerDataHandleIdBits) - 1));
 }
 
@@ -243,14 +246,17 @@ constexpr LayerDataHandle dataHandleData(DataHandle handle) {
 @brief Extract layer ID from a data handle
 @m_since_latest_{extras}
 
-Expects that the layer portion of @p handle is not @ref LayerHandle::Null. Use
-@ref dataHandleLayerGeneration() for extracting the layer generation and
-@ref layerHandle() together with @ref dataHandle() for an inverse operation.
+Expects that the layer portion of @p handle has a generation that is not
+@cpp 0 @ce, which is the case only for @ref DataHandle::Null and invalid
+handles. Use @ref dataHandleLayerGeneration() for extracting the layer
+generation and @ref layerHandle() together with @ref dataHandle() for an
+inverse operation.
 @see @ref dataHandleLayer()
 */
 constexpr UnsignedInt dataHandleLayerId(DataHandle handle) {
-    return (CORRADE_CONSTEXPR_DEBUG_ASSERT(LayerHandle(UnsignedLong(handle) >> (Implementation::LayerDataHandleIdBits + Implementation::LayerDataHandleGenerationBits)) != LayerHandle::Null,
-        "Ui::dataHandleLayerId(): the layer portion of" << handle << "is null"),
+    /* Copy of dataHandleLayerGeneration() to avoid a call on debug builds */
+    return (CORRADE_CONSTEXPR_DEBUG_ASSERT((UnsignedLong(handle) >> (Implementation::LayerDataHandleIdBits + Implementation::LayerDataHandleGenerationBits + Implementation::LayerHandleIdBits)) & ((1 << Implementation::LayerHandleGenerationBits) - 1),
+        "Ui::dataHandleLayerId(): invalid layer portion of" << handle),
         (UnsignedLong(handle) >> (Implementation::LayerDataHandleIdBits + Implementation::LayerDataHandleGenerationBits)) & ((1 << Implementation::LayerHandleIdBits) - 1));
 }
 
@@ -272,15 +278,17 @@ constexpr UnsignedInt dataHandleLayerGeneration(DataHandle handle) {
 @brief Extract ID from a data handle
 @m_since_latest_{extras}
 
-Expects that the data portion of @p handle is not @ref LayerDataHandle::Null.
-Use @ref dataHandleGeneration() for extracting the generation and
+Expects that the data portion of @p handle has a generation that is not
+@cpp 0 @ce, which is the case only for @ref DataHandle::Null and invalid
+handles. Use @ref dataHandleGeneration() for extracting the generation and
 @ref dataHandle(LayerHandle, UnsignedInt, UnsignedInt) for an inverse
 operation.
 @see @ref dataHandleData()
 */
 constexpr UnsignedInt dataHandleId(DataHandle handle) {
-    return (CORRADE_CONSTEXPR_DEBUG_ASSERT(LayerDataHandle(UnsignedLong(handle)) != LayerDataHandle::Null,
-        "Ui::dataHandleId(): the data portion of" << handle << "is null"),
+    /* Copy of dataHandleGeneration() to avoid a call on debug builds */
+    return (CORRADE_CONSTEXPR_DEBUG_ASSERT((UnsignedLong(handle) >> Implementation::LayerDataHandleIdBits) & ((1 << Implementation::LayerDataHandleGenerationBits) - 1),
+        "Ui::dataHandleId(): invalid data portion of" << handle),
         UnsignedLong(handle) & ((1 << Implementation::LayerDataHandleIdBits) - 1));
 }
 
@@ -341,13 +349,14 @@ constexpr NodeHandle nodeHandle(UnsignedInt id, UnsignedInt generation) {
 @brief Extract ID from a node handle
 @m_since_latest_{extras}
 
-Expects that @p handle is not @ref NodeHandle::Null. Use
-@ref nodeHandleGeneration() for extracting the generation and @ref nodeHandle()
-for an inverse operation.
+Expects that @p handle generation is not @cpp 0 @ce, which is the case only for
+@ref NodeHandle::Null and invalid handles. Use @ref nodeHandleGeneration() for
+extracting the generation and @ref nodeHandle() for an inverse operation.
 */
 constexpr UnsignedInt nodeHandleId(NodeHandle handle) {
-    return (CORRADE_CONSTEXPR_DEBUG_ASSERT(handle != NodeHandle::Null,
-        "Ui::nodeHandleId(): the handle is null"),
+    /* Copy of nodeHandleGeneration() to avoid a call on debug builds */
+    return (CORRADE_CONSTEXPR_DEBUG_ASSERT(UnsignedInt(handle) >> Implementation::NodeHandleIdBits,
+        "Ui::nodeHandleId(): invalid handle" << handle),
         UnsignedInt(handle) & ((1 << Implementation::NodeHandleIdBits) - 1));
 }
 
@@ -407,13 +416,15 @@ constexpr LayouterHandle layouterHandle(UnsignedInt id, UnsignedInt generation) 
 @brief Extract ID from a layouter handle
 @m_since_latest_{extras}
 
-Expects that @p handle is not @ref LayouterHandle::Null. Use
+Expects that @p handle generation is not @cpp 0 @ce, which is the case only for
+@ref LayouterHandle::Null and invalid handles. Use
 @ref layouterHandleGeneration() for extracting the generation and
 @ref layouterHandle() for an inverse operation.
 */
 constexpr UnsignedInt layouterHandleId(LayouterHandle handle) {
-    return (CORRADE_CONSTEXPR_DEBUG_ASSERT(handle != LayouterHandle::Null,
-        "Ui::layouterHandleId(): the handle is null"),
+    /* Copy of layouterHandleGeneration() to avoid a call on debug builds */
+    return (CORRADE_CONSTEXPR_DEBUG_ASSERT(UnsignedInt(handle) >> Implementation::LayouterHandleIdBits,
+        "Ui::layouterHandleId(): invalid handle" << handle),
         UnsignedInt(handle) & ((1 << Implementation::LayouterHandleIdBits) - 1));
 }
 
@@ -472,13 +483,16 @@ constexpr LayouterDataHandle layouterDataHandle(UnsignedInt id, UnsignedInt gene
 @brief Extract ID from a layouter data handle
 @m_since_latest_{extras}
 
-Expects that @p handle is not @ref LayouterDataHandle::Null. Use
+Expects that @p handle generation is not @cpp 0 @ce, which is the case only for
+@ref LayouterDataHandle::Null and invalid handles. Use
 @ref layouterDataHandleGeneration() for extracting the generation and
 @ref layouterDataHandle() for an inverse operation.
 */
 constexpr UnsignedInt layouterDataHandleId(LayouterDataHandle handle) {
-    return (CORRADE_CONSTEXPR_DEBUG_ASSERT(handle != LayouterDataHandle::Null,
-        "Ui::layouterDataHandleId(): the handle is null"),
+    /* Copy of layouterDataHandleGeneration() to avoid a call on debug
+       builds */
+    return (CORRADE_CONSTEXPR_DEBUG_ASSERT(UnsignedInt(handle) >> Implementation::LayouterDataHandleIdBits,
+        "Ui::layouterDataHandleId(): invalid handle" << handle),
         UnsignedInt(handle) & ((1 << Implementation::LayouterDataHandleIdBits) - 1));
 }
 
@@ -571,15 +585,18 @@ constexpr LayouterDataHandle layoutHandleData(LayoutHandle handle) {
 @brief Extract layouter ID from a layout handle
 @m_since_latest_{extras}
 
-Expects that the layouter portion of @p handle is @ref LayouterHandle::Null.
-Use @ref layoutHandleLayouterGeneration() for extracting the layouter
+Expects that the layouter portion of @p handle has a generation that is not
+@cpp 0 @ce, which is the case only for @ref LayoutHandle::Null and invalid
+handles. Use @ref layoutHandleLayouterGeneration() for extracting the layouter
 generation and @ref layouterHandle() together with @ref layoutHandle()
 for an inverse operation.
 @see @ref layoutHandleLayouter()
 */
 constexpr UnsignedInt layoutHandleLayouterId(LayoutHandle handle) {
-    return (CORRADE_CONSTEXPR_DEBUG_ASSERT(LayouterHandle(UnsignedLong(handle) >> (Implementation::LayouterDataHandleIdBits + Implementation::LayouterDataHandleGenerationBits)) != LayouterHandle::Null,
-        "Ui::layoutHandleLayouterId(): the layouter portion of" << handle << "is null"),
+    /* Copy of layoutHandleLayouterGeneration() to avoid a call on debug
+       builds */
+    return (CORRADE_CONSTEXPR_DEBUG_ASSERT((UnsignedLong(handle) >> (Implementation::LayouterDataHandleIdBits + Implementation::LayouterDataHandleGenerationBits + Implementation::LayouterHandleIdBits)) & ((1 << Implementation::LayouterHandleGenerationBits) - 1),
+        "Ui::layoutHandleLayouterId(): invalid layouter portion of" << handle),
         (UnsignedLong(handle) >> (Implementation::LayouterDataHandleIdBits + Implementation::LayouterDataHandleGenerationBits)) & ((1 << Implementation::LayouterHandleIdBits) - 1));
 }
 
@@ -601,15 +618,17 @@ constexpr UnsignedInt layoutHandleLayouterGeneration(LayoutHandle handle) {
 @brief Extract ID from a layout handle
 @m_since_latest_{extras}
 
-Expects that the data portion of @p handle is not @ref LayouterDataHandle::Null.
-Use @ref layoutHandleGeneration() for extracting the generation and
+Expects that the data portion of @p handle has a generation that is not
+@cpp 0 @ce, which is the case only for @ref LayoutHandle::Null and invalid
+handles. Use @ref layoutHandleGeneration() for extracting the generation and
 @ref layoutHandle(LayouterHandle, UnsignedInt, UnsignedInt) for an inverse
 operation.
 @see @ref layoutHandleData()
 */
 constexpr UnsignedInt layoutHandleId(LayoutHandle handle) {
-    return (CORRADE_CONSTEXPR_DEBUG_ASSERT(LayouterDataHandle(UnsignedLong(handle)) != LayouterDataHandle::Null,
-        "Ui::layoutHandleId(): the data portion of" << handle << "is null"),
+    /* Copy of layoutHandleGeneration() to avoid a call on debug builds */
+    return (CORRADE_CONSTEXPR_DEBUG_ASSERT((UnsignedLong(handle) >> Implementation::LayouterDataHandleIdBits) & ((1 << Implementation::LayouterDataHandleGenerationBits) - 1),
+        "Ui::layoutHandleId(): invalid data portion of" << handle),
         UnsignedLong(handle) & ((1 << Implementation::LayouterDataHandleIdBits) - 1));
 }
 
@@ -672,13 +691,15 @@ constexpr AnimatorHandle animatorHandle(UnsignedInt id, UnsignedInt generation) 
 @brief Extract ID from an animator handle
 @m_since_latest_{extras}
 
-Expects that @p handle is not @ref AnimatorHandle::Null. Use
+Expects that @p handle generation is not @cpp 0 @ce, which is the case only for
+@ref AnimatorHandle::Null and invalid handles. Use
 @ref animatorHandleGeneration() for extracting the generation and
 @ref animatorHandle() for an inverse operation.
 */
 constexpr UnsignedInt animatorHandleId(AnimatorHandle handle) {
-    return (CORRADE_CONSTEXPR_DEBUG_ASSERT(handle != AnimatorHandle::Null,
-        "Ui::animatorHandleId(): the handle is null"),
+    /* Copy of animatorHandleGeneration() to avoid a call on debug builds */
+    return (CORRADE_CONSTEXPR_DEBUG_ASSERT(UnsignedInt(handle) >> Implementation::AnimatorHandleIdBits,
+        "Ui::animatorHandleId(): invalid handle" << handle),
         UnsignedInt(handle) & ((1 << Implementation::AnimatorHandleIdBits) - 1));
 }
 
@@ -737,13 +758,16 @@ constexpr AnimatorDataHandle animatorDataHandle(UnsignedInt id, UnsignedInt gene
 @brief Extract ID from an animator data handle
 @m_since_latest_{extras}
 
-Expects that @p handle is not @ref AnimatorDataHandle::Null. Use
+Expects that @p handle generation is not @cpp 0 @ce, which is the case only for
+@ref AnimatorDataHandle::Null and invalid handles. Use
 @ref animatorDataHandleGeneration() for extracting the generation and
 @ref animatorDataHandle() for an inverse operation.
 */
 constexpr UnsignedInt animatorDataHandleId(AnimatorDataHandle handle) {
-    return (CORRADE_CONSTEXPR_DEBUG_ASSERT(handle != AnimatorDataHandle::Null,
-        "Ui::animatorDataHandleId(): the handle is null"),
+    /* Copy of animatorDataHandleGeneration() to avoid a call on debug
+       builds */
+    return (CORRADE_CONSTEXPR_DEBUG_ASSERT(UnsignedInt(handle) >> Implementation::AnimatorDataHandleIdBits,
+        "Ui::animatorDataHandleId(): invalid handle" << handle),
         UnsignedInt(handle) & ((1 << Implementation::AnimatorDataHandleIdBits) - 1));
 }
 
@@ -839,15 +863,18 @@ constexpr AnimatorDataHandle animationHandleData(AnimationHandle handle) {
 @brief Extract animator ID from an animation handle
 @m_since_latest_{extras}
 
-Expects that the animator portion of @p handle is not @ref AnimatorHandle::Null.
-Use @ref animationHandleAnimatorGeneration() for extracting the animator
-generation and @ref animatorHandle() together with @ref animationHandle() for
-an inverse operation.
+Expects that the animator portion of @p handle has a generation that is not
+@cpp 0 @ce, which is the case only for @ref AnimationHandle::Null and invalid
+handles. Use @ref animationHandleAnimatorGeneration() for extracting the
+animator generation and @ref animatorHandle() together with
+@ref animationHandle() for an inverse operation.
 @see @ref animationHandleAnimator()
 */
 constexpr UnsignedInt animationHandleAnimatorId(AnimationHandle handle) {
-    return (CORRADE_CONSTEXPR_DEBUG_ASSERT(AnimatorHandle(UnsignedLong(handle) >> (Implementation::AnimatorDataHandleIdBits + Implementation::AnimatorDataHandleGenerationBits)) != AnimatorHandle::Null,
-        "Ui::animationHandleAnimatorId(): the animator portion of" << handle << "is null"),
+    /* Copy of animationHandleAnimatorGeneration() to avoid a call on debug
+       builds */
+    return (CORRADE_CONSTEXPR_DEBUG_ASSERT((UnsignedLong(handle) >> (Implementation::AnimatorDataHandleIdBits + Implementation::AnimatorDataHandleGenerationBits + Implementation::AnimatorHandleIdBits)) & ((1 << Implementation::AnimatorHandleGenerationBits) - 1),
+        "Ui::animationHandleAnimatorId(): invalid animator portion of" << handle),
         (UnsignedLong(handle) >> (Implementation::AnimatorDataHandleIdBits + Implementation::AnimatorDataHandleGenerationBits)) & ((1 << Implementation::AnimatorHandleIdBits) - 1));
 }
 
@@ -870,15 +897,17 @@ constexpr UnsignedInt animationHandleAnimatorGeneration(AnimationHandle handle) 
 @brief Extract ID from an animation handle
 @m_since_latest_{extras}
 
-Expects that the data portion of @p handle is not @ref AnimatorDataHandle::Null.
-Use @ref animationHandleGeneration() for extracting the generation and
+Expects that the data portion of @p handle has a generation that is not
+@cpp 0 @ce, which is the case only for @ref AnimationHandle::Null and invalid
+handles. Use @ref animationHandleGeneration() for extracting the generation and
 @ref animationHandle(AnimatorHandle, UnsignedInt, UnsignedInt) for an inverse
 operation.
 @see @ref animationHandleData()
 */
 constexpr UnsignedInt animationHandleId(AnimationHandle handle) {
-    return (CORRADE_CONSTEXPR_DEBUG_ASSERT(AnimatorDataHandle(UnsignedLong(handle)) != AnimatorDataHandle::Null,
-        "Ui::animationHandleId(): the data portion of" << handle << "is null"),
+    /* Copy of animationHandleId() to avoid a call on debug builds */
+    return (CORRADE_CONSTEXPR_DEBUG_ASSERT((UnsignedLong(handle) >> Implementation::AnimatorDataHandleIdBits) & ((1 << Implementation::AnimatorDataHandleGenerationBits) - 1),
+        "Ui::animationHandleId(): invalid data portion of" << handle),
         UnsignedLong(handle) & ((1 << Implementation::AnimatorDataHandleIdBits) - 1));
 }
 

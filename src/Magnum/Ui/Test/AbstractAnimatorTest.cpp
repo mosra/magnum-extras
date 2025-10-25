@@ -92,9 +92,11 @@ struct AbstractAnimatorTest: TestSuite::Tester {
     void createNoHandlesLeft();
     void createInvalid();
     void createNodeAttachment();
+    void createNodeAttachmentInvalid();
     void createNodeAttachmentInvalidFeatures();
     void createDataAttachment();
     void createDataAttachmentNoLayerSet();
+    void createDataAttachmentInvalid();
     void createDataAttachmentInvalidLayer();
     void createDataAttachmentInvalidFeatures();
     void removeInvalid();
@@ -821,9 +823,11 @@ AbstractAnimatorTest::AbstractAnimatorTest() {
               &AbstractAnimatorTest::createNoHandlesLeft,
               &AbstractAnimatorTest::createInvalid,
               &AbstractAnimatorTest::createNodeAttachment,
+              &AbstractAnimatorTest::createNodeAttachmentInvalid,
               &AbstractAnimatorTest::createNodeAttachmentInvalidFeatures,
               &AbstractAnimatorTest::createDataAttachment,
               &AbstractAnimatorTest::createDataAttachmentNoLayerSet,
+              &AbstractAnimatorTest::createDataAttachmentInvalid,
               &AbstractAnimatorTest::createDataAttachmentInvalidLayer,
               &AbstractAnimatorTest::createDataAttachmentInvalidFeatures,
               &AbstractAnimatorTest::removeInvalid,
@@ -984,6 +988,12 @@ void AbstractAnimatorTest::construct() {
     CORRADE_COMPARE(animator.usedCount(), 0);
     CORRADE_VERIFY(!animator.isHandleValid(AnimatorDataHandle::Null));
     CORRADE_VERIFY(!animator.isHandleValid(AnimationHandle::Null));
+    /* Verify that out-of-bounds ID and zero generation is handled correctly
+       even for an empty animator */
+    CORRADE_VERIFY(!animator.isHandleValid(animatorDataHandle(0, 1)));
+    CORRADE_VERIFY(!animator.isHandleValid(animatorDataHandle(1, 0)));
+    CORRADE_VERIFY(!animator.isHandleValid(animationHandle(animator.handle(), 0, 1)));
+    CORRADE_VERIFY(!animator.isHandleValid(animationHandle(animator.handle(), 1, 0)));
 }
 
 void AbstractAnimatorTest::constructGeneric() {
@@ -1043,8 +1053,11 @@ void AbstractAnimatorTest::constructInvalidHandle() {
     Containers::String out;
     Error redirectError{&out};
     Animator{AnimatorHandle::Null};
-    CORRADE_COMPARE(out,
-        "Ui::AbstractAnimator: handle is null\n");
+    Animator{animatorHandle(0xab, 0)};
+    CORRADE_COMPARE_AS(out,
+        "Ui::AbstractAnimator: invalid handle Ui::AnimatorHandle::Null\n"
+        "Ui::AbstractAnimator: invalid handle Ui::AnimatorHandle(0xab, 0x0)\n",
+        TestSuite::Compare::String);
 }
 
 void AbstractAnimatorTest::constructCopy() {
@@ -1828,6 +1841,28 @@ void AbstractAnimatorTest::createNodeAttachment() {
     }), TestSuite::Compare::Container);
 }
 
+void AbstractAnimatorTest::createNodeAttachmentInvalid() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct: AbstractAnimator {
+        using AbstractAnimator::AbstractAnimator;
+        using AbstractAnimator::create;
+
+        AnimatorFeatures doFeatures() const override {
+            return AnimatorFeature::NodeAttachment;
+        }
+    } animator{animatorHandle(0, 1)};
+
+    Containers::String out;
+    Error redirectError{&out};
+    animator.create(0_nsec, 1_nsec, nodeHandle(0xabcde, 0), 1);
+    animator.create(0_nsec, 1_nsec, nodeHandle(0xabcde, 0), AnimationFlag::KeepOncePlayed);
+    CORRADE_COMPARE_AS(out,
+        "Ui::AbstractAnimator::create(): invalid handle Ui::NodeHandle(0xabcde, 0x0)\n"
+        "Ui::AbstractAnimator::create(): invalid handle Ui::NodeHandle(0xabcde, 0x0)\n",
+        TestSuite::Compare::String);
+}
+
 void AbstractAnimatorTest::createNodeAttachmentInvalidFeatures() {
     CORRADE_SKIP_IF_NO_ASSERT();
 
@@ -1979,6 +2014,43 @@ void AbstractAnimatorTest::createDataAttachmentNoLayerSet() {
         "Ui::AbstractAnimator::create(): no layer set for data attachment\n"
         "Ui::AbstractAnimator::create(): no layer set for data attachment\n"
         "Ui::AbstractAnimator::create(): no layer set for data attachment\n");
+}
+
+void AbstractAnimatorTest::createDataAttachmentInvalid() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    /* Using AbstractGenericAnimator in order to access setLayer(), other than
+       that it's testing the base AbstractAnimator APIs */
+    struct: AbstractGenericAnimator {
+        using AbstractGenericAnimator::AbstractGenericAnimator;
+        using AbstractGenericAnimator::setLayer;
+        using AbstractAnimator::create;
+
+        AnimatorFeatures doFeatures() const override {
+            return AnimatorFeature::DataAttachment;
+        }
+        void doAdvance(Containers::BitArrayView, Containers::BitArrayView, Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&) override {}
+    } animator{animatorHandle(0, 1)};
+
+    struct: AbstractLayer {
+        using AbstractLayer::AbstractLayer;
+
+        LayerFeatures doFeatures() const override { return {}; }
+    } layer{layerHandle(0xab, 0x12)};
+    animator.setLayer(layer);
+
+    Containers::String out;
+    Error redirectError{&out};
+    animator.create(0_nsec, 1_nsec, dataHandle(layer.handle(), 0xabcde, 0), 1);
+    animator.create(0_nsec, 1_nsec, layerDataHandle(0xabcde, 0), 1);
+    animator.create(0_nsec, 1_nsec, dataHandle(layer.handle(), 0xabcde, 0), AnimationFlag::KeepOncePlayed);
+    animator.create(0_nsec, 1_nsec, layerDataHandle(0xabcde, 0), AnimationFlag::KeepOncePlayed);
+    CORRADE_COMPARE_AS(out,
+        "Ui::AbstractAnimator::create(): invalid handle Ui::DataHandle({0xab, 0x12}, {0xabcde, 0x0})\n"
+        "Ui::AbstractAnimator::create(): invalid handle Ui::LayerDataHandle(0xabcde, 0x0)\n"
+        "Ui::AbstractAnimator::create(): invalid handle Ui::DataHandle({0xab, 0x12}, {0xabcde, 0x0})\n"
+        "Ui::AbstractAnimator::create(): invalid handle Ui::LayerDataHandle(0xabcde, 0x0)\n",
+        TestSuite::Compare::String);
 }
 
 void AbstractAnimatorTest::createDataAttachmentInvalidLayer() {
@@ -2459,6 +2531,8 @@ void AbstractAnimatorTest::attachNodeInvalid() {
     /* AnimatorDataHandle directly */
     animator.attach(AnimatorDataHandle(0x123abcde), nodeHandle(2865, 0xcec));
     animator.node(AnimatorDataHandle(0x123abcde));
+    /* Invalid node generation */
+    animator.attach(handle, nodeHandle(0xabcde, 0));
     CORRADE_COMPARE_AS(out,
         "Ui::AbstractAnimator::attach(): invalid handle Ui::AnimationHandle::Null\n"
         "Ui::AbstractAnimator::node(): invalid handle Ui::AnimationHandle::Null\n"
@@ -2467,7 +2541,8 @@ void AbstractAnimatorTest::attachNodeInvalid() {
         "Ui::AbstractAnimator::attach(): invalid handle Ui::AnimationHandle(Null, {0x0, 0x1})\n"
         "Ui::AbstractAnimator::node(): invalid handle Ui::AnimationHandle(Null, {0x0, 0x1})\n"
         "Ui::AbstractAnimator::attach(): invalid handle Ui::AnimatorDataHandle(0xabcde, 0x123)\n"
-        "Ui::AbstractAnimator::node(): invalid handle Ui::AnimatorDataHandle(0xabcde, 0x123)\n",
+        "Ui::AbstractAnimator::node(): invalid handle Ui::AnimatorDataHandle(0xabcde, 0x123)\n"
+        "Ui::AbstractAnimator::attach(): invalid handle Ui::NodeHandle(0xabcde, 0x0)\n",
         TestSuite::Compare::String);
 }
 
@@ -2601,14 +2676,25 @@ void AbstractAnimatorTest::attachData() {
 void AbstractAnimatorTest::attachDataInvalid() {
     CORRADE_SKIP_IF_NO_ASSERT();
 
-    struct: AbstractAnimator {
-        using AbstractAnimator::AbstractAnimator;
+    /* Using AbstractGenericAnimator in order to access setLayer(), other than
+       that it's testing the base AbstractAnimator APIs */
+    struct: AbstractGenericAnimator {
+        using AbstractGenericAnimator::AbstractGenericAnimator;
+        using AbstractGenericAnimator::setLayer;
         using AbstractAnimator::create;
 
         AnimatorFeatures doFeatures() const override {
             return AnimatorFeature::DataAttachment;
         }
+        void doAdvance(Containers::BitArrayView, Containers::BitArrayView, Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&) override {}
     } animator{animatorHandle(0xab, 0x12)};
+
+    struct: AbstractLayer {
+        using AbstractLayer::AbstractLayer;
+
+        LayerFeatures doFeatures() const override { return {}; }
+    } layer{layerHandle(0xcd, 0x34)};
+    animator.setLayer(layer);
 
     /* Don't need to call setLayer() here as the animation handle validity is
        checked as the first thing, before everything else */
@@ -2632,6 +2718,9 @@ void AbstractAnimatorTest::attachDataInvalid() {
     animator.attach(AnimatorDataHandle(0x123abcde), dataHandle(animator.layer(), 2865, 0xcec));
     animator.attach(AnimatorDataHandle(0x123abcde), layerDataHandle(2865, 0xcec));
     animator.data(AnimatorDataHandle(0x123abcde));
+    /* Invalid data generation */
+    animator.attach(handle, dataHandle(animator.layer(), 0xabcde, 0));
+    animator.attach(handle, layerDataHandle(0xabcde, 0));
     CORRADE_COMPARE_AS(out,
         "Ui::AbstractAnimator::attach(): invalid handle Ui::AnimationHandle::Null\n"
         "Ui::AbstractAnimator::attach(): invalid handle Ui::AnimationHandle::Null\n"
@@ -2644,7 +2733,9 @@ void AbstractAnimatorTest::attachDataInvalid() {
         "Ui::AbstractAnimator::data(): invalid handle Ui::AnimationHandle(Null, {0x0, 0x1})\n"
         "Ui::AbstractAnimator::attach(): invalid handle Ui::AnimatorDataHandle(0xabcde, 0x123)\n"
         "Ui::AbstractAnimator::attach(): invalid handle Ui::AnimatorDataHandle(0xabcde, 0x123)\n"
-        "Ui::AbstractAnimator::data(): invalid handle Ui::AnimatorDataHandle(0xabcde, 0x123)\n",
+        "Ui::AbstractAnimator::data(): invalid handle Ui::AnimatorDataHandle(0xabcde, 0x123)\n"
+        "Ui::AbstractAnimator::attach(): invalid handle Ui::DataHandle({0xcd, 0x34}, {0xabcde, 0x0})\n"
+        "Ui::AbstractAnimator::attach(): invalid handle Ui::LayerDataHandle(0xabcde, 0x0)\n",
         TestSuite::Compare::String);
 }
 

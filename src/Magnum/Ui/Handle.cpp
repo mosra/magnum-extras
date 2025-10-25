@@ -36,7 +36,10 @@ Debug& operator<<(Debug& debug, const LayerHandle value) {
     if(value == LayerHandle::Null)
         return debug << (packed ? "Null" : "Ui::LayerHandle::Null");
 
-    return debug << (packed ? "{" : "Ui::LayerHandle(") << Debug::nospace << Debug::hex << layerHandleId(value) << Debug::nospace << "," << Debug::hex << layerHandleGeneration(value) << Debug::nospace << (packed ? "}" : ")");
+    /* ID extraction is copy of layerHandleId() because it asserts if the
+       generation is 0, and the assert calls into this debug printer, leading
+       to infinite recursion */
+    return debug << (packed ? "{" : "Ui::LayerHandle(") << Debug::nospace << Debug::hex << (UnsignedInt(value) & ((1 << Implementation::LayerHandleIdBits) - 1)) << Debug::nospace << "," << Debug::hex << layerHandleGeneration(value) << Debug::nospace << (packed ? "}" : ")");
 }
 
 Debug& operator<<(Debug& debug, const LayerDataHandle value) {
@@ -45,7 +48,10 @@ Debug& operator<<(Debug& debug, const LayerDataHandle value) {
     if(value == LayerDataHandle::Null)
         return debug << (packed ? "Null" : "Ui::LayerDataHandle::Null");
 
-    return debug << (packed ? "{" : "Ui::LayerDataHandle(") << Debug::nospace << Debug::hex << layerDataHandleId(value) << Debug::nospace << "," << Debug::hex << layerDataHandleGeneration(value) << Debug::nospace << (packed ? "}" : ")");
+    /* ID extraction is copy of layerDataHandleId() because it asserts if the
+       generation is 0, and the assert calls into this debug printer, leading
+       to infinite recursion */
+    return debug << (packed ? "{" : "Ui::LayerDataHandle(") << Debug::nospace << Debug::hex << (UnsignedInt(value) & ((1 << Implementation::LayerDataHandleIdBits) - 1)) << Debug::nospace << "," << Debug::hex << layerDataHandleGeneration(value) << Debug::nospace << (packed ? "}" : ")");
 }
 
 Debug& operator<<(Debug& debug, const DataHandle value) {
@@ -58,12 +64,18 @@ Debug& operator<<(Debug& debug, const DataHandle value) {
     if(dataHandleLayer(value) == LayerHandle::Null)
         debug << "Null,";
     else
-        debug << "{" << Debug::nospace << Debug::hex << dataHandleLayerId(value) << Debug::nospace << "," << Debug::hex << dataHandleLayerGeneration(value) << Debug::nospace << "},";
+        /* ID extraction is copy of dataHandleLayerId() because it asserts if
+           the generation is 0, and the assert calls into this debug printer,
+           leading to infinite recursion */
+        debug << "{" << Debug::nospace << Debug::hex << ((UnsignedLong(value) >> (Implementation::LayerDataHandleIdBits + Implementation::LayerDataHandleGenerationBits)) & ((1 << Implementation::LayerHandleIdBits) - 1)) << Debug::nospace << "," << Debug::hex << dataHandleLayerGeneration(value) << Debug::nospace << "},";
 
     if(dataHandleData(value) == LayerDataHandle::Null)
         debug << (packed ? "Null}" : "Null)");
     else
-        debug << "{" << Debug::nospace << Debug::hex << dataHandleId(value) << Debug::nospace << "," << Debug::hex << dataHandleGeneration(value) << Debug::nospace << (packed ? "}}" : "})");
+        /* ID extraction is copy of dataHandleId() because it asserts if the
+           generation is 0, and the assert calls into this debug printer,
+           leading to infinite recursion */
+        debug << "{" << Debug::nospace << Debug::hex << (UnsignedLong(value) & ((1 << Implementation::LayerDataHandleIdBits) - 1)) << Debug::nospace << "," << Debug::hex << dataHandleGeneration(value) << Debug::nospace << (packed ? "}}" : "})");
 
     return debug;
 }
@@ -74,7 +86,10 @@ Debug& operator<<(Debug& debug, const NodeHandle value) {
     if(value == NodeHandle::Null)
         return debug << (packed ? "Null" : "Ui::NodeHandle::Null");
 
-    return debug << (packed ? "{" : "Ui::NodeHandle(") << Debug::nospace << Debug::hex << nodeHandleId(value) << Debug::nospace << "," << Debug::hex << nodeHandleGeneration(value) << Debug::nospace << (packed ? "}" : ")");
+    /* ID extraction is copy of nodeHandleId() because it asserts if the
+       generation is 0, and the assert calls into this debug printer, leading
+       to infinite recursion */
+    return debug << (packed ? "{" : "Ui::NodeHandle(") << Debug::nospace << Debug::hex << (UnsignedInt(value) & ((1 << Implementation::NodeHandleIdBits) - 1)) << Debug::nospace << "," << Debug::hex << nodeHandleGeneration(value) << Debug::nospace << (packed ? "}" : ")");
 }
 
 Debug& operator<<(Debug& debug, const LayouterHandle value) {
@@ -83,7 +98,10 @@ Debug& operator<<(Debug& debug, const LayouterHandle value) {
     if(value == LayouterHandle::Null)
         return debug << (packed ? "Null" : "Ui::LayouterHandle::Null");
 
-    return debug << (packed ? "{" : "Ui::LayouterHandle(") << Debug::nospace << Debug::hex << layouterHandleId(value) << Debug::nospace << "," << Debug::hex << layouterHandleGeneration(value) << Debug::nospace << (packed ? "}" : ")");
+    /* ID extraction is copy of layouterHandleId() because it asserts if the
+       generation is 0, and the assert calls into this debug printer, leading
+       to infinite recursion */
+    return debug << (packed ? "{" : "Ui::LayouterHandle(") << Debug::nospace << Debug::hex << (UnsignedInt(value) & ((1 << Implementation::LayouterHandleIdBits) - 1)) << Debug::nospace << "," << Debug::hex << layouterHandleGeneration(value) << Debug::nospace << (packed ? "}" : ")");
 }
 
 Debug& operator<<(Debug& debug, const LayouterDataHandle value) {
@@ -92,7 +110,10 @@ Debug& operator<<(Debug& debug, const LayouterDataHandle value) {
     if(value == LayouterDataHandle::Null)
         return debug << (packed ? "Null" : "Ui::LayouterDataHandle::Null");
 
-    return debug << (packed ? "{" : "Ui::LayouterDataHandle(") << Debug::nospace << Debug::hex << layouterDataHandleId(value) << Debug::nospace << "," << Debug::hex << layouterDataHandleGeneration(value) << Debug::nospace << (packed ? "}" : ")");
+    /* ID extraction is copy of layouterDataHandleId() because it asserts if
+       the generation is 0, and the assert calls into this debug printer,
+       leading to infinite recursion */
+    return debug << (packed ? "{" : "Ui::LayouterDataHandle(") << Debug::nospace << Debug::hex << (UnsignedInt(value) & ((1 << Implementation::LayouterDataHandleIdBits) - 1)) << Debug::nospace << "," << Debug::hex << layouterDataHandleGeneration(value) << Debug::nospace << (packed ? "}" : ")");
 }
 
 Debug& operator<<(Debug& debug, const LayoutHandle value) {
@@ -105,12 +126,18 @@ Debug& operator<<(Debug& debug, const LayoutHandle value) {
     if(layoutHandleLayouter(value) == LayouterHandle::Null)
         debug << "Null,";
     else
-        debug << "{" << Debug::nospace << Debug::hex << layoutHandleLayouterId(value) << Debug::nospace << "," << Debug::hex << layoutHandleLayouterGeneration(value) << Debug::nospace << "},";
+        /* ID extraction is copy of layoutHandleLayouterId() because it asserts
+           if the generation is 0, and the assert calls into this debug
+           printer, leading to infinite recursion */
+        debug << "{" << Debug::nospace << Debug::hex << ((UnsignedLong(value) >> (Implementation::LayouterDataHandleIdBits + Implementation::LayouterDataHandleGenerationBits)) & ((1 << Implementation::LayouterHandleIdBits) - 1)) << Debug::nospace << "," << Debug::hex << layoutHandleLayouterGeneration(value) << Debug::nospace << "},";
 
     if(layoutHandleData(value) == LayouterDataHandle::Null)
         debug << (packed ? "Null}" : "Null)");
     else
-        debug << "{" << Debug::nospace << Debug::hex << layoutHandleId(value) << Debug::nospace << "," << Debug::hex << layoutHandleGeneration(value) << Debug::nospace << (packed ? "}}" : "})");
+        /* ID extraction is copy of layoutHandleId() because it asserts if the
+           generation is 0, and the assert calls into this debug printer,
+           leading to infinite recursion */
+        debug << "{" << Debug::nospace << Debug::hex << (UnsignedLong(value) & ((1 << Implementation::LayouterDataHandleIdBits) - 1)) << Debug::nospace << "," << Debug::hex << layoutHandleGeneration(value) << Debug::nospace << (packed ? "}}" : "})");
 
     return debug;
 }
@@ -121,7 +148,10 @@ Debug& operator<<(Debug& debug, const AnimatorHandle value) {
     if(value == AnimatorHandle::Null)
         return debug << (packed ? "Null" : "Ui::AnimatorHandle::Null");
 
-    return debug << (packed ? "{" : "Ui::AnimatorHandle(") << Debug::nospace << Debug::hex << animatorHandleId(value) << Debug::nospace << "," << Debug::hex << animatorHandleGeneration(value) << Debug::nospace << (packed ? "}" : ")");
+    /* ID extraction is copy of animatorHandleId() because it asserts if the
+       generation is 0, and the assert calls into this debug printer, leading
+       to infinite recursion */
+    return debug << (packed ? "{" : "Ui::AnimatorHandle(") << Debug::nospace << Debug::hex << (UnsignedInt(value) & ((1 << Implementation::AnimatorHandleIdBits) - 1)) << Debug::nospace << "," << Debug::hex << animatorHandleGeneration(value) << Debug::nospace << (packed ? "}" : ")");
 }
 
 Debug& operator<<(Debug& debug, const AnimatorDataHandle value) {
@@ -130,7 +160,10 @@ Debug& operator<<(Debug& debug, const AnimatorDataHandle value) {
     if(value == AnimatorDataHandle::Null)
         return debug << (packed ? "Null" : "Ui::AnimatorDataHandle::Null");
 
-    return debug << (packed ? "{" : "Ui::AnimatorDataHandle(") << Debug::nospace << Debug::hex << animatorDataHandleId(value) << Debug::nospace << "," << Debug::hex << animatorDataHandleGeneration(value) << Debug::nospace << (packed ? "}" : ")");
+    /* ID extraction is copy of animatorDataHandleId() because it asserts if
+       the generation is 0, and the assert calls into this debug printer,
+       leading to infinite recursion */
+    return debug << (packed ? "{" : "Ui::AnimatorDataHandle(") << Debug::nospace << Debug::hex << (UnsignedInt(value) & ((1 << Implementation::AnimatorDataHandleIdBits) - 1)) << Debug::nospace << "," << Debug::hex << animatorDataHandleGeneration(value) << Debug::nospace << (packed ? "}" : ")");
 }
 
 Debug& operator<<(Debug& debug, const AnimationHandle value) {
@@ -143,12 +176,18 @@ Debug& operator<<(Debug& debug, const AnimationHandle value) {
     if(animationHandleAnimator(value) == AnimatorHandle::Null)
         debug << "Null,";
     else
-        debug << "{" << Debug::nospace << Debug::hex << animationHandleAnimatorId(value) << Debug::nospace << "," << Debug::hex << animationHandleAnimatorGeneration(value) << Debug::nospace << "},";
+        /* ID extraction is copy of animationHandleAnimatorId() because it
+           asserts if the generation is 0, and the assert calls into this debug
+           printer, leading to infinite recursion */
+        debug << "{" << Debug::nospace << Debug::hex << ((UnsignedLong(value) >> (Implementation::AnimatorDataHandleIdBits + Implementation::AnimatorDataHandleGenerationBits)) & ((1 << Implementation::AnimatorHandleIdBits) - 1)) << Debug::nospace << "," << Debug::hex << animationHandleAnimatorGeneration(value) << Debug::nospace << "},";
 
     if(animationHandleData(value) == AnimatorDataHandle::Null)
         debug << (packed ? "Null}" : "Null)");
     else
-        debug << "{" << Debug::nospace << Debug::hex << animationHandleId(value) << Debug::nospace << "," << Debug::hex << animationHandleGeneration(value) << Debug::nospace << (packed ? "}}" : "})");
+        /* ID extraction is copy of animationHandleId() because it asserts if
+           the generation is 0, and the assert calls into this debug printer,
+           leading to infinite recursion */
+        debug << "{" << Debug::nospace << Debug::hex << (UnsignedLong(value) & ((1 << Implementation::AnimatorDataHandleIdBits) - 1)) << Debug::nospace << "," << Debug::hex << animationHandleGeneration(value) << Debug::nospace << (packed ? "}}" : "})");
 
     return debug;
 }

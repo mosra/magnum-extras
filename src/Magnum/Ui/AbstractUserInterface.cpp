@@ -979,26 +979,30 @@ Containers::StridedArrayView1D<const UnsignedByte> AbstractUserInterface::layerG
 }
 
 bool AbstractUserInterface::isHandleValid(const LayerHandle handle) const {
-    if(handle == LayerHandle::Null)
+    /* layerHandleId() below expects generation to be non-zero, check for that
+       first. This is also a superset of a check for LayerHandle::Null. */
+    const UnsignedInt generation = layerHandleGeneration(handle);
+    if(!generation)
         return false;
     const State& state = *_state;
     const UnsignedInt index = layerHandleId(handle);
     if(index >= state.layers.size())
         return false;
-    const UnsignedInt generation = layerHandleGeneration(handle);
     const Layer& layer = state.layers[index];
     /* Zero generation handles (i.e., where it wrapped around from all bits
        set) are expected to be expired and thus with `previous` being null
        (while, if valid, the `previous` and `next` is a cyclical linked list
-       and thus never null). In other words, it shouldn't be needed to verify
-       also that generation is non-zero. */
-    CORRADE_INTERNAL_DEBUG_ASSERT(generation || layer.used.previous == LayerHandle::Null);
+       and thus never null) */
+    CORRADE_INTERNAL_DEBUG_ASSERT(layer.used.generation || layer.used.previous == LayerHandle::Null);
     return layer.used.previous != LayerHandle::Null && generation == layer.used.generation;
 }
 
 bool AbstractUserInterface::isHandleValid(const DataHandle handle) const {
-    if(dataHandleData(handle) == LayerDataHandle::Null ||
-       dataHandleLayer(handle) == LayerHandle::Null)
+    /* dataHandleLayerId() below expects generation to be non-zero, check for
+       that first. This is also a superset of a check for both
+       LayerHandle::Null and LayerDataHandle::Null. */
+    const UnsignedInt layerGeneration = dataHandleLayerGeneration(handle);
+    if(!layerGeneration)
         return false;
     const State& state = *_state;
     const UnsignedInt layerIndex = dataHandleLayerId(handle);
@@ -1007,7 +1011,7 @@ bool AbstractUserInterface::isHandleValid(const DataHandle handle) const {
     const Layer& layer = state.layers[layerIndex];
     if(!layer.used.instance)
         return false;
-    return dataHandleLayerGeneration(handle) == layer.used.generation && layer.used.instance->isHandleValid(dataHandleData(handle));
+    return layerGeneration == layer.used.generation && layer.used.instance->isHandleValid(dataHandleData(handle));
         return false;
 }
 
@@ -1277,26 +1281,31 @@ Containers::StridedArrayView1D<const UnsignedByte> AbstractUserInterface::layout
 }
 
 bool AbstractUserInterface::isHandleValid(const LayouterHandle handle) const {
-    if(handle == LayouterHandle::Null)
+    /* layouterHandleId() below expects generation to be non-zero, check for
+       that first. This is also a superset of a check for
+       LayouterHandle::Null. */
+    const UnsignedInt generation = layouterHandleGeneration(handle);
+    if(!generation)
         return false;
     const UnsignedInt index = layouterHandleId(handle);
     const State& state = *_state;
     if(index >= state.layouters.size())
         return false;
-    const UnsignedInt generation = layouterHandleGeneration(handle);
     const Layouter& layouter = state.layouters[index];
     /* Zero generation handles (i.e., where it wrapped around from all bits
        set) are expected to be expired and thus with `previous` being null
        (while, if valid, the `previous` and `next` is a cyclical linked list
-       and thus never null). In other words, it shouldn't be needed to verify
-       also that generation is non-zero. */
-    CORRADE_INTERNAL_DEBUG_ASSERT(generation || layouter.used.previous == LayouterHandle::Null);
+       and thus never null) */
+    CORRADE_INTERNAL_DEBUG_ASSERT(layouter.used.generation || layouter.used.previous == LayouterHandle::Null);
     return layouter.used.previous != LayouterHandle::Null && generation == layouter.used.generation;
 }
 
 bool AbstractUserInterface::isHandleValid(const LayoutHandle handle) const {
-    if(layoutHandleData(handle) == LayouterDataHandle::Null ||
-       layoutHandleLayouter(handle) == LayouterHandle::Null)
+    /* layoutHandleLayouterId() below expects generation to be non-zero, check
+       for that first. This is also a superset of a check for both
+       LayouterHandle::Null and LayouterDataHandle::Null. */
+    const UnsignedInt layouterGeneration = layoutHandleLayouterGeneration(handle);
+    if(!layouterGeneration)
         return false;
     const UnsignedInt layouterIndex = layoutHandleLayouterId(handle);
     const State& state = *_state;
@@ -1305,7 +1314,7 @@ bool AbstractUserInterface::isHandleValid(const LayoutHandle handle) const {
     const Layouter& layouter = state.layouters[layouterIndex];
     if(!layouter.used.instance)
         return false;
-    return layoutHandleLayouterGeneration(handle) == layouter.used.generation && layouter.used.instance->isHandleValid(layoutHandleData(handle));
+    return layouterGeneration == layouter.used.generation && layouter.used.instance->isHandleValid(layoutHandleData(handle));
 }
 
 LayouterHandle AbstractUserInterface::layouterFirst() const {
@@ -1557,25 +1566,29 @@ Containers::StridedArrayView1D<const UnsignedByte> AbstractUserInterface::animat
 }
 
 bool AbstractUserInterface::isHandleValid(const AnimatorHandle handle) const {
-    if(handle == AnimatorHandle::Null)
+    /* animatorHandleId() below expects generation to be non-zero, check for
+       that first. This is also a superset of a check for
+       AnimatorHandle::Null. */
+    const UnsignedInt generation = animatorHandleGeneration(handle);
+    if(!generation)
         return false;
     const UnsignedInt index = animatorHandleId(handle);
     const State& state = *_state;
     if(index >= state.animators.size())
         return false;
-    const UnsignedInt generation = animatorHandleGeneration(handle);
     const Animator& animator = state.animators[index];
     /* Zero generation handles (i.e., where it wrapped around from all bits
-       set) are expected to be expired and thus with `used` being false. In
-       other words, it shouldn't be needed to verify also that generation is
-       non-zero. */
-    CORRADE_INTERNAL_DEBUG_ASSERT(generation || !animator.used.used);
+       set) are expected to be expired and thus with `used` being false */
+    CORRADE_INTERNAL_DEBUG_ASSERT(animator.used.generation || !animator.used.used);
     return animator.used.used && generation == animator.used.generation;
 }
 
 bool AbstractUserInterface::isHandleValid(const AnimationHandle handle) const {
-    if(animationHandleData(handle) == AnimatorDataHandle::Null ||
-       animationHandleAnimator(handle) == AnimatorHandle::Null)
+    /* animationHandleAnimatorId() below expects generation to be non-zero,
+       check for that first. This is also a superset of a check for both
+       AnimatorHandle::Null and AnimatorDataHandle::Null. */
+    const UnsignedInt animatorGeneration = animationHandleAnimatorGeneration(handle);
+    if(!animatorGeneration)
         return false;
     const UnsignedInt animatorIndex = animationHandleAnimatorId(handle);
     const State& state = *_state;
@@ -1584,7 +1597,7 @@ bool AbstractUserInterface::isHandleValid(const AnimationHandle handle) const {
     const Animator& animator = state.animators[animatorIndex];
     if(!animator.used.instance)
         return false;
-    return animationHandleAnimatorGeneration(handle) == animator.used.generation && animator.used.instance->isHandleValid(animationHandleData(handle));
+    return animatorGeneration == animator.used.generation && animator.used.instance->isHandleValid(animationHandleData(handle));
 }
 
 AnimatorHandle AbstractUserInterface::createAnimator() {
@@ -1865,19 +1878,19 @@ Containers::StridedArrayView1D<const UnsignedShort> AbstractUserInterface::nodeG
 }
 
 bool AbstractUserInterface::isHandleValid(const NodeHandle handle) const {
-    if(handle == NodeHandle::Null)
+    /* nodeHandleId() below expects generation to be non-zero, check for that
+       first. This is also a superset of a check for NodeHandle::Null. */
+    const UnsignedInt generation = nodeHandleGeneration(handle);
+    if(!generation)
         return false;
     const UnsignedInt index = nodeHandleId(handle);
     const State& state = *_state;
     if(index >= state.nodes.size())
         return false;
-    const UnsignedInt generation = nodeHandleGeneration(handle);
     const Node& node = state.nodes[index];
     /* Zero generation handles (i.e., where it wrapped around from all bits
-       set) are expected to be expired and thus with `used` being false. In
-       other words, it shouldn't be needed to verify also that generation is
-       non-zero. */
-    CORRADE_INTERNAL_DEBUG_ASSERT(generation || !node.used.used);
+       set) are expected to be expired and thus with `used` being false */
+    CORRADE_INTERNAL_DEBUG_ASSERT(node.used.generation || !node.used.used);
     return node.used.used && generation == node.used.generation;
 }
 

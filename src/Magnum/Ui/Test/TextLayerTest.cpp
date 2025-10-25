@@ -2000,15 +2000,23 @@ void TextLayerTest::fontHandle() {
 void TextLayerTest::fontHandleInvalid() {
     CORRADE_SKIP_IF_NO_DEBUG_ASSERT();
 
+    /* Verify the zero generation check isn't off by a bit. There's actually
+       just a single generation bit, so this check isn't any different from
+       comparing to Null. But eventually the generation counter will expand in
+       order to support replacing fonts when changing styles. */
+    fontHandleId(Ui::fontHandle(0, 1));
+
     Containers::String out;
     Error redirectError{&out};
     Ui::fontHandle(0x8000, 0x1);
     Ui::fontHandle(0x1, 0x2);
-    Ui::fontHandleId(FontHandle::Null);
+    fontHandleId(FontHandle::Null);
+    fontHandleId(Ui::fontHandle(0x7331, 0));
     CORRADE_COMPARE_AS(out,
         "Ui::fontHandle(): expected index to fit into 15 bits and generation into 1, got 0x8000 and 0x1\n"
         "Ui::fontHandle(): expected index to fit into 15 bits and generation into 1, got 0x1 and 0x2\n"
-        "Ui::fontHandleId(): the handle is null\n",
+        "Ui::fontHandleId(): invalid handle Ui::FontHandle::Null\n"
+        "Ui::fontHandleId(): invalid handle Ui::FontHandle(0x7331, 0x0)\n",
         TestSuite::Compare::String);
 }
 
@@ -2259,6 +2267,10 @@ void TextLayerTest::sharedConstruct() {
 
     CORRADE_COMPARE(shared.fontCount(), 0);
     CORRADE_VERIFY(!shared.isHandleValid(FontHandle::Null));
+    /* Verify that out-of-bounds ID and zero generation is handled correctly
+       even for an empty shared state */
+    CORRADE_VERIFY(!shared.isHandleValid(Ui::fontHandle(0, 1)));
+    CORRADE_VERIFY(!shared.isHandleValid(Ui::fontHandle(1, 0)));
 }
 
 void TextLayerTest::sharedConstructNoCreate() {
@@ -9307,9 +9319,10 @@ void TextLayerTest::updateCleanDataOrder() {
             layer.setDynamicStyle(1, TextLayerStyleUniform{}, threeGlyphFontHandle, Text::Alignment::MiddleCenter, {}, data.paddingFromStyle);
     }
 
-    /* Two node handles to attach the data to */
-    NodeHandle node6 = nodeHandle(6, 0);
-    NodeHandle node15 = nodeHandle(15, 0);
+    /* Two node handles to attach the data to. Generation doesn't matter, just
+       has to be non-zero. */
+    NodeHandle node6 = nodeHandle(6, 0x111);
+    NodeHandle node15 = nodeHandle(15, 0xccc);
 
     /* Create 11 data handles. Only four get actually used, the rest results in
        a single or no quad */
@@ -10385,7 +10398,8 @@ void TextLayerTest::updateAlignment() {
        guarantees the same on a higher level), not needed for anything here */
     layer.setSize({1, 1}, {1, 1});
 
-    NodeHandle node3 = nodeHandle(3, 0);
+    /* Generation doesn't matter, just has to be non-zero */
+    NodeHandle node3 = nodeHandle(3, 0xeee);
 
     /* 3 chars, size x2, so the bounding box is 9x11 */
     DataHandle node3Data = layer.create(0,
@@ -10499,7 +10513,8 @@ void TextLayerTest::updateAlignmentGlyph() {
        guarantees the same on a higher level), not needed for anything here */
     layer.setSize({1, 1}, {1, 1});
 
-    NodeHandle node3 = nodeHandle(3, 0);
+    /* Generation doesn't matter, just has to be non-zero */
+    NodeHandle node3 = nodeHandle(3, 0xeee);
 
     /* Size x2, so the bounding box is 6x8 */
     layer.createGlyph(
@@ -10650,7 +10665,8 @@ void TextLayerTest::updatePadding() {
        guarantees the same on a higher level), not needed for anything here */
     layer.setSize({1, 1}, {1, 1});
 
-    NodeHandle node3 = nodeHandle(3, 0);
+    /* Generation doesn't matter, just has to be non-zero */
+    NodeHandle node3 = nodeHandle(3, 0xeee);
 
     /* 3 chars, size x2, so the bounding box is 9x11 */
     DataHandle node3Data = layer.create(0, "hey", data.alignment, TextDataFlag::Editable, node3);
@@ -10764,7 +10780,8 @@ void TextLayerTest::updatePaddingGlyph() {
        guarantees the same on a higher level), not needed for anything here */
     layer.setSize({1, 1}, {1, 1});
 
-    NodeHandle node3 = nodeHandle(3, 0);
+    /* Generation doesn't matter, just has to be non-zero */
+    NodeHandle node3 = nodeHandle(3, 0xeee);
 
     /* Size x2, so the bounding box is 6x8 */
     DataHandle node3Data = layer.createGlyph(0, 17,
@@ -10895,7 +10912,8 @@ void TextLayerTest::updateTransformation() {
        guarantees the same on a higher level), not needed for anything here */
     layer.setSize({1, 1}, {1, 1});
 
-    NodeHandle node3 = nodeHandle(3, 0);
+    /* Generation doesn't matter, just has to be non-zero */
+    NodeHandle node3 = nodeHandle(3, 0xeee);
 
     /* 3 chars, so the bounding box is 9x11. It's always that regardless of
        transformation. */

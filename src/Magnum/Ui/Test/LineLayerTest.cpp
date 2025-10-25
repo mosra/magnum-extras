@@ -2573,9 +2573,10 @@ void LineLayerTest::updateCleanDataOrder() {
        guarantees the same on a higher level), not needed for anything here */
     layer.setSize({1, 1}, {1, 1});
 
-    /* Two node handles to attach the data to */
-    NodeHandle node6 = nodeHandle(6, 0);
-    NodeHandle node15 = nodeHandle(15, 0);
+    /* Two node handles to attach the data to. Generation doesn't matter, just
+       has to be non-zero. */
+    NodeHandle node6 = nodeHandle(6, 0x111);
+    NodeHandle node15 = nodeHandle(15, 0xccc);
 
     /* Create 10 data handles. Four get filled and actually used, two more are
        filled to be non-empty but aren't checked in any way, just there to
@@ -3322,7 +3323,9 @@ void LineLayerTest::updateAlignment() {
        guarantees the same on a higher level), not needed for anything here */
     layer.setSize({1, 1}, {1, 1});
 
-    NodeHandle node3 = nodeHandle(3, 0);
+    /* Generation doesn't matter, just has to be non-zero */
+    NodeHandle node3 = nodeHandle(3, 0xeee);
+
     layer.create(0,
         {0, 1},
         {{-3.0f, 4.0f}, {5.0f, -6.0f}},
@@ -3382,7 +3385,9 @@ void LineLayerTest::updatePadding() {
        guarantees the same on a higher level), not needed for anything here */
     layer.setSize({1, 1}, {1, 1});
 
-    NodeHandle node3 = nodeHandle(3, 0);
+    /* Generation doesn't matter, just has to be non-zero */
+    NodeHandle node3 = nodeHandle(3, 0xeee);
+
     DataHandle node3Data = layer.create(0,
         {0, 1},
         {{-3.0f, 4.0f}, {5.0f, -6.0f}},

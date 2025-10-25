@@ -174,8 +174,14 @@ void AbstractLayouterTest::construct() {
     CORRADE_COMPARE(layouter.usedCount(), 0);
     CORRADE_VERIFY(!layouter.isHandleValid(LayouterDataHandle::Null));
     CORRADE_VERIFY(!layouter.isHandleValid(LayoutHandle::Null));
-    CORRADE_VERIFY(!layouter.hasUi());
+    /* Verify that out-of-bounds ID and zero generation is handled correctly
+       even for an empty layouter */
+    CORRADE_VERIFY(!layouter.isHandleValid(layouterDataHandle(0, 1)));
+    CORRADE_VERIFY(!layouter.isHandleValid(layouterDataHandle(1, 0)));
+    CORRADE_VERIFY(!layouter.isHandleValid(layoutHandle(layouter.handle(), 0, 1)));
+    CORRADE_VERIFY(!layouter.isHandleValid(layoutHandle(layouter.handle(), 1, 0)));
 
+    CORRADE_VERIFY(!layouter.hasUi());
     /* ui() and hasUi() tested thoroughly in
        AbstractUserInterfaceTest::layouterUserInterfaceReference(), invalid
        access in uiInvalid() below */
@@ -194,8 +200,11 @@ void AbstractLayouterTest::constructInvalidHandle() {
     Containers::String out;
     Error redirectError{&out};
     Layouter{LayouterHandle::Null};
-    CORRADE_COMPARE(out,
-        "Ui::AbstractLayouter: handle is null\n");
+    Layouter{layouterHandle(0xab, 0)};
+    CORRADE_COMPARE_AS(out,
+        "Ui::AbstractLayouter: invalid handle Ui::LayouterHandle::Null\n"
+        "Ui::AbstractLayouter: invalid handle Ui::LayouterHandle(0xab, 0x0)\n",
+        TestSuite::Compare::String);
 }
 
 void AbstractLayouterTest::constructCopy() {
@@ -680,8 +689,11 @@ void AbstractLayouterTest::addInvalid() {
     Containers::String out;
     Error redirectError{&out};
     layouter.add(NodeHandle::Null);
-    CORRADE_COMPARE(out,
-        "Ui::AbstractLayouter::add(): invalid handle Ui::NodeHandle::Null\n");
+    layouter.add(nodeHandle(0xabcde, 0));
+    CORRADE_COMPARE_AS(out,
+        "Ui::AbstractLayouter::add(): invalid handle Ui::NodeHandle::Null\n"
+        "Ui::AbstractLayouter::add(): invalid handle Ui::NodeHandle(0xabcde, 0x0)\n",
+        TestSuite::Compare::String);
 }
 
 void AbstractLayouterTest::addInvalidUniqueLayouts() {

@@ -60,7 +60,10 @@ Debug& operator<<(Debug& debug, const FontHandle value) {
     if(value == FontHandle::Null)
         return debug << (packed ? "Null" : "Ui::FontHandle::Null");
 
-    return debug << (packed ? "{" : "Ui::FontHandle(") << Debug::nospace << Debug::hex << fontHandleId(value) << Debug::nospace << "," << Debug::hex << fontHandleGeneration(value) << Debug::nospace << (packed ? "}" : ")");
+    /* ID extraction is copy of fontHandleId() because it asserts if the
+       generation is 0, and the assert calls into this debug printer, leading
+       to infinite recursion */
+    return debug << (packed ? "{" : "Ui::FontHandle(") << Debug::nospace << Debug::hex << (UnsignedInt(value) & ((1 << Implementation::FontHandleIdBits) - 1)) << Debug::nospace << "," << Debug::hex << fontHandleGeneration(value) << Debug::nospace << (packed ? "}" : ")");
 }
 
 Debug& operator<<(Debug& debug, const TextLayerFlag value) {

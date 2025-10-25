@@ -1462,11 +1462,19 @@ void AbstractUserInterfaceTest::constructNoCreate() {
     CORRADE_COMPARE(ui.layerUsedCount(), 0);
     CORRADE_COMPARE(ui.layerFirst(), LayerHandle::Null);
     CORRADE_VERIFY(!ui.isHandleValid(LayerHandle::Null));
+    /* Verify that out-of-bounds ID and zero generation is handled correctly
+       even for an empty UI */
+    CORRADE_VERIFY(!ui.isHandleValid(layerHandle(0, 1)));
+    CORRADE_VERIFY(!ui.isHandleValid(layerHandle(1, 0)));
 
     CORRADE_COMPARE(ui.layouterCapacity(), 0);
     CORRADE_COMPARE(ui.layouterUsedCount(), 0);
     CORRADE_COMPARE(ui.layouterFirst(), LayouterHandle::Null);
     CORRADE_VERIFY(!ui.isHandleValid(LayouterHandle::Null));
+    /* Verify that out-of-bounds ID and zero generation is handled correctly
+       even for an empty UI */
+    CORRADE_VERIFY(!ui.isHandleValid(layouterHandle(0, 1)));
+    CORRADE_VERIFY(!ui.isHandleValid(layouterHandle(1, 0)));
 
     CORRADE_COMPARE(ui.animatorCapacity(), 0);
     CORRADE_COMPARE(ui.animatorUsedCount(), 0);
@@ -1474,6 +1482,10 @@ void AbstractUserInterfaceTest::constructNoCreate() {
     CORRADE_COMPARE(ui.nodeCapacity(), 0);
     CORRADE_COMPARE(ui.nodeUsedCount(), 0);
     CORRADE_VERIFY(!ui.isHandleValid(NodeHandle::Null));
+    /* Verify that out-of-bounds ID and zero generation is handled correctly
+       even for an empty UI */
+    CORRADE_VERIFY(!ui.isHandleValid(nodeHandle(0, 1)));
+    CORRADE_VERIFY(!ui.isHandleValid(nodeHandle(1, 0)));
 
     CORRADE_COMPARE(ui.nodeOrderFirst(), NodeHandle::Null);
     CORRADE_COMPARE(ui.nodeOrderLast(), NodeHandle::Null);

@@ -73,6 +73,7 @@ struct AbstractLayerTest: TestSuite::Tester {
     void createRemoveHandleDisable();
     void createNoHandlesLeft();
     void createAttached();
+    void createAttachedInvalid();
     void removeInvalid();
     void attach();
     void attachInvalid();
@@ -250,6 +251,7 @@ AbstractLayerTest::AbstractLayerTest() {
               &AbstractLayerTest::createRemoveHandleDisable,
               &AbstractLayerTest::createNoHandlesLeft,
               &AbstractLayerTest::createAttached,
+              &AbstractLayerTest::createAttachedInvalid,
               &AbstractLayerTest::removeInvalid,
               &AbstractLayerTest::attach,
               &AbstractLayerTest::attachInvalid,
@@ -462,8 +464,14 @@ void AbstractLayerTest::construct() {
     CORRADE_COMPARE(layer.usedCount(), 0);
     CORRADE_VERIFY(!layer.isHandleValid(LayerDataHandle::Null));
     CORRADE_VERIFY(!layer.isHandleValid(DataHandle::Null));
-    CORRADE_VERIFY(!layer.hasUi());
+    /* Verify that out-of-bounds ID and zero generation is handled correctly
+       even for an empty layer */
+    CORRADE_VERIFY(!layer.isHandleValid(layerDataHandle(0, 1)));
+    CORRADE_VERIFY(!layer.isHandleValid(layerDataHandle(1, 0)));
+    CORRADE_VERIFY(!layer.isHandleValid(dataHandle(layer.handle(), 0, 1)));
+    CORRADE_VERIFY(!layer.isHandleValid(dataHandle(layer.handle(), 1, 0)));
 
+    CORRADE_VERIFY(!layer.hasUi());
     /* ui() and hasUi() tested thoroughly in
        AbstractUserInterfaceTest::layerUserInterfaceReference(), invalid access
        in uiInvalid() below */
@@ -481,8 +489,11 @@ void AbstractLayerTest::constructInvalidHandle() {
     Containers::String out;
     Error redirectError{&out};
     Layer{LayerHandle::Null};
-    CORRADE_COMPARE(out,
-        "Ui::AbstractLayer: handle is null\n");
+    Layer{layerHandle(0xab, 0)};
+    CORRADE_COMPARE_AS(out,
+        "Ui::AbstractLayer: invalid handle Ui::LayerHandle::Null\n"
+        "Ui::AbstractLayer: invalid handle Ui::LayerHandle(0xab, 0x0)\n",
+        TestSuite::Compare::String);
 }
 
 void AbstractLayerTest::constructCopy() {
@@ -926,6 +937,27 @@ void AbstractLayerTest::createAttached() {
     }), TestSuite::Compare::Container);
 }
 
+void AbstractLayerTest::createAttachedInvalid() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct: AbstractLayer {
+        using AbstractLayer::AbstractLayer;
+        using AbstractLayer::create;
+        using AbstractLayer::remove;
+
+        LayerFeatures doFeatures() const override { return {}; }
+    } layer{layerHandle(0, 1)};
+
+    /* Passing a null node handle is okay, but a non-null with zero generation
+       is not */
+    layer.create(NodeHandle::Null);
+
+    Containers::String out;
+    Error redirectError{&out};
+    layer.create(nodeHandle(0xabcde, 0));
+    CORRADE_COMPARE(out, "Ui::AbstractLayer::create(): invalid handle Ui::NodeHandle(0xabcde, 0x0)\n");
+}
+
 void AbstractLayerTest::removeInvalid() {
     CORRADE_SKIP_IF_NO_ASSERT();
 
@@ -1080,6 +1112,8 @@ void AbstractLayerTest::attachInvalid() {
     /* LayerDataHandle directly */
     layer.attach(LayerDataHandle(0x123abcde), nodeHandle(2865, 0xcec));
     layer.node(LayerDataHandle(0x123abcde));
+    /* Invalid node generation */
+    layer.attach(handle, nodeHandle(0xabcde, 0));
     CORRADE_COMPARE_AS(out,
         "Ui::AbstractLayer::attach(): invalid handle Ui::DataHandle::Null\n"
         "Ui::AbstractLayer::node(): invalid handle Ui::DataHandle::Null\n"
@@ -1088,7 +1122,8 @@ void AbstractLayerTest::attachInvalid() {
         "Ui::AbstractLayer::attach(): invalid handle Ui::DataHandle(Null, {0x0, 0x1})\n"
         "Ui::AbstractLayer::node(): invalid handle Ui::DataHandle(Null, {0x0, 0x1})\n"
         "Ui::AbstractLayer::attach(): invalid handle Ui::LayerDataHandle(0xabcde, 0x123)\n"
-        "Ui::AbstractLayer::node(): invalid handle Ui::LayerDataHandle(0xabcde, 0x123)\n",
+        "Ui::AbstractLayer::node(): invalid handle Ui::LayerDataHandle(0xabcde, 0x123)\n"
+        "Ui::AbstractLayer::attach(): invalid handle Ui::NodeHandle(0xabcde, 0x0)\n",
         TestSuite::Compare::String);
 }
 

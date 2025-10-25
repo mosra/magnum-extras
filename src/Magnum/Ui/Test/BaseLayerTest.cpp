@@ -2356,9 +2356,10 @@ void BaseLayerTest::updateDataOrder() {
     if(data.backgroundBlurPassCount)
         layer.setBackgroundBlurPassCount(data.backgroundBlurPassCount);
 
-    /* Two node handles to attach the data to */
-    NodeHandle node6 = nodeHandle(6, 0);
-    NodeHandle node15 = nodeHandle(15, 0);
+    /* Two node handles to attach the data to. Generation doesn't matter, just
+       has to be non-zero. */
+    NodeHandle node6 = nodeHandle(6, 0x111);
+    NodeHandle node15 = nodeHandle(15, 0xccc);
 
     /* Create 10 data handles. Only three get filled and actually used. */
     layer.create(0);                                                    /* 0 */
