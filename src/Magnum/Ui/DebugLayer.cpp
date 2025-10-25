@@ -698,8 +698,8 @@ bool DebugLayer::inspectNodeInternal(const NodeHandle handle, const DebugLayerFl
             debug << "  Offset:" << Debug::packed << ui.nodeOffset(handle) << Debug::nospace << ", size:" << Debug::packed << ui.nodeSize(handle) << Debug::newline;
         }
 
-        if(const NodeFlags flags = ui.nodeFlags(handle))
-            debug << "  Flags:" << Debug::color(Debug::Color::Cyan) << Debug::packed << flags << Debug::resetColor << Debug::newline;
+        if(const NodeFlags nodeFlags = ui.nodeFlags(handle))
+            debug << "  Flags:" << Debug::color(Debug::Color::Cyan) << Debug::packed << nodeFlags << Debug::resetColor << Debug::newline;
 
         if(state.sources >= DebugLayerSource::NodeHierarchy) {
             /* Calculate hierarchy depth */
@@ -882,9 +882,9 @@ bool DebugLayer::inspectNodeInternal(const NodeHandle handle, const DebugLayerFl
                     animatorHandle = animationHandleAnimator(animationHandle);
                     animator = &state.animators[animatorHandleId(animatorHandle)];
                     animatorInstance = &ui.animator(animatorHandle);
-                    for(std::size_t i = 0; i != animationStateCount; ++i) {
-                        hasOtherAnimationsFromThisAnimator[i] = false;
-                        namedAnimatorDataCount[i] = 0;
+                    for(std::size_t j = 0; j != animationStateCount; ++j) {
+                        hasOtherAnimationsFromThisAnimator[j] = false;
+                        namedAnimatorDataCount[j] = 0;
                     }
                 }
 
@@ -907,13 +907,13 @@ bool DebugLayer::inspectNodeInternal(const NodeHandle handle, const DebugLayerFl
                    print summary for the current one */
                 ++i;
                 if(i == animations.size() || animationHandleAnimator(animations[i]) != animatorHandle) {
-                    for(UnsignedInt i = 0; i != animationStateCount; ++i) {
-                        if(namedAnimatorDataCount[i]) {
-                            debug << " " << namedAnimatorDataCount[i] << Debug::color(Debug::Color::Cyan) << Debug::packed << AnimationState(i) << Debug::resetColor << "animations from animator" << Debug::packed << animator->handle << Debug::color(Debug::Color::Yellow) << animator->name << Debug::resetColor << Debug::newline;
+                    for(UnsignedInt j = 0; j != animationStateCount; ++j) {
+                        if(namedAnimatorDataCount[j]) {
+                            debug << " " << namedAnimatorDataCount[j] << Debug::color(Debug::Color::Cyan) << Debug::packed << AnimationState(j) << Debug::resetColor << "animations from animator" << Debug::packed << animator->handle << Debug::color(Debug::Color::Yellow) << animator->name << Debug::resetColor << Debug::newline;
                         }
 
-                        if(hasOtherAnimationsFromThisAnimator[i])
-                            ++otherAnimatorCount[i];
+                        if(hasOtherAnimationsFromThisAnimator[j])
+                            ++otherAnimatorCount[j];
                     }
                 }
             }
@@ -1491,10 +1491,10 @@ void DebugLayer::doUpdate(const LayerStates states, const Containers::StridedArr
 
         const Vector2 min = nodeOffsets[nodeId];
         const Vector2 max = min + nodeSizes[nodeId];
-        for(UnsignedByte i = 0; i != 4; ++i) {
+        for(UnsignedByte j = 0; j != 4; ++j) {
             /* ✨ */
-            state.highlightedNodeVertices[offset*4 + i].position = Math::lerp(min, max, BitVector2{i});
-            state.highlightedNodeVertices[offset*4 + i].color = color;
+            state.highlightedNodeVertices[offset*4 + j].position = Math::lerp(min, max, BitVector2{j});
+            state.highlightedNodeVertices[offset*4 + j].color = color;
         }
 
         ++offset;

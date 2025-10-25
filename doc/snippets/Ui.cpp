@@ -1515,6 +1515,8 @@ struct Shared: Ui::TextLayer::Shared {
     void doSetStyle(const Ui::TextLayerCommonStyleUniform&, Containers::ArrayView<const Ui::TextLayerStyleUniform>) override {}
     void doSetEditingStyle(const Ui::TextLayerCommonEditingStyleUniform&, Containers::ArrayView<const Ui::TextLayerEditingStyleUniform>) override {}
 } textLayerShared{glyphCache};
+
+{
 /* [TextLayer-setup-fonts] */
 PluginManager::Manager<Text::AbstractFont> fontManager;
 
@@ -1557,7 +1559,6 @@ textLayerShared.setStyle(Ui::TextLayerCommonStyleUniform{}, {
 }, {}, {}, {}, {}, {}, {});
 /* [TextLayer-setup-style] */
 
-{
 /* [TextLayer-setup-style-struct-slice] */
 Ui::TextLayerStyleUniform uniforms[]{
     Ui::TextLayerStyleUniform{},    /* Style 0 */
@@ -1660,8 +1661,9 @@ textLayer.setPadding(text, {textLayer.size(hash).x(), 0.0f, 0.0f, 0.0f});
 }
 
 {
+Containers::Pointer<Text::AbstractFont> font;
 /* [TextLayer-style-shaping-font] */
-Ui::FontHandle greekFontHandle = textLayerShared.addFont(DOXYGEN_ELLIPSIS(*font16, 1.0f));
+Ui::FontHandle greekFontHandle = textLayerShared.addFont(DOXYGEN_ELLIPSIS(*font, 1.0f));
 
 DOXYGEN_ELLIPSIS()
 
@@ -1693,8 +1695,7 @@ textLayer.create(DOXYGEN_ELLIPSIS(0), "Status: 418 I'm a Teapot",
 }
 
 {
-Containers::Pointer<Text::AbstractFont> font =
-    fontManager.loadAndInstantiate("TrueTypeFont");
+Containers::Pointer<Text::AbstractFont> font;
 /* [TextLayer-style-features-fill-glyph-cache] */
 font->fillGlyphCache(glyphCache, {
     /* Small capitals */
@@ -1744,6 +1745,7 @@ textLayerShared.setStyle(DOXYGEN_ELLIPSIS(Ui::TextLayerCommonStyleUniform{}), {
 }
 
 {
+PluginManager::Manager<Text::AbstractFont> fontManager;
 /* [TextLayer-distancefield-setup-fonts] */
 Containers::Pointer<Text::AbstractFont> font =
     fontManager.loadAndInstantiate("TrueTypeFont");
@@ -1806,8 +1808,7 @@ textLayer.create(1, "bulky?!", {}, bulky);
 
 {
 Ui::NodeHandle node{};
-Containers::Pointer<Text::AbstractFont> font =
-    fontManager.loadAndInstantiate("TrueTypeFont");
+Containers::Pointer<Text::AbstractFont> font;
 /* [TextLayer-single-glyph-runtime] */
 textLayer.createGlyph(DOXYGEN_ELLIPSIS(0), font->glyphForName("coffee"), {}, node);
 /* [TextLayer-single-glyph-runtime] */
