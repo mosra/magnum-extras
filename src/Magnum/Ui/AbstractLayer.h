@@ -918,6 +918,14 @@ class MAGNUM_UI_EXPORT AbstractLayer {
          */
         LayerHandle handle() const;
 
+        /**
+         * @brief Layer handle
+         *
+         * Same as @ref handle(). Useful for passing the layer instance
+         * directly to APIs accepting just a @ref LayerHandle.
+         */
+        /*implicit*/ operator LayerHandle() const;
+
         /** @brief Features exposed by a layer */
         LayerFeatures features() const { return doFeatures(); }
 

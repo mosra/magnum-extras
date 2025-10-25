@@ -1389,13 +1389,13 @@ void DebugLayerTest::layerNameNoOp() {
     EmptyLayer& emptyLayer = ui.setLayerInstance(Containers::pointer<EmptyLayer>(ui.createLayer()));
     /* Picking a source that isn't Layers but also isn't just empty */
     DebugLayer& layer = ui.setLayerInstance(Containers::pointer<DebugLayer>(ui.createLayer(), DebugLayerSource::NodeHierarchy, DebugLayerFlags{}));
-    CORRADE_COMPARE(layer.layerName(emptyLayer.handle()), "");
+    CORRADE_COMPARE(layer.layerName(emptyLayer), "");
     /* Not even the debug layer itself is named */
-    CORRADE_COMPARE(layer.layerName(layer.handle()), "");
+    CORRADE_COMPARE(layer.layerName(layer), "");
 
     /* Setting a name doesn't remember anything */
     layer.setLayerName(emptyLayer, "Empty");
-    CORRADE_COMPARE(layer.layerName(emptyLayer.handle()), "");
+    CORRADE_COMPARE(layer.layerName(emptyLayer), "");
 }
 
 void DebugLayerTest::layerName() {
@@ -1426,14 +1426,14 @@ void DebugLayerTest::layerName() {
     /* By default, any layer has the name empty, just the debug layer itself
        has it set, and there it's a global string. The empty names have no
        null-terminated or global flags guaranteed */
-    CORRADE_COMPARE(layer.layerName(emptyLayer1.handle()), "");
-    CORRADE_COMPARE(layer.layerName(layer.handle()), "Debug");
-    CORRADE_COMPARE(layer.layerName(layer.handle()).flags(), Containers::StringViewFlag::Global|Containers::StringViewFlag::NullTerminated);
-    CORRADE_COMPARE(layer.layerName(emptyLayer2.handle()), "");
+    CORRADE_COMPARE(layer.layerName(emptyLayer1), "");
+    CORRADE_COMPARE(layer.layerName(layer), "Debug");
+    CORRADE_COMPARE(layer.layerName(layer).flags(), Containers::StringViewFlag::Global|Containers::StringViewFlag::NullTerminated);
+    CORRADE_COMPARE(layer.layerName(emptyLayer2), "");
 
     /* Setting a name of a known layer updates it */
     layer.setLayerName(emptyLayer1, "First empty");
-    CORRADE_COMPARE(layer.layerName(emptyLayer1.handle()), "First empty");
+    CORRADE_COMPARE(layer.layerName(emptyLayer1), "First empty");
 
     /* A layer outside of any existing bounds will have an empty name as well;
        a layer with known ID but wrong generation also, no null-terminated or
@@ -1447,39 +1447,39 @@ void DebugLayerTest::layerName() {
     EmptyLayer& emptyLayer4 = ui.setLayerInstance(Containers::pointer<EmptyLayer>(ui.createLayer()));
     EmptyLayer& emptyLayer5 = ui.setLayerInstance(Containers::pointer<EmptyLayer>(ui.createLayer()));
     CORRADE_COMPARE(layer.stateData().layers.size(), 2);
-    CORRADE_COMPARE(layer.layerName(emptyLayer3.handle()), "");
-    CORRADE_COMPARE(layer.layerName(emptyLayer4.handle()), "");
-    CORRADE_COMPARE(layer.layerName(emptyLayer5.handle()), "");
+    CORRADE_COMPARE(layer.layerName(emptyLayer3), "");
+    CORRADE_COMPARE(layer.layerName(emptyLayer4), "");
+    CORRADE_COMPARE(layer.layerName(emptyLayer5), "");
 
     /* It enlarges only once setting a name of one of these */
     layer.setLayerName(emptyLayer4, "Fourth");
     CORRADE_COMPARE(layer.stateData().layers.size(), 5);
-    CORRADE_COMPARE(layer.layerName(emptyLayer4.handle()), "Fourth");
+    CORRADE_COMPARE(layer.layerName(emptyLayer4), "Fourth");
 
     /* Update doesn't clear the layer names */
     ui.update();
-    CORRADE_COMPARE(layer.layerName(emptyLayer1.handle()), "First empty");
-    CORRADE_COMPARE(layer.layerName(emptyLayer4.handle()), "Fourth");
+    CORRADE_COMPARE(layer.layerName(emptyLayer1), "First empty");
+    CORRADE_COMPARE(layer.layerName(emptyLayer4), "Fourth");
 
     /* Setting a global string keeps a reference to it, local or
        non-null-terminated string is copied */
     Containers::StringView global = "Global"_s;
     layer.setLayerName(emptyLayer2, global);
-    CORRADE_COMPARE(layer.layerName(emptyLayer2.handle()), "Global");
-    CORRADE_COMPARE(layer.layerName(emptyLayer2.handle()).data(), global.data());
-    CORRADE_COMPARE(layer.layerName(emptyLayer2.handle()).flags(), Containers::StringViewFlag::Global|Containers::StringViewFlag::NullTerminated);
+    CORRADE_COMPARE(layer.layerName(emptyLayer2), "Global");
+    CORRADE_COMPARE(layer.layerName(emptyLayer2).data(), global.data());
+    CORRADE_COMPARE(layer.layerName(emptyLayer2).flags(), Containers::StringViewFlag::Global|Containers::StringViewFlag::NullTerminated);
 
     Containers::StringView globalNonNullTerminated = "Global non null!"_s.exceptSuffix(1);
     layer.setLayerName(emptyLayer3, globalNonNullTerminated);
-    CORRADE_COMPARE(layer.layerName(emptyLayer3.handle()), "Global non null");
-    CORRADE_VERIFY(layer.layerName(emptyLayer3.handle()).data() != globalNonNullTerminated.data());
-    CORRADE_COMPARE(layer.layerName(emptyLayer3.handle()).flags(), Containers::StringViewFlag::NullTerminated);
+    CORRADE_COMPARE(layer.layerName(emptyLayer3), "Global non null");
+    CORRADE_VERIFY(layer.layerName(emptyLayer3).data() != globalNonNullTerminated.data());
+    CORRADE_COMPARE(layer.layerName(emptyLayer3).flags(), Containers::StringViewFlag::NullTerminated);
 
     Containers::StringView local = "Local";
     layer.setLayerName(emptyLayer5, local);
-    CORRADE_COMPARE(layer.layerName(emptyLayer5.handle()), "Local");
-    CORRADE_VERIFY(layer.layerName(emptyLayer5.handle()).data() != local.data());
-    CORRADE_COMPARE(layer.layerName(emptyLayer5.handle()).flags(), Containers::StringViewFlag::NullTerminated);
+    CORRADE_COMPARE(layer.layerName(emptyLayer5), "Local");
+    CORRADE_VERIFY(layer.layerName(emptyLayer5).data() != local.data());
+    CORRADE_COMPARE(layer.layerName(emptyLayer5).flags(), Containers::StringViewFlag::NullTerminated);
 
     /* Removing a layer makes the old name still available with the old
        handle */
@@ -1492,12 +1492,12 @@ void DebugLayerTest::layerName() {
     EmptyLayer& emptyLayer4Replacement = ui.setLayerInstance(Containers::pointer<EmptyLayer>(ui.createLayer()));
     CORRADE_COMPARE(layerHandleId(emptyLayer4Replacement.handle()), layerHandleId(emptyLayer4Handle));
     CORRADE_COMPARE(layer.layerName(emptyLayer4Handle), "Fourth");
-    CORRADE_COMPARE(layer.layerName(emptyLayer4Replacement.handle()), "");
+    CORRADE_COMPARE(layer.layerName(emptyLayer4Replacement), "");
 
     /* Setting a name for the replacement layer makes the old one unknown */
     layer.setLayerName(emptyLayer4Replacement, "Replacement");
     CORRADE_COMPARE(layer.layerName(emptyLayer4Handle), "");
-    CORRADE_COMPARE(layer.layerName(emptyLayer4Replacement.handle()), "Replacement");
+    CORRADE_COMPARE(layer.layerName(emptyLayer4Replacement), "Replacement");
 
     /* Updating after removing a layer and creating a new one in the same slot
        forgets the name -- the handle gets updated internally, so it cannot
@@ -1508,7 +1508,7 @@ void DebugLayerTest::layerName() {
     CORRADE_COMPARE(layerHandleId(emptyLayer4Replacement2.handle()), layerHandleId(emptyLayer4ReplacementHandle));
     ui.update();
     CORRADE_COMPARE(layer.layerName(emptyLayer4ReplacementHandle), "");
-    CORRADE_COMPARE(layer.layerName(emptyLayer4Replacement2.handle()), "");
+    CORRADE_COMPARE(layer.layerName(emptyLayer4Replacement2), "");
 
     /* Updating after removing a layer forgets the name as well */
     layer.setLayerName(emptyLayer4Replacement2, "Replacement 2");
@@ -1520,11 +1520,11 @@ void DebugLayerTest::layerName() {
 
     /* It's possible to change the debug layer name */
     layer.setLayerName(layer, "This is a debug layer!");
-    CORRADE_COMPARE(layer.layerName(layer.handle()), "This is a debug layer!");
+    CORRADE_COMPARE(layer.layerName(layer), "This is a debug layer!");
 
     /* Even to an empty string, it doesn't go back to the default in that case */
     layer.setLayerName(layer, "");
-    CORRADE_COMPARE(layer.layerName(layer.handle()), "");
+    CORRADE_COMPARE(layer.layerName(layer), "");
 }
 
 void DebugLayerTest::layerNameDebugIntegration() {
@@ -1708,7 +1708,7 @@ void DebugLayerTest::layerNameDebugIntegration() {
 
     /* Removing an integrated layer w/o replacing deletes the integration on
        next update() as well, if there is */
-    ui.removeLayer(integratedLayer3.handle());
+    ui.removeLayer(integratedLayer3);
     CORRADE_COMPARE(layer.stateData().layers[4].name, "Integrated 3");
     CORRADE_COMPARE(layer.stateData().layers[4].integration, data.used);
     CORRADE_COMPARE(layer.stateData().layers[4].deleter, data.used);
@@ -1731,7 +1731,7 @@ void DebugLayerTest::layerNameDebugIntegration() {
 
     /* Removing the whole debug layer deletes the remaining integration, if
        there is */
-    ui.removeLayer(layer.handle());
+    ui.removeLayer(layer);
     CORRADE_COMPARE(debugIntegrationConstructed, data.used ? 10 : 5);
     CORRADE_COMPARE(debugIntegrationCopied, data.used ? 5 : 0);
     CORRADE_COMPARE(debugIntegrationDestructed, data.used ? 10 : 5);
@@ -1832,7 +1832,7 @@ void DebugLayerTest::layerNameDebugIntegrationExplicit() {
 
     /* Removing the whole debug layer deletes the integration in this case as
        well, if there is */
-    ui.removeLayer(layer.handle());
+    ui.removeLayer(layer);
     CORRADE_COMPARE(debugIntegrationConstructed, data.used ? 3 : 2);
     CORRADE_COMPARE(debugIntegrationCopied, data.used ? 2 : 1);
     CORRADE_COMPARE(debugIntegrationDestructed, data.used ? 3 : 2);
@@ -1925,7 +1925,7 @@ void DebugLayerTest::layerNameDebugIntegrationExplicitRvalue() {
 
     /* Removing the whole debug layer deletes the integration in this case as
        well */
-    ui.removeLayer(layer.handle());
+    ui.removeLayer(layer);
     CORRADE_COMPARE(debugIntegrationConstructed, data.used ? 2 : 1);
     CORRADE_COMPARE(debugIntegrationMoved, data.used ? 1 : 0);
     CORRADE_COMPARE(debugIntegrationDestructed, data.used ? 2 : 1);
@@ -2082,11 +2082,11 @@ void DebugLayerTest::layouterNameNoOp() {
     EmptyLayouter& emptyLayouter = ui.setLayouterInstance(Containers::pointer<EmptyLayouter>(ui.createLayouter()));
     /* Picking a source that isn't Layouters but also isn't just empty */
     DebugLayer& layer = ui.setLayerInstance(Containers::pointer<DebugLayer>(ui.createLayer(), DebugLayerSource::NodeHierarchy, DebugLayerFlags{}));
-    CORRADE_COMPARE(layer.layouterName(emptyLayouter.handle()), "");
+    CORRADE_COMPARE(layer.layouterName(emptyLayouter), "");
 
     /* Setting a name doesn't remember anything */
     layer.setLayouterName(emptyLayouter, "Empty");
-    CORRADE_COMPARE(layer.layouterName(emptyLayouter.handle()), "");
+    CORRADE_COMPARE(layer.layouterName(emptyLayouter), "");
 }
 
 void DebugLayerTest::layouterName() {
@@ -2115,8 +2115,8 @@ void DebugLayerTest::layouterName() {
 
     /* By default, any animator has the name empty. The empty names have no
        null-terminated or global flags guaranteed. */
-    CORRADE_COMPARE(layer.layouterName(emptyLayouter1.handle()), "");
-    CORRADE_COMPARE(layer.layouterName(emptyLayouter2.handle()), "");
+    CORRADE_COMPARE(layer.layouterName(emptyLayouter1), "");
+    CORRADE_COMPARE(layer.layouterName(emptyLayouter2), "");
 
     /* Setting a name of the first animator enlarges the array to fit it.
        Compared to layers, which are resized to contain at least the debug
@@ -2124,7 +2124,7 @@ void DebugLayerTest::layouterName() {
        entry to update. */
     layer.setLayouterName(emptyLayouter1, "First empty");
     CORRADE_COMPARE(layer.stateData().layouters.size(), 1);
-    CORRADE_COMPARE(layer.layouterName(emptyLayouter1.handle()), "First empty");
+    CORRADE_COMPARE(layer.layouterName(emptyLayouter1), "First empty");
 
     /* A layouter outside of any existing bounds will have an empty name as
        well; a layer with known ID but wrong generation also, no
@@ -2138,39 +2138,39 @@ void DebugLayerTest::layouterName() {
     EmptyLayouter& emptyLayouter4 = ui.setLayouterInstance(Containers::pointer<EmptyLayouter>(ui.createLayouter()));
     EmptyLayouter& emptyLayouter5 = ui.setLayouterInstance(Containers::pointer<EmptyLayouter>(ui.createLayouter()));
     CORRADE_COMPARE(layer.stateData().layouters.size(), 1);
-    CORRADE_COMPARE(layer.layouterName(emptyLayouter3.handle()), "");
-    CORRADE_COMPARE(layer.layouterName(emptyLayouter4.handle()), "");
-    CORRADE_COMPARE(layer.layouterName(emptyLayouter5.handle()), "");
+    CORRADE_COMPARE(layer.layouterName(emptyLayouter3), "");
+    CORRADE_COMPARE(layer.layouterName(emptyLayouter4), "");
+    CORRADE_COMPARE(layer.layouterName(emptyLayouter5), "");
 
     /* It enlarges only once setting a name of one of these */
     layer.setLayouterName(emptyLayouter4, "Fourth");
     CORRADE_COMPARE(layer.stateData().layouters.size(), 4);
-    CORRADE_COMPARE(layer.layouterName(emptyLayouter4.handle()), "Fourth");
+    CORRADE_COMPARE(layer.layouterName(emptyLayouter4), "Fourth");
 
     /* Update doesn't clear the layouter names */
     ui.update();
-    CORRADE_COMPARE(layer.layouterName(emptyLayouter1.handle()), "First empty");
-    CORRADE_COMPARE(layer.layouterName(emptyLayouter4.handle()), "Fourth");
+    CORRADE_COMPARE(layer.layouterName(emptyLayouter1), "First empty");
+    CORRADE_COMPARE(layer.layouterName(emptyLayouter4), "Fourth");
 
     /* Setting a global string keeps a reference to it, local or
        non-null-terminated string is copied */
     Containers::StringView global = "Global"_s;
     layer.setLayouterName(emptyLayouter2, global);
-    CORRADE_COMPARE(layer.layouterName(emptyLayouter2.handle()), "Global");
-    CORRADE_COMPARE(layer.layouterName(emptyLayouter2.handle()).data(), global.data());
-    CORRADE_COMPARE(layer.layouterName(emptyLayouter2.handle()).flags(), Containers::StringViewFlag::Global|Containers::StringViewFlag::NullTerminated);
+    CORRADE_COMPARE(layer.layouterName(emptyLayouter2), "Global");
+    CORRADE_COMPARE(layer.layouterName(emptyLayouter2).data(), global.data());
+    CORRADE_COMPARE(layer.layouterName(emptyLayouter2).flags(), Containers::StringViewFlag::Global|Containers::StringViewFlag::NullTerminated);
 
     Containers::StringView globalNonNullTerminated = "Global non null!"_s.exceptSuffix(1);
     layer.setLayouterName(emptyLayouter3, globalNonNullTerminated);
-    CORRADE_COMPARE(layer.layouterName(emptyLayouter3.handle()), "Global non null");
-    CORRADE_VERIFY(layer.layouterName(emptyLayouter3.handle()).data() != globalNonNullTerminated.data());
-    CORRADE_COMPARE(layer.layouterName(emptyLayouter3.handle()).flags(), Containers::StringViewFlag::NullTerminated);
+    CORRADE_COMPARE(layer.layouterName(emptyLayouter3), "Global non null");
+    CORRADE_VERIFY(layer.layouterName(emptyLayouter3).data() != globalNonNullTerminated.data());
+    CORRADE_COMPARE(layer.layouterName(emptyLayouter3).flags(), Containers::StringViewFlag::NullTerminated);
 
     Containers::StringView local = "Local";
     layer.setLayouterName(emptyLayouter5, local);
-    CORRADE_COMPARE(layer.layouterName(emptyLayouter5.handle()), "Local");
-    CORRADE_VERIFY(layer.layouterName(emptyLayouter5.handle()).data() != local.data());
-    CORRADE_COMPARE(layer.layouterName(emptyLayouter5.handle()).flags(), Containers::StringViewFlag::NullTerminated);
+    CORRADE_COMPARE(layer.layouterName(emptyLayouter5), "Local");
+    CORRADE_VERIFY(layer.layouterName(emptyLayouter5).data() != local.data());
+    CORRADE_COMPARE(layer.layouterName(emptyLayouter5).flags(), Containers::StringViewFlag::NullTerminated);
 
     /* Removing a layouter makes the old name still available with the old
        handle */
@@ -2183,12 +2183,12 @@ void DebugLayerTest::layouterName() {
     EmptyLayouter& emptyLayouter4Replacement = ui.setLayouterInstance(Containers::pointer<EmptyLayouter>(ui.createLayouter()));
     CORRADE_COMPARE(layouterHandleId(emptyLayouter4Replacement.handle()), layouterHandleId(emptyLayouter4Handle));
     CORRADE_COMPARE(layer.layouterName(emptyLayouter4Handle), "Fourth");
-    CORRADE_COMPARE(layer.layouterName(emptyLayouter4Replacement.handle()), "");
+    CORRADE_COMPARE(layer.layouterName(emptyLayouter4Replacement), "");
 
     /* Setting a name for the replacement layouter makes the old one unknown */
     layer.setLayouterName(emptyLayouter4Replacement, "Replacement");
     CORRADE_COMPARE(layer.layouterName(emptyLayouter4Handle), "");
-    CORRADE_COMPARE(layer.layouterName(emptyLayouter4Replacement.handle()), "Replacement");
+    CORRADE_COMPARE(layer.layouterName(emptyLayouter4Replacement), "Replacement");
 
     /* Updating after removing a layouter and creating a new one in the same
        slot forgets the name -- the handle gets updated internally, so it
@@ -2196,10 +2196,10 @@ void DebugLayerTest::layouterName() {
     LayouterHandle emptyLayouter4ReplacementHandle = emptyLayouter4Replacement.handle();
     ui.removeLayouter(emptyLayouter4ReplacementHandle);
     EmptyLayouter& emptyLayouter4Replacement2 = ui.setLayouterInstance(Containers::pointer<EmptyLayouter>(ui.createLayouter()));
-    CORRADE_COMPARE(layouterHandleId(emptyLayouter4Replacement2.handle()), layouterHandleId(emptyLayouter4ReplacementHandle));
+    CORRADE_COMPARE(layouterHandleId(emptyLayouter4Replacement2), layouterHandleId(emptyLayouter4ReplacementHandle));
     ui.update();
     CORRADE_COMPARE(layer.layouterName(emptyLayouter4ReplacementHandle), "");
-    CORRADE_COMPARE(layer.layouterName(emptyLayouter4Replacement2.handle()), "");
+    CORRADE_COMPARE(layer.layouterName(emptyLayouter4Replacement2), "");
 
     /* Updating after removing a layouter forgets the name as well */
     layer.setLayouterName(emptyLayouter4Replacement2, "Replacement 2");
@@ -2387,7 +2387,7 @@ void DebugLayerTest::layouterNameDebugIntegration() {
 
     /* Removing an integrated layouter w/o replacing deletes the integration on
        next update() as well, if there is */
-    ui.removeLayouter(integratedLayouter3.handle());
+    ui.removeLayouter(integratedLayouter3);
     CORRADE_COMPARE(layer.stateData().layouters[3].name, "Integrated 3");
     CORRADE_COMPARE(layer.stateData().layouters[3].integration, data.used);
     CORRADE_COMPARE(layer.stateData().layouters[3].deleter, data.used);
@@ -2410,7 +2410,7 @@ void DebugLayerTest::layouterNameDebugIntegration() {
 
     /* Removing the whole debug layer deletes the remaining integration, if
        there is */
-    ui.removeLayer(layer.handle());
+    ui.removeLayer(layer);
     CORRADE_COMPARE(debugIntegrationConstructed, data.used ? 10 : 5);
     CORRADE_COMPARE(debugIntegrationCopied, data.used ? 5 : 0);
     CORRADE_COMPARE(debugIntegrationDestructed, data.used ? 10 : 5);
@@ -2508,7 +2508,7 @@ void DebugLayerTest::layouterNameDebugIntegrationExplicit() {
 
     /* Removing the whole debug layer deletes the integration in this case as
        well, if there is */
-    ui.removeLayer(layer.handle());
+    ui.removeLayer(layer);
     CORRADE_COMPARE(debugIntegrationConstructed, data.used ? 3 : 2);
     CORRADE_COMPARE(debugIntegrationCopied, data.used ? 2 : 1);
     CORRADE_COMPARE(debugIntegrationDestructed, data.used ? 3 : 2);
@@ -2602,7 +2602,7 @@ void DebugLayerTest::layouterNameDebugIntegrationExplicitRvalue() {
 
     /* Removing the whole debug layer deletes the integration in this case as
        well */
-    ui.removeLayer(layer.handle());
+    ui.removeLayer(layer);
     CORRADE_COMPARE(debugIntegrationConstructed, data.used ? 2 : 1);
     CORRADE_COMPARE(debugIntegrationMoved, data.used ? 1 : 0);
     CORRADE_COMPARE(debugIntegrationDestructed, data.used ? 2 : 1);
@@ -2769,11 +2769,11 @@ void DebugLayerTest::animatorNameNoOp() {
     EmptyAnimator& emptyAnimator = ui.setGenericAnimatorInstance(Containers::pointer<EmptyAnimator>(ui.createAnimator()));
     /* Picking a source that isn't Animators but also isn't just empty */
     DebugLayer& layer = ui.setLayerInstance(Containers::pointer<DebugLayer>(ui.createLayer(), DebugLayerSource::NodeHierarchy, DebugLayerFlags{}));
-    CORRADE_COMPARE(layer.animatorName(emptyAnimator.handle()), "");
+    CORRADE_COMPARE(layer.animatorName(emptyAnimator), "");
 
     /* Setting a name doesn't remember anything */
     layer.setAnimatorName(emptyAnimator, "Empty");
-    CORRADE_COMPARE(layer.animatorName(emptyAnimator.handle()), "");
+    CORRADE_COMPARE(layer.animatorName(emptyAnimator), "");
 }
 
 void DebugLayerTest::animatorName() {
@@ -2815,8 +2815,8 @@ void DebugLayerTest::animatorName() {
 
     /* By default, any animator has the name empty. The empty names have no
        null-terminated or global flags guaranteed. */
-    CORRADE_COMPARE(layer.animatorName(emptyAnimator1.handle()), "");
-    CORRADE_COMPARE(layer.animatorName(emptyAnimator2.handle()), "");
+    CORRADE_COMPARE(layer.animatorName(emptyAnimator1), "");
+    CORRADE_COMPARE(layer.animatorName(emptyAnimator2), "");
 
     /* Setting a name of the first animator enlarges the array to fit it.
        Compared to layers, which are resized to contain at least the debug
@@ -2824,7 +2824,7 @@ void DebugLayerTest::animatorName() {
        entry to update. */
     layer.setAnimatorName(emptyAnimator1, "First empty");
     CORRADE_COMPARE(layer.stateData().animators.size(), 1);
-    CORRADE_COMPARE(layer.animatorName(emptyAnimator1.handle()), "First empty");
+    CORRADE_COMPARE(layer.animatorName(emptyAnimator1), "First empty");
 
     /* An animator outside of any existing bounds will have an empty name as
        well; an animator with known ID but wrong generation also, no
@@ -2838,39 +2838,39 @@ void DebugLayerTest::animatorName() {
     EmptyNodeAnimator& emptyAnimator4 = ui.setNodeAnimatorInstance(Containers::pointer<EmptyNodeAnimator>(ui.createAnimator()));
     EmptyGenericAnimator& emptyAnimator5 = ui.setGenericAnimatorInstance(Containers::pointer<EmptyGenericAnimator>(ui.createAnimator()));
     CORRADE_COMPARE(layer.stateData().animators.size(), 1);
-    CORRADE_COMPARE(layer.animatorName(emptyAnimator3.handle()), "");
-    CORRADE_COMPARE(layer.animatorName(emptyAnimator4.handle()), "");
-    CORRADE_COMPARE(layer.animatorName(emptyAnimator5.handle()), "");
+    CORRADE_COMPARE(layer.animatorName(emptyAnimator3), "");
+    CORRADE_COMPARE(layer.animatorName(emptyAnimator4), "");
+    CORRADE_COMPARE(layer.animatorName(emptyAnimator5), "");
 
     /* It enlarges only once setting a name of one of these */
     layer.setAnimatorName(emptyAnimator4, "Fourth");
     CORRADE_COMPARE(layer.stateData().animators.size(), 4);
-    CORRADE_COMPARE(layer.animatorName(emptyAnimator4.handle()), "Fourth");
+    CORRADE_COMPARE(layer.animatorName(emptyAnimator4), "Fourth");
 
     /* Update doesn't clear the animator names */
     ui.update();
-    CORRADE_COMPARE(layer.animatorName(emptyAnimator1.handle()), "First empty");
-    CORRADE_COMPARE(layer.animatorName(emptyAnimator4.handle()), "Fourth");
+    CORRADE_COMPARE(layer.animatorName(emptyAnimator1), "First empty");
+    CORRADE_COMPARE(layer.animatorName(emptyAnimator4), "Fourth");
 
     /* Setting a global string keeps a reference to it, local or
        non-null-terminated string is copied */
     Containers::StringView global = "Global"_s;
     layer.setAnimatorName(emptyAnimator2, global);
-    CORRADE_COMPARE(layer.animatorName(emptyAnimator2.handle()), "Global");
-    CORRADE_COMPARE(layer.animatorName(emptyAnimator2.handle()).data(), global.data());
-    CORRADE_COMPARE(layer.animatorName(emptyAnimator2.handle()).flags(), Containers::StringViewFlag::Global|Containers::StringViewFlag::NullTerminated);
+    CORRADE_COMPARE(layer.animatorName(emptyAnimator2), "Global");
+    CORRADE_COMPARE(layer.animatorName(emptyAnimator2).data(), global.data());
+    CORRADE_COMPARE(layer.animatorName(emptyAnimator2).flags(), Containers::StringViewFlag::Global|Containers::StringViewFlag::NullTerminated);
 
     Containers::StringView globalNonNullTerminated = "Global non null!"_s.exceptSuffix(1);
     layer.setAnimatorName(emptyAnimator3, globalNonNullTerminated);
-    CORRADE_COMPARE(layer.animatorName(emptyAnimator3.handle()), "Global non null");
-    CORRADE_VERIFY(layer.animatorName(emptyAnimator3.handle()).data() != globalNonNullTerminated.data());
-    CORRADE_COMPARE(layer.animatorName(emptyAnimator3.handle()).flags(), Containers::StringViewFlag::NullTerminated);
+    CORRADE_COMPARE(layer.animatorName(emptyAnimator3), "Global non null");
+    CORRADE_VERIFY(layer.animatorName(emptyAnimator3).data() != globalNonNullTerminated.data());
+    CORRADE_COMPARE(layer.animatorName(emptyAnimator3).flags(), Containers::StringViewFlag::NullTerminated);
 
     Containers::StringView local = "Local";
     layer.setAnimatorName(emptyAnimator5, local);
-    CORRADE_COMPARE(layer.animatorName(emptyAnimator5.handle()), "Local");
-    CORRADE_VERIFY(layer.animatorName(emptyAnimator5.handle()).data() != local.data());
-    CORRADE_COMPARE(layer.animatorName(emptyAnimator5.handle()).flags(), Containers::StringViewFlag::NullTerminated);
+    CORRADE_COMPARE(layer.animatorName(emptyAnimator5), "Local");
+    CORRADE_VERIFY(layer.animatorName(emptyAnimator5).data() != local.data());
+    CORRADE_COMPARE(layer.animatorName(emptyAnimator5).flags(), Containers::StringViewFlag::NullTerminated);
 
     /* Removing an animator makes the old name still available with the old
        handle */
@@ -2883,12 +2883,12 @@ void DebugLayerTest::animatorName() {
     EmptyGenericAnimator& emptyAnimator4Replacement = ui.setGenericAnimatorInstance(Containers::pointer<EmptyGenericAnimator>(ui.createAnimator()));
     CORRADE_COMPARE(animatorHandleId(emptyAnimator4Replacement.handle()), animatorHandleId(emptyAnimator4Handle));
     CORRADE_COMPARE(layer.animatorName(emptyAnimator4Handle), "Fourth");
-    CORRADE_COMPARE(layer.animatorName(emptyAnimator4Replacement.handle()), "");
+    CORRADE_COMPARE(layer.animatorName(emptyAnimator4Replacement), "");
 
     /* Setting a name for the replacement animator makes the old one unknown */
     layer.setAnimatorName(emptyAnimator4Replacement, "Replacement");
     CORRADE_COMPARE(layer.animatorName(emptyAnimator4Handle), "");
-    CORRADE_COMPARE(layer.animatorName(emptyAnimator4Replacement.handle()), "Replacement");
+    CORRADE_COMPARE(layer.animatorName(emptyAnimator4Replacement), "Replacement");
 
     /* Updating after removing a layer and creating a new one in the same slot
        forgets the name -- the handle gets updated internally, so it cannot
@@ -2899,7 +2899,7 @@ void DebugLayerTest::animatorName() {
     CORRADE_COMPARE(animatorHandleId(emptyAnimator4Replacement2.handle()), animatorHandleId(emptyAnimator4ReplacementHandle));
     ui.update();
     CORRADE_COMPARE(layer.animatorName(emptyAnimator4ReplacementHandle), "");
-    CORRADE_COMPARE(layer.animatorName(emptyAnimator4Replacement2.handle()), "");
+    CORRADE_COMPARE(layer.animatorName(emptyAnimator4Replacement2), "");
 
     /* Updating after removing a layer forgets the name as well */
     layer.setAnimatorName(emptyAnimator4Replacement2, "Replacement 2");
@@ -3828,7 +3828,7 @@ void DebugLayerTest::preUpdateTrackAnimators() {
     CORRADE_COMPARE(layer.stateData().animators[1].name, "Hello?");
     AnimatorHandle emptyAnimator2Handle = emptyAnimator2.handle();
     ui.removeAnimator(emptyAnimator2Handle);
-    ui.removeAnimator(emptyAnimator1.handle());
+    ui.removeAnimator(emptyAnimator1);
     EmptyGenericAnimator& emptyAnimator2Replacement = ui.setGenericAnimatorInstance(Containers::pointer<EmptyGenericAnimator>(ui.createAnimator()));
     ui.update();
     CORRADE_COMPARE(animatorHandleId(emptyAnimator2Replacement.handle()), animatorHandleId(emptyAnimator2Handle));
@@ -4296,9 +4296,9 @@ void DebugLayerTest::nodeInspect() {
     /* Remove the layer, animator and child node after all DebugLayer setup;
        add layers, animators and nodes that aren't yet known by it and should
        thus be skipped */
-    ui.removeLayer(removedLayer.handle());
-    ui.removeLayouter(removedLayouter.handle());
-    ui.removeAnimator(removedAnimator1.handle());
+    ui.removeLayer(removedLayer);
+    ui.removeLayouter(removedLayouter);
+    ui.removeAnimator(removedAnimator1);
     if(removedChild != NodeHandle::Null)
         ui.removeNode(removedChild);
     /* This one is in place of removedChild */
@@ -4322,7 +4322,7 @@ void DebugLayerTest::nodeInspect() {
     unknownAnimator2.create(50_nsec, 1_nsec, node);
     /* Remove the other animator after adding others so there's a slot with an
        invalid handle */
-    ui.removeAnimator(removedAnimator2.handle());
+    ui.removeAnimator(removedAnimator2);
 
     /* Inspecting a Null node if nothing is inspected does nothing but returns
        true, as that's a valid scenario */
@@ -4391,12 +4391,12 @@ void DebugLayerTest::nodeInspect() {
        output as above. */
     ui.removeNode(unknownNode1);
     ui.removeNode(unknownNode2);
-    ui.removeLayer(unknownLayer1.handle());
-    ui.removeLayer(unknownLayer2.handle());
-    ui.removeLayouter(unknownLayouter1.handle());
-    ui.removeLayouter(unknownLayouter2.handle());
-    ui.removeAnimator(unknownAnimator1.handle());
-    ui.removeAnimator(unknownAnimator2.handle());
+    ui.removeLayer(unknownLayer1);
+    ui.removeLayer(unknownLayer2);
+    ui.removeLayouter(unknownLayouter1);
+    ui.removeLayouter(unknownLayouter2);
+    ui.removeAnimator(unknownAnimator1);
+    ui.removeAnimator(unknownAnimator2);
 
     /* Inspect the node by an event */
     out = {};

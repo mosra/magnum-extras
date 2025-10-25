@@ -275,6 +275,10 @@ AnimatorHandle AbstractAnimator::handle() const {
     return _state->handle;
 }
 
+AbstractAnimator::operator AnimatorHandle() const {
+    return _state->handle;
+}
+
 AnimatorFeatures AbstractAnimator::features() const {
     const AnimatorFeatures features = doFeatures();
     CORRADE_ASSERT(!(features >= AnimatorFeature::NodeAttachment) ||

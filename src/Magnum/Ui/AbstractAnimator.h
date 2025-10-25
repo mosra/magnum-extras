@@ -374,6 +374,14 @@ class MAGNUM_UI_EXPORT AbstractAnimator {
          */
         AnimatorHandle handle() const;
 
+        /**
+         * @brief Animator handle
+         *
+         * Same as @ref handle(). Useful for passing the animator instance
+         * directly to APIs accepting just an @ref AnimatorHandle.
+         */
+        /*implicit*/ operator AnimatorHandle() const;
+
         /** @brief Features exposed by an animator */
         AnimatorFeatures features() const;
 

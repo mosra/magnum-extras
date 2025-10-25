@@ -807,7 +807,7 @@ Ui::AbstractUserInterface ui{{100, 100}};
 /* [AbstractUserInterface-layers-order] */
 Ui::LineLayer& overlayLineLayer = DOXYGEN_ELLIPSIS(ui.layer<Ui::LineLayer>({}));
 
-Ui::LayerHandle overlayLayerHandle = ui.createLayer(overlayLineLayer.handle());
+Ui::LayerHandle overlayLayerHandle = ui.createLayer(overlayLineLayer);
 Ui::BaseLayer& overlayLayer = ui.setLayerInstance(DOXYGEN_ELLIPSIS(Containers::pointer<BaseLayer>(overlayLayerHandle, shared)));
 /* [AbstractUserInterface-layers-order] */
 static_cast<void>(overlayLayer);

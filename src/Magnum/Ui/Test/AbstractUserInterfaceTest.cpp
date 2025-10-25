@@ -6777,7 +6777,7 @@ void AbstractUserInterfaceTest::advanceAnimations() {
        nothing else to call doAdvance() for), the playing is. */
     ui.advanceAnimations(2_nsec);
     CORRADE_COMPARE_AS(calls, (Containers::arrayView<Containers::Pair<AnimatorHandle, Call>>({
-        {animator2.handle(), Advance},
+        {animator2, Advance},
     })), TestSuite::Compare::Container);
     CORRADE_COMPARE(animator1.state(), AnimatorState::NeedsAdvance);
     CORRADE_COMPARE(animatorNoAdvanceNeeded.state(), AnimatorStates{});
@@ -6815,17 +6815,17 @@ void AbstractUserInterfaceTest::advanceAnimations() {
     calls = {};
     ui.advanceAnimations(10_nsec);
     CORRADE_COMPARE_AS(calls, (Containers::arrayView<Containers::Pair<AnimatorHandle, Call>>({
-        {animator1.handle(), Advance},
-        {animator2.handle(), Advance},
-        {animator2.handle(), Clean},
-        {animatorNodeAttachment.handle(), Advance},
-        {animatorLayer3DataAttachment.handle(), Advance},
+        {animator1, Advance},
+        {animator2, Advance},
+        {animator2, Clean},
+        {animatorNodeAttachment, Advance},
+        {animatorLayer3DataAttachment, Advance},
         /* All generic animators get executed first, then node animators */
-        {animatorNode.handle(), Advance},
+        {animatorNode, Advance},
         /* Then data animators */
-        {animatorLayer3Data.handle(), Advance},
+        {animatorLayer3Data, Advance},
         /* And then (another layer) style animators */
-        {animatorLayer4Style.handle(), Advance},
+        {animatorLayer4Style, Advance},
     })), TestSuite::Compare::Container);
     CORRADE_COMPARE(animator1.state(), AnimatorState::NeedsAdvance);
     CORRADE_COMPARE(animatorNoAdvanceNeeded.state(), AnimatorStates{});
@@ -6863,21 +6863,21 @@ void AbstractUserInterfaceTest::advanceAnimations() {
     calls = {};
     ui.advanceAnimations(15_nsec);
     CORRADE_COMPARE_AS(calls, (Containers::arrayView<Containers::Pair<AnimatorHandle, Call>>({
-        {animator1.handle(), Advance},
-        {animator1.handle(), Clean},
-        {animatorNodeAttachment.handle(), Advance},
-        {animatorNodeAttachment.handle(), Clean},
-        {animatorLayer3DataAttachment.handle(), Advance},
-        {animatorLayer3DataAttachment.handle(), Clean},
+        {animator1, Advance},
+        {animator1, Clean},
+        {animatorNodeAttachment, Advance},
+        {animatorNodeAttachment, Clean},
+        {animatorLayer3DataAttachment, Advance},
+        {animatorLayer3DataAttachment, Clean},
         /* All generic animators get executed first, then node animators */
-        {animatorNode.handle(), Advance},
-        {animatorNode.handle(), Clean},
+        {animatorNode, Advance},
+        {animatorNode, Clean},
         /* Then data animators */
-        {animatorLayer3Data.handle(), Advance},
-        {animatorLayer3Data.handle(), Clean},
+        {animatorLayer3Data, Advance},
+        {animatorLayer3Data, Clean},
         /* And then (another layer) style animators */
-        {animatorLayer4Style.handle(), Advance},
-        {animatorLayer4Style.handle(), Clean},
+        {animatorLayer4Style, Advance},
+        {animatorLayer4Style, Clean},
     })), TestSuite::Compare::Container);
     CORRADE_COMPARE(animator1.state(), AnimatorStates{});
     CORRADE_COMPARE(animatorNoAdvanceNeeded.state(), AnimatorStates{});
@@ -12077,7 +12077,7 @@ void AbstractUserInterfaceTest::statePreUpdateClean() {
     OtherLayer& layer2 = ui.setLayerInstance(Containers::pointer<OtherLayer>(ui.createLayer(), calls));
     OtherLayer& layerRemoved = ui.setLayerInstance(Containers::pointer<OtherLayer>(ui.createLayer(), calls));
     Layer& layer3 = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer(), calls));
-    ui.removeLayer(layerRemoved.handle());
+    ui.removeLayer(layerRemoved);
     CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataAttachmentUpdate);
 
     /* Nodes with attachments from various layers */
@@ -12101,9 +12101,9 @@ void AbstractUserInterfaceTest::statePreUpdateClean() {
         ui.update();
         CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
         CORRADE_COMPARE_AS(calls, (Containers::arrayView<Containers::Pair<int, LayerHandle>>({
-            {Update, layer1.handle()},
-            {Update, layer2.handle()},
-            {Update, layer3.handle()},
+            {Update, layer1},
+            {Update, layer2},
+            {Update, layer3},
         })), TestSuite::Compare::Container);
     }
 
@@ -12119,12 +12119,12 @@ void AbstractUserInterfaceTest::statePreUpdateClean() {
         CORRADE_COMPARE_AS(calls, (Containers::arrayView<Containers::Pair<int, LayerHandle>>({
             /* Both clean and update is called on all layers although only for one
             there's an actual change */
-            {0|Clean, layer1.handle()},
-            {0|Clean, layer2.handle()},
-            {1|Clean, layer3.handle()},
-            {Update, layer1.handle()},
-            {Update, layer2.handle()},
-            {Update, layer3.handle()},
+            {0|Clean, layer1},
+            {0|Clean, layer2},
+            {1|Clean, layer3},
+            {Update, layer1},
+            {Update, layer2},
+            {Update, layer3},
         })), TestSuite::Compare::Container);
     }
 
@@ -12139,8 +12139,8 @@ void AbstractUserInterfaceTest::statePreUpdateClean() {
         ui.update();
         CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
         CORRADE_COMPARE_AS(calls, (Containers::arrayView<Containers::Pair<int, LayerHandle>>({
-            {PreUpdate, layer1.handle()},
-            {Update, layer1.handle()},
+            {PreUpdate, layer1},
+            {Update, layer1},
         })), TestSuite::Compare::Container);
     }
 
@@ -12159,13 +12159,13 @@ void AbstractUserInterfaceTest::statePreUpdateClean() {
         CORRADE_COMPARE_AS(calls, (Containers::arrayView<Containers::Pair<int, LayerHandle>>({
             /* Again both clean and update is called on all layers although only
             for one there's an actual change */
-            {0|Clean, layer1.handle()},
-            {1|Clean, layer2.handle()},
-            {0|Clean, layer3.handle()},
-            {PreUpdate, layer3.handle()},
-            {Update, layer1.handle()},
-            {Update, layer2.handle()},
-            {Update, layer3.handle()},
+            {0|Clean, layer1},
+            {1|Clean, layer2},
+            {0|Clean, layer3},
+            {PreUpdate, layer3},
+            {Update, layer1},
+            {Update, layer2},
+            {Update, layer3},
         })), TestSuite::Compare::Container);
     }
 
@@ -12186,18 +12186,18 @@ void AbstractUserInterfaceTest::statePreUpdateClean() {
         CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
         CORRADE_COMPARE_AS(calls, (Containers::arrayView<Containers::Pair<int, LayerHandle>>({
             /* First the clean for the data removed in layer 1 */
-            {1|Clean, layer1.handle()},
-            {0|Clean, layer2.handle()},
-            {0|Clean, layer3.handle()},
-            {PreUpdate, layer1.handle()},
-            {PreUpdate, layer3.handle()},
+            {1|Clean, layer1},
+            {0|Clean, layer2},
+            {0|Clean, layer3},
+            {PreUpdate, layer1},
+            {PreUpdate, layer3},
             /* Then the clean for the data removed inside preUpdate() calls */
-            {1|Clean, layer1.handle()},
-            {2|Clean, layer2.handle()},
-            {1|Clean, layer3.handle()},
-            {Update, layer1.handle()},
-            {Update, layer2.handle()},
-            {Update, layer3.handle()},
+            {1|Clean, layer1},
+            {2|Clean, layer2},
+            {1|Clean, layer3},
+            {Update, layer1},
+            {Update, layer2},
+            {Update, layer3},
         })), TestSuite::Compare::Container);
     }
 }
@@ -12235,7 +12235,7 @@ void AbstractUserInterfaceTest::statePropagateFromLayers() {
        skipped. The "works correctly" aspect can't really be observed, we can
        only check that it doesn't crash. */
     layerRemoved.setNeedsUpdate(data.state);
-    ui.removeLayer(layerRemoved.handle());
+    ui.removeLayer(layerRemoved);
     CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataAttachmentUpdate);
 
     ui.update();
@@ -12307,7 +12307,7 @@ void AbstractUserInterfaceTest::statePropagateFromLayouters() {
        skipped. The "works correctly" aspect can't really be observed, we can
        only check that it doesn't crash. */
     layouterRemoved.setNeedsUpdate();
-    ui.removeLayouter(layouterRemoved.handle());
+    ui.removeLayouter(layouterRemoved);
     CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsLayoutAssignmentUpdate);
 
     ui.update();
@@ -12371,7 +12371,7 @@ void AbstractUserInterfaceTest::statePropagateFromAnimators() {
        instance is skipped. The "works correctly" aspect can't really be
        observed, we can only check that it doesn't crash. */
     animatorRemoved.create(10_nsec, 10_nsec);
-    ui.removeAnimator(animatorRemoved.handle());
+    ui.removeAnimator(animatorRemoved);
     CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
 
     /* Create an animation in the second animator. It shouldn't stop at the
@@ -13011,27 +13011,27 @@ void AbstractUserInterfaceTest::drawComposite() {
     CORRADE_COMPARE_AS(compositeDrawCalls, (Containers::arrayView<Containers::Triple<LayerHandle, Int,
             Containers::Pair<std::size_t, std::size_t>>>({
         /* First top-level node, non-composited data and then composited */
-        {layer2.handle(), Draw, {0, 1}},
+        {layer2, Draw, {0, 1}},
         /* The composite right now uses a range of rectangles that matches the
            range of data passed to draw. No deduplication or overlap handling
            anywhere so far. */
-        {layer3Compositing.handle(), Composite, {0, 1}},
-        {layer3Compositing.handle(), Draw, {0, 1}},
+        {layer3Compositing, Composite, {0, 1}},
+        {layer3Compositing, Draw, {0, 1}},
         /* Second top-level node, a composition with two data and then a
            composition with one data */
         /** @todo this composition could be merged with the above when
             non-overlapping top-level node draw merging is implemented */
-        {layer1Compositing.handle(), Composite, {0, 3}},
-        {layer1Compositing.handle(), Draw, {0, 3}},
-        {layer3Compositing.handle(), Composite, {1, 1}},
-        {layer3Compositing.handle(), Draw, {1, 1}},
+        {layer1Compositing, Composite, {0, 3}},
+        {layer1Compositing, Draw, {0, 3}},
+        {layer3Compositing, Composite, {1, 1}},
+        {layer3Compositing, Draw, {1, 1}},
         /* Third top-level node, just a draw */
-        {layer2.handle(), Draw, {1, 1}},
+        {layer2, Draw, {1, 1}},
         /* Fourth top-level node, composite and draw that has to happen in
            isolation because of the other top-level node in between */
         /** @todo or does it? if non-overlapping it also doesn't have to */
-        {layer1Compositing.handle(), Composite, {3, 1}},
-        {layer1Compositing.handle(), Draw, {3, 1}},
+        {layer1Compositing, Composite, {3, 1}},
+        {layer1Compositing, Draw, {3, 1}},
     })), TestSuite::Compare::Container);
 }
 
@@ -13141,42 +13141,38 @@ void AbstractUserInterfaceTest::drawRendererTransitions() {
 
             {{}, {RendererTargetState::Initial, RendererTargetState::Composite},
                  {{}, {}}},
-            {{layerWithScissorAndCompositing.handle(), Composite}, {}, {}},
+            {{layerWithScissorAndCompositing, Composite}, {}, {}},
                                                 /* First draw composition */
             {{}, {RendererTargetState::Composite, RendererTargetState::Draw},
                  {{}, RendererDrawState::Scissor}},
-            {{layerWithScissorAndCompositing.handle(), Draw}, {}, {}},
-                                                            /* First draw */
+            {{layerWithScissorAndCompositing, Draw}, {}, {}}, /* First draw */
 
             {{}, {RendererTargetState::Draw, RendererTargetState::Draw},
                  {RendererDrawState::Scissor, RendererDrawState::Blending|RendererDrawState::Scissor}},
-            {{layerWithBlendingScissor.handle(), Draw}, {}, {}},
-                                                            /* Second draw */
-            {{layerWithBlendingScissor.handle(), Draw}, {}, {}},
-                                                            /* Third draw */
+            {{layerWithBlendingScissor, Draw}, {}, {}},     /* Second draw */
+            {{layerWithBlendingScissor, Draw}, {}, {}},     /* Third draw */
 
             {{}, {RendererTargetState::Draw, RendererTargetState::Draw},
                  {RendererDrawState::Blending|RendererDrawState::Scissor,
                   RendererDrawState::Blending}},
-            {{layerWithBlending.handle(), Draw}, {}, {}},   /* Fourth draw */
+            {{layerWithBlending, Draw}, {}, {}},            /* Fourth draw */
 
             {{}, {RendererTargetState::Draw, RendererTargetState::Composite},
                  {RendererDrawState::Blending, {}}},
-            {{layerWithScissorAndCompositing.handle(), Composite}, {}, {}},
+            {{layerWithScissorAndCompositing, Composite}, {}, {}},
                                                 /* Fifth draw composition */
             {{}, {RendererTargetState::Composite, RendererTargetState::Draw},
                  {{}, RendererDrawState::Scissor}},
-            {{layerWithScissorAndCompositing.handle(), Draw}, {}, {}},
-                                                            /* Fifth draw */
+            {{layerWithScissorAndCompositing, Draw}, {}, {}}, /* Fifth draw */
 
             {{}, {RendererTargetState::Draw, RendererTargetState::Draw},
                  {RendererDrawState::Scissor, {}}},
-            {{layerWithNothing.handle(), Draw}, {}, {}},    /* Sixth draw */
+            {{layerWithNothing, Draw}, {}, {}},             /* Sixth draw */
 
             {{}, {RendererTargetState::Draw, RendererTargetState::Draw},
                  {{}, RendererDrawState::Blending}},
-            {{layerWithBlending.handle(), Draw}, {}, {}},   /* Seventh draw */
-            {{layerWithBlending.handle(), Draw}, {}, {}},   /* Eighth draw */
+            {{layerWithBlending, Draw}, {}, {}},            /* Seventh draw */
+            {{layerWithBlending, Draw}, {}, {}},            /* Eighth draw */
 
             {{}, {RendererTargetState::Draw, RendererTargetState::Final},
                  {RendererDrawState::Blending, {}}},

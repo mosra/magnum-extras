@@ -155,7 +155,7 @@ Label& Label::setText(const Containers::StringView text) {
 DataHandle Label::data() const {
     /* The data is implicitly from the text layer */
     return _data == LayerDataHandle::Null ? DataHandle::Null :
-        dataHandle(ui().textLayer().handle(), _data);
+        dataHandle(ui().textLayer(), _data);
 }
 
 Anchor label(const Anchor& anchor, const Containers::StringView text, const TextProperties& textProperties, const LabelStyle style) {

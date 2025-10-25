@@ -285,7 +285,7 @@ CORRADE_INTERNAL_ASSERT(debugLayer.highlightNode(button));
         ui.draw();
         converter->convertToFile(unpremultiply(ui.renderer().compositingFramebuffer().read({{}, ImageSize}, {PixelFormat::RGBA8Unorm})), "ui-debuglayer-node-highlight.png");
 
-        ui.removeLayer(debugLayer.handle());
+        ui.removeLayer(debugLayer);
     }
 
     /* Custom integration, with a debug layer that has NodeHierarchy disabled

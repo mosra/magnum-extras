@@ -88,6 +88,10 @@ LayouterHandle AbstractLayouter::handle() const {
     return _state->handle;
 }
 
+AbstractLayouter::operator LayouterHandle() const {
+    return _state->handle;
+}
+
 LayouterStates AbstractLayouter::state() const {
     return _state->state;
 }

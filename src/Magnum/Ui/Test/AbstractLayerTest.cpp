@@ -454,6 +454,8 @@ void AbstractLayerTest::construct() {
     } layer{layerHandle(0xab, 0x12)};
 
     CORRADE_COMPARE(layer.handle(), layerHandle(0xab, 0x12));
+    /* Tests the implicit LayerHandle conversion */
+    CORRADE_COMPARE(layer, layerHandle(0xab, 0x12));
     CORRADE_COMPARE(layer.features(), LayerFeatures(0xe0));
     CORRADE_COMPARE(layer.state(), LayerStates{});
     CORRADE_COMPARE(layer.capacity(), 0);

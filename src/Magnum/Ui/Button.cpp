@@ -271,19 +271,19 @@ DataHandle Button::backgroundData() const {
     /* The background is implicitly from the base layer. It can be null only
        for a NoCreate'd instance, otherwise not. */
     return _backgroundData == LayerDataHandle::Null ? DataHandle::Null :
-        dataHandle(ui().baseLayer().handle(), _backgroundData);
+        dataHandle(ui().baseLayer(), _backgroundData);
 }
 
 DataHandle Button::iconData() const {
     /* The icon is implicitly from the text layer */
     return _iconData == LayerDataHandle::Null ? DataHandle::Null :
-        dataHandle(ui().textLayer().handle(), _iconData);
+        dataHandle(ui().textLayer(), _iconData);
 }
 
 DataHandle Button::textData() const {
     /* The text is implicitly from the text layer */
     return _textData == LayerDataHandle::Null ? DataHandle::Null :
-        dataHandle(ui().textLayer().handle(), _textData);
+        dataHandle(ui().textLayer(), _textData);
 }
 
 Anchor button(const Anchor& anchor, const Icon icon, const Containers::StringView text, const TextProperties& textProperties, const ButtonStyle style) {

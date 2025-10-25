@@ -142,6 +142,8 @@ void AbstractLayouterTest::construct() {
     } layouter{layouterHandle(0xab, 0x12)};
 
     CORRADE_COMPARE(layouter.handle(), layouterHandle(0xab, 0x12));
+    /* Tests the implicit LayouterHandle conversion */
+    CORRADE_COMPARE(layouter, layouterHandle(0xab, 0x12));
     CORRADE_COMPARE(layouter.state(), LayouterStates{});
     CORRADE_COMPARE(layouter.capacity(), 0);
     CORRADE_COMPARE(layouter.usedCount(), 0);

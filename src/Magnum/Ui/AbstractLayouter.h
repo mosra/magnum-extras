@@ -144,6 +144,14 @@ class MAGNUM_UI_EXPORT AbstractLayouter {
         LayouterHandle handle() const;
 
         /**
+         * @brief Layouter handle
+         *
+         * Same as @ref handle(). Useful for passing the layouter instance
+         * directly to APIs accepting just a @ref LayouterHandle.
+         */
+        /*implicit*/ operator LayouterHandle() const;
+
+        /**
          * @brief Layouter state
          *
          * See the @ref LayouterState enum for more information. By default no

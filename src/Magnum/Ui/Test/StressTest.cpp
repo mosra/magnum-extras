@@ -240,7 +240,7 @@ StressTest::StressTest(const Arguments& arguments): Platform::Application{argume
     Containers::Array<Containers::Reference<Layer>> layers;
     for(UnsignedInt i = 0; i != count*2; ++i)
         arrayAppend(layers,  _ui.setLayerInstance(Containers::pointer<Layer>(_ui.createLayer(), skipVertexDataUpdate, skipIndexDataUpdate, advertiseEvents)));
-    _firstLayer = layers[0]->handle();
+    _firstLayer = *layers[0];
 
     const Containers::StaticArrayView<256, const Vector3ub> colors = DebugTools::ColorMap::turbo();
 

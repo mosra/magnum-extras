@@ -976,6 +976,8 @@ void AbstractAnimatorTest::construct() {
 
     CORRADE_COMPARE(animator.features(), AnimatorFeatures{0xbc});
     CORRADE_COMPARE(animator.handle(), animatorHandle(0xab, 0x12));
+    /* Tests the implicit AnimatorHandle conversion */
+    CORRADE_COMPARE(animator, animatorHandle(0xab, 0x12));
     CORRADE_COMPARE(animator.state(), AnimatorStates{});
     CORRADE_COMPARE(animator.time(), 0_nsec);
     CORRADE_COMPARE(animator.capacity(), 0);

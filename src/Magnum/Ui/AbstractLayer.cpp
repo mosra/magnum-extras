@@ -168,6 +168,10 @@ LayerHandle AbstractLayer::handle() const {
     return _state->handle;
 }
 
+AbstractLayer::operator LayerHandle() const {
+    return _state->handle;
+}
+
 LayerStates AbstractLayer::state() const {
     const LayerStates state = doState();
     #ifndef CORRADE_NO_ASSERT
