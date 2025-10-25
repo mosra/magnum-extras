@@ -1499,7 +1499,7 @@ class MAGNUM_UI_EXPORT AbstractAnimator {
          * same as @ref create(Nanoseconds, Nanoseconds, UnsignedInt, AnimationFlags),
          * see its documentation for more information. If @p node is not
          * @ref NodeHandle::Null, directly attaches the created animation to
-         * given animation, equivalent to calling @ref attach(AnimationHandle, NodeHandle).
+         * given node, equivalent to calling @ref attach(AnimationHandle, NodeHandle).
          */
         AnimationHandle create(Nanoseconds start, Nanoseconds duration, NodeHandle node, UnsignedInt repeatCount = 1, AnimationFlags flags = {});
 
