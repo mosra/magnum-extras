@@ -167,77 +167,87 @@ const struct {
     bool succeed;
     UnsignedInt expectedLayerCount, expectedLayouterCount, expectedAnimatorCount;
     Containers::Array<StyleFeatures> features;
+    bool explicitImporterManager, explicitFontManager;
 } SetStyleData[]{
     {"base layer only", StyleFeature::BaseLayer, StyleFeature::BaseLayer, true, 1, 0, 0, {InPlaceInit, {
         StyleFeature::BaseLayer
-    }}},
+    }}, false, false},
     {"base layer only, everything supported", StyleFeature::BaseLayer, StyleFeature::BaseLayer|StyleFeature::TextLayer|StyleFeature::EventLayer|StyleFeature::SnapLayouter, true, 1, 0, 0, {InPlaceInit, {
         StyleFeature::BaseLayer
-    }}},
+    }}, false, false},
     {"base layer + animations only", StyleFeature::BaseLayer|StyleFeature::BaseLayerAnimations, StyleFeature::BaseLayer|StyleFeature::BaseLayerAnimations, true, 1, 0, 1, {InPlaceInit, {
         StyleFeature::BaseLayer|StyleFeature::BaseLayerAnimations
-    }}},
+    }}, false, false},
     {"base layer + animations, applied gradually", StyleFeature::BaseLayer|StyleFeature::BaseLayerAnimations, StyleFeature::BaseLayer|StyleFeature::BaseLayerAnimations, true, 1, 0, 1, {InPlaceInit, {
         StyleFeature::BaseLayer,
         StyleFeature::BaseLayerAnimations
-    }}},
+    }}, false, false},
     {"base layer + animations only, everything supported", StyleFeature::BaseLayer|StyleFeature::BaseLayerAnimations, ~StyleFeatures{}, true, 1, 0, 1, {InPlaceInit, {
         StyleFeature::BaseLayer|StyleFeature::BaseLayerAnimations
-    }}},
+    }}, false, false},
     {"text layer only", StyleFeature::TextLayer, StyleFeature::TextLayer, true, 1, 0, 0, {InPlaceInit, {
         StyleFeature::TextLayer
-    }}},
+    }}, false, true},
     {"text layer only, everything supported", StyleFeature::TextLayer, StyleFeature::BaseLayer|StyleFeature::TextLayer|StyleFeature::EventLayer|StyleFeature::SnapLayouter, true, 1, 0, 0, {InPlaceInit, {
         StyleFeature::TextLayer
-    }}},
+    }}, false, true},
     {"text layer + images only", StyleFeature::TextLayer|StyleFeature::TextLayerImages, StyleFeature::TextLayer|StyleFeature::TextLayerImages, true, 1, 0, 0, {InPlaceInit, {
         StyleFeature::TextLayer|StyleFeature::TextLayerImages
-    }}},
+    }}, true, true},
     {"text layer + images, applied gradually", StyleFeature::TextLayer|StyleFeature::TextLayerImages, StyleFeature::TextLayer|StyleFeature::TextLayerImages, true, 1, 0, 0, {InPlaceInit, {
         StyleFeature::TextLayer,
         StyleFeature::TextLayerImages
-    }}},
+    }}, true, true},
     {"text layer + images only, everything supported", StyleFeature::TextLayer|StyleFeature::TextLayerImages, ~StyleFeatures{}, true, 1, 0, 0, {InPlaceInit, {
         StyleFeature::TextLayer|StyleFeature::TextLayerImages
-    }}},
+    }}, true, true},
     {"text layer + animations only", StyleFeature::TextLayer|StyleFeature::TextLayerAnimations, StyleFeature::TextLayer|StyleFeature::TextLayerAnimations, true, 1, 0, 1, {InPlaceInit, {
         StyleFeature::TextLayer|StyleFeature::TextLayerAnimations
-    }}},
+    }}, false, true},
     {"text layer + animations, applied gradually", StyleFeature::TextLayer|StyleFeature::TextLayerAnimations, StyleFeature::TextLayer|StyleFeature::TextLayerAnimations, true, 1, 0, 1, {InPlaceInit, {
         StyleFeature::TextLayer,
         StyleFeature::TextLayerAnimations
-    }}},
+    }}, false, true},
     {"text layer + animations only, everything supported", StyleFeature::TextLayer|StyleFeature::TextLayerAnimations, ~StyleFeatures{}, true, 1, 0, 1, {InPlaceInit, {
         StyleFeature::TextLayer|StyleFeature::TextLayerAnimations
-    }}},
+    }}, false, true},
     {"event layer only", StyleFeature::EventLayer, StyleFeature::EventLayer, true, 1, 0, 0, {InPlaceInit, {
         StyleFeature::EventLayer
-    }}},
+    }}, false, false},
     {"event layer only, everything supported", StyleFeature::EventLayer, StyleFeature::BaseLayer|StyleFeature::TextLayer|StyleFeature::EventLayer|StyleFeature::SnapLayouter, true, 1, 0, 0, {InPlaceInit, {
         StyleFeature::EventLayer
-    }}},
+    }}, false, false},
     {"snap layouter only", StyleFeature::SnapLayouter, StyleFeature::SnapLayouter, true, 0, 1, 0, {InPlaceInit, {
         StyleFeature::SnapLayouter
-    }}},
+    }}, false, false},
     {"snap layouter only, everything supported", StyleFeature::SnapLayouter, StyleFeature::BaseLayer|StyleFeature::TextLayer|StyleFeature::EventLayer|StyleFeature::SnapLayouter, true, 0, 1, 0, {InPlaceInit, {
         StyleFeature::SnapLayouter
-    }}},
+    }}, false, false},
     {"everything except base layer (and its animations)", ~(StyleFeature::BaseLayer|StyleFeature::BaseLayerAnimations), ~(StyleFeature::BaseLayer|StyleFeature::BaseLayerAnimations), true, 2, 1, 1, {InPlaceInit, {
         ~(StyleFeature::BaseLayer|StyleFeature::BaseLayerAnimations)
-    }}},
+    }}, true, true},
     {"everything except base layer (and its animations), applied gradually", ~(StyleFeature::BaseLayer|StyleFeature::BaseLayerAnimations), ~(StyleFeature::BaseLayer|StyleFeature::BaseLayerAnimations), true, 2, 1, 1, {InPlaceInit, {
         StyleFeature::TextLayer,
         StyleFeature::TextLayerImages,
         StyleFeature::TextLayerAnimations,
         StyleFeature::SnapLayouter,
         StyleFeature::EventLayer,
-    }}},
+    }}, true, true},
     {"everything except base layer (and its animations), everything supported", ~(StyleFeature::BaseLayer|StyleFeature::BaseLayerAnimations), ~StyleFeatures{}, true, 2, 1, 1, {InPlaceInit, {
         ~(StyleFeature::BaseLayer|StyleFeature::BaseLayerAnimations)
-    }}},
+    }}, true, true},
     {"everything", ~StyleFeatures{}, ~StyleFeatures{}, true, 3, 1, 2, {InPlaceInit, {
         ~StyleFeatures{}
-    }}},
+    }}, true, true},
+    {"everything, implicit importer manager", ~StyleFeatures{}, ~StyleFeatures{}, true, 3, 1, 2, {InPlaceInit, {
+        ~StyleFeatures{}
+    }}, false, true},
+    {"everything, implicit font manager", ~StyleFeatures{}, ~StyleFeatures{}, true, 3, 1, 2, {InPlaceInit, {
+        ~StyleFeatures{}
+    }}, true, false},
+    {"everything, implicit importer & font manager", ~StyleFeatures{}, ~StyleFeatures{}, true, 3, 1, 2, {InPlaceInit, {
+        ~StyleFeatures{}
+    }}, false, false},
     {"everything, applied gradually", ~StyleFeatures{}, ~StyleFeatures{}, true, 3, 1, 2, {InPlaceInit, {
         StyleFeature::TextLayer,
         StyleFeature::TextLayerImages,
@@ -246,15 +256,45 @@ const struct {
         StyleFeature::SnapLayouter,
         StyleFeature::BaseLayer,
         StyleFeature::BaseLayerAnimations,
-    }}},
+    }}, true, true},
+    {"everything, applied gradually, implicit importer manager", ~StyleFeatures{}, ~StyleFeatures{}, true, 3, 1, 2, {InPlaceInit, {
+        StyleFeature::TextLayer,
+        StyleFeature::TextLayerImages,
+        StyleFeature::TextLayerAnimations,
+        StyleFeature::EventLayer,
+        StyleFeature::SnapLayouter,
+        StyleFeature::BaseLayer,
+        StyleFeature::BaseLayerAnimations,
+    }}, false, true},
+    {"everything, applied gradually, implicit font manager", ~StyleFeatures{}, ~StyleFeatures{}, true, 3, 1, 2, {InPlaceInit, {
+        StyleFeature::TextLayer,
+        StyleFeature::TextLayerImages,
+        StyleFeature::TextLayerAnimations,
+        StyleFeature::EventLayer,
+        StyleFeature::SnapLayouter,
+        StyleFeature::BaseLayer,
+        StyleFeature::BaseLayerAnimations,
+    }}, true, false},
+    {"everything, applied gradually, implicit importer & font manager", ~StyleFeatures{}, ~StyleFeatures{}, true, 3, 1, 2, {InPlaceInit, {
+        StyleFeature::TextLayer,
+        StyleFeature::TextLayerImages,
+        StyleFeature::TextLayerAnimations,
+        StyleFeature::EventLayer,
+        StyleFeature::SnapLayouter,
+        StyleFeature::BaseLayer,
+        StyleFeature::BaseLayerAnimations,
+    }}, false, false},
     {"application failed", StyleFeature::BaseLayer|StyleFeature::BaseLayerAnimations|StyleFeature::EventLayer|StyleFeature::SnapLayouter, StyleFeature::BaseLayer|StyleFeature::BaseLayerAnimations|StyleFeature::EventLayer|StyleFeature::SnapLayouter, false, 2, 1, 1, {InPlaceInit, {
         StyleFeature::BaseLayer|StyleFeature::BaseLayerAnimations|StyleFeature::EventLayer|StyleFeature::SnapLayouter
-    }}},
-    {"everything, implicitly", ~StyleFeatures{}, ~StyleFeatures{}, true, 3, 1, 2, {}},
-    {"everything, implicitly, application failed", ~StyleFeatures{}, ~StyleFeatures{}, false, 3, 1, 2, {}},
-    {"everything, implicitly, only unknown feature supported", StyleFeatures{0x80}, StyleFeatures{0x80}, true, 0, 0, 0, {}},
-    {"everything, implicitly, only base layer supported", StyleFeature::BaseLayer, StyleFeature::BaseLayer, true, 1, 0, 0, {}},
-    {"everything, implicitly, everything except text layer (and its images and animations) supported", ~(StyleFeature::TextLayer|StyleFeature::TextLayerImages|StyleFeature::TextLayerAnimations), ~(StyleFeature::TextLayer|StyleFeature::TextLayerImages|StyleFeature::TextLayerAnimations), true, 2, 1, 1, {}},
+    }}, true, true},
+    {"everything, implicitly", ~StyleFeatures{}, ~StyleFeatures{}, true, 3, 1, 2, {}, true, true},
+    {"everything, implicitl, implicit importer manager", ~StyleFeatures{}, ~StyleFeatures{}, true, 3, 1, 2, {}, false, true},
+    {"everything, implicitl, implicit font manager", ~StyleFeatures{}, ~StyleFeatures{}, true, 3, 1, 2, {}, true, false},
+    {"everything, implicitl, implicit importer & font manager", ~StyleFeatures{}, ~StyleFeatures{}, true, 3, 1, 2, {}, false, false},
+    {"everything, implicitly, application failed", ~StyleFeatures{}, ~StyleFeatures{}, false, 3, 1, 2, {}, true, true},
+    {"everything, implicitly, only unknown feature supported", StyleFeatures{0x80}, StyleFeatures{0x80}, true, 0, 0, 0, {}, true, true},
+    {"everything, implicitly, only base layer supported", StyleFeature::BaseLayer, StyleFeature::BaseLayer, true, 1, 0, 0, {}, false, false},
+    {"everything, implicitly, everything except text layer (and its images and animations) supported", ~(StyleFeature::TextLayer|StyleFeature::TextLayerImages|StyleFeature::TextLayerAnimations), ~(StyleFeature::TextLayer|StyleFeature::TextLayerImages|StyleFeature::TextLayerAnimations), true, 2, 1, 1, {}, false, false},
 };
 
 UserInterfaceGLTest::UserInterfaceGLTest() {
@@ -658,12 +698,14 @@ void UserInterfaceGLTest::setStyle() {
     CORRADE_VERIFY(!ui.hasRendererInstance());
     CORRADE_COMPARE(ui.layerUsedCount(), 0);
 
-    /** @todo once FreeTypeFont is fixed to work with multiple plugin managers,
-        test also a variant with the manager not passed */
     if(data.features.isEmpty())
-        CORRADE_COMPARE(ui.trySetStyle(style, &_importerManager, &_fontManager), data.succeed);
+        CORRADE_COMPARE(ui.trySetStyle(style,
+            data.explicitImporterManager ? &_importerManager : nullptr,
+            data.explicitFontManager ? &_fontManager : nullptr), data.succeed);
     else for(StyleFeatures features: data.features)
-        CORRADE_COMPARE(ui.trySetStyle(style, features, features >= StyleFeature::TextLayerImages ? &_importerManager : nullptr, features >= StyleFeature::TextLayer ? &_fontManager : nullptr), data.succeed);
+        CORRADE_COMPARE(ui.trySetStyle(style, features,
+            data.explicitImporterManager ? &_importerManager : nullptr,
+            data.explicitFontManager ? &_fontManager : nullptr), data.succeed);
     CORRADE_COMPARE(ui.layerUsedCount(), data.expectedLayerCount);
     CORRADE_COMPARE(ui.layouterUsedCount(), data.expectedLayouterCount);
     CORRADE_COMPARE(ui.animatorUsedCount(), data.expectedAnimatorCount);
