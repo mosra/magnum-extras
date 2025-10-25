@@ -513,7 +513,8 @@ union NodeUniqueLayout {
            last layout's `next` is the same as node's `firstUniqueLayout` */
         UnsignedInt next;
 
-        static_assert(Implementation::LayouterHandleIdBits + Implementation::LayouterDataHandleIdBits <= sizeof(next)*8,
+        /* `next` has to be fully qualified for MSVC 2015 */
+        static_assert(Implementation::LayouterHandleIdBits + Implementation::LayouterDataHandleIdBits <= sizeof(NodeUniqueLayout::Used::next)*8,
             "not enough bits to fit all layouts from all possible layouters into the NodeUniqueLayout array");
     } used;
 
@@ -522,7 +523,8 @@ union NodeUniqueLayout {
         /* See State::firstFreeNodeUniqueLayout for more information */
         UnsignedInt next;
 
-        static_assert(Implementation::LayouterHandleIdBits + Implementation::LayouterDataHandleIdBits <= sizeof(next)*8,
+        /* `next` has to be fully qualified for MSVC 2015 */
+        static_assert(Implementation::LayouterHandleIdBits + Implementation::LayouterDataHandleIdBits <= sizeof(NodeUniqueLayout::Used::next)*8,
             "not enough bits to fit all layouts from all possible layouters into the NodeUniqueLayout array");
     } free;
 };
