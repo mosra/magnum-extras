@@ -2084,8 +2084,9 @@ void AbstractVisualLayerTest::eventStyleTransitionNoOp() {
     StyleLayer& layer = ui.setLayerInstance(Containers::pointer<StyleLayer>(ui.createLayer(), shared));
 
     /* Set up style animators if needed for either dynamic style or transition
-       / persistent animations */
-    StyleLayerStyleAnimator* animator;
+       / persistent animations. Has to be initialized because otherwise MSVC
+       thinks it's "potentially uninitialized" in the next branch after. */
+    StyleLayerStyleAnimator* animator{};
     if(data.dynamicAnimated || data.transitionPersistentAnimation) {
         Containers::Pointer<StyleLayerStyleAnimator> animatorInstance{InPlaceInit, ui.createAnimator()};
         layer.assignAnimator(*animatorInstance);
