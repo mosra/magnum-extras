@@ -1468,6 +1468,9 @@ void AbstractUserInterfaceTest::constructNoCreate() {
     CORRADE_COMPARE(ui.layouterFirst(), LayouterHandle::Null);
     CORRADE_VERIFY(!ui.isHandleValid(LayouterHandle::Null));
 
+    CORRADE_COMPARE(ui.animatorCapacity(), 0);
+    CORRADE_COMPARE(ui.animatorUsedCount(), 0);
+
     CORRADE_COMPARE(ui.nodeCapacity(), 0);
     CORRADE_COMPARE(ui.nodeUsedCount(), 0);
     CORRADE_VERIFY(!ui.isHandleValid(NodeHandle::Null));
@@ -1477,15 +1480,20 @@ void AbstractUserInterfaceTest::constructNoCreate() {
     CORRADE_COMPARE(ui.nodeOrderCapacity(), 0);
     CORRADE_COMPARE(ui.nodeOrderUsedCount(), 0);
 
+    CORRADE_VERIFY(!ui.isHandleValid(DataHandle::Null));
+    CORRADE_VERIFY(!ui.isHandleValid(dataHandle(LayerHandle(0xffff), LayerDataHandle::Null)));
+    CORRADE_VERIFY(!ui.isHandleValid(dataHandle(LayerHandle::Null, LayerDataHandle(0xffffffff))));
+    CORRADE_VERIFY(!ui.isHandleValid(dataHandle(LayerHandle(0xffff), LayerDataHandle(0xffffffff))));
+
     CORRADE_VERIFY(!ui.isHandleValid(LayoutHandle::Null));
     CORRADE_VERIFY(!ui.isHandleValid(layoutHandle(LayouterHandle(0xffff), LayouterDataHandle::Null)));
     CORRADE_VERIFY(!ui.isHandleValid(layoutHandle(LayouterHandle::Null, LayouterDataHandle(0xffffffff))));
     CORRADE_VERIFY(!ui.isHandleValid(layoutHandle(LayouterHandle(0xffff), LayouterDataHandle(0xffffffff))));
 
-    CORRADE_VERIFY(!ui.isHandleValid(DataHandle::Null));
-    CORRADE_VERIFY(!ui.isHandleValid(dataHandle(LayerHandle(0xffff), LayerDataHandle::Null)));
-    CORRADE_VERIFY(!ui.isHandleValid(dataHandle(LayerHandle::Null, LayerDataHandle(0xffffffff))));
-    CORRADE_VERIFY(!ui.isHandleValid(dataHandle(LayerHandle(0xffff), LayerDataHandle(0xffffffff))));
+    CORRADE_VERIFY(!ui.isHandleValid(AnimationHandle::Null));
+    CORRADE_VERIFY(!ui.isHandleValid(animationHandle(AnimatorHandle(0xffff), AnimatorDataHandle::Null)));
+    CORRADE_VERIFY(!ui.isHandleValid(animationHandle(AnimatorHandle::Null, AnimatorDataHandle(0xffffffff))));
+    CORRADE_VERIFY(!ui.isHandleValid(animationHandle(AnimatorHandle(0xffff), AnimatorDataHandle(0xffffffff))));
 
     CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
     CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
