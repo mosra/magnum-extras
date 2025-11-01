@@ -53,8 +53,8 @@ cmake .. \
 ninja install
 cd ../..
 
-# Magnum Plugins. Used only if GL tests are enabled (thus, targeting EGL), not
-# needed otherwise.
+# Magnum Plugins. Used if GL tests are enabled (thus, targeting EGL), but also
+# by UiStyleTest, so build them always.
 git clone --depth 1 https://github.com/mosra/magnum-plugins.git
 cd magnum-plugins
 mkdir build && cd build
@@ -65,10 +65,11 @@ cmake .. \
     -DCMAKE_BUILD_TYPE=$CONFIGURATION \
     -DMAGNUM_BUILD_STATIC=$BUILD_STATIC \
     -DMAGNUM_BUILD_PLUGINS_STATIC=$BUILD_STATIC \
-    -DMAGNUM_WITH_STBIMAGEIMPORTER=$TARGET_EGL \
-    `# StbImageConverter so we can easier debug rendering failures on the CI` \
+    -DMAGNUM_WITH_STBIMAGEIMPORTER=ON \
+    `# StbImageConverter so we can easier debug rendering failures on the` \
+    `# CI. Those are however needed only if targeting EGL.` \
     -DMAGNUM_WITH_STBIMAGECONVERTER=$TARGET_EGL \
-    -DMAGNUM_WITH_STBTRUETYPEFONT=$TARGET_EGL \
+    -DMAGNUM_WITH_STBTRUETYPEFONT=ON \
     -G Ninja
 ninja install
 cd ../..
