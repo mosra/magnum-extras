@@ -44,13 +44,23 @@ endif()
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/configure.h.cmake
                ${CMAKE_CURRENT_BINARY_DIR}/configure.h)
 
+# TODO maybe split into several resource groups? because once Vulkan / WebGPU
+# backends exist and/or there's a possibility to not build the default style,
+# there will be a combinatorial explosion of resource files.
+if(MAGNUM_TARGET_GL)
+    corrade_add_resource(MagnumUi_RESOURCES resources-gl.conf)
+else()
+    corrade_add_resource(MagnumUi_RESOURCES resources.conf)
+endif()
+
 set(MagnumUi_SRCS
     Button.cpp
     Handle.cpp
     Input.cpp
     Label.cpp
     NodeFlags.cpp
-    Style.cpp)
+    Style.cpp
+    ${MagnumUi_RESOURCES})
 
 set(MagnumUi_GracefulAssert_SRCS
     AbstractAnimator.cpp
@@ -129,12 +139,8 @@ set(MagnumUi_PRIVATE_HEADERS
     Implementation/userInterfaceState.h)
 
 if(MAGNUM_TARGET_GL)
-    corrade_add_resource(MagnumUi_RESOURCES resources.conf)
     list(APPEND MagnumUi_SRCS
-        DebugLayerGL.cpp
-        # TODO this contains the font and icons as well, split into multiple
-        #   files once non-GL / Vulkan builds become desirable
-        ${MagnumUi_RESOURCES})
+        DebugLayerGL.cpp)
     list(APPEND MagnumUi_GracefulAssert_SRCS
         BaseLayerGL.cpp
         LineLayerGL.cpp
