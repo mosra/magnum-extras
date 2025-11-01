@@ -28,7 +28,7 @@ cmake .. \
     -DCMAKE_BUILD_TYPE=Release \
     -DCMAKE_INSTALL_PREFIX=$HOME/deps \
     -DCORRADE_RC_EXECUTABLE=$HOME/deps-native/bin/corrade-rc \
-    -DCORRADE_WITH_INTERCONNECT=$TARGET_GLES3 \
+    -DCORRADE_WITH_INTERCONNECT=OFF \
     -G Ninja
 ninja install
 cd ../..

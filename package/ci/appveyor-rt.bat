@@ -29,7 +29,7 @@ cmake .. ^
     -DCMAKE_SYSTEM_NAME=WindowsStore ^
     -DCMAKE_SYSTEM_VERSION=10.0 ^
     -DCMAKE_INSTALL_PREFIX=%APPVEYOR_BUILD_FOLDER%/deps ^
-    -DCORRADE_WITH_INTERCONNECT=%TARGET_GLES3% ^
+    -DCORRADE_WITH_INTERCONNECT=OFF ^
     -DCORRADE_BUILD_STATIC=ON ^
     -G "%GENERATOR%" -A x64 || exit /b
 cmake --build . --config Release --target install -- /m /v:m || exit /b
