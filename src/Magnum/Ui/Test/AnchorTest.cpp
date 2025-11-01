@@ -196,9 +196,7 @@ template<class T> void AnchorTest::constructCreateNodeTopLevel() {
 void AnchorTest::layoutInvalid() {
     CORRADE_SKIP_IF_NO_ASSERT();
 
-    struct Interface: AbstractUserInterface {
-        explicit Interface(NoCreateT): AbstractUserInterface{NoCreate} {}
-    } ui{NoCreate};
+    AbstractUserInterface ui{{100, 100}};
 
     NodeHandle node = ui.createNode({}, {});
     AbstractAnchor a{ui, node, LayoutHandle::Null};

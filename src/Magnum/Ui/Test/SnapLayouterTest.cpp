@@ -941,9 +941,8 @@ void SnapLayouterTest::addDefaultLayouter() {
 }
 
 void SnapLayouterTest::addRemoveHandleRecycle() {
-    struct Interface: AbstractUserInterface {
-        explicit Interface(NoCreateT): AbstractUserInterface{NoCreate} {}
-    } ui{NoCreate};
+    AbstractUserInterface ui{{100, 100}};
+
     SnapLayouter& layouter = ui.setLayouterInstance(Containers::pointer<SnapLayouter>(ui.createLayouter()));
 
     NodeHandle node = ui.createNode({}, {});
@@ -965,9 +964,7 @@ void SnapLayouterTest::layoutInvalid() {
 
     SnapLayouter layouter{layouterHandle(0, 1)};
 
-    struct Interface: AbstractUserInterface {
-        explicit Interface(NoCreateT): AbstractUserInterface{NoCreate} {}
-    } ui{NoCreate};
+    AbstractUserInterface ui{{100, 100}};
 
     NodeHandle node = ui.createNode({}, {});
 
@@ -1036,9 +1033,8 @@ void SnapLayouterTest::updateDataOrder() {
     auto&& data = UpdateDataOrderData[testCaseInstanceId()];
     setTestCaseDescription(data.name);
 
-    struct Interface: AbstractUserInterface {
-        explicit Interface(NoCreateT): AbstractUserInterface{NoCreate} {}
-    } ui{NoCreate};
+    AbstractUserInterface ui{{100, 100}};
+
     SnapLayouter& layouter = ui.setLayouterInstance(Containers::pointer<SnapLayouter>(ui.createLayouter()));
 
     if(data.recycledLayouts) {
