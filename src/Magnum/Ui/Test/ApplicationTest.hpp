@@ -26,13 +26,18 @@
     DEALINGS IN THE SOFTWARE.
 */
 
+#include <Magnum/configure.h>
+#ifdef MAGNUM_TARGET_GL
 #include <Magnum/GL/DefaultFramebuffer.h>
+#endif
 
 #include "Magnum/Ui/Application.h"
 #include "Magnum/Ui/AbstractLayer.h"
 #include "Magnum/Ui/AbstractUserInterface.h"
 #include "Magnum/Ui/NodeFlags.h"
+#ifdef MAGNUM_TARGET_GL
 #include "Magnum/Ui/RendererGL.h"
+#endif
 
 namespace Magnum { namespace Ui { namespace Test { namespace {
 
@@ -45,22 +50,41 @@ struct ApplicationTest: Platform::Application {
     explicit ApplicationTest(const Arguments& arguments);
 
     void viewportEvent(ViewportEvent& event) override {
+        /* The ApplicationSizeConverter from Application.h requires the
+           Application class to expose framebufferSize(), which is currently
+           only available on GL builds. Pass just window size alone
+           otherwise. Same is done in the ApplicationTest constructor. */
+        #ifdef MAGNUM_TARGET_GL
         _ui.setSize(event);
+        #else
+        _ui.setSize(event.windowSize());
+        #endif
     }
 
     void drawEvent() override {
+        #ifdef MAGNUM_TARGET_GL
         GL::defaultFramebuffer.clear(GL::FramebufferClear::Color);
+        #endif
 
         Debug{} << "draw event";
 
+        /* Drawing the UI requires a renderer instance to be set. On a GL-less
+           build there's currently no such thing, so do an update at least to
+           not loop indefinitely due to state() being non-empty. */
+        #ifdef MAGNUM_TARGET_GL
         _ui.draw();
+        #else
+        _ui.update();
+        #endif
 
         if(_ui.state()) {
             Debug{} << "redraw triggered by" << _ui.state();
             redraw();
         }
 
+        #ifdef MAGNUM_TARGET_GL
         swapBuffers();
+        #endif
     }
 
     /* Set to 0 to test the deprecated mouse events instead */
@@ -197,10 +221,23 @@ struct ApplicationTest: Platform::Application {
     AbstractUserInterface _ui;
 };
 
-ApplicationTest::ApplicationTest(const Arguments& arguments): Platform::Application{arguments}, _ui{*this} {
+ApplicationTest::ApplicationTest(const Arguments& arguments):
+    Platform::Application{arguments},
+    /* The ApplicationSizeConverter from Application.h requires the Application
+       class to expose framebufferSize(), which is currently only available on
+       GL builds. Pass just window size alone otherwise. Same is done in
+       viewportEvent(). */
+    #ifdef MAGNUM_TARGET_GL
+    _ui{*this}
+    #else
+    _ui{windowSize()}
+    #endif
+{
     Debug{} << "UI of" << Debug::packed << _ui.size() << "in a" << Debug::packed << _ui.windowSize() << "window and a" << Debug::packed << _ui.framebufferSize() << "framebuffer";
 
+    #ifdef MAGNUM_TARGET_GL
     _ui.setRendererInstance(Containers::pointer<RendererGL>());
+    #endif
 
     /* Layer capturing all events by default */
     struct Layer: AbstractLayer {

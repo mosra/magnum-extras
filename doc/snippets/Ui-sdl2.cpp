@@ -24,22 +24,30 @@
     DEALINGS IN THE SOFTWARE.
 */
 
+#include <Magnum/configure.h>
+#ifdef MAGNUM_TARGET_GL
 #include <Magnum/GL/DefaultFramebuffer.h>
 #include <Magnum/GL/Framebuffer.h>
+#endif
 #include <Magnum/Platform/Sdl2Application.h>
 
 #include "Magnum/Math/Functions.h"
 #include "Magnum/Math/TimeStl.h"
 #include "Magnum/Ui/Application.h"
+#ifdef MAGNUM_TARGET_GL
 #include "Magnum/Ui/RendererGL.h"
+#endif
 #include "Magnum/Ui/Style.h"
+#ifdef MAGNUM_TARGET_GL
 #include "Magnum/Ui/UserInterfaceGL.h"
+#endif
 
 #define DOXYGEN_ELLIPSIS(...) __VA_ARGS__
 #define DOXYGEN_IGNORE(...) __VA_ARGS__
 
 using namespace Magnum;
 
+#ifdef MAGNUM_TARGET_GL
 struct Foo: Platform::Application {
 void foo() {
 {
@@ -68,9 +76,11 @@ Ui::UserInterfaceGL ui(
 }
 }
 };
+#endif
 
 namespace A {
 
+#ifdef MAGNUM_TARGET_GL
 /* The include is already above, so doing it again here should be harmless */
 /* [AbstractUserInterface-application-construct-viewport] */
 DOXYGEN_ELLIPSIS()
@@ -156,11 +166,13 @@ void MyApplication::textInputEvent(TextInputEvent& event) {
     if(_ui.state()) redraw();
 }
 /* [AbstractUserInterface-application-events] */
+#endif
 
 }
 
 namespace B {
 
+#ifdef MAGNUM_TARGET_GL
 struct MyApplication: Platform::Application {
     explicit MyApplication(const Arguments& arguments);
 
@@ -211,6 +223,7 @@ MyApplication::MyApplication(const Arguments& arguments):
     DOXYGEN_ELLIPSIS()
 }
 /* [AbstractUserInterface-animations-style-features] */
+#endif
 
 }
 
@@ -243,6 +256,7 @@ void MyApplication::pointerMoveEvent(PointerMoveEvent& event) {
 
 namespace D {
 
+#ifdef MAGNUM_TARGET_GL
 /* [UserInterfaceGL-setup-delayed] */
 class MyApplication: public Platform::Application {
     DOXYGEN_ELLIPSIS(explicit MyApplication(const Arguments& arguments);)
@@ -260,11 +274,13 @@ MyApplication::MyApplication(const Arguments& arguments):
     _ui.create(DOXYGEN_ELLIPSIS(*this), Ui::McssDarkStyle{});
 }
 /* [UserInterfaceGL-setup-delayed] */
+#endif
 
 }
 
 namespace E {
 
+#ifdef MAGNUM_TARGET_GL
 /* [RendererGL-compositing-framebuffer] */
 class MyApplication: public Platform::Application {
     DOXYGEN_ELLIPSIS(explicit MyApplication(const Arguments& arguments);
@@ -309,5 +325,6 @@ void MyApplication::drawEvent() {
     redraw();
 }
 /* [RendererGL-compositing-framebuffer-draw] */
+#endif
 
 }
