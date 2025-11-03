@@ -71,9 +71,10 @@ The rest of the setup --- drawing and event handling --- is the same for all
 
 The above by default populates the user interface with everything a style
 provides for use by builtin widgets --- in particular, making @ref baseLayer(),
-@ref textLayer(), @ref eventLayer() and @ref snapLayouter() all available. In
-case you for example use just a subset of the builtin widgets that only need a
-part of the above, you can specify a @ref StyleFeatures subset. This can be
+@ref textLayer(), @ref eventLayer(), @ref snapLayouter(),
+@ref baseLayerStyleAnimator() and @ref textLayerStyleAnimator() all available.
+In case you for example use just a subset of the builtin widgets that only need
+a part of the above, you can specify a @ref StyleFeatures subset. This can be
 further combined with @ref setStyle(), where, as long as you specify
 non-overlapping sets of @ref StyleFeatures, you can combine multiple styles
 together:
@@ -118,11 +119,13 @@ for a custom layer --- pass it to @ref setRendererInstance() and then call
 @subsection Ui-UserInterfaceGL-setup-layers Supplying custom layer and layouter instances
 
 If a constructor or @ref create() taking a style isn't used at all, or if a
-style is applied excluding a particular layer or layouter, you can supply a
-custom instance using @ref setBaseLayerInstance(), @ref setTextLayerInstance(),
-@ref setEventLayerInstance() or @ref setSnapLayouterInstance(). Note that
-however, at this point, you're on your own when you attempt to use any builtin
-widgets that rely on given instance being set up in a particular way.
+style is applied excluding a particular layer, layouter or animator, you can
+supply a custom instance using @ref setBaseLayerInstance(),
+@ref setTextLayerInstance(), @ref setEventLayerInstance(),
+@ref setSnapLayouterInstance(), @ref setBaseLayerStyleAnimatorInstance() or
+@ref setTextLayerStyleAnimatorInstance(). Note that however, at this point,
+you're on your own when you attempt to use any builtin widgets that rely on
+given instance being set up in a particular way.
 
 @snippet Ui-gl.cpp UserInterfaceGL-setup-layer
 */
@@ -266,8 +269,10 @@ class MAGNUM_UI_EXPORT UserInterfaceGL: public UserInterface {
          *
          * Expects that none of @ref create(), @ref tryCreate(),
          * @ref setBaseLayerInstance(), @ref setTextLayerInstance(),
-         * @ref setEventLayerInstance() or @ref setRendererInstance() was
-         * called yet. Equivalent to calling
+         * @ref setEventLayerInstance(), @ref setSnapLayouterInstance(),
+         * @ref setBaseLayerStyleAnimatorInstance(),
+         * @ref setTextLayerStyleAnimatorInstance() or
+         * @ref setRendererInstance() was called yet. Equivalent to calling
          * @ref setSize(const Vector2&, const Vector2&, const Vector2i&)
          * followed by @ref setStyle(const AbstractStyle&, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*).
          * See documentation of these functions for more information and
@@ -293,8 +298,10 @@ class MAGNUM_UI_EXPORT UserInterfaceGL: public UserInterface {
          *
          * Expects that none of @ref create(), @ref tryCreate(),
          * @ref setBaseLayerInstance(), @ref setTextLayerInstance(),
-         * @ref setEventLayerInstance() or @ref setRendererInstance() was
-         * called yet. Equivalent to calling
+         * @ref setEventLayerInstance(), @ref setSnapLayouterInstance(),
+         * @ref setBaseLayerStyleAnimatorInstance(),
+         * @ref setTextLayerStyleAnimatorInstance() or
+         * @ref setRendererInstance() was called yet. Equivalent to calling
          * @ref setSize(const ApplicationOrViewportEvent&) followed by
          * @ref setStyle(const AbstractStyle&, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*).
          * See documentation of these functions for more information and
@@ -325,7 +332,9 @@ class MAGNUM_UI_EXPORT UserInterfaceGL: public UserInterface {
          *
          * Expects that none of @ref create(), @ref tryCreate(),
          * @ref setBaseLayerInstance(), @ref setTextLayerInstance(),
-         * @ref setEventLayerInstance(), @ref setSnapLayouterInstance() or
+         * @ref setEventLayerInstance(), @ref setSnapLayouterInstance(),
+         * @ref setBaseLayerStyleAnimatorInstance(),
+         * @ref setTextLayerStyleAnimatorInstance() or
          * @ref setRendererInstance() was called yet. Equivalent to calling
          * @ref setSize(const Vector2&, const Vector2&, const Vector2i&)
          * followed by @ref setStyle(const AbstractStyle&, StyleFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*).
@@ -353,8 +362,10 @@ class MAGNUM_UI_EXPORT UserInterfaceGL: public UserInterface {
          *
          * Expects that none of @ref create(), @ref tryCreate(),
          * @ref setBaseLayerInstance(), @ref setTextLayerInstance(),
-         * @ref setEventLayerInstance() or @ref setRendererInstance() was
-         * called yet. Equivalent to calling
+         * @ref setEventLayerInstance(), @ref setSnapLayouterInstance(),
+         * @ref setBaseLayerStyleAnimatorInstance(),
+         * @ref setTextLayerStyleAnimatorInstance() or
+         * @ref setRendererInstance() was called yet. Equivalent to calling
          * @ref setSize(const ApplicationOrViewportEvent&) followed by
          * @ref setStyle(const AbstractStyle&, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*).
          * See documentation of these functions for more information and
@@ -532,7 +543,8 @@ class MAGNUM_UI_EXPORT UserInterfaceGL: public UserInterface {
          * @see @ref setStyle(const AbstractStyle&, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*),
          *      @ref hasRendererInstance(), @ref hasBaseLayer(),
          *      @ref hasTextLayer(), @ref hasEventLayer(),
-         *      @ref hasSnapLayouter(),
+         *      @ref hasSnapLayouter(), @ref hasBaseLayerStyleAnimator(),
+         *      @ref hasTextLayerStyleAnimator(),
          *      @ref UserInterfaceGL(const Vector2&, const Vector2&, const Vector2i&, const AbstractStyle&, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*),
          *      @ref UserInterfaceGL(const Vector2i&, const AbstractStyle&, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*)
          */

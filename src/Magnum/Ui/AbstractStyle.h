@@ -599,11 +599,13 @@ class MAGNUM_UI_EXPORT AbstractStyle {
          * @ref BaseLayer::Shared::setStyleAnimation(),
          * @ref TextLayer::Shared::addFont(),
          * @ref TextLayer::Shared::setStyle(),
-         * @ref TextLayer::Shared::setStyleTransition() and
-         * @ref TextLayer::Shared::setStyleAnimation() with style contents
-         * based on what @p features are passed and return @cpp true @ce. If
-         * some runtime error happens, should print a message to
-         * @relativeref{Magnum,Error} and return @cpp false @ce.
+         * @ref TextLayer::Shared::setStyleTransition(),
+         * @ref TextLayer::Shared::setStyleAnimation(),
+         * @ref SnapLayouter::setPadding() and
+         * @ref SnapLayouter::setMargin() with style contents based on what
+         * @p features are passed and return @cpp true @ce. If some runtime
+         * error happens, should print a message to @relativeref{Magnum,Error}
+         * and return @cpp false @ce.
          *
          * The @p ui is guaranteed to have user interface set for the style to
          * use to calculate font rasterization and icon sizes, for example. The

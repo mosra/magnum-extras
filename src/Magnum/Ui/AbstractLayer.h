@@ -1014,7 +1014,9 @@ class MAGNUM_UI_EXPORT AbstractLayer {
          * If @p data wasn't attached to @p node before, calling this function
          * causes @ref LayerState::NeedsAttachmentUpdate to be set.
          * Additionally, if @p node isn't @ref NodeHandle::Null,
-         * @ref LayerState::NeedsNodeOffsetSizeUpdate is set as well.
+         * @ref LayerState::NeedsNodeOffsetSizeUpdate is set as well, and
+         * also @ref LayerState::NeedsCompositeOffsetSizeUpdate if the layer
+         * advertises @ref LayerFeature::Composite.
          * @see @ref isHandleValid(DataHandle) const, @ref create(),
          *      @ref AbstractUserInterface::attachData()
          */
@@ -1239,13 +1241,16 @@ class MAGNUM_UI_EXPORT AbstractLayer {
          * Used internally from @ref AbstractUserInterface::draw(). Exposed
          * just for testing purposes, there should be no need to call this
          * function directly. Expects that the layer supports
-         * @ref LayerFeature::Composite, that the @p rectOffsets and
-         * @p rectSizes views have the same size and that @p offset and
-         * @p count fits into their size. Delegates to @ref doComposite(), see
-         * its documentation for more information about the arguments.
+         * @ref LayerFeature::Composite, that the @p compositeRectOffsets and
+         * @p compositeRectSizes views have the same size and that @p offset
+         * and @p count fits into their size. The assumption is that
+         * @ref update() was called before this function with the same
+         * @p compositeRectOffsets and @p compositeRectSizes views. Delegates
+         * to @ref doComposite(), see its documentation for more information
+         * about the arguments.
          * @see @ref features()
          */
-        void composite(AbstractRenderer& renderer, const Containers::StridedArrayView1D<const Vector2>& rectOffsets, const Containers::StridedArrayView1D<const Vector2>& rectSizes, std::size_t offset, std::size_t count);
+        void composite(AbstractRenderer& renderer, const Containers::StridedArrayView1D<const Vector2>& compositeRectOffsets, const Containers::StridedArrayView1D<const Vector2>& compositeRectSizes, std::size_t offset, std::size_t count);
 
         /**
          * @brief Draw a sub-range of visible layer data
@@ -1257,11 +1262,14 @@ class MAGNUM_UI_EXPORT AbstractLayer {
          * size, that the @p clipRectIds and @p clipRectDataCounts views have
          * the same size, @p nodeOffsets, @p nodeSizes, @p nodeOpacities and
          * @p nodesEnabled have the same size and @p clipRectOffsets and
-         * @p clipRectOffset have the same size. The @p nodeOffsets,
+         * @p clipRectSizes have the same size. The @p nodeOffsets,
          * @p nodeSizes, @p nodeOpacities and @p nodesEnabled views should be
-         * large enough to contain any valid node ID. Delegates to
-         * @ref doDraw(), see its documentation for more information about the
-         * arguments.
+         * large enough to contain any valid node ID. The assumption is that
+         * @ref update() was called before this function with the same
+         * @p dataIds, @p clipRectIds, @p clipRectDataCounts, @p nodeOffsets,
+         * @p nodeSizes, @p nodeOpacities, @p nodesEnabled, @p clipRectOffsets
+         * and @p clipRectSizes views. Delegates to @ref doDraw(), see its
+         * documentation for more information about the arguments.
          * @see @ref features()
          */
         void draw(const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, std::size_t offset, std::size_t count, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectDataCounts, std::size_t clipRectOffset, std::size_t clipRectCount, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, const Containers::StridedArrayView1D<const Float>& nodeOpacities, Containers::BitArrayView nodesEnabled, const Containers::StridedArrayView1D<const Vector2>& clipRectOffsets, const Containers::StridedArrayView1D<const Vector2>& clipRectSizes);
@@ -1514,11 +1522,13 @@ class MAGNUM_UI_EXPORT AbstractLayer {
          * calling @ref attach().
          *
          * Calling this function causes @ref LayerState::NeedsDataUpdate to be
-         * set. If @p node is not @ref NodeHandle::Null, causes also
+         * set. If @p node is not @ref NodeHandle::Null, causes additionally
          * @ref LayerState::NeedsAttachmentUpdate and
-         * @relativeref{LayerState,NeedsNodeOffsetSizeUpdate} to be set. The
-         * subclass is meant to wrap this function in a public API and perform
-         * appropriate additional initialization work there.
+         * @relativeref{LayerState,NeedsNodeOffsetSizeUpdate} to be set, and
+         * also @ref LayerState::NeedsCompositeOffsetSizeUpdate if the layer
+         * advertises @ref LayerFeature::Composite. The subclass is meant to
+         * wrap this function in a public API and perform appropriate
+         * additional initialization work there.
          */
         DataHandle create(NodeHandle node =
             #ifdef DOXYGEN_GENERATING_OUTPUT

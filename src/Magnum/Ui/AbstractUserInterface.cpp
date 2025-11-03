@@ -203,8 +203,8 @@ union Layer {
 
         /* 1 byte free */
 
-        /* Also has to be preserved in order to know whether the layout is
-           used or not even if it's in the free list */
+        /* Also has to be preserved in order to know whether the layer is used
+           or not even if it's in the free list */
         LayerHandle previous;
 
         /* See State::firstFreeLayer for more information. Has to be larger
@@ -3322,7 +3322,9 @@ AbstractUserInterface& AbstractUserInterface::update() {
 
         /* Call a no-op update() on layouters that have Needs*Update flags but
            have no visible layouts so update() wasn't called for them above */
-        /** @todo this is nasty, think of a better solution */
+        /** @todo this is nasty, think of a better solution ... disallowing
+            NeedsUpdate on empty layouters isn't enough because this gets
+            called also in case there are layouts but all of them are hidden */
         for(Layouter& layouter: state.layouters) {
             AbstractLayouter* const instance = layouter.used.instance.get();
             if(instance && instance->state() & LayouterState::NeedsAssignmentUpdate) {

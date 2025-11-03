@@ -79,7 +79,7 @@ bool UserInterfaceGL::tryCreateInternal(const AbstractStyle& style, const StyleF
     State& state = static_cast<State&>(*_state);
     #endif
     /* No need to test for baseLayerStyleAnimator / textLayerStyleAnimator as
-       those can be present only if baseLayer / styleLayer is there already */
+       those can be present only if baseLayer / textLayer is there already */
     CORRADE_ASSERT(!hasRendererInstance() && !state.baseLayer && !state.textLayer && !state.eventLayer && !state.snapLayouter,
         "Ui::UserInterfaceGL::tryCreate(): user interface already created",
         /* Has to return true with CORRADE_GRACEFUL_ASSERT so when tested
