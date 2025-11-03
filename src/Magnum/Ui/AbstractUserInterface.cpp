@@ -161,10 +161,7 @@ union Layer {
            (with index 0) from LayerHandle::Null. Once wraps back to zero once
            the handle gets disabled. */
         UnsignedByte generation = 1;
-
-        /* Extracted from AbstractLayer for more direct access. Filled in
-           setLayerInstance(), cleared in removeLayer(). */
-        LayerFeatures features;
+        /* 1 byte free */
 
         /* If used, meant to be non-null and valid. To make insert/remove
            operations easier the list is cyclic, so the last layers's `next` is
@@ -182,7 +179,11 @@ union Layer {
         UnsignedShort dataAnimatorOffset;
         UnsignedShort styleAnimatorOffset;
 
-        /* 0 / 4 bytes free */
+        /* Extracted from AbstractLayer for more direct access. Filled in
+           setLayerInstance(), cleared in removeLayer(). */
+        LayerFeatures features;
+
+        /* 2 bytes free */
     } used;
 
     /* Used only if the Layer is among the free ones */
@@ -216,6 +217,8 @@ union Layer {
         UnsignedShort dataAttachmentAnimatorOffset;
         UnsignedShort dataAnimatorOffset;
         UnsignedShort styleAnimatorOffset;
+
+        /* 4 bytes free */
     } free;
 };
 

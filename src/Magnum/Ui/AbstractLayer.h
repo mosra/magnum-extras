@@ -46,7 +46,7 @@ namespace Magnum { namespace Ui {
 
 @see @ref LayerFeatures, @ref AbstractLayer::features()
 */
-enum class LayerFeature: UnsignedByte {
+enum class LayerFeature: UnsignedShort {
     /** Drawing using @ref AbstractLayer::draw() */
     Draw = 1 << 0,
 

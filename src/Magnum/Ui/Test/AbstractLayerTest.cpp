@@ -367,14 +367,14 @@ AbstractLayerTest::AbstractLayerTest() {
 
 void AbstractLayerTest::debugFeature() {
     Containers::String out;
-    Debug{&out} << LayerFeature::Draw << LayerFeature(0xbe);
-    CORRADE_COMPARE(out, "Ui::LayerFeature::Draw Ui::LayerFeature(0xbe)\n");
+    Debug{&out} << LayerFeature::Draw << LayerFeature(0xbeeb);
+    CORRADE_COMPARE(out, "Ui::LayerFeature::Draw Ui::LayerFeature(0xbeeb)\n");
 }
 
 void AbstractLayerTest::debugFeatures() {
     Containers::String out;
-    Debug{&out} << (LayerFeature::Draw|LayerFeature(0x80)) << LayerFeatures{};
-    CORRADE_COMPARE(out, "Ui::LayerFeature::Draw|Ui::LayerFeature(0x80) Ui::LayerFeatures{}\n");
+    Debug{&out} << (LayerFeature::Draw|LayerFeature(0x8000)) << LayerFeatures{};
+    CORRADE_COMPARE(out, "Ui::LayerFeature::Draw|Ui::LayerFeature(0x8000) Ui::LayerFeatures{}\n");
 }
 
 void AbstractLayerTest::debugFeaturesSupersets() {

@@ -45,7 +45,7 @@ Debug& operator<<(Debug& debug, const LayerFeature value) {
     /* Special case coming from the LayerFeatures printer. As both flags are a
        superset of Draw, printing just one would result in
        `LayerFeature::DrawUsesBlending|LayerFeature(0x04)` in the output. */
-    if(value == LayerFeature(UnsignedByte(LayerFeature::DrawUsesBlending|LayerFeature::DrawUsesScissor)))
+    if(value == LayerFeature(UnsignedShort(LayerFeature::DrawUsesBlending|LayerFeature::DrawUsesScissor)))
         return debug << LayerFeature::DrawUsesBlending << Debug::nospace << "|" << Debug::nospace << LayerFeature::DrawUsesScissor;
 
     debug << "Ui::LayerFeature" << Debug::nospace;
@@ -64,7 +64,7 @@ Debug& operator<<(Debug& debug, const LayerFeature value) {
         /* LCOV_EXCL_STOP */
     }
 
-    return debug << "(" << Debug::nospace << Debug::hex << UnsignedByte(value) << Debug::nospace << ")";
+    return debug << "(" << Debug::nospace << Debug::hex << UnsignedShort(value) << Debug::nospace << ")";
 }
 
 Debug& operator<<(Debug& debug, const LayerFeatures value) {
@@ -73,7 +73,7 @@ Debug& operator<<(Debug& debug, const LayerFeatures value) {
            would result in `LayerFeature::DrawUsesBlending|LayerFeature(0x04)`
            in the output. So we pass both and let the LayerFeature printer deal
            with that. */
-        LayerFeature(UnsignedByte(LayerFeature::DrawUsesBlending|LayerFeature::DrawUsesScissor)),
+        LayerFeature(UnsignedShort(LayerFeature::DrawUsesBlending|LayerFeature::DrawUsesScissor)),
         LayerFeature::DrawUsesBlending, /* superset of Draw */
         LayerFeature::DrawUsesScissor, /* superset of Draw */
         LayerFeature::Composite, /* superset of Draw */
