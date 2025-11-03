@@ -278,6 +278,7 @@ debugLayer.setNodeName(button, "Accept button");
         }
 
 /* [button-highlight] */
+/* If this asserts, may need to explicitly call ui.update() before */
 CORRADE_INTERNAL_ASSERT(debugLayer.highlightNode(button));
 /* [button-highlight] */
 

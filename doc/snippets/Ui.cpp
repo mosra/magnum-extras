@@ -60,6 +60,7 @@
 #include "Magnum/Ui/Label.h"
 #include "Magnum/Ui/NodeAnimator.h"
 #include "Magnum/Ui/NodeFlags.h"
+#include "Magnum/Ui/SnapLayouter.h"
 #include "Magnum/Ui/TextLayer.h"
 #include "Magnum/Ui/TextLayerAnimator.h"
 #include "Magnum/Ui/TextProperties.h"
@@ -1114,6 +1115,13 @@ debugLayer.highlightNodes(ui.textLayer(),
         return layer.color(data) != Color4{1.0f};
     });
 /* [DebugLayer-node-highlight-condition-layer] */
+
+/* [DebugLayer-node-highlight-condition-layouter] */
+debugLayer.highlightNodes(ui.snapLayouter(),
+    [](const Ui::SnapLayouter&, Ui::LayouterDataHandle) {
+        return true;
+    });
+/* [DebugLayer-node-highlight-condition-layouter] */
 }
 
 {

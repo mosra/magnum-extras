@@ -452,8 +452,8 @@ passing their handle to @ref highlightNode(). This is useful for example in
 case you have a node in the code and want to see where it appears in the UI.
 In the following snippet, the `button` from above would get highlighted like
 this, resulting in it having a cyan overlay. The function returns @cpp false @ce
-in case given node handle is unknown to the debug layer, which you can use for
-various sanity checks:
+in case given node handle is unknown to the debug layer, which is often the
+case if no UI draw or update happened since the node was created:
 
 @snippet ui-debuglayer.cpp button-highlight
 
@@ -484,6 +484,12 @@ discover pieces of the UI that might have their styling hardcoded. The
 highlights will be combined from these two calls:
 
 @snippet Ui.cpp DebugLayer-node-highlight-condition-layer
+
+Highlights can be very useful to visualize calculated layouts even before any
+data get attached to given nodes. So, for example, highlighting all nodes that
+have @ref SnapLayouter layouts assigned:
+
+@snippet Ui.cpp DebugLayer-node-highlight-condition-layouter
 
 Node highlight is orthogonal to node inspection, so if you have
 @ref DebugLayerFlag::NodeInspect enabled as well, you can then inspect the
