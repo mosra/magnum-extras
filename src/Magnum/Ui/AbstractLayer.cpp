@@ -581,6 +581,10 @@ void AbstractLayer::preUpdate(const LayerStates states) {
         "Ui::AbstractLayer::preUpdate(): expected a non-empty subset of" << (LayerState::NeedsCommonDataUpdate|LayerState::NeedsSharedDataUpdate) << "but got" << states, );
     CORRADE_ASSERT(!(features() >= LayerFeature::Draw) || _state->setSizeCalled,
         "Ui::AbstractLayer::preUpdate(): user interface size wasn't set", );
+    /* Compared to update(), here is no check for setSize() being called, as in
+       update() it's only if the layer actually draws anything and preUpdate()
+       isn't meant to be populating any draw-related data that'd depend on UI
+       size */
     doPreUpdate(states);
 }
 
@@ -625,6 +629,8 @@ void AbstractLayer::composite(AbstractRenderer& renderer, const Containers::Stri
         "Ui::AbstractLayer::composite(): expected rect offset and size views to have the same size but got" << compositeRectOffsets.size() << "and" << compositeRectSizes.size(), );
     CORRADE_ASSERT(offset + count <= compositeRectOffsets.size(),
         "Ui::AbstractLayer::composite(): offset" << offset << "and count" << count << "out of range for" << compositeRectOffsets.size() << "items", );
+    /* Here's no check for setSize() being called, as the assumption is that
+       update(), which checks for it, was called before */
     doComposite(renderer, compositeRectOffsets, compositeRectSizes, offset, count);
 }
 
@@ -647,6 +653,8 @@ void AbstractLayer::draw(const Containers::StridedArrayView1D<const UnsignedInt>
         "Ui::AbstractLayer::draw(): expected node offset, size, opacity and enabled views to have the same size but got" << nodeOffsets.size() << Debug::nospace << "," << nodeSizes.size() << Debug::nospace << "," << nodeOpacities.size() << "and" << nodesEnabled.size(), );
     CORRADE_ASSERT(clipRectOffsets.size() == clipRectSizes.size(),
         "Ui::AbstractLayer::draw(): expected clip rect offset and size views to have the same size but got" << clipRectOffsets.size() << "and" << clipRectSizes.size(), );
+    /* Here's no check for setSize() being called, as the assumption is that
+       update(), which checks for it, was called before */
     doDraw(dataIds, offset, count, clipRectIds, clipRectDataCounts, clipRectOffset, clipRectCount, nodeOffsets, nodeSizes, nodeOpacities, nodesEnabled, clipRectOffsets, clipRectSizes);
 }
 
