@@ -1073,11 +1073,6 @@ void AbstractLayouterTest::update() {
        guarantees the same on a higher level), not needed for anything here */
     layouter.setSize({1, 1});
 
-    NodeHandle nodeParents[]{
-        NodeHandle::Null,
-        nodeHandle(7, 1),
-        nodeHandle(1, 7)
-    };
     Vector2 nodeOffsets[]{
         {1.0f, 2.0f},
         {3.0f, 4.0f},
@@ -1097,7 +1092,11 @@ void AbstractLayouterTest::update() {
             0xabcdeu,
             0x45678u,
         }),
-        nodeParents,
+        Containers::arrayView({
+            NodeHandle::Null,
+            nodeHandle(7, 1),
+            nodeHandle(1, 7)
+        }),
         nodeOffsets,
         nodeSizes);
     CORRADE_COMPARE(layouter.called, 1);
