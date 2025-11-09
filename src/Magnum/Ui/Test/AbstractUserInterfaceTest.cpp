@@ -280,49 +280,55 @@ const struct {
 
 const struct {
     const char* name;
-    bool compositingLayer;
+    LayerFeatures layerFeatures;
+    RendererFeatures rendererFeatures;
     bool layouters;
     bool nodeAttachmentAnimators;
     bool dataAttachmentAnimators;
     bool clean;
     bool noOp;
+    LayerStates extraExpectedLayerState;
 } StateData[]{
     {"",
-        false, false, false, false, true, false},
+        {}, {}, false, false, false, true, false, {}},
     {"with no-op calls",
-        false, false, false, false, true, true},
+        {}, {}, false, false, false, true, true, {}},
     {"with implicit clean",
-        false, false, false, false, false, false},
+        {}, {}, false, false, false, false, false, {}},
     {"with implicit clean and no-op calls",
-        false, false, false, false, false, true},
+        {}, {}, false, false, false, false, true, {}},
     {"with layouters",
-        false, true, false, false, true, false},
+        {}, {}, true, false, false, true, false, {}},
     {"with layouters, with no-op calls",
-        false, true, false, false, true, true},
+        {}, {}, true, false, false, true, true, {}},
     {"with layouters, with implicit clean",
-        false, true, false, false, false, false},
+        {}, {}, true, false, false, false, false, {}},
     {"with layouters, with implicit clean and no-op calls",
-        false, true, false, false, false, true},
+        {}, {}, true, false, false, false, true, {}},
     {"with node attachment animators",
-        false, false, true, false, true, false},
+        {}, {}, false, true, false, true, false, {}},
     {"with node attachment animators, with no-op calls",
-        false, false, true, false, true, true},
+        {}, {}, false, true, false, true, true, {}},
     {"with node attachment animators, with implicit clean",
-        false, false, true, false, false, false},
+        {}, {}, false, true, false, false, false, {}},
     {"with node attachment animators, with implicit clean and no-op calls",
-        false, false, true, false, false, true},
+        {}, {}, false, true, false, false, true, {}},
     {"with data attachment animators",
-        false, false, false, true, true, false},
+        {}, {}, false, false, true, true, false, {}},
     {"with data attachment animators, with no-op calls",
-        false, false, false, true, true, true},
+        {}, {}, false, false, true, true, true, {}},
     {"with data attachment animators, with implicit clean",
-        false, false, false, true, false, false},
+        {}, {}, false, false, true, false, false, {}},
     {"with data attachment animators, with implicit clean and no-op calls",
-        false, false, false, true, false, true},
+        {}, {}, false, false, true, false, true, {}},
     {"compositing layer",
-        true, false, false, false, true, false},
+        LayerFeature::Composite, RendererFeature::Composite,
+        false, false, false, true, false,
+        LayerState::NeedsCompositeOffsetSizeUpdate},
     {"compositing layer, with layouters",
-        true, true, false, false, true, false},
+        LayerFeature::Composite, RendererFeature::Composite,
+        true, false, false, true, false,
+        LayerState::NeedsCompositeOffsetSizeUpdate},
 };
 
 const struct {
@@ -8269,7 +8275,7 @@ void AbstractUserInterfaceTest::state() {
     };
 
     /* Creating a layer sets no state flags */
-    Layer& layer = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer(), data.compositingLayer ? LayerFeature::Composite : LayerFeatures{}));
+    Layer& layer = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer(), data.layerFeatures));
     CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
 
     /* Calling clean() should be a no-op, not calling anything in the layouters
@@ -8369,7 +8375,7 @@ void AbstractUserInterfaceTest::state() {
         layer.expectedNodesEnabled = expectedNodesEnabled;
         layer.expectedClipRectIdsDataCounts = {};
         layer.expectedClipRectOffsetsSizes = expectedClipRectOffsetsSizes;
-        if(data.compositingLayer)
+        if(data.layerFeatures >= LayerFeature::Composite)
             layer.expectedCompositeRectOffsetsSizes = {};
         ui.update();
     }
@@ -8579,13 +8585,13 @@ void AbstractUserInterfaceTest::state() {
         };
         /* Data were updated in the previous call, so it's now just the
            node-related state */
-        layer.expectedState = LayerState::NeedsNodeOffsetSizeUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsNodeOpacityUpdate|LayerState::NeedsNodeOrderUpdate|(data.compositingLayer ? LayerState::NeedsCompositeOffsetSizeUpdate : LayerStates{});
+        layer.expectedState = LayerState::NeedsNodeOffsetSizeUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsNodeOpacityUpdate|LayerState::NeedsNodeOrderUpdate|data.extraExpectedLayerState;
         layer.expectedDataIds = expectedDataIds;
         layer.expectedNodeOffsetsSizesOpacities = expectedNodeOffsetsSizesOpacities;
         layer.expectedNodesEnabled = expectedNodesEnabled;
         layer.expectedClipRectIdsDataCounts = expectedClipRectIdsDataCounts;
         layer.expectedClipRectOffsetsSizes = expectedClipRectOffsetsSizes;
-        if(data.compositingLayer)
+        if(data.layerFeatures >= LayerFeature::Composite)
             layer.expectedCompositeRectOffsetsSizes = expectedCompositeRectOffsetsSizes;
         ui.update();
     }
@@ -8627,7 +8633,7 @@ void AbstractUserInterfaceTest::state() {
         private:
             RendererFeatures _features;
     };
-    ui.setRendererInstance(Containers::pointer<Renderer>(data.compositingLayer ? RendererFeature::Composite : RendererFeatures{}));
+    ui.setRendererInstance(Containers::pointer<Renderer>(data.rendererFeatures));
     CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
     CORRADE_COMPARE(ui.renderer<Renderer>().setupFramebufferCallCount, 1);
     CORRADE_COMPARE(ui.renderer().framebufferSize(), Vector2i{100});
@@ -8712,7 +8718,7 @@ void AbstractUserInterfaceTest::state() {
         layer.expectedNodesEnabled = expectedNodesEnabled;
         layer.expectedClipRectIdsDataCounts = expectedClipRectIdsDataCounts;
         layer.expectedClipRectOffsetsSizes = expectedClipRectOffsetsSizes;
-        if(data.compositingLayer)
+        if(data.layerFeatures >= LayerFeature::Composite)
             layer.expectedCompositeRectOffsetsSizes = expectedCompositeRectOffsetsSizes;
         ui.update();
     }
@@ -8814,7 +8820,7 @@ void AbstractUserInterfaceTest::state() {
         layer.expectedNodesEnabled = expectedNodesEnabled;
         layer.expectedClipRectIdsDataCounts = expectedClipRectIdsDataCounts;
         layer.expectedClipRectOffsetsSizes = expectedClipRectOffsetsSizes;
-        if(data.compositingLayer)
+        if(data.layerFeatures >= LayerFeature::Composite)
             layer.expectedCompositeRectOffsetsSizes = expectedCompositeRectOffsetsSizes;
         ui.update();
     }
@@ -8913,7 +8919,7 @@ void AbstractUserInterfaceTest::state() {
         layer.expectedNodesEnabled = expectedNodesEnabled;
         layer.expectedClipRectIdsDataCounts = expectedClipRectIdsDataCounts;
         layer.expectedClipRectOffsetsSizes = expectedClipRectOffsetsSizes;
-        if(data.compositingLayer)
+        if(data.layerFeatures >= LayerFeature::Composite)
             layer.expectedCompositeRectOffsetsSizes = expectedCompositeRectOffsetsSizes;
         ui.update();
     }
@@ -9089,13 +9095,13 @@ void AbstractUserInterfaceTest::state() {
         /* Updating node size means offsets/sizes have to be changed, and the
            order + enabled state as well, as the set of visible nodes may be
            different now */
-        layer.expectedState = LayerState::NeedsNodeOffsetSizeUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsNodeOrderUpdate|(data.compositingLayer ? LayerState::NeedsCompositeOffsetSizeUpdate : LayerStates{});
+        layer.expectedState = LayerState::NeedsNodeOffsetSizeUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsNodeOrderUpdate|data.extraExpectedLayerState;
         layer.expectedDataIds = expectedDataIds;
         layer.expectedNodeOffsetsSizesOpacities = expectedNodeOffsetsSizesOpacities;
         layer.expectedNodesEnabled = expectedNodesEnabled;
         layer.expectedClipRectIdsDataCounts = expectedClipRectIdsDataCounts;
         layer.expectedClipRectOffsetsSizes = expectedClipRectOffsetsSizes;
-        if(data.compositingLayer)
+        if(data.layerFeatures >= LayerFeature::Composite)
             layer.expectedCompositeRectOffsetsSizes = expectedCompositeRectOffsetsSizes;
 
         ui.update();
@@ -9269,13 +9275,13 @@ void AbstractUserInterfaceTest::state() {
         };
         /* Updating node size agains means offsets/sizes + order + enabled
            has to be updated now */
-        layer.expectedState = LayerState::NeedsNodeOffsetSizeUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsNodeOrderUpdate|(data.compositingLayer ? LayerState::NeedsCompositeOffsetSizeUpdate : LayerStates{});
+        layer.expectedState = LayerState::NeedsNodeOffsetSizeUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsNodeOrderUpdate|data.extraExpectedLayerState;
         layer.expectedDataIds = expectedDataIds;
         layer.expectedNodeOffsetsSizesOpacities = expectedNodeOffsetsSizesOpacities;
         layer.expectedNodesEnabled = expectedNodesEnabled;
         layer.expectedClipRectIdsDataCounts = expectedClipRectIdsDataCounts;
         layer.expectedClipRectOffsetsSizes = expectedClipRectOffsetsSizes;
-        if(data.compositingLayer)
+        if(data.layerFeatures >= LayerFeature::Composite)
             layer.expectedCompositeRectOffsetsSizes = expectedCompositeRectOffsetsSizes;
 
         ui.update();
@@ -9414,13 +9420,13 @@ void AbstractUserInterfaceTest::state() {
            calculated), which is however smashed together with offset/size
            changes due to the coarseness of the UserInterfaceState bits. */
         /** @todo separate those */
-        layer.expectedState = LayerState::NeedsNodeOrderUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsNodeOpacityUpdate|LayerState::NeedsNodeOffsetSizeUpdate|(data.compositingLayer ? LayerState::NeedsCompositeOffsetSizeUpdate : LayerStates{});
+        layer.expectedState = LayerState::NeedsNodeOrderUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsNodeOpacityUpdate|LayerState::NeedsNodeOffsetSizeUpdate|data.extraExpectedLayerState;
         layer.expectedDataIds = expectedDataIds;
         layer.expectedNodeOffsetsSizesOpacities = expectedNodeOffsetsSizesOpacities;
         layer.expectedNodesEnabled = expectedNodesEnabled;
         layer.expectedClipRectIdsDataCounts = expectedClipRectIdsDataCounts;
         layer.expectedClipRectOffsetsSizes = expectedClipRectOffsetsSizes;
-        if(data.compositingLayer)
+        if(data.layerFeatures >= LayerFeature::Composite)
             layer.expectedCompositeRectOffsetsSizes = expectedCompositeRectOffsetsSizes;
 
         ui.update();
@@ -9588,13 +9594,13 @@ void AbstractUserInterfaceTest::state() {
            calculated), which is again smashed together with offset/size
            changes due to the coarseness of the UserInterfaceState bits. */
         /** @todo separate those */
-        layer.expectedState = LayerState::NeedsNodeOrderUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsNodeOpacityUpdate|LayerState::NeedsNodeOffsetSizeUpdate|(data.compositingLayer ? LayerState::NeedsCompositeOffsetSizeUpdate : LayerStates{});
+        layer.expectedState = LayerState::NeedsNodeOrderUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsNodeOpacityUpdate|LayerState::NeedsNodeOffsetSizeUpdate|data.extraExpectedLayerState;
         layer.expectedDataIds = expectedDataIds;
         layer.expectedNodeOffsetsSizesOpacities = expectedNodeOffsetsSizesOpacities;
         layer.expectedNodesEnabled = expectedNodesEnabled;
         layer.expectedClipRectIdsDataCounts = expectedClipRectIdsDataCounts;
         layer.expectedClipRectOffsetsSizes = expectedClipRectOffsetsSizes;
-        if(data.compositingLayer)
+        if(data.layerFeatures >= LayerFeature::Composite)
             layer.expectedCompositeRectOffsetsSizes = expectedCompositeRectOffsetsSizes;
 
         ui.update();
@@ -9698,7 +9704,7 @@ void AbstractUserInterfaceTest::state() {
         layer.expectedNodesEnabled = expectedNodesEnabled;
         layer.expectedClipRectIdsDataCounts = expectedClipRectIdsDataCounts;
         layer.expectedClipRectOffsetsSizes = expectedClipRectOffsetsSizes;
-        if(data.compositingLayer)
+        if(data.layerFeatures >= LayerFeature::Composite)
             layer.expectedCompositeRectOffsetsSizes = expectedCompositeRectOffsetsSizes;
 
         ui.update();
@@ -9808,7 +9814,7 @@ void AbstractUserInterfaceTest::state() {
         layer.expectedNodesEnabled = expectedNodesEnabled;
         layer.expectedClipRectIdsDataCounts = expectedClipRectIdsDataCounts;
         layer.expectedClipRectOffsetsSizes = expectedClipRectOffsetsSizes;
-        if(data.compositingLayer)
+        if(data.layerFeatures >= LayerFeature::Composite)
             layer.expectedCompositeRectOffsetsSizes = expectedCompositeRectOffsetsSizes;
 
         ui.update();
@@ -9908,7 +9914,7 @@ void AbstractUserInterfaceTest::state() {
         layer.expectedNodesEnabled = expectedNodesEnabled;
         layer.expectedClipRectIdsDataCounts = expectedClipRectIdsDataCounts;
         layer.expectedClipRectOffsetsSizes = expectedClipRectOffsetsSizes;
-        if(data.compositingLayer)
+        if(data.layerFeatures >= LayerFeature::Composite)
             layer.expectedCompositeRectOffsetsSizes = expectedCompositeRectOffsetsSizes;
 
         ui.update();
@@ -10026,7 +10032,7 @@ void AbstractUserInterfaceTest::state() {
         layer.expectedNodesEnabled = expectedNodesEnabled;
         layer.expectedClipRectIdsDataCounts = expectedClipRectIdsDataCounts;
         layer.expectedClipRectOffsetsSizes = expectedClipRectOffsetsSizes;
-        if(data.compositingLayer)
+        if(data.layerFeatures >= LayerFeature::Composite)
             layer.expectedCompositeRectOffsetsSizes = expectedCompositeRectOffsetsSizes;
         ui.update();
     }
@@ -10126,7 +10132,7 @@ void AbstractUserInterfaceTest::state() {
         layer.expectedNodesEnabled = expectedNodesEnabled;
         layer.expectedClipRectIdsDataCounts = expectedClipRectIdsDataCounts;
         layer.expectedClipRectOffsetsSizes = expectedClipRectOffsetsSizes;
-        if(data.compositingLayer)
+        if(data.layerFeatures >= LayerFeature::Composite)
             layer.expectedCompositeRectOffsetsSizes = expectedCompositeRectOffsetsSizes;
         ui.update();
     }
@@ -10243,13 +10249,13 @@ void AbstractUserInterfaceTest::state() {
            to be calculated) being updated, but offset/size update is also
            triggered due to the coarseness of the UserInterfaceState bits */
         /** @todo separate those */
-        layer.expectedState = LayerState::NeedsNodeOrderUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsNodeOpacityUpdate|LayerState::NeedsNodeOffsetSizeUpdate|(data.compositingLayer ? LayerState::NeedsCompositeOffsetSizeUpdate : LayerStates{});
+        layer.expectedState = LayerState::NeedsNodeOrderUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsNodeOpacityUpdate|LayerState::NeedsNodeOffsetSizeUpdate|data.extraExpectedLayerState;
         layer.expectedDataIds = expectedDataIds;
         layer.expectedNodeOffsetsSizesOpacities = expectedNodeOffsetsSizesOpacities;
         layer.expectedNodesEnabled = expectedNodesEnabled;
         layer.expectedClipRectIdsDataCounts = expectedClipRectIdsDataCounts;
         layer.expectedClipRectOffsetsSizes = expectedClipRectOffsetsSizes;
-        if(data.compositingLayer)
+        if(data.layerFeatures >= LayerFeature::Composite)
             layer.expectedCompositeRectOffsetsSizes = expectedCompositeRectOffsetsSizes;
 
         ui.update();
@@ -10412,13 +10418,13 @@ void AbstractUserInterfaceTest::state() {
         };
         /* Putting a node back to the top-level order triggers offset/size
            update in addition to just the order + enabled + opacity */
-        layer.expectedState = LayerState::NeedsNodeOrderUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsNodeOpacityUpdate|LayerState::NeedsNodeOffsetSizeUpdate|(data.compositingLayer ? LayerState::NeedsCompositeOffsetSizeUpdate : LayerStates{});
+        layer.expectedState = LayerState::NeedsNodeOrderUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsNodeOpacityUpdate|LayerState::NeedsNodeOffsetSizeUpdate|data.extraExpectedLayerState;
         layer.expectedDataIds = expectedDataIds;
         layer.expectedNodeOffsetsSizesOpacities = expectedNodeOffsetsSizesOpacities;
         layer.expectedNodesEnabled = expectedNodesEnabled;
         layer.expectedClipRectIdsDataCounts = expectedClipRectIdsDataCounts;
         layer.expectedClipRectOffsetsSizes = expectedClipRectOffsetsSizes;
-        if(data.compositingLayer)
+        if(data.layerFeatures >= LayerFeature::Composite)
             layer.expectedCompositeRectOffsetsSizes = expectedCompositeRectOffsetsSizes;
 
         ui.update();
@@ -10579,13 +10585,13 @@ void AbstractUserInterfaceTest::state() {
            offset/size update is also triggered due to the coarseness of the
            UserInterfaceState bits */
         /** @todo separate those */
-        layer.expectedState = LayerState::NeedsNodeOrderUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsNodeOpacityUpdate|LayerState::NeedsNodeOffsetSizeUpdate|(data.compositingLayer ? LayerState::NeedsCompositeOffsetSizeUpdate : LayerStates{});
+        layer.expectedState = LayerState::NeedsNodeOrderUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsNodeOpacityUpdate|LayerState::NeedsNodeOffsetSizeUpdate|data.extraExpectedLayerState;
         layer.expectedDataIds = expectedDataIds;
         layer.expectedNodeOffsetsSizesOpacities = expectedNodeOffsetsSizesOpacities;
         layer.expectedNodesEnabled = expectedNodesEnabled;
         layer.expectedClipRectIdsDataCounts = expectedClipRectIdsDataCounts;
         layer.expectedClipRectOffsetsSizes = expectedClipRectOffsetsSizes;
-        if(data.compositingLayer)
+        if(data.layerFeatures >= LayerFeature::Composite)
             layer.expectedCompositeRectOffsetsSizes = expectedCompositeRectOffsetsSizes;
 
         ui.update();
@@ -10713,13 +10719,13 @@ void AbstractUserInterfaceTest::state() {
             };
             /* Layout change means offset/size update, which may affect the set
                of visible nodes and thus also the enabled state */
-            layer.expectedState = LayerState::NeedsNodeOrderUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsNodeOffsetSizeUpdate|(data.compositingLayer ? LayerState::NeedsCompositeOffsetSizeUpdate : LayerStates{});
+            layer.expectedState = LayerState::NeedsNodeOrderUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsNodeOffsetSizeUpdate|data.extraExpectedLayerState;
             layer.expectedDataIds = expectedDataIds;
             layer.expectedNodeOffsetsSizesOpacities = expectedNodeOffsetsSizesOpacities;
             layer.expectedNodesEnabled = expectedNodesEnabled;
             layer.expectedClipRectIdsDataCounts = expectedClipRectIdsDataCounts;
             layer.expectedClipRectOffsetsSizes = expectedClipRectOffsetsSizes;
-            if(data.compositingLayer)
+            if(data.layerFeatures >= LayerFeature::Composite)
                 layer.expectedCompositeRectOffsetsSizes = expectedCompositeRectOffsetsSizes;
 
             ui.update();
@@ -10824,7 +10830,7 @@ void AbstractUserInterfaceTest::state() {
         layer.expectedNodesEnabled = expectedNodesEnabled;
         layer.expectedClipRectIdsDataCounts = expectedClipRectIdsDataCounts;
         layer.expectedClipRectOffsetsSizes = expectedClipRectOffsetsSizes;
-        if(data.compositingLayer)
+        if(data.layerFeatures >= LayerFeature::Composite)
             layer.expectedCompositeRectOffsetsSizes = expectedCompositeRectOffsetsSizes;
 
         ui.update();
@@ -11022,7 +11028,7 @@ void AbstractUserInterfaceTest::state() {
         };
         layer.expectedDataIds = expectedDataIds;
         layer.expectedClipRectIdsDataCounts = expectedClipRectIdsDataCounts;
-        if(data.compositingLayer)
+        if(data.layerFeatures >= LayerFeature::Composite)
             layer.expectedCompositeRectOffsetsSizes = expectedCompositeRectOffsetsSizes;
         /* Removing attached data means the draw order needs an update.
            Currently, affecting any node attachments triggers a need to update
@@ -11263,13 +11269,13 @@ void AbstractUserInterfaceTest::state() {
            updated, however again with the coarseness of UserInterfaceState
            bits it's together with offset/size as well */
         /** @todo separate */
-        layer.expectedState = LayerState::NeedsNodeOrderUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsNodeOpacityUpdate|LayerState::NeedsNodeOffsetSizeUpdate|(data.compositingLayer ? LayerState::NeedsCompositeOffsetSizeUpdate : LayerStates{});
+        layer.expectedState = LayerState::NeedsNodeOrderUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsNodeOpacityUpdate|LayerState::NeedsNodeOffsetSizeUpdate|data.extraExpectedLayerState;
         /* The other layer doesn't have compositing enabled ever */
         anotherLayer.expectedState = LayerState::NeedsNodeOrderUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsNodeOpacityUpdate|LayerState::NeedsNodeOffsetSizeUpdate;
         layer.expectedDataIdsToRemove = expectedDataIdsToRemove;
         layer.expectedDataIds = expectedDataIds;
         layer.expectedClipRectIdsDataCounts = expectedClipRectIdsDataCounts;
-        if(data.compositingLayer)
+        if(data.layerFeatures >= LayerFeature::Composite)
             layer.expectedCompositeRectOffsetsSizes = expectedCompositeRectOffsetsSizes;
         for(Layer* i: {&layer, &anotherLayer}) {
             CORRADE_ITERATION(i->handle());
@@ -11393,12 +11399,12 @@ void AbstractUserInterfaceTest::state() {
             };
             /* Removing a layouter means node offsets/sizes can change but also
                the set of visible nodes and enabled state */
-            layer.expectedState = LayerState::NeedsNodeOrderUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsNodeOffsetSizeUpdate|(data.compositingLayer ? LayerState::NeedsCompositeOffsetSizeUpdate : LayerStates{});
+            layer.expectedState = LayerState::NeedsNodeOrderUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsNodeOffsetSizeUpdate|data.extraExpectedLayerState;
             /* The other layer doesn't have compositing enabled ever */
             anotherLayer.expectedState = LayerState::NeedsNodeOrderUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsNodeOffsetSizeUpdate;
             layer.expectedDataIds = expectedDataIds;
             layer.expectedClipRectIdsDataCounts = expectedClipRectIdsDataCounts;
-            if(data.compositingLayer)
+            if(data.layerFeatures >= LayerFeature::Composite)
                 layer.expectedCompositeRectOffsetsSizes = expectedCompositeRectOffsetsSizes;
             for(Layer* i: {&layer, &anotherLayer}) {
                 CORRADE_ITERATION(i->handle());
