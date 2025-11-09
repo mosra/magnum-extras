@@ -293,8 +293,10 @@ enum class LayerState: UnsignedShort {
      * and reupload compositing-related data after node sizes and offsets
      * changed. Set on layers that advertise @ref LayerFeature::Composite
      * implicitly after every @ref AbstractLayer::create() with a non-null
-     * @ref NodeHandle and after every @ref AbstractLayer::attach() call that
-     * attaches data to a different non-null @ref NodeHandle. Can also be
+     * @ref NodeHandle, after every @ref AbstractLayer::attach() call that
+     * attaches data to a different non-null @ref NodeHandle, and after every
+     * @ref AbstractLayer::remove() or @ref AbstractLayer::cleanNodes()
+     * removing data attached to a non-null @ref NodeHandle. Can also be
      * returned by @ref AbstractLayer::doState() or be explicitly set by the
      * layer implementation using @ref AbstractLayer::setNeedsUpdate() if the
      * layer advertises @ref LayerFeature::Composite. Is reset next time
@@ -1117,6 +1119,10 @@ class MAGNUM_UI_EXPORT AbstractLayer {
          * decide about node attachment validity, data with invalid node
          * attachments are then removed. Delegates to @ref doClean(), see its
          * documentation for more information about the arguments.
+         *
+         * If the layer advertises @ref LayerFeature::Composite and calling
+         * this function causes any data to be removed, it results in
+         * @ref LayerState::NeedsCompositeOffsetSizeUpdate being set.
          */
         void cleanNodes(const Containers::StridedArrayView1D<const UnsignedShort>& nodeHandleGenerations);
 
@@ -1550,11 +1556,12 @@ class MAGNUM_UI_EXPORT AbstractLayer {
          *
          * Calling this function causes @ref LayerState::NeedsDataClean to be
          * set. If @p handle is attached to a node, calling this function also
-         * causes @ref LayerState::NeedsAttachmentUpdate to be set. Other than
-         * that, no flag is set to trigger a subsequent @ref cleanNodes() or
-         * @ref update() --- instead the subclass is meant to wrap this
-         * function in a public API and perform appropriate cleanup work
-         * directly there.
+         * causes @ref LayerState::NeedsAttachmentUpdate to be set, and also
+         * @ref LayerState::NeedsCompositeOffsetSizeUpdate if the layer
+         * advertises @ref LayerFeature::Composite. Other than that, no flag is
+         * set to trigger a subsequent @ref cleanNodes() or @ref update() ---
+         * instead the subclass is meant to wrap this function in a public API
+         * and perform appropriate cleanup work directly there.
          * @see @ref node()
          */
         void remove(DataHandle handle);
