@@ -2917,12 +2917,13 @@ void AbstractLayerTest::state() {
     layer.cleanData({});
     CORRADE_COMPARE(layer.state(), LayerStates{});
 
-    /* remove() adds NeedsAttachmentUpdate if the data were attached */
+    /* remove() adds NeedsAttachmentUpdate and potentially
+       NeedsCompositeOffsetSizeUpdate if the data were attached */
     layer.remove(data2);
-    CORRADE_COMPARE(layer.state(), LayerState::NeedsDataClean|LayerState::NeedsAttachmentUpdate);
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsDataClean|LayerState::NeedsAttachmentUpdate|data.extraAttachState);
 
     /* update() then resets one */
-    layer.update(LayerState::NeedsAttachmentUpdate, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
+    layer.update(LayerState::NeedsAttachmentUpdate|data.extraAttachState, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
     CORRADE_COMPARE(layer.state(), LayerState::NeedsDataClean);
 
     /* cleanData() the other */
@@ -2931,17 +2932,18 @@ void AbstractLayerTest::state() {
 
     /* Testing the other overload */
     layer.remove(dataHandleData(data3));
-    CORRADE_COMPARE(layer.state(), LayerState::NeedsDataClean|LayerState::NeedsAttachmentUpdate);
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsDataClean|LayerState::NeedsAttachmentUpdate|data.extraAttachState);
 
     /* update() and cleanData() then resets it */
-    layer.update(LayerState::NeedsAttachmentUpdate, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
+    layer.update(LayerState::NeedsAttachmentUpdate|data.extraAttachState, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
     layer.cleanData({});
     CORRADE_COMPARE(layer.state(), LayerStates{});
 
-    /* cleanNodes() that removes a data doesn't set any flags either */
+    /* cleanNodes() that removes a data sets NeedsCompositeOffsetSizeUpdate if
+       the layer is compositing */
     CORRADE_VERIFY(layer.isHandleValid(data4));
     layer.cleanNodes(Containers::arrayView({UnsignedShort{0xfef}}));
-    CORRADE_COMPARE(layer.state(), LayerStates{});
+    CORRADE_COMPARE(layer.state(), data.extraAttachState);
     CORRADE_VERIFY(!layer.isHandleValid(data4));
 }
 

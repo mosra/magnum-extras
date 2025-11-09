@@ -10942,7 +10942,8 @@ void AbstractUserInterfaceTest::state() {
     }
 
     /* Removing attached data marks the layer with both NeedsDataClean and
-       NeedsAttachmentUpdate, which is then propagated to the UI-wide state */
+       NeedsAttachmentUpdate, and potentially NeedsCompositeOffsetSizeUpdate,
+       which is then propagated to the UI-wide state */
     layer.remove(dataNode);
     CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataClean|UserInterfaceState::NeedsDataAttachmentUpdate);
     CORRADE_COMPARE(layer.usedCount(), 3);
@@ -11036,9 +11037,11 @@ void AbstractUserInterfaceTest::state() {
            attachments affected. Also, the layer which needed attachment update
            gets opacity update triggered as well, even though it might only
            make sense when attaching new data, not removing existing. */
-        /** @todo separate those? or with the addition of draw merging this
-            won't be possible anymore? */
-        layer.expectedState = LayerState::NeedsNodeOpacityUpdate|LayerState::NeedsNodeOrderUpdate;
+        /** @todo separate attachment from order? or with the addition of draw
+            merging this won't be possible anymore? */
+        /* If the layer is compositing, then removing a node means also update
+           to the composite rects. */
+        layer.expectedState = LayerState::NeedsNodeOpacityUpdate|LayerState::NeedsNodeOrderUpdate|data.extraExpectedLayerState;
         anotherLayer.expectedState = LayerState::NeedsNodeOrderUpdate;
         /* The other layer, which didn't need attachment update, doesn't get
            opacity update triggered, only node order */

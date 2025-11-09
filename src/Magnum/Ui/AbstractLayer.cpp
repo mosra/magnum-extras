@@ -343,6 +343,19 @@ void AbstractLayer::removeInternal(const UnsignedInt id) {
     ++data.used.generation &= (1 << Implementation::LayerDataHandleGenerationBits) - 1;
     data.used.used = false;
 
+    /* If this is a composite layer and the data is attached to a node, the
+       composite offset/size needs to be updated to remove the node from the
+       set of composite rects. This mirrors what's done in create() and
+       attach(), which also set NeedsCompositeOffsetSizeUpdate for attached
+       data. */
+    if(data.used.node != NodeHandle::Null && features() >= LayerFeature::Composite)
+        state.state |= LayerState::NeedsCompositeOffsetSizeUpdate;
+
+    /* Updating further LayerState is caller's responsibility. While remove()
+       additionally sets NeedsAttachmentUpdate, clean() below doesn't set any
+       additional state after calling removeInternal() because at that point
+       the node itself is gone and thus no other attachments to it remain. */
+
     /* Set the node attachment to null to avoid falsely recognizing this item
        as used when directly iterating the list */
     data.used.node = NodeHandle::Null;
@@ -365,9 +378,6 @@ void AbstractLayer::removeInternal(const UnsignedInt id) {
         }
         state.lastFree = id;
     }
-
-    /* Updating LayerState (or not) is caller's responsibility. For example,
-       clean() below doesn't set any state after calling removeInternal(). */
 }
 
 void AbstractLayer::assignAnimator(AbstractDataAnimator& animator) const {
