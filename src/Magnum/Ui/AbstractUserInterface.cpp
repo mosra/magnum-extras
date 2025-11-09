@@ -836,11 +836,12 @@ UserInterfaceStates AbstractUserInterface::state() const {
     const State& state = *_state;
     UserInterfaceStates states;
 
-    /* Unless UserInterfaceState::NeedsLayoutAssignmentUpdate is set already,
+    /* Unless the max possible state inherited from layouters is set already,
        go through all layouters and inherit the Needs* flags from them. Invalid
        (removed) layouters have instances set to nullptr, so this will skip
        them. */
-    if(!(state.state >= UserInterfaceState::NeedsLayoutAssignmentUpdate)) for(const Layouter& layouter: state.layouters) {
+    constexpr UserInterfaceStates maxLayouterState = UserInterfaceState::NeedsLayoutAssignmentUpdate;
+    if(!(state.state >= maxLayouterState)) for(const Layouter& layouter: state.layouters) {
         if(const AbstractLayouter* const instance = layouter.used.instance.get()) {
             const LayouterStates layouterState = instance->state();
             if(layouterState >= LayouterState::NeedsUpdate)
@@ -850,16 +851,17 @@ UserInterfaceStates AbstractUserInterface::state() const {
 
             /* There's no broader state than this so if it's set, we can stop
                iterating further */
-            if(states == UserInterfaceState::NeedsLayoutAssignmentUpdate)
+            if(states >= maxLayouterState)
                 break;
         }
     }
 
-    /* Unless UserInterfaceState::NeedsDataAttachmentUpdate is set already, go
+    /* Unless the max possible state inherited from layers is set already, go
        through all layers and inherit the Needs* flags from them. Invalid
        (removed) layers have instances set to nullptr as well, so this will
        skip them. */
-    if(!(state.state >= (UserInterfaceState::NeedsDataAttachmentUpdate|UserInterfaceState::NeedsDataClean))) for(const Layer& layer: state.layers) {
+    constexpr UserInterfaceStates maxLayerState = UserInterfaceState::NeedsDataAttachmentUpdate|UserInterfaceState::NeedsDataClean;
+    if(!(state.state >= maxLayerState)) for(const Layer& layer: state.layers) {
         if(const AbstractLayer* const instance = layer.used.instance.get()) {
             const LayerStates layerState = instance->state();
             if(layerState & (LayerState::NeedsDataUpdate|LayerState::NeedsCommonDataUpdate|LayerState::NeedsSharedDataUpdate|LayerState::NeedsCompositeOffsetSizeUpdate))
@@ -871,7 +873,7 @@ UserInterfaceStates AbstractUserInterface::state() const {
 
             /* There's no broader state than this so if it's set, we can stop
                iterating further */
-            if(states == (UserInterfaceState::NeedsDataAttachmentUpdate|UserInterfaceState::NeedsDataClean))
+            if(states >= maxLayerState)
                 break;
         }
     }
@@ -880,7 +882,8 @@ UserInterfaceStates AbstractUserInterface::state() const {
        (removed) animators have instances set to nullptr as well, so this will
        skip them. In contrast to layers and layouters, NeedsAnimationAdvance is
        never set on state.state itself, it's always inherited. */
-    CORRADE_INTERNAL_ASSERT(!(state.state >= UserInterfaceState::NeedsAnimationAdvance));
+    constexpr UserInterfaceStates maxAnimatorState = UserInterfaceState::NeedsAnimationAdvance;
+    CORRADE_INTERNAL_ASSERT(!(state.state >= maxAnimatorState));
     for(const Animator& animator: state.animators) {
         if(const AbstractAnimator* const instance = animator.used.instance.get()) {
             const AnimatorStates animatorState = instance->state();
@@ -889,7 +892,7 @@ UserInterfaceStates AbstractUserInterface::state() const {
 
             /* There's no broader state than this so if it's set, we can stop
                iterating further */
-            if(states == UserInterfaceState::NeedsAnimationAdvance)
+            if(states >= maxAnimatorState)
                 break;
         }
     }
