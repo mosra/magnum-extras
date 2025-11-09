@@ -862,7 +862,7 @@ UserInterfaceStates AbstractUserInterface::state() const {
     if(!(state.state >= (UserInterfaceState::NeedsDataAttachmentUpdate|UserInterfaceState::NeedsDataClean))) for(const Layer& layer: state.layers) {
         if(const AbstractLayer* const instance = layer.used.instance.get()) {
             const LayerStates layerState = instance->state();
-            if(layerState & (LayerState::NeedsDataUpdate|LayerState::NeedsCommonDataUpdate|LayerState::NeedsSharedDataUpdate))
+            if(layerState & (LayerState::NeedsDataUpdate|LayerState::NeedsCommonDataUpdate|LayerState::NeedsSharedDataUpdate|LayerState::NeedsCompositeOffsetSizeUpdate))
                 states |= UserInterfaceState::NeedsDataUpdate;
             if(layerState >= LayerState::NeedsAttachmentUpdate)
                 states |= UserInterfaceState::NeedsDataAttachmentUpdate;

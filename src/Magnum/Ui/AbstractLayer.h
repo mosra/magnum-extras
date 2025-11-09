@@ -302,10 +302,10 @@ enum class LayerState: UnsignedShort {
      * layer advertises @ref LayerFeature::Composite. Is reset next time
      * @ref AbstractLayer::update() is called with this flag present.
      *
-     * Besides being present in @ref AbstractLayer::state() gets passed to
-     * @ref AbstractLayer::update() when
-     * @ref UserInterfaceState::NeedsLayoutUpdate or anything that implies it
-     * is set on the user interface and the layer advertises
+     * If set on a layer, causes @ref UserInterfaceState::NeedsDataUpdate to
+     * be set on the user interface. Gets passed to @ref AbstractLayer::update()
+     * when @ref UserInterfaceState::NeedsLayoutUpdate or anything that implies
+     * it is set on the user interface and the layer advertises
      * @ref LayerFeature::Composite.
      */
     NeedsCompositeOffsetSizeUpdate = 1 << 8,
