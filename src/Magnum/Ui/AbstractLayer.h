@@ -1028,6 +1028,8 @@ class MAGNUM_UI_EXPORT AbstractLayer {
          * Like @ref attach(DataHandle, NodeHandle) but without checking that
          * @p data indeed belongs to this layer. See its documentation for more
          * information.
+         * @see @ref isHandleValid(LayerDataHandle) const,
+         *      @ref dataHandleData()
          */
         void attach(LayerDataHandle data, NodeHandle node);
 
@@ -1560,19 +1562,11 @@ class MAGNUM_UI_EXPORT AbstractLayer {
         /**
          * @brief Remove a data assuming it belongs to this layer
          *
-         * Expects that @p handle is valid. After this call,
-         * @ref isHandleValid(LayerDataHandle) const returns @cpp false @ce for
-         * @p handle. See also @ref remove(DataHandle) which additionally
-         * checks that the data belongs to this layer.
-         *
-         * Calling this function causes @ref LayerState::NeedsDataClean to be
-         * set. If @p handle is attached to a node, calling this function also
-         * causes @ref LayerState::NeedsAttachmentUpdate to be set. Other than
-         * that, no flag is set to trigger a subsequent @ref cleanNodes() or
-         * @ref update() --- instead the subclass is meant to wrap this
-         * function in a public API and perform appropriate cleanup work
-         * directly there.
-         * @see @ref dataHandleData(), @ref node()
+         * Like @ref remove(DataHandle, NodeHandle) but without checking that
+         * @p data indeed belongs to this layer. See its documentation for more
+         * information.
+         * @see @ref isHandleValid(LayerDataHandle) const,
+         *      @ref dataHandleData()
          */
         void remove(LayerDataHandle handle);
 
