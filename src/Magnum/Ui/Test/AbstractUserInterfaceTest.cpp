@@ -665,12 +665,25 @@ const struct {
 
 const struct {
     const char* name;
-    LayerStates state;
+    LayerFeatures features;
+    LayerStates extraAttachState, state;
 } StatePropagateFromLayersData[]{
-    {"needs data update", LayerState::NeedsDataUpdate},
-    {"needs common data update", LayerState::NeedsCommonDataUpdate},
-    {"needs shared data update", LayerState::NeedsSharedDataUpdate},
-    {"all", LayerState::NeedsDataUpdate|LayerState::NeedsCommonDataUpdate|LayerState::NeedsSharedDataUpdate},
+    {"needs data update", {}, {},
+        LayerState::NeedsDataUpdate},
+    {"needs common data update", {}, {},
+        LayerState::NeedsCommonDataUpdate},
+    {"needs shared data update", {}, {},
+        LayerState::NeedsSharedDataUpdate},
+    {"composite layer, needs composite offset size update",
+        LayerFeature::Composite,
+        LayerState::NeedsCompositeOffsetSizeUpdate,
+        LayerState::NeedsCompositeOffsetSizeUpdate},
+    {"all", {}, {},
+        LayerState::NeedsDataUpdate|LayerState::NeedsCommonDataUpdate|LayerState::NeedsSharedDataUpdate},
+    {"composite layer, all",
+        LayerFeature::Composite,
+        LayerState::NeedsCompositeOffsetSizeUpdate,
+        LayerState::NeedsDataUpdate|LayerState::NeedsCommonDataUpdate|LayerState::NeedsSharedDataUpdate|LayerState::NeedsCompositeOffsetSizeUpdate},
 };
 
 const struct {
@@ -12306,16 +12319,22 @@ void AbstractUserInterfaceTest::statePropagateFromLayers() {
     AbstractUserInterface ui{{100, 100}};
 
     struct Layer: AbstractLayer {
-        using AbstractLayer::AbstractLayer;
+        explicit Layer(LayerHandle handle, LayerFeatures features): AbstractLayer{handle}, _features{features} {}
+
         using AbstractLayer::create;
         using AbstractLayer::remove;
 
-        LayerFeatures doFeatures() const override { return {}; }
+        LayerFeatures doFeatures() const override {
+            return _features;
+        }
+
+        private:
+            LayerFeatures _features;
     };
     /*LayerHandle layerWithoutInstance =*/ ui.createLayer();
-    Layer& layerRemoved = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer()));
-    Layer& layer1 = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer()));
-    Layer& layer2 = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer()));
+    Layer& layerRemoved = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer(), data.features));
+    Layer& layer1 = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer(), data.features));
+    Layer& layer2 = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer(), LayerFeatures{}));
     CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
 
     /* Create a node for using later and make the state empty again */
@@ -12352,10 +12371,11 @@ void AbstractUserInterfaceTest::statePropagateFromLayers() {
     CORRADE_COMPARE(layer1.state(), LayerState::NeedsDataUpdate);
     CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataUpdate);
 
-    /* Attaching results in NeedsAttachmentUpdate in addition, plus extra
-       states on the layer itself */
+    /* Attaching results in NeedsAttachmentUpdate in addition (and potentially
+       NeedsCompositeOffsetSizeUpdate), plus extra states on the layer
+       itself */
     layer1.attach(data1, node);
-    CORRADE_COMPARE(layer1.state(), LayerState::NeedsAttachmentUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsNodeOffsetSizeUpdate|LayerState::NeedsDataUpdate);
+    CORRADE_COMPARE(layer1.state(), LayerState::NeedsAttachmentUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsNodeOffsetSizeUpdate|LayerState::NeedsDataUpdate|data.extraAttachState);
     CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataAttachmentUpdate);
 
     /* Hiding a node will set a UI-wide NeedsNodeUpdate flag */

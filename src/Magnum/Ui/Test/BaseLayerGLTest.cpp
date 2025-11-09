@@ -2104,14 +2104,18 @@ template<BaseLayerSharedFlag flag> void BaseLayerGLTest::renderCompositeEdgeSmoo
            otherwise it'd be all deferred to draw() below, circumventing what
            we want to test */
         ui.update();
+        CORRADE_COMPARE(layer.state(), LayerStates{});
         CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
 
         /* Setting the size should correctly regenerate whatever needs to be
-           regenerated (except for SubdividedQuads, where it's all done in the
-           shader) in order to adapt to the new DPI scaling. All state flag
-           possibilities are tested in BaseLayerTest::setSize(). */
+           regenerated for the composite rects in order to adapt to the new DPI
+           scaling. All state flag possibilities are tested in
+           BaseLayerTest::setSize(). Additionally, NeedsDataUpdate is set in
+           order to adjust for DPI-specific smoothness expansion, except for
+           SubdividedQuads where it's all done in the shader. */
         ui.setSize(data.scale*Vector2{RenderSize}, {1, 1}, RenderSize);
-        CORRADE_COMPARE(ui.state(), flag == BaseLayerSharedFlag::SubdividedQuads ? UserInterfaceStates{} : UserInterfaceState::NeedsDataUpdate);
+        CORRADE_COMPARE(layer.state(), LayerState::NeedsCompositeOffsetSizeUpdate|(flag == BaseLayerSharedFlag::SubdividedQuads ? LayerState{} : LayerState::NeedsDataUpdate));
+        CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataUpdate);
     }
 
     /* Set the background image only after setSize() to make sure it's uploaded
