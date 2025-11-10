@@ -162,24 +162,31 @@ struct AbstractUserInterfaceTest: TestSuite::Tester {
     void advanceAnimationsStyle();
     void advanceAnimationsInvalidTime();
 
+    /* Tests that update() calls on AbstractLayouter get correct data */
+    void updateLayout();
+
     void updateLayerOrder();
     void updateRecycledLayerWithoutInstance();
 
-    /* Tests update() and clean() calls on AbstractLayer, AbstractLayouter and
-       AbstractAnimator, and that the UserInterfaceState flags cause the right
-       subset of these to be called. Does *not* verify the state update
-       behavior consistency for events, that's done in event*() cases below. */
+    /* Tests that update() and clean() calls on AbstractLayer, AbstractLayouter
+       and AbstractAnimator are correctly triggered based on UserInterfaceState
+       flags. Does *not* verify the state update behavior consistency for
+       events, that's done in event*() cases below. */
     void state();
     /* Tests update() and clean() calls triggered by advanceAnimations() */
     void stateAnimations();
+    /* Tests AbstractLayer::preUpdate() triggering subsequent clean() calls */
     void statePreUpdateClean();
 
     void statePropagateFromLayers();
     void statePropagateFromLayouters();
     void statePropagateFromAnimators();
 
+    /* Tests that update() and draw() on AbstractLayer gets correct data */
     void draw();
+    /* Tests that update(), composite() and draw() gets correct data */
     void drawComposite();
+    /* Tests Renderer state transitions between AbstractLayer draw() calls */
     void drawRendererTransitions();
     void drawEmpty();
     void drawNoRendererSet();
@@ -268,6 +275,16 @@ const struct {
     {"", {}},
     {"node attachment", AnimatorFeature::NodeAttachment},
     {"data attachment", AnimatorFeature::DataAttachment},
+};
+
+const struct {
+    const char* name;
+    bool clean;
+    bool reorderLayouters;
+} UpdateLayoutData[]{
+    {"clean before", true, false},
+    {"", false, false},
+    {"non-implicit layouter order", false, true},
 };
 
 const struct {
@@ -1194,6 +1211,9 @@ AbstractUserInterfaceTest::AbstractUserInterfaceTest() {
               &AbstractUserInterfaceTest::advanceAnimationsData,
               &AbstractUserInterfaceTest::advanceAnimationsStyle,
               &AbstractUserInterfaceTest::advanceAnimationsInvalidTime});
+
+    addInstancedTests({&AbstractUserInterfaceTest::updateLayout},
+        Containers::arraySize(UpdateLayoutData));
 
     addInstancedTests({&AbstractUserInterfaceTest::updateLayerOrder},
         Containers::arraySize(UpdateLayerOrderData));
@@ -7733,6 +7753,360 @@ void AbstractUserInterfaceTest::advanceAnimationsInvalidTime() {
     CORRADE_COMPARE(out, "Ui::AbstractUserInterface::advanceAnimations(): expected a time at least Nanoseconds(56) but got Nanoseconds(55)\n");
 }
 
+void AbstractUserInterfaceTest::updateLayout() {
+    auto&& data = UpdateLayoutData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
+    /* Event/framebuffer scaling doesn't affect these tests */
+    AbstractUserInterface ui{{100, 100}};
+
+    struct Layouter1: AbstractLayouter {
+        explicit Layouter1(LayouterHandle handle, Containers::Array<UnsignedInt>& updateCalls): AbstractLayouter{handle}, _updateCalls(updateCalls) {}
+
+        using AbstractLayouter::add;
+
+        LayouterFeatures doFeatures() const override { return {}; }
+
+        void doUpdate(Containers::BitArrayView layoutIdsToUpdate, const Containers::StridedArrayView1D<const UnsignedInt>& topLevelLayoutIds, const Containers::StridedArrayView1D<const NodeHandle>& nodeParents, const Containers::StridedArrayView1D<Vector2>& nodeOffsets, const Containers::StridedArrayView1D<Vector2>& nodeSizes) override {
+            CORRADE_ITERATION("Layouter1");
+            CORRADE_COMPARE_AS(layoutIdsToUpdate,
+                expectedLayoutIdsToUpdate.sliceBit(0),
+                TestSuite::Compare::Container);
+            CORRADE_COMPARE_AS(topLevelLayoutIds,
+                expectedTopLevelLayoutIds,
+                TestSuite::Compare::Container);
+            CORRADE_COMPARE_AS(nodeParents,
+                expectedNodeParents,
+                TestSuite::Compare::Container);
+            CORRADE_COMPARE(nodeOffsets.size(), expectedNodeOffsetsSizes.size());
+            for(std::size_t i = 0; i != nodeOffsets.size(); ++i) {
+                CORRADE_ITERATION(i);
+                /* For nodes that aren't in the visible hierarchy or are
+                   removed the value can be just anything, skip */
+                if(expectedNodeOffsetsSizes[i].second().isZero())
+                    continue;
+                /* The original test case (in state(), from where it got moved)
+                   created the layouters in a shuffled order, but never
+                   actually tested for non-shuffled order, which executes the
+                   layouts in a slightly different order while it shouldn't.
+                   Because the final node offsets/sizes aren't any different,
+                   it doesn't seem to be a critical issue, nevertheless add an
+                   XFAIL (instead of testing only in shuffled order) for
+                   investigating later. */
+                CORRADE_EXPECT_FAIL_IF(layouterHandleId(handle()) == 1 && (i == 0 || i == 4),
+                    "Layouter update order isn't fully independent from handle order.");
+                CORRADE_COMPARE(Containers::pair(nodeOffsets[i], nodeSizes[i]), expectedNodeOffsetsSizes[i]);
+            }
+            for(std::size_t id = 0; id != layoutIdsToUpdate.size(); ++id) {
+                if(!layoutIdsToUpdate[id])
+                    continue;
+                nodeOffsets[nodeHandleId(nodes()[id])].x() += 2.0f;
+                nodeSizes[nodeHandleId(nodes()[id])].x() *= 2.0f;
+            }
+            actualNodeSizes = nodeSizes;
+            arrayAppend(_updateCalls, layouterHandleId(handle()));
+        }
+
+        Containers::StridedArrayView1D<const bool> expectedLayoutIdsToUpdate;
+        Containers::StridedArrayView1D<const UnsignedInt> expectedTopLevelLayoutIds;
+        Containers::StridedArrayView1D<const Containers::Pair<Vector2, Vector2>> expectedNodeOffsetsSizes;
+        Containers::StridedArrayView1D<const NodeHandle> expectedNodeParents;
+
+        Containers::StridedArrayView1D<const Vector2> actualNodeSizes;
+
+        private:
+            Containers::Array<UnsignedInt>& _updateCalls;
+    };
+    struct Layouter2: AbstractLayouter {
+        explicit Layouter2(LayouterHandle handle, Containers::Array<UnsignedInt>& updateCalls): AbstractLayouter{handle}, _updateCalls(updateCalls) {}
+
+        using AbstractLayouter::add;
+
+        LayouterFeatures doFeatures() const override { return {}; }
+
+        void doUpdate(Containers::BitArrayView layoutIdsToUpdate, const Containers::StridedArrayView1D<const UnsignedInt>& topLevelLayoutIds, const Containers::StridedArrayView1D<const NodeHandle>& nodeParents, const Containers::StridedArrayView1D<Vector2>& nodeOffsets, const Containers::StridedArrayView1D<Vector2>& nodeSizes) override {
+            CORRADE_ITERATION("Layouter2 call" << updateCallId);
+            CORRADE_COMPARE_AS(updateCallId,
+                2,
+                TestSuite::Compare::Less);
+            CORRADE_COMPARE_AS(layoutIdsToUpdate,
+                expectedLayoutIdsToUpdate[updateCallId].sliceBit(0),
+                TestSuite::Compare::Container);
+            CORRADE_COMPARE_AS(topLevelLayoutIds,
+                expectedTopLevelLayoutIds[updateCallId],
+                TestSuite::Compare::Container);
+            CORRADE_COMPARE_AS(nodeParents,
+                expectedNodeParents,
+                TestSuite::Compare::Container);
+            CORRADE_COMPARE(nodeOffsets.size(), expectedNodeOffsetsSizes[updateCallId].size());
+            for(std::size_t i = 0; i != nodeOffsets.size(); ++i) {
+                CORRADE_ITERATION(i);
+                /* For nodes that aren't in the visible hierarchy or are
+                   removed the value can be just anything, skip */
+                if(expectedNodeOffsetsSizes[updateCallId][i].second().isZero())
+                    continue;
+                /* See the XFAIL in Layouter1 for details */
+                CORRADE_EXPECT_FAIL_IF(layouterHandleId(handle()) == 3 && updateCallId == 0 && i == 1,
+                    "Layouter update order isn't fully independent from handle order.");
+                CORRADE_COMPARE(Containers::pair(nodeOffsets[i], nodeSizes[i]), expectedNodeOffsetsSizes[updateCallId][i]);
+            }
+            for(std::size_t id = 0; id != layoutIdsToUpdate.size(); ++id) {
+                if(!layoutIdsToUpdate[id])
+                    continue;
+                nodeOffsets[nodeHandleId(nodes()[id])].y() += -2.0f;
+                nodeSizes[nodeHandleId(nodes()[id])].y() *= 2.0f;
+            }
+            ++updateCallId;
+            arrayAppend(_updateCalls, layouterHandleId(handle()));
+        }
+
+        Containers::StridedArrayView1D<const bool> expectedLayoutIdsToUpdate[2];
+        Containers::StridedArrayView1D<const UnsignedInt> expectedTopLevelLayoutIds[2];
+        Containers::StridedArrayView1D<const Containers::Pair<Vector2, Vector2>> expectedNodeOffsetsSizes[2];
+        Containers::StridedArrayView1D<const NodeHandle> expectedNodeParents;
+
+        Int updateCallId = 0;
+
+        private:
+            Containers::Array<UnsignedInt>& _updateCalls;
+    };
+
+    struct Layer: AbstractLayer {
+        using AbstractLayer::AbstractLayer;
+        using AbstractLayer::create;
+        using AbstractLayer::remove;
+
+        LayerFeatures doFeatures() const override { return {}; }
+
+        void doUpdate(LayerStates, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, const Containers::StridedArrayView1D<const Float>&, Containers::BitArrayView, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&) override {
+            CORRADE_COMPARE(nodeOffsets.size(), expectedNodeOffsetsSizes.size());
+            for(std::size_t i = 0; i != nodeOffsets.size(); ++i) {
+                CORRADE_ITERATION(i);
+                /* For nodes that aren't in the visible hierarchy or are
+                   removed the value can be just anything, skip */
+                if(expectedNodeOffsetsSizes[i].second().isZero())
+                    continue;
+                CORRADE_COMPARE(Containers::pair(nodeOffsets[i], nodeSizes[i]), expectedNodeOffsetsSizes[i]);
+            }
+            actualNodeSizes = nodeSizes;
+            ++updateCallCount;
+        }
+
+        Containers::StridedArrayView1D<const Containers::Pair<Vector2, Vector2>> expectedNodeOffsetsSizes;
+        Int updateCallCount = 0;
+
+        Containers::StridedArrayView1D<const Vector2> actualNodeSizes;
+    };
+
+    /*   2        3         4         5          6
+       0                              +----------+
+       1 +----------------------------| another1 |
+       2 |       node                 +----------+
+       3 |                  +---------+ another2 |
+       4 |        +---------| nested2 |----------+
+       5 |        | nested1 +---------+
+       6 +--------+---------+---------+           */
+
+    /* node, another1, another2 and nested2 are assigned a layout that moves by
+       -2 on Y and scales by 2 on Y; invisible and another1 is assigned a
+       layout that moves by 2 on X and scales by 2 on X, so the initial offsets
+       are adjusted to make the end results match between the two */
+    NodeHandle node = ui.createNode({2.0f, 3.0f}, {3.0f, 2.5f}, NodeFlag::Clip);
+    NodeHandle another1 = ui.createNode({3.0f, 2.0f}, {0.5f, 1.0f});
+    NodeHandle another2 = ui.createNode(another1, {0.0f, 4.0f}, {1.0f, 1.0f});
+    /* This node is top-level but not root, so it shouldn't be included among
+       top-level nodes for layout processing. In other words, the behavior
+       should be the same as if setNodeOrder() wouldn't be called, but not the
+       same as if another2 was a root node. */
+    ui.setNodeOrder(another2, NodeHandle::Null);
+    /* This node isn't assigned any layout */
+    /*NodeHandle nested1 =*/ ui.createNode(node, {1.0f, 3.0f}, {1.0f, 2.0f});
+    NodeHandle nested2 = ui.createNode(node, {2.0f, 4.0f}, {1.0f, 1.0f});
+    NodeHandle removed = ui.createNode(node, {}, {});
+    /* This node is assigned a layout but isn't visible so it won't appear
+       anywhere. It also shouldn't be modified by the layouter in any way. */
+    NodeHandle invisible = ui.createNode({9.0f, 9.0f}, {9.0f, 9.0f}, NodeFlag::Hidden);
+    /* This node is not part of the top-level order so it won't appear anywhere
+       either. It also shouldn't be modified by the layouter in any way. */
+    NodeHandle notInOrder = ui.createNode({8.0f, 8.0f}, {8.0f, 8.0f});
+
+    NodeHandle expectedNodeParents[]{
+        NodeHandle::Null,
+        NodeHandle::Null,
+        another1,
+        node,
+        node,
+        NodeHandle::Null, /* removed */
+        NodeHandle::Null,
+        NodeHandle::Null,
+    };
+
+    /* Layouter without an instance, to verify those get skipped during
+       updates */
+    /*LayouterHandle layouterWithoutInstance =*/ ui.createLayouter();
+
+    LayouterHandle layouter1Handle, layouterRemovedHandle, layouter2Handle;
+    if(!data.reorderLayouters) {
+        layouter1Handle = ui.createLayouter();
+        layouterRemovedHandle = ui.createLayouter();
+        layouter2Handle = ui.createLayouter();
+    } else {
+        layouter2Handle = ui.createLayouter();
+        layouterRemovedHandle = ui.createLayouter();
+        layouter1Handle = ui.createLayouter(layouter2Handle);
+    }
+
+    /* Layouter that's subsequently removed, to verify it also gets skipped
+       during updates */
+    ui.removeLayouter(layouterRemovedHandle);
+
+    Containers::Array<UnsignedInt> layouterUpdateCalls;
+    Layouter1& layouter1 = ui.setLayouterInstance(Containers::pointer<Layouter1>(layouter1Handle, layouterUpdateCalls));
+    Layouter2& layouter2 = ui.setLayouterInstance(Containers::pointer<Layouter2>(layouter2Handle, layouterUpdateCalls));
+    Layer& updateLayer = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer()));
+
+    /* The commented out variables are either removed or skipped, thus not
+       referenced from any doUpdate() below */
+    /* This one gets ignored, as there's the same node added again after */
+    /*LayoutHandle layout2Nested2Duplicate =*/ layouter2.add(nested2);
+    LayoutHandle layout2Node = layouter2.add(node);
+    /*LayoutHandle layout2Nested2 =*/ layouter2.add(nested2);
+    LayoutHandle layout2Another1 = layouter2.add(another1);
+    /* This one is unused because the node is invisible */
+    /*LayoutHandle layout1Invisible =*/ layouter1.add(invisible);
+    /* This one is not referenced by the test as another2 is a non-root
+       top-level node so it never appears among top-level layout nodes */
+    /*LayoutHandle layout2Another2 =*/ layouter2.add(another2);
+    LayoutHandle layout1Another1 = layouter1.add(another1);
+    /*LayoutHandle layout1Removed =*/ layouter1.add(removed);
+    /* This one is again unused because the node is not in the top-level
+       order */
+    /*LayoutHandle layout1NotInOrder =*/ layouter1.add(notInOrder);
+
+    bool expectedLayoutIdsToUpdate1[]{
+        /* layout2Node and layout2Nested2 */
+        false, true, true, false, false
+    };
+    bool expectedLayoutIdsToUpdate2[]{
+        /* layout1Another1 */
+        false, true, false, false
+    };
+    bool expectedLayoutIdsToUpdate3[]{
+        /* layout2Another1 and layout2Another2 */
+        false, false, false, true, true
+    };
+    UnsignedInt expectedTopLevelLayoutIds1[]{
+        layoutHandleId(layout2Node),
+    };
+    UnsignedInt expectedTopLevelLayoutIds2[]{
+        layoutHandleId(layout1Another1),
+    };
+    UnsignedInt expectedTopLevelLayoutIds3[]{
+        layoutHandleId(layout2Another1),
+        /* layout2Another2 is top-level but not root, so not included
+           here */
+    };
+    Containers::Pair<Vector2, Vector2> expectedLayoutNodeOffsetsSizes1[]{
+        /* This gets the original sizes and *relative* offsets,
+           subsequent layouters then modified values and the layers
+           then what the layouter produces and absolute */
+        {{2.0f, 3.0f}, {3.0f, 2.5f}}, /* node */
+        {{3.0f, 2.0f}, {0.5f, 1.0f}}, /* another1 */
+        {{0.0f, 4.0f}, {1.0f, 1.0f}}, /* another2 */
+        {{1.0f, 3.0f}, {1.0f, 2.0f}}, /* nested1 */
+        {{2.0f, 4.0f}, {1.0f, 1.0f}}, /* nested2 */
+        {},                           /* removed */
+        {{9.0f, 9.0f}, {9.0f, 9.0f}}, /* invisible */
+        {{8.0f, 8.0f}, {8.0f, 8.0f}}, /* notInOrder */
+    };
+    Containers::Pair<Vector2, Vector2> expectedLayoutNodeOffsetsSizes2[]{
+        {{2.0f, 1.0f}, {3.0f, 5.0f}}, /* changed by layouter 2 */
+        {{3.0f, 2.0f}, {0.5f, 1.0f}},
+        {{0.0f, 4.0f}, {1.0f, 1.0f}},
+        {{1.0f, 3.0f}, {1.0f, 2.0f}},
+        {{2.0f, 2.0f}, {1.0f, 2.0f}},
+        {},                           /* removed */
+        {{9.0f, 9.0f}, {9.0f, 9.0f}},
+        {{8.0f, 8.0f}, {8.0f, 8.0f}}
+    };
+    Containers::Pair<Vector2, Vector2> expectedLayoutNodeOffsetsSizes3[]{
+        {{2.0f, 1.0f}, {3.0f, 5.0f}},
+        {{5.0f, 2.0f}, {1.0f, 1.0f}}, /* changed by layouter 1 */
+        {{0.0f, 4.0f}, {1.0f, 1.0f}},
+        {{1.0f, 3.0f}, {1.0f, 2.0f}},
+        {{2.0f, 2.0f}, {1.0f, 2.0f}},
+        {},                           /* removed */
+        {{9.0f, 9.0f}, {9.0f, 9.0f}},
+        {{8.0f, 8.0f}, {8.0f, 8.0f}}
+    };
+    layouter1.expectedNodeParents = expectedNodeParents;
+    layouter2.expectedNodeParents = expectedNodeParents;
+    layouter2.expectedLayoutIdsToUpdate[0] = expectedLayoutIdsToUpdate1;
+    layouter1.expectedLayoutIdsToUpdate = expectedLayoutIdsToUpdate2;
+    layouter2.expectedLayoutIdsToUpdate[1] = expectedLayoutIdsToUpdate3;
+    layouter2.expectedTopLevelLayoutIds[0] = expectedTopLevelLayoutIds1;
+    layouter1.expectedTopLevelLayoutIds = expectedTopLevelLayoutIds2;
+    layouter2.expectedTopLevelLayoutIds[1] = expectedTopLevelLayoutIds3;
+    layouter2.expectedNodeOffsetsSizes[0] = expectedLayoutNodeOffsetsSizes1;
+    layouter1.expectedNodeOffsetsSizes = expectedLayoutNodeOffsetsSizes2;
+    layouter2.expectedNodeOffsetsSizes[1] = expectedLayoutNodeOffsetsSizes3;
+
+    Containers::Pair<Vector2, Vector2> expectedLayerNodeOffsetsSizes[]{
+        {{2.0f, 1.0f}, {3.0f, 5.0f}}, /* node */
+        {{5.0f, 0.0f}, {1.0f, 2.0f}}, /* another1 */
+        {{5.0f, 2.0f}, {1.0f, 2.0f}}, /* another2 */
+        {{3.0f, 4.0f}, {1.0f, 2.0f}}, /* nested1 */
+        {{4.0f, 3.0f}, {1.0f, 2.0f}}, /* nested2 */
+        {},                           /* removed */
+        {},                           /* invisible */
+        {},                           /* notInOrder */
+    };
+    updateLayer.expectedNodeOffsetsSizes = expectedLayerNodeOffsetsSizes;
+
+    ui.clearNodeOrder(notInOrder);
+    ui.removeNode(removed);
+    CORRADE_COMPARE(layouter1.usedCount(), 4);
+    CORRADE_COMPARE(layouter2.usedCount(), 5);
+    CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeClean);
+    CORRADE_COMPARE_AS(layouterUpdateCalls, Containers::arrayView<UnsignedInt>({
+    }), TestSuite::Compare::Container);
+    CORRADE_COMPARE(updateLayer.updateCallCount, 0);
+
+    if(data.clean) {
+        ui.clean();
+        CORRADE_COMPARE(layouter1.usedCount(), 3);
+        CORRADE_COMPARE(layouter2.usedCount(), 5);
+        CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeUpdate);
+        CORRADE_COMPARE_AS(layouterUpdateCalls, Containers::arrayView<UnsignedInt>({
+        }), TestSuite::Compare::Container);
+        CORRADE_COMPARE(updateLayer.updateCallCount, 0);
+    }
+
+    ui.update();
+    CORRADE_COMPARE(layouter1.usedCount(), 3);
+    CORRADE_COMPARE(layouter2.usedCount(), 5);
+    CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
+    {
+        /* See the XFAIL in Layouter1 for details */
+        CORRADE_EXPECT_FAIL_IF(layouterHandleId(layouter1Handle) == 1,
+            "Layouter update order isn't fully independent from handle order.");
+        CORRADE_COMPARE_AS(layouterUpdateCalls, Containers::arrayView({
+            /* update() gets called twice on layouter 2 */
+            layouterHandleId(layouter2.handle()),
+            layouterHandleId(layouter1.handle()),
+            layouterHandleId(layouter2.handle())
+        }), TestSuite::Compare::Container);
+    }
+    CORRADE_COMPARE(updateLayer.updateCallCount, 1);
+
+    /* The node sizes view passed to layouters should be the same as the view
+       passed to layers later. The offsets view not because it's converted to
+       absolute. */
+    CORRADE_COMPARE(updateLayer.actualNodeSizes.data(), layouter1.actualNodeSizes.data());
+    CORRADE_COMPARE(updateLayer.actualNodeSizes.size(), layouter1.actualNodeSizes.size());
+    CORRADE_COMPARE(updateLayer.actualNodeSizes.stride(), layouter1.actualNodeSizes.stride());
+}
+
 void AbstractUserInterfaceTest::updateLayerOrder() {
     auto&& data = UpdateLayerOrderData[testCaseInstanceId()];
     setTestCaseDescription(data.name);
@@ -7876,9 +8250,9 @@ void AbstractUserInterfaceTest::state() {
         another2 = ui.createNode(another1, {0.0f, 2.0f}, {1.0f, 2.0f});
         ui.setNodeOrder(another2, NodeHandle::Null);
     } else {
-        node = ui.createNode({2.0f, 3.0f}, {3.0f, 2.5f}, NodeFlag::Clip);
-        another1 = ui.createNode({3.0f, 2.0f}, {0.5f, 1.0f});
-        another2 = ui.createNode(another1, {0.0f, 4.0f}, {1.0f, 1.0f});
+        node = ui.createNode({2.0f, 3.0f}, {1.5f, 5.0f}, NodeFlag::Clip);
+        another1 = ui.createNode({5.0f, 2.0f}, {0.5f, 2.0f});
+        another2 = ui.createNode(another1, {0.0f, 4.0f}, {0.5f, 2.0f});
         ui.setNodeOrder(another2, NodeHandle::Null);
     }
     /* This node isn't assigned any layout */
@@ -7886,7 +8260,7 @@ void AbstractUserInterfaceTest::state() {
     if(!data.layouters) {
         nested2 = ui.createNode(node, {2.0f, 2.0f}, {1.0f, 2.0f});
     } else {
-        nested2 = ui.createNode(node, {2.0f, 4.0f}, {1.0f, 1.0f});
+        nested2 = ui.createNode(node, {2.0f, 4.0f}, {0.5f, 2.0f});
     }
     /* This node is assigned a layout but isn't visible so it won't appear
        anywhere. It also shouldn't be modified by the layouter in any way. */
@@ -7896,7 +8270,7 @@ void AbstractUserInterfaceTest::state() {
     NodeHandle topLevelChildOfInvisible = ui.createNode(invisible, {0.0f, 0.0f}, {9.0f, 9.0f});
     ui.setNodeOrder(topLevelChildOfInvisible, NodeHandle::Null);
     /* This node is not part of the top-level order so it won't appear anywhere
-       either. It also shouldn't be modified by the layouter in any way. */
+       either */
     NodeHandle notInOrder = ui.createNode({8.0f, 8.0f}, {8.0f, 8.0f});
     ui.clearNodeOrder(notInOrder);
 
@@ -7922,8 +8296,7 @@ void AbstractUserInterfaceTest::state() {
     CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
 
     struct Layouter: AbstractLayouter {
-        explicit Layouter(LayouterHandle handle, Containers::Array<UnsignedInt>& updateCalls): AbstractLayouter{handle}, updateCalls(updateCalls) {}
-
+        using AbstractLayouter::AbstractLayouter;
         using AbstractLayouter::add;
         using AbstractLayouter::remove;
 
@@ -7938,21 +8311,8 @@ void AbstractUserInterfaceTest::state() {
             ++cleanCallCount;
         }
 
-        void doUpdate(Containers::BitArrayView, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const NodeHandle>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Vector2>&) override {
-            arrayAppend(updateCalls, layouterHandleId(handle()));
-        }
-
-        Containers::StridedArrayView1D<const bool> expectedLayoutIdsToRemove;
-        Int cleanCallCount = 0;
-        Containers::Array<UnsignedInt>& updateCalls;
-    };
-    struct Layouter1: Layouter {
-        using Layouter::Layouter;
-
-        LayouterFeatures doFeatures() const override { return {}; }
         void doUpdate(Containers::BitArrayView layoutIdsToUpdate, const Containers::StridedArrayView1D<const UnsignedInt>& topLevelLayoutIds, const Containers::StridedArrayView1D<const NodeHandle>& nodeParents, const Containers::StridedArrayView1D<Vector2>& nodeOffsets, const Containers::StridedArrayView1D<Vector2>& nodeSizes) override {
-            CORRADE_ITERATION("Layouter1");
-            Layouter::doUpdate(layoutIdsToUpdate, topLevelLayoutIds, nodeParents, nodeOffsets, nodeSizes);
+            CORRADE_ITERATION(handle());
             CORRADE_COMPARE_AS(layoutIdsToUpdate,
                 expectedLayoutIdsToUpdate.sliceBit(0),
                 TestSuite::Compare::Container);
@@ -7972,74 +8332,32 @@ void AbstractUserInterfaceTest::state() {
                 CORRADE_COMPARE(Containers::pair(nodeOffsets[i], nodeSizes[i]), expectedNodeOffsetsSizes[i]);
             }
             for(std::size_t id = 0; id != layoutIdsToUpdate.size(); ++id) {
-                /** @todo some way to iterate set bits */
                 if(!layoutIdsToUpdate[id])
                     continue;
-                nodeOffsets[nodeHandleId(nodes()[id])].x() += 2.0f;
+                nodeOffsets[nodeHandleId(nodes()[id])].y() -= 2.0f;
                 nodeSizes[nodeHandleId(nodes()[id])].x() *= 2.0f;
             }
+            ++updateCallCount;
         }
 
+        Containers::StridedArrayView1D<const bool> expectedLayoutIdsToRemove;
         Containers::StridedArrayView1D<const bool> expectedLayoutIdsToUpdate;
         Containers::StridedArrayView1D<const UnsignedInt> expectedTopLevelLayoutIds;
         Containers::StridedArrayView1D<const Containers::Pair<Vector2, Vector2>> expectedNodeOffsetsSizes;
         Containers::StridedArrayView1D<const NodeHandle> expectedNodeParents;
+
+        Int cleanCallCount = 0;
+        Int updateCallCount = 0;
     };
-    struct Layouter2: Layouter {
-        using Layouter::Layouter;
-
-        void doUpdate(Containers::BitArrayView layoutIdsToUpdate, const Containers::StridedArrayView1D<const UnsignedInt>& topLevelLayoutIds, const Containers::StridedArrayView1D<const NodeHandle>& nodeParents, const Containers::StridedArrayView1D<Vector2>& nodeOffsets, const Containers::StridedArrayView1D<Vector2>& nodeSizes) override {
-            CORRADE_ITERATION("Layouter2 call" << updateCallId);
-            Layouter::doUpdate(layoutIdsToUpdate, topLevelLayoutIds, nodeParents, nodeOffsets, nodeSizes);
-            CORRADE_COMPARE_AS(updateCallId,
-                2,
-                TestSuite::Compare::Less);
-            CORRADE_COMPARE_AS(layoutIdsToUpdate,
-                expectedLayoutIdsToUpdate[updateCallId].sliceBit(0),
-                TestSuite::Compare::Container);
-            CORRADE_COMPARE_AS(topLevelLayoutIds,
-                expectedTopLevelLayoutIds[updateCallId],
-                TestSuite::Compare::Container);
-            CORRADE_COMPARE_AS(nodeParents,
-                expectedNodeParents,
-                TestSuite::Compare::Container);
-            CORRADE_COMPARE(nodeOffsets.size(), expectedNodeOffsetsSizes[updateCallId].size());
-            for(std::size_t i = 0; i != nodeOffsets.size(); ++i) {
-                CORRADE_ITERATION(i);
-                /* For nodes that aren't in the visible hierarchy or are
-                   removed the value can be just anything, skip */
-                if(expectedNodeOffsetsSizes[updateCallId][i].second().isZero())
-                    continue;
-                CORRADE_COMPARE(Containers::pair(nodeOffsets[i], nodeSizes[i]), expectedNodeOffsetsSizes[updateCallId][i]);
-            }
-            for(std::size_t id = 0; id != layoutIdsToUpdate.size(); ++id) {
-                /** @todo some way to iterate set bits */
-                if(!layoutIdsToUpdate[id])
-                    continue;
-                nodeOffsets[nodeHandleId(nodes()[id])].y() += -2.0f;
-                nodeSizes[nodeHandleId(nodes()[id])].y() *= 2.0f;
-            }
-            ++updateCallId;
-        }
-
-        Containers::StridedArrayView1D<const bool> expectedLayoutIdsToUpdate[2];
-        Containers::StridedArrayView1D<const UnsignedInt> expectedTopLevelLayoutIds[2];
-        Containers::StridedArrayView1D<const Containers::Pair<Vector2, Vector2>> expectedNodeOffsetsSizes[2];
-        Containers::StridedArrayView1D<const NodeHandle> expectedNodeParents;
-        Int updateCallId = 0;
-    };
-
-    Containers::Array<UnsignedInt> layouterUpdateCalls;
 
     /* Creating layouters sets no state flags */
-    Layouter1* layouter1{};
-    Layouter2* layouter2{};
+    Layouter* layouter{};
     /* These are set to all 1s to not trigger a null assertion when
        unconditionally querying layoutHandleId() on them when layouters are not
        used */
-    LayoutHandle layout2Node = LayoutHandle(~UnsignedLong{});
-    LayoutHandle layout2Another1 = LayoutHandle(~UnsignedLong{});
-    LayoutHandle layout1Another1 = LayoutHandle(~UnsignedLong{});
+    LayoutHandle layoutNode = LayoutHandle(~UnsignedLong{});
+    LayoutHandle layoutAnother1 = LayoutHandle(~UnsignedLong{});
+    LayoutHandle layoutAnother2 = LayoutHandle(~UnsignedLong{});
     NodeHandle expectedNodeParents[]{
         NodeHandle::Null,
         NodeHandle::Null,
@@ -8051,15 +8369,10 @@ void AbstractUserInterfaceTest::state() {
         NodeHandle::Null,
     };
     if(data.layouters) {
-        /* Layouter 2 is ordered first even though it has a higher ID */
-        LayouterHandle layouter2Handle = ui.createLayouter();
-        LayouterHandle layouter1Handle = ui.createLayouter(layouter2Handle);
-        layouter2 = &ui.setLayouterInstance(Containers::pointer<Layouter2>(layouter2Handle, layouterUpdateCalls));
-        layouter1 = &ui.setLayouterInstance(Containers::pointer<Layouter1>(layouter1Handle, layouterUpdateCalls));
+        layouter = &ui.setLayouterInstance(Containers::pointer<Layouter>(ui.createLayouter()));
         /* The node parents change only after node removal so they're set just
            once and then the original array gets updated */
-        layouter1->expectedNodeParents = expectedNodeParents;
-        layouter2->expectedNodeParents = expectedNodeParents;
+        layouter->expectedNodeParents = expectedNodeParents;
         CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
 
         /* Calling clean() should be a no-op, not calling anything in the
@@ -8070,11 +8383,8 @@ void AbstractUserInterfaceTest::state() {
                 ui.clean();
             }
             CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
-            CORRADE_COMPARE(layouter1->cleanCallCount, 0);
-            CORRADE_COMPARE(layouter2->cleanCallCount, 0);
-            CORRADE_COMPARE_AS(layouterUpdateCalls,
-                Containers::arrayView<UnsignedInt>({}),
-                TestSuite::Compare::Container);
+            CORRADE_COMPARE(layouter->cleanCallCount, 0);
+            CORRADE_COMPARE(layouter->updateCallCount, 0);
         }
 
         /* Calling update() should be a no-op, not calling anything in the
@@ -8085,28 +8395,19 @@ void AbstractUserInterfaceTest::state() {
                 ui.update();
             }
             CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
-            CORRADE_COMPARE(layouter1->cleanCallCount, 0);
-            CORRADE_COMPARE(layouter2->cleanCallCount, 0);
-            CORRADE_COMPARE_AS(layouterUpdateCalls,
-                Containers::arrayView<UnsignedInt>({}),
-                TestSuite::Compare::Container);
+            CORRADE_COMPARE(layouter->cleanCallCount, 0);
+            CORRADE_COMPARE(layouter->updateCallCount, 0);
         }
 
         /* Creating a layout in a layouter sets state flags */
         /* This one gets ignored, as there's the same node added again after */
-        /*layout2Nested2Duplicate =*/ layouter2->add(nested2);
-        layout2Node = layouter2->add(node);
-        /*layout2Nested2 =*/ layouter2->add(nested2);
-        layout2Another1 = layouter2->add(another1);
+        /*layoutNested2Duplicate =*/ layouter->add(nested2);
+        layoutNode = layouter->add(node);
+        /*layoutNested2 =*/ layouter->add(nested2);
+        layoutAnother1 = layouter->add(another1);
         /* This one is unused because the node is invisible */
-        /*layout1Invisible =*/ layouter1->add(invisible);
-        /* This one is not referenced by the test as another2 is a non-root
-           top-level node so it never appears among top-level layout nodes */
-        /*layout2Another2 =*/ layouter2->add(another2);
-        layout1Another1 = layouter1->add(another1);
-        /* This one is again unused because the node is not in the top-level
-           order */
-        /*layout1NotInOrder =*/ layouter1->add(notInOrder);
+        /*layoutInvisible =*/ layouter->add(invisible);
+        layoutAnother2 = layouter->add(another2);
         CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsLayoutAssignmentUpdate);
 
         /* Calling clean() should be a no-op */
@@ -8116,94 +8417,40 @@ void AbstractUserInterfaceTest::state() {
                 ui.clean();
             }
             CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsLayoutAssignmentUpdate);
-            CORRADE_COMPARE(layouter1->cleanCallCount, 0);
-            CORRADE_COMPARE(layouter2->cleanCallCount, 0);
-            CORRADE_COMPARE_AS(layouterUpdateCalls,
-                Containers::arrayView<UnsignedInt>({}),
-                TestSuite::Compare::Container);
+            CORRADE_COMPARE(layouter->cleanCallCount, 0);
+            CORRADE_COMPARE(layouter->updateCallCount, 0);
         }
 
         /* Calling update() rebuilds internal state, calls doUpdate() on the
            layouters, and resets the flag. */
         {
             CORRADE_ITERATION(__FILE__ ":" CORRADE_LINE_STRING);
-            bool expectedLayoutIdsToUpdate1[]{
-                /* layout2Node and layout2Nested2 */
-                false, true, true, false, false
+            bool expectedLayoutIdsToUpdate[]{
+                /* layoutNode, layoutNested2, layoutAnother1, layoutAnother2 */
+                false, true, true, true, false, true
             };
-            bool expectedLayoutIdsToUpdate2[]{
-                /* layout1Another1 */
-                false, true, false
+            UnsignedInt expectedTopLevelLayoutIds[]{
+                layoutHandleId(layoutNode),
+                layoutHandleId(layoutAnother1),
             };
-            bool expectedLayoutIdsToUpdate3[]{
-                /* layout2Another1 and layout2Another2 */
-                false, false, false, true, true
-            };
-            UnsignedInt expectedTopLevelLayoutIds1[]{
-                layoutHandleId(layout2Node),
-            };
-            UnsignedInt expectedTopLevelLayoutIds2[]{
-                layoutHandleId(layout1Another1),
-            };
-            UnsignedInt expectedTopLevelLayoutIds3[]{
-                layoutHandleId(layout2Another1),
-                /* layout2Another2 is top-level but not root, so not included
-                   here */
-            };
-            Containers::Pair<Vector2, Vector2> expectedLayoutNodeOffsetsSizes1[]{
-                /* This gets the original sizes and *relative* offsets,
-                   subsequent layouters then modified values and the layers
-                   then what the layouter produces and absolute */
-                {{2.0f, 3.0f}, {3.0f, 2.5f}}, /* node */
-                {{3.0f, 2.0f}, {0.5f, 1.0f}}, /* another1 */
-                {{0.0f, 4.0f}, {1.0f, 1.0f}}, /* another2 */
+            Containers::Pair<Vector2, Vector2> expectedLayoutNodeOffsetsSizes[]{
+                {{2.0f, 3.0f}, {1.5f, 5.0f}}, /* node */
+                {{5.0f, 2.0f}, {0.5f, 2.0f}}, /* another1 */
+                {{0.0f, 4.0f}, {0.5f, 2.0f}}, /* another2 */
                 {{1.0f, 3.0f}, {1.0f, 2.0f}}, /* nested1 */
-                {{2.0f, 4.0f}, {1.0f, 1.0f}}, /* nested2 */
+                {{2.0f, 4.0f}, {0.5f, 2.0f}}, /* nested2 */
                 {{9.0f, 9.0f}, {9.0f, 9.0f}}, /* invisible */
                 {{0.0f, 0.0f}, {9.0f, 9.0f}}, /* topLevelChildOfInvisible */
                 {{8.0f, 8.0f}, {8.0f, 8.0f}}, /* notInOrder */
             };
-            Containers::Pair<Vector2, Vector2> expectedLayoutNodeOffsetsSizes2[]{
-                {{2.0f, 1.0f}, {3.0f, 5.0f}}, /* changed by layouter 2 */
-                {{3.0f, 2.0f}, {0.5f, 1.0f}},
-                {{0.0f, 4.0f}, {1.0f, 1.0f}},
-                {{1.0f, 3.0f}, {1.0f, 2.0f}},
-                {{2.0f, 2.0f}, {1.0f, 2.0f}},
-                {{9.0f, 9.0f}, {9.0f, 9.0f}},
-                {{0.0f, 0.0f}, {9.0f, 9.0f}},
-                {{8.0f, 8.0f}, {8.0f, 8.0f}}
-            };
-            Containers::Pair<Vector2, Vector2> expectedLayoutNodeOffsetsSizes3[]{
-                {{2.0f, 1.0f}, {3.0f, 5.0f}},
-                {{5.0f, 2.0f}, {1.0f, 1.0f}}, /* changed by layouter 1 */
-                {{0.0f, 4.0f}, {1.0f, 1.0f}},
-                {{1.0f, 3.0f}, {1.0f, 2.0f}},
-                {{2.0f, 2.0f}, {1.0f, 2.0f}},
-                {{9.0f, 9.0f}, {9.0f, 9.0f}},
-                {{0.0f, 0.0f}, {9.0f, 9.0f}},
-                {{8.0f, 8.0f}, {8.0f, 8.0f}}
-            };
-            layouter2->expectedLayoutIdsToUpdate[0] = expectedLayoutIdsToUpdate1;
-            layouter1->expectedLayoutIdsToUpdate = expectedLayoutIdsToUpdate2;
-            layouter2->expectedLayoutIdsToUpdate[1] = expectedLayoutIdsToUpdate3;
-            layouter2->expectedTopLevelLayoutIds[0] = expectedTopLevelLayoutIds1;
-            layouter1->expectedTopLevelLayoutIds = expectedTopLevelLayoutIds2;
-            layouter2->expectedTopLevelLayoutIds[1] = expectedTopLevelLayoutIds3;
-            layouter2->expectedNodeOffsetsSizes[0] = expectedLayoutNodeOffsetsSizes1;
-            layouter1->expectedNodeOffsetsSizes = expectedLayoutNodeOffsetsSizes2;
-            layouter2->expectedNodeOffsetsSizes[1] = expectedLayoutNodeOffsetsSizes3;
-            layouter2->updateCallId = 0;
+            layouter->expectedLayoutIdsToUpdate = expectedLayoutIdsToUpdate;
+            layouter->expectedTopLevelLayoutIds = expectedTopLevelLayoutIds;
+            layouter->expectedNodeOffsetsSizes = expectedLayoutNodeOffsetsSizes;
             ui.update();
         }
         CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
-        CORRADE_COMPARE(layouter1->cleanCallCount, 0);
-        CORRADE_COMPARE(layouter2->cleanCallCount, 0);
-        CORRADE_COMPARE_AS(layouterUpdateCalls, Containers::arrayView({
-            /* update() gets called twice on layouter 2 */
-            layouterHandleId(layouter2->handle()),
-            layouterHandleId(layouter1->handle()),
-            layouterHandleId(layouter2->handle())
-        }), TestSuite::Compare::Container);
+        CORRADE_COMPARE(layouter->cleanCallCount, 0);
+        CORRADE_COMPARE(layouter->updateCallCount, 1);
     }
 
     struct Layer: AbstractLayer {
@@ -8300,8 +8547,8 @@ void AbstractUserInterfaceTest::state() {
         }
         CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
         if(data.layouters) {
-            CORRADE_COMPARE(layouter1->cleanCallCount, 0);
-            CORRADE_COMPARE(layouter2->cleanCallCount, 0);
+            CORRADE_COMPARE(layouter->cleanCallCount, 0);
+            CORRADE_COMPARE(layouter->updateCallCount, 1);
         }
         CORRADE_COMPARE(layer.cleanCallCount, 0);
         CORRADE_COMPARE(layer.preUpdateCallCount, 0);
@@ -8317,13 +8564,8 @@ void AbstractUserInterfaceTest::state() {
         }
         CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
         if(data.layouters) {
-            CORRADE_COMPARE(layouter1->cleanCallCount, 0);
-            CORRADE_COMPARE(layouter2->cleanCallCount, 0);
-            CORRADE_COMPARE_AS(layouterUpdateCalls, Containers::arrayView({
-                layouterHandleId(layouter2->handle()),
-                layouterHandleId(layouter1->handle()),
-                layouterHandleId(layouter2->handle())
-            }), TestSuite::Compare::Container);
+            CORRADE_COMPARE(layouter->cleanCallCount, 0);
+            CORRADE_COMPARE(layouter->updateCallCount, 1);
         }
         CORRADE_COMPARE(layer.cleanCallCount, 0);
         CORRADE_COMPARE(layer.preUpdateCallCount, 0);
@@ -8347,8 +8589,8 @@ void AbstractUserInterfaceTest::state() {
         }
         CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataUpdate);
         if(data.layouters) {
-            CORRADE_COMPARE(layouter1->cleanCallCount, 0);
-            CORRADE_COMPARE(layouter2->cleanCallCount, 0);
+            CORRADE_COMPARE(layouter->cleanCallCount, 0);
+            CORRADE_COMPARE(layouter->updateCallCount, 1);
         }
         CORRADE_COMPARE(layer.cleanCallCount, 0);
         CORRADE_COMPARE(layer.preUpdateCallCount, 0);
@@ -8394,13 +8636,8 @@ void AbstractUserInterfaceTest::state() {
     }
     CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
     if(data.layouters) {
-        CORRADE_COMPARE(layouter1->cleanCallCount, 0);
-        CORRADE_COMPARE(layouter2->cleanCallCount, 0);
-        CORRADE_COMPARE_AS(layouterUpdateCalls, Containers::arrayView({
-            layouterHandleId(layouter2->handle()),
-            layouterHandleId(layouter1->handle()),
-            layouterHandleId(layouter2->handle())
-        }), TestSuite::Compare::Container);
+        CORRADE_COMPARE(layouter->cleanCallCount, 0);
+        CORRADE_COMPARE(layouter->updateCallCount, 1);
     }
     CORRADE_COMPARE(layer.cleanCallCount, 0);
     CORRADE_COMPARE(layer.preUpdateCallCount, 0);
@@ -8489,8 +8726,8 @@ void AbstractUserInterfaceTest::state() {
         }
         CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
         if(data.layouters) {
-            CORRADE_COMPARE(layouter1->cleanCallCount, 0);
-            CORRADE_COMPARE(layouter2->cleanCallCount, 0);
+            CORRADE_COMPARE(layouter->cleanCallCount, 0);
+            CORRADE_COMPARE(layouter->updateCallCount, 1);
         }
         CORRADE_COMPARE(layer.cleanCallCount, 0);
         CORRADE_COMPARE(layer.preUpdateCallCount, 0);
@@ -8510,13 +8747,8 @@ void AbstractUserInterfaceTest::state() {
         }
         CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
         if(data.layouters) {
-            CORRADE_COMPARE(layouter1->cleanCallCount, 0);
-            CORRADE_COMPARE(layouter2->cleanCallCount, 0);
-            CORRADE_COMPARE_AS(layouterUpdateCalls, Containers::arrayView({
-                layouterHandleId(layouter2->handle()),
-                layouterHandleId(layouter1->handle()),
-                layouterHandleId(layouter2->handle())
-            }), TestSuite::Compare::Container);
+            CORRADE_COMPARE(layouter->cleanCallCount, 0);
+            CORRADE_COMPARE(layouter->updateCallCount, 1);
         }
         CORRADE_COMPARE(layer.cleanCallCount, 0);
         CORRADE_COMPARE(layer.preUpdateCallCount, 0);
@@ -8543,8 +8775,8 @@ void AbstractUserInterfaceTest::state() {
         }
         CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataAttachmentUpdate);
         if(data.layouters) {
-            CORRADE_COMPARE(layouter1->cleanCallCount, 0);
-            CORRADE_COMPARE(layouter2->cleanCallCount, 0);
+            CORRADE_COMPARE(layouter->cleanCallCount, 0);
+            CORRADE_COMPARE(layouter->updateCallCount, 1);
         }
         CORRADE_COMPARE(layer.cleanCallCount, 0);
         CORRADE_COMPARE(layer.preUpdateCallCount, 0);
@@ -8610,13 +8842,8 @@ void AbstractUserInterfaceTest::state() {
     }
     CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
     if(data.layouters) {
-        CORRADE_COMPARE(layouter1->cleanCallCount, 0);
-        CORRADE_COMPARE(layouter2->cleanCallCount, 0);
-        CORRADE_COMPARE_AS(layouterUpdateCalls, Containers::arrayView({
-            layouterHandleId(layouter2->handle()),
-            layouterHandleId(layouter1->handle()),
-            layouterHandleId(layouter2->handle())
-        }), TestSuite::Compare::Container);
+        CORRADE_COMPARE(layouter->cleanCallCount, 0);
+        CORRADE_COMPARE(layouter->updateCallCount, 1);
     }
     CORRADE_COMPARE(layer.cleanCallCount, 0);
     CORRADE_COMPARE(layer.preUpdateCallCount, 0);
@@ -8674,8 +8901,8 @@ void AbstractUserInterfaceTest::state() {
         }
         CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeClipUpdate);
         if(data.layouters) {
-            CORRADE_COMPARE(layouter1->cleanCallCount, 0);
-            CORRADE_COMPARE(layouter2->cleanCallCount, 0);
+            CORRADE_COMPARE(layouter->cleanCallCount, 0);
+            CORRADE_COMPARE(layouter->updateCallCount, 1);
         }
         CORRADE_COMPARE(layer.cleanCallCount, 0);
         CORRADE_COMPARE(layer.preUpdateCallCount, 0);
@@ -8739,13 +8966,8 @@ void AbstractUserInterfaceTest::state() {
     CORRADE_COMPARE(ui.renderer<Renderer>().setupFramebufferCallCount, 2);
     CORRADE_COMPARE(ui.renderer().framebufferSize(), (Vector2i{17, 35}));
     if(data.layouters) {
-        CORRADE_COMPARE(layouter1->cleanCallCount, 0);
-        CORRADE_COMPARE(layouter2->cleanCallCount, 0);
-        CORRADE_COMPARE_AS(layouterUpdateCalls, Containers::arrayView({
-            layouterHandleId(layouter2->handle()),
-            layouterHandleId(layouter1->handle()),
-            layouterHandleId(layouter2->handle())
-        }), TestSuite::Compare::Container);
+        CORRADE_COMPARE(layouter->cleanCallCount, 0);
+        CORRADE_COMPARE(layouter->updateCallCount, 1);
     }
     CORRADE_COMPARE(layer.cleanCallCount, 0);
     CORRADE_COMPARE(layer.preUpdateCallCount, 0);
@@ -8771,8 +8993,8 @@ void AbstractUserInterfaceTest::state() {
         }
         CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeClipUpdate);
         if(data.layouters) {
-            CORRADE_COMPARE(layouter1->cleanCallCount, 0);
-            CORRADE_COMPARE(layouter2->cleanCallCount, 0);
+            CORRADE_COMPARE(layouter->cleanCallCount, 0);
+            CORRADE_COMPARE(layouter->updateCallCount, 1);
         }
         CORRADE_COMPARE(layer.cleanCallCount, 0);
         CORRADE_COMPARE(layer.preUpdateCallCount, 0);
@@ -8841,13 +9063,8 @@ void AbstractUserInterfaceTest::state() {
     CORRADE_COMPARE(ui.renderer<Renderer>().setupFramebufferCallCount, 2);
     CORRADE_COMPARE(ui.renderer().framebufferSize(), (Vector2i{17, 35}));
     if(data.layouters) {
-        CORRADE_COMPARE(layouter1->cleanCallCount, 0);
-        CORRADE_COMPARE(layouter2->cleanCallCount, 0);
-        CORRADE_COMPARE_AS(layouterUpdateCalls, Containers::arrayView({
-            layouterHandleId(layouter2->handle()),
-            layouterHandleId(layouter1->handle()),
-            layouterHandleId(layouter2->handle())
-        }), TestSuite::Compare::Container);
+        CORRADE_COMPARE(layouter->cleanCallCount, 0);
+        CORRADE_COMPARE(layouter->updateCallCount, 1);
     }
     CORRADE_COMPARE(layer.cleanCallCount, 0);
     CORRADE_COMPARE(layer.preUpdateCallCount, 0);
@@ -8871,8 +9088,8 @@ void AbstractUserInterfaceTest::state() {
         CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataUpdate);
         CORRADE_COMPARE(ui.renderer<Renderer>().setupFramebufferCallCount, 2);
         if(data.layouters) {
-            CORRADE_COMPARE(layouter1->cleanCallCount, 0);
-            CORRADE_COMPARE(layouter2->cleanCallCount, 0);
+            CORRADE_COMPARE(layouter->cleanCallCount, 0);
+            CORRADE_COMPARE(layouter->updateCallCount, 1);
         }
         CORRADE_COMPARE(layer.cleanCallCount, 0);
         CORRADE_COMPARE(layer.preUpdateCallCount, 0);
@@ -8939,13 +9156,8 @@ void AbstractUserInterfaceTest::state() {
     CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
     CORRADE_COMPARE(ui.renderer<Renderer>().setupFramebufferCallCount, 2);
     if(data.layouters) {
-        CORRADE_COMPARE(layouter1->cleanCallCount, 0);
-        CORRADE_COMPARE(layouter2->cleanCallCount, 0);
-        CORRADE_COMPARE_AS(layouterUpdateCalls, Containers::arrayView({
-            layouterHandleId(layouter2->handle()),
-            layouterHandleId(layouter1->handle()),
-            layouterHandleId(layouter2->handle())
-        }), TestSuite::Compare::Container);
+        CORRADE_COMPARE(layouter->cleanCallCount, 0);
+        CORRADE_COMPARE(layouter->updateCallCount, 1);
     }
     CORRADE_COMPARE(layer.cleanCallCount, 0);
     /* Because a common data update was requested, preUpdate() gets called as
@@ -8971,7 +9183,7 @@ void AbstractUserInterfaceTest::state() {
     if(!data.layouters)
         ui.setNodeSize(node, {2.0f, 4.0f});
     else
-        ui.setNodeSize(node, {2.0f, 2.0f});
+        ui.setNodeSize(node, {1.0f, 4.0f});
     CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsLayoutUpdate);
 
     /* Calling clean() should be a no-op */
@@ -8983,8 +9195,8 @@ void AbstractUserInterfaceTest::state() {
         CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsLayoutUpdate);
         CORRADE_COMPARE(ui.renderer<Renderer>().setupFramebufferCallCount, 2);
         if(data.layouters) {
-            CORRADE_COMPARE(layouter1->cleanCallCount, 0);
-            CORRADE_COMPARE(layouter2->cleanCallCount, 0);
+            CORRADE_COMPARE(layouter->cleanCallCount, 0);
+            CORRADE_COMPARE(layouter->updateCallCount, 1);
         }
         CORRADE_COMPARE(layer.cleanCallCount, 0);
         CORRADE_COMPARE(layer.preUpdateCallCount, 1);
@@ -9001,73 +9213,30 @@ void AbstractUserInterfaceTest::state() {
     {
         CORRADE_ITERATION(__FILE__ ":" CORRADE_LINE_STRING);
 
-        bool expectedLayoutIdsToUpdate1[]{
-            /* layout2Node and layout2Nested2. Before calling layouters it's
-               not yet clear that layout2Nested2 is going to be culled, so this
-               includes it. */
-            false, true, true, false, false
+        bool expectedLayoutIdsToUpdate[]{
+            /* layout2Node, layoutNested2, layoutAnother1, layoutAnother2.
+               Before calling layouters it's not yet clear that layout2Nested2
+               is going to be culled, so this includes it. */
+            false, true, true, true, false, true
         };
-        bool expectedLayoutIdsToUpdate2[]{
-            /* layout1Another1 */
-            false, true, false
+        UnsignedInt expectedTopLevelLayoutIds[]{
+            layoutHandleId(layoutNode),
+            layoutHandleId(layoutAnother1),
         };
-        bool expectedLayoutIdsToUpdate3[]{
-            /* layout2Another1 and layout2Another2 */
-            false, false, false, true, true
-        };
-        UnsignedInt expectedTopLevelLayoutIds1[]{
-            layoutHandleId(layout2Node),
-        };
-        UnsignedInt expectedTopLevelLayoutIds2[]{
-            layoutHandleId(layout1Another1),
-        };
-        UnsignedInt expectedTopLevelLayoutIds3[]{
-            layoutHandleId(layout2Another1),
-            /* layout2Another2 is top-level but not root, so not included
-               here */
-        };
-        Containers::Pair<Vector2, Vector2> expectedLayoutNodeOffsetsSizes1[]{
-            {{2.0f, 3.0f}, {2.0f, 2.0f}}, /* node, size changed */
-            {{3.0f, 2.0f}, {0.5f, 1.0f}}, /* another1 */
-            {{0.0f, 4.0f}, {1.0f, 1.0f}}, /* another2 */
+        Containers::Pair<Vector2, Vector2> expectedLayoutNodeOffsetsSizes[]{
+            {{2.0f, 3.0f}, {1.0f, 4.0f}}, /* node */
+            {{5.0f, 2.0f}, {0.5f, 2.0f}}, /* another1 */
+            {{0.0f, 4.0f}, {0.5f, 2.0f}}, /* another2 */
             {{1.0f, 3.0f}, {1.0f, 2.0f}}, /* nested1 */
-            {{2.0f, 4.0f}, {1.0f, 1.0f}}, /* nested2 */
+            {{2.0f, 4.0f}, {0.5f, 2.0f}}, /* nested2 */
             {{9.0f, 9.0f}, {9.0f, 9.0f}}, /* invisible */
             {{0.0f, 0.0f}, {9.0f, 9.0f}}, /* topLevelChildOfInvisible */
             {{8.0f, 8.0f}, {8.0f, 8.0f}}, /* notInOrder */
         };
-        Containers::Pair<Vector2, Vector2> expectedLayoutNodeOffsetsSizes2[]{
-            {{2.0f, 1.0f}, {2.0f, 4.0f}}, /* changed by layouter 2 */
-            {{3.0f, 2.0f}, {0.5f, 1.0f}},
-            {{0.0f, 4.0f}, {1.0f, 1.0f}},
-            {{1.0f, 3.0f}, {1.0f, 2.0f}},
-            {{2.0f, 2.0f}, {1.0f, 2.0f}},
-            {{9.0f, 9.0f}, {9.0f, 9.0f}},
-            {{0.0f, 0.0f}, {9.0f, 9.0f}},
-            {{8.0f, 8.0f}, {8.0f, 8.0f}}
-        };
-        Containers::Pair<Vector2, Vector2> expectedLayoutNodeOffsetsSizes3[]{
-            {{2.0f, 1.0f}, {2.0f, 4.0f}},
-            {{5.0f, 2.0f}, {1.0f, 1.0f}}, /* changed by layouter 1 */
-            {{0.0f, 4.0f}, {1.0f, 1.0f}},
-            {{1.0f, 3.0f}, {1.0f, 2.0f}},
-            {{2.0f, 2.0f}, {1.0f, 2.0f}},
-            {{9.0f, 9.0f}, {9.0f, 9.0f}},
-            {{0.0f, 0.0f}, {9.0f, 9.0f}},
-            {{8.0f, 8.0f}, {8.0f, 8.0f}}
-        };
         if(data.layouters) {
-            layouterUpdateCalls = {};
-            layouter2->expectedLayoutIdsToUpdate[0] = expectedLayoutIdsToUpdate1;
-            layouter1->expectedLayoutIdsToUpdate = expectedLayoutIdsToUpdate2;
-            layouter2->expectedLayoutIdsToUpdate[1] = expectedLayoutIdsToUpdate3;
-            layouter2->expectedTopLevelLayoutIds[0] = expectedTopLevelLayoutIds1;
-            layouter1->expectedTopLevelLayoutIds = expectedTopLevelLayoutIds2;
-            layouter2->expectedTopLevelLayoutIds[1] = expectedTopLevelLayoutIds3;
-            layouter2->expectedNodeOffsetsSizes[0] = expectedLayoutNodeOffsetsSizes1;
-            layouter1->expectedNodeOffsetsSizes = expectedLayoutNodeOffsetsSizes2;
-            layouter2->expectedNodeOffsetsSizes[1] = expectedLayoutNodeOffsetsSizes3;
-            layouter2->updateCallId = 0;
+            layouter->expectedLayoutIdsToUpdate = expectedLayoutIdsToUpdate;
+            layouter->expectedTopLevelLayoutIds = expectedTopLevelLayoutIds;
+            layouter->expectedNodeOffsetsSizes = expectedLayoutNodeOffsetsSizes;
         }
 
         UnsignedInt expectedDataIds[]{
@@ -9122,14 +9291,8 @@ void AbstractUserInterfaceTest::state() {
     CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
     CORRADE_COMPARE(ui.renderer<Renderer>().setupFramebufferCallCount, 2);
     if(data.layouters) {
-        CORRADE_COMPARE(layouter1->cleanCallCount, 0);
-        CORRADE_COMPARE(layouter2->cleanCallCount, 0);
-        CORRADE_COMPARE_AS(layouterUpdateCalls, Containers::arrayView({
-            /* update() again gets called twice on layouter 2 */
-            layouterHandleId(layouter2->handle()),
-            layouterHandleId(layouter1->handle()),
-            layouterHandleId(layouter2->handle())
-        }), TestSuite::Compare::Container);
+        CORRADE_COMPARE(layouter->cleanCallCount, 0);
+        CORRADE_COMPARE(layouter->updateCallCount, 2);
     }
     CORRADE_COMPARE(layer.cleanCallCount, 0);
     CORRADE_COMPARE(layer.preUpdateCallCount, 1);
@@ -9165,8 +9328,8 @@ void AbstractUserInterfaceTest::state() {
         CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsLayoutUpdate);
         CORRADE_COMPARE(ui.renderer<Renderer>().setupFramebufferCallCount, 2);
         if(data.layouters) {
-            CORRADE_COMPARE(layouter1->cleanCallCount, 0);
-            CORRADE_COMPARE(layouter2->cleanCallCount, 0);
+            CORRADE_COMPARE(layouter->cleanCallCount, 0);
+            CORRADE_COMPARE(layouter->updateCallCount, 2);
         }
         CORRADE_COMPARE(layer.cleanCallCount, 0);
         CORRADE_COMPARE(layer.preUpdateCallCount, 1);
@@ -9182,73 +9345,31 @@ void AbstractUserInterfaceTest::state() {
     {
         CORRADE_ITERATION(__FILE__ ":" CORRADE_LINE_STRING);
 
-        bool expectedLayoutIdsToUpdate1[]{
-            /* layout2Node and layout2Nested2. Again, before calling layouters
-               it's not yet clear that layout2Nested2 is going to be culled
-               even though it was culled before, so this includes it. */
-            false, true, true, false, false
+        bool expectedLayoutIdsToUpdate[]{
+            /* layout2Node, layoutNested2, layoutAnother1, layoutAnother2.
+               Again, before calling layouters it's not yet clear that
+               layout2Nested2 is going to be culled even though it was culled
+               before, so this includes it. */
+            false, true, true, true, false, true
         };
-        bool expectedLayoutIdsToUpdate2[]{
-            /* layout1Another1 */
-            false, true, false
+        UnsignedInt expectedTopLevelLayoutIds[]{
+            layoutHandleId(layoutNode),
+            layoutHandleId(layoutAnother1),
         };
-        bool expectedLayoutIdsToUpdate3[]{
-            /* layout2Another1 and layout2Another2 */
-            false, false, false, true, true
-        };
-        UnsignedInt expectedTopLevelLayoutIds1[]{
-            layoutHandleId(layout2Node),
-        };
-        UnsignedInt expectedTopLevelLayoutIds2[]{
-            layoutHandleId(layout1Another1),
-        };
-        UnsignedInt expectedTopLevelLayoutIds3[]{
-            layoutHandleId(layout2Another1)
-            /* layout2Another2 is top-level but not root, so not included
-               here */
-        };
-        Containers::Pair<Vector2, Vector2> expectedLayoutNodeOffsetsSizes1[]{
-            {{3.0f, 3.0f}, {2.0f, 2.0f}}, /* node, offset changed */
-            {{3.0f, 2.0f}, {0.5f, 1.0f}}, /* another1 */
-            {{0.0f, 4.0f}, {1.0f, 1.0f}}, /* another2 */
+        Containers::Pair<Vector2, Vector2> expectedLayoutNodeOffsetsSizes[]{
+            {{3.0f, 3.0f}, {1.0f, 4.0f}}, /* node, offset changed */
+            {{5.0f, 2.0f}, {0.5f, 2.0f}}, /* another1 */
+            {{0.0f, 4.0f}, {0.5f, 2.0f}}, /* another2 */
             {{1.0f, 3.0f}, {1.0f, 2.0f}}, /* nested1 */
-            {{2.0f, 4.0f}, {1.0f, 1.0f}}, /* nested2 */
+            {{2.0f, 4.0f}, {0.5f, 2.0f}}, /* nested2 */
             {{9.0f, 9.0f}, {9.0f, 9.0f}}, /* invisible */
             {{0.0f, 0.0f}, {9.0f, 9.0f}}, /* topLevelChildOfInvisible */
             {{8.0f, 8.0f}, {8.0f, 8.0f}}, /* notInOrder */
         };
-        Containers::Pair<Vector2, Vector2> expectedLayoutNodeOffsetsSizes2[]{
-            {{3.0f, 1.0f}, {2.0f, 4.0f}}, /* changed by layouter 2 */
-            {{3.0f, 2.0f}, {0.5f, 1.0f}},
-            {{0.0f, 4.0f}, {1.0f, 1.0f}}, /* changed by layouter 2 */
-            {{1.0f, 3.0f}, {1.0f, 2.0f}},
-            {{2.0f, 2.0f}, {1.0f, 2.0f}},
-            {{9.0f, 9.0f}, {9.0f, 9.0f}},
-            {{0.0f, 0.0f}, {9.0f, 9.0f}},
-            {{8.0f, 8.0f}, {8.0f, 8.0f}}
-        };
-        Containers::Pair<Vector2, Vector2> expectedLayoutNodeOffsetsSizes3[]{
-            {{3.0f, 1.0f}, {2.0f, 4.0f}},
-            {{5.0f, 2.0f}, {1.0f, 1.0f}}, /* changed by layouter 1 */
-            {{0.0f, 4.0f}, {1.0f, 1.0f}},
-            {{1.0f, 3.0f}, {1.0f, 2.0f}},
-            {{2.0f, 2.0f}, {1.0f, 2.0f}},
-            {{9.0f, 9.0f}, {9.0f, 9.0f}},
-            {{0.0f, 0.0f}, {9.0f, 9.0f}},
-            {{8.0f, 8.0f}, {8.0f, 8.0f}}
-        };
         if(data.layouters) {
-            layouterUpdateCalls = {};
-            layouter2->expectedLayoutIdsToUpdate[0] = expectedLayoutIdsToUpdate1;
-            layouter1->expectedLayoutIdsToUpdate = expectedLayoutIdsToUpdate2;
-            layouter2->expectedLayoutIdsToUpdate[1] = expectedLayoutIdsToUpdate3;
-            layouter2->expectedTopLevelLayoutIds[0] = expectedTopLevelLayoutIds1;
-            layouter1->expectedTopLevelLayoutIds = expectedTopLevelLayoutIds2;
-            layouter2->expectedTopLevelLayoutIds[1] = expectedTopLevelLayoutIds3;
-            layouter2->expectedNodeOffsetsSizes[0] = expectedLayoutNodeOffsetsSizes1;
-            layouter1->expectedNodeOffsetsSizes = expectedLayoutNodeOffsetsSizes2;
-            layouter2->expectedNodeOffsetsSizes[1] = expectedLayoutNodeOffsetsSizes3;
-            layouter2->updateCallId = 0;
+            layouter->expectedLayoutIdsToUpdate = expectedLayoutIdsToUpdate;
+            layouter->expectedTopLevelLayoutIds = expectedTopLevelLayoutIds;
+            layouter->expectedNodeOffsetsSizes = expectedLayoutNodeOffsetsSizes;
         }
 
         UnsignedInt expectedDataIds[]{
@@ -9302,14 +9423,8 @@ void AbstractUserInterfaceTest::state() {
     CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
     CORRADE_COMPARE(ui.renderer<Renderer>().setupFramebufferCallCount, 2);
     if(data.layouters) {
-        CORRADE_COMPARE(layouter1->cleanCallCount, 0);
-        CORRADE_COMPARE(layouter2->cleanCallCount, 0);
-        CORRADE_COMPARE_AS(layouterUpdateCalls, Containers::arrayView({
-            /* update() again gets called twice on layouter 2 */
-            layouterHandleId(layouter2->handle()),
-            layouterHandleId(layouter1->handle()),
-            layouterHandleId(layouter2->handle())
-        }), TestSuite::Compare::Container);
+        CORRADE_COMPARE(layouter->cleanCallCount, 0);
+        CORRADE_COMPARE(layouter->updateCallCount, 3);
     }
     CORRADE_COMPARE(layer.cleanCallCount, 0);
     CORRADE_COMPARE(layer.preUpdateCallCount, 1);
@@ -9332,8 +9447,8 @@ void AbstractUserInterfaceTest::state() {
         CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeUpdate);
         CORRADE_COMPARE(ui.renderer<Renderer>().setupFramebufferCallCount, 2);
         if(data.layouters) {
-            CORRADE_COMPARE(layouter1->cleanCallCount, 0);
-            CORRADE_COMPARE(layouter2->cleanCallCount, 0);
+            CORRADE_COMPARE(layouter->cleanCallCount, 0);
+            CORRADE_COMPARE(layouter->updateCallCount, 3);
         }
         CORRADE_COMPARE(layer.cleanCallCount, 0);
         CORRADE_COMPARE(layer.preUpdateCallCount, 1);
@@ -9349,54 +9464,27 @@ void AbstractUserInterfaceTest::state() {
     {
         CORRADE_ITERATION(__FILE__ ":" CORRADE_LINE_STRING);
 
-        bool expectedLayoutIdsToUpdate1[]{
-            /* layout1Another1 */
-            false, true, false
-        };
-        bool expectedLayoutIdsToUpdate2[]{
+        bool expectedLayoutIdsToUpdate[]{
             /* layout2Another1 and layout2Another2 */
-            false, false, false, true, true
+            false, false, false, true, false, true
         };
-        UnsignedInt expectedTopLevelLayoutIds1[]{
-            layoutHandleId(layout1Another1),
+        UnsignedInt expectedTopLevelLayoutIds[]{
+            layoutHandleId(layoutAnother1),
         };
-        UnsignedInt expectedTopLevelLayoutIds2[]{
-            layoutHandleId(layout2Another1),
-            /* layout2Another2 is top-level but not root, so not included
-               here */
-        };
-        Containers::Pair<Vector2, Vector2> expectedLayoutNodeOffsetsSizes1[]{
+        Containers::Pair<Vector2, Vector2> expectedLayoutNodeOffsetsSizes[]{
             {},
-            {{3.0f, 2.0f}, {0.5f, 1.0f}}, /* another1 */
-            {{0.0f, 4.0f}, {1.0f, 1.0f}}, /* another2 */
+            {{5.0f, 2.0f}, {0.5f, 2.0f}}, /* another1 */
+            {{0.0f, 4.0f}, {0.5f, 2.0f}}, /* another2 */
             {},
             {},
             {{9.0f, 9.0f}, {9.0f, 9.0f}}, /* invisible */
             {{0.0f, 0.0f}, {9.0f, 9.0f}}, /* topLevelChildOfInvisible */
             {{8.0f, 8.0f}, {8.0f, 8.0f}}  /* notInOrder */
         };
-        Containers::Pair<Vector2, Vector2> expectedLayoutNodeOffsetsSizes2[]{
-            {},
-            {{5.0f, 2.0f}, {1.0f, 1.0f}}, /* changed by layouter 1 */
-            {{0.0f, 4.0f}, {1.0f, 1.0f}},
-            {},
-            {},
-            {{9.0f, 9.0f}, {9.0f, 9.0f}},
-            {{0.0f, 0.0f}, {9.0f, 9.0f}},
-            {{8.0f, 8.0f}, {8.0f, 8.0f}},
-        };
         if(data.layouters) {
-            layouterUpdateCalls = {};
-            layouter1->expectedLayoutIdsToUpdate = expectedLayoutIdsToUpdate1;
-            layouter2->expectedLayoutIdsToUpdate[0] = expectedLayoutIdsToUpdate2;
-            layouter2->expectedLayoutIdsToUpdate[1] = {};
-            layouter1->expectedTopLevelLayoutIds = expectedTopLevelLayoutIds1;
-            layouter2->expectedTopLevelLayoutIds[0] = expectedTopLevelLayoutIds2;
-            layouter2->expectedTopLevelLayoutIds[1] = {};
-            layouter1->expectedNodeOffsetsSizes = expectedLayoutNodeOffsetsSizes1;
-            layouter2->expectedNodeOffsetsSizes[0] = expectedLayoutNodeOffsetsSizes2;
-            layouter2->expectedNodeOffsetsSizes[1] = {};
-            layouter2->updateCallId = 0;
+            layouter->expectedLayoutIdsToUpdate = expectedLayoutIdsToUpdate;
+            layouter->expectedTopLevelLayoutIds = expectedTopLevelLayoutIds;
+            layouter->expectedNodeOffsetsSizes = expectedLayoutNodeOffsetsSizes;
         }
 
         UnsignedInt expectedDataIds[]{
@@ -9447,14 +9535,8 @@ void AbstractUserInterfaceTest::state() {
     CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
     CORRADE_COMPARE(ui.renderer<Renderer>().setupFramebufferCallCount, 2);
     if(data.layouters) {
-        CORRADE_COMPARE(layouter1->cleanCallCount, 0);
-        CORRADE_COMPARE(layouter2->cleanCallCount, 0);
-        CORRADE_COMPARE_AS(layouterUpdateCalls, Containers::arrayView({
-            /* layouter 2 gets called just once this time, i.e. the usual first
-               call to layouter2 is omitted now */
-            layouterHandleId(layouter1->handle()),
-            layouterHandleId(layouter2->handle())
-        }), TestSuite::Compare::Container);
+        CORRADE_COMPARE(layouter->cleanCallCount, 0);
+        CORRADE_COMPARE(layouter->updateCallCount, 4);
     }
     CORRADE_COMPARE(layer.cleanCallCount, 0);
     CORRADE_COMPARE(layer.preUpdateCallCount, 1);
@@ -9482,8 +9564,8 @@ void AbstractUserInterfaceTest::state() {
         CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeUpdate);
         CORRADE_COMPARE(ui.renderer<Renderer>().setupFramebufferCallCount, 2);
         if(data.layouters) {
-            CORRADE_COMPARE(layouter1->cleanCallCount, 0);
-            CORRADE_COMPARE(layouter2->cleanCallCount, 0);
+            CORRADE_COMPARE(layouter->cleanCallCount, 0);
+            CORRADE_COMPARE(layouter->updateCallCount, 4);
         }
         CORRADE_COMPARE(layer.cleanCallCount, 0);
         CORRADE_COMPARE(layer.preUpdateCallCount, 1);
@@ -9499,71 +9581,28 @@ void AbstractUserInterfaceTest::state() {
     {
         CORRADE_ITERATION(__FILE__ ":" CORRADE_LINE_STRING);
 
-        bool expectedLayoutIdsToUpdate1[]{
-            /* layout2Node and layout2Nested2 */
-            false, true, true, false, false
+        bool expectedLayoutIdsToUpdate[]{
+            /* layoutNode, layoutNested2, layoutAnother1, layoutAnother2 */
+            false, true, true, true, false, true
         };
-        bool expectedLayoutIdsToUpdate2[]{
-            /* layout1Another1 */
-            false, true, false
+        UnsignedInt expectedTopLevelLayoutIds[]{
+            layoutHandleId(layoutNode),
+            layoutHandleId(layoutAnother1),
         };
-        bool expectedLayoutIdsToUpdate3[]{
-            /* layout2Another1 and layout2Another2 */
-            false, false, false, true, true
-        };
-        UnsignedInt expectedTopLevelLayoutIds1[]{
-            layoutHandleId(layout2Node),
-        };
-        UnsignedInt expectedTopLevelLayoutIds2[]{
-            layoutHandleId(layout1Another1),
-        };
-        UnsignedInt expectedTopLevelLayoutIds3[]{
-            layoutHandleId(layout2Another1),
-            /* layout2Another2 is top-level but not root, so not included
-               here */
-        };
-        Containers::Pair<Vector2, Vector2> expectedLayoutNodeOffsetsSizes1[]{
-            {{3.0f, 3.0f}, {2.0f, 2.0f}}, /* node, visible again */
-            {{3.0f, 2.0f}, {0.5f, 1.0f}}, /* another1 */
-            {{0.0f, 4.0f}, {1.0f, 1.0f}}, /* another2 */
+        Containers::Pair<Vector2, Vector2> expectedLayoutNodeOffsetsSizes[]{
+            {{3.0f, 3.0f}, {1.0f, 4.0f}}, /* node, visible again */
+            {{5.0f, 2.0f}, {0.5f, 2.0f}}, /* another1 */
+            {{0.0f, 4.0f}, {0.5f, 2.0f}}, /* another2 */
             {{1.0f, 3.0f}, {1.0f, 2.0f}}, /* nested1 */
-            {{2.0f, 4.0f}, {1.0f, 1.0f}}, /* nested2 */
+            {{2.0f, 4.0f}, {0.5f, 2.0f}}, /* nested2 */
             {{9.0f, 9.0f}, {9.0f, 9.0f}}, /* invisible */
             {{0.0f, 0.0f}, {9.0f, 9.0f}}, /* topLevelChildOfInvisible */
             {{8.0f, 8.0f}, {8.0f, 8.0f}}, /* notInOrder */
         };
-        Containers::Pair<Vector2, Vector2> expectedLayoutNodeOffsetsSizes2[]{
-            {{3.0f, 1.0f}, {2.0f, 4.0f}}, /* changed by layouter 2 */
-            {{3.0f, 2.0f}, {0.5f, 1.0f}},
-            {{0.0f, 4.0f}, {1.0f, 1.0f}},
-            {{1.0f, 3.0f}, {1.0f, 2.0f}},
-            {{2.0f, 2.0f}, {1.0f, 2.0f}},
-            {{9.0f, 9.0f}, {9.0f, 9.0f}},
-            {{0.0f, 0.0f}, {9.0f, 9.0f}},
-            {{8.0f, 8.0f}, {8.0f, 8.0f}}
-        };
-        Containers::Pair<Vector2, Vector2> expectedLayoutNodeOffsetsSizes3[]{
-            {{3.0f, 1.0f}, {2.0f, 4.0f}},
-            {{5.0f, 2.0f}, {1.0f, 1.0f}}, /* changed by layouter 1 */
-            {{0.0f, 4.0f}, {1.0f, 1.0f}},
-            {{1.0f, 3.0f}, {1.0f, 2.0f}},
-            {{2.0f, 2.0f}, {1.0f, 2.0f}},
-            {{9.0f, 9.0f}, {9.0f, 9.0f}},
-            {{0.0f, 0.0f}, {9.0f, 9.0f}},
-            {{8.0f, 8.0f}, {8.0f, 8.0f}}
-        };
         if(data.layouters) {
-            layouterUpdateCalls = {};
-            layouter2->expectedLayoutIdsToUpdate[0] = expectedLayoutIdsToUpdate1;
-            layouter1->expectedLayoutIdsToUpdate = expectedLayoutIdsToUpdate2;
-            layouter2->expectedLayoutIdsToUpdate[1] = expectedLayoutIdsToUpdate3;
-            layouter2->expectedTopLevelLayoutIds[0] = expectedTopLevelLayoutIds1;
-            layouter1->expectedTopLevelLayoutIds = expectedTopLevelLayoutIds2;
-            layouter2->expectedTopLevelLayoutIds[1] = expectedTopLevelLayoutIds3;
-            layouter2->expectedNodeOffsetsSizes[0] = expectedLayoutNodeOffsetsSizes1;
-            layouter1->expectedNodeOffsetsSizes = expectedLayoutNodeOffsetsSizes2;
-            layouter2->expectedNodeOffsetsSizes[1] = expectedLayoutNodeOffsetsSizes3;
-            layouter2->updateCallId = 0;
+            layouter->expectedLayoutIdsToUpdate = expectedLayoutIdsToUpdate;
+            layouter->expectedTopLevelLayoutIds = expectedTopLevelLayoutIds;
+            layouter->expectedNodeOffsetsSizes = expectedLayoutNodeOffsetsSizes;
         }
 
         UnsignedInt expectedDataIds[]{
@@ -9621,14 +9660,8 @@ void AbstractUserInterfaceTest::state() {
     CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
     CORRADE_COMPARE(ui.renderer<Renderer>().setupFramebufferCallCount, 2);
     if(data.layouters) {
-        CORRADE_COMPARE(layouter1->cleanCallCount, 0);
-        CORRADE_COMPARE(layouter2->cleanCallCount, 0);
-        CORRADE_COMPARE_AS(layouterUpdateCalls, Containers::arrayView({
-            /* update() again gets called twice on layouter 2 */
-            layouterHandleId(layouter2->handle()),
-            layouterHandleId(layouter1->handle()),
-            layouterHandleId(layouter2->handle())
-        }), TestSuite::Compare::Container);
+        CORRADE_COMPARE(layouter->cleanCallCount, 0);
+        CORRADE_COMPARE(layouter->updateCallCount, 5);
     }
     CORRADE_COMPARE(layer.cleanCallCount, 0);
     CORRADE_COMPARE(layer.preUpdateCallCount, 1);
@@ -9656,13 +9689,8 @@ void AbstractUserInterfaceTest::state() {
         CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeEnabledUpdate);
         CORRADE_COMPARE(ui.renderer<Renderer>().setupFramebufferCallCount, 2);
         if(data.layouters) {
-            CORRADE_COMPARE(layouter1->cleanCallCount, 0);
-            CORRADE_COMPARE(layouter2->cleanCallCount, 0);
-            CORRADE_COMPARE_AS(layouterUpdateCalls, Containers::arrayView({
-                layouterHandleId(layouter2->handle()),
-                layouterHandleId(layouter1->handle()),
-                layouterHandleId(layouter2->handle())
-            }), TestSuite::Compare::Container);
+            CORRADE_COMPARE(layouter->cleanCallCount, 0);
+            CORRADE_COMPARE(layouter->updateCallCount, 5);
         }
         CORRADE_COMPARE(layer.cleanCallCount, 0);
         CORRADE_COMPARE(layer.preUpdateCallCount, 1);
@@ -9725,14 +9753,8 @@ void AbstractUserInterfaceTest::state() {
     CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
     CORRADE_COMPARE(ui.renderer<Renderer>().setupFramebufferCallCount, 2);
     if(data.layouters) {
-        CORRADE_COMPARE(layouter1->cleanCallCount, 0);
-        CORRADE_COMPARE(layouter2->cleanCallCount, 0);
-        CORRADE_COMPARE_AS(layouterUpdateCalls, Containers::arrayView({
-            /* update() again gets called twice on layouter 2 */
-            layouterHandleId(layouter2->handle()),
-            layouterHandleId(layouter1->handle()),
-            layouterHandleId(layouter2->handle())
-        }), TestSuite::Compare::Container);
+        CORRADE_COMPARE(layouter->cleanCallCount, 0);
+        CORRADE_COMPARE(layouter->updateCallCount, 5);
     }
     CORRADE_COMPARE(layer.cleanCallCount, 0);
     CORRADE_COMPARE(layer.preUpdateCallCount, 1);
@@ -9767,8 +9789,8 @@ void AbstractUserInterfaceTest::state() {
         CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeEnabledUpdate);
         CORRADE_COMPARE(ui.renderer<Renderer>().setupFramebufferCallCount, 2);
         if(data.layouters) {
-            CORRADE_COMPARE(layouter1->cleanCallCount, 0);
-            CORRADE_COMPARE(layouter2->cleanCallCount, 0);
+            CORRADE_COMPARE(layouter->cleanCallCount, 0);
+            CORRADE_COMPARE(layouter->updateCallCount, 5);
         }
         CORRADE_COMPARE(layer.cleanCallCount, 0);
         CORRADE_COMPARE(layer.preUpdateCallCount, 1);
@@ -9835,14 +9857,8 @@ void AbstractUserInterfaceTest::state() {
     CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
     CORRADE_COMPARE(ui.renderer<Renderer>().setupFramebufferCallCount, 2);
     if(data.layouters) {
-        CORRADE_COMPARE(layouter1->cleanCallCount, 0);
-        CORRADE_COMPARE(layouter2->cleanCallCount, 0);
-        CORRADE_COMPARE_AS(layouterUpdateCalls, Containers::arrayView({
-            /* update() again gets called twice on layouter 2 */
-            layouterHandleId(layouter2->handle()),
-            layouterHandleId(layouter1->handle()),
-            layouterHandleId(layouter2->handle())
-        }), TestSuite::Compare::Container);
+        CORRADE_COMPARE(layouter->cleanCallCount, 0);
+        CORRADE_COMPARE(layouter->updateCallCount, 5);
     }
     CORRADE_COMPARE(layer.cleanCallCount, 0);
     CORRADE_COMPARE(layer.preUpdateCallCount, 1);
@@ -9866,8 +9882,8 @@ void AbstractUserInterfaceTest::state() {
         CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeEnabledUpdate);
         CORRADE_COMPARE(ui.renderer<Renderer>().setupFramebufferCallCount, 2);
         if(data.layouters) {
-            CORRADE_COMPARE(layouter1->cleanCallCount, 0);
-            CORRADE_COMPARE(layouter2->cleanCallCount, 0);
+            CORRADE_COMPARE(layouter->cleanCallCount, 0);
+            CORRADE_COMPARE(layouter->updateCallCount, 5);
         }
         CORRADE_COMPARE(layer.cleanCallCount, 0);
         CORRADE_COMPARE(layer.preUpdateCallCount, 1);
@@ -9935,14 +9951,8 @@ void AbstractUserInterfaceTest::state() {
     CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
     CORRADE_COMPARE(ui.renderer<Renderer>().setupFramebufferCallCount, 2);
     if(data.layouters) {
-        CORRADE_COMPARE(layouter1->cleanCallCount, 0);
-        CORRADE_COMPARE(layouter2->cleanCallCount, 0);
-        CORRADE_COMPARE_AS(layouterUpdateCalls, Containers::arrayView({
-            /* update() again gets called twice on layouter 2 */
-            layouterHandleId(layouter2->handle()),
-            layouterHandleId(layouter1->handle()),
-            layouterHandleId(layouter2->handle())
-        }), TestSuite::Compare::Container);
+        CORRADE_COMPARE(layouter->cleanCallCount, 0);
+        CORRADE_COMPARE(layouter->updateCallCount, 5);
     }
     CORRADE_COMPARE(layer.cleanCallCount, 0);
     CORRADE_COMPARE(layer.preUpdateCallCount, 1);
@@ -9984,8 +9994,8 @@ void AbstractUserInterfaceTest::state() {
         CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeClipUpdate);
         CORRADE_COMPARE(ui.renderer<Renderer>().setupFramebufferCallCount, 2);
         if(data.layouters) {
-            CORRADE_COMPARE(layouter1->cleanCallCount, 0);
-            CORRADE_COMPARE(layouter2->cleanCallCount, 0);
+            CORRADE_COMPARE(layouter->cleanCallCount, 0);
+            CORRADE_COMPARE(layouter->updateCallCount, 5);
         }
         CORRADE_COMPARE(layer.cleanCallCount, 0);
         CORRADE_COMPARE(layer.preUpdateCallCount, 1);
@@ -10052,13 +10062,8 @@ void AbstractUserInterfaceTest::state() {
     CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
     CORRADE_COMPARE(ui.renderer<Renderer>().setupFramebufferCallCount, 2);
     if(data.layouters) {
-        CORRADE_COMPARE(layouter1->cleanCallCount, 0);
-        CORRADE_COMPARE(layouter2->cleanCallCount, 0);
-        CORRADE_COMPARE_AS(layouterUpdateCalls, Containers::arrayView({
-            layouterHandleId(layouter2->handle()),
-            layouterHandleId(layouter1->handle()),
-            layouterHandleId(layouter2->handle())
-        }), TestSuite::Compare::Container);
+        CORRADE_COMPARE(layouter->cleanCallCount, 0);
+        CORRADE_COMPARE(layouter->updateCallCount, 5);
     }
     CORRADE_COMPARE(layer.cleanCallCount, 0);
     CORRADE_COMPARE(layer.preUpdateCallCount, 1);
@@ -10086,8 +10091,8 @@ void AbstractUserInterfaceTest::state() {
         CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeClipUpdate);
         CORRADE_COMPARE(ui.renderer<Renderer>().setupFramebufferCallCount, 2);
         if(data.layouters) {
-            CORRADE_COMPARE(layouter1->cleanCallCount, 0);
-            CORRADE_COMPARE(layouter2->cleanCallCount, 0);
+            CORRADE_COMPARE(layouter->cleanCallCount, 0);
+            CORRADE_COMPARE(layouter->updateCallCount, 5);
         }
         CORRADE_COMPARE(layer.cleanCallCount, 0);
         CORRADE_COMPARE(layer.preUpdateCallCount, 1);
@@ -10152,13 +10157,8 @@ void AbstractUserInterfaceTest::state() {
     CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
     CORRADE_COMPARE(ui.renderer<Renderer>().setupFramebufferCallCount, 2);
     if(data.layouters) {
-        CORRADE_COMPARE(layouter1->cleanCallCount, 0);
-        CORRADE_COMPARE(layouter2->cleanCallCount, 0);
-        CORRADE_COMPARE_AS(layouterUpdateCalls, Containers::arrayView({
-            layouterHandleId(layouter2->handle()),
-            layouterHandleId(layouter1->handle()),
-            layouterHandleId(layouter2->handle())
-        }), TestSuite::Compare::Container);
+        CORRADE_COMPARE(layouter->cleanCallCount, 0);
+        CORRADE_COMPARE(layouter->updateCallCount, 5);
     }
     CORRADE_COMPARE(layer.cleanCallCount, 0);
     CORRADE_COMPARE(layer.preUpdateCallCount, 1);
@@ -10181,8 +10181,8 @@ void AbstractUserInterfaceTest::state() {
         CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeUpdate);
         CORRADE_COMPARE(ui.renderer<Renderer>().setupFramebufferCallCount, 2);
         if(data.layouters) {
-            CORRADE_COMPARE(layouter1->cleanCallCount, 0);
-            CORRADE_COMPARE(layouter2->cleanCallCount, 0);
+            CORRADE_COMPARE(layouter->cleanCallCount, 0);
+            CORRADE_COMPARE(layouter->updateCallCount, 5);
         }
         CORRADE_COMPARE(layer.cleanCallCount, 0);
         CORRADE_COMPARE(layer.preUpdateCallCount, 1);
@@ -10193,40 +10193,32 @@ void AbstractUserInterfaceTest::state() {
             CORRADE_COMPARE(dataAttachmentAnimator->cleanCallCount, 0);
     }
 
-    /* Calling update() calls the one remaining layouter, uploads data in
-       new order and resets the flag */
+    /* Calling update() calls the layouter with the remaining nodes, uploads
+       data in new order and resets the flag */
     {
         CORRADE_ITERATION(__FILE__ ":" CORRADE_LINE_STRING);
 
-        bool expectedLayoutIdsToUpdate1[]{
+        bool expectedLayoutIdsToUpdate[]{
             /* layout2Node and layout2Nested2 */
-            false, true, true, false, false
+            false, true, true, false, false, false
         };
-        UnsignedInt expectedTopLevelLayoutIds1[]{
-            layoutHandleId(layout2Node),
+        UnsignedInt expectedTopLevelLayoutIds[]{
+            layoutHandleId(layoutNode),
         };
-        Containers::Pair<Vector2, Vector2> expectedLayoutNodeOffsetsSizes1[]{
-            {{3.0f, 3.0f}, {2.0f, 2.0f}}, /* node, visible again */
+        Containers::Pair<Vector2, Vector2> expectedLayoutNodeOffsetsSizes[]{
+            {{3.0f, 3.0f}, {1.0f, 4.0f}}, /* node */
             {},
             {},
             {{1.0f, 3.0f}, {1.0f, 2.0f}}, /* nested1 */
-            {{2.0f, 4.0f}, {1.0f, 1.0f}}, /* nested2 */
+            {{2.0f, 4.0f}, {0.5f, 2.0f}}, /* nested2 */
             {{9.0f, 9.0f}, {9.0f, 9.0f}}, /* invisible */
             {{0.0f, 0.0f}, {9.0f, 9.0f}}, /* topLevelChildOfInvisible */
             {{8.0f, 8.0f}, {8.0f, 8.0f}}, /* notInOrder */
         };
         if(data.layouters) {
-            layouterUpdateCalls = {};
-            layouter2->expectedLayoutIdsToUpdate[0] = expectedLayoutIdsToUpdate1;
-            layouter1->expectedLayoutIdsToUpdate = {};
-            layouter2->expectedLayoutIdsToUpdate[1] = {};
-            layouter2->expectedTopLevelLayoutIds[0] = expectedTopLevelLayoutIds1;
-            layouter1->expectedTopLevelLayoutIds = {};
-            layouter2->expectedTopLevelLayoutIds[1] = {};
-            layouter2->expectedNodeOffsetsSizes[0] = expectedLayoutNodeOffsetsSizes1;
-            layouter1->expectedNodeOffsetsSizes = {};
-            layouter2->expectedNodeOffsetsSizes[1] = {};
-            layouter2->updateCallId = 0;
+            layouter->expectedLayoutIdsToUpdate = expectedLayoutIdsToUpdate;
+            layouter->expectedTopLevelLayoutIds = expectedTopLevelLayoutIds;
+            layouter->expectedNodeOffsetsSizes = expectedLayoutNodeOffsetsSizes;
         }
 
         UnsignedInt expectedDataIds[]{
@@ -10276,12 +10268,8 @@ void AbstractUserInterfaceTest::state() {
     CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
     CORRADE_COMPARE(ui.renderer<Renderer>().setupFramebufferCallCount, 2);
     if(data.layouters) {
-        CORRADE_COMPARE(layouter1->cleanCallCount, 0);
-        CORRADE_COMPARE(layouter2->cleanCallCount, 0);
-        CORRADE_COMPARE_AS(layouterUpdateCalls, Containers::arrayView({
-            /* Now only layouter2 gets called, once */
-            layouterHandleId(layouter2->handle())
-        }), TestSuite::Compare::Container);
+        CORRADE_COMPARE(layouter->cleanCallCount, 0);
+        CORRADE_COMPARE(layouter->updateCallCount, 6);
     }
     CORRADE_COMPARE(layer.cleanCallCount, 0);
     CORRADE_COMPARE(layer.preUpdateCallCount, 1);
@@ -10309,8 +10297,8 @@ void AbstractUserInterfaceTest::state() {
         CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeUpdate);
         CORRADE_COMPARE(ui.renderer<Renderer>().setupFramebufferCallCount, 2);
         if(data.layouters) {
-            CORRADE_COMPARE(layouter1->cleanCallCount, 0);
-            CORRADE_COMPARE(layouter2->cleanCallCount, 0);
+            CORRADE_COMPARE(layouter->cleanCallCount, 0);
+            CORRADE_COMPARE(layouter->updateCallCount, 6);
         }
         CORRADE_COMPARE(layer.cleanCallCount, 0);
         CORRADE_COMPARE(layer.preUpdateCallCount, 1);
@@ -10327,71 +10315,28 @@ void AbstractUserInterfaceTest::state() {
     {
         CORRADE_ITERATION(__FILE__ ":" CORRADE_LINE_STRING);
 
-        bool expectedLayoutIdsToUpdate1[]{
-            /* layout2Node and layout2Nested2 */
-            false, true, true, false, false
+        bool expectedLayoutIdsToUpdate[]{
+            /* layoutNode, layoutNested2, layoutAnother1, layoutAnother2 */
+            false, true, true, true, false, true
         };
-        bool expectedLayoutIdsToUpdate2[]{
-            /* layout1Another1 */
-            false, true, false
+        UnsignedInt expectedTopLevelLayoutIds[]{
+            layoutHandleId(layoutAnother1), /** @todo why the order changed? */
+            layoutHandleId(layoutNode),
         };
-        bool expectedLayoutIdsToUpdate3[]{
-            /* layout2Another1 and layout2Another2 */
-            false, false, false, true, true
-        };
-        UnsignedInt expectedTopLevelLayoutIds1[]{
-            layoutHandleId(layout2Node),
-        };
-        UnsignedInt expectedTopLevelLayoutIds2[]{
-            layoutHandleId(layout1Another1),
-        };
-        UnsignedInt expectedTopLevelLayoutIds3[]{
-            layoutHandleId(layout2Another1),
-            /* layout2Another2 is top-level but not root, so not included
-               here */
-        };
-        Containers::Pair<Vector2, Vector2> expectedLayoutNodeOffsetsSizes1[]{
-            {{3.0f, 3.0f}, {2.0f, 2.0f}}, /* node, visible again */
-            {{3.0f, 2.0f}, {0.5f, 1.0f}}, /* another1 */
-            {{0.0f, 4.0f}, {1.0f, 1.0f}}, /* another2 */
+        Containers::Pair<Vector2, Vector2> expectedLayoutNodeOffsetsSizes[]{
+            {{3.0f, 3.0f}, {1.0f, 4.0f}}, /* node */
+            {{5.0f, 2.0f}, {0.5f, 2.0f}}, /* another1, visible again */
+            {{0.0f, 4.0f}, {0.5f, 2.0f}}, /* another2 */
             {{1.0f, 3.0f}, {1.0f, 2.0f}}, /* nested1 */
-            {{2.0f, 4.0f}, {1.0f, 1.0f}}, /* nested2 */
+            {{2.0f, 4.0f}, {0.5f, 2.0f}}, /* nested2 */
             {{9.0f, 9.0f}, {9.0f, 9.0f}}, /* invisible */
             {{0.0f, 0.0f}, {9.0f, 9.0f}}, /* topLevelChildOfInvisible */
             {{8.0f, 8.0f}, {8.0f, 8.0f}}, /* notInOrder */
         };
-        Containers::Pair<Vector2, Vector2> expectedLayoutNodeOffsetsSizes2[]{
-            {{3.0f, 1.0f}, {2.0f, 4.0f}}, /* changed by layouter 2 */
-            {{3.0f, 2.0f}, {0.5f, 1.0f}},
-            {{0.0f, 4.0f}, {1.0f, 1.0f}},
-            {{1.0f, 3.0f}, {1.0f, 2.0f}},
-            {{2.0f, 2.0f}, {1.0f, 2.0f}},
-            {{9.0f, 9.0f}, {9.0f, 9.0f}},
-            {{0.0f, 0.0f}, {9.0f, 9.0f}},
-            {{8.0f, 8.0f}, {8.0f, 8.0f}}
-        };
-        Containers::Pair<Vector2, Vector2> expectedLayoutNodeOffsetsSizes3[]{
-            {{3.0f, 1.0f}, {2.0f, 4.0f}},
-            {{5.0f, 2.0f}, {1.0f, 1.0f}}, /* changed by layouter 1 */
-            {{0.0f, 4.0f}, {1.0f, 1.0f}},
-            {{1.0f, 3.0f}, {1.0f, 2.0f}},
-            {{2.0f, 2.0f}, {1.0f, 2.0f}},
-            {{9.0f, 9.0f}, {9.0f, 9.0f}},
-            {{0.0f, 0.0f}, {9.0f, 9.0f}},
-            {{8.0f, 8.0f}, {8.0f, 8.0f}}
-        };
         if(data.layouters) {
-            layouterUpdateCalls = {};
-            layouter2->expectedLayoutIdsToUpdate[0] = expectedLayoutIdsToUpdate1;
-            layouter1->expectedLayoutIdsToUpdate = expectedLayoutIdsToUpdate2;
-            layouter2->expectedLayoutIdsToUpdate[1] = expectedLayoutIdsToUpdate3;
-            layouter2->expectedTopLevelLayoutIds[0] = expectedTopLevelLayoutIds1;
-            layouter1->expectedTopLevelLayoutIds = expectedTopLevelLayoutIds2;
-            layouter2->expectedTopLevelLayoutIds[1] = expectedTopLevelLayoutIds3;
-            layouter2->expectedNodeOffsetsSizes[0] = expectedLayoutNodeOffsetsSizes1;
-            layouter1->expectedNodeOffsetsSizes = expectedLayoutNodeOffsetsSizes2;
-            layouter2->expectedNodeOffsetsSizes[1] = expectedLayoutNodeOffsetsSizes3;
-            layouter2->updateCallId = 0;
+            layouter->expectedLayoutIdsToUpdate = expectedLayoutIdsToUpdate;
+            layouter->expectedTopLevelLayoutIds = expectedTopLevelLayoutIds;
+            layouter->expectedNodeOffsetsSizes = expectedLayoutNodeOffsetsSizes;
         }
 
         UnsignedInt expectedDataIds[]{
@@ -10445,14 +10390,8 @@ void AbstractUserInterfaceTest::state() {
     CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
     CORRADE_COMPARE(ui.renderer<Renderer>().setupFramebufferCallCount, 2);
     if(data.layouters) {
-        CORRADE_COMPARE(layouter1->cleanCallCount, 0);
-        CORRADE_COMPARE(layouter2->cleanCallCount, 0);
-        CORRADE_COMPARE_AS(layouterUpdateCalls, Containers::arrayView({
-            /* layouter2 getting called twice again */
-            layouterHandleId(layouter2->handle()),
-            layouterHandleId(layouter1->handle()),
-            layouterHandleId(layouter2->handle()),
-        }), TestSuite::Compare::Container);
+        CORRADE_COMPARE(layouter->cleanCallCount, 0);
+        CORRADE_COMPARE(layouter->updateCallCount, 7);
     }
     CORRADE_COMPARE(layer.cleanCallCount, 0);
     CORRADE_COMPARE(layer.preUpdateCallCount, 1);
@@ -10475,8 +10414,8 @@ void AbstractUserInterfaceTest::state() {
         CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeUpdate);
         CORRADE_COMPARE(ui.renderer<Renderer>().setupFramebufferCallCount, 2);
         if(data.layouters) {
-            CORRADE_COMPARE(layouter1->cleanCallCount, 0);
-            CORRADE_COMPARE(layouter2->cleanCallCount, 0);
+            CORRADE_COMPARE(layouter->cleanCallCount, 0);
+            CORRADE_COMPARE(layouter->updateCallCount, 7);
         }
         CORRADE_COMPARE(layer.cleanCallCount, 0);
         CORRADE_COMPARE(layer.preUpdateCallCount, 1);
@@ -10493,71 +10432,28 @@ void AbstractUserInterfaceTest::state() {
     {
         CORRADE_ITERATION(__FILE__ ":" CORRADE_LINE_STRING);
 
-        bool expectedLayoutIdsToUpdate1[]{
-            /* layout2Node and layout2Nested2 */
-            false, true, true, false, false
+        bool expectedLayoutIdsToUpdate[]{
+            /* layoutNode, layoutNested2, layoutAnother1, layoutAnother2 */
+            false, true, true, true, false, true
         };
-        bool expectedLayoutIdsToUpdate2[]{
-            /* layout1Another1 */
-            false, true, false
+        UnsignedInt expectedTopLevelLayoutIds[]{
+            layoutHandleId(layoutAnother1),
+            layoutHandleId(layoutNode),
         };
-        bool expectedLayoutIdsToUpdate3[]{
-            /* layout2Another1 and layout2Another2 */
-            false, false, false, true, true
-        };
-        UnsignedInt expectedTopLevelLayoutIds1[]{
-            layoutHandleId(layout2Node),
-        };
-        UnsignedInt expectedTopLevelLayoutIds2[]{
-            layoutHandleId(layout1Another1),
-        };
-        UnsignedInt expectedTopLevelLayoutIds3[]{
-            layoutHandleId(layout2Another1),
-            /* layout2Another2 is top-level but not root, so not included
-               here */
-        };
-        Containers::Pair<Vector2, Vector2> expectedLayoutNodeOffsetsSizes1[]{
-            {{3.0f, 3.0f}, {2.0f, 2.0f}}, /* node, visible again */
-            {{3.0f, 2.0f}, {0.5f, 1.0f}}, /* another1 */
-            {{0.0f, 4.0f}, {1.0f, 1.0f}}, /* another2 */
+        Containers::Pair<Vector2, Vector2> expectedLayoutNodeOffsetsSizes[]{
+            {{3.0f, 3.0f}, {1.0f, 4.0f}}, /* node */
+            {{5.0f, 2.0f}, {0.5f, 2.0f}}, /* another1 */
+            {{0.0f, 4.0f}, {0.5f, 2.0f}}, /* another2 */
             {{1.0f, 3.0f}, {1.0f, 2.0f}}, /* nested1 */
-            {{2.0f, 4.0f}, {1.0f, 1.0f}}, /* nested2 */
+            {{2.0f, 4.0f}, {0.5f, 2.0f}}, /* nested2 */
             {{9.0f, 9.0f}, {9.0f, 9.0f}}, /* invisible */
             {{0.0f, 0.0f}, {9.0f, 9.0f}}, /* topLevelChildOfInvisible */
             {{8.0f, 8.0f}, {8.0f, 8.0f}}, /* notInOrder */
         };
-        Containers::Pair<Vector2, Vector2> expectedLayoutNodeOffsetsSizes2[]{
-            {{3.0f, 1.0f}, {2.0f, 4.0f}}, /* changed by layouter 2 */
-            {{3.0f, 2.0f}, {0.5f, 1.0f}},
-            {{0.0f, 4.0f}, {1.0f, 1.0f}},
-            {{1.0f, 3.0f}, {1.0f, 2.0f}},
-            {{2.0f, 2.0f}, {1.0f, 2.0f}},
-            {{9.0f, 9.0f}, {9.0f, 9.0f}},
-            {{0.0f, 0.0f}, {9.0f, 9.0f}},
-            {{8.0f, 8.0f}, {8.0f, 8.0f}}
-        };
-        Containers::Pair<Vector2, Vector2> expectedLayoutNodeOffsetsSizes3[]{
-            {{3.0f, 1.0f}, {2.0f, 4.0f}},
-            {{5.0f, 2.0f}, {1.0f, 1.0f}}, /* changed by layouter 1 */
-            {{0.0f, 4.0f}, {1.0f, 1.0f}},
-            {{1.0f, 3.0f}, {1.0f, 2.0f}},
-            {{2.0f, 2.0f}, {1.0f, 2.0f}},
-            {{9.0f, 9.0f}, {9.0f, 9.0f}},
-            {{0.0f, 0.0f}, {9.0f, 9.0f}},
-            {{8.0f, 8.0f}, {8.0f, 8.0f}}
-        };
         if(data.layouters) {
-            layouterUpdateCalls = {};
-            layouter2->expectedLayoutIdsToUpdate[0] = expectedLayoutIdsToUpdate1;
-            layouter1->expectedLayoutIdsToUpdate = expectedLayoutIdsToUpdate2;
-            layouter2->expectedLayoutIdsToUpdate[1] = expectedLayoutIdsToUpdate3;
-            layouter2->expectedTopLevelLayoutIds[0] = expectedTopLevelLayoutIds1;
-            layouter1->expectedTopLevelLayoutIds = expectedTopLevelLayoutIds2;
-            layouter2->expectedTopLevelLayoutIds[1] = expectedTopLevelLayoutIds3;
-            layouter2->expectedNodeOffsetsSizes[0] = expectedLayoutNodeOffsetsSizes1;
-            layouter1->expectedNodeOffsetsSizes = expectedLayoutNodeOffsetsSizes2;
-            layouter2->expectedNodeOffsetsSizes[1] = expectedLayoutNodeOffsetsSizes3;
-            layouter2->updateCallId = 0;
+            layouter->expectedLayoutIdsToUpdate = expectedLayoutIdsToUpdate;
+            layouter->expectedTopLevelLayoutIds = expectedTopLevelLayoutIds;
+            layouter->expectedNodeOffsetsSizes = expectedLayoutNodeOffsetsSizes;
         }
 
         UnsignedInt expectedDataIds[]{
@@ -10612,14 +10508,8 @@ void AbstractUserInterfaceTest::state() {
     CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
     CORRADE_COMPARE(ui.renderer<Renderer>().setupFramebufferCallCount, 2);
     if(data.layouters) {
-        CORRADE_COMPARE(layouter1->cleanCallCount, 0);
-        CORRADE_COMPARE(layouter2->cleanCallCount, 0);
-        CORRADE_COMPARE_AS(layouterUpdateCalls, Containers::arrayView({
-            /* layouter2 getting called twice again */
-            layouterHandleId(layouter2->handle()),
-            layouterHandleId(layouter1->handle()),
-            layouterHandleId(layouter2->handle()),
-        }), TestSuite::Compare::Container);
+        CORRADE_COMPARE(layouter->cleanCallCount, 0);
+        CORRADE_COMPARE(layouter->updateCallCount, 8);
     }
     CORRADE_COMPARE(layer.cleanCallCount, 0);
     CORRADE_COMPARE(layer.preUpdateCallCount, 1);
@@ -10637,62 +10527,36 @@ void AbstractUserInterfaceTest::state() {
     if(data.layouters) {
         /* Removing a layout marks the layouter with NeedsAssignmentUpdate,
            which is then propagated to the UI-wide state */
-        layouter1->remove(layout1Another1);
+        layouter->remove(layoutAnother1);
         CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsLayoutAssignmentUpdate);
-        CORRADE_COMPARE(layouter1->usedCount(), 2);
-        CORRADE_COMPARE(layouter2->usedCount(), 5);
+        CORRADE_COMPARE(layouter->usedCount(), 5);
 
         /* Calling update() then calls the remaining layouter, uploads
            remaining data and resets the remaining state flag */
         {
             CORRADE_ITERATION(__FILE__ ":" CORRADE_LINE_STRING);
 
-            bool expectedLayoutIdsToUpdate1[]{
-                /* layout2Node, layout2Nested2, layout2Another1 and
-                   layout2Another2 */
-                false, true, true, true, true
+            bool expectedLayoutIdsToUpdate[]{
+                /* layoutNode, layoutNested2, layoutAnother2 */
+                false, true, true, false, false, true
             };
-            /* Layouter1 is called with nothing just to reset the
-               NeedsLayoutAssignmentUpdate flag. */
-            /** @todo which is rather ugly, better idea? */
-            bool expectedLayoutIdsToUpdate2[3]{};
-            UnsignedInt expectedTopLevelLayoutIds1[]{
-                layoutHandleId(layout2Another1),
-                layoutHandleId(layout2Node),
-                /* layout2Another2 is top-level but not root, so not included
-                   here */
+            UnsignedInt expectedTopLevelLayoutIds[]{
+                layoutHandleId(layoutAnother2),
+                layoutHandleId(layoutNode),
             };
-            Containers::Pair<Vector2, Vector2> expectedLayoutNodeOffsetsSizes1[]{
-                {{3.0f, 3.0f}, {2.0f, 2.0f}}, /* node, visible again */
-                {{3.0f, 2.0f}, {0.5f, 1.0f}}, /* another1 */
-                {{0.0f, 4.0f}, {1.0f, 1.0f}}, /* another2 */
+            Containers::Pair<Vector2, Vector2> expectedLayoutNodeOffsetsSizes[]{
+                {{3.0f, 3.0f}, {1.0f, 4.0f}}, /* node */
+                {{5.0f, 2.0f}, {0.5f, 2.0f}}, /* another1 */
+                {{0.0f, 4.0f}, {0.5f, 2.0f}}, /* another2 */
                 {{1.0f, 3.0f}, {1.0f, 2.0f}}, /* nested1 */
-                {{2.0f, 4.0f}, {1.0f, 1.0f}}, /* nested2 */
+                {{2.0f, 4.0f}, {0.5f, 2.0f}}, /* nested2 */
                 {{9.0f, 9.0f}, {9.0f, 9.0f}}, /* invisible */
                 {{0.0f, 0.0f}, {9.0f, 9.0f}}, /* topLevelChildOfInvisible */
                 {{8.0f, 8.0f}, {8.0f, 8.0f}}, /* notInOrder */
             };
-            Containers::Pair<Vector2, Vector2> expectedLayoutNodeOffsetsSizes2[]{
-                {{3.0f, 1.0f}, {2.0f, 4.0f}}, /* changed by layouter 2 */
-                {{3.0f, 0.0f}, {0.5f, 2.0f}}, /* changed by layouter 2 */
-                {{0.0f, 2.0f}, {1.0f, 2.0f}}, /* changed by layouter 2 */
-                {{1.0f, 3.0f}, {1.0f, 2.0f}},
-                {{2.0f, 2.0f}, {1.0f, 2.0f}},
-                {{9.0f, 9.0f}, {9.0f, 9.0f}},
-                {{0.0f, 0.0f}, {9.0f, 9.0f}},
-                {{8.0f, 8.0f}, {8.0f, 8.0f}}
-            };
-            layouterUpdateCalls = {};
-            layouter2->expectedLayoutIdsToUpdate[0] = expectedLayoutIdsToUpdate1;
-            layouter1->expectedLayoutIdsToUpdate = expectedLayoutIdsToUpdate2;
-            layouter2->expectedLayoutIdsToUpdate[1] = {};
-            layouter2->expectedTopLevelLayoutIds[0] = expectedTopLevelLayoutIds1;
-            layouter1->expectedTopLevelLayoutIds = {};
-            layouter2->expectedTopLevelLayoutIds[1] = {};
-            layouter2->expectedNodeOffsetsSizes[0] = expectedLayoutNodeOffsetsSizes1;
-            layouter1->expectedNodeOffsetsSizes = expectedLayoutNodeOffsetsSizes2;
-            layouter2->expectedNodeOffsetsSizes[1] = {};
-            layouter2->updateCallId = 0;
+            layouter->expectedLayoutIdsToUpdate = expectedLayoutIdsToUpdate;
+            layouter->expectedTopLevelLayoutIds = expectedTopLevelLayoutIds;
+            layouter->expectedNodeOffsetsSizes = expectedLayoutNodeOffsetsSizes;
 
             UnsignedInt expectedDataIds[]{
                 dataHandleId(dataAnother1),
@@ -10703,9 +10567,9 @@ void AbstractUserInterfaceTest::state() {
                 {{3.0f, 1.0f}, {2.0f, 4.0f}, 0.8f}, /* node */
                 /* With the layouter for another1 gone, the size is not updated
                    anymore */
-                {{3.0f, 0.0f}, {0.5f, 2.0f}, 1.0f},
+                {{5.0f, 2.0f}, {0.5f, 2.0f}, 1.0f},
                 /* Which also affects another2 that's a child */
-                {{3.0f, 2.0f}, {1.0f, 2.0f}, 0.6f},
+                {{5.0f, 4.0f}, {1.0f, 2.0f}, 0.6f},
                 {{4.0f, 4.0f}, {1.0f, 2.0f}, 0.8f}, /* nested1 */
                 {},
                 {},                                 /* invisible */
@@ -10726,7 +10590,7 @@ void AbstractUserInterfaceTest::state() {
                 {{3.0f, 1.0f}, {2.0f, 4.0f}},
             };
             Containers::Pair<Vector2, Vector2> expectedCompositeRectOffsetsSizes[]{
-                {{3.0f, 0.0f}, {0.5f, 2.0f}}, /* matching another1 */
+                {{5.0f, 2.0f}, {0.5f, 2.0f}}, /* matching another1 */
                 {{3.0f, 1.0f}, {2.0f, 4.0f}}, /* matching node */
                 {{4.0f, 4.0f}, {1.0f, 1.0f}}, /* matching nested1, clipped */
             };
@@ -10744,18 +10608,9 @@ void AbstractUserInterfaceTest::state() {
             ui.update();
         }
         CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
-        CORRADE_COMPARE(layouter1->usedCount(), 2);
-        CORRADE_COMPARE(layouter2->usedCount(), 5);
-        CORRADE_COMPARE(layouter1->cleanCallCount, 0);
-        CORRADE_COMPARE(layouter2->cleanCallCount, 0);
-        CORRADE_COMPARE_AS(layouterUpdateCalls, Containers::arrayView({
-            /* There's nothing visible left in layouter1, so layouter2 is
-               called with everything it has, and then layouter1 with nothing
-               just to reset the NeedsLayoutAssignmentUpdate flag. */
-            /** @todo which is rather ugly, better idea? */
-            layouterHandleId(layouter2->handle()),
-            layouterHandleId(layouter1->handle()),
-        }), TestSuite::Compare::Container);
+        CORRADE_COMPARE(layouter->usedCount(), 5);
+        CORRADE_COMPARE(layouter->cleanCallCount, 0);
+        CORRADE_COMPARE(layouter->updateCallCount, 9);
         CORRADE_COMPARE(layer.cleanCallCount, 0);
         CORRADE_COMPARE(layer.preUpdateCallCount, 1);
         CORRADE_COMPARE(layer.updateCallCount, 18);
@@ -10778,8 +10633,8 @@ void AbstractUserInterfaceTest::state() {
         CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeOpacityUpdate);
         CORRADE_COMPARE(ui.renderer<Renderer>().setupFramebufferCallCount, 2);
         if(data.layouters) {
-            CORRADE_COMPARE(layouter1->cleanCallCount, 0);
-            CORRADE_COMPARE(layouter2->cleanCallCount, 0);
+            CORRADE_COMPARE(layouter->cleanCallCount, 0);
+            CORRADE_COMPARE(layouter->updateCallCount, 9);
         }
         CORRADE_COMPARE(layer.cleanCallCount, 0);
         CORRADE_COMPARE(layer.preUpdateCallCount, 1);
@@ -10805,11 +10660,11 @@ void AbstractUserInterfaceTest::state() {
             /* With the layouter for another1 gone, the size is not updated
                anymore */
             data.layouters ?
-                Containers::triple(Vector2{3.0f, 0.0f}, Vector2{0.5f, 2.0f}, 0.5f) :
+                Containers::triple(Vector2{5.0f, 2.0f}, Vector2{0.5f, 2.0f}, 0.5f) :
                 Containers::triple(Vector2{5.0f, 0.0f}, Vector2{1.0f, 2.0f}, 0.5f),
             /* Which also affects another2 that's a child */
             data.layouters ?
-                Containers::triple(Vector2{3.0f, 2.0f}, Vector2{1.0f, 2.0f}, 0.3f) :
+                Containers::triple(Vector2{5.0f, 4.0f}, Vector2{1.0f, 2.0f}, 0.3f) :
                 Containers::triple(Vector2{5.0f, 2.0f}, Vector2{1.0f, 2.0f}, 0.3f),
             {{4.0f, 4.0f}, {1.0f, 2.0f}, 0.8f}, /* nested1 */
             {},
@@ -10832,7 +10687,7 @@ void AbstractUserInterfaceTest::state() {
         };
         Containers::Pair<Vector2, Vector2> expectedCompositeRectOffsetsSizes[]{
             data.layouters ?              /* matching another1 */
-                Containers::Pair<Vector2, Vector2>{{3.0f, 0.0f}, {0.5f, 2.0f}} :
+                Containers::Pair<Vector2, Vector2>{{5.0f, 2.0f}, {0.5f, 2.0f}} :
                 Containers::Pair<Vector2, Vector2>{{5.0f, 0.0f}, {1.0f, 2.0f}},
             {{3.0f, 1.0f}, {2.0f, 4.0f}}, /* matching node */
             {{4.0f, 4.0f}, {1.0f, 1.0f}}, /* matching nested1, clipped */
@@ -10851,12 +10706,8 @@ void AbstractUserInterfaceTest::state() {
     CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
     CORRADE_COMPARE(ui.renderer<Renderer>().setupFramebufferCallCount, 2);
     if(data.layouters) {
-        CORRADE_COMPARE(layouter1->cleanCallCount, 0);
-        CORRADE_COMPARE(layouter2->cleanCallCount, 0);
-        CORRADE_COMPARE_AS(layouterUpdateCalls, Containers::arrayView({
-            layouterHandleId(layouter2->handle()),
-            layouterHandleId(layouter1->handle())
-        }), TestSuite::Compare::Container);
+        CORRADE_COMPARE(layouter->cleanCallCount, 0);
+        CORRADE_COMPARE(layouter->updateCallCount, 9);
     }
     CORRADE_COMPARE(layer.cleanCallCount, 0);
     CORRADE_COMPARE(layer.preUpdateCallCount, 1);
@@ -10904,8 +10755,8 @@ void AbstractUserInterfaceTest::state() {
         CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
         CORRADE_COMPARE(layer.usedCount(), 4);
         if(data.layouters) {
-            CORRADE_COMPARE(layouter1->cleanCallCount, 0);
-            CORRADE_COMPARE(layouter2->cleanCallCount, 0);
+            CORRADE_COMPARE(layouter->cleanCallCount, 0);
+            CORRADE_COMPARE(layouter->updateCallCount, 9);
         }
         CORRADE_COMPARE(layer.cleanCallCount, 0);
         CORRADE_COMPARE(layer.preUpdateCallCount, 1);
@@ -11009,11 +10860,11 @@ void AbstractUserInterfaceTest::state() {
             /* With the layouter for another1 gone, the size is not updated
                anymore */
             data.layouters ?
-                Containers::triple(Vector2{3.0f, 0.0f}, Vector2{0.5f, 2.0f}, 0.5f) :
+                Containers::triple(Vector2{5.0f, 2.0f}, Vector2{0.5f, 2.0f}, 0.5f) :
                 Containers::triple(Vector2{5.0f, 0.0f}, Vector2{1.0f, 2.0f}, 0.5f),
             /* Which also affects another2 that's a child */
             data.layouters ?
-                Containers::triple(Vector2{3.0f, 2.0f}, Vector2{1.0f, 2.0f}, 0.3f) :
+                Containers::triple(Vector2{5.0f, 4.0f}, Vector2{1.0f, 2.0f}, 0.3f) :
                 Containers::triple(Vector2{5.0f, 2.0f}, Vector2{1.0f, 2.0f}, 0.3f),
             {{4.0f, 4.0f}, {1.0f, 2.0f}, 0.8f}, /* nested1 */
             {},
@@ -11031,7 +10882,7 @@ void AbstractUserInterfaceTest::state() {
         };
         Containers::Pair<Vector2, Vector2> expectedCompositeRectOffsetsSizes[]{
             data.layouters ?              /* matching another1 */
-                Containers::Pair<Vector2, Vector2>{{3.0f, 0.0f}, {0.5f, 2.0f}} :
+                Containers::Pair<Vector2, Vector2>{{5.0f, 2.0f}, {0.5f, 2.0f}} :
                 Containers::Pair<Vector2, Vector2>{{5.0f, 0.0f}, {1.0f, 2.0f}},
             {{4.0f, 4.0f}, {1.0f, 1.0f}}, /* matching nested1, clipped */
         };
@@ -11076,11 +10927,8 @@ void AbstractUserInterfaceTest::state() {
     CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
     CORRADE_COMPARE(ui.renderer<Renderer>().setupFramebufferCallCount, 2);
     if(data.layouters) {
-        CORRADE_COMPARE(layouter1->cleanCallCount, 0);
-        CORRADE_COMPARE(layouter2->cleanCallCount, 0);
-        CORRADE_COMPARE_AS(layouterUpdateCalls, Containers::arrayView({
-            layouterHandleId(layouter2->handle()), layouterHandleId(layouter1->handle()),
-        }), TestSuite::Compare::Container);
+        CORRADE_COMPARE(layouter->cleanCallCount, 0);
+        CORRADE_COMPARE(layouter->updateCallCount, 9);
     }
     CORRADE_COMPARE(layer.usedCount(), 3);
     CORRADE_COMPARE(layer.cleanCallCount, 0);
@@ -11104,8 +10952,7 @@ void AbstractUserInterfaceTest::state() {
     CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeClean);
     CORRADE_COMPARE(ui.nodeUsedCount(), 7);
     if(data.layouters) {
-        CORRADE_COMPARE(layouter1->usedCount(), 2);
-        CORRADE_COMPARE(layouter2->usedCount(), 5);
+        CORRADE_COMPARE(layouter->usedCount(), 5);
         /* Node parents are reset to Null in clean() for freed nodes, Update
            the expected array to match that */
         expectedNodeParents[nodeHandleId(nested1)] = NodeHandle::Null;
@@ -11120,19 +10967,14 @@ void AbstractUserInterfaceTest::state() {
         {
             CORRADE_ITERATION(__FILE__ ":" CORRADE_LINE_STRING);
 
-            bool expectedLayoutIdsToRemove1[]{
-                /* Nothing changes in layouter1 */
-                false, false, false
-            };
-            bool expectedLayoutIdsToRemove2[]{
-                /* layout2Node, layout2Nested2Duplicate and layout2Nested2 were
+            bool expectedLayoutIdsToRemove[]{
+                /* layoutNode, layoutNested2Duplicate and layoutNested2 were
                    attached to node and nested2, which got all orphaned when
                    removing `node`. The duplicate layout gets removed also. */
-                true, true, true, false, false
+                true, true, true, false, false, false
             };
             if(data.layouters) {
-                layouter1->expectedLayoutIdsToRemove = expectedLayoutIdsToRemove1;
-                layouter2->expectedLayoutIdsToRemove = expectedLayoutIdsToRemove2;
+                layouter->expectedLayoutIdsToRemove = expectedLayoutIdsToRemove;
             }
 
             bool expectedDataIdsToRemove[]{
@@ -11165,10 +11007,9 @@ void AbstractUserInterfaceTest::state() {
         CORRADE_COMPARE(ui.renderer<Renderer>().setupFramebufferCallCount, 2);
         CORRADE_COMPARE(ui.nodeUsedCount(), 5);
         if(data.layouters) {
-            CORRADE_COMPARE(layouter1->usedCount(), 2);
-            CORRADE_COMPARE(layouter2->usedCount(), 2);
-            CORRADE_COMPARE(layouter1->cleanCallCount, 1);
-            CORRADE_COMPARE(layouter2->cleanCallCount, 1);
+            CORRADE_COMPARE(layouter->usedCount(), 2);
+            CORRADE_COMPARE(layouter->cleanCallCount, 1);
+            CORRADE_COMPARE(layouter->updateCallCount, 9);
         }
         CORRADE_COMPARE(layer.usedCount(), 1);
         CORRADE_COMPARE(layer.cleanCallCount, 1);
@@ -11196,29 +11037,23 @@ void AbstractUserInterfaceTest::state() {
     {
         CORRADE_ITERATION(__FILE__ ":" CORRADE_LINE_STRING);
 
-        bool expectedLayoutIdsToRemove1[]{
-            /* Nothing changes in layouter1 */
-            false, false, false
-        };
-        bool expectedLayoutIdsToRemove2[]{
-            /* layout2Node, layout2Nested2Duplicate and layout2Nested2 were
+        bool expectedLayoutIdsToRemove[]{
+            /* layoutNode, layoutNested2Duplicate and layoutNested2 were
                attached to node and nested2, which got all orphaned when
                removing `node`. The duplicate layout gets removed also. */
-            true, true, true, false, false
+            true, true, true, false, false, false
         };
-        bool expectedLayoutIdsToUpdate1[]{
-            /* layout2Another1 and layout2Another2 */
-            false, false, false, true, true
+        bool expectedLayoutIdsToUpdate[]{
+            /* layoutAnother2 */
+            false, false, false, false, false, true
         };
-        UnsignedInt expectedTopLevelLayoutIds1[]{
-            layoutHandleId(layout2Another1),
-            /* layout2Another2 is top-level but not root, so not included
-               here */
+        UnsignedInt expectedTopLevelLayoutIds[]{
+            layoutHandleId(layoutAnother2),
         };
-        Containers::Pair<Vector2, Vector2> expectedLayoutNodeOffsetsSizes1[]{
+        Containers::Pair<Vector2, Vector2> expectedLayoutNodeOffsetsSizes[]{
             {},
-            {{3.0f, 2.0f}, {0.5f, 1.0f}}, /* another1 */
-            {{0.0f, 4.0f}, {1.0f, 1.0f}}, /* another2 */
+            {{5.0f, 2.0f}, {0.5f, 2.0f}}, /* another1 */
+            {{0.0f, 4.0f}, {0.5f, 2.0f}}, /* another2 */
             {},
             {},
             {{9.0f, 9.0f}, {9.0f, 9.0f}}, /* invisible */
@@ -11226,19 +11061,10 @@ void AbstractUserInterfaceTest::state() {
             {{8.0f, 8.0f}, {8.0f, 8.0f}}, /* notInOrder */
         };
         if(data.layouters) {
-            layouterUpdateCalls = {};
-            layouter1->expectedLayoutIdsToRemove = expectedLayoutIdsToRemove1;
-            layouter2->expectedLayoutIdsToRemove = expectedLayoutIdsToRemove2;
-            layouter2->expectedLayoutIdsToUpdate[0] = expectedLayoutIdsToUpdate1;
-            layouter1->expectedLayoutIdsToUpdate = {};
-            layouter2->expectedLayoutIdsToUpdate[1] = {};
-            layouter2->expectedTopLevelLayoutIds[0] = expectedTopLevelLayoutIds1;
-            layouter1->expectedTopLevelLayoutIds = {};
-            layouter2->expectedTopLevelLayoutIds[1] = {};
-            layouter2->expectedNodeOffsetsSizes[0] = expectedLayoutNodeOffsetsSizes1;
-            layouter1->expectedNodeOffsetsSizes = {};
-            layouter2->expectedNodeOffsetsSizes[1] = {};
-            layouter2->updateCallId = 0;
+            layouter->expectedLayoutIdsToRemove = expectedLayoutIdsToRemove;
+            layouter->expectedLayoutIdsToUpdate = expectedLayoutIdsToUpdate;
+            layouter->expectedTopLevelLayoutIds = expectedTopLevelLayoutIds;
+            layouter->expectedNodeOffsetsSizes = expectedLayoutNodeOffsetsSizes;
         }
 
         bool expectedDataIdsToRemove[]{
@@ -11254,11 +11080,11 @@ void AbstractUserInterfaceTest::state() {
             /* With the layouter for another1 gone, the size is not updated
                anymore */
             data.layouters ?
-                Containers::triple(Vector2{3.0f, 0.0f}, Vector2{0.5f, 2.0f}, 0.5f) :
+                Containers::triple(Vector2{5.0f, 2.0f}, Vector2{0.5f, 2.0f}, 0.5f) :
                 Containers::triple(Vector2{5.0f, 0.0f}, Vector2{1.0f, 2.0f}, 0.5f),
             /* Which also affects another2 that's a child */
             data.layouters ?
-                Containers::triple(Vector2{3.0f, 2.0f}, Vector2{1.0f, 2.0f}, 0.3f) :
+                Containers::triple(Vector2{5.0f, 4.0f}, Vector2{1.0f, 2.0f}, 0.3f) :
                 Containers::triple(Vector2{5.0f, 2.0f}, Vector2{1.0f, 2.0f}, 0.3f),
             {},
             {},
@@ -11278,7 +11104,7 @@ void AbstractUserInterfaceTest::state() {
         };
         Containers::Pair<Vector2, Vector2> expectedCompositeRectOffsetsSizes[]{
             data.layouters ?              /* matching another1 */
-                Containers::Pair<Vector2, Vector2>{{3.0f, 0.0f}, {0.5f, 2.0f}} :
+                Containers::Pair<Vector2, Vector2>{{5.0f, 2.0f}, {0.5f, 2.0f}} :
                 Containers::Pair<Vector2, Vector2>{{5.0f, 0.0f}, {1.0f, 2.0f}},
         };
         /* Removing a node causes just node order and enabled state to get
@@ -11321,14 +11147,9 @@ void AbstractUserInterfaceTest::state() {
     CORRADE_COMPARE(ui.renderer<Renderer>().setupFramebufferCallCount, 2);
     CORRADE_COMPARE(ui.nodeUsedCount(), 5);
     if(data.layouters) {
-        CORRADE_COMPARE(layouter1->usedCount(), 2);
-        CORRADE_COMPARE(layouter2->usedCount(), 2);
-        CORRADE_COMPARE(layouter1->cleanCallCount, 1);
-        CORRADE_COMPARE(layouter2->cleanCallCount, 1);
-        CORRADE_COMPARE_AS(layouterUpdateCalls, Containers::arrayView({
-            /* There's just layouter2 called now */
-            layouterHandleId(layouter2->handle()),
-        }), TestSuite::Compare::Container);
+        CORRADE_COMPARE(layouter->usedCount(), 2);
+        CORRADE_COMPARE(layouter->cleanCallCount, 1);
+        CORRADE_COMPARE(layouter->updateCallCount, 10);
     }
     CORRADE_COMPARE(layer.usedCount(), 1);
     CORRADE_COMPARE(layer.cleanCallCount, 1);
@@ -11349,12 +11170,19 @@ void AbstractUserInterfaceTest::state() {
         CORRADE_COMPARE(anotherDataAttachmentAnimator->cleanCallCount, 1);
     }
 
-    /* Removing a layouter sets a state flag */
+    /* Add one more layouter to verify layouter removal behavior. Should set no
+       state flags. */
+    Layouter* anotherLayouter{};
     if(data.layouters) {
-        ui.removeLayouter(layouter2->handle());
-        CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsLayoutAssignmentUpdate);
+        anotherLayouter = &ui.setLayouterInstance(Containers::pointer<Layouter>(ui.createLayouter()));
+        anotherLayouter->expectedNodeParents = expectedNodeParents;
+        CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
+    }
 
-        layouterUpdateCalls = {};
+    /* Adding a layout to a node that's not in order sets a flag */
+    if(data.layouters) {
+        anotherLayouter->add(notInOrder);
+        CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsLayoutAssignmentUpdate);
 
         /* Calling clean() should be a no-op */
         if(data.clean && data.noOp) {
@@ -11363,10 +11191,9 @@ void AbstractUserInterfaceTest::state() {
                 ui.clean();
             }
             CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsLayoutAssignmentUpdate);
-            CORRADE_COMPARE(layouter1->usedCount(), 2);
-            CORRADE_COMPARE(layouter1->cleanCallCount, 1);
-            CORRADE_COMPARE_AS(layouterUpdateCalls, Containers::arrayView<UnsignedInt>({
-            }), TestSuite::Compare::Container);
+            CORRADE_COMPARE(anotherLayouter->usedCount(), 1);
+            CORRADE_COMPARE(anotherLayouter->cleanCallCount, 0);
+            CORRADE_COMPARE(anotherLayouter->updateCallCount, 0);
             CORRADE_COMPARE(layer.cleanCallCount, 1);
             CORRADE_COMPARE(layer.preUpdateCallCount, 1);
             CORRADE_COMPARE(layer.updateCallCount, 21);
@@ -11375,25 +11202,58 @@ void AbstractUserInterfaceTest::state() {
             CORRADE_COMPARE(anotherLayer.updateCallCount, 2);
         }
 
-        /* Calling update() then resets the remaining state flag. There's no
-           visible layouts to update anymore, so no update() is called on
-           them, only on the layer. */
+        /* Calling update() then resets the remaining state flag. There are no
+           visible layouts in anotherLayouter so it's called with a completely
+           empty list of top-level nodes and no bits set */
         {
             CORRADE_ITERATION(__FILE__ ":" CORRADE_LINE_STRING);
 
-            layouter1->expectedLayoutIdsToUpdate = {};
-            layouter1->expectedTopLevelLayoutIds = {};
-            layouter1->expectedNodeOffsetsSizes = {};
+            bool expectedLayoutIdsToUpdate[]{
+                /* layoutAnother2 */
+                false, false, false, false, false, true
+            };
+            bool expectedAnotherLayoutIdsToUpdate[]{
+                false
+            };
+            UnsignedInt expectedTopLevelLayoutIds[]{
+                layoutHandleId(layoutAnother2),
+            };
+            Containers::Pair<Vector2, Vector2> expectedLayoutNodeOffsetsSizes[]{
+                {},
+                {{5.0f, 2.0f}, {0.5f, 2.0f}}, /* another1 */
+                {{0.0f, 4.0f}, {0.5f, 2.0f}}, /* another2 */
+                {},
+                {},
+                {{9.0f, 9.0f}, {9.0f, 9.0f}}, /* invisible */
+                {{0.0f, 0.0f}, {9.0f, 9.0f}}, /* topLevelChildOfInvisible */
+                {{8.0f, 8.0f}, {8.0f, 8.0f}}, /* notInOrder */
+            };
+            Containers::Pair<Vector2, Vector2> expectedAnotherLayoutNodeOffsetsSizes[]{
+                {},
+                {{5.0f, 2.0f}, {0.5f, 2.0f}}, /* another1 */
+                {{0.0f, 2.0f}, {1.0f, 2.0f}}, /* another2, updated by layouter */
+                {},
+                {},
+                {{9.0f, 9.0f}, {9.0f, 9.0f}}, /* invisible */
+                {{0.0f, 0.0f}, {9.0f, 9.0f}}, /* topLevelChildOfInvisible */
+                {{8.0f, 8.0f}, {8.0f, 8.0f}}, /* notInOrder */
+            };
+            layouter->expectedLayoutIdsToUpdate = expectedLayoutIdsToUpdate;
+            layouter->expectedTopLevelLayoutIds = expectedTopLevelLayoutIds;
+            layouter->expectedNodeOffsetsSizes = expectedLayoutNodeOffsetsSizes;
+            anotherLayouter->expectedLayoutIdsToUpdate = expectedAnotherLayoutIdsToUpdate;
+            anotherLayouter->expectedTopLevelLayoutIds = {};
+            anotherLayouter->expectedNodeOffsetsSizes = expectedAnotherLayoutNodeOffsetsSizes;
 
             UnsignedInt expectedDataIds[]{
                 dataHandleId(dataAnother1)
             };
             Containers::Triple<Vector2, Vector2, Float> expectedNodeOffsetsSizesOpacities[]{
                 {},
-                /* With all layouters for another1 and another2 gone, the sizes
-                   are not updated anymore */
-                {{3.0f, 2.0f}, {0.5f, 1.0f}, 0.5f},
-                {{3.0f, 6.0f}, {1.0f, 1.0f}, 0.3f},
+                /* With the layouter for another1 gone, the size is not updated
+                   anymore */
+                {{5.0f, 2.0f}, {0.5f, 2.0f}, 0.5f},
+                {{5.0f, 4.0f}, {1.0f, 2.0f}, 0.3f},
                 {},
                 {},
                 {},                           /* invisible */
@@ -11411,7 +11271,7 @@ void AbstractUserInterfaceTest::state() {
                 {{}, {}}
             };
             Containers::Pair<Vector2, Vector2> expectedCompositeRectOffsetsSizes[]{
-                {{3.0f, 2.0f}, {0.5f, 1.0f}}, /* matching another1 */
+                {{5.0f, 2.0f}, {0.5f, 2.0f}}, /* matching another1 */
             };
             /* Removing a layouter means node offsets/sizes can change but also
                the set of visible nodes and enabled state */
@@ -11432,11 +11292,9 @@ void AbstractUserInterfaceTest::state() {
             ui.update();
         }
         CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
-        CORRADE_COMPARE(layouter1->usedCount(), 2);
-        CORRADE_COMPARE(layouter1->cleanCallCount, 1);
-        CORRADE_COMPARE_AS(layouterUpdateCalls, Containers::arrayView<UnsignedInt>({
-            /* No update() is called on layouter2 anymore */
-        }), TestSuite::Compare::Container);
+        CORRADE_COMPARE(anotherLayouter->usedCount(), 1);
+        CORRADE_COMPARE(anotherLayouter->cleanCallCount, 0);
+        CORRADE_COMPARE(anotherLayouter->updateCallCount, 1);
         CORRADE_COMPARE(layer.usedCount(), 1);
         CORRADE_COMPARE(layer.cleanCallCount, 1);
         CORRADE_COMPARE(layer.preUpdateCallCount, 1);
@@ -11444,6 +11302,102 @@ void AbstractUserInterfaceTest::state() {
         CORRADE_COMPARE(anotherLayer.cleanCallCount, 1);
         CORRADE_COMPARE(anotherLayer.preUpdateCallCount, 0);
         CORRADE_COMPARE(anotherLayer.updateCallCount, 3);
+        if(data.nodeAttachmentAnimators) {
+            CORRADE_COMPARE(nodeAttachmentAnimator->usedCount(), 1);
+            CORRADE_COMPARE(nodeAttachmentAnimator->cleanCallCount, 1);
+        }
+        if(data.dataAttachmentAnimators) {
+            CORRADE_COMPARE(dataAttachmentAnimator->usedCount(), 1);
+            CORRADE_COMPARE(dataAttachmentAnimator->cleanCallCount, 3);
+        }
+    }
+
+    /* Removing a layouter sets a state flag */
+    if(data.layouters) {
+        ui.removeLayouter(layouter->handle());
+        CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsLayoutAssignmentUpdate);
+
+        /* Calling clean() should be a no-op */
+        if(data.clean && data.noOp) {
+            {
+                CORRADE_ITERATION(__FILE__ ":" CORRADE_LINE_STRING);
+                ui.clean();
+            }
+            CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsLayoutAssignmentUpdate);
+            CORRADE_COMPARE(anotherLayouter->usedCount(), 1);
+            CORRADE_COMPARE(anotherLayouter->cleanCallCount, 0);
+            CORRADE_COMPARE(anotherLayouter->updateCallCount, 1);
+            CORRADE_COMPARE(layer.cleanCallCount, 1);
+            CORRADE_COMPARE(layer.preUpdateCallCount, 1);
+            CORRADE_COMPARE(layer.updateCallCount, 22);
+            CORRADE_COMPARE(anotherLayer.cleanCallCount, 1);
+            CORRADE_COMPARE(anotherLayer.preUpdateCallCount, 0);
+            CORRADE_COMPARE(anotherLayer.updateCallCount, 3);
+        }
+
+        /* Calling update() then resets the remaining state flag. There's no
+           visible layouts to update anymore, so no update() is called on
+           them, only on the layer. */
+        {
+            CORRADE_ITERATION(__FILE__ ":" CORRADE_LINE_STRING);
+
+            UnsignedInt expectedDataIds[]{
+                dataHandleId(dataAnother1)
+            };
+            Containers::Triple<Vector2, Vector2, Float> expectedNodeOffsetsSizesOpacities[]{
+                {},
+                /* With all layouters for another1 and another2 gone, the sizes
+                   are not updated anymore */
+                {{5.0f, 2.0f}, {0.5f, 2.0f}, 0.5f},
+                {{5.0f, 6.0f}, {0.5f, 2.0f}, 0.3f},
+                {},
+                {},
+                {},                           /* invisible */
+                {},                           /* topLevelChildOfInvisible */
+                {}                            /* notInOrder */
+            };
+            bool expectedNodesEnabled[]{
+                /* Only another1 and another2 left */
+                false, true, true, false, false, false, false, false
+            };
+            Containers::Pair<UnsignedInt, UnsignedInt> expectedClipRectIdsDataCounts[]{
+                {0, 1}, /* another1, unclipped */
+            };
+            Containers::Pair<Vector2, Vector2> expectedClipRectOffsetsSizes[]{
+                {{}, {}}
+            };
+            Containers::Pair<Vector2, Vector2> expectedCompositeRectOffsetsSizes[]{
+                {{5.0f, 2.0f}, {0.5f, 2.0f}}, /* matching another1 */
+            };
+            /* Removing a layouter means node offsets/sizes can change but also
+               the set of visible nodes and enabled state */
+            layer.expectedState = LayerState::NeedsNodeOrderUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsNodeOffsetSizeUpdate|data.extraExpectedLayerState;
+            /* The other layer doesn't have compositing enabled ever */
+            anotherLayer.expectedState = LayerState::NeedsNodeOrderUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsNodeOffsetSizeUpdate;
+            layer.expectedDataIds = expectedDataIds;
+            layer.expectedClipRectIdsDataCounts = expectedClipRectIdsDataCounts;
+            if(data.layerFeatures >= LayerFeature::Composite)
+                layer.expectedCompositeRectOffsetsSizes = expectedCompositeRectOffsetsSizes;
+            for(Layer* i: {&layer, &anotherLayer}) {
+                CORRADE_ITERATION(i->handle());
+                i->expectedNodeOffsetsSizesOpacities = expectedNodeOffsetsSizesOpacities;
+                i->expectedNodesEnabled = expectedNodesEnabled;
+                i->expectedClipRectOffsetsSizes = expectedClipRectOffsetsSizes;
+            }
+
+            ui.update();
+        }
+        CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
+        CORRADE_COMPARE(anotherLayouter->usedCount(), 1);
+        CORRADE_COMPARE(anotherLayouter->cleanCallCount, 0);
+        CORRADE_COMPARE(anotherLayouter->updateCallCount, 1);
+        CORRADE_COMPARE(layer.usedCount(), 1);
+        CORRADE_COMPARE(layer.cleanCallCount, 1);
+        CORRADE_COMPARE(layer.preUpdateCallCount, 1);
+        CORRADE_COMPARE(layer.updateCallCount, 23);
+        CORRADE_COMPARE(anotherLayer.cleanCallCount, 1);
+        CORRADE_COMPARE(anotherLayer.preUpdateCallCount, 0);
+        CORRADE_COMPARE(anotherLayer.updateCallCount, 4);
         if(data.nodeAttachmentAnimators) {
             CORRADE_COMPARE(nodeAttachmentAnimator->usedCount(), 1);
             CORRADE_COMPARE(nodeAttachmentAnimator->cleanCallCount, 1);
@@ -11467,12 +11421,13 @@ void AbstractUserInterfaceTest::state() {
         CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataAttachmentUpdate);
         CORRADE_COMPARE(ui.renderer<Renderer>().setupFramebufferCallCount, 2);
         if(data.layouters) {
-            CORRADE_COMPARE(layouter1->usedCount(), 2);
-            CORRADE_COMPARE(layouter1->cleanCallCount, 1);
+            CORRADE_COMPARE(anotherLayouter->usedCount(), 1);
+            CORRADE_COMPARE(anotherLayouter->cleanCallCount, 0);
+            CORRADE_COMPARE(anotherLayouter->updateCallCount, 1);
         }
         CORRADE_COMPARE(anotherLayer.cleanCallCount, 1);
         CORRADE_COMPARE(anotherLayer.preUpdateCallCount, 0);
-        CORRADE_COMPARE(anotherLayer.updateCallCount, 2 + (data.layouters ? 1 : 0));
+        CORRADE_COMPARE(anotherLayer.updateCallCount, 2 + (data.layouters ? 2 : 0));
         if(data.nodeAttachmentAnimators) {
             CORRADE_COMPARE(nodeAttachmentAnimator->usedCount(), 1);
             CORRADE_COMPARE(nodeAttachmentAnimator->cleanCallCount, 1);
@@ -11494,10 +11449,10 @@ void AbstractUserInterfaceTest::state() {
             /* With all layouters for another1 and another2 gone, the sizes are
                not updated anymore */
             data.layouters ?
-                Containers::triple(Vector2{3.0f, 2.0f}, Vector2{0.5f, 1.0f}, 0.5f) :
+                Containers::triple(Vector2{5.0f, 2.0f}, Vector2{0.5f, 2.0f}, 0.5f) :
                 Containers::triple(Vector2{5.0f, 0.0f}, Vector2{1.0f, 2.0f}, 0.5f),
             data.layouters ?
-                Containers::triple(Vector2{3.0f, 6.0f}, Vector2{1.0f, 1.0f}, 0.3f) :
+                Containers::triple(Vector2{5.0f, 6.0f}, Vector2{0.5f, 2.0f}, 0.3f) :
                 Containers::triple(Vector2{5.0f, 2.0f}, Vector2{1.0f, 2.0f}, 0.3f),
             {},
             {},
@@ -11530,14 +11485,13 @@ void AbstractUserInterfaceTest::state() {
     CORRADE_COMPARE(ui.renderer<Renderer>().setupFramebufferCallCount, 2);
     CORRADE_COMPARE(anotherLayer.usedCount(), 0);
     if(data.layouters) {
-        CORRADE_COMPARE(layouter1->usedCount(), 2);
-        CORRADE_COMPARE(layouter1->cleanCallCount, 1);
-        CORRADE_COMPARE_AS(layouterUpdateCalls, Containers::arrayView<UnsignedInt>({
-        }), TestSuite::Compare::Container);
+        CORRADE_COMPARE(anotherLayouter->usedCount(), 1);
+        CORRADE_COMPARE(anotherLayouter->cleanCallCount, 0);
+        CORRADE_COMPARE(anotherLayouter->updateCallCount, 1);
     }
     CORRADE_COMPARE(anotherLayer.cleanCallCount, 1);
     CORRADE_COMPARE(anotherLayer.preUpdateCallCount, 0);
-    CORRADE_COMPARE(anotherLayer.updateCallCount, 3 + (data.layouters ? 1 : 0));
+    CORRADE_COMPARE(anotherLayer.updateCallCount, 3 + (data.layouters ? 2 : 0));
     if(data.nodeAttachmentAnimators) {
         CORRADE_COMPARE(nodeAttachmentAnimator->usedCount(), 1);
         CORRADE_COMPARE(nodeAttachmentAnimator->cleanCallCount, 1);
@@ -12845,9 +12799,9 @@ void AbstractUserInterfaceTest::draw() {
     ui.setNodeOrder(anotherTopLevel, topLevel);
     ui.clearNodeOrder(topLevelNotInOrder);
     ui.removeNode(removed);
-    CORRADE_COMPARE(ui.layer(layer1Handle).usedCount(), 5);
-    CORRADE_COMPARE(ui.layer(layer2Handle).usedCount(), 9);
-    CORRADE_COMPARE(ui.layer(layer3Handle).usedCount(), 3);
+    CORRADE_COMPARE(layer1.usedCount(), 5);
+    CORRADE_COMPARE(layer2.usedCount(), 9);
+    CORRADE_COMPARE(layer3.usedCount(), 3);
     CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeClean);
     CORRADE_COMPARE(layer1.updateCallCount, 0);
     CORRADE_COMPARE(layer2.updateCallCount, 0);
@@ -12855,9 +12809,9 @@ void AbstractUserInterfaceTest::draw() {
 
     if(data.clean) {
         ui.clean();
-        CORRADE_COMPARE(ui.layer(layer1Handle).usedCount(), 4);
-        CORRADE_COMPARE(ui.layer(layer2Handle).usedCount(), 9);
-        CORRADE_COMPARE(ui.layer(layer3Handle).usedCount(), 3);
+        CORRADE_COMPARE(layer1.usedCount(), 4);
+        CORRADE_COMPARE(layer2.usedCount(), 9);
+        CORRADE_COMPARE(layer3.usedCount(), 3);
         CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeUpdate);
         CORRADE_COMPARE(layer1.updateCallCount, 0);
         CORRADE_COMPARE(layer2.updateCallCount, 0);
@@ -12867,9 +12821,9 @@ void AbstractUserInterfaceTest::draw() {
     /* update() should call clean() only if needed */
     if(data.update) {
         ui.update();
-        CORRADE_COMPARE(ui.layer(layer1Handle).usedCount(), 4);
-        CORRADE_COMPARE(ui.layer(layer2Handle).usedCount(), 9);
-        CORRADE_COMPARE(ui.layer(layer3Handle).usedCount(), 3);
+        CORRADE_COMPARE(layer1.usedCount(), 4);
+        CORRADE_COMPARE(layer2.usedCount(), 9);
+        CORRADE_COMPARE(layer3.usedCount(), 3);
         CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
         CORRADE_COMPARE(layer1.updateCallCount, 1);
         CORRADE_COMPARE(layer2.updateCallCount, 1);
@@ -12878,9 +12832,9 @@ void AbstractUserInterfaceTest::draw() {
 
     /* draw() should call update() and clean() only if needed */
     ui.draw();
-    CORRADE_COMPARE(ui.layer(layer1Handle).usedCount(), 4);
-    CORRADE_COMPARE(ui.layer(layer2Handle).usedCount(), 9);
-    CORRADE_COMPARE(ui.layer(layer3Handle).usedCount(), 3);
+    CORRADE_COMPARE(layer1.usedCount(), 4);
+    CORRADE_COMPARE(layer2.usedCount(), 9);
+    CORRADE_COMPARE(layer3.usedCount(), 3);
     CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
     CORRADE_COMPARE(layer1.updateCallCount, 1);
     CORRADE_COMPARE(layer2.updateCallCount, 1);
