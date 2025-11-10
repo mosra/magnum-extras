@@ -12509,11 +12509,14 @@ void AbstractUserInterfaceTest::draw() {
     ui.setRendererInstance(Containers::pointer<Renderer>());
 
     struct Layer: AbstractLayer {
-        explicit Layer(LayerHandle handle, LayerFeatures features): AbstractLayer{handle}, features{features} {}
+        explicit Layer(LayerHandle handle, LayerFeatures features, Containers::Array<Containers::Triple<LayerHandle,
+            Containers::Pair<std::size_t, std::size_t>,
+            Containers::Pair<std::size_t, std::size_t>>>& drawCalls):
+            AbstractLayer{handle}, _features{features}, _drawCalls(drawCalls) {}
 
         using AbstractLayer::create;
 
-        LayerFeatures doFeatures() const override { return features; }
+        LayerFeatures doFeatures() const override { return _features; }
 
         void doSetSize(const Vector2& size, const Vector2i& framebufferSize) override {
             CORRADE_ITERATION(handle());
@@ -12531,7 +12534,7 @@ void AbstractUserInterfaceTest::draw() {
             CORRADE_COMPARE(states, LayerState::NeedsNodeOrderUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsNodeOpacityUpdate|LayerState::NeedsNodeOffsetSizeUpdate|LayerState::NeedsDataUpdate);
             /* doSetSize() should have been called exactly once at this point
                if this layer draws, and not at all if it doesn't */
-            CORRADE_COMPARE(setSizeCallCount, features & LayerFeature::Draw ? 1 : 0);
+            CORRADE_COMPARE(setSizeCallCount, _features & LayerFeature::Draw ? 1 : 0);
             CORRADE_COMPARE_AS(dataIds,
                 expectedDataIds,
                 TestSuite::Compare::Container);
@@ -12574,7 +12577,7 @@ void AbstractUserInterfaceTest::draw() {
             actualNodesEnabled = nodesEnabled;
             actualClipRectOffsets = clipRectOffsets;
             actualClipRectSizes = clipRectSizes;
-            ++*updateCallCount;
+            ++updateCallCount;
         }
 
         void doDraw(const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, std::size_t offset, std::size_t count, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectDataCounts, std::size_t clipRectOffset, std::size_t clipRectCount, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, const Containers::StridedArrayView1D<const Float>& nodeOpacities, const Containers::BitArrayView nodesEnabled, const Containers::StridedArrayView1D<const Vector2>& clipRectOffsets, const Containers::StridedArrayView1D<const Vector2>& clipRectSizes) override {
@@ -12609,22 +12612,18 @@ void AbstractUserInterfaceTest::draw() {
             CORRADE_COMPARE(clipRectSizes.data(), actualClipRectSizes.data());
             CORRADE_COMPARE(clipRectSizes.size(), actualClipRectSizes.size());
             CORRADE_COMPARE(clipRectSizes.stride(), actualClipRectSizes.stride());
-            arrayAppend(*drawCalls, InPlaceInit, handle(),
+            arrayAppend(_drawCalls, InPlaceInit, handle(),
                 Containers::pair(offset, count),
                 Containers::pair(clipRectOffset, clipRectCount));
         }
 
-        LayerFeatures features;
         Containers::StridedArrayView1D<const UnsignedInt> expectedDataIds;
         Containers::StridedArrayView1D<const Containers::Pair<UnsignedInt, UnsignedInt>> expectedClipRectIdsDataCounts;
         Containers::StridedArrayView1D<const Containers::Triple<Vector2, Vector2, Float>> expectedNodeOffsetsSizesOpacities;
         Containers::StridedArrayView1D<const bool> expectedNodesEnabled;
         Containers::StridedArrayView1D<const Containers::Pair<Vector2, Vector2>> expectedClipRectOffsetsSizes;
-        Int* updateCallCount;
+        Int updateCallCount = 0;
         Int setSizeCallCount = 0;
-        Containers::Array<Containers::Triple<LayerHandle,
-            Containers::Pair<std::size_t, std::size_t>,
-            Containers::Pair<std::size_t, std::size_t>>>* drawCalls;
 
         Containers::StridedArrayView1D<const UnsignedInt> actualDataIds;
         Containers::StridedArrayView1D<const UnsignedInt> actualClipRectIds;
@@ -12635,6 +12634,12 @@ void AbstractUserInterfaceTest::draw() {
         Containers::BitArrayView actualNodesEnabled;
         Containers::StridedArrayView1D<const Vector2> actualClipRectOffsets;
         Containers::StridedArrayView1D<const Vector2> actualClipRectSizes;
+
+        private:
+            LayerFeatures _features;
+            Containers::Array<Containers::Triple<LayerHandle,
+                Containers::Pair<std::size_t, std::size_t>,
+                Containers::Pair<std::size_t, std::size_t>>>& _drawCalls;
     };
 
     /* Capture correct function name */
@@ -12701,48 +12706,49 @@ void AbstractUserInterfaceTest::draw() {
     /* Layer without an instance, to verify those get skipped during updates */
     /*LayerHandle layerWithoutInstance =*/ ui.createLayer();
 
-    LayerHandle layer1, layer2, layerRemoved, layer3;
+    LayerHandle layer1Handle, layer2Handle, layerRemovedHandle, layer3Handle;
     if(!data.reorderLayers) {
-        layer1 = ui.createLayer();
-        layer2 = ui.createLayer();
-        layerRemoved = ui.createLayer();
-        layer3 = ui.createLayer();
+        layer1Handle = ui.createLayer();
+        layer2Handle = ui.createLayer();
+        layerRemovedHandle = ui.createLayer();
+        layer3Handle = ui.createLayer();
     } else {
-        layer3 = ui.createLayer();
-        layer2 = ui.createLayer(layer3);
-        layerRemoved = ui.createLayer();
-        layer1 = ui.createLayer(layer2);
+        layer3Handle = ui.createLayer();
+        layer2Handle = ui.createLayer(layer3Handle);
+        layerRemovedHandle = ui.createLayer();
+        layer1Handle = ui.createLayer(layer2Handle);
     }
 
     /* Layer that's subsequently removed, to verify it also gets skipped during
        updates */
-    ui.removeLayer(layerRemoved);
+    ui.removeLayer(layerRemovedHandle);
 
-    Containers::Pointer<Layer> layer1Instance{InPlaceInit, layer1, LayerFeature::Draw};
-
-    Containers::Pointer<Layer> layer2Instance{InPlaceInit, layer2, LayerFeature::Draw|LayerFeature::Event};
-
-    Containers::Pointer<Layer> layer3Instance{InPlaceInit, layer3, LayerFeature::Event};
+    Containers::Array<Containers::Triple<LayerHandle,
+        Containers::Pair<std::size_t, std::size_t>,
+        Containers::Pair<std::size_t, std::size_t>>> drawCalls;
+    Layer& layer1 = ui.setLayerInstance(Containers::pointer<Layer>(layer1Handle, LayerFeature::Draw, drawCalls));
+    Layer& layer2 = ui.setLayerInstance(Containers::pointer<Layer>(layer2Handle, LayerFeature::Draw|LayerFeature::Event, drawCalls));
+    Layer& layer3 = ui.setLayerInstance(Containers::pointer<Layer>(layer3Handle, LayerFeature::Event, drawCalls));
 
     /* The commented out variables are either removed, culled or hidden, thus
        not referenced from any doUpdate() or doDraw() below */
-    DataHandle leftData2 = layer1Instance->create(left);
-    DataHandle leftData1 = layer2Instance->create(left);
-    DataHandle leftData3 = layer1Instance->create(left);
-    DataHandle anotherTopLevelData1 = layer1Instance->create(anotherTopLevel);
-    DataHandle anotherTopLevelData2 = layer2Instance->create(anotherTopLevel);
-    DataHandle anotherTopLevelData3 = layer3Instance->create(anotherTopLevel);
-    DataHandle anotherTopLevelData4 = layer2Instance->create(anotherTopLevel);
-    DataHandle topLevelData = layer3Instance->create(topLevel);
-    /*DataHandle culledData =*/ layer2Instance->create(culled);
-    DataHandle nestedData = layer2Instance->create(nested);
-    /*DataHandle topLevelNotInOrderData =*/ layer2Instance->create(topLevelNotInOrder);
-    /*DataHandle removedData =*/ layer1Instance->create(removed);
-    /*DataHandle topLevelHiddenData =*/ layer2Instance->create(topLevelHidden);
-    DataHandle rightData1 = layer3Instance->create(right);
-    DataHandle rightData2 = layer2Instance->create(right);
-    DataHandle layer1OnlyData = layer1Instance->create(layer1Only);
-    DataHandle layer2OnlyData = layer2Instance->create(layer2Only);
+    DataHandle leftData2 = layer1.create(left);
+    DataHandle leftData1 = layer2.create(left);
+    DataHandle leftData3 = layer1.create(left);
+    DataHandle anotherTopLevelData1 = layer1.create(anotherTopLevel);
+    DataHandle anotherTopLevelData2 = layer2.create(anotherTopLevel);
+    DataHandle anotherTopLevelData3 = layer3.create(anotherTopLevel);
+    DataHandle anotherTopLevelData4 = layer2.create(anotherTopLevel);
+    DataHandle topLevelData = layer3.create(topLevel);
+    /*DataHandle culledData =*/ layer2.create(culled);
+    DataHandle nestedData = layer2.create(nested);
+    /*DataHandle topLevelNotInOrderData =*/ layer2.create(topLevelNotInOrder);
+    /*DataHandle removedData =*/ layer1.create(removed);
+    /*DataHandle topLevelHiddenData =*/ layer2.create(topLevelHidden);
+    DataHandle rightData1 = layer3.create(right);
+    DataHandle rightData2 = layer2.create(right);
+    DataHandle layer1OnlyData = layer1.create(layer1Only);
+    DataHandle layer2OnlyData = layer2.create(layer2Only);
 
     /* These follow the node nesting order and then the order in which the
        data get attached below */
@@ -12820,81 +12826,65 @@ void AbstractUserInterfaceTest::draw() {
         /* right */
         {3, 1}
     };
-
-    layer1Instance->expectedDataIds = expectedLayer1DataIds;
-    layer2Instance->expectedDataIds = expectedLayer2DataIds;
-    layer3Instance->expectedDataIds = expectedLayer3DataIds;
-    layer1Instance->expectedNodeOffsetsSizesOpacities = expectedNodeOffsetsSizesOpacities;
-    layer2Instance->expectedNodeOffsetsSizesOpacities = expectedNodeOffsetsSizesOpacities;
-    layer3Instance->expectedNodeOffsetsSizesOpacities = expectedNodeOffsetsSizesOpacities;
-    layer1Instance->expectedNodesEnabled = expectedNodesEnabled;
-    layer2Instance->expectedNodesEnabled = expectedNodesEnabled;
-    layer3Instance->expectedNodesEnabled = expectedNodesEnabled;
-    layer1Instance->expectedClipRectIdsDataCounts = expectedLayer1ClipRectIdsDataCounts;
-    layer2Instance->expectedClipRectIdsDataCounts = expectedLayer2ClipRectIdsDataCounts;
-    layer3Instance->expectedClipRectIdsDataCounts = expectedLayer3ClipRectIdsDataCounts;
-    layer1Instance->expectedClipRectOffsetsSizes = expectedClipRectOffsetsSizes;
-    layer2Instance->expectedClipRectOffsetsSizes = expectedClipRectOffsetsSizes;
-    layer3Instance->expectedClipRectOffsetsSizes = expectedClipRectOffsetsSizes;
-    Int layer1UpdateCallCount = 0;
-    Int layer2UpdateCallCount = 0;
-    Int layer3UpdateCallCount = 0;
-    layer1Instance->updateCallCount = &layer1UpdateCallCount;
-    layer2Instance->updateCallCount = &layer2UpdateCallCount;
-    layer3Instance->updateCallCount = &layer3UpdateCallCount;
-    Containers::Array<Containers::Triple<LayerHandle,
-            Containers::Pair<std::size_t, std::size_t>,
-            Containers::Pair<std::size_t, std::size_t>>> drawCalls;
-    layer1Instance->drawCalls = &drawCalls;
-    layer2Instance->drawCalls = &drawCalls;
-    layer3Instance->drawCalls = &drawCalls;
-    ui.setLayerInstance(Utility::move(layer1Instance));
-    ui.setLayerInstance(Utility::move(layer2Instance));
-    ui.setLayerInstance(Utility::move(layer3Instance));
+    layer1.expectedDataIds = expectedLayer1DataIds;
+    layer2.expectedDataIds = expectedLayer2DataIds;
+    layer3.expectedDataIds = expectedLayer3DataIds;
+    layer1.expectedNodeOffsetsSizesOpacities = expectedNodeOffsetsSizesOpacities;
+    layer2.expectedNodeOffsetsSizesOpacities = expectedNodeOffsetsSizesOpacities;
+    layer3.expectedNodeOffsetsSizesOpacities = expectedNodeOffsetsSizesOpacities;
+    layer1.expectedNodesEnabled = expectedNodesEnabled;
+    layer2.expectedNodesEnabled = expectedNodesEnabled;
+    layer3.expectedNodesEnabled = expectedNodesEnabled;
+    layer1.expectedClipRectIdsDataCounts = expectedLayer1ClipRectIdsDataCounts;
+    layer2.expectedClipRectIdsDataCounts = expectedLayer2ClipRectIdsDataCounts;
+    layer3.expectedClipRectIdsDataCounts = expectedLayer3ClipRectIdsDataCounts;
+    layer1.expectedClipRectOffsetsSizes = expectedClipRectOffsetsSizes;
+    layer2.expectedClipRectOffsetsSizes = expectedClipRectOffsetsSizes;
+    layer3.expectedClipRectOffsetsSizes = expectedClipRectOffsetsSizes;
 
     ui.setNodeOrder(anotherTopLevel, topLevel);
     ui.clearNodeOrder(topLevelNotInOrder);
     ui.removeNode(removed);
-    CORRADE_COMPARE(ui.layer(layer1).usedCount(), 5);
-    CORRADE_COMPARE(ui.layer(layer2).usedCount(), 9);
-    CORRADE_COMPARE(ui.layer(layer3).usedCount(), 3);
+    CORRADE_COMPARE(ui.layer(layer1Handle).usedCount(), 5);
+    CORRADE_COMPARE(ui.layer(layer2Handle).usedCount(), 9);
+    CORRADE_COMPARE(ui.layer(layer3Handle).usedCount(), 3);
     CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeClean);
-    CORRADE_COMPARE(layer1UpdateCallCount, 0);
-    CORRADE_COMPARE(layer2UpdateCallCount, 0);
-    CORRADE_COMPARE(layer3UpdateCallCount, 0);
+    CORRADE_COMPARE(layer1.updateCallCount, 0);
+    CORRADE_COMPARE(layer2.updateCallCount, 0);
+    CORRADE_COMPARE(layer3.updateCallCount, 0);
 
     if(data.clean) {
         ui.clean();
-        CORRADE_COMPARE(ui.layer(layer1).usedCount(), 4);
-        CORRADE_COMPARE(ui.layer(layer2).usedCount(), 9);
-        CORRADE_COMPARE(ui.layer(layer3).usedCount(), 3);
+        CORRADE_COMPARE(ui.layer(layer1Handle).usedCount(), 4);
+        CORRADE_COMPARE(ui.layer(layer2Handle).usedCount(), 9);
+        CORRADE_COMPARE(ui.layer(layer3Handle).usedCount(), 3);
         CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeUpdate);
-        CORRADE_COMPARE(layer1UpdateCallCount, 0);
-        CORRADE_COMPARE(layer2UpdateCallCount, 0);
-        CORRADE_COMPARE(layer3UpdateCallCount, 0);
+        CORRADE_COMPARE(layer1.updateCallCount, 0);
+        CORRADE_COMPARE(layer2.updateCallCount, 0);
+        CORRADE_COMPARE(layer3.updateCallCount, 0);
     }
 
     /* update() should call clean() only if needed */
     if(data.update) {
         ui.update();
-        CORRADE_COMPARE(ui.layer(layer1).usedCount(), 4);
-        CORRADE_COMPARE(ui.layer(layer2).usedCount(), 9);
-        CORRADE_COMPARE(ui.layer(layer3).usedCount(), 3);
+        CORRADE_COMPARE(ui.layer(layer1Handle).usedCount(), 4);
+        CORRADE_COMPARE(ui.layer(layer2Handle).usedCount(), 9);
+        CORRADE_COMPARE(ui.layer(layer3Handle).usedCount(), 3);
         CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
-        CORRADE_COMPARE(layer1UpdateCallCount, 1);
-        CORRADE_COMPARE(layer2UpdateCallCount, 1);
-        CORRADE_COMPARE(layer3UpdateCallCount, 1);
+        CORRADE_COMPARE(layer1.updateCallCount, 1);
+        CORRADE_COMPARE(layer2.updateCallCount, 1);
+        CORRADE_COMPARE(layer3.updateCallCount, 1);
     }
 
     /* draw() should call update() and clean() only if needed */
     ui.draw();
-    CORRADE_COMPARE(ui.layer(layer1).usedCount(), 4);
-    CORRADE_COMPARE(ui.layer(layer2).usedCount(), 9);
-    CORRADE_COMPARE(ui.layer(layer3).usedCount(), 3);
+    CORRADE_COMPARE(ui.layer(layer1Handle).usedCount(), 4);
+    CORRADE_COMPARE(ui.layer(layer2Handle).usedCount(), 9);
+    CORRADE_COMPARE(ui.layer(layer3Handle).usedCount(), 3);
     CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
-    CORRADE_COMPARE(layer1UpdateCallCount, 1);
-    CORRADE_COMPARE(layer2UpdateCallCount, 1);
-    CORRADE_COMPARE(layer3UpdateCallCount, 1);
+    CORRADE_COMPARE(layer1.updateCallCount, 1);
+    CORRADE_COMPARE(layer2.updateCallCount, 1);
+    CORRADE_COMPARE(layer3.updateCallCount, 1);
     CORRADE_COMPARE_AS(drawCalls, (Containers::arrayView<Containers::Triple<LayerHandle,
             Containers::Pair<std::size_t, std::size_t>,
             Containers::Pair<std::size_t, std::size_t>>>({
