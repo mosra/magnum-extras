@@ -60,6 +60,7 @@ Debug& operator<<(Debug& debug, const LayerFeature value) {
         _c(Event)
         _c(AnimateData)
         _c(AnimateStyles)
+        _c(Layout)
         #undef _c
         /* LCOV_EXCL_STOP */
     }
@@ -80,7 +81,8 @@ Debug& operator<<(Debug& debug, const LayerFeatures value) {
         LayerFeature::Draw,
         LayerFeature::Event,
         LayerFeature::AnimateData,
-        LayerFeature::AnimateStyles
+        LayerFeature::AnimateStyles,
+        LayerFeature::Layout
     });
 }
 
@@ -101,6 +103,7 @@ Debug& operator<<(Debug& debug, const LayerState value) {
         _c(NeedsNodeOrderUpdate)
         _c(NeedsNodeOffsetSizeUpdate)
         _c(NeedsAttachmentUpdate)
+        _c(NeedsLayoutUpdate)
         _c(NeedsDataUpdate)
         _c(NeedsCommonDataUpdate)
         _c(NeedsSharedDataUpdate)
@@ -129,6 +132,7 @@ Debug& operator<<(Debug& debug, const LayerStates value) {
         LayerState::NeedsNodeOrderUpdate,
         /* Implied by NeedsNodeOrderUpdate, has to be after */
         LayerState::NeedsNodeEnabledUpdate,
+        LayerState::NeedsLayoutUpdate,
         LayerState::NeedsDataUpdate,
         LayerState::NeedsCommonDataUpdate,
         LayerState::NeedsSharedDataUpdate,
@@ -181,9 +185,12 @@ AbstractLayer::operator LayerHandle() const {
 LayerStates AbstractLayer::state() const {
     const LayerStates state = doState();
     #ifndef CORRADE_NO_ASSERT
+    const LayerFeatures features = this->features();
     LayerStates expectedStates = LayerState::NeedsDataUpdate|LayerState::NeedsCommonDataUpdate|LayerState::NeedsSharedDataUpdate;
-    if(features() >= LayerFeature::Composite)
+    if(features >= LayerFeature::Composite)
         expectedStates |= LayerState::NeedsCompositeOffsetSizeUpdate;
+    if(features >= LayerFeature::Layout)
+        expectedStates |= LayerState::NeedsLayoutUpdate;
     #endif
     CORRADE_ASSERT(state <= expectedStates,
         "Ui::AbstractLayer::state(): implementation expected to return a subset of" << expectedStates << "but got" << state, {});
@@ -194,9 +201,12 @@ LayerStates AbstractLayer::doState() const { return {}; }
 
 void AbstractLayer::setNeedsUpdate(const LayerStates state) {
     #ifndef CORRADE_NO_ASSERT
+    const LayerFeatures features = this->features();
     LayerStates expectedStates = LayerState::NeedsDataUpdate|LayerState::NeedsCommonDataUpdate|LayerState::NeedsSharedDataUpdate;
-    if(features() >= LayerFeature::Composite)
+    if(features >= LayerFeature::Composite)
         expectedStates |= LayerState::NeedsCompositeOffsetSizeUpdate;
+    if(features >= LayerFeature::Layout)
+        expectedStates |= LayerState::NeedsLayoutUpdate;
     #endif
     CORRADE_ASSERT(state && state <= expectedStates,
         "Ui::AbstractLayer::setNeedsUpdate(): expected a non-empty subset of" << expectedStates << "but got" << state, );
@@ -284,10 +294,13 @@ DataHandle AbstractLayer::create(const NodeHandle node) {
     state.state |= LayerState::NeedsDataUpdate;
     if(node != NodeHandle::Null) {
         data->used.node = node;
+        const LayerFeatures features = this->features();
         state.state |= LayerState::NeedsAttachmentUpdate|
                        LayerState::NeedsNodeOffsetSizeUpdate;
-        if(features() >= LayerFeature::Composite)
+        if(features >= LayerFeature::Composite)
             state.state |= LayerState::NeedsCompositeOffsetSizeUpdate;
+        if(features >= LayerFeature::Layout)
+            state.state |= LayerState::NeedsLayoutUpdate;
     }
 
     return dataHandle(state.handle, (data - state.data), data->used.generation);
@@ -345,11 +358,17 @@ void AbstractLayer::removeInternal(const UnsignedInt id) {
 
     /* If this is a composite layer and the data is attached to a node, the
        composite offset/size needs to be updated to remove the node from the
-       set of composite rects. This mirrors what's done in create() and
-       attach(), which also set NeedsCompositeOffsetSizeUpdate for attached
-       data. */
-    if(data.used.node != NodeHandle::Null && features() >= LayerFeature::Composite)
-        state.state |= LayerState::NeedsCompositeOffsetSizeUpdate;
+       set of composite rects. If it's a layout layer, then layout update needs
+       to be triggered. This mirrors what's done in create() and attach(),
+       which also set NeedsCompositeOffsetSizeUpdate / NeedsLayoutUpdate for
+       attached data. */
+    if(data.used.node != NodeHandle::Null) {
+        const LayerFeatures features = this->features();
+        if(features >= LayerFeature::Composite)
+            state.state |= LayerState::NeedsCompositeOffsetSizeUpdate;
+        if(features >= LayerFeature::Layout)
+            state.state |= LayerState::NeedsLayoutUpdate;
+    }
 
     /* Updating further LayerState is caller's responsibility. While remove()
        additionally sets NeedsAttachmentUpdate, clean() below doesn't set any
@@ -431,9 +450,12 @@ void AbstractLayer::attachInternal(const UnsignedInt id, const NodeHandle node) 
     state.data[id].used.node = node;
     state.state |= LayerState::NeedsAttachmentUpdate;
     if(node != NodeHandle::Null) {
+        const LayerFeatures features = this->features();
         state.state |= LayerState::NeedsNodeOffsetSizeUpdate;
-        if(features() >= LayerFeature::Composite)
+        if(features >= LayerFeature::Composite)
             state.state |= LayerState::NeedsCompositeOffsetSizeUpdate;
+        if(features >= LayerFeature::Layout)
+            state.state |= LayerState::NeedsLayoutUpdate;
     }
 }
 
@@ -600,11 +622,36 @@ void AbstractLayer::preUpdate(const LayerStates states) {
 
 void AbstractLayer::doPreUpdate(LayerStates) {}
 
+void AbstractLayer::layout(const Containers::BitArrayView dataIdsToLayout, const Containers::StridedArrayView1D<Vector2>& nodeMinSizes, const Containers::StridedArrayView1D<Vector2>& nodeMaxSizes, const Containers::StridedArrayView1D<Float>& nodeAspectRatios, const Containers::StridedArrayView1D<Vector4>& nodePaddings, const Containers::StridedArrayView1D<Vector4>& nodeMargins) {
+    CORRADE_ASSERT(features() & LayerFeature::Layout,
+        "Ui::AbstractLayer::layout(): feature not supported", );
+    CORRADE_ASSERT(dataIdsToLayout.size() == capacity(),
+        "Ui::AbstractLayer::layout(): expected dataIdsToLayout to have" << capacity() << "bits but got" << dataIdsToLayout.size(), );
+    CORRADE_ASSERT(nodeMaxSizes.size() == nodeMinSizes.size() &&
+                   nodeAspectRatios.size() == nodeMinSizes.size() &&
+                   nodePaddings.size() == nodeMinSizes.size() &&
+                   nodeMargins.size() == nodeMinSizes.size(),
+        "Ui::AbstractLayer::layout(): expected node min size, max size, aspect ratio, padding and margin views to have the same size but got" << nodeMinSizes.size() << Debug::nospace << "," << nodeMaxSizes.size() << Debug::nospace << "," << nodeAspectRatios.size() << Debug::nospace << "," << nodePaddings.size() << "and" << nodeMargins.size(), );
+    /* Compared to update(), here is no check for setSize() being called, as in
+       update() it's only if the layer actually draws anything and layout()
+       isn't meant to be populating any draw-related data that'd depend on UI
+       size */
+    doLayout(dataIdsToLayout, nodeMinSizes, nodeMaxSizes, nodeAspectRatios, nodePaddings, nodeMargins);
+}
+
+void AbstractLayer::doLayout(Containers::BitArrayView, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Float>&, const Containers::StridedArrayView1D<Vector4>&, const Containers::StridedArrayView1D<Vector4>&) {
+    CORRADE_ASSERT_UNREACHABLE("Ui::AbstractLayer::layout(): feature advertised but not implemented", );
+}
+
+
 void AbstractLayer::update(const LayerStates states, const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectDataCounts, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, const Containers::StridedArrayView1D<const Float>& nodeOpacities, const Containers::BitArrayView nodesEnabled, const Containers::StridedArrayView1D<const Vector2>& clipRectOffsets, const Containers::StridedArrayView1D<const Vector2>& clipRectSizes, const Containers::StridedArrayView1D<const Vector2>& compositeRectOffsets, const Containers::StridedArrayView1D<const Vector2>& compositeRectSizes) {
     #ifndef CORRADE_NO_ASSERT
+    const LayerFeatures features = this->features();
     LayerStates expectedStates = LayerState::NeedsNodeOffsetSizeUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsNodeOpacityUpdate|LayerState::NeedsNodeOrderUpdate|LayerState::NeedsDataUpdate|LayerState::NeedsCommonDataUpdate|LayerState::NeedsSharedDataUpdate|LayerState::NeedsAttachmentUpdate;
-    if(features() >= LayerFeature::Composite)
+    if(features >= LayerFeature::Composite)
         expectedStates |= LayerState::NeedsCompositeOffsetSizeUpdate;
+    if(features >= LayerFeature::Layout)
+        expectedStates |= LayerState::NeedsLayoutUpdate;
     #endif
     CORRADE_ASSERT(states && states <= expectedStates,
         "Ui::AbstractLayer::update(): expected a non-empty subset of" << expectedStates << "but got" << states, );
@@ -618,15 +665,16 @@ void AbstractLayer::update(const LayerStates states, const Containers::StridedAr
         "Ui::AbstractLayer::update(): expected clip rect offset and size views to have the same size but got" << clipRectOffsets.size() << "and" << clipRectSizes.size(), );
     CORRADE_ASSERT(compositeRectOffsets.size() == compositeRectSizes.size(),
         "Ui::AbstractLayer::update(): expected composite rect offset and size views to have the same size but got" << compositeRectOffsets.size() << "and" << compositeRectSizes.size(), );
-    CORRADE_ASSERT(features() >= LayerFeature::Composite || compositeRectOffsets.isEmpty(),
+    CORRADE_ASSERT(features >= LayerFeature::Composite || compositeRectOffsets.isEmpty(),
         "Ui::AbstractLayer::update(): compositing not supported but got" << compositeRectOffsets.size() << "composite rects", );
     auto& state = *_state;
-    CORRADE_ASSERT(!(features() >= LayerFeature::Draw) || state.setSizeCalled,
+    CORRADE_ASSERT(!(features >= LayerFeature::Draw) || state.setSizeCalled,
         "Ui::AbstractLayer::update(): user interface size wasn't set", );
     /* Don't pass the NeedsAttachmentUpdate bit to the implementation as it
        shouldn't need that, just NeedsNodeOpacityUpdate NeedsNodeOrderUpdate
-       that's a subset of it */
-    doUpdate(states & ~(LayerState::NeedsAttachmentUpdate & ~(LayerState::NeedsNodeOpacityUpdate|LayerState::NeedsNodeOrderUpdate)), dataIds, clipRectIds, clipRectDataCounts, nodeOffsets, nodeSizes, nodeOpacities, nodesEnabled, clipRectOffsets, clipRectSizes, compositeRectOffsets, compositeRectSizes);
+       that's a subset of it. Similarly the implementation shouldn't need
+       NeedsLayoutUpdate but rather depend on NeedsNodeOffsetSizeUpdate. */
+    doUpdate(states & ~((LayerState::NeedsAttachmentUpdate & ~(LayerState::NeedsNodeOpacityUpdate|LayerState::NeedsNodeOrderUpdate))|LayerState::NeedsLayoutUpdate), dataIds, clipRectIds, clipRectDataCounts, nodeOffsets, nodeSizes, nodeOpacities, nodesEnabled, clipRectOffsets, clipRectSizes, compositeRectOffsets, compositeRectSizes);
     state.state &= ~states;
 }
 

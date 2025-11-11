@@ -155,9 +155,11 @@ enum class UserInterfaceState: UnsignedShort {
      * @ref AbstractUserInterface::update() needs to be called to refresh the
      * visible node hierarchy layout after node sizes or offsets changed. Set
      * implicitly if any of the layouters have
-     * @ref LayouterState::NeedsUpdate set and after every
+     * @ref LayouterState::NeedsUpdate set, after every
      * @ref AbstractUserInterface::setNodeOffset() and
-     * @ref AbstractUserInterface::setNodeSize(), is reset next time
+     * @ref AbstractUserInterface::setNodeSize(), and after every
+     * @ref AbstractUserInterface::removeLayer() call of a layer that
+     * advertised @ref LayerFeature::Layout, is reset next time
      * @ref AbstractUserInterface::update() is called. Implies
      * @ref UserInterfaceState::NeedsNodeClipUpdate. Implied by
      * @relativeref{UserInterfaceState,NeedsLayoutAssignmentUpdate},
@@ -1475,7 +1477,9 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
          * Calling @ref removeAnimator() on these is left to the user.
          *
          * Calling this function causes
-         * @ref UserInterfaceState::NeedsDataAttachmentUpdate to be set.
+         * @ref UserInterfaceState::NeedsDataAttachmentUpdate to be set. If the
+         * layer advertised @ref LayerFeature::Layout,
+         * @ref UserInterfaceState::NeedsLayoutUpdate is set as well.
          * @see @ref update(), @ref Ui-AbstractUserInterface-layers
          */
         void removeLayer(LayerHandle handle);
@@ -2675,6 +2679,10 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
          * -    Orders visible nodes back-to-front for drawing and
          *      front-to-back for event processing
          * -    Orders layouts assigned to nodes by their dependency
+         * -    Goes in a back to front order through layers that have
+         *      instances set and advertise @ref LayerFeature::Layout, and
+         *      calls @ref AbstractLayer::layout() to populate per-node layout
+         *      properties
          * -    Performs layout calculation
          * -    Calculates absolute offsets for visible nodes
          * -    Culls invisible nodes, calculates clip rectangles
