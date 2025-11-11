@@ -35,7 +35,7 @@
 #include <Corrade/Containers/Optional.h>
 #include <Corrade/Containers/Reference.h>
 #include <Magnum/Math/Time.h>
-#include <Magnum/Math/Vector2.h>
+#include <Magnum/Math/Vector4.h>
 
 #include "Magnum/Ui/AbstractAnimator.h"
 #include "Magnum/Ui/AbstractLayer.h"
@@ -673,6 +673,7 @@ struct AbstractUserInterface::State {
     Containers::ArrayView<Vector2> nodeSizes;
     Containers::ArrayView<Vector2> absoluteNodeOffsets;
     Containers::ArrayView<Float> absoluteNodeOpacities;
+    Containers::MutableBitArrayView layoutNodeMask;
     Containers::MutableBitArrayView visibleNodeMask;
     Containers::MutableBitArrayView visibleEventNodeMask;
     Containers::MutableBitArrayView visibleEnabledNodeMask;
@@ -860,7 +861,7 @@ UserInterfaceStates AbstractUserInterface::state() const {
        through all layers and inherit the Needs* flags from them. Invalid
        (removed) layers have instances set to nullptr as well, so this will
        skip them. */
-    constexpr UserInterfaceStates maxLayerState = UserInterfaceState::NeedsDataAttachmentUpdate|UserInterfaceState::NeedsDataClean;
+    constexpr UserInterfaceStates maxLayerState = UserInterfaceState::NeedsLayoutUpdate|UserInterfaceState::NeedsDataAttachmentUpdate|UserInterfaceState::NeedsDataClean;
     if(!(state.state >= maxLayerState)) for(const Layer& layer: state.layers) {
         if(const AbstractLayer* const instance = layer.used.instance.get()) {
             const LayerStates layerState = instance->state();
@@ -870,6 +871,8 @@ UserInterfaceStates AbstractUserInterface::state() const {
                 states |= UserInterfaceState::NeedsDataAttachmentUpdate;
             if(layerState >= LayerState::NeedsDataClean)
                 states |= UserInterfaceState::NeedsDataClean;
+            if(layerState >= LayerState::NeedsLayoutUpdate)
+                states |= UserInterfaceState::NeedsLayoutUpdate;
 
             /* There's no broader state than this so if it's set, we can stop
                iterating further */
@@ -1197,6 +1200,13 @@ void AbstractUserInterface::removeLayer(const LayerHandle handle) {
         stridedArrayView(state.layers).slice(&Layer::used).slice(&Layer::Used::styleAnimatorOffset),
         handle);
 
+    /* Mark the UI as needing an update() call to refresh per-node data
+       lists. If it's a layout layer, then layouts need updating as well to
+       discard layout properties from the now-gone layer. */
+    state.state |= UserInterfaceState::NeedsDataAttachmentUpdate;
+    if(layer.used.features >= LayerFeature::Layout)
+        state.state |= UserInterfaceState::NeedsLayoutUpdate;
+
     /* Delete the instance. The instance being null then means that the layer
        is either free or is newly created until setLayerInstance() is called,
        which is used for iterating them in clean() and update(). */
@@ -1237,10 +1247,6 @@ void AbstractUserInterface::removeLayer(const LayerHandle handle) {
         }
         state.lastFreeLayer = id;
     }
-
-    /* Mark the UI as needing an update() call to refresh per-node data
-       lists */
-    state.state |= UserInterfaceState::NeedsDataAttachmentUpdate;
 }
 
 void AbstractUserInterface::attachData(const NodeHandle node, const DataHandle data) {
@@ -3117,6 +3123,18 @@ AbstractUserInterface& AbstractUserInterface::update() {
                 dataCount += instance->capacity();
     }
 
+    /* If layout update is desired, calculate the max capacity across all
+       layers that expose LayerFeature::Layout. The features are cached from
+       the instance, so if the feature is present, the instance should be as
+       well. */
+    std::size_t maxLayoutLayerDataCapacity = 0;
+    if(states >= UserInterfaceState::NeedsLayoutUpdate) {
+        for(Layer& layer: state.layers) if(layer.used.features >= LayerFeature::Layout) {
+            CORRADE_INTERNAL_DEBUG_ASSERT(layer.used.instance);
+            maxLayoutLayerDataCapacity = Math::max(maxLayoutLayerDataCapacity, layer.used.instance->capacity());
+        }
+    }
+
     /* Single allocation for all temporary data */
     /** @todo well, not really, there's one more temp array for layout mask
         calculation */
@@ -3124,6 +3142,13 @@ AbstractUserInterface& AbstractUserInterface::update() {
     Containers::ArrayView<UnsignedInt> childrenOffsets;
     Containers::ArrayView<UnsignedInt> children;
     Containers::ArrayView<Containers::Triple<UnsignedInt, UnsignedInt, UnsignedInt>> parentsToProcess;
+    Containers::MutableBitArrayView preLayoutVisibleNodeMask;
+    Containers::MutableBitArrayView preLayoutVisibleDataMask;
+    Containers::ArrayView<Vector2> nodeMinSizes;
+    Containers::ArrayView<Vector2> nodeMaxSizes;
+    Containers::ArrayView<Float> nodeAspectRatios;
+    Containers::ArrayView<Vector4> nodePaddings;
+    Containers::ArrayView<Vector4> nodeMargins;
     Containers::StridedArrayView2D<LayoutHandle> nodeLayouts;
     Containers::StridedArrayView2D<UnsignedInt> nodeLayoutLevels;
     Containers::ArrayView<UnsignedInt> layoutLevelOffsets;
@@ -3146,6 +3171,22 @@ AbstractUserInterface& AbstractUserInterface::update() {
         {ValueInit, state.nodes.size() + 1, childrenOffsets},
         {NoInit, state.nodes.size(), children},
         {NoInit, state.nodes.size(), parentsToProcess},
+        /* These are all used only if NeedsLayoutUpdate is enabled */
+        {ValueInit, states >= UserInterfaceState::NeedsLayoutUpdate ?
+            state.nodes.size() : 0, preLayoutVisibleNodeMask},
+        {ValueInit, states >= UserInterfaceState::NeedsLayoutUpdate ?
+            maxLayoutLayerDataCapacity : 0, preLayoutVisibleDataMask},
+        {ValueInit, states >= UserInterfaceState::NeedsLayoutUpdate ?
+            state.nodes.size() : 0, nodeMinSizes},
+        /* Max sizes are initialized to infinity afterwards */
+        {NoInit, states >= UserInterfaceState::NeedsLayoutUpdate ?
+            state.nodes.size() : 0, nodeMaxSizes},
+        {ValueInit, states >= UserInterfaceState::NeedsLayoutUpdate ?
+            state.nodes.size() : 0, nodeAspectRatios},
+        {ValueInit, states >= UserInterfaceState::NeedsLayoutUpdate ?
+            state.nodes.size() : 0, nodePaddings},
+        {ValueInit, states >= UserInterfaceState::NeedsLayoutUpdate ?
+            state.nodes.size() : 0, nodeMargins},
         /* Not all nodes have layouts from all layouters, initialize to
            LayoutHandle::Null */
         {ValueInit, {state.nodes.size(), usedLayouterCount}, nodeLayouts},
@@ -3180,6 +3221,7 @@ AbstractUserInterface& AbstractUserInterface::update() {
             {NoInit, state.nodes.size(), state.nodeSizes},
             {NoInit, state.nodes.size(), state.absoluteNodeOffsets},
             {NoInit, state.nodes.size(), state.absoluteNodeOpacities},
+            {NoInit, state.nodes.size(), state.layoutNodeMask},
             {NoInit, state.nodes.size(), state.visibleNodeMask},
             {NoInit, state.nodes.size(), state.visibleEventNodeMask},
             {NoInit, state.nodes.size(), state.visibleEnabledNodeMask},
@@ -3214,8 +3256,13 @@ AbstractUserInterface& AbstractUserInterface::update() {
        `state.layouterStateStorage` and all views pointing to it are
        up-to-date */
     if(states >= UserInterfaceState::NeedsLayoutAssignmentUpdate) {
+        /* Make sure the mask of nodes that have layouts doesn't contain any
+           stale bits */
+        state.layoutNodeMask.resetAll();
+
         /* 3. Gather all layouts assigned to a particular node, ordered by the
-           layout order. */
+           layout order. Build a mask of nodes containing at least one layout
+           as a side effect. */
         if(state.firstLayouter != LayouterHandle::Null) {
             LayouterHandle layouter = state.firstLayouter;
             UnsignedInt layouterIndex = 0;
@@ -3228,11 +3275,13 @@ AbstractUserInterface& AbstractUserInterface::update() {
                         const NodeHandle node = nodes[i];
                         if(node == NodeHandle::Null)
                             continue;
+                        const UnsignedInt nodeId = nodeHandleId(node);
                         /* The LayoutHandle generation isn't used for anything,
                            so can be arbitrary (but not 0, as that'd make
                            layoutHandleId() assert). This here also overwrites
                            multiple layouts set for the same node. */
-                        nodeLayouts[{nodeHandleId(node), layouterIndex}] = layoutHandle(layouter, i, 0xfff);
+                        nodeLayouts[{nodeId, layouterIndex}] = layoutHandle(layouter, i, 0xfff);
+                        state.layoutNodeMask.set(nodeId);
                     }
                     ++layouterIndex;
                 }
@@ -3300,13 +3349,76 @@ AbstractUserInterface& AbstractUserInterface::update() {
        `state.nodeSizes` and `state.absoluteNodeOffsets` are all
        up-to-date */
     if(states >= UserInterfaceState::NeedsLayoutUpdate) {
-        /* 6. Copy the explicitly set offset + sizes to the output. */
+        /* Init the max sizes with infinities. The other views are ValueInit'd
+           and are meant to be zeros by default. */
+        for(Vector2& i: nodeMaxSizes)
+            i = Vector2{Constants::inf()};
+
+        /* All following operations make sense only if there's at least one
+           layer */
+        if(state.firstLayer != LayerHandle::Null) {
+            /* Calculate a bitmask of all nodes that have layouts and are
+               potentially visible from the visible node ID list, so we can use
+               it to populate per-layer data masks. The mask isn't needed by
+               anything else because after the layout calculation the nodes get
+               additionally also culled. */
+            for(UnsignedInt id: state.visibleNodeIds)
+                /** @todo could have some BitArray AND for this instead */
+                if(state.layoutNodeMask[id])
+                    preLayoutVisibleNodeMask.set(id);
+
+            /* 6. Populate the layout properties with layers that expose
+               LayerFeature::Layout. Like with update() calls below, make them
+               follow order so the implementations can rely on a consistent
+               order of operations compared to going through whatever was the
+               order they were created in. */
+            LayerHandle layer = state.firstLayer;
+            do {
+                const UnsignedInt layerId = layerHandleId(layer);
+                Layer& layerItem = state.layers[layerId];
+
+                /* The features are cached from the instance, so if the feature
+                   is present, the instance should be as well */
+                if(layerItem.used.features >= LayerFeature::Layout) {
+                    CORRADE_INTERNAL_DEBUG_ASSERT(layerItem.used.instance);
+                    AbstractLayer& instance = *layerItem.used.instance;
+
+                    /* Calculate a bitmask of layer data that's attached to
+                       visible nodes using the node visibility mask from above.
+                       As clean() got called right before, the assumption is
+                       that any non-null NodeHandle is valid. */
+                    const Containers::StridedArrayView1D<const NodeHandle> nodes = instance.nodes();
+                    /* The same storage is reused for all layers, so be sure to
+                       clear appropriate prefix every time */
+                    const Containers::MutableBitArrayView dataIds = preLayoutVisibleDataMask.prefix(instance.capacity());
+                    dataIds.resetAll();
+                    for(std::size_t i = 0; i != nodes.size(); ++i) {
+                        const NodeHandle node = nodes[i];
+                        if(node != NodeHandle::Null && preLayoutVisibleNodeMask[nodeHandleId(node)])
+                            dataIds.set(i);
+                    }
+
+                    /* Let the layer adjust the constraints as appropriate */
+                    instance.layout(
+                        dataIds,
+                        nodeMinSizes,
+                        nodeMaxSizes,
+                        nodeAspectRatios,
+                        nodePaddings,
+                        nodeMargins);
+                }
+
+                layer = layerItem.used.next;
+            } while(layer != state.firstLayer);
+        }
+
+        /* 7. Copy the explicitly set offset + sizes to the output. */
         Utility::copy(stridedArrayView(state.nodes).slice(&Node::used).slice(&Node::Used::offset), state.nodeOffsets);
         Utility::copy(stridedArrayView(state.nodes).slice(&Node::used).slice(&Node::Used::size), state.nodeSizes);
 
-        /* 7. Perform layout calculation for all top-level layouts. */
+        /* 8. Perform layout calculation for all top-level layouts. */
         std::size_t offset = 0;
-        for(std::size_t i = 0; i != state.topLevelLayoutOffsets.size() - 1; ++i) {
+        if(!state.topLevelLayoutOffsets.isEmpty()) for(std::size_t i = 0; i != state.topLevelLayoutOffsets.size() - 1; ++i) {
             AbstractLayouter* const instance = state.layouters[state.topLevelLayoutLayouterIds[i]].used.instance.get();
             CORRADE_INTERNAL_ASSERT(instance);
 
@@ -3316,6 +3428,11 @@ AbstractUserInterface& AbstractUserInterface::update() {
                     state.topLevelLayoutOffsets[i],
                     state.topLevelLayoutOffsets[i + 1]),
                 stridedArrayView(state.nodes).slice(&Node::used).slice(&Node::Used::parent),
+                nodeMinSizes,
+                nodeMaxSizes,
+                nodeAspectRatios,
+                nodePaddings,
+                nodeMargins,
                 state.nodeOffsets,
                 state.nodeSizes);
 
@@ -3336,11 +3453,16 @@ AbstractUserInterface& AbstractUserInterface::update() {
                     Containers::BitArray{ValueInit, instance->capacity()},
                     {},
                     stridedArrayView(state.nodes).slice(&Node::used).slice(&Node::Used::parent),
+                    nodeMinSizes,
+                    nodeMaxSizes,
+                    nodeAspectRatios,
+                    nodePaddings,
+                    nodeMargins,
                     state.nodeOffsets, state.nodeSizes);
             }
         }
 
-        /* 8. Calculate absolute offsets for visible nodes. */
+        /* 9. Calculate absolute offsets for visible nodes. */
         for(const UnsignedInt id: state.visibleNodeIds) {
             const Node& node = state.nodes[id];
             const Vector2 nodeOffset = state.nodeOffsets[id];
@@ -3365,7 +3487,7 @@ AbstractUserInterface& AbstractUserInterface::update() {
     /* If no clip update is needed, the `state.visibleNodeMask` is all
        up-to-date */
     if(states >= UserInterfaceState::NeedsNodeClipUpdate) {
-        /* 9. Cull / clip the visible nodes based on their clip rects and the
+        /* 10. Cull / clip the visible nodes based on their clip rects and the
            offset + size of the whole UI (window / screen area) */
         state.clipRectCount = Implementation::cullVisibleNodesInto(
             /** @todo might be useful to make the offset configurable as well,
@@ -3519,7 +3641,7 @@ AbstractUserInterface& AbstractUserInterface::update() {
 
         state.dataToUpdateLayerOffsets[0] = {0, 0, 0};
         if(state.firstLayer != LayerHandle::Null) {
-            /* 10. Go through the layer draw order and order data of each layer
+            /* 11. Go through the layer draw order and order data of each layer
                that are assigned to visible nodes into a contiguous range,
                populating also the draw list and count of event data per
                visible node as a side effect. */
@@ -3645,7 +3767,7 @@ AbstractUserInterface& AbstractUserInterface::update() {
                 state.dataToUpdateLayerOffsets[i + 1] = {offset, clipRectOffset, compositeRectOffset};
             }
 
-            /* 11. Take the count of event data per visible node, turn that
+            /* 12. Take the count of event data per visible node, turn that
                into an offset array and populate it. */
 
             /* `[state.visibleNodeEventDataOffsets[i + 1], state.visibleNodeEventDataOffsets[i + 2])`
@@ -3662,7 +3784,7 @@ AbstractUserInterface& AbstractUserInterface::update() {
                 }
             }
 
-            /* 12. Go through all event handling layers and populate the
+            /* 13. Go through all event handling layers and populate the
                `state.visibleNodeEventData` array based on the
                `state.visibleNodeEventDataOffsets` populated above. Compared
                to drawing, event handling has the layers in a front-to-back
@@ -3699,7 +3821,7 @@ AbstractUserInterface& AbstractUserInterface::update() {
             } while(layer != lastLayer);
         }
 
-        /* 13. Compact the draw calls by throwing away the empty ones. This
+        /* 14. Compact the draw calls by throwing away the empty ones. This
            cannot be done in the above loop directly as it'd need to go first
            by top-level node and then by layer in each. That it used to do in a
            certain way before which was much slower. */
@@ -3711,7 +3833,7 @@ AbstractUserInterface& AbstractUserInterface::update() {
             state.dataToDrawClipRectSizes);
     }
 
-    /* 14. Refresh the event handling state based on visible nodes. Because
+    /* 15. Refresh the event handling state based on visible nodes. Because
        this may call visibilityLostEvent() on layer data, do it before calling
        layer update() so any changes from the events can be directly reflected
        in the update. */
@@ -3780,7 +3902,7 @@ AbstractUserInterface& AbstractUserInterface::update() {
        doesn't get used. */
     visibleOrVisibilityLostEventNodeMask = {};
 
-    /* 15. Decide what all to update on all layers */
+    /* 16. Decide what all to update on all layers */
     LayerStates allLayerStateToUpdate;
     LayerStates allCompositeLayerStateToUpdate;
     /** @todo might be worth to have a dedicated state bit for just the
@@ -3808,7 +3930,7 @@ AbstractUserInterface& AbstractUserInterface::update() {
            to update , supply just the subset it should care about */
         allLayerStateToUpdate |= LayerState::NeedsNodeOrderUpdate;
 
-    /* 16. For each layer (if there are actually any) submit an update of
+    /* 17. For each layer (if there are actually any) submit an update of
        visible data across all visible top-level nodes. If no data update is
        needed, the data in layers is already up-to-date. */
     if(states >= UserInterfaceState::NeedsDataUpdate && state.firstLayer != LayerHandle::Null) {

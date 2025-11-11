@@ -97,6 +97,13 @@ enum class LayerFeature: UnsignedShort {
      * animating styles using @ref AbstractLayer::advanceAnimations(Nanoseconds, Containers::MutableBitArrayView, Containers::MutableBitArrayView, Containers::MutableBitArrayView, const Containers::StridedArrayView1D<Float>&, Containers::MutableBitArrayView, const Containers::Iterable<AbstractStyleAnimator>&).
      */
     AnimateStyles = 1 << 6,
+
+    /**
+     * Supplying node layout properties using @ref AbstractLayer::layout(),
+     * such as size constraints based on contents of data attached to given
+     * node.
+     */
+    Layout = 1 << 7
 };
 
 /**
@@ -238,6 +245,29 @@ enum class LayerState: UnsignedShort {
     NeedsAttachmentUpdate = NeedsNodeOpacityUpdate|NeedsNodeOrderUpdate|(1 << 4),
 
     /**
+     * @ref AbstractLayer::layout() (which is called from
+     * @ref AbstractUserInterface::update()) needs to be called to repopulate
+     * layout properties after they've been changed. Set on layers that
+     * advertise @ref LayerFeature::Layout implicitly after every
+     * @ref AbstractLayer::create() with a non-null @ref NodeHandle, after
+     * every @ref AbstractLayer::attach() call that attaches data to a
+     * different non-null @ref NodeHandle, and after every
+     * @ref AbstractLayer::remove() or @ref AbstractLayer::cleanNodes()
+     * removing data attached to a non-null @ref NodeHandle.  Can also be
+     * returned by @ref AbstractLayer::doState() or be explicitly set by the
+     * layer implementation using @ref AbstractLayer::setNeedsUpdate() if the
+     * layer advertises @ref LayerFeature::Layout. Is reset next time
+     * @ref AbstractLayer::update() is called with this flag present.
+     *
+     * If set on a layer, causes @ref UserInterfaceState::NeedsLayoutUpdate to
+     * be set on the user interface. Gets passed to
+     * @ref AbstractLayer::update() only if the layer itself has it set,
+     * independently of @ref UserInterfaceState::NeedsLayoutUpdate being
+     * present.
+     */
+    NeedsLayoutUpdate = 1 << 5,
+
+    /**
      * @ref AbstractLayer::update() (which is called from
      * @ref AbstractUserInterface::update()) needs to be called to recalculate
      * and reupload data after they've been changed. Set implicitly after every
@@ -253,7 +283,7 @@ enum class LayerState: UnsignedShort {
      * only if the layer itself has it set, independently of
      * @ref UserInterfaceState::NeedsDataUpdate being present.
      */
-    NeedsDataUpdate = 1 << 5,
+    NeedsDataUpdate = 1 << 6,
 
     /**
      * @ref AbstractLayer::update() (which is called from
@@ -269,7 +299,7 @@ enum class LayerState: UnsignedShort {
      * only if the layer itself has it set, independently of
      * @ref UserInterfaceState::NeedsDataUpdate being present.
      */
-    NeedsCommonDataUpdate = 1 << 6,
+    NeedsCommonDataUpdate = 1 << 7,
 
     /**
      * @ref AbstractLayer::update() (which is called from
@@ -285,7 +315,7 @@ enum class LayerState: UnsignedShort {
      * only if the layer itself has it set, independently of
      * @ref UserInterfaceState::NeedsDataUpdate being present.
      */
-    NeedsSharedDataUpdate = 1 << 7,
+    NeedsSharedDataUpdate = 1 << 8,
 
     /**
      * @ref AbstractLayer::update() (which is called from
@@ -308,7 +338,7 @@ enum class LayerState: UnsignedShort {
      * it is set on the user interface and the layer advertises
      * @ref LayerFeature::Composite.
      */
-    NeedsCompositeOffsetSizeUpdate = 1 << 8,
+    NeedsCompositeOffsetSizeUpdate = 1 << 9,
 
     /**
      * @ref AbstractLayer::cleanData() (which is called from
@@ -321,7 +351,7 @@ enum class LayerState: UnsignedShort {
      * to be set on the user interface. Doesn't get passed to
      * @ref AbstractLayer::update().
      */
-    NeedsDataClean = 1 << 9
+    NeedsDataClean = 1 << 10
 };
 
 /**
@@ -945,11 +975,13 @@ class MAGNUM_UI_EXPORT AbstractLayer {
          * Meant to be called by layer implementations when the data get
          * modified. Expects that @p state is a non-empty subset of
          * @ref LayerState::NeedsDataUpdate,
-         * @relativeref{LayerState,NeedsCommonDataUpdate},
-         * @relativeref{LayerState,NeedsSharedDataUpdate}, and if the layer
+         * @relativeref{LayerState,NeedsCommonDataUpdate} and
+         * @relativeref{LayerState,NeedsSharedDataUpdate}, if the layer
          * advertises @ref LayerFeature::Composite, also
-         * @ref LayerState::NeedsCompositeOffsetSizeUpdate. See the flags for
-         * more information.
+         * @ref LayerState::NeedsCompositeOffsetSizeUpdate, and if the layer
+         * advertises @ref LayerFeature::Layout, also
+         * @ref LayerState::NeedsLayoutUpdate. See the flags for more
+         * information.
          * @see @ref state(), @ref update()
          */
         void setNeedsUpdate(LayerStates state);
@@ -1018,7 +1050,9 @@ class MAGNUM_UI_EXPORT AbstractLayer {
          * Additionally, if @p node isn't @ref NodeHandle::Null,
          * @ref LayerState::NeedsNodeOffsetSizeUpdate is set as well, and
          * also @ref LayerState::NeedsCompositeOffsetSizeUpdate if the layer
-         * advertises @ref LayerFeature::Composite.
+         * advertises @ref LayerFeature::Composite, and
+         * @ref LayerState::NeedsLayoutUpdate if the layer advertises
+         * @ref LayerFeature::Layout.
          * @see @ref isHandleValid(DataHandle) const, @ref create(),
          *      @ref AbstractUserInterface::attachData()
          */
@@ -1205,6 +1239,29 @@ class MAGNUM_UI_EXPORT AbstractLayer {
         void preUpdate(LayerStates state);
 
         /**
+         * @brief Supply node layout properties
+         *
+         * Used internally from @ref AbstractUserInterface::update(). Exposed
+         * just for testing purposes, there should be no need to call this
+         * function directly and doing so may cause internal
+         * @ref AbstractUserInterface state update to misbehave.
+         *
+         * Expects that the layer supports @ref LayerFeature::Layout, the size
+         * of @ref dataIdsToLayout is the same as @ref capacity(), and that the
+         * @p nodeMinSizes, @p nodeMaxSizes, @p nodeAspectRatios,
+         * @p nodePaddings and @p nodeMargins views have all the same size. The
+         * @p nodeMinSizes, @p nodeMaxSizes, @p nodeAspectRatios,
+         * @p nodePaddings and @p nodeMargins views should be large enough to
+         * contain any valid node ID. Delegates to @ref doLayout(), see its
+         * documentation for more information about the arguments.
+         *
+         * Note that, unlike @ref update(), calling this function *does not*
+         * reset @ref LayerState::NeedsLayoutUpdate present in @p state, that's
+         * only done once @ref update() is subsequently called.
+         */
+        void layout(Containers::BitArrayView dataIdsToLayout, const Containers::StridedArrayView1D<Vector2>& nodeMinSizes, const Containers::StridedArrayView1D<Vector2>& nodeMaxSizes, const Containers::StridedArrayView1D<Float>& nodeAspectRatios, const Containers::StridedArrayView1D<Vector4>& nodePaddings, const Containers::StridedArrayView1D<Vector4>& nodeMargins);
+
+        /**
          * @brief Update visible layer data to given offsets and positions
          *
          * Used internally from @ref AbstractUserInterface::update(). Exposed
@@ -1217,6 +1274,7 @@ class MAGNUM_UI_EXPORT AbstractLayer {
          * @relativeref{LayerState,NeedsNodeOrderUpdate},
          * @relativeref{LayerState,NeedsNodeEnabledUpdate},
          * @relativeref{LayerState,NeedsNodeOpacityUpdate},
+         * @relativeref{LayerState,NeedsLayoutUpdate},
          * @relativeref{LayerState,NeedsDataUpdate},
          * @relativeref{LayerState,NeedsCommonDataUpdate},
          * @relativeref{LayerState,NeedsSharedDataUpdate} and
@@ -1534,9 +1592,11 @@ class MAGNUM_UI_EXPORT AbstractLayer {
          * @ref LayerState::NeedsAttachmentUpdate and
          * @relativeref{LayerState,NeedsNodeOffsetSizeUpdate} to be set, and
          * also @ref LayerState::NeedsCompositeOffsetSizeUpdate if the layer
-         * advertises @ref LayerFeature::Composite. The subclass is meant to
-         * wrap this function in a public API and perform appropriate
-         * additional initialization work there.
+         * advertises @ref LayerFeature::Composite, and
+         * @ref LayerState::NeedsLayoutUpdate if the layer advertises
+         * @ref LayerFeature::Layout. The subclass is meant to wrap this
+         * function in a public API and perform appropriate additional
+         * initialization work there.
          */
         DataHandle create(NodeHandle node =
             #ifdef DOXYGEN_GENERATING_OUTPUT
@@ -1558,10 +1618,12 @@ class MAGNUM_UI_EXPORT AbstractLayer {
          * set. If @p handle is attached to a node, calling this function also
          * causes @ref LayerState::NeedsAttachmentUpdate to be set, and also
          * @ref LayerState::NeedsCompositeOffsetSizeUpdate if the layer
-         * advertises @ref LayerFeature::Composite. Other than that, no flag is
-         * set to trigger a subsequent @ref cleanNodes() or @ref update() ---
-         * instead the subclass is meant to wrap this function in a public API
-         * and perform appropriate cleanup work directly there.
+         * advertises @ref LayerFeature::Composite, and
+         * @ref LayerState::NeedsLayoutUpdate if the layer advertises
+         * @ref LayerFeature::Layout. Other than that, no flag is set to
+         * trigger a subsequent @ref cleanNodes() or @ref update() --- instead
+         * the subclass is meant to wrap this function in a public API and
+         * perform appropriate cleanup work directly there.
          * @see @ref node()
          */
         void remove(DataHandle handle);
@@ -1657,9 +1719,11 @@ class MAGNUM_UI_EXPORT AbstractLayer {
          * implementation is expected to return a subset of
          * @ref LayerState::NeedsDataUpdate,
          * @relativeref{LayerState,NeedsCommonDataUpdate} and
-         * @relativeref{LayerState,NeedsSharedDataUpdate}, and if the layer
+         * @relativeref{LayerState,NeedsSharedDataUpdate}, if the layer
          * advertises @ref LayerFeature::Composite, also
-         * @ref LayerState::NeedsCompositeOffsetSizeUpdate.
+         * @ref LayerState::NeedsCompositeOffsetSizeUpdate, and if the layer
+         * advertises @ref LayerFeature::Layout, also
+         * @ref LayerState::NeedsLayoutUpdate.
          *
          * Default implementation returns an empty set.
          */
@@ -1810,13 +1874,16 @@ class MAGNUM_UI_EXPORT AbstractLayer {
          * @ref AbstractUserInterface::state(). Is always called after
          * @ref doClean() and before @ref doUpdate(), @ref doComposite() and
          * @ref doDraw(), with at least one @ref doSetSize() call happening at
-         * some point before. In case the function performs operations that
-         * trigger @ref UserInterfaceState::NeedsDataClean, another
-         * @ref doClean() is executed right after calling this function. This
-         * function is always called before any internal operations that
-         * calculate the set of visible nodes and data, meaning this function
-         * can be used not just for updating common and shared layer data, but
-         * also for example for data addition or removal.
+         * some point before. Individual layers in the user interface have this
+         * function called in a back to front order.
+         *
+         * In case the function performs operations that trigger
+         * @ref UserInterfaceState::NeedsDataClean, another @ref doClean() is
+         * executed right after calling this function. This function is always
+         * called before any internal operations that calculate the set of
+         * visible nodes and data, meaning this function can be used not just
+         * for updating common and shared layer data, but also for example for
+         * data addition or removal.
          *
          * The @p state is guaranteed to be a subset of
          * @ref LayerState::NeedsCommonDataUpdate and
@@ -1831,6 +1898,77 @@ class MAGNUM_UI_EXPORT AbstractLayer {
          * Default implementation does nothing.
          */
         virtual void doPreUpdate(LayerStates state);
+
+        /**
+         * @brief Supply node layout properties
+         * @param[in] dataIdsToLayout   Data IDs for which to update node
+         *      layouts
+         * @param[in,out] nodeMinSizes  Minimal node sizes indexed by node ID
+         * @param[in,out] nodeMaxSizes  Maximal node sizes indexed by node ID
+         * @param[in,out] nodeAspectRatios  Node aspect ratios, i.e. width
+         *      divided by height, indexed by node ID
+         * @param[in,out] nodePaddings  Padding inside nodes for child node
+         *      placement, in order left, top, right, bottom, indexed by node
+         *      ID
+         * @param[in,out] nodeMargins   Margins outside nodes for placement
+         *      within parents and besides neighbor nodes, in order left, top,
+         *      right, bottom, indexed by node ID
+         *
+         * Implementation for @ref layout(), which is called from
+         * @ref AbstractUserInterface::update() whenever
+         * @ref UserInterfaceState::NeedsLayoutUpdate or any of the global or
+         * layer-specific states that imply it are present in
+         * @ref AbstractUserInterface::state(). Called only if
+         * @ref LayerFeature::Layout is supported, is always called after
+         * @ref doPreUpdate() and @ref doClean(), and before @ref doUpdate(),
+         * @ref doComposite() and @ref doDraw(), with at least one
+         * @ref doSetSize() call happening at some point before. Individual
+         * layers in the user interface have this function called in a back to
+         * front order.
+         *
+         * Node handles corresponding to @p dataIdsToLayout are available in
+         * @ref nodes(), node IDs can be then extracted from the handles
+         * using @ref nodeHandleId(). The node IDs then index into the
+         * @p nodeMinSizes, @p nodeMaxSizes, @p nodeAspectRatios,
+         * @p nodePaddings and @p nodeMargins views. The @p nodeMinSizes,
+         * @p nodeMaxSizes, @p nodeAspectRatios, @p nodePaddings and
+         * @p nodeMargins have the same size and are guaranteed to be large
+         * enough to contain any valid node ID.
+         *
+         * The implementation is expect to update the views as follows:
+         *
+         * -    The @p nodeMinSizes with a *max* of current value for a
+         *      particular node and min size requirement of data attached to
+         *      it, if any. Initially the min sizes are all @cpp 0.0f @ce.
+         * -    The @p nodeMaxSizes with a *min* of current value for a
+         *      particular node and max size requirement of data attached to
+         *      it, if any. Initially the max sizes are all @ref Constants::inf().
+         * -    The @p nodeAspectRatios with an aspect ratio requirement of
+         *      data attached to particular node, if any, and only if the
+         *      current value is @cpp 0.0f @ce. In other words, if there are
+         *      multiple conflicting aspect ratio requirements, the first is
+         *      picked. Initially the aspect ratios are all @cpp 0.0f @ce,
+         *      which means no aspect ratio requirement.
+         * -    The @p nodePaddings with a *max* of current value for a
+         *      particular node and padding requirement of data attached to it,
+         *      if any. Initially the paddings are all @cpp 0.0f @ce.
+         * -    The @p nodeMargins with a *max* of current value for a
+         *      particular node and margin requirement of data attached to it,
+         *      if any. Initially the paddings are all @cpp 0.0f @ce.
+         *
+         * In other words, for example, if the layer only has size constraints
+         * for min sizes but nothing else, it'll only update the @p nodeMinSizes
+         * array and ignores the rest.
+         *
+         * This function may get also called with @p dataIds having all bits
+         * zero, for example when @ref setNeedsUpdate() was called but the
+         * layer doesn't have any data currently visible.
+         *
+         * Default implementation does nothing. Data collected by calls to this
+         * function are subsequently passed as inputs to
+         * @ref AbstractLayouter::layout() of particular layouters.
+         */
+        virtual void doLayout(Containers::BitArrayView dataIdsToLayout, const Containers::StridedArrayView1D<Vector2>& nodeMinSizes, const Containers::StridedArrayView1D<Vector2>& nodeMaxSizes, const Containers::StridedArrayView1D<Float>& nodeAspectRatios, const Containers::StridedArrayView1D<Vector4>& nodePaddings, const Containers::StridedArrayView1D<Vector4>& nodeMargins);
 
         /**
          * @brief Update visible layer data to given offsets and positions
@@ -1861,9 +1999,10 @@ class MAGNUM_UI_EXPORT AbstractLayer {
          * @ref UserInterfaceState::NeedsDataUpdate or any of the global or
          * layer-specific states that imply it are present in
          * @ref AbstractUserInterface::state(). Is always called after
-         * @ref doPreUpdate() and @ref doClean(), and before @ref doComposite()
-         * and @ref doDraw(), with at least one @ref doSetSize() call happening
-         * at some point before.
+         * @ref doLayout(), @ref doPreUpdate() and @ref doClean(), and before
+         * @ref doComposite() and @ref doDraw(), with at least one
+         * @ref doSetSize() call happening at some point before. Individual
+         * layers in the user interface are updated in a back to front order.
          *
          * The @p state is guaranteed to be a subset of
          * @ref LayerState::NeedsNodeOffsetSizeUpdate,

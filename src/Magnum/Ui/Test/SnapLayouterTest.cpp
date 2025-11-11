@@ -540,7 +540,7 @@ void SnapLayouterTest::setPadding() {
     CORRADE_COMPARE(layouter.state(), LayouterState::NeedsUpdate);
 
     /* Clear the state flags */
-    layouter.update({}, {}, {}, {}, {});
+    layouter.update({}, {}, {}, {}, {}, {}, {}, {}, {}, {});
     CORRADE_COMPARE(layouter.state(), LayouterStates{});
 
     /* Horizontal and vertical */
@@ -549,7 +549,7 @@ void SnapLayouterTest::setPadding() {
     CORRADE_COMPARE(layouter.state(), LayouterState::NeedsUpdate);
 
     /* Clear the state flags */
-    layouter.update({}, {}, {}, {}, {});
+    layouter.update({}, {}, {}, {}, {}, {}, {}, {}, {}, {});
     CORRADE_COMPARE(layouter.state(), LayouterStates{});
 
     /* All sides the same */
@@ -573,7 +573,7 @@ void SnapLayouterTest::setMargin() {
     CORRADE_COMPARE(layouter.state(), LayouterState::NeedsUpdate);
 
     /* Clear the state flags */
-    layouter.update({}, {}, {}, {}, {});
+    layouter.update({}, {}, {}, {}, {}, {}, {}, {}, {}, {});
     CORRADE_COMPARE(layouter.state(), LayouterStates{});
 
     /* Both directions the same */
@@ -1025,7 +1025,7 @@ void SnapLayouterTest::updateEmpty() {
     layouter.setSize({1, 1});
 
     /* It shouldn't crash or do anything weird */
-    layouter.update({}, {}, {}, {}, {});
+    layouter.update({}, {}, {}, {}, {}, {}, {}, {}, {}, {});
     CORRADE_VERIFY(true);
 }
 
@@ -1105,7 +1105,7 @@ void SnapLayouterTest::updateDataOrder() {
         using AbstractLayouter::add;
 
         LayouterFeatures doFeatures() const override { return {}; }
-        void doUpdate(Containers::BitArrayView, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const NodeHandle>&, const Containers::StridedArrayView1D<Vector2>& nodeOffsets, const Containers::StridedArrayView1D<Vector2>& nodeSizes) override {
+        void doUpdate(Containers::BitArrayView, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const NodeHandle>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Float>&, const Containers::StridedArrayView1D<const Vector4>&, const Containers::StridedArrayView1D<const Vector4>&, const Containers::StridedArrayView1D<Vector2>& nodeOffsets, const Containers::StridedArrayView1D<Vector2>& nodeSizes) override {
             CORRADE_COMPARE_AS(nodeOffsets, Containers::stridedArrayView<Vector2>({
                 /* (6, 5) is right and bottom padding */
                 {500.0f - 70.0f - 6.0f, 400.0f - 90.0f - 5.0f}, /* layout1 */

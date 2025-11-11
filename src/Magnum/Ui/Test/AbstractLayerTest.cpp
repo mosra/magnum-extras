@@ -34,7 +34,7 @@
 #include <Corrade/TestSuite/Compare/Container.h>
 #include <Corrade/TestSuite/Compare/String.h>
 #include <Magnum/Math/Time.h>
-#include <Magnum/Math/Vector2.h>
+#include <Magnum/Math/Vector4.h>
 
 #include "Magnum/Ui/AbstractAnimator.h"
 #include "Magnum/Ui/AbstractLayer.h"
@@ -122,6 +122,12 @@ struct AbstractLayerTest: TestSuite::Tester {
     void preUpdateInvalidState();
     void preUpdateNoSizeSet();
 
+    void layout();
+    void layoutEmpty();
+    void layoutNotSupported();
+    void layoutNotImplemented();
+    void layoutInvalidSizes();
+
     void update();
     void updateComposite();
     void updateEmpty();
@@ -193,6 +199,8 @@ const struct {
 } StateQuerySetNeedsUpdateData[]{
     {"", {}, {}},
     {"composite layer", LayerFeature::Composite, LayerState::NeedsCompositeOffsetSizeUpdate},
+    {"layout layer", LayerFeature::Layout, LayerState::NeedsLayoutUpdate},
+    {"composite + layout layer", LayerFeature::Composite|LayerFeature::Layout, LayerState::NeedsCompositeOffsetSizeUpdate|LayerState::NeedsLayoutUpdate},
 };
 
 const struct {
@@ -218,6 +226,8 @@ const struct {
 } StateData[]{
     {"", {}, {}},
     {"composite layer", LayerFeature::Composite, LayerState::NeedsCompositeOffsetSizeUpdate},
+    {"layout layer", LayerFeature::Layout, LayerState::NeedsLayoutUpdate},
+    {"composite + layout layer", LayerFeature::Composite|LayerFeature::Layout, LayerState::NeedsCompositeOffsetSizeUpdate|LayerState::NeedsLayoutUpdate},
 };
 
 AbstractLayerTest::AbstractLayerTest() {
@@ -299,6 +309,12 @@ AbstractLayerTest::AbstractLayerTest() {
               &AbstractLayerTest::preUpdateNotImplemented,
               &AbstractLayerTest::preUpdateInvalidState,
               &AbstractLayerTest::preUpdateNoSizeSet,
+
+              &AbstractLayerTest::layout,
+              &AbstractLayerTest::layoutEmpty,
+              &AbstractLayerTest::layoutNotSupported,
+              &AbstractLayerTest::layoutNotImplemented,
+              &AbstractLayerTest::layoutInvalidSizes,
 
               &AbstractLayerTest::update,
               &AbstractLayerTest::updateComposite,
@@ -590,7 +606,15 @@ void AbstractLayerTest::stateQueryInvalid() {
         LayerStates doState() const override {
             return LayerState::NeedsSharedDataUpdate|LayerState::NeedsCompositeOffsetSizeUpdate;
         }
-    } layer{layerHandle(0, 1)};
+    } layerWrongComposite{layerHandle(0, 1)};
+    struct: AbstractLayer {
+        using AbstractLayer::AbstractLayer;
+
+        LayerFeatures doFeatures() const override { return {}; }
+        LayerStates doState() const override {
+            return LayerState::NeedsSharedDataUpdate|LayerState::NeedsLayoutUpdate;
+        }
+    } layerWrongLayout{layerHandle(0, 1)};
     struct: AbstractLayer {
         using AbstractLayer::AbstractLayer;
 
@@ -600,15 +624,41 @@ void AbstractLayerTest::stateQueryInvalid() {
         LayerStates doState() const override {
             return LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsSharedDataUpdate;
         }
-    } layerCompositing{layerHandle(0, 1)};
+    } layerComposite{layerHandle(0, 1)};
+    struct: AbstractLayer {
+        using AbstractLayer::AbstractLayer;
+
+        LayerFeatures doFeatures() const override {
+            return LayerFeature::Layout;
+        }
+        LayerStates doState() const override {
+            return LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsSharedDataUpdate;
+        }
+    } layerLayout{layerHandle(0, 1)};
+    struct: AbstractLayer {
+        using AbstractLayer::AbstractLayer;
+
+        LayerFeatures doFeatures() const override {
+            return LayerFeature::Composite|LayerFeature::Layout;
+        }
+        LayerStates doState() const override {
+            return LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsSharedDataUpdate;
+        }
+    } layerCompositeLayout{layerHandle(0, 1)};
 
     Containers::String out;
     Error redirectError{&out};
-    layer.state();
-    layerCompositing.state();
+    layerWrongComposite.state();
+    layerWrongLayout.state();
+    layerComposite.state();
+    layerLayout.state();
+    layerCompositeLayout.state();
     CORRADE_COMPARE_AS(out,
         "Ui::AbstractLayer::state(): implementation expected to return a subset of Ui::LayerState::NeedsDataUpdate|Ui::LayerState::NeedsCommonDataUpdate|Ui::LayerState::NeedsSharedDataUpdate but got Ui::LayerState::NeedsSharedDataUpdate|Ui::LayerState::NeedsCompositeOffsetSizeUpdate\n"
-        "Ui::AbstractLayer::state(): implementation expected to return a subset of Ui::LayerState::NeedsDataUpdate|Ui::LayerState::NeedsCommonDataUpdate|Ui::LayerState::NeedsSharedDataUpdate|Ui::LayerState::NeedsCompositeOffsetSizeUpdate but got Ui::LayerState::NeedsNodeEnabledUpdate|Ui::LayerState::NeedsSharedDataUpdate\n",
+        "Ui::AbstractLayer::state(): implementation expected to return a subset of Ui::LayerState::NeedsDataUpdate|Ui::LayerState::NeedsCommonDataUpdate|Ui::LayerState::NeedsSharedDataUpdate but got Ui::LayerState::NeedsLayoutUpdate|Ui::LayerState::NeedsSharedDataUpdate\n"
+        "Ui::AbstractLayer::state(): implementation expected to return a subset of Ui::LayerState::NeedsDataUpdate|Ui::LayerState::NeedsCommonDataUpdate|Ui::LayerState::NeedsSharedDataUpdate|Ui::LayerState::NeedsCompositeOffsetSizeUpdate but got Ui::LayerState::NeedsNodeEnabledUpdate|Ui::LayerState::NeedsSharedDataUpdate\n"
+        "Ui::AbstractLayer::state(): implementation expected to return a subset of Ui::LayerState::NeedsLayoutUpdate|Ui::LayerState::NeedsDataUpdate|Ui::LayerState::NeedsCommonDataUpdate|Ui::LayerState::NeedsSharedDataUpdate but got Ui::LayerState::NeedsNodeEnabledUpdate|Ui::LayerState::NeedsSharedDataUpdate\n"
+        "Ui::AbstractLayer::state(): implementation expected to return a subset of Ui::LayerState::NeedsLayoutUpdate|Ui::LayerState::NeedsDataUpdate|Ui::LayerState::NeedsCommonDataUpdate|Ui::LayerState::NeedsSharedDataUpdate|Ui::LayerState::NeedsCompositeOffsetSizeUpdate but got Ui::LayerState::NeedsNodeEnabledUpdate|Ui::LayerState::NeedsSharedDataUpdate\n",
         TestSuite::Compare::String);
 }
 
@@ -648,19 +698,39 @@ void AbstractLayerTest::setNeedsUpdateInvalid() {
         LayerFeatures doFeatures() const override {
             return LayerFeature::Composite;
         }
-    } layerCompositing{layerHandle(0, 1)};
+    } layerComposite{layerHandle(0, 1)};
+    struct: AbstractLayer {
+        using AbstractLayer::AbstractLayer;
+
+        LayerFeatures doFeatures() const override {
+            return LayerFeature::Layout;
+        }
+    } layerLayout{layerHandle(0, 1)};
+    struct: AbstractLayer {
+        using AbstractLayer::AbstractLayer;
+
+        LayerFeatures doFeatures() const override {
+            return LayerFeature::Composite|LayerFeature::Layout;
+        }
+    } layerCompositeLayout{layerHandle(0, 1)};
     CORRADE_COMPARE(layer.state(), LayerStates{});
-    CORRADE_COMPARE(layerCompositing.state(), LayerStates{});
+    CORRADE_COMPARE(layerComposite.state(), LayerStates{});
+    CORRADE_COMPARE(layerLayout.state(), LayerStates{});
+    CORRADE_COMPARE(layerCompositeLayout.state(), LayerStates{});
 
     Containers::String out;
     Error redirectError{&out};
     layer.setNeedsUpdate({});
     layer.setNeedsUpdate(LayerState::NeedsCompositeOffsetSizeUpdate);
-    layerCompositing.setNeedsUpdate(LayerState::NeedsNodeOffsetSizeUpdate);
+    layerComposite.setNeedsUpdate(LayerState::NeedsLayoutUpdate);
+    layerLayout.setNeedsUpdate(LayerState::NeedsCompositeOffsetSizeUpdate);
+    layerCompositeLayout.setNeedsUpdate(LayerState::NeedsNodeOffsetSizeUpdate);
     CORRADE_COMPARE_AS(out,
         "Ui::AbstractLayer::setNeedsUpdate(): expected a non-empty subset of Ui::LayerState::NeedsDataUpdate|Ui::LayerState::NeedsCommonDataUpdate|Ui::LayerState::NeedsSharedDataUpdate but got Ui::LayerStates{}\n"
         "Ui::AbstractLayer::setNeedsUpdate(): expected a non-empty subset of Ui::LayerState::NeedsDataUpdate|Ui::LayerState::NeedsCommonDataUpdate|Ui::LayerState::NeedsSharedDataUpdate but got Ui::LayerState::NeedsCompositeOffsetSizeUpdate\n"
-        "Ui::AbstractLayer::setNeedsUpdate(): expected a non-empty subset of Ui::LayerState::NeedsDataUpdate|Ui::LayerState::NeedsCommonDataUpdate|Ui::LayerState::NeedsSharedDataUpdate|Ui::LayerState::NeedsCompositeOffsetSizeUpdate but got Ui::LayerState::NeedsNodeOffsetSizeUpdate\n",
+        "Ui::AbstractLayer::setNeedsUpdate(): expected a non-empty subset of Ui::LayerState::NeedsDataUpdate|Ui::LayerState::NeedsCommonDataUpdate|Ui::LayerState::NeedsSharedDataUpdate|Ui::LayerState::NeedsCompositeOffsetSizeUpdate but got Ui::LayerState::NeedsLayoutUpdate\n"
+        "Ui::AbstractLayer::setNeedsUpdate(): expected a non-empty subset of Ui::LayerState::NeedsLayoutUpdate|Ui::LayerState::NeedsDataUpdate|Ui::LayerState::NeedsCommonDataUpdate|Ui::LayerState::NeedsSharedDataUpdate but got Ui::LayerState::NeedsCompositeOffsetSizeUpdate\n"
+        "Ui::AbstractLayer::setNeedsUpdate(): expected a non-empty subset of Ui::LayerState::NeedsLayoutUpdate|Ui::LayerState::NeedsDataUpdate|Ui::LayerState::NeedsCommonDataUpdate|Ui::LayerState::NeedsSharedDataUpdate|Ui::LayerState::NeedsCompositeOffsetSizeUpdate but got Ui::LayerState::NeedsNodeOffsetSizeUpdate\n",
         TestSuite::Compare::String);
 }
 
@@ -2263,6 +2333,201 @@ void AbstractLayerTest::preUpdateNoSizeSet() {
     CORRADE_COMPARE(out, "Ui::AbstractLayer::preUpdate(): user interface size wasn't set\n");
 }
 
+void AbstractLayerTest::layout() {
+    struct: AbstractLayer {
+        using AbstractLayer::AbstractLayer;
+        using AbstractLayer::create;
+
+        LayerFeatures doFeatures() const override {
+            return LayerFeature::Layout;
+        }
+
+        void doLayout(Containers::BitArrayView dataIdsToLayout, const Containers::StridedArrayView1D<Vector2>& nodeMinSizes, const Containers::StridedArrayView1D<Vector2>& nodeMaxSizes, const Containers::StridedArrayView1D<Float>& nodeAspectRatios, const Containers::StridedArrayView1D<Vector4>& nodePaddings, const Containers::StridedArrayView1D<Vector4>& nodeMargins) override {
+            ++called;
+            CORRADE_COMPARE_AS(dataIdsToLayout, Containers::stridedArrayView({
+                false, true, false, false, true
+            }).sliceBit(0), TestSuite::Compare::Container);
+            CORRADE_COMPARE_AS(nodeMinSizes, Containers::stridedArrayView<Vector2>({
+                {1.1f, 1.2f},
+                {1.3f, 1.4f},
+                {1.5f, 1.6f}
+            }), TestSuite::Compare::Container);
+            CORRADE_COMPARE_AS(nodeMaxSizes, Containers::stridedArrayView<Vector2>({
+                {1.1f, 2.1f},
+                {3.1f, 4.1f},
+                {5.1f, 6.1f}
+            }), TestSuite::Compare::Container);
+            CORRADE_COMPARE_AS(nodeAspectRatios, Containers::stridedArrayView({
+                0.0f,
+                1.1f,
+                2.2f
+            }), TestSuite::Compare::Container);
+            CORRADE_COMPARE_AS(nodePaddings, Containers::stridedArrayView<Vector4>({
+                {3.1f, 2.2f, 1.3f, 0.4f},
+                {3.4f, 2.3f, 1.2f, 0.1f},
+                {3.1f, 2.2f, 1.3f, 0.4f}
+            }), TestSuite::Compare::Container);
+            CORRADE_COMPARE_AS(nodeMargins, Containers::stridedArrayView<Vector4>({
+                {0.1f, 1.2f, 2.3f, 3.4f},
+                {0.4f, 1.3f, 2.2f, 3.1f},
+                {0.1f, 1.2f, 2.3f, 3.4f}
+            }), TestSuite::Compare::Container);
+        }
+
+        Int called = 0;
+    } layer{layerHandle(0, 1)};
+
+    layer.create();
+    layer.create();
+    layer.create();
+    layer.create();
+    layer.create();
+
+    /* Capture correct function name */
+    CORRADE_VERIFY(true);
+
+    UnsignedByte dataIdsToLayout[]{
+        0x12
+    };
+    Vector2 nodeMinSizes[]{
+        {1.1f, 1.2f},
+        {1.3f, 1.4f},
+        {1.5f, 1.6f}
+    };
+    Vector2 nodeMaxSizes[]{
+        {1.1f, 2.1f},
+        {3.1f, 4.1f},
+        {5.1f, 6.1f}
+    };
+    Float nodeAspectRatios[]{
+        0.0f,
+        1.1f,
+        2.2f
+    };
+    Vector4 nodePaddings[]{
+        {3.1f, 2.2f, 1.3f, 0.4f},
+        {3.4f, 2.3f, 1.2f, 0.1f},
+        {3.1f, 2.2f, 1.3f, 0.4f}
+    };
+    Vector4 nodeMargins[]{
+        {0.1f, 1.2f, 2.3f, 3.4f},
+        {0.4f, 1.3f, 2.2f, 3.1f},
+        {0.1f, 1.2f, 2.3f, 3.4f}
+    };
+    layer.layout(
+        Containers::BitArrayView{dataIdsToLayout, 0, 5},
+        nodeMinSizes,
+        nodeMaxSizes,
+        nodeAspectRatios,
+        nodePaddings,
+        nodeMargins);
+    CORRADE_COMPARE(layer.called, 1);
+}
+
+void AbstractLayerTest::layoutEmpty() {
+    struct: AbstractLayer {
+        using AbstractLayer::AbstractLayer;
+        using AbstractLayer::create;
+
+        LayerFeatures doFeatures() const override {
+            return LayerFeature::Layout;
+        }
+
+        void doLayout(Containers::BitArrayView, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Float>&, const Containers::StridedArrayView1D<Vector4>&, const Containers::StridedArrayView1D<Vector4>&) override {
+            ++called;
+        }
+
+        Int called = 0;
+    } layer{layerHandle(0, 1)};
+
+    /* It should call the implementation even with empty contents */
+    layer.layout({}, {}, {}, {}, {}, {});
+    CORRADE_COMPARE(layer.called, 1);
+}
+
+void AbstractLayerTest::layoutNotSupported() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct: AbstractLayer {
+        using AbstractLayer::AbstractLayer;
+        using AbstractLayer::create;
+
+        LayerFeatures doFeatures() const override {
+            return LayerFeature::Draw; /* not Layout */
+        }
+
+        void doLayout(Containers::BitArrayView, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Float>&, const Containers::StridedArrayView1D<Vector4>&, const Containers::StridedArrayView1D<Vector4>&) override {}
+    } layer{layerHandle(0, 1)};
+
+    Containers::String out;
+    Error redirectError{&out};
+    layer.layout({}, {}, {}, {}, {}, {});
+    CORRADE_COMPARE(out, "Ui::AbstractLayer::layout(): feature not supported\n");
+}
+
+void AbstractLayerTest::layoutNotImplemented() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct: AbstractLayer {
+        using AbstractLayer::AbstractLayer;
+        using AbstractLayer::create;
+
+        LayerFeatures doFeatures() const override {
+            return LayerFeature::Layout;
+        }
+    } layer{layerHandle(0, 1)};
+
+    Containers::String out;
+    Error redirectError{&out};
+    layer.layout({}, {}, {}, {}, {}, {});
+    CORRADE_COMPARE(out, "Ui::AbstractLayer::layout(): feature advertised but not implemented\n");
+}
+
+void AbstractLayerTest::layoutInvalidSizes() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct: AbstractLayer {
+        using AbstractLayer::AbstractLayer;
+        using AbstractLayer::create;
+
+        LayerFeatures doFeatures() const override {
+            return LayerFeature::Layout;
+        }
+
+        void doLayout(Containers::BitArrayView, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Float>&, const Containers::StridedArrayView1D<Vector4>&, const Containers::StridedArrayView1D<Vector4>&) override {}
+    } layer{layerHandle(0, 1)};
+
+    layer.create();
+    layer.create();
+    layer.create();
+    layer.create();
+    layer.create();
+
+    Containers::String out;
+    Error redirectError{&out};
+    UnsignedByte dataIdsToLayout[1];
+    Vector2 sizes[2];
+    Vector2 sizesInvalid[3];
+    Float aspectRatios[2];
+    Float aspectRatiosInvalid[3];
+    Vector4 paddingsMargins[2];
+    Vector4 paddingsMarginsInvalid[3];
+    layer.layout(Containers::BitArrayView{dataIdsToLayout, 0, 6}, sizes, sizes, aspectRatios, paddingsMargins, paddingsMargins);
+    layer.layout(Containers::BitArrayView{dataIdsToLayout, 0, 5}, sizesInvalid, sizes, aspectRatios, paddingsMargins, paddingsMargins);
+    layer.layout(Containers::BitArrayView{dataIdsToLayout, 0, 5}, sizes, sizesInvalid, aspectRatios, paddingsMargins, paddingsMargins);
+    layer.layout(Containers::BitArrayView{dataIdsToLayout, 0, 5}, sizes, sizes, aspectRatiosInvalid, paddingsMargins, paddingsMargins);
+    layer.layout(Containers::BitArrayView{dataIdsToLayout, 0, 5}, sizes, sizes, aspectRatios, paddingsMarginsInvalid, paddingsMargins);
+    layer.layout(Containers::BitArrayView{dataIdsToLayout, 0, 5}, sizes, sizes, aspectRatios, paddingsMargins, paddingsMarginsInvalid);
+    CORRADE_COMPARE_AS(out,
+        "Ui::AbstractLayer::layout(): expected dataIdsToLayout to have 5 bits but got 6\n"
+        "Ui::AbstractLayer::layout(): expected node min size, max size, aspect ratio, padding and margin views to have the same size but got 3, 2, 2, 2 and 2\n"
+        "Ui::AbstractLayer::layout(): expected node min size, max size, aspect ratio, padding and margin views to have the same size but got 2, 3, 2, 2 and 2\n"
+        "Ui::AbstractLayer::layout(): expected node min size, max size, aspect ratio, padding and margin views to have the same size but got 2, 2, 3, 2 and 2\n"
+        "Ui::AbstractLayer::layout(): expected node min size, max size, aspect ratio, padding and margin views to have the same size but got 2, 2, 2, 3 and 2\n"
+        "Ui::AbstractLayer::layout(): expected node min size, max size, aspect ratio, padding and margin views to have the same size but got 2, 2, 2, 2 and 3\n",
+        TestSuite::Compare::String);
+}
+
 void AbstractLayerTest::update() {
     struct: AbstractLayer {
         using AbstractLayer::AbstractLayer;
@@ -2831,10 +3096,12 @@ void AbstractLayerTest::state() {
         void doUpdate(LayerStates state, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Float>&, Containers::BitArrayView, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&) override {
             /* The doUpdate() should never get the NeedsAttachmentUpdate, only
                the NeedsNodeOpacityUpdate / NeedsNodeOrderUpdate that's a
-               subset of it. It shouldn't get an empty state either, that'd
-               mean there's some bug in the process. */
+               subset of it. Similarly, NeedsLayoutUpdate isn't relevant here.
+               It also shouldn't get an empty state, that'd mean there's some
+               bug in the process. */
             CORRADE_VERIFY(state);
             CORRADE_VERIFY(!(state >= LayerState::NeedsAttachmentUpdate));
+            CORRADE_VERIFY(!(state >= LayerState::NeedsLayoutUpdate));
         }
 
         private:
@@ -3271,7 +3538,9 @@ void AbstractLayerTest::drawNotSupported() {
     struct: AbstractLayer {
         using AbstractLayer::AbstractLayer;
 
-        LayerFeatures doFeatures() const override { return {}; }
+        LayerFeatures doFeatures() const override {
+            return LayerFeature::Layout; /* not Draw */
+        }
     } layer{layerHandle(0, 1)};
 
     Containers::String out;
