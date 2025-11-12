@@ -488,7 +488,10 @@ jobs:
         extra: sdl2 glfw
     - build:
         script: unix-desktop.sh
-    - lcov
+    # The 14.3 image seems to have the new lcov, which is very picky and throws
+    # errors about a ton of little things, 14.0.1 and older didn't
+    - lcov:
+        extra: --ignore-errors inconsistent,gcov
 
   macos-gles3:
     executor: xcode-14_3
@@ -504,7 +507,10 @@ jobs:
         build: macos12-arm64
     - build:
         script: unix-desktop-gles.sh
-    - lcov
+    # The 14.3 image seems to have the new lcov, which is very picky and throws
+    # errors about a ton of little things, 14.0.1 and older didn't
+    - lcov:
+        extra: --ignore-errors inconsistent,gcov
 
   macos-vulkan:
     executor: xcode-14_3
@@ -519,7 +525,10 @@ jobs:
         build: macos12-x64-arm64
     - build:
         script: unix-desktop-vulkan.sh
-    - lcov
+    # The 14.3 image seems to have the new lcov, which is very picky and throws
+    # errors about a ton of little things, 14.0.1 and older didn't
+    - lcov:
+        extra: --ignore-errors inconsistent,gcov
 
   macos-static:
     executor: xcode-14_3
@@ -533,7 +542,10 @@ jobs:
         extra: sdl2 glfw
     - build:
         script: unix-desktop.sh
-    - lcov
+    # The 14.3 image seems to have the new lcov, which is very picky and throws
+    # errors about a ton of little things, 14.0.1 and older didn't
+    - lcov:
+        extra: --ignore-errors inconsistent,gcov
 
   emscripten-webgl1:
     executor: emscripten2
