@@ -204,7 +204,6 @@ DataHandle EventLayer::create(const NodeHandle node, const Implementation::Event
     if(id >= state.data.size())
         /* Can't use arrayAppend(NoInit) because the Function has to be
            zero-initialized */
-        /** @todo some arrayAppend(DefaultInit, std::size_t)? */
         arrayResize(state.data, id + 1);
 
     Data& data = state.data[id];
