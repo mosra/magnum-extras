@@ -1841,7 +1841,7 @@ template<class T> void BaseLayerTest::createRemove() {
     } else {
         CORRADE_COMPARE(layer.style(third), 37);
         /* Can't use T, as the function restricts to enum types which would
-            fail for T == UnsignedInt */
+           fail for T == UnsignedInt */
         CORRADE_COMPARE(layer.template style<Enum>(third), Enum(37));
         CORRADE_COMPARE(layer.color(third), 0xffffff_rgbf);
         CORRADE_COMPARE(layer.outlineWidth(third), (Vector4{0.0f}));
