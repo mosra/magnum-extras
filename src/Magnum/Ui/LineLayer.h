@@ -759,8 +759,12 @@ class MAGNUM_UI_EXPORT LineLayer: public AbstractVisualLayer {
          * @return New data handle
          *
          * Expects that @p style is less than @ref Shared::totalStyleCount().
-         * All styling is driven from the @ref LineLayerStyleUniform at index
-         * @p style.
+         * It is allowed to call this function before any styles are set with
+         * @ref Shared::setStyle(). Once a style is set, styling is driven from
+         * the @ref LineLayerStyleUniform, alignment and padding for given
+         * @p style. A subset of the style can be customized on a per-data
+         * basis with @ref setColor(), @ref setAlignment() and
+         * @ref setPadding().
          *
          * The @p indices are expected to have an even size and their values
          * are all expected to be less than size of @p points. Every successive
@@ -790,6 +794,9 @@ class MAGNUM_UI_EXPORT LineLayer: public AbstractVisualLayer {
          * from @ref setColor() and with node opacity coming from
          * @ref AbstractUserInterface::setNodeOpacity(). If empty, it's as if
          * an array of @cpp 0xffffffff_srgbaf @ce was supplied.
+         *
+         * Delegates to @ref AbstractLayer::create(), see its documentation for
+         * more information.
          * @see @ref createStrip(), @ref createLoop(), @ref setAlignment(),
          *      @ref Color4::premultiplied()
          */

@@ -1049,10 +1049,15 @@ class MAGNUM_UI_EXPORT BaseLayer: public AbstractVisualLayer {
          * @return New data handle
          *
          * Expects that @p style is less than @ref Shared::totalStyleCount().
-         * All styling is driven from the @ref BaseLayerStyleUniform at index
-         * @p style.
-         * @see @ref setColor(), @ref setOutlineWidth(), @ref setPadding(),
-         *      @ref setTextureCoordinates()
+         * It is allowed to call this function before any styles are set with
+         * @ref Shared::setStyle(). Once a style is set, styling is driven from
+         * the @ref BaseLayerStyleUniform and padding for given @p style. A
+         * subset of the style can be customized on a per-data basis with
+         * @ref setColor(), @ref setOutlineWidth(), @ref setPadding() and
+         * @ref setTextureCoordinates().
+         *
+         * Delegates to @ref AbstractLayer::create(), see its documentation for
+         * more information.
          */
         DataHandle create(UnsignedInt style, NodeHandle node =
             #ifdef DOXYGEN_GENERATING_OUTPUT

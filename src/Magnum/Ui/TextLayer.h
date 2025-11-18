@@ -2079,14 +2079,17 @@ class MAGNUM_UI_EXPORT TextLayer: public AbstractVisualLayer {
          * @ref TextProperties::font() is either @ref FontHandle::Null or
          * valid and @p flags don't contain @ref TextDataFlag::Editable if the
          * layer was created with @ref TextLayerFlag::Transformable enabled.
-         * Styling is driven from the @ref TextLayerStyleUniform at index
-         * @p style. If @ref TextProperties::font() is not null it's used,
-         * otherwise the default @ref FontHandle assigned to given style is
-         * used and is expected to not be null. The @ref FontHandle, whether
+         * Styling is driven from the @ref TextLayerStyleUniform, font,
+         * alignment, features, cursor and selection style and padding for
+         * given @p style. If @ref TextProperties::font() is not null it's
+         * used, otherwise the default @ref FontHandle assigned to given style
+         * is used and is expected to not be null. The @ref FontHandle, whether
          * coming from the @p style or from @p properties, is expected to have
          * a font instance. Instance-less fonts can be only used to create
          * single glyphs (such as various icons or images) with
-         * @ref createGlyph().
+         * @ref createGlyph(). A subset of the style can be customized on a
+         * per-data basis with @ref setColor(), @ref setPadding() and
+         * @ref setTransformation().
          *
          * If @p flags contain @ref TextDataFlag::Editable, the @p text and
          * @p properties are remembered and subsequently accessible through
@@ -2095,9 +2098,11 @@ class MAGNUM_UI_EXPORT TextLayer: public AbstractVisualLayer {
          * text, the @p properties are expected to have empty
          * @ref TextProperties::features() --- only the features supplied by
          * the style are used for editable text.
+         *
+         * Delegates to @ref AbstractLayer::create(), see its documentation for
+         * more information.
          * @see @ref Shared::hasFontInstance(), @ref setText(),
-         *      @ref setColor(), @ref setPadding(), @ref setCursor(),
-         *      @ref updateText(), @ref editText()
+         *      @ref setCursor(), @ref updateText(), @ref editText()
          */
         DataHandle create(UnsignedInt style, Containers::StringView text, const TextProperties& properties, TextDataFlags flags = {}, NodeHandle node =
             #ifdef DOXYGEN_GENERATING_OUTPUT
@@ -2155,12 +2160,15 @@ class MAGNUM_UI_EXPORT TextLayer: public AbstractVisualLayer {
          * Expects that @ref Shared::setStyle() has been called, @p style is
          * less than @ref Shared::totalStyleCount() and
          * @ref TextProperties::font() is either @ref FontHandle::Null or
-         * valid. Styling is driven from the @ref TextLayerStyleUniform at
-         * index @p style. If @ref TextProperties::font() is not null it's
-         * used, otherwise the default @ref FontHandle assigned to given style
-         * is used and is expected to not be null. The @p glyph is expected to
-         * be less than @ref Text::AbstractGlyphCache::fontGlyphCount() for
-         * given font.
+         * valid. Styling is driven from the @ref TextLayerStyleUniform, font,
+         * alignment and padding for given @p style, features and
+         * cursor/selection style aren't used. If @ref TextProperties::font()
+         * is not null it's used, otherwise the default @ref FontHandle assigned
+         * to given style is used and is expected to not be null. The @p glyph
+         * is expected to be less than
+         * @ref Text::AbstractGlyphCache::fontGlyphCount() for given font. A
+         * subset of the style can be customized on a per-data basis with
+         * @ref setColor(), @ref setPadding() and @ref setTransformation().
          *
          * Compared to @ref create(), the glyph is aligned according to
          * @ref TextProperties::alignment() based on its bounding rectangle
@@ -2173,8 +2181,10 @@ class MAGNUM_UI_EXPORT TextLayer: public AbstractVisualLayer {
          * @relativeref{TextProperties,language()} and
          * @relativeref{TextProperties,features()} properties aren't used in
          * any way.
-         * @see @ref Shared::glyphCacheFontId(), @ref setGlyph(),
-         *      @ref setColor(), @ref setPadding()
+         *
+         * Delegates to @ref AbstractLayer::create(), see its documentation for
+         * more information.
+         * @see @ref Shared::glyphCacheFontId(), @ref setGlyph()
          */
         DataHandle createGlyph(UnsignedInt style, UnsignedInt glyph, const TextProperties& properties, NodeHandle node =
             #ifdef DOXYGEN_GENERATING_OUTPUT
