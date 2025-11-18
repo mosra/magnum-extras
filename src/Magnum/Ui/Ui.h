@@ -80,6 +80,8 @@ class DebugLayerGL;
 class EventConnection;
 class EventLayer;
 
+class LayoutLayer;
+
 class LineLayer;
 struct LineLayerCommonStyleUniform;
 struct LineLayerStyleUniform;

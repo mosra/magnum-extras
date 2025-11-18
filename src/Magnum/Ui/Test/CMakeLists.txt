@@ -59,6 +59,7 @@ corrade_add_test(UiGenericAnimatorTest GenericAnimatorTest.cpp LIBRARIES MagnumU
 corrade_add_test(UiHandleTest HandleTest.cpp LIBRARIES MagnumUi)
 corrade_add_test(UiInputTest InputTest.cpp LIBRARIES MagnumUi)
 corrade_add_test(UiLabelTest LabelTest.cpp LIBRARIES MagnumUi)
+corrade_add_test(UiLayoutLayerTest LayoutLayerTest.cpp LIBRARIES MagnumUiTestLib)
 corrade_add_test(UiLineLayerTest LineLayerTest.cpp LIBRARIES MagnumUiTestLib)
 corrade_add_test(UiNodeAnimatorTest NodeAnimatorTest.cpp LIBRARIES MagnumUiTestLib)
 corrade_add_test(UiNodeFlagsTest NodeFlagsTest.cpp LIBRARIES MagnumUi)
