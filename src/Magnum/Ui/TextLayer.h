@@ -3373,17 +3373,19 @@ class MAGNUM_UI_EXPORT TextLayer::Shared: public AbstractVisualLayer::Shared {
          * @param uniforms      Style uniforms
          * @param fonts         Font handles corresponding to style uniforms
          * @param alignments    Text alignment corresponding to style uniforms
-         * @param features      Font feature data for all styles
+         * @param features      Font feature data for all styles, or an empty
+         *      view for no style-specific features
          * @param featureOffsets  Offsets into @p features corresponding to
-         *      style uniforms
+         *      style uniforms, or an empty view for no style-specific features
          * @param featureCounts  Counts into @p features corresponding to style
-         *      uniforms
+         *      uniforms, or an empty view for no style-specific features
          * @param cursorStyles  Cursor style IDs corresponding to style
-         *      uniforms
+         *      uniforms, or an empty view for no cursor styles
          * @param selectionStyles  Selection style IDs corresponding to style
-         *      uniforms
+         *      uniforms, or an empty view for no selection styles
          * @param paddings      Padding inside the node in UI units, in order
-         *      left, top, right, bottom, corresponding to style uniforms
+         *      left, top, right, bottom, corresponding to style uniforms, or
+         *      an empty view for no style-specific padding
          * @return Reference to self (for method chaining)
          *
          * The @p uniforms view is expected to have the same size as
@@ -3461,13 +3463,19 @@ class MAGNUM_UI_EXPORT TextLayer::Shared: public AbstractVisualLayer::Shared {
          * @param styleToUniform    Style to style uniform mapping
          * @param styleFonts        Per-style font handles
          * @param styleAlignments   Per-style text alignment
-         * @param styleFeatures     Font feature data for all styles
-         * @param styleFeatureOffsets  Per-style offsets into @p styleFeatures
-         * @param styleFeatureCounts  Per-style counts into @p styleFeatures
-         * @param styleCursorStyles  Per-style cursor style IDs
-         * @param styleSelectionStyles  Per-style selection style IDs
+         * @param styleFeatures     Font feature data for all styles, or an
+         *      empty view for no style-specific features
+         * @param styleFeatureOffsets  Per-style offsets into @p styleFeatures,
+         *      or an empty view for no style-specific features
+         * @param styleFeatureCounts  Per-style counts into @p styleFeatures,
+         *      or an empty view for no style-specific features
+         * @param styleCursorStyles  Per-style cursor style IDs, or an empty
+         *      view for no cursor styles
+         * @param styleSelectionStyles  Per-style selection style IDs, or an
+         *      empty view for no cursor styles
          * @param stylePaddings     Per-style padding inside the node in UI
-         *      units, in order left, top, right, bottom
+         *      units, in order left, top, right, bottom, or an empty view for
+         *      no style-specific padding
          * @return Reference to self (for method chaining)
          *
          * The @p uniforms view is expected to have the same size as

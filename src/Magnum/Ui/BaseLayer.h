@@ -1566,7 +1566,8 @@ class MAGNUM_UI_EXPORT BaseLayer::Shared: public AbstractVisualLayer::Shared {
          * @param commonUniform Common style uniform data
          * @param uniforms      Style uniforms
          * @param paddings      Padding inside the node in UI units, in order
-         *      left, top, right, bottom, corresponding to style uniforms
+         *      left, top, right, bottom, corresponding to style uniforms, or
+         *      an empty view for no style-specific padding
          * @return Reference to self (for method chaining)
          *
          * The @p uniforms view is expected to have the same size as
@@ -1597,7 +1598,8 @@ class MAGNUM_UI_EXPORT BaseLayer::Shared: public AbstractVisualLayer::Shared {
          * @param uniforms          Style uniforms
          * @param styleToUniform    Style to style uniform mapping
          * @param stylePaddings     Per-style padding inside the node in UI
-         *      units, in order left, top, right, bottom
+         *      units, in order left, top, right, bottom, or an empty view for
+         *      no style-specific padding
          * @return Reference to self (for method chaining)
          *
          * The @p uniforms view is expected to have the same size as

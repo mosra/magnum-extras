@@ -1425,7 +1425,8 @@ class MAGNUM_UI_EXPORT LineLayer::Shared: public AbstractVisualLayer::Shared {
          * @param uniforms      Style uniforms
          * @param alignments    Line alignment corresponding to style uniforms
          * @param paddings      Padding inside the node in UI units, in order
-         *      left, top, right, bottom, corresponding to style uniforms
+         *      left, top, right, bottom, corresponding to style uniforms, or
+         *      an empty view for no style-specific padding
          * @return Reference to self (for method chaining)
          *
          * The @p uniforms view is expected to have the same size as
@@ -1455,7 +1456,8 @@ class MAGNUM_UI_EXPORT LineLayer::Shared: public AbstractVisualLayer::Shared {
          * @param styleToUniform    Style to style uniform mapping
          * @param styleAlignments   Per-style line alignment
          * @param stylePaddings     Per-style padding inside the node in UI
-         *      units, in order left, top, right, bottom
+         *      units, in order left, top, right, bottom, or an empty view for
+         *      no style-specific padding
          * @return Reference to self (for method chaining)
          *
          * The @p uniforms view is expected to have the same size as
