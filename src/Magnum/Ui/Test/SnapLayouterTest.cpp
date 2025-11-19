@@ -106,6 +106,8 @@ const struct {
     Vector2 expectedOffset, expectedSize;
 } SnapData[]{
     /*     100   500
+          QR A M
+             E
         200 +-----+                   margin
           BD|F    |                     3
             | CN  |             +---------------+
@@ -117,44 +119,44 @@ const struct {
                  G  S                                */
     {Snap::Top|Snap::Left|Snap::InsideX,
         {100.0f, 167.0f}, Size},                            /* A */
-    {Snap::Top|Snap::Left|Snap::NoPadX |Snap::InsideX,
+    {Snap::Top|Snap::Left|Snap::NoPadX|Snap::InsideX,
         {100.0f, 167.0f}, Size},                            /* A again */
     {Snap::Top|Snap::Left|Snap::InsideY,
         {73.0f, 200.0f}, Size},                             /* B */
-    {Snap::Top|Snap::Left|Snap::NoPadY |Snap::InsideY,
+    {Snap::Top|Snap::Left|Snap::NoPadY|Snap::InsideY,
         {73.0f, 200.0f}, Size},                             /* B again */
     {Snap::Top|Snap::Left|Snap::InsideX|Snap::InsideY,
         {110.0f, 205.0f}, Size},                            /* C */
-    {Snap::Top|Snap::Left|Snap::NoPadX |Snap::InsideY,
+    {Snap::Top|Snap::Left|Snap::NoPadX|Snap::InsideY,
         {80.0f, 200.0f}, Size},                             /* D */
-    {Snap::Top|Snap::Left|Snap::NoPadY |Snap::InsideX,
+    {Snap::Top|Snap::Left|Snap::NoPadY|Snap::InsideX,
         {100.0f, 170.0f}, Size},                            /* E */
-    {Snap::Top|Snap::Left|Snap::NoPadX |Snap::NoPadY |Snap::InsideX|Snap::InsideY,
+    {Snap::Top|Snap::Left|Snap::NoPadX|Snap::NoPadY|Snap::InsideX|Snap::InsideY,
         {100.0f, 200.0f}, Size},                            /* F */
     {Snap::Bottom|Snap::Right|Snap::InsideX,
         {480.0f, 503.0f}, Size},                            /* G */
-    {Snap::Bottom|Snap::Right|Snap::NoPadX |Snap::InsideX,
+    {Snap::Bottom|Snap::Right|Snap::NoPadX|Snap::InsideX,
         {480.0f, 503.0f}, Size},                            /* G again */
     {Snap::Bottom|Snap::Right|Snap::InsideY,
         {507.0f, 470.0f}, Size},                            /* H */
-    {Snap::Bottom|Snap::Right|Snap::NoPadY |Snap::InsideY,
+    {Snap::Bottom|Snap::Right|Snap::NoPadY|Snap::InsideY,
         {507.0f, 470.0f}, Size},                            /* H again */
     {Snap::Bottom|Snap::Right|Snap::InsideX|Snap::InsideY,
         {465.0f, 445.0f}, Size},                            /* I */
-    {Snap::Bottom|Snap::Right|Snap::NoPadX |Snap::InsideY,
+    {Snap::Bottom|Snap::Right|Snap::NoPadX|Snap::InsideY,
         {500.0f, 470.0f}, Size},                            /* J */
-    {Snap::Bottom|Snap::Right|Snap::NoPadY |Snap::InsideX,
+    {Snap::Bottom|Snap::Right|Snap::NoPadY|Snap::InsideX,
         {480.0f, 500.0f}, Size},                            /* K */
-    {Snap::Bottom|Snap::Right|Snap::NoPadX |Snap::NoPadY |Snap::InsideX|Snap::InsideY,
+    {Snap::Bottom|Snap::Right|Snap::NoPadX|Snap::NoPadY|Snap::InsideX|Snap::InsideY,
         {480.0f, 470.0f}, Size},                            /* L */
     {Snap::Top,
         {290.0f, 167.0f}, Size},                            /* M */
     {Snap::Top|Snap::NoPadX,
-        {290.0f, 167.0f}, Size},                            /* M */
+        {290.0f, 167.0f}, Size},                            /* M again */
     {Snap::Top|Snap::InsideY,
         {287.5f, 205.0f}, Size},                            /* N */
     {Snap::Top|Snap::InsideY|Snap::NoPadX,
-        {290.0f, 205.0f}, Size},                            /* N, no space X */
+        {290.0f, 205.0f}, Size},                            /* N, no pad X */
     {Snap::Left,
         {73.0f, 335.0f}, Size},                             /* O */
     {Snap::Left|Snap::NoPadY,
@@ -162,7 +164,7 @@ const struct {
     {Snap::Left|Snap::InsideX,
         {110.0f, 325.0f}, Size},                            /* P */
     {Snap::Left|Snap::InsideX|Snap::NoPadY,
-        {110.0f, 335.0f}, Size},                            /* P, no space Y */
+        {110.0f, 335.0f}, Size},                            /* P, no pad Y */
     {Snap::Top|Snap::Left,
         {73.0f, 167.0f}, Size},                             /* Q */
     {Snap::Top|Snap::Left|Snap::NoPadX,
@@ -173,8 +175,8 @@ const struct {
         {507.0f, 500.0f}, Size},                            /* T */
     {{},
         {287.5f, 325.0f}, Size},                            /* U */
-    {Snap::NoPadX |Snap::NoPadY,
-        {290.0f, 335.0f}, Size},                            /* U, no space XY */
+    {Snap::NoPadX|Snap::NoPadY,
+        {290.0f, 335.0f}, Size},                            /* U, no pad XY */
 
     /*     100   500
         200 +-----+     +-----+      +-----+
