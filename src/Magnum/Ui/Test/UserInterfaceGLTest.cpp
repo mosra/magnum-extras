@@ -214,13 +214,13 @@ const struct {
     {"event layer only", StyleFeature::EventLayer, StyleFeature::EventLayer, true, 1, 0, 0, {InPlaceInit, {
         StyleFeature::EventLayer
     }}, false, false},
-    {"event layer only, everything supported", StyleFeature::EventLayer, StyleFeature::BaseLayer|StyleFeature::TextLayer|StyleFeature::EventLayer|StyleFeature::SnapLayouter, true, 1, 0, 0, {InPlaceInit, {
+    {"event layer only, everything supported", StyleFeature::EventLayer, ~StyleFeatures{}, true, 1, 0, 0, {InPlaceInit, {
         StyleFeature::EventLayer
     }}, false, false},
     {"snap layouter only", StyleFeature::SnapLayouter, StyleFeature::SnapLayouter, true, 0, 1, 0, {InPlaceInit, {
         StyleFeature::SnapLayouter
     }}, false, false},
-    {"snap layouter only, everything supported", StyleFeature::SnapLayouter, StyleFeature::BaseLayer|StyleFeature::TextLayer|StyleFeature::EventLayer|StyleFeature::SnapLayouter, true, 0, 1, 0, {InPlaceInit, {
+    {"snap layouter only, everything supported", StyleFeature::SnapLayouter, ~StyleFeatures{}, true, 0, 1, 0, {InPlaceInit, {
         StyleFeature::SnapLayouter
     }}, false, false},
     {"everything except base layer (and its animations)", ~(StyleFeature::BaseLayer|StyleFeature::BaseLayerAnimations), ~(StyleFeature::BaseLayer|StyleFeature::BaseLayerAnimations), true, 2, 1, 1, {InPlaceInit, {
