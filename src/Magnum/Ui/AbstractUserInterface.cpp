@@ -3092,11 +3092,23 @@ AbstractUserInterface& AbstractUserInterface::update() {
        is that in majority cases there will be very little freed layouts. */
     std::size_t usedLayouterCount = 0;
     std::size_t layoutCount = 0;
+    bool hasLayouters = false;
     if(states >= UserInterfaceState::NeedsLayoutAssignmentUpdate) {
         for(const Layouter& layouter: state.layouters) {
             if(const AbstractLayouter* const instance = layouter.used.instance.get()) {
                 ++usedLayouterCount;
+                hasLayouters = true;
                 layoutCount += instance->capacity();
+            }
+        }
+    /* If only layout update is needed, check if we have at least one layouter
+       to know whether to fill the node min/max sizes and other layout
+       properties at all */
+    } else if(states >= UserInterfaceState::NeedsLayoutUpdate) {
+        for(const Layouter& layouter: state.layouters) {
+            if(layouter.used.instance) {
+                hasLayouters = true;
+                break;
             }
         }
     }
@@ -3172,21 +3184,25 @@ AbstractUserInterface& AbstractUserInterface::update() {
         {ValueInit, state.nodes.size() + 1, childrenOffsets},
         {NoInit, state.nodes.size(), children},
         {NoInit, state.nodes.size(), parentsToProcess},
-        /* These are all used only if NeedsLayoutUpdate is enabled */
-        {ValueInit, states >= UserInterfaceState::NeedsLayoutUpdate ?
+        /* The node min, max sizes, aspect ratios, paddings and margins only
+           need to be filled if there's actually any layouter to use them, and
+           if NeedsLayoutUpdate is set. The preLayoutVisibleNodeMask and
+           preLayoutVisibleDataMask is only needed to populate those, so also
+           skip them if there's no layouter. */
+        {ValueInit, hasLayouters && states >= UserInterfaceState::NeedsLayoutUpdate ?
             state.nodes.size() : 0, preLayoutVisibleNodeMask},
-        {ValueInit, states >= UserInterfaceState::NeedsLayoutUpdate ?
+        {ValueInit, hasLayouters && states >= UserInterfaceState::NeedsLayoutUpdate ?
             maxLayoutLayerDataCapacity : 0, preLayoutVisibleDataMask},
-        {ValueInit, states >= UserInterfaceState::NeedsLayoutUpdate ?
+        {ValueInit, hasLayouters && states >= UserInterfaceState::NeedsLayoutUpdate ?
             state.nodes.size() : 0, nodeMinSizes},
         /* Max sizes are initialized to infinity afterwards */
-        {NoInit, states >= UserInterfaceState::NeedsLayoutUpdate ?
+        {NoInit, hasLayouters && states >= UserInterfaceState::NeedsLayoutUpdate ?
             state.nodes.size() : 0, nodeMaxSizes},
-        {ValueInit, states >= UserInterfaceState::NeedsLayoutUpdate ?
+        {ValueInit, hasLayouters && states >= UserInterfaceState::NeedsLayoutUpdate ?
             state.nodes.size() : 0, nodeAspectRatios},
-        {ValueInit, states >= UserInterfaceState::NeedsLayoutUpdate ?
+        {ValueInit, hasLayouters && states >= UserInterfaceState::NeedsLayoutUpdate ?
             state.nodes.size() : 0, nodePaddings},
-        {ValueInit, states >= UserInterfaceState::NeedsLayoutUpdate ?
+        {ValueInit, hasLayouters && states >= UserInterfaceState::NeedsLayoutUpdate ?
             state.nodes.size() : 0, nodeMargins},
         /* Not all nodes have layouts from all layouters, initialize to
            LayoutHandle::Null */
@@ -3222,6 +3238,11 @@ AbstractUserInterface& AbstractUserInterface::update() {
             {NoInit, state.nodes.size(), state.nodeSizes},
             {NoInit, state.nodes.size(), state.absoluteNodeOffsets},
             {NoInit, state.nodes.size(), state.absoluteNodeOpacities},
+            /* The layoutNodeMask is only used to fill node min/max sizes and
+               other properties to be used by layouters. If there are no
+               layouters, the mask will be unused but needs to be allocated
+               because it gets reallocated only if nodes get added or
+               removed. */
             {NoInit, state.nodes.size(), state.layoutNodeMask},
             {NoInit, state.nodes.size(), state.visibleNodeMask},
             {NoInit, state.nodes.size(), state.visibleEventNodeMask},
@@ -3346,10 +3367,19 @@ AbstractUserInterface& AbstractUserInterface::update() {
             state.layoutMasks);
     }
 
-    /* If no layout update is needed, the `state.nodeOffsets`,
-       `state.nodeSizes` and `state.absoluteNodeOffsets` are all
-       up-to-date */
+    /* 6. Copy the explicitly set offset + sizes to the output. If no layout
+       update is needed, the `state.nodeOffsets` and `state.nodeSizes` are all
+       up-to-date. */
     if(states >= UserInterfaceState::NeedsLayoutUpdate) {
+        Utility::copy(stridedArrayView(state.nodes).slice(&Node::used).slice(&Node::Used::offset), state.nodeOffsets);
+        Utility::copy(stridedArrayView(state.nodes).slice(&Node::used).slice(&Node::Used::size), state.nodeSizes);
+    }
+
+    /* Populate layout properties from layers that expose LayerFeature::Layout
+       and then feed those to layouters, which then update
+       `state.nodeOffsets` and `state.nodeSizes`. If there are no layouters,
+       none of this needs to be done. */
+    if(hasLayouters && states >= UserInterfaceState::NeedsLayoutUpdate) {
         /* Init the max sizes with infinities. The other views are ValueInit'd
            and are meant to be zeros by default. */
         for(Vector2& i: nodeMaxSizes)
@@ -3368,7 +3398,7 @@ AbstractUserInterface& AbstractUserInterface::update() {
                 if(state.layoutNodeMask[id])
                     preLayoutVisibleNodeMask.set(id);
 
-            /* 6. Populate the layout properties with layers that expose
+            /* 7. Populate the layout properties with layers that expose
                LayerFeature::Layout. Like with update() calls below, make them
                follow order so the implementations can rely on a consistent
                order of operations compared to going through whatever was the
@@ -3412,10 +3442,6 @@ AbstractUserInterface& AbstractUserInterface::update() {
                 layer = layerItem.used.next;
             } while(layer != state.firstLayer);
         }
-
-        /* 7. Copy the explicitly set offset + sizes to the output. */
-        Utility::copy(stridedArrayView(state.nodes).slice(&Node::used).slice(&Node::Used::offset), state.nodeOffsets);
-        Utility::copy(stridedArrayView(state.nodes).slice(&Node::used).slice(&Node::Used::size), state.nodeSizes);
 
         /* 8. Perform layout calculation for all top-level layouts. */
         std::size_t offset = 0;
@@ -3467,8 +3493,13 @@ AbstractUserInterface& AbstractUserInterface::update() {
                     state.nodeOffsets, state.nodeSizes);
             }
         }
+    }
 
-        /* 9. Calculate absolute offsets for visible nodes. */
+    /* 9. Calculate absolute offsets for visible nodes. If there are no
+       layouters, the absolute offsets get calculated directly from the node
+       offsets copied above. If no layout update is needed, the
+       `state.absoluteNodeOffsets` are all up-to-date. */
+    if(states >= UserInterfaceState::NeedsLayoutUpdate) {
         for(const UnsignedInt id: state.visibleNodeIds) {
             const Node& node = state.nodes[id];
             const Vector2 nodeOffset = state.nodeOffsets[id];

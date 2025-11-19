@@ -294,12 +294,14 @@ const struct {
 const struct {
     const char* name;
     LayerFeatures features;
-    bool shuffle;
+    bool shuffle, layouter;
 } UpdateLayerOrderData[]{
-    {"created in layer order", {}, false},
-    {"created in shuffled order", {}, true},
-    {"layout layers, created in layer order", LayerFeature::Layout, false},
-    {"layout layers, created in shuffled order", LayerFeature::Layout, true},
+    {"created in layer order", {}, false, false},
+    {"created in shuffled order", {}, true, false},
+    {"layout layers without layouter, created in layer order", LayerFeature::Layout, false, false},
+    {"layout layers without layouter, created in shuffled order", LayerFeature::Layout, true, false},
+    {"layout layers and a layouter, created in layer order", LayerFeature::Layout, false, true},
+    {"layout layers and a layouter, created in shuffled order", LayerFeature::Layout, true, true},
 };
 
 const struct {
@@ -770,94 +772,101 @@ const struct {
 
 const struct {
     const char* name;
-    bool layer1, layer2, layoutLayer, node;
+    bool layer1, layer2, layouter, node;
+    LayerFeatures layerFeatures;
     bool hide, attach, clean, update;
 } DrawEmptyData[]{
     {"nothing, clean + update before",
-        false, false, false, false,
+        false, false, false, false, LayerFeature::Draw,
         false, false, true, true},
     {"nothing, clean before",
-        false, false, false, false,
+        false, false, false, false, LayerFeature::Draw,
         false, false, true, false},
     {"nothing, update before",
-        false, false, false, false,
+        false, false, false, false, LayerFeature::Draw,
         false, false, false, true},
     {"nothing",
-        false, false, false, false,
+        false, false, false, false, LayerFeature::Draw,
         false, false, false, false},
 
     {"no node, one layer with update needed",
-        true, false, false, false,
+        true, false, false, false, LayerFeature::Draw,
         false, false, false, false},
     {"no node, two layers with update needed",
-        true, true, false, false,
+        true, true, false, false, LayerFeature::Draw,
         false, false, false, false},
     {"no node, two layers with update needed, clean + update before",
-        true, true, false, false,
+        true, true, false, false, LayerFeature::Draw,
         false, false, true, true},
     {"no node, two layers with update needed, clean before",
-        true, true, false, false,
+        true, true, false, false, LayerFeature::Draw,
         false, false, true, false},
     {"no node, two layers with update needed, update before",
-        true, true, false, false,
+        true, true, false, false, LayerFeature::Draw,
         false, false, false, true},
 
-    {"no node, layer with layout needed",
-        true, false, true, false,
+    {"no node, no layer, one layouter with update needed",
+        false, false, true, false, {},
+        false, false, false, false},
+    {"no node, layer with layout needed but no layouter",
+        true, false, false, false, LayerFeature::Draw|LayerFeature::Layout,
+        false, false, false, false},
+    {"no node, layer with layout needed and a layouter",
+        true, false, true, false, LayerFeature::Draw|LayerFeature::Layout,
         false, false, false, false},
 
     {"node but no data attachment, one layer with update needed",
-        true, false, false, true,
+        true, false, false, true, LayerFeature::Draw,
         false, false, false, false},
     {"node but no data attachment, two layers with update needed",
-        true, true, false, true,
+        true, true, false, true, LayerFeature::Draw,
         false, false, false, false},
     {"node but no data attachment, two layers with update needed, clean + update before",
-        true, true, false, true,
+        true, true, false, true, LayerFeature::Draw,
         false, false, true, true},
     {"node but no data attachment, two layers with update needed, clean before",
-        true, true, false, true,
+        true, true, false, true, LayerFeature::Draw,
         false, false, true, false},
     {"node but no data attachment, two layers with update needed, update before",
-        true, true, false, true,
+        true, true, false, true, LayerFeature::Draw,
         false, false, false, true},
 
     {"node not in top-level order, no layers",
-        false, false, false, true,
+        false, false, false, true, LayerFeature::Draw,
         false, true, false, false},
     {"node not in top-level order, one layer",
-        true, false, false, true,
+        true, false, false, true, LayerFeature::Draw,
         false, true, false, false},
     {"node not in top-level order, two layers",
-        true, true, false, true,
+        true, true, false, true, LayerFeature::Draw,
         false, true, false, false},
     {"node not in top-level order, two layers, clean + update before",
-        true, true, false, true,
+        true, true, false, true, LayerFeature::Draw,
         false, true, true, true},
     {"node not in top-level order, two layers, clean before",
-        true, true, false, true,
+        true, true, false, true, LayerFeature::Draw,
         false, true, true, false},
     {"node not in top-level order, two layers, update before",
-        true, true, false, true,
+        true, true, false, true, LayerFeature::Draw,
         false, true, false, true},
 
     {"node hidden, no layers",
-        false, false, false, true,
+        false, false, false, true, LayerFeature::Draw,
         true, true, false, false},
     {"node hidden, one layer",
-        true, false, false, true,
+        true, false, false, true, LayerFeature::Draw,
         true, true, false, false},
     {"node hidden, two layers",
-        true, true, false, true,
+        true, true, false, true, LayerFeature::Draw,
         true, true, false, false},
     {"node hidden, two layers, clean + update before",
-        true, true, false, true,
+        true, true, false, true, LayerFeature::Draw,
         true, true, true, true},
     {"node hidden, two layers, clean before",
-        true, true, false, true,
+        true, true, false, true, LayerFeature::Draw,
         true, true, true, false},
     {"node hidden, two layers, update before",
-        true, true, false, true,
+        true, true, false, true, LayerFeature::Draw,
         true, true, false, false},
 };
 
@@ -8637,6 +8646,19 @@ void AbstractUserInterfaceTest::updateLayerOrder() {
     ui.removeLayer(layer5Removed);
     ui.setLayerInstance(Containers::pointer<Layer>(layer6, data.features, order));
 
+    /* If we have a layout layer, a layouter has to be added for layout() to
+       get called at all */
+    if(data.layouter) {
+        struct Layouter: AbstractLayouter {
+            using AbstractLayouter::AbstractLayouter;
+
+            LayouterFeatures doFeatures() const override { return {}; }
+
+            void doUpdate(Containers::BitArrayView, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const NodeHandle>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Float>&, const Containers::StridedArrayView1D<const Vector4>&, const Containers::StridedArrayView1D<const Vector4>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Vector2>&) override {}
+        };
+        ui.setLayouterInstance(Containers::pointer<Layouter>(ui.createLayouter()));
+    }
+
     /* Initially the update goes through everything due to the layer being
        removed; the pre-update is called only for layers that have
        corresponding flag set */
@@ -8644,7 +8666,7 @@ void AbstractUserInterfaceTest::updateLayerOrder() {
     ui.layer(layer1).setNeedsUpdate(LayerState::NeedsCommonDataUpdate);
     ui.layer(layer2).setNeedsUpdate(LayerState::NeedsDataUpdate);
     ui.update();
-    if(data.features >= LayerFeature::Layout)
+    if(data.features >= LayerFeature::Layout && data.layouter)
         CORRADE_COMPARE_AS(order, (Containers::arrayView<Containers::Pair<Int, LayerHandle>>({
             {PreUpdate, layer1},
             /* layer 2 is only NeedsDataUpdate, no pre-update */
@@ -8682,13 +8704,21 @@ void AbstractUserInterfaceTest::updateLayerOrder() {
     if(data.features >= LayerFeature::Layout)
         ui.layer(layer4).setNeedsUpdate(LayerState::NeedsLayoutUpdate);
     ui.update();
-    if(data.features >= LayerFeature::Layout)
+    if(data.features >= LayerFeature::Layout && data.layouter)
         CORRADE_COMPARE_AS(order, (Containers::arrayView<Containers::Pair<Int, LayerHandle>>({
             {PreUpdate, layer2},
             {Layout, layer1},
             {Layout, layer2},
             {Layout, layer4},
             {Layout, layer6},
+            {Update, layer1},
+            {Update, layer2},
+            {Update, layer4},
+            {Update, layer6},
+        })), TestSuite::Compare::Container);
+    else if(data.features >= LayerFeature::Layout)
+        CORRADE_COMPARE_AS(order, (Containers::arrayView<Containers::Pair<Int, LayerHandle>>({
+            {PreUpdate, layer2},
             {Update, layer1},
             {Update, layer2},
             {Update, layer4},
@@ -9455,7 +9485,7 @@ void AbstractUserInterfaceTest::state() {
     }
     CORRADE_COMPARE(layer.cleanCallCount, 0);
     CORRADE_COMPARE(layer.preUpdateCallCount, 0);
-    CORRADE_COMPARE(layer.layoutCallCount, data.layerFeatures >= LayerFeature::Layout ? 1 : 0);
+    CORRADE_COMPARE(layer.layoutCallCount, data.layerFeatures >= LayerFeature::Layout && data.layouters ? 1 : 0);
     CORRADE_COMPARE(layer.updateCallCount, 2);
     if(data.nodeAttachmentAnimators)
         CORRADE_COMPARE(nodeAttachmentAnimator->cleanCallCount, 0);
@@ -9515,7 +9545,7 @@ void AbstractUserInterfaceTest::state() {
         }
         CORRADE_COMPARE(layer.cleanCallCount, 0);
         CORRADE_COMPARE(layer.preUpdateCallCount, 0);
-        CORRADE_COMPARE(layer.layoutCallCount, data.layerFeatures >= LayerFeature::Layout ? 1 : 0);
+        CORRADE_COMPARE(layer.layoutCallCount, data.layerFeatures >= LayerFeature::Layout && data.layouters ? 1 : 0);
         CORRADE_COMPARE(layer.updateCallCount, 2);
         if(data.nodeAttachmentAnimators)
             CORRADE_COMPARE(nodeAttachmentAnimator->cleanCallCount, 0);
@@ -9581,7 +9611,7 @@ void AbstractUserInterfaceTest::state() {
     }
     CORRADE_COMPARE(layer.cleanCallCount, 0);
     CORRADE_COMPARE(layer.preUpdateCallCount, 0);
-    CORRADE_COMPARE(layer.layoutCallCount, data.layerFeatures >= LayerFeature::Layout ? 1 : 0);
+    CORRADE_COMPARE(layer.layoutCallCount, data.layerFeatures >= LayerFeature::Layout && data.layouters ? 1 : 0);
     CORRADE_COMPARE(layer.updateCallCount, 3);
     if(data.nodeAttachmentAnimators)
         CORRADE_COMPARE(nodeAttachmentAnimator->cleanCallCount, 0);
@@ -9605,11 +9635,11 @@ void AbstractUserInterfaceTest::state() {
         CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeClipUpdate);
         if(data.layouters) {
             CORRADE_COMPARE(layouter->cleanCallCount, 0);
-            CORRADE_COMPARE(layouter->updateCallCount, data.layerFeatures >= LayerFeature::Layout ? 2 : 1);
+            CORRADE_COMPARE(layouter->updateCallCount, data.layerFeatures >= LayerFeature::Layout && data.layouters ? 2 : 1);
         }
         CORRADE_COMPARE(layer.cleanCallCount, 0);
         CORRADE_COMPARE(layer.preUpdateCallCount, 0);
-        CORRADE_COMPARE(layer.layoutCallCount, data.layerFeatures >= LayerFeature::Layout ? 1 : 0);
+        CORRADE_COMPARE(layer.layoutCallCount, data.layerFeatures >= LayerFeature::Layout && data.layouters ? 1 : 0);
         CORRADE_COMPARE(layer.updateCallCount, 3);
         if(data.nodeAttachmentAnimators)
             CORRADE_COMPARE(nodeAttachmentAnimator->cleanCallCount, 0);
@@ -9680,7 +9710,7 @@ void AbstractUserInterfaceTest::state() {
     }
     CORRADE_COMPARE(layer.cleanCallCount, 0);
     CORRADE_COMPARE(layer.preUpdateCallCount, 0);
-    CORRADE_COMPARE(layer.layoutCallCount, data.layerFeatures >= LayerFeature::Layout ? 1 : 0);
+    CORRADE_COMPARE(layer.layoutCallCount, data.layerFeatures >= LayerFeature::Layout && data.layouters ? 1 : 0);
     CORRADE_COMPARE(layer.updateCallCount, 4);
     if(data.nodeAttachmentAnimators)
         CORRADE_COMPARE(nodeAttachmentAnimator->cleanCallCount, 0);
@@ -9706,7 +9736,7 @@ void AbstractUserInterfaceTest::state() {
         }
         CORRADE_COMPARE(layer.cleanCallCount, 0);
         CORRADE_COMPARE(layer.preUpdateCallCount, 0);
-        CORRADE_COMPARE(layer.layoutCallCount, data.layerFeatures >= LayerFeature::Layout ? 1 : 0);
+        CORRADE_COMPARE(layer.layoutCallCount, data.layerFeatures >= LayerFeature::Layout && data.layouters ? 1 : 0);
         CORRADE_COMPARE(layer.updateCallCount, 4);
         if(data.nodeAttachmentAnimators)
             CORRADE_COMPARE(nodeAttachmentAnimator->cleanCallCount, 0);
@@ -9777,7 +9807,7 @@ void AbstractUserInterfaceTest::state() {
     /* Because a common data update was requested, preUpdate() gets called as
        well */
     CORRADE_COMPARE(layer.preUpdateCallCount, 1);
-    CORRADE_COMPARE(layer.layoutCallCount, data.layerFeatures >= LayerFeature::Layout ? 1 : 0);
+    CORRADE_COMPARE(layer.layoutCallCount, data.layerFeatures >= LayerFeature::Layout && data.layouters ? 1 : 0);
     CORRADE_COMPARE(layer.updateCallCount, 5);
     if(data.nodeAttachmentAnimators)
         CORRADE_COMPARE(nodeAttachmentAnimator->cleanCallCount, 0);
@@ -9815,7 +9845,7 @@ void AbstractUserInterfaceTest::state() {
         }
         CORRADE_COMPARE(layer.cleanCallCount, 0);
         CORRADE_COMPARE(layer.preUpdateCallCount, 1);
-        CORRADE_COMPARE(layer.layoutCallCount, data.layerFeatures >= LayerFeature::Layout ? 1 : 0);
+        CORRADE_COMPARE(layer.layoutCallCount, data.layerFeatures >= LayerFeature::Layout && data.layouters ? 1 : 0);
         CORRADE_COMPARE(layer.updateCallCount, 5);
         if(data.nodeAttachmentAnimators)
             CORRADE_COMPARE(nodeAttachmentAnimator->cleanCallCount, 0);
@@ -9931,7 +9961,7 @@ void AbstractUserInterfaceTest::state() {
     }
     CORRADE_COMPARE(layer.cleanCallCount, 0);
     CORRADE_COMPARE(layer.preUpdateCallCount, 1);
-    CORRADE_COMPARE(layer.layoutCallCount, data.layerFeatures >= LayerFeature::Layout ? 2 : 0);
+    CORRADE_COMPARE(layer.layoutCallCount, data.layerFeatures >= LayerFeature::Layout && data.layouters ? 2 : 0);
     CORRADE_COMPARE(layer.updateCallCount, 6);
     if(data.nodeAttachmentAnimators)
         CORRADE_COMPARE(nodeAttachmentAnimator->cleanCallCount, 0);
@@ -9969,7 +9999,7 @@ void AbstractUserInterfaceTest::state() {
         }
         CORRADE_COMPARE(layer.cleanCallCount, 0);
         CORRADE_COMPARE(layer.preUpdateCallCount, 1);
-        CORRADE_COMPARE(layer.layoutCallCount, data.layerFeatures >= LayerFeature::Layout ? 2 : 0);
+        CORRADE_COMPARE(layer.layoutCallCount, data.layerFeatures >= LayerFeature::Layout && data.layouters ? 2 : 0);
         CORRADE_COMPARE(layer.updateCallCount, 6);
         if(data.nodeAttachmentAnimators)
             CORRADE_COMPARE(nodeAttachmentAnimator->cleanCallCount, 0);
@@ -10084,7 +10114,7 @@ void AbstractUserInterfaceTest::state() {
     }
     CORRADE_COMPARE(layer.cleanCallCount, 0);
     CORRADE_COMPARE(layer.preUpdateCallCount, 1);
-    CORRADE_COMPARE(layer.layoutCallCount, data.layerFeatures >= LayerFeature::Layout ? 3 : 0);
+    CORRADE_COMPARE(layer.layoutCallCount, data.layerFeatures >= LayerFeature::Layout && data.layouters ? 3 : 0);
     CORRADE_COMPARE(layer.updateCallCount, 7);
     if(data.nodeAttachmentAnimators)
         CORRADE_COMPARE(nodeAttachmentAnimator->cleanCallCount, 0);
@@ -10109,7 +10139,7 @@ void AbstractUserInterfaceTest::state() {
         }
         CORRADE_COMPARE(layer.cleanCallCount, 0);
         CORRADE_COMPARE(layer.preUpdateCallCount, 1);
-        CORRADE_COMPARE(layer.layoutCallCount, data.layerFeatures >= LayerFeature::Layout ? 3 : 0);
+        CORRADE_COMPARE(layer.layoutCallCount, data.layerFeatures >= LayerFeature::Layout && data.layouters ? 3 : 0);
         CORRADE_COMPARE(layer.updateCallCount, 7);
         if(data.nodeAttachmentAnimators)
             CORRADE_COMPARE(nodeAttachmentAnimator->cleanCallCount, 0);
@@ -10217,7 +10247,7 @@ void AbstractUserInterfaceTest::state() {
     }
     CORRADE_COMPARE(layer.cleanCallCount, 0);
     CORRADE_COMPARE(layer.preUpdateCallCount, 1);
-    CORRADE_COMPARE(layer.layoutCallCount, data.layerFeatures >= LayerFeature::Layout ? 4 : 0);
+    CORRADE_COMPARE(layer.layoutCallCount, data.layerFeatures >= LayerFeature::Layout && data.layouters ? 4 : 0);
     CORRADE_COMPARE(layer.updateCallCount, 8);
     if(data.nodeAttachmentAnimators)
         CORRADE_COMPARE(nodeAttachmentAnimator->cleanCallCount, 0);
@@ -10247,7 +10277,7 @@ void AbstractUserInterfaceTest::state() {
         }
         CORRADE_COMPARE(layer.cleanCallCount, 0);
         CORRADE_COMPARE(layer.preUpdateCallCount, 1);
-        CORRADE_COMPARE(layer.layoutCallCount, data.layerFeatures >= LayerFeature::Layout ? 4 : 0);
+        CORRADE_COMPARE(layer.layoutCallCount, data.layerFeatures >= LayerFeature::Layout && data.layouters ? 4 : 0);
         CORRADE_COMPARE(layer.updateCallCount, 8);
         if(data.nodeAttachmentAnimators)
             CORRADE_COMPARE(nodeAttachmentAnimator->cleanCallCount, 0);
@@ -10363,7 +10393,7 @@ void AbstractUserInterfaceTest::state() {
     }
     CORRADE_COMPARE(layer.cleanCallCount, 0);
     CORRADE_COMPARE(layer.preUpdateCallCount, 1);
-    CORRADE_COMPARE(layer.layoutCallCount, data.layerFeatures >= LayerFeature::Layout ? 5 : 0);
+    CORRADE_COMPARE(layer.layoutCallCount, data.layerFeatures >= LayerFeature::Layout && data.layouters ? 5 : 0);
     CORRADE_COMPARE(layer.updateCallCount, 9);
     if(data.nodeAttachmentAnimators)
         CORRADE_COMPARE(nodeAttachmentAnimator->cleanCallCount, 0);
@@ -10393,7 +10423,7 @@ void AbstractUserInterfaceTest::state() {
         }
         CORRADE_COMPARE(layer.cleanCallCount, 0);
         CORRADE_COMPARE(layer.preUpdateCallCount, 1);
-        CORRADE_COMPARE(layer.layoutCallCount, data.layerFeatures >= LayerFeature::Layout ? 5 : 0);
+        CORRADE_COMPARE(layer.layoutCallCount, data.layerFeatures >= LayerFeature::Layout && data.layouters ? 5 : 0);
         CORRADE_COMPARE(layer.updateCallCount, 9);
     }
 
@@ -10458,7 +10488,7 @@ void AbstractUserInterfaceTest::state() {
     }
     CORRADE_COMPARE(layer.cleanCallCount, 0);
     CORRADE_COMPARE(layer.preUpdateCallCount, 1);
-    CORRADE_COMPARE(layer.layoutCallCount, data.layerFeatures >= LayerFeature::Layout ? 5 : 0);
+    CORRADE_COMPARE(layer.layoutCallCount, data.layerFeatures >= LayerFeature::Layout && data.layouters ? 5 : 0);
     CORRADE_COMPARE(layer.updateCallCount, 10);
     if(data.nodeAttachmentAnimators)
         CORRADE_COMPARE(nodeAttachmentAnimator->cleanCallCount, 0);
@@ -10495,7 +10525,7 @@ void AbstractUserInterfaceTest::state() {
         }
         CORRADE_COMPARE(layer.cleanCallCount, 0);
         CORRADE_COMPARE(layer.preUpdateCallCount, 1);
-        CORRADE_COMPARE(layer.layoutCallCount, data.layerFeatures >= LayerFeature::Layout ? 5 : 0);
+        CORRADE_COMPARE(layer.layoutCallCount, data.layerFeatures >= LayerFeature::Layout && data.layouters ? 5 : 0);
         CORRADE_COMPARE(layer.updateCallCount, 10);
         if(data.nodeAttachmentAnimators)
             CORRADE_COMPARE(nodeAttachmentAnimator->cleanCallCount, 0);
@@ -10564,7 +10594,7 @@ void AbstractUserInterfaceTest::state() {
     }
     CORRADE_COMPARE(layer.cleanCallCount, 0);
     CORRADE_COMPARE(layer.preUpdateCallCount, 1);
-    CORRADE_COMPARE(layer.layoutCallCount, data.layerFeatures >= LayerFeature::Layout ? 5 : 0);
+    CORRADE_COMPARE(layer.layoutCallCount, data.layerFeatures >= LayerFeature::Layout && data.layouters ? 5 : 0);
     CORRADE_COMPARE(layer.updateCallCount, 11);
     if(data.nodeAttachmentAnimators)
         CORRADE_COMPARE(nodeAttachmentAnimator->cleanCallCount, 0);
@@ -10590,7 +10620,7 @@ void AbstractUserInterfaceTest::state() {
         }
         CORRADE_COMPARE(layer.cleanCallCount, 0);
         CORRADE_COMPARE(layer.preUpdateCallCount, 1);
-        CORRADE_COMPARE(layer.layoutCallCount, data.layerFeatures >= LayerFeature::Layout ? 5 : 0);
+        CORRADE_COMPARE(layer.layoutCallCount, data.layerFeatures >= LayerFeature::Layout && data.layouters ? 5 : 0);
         CORRADE_COMPARE(layer.updateCallCount, 11);
         if(data.nodeAttachmentAnimators)
             CORRADE_COMPARE(nodeAttachmentAnimator->cleanCallCount, 0);
@@ -10660,7 +10690,7 @@ void AbstractUserInterfaceTest::state() {
     }
     CORRADE_COMPARE(layer.cleanCallCount, 0);
     CORRADE_COMPARE(layer.preUpdateCallCount, 1);
-    CORRADE_COMPARE(layer.layoutCallCount, data.layerFeatures >= LayerFeature::Layout ? 5 : 0);
+    CORRADE_COMPARE(layer.layoutCallCount, data.layerFeatures >= LayerFeature::Layout && data.layouters ? 5 : 0);
     CORRADE_COMPARE(layer.updateCallCount, 12);
     if(data.nodeAttachmentAnimators)
         CORRADE_COMPARE(nodeAttachmentAnimator->cleanCallCount, 0);
@@ -10704,7 +10734,7 @@ void AbstractUserInterfaceTest::state() {
         }
         CORRADE_COMPARE(layer.cleanCallCount, 0);
         CORRADE_COMPARE(layer.preUpdateCallCount, 1);
-        CORRADE_COMPARE(layer.layoutCallCount, data.layerFeatures >= LayerFeature::Layout ? 5 : 0);
+        CORRADE_COMPARE(layer.layoutCallCount, data.layerFeatures >= LayerFeature::Layout && data.layouters && data.layouters ? 5 : 0);
         CORRADE_COMPARE(layer.updateCallCount, 12);
         if(data.nodeAttachmentAnimators)
             CORRADE_COMPARE(nodeAttachmentAnimator->cleanCallCount, 0);
@@ -10773,7 +10803,7 @@ void AbstractUserInterfaceTest::state() {
     }
     CORRADE_COMPARE(layer.cleanCallCount, 0);
     CORRADE_COMPARE(layer.preUpdateCallCount, 1);
-    CORRADE_COMPARE(layer.layoutCallCount, data.layerFeatures >= LayerFeature::Layout ? 5 : 0);
+    CORRADE_COMPARE(layer.layoutCallCount, data.layerFeatures >= LayerFeature::Layout && data.layouters ? 5 : 0);
     CORRADE_COMPARE(layer.updateCallCount, 13);
     if(data.nodeAttachmentAnimators)
         CORRADE_COMPARE(nodeAttachmentAnimator->cleanCallCount, 0);
@@ -10803,7 +10833,7 @@ void AbstractUserInterfaceTest::state() {
         }
         CORRADE_COMPARE(layer.cleanCallCount, 0);
         CORRADE_COMPARE(layer.preUpdateCallCount, 1);
-        CORRADE_COMPARE(layer.layoutCallCount, data.layerFeatures >= LayerFeature::Layout ? 5 : 0);
+        CORRADE_COMPARE(layer.layoutCallCount, data.layerFeatures >= LayerFeature::Layout && data.layouters ? 5 : 0);
         CORRADE_COMPARE(layer.updateCallCount, 13);
         if(data.nodeAttachmentAnimators)
             CORRADE_COMPARE(nodeAttachmentAnimator->cleanCallCount, 0);
@@ -10870,7 +10900,7 @@ void AbstractUserInterfaceTest::state() {
     }
     CORRADE_COMPARE(layer.cleanCallCount, 0);
     CORRADE_COMPARE(layer.preUpdateCallCount, 1);
-    CORRADE_COMPARE(layer.layoutCallCount, data.layerFeatures >= LayerFeature::Layout ? 5 : 0);
+    CORRADE_COMPARE(layer.layoutCallCount, data.layerFeatures >= LayerFeature::Layout && data.layouters ? 5 : 0);
     CORRADE_COMPARE(layer.updateCallCount, 14);
     if(data.nodeAttachmentAnimators)
         CORRADE_COMPARE(nodeAttachmentAnimator->cleanCallCount, 0);
@@ -10895,7 +10925,7 @@ void AbstractUserInterfaceTest::state() {
         }
         CORRADE_COMPARE(layer.cleanCallCount, 0);
         CORRADE_COMPARE(layer.preUpdateCallCount, 1);
-        CORRADE_COMPARE(layer.layoutCallCount, data.layerFeatures >= LayerFeature::Layout ? 5 : 0);
+        CORRADE_COMPARE(layer.layoutCallCount, data.layerFeatures >= LayerFeature::Layout && data.layouters ? 5 : 0);
         CORRADE_COMPARE(layer.updateCallCount, 14);
         if(data.nodeAttachmentAnimators)
             CORRADE_COMPARE(nodeAttachmentAnimator->cleanCallCount, 0);
@@ -11002,7 +11032,7 @@ void AbstractUserInterfaceTest::state() {
     }
     CORRADE_COMPARE(layer.cleanCallCount, 0);
     CORRADE_COMPARE(layer.preUpdateCallCount, 1);
-    CORRADE_COMPARE(layer.layoutCallCount, data.layerFeatures >= LayerFeature::Layout ? 6 : 0);
+    CORRADE_COMPARE(layer.layoutCallCount, data.layerFeatures >= LayerFeature::Layout && data.layouters ? 6 : 0);
     CORRADE_COMPARE(layer.updateCallCount, 15);
     if(data.nodeAttachmentAnimators)
         CORRADE_COMPARE(nodeAttachmentAnimator->cleanCallCount, 0);
@@ -11032,7 +11062,7 @@ void AbstractUserInterfaceTest::state() {
         }
         CORRADE_COMPARE(layer.cleanCallCount, 0);
         CORRADE_COMPARE(layer.preUpdateCallCount, 1);
-        CORRADE_COMPARE(layer.layoutCallCount, data.layerFeatures >= LayerFeature::Layout ? 6 : 0);
+        CORRADE_COMPARE(layer.layoutCallCount, data.layerFeatures >= LayerFeature::Layout && data.layouters ? 6 : 0);
         CORRADE_COMPARE(layer.updateCallCount, 15);
         if(data.nodeAttachmentAnimators)
             CORRADE_COMPARE(nodeAttachmentAnimator->cleanCallCount, 0);
@@ -11145,7 +11175,7 @@ void AbstractUserInterfaceTest::state() {
     }
     CORRADE_COMPARE(layer.cleanCallCount, 0);
     CORRADE_COMPARE(layer.preUpdateCallCount, 1);
-    CORRADE_COMPARE(layer.layoutCallCount, data.layerFeatures >= LayerFeature::Layout ? 7 : 0);
+    CORRADE_COMPARE(layer.layoutCallCount, data.layerFeatures >= LayerFeature::Layout && data.layouters ? 7 : 0);
     CORRADE_COMPARE(layer.updateCallCount, 16);
     if(data.nodeAttachmentAnimators)
         CORRADE_COMPARE(nodeAttachmentAnimator->cleanCallCount, 0);
@@ -11170,7 +11200,7 @@ void AbstractUserInterfaceTest::state() {
         }
         CORRADE_COMPARE(layer.cleanCallCount, 0);
         CORRADE_COMPARE(layer.preUpdateCallCount, 1);
-        CORRADE_COMPARE(layer.layoutCallCount, data.layerFeatures >= LayerFeature::Layout ? 7 : 0);
+        CORRADE_COMPARE(layer.layoutCallCount, data.layerFeatures >= LayerFeature::Layout && data.layouters ? 7 : 0);
         CORRADE_COMPARE(layer.updateCallCount, 16);
         if(data.nodeAttachmentAnimators)
             CORRADE_COMPARE(nodeAttachmentAnimator->cleanCallCount, 0);
@@ -11284,7 +11314,7 @@ void AbstractUserInterfaceTest::state() {
     }
     CORRADE_COMPARE(layer.cleanCallCount, 0);
     CORRADE_COMPARE(layer.preUpdateCallCount, 1);
-    CORRADE_COMPARE(layer.layoutCallCount, data.layerFeatures >= LayerFeature::Layout ? 8 : 0);
+    CORRADE_COMPARE(layer.layoutCallCount, data.layerFeatures >= LayerFeature::Layout && data.layouters ? 8 : 0);
     CORRADE_COMPARE(layer.updateCallCount, 17);
     if(data.nodeAttachmentAnimators)
         CORRADE_COMPARE(nodeAttachmentAnimator->cleanCallCount, 0);
@@ -11404,7 +11434,7 @@ void AbstractUserInterfaceTest::state() {
         CORRADE_COMPARE(layouter->updateCallCount, data.layerFeatures >= LayerFeature::Layout ? 10 : 9);
         CORRADE_COMPARE(layer.cleanCallCount, 0);
         CORRADE_COMPARE(layer.preUpdateCallCount, 1);
-        CORRADE_COMPARE(layer.layoutCallCount, data.layerFeatures >= LayerFeature::Layout ? 9 : 0);
+        CORRADE_COMPARE(layer.layoutCallCount, data.layerFeatures >= LayerFeature::Layout && data.layouters ? 9 : 0);
         CORRADE_COMPARE(layer.updateCallCount, 18);
         if(data.nodeAttachmentAnimators)
             CORRADE_COMPARE(nodeAttachmentAnimator->cleanCallCount, 0);
@@ -11430,7 +11460,7 @@ void AbstractUserInterfaceTest::state() {
         }
         CORRADE_COMPARE(layer.cleanCallCount, 0);
         CORRADE_COMPARE(layer.preUpdateCallCount, 1);
-        CORRADE_COMPARE(layer.layoutCallCount, (data.layerFeatures >= LayerFeature::Layout ? 8 + (data.layouters ? 1 : 0) : 0));
+        CORRADE_COMPARE(layer.layoutCallCount, data.layerFeatures >= LayerFeature::Layout && data.layouters ? 9 : 0);
         CORRADE_COMPARE(layer.updateCallCount, 17 + (data.layouters ? 1 : 0));
         if(data.nodeAttachmentAnimators)
             CORRADE_COMPARE(nodeAttachmentAnimator->cleanCallCount, 0);
@@ -11504,7 +11534,7 @@ void AbstractUserInterfaceTest::state() {
     }
     CORRADE_COMPARE(layer.cleanCallCount, 0);
     CORRADE_COMPARE(layer.preUpdateCallCount, 1);
-    CORRADE_COMPARE(layer.layoutCallCount, (data.layerFeatures >= LayerFeature::Layout ? 8 + (data.layouters ? 1 : 0) : 0));
+    CORRADE_COMPARE(layer.layoutCallCount, data.layerFeatures >= LayerFeature::Layout && data.layouters ? 9 : 0);
     CORRADE_COMPARE(layer.updateCallCount, 18 + (data.layouters ? 1 : 0));
     if(data.nodeAttachmentAnimators)
         CORRADE_COMPARE(nodeAttachmentAnimator->cleanCallCount, 0);
@@ -11554,7 +11584,7 @@ void AbstractUserInterfaceTest::state() {
         }
         CORRADE_COMPARE(layer.cleanCallCount, 0);
         CORRADE_COMPARE(layer.preUpdateCallCount, 1);
-        CORRADE_COMPARE(layer.layoutCallCount, (data.layerFeatures >= LayerFeature::Layout ? 8 + (data.layouters ? 1 : 0) : 0));
+        CORRADE_COMPARE(layer.layoutCallCount, data.layerFeatures >= LayerFeature::Layout && data.layouters ? 9 : 0);
         CORRADE_COMPARE(layer.updateCallCount, 18 + (data.layouters ? 1 : 0));
         CORRADE_COMPARE(anotherLayer.cleanCallCount, 0);
         CORRADE_COMPARE(anotherLayer.preUpdateCallCount, 0);
@@ -11587,7 +11617,7 @@ void AbstractUserInterfaceTest::state() {
     }
     CORRADE_COMPARE(layer.cleanCallCount, 0);
     CORRADE_COMPARE(layer.preUpdateCallCount, 1);
-    CORRADE_COMPARE(layer.layoutCallCount, (data.layerFeatures >= LayerFeature::Layout ? 8 + (data.layouters ? 1 : 0) : 0));
+    CORRADE_COMPARE(layer.layoutCallCount, data.layerFeatures >= LayerFeature::Layout && data.layouters ? 9 : 0);
     CORRADE_COMPARE(layer.updateCallCount, 18 + (data.layouters ? 1 : 0));
     CORRADE_COMPARE(anotherLayer.cleanCallCount, 0);
     CORRADE_COMPARE(anotherLayer.preUpdateCallCount, 0);
@@ -11629,7 +11659,7 @@ void AbstractUserInterfaceTest::state() {
         CORRADE_COMPARE(layer.usedCount(), 3);
         CORRADE_COMPARE(layer.cleanCallCount, 0);
         CORRADE_COMPARE(layer.preUpdateCallCount, 1);
-        CORRADE_COMPARE(layer.layoutCallCount, (data.layerFeatures >= LayerFeature::Layout ? 8 + (data.layouters ? 1 : 0) : 0));
+        CORRADE_COMPARE(layer.layoutCallCount, data.layerFeatures >= LayerFeature::Layout && data.layouters ? 9 : 0);
         CORRADE_COMPARE(layer.updateCallCount, 18 + (data.layouters ? 1 : 0));
         CORRADE_COMPARE(anotherLayer.cleanCallCount, 0);
         CORRADE_COMPARE(anotherLayer.preUpdateCallCount, 0);
@@ -11783,7 +11813,7 @@ void AbstractUserInterfaceTest::state() {
     CORRADE_COMPARE(layer.usedCount(), 3);
     CORRADE_COMPARE(layer.cleanCallCount, 0);
     CORRADE_COMPARE(layer.preUpdateCallCount, 1);
-    CORRADE_COMPARE(layer.layoutCallCount, (data.layerFeatures >= LayerFeature::Layout ? 9 + (data.layouters ? 1 : 0) : 0));
+    CORRADE_COMPARE(layer.layoutCallCount, data.layerFeatures >= LayerFeature::Layout && data.layouters ? 10 : 0);
     CORRADE_COMPARE(layer.updateCallCount, 19 + (data.layouters ? 1 : 0));
     CORRADE_COMPARE(anotherLayer.cleanCallCount, 0);
     CORRADE_COMPARE(anotherLayer.preUpdateCallCount, 0);
@@ -11866,7 +11896,7 @@ void AbstractUserInterfaceTest::state() {
         CORRADE_COMPARE(layer.usedCount(), 1);
         CORRADE_COMPARE(layer.cleanCallCount, 1);
         CORRADE_COMPARE(layer.preUpdateCallCount, 1);
-        CORRADE_COMPARE(layer.layoutCallCount, (data.layerFeatures >= LayerFeature::Layout ? 9 + (data.layouters ? 1 : 0) : 0));
+        CORRADE_COMPARE(layer.layoutCallCount, data.layerFeatures >= LayerFeature::Layout && data.layouters ? 10 : 0);
         CORRADE_COMPARE(layer.updateCallCount, 19 + (data.layouters ? 1 : 0));
         CORRADE_COMPARE(anotherLayer.cleanCallCount, 1);
         CORRADE_COMPARE(anotherLayer.preUpdateCallCount, 0);
@@ -12027,7 +12057,7 @@ void AbstractUserInterfaceTest::state() {
     CORRADE_COMPARE(layer.usedCount(), 1);
     CORRADE_COMPARE(layer.cleanCallCount, 1);
     CORRADE_COMPARE(layer.preUpdateCallCount, 1);
-    CORRADE_COMPARE(layer.layoutCallCount, data.layerFeatures >= LayerFeature::Layout ? 10 + (data.layouters ? 1 : 0) : 0);
+    CORRADE_COMPARE(layer.layoutCallCount, data.layerFeatures >= LayerFeature::Layout && data.layouters ? 11 : 0);
     CORRADE_COMPARE(layer.updateCallCount, 20 + (data.layouters ? 1 : 0));
     CORRADE_COMPARE(anotherLayer.cleanCallCount, 1);
     CORRADE_COMPARE(anotherLayer.preUpdateCallCount, 0);
@@ -12071,7 +12101,7 @@ void AbstractUserInterfaceTest::state() {
             CORRADE_COMPARE(anotherLayouter->updateCallCount, 0);
             CORRADE_COMPARE(layer.cleanCallCount, 1);
             CORRADE_COMPARE(layer.preUpdateCallCount, 1);
-            CORRADE_COMPARE(layer.layoutCallCount, data.layerFeatures >= LayerFeature::Layout ? 10 + (data.layouters ? 1 : 0) : 0);
+            CORRADE_COMPARE(layer.layoutCallCount, data.layerFeatures >= LayerFeature::Layout && data.layouters ? 11 : 0);
             CORRADE_COMPARE(layer.updateCallCount, 21);
             CORRADE_COMPARE(anotherLayer.cleanCallCount, 1);
             CORRADE_COMPARE(anotherLayer.preUpdateCallCount, 0);
@@ -12193,7 +12223,7 @@ void AbstractUserInterfaceTest::state() {
         CORRADE_COMPARE(layer.usedCount(), 1);
         CORRADE_COMPARE(layer.cleanCallCount, 1);
         CORRADE_COMPARE(layer.preUpdateCallCount, 1);
-        CORRADE_COMPARE(layer.layoutCallCount, data.layerFeatures >= LayerFeature::Layout ? 12 : 0);
+        CORRADE_COMPARE(layer.layoutCallCount, data.layerFeatures >= LayerFeature::Layout && data.layouters ? 12 : 0);
         CORRADE_COMPARE(layer.updateCallCount, 22);
         CORRADE_COMPARE(anotherLayer.cleanCallCount, 1);
         CORRADE_COMPARE(anotherLayer.preUpdateCallCount, 0);
@@ -12226,7 +12256,7 @@ void AbstractUserInterfaceTest::state() {
             CORRADE_COMPARE(anotherLayouter->updateCallCount, 1);
             CORRADE_COMPARE(layer.cleanCallCount, 1);
             CORRADE_COMPARE(layer.preUpdateCallCount, 1);
-            CORRADE_COMPARE(layer.layoutCallCount, data.layerFeatures >= LayerFeature::Layout ? 12 : 0);
+            CORRADE_COMPARE(layer.layoutCallCount, data.layerFeatures >= LayerFeature::Layout && data.layouters ? 12 : 0);
             CORRADE_COMPARE(layer.updateCallCount, 22);
             CORRADE_COMPARE(anotherLayer.cleanCallCount, 1);
             CORRADE_COMPARE(anotherLayer.preUpdateCallCount, 0);
@@ -12299,7 +12329,7 @@ void AbstractUserInterfaceTest::state() {
         CORRADE_COMPARE(layer.usedCount(), 1);
         CORRADE_COMPARE(layer.cleanCallCount, 1);
         CORRADE_COMPARE(layer.preUpdateCallCount, 1);
-        CORRADE_COMPARE(layer.layoutCallCount, data.layerFeatures >= LayerFeature::Layout ? 13 : 0);
+        CORRADE_COMPARE(layer.layoutCallCount, data.layerFeatures >= LayerFeature::Layout && data.layouters ? 13 : 0);
         CORRADE_COMPARE(layer.updateCallCount, 23);
         CORRADE_COMPARE(anotherLayer.cleanCallCount, 1);
         CORRADE_COMPARE(anotherLayer.preUpdateCallCount, 0);
@@ -14187,7 +14217,7 @@ void AbstractUserInterfaceTest::drawEmpty() {
         using AbstractLayer::create;
 
         LayerFeatures doFeatures() const override {
-            return LayerFeature::Draw|_features;
+            return _features;
         }
 
         void doLayout(Containers::BitArrayView dataIdsToLayout, const Containers::StridedArrayView1D<Vector2>& nodeMinSizes, const Containers::StridedArrayView1D<Vector2>& nodeMaxSizes, const Containers::StridedArrayView1D<Float> & nodeAspectRatios, const Containers::StridedArrayView1D<Vector4>& nodePaddings, const Containers::StridedArrayView1D<Vector4>& nodeMargins) override {
@@ -14227,12 +14257,22 @@ void AbstractUserInterfaceTest::drawEmpty() {
             LayerFeatures _features;
             bool _node;
     };
+    struct Layouter: AbstractLayouter {
+        using AbstractLayouter::AbstractLayouter;
+
+        LayouterFeatures doFeatures() const override { return {}; }
+
+        void doUpdate(Containers::BitArrayView, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const NodeHandle>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Float>&, const Containers::StridedArrayView1D<const Vector4>&, const Containers::StridedArrayView1D<const Vector4>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Vector2>&) override {}
+    };
 
     Layer *layer1{}, *layer2{};
+    Layouter* layouter{};
     if(data.layer1)
-        layer1 = &ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer(), data.layoutLayer ? LayerFeature::Layout : LayerFeatures{}, data.node));
+        layer1 = &ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer(), data.layerFeatures, data.node));
     if(data.layer2)
-        layer2 = &ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer(), data.layoutLayer ? LayerFeature::Layout : LayerFeatures{}, data.node));
+        layer2 = &ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer(), data.layerFeatures, data.node));
+    if(data.layouter)
+        layouter = &ui.setLayouterInstance(Containers::pointer<Layouter>(ui.createLayouter()));
 
     if(data.node) {
         NodeHandle node = ui.createNode({}, {100, 100});
@@ -14262,13 +14302,16 @@ void AbstractUserInterfaceTest::drawEmpty() {
         /* Without a node no update is triggered by default, so force it */
         if(data.layer1) {
             layer1->setNeedsUpdate(LayerState::NeedsDataUpdate);
-            if(data.layoutLayer)
+            if(data.layerFeatures >= LayerFeature::Layout)
                 layer1->setNeedsUpdate(LayerState::NeedsLayoutUpdate);
         }
         if(data.layer2) {
             layer2->setNeedsUpdate(LayerState::NeedsDataUpdate);
-            if(data.layoutLayer)
+            if(data.layerFeatures >= LayerFeature::Layout)
                 layer2->setNeedsUpdate(LayerState::NeedsLayoutUpdate);
+        }
+        if(data.layouter && !data.layer1 && !data.layer2) {
+            layouter->setNeedsUpdate();
         }
     }
 
@@ -14283,8 +14326,8 @@ void AbstractUserInterfaceTest::drawEmpty() {
         CORRADE_COMPARE(layer2->updateCallCount, 0);
     }
 
-    /* At least one state should be set if we have at least one layer, if not,
-       the test is wrong */
+    /* At least one state should be set if we have at least one layer or
+       layouter, if not, the test is wrong */
     if(data.layer1 || data.layer2)
         CORRADE_COMPARE_AS(ui.state(),
             UserInterfaceStates{},
@@ -14310,11 +14353,11 @@ void AbstractUserInterfaceTest::drawEmpty() {
     CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
     CORRADE_COMPARE(ui.renderer<Renderer>().transitionCallCount, 1);
     if(data.layer1) {
-        CORRADE_COMPARE(layer1->layoutCallCount, data.layoutLayer ? 1 : 0);
+        CORRADE_COMPARE(layer1->layoutCallCount, data.layerFeatures >= LayerFeature::Layout && data.layouter ? 1 : 0);
         CORRADE_COMPARE(layer1->updateCallCount, 1);
     }
     if(data.layer2) {
-        CORRADE_COMPARE(layer2->layoutCallCount, data.layoutLayer ? 1 : 0);
+        CORRADE_COMPARE(layer2->layoutCallCount, data.layerFeatures >= LayerFeature::Layout && data.layouter ? 1 : 0);
         CORRADE_COMPARE(layer2->updateCallCount, 1);
     }
 }

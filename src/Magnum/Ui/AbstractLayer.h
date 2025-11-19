@@ -1918,7 +1918,8 @@ class MAGNUM_UI_EXPORT AbstractLayer {
          * @ref AbstractUserInterface::update() whenever
          * @ref UserInterfaceState::NeedsLayoutUpdate or any of the global or
          * layer-specific states that imply it are present in
-         * @ref AbstractUserInterface::state(). Called only if
+         * @ref AbstractUserInterface::state() and there's at least one
+         * layouter to make use of these properties. Called only if
          * @ref LayerFeature::Layout is supported, is always called after
          * @ref doPreUpdate() and @ref doClean(), and before @ref doUpdate(),
          * @ref doComposite() and @ref doDraw(), with at least one
