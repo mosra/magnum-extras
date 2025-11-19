@@ -728,11 +728,11 @@ StyleFeatures McssDarkStyle::doFeatures() const {
 }
 
 UnsignedInt McssDarkStyle::doBaseLayerStyleUniformCount() const {
-    return Implementation::BaseStyleCount;
+    return Implementation::BaseStyleUniformCount;
 }
 
 UnsignedInt McssDarkStyle::doBaseLayerStyleCount() const {
-    return Implementation::BaseStyleUniformCount;
+    return Implementation::BaseStyleCount;
 }
 
 UnsignedInt McssDarkStyle::doBaseLayerDynamicStyleCount() const {
