@@ -35,6 +35,7 @@
 #include "Magnum/Ui/BaseLayerGL.h"
 #include "Magnum/Ui/BaseLayerAnimator.h"
 #include "Magnum/Ui/EventLayer.h"
+#include "Magnum/Ui/LayoutLayer.h"
 #include "Magnum/Ui/RendererGL.h"
 #include "Magnum/Ui/SnapLayouter.h"
 #include "Magnum/Ui/TextLayerGL.h"
@@ -80,7 +81,7 @@ bool UserInterfaceGL::tryCreateInternal(const AbstractStyle& style, const StyleF
     #endif
     /* No need to test for baseLayerStyleAnimator / textLayerStyleAnimator as
        those can be present only if baseLayer / textLayer is there already */
-    CORRADE_ASSERT(!hasRendererInstance() && !state.baseLayer && !state.textLayer && !state.eventLayer && !state.snapLayouter,
+    CORRADE_ASSERT(!hasRendererInstance() && !state.baseLayer && !state.textLayer && !state.eventLayer && !state.layoutLayer && !state.snapLayouter,
         "Ui::UserInterfaceGL::tryCreate(): user interface already created",
         /* Has to return true with CORRADE_GRACEFUL_ASSERT so when tested
            through create() it doesn't std::exit() the whole executable */
@@ -216,6 +217,11 @@ bool UserInterfaceGL::trySetStyle(const AbstractStyle& style, const StyleFeature
         CORRADE_ASSERT(!state.eventLayer,
             "Ui::UserInterfaceGL::trySetStyle(): event layer already present", {});
         setEventLayerInstance(Containers::pointer<EventLayer>(createLayer()));
+    }
+    if(features >= StyleFeature::LayoutLayer) {
+        CORRADE_ASSERT(!state.layoutLayer,
+            "Ui::UserInterfaceGL::trySetStyle(): layout layer already present", {});
+        setLayoutLayerInstance(Containers::pointer<LayoutLayer>(createLayer(), style.layoutLayerStyleCount()));
     }
     if(features >= StyleFeature::SnapLayouter) {
         CORRADE_ASSERT(!state.snapLayouter,

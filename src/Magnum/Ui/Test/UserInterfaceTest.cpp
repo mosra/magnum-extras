@@ -36,6 +36,7 @@
 #include "Magnum/Ui/BaseLayerAnimator.h"
 #include "Magnum/Ui/EventLayer.h"
 #include "Magnum/Ui/Handle.h"
+#include "Magnum/Ui/LayoutLayer.h"
 #include "Magnum/Ui/SnapLayouter.h"
 #include "Magnum/Ui/TextLayer.h"
 #include "Magnum/Ui/TextLayerAnimator.h"
@@ -70,6 +71,10 @@ struct UserInterfaceTest: TestSuite::Tester {
     void setEventLayerInstance();
     void setEventLayerInstanceInvalid();
     void eventLayerInvalid();
+
+    void setLayoutLayerInstance();
+    void setLayoutLayerInstanceInvalid();
+    void layoutLayerInvalid();
 
     void setSnapLayouterInstance();
     void setSnapLayouterInstanceInvalid();
@@ -113,6 +118,10 @@ UserInterfaceTest::UserInterfaceTest() {
               &UserInterfaceTest::setEventLayerInstance,
               &UserInterfaceTest::setEventLayerInstanceInvalid,
               &UserInterfaceTest::eventLayerInvalid,
+
+              &UserInterfaceTest::setLayoutLayerInstance,
+              &UserInterfaceTest::setLayoutLayerInstanceInvalid,
+              &UserInterfaceTest::layoutLayerInvalid,
 
               &UserInterfaceTest::setSnapLayouterInstance,
               &UserInterfaceTest::setSnapLayouterInstanceInvalid,
@@ -622,6 +631,59 @@ void UserInterfaceTest::eventLayerInvalid() {
     Error redirectError{&out};
     ui.eventLayer();
     CORRADE_COMPARE(out, "Ui::UserInterface::eventLayer(): no instance set\n");
+}
+
+void UserInterfaceTest::setLayoutLayerInstance() {
+    struct Interface: UserInterface {
+        explicit Interface(NoCreateT): UserInterface{NoCreate} {}
+    } ui{NoCreate};
+    CORRADE_COMPARE(ui.layerCapacity(), 0);
+    CORRADE_COMPARE(ui.layerUsedCount(), 0);
+    CORRADE_VERIFY(!ui.hasBaseLayer());
+    CORRADE_VERIFY(!ui.hasTextLayer());
+    CORRADE_VERIFY(!ui.hasLayoutLayer());
+
+    LayerHandle handle = ui.createLayer();
+    Containers::Pointer<LayoutLayer> layer{InPlaceInit, handle, 3u};
+    LayoutLayer* pointer = layer.get();
+    ui.setLayoutLayerInstance(Utility::move(layer));
+    CORRADE_COMPARE(ui.layerCapacity(), 1);
+    CORRADE_COMPARE(ui.layerUsedCount(), 1);
+    CORRADE_VERIFY(!ui.hasBaseLayer());
+    CORRADE_VERIFY(!ui.hasTextLayer());
+    CORRADE_VERIFY(ui.hasLayoutLayer());
+    CORRADE_COMPARE(&ui.layer(handle), pointer);
+    CORRADE_COMPARE(&ui.layoutLayer(), pointer);
+}
+
+void UserInterfaceTest::setLayoutLayerInstanceInvalid() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct Interface: UserInterface {
+        explicit Interface(NoCreateT): UserInterface{NoCreate} {}
+    } ui{NoCreate};
+    ui.setLayoutLayerInstance(Containers::pointer<LayoutLayer>(ui.createLayer(), 3u));
+
+    Containers::String out;
+    Error redirectError{&out};
+    ui.setLayoutLayerInstance(nullptr);
+    ui.setLayoutLayerInstance(Containers::pointer<LayoutLayer>(ui.createLayer(), 3u));
+    CORRADE_COMPARE(out,
+        "Ui::UserInterface::setLayoutLayerInstance(): instance is null\n"
+        "Ui::UserInterface::setLayoutLayerInstance(): instance already set\n");
+}
+
+void UserInterfaceTest::layoutLayerInvalid() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct Interface: UserInterface {
+        explicit Interface(NoCreateT): UserInterface{NoCreate} {}
+    } ui{NoCreate};
+
+    Containers::String out;
+    Error redirectError{&out};
+    ui.layoutLayer();
+    CORRADE_COMPARE(out, "Ui::UserInterface::layoutLayer(): no instance set\n");
 }
 
 void UserInterfaceTest::setSnapLayouterInstance() {

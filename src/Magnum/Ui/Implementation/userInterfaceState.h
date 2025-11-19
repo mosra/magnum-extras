@@ -57,6 +57,7 @@ struct UserInterface::State {
     TextLayer* textLayer{};
     TextLayerStyleAnimator* textLayerStyleAnimator{};
     EventLayer* eventLayer{};
+    LayoutLayer* layoutLayer{};
     SnapLayouter* snapLayouter{};
 };
 

@@ -33,6 +33,7 @@
 #include "Magnum/Ui/BaseLayerAnimator.h"
 #include "Magnum/Ui/EventLayer.h"
 #include "Magnum/Ui/Handle.h"
+#include "Magnum/Ui/LayoutLayer.h"
 #include "Magnum/Ui/SnapLayouter.h"
 #include "Magnum/Ui/TextLayer.h"
 #include "Magnum/Ui/TextLayerAnimator.h"
@@ -118,6 +119,16 @@ UserInterface& UserInterface::setEventLayerInstance(Containers::Pointer<EventLay
     return *this;
 }
 
+UserInterface& UserInterface::setLayoutLayerInstance(Containers::Pointer<LayoutLayer>&& instance) {
+    CORRADE_ASSERT(instance,
+        "Ui::UserInterface::setLayoutLayerInstance(): instance is null", *this);
+    CORRADE_ASSERT(!_state->layoutLayer,
+        "Ui::UserInterface::setLayoutLayerInstance(): instance already set", *this);
+    _state->layoutLayer = instance.get();
+    setLayerInstance(Utility::move(instance));
+    return *this;
+}
+
 UserInterface& UserInterface::setSnapLayouterInstance(Containers::Pointer<SnapLayouter>&& instance) {
     CORRADE_ASSERT(instance,
         "Ui::UserInterface::setSnapLayouterInstance(): instance is null", *this);
@@ -196,6 +207,20 @@ const EventLayer& UserInterface::eventLayer() const {
 
 EventLayer& UserInterface::eventLayer() {
     return const_cast<EventLayer&>(const_cast<const UserInterface&>(*this).eventLayer());
+}
+
+bool UserInterface::hasLayoutLayer() const {
+    return _state->layoutLayer;
+}
+
+const LayoutLayer& UserInterface::layoutLayer() const {
+    CORRADE_ASSERT(_state->layoutLayer,
+        "Ui::UserInterface::layoutLayer(): no instance set", *_state->layoutLayer);
+    return *_state->layoutLayer;
+}
+
+LayoutLayer& UserInterface::layoutLayer() {
+    return const_cast<LayoutLayer&>(const_cast<const UserInterface&>(*this).layoutLayer());
 }
 
 bool UserInterface::hasSnapLayouter() const {

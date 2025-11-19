@@ -32,6 +32,7 @@
 #include <Magnum/Text/AbstractGlyphCache.h>
 
 #include "Magnum/Ui/BaseLayer.h"
+#include "Magnum/Ui/LayoutLayer.h"
 #include "Magnum/Ui/TextLayer.h"
 #include "Magnum/Ui/UserInterface.h"
 
@@ -49,6 +50,7 @@ Debug& operator<<(Debug& debug, const StyleFeature value) {
         _c(TextLayerImages)
         _c(TextLayerAnimations)
         _c(EventLayer)
+        _c(LayoutLayer)
         _c(SnapLayouter)
         #undef _c
         /* LCOV_EXCL_STOP */
@@ -65,6 +67,7 @@ Debug& operator<<(Debug& debug, const StyleFeatures value) {
         StyleFeature::TextLayerImages,
         StyleFeature::TextLayerAnimations,
         StyleFeature::EventLayer,
+        StyleFeature::LayoutLayer,
         StyleFeature::SnapLayouter,
     });
 }
@@ -237,6 +240,16 @@ AbstractStyle& AbstractStyle::setTextLayerGlyphCacheSize(const Vector3i& size, c
     return *this;
 }
 
+UnsignedInt AbstractStyle::layoutLayerStyleCount() const {
+    CORRADE_ASSERT(features() >= StyleFeature::LayoutLayer,
+        "Ui::AbstractStyle::layoutLayerStyleCount(): feature not supported", {});
+    return doLayoutLayerStyleCount();
+}
+
+UnsignedInt AbstractStyle::doLayoutLayerStyleCount() const {
+    CORRADE_ASSERT_UNREACHABLE("Ui::AbstractStyle::layoutLayerStyleCount(): feature advertised but not implemented", {});
+}
+
 bool AbstractStyle::apply(UserInterface& ui, const StyleFeatures features, PluginManager::Manager<Trade::AbstractImporter>* const importerManager, PluginManager::Manager<Text::AbstractFont>* const fontManager) const {
     CORRADE_ASSERT(features,
         "Ui::AbstractStyle::apply(): no features specified", {});
@@ -295,6 +308,14 @@ bool AbstractStyle::apply(UserInterface& ui, const StyleFeatures features, Plugi
     if(features >= StyleFeature::EventLayer) {
         CORRADE_ASSERT(ui.hasEventLayer(),
             "Ui::AbstractStyle::apply(): event layer not present in the user interface", {});
+    }
+    if(features >= StyleFeature::LayoutLayer) {
+        CORRADE_ASSERT(ui.hasLayoutLayer(),
+            "Ui::AbstractStyle::apply(): layout layer not present in the user interface", {});
+        const LayoutLayer& layer = ui.layoutLayer();
+        CORRADE_ASSERT(
+            layer.styleCount() == layoutLayerStyleCount(),
+            "Ui::AbstractStyle::apply(): style wants" << layoutLayerStyleCount() << "styles but the layout layer has" << layer.styleCount(), {});
     }
     if(features >= StyleFeature::SnapLayouter) {
         CORRADE_ASSERT(ui.hasSnapLayouter(),

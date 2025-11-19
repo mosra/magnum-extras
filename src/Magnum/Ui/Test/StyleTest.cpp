@@ -424,7 +424,11 @@ void StyleTest::apply() {
     ui.setSnapLayouterInstance(Containers::pointer<SnapLayouter>(ui.createLayouter()));
 
     McssDarkStyle style{data.styleFeatures};
-    CORRADE_VERIFY(style.apply(ui, data.features, &importerManager, &_fontManager));
+    /* The AbstractStyle can have the set of features bigger than what the
+       particular McssDarkStyle supports, which would then fail if
+       data.features is ~StyleFeatures{}. Make it an union with what's actually
+       supported. */
+    CORRADE_VERIFY(style.apply(ui, data.features & style.features(), &importerManager, &_fontManager));
 
     /* Style transition for disabled functions should be set if base / text
        layer style is set and not if not */

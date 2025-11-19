@@ -250,6 +250,38 @@ class MAGNUM_UI_EXPORT UserInterface: public AbstractUserInterface {
         UserInterface& setEventLayerInstance(Containers::Pointer<EventLayer>&& instance);
 
         /**
+         * @brief Whether a layout layer instance has been set
+         *
+         * @see @ref layoutLayer(), @ref setLayoutLayerInstance()
+         */
+        bool hasLayoutLayer() const;
+
+        /**
+         * @brief Layout layer instance
+         *
+         * Expects that an instance has been set, either by
+         * @ref setLayoutLayerInstance() or transitively by
+         * @ref UserInterfaceGL::setStyle(), @relativeref{UserInterfaceGL,create()}
+         * or a @ref UserInterfaceGL constructor taking a style instance.
+         * @see @ref StyleFeature::LayoutLayer
+         */
+        LayoutLayer& layoutLayer();
+        const LayoutLayer& layoutLayer() const; /**< @overload */
+
+        /**
+         * @brief Set a layout layer instance
+         * @return Reference to self (for method chaining)
+         *
+         * Expects that the instance hasn't been set yet, either by this
+         * function or transitively either by @ref UserInterfaceGL::setStyle(),
+         * @relativeref{UserInterfaceGL,create()} or a @ref UserInterfaceGL
+         * constructor taking a style instance. The instance is subsequently
+         * available through @ref layoutLayer().
+         * @see @ref hasLayoutLayer(), @ref StyleFeature::LayoutLayer
+         */
+        UserInterface& setLayoutLayerInstance(Containers::Pointer<LayoutLayer>&& instance);
+
+        /**
          * @brief Whether a snap layouter instance has been set
          *
          * @see @ref snapLayouter(), @ref setSnapLayouterInstance()
