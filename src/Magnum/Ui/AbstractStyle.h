@@ -615,8 +615,9 @@ class MAGNUM_UI_EXPORT AbstractStyle {
          * the layer shared state style uniform and style count matches the
          * subset of @ref baseLayerStyleUniformCount(),
          * @ref baseLayerStyleCount(), @ref textLayerStyleUniformCount(),
-         * @ref textLayerStyleCount() matching @p features and the layer shared
-         * state dynamic style count is at least the subset of
+         * @ref textLayerStyleCount(), @ref textLayerEditingStyleUniformCount(),
+         * @ref textLayerEditingStyleCount() matching @p features and the layer
+         * shared state dynamic style count is at least the subset of
          * @ref baseLayerDynamicStyleCount(), @ref textLayerDynamicStyleCount()
          * matching @p features. Additionally, if @ref StyleFeature::TextLayer
          * is present in @p features, the @ref TextLayer::Shared instance is
