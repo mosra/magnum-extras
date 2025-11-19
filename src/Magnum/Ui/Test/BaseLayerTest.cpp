@@ -321,6 +321,11 @@ const struct {
         {-1.0f, 1.5f}, {13.0f, 17.0f},
         {0.5f, 0.0f, 1.0f, 0.75f}, {1.5f, 0.5f, 0.0f, 0.75f}, 0.0f, {},
         LayerState::NeedsDataUpdate, true, true, false},
+    {"padding from both style and data, subdivided",
+        false, false, true, 5, 0, 0, 0, 0.0f,
+        {-1.0f, 1.5f}, {13.0f, 17.0f},
+        {0.5f, 0.0f, 1.0f, 0.75f}, {1.5f, 0.5f, 0.0f, 0.75f}, 0.0f, {},
+        LayerState::NeedsDataUpdate, true, true, false},
     {"unused dynamic styles",
         false, false, false, 5, 17, 0, 0, 0.0f,
         {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, 0.0f, {},
@@ -336,6 +341,11 @@ const struct {
         LayerState::NeedsDataUpdate, true, true, false},
     {"dynamic styles, padding from both dynamic style and data",
         false, false, false, 2, 3, 0, 0, 0.0f,
+        {-1.0f, 1.5f}, {13.0f, 17.0f},
+        {0.5f, 0.0f, 1.0f, 0.75f}, {1.5f, 0.5f, 0.0f, 0.75f}, 0.0f, {},
+        LayerState::NeedsDataUpdate, true, true, false},
+    {"dynamic styles, padding from both dynamic style and data, subdivided",
+        false, false, true, 2, 3, 0, 0, 0.0f,
         {-1.0f, 1.5f}, {13.0f, 17.0f},
         {0.5f, 0.0f, 1.0f, 0.75f}, {1.5f, 0.5f, 0.0f, 0.75f}, 0.0f, {},
         LayerState::NeedsDataUpdate, true, true, false},
@@ -2666,11 +2676,11 @@ void BaseLayerTest::updateDataOrder() {
             /* Created with style 4, which if not dynamic is transitioned to 2
                as the node is disabled, which is mapped to uniform 0. If
                dynamic, it's implicitly `uniformCount + (id - styleCount)`,
-               thus 5. */
+               thus 6. */
             if(data.styleCount == 5)
                 CORRADE_COMPARE(vertices[3*16 + i].styleUniform, 0);
             else if(data.styleCount == 2)
-                CORRADE_COMPARE(vertices[3*16 + i].styleUniform, 5);
+                CORRADE_COMPARE(vertices[3*16 + i].styleUniform, 6);
             else CORRADE_INTERNAL_ASSERT_UNREACHABLE();
 
             /* Quad 7 */
@@ -2682,11 +2692,11 @@ void BaseLayerTest::updateDataOrder() {
             CORRADE_COMPARE(vertices[9*16 + i].color, 0x663399ff_rgbaf*0.9f);
             /* Created with style 3, which if not dynamic is mapped to uniform
                1. If dynamic, it's implicitly `uniformCount + (id - styleCount)`,
-               thus 4. */
+               thus 5. */
             if(data.styleCount == 5)
                 CORRADE_COMPARE(vertices[9*16 + i].styleUniform, 1);
             else if(data.styleCount == 2)
-                CORRADE_COMPARE(vertices[9*16 + i].styleUniform, 4);
+                CORRADE_COMPARE(vertices[9*16 + i].styleUniform, 5);
             else CORRADE_INTERNAL_ASSERT_UNREACHABLE();
         }
 
