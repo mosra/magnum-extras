@@ -609,8 +609,21 @@ void UserInterfaceGLTest::createAlreadyCreated() {
     ui.setSize({100, 100});
     if(data.hasRenderer)
         ui.setRendererInstance(Containers::pointer<RendererGL>());
-    if(data.features)
-        ui.setStyle(style, data.features, nullptr, &_fontManager);
+
+    /* Can't just do a ui.setStyle() with data.features because it always
+       implicitly creates the renderer, and thus the rest of the condition
+       would never be verified */
+    Text::GlyphCacheArrayGL cache{PixelFormat::R8Unorm, {32, 32, 1}};
+    BaseLayerGL::Shared baseLayerShared{BaseLayerGL::Shared::Configuration{1}};
+    TextLayerGL::Shared textLayerShared{cache, TextLayerGL::Shared::Configuration{1}};
+    if(data.features >= StyleFeature::BaseLayer)
+        ui.setBaseLayerInstance(Containers::pointer<BaseLayerGL>(ui.createLayer(), baseLayerShared));
+    if(data.features >= StyleFeature::TextLayer)
+        ui.setTextLayerInstance(Containers::pointer<TextLayerGL>(ui.createLayer(), textLayerShared));
+    if(data.features >= StyleFeature::EventLayer)
+        ui.setEventLayerInstance(Containers::pointer<EventLayer>(ui.createLayer()));
+    if(data.features >= StyleFeature::SnapLayouter)
+        ui.setSnapLayouterInstance(Containers::pointer<SnapLayouter>(ui.createLayouter()));
 
     Containers::String out;
     Error redirectError{&out};
