@@ -292,7 +292,7 @@ const struct {
     {"everything, implicitl, implicit font manager", ~StyleFeatures{}, ~StyleFeatures{}, true, 3, 1, 2, {}, true, false},
     {"everything, implicitl, implicit importer & font manager", ~StyleFeatures{}, ~StyleFeatures{}, true, 3, 1, 2, {}, false, false},
     {"everything, implicitly, application failed", ~StyleFeatures{}, ~StyleFeatures{}, false, 3, 1, 2, {}, true, true},
-    {"everything, implicitly, only unknown feature supported", StyleFeatures{0x80}, StyleFeatures{0x80}, true, 0, 0, 0, {}, true, true},
+    {"everything, implicitly, only unknown feature supported", StyleFeatures{0x8000}, StyleFeatures{0x8000}, true, 0, 0, 0, {}, true, true},
     {"everything, implicitly, only base layer supported", StyleFeature::BaseLayer, StyleFeature::BaseLayer, true, 1, 0, 0, {}, false, false},
     {"everything, implicitly, everything except text layer (and its images and animations) supported", ~(StyleFeature::TextLayer|StyleFeature::TextLayerImages|StyleFeature::TextLayerAnimations), ~(StyleFeature::TextLayer|StyleFeature::TextLayerImages|StyleFeature::TextLayerAnimations), true, 2, 1, 1, {}, false, false},
 };

@@ -50,7 +50,7 @@ namespace Magnum { namespace Ui {
     @ref AbstractStyle::apply(), @ref UserInterfaceGL::setStyle(),
     @ref UserInterfaceGL::trySetStyle()
 */
-enum class StyleFeature: UnsignedByte {
+enum class StyleFeature: UnsignedShort {
     /**
      * @ref BaseLayer style. Ensures a @ref BaseLayer instance with a
      * compatible @ref BaseLayer::Shared state is set up on the

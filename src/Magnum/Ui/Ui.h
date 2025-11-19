@@ -113,7 +113,7 @@ class GenericDataAnimator;
 
 class RendererGL;
 
-enum class StyleFeature: UnsignedByte;
+enum class StyleFeature: UnsignedShort;
 typedef Containers::EnumSet<StyleFeature, 127> StyleFeatures;
 class AbstractStyle;
 

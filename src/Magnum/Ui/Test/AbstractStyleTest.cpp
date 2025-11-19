@@ -229,14 +229,14 @@ AbstractStyleTest::AbstractStyleTest() {
 
 void AbstractStyleTest::debugFeature() {
     Containers::String out;
-    Debug{&out} << StyleFeature::BaseLayer << StyleFeature(0xbe);
-    CORRADE_COMPARE(out, "Ui::StyleFeature::BaseLayer Ui::StyleFeature(0xbe)\n");
+    Debug{&out} << StyleFeature::BaseLayer << StyleFeature(0xbeef);
+    CORRADE_COMPARE(out, "Ui::StyleFeature::BaseLayer Ui::StyleFeature(0xbeef)\n");
 }
 
 void AbstractStyleTest::debugFeatures() {
     Containers::String out;
-    Debug{&out} << (StyleFeature::TextLayer|StyleFeature(0x80)) << StyleFeatures{};
-    CORRADE_COMPARE(out, "Ui::StyleFeature::TextLayer|Ui::StyleFeature(0x80) Ui::StyleFeatures{}\n");
+    Debug{&out} << (StyleFeature::TextLayer|StyleFeature(0x8000)) << StyleFeatures{};
+    CORRADE_COMPARE(out, "Ui::StyleFeature::TextLayer|Ui::StyleFeature(0x8000) Ui::StyleFeatures{}\n");
 }
 
 void AbstractStyleTest::construct() {
@@ -708,8 +708,8 @@ void AbstractStyleTest::textLayerGlyphCacheSizeNoTextFeature() {
 
     Containers::String out;
     Error redirectError{&out};
-    style.textLayerGlyphCacheSize(StyleFeature::BaseLayer|StyleFeature(0x80));
-    CORRADE_COMPARE(out, "Ui::AbstractStyle::textLayerGlyphCacheSize(): expected a superset of Ui::StyleFeature::TextLayer but got Ui::StyleFeature::BaseLayer|Ui::StyleFeature(0x80)\n");
+    style.textLayerGlyphCacheSize(StyleFeature::BaseLayer|StyleFeature(0x8000));
+    CORRADE_COMPARE(out, "Ui::AbstractStyle::textLayerGlyphCacheSize(): expected a superset of Ui::StyleFeature::TextLayer but got Ui::StyleFeature::BaseLayer|Ui::StyleFeature(0x8000)\n");
 }
 
 void AbstractStyleTest::textLayerGlyphCacheSizeFeaturesNotSupported() {
