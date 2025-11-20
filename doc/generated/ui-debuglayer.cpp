@@ -54,8 +54,6 @@
 #include "Magnum/Ui/Anchor.h"
 #include "Magnum/Ui/Button.h"
 #include "Magnum/Ui/BaseLayerGL.h"
-#include "Magnum/Ui/TextLayer.h"
-#include "Magnum/Ui/TextProperties.h"
 #include "Magnum/Ui/EventLayer.h"
 #include "Magnum/Ui/Handle.h"
 #include "Magnum/Ui/LineLayerGL.h"
@@ -65,6 +63,7 @@
 #include "Magnum/Ui/SnapLayouter.h"
 #include "Magnum/Ui/Style.h"
 #include "Magnum/Ui/TextLayerGL.h"
+#include "Magnum/Ui/TextProperties.h"
 #include "Magnum/Ui/UserInterfaceGL.h"
 #include "Magnum/Ui/DebugLayerGL.h"
 
@@ -120,7 +119,7 @@ struct ColorLayer::DebugIntegration {
 /* [integration] */
 
 /* Used by abstractvisuallayer-style-names, needs to be defined here */
-enum Style {
+enum class Style {
     Button = 13,
     ButtonPressed = 7,
     ButtonHovered = 11,
@@ -326,8 +325,8 @@ debugLayer.setLayerName(colorLayer, "Shiny");
         Debug{} << out;
         Utility::Path::write("ui-debuglayer-integration.ansi", out);
 
-        /* AbstractVisualLayer integration, default behavior. Using a BaseLayer to
-        not have to create an ad-hoc subclass. */
+        /* AbstractVisualLayer integration, default behavior. Using a BaseLayer
+           to not have to create an ad-hoc subclass. */
         Ui::BaseLayerGL::Shared baseLayerShared{
             Ui::BaseLayerGL::Shared::Configuration{17}
         };
@@ -489,8 +488,8 @@ debugLayer.setLayerName(visualLayer, "Styled", [](UnsignedInt style) {
         Debug{} << out;
         Utility::Path::write("ui-debuglayer-eventlayer.ansi", out);
 
-        /* NodeAnimator integration. Creating some more animators and animations to
-        have non-trivial handles. */
+        /* NodeAnimator integration. Creating some more animators and
+           animations to have non-trivial handles. */
         ui.createAnimator();
         ui.createAnimator();
         ui.removeAnimator(ui.createAnimator());
