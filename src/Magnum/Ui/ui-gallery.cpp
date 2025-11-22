@@ -48,6 +48,7 @@
 #include "Magnum/Ui/Input.h"
 #include "Magnum/Ui/Label.h"
 #include "Magnum/Ui/NodeFlags.h"
+#include "Magnum/Ui/Panel.h"
 #include "Magnum/Ui/SnapLayouter.h"
 #include "Magnum/Ui/Style.h"
 #include "Magnum/Ui/Style.hpp" /* for DebugLayer style names */
@@ -191,7 +192,8 @@ UiGallery::UiGallery(const Arguments& arguments): Platform::Application{argument
             50);
     }
 
-    Ui::NodeHandle root = _ui.createNode({}, _ui.size());
+    /* Wrap everything in a single panel to get some basic paddings and such */
+    Ui::NodeHandle root = Ui::panel(Ui::snap(_ui, Ui::Snap::Fill|Ui::Snap::NoPad, {}));
 
     {
         /* Buttons */
