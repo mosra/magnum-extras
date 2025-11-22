@@ -40,9 +40,13 @@ struct LabelTest: WidgetTester {
     void debugStyle();
 
     void constructEmpty();
+    void constructEmptyStateless();
     void constructIcon();
+    void constructIconStateless();
     void constructText();
+    void constructTextStateless();
     void constructTextTextProperties();
+    void constructTextTextPropertiesStateless();
     void constructNoCreate();
 
     void setStyle();
@@ -76,9 +80,13 @@ LabelTest::LabelTest() {
 
     addTests<LabelTest>({
         &LabelTest::constructEmpty,
+        &LabelTest::constructEmptyStateless,
         &LabelTest::constructIcon,
+        &LabelTest::constructIconStateless,
         &LabelTest::constructText,
+        &LabelTest::constructTextStateless,
         &LabelTest::constructTextTextProperties,
+        &LabelTest::constructTextTextPropertiesStateless,
         &LabelTest::constructNoCreate
     }, &WidgetTester::setup,
        &WidgetTester::teardown);
@@ -112,112 +120,112 @@ void LabelTest::debugStyle() {
 }
 
 void LabelTest::constructEmpty() {
-    {
-        NodeHandle node1 = label({ui, rootNode, {32, 16}}, Icon::None, LabelStyle::Success);
-        NodeHandle node2 = label({ui, rootNode, {32, 16}}, "", LabelStyle::Success);
-        CORRADE_COMPARE(ui.nodeParent(node1), rootNode);
-        CORRADE_COMPARE(ui.nodeParent(node2), rootNode);
-        CORRADE_COMPARE(ui.nodeSize(node1), (Vector2{32, 16}));
-        CORRADE_COMPARE(ui.nodeSize(node2), (Vector2{32, 16}));
+    Label label1{{ui, rootNode, {32, 16}}, Icon::None, LabelStyle::Success};
+    Label label2{{ui, rootNode, {32, 16}}, "", LabelStyle::Success};
+    CORRADE_COMPARE(ui.nodeParent(label1), rootNode);
+    CORRADE_COMPARE(ui.nodeParent(label2), rootNode);
+    CORRADE_COMPARE(ui.nodeSize(label1), (Vector2{32, 16}));
+    CORRADE_COMPARE(ui.nodeSize(label2), (Vector2{32, 16}));
 
-        /* Can only verify that the data were (not) created, nothing else.
-           Visually tested in StyleGLTest. */
-        CORRADE_COMPARE(ui.baseLayer().usedCount(), 0);
-        CORRADE_COMPARE(ui.textLayer().usedCount(), 0);
-    } {
-        Label label1{{ui, rootNode, {32, 16}}, Icon::None, LabelStyle::Success};
-        Label label2{{ui, rootNode, {32, 16}}, "", LabelStyle::Success};
-        CORRADE_COMPARE(ui.nodeParent(label1), rootNode);
-        CORRADE_COMPARE(ui.nodeParent(label2), rootNode);
-        CORRADE_COMPARE(ui.nodeSize(label1), (Vector2{32, 16}));
-        CORRADE_COMPARE(ui.nodeSize(label2), (Vector2{32, 16}));
+    CORRADE_COMPARE(label1.style(), LabelStyle::Success);
+    CORRADE_COMPARE(label2.style(), LabelStyle::Success);
+    CORRADE_COMPARE(label1.icon(), Icon::None);
+    CORRADE_COMPARE(label2.icon(), Icon::None);
+    CORRADE_COMPARE(label1.data(), DataHandle::Null);
+    CORRADE_COMPARE(label2.data(), DataHandle::Null);
+}
 
-        CORRADE_COMPARE(label1.style(), LabelStyle::Success);
-        CORRADE_COMPARE(label2.style(), LabelStyle::Success);
-        CORRADE_COMPARE(label1.icon(), Icon::None);
-        CORRADE_COMPARE(label2.icon(), Icon::None);
-        CORRADE_COMPARE(label1.data(), DataHandle::Null);
-        CORRADE_COMPARE(label2.data(), DataHandle::Null);
-    }
+void LabelTest::constructEmptyStateless() {
+    NodeHandle node1 = label({ui, rootNode, {32, 16}}, Icon::None, LabelStyle::Success);
+    NodeHandle node2 = label({ui, rootNode, {32, 16}}, "", LabelStyle::Success);
+    CORRADE_COMPARE(ui.nodeParent(node1), rootNode);
+    CORRADE_COMPARE(ui.nodeParent(node2), rootNode);
+    CORRADE_COMPARE(ui.nodeSize(node1), (Vector2{32, 16}));
+    CORRADE_COMPARE(ui.nodeSize(node2), (Vector2{32, 16}));
+
+    /* Can only verify that the data were (not) created, nothing else. Visually
+       tested in StyleGLTest. */
+    CORRADE_COMPARE(ui.baseLayer().usedCount(), 0);
+    CORRADE_COMPARE(ui.textLayer().usedCount(), 0);
 }
 
 void LabelTest::constructIcon() {
-    {
-        NodeHandle node = label({ui, rootNode, {32, 16}}, Icon::Yes, LabelStyle::Success);
-        CORRADE_COMPARE(ui.nodeParent(node), rootNode);
-        CORRADE_COMPARE(ui.nodeSize(node), (Vector2{32, 16}));
+    Label label{{ui, rootNode, {32, 16}}, Icon::Yes, LabelStyle::Warning};
+    CORRADE_COMPARE(ui.nodeParent(label), rootNode);
+    CORRADE_COMPARE(ui.nodeSize(label), (Vector2{32, 16}));
 
-        /* Can only verify that the data were created, nothing else. Visually
-           tested in StyleGLTest. */
-        CORRADE_COMPARE(ui.baseLayer().usedCount(), 0);
-        CORRADE_COMPARE(ui.textLayer().usedCount(), 1);
-    } {
-        Label label{{ui, rootNode, {32, 16}}, Icon::Yes, LabelStyle::Warning};
-        CORRADE_COMPARE(ui.nodeParent(label), rootNode);
-        CORRADE_COMPARE(ui.nodeSize(label), (Vector2{32, 16}));
+    CORRADE_COMPARE(label.style(), LabelStyle::Warning);
+    CORRADE_COMPARE(label.icon(), Icon::Yes);
 
-        CORRADE_COMPARE(label.style(), LabelStyle::Warning);
-        CORRADE_COMPARE(label.icon(), Icon::Yes);
+    CORRADE_VERIFY(ui.isHandleValid(label.data()));
+    CORRADE_COMPARE(ui.textLayer().glyphCount(label.data()), 1);
+}
 
-        CORRADE_VERIFY(ui.isHandleValid(label.data()));
-        CORRADE_COMPARE(ui.textLayer().glyphCount(label.data()), 1);
-    }
+void LabelTest::constructIconStateless() {
+    NodeHandle node = label({ui, rootNode, {32, 16}}, Icon::Yes, LabelStyle::Success);
+    CORRADE_COMPARE(ui.nodeParent(node), rootNode);
+    CORRADE_COMPARE(ui.nodeSize(node), (Vector2{32, 16}));
+
+    /* Can only verify that the data were created, nothing else. Visually
+       tested in StyleGLTest. */
+    CORRADE_COMPARE(ui.baseLayer().usedCount(), 0);
+    CORRADE_COMPARE(ui.textLayer().usedCount(), 1);
 }
 
 void LabelTest::constructText() {
-    {
-        NodeHandle node1 = label({ui, rootNode, {32, 16}}, "hello!", LabelStyle::Warning);
-        CORRADE_COMPARE(ui.nodeParent(node1), rootNode);
-        CORRADE_COMPARE(ui.nodeOffset(node1), Vector2{});
-        CORRADE_COMPARE(ui.nodeSize(node1), (Vector2{32, 16}));
+    Label label{{ui, rootNode, {32, 16}}, "hello!", LabelStyle::Danger};
+    CORRADE_COMPARE(ui.nodeParent(label), rootNode);
+    CORRADE_COMPARE(ui.nodeOffset(label), Vector2{});
+    CORRADE_COMPARE(ui.nodeSize(label), (Vector2{32, 16}));
 
-        /* Can only verify that the data were created, nothing else. Visually
-           tested in StyleGLTest. */
-        CORRADE_COMPARE(ui.baseLayer().usedCount(), 0);
-        CORRADE_COMPARE(ui.textLayer().usedCount(), 1);
-    } {
-        Label label{{ui, rootNode, {32, 16}}, "hello!", LabelStyle::Danger};
-        CORRADE_COMPARE(ui.nodeParent(label), rootNode);
-        CORRADE_COMPARE(ui.nodeOffset(label), Vector2{});
-        CORRADE_COMPARE(ui.nodeSize(label), (Vector2{32, 16}));
+    CORRADE_COMPARE(label.style(), LabelStyle::Danger);
+    CORRADE_COMPARE(label.icon(), Icon::None);
 
-        CORRADE_COMPARE(label.style(), LabelStyle::Danger);
-        CORRADE_COMPARE(label.icon(), Icon::None);
+    CORRADE_VERIFY(ui.isHandleValid(label.data()));
+    CORRADE_COMPARE(ui.textLayer().glyphCount(label.data()), 6);
+}
 
-        CORRADE_VERIFY(ui.isHandleValid(label.data()));
-        CORRADE_COMPARE(ui.textLayer().glyphCount(label.data()), 6);
-    }
+void LabelTest::constructTextStateless() {
+    NodeHandle node1 = label({ui, rootNode, {32, 16}}, "hello!", LabelStyle::Warning);
+    CORRADE_COMPARE(ui.nodeParent(node1), rootNode);
+    CORRADE_COMPARE(ui.nodeOffset(node1), Vector2{});
+    CORRADE_COMPARE(ui.nodeSize(node1), (Vector2{32, 16}));
+
+    /* Can only verify that the data were created, nothing else. Visually
+       tested in StyleGLTest. */
+    CORRADE_COMPARE(ui.baseLayer().usedCount(), 0);
+    CORRADE_COMPARE(ui.textLayer().usedCount(), 1);
 }
 
 void LabelTest::constructTextTextProperties() {
-    {
-        NodeHandle node = label({ui, rootNode, {32, 16}}, "hello!",
-            TextProperties{}.setScript(Text::Script::Braille),
-            LabelStyle::Primary);
-        CORRADE_COMPARE(ui.nodeParent(node), rootNode);
-        CORRADE_COMPARE(ui.nodeOffset(node), Vector2{});
-        CORRADE_COMPARE(ui.nodeSize(node), (Vector2{32, 16}));
+    Label label{{ui, rootNode, {32, 16}}, "hello!",
+        TextProperties{}.setScript(Text::Script::Braille),
+        LabelStyle::Info};
+    CORRADE_COMPARE(ui.nodeParent(label), rootNode);
+    CORRADE_COMPARE(ui.nodeOffset(label), Vector2{});
+    CORRADE_COMPARE(ui.nodeSize(label), (Vector2{32, 16}));
 
-        /* Can only verify that the data were created, nothing else. Visually
-           tested in StyleGLTest. */
-        /** @todo this doesn't verify that the properties were passed :/ */
-        CORRADE_COMPARE(ui.baseLayer().usedCount(), 0);
-        CORRADE_COMPARE(ui.textLayer().usedCount(), 1);
-    } {
-        Label label{{ui, rootNode, {32, 16}}, "hello!",
-            TextProperties{}.setScript(Text::Script::Braille),
-            LabelStyle::Info};
-        CORRADE_COMPARE(ui.nodeParent(label), rootNode);
-        CORRADE_COMPARE(ui.nodeOffset(label), Vector2{});
-        CORRADE_COMPARE(ui.nodeSize(label), (Vector2{32, 16}));
+    CORRADE_COMPARE(label.style(), LabelStyle::Info);
+    CORRADE_COMPARE(label.icon(), Icon::None);
 
-        CORRADE_COMPARE(label.style(), LabelStyle::Info);
-        CORRADE_COMPARE(label.icon(), Icon::None);
+    CORRADE_VERIFY(ui.isHandleValid(label.data()));
+    /* Multiplied by 6 because of the Braille script */
+    CORRADE_COMPARE(ui.textLayer().glyphCount(label.data()), 6*6);
+}
 
-        CORRADE_VERIFY(ui.isHandleValid(label.data()));
-        /* Multiplied by 6 because of the Braille script */
-        CORRADE_COMPARE(ui.textLayer().glyphCount(label.data()), 6*6);
-    }
+void LabelTest::constructTextTextPropertiesStateless() {
+    NodeHandle node = label({ui, rootNode, {32, 16}}, "hello!",
+        TextProperties{}.setScript(Text::Script::Braille),
+        LabelStyle::Primary);
+    CORRADE_COMPARE(ui.nodeParent(node), rootNode);
+    CORRADE_COMPARE(ui.nodeOffset(node), Vector2{});
+    CORRADE_COMPARE(ui.nodeSize(node), (Vector2{32, 16}));
+
+    /* Can only verify that the data were created, nothing else. Visually
+       tested in StyleGLTest. */
+    /** @todo this doesn't verify that the properties were passed :/ */
+    CORRADE_COMPARE(ui.baseLayer().usedCount(), 0);
+    CORRADE_COMPARE(ui.textLayer().usedCount(), 1);
 }
 
 void LabelTest::constructNoCreate() {

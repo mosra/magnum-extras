@@ -41,11 +41,17 @@ struct ButtonTest: WidgetTester {
     void debugStyle();
 
     void constructEmpty();
+    void constructEmptyStateless();
     void constructIconOnly();
+    void constructIconOnlyStateless();
     void constructTextOnly();
+    void constructTextOnlyStateless();
     void constructTextOnlyTextProperties();
+    void constructTextOnlyTextPropertiesStateless();
     void constructIconText();
+    void constructIconTextStateless();
     void constructIconTextTextProperties();
+    void constructIconTextTextPropertiesStateless();
     void constructNoCreate();
 
     void setStyle();
@@ -79,11 +85,17 @@ ButtonTest::ButtonTest() {
 
     addTests<ButtonTest>({
         &ButtonTest::constructEmpty,
+        &ButtonTest::constructEmptyStateless,
         &ButtonTest::constructIconOnly,
+        &ButtonTest::constructIconOnlyStateless,
         &ButtonTest::constructTextOnly,
+        &ButtonTest::constructTextOnlyStateless,
         &ButtonTest::constructTextOnlyTextProperties,
+        &ButtonTest::constructTextOnlyTextPropertiesStateless,
         &ButtonTest::constructIconText,
+        &ButtonTest::constructIconTextStateless,
         &ButtonTest::constructIconTextTextProperties,
+        &ButtonTest::constructIconTextTextPropertiesStateless,
         &ButtonTest::constructNoCreate,
     }, &WidgetTester::setup,
        &WidgetTester::teardown);
@@ -117,229 +129,229 @@ void ButtonTest::debugStyle() {
 }
 
 void ButtonTest::constructEmpty() {
-    {
-        NodeHandle node1 = button({ui, rootNode, {32, 16}}, Icon::None, ButtonStyle::Success);
-        NodeHandle node2 = button({ui, rootNode, {32, 16}}, "", ButtonStyle::Success);
-        NodeHandle node3 = button({ui, rootNode, {32, 16}}, Icon::None, "", ButtonStyle::Success);
-        CORRADE_COMPARE(ui.nodeParent(node1), rootNode);
-        CORRADE_COMPARE(ui.nodeParent(node2), rootNode);
-        CORRADE_COMPARE(ui.nodeParent(node3), rootNode);
-        CORRADE_COMPARE(ui.nodeSize(node1), (Vector2{32, 16}));
-        CORRADE_COMPARE(ui.nodeSize(node2), (Vector2{32, 16}));
-        CORRADE_COMPARE(ui.nodeSize(node3), (Vector2{32, 16}));
+    Button button1{{ui, rootNode, {32, 16}}, Icon::None, ButtonStyle::Success};
+    Button button2{{ui, rootNode, {32, 16}}, "", ButtonStyle::Success};
+    Button button3{{ui, rootNode, {32, 16}}, Icon::None, "", ButtonStyle::Success};
+    CORRADE_COMPARE(ui.nodeParent(button1), rootNode);
+    CORRADE_COMPARE(ui.nodeParent(button2), rootNode);
+    CORRADE_COMPARE(ui.nodeParent(button3), rootNode);
+    CORRADE_COMPARE(ui.nodeSize(button1), (Vector2{32, 16}));
+    CORRADE_COMPARE(ui.nodeSize(button2), (Vector2{32, 16}));
+    CORRADE_COMPARE(ui.nodeSize(button3), (Vector2{32, 16}));
 
-        /* Can only verify that the data were created, nothing else. Visually
-           tested in StyleGLTest. */
-        CORRADE_COMPARE(ui.baseLayer().usedCount(), 3);
-        CORRADE_COMPARE(ui.textLayer().usedCount(), 0);
-    } {
-        Button button1{{ui, rootNode, {32, 16}}, Icon::None, ButtonStyle::Success};
-        Button button2{{ui, rootNode, {32, 16}}, "", ButtonStyle::Success};
-        Button button3{{ui, rootNode, {32, 16}}, Icon::None, "", ButtonStyle::Success};
-        CORRADE_COMPARE(ui.nodeParent(button1), rootNode);
-        CORRADE_COMPARE(ui.nodeParent(button2), rootNode);
-        CORRADE_COMPARE(ui.nodeParent(button3), rootNode);
-        CORRADE_COMPARE(ui.nodeSize(button1), (Vector2{32, 16}));
-        CORRADE_COMPARE(ui.nodeSize(button2), (Vector2{32, 16}));
-        CORRADE_COMPARE(ui.nodeSize(button3), (Vector2{32, 16}));
+    CORRADE_COMPARE(button1.style(), ButtonStyle::Success);
+    CORRADE_COMPARE(button2.style(), ButtonStyle::Success);
+    CORRADE_COMPARE(button3.style(), ButtonStyle::Success);
+    CORRADE_COMPARE(button1.icon(), Icon::None);
+    CORRADE_COMPARE(button2.icon(), Icon::None);
+    CORRADE_COMPARE(button3.icon(), Icon::None);
 
-        CORRADE_COMPARE(button1.style(), ButtonStyle::Success);
-        CORRADE_COMPARE(button2.style(), ButtonStyle::Success);
-        CORRADE_COMPARE(button3.style(), ButtonStyle::Success);
-        CORRADE_COMPARE(button1.icon(), Icon::None);
-        CORRADE_COMPARE(button2.icon(), Icon::None);
-        CORRADE_COMPARE(button3.icon(), Icon::None);
+    CORRADE_VERIFY(ui.isHandleValid(button1.backgroundData()));
+    CORRADE_VERIFY(ui.isHandleValid(button2.backgroundData()));
+    CORRADE_VERIFY(ui.isHandleValid(button3.backgroundData()));
+    CORRADE_COMPARE(button1.iconData(), DataHandle::Null);
+    CORRADE_COMPARE(button2.iconData(), DataHandle::Null);
+    CORRADE_COMPARE(button3.iconData(), DataHandle::Null);
+    CORRADE_COMPARE(button1.textData(), DataHandle::Null);
+    CORRADE_COMPARE(button2.textData(), DataHandle::Null);
+    CORRADE_COMPARE(button3.textData(), DataHandle::Null);
+}
 
-        CORRADE_VERIFY(ui.isHandleValid(button1.backgroundData()));
-        CORRADE_VERIFY(ui.isHandleValid(button2.backgroundData()));
-        CORRADE_VERIFY(ui.isHandleValid(button3.backgroundData()));
-        CORRADE_COMPARE(button1.iconData(), DataHandle::Null);
-        CORRADE_COMPARE(button2.iconData(), DataHandle::Null);
-        CORRADE_COMPARE(button3.iconData(), DataHandle::Null);
-        CORRADE_COMPARE(button1.textData(), DataHandle::Null);
-        CORRADE_COMPARE(button2.textData(), DataHandle::Null);
-        CORRADE_COMPARE(button3.textData(), DataHandle::Null);
-    }
+void ButtonTest::constructEmptyStateless() {
+    NodeHandle node1 = button({ui, rootNode, {32, 16}}, Icon::None, ButtonStyle::Success);
+    NodeHandle node2 = button({ui, rootNode, {32, 16}}, "", ButtonStyle::Success);
+    NodeHandle node3 = button({ui, rootNode, {32, 16}}, Icon::None, "", ButtonStyle::Success);
+    CORRADE_COMPARE(ui.nodeParent(node1), rootNode);
+    CORRADE_COMPARE(ui.nodeParent(node2), rootNode);
+    CORRADE_COMPARE(ui.nodeParent(node3), rootNode);
+    CORRADE_COMPARE(ui.nodeSize(node1), (Vector2{32, 16}));
+    CORRADE_COMPARE(ui.nodeSize(node2), (Vector2{32, 16}));
+    CORRADE_COMPARE(ui.nodeSize(node3), (Vector2{32, 16}));
+
+    /* Can only verify that the data were created, nothing else. Visually
+       tested in StyleGLTest. */
+    CORRADE_COMPARE(ui.baseLayer().usedCount(), 3);
+    CORRADE_COMPARE(ui.textLayer().usedCount(), 0);
 }
 
 void ButtonTest::constructIconOnly() {
-    {
-        NodeHandle node1 = button({ui, rootNode, {32, 16}}, Icon::Yes, ButtonStyle::Danger);
-        NodeHandle node2 = button({ui, rootNode, {32, 16}}, Icon::Yes, "", ButtonStyle::Danger);
-        CORRADE_COMPARE(ui.nodeParent(node1), rootNode);
-        CORRADE_COMPARE(ui.nodeParent(node2), rootNode);
-        CORRADE_COMPARE(ui.nodeSize(node1), (Vector2{32, 16}));
-        CORRADE_COMPARE(ui.nodeSize(node2), (Vector2{32, 16}));
+    Button button1{{ui, rootNode, {32, 16}}, Icon::Yes, ButtonStyle::Danger};
+    Button button2{{ui, rootNode, {32, 16}}, Icon::Yes, "", ButtonStyle::Danger};
+    CORRADE_COMPARE(ui.nodeParent(button1), rootNode);
+    CORRADE_COMPARE(ui.nodeParent(button2), rootNode);
+    CORRADE_COMPARE(ui.nodeSize(button1), (Vector2{32, 16}));
+    CORRADE_COMPARE(ui.nodeSize(button2), (Vector2{32, 16}));
 
-        /* Can only verify that the data were created, nothing else. Visually
-           tested in StyleGLTest. */
-        CORRADE_COMPARE(ui.baseLayer().usedCount(), 2);
-        CORRADE_COMPARE(ui.textLayer().usedCount(), 2);
-    } {
-        Button button1{{ui, rootNode, {32, 16}}, Icon::Yes, ButtonStyle::Danger};
-        Button button2{{ui, rootNode, {32, 16}}, Icon::Yes, "", ButtonStyle::Danger};
-        CORRADE_COMPARE(ui.nodeParent(button1), rootNode);
-        CORRADE_COMPARE(ui.nodeParent(button2), rootNode);
-        CORRADE_COMPARE(ui.nodeSize(button1), (Vector2{32, 16}));
-        CORRADE_COMPARE(ui.nodeSize(button2), (Vector2{32, 16}));
+    CORRADE_COMPARE(button1.style(), ButtonStyle::Danger);
+    CORRADE_COMPARE(button2.style(), ButtonStyle::Danger);
+    CORRADE_COMPARE(button1.icon(), Icon::Yes);
+    CORRADE_COMPARE(button2.icon(), Icon::Yes);
 
-        CORRADE_COMPARE(button1.style(), ButtonStyle::Danger);
-        CORRADE_COMPARE(button2.style(), ButtonStyle::Danger);
-        CORRADE_COMPARE(button1.icon(), Icon::Yes);
-        CORRADE_COMPARE(button2.icon(), Icon::Yes);
+    CORRADE_VERIFY(ui.isHandleValid(button1.backgroundData()));
+    CORRADE_VERIFY(ui.isHandleValid(button2.backgroundData()));
+    CORRADE_VERIFY(ui.isHandleValid(button1.iconData()));
+    CORRADE_VERIFY(ui.isHandleValid(button2.iconData()));
+    CORRADE_COMPARE(ui.textLayer().glyphCount(button1.iconData()), 1);
+    CORRADE_COMPARE(ui.textLayer().glyphCount(button2.iconData()), 1);
+    CORRADE_COMPARE(button1.textData(), DataHandle::Null);
+    CORRADE_COMPARE(button2.textData(), DataHandle::Null);
+}
 
-        CORRADE_VERIFY(ui.isHandleValid(button1.backgroundData()));
-        CORRADE_VERIFY(ui.isHandleValid(button2.backgroundData()));
-        CORRADE_VERIFY(ui.isHandleValid(button1.iconData()));
-        CORRADE_VERIFY(ui.isHandleValid(button2.iconData()));
-        CORRADE_COMPARE(ui.textLayer().glyphCount(button1.iconData()), 1);
-        CORRADE_COMPARE(ui.textLayer().glyphCount(button2.iconData()), 1);
-        CORRADE_COMPARE(button1.textData(), DataHandle::Null);
-        CORRADE_COMPARE(button2.textData(), DataHandle::Null);
-    }
+void ButtonTest::constructIconOnlyStateless() {
+    NodeHandle node1 = button({ui, rootNode, {32, 16}}, Icon::Yes, ButtonStyle::Danger);
+    NodeHandle node2 = button({ui, rootNode, {32, 16}}, Icon::Yes, "", ButtonStyle::Danger);
+    CORRADE_COMPARE(ui.nodeParent(node1), rootNode);
+    CORRADE_COMPARE(ui.nodeParent(node2), rootNode);
+    CORRADE_COMPARE(ui.nodeSize(node1), (Vector2{32, 16}));
+    CORRADE_COMPARE(ui.nodeSize(node2), (Vector2{32, 16}));
+
+    /* Can only verify that the data were created, nothing else. Visually
+       tested in StyleGLTest. */
+    CORRADE_COMPARE(ui.baseLayer().usedCount(), 2);
+    CORRADE_COMPARE(ui.textLayer().usedCount(), 2);
 }
 
 void ButtonTest::constructTextOnly() {
-    {
-        NodeHandle node1 = button({ui, rootNode, {32, 16}}, "hello!", ButtonStyle::Primary);
-        NodeHandle node2 = button({ui, rootNode, {32, 16}}, Icon::None, "hello!", ButtonStyle::Primary);
-        CORRADE_COMPARE(ui.nodeParent(node1), rootNode);
-        CORRADE_COMPARE(ui.nodeParent(node2), rootNode);
-        CORRADE_COMPARE(ui.nodeSize(node1), (Vector2{32, 16}));
-        CORRADE_COMPARE(ui.nodeSize(node2), (Vector2{32, 16}));
+    Button button1{{ui, rootNode, {32, 16}}, "hello!", ButtonStyle::Primary};
+    Button button2{{ui, rootNode, {32, 16}}, Icon::None, "hello!", ButtonStyle::Primary};
+    CORRADE_COMPARE(ui.nodeParent(button1), rootNode);
+    CORRADE_COMPARE(ui.nodeParent(button2), rootNode);
+    CORRADE_COMPARE(ui.nodeSize(button1), (Vector2{32, 16}));
+    CORRADE_COMPARE(ui.nodeSize(button2), (Vector2{32, 16}));
 
-        /* Can only verify that the data were created, nothing else. Visually
-           tested in StyleGLTest. */
-        CORRADE_COMPARE(ui.baseLayer().usedCount(), 2);
-        CORRADE_COMPARE(ui.textLayer().usedCount(), 2);
-    } {
-        Button button1{{ui, rootNode, {32, 16}}, "hello!", ButtonStyle::Primary};
-        Button button2{{ui, rootNode, {32, 16}}, Icon::None, "hello!", ButtonStyle::Primary};
-        CORRADE_COMPARE(ui.nodeParent(button1), rootNode);
-        CORRADE_COMPARE(ui.nodeParent(button2), rootNode);
-        CORRADE_COMPARE(ui.nodeSize(button1), (Vector2{32, 16}));
-        CORRADE_COMPARE(ui.nodeSize(button2), (Vector2{32, 16}));
+    CORRADE_COMPARE(button1.style(), ButtonStyle::Primary);
+    CORRADE_COMPARE(button2.style(), ButtonStyle::Primary);
+    CORRADE_COMPARE(button1.icon(), Icon::None);
+    CORRADE_COMPARE(button2.icon(), Icon::None);
 
-        CORRADE_COMPARE(button1.style(), ButtonStyle::Primary);
-        CORRADE_COMPARE(button2.style(), ButtonStyle::Primary);
-        CORRADE_COMPARE(button1.icon(), Icon::None);
-        CORRADE_COMPARE(button2.icon(), Icon::None);
+    CORRADE_VERIFY(ui.isHandleValid(button1.backgroundData()));
+    CORRADE_VERIFY(ui.isHandleValid(button2.backgroundData()));
+    CORRADE_COMPARE(button1.iconData(), DataHandle::Null);
+    CORRADE_COMPARE(button2.iconData(), DataHandle::Null);
+    CORRADE_VERIFY(ui.isHandleValid(button1.textData()));
+    CORRADE_VERIFY(ui.isHandleValid(button2.textData()));
+    CORRADE_COMPARE(ui.textLayer().glyphCount(button1.textData()), 6);
+    CORRADE_COMPARE(ui.textLayer().glyphCount(button2.textData()), 6);
+}
 
-        CORRADE_VERIFY(ui.isHandleValid(button1.backgroundData()));
-        CORRADE_VERIFY(ui.isHandleValid(button2.backgroundData()));
-        CORRADE_COMPARE(button1.iconData(), DataHandle::Null);
-        CORRADE_COMPARE(button2.iconData(), DataHandle::Null);
-        CORRADE_VERIFY(ui.isHandleValid(button1.textData()));
-        CORRADE_VERIFY(ui.isHandleValid(button2.textData()));
-        CORRADE_COMPARE(ui.textLayer().glyphCount(button1.textData()), 6);
-        CORRADE_COMPARE(ui.textLayer().glyphCount(button2.textData()), 6);
-    }
+void ButtonTest::constructTextOnlyStateless() {
+    NodeHandle node1 = button({ui, rootNode, {32, 16}}, "hello!", ButtonStyle::Primary);
+    NodeHandle node2 = button({ui, rootNode, {32, 16}}, Icon::None, "hello!", ButtonStyle::Primary);
+    CORRADE_COMPARE(ui.nodeParent(node1), rootNode);
+    CORRADE_COMPARE(ui.nodeParent(node2), rootNode);
+    CORRADE_COMPARE(ui.nodeSize(node1), (Vector2{32, 16}));
+    CORRADE_COMPARE(ui.nodeSize(node2), (Vector2{32, 16}));
+
+    /* Can only verify that the data were created, nothing else. Visually
+       tested in StyleGLTest. */
+    CORRADE_COMPARE(ui.baseLayer().usedCount(), 2);
+    CORRADE_COMPARE(ui.textLayer().usedCount(), 2);
 }
 
 void ButtonTest::constructTextOnlyTextProperties() {
-    {
-        NodeHandle node1 = button({ui, rootNode, {32, 16}}, "hello!",
-            TextProperties{}.setScript(Text::Script::Braille),
-            ButtonStyle::Info);
-        NodeHandle node2 = button({ui, rootNode, {32, 16}}, Icon::None, "hello!",
-            TextProperties{}.setScript(Text::Script::Braille),
-            ButtonStyle::Info);
-        CORRADE_COMPARE(ui.nodeParent(node1), rootNode);
-        CORRADE_COMPARE(ui.nodeParent(node2), rootNode);
-        CORRADE_COMPARE(ui.nodeSize(node1), (Vector2{32, 16}));
-        CORRADE_COMPARE(ui.nodeSize(node2), (Vector2{32, 16}));
+    Button button1{{ui, rootNode, {32, 16}}, "hello!",
+        TextProperties{}.setScript(Text::Script::Braille),
+        ButtonStyle::Info};
+    Button button2{{ui, rootNode, {32, 16}}, Icon::None, "hello!",
+        TextProperties{}.setScript(Text::Script::Braille),
+        ButtonStyle::Info};
+    CORRADE_COMPARE(ui.nodeParent(button1), rootNode);
+    CORRADE_COMPARE(ui.nodeParent(button2), rootNode);
+    CORRADE_COMPARE(ui.nodeSize(button1), (Vector2{32, 16}));
+    CORRADE_COMPARE(ui.nodeSize(button2), (Vector2{32, 16}));
 
-        /* Can only verify that the data were created, nothing else. Visually
-           tested in StyleGLTest. */
-        /** @todo this doesn't verify that the properties were passed :/ */
-        CORRADE_COMPARE(ui.baseLayer().usedCount(), 2);
-        CORRADE_COMPARE(ui.textLayer().usedCount(), 2);
-    } {
-        Button button1{{ui, rootNode, {32, 16}}, "hello!",
-            TextProperties{}.setScript(Text::Script::Braille),
-            ButtonStyle::Info};
-        Button button2{{ui, rootNode, {32, 16}}, Icon::None, "hello!",
-            TextProperties{}.setScript(Text::Script::Braille),
-            ButtonStyle::Info};
-        CORRADE_COMPARE(ui.nodeParent(button1), rootNode);
-        CORRADE_COMPARE(ui.nodeParent(button2), rootNode);
-        CORRADE_COMPARE(ui.nodeSize(button1), (Vector2{32, 16}));
-        CORRADE_COMPARE(ui.nodeSize(button2), (Vector2{32, 16}));
+    CORRADE_COMPARE(button1.style(), ButtonStyle::Info);
+    CORRADE_COMPARE(button2.style(), ButtonStyle::Info);
+    CORRADE_COMPARE(button1.icon(), Icon::None);
+    CORRADE_COMPARE(button2.icon(), Icon::None);
 
-        CORRADE_COMPARE(button1.style(), ButtonStyle::Info);
-        CORRADE_COMPARE(button2.style(), ButtonStyle::Info);
-        CORRADE_COMPARE(button1.icon(), Icon::None);
-        CORRADE_COMPARE(button2.icon(), Icon::None);
+    CORRADE_VERIFY(ui.isHandleValid(button1.backgroundData()));
+    CORRADE_VERIFY(ui.isHandleValid(button2.backgroundData()));
+    CORRADE_COMPARE(button1.iconData(), DataHandle::Null);
+    CORRADE_COMPARE(button2.iconData(), DataHandle::Null);
+    CORRADE_VERIFY(ui.isHandleValid(button1.textData()));
+    CORRADE_VERIFY(ui.isHandleValid(button2.textData()));
+    /* Multiplied by 6 because of the Braille script */
+    CORRADE_COMPARE(ui.textLayer().glyphCount(button1.textData()), 6*6);
+    CORRADE_COMPARE(ui.textLayer().glyphCount(button2.textData()), 6*6);
+}
 
-        CORRADE_VERIFY(ui.isHandleValid(button1.backgroundData()));
-        CORRADE_VERIFY(ui.isHandleValid(button2.backgroundData()));
-        CORRADE_COMPARE(button1.iconData(), DataHandle::Null);
-        CORRADE_COMPARE(button2.iconData(), DataHandle::Null);
-        CORRADE_VERIFY(ui.isHandleValid(button1.textData()));
-        CORRADE_VERIFY(ui.isHandleValid(button2.textData()));
-        /* Multiplied by 6 because of the Braille script */
-        CORRADE_COMPARE(ui.textLayer().glyphCount(button1.textData()), 6*6);
-        CORRADE_COMPARE(ui.textLayer().glyphCount(button2.textData()), 6*6);
-    }
+void ButtonTest::constructTextOnlyTextPropertiesStateless() {
+    NodeHandle node1 = button({ui, rootNode, {32, 16}}, "hello!",
+        TextProperties{}.setScript(Text::Script::Braille),
+        ButtonStyle::Info);
+    NodeHandle node2 = button({ui, rootNode, {32, 16}}, Icon::None, "hello!",
+        TextProperties{}.setScript(Text::Script::Braille),
+        ButtonStyle::Info);
+    CORRADE_COMPARE(ui.nodeParent(node1), rootNode);
+    CORRADE_COMPARE(ui.nodeParent(node2), rootNode);
+    CORRADE_COMPARE(ui.nodeSize(node1), (Vector2{32, 16}));
+    CORRADE_COMPARE(ui.nodeSize(node2), (Vector2{32, 16}));
+
+    /* Can only verify that the data were created, nothing else. Visually
+       tested in StyleGLTest. */
+    /** @todo this doesn't verify that the properties were passed :/ */
+    CORRADE_COMPARE(ui.baseLayer().usedCount(), 2);
+    CORRADE_COMPARE(ui.textLayer().usedCount(), 2);
 }
 
 void ButtonTest::constructIconText() {
-    {
-        NodeHandle node = button({ui, rootNode, {32, 16}}, Icon::No, "bye!", ButtonStyle::Dim);
-        CORRADE_COMPARE(ui.nodeParent(node), rootNode);
-        CORRADE_COMPARE(ui.nodeSize(node), (Vector2{32, 16}));
+    Button button{{ui, rootNode, {32, 16}}, Icon::No, "bye!", ButtonStyle::Dim};
+    CORRADE_COMPARE(ui.nodeParent(button), rootNode);
+    CORRADE_COMPARE(ui.nodeSize(button), (Vector2{32, 16}));
 
-        /* Can only verify that the data were created, nothing else. Visually
-           tested in StyleGLTest. */
-        CORRADE_COMPARE(ui.baseLayer().usedCount(), 1);
-        CORRADE_COMPARE(ui.textLayer().usedCount(), 2);
-    } {
-        Button button{{ui, rootNode, {32, 16}}, Icon::No, "bye!", ButtonStyle::Dim};
-        CORRADE_COMPARE(ui.nodeParent(button), rootNode);
-        CORRADE_COMPARE(ui.nodeSize(button), (Vector2{32, 16}));
+    CORRADE_COMPARE(button.style(), ButtonStyle::Dim);
+    CORRADE_COMPARE(button.icon(), Icon::No);
 
-        CORRADE_COMPARE(button.style(), ButtonStyle::Dim);
-        CORRADE_COMPARE(button.icon(), Icon::No);
+    CORRADE_VERIFY(ui.isHandleValid(button.backgroundData()));
+    CORRADE_VERIFY(ui.isHandleValid(button.iconData()));
+    CORRADE_COMPARE(ui.textLayer().glyphCount(button.iconData()), 1);
+    CORRADE_VERIFY(ui.isHandleValid(button.textData()));
+    CORRADE_COMPARE(ui.textLayer().glyphCount(button.textData()), 4);
+}
 
-        CORRADE_VERIFY(ui.isHandleValid(button.backgroundData()));
-        CORRADE_VERIFY(ui.isHandleValid(button.iconData()));
-        CORRADE_COMPARE(ui.textLayer().glyphCount(button.iconData()), 1);
-        CORRADE_VERIFY(ui.isHandleValid(button.textData()));
-        CORRADE_COMPARE(ui.textLayer().glyphCount(button.textData()), 4);
-    }
+void ButtonTest::constructIconTextStateless() {
+    NodeHandle node = button({ui, rootNode, {32, 16}}, Icon::No, "bye!", ButtonStyle::Dim);
+    CORRADE_COMPARE(ui.nodeParent(node), rootNode);
+    CORRADE_COMPARE(ui.nodeSize(node), (Vector2{32, 16}));
+
+    /* Can only verify that the data were created, nothing else. Visually
+       tested in StyleGLTest. */
+    CORRADE_COMPARE(ui.baseLayer().usedCount(), 1);
+    CORRADE_COMPARE(ui.textLayer().usedCount(), 2);
 }
 
 void ButtonTest::constructIconTextTextProperties() {
-    {
-        NodeHandle node = button({ui, rootNode, {32, 16}}, Icon::No, "bye!",
-            TextProperties{}.setScript(Text::Script::Braille),
-            ButtonStyle::Warning);
-        CORRADE_COMPARE(ui.nodeParent(node), rootNode);
-        CORRADE_COMPARE(ui.nodeSize(node), (Vector2{32, 16}));
+    Button button{{ui, rootNode, {32, 16}}, Icon::No, "bye!",
+        TextProperties{}.setScript(Text::Script::Braille),
+        ButtonStyle::Warning};
+    CORRADE_COMPARE(ui.nodeParent(button), rootNode);
+    CORRADE_COMPARE(ui.nodeSize(button), (Vector2{32, 16}));
 
-        /* Can only verify that the data were created, nothing else. Visually
-           tested in StyleGLTest. */
-        /** @todo this doesn't verify that the properties were passed :/ */
-        CORRADE_COMPARE(ui.baseLayer().usedCount(), 1);
-        CORRADE_COMPARE(ui.textLayer().usedCount(), 2);
-    } {
-        Button button{{ui, rootNode, {32, 16}}, Icon::No, "bye!",
-            TextProperties{}.setScript(Text::Script::Braille),
-            ButtonStyle::Warning};
-        CORRADE_COMPARE(ui.nodeParent(button), rootNode);
-        CORRADE_COMPARE(ui.nodeSize(button), (Vector2{32, 16}));
+    CORRADE_COMPARE(button.style(), ButtonStyle::Warning);
+    CORRADE_COMPARE(button.icon(), Icon::No);
 
-        CORRADE_COMPARE(button.style(), ButtonStyle::Warning);
-        CORRADE_COMPARE(button.icon(), Icon::No);
+    CORRADE_VERIFY(ui.isHandleValid(button.backgroundData()));
+    CORRADE_VERIFY(ui.isHandleValid(button.iconData()));
+    /* Not multiplied as it goes directly, without the shaper */
+    CORRADE_COMPARE(ui.textLayer().glyphCount(button.iconData()), 1);
+    CORRADE_VERIFY(ui.isHandleValid(button.textData()));
+    /* Multiplied by 6 because of the Braille script */
+    CORRADE_COMPARE(ui.textLayer().glyphCount(button.textData()), 4*6);
+}
 
-        CORRADE_VERIFY(ui.isHandleValid(button.backgroundData()));
-        CORRADE_VERIFY(ui.isHandleValid(button.iconData()));
-        /* Not multiplied as it goes directly, without the shaper */
-        CORRADE_COMPARE(ui.textLayer().glyphCount(button.iconData()), 1);
-        CORRADE_VERIFY(ui.isHandleValid(button.textData()));
-        /* Multiplied by 6 because of the Braille script */
-        CORRADE_COMPARE(ui.textLayer().glyphCount(button.textData()), 4*6);
-    }
+void ButtonTest::constructIconTextTextPropertiesStateless() {
+    NodeHandle node = button({ui, rootNode, {32, 16}}, Icon::No, "bye!",
+        TextProperties{}.setScript(Text::Script::Braille),
+        ButtonStyle::Warning);
+    CORRADE_COMPARE(ui.nodeParent(node), rootNode);
+    CORRADE_COMPARE(ui.nodeSize(node), (Vector2{32, 16}));
+
+    /* Can only verify that the data were created, nothing else. Visually
+       tested in StyleGLTest. */
+    /** @todo this doesn't verify that the properties were passed :/ */
+    CORRADE_COMPARE(ui.baseLayer().usedCount(), 1);
+    CORRADE_COMPARE(ui.textLayer().usedCount(), 2);
 }
 
 void ButtonTest::constructNoCreate() {
