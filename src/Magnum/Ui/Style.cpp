@@ -225,6 +225,14 @@ Containers::StaticArray<7, BaseStyle> styleTransition(const BaseStyle index) {
                     BaseStyle::InputFlatFocused,
                     BaseStyle::InputFlatFocused,
                     BaseStyle::InputFlatDisabled};
+        case BaseStyle::PanelBackground:
+            return {BaseStyle::PanelBackground,
+                    BaseStyle::PanelBackground,
+                    BaseStyle::PanelBackground,
+                    BaseStyle::PanelBackground,
+                    BaseStyle::PanelBackground,
+                    BaseStyle::PanelBackground,
+                    BaseStyle::PanelBackgroundDisabled};
         case BaseStyle::ButtonDefaultDisabled:
         case BaseStyle::ButtonPrimaryDisabled:
         case BaseStyle::ButtonSuccessDisabled:
@@ -238,6 +246,7 @@ Containers::StaticArray<7, BaseStyle> styleTransition(const BaseStyle index) {
         case BaseStyle::InputWarningDisabled:
         case BaseStyle::InputDangerDisabled:
         case BaseStyle::InputFlatDisabled:
+        case BaseStyle::PanelBackgroundDisabled:
             CORRADE_INTERNAL_ASSERT_UNREACHABLE();
     }
     /* LCOV_EXCL_STOP */

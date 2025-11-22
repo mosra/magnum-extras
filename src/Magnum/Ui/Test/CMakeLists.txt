@@ -63,6 +63,7 @@ corrade_add_test(UiLayoutLayerTest LayoutLayerTest.cpp LIBRARIES MagnumUiTestLib
 corrade_add_test(UiLineLayerTest LineLayerTest.cpp LIBRARIES MagnumUiTestLib)
 corrade_add_test(UiNodeAnimatorTest NodeAnimatorTest.cpp LIBRARIES MagnumUiTestLib)
 corrade_add_test(UiNodeFlagsTest NodeFlagsTest.cpp LIBRARIES MagnumUi)
+corrade_add_test(UiPanelTest PanelTest.cpp LIBRARIES MagnumUi)
 corrade_add_test(UiSnapLayouterTest SnapLayouterTest.cpp LIBRARIES MagnumUiTestLib)
 
 corrade_add_test(UiStyleTest StyleTest.cpp LIBRARIES MagnumUi)
@@ -421,7 +422,8 @@ if(MAGNUM_BUILD_GL_TESTS)
             StyleTestFiles/mcss-dark-button-icon.png
             StyleTestFiles/mcss-dark-input.png
             StyleTestFiles/mcss-dark-label-text.png
-            StyleTestFiles/mcss-dark-label-icon.png)
+            StyleTestFiles/mcss-dark-label-icon.png
+            StyleTestFiles/mcss-dark-panel.png)
     target_include_directories(UiStyleGLTest PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
     if(MAGNUM_BUILD_STATIC)
         if(Magnum_AnyImageImporter_FOUND)

@@ -119,6 +119,9 @@ enum class BaseStyle: UnsignedShort {
     InputFlatInactiveOver,
     InputFlatFocused,
     InputFlatDisabled,
+
+    PanelBackground,
+    PanelBackgroundDisabled,
 };
 
 MAGNUM_UI_EXPORT BaseStyle styleTransitionToInactiveOut(BaseStyle index);

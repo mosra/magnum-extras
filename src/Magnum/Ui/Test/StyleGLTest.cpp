@@ -50,6 +50,7 @@
 #include "Magnum/Ui/Input.h"
 #include "Magnum/Ui/Label.h"
 #include "Magnum/Ui/NodeFlags.h"
+#include "Magnum/Ui/Panel.h"
 #include "Magnum/Ui/RendererGL.h"
 #include "Magnum/Ui/Style.h"
 #include "Magnum/Ui/TextLayerGL.h"
@@ -321,6 +322,23 @@ const struct {
             /** @todo use a cursor setting API once it exists */
             ui.textLayer().setCursor(input.textData(), counter % 2 ? 2 : 5, counter % 2 ? 5 : 2);
             return input.release();
+        }},
+
+    {"panel, stateless", "panel.png",
+        /* Panel has no animations */
+        {2, false, false, true, {}, 0.25f, 0.0339f, false},
+        [](UserInterface& ui, Int style, Int) {
+            return panel({ui, {48, 36}}, PanelStyle(style)).node();
+        }},
+    {"panel", nullptr, {},
+        [](UserInterface& ui, Int style, Int) {
+            return Panel{{ui, {48, 36}},PanelStyle(style)}.release();
+        }},
+    {"panel, setStyle()", nullptr, {},
+        [](UserInterface& ui, Int style, Int) {
+            Panel panel{{ui, {48, 36}},PanelStyle(style == 0 ? 1 : 0)};
+            panel.setStyle(PanelStyle(style));
+            return panel.release();
         }},
 };
 

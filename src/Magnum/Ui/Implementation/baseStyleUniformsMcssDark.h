@@ -147,4 +147,9 @@ _c(InputFlatFocused,            {}, 0xa5c9ea_rgbf,
     {4.0f, 1.0f, 1.0f, 1.0f}, Vector4{4.0f}, {1.0f, 1.0f, 3.0f, 3.0f})
 _c(InputFlatDisabled,           {}, {},
     {0.0f, 0.0f, 0.0f, 0.0f}, Vector4{4.0f}, {4.0f, 4.0f, 4.0f, 4.0f})
+
+/* --header-background-color, with some transparency, disabled variant the same
+   as elsewhere with 30% opacity */
+_c(PanelBackground,             0x22272eff_rgbaf*0.9f, 4.0f)
+_c(PanelBackgroundDisabled,     0x22272eff_rgbaf*0.3f, 4.0f)
 #endif

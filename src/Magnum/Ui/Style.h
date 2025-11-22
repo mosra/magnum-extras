@@ -62,7 +62,7 @@ namespace Implementation {
     /* Used by various tests, less wasteful to have here than in the
        potentially huge Style.hpp */
     enum: UnsignedInt {
-        BaseStyleCount = 61,
+        BaseStyleCount = 63,
         BaseStyleUniformCount = BaseStyleCount,
         TextStyleCount = 91,
         TextStyleUniformCount = 33,
