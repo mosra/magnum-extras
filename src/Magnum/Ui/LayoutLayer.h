@@ -59,6 +59,16 @@ resulting in the output below:
 @snippet ui-debuglayer.cpp layoutlayer-style-names
 
 @include ui-debuglayer-layoutlayer-style-names.ansi
+
+<b></b>
+
+@m_class{m-note m-success}
+
+@par
+    Names and IDs of styles used by builtin widgets are considered an
+    implementation detail and thus aren't exposed, but they're included in the
+    @ref magnum-ui-gallery "magnum-ui-gallery" `--debug` output if you want to
+    have a peek.
 */
 class MAGNUM_UI_EXPORT LayoutLayer: public AbstractLayer {
     public:

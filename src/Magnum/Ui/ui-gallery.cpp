@@ -53,6 +53,7 @@
 #include "Magnum/Ui/Style.h"
 #include "Magnum/Ui/Style.hpp" /* for DebugLayer style names */
 #include "Magnum/Ui/TextLayer.h" /* for DebugLayer style names */
+#include "Magnum/Ui/LayoutLayer.h" /* for DebugLayer style names */
 #include "Magnum/Ui/TextProperties.h"
 #include "Magnum/Ui/UserInterfaceGL.h"
 
@@ -371,6 +372,14 @@ UiGallery::UiGallery(const Arguments& arguments): Platform::Application{argument
             CORRADE_INTERNAL_ASSERT_UNREACHABLE();
         });
         debugLayer.setLayerName(_ui.eventLayer(), "EventLayer");
+        debugLayer.setLayerName(_ui.layoutLayer(), "LayoutLayer", [](UnsignedInt style) -> Containers::StringView {
+            switch(Ui::Implementation::LayoutStyle(style)) {
+                #define _c(name, ...) case Ui::Implementation::LayoutStyle::name: return #name;
+                #include "Magnum/Ui/Implementation/layoutStyleMcssDark.h"
+                #undef _c
+            }
+            CORRADE_INTERNAL_ASSERT_UNREACHABLE();
+        });
     }
     #endif
 }
