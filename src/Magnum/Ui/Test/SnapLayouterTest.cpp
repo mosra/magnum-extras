@@ -117,37 +117,37 @@ const struct {
         500 +-----+             +---------------+
                  K  T                   3
                  G  S                                */
-    {Snap::Top|Snap::Left|Snap::InsideX,
+    {Snap::TopLeft|Snap::InsideX,
         {100.0f, 167.0f}, Size},                            /* A */
-    {Snap::Top|Snap::Left|Snap::NoPadX|Snap::InsideX,
+    {Snap::TopLeft|Snap::NoPadX|Snap::InsideX,
         {100.0f, 167.0f}, Size},                            /* A again */
-    {Snap::Top|Snap::Left|Snap::InsideY,
+    {Snap::TopLeft|Snap::InsideY,
         {73.0f, 200.0f}, Size},                             /* B */
-    {Snap::Top|Snap::Left|Snap::NoPadY|Snap::InsideY,
+    {Snap::TopLeft|Snap::NoPadY|Snap::InsideY,
         {73.0f, 200.0f}, Size},                             /* B again */
-    {Snap::Top|Snap::Left|Snap::InsideX|Snap::InsideY,
+    {Snap::TopLeft|Snap::InsideX|Snap::InsideY,
         {110.0f, 205.0f}, Size},                            /* C */
-    {Snap::Top|Snap::Left|Snap::NoPadX|Snap::InsideY,
+    {Snap::TopLeft|Snap::NoPadX|Snap::InsideY,
         {80.0f, 200.0f}, Size},                             /* D */
-    {Snap::Top|Snap::Left|Snap::NoPadY|Snap::InsideX,
+    {Snap::TopLeft|Snap::NoPadY|Snap::InsideX,
         {100.0f, 170.0f}, Size},                            /* E */
-    {Snap::Top|Snap::Left|Snap::NoPadX|Snap::NoPadY|Snap::InsideX|Snap::InsideY,
+    {Snap::TopLeft|Snap::NoPad|Snap::Inside,
         {100.0f, 200.0f}, Size},                            /* F */
-    {Snap::Bottom|Snap::Right|Snap::InsideX,
+    {Snap::BottomRight|Snap::InsideX,
         {480.0f, 503.0f}, Size},                            /* G */
-    {Snap::Bottom|Snap::Right|Snap::NoPadX|Snap::InsideX,
+    {Snap::BottomRight|Snap::NoPadX|Snap::InsideX,
         {480.0f, 503.0f}, Size},                            /* G again */
-    {Snap::Bottom|Snap::Right|Snap::InsideY,
+    {Snap::BottomRight|Snap::InsideY,
         {507.0f, 470.0f}, Size},                            /* H */
-    {Snap::Bottom|Snap::Right|Snap::NoPadY|Snap::InsideY,
+    {Snap::BottomRight|Snap::NoPadY|Snap::InsideY,
         {507.0f, 470.0f}, Size},                            /* H again */
-    {Snap::Bottom|Snap::Right|Snap::InsideX|Snap::InsideY,
+    {Snap::BottomRight|Snap::Inside,
         {465.0f, 445.0f}, Size},                            /* I */
-    {Snap::Bottom|Snap::Right|Snap::NoPadX|Snap::InsideY,
+    {Snap::BottomRight|Snap::NoPadX|Snap::InsideY,
         {500.0f, 470.0f}, Size},                            /* J */
-    {Snap::Bottom|Snap::Right|Snap::NoPadY|Snap::InsideX,
+    {Snap::BottomRight|Snap::NoPadY|Snap::InsideX,
         {480.0f, 500.0f}, Size},                            /* K */
-    {Snap::Bottom|Snap::Right|Snap::NoPadX|Snap::NoPadY|Snap::InsideX|Snap::InsideY,
+    {Snap::BottomRight|Snap::NoPad|Snap::Inside,
         {480.0f, 470.0f}, Size},                            /* L */
     {Snap::Top,
         {290.0f, 167.0f}, Size},                            /* M */
@@ -165,17 +165,17 @@ const struct {
         {110.0f, 325.0f}, Size},                            /* P */
     {Snap::Left|Snap::InsideX|Snap::NoPadY,
         {110.0f, 335.0f}, Size},                            /* P, no pad Y */
-    {Snap::Top|Snap::Left,
+    {Snap::TopLeft,
         {73.0f, 167.0f}, Size},                             /* Q */
-    {Snap::Top|Snap::Left|Snap::NoPadX,
+    {Snap::TopLeft|Snap::NoPadX,
         {80.0f, 167.0f}, Size},                             /* R */
-    {Snap::Bottom|Snap::Right,
+    {Snap::BottomRight,
         {507.0f, 503.0f}, Size},                            /* S */
-    {Snap::Bottom|Snap::Right|Snap::NoPadY,
+    {Snap::BottomRight|Snap::NoPadY,
         {507.0f, 500.0f}, Size},                            /* T */
     {{},
         {287.5f, 325.0f}, Size},                            /* U */
-    {Snap::NoPadX|Snap::NoPadY,
+    {Snap::NoPad,
         {290.0f, 335.0f}, Size},                            /* U, no pad XY */
 
     /*     100   500
@@ -187,21 +187,21 @@ const struct {
             |     |     |   f | d    |hhhhh|
         500 +-----+     +-----+      +-----+
              aaaaa                           */
-    {Snap::Bottom|Snap::Left|Snap::Right,
+    {Snap::Bottom|Snap::FillX,
         {100.0f, 503.0f}, {400.0f, Size.y()}},              /* aaa */
-    {Snap::Bottom|Snap::Left|Snap::Right|Snap::InsideY,
+    {Snap::Bottom|Snap::FillX|Snap::InsideY,
         {110.0f, 445.0f}, {375.0f, Size.y()}},              /* bbb */
-    {Snap::Bottom|Snap::Left|Snap::Right|Snap::InsideY|Snap::NoPadX,
+    {Snap::Bottom|Snap::FillX|Snap::InsideY|Snap::NoPadX,
         {100.0f, 445.0f}, {400.0f, Size.y()}},              /* cbc */
-    {Snap::Top|Snap::Bottom|Snap::Right,
+    {Snap::FillY|Snap::Right,
         {507.0f, 200.0f}, {Size.x(), 300.0f}},              /* ddd */
-    {Snap::Top|Snap::Bottom|Snap::Right|Snap::InsideX,
+    {Snap::FillY|Snap::Right|Snap::InsideX,
         {465.0f, 205.0f}, {Size.x(), 270.0f}},              /* eee */
-    {Snap::Top|Snap::Bottom|Snap::Right|Snap::InsideX|Snap::NoPadY,
+    {Snap::FillY|Snap::Right|Snap::InsideX|Snap::NoPadY,
         {465.0f, 200.0f}, {Size.x(), 300.0f}},              /* fef */
-    {Snap::Top|Snap::Bottom|Snap::Left|Snap::Right,
+    {Snap::Fill,
         {110.0f, 205.0f}, {375.0f, 270.0f}},                /* ggg */
-    {Snap::Top|Snap::Bottom|Snap::Left|Snap::Right|Snap::NoPadX |Snap::NoPadY,
+    {Snap::Fill|Snap::NoPad,
         {100.0f, 200.0f}, {400.0f, 300.0f}}                 /* hgh */
 };
 
