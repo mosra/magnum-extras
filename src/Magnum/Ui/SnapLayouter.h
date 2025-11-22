@@ -46,58 +46,65 @@ Specifying neither @ref Snap::Left nor @ref Snap::Right will result in
 horizontal centering. Specifying both @ref Snap::Left and @ref Snap::Right (or
 the @ref Snap::FillX alias) will cause the node width to match width of the
 target node or the user interface. In both cases it's as if @ref Snap::InsideX
-was specified as well. If the snap results in the node being inside the target
-node, horizontal @ref SnapLayouter::padding() is taken into account.
+was specified as well.
 
 Specifying neither @ref Snap::Top nor @ref Snap::Bottom will result in verical
 centering. Specifying both @ref Snap::Top and @ref Snap::Bottom (or the
 @ref Snap::FillX alias) will cause the node height to match height the target
 node or user interface. In both cases it's as if @ref Snap::InsideY was
-specified as well. If the snap results in the node being inside the target
-node, vertical @ref SnapLayouter::padding() is taken into account.
+specified as well.
+
+If the snap results in the node being outside of the target node, margin of
+both nodes is taken into account. If the snap results in the node being inside
+the target node, padding of the target node and margin of the snapped node is
+taken into account.
 
 Specifying @ref Snap::NoPadX and/or @ref Snap::NoPadY will ignore horizontal
-and/or vertical @ref SnapLayouter::padding() and @ref SnapLayouter::margin().
+and/or vertical padding and margin.
 @see @ref Snaps, @ref SnapLayouter, @ref SnapLayout
 */
 enum class Snap: UnsignedByte {
     /**
      * Snaps right side of a node to left side of the target node, taking
-     * horizontal @ref SnapLayouter::margin() into account.
+     * left-side snapped node margin and right-side target node margin into
+     * account.
      *
      * If combined with @ref Snap::InsideX, snaps left side of a node to left
-     * side of the target node or user interface, taking left-side
-     * @ref SnapLayouter::padding() into account.
+     * side of the target node or user interface, taking left-side target node
+     * padding and left-side snapped node margin into account.
      */
     Left = 1 << 0,
 
     /**
      * Snaps bottom side of a node to top side of the target node, taking
-     * vertical @ref SnapLayouter::margin() into account.
+     * bottom-side snapped node margin and top-side target node margin into
+     * account.
      *
      * If combined with @ref Snap::InsideY, snaps top side of a node to top
-     * side of the target node or user interface, taking top-side
-     * @ref SnapLayouter::padding() into account.
+     * side of the target node or user interface, taking top-side target node
+     * padding and top-side snapped node margin into account.
      */
     Top = 1 << 1,
 
     /**
      * Snaps left side of a node to right side of the target node, taking
-     * horizontal @ref SnapLayouter::margin() into account.
+     * right-side snapped node margin and left-side target node margin into
+     * account.
      *
      * If combined with @ref Snap::InsideX, snaps right side of a node to
      * right side of the target node or user interface, taking right-side
-     * @ref SnapLayouter::padding() into account.
+     * target node padding and right-side snapped node margin into account.
      */
     Right = 1 << 2,
 
     /**
      * Snaps top side of a node to bottom side of the target node, taking
-     * vertical @ref SnapLayouter::margin() into account.
+     * bottom-side snapped node margin and top-side target node margin into
+     * account.
      *
      * If combined with @ref Snap::InsideY, snaps bottom side of a node to
-     * bottom side of the target node or user interface, taking top-side
-     * @ref SnapLayouter::padding() into account.
+     * bottom side of the target node or user interface, taking bottom-side
+     * target node padding and bottom-side node margin into account.
      */
     Bottom = 1 << 3,
 
@@ -170,15 +177,13 @@ enum class Snap: UnsignedByte {
     Inside = InsideX|InsideY,
 
     /**
-     * Ignore horizontal @ref SnapLayouter::padding() and
-     * @ref SnapLayouter::margin().
+     * Ignore horizontal node margin and padding.
      * @m_since_latest_{extras}
      */
     NoPadX = 1 << 6,
 
     /**
-     * Ignore vertical @ref SnapLayouter::padding() and
-     * @ref SnapLayouter::margin().
+     * Ignore vertical node margin and padding.
      * @m_since_latest_{extras}
      */
     NoPadY = 1 << 7,
@@ -249,71 +254,6 @@ class MAGNUM_UI_EXPORT SnapLayouter: public AbstractLayouter {
 
         /** @brief Move assignment */
         SnapLayouter& operator=(SnapLayouter&&) noexcept;
-
-        /** @brief Left, top, right and bottom padding inside a node */
-        Vector4 padding() const;
-
-        /**
-         * @brief Set different left, top, right and bottom padding inside a node
-         * @return Reference to self (for method chaining)
-         *
-         * Applied globally to all layouts, i.e. when this value changes, all
-         * existing layouts will have their padding changed as well. Use
-         * @ref setMargin() to set margin *between* nodes. Initially the
-         * padding is @cpp {0.0f, 0.0f, 0.0f, 0.0f} @ce.
-         *
-         * Calling this function causes @ref LayouterState::NeedsUpdate to be
-         * set.
-         * @see @ref setPadding(const Vector2&), @ref setPadding(Float)
-         */
-        SnapLayouter& setPadding(const Vector4& padding);
-
-        /**
-         * @brief Set different horizontal and vertical padding inside a node
-         * @return Reference to self (for method chaining)
-         *
-         * Same as calling @ref setPadding(const Vector4&) with the left, right
-         * and top, bottom components being the same.
-         * @see @ref setPadding(Float)
-         */
-        SnapLayouter& setPadding(const Vector2& padding);
-
-        /**
-         * @brief Set padding inside a node
-         * @return Reference to self (for method chaining)
-         *
-         * Same as calling @ref setPadding(const Vector4&) with all values
-         * being the same.
-         * @see @ref setPadding(const Vector2&)
-         */
-        SnapLayouter& setPadding(Float padding);
-
-        /** @brief Horizontal and vertical margin between nodes */
-        Vector2 margin() const;
-
-        /**
-         * @brief Set different horizontal and vertical marging between nodes
-         * @return Reference to self (for method chaining)
-         *
-         * Applied globally to all layouts, i.e. when this value changes, all
-         * existing layouts will have their margin changed as well. Use
-         * @ref setPadding() to set padding *inside* of a node. Initially the
-         * margin is @cpp {0.0f, 0.0f} @ce.
-         *
-         * Calling this function causes @ref LayouterState::NeedsUpdate to be
-         * set.
-         * @see @ref setMargin(Float)
-         */
-        SnapLayouter& setMargin(const Vector2& margin);
-
-        /**
-         * @brief Set margin between nodes
-         * @return Reference to self (for method chaining)
-         *
-         * Same as calling @ref setMargin(const Vector2&) with both values
-         * being the same.
-         */
-        SnapLayouter& setMargin(Float margin);
 
         /**
          * @brief Remove a layout

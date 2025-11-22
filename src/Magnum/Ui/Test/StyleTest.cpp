@@ -541,8 +541,7 @@ void StyleTest::apply() {
         /* Nothing to check here */
     }
     if(data.features >= StyleFeature::SnapLayouter) {
-        /* No need to check everything */
-        CORRADE_COMPARE(ui.snapLayouter().margin(), (Vector2{12.0f, 10.0f}));
+        /* Nothing to check here */
     }
 }
 

@@ -128,9 +128,7 @@ enum class StyleFeature: UnsignedShort {
 
     /**
      * @ref SnapLayouter style. Ensures a @ref SnapLayouter instance is set up
-     * on the @ref UserInterface, the style implementation then calls
-     * @relativeref{SnapLayouter,setPadding()} and
-     * @relativeref{SnapLayouter,setMargin()} on it.
+     * on the @ref UserInterface.
      * @see @ref UserInterface::snapLayouter(),
      *      @ref UserInterface::hasSnapLayouter()
      */
@@ -628,9 +626,8 @@ class MAGNUM_UI_EXPORT AbstractStyle {
          * @ref TextLayer::Shared::addFont(),
          * @ref TextLayer::Shared::setStyle(),
          * @ref TextLayer::Shared::setStyleTransition(),
-         * @ref TextLayer::Shared::setStyleAnimation(),
-         * @ref LayoutLayer::setStyle(), @ref SnapLayouter::setPadding() and
-         * @ref SnapLayouter::setMargin() with style contents based on what
+         * @ref TextLayer::Shared::setStyleAnimation() and
+         * @ref LayoutLayer::setStyle() with style contents based on what
          * @p features are passed and return @cpp true @ce. If some runtime
          * error happens, should print a message to @relativeref{Magnum,Error}
          * and return @cpp false @ce.

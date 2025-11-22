@@ -42,9 +42,10 @@ BitVector2 snapInside(Snaps snap) {
 }
 
 /* Snaps rectangle of given `size` to a rectangle defined by `targetOffset`,
-   `targetSize`, `padding` inside in order left, top, right, bottom and
-   `margin` outside */
-Containers::Pair<Vector2, Vector2> snap(Snaps snap, const Vector2& targetOffset, const Vector2& targetSize, const Vector4& padding, const Vector2& margin, const Vector2& size) {
+   `targetSize`, `targetPadding` inside the target rectangle in order left,
+   top, right, bottom, `targetMargin` outside the target rectangle, and
+   `margin` outside of the to-be-snapped rectangle */
+Containers::Pair<Vector2, Vector2> snap(Snaps snap, const Vector2& targetOffset, const Vector2& targetSize, const Vector4& targetPadding, const Vector4& targetMargin, const Vector4& margin, const Vector2& size) {
     const BitVector2 snapInside = Implementation::snapInside(snap);
 
     /* Spacing in given direction is ignored either explicitly or if snapping
@@ -55,12 +56,43 @@ Containers::Pair<Vector2, Vector2> snap(Snaps snap, const Vector2& targetOffset,
         ((snap & Snap::NoPadY) || (snapInside[1] && !snapInside[0] && (!(snap & Snap::Left) != !(snap & Snap::Right))) ? 2 : 0)
     )};
 
+    /*           +----+
+              max(tmT, mB)
+               +--------+
+       -+ max( |        | max( +-
+        | tmL, |        | tmR, |
+       -+  mR) |        |  mL) +-
+               +--------+
+              max(rmB, mT)
+                 +----+
+
+       Order of target margin (tm*) is left, top, right, bottom (xyzw), so it
+       has to take the margin (m*) in right, bottom, left, top (zwxy). */
+    const Vector4 maxMargin = Math::max(
+        targetMargin,
+        Math::gather<'z', 'w', 'x', 'y'>(margin));
+
+    /* +----------------------+
+       |     max(tpT, mT)     |
+       | max( +--------+ max( |
+       | tpL, |        | tpR, |
+       |  mL) +--------+  mR) |
+       |     max(tpB, mB)     |
+       +----------------------+
+
+       For target padding (tp*) and margin (m*) the sides are the same. */
+    const Vector4 maxPadding = Math::max(
+        targetPadding,
+        margin);
+
     const Vector2 targetPaddedMin = targetOffset - Math::lerp(
-        Math::lerp(margin, -padding.xy(), snapInside),
+        Math::lerp(maxMargin.xy(),
+                  -maxPadding.xy(), snapInside),
         {},
         ignoreSpace);
     const Vector2 targetPaddedMax = targetOffset + targetSize + Math::lerp(
-        Math::lerp(margin, -Math::gather<'z', 'w'>(padding), snapInside),
+        Math::lerp(Math::gather<'z', 'w'>(maxMargin),
+                  -Math::gather<'z', 'w'>(maxPadding), snapInside),
         {},
         ignoreSpace);
 

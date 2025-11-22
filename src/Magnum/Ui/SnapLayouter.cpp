@@ -113,8 +113,6 @@ struct Layout {
 }
 
 struct SnapLayouter::State {
-    Vector4 padding;
-    Vector2 margin;
     Containers::Array<Layout> layouts;
     Vector2 uiSize;
 };
@@ -126,34 +124,6 @@ SnapLayouter::SnapLayouter(SnapLayouter&&) noexcept = default;
 SnapLayouter::~SnapLayouter() = default;
 
 SnapLayouter& SnapLayouter::operator=(SnapLayouter&&) noexcept = default;
-
-Vector4 SnapLayouter::padding() const { return _state->padding; }
-
-SnapLayouter& SnapLayouter::setPadding(const Vector4& padding) {
-    _state->padding = padding;
-    setNeedsUpdate();
-    return *this;
-}
-
-SnapLayouter& SnapLayouter::setPadding(const Vector2& padding) {
-    return setPadding(Math::gather<'x', 'y', 'x', 'y'>(padding));
-}
-
-SnapLayouter& SnapLayouter::setPadding(const Float padding) {
-    return setPadding(Vector4{padding});
-}
-
-Vector2 SnapLayouter::margin() const { return _state->margin; }
-
-SnapLayouter& SnapLayouter::setMargin(const Vector2& margin) {
-    _state->margin = margin;
-    setNeedsUpdate();
-    return *this;
-}
-
-SnapLayouter& SnapLayouter::setMargin(const Float margin) {
-    return setMargin(Vector2{margin});
-}
 
 Snaps SnapLayouter::snap(const LayoutHandle handle) const {
     CORRADE_ASSERT(isHandleValid(handle),
@@ -216,7 +186,7 @@ void SnapLayouter::doSetSize(const Vector2& size) {
     setNeedsUpdate();
 }
 
-void SnapLayouter::doUpdate(const Containers::BitArrayView layoutIdsToUpdate, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const NodeHandle>& nodeParents, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Float>&, const Containers::StridedArrayView1D<const Vector4>&, const Containers::StridedArrayView1D<const Vector4>&, const Containers::StridedArrayView1D<Vector2>& nodeOffsets, const Containers::StridedArrayView1D<Vector2>& nodeSizes) {
+void SnapLayouter::doUpdate(const Containers::BitArrayView layoutIdsToUpdate, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const NodeHandle>& nodeParents, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Float>&, const Containers::StridedArrayView1D<const Vector4>& nodePaddings, const Containers::StridedArrayView1D<const Vector4>& nodeMargins, const Containers::StridedArrayView1D<Vector2>& nodeOffsets, const Containers::StridedArrayView1D<Vector2>& nodeSizes) {
     const State& state = *_state;
 
     /* Order layouts breadth first in dependency order to ensure the parent
@@ -271,6 +241,7 @@ void SnapLayouter::doUpdate(const Containers::BitArrayView layoutIdsToUpdate, co
         /* If the target is null, we're snapping to the whole UI */
         Snaps snap = layout.snap;
         Vector2 targetOffset{NoInit}, targetSize{NoInit};
+        Vector4 targetPadding{NoInit}, targetMargin{NoInit};
         if(layout.target == NodeHandle::Null) {
             /* This was ensured by the snap() helper itself, which makes the
                parent null if the target is null */
@@ -279,12 +250,19 @@ void SnapLayouter::doUpdate(const Containers::BitArrayView layoutIdsToUpdate, co
             targetOffset = {};
             targetSize = state.uiSize;
 
+            /* The whole UI on its own doesn't have any padding defined, only
+               margin of root nodes is used. */
+            targetPadding = {};
+            /* Margin shouldn't get used for anything, poison it with NaNs */
+            targetMargin = Vector4{Constants::nan()};
+
         /* Otherwise we're snapping relative to the parent node, which should
            have the layout already calculated at this point thanks to the
            dependency ordering */
         } else {
             const UnsignedInt nodeTargetId = nodeHandleId(layout.target);
             targetSize = nodeSizes[nodeTargetId];
+
             /* If the nodes are siblings, include the target offset in the
                calculation */
             if(nodeParents[nodeId] == nodeParents[nodeTargetId])
@@ -296,12 +274,14 @@ void SnapLayouter::doUpdate(const Containers::BitArrayView layoutIdsToUpdate, co
                or the snap() helper, which makes the node either a sibling or
                a child of the target */
             else CORRADE_INTERNAL_DEBUG_ASSERT_UNREACHABLE(); /* LCOV_EXCL_LINE */
+
+            targetPadding = nodePaddings[nodeTargetId];
+            targetMargin = nodeMargins[nodeTargetId];
         }
 
         const Containers::Pair<Vector2, Vector2> out = Implementation::snap(snap,
             targetOffset, targetSize,
-            state.padding,
-            state.margin,
+            targetPadding, targetMargin, nodeMargins[nodeId],
             nodeSizes[nodeId]);
 
         /* The original node offset is added to the calculated layout, size

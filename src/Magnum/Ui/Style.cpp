@@ -1028,12 +1028,9 @@ bool McssDarkStyle::doApply(UserInterface& ui, const StyleFeatures features, Plu
 
     /* Snap layouter */
     if(features >= StyleFeature::SnapLayouter) {
-        ui.snapLayouter()
-            /* Compared to m.css, which has both and margin and padding 1rem
-               (= 16px, matching font size), the spacing is slightly reduced
-               here. */
-            .setMargin({12.0f, 10.0f})
-            .setPadding({16.0f, 12.0f});
+        /* Right now nothing to set here. It's present in features() mainly in
+           order to make UserInterface implicitly add this layer for use by the
+           application. */
     }
 
     return true;

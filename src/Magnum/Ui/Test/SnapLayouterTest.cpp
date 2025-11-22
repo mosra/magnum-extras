@@ -31,6 +31,7 @@
 #include <Corrade/TestSuite/Compare/Container.h>
 #include <Corrade/TestSuite/Compare/String.h>
 
+#include "Magnum/Ui/AbstractLayer.h"
 #include "Magnum/Ui/Anchor.h"
 #include "Magnum/Ui/Handle.h"
 #include "Magnum/Ui/NodeFlags.h"
@@ -58,9 +59,6 @@ struct SnapLayouterTest: TestSuite::Tester {
     void constructCopy();
     void constructMove();
 
-    void setPadding();
-    void setMargin();
-
     template<class T> void layoutConstructInside();
     template<class T> void layoutConstructOutside();
     void layoutConstructDefaultLayouter();
@@ -78,6 +76,7 @@ struct SnapLayouterTest: TestSuite::Tester {
 
     void updateEmpty();
     void updateDataOrder();
+    void updateLayoutProperties();
 };
 
 const struct {
@@ -101,8 +100,15 @@ const struct {
 
 const Vector2 Size{20.0f, 30.0f};
 
+/* Used inside SnapData below but also in updateDataOrder() */
+constexpr Float Nan = Constants::nan();
+constexpr Vector4 Nan4{Constants::nan()};
+
 const struct {
     Snaps snap;
+    const char* name;
+    /* left, top, right, bottom; components that should not be used are NaN */
+    Vector4 referencePadding, referenceMargin, margin;
     Vector2 expectedOffset, expectedSize;
 } SnapData[]{
     /*     100   500
@@ -117,65 +123,212 @@ const struct {
         500 +-----+             +---------------+
                  K  T                   3
                  G  S                                */
-    {Snap::TopLeft|Snap::InsideX,
+    {Snap::TopLeft|Snap::InsideX, "ref Y margin larger",
+        Nan4, {Nan, 3.0f, Nan, Nan}, {Nan, Nan, Nan, 2.0f},
         {100.0f, 167.0f}, Size},                            /* A */
-    {Snap::TopLeft|Snap::NoPadX|Snap::InsideX,
+    {Snap::TopLeft|Snap::InsideX, nullptr,
+        Nan4, {Nan, 1.0f, Nan, Nan}, {Nan, Nan, Nan, 3.0f},
+        {100.0f, 167.0f}, Size},                            /* A */
+    {Snap::TopLeft|Snap::NoPadX|Snap::InsideX, "ref Y margin larger",
+        Nan4, {Nan, 3.0f, Nan, Nan}, {Nan, Nan, Nan, 2.0f},
         {100.0f, 167.0f}, Size},                            /* A again */
-    {Snap::TopLeft|Snap::InsideY,
+    {Snap::TopLeft|Snap::NoPadX|Snap::InsideX, nullptr,
+        Nan4, {Nan, 1.0f, Nan, Nan}, {Nan, Nan, Nan, 3.0f},
+        {100.0f, 167.0f}, Size},                            /* A again */
+    {Snap::TopLeft|Snap::InsideY, "ref X margin larger",
+        Nan4, {7.0f, Nan, Nan, Nan}, {Nan, Nan, 5.0f, Nan},
         {73.0f, 200.0f}, Size},                             /* B */
-    {Snap::TopLeft|Snap::NoPadY|Snap::InsideY,
+    {Snap::TopLeft|Snap::InsideY, nullptr,
+        Nan4, {6.0f, Nan, Nan, Nan}, {Nan, Nan, 7.0f, Nan},
+        {73.0f, 200.0f}, Size},                             /* B */
+    {Snap::TopLeft|Snap::NoPadY|Snap::InsideY, "ref X margin larger",
+        Nan4, {7.0f, Nan, Nan, Nan}, {Nan, Nan, 5.0f, Nan},
         {73.0f, 200.0f}, Size},                             /* B again */
-    {Snap::TopLeft|Snap::InsideX|Snap::InsideY,
+    {Snap::TopLeft|Snap::NoPadY|Snap::InsideY, nullptr,
+        Nan4, {6.0f, Nan, Nan, Nan}, {Nan, Nan, 7.0f, Nan},
+        {73.0f, 200.0f}, Size},                             /* B again */
+    {Snap::TopLeft|Snap::InsideX|Snap::InsideY, "ref X padding larger",
+        {10.0f, 4.0f, Nan, Nan}, Nan4, {9.0f, 5.0f, Nan, Nan},
         {110.0f, 205.0f}, Size},                            /* C */
-    {Snap::TopLeft|Snap::NoPadX|Snap::InsideY,
+    {Snap::TopLeft|Snap::InsideX|Snap::InsideY, "ref Y padding larger",
+        {8.0f, 5.0f, Nan, Nan}, Nan4, {10.0f, 3.0f, Nan, Nan},
+        {110.0f, 205.0f}, Size},                            /* C */
+    {Snap::TopLeft|Snap::InsideX|Snap::InsideY, "ref XY padding larger",
+        {10.0f, 5.0f, Nan, Nan}, Nan4, {4.0f, 3.0f, Nan, Nan},
+        {110.0f, 205.0f}, Size},                            /* C */
+    {Snap::TopLeft|Snap::InsideX|Snap::InsideY, nullptr,
+        {3.0f, 2.0f, Nan, Nan}, Nan4, {10.0f, 5.0f, Nan, Nan},
+        {110.0f, 205.0f}, Size},                            /* C */
+    {Snap::TopLeft|Snap::NoPadX|Snap::InsideY, nullptr,
+        Nan4, Nan4, Nan4,
         {80.0f, 200.0f}, Size},                             /* D */
-    {Snap::TopLeft|Snap::NoPadY|Snap::InsideX,
+    {Snap::TopLeft|Snap::NoPadY|Snap::InsideX, nullptr,
+        Nan4, Nan4, Nan4,
         {100.0f, 170.0f}, Size},                            /* E */
-    {Snap::TopLeft|Snap::NoPad|Snap::Inside,
+    {Snap::TopLeft|Snap::NoPad|Snap::Inside, nullptr,
+        Nan4, Nan4, Nan4,
         {100.0f, 200.0f}, Size},                            /* F */
-    {Snap::BottomRight|Snap::InsideX,
+    {Snap::BottomRight|Snap::InsideX, "ref Y margin larger",
+        Nan4, {Nan, Nan, Nan, 3.0f}, {Nan, 2.0f, Nan, Nan},
         {480.0f, 503.0f}, Size},                            /* G */
-    {Snap::BottomRight|Snap::NoPadX|Snap::InsideX,
+    {Snap::BottomRight|Snap::InsideX, nullptr,
+        Nan4, {Nan, Nan, Nan, 1.0f}, {Nan, 3.0f, Nan, Nan},
+        {480.0f, 503.0f}, Size},                            /* G */
+    {Snap::BottomRight|Snap::NoPadX|Snap::InsideX, "ref Y margin larger",
+        Nan4, {Nan, Nan, Nan, 3.0f}, {Nan, 2.0f, Nan, Nan},
         {480.0f, 503.0f}, Size},                            /* G again */
-    {Snap::BottomRight|Snap::InsideY,
+    {Snap::BottomRight|Snap::NoPadX|Snap::InsideX, nullptr,
+        Nan4, {Nan, Nan, Nan, 1.0f}, {Nan, 3.0f, Nan, Nan},
+        {480.0f, 503.0f}, Size},                            /* G again */
+    {Snap::BottomRight|Snap::InsideY, "ref X margin larger",
+        Nan4, {Nan, Nan, 7.0f, Nan}, {4.0f, Nan, Nan, Nan},
         {507.0f, 470.0f}, Size},                            /* H */
-    {Snap::BottomRight|Snap::NoPadY|Snap::InsideY,
+    {Snap::BottomRight|Snap::InsideY, nullptr,
+        Nan4, {Nan, Nan, 6.0f, Nan}, {7.0f, Nan, Nan, Nan},
+        {507.0f, 470.0f}, Size},                            /* H */
+    {Snap::BottomRight|Snap::NoPadY|Snap::InsideY, "ref X margin larger",
+        Nan4, {Nan, Nan, 7.0f, Nan}, {4.0f, Nan, Nan, Nan},
         {507.0f, 470.0f}, Size},                            /* H again */
-    {Snap::BottomRight|Snap::Inside,
+    {Snap::BottomRight|Snap::NoPadY|Snap::InsideY, nullptr,
+        Nan4, {Nan, Nan, 6.0f, Nan}, {7.0f, Nan, Nan, Nan},
+        {507.0f, 470.0f}, Size},                            /* H again */
+    {Snap::BottomRight|Snap::Inside, "ref X padding larger",
+        {Nan, Nan, 15.0f, 23.0f}, Nan4, {Nan, Nan, 14.0f, 25.0f},
         {465.0f, 445.0f}, Size},                            /* I */
-    {Snap::BottomRight|Snap::NoPadX|Snap::InsideY,
+    {Snap::BottomRight|Snap::Inside, "ref Y padding larger",
+        {Nan, Nan, 10.0f, 25.0f}, Nan4, {Nan, Nan, 15.0f, 20.0f},
+        {465.0f, 445.0f}, Size},                            /* I */
+    {Snap::BottomRight|Snap::Inside, "ref XY padding larger",
+        {Nan, Nan, 15.0f, 25.0f}, Nan4, {Nan, Nan, 14.0f, 22.0f},
+        {465.0f, 445.0f}, Size},                            /* I */
+    {Snap::BottomRight|Snap::Inside, nullptr,
+        {Nan, Nan, 11.0f, 23.0f}, Nan4, {Nan, Nan, 15.0f, 25.0f},
+        {465.0f, 445.0f}, Size},                            /* I */
+    {Snap::BottomRight|Snap::NoPadX|Snap::InsideY, nullptr,
+        Nan4, Nan4, Nan4,
         {500.0f, 470.0f}, Size},                            /* J */
-    {Snap::BottomRight|Snap::NoPadY|Snap::InsideX,
+    {Snap::BottomRight|Snap::NoPadY|Snap::InsideX, nullptr,
+        Nan4, Nan4, Nan4,
         {480.0f, 500.0f}, Size},                            /* K */
-    {Snap::BottomRight|Snap::NoPad|Snap::Inside,
+    {Snap::BottomRight|Snap::NoPad|Snap::Inside, nullptr,
+        Nan4, Nan4, Nan4,
         {480.0f, 470.0f}, Size},                            /* L */
-    {Snap::Top,
+    {Snap::Top, "ref Y margin larger",
+        Nan4, {Nan, 3.0f, Nan, Nan}, {Nan, Nan, Nan, 2.0f},
         {290.0f, 167.0f}, Size},                            /* M */
-    {Snap::Top|Snap::NoPadX,
+    {Snap::Top, nullptr,
+        Nan4, {Nan, 1.0f, Nan, Nan}, {Nan, Nan, Nan, 3.0f},
+        {290.0f, 167.0f}, Size},                            /* M */
+    {Snap::Top|Snap::NoPadX, "ref Y margin larger",
+        Nan4, {Nan, 3.0f, Nan, Nan}, {Nan, Nan, Nan, 2.0f},
         {290.0f, 167.0f}, Size},                            /* M again */
-    {Snap::Top|Snap::InsideY,
+    {Snap::Top|Snap::NoPadX, nullptr,
+        Nan4, {Nan, 1.0f, Nan, Nan}, {Nan, Nan, Nan, 3.0f},
+        {290.0f, 167.0f}, Size},                            /* M again */
+    {Snap::Top|Snap::InsideY, "ref left padding larger",
+        {10.0f, 3.0f, 7.0f, Nan}, Nan4, {9.0f, 5.0f, 15.0f, Nan},
         {287.5f, 205.0f}, Size},                            /* N */
-    {Snap::Top|Snap::InsideY|Snap::NoPadX,
+    {Snap::Top|Snap::InsideY, "ref right padding larger",
+        {7.0f, 3.0f, 15.0f, Nan}, Nan4, {10.0f, 5.0f, 1.0f, Nan},
+        {287.5f, 205.0f}, Size},                            /* N */
+    {Snap::Top|Snap::InsideY, "ref X padding larger",
+        {10.0f, 3.0f, 15.0f, Nan}, Nan4, {9.0f, 5.0f, 10.0f, Nan},
+        {287.5f, 205.0f}, Size},                            /* N */
+    {Snap::Top|Snap::InsideY, "ref Y padding larger",
+        {9.0f, 5.0f, 14.0f, Nan}, Nan4, {10.0f, 3.0f, 15.0f, Nan},
+        {287.5f, 205.0f}, Size},                            /* N */
+    {Snap::Top|Snap::InsideY, "ref XY padding larger",
+        {10.0f, 5.0f, 15.0f, Nan}, Nan4, {7.0f, 3.0f, 10.0f, Nan},
+        {287.5f, 205.0f}, Size},                            /* N */
+    {Snap::Top|Snap::InsideY, nullptr,
+        {3.0f, 3.0f, 2.0f, Nan}, Nan4, {10, 5.0f, 15.0f, Nan},
+        {287.5f, 205.0f}, Size},                            /* N */
+    {Snap::Top|Snap::InsideY|Snap::NoPadX, "ref Y padding larger",
+        {Nan, 5.0f, Nan, Nan}, Nan4, {Nan, 3.0f, Nan, Nan},
         {290.0f, 205.0f}, Size},                            /* N, no pad X */
-    {Snap::Left,
+    {Snap::Top|Snap::InsideY|Snap::NoPadX, nullptr,
+        {Nan, 4.0f, Nan, Nan}, Nan4, {Nan, 5.0f, Nan, Nan},
+        {290.0f, 205.0f}, Size},                            /* N, no pad X */
+    {Snap::Left, "ref X margin larger",
+        Nan4, {7.0f, Nan, Nan, Nan}, {Nan, Nan, 6.0f, Nan},
         {73.0f, 335.0f}, Size},                             /* O */
-    {Snap::Left|Snap::NoPadY,
+    {Snap::Left, nullptr,
+        Nan4, {3.0f, Nan, Nan, Nan}, {Nan, Nan, 7.0f, Nan},
+        {73.0f, 335.0f}, Size},                             /* O */
+    {Snap::Left|Snap::NoPadY, "ref X margin larger",
+        Nan4, {7.0f, Nan, Nan, Nan}, {Nan, Nan, 6.0f, Nan},
         {73.0f, 335.0f}, Size},                             /* O again */
-    {Snap::Left|Snap::InsideX,
+    {Snap::Left|Snap::NoPadY, nullptr,
+        Nan4, {3.0f, Nan, Nan, Nan}, {Nan, Nan, 7.0f, Nan},
+        {73.0f, 335.0f}, Size},                             /* O again */
+    {Snap::Left|Snap::InsideX, "ref X padding larger",
+        {10.0f, 3.0f, Nan, 20.0f}, Nan4, {9.0f, 5.0f, Nan, 25.0f},
         {110.0f, 325.0f}, Size},                            /* P */
-    {Snap::Left|Snap::InsideX|Snap::NoPadY,
+    {Snap::Left|Snap::InsideX, "ref top padding larger",
+        {9.0f, 5.0f, Nan, 20.0f}, Nan4, {10.0f, 4.0f, Nan, 25.0f},
+        {110.0f, 325.0f}, Size},                            /* P */
+    {Snap::Left|Snap::InsideX, "ref bottom padding larger",
+        {9.0f, 4.0f, Nan, 25.0f}, Nan4, {10.0f, 5.0f, Nan, 22.0f},
+        {110.0f, 325.0f}, Size},                            /* P */
+    {Snap::Left|Snap::InsideX, "ref Y padding larger",
+        {9.0f, 5.0f, Nan, 25.0f}, Nan4, {10.0f, 4.0f, Nan, 22.0f},
+        {110.0f, 325.0f}, Size},                            /* P */
+    {Snap::Left|Snap::InsideX, "ref XY padding larger",
+        {10.0f, 5.0f, Nan, 25.0f}, Nan4, {7.0f, 4.0f, Nan, 22.0f},
+        {110.0f, 325.0f}, Size},                            /* P */
+    {Snap::Left|Snap::InsideX, nullptr,
+        {9.0f, 3.0f, Nan, 24.0f}, Nan4, {10.0f, 5.0f, Nan, 25.0f},
+        {110.0f, 325.0f}, Size},                            /* P */
+    {Snap::Left|Snap::InsideX|Snap::NoPadY, "ref X padding larger",
+        {10.0f, Nan, Nan, Nan}, Nan4, {9.0f, Nan, Nan, Nan},
         {110.0f, 335.0f}, Size},                            /* P, no pad Y */
-    {Snap::TopLeft,
+    {Snap::Left|Snap::InsideX|Snap::NoPadY, nullptr,
+        {8.0f, Nan, Nan, Nan}, Nan4, {10.0f, Nan, Nan, Nan},
+        {110.0f, 335.0f}, Size},                            /* P, no pad Y */
+    {Snap::TopLeft, "ref X margin larger",
+        Nan4, {7.0f, 2.0f, Nan, Nan}, {Nan, Nan, 6.0f, 3.0f},
         {73.0f, 167.0f}, Size},                             /* Q */
-    {Snap::TopLeft|Snap::NoPadX,
+    {Snap::TopLeft, "ref Y margin larger",
+        Nan4, {5.0f, 3.0f, Nan, Nan}, {Nan, Nan, 7.0f, 1.0f},
+        {73.0f, 167.0f}, Size},                             /* Q */
+    {Snap::TopLeft, "ref XY margin larger",
+        Nan4, {7.0f, 3.0f, Nan, Nan}, {Nan, Nan, 4.0f, 1.0f},
+        {73.0f, 167.0f}, Size},                             /* Q */
+    {Snap::TopLeft, nullptr,
+        Nan4, {4.0f, 1.0f, Nan, Nan}, {Nan, Nan, 7.0f, 3.0f},
+        {73.0f, 167.0f}, Size},                             /* Q */
+    {Snap::TopLeft|Snap::NoPadX, "ref Y margin larger",
+        Nan4, {Nan, 3.0f, Nan, Nan}, {Nan, Nan, Nan, 2.0f},
         {80.0f, 167.0f}, Size},                             /* R */
-    {Snap::BottomRight,
+    {Snap::TopLeft|Snap::NoPadX, nullptr,
+        Nan4, {Nan, 1.0f, Nan, Nan}, {Nan, Nan, Nan, 3.0f},
+        {80.0f, 167.0f}, Size},                             /* R */
+    {Snap::BottomRight, "ref X margin larger",
+        Nan4, {Nan, Nan, 7.0f, 2.0f}, {6.0f, 3.0f, Nan, Nan},
         {507.0f, 503.0f}, Size},                            /* S */
-    {Snap::BottomRight|Snap::NoPadY,
+    {Snap::BottomRight, "ref X margin larger",
+        Nan4, {Nan, Nan, 5.0f, 3.0f}, {7.0f, 2.0f, Nan, Nan},
+        {507.0f, 503.0f}, Size},                            /* S */
+    {Snap::BottomRight, "ref XY margin larger",
+        Nan4, {Nan, Nan, 7.0f, 3.0f}, {4.0f, 1.0f, Nan, Nan},
+        {507.0f, 503.0f}, Size},                            /* S */
+    {Snap::BottomRight, nullptr,
+        Nan4, {Nan, Nan, 3.0f, 1.0f}, {7.0f, 3.0f, Nan, Nan},
+        {507.0f, 503.0f}, Size},                            /* S */
+    {Snap::BottomRight|Snap::NoPadY, "ref X margin larger",
+        Nan4, {Nan, Nan, 7.0f, Nan}, {6.0f, Nan, Nan, Nan},
         {507.0f, 500.0f}, Size},                            /* T */
-    {{},
+    {Snap::BottomRight|Snap::NoPadY, nullptr,
+        Nan4, {Nan, Nan,5.0f, Nan}, {7.0f, Nan, Nan, Nan},
+        {507.0f, 500.0f}, Size},                            /* T */
+    {{}, "ref padding larger",
+        {9.0f, 3.0f, 11.0f, 22.0f}, Nan4, {10.0f, 5.0f, 15.0f, 25.0f},
         {287.5f, 325.0f}, Size},                            /* U */
-    {Snap::NoPad,
+    {{}, nullptr,
+        {10.0f, 5.0f, 15.0f, 25.0f}, Nan4, {9.0f, 3.0f, 11.0f, 22.0f},
+        {287.5f, 325.0f}, Size},                            /* U */
+    {Snap::NoPad, nullptr,
+        Nan4, Nan4, Nan4,
         {290.0f, 335.0f}, Size},                            /* U, no pad XY */
 
     /*     100   500
@@ -186,33 +339,102 @@ const struct {
             |cbbbc|     |   e | d    |hgggh|
             |     |     |   f | d    |hhhhh|
         500 +-----+     +-----+      +-----+
-             aaaaa                           */
-    {Snap::Bottom|Snap::FillX,
+             aaaaa
+
+        Per-component max() is tested sufficiently above, verifying just that
+        both sides are taken into account. */
+    {Snap::Bottom|Snap::FillX, "ref margin larger",
+        Nan4, {Nan, Nan, Nan, 3.0f}, {Nan, 2.0f, Nan, Nan},
         {100.0f, 503.0f}, {400.0f, Size.y()}},              /* aaa */
-    {Snap::Bottom|Snap::FillX|Snap::InsideY,
+    {Snap::Bottom|Snap::FillX, nullptr,
+        Nan4, {Nan, Nan, Nan, 1.0f}, {Nan, 3.0f, Nan, Nan},
+        {100.0f, 503.0f}, {400.0f, Size.y()}},              /* aaa */
+    {Snap::Bottom|Snap::FillX|Snap::InsideY, "ref padding larger",
+        {10.0f, Nan, 15.0f, 25.0f}, Nan4, {9.0f, Nan, 11.0f, 22.0f},
         {110.0f, 445.0f}, {375.0f, Size.y()}},              /* bbb */
-    {Snap::Bottom|Snap::FillX|Snap::InsideY|Snap::NoPadX,
+    {Snap::Bottom|Snap::FillX|Snap::InsideY, nullptr,
+        {9.0f, Nan, 11.0f, 22.0f}, Nan4, {10.0f, Nan, 15.0f, 25.0f},
+        {110.0f, 445.0f}, {375.0f, Size.y()}},              /* bbb */
+    {Snap::Bottom|Snap::FillX|Snap::InsideY|Snap::NoPadX, "ref padding larger",
+        {Nan, Nan, Nan, 25.0f}, Nan4, {Nan, Nan, Nan, 22.0f},
         {100.0f, 445.0f}, {400.0f, Size.y()}},              /* cbc */
-    {Snap::FillY|Snap::Right,
+    {Snap::Bottom|Snap::FillX|Snap::InsideY|Snap::NoPadX, nullptr,
+        {Nan, Nan, Nan, 24.0f}, Nan4, {Nan, Nan, Nan, 25.0f},
+        {100.0f, 445.0f}, {400.0f, Size.y()}},              /* cbc */
+    {Snap::FillY|Snap::Right, "ref margin larger",
+        Nan4, {Nan, Nan, 7.0f, Nan}, {5.0f, Nan, Nan, Nan},
         {507.0f, 200.0f}, {Size.x(), 300.0f}},              /* ddd */
-    {Snap::FillY|Snap::Right|Snap::InsideX,
+    {Snap::FillY|Snap::Right, nullptr,
+        Nan4, {Nan, Nan, 6.0f, Nan}, {7.0f, Nan, Nan, Nan},
+        {507.0f, 200.0f}, {Size.x(), 300.0f}},              /* ddd */
+    {Snap::FillY|Snap::Right|Snap::InsideX, "ref padding larger",
+        {Nan, 5.0f, 15.0f, 25.0f}, Nan4, {Nan, 4.0f, 11.0f, 22.0f},
         {465.0f, 205.0f}, {Size.x(), 270.0f}},              /* eee */
-    {Snap::FillY|Snap::Right|Snap::InsideX|Snap::NoPadY,
+    {Snap::FillY|Snap::Right|Snap::InsideX, nullptr,
+        {Nan, 4.0f, 11.0f, 22.0f}, Nan4, {Nan, 5.0f, 15.0f, 25.0f},
+        {465.0f, 205.0f}, {Size.x(), 270.0f}},              /* eee */
+    {Snap::FillY|Snap::Right|Snap::InsideX|Snap::NoPadY, "ref padding larger",
+        {Nan, Nan, 15.0f, Nan}, Nan4, {Nan, Nan, 13.0f, Nan},
         {465.0f, 200.0f}, {Size.x(), 300.0f}},              /* fef */
-    {Snap::Fill,
+    {Snap::FillY|Snap::Right|Snap::InsideX|Snap::NoPadY, nullptr,
+        {Nan, Nan, 14.0f, Nan}, Nan4, {Nan, Nan, 15.0f, Nan},
+        {465.0f, 200.0f}, {Size.x(), 300.0f}},              /* fef */
+    {Snap::Fill, "ref padding larger",
+        {10.0f, 5.0f, 15.0f, 25.0f}, Nan4, {9.0f, 4.0f, 11.0f, 22.0f},
         {110.0f, 205.0f}, {375.0f, 270.0f}},                /* ggg */
-    {Snap::Fill|Snap::NoPad,
+    {Snap::Fill, nullptr,
+        {9.0f, 4.0f, 11.0f, 22.0f}, Nan4, {10.0f, 5.0f, 15.0f, 25.0f},
+        {110.0f, 205.0f}, {375.0f, 270.0f}},                /* ggg */
+    {Snap::Fill|Snap::NoPad, nullptr,
+        Nan4, Nan4, Nan4,
         {100.0f, 200.0f}, {400.0f, 300.0f}}                 /* hgh */
 };
 
 const struct {
     const char* name;
-    bool setMarginPaddingLater;
     bool recycledLayouts;
 } UpdateDataOrderData[]{
-    {"", false, false},
-    {"margin & padding set later", true, false},
-    {"layouts recycled in shuffled order", false, true},
+    {"", false},
+    {"layouts recycled in shuffled order", true},
+};
+
+const struct {
+    const char* name;
+    /* Individual edges tested sufficiently in snap() */
+    Float paddingTarget, marginTarget, margin;
+    Snaps snap;
+    /* The UI has a size of {500, 600} */
+    bool targetUi;
+    /* The target is at {300, 400} with a size of {100, 200}, snapped node size
+       is {50, 100}. A constant node offset is additionally supplied by the
+       test case, which is added to the expectedOffset. */
+    Vector2 expectedOffset, expectedSize;
+} UpdateLayoutPropertiesData[]{
+    /* Tests just that the padding / margin properties get used at all.
+       Complete behavior tested in snap(), an "integration test" with multiple
+       nodes having different paddings and margins is in updateDataOrder(). */
+    {"target node padding, fill",
+        10.0f, 0.0f, 0.0f,
+        Snap::Fill, false,
+        /* The node becomes a child, so its offset is relative to parent */
+        {10.0f, 10.0f}, {80.0f, 180.0f}},
+    {"margin, fill",
+        0.0f, 0.0f, 10.0f,
+        Snap::Fill, false,
+        /* The node becomes a child, so its offset is relative to parent */
+        {10.0f, 10.0f}, {80.0f, 180.0f}},
+    {"margin, fill, target UI instead of a node",
+        0.0f, 0.0f, 10.0f,
+        Snap::Fill, true,
+        {10.0f, 10.0f}, {480.0f, 580.0f}},
+    {"target margin, outside",
+        0.0f, 10.0f, 0.0f,
+        Snap::BottomRight, false,
+        {410.0f, 610.0f}, {50.0f, 100.0f}},
+    {"margin, outside",
+        0.0f, 0.0f, 10.0f,
+        Snap::BottomRight, false,
+        {410.0f, 610.0f}, {50.0f, 100.0f}},
 };
 
 SnapLayouterTest::SnapLayouterTest() {
@@ -233,9 +455,6 @@ SnapLayouterTest::SnapLayouterTest() {
               &SnapLayouterTest::construct,
               &SnapLayouterTest::constructCopy,
               &SnapLayouterTest::constructMove,
-
-              &SnapLayouterTest::setPadding,
-              &SnapLayouterTest::setMargin,
 
               &SnapLayouterTest::layoutConstructInside<AbstractSnapLayout>,
               &SnapLayouterTest::layoutConstructInside<SnapLayout>,
@@ -261,6 +480,9 @@ SnapLayouterTest::SnapLayouterTest() {
 
     addInstancedTests({&SnapLayouterTest::updateDataOrder},
         Containers::arraySize(UpdateDataOrderData));
+
+    addInstancedTests({&SnapLayouterTest::updateLayoutProperties},
+        Containers::arraySize(UpdateLayoutPropertiesData));
 }
 
 void SnapLayouterTest::debugSnap() {
@@ -354,15 +576,20 @@ void SnapLayouterTest::snap() {
     auto&& data = SnapData[testCaseInstanceId()];
     {
         Containers::String out;
-        Debug{&out, Debug::Flag::NoNewlineAtTheEnd|Debug::Flag::Packed} << data.snap;
+        {
+            Debug debug{&out, Debug::Flag::NoNewlineAtTheEnd|Debug::Flag::Packed};
+            debug << data.snap;
+            if(data.name)
+                debug << Debug::nospace << "," << data.name;
+        }
         setTestCaseDescription(out);
     }
 
     Containers::Pair<Vector2, Vector2> out = Implementation::snap(data.snap,
         {100.0f, 200.0f}, {400.0f, 300.0f},
-        /* Left, top, right, bottom */
-        {10.0f, 5.0f, 15.0f, 25.0f},
-        {7.0f, 3.0f},
+        data.referencePadding,
+        data.referenceMargin,
+        data.margin,
         Size);
 
     CORRADE_COMPARE(out, Containers::pair(data.expectedOffset, data.expectedSize));
@@ -498,8 +725,6 @@ void SnapLayouterTest::orderLayoutsBreadthFirst() {
 void SnapLayouterTest::construct() {
     SnapLayouter layouter{layouterHandle(0xab, 0x12)};
     CORRADE_COMPARE(layouter.handle(), layouterHandle(0xab, 0x12));
-    CORRADE_COMPARE(layouter.padding(), Vector4{});
-    CORRADE_COMPARE(layouter.margin(), Vector2{});
 }
 
 void SnapLayouterTest::constructCopy() {
@@ -509,78 +734,16 @@ void SnapLayouterTest::constructCopy() {
 
 void SnapLayouterTest::constructMove() {
     SnapLayouter a{layouterHandle(0xab, 0x12)};
-    a.setPadding(1.0f);
-    a.setMargin(3.0f);
 
     SnapLayouter b{Utility::move(a)};
     CORRADE_COMPARE(b.handle(), layouterHandle(0xab, 0x12));
-    CORRADE_COMPARE(b.padding(), Vector4{1.0f});
-    CORRADE_COMPARE(b.margin(), Vector2{3.0f});
 
     SnapLayouter c{layouterHandle(3, 5)};
     c = Utility::move(b);
     CORRADE_COMPARE(c.handle(), layouterHandle(0xab, 0x12));
-    CORRADE_COMPARE(c.padding(), Vector4{1.0f});
-    CORRADE_COMPARE(c.margin(), Vector2{3.0f});
 
     CORRADE_VERIFY(std::is_nothrow_move_constructible<SnapLayouter>::value);
     CORRADE_VERIFY(std::is_nothrow_move_assignable<SnapLayouter>::value);
-}
-
-void SnapLayouterTest::setPadding() {
-    SnapLayouter layouter{layouterHandle(0, 1)};
-    CORRADE_COMPARE(layouter.padding(), Vector4{});
-    CORRADE_COMPARE(layouter.state(), LayouterStates{});
-
-    /* Required to be called before update() (because AbstractUserInterface
-       guarantees the same on a higher level), not needed for anything here */
-    layouter.setSize({1, 1});
-
-    /* Each side separately */
-    layouter.setPadding({1.0f, 3.0f, 2.0f, 4.0f});
-    CORRADE_COMPARE(layouter.padding(), (Vector4{1.0f, 3.0f, 2.0f, 4.0f}));
-    CORRADE_COMPARE(layouter.state(), LayouterState::NeedsUpdate);
-
-    /* Clear the state flags */
-    layouter.update({}, {}, {}, {}, {}, {}, {}, {}, {}, {});
-    CORRADE_COMPARE(layouter.state(), LayouterStates{});
-
-    /* Horizontal and vertical */
-    layouter.setPadding({1.0f, 3.0f});
-    CORRADE_COMPARE(layouter.padding(), (Vector4{1.0f, 3.0f, 1.0f, 3.0f}));
-    CORRADE_COMPARE(layouter.state(), LayouterState::NeedsUpdate);
-
-    /* Clear the state flags */
-    layouter.update({}, {}, {}, {}, {}, {}, {}, {}, {}, {});
-    CORRADE_COMPARE(layouter.state(), LayouterStates{});
-
-    /* All sides the same */
-    layouter.setPadding(1.0f);
-    CORRADE_COMPARE(layouter.padding(), (Vector4{1.0f}));
-    CORRADE_COMPARE(layouter.state(), LayouterState::NeedsUpdate);
-}
-
-void SnapLayouterTest::setMargin() {
-    SnapLayouter layouter{layouterHandle(0, 1)};
-    CORRADE_COMPARE(layouter.margin(), Vector2{});
-    CORRADE_COMPARE(layouter.state(), LayouterStates{});
-
-    /* Required to be called before update() (because AbstractUserInterface
-       guarantees the same on a higher level), not needed for anything here */
-    layouter.setSize({1, 1});
-
-    /* Horizontal and vertical separately */
-    layouter.setMargin({2.0f, 4.0f});
-    CORRADE_COMPARE(layouter.margin(), (Vector2{2.0f, 4.0f}));
-    CORRADE_COMPARE(layouter.state(), LayouterState::NeedsUpdate);
-
-    /* Clear the state flags */
-    layouter.update({}, {}, {}, {}, {}, {}, {}, {}, {}, {});
-    CORRADE_COMPARE(layouter.state(), LayouterStates{});
-
-    /* Both directions the same */
-    layouter.setMargin(2.0f);
-    CORRADE_COMPARE(layouter.margin(), (Vector2{2.0f}));
 }
 
 template<class> struct SnapLayoutTraits;
@@ -1037,6 +1200,62 @@ void SnapLayouterTest::updateDataOrder() {
 
     AbstractUserInterface ui{{100, 100}};
 
+    /* Just to supply node-specific paddings and margins. Tested to verify the
+       properties get used at all, and from both the snapped and target node.
+       Tests for complete padding/margin behavior is in snap(), tests for other
+       layout properties are in updateLayoutProperties(). */
+    struct LayoutLayer: AbstractLayer {
+        using AbstractLayer::AbstractLayer;
+
+        LayerFeatures doFeatures() const override {
+            return LayerFeature::Layout;
+        }
+        void doLayout(Containers::BitArrayView, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Float>&, const Containers::StridedArrayView1D<Vector4>& nodePaddings, const Containers::StridedArrayView1D<Vector4>& nodeMargins) override {
+            /* layout1 has no children, no padding gets used; only bottom right
+               margin (6, 5) is used */
+            nodePaddings[0 /*layout1*/] = Nan4;
+            nodeMargins[0 /*layout1*/] = {Nan, Nan, 6.0f, 5.0f};
+
+            /* nodeRoot is used as a target node for a child layout3, so max of
+               its Y padding and layout3 Y margin is used, on X no padding is
+               used */
+            nodePaddings[1 /*nodeRoot*/] = {Nan, 4.0f, Nan, 0.5f};
+            nodeMargins[1 /*nodeRoot*/] = Nan4;
+
+            /* nodeChild is used as a target node for a neighbor layout, but
+               without any padding, so the margin isn't used at all */
+            nodePaddings[2 /*nodeChild*/] = Nan4;
+            nodeMargins[2 /*nodeChild*/] = Nan4;
+
+            /* layout2 is snapped to nodeChild without any padding and has
+               nothing else snapped to it, so neither of the two is used */
+            nodePaddings[3 /*layout2*/] = Nan4;
+            nodeMargins[3 /*layout2*/] = Nan4;
+
+            /* layout3 is snapped to nodeRoot so max of its Y margin and
+               nodeRoot Y padding is used (4 top, 5 bottom); it has no children
+               so padding isn't used. The left margin is used for positioning
+               layout4. */
+            nodePaddings[4 /*layout3*/] = Nan4;
+            nodeMargins[4 /*layout3*/] = {3.0f, 0.4f, Nan, 5.0f};
+
+            /* Snapped to the left of layout3, a max of right margin and
+               layout3 left margin is used (3). Padding is used for layout5
+               placement. */
+            nodePaddings[5 /*layout4*/] = {1.0f, 0.4f, 6.0f, 0.5f};
+            nodeMargins[5 /*layout4*/] = {Nan, Nan, 0.3f, Nan};
+
+            /* Placed inside layout4, with a max of the margin and layout4
+               padding (1, 4, 6, 5) */
+            nodePaddings[6 /*layout5*/] = Nan4;
+            nodeMargins[6 /*layout5*/] = {0.1f, 4.0f, 0.6f, 5.0f};
+            ++called;
+        }
+
+        Int called = 0;
+    };
+    LayoutLayer& layoutLayer = ui.setLayerInstance(Containers::pointer<LayoutLayer>(ui.createLayer()));
+
     SnapLayouter& layouter = ui.setLayouterInstance(Containers::pointer<SnapLayouter>(ui.createLayouter()));
 
     if(data.recycledLayouts) {
@@ -1060,11 +1279,6 @@ void SnapLayouterTest::updateDataOrder() {
         ui.removeNode(layout5);
     }
 
-    if(!data.setMarginPaddingLater) {
-        layouter.setMargin({3.0f, 2.0f});
-        layouter.setPadding({1.0f, 4.0f, 6.0f, 5.0f});
-    }
-
     /* A layout snapped to the whole UI, with Snap::Inside being implicit */
     AbstractAnchor layout1 = Ui::snap(ui, layouter, Snap::Bottom|Snap::Right, {70.0f, 90.0f});
     CORRADE_COMPARE(ui.nodeParent(layout1), NodeHandle::Null);
@@ -1086,21 +1300,15 @@ void SnapLayouterTest::updateDataOrder() {
     AbstractAnchor layout4 = Ui::snap(ui, layouter, Snap::Top|Snap::Bottom|Snap::Left, layout3, {0.2f, -0.5f}, {20.0f, 0.0f});
     CORRADE_COMPARE(ui.nodeParent(layout4), nodeRoot);
 
-    /* A layout that's further dependent on previous, match its XY size */
+    /* A layout that's further dependent on previous, match its XY size & being
+       inside */
     AbstractAnchor layout5 = Ui::snap(ui, layouter, Snap::Top|Snap::Bottom|Snap::Left|Snap::Right, layout4, {0.02f, -0.05f}, Vector2{});
     CORRADE_COMPARE(ui.nodeParent(layout5), layout4);
-
-    /* The padding should be taken into account even if set later */
-    if(data.setMarginPaddingLater) {
-        layouter.setMargin({3.0f, 2.0f});
-        /* left, top, right, bottom */
-        layouter.setPadding({1.0f, 4.0f, 6.0f, 5.0f});
-    }
 
     /* The size also */
     ui.setSize({500, 400});
 
-    /* Add a dummy second layouter because that's the easiest way verify the
+    /* Add a dummy second layouter because that's the easiest way to verify the
        calculated node offsets / sizes */
     struct DummyLayouter: AbstractLayouter {
         using AbstractLayouter::AbstractLayouter;
@@ -1148,6 +1356,85 @@ void SnapLayouterTest::updateDataOrder() {
     DummyLayouter& dummyLayouter = ui.setLayouterInstance(Containers::pointer<DummyLayouter>(ui.createLayouter()));
     dummyLayouter.add(layout5);
     ui.update();
+    CORRADE_COMPARE(layoutLayer.called, 1);
+    CORRADE_COMPARE(dummyLayouter.called, 1);
+}
+
+void SnapLayouterTest::updateLayoutProperties() {
+    auto&& data = UpdateLayoutPropertiesData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
+    AbstractUserInterface ui{{500, 600}};
+
+    /* Just to supply node-specific paddings and margins. Tested to verify the
+       properties get used at all, and from both the snapped and target node.
+       Tests for complete padding/margin behavior is in snap(), tests for other
+       layout properties are in updateLayoutProperties(). */
+    struct LayoutLayer: AbstractLayer {
+        explicit LayoutLayer(LayerHandle handle, Float paddingTarget, Float marginTarget, Float margin): AbstractLayer{handle}, _paddingTarget{paddingTarget}, _marginTarget{marginTarget}, _margin{margin} {}
+
+        LayerFeatures doFeatures() const override {
+            return LayerFeature::Layout;
+        }
+        void doLayout(Containers::BitArrayView, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Float>&, const Containers::StridedArrayView1D<Vector4>& nodePaddings, const Containers::StridedArrayView1D<Vector4>& nodeMargins) override {
+            /* Only select properties of the two nodes should be used,
+               initialize everything else to 0 */
+            for(Vector4& i: nodePaddings)
+                i = Vector4{Constants::nan()};
+            for(Vector4& i: nodeMargins)
+                i = Vector4{Constants::nan()};
+
+            nodePaddings[3 /*targetNode*/] = Vector4{_paddingTarget};
+            nodeMargins[3 /*targetNode*/] = Vector4{_marginTarget};
+            nodeMargins[7 /*node*/] = Vector4{_margin};
+            ++called;
+        }
+
+        Int called = 0;
+
+        private:
+            Float _paddingTarget, _marginTarget, _margin;
+    };
+    LayoutLayer& layoutLayer = ui.setLayerInstance(Containers::pointer<LayoutLayer>(ui.createLayer(), data.paddingTarget, data.marginTarget, data.margin));
+
+    SnapLayouter& layouter = ui.setLayouterInstance(Containers::pointer<SnapLayouter>(ui.createLayouter()));
+
+    ui.createNode({}, {});
+    ui.createNode({}, {});
+    ui.createNode({}, {});
+    NodeHandle targetNode = ui.createNode({300.0f, 400.0f}, {100.0f, 200.0f});
+    ui.createNode({}, {});
+    ui.createNode({}, {});
+    ui.createNode({}, {});
+    NodeHandle node = Ui::snap(ui, layouter, data.snap, data.targetUi ? NodeHandle::Null : targetNode, {0.25f, 0.75f}, {50.0f, 100.0f});
+    CORRADE_COMPARE(nodeHandleId(targetNode), 3);
+    CORRADE_COMPARE(nodeHandleId(node), 7);
+
+    /* Add a dummy second layouter because that's the easiest way to verify the
+       calculated node offsets / sizes */
+    struct DummyLayouter: AbstractLayouter {
+        explicit DummyLayouter(LayouterHandle handle, const Vector2& expectedOffset, const Vector2& expectedSize): AbstractLayouter{handle}, _expectedOffset{expectedOffset}, _expectedSize{expectedSize} {}
+
+        using AbstractLayouter::add;
+
+        LayouterFeatures doFeatures() const override { return {}; }
+        void doUpdate(Containers::BitArrayView, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const NodeHandle>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Float>&, const Containers::StridedArrayView1D<const Vector4>&, const Containers::StridedArrayView1D<const Vector4>&, const Containers::StridedArrayView1D<Vector2>& nodeOffsets, const Containers::StridedArrayView1D<Vector2>& nodeSizes) override {
+            /* The offset should always include the node-specific offset,
+               subtract it for comparison */
+            CORRADE_COMPARE(nodeOffsets[7 /*node*/] - (Vector2{0.25f, 0.75f}), _expectedOffset);
+            CORRADE_COMPARE(nodeSizes[7 /*node*/], _expectedSize);
+            ++called;
+        }
+
+        Int called = 0;
+
+        private:
+            Vector2 _expectedOffset, _expectedSize;
+    };
+    DummyLayouter& dummyLayouter = ui.setLayouterInstance(Containers::pointer<DummyLayouter>(ui.createLayouter(), data.expectedOffset, data.expectedSize));
+    dummyLayouter.add(node);
+    ui.update();
+    CORRADE_COMPARE(layoutLayer.called, 1);
     CORRADE_COMPARE(dummyLayouter.called, 1);
 }
 
