@@ -41,10 +41,10 @@ BitVector2 snapInside(Snaps snap) {
     )};
 }
 
-/* Snaps rectangle of given `size` to a rectangle defined by `referenceOffset`,
-   `referenceSize`, `padding` inside in order left, top, right, bottom and
+/* Snaps rectangle of given `size` to a rectangle defined by `targetOffset`,
+   `targetSize`, `padding` inside in order left, top, right, bottom and
    `margin` outside */
-Containers::Pair<Vector2, Vector2> snap(Snaps snap, const Vector2& referenceOffset, const Vector2& referenceSize, const Vector4& padding, const Vector2& margin, const Vector2& size) {
+Containers::Pair<Vector2, Vector2> snap(Snaps snap, const Vector2& targetOffset, const Vector2& targetSize, const Vector4& padding, const Vector2& margin, const Vector2& size) {
     const BitVector2 snapInside = Implementation::snapInside(snap);
 
     /* Spacing in given direction is ignored either explicitly or if snapping
@@ -55,20 +55,20 @@ Containers::Pair<Vector2, Vector2> snap(Snaps snap, const Vector2& referenceOffs
         ((snap & Snap::NoPadY) || (snapInside[1] && !snapInside[0] && (!(snap & Snap::Left) != !(snap & Snap::Right))) ? 2 : 0)
     )};
 
-    const Vector2 referencePaddedMin = referenceOffset - Math::lerp(
+    const Vector2 targetPaddedMin = targetOffset - Math::lerp(
         Math::lerp(margin, -padding.xy(), snapInside),
         {},
         ignoreSpace);
-    const Vector2 referencePaddedMax = referenceOffset + referenceSize + Math::lerp(
+    const Vector2 targetPaddedMax = targetOffset + targetSize + Math::lerp(
         Math::lerp(margin, -Math::gather<'z', 'w'>(padding), snapInside),
         {},
         ignoreSpace);
 
-    /* Enlarge to reference width */
+    /* Enlarge to target width */
     Float sizeX, offsetX;
     if(snap >= (Snap::Left|Snap::Right)) {
-        sizeX = referencePaddedMax.x() - referencePaddedMin.x();
-        offsetX = referencePaddedMin.x();
+        sizeX = targetPaddedMax.x() - targetPaddedMin.x();
+        offsetX = targetPaddedMin.x();
 
     /* Keep the original width */
     } else {
@@ -77,26 +77,26 @@ Containers::Pair<Vector2, Vector2> snap(Snaps snap, const Vector2& referenceOffs
         /* Snap to left */
         if(snap & Snap::Left) {
             if(snap & Snap::InsideX)
-                offsetX = referencePaddedMin.x();
+                offsetX = targetPaddedMin.x();
             else
-                offsetX = referencePaddedMin.x() - size.x();
+                offsetX = targetPaddedMin.x() - size.x();
 
         /* Snap to right */
         } else if(snap & Snap::Right) {
             if(snap & Snap::InsideX)
-                offsetX = referencePaddedMax.x() - size.x();
+                offsetX = targetPaddedMax.x() - size.x();
             else
-                offsetX = referencePaddedMax.x();
+                offsetX = targetPaddedMax.x();
 
         /* Snap to horizontal center */
-        } else offsetX = (referencePaddedMin.x() + referencePaddedMax.x())*0.5f - size.x()*0.5f;
+        } else offsetX = (targetPaddedMin.x() + targetPaddedMax.x())*0.5f - size.x()*0.5f;
     }
 
-    /* Enlarge to reference height */
+    /* Enlarge to target height */
     Float sizeY, offsetY;
     if(snap >= (Snap::Top|Snap::Bottom)) {
-        sizeY = referencePaddedMax.y() - referencePaddedMin.y();
-        offsetY = referencePaddedMin.y();
+        sizeY = targetPaddedMax.y() - targetPaddedMin.y();
+        offsetY = targetPaddedMin.y();
 
     /* Keep the original width */
     } else {
@@ -105,19 +105,19 @@ Containers::Pair<Vector2, Vector2> snap(Snaps snap, const Vector2& referenceOffs
         /* Snap to top */
         if(snap & Snap::Top) {
             if(snap & Snap::InsideY)
-                offsetY = referencePaddedMin.y();
+                offsetY = targetPaddedMin.y();
             else
-                offsetY = referencePaddedMin.y() - size.y();
+                offsetY = targetPaddedMin.y() - size.y();
 
         /* Snap to bottom */
         } else if(snap & Snap::Bottom) {
             if(snap & Snap::InsideY)
-                offsetY = referencePaddedMax.y() - size.y();
+                offsetY = targetPaddedMax.y() - size.y();
             else
-                offsetY = referencePaddedMax.y();
+                offsetY = targetPaddedMax.y();
 
         /* Snap to vertical center */
-        } else offsetY = (referencePaddedMin.y() + referencePaddedMax.y())*0.5f - size.y()*0.5f;
+        } else offsetY = (targetPaddedMin.y() + targetPaddedMax.y())*0.5f - size.y()*0.5f;
     }
 
     return {{offsetX, offsetY}, {sizeX, sizeY}};
