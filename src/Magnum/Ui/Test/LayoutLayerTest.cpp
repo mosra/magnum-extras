@@ -25,6 +25,7 @@
 */
 
 #include <Corrade/Containers/BitArrayView.h>
+#include <Corrade/Containers/Function.h> /* for debugIntegration() */
 #include <Corrade/Containers/StridedArrayView.h>
 #include <Corrade/Containers/String.h>
 #include <Corrade/TestSuite/Tester.h>
@@ -33,6 +34,8 @@
 #include <Magnum/Math/Functions.h>
 #include <Magnum/Math/Vector4.h>
 
+#include "Magnum/Ui/AbstractUserInterface.h" /* for debugIntegration() */
+#include "Magnum/Ui/DebugLayer.h" /* for debugIntegration() */
 #include "Magnum/Ui/Handle.h"
 #include "Magnum/Ui/LayoutLayer.h"
 
@@ -61,6 +64,10 @@ struct LayoutLayerTest: TestSuite::Tester {
     void layoutEmpty();
     void layout();
     void layoutNoStyleSet();
+
+    void debugIntegration();
+    void debugIntegrationNoCallback();
+    void debugIntegrationLambdaStyleName();
 };
 
 enum class Enum: UnsignedShort {};
@@ -160,6 +167,37 @@ const struct {
         3, 3, true, 15, 15},
 };
 
+enum class DebugIntegrationStyle {
+    /* Make the first style not start at 0 to catch issues with printing */
+    Panel = 13,
+
+    Label,
+    Button,
+};
+
+const struct {
+    const char* name;
+    DebugIntegrationStyle style;
+    bool layerName, styleNames;
+    const char* expected;
+} DebugIntegrationData[]{
+    {"no name mapping",
+        DebugIntegrationStyle::Button, true, false,
+        "Node {0x1, 0x1}\n"
+        "  Data {0x6, 0x2} from layer {0x0, 0x3} LayOut with style 15"},
+    {"no layer name",
+        DebugIntegrationStyle::Label, false, true,
+        "Node {0x1, 0x1}\n"
+        "  Data {0x6, 0x2} from layer {0x0, 0x3} with style Label (14)"},
+    {"",
+        DebugIntegrationStyle::Panel, true, true,
+        "Node {0x1, 0x1}\n"
+        "  Data {0x6, 0x2} from layer {0x0, 0x3} LayOut with style Panel (13)"},
+    /* The last case here is used in debugIntegrationNoCallback() to verify
+       output w/o a callback and for visual color verification, it's expected
+       to be the most complete, executing all coloring code paths */
+};
+
 LayoutLayerTest::LayoutLayerTest() {
     addTests({&LayoutLayerTest::construct,
               &LayoutLayerTest::constructInvalid,
@@ -193,6 +231,12 @@ LayoutLayerTest::LayoutLayerTest() {
         Containers::arraySize(LayoutData));
 
     addTests({&LayoutLayerTest::layoutNoStyleSet});
+
+    addInstancedTests({&LayoutLayerTest::debugIntegration},
+        Containers::arraySize(DebugIntegrationData));
+
+    addTests({&LayoutLayerTest::debugIntegrationNoCallback,
+              &LayoutLayerTest::debugIntegrationLambdaStyleName});
 }
 
 void LayoutLayerTest::construct() {
@@ -793,6 +837,147 @@ void LayoutLayerTest::layoutNoStyleSet() {
     Error redirectError{&out};
     layer.layout({}, {}, {}, {}, {}, {});
     CORRADE_COMPARE(out, "Ui::LayoutLayer::layout(): no style data was set\n");
+}
+
+Containers::StringView debugIntegrationStyleName(UnsignedInt style) {
+    switch(DebugIntegrationStyle(style)) {
+        #define _c(name) case DebugIntegrationStyle::name: return #name;
+        _c(Panel)
+        _c(Label)
+        _c(Button)
+        #undef _c
+    }
+
+    CORRADE_INTERNAL_ASSERT_UNREACHABLE();
+}
+
+void LayoutLayerTest::debugIntegration() {
+    auto&& data = DebugIntegrationData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
+    AbstractUserInterface ui{{100, 100}};
+    NodeHandle root = ui.createNode({}, {100, 100});
+    NodeHandle node = ui.createNode(root, {}, {100, 100});
+
+    /* Create and remove a bunch of layers first to have the handle with a
+       non-trivial value */
+    ui.removeLayer(ui.createLayer());
+    ui.removeLayer(ui.createLayer());
+    LayoutLayer& layer = ui.setLayerInstance(Containers::pointer<LayoutLayer>(ui.createLayer(), 16u));
+    /* And also some more data to not list a trivial data handle */
+    layer.create(0);
+    layer.create(0);
+    layer.create(0);
+    layer.create(0);
+    layer.create(0);
+    layer.create(0);
+    layer.remove(layer.create(0));
+    layer.create(data.style, node);
+
+    DebugLayer& debugLayer = ui.setLayerInstance(Containers::pointer<DebugLayer>(ui.createLayer(), DebugLayerSource::NodeDataDetails, DebugLayerFlag::NodeInspect));
+
+    Containers::String out;
+    debugLayer.setNodeInspectCallback([&out](Containers::StringView message) {
+        out = message;
+    });
+    if(data.styleNames)
+        debugLayer.setLayerName(layer, data.layerName ? "LayOut" : "", debugIntegrationStyleName);
+    else
+        debugLayer.setLayerName(layer, data.layerName ? "LayOut" : "");
+
+    /* Make the debug layer aware of everything */
+    ui.update();
+
+    CORRADE_VERIFY(debugLayer.inspectNode(node));
+    CORRADE_COMPARE_AS(out, data.expected, TestSuite::Compare::String);
+}
+
+void LayoutLayerTest::debugIntegrationNoCallback() {
+    AbstractUserInterface ui{{100, 100}};
+    NodeHandle root = ui.createNode({}, {100, 100});
+    NodeHandle node = ui.createNode(root, {}, {100, 100});
+
+    /* Just to match the layer handle in debugIntegration() above */
+    ui.removeLayer(ui.createLayer());
+    ui.removeLayer(ui.createLayer());
+    LayoutLayer& layer = ui.setLayerInstance(Containers::pointer<LayoutLayer>(ui.createLayer(), 16u));
+    /* ... and the data handle also */
+    layer.create(0);
+    layer.create(0);
+    layer.create(0);
+    layer.create(0);
+    layer.create(0);
+    layer.create(0);
+    layer.remove(layer.create(0));
+    layer.create(DebugIntegrationStyle::Panel, node);
+
+    DebugLayer& debugLayer = ui.setLayerInstance(Containers::pointer<DebugLayer>(ui.createLayer(), DebugLayerSource::NodeDataDetails, DebugLayerFlag::NodeInspect));
+
+    debugLayer.setLayerName(layer, "LayOut", debugIntegrationStyleName);
+
+    /* Make the debug layer aware of everything */
+    ui.update();
+
+    /* Inspect the node for visual color verification */
+    {
+        Debug{} << "======================== visual color verification start =======================";
+
+        debugLayer.addFlags(DebugLayerFlag::ColorAlways);
+
+        CORRADE_VERIFY(debugLayer.inspectNode(node));
+
+        debugLayer.clearFlags(DebugLayerFlag::ColorAlways);
+
+        Debug{} << "======================== visual color verification end =========================";
+    }
+
+    /* Do the same, but this time with output redirection to verify the
+       contents. The internals automatically disable coloring if they detect
+       the output isn't a TTY. */
+    {
+        Containers::String out;
+        Debug redirectOutput{&out};
+        CORRADE_VERIFY(debugLayer.inspectNode(node));
+        /* The output always has a newline at the end which cannot be disabled
+           so strip it to have the comparison match the debugIntegration()
+           case */
+        CORRADE_COMPARE_AS(out,
+            "\n",
+            TestSuite::Compare::StringHasSuffix);
+        CORRADE_COMPARE_AS(out.exceptSuffix("\n"),
+            Containers::arrayView(DebugIntegrationData).back().expected,
+            TestSuite::Compare::String);
+    }
+}
+
+void LayoutLayerTest::debugIntegrationLambdaStyleName() {
+    AbstractUserInterface ui{{100, 100}};
+    NodeHandle node = ui.createNode({}, {100, 100});
+
+    LayoutLayer& layer = ui.setLayerInstance(Containers::pointer<LayoutLayer>(ui.createLayer(), 12u));
+    layer.create(7, node);
+
+    DebugLayer& debugLayer = ui.setLayerInstance(Containers::pointer<DebugLayer>(ui.createLayer(), DebugLayerSource::NodeDataDetails, DebugLayerFlag::NodeInspect));
+    /* Somehow it doesn't "just work", the DebugIntegration has to have a
+       special template constructor to convert this to a pointer without having
+       to explicitly cast to a function pointer, use `+` to convert it to a
+       function pointer, or explicitly wrap the lambda in LayoutLayer::DebugIntegration{} */
+    debugLayer.setLayerName(layer, "Outlay", [](UnsignedInt style) -> Containers::StringView {
+        return style == 7 ? "LambdaStyle" : "Wrong";
+    });
+
+    /* Make the debug layer aware of everything */
+    ui.update();
+
+    Containers::String out;
+    {
+        Debug redirectOutput{&out};
+        CORRADE_VERIFY(debugLayer.inspectNode(node));
+    }
+    CORRADE_COMPARE_AS(out,
+        "Top-level node {0x0, 0x1}\n"
+        "  Data {0x0, 0x1} from layer {0x0, 0x1} Outlay with style LambdaStyle (7)\n",
+        TestSuite::Compare::String);
 }
 
 }}}}

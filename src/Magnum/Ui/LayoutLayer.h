@@ -40,9 +40,30 @@ namespace Magnum { namespace Ui {
 /**
 @brief Layout properties layer
 @m_since_latest_{extras}
+
+@section Ui-LayoutLayer-debug-integration Debug layer integration
+
+When using @ref Ui-DebugLayer-node-inspect "DebugLayer node inspect" and
+@ref DebugLayerSource::NodeDataDetails is enabled, passing this layer to
+@ref DebugLayer::setLayerName(const T&, const Containers::StringView&) "DebugLayer::setLayerName()"
+will make it list style assignments of all data. For example:
+
+@include ui-debuglayer-layoutlayer.ansi
+
+By default only style IDs are shown, but the @ref DebugIntegration constructor
+accepts an optional function to map them from an @relativeref{Magnum,UnsignedInt}
+to a @relativeref{Corrade,Containers::StringView}. Assuming a `LayoutStyle`
+@cpp enum @ce is used by given layer, the function could look like this,
+resulting in the output below:
+
+@snippet ui-debuglayer.cpp layoutlayer-style-names
+
+@include ui-debuglayer-layoutlayer-style-names.ansi
 */
 class MAGNUM_UI_EXPORT LayoutLayer: public AbstractLayer {
     public:
+        class DebugIntegration;
+
         /**
          * @brief Constructor
          * @param handle        Layer handle returned from
@@ -342,6 +363,42 @@ class MAGNUM_UI_EXPORT LayoutLayer: public AbstractLayer {
 
         MAGNUM_UI_LOCAL LayerFeatures doFeatures() const override;
         MAGNUM_UI_LOCAL void doLayout(Containers::BitArrayView dataIdsToLayout, const Containers::StridedArrayView1D<Vector2>& nodeMinSizes, const Containers::StridedArrayView1D<Vector2>& nodeMaxSizes, const Containers::StridedArrayView1D<Float>& nodeAspectRatios, const Containers::StridedArrayView1D<Vector4>& nodePaddings, const Containers::StridedArrayView1D<Vector4>& nodeMargins) override;
+};
+
+/**
+@brief Debug layer integration
+
+Integrates the layer with @ref DebugLayer. See
+@ref Ui-LayoutLayer-debug-integration "LayoutLayer debug layer integration" for
+more information and example usage.
+*/
+class MAGNUM_UI_EXPORT LayoutLayer::DebugIntegration {
+    public:
+        /**
+         * @brief Constructor
+         *
+         * The @p styleName function, if set, is used to retrieve names for
+         * styles assigned to particular data. If it returns an empty string
+         * for a particular style ID, it's treated as if the function wasn't
+         * used for given style at all, showing just the ID alone. The @p style
+         * passed to the function is guaranteed to be less than
+         * @ref LayoutLayer::styleCount() for given layer.
+         */
+        /*implicit*/ DebugIntegration(Containers::StringView(*styleName)(UnsignedInt style) = nullptr): _styleName{styleName} {}
+        #ifndef DOXYGEN_GENERATING_OUTPUT
+        /* Needed because while passing a lambda directly to the constructor
+           works, passing it to DebugLayer::setLayerName() doesn't, as there's
+           too many conversions or some such. Sigh, C++. */
+        template<class T, typename std::enable_if<std::is_convertible<T, Containers::StringView(*)(UnsignedInt)>::value, int>::type = 0> /*implicit*/ DebugIntegration(T styleName): DebugIntegration{static_cast<Containers::StringView(*)(UnsignedInt)>(styleName)} {}
+        #endif
+
+        #ifndef DOXYGEN_GENERATING_OUTPUT
+        /* Used internally by DebugLayer, no point in documenting it here */
+        void print(Debug& debug, const LayoutLayer& layer, const Containers::StringView& layerName, LayerDataHandle data);
+        #endif
+
+    private:
+        Containers::StringView(*_styleName)(UnsignedInt);
 };
 
 }}

@@ -29,6 +29,7 @@
 #include <Corrade/Containers/BitArrayView.h>
 #include <Corrade/Containers/GrowableArray.h>
 #include <Corrade/Containers/StridedArrayView.h>
+#include <Corrade/Containers/StringView.h>
 #include <Corrade/Utility/Algorithms.h>
 #include <Magnum/Math/Functions.h>
 #include <Magnum/Math/Vector4.h>
@@ -224,6 +225,23 @@ void LayoutLayer::doLayout(const Containers::BitArrayView dataIdsToLayout, const
         nodePaddings[nodeId] = Math::max(nodePaddings[nodeId], style.padding);
         nodeMargins[nodeId] = Math::max(nodeMargins[nodeId], style.margin);
     }
+}
+
+void LayoutLayer::DebugIntegration::print(Debug& debug, const LayoutLayer& layer, const Containers::StringView& layerName, LayerDataHandle data) {
+    debug << "  Data" << Debug::packed << data << "from layer" << Debug::packed << layer.handle();
+    if(layerName)
+        debug << Debug::color(Debug::Color::Yellow) << layerName << Debug::resetColor;
+    debug << "with style";
+
+    const UnsignedInt style = layer.style(data);
+    Containers::StringView name;
+    if(_styleName)
+        name = _styleName(style);
+    if(name)
+        debug << Debug::color(Debug::Color::Yellow) << name << Debug::resetColor << "(" << Debug::nospace << style << Debug::nospace << ")";
+    else
+        debug << style;
+    debug << Debug::newline;
 }
 
 }}

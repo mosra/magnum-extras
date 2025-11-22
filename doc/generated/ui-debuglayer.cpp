@@ -56,6 +56,7 @@
 #include "Magnum/Ui/BaseLayerGL.h"
 #include "Magnum/Ui/EventLayer.h"
 #include "Magnum/Ui/Handle.h"
+#include "Magnum/Ui/LayoutLayer.h"
 #include "Magnum/Ui/LineLayerGL.h"
 #include "Magnum/Ui/NodeAnimator.h"
 #include "Magnum/Ui/NodeFlags.h"
@@ -148,6 +149,13 @@ Transition transition(Style style) {
 template<Style Transition::*member> Style to(Style style) {
     return transition(style).*member;
 }
+
+/* Used by layoutlayer-style-names, needs to be defined here */
+enum class LayoutStyle {
+    Button = 11,
+    Label = 3,
+    Panel = 9,
+};
 
 Color3 ColorLayer::color(Ui::LayerDataHandle data) const {
     return layerDataHandleId(data) == 7 ? 0x3bd267_rgbf : 0x2f83cc_rgbf;
@@ -487,6 +495,50 @@ debugLayer.setLayerName(visualLayer, "Styled", [](UnsignedInt style) {
         }
         Debug{} << out;
         Utility::Path::write("ui-debuglayer-eventlayer.ansi", out);
+
+        /* LayoutLayer integration, default behavior */
+        Ui::LayoutLayer& layoutLayer = ui.setLayerInstance(Containers::pointer<Ui::LayoutLayer>(ui.createLayer(), 10u));
+        layoutLayer.setStyle({}, {}, {}, {}, {});
+        ui.createNode({}, {});
+        ui.createNode({}, {});
+        Ui::NodeHandle layoutNode = ui.createNode(parent, {}, {});
+        layoutLayer.create(9, layoutNode);
+        debugLayer.setLayerName(layoutLayer, "Layout");
+
+        ui.update();
+        out = {};
+        {
+            Debug redirectOutput{&out};
+            CORRADE_INTERNAL_ASSERT(debugLayer.inspectNode(layoutNode));
+        }
+        Debug{} << out;
+        Utility::Path::write("ui-debuglayer-layoutlayer.ansi", out);
+
+        /* LayoutLayer integration with supplied style names */
+
+/* [layoutlayer-style-names] */
+debugLayer.setLayerName(layoutLayer, "Layout", [](UnsignedInt style) {
+    using namespace Containers::Literals;
+
+    switch(LayoutStyle(style)) {
+        case LayoutStyle::Button: return "Button"_s;
+        case LayoutStyle::Label: return "Label"_s;
+        case LayoutStyle::Panel: return "Panel"_s;
+        DOXYGEN_ELLIPSIS()
+    }
+
+    return ""_s;
+});
+/* [layoutlayer-style-names] */
+
+        ui.update();
+        out = {};
+        {
+            Debug redirectOutput{&out};
+            CORRADE_INTERNAL_ASSERT(debugLayer.inspectNode(layoutNode));
+        }
+        Debug{} << out;
+        Utility::Path::write("ui-debuglayer-layoutlayer-style-names.ansi", out);
 
         /* NodeAnimator integration. Creating some more animators and
            animations to have non-trivial handles. */
