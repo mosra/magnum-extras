@@ -37,6 +37,7 @@
 
 #include "Magnum/Ui/BaseLayer.h"
 #include "Magnum/Ui/Handle.h"
+#include "Magnum/Ui/LayoutLayer.h"
 #include "Magnum/Ui/Style.h"
 #include "Magnum/Ui/Style.hpp"
 #include "Magnum/Ui/TextLayer.h"
@@ -185,6 +186,8 @@ struct WidgetTester: TestSuite::Tester {
 WidgetTester::WidgetTester() {
     ui.setBaseLayerInstance(Containers::pointer<TestBaseLayer>(ui.createLayer(), baseLayerShared))
       .setTextLayerInstance(Containers::pointer<TestTextLayer>(ui.createLayer(), textLayerShared))
+      /* Event layer not needed for anything yet */
+      .setLayoutLayerInstance(Containers::pointer<LayoutLayer>(ui.createLayer(), Implementation::LayoutStyleCount))
       .setSize({100, 100});
 }
 
@@ -193,6 +196,7 @@ void WidgetTester::setup() {
     CORRADE_INTERNAL_ASSERT(ui.nodeUsedCount() == 0);
     CORRADE_INTERNAL_ASSERT(ui.baseLayer().usedCount() == 0);
     CORRADE_INTERNAL_ASSERT(ui.textLayer().usedCount() == 0);
+    CORRADE_INTERNAL_ASSERT(ui.layoutLayer().usedCount() == 0);
     rootNode = ui.createNode({}, ui.size());
 }
 
@@ -203,6 +207,7 @@ void WidgetTester::teardown() {
     CORRADE_INTERNAL_ASSERT(ui.nodeUsedCount() == 0);
     CORRADE_INTERNAL_ASSERT(ui.baseLayer().usedCount() == 0);
     CORRADE_INTERNAL_ASSERT(ui.textLayer().usedCount() == 0);
+    CORRADE_INTERNAL_ASSERT(ui.layoutLayer().usedCount() == 0);
 }
 
 

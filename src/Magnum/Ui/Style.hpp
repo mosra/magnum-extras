@@ -309,6 +309,13 @@ MAGNUM_UI_EXPORT TextStyle styleTransitionToPressedOut(TextStyle index);
 MAGNUM_UI_EXPORT TextStyle styleTransitionToPressedOver(TextStyle index);
 MAGNUM_UI_EXPORT TextStyle styleTransitionToDisabled(TextStyle index);
 
+enum class LayoutStyle: UnsignedShort {
+    Button,
+    Label,
+    Input,
+    Panel,
+};
+
 }}}
 #endif
 

@@ -68,6 +68,7 @@ namespace Implementation {
         TextStyleUniformCount = 33,
         TextEditingStyleCount = 16,
         TextEditingStyleUniformCount = TextEditingStyleCount,
+        LayoutStyleCount = 4,
         IconCount = 2
     };
 }
@@ -138,6 +139,7 @@ class MAGNUM_UI_EXPORT McssDarkStyle: public AbstractStyle {
         MAGNUM_UI_LOCAL UnsignedInt doTextLayerEditingStyleUniformCount() const override;
         MAGNUM_UI_LOCAL UnsignedInt doTextLayerEditingStyleCount() const override;
         MAGNUM_UI_LOCAL Vector3i doTextLayerGlyphCacheSize(StyleFeatures features) const override;
+        MAGNUM_UI_LOCAL UnsignedInt doLayoutLayerStyleCount() const override;
         MAGNUM_UI_LOCAL bool doApply(UserInterface& ui, StyleFeatures features, PluginManager::Manager<Trade::AbstractImporter>* importerManager, PluginManager::Manager<Text::AbstractFont>* fontManager) const override;
 
         Features _features;

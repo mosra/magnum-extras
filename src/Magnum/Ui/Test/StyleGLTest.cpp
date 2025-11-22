@@ -49,6 +49,7 @@
 #include "Magnum/Ui/Handle.h"
 #include "Magnum/Ui/Input.h"
 #include "Magnum/Ui/Label.h"
+#include "Magnum/Ui/LayoutLayer.h"
 #include "Magnum/Ui/NodeFlags.h"
 #include "Magnum/Ui/Panel.h"
 #include "Magnum/Ui/RendererGL.h"
@@ -427,8 +428,9 @@ void StyleGLTest::render() {
             /** @todo allow a setting non-owned renderer instance maybe? */
             .setRendererInstance(Containers::pointer<RendererGL>())
             .setBaseLayerInstance(Containers::pointer<BaseLayerGL>(ui.createLayer(), static_cast<BaseLayerGL::Shared&>(_styleUis[styleDataIndex].baseLayer().shared())))
-            .setTextLayerInstance(Containers::pointer<TextLayerGL>(ui.createLayer(), static_cast<TextLayerGL::Shared&>(_styleUis[styleDataIndex].textLayer().shared())));
+            .setTextLayerInstance(Containers::pointer<TextLayerGL>(ui.createLayer(), static_cast<TextLayerGL::Shared&>(_styleUis[styleDataIndex].textLayer().shared())))
             /* Event layer not needed for anything yet */
+            .setLayoutLayerInstance(Containers::pointer<LayoutLayer>(ui.createLayer(), _styleUis[styleDataIndex].layoutLayer().styleCount()));
 
         /* If dynamic styles are present (because the style requested them for
            animators), add also default style animators. Can't hook to just

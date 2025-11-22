@@ -45,6 +45,7 @@
 #include "Magnum/Ui/Event.h"
 #include "Magnum/Ui/EventLayer.h"
 #include "Magnum/Ui/Handle.h"
+#include "Magnum/Ui/LayoutLayer.h"
 #include "Magnum/Ui/NodeFlags.h"
 #include "Magnum/Ui/SnapLayouter.h"
 #include "Magnum/Ui/Style.h"
@@ -68,6 +69,7 @@ struct StyleTest: TestSuite::Tester {
     void textMcssDark();
     void textUniformsMcssDark();
     void textEditingMcssDark();
+    void layoutMcssDark();
 
     void apply();
     void applyTextLayerCannotOpenFont();
@@ -144,7 +146,8 @@ StyleTest::StyleTest() {
               &StyleTest::baseMcssDark,
               &StyleTest::textMcssDark,
               &StyleTest::textUniformsMcssDark,
-              &StyleTest::textEditingMcssDark});
+              &StyleTest::textEditingMcssDark,
+              &StyleTest::layoutMcssDark});
 
     addInstancedTests({&StyleTest::apply},
         Containers::arraySize(ApplyData));
@@ -162,6 +165,7 @@ using Implementation::BaseStyle;
 using Implementation::TextStyle;
 using Implementation::TextStyleUniform;
 using Implementation::TextEditingStyle;
+using Implementation::LayoutStyle;
 
 void StyleTest::debugIcon() {
     Containers::String out;
@@ -355,6 +359,43 @@ void StyleTest::textEditingMcssDark() {
     }
 }
 
+void StyleTest::layoutMcssDark() {
+    const LayoutStyle styles[]{
+        #define _c(style, ...) LayoutStyle::style,
+        #include "Magnum/Ui/Implementation/layoutStyleMcssDark.h"
+        #undef _c
+    };
+
+    /* Verify that the harcoded LayoutStyleCount matches the actual number of
+       entries in the mapping. The same should be a static_assert() in
+       Style.cpp already, here it's just a sanity check. */
+    CORRADE_COMPARE(Implementation::LayoutStyleCount, Containers::arraySize(styles));
+
+    /* This checks that:
+        - the mapping contains entries for all enum values (otherwise -Wswitch
+          would trigger)
+        - none of the values are duplicated (otherwise it'd be a syntax error)
+        - and the position of the value in the mapping corresponds to the
+          enum value (by checking against the styles[] above) */
+    for(UnsignedInt i = 0; i != Implementation::BaseStyleCount; ++i) {
+        #ifdef CORRADE_TARGET_GCC
+        #pragma GCC diagnostic push
+        #pragma GCC diagnostic error "-Wswitch"
+        #endif
+        switch(LayoutStyle(i)) {
+            #define _c(style, ...) \
+                case LayoutStyle::style: \
+                    CORRADE_COMPARE(UnsignedInt(styles[i]), UnsignedInt(LayoutStyle::style)); \
+                    break;
+            #include "Magnum/Ui/Implementation/layoutStyleMcssDark.h"
+            #undef _c
+        }
+        #ifdef CORRADE_TARGET_GCC
+        #pragma GCC diagnostic pop
+        #endif
+    }
+}
+
 void StyleTest::apply() {
     auto&& data = ApplyData[testCaseInstanceId()];
     setTestCaseDescription(data.name);
@@ -421,6 +462,7 @@ void StyleTest::apply() {
     ui.setTextLayerStyleAnimatorInstance(Containers::pointer<TextLayerStyleAnimator>(ui.createAnimator()));
 
     ui.setEventLayerInstance(Containers::pointer<EventLayer>(ui.createLayer()));
+    ui.setLayoutLayerInstance(Containers::pointer<LayoutLayer>(ui.createLayer(), Implementation::LayoutStyleCount));
     ui.setSnapLayouterInstance(Containers::pointer<SnapLayouter>(ui.createLayouter()));
 
     McssDarkStyle style{data.styleFeatures};
@@ -493,6 +535,9 @@ void StyleTest::apply() {
            StyleGLTest. */
     }
     if(data.features >= StyleFeature::EventLayer) {
+        /* Nothing to check here */
+    }
+    if(data.features >= StyleFeature::LayoutLayer) {
         /* Nothing to check here */
     }
     if(data.features >= StyleFeature::SnapLayouter) {

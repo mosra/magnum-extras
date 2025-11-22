@@ -91,6 +91,9 @@ void InputTest::construct() {
     CORRADE_VERIFY(ui.isHandleValid(input.backgroundData()));
     CORRADE_VERIFY(ui.isHandleValid(input.textData()));
     CORRADE_COMPARE(ui.textLayer().glyphCount(input.textData()), 5);
+
+    /* Can only verify that the layout data were created, they're not saved */
+    CORRADE_COMPARE(ui.layoutLayer().usedCount(), 1);
 }
 
 void InputTest::constructTextProperties() {
@@ -108,6 +111,9 @@ void InputTest::constructTextProperties() {
     CORRADE_VERIFY(ui.isHandleValid(input.textData()));
     /* Multiplied by 6 because of the Braille script */
     CORRADE_COMPARE(ui.textLayer().glyphCount(input.textData()), 5*6);
+
+    /* Can only verify that the layout data were created, they're not saved */
+    CORRADE_COMPARE(ui.layoutLayer().usedCount(), 1);
 }
 
 void InputTest::constructNoCreate() {
@@ -115,6 +121,10 @@ void InputTest::constructNoCreate() {
     CORRADE_COMPARE(input.node(), NodeHandle::Null);
     CORRADE_COMPARE(input.backgroundData(), DataHandle::Null);
     CORRADE_COMPARE(input.textData(), DataHandle::Null);
+
+    /* Can only verify that the layout data were not created, they're not
+       saved */
+    CORRADE_COMPARE(ui.layoutLayer().usedCount(), 0);
 }
 
 void InputTest::setStyle() {

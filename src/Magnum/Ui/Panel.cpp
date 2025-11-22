@@ -31,6 +31,7 @@
 #include "Magnum/Ui/Anchor.h"
 #include "Magnum/Ui/BaseLayer.h"
 #include "Magnum/Ui/Handle.h"
+#include "Magnum/Ui/LayoutLayer.h"
 #include "Magnum/Ui/Style.hpp"
 #include "Magnum/Ui/UserInterface.h"
 
@@ -52,8 +53,13 @@ Debug& operator<<(Debug& debug, const PanelStyle value) {
 }
 
 using Implementation::BaseStyle;
+using Implementation::LayoutStyle;
 
 Panel::Panel(const Anchor& anchor, const PanelStyle style): Widget{anchor}, _style{style} {
+    /* The LayoutLayer data aren't stored because currently they're never
+       updated */
+    ui().layoutLayer().create(LayoutStyle::Panel, node());
+
     _backgroundData = style == PanelStyle::Default ? LayerDataHandle::Null :
         dataHandleData(ui().baseLayer().create(BaseStyle::PanelBackground, node()));
 }
@@ -85,6 +91,8 @@ DataHandle Panel::backgroundData() const {
 }
 
 Anchor panel(const Anchor& anchor, const PanelStyle style) {
+    anchor.ui().layoutLayer().create(LayoutStyle::Panel, anchor.node());
+
     if(style != PanelStyle::Default)
         anchor.ui().baseLayer().create(BaseStyle::PanelBackground, anchor.node());
     return anchor;

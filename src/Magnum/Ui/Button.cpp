@@ -34,6 +34,7 @@
 #include "Magnum/Ui/Anchor.h"
 #include "Magnum/Ui/BaseLayer.h"
 #include "Magnum/Ui/Handle.h"
+#include "Magnum/Ui/LayoutLayer.h"
 #include "Magnum/Ui/Style.h"
 #include "Magnum/Ui/Style.hpp"
 #include "Magnum/Ui/TextLayer.h"
@@ -67,6 +68,7 @@ namespace {
 
 using Implementation::BaseStyle;
 using Implementation::TextStyle;
+using Implementation::LayoutStyle;
 
 BaseStyle baseLayerStyle(const ButtonStyle style) {
     switch(style) {
@@ -184,6 +186,10 @@ struct ButtonData {
 
 ButtonData buttonInternal(UserInterface& ui, const NodeHandle node, const Icon icon, const Containers::StringView text, const TextProperties& properties, const ButtonStyle style) {
     ButtonData out{};
+
+    /* The LayoutLayer data aren't stored because currently they're never
+       updated */
+    ui.layoutLayer().create(LayoutStyle::Button, node);
 
     out.background = dataHandleData(ui.baseLayer().create(baseLayerStyle(style), node));
 

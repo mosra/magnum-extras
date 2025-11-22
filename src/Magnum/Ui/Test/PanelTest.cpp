@@ -80,6 +80,9 @@ void PanelTest::constructDefault() {
     CORRADE_COMPARE(panel.style(), PanelStyle::Default);
 
     CORRADE_COMPARE(panel.backgroundData(), DataHandle::Null);
+
+    /* Can only verify that the layout data were created, they're not saved */
+    CORRADE_COMPARE(ui.layoutLayer().usedCount(), 1);
 }
 
 void PanelTest::constructDefaultStateless() {
@@ -90,6 +93,7 @@ void PanelTest::constructDefaultStateless() {
     /* Can only verify that the data were (not) created, nothing else. Visually
        tested in StyleGLTest. */
     CORRADE_COMPARE(ui.baseLayer().usedCount(), 0);
+    CORRADE_COMPARE(ui.layoutLayer().usedCount(), 1);
 }
 
 void PanelTest::constructFilled() {
@@ -100,6 +104,9 @@ void PanelTest::constructFilled() {
     CORRADE_COMPARE(panel.style(), PanelStyle::Filled);
 
     CORRADE_VERIFY(ui.isHandleValid(panel.backgroundData()));
+
+    /* Can only verify that the layout data were created, they're not saved */
+    CORRADE_COMPARE(ui.layoutLayer().usedCount(), 1);
 }
 
 void PanelTest::constructFilledStateless() {
@@ -110,12 +117,17 @@ void PanelTest::constructFilledStateless() {
     /* Can only verify that the data were created, nothing else. Visually
        tested in StyleGLTest. */
     CORRADE_COMPARE(ui.baseLayer().usedCount(), 1);
+    CORRADE_COMPARE(ui.layoutLayer().usedCount(), 1);
 }
 
 void PanelTest::constructNoCreate() {
     Panel label{NoCreate, ui};
     CORRADE_COMPARE(label.node(), NodeHandle::Null);
     CORRADE_COMPARE(label.backgroundData(), DataHandle::Null);
+
+    /* Can only verify that the layout data were not created, they're not
+       saved */
+    CORRADE_COMPARE(ui.layoutLayer().usedCount(), 0);
 }
 
 void PanelTest::setStyleNoOp() {

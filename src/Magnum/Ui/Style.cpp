@@ -49,6 +49,7 @@
 #include "Magnum/Ui/BaseLayerAnimator.h"
 #include "Magnum/Ui/EventLayer.h"
 #include "Magnum/Ui/Handle.h"
+#include "Magnum/Ui/LayoutLayer.h"
 #include "Magnum/Ui/SnapLayouter.h"
 #include "Magnum/Ui/TextLayer.h"
 #include "Magnum/Ui/TextLayerAnimator.h"
@@ -720,6 +721,31 @@ constexpr struct {
 static_assert(Implementation::TextEditingStyleCount == Containers::arraySize(TextEditingStylesMcssDark),
     "outdated TextEditingStyleCount value");
 
+/* MSVC 2015, 2017 and 2019 cannot handle this in the form of
+    constexpr struct LayoutStyle {
+        constexpr LayoutStyle(...);
+    } LayoutStylesMcssDark[]{
+        ...
+    };
+   complaining that the LayoutStyle constructor isn't constexpr. Splitting the
+   struct and array definition makes it work. MSVC 2022 works. */
+/** @todo clean this up once MSVC 2017 and 2019 is gone */
+struct LayoutStyle {
+    constexpr /*implicit*/ LayoutStyle(const Vector4& padding, const Vector4& margin): padding{padding}, margin{margin} {}
+    constexpr /*implicit*/ LayoutStyle(const Vector2& padding, const Vector2& margin): padding{padding.x(), padding.y(), padding.x(), padding.y()}, margin{margin.x(), margin.y(), margin.x(), margin.y()} {}
+
+    Vector4 padding;
+    Vector4 margin;
+};
+
+constexpr LayoutStyle LayoutStylesMcssDark[]{
+    #define _c(style, ...) {__VA_ARGS__},
+    #include "Magnum/Ui/Implementation/layoutStyleMcssDark.h"
+    #undef _c
+};
+static_assert(Implementation::LayoutStyleCount == Containers::arraySize(LayoutStylesMcssDark),
+    "outdated LayoutStyleCount value");
+
 }
 
 McssDarkStyle::McssDarkStyle(const Features features): _features{features} {}
@@ -729,6 +755,7 @@ StyleFeatures McssDarkStyle::doFeatures() const {
            StyleFeature::TextLayer|
            StyleFeature::TextLayerImages|
            StyleFeature::EventLayer|
+           StyleFeature::LayoutLayer|
            StyleFeature::SnapLayouter|
            /* Essential animations are currently just (text layer) cursor
               blinking */
@@ -775,6 +802,10 @@ Vector3i McssDarkStyle::doTextLayerGlyphCacheSize(StyleFeatures) const {
     /* 256x256 is enough only for DPI scale of 1, adding some extra space */
     /** @todo Make this dependent on DPI scale */
     return {512, 512, 1};
+}
+
+UnsignedInt McssDarkStyle::doLayoutLayerStyleCount() const {
+    return Implementation::LayoutStyleCount;
 }
 
 bool McssDarkStyle::doApply(UserInterface& ui, const StyleFeatures features, PluginManager::Manager<Trade::AbstractImporter>* importerManager, PluginManager::Manager<Text::AbstractFont>* fontManager) const {
@@ -983,6 +1014,16 @@ bool McssDarkStyle::doApply(UserInterface& ui, const StyleFeatures features, Plu
         /* Right now nothing to set here. It's present in features() mainly in
            order to make UserInterface implicitly add this layer for use by the
            application. */
+    }
+
+    /* Layout layer. So far just paddings and margins. */
+    if(features >= StyleFeature::LayoutLayer) {
+        ui.layoutLayer().setStyle(
+            {},
+            {},
+            {},
+            Containers::stridedArrayView(LayoutStylesMcssDark).slice(&std::remove_all_extents<decltype(LayoutStylesMcssDark)>::type::padding),
+            Containers::stridedArrayView(LayoutStylesMcssDark).slice(&std::remove_all_extents<decltype(LayoutStylesMcssDark)>::type::margin));
     }
 
     /* Snap layouter */

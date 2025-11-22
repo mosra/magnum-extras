@@ -133,6 +133,9 @@ void LabelTest::constructEmpty() {
     CORRADE_COMPARE(label2.icon(), Icon::None);
     CORRADE_COMPARE(label1.data(), DataHandle::Null);
     CORRADE_COMPARE(label2.data(), DataHandle::Null);
+
+    /* Can only verify that the layout data were created, they're not saved */
+    CORRADE_COMPARE(ui.layoutLayer().usedCount(), 2);
 }
 
 void LabelTest::constructEmptyStateless() {
@@ -147,6 +150,7 @@ void LabelTest::constructEmptyStateless() {
        tested in StyleGLTest. */
     CORRADE_COMPARE(ui.baseLayer().usedCount(), 0);
     CORRADE_COMPARE(ui.textLayer().usedCount(), 0);
+    CORRADE_COMPARE(ui.layoutLayer().usedCount(), 2);
 }
 
 void LabelTest::constructIcon() {
@@ -159,6 +163,9 @@ void LabelTest::constructIcon() {
 
     CORRADE_VERIFY(ui.isHandleValid(label.data()));
     CORRADE_COMPARE(ui.textLayer().glyphCount(label.data()), 1);
+
+    /* Can only verify that the layout data were created, they're not saved */
+    CORRADE_COMPARE(ui.layoutLayer().usedCount(), 1);
 }
 
 void LabelTest::constructIconStateless() {
@@ -170,6 +177,7 @@ void LabelTest::constructIconStateless() {
        tested in StyleGLTest. */
     CORRADE_COMPARE(ui.baseLayer().usedCount(), 0);
     CORRADE_COMPARE(ui.textLayer().usedCount(), 1);
+    CORRADE_COMPARE(ui.layoutLayer().usedCount(), 1);
 }
 
 void LabelTest::constructText() {
@@ -183,6 +191,9 @@ void LabelTest::constructText() {
 
     CORRADE_VERIFY(ui.isHandleValid(label.data()));
     CORRADE_COMPARE(ui.textLayer().glyphCount(label.data()), 6);
+
+    /* Can only verify that the layout data were created, they're not saved */
+    CORRADE_COMPARE(ui.layoutLayer().usedCount(), 1);
 }
 
 void LabelTest::constructTextStateless() {
@@ -195,6 +206,7 @@ void LabelTest::constructTextStateless() {
        tested in StyleGLTest. */
     CORRADE_COMPARE(ui.baseLayer().usedCount(), 0);
     CORRADE_COMPARE(ui.textLayer().usedCount(), 1);
+    CORRADE_COMPARE(ui.layoutLayer().usedCount(), 1);
 }
 
 void LabelTest::constructTextTextProperties() {
@@ -211,6 +223,9 @@ void LabelTest::constructTextTextProperties() {
     CORRADE_VERIFY(ui.isHandleValid(label.data()));
     /* Multiplied by 6 because of the Braille script */
     CORRADE_COMPARE(ui.textLayer().glyphCount(label.data()), 6*6);
+
+    /* Can only verify that the layout data were created, they're not saved */
+    CORRADE_COMPARE(ui.layoutLayer().usedCount(), 1);
 }
 
 void LabelTest::constructTextTextPropertiesStateless() {
@@ -226,12 +241,17 @@ void LabelTest::constructTextTextPropertiesStateless() {
     /** @todo this doesn't verify that the properties were passed :/ */
     CORRADE_COMPARE(ui.baseLayer().usedCount(), 0);
     CORRADE_COMPARE(ui.textLayer().usedCount(), 1);
+    CORRADE_COMPARE(ui.layoutLayer().usedCount(), 1);
 }
 
 void LabelTest::constructNoCreate() {
     Label label{NoCreate, ui};
     CORRADE_COMPARE(label.node(), NodeHandle::Null);
     CORRADE_COMPARE(label.data(), DataHandle::Null);
+
+    /* Can only verify that the layout data were not created, they're not
+       saved */
+    CORRADE_COMPARE(ui.layoutLayer().usedCount(), 0);
 }
 
 void LabelTest::setStyle() {

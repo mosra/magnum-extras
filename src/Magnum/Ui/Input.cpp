@@ -33,6 +33,7 @@
 
 #include "Magnum/Ui/BaseLayer.h"
 #include "Magnum/Ui/Handle.h"
+#include "Magnum/Ui/LayoutLayer.h"
 #include "Magnum/Ui/NodeFlags.h"
 #include "Magnum/Ui/Style.hpp"
 #include "Magnum/Ui/TextLayer.h"
@@ -43,6 +44,7 @@ namespace Magnum { namespace Ui {
 
 using Implementation::BaseStyle;
 using Implementation::TextStyle;
+using Implementation::LayoutStyle;
 
 Debug& operator<<(Debug& debug, const InputStyle value) {
     debug << "Ui::InputStyle" << Debug::nospace;
@@ -99,6 +101,7 @@ TextStyle textLayerStyle(const InputStyle style) {
 
 Input::Input(const Anchor& anchor, const Containers::StringView text, const TextProperties& textProperties, const InputStyle style): Widget{anchor}, _style{style} {
     ui().addNodeFlags(node(), NodeFlag::Focusable);
+    ui().layoutLayer().create(LayoutStyle::Input, node());
 
     _backgroundData = dataHandleData(ui().baseLayer().create(baseLayerStyle(style), node()));
     _textData = dataHandleData(ui().textLayer().create(textLayerStyle(style), text, textProperties, TextDataFlag::Editable, node()));

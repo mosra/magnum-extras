@@ -155,6 +155,9 @@ void ButtonTest::constructEmpty() {
     CORRADE_COMPARE(button1.textData(), DataHandle::Null);
     CORRADE_COMPARE(button2.textData(), DataHandle::Null);
     CORRADE_COMPARE(button3.textData(), DataHandle::Null);
+
+    /* Can only verify that the layout data were created, they're not saved */
+    CORRADE_COMPARE(ui.layoutLayer().usedCount(), 3);
 }
 
 void ButtonTest::constructEmptyStateless() {
@@ -172,6 +175,7 @@ void ButtonTest::constructEmptyStateless() {
        tested in StyleGLTest. */
     CORRADE_COMPARE(ui.baseLayer().usedCount(), 3);
     CORRADE_COMPARE(ui.textLayer().usedCount(), 0);
+    CORRADE_COMPARE(ui.layoutLayer().usedCount(), 3);
 }
 
 void ButtonTest::constructIconOnly() {
@@ -195,6 +199,9 @@ void ButtonTest::constructIconOnly() {
     CORRADE_COMPARE(ui.textLayer().glyphCount(button2.iconData()), 1);
     CORRADE_COMPARE(button1.textData(), DataHandle::Null);
     CORRADE_COMPARE(button2.textData(), DataHandle::Null);
+
+    /* Can only verify that the layout data were created, they're not saved */
+    CORRADE_COMPARE(ui.layoutLayer().usedCount(), 2);
 }
 
 void ButtonTest::constructIconOnlyStateless() {
@@ -209,6 +216,7 @@ void ButtonTest::constructIconOnlyStateless() {
        tested in StyleGLTest. */
     CORRADE_COMPARE(ui.baseLayer().usedCount(), 2);
     CORRADE_COMPARE(ui.textLayer().usedCount(), 2);
+    CORRADE_COMPARE(ui.layoutLayer().usedCount(), 2);
 }
 
 void ButtonTest::constructTextOnly() {
@@ -232,6 +240,9 @@ void ButtonTest::constructTextOnly() {
     CORRADE_VERIFY(ui.isHandleValid(button2.textData()));
     CORRADE_COMPARE(ui.textLayer().glyphCount(button1.textData()), 6);
     CORRADE_COMPARE(ui.textLayer().glyphCount(button2.textData()), 6);
+
+    /* Can only verify that the layout data were created, they're not saved */
+    CORRADE_COMPARE(ui.layoutLayer().usedCount(), 2);
 }
 
 void ButtonTest::constructTextOnlyStateless() {
@@ -246,6 +257,7 @@ void ButtonTest::constructTextOnlyStateless() {
        tested in StyleGLTest. */
     CORRADE_COMPARE(ui.baseLayer().usedCount(), 2);
     CORRADE_COMPARE(ui.textLayer().usedCount(), 2);
+    CORRADE_COMPARE(ui.layoutLayer().usedCount(), 2);
 }
 
 void ButtonTest::constructTextOnlyTextProperties() {
@@ -274,6 +286,9 @@ void ButtonTest::constructTextOnlyTextProperties() {
     /* Multiplied by 6 because of the Braille script */
     CORRADE_COMPARE(ui.textLayer().glyphCount(button1.textData()), 6*6);
     CORRADE_COMPARE(ui.textLayer().glyphCount(button2.textData()), 6*6);
+
+    /* Can only verify that the layout data were created, they're not saved */
+    CORRADE_COMPARE(ui.layoutLayer().usedCount(), 2);
 }
 
 void ButtonTest::constructTextOnlyTextPropertiesStateless() {
@@ -293,6 +308,7 @@ void ButtonTest::constructTextOnlyTextPropertiesStateless() {
     /** @todo this doesn't verify that the properties were passed :/ */
     CORRADE_COMPARE(ui.baseLayer().usedCount(), 2);
     CORRADE_COMPARE(ui.textLayer().usedCount(), 2);
+    CORRADE_COMPARE(ui.layoutLayer().usedCount(), 2);
 }
 
 void ButtonTest::constructIconText() {
@@ -308,6 +324,9 @@ void ButtonTest::constructIconText() {
     CORRADE_COMPARE(ui.textLayer().glyphCount(button.iconData()), 1);
     CORRADE_VERIFY(ui.isHandleValid(button.textData()));
     CORRADE_COMPARE(ui.textLayer().glyphCount(button.textData()), 4);
+
+    /* Can only verify that the layout data were created, they're not saved */
+    CORRADE_COMPARE(ui.layoutLayer().usedCount(), 1);
 }
 
 void ButtonTest::constructIconTextStateless() {
@@ -319,6 +338,7 @@ void ButtonTest::constructIconTextStateless() {
        tested in StyleGLTest. */
     CORRADE_COMPARE(ui.baseLayer().usedCount(), 1);
     CORRADE_COMPARE(ui.textLayer().usedCount(), 2);
+    CORRADE_COMPARE(ui.layoutLayer().usedCount(), 1);
 }
 
 void ButtonTest::constructIconTextTextProperties() {
@@ -338,6 +358,9 @@ void ButtonTest::constructIconTextTextProperties() {
     CORRADE_VERIFY(ui.isHandleValid(button.textData()));
     /* Multiplied by 6 because of the Braille script */
     CORRADE_COMPARE(ui.textLayer().glyphCount(button.textData()), 4*6);
+
+    /* Can only verify that the layout data were created, they're not saved */
+    CORRADE_COMPARE(ui.layoutLayer().usedCount(), 1);
 }
 
 void ButtonTest::constructIconTextTextPropertiesStateless() {
@@ -352,6 +375,7 @@ void ButtonTest::constructIconTextTextPropertiesStateless() {
     /** @todo this doesn't verify that the properties were passed :/ */
     CORRADE_COMPARE(ui.baseLayer().usedCount(), 1);
     CORRADE_COMPARE(ui.textLayer().usedCount(), 2);
+    CORRADE_COMPARE(ui.layoutLayer().usedCount(), 1);
 }
 
 void ButtonTest::constructNoCreate() {
@@ -360,6 +384,10 @@ void ButtonTest::constructNoCreate() {
     CORRADE_COMPARE(button.backgroundData(), DataHandle::Null);
     CORRADE_COMPARE(button.iconData(), DataHandle::Null);
     CORRADE_COMPARE(button.textData(), DataHandle::Null);
+
+    /* Can only verify that the layout data were not created, they're not
+       saved */
+    CORRADE_COMPARE(ui.layoutLayer().usedCount(), 0);
 }
 
 void ButtonTest::setStyle() {

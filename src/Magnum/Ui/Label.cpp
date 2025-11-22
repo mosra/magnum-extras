@@ -34,6 +34,7 @@
 #include "Magnum/Ui/Anchor.h"
 #include "Magnum/Ui/BaseLayer.h"
 #include "Magnum/Ui/Handle.h"
+#include "Magnum/Ui/LayoutLayer.h"
 #include "Magnum/Ui/Style.h"
 #include "Magnum/Ui/Style.hpp"
 #include "Magnum/Ui/TextLayer.h"
@@ -65,6 +66,7 @@ Debug& operator<<(Debug& debug, const LabelStyle value) {
 namespace {
 
 using Implementation::TextStyle;
+using Implementation::LayoutStyle;
 
 TextStyle textLayerStyleIcon(const LabelStyle style) {
     switch(style) {
@@ -97,11 +99,19 @@ TextStyle textLayerStyleText(const LabelStyle style) {
 }
 
 Label::Label(const Anchor& anchor, const Icon icon, const LabelStyle style): Widget{anchor}, _style{style}, _icon{icon} {
+    /* The LayoutLayer data aren't stored because currently they're never
+       updated */
+    ui().layoutLayer().create(LayoutStyle::Label, node());
+
     _data = icon == Icon::None ? LayerDataHandle::Null :
         dataHandleData(ui().textLayer().createGlyph(textLayerStyleIcon(style), icon, {}, node()));
 }
 
 Label::Label(const Anchor& anchor, const Containers::StringView text, const TextProperties& textProperties, const LabelStyle style): Widget{anchor}, _style{style}, _icon{Icon::None} {
+    /* The LayoutLayer data aren't stored because currently they're never
+       updated */
+    ui().layoutLayer().create(LayoutStyle::Label, node());
+
     _data = !text ? LayerDataHandle::Null :
         dataHandleData(ui().textLayer().create(textLayerStyleText(style), text, textProperties, node()));
 }
@@ -159,6 +169,8 @@ DataHandle Label::data() const {
 }
 
 Anchor label(const Anchor& anchor, const Containers::StringView text, const TextProperties& textProperties, const LabelStyle style) {
+    anchor.ui().layoutLayer().create(LayoutStyle::Label, anchor.node());
+
     if(text)
         anchor.ui().textLayer().create(textLayerStyleText(style), text, textProperties, anchor.node());
     return anchor;
@@ -169,6 +181,8 @@ Anchor label(const Anchor& anchor, const Containers::StringView text, const Labe
 }
 
 Anchor label(const Anchor& anchor, const Icon icon, const LabelStyle style) {
+    anchor.ui().layoutLayer().create(LayoutStyle::Label, anchor.node());
+
     if(icon != Icon::None)
         anchor.ui().textLayer().createGlyph(textLayerStyleIcon(style), icon, {}, anchor.node());
     return anchor;

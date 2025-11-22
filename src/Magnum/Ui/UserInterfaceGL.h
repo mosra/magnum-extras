@@ -71,7 +71,7 @@ The rest of the setup --- drawing and event handling --- is the same for all
 
 The above by default populates the user interface with everything a style
 provides for use by builtin widgets --- in particular, making @ref baseLayer(),
-@ref textLayer(), @ref eventLayer(), @ref snapLayouter(),
+@ref textLayer(), @ref eventLayer(), @ref layoutLayer(), @ref snapLayouter(),
 @ref baseLayerStyleAnimator() and @ref textLayerStyleAnimator() all available.
 In case you for example use just a subset of the builtin widgets that only need
 a part of the above, you can specify a @ref StyleFeatures subset. This can be
