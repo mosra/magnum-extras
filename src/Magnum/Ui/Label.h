@@ -176,11 +176,11 @@ class MAGNUM_UI_EXPORT Label: public Widget {
 @return The @p anchor verbatim
 @m_since_latest_{extras}
 
-Compared to @ref Label::Label(const Anchor&, Icon, LabelStyle)
-this creates a stateless label that doesn't have any class instance that would
-need to be kept in scope and eventually destructed, making it more lightweight.
-As a consequence it can't have its style, icon or text subsequently changed and
-is removed only when the node or its parent get removed.
+Compared to @ref Label::Label(const Anchor&, Icon, LabelStyle) this creates a
+stateless label that doesn't have any class instance that would need to be kept
+in scope and eventually destructed, making it more lightweight. As a
+consequence it can't have its style, icon or text subsequently changed and is
+removed only when the node or its parent get removed.
 */
 MAGNUM_UI_EXPORT Anchor label(const Anchor& anchor, Icon icon, LabelStyle style = LabelStyle::Default);
 

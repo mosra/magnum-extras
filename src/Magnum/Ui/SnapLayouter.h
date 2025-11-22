@@ -46,14 +46,15 @@ Specifying neither @ref Snap::Left nor @ref Snap::Right will result in
 horizontal centering. Specifying both @ref Snap::Left and @ref Snap::Right (or
 the @ref Snap::FillX alias) will cause the node width to match width of the
 target node or the user interface. In both cases it's as if @ref Snap::InsideX
-was specified as well, taking horizontal @ref SnapLayouter::padding() into
-account.
+was specified as well. If the snap results in the node being inside the target
+node, horizontal @ref SnapLayouter::padding() is taken into account.
 
 Specifying neither @ref Snap::Top nor @ref Snap::Bottom will result in verical
 centering. Specifying both @ref Snap::Top and @ref Snap::Bottom (or the
 @ref Snap::FillX alias) will cause the node height to match height the target
 node or user interface. In both cases it's as if @ref Snap::InsideY was
-specified as well, taking vertical @ref SnapLayouter::padding() into account.
+specified as well. If the snap results in the node being inside the target
+node, vertical @ref SnapLayouter::padding() is taken into account.
 
 Specifying @ref Snap::NoPadX and/or @ref Snap::NoPadY will ignore horizontal
 and/or vertical @ref SnapLayouter::padding() and @ref SnapLayouter::margin().
