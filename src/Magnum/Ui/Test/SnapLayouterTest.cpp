@@ -29,6 +29,7 @@
 #include <Corrade/Containers/String.h>
 #include <Corrade/TestSuite/Tester.h>
 #include <Corrade/TestSuite/Compare/Container.h>
+#include <Corrade/TestSuite/Compare/Numeric.h>
 #include <Corrade/TestSuite/Compare/String.h>
 
 #include "Magnum/Ui/AbstractLayer.h"
@@ -402,9 +403,10 @@ const struct {
     const char* name;
     /* Individual edges tested sufficiently in snap() */
     Float paddingTarget, marginTarget, margin;
+    Vector2 minSize;
     Snaps snap;
     /* The UI has a size of {500, 600} */
-    bool targetUi;
+    bool targetUi, xfailMinSize;
     /* The target is at {300, 400} with a size of {100, 200}, snapped node size
        is {50, 100}. A constant node offset is additionally supplied by the
        test case, which is added to the expectedOffset. */
@@ -414,27 +416,69 @@ const struct {
        Complete behavior tested in snap(), an "integration test" with multiple
        nodes having different paddings and margins is in updateDataOrder(). */
     {"target node padding, fill",
-        10.0f, 0.0f, 0.0f,
-        Snap::Fill, false,
+        10.0f, 0.0f, 0.0f, {},
+        Snap::Fill, false, false,
         /* The node becomes a child, so its offset is relative to parent */
         {10.0f, 10.0f}, {80.0f, 180.0f}},
     {"margin, fill",
-        0.0f, 0.0f, 10.0f,
-        Snap::Fill, false,
+        0.0f, 0.0f, 10.0f, {},
+        Snap::Fill, false, false,
         /* The node becomes a child, so its offset is relative to parent */
         {10.0f, 10.0f}, {80.0f, 180.0f}},
     {"margin, fill, target UI instead of a node",
-        0.0f, 0.0f, 10.0f,
-        Snap::Fill, true,
+        0.0f, 0.0f, 10.0f, {},
+        Snap::Fill, true, false,
         {10.0f, 10.0f}, {480.0f, 580.0f}},
     {"target margin, outside",
-        0.0f, 10.0f, 0.0f,
-        Snap::BottomRight, false,
+        0.0f, 10.0f, 0.0f, {},
+        Snap::BottomRight, false, false,
         {410.0f, 610.0f}, {50.0f, 100.0f}},
     {"margin, outside",
-        0.0f, 0.0f, 10.0f,
-        Snap::BottomRight, false,
+        0.0f, 0.0f, 10.0f, {},
+        Snap::BottomRight, false, false,
         {410.0f, 610.0f}, {50.0f, 100.0f}},
+    {"margin, min size, fill",
+        0.0f, 0.0f, 10.0f, {900.0f, 1500.0f},
+        Snap::Fill, false, true,
+        /* The size is ignored when filling; the node also becomes a child, so
+           its offset is relative to parent */
+        /** @todo what to do here instead? the parent doesn't have a layout to
+            be enlarged */
+        {10.0f, 10.0f}, {80.0f, 180.0f}},
+    {"min size, centered",
+        0.0f, 0.0f, 0.0f, {70.0f, 120.0f},
+        {}, false, false,
+        /* The node becomes a child, so its offset is relative to parent */
+        {15.0f, 40.0f}, {70.0f, 120.0f}},
+    {"large, min size, centered",
+        0.0f, 0.0f, 0.0f, {150.0f, 300.0f},
+        {}, false, false,
+        /* The node becomes a child, so its offset is relative to parent */
+        /** @todo here it should likely also enlarge the parent, if it has a
+            layout? */
+        {-25.0f, -50.0f}, {150.0f, 300.0f}},
+    {"min X size, outside, margin, fill Y",
+        0.0f, 0.0f, 10.0f, {350.0f, 0.0f},
+        Snap::Right|Snap::FillY, false, false,
+        {410.0f, 400.0f}, {350.0f, 200.0f}},
+    {"min size, outside, margin, fill Y",
+        0.0f, 0.0f, 10.0f, {350.0f, 1500.0f},
+        Snap::Right|Snap::FillY, false, true,
+        /* The Y size is ignored in this case as well */
+        /** @todo should probably enlarge the target node as well? here it
+            doesn't have a layout to affect */
+        {410.0f, 400.0f}, {350.0f, 200.0f}},
+    {"min Y size, outside, margin, fill X",
+        0.0f, 0.0f, 10.0f, {0.0f, 150.0f},
+        Snap::Bottom|Snap::FillX, false, false,
+        {300.0f, 610.0f}, {100.0f, 150.0f}},
+    {"min size, outside, margin, fill X",
+        0.0f, 0.0f, 10.0f, {900.0f, 150.0f},
+        Snap::Bottom|Snap::FillX, false, true,
+        /* The X size is ignored in this case as well */
+        /** @todo should probably enlarge the target node as well? here it
+            doesn't have a layout to affect */
+        {300.0f, 610.0f}, {100.0f, 150.0f}},
 };
 
 SnapLayouterTest::SnapLayouterTest() {
@@ -1371,19 +1415,22 @@ void SnapLayouterTest::updateLayoutProperties() {
        Tests for complete padding/margin behavior is in snap(), tests for other
        layout properties are in updateLayoutProperties(). */
     struct LayoutLayer: AbstractLayer {
-        explicit LayoutLayer(LayerHandle handle, Float paddingTarget, Float marginTarget, Float margin): AbstractLayer{handle}, _paddingTarget{paddingTarget}, _marginTarget{marginTarget}, _margin{margin} {}
+        explicit LayoutLayer(LayerHandle handle, const Vector2& minSize, Float paddingTarget, Float marginTarget, Float margin): AbstractLayer{handle}, _minSize{minSize}, _paddingTarget{paddingTarget}, _marginTarget{marginTarget}, _margin{margin} {}
 
         LayerFeatures doFeatures() const override {
             return LayerFeature::Layout;
         }
-        void doLayout(Containers::BitArrayView, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Float>&, const Containers::StridedArrayView1D<Vector4>& nodePaddings, const Containers::StridedArrayView1D<Vector4>& nodeMargins) override {
+        void doLayout(Containers::BitArrayView, const Containers::StridedArrayView1D<Vector2>& nodeMinSizes, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Float>&, const Containers::StridedArrayView1D<Vector4>& nodePaddings, const Containers::StridedArrayView1D<Vector4>& nodeMargins) override {
             /* Only select properties of the two nodes should be used,
                initialize everything else to 0 */
+            for(Vector2& i: nodeMinSizes)
+                i = Vector2{Constants::nan()};
             for(Vector4& i: nodePaddings)
                 i = Vector4{Constants::nan()};
             for(Vector4& i: nodeMargins)
                 i = Vector4{Constants::nan()};
 
+            nodeMinSizes[7 /*node*/] = _minSize;
             nodePaddings[3 /*targetNode*/] = Vector4{_paddingTarget};
             nodeMargins[3 /*targetNode*/] = Vector4{_marginTarget};
             nodeMargins[7 /*node*/] = Vector4{_margin};
@@ -1393,9 +1440,10 @@ void SnapLayouterTest::updateLayoutProperties() {
         Int called = 0;
 
         private:
+            Vector2 _minSize;
             Float _paddingTarget, _marginTarget, _margin;
     };
-    LayoutLayer& layoutLayer = ui.setLayerInstance(Containers::pointer<LayoutLayer>(ui.createLayer(), data.paddingTarget, data.marginTarget, data.margin));
+    LayoutLayer& layoutLayer = ui.setLayerInstance(Containers::pointer<LayoutLayer>(ui.createLayer(), data.minSize, data.paddingTarget, data.marginTarget, data.margin));
 
     SnapLayouter& layouter = ui.setLayouterInstance(Containers::pointer<SnapLayouter>(ui.createLayouter()));
 
@@ -1413,16 +1461,21 @@ void SnapLayouterTest::updateLayoutProperties() {
     /* Add a dummy second layouter because that's the easiest way to verify the
        calculated node offsets / sizes */
     struct DummyLayouter: AbstractLayouter {
-        explicit DummyLayouter(LayouterHandle handle, const Vector2& expectedOffset, const Vector2& expectedSize): AbstractLayouter{handle}, _expectedOffset{expectedOffset}, _expectedSize{expectedSize} {}
+        explicit DummyLayouter(LayouterHandle handle, const Vector2& expectedOffset, const Vector2& expectedSize, bool xfailMinSize): AbstractLayouter{handle}, _expectedOffset{expectedOffset}, _expectedSize{expectedSize}, _xfailMinSize{xfailMinSize} {}
 
         using AbstractLayouter::add;
 
         LayouterFeatures doFeatures() const override { return {}; }
-        void doUpdate(Containers::BitArrayView, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const NodeHandle>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Float>&, const Containers::StridedArrayView1D<const Vector4>&, const Containers::StridedArrayView1D<const Vector4>&, const Containers::StridedArrayView1D<Vector2>& nodeOffsets, const Containers::StridedArrayView1D<Vector2>& nodeSizes) override {
+        void doUpdate(Containers::BitArrayView, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const NodeHandle>&, const Containers::StridedArrayView1D<const Vector2>& nodeMinSizes, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Float>&, const Containers::StridedArrayView1D<const Vector4>&, const Containers::StridedArrayView1D<const Vector4>&, const Containers::StridedArrayView1D<Vector2>& nodeOffsets, const Containers::StridedArrayView1D<Vector2>& nodeSizes) override {
             /* The offset should always include the node-specific offset,
                subtract it for comparison */
             CORRADE_COMPARE(nodeOffsets[7 /*node*/] - (Vector2{0.25f, 0.75f}), _expectedOffset);
             CORRADE_COMPARE(nodeSizes[7 /*node*/], _expectedSize);
+            {
+                CORRADE_EXPECT_FAIL_IF(_xfailMinSize, "Min size doesn't get correctly applied in this case.");
+                CORRADE_COMPARE_AS(nodeSizes[7], nodeMinSizes[7],
+                    TestSuite::Compare::GreaterOrEqual);
+            }
             ++called;
         }
 
@@ -1430,8 +1483,9 @@ void SnapLayouterTest::updateLayoutProperties() {
 
         private:
             Vector2 _expectedOffset, _expectedSize;
+            bool _xfailMinSize;
     };
-    DummyLayouter& dummyLayouter = ui.setLayouterInstance(Containers::pointer<DummyLayouter>(ui.createLayouter(), data.expectedOffset, data.expectedSize));
+    DummyLayouter& dummyLayouter = ui.setLayouterInstance(Containers::pointer<DummyLayouter>(ui.createLayouter(), data.expectedOffset, data.expectedSize, data.xfailMinSize));
     dummyLayouter.add(node);
     ui.update();
     CORRADE_COMPARE(layoutLayer.called, 1);
