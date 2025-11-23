@@ -156,13 +156,12 @@ TextStyle textLayerStyleText(const ButtonStyle style) {
 }
 
 void alignIconText(TextLayer& textLayer, const ButtonStyle style, const LayerDataHandle icon, const LayerDataHandle text) {
-    /* If both the text and the icon is present, shift the icon to be next to
-       the text instead of in the center, and pick appropriate styles for
-       correct alignment */
+    /* If both the text and the icon is present, make the icon padded from the
+       right by the text size, and pick appropriate styles for correct
+       alignment */
     if(icon != LayerDataHandle::Null && text != LayerDataHandle::Null) {
         /** @todo handle vertical / sideways buttons as well, eventually */
-        const Float halfTextWidth = textLayer.size(text).x()*0.5f;
-        textLayer.setPadding(icon, {-halfTextWidth, 0.0f, halfTextWidth, 0.0f});
+        textLayer.setPadding(icon, {0.0f, 0.0f, textLayer.size(text).x(), 0.0f});
         textLayer.setStyle(icon, textLayerStyleIcon(style));
         textLayer.setStyle(text, textLayerStyleText(style));
 
