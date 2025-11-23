@@ -4943,9 +4943,9 @@ void AbstractAnimatorTest::updatePreviousState() {
     animator.remove(playingRemoveRecycleStopped);
     animator.remove(playingRemove);
     AnimationHandle playing = animator.create(-20_nsec, 40_nsec);
-    AnimationHandle stopped = animator.create(-50_nsec, 10_nsec, AnimationFlag::KeepOncePlayed);
+    AnimationHandle stoppedKeep = animator.create(-50_nsec, 10_nsec, AnimationFlag::KeepOncePlayed);
     CORRADE_COMPARE(animationHandleId(playing), animationHandleId(playingRemoveRecyclePlaying));
-    CORRADE_COMPARE(animationHandleId(stopped), animationHandleId(playingRemoveRecycleStopped));
+    CORRADE_COMPARE(animationHandleId(stoppedKeep), animationHandleId(playingRemoveRecycleStopped));
 
     /* Call update() again. The animations that were recycled should have the
        `started` bit set again, not being treated as already started
@@ -4963,7 +4963,7 @@ void AbstractAnimatorTest::updatePreviousState() {
             true,  /* 0 stoppedPlaying */
             true,  /* 1 playingRestart */
             true,  /* 1 playing */
-            true,  /* 2 stopped */
+            true,  /* 2 stoppedKeep */
             false, /* 3 (unused) */
         }).sliceBit(0), TestSuite::Compare::Container);
         CORRADE_COMPARE_AS(Containers::BitArrayView{started}, Containers::stridedArrayView({
