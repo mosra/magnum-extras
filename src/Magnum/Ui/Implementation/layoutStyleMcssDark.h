@@ -24,13 +24,13 @@
     DEALINGS IN THE SOFTWARE.
 */
 
-/* _c() is LayoutLayer enum name, padding and margin */
+/* _c() is LayoutLayer enum name, min size, padding and margin */
 
 #ifdef _c
 /* Compared to m.css, which has both and margin and padding 1rem (= 16px,
    matching font size), the spacing is slightly reduced here. */
-_c(Button, {}, {12.0f, 10.0f})
-_c(Label, {}, {12.0f, 10.0f})
-_c(Input, {}, {12.0f, 10.0f})
-_c(Panel, {16.0f, 12.0f}, {12.0f, 10.0f})
+_c(Button, {0.0f, 36.0f}, {}, {12.0f, 10.0f})
+_c(Label, {0.0f, 24.0f}, {}, {12.0f, 10.0f})
+_c(Input, {0.0f, 36.0f}, {}, {12.0f, 10.0f})
+_c(Panel, {}, {16.0f, 12.0f}, {12.0f, 10.0f})
 #endif

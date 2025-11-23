@@ -731,9 +731,10 @@ static_assert(Implementation::TextEditingStyleCount == Containers::arraySize(Tex
    struct and array definition makes it work. MSVC 2022 works. */
 /** @todo clean this up once MSVC 2017 and 2019 is gone */
 struct LayoutStyle {
-    constexpr /*implicit*/ LayoutStyle(const Vector4& padding, const Vector4& margin): padding{padding}, margin{margin} {}
-    constexpr /*implicit*/ LayoutStyle(const Vector2& padding, const Vector2& margin): padding{padding.x(), padding.y(), padding.x(), padding.y()}, margin{margin.x(), margin.y(), margin.x(), margin.y()} {}
+    constexpr /*implicit*/ LayoutStyle(const Vector2& minSize, const Vector4& padding, const Vector4& margin): minSize{minSize}, padding{padding}, margin{margin} {}
+    constexpr /*implicit*/ LayoutStyle(const Vector2& minSize, const Vector2& padding, const Vector2& margin): minSize{minSize}, padding{padding.x(), padding.y(), padding.x(), padding.y()}, margin{margin.x(), margin.y(), margin.x(), margin.y()} {}
 
+    Vector2 minSize;
     Vector4 padding;
     Vector4 margin;
 };
@@ -1016,10 +1017,10 @@ bool McssDarkStyle::doApply(UserInterface& ui, const StyleFeatures features, Plu
            application. */
     }
 
-    /* Layout layer. So far just paddings and margins. */
+    /* Layout layer. So far just min sizes, paddings and margins. */
     if(features >= StyleFeature::LayoutLayer) {
         ui.layoutLayer().setStyle(
-            {},
+            Containers::stridedArrayView(LayoutStylesMcssDark).slice(&std::remove_all_extents<decltype(LayoutStylesMcssDark)>::type::minSize),
             {},
             {},
             Containers::stridedArrayView(LayoutStylesMcssDark).slice(&std::remove_all_extents<decltype(LayoutStylesMcssDark)>::type::padding),
