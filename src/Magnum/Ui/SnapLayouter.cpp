@@ -232,10 +232,9 @@ void SnapLayouter::doUpdate(const Containers::BitArrayView layoutIdsToUpdate, co
 
     const Containers::StridedArrayView1D<const NodeHandle> nodes = this->nodes();
 
-    /* Go through the layouts in their dependency order, skipping the first
-       item which was -1 */
+    /* Go through the layouts in their dependency order */
     for(const std::size_t i: layoutIds.prefix(count)) {
-        const Layout& layout = _state->layouts[i];
+        const Layout& layout = state.layouts[i];
         const UnsignedInt nodeId = nodeHandleId(nodes[i]);
 
         /* If the target is null, we're snapping to the whole UI */
