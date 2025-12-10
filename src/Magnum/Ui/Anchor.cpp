@@ -35,7 +35,7 @@
 
 namespace Magnum { namespace Ui {
 
-AbstractAnchor::AbstractAnchor(AbstractUserInterface& ui, const NodeHandle node, const LayoutHandle layout): _ui{ui}, _node{node}, _layout{layout} {
+AbstractAnchor::AbstractAnchor(AbstractUserInterface& ui, const NodeHandle node, const LayoutHandle layout): _ui{&ui}, _node{node}, _layout{layout} {
     CORRADE_ASSERT(ui.isHandleValid(node),
         "Ui::AbstractAnchor: invalid handle" << node, );
     CORRADE_ASSERT(layout == LayoutHandle::Null || ui.isHandleValid(layout),
@@ -46,7 +46,7 @@ AbstractAnchor::AbstractAnchor(AbstractUserInterface& ui, const NodeHandle node,
         "Ui::AbstractAnchor:" << layout << "not associated with" << node, );
 }
 
-AbstractAnchor::AbstractAnchor(AbstractUserInterface& ui, const NodeHandle parent, const Vector2& offset, const Vector2& size, const NodeFlags flags): _ui{ui}, _layout{} {
+AbstractAnchor::AbstractAnchor(AbstractUserInterface& ui, const NodeHandle parent, const Vector2& offset, const Vector2& size, const NodeFlags flags): _ui{&ui}, _layout{} {
     _node = ui.createNode(parent, offset, size, flags);
 }
 

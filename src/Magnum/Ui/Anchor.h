@@ -32,7 +32,6 @@
  */
 
 #include <Corrade/Containers/EnumSet.h>
-#include <Corrade/Containers/Reference.h>
 #include <Corrade/Utility/DebugAssert.h>
 
 #include "Magnum/Ui/visibility.h"
@@ -103,7 +102,7 @@ class MAGNUM_UI_EXPORT AbstractAnchor {
         /*implicit*/ AbstractAnchor(AbstractUserInterface& ui, const Vector2& size, NodeFlags flags = {});
 
         /** @brief User interface instance */
-        AbstractUserInterface& ui() const { return _ui; }
+        AbstractUserInterface& ui() const { return *_ui; }
 
         /**
          * @brief Node handle
@@ -135,7 +134,7 @@ class MAGNUM_UI_EXPORT AbstractAnchor {
         operator LayoutHandle() const;
 
     private:
-        Containers::Reference<AbstractUserInterface> _ui;
+        AbstractUserInterface* _ui;
         /* 0/4 bytes free */
         NodeHandle _node;
         LayoutHandle _layout;

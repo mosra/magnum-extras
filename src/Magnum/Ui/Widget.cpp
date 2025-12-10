@@ -35,12 +35,12 @@
 
 namespace Magnum { namespace Ui {
 
-AbstractWidget::AbstractWidget(AbstractUserInterface& ui, NodeHandle node): _ui{ui}, _node{node} {
+AbstractWidget::AbstractWidget(AbstractUserInterface& ui, NodeHandle node): _ui{&ui}, _node{node} {
     CORRADE_ASSERT(ui.isHandleValid(node),
         "Ui::AbstractWidget: invalid handle" << node, );
 }
 
-AbstractWidget::AbstractWidget(const AbstractAnchor& anchor): _ui{anchor.ui()}, _node{anchor.node()} {
+AbstractWidget::AbstractWidget(const AbstractAnchor& anchor): _ui{&anchor.ui()}, _node{anchor.node()} {
     /* No validity assertion here as the anchor takes care of that already. If
        the node got removed since the anchor was created, that's not our
        problem tho. */

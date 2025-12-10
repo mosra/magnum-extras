@@ -31,7 +31,6 @@
  * @m_since_latest_{extras}
  */
 
-#include <Corrade/Containers/Reference.h>
 #include <Corrade/Utility/Move.h>
 
 #include "Magnum/Tags.h"
@@ -78,7 +77,7 @@ class MAGNUM_UI_EXPORT AbstractWidget {
          * The instance is equivalent to a moved-out state, i.e. not usable
          * for anything. Move another instance over it to make it useful.
          */
-        explicit AbstractWidget(NoCreateT, AbstractUserInterface& ui): _ui{ui}, _node{} {}
+        explicit AbstractWidget(NoCreateT, AbstractUserInterface& ui): _ui{&ui}, _node{} {}
 
         /**
          * @brief Construct from a positioning anchor
@@ -118,7 +117,7 @@ class MAGNUM_UI_EXPORT AbstractWidget {
         AbstractWidget& operator=(AbstractWidget&& other) noexcept;
 
         /** @brief User interface instance this widget is part of */
-        AbstractUserInterface& ui() const { return _ui; }
+        AbstractUserInterface& ui() const { return *_ui; }
 
         /**
          * @brief Widget node
@@ -187,7 +186,7 @@ class MAGNUM_UI_EXPORT AbstractWidget {
         NodeHandle release();
 
     private:
-        Containers::Reference<AbstractUserInterface> _ui;
+        AbstractUserInterface* _ui;
         NodeHandle _node;
 };
 
