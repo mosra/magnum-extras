@@ -2658,7 +2658,7 @@ void AbstractUserInterfaceTest::layouterSetInstance() {
             }
 
             LayouterFeatures doFeatures() const override { return {}; }
-            void doUpdate(Containers::BitArrayView, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const NodeHandle>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Float>&, const Containers::StridedArrayView1D<const Vector4>&, const Containers::StridedArrayView1D<const Vector4>&, const Containers::StridedArrayView1D<Vector2>&, const  Containers::StridedArrayView1D<Vector2>&) override {}
+            void doUpdate(Containers::BitArrayView, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Float>&, const Containers::StridedArrayView1D<const Vector4>&, const Containers::StridedArrayView1D<const Vector4>&, const Containers::StridedArrayView1D<Vector2>&, const  Containers::StridedArrayView1D<Vector2>&) override {}
 
             int& destructed;
         };
@@ -2727,7 +2727,7 @@ void AbstractUserInterfaceTest::layouterSetInstanceInvalid() {
         using AbstractLayouter::AbstractLayouter;
 
         LayouterFeatures doFeatures() const override { return {}; }
-        void doUpdate(Containers::BitArrayView, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const NodeHandle>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Float>&, const Containers::StridedArrayView1D<const Vector4>&, const Containers::StridedArrayView1D<const Vector4>&, const Containers::StridedArrayView1D<Vector2>&, const  Containers::StridedArrayView1D<Vector2>&) override {}
+        void doUpdate(Containers::BitArrayView, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Float>&, const Containers::StridedArrayView1D<const Vector4>&, const Containers::StridedArrayView1D<const Vector4>&, const Containers::StridedArrayView1D<Vector2>&, const  Containers::StridedArrayView1D<Vector2>&) override {}
     };
 
     AbstractUserInterface ui{{100, 100}};
@@ -2754,7 +2754,7 @@ void AbstractUserInterfaceTest::layouterGetInvalid() {
         using AbstractLayouter::AbstractLayouter;
 
         LayouterFeatures doFeatures() const override { return {}; }
-        void doUpdate(Containers::BitArrayView, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const NodeHandle>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Float>&, const Containers::StridedArrayView1D<const Vector4>&, const Containers::StridedArrayView1D<const Vector4>&, const Containers::StridedArrayView1D<Vector2>&, const  Containers::StridedArrayView1D<Vector2>&) override {}
+        void doUpdate(Containers::BitArrayView, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Float>&, const Containers::StridedArrayView1D<const Vector4>&, const Containers::StridedArrayView1D<const Vector4>&, const Containers::StridedArrayView1D<Vector2>&, const  Containers::StridedArrayView1D<Vector2>&) override {}
     };
 
     AbstractUserInterface ui{{100, 100}};
@@ -2838,7 +2838,7 @@ void AbstractUserInterfaceTest::layouterUserInterfaceReference() {
         using AbstractLayouter::ui;
 
         LayouterFeatures doFeatures() const override { return {}; }
-        void doUpdate(Containers::BitArrayView, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const NodeHandle>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Float>&, const Containers::StridedArrayView1D<const Vector4>&, const Containers::StridedArrayView1D<const Vector4>&, const Containers::StridedArrayView1D<Vector2>&, const  Containers::StridedArrayView1D<Vector2>&) override {}
+        void doUpdate(Containers::BitArrayView, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Float>&, const Containers::StridedArrayView1D<const Vector4>&, const Containers::StridedArrayView1D<const Vector4>&, const Containers::StridedArrayView1D<Vector2>&, const  Containers::StridedArrayView1D<Vector2>&) override {}
     };
 
     Containers::Pointer<Layouter> layouter1Instance{InPlaceInit, ui.createLayouter()};
@@ -4975,7 +4975,7 @@ void AbstractUserInterfaceTest::nodeUniqueLayoutInvalid() {
         explicit Layouter(LayouterHandle handle, LayouterFeatures features): AbstractLayouter{handle}, _features{features} {}
 
         LayouterFeatures doFeatures() const override { return _features; }
-        void doUpdate(Containers::BitArrayView, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const NodeHandle>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Float>&, const Containers::StridedArrayView1D<const Vector4>&, const Containers::StridedArrayView1D<const Vector4>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Vector2>&) override {}
+        void doUpdate(Containers::BitArrayView, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Float>&, const Containers::StridedArrayView1D<const Vector4>&, const Containers::StridedArrayView1D<const Vector4>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Vector2>&) override {}
 
         private:
             LayouterFeatures _features;
@@ -5102,7 +5102,7 @@ void AbstractUserInterfaceTest::layout() {
         using AbstractLayouter::remove;
 
         LayouterFeatures doFeatures() const override { return {}; }
-        void doUpdate(Containers::BitArrayView, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const NodeHandle>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Float>&, const Containers::StridedArrayView1D<const Vector4>&, const Containers::StridedArrayView1D<const Vector4>&, const Containers::StridedArrayView1D<Vector2>&, const  Containers::StridedArrayView1D<Vector2>&) override {}
+        void doUpdate(Containers::BitArrayView, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Float>&, const Containers::StridedArrayView1D<const Vector4>&, const Containers::StridedArrayView1D<const Vector4>&, const Containers::StridedArrayView1D<Vector2>&, const  Containers::StridedArrayView1D<Vector2>&) override {}
     };
     Containers::Pointer<Layouter> layouter{InPlaceInit, layouterHandle};
     LayoutHandle layoutHandle1 = layouter->add(nodeHandle(0x12345, 0xabc));
@@ -5518,7 +5518,7 @@ void AbstractUserInterfaceTest::setSizeToLayouters() {
         void doSetSize(const Vector2& size) override {
             arrayAppend(calls, InPlaceInit, handle(), size);
         }
-        void doUpdate(Containers::BitArrayView, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const NodeHandle>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Float>&, const Containers::StridedArrayView1D<const Vector4>&, const Containers::StridedArrayView1D<const Vector4>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Vector2>&) override {}
+        void doUpdate(Containers::BitArrayView, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Float>&, const Containers::StridedArrayView1D<const Vector4>&, const Containers::StridedArrayView1D<const Vector4>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Vector2>&) override {}
 
         Containers::Array<Containers::Pair<LayouterHandle, Vector2>>& calls;
     };
@@ -5736,7 +5736,7 @@ void AbstractUserInterfaceTest::cleanNoOp() {
             using AbstractLayouter::add;
 
             LayouterFeatures doFeatures() const override { return {}; }
-            void doUpdate(Containers::BitArrayView, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const NodeHandle>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Float>&, const Containers::StridedArrayView1D<const Vector4>&, const Containers::StridedArrayView1D<const Vector4>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Vector2>&) override {}
+            void doUpdate(Containers::BitArrayView, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Float>&, const Containers::StridedArrayView1D<const Vector4>&, const Containers::StridedArrayView1D<const Vector4>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Vector2>&) override {}
         };
         ui.setLayouterInstance(Containers::pointer<Layouter>(layouterHandle));
 
@@ -5882,7 +5882,7 @@ void AbstractUserInterfaceTest::cleanRemoveAttachedData() {
             using AbstractLayouter::add;
 
             LayouterFeatures doFeatures() const override { return {}; }
-            void doUpdate(Containers::BitArrayView, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const NodeHandle>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Float>&, const Containers::StridedArrayView1D<const Vector4>&, const Containers::StridedArrayView1D<const Vector4>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Vector2>&) override {}
+            void doUpdate(Containers::BitArrayView, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Float>&, const Containers::StridedArrayView1D<const Vector4>&, const Containers::StridedArrayView1D<const Vector4>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Vector2>&) override {}
         };
         ui.setLayouterInstance(Containers::pointer<Layouter>(layouterHandle1));
         ui.setLayouterInstance(Containers::pointer<Layouter>(layouterHandle2));
@@ -6063,7 +6063,7 @@ void AbstractUserInterfaceTest::cleanRemoveNestedNodes() {
             using AbstractLayouter::add;
 
             LayouterFeatures doFeatures() const override { return {}; }
-            void doUpdate(Containers::BitArrayView, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const NodeHandle>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Float>&, const Containers::StridedArrayView1D<const Vector4>&, const Containers::StridedArrayView1D<const Vector4>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Vector2>&) override {}
+            void doUpdate(Containers::BitArrayView, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Float>&, const Containers::StridedArrayView1D<const Vector4>&, const Containers::StridedArrayView1D<const Vector4>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Vector2>&) override {}
         };
         ui.setLayouterInstance(Containers::pointer<Layouter>(layouterHandle));
 
@@ -6233,7 +6233,7 @@ void AbstractUserInterfaceTest::cleanRemoveNestedNodesRecycledHandle() {
             using AbstractLayouter::add;
 
             LayouterFeatures doFeatures() const override { return {}; }
-            void doUpdate(Containers::BitArrayView, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const NodeHandle>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Float>&, const Containers::StridedArrayView1D<const Vector4>&, const Containers::StridedArrayView1D<const Vector4>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Vector2>&) override {}
+            void doUpdate(Containers::BitArrayView, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Float>&, const Containers::StridedArrayView1D<const Vector4>&, const Containers::StridedArrayView1D<const Vector4>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Vector2>&) override {}
         };
         ui.setLayouterInstance(Containers::pointer<Layouter>(layouterHandle));
 
@@ -6349,7 +6349,7 @@ void AbstractUserInterfaceTest::cleanRemoveNestedNodesRecycledHandleOrphanedCycl
             using AbstractLayouter::add;
 
             LayouterFeatures doFeatures() const override { return {}; }
-            void doUpdate(Containers::BitArrayView, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const NodeHandle>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Float>&, const Containers::StridedArrayView1D<const Vector4>&, const Containers::StridedArrayView1D<const Vector4>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Vector2>&) override {}
+            void doUpdate(Containers::BitArrayView, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Float>&, const Containers::StridedArrayView1D<const Vector4>&, const Containers::StridedArrayView1D<const Vector4>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Vector2>&) override {}
         };
         ui.setLayouterInstance(Containers::pointer<Layouter>(layouterHandle));
 
@@ -6461,7 +6461,7 @@ void AbstractUserInterfaceTest::cleanRemoveAll() {
             using AbstractLayouter::add;
 
             LayouterFeatures doFeatures() const override { return {}; }
-            void doUpdate(Containers::BitArrayView, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const NodeHandle>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Float>&, const Containers::StridedArrayView1D<const Vector4>&, const Containers::StridedArrayView1D<const Vector4>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Vector2>&) override {}
+            void doUpdate(Containers::BitArrayView, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Float>&, const Containers::StridedArrayView1D<const Vector4>&, const Containers::StridedArrayView1D<const Vector4>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Vector2>&) override {}
         };
         ui.setLayouterInstance(Containers::pointer<Layouter>(layouterHandle));
 
@@ -7832,16 +7832,13 @@ void AbstractUserInterfaceTest::updateLayout() {
 
         LayouterFeatures doFeatures() const override { return {}; }
 
-        void doUpdate(Containers::BitArrayView layoutIdsToUpdate, const Containers::StridedArrayView1D<const UnsignedInt>& topLevelLayoutIds, const Containers::StridedArrayView1D<const NodeHandle>& nodeParents, const Containers::StridedArrayView1D<const Vector2>& nodeMinSizes, const Containers::StridedArrayView1D<const Vector2>& nodeMaxSizes, const Containers::StridedArrayView1D<const Float>& nodeAspectRatios, const Containers::StridedArrayView1D<const Vector4>& nodePaddings, const Containers::StridedArrayView1D<const Vector4>& nodeMargins, const Containers::StridedArrayView1D<Vector2>& nodeOffsets, const Containers::StridedArrayView1D<Vector2>& nodeSizes) override {
+        void doUpdate(Containers::BitArrayView layoutIdsToUpdate, const Containers::StridedArrayView1D<const UnsignedInt>& topLevelLayoutIds, const Containers::StridedArrayView1D<const Vector2>& nodeMinSizes, const Containers::StridedArrayView1D<const Vector2>& nodeMaxSizes, const Containers::StridedArrayView1D<const Float>& nodeAspectRatios, const Containers::StridedArrayView1D<const Vector4>& nodePaddings, const Containers::StridedArrayView1D<const Vector4>& nodeMargins, const Containers::StridedArrayView1D<Vector2>& nodeOffsets, const Containers::StridedArrayView1D<Vector2>& nodeSizes) override {
             CORRADE_ITERATION("Layouter1");
             CORRADE_COMPARE_AS(layoutIdsToUpdate,
                 expectedLayoutIdsToUpdate.sliceBit(0),
                 TestSuite::Compare::Container);
             CORRADE_COMPARE_AS(topLevelLayoutIds,
                 expectedTopLevelLayoutIds,
-                TestSuite::Compare::Container);
-            CORRADE_COMPARE_AS(nodeParents,
-                expectedNodeParents,
                 TestSuite::Compare::Container);
             CORRADE_COMPARE_AS(nodeMinSizes,
                 expectedNodeMinSizes,
@@ -7895,7 +7892,6 @@ void AbstractUserInterfaceTest::updateLayout() {
         Containers::StridedArrayView1D<const bool> expectedLayoutIdsToUpdate;
         Containers::StridedArrayView1D<const UnsignedInt> expectedTopLevelLayoutIds;
         Containers::StridedArrayView1D<const Containers::Pair<Vector2, Vector2>> expectedNodeOffsetsSizes;
-        Containers::StridedArrayView1D<const NodeHandle> expectedNodeParents;
         Containers::StridedArrayView1D<const Vector2> expectedNodeMinSizes;
         Containers::StridedArrayView1D<const Vector2> expectedNodeMaxSizes;
         Containers::StridedArrayView1D<const Float> expectedNodeAspectRatios;
@@ -7919,7 +7915,7 @@ void AbstractUserInterfaceTest::updateLayout() {
 
         LayouterFeatures doFeatures() const override { return {}; }
 
-        void doUpdate(Containers::BitArrayView layoutIdsToUpdate, const Containers::StridedArrayView1D<const UnsignedInt>& topLevelLayoutIds, const Containers::StridedArrayView1D<const NodeHandle>& nodeParents, const Containers::StridedArrayView1D<const Vector2>& nodeMinSizes, const Containers::StridedArrayView1D<const Vector2>& nodeMaxSizes, const Containers::StridedArrayView1D<const Float>& nodeAspectRatios, const Containers::StridedArrayView1D<const Vector4>& nodePaddings, const Containers::StridedArrayView1D<const Vector4>& nodeMargins, const Containers::StridedArrayView1D<Vector2>& nodeOffsets, const Containers::StridedArrayView1D<Vector2>& nodeSizes) override {
+        void doUpdate(Containers::BitArrayView layoutIdsToUpdate, const Containers::StridedArrayView1D<const UnsignedInt>& topLevelLayoutIds, const Containers::StridedArrayView1D<const Vector2>& nodeMinSizes, const Containers::StridedArrayView1D<const Vector2>& nodeMaxSizes, const Containers::StridedArrayView1D<const Float>& nodeAspectRatios, const Containers::StridedArrayView1D<const Vector4>& nodePaddings, const Containers::StridedArrayView1D<const Vector4>& nodeMargins, const Containers::StridedArrayView1D<Vector2>& nodeOffsets, const Containers::StridedArrayView1D<Vector2>& nodeSizes) override {
             CORRADE_ITERATION("Layouter2 call" << updateCallId);
             CORRADE_COMPARE_AS(updateCallId,
                 2,
@@ -7929,9 +7925,6 @@ void AbstractUserInterfaceTest::updateLayout() {
                 TestSuite::Compare::Container);
             CORRADE_COMPARE_AS(topLevelLayoutIds,
                 expectedTopLevelLayoutIds[updateCallId],
-                TestSuite::Compare::Container);
-            CORRADE_COMPARE_AS(nodeParents,
-                expectedNodeParents,
                 TestSuite::Compare::Container);
             CORRADE_COMPARE_AS(nodeMinSizes,
                 expectedNodeMinSizes,
@@ -7973,7 +7966,6 @@ void AbstractUserInterfaceTest::updateLayout() {
         Containers::StridedArrayView1D<const bool> expectedLayoutIdsToUpdate[2];
         Containers::StridedArrayView1D<const UnsignedInt> expectedTopLevelLayoutIds[2];
         Containers::StridedArrayView1D<const Containers::Pair<Vector2, Vector2>> expectedNodeOffsetsSizes[2];
-        Containers::StridedArrayView1D<const NodeHandle> expectedNodeParents;
         Containers::StridedArrayView1D<const Vector2> expectedNodeMinSizes;
         Containers::StridedArrayView1D<const Vector2> expectedNodeMaxSizes;
         Containers::StridedArrayView1D<const Float> expectedNodeAspectRatios;
@@ -8123,19 +8115,6 @@ void AbstractUserInterfaceTest::updateLayout() {
     NodeHandle notInOrder = ui.createNode({8.0f, 8.0f}, {8.0f, 8.0f});
     /* This node has again no layout assigned but it has layout layer data */
     NodeHandle noLayout2 = ui.createNode(node, {}, {});
-
-    NodeHandle expectedNodeParents[]{
-        NodeHandle::Null,
-        NodeHandle::Null,
-        another1,
-        node,
-        node,
-        NodeHandle::Null, /* removed */
-        NodeHandle::Null,
-        NodeHandle::Null, /* noLayout1 */
-        NodeHandle::Null,
-        node,             /* noLayout2 */
-    };
 
     /* Layouter without an instance, to verify those get skipped during
        updates */
@@ -8429,8 +8408,6 @@ void AbstractUserInterfaceTest::updateLayout() {
         {{8.0f, 8.0f}, {8.0f, 8.0f}},
         {},                           /* noLayout2 */
     };
-    layouter1.expectedNodeParents = expectedNodeParents;
-    layouter2.expectedNodeParents = expectedNodeParents;
     if(data.layoutLayers) {
         layouter1.expectedNodeMinSizes = expectedLayoutNodeMinSizes;
         layouter2.expectedNodeMinSizes = expectedLayoutNodeMinSizes;
@@ -8654,7 +8631,7 @@ void AbstractUserInterfaceTest::updateLayerOrder() {
 
             LayouterFeatures doFeatures() const override { return {}; }
 
-            void doUpdate(Containers::BitArrayView, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const NodeHandle>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Float>&, const Containers::StridedArrayView1D<const Vector4>&, const Containers::StridedArrayView1D<const Vector4>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Vector2>&) override {}
+            void doUpdate(Containers::BitArrayView, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Float>&, const Containers::StridedArrayView1D<const Vector4>&, const Containers::StridedArrayView1D<const Vector4>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Vector2>&) override {}
         };
         ui.setLayouterInstance(Containers::pointer<Layouter>(ui.createLayouter()));
     }
@@ -8852,16 +8829,13 @@ void AbstractUserInterfaceTest::state() {
             ++cleanCallCount;
         }
 
-        void doUpdate(Containers::BitArrayView layoutIdsToUpdate, const Containers::StridedArrayView1D<const UnsignedInt>& topLevelLayoutIds, const Containers::StridedArrayView1D<const NodeHandle>& nodeParents, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Float>& nodeAspectRatios, const Containers::StridedArrayView1D<const Vector4>&, const Containers::StridedArrayView1D<const Vector4>&, const Containers::StridedArrayView1D<Vector2>& nodeOffsets, const Containers::StridedArrayView1D<Vector2>& nodeSizes) override {
+        void doUpdate(Containers::BitArrayView layoutIdsToUpdate, const Containers::StridedArrayView1D<const UnsignedInt>& topLevelLayoutIds, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Float>& nodeAspectRatios, const Containers::StridedArrayView1D<const Vector4>&, const Containers::StridedArrayView1D<const Vector4>&, const Containers::StridedArrayView1D<Vector2>& nodeOffsets, const Containers::StridedArrayView1D<Vector2>& nodeSizes) override {
             CORRADE_ITERATION(handle());
             CORRADE_COMPARE_AS(layoutIdsToUpdate,
                 expectedLayoutIdsToUpdate.sliceBit(0),
                 TestSuite::Compare::Container);
             CORRADE_COMPARE_AS(topLevelLayoutIds,
                 expectedTopLevelLayoutIds,
-                TestSuite::Compare::Container);
-            CORRADE_COMPARE_AS(nodeParents,
-                expectedNodeParents,
                 TestSuite::Compare::Container);
             /* Just one of the arrays is verified and the value also doesn't
                affect the output in any way. A thorough check for all layout
@@ -8891,7 +8865,6 @@ void AbstractUserInterfaceTest::state() {
         Containers::StridedArrayView1D<const bool> expectedLayoutIdsToUpdate;
         Containers::StridedArrayView1D<const UnsignedInt> expectedTopLevelLayoutIds;
         Containers::StridedArrayView1D<const Containers::Pair<Vector2, Vector2>> expectedNodeOffsetsSizes;
-        Containers::StridedArrayView1D<const NodeHandle> expectedNodeParents;
         Containers::StridedArrayView1D<const Float> expectedNodeAspectRatios;
 
         Int cleanCallCount = 0;
@@ -8908,21 +8881,8 @@ void AbstractUserInterfaceTest::state() {
     LayoutHandle layoutNode = LayoutHandle(~UnsignedLong{});
     LayoutHandle layoutAnother1 = LayoutHandle(~UnsignedLong{});
     LayoutHandle layoutAnother2 = LayoutHandle(~UnsignedLong{});
-    NodeHandle expectedNodeParents[]{
-        NodeHandle::Null,
-        NodeHandle::Null,
-        another1,
-        node,
-        node,
-        NodeHandle::Null,
-        invisible,
-        NodeHandle::Null,
-    };
     if(data.layouters) {
         layouter = &ui.setLayouterInstance(Containers::pointer<Layouter>(ui.createLayouter()));
-        /* The node parents change only after node removal so they're set just
-           once and then the original array gets updated */
-        layouter->expectedNodeParents = expectedNodeParents;
         CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
 
         /* Calling clean() should be a no-op, not calling anything in the
@@ -11835,10 +11795,6 @@ void AbstractUserInterfaceTest::state() {
     CORRADE_COMPARE(ui.nodeUsedCount(), 7);
     if(data.layouters) {
         CORRADE_COMPARE(layouter->usedCount(), 5);
-        /* Node parents are reset to Null in clean() for freed nodes, Update
-           the expected array to match that */
-        expectedNodeParents[nodeHandleId(nested1)] = NodeHandle::Null;
-        expectedNodeParents[nodeHandleId(nested2)] = NodeHandle::Null;
     }
     CORRADE_COMPARE(layer.usedCount(), 3);
 
@@ -12080,7 +12036,6 @@ void AbstractUserInterfaceTest::state() {
     Layouter* anotherLayouter{};
     if(data.layouters) {
         anotherLayouter = &ui.setLayouterInstance(Containers::pointer<Layouter>(ui.createLayouter()));
-        anotherLayouter->expectedNodeParents = expectedNodeParents;
         CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
     }
 
@@ -13304,7 +13259,7 @@ void AbstractUserInterfaceTest::statePropagateFromLayouters() {
         using AbstractLayouter::remove;
 
         LayouterFeatures doFeatures() const override { return {}; }
-        void doUpdate(Containers::BitArrayView, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const NodeHandle>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Float>&, const Containers::StridedArrayView1D<const Vector4>&, const Containers::StridedArrayView1D<const Vector4>&, const Containers::StridedArrayView1D<Vector2>&, const  Containers::StridedArrayView1D<Vector2>&) override {}
+        void doUpdate(Containers::BitArrayView, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Float>&, const Containers::StridedArrayView1D<const Vector4>&, const Containers::StridedArrayView1D<const Vector4>&, const Containers::StridedArrayView1D<Vector2>&, const  Containers::StridedArrayView1D<Vector2>&) override {}
     };
     /*LayouterHandle layouterWithoutInstance =*/ ui.createLayouter();
     Layouter& layouterRemoved = ui.setLayouterInstance(Containers::pointer<Layouter>(ui.createLayouter()));
@@ -14262,7 +14217,7 @@ void AbstractUserInterfaceTest::drawEmpty() {
 
         LayouterFeatures doFeatures() const override { return {}; }
 
-        void doUpdate(Containers::BitArrayView, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const NodeHandle>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Float>&, const Containers::StridedArrayView1D<const Vector4>&, const Containers::StridedArrayView1D<const Vector4>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Vector2>&) override {}
+        void doUpdate(Containers::BitArrayView, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Float>&, const Containers::StridedArrayView1D<const Vector4>&, const Containers::StridedArrayView1D<const Vector4>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Vector2>&) override {}
     };
 
     Layer *layer1{}, *layer2{};
@@ -14511,7 +14466,7 @@ void AbstractUserInterfaceTest::eventNodePropagation() {
         using AbstractLayouter::add;
 
         LayouterFeatures doFeatures() const override { return {}; }
-        void doUpdate(Containers::BitArrayView layoutIdsToUpdate, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const NodeHandle>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Float>&, const Containers::StridedArrayView1D<const Vector4>&, const Containers::StridedArrayView1D<const Vector4>&, const Containers::StridedArrayView1D<Vector2>& nodeOffsets, const  Containers::StridedArrayView1D<Vector2>& nodeSizes) override {
+        void doUpdate(Containers::BitArrayView layoutIdsToUpdate, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Float>&, const Containers::StridedArrayView1D<const Vector4>&, const Containers::StridedArrayView1D<const Vector4>&, const Containers::StridedArrayView1D<Vector2>& nodeOffsets, const  Containers::StridedArrayView1D<Vector2>& nodeSizes) override {
             const Containers::StridedArrayView1D<const NodeHandle> nodes = this->nodes();
             for(std::size_t i = 0; i != layoutIdsToUpdate.size(); ++i) {
                 if(!layoutIdsToUpdate[i])
@@ -14952,7 +14907,7 @@ void AbstractUserInterfaceTest::eventPointerPress() {
         using AbstractLayouter::add;
 
         LayouterFeatures doFeatures() const override { return {}; }
-        void doUpdate(Containers::BitArrayView layoutIdsToUpdate, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const NodeHandle>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Float>&, const Containers::StridedArrayView1D<const Vector4>&, const Containers::StridedArrayView1D<const Vector4>&, const Containers::StridedArrayView1D<Vector2>& nodeOffsets, const  Containers::StridedArrayView1D<Vector2>& nodeSizes) override {
+        void doUpdate(Containers::BitArrayView layoutIdsToUpdate, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Float>&, const Containers::StridedArrayView1D<const Vector4>&, const Containers::StridedArrayView1D<const Vector4>&, const Containers::StridedArrayView1D<Vector2>& nodeOffsets, const  Containers::StridedArrayView1D<Vector2>& nodeSizes) override {
             const Containers::StridedArrayView1D<const NodeHandle> nodes = this->nodes();
             for(std::size_t i = 0; i != layoutIdsToUpdate.size(); ++i) {
                 if(!layoutIdsToUpdate[i])
@@ -15452,7 +15407,7 @@ void AbstractUserInterfaceTest::eventPointerRelease() {
         using AbstractLayouter::add;
 
         LayouterFeatures doFeatures() const override { return {}; }
-        void doUpdate(Containers::BitArrayView layoutIdsToUpdate, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const NodeHandle>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Float>&, const Containers::StridedArrayView1D<const Vector4>&, const Containers::StridedArrayView1D<const Vector4>&, const Containers::StridedArrayView1D<Vector2>& nodeOffsets, const  Containers::StridedArrayView1D<Vector2>& nodeSizes) override {
+        void doUpdate(Containers::BitArrayView layoutIdsToUpdate, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Float>&, const Containers::StridedArrayView1D<const Vector4>&, const Containers::StridedArrayView1D<const Vector4>&, const Containers::StridedArrayView1D<Vector2>& nodeOffsets, const  Containers::StridedArrayView1D<Vector2>& nodeSizes) override {
             const Containers::StridedArrayView1D<const NodeHandle> nodes = this->nodes();
             for(std::size_t i = 0; i != layoutIdsToUpdate.size(); ++i) {
                 if(!layoutIdsToUpdate[i])
@@ -15907,7 +15862,7 @@ void AbstractUserInterfaceTest::eventPointerMove() {
         using AbstractLayouter::add;
 
         LayouterFeatures doFeatures() const override { return {}; }
-        void doUpdate(Containers::BitArrayView layoutIdsToUpdate, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const NodeHandle>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Float>&, const Containers::StridedArrayView1D<const Vector4>&, const Containers::StridedArrayView1D<const Vector4>&, const Containers::StridedArrayView1D<Vector2>& nodeOffsets, const  Containers::StridedArrayView1D<Vector2>& nodeSizes) override {
+        void doUpdate(Containers::BitArrayView layoutIdsToUpdate, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Float>&, const Containers::StridedArrayView1D<const Vector4>&, const Containers::StridedArrayView1D<const Vector4>&, const Containers::StridedArrayView1D<Vector2>& nodeOffsets, const  Containers::StridedArrayView1D<Vector2>& nodeSizes) override {
             const Containers::StridedArrayView1D<const NodeHandle> nodes = this->nodes();
             for(std::size_t i = 0; i != layoutIdsToUpdate.size(); ++i) {
                 if(!layoutIdsToUpdate[i])
@@ -17146,7 +17101,7 @@ void AbstractUserInterfaceTest::eventCapture() {
         using AbstractLayouter::add;
 
         LayouterFeatures doFeatures() const override { return {}; }
-        void doUpdate(Containers::BitArrayView layoutIdsToUpdate, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const NodeHandle>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Float>&, const Containers::StridedArrayView1D<const Vector4>&, const Containers::StridedArrayView1D<const Vector4>&, const Containers::StridedArrayView1D<Vector2>& nodeOffsets, const  Containers::StridedArrayView1D<Vector2>& nodeSizes) override {
+        void doUpdate(Containers::BitArrayView layoutIdsToUpdate, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Float>&, const Containers::StridedArrayView1D<const Vector4>&, const Containers::StridedArrayView1D<const Vector4>&, const Containers::StridedArrayView1D<Vector2>& nodeOffsets, const  Containers::StridedArrayView1D<Vector2>& nodeSizes) override {
             const Containers::StridedArrayView1D<const NodeHandle> nodes = this->nodes();
             for(std::size_t i = 0; i != layoutIdsToUpdate.size(); ++i) {
                 if(!layoutIdsToUpdate[i])
@@ -21124,7 +21079,7 @@ void AbstractUserInterfaceTest::eventScroll() {
         using AbstractLayouter::add;
 
         LayouterFeatures doFeatures() const override { return {}; }
-        void doUpdate(Containers::BitArrayView layoutIdsToUpdate, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const NodeHandle>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Float>&, const Containers::StridedArrayView1D<const Vector4>&, const Containers::StridedArrayView1D<const Vector4>&, const Containers::StridedArrayView1D<Vector2>& nodeOffsets, const  Containers::StridedArrayView1D<Vector2>& nodeSizes) override {
+        void doUpdate(Containers::BitArrayView layoutIdsToUpdate, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Float>&, const Containers::StridedArrayView1D<const Vector4>&, const Containers::StridedArrayView1D<const Vector4>&, const Containers::StridedArrayView1D<Vector2>& nodeOffsets, const  Containers::StridedArrayView1D<Vector2>& nodeSizes) override {
             const Containers::StridedArrayView1D<const NodeHandle> nodes = this->nodes();
             for(std::size_t i = 0; i != layoutIdsToUpdate.size(); ++i) {
                 if(!layoutIdsToUpdate[i])
@@ -23779,7 +23734,7 @@ void AbstractUserInterfaceTest::eventKeyPressRelease() {
         using AbstractLayouter::add;
 
         LayouterFeatures doFeatures() const override { return {}; }
-        void doUpdate(Containers::BitArrayView layoutIdsToUpdate, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const NodeHandle>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Float>&, const Containers::StridedArrayView1D<const Vector4>&, const Containers::StridedArrayView1D<const Vector4>&, const Containers::StridedArrayView1D<Vector2>& nodeOffsets, const  Containers::StridedArrayView1D<Vector2>& nodeSizes) override {
+        void doUpdate(Containers::BitArrayView layoutIdsToUpdate, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Float>&, const Containers::StridedArrayView1D<const Vector4>&, const Containers::StridedArrayView1D<const Vector4>&, const Containers::StridedArrayView1D<Vector2>& nodeOffsets, const  Containers::StridedArrayView1D<Vector2>& nodeSizes) override {
             const Containers::StridedArrayView1D<const NodeHandle> nodes = this->nodes();
             for(std::size_t i = 0; i != layoutIdsToUpdate.size(); ++i) {
                 if(!layoutIdsToUpdate[i])

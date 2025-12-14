@@ -3458,7 +3458,6 @@ AbstractUserInterface& AbstractUserInterface::update() {
                 state.topLevelLayoutIds.slice(
                     state.topLevelLayoutOffsets[i],
                     state.topLevelLayoutOffsets[i + 1]),
-                stridedArrayView(state.nodes).slice(&Node::used).slice(&Node::Used::parent),
                 nodeMinSizes,
                 nodeMaxSizes,
                 nodeAspectRatios,
@@ -3483,7 +3482,6 @@ AbstractUserInterface& AbstractUserInterface::update() {
                     /** @todo yeah and this allocation REALLY isn't great */
                     Containers::BitArray{ValueInit, instance->capacity()},
                     {},
-                    stridedArrayView(state.nodes).slice(&Node::used).slice(&Node::Used::parent),
                     nodeMinSizes,
                     nodeMaxSizes,
                     nodeAspectRatios,
