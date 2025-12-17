@@ -38,6 +38,7 @@
 #include <Corrade/Utility/Resource.h>
 #include <Corrade/Utility/String.h>
 #include <Magnum/DebugTools/FrameProfiler.h>
+#include <Magnum/Math/TimeStl.h>
 #include <Magnum/GL/Context.h>
 #include <Magnum/GL/DefaultFramebuffer.h>
 #include <Magnum/GL/Extensions.h>
@@ -91,6 +92,10 @@ constexpr const Vector2 ButtonSize{112.0f, WidgetHeight};
 constexpr const Float LabelHeight{36.0f};
 constexpr const Vector2 LabelSize{72.0f, LabelHeight};
 #endif
+
+Nanoseconds now() {
+    return Nanoseconds{std::chrono::steady_clock::now()};
+}
 
 struct Overlay: public Platform::Screen {
     public:
@@ -170,7 +175,7 @@ class Player: public Platform::ScreenedApplication {
 Overlay::Overlay(Platform::ScreenedApplication& application):
     Platform::Screen{application, PropagatedEvent::Draw|PropagatedEvent::Input},
     ui{application,
-        Ui::McssDarkStyle{}
+        Ui::McssDarkStyle{Ui::McssDarkStyle::Feature::Animations}
             #ifdef CORRADE_TARGET_EMSCRIPTEN
             /* For the info / error popups and popup background */
             /** @todo remove once there's a builtin thing for dialogs */
@@ -280,7 +285,15 @@ void Overlay::drawEvent() {
     GL::Renderer::disable(GL::Renderer::Feature::DepthTest);
     GL::Renderer::enable(GL::Renderer::Feature::Blending);
     GL::Renderer::setBlendFunction(GL::Renderer::BlendFunction::One, GL::Renderer::BlendFunction::OneMinusSourceAlpha);
-    ui.draw();
+
+    ui
+        .advanceAnimations(now())
+        .draw();
+
+    /* In case UI animations are playing, redraw */
+    if(ui.state())
+        redraw();
+
     GL::Renderer::setBlendFunction(GL::Renderer::BlendFunction::One, GL::Renderer::BlendFunction::Zero);
     GL::Renderer::disable(GL::Renderer::Feature::Blending);
     GL::Renderer::enable(GL::Renderer::Feature::DepthTest);
@@ -308,21 +321,21 @@ void Overlay::keyPressEvent(KeyEvent& event) {
 }
 
 void Overlay::pointerPressEvent(PointerEvent& event) {
-    ui.pointerPressEvent(event);
+    ui.pointerPressEvent(event, now());
 
     if(ui.state())
         redraw();
 }
 
 void Overlay::pointerReleaseEvent(PointerEvent& event) {
-    ui.pointerReleaseEvent(event);
+    ui.pointerReleaseEvent(event, now());
 
     if(ui.state())
         redraw();
 }
 
 void Overlay::pointerMoveEvent(PointerMoveEvent& event) {
-    ui.pointerMoveEvent(event);
+    ui.pointerMoveEvent(event, now());
 
     if(ui.state())
         redraw();
