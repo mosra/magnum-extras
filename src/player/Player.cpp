@@ -169,9 +169,7 @@ class Player: public Platform::ScreenedApplication {
 
 Overlay::Overlay(Platform::ScreenedApplication& application):
     Platform::Screen{application, PropagatedEvent::Draw|PropagatedEvent::Input},
-    ui{Vector2(application.windowSize())/application.dpiScaling(),
-        Vector2{application.windowSize()},
-        application.framebufferSize(),
+    ui{application,
         Ui::McssDarkStyle{}
             #ifdef CORRADE_TARGET_EMSCRIPTEN
             /* For the info / error popups and popup background */
@@ -289,7 +287,7 @@ void Overlay::drawEvent() {
 }
 
 void Overlay::viewportEvent(ViewportEvent& event) {
-    ui.setSize(Vector2(event.windowSize())/event.dpiScaling(), Vector2{event.windowSize()}, event.framebufferSize());
+    ui.setSize(event);
 }
 
 void Overlay::keyPressEvent(KeyEvent& event) {
