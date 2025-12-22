@@ -81,26 +81,44 @@ Containers::Pair<Vector2, Vector2> snap(Snaps snap, const Vector2& targetOffset,
        +----------------------+
 
        For target padding (tp*) and margin (m*) the sides are the same. */
+
+    /* These take both target padding and margin into account and are used when
+       aligning to sides or filling */
     const Vector4 maxPadding = Math::max(
         targetPadding,
         margin);
-
-    const Vector2 targetPaddedMin = targetOffset - Math::lerp(
+    const Vector2 targetMaxPaddedMin = targetOffset - Math::lerp(
         Math::lerp(maxMargin.xy(),
                   -maxPadding.xy(), snapInside),
         {},
         ignoreSpace);
-    const Vector2 targetPaddedMax = targetOffset + targetSize + Math::lerp(
+    const Vector2 targetMaxPaddedMax = targetOffset + targetSize + Math::lerp(
         Math::lerp(Math::gather<'z', 'w'>(maxMargin),
                   -Math::gather<'z', 'w'>(maxPadding), snapInside),
+        {},
+        ignoreSpace);
+
+    /* These take only the target padding into account when centering inside,
+       ignoring margin, and taking into account neither margin nor padding when
+       centering outside. The reason is that uneven margin would lead to uneven
+       centering with no clear reason why, especially if there's enough room on
+       either side to fit.*/
+    const Vector2 targetPaddedMin = targetOffset - Math::lerp(
+        Math::lerp(maxMargin.xy(),
+                  -targetPadding.xy(), snapInside),
+        {},
+        ignoreSpace);
+    const Vector2 targetPaddedMax = targetOffset + targetSize + Math::lerp(
+        Math::lerp(Math::gather<'z', 'w'>(maxMargin),
+                  -Math::gather<'z', 'w'>(targetPadding), snapInside),
         {},
         ignoreSpace);
 
     /* Enlarge to target width */
     Float sizeX, offsetX;
     if(snap >= (Snap::Left|Snap::Right)) {
-        sizeX = targetPaddedMax.x() - targetPaddedMin.x();
-        offsetX = targetPaddedMin.x();
+        sizeX = targetMaxPaddedMax.x() - targetMaxPaddedMin.x();
+        offsetX = targetMaxPaddedMin.x();
 
     /* Keep the original width */
     } else {
@@ -109,16 +127,16 @@ Containers::Pair<Vector2, Vector2> snap(Snaps snap, const Vector2& targetOffset,
         /* Snap to left */
         if(snap & Snap::Left) {
             if(snap & Snap::InsideX)
-                offsetX = targetPaddedMin.x();
+                offsetX = targetMaxPaddedMin.x();
             else
-                offsetX = targetPaddedMin.x() - size.x();
+                offsetX = targetMaxPaddedMin.x() - size.x();
 
         /* Snap to right */
         } else if(snap & Snap::Right) {
             if(snap & Snap::InsideX)
-                offsetX = targetPaddedMax.x() - size.x();
+                offsetX = targetMaxPaddedMax.x() - size.x();
             else
-                offsetX = targetPaddedMax.x();
+                offsetX = targetMaxPaddedMax.x();
 
         /* Snap to horizontal center */
         } else offsetX = (targetPaddedMin.x() + targetPaddedMax.x())*0.5f - size.x()*0.5f;
@@ -127,8 +145,8 @@ Containers::Pair<Vector2, Vector2> snap(Snaps snap, const Vector2& targetOffset,
     /* Enlarge to target height */
     Float sizeY, offsetY;
     if(snap >= (Snap::Top|Snap::Bottom)) {
-        sizeY = targetPaddedMax.y() - targetPaddedMin.y();
-        offsetY = targetPaddedMin.y();
+        sizeY = targetMaxPaddedMax.y() - targetMaxPaddedMin.y();
+        offsetY = targetMaxPaddedMin.y();
 
     /* Keep the original width */
     } else {
@@ -137,16 +155,16 @@ Containers::Pair<Vector2, Vector2> snap(Snaps snap, const Vector2& targetOffset,
         /* Snap to top */
         if(snap & Snap::Top) {
             if(snap & Snap::InsideY)
-                offsetY = targetPaddedMin.y();
+                offsetY = targetMaxPaddedMin.y();
             else
-                offsetY = targetPaddedMin.y() - size.y();
+                offsetY = targetMaxPaddedMin.y() - size.y();
 
         /* Snap to bottom */
         } else if(snap & Snap::Bottom) {
             if(snap & Snap::InsideY)
-                offsetY = targetPaddedMax.y() - size.y();
+                offsetY = targetMaxPaddedMax.y() - size.y();
             else
-                offsetY = targetPaddedMax.y();
+                offsetY = targetMaxPaddedMax.y();
 
         /* Snap to vertical center */
         } else offsetY = (targetPaddedMin.y() + targetPaddedMax.y())*0.5f - size.y()*0.5f;

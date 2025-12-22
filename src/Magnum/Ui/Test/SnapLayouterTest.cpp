@@ -112,8 +112,8 @@ const struct {
     Vector4 referencePadding, referenceMargin, margin;
     Vector2 expectedOffset, expectedSize;
 } SnapData[]{
-    /*     100   500
-          QR A M
+    /*     100   500        in all cases below, the final margin and padding
+          QR A M            should be either the following or NaN if not used
              E
         200 +-----+                   margin
           BD|F    |                     3
@@ -226,23 +226,11 @@ const struct {
     {Snap::Top|Snap::NoPadX, nullptr,
         Nan4, {Nan, 1.0f, Nan, Nan}, {Nan, Nan, Nan, 3.0f},
         {290.0f, 167.0f}, Size},                            /* M again */
-    {Snap::Top|Snap::InsideY, "ref left padding larger",
-        {10.0f, 3.0f, 7.0f, Nan}, Nan4, {9.0f, 5.0f, 15.0f, Nan},
-        {287.5f, 205.0f}, Size},                            /* N */
-    {Snap::Top|Snap::InsideY, "ref right padding larger",
-        {7.0f, 3.0f, 15.0f, Nan}, Nan4, {10.0f, 5.0f, 1.0f, Nan},
-        {287.5f, 205.0f}, Size},                            /* N */
-    {Snap::Top|Snap::InsideY, "ref X padding larger",
-        {10.0f, 3.0f, 15.0f, Nan}, Nan4, {9.0f, 5.0f, 10.0f, Nan},
-        {287.5f, 205.0f}, Size},                            /* N */
     {Snap::Top|Snap::InsideY, "ref Y padding larger",
-        {9.0f, 5.0f, 14.0f, Nan}, Nan4, {10.0f, 3.0f, 15.0f, Nan},
-        {287.5f, 205.0f}, Size},                            /* N */
-    {Snap::Top|Snap::InsideY, "ref XY padding larger",
-        {10.0f, 5.0f, 15.0f, Nan}, Nan4, {7.0f, 3.0f, 10.0f, Nan},
+        {10.0f, 5.0f, 15.0f, Nan}, Nan4, {Nan, 3.0f, Nan, Nan},
         {287.5f, 205.0f}, Size},                            /* N */
     {Snap::Top|Snap::InsideY, nullptr,
-        {3.0f, 3.0f, 2.0f, Nan}, Nan4, {10, 5.0f, 15.0f, Nan},
+        {10.0f, 3.0f, 15.0f, Nan}, Nan4, {Nan, 5.0f, Nan, Nan},
         {287.5f, 205.0f}, Size},                            /* N */
     {Snap::Top|Snap::InsideY|Snap::NoPadX, "ref Y padding larger",
         {Nan, 5.0f, Nan, Nan}, Nan4, {Nan, 3.0f, Nan, Nan},
@@ -263,22 +251,10 @@ const struct {
         Nan4, {3.0f, Nan, Nan, Nan}, {Nan, Nan, 7.0f, Nan},
         {73.0f, 335.0f}, Size},                             /* O again */
     {Snap::Left|Snap::InsideX, "ref X padding larger",
-        {10.0f, 3.0f, Nan, 20.0f}, Nan4, {9.0f, 5.0f, Nan, 25.0f},
-        {110.0f, 325.0f}, Size},                            /* P */
-    {Snap::Left|Snap::InsideX, "ref top padding larger",
-        {9.0f, 5.0f, Nan, 20.0f}, Nan4, {10.0f, 4.0f, Nan, 25.0f},
-        {110.0f, 325.0f}, Size},                            /* P */
-    {Snap::Left|Snap::InsideX, "ref bottom padding larger",
-        {9.0f, 4.0f, Nan, 25.0f}, Nan4, {10.0f, 5.0f, Nan, 22.0f},
-        {110.0f, 325.0f}, Size},                            /* P */
-    {Snap::Left|Snap::InsideX, "ref Y padding larger",
-        {9.0f, 5.0f, Nan, 25.0f}, Nan4, {10.0f, 4.0f, Nan, 22.0f},
-        {110.0f, 325.0f}, Size},                            /* P */
-    {Snap::Left|Snap::InsideX, "ref XY padding larger",
-        {10.0f, 5.0f, Nan, 25.0f}, Nan4, {7.0f, 4.0f, Nan, 22.0f},
+        {10.0f, 5.0f, Nan, 25.0f}, Nan4, {7.0f, Nan, Nan, Nan},
         {110.0f, 325.0f}, Size},                            /* P */
     {Snap::Left|Snap::InsideX, nullptr,
-        {9.0f, 3.0f, Nan, 24.0f}, Nan4, {10.0f, 5.0f, Nan, 25.0f},
+        {9.0f, 5.0f, Nan, 25.0f}, Nan4, {10.0f, Nan, Nan, Nan},
         {110.0f, 325.0f}, Size},                            /* P */
     {Snap::Left|Snap::InsideX|Snap::NoPadY, "ref X padding larger",
         {10.0f, Nan, Nan, Nan}, Nan4, {9.0f, Nan, Nan, Nan},
@@ -322,11 +298,8 @@ const struct {
     {Snap::BottomRight|Snap::NoPadY, nullptr,
         Nan4, {Nan, Nan,5.0f, Nan}, {7.0f, Nan, Nan, Nan},
         {507.0f, 500.0f}, Size},                            /* T */
-    {{}, "ref padding larger",
-        {9.0f, 3.0f, 11.0f, 22.0f}, Nan4, {10.0f, 5.0f, 15.0f, 25.0f},
-        {287.5f, 325.0f}, Size},                            /* U */
     {{}, nullptr,
-        {10.0f, 5.0f, 15.0f, 25.0f}, Nan4, {9.0f, 3.0f, 11.0f, 22.0f},
+        {10.0f, 5.0f, 15.0f, 25.0f}, Nan4, Nan4,
         {287.5f, 325.0f}, Size},                            /* U */
     {Snap::NoPad, nullptr,
         Nan4, Nan4, Nan4,
