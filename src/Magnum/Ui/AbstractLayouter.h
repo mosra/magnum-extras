@@ -368,7 +368,7 @@ class MAGNUM_UI_EXPORT AbstractLayouter {
          * behavior of this function is independent of @ref state() --- it
          * performs the update always regardless of what flags are set.
          */
-        void update(Containers::BitArrayView layoutIdsToUpdate, const Containers::StridedArrayView1D<const UnsignedInt>& topLevelLayoutIds, const Containers::StridedArrayView1D<const Vector2>& nodeMinSizes, const Containers::StridedArrayView1D<const Vector2>& nodeMaxSizes, const Containers::StridedArrayView1D<const Float>& nodeAspectRatios, const Containers::StridedArrayView1D<const Vector4>& nodePaddings, const Containers::StridedArrayView1D<const Vector4>& nodeMargins, const Containers::StridedArrayView1D<Vector2>& nodeOffsets, const Containers::StridedArrayView1D<Vector2>& nodeSizes);
+        void update(Containers::BitArrayView layoutIdsToUpdate, const Containers::StridedArrayView1D<const UnsignedInt>& topLevelLayoutIds, const Containers::StridedArrayView1D<Vector2>& nodeMinSizes, const Containers::StridedArrayView1D<Vector2>& nodeMaxSizes, const Containers::StridedArrayView1D<Float>& nodeAspectRatios, const Containers::StridedArrayView1D<Vector4>& nodePaddings, const Containers::StridedArrayView1D<Vector4>& nodeMargins, const Containers::StridedArrayView1D<Vector2>& nodeOffsets, const Containers::StridedArrayView1D<Vector2>& nodeSizes);
 
     protected:
         /**
@@ -517,14 +517,14 @@ class MAGNUM_UI_EXPORT AbstractLayouter {
          * @brief Update selected top-level layouts
          * @param[in] layoutIdsToUpdate Layout IDs to update
          * @param[in] topLevelLayoutIds Top-level layout IDs to update from
-         * @param[in] nodeMinSizes      Minimal node sizes indexed by node ID
-         * @param[in] nodeMaxSizes      Maximal node sizes indexed by node ID
-         * @param[in] nodeAspectRatios  Node aspect ratios, i.e. width divided
-         *      by height, indexed by node ID
-         * @param[in] nodePaddings      Padding inside nodes for child node
+         * @param[in,out] nodeMinSizes  Minimal node sizes indexed by node ID
+         * @param[in,out] nodeMaxSizes  Maximal node sizes indexed by node ID
+         * @param[in,out] nodeAspectRatios  Node aspect ratios, i.e. width
+         *      divided by height, indexed by node ID
+         * @param[in,out] nodePaddings  Padding inside nodes for child node
          *      placement, in order left, top, right, bottom, indexed by node
          *      ID
-         * @param[in] nodeMargins       Margins outside nodes for placement
+         * @param[in,out] nodeMargins   Margins outside nodes for placement
          *      within parents and besides neighbor nodes, in order left, top,
          *      right, bottom, indexed by node ID
          * @param[in,out] nodeOffsets   Node offsets indexed by node ID
@@ -585,6 +585,15 @@ class MAGNUM_UI_EXPORT AbstractLayouter {
          * @ref AbstractUserInterface::nodeParent() on @ref ui(). See also
          * @ref LayouterFeature::UniqueLayouts for even stronger guarantees.
          *
+         * In addition to updating @p nodeOffsets and @p nodeSizes, the
+         * implementation can also modify @p nodeMinSizes, @p nodeMaxSizes,
+         * @p nodeAspectRatios, @p nodePaddings and @p nodeMargins, either for
+         * its own use or for layouters that are called next. Unlike with
+         * @ref AbstractLayer::doLayout(), the layouter has the final say about
+         * what constraints will actually be used for the layout and can thus
+         * modify these arbitrarily, without taking the update rules specified
+         * in @ref AbstractLayer::doLayout() into account.
+         *
          * Unlike @ref AbstractLayer::doUpdate(), calls to this function may
          * happen several times with different @p layoutIdsToUpdate and
          * @p topLevelLayoutIds, ordered relative to calls to other layouters
@@ -597,7 +606,7 @@ class MAGNUM_UI_EXPORT AbstractLayouter {
          * @ref setNeedsUpdate() was called but the layouter doesn't have any
          * layouts currently visible.
          */
-        virtual void doUpdate(Containers::BitArrayView layoutIdsToUpdate, const Containers::StridedArrayView1D<const UnsignedInt>& topLevelLayoutIds, const Containers::StridedArrayView1D<const Vector2>& nodeMinSizes, const Containers::StridedArrayView1D<const Vector2>& nodeMaxSizes, const Containers::StridedArrayView1D<const Float>& nodeAspectRatios, const Containers::StridedArrayView1D<const Vector4>& nodePaddings, const Containers::StridedArrayView1D<const Vector4>& nodeMargins, const Containers::StridedArrayView1D<Vector2>& nodeOffsets, const Containers::StridedArrayView1D<Vector2>& nodeSizes) = 0;
+        virtual void doUpdate(Containers::BitArrayView layoutIdsToUpdate, const Containers::StridedArrayView1D<const UnsignedInt>& topLevelLayoutIds, const Containers::StridedArrayView1D<Vector2>& nodeMinSizes, const Containers::StridedArrayView1D<Vector2>& nodeMaxSizes, const Containers::StridedArrayView1D<Float>& nodeAspectRatios, const Containers::StridedArrayView1D<Vector4>& nodePaddings, const Containers::StridedArrayView1D<Vector4>& nodeMargins, const Containers::StridedArrayView1D<Vector2>& nodeOffsets, const Containers::StridedArrayView1D<Vector2>& nodeSizes) = 0;
 
         /* Common implementation for remove(LayoutHandle) and
            remove(LayouterDataHandle) */

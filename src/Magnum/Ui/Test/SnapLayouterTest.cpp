@@ -3103,7 +3103,7 @@ void SnapLayouterTest::updateDataOrder() {
         using AbstractLayouter::add;
 
         LayouterFeatures doFeatures() const override { return {}; }
-        void doUpdate(Containers::BitArrayView, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Float>&, const Containers::StridedArrayView1D<const Vector4>&, const Containers::StridedArrayView1D<const Vector4>&, const Containers::StridedArrayView1D<Vector2>& nodeOffsets, const Containers::StridedArrayView1D<Vector2>& nodeSizes) override {
+        void doUpdate(Containers::BitArrayView, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Float>&, const Containers::StridedArrayView1D<Vector4>&, const Containers::StridedArrayView1D<Vector4>&, const Containers::StridedArrayView1D<Vector2>& nodeOffsets, const Containers::StridedArrayView1D<Vector2>& nodeSizes) override {
             /* Skipping the last 5 removed nodes, as their sizes/offsets are
                left at random */
             CORRADE_COMPARE_AS(nodeOffsets.exceptSuffix(5), Containers::stridedArrayView<Vector2>({
@@ -3219,7 +3219,7 @@ void SnapLayouterTest::updateLayoutProperties() {
         using AbstractLayouter::add;
 
         LayouterFeatures doFeatures() const override { return {}; }
-        void doUpdate(Containers::BitArrayView, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const Vector2>& nodeMinSizes, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Float>&, const Containers::StridedArrayView1D<const Vector4>&, const Containers::StridedArrayView1D<const Vector4>&, const Containers::StridedArrayView1D<Vector2>& nodeOffsets, const Containers::StridedArrayView1D<Vector2>& nodeSizes) override {
+        void doUpdate(Containers::BitArrayView, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<Vector2>& nodeMinSizes, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Float>&, const Containers::StridedArrayView1D<Vector4>&, const Containers::StridedArrayView1D<Vector4>&, const Containers::StridedArrayView1D<Vector2>& nodeOffsets, const Containers::StridedArrayView1D<Vector2>& nodeSizes) override {
             /* The offset should always include the node-specific offset,
                subtract it for comparison */
             CORRADE_COMPARE(nodeOffsets[7 /*node*/] - (Vector2{0.25f, 0.75f}), _expectedOffset);
@@ -3312,7 +3312,7 @@ void SnapLayouterTest::updateChildSnap() {
 
         LayouterFeatures doFeatures() const override { return {}; }
 
-        void doUpdate(Containers::BitArrayView, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Float>&, const Containers::StridedArrayView1D<const Vector4>&, const Containers::StridedArrayView1D<const Vector4>&, const Containers::StridedArrayView1D<Vector2>& nodeOffsets, const Containers::StridedArrayView1D<Vector2>& nodeSizes) override {
+        void doUpdate(Containers::BitArrayView, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Float>&, const Containers::StridedArrayView1D<Vector4>&, const Containers::StridedArrayView1D<Vector4>&, const Containers::StridedArrayView1D<Vector2>& nodeOffsets, const Containers::StridedArrayView1D<Vector2>& nodeSizes) override {
             CORRADE_COMPARE_AS(nodeOffsets, Containers::stridedArrayView<Vector2>({
                 {15.0f, 35.0f},
                 _offset,
@@ -3450,7 +3450,7 @@ void SnapLayouterTest::updatePropagateChildSizes() {
         using AbstractLayouter::add;
 
         LayouterFeatures doFeatures() const override { return {}; }
-        void doUpdate(Containers::BitArrayView, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Float>&, const Containers::StridedArrayView1D<const Vector4>&, const Containers::StridedArrayView1D<const Vector4>&, const Containers::StridedArrayView1D<Vector2>& nodeOffsets, const Containers::StridedArrayView1D<Vector2>& nodeSizes) override {
+        void doUpdate(Containers::BitArrayView, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Float>&, const Containers::StridedArrayView1D<Vector4>&, const Containers::StridedArrayView1D<Vector4>&, const Containers::StridedArrayView1D<Vector2>& nodeOffsets, const Containers::StridedArrayView1D<Vector2>& nodeSizes) override {
             CORRADE_COMPARE_AS(nodeOffsets, Containers::stridedArrayView<Vector2>({
                 {10.0f, 5.0f},                  /*  0, outer */
                 {expectedInnerOffsetX, 5.0f},   /*  1, inner */
