@@ -1937,7 +1937,7 @@ class MAGNUM_UI_EXPORT AbstractLayer {
          * @p nodePaddings and @p nodeMargins have the same size and are
          * guaranteed to be large enough to contain any valid node ID.
          *
-         * The implementation is expect to update the views as follows:
+         * The implementation is expected to update the views as follows:
          *
          * -    The @p nodeMinSizes with a *max* of current value for a
          *      particular node and min size requirement of data attached to
