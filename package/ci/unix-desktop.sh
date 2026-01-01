@@ -42,8 +42,9 @@ cmake .. \
     `# Application libraries needed by various Ui tests` \
     -DMAGNUM_WITH_SDL2APPLICATION=ON \
     -DMAGNUM_WITH_GLFWAPPLICATION=ON \
-    `# AnyImageImporter needed if GL texts are enabled (thus, targeting EGL)` \
-    -DMAGNUM_WITH_ANYIMAGEIMPORTER=$TARGET_EGL \
+    `# AnyImageImporter needed if GL texts are enabled (thus, targeting` \
+    `# EGL), but also by UiStyleTest` \
+    -DMAGNUM_WITH_ANYIMAGEIMPORTER=ON \
     `# AnyImageConverter so we can easier debug rendering failures on the CI` \
     -DMAGNUM_WITH_ANYIMAGECONVERTER=$TARGET_EGL \
     -DMAGNUM_BUILD_DEPRECATED=$BUILD_DEPRECATED \

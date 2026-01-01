@@ -65,6 +65,7 @@ cmake .. \
     -DMAGNUM_WITH_SDL2APPLICATION=OFF \
     -DMAGNUM_WITH_GLFWAPPLICATION=OFF \
     -DMAGNUM_WITH_VULKANTESTER=ON \
+    `# AnyImageImporter used by UiStyleTest` \
     -DMAGNUM_WITH_ANYIMAGEIMPORTER=ON \
     -G Ninja
 

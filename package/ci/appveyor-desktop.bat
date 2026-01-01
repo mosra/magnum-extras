@@ -29,7 +29,7 @@ cmake --build . || exit /b
 cmake --build . --target install || exit /b
 cd .. && cd ..
 
-rem Build Magnum
+rem Build Magnum. AnyImageImporter used by UiStyleTest.
 git clone --depth 1 https://github.com/mosra/magnum.git || exit /b
 cd magnum || exit /b
 mkdir build && cd build || exit /b
@@ -51,7 +51,25 @@ cmake .. ^
     -DMAGNUM_WITH_OPENGLTESTER=ON ^
     -DMAGNUM_WITH_SDL2APPLICATION=ON ^
     -DMAGNUM_WITH_GLFWAPPLICATION=ON ^
+    -DMAGNUM_WITH_ANYIMAGEIMPORTER=ON ^
     -DMAGNUM_BUILD_STATIC=%BUILD_STATIC% ^
+    -DMAGNUM_BUILD_PLUGINS_STATIC=%BUILD_STATIC% ^
+    %COMPILER_EXTRA% -G Ninja || exit /b
+cmake --build . || exit /b
+cmake --build . --target install || exit /b
+cd .. && cd ..
+
+rem Build Magnum Plugins. Used by UiStyleTest.
+git clone --depth 1 https://github.com/mosra/magnum-plugins.git || exit /b
+cd magnum-plugins || exit /b
+mkdir build && cd build || exit /b
+cmake .. ^
+    -DCMAKE_BUILD_TYPE=%CONFIGURATION% ^
+    -DCMAKE_INSTALL_PREFIX=%APPVEYOR_BUILD_FOLDER%/deps ^
+    -DMAGNUM_WITH_STBIMAGEIMPORTER=ON ^
+    -DMAGNUM_WITH_STBTRUETYPEFONT=ON ^
+    -DMAGNUM_BUILD_STATIC=%BUILD_STATIC% ^
+    -DMAGNUM_BUILD_PLUGINS_STATIC=%BUILD_STATIC% ^
     %COMPILER_EXTRA% -G Ninja || exit /b
 cmake --build . || exit /b
 cmake --build . --target install || exit /b

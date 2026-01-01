@@ -46,6 +46,7 @@ cmake .. \
     -DMAGNUM_WITH_SDL2APPLICATION=ON \
     -DMAGNUM_WITH_GLFWAPPLICATION=ON \
     -DMAGNUM_WITH_VULKANTESTER=ON \
+    `# AnyImageImporter used by UiStyleTest` \
     -DMAGNUM_WITH_ANYIMAGEIMPORTER=ON \
     -G Ninja
 ninja install
