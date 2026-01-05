@@ -252,8 +252,11 @@ void SnapLayouter::doUpdate(const Containers::BitArrayView layoutIdsToUpdate, co
             /* The whole UI on its own doesn't have any padding defined, only
                margin of root nodes is used. */
             targetPadding = {};
-            /* Margin shouldn't get used for anything, poison it with NaNs */
+            /* Margin shouldn't get used for anything, poison it with NaNs on
+               debug builds and leave uninitialized otherwise */
+            #ifdef CORRADE_IS_DEBUG_BUILD
             targetMargin = Vector4{Constants::nan()};
+            #endif
 
         /* Otherwise we're snapping relative to the parent node, which should
            have the layout already calculated at this point thanks to the
