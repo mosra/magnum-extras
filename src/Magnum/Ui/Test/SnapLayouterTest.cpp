@@ -58,9 +58,10 @@ struct SnapLayouterTest: TestSuite::Tester {
     void snapInside();
     void snap();
 
-    void childLayoutSizeSingleLayout();
-    /* The result is fed into snap(), so this subsequently tests that snap()
-       does what's expected */
+    void layoutSizePadding();
+
+    /* The result is fed into layoutSizePadding() and snap(), so this
+       subsequently tests that these two do what's expected */
     void childLayoutSizeSide();
     void childLayoutSizeForward();
 
@@ -384,51 +385,173 @@ const struct {
 
 const struct {
     const char* name;
+    SnapLayoutFlags flags;
     Snaps extraChildSnap;
-    Vector4 padding, margin;
-    Vector2 expectedSize;
-    Vector4 expectedPadding;
-} ChildLayoutSizeSingleLayoutData[]{
-    {"no padding or margin", {},
+    Vector2 nodeSize;
+    Vector4 nodePadding;
+    Vector2 childLayoutSize;
+    Vector4 childLayoutMargin;
+    Vector2 expectedLayoutSize;
+    Vector4 expectedLayoutPadding;
+} LayoutSizePaddingData[]{
+    {"no padding or margin, node size only", {}, {},
+        {30.0f, 20.0f}, {},
         {}, {},
-        {20.0f, 30.0f}, {}},
-    {"padding only", {},
-        {1.0f, 2.0f, 3.0f, 4.0f}, {},
-        {24.0f, 36.0f}, {1.0f, 2.0f, 3.0f, 4.0f}},
-    {"margin only", {},
+        {30.0f, 20.0f}, {}},
+    {"no padding or margin, child layout size only", {}, {},
+        {}, {},
+        {30.0f, 20.0f}, {},
+        {30.0f, 20.0f}, {}},
+    {"padding, node size only", {}, {},
+        {30.0f, 20.0f}, {1.0f, 2.0f, 3.0f, 4.0f},
+        {}, {},
+        /* The padding is applied inside so it doesn't expand the node size */
+        {30.0f, 20.0f}, {1.0f, 2.0f, 3.0f, 4.0f}},
+    {"padding, child layout size only", {}, {},
         {}, {1.0f, 2.0f, 3.0f, 4.0f},
-        {24.0f, 36.0f}, {1.0f, 2.0f, 3.0f, 4.0f}},
-    /* It should correctly do element-wise max() */
-    {"X padding larger", {},
-        {1.0f, 0.0f, 3.0f, 0.0f}, {0.0f, 2.0f, 2.0f, 4.0f},
-        {24.0f, 36.0f}, {1.0f, 2.0f, 3.0f, 4.0f}},
-    {"X margin larger", {},
-        {0.0f, 2.0f, 2.0f, 4.0f}, {1.0f, 0.0f, 3.0f, 0.0f},
-        {24.0f, 36.0f}, {1.0f, 2.0f, 3.0f, 4.0f}},
-    {"padding only", Snap::NoPad,
-        {1.0f, 2.0f, 3.0f, 4.0f}, {},
-        {20.0f, 30.0f}, {}},
-    {"padding only", Snap::NoPadX,
-        {1.0f, 2.0f, 3.0f, 4.0f}, {},
-        {20.0f, 36.0f}, {0.0f, 2.0f, 0.0f, 4.0f}},
-    {"padding only", Snap::NoPadY,
-        {1.0f, 2.0f, 3.0f, 4.0f}, {},
-        {24.0f, 30.0f}, {1.0f, 0.0f, 3.0f, 0.0f}},
-    {"margin only", Snap::NoPad,
+        {30.0f, 20.0f}, {},
+        {34.0f, 26.0f}, {1.0f, 2.0f, 3.0f, 4.0f}},
+    {"margin, node size only", {}, {},
+        {30.0f, 20.0f}, {},
         {}, {1.0f, 2.0f, 3.0f, 4.0f},
-        {20.0f, 30.0f}, {}},
-    {"margin only", Snap::NoPadX,
-        {}, {1.0f, 2.0f, 3.0f, 4.0f},
-        {20.0f, 36.0f}, {0.0f, 2.0f, 0.0f, 4.0f}},
-    {"margin only", Snap::NoPadY,
-        {}, {1.0f, 2.0f, 3.0f, 4.0f},
-        {24.0f, 30.0f}, {1.0f, 0.0f, 3.0f, 0.0f}},
+        /* The child margin is applied inside so it doesn't expand the node
+           size */
+        {30.0f, 20.0f}, {1.0f, 2.0f, 3.0f, 4.0f}},
+    {"margin, child layout size only", {}, {},
+        {}, {},
+        {30.0f, 20.0f}, {1.0f, 2.0f, 3.0f, 4.0f},
+        {34.0f, 26.0f}, {1.0f, 2.0f, 3.0f, 4.0f}},
+    {"padding, margin, node size, child layout size, variant 1", {}, {},
+        /* The node X size is larger than child layout X size but padding +
+           margin makes the child size bigger so it's picked */
+        {29.0f, 20.0f}, {1.0f, 1.0f, 3.0f, 3.0f},
+      /* v      ^        ^     v     ^     v     */
+        {26.0f, 10.0f}, {0.0f, 2.0f, 2.0f, 4.0f},
+        {30.0f, 20.0f}, {1.0f, 2.0f, 3.0f, 4.0f}},
+    {"padding, margin, node size, child layout size, variant 2", {}, {},
+        /* The node Y size is larger than child layout Y size but padding +
+           margin makes the child size bigger so it's picked */
+        {30.0f, 15.0f}, {0.0f, 2.0f, 2.0f, 4.0f},
+      /* ^      v        v     ^     v     ^     */
+        {20.0f, 14.0f}, {1.0f, 1.0f, 3.0f, 3.0f},
+        {30.0f, 20.0f}, {1.0f, 2.0f, 3.0f, 4.0f}},
+    {"padding, margin, node size, child layout size, no pad, variant 1",
+        {}, Snap::NoPad,
+        {30.0f, 15.0f}, {1.0f, 2.0f, 3.0f, 4.0f},
+      /* ^      v */
+        {20.0f, 20.0f}, {1.0f, 2.0f, 3.0f, 4.0f},
+        {30.0f, 20.0f}, {}},
+    {"padding, margin, node size, child layout size, no pad, variant 2",
+        {}, Snap::NoPad,
+        {20.0f, 20.0f}, {1.0f, 2.0f, 3.0f, 4.0f},
+      /* v      ^ */
+        {30.0f, 15.0f}, {1.0f, 2.0f, 3.0f, 4.0f},
+        {30.0f, 20.0f}, {}},
+    {"padding, margin, node size, child layout size, no pad X, variant 1",
+        {}, Snap::NoPadX,
+        /* The node Y size is larger than child layout Y size but padding +
+           margin makes the child size bigger so it's picked */
+        {30.0f, 15.0f}, {1.0f, 2.0f, 3.0f, 3.0f},
+      /* ^      v              ^           v     */
+        {20.0f, 14.0f}, {1.0f, 1.0f, 3.0f, 4.0f},
+        {30.0f, 20.0f}, {0.0f, 2.0f, 0.0f, 4.0f}},
+    {"padding, margin, node size, child layout size, no pad X, variant 2",
+        {}, Snap::NoPadX,
+        {20.0f, 20.0f}, {1.0f, 1.0f, 3.0f, 4.0f},
+      /* v      ^              v           ^     */
+        {30.0f, 10.0f}, {1.0f, 2.0f, 3.0f, 3.0f},
+        {30.0f, 20.0f}, {0.0f, 2.0f, 0.0f, 4.0f}},
+    {"padding, margin, node size, child layout size, no pad Y, variant 1",
+        {}, Snap::NoPadY,
+        /* The node X size is larger than child layout X size but padding +
+           margin makes the child size bigger so it's picked */
+        {29.0f, 20.0f}, {1.0f, 2.0f, 2.0f, 4.0f},
+      /* v      ^        ^           v           */
+        {26.0f, 10.0f}, {0.0f, 2.0f, 3.0f, 4.0f},
+        {30.0f, 20.0f}, {1.0f, 0.0f, 3.0f, 0.0f}},
+    {"padding, margin, node size, child layout size, no pad Y, variant 2",
+        {}, Snap::NoPadY,
+        {30.0f, 10.0f}, {0.0f, 2.0f, 3.0f, 4.0f},
+      /* ^      v        v           ^           */
+        {20.0f, 20.0f}, {1.0f, 2.0f, 2.0f, 4.0f},
+        {30.0f, 20.0f}, {1.0f, 0.0f, 3.0f, 0.0f}},
+    {"padding, margin, node size, child layout size, ignore overflow",
+        SnapLayoutFlag::IgnoreOverflow, {},
+        {30.0f, 20.0f}, {1.0f, 2.0f, 3.0f, 4.0f},
+        /* The child layout size or margin isn't taken into account at all */
+        {50.0f, 40.0f}, {9.0f, 8.0f, 7.0f, 6.0f},
+        {30.0f, 20.0f}, {1.0f, 2.0f, 3.0f, 4.0f}},
+    {"padding, margin, node size, child layout size, ignore overflow, no pad",
+        SnapLayoutFlag::IgnoreOverflow, Snap::NoPad,
+        {30.0f, 20.0f}, {1.0f, 2.0f, 3.0f, 4.0f},
+        /* The child layout size or margin isn't taken into account at all */
+        {50.0f, 40.0f}, {9.0f, 8.0f, 7.0f, 6.0f},
+        {30.0f, 20.0f}, {}},
+    {"padding, margin, node size, child layout size, ignore overflow, no pad X",
+        SnapLayoutFlag::IgnoreOverflow, Snap::NoPadX,
+        {30.0f, 20.0f}, {1.0f, 2.0f, 3.0f, 4.0f},
+        /* The child layout size or margin isn't taken into account at all */
+        {50.0f, 40.0f}, {9.0f, 8.0f, 7.0f, 6.0f},
+        {30.0f, 20.0f}, {0.0f, 2.0f, 0.0f, 4.0f}},
+    {"padding, margin, node size, child layout size, ignore overflow, no pad Y",
+        SnapLayoutFlag::IgnoreOverflow, Snap::NoPadY,
+        {30.0f, 20.0f}, {1.0f, 2.0f, 3.0f, 4.0f},
+        /* The child layout size or margin isn't taken into account at all */
+        {50.0f, 40.0f}, {9.0f, 8.0f, 7.0f, 6.0f},
+        {30.0f, 20.0f}, {1.0f, 0.0f, 3.0f, 0.0f}},
+    {"padding, margin, node size, child layout size, ignore overflow X",
+        SnapLayoutFlag::IgnoreOverflowX, {},
+        /* The node Y size is larger than child layout Y size but padding +
+           margin makes the child size bigger so it's picked */
+        {30.0f, 15.0f}, {1.0f, 1.0f, 3.0f, 3.0f},
+        {50.0f, 14.0f}, {9.0f, 2.0f, 7.0f, 4.0f},
+        {30.0f, 20.0f}, {1.0f, 2.0f, 3.0f, 4.0f}},
+    {"padding, margin, node size, child layout size, ignore overflow X, no pad",
+        SnapLayoutFlag::IgnoreOverflowX, Snap::NoPad,
+        {30.0f, 10.0f}, {1.0f, 2.0f, 3.0f, 3.0f},
+        {50.0f, 20.0f}, {9.0f, 8.0f, 7.0f, 6.0f},
+        {30.0f, 20.0f}, {}},
+    {"padding, margin, node size, child layout size, ignore overflow X, no pad X",
+        SnapLayoutFlag::IgnoreOverflowX, Snap::NoPadX,
+        /* The node Y size is larger than child layout Y size but padding +
+           margin makes the child size bigger so it's picked */
+        {30.0f, 15.0f}, {1.0f, 1.0f, 3.0f, 3.0f},
+        {50.0f, 14.0f}, {9.0f, 2.0f, 7.0f, 4.0f},
+        {30.0f, 20.0f}, {0.0f, 2.0f, 0.0f, 4.0f}},
+    {"padding, margin, node size, child layout size, ignore overflow X, no pad Y",
+        SnapLayoutFlag::IgnoreOverflowX, Snap::NoPadY,
+        {30.0f, 19.0f}, {1.0f, 2.0f, 3.0f, 4.0f},
+        {50.0f, 20.0f}, {9.0f, 8.0f, 7.0f, 6.0f},
+        {30.0f, 20.0f}, {1.0f, 0.0f, 3.0f, 0.0f}},
+    {"padding, margin, node size, child layout size, ignore overflow Y",
+        SnapLayoutFlag::IgnoreOverflowY, {},
+        /* The node X size is larger than child layout X size but padding +
+           margin makes the child size bigger so it's picked */
+        {29.0f, 20.0f}, {0.0f, 2.0f, 2.0f, 4.0f},
+        {26.0f, 40.0f}, {1.0f, 8.0f, 3.0f, 6.0f},
+        {30.0f, 20.0f}, {1.0f, 2.0f, 3.0f, 4.0f}},
+    {"padding, margin, node size, child layout size, ignore overflow Y, no pad",
+        SnapLayoutFlag::IgnoreOverflowY, Snap::NoPad,
+        {20.0f, 20.0f}, {1.0f, 2.0f, 3.0f, 4.0f},
+        {30.0f, 40.0f}, {9.0f, 8.0f, 7.0f, 6.0f},
+        {30.0f, 20.0f}, {}},
+    {"padding, margin, node size, child layout size, ignore overflow Y, no pad X",
+        SnapLayoutFlag::IgnoreOverflowY, Snap::NoPadX,
+        {20.0f, 20.0f}, {1.0f, 2.0f, 3.0f, 4.0f},
+        {30.0f, 40.0f}, {9.0f, 8.0f, 7.0f, 6.0f},
+        {30.0f, 20.0f}, {0.0f, 2.0f, 0.0f, 4.0f}},
+    {"padding, margin, node size, child layout size, ignore overflow Y, no pad Y",
+        SnapLayoutFlag::IgnoreOverflowY, Snap::NoPadY,
+        /* The node X size is larger than child layout X size but padding +
+           margin makes the child size bigger so it's picked */
+        {29.0f, 20.0f}, {0.0f, 2.0f, 2.0f, 4.0f},
+        {26.0f, 40.0f}, {1.0f, 8.0f, 3.0f, 6.0f},
+        {30.0f, 20.0f}, {1.0f, 0.0f, 3.0f, 0.0f}},
 };
 
 const struct {
     TestSuite::TestCaseDescriptionSourceLocation name;
     Snaps childSnaps[4];
-    Vector2 paddingSide;
     Vector2 marginsSide[3];
     Float sizesSide[3];
     Float expectedSizeSide;
@@ -436,27 +559,17 @@ const struct {
     Float expectedOffsetsSide[3];
     Float expectedSizesSide[3]; /* If left at {}, sizeSide is used */
 } ChildLayoutSizeSideData[]{
-    /* All diagrams for left-to-right direction (first in childSnap), # denotes
-       parent padding, @ child margin */
+    /* All diagrams for left-to-right direction (first in childSnap), @ denotes
+       child margin */
 
     /* +---+ +---+ +---+
        |   | |   | |   |
        +---+ +---+ +---+ */
-    {"same sizes, no padding or margins, center",
+    {"same sizes, no margins, center",
         {Snap::Right, Snap::Bottom, Snap::Left, Snap::Top},
-        {}, {},
+        {},
         {20.0f, 20.0f, 20.0f},
         20.0f, {}, {0.0f, 0.0f, 0.0f}, {}},
-    /* #################
-       +---+ +---+ +---+
-       |   | |   | |   |
-       +---+ +---+ +---+
-       ################# */
-    {"same sizes, even padding, center",
-        {Snap::Right, Snap::Bottom, Snap::Left, Snap::Top},
-        {5.0f, 5.0f}, {},
-        {20.0f, 20.0f, 20.0f},
-        30.0f, {5.0f, 5.0f}, {5.0f, 5.0f, 5.0f}, {}},
     /* @@@@@ @@@@@ @@@@@
        +---+ +---+ +---+
        |   | |   | |   |
@@ -464,67 +577,57 @@ const struct {
        @@@@@ @@@@@ @@@@@ */
     {"same sizes, even margins, center",
         {Snap::Right, Snap::Bottom, Snap::Left, Snap::Top},
-        {}, {{5.0f, 5.0f}, {5.0f, 5.0f}, {5.0f, 5.0f}},
+        {{5.0f, 5.0f}, {5.0f, 5.0f}, {5.0f, 5.0f}},
         {20.0f, 20.0f, 20.0f},
-        30.0f, {5.0f, 5.0f}, {5.0f, 5.0f, 5.0f}, {}},
-    /* @@@@@#@@@@@#@@@@@
-       +---+ +---+ +---+
-       |   | |   | |   |
-       +---+ +---+ +---+
-       @@@@@#@@@@@#@@@@@ */
-    {"same sizes, even padding and margins, center",
-        {Snap::Right, Snap::Bottom, Snap::Left, Snap::Top},
-        {5.0f, 5.0f}, {{5.0f, 5.0f}, {5.0f, 5.0f}, {5.0f, 5.0f}},
-        {20.0f, 20.0f, 20.0f},
-        30.0f, {5.0f, 5.0f}, {5.0f, 5.0f, 5.0f}, {}},
+        20.0f, {5.0f, 5.0f}, {5.0f, 5.0f, 5.0f}, {}},
     /* +---+ +---+ +---+
        |   | |   | |   |
        +---+ +---+ +---+ */
-    {"same sizes, even padding and margin, center, no pad",
+    {"same sizes, even margin, center, no pad",
         {Snap::Right|Snap::NoPadY,
          Snap::Bottom|Snap::NoPadX,
          Snap::Left|Snap::NoPadY,
          Snap::Top|Snap::NoPadX},
-        {5.0f, 5.0f}, {{5.0f, 5.0f}, {5.0f, 5.0f}, {5.0f, 5.0f}},
+        {{5.0f, 5.0f}, {5.0f, 5.0f}, {5.0f, 5.0f}},
         {20.0f, 20.0f, 20.0f},
         20.0f, {}, {0.0f, 0.0f, 0.0f}, {}},
-    /* @@@@@############
-       @@@@@############
+    /* @@@@@
+       @@@@@
        @@@@@       @@@@@
        +---+ +---+ +---+    (same for all four cases below)
        |   | |   | |   |
        +---+ +---+ +---+
              @@@@@
-       ######@@@@@###### */
-    {"same sizes, uneven padding and margin, center",
+             @@@@@ */
+    {"same sizes, uneven margin, center",
         {Snap::Right, Snap::Bottom, Snap::Left, Snap::Top},
-        {10.0f, 5.0f}, {{15.0f, 0.0f}, {0.0f, 10.0f}, {5.0f, 0.0f}},
+        {{15.0f, 0.0f}, {0.0f, 10.0f}, {5.0f, 0.0f}},
         {20.0f, 20.0f, 20.0f},
-        45.0f, {15.0f, 10.0f}, {15.0f, 15.0f, 15.0f}, {}},
-    {"same sizes, uneven padding and margin, fill",
+        20.0f, {15.0f, 10.0f}, {15.0f, 15.0f, 15.0f}, {}},
+    {"same sizes, uneven margin, fill",
         {Snap::Right|Snap::FillY,
          Snap::Bottom|Snap::FillX,
          Snap::Left|Snap::FillY,
          Snap::Top|Snap::FillX},
-        {10.0f, 5.0f}, {{15.0f, 0.0f}, {0.0f, 10.0f}, {5.0f, 0.0f}},
+        {{15.0f, 0.0f}, {0.0f, 10.0f}, {5.0f, 0.0f}},
         {20.0f, 20.0f, 20.0f},
-        45.0f, {15.0f, 10.0f}, {15.0f, 15.0f, 15.0f}, {}},
-    {"same sizes, uneven padding and margin, side 1",
+        20.0f, {15.0f, 10.0f}, {15.0f, 15.0f, 15.0f}, {}},
+    {"same sizes, uneven margin, side 1",
         {Snap::TopRight|Snap::InsideY,
          Snap::BottomRight|Snap::InsideX,
          Snap::BottomLeft|Snap::InsideY,
          Snap::TopLeft|Snap::InsideX},
-        {10.0f, 5.0f}, {{15.0f, 0.0f}, {0.0f, 10.0f}, {5.0f, 0.0f}},
+        {{15.0f, 0.0f}, {0.0f, 10.0f}, {5.0f, 0.0f}},
         {20.0f, 20.0f, 20.0f},
-        45.0f, {15.0f, 10.0f}, {15.0f, 15.0f, 15.0f}, {}},
+        20.0f, {15.0f, 10.0f}, {15.0f, 15.0f, 15.0f}, {}},
     {"same sizes, uneven padding and margin, side 2",
         {Snap::BottomRight|Snap::InsideY,
          Snap::BottomLeft|Snap::InsideX,
          Snap::TopLeft|Snap::InsideY,
          Snap::TopRight|Snap::InsideX},
-        {10.0f, 5.0f}, {{15.0f, 0.0f}, {0.0f, 10.0f}, {5.0f, 0.0f}},
+        {{15.0f, 0.0f}, {0.0f, 10.0f}, {5.0f, 0.0f}},
         {20.0f, 20.0f, 20.0f},
-        45.0f, {15.0f, 10.0f}, {15.0f, 15.0f, 15.0f}, {}},
+        20.0f, {15.0f, 10.0f}, {15.0f, 15.0f, 15.0f}, {}},
     /* @@@@@
        +---+ +---+ +---+
        |   | |   | !   |
@@ -537,9 +640,9 @@ const struct {
          Snap::BottomRight|Snap::InsideX,
          Snap::BottomLeft|Snap::InsideY,
          Snap::TopLeft|Snap::InsideX},
-        {}, {{5.0f, 0.0f}, {0.0f, 5.0f}, {}},
+        {{5.0f, 0.0f}, {0.0f, 5.0f}, {}},
         {20.0f, 40.0f, 20.0f},
-        50.0f, {5.0f, 5.0f}, {5.0f, 5.0f, 5.0f}, {}},
+        40.0f, {5.0f, 5.0f}, {5.0f, 5.0f, 5.0f}, {}},
     /*       +---+
        @@@@@ |   |
        +---+ |   | +---+
@@ -551,9 +654,9 @@ const struct {
          Snap::BottomLeft|Snap::InsideX,
          Snap::TopLeft|Snap::InsideY,
          Snap::TopRight|Snap::InsideX},
-        {}, {{5.0f, 0.0f}, {0.0f, 5.0f}, {}},
+        {{5.0f, 0.0f}, {0.0f, 5.0f}, {}},
         {20.0f, 40.0f, 20.0f},
-        45.0f, {0.0f, 5.0f}, {20.0f, 0.0f, 20.0f}, {}},
+        40.0f, {0.0f, 5.0f}, {20.0f, 0.0f, 20.0f}, {}},
     /* @@@@@ +---+
        +---+ |   | +---+
        |   | |   | |   |
@@ -562,9 +665,9 @@ const struct {
              @@@@@       */
     {"one node larger, center",
         {Snap::Right, Snap::Bottom, Snap::Left, Snap::Top},
-        {}, {{5.0f, 0.0f}, {0.0f, 5.0f}, {}},
+        {{5.0f, 0.0f}, {0.0f, 5.0f}, {}},
         {20.0f, 40.0f, 20.0f},
-        45.0f, {0.0f, 5.0f}, {10.0f, 0.0f, 10.0f}, {}},
+        40.0f, {0.0f, 5.0f}, {10.0f, 0.0f, 10.0f}, {}},
     /* @@@@@
        +---+ +---+ +---+
        |   | |   | !   |
@@ -577,9 +680,9 @@ const struct {
          Snap::Bottom|Snap::FillX,
          Snap::Left|Snap::FillY,
          Snap::Top|Snap::FillX},
-        {}, {{5.0f, 0.0f}, {0.0f, 5.0f}, {}},
+        {{5.0f, 0.0f}, {0.0f, 5.0f}, {}},
         {20.0f, 40.0f, 20.0f},
-        50.0f, {5.0f, 5.0f}, {5.0f, 5.0f, 5.0f}, {40.0f, 40.0f, 40.0f}},
+        40.0f, {5.0f, 5.0f}, {5.0f, 5.0f, 5.0f}, {40.0f, 40.0f, 40.0f}},
     /*       @@@@@
        +---+ @@@@@ +---+
        |   | +---+ |   |
@@ -590,9 +693,9 @@ const struct {
              @@@@@       */
     {"one node smaller with excessive margin, center",
         {Snap::Right, Snap::Bottom, Snap::Left, Snap::Top},
-        {}, {{}, {10.0f, 15.0f}, {}},
+        {{}, {10.0f, 15.0f}, {}},
         {30.0f, 20.0f, 30.0f},
-        45.0f, {5.0f, 10.0f}, {5.0f, 10.0f, 5.0f}, {}},
+        30.0f, {5.0f, 10.0f}, {5.0f, 10.0f, 5.0f}, {}},
     /*       @@@@@
              @@@@@
        +---+ +---+ +---+
@@ -608,46 +711,33 @@ const struct {
          Snap::Bottom|Snap::FillX,
          Snap::Left|Snap::FillY,
          Snap::Top|Snap::FillX},
-        {}, {{}, {10.0f, 15.0f}, {}},
+        {{}, {10.0f, 15.0f}, {}},
         {30.0f, 20.0f, 30.0f},
-        55.0f, {10.0f, 15.0f}, {10.0f, 10.0f, 10.0f}, {30.0f, 30.0f, 30.0f}},
-    /* ######@@@@@######
+        30.0f, {10.0f, 15.0f}, {10.0f, 10.0f, 10.0f}, {30.0f, 30.0f, 30.0f}},
+    /*       @@@@@
        +---+ @@@@@ +---+
        |   | +---+ |   |
        |   | |   | |   |
        |   | +---+ |   |
        +---+ @@@@@ +---+
-       ######@@@@@######
-       ######@@@@@###### */
-    {"one node smaller with excessive margin matching padding, center",
+             @@@@@
+             @@@@@ */
+    {"one node smaller with excessive margin, center",
         {Snap::Right, Snap::Bottom, Snap::Left, Snap::Top},
-        {5.0f, 10.0f}, {{}, {10.0f, 15.0f}, {}},
+        {{}, {10.0f, 15.0f}, {}},
         {30.0f, 20.0f, 30.0f},
-        45.0f, {5.0f, 10.0f}, {5.0f, 10.0f, 5.0f}, {}},
-    /* #################
-       +---+       +---+
-       |   | +---+ |   |
-       |   | |   | |   |
-       |   | +---+ |   |
-       +---+       +---+
-       #################
-       ################# */
-    {"one node smaller with just padding, center",
-        {Snap::Right, Snap::Bottom, Snap::Left, Snap::Top},
-        {5.0f, 10.0f}, {},
-        {30.0f, 20.0f, 30.0f},
-        45.0f, {5.0f, 10.0f}, {5.0f, 10.0f, 5.0f}, {}},
+        30.0f, {5.0f, 10.0f}, {5.0f, 10.0f, 5.0f}, {}},
     /* +---+       +---+
        |   | +---+ |   |
        |   | |   | |   |
        |   | +---+ |   |
        +---+       +---+ */
-    {"one node smaller with excessive margin matching padding, center, no pad",
+    {"one node smaller with excessive margin, center, no pad",
         {Snap::Right|Snap::NoPadY,
          Snap::Bottom|Snap::NoPadX,
          Snap::Left|Snap::NoPadY,
          Snap::Top|Snap::NoPadX},
-        {5.0f, 10.0f}, {{}, {10.0f, 15.0f}, {}},
+        {{}, {10.0f, 15.0f}, {}},
         {30.0f, 20.0f, 30.0f},
         30.0f, {}, {0.0f, 5.0f, 0.0f}, {}},
 };
@@ -655,66 +745,53 @@ const struct {
 const struct {
     TestSuite::TestCaseDescriptionSourceLocation name;
     Snaps extraChildSnaps[2]; /* for X and Y direction */
-    Vector2 paddingForward;
     Vector2 marginsForward[3];
     Float sizesForward[3];
     Float expectedSizeForward;
     Vector2 expectedPaddingForward;
     Float expectedOffsetsForward[3];
 } ChildLayoutSizeForwardData[]{
-    /* All diagrams for left-to-right direction, # denotes parent padding, @
-       child margin */
+    /* All diagrams for left-to-right direction, @ denotes child margin */
 
     /* +---+ +---+ +---+
        |   | |   | |   |
        +---+ +---+ +---+ */
     {"same sizes, no padding or margins",
-        {}, {}, {},
+        {}, {},
         {20.0f, 20.0f, 20.0f},
         60.0f, {}, {0.0f, 20.0f, 40.0f}},
-    /* # +---+ +---+ +---+ #
-       # |   | |   | |   | #
-       # +---+ +---+ +---+ # */
-    {"same sizes, even padding",
-        {}, {5.0f, 5.0f}, {},
-        {20.0f, 20.0f, 20.0f},
-        70.0f, {5.0f, 5.0f}, {5.0f, 25.0f, 45.0f}},
     /* @ +---+ @ +---+ @ +---+ @
        @ |   | @ |   | @ |   | @
        @ +---+ @ +---+ @ +---+ @ */
     {"same sizes, even margins",
-        {}, {}, {{5.0f, 5.0f}, {5.0f, 5.0f}, {5.0f, 5.0f}},
+        {}, {{5.0f, 5.0f}, {5.0f, 5.0f}, {5.0f, 5.0f}},
         {20.0f, 20.0f, 20.0f},
-        80.0f, {5.0f, 5.0f}, {5.0f, 30.0f, 55.0f}},
-    /* @ +---+ @ +---+ @ +---+ #
-       # |   | @ |   | @ |   | @
-       @ +---+ @ +---+ @ +---+ # */
-    {"same sizes, even padding and margins",
-        {}, {5.0f, 5.0f}, {{5.0f, 5.0f}, {5.0f, 5.0f}, {5.0f, 5.0f}},
-        {20.0f, 20.0f, 20.0f},
-        80.0f, {5.0f, 5.0f}, {5.0f, 30.0f, 55.0f}},
+        /* Size doesn't include the margin before/after */
+        70.0f, {5.0f, 5.0f}, {5.0f, 30.0f, 55.0f}},
     /* +---+ +---+ +---+
        |   | |   | |   |
        +---+ +---+ +---+ */
-    {"same sizes, even padding and margins, no pad",
+    {"same sizes, even margins, no pad",
         {Snap::NoPadX, Snap::NoPadY},
-        {5.0f, 5.0f}, {{5.0f, 5.0f}, {5.0f, 5.0f}, {5.0f, 5.0f}},
+        {{5.0f, 5.0f}, {5.0f, 5.0f}, {5.0f, 5.0f}},
         {20.0f, 20.0f, 20.0f},
         60.0f, {}, {0.0f, 20.0f, 40.0f}},
-    /* ##@ +-----+ @@ +-+ @@@@ +---+ @
-       ##@ |     | @@ | | @@@@ |   | @
-       ##@ +-----+ @@ +-+ @@@@ +---+ @ */
-    {"uneven sizes, paddings and margins, variant 1",
-        {}, {15.0f, 0.0f}, {{5.0f, 10.0f}, {}, {20.0f, 5.0f}},
+    /* @@@ +-----+ @@ +-+ @@@@ +---+ @
+       @@@ |     | @@ | | @@@@ |   | @
+       @@@ +-----+ @@ +-+ @@@@ +---+ @ */
+    {"uneven sizes amd margins, variant 1",
+        {}, {{15.0f, 10.0f}, {}, {20.0f, 5.0f}},
         {40.0f, 10.0f, 20.0f},
-        120.0f, {15.0f, 5.0f}, {15.0f, 65.0f, 95.0f}},
-    /* #@@ +-----+ @@ +-+ @@@@ +---+ #
-       @@@ |     | @@ | | @@@@ |   | #
-       #@@ +-----+ @@ +-+ @@@@ +---+ # */
-    {"uneven sizes, paddings and margins, variant 2",
-        {}, {5.0f, 5.0f}, {{15.0f, 0.0f}, {10.0f, 20.0f}, {}},
+        /* Size doesn't include the margin before/after */
+        100.0f, {15.0f, 5.0f}, {15.0f, 65.0f, 95.0f}},
+    /* @@@ +-----+ @@ +-+ @@@@ +---+ @
+       @@@ |     | @@ | | @@@@ |   | @
+       @@@ +-----+ @@ +-+ @@@@ +---+ @ */
+    {"uneven sizes amd margins, variant 2",
+        {}, {{15.0f, 0.0f}, {10.0f, 20.0f}, {0.0f, 5.0f}},
         {40.0f, 10.0f, 20.0f},
-        120.0f, {15.0f, 5.0f}, {15.0f, 65.0f, 95.0f}},
+        /* Size doesn't include the margin before/after */
+        100.0f, {15.0f, 5.0f}, {15.0f, 65.0f, 95.0f}},
 };
 
 const struct {
@@ -1096,8 +1173,8 @@ SnapLayouterTest::SnapLayouterTest() {
     addInstancedTests({&SnapLayouterTest::snap},
         Containers::arraySize(SnapData));
 
-    addInstancedTests({&SnapLayouterTest::childLayoutSizeSingleLayout},
-        Containers::arraySize(ChildLayoutSizeSingleLayoutData));
+    addInstancedTests({&SnapLayouterTest::layoutSizePadding},
+        Containers::arraySize(LayoutSizePaddingData));
 
     addInstancedTests({&SnapLayouterTest::childLayoutSizeSide},
         Containers::arraySize(ChildLayoutSizeSideData));
@@ -1280,90 +1357,18 @@ void SnapLayouterTest::snap() {
     CORRADE_COMPARE(out, Containers::pair(data.expectedOffset, data.expectedSize));
 }
 
-void SnapLayouterTest::childLayoutSizeSingleLayout() {
-    auto&& data = ChildLayoutSizeSingleLayoutData[testCaseInstanceId()];
-    {
-        Containers::String out;
-        {
-            Debug debug{&out, Debug::Flag::NoNewlineAtTheEnd|Debug::Flag::Packed};
-            debug << data.name;
-            if(data.extraChildSnap)
-                debug << Debug::nospace << "," << data.extraChildSnap;
-        }
-        setTestCaseDescription(out);
-    }
+void SnapLayouterTest::layoutSizePadding() {
+    auto&& data = LayoutSizePaddingData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
 
-    /* Verifies that the utility output is exactly the same regardless of what
-       child snap is specified. Output with multiple children verified
-       thoroughly in childLayoutSize() below, integration test with the whole
-       SnapLayouter in updateChildSnap(), recursive behavior in
-       updatePropagateChildSizes() */
-
-    struct Node {
-        Vector2 zero;
-        Vector2 size;
-        Vector4 margin;
-    } nodes[]{
-        {}, {}, {},
-        {{}, {20.0f, 30.0f}, data.margin}, /* node 3 */
-    };
-
-    struct Layout {
-        NodeHandle node;
-        LayouterDataHandle next;
-    } layouts[]{
-        {},
-        {nodeHandle(3, 0xbeb), layouterDataHandle(1, 0x111)}, /* layout 1 */
-    };
-
-    /* These are all possible Snap combinations accepted for children */
-    for(Snaps childSnap: {
-        Snap::Right|data.extraChildSnap,
-        Snap::Right|Snap::FillY|data.extraChildSnap,
-        Snap::TopRight|Snap::InsideY|data.extraChildSnap,
-        Snap::BottomRight|Snap::InsideY|data.extraChildSnap,
-
-        Snap::Bottom|data.extraChildSnap,
-        Snap::Bottom|Snap::FillX|data.extraChildSnap,
-        Snap::BottomLeft|Snap::InsideX|data.extraChildSnap,
-        Snap::BottomRight|Snap::InsideX|data.extraChildSnap,
-
-        Snap::Left|data.extraChildSnap,
-        Snap::Left|Snap::FillY|data.extraChildSnap,
-        Snap::TopLeft|Snap::InsideY|data.extraChildSnap,
-        Snap::BottomLeft|Snap::InsideY|data.extraChildSnap,
-
-        Snap::Top|data.extraChildSnap,
-        Snap::Top|Snap::FillX|data.extraChildSnap,
-        Snap::TopLeft|Snap::InsideX|data.extraChildSnap,
-        Snap::TopRight|Snap::InsideX|data.extraChildSnap,
-    }) {
-        CORRADE_ITERATION(childSnap);
-
-        Containers::Pair<Vector2, Vector4> sizePadding = Implementation::childLayoutSizePadding(
-            childSnap|data.extraChildSnap,
-            data.padding,
-            Containers::stridedArrayView(nodes).slice(&Node::zero),
-            Containers::stridedArrayView(nodes).slice(&Node::margin),
-            Containers::stridedArrayView(nodes).slice(&Node::size),
-            layouterDataHandle(1, 0x111),
-            Containers::stridedArrayView(layouts).slice(&Layout::node),
-            Containers::stridedArrayView(layouts).slice(&Layout::next));
-        CORRADE_COMPARE(sizePadding, Containers::pair(data.expectedSize, data.expectedPadding));
-
-        /* Should behave the same when node min sizes are used instead of node
-           sizes */
-        sizePadding = Implementation::childLayoutSizePadding(
-            childSnap|data.extraChildSnap,
-            data.padding,
-            Containers::stridedArrayView(nodes).slice(&Node::size),
-            Containers::stridedArrayView(nodes).slice(&Node::margin),
-            Containers::stridedArrayView(nodes).slice(&Node::zero),
-            layouterDataHandle(1, 0x111),
-            Containers::stridedArrayView(layouts).slice(&Layout::node),
-            Containers::stridedArrayView(layouts).slice(&Layout::next));
-        CORRADE_COMPARE(sizePadding, Containers::pair(data.expectedSize, data.expectedPadding));
-    }
+    Containers::Pair<Vector2, Vector4> out = Implementation::layoutSizePadding(
+        data.flags,
+        data.extraChildSnap,
+        data.nodeSize,
+        data.nodePadding,
+        data.childLayoutSize,
+        data.childLayoutMargin);
+    CORRADE_COMPARE(out, Containers::pair(data.expectedLayoutSize, data.expectedLayoutPadding));
 }
 
 void SnapLayouterTest::childLayoutSizeSide() {
@@ -1381,21 +1386,19 @@ void SnapLayouterTest::childLayoutSizeSide() {
         {nodeHandle(6, 0xcec), layouterDataHandle(2, 0x222)}, /* layout 5 */
     };
 
-    Vector4 paddings[4];
     Vector4 margins[4][3];
     Vector2 sizes[4][3];
     Vector2 expectedSizes[4];
-    Vector4 expectedPaddings[4];
+    Vector4 expectedMargins[4];
     Vector2 expectedChildOffsets[4][3];
     Vector2 expectedChildSizes[4][3];
 
     /* Data for the first (left-to-right) rotation. In the forward direction
-       the padding is always 7 and margin 3 from both sides, and all three
-       nodes have the same width of 30. */
-    paddings[0] = {7.0f, data.paddingSide[0], 7.0f, data.paddingSide[1]};
-    expectedSizes[0] = {14.0f + 90.0f + 6.0f, data.expectedSizeSide};
-    expectedPaddings[0] = {7.0f, data.expectedPaddingSide[0], 7.0f, data.expectedPaddingSide[1]};
-    expectedChildOffsets[0][0][0] = 7.0f;
+       the margin is always 3 from both sides, and all three nodes have the
+       same width of 30. */
+    expectedSizes[0] = {90.0f + 6.0f, data.expectedSizeSide};
+    expectedMargins[0] = {3.0f, data.expectedPaddingSide[0], 3.0f, data.expectedPaddingSide[1]};
+    expectedChildOffsets[0][0][0] = 3.0f;
     expectedChildOffsets[0][1][0] = expectedChildOffsets[0][0].x() + 30.0f + 3.0f;
     expectedChildOffsets[0][2][0] = expectedChildOffsets[0][1].x() + 30.0f + 3.0f;
     expectedChildSizes[0][0][0] = 30.0f;
@@ -1412,9 +1415,8 @@ void SnapLayouterTest::childLayoutSizeSide() {
 
     /* Gradually rotate the inputs to generate all four rotations */
     for(UnsignedInt i = 0; i != 3; ++i) {
-        paddings[i + 1] = Math::gather<'w', 'x', 'y', 'z'>(paddings[i]);
         expectedSizes[i + 1] = Math::gather<'y', 'x'>(expectedSizes[i]);
-        expectedPaddings[i + 1] = Math::gather<'w', 'x', 'y', 'z'>(expectedPaddings[i]);
+        expectedMargins[i + 1] = Math::gather<'w', 'x', 'y', 'z'>(expectedMargins[i]);
 
         for(UnsignedInt j = 0; j != 3; ++j) {
             margins[i + 1][j] = Math::gather<'w', 'x', 'y', 'z'>(margins[i][j]);
@@ -1425,11 +1427,12 @@ void SnapLayouterTest::childLayoutSizeSide() {
     }
 
     /* Offsets in the right-to-left and bottom-to-top rotations are from the
-       other edges */
+       other edges, so have to subtract it from the size and padding on both
+       sides */
     for(UnsignedInt j = 0; j != 3; ++j) {
-        expectedChildOffsets[1][j].x() = expectedSizes[1].x() - expectedChildOffsets[1][j].x() - expectedChildSizes[1][j].x();
-        expectedChildOffsets[2][j] = expectedSizes[2] - expectedChildOffsets[2][j] - expectedChildSizes[2][j];
-        expectedChildOffsets[3][j].y() = expectedSizes[3].y() - expectedChildOffsets[3][j].y() - expectedChildSizes[3][j].y();
+        expectedChildOffsets[1][j].x() = expectedSizes[1].x() + expectedMargins[1][0] + expectedMargins[1][2] - expectedChildOffsets[1][j].x() - expectedChildSizes[1][j].x();
+        expectedChildOffsets[2][j] = expectedSizes[2] + expectedMargins[2].xy() + Math::gather<'z', 'w'>(expectedMargins[2]) - expectedChildOffsets[2][j] - expectedChildSizes[2][j];
+        expectedChildOffsets[3][j].y() = expectedSizes[3].y() + expectedMargins[3][1] + expectedMargins[3][3] - expectedChildOffsets[3][j].y() - expectedChildSizes[3][j].y();
     }
 
     /* The output should be the same for all rotations and node orderings */
@@ -1460,36 +1463,38 @@ void SnapLayouterTest::childLayoutSizeSide() {
             }
 
             /* Node size passed directly */
-            Containers::Pair<Vector2, Vector4> sizePadding = Implementation::childLayoutSizePadding(
+            Containers::Pair<Vector2, Vector4> sizeMargin = Implementation::childLayoutSizeMargin(
                 snap,
-                paddings[rotation],
                 Containers::stridedArrayView(nodes).slice(&Node::zero), /* minSize */
                 Containers::stridedArrayView(nodes).slice(&Node::margin),
                 Containers::stridedArrayView(nodes).slice(&Node::size), /* size */
                 layouterDataHandle(2, 0x222),
                 Containers::stridedArrayView(layouts).slice(&Layout::node),
                 Containers::stridedArrayView(layouts).slice(&Layout::next));
-            CORRADE_COMPARE(sizePadding, Containers::pair(expectedSizes[rotation], expectedPaddings[rotation]));
+            CORRADE_COMPARE(sizeMargin, Containers::pair(expectedSizes[rotation], expectedMargins[rotation]));
 
             /* Node size passed as a min size, should work the same */
-            sizePadding = Implementation::childLayoutSizePadding(
+            sizeMargin = Implementation::childLayoutSizeMargin(
                 snap,
-                paddings[rotation],
                 Containers::stridedArrayView(nodes).slice(&Node::size), /* minSize */
                 Containers::stridedArrayView(nodes).slice(&Node::margin),
                 Containers::stridedArrayView(nodes).slice(&Node::zero), /* size */
                 layouterDataHandle(2, 0x222),
                 Containers::stridedArrayView(layouts).slice(&Layout::node),
                 Containers::stridedArrayView(layouts).slice(&Layout::next));
-            CORRADE_COMPARE(sizePadding, Containers::pair(expectedSizes[rotation], expectedPaddings[rotation]));
+            CORRADE_COMPARE(sizeMargin, Containers::pair(expectedSizes[rotation], expectedMargins[rotation]));
+
+            /* Just to get the layout size and padding to pass to snap().
+               Tested thoroughly in layoutSizePadding() instead. */
+            Containers::Pair<Vector2, Vector4> layoutSizePadding = Implementation::layoutSizePadding({}, snap, {}, {}, sizeMargin.first(), sizeMargin.second());
 
             /* With the above size and padding, snapping the three nodes should
                give the expected offsets. The first child uses a different
                snap, and is affected by the reported size and padding */
             Containers::Pair<Vector2, Vector2> offsetSize0 = Implementation::snap(
                 Implementation::firstChildSnap(snap),
-                {}, sizePadding.first(),
-                sizePadding.second(), {},
+                {}, layoutSizePadding.first(),
+                layoutSizePadding.second(), {},
                 nodes[nodeIds[shuffle][0]].margin,
                 nodes[nodeIds[shuffle][0]].size);
             CORRADE_COMPARE(offsetSize0, Containers::pair(expectedChildOffsets[rotation][0], expectedChildSizes[rotation][0]));
@@ -1553,22 +1558,20 @@ void SnapLayouterTest::childLayoutSizeForward() {
         {nodeHandle(6, 0xcec), layouterDataHandle(2, 0x222)}, /* layout 5 */
     };
 
-    Vector4 paddings[4];
     Vector4 margins[4][3];
     Vector2 sizes[4][3];
     Vector2 expectedSizes[4];
-    Vector4 expectedPaddings[4];
+    Vector4 expectedMargins[4];
     Vector2 expectedChildOffsets[4][3];
 
     /* Data for the first (left-to-right) rotation. In the side direction the
-       padding is always 7 and margin 3 from both sides, and all three nodes
-       have the same height of 30. */
-    paddings[0] = {data.paddingForward[0], 7.0f, data.paddingForward[1], 7.0f};
-    expectedSizes[0] = {data.expectedSizeForward, 14.0f + 30.0f};
-    expectedPaddings[0] = {data.expectedPaddingForward[0], 7.0f, data.expectedPaddingForward[1], 7.0f};
-    expectedChildOffsets[0][0][1] = 7.0f;
-    expectedChildOffsets[0][1][1] = 7.0f;
-    expectedChildOffsets[0][2][1] = 7.0f;
+       margin is always 3 from both sides, and all three nodes have the same
+       height of 30. */
+    expectedSizes[0] = {data.expectedSizeForward, 30.0f};
+    expectedMargins[0] = {data.expectedPaddingForward[0], 3.0f, data.expectedPaddingForward[1], 3.0f};
+    expectedChildOffsets[0][0][1] = 3.0f;
+    expectedChildOffsets[0][1][1] = 3.0f;
+    expectedChildOffsets[0][2][1] = 3.0f;
     for(UnsignedInt i = 0; i != 3; ++i) {
         margins[0][i] = {data.marginsForward[i][0], 3.0f, data.marginsForward[i][1], 3.0f};
         sizes[0][i] = {data.sizesForward[i], 30.0f};
@@ -1577,9 +1580,8 @@ void SnapLayouterTest::childLayoutSizeForward() {
 
     /* Gradually rotate the inputs to generate all four rotations */
     for(UnsignedInt i = 0; i != 3; ++i) {
-        paddings[i + 1] = Math::gather<'w', 'x', 'y', 'z'>(paddings[i]);
         expectedSizes[i + 1] = Math::gather<'y', 'x'>(expectedSizes[i]);
-        expectedPaddings[i + 1] = Math::gather<'w', 'x', 'y', 'z'>(expectedPaddings[i]);
+        expectedMargins[i + 1] = Math::gather<'w', 'x', 'y', 'z'>(expectedMargins[i]);
 
         for(UnsignedInt j = 0; j != 3; ++j) {
             margins[i + 1][j] = Math::gather<'w', 'x', 'y', 'z'>(margins[i][j]);
@@ -1589,11 +1591,12 @@ void SnapLayouterTest::childLayoutSizeForward() {
     }
 
     /* Offsets in the right-to-left and bottom-to-top rotations are from the
-       other edges */
+       other edges, so have to subtract it from the size and padding on both
+       sides */
     for(UnsignedInt j = 0; j != 3; ++j) {
-        expectedChildOffsets[1][j].x() = expectedSizes[1].x() - expectedChildOffsets[1][j].x() - sizes[1][j].x();
-        expectedChildOffsets[2][j] = expectedSizes[2] - expectedChildOffsets[2][j] - sizes[2][j];
-        expectedChildOffsets[3][j].y() = expectedSizes[3].y() - expectedChildOffsets[3][j].y() - sizes[3][j].y();
+        expectedChildOffsets[1][j].x() = expectedSizes[1].x() + expectedMargins[1][0] + expectedMargins[1][2] - expectedChildOffsets[1][j].x() - sizes[1][j].x();
+        expectedChildOffsets[2][j] = expectedSizes[2] + expectedMargins[2].xy() + Math::gather<'z', 'w'>(expectedMargins[2]) - expectedChildOffsets[2][j] - sizes[2][j];
+        expectedChildOffsets[3][j].y() = expectedSizes[3].y() + expectedMargins[3][1] + expectedMargins[3][3] - expectedChildOffsets[3][j].y() - sizes[3][j].y();
     }
 
     for(UnsignedInt rotation = 0; rotation != 4; ++rotation) {
@@ -1615,36 +1618,38 @@ void SnapLayouterTest::childLayoutSizeForward() {
             }
 
             /* Node size passed directly */
-            Containers::Pair<Vector2, Vector4> sizePadding = Implementation::childLayoutSizePadding(
+            Containers::Pair<Vector2, Vector4> sizeMargin = Implementation::childLayoutSizeMargin(
                 snap,
-                paddings[rotation],
                 Containers::stridedArrayView(nodes).slice(&Node::zero), /* minSize */
                 Containers::stridedArrayView(nodes).slice(&Node::margin),
                 Containers::stridedArrayView(nodes).slice(&Node::size), /* size */
                 layouterDataHandle(2, 0x222),
                 Containers::stridedArrayView(layouts).slice(&Layout::node),
                 Containers::stridedArrayView(layouts).slice(&Layout::next));
-            CORRADE_COMPARE(sizePadding, Containers::pair(expectedSizes[rotation], expectedPaddings[rotation]));
+            CORRADE_COMPARE(sizeMargin, Containers::pair(expectedSizes[rotation], expectedMargins[rotation]));
 
             /* Node size passed as a min size, should work the same */
-            sizePadding = Implementation::childLayoutSizePadding(
+            sizeMargin = Implementation::childLayoutSizeMargin(
                 snap,
-                paddings[rotation],
                 Containers::stridedArrayView(nodes).slice(&Node::size), /* minSize */
                 Containers::stridedArrayView(nodes).slice(&Node::margin),
                 Containers::stridedArrayView(nodes).slice(&Node::zero), /* size */
                 layouterDataHandle(2, 0x222),
                 Containers::stridedArrayView(layouts).slice(&Layout::node),
                 Containers::stridedArrayView(layouts).slice(&Layout::next));
-            CORRADE_COMPARE(sizePadding, Containers::pair(expectedSizes[rotation], expectedPaddings[rotation]));
+            CORRADE_COMPARE(sizeMargin, Containers::pair(expectedSizes[rotation], expectedMargins[rotation]));
+
+            /* Just to get the layout size and padding to pass to snap().
+               Tested thoroughly in layoutSizePadding() instead. */
+            Containers::Pair<Vector2, Vector4> layoutSizePadding = Implementation::layoutSizePadding({}, snap, {}, {}, sizeMargin.first(), sizeMargin.second());
 
             /* With the above size and padding, snapping the three nodes should
                give the expected offsets. The first child uses a different
                snap, and is affected by the reported size and padding */
             Containers::Pair<Vector2, Vector2> offsetSize0 = Implementation::snap(
                 Implementation::firstChildSnap(snap),
-                {}, sizePadding.first(),
-                sizePadding.second(), {},
+                {}, layoutSizePadding.first(),
+                layoutSizePadding.second(), {},
                 nodes[nodeIds[0]].margin,
                 nodes[nodeIds[0]].size);
             CORRADE_COMPARE(offsetSize0, Containers::pair(expectedChildOffsets[rotation][0], sizes[rotation][0]));

@@ -831,12 +831,11 @@ void SnapLayouter::doUpdate(const Containers::BitArrayView layoutIdsToUpdate, co
            calculate the child size and padding at all, as it won't get used
            anyway. */
         const UnsignedInt nodeId = nodeHandleId(nodes[layoutId]);
-        const Containers::Pair<Vector2, Vector4> childLayoutSizePadding =
+        const Containers::Pair<Vector2, Vector4> childLayoutSizeMargin =
             layout.flags >= SnapLayoutFlag::IgnoreOverflow ?
                 Containers::Pair<Vector2, Vector4>{} :
-                Implementation::childLayoutSizePadding(
+                Implementation::childLayoutSizeMargin(
                     layout.childSnap,
-                    nodePaddings[nodeId],
                     nodeMinSizes,
                     nodeMargins,
                     nodeSizes,
@@ -844,26 +843,19 @@ void SnapLayouter::doUpdate(const Containers::BitArrayView layoutIdsToUpdate, co
                     nodes,
                     stridedArrayView(state.layouts).slice(&Layout::next));
 
-        /* Save padding for child layouts, which may be different from the
-           original node layout padding in order to properly align the items.
-           For directions that are ignored use the original node padding
-           verbatim. Order is left, top, right, bottom, so XZ components are
-           horizontal and YW vertical. Don't need to do a max() as the output
-           includes the original padding already. */
-        Math::scatterInto<0, 2>(childLayoutPaddings[layoutId],
-            Math::gather<0, 2>(layout.flags >= SnapLayoutFlag::IgnoreOverflowX ?
-                nodePaddings[nodeId] : childLayoutSizePadding.second()));
-        Math::scatterInto<1, 3>(childLayoutPaddings[layoutId],
-            Math::gather<1, 3>(layout.flags >= SnapLayoutFlag::IgnoreOverflowY ?
-                nodePaddings[nodeId] : childLayoutSizePadding.second()));
-
-        /* Similarly, update the size for directions that aren't ignored. Here
-           *do* keep a max because the utility returns just the occupied size,
-           not taking the original node size into account at all. */
-        if(!(layout.flags >= SnapLayoutFlag::IgnoreOverflowX))
-            nodeSizes[nodeId].x() = Math::max(nodeSizes[nodeId].x(), childLayoutSizePadding.first().x());
-        if(!(layout.flags >= SnapLayoutFlag::IgnoreOverflowY))
-            nodeSizes[nodeId].y() = Math::max(nodeSizes[nodeId].y(), childLayoutSizePadding.first().y());
+        /* Calculate the actual layout size and padding from the layout
+           properties and child layout size and margin (optionally) calculated
+           above */
+        const Containers::Pair<Vector2, Vector4> layoutSizePadding =
+            Implementation::layoutSizePadding(
+                layout.flags,
+                layout.childSnap,
+                nodeSizes[nodeId],
+                nodePaddings[nodeId],
+                childLayoutSizeMargin.first(),
+                childLayoutSizeMargin.second());
+        nodeSizes[nodeId] = layoutSizePadding.first();
+        childLayoutPaddings[layoutId] = layoutSizePadding.second();
     }
 
     /* Go through the layouts in their dependency order, skipping the first

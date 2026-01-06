@@ -33,29 +33,19 @@
 
 namespace Magnum { namespace Ui { namespace Implementation { namespace {
 
-/* Calculates total size of all child layouts, taking into account their margin
-   as well as the parent node padding, and returns also the padding inside that
-   node that's needed to be subsequently passed to snap() instead of
-   nodePadding to position everything correctly */
-Containers::Pair<Vector2, Vector4> childLayoutSizePadding(const Snaps childSnap, const Vector4& nodePadding, const Containers::StridedArrayView1D<const Vector2>& nodeMinSizes, const Containers::StridedArrayView1D<const Vector4>& nodeMargins, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, const LayouterDataHandle firstChildLayout, const Containers::StridedArrayView1D<const NodeHandle>& layoutNodes, const Containers::StridedArrayView1D<const LayouterDataHandle>& nextLayout) {
+/* Calculates total size of all child layouts along with their margin. The
+   output size and margin is then meant to be passed to layoutSizePadding()
+   which then calculates the actual node size and padding, which can be
+   subsequently passed to snap() to position everything correctly. */
+Containers::Pair<Vector2, Vector4> childLayoutSizeMargin(const Snaps childSnap, const Containers::StridedArrayView1D<const Vector2>& nodeMinSizes, const Containers::StridedArrayView1D<const Vector4>& nodeMargins, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, const LayouterDataHandle firstChildLayout, const Containers::StridedArrayView1D<const NodeHandle>& layoutNodes, const Containers::StridedArrayView1D<const LayouterDataHandle>& nextLayout) {
     CORRADE_INTERNAL_ASSERT(
         nodeSizes.size() == nodeMinSizes.size() &&
         nodeMargins.size() == nodeMinSizes.size() &&
         firstChildLayout != LayouterDataHandle::Null &&
         layoutNodes.size() == nextLayout.size());
 
-    /* First figure out padding and margin component indices based on child
-       snap. The order is left (0), top (1), right (2), bottom (3). Parent
-       padding (pp*) and child margin (cm*) share the same sides and thus the
-       same index.
-
-        +--------------------+
-        |    ppT / cmT (1)   |
-        | ppL +--------+ ppR |
-        | cmL |        | cmR |
-        | (0) +--------+ (2) |
-        |    ppB / cmB (3)   |
-        +--------------------+ */
+    /* First figure out margin component indices based on child snap. The order
+       is left (0), top (1), right (2), bottom (3). */
     const Snaps snapNoNoPad = childSnap & ~Snap::NoPad;
     UnsignedInt indexBefore, indexAfter, indexSideL, indexSideR,
         indexSizeForward, indexSizeSide;
@@ -203,24 +193,23 @@ Containers::Pair<Vector2, Vector4> childLayoutSizePadding(const Snaps childSnap,
        could happen. */
     } else CORRADE_INTERNAL_ASSERT_UNREACHABLE(); /* LCOV_EXCL_LINE */
 
-    /* Indexed below with indexSizeForward / indexSizeSide, causes the padding
-       to be not used in either direction if NoPad is specified. It's an extra
-       multiplication but I suspect it's better than even more branching. */
-    const Float padMultiplier[]{
-        childSnap >= Snap::NoPadX ? 0.0f : 1.0f,
-        childSnap >= Snap::NoPadY ? 0.0f : 1.0f
+    /* Whether to use the margin in the forward and size direction */
+    const bool useMargin[]{
+        !(childSnap >= Snap::NoPadX),
+        !(childSnap >= Snap::NoPadY)
     };
 
-    /* Calculate the size spanning all children along with their paddings and
-       margins */
+    /* First child layout and corresponding node gives the first output margin
+       value */
     LayouterDataHandle childLayout = firstChildLayout;
     UnsignedInt childNodeId = nodeHandleId(layoutNodes[layouterDataHandleId(childLayout)]);
+    Vector4 outMargin{Math::ZeroInit};
+    if(useMargin[indexSizeForward])
+        outMargin[indexBefore] = nodeMargins[childNodeId][indexBefore];
+
+    /* Calculate the size spanning all children along with their margins */
     Float previousNodeMarginAfter = 0.0f;
-    Float nextMargin = padMultiplier[indexSizeForward]*
-        Math::max(nodeMargins[childNodeId][indexBefore],
-                  nodePadding[indexBefore]);
-    Vector4 outPadding{NoInit};
-    outPadding[indexBefore] = nextMargin;
+    Float nextMargin = 0.0f;
     Float sizeForward = 0.0f;
     /* For alignment to a side, only maxMarginSideL + maxSizeSideExceptMarginL
        or maxMarginSideR / maxSizeSideExceptMarginR are filled. For centered
@@ -243,29 +232,22 @@ Containers::Pair<Vector2, Vector4> childLayoutSizePadding(const Snaps childSnap,
            doing one extra max() */
         const Vector2 childNodeSize = Math::max(nodeSizes[childNodeId],
                                                 nodeMinSizes[childNodeId]);
-        /* For side margins take the max of the actual node margin and parent
-           node padding. Before/after margins are combined either with the
-           previous/next node margin or with the parent node padding below. */
-        const Vector4 childNodeMargin = nodeMargins[childNodeId];
-        const Float childNodeMarginSideL = padMultiplier[indexSizeSide]*
-            Math::max(childNodeMargin[indexSideL],
-                      nodePadding[indexSideL]);
-        const Float childNodeMarginSideR = padMultiplier[indexSizeSide]*
-            Math::max(childNodeMargin[indexSideR],
-                      nodePadding[indexSideR]);
+        /* Side margins. Before/after margins are combined with the previous /
+           next node margin below. */
+        const Float childNodeMarginSideL = nodeMargins[childNodeId][indexSideL];
+        const Float childNodeMarginSideR = nodeMargins[childNodeId][indexSideR];
 
         /* Add the previously calculated next margin and current node size to
-           the forward sizes */
+           the forward sizes. If useMargin[indexSizeForward] is false,
+           nextMargin is always 0.0f. */
         sizeForward += nextMargin + childNodeSize[indexSizeForward];
 
         /* Max side size is calculated out of individual pieces based on how
            the alignment is done */
         if(calculate == Calculate::SideLeft || calculate == Calculate::Fill)
-            maxMarginSideL = Math::max(maxMarginSideL,
-                                       childNodeMarginSideL);
+            maxMarginSideL = Math::max(maxMarginSideL, childNodeMarginSideL);
         if(calculate == Calculate::SideRight || calculate == Calculate::Fill)
-            maxMarginSideR = Math::max(maxMarginSideR,
-                                       childNodeMarginSideR);
+            maxMarginSideR = Math::max(maxMarginSideR, childNodeMarginSideR);
         if(calculate == Calculate::SideLeft)
             maxSizeSideExceptMarginL = Math::max(maxSizeSideExceptMarginL,
                 childNodeSize[indexSizeSide] + childNodeMarginSideR);
@@ -288,48 +270,91 @@ Containers::Pair<Vector2, Vector4> childLayoutSizePadding(const Snaps childSnap,
            layout is firstChild again (i.e., we're at the end of the child
            list), the nextMargin value will stay unused and a value based on
            parentNodePadding will be used instead. */
-        previousNodeMarginAfter = childNodeMargin[indexAfter];
+        if(useMargin[indexSizeForward])
+            previousNodeMarginAfter = nodeMargins[childNodeId][indexAfter];
         childLayout = nextLayout[layouterDataHandleId(childLayout)];
         childNodeId = nodeHandleId(layoutNodes[layouterDataHandleId(childLayout)]);
-        nextMargin = padMultiplier[indexSizeForward]*
-            Math::max(previousNodeMarginAfter,
-                      nodeMargins[childNodeId][indexBefore]);
+        if(useMargin[indexSizeForward]) nextMargin = Math::max(
+            previousNodeMarginAfter,
+            nodeMargins[childNodeId][indexBefore]);
     } while(childLayout != firstChildLayout);
 
-    /* Calculate the final padding after, which includes the parent node
-       padding again, and add it to the forward size */
-    outPadding[indexAfter] = padMultiplier[indexSizeForward]*
-        Math::max(previousNodeMarginAfter,
-                  nodePadding[indexAfter]);
-    sizeForward += outPadding[indexAfter];
-
-    /* Figure out the output size and padding. Padding before got filled above
-       already. */
+    /* Figure out output size, which is just the forward and side size put into
+       correct components */
     Vector2 outSize{NoInit};
     outSize[indexSizeForward] = sizeForward;
-    if(calculate == Calculate::SideLeft) {
-        outSize[indexSizeSide] = maxMarginSideL + maxSizeSideExceptMarginL;
-        outPadding[indexSideL] = maxMarginSideL;
-        outPadding[indexSideR] = maxSizeSideExceptMarginL - maxSizeSideExceptMargin;
-    } else if(calculate == Calculate::SideRight) {
-        outSize[indexSizeSide] = maxMarginSideR + maxSizeSideExceptMarginR;
-        outPadding[indexSideL] = maxSizeSideExceptMarginR - maxSizeSideExceptMargin;
-        outPadding[indexSideR] = maxMarginSideR;
-    } else if(calculate == Calculate::Center) {
-        outSize[indexSizeSide] = maxHalfSizeSideWithMarginL + maxHalfSizeSideWithMarginR;
-        outPadding[indexSideL] = maxHalfSizeSideWithMarginL - maxSizeSideExceptMargin*0.5f;
-        outPadding[indexSideR] = maxHalfSizeSideWithMarginR - maxSizeSideExceptMargin*0.5f;
-    } else if(calculate == Calculate::Fill) {
-        outSize[indexSizeSide] = maxMarginSideL + maxSizeSideExceptMargin + maxMarginSideR;
-        outPadding[indexSideL] = maxMarginSideL;
-        outPadding[indexSideR] = maxMarginSideR;
-    } else CORRADE_INTERNAL_ASSERT_UNREACHABLE(); /* LCOV_EXCL_LINE */
+    outSize[indexSizeSide] = maxSizeSideExceptMargin;
 
-    return {outSize, outPadding};
+    /* Fill in the remaining output margin, if it's meant to be used. If not,
+       the fields stay zero-initialized. */
+    if(useMargin[indexSizeForward])
+        outMargin[indexAfter] = previousNodeMarginAfter;
+    if(useMargin[indexSizeSide]) {
+        if(calculate == Calculate::SideLeft) {
+            outMargin[indexSideL] = maxMarginSideL;
+            outMargin[indexSideR] = maxSizeSideExceptMarginL - maxSizeSideExceptMargin;
+        } else if(calculate == Calculate::SideRight) {
+            outMargin[indexSideL] = maxSizeSideExceptMarginR - maxSizeSideExceptMargin;
+            outMargin[indexSideR] = maxMarginSideR;
+        } else if(calculate == Calculate::Center) {
+            outMargin[indexSideL] = maxHalfSizeSideWithMarginL - maxSizeSideExceptMargin*0.5f;
+            outMargin[indexSideR] = maxHalfSizeSideWithMarginR - maxSizeSideExceptMargin*0.5f;
+        } else if(calculate == Calculate::Fill) {
+            outMargin[indexSideL] = maxMarginSideL;
+            outMargin[indexSideR] = maxMarginSideR;
+        } else CORRADE_INTERNAL_ASSERT_UNREACHABLE(); /* LCOV_EXCL_LINE */
+    }
+
+    return {outSize, outMargin};
+}
+
+/* Calculates the actual layout size and padding from the layout and node
+   properties and output from the childLayoutSizeMargin() above. Is a separate
+   function because that makes it easier to test, and childLayoutSizeMargin()
+   doesn't need to be called at all if flags contain IgnoreOverflow. */
+Containers::Pair<Vector2, Vector4> layoutSizePadding(const SnapLayoutFlags flags, const Snaps childSnap, const Vector2& nodeSize, const Vector4& nodePadding, const Vector2& childLayoutSize, const Vector4& childLayoutMargin) {
+    /* Calculate actual layout padding:
+        - It's zero on given side if padding is ignored in matching direction
+        - It's same as node padding in given direction if child layout overflow
+          is ignored in that direction
+        - Otherwise it's the max of node padding and child layout margin in
+          given direction */
+    Vector4 layoutPadding{NoInit};
+    Math::scatterInto<0, 2>(layoutPadding, childSnap >= Snap::NoPadX ?
+        Vector2{} : Math::max(
+            Math::gather<0, 2>(nodePadding),
+            flags >= SnapLayoutFlag::IgnoreOverflowX ?
+                Vector2{} :
+                Math::gather<0, 2>(childLayoutMargin)));
+    Math::scatterInto<1, 3>(layoutPadding, childSnap >= Snap::NoPadY ?
+        Vector2{} : Math::max(
+            Math::gather<1, 3>(nodePadding),
+            flags >= SnapLayoutFlag::IgnoreOverflowY ?
+                Vector2{} :
+                Math::gather<1, 3>(childLayoutMargin)));
+
+    /* Minimal layout size is the actual child layout size with padding from
+       both sides added */
+    const Vector2 minLayoutSize = childLayoutSize +
+        Math::gather<0, 1>(layoutPadding) +
+        Math::gather<2, 3>(layoutPadding);
+
+    /* Calculate actual layout size:
+        - It's same as node size in given direction if child layout overflow is
+          ignored in that direction
+        - Otherwise it's the max of node size and min layout size */
+    const Vector2 layoutSize{
+        flags >= SnapLayoutFlag::IgnoreOverflowX ?
+            nodeSize.x() : Math::max(nodeSize.x(), minLayoutSize.x()),
+        flags >= SnapLayoutFlag::IgnoreOverflowY ?
+            nodeSize.y() : Math::max(nodeSize.y(), minLayoutSize.y())
+    };
+
+    return {layoutSize, layoutPadding};
 }
 
 /* Used by SnapLayouter::setChildSnapInternal() but also tests that verify
-   childLayoutSizePadding() together with snap(), so has to be here. Empty set
+   childLayoutSizeMargin() together with snap(), so has to be here. Empty set
    returned is a failure that should be handled by the caller. */
 Snaps firstChildSnap(const Snaps childSnap) {
     /* Make the first child snap inherit also any padding. Since it's snapping
