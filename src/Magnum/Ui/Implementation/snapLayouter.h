@@ -66,11 +66,11 @@ Containers::Pair<Vector2, Vector2> snap(Snaps snap, const Vector2& targetOffset,
               max(rmB, mT)
                  +----+
 
-       Order of target margin (tm*) is left, top, right, bottom (xyzw), so it
-       has to take the margin (m*) in right, bottom, left, top (zwxy). */
+       Order of target margin (tm*) is left, top, right, bottom (0123), so it
+       has to take the margin (m*) in right, bottom, left, top (2301). */
     const Vector4 maxMargin = Math::max(
         targetMargin,
-        Math::gather<'z', 'w', 'x', 'y'>(margin));
+        Math::gather<2, 3, 0, 1>(margin));
 
     /* +----------------------+
        |     max(tpT, mT)     |
@@ -88,13 +88,13 @@ Containers::Pair<Vector2, Vector2> snap(Snaps snap, const Vector2& targetOffset,
         targetPadding,
         margin);
     const Vector2 targetMaxPaddedMin = targetOffset - Math::lerp(
-        Math::lerp(maxMargin.xy(),
-                  -maxPadding.xy(), snapInside),
+        Math::lerp(Math::gather<0, 1>(maxMargin),
+                  -Math::gather<0, 1>(maxPadding), snapInside),
         {},
         ignoreSpace);
     const Vector2 targetMaxPaddedMax = targetOffset + targetSize + Math::lerp(
-        Math::lerp(Math::gather<'z', 'w'>(maxMargin),
-                  -Math::gather<'z', 'w'>(maxPadding), snapInside),
+        Math::lerp(Math::gather<2, 3>(maxMargin),
+                  -Math::gather<2, 3>(maxPadding), snapInside),
         {},
         ignoreSpace);
 
@@ -104,13 +104,13 @@ Containers::Pair<Vector2, Vector2> snap(Snaps snap, const Vector2& targetOffset,
        centering with no clear reason why, especially if there's enough room on
        either side to fit.*/
     const Vector2 targetPaddedMin = targetOffset - Math::lerp(
-        Math::lerp(maxMargin.xy(),
-                  -targetPadding.xy(), snapInside),
+        Math::lerp(Math::gather<0, 1>(maxMargin),
+                  -Math::gather<0, 1>(targetPadding), snapInside),
         {},
         ignoreSpace);
     const Vector2 targetPaddedMax = targetOffset + targetSize + Math::lerp(
-        Math::lerp(Math::gather<'z', 'w'>(maxMargin),
-                  -Math::gather<'z', 'w'>(targetPadding), snapInside),
+        Math::lerp(Math::gather<2, 3>(maxMargin),
+                  -Math::gather<2, 3>(targetPadding), snapInside),
         {},
         ignoreSpace);
 
