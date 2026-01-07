@@ -27,6 +27,7 @@
 */
 
 #include <Corrade/Containers/StridedBitArrayView.h>
+#include <Corrade/Containers/Triple.h>
 #include <Magnum/Math/Functions.h>
 #include <Magnum/Math/Swizzle.h>
 #include <Magnum/Math/Vector4.h>
@@ -308,28 +309,30 @@ Containers::Pair<Vector2, Vector4> childLayoutSizeMargin(const Snaps childSnap, 
     return {outSize, outMargin};
 }
 
-/* Calculates the actual layout size and padding from the layout and node
-   properties and output from the childLayoutSizeMargin() above. Is a separate
-   function because that makes it easier to test, and childLayoutSizeMargin()
-   doesn't need to be called at all if flags contain IgnoreOverflow. */
-Containers::Pair<Vector2, Vector4> layoutSizePadding(const SnapLayoutFlags flags, const Snaps childSnap, const Vector2& nodeSize, const Vector4& nodePadding, const Vector2& childLayoutSize, const Vector4& childLayoutMargin) {
+/* Calculates the actual layout size, padding and margin from the layout and
+   node properties and output from the childLayoutSizeMargin() above. Is a
+   separate function because that makes it easier to test, and
+   childLayoutSizeMargin() doesn't need to be called at all if flags contain
+   IgnoreOverflow. */
+Containers::Triple<Vector2, Vector4, Vector4> layoutSizePaddingMargin(const SnapLayoutFlags flags, const Snaps childSnap, const Vector2& nodeSize, const Vector4& nodePadding, const Vector4& nodeMargin, const Vector2& childLayoutSize, const Vector4& childLayoutMargin) {
     /* Calculate actual layout padding:
         - It's zero on given side if padding is ignored in matching direction
         - It's same as node padding in given direction if child layout overflow
-          is ignored in that direction
+          is ignored in that direction, or if the child layout margin is
+          propagated outside
         - Otherwise it's the max of node padding and child layout margin in
           given direction */
     Vector4 layoutPadding{NoInit};
     Math::scatterInto<0, 2>(layoutPadding, childSnap >= Snap::NoPadX ?
         Vector2{} : Math::max(
             Math::gather<0, 2>(nodePadding),
-            flags >= SnapLayoutFlag::IgnoreOverflowX ?
+            flags & (SnapLayoutFlag::IgnoreOverflowX|SnapLayoutFlag::PropagateMarginX) ?
                 Vector2{} :
                 Math::gather<0, 2>(childLayoutMargin)));
     Math::scatterInto<1, 3>(layoutPadding, childSnap >= Snap::NoPadY ?
         Vector2{} : Math::max(
             Math::gather<1, 3>(nodePadding),
-            flags >= SnapLayoutFlag::IgnoreOverflowY ?
+            flags & (SnapLayoutFlag::IgnoreOverflowY|SnapLayoutFlag::PropagateMarginY) ?
                 Vector2{} :
                 Math::gather<1, 3>(childLayoutMargin)));
 
@@ -350,7 +353,155 @@ Containers::Pair<Vector2, Vector4> layoutSizePadding(const SnapLayoutFlags flags
             nodeSize.y() : Math::max(nodeSize.y(), minLayoutSize.y())
     };
 
-    return {layoutSize, layoutPadding};
+    /* Calculate actual layout margin. Initially it's the node margin. If
+       propagating child layout margin, it has to take into account the extra
+       available space between the parent layout padding and child layout. The
+       diagrams below show parent and child layouts, parent layout padding
+       denoted with # and child layout margin denoted with @, and the extra
+       available space marked with ^^ arrows.
+
+              +---------------+     When centering (i.e., Snaps{}), the child
+              |              #|     layout is placed with the extra available
+          @@@@@@@+--------+@@@@@    space divided in half between left and
+          @   |  | Center |  #|@    right side, which is thus additionally
+          @   |  |        |  #|@    subtracted from the child margins, along
+               ^^          ^^       with parent padding.
+
+              +---------------+     With left align, the left-side margin is
+              |              #|     overflows outside in full, and the whole
+        @@@@@@@+--------+@@@@@|     extra available space is subtracted from
+        @     ||  Left  |    @|     the right-side margin. In this particular
+        @     ||        |    @|     diagram the right-side child margin ends up
+                         ^^^^       not overflowing the parent at all.
+
+              +---------------+     With right align it's the opposite of
+              |              #|     above, the right-side margin overflows
+            @@@@@@@+--------+@@@@@  outside in full (again with parent padding
+            @ |    | Right  |#|  @  subtracted), and the whole extra available
+            @ |    |        |#|  @  space is subtracted from the left-side
+               ^^^^                 margin.
+
+              +---------------+     When filling, the child layout fills the
+              |              #|     whole parent layout so there's no extra
+        @@@@@@@+------------+@@@@@  available space to subtract from anywhere.
+        @     ||    Fill    |#|  @  Both margins thus overflow outside in full,
+        @     ||            |#|  @  with parent padding subtracted.
+
+       The vertical case is equivalent, just with Top/Bottom instead of
+       Left/Right. */
+    Vector4 layoutMargin = nodeMargin;
+    if((flags & SnapLayoutFlag::PropagateMargin) && !(childSnap >= Snap::NoPad)) {
+        const Snaps snapNoNoPad = childSnap & ~Snap::NoPad;
+        /* Horizontal margin propagation. If we're ignoring all horizontal
+           padding, there's nothing left to do, and the parent node horizontal
+           margin stays unchanged. */
+        if(flags >= SnapLayoutFlag::PropagateMarginX && !(childSnap >= Snap::NoPadX)) {
+            /* The extra available width is between the final layout width
+               excluding the parent node horizontal padding and the child
+               layout size. It cannot become negative because the layout size
+               is always at least as large as what the child layout needs. */
+            const Float extraAvailableWidth = layoutSize.x() - childLayoutSize.x() -
+            nodePadding[0] - nodePadding[2];
+            CORRADE_INTERNAL_DEBUG_ASSERT(extraAvailableWidth >= 0.0f);
+
+            /* Margin overflow is the horizontal child layout margin with
+               parent node horizontal padding subtracted. It's fine if it
+               becomes negative. */
+            Vector2 horizontalMarginOverflow = Math::gather<0, 2>(childLayoutMargin) - Math::gather<0, 2>(nodePadding);
+
+            /* Further subtract the extra available space from the overflow,
+               according to the diagrams above. Again this can make the
+               overflow negative but that's fine. */
+
+            /* Vertical centered snapping. The InsideX, if specified, is
+               redundant. */
+            if((snapNoNoPad|Snap::InsideX) == (Snap::Bottom|Snap::InsideX) ||
+               (snapNoNoPad|Snap::InsideX) == (Snap::Top|Snap::InsideX))
+                horizontalMarginOverflow -= Vector2{extraAvailableWidth*0.5f};
+            /* Vertical snapping to the left or horizontal snapping starting
+               from the left */
+            else if(snapNoNoPad == (Snap::BottomLeft|Snap::InsideX) ||
+                    snapNoNoPad == (Snap::TopLeft|Snap::InsideX) ||
+                    /* Here InsideY is redundant if specified, and FillY is
+                       treated the same as w/o */
+                    (snapNoNoPad|Snap::FillY|Snap::InsideY) == (Snap::Right|Snap::FillY|Snap::InsideY) ||
+                    snapNoNoPad == (Snap::TopRight|Snap::InsideY) ||
+                    snapNoNoPad == (Snap::BottomRight|Snap::InsideY))
+                horizontalMarginOverflow[1] -= extraAvailableWidth;
+            /* Vertical snapping to the right or horizontal snapping starting
+               from the right */
+            else if(snapNoNoPad == (Snap::BottomRight|Snap::InsideX) ||
+                    snapNoNoPad == (Snap::TopRight|Snap::InsideX) ||
+                    /* Here InsideY is redundant if specified, and FillY is
+                       treated the same as w/o */
+                    (snapNoNoPad|Snap::FillY|Snap::InsideY) == (Snap::Left|Snap::FillY|Snap::InsideY) ||
+                    snapNoNoPad == (Snap::TopLeft|Snap::InsideY) ||
+                    snapNoNoPad == (Snap::BottomLeft|Snap::InsideY))
+                horizontalMarginOverflow[0] -= extraAvailableWidth;
+            /* Vertical filled snapping doesn't need any further adjustment.
+               The InsideX, if specified, is redundant. */
+            else if((snapNoNoPad|Snap::InsideX) != (Snap::Top|Snap::FillX|Snap::InsideX) &&
+                    (snapNoNoPad|Snap::InsideX) != (Snap::Bottom|Snap::FillX|Snap::InsideX))
+                CORRADE_INTERNAL_DEBUG_ASSERT_UNREACHABLE(); /* LCOV_EXCL_LINE */
+
+            /* The final margin is the maximum of node margin and the
+               overflow. Assuming the node margin is always at least 0, this
+               handles the case where the overflow would be negative. */
+            Math::scatterInto<0, 2>(layoutMargin, Math::max(
+                Math::gather<0, 2>(layoutMargin),
+                horizontalMarginOverflow));
+        }
+
+        /* Vertical margin propagation, equivalent to above */
+        if(flags >= SnapLayoutFlag::PropagateMarginY && !(childSnap >= Snap::NoPadY)) {
+            const Float extraAvailableHeight = layoutSize.y() - childLayoutSize.y() -
+            nodePadding[1] - nodePadding[3];
+            CORRADE_INTERNAL_DEBUG_ASSERT(extraAvailableHeight >= 0.0f);
+
+            Vector2 verticalMarginOverflow = Math::gather<1, 3>(childLayoutMargin) - Math::gather<1, 3>(nodePadding);
+
+            /* Horizontal centered snapping. The InsideY, if specified, is
+               redundant. */
+            if((snapNoNoPad|Snap::InsideY) == (Snap::Left|Snap::InsideY) ||
+               (snapNoNoPad|Snap::InsideY) == (Snap::Right|Snap::InsideY))
+                verticalMarginOverflow -= Vector2{extraAvailableHeight*0.5f};
+            /* Horizontal snapping to the top or vertical snapping starting
+               from the top */
+            else if(snapNoNoPad == (Snap::TopLeft|Snap::InsideY) ||
+                    snapNoNoPad == (Snap::TopRight|Snap::InsideY) ||
+                    /* Here InsideX is redundant if specified, and FillX is
+                       treated the same as w/o */
+                    (snapNoNoPad|Snap::FillX|Snap::InsideX) == (Snap::Bottom|Snap::FillX|Snap::InsideX) ||
+                    snapNoNoPad == (Snap::BottomLeft|Snap::InsideX) ||
+                    snapNoNoPad == (Snap::BottomRight|Snap::InsideX))
+                verticalMarginOverflow[1] -= extraAvailableHeight;
+            /* Horizontal snapping to the bottom or vertical snapping starting
+               from the bottom */
+            else if(snapNoNoPad == (Snap::BottomLeft|Snap::InsideY) ||
+                    snapNoNoPad == (Snap::BottomRight|Snap::InsideY) ||
+                    /* Here InsideX is redundant if specified, and FillX is
+                       treated the same as w/o */
+                    (snapNoNoPad|Snap::FillX|Snap::InsideX) == (Snap::Top|Snap::FillX|Snap::InsideX) ||
+                    snapNoNoPad == (Snap::TopLeft|Snap::InsideX) ||
+                    snapNoNoPad == (Snap::TopRight|Snap::InsideX))
+                verticalMarginOverflow[0] -= extraAvailableHeight;
+            /* Horizontal filled snapping doesn't need any further adjustment.
+               The InsideY, if specified, is redundant. */
+            else if((snapNoNoPad|Snap::InsideY) != (Snap::Left|Snap::FillY|Snap::InsideY) &&
+                    (snapNoNoPad|Snap::InsideY) != (Snap::Right|Snap::FillY|Snap::InsideY))
+                CORRADE_INTERNAL_DEBUG_ASSERT_UNREACHABLE(); /* LCOV_EXCL_LINE */
+
+            Math::scatterInto<1, 3>(layoutMargin, Math::max(
+                Math::gather<1, 3>(layoutMargin),
+                verticalMarginOverflow));
+        }
+
+        /* Just a sanity check that a negative overflow really didn't cause the
+           parent node margin to shrink */
+        CORRADE_INTERNAL_DEBUG_ASSERT((layoutMargin >= nodeMargin).all());
+    }
+
+    return {layoutSize, layoutPadding, layoutMargin};
 }
 
 /* Used by SnapLayouter::setChildSnapInternal() but also tests that verify

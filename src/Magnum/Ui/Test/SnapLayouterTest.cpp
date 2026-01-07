@@ -58,7 +58,8 @@ struct SnapLayouterTest: TestSuite::Tester {
     void snapInside();
     void snap();
 
-    void layoutSizePadding();
+    void layoutSizePaddingMargin();
+    void layoutSizePaddingMarginPropagate();
 
     /* The result is fed into layoutSizePadding() and snap(), so this
        subsequently tests that these two do what's expected */
@@ -393,7 +394,7 @@ const struct {
     Vector4 childLayoutMargin;
     Vector2 expectedLayoutSize;
     Vector4 expectedLayoutPadding;
-} LayoutSizePaddingData[]{
+} LayoutSizePaddingMarginData[]{
     {"no padding or margin, node size only", {}, {},
         {30.0f, 20.0f}, {},
         {}, {},
@@ -547,6 +548,261 @@ const struct {
         {29.0f, 20.0f}, {0.0f, 2.0f, 2.0f, 4.0f},
         {26.0f, 40.0f}, {1.0f, 8.0f, 3.0f, 6.0f},
         {30.0f, 20.0f}, {1.0f, 0.0f, 3.0f, 0.0f}},
+};
+
+const struct {
+    TestSuite::TestCaseDescriptionSourceLocation name;
+    SnapLayoutFlags flags[2];
+    Snaps snaps[4];
+    Vector2 nodeSize;
+    Vector4 nodeMargin;
+    /* +----------------------+
+       |          2           |
+       |          5           |
+       |     +----------+     |     Parent node padding, child layout margin
+       | 3 7 | {10, 16} | 3 1 |     and child layout size
+       |     +----------+     |
+       |          9           |
+       |          4           |
+       +----------------------+ */
+    Vector2 expectedLayoutSize;
+    Vector4 expectedLayoutPadding, expectedLayoutMargin;
+} LayoutSizePaddingMarginPropagateData[]{
+    {"propagate both directions, node padding smaller than child margin, no node margin, center",
+        {SnapLayoutFlag::PropagateMargin,
+         SnapLayoutFlag::PropagateMargin},
+        {Snap::Right,
+         Snap::Bottom,
+         Snap::Left,
+         Snap::Top},
+        /* The left-side margin is fully propagated outside, the centering has
+           extra space of 4 on each side, which causes the top margin to
+           underflow by 1, bottom to overflow by 1. Right-side margin fits
+           exactly without overflow. */
+        {16.0f, 30.0f}, {},
+        {16.0f, 30.0f}, {3.0f, 2.0f, 1.0f, 4.0f}, {4.0f, 0.0f, 0.0f, 1.0f}},
+    /* Should be exactly the same as above */
+    {"propagate both directions, node padding smaller than child margin, no node margin, center, redundant Inside",
+        {SnapLayoutFlag::PropagateMargin,
+         SnapLayoutFlag::PropagateMargin},
+        {Snap::Right|Snap::InsideY,
+         Snap::Bottom|Snap::InsideX,
+         Snap::Left|Snap::InsideY,
+         Snap::Top|Snap::InsideX},
+        {16.0f, 30.0f}, {},
+        {16.0f, 30.0f}, {3.0f, 2.0f, 1.0f, 4.0f}, {4.0f, 0.0f, 0.0f, 1.0f}},
+    {"propagate both directions, node padding smaller than child margin, no node margin, center, no pad",
+        {SnapLayoutFlag::PropagateMargin,
+         SnapLayoutFlag::PropagateMargin},
+        {Snap::Right|Snap::NoPad,
+         Snap::Bottom|Snap::NoPad,
+         Snap::Left|Snap::NoPad,
+         Snap::Top|Snap::NoPad},
+        {16.0f, 30.0f}, {},
+        {16.0f, 30.0f}, {}, {}},
+    {"propagate both directions, node padding smaller than child margin, no node margin, center, no pad forward",
+        {SnapLayoutFlag::PropagateMargin,
+         SnapLayoutFlag::PropagateMargin},
+        {Snap::Right|Snap::NoPadX,
+         Snap::Bottom|Snap::NoPadY,
+         Snap::Left|Snap::NoPadX,
+         Snap::Top|Snap::NoPadY},
+        {16.0f, 30.0f}, {},
+        {16.0f, 30.0f}, {0.0f, 2.0f, 0.0f, 4.0f}, {0.0f, 0.0f, 0.0f, 1.0f}},
+    {"propagate both directions, node padding smaller than child margin, no node margin, center, no pad side",
+        {SnapLayoutFlag::PropagateMargin,
+         SnapLayoutFlag::PropagateMargin},
+        {Snap::Right|Snap::NoPadY,
+         Snap::Bottom|Snap::NoPadX,
+         Snap::Left|Snap::NoPadY,
+         Snap::Top|Snap::NoPadX},
+        {16.0f, 30.0f}, {},
+        {16.0f, 30.0f}, {3.0f, 0.0f, 1.0f, 0.0f}, {4.0f, 0.0f, 0.0f, 0.0f}},
+    {"propagate forward direction, node padding smaller than child margin, no node margin, center",
+        {SnapLayoutFlag::PropagateMarginX,
+         SnapLayoutFlag::PropagateMarginY},
+        {Snap::Right,
+         Snap::Bottom,
+         Snap::Left,
+         Snap::Top},
+        /* Left and right same as above, vertically the margin fits exactly
+           and thus affects inner padding instead of outer margin */
+        {16.0f, 30.0f}, {},
+        {16.0f, 30.0f}, {3.0f, 5.0f, 1.0f, 9.0f}, {4.0f, 0.0f, 0.0f, 0.0f}},
+    {"propagate side direction, node padding smaller than child margin, no node margin, center",
+        {SnapLayoutFlag::PropagateMarginY,
+         SnapLayoutFlag::PropagateMarginX},
+        {Snap::Right,
+         Snap::Bottom,
+         Snap::Left,
+         Snap::Top},
+        /* Top and bottom same as above, horizontally the margin doesn't fit
+           and thus affects inner padding and enlarges the width instead of
+           overflowing into outer margin */
+        {20.0f, 30.0f}, {},
+        {20.0f, 30.0f}, {7.0f, 2.0f, 3.0f, 4.0f}, {0.0f, 0.0f, 0.0f, 1.0f}},
+
+    {"propagate both directions, node padding smaller than child margin, no node margin, one side",
+        {SnapLayoutFlag::PropagateMargin,
+         SnapLayoutFlag::PropagateMargin},
+        {Snap::Right|Snap::Top|Snap::InsideY,
+         Snap::Bottom|Snap::Right|Snap::InsideX,
+         Snap::Left|Snap::Bottom|Snap::InsideY,
+         Snap::Top|Snap::Left|Snap::InsideX},
+        /* The left-side and top-side margin is fully propagated outside,
+           there's extra space of 7 on the other side, which causes the bottom
+           margin to overflow by 2. Right-side margin overflows by 1. */
+        {15.0f, 25.0f}, {},
+        {15.0f, 25.0f}, {3.0f, 2.0f, 1.0f, 4.0f}, {4.0f, 3.0f, 1.0f, 2.0f}},
+    {"propagate forward direction, node padding smaller than child margin, no node margin, one side",
+        {SnapLayoutFlag::PropagateMarginX,
+         SnapLayoutFlag::PropagateMarginY},
+        {Snap::Right|Snap::Top|Snap::InsideY,
+         Snap::Bottom|Snap::Right|Snap::InsideX,
+         Snap::Left|Snap::Bottom|Snap::InsideY,
+         Snap::Top|Snap::Left|Snap::InsideX},
+        {15.0f, 25.0f}, {},
+        /* Left and right same as above, vertically the margin doesn't fit and
+           thus affects inner padding and enlarges the height instead of
+           overflowing into outer margin */
+        {15.0f, 30.0f}, {3.0f, 5.0f, 1.0f, 9.0f}, {4.0f, 0.0f, 1.0f, 0.0f}},
+    /* No point in verifying forward direction not propagated, as that's the
+       same output as with the center variant above. Similarly not verifying
+       the NoPad cases, as they should have been sufficiently tested with the
+       center variant. */
+
+    {"propagate both directions, node padding smaller than child margin, no node margin, other side",
+        {SnapLayoutFlag::PropagateMargin,
+         SnapLayoutFlag::PropagateMargin},
+        {Snap::Right|Snap::Bottom|Snap::InsideY,
+         Snap::Bottom|Snap::Left|Snap::InsideX,
+         Snap::Left|Snap::Top|Snap::InsideY,
+         Snap::Top|Snap::Right|Snap::InsideX},
+        /* The left-side and bottom-side margin is fully propagated outside,
+           there's extra space of 2 on the other side, which causes the top
+           margin to overflow by 3. Right-side margin underflows by 1. */
+        {17.0f, 22.0f}, {},
+        {17.0f, 22.0f}, {3.0f, 2.0f, 1.0f, 4.0f}, {4.0f, 3.0f, 0.0f, 5.0f}},
+    {"propagate forward direction, node padding smaller than child margin, no node margin, other side",
+        {SnapLayoutFlag::PropagateMarginX,
+         SnapLayoutFlag::PropagateMarginY},
+        {Snap::Right|Snap::Bottom|Snap::InsideY,
+         Snap::Bottom|Snap::Left|Snap::InsideX,
+         Snap::Left|Snap::Top|Snap::InsideY,
+         Snap::Top|Snap::Right|Snap::InsideX},
+        {17.0f, 22.0f}, {},
+        /* Left and right same as above, vertically the same as with the other
+           side above */
+        {17.0f, 30.0f}, {3.0f, 5.0f, 1.0f, 9.0f}, {4.0f, 0.0f, 0.0f, 0.0f}},
+    /* No point in verifying forward direction not propagated, as that's the
+       same output as with the center variant above. Similarly not verifying
+       the NoPad cases, as they should have been sufficiently tested with the
+       center variant. */
+
+    {"propagate both directions, node padding smaller than child margin, no node margin, fill",
+        {SnapLayoutFlag::PropagateMargin,
+         SnapLayoutFlag::PropagateMargin},
+        {Snap::Right|Snap::FillY,
+         Snap::Bottom|Snap::FillX,
+         Snap::Left|Snap::FillY,
+         Snap::Top|Snap::FillX},
+        /* All margins except the right-side one are fully propagated outside,
+           right-side margin overflows by 2. */
+        {14.0f, 30.0f}, {},
+        {14.0f, 30.0f}, {3.0f, 2.0f, 1.0f, 4.0f}, {4.0f, 3.0f, 2.0f, 5.0f}},
+    /* Should be exactly the same as above */
+    {"propagate both directions, node padding smaller than child margin, no node margin, fill, redundant Inside",
+        {SnapLayoutFlag::PropagateMargin,
+         SnapLayoutFlag::PropagateMargin},
+        {Snap::Right|Snap::FillY|Snap::InsideY,
+         Snap::Bottom|Snap::FillX|Snap::InsideX,
+         Snap::Left|Snap::FillY|Snap::InsideY,
+         Snap::Top|Snap::FillX|Snap::InsideX},
+        {14.0f, 30.0f}, {},
+        {14.0f, 30.0f}, {3.0f, 2.0f, 1.0f, 4.0f}, {4.0f, 3.0f, 2.0f, 5.0f}},
+    {"propagate forward direction, node padding smaller than child margin, no node margin, fill",
+        {SnapLayoutFlag::PropagateMarginX,
+         SnapLayoutFlag::PropagateMarginY},
+        {Snap::Right|Snap::FillY,
+         Snap::Bottom|Snap::FillX,
+         Snap::Left|Snap::FillY,
+         Snap::Top|Snap::FillX},
+        /* Left and right same as above, vertically the margin affects inner
+           padding instead of overflowing into outer margin */
+        {14.0f, 30.0f}, {},
+        {14.0f, 30.0f}, {3.0f, 5.0f, 1.0f, 9.0f}, {4.0f, 0.0f, 2.0f, 0.0f}},
+    /* No point in verifying forward direction not propagated, as that's the
+       same output as with the center variant above. Similarly not verifying
+       the NoPad cases, as they should have been sufficiently tested with the
+       center variant. */
+
+    {"propagate both directions, node size zero forward, large side, no node margin",
+        {SnapLayoutFlag::PropagateMargin,
+         SnapLayoutFlag::PropagateMargin},
+        {Snap::Right,
+         Snap::Bottom,
+         Snap::Left,
+         Snap::Top},
+        {0.0f, 100.0f}, {},
+        {14.0f, 100.0f}, {3.0f, 2.0f, 1.0f, 4.0f}, {4.0f, 0.0f, 2.0f, 0.0f}},
+    {"propagate both directions, node size large forward, zero side, no node margin",
+        {SnapLayoutFlag::PropagateMargin,
+         SnapLayoutFlag::PropagateMargin},
+        {Snap::Right,
+         Snap::Bottom,
+         Snap::Left,
+         Snap::Top},
+        {100.0f, 0.0f}, {},
+        /* The margin before is propagated always, even with enough width */
+        {100.0f, 22.0f}, {3.0f, 2.0f, 1.0f, 4.0f}, {4.0f, 3.0f, 0.0f, 5.0f}},
+
+    {"propagate both directions, zero node size, node margin, variant 1",
+        {SnapLayoutFlag::PropagateMargin,
+         SnapLayoutFlag::PropagateMargin},
+        {Snap::Right,
+         Snap::Bottom,
+         Snap::Left,
+         Snap::Top},
+        {}, {2.0f, 7.0f, 3.0f, 3.0f},
+        /* Margin overflow is {4, 3, 2, 5}, so a bigger value gets picked on
+           top and right */
+        {14.0f, 22.0f}, {3.0f, 2.0f, 1.0f, 4.0f}, {4.0f, 7.0f, 3.0f, 5.0f}},
+    {"propagate both directions, zero node size, node margin, variant 2",
+        {SnapLayoutFlag::PropagateMargin,
+         SnapLayoutFlag::PropagateMargin},
+        {Snap::Right,
+         Snap::Bottom,
+         Snap::Left,
+         Snap::Top},
+        {}, {5.0f, 2.0f, 1.0f, 7.0f},
+        /* Margin overflow is {4, 3, 2, 5}, so a bigger value gets picked on
+           left and bottom */
+        {14.0f, 22.0f}, {3.0f, 2.0f, 1.0f, 4.0f}, {5.0f, 3.0f, 2.0f, 7.0f}},
+
+    {"propagate both directions, zero node size, node margin all smaller, no pad forward",
+        {SnapLayoutFlag::PropagateMargin,
+         SnapLayoutFlag::PropagateMargin},
+        {Snap::Right|Snap::NoPadX,
+         Snap::Bottom|Snap::NoPadY,
+         Snap::Left|Snap::NoPadX,
+         Snap::Top|Snap::NoPadY},
+        {}, {2.0f, 2.0f, 1.0f, 3.0f},
+        /* Margin overflow is {4, 3, 2, 5}, but gets picked only on top and
+           bottom. The parent node margin is used unchanged otherwise. Only the
+           inner padding and size is affected by NoPad, margin isn't zeroed. */
+        {10.0f, 22.0f}, {0.0f, 2.0f, 0.0f, 4.0f}, {2.0f, 3.0f, 1.0f, 5.0f}},
+    {"propagate both directions, zero node size, node margin all smaller, no pad side",
+        {SnapLayoutFlag::PropagateMargin,
+         SnapLayoutFlag::PropagateMargin},
+        {Snap::Right|Snap::NoPadY,
+         Snap::Bottom|Snap::NoPadX,
+         Snap::Left|Snap::NoPadY,
+         Snap::Top|Snap::NoPadX},
+        {}, {2.0f, 2.0f, 1.0f, 3.0f},
+        /* Margin overflow is {4, 3, 2, 5}, but gets picked only on left and
+           right. The parent node margin is used unchanged otherwise. Only the
+           inner padding and size is affected by NoPad, margin isn't zeroed. */
+        {14.0f, 16.0f}, {3.0f, 0.0f, 1.0f, 0.0f}, {4.0f, 2.0f, 2.0f, 3.0f}},
 };
 
 const struct {
@@ -1009,151 +1265,208 @@ const struct {
     const char* name;
     Vector2 outerSize;
     SnapLayoutFlags outerFlags;
-    Float innerWidth;
+    Vector2 innerSize;
     SnapLayoutFlags innerFlags;
+    bool innerReverseDirection;
     Float centerHeight;
     SnapLayoutFlags centerFlags;
     bool explicitlySnappedNodes;
     Vector2 expectedOuterSize;
     Float expectedInnerOffsetX;
-    Float expectedInnerWidth, expectedInnerCenterY;
+    Vector2 expectedInnerSize;
+    Float expectedInnerCenterY;
     Float expectedCenterHeight, expectedCenterOffsetY, expectedCenterLeftEdge;
 } UpdatePropagateChildSizesData[]{
     {"with no explicitly snapped nodes",
         {}, {},
-        0.0f, {},
+        {0.0f, 40.0f}, {}, false,
         0.0f, {}, false,
         {50.0f, 50.0f}, 0.0f,
-        50.0f, 0.0f,
+        {50.0f, 40.0f}, 0.0f,
         25.0f, 5.0f, 5.0f},
     {"",
         {}, {},
-        0.0f, {},
+        {0.0f, 40.0f}, {}, false,
         0.0f, {}, true,
         {50.0f, 50.0f}, 0.0f,
-        50.0f, 0.0f,
+        {50.0f, 40.0f}, 0.0f,
         25.0f, 5.0f, 5.0f},
     {"exactly outer size, ignored overflow",
         {50.0f, 50.0f}, SnapLayoutFlag::IgnoreOverflow,
-        0.0f, {},
+        {0.0f, 40.0f}, {}, false,
         0.0f, {}, true,
         /* Same as above */
         {50.0f, 50.0f}, 0.0f,
-        50.0f, 0.0f,
+        {50.0f, 40.0f}, 0.0f,
         25.0f, 5.0f, 5.0f},
     {"small outer size, ignored overflow",
         {30.0f, 30.0f}, SnapLayoutFlag::IgnoreOverflow,
-        0.0f, {},
+        {0.0f, 40.0f}, {}, false,
         0.0f, {}, true,
         /* Negative inner X offset because it overflows */
         {30.0f, 30.0f}, -10.0f,
-        50.0f, 0.0f,
+        {50.0f, 40.0f}, 0.0f,
         25.0f, 5.0f, 5.0f},
     {"small outer size, ignored X overflow",
         {30.0f, 30.0f}, SnapLayoutFlag::IgnoreOverflowX,
-        0.0f, {},
+        {0.0f, 40.0f}, {}, false,
         0.0f, {}, true,
         /* Negative inner X offset because it overflows, Y size is enlarged */
         {30.0f, 50.0f}, -10.0f,
-        50.0f, 0.0f,
+        {50.0f, 40.0f}, 0.0f,
         25.0f, 5.0f, 5.0f},
     {"small outer size, ignored Y overflow",
         {30.0f, 30.0f}, SnapLayoutFlag::IgnoreOverflowY,
-        0.0f, {},
+        {0.0f, 40.0f}, {}, false,
         0.0f, {}, true,
         /* Only X size is enlarged */
         {50.0f, 30.0f}, 0.0f,
-        50.0f, 0.0f,
+        {50.0f, 40.0f}, 0.0f,
         25.0f, 5.0f, 5.0f},
     {"large outer size",
         {100.0f, 100.0f}, {},
-        0.0f, {},
+        {0.0f, 40.0f}, {}, false,
         0.0f, {}, true,
         {100.0f, 100.0f}, 25.0f,
-        50.0f, 0.0f,
+        {50.0f, 40.0f}, 0.0f,
         25.0f, 5.0f, 5.0f},
     {"large outer size, ignored overflow",
         {100.0f, 100.0f}, SnapLayoutFlag::IgnoreOverflow,
-        0.0f, {},
+        {0.0f, 40.0f}, {}, false,
         0.0f, {}, true,
         /* Same as above */
         {100.0f, 100.0f}, 25.0f,
-        50.0f, 0.0f,
+        {50.0f, 40.0f}, 0.0f,
         25.0f, 5.0f, 5.0f},
     {"exact inner width, ignored X overflow",
         {}, {},
-        50.0f, SnapLayoutFlag::IgnoreOverflowX,
+        {50.0f, 40.0f}, SnapLayoutFlag::IgnoreOverflowX, false,
         0.0f, {}, true,
         {50.0f, 50.0f}, 0.0f,
-        50.0f, 0.0f,
+        {50.0f, 40.0f}, 0.0f,
         25.0f, 5.0f, 5.0f},
     {"small inner width, ignored X overflow",
         {}, {},
-        30.0f, SnapLayoutFlag::IgnoreOverflowX,
+        {30.0f, 40.0f}, SnapLayoutFlag::IgnoreOverflowX, false,
         0.0f, {}, true,
         /* The outer also becomes smaller because there's nothing to tell it
            that it should get larger */
         {30.0f, 50.0f}, 0.0f,
-        30.0f, 0.0f,
+        {30.0f, 40.0f}, 0.0f,
         25.0f, 5.0f, 5.0f},
     {"large inner width",
         {}, {},
-        100.0f, {},
+        {100.0f, 40.0f}, {}, false,
         0.0f, {}, true,
         /* Enlarges the outer node */
         {100.0f, 50.0f}, 0.0f,
-        100.0f, 0.0f,
+        {100.0f, 40.0f}, 0.0f,
         25.0f, 5.0f, 5.0f},
     {"large inner width, ignored X overflow",
         {}, {},
-        100.0f, SnapLayoutFlag::IgnoreOverflowX,
+        {100.0f, 40.0f}, SnapLayoutFlag::IgnoreOverflowX, false,
         0.0f, {}, true,
         /* Enlarges the outer node in this case as well, the Ignore is only
            taken into account for children */
         {100.0f, 50.0f}, 0.0f,
-        100.0f, 0.0f,
+        {100.0f, 40.0f}, 0.0f,
         25.0f, 5.0f, 5.0f},
     {"inner with ignored Y overflow",
         {}, {},
-        0.0f, SnapLayoutFlag::IgnoreOverflowY,
+        {0.0f, 40.0f}, SnapLayoutFlag::IgnoreOverflowY, false,
         0.0f, {}, true,
         {50.0f, 50.0f}, 0.0f,
         /* Inner contents are not aligned with the `right` padding taken into
            account, shifted down by 2.5 units */
-        50.0f, 2.5f,
+        {50.0f, 40.0f}, 2.5f,
         25.0f, 5.0f, 5.0f},
     {"exact center height, ignored Y overflow",
         {}, {},
-        0.0f, {},
+        {0.0f, 40.0f}, {}, false,
         25.0f, SnapLayoutFlag::IgnoreOverflowY, true,
         {50.0f, 50.0f}, 0.0f,
-        50.0f, 0.0f,
+        {50.0f, 40.0f}, 0.0f,
         25.0f, 5.0f, 5.0f},
     {"small center height, ignored Y overflow",
         {}, {},
-        0.0f, {},
+        {0.0f, 40.0f}, {}, false,
         15.0f, SnapLayoutFlag::IgnoreOverflowY, true,
         {50.0f, 50.0f}, 0.0f,
-        50.0f, 0.0f,
+        {50.0f, 40.0f}, 0.0f,
         /* Center gets aligned according to its original size */
         15.0f, 10.0f, 5.0f},
     {"large center height, ignored Y overflow",
         {}, {},
-        0.0f, {},
+        {0.0f, 40.0f}, {}, false,
         35.0f, SnapLayoutFlag::IgnoreOverflowY, true,
         {50.0f, 50.0f}, 0.0f,
-        50.0f, 0.0f,
+        {50.0f, 40.0f}, 0.0f,
         /* Center gets aligned according to its original size */
         35.0f, 0.0f, 5.0f},
     {"center with ignored X overflow",
         {}, {},
-        0.0f, {},
+        {0.0f, 40.0f}, {}, false,
         0.0f, SnapLayoutFlag::IgnoreOverflowX, true,
         {50.0f, 50.0f}, 0.0f,
-        50.0f, 0.0f,
+        {50.0f, 40.0f}, 0.0f,
         /* Center contents are not aligned with the `bottom` padding taken into
            account, shifted left by 5 units */
         25.0f, 5.0f, 0.0f},
+
+    {"inner with X margin propagated",
+        {}, {},
+        {0.0f, 40.0f}, SnapLayoutFlag::PropagateMarginX, false,
+        0.0f, {}, true,
+        {50.0f, 50.0f}, 0.0f,
+        /* The inner width is without the right-side margin, other than that
+           nothing changes */
+        {45.0f, 40.0f}, 0.0f,
+        25.0f, 5.0f, 5.0f},
+    {"inner with X margin propagated, reverse layout direction",
+        {}, {},
+        {0.0f, 40.0f}, SnapLayoutFlag::PropagateMarginX, true,
+        0.0f, {}, true,
+        /* Same as above, the right node (which is snapped to the parent)
+           should be placed without horizontal margin applied */
+        {50.0f, 50.0f}, 0.0f,
+        {45.0f, 40.0f}, 0.0f,
+        25.0f, 5.0f, 5.0f},
+    {"inner with zero Y size and Y margin propagated",
+        {}, {},
+        {}, SnapLayoutFlag::PropagateMarginY, false,
+        0.0f, {}, true,
+        /* The outer Y padding cancels out with the margin propagated from the
+           inner, so the height is smaller */
+        {50.0f, 40.0f}, 0.0f,
+        /* The inner height matches the center height */
+        {50.0f, 25.0f}, -5.0f,
+        25.0f, 5.0f, 5.0f},
+    {"inner with zero Y size and Y margin propagated, reverse layout direction",
+        {}, {},
+        {}, SnapLayoutFlag::PropagateMarginY, true,
+        0.0f, {}, true,
+        /* Same as above, the right node (which is snapped to the parent)
+           should be placed without vertical margin applied */
+        {50.0f, 40.0f}, 0.0f,
+        {50.0f, 25.0f}, -5.0f,
+        25.0f, 5.0f, 5.0f},
+    {"inner with zero size and margin propagated",
+        {}, {},
+        {}, SnapLayoutFlag::PropagateMargin, false,
+        0.0f, {}, true,
+        /* Combination of the above, basically */
+        {50.0f, 40.0f}, 0.0f,
+        {45.0f, 25.0f}, -5.0f,
+        25.0f, 5.0f, 5.0f},
+    {"inner with zero size and margin propagated, reverse layout direction",
+        {}, {},
+        {}, SnapLayoutFlag::PropagateMargin, true,
+        0.0f, {}, true,
+        /* Same as above, the right node (which is snapped to the parent)
+           should be placed without margin applied */
+        {50.0f, 40.0f}, 0.0f,
+        {45.0f, 25.0f}, -5.0f,
+        25.0f, 5.0f, 5.0f},
 };
 
 SnapLayouterTest::SnapLayouterTest() {
@@ -1173,8 +1486,11 @@ SnapLayouterTest::SnapLayouterTest() {
     addInstancedTests({&SnapLayouterTest::snap},
         Containers::arraySize(SnapData));
 
-    addInstancedTests({&SnapLayouterTest::layoutSizePadding},
-        Containers::arraySize(LayoutSizePaddingData));
+    addInstancedTests({&SnapLayouterTest::layoutSizePaddingMargin},
+        Containers::arraySize(LayoutSizePaddingMarginData));
+
+    addInstancedTests({&SnapLayouterTest::layoutSizePaddingMarginPropagate},
+        Containers::arraySize(LayoutSizePaddingMarginPropagateData));
 
     addInstancedTests({&SnapLayouterTest::childLayoutSizeSide},
         Containers::arraySize(ChildLayoutSizeSideData));
@@ -1320,6 +1636,12 @@ void SnapLayouterTest::debugFlagsSupersets() {
         Containers::String out;
         Debug{&out} << (SnapLayoutFlag::IgnoreOverflow|SnapLayoutFlag::IgnoreOverflowX|SnapLayoutFlag::IgnoreOverflowY);
         CORRADE_COMPARE(out, "Ui::SnapLayoutFlag::IgnoreOverflow\n");
+
+    /* PropagateMargin is PropagateMarginX and PropagateMarginY combined */
+    } {
+        Containers::String out;
+        Debug{&out} << (SnapLayoutFlag::PropagateMargin|SnapLayoutFlag::PropagateMarginX|SnapLayoutFlag::PropagateMarginY);
+        CORRADE_COMPARE(out, "Ui::SnapLayoutFlag::PropagateMargin\n");
     }
 }
 
@@ -1357,18 +1679,76 @@ void SnapLayouterTest::snap() {
     CORRADE_COMPARE(out, Containers::pair(data.expectedOffset, data.expectedSize));
 }
 
-void SnapLayouterTest::layoutSizePadding() {
-    auto&& data = LayoutSizePaddingData[testCaseInstanceId()];
+void SnapLayouterTest::layoutSizePaddingMargin() {
+    auto&& data = LayoutSizePaddingMarginData[testCaseInstanceId()];
     setTestCaseDescription(data.name);
 
-    Containers::Pair<Vector2, Vector4> out = Implementation::layoutSizePadding(
+    /* Behavior with PropagateMargin is tested in
+       layoutSizePaddingMarginPropagate() below, verifying all rotations
+       variants at the same time, here just verify that it
+       always passes the margin through unchanged */
+    Containers::Triple<Vector2, Vector4, Vector4> out = Implementation::layoutSizePaddingMargin(
         data.flags,
         data.extraChildSnap,
         data.nodeSize,
         data.nodePadding,
+        {19.0f, 23.0f, 13.0f, 29.0f},
         data.childLayoutSize,
         data.childLayoutMargin);
-    CORRADE_COMPARE(out, Containers::pair(data.expectedLayoutSize, data.expectedLayoutPadding));
+    CORRADE_COMPARE(out, Containers::triple(data.expectedLayoutSize, data.expectedLayoutPadding, Vector4{19.0f, 23.0f, 13.0f, 29.0f}));
+}
+
+void SnapLayouterTest::layoutSizePaddingMarginPropagate() {
+    auto&& data = LayoutSizePaddingMarginPropagateData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
+    Vector2 nodeSizes[4];
+    Vector4 nodeMargins[4];
+    Vector4 nodePaddings[4];
+    Vector2 childLayoutSizes[4];
+    Vector4 childLayoutMargins[4];
+    Vector2 expectedLayoutSizes[4];
+    Vector4 expectedLayoutPaddings[4];
+    Vector4 expectedLayoutMargins[4];
+
+    /* Data for the first (left-to-right) rotation. In the side direction the
+       sizes, margins and paddings are always constant. The node padding, child
+       layout size and child layout margin is a constant always. */
+    nodeSizes[0] = data.nodeSize;
+    nodePaddings[0] = {3.0f, 2.0f, 1.0f, 4.0f};
+    nodeMargins[0] = data.nodeMargin;
+    childLayoutSizes[0] = {10.0f, 16.0f};
+    childLayoutMargins[0] = {7.0f, 5.0f, 3.0f, 9.0f};
+    expectedLayoutSizes[0] = data.expectedLayoutSize;
+    expectedLayoutPaddings[0] = data.expectedLayoutPadding;
+    expectedLayoutMargins[0] = data.expectedLayoutMargin;
+
+    /* Gradually rotate the inputs to generate all four rotations */
+    for(UnsignedInt i = 0; i != 3; ++i) {
+        nodeSizes[i + 1] = Math::gather<'y', 'x'>(nodeSizes[i]);
+        nodeMargins[i + 1] = Math::gather<'w', 'x', 'y', 'z'>(nodeMargins[i]);
+        nodePaddings[i + 1] = Math::gather<'w', 'x', 'y', 'z'>(nodePaddings[i]);
+        childLayoutSizes[i + 1] = Math::gather<'y', 'x'>(childLayoutSizes[i]);
+        childLayoutMargins[i + 1] = Math::gather<'w', 'x', 'y', 'z'>(childLayoutMargins[i]);
+        expectedLayoutSizes[i + 1] = Math::gather<'y', 'x'>(expectedLayoutSizes[i]);
+        expectedLayoutPaddings[i + 1] = Math::gather<'w', 'x', 'y', 'z'>(expectedLayoutPaddings[i]);
+        expectedLayoutMargins[i + 1] = Math::gather<'w', 'x', 'y', 'z'>(expectedLayoutMargins[i]);
+    }
+
+    for(UnsignedInt rotation = 0; rotation != 4; ++rotation) {
+        CORRADE_ITERATION("rotation" << rotation);
+        CORRADE_ITERATION(data.snaps[rotation]);
+
+        Containers::Triple<Vector2, Vector4, Vector4> out = Implementation::layoutSizePaddingMargin(
+            data.flags[rotation % 2],
+            data.snaps[rotation],
+            nodeSizes[rotation],
+            nodePaddings[rotation],
+            nodeMargins[rotation],
+            childLayoutSizes[rotation],
+            childLayoutMargins[rotation]);
+        CORRADE_COMPARE(out, Containers::triple(expectedLayoutSizes[rotation], expectedLayoutPaddings[rotation], expectedLayoutMargins[rotation]));
+    }
 }
 
 void SnapLayouterTest::childLayoutSizeSide() {
@@ -1484,17 +1864,18 @@ void SnapLayouterTest::childLayoutSizeSide() {
                 Containers::stridedArrayView(layouts).slice(&Layout::next));
             CORRADE_COMPARE(sizeMargin, Containers::pair(expectedSizes[rotation], expectedMargins[rotation]));
 
-            /* Just to get the layout size and padding to pass to snap().
-               Tested thoroughly in layoutSizePadding() instead. */
-            Containers::Pair<Vector2, Vector4> layoutSizePadding = Implementation::layoutSizePadding({}, snap, {}, {}, sizeMargin.first(), sizeMargin.second());
+            /* Just to get the layout size and padding to pass to snap(), the
+               margin is unused. Tested thoroughly in layoutSizePadding()
+               instead. */
+            Containers::Triple<Vector2, Vector4, Vector4> layoutSizePaddingMargin = Implementation::layoutSizePaddingMargin({}, snap, {}, {}, {}, sizeMargin.first(), sizeMargin.second());
 
             /* With the above size and padding, snapping the three nodes should
                give the expected offsets. The first child uses a different
                snap, and is affected by the reported size and padding */
             Containers::Pair<Vector2, Vector2> offsetSize0 = Implementation::snap(
                 Implementation::firstChildSnap(snap),
-                {}, layoutSizePadding.first(),
-                layoutSizePadding.second(), {},
+                {}, layoutSizePaddingMargin.first(),
+                layoutSizePaddingMargin.second(), {},
                 nodes[nodeIds[shuffle][0]].margin,
                 nodes[nodeIds[shuffle][0]].size);
             CORRADE_COMPARE(offsetSize0, Containers::pair(expectedChildOffsets[rotation][0], expectedChildSizes[rotation][0]));
@@ -1639,17 +2020,18 @@ void SnapLayouterTest::childLayoutSizeForward() {
                 Containers::stridedArrayView(layouts).slice(&Layout::next));
             CORRADE_COMPARE(sizeMargin, Containers::pair(expectedSizes[rotation], expectedMargins[rotation]));
 
-            /* Just to get the layout size and padding to pass to snap().
-               Tested thoroughly in layoutSizePadding() instead. */
-            Containers::Pair<Vector2, Vector4> layoutSizePadding = Implementation::layoutSizePadding({}, snap, {}, {}, sizeMargin.first(), sizeMargin.second());
+            /* Just to get the layout size and padding to pass to snap(), the
+               margin is unused. Tested thoroughly in layoutSizePadding()
+               instead. */
+            Containers::Triple<Vector2, Vector4, Vector4> layoutSizePaddingMargin = Implementation::layoutSizePaddingMargin({}, snap, {}, {}, {}, sizeMargin.first(), sizeMargin.second());
 
             /* With the above size and padding, snapping the three nodes should
                give the expected offsets. The first child uses a different
                snap, and is affected by the reported size and padding */
             Containers::Pair<Vector2, Vector2> offsetSize0 = Implementation::snap(
                 Implementation::firstChildSnap(snap),
-                {}, layoutSizePadding.first(),
-                layoutSizePadding.second(), {},
+                {}, layoutSizePaddingMargin.first(),
+                layoutSizePaddingMargin.second(), {},
                 nodes[nodeIds[0]].margin,
                 nodes[nodeIds[0]].size);
             CORRADE_COMPARE(offsetSize0, Containers::pair(expectedChildOffsets[rotation][0], sizes[rotation][0]));
@@ -2587,12 +2969,12 @@ void SnapLayouterTest::flags() {
     ui.update();
     CORRADE_COMPARE(layouter.state(), LayouterStates{});
 
-    layouter.setFlags(layout1, SnapLayoutFlags{0x38});
-    layouter.setFlags(layout2, SnapLayoutFlags{0x24});
+    layouter.setFlags(layout1, SnapLayoutFlags{0x30});
+    layouter.setFlags(layout2, SnapLayoutFlags{0x20});
     CORRADE_VERIFY(!layouter.hasExplicitSnap(layout1));
     CORRADE_VERIFY(layouter.hasExplicitSnap(layout2));
-    CORRADE_COMPARE(layouter.flags(layout1), SnapLayoutFlags{0x38});
-    CORRADE_COMPARE(layouter.flags(layout2), SnapLayoutFlags{0x24});
+    CORRADE_COMPARE(layouter.flags(layout1), SnapLayoutFlags{0x30});
+    CORRADE_COMPARE(layouter.flags(layout2), SnapLayoutFlags{0x20});
     CORRADE_COMPARE(layouter.state(), LayouterState::NeedsUpdate);
 
     /* Reset state flags */
@@ -2603,20 +2985,20 @@ void SnapLayouterTest::flags() {
     layouter.addFlags(layout2, SnapLayoutFlag::IgnoreOverflow);
     CORRADE_VERIFY(!layouter.hasExplicitSnap(layout1));
     CORRADE_VERIFY(layouter.hasExplicitSnap(layout2));
-    CORRADE_COMPARE(layouter.flags(layout1), SnapLayoutFlag::IgnoreOverflowY|SnapLayoutFlags{0x38});
-    CORRADE_COMPARE(layouter.flags(layout2), SnapLayoutFlag::IgnoreOverflow|SnapLayoutFlags{0x24});
+    CORRADE_COMPARE(layouter.flags(layout1), SnapLayoutFlag::IgnoreOverflowY|SnapLayoutFlags{0x30});
+    CORRADE_COMPARE(layouter.flags(layout2), SnapLayoutFlag::IgnoreOverflow|SnapLayoutFlags{0x20});
     CORRADE_COMPARE(layouter.state(), LayouterState::NeedsUpdate);
 
     /* Reset state flags */
     ui.update();
     CORRADE_COMPARE(layouter.state(), LayouterStates{});
 
-    layouter.clearFlags(layout1, SnapLayoutFlags{0x34});
-    layouter.clearFlags(layout2, SnapLayoutFlags{0x28});
+    layouter.clearFlags(layout1, SnapLayoutFlag::IgnoreOverflowX|SnapLayoutFlags{0x30});
+    layouter.clearFlags(layout2, SnapLayoutFlag::PropagateMargin|SnapLayoutFlags{0x20});
     CORRADE_VERIFY(!layouter.hasExplicitSnap(layout1));
     CORRADE_VERIFY(layouter.hasExplicitSnap(layout2));
-    CORRADE_COMPARE(layouter.flags(layout1), SnapLayoutFlag::IgnoreOverflowY|SnapLayoutFlags{0x08});
-    CORRADE_COMPARE(layouter.flags(layout2), SnapLayoutFlag::IgnoreOverflow|SnapLayoutFlags{0x04});
+    CORRADE_COMPARE(layouter.flags(layout1), SnapLayoutFlag::IgnoreOverflowY);
+    CORRADE_COMPARE(layouter.flags(layout2), SnapLayoutFlag::IgnoreOverflow);
     CORRADE_COMPARE(layouter.state(), LayouterState::NeedsUpdate);
 
     /* Reset state flags */
@@ -2624,12 +3006,12 @@ void SnapLayouterTest::flags() {
     CORRADE_COMPARE(layouter.state(), LayouterStates{});
 
     /* Repeat of the above, just with LayouterDataHandle overloads */
-    layouter.setFlags(layoutHandleData(layout1), SnapLayoutFlags{0x38});
-    layouter.setFlags(layoutHandleData(layout2), SnapLayoutFlags{0x24});
+    layouter.setFlags(layoutHandleData(layout1), SnapLayoutFlags{0x30});
+    layouter.setFlags(layoutHandleData(layout2), SnapLayoutFlags{0x20});
     CORRADE_VERIFY(!layouter.hasExplicitSnap(layout1));
     CORRADE_VERIFY(layouter.hasExplicitSnap(layout2));
-    CORRADE_COMPARE(layouter.flags(layoutHandleData(layout1)), SnapLayoutFlags{0x38});
-    CORRADE_COMPARE(layouter.flags(layoutHandleData(layout2)), SnapLayoutFlags{0x24});
+    CORRADE_COMPARE(layouter.flags(layoutHandleData(layout1)), SnapLayoutFlags{0x30});
+    CORRADE_COMPARE(layouter.flags(layoutHandleData(layout2)), SnapLayoutFlags{0x20});
     CORRADE_COMPARE(layouter.state(), LayouterState::NeedsUpdate);
 
     /* Reset state flags */
@@ -2640,20 +3022,20 @@ void SnapLayouterTest::flags() {
     layouter.addFlags(layoutHandleData(layout2), SnapLayoutFlag::IgnoreOverflow);
     CORRADE_VERIFY(!layouter.hasExplicitSnap(layout1));
     CORRADE_VERIFY(layouter.hasExplicitSnap(layout2));
-    CORRADE_COMPARE(layouter.flags(layoutHandleData(layout1)), SnapLayoutFlag::IgnoreOverflowY|SnapLayoutFlags{0x38});
-    CORRADE_COMPARE(layouter.flags(layoutHandleData(layout2)), SnapLayoutFlag::IgnoreOverflow|SnapLayoutFlags{0x24});
+    CORRADE_COMPARE(layouter.flags(layoutHandleData(layout1)), SnapLayoutFlag::IgnoreOverflowY|SnapLayoutFlags{0x30});
+    CORRADE_COMPARE(layouter.flags(layoutHandleData(layout2)), SnapLayoutFlag::IgnoreOverflow|SnapLayoutFlags{0x20});
     CORRADE_COMPARE(layouter.state(), LayouterState::NeedsUpdate);
 
     /* Reset state flags */
     ui.update();
     CORRADE_COMPARE(layouter.state(), LayouterStates{});
 
-    layouter.clearFlags(layoutHandleData(layout1), SnapLayoutFlags{0x34});
-    layouter.clearFlags(layoutHandleData(layout2), SnapLayoutFlags{0x28});
+    layouter.clearFlags(layoutHandleData(layout1), SnapLayoutFlag::IgnoreOverflowX|SnapLayoutFlags{0x30});
+    layouter.clearFlags(layoutHandleData(layout2), SnapLayoutFlag::PropagateMargin|SnapLayoutFlags{0x20});
     CORRADE_VERIFY(!layouter.hasExplicitSnap(layout1));
     CORRADE_VERIFY(layouter.hasExplicitSnap(layout2));
-    CORRADE_COMPARE(layouter.flags(layoutHandleData(layout1)), SnapLayoutFlag::IgnoreOverflowY|SnapLayoutFlags{0x08});
-    CORRADE_COMPARE(layouter.flags(layoutHandleData(layout2)), SnapLayoutFlag::IgnoreOverflow|SnapLayoutFlags{0x04});
+    CORRADE_COMPARE(layouter.flags(layoutHandleData(layout1)), SnapLayoutFlag::IgnoreOverflowY);
+    CORRADE_COMPARE(layouter.flags(layoutHandleData(layout2)), SnapLayoutFlag::IgnoreOverflow);
     CORRADE_COMPARE(layouter.state(), LayouterState::NeedsUpdate);
 }
 
@@ -2663,13 +3045,38 @@ void SnapLayouterTest::flagsInvalid() {
     AbstractUserInterface ui{{100, 100}};
     SnapLayouter& layouter = ui.setLayouterInstance(Containers::pointer<SnapLayouter>(ui.createLayouter()));
 
+    /* Combining IgnoreOverflow and PropagateMargin in different axes is fine */
+    layouter.add(ui.createNode({}, {}), SnapLayoutFlag::IgnoreOverflowX|SnapLayoutFlag::PropagateMarginY);
+    layouter.add(ui.createNode({}, {}), SnapLayoutFlag::IgnoreOverflowY|SnapLayoutFlag::PropagateMarginX);
+    LayoutHandle layoutIsFine = layouter.add(ui.createNode({}, {}));
+    layouter.setFlags(layoutIsFine, SnapLayoutFlag::IgnoreOverflowX|SnapLayoutFlag::PropagateMarginY);
+    /* setFlags() shouldn't take previous flags into account, so this is fine
+       even though above the conflicting combination was set */
+    layouter.setFlags(layoutIsFine, SnapLayoutFlag::IgnoreOverflowY|SnapLayoutFlag::PropagateMarginX);
+    /* And addFlags() *should* take previous flags into account */
+    layouter.setFlags(layoutIsFine, SnapLayoutFlag::IgnoreOverflowX);
+    layouter.addFlags(layoutIsFine, SnapLayoutFlag::PropagateMarginY);
+    layouter.setFlags(layoutIsFine, SnapLayoutFlag::IgnoreOverflowY);
+    layouter.addFlags(layoutIsFine, SnapLayoutFlag::PropagateMarginX);
+
+    /* Calling clearFlags() with conflicting flags is fine also, as it won't
+       result in them being set */
+    layouter.clearFlags(layoutIsFine, SnapLayoutFlag::IgnoreOverflow|SnapLayoutFlag::PropagateMargin);
+
     LayoutHandle layout = layouter.add(ui.createNode({}, {}));
+    LayoutHandle layoutIgnoreOverflowX = layouter.add(ui.createNode({}, {}), SnapLayoutFlag::IgnoreOverflowX);
+    LayoutHandle layoutIgnoreOverflowY = layouter.add(ui.createNode({}, {}), SnapLayoutFlag::IgnoreOverflowY);
+    LayoutHandle layoutIgnoreOverflow = layouter.add(ui.createNode({}, {}), SnapLayoutFlag::IgnoreOverflow);
+    LayoutHandle layoutPropagateMarginX = layouter.add(ui.createNode({}, {}), SnapLayoutFlag::PropagateMarginX);
+    LayoutHandle layoutPropagateMarginY = layouter.add(ui.createNode({}, {}), SnapLayoutFlag::PropagateMarginY);
+    LayoutHandle layoutPropagateMargin = layouter.add(ui.createNode({}, {}), SnapLayoutFlag::PropagateMargin);
 
     Containers::String out;
     Error redirectError{&out};
+    /* Using illegal bits */
     layouter.add(ui.createNode({}, {}), SnapLayoutFlags{0x40}|SnapLayoutFlag::IgnoreOverflow);
     layouter.add(ui.createNode({}, {}), SnapLayoutFlags{0x80}|SnapLayoutFlag::IgnoreOverflowX);
-    layouter.add(ui.createNode({}, {}), Snap{}, layout, SnapLayoutFlags{0x40}|SnapLayoutFlag::IgnoreOverflowY);
+    layouter.add(ui.createNode({}, {}), Snaps{}, layout, SnapLayoutFlags{0x40}|SnapLayoutFlag::IgnoreOverflowY);
     layouter.add(ui.createNode({}, {}), Snaps{}, layout, SnapLayoutFlags{0x80}|SnapLayoutFlag::IgnoreOverflow);
     layouter.setFlags(layout, SnapLayoutFlags{0x80}|SnapLayoutFlag::IgnoreOverflowX);
     layouter.setFlags(layoutHandleData(layout), SnapLayoutFlags{0x80}|SnapLayoutFlag::IgnoreOverflowX);
@@ -2683,6 +3090,62 @@ void SnapLayouterTest::flagsInvalid() {
     layouter.clearFlags(layoutHandleData(layout), SnapLayoutFlags{0x80}|SnapLayoutFlag::IgnoreOverflow);
     layouter.clearFlags(layout, SnapLayoutFlags{0x40}|SnapLayoutFlag::IgnoreOverflowX);
     layouter.clearFlags(layoutHandleData(layout), SnapLayoutFlags{0x40}|SnapLayoutFlag::IgnoreOverflowX);
+
+    /* Combining IgnoreOverflow and PropagateMargin in same axes, all possible
+       conflicting combinations */
+    layouter.add(ui.createNode({}, {}), SnapLayoutFlag::IgnoreOverflowX|SnapLayoutFlag::PropagateMarginX);
+    layouter.add(ui.createNode({}, {}), SnapLayoutFlag::IgnoreOverflowX|SnapLayoutFlag::PropagateMargin);
+    layouter.add(ui.createNode({}, {}), SnapLayoutFlag::IgnoreOverflowY|SnapLayoutFlag::PropagateMarginY);
+    layouter.add(ui.createNode({}, {}), SnapLayoutFlag::IgnoreOverflowY|SnapLayoutFlag::PropagateMargin);
+    layouter.add(ui.createNode({}, {}), SnapLayoutFlag::IgnoreOverflow|SnapLayoutFlag::PropagateMarginX);
+    layouter.add(ui.createNode({}, {}), SnapLayoutFlag::IgnoreOverflow|SnapLayoutFlag::PropagateMarginY);
+    layouter.add(ui.createNode({}, {}), SnapLayoutFlag::IgnoreOverflow|SnapLayoutFlag::PropagateMargin);
+    /* Explicir snap variant */
+    layouter.add(ui.createNode({}, {}), Snaps{}, layout, SnapLayoutFlag::IgnoreOverflowX|SnapLayoutFlag::PropagateMarginX);
+    layouter.add(ui.createNode({}, {}), Snaps{}, layout, SnapLayoutFlag::IgnoreOverflowX|SnapLayoutFlag::PropagateMargin);
+    layouter.add(ui.createNode({}, {}), Snaps{}, layout, SnapLayoutFlag::IgnoreOverflowY|SnapLayoutFlag::PropagateMarginY);
+    layouter.add(ui.createNode({}, {}), Snaps{}, layout, SnapLayoutFlag::IgnoreOverflowY|SnapLayoutFlag::PropagateMargin);
+    layouter.add(ui.createNode({}, {}), Snaps{}, layout, SnapLayoutFlag::IgnoreOverflow|SnapLayoutFlag::PropagateMarginX);
+    layouter.add(ui.createNode({}, {}), Snaps{}, layout, SnapLayoutFlag::IgnoreOverflow|SnapLayoutFlag::PropagateMarginY);
+    layouter.add(ui.createNode({}, {}), Snaps{}, layout, SnapLayoutFlag::IgnoreOverflow|SnapLayoutFlag::PropagateMargin);
+
+    layouter.setFlags(layout, SnapLayoutFlag::IgnoreOverflowX|SnapLayoutFlag::PropagateMarginX);
+    layouter.setFlags(layout, SnapLayoutFlag::IgnoreOverflowX|SnapLayoutFlag::PropagateMargin);
+    layouter.setFlags(layout, SnapLayoutFlag::IgnoreOverflowY|SnapLayoutFlag::PropagateMarginY);
+    layouter.setFlags(layout, SnapLayoutFlag::IgnoreOverflowY|SnapLayoutFlag::PropagateMargin);
+    layouter.setFlags(layout, SnapLayoutFlag::IgnoreOverflow|SnapLayoutFlag::PropagateMarginX);
+    layouter.setFlags(layout, SnapLayoutFlag::IgnoreOverflow|SnapLayoutFlag::PropagateMarginY);
+    layouter.setFlags(layout, SnapLayoutFlag::IgnoreOverflow|SnapLayoutFlag::PropagateMargin);
+    /* All setFlags() should delegate to the same helper, so verify just one
+       case */
+    layouter.setFlags(layoutHandleData(layout), SnapLayoutFlag::IgnoreOverflow|SnapLayoutFlag::PropagateMargin);
+
+    /* Both existing and new flags should be taken into account in addFlags() */
+    layouter.addFlags(layoutIgnoreOverflowX, SnapLayoutFlag::PropagateMarginX);
+    layouter.addFlags(layoutIgnoreOverflowX, SnapLayoutFlag::PropagateMargin);
+    layouter.addFlags(layoutIgnoreOverflowY, SnapLayoutFlag::PropagateMarginY);
+    layouter.addFlags(layoutIgnoreOverflowY, SnapLayoutFlag::PropagateMargin);
+    layouter.addFlags(layoutIgnoreOverflow, SnapLayoutFlag::PropagateMarginX);
+    layouter.addFlags(layoutIgnoreOverflow, SnapLayoutFlag::PropagateMarginY);
+    layouter.addFlags(layoutIgnoreOverflow, SnapLayoutFlag::PropagateMargin);
+    layouter.addFlags(layoutPropagateMarginX, SnapLayoutFlag::IgnoreOverflowX);
+    layouter.addFlags(layoutPropagateMargin, SnapLayoutFlag::IgnoreOverflowX);
+    layouter.addFlags(layoutPropagateMarginY, SnapLayoutFlag::IgnoreOverflowY);
+    layouter.addFlags(layoutPropagateMargin, SnapLayoutFlag::IgnoreOverflowY);
+    layouter.addFlags(layoutPropagateMarginX, SnapLayoutFlag::IgnoreOverflow);
+    layouter.addFlags(layoutPropagateMarginY, SnapLayoutFlag::IgnoreOverflow);
+    layouter.addFlags(layoutPropagateMargin, SnapLayoutFlag::IgnoreOverflow);
+    /* But also the new flags alone should be checked */
+    layouter.addFlags(layout, SnapLayoutFlag::IgnoreOverflowX|SnapLayoutFlag::PropagateMarginX);
+    layouter.addFlags(layout, SnapLayoutFlag::IgnoreOverflowX|SnapLayoutFlag::PropagateMargin);
+    layouter.addFlags(layout, SnapLayoutFlag::IgnoreOverflowY|SnapLayoutFlag::PropagateMarginY);
+    layouter.addFlags(layout, SnapLayoutFlag::IgnoreOverflowY|SnapLayoutFlag::PropagateMargin);
+    layouter.addFlags(layout, SnapLayoutFlag::IgnoreOverflow|SnapLayoutFlag::PropagateMarginX);
+    layouter.addFlags(layout, SnapLayoutFlag::IgnoreOverflow|SnapLayoutFlag::PropagateMarginY);
+    layouter.addFlags(layout, SnapLayoutFlag::IgnoreOverflow|SnapLayoutFlag::PropagateMargin);
+    /* Again all addFlags() should delegate to the same helper, so verify just
+       one case */
+    layouter.addFlags(layoutHandleData(layoutIgnoreOverflow), SnapLayoutFlag::PropagateMargin);
     CORRADE_COMPARE_AS(out,
         "Ui::SnapLayouter::add(): invalid flags Ui::SnapLayoutFlag::IgnoreOverflow|Ui::SnapLayoutFlag(0x40)\n"
         "Ui::SnapLayouter::add(): invalid flags Ui::SnapLayoutFlag::IgnoreOverflowX|Ui::SnapLayoutFlag(0x80)\n"
@@ -2699,7 +3162,60 @@ void SnapLayouterTest::flagsInvalid() {
         "Ui::SnapLayouter::clearFlags(): invalid flags Ui::SnapLayoutFlag::IgnoreOverflow|Ui::SnapLayoutFlag(0x80)\n"
         "Ui::SnapLayouter::clearFlags(): invalid flags Ui::SnapLayoutFlag::IgnoreOverflow|Ui::SnapLayoutFlag(0x80)\n"
         "Ui::SnapLayouter::clearFlags(): invalid flags Ui::SnapLayoutFlag::IgnoreOverflowX|Ui::SnapLayoutFlag(0x40)\n"
-        "Ui::SnapLayouter::clearFlags(): invalid flags Ui::SnapLayoutFlag::IgnoreOverflowX|Ui::SnapLayoutFlag(0x40)\n",
+        "Ui::SnapLayouter::clearFlags(): invalid flags Ui::SnapLayoutFlag::IgnoreOverflowX|Ui::SnapLayoutFlag(0x40)\n"
+
+        "Ui::SnapLayouter::add(): Ui::SnapLayoutFlag::IgnoreOverflowX and Ui::SnapLayoutFlag::PropagateMarginX are mutually exclusive\n"
+        "Ui::SnapLayouter::add(): Ui::SnapLayoutFlag::IgnoreOverflowX and Ui::SnapLayoutFlag::PropagateMargin are mutually exclusive\n"
+        "Ui::SnapLayouter::add(): Ui::SnapLayoutFlag::IgnoreOverflowY and Ui::SnapLayoutFlag::PropagateMarginY are mutually exclusive\n"
+        "Ui::SnapLayouter::add(): Ui::SnapLayoutFlag::IgnoreOverflowY and Ui::SnapLayoutFlag::PropagateMargin are mutually exclusive\n"
+        "Ui::SnapLayouter::add(): Ui::SnapLayoutFlag::IgnoreOverflow and Ui::SnapLayoutFlag::PropagateMarginX are mutually exclusive\n"
+        "Ui::SnapLayouter::add(): Ui::SnapLayoutFlag::IgnoreOverflow and Ui::SnapLayoutFlag::PropagateMarginY are mutually exclusive\n"
+        "Ui::SnapLayouter::add(): Ui::SnapLayoutFlag::IgnoreOverflow and Ui::SnapLayoutFlag::PropagateMargin are mutually exclusive\n"
+        /* Explicit snap variants */
+        "Ui::SnapLayouter::add(): Ui::SnapLayoutFlag::IgnoreOverflowX and Ui::SnapLayoutFlag::PropagateMarginX are mutually exclusive\n"
+        "Ui::SnapLayouter::add(): Ui::SnapLayoutFlag::IgnoreOverflowX and Ui::SnapLayoutFlag::PropagateMargin are mutually exclusive\n"
+        "Ui::SnapLayouter::add(): Ui::SnapLayoutFlag::IgnoreOverflowY and Ui::SnapLayoutFlag::PropagateMarginY are mutually exclusive\n"
+        "Ui::SnapLayouter::add(): Ui::SnapLayoutFlag::IgnoreOverflowY and Ui::SnapLayoutFlag::PropagateMargin are mutually exclusive\n"
+        "Ui::SnapLayouter::add(): Ui::SnapLayoutFlag::IgnoreOverflow and Ui::SnapLayoutFlag::PropagateMarginX are mutually exclusive\n"
+        "Ui::SnapLayouter::add(): Ui::SnapLayoutFlag::IgnoreOverflow and Ui::SnapLayoutFlag::PropagateMarginY are mutually exclusive\n"
+        "Ui::SnapLayouter::add(): Ui::SnapLayoutFlag::IgnoreOverflow and Ui::SnapLayoutFlag::PropagateMargin are mutually exclusive\n"
+
+        "Ui::SnapLayouter::setFlags(): Ui::SnapLayoutFlag::IgnoreOverflowX and Ui::SnapLayoutFlag::PropagateMarginX are mutually exclusive\n"
+        "Ui::SnapLayouter::setFlags(): Ui::SnapLayoutFlag::IgnoreOverflowX and Ui::SnapLayoutFlag::PropagateMargin are mutually exclusive\n"
+        "Ui::SnapLayouter::setFlags(): Ui::SnapLayoutFlag::IgnoreOverflowY and Ui::SnapLayoutFlag::PropagateMarginY are mutually exclusive\n"
+        "Ui::SnapLayouter::setFlags(): Ui::SnapLayoutFlag::IgnoreOverflowY and Ui::SnapLayoutFlag::PropagateMargin are mutually exclusive\n"
+        "Ui::SnapLayouter::setFlags(): Ui::SnapLayoutFlag::IgnoreOverflow and Ui::SnapLayoutFlag::PropagateMarginX are mutually exclusive\n"
+        "Ui::SnapLayouter::setFlags(): Ui::SnapLayoutFlag::IgnoreOverflow and Ui::SnapLayoutFlag::PropagateMarginY are mutually exclusive\n"
+        "Ui::SnapLayouter::setFlags(): Ui::SnapLayoutFlag::IgnoreOverflow and Ui::SnapLayoutFlag::PropagateMargin are mutually exclusive\n"
+        /* The LayouterDataHandle overload */
+        "Ui::SnapLayouter::setFlags(): Ui::SnapLayoutFlag::IgnoreOverflow and Ui::SnapLayoutFlag::PropagateMargin are mutually exclusive\n"
+
+        /* One conflicting flag present before already */
+        "Ui::SnapLayouter::addFlags(): Ui::SnapLayoutFlag::IgnoreOverflowX and Ui::SnapLayoutFlag::PropagateMarginX are mutually exclusive\n"
+        "Ui::SnapLayouter::addFlags(): Ui::SnapLayoutFlag::IgnoreOverflowX and Ui::SnapLayoutFlag::PropagateMargin are mutually exclusive\n"
+        "Ui::SnapLayouter::addFlags(): Ui::SnapLayoutFlag::IgnoreOverflowY and Ui::SnapLayoutFlag::PropagateMarginY are mutually exclusive\n"
+        "Ui::SnapLayouter::addFlags(): Ui::SnapLayoutFlag::IgnoreOverflowY and Ui::SnapLayoutFlag::PropagateMargin are mutually exclusive\n"
+        "Ui::SnapLayouter::addFlags(): Ui::SnapLayoutFlag::IgnoreOverflow and Ui::SnapLayoutFlag::PropagateMarginX are mutually exclusive\n"
+        "Ui::SnapLayouter::addFlags(): Ui::SnapLayoutFlag::IgnoreOverflow and Ui::SnapLayoutFlag::PropagateMarginY are mutually exclusive\n"
+        "Ui::SnapLayouter::addFlags(): Ui::SnapLayoutFlag::IgnoreOverflow and Ui::SnapLayoutFlag::PropagateMargin are mutually exclusive\n"
+        /* Same, just different order */
+        "Ui::SnapLayouter::addFlags(): Ui::SnapLayoutFlag::IgnoreOverflowX and Ui::SnapLayoutFlag::PropagateMarginX are mutually exclusive\n"
+        "Ui::SnapLayouter::addFlags(): Ui::SnapLayoutFlag::IgnoreOverflowX and Ui::SnapLayoutFlag::PropagateMargin are mutually exclusive\n"
+        "Ui::SnapLayouter::addFlags(): Ui::SnapLayoutFlag::IgnoreOverflowY and Ui::SnapLayoutFlag::PropagateMarginY are mutually exclusive\n"
+        "Ui::SnapLayouter::addFlags(): Ui::SnapLayoutFlag::IgnoreOverflowY and Ui::SnapLayoutFlag::PropagateMargin are mutually exclusive\n"
+        "Ui::SnapLayouter::addFlags(): Ui::SnapLayoutFlag::IgnoreOverflow and Ui::SnapLayoutFlag::PropagateMarginX are mutually exclusive\n"
+        "Ui::SnapLayouter::addFlags(): Ui::SnapLayoutFlag::IgnoreOverflow and Ui::SnapLayoutFlag::PropagateMarginY are mutually exclusive\n"
+        "Ui::SnapLayouter::addFlags(): Ui::SnapLayoutFlag::IgnoreOverflow and Ui::SnapLayoutFlag::PropagateMargin are mutually exclusive\n"
+        /* Both conflicting flags passed to add() */
+        "Ui::SnapLayouter::addFlags(): Ui::SnapLayoutFlag::IgnoreOverflowX and Ui::SnapLayoutFlag::PropagateMarginX are mutually exclusive\n"
+        "Ui::SnapLayouter::addFlags(): Ui::SnapLayoutFlag::IgnoreOverflowX and Ui::SnapLayoutFlag::PropagateMargin are mutually exclusive\n"
+        "Ui::SnapLayouter::addFlags(): Ui::SnapLayoutFlag::IgnoreOverflowY and Ui::SnapLayoutFlag::PropagateMarginY are mutually exclusive\n"
+        "Ui::SnapLayouter::addFlags(): Ui::SnapLayoutFlag::IgnoreOverflowY and Ui::SnapLayoutFlag::PropagateMargin are mutually exclusive\n"
+        "Ui::SnapLayouter::addFlags(): Ui::SnapLayoutFlag::IgnoreOverflow and Ui::SnapLayoutFlag::PropagateMarginX are mutually exclusive\n"
+        "Ui::SnapLayouter::addFlags(): Ui::SnapLayoutFlag::IgnoreOverflow and Ui::SnapLayoutFlag::PropagateMarginY are mutually exclusive\n"
+        "Ui::SnapLayouter::addFlags(): Ui::SnapLayoutFlag::IgnoreOverflow and Ui::SnapLayoutFlag::PropagateMargin are mutually exclusive\n"
+        /* The LayouterDataHandle overload */
+        "Ui::SnapLayouter::addFlags(): Ui::SnapLayoutFlag::IgnoreOverflow and Ui::SnapLayoutFlag::PropagateMargin are mutually exclusive\n",
         TestSuite::Compare::String);
 }
 
@@ -3354,7 +3870,7 @@ void SnapLayouterTest::updatePropagateChildSizes() {
     /* 5          20  25  30 35 40  45 50  55
     10 +------------------------------------+ outer, ??? width & height,
        |####################################|        padding top/bottom
-    15 |+----------------------------------+| inner, fixed height, ??? width
+    15 |+----------------------------------+| inner, fixed? height, ??? width
        ||                           @@@@@  ||
     20 ||          +---+-----+---+  @@@@@  || top, fixed width and height
        ||          |   |     |   |  @@@@@  ||
@@ -3388,7 +3904,7 @@ void SnapLayouterTest::updatePropagateChildSizes() {
        `inner`, it ignores the vertical shift of children. */
 
     NodeHandle outer = ui.createNode({10.0f, 5.0f}, data.outerSize);
-    NodeHandle inner = ui.createNode(outer, {}, {data.innerWidth, 40.0f});
+    NodeHandle inner = ui.createNode(outer, {}, data.innerSize);
     NodeHandle center = ui.createNode(inner, {}, {20.0f, data.centerHeight});
     NodeHandle right = ui.createNode(inner, {}, {});
     NodeHandle middle = ui.createNode(center, {}, {0.0f, 5.0f});
@@ -3426,16 +3942,20 @@ void SnapLayouterTest::updatePropagateChildSizes() {
     layouter.add(outer, data.outerFlags);
 
     LayoutHandle innerLayout = layouter.add(inner, data.innerFlags);
-    layouter.setChildSnap(innerLayout, Snap::Right);
-    layouter.add(left);
+    layouter.setChildSnap(innerLayout, data.innerReverseDirection ?
+        Snap::Left : Snap::Right);
+    LayoutHandle leftLayout = layouter.add(left);
 
-    LayoutHandle centerLayout = layouter.add(center, data.centerFlags);
+    LayoutHandle centerLayout = layouter.add(center, data.innerReverseDirection ?
+        leftLayout : LayoutHandle::Null,
+        data.centerFlags);
     layouter.setChildSnap(centerLayout, Snap::BottomLeft|Snap::InsideX);
     LayoutHandle topLayout = layouter.add(top);
     layouter.add(middle);
     layouter.add(bottom);
 
-    layouter.add(right);
+    layouter.add(right, data.innerReverseDirection ?
+        centerLayout : LayoutHandle::Null);
 
     if(data.explicitlySnappedNodes) {
         /* These shouldn't affect the rest of the layout in any way (so yeah
@@ -3474,11 +3994,11 @@ void SnapLayouterTest::updatePropagateChildSizes() {
                 explicitlySnappedNodes ?        /*  9, explicit2 */
                     Vector2{expectedCenterLeftEdge + 10.0f, 5.0f} : Vector2{},
                 explicitlySnappedNodes ?        /* 10, explicit3 */
-                    Vector2{0.0f, 15.0f} : Vector2{},
+                    Vector2{0.0f, (expectedInnerSize.y() - 10.0f)*0.5f} : Vector2{},
             }), TestSuite::Compare::Container);
             CORRADE_COMPARE_AS(nodeSizes, Containers::stridedArrayView<Vector2>({
                 expectedOuterSize,              /*  0, outer */
-                {expectedInnerWidth, 40.0f},    /*  1, inner */
+                expectedInnerSize,              /*  1, inner */
                 {20.0f, expectedCenterHeight},  /*  2, center */
                 {5.0f, 5.0f},                   /*  3, right */
                 {5.0f, 5.0f},                   /*  4, middle */
@@ -3494,7 +4014,8 @@ void SnapLayouterTest::updatePropagateChildSizes() {
 
         Vector2 expectedOuterSize;
         Float expectedInnerOffsetX;
-        Float expectedInnerWidth, expectedInnerCenterY;
+        Vector2 expectedInnerSize;
+        Float expectedInnerCenterY;
         Float expectedCenterHeight, expectedCenterOffsetY;
         Float expectedCenterLeftEdge;
         bool explicitlySnappedNodes;
@@ -3503,7 +4024,7 @@ void SnapLayouterTest::updatePropagateChildSizes() {
     DummyLayouter& dummyLayouter = ui.setLayouterInstance(Containers::pointer<DummyLayouter>(ui.createLayouter()));
     dummyLayouter.expectedOuterSize = data.expectedOuterSize;
     dummyLayouter.expectedInnerOffsetX = data.expectedInnerOffsetX;
-    dummyLayouter.expectedInnerWidth = data.expectedInnerWidth;
+    dummyLayouter.expectedInnerSize = data.expectedInnerSize;
     dummyLayouter.expectedInnerCenterY = data.expectedInnerCenterY;
     dummyLayouter.expectedCenterHeight = data.expectedCenterHeight;
     dummyLayouter.expectedCenterOffsetY = data.expectedCenterOffsetY;

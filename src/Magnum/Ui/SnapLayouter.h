@@ -226,6 +226,8 @@ enum class SnapLayoutFlag: UnsignedByte {
      * Ignore horizontal overflow of child layouts instead of expanding node
      * width to contain them. Note that explicitly snapped layouts aren't
      * considered and may overflow regardless of this flag being set.
+     *
+     * Mutually exclusive with @ref SnapLayoutFlag::PropagateMarginX.
      */
     IgnoreOverflowX = 1 << 0,
 
@@ -233,14 +235,40 @@ enum class SnapLayoutFlag: UnsignedByte {
      * Ignore horizontal overflow of child layouts instead of expanding node
      * height to contain them. Note that explicitly snapped layouts aren't
      * considered and may overflow regardless of this flag being set.
+     *
+     * Mutually exclusive with @ref SnapLayoutFlag::PropagateMarginY.
      */
     IgnoreOverflowY = 1 << 1,
 
     /**
      * Alias to specifying both @ref SnapLayoutFlag::IgnoreOverflowX and
-     * @ref SnapLayoutFlag::IgnoreOverflowY.
+     * @ref SnapLayoutFlag::IgnoreOverflowY. Mutually exclusive with
+     * @ref SnapLayoutFlag::PropagateMargin.
      */
     IgnoreOverflow = IgnoreOverflowX|IgnoreOverflowY,
+
+    /**
+     * Propagate horizontal margin of child layouts that's larger than
+     * horizontal node padding instead of expanding the node width to fit it.
+     *
+     * Mutually exclusive with @ref SnapLayoutFlag::IgnoreOverflowX.
+     */
+    PropagateMarginX = 1 << 2,
+
+    /**
+     * Propagate vertical margin of child layouts that's larger than vertical
+     * node padding instead of expanding the node height to fit it.
+     *
+     * Mutually exclusive with @ref SnapLayoutFlag::IgnoreOverflowY.
+     */
+    PropagateMarginY = 1 << 3,
+
+    /**
+     * Alias to specifying both @ref SnapLayoutFlag::PropagateMarginX and
+     * @ref SnapLayoutFlag::PropagateMarginY. Mutually exclusive with
+     * @ref SnapLayoutFlag::IgnoreOverflow.
+     */
+    PropagateMargin = PropagateMarginX|PropagateMarginY,
 };
 
 /**

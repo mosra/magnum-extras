@@ -110,6 +110,9 @@ Debug& operator<<(Debug& debug, const SnapLayoutFlag value) {
         _c(IgnoreOverflowX)
         _c(IgnoreOverflowY)
         _c(IgnoreOverflow)
+        _c(PropagateMarginX)
+        _c(PropagateMarginY)
+        _c(PropagateMargin)
         #undef _c
         /* LCOV_EXCL_STOP */
     }
@@ -123,6 +126,10 @@ Debug& operator<<(Debug& debug, const SnapLayoutFlags value) {
         SnapLayoutFlag::IgnoreOverflow,
         SnapLayoutFlag::IgnoreOverflowX,
         SnapLayoutFlag::IgnoreOverflowY,
+        /* Combination of PropagateMarginX and PropagateMarginY, has to be first */
+        SnapLayoutFlag::PropagateMargin,
+        SnapLayoutFlag::PropagateMarginX,
+        SnapLayoutFlag::PropagateMarginY,
     });
 }
 
@@ -179,6 +186,10 @@ LayoutHandle SnapLayouter::addInternal(const NodeHandle node, const LayouterData
        explicitly snapped layouts, don't allow them to be set */
     CORRADE_ASSERT(!(flags & ~SnapLayoutFlagMask),
         "Ui::SnapLayouter::add(): invalid flags" << flags, {});
+    CORRADE_ASSERT(
+        !(flags >= (SnapLayoutFlag::IgnoreOverflowX|SnapLayoutFlag::PropagateMarginX)) &&
+        !(flags >= (SnapLayoutFlag::IgnoreOverflowY|SnapLayoutFlag::PropagateMarginY)),
+        "Ui::SnapLayouter::add():" << (flags & SnapLayoutFlag::IgnoreOverflow) << "and" << (flags & SnapLayoutFlag::PropagateMargin) << "are mutually exclusive", {});
 
     State& state = *_state;
 
@@ -265,6 +276,10 @@ LayoutHandle SnapLayouter::addInternal(const NodeHandle node, const Snaps snap, 
        explicitly snapped layouts, don't allow them to be set */
     CORRADE_ASSERT(!(flags & ~SnapLayoutFlagMask),
         "Ui::SnapLayouter::add(): invalid flags" << flags, {});
+    CORRADE_ASSERT(
+        !(flags >= (SnapLayoutFlag::IgnoreOverflowX|SnapLayoutFlag::PropagateMarginX)) &&
+        !(flags >= (SnapLayoutFlag::IgnoreOverflowY|SnapLayoutFlag::PropagateMarginY)),
+        "Ui::SnapLayouter::add():" << (flags & SnapLayoutFlag::IgnoreOverflow) << "and" << (flags & SnapLayoutFlag::PropagateMargin) << "are mutually exclusive", {});
 
     State& state = *_state;
 
@@ -462,6 +477,10 @@ void SnapLayouter::setFlagsInternal(const UnsignedInt id, const SnapLayoutFlags 
     CORRADE_ASSERT(!(flags & ~SnapLayoutFlagMask),
         "Ui::SnapLayouter::setFlags(): invalid flags" << flags, );
     Layout& layout = _state->layouts[id];
+    CORRADE_ASSERT(
+        !(flags >= (SnapLayoutFlag::IgnoreOverflowX|SnapLayoutFlag::PropagateMarginX)) &&
+        !(flags >= (SnapLayoutFlag::IgnoreOverflowY|SnapLayoutFlag::PropagateMarginY)),
+        "Ui::SnapLayouter::setFlags():" << (flags & SnapLayoutFlag::IgnoreOverflow) << "and" << (flags & SnapLayoutFlag::PropagateMargin) << "are mutually exclusive", );
     layout.flags = (layout.flags & ~SnapLayoutFlagMask)|flags;
     setNeedsUpdate();
 }
@@ -482,6 +501,10 @@ void SnapLayouter::addFlagsInternal(const UnsignedInt id, const SnapLayoutFlags 
     CORRADE_ASSERT(!(flags & ~SnapLayoutFlagMask),
         "Ui::SnapLayouter::addFlags(): invalid flags" << flags, );
     Layout& layout = _state->layouts[id];
+    CORRADE_ASSERT(
+        !((layout.flags|flags) >= (SnapLayoutFlag::IgnoreOverflowX|SnapLayoutFlag::PropagateMarginX)) &&
+        !((layout.flags|flags) >= (SnapLayoutFlag::IgnoreOverflowY|SnapLayoutFlag::PropagateMarginY)),
+        "Ui::SnapLayouter::addFlags():" << ((layout.flags|flags) & SnapLayoutFlag::IgnoreOverflow) << "and" << ((layout.flags|flags) & SnapLayoutFlag::PropagateMargin) << "are mutually exclusive", );
     /* Not delegating to setFlagsInternal() because this is a simpler operation
        than preserving certain bits while replacing the rest */
     layout.flags |= flags;
@@ -843,19 +866,21 @@ void SnapLayouter::doUpdate(const Containers::BitArrayView layoutIdsToUpdate, co
                     nodes,
                     stridedArrayView(state.layouts).slice(&Layout::next));
 
-        /* Calculate the actual layout size and padding from the layout
+        /* Calculate the actual layout size, padding and margin from the layout
            properties and child layout size and margin (optionally) calculated
            above */
-        const Containers::Pair<Vector2, Vector4> layoutSizePadding =
-            Implementation::layoutSizePadding(
+        const Containers::Triple<Vector2, Vector4, Vector4> layoutSizePaddingMargin =
+            Implementation::layoutSizePaddingMargin(
                 layout.flags,
                 layout.childSnap,
                 nodeSizes[nodeId],
                 nodePaddings[nodeId],
+                nodeMargins[nodeId],
                 childLayoutSizeMargin.first(),
                 childLayoutSizeMargin.second());
-        nodeSizes[nodeId] = layoutSizePadding.first();
-        childLayoutPaddings[layoutId] = layoutSizePadding.second();
+        nodeSizes[nodeId] = layoutSizePaddingMargin.first();
+        childLayoutPaddings[layoutId] = layoutSizePaddingMargin.second();
+        nodeMargins[nodeId] = layoutSizePaddingMargin.third();
     }
 
     /* Go through the layouts in their dependency order, skipping the first
@@ -877,7 +902,7 @@ void SnapLayouter::doUpdate(const Containers::BitArrayView layoutIdsToUpdate, co
            snap target and parameters */
         Snaps snap{NoInit};
         Vector2 targetOffset{NoInit}, targetSize{NoInit};
-        Vector4 targetPadding{NoInit}, targetMargin{NoInit};
+        Vector4 targetPadding{NoInit}, targetMargin{NoInit}, nodeMargin{NoInit};
         if(!(layout.flags >= SnapLayoutFlagHasExplicitSnap)) {
             /* If this is the first child layout in the list, snap to the
                parent */
@@ -899,6 +924,17 @@ void SnapLayouter::doUpdate(const Containers::BitArrayView layoutIdsToUpdate, co
                 targetMargin = Vector4{Constants::nan()};
                 #endif
 
+                /* If propagating margin in either direction, don't use it for
+                   positioning of the first node */
+                Math::scatterInto<0, 2>(nodeMargin,
+                    parentLayout.flags >= SnapLayoutFlag::PropagateMarginX ?
+                        Vector2{} :
+                        Math::gather<0, 2>(nodeMargins[nodeId]));
+                Math::scatterInto<1, 3>(nodeMargin,
+                    parentLayout.flags >= SnapLayoutFlag::PropagateMarginY ?
+                        Vector2{} :
+                        Math::gather<1, 3>(nodeMargins[nodeId]));
+
             /* Otherwise snap to the previous node */
             } else {
                 snap = parentLayout.childSnap;
@@ -913,6 +949,7 @@ void SnapLayouter::doUpdate(const Containers::BitArrayView layoutIdsToUpdate, co
                 targetPadding = Vector4{Constants::nan()};
                 #endif
                 targetMargin = nodeMargins[previousNodeId];
+                nodeMargin = nodeMargins[nodeId];
             }
 
         /* Otherwise we're snapping to an explicit target. If the target is
@@ -930,6 +967,7 @@ void SnapLayouter::doUpdate(const Containers::BitArrayView layoutIdsToUpdate, co
             #ifdef CORRADE_IS_DEBUG_BUILD
             targetMargin = Vector4{Constants::nan()};
             #endif
+            nodeMargin = nodeMargins[nodeId];
 
         /* Otherwise we're snapping relative to the target node, which should
            have the layout already calculated at this point thanks to the
@@ -950,11 +988,12 @@ void SnapLayouter::doUpdate(const Containers::BitArrayView layoutIdsToUpdate, co
 
             targetPadding = nodePaddings[targetNodeId];
             targetMargin = nodeMargins[targetNodeId];
+            nodeMargin = nodeMargins[nodeId];
         }
 
         const Containers::Pair<Vector2, Vector2> out = Implementation::snap(snap,
             targetOffset, targetSize,
-            targetPadding, targetMargin, nodeMargins[nodeId],
+            targetPadding, targetMargin, nodeMargin,
             Math::max(nodeSizes[nodeId], nodeMinSizes[nodeId]));
 
         /* The original node offset is added to the calculated layout, size
