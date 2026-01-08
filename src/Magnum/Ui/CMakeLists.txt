@@ -59,6 +59,7 @@ set(MagnumUi_SRCS
     Input.cpp
     Label.cpp
     NodeFlags.cpp
+    Panel.cpp
     Style.cpp
     ${MagnumUi_RESOURCES})
 
@@ -81,7 +82,6 @@ set(MagnumUi_GracefulAssert_SRCS
     LayoutLayer.cpp
     LineLayer.cpp
     NodeAnimator.cpp
-    Panel.cpp
     SnapLayouter.cpp
     TextLayer.cpp
     TextLayerAnimator.cpp
