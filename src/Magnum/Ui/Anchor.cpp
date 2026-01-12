@@ -29,24 +29,17 @@
 #include <Corrade/Utility/Assert.h>
 #include <Magnum/Math/Vector2.h>
 
-#include "Magnum/Ui/AbstractLayouter.h"
 #include "Magnum/Ui/AbstractUserInterface.h"
 #include "Magnum/Ui/Handle.h"
 
 namespace Magnum { namespace Ui {
 
-AbstractAnchor::AbstractAnchor(AbstractUserInterface& ui, const NodeHandle node, const LayoutHandle layout): _ui{&ui}, _node{node}, _layout{layout} {
+AbstractAnchor::AbstractAnchor(AbstractUserInterface& ui, const NodeHandle node): _ui{&ui}, _node{node} {
     CORRADE_ASSERT(ui.isHandleValid(node),
         "Ui::AbstractAnchor: invalid handle" << node, );
-    CORRADE_ASSERT(layout == LayoutHandle::Null || ui.isHandleValid(layout),
-        "Ui::AbstractAnchor: invalid handle" << layout, );
-    /** @todo might make sense to turn this into a debug assert? might become
-        pretty heavy */
-    CORRADE_ASSERT(layout == LayoutHandle::Null || ui.layouter(layoutHandleLayouter(layout)).node(layout) == node,
-        "Ui::AbstractAnchor:" << layout << "not associated with" << node, );
 }
 
-AbstractAnchor::AbstractAnchor(AbstractUserInterface& ui, const NodeHandle parent, const Vector2& offset, const Vector2& size, const NodeFlags flags): _ui{&ui}, _layout{} {
+AbstractAnchor::AbstractAnchor(AbstractUserInterface& ui, const NodeHandle parent, const Vector2& offset, const Vector2& size, const NodeFlags flags): _ui{&ui} {
     _node = ui.createNode(parent, offset, size, flags);
 }
 
@@ -55,11 +48,5 @@ AbstractAnchor::AbstractAnchor(AbstractUserInterface& ui, const NodeHandle paren
 AbstractAnchor::AbstractAnchor(AbstractUserInterface& ui, const Vector2& offset, const Vector2& size, const NodeFlags flags): AbstractAnchor{ui, NodeHandle::Null, offset, size, flags} {}
 
 AbstractAnchor::AbstractAnchor(AbstractUserInterface& ui, const Vector2& size, const NodeFlags flags): AbstractAnchor{ui, NodeHandle::Null, {}, size, flags} {}
-
-AbstractAnchor::operator Magnum::Ui::LayoutHandle() const {
-    CORRADE_ASSERT(_layout != LayoutHandle::Null,
-        "Ui::AbstractAnchor: layout is null", {});
-    return _layout;
-}
 
 }}

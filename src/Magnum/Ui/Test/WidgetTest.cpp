@@ -136,7 +136,7 @@ template<class T> void WidgetTest::constructFromAnchor() {
         explicit Interface(NoCreateT): WidgetTraits<T>::UserInterfaceType{NoCreate} {}
     } ui{NoCreate};
 
-    typename WidgetTraits<T>::AnchorType a{ui, ui.createNode({}, {}), LayoutHandle::Null};
+    typename WidgetTraits<T>::AnchorType a{ui, ui.createNode({}, {})};
 
     {
         T widget{a};

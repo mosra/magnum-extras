@@ -56,23 +56,18 @@ class MAGNUM_UI_EXPORT AbstractAnchor {
          * @brief Constructor
          * @param ui        User interface instance
          * @param node      Node handle
-         * @param layout    Layout associated with given node or
-         *      @ref LayoutHandle::Null
          *
-         * The @p node is expected to be valid in @p ui. If @p layout is not
-         * @ref LayoutHandle::Null, it's expected to be valid in @p ui and
-         * associated with @p node.
-         * @see @ref AbstractUserInterface::isHandleValid(NodeHandle) const,
-         *      @ref AbstractUserInterface::isHandleValid(LayoutHandle) const,
+         * The @p node is expected to be valid in @p ui.
+         * @see @ref AbstractUserInterface::isHandleValid(NodeHandle) const
          */
-        explicit AbstractAnchor(AbstractUserInterface& ui, NodeHandle node, LayoutHandle layout);
+        explicit AbstractAnchor(AbstractUserInterface& ui, NodeHandle node);
 
         /**
          * @brief Create a custom-positioned anchor
          *
          * Calls @ref AbstractUserInterface::createNode() with @p parent,
          * @p offset, @p size and @p flags, and remembers the created
-         * @ref NodeHandle. The @ref layout() is @ref LayoutHandle::Null.
+         * @ref NodeHandle.
          */
         /*implicit*/ AbstractAnchor(AbstractUserInterface& ui, NodeHandle parent, const Vector2& offset, const Vector2& size, NodeFlags flags = {});
 
@@ -81,7 +76,7 @@ class MAGNUM_UI_EXPORT AbstractAnchor {
          *
          * Calls @ref AbstractUserInterface::createNode() with @p parent,
          * zero offset, @p size and @p flags, and remembers the created
-         * @ref NodeHandle. The @ref layout() is @ref LayoutHandle::Null.
+         * @ref NodeHandle.
          */
         /*implicit*/ AbstractAnchor(AbstractUserInterface& ui, NodeHandle parent, const Vector2& size, NodeFlags flags = {});
 
@@ -118,26 +113,10 @@ class MAGNUM_UI_EXPORT AbstractAnchor {
          */
         operator NodeHandle() const { return _node; }
 
-        /**
-         * @brief Layout handle
-         *
-         * Can be @ref LayoutHandle::Null, in which case the anchor doesn't
-         * have any associated layout.
-         */
-        LayoutHandle layout() const { return _layout; }
-
-        /**
-         * @brief Layout handle
-         *
-         * Unlike @ref layout() expects that the handle is not null.
-         */
-        operator LayoutHandle() const;
-
     private:
         AbstractUserInterface* _ui;
         /* 0/4 bytes free */
         NodeHandle _node;
-        LayoutHandle _layout;
 };
 
 /**
@@ -150,8 +129,8 @@ base class documentation for more information.
 */
 template<class UserInterface> class BasicAnchor: public AbstractAnchor {
     public:
-        /** @copydoc AbstractAnchor::AbstractAnchor(AbstractUserInterface&, NodeHandle, LayoutHandle) */
-        explicit BasicAnchor(UserInterface& ui, NodeHandle node, LayoutHandle layout): AbstractAnchor{ui, node, layout} {}
+        /** @copydoc AbstractAnchor::AbstractAnchor(AbstractUserInterface&, NodeHandle) */
+        explicit BasicAnchor(UserInterface& ui, NodeHandle node): AbstractAnchor{ui, node} {}
 
         /** @copydoc AbstractAnchor::AbstractAnchor(AbstractUserInterface&, NodeHandle, const Vector2&, const Vector2&, NodeFlags) */
         /*implicit*/ BasicAnchor(UserInterface& ui, NodeHandle parent, const Vector2& offset, const Vector2& size, NodeFlags flags = {}): AbstractAnchor{ui, parent, offset, size, flags} {}

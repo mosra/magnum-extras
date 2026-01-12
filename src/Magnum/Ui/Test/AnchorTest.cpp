@@ -30,7 +30,6 @@
 #include <Corrade/TestSuite/Compare/String.h>
 #include <Magnum/Math/Vector2.h>
 
-#include "Magnum/Ui/AbstractLayouter.h"
 #include "Magnum/Ui/Anchor.h"
 #include "Magnum/Ui/Handle.h"
 #include "Magnum/Ui/NodeFlags.h"
@@ -47,21 +46,17 @@ struct AnchorTest: TestSuite::Tester {
     template<class T> void constructCreateNodeTopLevel();
     /* Passing an invalid parent to the node creation is asserted in
        UserInterface directly */
-
-    void layoutInvalid();
 };
 
 AnchorTest::AnchorTest() {
-    addTests({&AnchorTest::construct<AbstractAnchor>,
-              &AnchorTest::construct<Anchor>,
-              &AnchorTest::constructInvalid<AbstractAnchor>,
-              &AnchorTest::constructInvalid<Anchor>,
-              &AnchorTest::constructCreateNode<AbstractAnchor>,
-              &AnchorTest::constructCreateNode<Anchor>,
-              &AnchorTest::constructCreateNodeTopLevel<AbstractAnchor>,
-              &AnchorTest::constructCreateNodeTopLevel<Anchor>,
-
-              &AnchorTest::layoutInvalid});
+    addTests<AnchorTest>({&AnchorTest::construct<AbstractAnchor>,
+                          &AnchorTest::construct<Anchor>,
+                          &AnchorTest::constructInvalid<AbstractAnchor>,
+                          &AnchorTest::constructInvalid<Anchor>,
+                          &AnchorTest::constructCreateNode<AbstractAnchor>,
+                          &AnchorTest::constructCreateNode<Anchor>,
+                          &AnchorTest::constructCreateNodeTopLevel<AbstractAnchor>,
+                          &AnchorTest::constructCreateNodeTopLevel<Anchor>});
 }
 
 template<class> struct AnchorTraits;
@@ -81,31 +76,12 @@ template<class T> void AnchorTest::construct() {
         explicit Interface(NoCreateT): AnchorTraits<T>::UserInterfaceType{NoCreate} {}
     } ui{NoCreate};
 
-    struct Layouter: AbstractLayouter {
-        using AbstractLayouter::AbstractLayouter;
-        using AbstractLayouter::add;
-
-        LayouterFeatures doFeatures() const override { return {}; }
-        void doUpdate(Containers::BitArrayView, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const NodeHandle>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Float>&, const Containers::StridedArrayView1D<const Vector4>&, const Containers::StridedArrayView1D<const Vector4>&, const Containers::StridedArrayView1D<Vector2>&, const  Containers::StridedArrayView1D<Vector2>&) override {}
-    };
-    Layouter& layouter = ui.setLayouterInstance(Containers::pointer<Layouter>(ui.createLayouter()));
-
     NodeHandle node = ui.createNode({}, {});
-    LayoutHandle layout = layouter.add(node);
 
-    T a{ui, node, layout};
-    CORRADE_COMPARE(&a.ui(), &ui);
-    CORRADE_COMPARE(a.node(), node);
-    CORRADE_COMPARE(a, node);
-    CORRADE_COMPARE(a.layout(), layout);
-    CORRADE_COMPARE(a, layout);
-
-    T b{ui, node, LayoutHandle::Null};
-    CORRADE_COMPARE(&b.ui(), &ui);
-    CORRADE_COMPARE(b.node(), node);
-    CORRADE_COMPARE(b, node);
-    CORRADE_COMPARE(b.layout(), LayoutHandle::Null);
-    /* LayoutHandle conversion would assert here */
+    T anchor{ui, node};
+    CORRADE_COMPARE(&anchor.ui(), &ui);
+    CORRADE_COMPARE(anchor.node(), node);
+    CORRADE_COMPARE(anchor, node);
 }
 
 template<class T> void AnchorTest::constructInvalid() {
@@ -117,30 +93,10 @@ template<class T> void AnchorTest::constructInvalid() {
         explicit Interface(NoCreateT): AnchorTraits<T>::UserInterfaceType{NoCreate} {}
     } ui{NoCreate};
 
-    struct Layouter: AbstractLayouter {
-        using AbstractLayouter::AbstractLayouter;
-        using AbstractLayouter::add;
-
-        LayouterFeatures doFeatures() const override { return {}; }
-        void doUpdate(Containers::BitArrayView, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const NodeHandle>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Float>&, const Containers::StridedArrayView1D<const Vector4>&, const Containers::StridedArrayView1D<const Vector4>&, const Containers::StridedArrayView1D<Vector2>&, const  Containers::StridedArrayView1D<Vector2>&) override {}
-    };
-    Layouter& layouter = ui.setLayouterInstance(Containers::pointer<Layouter>(ui.createLayouter()));
-
-    NodeHandle node = ui.createNode({}, {});
-    NodeHandle node2 = ui.createNode({}, {});
-    LayoutHandle layout = layouter.add(node);
-    LayoutHandle layout2 = layouter.add(node2);
-
     Containers::String out;
     Error redirectError{&out};
-    T{ui, nodeHandle(0x12345, 0xabc), layout};
-    T{ui, node, layoutHandle(layouterHandle(0x67, 0xde), 0x12345, 0xabc)};
-    T{ui, node, layout2};
-    CORRADE_COMPARE_AS(out,
-        "Ui::AbstractAnchor: invalid handle Ui::NodeHandle(0x12345, 0xabc)\n"
-        "Ui::AbstractAnchor: invalid handle Ui::LayoutHandle({0x67, 0xde}, {0x12345, 0xabc})\n"
-        "Ui::AbstractAnchor: Ui::LayoutHandle({0x0, 0x1}, {0x1, 0x1}) not associated with Ui::NodeHandle(0x0, 0x1)\n",
-        TestSuite::Compare::String);
+    T{ui, nodeHandle(0x12345, 0xabc)};
+    CORRADE_COMPARE(out, "Ui::AbstractAnchor: invalid handle Ui::NodeHandle(0x12345, 0xabc)\n");
 }
 
 template<class T> void AnchorTest::constructCreateNode() {
@@ -154,7 +110,6 @@ template<class T> void AnchorTest::constructCreateNode() {
 
     T a{ui, parent, {1.0f, 2.0f}, {3.0f, 4.0f}, NodeFlag::Disabled};
     CORRADE_COMPARE(&a.ui(), &ui);
-    CORRADE_COMPARE(a.layout(), LayoutHandle::Null);
     CORRADE_COMPARE(ui.nodeParent(a), parent);
     CORRADE_COMPARE(ui.nodeOffset(a), (Vector2{1.0f, 2.0f}));
     CORRADE_COMPARE(ui.nodeSize(a), (Vector2{3.0f, 4.0f}));
@@ -162,7 +117,6 @@ template<class T> void AnchorTest::constructCreateNode() {
 
     T b{ui, parent, {5.0f, 6.0f}, NodeFlag::NoEvents};
     CORRADE_COMPARE(&b.ui(), &ui);
-    CORRADE_COMPARE(b.layout(), LayoutHandle::Null);
     CORRADE_COMPARE(ui.nodeParent(b), parent);
     CORRADE_COMPARE(ui.nodeOffset(b), Vector2{});
     CORRADE_COMPARE(ui.nodeSize(b), (Vector2{5.0f, 6.0f}));
@@ -178,7 +132,6 @@ template<class T> void AnchorTest::constructCreateNodeTopLevel() {
 
     T a{ui, {1.0f, 2.0f}, {3.0f, 4.0f}, NodeFlag::Disabled};
     CORRADE_COMPARE(&a.ui(), &ui);
-    CORRADE_COMPARE(a.layout(), LayoutHandle::Null);
     CORRADE_COMPARE(ui.nodeParent(a), NodeHandle::Null);
     CORRADE_COMPARE(ui.nodeOffset(a), (Vector2{1.0f, 2.0f}));
     CORRADE_COMPARE(ui.nodeSize(a), (Vector2{3.0f, 4.0f}));
@@ -186,28 +139,10 @@ template<class T> void AnchorTest::constructCreateNodeTopLevel() {
 
     T b{ui, {5.0f, 6.0f}, NodeFlag::NoEvents};
     CORRADE_COMPARE(&b.ui(), &ui);
-    CORRADE_COMPARE(b.layout(), LayoutHandle::Null);
     CORRADE_COMPARE(ui.nodeParent(b), NodeHandle::Null);
     CORRADE_COMPARE(ui.nodeOffset(b), Vector2{});
     CORRADE_COMPARE(ui.nodeSize(b), (Vector2{5.0f, 6.0f}));
     CORRADE_COMPARE(ui.nodeFlags(b), NodeFlag::NoEvents);
-}
-
-void AnchorTest::layoutInvalid() {
-    CORRADE_SKIP_IF_NO_ASSERT();
-
-    AbstractUserInterface ui{{100, 100}};
-
-    NodeHandle node = ui.createNode({}, {});
-    AbstractAnchor a{ui, node, LayoutHandle::Null};
-
-    Containers::String out;
-    Error redirectError{&out};
-    /* LOL, LayoutHandle(a); says it's redefining a with a different type?!
-       What's up with that syntax?? Now I have to add another void cast because
-       otherwise it says expression result is unused. */
-    static_cast<void>(static_cast<LayoutHandle>(a));
-    CORRADE_COMPARE(out, "Ui::AbstractAnchor: layout is null\n");
 }
 
 }}}}
