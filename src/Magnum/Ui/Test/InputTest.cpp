@@ -80,7 +80,7 @@ void InputTest::debugStyle() {
 }
 
 void InputTest::construct() {
-    Input input{{ui, rootNode, {32, 16}}, "hello", InputStyle::Warning};
+    Input input{{ui, rootNode, {}, {32, 16}}, "hello", InputStyle::Warning};
     CORRADE_COMPARE(ui.nodeParent(input), rootNode);
     CORRADE_COMPARE(ui.nodeSize(input), (Vector2{32, 16}));
     CORRADE_COMPARE(ui.nodeFlags(input), NodeFlag::Focusable);
@@ -97,7 +97,7 @@ void InputTest::construct() {
 }
 
 void InputTest::constructTextProperties() {
-    Input input{{ui, rootNode, {32, 16}}, "hello",
+    Input input{{ui, rootNode, {}, {32, 16}}, "hello",
             TextProperties{}.setScript(Text::Script::Braille),
             InputStyle::Flat};
     CORRADE_COMPARE(ui.nodeParent(input), rootNode);
@@ -128,7 +128,7 @@ void InputTest::constructNoCreate() {
 }
 
 void InputTest::setStyle() {
-    Input input{{ui, rootNode, {32, 16}}, "hello", InputStyle::Danger};
+    Input input{{ui, rootNode, {}, {32, 16}}, "hello", InputStyle::Danger};
     CORRADE_COMPARE(input.style(), InputStyle::Danger);
 
     input.setStyle(InputStyle::Success);
@@ -140,7 +140,7 @@ void InputTest::setStyle() {
 }
 
 void InputTest::setStyleWhileActive() {
-    Input input{{ui, rootNode, {32, 16}}, "hello", InputStyle::Success};
+    Input input{{ui, rootNode, {}, {32, 16}}, "hello", InputStyle::Success};
     CORRADE_COMPARE(input.style(), InputStyle::Success);
 
     CORRADE_COMPARE(ui.baseLayer().style(input.backgroundData()),
@@ -166,7 +166,7 @@ void InputTest::setStyleWhileActive() {
 }
 
 void InputTest::setText() {
-    Input input{{ui, rootNode, {32, 16}}, "hiya"};
+    Input input{{ui, rootNode, {}, {32, 16}}, "hiya"};
     CORRADE_COMPARE(input.text(), "hiya");
     CORRADE_COMPARE(ui.textLayer().glyphCount(input.textData()), 4);
 
@@ -177,7 +177,7 @@ void InputTest::setText() {
 }
 
 void InputTest::setTextTextProperties() {
-    Input input{{ui, rootNode, {32, 16}}, "hiya"};
+    Input input{{ui, rootNode, {}, {32, 16}}, "hiya"};
     CORRADE_COMPARE(input.text(), "hiya");
     CORRADE_COMPARE(ui.textLayer().glyphCount(input.textData()), 4);
 
@@ -190,7 +190,7 @@ void InputTest::setTextTextProperties() {
 }
 
 void InputTest::edit() {
-    Input input{{ui, rootNode, {32, 16}}, "set"};
+    Input input{{ui, rootNode, {}, {32, 16}}, "set"};
     /** @todo use a cursor API once it exists */
     CORRADE_COMPARE(ui.textLayer().cursor(input.textData()), Containers::pair(3u, 3u));
 

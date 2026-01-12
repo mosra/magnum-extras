@@ -27,7 +27,6 @@
 #include "Anchor.h"
 
 #include <Corrade/Utility/Assert.h>
-#include <Magnum/Math/Vector2.h>
 
 #include "Magnum/Ui/AbstractUserInterface.h"
 #include "Magnum/Ui/Handle.h"
@@ -43,10 +42,6 @@ AbstractAnchor::AbstractAnchor(AbstractUserInterface& ui, const NodeHandle paren
     _node = ui.createNode(parent, offset, size, flags);
 }
 
-AbstractAnchor::AbstractAnchor(AbstractUserInterface& ui, const NodeHandle parent, const Vector2& size, const NodeFlags flags): AbstractAnchor{ui, parent, {}, size, flags} {}
-
 AbstractAnchor::AbstractAnchor(AbstractUserInterface& ui, const Vector2& offset, const Vector2& size, const NodeFlags flags): AbstractAnchor{ui, NodeHandle::Null, offset, size, flags} {}
-
-AbstractAnchor::AbstractAnchor(AbstractUserInterface& ui, const Vector2& size, const NodeFlags flags): AbstractAnchor{ui, NodeHandle::Null, {}, size, flags} {}
 
 }}

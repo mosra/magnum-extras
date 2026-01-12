@@ -108,19 +108,12 @@ template<class T> void AnchorTest::constructCreateNode() {
 
     NodeHandle parent = ui.createNode({}, {});
 
-    T a{ui, parent, {1.0f, 2.0f}, {3.0f, 4.0f}, NodeFlag::Disabled};
-    CORRADE_COMPARE(&a.ui(), &ui);
-    CORRADE_COMPARE(ui.nodeParent(a), parent);
-    CORRADE_COMPARE(ui.nodeOffset(a), (Vector2{1.0f, 2.0f}));
-    CORRADE_COMPARE(ui.nodeSize(a), (Vector2{3.0f, 4.0f}));
-    CORRADE_COMPARE(ui.nodeFlags(a), NodeFlag::Disabled);
-
-    T b{ui, parent, {5.0f, 6.0f}, NodeFlag::NoEvents};
-    CORRADE_COMPARE(&b.ui(), &ui);
-    CORRADE_COMPARE(ui.nodeParent(b), parent);
-    CORRADE_COMPARE(ui.nodeOffset(b), Vector2{});
-    CORRADE_COMPARE(ui.nodeSize(b), (Vector2{5.0f, 6.0f}));
-    CORRADE_COMPARE(ui.nodeFlags(b), NodeFlag::NoEvents);
+    T anchor{ui, parent, {1.0f, 2.0f}, {3.0f, 4.0f}, NodeFlag::Disabled};
+    CORRADE_COMPARE(&anchor.ui(), &ui);
+    CORRADE_COMPARE(ui.nodeParent(anchor), parent);
+    CORRADE_COMPARE(ui.nodeOffset(anchor), (Vector2{1.0f, 2.0f}));
+    CORRADE_COMPARE(ui.nodeSize(anchor), (Vector2{3.0f, 4.0f}));
+    CORRADE_COMPARE(ui.nodeFlags(anchor), NodeFlag::Disabled);
 }
 
 template<class T> void AnchorTest::constructCreateNodeTopLevel() {
@@ -130,19 +123,12 @@ template<class T> void AnchorTest::constructCreateNodeTopLevel() {
         explicit Interface(NoCreateT): AnchorTraits<T>::UserInterfaceType{NoCreate} {}
     } ui{NoCreate};
 
-    T a{ui, {1.0f, 2.0f}, {3.0f, 4.0f}, NodeFlag::Disabled};
-    CORRADE_COMPARE(&a.ui(), &ui);
-    CORRADE_COMPARE(ui.nodeParent(a), NodeHandle::Null);
-    CORRADE_COMPARE(ui.nodeOffset(a), (Vector2{1.0f, 2.0f}));
-    CORRADE_COMPARE(ui.nodeSize(a), (Vector2{3.0f, 4.0f}));
-    CORRADE_COMPARE(ui.nodeFlags(a), NodeFlag::Disabled);
-
-    T b{ui, {5.0f, 6.0f}, NodeFlag::NoEvents};
-    CORRADE_COMPARE(&b.ui(), &ui);
-    CORRADE_COMPARE(ui.nodeParent(b), NodeHandle::Null);
-    CORRADE_COMPARE(ui.nodeOffset(b), Vector2{});
-    CORRADE_COMPARE(ui.nodeSize(b), (Vector2{5.0f, 6.0f}));
-    CORRADE_COMPARE(ui.nodeFlags(b), NodeFlag::NoEvents);
+    T anchor{ui, {1.0f, 2.0f}, {3.0f, 4.0f}, NodeFlag::Disabled};
+    CORRADE_COMPARE(&anchor.ui(), &ui);
+    CORRADE_COMPARE(ui.nodeParent(anchor), NodeHandle::Null);
+    CORRADE_COMPARE(ui.nodeOffset(anchor), (Vector2{1.0f, 2.0f}));
+    CORRADE_COMPARE(ui.nodeSize(anchor), (Vector2{3.0f, 4.0f}));
+    CORRADE_COMPARE(ui.nodeFlags(anchor), NodeFlag::Disabled);
 }
 
 }}}}

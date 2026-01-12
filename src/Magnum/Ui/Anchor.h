@@ -71,29 +71,12 @@ class MAGNUM_UI_EXPORT AbstractAnchor {
         /*implicit*/ AbstractAnchor(AbstractUserInterface& ui, NodeHandle parent, const Vector2& offset, const Vector2& size, NodeFlags flags = {});
 
         /**
-         * @brief Create a custom-sized anchor
-         *
-         * Calls @ref AbstractUserInterface::createNode() with @p parent,
-         * zero offset, @p size and @p flags, and remembers the created
-         * @ref NodeHandle.
-         */
-        /*implicit*/ AbstractAnchor(AbstractUserInterface& ui, NodeHandle parent, const Vector2& size, NodeFlags flags = {});
-
-        /**
          * @brief Create a custom-positioned top-level anchor
          *
          * Equivalent to calling @ref AbstractAnchor(AbstractUserInterface&, NodeHandle, const Vector2&, const Vector2&, NodeFlags)
          * with @ref NodeHandle::Null as the parent.
          */
         /*implicit*/ AbstractAnchor(AbstractUserInterface& ui, const Vector2& offset, const Vector2& size, NodeFlags flags = {});
-
-        /**
-         * @brief Create a custom-sized top-level anchor
-         *
-         * Equivalent to calling @ref AbstractAnchor(AbstractUserInterface&, NodeHandle, const Vector2&, NodeFlags)
-         * with @ref NodeHandle::Null as the parent.
-         */
-        /*implicit*/ AbstractAnchor(AbstractUserInterface& ui, const Vector2& size, NodeFlags flags = {});
 
         /** @brief User interface instance */
         AbstractUserInterface& ui() const { return *_ui; }
@@ -134,9 +117,6 @@ template<class UserInterface> class BasicAnchor: public AbstractAnchor {
         /** @copydoc AbstractAnchor::AbstractAnchor(AbstractUserInterface&, NodeHandle, const Vector2&, const Vector2&, NodeFlags) */
         /*implicit*/ BasicAnchor(UserInterface& ui, NodeHandle parent, const Vector2& offset, const Vector2& size, NodeFlags flags = {}): AbstractAnchor{ui, parent, offset, size, flags} {}
 
-        /** @copydoc AbstractAnchor::AbstractAnchor(AbstractUserInterface&, NodeHandle, const Vector2&, NodeFlags) */
-        /*implicit*/ BasicAnchor(UserInterface& ui, NodeHandle parent, const Vector2& size, NodeFlags flags = {}): AbstractAnchor{ui, parent, size, flags} {}
-
         /**
          * @brief Create a custom-positioned top-level anchor
          *
@@ -144,14 +124,6 @@ template<class UserInterface> class BasicAnchor: public AbstractAnchor {
          * with @ref NodeHandle::Null as the parent.
          */
         /*implicit*/ BasicAnchor(UserInterface& ui, const Vector2& offset, const Vector2& size, NodeFlags flags = {}): AbstractAnchor{ui, offset, size, flags} {}
-
-        /**
-         * @brief Create a custom-sized top-level anchor
-         *
-         * Equivalent to calling @ref BasicAnchor(UserInterface&, NodeHandle, const Vector2&, NodeFlags)
-         * with @ref NodeHandle::Null as the parent.
-         */
-        /*implicit*/ BasicAnchor(UserInterface& ui, const Vector2& size, NodeFlags flags = {}): AbstractAnchor{ui, size, flags} {}
 
         /** @brief User interface instance */
         UserInterface& ui() const {

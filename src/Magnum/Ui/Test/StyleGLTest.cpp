@@ -110,42 +110,42 @@ const struct {
         {8, true, false, true, 0.5_sec, 2.0f, 0.0399f, true},
         [](UserInterface& ui, Int style, Int counter) {
             /** @todo differently wide icons to test alignment */
-            return button({ui, {96, 36}}, counter % 2 ? Icon::No : Icon::Yes, counter % 2 ? "Bye" : "Hello!", ButtonStyle(style)).node();
+            return button({ui, {}, {96, 36}}, counter % 2 ? Icon::No : Icon::Yes, counter % 2 ? "Bye" : "Hello!", ButtonStyle(style)).node();
         }},
     {"button text + icon", nullptr, {},
         [](UserInterface& ui, Int style, Int counter) {
-            return Button{{ui, {96, 36}}, counter % 2 ? Icon::No : Icon::Yes, counter % 2 ? "Bye" : "Hello!", ButtonStyle(style)}.release();
+            return Button{{ui, {}, {96, 36}}, counter % 2 ? Icon::No : Icon::Yes, counter % 2 ? "Bye" : "Hello!", ButtonStyle(style)}.release();
         }},
     {"button text + icon, setters", nullptr, {},
         [](UserInterface& ui, Int style, Int counter) {
-            Button button{{ui, {96, 36}}, Icon::No, "Hey", ButtonStyle(style)};
+            Button button{{ui, {}, {96, 36}}, Icon::No, "Hey", ButtonStyle(style)};
             button.setIcon(counter % 2 ? Icon::No : Icon::Yes);
             button.setText(counter % 2 ? "Bye" : "Hello!");
             return button.release();
         }},
     {"button text + icon, setters on empty", nullptr, {},
         [](UserInterface& ui, Int style, Int counter) {
-            Button button{{ui, {96, 36}}, Icon::None, "", ButtonStyle(style)};
+            Button button{{ui, {}, {96, 36}}, Icon::None, "", ButtonStyle(style)};
             button.setIcon(counter % 2 ? Icon::No : Icon::Yes);
             button.setText(counter % 2 ? "Bye" : "Hello!");
             return button.release();
         }},
     {"button text + icon, setters on empty, different order", nullptr, {},
         [](UserInterface& ui, Int style, Int counter) {
-            Button button{{ui, {96, 36}}, Icon::None, "", ButtonStyle(style)};
+            Button button{{ui, {}, {96, 36}}, Icon::None, "", ButtonStyle(style)};
             button.setText(counter % 2 ? "Bye" : "Hello!");
             button.setIcon(counter % 2 ? Icon::No : Icon::Yes);
             return button.release();
         }},
     {"button text + icon, setStyle()", nullptr, {},
         [](UserInterface& ui, Int style, Int counter) {
-            Button button{{ui, {96, 36}}, counter % 2 ? Icon::No : Icon::Yes, counter % 2 ? "Bye" : "Hello!", ButtonStyle(style == 0 ? 1 : 0)};
+            Button button{{ui, {}, {96, 36}}, counter % 2 ? Icon::No : Icon::Yes, counter % 2 ? "Bye" : "Hello!", ButtonStyle(style == 0 ? 1 : 0)};
             button.setStyle(ButtonStyle(style));
             return button.release();
         }},
     {"button text + icon, setStyle() on empty, setters", nullptr, {},
         [](UserInterface& ui, Int style, Int counter) {
-            Button button{{ui, {96, 36}}, Icon::None, "", ButtonStyle(style == 0 ? 1 : 0)};
+            Button button{{ui, {}, {96, 36}}, Icon::None, "", ButtonStyle(style == 0 ? 1 : 0)};
             button.setStyle(ButtonStyle(style));
             button.setIcon(counter % 2 ? Icon::No : Icon::Yes);
             button.setText(counter % 2 ? "Bye" : "Hello!");
@@ -156,33 +156,33 @@ const struct {
         /* Button fade out animations are all 0.5 sec */
         {8, true, false, true, 0.5_sec, 2.0f, 0.0386f, true},
         [](UserInterface& ui, Int style, Int counter) {
-            return button({ui, {64, 36}}, counter % 2 ? "Bye" : "Hello!", ButtonStyle(style)).node();
+            return button({ui, {}, {64, 36}}, counter % 2 ? "Bye" : "Hello!", ButtonStyle(style)).node();
         }},
     {"button text", nullptr, {},
         [](UserInterface& ui, Int style, Int counter) {
-            return Button{{ui, {64, 36}}, counter % 2 ? "Bye" : "Hello!", ButtonStyle(style)}.release();
+            return Button{{ui, {}, {64, 36}}, counter % 2 ? "Bye" : "Hello!", ButtonStyle(style)}.release();
         }},
     {"button text, setters", nullptr, {},
         [](UserInterface& ui, Int style, Int counter) {
-            Button button{{ui, {64, 36}}, "Hey", ButtonStyle(style)};
+            Button button{{ui, {}, {64, 36}}, "Hey", ButtonStyle(style)};
             button.setText(counter % 2 ? "Bye" : "Hello!");
             return button.release();
         }},
     {"button text, setters on empty", nullptr, {},
         [](UserInterface& ui, Int style, Int counter) {
-            Button button{{ui, {64, 36}}, "", ButtonStyle(style)};
+            Button button{{ui, {}, {64, 36}}, "", ButtonStyle(style)};
             button.setText(counter % 2 ? "Bye" : "Hello!");
             return button.release();
         }},
     {"button text, setStyle()", nullptr, {},
         [](UserInterface& ui, Int style, Int counter) {
-            Button button{{ui, {64, 36}}, counter % 2 ? "Bye" : "Hello!", ButtonStyle(style == 0 ? 1 : 0)};
+            Button button{{ui, {}, {64, 36}}, counter % 2 ? "Bye" : "Hello!", ButtonStyle(style == 0 ? 1 : 0)};
             button.setStyle(ButtonStyle(style));
             return button.release();
         }},
     {"button text, setStyle() on empty, setters", nullptr, {},
         [](UserInterface& ui, Int style, Int counter) {
-            Button button{{ui, {64, 36}}, "", ButtonStyle(style == 0 ? 1 : 0)};
+            Button button{{ui, {}, {64, 36}}, "", ButtonStyle(style == 0 ? 1 : 0)};
             button.setStyle(ButtonStyle(style));
             button.setText(counter % 2 ? "Bye" : "Hello!");
             return button.release();
@@ -193,33 +193,33 @@ const struct {
         {8, true, false, true, 0.5_sec, 1.25f, 0.0278f, true},
         [](UserInterface& ui, Int style, Int counter) {
             /** @todo differently wide icons to test alignment */
-            return button({ui, {48, 36}}, counter % 2 ? Icon::Yes : Icon::No, ButtonStyle(style)).node();
+            return button({ui, {}, {48, 36}}, counter % 2 ? Icon::Yes : Icon::No, ButtonStyle(style)).node();
         }},
     {"button icon", nullptr, {},
         [](UserInterface& ui, Int style, Int counter) {
-            return Button{{ui, {48, 36}}, counter % 2 ? Icon::Yes : Icon::No, ButtonStyle(style)}.release();
+            return Button{{ui, {}, {48, 36}}, counter % 2 ? Icon::Yes : Icon::No, ButtonStyle(style)}.release();
         }},
     {"button icon, setters", nullptr, {},
         [](UserInterface& ui, Int style, Int counter) {
-            Button button{{ui, {48, 36}}, Icon::Yes, ButtonStyle(style)};
+            Button button{{ui, {}, {48, 36}}, Icon::Yes, ButtonStyle(style)};
             button.setIcon(counter % 2 ? Icon::Yes : Icon::No);
             return button.release();
         }},
     {"button icon, setters on empty", nullptr, {},
         [](UserInterface& ui, Int style, Int counter) {
-            Button button{{ui, {48, 36}}, Icon::None, ButtonStyle(style)};
+            Button button{{ui, {}, {48, 36}}, Icon::None, ButtonStyle(style)};
             button.setIcon(counter % 2 ? Icon::Yes : Icon::No);
             return button.release();
         }},
     {"button icon, setStyle()", nullptr, {},
         [](UserInterface& ui, Int style, Int counter) {
-            Button button{{ui, {48, 36}}, counter % 2 ? Icon::Yes : Icon::No, ButtonStyle(style == 0 ? 1 : 0)};
+            Button button{{ui, {}, {48, 36}}, counter % 2 ? Icon::Yes : Icon::No, ButtonStyle(style == 0 ? 1 : 0)};
             button.setStyle(ButtonStyle(style));
             return button.release();
         }},
     {"button icon, setStyle() on empty, setters", nullptr, {},
         [](UserInterface& ui, Int style, Int counter) {
-            Button button{{ui, {48, 36}}, Icon::None, ButtonStyle(style == 0 ? 1 : 0)};
+            Button button{{ui, {}, {48, 36}}, Icon::None, ButtonStyle(style == 0 ? 1 : 0)};
             button.setStyle(ButtonStyle(style));
             button.setIcon(counter % 2 ? Icon::Yes : Icon::No);
             return button.release();
@@ -229,33 +229,33 @@ const struct {
         /* Label has no animations */
         {7, false, false, true, {}, 2.0f, 0.0248f, false},
         [](UserInterface& ui, Int style, Int counter) {
-            return label({ui, {52, 36}}, counter % 3 ? "Bye" : "Hello!", LabelStyle(style)).node();
+            return label({ui, {}, {52, 36}}, counter % 3 ? "Bye" : "Hello!", LabelStyle(style)).node();
         }},
     {"label text", nullptr, {},
         [](UserInterface& ui, Int style, Int counter) {
-            return Label{{ui, {52, 36}}, counter % 3 ? "Bye" : "Hello!", LabelStyle(style)}.release();
+            return Label{{ui, {}, {52, 36}}, counter % 3 ? "Bye" : "Hello!", LabelStyle(style)}.release();
         }},
     {"label text, setters", nullptr, {},
         [](UserInterface& ui, Int style, Int counter) {
-            Label label{{ui, {52, 36}}, "Hey", LabelStyle(style)};
+            Label label{{ui, {}, {52, 36}}, "Hey", LabelStyle(style)};
             label.setText(counter % 3 ? "Bye" : "Hello!");
             return label.release();
         }},
     {"label text, setters from empty", nullptr, {},
         [](UserInterface& ui, Int style, Int counter) {
-            Label label{{ui, {52, 36}}, "", LabelStyle(style)};
+            Label label{{ui, {}, {52, 36}}, "", LabelStyle(style)};
             label.setText(counter % 3 ? "Bye" : "Hello!");
             return label.release();
         }},
     {"label text, setStyle()", nullptr, {},
         [](UserInterface& ui, Int style, Int counter) {
-            Label label{{ui, {52, 36}}, counter % 3 ? "Bye" : "Hello!", LabelStyle(style == 0 ? 1 : 0)};
+            Label label{{ui, {}, {52, 36}}, counter % 3 ? "Bye" : "Hello!", LabelStyle(style == 0 ? 1 : 0)};
             label.setStyle(LabelStyle(style));
             return label.release();
         }},
     {"label text, setStyle() on empty, setters", nullptr, {},
         [](UserInterface& ui, Int style, Int counter) {
-            Label label{{ui, {52, 36}}, "", LabelStyle(style == 0 ? 1 : 0)};
+            Label label{{ui, {}, {52, 36}}, "", LabelStyle(style == 0 ? 1 : 0)};
             label.setStyle(LabelStyle(style));
             label.setText(counter % 3 ? "Bye" : "Hello!");
             return label.release();
@@ -266,33 +266,33 @@ const struct {
         {7, false, false, true, {}, 1.75f, 0.0099f, false},
         [](UserInterface& ui, Int style, Int counter) {
             /** @todo differently wide icons to test alignment */
-            return label({ui, {48, 36}}, counter % 3 ? Icon::Yes : Icon::No, LabelStyle(style)).node();
+            return label({ui, {}, {48, 36}}, counter % 3 ? Icon::Yes : Icon::No, LabelStyle(style)).node();
         }},
     {"label icon", nullptr, {},
         [](UserInterface& ui, Int style, Int counter) {
-            return Label{{ui, {48, 36}}, counter % 3 ? Icon::Yes : Icon::No, LabelStyle(style)}.release();
+            return Label{{ui, {}, {48, 36}}, counter % 3 ? Icon::Yes : Icon::No, LabelStyle(style)}.release();
         }},
     {"label icon, setters", nullptr, {},
         [](UserInterface& ui, Int style, Int counter) {
-            Label label{{ui, {48, 36}}, Icon::Yes, LabelStyle(style)};
+            Label label{{ui, {}, {48, 36}}, Icon::Yes, LabelStyle(style)};
             label.setIcon(counter % 3 ? Icon::Yes : Icon::No);
             return label.release();
         }},
     {"label icon, setters on empty", nullptr, {},
         [](UserInterface& ui, Int style, Int counter) {
-            Label label{{ui, {48, 36}}, Icon::None, LabelStyle(style)};
+            Label label{{ui, {}, {48, 36}}, Icon::None, LabelStyle(style)};
             label.setIcon(counter % 3 ? Icon::Yes : Icon::No);
             return label.release();
         }},
     {"label icon, setStyle()", nullptr, {},
         [](UserInterface& ui, Int style, Int counter) {
-            Label label{{ui, {48, 36}}, counter % 3 ? Icon::Yes : Icon::No, LabelStyle(style == 0 ? 1 : 0)};
+            Label label{{ui, {}, {48, 36}}, counter % 3 ? Icon::Yes : Icon::No, LabelStyle(style == 0 ? 1 : 0)};
             label.setStyle(LabelStyle(style));
             return label.release();
         }},
     {"label icon, setStyle() on empty, setters", nullptr, {},
         [](UserInterface& ui, Int style, Int counter) {
-            Label label{{ui, {48, 36}}, Icon::None, LabelStyle(style == 0 ? 1 : 0)};
+            Label label{{ui, {}, {48, 36}}, Icon::None, LabelStyle(style == 0 ? 1 : 0)};
             label.setStyle(LabelStyle(style));
             label.setIcon(counter % 3 ? Icon::Yes : Icon::No);
             return label.release();
@@ -303,14 +303,14 @@ const struct {
            iteration, so it'll be fully visible at twice as much */
         {5, true, true, true, 0.55_sec*2, 2.0f, 0.02292f, true},
         [](UserInterface& ui, Int style, Int counter) {
-            Input input{{ui, {64, 36}}, counter % 2 ? "Edit..." : "Type?", InputStyle(style)};
+            Input input{{ui, {}, {64, 36}}, counter % 2 ? "Edit..." : "Type?", InputStyle(style)};
             /** @todo use a cursor setting API once it exists */
             ui.textLayer().setCursor(input.textData(), counter % 2 ? 2 : 5, counter % 2 ? 5 : 2);
             return input.release();
         }},
     {"input, setters", nullptr, {},
         [](UserInterface& ui, Int style, Int counter) {
-            Input input{{ui, {64, 36}}, "", InputStyle(style)};
+            Input input{{ui, {}, {64, 36}}, "", InputStyle(style)};
             input.setText(counter % 2 ? "Edit..." : "Type?");
             /** @todo use a cursor setting API once it exists */
             ui.textLayer().setCursor(input.textData(), counter % 2 ? 2 : 5, counter % 2 ? 5 : 2);
@@ -318,7 +318,7 @@ const struct {
         }},
     {"input, setStyle()", nullptr, {},
         [](UserInterface& ui, Int style, Int counter) {
-            Input input{{ui, {64, 36}}, counter % 2 ? "Edit..." : "Type?", InputStyle(style == 0 ? 1 : 0)};
+            Input input{{ui, {}, {64, 36}}, counter % 2 ? "Edit..." : "Type?", InputStyle(style == 0 ? 1 : 0)};
             input.setStyle(InputStyle(style));
             /** @todo use a cursor setting API once it exists */
             ui.textLayer().setCursor(input.textData(), counter % 2 ? 2 : 5, counter % 2 ? 5 : 2);
@@ -329,15 +329,15 @@ const struct {
         /* Panel has no animations */
         {2, false, false, true, {}, 0.25f, 0.0339f, false},
         [](UserInterface& ui, Int style, Int) {
-            return panel({ui, {48, 36}}, PanelStyle(style)).node();
+            return panel({ui, {}, {48, 36}}, PanelStyle(style)).node();
         }},
     {"panel", nullptr, {},
         [](UserInterface& ui, Int style, Int) {
-            return Panel{{ui, {48, 36}},PanelStyle(style)}.release();
+            return Panel{{ui, {}, {48, 36}},PanelStyle(style)}.release();
         }},
     {"panel, setStyle()", nullptr, {},
         [](UserInterface& ui, Int style, Int) {
-            Panel panel{{ui, {48, 36}},PanelStyle(style == 0 ? 1 : 0)};
+            Panel panel{{ui, {}, {48, 36}},PanelStyle(style == 0 ? 1 : 0)};
             panel.setStyle(PanelStyle(style));
             return panel.release();
         }},
