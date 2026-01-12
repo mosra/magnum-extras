@@ -49,6 +49,7 @@
 #include "Magnum/Ui/Label.h"
 #include "Magnum/Ui/NodeFlags.h"
 #include "Magnum/Ui/Panel.h"
+#include "Magnum/Ui/SnapLayout.h"
 #include "Magnum/Ui/SnapLayouter.h"
 #include "Magnum/Ui/Style.h"
 #include "Magnum/Ui/Style.hpp" /* for DebugLayer style names */
@@ -136,10 +137,6 @@ class UiGallery: public Platform::Application {
         DebugTools::FrameProfilerGL _profiler;
 };
 
-constexpr const Float WidgetHeight = 36.0f;
-constexpr const Float LabelHeight = 24.0f;
-constexpr const Vector2 LabelSize{72.0f, LabelHeight};
-
 Nanoseconds now() {
     return Nanoseconds{std::chrono::steady_clock::now()};
 }
@@ -194,125 +191,102 @@ UiGallery::UiGallery(const Arguments& arguments): Platform::Application{argument
     }
 
     /* Wrap everything in a single panel to get some basic paddings and such */
-    Ui::NodeHandle root = Ui::panel(Ui::snap(_ui, Ui::Snap::Fill|Ui::Snap::NoPad, {}));
+    Ui::Anchor panel = Ui::panel(Ui::SnapLayout::root(_ui, Ui::Snap::Fill|Ui::Snap::NoPad));
+    Ui::SnapLayoutColumnFill root = Ui::SnapLayout::child(panel);
 
+    /* Buttons */
+    Ui::label(root.child(),
+        "Buttons", Text::Alignment::MiddleLeft, Ui::LabelStyle::Dim);
     {
-        /* Buttons */
-        Ui::NodeHandle buttons = Ui::label(
-            Ui::snap(_ui, Ui::Snap::TopLeft|Ui::Snap::Inside, root, LabelSize),
-            "Buttons", Text::Alignment::MiddleLeft, Ui::LabelStyle::Dim);
-
-        Ui::SnapLayout snap{_ui,
-            Ui::Snap::BottomLeft|Ui::Snap::InsideX, buttons, Ui::Snap::Right};
-        Ui::NodeHandle buttonDefault = Ui::button(snap({80, WidgetHeight}),
+        Ui::SnapLayoutRow row = root.child();
+        Ui::button(row.child({80, 0.0f}),
             "Default", Ui::ButtonStyle::Default);
-        Ui::button(snap({80, WidgetHeight}),
+        Ui::button(row.child({80, 0.0f}),
             "Primary", Ui::ButtonStyle::Primary);
-        Ui::button(snap({96, WidgetHeight}),
+        Ui::button(row.child({96, 0.0f}),
             Ui::Icon::Yes, "Success", Ui::ButtonStyle::Success);
-        Ui::button(snap({96, WidgetHeight}),
+        Ui::button(row.child({96, 0.0f}),
             Ui::Icon::No, "Warning", Ui::ButtonStyle::Warning);
-        Ui::button(snap({96, WidgetHeight}),
+        Ui::button(row.child({96, 0.0f}),
             Ui::Icon::No, "Danger", Ui::ButtonStyle::Danger);
-        Ui::button(snap({80, WidgetHeight}),
+        Ui::button(row.child({80, 0.0f}),
             "Info", Ui::ButtonStyle::Info);
-        Ui::button(snap({80, WidgetHeight}),
+        Ui::button(row.child({80, 0.0f}),
             "Dim", Ui::ButtonStyle::Dim);
-        Ui::button(snap({80, WidgetHeight}),
+        Ui::button(row.child({80, 0.0f}),
             Ui::Icon::Yes, "Flat", Ui::ButtonStyle::Flat);
-
-        snap = Ui::SnapLayout{_ui,
-            Ui::Snap::BottomLeft|Ui::Snap::InsideX, buttonDefault, Ui::Snap::Right};
-        Ui::NodeHandle buttonDefaultDisabled = Ui::button(
-            snap({80, WidgetHeight}, Ui::NodeFlag::Disabled),
+    } {
+        Ui::SnapLayoutRow row = root.child({}, Ui::NodeFlag::Disabled);
+        Ui::button(row.child({80, 0.0f}),
             "Default", Ui::ButtonStyle::Default);
-        Ui::button(snap({80, WidgetHeight}, Ui::NodeFlag::Disabled),
+        Ui::button(row.child({80, 0.0f}),
             "Primary", Ui::ButtonStyle::Primary);
-        Ui::button(snap({96, WidgetHeight}, Ui::NodeFlag::Disabled),
+        Ui::button(row.child({96, 0.0f}),
             Ui::Icon::Yes, "Success", Ui::ButtonStyle::Success);
-        Ui::button(snap({96, WidgetHeight}, Ui::NodeFlag::Disabled),
+        Ui::button(row.child({96, 0.0f}),
             Ui::Icon::No, "Warning", Ui::ButtonStyle::Warning);
-        Ui::button(snap({96, WidgetHeight}, Ui::NodeFlag::Disabled),
+        Ui::button(row.child({96, 0.0f}),
             Ui::Icon::No, "Danger", Ui::ButtonStyle::Danger);
-        Ui::button(snap({80, WidgetHeight}, Ui::NodeFlag::Disabled),
+        Ui::button(row.child({80, 0.0f}),
             "Info", Ui::ButtonStyle::Info);
-        Ui::button(snap({80, WidgetHeight}, Ui::NodeFlag::Disabled),
+        Ui::button(row.child({80, 0.0f}),
             "Dim", Ui::ButtonStyle::Dim);
-        Ui::button(snap({80, WidgetHeight}, Ui::NodeFlag::Disabled),
+        Ui::button(row.child({80, 0.0f}),
             Ui::Icon::Yes, "Flat", Ui::ButtonStyle::Flat);
+    }
 
-        /* Labels */
-        Ui::NodeHandle labels = Ui::label(
-            Ui::snap(_ui, Ui::Snap::BottomLeft|Ui::Snap::InsideX, buttonDefaultDisabled, {0, 8}, LabelSize),
-            "Labels", Text::Alignment::MiddleLeft, Ui::LabelStyle::Dim);
-
-        snap = Ui::SnapLayout{_ui,
-            Ui::Snap::BottomLeft|Ui::Snap::InsideX, labels, Ui::Snap::Right};
-        Ui::NodeHandle labelDefault = Ui::label(snap(LabelSize),
+    /* Labels */
+    Ui::label(root.child(),
+        "Labels", Text::Alignment::MiddleLeft, Ui::LabelStyle::Dim);
+    {
+        Ui::SnapLayoutRow row = root.child();
+        Ui::label(row.child({72.0f, 0.0f}),
             "Default", Ui::LabelStyle::Default);
-        Ui::label(snap(LabelSize),
+        Ui::label(row.child({72.0f, 0.0f}),
             "Primary", Ui::LabelStyle::Primary);
-        Ui::label(snap(LabelSize),
+        Ui::label(row.child({72.0f, 0.0f}),
             "Success", Ui::LabelStyle::Success);
-        Ui::label(snap(LabelSize),
+        Ui::label(row.child({72.0f, 0.0f}),
             "Warning", Ui::LabelStyle::Warning);
-        Ui::label(snap(LabelSize),
+        Ui::label(row.child({72.0f, 0.0f}),
             "Danger", Ui::LabelStyle::Danger);
-        Ui::label(snap(LabelSize),
+        Ui::label(row.child({72.0f, 0.0f}),
             "Info", Ui::LabelStyle::Info);
-        Ui::label(snap(LabelSize),
+        Ui::label(row.child({72.0f, 0.0f}),
             "Dim", Ui::LabelStyle::Dim);
-
-        snap = Ui::SnapLayout{_ui,
-            Ui::Snap::BottomLeft|Ui::Snap::InsideX, labelDefault, Ui::Snap::Right};
-        Ui::NodeHandle labelDefaultDisabled = Ui::label(
-            snap(LabelSize, Ui::NodeFlag::Disabled),
+    } {
+        Ui::SnapLayoutRow row = root.child({}, Ui::NodeFlag::Disabled);
+        Ui::label(row.child({72.0f, 0.0f}),
             "Default", Ui::LabelStyle::Default);
-        Ui::label(snap(LabelSize, Ui::NodeFlag::Disabled),
+        Ui::label(row.child({72.0f, 0.0f}),
             "Primary", Ui::LabelStyle::Primary);
-        Ui::label(snap(LabelSize, Ui::NodeFlag::Disabled),
+        Ui::label(row.child({72.0f, 0.0f}),
             "Success", Ui::LabelStyle::Success);
-        Ui::label(snap(LabelSize, Ui::NodeFlag::Disabled),
+        Ui::label(row.child({72.0f, 0.0f}),
             "Warning", Ui::LabelStyle::Warning);
-        Ui::label(snap(LabelSize, Ui::NodeFlag::Disabled),
+        Ui::label(row.child({72.0f, 0.0f}),
             "Danger", Ui::LabelStyle::Danger);
-        Ui::label(snap(LabelSize, Ui::NodeFlag::Disabled),
+        Ui::label(row.child({72.0f, 0.0f}),
             "Info", Ui::LabelStyle::Info);
-        Ui::label(snap(LabelSize, Ui::NodeFlag::Disabled),
+        Ui::label(row.child({72.0f, 0.0f}),
             "Dim", Ui::LabelStyle::Dim);
+    }
 
-        /* Inputs */
-        Ui::NodeHandle inputs = Ui::label(
-            Ui::snap(_ui, Ui::Snap::BottomLeft|Ui::Snap::InsideX, labelDefaultDisabled, {0, 8}, LabelSize),
-            "Inputs", Text::Alignment::MiddleLeft, Ui::LabelStyle::Dim);
-
-        snap = Ui::SnapLayout{_ui,
-            Ui::Snap::BottomLeft|Ui::Snap::InsideX, inputs,
-            Ui::Snap::Right};
-        Ui::Input inputDefault{snap({128, WidgetHeight}),
+    /* Inputs */
+    Ui::label(root.child(),
+        "Inputs", Text::Alignment::MiddleLeft, Ui::LabelStyle::Dim);
+    {
+        Ui::SnapLayoutRow row = root.child();
+        Ui::Input inputDefault{row.child({128, 0.0f}),
             "Default", Ui::InputStyle::Default};
-        Ui::Input inputSuccess{snap({128, WidgetHeight}),
+        Ui::Input inputSuccess{row.child({128, 0.0f}),
             "Success", Ui::InputStyle::Success};
-        Ui::Input inputWarning{snap({128, WidgetHeight}),
+        Ui::Input inputWarning{row.child({128, 0.0f}),
             "Warning", Ui::InputStyle::Warning};
-        Ui::Input inputDanger{snap({128, WidgetHeight}),
+        Ui::Input inputDanger{row.child({128, 0.0f}),
             "Danger", Ui::InputStyle::Danger};
-        Ui::Input inputFlat{snap({128, WidgetHeight}),
+        Ui::Input inputFlat{row.child({128, 0.0f}),
             "Flat", Ui::InputStyle::Flat};
-
-        snap = Ui::SnapLayout{_ui,
-            Ui::Snap::BottomLeft|Ui::Snap::InsideX, inputDefault,
-            Ui::Snap::Right};
-        Ui::Input{snap({128, WidgetHeight}, Ui::NodeFlag::Disabled),
-            "Default", Ui::InputStyle::Default}.release();
-        Ui::Input{snap({128, WidgetHeight}, Ui::NodeFlag::Disabled),
-            "Succes", Ui::InputStyle::Success}.release();
-        Ui::Input{snap({128, WidgetHeight}, Ui::NodeFlag::Disabled),
-            "Warning", Ui::InputStyle::Warning}.release();
-        Ui::Input{snap({128, WidgetHeight}, Ui::NodeFlag::Disabled),
-            "Danger", Ui::InputStyle::Danger}.release();
-        Ui::Input{snap({128, WidgetHeight}, Ui::NodeFlag::Disabled),
-            "Flat", Ui::InputStyle::Flat}.release();
 
         /** @todo provide some APIs on the Input directly */
         _ui.textLayer().setCursor(inputDefault.textData(), 7, 2);
@@ -325,6 +299,18 @@ UiGallery::UiGallery(const Arguments& arguments): Platform::Application{argument
         inputWarning.release();
         inputDanger.release();
         inputFlat.release();
+    } {
+        Ui::SnapLayoutRow row = root.child({}, Ui::NodeFlag::Disabled);
+        Ui::Input{row.child({128, 0.0f}),
+            "Default", Ui::InputStyle::Default}.release();
+        Ui::Input{row.child({128, 0.0f}),
+            "Succes", Ui::InputStyle::Success}.release();
+        Ui::Input{row.child({128, 0.0f}),
+            "Warning", Ui::InputStyle::Warning}.release();
+        Ui::Input{row.child({128, 0.0f}),
+            "Danger", Ui::InputStyle::Danger}.release();
+        Ui::Input{row.child({128, 0.0f}),
+            "Flat", Ui::InputStyle::Flat}.release();
     }
 
     #ifdef CORRADE_TARGET_EMSCRIPTEN
