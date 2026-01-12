@@ -2,7 +2,7 @@ class MagnumExtras < Formula
   desc "Extras for the Magnum C++11 graphics engine"
   homepage "https://magnum.graphics"
   # git describe origin/master, except the `v` prefix
-  version "2020.06-865-g54669108e2"
+  version "2020.06-1051-g8a88dae9fa"
   # Clone instead of getting an archive to have tags for version.h generation
   url "https://github.com/mosra/magnum-extras.git", revision: version.to_str().rpartition('g')[2]
   head "https://github.com/mosra/magnum-extras.git"
