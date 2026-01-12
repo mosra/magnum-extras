@@ -65,6 +65,7 @@ corrade_add_test(UiNodeAnimatorTest NodeAnimatorTest.cpp LIBRARIES MagnumUiTestL
 corrade_add_test(UiNodeFlagsTest NodeFlagsTest.cpp LIBRARIES MagnumUi)
 corrade_add_test(UiPanelTest PanelTest.cpp LIBRARIES MagnumUi)
 corrade_add_test(UiSnapLayouterTest SnapLayouterTest.cpp LIBRARIES MagnumUiTestLib)
+corrade_add_test(UiSnapLayoutTest SnapLayoutTest.cpp LIBRARIES MagnumUiTestLib)
 
 corrade_add_test(UiStyleTest StyleTest.cpp LIBRARIES MagnumUi)
 if(MAGNUM_BUILD_STATIC)
@@ -121,6 +122,7 @@ set_property(TARGET
     UiAnchorTest
     UiHandleTest
     UiDebugLayerTest
+    UiSnapLayoutTest
     UiTextLayerTest
     APPEND PROPERTY COMPILE_DEFINITIONS "CORRADE_GRACEFUL_ASSERT")
 

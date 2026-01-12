@@ -130,6 +130,30 @@ template<class> class BasicWidget;
 typedef BasicWidget<UserInterface> Widget;
 
 class SnapLayouter;
+enum class Snap: UnsignedByte;
+enum class SnapLayoutFlag: UnsignedByte;
+typedef Containers::EnumSet<SnapLayoutFlag> SnapLayoutFlags;
+typedef Containers::EnumSet<Snap> Snaps;
+
+class AbstractSnapLayout;
+template<class> class BasicSnapLayout;
+template<class> class BasicSnapLayoutColumn;
+template<class> class BasicSnapLayoutColumnLeft;
+template<class> class BasicSnapLayoutColumnRight;
+template<class> class BasicSnapLayoutColumnFill;
+template<class> class BasicSnapLayoutRow;
+template<class> class BasicSnapLayoutRowTop;
+template<class> class BasicSnapLayoutRowBottom;
+template<class> class BasicSnapLayoutRowFill;
+typedef BasicSnapLayout<UserInterface> SnapLayout;
+typedef BasicSnapLayoutColumn<UserInterface> SnapLayoutColumn;
+typedef BasicSnapLayoutColumnLeft<UserInterface> SnapLayoutColumnLeft;
+typedef BasicSnapLayoutColumnRight<UserInterface> SnapLayoutColumnRight;
+typedef BasicSnapLayoutColumnFill<UserInterface> SnapLayoutColumnFill;
+typedef BasicSnapLayoutRow<UserInterface> SnapLayoutRow;
+typedef BasicSnapLayoutRowTop<UserInterface> SnapLayoutRowTop;
+typedef BasicSnapLayoutRowBottom<UserInterface> SnapLayoutRowBottom;
+typedef BasicSnapLayoutRowFill<UserInterface> SnapLayoutRowFill;
 
 enum class Pointer: UnsignedByte;
 typedef Containers::EnumSet<Pointer> Pointers;
