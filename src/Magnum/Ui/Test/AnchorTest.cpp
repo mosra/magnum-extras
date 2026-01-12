@@ -43,7 +43,7 @@ struct AnchorTest: TestSuite::Tester {
     template<class T> void construct();
     template<class T> void constructInvalid();
     template<class T> void constructCreateNode();
-    template<class T> void constructCreateNodeTopLevel();
+    template<class T> void constructCreateNodeRoot();
     /* Passing an invalid parent to the node creation is asserted in
        UserInterface directly */
 };
@@ -55,8 +55,8 @@ AnchorTest::AnchorTest() {
                           &AnchorTest::constructInvalid<Anchor>,
                           &AnchorTest::constructCreateNode<AbstractAnchor>,
                           &AnchorTest::constructCreateNode<Anchor>,
-                          &AnchorTest::constructCreateNodeTopLevel<AbstractAnchor>,
-                          &AnchorTest::constructCreateNodeTopLevel<Anchor>});
+                          &AnchorTest::constructCreateNodeRoot<AbstractAnchor>,
+                          &AnchorTest::constructCreateNodeRoot<Anchor>});
 }
 
 template<class> struct AnchorTraits;
@@ -116,7 +116,7 @@ template<class T> void AnchorTest::constructCreateNode() {
     CORRADE_COMPARE(ui.nodeFlags(anchor), NodeFlag::Disabled);
 }
 
-template<class T> void AnchorTest::constructCreateNodeTopLevel() {
+template<class T> void AnchorTest::constructCreateNodeRoot() {
     setTestCaseTemplateName(AnchorTraits<T>::name());
 
     struct Interface: AnchorTraits<T>::UserInterfaceType {

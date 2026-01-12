@@ -71,7 +71,7 @@ class MAGNUM_UI_EXPORT AbstractAnchor {
         /*implicit*/ AbstractAnchor(AbstractUserInterface& ui, NodeHandle parent, const Vector2& offset, const Vector2& size, NodeFlags flags = {});
 
         /**
-         * @brief Create a custom-positioned top-level anchor
+         * @brief Create a custom-positioned root anchor
          *
          * Equivalent to calling @ref AbstractAnchor(AbstractUserInterface&, NodeHandle, const Vector2&, const Vector2&, NodeFlags)
          * with @ref NodeHandle::Null as the parent.
@@ -118,7 +118,7 @@ template<class UserInterface> class BasicAnchor: public AbstractAnchor {
         /*implicit*/ BasicAnchor(UserInterface& ui, NodeHandle parent, const Vector2& offset, const Vector2& size, NodeFlags flags = {}): AbstractAnchor{ui, parent, offset, size, flags} {}
 
         /**
-         * @brief Create a custom-positioned top-level anchor
+         * @brief Create a custom-positioned root anchor
          *
          * Equivalent to calling @ref BasicAnchor(UserInterface&, NodeHandle, const Vector2&, const Vector2&, NodeFlags)
          * with @ref NodeHandle::Null as the parent.

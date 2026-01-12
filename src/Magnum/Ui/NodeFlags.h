@@ -57,7 +57,7 @@ enum class NodeFlag: UnsignedByte {
      * attached data are hidden, i.e. not drawn and excluded from event
      * processing.
      *
-     * For top-level nodes (i.e., nodes for which
+     * For root nodes (i.e., nodes for which
      * @ref AbstractUserInterface::nodeParent() is @ref NodeHandle::Null) a
      * draw order is managed in addition to the hidden state, using
      * @ref AbstractUserInterface::setNodeOrder() and
