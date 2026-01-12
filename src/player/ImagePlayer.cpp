@@ -46,6 +46,7 @@
 
 #include "Magnum/Ui/Anchor.h"
 #include "Magnum/Ui/Label.h"
+#include "Magnum/Ui/SnapLayout.h"
 #include "Magnum/Ui/SnapLayouter.h"
 #include "Magnum/Ui/TextProperties.h"
 #include "Magnum/Ui/UserInterface.h"
@@ -62,7 +63,7 @@ constexpr const Vector2 LabelSize{72.0f, LabelHeight};
 
 class ImagePlayer: public AbstractPlayer {
     public:
-        explicit ImagePlayer(Platform::ScreenedApplication& application, Ui::UserInterface& ui, Ui::NodeHandle controls);
+        explicit ImagePlayer(Platform::ScreenedApplication& application, Ui::Anchor controls);
 
     private:
         void drawEvent() override;
@@ -97,10 +98,10 @@ class ImagePlayer: public AbstractPlayer {
         Matrix3 _projection;
 };
 
-ImagePlayer::ImagePlayer(Platform::ScreenedApplication& application, Ui::UserInterface& ui, Ui::NodeHandle controls):
+ImagePlayer::ImagePlayer(Platform::ScreenedApplication& application, const Ui::Anchor controls):
     AbstractPlayer{application, PropagatedEvent::Draw|PropagatedEvent::Input},
-    _screen{Ui::snap(ui, Ui::Snap::Fill|Ui::Snap::NoPad, controls, {})},
-    _imageInfo{Ui::snap(ui, Ui::Snap::TopLeft|Ui::Snap::Inside, _screen, LabelSize), {}, Ui::LabelStyle::Dim}
+    _screen{Ui::SnapLayout::child(Ui::Snap::Fill|Ui::Snap::NoPad, controls)},
+    _imageInfo{Ui::SnapLayout::child(Ui::Snap::TopLeft, _screen, LabelSize), {}, Ui::LabelStyle::Dim}
 {
     /* Prepare the square mesh and initial projection equal to framebuffer size */
     _square = MeshTools::compile(Primitives::squareSolid(Primitives::SquareFlag::TextureCoordinates));
@@ -234,8 +235,8 @@ void ImagePlayer::load(Containers::StringView filename, Trade::AbstractImporter&
 
 }
 
-Containers::Pointer<AbstractPlayer> createImagePlayer(Platform::ScreenedApplication& application, Ui::UserInterface& ui, Ui::NodeHandle controls) {
-    return Containers::Pointer<ImagePlayer>{InPlaceInit, application, ui, controls};
+Containers::Pointer<AbstractPlayer> createImagePlayer(Platform::ScreenedApplication& application, const Ui::Anchor controls) {
+    return Containers::Pointer<ImagePlayer>{InPlaceInit, application, controls};
 }
 
 }}

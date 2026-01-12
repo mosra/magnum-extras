@@ -94,6 +94,7 @@
 #include "Magnum/Ui/EventLayer.h"
 #include "Magnum/Ui/Label.h"
 #include "Magnum/Ui/NodeFlags.h"
+#include "Magnum/Ui/SnapLayout.h"
 #include "Magnum/Ui/SnapLayouter.h"
 #include "Magnum/Ui/TextProperties.h"
 #include "Magnum/Ui/UserInterface.h"
@@ -254,7 +255,7 @@ enum class Visualization: UnsignedByte {
 
 class ScenePlayer: public AbstractPlayer {
     public:
-        explicit ScenePlayer(Platform::ScreenedApplication& application, Ui::UserInterface& ui, Ui::NodeHandle controls, const DebugTools::FrameProfilerGL::Values profilerValues);
+        explicit ScenePlayer(Platform::ScreenedApplication& application, Ui::Anchor controls, const DebugTools::FrameProfilerGL::Values profilerValues);
 
     private:
         void drawEvent() override;
@@ -475,33 +476,35 @@ class JointDrawable: public SceneGraph::Drawable3D {
         Matrix4& _jointMatrix;
 };
 
-ScenePlayer::ScenePlayer(Platform::ScreenedApplication& application, Ui::UserInterface& ui, Ui::NodeHandle controls, DebugTools::FrameProfilerGL::Values profilerValues):
+ScenePlayer::ScenePlayer(Platform::ScreenedApplication& application, const Ui::Anchor controls, DebugTools::FrameProfilerGL::Values profilerValues):
     AbstractPlayer{application, PropagatedEvent::Draw|PropagatedEvent::Input},
-    _ui(ui),
-    _screen{Ui::snap(ui, Ui::Snap::Fill|Ui::Snap::NoPad, controls, {})},
-    _modelInfo{Ui::snap(ui, Ui::Snap::TopLeft|Ui::Snap::Inside, _screen, LabelSize),
+    _ui(controls.ui()),
+    _screen{Ui::SnapLayout::child(Ui::Snap::Fill|Ui::Snap::NoPad, controls, {})},
+    _modelInfo{Ui::SnapLayout::child(Ui::Snap::TopLeft, _screen, LabelSize),
         {}, Text::Alignment::LineLeft, Ui::LabelStyle::Dim},
-    _objectInfo{Ui::snap(ui, Ui::Snap::TopLeft|Ui::Snap::Inside, _screen, LabelSize, Ui::NodeFlag::Hidden),
+    _objectInfo{Ui::SnapLayout::child(Ui::Snap::TopLeft, _screen, LabelSize, Ui::NodeFlag::Hidden),
         {}, Text::Alignment::LineLeft, Ui::LabelStyle::Dim},
-    _toggleShadeless{Ui::snap(ui, Ui::Snap::TopRight|Ui::Snap::Inside, _screen, {0.0f,
+    _toggleShadeless{Ui::SnapLayout::child(Ui::Snap::TopRight, _screen, ButtonSize), "Shadeless"_s},
+    _toggleObjectVisualization{Ui::SnapLayout::sibling(Ui::Snap::Bottom, _toggleShadeless, ButtonSize), "Object centers"_s},
+    _cycleMeshVisualization{Ui::SnapLayout::sibling(Ui::Snap::Bottom, _toggleShadeless, ButtonSize, Ui::NodeFlag::Hidden), "Wireframe"_s},
+    _animationControls{Ui::SnapLayout::child(Ui::Snap::Fill|Ui::Snap::NoPad, _screen, {}, Ui::NodeFlag::Hidden)},
+    _animationBackward{Ui::button(Ui::SnapLayout::child(Ui::Snap::BottomLeft, {_ui, _animationControls}, HalfControlSize), "«"_s)},
+    _animationPlayPause{Ui::SnapLayout::sibling(Ui::Snap::Right, {_ui, _animationBackward}, ControlSize), "Pause"_s, Ui::ButtonStyle::Warning},
+    _animationStop{Ui::button(Ui::SnapLayout::sibling(Ui::Snap::Right, {_ui, _animationPlayPause}, ControlSize), "Stop"_s, Ui::ButtonStyle::Danger)},
+    _animationForward{Ui::button(Ui::SnapLayout::sibling(Ui::Snap::Right, {_ui, _animationStop}, HalfControlSize), "»"_s)},
+    _animationProgress{Ui::SnapLayout::sibling(Ui::Snap::Right, {_ui, _animationForward}, LabelSize), {}}
+{
+    /** @todo clean this up once all the right-side buttons can be stuffed into
+        a single implicit layout */
+    _ui.setNodeOffset(_toggleShadeless, {0.0f,
         /* There's also the fullscreen toggle on Emscripten */
-        /** @todo clean this up once there's a layouter that can snap relative
-            to a non-sibling / non-parent node */
         #ifdef CORRADE_TARGET_EMSCRIPTEN
         2*(ButtonSize.y() + PaddingY)
         #else
         ButtonSize.y() + PaddingY
         #endif
-    }, ButtonSize), "Shadeless"_s},
-    _toggleObjectVisualization{Ui::snap(ui, Ui::Snap::Bottom, _toggleShadeless, ButtonSize), "Object centers"_s},
-    _cycleMeshVisualization{Ui::snap(ui, Ui::Snap::Bottom, _toggleShadeless, ButtonSize, Ui::NodeFlag::Hidden), "Wireframe"_s},
-    _animationControls{Ui::snap(ui, Ui::Snap::Fill|Ui::Snap::NoPad, _screen, {}, Ui::NodeFlag::Hidden)},
-    _animationBackward{Ui::button(Ui::snap(ui, Ui::Snap::BottomLeft|Ui::Snap::Inside, _animationControls, HalfControlSize), "«"_s)},
-    _animationPlayPause{Ui::snap(ui, Ui::Snap::Right, _animationBackward, ControlSize), "Pause"_s, Ui::ButtonStyle::Warning},
-    _animationStop{Ui::button(Ui::snap(ui, Ui::Snap::Right, _animationPlayPause, ControlSize), "Stop"_s, Ui::ButtonStyle::Danger)},
-    _animationForward{Ui::button(Ui::snap(ui, Ui::Snap::Right, _animationStop, HalfControlSize), "»"_s)},
-    _animationProgress{Ui::snap(ui, Ui::Snap::Right, _animationForward, LabelSize), {}}
-{
+    });
+
     /* Color maps */
     _colorMapTexture
         .setMinificationFilter(SamplerFilter::Linear, SamplerMipmap::Linear)
@@ -539,19 +542,19 @@ ScenePlayer::ScenePlayer(Platform::ScreenedApplication& application, Ui::UserInt
     }
 
     /* Connect visualization controls */
-    ui.eventLayer().onTapOrClick(_toggleShadeless, [this]{
+    _ui.eventLayer().onTapOrClick(_toggleShadeless, [this]{
         _shadeless ^= true;
         _toggleShadeless.setStyle(_shadeless ?
             Ui::ButtonStyle::Success :
             Ui::ButtonStyle::Default);
     });
-    ui.eventLayer().onTapOrClick(_toggleObjectVisualization, [this]{
+    _ui.eventLayer().onTapOrClick(_toggleObjectVisualization, [this]{
         _data->visualizeObjects ^= true;
         _toggleObjectVisualization.setStyle(_data->visualizeObjects ?
             Ui::ButtonStyle::Success :
             Ui::ButtonStyle::Default);
     });
-    ui.eventLayer().onTapOrClick(_cycleMeshVisualization, [this]{
+    _ui.eventLayer().onTapOrClick(_cycleMeshVisualization, [this]{
         CORRADE_INTERNAL_ASSERT(_data->selectedObject);
 
         /* Advance through the options */
@@ -562,10 +565,10 @@ ScenePlayer::ScenePlayer(Platform::ScreenedApplication& application, Ui::UserInt
     });
 
     /* Connect animation controls */
-    ui.eventLayer().onTapOrClick(_animationPlayPause, {*this, &ScenePlayer::playPause});
-    ui.eventLayer().onTapOrClick(_animationStop, {*this, &ScenePlayer::stop});
-    ui.eventLayer().onTapOrClick(_animationBackward, {*this, &ScenePlayer::backward});
-    ui.eventLayer().onTapOrClick(_animationForward, {*this, &ScenePlayer::forward});
+    _ui.eventLayer().onTapOrClick(_animationPlayPause, {*this, &ScenePlayer::playPause});
+    _ui.eventLayer().onTapOrClick(_animationStop, {*this, &ScenePlayer::stop});
+    _ui.eventLayer().onTapOrClick(_animationBackward, {*this, &ScenePlayer::backward});
+    _ui.eventLayer().onTapOrClick(_animationForward, {*this, &ScenePlayer::forward});
 
     /* Set up offscreen rendering for object ID retrieval */
     _selectionDepth.setStorage(GL::RenderbufferFormat::DepthComponent24, application.framebufferSize());
@@ -2169,8 +2172,8 @@ void ScenePlayer::scrollEvent(ScrollEvent& event) {
 
 }
 
-Containers::Pointer<AbstractPlayer> createScenePlayer(Platform::ScreenedApplication& application, Ui::UserInterface& ui, Ui::NodeHandle controls, const DebugTools::FrameProfilerGL::Values profilerValues) {
-    return Containers::Pointer<ScenePlayer>{InPlaceInit, application, ui, controls, profilerValues};
+Containers::Pointer<AbstractPlayer> createScenePlayer(Platform::ScreenedApplication& application, Ui::Anchor controls, const DebugTools::FrameProfilerGL::Values profilerValues) {
+    return Containers::Pointer<ScenePlayer>{InPlaceInit, application, controls, profilerValues};
 }
 
 }}

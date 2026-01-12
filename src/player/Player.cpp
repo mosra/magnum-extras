@@ -55,6 +55,7 @@
 #include "Magnum/Ui/EventLayer.h"
 #include "Magnum/Ui/Label.h"
 #include "Magnum/Ui/NodeFlags.h"
+#include "Magnum/Ui/SnapLayout.h"
 #include "Magnum/Ui/SnapLayouter.h"
 #include "Magnum/Ui/Style.h"
 #include "Magnum/Ui/TextLayer.h" /** @todo remove once extra glyph cache fill is done better */
@@ -183,8 +184,8 @@ Overlay::Overlay(Platform::ScreenedApplication& application):
             .setBaseLayerDynamicStyleCount(15)
             #endif
     },
-    window{Ui::snap(ui, Ui::Snap::Fill|Ui::Snap::NoPad, {})},
-    controls{Ui::snap(ui, Ui::Snap::Fill|Ui::Snap::NoPad, window, {}
+    window{Ui::SnapLayout::root(ui, Ui::Snap::Fill|Ui::Snap::NoPad, {})},
+    controls{Ui::SnapLayout::child(Ui::Snap::Fill|Ui::Snap::NoPad, {ui, window}, {}
         #ifdef CORRADE_TARGET_EMSCRIPTEN
         /* By default a drop hint is shown on Emscripten and controls are
            hidden */
@@ -193,10 +194,10 @@ Overlay::Overlay(Platform::ScreenedApplication& application):
     )}
 {
     Ui::NodeHandle hideControls = Ui::button(
-        Ui::snap(ui, Ui::Snap::TopRight|Ui::Snap::Inside, controls, ButtonSize),
+        Ui::SnapLayout::child(Ui::Snap::TopRight, {ui, controls}, ButtonSize),
         "Controls"_s, Ui::ButtonStyle::Success);
     Ui::NodeHandle showControls = Ui::button(
-        Ui::snap(ui, Ui::Snap::TopRight|Ui::Snap::Inside, window, ButtonSize, Ui::NodeFlag::Hidden),
+        Ui::SnapLayout::child(Ui::Snap::TopRight, {ui, window}, ButtonSize, Ui::NodeFlag::Hidden),
         "Controls"_s, Ui::ButtonStyle::Flat);
     ui.eventLayer().onTapOrClick(hideControls, [this, showControls]{
         CORRADE_INTERNAL_ASSERT(!(ui.nodeFlags(controls) >= Ui::NodeFlag::Hidden));
@@ -213,7 +214,7 @@ Overlay::Overlay(Platform::ScreenedApplication& application):
 
     #ifdef CORRADE_TARGET_EMSCRIPTEN
     fullSize = Ui::Button{
-        Ui::snap(ui, Ui::Snap::Bottom, hideControls, ButtonSize),
+        Ui::SnapLayout::sibling(Ui::Snap::Bottom, {ui, hideControls}, ButtonSize),
         "Full size"};
     ui.eventLayer().onTapOrClick(fullSize, [this]{
         /* Can't be inside the branch because then this cursed message happens:
@@ -251,10 +252,10 @@ Overlay::Overlay(Platform::ScreenedApplication& application):
         .setColor(0x702b2aff_rgbaf*0.8f) /* m.css danger */
         .setCornerRadius(4.0f), {});
     /* Drop hint dialog. Shown initially, hidden once there's something loaded */
-    dropHint = Ui::snap(ui, Ui::Snap::Fill|Ui::Snap::NoPad, {});
+    dropHint = Ui::SnapLayout::root(ui, Ui::Snap::Fill|Ui::Snap::NoPad);
     {
         ui.baseLayer().create(ui.baseLayer().shared().styleCount() + style0, dropHint);
-        Ui::NodeHandle dialog = Ui::snap(ui, {}, dropHint, {540, 140});
+        Ui::NodeHandle dialog = Ui::SnapLayout::child({}, {ui, dropHint}, {540, 140});
         ui.baseLayer().create(ui.baseLayer().shared().styleCount() + style1, dialog);
         Ui::DataHandle hint = ui.textLayer().create(Ui::Implementation::TextStyle::LabelInfoText, "Drag&drop a file and everything it references here to play it.", {}, dialog);
         ui.textLayer().setPadding(hint, {0.0f, -30.0f, 0.0f, 30.0f});
@@ -262,18 +263,21 @@ Overlay::Overlay(Platform::ScreenedApplication& application):
         ui.textLayer().setPadding(disclaimer, {0.0f, 20.0f, 0.0f, -20.0f});
     }
     /* Error dialog. Hidden initially, shown if there's a loading error. */
-    error = Ui::snap(ui, Ui::Snap::Fill|Ui::Snap::NoPad, {});
+    error = Ui::SnapLayout::root(ui, Ui::Snap::Fill|Ui::Snap::NoPad);
     ui.clearNodeOrder(error);
     {
         ui.baseLayer().create(ui.baseLayer().shared().styleCount() + style0, error);
-        Ui::NodeHandle dialog = Ui::snap(ui, {}, error, {440, 200});
+        Ui::SnapLayout dialog = Ui::SnapLayout::child({}, {ui, error}, {440, 200});
         ui.baseLayer().create(ui.baseLayer().shared().styleCount() + style2, dialog);
         errorMessage = Ui::Label{
-            Ui::snap(ui, Ui::Snap::Top|Ui::Snap::Inside, dialog, {0.0f, 15.0f}, LabelSize), "No recognizable file dropped.", Ui::LabelStyle::Danger};
+            dialog.child(Ui::Snap::Top, LabelSize),
+            "No recognizable file dropped.", Ui::LabelStyle::Danger};
+        ui.setNodeOffset(errorMessage, {0.0f, 15.0f});
         ui.textLayer().create(Ui::Implementation::TextStyle::LabelDimText, "Try with another file or check the browser\nconsole for details. Bug reports welcome.", {}, dialog);
 
         Ui::NodeHandle close = Ui::button(
-            Ui::snap(ui, Ui::Snap::Bottom|Ui::Snap::Inside, dialog, ButtonSize), "Oh well", Ui::ButtonStyle::Danger);
+            dialog.child(Ui::Snap::Bottom, ButtonSize),
+            "Oh well", Ui::ButtonStyle::Danger);
         ui.eventLayer().onTapOrClick(close, [this]{
             ui.clearNodeOrder(error);
         });
@@ -572,9 +576,9 @@ PrimitiveClipRatio.)")
            or a scene */
         /** @todo ugh the importer should have an API for that */
         if(args.value("importer") != "AnySceneImporter" && !importer->objectCount() && !importer->meshCount() && importer->image2DCount() >= 1)
-            _player = createImagePlayer(*this, _overlay->ui, _overlay->controls);
+            _player = createImagePlayer(*this, {_overlay->ui, _overlay->controls});
         else
-            _player = createScenePlayer(*this, _overlay->ui, _overlay->controls, _profilerValues);
+            _player = createScenePlayer(*this, {_overlay->ui, _overlay->controls}, _profilerValues);
         _player->load(_file, *importer, _id);
         _importer = args.value("importer");
     } else if(args.value("importer") == "AnySceneImporter") {
@@ -586,7 +590,7 @@ PrimitiveClipRatio.)")
                 Error{} << "No 2D images found in the file";
                 std::exit(3);
             }
-            _player = createImagePlayer(*this, _overlay->ui, _overlay->controls);
+            _player = createImagePlayer(*this, {_overlay->ui, _overlay->controls});
             _player->load(_file, *imageImporter, _id);
             _importer = "AnyImageImporter";
         } else std::exit(2);
@@ -597,7 +601,7 @@ PrimitiveClipRatio.)")
     importer->addFlags(_importerFlags);
     Utility::Resource rs{"data"};
     importer->openData(rs.getRaw("artwork/default.glb"));
-    _player = createScenePlayer(*this, _overlay->ui, _overlay->controls, _profilerValues);
+    _player = createScenePlayer(*this, {_overlay->ui, _overlay->controls}, _profilerValues);
     _player->load({}, *importer, -1);
     #endif
 
@@ -690,14 +694,14 @@ void Player::loadFile(std::size_t totalCount, const char* filename, Containers::
             return;
         }
 
-        _player = createScenePlayer(*this, _overlay->ui, _overlay->controls, _profilerValues);
+        _player = createScenePlayer(*this, {_overlay->ui, _overlay->controls}, _profilerValues);
         _player->load(topLevelFile, *importer, -1);
 
     /* If there's just one non-recognized file, try to load it as an image instead */
     } else if(_droppedFiles.size() == 1) {
         Containers::Pointer<Trade::AbstractImporter> imageImporter = _manager.loadAndInstantiate("AnyImageImporter");
         if(imageImporter->openData(_droppedFiles.begin()->second) && imageImporter->image2DCount()) {
-            _player = createImagePlayer(*this, _overlay->ui, _overlay->controls);
+            _player = createImagePlayer(*this, {_overlay->ui, _overlay->controls});
             _player->load(_droppedFiles.begin()->first, *imageImporter, -1);
         } else {
             _overlay->errorMessage.setText("No recognizable file dropped.");

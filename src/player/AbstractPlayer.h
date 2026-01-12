@@ -51,8 +51,8 @@ class AbstractPlayer: public Platform::Screen {
 };
 
 /* Extreme PIMPL. */
-Containers::Pointer<AbstractPlayer> createScenePlayer(Platform::ScreenedApplication& application, Ui::UserInterface& ui, Ui::NodeHandle controls, const DebugTools::FrameProfilerGL::Values profilerValues);
-Containers::Pointer<AbstractPlayer> createImagePlayer(Platform::ScreenedApplication& application, Ui::UserInterface& ui, Ui::NodeHandle controls);
+Containers::Pointer<AbstractPlayer> createScenePlayer(Platform::ScreenedApplication& application, Ui::Anchor controls, const DebugTools::FrameProfilerGL::Values profilerValues);
+Containers::Pointer<AbstractPlayer> createImagePlayer(Platform::ScreenedApplication& application, Ui::Anchor controls);
 
 }}
 
