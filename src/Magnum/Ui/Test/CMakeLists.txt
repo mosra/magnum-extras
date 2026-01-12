@@ -118,6 +118,7 @@ if(CORRADE_TARGET_MSVC AND NOT CORRADE_TARGET_CLANG_CL AND NOT CORRADE_MSVC2015_
 endif()
 
 set_property(TARGET
+    UiAnchorTest
     UiHandleTest
     UiDebugLayerTest
     UiTextLayerTest

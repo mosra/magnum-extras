@@ -32,7 +32,6 @@
  */
 
 #include <Corrade/Containers/EnumSet.h>
-#include <Corrade/Utility/DebugAssert.h>
 
 #include "Magnum/Ui/visibility.h"
 #include "Magnum/Ui/Ui.h"
@@ -153,22 +152,6 @@ template<class UserInterface> class BasicAnchor: public AbstractAnchor {
          * with @ref NodeHandle::Null as the parent.
          */
         /*implicit*/ BasicAnchor(UserInterface& ui, const Vector2& size, NodeFlags flags = {}): AbstractAnchor{ui, size, flags} {}
-
-        /**
-         * @brief Construct from an abstract anchor and a concrete user interface reference
-         *
-         * Expects that @ref AbstractAnchor::ui() matches @p ui.
-         */
-        explicit BasicAnchor(UserInterface& ui, const AbstractAnchor& anchor): AbstractAnchor{anchor} {
-            #ifdef CORRADE_NO_DEBUG_ASSERT
-            static_cast<void>(ui);
-            #endif
-            /* Yes, again a reinterpret_cast like in BasicWidget so we don't
-               need to pull in UserInterface.h to know that UserInterface is
-               derived from AbstractUserInterface just for the assert alone. */
-            CORRADE_DEBUG_ASSERT(reinterpret_cast<AbstractUserInterface*>(&ui) == &anchor.ui(),
-                "Ui::BasicAnchor: expected the user interface reference to match" << &anchor.ui() << "but got" << &ui, );
-        }
 
         /** @brief User interface instance */
         UserInterface& ui() const {
