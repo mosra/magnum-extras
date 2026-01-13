@@ -245,7 +245,7 @@ void LabelTest::constructTextTextPropertiesStateless() {
 }
 
 void LabelTest::constructNoCreate() {
-    Label label{NoCreate, ui};
+    Label label{NoCreate};
     CORRADE_COMPARE(label.node(), NodeHandle::Null);
     CORRADE_COMPARE(label.data(), DataHandle::Null);
 

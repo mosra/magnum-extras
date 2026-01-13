@@ -117,7 +117,7 @@ void InputTest::constructTextProperties() {
 }
 
 void InputTest::constructNoCreate() {
-    Input input{NoCreate, ui};
+    Input input{NoCreate};
     CORRADE_COMPARE(input.node(), NodeHandle::Null);
     CORRADE_COMPARE(input.backgroundData(), DataHandle::Null);
     CORRADE_COMPARE(input.textData(), DataHandle::Null);

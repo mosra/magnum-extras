@@ -78,7 +78,7 @@ class MAGNUM_UI_EXPORT AbstractWidget {
          * The instance is equivalent to a moved-out state, i.e. not usable
          * for anything. Move another instance over it to make it useful.
          */
-        explicit AbstractWidget(NoCreateT, AbstractUserInterface& ui): _ui{&ui}, _node{} {}
+        explicit AbstractWidget(NoCreateT): _ui{}, _node{} {}
 
         /**
          * @brief Construct from a positioning anchor
@@ -233,8 +233,8 @@ template<class UserInterface> class BasicWidget: public AbstractWidget {
                still stand behind doing it to untangle complex dependencies. */
             AbstractWidget{reinterpret_cast<const AbstractAnchor&>(anchor)} {}
 
-        /** @copydoc AbstractWidget::AbstractWidget(NoCreateT, AbstractUserInterface&) */
-        explicit BasicWidget(NoCreateT, UserInterface& ui): AbstractWidget{NoCreate, ui} {}
+        /** @copydoc AbstractWidget::AbstractWidget(NoCreateT) */
+        explicit BasicWidget(NoCreateT): AbstractWidget{NoCreate} {}
 
         /** @brief Copying is not allowed */
         BasicWidget(const BasicWidget<UserInterface>&) = delete;

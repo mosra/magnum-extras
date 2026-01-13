@@ -379,7 +379,7 @@ void ButtonTest::constructIconTextTextPropertiesStateless() {
 }
 
 void ButtonTest::constructNoCreate() {
-    Button button{NoCreate, ui};
+    Button button{NoCreate};
     CORRADE_COMPARE(button.node(), NodeHandle::Null);
     CORRADE_COMPARE(button.backgroundData(), DataHandle::Null);
     CORRADE_COMPARE(button.iconData(), DataHandle::Null);

@@ -67,13 +67,8 @@ class MAGNUM_UI_EXPORT Panel: public Widget {
          */
         explicit Panel(Anchor anchor, PanelStyle style = PanelStyle::Default);
 
-        /**
-         * @brief Construct with no underlying node
-         *
-         * The instance is equivalent to a moved-out state, i.e. not usable
-         * for anything. Move another instance over it to make it useful.
-         */
-        explicit Panel(NoCreateT, UserInterface& ui): Widget{NoCreate, ui}, _style{}, _backgroundData{} {}
+        /** @copydoc AbstractWidget::AbstractWidget(NoCreateT) */
+        explicit Panel(NoCreateT): Widget{NoCreate}, _style{}, _backgroundData{} {}
 
         /** @brief Style */
         PanelStyle style() const { return _style; }

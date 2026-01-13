@@ -158,8 +158,8 @@ template<class T> void WidgetTest::constructNoCreate() {
         explicit Interface(NoCreateT): WidgetTraits<T>::UserInterfaceType{NoCreate} {}
     } ui{NoCreate};
 
-    T widget{NoCreate, ui};
-    CORRADE_COMPARE(&widget.ui(), &ui);
+    T widget{NoCreate};
+    CORRADE_COMPARE(&widget.ui(), nullptr);
     CORRADE_COMPARE(widget.node(), NodeHandle::Null);
 }
 

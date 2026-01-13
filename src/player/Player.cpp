@@ -105,9 +105,9 @@ struct Overlay: public Platform::Screen {
         Ui::UserInterfaceGL ui;
         Ui::NodeHandle window, controls;
         #ifdef CORRADE_TARGET_EMSCRIPTEN
-        Ui::Button fullSize{NoCreate, ui};
+        Ui::Button fullSize{NoCreate};
         Ui::NodeHandle dropHint, error;
-        Ui::Label errorMessage{NoCreate, ui};
+        Ui::Label errorMessage{NoCreate};
         #endif
 
     private:

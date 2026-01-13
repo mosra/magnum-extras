@@ -182,7 +182,7 @@ struct WidgetTester: TestSuite::Tester {
        before it's populated in setup(). Yeah, I know, this is abusing a
        construction path that shouldn't be used. There's (deliberately) no
        supported way to create an invalid anchor. */
-    Anchor rootAnchor = Widget{NoCreate, ui};
+    Anchor rootAnchor = Widget{NoCreate};
 };
 
 WidgetTester::WidgetTester() {
@@ -212,7 +212,7 @@ void WidgetTester::teardown() {
     CORRADE_INTERNAL_ASSERT(ui.layoutLayer().usedCount() == 0);
     /* Reset back to invalid to avoid accidents. Again yeah, I know, this is
        abusing a construction path that shouldn't be used. */
-    rootAnchor = Widget{NoCreate, ui};
+    rootAnchor = Widget{NoCreate};
 }
 
 

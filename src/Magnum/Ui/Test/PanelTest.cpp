@@ -121,7 +121,7 @@ void PanelTest::constructFilledStateless() {
 }
 
 void PanelTest::constructNoCreate() {
-    Panel label{NoCreate, ui};
+    Panel label{NoCreate};
     CORRADE_COMPARE(label.node(), NodeHandle::Null);
     CORRADE_COMPARE(label.backgroundData(), DataHandle::Null);
 
