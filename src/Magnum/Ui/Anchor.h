@@ -33,8 +33,8 @@
 
 #include <Corrade/Containers/EnumSet.h>
 
-#include "Magnum/Ui/visibility.h"
 #include "Magnum/Ui/Ui.h"
+#include "Magnum/Ui/visibility.h"
 
 namespace Magnum { namespace Ui {
 
@@ -42,9 +42,10 @@ namespace Magnum { namespace Ui {
 @brief Base for widget positioning anchors
 @m_since_latest_{extras}
 
-Wraps an @ref AbstractUserInterface reference, @ref NodeHandle and optional
-@ref LayoutHandle. The @ref BasicAnchor template and the @ref Anchor typedef
-then restrict the type to a concrete user interface instance.
+A non-owning wrapper over a @ref NodeHandle along with an
+@ref AbstractUserInterface reference and optional @ref LayoutHandle. The
+@ref BasicAnchor template and the @ref Anchor typedef then restrict the type to
+a concrete user interface instance.
 
 Meant to be returned from layouter instances to construct widget instances
 with.
@@ -75,7 +76,8 @@ class MAGNUM_UI_EXPORT AbstractAnchor {
          *
          * Calls @ref AbstractUserInterface::createNode() with @p parent,
          * @p offset, @p size and @p flags, and remembers the created
-         * @ref NodeHandle.
+         * @ref NodeHandle. See its documentation for detailed description of
+         * all constraints.
          */
         /*implicit*/ AbstractAnchor(AbstractUserInterface& ui, NodeHandle parent, const Vector2& offset, const Vector2& size, NodeFlags flags = {});
 
@@ -100,9 +102,9 @@ class MAGNUM_UI_EXPORT AbstractAnchor {
         /**
          * @brief Node handle
          *
-         * Guaranteed to be never @ref NodeHandle::Null.
+         * Same as @ref node().
          */
-        operator NodeHandle() const { return _node; }
+        /*implicit*/ operator NodeHandle() const { return _node; }
 
     private:
         AbstractUserInterface* _ui;
@@ -111,12 +113,12 @@ class MAGNUM_UI_EXPORT AbstractAnchor {
 };
 
 /**
-@brief Templated base for widget positioning anchors
+@brief Widget positioning anchor
 @m_since_latest_{extras}
 
-Restricts @ref AbstractAnchor to a concrete user interface instance. See the
-base class documentation for more information.
-@see @ref Anchor
+Restricts @ref AbstractAnchor to a concrete user interface instance. Meant to
+be used through concrete a typedef such as @ref Anchor. See the base class
+documentation for more information.
 */
 template<class UserInterface> class BasicAnchor: public AbstractAnchor {
     public:

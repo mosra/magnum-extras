@@ -40,12 +40,13 @@
 namespace Magnum { namespace Ui {
 
 /**
-@brief Abstract base for stateful widgets
+@brief Base for stateful widgets
 @m_since_latest_{extras}
 
-A move-only owning wrapper over a @ref NodeHandle. The @ref BasicWidget
-template and the @ref Widget typedef then restrict the type to a concrete user
-interface instance.
+A move-only owning wrapper over a @ref NodeHandle along with an
+@ref AbstractUserInterface reference. The @ref BasicWidget template and the
+@ref Widget typedef then restrict the type to a concrete user interface
+instance.
 
 Stateful widgets (such as a @ref Button) are meant to be used when their visual
 state will need be modified during their lifetime (for example, a button
@@ -132,7 +133,13 @@ class MAGNUM_UI_EXPORT AbstractWidget {
          *      @ref AbstractUserInterface::isHandleValid(NodeHandle) const
          */
         NodeHandle node() const { return _node; }
-        operator NodeHandle() const { return _node; } /**< @overload */
+
+        /**
+         * @brief Widget node
+         *
+         * Same as @ref node().
+         */
+        /*implicit*/ operator NodeHandle() const { return _node; }
 
         /**
          * @brief Whether the widget is hidden
