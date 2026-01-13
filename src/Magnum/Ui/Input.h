@@ -68,9 +68,9 @@ class MAGNUM_UI_EXPORT Input: public Widget {
          * @param textProperties    Text shaping and layouting properties
          * @param style             Input style
          */
-        explicit Input(const Anchor& anchor, Containers::StringView text, const TextProperties& textProperties, InputStyle style = InputStyle::Default);
+        explicit Input(Anchor anchor, Containers::StringView text, const TextProperties& textProperties, InputStyle style = InputStyle::Default);
         /** @overload */
-        explicit Input(const Anchor& anchor, Containers::StringView text, InputStyle style = InputStyle::Default);
+        explicit Input(Anchor anchor, Containers::StringView text, InputStyle style = InputStyle::Default);
 
         /**
          * @brief Construct with no underlying node

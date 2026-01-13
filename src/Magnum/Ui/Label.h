@@ -72,9 +72,9 @@ class MAGNUM_UI_EXPORT Label: public Widget {
          *
          * The label can be subsequently converted to a text label using
          * @ref setText().
-         * @see @ref label(const Anchor&, Icon, LabelStyle)
+         * @see @ref label(Anchor, Icon, LabelStyle)
          */
-        explicit Label(const Anchor& anchor, Icon icon, LabelStyle style = LabelStyle::Default);
+        explicit Label(Anchor anchor, Icon icon, LabelStyle style = LabelStyle::Default);
 
         /**
          * @brief Construct a text label
@@ -86,11 +86,11 @@ class MAGNUM_UI_EXPORT Label: public Widget {
          *
          * The label can be subsequently converted to an icon label using
          * @ref setIcon().
-         * @see @ref label(const Anchor&, Containers::StringView, const TextProperties&, LabelStyle)
+         * @see @ref label(Anchor, Containers::StringView, const TextProperties&, LabelStyle)
          */
-        explicit Label(const Anchor& anchor, Containers::StringView text, const TextProperties& textProperties, LabelStyle style = LabelStyle::Default);
+        explicit Label(Anchor anchor, Containers::StringView text, const TextProperties& textProperties, LabelStyle style = LabelStyle::Default);
         /** @overload */
-        explicit Label(const Anchor& anchor, Containers::StringView text, LabelStyle style = LabelStyle::Default);
+        explicit Label(Anchor anchor, Containers::StringView text, LabelStyle style = LabelStyle::Default);
 
         /**
          * @brief Construct with no underlying node
@@ -176,13 +176,13 @@ class MAGNUM_UI_EXPORT Label: public Widget {
 @return The @p anchor verbatim
 @m_since_latest_{extras}
 
-Compared to @ref Label::Label(const Anchor&, Icon, LabelStyle) this creates a
+Compared to @ref Label::Label(Anchor, Icon, LabelStyle) this creates a
 stateless label that doesn't have any class instance that would need to be kept
 in scope and eventually destructed, making it more lightweight. As a
 consequence it can't have its style, icon or text subsequently changed and is
 removed only when the node or its parent get removed.
 */
-MAGNUM_UI_EXPORT Anchor label(const Anchor& anchor, Icon icon, LabelStyle style = LabelStyle::Default);
+MAGNUM_UI_EXPORT Anchor label(Anchor anchor, Icon icon, LabelStyle style = LabelStyle::Default);
 
 /**
 @brief Stateless text label widget
@@ -194,18 +194,18 @@ MAGNUM_UI_EXPORT Anchor label(const Anchor& anchor, Icon icon, LabelStyle style 
 @return The @p anchor verbatim
 @m_since_latest_{extras}
 
-Compared to @ref Label::Label(const Anchor&, Containers::StringView, const TextProperties&, LabelStyle)
+Compared to @ref Label::Label(Anchor, Containers::StringView, const TextProperties&, LabelStyle)
 this creates a stateless label that doesn't have any class instance that would
 need to be kept in scope and eventually destructed, making it more lightweight.
 As a consequence it can't have its style, icon or text subsequently changed and
 is removed only when the node or its parent get removed.
 */
-MAGNUM_UI_EXPORT Anchor label(const Anchor& anchor, Containers::StringView text, const TextProperties& textProperties, LabelStyle style = LabelStyle::Default);
+MAGNUM_UI_EXPORT Anchor label(Anchor anchor, Containers::StringView text, const TextProperties& textProperties, LabelStyle style = LabelStyle::Default);
 /**
 @overload
 @m_since_latest_{extras}
 */
-MAGNUM_UI_EXPORT Anchor label(const Anchor& anchor, Containers::StringView text, LabelStyle style = LabelStyle::Default);
+MAGNUM_UI_EXPORT Anchor label(Anchor anchor, Containers::StringView text, LabelStyle style = LabelStyle::Default);
 
 }}
 

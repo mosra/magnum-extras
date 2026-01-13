@@ -98,7 +98,7 @@ TextStyle textLayerStyleText(const LabelStyle style) {
 
 }
 
-Label::Label(const Anchor& anchor, const Icon icon, const LabelStyle style): Widget{anchor}, _style{style}, _icon{icon} {
+Label::Label(const Anchor anchor, const Icon icon, const LabelStyle style): Widget{anchor}, _style{style}, _icon{icon} {
     /* The LayoutLayer data aren't stored because currently they're never
        updated */
     ui().layoutLayer().create(LayoutStyle::Label, node());
@@ -107,7 +107,7 @@ Label::Label(const Anchor& anchor, const Icon icon, const LabelStyle style): Wid
         dataHandleData(ui().textLayer().createGlyph(textLayerStyleIcon(style), icon, {}, node()));
 }
 
-Label::Label(const Anchor& anchor, const Containers::StringView text, const TextProperties& textProperties, const LabelStyle style): Widget{anchor}, _style{style}, _icon{Icon::None} {
+Label::Label(const Anchor anchor, const Containers::StringView text, const TextProperties& textProperties, const LabelStyle style): Widget{anchor}, _style{style}, _icon{Icon::None} {
     /* The LayoutLayer data aren't stored because currently they're never
        updated */
     ui().layoutLayer().create(LayoutStyle::Label, node());
@@ -116,7 +116,7 @@ Label::Label(const Anchor& anchor, const Containers::StringView text, const Text
         dataHandleData(ui().textLayer().create(textLayerStyleText(style), text, textProperties, node()));
 }
 
-Label::Label(const Anchor& anchor, const Containers::StringView text, const LabelStyle style): Label{anchor, text, {}, style} {}
+Label::Label(const Anchor anchor, const Containers::StringView text, const LabelStyle style): Label{anchor, text, {}, style} {}
 
 Label& Label::setStyle(const LabelStyle style) {
     _style = style;
@@ -168,7 +168,7 @@ DataHandle Label::data() const {
         dataHandle(ui().textLayer(), _data);
 }
 
-Anchor label(const Anchor& anchor, const Containers::StringView text, const TextProperties& textProperties, const LabelStyle style) {
+Anchor label(const Anchor anchor, const Containers::StringView text, const TextProperties& textProperties, const LabelStyle style) {
     anchor.ui().layoutLayer().create(LayoutStyle::Label, anchor.node());
 
     if(text)
@@ -176,11 +176,11 @@ Anchor label(const Anchor& anchor, const Containers::StringView text, const Text
     return anchor;
 }
 
-Anchor label(const Anchor& anchor, const Containers::StringView text, const LabelStyle style) {
+Anchor label(const Anchor anchor, const Containers::StringView text, const LabelStyle style) {
     return label(anchor, text, {}, style);
 }
 
-Anchor label(const Anchor& anchor, const Icon icon, const LabelStyle style) {
+Anchor label(const Anchor anchor, const Icon icon, const LabelStyle style) {
     anchor.ui().layoutLayer().create(LayoutStyle::Label, anchor.node());
 
     if(icon != Icon::None)

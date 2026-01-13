@@ -31,6 +31,7 @@
 #include <Magnum/Math/Vector2.h>
 #include <Magnum/Text/Alignment.h>
 
+#include "Magnum/Ui/Anchor.h"
 #include "Magnum/Ui/BaseLayer.h"
 #include "Magnum/Ui/Handle.h"
 #include "Magnum/Ui/LayoutLayer.h"
@@ -99,7 +100,7 @@ TextStyle textLayerStyle(const InputStyle style) {
 
 }
 
-Input::Input(const Anchor& anchor, const Containers::StringView text, const TextProperties& textProperties, const InputStyle style): Widget{anchor}, _style{style} {
+Input::Input(const Anchor anchor, const Containers::StringView text, const TextProperties& textProperties, const InputStyle style): Widget{anchor}, _style{style} {
     ui().addNodeFlags(node(), NodeFlag::Focusable);
     ui().layoutLayer().create(LayoutStyle::Input, node());
 
@@ -107,7 +108,7 @@ Input::Input(const Anchor& anchor, const Containers::StringView text, const Text
     _textData = dataHandleData(ui().textLayer().create(textLayerStyle(style), text, textProperties, TextDataFlag::Editable, node()));
 }
 
-Input::Input(const Anchor& anchor, const Containers::StringView text, const InputStyle style): Input{anchor, text, {}, style} {}
+Input::Input(const Anchor anchor, const Containers::StringView text, const InputStyle style): Input{anchor, text, {}, style} {}
 
 Input& Input::setStyle(const InputStyle style) {
     _style = style;

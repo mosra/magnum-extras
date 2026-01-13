@@ -55,7 +55,7 @@ Debug& operator<<(Debug& debug, const PanelStyle value) {
 using Implementation::BaseStyle;
 using Implementation::LayoutStyle;
 
-Panel::Panel(const Anchor& anchor, const PanelStyle style): Widget{anchor}, _style{style} {
+Panel::Panel(const Anchor anchor, const PanelStyle style): Widget{anchor}, _style{style} {
     /* The LayoutLayer data aren't stored because currently they're never
        updated */
     ui().layoutLayer().create(LayoutStyle::Panel, node());
@@ -90,7 +90,7 @@ DataHandle Panel::backgroundData() const {
         dataHandle(ui().baseLayer(), _backgroundData);
 }
 
-Anchor panel(const Anchor& anchor, const PanelStyle style) {
+Anchor panel(const Anchor anchor, const PanelStyle style) {
     anchor.ui().layoutLayer().create(LayoutStyle::Panel, anchor.node());
 
     if(style != PanelStyle::Default)

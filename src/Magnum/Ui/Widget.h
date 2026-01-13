@@ -85,6 +85,8 @@ class MAGNUM_UI_EXPORT AbstractWidget {
          * The @ref ui() and @ref node() is set to @ref AbstractAnchor::ui()
          * and @ref AbstractAnchor::node().
          */
+        /* Could be by-value but then it'd need the Anchor.h include for
+           BasicWidget below */
         explicit AbstractWidget(const AbstractAnchor& anchor);
 
         /** @brief Copying is not allowed */
@@ -214,6 +216,7 @@ template<class UserInterface> class BasicWidget: public AbstractWidget {
         explicit BasicWidget(UserInterface& ui, NodeHandle node): AbstractWidget{ui, node} {}
 
         /** @copydoc AbstractWidget::AbstractWidget(const AbstractAnchor&) */
+        /* Could be by-value but then it'd need the Anchor.h include */
         explicit BasicWidget(const BasicAnchor<UserInterface>& anchor):
             /* Yes, a reinterpret_cast so we don't need to pull in Anchor.h to
                know that BasicAnchor is derived from AbstractAnchor in the

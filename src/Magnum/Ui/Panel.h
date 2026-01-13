@@ -63,9 +63,9 @@ class MAGNUM_UI_EXPORT Panel: public Widget {
          * @param anchor            Positioning anchor
          * @param style             Panel style
          *
-         * @see @ref panel(const Anchor&, PanelStyle)
+         * @see @ref panel(Anchor, PanelStyle)
          */
-        explicit Panel(const Anchor& anchor, PanelStyle style = PanelStyle::Default);
+        explicit Panel(Anchor anchor, PanelStyle style = PanelStyle::Default);
 
         /**
          * @brief Construct with no underlying node
@@ -109,13 +109,13 @@ class MAGNUM_UI_EXPORT Panel: public Widget {
 @return The @p anchor verbatim
 @m_since_latest_{extras}
 
-Compared to @ref Panel::Panel(const Anchor&, PanelStyle) this creates a
+Compared to @ref Panel::Panel(Anchor, PanelStyle) this creates a
 stateless panel that doesn't have any class instance that would need to be kept
 in scope and eventually destructed, making it more lightweight. As a
 consequence it can't have its style subsequently changed and is removed only
 when the node or its parent get removed.
 */
-MAGNUM_UI_EXPORT Anchor panel(const Anchor& anchor, PanelStyle style = PanelStyle::Default);
+MAGNUM_UI_EXPORT Anchor panel(Anchor anchor, PanelStyle style = PanelStyle::Default);
 
 }}
 
