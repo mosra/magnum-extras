@@ -120,10 +120,10 @@ void LabelTest::debugStyle() {
 }
 
 void LabelTest::constructEmpty() {
-    Label label1{{ui, rootNode, {}, {32, 16}}, Icon::None, LabelStyle::Success};
-    Label label2{{ui, rootNode, {}, {32, 16}}, "", LabelStyle::Success};
-    CORRADE_COMPARE(ui.nodeParent(label1), rootNode);
-    CORRADE_COMPARE(ui.nodeParent(label2), rootNode);
+    Label label1{{rootAnchor, {}, {32, 16}}, Icon::None, LabelStyle::Success};
+    Label label2{{rootAnchor, {}, {32, 16}}, "", LabelStyle::Success};
+    CORRADE_COMPARE(ui.nodeParent(label1), rootAnchor);
+    CORRADE_COMPARE(ui.nodeParent(label2), rootAnchor);
     CORRADE_COMPARE(ui.nodeSize(label1), (Vector2{32, 16}));
     CORRADE_COMPARE(ui.nodeSize(label2), (Vector2{32, 16}));
 
@@ -139,10 +139,10 @@ void LabelTest::constructEmpty() {
 }
 
 void LabelTest::constructEmptyStateless() {
-    NodeHandle node1 = label({ui, rootNode, {}, {32, 16}}, Icon::None, LabelStyle::Success);
-    NodeHandle node2 = label({ui, rootNode, {}, {32, 16}}, "", LabelStyle::Success);
-    CORRADE_COMPARE(ui.nodeParent(node1), rootNode);
-    CORRADE_COMPARE(ui.nodeParent(node2), rootNode);
+    NodeHandle node1 = label({rootAnchor, {}, {32, 16}}, Icon::None, LabelStyle::Success);
+    NodeHandle node2 = label({rootAnchor, {}, {32, 16}}, "", LabelStyle::Success);
+    CORRADE_COMPARE(ui.nodeParent(node1), rootAnchor);
+    CORRADE_COMPARE(ui.nodeParent(node2), rootAnchor);
     CORRADE_COMPARE(ui.nodeSize(node1), (Vector2{32, 16}));
     CORRADE_COMPARE(ui.nodeSize(node2), (Vector2{32, 16}));
 
@@ -154,8 +154,8 @@ void LabelTest::constructEmptyStateless() {
 }
 
 void LabelTest::constructIcon() {
-    Label label{{ui, rootNode, {}, {32, 16}}, Icon::Yes, LabelStyle::Warning};
-    CORRADE_COMPARE(ui.nodeParent(label), rootNode);
+    Label label{{rootAnchor, {}, {32, 16}}, Icon::Yes, LabelStyle::Warning};
+    CORRADE_COMPARE(ui.nodeParent(label), rootAnchor);
     CORRADE_COMPARE(ui.nodeSize(label), (Vector2{32, 16}));
 
     CORRADE_COMPARE(label.style(), LabelStyle::Warning);
@@ -169,8 +169,8 @@ void LabelTest::constructIcon() {
 }
 
 void LabelTest::constructIconStateless() {
-    NodeHandle node = label({ui, rootNode, {}, {32, 16}}, Icon::Yes, LabelStyle::Success);
-    CORRADE_COMPARE(ui.nodeParent(node), rootNode);
+    NodeHandle node = label({rootAnchor, {}, {32, 16}}, Icon::Yes, LabelStyle::Success);
+    CORRADE_COMPARE(ui.nodeParent(node), rootAnchor);
     CORRADE_COMPARE(ui.nodeSize(node), (Vector2{32, 16}));
 
     /* Can only verify that the data were created, nothing else. Visually
@@ -181,8 +181,8 @@ void LabelTest::constructIconStateless() {
 }
 
 void LabelTest::constructText() {
-    Label label{{ui, rootNode, {}, {32, 16}}, "hello!", LabelStyle::Danger};
-    CORRADE_COMPARE(ui.nodeParent(label), rootNode);
+    Label label{{rootAnchor, {}, {32, 16}}, "hello!", LabelStyle::Danger};
+    CORRADE_COMPARE(ui.nodeParent(label), rootAnchor);
     CORRADE_COMPARE(ui.nodeOffset(label), Vector2{});
     CORRADE_COMPARE(ui.nodeSize(label), (Vector2{32, 16}));
 
@@ -197,8 +197,8 @@ void LabelTest::constructText() {
 }
 
 void LabelTest::constructTextStateless() {
-    NodeHandle node1 = label({ui, rootNode, {}, {32, 16}}, "hello!", LabelStyle::Warning);
-    CORRADE_COMPARE(ui.nodeParent(node1), rootNode);
+    NodeHandle node1 = label({rootAnchor, {}, {32, 16}}, "hello!", LabelStyle::Warning);
+    CORRADE_COMPARE(ui.nodeParent(node1), rootAnchor);
     CORRADE_COMPARE(ui.nodeOffset(node1), Vector2{});
     CORRADE_COMPARE(ui.nodeSize(node1), (Vector2{32, 16}));
 
@@ -210,10 +210,10 @@ void LabelTest::constructTextStateless() {
 }
 
 void LabelTest::constructTextTextProperties() {
-    Label label{{ui, rootNode, {}, {32, 16}}, "hello!",
+    Label label{{rootAnchor, {}, {32, 16}}, "hello!",
         TextProperties{}.setScript(Text::Script::Braille),
         LabelStyle::Info};
-    CORRADE_COMPARE(ui.nodeParent(label), rootNode);
+    CORRADE_COMPARE(ui.nodeParent(label), rootAnchor);
     CORRADE_COMPARE(ui.nodeOffset(label), Vector2{});
     CORRADE_COMPARE(ui.nodeSize(label), (Vector2{32, 16}));
 
@@ -229,10 +229,10 @@ void LabelTest::constructTextTextProperties() {
 }
 
 void LabelTest::constructTextTextPropertiesStateless() {
-    NodeHandle node = label({ui, rootNode, {}, {32, 16}}, "hello!",
+    NodeHandle node = label({rootAnchor, {}, {32, 16}}, "hello!",
         TextProperties{}.setScript(Text::Script::Braille),
         LabelStyle::Primary);
-    CORRADE_COMPARE(ui.nodeParent(node), rootNode);
+    CORRADE_COMPARE(ui.nodeParent(node), rootAnchor);
     CORRADE_COMPARE(ui.nodeOffset(node), Vector2{});
     CORRADE_COMPARE(ui.nodeSize(node), (Vector2{32, 16}));
 
@@ -259,8 +259,8 @@ void LabelTest::setStyle() {
     setTestCaseDescription(data.name);
 
     Label label = data.text ?
-        Label{{ui, rootNode, {}, {32, 16}}, data.text, LabelStyle::Dim} :
-        Label{{ui, rootNode, {}, {32, 16}}, data.icon, LabelStyle::Dim};
+        Label{{rootAnchor, {}, {32, 16}}, data.text, LabelStyle::Dim} :
+        Label{{rootAnchor, {}, {32, 16}}, data.icon, LabelStyle::Dim};
     CORRADE_COMPARE(label.style(), LabelStyle::Dim);
 
     UnsignedInt previousStyle;
@@ -279,7 +279,7 @@ void LabelTest::setStyle() {
 }
 
 void LabelTest::setIcon() {
-    Label label{{ui, rootNode, {}, {16, 32}}, Icon::No, LabelStyle::Default};
+    Label label{{rootAnchor, {}, {16, 32}}, Icon::No, LabelStyle::Default};
     CORRADE_COMPARE(label.icon(), Icon::No);
     CORRADE_COMPARE(ui.textLayer().glyphCount(label.data()), 1);
 
@@ -293,7 +293,7 @@ void LabelTest::setIcon() {
 }
 
 void LabelTest::setIconFromText() {
-    Label label{{ui, rootNode, {}, {16, 32}}, "hello", LabelStyle::Default};
+    Label label{{rootAnchor, {}, {16, 32}}, "hello", LabelStyle::Default};
     CORRADE_COMPARE(label.icon(), Icon::None);
     CORRADE_VERIFY(ui.isHandleValid(label.data()));
 
@@ -307,7 +307,7 @@ void LabelTest::setIconFromText() {
 }
 
 void LabelTest::setIconFromEmpty() {
-    Label label{{ui, rootNode, {}, {16, 32}}, Icon::None, LabelStyle::Danger};
+    Label label{{rootAnchor, {}, {16, 32}}, Icon::None, LabelStyle::Danger};
     CORRADE_COMPARE(label.icon(), Icon::None);
     CORRADE_COMPARE(label.data(), DataHandle::Null);
     CORRADE_COMPARE(ui.textLayer().usedCount(), 0);
@@ -319,7 +319,7 @@ void LabelTest::setIconFromEmpty() {
 }
 
 void LabelTest::setIconEmpty() {
-    Label label{{ui, rootNode, {}, {16, 32}}, Icon::No, LabelStyle::Primary};
+    Label label{{rootAnchor, {}, {16, 32}}, Icon::No, LabelStyle::Primary};
     CORRADE_COMPARE(label.icon(), Icon::No);
     CORRADE_VERIFY(ui.isHandleValid(label.data()));
     CORRADE_COMPARE(ui.textLayer().usedCount(), 1);
@@ -332,7 +332,7 @@ void LabelTest::setIconEmpty() {
 }
 
 void LabelTest::setIconEmptyFromText() {
-    Label label{{ui, rootNode, {}, {16, 32}}, "hello", LabelStyle::Default};
+    Label label{{rootAnchor, {}, {16, 32}}, "hello", LabelStyle::Default};
     CORRADE_COMPARE(label.icon(), Icon::None);
     CORRADE_VERIFY(ui.isHandleValid(label.data()));
     CORRADE_COMPARE(ui.textLayer().usedCount(), 1);
@@ -345,7 +345,7 @@ void LabelTest::setIconEmptyFromText() {
 }
 
 void LabelTest::setText() {
-    Label label{{ui, rootNode, {}, {16, 32}}, "hello", LabelStyle::Default};
+    Label label{{rootAnchor, {}, {16, 32}}, "hello", LabelStyle::Default};
     CORRADE_COMPARE(ui.textLayer().glyphCount(label.data()), 5);
 
     label.setText("wonderful!!");
@@ -353,7 +353,7 @@ void LabelTest::setText() {
 }
 
 void LabelTest::setTextTextProperties() {
-    Label label{{ui, rootNode, {}, {16, 32}}, "hello", LabelStyle::Default};
+    Label label{{rootAnchor, {}, {16, 32}}, "hello", LabelStyle::Default};
     CORRADE_COMPARE(ui.textLayer().glyphCount(label.data()), 5);
 
     label.setText("wonderful!!",
@@ -363,7 +363,7 @@ void LabelTest::setTextTextProperties() {
 }
 
 void LabelTest::setTextFromIcon() {
-    Label label{{ui, rootNode, {}, {16, 32}}, Icon::No, LabelStyle::Default};
+    Label label{{rootAnchor, {}, {16, 32}}, Icon::No, LabelStyle::Default};
     CORRADE_VERIFY(ui.isHandleValid(label.data()));
     CORRADE_COMPARE(ui.textLayer().usedCount(), 1);
 
@@ -377,7 +377,7 @@ void LabelTest::setTextFromIcon() {
 }
 
 void LabelTest::setTextFromEmpty() {
-    Label label{{ui, rootNode, {}, {16, 32}}, ""};
+    Label label{{rootAnchor, {}, {16, 32}}, ""};
     CORRADE_COMPARE(label.data(), DataHandle::Null);
     CORRADE_COMPARE(ui.textLayer().usedCount(), 0);
 
@@ -388,7 +388,7 @@ void LabelTest::setTextFromEmpty() {
 }
 
 void LabelTest::setTextEmpty() {
-    Label label{{ui, rootNode, {}, {16, 32}}, "hello", LabelStyle::Default};
+    Label label{{rootAnchor, {}, {16, 32}}, "hello", LabelStyle::Default};
     CORRADE_VERIFY(ui.isHandleValid(label.data()));
     CORRADE_COMPARE(ui.textLayer().usedCount(), 1);
 
@@ -400,7 +400,7 @@ void LabelTest::setTextEmpty() {
 }
 
 void LabelTest::setTextEmptyFromIcon() {
-    Label label{{ui, rootNode, {}, {16, 32}}, Icon::No, LabelStyle::Info};
+    Label label{{rootAnchor, {}, {16, 32}}, Icon::No, LabelStyle::Info};
     CORRADE_COMPARE(label.icon(), Icon::No);
     CORRADE_VERIFY(ui.isHandleValid(label.data()));
     CORRADE_COMPARE(ui.textLayer().usedCount(), 1);

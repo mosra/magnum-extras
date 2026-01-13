@@ -73,8 +73,8 @@ void PanelTest::debugStyle() {
 }
 
 void PanelTest::constructDefault() {
-    Panel panel{{ui, rootNode, {}, {32, 16}}, PanelStyle::Default};
-    CORRADE_COMPARE(ui.nodeParent(panel), rootNode);
+    Panel panel{{rootAnchor, {}, {32, 16}}, PanelStyle::Default};
+    CORRADE_COMPARE(ui.nodeParent(panel), rootAnchor);
     CORRADE_COMPARE(ui.nodeSize(panel), (Vector2{32, 16}));
 
     CORRADE_COMPARE(panel.style(), PanelStyle::Default);
@@ -86,8 +86,8 @@ void PanelTest::constructDefault() {
 }
 
 void PanelTest::constructDefaultStateless() {
-    NodeHandle node = panel({ui, rootNode, {}, {32, 16}}, PanelStyle::Default);
-    CORRADE_COMPARE(ui.nodeParent(node), rootNode);
+    NodeHandle node = panel({rootAnchor, {}, {32, 16}}, PanelStyle::Default);
+    CORRADE_COMPARE(ui.nodeParent(node), rootAnchor);
     CORRADE_COMPARE(ui.nodeSize(node), (Vector2{32, 16}));
 
     /* Can only verify that the data were (not) created, nothing else. Visually
@@ -97,8 +97,8 @@ void PanelTest::constructDefaultStateless() {
 }
 
 void PanelTest::constructFilled() {
-    Panel panel{{ui, rootNode, {}, {32, 16}}, PanelStyle::Filled};
-    CORRADE_COMPARE(ui.nodeParent(panel), rootNode);
+    Panel panel{{rootAnchor, {}, {32, 16}}, PanelStyle::Filled};
+    CORRADE_COMPARE(ui.nodeParent(panel), rootAnchor);
     CORRADE_COMPARE(ui.nodeSize(panel), (Vector2{32, 16}));
 
     CORRADE_COMPARE(panel.style(), PanelStyle::Filled);
@@ -110,8 +110,8 @@ void PanelTest::constructFilled() {
 }
 
 void PanelTest::constructFilledStateless() {
-    NodeHandle node = panel({ui, rootNode, {}, {32, 16}}, PanelStyle::Filled);
-    CORRADE_COMPARE(ui.nodeParent(node), rootNode);
+    NodeHandle node = panel({rootAnchor, {}, {32, 16}}, PanelStyle::Filled);
+    CORRADE_COMPARE(ui.nodeParent(node), rootAnchor);
     CORRADE_COMPARE(ui.nodeSize(node), (Vector2{32, 16}));
 
     /* Can only verify that the data were created, nothing else. Visually
@@ -131,8 +131,8 @@ void PanelTest::constructNoCreate() {
 }
 
 void PanelTest::setStyleNoOp() {
-    Panel a{{ui, rootNode, {}, {32, 16}}, PanelStyle::Default};
-    Panel b{{ui, rootNode, {}, {32, 16}}, PanelStyle::Filled};
+    Panel a{{rootAnchor, {}, {32, 16}}, PanelStyle::Default};
+    Panel b{{rootAnchor, {}, {32, 16}}, PanelStyle::Filled};
     CORRADE_COMPARE(a.style(), PanelStyle::Default);
     CORRADE_COMPARE(b.style(), PanelStyle::Filled);
     CORRADE_COMPARE(a.backgroundData(), DataHandle::Null);
@@ -152,7 +152,7 @@ void PanelTest::setStyleNoOp() {
 
 void PanelTest::setStyleFromNoBackground() {
     /* Default style is ... the default */
-    Panel panel{{ui, rootNode, {}, {32, 16}}};
+    Panel panel{{rootAnchor, {}, {32, 16}}};
     CORRADE_COMPARE(panel.style(), PanelStyle::Default);
     CORRADE_COMPARE(panel.backgroundData(), DataHandle::Null);
 
@@ -163,7 +163,7 @@ void PanelTest::setStyleFromNoBackground() {
 }
 
 void PanelTest::setStyleToNoBackground() {
-    Panel panel{{ui, rootNode, {}, {32, 16}}, PanelStyle::Filled};
+    Panel panel{{rootAnchor, {}, {32, 16}}, PanelStyle::Filled};
     CORRADE_COMPARE(panel.style(), PanelStyle::Filled);
     CORRADE_VERIFY(ui.isHandleValid(panel.backgroundData()));
 

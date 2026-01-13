@@ -129,12 +129,12 @@ void ButtonTest::debugStyle() {
 }
 
 void ButtonTest::constructEmpty() {
-    Button button1{{ui, rootNode, {}, {32, 16}}, Icon::None, ButtonStyle::Success};
-    Button button2{{ui, rootNode, {}, {32, 16}}, "", ButtonStyle::Success};
-    Button button3{{ui, rootNode, {}, {32, 16}}, Icon::None, "", ButtonStyle::Success};
-    CORRADE_COMPARE(ui.nodeParent(button1), rootNode);
-    CORRADE_COMPARE(ui.nodeParent(button2), rootNode);
-    CORRADE_COMPARE(ui.nodeParent(button3), rootNode);
+    Button button1{{rootAnchor, {}, {32, 16}}, Icon::None, ButtonStyle::Success};
+    Button button2{{rootAnchor, {}, {32, 16}}, "", ButtonStyle::Success};
+    Button button3{{rootAnchor, {}, {32, 16}}, Icon::None, "", ButtonStyle::Success};
+    CORRADE_COMPARE(ui.nodeParent(button1), rootAnchor);
+    CORRADE_COMPARE(ui.nodeParent(button2), rootAnchor);
+    CORRADE_COMPARE(ui.nodeParent(button3), rootAnchor);
     CORRADE_COMPARE(ui.nodeSize(button1), (Vector2{32, 16}));
     CORRADE_COMPARE(ui.nodeSize(button2), (Vector2{32, 16}));
     CORRADE_COMPARE(ui.nodeSize(button3), (Vector2{32, 16}));
@@ -161,12 +161,12 @@ void ButtonTest::constructEmpty() {
 }
 
 void ButtonTest::constructEmptyStateless() {
-    NodeHandle node1 = button({ui, rootNode, {}, {32, 16}}, Icon::None, ButtonStyle::Success);
-    NodeHandle node2 = button({ui, rootNode, {}, {32, 16}}, "", ButtonStyle::Success);
-    NodeHandle node3 = button({ui, rootNode, {}, {32, 16}}, Icon::None, "", ButtonStyle::Success);
-    CORRADE_COMPARE(ui.nodeParent(node1), rootNode);
-    CORRADE_COMPARE(ui.nodeParent(node2), rootNode);
-    CORRADE_COMPARE(ui.nodeParent(node3), rootNode);
+    NodeHandle node1 = button({rootAnchor, {}, {32, 16}}, Icon::None, ButtonStyle::Success);
+    NodeHandle node2 = button({rootAnchor, {}, {32, 16}}, "", ButtonStyle::Success);
+    NodeHandle node3 = button({rootAnchor, {}, {32, 16}}, Icon::None, "", ButtonStyle::Success);
+    CORRADE_COMPARE(ui.nodeParent(node1), rootAnchor);
+    CORRADE_COMPARE(ui.nodeParent(node2), rootAnchor);
+    CORRADE_COMPARE(ui.nodeParent(node3), rootAnchor);
     CORRADE_COMPARE(ui.nodeSize(node1), (Vector2{32, 16}));
     CORRADE_COMPARE(ui.nodeSize(node2), (Vector2{32, 16}));
     CORRADE_COMPARE(ui.nodeSize(node3), (Vector2{32, 16}));
@@ -179,10 +179,10 @@ void ButtonTest::constructEmptyStateless() {
 }
 
 void ButtonTest::constructIconOnly() {
-    Button button1{{ui, rootNode, {}, {32, 16}}, Icon::Yes, ButtonStyle::Danger};
-    Button button2{{ui, rootNode, {}, {32, 16}}, Icon::Yes, "", ButtonStyle::Danger};
-    CORRADE_COMPARE(ui.nodeParent(button1), rootNode);
-    CORRADE_COMPARE(ui.nodeParent(button2), rootNode);
+    Button button1{{rootAnchor, {}, {32, 16}}, Icon::Yes, ButtonStyle::Danger};
+    Button button2{{rootAnchor, {}, {32, 16}}, Icon::Yes, "", ButtonStyle::Danger};
+    CORRADE_COMPARE(ui.nodeParent(button1), rootAnchor);
+    CORRADE_COMPARE(ui.nodeParent(button2), rootAnchor);
     CORRADE_COMPARE(ui.nodeSize(button1), (Vector2{32, 16}));
     CORRADE_COMPARE(ui.nodeSize(button2), (Vector2{32, 16}));
 
@@ -205,10 +205,10 @@ void ButtonTest::constructIconOnly() {
 }
 
 void ButtonTest::constructIconOnlyStateless() {
-    NodeHandle node1 = button({ui, rootNode, {}, {32, 16}}, Icon::Yes, ButtonStyle::Danger);
-    NodeHandle node2 = button({ui, rootNode, {}, {32, 16}}, Icon::Yes, "", ButtonStyle::Danger);
-    CORRADE_COMPARE(ui.nodeParent(node1), rootNode);
-    CORRADE_COMPARE(ui.nodeParent(node2), rootNode);
+    NodeHandle node1 = button({rootAnchor, {}, {32, 16}}, Icon::Yes, ButtonStyle::Danger);
+    NodeHandle node2 = button({rootAnchor, {}, {32, 16}}, Icon::Yes, "", ButtonStyle::Danger);
+    CORRADE_COMPARE(ui.nodeParent(node1), rootAnchor);
+    CORRADE_COMPARE(ui.nodeParent(node2), rootAnchor);
     CORRADE_COMPARE(ui.nodeSize(node1), (Vector2{32, 16}));
     CORRADE_COMPARE(ui.nodeSize(node2), (Vector2{32, 16}));
 
@@ -220,10 +220,10 @@ void ButtonTest::constructIconOnlyStateless() {
 }
 
 void ButtonTest::constructTextOnly() {
-    Button button1{{ui, rootNode, {}, {32, 16}}, "hello!", ButtonStyle::Primary};
-    Button button2{{ui, rootNode, {}, {32, 16}}, Icon::None, "hello!", ButtonStyle::Primary};
-    CORRADE_COMPARE(ui.nodeParent(button1), rootNode);
-    CORRADE_COMPARE(ui.nodeParent(button2), rootNode);
+    Button button1{{rootAnchor, {}, {32, 16}}, "hello!", ButtonStyle::Primary};
+    Button button2{{rootAnchor, {}, {32, 16}}, Icon::None, "hello!", ButtonStyle::Primary};
+    CORRADE_COMPARE(ui.nodeParent(button1), rootAnchor);
+    CORRADE_COMPARE(ui.nodeParent(button2), rootAnchor);
     CORRADE_COMPARE(ui.nodeSize(button1), (Vector2{32, 16}));
     CORRADE_COMPARE(ui.nodeSize(button2), (Vector2{32, 16}));
 
@@ -246,10 +246,10 @@ void ButtonTest::constructTextOnly() {
 }
 
 void ButtonTest::constructTextOnlyStateless() {
-    NodeHandle node1 = button({ui, rootNode, {}, {32, 16}}, "hello!", ButtonStyle::Primary);
-    NodeHandle node2 = button({ui, rootNode, {}, {32, 16}}, Icon::None, "hello!", ButtonStyle::Primary);
-    CORRADE_COMPARE(ui.nodeParent(node1), rootNode);
-    CORRADE_COMPARE(ui.nodeParent(node2), rootNode);
+    NodeHandle node1 = button({rootAnchor, {}, {32, 16}}, "hello!", ButtonStyle::Primary);
+    NodeHandle node2 = button({rootAnchor, {}, {32, 16}}, Icon::None, "hello!", ButtonStyle::Primary);
+    CORRADE_COMPARE(ui.nodeParent(node1), rootAnchor);
+    CORRADE_COMPARE(ui.nodeParent(node2), rootAnchor);
     CORRADE_COMPARE(ui.nodeSize(node1), (Vector2{32, 16}));
     CORRADE_COMPARE(ui.nodeSize(node2), (Vector2{32, 16}));
 
@@ -261,14 +261,14 @@ void ButtonTest::constructTextOnlyStateless() {
 }
 
 void ButtonTest::constructTextOnlyTextProperties() {
-    Button button1{{ui, rootNode, {}, {32, 16}}, "hello!",
+    Button button1{{rootAnchor, {}, {32, 16}}, "hello!",
         TextProperties{}.setScript(Text::Script::Braille),
         ButtonStyle::Info};
-    Button button2{{ui, rootNode, {}, {32, 16}}, Icon::None, "hello!",
+    Button button2{{rootAnchor, {}, {32, 16}}, Icon::None, "hello!",
         TextProperties{}.setScript(Text::Script::Braille),
         ButtonStyle::Info};
-    CORRADE_COMPARE(ui.nodeParent(button1), rootNode);
-    CORRADE_COMPARE(ui.nodeParent(button2), rootNode);
+    CORRADE_COMPARE(ui.nodeParent(button1), rootAnchor);
+    CORRADE_COMPARE(ui.nodeParent(button2), rootAnchor);
     CORRADE_COMPARE(ui.nodeSize(button1), (Vector2{32, 16}));
     CORRADE_COMPARE(ui.nodeSize(button2), (Vector2{32, 16}));
 
@@ -292,14 +292,14 @@ void ButtonTest::constructTextOnlyTextProperties() {
 }
 
 void ButtonTest::constructTextOnlyTextPropertiesStateless() {
-    NodeHandle node1 = button({ui, rootNode, {}, {32, 16}}, "hello!",
+    NodeHandle node1 = button({rootAnchor, {}, {32, 16}}, "hello!",
         TextProperties{}.setScript(Text::Script::Braille),
         ButtonStyle::Info);
-    NodeHandle node2 = button({ui, rootNode, {}, {32, 16}}, Icon::None, "hello!",
+    NodeHandle node2 = button({rootAnchor, {}, {32, 16}}, Icon::None, "hello!",
         TextProperties{}.setScript(Text::Script::Braille),
         ButtonStyle::Info);
-    CORRADE_COMPARE(ui.nodeParent(node1), rootNode);
-    CORRADE_COMPARE(ui.nodeParent(node2), rootNode);
+    CORRADE_COMPARE(ui.nodeParent(node1), rootAnchor);
+    CORRADE_COMPARE(ui.nodeParent(node2), rootAnchor);
     CORRADE_COMPARE(ui.nodeSize(node1), (Vector2{32, 16}));
     CORRADE_COMPARE(ui.nodeSize(node2), (Vector2{32, 16}));
 
@@ -312,8 +312,8 @@ void ButtonTest::constructTextOnlyTextPropertiesStateless() {
 }
 
 void ButtonTest::constructIconText() {
-    Button button{{ui, rootNode, {}, {32, 16}}, Icon::No, "bye!", ButtonStyle::Dim};
-    CORRADE_COMPARE(ui.nodeParent(button), rootNode);
+    Button button{{rootAnchor, {}, {32, 16}}, Icon::No, "bye!", ButtonStyle::Dim};
+    CORRADE_COMPARE(ui.nodeParent(button), rootAnchor);
     CORRADE_COMPARE(ui.nodeSize(button), (Vector2{32, 16}));
 
     CORRADE_COMPARE(button.style(), ButtonStyle::Dim);
@@ -330,8 +330,8 @@ void ButtonTest::constructIconText() {
 }
 
 void ButtonTest::constructIconTextStateless() {
-    NodeHandle node = button({ui, rootNode, {}, {32, 16}}, Icon::No, "bye!", ButtonStyle::Dim);
-    CORRADE_COMPARE(ui.nodeParent(node), rootNode);
+    NodeHandle node = button({rootAnchor, {}, {32, 16}}, Icon::No, "bye!", ButtonStyle::Dim);
+    CORRADE_COMPARE(ui.nodeParent(node), rootAnchor);
     CORRADE_COMPARE(ui.nodeSize(node), (Vector2{32, 16}));
 
     /* Can only verify that the data were created, nothing else. Visually
@@ -342,10 +342,10 @@ void ButtonTest::constructIconTextStateless() {
 }
 
 void ButtonTest::constructIconTextTextProperties() {
-    Button button{{ui, rootNode, {}, {32, 16}}, Icon::No, "bye!",
+    Button button{{rootAnchor, {}, {32, 16}}, Icon::No, "bye!",
         TextProperties{}.setScript(Text::Script::Braille),
         ButtonStyle::Warning};
-    CORRADE_COMPARE(ui.nodeParent(button), rootNode);
+    CORRADE_COMPARE(ui.nodeParent(button), rootAnchor);
     CORRADE_COMPARE(ui.nodeSize(button), (Vector2{32, 16}));
 
     CORRADE_COMPARE(button.style(), ButtonStyle::Warning);
@@ -364,10 +364,10 @@ void ButtonTest::constructIconTextTextProperties() {
 }
 
 void ButtonTest::constructIconTextTextPropertiesStateless() {
-    NodeHandle node = button({ui, rootNode, {}, {32, 16}}, Icon::No, "bye!",
+    NodeHandle node = button({rootAnchor, {}, {32, 16}}, Icon::No, "bye!",
         TextProperties{}.setScript(Text::Script::Braille),
         ButtonStyle::Warning);
-    CORRADE_COMPARE(ui.nodeParent(node), rootNode);
+    CORRADE_COMPARE(ui.nodeParent(node), rootAnchor);
     CORRADE_COMPARE(ui.nodeSize(node), (Vector2{32, 16}));
 
     /* Can only verify that the data were created, nothing else. Visually
@@ -394,7 +394,7 @@ void ButtonTest::setStyle() {
     auto&& data = SetStyleData[testCaseInstanceId()];
     setTestCaseDescription(data.name);
 
-    Button button{{ui, rootNode, {}, {32, 16}}, data.icon, data.text, ButtonStyle::Flat};
+    Button button{{rootAnchor, {}, {32, 16}}, data.icon, data.text, ButtonStyle::Flat};
     CORRADE_COMPARE(button.style(), ButtonStyle::Flat);
 
     UnsignedInt previousStyleIcon, previousStyleText;
@@ -422,7 +422,7 @@ void ButtonTest::setStyle() {
 }
 
 void ButtonTest::setStyleWhileActive() {
-    Button button{{ui, rootNode, {}, {32, 16}}, Icon::No, "yes", ButtonStyle::Primary};
+    Button button{{rootAnchor, {}, {32, 16}}, Icon::No, "yes", ButtonStyle::Primary};
     CORRADE_COMPARE(button.style(), ButtonStyle::Primary);
 
     CORRADE_COMPARE(ui.baseLayer().style(button.backgroundData()), UnsignedInt(Implementation::BaseStyle::ButtonPrimaryInactiveOut));
@@ -449,7 +449,7 @@ void ButtonTest::setStyleWhileActive() {
 }
 
 void ButtonTest::setIcon() {
-    Button button{{ui, rootNode, {}, {16, 32}}, Icon::No};
+    Button button{{rootAnchor, {}, {16, 32}}, Icon::No};
     CORRADE_COMPARE(button.icon(), Icon::No);
     CORRADE_COMPARE(ui.textLayer().glyphCount(button.iconData()), 1);
 
@@ -463,7 +463,7 @@ void ButtonTest::setIcon() {
 }
 
 void ButtonTest::setIconFromTextOnly() {
-    Button button{{ui, rootNode, {}, {16, 32}}, "hello"};
+    Button button{{rootAnchor, {}, {16, 32}}, "hello"};
     CORRADE_COMPARE(button.icon(), Icon::None);
     CORRADE_COMPARE(button.iconData(), DataHandle::Null);
 
@@ -477,7 +477,7 @@ void ButtonTest::setIconFromTextOnly() {
 }
 
 void ButtonTest::setIconEmpty() {
-    Button button{{ui, rootNode, {}, {16, 32}}, Icon::No};
+    Button button{{rootAnchor, {}, {16, 32}}, Icon::No};
     CORRADE_COMPARE(button.icon(), Icon::No);
     CORRADE_VERIFY(ui.isHandleValid(button.iconData()));
     CORRADE_COMPARE(ui.textLayer().usedCount(), 1);
@@ -490,7 +490,7 @@ void ButtonTest::setIconEmpty() {
 }
 
 void ButtonTest::setIconEmptyFromTextOnly() {
-    Button button{{ui, rootNode, {}, {16, 32}}, "hello"};
+    Button button{{rootAnchor, {}, {16, 32}}, "hello"};
     CORRADE_COMPARE(button.icon(), Icon::None);
     CORRADE_COMPARE(button.iconData(), DataHandle::Null);
     CORRADE_COMPARE(ui.textLayer().usedCount(), 1);
@@ -505,7 +505,7 @@ void ButtonTest::setIconEmptyFromTextOnly() {
 }
 
 void ButtonTest::setText() {
-    Button button{{ui, rootNode, {}, {16, 32}}, "hello"};
+    Button button{{rootAnchor, {}, {16, 32}}, "hello"};
     CORRADE_COMPARE(ui.textLayer().glyphCount(button.textData()), 5);
 
     button.setText("wonderful!!");
@@ -513,7 +513,7 @@ void ButtonTest::setText() {
 }
 
 void ButtonTest::setTextTextProperties() {
-    Button button{{ui, rootNode, {}, {16, 32}}, "hello"};
+    Button button{{rootAnchor, {}, {16, 32}}, "hello"};
     CORRADE_COMPARE(ui.textLayer().glyphCount(button.textData()), 5);
 
     button.setText("wonderful!!",
@@ -523,7 +523,7 @@ void ButtonTest::setTextTextProperties() {
 }
 
 void ButtonTest::setTextFromIconOnly() {
-    Button button{{ui, rootNode, {}, {16, 32}}, Icon::No};
+    Button button{{rootAnchor, {}, {16, 32}}, Icon::No};
     CORRADE_COMPARE(button.textData(), DataHandle::Null);
 
     /* It should create the text data now, the icon should however stay as
@@ -536,7 +536,7 @@ void ButtonTest::setTextFromIconOnly() {
 }
 
 void ButtonTest::setTextEmpty() {
-    Button button{{ui, rootNode, {}, {16, 32}}, "hello"};
+    Button button{{rootAnchor, {}, {16, 32}}, "hello"};
     CORRADE_VERIFY(ui.isHandleValid(button.textData()));
     CORRADE_COMPARE(ui.textLayer().usedCount(), 1);
 
@@ -547,7 +547,7 @@ void ButtonTest::setTextEmpty() {
 }
 
 void ButtonTest::setTextEmptyFromIconOnly() {
-    Button button{{ui, rootNode, {}, {16, 32}}, Icon::No};
+    Button button{{rootAnchor, {}, {16, 32}}, Icon::No};
     CORRADE_COMPARE(button.textData(), DataHandle::Null);
     CORRADE_COMPARE(ui.textLayer().usedCount(), 1);
 

@@ -178,9 +178,11 @@ struct WidgetTester: TestSuite::Tester {
     TestBaseLayerShared baseLayerShared;
     TestTextLayerShared textLayerShared;
     TestUserInterface ui{NoCreate};
-    /* Deliberately an invalid non-null handle initially, to make sure nothing
-       is parented to it before it's populated in setup() */
-    NodeHandle rootNode = nodeHandle(0xfffff, 0xfff);
+    /* Deliberately an invalid anchor initially, to make sure nothing uses it
+       before it's populated in setup(). Yeah, I know, this is abusing a
+       construction path that shouldn't be used. There's (deliberately) no
+       supported way to create an invalid anchor. */
+    Anchor rootAnchor = Widget{NoCreate, ui};
 };
 
 WidgetTester::WidgetTester() {
@@ -192,22 +194,25 @@ WidgetTester::WidgetTester() {
 }
 
 void WidgetTester::setup() {
-    CORRADE_INTERNAL_ASSERT(!ui.isHandleValid(rootNode));
+    CORRADE_INTERNAL_ASSERT(!ui.isHandleValid(rootAnchor));
     CORRADE_INTERNAL_ASSERT(ui.nodeUsedCount() == 0);
     CORRADE_INTERNAL_ASSERT(ui.baseLayer().usedCount() == 0);
     CORRADE_INTERNAL_ASSERT(ui.textLayer().usedCount() == 0);
     CORRADE_INTERNAL_ASSERT(ui.layoutLayer().usedCount() == 0);
-    rootNode = ui.createNode({}, ui.size());
+    rootAnchor = {ui, {}, ui.size()};
 }
 
 void WidgetTester::teardown() {
-    ui.removeNode(rootNode);
+    ui.removeNode(rootAnchor);
     ui.clean();
-    CORRADE_INTERNAL_ASSERT(!ui.isHandleValid(rootNode));
+    CORRADE_INTERNAL_ASSERT(!ui.isHandleValid(rootAnchor));
     CORRADE_INTERNAL_ASSERT(ui.nodeUsedCount() == 0);
     CORRADE_INTERNAL_ASSERT(ui.baseLayer().usedCount() == 0);
     CORRADE_INTERNAL_ASSERT(ui.textLayer().usedCount() == 0);
     CORRADE_INTERNAL_ASSERT(ui.layoutLayer().usedCount() == 0);
+    /* Reset back to invalid to avoid accidents. Again yeah, I know, this is
+       abusing a construction path that shouldn't be used. */
+    rootAnchor = Widget{NoCreate, ui};
 }
 
 
