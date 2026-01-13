@@ -2100,7 +2100,7 @@ class MAGNUM_UI_EXPORT TextLayer: public AbstractVisualLayer {
          * the style are used for editable text.
          *
          * Delegates to @ref AbstractLayer::create(), see its documentation for
-         * more information.
+         * detailed description of all constraints.
          * @see @ref Shared::hasFontInstance(), @ref setText(),
          *      @ref setCursor(), @ref updateText(), @ref editText()
          */
@@ -2183,7 +2183,7 @@ class MAGNUM_UI_EXPORT TextLayer: public AbstractVisualLayer {
          * any way.
          *
          * Delegates to @ref AbstractLayer::create(), see its documentation for
-         * more information.
+         * detailed description of all constraints.
          * @see @ref Shared::glyphCacheFontId(), @ref setGlyph()
          */
         DataHandle createGlyph(UnsignedInt style, UnsignedInt glyph, const TextProperties& properties, NodeHandle node =
@@ -2264,9 +2264,10 @@ class MAGNUM_UI_EXPORT TextLayer: public AbstractVisualLayer {
         /**
          * @brief Remove a text
          *
-         * Expects that @p handle is valid. Delegates to
-         * @ref AbstractLayer::remove(DataHandle) and additionally marks the
-         * now-unused glyph run for removal in the next @ref update().
+         * Expects that @p handle is valid. Marks the now-unused glyph run for
+         * removal in the next @ref update() and delegates to
+         * @ref AbstractLayer::remove(DataHandle), see its documentation for
+         * detailed description of all constraints.
          * @see @ref isHandleValid(DataHandle) const
          */
         void remove(DataHandle handle);

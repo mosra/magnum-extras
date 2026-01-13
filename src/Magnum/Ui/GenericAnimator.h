@@ -271,7 +271,7 @@ class MAGNUM_UI_EXPORT GenericAnimator: public AbstractGenericAnimator {
          *
          * Expects that both @p animation and @p easing are not @cpp nullptr @ce.
          * Delegates to @ref AbstractAnimator::create(Nanoseconds, Nanoseconds, UnsignedInt, AnimationFlags),
-         * see its documentation for more information.
+         * see its documentation for detailed description of all constraints.
          *
          * Assuming the @p easing function correctly maps @cpp 0.0f @ce and
          * @cpp 1.0f @ce to themselves, the animation function is guaranteed to
@@ -327,7 +327,7 @@ class MAGNUM_UI_EXPORT GenericAnimator: public AbstractGenericAnimator {
          * Expects that @p callback is not @cpp nullptr @ce. Delegates to
          * @ref AbstractAnimator::create(Nanoseconds, Nanoseconds, UnsignedInt, AnimationFlags)
          * with @p duration set to @cpp 0_nsec @ce, see its documentation for
-         * more information.
+         * detailed description of all constraints.
          */
         AnimationHandle callOnce(Containers::Function<void()>&& callback, Nanoseconds at, AnimationFlags flags = {});
 
@@ -336,7 +336,7 @@ class MAGNUM_UI_EXPORT GenericAnimator: public AbstractGenericAnimator {
          *
          * Expects that @p handle is valid. Delegates to
          * @ref AbstractAnimator::remove(AnimationHandle), see its
-         * documentation for more information.
+         * documentation for detailed description of all constraints.
          * @see @ref isHandleValid(AnimationHandle) const
          */
         void remove(AnimationHandle handle);
@@ -531,7 +531,7 @@ class MAGNUM_UI_EXPORT GenericNodeAnimator: public AbstractGenericAnimator {
          *
          * Expects that both @p animation and @p easing are not @cpp nullptr @ce.
          * Delegates to @ref AbstractAnimator::create(Nanoseconds, Nanoseconds, NodeHandle, UnsignedInt, AnimationFlags),
-         * see its documentation for more information.
+         * see its documentation for detailed description of all constraints.
          *
          * Assuming the @p easing function correctly maps @cpp 0.0f @ce and
          * @cpp 1.0f @ce to themselves, the animation function is guaranteed to
@@ -590,7 +590,7 @@ class MAGNUM_UI_EXPORT GenericNodeAnimator: public AbstractGenericAnimator {
          * Expects that @p callback is not @cpp nullptr @ce. Delegates to
          * @ref AbstractAnimator::create(Nanoseconds, Nanoseconds, NodeHandle, UnsignedInt, AnimationFlags)
          * with @p duration set to @cpp 0_nsec @ce, see its documentation for
-         * more information.
+         * detailed description of all constraints.
          */
         AnimationHandle callOnce(Containers::Function<void(NodeHandle node)>&& callback, Nanoseconds at, NodeHandle node, AnimationFlags flags = {});
 
@@ -599,7 +599,7 @@ class MAGNUM_UI_EXPORT GenericNodeAnimator: public AbstractGenericAnimator {
          *
          * Expects that @p handle is valid. Delegates to
          * @ref AbstractAnimator::remove(AnimationHandle), see its
-         * documentation for more information.
+         * documentation for detailed description of all constraints.
          * @see @ref isHandleValid(AnimationHandle) const
          */
         void remove(AnimationHandle handle);
@@ -793,7 +793,7 @@ class MAGNUM_UI_EXPORT GenericDataAnimator: public AbstractGenericAnimator {
          * Expects that @ref setLayer() has been already called and that both
          * @p animation and @p easing are not @cpp nullptr @ce. Delegates to
          * @ref AbstractAnimator::create(Nanoseconds, Nanoseconds, DataHandle, UnsignedInt, AnimationFlags),
-         * see its documentation for more information.
+         * see its documentation for detailed description of all constraints.
          *
          * Unless @p data is @ref DataHandle::Null or the animation is
          * subsequently detached from the data, the layer portion of the
@@ -924,7 +924,7 @@ class MAGNUM_UI_EXPORT GenericDataAnimator: public AbstractGenericAnimator {
          *
          * Expects that @p handle is valid. Delegates to
          * @ref AbstractAnimator::remove(AnimationHandle), see its
-         * documentation for more information.
+         * documentation for detailed description of all constraints.
          * @see @ref isHandleValid(AnimationHandle) const
          */
         void remove(AnimationHandle handle);

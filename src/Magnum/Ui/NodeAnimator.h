@@ -224,8 +224,8 @@ class MAGNUM_UI_EXPORT NodeAnimator: public AbstractNodeAnimator {
          *
          * Expects that @p easing is not @cpp nullptr @ce if @p animation
          * affects node offset, size or opacity. Delegates to
-         * @ref AbstractAnimator::create(Nanoseconds, Nanoseconds, NodeHandle, UnsignedInt, AnimationFlags), see its documentation for more
-         * information.
+         * @ref AbstractAnimator::create(Nanoseconds, Nanoseconds, NodeHandle, UnsignedInt, AnimationFlags), see its documentation for detailed
+         * description of all constraints.
          */
         AnimationHandle create(const NodeAnimation& animation, Float(*easing)(Float), Nanoseconds start, Nanoseconds duration, NodeHandle node, UnsignedInt repeatCount = 1, AnimationFlags flags = {});
 
@@ -242,7 +242,8 @@ class MAGNUM_UI_EXPORT NodeAnimator: public AbstractNodeAnimator {
         /**
          * @brief Remove an animation
          *
-         * Delegates to @ref AbstractAnimator::remove(AnimationHandle).
+         * Delegates to @ref AbstractAnimator::remove(AnimationHandle), see its
+         * documentation for detailed description of all constraints.
          *
          * @m_class{m-note m-warning}
          *
@@ -262,7 +263,7 @@ class MAGNUM_UI_EXPORT NodeAnimator: public AbstractNodeAnimator {
         /**
          * @brief Remove an animation assuming it belongs to this animator
          *
-         * Like @ref remove(AnimationHandle) but delegates to
+         * Compared to @ref remove(AnimationHandle) delegates to
          * @ref AbstractAnimator::remove(AnimatorDataHandle) instead.
          */
         void remove(AnimatorDataHandle handle) {

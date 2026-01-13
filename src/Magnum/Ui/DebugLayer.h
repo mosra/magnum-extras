@@ -593,12 +593,7 @@ class MAGNUM_UI_EXPORT DebugLayer: public AbstractLayer {
         /** @brief Copying is not allowed */
         DebugLayer(const DebugLayer&) = delete;
 
-        /**
-         * @brief Move constructor
-         *
-         * Performs a destructive move, i.e. the original object isn't usable
-         * afterwards anymore.
-         */
+        /** @copydoc AbstractLayer::AbstractLayer(AbstractLayer&&) */
         DebugLayer(DebugLayer&&) noexcept;
 
         ~DebugLayer();

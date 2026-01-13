@@ -314,12 +314,7 @@ class MAGNUM_UI_EXPORT SnapLayouter: public AbstractLayouter {
         /** @brief Copying is not allowed */
         SnapLayouter(const SnapLayouter&) = delete;
 
-        /**
-         * @brief Move constructor
-         *
-         * Performs a destructive move, i.e. the original object isn't usable
-         * afterwards anymore.
-         */
+        /** @copydoc AbstractLayouter::AbstractLayouter(AbstractLayouter&&) */
         SnapLayouter(SnapLayouter&&) noexcept;
 
         virtual ~SnapLayouter();
@@ -356,7 +351,7 @@ class MAGNUM_UI_EXPORT SnapLayouter: public AbstractLayouter {
          * into account and without affecting the parent layout size.
          *
          * Delegates to @ref AbstractLayouter::add(), see its documentation for
-         * more information.
+         * detailed description of all constraints.
          * @see @ref isHandleValid(LayoutHandle) const,
          *      @ref Ui::AbstractUserInterface::nodeParent(),
          *      @ref Ui::AbstractUserInterface::nodeUniqueLayout()
@@ -406,7 +401,7 @@ class MAGNUM_UI_EXPORT SnapLayouter: public AbstractLayouter {
          * margin to the parent.
          *
          * Delegates to @ref AbstractLayouter::add(), see its documentation for
-         * more information.
+         * detailed description of all constraints.
          */
         LayoutHandle add(NodeHandle node, Snaps snap, LayoutHandle snapTarget, SnapLayoutFlags flags = {});
 
@@ -429,7 +424,7 @@ class MAGNUM_UI_EXPORT SnapLayouter: public AbstractLayouter {
          * @ref Ui::AbstractUserInterface::removeNode().
          *
          * Delegates to @ref AbstractLayouter::remove(LayoutHandle), see its
-         * documentation for more information.
+         * documentation for detailed description of all constraints.
          * @see @ref isHandleValid(LayoutHandle) const
          */
         void remove(LayoutHandle handle);

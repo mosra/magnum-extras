@@ -796,7 +796,7 @@ class MAGNUM_UI_EXPORT LineLayer: public AbstractVisualLayer {
          * an array of @cpp 0xffffffff_srgbaf @ce was supplied.
          *
          * Delegates to @ref AbstractLayer::create(), see its documentation for
-         * more information.
+         * detailed description of all constraints.
          * @see @ref createStrip(), @ref createLoop(), @ref setAlignment(),
          *      @ref Color4::premultiplied()
          */
@@ -1020,14 +1020,16 @@ class MAGNUM_UI_EXPORT LineLayer: public AbstractVisualLayer {
         /**
          * @brief Remove a line
          *
-         * Delegates to @ref AbstractLayer::remove(DataHandle).
+         * Delegates to @ref AbstractLayer::remove(DataHandle), see its
+         * documentation for detailed description of all constraints.
          */
         void remove(DataHandle handle);
 
         /**
          * @brief Remove a line assuming it belongs to this layer
          *
-         * Delegates to @ref AbstractLayer::remove(LayerDataHandle).
+         * Compared to @ref remove(DataHandle) delegates to
+         * @ref AbstractLayer::remove(LayerDataHandle) instead.
          */
         void remove(LayerDataHandle handle);
 

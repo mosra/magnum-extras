@@ -1057,7 +1057,7 @@ class MAGNUM_UI_EXPORT BaseLayer: public AbstractVisualLayer {
          * @ref setTextureCoordinates().
          *
          * Delegates to @ref AbstractLayer::create(), see its documentation for
-         * more information.
+         * detailed description of all constraints.
          */
         DataHandle create(UnsignedInt style, NodeHandle node =
             #ifdef DOXYGEN_GENERATING_OUTPUT
@@ -1092,7 +1092,8 @@ class MAGNUM_UI_EXPORT BaseLayer: public AbstractVisualLayer {
         /**
          * @brief Remove a quad
          *
-         * Delegates to @ref AbstractLayer::remove(DataHandle).
+         * Delegates to @ref AbstractLayer::remove(DataHandle), see its
+         * documentation for detailed description of all constraints.
          */
         void remove(DataHandle handle) {
             AbstractVisualLayer::remove(handle);
@@ -1101,7 +1102,8 @@ class MAGNUM_UI_EXPORT BaseLayer: public AbstractVisualLayer {
         /**
          * @brief Remove a quad assuming it belongs to this layer
          *
-         * Delegates to @ref AbstractLayer::remove(LayerDataHandle).
+         * Compared to @ref remove(DataHandle) delegates to
+         * @ref AbstractLayer::remove(LayerDataHandle) instead.
          */
         void remove(LayerDataHandle handle) {
             AbstractVisualLayer::remove(handle);

@@ -131,12 +131,7 @@ class MAGNUM_UI_EXPORT RendererGL: public AbstractRenderer {
         /** @brief Copying is not allowed */
         RendererGL(const RendererGL&) = delete;
 
-        /**
-         * @brief Move constructor
-         *
-         * Performs a destructive move, i.e. the original object isn't usable
-         * afterwards anymore.
-         */
+        /** @copydoc AbstractRenderer::AbstractRenderer(AbstractRenderer&&) */
         RendererGL(RendererGL&&) noexcept;
 
         ~RendererGL();

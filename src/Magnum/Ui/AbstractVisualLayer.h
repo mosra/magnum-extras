@@ -83,12 +83,7 @@ class MAGNUM_UI_EXPORT AbstractVisualLayer: public AbstractLayer {
         /** @brief Copying is not allowed */
         AbstractVisualLayer(const AbstractVisualLayer&) = delete;
 
-        /**
-         * @brief Move constructor
-         *
-         * Performs a destructive move, i.e. the original object isn't usable
-         * afterwards anymore.
-         */
+        /** @copydoc AbstractLayer::AbstractLayer(AbstractLayer&&) */
         AbstractVisualLayer(AbstractVisualLayer&&) noexcept;
 
         ~AbstractVisualLayer();

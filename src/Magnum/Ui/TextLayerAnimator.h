@@ -315,7 +315,7 @@ class MAGNUM_UI_EXPORT TextLayerStyleAnimator: public AbstractVisualLayerStyleAn
          * @p easing is not @cpp nullptr @ce.
          *
          * Delegates to @ref AbstractAnimator::create(Nanoseconds, Nanoseconds, DataHandle, UnsignedInt, AnimationFlags),
-         * see its documentation for more information.
+         * see its documentation for detailed description of all constraints.
          *
          * The animation affects the @ref TextLayerStyleUniform and the padding
          * value, if it differs between the styles. The animated dynamic style
@@ -440,7 +440,7 @@ class MAGNUM_UI_EXPORT TextLayerStyleAnimator: public AbstractVisualLayerStyleAn
          * Expects that @p handle is valid. Recycles a dynamic style used by
          * given animation with @ref TextLayer::recycleDynamicStyle() and
          * delegates to @ref AbstractAnimator::remove(AnimationHandle), see its
-         * documentation for more information.
+         * documentation for detailed description of all constraints.
          *
          * @m_class{m-note m-warning}
          *

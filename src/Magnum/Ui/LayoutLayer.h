@@ -89,12 +89,7 @@ class MAGNUM_UI_EXPORT LayoutLayer: public AbstractLayer {
         /** @brief Copying is not allowed */
         LayoutLayer(const LayoutLayer&) = delete;
 
-        /**
-         * @brief Move constructor
-         *
-         * Performs a destructive move, i.e. the original object isn't usable
-         * afterwards anymore.
-         */
+        /** @copydoc AbstractLayer::AbstractLayer(AbstractLayer&&) */
         LayoutLayer(LayoutLayer&&) noexcept;
 
         ~LayoutLayer();
@@ -222,7 +217,7 @@ class MAGNUM_UI_EXPORT LayoutLayer: public AbstractLayer {
          * per-data basis.
          *
          * Delegates to @ref AbstractLayer::create(), see its documentation for
-         * more information.
+         * detailed description of all constraints.
          */
         DataHandle create(UnsignedInt style, NodeHandle node =
             #ifdef DOXYGEN_GENERATING_OUTPUT
@@ -257,7 +252,8 @@ class MAGNUM_UI_EXPORT LayoutLayer: public AbstractLayer {
         /**
          * @brief Remove a data
          *
-         * Delegates to @ref AbstractLayer::remove(DataHandle).
+         * Delegates to @ref AbstractLayer::remove(DataHandle), see its
+         * documentation for detailed description of all constraints.
          */
         void remove(DataHandle handle) {
             AbstractLayer::remove(handle);
@@ -266,7 +262,8 @@ class MAGNUM_UI_EXPORT LayoutLayer: public AbstractLayer {
         /**
          * @brief Remove a data assuming it belongs to this layer
          *
-         * Delegates to @ref AbstractLayer::remove(LayerDataHandle).
+         * Compared to @ref remove(DataHandle) delegates to
+         * @ref AbstractLayer::remove(LayerDataHandle) instead.
          */
         void remove(LayerDataHandle handle) {
             AbstractLayer::remove(handle);
