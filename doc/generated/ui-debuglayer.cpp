@@ -61,6 +61,7 @@
 #include "Magnum/Ui/NodeAnimator.h"
 #include "Magnum/Ui/NodeFlags.h"
 #include "Magnum/Ui/RendererGL.h"
+#include "Magnum/Ui/SnapLayout.h"
 #include "Magnum/Ui/SnapLayouter.h"
 #include "Magnum/Ui/Style.h"
 #include "Magnum/Ui/TextLayerGL.h"
@@ -195,14 +196,14 @@ int UiDebugLayer::exec() {
     ui.createNode({}, {});
     ui.createNode({}, {});
     ui.createNode({}, {});
-    Ui::NodeHandle root = Ui::snap(ui, Ui::Snap::Fill, {});
+    Ui::SnapLayout root = Ui::SnapLayout::root(ui, Ui::Snap::Fill);
     ui.removeNode(ui.createNode({}, {}));
-    Ui::NodeHandle hidden = Ui::snap(ui, Ui::Snap::Fill, {}, Ui::NodeFlag::Hidden);
-    Ui::button(Ui::snap(ui, {}, hidden, {}), Ui::Icon::Yes, "Accept");
-    Ui::button(Ui::snap(ui, {}, hidden, {}), Ui::Icon::Yes, "Accept");
-    Ui::button(Ui::snap(ui, {}, hidden, {}), Ui::Icon::Yes, "Accept");
+    Ui::SnapLayout hidden = Ui::SnapLayout::root(ui, Ui::Snap::Fill, {}, Ui::NodeFlag::Hidden);
+    Ui::button(hidden.child(), Ui::Icon::Yes, "Accept");
+    Ui::button(hidden.child(), Ui::Icon::Yes, "Accept");
+    Ui::button(hidden.child(), Ui::Icon::Yes, "Accept");
     /* Yeah this one deletes itself right away */
-    Ui::Button{Ui::snap(ui, {}, hidden, {}), ""};
+    Ui::Button{hidden.child(), ""};
 
     Containers::String out;
 
@@ -215,7 +216,7 @@ int UiDebugLayer::exec() {
         ui.update();
 
 /* [button] */
-Ui::NodeHandle button = Ui::button(DOXYGEN_ELLIPSIS(Ui::snap(ui, {}, root, {112, 32})), Ui::Icon::Yes, "Accept");
+Ui::NodeHandle button = Ui::button(DOXYGEN_ELLIPSIS(root.child({}, {112, 32})), Ui::Icon::Yes, "Accept");
 
 ui.eventLayer().onTapOrClick(button, []{
     DOXYGEN_ELLIPSIS()
