@@ -80,6 +80,8 @@ class MAGNUM_UI_EXPORT AbstractAnchor {
          * all constraints.
          */
         /*implicit*/ AbstractAnchor(AbstractUserInterface& ui, NodeHandle parent, const Vector2& offset, const Vector2& size, NodeFlags flags = {});
+        /** @overload */
+        /*implicit*/ AbstractAnchor(AbstractAnchor parent, const Vector2& offset, const Vector2& size, NodeFlags flags = {}): AbstractAnchor{parent.ui(), parent.node(), offset, size, flags} {}
 
         /**
          * @brief Create a custom-positioned root anchor
@@ -136,6 +138,8 @@ template<class UserInterface> class BasicAnchor: public AbstractAnchor {
 
         /** @copydoc AbstractAnchor::AbstractAnchor(AbstractUserInterface&, NodeHandle, const Vector2&, const Vector2&, NodeFlags) */
         /*implicit*/ BasicAnchor(UserInterface& ui, NodeHandle parent, const Vector2& offset, const Vector2& size, NodeFlags flags = {}): AbstractAnchor{ui, parent, offset, size, flags} {}
+        /** @copydoc AbstractAnchor::AbstractAnchor(AbstractAnchor, const Vector2&, const Vector2&, NodeFlags) */
+        /*implicit*/ BasicAnchor(BasicAnchor<UserInterface> parent, const Vector2& offset, const Vector2& size, NodeFlags flags = {}): AbstractAnchor{parent, offset, size, flags} {}
 
         /**
          * @brief Create a custom-positioned root anchor

@@ -45,6 +45,7 @@ struct AnchorTest: TestSuite::Tester {
     template<class T> void constructInvalid();
     template<class T> void constructFromWidget();
     template<class T> void constructCreateNode();
+    template<class T> void constructCreateNodeParentAnchor();
     template<class T> void constructCreateNodeRoot();
     /* Passing an invalid parent to the node creation is asserted in
        UserInterface directly */
@@ -59,6 +60,8 @@ AnchorTest::AnchorTest() {
                           &AnchorTest::constructFromWidget<Anchor>,
                           &AnchorTest::constructCreateNode<AbstractAnchor>,
                           &AnchorTest::constructCreateNode<Anchor>,
+                          &AnchorTest::constructCreateNodeParentAnchor<AbstractAnchor>,
+                          &AnchorTest::constructCreateNodeParentAnchor<Anchor>,
                           &AnchorTest::constructCreateNodeRoot<AbstractAnchor>,
                           &AnchorTest::constructCreateNodeRoot<Anchor>});
 }
@@ -150,6 +153,30 @@ template<class T> void AnchorTest::constructCreateNode() {
     CORRADE_COMPARE(&anchor.ui(), &ui);
     CORRADE_COMPARE(anchor.node(), nodeHandle(3, 1));
     CORRADE_COMPARE(ui.nodeParent(anchor), parent);
+    CORRADE_COMPARE(ui.nodeOffset(anchor), (Vector2{1.0f, 2.0f}));
+    CORRADE_COMPARE(ui.nodeSize(anchor), (Vector2{3.0f, 4.0f}));
+    CORRADE_COMPARE(ui.nodeFlags(anchor), NodeFlag::Disabled);
+}
+
+template<class T> void AnchorTest::constructCreateNodeParentAnchor() {
+    setTestCaseTemplateName(AnchorTraits<T>::name());
+
+    struct Interface: AnchorTraits<T>::UserInterfaceType {
+        explicit Interface(NoCreateT): AnchorTraits<T>::UserInterfaceType{NoCreate} {}
+    } ui{NoCreate};
+
+    /* Create extra nodes to verify it isn't just using a trivial handle */
+    ui.createNode({}, {});
+    ui.createNode({}, {});
+    ui.createNode({}, {});
+    ui.removeNode(ui.createNode({}, {}));
+
+    T parent{ui, {}, {}};
+    CORRADE_COMPARE(parent.node(), nodeHandle(3, 2));
+
+    T anchor{parent, {1.0f, 2.0f}, {3.0f, 4.0f}, NodeFlag::Disabled};
+    CORRADE_COMPARE(&anchor.ui(), &ui);
+    CORRADE_COMPARE(ui.nodeParent(anchor), parent.node());
     CORRADE_COMPARE(ui.nodeOffset(anchor), (Vector2{1.0f, 2.0f}));
     CORRADE_COMPARE(ui.nodeSize(anchor), (Vector2{3.0f, 4.0f}));
     CORRADE_COMPARE(ui.nodeFlags(anchor), NodeFlag::Disabled);
