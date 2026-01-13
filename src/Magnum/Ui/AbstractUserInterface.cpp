@@ -47,7 +47,6 @@
 #include "Magnum/Ui/Implementation/abstractLayerState.h"
 #include "Magnum/Ui/Implementation/abstractLayouterState.h"
 #include "Magnum/Ui/Implementation/abstractUserInterface.h"
-#include "Magnum/Ui/Implementation/orderNodesBreadthFirstInto.h"
 
 namespace Magnum { namespace Ui {
 

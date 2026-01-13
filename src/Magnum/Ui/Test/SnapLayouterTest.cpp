@@ -31,6 +31,7 @@
 #include <Corrade/TestSuite/Compare/Container.h>
 #include <Corrade/TestSuite/Compare/Numeric.h>
 #include <Corrade/TestSuite/Compare/String.h>
+#include <Magnum/Math/Swizzle.h>
 
 #include "Magnum/Ui/AbstractLayer.h"
 #include "Magnum/Ui/Anchor.h"
@@ -38,7 +39,6 @@
 #include "Magnum/Ui/NodeFlags.h"
 #include "Magnum/Ui/SnapLayouter.h"
 #include "Magnum/Ui/UserInterface.h"
-#include "Magnum/Ui/Implementation/orderNodesBreadthFirstInto.h"
 #include "Magnum/Ui/Implementation/snapLayouter.h"
 
 namespace Magnum { namespace Ui { namespace Test { namespace {
@@ -51,33 +51,51 @@ struct SnapLayouterTest: TestSuite::Tester {
     void debugSnaps();
     void debugSnapsPacked();
     void debugSnapsSupersets();
+    void debugFlag();
+    void debugFlags();
+    void debugFlagsSupersets();
 
     void snapInside();
     void snap();
+
+    void childLayoutSizeSingleLayout();
+    /* The result is fed into snap(), so this subsequently tests that snap()
+       does what's expected */
+    void childLayoutSizeSide();
+    void childLayoutSizeForward();
+
+    void orderLayoutsBreadthFirstEmpty();
     void orderLayoutsBreadthFirst();
 
     void construct();
     void constructCopy();
     void constructMove();
 
-    template<class T> void layoutConstructInside();
-    template<class T> void layoutConstructOutside();
-    void layoutConstructDefaultLayouter();
-    template<class T> void layoutConstructCopy();
-    template<class T> void layoutConstructMove();
-
-    template<class T> void addRemove();
+    void addRemove();
+    void addRemoveExplicitSnap();
     void addRemoveHandleRecycle();
-    void addDefaultLayouter();
-    void layoutInvalid();
+    void addInvalid();
+    void removeInvalid();
+
+    void flags();
+    void flagsInvalid();
+
+    void childSnap();
+    void childSnapInvalid();
+
+    void invalidHandle();
+    void invalidExplicitSnap();
 
     void setSize();
 
-    void invalidHandle();
+    void clean();
+    void cleanInvalid();
 
     void updateEmpty();
     void updateDataOrder();
     void updateLayoutProperties();
+    void updateChildSnap();
+    void updatePropagateChildSizes();
 };
 
 const struct {
@@ -366,10 +384,361 @@ const struct {
 
 const struct {
     const char* name;
-    bool recycledLayouts;
-} UpdateDataOrderData[]{
+    Snaps extraChildSnap;
+    Vector4 padding, margin;
+    Vector2 expectedSize;
+    Vector4 expectedPadding;
+} ChildLayoutSizeSingleLayoutData[]{
+    {"no padding or margin", {},
+        {}, {},
+        {20.0f, 30.0f}, {}},
+    {"padding only", {},
+        {1.0f, 2.0f, 3.0f, 4.0f}, {},
+        {24.0f, 36.0f}, {1.0f, 2.0f, 3.0f, 4.0f}},
+    {"margin only", {},
+        {}, {1.0f, 2.0f, 3.0f, 4.0f},
+        {24.0f, 36.0f}, {1.0f, 2.0f, 3.0f, 4.0f}},
+    /* It should correctly do element-wise max() */
+    {"X padding larger", {},
+        {1.0f, 0.0f, 3.0f, 0.0f}, {0.0f, 2.0f, 2.0f, 4.0f},
+        {24.0f, 36.0f}, {1.0f, 2.0f, 3.0f, 4.0f}},
+    {"X margin larger", {},
+        {0.0f, 2.0f, 2.0f, 4.0f}, {1.0f, 0.0f, 3.0f, 0.0f},
+        {24.0f, 36.0f}, {1.0f, 2.0f, 3.0f, 4.0f}},
+    {"padding only", Snap::NoPad,
+        {1.0f, 2.0f, 3.0f, 4.0f}, {},
+        {20.0f, 30.0f}, {}},
+    {"padding only", Snap::NoPadX,
+        {1.0f, 2.0f, 3.0f, 4.0f}, {},
+        {20.0f, 36.0f}, {0.0f, 2.0f, 0.0f, 4.0f}},
+    {"padding only", Snap::NoPadY,
+        {1.0f, 2.0f, 3.0f, 4.0f}, {},
+        {24.0f, 30.0f}, {1.0f, 0.0f, 3.0f, 0.0f}},
+    {"margin only", Snap::NoPad,
+        {}, {1.0f, 2.0f, 3.0f, 4.0f},
+        {20.0f, 30.0f}, {}},
+    {"margin only", Snap::NoPadX,
+        {}, {1.0f, 2.0f, 3.0f, 4.0f},
+        {20.0f, 36.0f}, {0.0f, 2.0f, 0.0f, 4.0f}},
+    {"margin only", Snap::NoPadY,
+        {}, {1.0f, 2.0f, 3.0f, 4.0f},
+        {24.0f, 30.0f}, {1.0f, 0.0f, 3.0f, 0.0f}},
+};
+
+const struct {
+    TestSuite::TestCaseDescriptionSourceLocation name;
+    Snaps childSnaps[4];
+    Vector2 paddingSide;
+    Vector2 marginsSide[3];
+    Float sizesSide[3];
+    Float expectedSizeSide;
+    Vector2 expectedPaddingSide;
+    Float expectedOffsetsSide[3];
+    Float expectedSizesSide[3]; /* If left at {}, sizeSide is used */
+} ChildLayoutSizeSideData[]{
+    /* All diagrams for left-to-right direction (first in childSnap), # denotes
+       parent padding, @ child margin */
+
+    /* +---+ +---+ +---+
+       |   | |   | |   |
+       +---+ +---+ +---+ */
+    {"same sizes, no padding or margins, center",
+        {Snap::Right, Snap::Bottom, Snap::Left, Snap::Top},
+        {}, {},
+        {20.0f, 20.0f, 20.0f},
+        20.0f, {}, {0.0f, 0.0f, 0.0f}, {}},
+    /* #################
+       +---+ +---+ +---+
+       |   | |   | |   |
+       +---+ +---+ +---+
+       ################# */
+    {"same sizes, even padding, center",
+        {Snap::Right, Snap::Bottom, Snap::Left, Snap::Top},
+        {5.0f, 5.0f}, {},
+        {20.0f, 20.0f, 20.0f},
+        30.0f, {5.0f, 5.0f}, {5.0f, 5.0f, 5.0f}, {}},
+    /* @@@@@ @@@@@ @@@@@
+       +---+ +---+ +---+
+       |   | |   | |   |
+       +---+ +---+ +---+
+       @@@@@ @@@@@ @@@@@ */
+    {"same sizes, even margins, center",
+        {Snap::Right, Snap::Bottom, Snap::Left, Snap::Top},
+        {}, {{5.0f, 5.0f}, {5.0f, 5.0f}, {5.0f, 5.0f}},
+        {20.0f, 20.0f, 20.0f},
+        30.0f, {5.0f, 5.0f}, {5.0f, 5.0f, 5.0f}, {}},
+    /* @@@@@#@@@@@#@@@@@
+       +---+ +---+ +---+
+       |   | |   | |   |
+       +---+ +---+ +---+
+       @@@@@#@@@@@#@@@@@ */
+    {"same sizes, even padding and margins, center",
+        {Snap::Right, Snap::Bottom, Snap::Left, Snap::Top},
+        {5.0f, 5.0f}, {{5.0f, 5.0f}, {5.0f, 5.0f}, {5.0f, 5.0f}},
+        {20.0f, 20.0f, 20.0f},
+        30.0f, {5.0f, 5.0f}, {5.0f, 5.0f, 5.0f}, {}},
+    /* +---+ +---+ +---+
+       |   | |   | |   |
+       +---+ +---+ +---+ */
+    {"same sizes, even padding and margin, center, no pad",
+        {Snap::Right|Snap::NoPadY,
+         Snap::Bottom|Snap::NoPadX,
+         Snap::Left|Snap::NoPadY,
+         Snap::Top|Snap::NoPadX},
+        {5.0f, 5.0f}, {{5.0f, 5.0f}, {5.0f, 5.0f}, {5.0f, 5.0f}},
+        {20.0f, 20.0f, 20.0f},
+        20.0f, {}, {0.0f, 0.0f, 0.0f}, {}},
+    /* @@@@@############
+       @@@@@############
+       @@@@@       @@@@@
+       +---+ +---+ +---+    (same for all four cases below)
+       |   | |   | |   |
+       +---+ +---+ +---+
+             @@@@@
+       ######@@@@@###### */
+    {"same sizes, uneven padding and margin, center",
+        {Snap::Right, Snap::Bottom, Snap::Left, Snap::Top},
+        {10.0f, 5.0f}, {{15.0f, 0.0f}, {0.0f, 10.0f}, {5.0f, 0.0f}},
+        {20.0f, 20.0f, 20.0f},
+        45.0f, {15.0f, 10.0f}, {15.0f, 15.0f, 15.0f}, {}},
+    {"same sizes, uneven padding and margin, fill",
+        {Snap::Right|Snap::FillY,
+         Snap::Bottom|Snap::FillX,
+         Snap::Left|Snap::FillY,
+         Snap::Top|Snap::FillX},
+        {10.0f, 5.0f}, {{15.0f, 0.0f}, {0.0f, 10.0f}, {5.0f, 0.0f}},
+        {20.0f, 20.0f, 20.0f},
+        45.0f, {15.0f, 10.0f}, {15.0f, 15.0f, 15.0f}, {}},
+    {"same sizes, uneven padding and margin, side 1",
+        {Snap::TopRight|Snap::InsideY,
+         Snap::BottomRight|Snap::InsideX,
+         Snap::BottomLeft|Snap::InsideY,
+         Snap::TopLeft|Snap::InsideX},
+        {10.0f, 5.0f}, {{15.0f, 0.0f}, {0.0f, 10.0f}, {5.0f, 0.0f}},
+        {20.0f, 20.0f, 20.0f},
+        45.0f, {15.0f, 10.0f}, {15.0f, 15.0f, 15.0f}, {}},
+    {"same sizes, uneven padding and margin, side 2",
+        {Snap::BottomRight|Snap::InsideY,
+         Snap::BottomLeft|Snap::InsideX,
+         Snap::TopLeft|Snap::InsideY,
+         Snap::TopRight|Snap::InsideX},
+        {10.0f, 5.0f}, {{15.0f, 0.0f}, {0.0f, 10.0f}, {5.0f, 0.0f}},
+        {20.0f, 20.0f, 20.0f},
+        45.0f, {15.0f, 10.0f}, {15.0f, 15.0f, 15.0f}, {}},
+    /* @@@@@
+       +---+ +---+ +---+
+       |   | |   | !   |
+       +---+ |   | +---+
+             |   |
+             +---+
+             @@@@@       */
+    {"one node larger, side 1",
+        {Snap::TopRight|Snap::InsideY,
+         Snap::BottomRight|Snap::InsideX,
+         Snap::BottomLeft|Snap::InsideY,
+         Snap::TopLeft|Snap::InsideX},
+        {}, {{5.0f, 0.0f}, {0.0f, 5.0f}, {}},
+        {20.0f, 40.0f, 20.0f},
+        50.0f, {5.0f, 5.0f}, {5.0f, 5.0f, 5.0f}, {}},
+    /*       +---+
+       @@@@@ |   |
+       +---+ |   | +---+
+       |   | |   | |   |
+       +---+ +---+ +---+
+             @@@@@       */
+    {"one node larger, side 2",
+        {Snap::BottomRight|Snap::InsideY,
+         Snap::BottomLeft|Snap::InsideX,
+         Snap::TopLeft|Snap::InsideY,
+         Snap::TopRight|Snap::InsideX},
+        {}, {{5.0f, 0.0f}, {0.0f, 5.0f}, {}},
+        {20.0f, 40.0f, 20.0f},
+        45.0f, {0.0f, 5.0f}, {20.0f, 0.0f, 20.0f}, {}},
+    /* @@@@@ +---+
+       +---+ |   | +---+
+       |   | |   | |   |
+       +---+ |   | +---+
+             +---+
+             @@@@@       */
+    {"one node larger, center",
+        {Snap::Right, Snap::Bottom, Snap::Left, Snap::Top},
+        {}, {{5.0f, 0.0f}, {0.0f, 5.0f}, {}},
+        {20.0f, 40.0f, 20.0f},
+        45.0f, {0.0f, 5.0f}, {10.0f, 0.0f, 10.0f}, {}},
+    /* @@@@@
+       +---+ +---+ +---+
+       |   | |   | !   |
+       |   | |   | !   |
+       |   | |   | !   |
+       +---+ +---+ +---+
+             @@@@@       */
+    {"one node larger, fill",
+        {Snap::Right|Snap::FillY,
+         Snap::Bottom|Snap::FillX,
+         Snap::Left|Snap::FillY,
+         Snap::Top|Snap::FillX},
+        {}, {{5.0f, 0.0f}, {0.0f, 5.0f}, {}},
+        {20.0f, 40.0f, 20.0f},
+        50.0f, {5.0f, 5.0f}, {5.0f, 5.0f, 5.0f}, {40.0f, 40.0f, 40.0f}},
+    /*       @@@@@
+       +---+ @@@@@ +---+
+       |   | +---+ |   |
+       |   | |   | |   |
+       |   | +---+ |   |
+       +---+ @@@@@ +---+
+             @@@@@
+             @@@@@       */
+    {"one node smaller with excessive margin, center",
+        {Snap::Right, Snap::Bottom, Snap::Left, Snap::Top},
+        {}, {{}, {10.0f, 15.0f}, {}},
+        {30.0f, 20.0f, 30.0f},
+        45.0f, {5.0f, 10.0f}, {5.0f, 10.0f, 5.0f}, {}},
+    /*       @@@@@
+             @@@@@
+       +---+ +---+ +---+
+       |   | |   | |   |
+       |   | |   | |   |
+       |   | |   | |   |
+       +---+ +---+ +---+
+             @@@@@
+             @@@@@
+             @@@@@       */
+    {"one node smaller with excessive margin, fill",
+        {Snap::Right|Snap::FillY,
+         Snap::Bottom|Snap::FillX,
+         Snap::Left|Snap::FillY,
+         Snap::Top|Snap::FillX},
+        {}, {{}, {10.0f, 15.0f}, {}},
+        {30.0f, 20.0f, 30.0f},
+        55.0f, {10.0f, 15.0f}, {10.0f, 10.0f, 10.0f}, {30.0f, 30.0f, 30.0f}},
+    /* ######@@@@@######
+       +---+ @@@@@ +---+
+       |   | +---+ |   |
+       |   | |   | |   |
+       |   | +---+ |   |
+       +---+ @@@@@ +---+
+       ######@@@@@######
+       ######@@@@@###### */
+    {"one node smaller with excessive margin matching padding, center",
+        {Snap::Right, Snap::Bottom, Snap::Left, Snap::Top},
+        {5.0f, 10.0f}, {{}, {10.0f, 15.0f}, {}},
+        {30.0f, 20.0f, 30.0f},
+        45.0f, {5.0f, 10.0f}, {5.0f, 10.0f, 5.0f}, {}},
+    /* #################
+       +---+       +---+
+       |   | +---+ |   |
+       |   | |   | |   |
+       |   | +---+ |   |
+       +---+       +---+
+       #################
+       ################# */
+    {"one node smaller with just padding, center",
+        {Snap::Right, Snap::Bottom, Snap::Left, Snap::Top},
+        {5.0f, 10.0f}, {},
+        {30.0f, 20.0f, 30.0f},
+        45.0f, {5.0f, 10.0f}, {5.0f, 10.0f, 5.0f}, {}},
+    /* +---+       +---+
+       |   | +---+ |   |
+       |   | |   | |   |
+       |   | +---+ |   |
+       +---+       +---+ */
+    {"one node smaller with excessive margin matching padding, center, no pad",
+        {Snap::Right|Snap::NoPadY,
+         Snap::Bottom|Snap::NoPadX,
+         Snap::Left|Snap::NoPadY,
+         Snap::Top|Snap::NoPadX},
+        {5.0f, 10.0f}, {{}, {10.0f, 15.0f}, {}},
+        {30.0f, 20.0f, 30.0f},
+        30.0f, {}, {0.0f, 5.0f, 0.0f}, {}},
+};
+
+const struct {
+    TestSuite::TestCaseDescriptionSourceLocation name;
+    Snaps extraChildSnaps[2]; /* for X and Y direction */
+    Vector2 paddingForward;
+    Vector2 marginsForward[3];
+    Float sizesForward[3];
+    Float expectedSizeForward;
+    Vector2 expectedPaddingForward;
+    Float expectedOffsetsForward[3];
+} ChildLayoutSizeForwardData[]{
+    /* All diagrams for left-to-right direction, # denotes parent padding, @
+       child margin */
+
+    /* +---+ +---+ +---+
+       |   | |   | |   |
+       +---+ +---+ +---+ */
+    {"same sizes, no padding or margins",
+        {}, {}, {},
+        {20.0f, 20.0f, 20.0f},
+        60.0f, {}, {0.0f, 20.0f, 40.0f}},
+    /* # +---+ +---+ +---+ #
+       # |   | |   | |   | #
+       # +---+ +---+ +---+ # */
+    {"same sizes, even padding",
+        {}, {5.0f, 5.0f}, {},
+        {20.0f, 20.0f, 20.0f},
+        70.0f, {5.0f, 5.0f}, {5.0f, 25.0f, 45.0f}},
+    /* @ +---+ @ +---+ @ +---+ @
+       @ |   | @ |   | @ |   | @
+       @ +---+ @ +---+ @ +---+ @ */
+    {"same sizes, even margins",
+        {}, {}, {{5.0f, 5.0f}, {5.0f, 5.0f}, {5.0f, 5.0f}},
+        {20.0f, 20.0f, 20.0f},
+        80.0f, {5.0f, 5.0f}, {5.0f, 30.0f, 55.0f}},
+    /* @ +---+ @ +---+ @ +---+ #
+       # |   | @ |   | @ |   | @
+       @ +---+ @ +---+ @ +---+ # */
+    {"same sizes, even padding and margins",
+        {}, {5.0f, 5.0f}, {{5.0f, 5.0f}, {5.0f, 5.0f}, {5.0f, 5.0f}},
+        {20.0f, 20.0f, 20.0f},
+        80.0f, {5.0f, 5.0f}, {5.0f, 30.0f, 55.0f}},
+    /* +---+ +---+ +---+
+       |   | |   | |   |
+       +---+ +---+ +---+ */
+    {"same sizes, even padding and margins, no pad",
+        {Snap::NoPadX, Snap::NoPadY},
+        {5.0f, 5.0f}, {{5.0f, 5.0f}, {5.0f, 5.0f}, {5.0f, 5.0f}},
+        {20.0f, 20.0f, 20.0f},
+        60.0f, {}, {0.0f, 20.0f, 40.0f}},
+    /* ##@ +-----+ @@ +-+ @@@@ +---+ @
+       ##@ |     | @@ | | @@@@ |   | @
+       ##@ +-----+ @@ +-+ @@@@ +---+ @ */
+    {"uneven sizes, paddings and margins, variant 1",
+        {}, {15.0f, 0.0f}, {{5.0f, 10.0f}, {}, {20.0f, 5.0f}},
+        {40.0f, 10.0f, 20.0f},
+        120.0f, {15.0f, 5.0f}, {15.0f, 65.0f, 95.0f}},
+    /* #@@ +-----+ @@ +-+ @@@@ +---+ #
+       @@@ |     | @@ | | @@@@ |   | #
+       #@@ +-----+ @@ +-+ @@@@ +---+ # */
+    {"uneven sizes, paddings and margins, variant 2",
+        {}, {5.0f, 5.0f}, {{15.0f, 0.0f}, {10.0f, 20.0f}, {}},
+        {40.0f, 10.0f, 20.0f},
+        120.0f, {15.0f, 5.0f}, {15.0f, 65.0f, 95.0f}},
+};
+
+const struct {
+    const char* name;
+    bool clean;
+} AddRemoveData[]{
     {"", false},
-    {"layouts recycled in shuffled order", true},
+    {"clean to remove", true},
+};
+
+const struct {
+    const char* name;
+    bool recycledLayouts, shuffledChildLayouts, removedLayouts;
+} UpdateDataOrderData[]{
+    {"",
+        false, false, false},
+    {"layouts recycled in shuffled order",
+        true, false, false},
+    {"child layouts added in shuffled order",
+        false, true, false},
+    {"layouts recycled in shuffled order, child layouts added in shuffled order",
+        true, true, false},
+    {"with removed layouts",
+        false, false, true},
 };
 
 const struct {
@@ -379,7 +748,7 @@ const struct {
     Vector2 minSize;
     Snaps snap;
     /* The UI has a size of {500, 600} */
-    bool targetUi, xfailMinSize;
+    bool child, targetUi, xfailMinSize;
     /* The target is at {300, 400} with a size of {100, 200}, snapped node size
        is {50, 100}. A constant node offset is additionally supplied by the
        test case, which is added to the expectedOffset. */
@@ -390,68 +759,324 @@ const struct {
        nodes having different paddings and margins is in updateDataOrder(). */
     {"target node padding, fill",
         10.0f, 0.0f, 0.0f, {},
-        Snap::Fill, false, false,
-        /* The node becomes a child, so its offset is relative to parent */
+        Snap::Fill, true, false, false,
+        /* The node is a child, so its offset is relative to parent */
         {10.0f, 10.0f}, {80.0f, 180.0f}},
     {"margin, fill",
         0.0f, 0.0f, 10.0f, {},
-        Snap::Fill, false, false,
-        /* The node becomes a child, so its offset is relative to parent */
+        Snap::Fill, true, false, false,
+        /* The node is a child, so its offset is relative to parent */
         {10.0f, 10.0f}, {80.0f, 180.0f}},
     {"margin, fill, target UI instead of a node",
         0.0f, 0.0f, 10.0f, {},
-        Snap::Fill, true, false,
+        Snap::Fill, false, true, false,
         {10.0f, 10.0f}, {480.0f, 580.0f}},
     {"target margin, outside",
         0.0f, 10.0f, 0.0f, {},
-        Snap::BottomRight, false, false,
+        Snap::BottomRight, false, false, false,
         {410.0f, 610.0f}, {50.0f, 100.0f}},
     {"margin, outside",
         0.0f, 0.0f, 10.0f, {},
-        Snap::BottomRight, false, false,
+        Snap::BottomRight, false, false, false,
         {410.0f, 610.0f}, {50.0f, 100.0f}},
     {"margin, min size, fill",
         0.0f, 0.0f, 10.0f, {900.0f, 1500.0f},
-        Snap::Fill, false, true,
-        /* The size is ignored when filling; the node also becomes a child, so
+        Snap::Fill, true, false, true,
+        /* The size is ignored when filling; the node also is a child, so
            its offset is relative to parent */
         /** @todo what to do here instead? the parent doesn't have a layout to
             be enlarged */
         {10.0f, 10.0f}, {80.0f, 180.0f}},
     {"min size, centered",
         0.0f, 0.0f, 0.0f, {70.0f, 120.0f},
-        {}, false, false,
-        /* The node becomes a child, so its offset is relative to parent */
+        {}, true, false, false,
+        /* The node is a child, so its offset is relative to parent */
         {15.0f, 40.0f}, {70.0f, 120.0f}},
     {"large, min size, centered",
         0.0f, 0.0f, 0.0f, {150.0f, 300.0f},
-        {}, false, false,
-        /* The node becomes a child, so its offset is relative to parent */
+        {}, true, false, false,
+        /* The node is a child, so its offset is relative to parent */
         /** @todo here it should likely also enlarge the parent, if it has a
             layout? */
         {-25.0f, -50.0f}, {150.0f, 300.0f}},
     {"min X size, outside, margin, fill Y",
         0.0f, 0.0f, 10.0f, {350.0f, 0.0f},
-        Snap::Right|Snap::FillY, false, false,
+        Snap::Right|Snap::FillY, false, false, false,
         {410.0f, 400.0f}, {350.0f, 200.0f}},
     {"min size, outside, margin, fill Y",
         0.0f, 0.0f, 10.0f, {350.0f, 1500.0f},
-        Snap::Right|Snap::FillY, false, true,
+        Snap::Right|Snap::FillY, false, false, true,
         /* The Y size is ignored in this case as well */
         /** @todo should probably enlarge the target node as well? here it
             doesn't have a layout to affect */
         {410.0f, 400.0f}, {350.0f, 200.0f}},
     {"min Y size, outside, margin, fill X",
         0.0f, 0.0f, 10.0f, {0.0f, 150.0f},
-        Snap::Bottom|Snap::FillX, false, false,
+        Snap::Bottom|Snap::FillX, false, false, false,
         {300.0f, 610.0f}, {100.0f, 150.0f}},
     {"min size, outside, margin, fill X",
         0.0f, 0.0f, 10.0f, {900.0f, 150.0f},
-        Snap::Bottom|Snap::FillX, false, true,
+        Snap::Bottom|Snap::FillX, false, false, true,
         /* The X size is ignored in this case as well */
         /** @todo should probably enlarge the target node as well? here it
             doesn't have a layout to affect */
         {300.0f, 610.0f}, {100.0f, 150.0f}},
+};
+
+const struct {
+    Snaps snap;
+    const char* name;
+    Float padding, childMargin;
+    /* Parent is {100, 200}, the three children are {20, 30} originally */
+    Vector2 offset, advance, childSize;
+} UpdateChildSnapData[]{
+    {Snap::Left,
+        nullptr, 0.0f, 0.0f,
+        {80.0f, 85.0f}, {-20.0f, 0.0f}, {20.0f, 30.0f}},
+    {Snap::Left|Snap::InsideY, /* InsideY is implicit, same as above */
+        nullptr, 0.0f, 0.0f,
+        {80.0f, 85.0f}, {-20.0f, 0.0f}, {20.0f, 30.0f}},
+    {Snap::Left|Snap::FillY,
+        nullptr, 0.0f, 0.0f,
+        {80.0f, 0.0f}, {-20.0f, 0.0f}, {20.0f, 200.0f}},
+    {Snap::Left|Snap::FillY|Snap::InsideY, /* InsideY is implicit, same as above */
+        nullptr, 0.0f, 0.0f,
+        {80.0f, 0.0f}, {-20.0f, 0.0f}, {20.0f, 200.0f}},
+    {Snap::Right,
+        nullptr, 0.0f, 0.0f,
+        {0.0f, 85.0f}, {20.0f, 0.0f}, {20.0f, 30.0f}},
+    {Snap::Right|Snap::InsideY, /* InsideY is implicit, same as above */
+        nullptr, 0.0f, 0.0f,
+        {0.0f, 85.0f}, {20.0f, 0.0f}, {20.0f, 30.0f}},
+    {Snap::Right|Snap::FillY,
+        nullptr, 0.0f, 0.0f,
+        {0.0f, 0.0f}, {20.0f, 0.0f}, {20.0f, 200.0f}},
+    {Snap::Right|Snap::FillY|Snap::InsideY, /* InsideY is implicit, same as above */
+        nullptr, 0.0f, 0.0f,
+        {0.0f, 0.0f}, {20.0f, 0.0f}, {20.0f, 200.0f}},
+    {Snap::Top,
+        nullptr, 0.0f, 0.0f,
+        {40.0f, 170.0f}, {0.0f, -30.0f}, {20.0f, 30.0f}},
+    {Snap::Top|Snap::InsideX, /* InsideX is implicit, same as above */
+        nullptr, 0.0f, 0.0f,
+        {40.0f, 170.0f}, {0.0f, -30.0f}, {20.0f, 30.0f}},
+    {Snap::Top|Snap::FillX,
+        nullptr, 0.0f, 0.0f,
+        {0.0f, 170.0f}, {0.0f, -30.0f}, {100.0f, 30.0f}},
+    {Snap::Top|Snap::FillX|Snap::InsideX, /* InsideX is implicit, same as above */
+        nullptr, 0.0f, 0.0f,
+        {0.0f, 170.0f}, {0.0f, -30.0f}, {100.0f, 30.0f}},
+    {Snap::Bottom,
+        nullptr, 0.0f, 0.0f,
+        {40.0f, 0.0f}, {0.0f, 30.0f}, {20.0f, 30.0f}},
+    {{}, /* default, should be same as Bottom */
+        "default", 0.0f, 0.0f,
+        {40.0f, 0.0f}, {0.0f, 30.0f}, {20.0f, 30.0f}},
+    {~Snaps{}, /* default, should be same as Bottom, explicit snap overload */
+        "default, explicit snap overload", 0.0f, 0.0f,
+        {40.0f, 0.0f}, {0.0f, 30.0f}, {20.0f, 30.0f}},
+    {Snap::Bottom|Snap::InsideX, /* InsideX is implicit, same as above */
+        nullptr, 0.0f, 0.0f,
+        {40.0f, 0.0f}, {0.0f, 30.0f}, {20.0f, 30.0f}},
+    {Snap::Bottom|Snap::FillX,
+        nullptr, 0.0f, 0.0f,
+        {0.0f, 0.0f}, {0.0f, 30.0f}, {100.0f, 30.0f}},
+    {Snap::Bottom|Snap::FillX|Snap::InsideX, /* InsideX is implicit, same as above */
+        nullptr, 0.0f, 0.0f,
+        {0.0f, 0.0f}, {0.0f, 30.0f}, {100.0f, 30.0f}},
+    {Snap::TopLeft|Snap::InsideX,
+        nullptr, 0.0f, 0.0f,
+        {0.0f, 170.0f}, {0.0f, -30.0f}, {20.0f, 30.0f}},
+    {Snap::TopLeft|Snap::InsideY,
+        nullptr, 0.0f, 0.0f,
+        {80.0f, 0.0f}, {-20.0f, 0.0f}, {20.0f, 30.0f}},
+    {Snap::TopRight|Snap::InsideX,
+        nullptr, 0.0f, 0.0f,
+        {80.0f, 170.0f}, {0.0f, -30.0f}, {20.0f, 30.0f}},
+    {Snap::TopRight|Snap::InsideY,
+        nullptr, 0.0f, 0.0f,
+        {0.0f, 0.0f}, {20.0f, 0.0f}, {20.0f, 30.0f}},
+    {Snap::BottomLeft|Snap::InsideX,
+        nullptr, 0.0f, 0.0f,
+        {0.0f, 0.0f}, {0.0f, 30.0f}, {20.0f, 30.0f}},
+    {Snap::BottomLeft|Snap::InsideY,
+        nullptr, 0.0f, 0.0f,
+        {80.0f, 170.0f}, {-20.0f, 0.0f}, {20.0f, 30.0f}},
+    {Snap::BottomRight|Snap::InsideX,
+        nullptr, 0.0f, 0.0f,
+        {80.0f, 0.0f}, {0.0f, 30.0f}, {20.0f, 30.0f}},
+    {Snap::BottomRight|Snap::InsideY,
+        nullptr, 0.0f, 0.0f,
+        {0.0f, 170.0f}, {20.0f, 0.0f}, {20.0f, 30.0f}},
+    {Snap::Right|Snap::FillY,
+        "with padding", 5.0f, 0.0f,
+        {5.0f, 5.0f}, {20.0f, 0.0f}, {20.0f, 190.0f}},
+    {Snap::Right|Snap::FillY,
+        "with margin", 0.0f, 5.0f,
+        {5.0f, 5.0f}, {25.0f, 0.0f}, {20.0f, 190.0f}},
+    {Snap::Right|Snap::FillY,
+        "with padding and margin", 5.0f, 5.0f,
+        {5.0f, 5.0f}, {25.0f, 0.0f}, {20.0f, 190.0f}},
+    {Snap::Right|Snap::FillY|Snap::NoPadX,
+        "with padding and margin", 5.0f, 5.0f,
+        {0.0f, 5.0f}, {20.0f, 0.0f}, {20.0f, 190.0f}},
+    {Snap::Right|Snap::FillY|Snap::NoPadY,
+        "with padding and margin", 5.0f, 5.0f,
+        {5.0f, 0.0f}, {25.0f, 0.0f}, {20.0f, 200.0f}},
+    {Snap::Right|Snap::FillY|Snap::NoPad,
+        "with padding and margin", 5.0f, 5.0f,
+        {0.0f, 0.0f}, {20.0f, 0.0f}, {20.0f, 200.0f}},
+};
+
+const struct {
+    const char* name;
+    Vector2 outerSize;
+    SnapLayoutFlags outerFlags;
+    Float innerWidth;
+    SnapLayoutFlags innerFlags;
+    Float centerHeight;
+    SnapLayoutFlags centerFlags;
+    bool explicitlySnappedNodes;
+    Vector2 expectedOuterSize;
+    Float expectedInnerOffsetX;
+    Float expectedInnerWidth, expectedInnerCenterY;
+    Float expectedCenterHeight, expectedCenterOffsetY, expectedCenterLeftEdge;
+} UpdatePropagateChildSizesData[]{
+    {"with no explicitly snapped nodes",
+        {}, {},
+        0.0f, {},
+        0.0f, {}, false,
+        {50.0f, 50.0f}, 0.0f,
+        50.0f, 0.0f,
+        25.0f, 5.0f, 5.0f},
+    {"",
+        {}, {},
+        0.0f, {},
+        0.0f, {}, true,
+        {50.0f, 50.0f}, 0.0f,
+        50.0f, 0.0f,
+        25.0f, 5.0f, 5.0f},
+    {"exactly outer size, ignored overflow",
+        {50.0f, 50.0f}, SnapLayoutFlag::IgnoreOverflow,
+        0.0f, {},
+        0.0f, {}, true,
+        /* Same as above */
+        {50.0f, 50.0f}, 0.0f,
+        50.0f, 0.0f,
+        25.0f, 5.0f, 5.0f},
+    {"small outer size, ignored overflow",
+        {30.0f, 30.0f}, SnapLayoutFlag::IgnoreOverflow,
+        0.0f, {},
+        0.0f, {}, true,
+        /* Negative inner X offset because it overflows */
+        {30.0f, 30.0f}, -10.0f,
+        50.0f, 0.0f,
+        25.0f, 5.0f, 5.0f},
+    {"small outer size, ignored X overflow",
+        {30.0f, 30.0f}, SnapLayoutFlag::IgnoreOverflowX,
+        0.0f, {},
+        0.0f, {}, true,
+        /* Negative inner X offset because it overflows, Y size is enlarged */
+        {30.0f, 50.0f}, -10.0f,
+        50.0f, 0.0f,
+        25.0f, 5.0f, 5.0f},
+    {"small outer size, ignored Y overflow",
+        {30.0f, 30.0f}, SnapLayoutFlag::IgnoreOverflowY,
+        0.0f, {},
+        0.0f, {}, true,
+        /* Only X size is enlarged */
+        {50.0f, 30.0f}, 0.0f,
+        50.0f, 0.0f,
+        25.0f, 5.0f, 5.0f},
+    {"large outer size",
+        {100.0f, 100.0f}, {},
+        0.0f, {},
+        0.0f, {}, true,
+        {100.0f, 100.0f}, 25.0f,
+        50.0f, 0.0f,
+        25.0f, 5.0f, 5.0f},
+    {"large outer size, ignored overflow",
+        {100.0f, 100.0f}, SnapLayoutFlag::IgnoreOverflow,
+        0.0f, {},
+        0.0f, {}, true,
+        /* Same as above */
+        {100.0f, 100.0f}, 25.0f,
+        50.0f, 0.0f,
+        25.0f, 5.0f, 5.0f},
+    {"exact inner width, ignored X overflow",
+        {}, {},
+        50.0f, SnapLayoutFlag::IgnoreOverflowX,
+        0.0f, {}, true,
+        {50.0f, 50.0f}, 0.0f,
+        50.0f, 0.0f,
+        25.0f, 5.0f, 5.0f},
+    {"small inner width, ignored X overflow",
+        {}, {},
+        30.0f, SnapLayoutFlag::IgnoreOverflowX,
+        0.0f, {}, true,
+        /* The outer also becomes smaller because there's nothing to tell it
+           that it should get larger */
+        {30.0f, 50.0f}, 0.0f,
+        30.0f, 0.0f,
+        25.0f, 5.0f, 5.0f},
+    {"large inner width",
+        {}, {},
+        100.0f, {},
+        0.0f, {}, true,
+        /* Enlarges the outer node */
+        {100.0f, 50.0f}, 0.0f,
+        100.0f, 0.0f,
+        25.0f, 5.0f, 5.0f},
+    {"large inner width, ignored X overflow",
+        {}, {},
+        100.0f, SnapLayoutFlag::IgnoreOverflowX,
+        0.0f, {}, true,
+        /* Enlarges the outer node in this case as well, the Ignore is only
+           taken into account for children */
+        {100.0f, 50.0f}, 0.0f,
+        100.0f, 0.0f,
+        25.0f, 5.0f, 5.0f},
+    {"inner with ignored Y overflow",
+        {}, {},
+        0.0f, SnapLayoutFlag::IgnoreOverflowY,
+        0.0f, {}, true,
+        {50.0f, 50.0f}, 0.0f,
+        /* Inner contents are not aligned with the `right` padding taken into
+           account, shifted down by 2.5 units */
+        50.0f, 2.5f,
+        25.0f, 5.0f, 5.0f},
+    {"exact center height, ignored Y overflow",
+        {}, {},
+        0.0f, {},
+        25.0f, SnapLayoutFlag::IgnoreOverflowY, true,
+        {50.0f, 50.0f}, 0.0f,
+        50.0f, 0.0f,
+        25.0f, 5.0f, 5.0f},
+    {"small center height, ignored Y overflow",
+        {}, {},
+        0.0f, {},
+        15.0f, SnapLayoutFlag::IgnoreOverflowY, true,
+        {50.0f, 50.0f}, 0.0f,
+        50.0f, 0.0f,
+        /* Center gets aligned according to its original size */
+        15.0f, 10.0f, 5.0f},
+    {"large center height, ignored Y overflow",
+        {}, {},
+        0.0f, {},
+        35.0f, SnapLayoutFlag::IgnoreOverflowY, true,
+        {50.0f, 50.0f}, 0.0f,
+        50.0f, 0.0f,
+        /* Center gets aligned according to its original size */
+        35.0f, 0.0f, 5.0f},
+    {"center with ignored X overflow",
+        {}, {},
+        0.0f, {},
+        0.0f, SnapLayoutFlag::IgnoreOverflowX, true,
+        {50.0f, 50.0f}, 0.0f,
+        50.0f, 0.0f,
+        /* Center contents are not aligned with the `bottom` padding taken into
+           account, shifted left by 5 units */
+        25.0f, 5.0f, 0.0f},
 };
 
 SnapLayouterTest::SnapLayouterTest() {
@@ -459,7 +1084,11 @@ SnapLayouterTest::SnapLayouterTest() {
               &SnapLayouterTest::debugSnapPacked,
               &SnapLayouterTest::debugSnaps,
               &SnapLayouterTest::debugSnapsPacked,
-              &SnapLayouterTest::debugSnapsSupersets});
+              &SnapLayouterTest::debugSnapsSupersets,
+
+              &SnapLayouterTest::debugFlag,
+              &SnapLayouterTest::debugFlags,
+              &SnapLayouterTest::debugFlagsSupersets});
 
     addInstancedTests({&SnapLayouterTest::snapInside},
         Containers::arraySize(SnapInsideData));
@@ -467,31 +1096,43 @@ SnapLayouterTest::SnapLayouterTest() {
     addInstancedTests({&SnapLayouterTest::snap},
         Containers::arraySize(SnapData));
 
-    addTests({&SnapLayouterTest::orderLayoutsBreadthFirst,
+    addInstancedTests({&SnapLayouterTest::childLayoutSizeSingleLayout},
+        Containers::arraySize(ChildLayoutSizeSingleLayoutData));
+
+    addInstancedTests({&SnapLayouterTest::childLayoutSizeSide},
+        Containers::arraySize(ChildLayoutSizeSideData));
+
+    addInstancedTests({&SnapLayouterTest::childLayoutSizeForward},
+        Containers::arraySize(ChildLayoutSizeForwardData));
+
+    addTests({&SnapLayouterTest::orderLayoutsBreadthFirstEmpty,
+              &SnapLayouterTest::orderLayoutsBreadthFirst,
 
               &SnapLayouterTest::construct,
               &SnapLayouterTest::constructCopy,
-              &SnapLayouterTest::constructMove,
+              &SnapLayouterTest::constructMove});
 
-              &SnapLayouterTest::layoutConstructInside<AbstractSnapLayout>,
-              &SnapLayouterTest::layoutConstructInside<SnapLayout>,
-              &SnapLayouterTest::layoutConstructDefaultLayouter,
-              &SnapLayouterTest::layoutConstructOutside<AbstractSnapLayout>,
-              &SnapLayouterTest::layoutConstructOutside<SnapLayout>,
-              &SnapLayouterTest::layoutConstructCopy<AbstractSnapLayout>,
-              &SnapLayouterTest::layoutConstructCopy<SnapLayout>,
-              &SnapLayouterTest::layoutConstructMove<AbstractSnapLayout>,
-              &SnapLayouterTest::layoutConstructMove<SnapLayout>,
+    addInstancedTests({&SnapLayouterTest::addRemove,
+                       &SnapLayouterTest::addRemoveExplicitSnap},
+        Containers::arraySize(AddRemoveData));
 
-              &SnapLayouterTest::addRemove<AbstractSnapLayout>,
-              &SnapLayouterTest::addRemove<SnapLayout>,
-              &SnapLayouterTest::addRemoveHandleRecycle,
-              &SnapLayouterTest::addDefaultLayouter,
-              &SnapLayouterTest::layoutInvalid,
+    addTests({&SnapLayouterTest::addRemoveHandleRecycle,
+              &SnapLayouterTest::addInvalid,
+              &SnapLayouterTest::removeInvalid,
+
+              &SnapLayouterTest::flags,
+              &SnapLayouterTest::flagsInvalid,
+
+              &SnapLayouterTest::childSnap,
+              &SnapLayouterTest::childSnapInvalid,
 
               &SnapLayouterTest::setSize,
 
               &SnapLayouterTest::invalidHandle,
+              &SnapLayouterTest::invalidExplicitSnap,
+
+              &SnapLayouterTest::clean,
+              &SnapLayouterTest::cleanInvalid,
 
               &SnapLayouterTest::updateEmpty});
 
@@ -500,6 +1141,12 @@ SnapLayouterTest::SnapLayouterTest() {
 
     addInstancedTests({&SnapLayouterTest::updateLayoutProperties},
         Containers::arraySize(UpdateLayoutPropertiesData));
+
+    addInstancedTests({&SnapLayouterTest::updateChildSnap},
+        Containers::arraySize(UpdateChildSnapData));
+
+    addInstancedTests({&SnapLayouterTest::updatePropagateChildSizes},
+        Containers::arraySize(UpdatePropagateChildSizesData));
 }
 
 void SnapLayouterTest::debugSnap() {
@@ -578,6 +1225,27 @@ void SnapLayouterTest::debugSnapsSupersets() {
     }
 }
 
+void SnapLayouterTest::debugFlag() {
+    Containers::String out;
+    Debug{&out} << SnapLayoutFlag::IgnoreOverflowY << SnapLayoutFlag(0xbe);
+    CORRADE_COMPARE(out, "Ui::SnapLayoutFlag::IgnoreOverflowY Ui::SnapLayoutFlag(0xbe)\n");
+}
+
+void SnapLayouterTest::debugFlags() {
+    Containers::String out;
+    Debug{&out} << (SnapLayoutFlag::IgnoreOverflowX|SnapLayoutFlag(0xe0)) << SnapLayoutFlags{};
+    CORRADE_COMPARE(out, "Ui::SnapLayoutFlag::IgnoreOverflowX|Ui::SnapLayoutFlag(0xe0) Ui::SnapLayoutFlags{}\n");
+}
+
+void SnapLayouterTest::debugFlagsSupersets() {
+    /* IgnoreOverflow is IgnoreOverflowX and IgnoreOverflowY combined */
+    {
+        Containers::String out;
+        Debug{&out} << (SnapLayoutFlag::IgnoreOverflow|SnapLayoutFlag::IgnoreOverflowX|SnapLayoutFlag::IgnoreOverflowY);
+        CORRADE_COMPARE(out, "Ui::SnapLayoutFlag::IgnoreOverflow\n");
+    }
+}
+
 void SnapLayouterTest::snapInside() {
     auto&& data = SnapInsideData[testCaseInstanceId()];
     {
@@ -612,130 +1280,552 @@ void SnapLayouterTest::snap() {
     CORRADE_COMPARE(out, Containers::pair(data.expectedOffset, data.expectedSize));
 }
 
+void SnapLayouterTest::childLayoutSizeSingleLayout() {
+    auto&& data = ChildLayoutSizeSingleLayoutData[testCaseInstanceId()];
+    {
+        Containers::String out;
+        {
+            Debug debug{&out, Debug::Flag::NoNewlineAtTheEnd|Debug::Flag::Packed};
+            debug << data.name;
+            if(data.extraChildSnap)
+                debug << Debug::nospace << "," << data.extraChildSnap;
+        }
+        setTestCaseDescription(out);
+    }
+
+    /* Verifies that the utility output is exactly the same regardless of what
+       child snap is specified. Output with multiple children verified
+       thoroughly in childLayoutSize() below, integration test with the whole
+       SnapLayouter in updateChildSnap(), recursive behavior in
+       updatePropagateChildSizes() */
+
+    struct Node {
+        Vector2 zero;
+        Vector2 size;
+        Vector4 margin;
+    } nodes[]{
+        {}, {}, {},
+        {{}, {20.0f, 30.0f}, data.margin}, /* node 3 */
+    };
+
+    struct Layout {
+        NodeHandle node;
+        LayouterDataHandle next;
+    } layouts[]{
+        {},
+        {nodeHandle(3, 0xbeb), layouterDataHandle(1, 0x111)}, /* layout 1 */
+    };
+
+    /* These are all possible Snap combinations accepted for children */
+    for(Snaps childSnap: {
+        Snap::Right|data.extraChildSnap,
+        Snap::Right|Snap::FillY|data.extraChildSnap,
+        Snap::TopRight|Snap::InsideY|data.extraChildSnap,
+        Snap::BottomRight|Snap::InsideY|data.extraChildSnap,
+
+        Snap::Bottom|data.extraChildSnap,
+        Snap::Bottom|Snap::FillX|data.extraChildSnap,
+        Snap::BottomLeft|Snap::InsideX|data.extraChildSnap,
+        Snap::BottomRight|Snap::InsideX|data.extraChildSnap,
+
+        Snap::Left|data.extraChildSnap,
+        Snap::Left|Snap::FillY|data.extraChildSnap,
+        Snap::TopLeft|Snap::InsideY|data.extraChildSnap,
+        Snap::BottomLeft|Snap::InsideY|data.extraChildSnap,
+
+        Snap::Top|data.extraChildSnap,
+        Snap::Top|Snap::FillX|data.extraChildSnap,
+        Snap::TopLeft|Snap::InsideX|data.extraChildSnap,
+        Snap::TopRight|Snap::InsideX|data.extraChildSnap,
+    }) {
+        CORRADE_ITERATION(childSnap);
+
+        Containers::Pair<Vector2, Vector4> sizePadding = Implementation::childLayoutSizePadding(
+            childSnap|data.extraChildSnap,
+            data.padding,
+            Containers::stridedArrayView(nodes).slice(&Node::zero),
+            Containers::stridedArrayView(nodes).slice(&Node::margin),
+            Containers::stridedArrayView(nodes).slice(&Node::size),
+            layouterDataHandle(1, 0x111),
+            Containers::stridedArrayView(layouts).slice(&Layout::node),
+            Containers::stridedArrayView(layouts).slice(&Layout::next));
+        CORRADE_COMPARE(sizePadding, Containers::pair(data.expectedSize, data.expectedPadding));
+
+        /* Should behave the same when node min sizes are used instead of node
+           sizes */
+        sizePadding = Implementation::childLayoutSizePadding(
+            childSnap|data.extraChildSnap,
+            data.padding,
+            Containers::stridedArrayView(nodes).slice(&Node::size),
+            Containers::stridedArrayView(nodes).slice(&Node::margin),
+            Containers::stridedArrayView(nodes).slice(&Node::zero),
+            layouterDataHandle(1, 0x111),
+            Containers::stridedArrayView(layouts).slice(&Layout::node),
+            Containers::stridedArrayView(layouts).slice(&Layout::next));
+        CORRADE_COMPARE(sizePadding, Containers::pair(data.expectedSize, data.expectedPadding));
+    }
+}
+
+void SnapLayouterTest::childLayoutSizeSide() {
+    auto&& data = ChildLayoutSizeSideData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
+    struct Layout {
+        NodeHandle node;
+        LayouterDataHandle next;
+    } layouts[]{
+        {},
+        {nodeHandle(3, 0xbeb), layouterDataHandle(5, 0x555)}, /* layout 1 */
+        {nodeHandle(8, 0xaba), layouterDataHandle(1, 0x111)}, /* layout 2 */
+        {}, {},
+        {nodeHandle(6, 0xcec), layouterDataHandle(2, 0x222)}, /* layout 5 */
+    };
+
+    Vector4 paddings[4];
+    Vector4 margins[4][3];
+    Vector2 sizes[4][3];
+    Vector2 expectedSizes[4];
+    Vector4 expectedPaddings[4];
+    Vector2 expectedChildOffsets[4][3];
+    Vector2 expectedChildSizes[4][3];
+
+    /* Data for the first (left-to-right) rotation. In the forward direction
+       the padding is always 7 and margin 3 from both sides, and all three
+       nodes have the same width of 30. */
+    paddings[0] = {7.0f, data.paddingSide[0], 7.0f, data.paddingSide[1]};
+    expectedSizes[0] = {14.0f + 90.0f + 6.0f, data.expectedSizeSide};
+    expectedPaddings[0] = {7.0f, data.expectedPaddingSide[0], 7.0f, data.expectedPaddingSide[1]};
+    expectedChildOffsets[0][0][0] = 7.0f;
+    expectedChildOffsets[0][1][0] = expectedChildOffsets[0][0].x() + 30.0f + 3.0f;
+    expectedChildOffsets[0][2][0] = expectedChildOffsets[0][1].x() + 30.0f + 3.0f;
+    expectedChildSizes[0][0][0] = 30.0f;
+    expectedChildSizes[0][1][0] = 30.0f;
+    expectedChildSizes[0][2][0] = 30.0f;
+    for(UnsignedInt i = 0; i != 3; ++i) {
+        margins[0][i] = {3.0f, data.marginsSide[i][0], 3.0f, data.marginsSide[i][1]};
+        sizes[0][i] = {30.0f, data.sizesSide[i]};
+        expectedChildOffsets[0][i][1] = data.expectedOffsetsSide[i];
+        /* If the expected size is 0.0f, it's the same as the input size */
+        expectedChildSizes[0][i][1] = data.expectedSizesSide[i] ?
+            data.expectedSizesSide[i] : data.sizesSide[i];
+    }
+
+    /* Gradually rotate the inputs to generate all four rotations */
+    for(UnsignedInt i = 0; i != 3; ++i) {
+        paddings[i + 1] = Math::gather<'w', 'x', 'y', 'z'>(paddings[i]);
+        expectedSizes[i + 1] = Math::gather<'y', 'x'>(expectedSizes[i]);
+        expectedPaddings[i + 1] = Math::gather<'w', 'x', 'y', 'z'>(expectedPaddings[i]);
+
+        for(UnsignedInt j = 0; j != 3; ++j) {
+            margins[i + 1][j] = Math::gather<'w', 'x', 'y', 'z'>(margins[i][j]);
+            sizes[i + 1][j] = Math::gather<'y', 'x'>(sizes[i][j]);
+            expectedChildOffsets[i + 1][j] = Math::gather<'y', 'x'>(expectedChildOffsets[i][j]);
+            expectedChildSizes[i + 1][j] = Math::gather<'y', 'x'>(expectedChildSizes[i][j]);
+        }
+    }
+
+    /* Offsets in the right-to-left and bottom-to-top rotations are from the
+       other edges */
+    for(UnsignedInt j = 0; j != 3; ++j) {
+        expectedChildOffsets[1][j].x() = expectedSizes[1].x() - expectedChildOffsets[1][j].x() - expectedChildSizes[1][j].x();
+        expectedChildOffsets[2][j] = expectedSizes[2] - expectedChildOffsets[2][j] - expectedChildSizes[2][j];
+        expectedChildOffsets[3][j].y() = expectedSizes[3].y() - expectedChildOffsets[3][j].y() - expectedChildSizes[3][j].y();
+    }
+
+    /* The output should be the same for all rotations and node orderings */
+    UnsignedInt nodeIds[][3]{
+        {8, 3, 6},
+        {8, 6, 3},
+        {3, 6, 8},
+        {3, 8, 6},
+        {6, 8, 3},
+        {6, 3, 8}
+    };
+    for(UnsignedInt rotation = 0; rotation != 4; ++rotation) {
+        const Snaps snap = data.childSnaps[rotation];
+        CORRADE_ITERATION("rotation" << rotation << snap);
+
+        for(UnsignedInt shuffle = 0; shuffle != 6; ++shuffle) {
+            CORRADE_ITERATION("shuffle" << shuffle);
+
+            struct Node {
+                Vector2 zero;
+                Vector2 size;
+                Vector4 margin;
+            } nodes[9];
+
+            for(UnsignedInt i = 0; i != 3; ++i) {
+                nodes[nodeIds[shuffle][i]].size = sizes[rotation][i];
+                nodes[nodeIds[shuffle][i]].margin = margins[rotation][i];
+            }
+
+            /* Node size passed directly */
+            Containers::Pair<Vector2, Vector4> sizePadding = Implementation::childLayoutSizePadding(
+                snap,
+                paddings[rotation],
+                Containers::stridedArrayView(nodes).slice(&Node::zero), /* minSize */
+                Containers::stridedArrayView(nodes).slice(&Node::margin),
+                Containers::stridedArrayView(nodes).slice(&Node::size), /* size */
+                layouterDataHandle(2, 0x222),
+                Containers::stridedArrayView(layouts).slice(&Layout::node),
+                Containers::stridedArrayView(layouts).slice(&Layout::next));
+            CORRADE_COMPARE(sizePadding, Containers::pair(expectedSizes[rotation], expectedPaddings[rotation]));
+
+            /* Node size passed as a min size, should work the same */
+            sizePadding = Implementation::childLayoutSizePadding(
+                snap,
+                paddings[rotation],
+                Containers::stridedArrayView(nodes).slice(&Node::size), /* minSize */
+                Containers::stridedArrayView(nodes).slice(&Node::margin),
+                Containers::stridedArrayView(nodes).slice(&Node::zero), /* size */
+                layouterDataHandle(2, 0x222),
+                Containers::stridedArrayView(layouts).slice(&Layout::node),
+                Containers::stridedArrayView(layouts).slice(&Layout::next));
+            CORRADE_COMPARE(sizePadding, Containers::pair(expectedSizes[rotation], expectedPaddings[rotation]));
+
+            /* With the above size and padding, snapping the three nodes should
+               give the expected offsets. The first child uses a different
+               snap, and is affected by the reported size and padding */
+            Containers::Pair<Vector2, Vector2> offsetSize0 = Implementation::snap(
+                Implementation::firstChildSnap(snap),
+                {}, sizePadding.first(),
+                sizePadding.second(), {},
+                nodes[nodeIds[shuffle][0]].margin,
+                nodes[nodeIds[shuffle][0]].size);
+            CORRADE_COMPARE(offsetSize0, Containers::pair(expectedChildOffsets[rotation][0], expectedChildSizes[rotation][0]));
+
+            Containers::Pair<Vector2, Vector2> offsetSize1 = Implementation::snap(
+                snap,
+                offsetSize0.first(), offsetSize0.second(),
+                {}, nodes[nodeIds[shuffle][0]].margin,
+                nodes[nodeIds[shuffle][1]].margin,
+                nodes[nodeIds[shuffle][1]].size);
+            CORRADE_COMPARE(offsetSize1, Containers::pair(expectedChildOffsets[rotation][1], expectedChildSizes[rotation][1]));
+
+            Containers::Pair<Vector2, Vector2> offsetSize2 = Implementation::snap(
+                snap,
+                offsetSize1.first(), offsetSize1.second(),
+                {}, nodes[nodeIds[shuffle][1]].margin,
+                nodes[nodeIds[shuffle][2]].margin,
+                nodes[nodeIds[shuffle][2]].size);
+            CORRADE_COMPARE(offsetSize2, Containers::pair(expectedChildOffsets[rotation][2], expectedChildSizes[rotation][2]));
+        }
+    }
+}
+
+void SnapLayouterTest::childLayoutSizeForward() {
+    auto&& data = ChildLayoutSizeForwardData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
+    UnsignedInt nodeIds[]{8, 3, 6};
+    /* Every group of four snaps is rotated 90° clockwise compared to the
+       previous */
+    Snaps snaps[]{
+        Snap::Right|data.extraChildSnaps[0],
+        Snap::Right|Snap::FillY|data.extraChildSnaps[0],
+        Snap::TopRight|Snap::InsideY|data.extraChildSnaps[0],
+        Snap::BottomRight|Snap::InsideY|data.extraChildSnaps[0],
+
+        Snap::Bottom|data.extraChildSnaps[1],
+        Snap::Bottom|Snap::FillX|data.extraChildSnaps[1],
+        Snap::BottomRight|Snap::InsideX|data.extraChildSnaps[1],
+        Snap::BottomLeft|Snap::InsideX|data.extraChildSnaps[1],
+
+        Snap::Left|data.extraChildSnaps[0],
+        Snap::Left|Snap::FillY|data.extraChildSnaps[0],
+        Snap::BottomLeft|Snap::InsideY|data.extraChildSnaps[0],
+        Snap::TopLeft|Snap::InsideY|data.extraChildSnaps[0],
+
+        Snap::Top|data.extraChildSnaps[1],
+        Snap::Top|Snap::FillX|data.extraChildSnaps[1],
+        Snap::TopLeft|Snap::InsideX|data.extraChildSnaps[1],
+        Snap::TopRight|Snap::InsideX|data.extraChildSnaps[1],
+    };
+
+    struct Layout {
+        NodeHandle node;
+        LayouterDataHandle next;
+    } layouts[]{
+        {},
+        {nodeHandle(3, 0xbeb), layouterDataHandle(5, 0x555)}, /* layout 1 */
+        {nodeHandle(8, 0xaba), layouterDataHandle(1, 0x111)}, /* layout 2 */
+        {}, {},
+        {nodeHandle(6, 0xcec), layouterDataHandle(2, 0x222)}, /* layout 5 */
+    };
+
+    Vector4 paddings[4];
+    Vector4 margins[4][3];
+    Vector2 sizes[4][3];
+    Vector2 expectedSizes[4];
+    Vector4 expectedPaddings[4];
+    Vector2 expectedChildOffsets[4][3];
+
+    /* Data for the first (left-to-right) rotation. In the side direction the
+       padding is always 7 and margin 3 from both sides, and all three nodes
+       have the same height of 30. */
+    paddings[0] = {data.paddingForward[0], 7.0f, data.paddingForward[1], 7.0f};
+    expectedSizes[0] = {data.expectedSizeForward, 14.0f + 30.0f};
+    expectedPaddings[0] = {data.expectedPaddingForward[0], 7.0f, data.expectedPaddingForward[1], 7.0f};
+    expectedChildOffsets[0][0][1] = 7.0f;
+    expectedChildOffsets[0][1][1] = 7.0f;
+    expectedChildOffsets[0][2][1] = 7.0f;
+    for(UnsignedInt i = 0; i != 3; ++i) {
+        margins[0][i] = {data.marginsForward[i][0], 3.0f, data.marginsForward[i][1], 3.0f};
+        sizes[0][i] = {data.sizesForward[i], 30.0f};
+        expectedChildOffsets[0][i][0] = data.expectedOffsetsForward[i];
+    }
+
+    /* Gradually rotate the inputs to generate all four rotations */
+    for(UnsignedInt i = 0; i != 3; ++i) {
+        paddings[i + 1] = Math::gather<'w', 'x', 'y', 'z'>(paddings[i]);
+        expectedSizes[i + 1] = Math::gather<'y', 'x'>(expectedSizes[i]);
+        expectedPaddings[i + 1] = Math::gather<'w', 'x', 'y', 'z'>(expectedPaddings[i]);
+
+        for(UnsignedInt j = 0; j != 3; ++j) {
+            margins[i + 1][j] = Math::gather<'w', 'x', 'y', 'z'>(margins[i][j]);
+            sizes[i + 1][j] = Math::gather<'y', 'x'>(sizes[i][j]);
+            expectedChildOffsets[i + 1][j] = Math::gather<'y', 'x'>(expectedChildOffsets[i][j]);
+        }
+    }
+
+    /* Offsets in the right-to-left and bottom-to-top rotations are from the
+       other edges */
+    for(UnsignedInt j = 0; j != 3; ++j) {
+        expectedChildOffsets[1][j].x() = expectedSizes[1].x() - expectedChildOffsets[1][j].x() - sizes[1][j].x();
+        expectedChildOffsets[2][j] = expectedSizes[2] - expectedChildOffsets[2][j] - sizes[2][j];
+        expectedChildOffsets[3][j].y() = expectedSizes[3].y() - expectedChildOffsets[3][j].y() - sizes[3][j].y();
+    }
+
+    for(UnsignedInt rotation = 0; rotation != 4; ++rotation) {
+        CORRADE_ITERATION("rotation" << rotation);
+
+        for(UnsignedInt snapI = 0; snapI != 4; ++snapI) {
+            const Snaps snap = snaps[rotation*4 + snapI];
+            CORRADE_ITERATION(snap);
+
+            struct Node {
+                Vector2 zero;
+                Vector2 size;
+                Vector4 margin;
+            } nodes[9];
+
+            for(UnsignedInt i = 0; i != 3; ++i) {
+                nodes[nodeIds[i]].size = sizes[rotation][i];
+                nodes[nodeIds[i]].margin = margins[rotation][i];
+            }
+
+            /* Node size passed directly */
+            Containers::Pair<Vector2, Vector4> sizePadding = Implementation::childLayoutSizePadding(
+                snap,
+                paddings[rotation],
+                Containers::stridedArrayView(nodes).slice(&Node::zero), /* minSize */
+                Containers::stridedArrayView(nodes).slice(&Node::margin),
+                Containers::stridedArrayView(nodes).slice(&Node::size), /* size */
+                layouterDataHandle(2, 0x222),
+                Containers::stridedArrayView(layouts).slice(&Layout::node),
+                Containers::stridedArrayView(layouts).slice(&Layout::next));
+            CORRADE_COMPARE(sizePadding, Containers::pair(expectedSizes[rotation], expectedPaddings[rotation]));
+
+            /* Node size passed as a min size, should work the same */
+            sizePadding = Implementation::childLayoutSizePadding(
+                snap,
+                paddings[rotation],
+                Containers::stridedArrayView(nodes).slice(&Node::size), /* minSize */
+                Containers::stridedArrayView(nodes).slice(&Node::margin),
+                Containers::stridedArrayView(nodes).slice(&Node::zero), /* size */
+                layouterDataHandle(2, 0x222),
+                Containers::stridedArrayView(layouts).slice(&Layout::node),
+                Containers::stridedArrayView(layouts).slice(&Layout::next));
+            CORRADE_COMPARE(sizePadding, Containers::pair(expectedSizes[rotation], expectedPaddings[rotation]));
+
+            /* With the above size and padding, snapping the three nodes should
+               give the expected offsets. The first child uses a different
+               snap, and is affected by the reported size and padding */
+            Containers::Pair<Vector2, Vector2> offsetSize0 = Implementation::snap(
+                Implementation::firstChildSnap(snap),
+                {}, sizePadding.first(),
+                sizePadding.second(), {},
+                nodes[nodeIds[0]].margin,
+                nodes[nodeIds[0]].size);
+            CORRADE_COMPARE(offsetSize0, Containers::pair(expectedChildOffsets[rotation][0], sizes[rotation][0]));
+
+            Containers::Pair<Vector2, Vector2> offsetSize1 = Implementation::snap(
+                snap,
+                offsetSize0.first(), offsetSize0.second(),
+                {}, nodes[nodeIds[0]].margin,
+                nodes[nodeIds[1]].margin,
+                nodes[nodeIds[1]].size);
+            CORRADE_COMPARE(offsetSize1, Containers::pair(expectedChildOffsets[rotation][1], sizes[rotation][1]));
+
+            Containers::Pair<Vector2, Vector2> offsetSize2 = Implementation::snap(
+                snap,
+                offsetSize1.first(), offsetSize1.second(),
+                {}, nodes[nodeIds[1]].margin,
+                nodes[nodeIds[2]].margin,
+                nodes[nodeIds[2]].size);
+            CORRADE_COMPARE(offsetSize2, Containers::pair(expectedChildOffsets[rotation][2], sizes[rotation][2]));
+        }
+    }
+}
+
+void SnapLayouterTest::orderLayoutsBreadthFirstEmpty() {
+    /* Just to verify it doesn't blow up with some OOB access in this case */
+    UnsignedInt childrenOffsets[2]{};
+    Int layoutIds[1];
+    Implementation::orderLayoutsBreadthFirstInto(
+        {},
+        {},
+        {},
+        {},
+        childrenOffsets, {}, layoutIds);
+    CORRADE_COMPARE_AS(Containers::arrayView(layoutIds), Containers::arrayView({
+        -1
+    }), TestSuite::Compare::Container);
+}
+
 void SnapLayouterTest::orderLayoutsBreadthFirst() {
     /* Expands AbstractUserInterfaceImplementationTest::orderNodesBreadthFirst()
-       with a subsequent mapping to layout IDs */
+       (which tests the base of the algorithm) with explicit ordering between
+       children */
 
     /* The handle generations aren't used for anything here so can be
-       arbitrary */
-    const NodeHandle nodeParents[]{
-        /* Forward parent reference */
-        nodeHandle(11, 0x123),          /*  0 */
-        /* Root elements */
-        NodeHandle::Null,               /*  1 */
-        NodeHandle::Null,               /*  2 */
-        /* Backward parent reference */
-        nodeHandle(1, 0xabc),           /*  3 */
-        /* Deep hierarchy */
-        nodeHandle(3, 0x1),             /*  4 */
-        nodeHandle(3, 0x2),             /*  5, not referenced */
-        nodeHandle(4, 0xfff),           /*  6 */
-        /* Multiple children */
-        nodeHandle(1, 0x1),             /*  7 */
-        nodeHandle(10, 0x1),            /*  8 */
-        nodeHandle(1, 0xeee),           /*  9, not referenced */
-        nodeHandle(1, 0x1),             /* 10 */
-        /* More root elements */
-        NodeHandle::Null,               /* 11 */
-        NodeHandle::Null,               /* 12, not referenced */
+       arbitrary. But multiple uses should have matching generations so the
+       cyclic linked lists work as expected. */
+    const struct Layout {
+        LayouterDataHandle parentOrTarget;
+        LayouterDataHandle firstChild;
+        LayouterDataHandle firstExplicitSnap;
+        LayouterDataHandle next;
+    } layouts[]{
+        /* Forward parent and next reference, no dependent layouts */
+        {layouterDataHandle(11, 0x323),     /* 0 */
+         LayouterDataHandle::Null,
+         LayouterDataHandle::Null,
+         layouterDataHandle(3, 0xcec)},
+        /* Root layout, has both children and explicitly snapped layouts */
+        {LayouterDataHandle::Null,          /* 1 */
+         layouterDataHandle(10, 0x111),
+         layouterDataHandle(4, 0xaba),
+         LayouterDataHandle::Null},
+        /* Unused / freed layout. Has to have all four handles null to not
+           contribute to anything. */
+        {},                                 /* 2 */
+        /* Sibling of layout 0 or possibly with the same target. Has just
+           children, no explicitly snapped layouts. There's one more in the
+           same list. */
+        {layouterDataHandle(11, 0x323),     /* 3 */
+         layouterDataHandle(7, 0x321),
+         LayouterDataHandle::Null,
+         layouterDataHandle(8, 0x666)},
+        /* Explicitly snapping to layout 1, no children or dependent layouts */
+        {layouterDataHandle(1, 0xabc),      /* 4 */
+         LayouterDataHandle::Null,
+         LayouterDataHandle::Null,
+         layouterDataHandle(16, 0xede)},
+        /* Child of layout 1, having one more sibling and an explicitly
+           snapped node */
+        {layouterDataHandle(1, 0xabc),      /* 5 */
+         LayouterDataHandle::Null,
+         layouterDataHandle(11, 0x323),
+         layouterDataHandle(10, 0x111)},
+        /* Unused / freed layout again */
+        {},                                 /* 6 */
+        /* The only child of layout 3 so next points to itself, no more nested
+           layouts */
+        {layouterDataHandle(3, 0xcec),      /* 7 */
+         LayouterDataHandle::Null,
+         LayouterDataHandle::Null,
+         layouterDataHandle(7, 0x321)},
+        /* Remaining sibling of layout 0 or possibly with the same target, the
+           next one is layout 0 which cycles back */
+        {layouterDataHandle(11, 0x323),     /* 8 */
+         LayouterDataHandle::Null,
+         LayouterDataHandle::Null,
+         layouterDataHandle(0, 0x888)},
+        /* Root layout with nothing else, treated the same as an unused / freed
+           layout */
+        {LayouterDataHandle::Null,          /* 9 */
+         LayouterDataHandle::Null,
+         LayouterDataHandle::Null,
+         LayouterDataHandle::Null},
+        /* Second, last child of layout 1 */
+        {layouterDataHandle(1, 0xabc),      /* 10 */
+         LayouterDataHandle::Null,
+         LayouterDataHandle::Null,
+         layouterDataHandle(5, 0x444)},
+        /* Explicitly snapped to layout 5, having children but no other layouts
+           snapped to the same target so next points to itself */
+        {layouterDataHandle(5, 0x444),      /* 11 */
+         layouterDataHandle(3, 0xcec),
+         LayouterDataHandle::Null,
+         layouterDataHandle(11, 0x323)},
+        /* Another unused layout */
+        {},                                 /* 12 */
+        /* Third layout snapped to layout 1 */
+        {layouterDataHandle(1, 0xabc),      /* 13 */
+         LayouterDataHandle::Null,
+         LayouterDataHandle::Null,
+         layouterDataHandle(4, 0xaba)},
+        /* Root with a single snapped layout that's right before */
+        {layouterDataHandle(15, 0x566),     /* 14 */
+         LayouterDataHandle::Null,
+         LayouterDataHandle::Null,
+         layouterDataHandle(14, 0x565)},
+        {LayouterDataHandle::Null,          /* 15 */
+         LayouterDataHandle::Null,
+         layouterDataHandle(14, 0x565),
+         LayouterDataHandle::Null},
+        /* Second layout snapped to layout 1 */
+        {layouterDataHandle(1, 0xabc),      /* 16 */
+         LayouterDataHandle::Null,
+         LayouterDataHandle::Null,
+         layouterDataHandle(13, 0x444)},
     };
 
     /* Important: the childrenOffsets array has to be zero-initialized. Others
        don't need to be. */
-    UnsignedInt childrenOffsets[Containers::arraySize(nodeParents) + 2]{};
-    UnsignedInt children[Containers::arraySize(nodeParents)];
-    Int nodeIds[Containers::arraySize(nodeParents) + 1];
-    Implementation::orderNodesBreadthFirstInto(
-        nodeParents,
-        childrenOffsets, children, nodeIds);
-    CORRADE_COMPARE_AS(Containers::arrayView(nodeIds), Containers::arrayView({
+    UnsignedInt childrenOffsets[Containers::arraySize(layouts) + 2]{};
+    UnsignedInt children[Containers::arraySize(layouts)];
+    Int layoutIds[Containers::arraySize(layouts) + 1];
+    Implementation::orderLayoutsBreadthFirstInto(
+        Containers::stridedArrayView(layouts).slice(&Layout::parentOrTarget),
+        Containers::stridedArrayView(layouts).slice(&Layout::firstChild),
+        Containers::stridedArrayView(layouts).slice(&Layout::firstExplicitSnap),
+        Containers::stridedArrayView(layouts).slice(&Layout::next),
+        childrenOffsets, children, layoutIds);
+    CORRADE_COMPARE_AS(Containers::arrayView(layoutIds), Containers::arrayView({
         /* -1 is always first */
         -1,
-        /* Root nodes first, in order as found */
+        /* Root / unused layouts first, in order as found */
         1,
         2,
-        11,
-        12,
-        /* Then children of node 1, clustered together, in order as found */
-        3,
-        7,
-        9,
-        10,
-        /* Then children of node 11 */
-        0,
-        /* Children of node 3 */
-        4,
-        5,
-        /* Children of node 10 */
-        8,
-        /* Children of node 4 */
         6,
-    }), TestSuite::Compare::Container);
-
-    /* Now use that to order the masked layout IDs as well */
-    UnsignedInt layoutIdsToUpdateData[]{0xffffffff};
-    Containers::MutableBitArrayView layoutIdsToUpdate{layoutIdsToUpdateData, 0, 21};
-    layoutIdsToUpdate.reset(2);
-    layoutIdsToUpdate.reset(5);
-    layoutIdsToUpdate.reset(6);
-    layoutIdsToUpdate.reset(11);
-
-    /* Again the handle generations aren't used for anything here so can be
-       arbitrary */
-    const NodeHandle layoutTargets[]{
-        nodeHandle(8, 0xcec),           /*  0 */
-        nodeHandle(3, 0xcec),           /*  1 */
-        nodeHandle(0xfffff, 0xcec),     /*  2, skipped */
-        nodeHandle(10, 0xcec),          /*  3 */
-        nodeHandle(2, 0xcec),           /*  4 */
-        nodeHandle(0xfffff, 0xcec),     /*  5, skipped */
-        nodeHandle(0xfffff, 0xcec),     /*  6, skipped */
-        nodeHandle(1, 0xcec),           /*  7 */
-        nodeHandle(7, 0xcec),           /*  8 */
-        NodeHandle::Null,               /*  9 */
-        nodeHandle(2, 0xcec),           /* 10, same target as 4 */
-        nodeHandle(0xfffff, 0xcec),     /* 11, skipped */
-        nodeHandle(11, 0xcec),          /* 12 */
-        NodeHandle::Null,               /* 13 */
-        nodeHandle(0, 0xcec),           /* 14 */
-        nodeHandle(6, 0xcec),           /* 15 */
-        nodeHandle(3, 0xcec),           /* 16, same target as 1 */
-        nodeHandle(3, 0xcec),           /* 17, same target as 1 */
-        nodeHandle(8, 0xcec),           /* 18, same target as 0 */
-        nodeHandle(4, 0xcec),           /* 19 */
-        nodeHandle(6, 0xcec),           /* 20, same target as 15 */
-    };
-
-    /* Similarly here, the layoutOffsets array has to be zero-initialized */
-    UnsignedInt layoutOffsets[Containers::arraySize(nodeParents) + 2]{};
-    UnsignedInt layouts[Containers::arraySize(layoutTargets)];
-    UnsignedInt layoutIds[Containers::arraySize(layoutTargets)];
-    std::size_t count = Implementation::orderLayoutsBreadthFirstInto(
-        layoutIdsToUpdate,
-        layoutTargets,
-        nodeIds,
-        layoutOffsets,
-        layouts,
-        layoutIds);
-    CORRADE_COMPARE_AS(Containers::arrayView(layoutIds).prefix(count), Containers::arrayView<UnsignedInt>({
-        /* Layouts targeting the whole UI first, in order as found */
-        9, 13,
-        /* Layouts assigned to root nodes second, in order as found */
-        7,          /* node 1 */
-        4, 10,      /* node 2 */
-        12,         /* node 11 */
-        /* Then children of node 1, clustered together, in order as found */
-        1, 16, 17,  /* node 3 */
-        8,          /* node 7 */
-        3,          /* node 10 */
-        /* Then children of node 11 */
-        14,         /* node 0 */
-        /* Children of node 3 */
-        19,         /* node 4 */
-        /* Children of node 10 */
-        0, 18,      /* node 8 */
-        /* Children of node 4 */
-        15, 20,     /* node 6 */
+        9,
+        12,
+        15,
+        /* Then children of layout 1, clustered together, in order following
+           the linked list */
+        10,
+        5,
+        /* Then layouts snapped to layout 1, again following the linked list */
+        4,
+        16,
+        13,
+        /* Layout 2, 6 and 12 have no children or explicit snaps */
+        /* Layout 15 has a single snapped layout */
+        14,
+        /* Layout 10 has no children or explicit snaps */
+        /* Layout 5 has no children, but a single explicit snap */
+        11,
+        /* Layout 4, 16 and 13 have no children or explicit snaps */
+        /* Layout 11 has only children, no explicit snaps */
+        3,
+        8,
+        0,
+        /* Layout 3 has a single child */
+        7,
+        /* Layout 8 and 0 have no children or explicit snaps */
+        /* Layout 7 has no children or explicit snaps */
     }), TestSuite::Compare::Container);
 }
 
@@ -763,363 +1853,408 @@ void SnapLayouterTest::constructMove() {
     CORRADE_VERIFY(std::is_nothrow_move_assignable<SnapLayouter>::value);
 }
 
-template<class> struct SnapLayoutTraits;
-template<> struct SnapLayoutTraits<AbstractSnapLayout> {
-    typedef AbstractUserInterface UserInterfaceType;
-    typedef AbstractAnchor AnchorType;
-    static const char* name() { return "AbstractSnapLayout"; }
-};
-template<> struct SnapLayoutTraits<SnapLayout> {
-    typedef UserInterface UserInterfaceType;
-    typedef Anchor AnchorType;
-    static const char* name() { return "SnapLayout"; }
-};
+void SnapLayouterTest::addRemove() {
+    auto&& data = AddRemoveData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
 
-template<class T> void SnapLayouterTest::layoutConstructInside() {
-    setTestCaseTemplateName(SnapLayoutTraits<T>::name());
-
-    struct Interface: SnapLayoutTraits<T>::UserInterfaceType {
-        explicit Interface(NoCreateT): SnapLayoutTraits<T>::UserInterfaceType{NoCreate} {}
-    } ui{NoCreate};
-    NodeHandle node = ui.createNode({}, {});
-
-    /* The target is also a parent in this case */
-    SnapLayouter layouter{layouterHandle(0, 1)};
-    T layout{ui, layouter,
-        Snap::Bottom|Snap::InsideY, node,
-        Snap::Top|Snap::Left|Snap::Right};
-    CORRADE_COMPARE(&layout.ui(), &ui);
-    CORRADE_COMPARE(&layout.layouter(), &layouter);
-    CORRADE_COMPARE(layout.parent(), node);
-    CORRADE_COMPARE(layout.snapFirst(), Snap::Bottom|Snap::InsideY);
-    CORRADE_COMPARE(layout.targetFirst(), node);
-    CORRADE_COMPARE(layout.snapNext(), Snap::Top|Snap::Left|Snap::Right);
-    CORRADE_COMPARE(layout.targetNext(), NodeHandle::Null);
-}
-
-template<class T> void SnapLayouterTest::layoutConstructOutside() {
-    setTestCaseTemplateName(SnapLayoutTraits<T>::name());
-
-    struct Interface: SnapLayoutTraits<T>::UserInterfaceType {
-        explicit Interface(NoCreateT): SnapLayoutTraits<T>::UserInterfaceType{NoCreate} {}
-    } ui{NoCreate};
-    NodeHandle node = ui.createNode({}, {});
-    NodeHandle sub = ui.createNode(node, {}, {});
-
-    /* The target is a sibling in this case */
-    SnapLayouter layouter{layouterHandle(0, 1)};
-    T layout{ui, layouter,
-        Snap::Bottom|Snap::NoPadY, sub,
-        Snap::Top|Snap::Left|Snap::Right};
-    CORRADE_COMPARE(&layout.ui(), &ui);
-    CORRADE_COMPARE(&layout.layouter(), &layouter);
-    CORRADE_COMPARE(layout.parent(), node);
-    CORRADE_COMPARE(layout.snapFirst(), Snap::Bottom|Snap::NoPadY);
-    CORRADE_COMPARE(layout.targetFirst(), sub);
-    CORRADE_COMPARE(layout.snapNext(), Snap::Top|Snap::Left|Snap::Right);
-    CORRADE_COMPARE(layout.targetNext(), NodeHandle::Null);
-}
-
-void SnapLayouterTest::layoutConstructDefaultLayouter() {
-    struct Interface: UserInterface {
-        explicit Interface(NoCreateT): UserInterface{NoCreate} {}
-    } ui{NoCreate};
-    ui.setSnapLayouterInstance(Containers::pointer<SnapLayouter>(ui.createLayouter()));
-    NodeHandle node = ui.createNode({}, {});
-
-    /* The target is also a parent in this case */
-    SnapLayout layout{ui,
-        Snap::Bottom|Snap::InsideY, node,
-        Snap::Top|Snap::Left|Snap::Right};
-    CORRADE_COMPARE(&layout.ui(), &ui);
-    CORRADE_COMPARE(&layout.layouter(), &ui.snapLayouter());
-    CORRADE_COMPARE(layout.parent(), node);
-    CORRADE_COMPARE(layout.snapFirst(), Snap::Bottom|Snap::InsideY);
-    CORRADE_COMPARE(layout.targetFirst(), node);
-    CORRADE_COMPARE(layout.snapNext(), Snap::Top|Snap::Left|Snap::Right);
-    CORRADE_COMPARE(layout.targetNext(), NodeHandle::Null);
-}
-
-template<class T> void SnapLayouterTest::layoutConstructCopy() {
-    setTestCaseTemplateName(SnapLayoutTraits<T>::name());
-
-    CORRADE_VERIFY(!std::is_copy_constructible<T>{});
-    CORRADE_VERIFY(!std::is_copy_assignable<T>{});
-}
-
-template<class T> void SnapLayouterTest::layoutConstructMove() {
-    setTestCaseTemplateName(SnapLayoutTraits<T>::name());
-
-    struct Interface: SnapLayoutTraits<T>::UserInterfaceType {
-        explicit Interface(NoCreateT): SnapLayoutTraits<T>::UserInterfaceType{NoCreate} {}
-    } ui1{NoCreate}, ui2{NoCreate};
-    NodeHandle node1 = ui1.createNode({}, {});
-    NodeHandle node2 = ui2.createNode({}, {});
-
-    SnapLayouter layouter1{layouterHandle(0, 1)};
-    SnapLayouter layouter2{layouterHandle(3, 4)};
-
-    T a{ui1, layouter1, Snap::Bottom|Snap::Inside, node1, Snap::Top};
-
-    T b{Utility::move(a)};
-    CORRADE_COMPARE(&b.ui(), &ui1);
-    CORRADE_COMPARE(&b.layouter(), &layouter1);
-    CORRADE_COMPARE(b.snapFirst(), Snap::Bottom|Snap::Inside);
-    CORRADE_COMPARE(b.targetFirst(), node1);
-    CORRADE_COMPARE(b.snapNext(), Snap::Top);
-
-    T c{ui2, layouter2, {}, node2, {}};
-    c = Utility::move(b);
-    CORRADE_COMPARE(&c.ui(), &ui1);
-    CORRADE_COMPARE(&c.layouter(), &layouter1);
-    CORRADE_COMPARE(c.snapFirst(), Snap::Bottom|Snap::Inside);
-    CORRADE_COMPARE(c.targetFirst(), node1);
-    CORRADE_COMPARE(c.snapNext(), Snap::Top);
-
-    CORRADE_VERIFY(std::is_nothrow_move_constructible<SnapLayout>::value);
-    CORRADE_VERIFY(std::is_nothrow_move_assignable<SnapLayout>::value);
-}
-
-template<class T> void SnapLayouterTest::addRemove() {
-    setTestCaseTemplateName(SnapLayoutTraits<T>::name());
-
-    struct Interface: SnapLayoutTraits<T>::UserInterfaceType {
-        explicit Interface(NoCreateT): SnapLayoutTraits<T>::UserInterfaceType{NoCreate} {}
-    } ui{NoCreate};
+    AbstractUserInterface ui{{100, 100}};
     SnapLayouter& layouter = ui.setLayouterInstance(Containers::pointer<SnapLayouter>(ui.createLayouter()));
 
-    NodeHandle node = ui.createNode({}, {});
-    NodeHandle child = ui.createNode(node, {}, {});
+    NodeHandle root1 = ui.createNode({}, {});
+    NodeHandle root1Child1 = ui.createNode(root1, {}, {});
+    NodeHandle root1Child2 = ui.createNode(root1, {}, {});
+    NodeHandle root1Child3 = ui.createNode(root1, {}, {});
+    NodeHandle root1Child4 = ui.createNode(root1, {}, {});
+    NodeHandle root1ExplicitSnap = ui.createNode(root1, {}, {});
 
-    /* Snapping inside the node, thus it is also a parent */
-    T snap1{ui, layouter, Snap::Left|Snap::InsideX, child, Snap::Right|Snap::NoPadX};
-    CORRADE_COMPARE(snap1.parent(), child);
-    CORRADE_COMPARE(snap1.targetFirst(), child);
-    CORRADE_COMPARE(snap1.targetNext(), NodeHandle::Null);
+    NodeHandle root2 = ui.createNode({}, {});
 
-    /* First gets snapped to the parent */
-    typename SnapLayoutTraits<T>::AnchorType anchor1 = snap1({1.0f, 2.0f}, {3.0f, 4.0f}, NodeFlag::Disabled|NodeFlag::Focusable);
-    CORRADE_COMPARE(&anchor1.ui(), &ui);
-    CORRADE_COMPARE(anchor1, nodeHandle(2, 1));
-    CORRADE_COMPARE(ui.nodeParent(anchor1), child);
-    CORRADE_COMPARE(ui.nodeOffset(anchor1), (Vector2{1.0f, 2.0f}));
-    CORRADE_COMPARE(ui.nodeSize(anchor1), (Vector2{3.0f, 4.0f}));
-    CORRADE_COMPARE(ui.nodeFlags(anchor1), NodeFlag::Disabled|NodeFlag::Focusable);
-    CORRADE_COMPARE(anchor1, layoutHandle(layouter.handle(), 0, 1));
-    CORRADE_COMPARE(layouter.snap(anchor1), Snap::Left|Snap::InsideX);
-    CORRADE_COMPARE(layouter.target(anchor1), child);
-    CORRADE_COMPARE(snap1.targetNext(), anchor1);
+    /* Layout that does nothing on its own but can manage children in a
+       specific order and snap */
+    LayoutHandle root1Layout = layouter.add(root1);
+    CORRADE_COMPARE(layouter.node(root1Layout), root1);
+    CORRADE_COMPARE(layouter.flags(root1Layout), SnapLayoutFlags{});
+    CORRADE_COMPARE(layouter.firstChild(root1Layout), LayoutHandle::Null);
+    CORRADE_COMPARE(layouter.firstExplicitSnap(root1Layout), LayoutHandle::Null);
+    CORRADE_VERIFY(!layouter.hasExplicitSnap(root1Layout));
+    CORRADE_COMPARE(layouter.parent(root1Layout), LayoutHandle::Null);
+    CORRADE_COMPARE(layouter.previous(root1Layout), LayoutHandle::Null);
+    CORRADE_COMPARE(layouter.next(root1Layout), LayoutHandle::Null);
 
-    /* Second to the first. Testing the overload with implicit offset. */
-    typename SnapLayoutTraits<T>::AnchorType anchor2 = snap1({5.0f, 6.0f}, NodeFlag::NoEvents);
-    CORRADE_COMPARE(&anchor2.ui(), &ui);
-    CORRADE_COMPARE(anchor2, nodeHandle(3, 1));
-    CORRADE_COMPARE(ui.nodeParent(anchor2), child);
-    CORRADE_COMPARE(ui.nodeOffset(anchor2), Vector2{});
-    CORRADE_COMPARE(ui.nodeSize(anchor2), (Vector2{5.0f, 6.0f}));
-    CORRADE_COMPARE(ui.nodeFlags(anchor2), NodeFlag::NoEvents);
-    CORRADE_COMPARE(anchor2, layoutHandle(layouter.handle(), 1, 1));
-    CORRADE_COMPARE(layouter.snap(anchor2), Snap::Right|Snap::NoPadX);
-    CORRADE_COMPARE(layouter.target(anchor2), anchor1);
-    CORRADE_COMPARE(snap1.targetNext(), anchor2);
+    /* Layout that again does nothing on its own, with an explicit
+       LayouterDataHandle::Null argument, and LayouterDataHandle overloads */
+    LayoutHandle root2Layout = layouter.add(root2, LayouterDataHandle::Null, SnapLayoutFlag::IgnoreOverflowX);
+    CORRADE_COMPARE(layouter.node(root2Layout), root2);
+    CORRADE_COMPARE(layouter.flags(root2Layout), SnapLayoutFlag::IgnoreOverflowX);
+    CORRADE_COMPARE(layouter.firstChild(layoutHandleData(root2Layout)), LayoutHandle::Null);
+    CORRADE_COMPARE(layouter.firstExplicitSnap(layoutHandleData(root2Layout)), LayoutHandle::Null);
+    CORRADE_VERIFY(!layouter.hasExplicitSnap(layoutHandleData(root2Layout)));
+    CORRADE_COMPARE(layouter.parent(layoutHandleData(root2Layout)), LayoutHandle::Null);
+    CORRADE_COMPARE(layouter.previous(layoutHandleData(root2Layout)), LayoutHandle::Null);
+    CORRADE_COMPARE(layouter.next(layoutHandleData(root2Layout)), LayoutHandle::Null);
 
-    /* Third to the second. Omitting the flags. */
-    typename SnapLayoutTraits<T>::AnchorType anchor3 = snap1({7.0f, 8.0f}, {9.0f, 10.0f});
-    CORRADE_COMPARE(&anchor3.ui(), &ui);
-    CORRADE_COMPARE(anchor3, nodeHandle(4, 1));
-    CORRADE_COMPARE(ui.nodeParent(anchor3), child);
-    CORRADE_COMPARE(ui.nodeOffset(anchor3), (Vector2{7.0f, 8.0f}));
-    CORRADE_COMPARE(ui.nodeSize(anchor3), (Vector2{9.0f, 10.0f}));
-    CORRADE_COMPARE(ui.nodeFlags(anchor3), NodeFlags{});
-    CORRADE_COMPARE(anchor3, layoutHandle(layouter.handle(), 2, 1));
-    CORRADE_COMPARE(layouter.snap(anchor3), Snap::Right|Snap::NoPadX);
-    CORRADE_COMPARE(layouter.target(anchor3), anchor2);
-    CORRADE_COMPARE(snap1.targetNext(), anchor3);
+    /* Layout that's the first implicit child inside, with flags */
+    LayoutHandle root1Child1Layout = layouter.add(root1Child1, SnapLayoutFlag::IgnoreOverflowY);
+    CORRADE_COMPARE(layouter.firstChild(root1Layout), root1Child1Layout);
+    CORRADE_COMPARE(layouter.firstExplicitSnap(root1Layout), LayoutHandle::Null);
+    CORRADE_COMPARE(layouter.node(root1Child1Layout), root1Child1);
+    CORRADE_COMPARE(layouter.flags(root1Child1Layout), SnapLayoutFlag::IgnoreOverflowY);
+    CORRADE_COMPARE(layouter.firstChild(root1Child1Layout), LayoutHandle::Null);
+    CORRADE_COMPARE(layouter.firstExplicitSnap(root1Child1Layout), LayoutHandle::Null);
+    CORRADE_VERIFY(!layouter.hasExplicitSnap(root1Child1Layout));
+    CORRADE_COMPARE(layouter.parent(root1Child1Layout), root1Layout);
+    CORRADE_COMPARE(layouter.previous(root1Layout), LayoutHandle::Null);
+    CORRADE_COMPARE(layouter.next(root1Layout), LayoutHandle::Null);
+    CORRADE_COMPARE(layouter.previous(root1Child1Layout), LayoutHandle::Null);
+    CORRADE_COMPARE(layouter.next(root1Child1Layout), LayoutHandle::Null);
 
-    /* Snapping outside of the node, thus it's a sibling */
-    T snap2{ui, layouter, Snap::Left|Snap::Top, child, Snap::Bottom};
-    CORRADE_COMPARE(snap2.parent(), node);
-    CORRADE_COMPARE(snap2.targetFirst(), child);
-    CORRADE_COMPARE(snap2.targetNext(), NodeHandle::Null);
+    /* Layout that's the second */
+    LayoutHandle root1Child2Layout = layouter.add(root1Child2);
+    CORRADE_COMPARE(layouter.firstChild(root1Layout), root1Child1Layout);
+    CORRADE_COMPARE(layouter.firstExplicitSnap(root1Layout), LayoutHandle::Null);
+    CORRADE_COMPARE(layouter.node(root1Child2Layout), root1Child2);
+    CORRADE_COMPARE(layouter.flags(root1Child2Layout), SnapLayoutFlags{});
+    CORRADE_COMPARE(layouter.firstChild(root1Child2Layout), LayoutHandle::Null);
+    CORRADE_COMPARE(layouter.firstExplicitSnap(root1Child2Layout), LayoutHandle::Null);
+    CORRADE_VERIFY(!layouter.hasExplicitSnap(root1Child2Layout));
+    CORRADE_COMPARE(layouter.parent(root1Child2Layout), root1Layout);
+    CORRADE_COMPARE(layouter.previous(root1Child1Layout), LayoutHandle::Null);
+    CORRADE_COMPARE(layouter.next(root1Child1Layout), root1Child2Layout);
+    CORRADE_COMPARE(layouter.previous(root1Child2Layout), root1Child1Layout);
+    CORRADE_COMPARE(layouter.next(root1Child2Layout), LayoutHandle::Null);
 
-    /* First gets snapped to the target. Querying with the LayouterDataHandle
-       overloads. */
-    typename SnapLayoutTraits<T>::AnchorType anchor4 = snap2({2.0f, 1.0f}, {4.0f, 3.0f}, NodeFlag::Focusable);
-    CORRADE_COMPARE(&anchor4.ui(), &ui);
-    CORRADE_COMPARE(anchor4, nodeHandle(5, 1));
-    CORRADE_COMPARE(ui.nodeParent(anchor4), node);
-    CORRADE_COMPARE(ui.nodeOffset(anchor4), (Vector2{2.0f, 1.0f}));
-    CORRADE_COMPARE(ui.nodeSize(anchor4), (Vector2{4.0f, 3.0f}));
-    CORRADE_COMPARE(ui.nodeFlags(anchor4), NodeFlag::Focusable);
-    CORRADE_COMPARE(anchor4, layoutHandle(layouter.handle(), 3, 1));
-    CORRADE_COMPARE(layouter.snap(layoutHandleData(anchor4)), Snap::Left|Snap::Top);
-    CORRADE_COMPARE(layouter.target(layoutHandleData(anchor4)), child);
-    CORRADE_COMPARE(snap2.targetNext(), anchor4);
+    /* Layout inserted in the middle, with flags */
+    LayoutHandle root1Child3Layout = layouter.add(root1Child3, root1Child2Layout, SnapLayoutFlags{0x20});
+    CORRADE_COMPARE(layouter.firstChild(root1Layout), root1Child1Layout);
+    CORRADE_COMPARE(layouter.firstExplicitSnap(root1Layout), LayoutHandle::Null);
+    CORRADE_COMPARE(layouter.node(root1Child3Layout), root1Child3);
+    CORRADE_COMPARE(layouter.flags(root1Child3Layout), SnapLayoutFlags{0x20});
+    CORRADE_COMPARE(layouter.firstChild(root1Child3Layout), LayoutHandle::Null);
+    CORRADE_COMPARE(layouter.firstExplicitSnap(root1Child3Layout), LayoutHandle::Null);
+    CORRADE_VERIFY(!layouter.hasExplicitSnap(root1Child3Layout));
+    CORRADE_COMPARE(layouter.parent(root1Child3Layout), root1Layout);
+    CORRADE_COMPARE(layouter.previous(root1Child1Layout), LayoutHandle::Null);
+    CORRADE_COMPARE(layouter.next(root1Child1Layout), root1Child3Layout);
+    CORRADE_COMPARE(layouter.previous(root1Child3Layout), root1Child1Layout);
+    CORRADE_COMPARE(layouter.next(root1Child3Layout), root1Child2Layout);
+    CORRADE_COMPARE(layouter.previous(root1Child2Layout), root1Child3Layout);
+    CORRADE_COMPARE(layouter.next(root1Child2Layout), LayoutHandle::Null);
 
-    /* Second gets snapped to the first. Omitting both offset and flags. */
-    typename SnapLayoutTraits<T>::AnchorType anchor5 = snap2({11.0f, 12.0f});
-    CORRADE_COMPARE(&anchor5.ui(), &ui);
-    CORRADE_COMPARE(anchor5, nodeHandle(6, 1));
-    CORRADE_COMPARE(ui.nodeParent(anchor5), node);
-    CORRADE_COMPARE(ui.nodeOffset(anchor5), Vector2{});
-    CORRADE_COMPARE(ui.nodeSize(anchor5), (Vector2{11.0f, 12.0f}));
-    CORRADE_COMPARE(ui.nodeFlags(anchor5), NodeFlags{});
-    CORRADE_COMPARE(anchor5, layoutHandle(layouter.handle(), 4, 1));
-    CORRADE_COMPARE(layouter.snap(anchor5), Snap::Bottom);
-    CORRADE_COMPARE(layouter.target(anchor5), anchor4);
-    CORRADE_COMPARE(snap2.targetNext(), anchor5);
+    /* Layout that's explicitly snapped isn't added to the child list even
+       though it's assigned to a node that's a sibling of the others. It's
+       added to the snap list of the target however. */
+    LayoutHandle root1ExplicitSnapLayout = layouter.add(root1ExplicitSnap, Snap::Left|Snap::NoPadY, root1Child2Layout);
+    CORRADE_COMPARE(layouter.firstChild(root1Layout), root1Child1Layout);
+    CORRADE_COMPARE(layouter.firstExplicitSnap(root1Layout), LayoutHandle::Null);
+    CORRADE_COMPARE(layouter.firstExplicitSnap(root1Child2Layout), root1ExplicitSnapLayout);
+    CORRADE_COMPARE(layouter.node(root1ExplicitSnapLayout), root1ExplicitSnap);
+    CORRADE_COMPARE(layouter.flags(root1ExplicitSnapLayout), SnapLayoutFlags{});
+    CORRADE_COMPARE(layouter.firstChild(root1ExplicitSnapLayout), LayoutHandle::Null);
+    CORRADE_VERIFY(layouter.hasExplicitSnap(root1ExplicitSnapLayout));
+    CORRADE_COMPARE(layouter.explicitSnap(root1ExplicitSnapLayout), Snap::Left|Snap::NoPadY);
+    CORRADE_COMPARE(layouter.explicitSnapTarget(root1ExplicitSnapLayout), root1Child2Layout);
+    CORRADE_COMPARE(layouter.firstChild(root1Layout), root1Child1Layout);
+    CORRADE_COMPARE(layouter.previous(root1Child1Layout), LayoutHandle::Null);
+    CORRADE_COMPARE(layouter.next(root1Child2Layout), LayoutHandle::Null);
 
-    /* Snapping a single layout inside of the node, thus a child */
-    typename SnapLayoutTraits<T>::AnchorType anchor6 = Ui::snap(ui, layouter, Snap::Bottom|Snap::InsideY, child, {13.0f, 14.0f}, {15.0f, 16.0f}, NodeFlag::NoEvents|NodeFlag::Clip);
-    CORRADE_COMPARE(&anchor6.ui(), &ui);
-    CORRADE_COMPARE(anchor6, nodeHandle(7, 1));
-    CORRADE_COMPARE(ui.nodeParent(anchor6), child);
-    CORRADE_COMPARE(ui.nodeOffset(anchor6), (Vector2{13.0f, 14.0f}));
-    CORRADE_COMPARE(ui.nodeSize(anchor6), (Vector2{15.0f, 16.0f}));
-    CORRADE_COMPARE(ui.nodeFlags(anchor6), NodeFlag::NoEvents|NodeFlag::Clip);
-    CORRADE_COMPARE(anchor6, layoutHandle(layouter.handle(), 5, 1));
-    CORRADE_COMPARE(layouter.snap(anchor6), Snap::Bottom|Snap::InsideY);
-    CORRADE_COMPARE(layouter.target(anchor6), child);
+    /* Layout inserted at the front, with LayouterDataHandle overload, and
+       getter overloads as well */
+    LayoutHandle root1Child4Layout = layouter.add(root1Child4, layoutHandleData(root1Child1Layout), SnapLayoutFlag::IgnoreOverflow);
+    CORRADE_COMPARE(layouter.firstChild(layoutHandleData(root1Layout)), root1Child4Layout);
+    CORRADE_COMPARE(layouter.firstExplicitSnap(layoutHandleData(root1Layout)), LayoutHandle::Null);
+    CORRADE_COMPARE(layouter.firstExplicitSnap(layoutHandleData(root1Child2Layout)), root1ExplicitSnapLayout);
+    CORRADE_COMPARE(layouter.node(root1Child4Layout), root1Child4);
+    CORRADE_COMPARE(layouter.flags(layoutHandleData(root1Child4Layout)), SnapLayoutFlag::IgnoreOverflow);
+    CORRADE_VERIFY(!layouter.hasExplicitSnap(layoutHandleData(root1Child4Layout)));
+    CORRADE_COMPARE(layouter.firstChild(layoutHandleData(root1Child4Layout)), LayoutHandle::Null);
+    CORRADE_COMPARE(layouter.firstExplicitSnap(layoutHandleData(root1Child4Layout)), LayoutHandle::Null);
+    CORRADE_COMPARE(layouter.parent(layoutHandleData(root1Child4Layout)), root1Layout);
+    CORRADE_COMPARE(layouter.previous(layoutHandleData(root1Child4Layout)), LayoutHandle::Null);
+    CORRADE_COMPARE(layouter.next(layoutHandleData(root1Child4Layout)), root1Child1Layout);
+    CORRADE_COMPARE(layouter.previous(layoutHandleData(root1Child1Layout)), root1Child4Layout);
+    CORRADE_COMPARE(layouter.next(layoutHandleData(root1Child1Layout)), root1Child3Layout);
+    CORRADE_COMPARE(layouter.previous(layoutHandleData(root1Child3Layout)), root1Child1Layout);
+    CORRADE_COMPARE(layouter.next(layoutHandleData(root1Child3Layout)), root1Child2Layout);
+    CORRADE_COMPARE(layouter.previous(layoutHandleData(root1Child2Layout)), root1Child3Layout);
+    CORRADE_COMPARE(layouter.next(layoutHandleData(root1Child2Layout)), LayoutHandle::Null);
 
-    /* Snapping a single layout outside of the node, thus a sibling. Omitting
-       the offset. */
-    typename SnapLayoutTraits<T>::AnchorType anchor7 = Ui::snap(ui, layouter, Snap::Right|Snap::InsideY, child, {17.0f, 18.0f}, NodeFlag::Hidden);
-    CORRADE_COMPARE(&anchor7.ui(), &ui);
-    CORRADE_COMPARE(anchor7, nodeHandle(8, 1));
-    CORRADE_COMPARE(ui.nodeParent(anchor7), node);
-    CORRADE_COMPARE(ui.nodeOffset(anchor7), Vector2{});
-    CORRADE_COMPARE(ui.nodeSize(anchor7), (Vector2{17.0f, 18.0f}));
-    CORRADE_COMPARE(ui.nodeFlags(anchor7), NodeFlag::Hidden);
-    CORRADE_COMPARE(anchor7, layoutHandle(layouter.handle(), 6, 1));
-    CORRADE_COMPARE(layouter.snap(anchor7), Snap::Right|Snap::InsideY);
-    CORRADE_COMPARE(layouter.target(anchor7), child);
+    /* Passed to cleanNodes(). As no nodes were removed until now, the
+       generations are all initially at 1. */
+    UnsignedShort nodeHandleGenerations[]{
+        1, 1, 1,
+        1, 1, 1,
+        1,
+    };
 
-    /* Snapping a single layout outside of a root node, thus also a root node.
-       Omitting the flags. */
-    typename SnapLayoutTraits<T>::AnchorType anchor8 = Ui::snap(ui, layouter, Snap::Top|Snap::InsideX, node, {19.0f, 20.0f}, {21.0f, 22.0f});
-    CORRADE_COMPARE(&anchor8.ui(), &ui);
-    CORRADE_COMPARE(anchor8, nodeHandle(9, 1));
-    CORRADE_COMPARE(ui.nodeParent(anchor8), NodeHandle::Null);
-    CORRADE_COMPARE(ui.nodeOffset(anchor8), (Vector2{19.0f, 20.0f}));
-    CORRADE_COMPARE(ui.nodeSize(anchor8), (Vector2{21.0f, 22.0f}));
-    CORRADE_COMPARE(ui.nodeFlags(anchor8), NodeFlags{});
-    CORRADE_COMPARE(anchor8, layoutHandle(layouter.handle(), 7, 1));
-    CORRADE_COMPARE(layouter.snap(anchor8), Snap::Top|Snap::InsideX);
-    CORRADE_COMPARE(layouter.target(anchor8), node);
+    /* Removing a layout from the middle of the sibling list */
+    if(data.clean) {
+        nodeHandleGenerations[nodeHandleId(root1Child1)] += 1;
+        layouter.cleanNodes(nodeHandleGenerations);
+    } else layouter.remove(root1Child1Layout);
+    CORRADE_VERIFY(!layouter.isHandleValid(root1Child1Layout));
+    CORRADE_COMPARE(layouter.firstChild(root1Layout), root1Child4Layout);
+    CORRADE_COMPARE(layouter.firstExplicitSnap(root1Layout), LayoutHandle::Null);
+    CORRADE_COMPARE(layouter.previous(root1Child4Layout), LayoutHandle::Null);
+    CORRADE_COMPARE(layouter.next(root1Child4Layout), root1Child3Layout);
+    CORRADE_COMPARE(layouter.previous(root1Child3Layout), root1Child4Layout);
+    CORRADE_COMPARE(layouter.next(root1Child3Layout), root1Child2Layout);
+    CORRADE_COMPARE(layouter.previous(root1Child2Layout), root1Child3Layout);
+    CORRADE_COMPARE(layouter.next(root1Child2Layout), LayoutHandle::Null);
 
-    /* Snapping a single layout to the UI itself, thus being implicitly
-       inside. Variant with the null parent explicit and implicit. */
-    typename SnapLayoutTraits<T>::AnchorType anchor9a = Ui::snap(ui, layouter, Snap::Left|Snap::Bottom, NodeHandle::Null, {23.0f, 24.0f}, {25.0f, 26.0f}, NodeFlag::Clip);
-    typename SnapLayoutTraits<T>::AnchorType anchor9b = Ui::snap(ui, layouter, Snap::Left|Snap::Bottom, {23.0f, 24.0f}, {25.0f, 26.0f}, NodeFlag::Clip);
-    CORRADE_COMPARE(&anchor9a.ui(), &ui);
-    CORRADE_COMPARE(&anchor9b.ui(), &ui);
-    CORRADE_COMPARE(anchor9a, nodeHandle(10, 1));
-    CORRADE_COMPARE(anchor9b, nodeHandle(11, 1));
-    CORRADE_COMPARE(ui.nodeParent(anchor9a), NodeHandle::Null);
-    CORRADE_COMPARE(ui.nodeParent(anchor9b), NodeHandle::Null);
-    CORRADE_COMPARE(ui.nodeOffset(anchor9a), (Vector2{23.0f, 24.0f}));
-    CORRADE_COMPARE(ui.nodeOffset(anchor9b), (Vector2{23.0f, 24.0f}));
-    CORRADE_COMPARE(ui.nodeSize(anchor9a), (Vector2{25.0f, 26.0f}));
-    CORRADE_COMPARE(ui.nodeSize(anchor9b), (Vector2{25.0f, 26.0f}));
-    CORRADE_COMPARE(ui.nodeFlags(anchor9a), NodeFlag::Clip);
-    CORRADE_COMPARE(ui.nodeFlags(anchor9b), NodeFlag::Clip);
-    CORRADE_COMPARE(anchor9a, layoutHandle(layouter.handle(), 8, 1));
-    CORRADE_COMPARE(anchor9b, layoutHandle(layouter.handle(), 9, 1));
-    CORRADE_COMPARE(layouter.snap(anchor9a), Snap::Left|Snap::Bottom);
-    CORRADE_COMPARE(layouter.snap(anchor9b), Snap::Left|Snap::Bottom);
-    CORRADE_COMPARE(layouter.target(anchor9a), NodeHandle::Null);
-    CORRADE_COMPARE(layouter.target(anchor9b), NodeHandle::Null);
+    /* Removing a layout that has no parent nor any children or explicitly
+       snapped nodes doesn't cause any list to be updated */
+    if(data.clean) {
+        nodeHandleGenerations[nodeHandleId(root2)] += 1;
+        layouter.cleanNodes(nodeHandleGenerations);
+    } else layouter.remove(root2Layout);
+    CORRADE_VERIFY(!layouter.isHandleValid(root2Layout));
 
-    /* Snapping a single layout to the UI itself with offset omitted, again a
-       variant with the null parent explicit and implicit */
-    typename SnapLayoutTraits<T>::AnchorType anchor10a = Ui::snap(ui, layouter, Snap::Bottom|Snap::NoPad, NodeHandle::Null, {27.0f, 28.0f}, NodeFlag::Focusable);
-    typename SnapLayoutTraits<T>::AnchorType anchor10b = Ui::snap(ui, layouter, Snap::Bottom|Snap::NoPad, {27.0f, 28.0f}, NodeFlag::Focusable);
-    CORRADE_COMPARE(&anchor10a.ui(), &ui);
-    CORRADE_COMPARE(&anchor10b.ui(), &ui);
-    CORRADE_COMPARE(anchor10a, nodeHandle(12, 1));
-    CORRADE_COMPARE(anchor10b, nodeHandle(13, 1));
-    CORRADE_COMPARE(ui.nodeParent(anchor10a), NodeHandle::Null);
-    CORRADE_COMPARE(ui.nodeParent(anchor10b), NodeHandle::Null);
-    CORRADE_COMPARE(ui.nodeOffset(anchor10a), Vector2{});
-    CORRADE_COMPARE(ui.nodeOffset(anchor10b), Vector2{});
-    CORRADE_COMPARE(ui.nodeSize(anchor10a), (Vector2{27.0f, 28.0f}));
-    CORRADE_COMPARE(ui.nodeSize(anchor10b), (Vector2{27.0f, 28.0f}));
-    CORRADE_COMPARE(ui.nodeFlags(anchor10a), NodeFlag::Focusable);
-    CORRADE_COMPARE(ui.nodeFlags(anchor10b), NodeFlag::Focusable);
-    CORRADE_COMPARE(anchor10a, layoutHandle(layouter.handle(), 10, 1));
-    CORRADE_COMPARE(anchor10b, layoutHandle(layouter.handle(), 11, 1));
-    CORRADE_COMPARE(layouter.snap(anchor10a), Snap::Bottom|Snap::NoPad);
-    CORRADE_COMPARE(layouter.snap(anchor10b), Snap::Bottom|Snap::NoPad);
-    CORRADE_COMPARE(layouter.target(anchor10a), NodeHandle::Null);
-    CORRADE_COMPARE(layouter.target(anchor10b), NodeHandle::Null);
+    /* Removing a layout with an explicit snap doesn't affect the sibling list,
+       even though the node it's assigned to is a sibling. It's removed from
+       the snap list of the target though. */
+    if(data.clean) {
+        nodeHandleGenerations[nodeHandleId(root1ExplicitSnap)] += 1;
+        layouter.cleanNodes(nodeHandleGenerations);
+    } else layouter.remove(root1ExplicitSnapLayout);
+    CORRADE_VERIFY(!layouter.isHandleValid(root1ExplicitSnapLayout));
+    CORRADE_COMPARE(layouter.firstChild(root1Layout), root1Child4Layout);
+    CORRADE_COMPARE(layouter.firstExplicitSnap(root1Layout), LayoutHandle::Null);
+    CORRADE_COMPARE(layouter.firstExplicitSnap(root1Child2Layout), LayoutHandle::Null);
+    CORRADE_COMPARE(layouter.previous(root1Child4Layout), LayoutHandle::Null);
+    CORRADE_COMPARE(layouter.next(root1Child4Layout), root1Child3Layout);
+    CORRADE_COMPARE(layouter.previous(root1Child3Layout), root1Child4Layout);
+    CORRADE_COMPARE(layouter.next(root1Child3Layout), root1Child2Layout);
+    CORRADE_COMPARE(layouter.previous(root1Child2Layout), root1Child3Layout);
+    CORRADE_COMPARE(layouter.next(root1Child2Layout), LayoutHandle::Null);
 
-    /* Removing a layout just delegates to the base implementation, nothing
-       else needs to be cleaned up */
-    layouter.remove(anchor6);
-    layouter.remove(layoutHandleData(anchor9b));
-    CORRADE_VERIFY(!layouter.isHandleValid(anchor6));
-    CORRADE_VERIFY(!layouter.isHandleValid(anchor9b));
+    /* Removing a layout from the back of the sibling list, LayouterDataHandle
+       overload */
+    if(data.clean) {
+        nodeHandleGenerations[nodeHandleId(root1Child2)] += 1;
+        layouter.cleanNodes(nodeHandleGenerations);
+    } else layouter.remove(layoutHandleData(root1Child2Layout));
+    CORRADE_VERIFY(!layouter.isHandleValid(root1Child2Layout));
+    CORRADE_COMPARE(layouter.firstChild(layoutHandleData(root1Layout)), root1Child4Layout);
+    CORRADE_COMPARE(layouter.firstExplicitSnap(layoutHandleData(root1Layout)), LayoutHandle::Null);
+    CORRADE_COMPARE(layouter.previous(layoutHandleData(root1Child4Layout)), LayoutHandle::Null);
+    CORRADE_COMPARE(layouter.next(layoutHandleData(root1Child4Layout)), root1Child3Layout);
+    CORRADE_COMPARE(layouter.previous(layoutHandleData(root1Child3Layout)), root1Child4Layout);
+    CORRADE_COMPARE(layouter.next(layoutHandleData(root1Child3Layout)), LayoutHandle::Null);
+
+    CORRADE_VERIFY(layouter.parent(root1Child4Layout) == root1Layout);
+    CORRADE_VERIFY(!layouter.hasExplicitSnap(root1Child4Layout));
+    CORRADE_COMPARE(layouter.firstChild(root1Layout), root1Child4Layout);
+
+    /* Removing a layout from the front of the sibling list results in just one
+       item left */
+    if(data.clean) {
+        nodeHandleGenerations[nodeHandleId(root1Child4)] += 1;
+        layouter.cleanNodes(nodeHandleGenerations);
+    } else layouter.remove(root1Child4Layout);
+    CORRADE_VERIFY(!layouter.isHandleValid(root1Child4Layout));
+    CORRADE_COMPARE(layouter.firstChild(root1Layout), root1Child3Layout);
+    CORRADE_COMPARE(layouter.firstExplicitSnap(root1Layout), LayoutHandle::Null);
+    CORRADE_COMPARE(layouter.previous(root1Child3Layout), LayoutHandle::Null);
+    CORRADE_COMPARE(layouter.next(root1Child3Layout), LayoutHandle::Null);
+
+    /* Removing the remaining layout */
+    if(data.clean) {
+        nodeHandleGenerations[nodeHandleId(root1Child3)] += 1;
+        layouter.cleanNodes(nodeHandleGenerations);
+    } else layouter.remove(root1Child3Layout);
+    CORRADE_VERIFY(!layouter.isHandleValid(root1Child3Layout));
+    CORRADE_COMPARE(layouter.firstChild(root1Layout), LayoutHandle::Null);
+    CORRADE_COMPARE(layouter.firstExplicitSnap(root1Layout), LayoutHandle::Null);
 }
 
-void SnapLayouterTest::addDefaultLayouter() {
-    /* Subset of addRemove() testing just the snap() overloads that take the
-       implicit layouter instance */
+void SnapLayouterTest::addRemoveExplicitSnap() {
+    auto&& data = AddRemoveData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
 
-    struct Interface: UserInterface {
-        explicit Interface(NoCreateT): UserInterface{NoCreate} {}
-    } ui{NoCreate};
-    ui.setSnapLayouterInstance(Containers::pointer<SnapLayouter>(ui.createLayouter()));
+    /* Like addRemove(), but instead of most layouts being implicit children,
+       most are with explicit swap, with just one layout being implicit, to
+       verify the linked list is appropriately updated in both cases. */
 
-    NodeHandle node = ui.createNode({}, {});
-    NodeHandle child = ui.createNode(node, {}, {});
+    AbstractUserInterface ui{{100, 100}};
+    SnapLayouter& layouter = ui.setLayouterInstance(Containers::pointer<SnapLayouter>(ui.createLayouter()));
 
-    /* Full signature */
-    Anchor anchor1 = Ui::snap(ui, Snap::Bottom|Snap::InsideY, child, {13.0f, 14.0f}, {15.0f, 16.0f}, NodeFlag::NoEvents|NodeFlag::Clip);
-    CORRADE_COMPARE(&anchor1.ui(), &ui);
-    CORRADE_COMPARE(anchor1, nodeHandle(2, 1));
-    CORRADE_COMPARE(ui.nodeParent(anchor1), child);
-    CORRADE_COMPARE(ui.nodeOffset(anchor1), (Vector2{13.0f, 14.0f}));
-    CORRADE_COMPARE(ui.nodeSize(anchor1), (Vector2{15.0f, 16.0f}));
-    CORRADE_COMPARE(ui.nodeFlags(anchor1), NodeFlag::NoEvents|NodeFlag::Clip);
-    CORRADE_COMPARE(anchor1, layoutHandle(ui.snapLayouter().handle(), 0, 1));
-    CORRADE_COMPARE(ui.snapLayouter().snap(anchor1), Snap::Bottom|Snap::InsideY);
-    CORRADE_COMPARE(ui.snapLayouter().target(anchor1), child);
+    NodeHandle root1 = ui.createNode({}, {});
+    NodeHandle root1Child1 = ui.createNode(root1, {}, {});
+    NodeHandle root1Child2 = ui.createNode(root1, {}, {});
+    NodeHandle root1ImplicitSnap = ui.createNode(root1, {}, {});
+    NodeHandle root1Child3 = ui.createNode(root1, {}, {});
 
-    /* With offset omitted */
-    Anchor anchor2 = Ui::snap(ui, Snap::Right|Snap::InsideY, child, {17.0f, 18.0f}, NodeFlag::Hidden);
-    CORRADE_COMPARE(&anchor2.ui(), &ui);
-    CORRADE_COMPARE(anchor2, nodeHandle(3, 1));
-    CORRADE_COMPARE(ui.nodeParent(anchor2), node);
-    CORRADE_COMPARE(ui.nodeOffset(anchor2), Vector2{});
-    CORRADE_COMPARE(ui.nodeSize(anchor2), (Vector2{17.0f, 18.0f}));
-    CORRADE_COMPARE(ui.nodeFlags(anchor2), NodeFlag::Hidden);
-    CORRADE_COMPARE(anchor2, layoutHandle(ui.snapLayouter().handle(), 1, 1));
-    CORRADE_COMPARE(ui.snapLayouter().snap(anchor2), Snap::Right|Snap::InsideY);
-    CORRADE_COMPARE(ui.snapLayouter().target(anchor2), child);
+    NodeHandle root2 = ui.createNode({}, {});
+    NodeHandle root3 = ui.createNode({}, {});
 
-    /* With implicit null parent */
-    Anchor anchor3 = Ui::snap(ui, Snap::Left|Snap::Bottom, {23.0f, 24.0f}, {25.0f, 26.0f}, NodeFlag::Clip);
-    CORRADE_COMPARE(&anchor3.ui(), &ui);
-    CORRADE_COMPARE(anchor3, nodeHandle(4, 1));
-    CORRADE_COMPARE(ui.nodeParent(anchor3), NodeHandle::Null);
-    CORRADE_COMPARE(ui.nodeOffset(anchor3), (Vector2{23.0f, 24.0f}));
-    CORRADE_COMPARE(ui.nodeSize(anchor3), (Vector2{25.0f, 26.0f}));
-    CORRADE_COMPARE(ui.nodeFlags(anchor3), NodeFlag::Clip);
-    CORRADE_COMPARE(anchor3, layoutHandle(ui.snapLayouter().handle(), 2, 1));
-    CORRADE_COMPARE(ui.snapLayouter().snap(anchor3), Snap::Left|Snap::Bottom);
-    CORRADE_COMPARE(ui.snapLayouter().target(anchor3), NodeHandle::Null);
+    /* Layout snapped to the whole UI, acting as a target to others */
+    LayoutHandle root1Layout = layouter.add(root1, Snap::Top|Snap::FillX, LayoutHandle::Null);
+    CORRADE_COMPARE(layouter.node(root1Layout), root1);
+    CORRADE_COMPARE(layouter.flags(root1Layout), SnapLayoutFlags{});
+    CORRADE_COMPARE(layouter.firstChild(root1Layout), LayoutHandle::Null);
+    CORRADE_COMPARE(layouter.firstExplicitSnap(root1Layout), LayoutHandle::Null);
+    CORRADE_VERIFY(layouter.hasExplicitSnap(root1Layout));
+    CORRADE_COMPARE(layouter.explicitSnapTarget(root1Layout), LayoutHandle::Null);
+    CORRADE_COMPARE(layouter.explicitSnap(root1Layout), Snap::Top|Snap::FillX);
+    CORRADE_COMPARE(layouter.previous(root1Layout), LayoutHandle::Null);
+    CORRADE_COMPARE(layouter.next(root1Layout), LayoutHandle::Null);
 
-    /* With implicit null parent and offset omitted */
-    Anchor anchor4 = Ui::snap(ui, Snap::Bottom|Snap::NoPad, {27.0f, 28.0f}, NodeFlag::Focusable);
-    CORRADE_COMPARE(&anchor4.ui(), &ui);
-    CORRADE_COMPARE(anchor4, nodeHandle(5, 1));
-    CORRADE_COMPARE(ui.nodeParent(anchor4), NodeHandle::Null);
-    CORRADE_COMPARE(ui.nodeOffset(anchor4), Vector2{});
-    CORRADE_COMPARE(ui.nodeSize(anchor4), (Vector2{27.0f, 28.0f}));
-    CORRADE_COMPARE(ui.nodeFlags(anchor4), NodeFlag::Focusable);
-    CORRADE_COMPARE(anchor4, layoutHandle(ui.snapLayouter().handle(), 3, 1));
-    CORRADE_COMPARE(ui.snapLayouter().snap(anchor4), Snap::Bottom|Snap::NoPad);
-    CORRADE_COMPARE(ui.snapLayouter().target(anchor4), NodeHandle::Null);
+    /* Layout again snapped to the whole UI, LayouterDataHandle overloads */
+    LayoutHandle root2Layout = layouter.add(root2, Snap::Right, LayouterDataHandle::Null);
+    CORRADE_COMPARE(layouter.node(root2Layout), root2);
+    CORRADE_COMPARE(layouter.flags(layoutHandleData(root2Layout)), SnapLayoutFlags{});
+    CORRADE_COMPARE(layouter.firstChild(layoutHandleData(root2Layout)), LayoutHandle::Null);
+    CORRADE_COMPARE(layouter.firstExplicitSnap(layoutHandleData(root2Layout)), LayoutHandle::Null);
+    CORRADE_VERIFY(layouter.hasExplicitSnap(layoutHandleData(root2Layout)));
+    CORRADE_COMPARE(layouter.explicitSnapTarget(layoutHandleData(root2Layout)), LayoutHandle::Null);
+    CORRADE_COMPARE(layouter.explicitSnap(layoutHandleData(root2Layout)), Snap::Right);
+    CORRADE_COMPARE(layouter.previous(layoutHandleData(root2Layout)), LayoutHandle::Null);
+    CORRADE_COMPARE(layouter.next(layoutHandleData(root2Layout)), LayoutHandle::Null);
+
+    /* Layout that's snapped to a parent, with flags */
+    LayoutHandle root1Child1Layout = layouter.add(root1Child1, Snap::BottomRight, root1Layout, SnapLayoutFlag::IgnoreOverflowY);
+    CORRADE_COMPARE(layouter.firstChild(root1Layout), LayoutHandle::Null);
+    CORRADE_COMPARE(layouter.firstExplicitSnap(root1Layout), root1Child1Layout);
+    CORRADE_COMPARE(layouter.node(root1Child1Layout), root1Child1);
+    CORRADE_COMPARE(layouter.flags(root1Child1Layout), SnapLayoutFlag::IgnoreOverflowY);
+    CORRADE_COMPARE(layouter.firstChild(root1Child1Layout), LayoutHandle::Null);
+    CORRADE_COMPARE(layouter.firstExplicitSnap(root1Child1Layout), LayoutHandle::Null);
+    CORRADE_VERIFY(layouter.hasExplicitSnap(root1Child1Layout));
+    CORRADE_COMPARE(layouter.explicitSnapTarget(root1Child1Layout), root1Layout);
+    CORRADE_COMPARE(layouter.explicitSnap(root1Child1Layout), Snap::BottomRight);
+    CORRADE_COMPARE(layouter.previous(root1Child1Layout), LayoutHandle::Null);
+    CORRADE_COMPARE(layouter.next(root1Child1Layout), LayoutHandle::Null);
+
+    /* Layout that's snapped to a parent, and explicitly snapped inside */
+    LayoutHandle root1Child2Layout = layouter.add(root1Child2, Snap::TopRight|Snap::Inside, root1Layout);
+    CORRADE_COMPARE(layouter.firstChild(root1Layout), LayoutHandle::Null);
+    CORRADE_COMPARE(layouter.firstExplicitSnap(root1Layout), root1Child1Layout);
+    CORRADE_COMPARE(layouter.node(root1Child2Layout), root1Child2);
+    CORRADE_COMPARE(layouter.flags(root1Child2Layout), SnapLayoutFlags{});
+    CORRADE_COMPARE(layouter.firstChild(root1Child2Layout), LayoutHandle::Null);
+    CORRADE_COMPARE(layouter.firstExplicitSnap(root1Child2Layout), LayoutHandle::Null);
+    CORRADE_VERIFY(layouter.hasExplicitSnap(root1Child2Layout));
+    CORRADE_COMPARE(layouter.explicitSnapTarget(root1Child2Layout), root1Layout);
+    CORRADE_COMPARE(layouter.explicitSnap(root1Child2Layout), Snap::TopRight|Snap::Inside);
+    CORRADE_COMPARE(layouter.previous(root1Child1Layout), LayoutHandle::Null);
+    CORRADE_COMPARE(layouter.next(root1Child1Layout), root1Child2Layout);
+    CORRADE_COMPARE(layouter.previous(root1Child2Layout), root1Child1Layout);
+    CORRADE_COMPARE(layouter.next(root1Child2Layout), LayoutHandle::Null);
+
+    /* Layout that's an implicitly snapped child doesn't get inserted into the
+       parent's list of explicitly snapped layouts */
+    LayoutHandle root1ImplicitSnapLayout = layouter.add(root1ImplicitSnap);
+    CORRADE_COMPARE(layouter.firstChild(root1Layout), root1ImplicitSnapLayout);
+    CORRADE_COMPARE(layouter.firstExplicitSnap(root1Layout), root1Child1Layout);
+    CORRADE_COMPARE(layouter.node(root1ImplicitSnapLayout), root1ImplicitSnap);
+    CORRADE_COMPARE(layouter.flags(root1ImplicitSnapLayout), SnapLayoutFlags{});
+    CORRADE_COMPARE(layouter.firstChild(root1ImplicitSnapLayout), LayoutHandle::Null);
+    CORRADE_COMPARE(layouter.firstExplicitSnap(root1ImplicitSnapLayout), LayoutHandle::Null);
+    CORRADE_VERIFY(!layouter.hasExplicitSnap(root1ImplicitSnapLayout));
+    CORRADE_COMPARE(layouter.parent(root1ImplicitSnapLayout), root1Layout);
+    CORRADE_COMPARE(layouter.previous(root1ImplicitSnapLayout), LayoutHandle::Null);
+    CORRADE_COMPARE(layouter.next(root1ImplicitSnapLayout), LayoutHandle::Null);
+
+    /* Layout that's snapped to a sibling doesn't get inserted into the
+       parent's list either. LayouterDataHandle overloads, with flags */
+    LayoutHandle root1Child3Layout = layouter.add(root1Child3, Snap::Left|Snap::NoPadX, layoutHandleData(root1Child1Layout), SnapLayoutFlag::IgnoreOverflowX);
+    CORRADE_COMPARE(layouter.firstChild(root1Layout), root1ImplicitSnapLayout);
+    CORRADE_COMPARE(layouter.firstExplicitSnap(root1Layout), root1Child1Layout);
+    CORRADE_COMPARE(layouter.node(root1Child3Layout), root1Child3);
+    CORRADE_COMPARE(layouter.flags(layoutHandleData(root1Child3Layout)), SnapLayoutFlag::IgnoreOverflowX);
+    CORRADE_COMPARE(layouter.firstChild(layoutHandleData(root1Child3Layout)), LayoutHandle::Null);
+    CORRADE_COMPARE(layouter.firstExplicitSnap(layoutHandleData(root1Child3Layout)), LayoutHandle::Null);
+    CORRADE_VERIFY(layouter.hasExplicitSnap(layoutHandleData(root1Child3Layout)));
+    CORRADE_COMPARE(layouter.explicitSnapTarget(layoutHandleData(root1Child3Layout)), root1Child1Layout);
+    CORRADE_COMPARE(layouter.explicitSnap(layoutHandleData(root1Child3Layout)), Snap::Left|Snap::NoPadX);
+    CORRADE_COMPARE(layouter.previous(layoutHandleData(root1Child1Layout)), LayoutHandle::Null);
+    CORRADE_COMPARE(layouter.next(layoutHandleData(root1Child1Layout)), root1Child2Layout);
+    CORRADE_COMPARE(layouter.previous(layoutHandleData(root1Child2Layout)), root1Child1Layout);
+    CORRADE_COMPARE(layouter.next(layoutHandleData(root1Child2Layout)), LayoutHandle::Null);
+    CORRADE_COMPARE(layouter.previous(layoutHandleData(root1Child3Layout)), LayoutHandle::Null);
+    CORRADE_COMPARE(layouter.next(layoutHandleData(root1Child3Layout)), LayoutHandle::Null);
+
+    /* Another layout, snapped as a sibling to the root layout, gets added to
+       the list along the layouts assigned to node children */
+    LayoutHandle root3Layout = layouter.add(root3, Snap::Top|Snap::NoPadY, root1Layout, SnapLayoutFlag::IgnoreOverflow);
+    CORRADE_COMPARE(layouter.firstChild(root1Layout), root1ImplicitSnapLayout);
+    CORRADE_COMPARE(layouter.firstExplicitSnap(root1Layout), root1Child1Layout);
+    CORRADE_COMPARE(layouter.node(root3Layout), root3);
+    CORRADE_COMPARE(layouter.flags(root3Layout), SnapLayoutFlag::IgnoreOverflow);
+    CORRADE_COMPARE(layouter.firstChild(root3Layout), LayoutHandle::Null);
+    CORRADE_COMPARE(layouter.firstExplicitSnap(root3Layout), LayoutHandle::Null);
+    CORRADE_VERIFY(layouter.hasExplicitSnap(root3Layout));
+    CORRADE_COMPARE(layouter.explicitSnapTarget(root3Layout), root1Layout);
+    CORRADE_COMPARE(layouter.explicitSnap(root3Layout), Snap::Top|Snap::NoPadY);
+    CORRADE_COMPARE(layouter.previous(root1Child1Layout), LayoutHandle::Null);
+    CORRADE_COMPARE(layouter.next(root1Child1Layout), root1Child2Layout);
+    CORRADE_COMPARE(layouter.previous(root1Child2Layout), root1Child1Layout);
+    CORRADE_COMPARE(layouter.next(root1Child2Layout), root3Layout);
+    CORRADE_COMPARE(layouter.previous(root3Layout), root1Child2Layout);
+    CORRADE_COMPARE(layouter.next(root3Layout), LayoutHandle::Null);
+
+    /* Passed to cleanNodes(). As no nodes were removed until now, the
+       generations are all initially at 1. */
+    UnsignedShort nodeHandleGenerations[]{
+        1, 1, 1,
+        1, 1, 1,
+        1,
+    };
+
+    /* Removing an explicitly snapped layout that has no parent nor any
+       children or explicitly snapped nodes doesn't cause any list to be
+       updated */
+    if(data.clean) {
+        nodeHandleGenerations[nodeHandleId(root1Child3)] += 1;
+        layouter.cleanNodes(nodeHandleGenerations);
+    } else layouter.remove(root1Child3Layout);
+    CORRADE_VERIFY(!layouter.isHandleValid(root1Child3Layout));
+
+    /* Remove a layout from the front of the list updates the handle in the
+       target to point to the next one */
+    if(data.clean) {
+        nodeHandleGenerations[nodeHandleId(root1Child1)] += 1;
+        layouter.cleanNodes(nodeHandleGenerations);
+    } else layouter.remove(root1Child1Layout);
+    CORRADE_VERIFY(!layouter.isHandleValid(root1Child1Layout));
+    CORRADE_COMPARE(layouter.firstChild(root1Layout), root1ImplicitSnapLayout);
+    CORRADE_COMPARE(layouter.firstExplicitSnap(root1Layout), root1Child2Layout);
+    CORRADE_COMPARE(layouter.previous(root1Child2Layout), LayoutHandle::Null);
+    CORRADE_COMPARE(layouter.next(root1Child2Layout), root3Layout);
+    CORRADE_COMPARE(layouter.previous(root3Layout), root1Child2Layout);
+    CORRADE_COMPARE(layouter.next(root3Layout), LayoutHandle::Null);
+
+    /* Removing a layout with an implicit snap doesn't affect the list, even
+       though the node it's assigned to is a sibling of the others. It's
+       removed from its parent tho. */
+    if(data.clean) {
+        nodeHandleGenerations[nodeHandleId(root1ImplicitSnap)] += 1;
+        layouter.cleanNodes(nodeHandleGenerations);
+    } else layouter.remove(root1ImplicitSnapLayout);
+    CORRADE_VERIFY(!layouter.isHandleValid(root1ImplicitSnapLayout));
+    CORRADE_COMPARE(layouter.firstChild(root1Layout), LayoutHandle::Null);
+    CORRADE_COMPARE(layouter.firstExplicitSnap(root1Layout), root1Child2Layout);
+
+    /* Removing a layout from the back of the list, LayouterDataHandle
+       overload */
+    if(data.clean) {
+        nodeHandleGenerations[nodeHandleId(root3)] += 1;
+        layouter.cleanNodes(nodeHandleGenerations);
+    } else layouter.remove(layoutHandleData(root3Layout));
+    CORRADE_VERIFY(!layouter.isHandleValid(root3Layout));
+    CORRADE_COMPARE(layouter.firstChild(layoutHandleData(root1Layout)), LayoutHandle::Null);
+    CORRADE_COMPARE(layouter.firstExplicitSnap(layoutHandleData(root1Layout)), root1Child2Layout);
+    CORRADE_COMPARE(layouter.previous(layoutHandleData(root1Child2Layout)), LayoutHandle::Null);
+    CORRADE_COMPARE(layouter.next(layoutHandleData(root1Child2Layout)), LayoutHandle::Null);
+
+    /* Removing the last layout updates the node in the target also */
+    if(data.clean) {
+        nodeHandleGenerations[nodeHandleId(root1Child2)] += 1;
+        layouter.cleanNodes(nodeHandleGenerations);
+    } else layouter.remove(layoutHandleData(root1Child2Layout));
+    CORRADE_VERIFY(!layouter.isHandleValid(root1Child2Layout));
+    CORRADE_COMPARE(layouter.firstChild(layoutHandleData(root1Layout)), LayoutHandle::Null);
+    CORRADE_COMPARE(layouter.firstExplicitSnap(layoutHandleData(root1Layout)), LayoutHandle::Null);
 }
 
 void SnapLayouterTest::addRemoveHandleRecycle() {
@@ -1128,39 +2263,529 @@ void SnapLayouterTest::addRemoveHandleRecycle() {
     SnapLayouter& layouter = ui.setLayouterInstance(Containers::pointer<SnapLayouter>(ui.createLayouter()));
 
     NodeHandle node = ui.createNode({}, {});
-    NodeHandle child = ui.createNode(node, {}, {});
-    /*LayoutHandle first =*/ Ui::snap(ui, layouter, Snap::Bottom|Snap::Inside, node, {0.0f, 1.0f});
-    LayoutHandle second = Ui::snap(ui, layouter, Snap::Right|Snap::NoPadX, child, {2.0f, 3.0f});
+    NodeHandle child0 = ui.createNode(node, {}, {});
+    NodeHandle child1 = ui.createNode(node, {}, {});
+    NodeHandle child2 = ui.createNode(node, {}, {});
+    NodeHandle child3 = ui.createNode(node, {}, {});
+    NodeHandle child4 = ui.createNode(node, {}, {});
 
-    /* Layout that reuses a previous slot should have the snap and target
-       cleared even if having them empty / null */
-    layouter.remove(second);
-    LayoutHandle second2 = Ui::snap(ui, layouter, {}, {2.0f, 3.0f});
-    CORRADE_COMPARE(layoutHandleId(second2), layoutHandleId(second));
-    CORRADE_COMPARE(layouter.target(second2), NodeHandle::Null);
-    CORRADE_COMPARE(layouter.snap(second2), Snaps{});
+    LayoutHandle first = layouter.add(node);
+    LayoutHandle second = layouter.add(child0);
+    LayoutHandle implicit1 = layouter.add(child1, SnapLayoutFlags{0x08});
+    LayoutHandle implicit2 = layouter.add(child2, SnapLayoutFlags{0x10});
+    LayoutHandle explicit1 = layouter.add(child3, Snap::Left, first, SnapLayoutFlags{0x20});
+    LayoutHandle explicit2 = layouter.add(child4, Snap::Right, first, SnapLayoutFlags{0x30});
+    layouter.setChildSnap(implicit1, Snap::Top|Snap::FillX);
+    layouter.setChildSnap(implicit2, Snap::Right|Snap::FillY);
+    layouter.setChildSnap(explicit1, Snap::Top|Snap::NoPadX);
+    layouter.setChildSnap(explicit2, Snap::BottomLeft|Snap::InsideX);
+    CORRADE_VERIFY(!layouter.hasExplicitSnap(implicit1));
+    CORRADE_VERIFY(!layouter.hasExplicitSnap(implicit2));
+    CORRADE_COMPARE(layouter.parent(implicit1), first);
+    CORRADE_COMPARE(layouter.parent(implicit2), first);
+    CORRADE_COMPARE(layouter.previous(implicit1), second);
+    CORRADE_COMPARE(layouter.next(implicit1), implicit2);
+    CORRADE_COMPARE(layouter.previous(implicit2), implicit1);
+    CORRADE_COMPARE(layouter.next(implicit2), LayoutHandle::Null);
+    CORRADE_VERIFY(layouter.hasExplicitSnap(explicit1));
+    CORRADE_VERIFY(layouter.hasExplicitSnap(explicit2));
+    CORRADE_COMPARE(layouter.previous(explicit1), LayoutHandle::Null);
+    CORRADE_COMPARE(layouter.next(explicit1), explicit2);
+    CORRADE_COMPARE(layouter.previous(explicit2), explicit1);
+    CORRADE_COMPARE(layouter.next(explicit2), LayoutHandle::Null);
+
+    /* Layouts that reuse a previous slot should have the properties cleared
+       even if having them empty / null. First replacing with the same kind
+       ... */
+    layouter.remove(implicit1);
+    LayoutHandle implicit1Replacement = layouter.add(child1);
+    CORRADE_COMPARE(layoutHandleId(implicit1Replacement), layoutHandleId(implicit1));
+    CORRADE_COMPARE(layouter.flags(implicit1Replacement), SnapLayoutFlags{});
+    CORRADE_COMPARE(layouter.childSnap(implicit1Replacement), Snap::Bottom);
+    CORRADE_VERIFY(!layouter.hasExplicitSnap(implicit1Replacement));
+    CORRADE_COMPARE(layouter.parent(implicit1Replacement), first);
+    CORRADE_COMPARE(layouter.previous(implicit1Replacement), implicit2);
+    CORRADE_COMPARE(layouter.next(implicit1Replacement), LayoutHandle::Null);
+
+    layouter.remove(explicit1);
+    LayoutHandle explicit1Replacement = layouter.add(child3, Snap::Right|Snap::NoPad, second);
+    CORRADE_COMPARE(layoutHandleId(explicit1Replacement), layoutHandleId(explicit1));
+    CORRADE_COMPARE(layouter.flags(explicit1Replacement), SnapLayoutFlags{});
+    CORRADE_COMPARE(layouter.childSnap(explicit1Replacement), Snap::Bottom);
+    CORRADE_VERIFY(layouter.hasExplicitSnap(explicit1Replacement));
+    CORRADE_COMPARE(layouter.explicitSnap(explicit1Replacement), Snap::Right|Snap::NoPad);
+    CORRADE_COMPARE(layouter.explicitSnapTarget(explicit1Replacement), second);
+
+    /* ... and then with the other kind */
+    layouter.remove(implicit2);
+    LayoutHandle implicit2ExplicitReplacement = layouter.add(child2, Snap::FillY|Snap::NoPadX, second);
+    CORRADE_COMPARE(layoutHandleId(implicit2ExplicitReplacement), layoutHandleId(implicit2));
+    CORRADE_COMPARE(layouter.flags(implicit2ExplicitReplacement), SnapLayoutFlags{});
+    CORRADE_COMPARE(layouter.childSnap(implicit2ExplicitReplacement), Snap::Bottom);
+    CORRADE_VERIFY(layouter.hasExplicitSnap(implicit2ExplicitReplacement));
+    CORRADE_COMPARE(layouter.explicitSnap(implicit2ExplicitReplacement), Snap::FillY|Snap::NoPadX);
+    CORRADE_COMPARE(layouter.explicitSnapTarget(implicit2ExplicitReplacement), second);
+
+    layouter.remove(explicit2);
+    LayoutHandle explicit2ImplicitReplacement = layouter.add(child4);
+    CORRADE_COMPARE(layoutHandleId(explicit2ImplicitReplacement), layoutHandleId(explicit2));
+    CORRADE_COMPARE(layouter.flags(explicit2ImplicitReplacement), SnapLayoutFlags{});
+    CORRADE_COMPARE(layouter.childSnap(explicit2ImplicitReplacement), Snap::Bottom);
+    CORRADE_VERIFY(!layouter.hasExplicitSnap(explicit2ImplicitReplacement));
+    CORRADE_COMPARE(layouter.parent(explicit2ImplicitReplacement), first);
+    CORRADE_COMPARE(layouter.previous(explicit2ImplicitReplacement), implicit1Replacement);
+    CORRADE_COMPARE(layouter.next(explicit2ImplicitReplacement), LayoutHandle::Null);
 }
 
-void SnapLayouterTest::layoutInvalid() {
+void SnapLayouterTest::addInvalid() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    AbstractUserInterface ui{{100, 100}};
+    SnapLayouter& layouter = ui.setLayouterInstance(Containers::pointer<SnapLayouter>(ui.createLayouter()));
+    SnapLayouter& differentLayouter = ui.setLayouterInstance(Containers::pointer<SnapLayouter>(ui.createLayouter()));
+
+    NodeHandle nodeWithNoParent = ui.createNode({}, {});
+    NodeHandle nodeWithNoParent2 = ui.createNode({}, {});
+    NodeHandle nodeWithNoLayout = ui.createNode({}, {});
+    NodeHandle nodeWithNoParentLayout = ui.createNode(nodeWithNoLayout, {}, {});
+    NodeHandle nodeWithNoParentLayout2 = ui.createNode(nodeWithNoLayout, {}, {});
+    NodeHandle nodeWithNoParentLayoutSibling = ui.createNode(nodeWithNoLayout, {}, {});
+    LayoutHandle nodeWithNoParentLayoutSiblingLayout = layouter.add(nodeWithNoParentLayoutSibling);
+
+    NodeHandle nodeWithLayout = ui.createNode({}, {});
+    LayoutHandle layout = layouter.add(nodeWithLayout);
+    LayoutHandle differentLayouterLayout = differentLayouter.add(nodeWithLayout);
+
+    NodeHandle node1 = ui.createNode(nodeWithLayout, {}, {});
+    NodeHandle node2 = ui.createNode(nodeWithLayout, {}, {});
+    NodeHandle node3 = ui.createNode(nodeWithLayout, {}, {});
+    NodeHandle node4 = ui.createNode(nodeWithLayout, {}, {});
+    NodeHandle node5 = ui.createNode(nodeWithLayout, {}, {});
+    NodeHandle node6 = ui.createNode(nodeWithLayout, {}, {});
+    NodeHandle notSiblingOrParentLayoutOfNode = ui.createNode(node1, {}, {});
+    LayoutHandle notSiblingOrParentLayoutOfNodeLayout = layouter.add(notSiblingOrParentLayoutOfNode);
+
+    Containers::String out;
+    Error redirectError{&out};
+    /* Invalid before or target handle */
+    layouter.add(ui.createNode({}, {}), differentLayouterLayout);
+    layouter.add(ui.createNode({}, {}), layouterDataHandle(0xabcde, 0x123));
+    layouter.add(ui.createNode({}, {}), Snap::Left, differentLayouterLayout);
+    layouter.add(ui.createNode({}, {}), Snap::Left, layouterDataHandle(0xabcde, 0x123));
+    /* Before handle should be null but isn't */
+    layouter.add(nodeWithNoParent, layout);
+    layouter.add(nodeWithNoParent2, layoutHandleData(layout));
+    layouter.add(nodeWithNoParentLayout, nodeWithNoParentLayoutSiblingLayout);
+    layouter.add(nodeWithNoParentLayout2, layoutHandleData(nodeWithNoParentLayoutSiblingLayout));
+    /* Layout not a sibling of node */
+    layouter.add(node1, layout);
+    layouter.add(node2, layoutHandleData(layout));
+    /* Layout not a sibling or parent of node */
+    layouter.add(node3, Snap::Top, notSiblingOrParentLayoutOfNodeLayout);
+    layouter.add(node4, Snap::Top, layoutHandleData(notSiblingOrParentLayoutOfNodeLayout));
+    /* Snapping a non-root node to the UI */
+    layouter.add(node5, Snap::Fill, LayoutHandle::Null);
+    layouter.add(node6, Snap::Fill, LayouterDataHandle::Null);
+    /* Invalid SnapLayoutFlags are tested along with setters in flagsInvalid() */
+    CORRADE_COMPARE_AS(out,
+        "Ui::SnapLayouter::add(): invalid before handle Ui::LayoutHandle({0x1, 0x1}, {0x0, 0x1})\n"
+        "Ui::SnapLayouter::add(): invalid before handle Ui::LayouterDataHandle(0xabcde, 0x123)\n"
+        "Ui::SnapLayouter::add(): invalid target handle Ui::LayoutHandle({0x1, 0x1}, {0x0, 0x1})\n"
+        "Ui::SnapLayouter::add(): invalid target handle Ui::LayouterDataHandle(0xabcde, 0x123)\n"
+
+        "Ui::SnapLayouter::add(): expected before to be null for Ui::NodeHandle(0x0, 0x1) without a parent layout but got Ui::LayouterDataHandle(0x1, 0x1)\n"
+        "Ui::SnapLayouter::add(): expected before to be null for Ui::NodeHandle(0x1, 0x1) without a parent layout but got Ui::LayouterDataHandle(0x1, 0x1)\n"
+        "Ui::SnapLayouter::add(): expected before to be null for Ui::NodeHandle(0x3, 0x1) without a parent layout but got Ui::LayouterDataHandle(0x0, 0x1)\n"
+        "Ui::SnapLayouter::add(): expected before to be null for Ui::NodeHandle(0x4, 0x1) without a parent layout but got Ui::LayouterDataHandle(0x0, 0x1)\n"
+
+        "Ui::SnapLayouter::add(): expected before to be a child of Ui::NodeHandle(0x6, 0x1) but Ui::LayouterDataHandle(0x1, 0x1) is a child of Ui::NodeHandle::Null\n"
+        "Ui::SnapLayouter::add(): expected before to be a child of Ui::NodeHandle(0x6, 0x1) but Ui::LayouterDataHandle(0x1, 0x1) is a child of Ui::NodeHandle::Null\n"
+
+        "Ui::SnapLayouter::add(): expected target to be assigned to either Ui::NodeHandle(0x6, 0x1) or a child of it but Ui::LayouterDataHandle(0x2, 0x1) is a child of Ui::NodeHandle(0x7, 0x1)\n"
+        "Ui::SnapLayouter::add(): expected target to be assigned to either Ui::NodeHandle(0x6, 0x1) or a child of it but Ui::LayouterDataHandle(0x2, 0x1) is a child of Ui::NodeHandle(0x7, 0x1)\n"
+
+        "Ui::SnapLayouter::add(): can't snap a non-root Ui::NodeHandle(0xb, 0x1) to the whole UI\n"
+        "Ui::SnapLayouter::add(): can't snap a non-root Ui::NodeHandle(0xc, 0x1) to the whole UI\n",
+        TestSuite::Compare::String);
+}
+
+void SnapLayouterTest::removeInvalid() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    AbstractUserInterface ui{{100, 100}};
+    SnapLayouter& layouter = ui.setLayouterInstance(Containers::pointer<SnapLayouter>(ui.createLayouter()));
+
+    NodeHandle withChild = ui.createNode({}, {});
+    NodeHandle child = ui.createNode(withChild, {}, {});
+    LayoutHandle withChildLayout = layouter.add(withChild);
+    layouter.add(child);
+
+    NodeHandle withDependent = ui.createNode({}, {});
+    NodeHandle dependent = ui.createNode({}, {});
+    LayoutHandle withDependentLayout = layouter.add(withDependent);
+    layouter.add(dependent, Snap::Bottom, withDependentLayout);
+
+    NodeHandle withBoth = ui.createNode({}, {});
+    NodeHandle child1 = ui.createNode(withBoth, {}, {});
+    NodeHandle child2 = ui.createNode(withBoth, {}, {});
+    NodeHandle child3 = ui.createNode(withBoth, {}, {});
+    NodeHandle dependent1 = ui.createNode({}, {});
+    NodeHandle dependent2 = ui.createNode({}, {});
+    LayoutHandle withBothLayoutLayout = layouter.add(withBoth);
+    layouter.add(child1);
+    layouter.add(child2);
+    layouter.add(child3, Snap::Left, withBothLayoutLayout);
+    layouter.add(dependent1, Snap::Top, withBothLayoutLayout);
+    layouter.add(dependent2, Snap::Top, withBothLayoutLayout);
+
+    Containers::String out;
+    Error redirectError{&out};
+    /* The check is duplicated in both overloads to print the original handle,
+       test both */
+    layouter.remove(withChildLayout);
+    layouter.remove(layoutHandleData(withChildLayout));
+    layouter.remove(withDependentLayout);
+    layouter.remove(layoutHandleData(withDependentLayout));
+    layouter.remove(withBothLayoutLayout);
+    layouter.remove(layoutHandleData(withBothLayoutLayout));
+    CORRADE_COMPARE_AS(out,
+        "Ui::SnapLayouter::remove(): cannot remove Ui::LayoutHandle({0x0, 0x1}, {0x0, 0x1}) with 1 children and 0 dependent layouts\n"
+        "Ui::SnapLayouter::remove(): cannot remove Ui::LayouterDataHandle(0x0, 0x1) with 1 children and 0 dependent layouts\n"
+        "Ui::SnapLayouter::remove(): cannot remove Ui::LayoutHandle({0x0, 0x1}, {0x2, 0x1}) with 0 children and 1 dependent layouts\n"
+        "Ui::SnapLayouter::remove(): cannot remove Ui::LayouterDataHandle(0x2, 0x1) with 0 children and 1 dependent layouts\n"
+        "Ui::SnapLayouter::remove(): cannot remove Ui::LayoutHandle({0x0, 0x1}, {0x4, 0x1}) with 2 children and 3 dependent layouts\n"
+        "Ui::SnapLayouter::remove(): cannot remove Ui::LayouterDataHandle(0x4, 0x1) with 2 children and 3 dependent layouts\n",
+        TestSuite::Compare::String);
+}
+
+void SnapLayouterTest::invalidHandle() {
     CORRADE_SKIP_IF_NO_ASSERT();
 
     SnapLayouter layouter{layouterHandle(0, 1)};
 
-    AbstractUserInterface ui{{100, 100}};
+    Containers::String out;
+    Error redirectError{&out};
+    layouter.remove(LayoutHandle::Null);
+    layouter.remove(LayouterDataHandle::Null);
+    layouter.flags(LayoutHandle::Null);
+    layouter.flags(LayouterDataHandle::Null);
+    layouter.setFlags(LayoutHandle::Null, {});
+    layouter.setFlags(LayouterDataHandle::Null, {});
+    layouter.addFlags(LayoutHandle::Null, {});
+    layouter.addFlags(LayouterDataHandle::Null, {});
+    layouter.clearFlags(LayoutHandle::Null, {});
+    layouter.clearFlags(LayouterDataHandle::Null, {});
+    layouter.childSnap(LayoutHandle::Null);
+    layouter.childSnap(LayouterDataHandle::Null);
+    layouter.setChildSnap(LayoutHandle::Null, {});
+    layouter.setChildSnap(LayouterDataHandle::Null, {});
+    layouter.firstChild(LayoutHandle::Null);
+    layouter.firstChild(LayouterDataHandle::Null);
+    layouter.firstExplicitSnap(LayoutHandle::Null);
+    layouter.firstExplicitSnap(LayouterDataHandle::Null);
+    layouter.hasExplicitSnap(LayoutHandle::Null);
+    layouter.hasExplicitSnap(LayouterDataHandle::Null);
+    layouter.parent(LayoutHandle::Null);
+    layouter.parent(LayouterDataHandle::Null);
+    layouter.previous(LayoutHandle::Null);
+    layouter.previous(LayouterDataHandle::Null);
+    layouter.next(LayoutHandle::Null);
+    layouter.next(LayouterDataHandle::Null);
+    layouter.explicitSnap(LayoutHandle::Null);
+    layouter.explicitSnap(LayouterDataHandle::Null);
+    layouter.explicitSnapTarget(LayoutHandle::Null);
+    layouter.explicitSnapTarget(LayouterDataHandle::Null);
+    CORRADE_COMPARE_AS(out,
+        "Ui::SnapLayouter::remove(): invalid handle Ui::LayoutHandle::Null\n"
+        "Ui::SnapLayouter::remove(): invalid handle Ui::LayouterDataHandle::Null\n"
+        "Ui::SnapLayouter::flags(): invalid handle Ui::LayoutHandle::Null\n"
+        "Ui::SnapLayouter::flags(): invalid handle Ui::LayouterDataHandle::Null\n"
+        "Ui::SnapLayouter::setFlags(): invalid handle Ui::LayoutHandle::Null\n"
+        "Ui::SnapLayouter::setFlags(): invalid handle Ui::LayouterDataHandle::Null\n"
+        "Ui::SnapLayouter::addFlags(): invalid handle Ui::LayoutHandle::Null\n"
+        "Ui::SnapLayouter::addFlags(): invalid handle Ui::LayouterDataHandle::Null\n"
+        "Ui::SnapLayouter::clearFlags(): invalid handle Ui::LayoutHandle::Null\n"
+        "Ui::SnapLayouter::clearFlags(): invalid handle Ui::LayouterDataHandle::Null\n"
+        "Ui::SnapLayouter::childSnap(): invalid handle Ui::LayoutHandle::Null\n"
+        "Ui::SnapLayouter::childSnap(): invalid handle Ui::LayouterDataHandle::Null\n"
+        "Ui::SnapLayouter::setChildSnap(): invalid handle Ui::LayoutHandle::Null\n"
+        "Ui::SnapLayouter::setChildSnap(): invalid handle Ui::LayouterDataHandle::Null\n"
+        "Ui::SnapLayouter::firstChild(): invalid handle Ui::LayoutHandle::Null\n"
+        "Ui::SnapLayouter::firstChild(): invalid handle Ui::LayouterDataHandle::Null\n"
+        "Ui::SnapLayouter::firstExplicitSnap(): invalid handle Ui::LayoutHandle::Null\n"
+        "Ui::SnapLayouter::firstExplicitSnap(): invalid handle Ui::LayouterDataHandle::Null\n"
+        "Ui::SnapLayouter::hasExplicitSnap(): invalid handle Ui::LayoutHandle::Null\n"
+        "Ui::SnapLayouter::hasExplicitSnap(): invalid handle Ui::LayouterDataHandle::Null\n"
+        "Ui::SnapLayouter::parent(): invalid handle Ui::LayoutHandle::Null\n"
+        "Ui::SnapLayouter::parent(): invalid handle Ui::LayouterDataHandle::Null\n"
+        "Ui::SnapLayouter::previous(): invalid handle Ui::LayoutHandle::Null\n"
+        "Ui::SnapLayouter::previous(): invalid handle Ui::LayouterDataHandle::Null\n"
+        "Ui::SnapLayouter::next(): invalid handle Ui::LayoutHandle::Null\n"
+        "Ui::SnapLayouter::next(): invalid handle Ui::LayouterDataHandle::Null\n"
+        "Ui::SnapLayouter::explicitSnap(): invalid handle Ui::LayoutHandle::Null\n"
+        "Ui::SnapLayouter::explicitSnap(): invalid handle Ui::LayouterDataHandle::Null\n"
+        "Ui::SnapLayouter::explicitSnapTarget(): invalid handle Ui::LayoutHandle::Null\n"
+        "Ui::SnapLayouter::explicitSnapTarget(): invalid handle Ui::LayouterDataHandle::Null\n",
+        TestSuite::Compare::String);
+}
 
-    NodeHandle node = ui.createNode({}, {});
+void SnapLayouterTest::invalidExplicitSnap() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    AbstractUserInterface ui{{100, 100}};
+    SnapLayouter& layouter = ui.setLayouterInstance(Containers::pointer<SnapLayouter>(ui.createLayouter()));
+
+    LayoutHandle implicitSnap = layouter.add(ui.createNode({}, {}));
+    LayoutHandle explicitSnap = layouter.add(ui.createNode({}, {}), {}, LayoutHandle::Null);
+    CORRADE_VERIFY(!layouter.hasExplicitSnap(implicitSnap));
+    CORRADE_VERIFY(layouter.hasExplicitSnap(explicitSnap));
 
     Containers::String out;
     Error redirectError{&out};
-    AbstractSnapLayout{ui, layouter, {}, NodeHandle::Null, {}};
-    AbstractSnapLayout{ui, layouter, {}, nodeHandle(0x12345, 0xabc), {}};
-    AbstractSnapLayout{ui, layouter, Snap::Right|Snap::Bottom|Snap::InsideY, node, {}};
-    Ui::snap(ui, layouter, {}, nodeHandle(0x12345, 0xabc), {});
+    layouter.parent(explicitSnap);
+    layouter.parent(layoutHandleData(explicitSnap));
+    layouter.explicitSnap(implicitSnap);
+    layouter.explicitSnap(layoutHandleData(implicitSnap));
+    layouter.explicitSnapTarget(implicitSnap);
+    layouter.explicitSnapTarget(layoutHandleData(implicitSnap));
     CORRADE_COMPARE_AS(out,
-        "Ui::AbstractSnapLayout: invalid target handle Ui::NodeHandle::Null\n"
-        "Ui::AbstractSnapLayout: invalid target handle Ui::NodeHandle(0x12345, 0xabc)\n"
-        "Ui::AbstractSnapLayout: target cannot be a root node for Ui::Snap::BottomRight|Ui::Snap::InsideY\n"
-        "Ui::snap(): invalid target handle Ui::NodeHandle(0x12345, 0xabc)\n",
+        "Ui::SnapLayouter::parent(): Ui::LayoutHandle({0x0, 0x1}, {0x1, 0x1}) has an explicit snap\n"
+        "Ui::SnapLayouter::parent(): Ui::LayouterDataHandle(0x1, 0x1) has an explicit snap\n"
+        "Ui::SnapLayouter::explicitSnap(): Ui::LayoutHandle({0x0, 0x1}, {0x0, 0x1}) doesn't have an explicit snap\n"
+        "Ui::SnapLayouter::explicitSnap(): Ui::LayouterDataHandle(0x0, 0x1) doesn't have an explicit snap\n"
+        "Ui::SnapLayouter::explicitSnapTarget(): Ui::LayoutHandle({0x0, 0x1}, {0x0, 0x1}) doesn't have an explicit snap\n"
+        "Ui::SnapLayouter::explicitSnapTarget(): Ui::LayouterDataHandle(0x0, 0x1) doesn't have an explicit snap\n",
+        TestSuite::Compare::String);
+}
+
+void SnapLayouterTest::flags() {
+    AbstractUserInterface ui{{100, 100}};
+    SnapLayouter& layouter = ui.setLayouterInstance(Containers::pointer<SnapLayouter>(ui.createLayouter()));
+
+    NodeHandle node0 = ui.createNode({}, {});
+    NodeHandle node1 = ui.createNode({}, {});
+    NodeHandle node2 = ui.createNode({}, {});
+
+    /* Add more than one layout to verify the correct one gets updated and not
+       always the first. Also verify that it behaves correctly for both
+       implicit and explicit snaps and doesn't affect the explicitness. */
+    /*LayoutHandle layout0 =*/ layouter.add(node0);
+    LayoutHandle layout1 = layouter.add(node1, SnapLayoutFlag::IgnoreOverflowX);
+    LayoutHandle layout2 = layouter.add(node2, Snap::Left, LayoutHandle::Null, SnapLayoutFlag::IgnoreOverflowY);
+    CORRADE_VERIFY(!layouter.hasExplicitSnap(layout1));
+    CORRADE_VERIFY(layouter.hasExplicitSnap(layout2));
+    CORRADE_COMPARE(layouter.flags(layout1), SnapLayoutFlag::IgnoreOverflowX);
+    CORRADE_COMPARE(layouter.flags(layout2), SnapLayoutFlag::IgnoreOverflowY);
+    CORRADE_COMPARE(layouter.state(), LayouterState::NeedsAssignmentUpdate);
+
+    /* Reset state flags */
+    ui.update();
+    CORRADE_COMPARE(layouter.state(), LayouterStates{});
+
+    layouter.setFlags(layout1, SnapLayoutFlags{0x38});
+    layouter.setFlags(layout2, SnapLayoutFlags{0x24});
+    CORRADE_VERIFY(!layouter.hasExplicitSnap(layout1));
+    CORRADE_VERIFY(layouter.hasExplicitSnap(layout2));
+    CORRADE_COMPARE(layouter.flags(layout1), SnapLayoutFlags{0x38});
+    CORRADE_COMPARE(layouter.flags(layout2), SnapLayoutFlags{0x24});
+    CORRADE_COMPARE(layouter.state(), LayouterState::NeedsUpdate);
+
+    /* Reset state flags */
+    ui.update();
+    CORRADE_COMPARE(layouter.state(), LayouterStates{});
+
+    layouter.addFlags(layout1, SnapLayoutFlag::IgnoreOverflowY);
+    layouter.addFlags(layout2, SnapLayoutFlag::IgnoreOverflow);
+    CORRADE_VERIFY(!layouter.hasExplicitSnap(layout1));
+    CORRADE_VERIFY(layouter.hasExplicitSnap(layout2));
+    CORRADE_COMPARE(layouter.flags(layout1), SnapLayoutFlag::IgnoreOverflowY|SnapLayoutFlags{0x38});
+    CORRADE_COMPARE(layouter.flags(layout2), SnapLayoutFlag::IgnoreOverflow|SnapLayoutFlags{0x24});
+    CORRADE_COMPARE(layouter.state(), LayouterState::NeedsUpdate);
+
+    /* Reset state flags */
+    ui.update();
+    CORRADE_COMPARE(layouter.state(), LayouterStates{});
+
+    layouter.clearFlags(layout1, SnapLayoutFlags{0x34});
+    layouter.clearFlags(layout2, SnapLayoutFlags{0x28});
+    CORRADE_VERIFY(!layouter.hasExplicitSnap(layout1));
+    CORRADE_VERIFY(layouter.hasExplicitSnap(layout2));
+    CORRADE_COMPARE(layouter.flags(layout1), SnapLayoutFlag::IgnoreOverflowY|SnapLayoutFlags{0x08});
+    CORRADE_COMPARE(layouter.flags(layout2), SnapLayoutFlag::IgnoreOverflow|SnapLayoutFlags{0x04});
+    CORRADE_COMPARE(layouter.state(), LayouterState::NeedsUpdate);
+
+    /* Reset state flags */
+    ui.update();
+    CORRADE_COMPARE(layouter.state(), LayouterStates{});
+
+    /* Repeat of the above, just with LayouterDataHandle overloads */
+    layouter.setFlags(layoutHandleData(layout1), SnapLayoutFlags{0x38});
+    layouter.setFlags(layoutHandleData(layout2), SnapLayoutFlags{0x24});
+    CORRADE_VERIFY(!layouter.hasExplicitSnap(layout1));
+    CORRADE_VERIFY(layouter.hasExplicitSnap(layout2));
+    CORRADE_COMPARE(layouter.flags(layoutHandleData(layout1)), SnapLayoutFlags{0x38});
+    CORRADE_COMPARE(layouter.flags(layoutHandleData(layout2)), SnapLayoutFlags{0x24});
+    CORRADE_COMPARE(layouter.state(), LayouterState::NeedsUpdate);
+
+    /* Reset state flags */
+    ui.update();
+    CORRADE_COMPARE(layouter.state(), LayouterStates{});
+
+    layouter.addFlags(layoutHandleData(layout1), SnapLayoutFlag::IgnoreOverflowY);
+    layouter.addFlags(layoutHandleData(layout2), SnapLayoutFlag::IgnoreOverflow);
+    CORRADE_VERIFY(!layouter.hasExplicitSnap(layout1));
+    CORRADE_VERIFY(layouter.hasExplicitSnap(layout2));
+    CORRADE_COMPARE(layouter.flags(layoutHandleData(layout1)), SnapLayoutFlag::IgnoreOverflowY|SnapLayoutFlags{0x38});
+    CORRADE_COMPARE(layouter.flags(layoutHandleData(layout2)), SnapLayoutFlag::IgnoreOverflow|SnapLayoutFlags{0x24});
+    CORRADE_COMPARE(layouter.state(), LayouterState::NeedsUpdate);
+
+    /* Reset state flags */
+    ui.update();
+    CORRADE_COMPARE(layouter.state(), LayouterStates{});
+
+    layouter.clearFlags(layoutHandleData(layout1), SnapLayoutFlags{0x34});
+    layouter.clearFlags(layoutHandleData(layout2), SnapLayoutFlags{0x28});
+    CORRADE_VERIFY(!layouter.hasExplicitSnap(layout1));
+    CORRADE_VERIFY(layouter.hasExplicitSnap(layout2));
+    CORRADE_COMPARE(layouter.flags(layoutHandleData(layout1)), SnapLayoutFlag::IgnoreOverflowY|SnapLayoutFlags{0x08});
+    CORRADE_COMPARE(layouter.flags(layoutHandleData(layout2)), SnapLayoutFlag::IgnoreOverflow|SnapLayoutFlags{0x04});
+    CORRADE_COMPARE(layouter.state(), LayouterState::NeedsUpdate);
+}
+
+void SnapLayouterTest::flagsInvalid() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    AbstractUserInterface ui{{100, 100}};
+    SnapLayouter& layouter = ui.setLayouterInstance(Containers::pointer<SnapLayouter>(ui.createLayouter()));
+
+    LayoutHandle layout = layouter.add(ui.createNode({}, {}));
+
+    Containers::String out;
+    Error redirectError{&out};
+    layouter.add(ui.createNode({}, {}), SnapLayoutFlags{0x40}|SnapLayoutFlag::IgnoreOverflow);
+    layouter.add(ui.createNode({}, {}), SnapLayoutFlags{0x80}|SnapLayoutFlag::IgnoreOverflowX);
+    layouter.add(ui.createNode({}, {}), Snap{}, layout, SnapLayoutFlags{0x40}|SnapLayoutFlag::IgnoreOverflowY);
+    layouter.add(ui.createNode({}, {}), Snaps{}, layout, SnapLayoutFlags{0x80}|SnapLayoutFlag::IgnoreOverflow);
+    layouter.setFlags(layout, SnapLayoutFlags{0x80}|SnapLayoutFlag::IgnoreOverflowX);
+    layouter.setFlags(layoutHandleData(layout), SnapLayoutFlags{0x80}|SnapLayoutFlag::IgnoreOverflowX);
+    layouter.setFlags(layout, SnapLayoutFlags{0x40}|SnapLayoutFlag::IgnoreOverflowY);
+    layouter.setFlags(layoutHandleData(layout), SnapLayoutFlags{0x40}|SnapLayoutFlag::IgnoreOverflowY);
+    layouter.addFlags(layout, SnapLayoutFlags{0x40}|SnapLayoutFlag::IgnoreOverflow);
+    layouter.addFlags(layoutHandleData(layout), SnapLayoutFlags{0x40}|SnapLayoutFlag::IgnoreOverflow);
+    layouter.addFlags(layout, SnapLayoutFlags{0x80}|SnapLayoutFlag::IgnoreOverflowY);
+    layouter.addFlags(layoutHandleData(layout), SnapLayoutFlags{0x80}|SnapLayoutFlag::IgnoreOverflowY);
+    layouter.clearFlags(layout, SnapLayoutFlags{0x80}|SnapLayoutFlag::IgnoreOverflow);
+    layouter.clearFlags(layoutHandleData(layout), SnapLayoutFlags{0x80}|SnapLayoutFlag::IgnoreOverflow);
+    layouter.clearFlags(layout, SnapLayoutFlags{0x40}|SnapLayoutFlag::IgnoreOverflowX);
+    layouter.clearFlags(layoutHandleData(layout), SnapLayoutFlags{0x40}|SnapLayoutFlag::IgnoreOverflowX);
+    CORRADE_COMPARE_AS(out,
+        "Ui::SnapLayouter::add(): invalid flags Ui::SnapLayoutFlag::IgnoreOverflow|Ui::SnapLayoutFlag(0x40)\n"
+        "Ui::SnapLayouter::add(): invalid flags Ui::SnapLayoutFlag::IgnoreOverflowX|Ui::SnapLayoutFlag(0x80)\n"
+        "Ui::SnapLayouter::add(): invalid flags Ui::SnapLayoutFlag::IgnoreOverflowY|Ui::SnapLayoutFlag(0x40)\n"
+        "Ui::SnapLayouter::add(): invalid flags Ui::SnapLayoutFlag::IgnoreOverflow|Ui::SnapLayoutFlag(0x80)\n"
+        "Ui::SnapLayouter::setFlags(): invalid flags Ui::SnapLayoutFlag::IgnoreOverflowX|Ui::SnapLayoutFlag(0x80)\n"
+        "Ui::SnapLayouter::setFlags(): invalid flags Ui::SnapLayoutFlag::IgnoreOverflowX|Ui::SnapLayoutFlag(0x80)\n"
+        "Ui::SnapLayouter::setFlags(): invalid flags Ui::SnapLayoutFlag::IgnoreOverflowY|Ui::SnapLayoutFlag(0x40)\n"
+        "Ui::SnapLayouter::setFlags(): invalid flags Ui::SnapLayoutFlag::IgnoreOverflowY|Ui::SnapLayoutFlag(0x40)\n"
+        "Ui::SnapLayouter::addFlags(): invalid flags Ui::SnapLayoutFlag::IgnoreOverflow|Ui::SnapLayoutFlag(0x40)\n"
+        "Ui::SnapLayouter::addFlags(): invalid flags Ui::SnapLayoutFlag::IgnoreOverflow|Ui::SnapLayoutFlag(0x40)\n"
+        "Ui::SnapLayouter::addFlags(): invalid flags Ui::SnapLayoutFlag::IgnoreOverflowY|Ui::SnapLayoutFlag(0x80)\n"
+        "Ui::SnapLayouter::addFlags(): invalid flags Ui::SnapLayoutFlag::IgnoreOverflowY|Ui::SnapLayoutFlag(0x80)\n"
+        "Ui::SnapLayouter::clearFlags(): invalid flags Ui::SnapLayoutFlag::IgnoreOverflow|Ui::SnapLayoutFlag(0x80)\n"
+        "Ui::SnapLayouter::clearFlags(): invalid flags Ui::SnapLayoutFlag::IgnoreOverflow|Ui::SnapLayoutFlag(0x80)\n"
+        "Ui::SnapLayouter::clearFlags(): invalid flags Ui::SnapLayoutFlag::IgnoreOverflowX|Ui::SnapLayoutFlag(0x40)\n"
+        "Ui::SnapLayouter::clearFlags(): invalid flags Ui::SnapLayoutFlag::IgnoreOverflowX|Ui::SnapLayoutFlag(0x40)\n",
+        TestSuite::Compare::String);
+}
+
+void SnapLayouterTest::childSnap() {
+    AbstractUserInterface ui{{100, 100}};
+    SnapLayouter& layouter = ui.setLayouterInstance(Containers::pointer<SnapLayouter>(ui.createLayouter()));
+
+    NodeHandle node1 = ui.createNode({}, {});
+    NodeHandle node2 = ui.createNode({}, {});
+
+    /* By default, the child snap is Bottom for both implicitly and explicitly
+       snapped layouts */
+    LayoutHandle layout1 = layouter.add(node1);
+    LayoutHandle layout2 = layouter.add(node2, Snap::Left, LayoutHandle::Null);
+    CORRADE_COMPARE(layouter.childSnap(layout1), Snap::Bottom);
+    CORRADE_COMPARE(layouter.childSnap(layout2), Snap::Bottom);
+    CORRADE_COMPARE(layouter.state(), LayouterState::NeedsAssignmentUpdate);
+
+    /* Reset state flags */
+    ui.update();
+    CORRADE_COMPARE(layouter.state(), LayouterStates{});
+
+    /* Changing the value sets a flag */
+    layouter.setChildSnap(layout1, Snap::Right|Snap::FillY);
+    CORRADE_COMPARE(layouter.childSnap(layout1), Snap::Right|Snap::FillY);
+    CORRADE_COMPARE(layouter.state(), LayouterState::NeedsUpdate);
+
+    /* Reset state flags */
+    ui.update();
+    CORRADE_COMPARE(layouter.state(), LayouterStates{});
+
+    /* LayouterDataHandle overloads */
+    layouter.setChildSnap(layoutHandleData(layout2), Snap::TopRight|Snap::InsideX);
+    CORRADE_COMPARE(layouter.childSnap(layoutHandleData(layout2)), Snap::TopRight|Snap::InsideX);
+    CORRADE_COMPARE(layouter.state(), LayouterState::NeedsUpdate);
+}
+
+void SnapLayouterTest::childSnapInvalid() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    AbstractUserInterface ui{{100, 100}};
+    SnapLayouter& layouter = ui.setLayouterInstance(Containers::pointer<SnapLayouter>(ui.createLayouter()));
+
+    LayoutHandle layout = layouter.add(ui.createNode({}, {}));
+
+    /* These are fine, as the Inside is implicit */
+    layouter.setChildSnap(layout, Snap::Left|Snap::InsideY);
+    layouter.setChildSnap(layout, Snap::Right|Snap::InsideY);
+    layouter.setChildSnap(layout, Snap::Top|Snap::InsideX);
+    layouter.setChildSnap(layout, Snap::Bottom|Snap::InsideX);
+
+    Containers::String out;
+    Error redirectError{&out};
+    /* Centering / filling in any direction would cause children to be stacked
+       on top of each other, overlapping */
+    layouter.setChildSnap(layout, {});
+    layouter.setChildSnap(layout, Snap::Fill);
+    layouter.setChildSnap(layout, Snap::FillX);
+    layouter.setChildSnap(layout, Snap::FillY);
+    /* NoPad or Inside doesn't turn the above into a valid case */
+    layouter.setChildSnap(layout, Snap::NoPad);
+    layouter.setChildSnap(layout, Snap::Fill|Snap::Inside);
+    /* Snapping to an edge but inside leads to an overlap as well */
+    layouter.setChildSnap(layout, Snap::Left|Snap::InsideX);
+    layouter.setChildSnap(layout, Snap::Right|Snap::InsideX);
+    layouter.setChildSnap(layout, Snap::Top|Snap::InsideY);
+    layouter.setChildSnap(layout, Snap::Bottom|Snap::InsideY);
+    /* Snapping to a corner wouldn't create a purely horizontal / vertical
+       sequence */
+    layouter.setChildSnap(layout, Snap::TopLeft);
+    layouter.setChildSnap(layout, Snap::TopRight);
+    layouter.setChildSnap(layout, Snap::BottomLeft);
+    layouter.setChildSnap(layout, Snap::BottomRight);
+    CORRADE_COMPARE_AS(out,
+        "Ui::SnapLayouter::setChildSnap(): Ui::Snaps{} doesn't produce a non-overlapping purely horizontal or vertical order\n"
+        "Ui::SnapLayouter::setChildSnap(): Ui::Snap::Fill doesn't produce a non-overlapping purely horizontal or vertical order\n"
+        "Ui::SnapLayouter::setChildSnap(): Ui::Snap::FillX doesn't produce a non-overlapping purely horizontal or vertical order\n"
+        "Ui::SnapLayouter::setChildSnap(): Ui::Snap::FillY doesn't produce a non-overlapping purely horizontal or vertical order\n"
+
+        "Ui::SnapLayouter::setChildSnap(): Ui::Snap::NoPad doesn't produce a non-overlapping purely horizontal or vertical order\n"
+        "Ui::SnapLayouter::setChildSnap(): Ui::Snap::Fill|Ui::Snap::Inside doesn't produce a non-overlapping purely horizontal or vertical order\n"
+
+        "Ui::SnapLayouter::setChildSnap(): Ui::Snap::Left|Ui::Snap::InsideX doesn't produce a non-overlapping purely horizontal or vertical order\n"
+        "Ui::SnapLayouter::setChildSnap(): Ui::Snap::Right|Ui::Snap::InsideX doesn't produce a non-overlapping purely horizontal or vertical order\n"
+        "Ui::SnapLayouter::setChildSnap(): Ui::Snap::Top|Ui::Snap::InsideY doesn't produce a non-overlapping purely horizontal or vertical order\n"
+        "Ui::SnapLayouter::setChildSnap(): Ui::Snap::Bottom|Ui::Snap::InsideY doesn't produce a non-overlapping purely horizontal or vertical order\n"
+
+        "Ui::SnapLayouter::setChildSnap(): Ui::Snap::TopLeft doesn't produce a non-overlapping purely horizontal or vertical order\n"
+        "Ui::SnapLayouter::setChildSnap(): Ui::Snap::TopRight doesn't produce a non-overlapping purely horizontal or vertical order\n"
+        "Ui::SnapLayouter::setChildSnap(): Ui::Snap::BottomLeft doesn't produce a non-overlapping purely horizontal or vertical order\n"
+        "Ui::SnapLayouter::setChildSnap(): Ui::Snap::BottomRight doesn't produce a non-overlapping purely horizontal or vertical order\n",
         TestSuite::Compare::String);
 }
 
@@ -1180,22 +2805,94 @@ void SnapLayouterTest::setSize() {
     CORRADE_COMPARE(layouter.state(), LayouterState::NeedsUpdate);
 }
 
-void SnapLayouterTest::invalidHandle() {
+void SnapLayouterTest::clean() {
+    AbstractUserInterface ui{{100, 100}};
+    SnapLayouter& layouter = ui.setLayouterInstance(Containers::pointer<SnapLayouter>(ui.createLayouter()));
+
+    /* Individual removals in clean() are tested in addRemove() and
+       addRemoveExplicitSnap(), this verifies that it correctly removes more
+       than one */
+
+    NodeHandle root = ui.createNode({}, {});
+    NodeHandle nested = ui.createNode(root, {}, {});
+    NodeHandle child1 = ui.createNode(nested, {}, {});
+    NodeHandle child2 = ui.createNode(nested, {}, {});
+    NodeHandle child3 = ui.createNode(nested, {}, {});
+    NodeHandle sibling1 = ui.createNode(root, {}, {});
+    NodeHandle sibling2 = ui.createNode(root, {}, {});
+    NodeHandle rootSibling = ui.createNode({}, {});
+
+    LayoutHandle rootLayout = layouter.add(root);
+    LayoutHandle nestedLayout = layouter.add(nested);
+    LayoutHandle child1Layout = layouter.add(child1);
+    LayoutHandle child2Layout = layouter.add(child2);
+    LayoutHandle child3Layout = layouter.add(child3, Snap::Top, child1Layout);
+    LayoutHandle sibling1Layout = layouter.add(sibling1, Snap::Right, nestedLayout);
+    LayoutHandle rootSiblingLayout = layouter.add(rootSibling, Snap::Right, rootLayout);
+    LayoutHandle sibling2Layout = layouter.add(sibling2, Snap::Right, nestedLayout);
+    CORRADE_COMPARE(layouter.capacity(), 8);
+    CORRADE_COMPARE(layouter.firstChild(rootLayout), nestedLayout);
+    CORRADE_COMPARE(layouter.firstExplicitSnap(rootLayout), rootSiblingLayout);
+
+    ui.removeNode(nested);
+    /* The sibling{1,2}Layout depends on nestedLayout and thus has to be
+       removed as well to have clean() not fail */
+    ui.removeNode(sibling1);
+    ui.removeNode(sibling2);
+    ui.clean();
+    CORRADE_COMPARE(layouter.capacity(), 8);
+    CORRADE_COMPARE(layouter.usedCount(), 2);
+    CORRADE_VERIFY(layouter.isHandleValid(rootLayout));
+    CORRADE_VERIFY(!layouter.isHandleValid(nestedLayout));
+    CORRADE_VERIFY(!layouter.isHandleValid(child1Layout));
+    CORRADE_VERIFY(!layouter.isHandleValid(child2Layout));
+    CORRADE_VERIFY(!layouter.isHandleValid(child3Layout));
+    CORRADE_VERIFY(!layouter.isHandleValid(sibling1Layout));
+    CORRADE_VERIFY(!layouter.isHandleValid(sibling2Layout));
+    CORRADE_VERIFY(layouter.isHandleValid(rootSiblingLayout));
+    CORRADE_COMPARE(layouter.firstChild(rootLayout), LayoutHandle::Null);
+    CORRADE_COMPARE(layouter.firstExplicitSnap(rootLayout), rootSiblingLayout);
+}
+
+void SnapLayouterTest::cleanInvalid() {
     CORRADE_SKIP_IF_NO_ASSERT();
 
-    SnapLayouter layouter{layouterHandle(0, 1)};
+    /* Trimmed-down variant of clean() above, triggering the failure case. It
+       should assert on siblingLayout, all others layouts should be either not
+       affected or scheduled for removal as well. */
+
+    AbstractUserInterface ui{{100, 100}};
+    SnapLayouter& layouter = ui.setLayouterInstance(Containers::pointer<SnapLayouter>(ui.createLayouter()));
+
+    NodeHandle root = ui.createNode({}, {});
+    NodeHandle nested = ui.createNode(root, {}, {});
+    NodeHandle child1 = ui.createNode(nested, {}, {});
+    NodeHandle child2 = ui.createNode(nested, {}, {});
+    NodeHandle rootSibling = ui.createNode({}, {});
+    NodeHandle sibling1 = ui.createNode(root, {}, {});
+    NodeHandle sibling2 = ui.createNode(root, {}, {});
+
+    LayoutHandle rootLayout = layouter.add(root);
+    /* Just to have a non-trivial handle generation */
+    layouter.remove(layouter.add(nested));
+    layouter.remove(layouter.add(nested));
+    layouter.remove(layouter.add(nested));
+    LayoutHandle nestedLayout = layouter.add(nested);
+    LayoutHandle child1Layout = layouter.add(child1);
+    layouter.add(child2, Snap::Top, child1Layout);
+    layouter.add(rootSibling, Snap::Right, rootLayout);
+    layouter.add(sibling1, Snap::Right, nestedLayout);
+    layouter.add(sibling2, Snap::Right, nestedLayout);
+    ui.removeNode(nested);
+
+    /* This should match what's in the assert below */
+    CORRADE_COMPARE(layoutHandleData(nestedLayout), layouterDataHandle(1, 4));
 
     Containers::String out;
     Error redirectError{&out};
-    layouter.snap(LayoutHandle::Null);
-    layouter.snap(LayouterDataHandle::Null);
-    layouter.target(LayoutHandle::Null);
-    layouter.target(LayouterDataHandle::Null);
+    ui.clean();
     CORRADE_COMPARE_AS(out,
-        "Ui::SnapLayouter::snap(): invalid handle Ui::LayoutHandle::Null\n"
-        "Ui::SnapLayouter::snap(): invalid handle Ui::LayouterDataHandle::Null\n"
-        "Ui::SnapLayouter::target(): invalid handle Ui::LayoutHandle::Null\n"
-        "Ui::SnapLayouter::target(): invalid handle Ui::LayouterDataHandle::Null\n",
+        "Ui::SnapLayouter::clean(): cannot remove Ui::LayouterDataHandle(0x1, 0x4) that still has 2 dependent layouts\n",
         TestSuite::Compare::String);
 }
 
@@ -1228,21 +2925,21 @@ void SnapLayouterTest::updateDataOrder() {
             return LayerFeature::Layout;
         }
         void doLayout(Containers::BitArrayView, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Float>&, const Containers::StridedArrayView1D<Vector4>& nodePaddings, const Containers::StridedArrayView1D<Vector4>& nodeMargins) override {
-            /* layout1 has no children, no padding gets used; only bottom right
-               margin (6, 5) is used */
-            nodePaddings[0 /*layout1*/] = Nan4;
-            nodeMargins[0 /*layout1*/] = {Nan, Nan, 6.0f, 5.0f};
-
             /* nodeRoot is used as a target node for a child layout3, so max of
                its Y padding and layout3 Y margin is used, on X no padding is
                used */
-            nodePaddings[1 /*nodeRoot*/] = {Nan, 4.0f, Nan, 0.5f};
-            nodeMargins[1 /*nodeRoot*/] = Nan4;
+            nodePaddings[0 /*nodeRoot*/] = {Nan, 4.0f, Nan, 0.5f};
+            nodeMargins[0 /*nodeRoot*/] = Nan4;
 
             /* nodeChild is used as a target node for a neighbor layout, but
                without any padding, so the margin isn't used at all */
-            nodePaddings[2 /*nodeChild*/] = Nan4;
-            nodeMargins[2 /*nodeChild*/] = Nan4;
+            nodePaddings[1 /*nodeChild*/] = Nan4;
+            nodeMargins[1 /*nodeChild*/] = Nan4;
+
+            /* layout1 has no children, no padding gets used; only bottom right
+               margin (6, 5) is used */
+            nodePaddings[2 /*layout1*/] = Nan4;
+            nodeMargins[2 /*layout1*/] = {Nan, Nan, 6.0f, 5.0f};
 
             /* layout2 is snapped to nodeChild without any padding and has
                nothing else snapped to it, so neither of the two is used */
@@ -1250,22 +2947,33 @@ void SnapLayouterTest::updateDataOrder() {
             nodeMargins[3 /*layout2*/] = Nan4;
 
             /* layout3 is snapped to nodeRoot so max of its Y margin and
-               nodeRoot Y padding is used (4 top, 5 bottom); it has no children
-               so padding isn't used. The left margin is used for positioning
+               nodeRoot Y padding is used (4 top, 5 bottom); it has implicitly
+               snapped children to the bottom, and no pad on X so only bottom
+               padding is used. The left margin is used for positioning
                layout4. */
-            nodePaddings[4 /*layout3*/] = Nan4;
+            nodePaddings[4 /*layout3*/] = {Nan, Nan, Nan, 15.0f};
             nodeMargins[4 /*layout3*/] = {3.0f, 0.4f, Nan, 5.0f};
+
+            /* layout3 children have no further children so paddings are
+               unused, and only the bottom margin is used, but it's never
+               larger than layout3 padding */
+            nodePaddings[5 /*layout3Child1*/] = Nan4;
+            nodePaddings[6 /*layout3Child2*/] = Nan4;
+            nodePaddings[7 /*layout3Child3*/] = Nan4;
+            nodeMargins[5 /*layout3Child1*/] = {Nan, Nan, Nan, 10.0f};
+            nodeMargins[6 /*layout3Child2*/] = {Nan, Nan, Nan, 1.0f};
+            nodeMargins[7 /*layout3Child3*/] = {Nan, Nan, Nan, 15.0f};
 
             /* Snapped to the left of layout3, a max of right margin and
                layout3 left margin is used (3). Padding is used for layout5
                placement. */
-            nodePaddings[5 /*layout4*/] = {1.0f, 0.4f, 6.0f, 0.5f};
-            nodeMargins[5 /*layout4*/] = {Nan, Nan, 0.3f, Nan};
+            nodePaddings[8 /*layout4*/] = {1.0f, 0.4f, 6.0f, 0.5f};
+            nodeMargins[8 /*layout4*/] = {Nan, Nan, 0.3f, Nan};
 
             /* Placed inside layout4, with a max of the margin and layout4
                padding (1, 4, 6, 5) */
-            nodePaddings[6 /*layout5*/] = Nan4;
-            nodeMargins[6 /*layout5*/] = {0.1f, 4.0f, 0.6f, 5.0f};
+            nodePaddings[9 /*layout5*/] = Nan4;
+            nodeMargins[9 /*layout5*/] = {0.1f, 4.0f, 0.6f, 5.0f};
             ++called;
         }
 
@@ -1276,54 +2984,117 @@ void SnapLayouterTest::updateDataOrder() {
     SnapLayouter& layouter = ui.setLayouterInstance(Containers::pointer<SnapLayouter>(ui.createLayouter()));
 
     if(data.recycledLayouts) {
-        AbstractAnchor layout1 = Ui::snap(ui, layouter, {}, {});
-        AbstractAnchor layout2 = Ui::snap(ui, layouter, {}, {});
-        AbstractAnchor layout3 = Ui::snap(ui, layouter, {}, {});
-        AbstractAnchor layout4 = Ui::snap(ui, layouter, {}, {});
-        AbstractAnchor layout5 = Ui::snap(ui, layouter, {}, {});
+        NodeHandle node1 = ui.createNode({}, {});
+        NodeHandle node2 = ui.createNode({}, {});
+        NodeHandle node3 = ui.createNode({}, {});
+        NodeHandle node3Child1 = ui.createNode({}, {});
+        NodeHandle node3Child2 = ui.createNode({}, {});
+        NodeHandle node3Child3 = ui.createNode({}, {});
+        NodeHandle node4 = ui.createNode({}, {});
+        NodeHandle node5 = ui.createNode({}, {});
+        LayoutHandle layout1 = layouter.add(node1);
+        LayoutHandle layout2 = layouter.add(node2);
+        LayoutHandle layout3 = layouter.add(node3);
+        LayoutHandle layout3Child1 = layouter.add(node3Child1);
+        LayoutHandle layout3Child2 = layouter.add(node3Child2);
+        LayoutHandle layout3Child3 = layouter.add(node3Child3);
+        LayoutHandle layout4 = layouter.add(node4);
+        LayoutHandle layout5 = layouter.add(node5);
         layouter.remove(layout4);
+        layouter.remove(layout3Child3);
         layouter.remove(layout5);
         layouter.remove(layout3);
+        layouter.remove(layout3Child1);
         layouter.remove(layout1);
+        layouter.remove(layout3Child2);
         layouter.remove(layout2);
-        /* Recycle the nodes in the order they were created so they retain the
-           ID order when created again below, in order to not need to shuffle
-           them in the checks in doUpdate() */
-        ui.removeNode(layout1);
-        ui.removeNode(layout2);
-        ui.removeNode(layout3);
-        ui.removeNode(layout4);
-        ui.removeNode(layout5);
+        ui.removeNode(node1);
+        ui.removeNode(node2);
+        ui.removeNode(node3);
+        ui.removeNode(node3Child1);
+        ui.removeNode(node3Child2);
+        ui.removeNode(node3Child3);
+        ui.removeNode(node4);
+        ui.removeNode(node5);
     }
 
     /* A layout snapped to the whole UI, with Snap::Inside being implicit */
-    AbstractAnchor layout1 = Ui::snap(ui, layouter, Snap::Bottom|Snap::Right, {70.0f, 90.0f});
-    CORRADE_COMPARE(ui.nodeParent(layout1), NodeHandle::Null);
+    NodeHandle nodeRoot = ui.createNode({10.0f, 40.0f}, {100.0f, 200.0f});
+    NodeHandle nodeChild = ui.createNode(nodeRoot, {30.0f, 20.0f}, {50.0f, 150.0f});
+    NodeHandle node1 = ui.createNode({}, {70.0f, 90.0f});
+    /*LayoutHandle layout1 =*/ layouter.add(node1, Snap::Bottom|Snap::Right, LayoutHandle::Null);
 
     /* A layout snapped outside of a (non-layouted) node, inheriting its offset
        in addition to having its own offset preserved */
-    NodeHandle nodeRoot = ui.createNode({10.0f, 40.0f}, {100.0f, 200.0f});
-    NodeHandle nodeChild = ui.createNode(nodeRoot, {30.0f, 20.0f}, {50.0f, 150.0f});
-    AbstractAnchor layout2 = Ui::snap(ui, layouter, Snap::Left|Snap::Right|Snap::Top|Snap::NoPadY, nodeChild, {0.3f, -0.2f}, {0.0f, 25.0f});
-    CORRADE_COMPARE(ui.nodeParent(layout2), nodeRoot);
+    LayoutHandle nodeChildLayout = layouter.add(nodeChild);
+    NodeHandle node2 = ui.createNode(nodeRoot, {0.3f, -0.2f}, {0.0f, 25.0f});
+    /*LayoutHandle layout2 =*/ layouter.add(node2, Snap::Left|Snap::Right|Snap::Top|Snap::NoPadY, nodeChildLayout);
 
     /* A layout snapped inside of a (non-layouted) node, not inheriting its
        offset but having its own offset preserved */
-    AbstractAnchor layout3 = Ui::snap(ui, layouter, Snap::Top|Snap::Bottom|Snap::Right|Snap::Inside|Snap::NoPadX, nodeRoot, {0.9f, 0.6f}, {10.0f, 0.0f});
-    CORRADE_COMPARE(ui.nodeParent(layout3), nodeRoot);
+    LayoutHandle nodeRootLayout = layouter.add(nodeRoot);
+    NodeHandle node3 = ui.createNode(nodeRoot, {0.9f, 0.6f}, {10.0f, 0.0f});
+    LayoutHandle layout3 = layouter.add(node3, Snap::Top|Snap::Bottom|Snap::Right|Snap::Inside|Snap::NoPadX, nodeRootLayout);
+
+    /* Three child nodes & layouts for node3, ordered at the bottom, right to
+       left, with no X padding, but with X/Y shift due to offset. All variants
+       of setChildSnap() tested in updateChildSnap() below. */
+    layouter.setChildSnap(layout3, Snap::BottomLeft|Snap::InsideY|Snap::NoPadX);
+    NodeHandle node3Child1 = ui.createNode(node3, {0.0f, -0.5f}, {2.0f, 10.0f});
+    NodeHandle node3Child2 = ui.createNode(node3, {0.0f, +0.5f}, {2.0f, 10.0f});
+    NodeHandle node3Child3 = ui.createNode(node3, {0.0f, -0.5f}, {2.0f, 10.0f});
+    if(!data.shuffledChildLayouts) {
+        /*LayoutHandle layout3Child1 =*/ layouter.add(node3Child1);
+        /*LayoutHandle layout3Child2 =*/ layouter.add(node3Child2);
+        /*LayoutHandle layout3Child3 =*/ layouter.add(node3Child3);
+    } else {
+        LayoutHandle layout3Child3 = layouter.add(node3Child3);
+        /*LayoutHandle layout3Child1 =*/ layouter.add(node3Child1, layout3Child3);
+        /*LayoutHandle layout3Child2 =*/ layouter.add(node3Child2, layout3Child3);
+    }
 
     /* A layout relative to layouted node with an offset, should inerit that
        offset in addition to its own, and match its Y size */
-    AbstractAnchor layout4 = Ui::snap(ui, layouter, Snap::Top|Snap::Bottom|Snap::Left, layout3, {0.2f, -0.5f}, {20.0f, 0.0f});
-    CORRADE_COMPARE(ui.nodeParent(layout4), nodeRoot);
+    NodeHandle node4 = ui.createNode(nodeRoot, {0.2f, -0.5f}, {20.0f, 0.0f});
+    LayoutHandle layout4 = layouter.add(node4, Snap::Top|Snap::Bottom|Snap::Left, layout3);
 
     /* A layout that's further dependent on previous, match its XY size & being
        inside */
-    AbstractAnchor layout5 = Ui::snap(ui, layouter, Snap::Top|Snap::Bottom|Snap::Left|Snap::Right, layout4, {0.02f, -0.05f}, Vector2{});
-    CORRADE_COMPARE(ui.nodeParent(layout5), layout4);
+    NodeHandle node5 = ui.createNode(node4, {0.02f, -0.05f}, {});
+    /*LayoutHandle layout5 =*/ layouter.add(node5, Snap::Top|Snap::Bottom|Snap::Left|Snap::Right, layout4);
+
+    /* Layouts that are root / children / dependent on the above but
+       subsequently removed, to verify they're not taken into account when
+       ordering them internally. Nodes present always to have it easier to
+       verify node properties later. */
+    NodeHandle node6 = ui.createNode({}, {});
+    NodeHandle node7 = ui.createNode(node6, {}, {});
+    NodeHandle node8 = ui.createNode({}, {});
+    NodeHandle node9 = ui.createNode(nodeRoot, {}, {});
+    NodeHandle node10 = ui.createNode({}, {});
+    if(data.removedLayouts) {
+        LayoutHandle layout6 = layouter.add(node6);
+        layouter.add(node7);
+        layouter.add(node8, Snap::Top, layout6);
+        layouter.add(node9);
+        layouter.add(node10, Snap::Top, nodeRootLayout);
+    }
+
+    /* Removing the nodes + clean() instead of removing the layouts one by one
+       directly to verify that the "mark as unused" operation behaves correctly
+       also when the layouts are removed in bulk. */
+    ui.removeNode(node6);
+    ui.removeNode(node7);
+    ui.removeNode(node8);
+    ui.removeNode(node9);
+    ui.removeNode(node10);
+    ui.clean();
 
     /* The size also */
     ui.setSize({500, 400});
+
+    /* Capture correct function name */
+    CORRADE_VERIFY(true);
 
     /* Add a dummy second layouter because that's the easiest way to verify the
        calculated node offsets / sizes */
@@ -1333,17 +3104,25 @@ void SnapLayouterTest::updateDataOrder() {
 
         LayouterFeatures doFeatures() const override { return {}; }
         void doUpdate(Containers::BitArrayView, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const NodeHandle>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Float>&, const Containers::StridedArrayView1D<const Vector4>&, const Containers::StridedArrayView1D<const Vector4>&, const Containers::StridedArrayView1D<Vector2>& nodeOffsets, const Containers::StridedArrayView1D<Vector2>& nodeSizes) override {
-            CORRADE_COMPARE_AS(nodeOffsets, Containers::stridedArrayView<Vector2>({
+            /* Skipping the last 5 removed nodes, as their sizes/offsets are
+               left at random */
+            CORRADE_COMPARE_AS(nodeOffsets.exceptSuffix(5), Containers::stridedArrayView<Vector2>({
                 /* (6, 5) is right and bottom padding */
-                {500.0f - 70.0f - 6.0f, 400.0f - 90.0f - 5.0f}, /* layout1 */
                 {10.0f, 40.0f},                                 /* nodeRoot */
                 {30.0f, 20.0f},                                 /* nodeChild */
+                {500.0f - 70.0f - 6.0f, 400.0f - 90.0f - 5.0f}, /* layout1 */
                 /* Snapped outside so no X margin / padding, Y spacing
                    disabled, (0.3, -0.2) is the node offset */
                 {30.0f + 0.3f, 20.0f - 0.2f - 25.0f},           /* layout2 */
                 /* 4 is top padding, X padding disabled, (0.9, 0.6) is the
                    node offset */
                 {100.0f - 10.0f + 0.9f, 4.0f + 0.6f},           /* layout3 */
+                /* Each child is {2.0f, 10.0f}, no padding on X, on Y there's
+                   +-0.5 offset that accumulates, the layout3 height is
+                   further shortened by 15 padding */
+                {8.0f, 200.0f - 9.0f - 10.0f - 15.0f - 0.5f},   /* layout3Child1 */
+                {6.0f, 200.0f - 9.0f - 10.0f - 15.0f + 0.0f},   /* layout3Child2 */
+                {4.0f, 200.0f - 9.0f - 10.0f - 15.0f - 0.5f},   /* layout3Child3 */
                 /* In addition to what's in layout3 3 is horizontal margin,
                    (0.2, -0.5) is node offset */
                 {100.0f - 10.0f + 0.9f - 20.0f - 3.0f + 0.2f,
@@ -1352,13 +3131,16 @@ void SnapLayouterTest::updateDataOrder() {
                     relative to layout4 so layout4's offset isn't included */
                 {1.0f + 0.02f, 4.0f - 0.05f},                   /* layout5 */
             }), TestSuite::Compare::Container);
-            CORRADE_COMPARE_AS(nodeSizes, Containers::stridedArrayView<Vector2>({
-                {70.0f, 90.0f},                                 /* layout1 */
+            CORRADE_COMPARE_AS(nodeSizes.exceptSuffix(5), Containers::stridedArrayView<Vector2>({
                 {100.0f, 200.0f},                               /* nodeRoot */
                 {50.0f, 150.0f},                                /* nodeChild */
+                {70.0f, 90.0f},                                 /* layout1 */
                 {50.0f, 25.0f},                                 /* layout2 */
                 /* Y size matches nodeRoot height minus top/bottom padding */
                 {10.0f, 200.0f - 4.0f - 5.0f},                  /* layout3 */
+                {2.0f, 10.0f},                                  /* layout3Child1 */
+                {2.0f, 10.0f},                                  /* layout3Child2 */
+                {2.0f, 10.0f},                                  /* layout3Child3 */
                 /* Y size matches layout3 height, is outside so no padding */
                 {20.0f, 200.0f - 4.0f - 5.0f},                  /* layout4 */
                 /* XY size matches layout4 size minus padding */
@@ -1371,7 +3153,7 @@ void SnapLayouterTest::updateDataOrder() {
         Int called = 0;
     };
     DummyLayouter& dummyLayouter = ui.setLayouterInstance(Containers::pointer<DummyLayouter>(ui.createLayouter()));
-    dummyLayouter.add(layout5);
+    dummyLayouter.add(nodeRoot);
     ui.update();
     CORRADE_COMPARE(layoutLayer.called, 1);
     CORRADE_COMPARE(dummyLayouter.called, 1);
@@ -1383,10 +3165,6 @@ void SnapLayouterTest::updateLayoutProperties() {
 
     AbstractUserInterface ui{{500, 600}};
 
-    /* Just to supply node-specific paddings and margins. Tested to verify the
-       properties get used at all, and from both the snapped and target node.
-       Tests for complete padding/margin behavior is in snap(), tests for other
-       layout properties are in updateLayoutProperties(). */
     struct LayoutLayer: AbstractLayer {
         explicit LayoutLayer(LayerHandle handle, const Vector2& minSize, Float paddingTarget, Float marginTarget, Float margin): AbstractLayer{handle}, _minSize{minSize}, _paddingTarget{paddingTarget}, _marginTarget{marginTarget}, _margin{margin} {}
 
@@ -1424,12 +3202,14 @@ void SnapLayouterTest::updateLayoutProperties() {
     ui.createNode({}, {});
     ui.createNode({}, {});
     NodeHandle targetNode = ui.createNode({300.0f, 400.0f}, {100.0f, 200.0f});
+    LayoutHandle targetNodeLayout = layouter.add(targetNode);
     ui.createNode({}, {});
     ui.createNode({}, {});
     ui.createNode({}, {});
-    NodeHandle node = Ui::snap(ui, layouter, data.snap, data.targetUi ? NodeHandle::Null : targetNode, {0.25f, 0.75f}, {50.0f, 100.0f});
+    NodeHandle node = ui.createNode(data.child ? targetNode : NodeHandle::Null, {0.25f, 0.75f}, {50.0f, 100.0f});
     CORRADE_COMPARE(nodeHandleId(targetNode), 3);
     CORRADE_COMPARE(nodeHandleId(node), 7);
+    layouter.add(node, data.snap, data.targetUi ? LayoutHandle::Null : targetNodeLayout);
 
     /* Add a dummy second layouter because that's the easiest way to verify the
        calculated node offsets / sizes */
@@ -1460,6 +3240,271 @@ void SnapLayouterTest::updateLayoutProperties() {
     };
     DummyLayouter& dummyLayouter = ui.setLayouterInstance(Containers::pointer<DummyLayouter>(ui.createLayouter(), data.expectedOffset, data.expectedSize, data.xfailMinSize));
     dummyLayouter.add(node);
+    ui.update();
+    CORRADE_COMPARE(layoutLayer.called, 1);
+    CORRADE_COMPARE(dummyLayouter.called, 1);
+}
+
+void SnapLayouterTest::updateChildSnap() {
+    auto&& data = UpdateChildSnapData[testCaseInstanceId()];
+    {
+        Containers::String out;
+        {
+            Debug debug{&out, Debug::Flag::NoNewlineAtTheEnd|Debug::Flag::Packed};
+            debug << data.snap;
+            if(data.name)
+                debug << Debug::nospace << "," << data.name;
+        }
+        setTestCaseDescription(out);
+    }
+
+    AbstractUserInterface ui{{500, 600}};
+
+    struct LayoutLayer: AbstractLayer {
+        explicit LayoutLayer(LayerHandle handle, Float padding, Float childMargin): AbstractLayer{handle}, _padding{padding}, _childMargin{childMargin} {}
+
+        LayerFeatures doFeatures() const override {
+            return LayerFeature::Layout;
+        }
+        void doLayout(Containers::BitArrayView, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Float>&, const Containers::StridedArrayView1D<Vector4>& nodePaddings, const Containers::StridedArrayView1D<Vector4>& nodeMargins) override {
+            nodePaddings[0 /*root*/] = Vector4{_padding};
+            nodeMargins[1 /*child1*/] = Vector4{_childMargin};
+            nodeMargins[2 /*child2*/] = Vector4{_childMargin};
+            nodeMargins[2 /*child3*/] = Vector4{_childMargin};
+            ++called;
+        }
+
+        Int called = 0;
+
+        private:
+            Float _padding, _childMargin;
+    };
+    LayoutLayer& layoutLayer = ui.setLayerInstance(Containers::pointer<LayoutLayer>(ui.createLayer(), data.padding, data.childMargin));
+
+    SnapLayouter& layouter = ui.setLayouterInstance(Containers::pointer<SnapLayouter>(ui.createLayouter()));
+
+    NodeHandle root = ui.createNode({15.0f, 35.0f}, {100.0f, 200.0f});
+
+    /* Empty Snaps and all Snaps bit set are abused for verifying the default
+       behavior, i.e. what gets filled by one of the two add() variants */
+    LayoutHandle rootLayout = data.snap == ~Snaps{} ?
+        layouter.add(root, Snap::TopLeft, LayoutHandle::Null) :
+        layouter.add(root);
+    if(data.snap && data.snap != ~Snaps{})
+        layouter.setChildSnap(rootLayout, data.snap);
+
+    NodeHandle child1 = ui.createNode(root, {}, {20.0f, 30.0f});
+    NodeHandle child2 = ui.createNode(root, {}, {20.0f, 30.0f});
+    NodeHandle child3 = ui.createNode(root, {}, {20.0f, 30.0f});
+    layouter.add(child1);
+    layouter.add(child2);
+    layouter.add(child3);
+
+    /* Capture correct function name */
+    CORRADE_VERIFY(true);
+
+    /* Add a dummy second layouter because that's the easiest way to verify the
+       calculated node offsets / sizes */
+    struct DummyLayouter: AbstractLayouter {
+        explicit DummyLayouter(LayouterHandle handle, const Vector2& offset, const Vector2& advance, const Vector2& childSize): AbstractLayouter{handle}, _offset{offset}, _advance{advance}, _childSize{childSize} {}
+
+        using AbstractLayouter::add;
+
+        LayouterFeatures doFeatures() const override { return {}; }
+
+        void doUpdate(Containers::BitArrayView, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const NodeHandle>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Float>&, const Containers::StridedArrayView1D<const Vector4>&, const Containers::StridedArrayView1D<const Vector4>&, const Containers::StridedArrayView1D<Vector2>& nodeOffsets, const Containers::StridedArrayView1D<Vector2>& nodeSizes) override {
+            CORRADE_COMPARE_AS(nodeOffsets, Containers::stridedArrayView<Vector2>({
+                {15.0f, 35.0f},
+                _offset,
+                _offset + _advance,
+                _offset + 2.0f*_advance,
+            }), TestSuite::Compare::Container);
+            CORRADE_COMPARE_AS(nodeSizes, Containers::stridedArrayView<Vector2>({
+                {100.0f, 200.0f},
+                _childSize,
+                _childSize,
+                _childSize,
+            }), TestSuite::Compare::Container);
+            ++called;
+        }
+
+        Int called = 0;
+
+        private:
+            Vector2 _offset, _advance, _childSize;
+    };
+    DummyLayouter& dummyLayouter = ui.setLayouterInstance(Containers::pointer<DummyLayouter>(ui.createLayouter(), data.offset, data.advance, data.childSize));
+    dummyLayouter.add(root);
+    ui.update();
+    CORRADE_COMPARE(layoutLayer.called, 1);
+    CORRADE_COMPARE(dummyLayouter.called, 1);
+}
+
+void SnapLayouterTest::updatePropagateChildSizes() {
+    auto&& data = UpdatePropagateChildSizesData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
+    AbstractUserInterface ui{{100, 100}};
+
+    /* 5          20  25  30 35 40  45 50  55
+    10 +------------------------------------+ outer, ??? width & height,
+       |####################################|        padding top/bottom
+    15 |+----------------------------------+| inner, fixed height, ??? width
+       ||                           @@@@@  ||
+    20 ||          +---+-----+---+  @@@@@  || top, fixed width and height
+       ||          |   |     |   |  @@@@@  ||
+    25 ||+--------+|   +-----+-----+@@@@@  ||
+       |||        ||   @@@@  |x2 | |@@@@@  ||
+    30 ||+---+    ||   +--+  +-----++---+@@|| middle, min width, fixed height,
+       |||x3 |    ||   |  |      |@@|   |@@||         bottom & top margin
+    35 |||   |    |+---+--+      |@@+---+@@||
+       |||   |    ||x1 |@@@      |  @@@@@  ||
+    40 ||+---+----+|@@@|-----+   |  @@@@@  || bottom, fixed width, min height,
+       ||          |@@@|     |   |  @@@@@  ||         left margin
+    45 ||          +---+-----+---+  @@@@@  ||
+       ||                           @@@@@  ||
+    50 ||                           @@@@@  ||
+       ||                           @@@@@  ||
+    55 |+----------------------------------+|
+       |####################################|
+    60 +------------------------------------+
+        left,       center,         right,
+        fixed size  ??? height,     min width and height,
+                    fixed width     margin on all sides
+
+       The left margin of `bottom` node causes all three to shift to the right,
+       the top/bottom margin of `right` causes the vertical center alignment to
+       shift.
+
+       The `explicit1` (x1) is snapped bottom left inside `center`, it ignores
+       the extra left-side padding used by children. The `explicit2` (x2) is
+       snapped to the bottom right of `top`, it doesn't affect the `center`
+       node size and overflows. The `explicit3` (x3) is snapped to left of
+       `inner`, it ignores the vertical shift of children. */
+
+    NodeHandle outer = ui.createNode({10.0f, 5.0f}, data.outerSize);
+    NodeHandle inner = ui.createNode(outer, {}, {data.innerWidth, 40.0f});
+    NodeHandle center = ui.createNode(inner, {}, {20.0f, data.centerHeight});
+    NodeHandle right = ui.createNode(inner, {}, {});
+    NodeHandle middle = ui.createNode(center, {}, {0.0f, 5.0f});
+    NodeHandle top = ui.createNode(center, {}, {10.0f, 5.0f});
+    NodeHandle left = ui.createNode(inner, {}, {15.0f, 15.0f});
+    NodeHandle bottom = ui.createNode(center, {}, {10.0f, 0.0f});
+    NodeHandle explicit1 = ui.createNode(center, {}, {5.0f, 10.0f});
+    NodeHandle explicit2 = ui.createNode(center, {}, {10.0f, 5.0f});
+    NodeHandle explicit3 = ui.createNode(inner, {}, {5.0f, 10.0f});
+
+    struct LayoutLayer: AbstractLayer {
+        using AbstractLayer::AbstractLayer;
+
+        LayerFeatures doFeatures() const override {
+            return LayerFeature::Layout;
+        }
+        void doLayout(Containers::BitArrayView, const Containers::StridedArrayView1D<Vector2>& nodeMinSizes, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Float>&, const Containers::StridedArrayView1D<Vector4>& nodePaddings, const Containers::StridedArrayView1D<Vector4>& nodeMargins) override {
+            nodePaddings[0 /*outer*/] = {0.0f, 5.0f, 0.0f, 5.0f};
+
+            nodeMinSizes[3 /*right*/] = {5.0f, 5.0f};
+            nodeMargins[3 /*right*/] = {5.0f, 15.0f, 5.0f, 20.0f};
+
+            nodeMinSizes[4 /*middle*/].x() = 5.0f;
+            nodeMargins[4 /*middle*/] = {0.0f, 5.0f, 0.0f, 5.0f};
+            nodeMinSizes[7 /*bottom*/].y() = 5.0f;
+            nodeMargins[7 /*bottom*/] = {5.0f, 0.0f, 0.0f, 0.0f};
+            ++called;
+        }
+
+        Int called = 0;
+    };
+    LayoutLayer& layoutLayer = ui.setLayerInstance(Containers::pointer<LayoutLayer>(ui.createLayer()));
+
+    SnapLayouter& layouter = ui.setLayouterInstance(Containers::pointer<SnapLayouter>(ui.createLayouter()));
+    layouter.add(outer, data.outerFlags);
+
+    LayoutHandle innerLayout = layouter.add(inner, data.innerFlags);
+    layouter.setChildSnap(innerLayout, Snap::Right);
+    layouter.add(left);
+
+    LayoutHandle centerLayout = layouter.add(center, data.centerFlags);
+    layouter.setChildSnap(centerLayout, Snap::BottomLeft|Snap::InsideX);
+    LayoutHandle topLayout = layouter.add(top);
+    layouter.add(middle);
+    layouter.add(bottom);
+
+    layouter.add(right);
+
+    if(data.explicitlySnappedNodes) {
+        /* These shouldn't affect the rest of the layout in any way (so yeah
+           they'll overlap) */
+        layouter.add(explicit1, Snap::BottomLeft|Snap::Inside, centerLayout);
+        layouter.add(explicit2, Snap::BottomRight, topLayout);
+        layouter.add(explicit3, Snap::Left|Snap::Inside, innerLayout);
+    }
+
+    /* Capture correct function name */
+    CORRADE_VERIFY(true);
+
+    /* Add a dummy second layouter because that's the easiest way to verify the
+       calculated node offsets / sizes */
+    struct DummyLayouter: AbstractLayouter {
+        using AbstractLayouter::AbstractLayouter;
+        using AbstractLayouter::add;
+
+        LayouterFeatures doFeatures() const override { return {}; }
+        void doUpdate(Containers::BitArrayView, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const NodeHandle>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Float>&, const Containers::StridedArrayView1D<const Vector4>&, const Containers::StridedArrayView1D<const Vector4>&, const Containers::StridedArrayView1D<Vector2>& nodeOffsets, const Containers::StridedArrayView1D<Vector2>& nodeSizes) override {
+            CORRADE_COMPARE_AS(nodeOffsets, Containers::stridedArrayView<Vector2>({
+                {10.0f, 5.0f},                  /*  0, outer */
+                {expectedInnerOffsetX, 5.0f},   /*  1, inner */
+                {15.0f,                         /*  2, center */
+                    expectedInnerCenterY + expectedCenterOffsetY},
+                {40.0f,                         /*  3, right */
+                    expectedInnerCenterY + 15.0f},
+                {expectedCenterLeftEdge, 10.0f},/*  4, middle */
+                {expectedCenterLeftEdge, 0.0f}, /*  5, top */
+                {0.0f,                          /*  6, left */
+                    expectedInnerCenterY + 10.0f},
+                {expectedCenterLeftEdge,        /*  7, bottom */
+                    20.0f},
+                explicitlySnappedNodes ?        /*  8, explicit1 */
+                    Vector2{0.0f, expectedCenterHeight - 10.0f} : Vector2{},
+                explicitlySnappedNodes ?        /*  9, explicit2 */
+                    Vector2{expectedCenterLeftEdge + 10.0f, 5.0f} : Vector2{},
+                explicitlySnappedNodes ?        /* 10, explicit3 */
+                    Vector2{0.0f, 15.0f} : Vector2{},
+            }), TestSuite::Compare::Container);
+            CORRADE_COMPARE_AS(nodeSizes, Containers::stridedArrayView<Vector2>({
+                expectedOuterSize,              /*  0, outer */
+                {expectedInnerWidth, 40.0f},    /*  1, inner */
+                {20.0f, expectedCenterHeight},  /*  2, center */
+                {5.0f, 5.0f},                   /*  3, right */
+                {5.0f, 5.0f},                   /*  4, middle */
+                {10.0f, 5.0f},                  /*  5, top (unchanged) */
+                {15.0f, 15.0f},                 /*  6, left */
+                {10.0f, 5.0f},                  /*  7, bottom (X unchanged) */
+                {5.0f, 10.0f},                  /*  8, explicit1 (unchanged) */
+                {10.0f, 5.0f},                  /*  9, explicit2 (unchanged) */
+                {5.0f, 10.0f},                  /* 10, explicit3 (unchanged) */
+            }), TestSuite::Compare::Container);
+            ++called;
+        }
+
+        Vector2 expectedOuterSize;
+        Float expectedInnerOffsetX;
+        Float expectedInnerWidth, expectedInnerCenterY;
+        Float expectedCenterHeight, expectedCenterOffsetY;
+        Float expectedCenterLeftEdge;
+        bool explicitlySnappedNodes;
+        Int called = 0;
+    };
+    DummyLayouter& dummyLayouter = ui.setLayouterInstance(Containers::pointer<DummyLayouter>(ui.createLayouter()));
+    dummyLayouter.expectedOuterSize = data.expectedOuterSize;
+    dummyLayouter.expectedInnerOffsetX = data.expectedInnerOffsetX;
+    dummyLayouter.expectedInnerWidth = data.expectedInnerWidth;
+    dummyLayouter.expectedInnerCenterY = data.expectedInnerCenterY;
+    dummyLayouter.expectedCenterHeight = data.expectedCenterHeight;
+    dummyLayouter.expectedCenterOffsetY = data.expectedCenterOffsetY;
+    dummyLayouter.expectedCenterLeftEdge = data.expectedCenterLeftEdge;
+    dummyLayouter.explicitlySnappedNodes = data.explicitlySnappedNodes;
+    dummyLayouter.add(outer);
     ui.update();
     CORRADE_COMPARE(layoutLayer.called, 1);
     CORRADE_COMPARE(dummyLayouter.called, 1);

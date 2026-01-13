@@ -26,11 +26,348 @@
     DEALINGS IN THE SOFTWARE.
 */
 
+#include <Corrade/Containers/StridedBitArrayView.h>
 #include <Magnum/Math/Functions.h>
 #include <Magnum/Math/Swizzle.h>
 #include <Magnum/Math/Vector4.h>
 
 namespace Magnum { namespace Ui { namespace Implementation { namespace {
+
+/* Calculates total size of all child layouts, taking into account their margin
+   as well as the parent node padding, and returns also the padding inside that
+   node that's needed to be subsequently passed to snap() instead of
+   nodePadding to position everything correctly */
+Containers::Pair<Vector2, Vector4> childLayoutSizePadding(const Snaps childSnap, const Vector4& nodePadding, const Containers::StridedArrayView1D<const Vector2>& nodeMinSizes, const Containers::StridedArrayView1D<const Vector4>& nodeMargins, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, const LayouterDataHandle firstChildLayout, const Containers::StridedArrayView1D<const NodeHandle>& layoutNodes, const Containers::StridedArrayView1D<const LayouterDataHandle>& nextLayout) {
+    CORRADE_INTERNAL_ASSERT(
+        nodeSizes.size() == nodeMinSizes.size() &&
+        nodeMargins.size() == nodeMinSizes.size() &&
+        firstChildLayout != LayouterDataHandle::Null &&
+        layoutNodes.size() == nextLayout.size());
+
+    /* First figure out padding and margin component indices based on child
+       snap. The order is left (0), top (1), right (2), bottom (3). Parent
+       padding (pp*) and child margin (cm*) share the same sides and thus the
+       same index.
+
+        +--------------------+
+        |    ppT / cmT (1)   |
+        | ppL +--------+ ppR |
+        | cmL |        | cmR |
+        | (0) +--------+ (2) |
+        |    ppB / cmB (3)   |
+        +--------------------+ */
+    const Snaps snapNoNoPad = childSnap & ~Snap::NoPad;
+    UnsignedInt indexBefore, indexAfter, indexSideL, indexSideR,
+        indexSizeForward, indexSizeSide;
+    enum Calculate {
+        SideLeft,
+        SideRight,
+        Center,
+        Fill,
+    } calculate;
+
+    /* +-------- 1 --------+
+       |          sR       |
+       |      +--+  +--+   |        +-- 0 -+
+       0 a...a|  |ba|  |bb 2        1 size |
+       |      +--+  +--+   |        +------+
+       |          sL       |
+       +-------- 3 --------+ */
+    if(
+        (snapNoNoPad|Snap::FillY|Snap::InsideY) == (Snap::Left|Snap::FillY|Snap::InsideY) ||
+         snapNoNoPad == (Snap::TopLeft|Snap::InsideY) ||
+         snapNoNoPad == (Snap::BottomLeft|Snap::InsideY)
+    ) {
+        indexBefore = 2;
+        indexAfter = 0;
+        indexSideL = 3;
+        indexSideR = 1;
+        indexSizeForward = 0;
+        indexSizeSide = 1;
+
+        if(snapNoNoPad >= (Snap::Left|Snap::FillY))
+            calculate = Calculate::Fill;
+        else if(snapNoNoPad >= Snap::TopLeft)
+            calculate = Calculate::SideRight;
+        else if(snapNoNoPad >= Snap::BottomLeft)
+            calculate = Calculate::SideLeft;
+        else if(!(snapNoNoPad & Snap::FillY))
+            calculate = Calculate::Center;
+        else CORRADE_INTERNAL_ASSERT_UNREACHABLE(); /* LCOV_EXCL_LINE */
+
+    /* +-------- 1 --------+
+       |       sL          |
+       |   +--+  +--+      |        +-- 0 -+
+       0 bb|  |ab|  |a...a 2        1 size |
+       |   +--+  +--+      |        +------+
+       |       sR          |
+       +-------- 3 --------+ */
+    } else if(
+        (snapNoNoPad|Snap::FillY|Snap::InsideY) == (Snap::Right|Snap::FillY|Snap::InsideY) ||
+         snapNoNoPad == (Snap::TopRight|Snap::InsideY) ||
+         snapNoNoPad == (Snap::BottomRight|Snap::InsideY)
+    ) {
+        indexBefore = 0;
+        indexAfter = 2;
+        indexSideL = 1;
+        indexSideR = 3;
+        indexSizeForward = 0;
+        indexSizeSide = 1;
+
+        if(snapNoNoPad >= (Snap::Right|Snap::FillY))
+            calculate = Calculate::Fill;
+        else if(snapNoNoPad >= Snap::TopRight)
+            calculate = Calculate::SideLeft;
+        else if(snapNoNoPad >= Snap::BottomRight)
+            calculate = Calculate::SideRight;
+        else if(!(snapNoNoPad & Snap::FillY))
+            calculate = Calculate::Center;
+        else CORRADE_INTERNAL_ASSERT_UNREACHABLE(); /* LCOV_EXCL_LINE */
+
+    /* +---- 1 ----+
+       |     a     |
+       |    ...    |
+       |     a     |
+       |   +---+   |
+       |   |   |   |
+       |   +---+   |        +-- 0 -+
+       0     b     2        1 size |
+       | sL  a  sR |        +------+
+       |   +---+   |
+       |   |   |   |
+       |   +---+   |
+       |     b     |
+       |     b     |
+       +---- 3 ----+ */
+    } else if(
+        (snapNoNoPad|Snap::FillX|Snap::InsideX) == (Snap::Top|Snap::FillX|Snap::InsideX) ||
+         snapNoNoPad == (Snap::TopLeft|Snap::InsideX) ||
+         snapNoNoPad == (Snap::TopRight|Snap::InsideX)
+    ) {
+        indexBefore = 3;
+        indexAfter = 1;
+        indexSideL = 0;
+        indexSideR = 2;
+        indexSizeForward = 1;
+        indexSizeSide = 0;
+
+        if(snapNoNoPad >= (Snap::Top|Snap::FillX))
+            calculate = Calculate::Fill;
+        else if(snapNoNoPad >= Snap::TopLeft)
+            calculate = Calculate::SideLeft;
+        else if(snapNoNoPad >= Snap::TopRight)
+            calculate = Calculate::SideRight;
+        else if(!(snapNoNoPad & Snap::FillX))
+            calculate = Calculate::Center;
+        else CORRADE_INTERNAL_ASSERT_UNREACHABLE(); /* LCOV_EXCL_LINE */
+
+    /* +---- 1 ----+
+       |     b     |
+       |     b     |
+       |   +---+   |
+       |   |   |   |
+       |   +---+   |
+       | sR  a  sL |        +-- 0 -+
+       0     b     2        1 size |
+       |   +---+   |        +------+
+       |   |   |   |
+       |   +---+   |
+       |     a     |
+       |    ...    |
+       |     a     |
+       +---- 3 ----+ */
+    } else if(
+        (snapNoNoPad|Snap::FillX|Snap::InsideX) == (Snap::Bottom|Snap::FillX|Snap::InsideX) ||
+         snapNoNoPad == (Snap::BottomLeft|Snap::InsideX) ||
+         snapNoNoPad == (Snap::BottomRight|Snap::InsideX)
+    ) {
+        indexBefore = 1;
+        indexAfter = 3;
+        indexSideL = 2;
+        indexSideR = 0;
+        indexSizeForward = 1;
+        indexSizeSide = 0;
+
+        if(snapNoNoPad >= (Snap::Bottom|Snap::FillX))
+            calculate = Calculate::Fill;
+        else if(snapNoNoPad >= Snap::BottomLeft)
+            calculate = Calculate::SideRight;
+        else if(snapNoNoPad >= Snap::BottomRight)
+            calculate = Calculate::SideLeft;
+        else if(!(snapNoNoPad & Snap::FillX))
+            calculate = Calculate::Center;
+        else CORRADE_INTERNAL_ASSERT_UNREACHABLE(); /* LCOV_EXCL_LINE */
+
+    /* The conditions above enumerate exactly the cases as in
+       SnapLayouter::setChildSnapInternal(), thus there's no other variant that
+       could happen. */
+    } else CORRADE_INTERNAL_ASSERT_UNREACHABLE(); /* LCOV_EXCL_LINE */
+
+    /* Indexed below with indexSizeForward / indexSizeSide, causes the padding
+       to be not used in either direction if NoPad is specified. It's an extra
+       multiplication but I suspect it's better than even more branching. */
+    const Float padMultiplier[]{
+        childSnap >= Snap::NoPadX ? 0.0f : 1.0f,
+        childSnap >= Snap::NoPadY ? 0.0f : 1.0f
+    };
+
+    /* Calculate the size spanning all children along with their paddings and
+       margins */
+    LayouterDataHandle childLayout = firstChildLayout;
+    UnsignedInt childNodeId = nodeHandleId(layoutNodes[layouterDataHandleId(childLayout)]);
+    Float previousNodeMarginAfter = 0.0f;
+    Float nextMargin = padMultiplier[indexSizeForward]*
+        Math::max(nodeMargins[childNodeId][indexBefore],
+                  nodePadding[indexBefore]);
+    Vector4 outPadding{NoInit};
+    outPadding[indexBefore] = nextMargin;
+    Float sizeForward = 0.0f;
+    /* For alignment to a side, only maxMarginSideL + maxSizeSideExceptMarginL
+       or maxMarginSideR / maxSizeSideExceptMarginR are filled. For centered
+       layout, only maxHalfSizeSideWithMarginL and maxHalfSizeSideWithMarginR
+       are filled. For filled layout, maxSizeSideExceptMargin and
+       maxMarginSideL + maxMarginSideR are filled. */
+    Float maxMarginSideL = 0.0f;
+    Float maxMarginSideR = 0.0f;
+    Float maxSizeSideExceptMargin = 0.0f;
+    Float maxSizeSideExceptMarginL = 0.0f;
+    Float maxSizeSideExceptMarginR = 0.0f;
+    Float maxHalfSizeSideWithMarginL = 0.0f;
+    Float maxHalfSizeSideWithMarginR = 0.0f;
+    do {
+        /* Take the max of the actual node size and min size. The same
+           operation will be done again later when passing arguments to snap()
+           but doing it in a single place would mean iterating all nodes first
+           (even those which aren't implicitly snapped children), which is
+           likely going to be more expensive due to cache misses than just
+           doing one extra max() */
+        const Vector2 childNodeSize = Math::max(nodeSizes[childNodeId],
+                                                nodeMinSizes[childNodeId]);
+        /* For side margins take the max of the actual node margin and parent
+           node padding. Before/after margins are combined either with the
+           previous/next node margin or with the parent node padding below. */
+        const Vector4 childNodeMargin = nodeMargins[childNodeId];
+        const Float childNodeMarginSideL = padMultiplier[indexSizeSide]*
+            Math::max(childNodeMargin[indexSideL],
+                      nodePadding[indexSideL]);
+        const Float childNodeMarginSideR = padMultiplier[indexSizeSide]*
+            Math::max(childNodeMargin[indexSideR],
+                      nodePadding[indexSideR]);
+
+        /* Add the previously calculated next margin and current node size to
+           the forward sizes */
+        sizeForward += nextMargin + childNodeSize[indexSizeForward];
+
+        /* Max side size is calculated out of individual pieces based on how
+           the alignment is done */
+        if(calculate == Calculate::SideLeft || calculate == Calculate::Fill)
+            maxMarginSideL = Math::max(maxMarginSideL,
+                                       childNodeMarginSideL);
+        if(calculate == Calculate::SideRight || calculate == Calculate::Fill)
+            maxMarginSideR = Math::max(maxMarginSideR,
+                                       childNodeMarginSideR);
+        if(calculate == Calculate::SideLeft)
+            maxSizeSideExceptMarginL = Math::max(maxSizeSideExceptMarginL,
+                childNodeSize[indexSizeSide] + childNodeMarginSideR);
+        if(calculate == Calculate::SideRight)
+            maxSizeSideExceptMarginR = Math::max(maxSizeSideExceptMarginR,
+                childNodeSize[indexSizeSide] + childNodeMarginSideL);
+        if(calculate == Calculate::Center) {
+            maxHalfSizeSideWithMarginL = Math::max(maxHalfSizeSideWithMarginL,
+                childNodeSize[indexSizeSide]*0.5f + childNodeMarginSideL);
+            maxHalfSizeSideWithMarginR = Math::max(maxHalfSizeSideWithMarginR,
+                childNodeSize[indexSizeSide]*0.5f + childNodeMarginSideR);
+        }
+
+        /* Max size is used for Calculate::Fill but also below to figure out
+           the max margin of all nodes, so calculate it always */
+        maxSizeSideExceptMargin = Math::max(maxSizeSideExceptMargin,
+                                            childNodeSize[indexSizeSide]);
+
+        /* Advance to the next layout and calculate margin for it. If the next
+           layout is firstChild again (i.e., we're at the end of the child
+           list), the nextMargin value will stay unused and a value based on
+           parentNodePadding will be used instead. */
+        previousNodeMarginAfter = childNodeMargin[indexAfter];
+        childLayout = nextLayout[layouterDataHandleId(childLayout)];
+        childNodeId = nodeHandleId(layoutNodes[layouterDataHandleId(childLayout)]);
+        nextMargin = padMultiplier[indexSizeForward]*
+            Math::max(previousNodeMarginAfter,
+                      nodeMargins[childNodeId][indexBefore]);
+    } while(childLayout != firstChildLayout);
+
+    /* Calculate the final padding after, which includes the parent node
+       padding again, and add it to the forward size */
+    outPadding[indexAfter] = padMultiplier[indexSizeForward]*
+        Math::max(previousNodeMarginAfter,
+                  nodePadding[indexAfter]);
+    sizeForward += outPadding[indexAfter];
+
+    /* Figure out the output size and padding. Padding before got filled above
+       already. */
+    Vector2 outSize{NoInit};
+    outSize[indexSizeForward] = sizeForward;
+    if(calculate == Calculate::SideLeft) {
+        outSize[indexSizeSide] = maxMarginSideL + maxSizeSideExceptMarginL;
+        outPadding[indexSideL] = maxMarginSideL;
+        outPadding[indexSideR] = maxSizeSideExceptMarginL - maxSizeSideExceptMargin;
+    } else if(calculate == Calculate::SideRight) {
+        outSize[indexSizeSide] = maxMarginSideR + maxSizeSideExceptMarginR;
+        outPadding[indexSideL] = maxSizeSideExceptMarginR - maxSizeSideExceptMargin;
+        outPadding[indexSideR] = maxMarginSideR;
+    } else if(calculate == Calculate::Center) {
+        outSize[indexSizeSide] = maxHalfSizeSideWithMarginL + maxHalfSizeSideWithMarginR;
+        outPadding[indexSideL] = maxHalfSizeSideWithMarginL - maxSizeSideExceptMargin*0.5f;
+        outPadding[indexSideR] = maxHalfSizeSideWithMarginR - maxSizeSideExceptMargin*0.5f;
+    } else if(calculate == Calculate::Fill) {
+        outSize[indexSizeSide] = maxMarginSideL + maxSizeSideExceptMargin + maxMarginSideR;
+        outPadding[indexSideL] = maxMarginSideL;
+        outPadding[indexSideR] = maxMarginSideR;
+    } else CORRADE_INTERNAL_ASSERT_UNREACHABLE(); /* LCOV_EXCL_LINE */
+
+    return {outSize, outPadding};
+}
+
+/* Used by SnapLayouter::setChildSnapInternal() but also tests that verify
+   childLayoutSizePadding() together with snap(), so has to be here. Empty set
+   returned is a failure that should be handled by the caller. */
+Snaps firstChildSnap(const Snaps childSnap) {
+    /* Make the first child snap inherit also any padding. Since it's snapping
+       to a parent, Snap::Inside is implicit and doesn't need to be set. */
+    const Snaps out = (childSnap & Snap::NoPad)|Snap::Inside;
+    const Snaps snapNoNoPad = childSnap & ~Snap::NoPad;
+    /* InsideY is implicit in these, allow it to be specified explicitly */
+    if((snapNoNoPad|Snap::InsideY) == (Snap::Left|Snap::InsideY) ||
+       (snapNoNoPad|Snap::InsideY) == (Snap::Left|Snap::FillY|Snap::InsideY))
+        return out|Snap::Right|(snapNoNoPad & Snap::FillY);
+    if((snapNoNoPad|Snap::InsideY) == (Snap::Right|Snap::InsideY) ||
+       (snapNoNoPad|Snap::InsideY) == (Snap::Right|Snap::FillY|Snap::InsideY))
+        return out|Snap::Left|(snapNoNoPad & Snap::FillY);
+    /* InsideX is implicit in these, allow it to be specified explicitly */
+    if((snapNoNoPad|Snap::InsideX) == (Snap::Top|Snap::InsideX) ||
+       (snapNoNoPad|Snap::InsideX) == (Snap::Top|Snap::FillX|Snap::InsideX))
+        return out|Snap::Bottom|(snapNoNoPad & Snap::FillX);
+    if((snapNoNoPad|Snap::InsideX) == (Snap::Bottom|Snap::InsideX) ||
+       (snapNoNoPad|Snap::InsideX) == (Snap::Bottom|Snap::FillX|Snap::InsideX))
+        return out|Snap::Top|(snapNoNoPad & Snap::FillX);
+    if(snapNoNoPad == (Snap::TopLeft|Snap::InsideX))
+        return out|Snap::BottomLeft;
+    if(snapNoNoPad == (Snap::TopLeft|Snap::InsideY))
+        return out|Snap::TopRight;
+    if(snapNoNoPad == (Snap::TopRight|Snap::InsideX))
+        return out|Snap::BottomRight;
+    if(snapNoNoPad == (Snap::TopRight|Snap::InsideY))
+        return out|Snap::TopLeft;
+    if(snapNoNoPad == (Snap::BottomLeft|Snap::InsideX))
+        return out|Snap::TopLeft;
+    if(snapNoNoPad == (Snap::BottomLeft|Snap::InsideY))
+        return out|Snap::BottomRight;
+    if(snapNoNoPad == (Snap::BottomRight|Snap::InsideX))
+        return out|Snap::TopRight;
+    if(snapNoNoPad == (Snap::BottomRight|Snap::InsideY))
+        return out|Snap::BottomLeft;
+    return {};
+}
 
 /* Snapping inside given direction is either explicitly or if either filling or
    centering in this direction */
@@ -173,68 +510,113 @@ Containers::Pair<Vector2, Vector2> snap(Snaps snap, const Vector2& targetOffset,
     return {{offsetX, offsetY}, {sizeX, sizeY}};
 }
 
-/* Takes the `nodeIdsBreadthFirst` array (including the first -1 item)
-   populated by orderNodesBreadthFirstInto() and fills a prefix of `layoutIds`
-   in an order that matches the breadth-first order of layout target nodes.
-   Returns the prefix of the `layoutIds` that got populated.
+/* The `layoutIds` array gets filled with layout IDs in the following order:
 
-   Assumes that the masked layoutTargets are unique, which should hold because
-   AbstractUserInterface has the same constraing. The `layoutOffsets` and
-   `layouts` arrays are temporary storage, `layoutOffsets` is expected to be
-   zero-initialized. */
-std::size_t orderLayoutsBreadthFirstInto(const Containers::BitArrayView layoutIdsToUpdate, const Containers::StridedArrayView1D<const NodeHandle>& layoutTargets, const Containers::ArrayView<const Int> nodeIdsBreadthFirst, const Containers::ArrayView<UnsignedInt> layoutOffsets, const Containers::ArrayView<UnsignedInt> layouts, const Containers::ArrayView<UnsignedInt> layoutIds) {
+    -   the first item is always -1
+    -   children / nested layout IDs are always after their parent / target in
+        the `layoutIds` array in a breadth-first order
+
+   The `childrenOffsets` and `children` arrays are temporary storage. The
+   `childrenOffsets` array has to be zero-initialized. Others don't need to
+   be. */
+void orderLayoutsBreadthFirstInto(const Containers::StridedArrayView1D<const LayouterDataHandle>& layoutParentsOrTargets, const Containers::StridedArrayView1D<const LayouterDataHandle>& layoutFirstChildren, const Containers::StridedArrayView1D<const LayouterDataHandle>& layoutFirstExplicitSnaps, const Containers::StridedArrayView1D<const LayouterDataHandle>& layoutNext, const Containers::ArrayView<UnsignedInt> childrenOffsets, const Containers::ArrayView<UnsignedInt> children, const Containers::ArrayView<Int> layoutIds) {
     CORRADE_INTERNAL_ASSERT(
-        layoutTargets.size() == layoutIdsToUpdate.size() &&
-        layoutOffsets.size() == nodeIdsBreadthFirst.size() + 1 &&
-        layouts.size() == layoutIdsToUpdate.size() &&
-        layoutIds.size() == layoutIdsToUpdate.size());
+        layoutFirstChildren.size() == layoutParentsOrTargets.size() &&
+        layoutFirstExplicitSnaps.size() == layoutParentsOrTargets.size() &&
+        layoutNext.size() == layoutParentsOrTargets.size() &&
+        childrenOffsets.size() == layoutParentsOrTargets.size() + 2 &&
+        children.size() == layoutParentsOrTargets.size() &&
+        layoutIds.size() == layoutParentsOrTargets.size() + 1);
 
-    /* First calculate the count of layouts targeting each node, skipping the
-       first element (targeting the UI itself is at index 1, targeting first
-       node at index 2) ... */
-    /** @todo some way to iterate set bits */
-    for(std::size_t i = 0; i != layoutIdsToUpdate.size(); ++i) {
-        if(!layoutIdsToUpdate[i])
-            continue;
-        const NodeHandle target = layoutTargets[i];
-        ++layoutOffsets[target == NodeHandle::Null ? 1 : nodeHandleId(target) + 2];
+    /* Children offset for each layout including layouts with no parents or
+       targets. Handle generation is ignored here, so free and invalid layouts
+       are counted as well.
+
+       First calculate the count of children / dependent layouts for each,
+       skipping the first element (parent-/target-less layout is at index 1,
+       first layout at index 2) ... */
+    for(const LayouterDataHandle parentOrTarget: layoutParentsOrTargets) {
+        if(parentOrTarget != LayouterDataHandle::Null)
+            ++childrenOffsets[layouterDataHandleId(parentOrTarget) + 1];
+        else
+            ++childrenOffsets[0];
     }
 
     /* ... then convert the counts to a running offset. Now
-       `[layoutOffsets[i + 2], layoutOffsets[i + 3])` is a range in which
-       the `layouts` array contains a list of layouts targeting node `i`. The
-       last element (containing the end offset) is omitted at this step. */
+       `[childrenOffsets[i + 1], childrenOffsets[i + 2])` is a range in which
+       the `children` array contains a list of children for layout `i`. */
     {
         UnsignedInt offset = 0;
-        for(UnsignedInt& i: layoutOffsets) {
+        for(UnsignedInt& i: childrenOffsets) {
             const UnsignedInt nextOffset = offset + i;
             i = offset;
             offset = nextOffset;
         }
+        childrenOffsets.back() = offset;
+        CORRADE_INTERNAL_ASSERT(offset == layoutParentsOrTargets.size());
     }
 
-    /* Go through the layout list again, convert that to layout ranges. The
-       `layoutOffsets` array gets shifted by one element by the process, thus
-       now `[layoutOffsets[i + 1], layoutOffsets[i + 2])` is a range in which
-       the `layouts` array below contains a list of layouts targeting node `i`.
-       The last filled array element is now containing the end offset. */
-    /** @todo some way to iterate set bits */
-    for(std::size_t i = 0; i != layoutIdsToUpdate.size(); ++i) {
-        if(!layoutIdsToUpdate[i])
-            continue;
-        const NodeHandle target = layoutTargets[i];
-        layouts[layoutOffsets[target == NodeHandle::Null ? 1 : nodeHandleId(target) + 2]++] = i;
+    /* Go through the layout list again. For each layout iterate its children
+       and dependent layouts, filling the children list. Additionally put all
+       layouts that don't have a parent / target at the start of the children
+       list. */
+    {
+        UnsignedInt rootOffset = 0;
+        for(std::size_t i = 0; i != layoutParentsOrTargets.size(); ++i) {
+            const LayouterDataHandle parentOrTarget = layoutParentsOrTargets[i];
+
+            /* If the layout has no parent or target, add it to the root layout
+               list. Such layouts should not be part of any list. */
+            if(parentOrTarget == LayouterDataHandle::Null) {
+                children[rootOffset++] = i;
+                CORRADE_INTERNAL_DEBUG_ASSERT(layoutNext[i] == LayouterDataHandle::Null);
+            }
+
+            /* If the layout has any children, put them all into the list in
+               their respective order. */
+            UnsignedInt childOffset = childrenOffsets[i + 1];
+            const LayouterDataHandle firstChild = layoutFirstChildren[i];
+            if(firstChild != LayouterDataHandle::Null) {
+                LayouterDataHandle layout = firstChild;
+                do {
+                    const UnsignedInt layoutId = layouterDataHandleId(layout);
+                    children[childOffset++] = layoutId;
+                    layout = layoutNext[layoutId];
+                } while(layout != firstChild);
+            }
+
+            /* If the layout has any dependent layouts, put them into the
+               list. The order doesn't matter in this case. */
+            const LayouterDataHandle firstExplicitSnap = layoutFirstExplicitSnaps[i];
+            if(firstExplicitSnap != LayouterDataHandle::Null) {
+                LayouterDataHandle layout = firstExplicitSnap;
+                do {
+                    const UnsignedInt layoutId = layouterDataHandleId(layout);
+                    children[childOffset++] = layoutId;
+                    layout = layoutNext[layoutId];
+                } while(layout != firstExplicitSnap);
+            }
+
+            CORRADE_INTERNAL_DEBUG_ASSERT(childOffset == childrenOffsets[i + 2]);
+        }
+
+        CORRADE_INTERNAL_DEBUG_ASSERT(rootOffset == childrenOffsets[1]);
     }
 
-    /* Go through the breadth-first node order and put each that has a layout
-       assigned to the output array */
-    std::size_t offset = 0;
-    for(const Int nodeId: nodeIdsBreadthFirst) {
-        for(UnsignedInt i = layoutOffsets[nodeId + 1], end = layoutOffsets[nodeId + 2]; i != end; ++i)
-            layoutIds[offset++] = layouts[i];
+    /* Go breadth-first (so we have items sharing the same parent next to each
+       other, but that doesn't really matter, it's simpler than depth-first)
+       and build a layout IDs list where a parent / target layout ID is always
+       before its children. */
+    std::size_t outputOffset = 0;
+    layoutIds[0] = -1;
+    for(std::size_t i = 0; i != outputOffset + 1; ++i) {
+        const Int layoutId = layoutIds[i];
+        for(std::size_t j = childrenOffsets[layoutId + 1], jMax = childrenOffsets[layoutId + 2]; j != jMax; ++j) {
+            layoutIds[outputOffset + 1] = children[j];
+            ++outputOffset;
+        }
     }
-
-    return offset;
+    CORRADE_INTERNAL_ASSERT(outputOffset == layoutParentsOrTargets.size());
 }
 
 }}}}
