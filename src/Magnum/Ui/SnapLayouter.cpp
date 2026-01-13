@@ -902,7 +902,17 @@ void SnapLayouter::doUpdate(const Containers::BitArrayView layoutIdsToUpdate, co
            snap target and parameters */
         Snaps snap{NoInit};
         Vector2 targetOffset{NoInit}, targetSize{NoInit};
-        Vector4 targetPadding{NoInit}, targetMargin{NoInit}, nodeMargin{NoInit};
+        /* GCC is overly "helpful" and warns that targetPadding / targetMargin
+           might be used uninitialized in some cases in Release builds. It
+           isn't, and in Debug builds I'm poisoning the values with NaNs below
+           to be sure they aren't. Thus zero-init on Release to silence the
+           damn thing, even though it's completely unnecessary. */
+        #ifdef CORRADE_IS_DEBUG_BUILD
+        Vector4 targetPadding{NoInit}, targetMargin{NoInit};
+        #else
+        Vector4 targetPadding{Math::ZeroInit}, targetMargin{Math::ZeroInit};
+        #endif
+        Vector4 nodeMargin{NoInit};
         if(!(layout.flags >= SnapLayoutFlagHasExplicitSnap)) {
             /* If this is the first child layout in the list, snap to the
                parent */
