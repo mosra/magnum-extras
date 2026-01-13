@@ -317,7 +317,7 @@ class MAGNUM_UI_EXPORT SnapLayouter: public AbstractLayouter {
         /** @copydoc AbstractLayouter::AbstractLayouter(AbstractLayouter&&) */
         SnapLayouter(SnapLayouter&&) noexcept;
 
-        virtual ~SnapLayouter();
+        ~SnapLayouter();
 
         /** @brief Copying is not allowed */
         SnapLayouter& operator=(const SnapLayouter&) = delete;
