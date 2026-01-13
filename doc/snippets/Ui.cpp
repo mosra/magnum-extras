@@ -1703,7 +1703,11 @@ textLayer.create(DOXYGEN_ELLIPSIS(0), "Status: 418 I'm a Teapot",
 }
 
 {
-Containers::Pointer<Text::AbstractFont> font;
+/* -Wnonnull in GCC 11+  "helpfully" says "this is null" if I don't initialize
+   the converter pointer. I don't care, I just want you to check compilation
+   errors, not more! */
+PluginManager::Manager<Text::AbstractFont> fontManager;
+Containers::Pointer<Text::AbstractFont> font = fontManager.loadAndInstantiate("SomethingWhatever");
 /* [TextLayer-style-features-fill-glyph-cache] */
 font->fillGlyphCache(glyphCache, {
     /* Small capitals */
@@ -1816,7 +1820,11 @@ textLayer.create(1, "bulky?!", {}, bulky);
 
 {
 Ui::NodeHandle node{};
-Containers::Pointer<Text::AbstractFont> font;
+/* -Wnonnull in GCC 11+  "helpfully" says "this is null" if I don't initialize
+   the converter pointer. I don't care, I just want you to check compilation
+   errors, not more! */
+PluginManager::Manager<Text::AbstractFont> fontManager;
+Containers::Pointer<Text::AbstractFont> font = fontManager.loadAndInstantiate("SomethingWhatever");
 /* [TextLayer-single-glyph-runtime] */
 textLayer.createGlyph(DOXYGEN_ELLIPSIS(0), font->glyphForName("coffee"), {}, node);
 /* [TextLayer-single-glyph-runtime] */
