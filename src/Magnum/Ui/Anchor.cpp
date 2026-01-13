@@ -30,6 +30,7 @@
 
 #include "Magnum/Ui/AbstractUserInterface.h"
 #include "Magnum/Ui/Handle.h"
+#include "Magnum/Ui/Widget.h"
 
 namespace Magnum { namespace Ui {
 
@@ -37,6 +38,8 @@ AbstractAnchor::AbstractAnchor(AbstractUserInterface& ui, const NodeHandle node)
     CORRADE_ASSERT(ui.isHandleValid(node),
         "Ui::AbstractAnchor: invalid handle" << node, );
 }
+
+AbstractAnchor::AbstractAnchor(const AbstractWidget& widget): _ui{&widget.ui()}, _node{widget.node()} {}
 
 AbstractAnchor::AbstractAnchor(AbstractUserInterface& ui, const NodeHandle parent, const Vector2& offset, const Vector2& size, const NodeFlags flags): _ui{&ui} {
     _node = ui.createNode(parent, offset, size, flags);

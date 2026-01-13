@@ -62,6 +62,15 @@ class MAGNUM_UI_EXPORT AbstractAnchor {
         /*implicit*/ AbstractAnchor(AbstractUserInterface& ui, NodeHandle node);
 
         /**
+         * @brief Construct from a widget instance
+         *
+         * Unlike @ref AbstractAnchor(AbstractUserInterface&, NodeHandle)
+         * doesn't perform any checks and just assumes the widget has a live
+         * @ref AbstractUserInterface reference and a valid @ref NodeHandle.
+         */
+        /*implicit*/ AbstractAnchor(const AbstractWidget& widget);
+
+        /**
          * @brief Create a custom-positioned anchor
          *
          * Calls @ref AbstractUserInterface::createNode() with @p parent,
@@ -113,6 +122,15 @@ template<class UserInterface> class BasicAnchor: public AbstractAnchor {
     public:
         /** @copydoc AbstractAnchor::AbstractAnchor(AbstractUserInterface&, NodeHandle) */
         /*implicit*/ BasicAnchor(UserInterface& ui, NodeHandle node): AbstractAnchor{ui, node} {}
+
+        /** @copydoc AbstractAnchor::AbstractAnchor(const AbstractWidget&) */
+        /*implicit*/ BasicAnchor(const BasicWidget<UserInterface>& widget):
+            /* Yes, again a reinterpret_cast like in BasicWidget so we don't
+               need to pull in Widget.h and UserInterface.h to know that
+               BasicWidget<UserInterface> is derived from AbstractWidget. The
+               subclass has no members and it's a trivial type so such a cast
+               is fine. */
+            AbstractAnchor{reinterpret_cast<const AbstractWidget&>(widget)} {}
 
         /** @copydoc AbstractAnchor::AbstractAnchor(AbstractUserInterface&, NodeHandle, const Vector2&, const Vector2&, NodeFlags) */
         /*implicit*/ BasicAnchor(UserInterface& ui, NodeHandle parent, const Vector2& offset, const Vector2& size, NodeFlags flags = {}): AbstractAnchor{ui, parent, offset, size, flags} {}

@@ -34,6 +34,7 @@
 #include "Magnum/Ui/Handle.h"
 #include "Magnum/Ui/NodeFlags.h"
 #include "Magnum/Ui/UserInterface.h"
+#include "Magnum/Ui/Widget.h"
 
 namespace Magnum { namespace Ui { namespace Test { namespace {
 
@@ -42,6 +43,7 @@ struct AnchorTest: TestSuite::Tester {
 
     template<class T> void construct();
     template<class T> void constructInvalid();
+    template<class T> void constructFromWidget();
     template<class T> void constructCreateNode();
     template<class T> void constructCreateNodeRoot();
     /* Passing an invalid parent to the node creation is asserted in
@@ -53,6 +55,8 @@ AnchorTest::AnchorTest() {
                           &AnchorTest::construct<Anchor>,
                           &AnchorTest::constructInvalid<AbstractAnchor>,
                           &AnchorTest::constructInvalid<Anchor>,
+                          &AnchorTest::constructFromWidget<AbstractAnchor>,
+                          &AnchorTest::constructFromWidget<Anchor>,
                           &AnchorTest::constructCreateNode<AbstractAnchor>,
                           &AnchorTest::constructCreateNode<Anchor>,
                           &AnchorTest::constructCreateNodeRoot<AbstractAnchor>,
@@ -62,10 +66,12 @@ AnchorTest::AnchorTest() {
 template<class> struct AnchorTraits;
 template<> struct AnchorTraits<AbstractAnchor> {
     typedef AbstractUserInterface UserInterfaceType;
+    typedef AbstractWidget WidgetType;
     static const char* name() { return "AbstractAnchor"; }
 };
 template<> struct AnchorTraits<Anchor> {
     typedef UserInterface UserInterfaceType;
+    typedef Widget WidgetType;
     static const char* name() { return "Anchor"; }
 };
 
@@ -104,6 +110,25 @@ template<class T> void AnchorTest::constructInvalid() {
     Error redirectError{&out};
     T{ui, nodeHandle(0x12345, 0xabc)};
     CORRADE_COMPARE(out, "Ui::AbstractAnchor: invalid handle Ui::NodeHandle(0x12345, 0xabc)\n");
+}
+
+template<class T> void AnchorTest::constructFromWidget() {
+    setTestCaseTemplateName(AnchorTraits<T>::name());
+
+    struct Interface: AnchorTraits<T>::UserInterfaceType {
+        explicit Interface(NoCreateT): AnchorTraits<T>::UserInterfaceType{NoCreate} {}
+    } ui{NoCreate};
+
+    /* Create extra nodes to verify it isn't just using a trivial handle */
+    ui.createNode({}, {});
+    ui.removeNode(ui.createNode({}, {}));
+
+    NodeHandle node = ui.createNode({}, {});
+    typename AnchorTraits<T>::WidgetType widget{ui, node};
+    CORRADE_COMPARE(widget.node(), nodeHandle(1, 2));
+
+    T anchor = widget;
+    CORRADE_COMPARE(anchor.node(), node);
 }
 
 template<class T> void AnchorTest::constructCreateNode() {
