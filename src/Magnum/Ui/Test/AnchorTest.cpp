@@ -78,7 +78,7 @@ template<class T> void AnchorTest::construct() {
 
     NodeHandle node = ui.createNode({}, {});
 
-    T anchor{ui, node};
+    T anchor = {ui, node};
     CORRADE_COMPARE(&anchor.ui(), &ui);
     CORRADE_COMPARE(anchor.node(), node);
     CORRADE_COMPARE(anchor, node);

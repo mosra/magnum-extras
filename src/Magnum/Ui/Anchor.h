@@ -59,7 +59,7 @@ class MAGNUM_UI_EXPORT AbstractAnchor {
          * The @p node is expected to be valid in @p ui.
          * @see @ref AbstractUserInterface::isHandleValid(NodeHandle) const
          */
-        explicit AbstractAnchor(AbstractUserInterface& ui, NodeHandle node);
+        /*implicit*/ AbstractAnchor(AbstractUserInterface& ui, NodeHandle node);
 
         /**
          * @brief Create a custom-positioned anchor
@@ -112,7 +112,7 @@ base class documentation for more information.
 template<class UserInterface> class BasicAnchor: public AbstractAnchor {
     public:
         /** @copydoc AbstractAnchor::AbstractAnchor(AbstractUserInterface&, NodeHandle) */
-        explicit BasicAnchor(UserInterface& ui, NodeHandle node): AbstractAnchor{ui, node} {}
+        /*implicit*/ BasicAnchor(UserInterface& ui, NodeHandle node): AbstractAnchor{ui, node} {}
 
         /** @copydoc AbstractAnchor::AbstractAnchor(AbstractUserInterface&, NodeHandle, const Vector2&, const Vector2&, NodeFlags) */
         /*implicit*/ BasicAnchor(UserInterface& ui, NodeHandle parent, const Vector2& offset, const Vector2& size, NodeFlags flags = {}): AbstractAnchor{ui, parent, offset, size, flags} {}
