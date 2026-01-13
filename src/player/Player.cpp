@@ -177,9 +177,10 @@ Overlay::Overlay(Platform::ScreenedApplication& application):
     ui{application,
         Ui::McssDarkStyle{Ui::McssDarkStyle::Feature::Animations}
             #ifdef CORRADE_TARGET_EMSCRIPTEN
-            /* For the info / error popups and popup background */
+            /* For the info / error popups and popup background. Use a larger
+               value to not clash with style animations. */
             /** @todo remove once there's a builtin thing for dialogs */
-            .setBaseLayerDynamicStyleCount(3)
+            .setBaseLayerDynamicStyleCount(15)
             #endif
     },
     window{Ui::snap(ui, Ui::Snap::Fill|Ui::Snap::NoPad, {})},
@@ -235,21 +236,26 @@ Overlay::Overlay(Platform::ScreenedApplication& application):
         this->application().setContainerCssClass(_isFullsize ? "mn-fullsize" : "mn-width-800 mn-aspect-16-10");
     });
     /** @todo clean up once there's a builtin thing for dialogs */
+    /* Explicitly allocate the dynamic styles to prevent them from being reused
+       by animations */
+    const UnsignedInt style0 = *ui.baseLayer().allocateDynamicStyle();
+    const UnsignedInt style1 = *ui.baseLayer().allocateDynamicStyle();
+    const UnsignedInt style2 = *ui.baseLayer().allocateDynamicStyle();
     /* Abusing styles for creating modal dialog backgrounds */
-    ui.baseLayer().setDynamicStyle(0, Ui::BaseLayerStyleUniform{}
+    ui.baseLayer().setDynamicStyle(style0, Ui::BaseLayerStyleUniform{}
         .setColor(0x00000099_rgbaf), {}); /* m.css dim */
-    ui.baseLayer().setDynamicStyle(1, Ui::BaseLayerStyleUniform{}
+    ui.baseLayer().setDynamicStyle(style1, Ui::BaseLayerStyleUniform{}
         .setColor(0x2a4f70ff_rgbaf*0.8f) /* m.css info */
         .setCornerRadius(4.0f), {});
-    ui.baseLayer().setDynamicStyle(2, Ui::BaseLayerStyleUniform{}
+    ui.baseLayer().setDynamicStyle(style2, Ui::BaseLayerStyleUniform{}
         .setColor(0x702b2aff_rgbaf*0.8f) /* m.css danger */
         .setCornerRadius(4.0f), {});
     /* Drop hint dialog. Shown initially, hidden once there's something loaded */
     dropHint = Ui::snap(ui, Ui::Snap::Fill|Ui::Snap::NoPad, {});
     {
-        ui.baseLayer().create(ui.baseLayer().shared().styleCount() + 0, dropHint);
+        ui.baseLayer().create(ui.baseLayer().shared().styleCount() + style0, dropHint);
         Ui::NodeHandle dialog = Ui::snap(ui, {}, dropHint, {540, 140});
-        ui.baseLayer().create(ui.baseLayer().shared().styleCount() + 1, dialog);
+        ui.baseLayer().create(ui.baseLayer().shared().styleCount() + style1, dialog);
         Ui::DataHandle hint = ui.textLayer().create(Ui::Implementation::TextStyle::LabelInfoText, "Drag&drop a file and everything it references here to play it.", {}, dialog);
         ui.textLayer().setPadding(hint, {0.0f, -30.0f, 0.0f, 30.0f});
         Ui::DataHandle disclaimer = ui.textLayer().create(Ui::Implementation::TextStyle::LabelDimText, "All data are processed and viewed locally in your\nweb browser. Nothing is uploaded to the server.", {}, dialog);
@@ -259,9 +265,9 @@ Overlay::Overlay(Platform::ScreenedApplication& application):
     error = Ui::snap(ui, Ui::Snap::Fill|Ui::Snap::NoPad, {});
     ui.clearNodeOrder(error);
     {
-        ui.baseLayer().create(ui.baseLayer().shared().styleCount() + 0, error);
+        ui.baseLayer().create(ui.baseLayer().shared().styleCount() + style0, error);
         Ui::NodeHandle dialog = Ui::snap(ui, {}, error, {440, 200});
-        ui.baseLayer().create(ui.baseLayer().shared().styleCount() + 2, dialog);
+        ui.baseLayer().create(ui.baseLayer().shared().styleCount() + style2, dialog);
         errorMessage = Ui::Label{
             Ui::snap(ui, Ui::Snap::Top|Ui::Snap::Inside, dialog, {0.0f, 15.0f}, LabelSize), "No recognizable file dropped.", Ui::LabelStyle::Danger};
         ui.textLayer().create(Ui::Implementation::TextStyle::LabelDimText, "Try with another file or check the browser\nconsole for details. Bug reports welcome.", {}, dialog);
