@@ -76,7 +76,14 @@ template<class T> void AnchorTest::construct() {
         explicit Interface(NoCreateT): AnchorTraits<T>::UserInterfaceType{NoCreate} {}
     } ui{NoCreate};
 
+    /* Create extra nodes to verify it isn't just using a trivial handle */
+    ui.createNode({}, {});
+    ui.createNode({}, {});
+    ui.createNode({}, {});
+    ui.removeNode(ui.createNode({}, {}));
+
     NodeHandle node = ui.createNode({}, {});
+    CORRADE_COMPARE(node, nodeHandle(3, 2));
 
     T anchor = {ui, node};
     CORRADE_COMPARE(&anchor.ui(), &ui);
@@ -106,10 +113,17 @@ template<class T> void AnchorTest::constructCreateNode() {
         explicit Interface(NoCreateT): AnchorTraits<T>::UserInterfaceType{NoCreate} {}
     } ui{NoCreate};
 
+    /* Create extra nodes to verify it isn't just using a trivial handle */
+    ui.createNode({}, {});
+    ui.createNode({}, {});
+    ui.removeNode(ui.createNode({}, {}));
+
     NodeHandle parent = ui.createNode({}, {});
+    CORRADE_COMPARE(parent, nodeHandle(2, 2));
 
     T anchor{ui, parent, {1.0f, 2.0f}, {3.0f, 4.0f}, NodeFlag::Disabled};
     CORRADE_COMPARE(&anchor.ui(), &ui);
+    CORRADE_COMPARE(anchor.node(), nodeHandle(3, 1));
     CORRADE_COMPARE(ui.nodeParent(anchor), parent);
     CORRADE_COMPARE(ui.nodeOffset(anchor), (Vector2{1.0f, 2.0f}));
     CORRADE_COMPARE(ui.nodeSize(anchor), (Vector2{3.0f, 4.0f}));
@@ -123,8 +137,13 @@ template<class T> void AnchorTest::constructCreateNodeRoot() {
         explicit Interface(NoCreateT): AnchorTraits<T>::UserInterfaceType{NoCreate} {}
     } ui{NoCreate};
 
+    /* Create extra nodes to verify it isn't just using a trivial handle */
+    ui.createNode({}, {});
+    ui.removeNode(ui.createNode({}, {}));
+
     T anchor{ui, {1.0f, 2.0f}, {3.0f, 4.0f}, NodeFlag::Disabled};
     CORRADE_COMPARE(&anchor.ui(), &ui);
+    CORRADE_COMPARE(anchor.node(), nodeHandle(1, 2));
     CORRADE_COMPARE(ui.nodeParent(anchor), NodeHandle::Null);
     CORRADE_COMPARE(ui.nodeOffset(anchor), (Vector2{1.0f, 2.0f}));
     CORRADE_COMPARE(ui.nodeSize(anchor), (Vector2{3.0f, 4.0f}));
