@@ -108,6 +108,7 @@ struct AbstractUserInterfaceTest: TestSuite::Tester {
     void node();
     void nodeHandleRecycle();
     void nodeHandleDisable();
+    void nodeOffsetSize();
     void nodeOpacity();
     void nodeFlags();
     void nodeGetSetInvalid();
@@ -1217,6 +1218,7 @@ AbstractUserInterfaceTest::AbstractUserInterfaceTest() {
               &AbstractUserInterfaceTest::node,
               &AbstractUserInterfaceTest::nodeHandleRecycle,
               &AbstractUserInterfaceTest::nodeHandleDisable,
+              &AbstractUserInterfaceTest::nodeOffsetSize,
               &AbstractUserInterfaceTest::nodeOpacity,
               &AbstractUserInterfaceTest::nodeFlags,
               &AbstractUserInterfaceTest::nodeCreateInvalid,
@@ -3671,6 +3673,59 @@ void AbstractUserInterfaceTest::nodeHandleDisable() {
     }), TestSuite::Compare::Container);
 }
 
+void AbstractUserInterfaceTest::nodeOffsetSize() {
+    AbstractUserInterface ui{{100, 100}};
+
+    /* Add more than one handle to verify the correct one gets updated and not
+       always the first */
+    NodeHandle another = ui.createNode({1.0f, 2.0f}, {3.0f, 4.0f});
+    CORRADE_COMPARE(ui.nodeOffset(another), (Vector2{1.0f, 2.0f}));
+    CORRADE_COMPARE(ui.nodeSize(another), (Vector2{3.0f, 4.0f}));
+    CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeUpdate);
+
+    NodeHandle node = ui.createNode({5.0f, 6.0f}, {7.0f, 8.0f});
+    CORRADE_COMPARE(ui.nodeOffset(node), (Vector2{5.0f, 6.0f}));
+    CORRADE_COMPARE(ui.nodeSize(node), (Vector2{7.0f, 8.0f}));
+    CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeUpdate);
+
+    /* Clear the state flags */
+    ui.update();
+    CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
+
+    ui.setNodeOffset(node, {6.0f, 5.0f});
+    CORRADE_COMPARE(ui.nodeOffset(node), (Vector2{6.0f, 5.0f}));
+    CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsLayoutUpdate);
+
+    /* Clear the state flags */
+    ui.update();
+    CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
+
+    /* Setting the same offset still triggers the update */
+    ui.setNodeOffset(node, {6.0f, 5.0f});
+    CORRADE_COMPARE(ui.nodeOffset(node), (Vector2{6.0f, 5.0f}));
+    CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsLayoutUpdate);
+
+    /* Clear the state flags */
+    ui.update();
+    CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
+
+    ui.setNodeSize(node, {8.0f, 7.0f});
+    CORRADE_COMPARE(ui.nodeSize(node), (Vector2{8.0f, 7.0f}));
+    CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsLayoutUpdate);
+
+    /* Clear the state flags */
+    ui.update();
+    CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
+
+    /* Setting the same size still triggers the update */
+    ui.setNodeSize(node, {8.0f, 7.0f});
+    CORRADE_COMPARE(ui.nodeSize(node), (Vector2{8.0f, 7.0f}));
+    CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsLayoutUpdate);
+
+    CORRADE_COMPARE(ui.nodeOffset(another), (Vector2{1.0f, 2.0f}));
+    CORRADE_COMPARE(ui.nodeSize(another), (Vector2{3.0f, 4.0f}));
+}
+
 void AbstractUserInterfaceTest::nodeOpacity() {
     AbstractUserInterface ui{{100, 100}};
 
@@ -3678,17 +3733,37 @@ void AbstractUserInterfaceTest::nodeOpacity() {
        always the first */
     NodeHandle another = ui.createNode({}, {});
     CORRADE_COMPARE(ui.nodeOpacity(another), 1.0f);
+    CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeUpdate);
 
     NodeHandle node = ui.createNode({}, {});
     CORRADE_COMPARE(ui.nodeOpacity(another), 1.0f);
+    CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeUpdate);
+
+    /* Clear the state flags */
+    ui.update();
+    CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
 
     ui.setNodeOpacity(node, 0.75f);
     CORRADE_COMPARE(ui.nodeOpacity(node), 0.75f);
+    CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeOpacityUpdate);
+
+    /* Clear the state flags */
+    ui.update();
+    CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
+
+    /* Setting the same opacity still triggers the update */
+    ui.setNodeOpacity(node, 0.75f);
+    CORRADE_COMPARE(ui.nodeOpacity(node), 0.75f);
+    CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeOpacityUpdate);
 
     CORRADE_COMPARE(ui.nodeOpacity(another), 1.0f);
 }
 
 void AbstractUserInterfaceTest::nodeFlags() {
+    /* Compared to nodeOffsetSize() and nodeOpacity(), the state flags aren't
+       tested here as they differ for each flag. They're tested in state()
+       instead. */
+
     AbstractUserInterface ui{{100, 100}};
 
     /* Add more than one handle to verify the correct one gets updated and not
