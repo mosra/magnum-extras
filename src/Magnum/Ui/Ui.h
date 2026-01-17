@@ -110,6 +110,7 @@ class TextProperties;
 class GenericAnimator;
 class GenericNodeAnimator;
 class GenericDataAnimator;
+class GenericLayouter;
 
 class RendererGL;
 

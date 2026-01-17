@@ -56,6 +56,7 @@
 #include "Magnum/Ui/Event.h"
 #include "Magnum/Ui/EventLayer.h"
 #include "Magnum/Ui/GenericAnimator.h"
+#include "Magnum/Ui/GenericLayouter.h"
 #include "Magnum/Ui/Handle.h"
 #include "Magnum/Ui/Label.h"
 #include "Magnum/Ui/NodeAnimator.h"
@@ -2262,5 +2263,51 @@ animator.callOnce([&textLayer](Ui::DataHandle label) {
     textLayer.setText(label, "Timed out.", {});
 }, now + 10.0_sec, label);
 /* [GenericDataAnimator-callOnce] */
+}
+
+{
+Ui::AbstractUserInterface ui{{100, 100}};
+/* [GenericLayouter-setup] */
+Ui::GenericLayouter& layouter = ui.setLayouterInstance(
+    Containers::pointer<Ui::GenericLayouter>(ui.createLayouter()));
+/* [GenericLayouter-setup] */
+
+{
+/* [GenericLayouter-add] */
+Ui::NodeHandle background = ui.createNode(DOXYGEN_ELLIPSIS({}, {}));
+Ui::NodeHandle fill = ui.createNode(background, DOXYGEN_ELLIPSIS({}, {}));
+
+Float percentage = 38.4f;
+
+layouter.add(fill, [background, &percentage](const Ui::GenericLayouter& layouter, Vector2&, Vector2& nodeSize) {
+    nodeSize.x() = layouter.nodeSize(background).x()*percentage/100.0f;
+});
+/* [GenericLayouter-add] */
+
+/* [GenericLayouter-add-percentage-in-node-size] */
+ui.setNodeSizeX(fill, 38.4f);
+
+layouter.add(fill, [background](const Ui::GenericLayouter& layouter, Vector2&, Vector2& nodeSize) {
+    nodeSize.x() *= layouter.nodeSize(background).x()/100.0f;
+});
+/* [GenericLayouter-add-percentage-in-node-size] */
+}
+
+{
+/* [GenericLayouter-add-no-node-modification] */
+Ui::BaseLayer& baseLayer = DOXYGEN_ELLIPSIS(ui.layer<Ui::BaseLayer>({}));
+Ui::NodeHandle progressbar = ui.createNode(DOXYGEN_ELLIPSIS({}, {}));
+Ui::DataHandle progressbarData = baseLayer.create(DOXYGEN_ELLIPSIS(0), progressbar);
+
+baseLayer.setOutlineWidth(progressbarData, {0.0f, 0.0f, 100.0f - 38.4f, 0.0f});
+
+layouter.add(progressbar, [&baseLayer, progressbarData](const Ui::GenericLayouter& layouter, Vector2&, Vector2&) {
+    Float progressbarWidth = layouter.nodeSize(baseLayer.node(progressbarData)).x();
+    Float inversePercentage = baseLayer.outlineWidth(progressbarData)[3];
+    baseLayer.setOutlineWidth(progressbarData,
+        {0.0f, 0.0f, progressbarWidth*inversePercentage/100.0f, 0.0f});
+});
+/* [GenericLayouter-add-no-node-modification] */
+}
 }
 }
