@@ -2218,6 +2218,7 @@ void SnapLayouterTest::orderLayoutsBreadthFirst() {
 
 void SnapLayouterTest::construct() {
     SnapLayouter layouter{layouterHandle(0xab, 0x12)};
+    CORRADE_COMPARE(layouter.features(), LayouterFeature::UniqueLayouts);
     CORRADE_COMPARE(layouter.handle(), layouterHandle(0xab, 0x12));
 }
 
