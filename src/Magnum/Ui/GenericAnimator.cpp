@@ -67,6 +67,8 @@ Debug& operator<<(Debug& debug, const GenericAnimationStates value) {
     });
 }
 
+namespace {
+
 struct Animation {
     Containers::FunctionData animation;
     Float(*easing)(Float);
@@ -76,6 +78,8 @@ struct Animation {
         the EventLayer implementation. */
     void(*call)(Animation&, NodeHandle, DataHandle, Float, GenericAnimationStates);
 };
+
+}
 
 struct GenericAnimator::State {
     Containers::Array<Animation> animations;
