@@ -3671,6 +3671,23 @@ void AbstractUserInterfaceTest::nodeHandleDisable() {
     }), TestSuite::Compare::Container);
 }
 
+void AbstractUserInterfaceTest::nodeOpacity() {
+    AbstractUserInterface ui{{100, 100}};
+
+    /* Add more than one handle to verify the correct one gets updated and not
+       always the first */
+    NodeHandle another = ui.createNode({}, {});
+    CORRADE_COMPARE(ui.nodeOpacity(another), 1.0f);
+
+    NodeHandle node = ui.createNode({}, {});
+    CORRADE_COMPARE(ui.nodeOpacity(another), 1.0f);
+
+    ui.setNodeOpacity(node, 0.75f);
+    CORRADE_COMPARE(ui.nodeOpacity(node), 0.75f);
+
+    CORRADE_COMPARE(ui.nodeOpacity(another), 1.0f);
+}
+
 void AbstractUserInterfaceTest::nodeFlags() {
     AbstractUserInterface ui{{100, 100}};
 
@@ -3692,23 +3709,6 @@ void AbstractUserInterfaceTest::nodeFlags() {
     CORRADE_COMPARE(ui.nodeFlags(node), NodeFlag::Hidden);
 
     CORRADE_COMPARE(ui.nodeFlags(another), NodeFlags{});
-}
-
-void AbstractUserInterfaceTest::nodeOpacity() {
-    AbstractUserInterface ui{{100, 100}};
-
-    /* Add more than one handle to verify the correct one gets updated and not
-       always the first */
-    NodeHandle another = ui.createNode({}, {});
-    CORRADE_COMPARE(ui.nodeOpacity(another), 1.0f);
-
-    NodeHandle node = ui.createNode({}, {});
-    CORRADE_COMPARE(ui.nodeOpacity(another), 1.0f);
-
-    ui.setNodeOpacity(node, 0.75f);
-    CORRADE_COMPARE(ui.nodeOpacity(node), 0.75f);
-
-    CORRADE_COMPARE(ui.nodeOpacity(another), 1.0f);
 }
 
 void AbstractUserInterfaceTest::nodeCreateInvalid() {
