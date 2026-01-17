@@ -3722,6 +3722,74 @@ void AbstractUserInterfaceTest::nodeOffsetSize() {
     CORRADE_COMPARE(ui.nodeSize(node), (Vector2{8.0f, 7.0f}));
     CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsLayoutUpdate);
 
+    /* Clear the state flags */
+    ui.update();
+    CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
+
+    ui.setNodeOffsetX(node, 13.0f);
+    CORRADE_COMPARE(ui.nodeOffset(node), (Vector2{13.0f, 5.0f}));
+    CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsLayoutUpdate);
+
+    /* Clear the state flags */
+    ui.update();
+    CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
+
+    /* Setting the same offset still triggers the update */
+    ui.setNodeOffsetX(node, 13.0f);
+    CORRADE_COMPARE(ui.nodeOffset(node), (Vector2{13.0f, 5.0f}));
+    CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsLayoutUpdate);
+
+    /* Clear the state flags */
+    ui.update();
+    CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
+
+    ui.setNodeOffsetY(node, -7.0f);
+    CORRADE_COMPARE(ui.nodeOffset(node), (Vector2{13.0f, -7.0f}));
+    CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsLayoutUpdate);
+
+    /* Clear the state flags */
+    ui.update();
+    CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
+
+    /* Setting the same offset still triggers the update */
+    ui.setNodeOffsetY(node, -7.0f);
+    CORRADE_COMPARE(ui.nodeOffset(node), (Vector2{13.0f, -7.0f}));
+    CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsLayoutUpdate);
+
+    /* Clear the state flags */
+    ui.update();
+    CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
+
+    ui.setNodeSizeX(node, 223.0f);
+    CORRADE_COMPARE(ui.nodeSize(node), (Vector2{223.0f, 7.0f}));
+    CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsLayoutUpdate);
+
+    /* Clear the state flags */
+    ui.update();
+    CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
+
+    /* Setting the same offset still triggers the update */
+    ui.setNodeSizeX(node, 223.0f);
+    CORRADE_COMPARE(ui.nodeSize(node), (Vector2{223.0f, 7.0f}));
+    CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsLayoutUpdate);
+
+    /* Clear the state flags */
+    ui.update();
+    CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
+
+    ui.setNodeSizeY(node, -137.0f);
+    CORRADE_COMPARE(ui.nodeSize(node), (Vector2{223.0f, -137.0f}));
+    CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsLayoutUpdate);
+
+    /* Clear the state flags */
+    ui.update();
+    CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
+
+    /* Setting the same offset still triggers the update */
+    ui.setNodeSizeY(node, -137.0f);
+    CORRADE_COMPARE(ui.nodeSize(node), (Vector2{223.0f, -137.0f}));
+    CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsLayoutUpdate);
+
     CORRADE_COMPARE(ui.nodeOffset(another), (Vector2{1.0f, 2.0f}));
     CORRADE_COMPARE(ui.nodeSize(another), (Vector2{3.0f, 4.0f}));
 }
@@ -3811,7 +3879,11 @@ void AbstractUserInterfaceTest::nodeGetSetInvalid() {
     ui.nodeOpacity(NodeHandle(0x123abcde));
     ui.nodeFlags(NodeHandle(0x123abcde));
     ui.setNodeOffset(NodeHandle(0x123abcde), {});
+    ui.setNodeOffsetX(NodeHandle(0x123abcde), {});
+    ui.setNodeOffsetY(NodeHandle(0x123abcde), {});
     ui.setNodeSize(NodeHandle(0x123abcde), {});
+    ui.setNodeSizeX(NodeHandle(0x123abcde), {});
+    ui.setNodeSizeY(NodeHandle(0x123abcde), {});
     ui.setNodeOpacity(NodeHandle(0x123abcde), {});
     ui.setNodeFlags(NodeHandle(0x123abcde), {});
     ui.addNodeFlags(NodeHandle(0x123abcde), {});
@@ -3823,7 +3895,11 @@ void AbstractUserInterfaceTest::nodeGetSetInvalid() {
         "Ui::AbstractUserInterface::nodeOpacity(): invalid handle Ui::NodeHandle(0xabcde, 0x123)\n"
         "Ui::AbstractUserInterface::nodeFlags(): invalid handle Ui::NodeHandle(0xabcde, 0x123)\n"
         "Ui::AbstractUserInterface::setNodeOffset(): invalid handle Ui::NodeHandle(0xabcde, 0x123)\n"
+        "Ui::AbstractUserInterface::setNodeOffsetX(): invalid handle Ui::NodeHandle(0xabcde, 0x123)\n"
+        "Ui::AbstractUserInterface::setNodeOffsetY(): invalid handle Ui::NodeHandle(0xabcde, 0x123)\n"
         "Ui::AbstractUserInterface::setNodeSize(): invalid handle Ui::NodeHandle(0xabcde, 0x123)\n"
+        "Ui::AbstractUserInterface::setNodeSizeX(): invalid handle Ui::NodeHandle(0xabcde, 0x123)\n"
+        "Ui::AbstractUserInterface::setNodeSizeY(): invalid handle Ui::NodeHandle(0xabcde, 0x123)\n"
         "Ui::AbstractUserInterface::setNodeOpacity(): invalid handle Ui::NodeHandle(0xabcde, 0x123)\n"
         "Ui::AbstractUserInterface::setNodeFlags(): invalid handle Ui::NodeHandle(0xabcde, 0x123)\n"
         "Ui::AbstractUserInterface::addNodeFlags(): invalid handle Ui::NodeHandle(0xabcde, 0x123)\n"

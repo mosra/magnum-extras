@@ -2143,9 +2143,26 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
          * Calling this function causes
          * @ref UserInterfaceState::NeedsLayoutUpdate to be set.
          * @see @ref isHandleValid(NodeHandle) const, @ref nodeParent(),
+         *      @ref setNodeOffsetX(), @ref setNodeOffsetY(),
          *      @ref Ui-AbstractUserInterface-nodes
          */
         void setNodeOffset(NodeHandle handle, const Vector2& offset);
+
+        /**
+         * @brief Set horizontal node offset relative to its parent
+         *
+         * Like @ref setNodeOffset(), but updates just the X value, leaving Y
+         * untouched. See its documentation for more information.
+         */
+        void setNodeOffsetX(NodeHandle handle, const Float offset);
+
+        /**
+         * @brief Set vertical node offset relative to its parent
+         *
+         * Like @ref setNodeOffset(), but updates just the Y value, leaving X
+         * untouched. See its documentation for more information.
+         */
+        void setNodeOffsetY(NodeHandle handle, const Float offset);
 
         /**
          * @brief Node size
@@ -2173,10 +2190,26 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
          *
          * Calling this function causes
          * @ref UserInterfaceState::NeedsLayoutUpdate to be set.
-         * @see @ref isHandleValid(NodeHandle) const,
-         *      @ref Ui-AbstractUserInterface-nodes
+         * @see @ref isHandleValid(NodeHandle) const, @ref setNodeSizeX(),
+         *      @ref setNodeSizeY(), @ref Ui-AbstractUserInterface-nodes
          */
         void setNodeSize(NodeHandle handle, const Vector2& size);
+
+        /**
+         * @brief Set node width
+         *
+         * Like @ref setNodeSize(), but updates just the X value, leaving Y
+         * untouched. See its documentation for more information.
+         */
+        void setNodeSizeX(NodeHandle handle, const Float offset);
+
+        /**
+         * @brief Set node height
+         *
+         * Like @ref setNodeSize(), but updates just the Y value, leaving X
+         * untouched. See its documentation for more information.
+         */
+        void setNodeSizeY(NodeHandle handle, const Float offset);
 
         /**
          * @brief Node opacity

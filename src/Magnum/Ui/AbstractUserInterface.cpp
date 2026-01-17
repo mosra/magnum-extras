@@ -1981,6 +1981,26 @@ void AbstractUserInterface::setNodeOffset(const NodeHandle handle, const Vector2
     state.state |= UserInterfaceState::NeedsLayoutUpdate;
 }
 
+void AbstractUserInterface::setNodeOffsetX(const NodeHandle handle, const Float offset) {
+    CORRADE_ASSERT(isHandleValid(handle),
+        "Ui::AbstractUserInterface::setNodeOffsetX(): invalid handle" << handle, );
+    State& state = *_state;
+    state.nodes[nodeHandleId(handle)].used.offset.x() = offset;
+
+    /* Mark the UI as needing an update() call to refresh node layout state */
+    state.state |= UserInterfaceState::NeedsLayoutUpdate;
+}
+
+void AbstractUserInterface::setNodeOffsetY(const NodeHandle handle, const Float offset) {
+    CORRADE_ASSERT(isHandleValid(handle),
+        "Ui::AbstractUserInterface::setNodeOffsetY(): invalid handle" << handle, );
+    State& state = *_state;
+    state.nodes[nodeHandleId(handle)].used.offset.y() = offset;
+
+    /* Mark the UI as needing an update() call to refresh node layout state */
+    state.state |= UserInterfaceState::NeedsLayoutUpdate;
+}
+
 Vector2 AbstractUserInterface::nodeSize(const NodeHandle handle) const {
     CORRADE_ASSERT(isHandleValid(handle),
         "Ui::AbstractUserInterface::nodeSize(): invalid handle" << handle, {});
@@ -1992,6 +2012,26 @@ void AbstractUserInterface::setNodeSize(const NodeHandle handle, const Vector2& 
         "Ui::AbstractUserInterface::setNodeSize(): invalid handle" << handle, );
     State& state = *_state;
     state.nodes[nodeHandleId(handle)].used.size = size;
+
+    /* Mark the UI as needing an update() call to refresh node layout state */
+    state.state |= UserInterfaceState::NeedsLayoutUpdate;
+}
+
+void AbstractUserInterface::setNodeSizeX(const NodeHandle handle, const Float size) {
+    CORRADE_ASSERT(isHandleValid(handle),
+        "Ui::AbstractUserInterface::setNodeSizeX(): invalid handle" << handle, );
+    State& state = *_state;
+    state.nodes[nodeHandleId(handle)].used.size.x() = size;
+
+    /* Mark the UI as needing an update() call to refresh node layout state */
+    state.state |= UserInterfaceState::NeedsLayoutUpdate;
+}
+
+void AbstractUserInterface::setNodeSizeY(const NodeHandle handle, const Float size) {
+    CORRADE_ASSERT(isHandleValid(handle),
+        "Ui::AbstractUserInterface::setNodeSizeY(): invalid handle" << handle, );
+    State& state = *_state;
+    state.nodes[nodeHandleId(handle)].used.size.y() = size;
 
     /* Mark the UI as needing an update() call to refresh node layout state */
     state.state |= UserInterfaceState::NeedsLayoutUpdate;
