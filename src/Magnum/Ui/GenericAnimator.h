@@ -150,8 +150,8 @@ in an appropriate place, it's ready to use.
 
 @snippet Ui.cpp GenericAnimator-setup
 
-Unlike builtin layers or layouters, the default @ref UserInterface
-implementation doesn't implicitly provide a @ref GenericAnimator instance.
+Unlike other builtin animators, the default @ref UserInterface implementation
+doesn't implicitly provide a @ref GenericAnimator instance.
 
 @section Ui-GenericAnimator-create Creating animations
 
@@ -407,8 +407,8 @@ in an appropriate place, it's ready to use.
 
 @snippet Ui.cpp GenericNodeAnimator-setup
 
-Unlike builtin layers or layouters, the default @ref UserInterface
-implementation doesn't implicitly provide a @ref GenericNodeAnimator instance.
+Unlike other builtin animators, the default @ref UserInterface implementation
+doesn't implicitly provide a @ref GenericNodeAnimator instance.
 
 @section Ui-GenericNodeAnimator-create Creating animations
 
@@ -668,8 +668,8 @@ appropriate place, the animator is ready to use.
 
 @snippet Ui.cpp GenericDataAnimator-setup
 
-Unlike builtin layers or layouters, the default @ref UserInterface
-implementation doesn't implicitly provide a @ref GenericDataAnimator instance.
+Unlike other builtin animators, the default @ref UserInterface implementation
+doesn't implicitly provide a @ref GenericDataAnimator instance.
 
 @section Ui-GenericDataAnimator-create Creating animations
 

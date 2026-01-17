@@ -58,8 +58,8 @@ in an appropriate place, it's ready to use.
 
 @snippet Ui.cpp NodeAnimator-setup
 
-Unlike builtin layers or layouters, the default @ref UserInterface
-implementation doesn't implicitly provide a @ref NodeAnimator instance.
+Unlike other builtin animators, the default @ref UserInterface implementation
+doesn't implicitly provide a @ref NodeAnimator instance.
 
 @section Ui-NodeAnimator-create Creating animations
 
