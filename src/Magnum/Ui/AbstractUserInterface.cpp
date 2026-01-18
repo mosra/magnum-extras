@@ -665,8 +665,8 @@ struct AbstractUserInterface::State {
     /* Data for updates, event handling and drawing, repopulated by clean() and
        update() */
     Containers::ArrayTuple nodeStateStorage;
-    Containers::ArrayView<UnsignedInt> visibleNodeIds;
-    Containers::ArrayView<UnsignedInt> visibleNodeChildrenCounts;
+    Containers::ArrayView<UnsignedInt> preLayoutVisibleNodeIds;
+    Containers::ArrayView<UnsignedInt> preLayoutVisibleNodeChildrenCounts;
     Containers::StridedArrayView1D<UnsignedInt> visibleFrontToBackTopLevelNodeIndices;
     Containers::ArrayView<Vector2> nodeOffsets;
     Containers::ArrayView<Vector2> nodeSizes;
@@ -3190,12 +3190,12 @@ AbstractUserInterface& AbstractUserInterface::update() {
     /* Single allocation for all temporary data */
     /** @todo well, not really, there's one more temp array for layout mask
         calculation */
-    Containers::MutableBitArrayView visibleNodes;
+    Containers::MutableBitArrayView preLayoutVisibleNodeMask;
     Containers::ArrayView<UnsignedInt> childrenOffsets;
     Containers::ArrayView<UnsignedInt> children;
     Containers::ArrayView<Containers::Triple<UnsignedInt, UnsignedInt, UnsignedInt>> parentsToProcess;
-    Containers::MutableBitArrayView preLayoutVisibleNodeMask;
-    Containers::MutableBitArrayView preLayoutVisibleDataMask;
+    Containers::MutableBitArrayView preLayoutVisibleNodeWithLayoutMask;
+    Containers::MutableBitArrayView dataIdsToLayoutStorage;
     Containers::ArrayView<Vector2> nodeMinSizes;
     Containers::ArrayView<Vector2> nodeMaxSizes;
     Containers::ArrayView<Float> nodeAspectRatios;
@@ -3218,20 +3218,20 @@ AbstractUserInterface& AbstractUserInterface::update() {
        usable for anything else afterwards. */
     Containers::MutableBitArrayView visibleOrVisibilityLostEventNodeMask;
     Containers::ArrayTuple storage{
-        {ValueInit, state.nodes.size(), visibleNodes},
+        {ValueInit, state.nodes.size(), preLayoutVisibleNodeMask},
         /* Running children offset (+1) for each node */
         {ValueInit, state.nodes.size() + 1, childrenOffsets},
         {NoInit, state.nodes.size(), children},
         {NoInit, state.nodes.size(), parentsToProcess},
         /* The node min, max sizes, aspect ratios, paddings and margins only
            need to be filled if there's actually any layouter to use them, and
-           if NeedsLayoutUpdate is set. The preLayoutVisibleNodeMask and
-           preLayoutVisibleDataMask is only needed to populate those, so also
+           if NeedsLayoutUpdate is set. The preLayoutVisibleNodeWithLayoutMask
+           and dataIdsToLayoutStorage is only needed to populate those, so also
            skip them if there's no layouter. */
         {ValueInit, hasLayouters && states >= UserInterfaceState::NeedsLayoutUpdate ?
-            state.nodes.size() : 0, preLayoutVisibleNodeMask},
+            state.nodes.size() : 0, preLayoutVisibleNodeWithLayoutMask},
         {ValueInit, hasLayouters && states >= UserInterfaceState::NeedsLayoutUpdate ?
-            maxLayoutLayerDataCapacity : 0, preLayoutVisibleDataMask},
+            maxLayoutLayerDataCapacity : 0, dataIdsToLayoutStorage},
         {ValueInit, hasLayouters && states >= UserInterfaceState::NeedsLayoutUpdate ?
             state.nodes.size() : 0, nodeMinSizes},
         /* Max sizes are initialized to infinity afterwards */
@@ -3270,8 +3270,8 @@ AbstractUserInterface& AbstractUserInterface::update() {
     if(states >= UserInterfaceState::NeedsNodeUpdate) {
         /* Make a resident allocation for all node-related state */
         state.nodeStateStorage = Containers::ArrayTuple{
-            {NoInit, state.nodes.size(), state.visibleNodeIds},
-            {NoInit, state.nodes.size(), state.visibleNodeChildrenCounts},
+            {NoInit, state.nodes.size(), state.preLayoutVisibleNodeIds},
+            {NoInit, state.nodes.size(), state.preLayoutVisibleNodeChildrenCounts},
             {NoInit, state.nodeOrder.size(), state.visibleFrontToBackTopLevelNodeIndices},
             {NoInit, state.nodes.size(), state.nodeOffsets},
             {NoInit, state.nodes.size(), state.nodeSizes},
@@ -3299,16 +3299,16 @@ AbstractUserInterface& AbstractUserInterface::update() {
                 stridedArrayView(state.nodes).slice(&Node::used).slice(&Node::Used::order),
                 stridedArrayView(state.nodes).slice(&Node::used).slice(&Node::Used::flags),
                 stridedArrayView(state.nodeOrder).slice(&NodeOrder::used).slice(&NodeOrder::Used::next),
-                state.firstNodeOrder, visibleNodes, childrenOffsets, children,
-                parentsToProcess, state.visibleNodeIds, state.visibleNodeChildrenCounts);
-            state.visibleNodeIds = state.visibleNodeIds.prefix(visibleCount);
-            state.visibleNodeChildrenCounts = state.visibleNodeChildrenCounts.prefix(visibleCount);
+                state.firstNodeOrder, preLayoutVisibleNodeMask, childrenOffsets, children,
+                parentsToProcess, state.preLayoutVisibleNodeIds, state.preLayoutVisibleNodeChildrenCounts);
+            state.preLayoutVisibleNodeIds = state.preLayoutVisibleNodeIds.prefix(visibleCount);
+            state.preLayoutVisibleNodeChildrenCounts = state.preLayoutVisibleNodeChildrenCounts.prefix(visibleCount);
         }
 
         /* 2. Create a front-to-back index map for visible top-level nodes,
            i.e. populate it in a flipped order. */
         {
-            const std::size_t count = Implementation::visibleTopLevelNodeIndicesInto(state.visibleNodeChildrenCounts, state.visibleFrontToBackTopLevelNodeIndices.flipped<0>());
+            const std::size_t count = Implementation::visibleTopLevelNodeIndicesInto(state.preLayoutVisibleNodeChildrenCounts, state.visibleFrontToBackTopLevelNodeIndices.flipped<0>());
             state.visibleFrontToBackTopLevelNodeIndices = state.visibleFrontToBackTopLevelNodeIndices.exceptPrefix(state.visibleFrontToBackTopLevelNodeIndices.size() - count);
         }
     }
@@ -3361,7 +3361,7 @@ AbstractUserInterface& AbstractUserInterface::update() {
            update() calls. */
         const Containers::Pair<UnsignedInt, std::size_t> maxLevelTopLevelLayoutOffsetCount = Implementation::discoverTopLevelLayoutNodesInto(
             stridedArrayView(state.nodes).slice(&Node::used).slice(&Node::Used::parent),
-            state.visibleNodeIds,
+            state.preLayoutVisibleNodeIds,
             state.layouters.size(),
             nodeLayouts,
             nodeLayoutLevels,
@@ -3432,10 +3432,10 @@ AbstractUserInterface& AbstractUserInterface::update() {
                it to populate per-layer data masks. The mask isn't needed by
                anything else because after the layout calculation the nodes get
                additionally also culled. */
-            for(UnsignedInt id: state.visibleNodeIds)
+            for(UnsignedInt id: state.preLayoutVisibleNodeIds)
                 /** @todo could have some BitArray AND for this instead */
                 if(state.layoutNodeMask[id])
-                    preLayoutVisibleNodeMask.set(id);
+                    preLayoutVisibleNodeWithLayoutMask.set(id);
 
             /* 7. Populate the layout properties with layers that expose
                LayerFeature::Layout. Like with update() calls below, make them
@@ -3460,17 +3460,17 @@ AbstractUserInterface& AbstractUserInterface::update() {
                     const Containers::StridedArrayView1D<const NodeHandle> nodes = instance.nodes();
                     /* The same storage is reused for all layers, so be sure to
                        clear appropriate prefix every time */
-                    const Containers::MutableBitArrayView dataIds = preLayoutVisibleDataMask.prefix(instance.capacity());
-                    dataIds.resetAll();
+                    const Containers::MutableBitArrayView dataIdsToLayout = dataIdsToLayoutStorage.prefix(instance.capacity());
+                    dataIdsToLayout.resetAll();
                     for(std::size_t i = 0; i != nodes.size(); ++i) {
                         const NodeHandle node = nodes[i];
-                        if(node != NodeHandle::Null && preLayoutVisibleNodeMask[nodeHandleId(node)])
-                            dataIds.set(i);
+                        if(node != NodeHandle::Null && preLayoutVisibleNodeWithLayoutMask[nodeHandleId(node)])
+                            dataIdsToLayout.set(i);
                     }
 
                     /* Let the layer adjust the constraints as appropriate */
                     instance.layout(
-                        dataIds,
+                        dataIdsToLayout,
                         nodeMinSizes,
                         nodeMaxSizes,
                         nodeAspectRatios,
@@ -3537,7 +3537,7 @@ AbstractUserInterface& AbstractUserInterface::update() {
        offsets copied above. If no layout update is needed, the
        `state.absoluteNodeOffsets` are all up-to-date. */
     if(states >= UserInterfaceState::NeedsLayoutUpdate) {
-        for(const UnsignedInt id: state.visibleNodeIds) {
+        for(const UnsignedInt id: state.preLayoutVisibleNodeIds) {
             const Node& node = state.nodes[id];
             const Vector2 nodeOffset = state.nodeOffsets[id];
             state.absoluteNodeOffsets[id] =
@@ -3549,7 +3549,7 @@ AbstractUserInterface& AbstractUserInterface::update() {
     /* If no opacity update is needed, the `state.absoluteNodeOpacities` are
        all up-to-date */
     if(states >= UserInterfaceState::NeedsNodeOpacityUpdate) {
-        for(const UnsignedInt id: state.visibleNodeIds) {
+        for(const UnsignedInt id: state.preLayoutVisibleNodeIds) {
             const Node& node = state.nodes[id];
             const Float nodeOpacity = node.used.opacity;
             state.absoluteNodeOpacities[id] =
@@ -3572,9 +3572,9 @@ AbstractUserInterface& AbstractUserInterface::update() {
             state.absoluteNodeOffsets,
             state.nodeSizes,
             stridedArrayView(state.nodes).slice(&Node::used).slice(&Node::Used::flags),
-            clipStack.prefix(state.visibleNodeIds.size() + 1),
-            state.visibleNodeIds,
-            state.visibleNodeChildrenCounts,
+            clipStack.prefix(state.preLayoutVisibleNodeIds.size() + 1),
+            state.preLayoutVisibleNodeIds,
+            state.preLayoutVisibleNodeChildrenCounts,
             state.visibleNodeMask,
             state.clipRectOffsets,
             state.clipRectSizes,
@@ -3607,13 +3607,13 @@ AbstractUserInterface& AbstractUserInterface::update() {
             Containers::arrayView(state.visibleEnabledNodeMask.data(), sizeWholeBytes));
         Implementation::propagateNodeFlagToChildrenInto<NodeFlag::NoEvents>(
             stridedArrayView(state.nodes).slice(&Node::used).slice(&Node::Used::flags),
-            state.visibleNodeIds,
-            state.visibleNodeChildrenCounts,
+            state.preLayoutVisibleNodeIds,
+            state.preLayoutVisibleNodeChildrenCounts,
             state.visibleEventNodeMask);
         Implementation::propagateNodeFlagToChildrenInto<NodeFlag::Disabled>(
             stridedArrayView(state.nodes).slice(&Node::used).slice(&Node::Used::flags),
-            state.visibleNodeIds,
-            state.visibleNodeChildrenCounts,
+            state.preLayoutVisibleNodeIds,
+            state.preLayoutVisibleNodeChildrenCounts,
             state.visibleEnabledNodeMask);
     }
     /* If no node event mask state update is needed, the
@@ -3628,8 +3628,8 @@ AbstractUserInterface& AbstractUserInterface::update() {
             Containers::arrayView(state.visibleBlurNodeMask.data(), sizeWholeBytes));
         Implementation::propagateNodeFlagToChildrenInto<NodeFlag::NoBlur>(
             stridedArrayView(state.nodes).slice(&Node::used).slice(&Node::Used::flags),
-            state.visibleNodeIds,
-            state.visibleNodeChildrenCounts,
+            state.preLayoutVisibleNodeIds,
+            state.preLayoutVisibleNodeChildrenCounts,
             state.visibleBlurNodeMask);
     }
 
@@ -3673,8 +3673,8 @@ AbstractUserInterface& AbstractUserInterface::update() {
         /* Calculate count of visible top-level nodes and layers that draw in
            order to accurately size the array with draws */
         UnsignedInt visibleTopLevelNodeCount = 0;
-        for(UnsignedInt visibleTopLevelNodeIndex = 0; visibleTopLevelNodeIndex != state.visibleNodeChildrenCounts.size(); visibleTopLevelNodeIndex += state.visibleNodeChildrenCounts[visibleTopLevelNodeIndex] + 1) {
-            if(!(state.nodes[state.visibleNodeIds[visibleTopLevelNodeIndex]].used.flags & NodeFlag::Hidden))
+        for(UnsignedInt visibleTopLevelNodeIndex = 0; visibleTopLevelNodeIndex != state.preLayoutVisibleNodeChildrenCounts.size(); visibleTopLevelNodeIndex += state.preLayoutVisibleNodeChildrenCounts[visibleTopLevelNodeIndex] + 1) {
+            if(!(state.nodes[state.preLayoutVisibleNodeIds[visibleTopLevelNodeIndex]].used.flags & NodeFlag::Hidden))
                 ++visibleTopLevelNodeCount;
         }
         UnsignedInt drawLayerCount = 0;
@@ -3700,8 +3700,8 @@ AbstractUserInterface& AbstractUserInterface::update() {
                a dedicated clip rect for every visible node. It's being run for
                all layers, so in order to fit it has to have layer count times
                visible node count elements. */
-            {NoInit, state.visibleNodeIds.size()*state.layers.size(), state.dataToUpdateClipRectIds},
-            {NoInit, state.visibleNodeIds.size()*state.layers.size(), state.dataToUpdateClipRectDataCounts},
+            {NoInit, state.preLayoutVisibleNodeIds.size()*state.layers.size(), state.dataToUpdateClipRectIds},
+            {NoInit, state.preLayoutVisibleNodeIds.size()*state.layers.size(), state.dataToUpdateClipRectDataCounts},
             {NoInit, compositingDataCount, state.dataToUpdateCompositeRectOffsets},
             {NoInit, compositingDataCount, state.dataToUpdateCompositeRectSizes},
             {NoInit, visibleTopLevelNodeCount*drawLayerCount, state.dataToDrawLayerIds},
@@ -3754,8 +3754,8 @@ AbstractUserInterface& AbstractUserInterface::update() {
                     const bool isDrawingAnything = visibleTopLevelNodeCount && layerItem.used.features >= LayerFeature::Draw;
 
                     const Containers::Pair<UnsignedInt, UnsignedInt> out = Implementation::orderVisibleNodeDataInto(
-                        state.visibleNodeIds,
-                        state.visibleNodeChildrenCounts,
+                        state.preLayoutVisibleNodeIds,
+                        state.preLayoutVisibleNodeChildrenCounts,
                         instance->nodes(),
                         layerItem.used.features,
                         state.visibleNodeMask,
@@ -4340,7 +4340,7 @@ template<class Event, void(AbstractLayer::*function)(UnsignedInt, Event&)> NodeH
        wouldn't return early, it wouldn't call anything anyway because the
        `state.visibleNodeEventDataOffsets` ranges for these is empty but why do
        all that extra work in the first place. */
-    const UnsignedInt nodeId = state.visibleNodeIds[visibleNodeIndex];
+    const UnsignedInt nodeId = state.preLayoutVisibleNodeIds[visibleNodeIndex];
     if(!state.visibleEventNodeMask[nodeId])
         return {};
 
@@ -4355,7 +4355,7 @@ template<class Event, void(AbstractLayer::*function)(UnsignedInt, Event&)> NodeH
     /** @todo maintain some info about how many actual event handlers is in
         particular subtrees, to not have to do complex hit testing when there's
         nothing to call anyway? especially for move events and such */
-    for(UnsignedInt i = 1, iMax = state.visibleNodeChildrenCounts[visibleNodeIndex] + 1; i != iMax; i += state.visibleNodeChildrenCounts[visibleNodeIndex + i] + 1) {
+    for(UnsignedInt i = 1, iMax = state.preLayoutVisibleNodeChildrenCounts[visibleNodeIndex] + 1; i != iMax; i += state.preLayoutVisibleNodeChildrenCounts[visibleNodeIndex + i] + 1) {
         const NodeHandle called = callEvent<Event, function>(globalPositionScaled, visibleNodeIndex + i, event);
         if(called != NodeHandle::Null)
             return called;
