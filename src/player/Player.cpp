@@ -567,7 +567,8 @@ PrimitiveClipRatio.)")
     if(args.isSet("map")) {
         Containers::Optional<Containers::Array<const char, Utility::Path::MapDeleter>> maybeMapped;
         success = importer && (maybeMapped = Utility::Path::mapRead(args.value("file"))) && importer->openMemory(*maybeMapped);
-        mapped = *Utility::move(maybeMapped);
+        if(maybeMapped)
+            mapped = *Utility::move(maybeMapped);
     } else {
         success = importer && importer->openFile(_file);
     }
