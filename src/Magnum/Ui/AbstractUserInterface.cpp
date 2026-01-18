@@ -3605,6 +3605,9 @@ AbstractUserInterface& AbstractUserInterface::update() {
         Utility::copy(
             Containers::arrayView(state.visibleNodeMask.data(), sizeWholeBytes),
             Containers::arrayView(state.visibleEnabledNodeMask.data(), sizeWholeBytes));
+        /* NodeFlag::Hidden is propagated to children in
+           Implementation::orderVisibleNodesDepthFirstInto(), reflected in
+           state.preLayoutVisibleNodeMask and all derived data already */
         Implementation::propagateNodeFlagToChildrenInto<NodeFlag::NoEvents>(
             stridedArrayView(state.nodes).slice(&Node::used).slice(&Node::Used::flags),
             state.preLayoutVisibleNodeIds,

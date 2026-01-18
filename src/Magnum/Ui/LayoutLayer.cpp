@@ -213,6 +213,7 @@ void LayoutLayer::doLayout(const Containers::BitArrayView dataIdsToLayout, const
 
     const Containers::StridedArrayView1D<const NodeHandle> nodes = this->nodes();
     for(std::size_t i = 0; i != dataIdsToLayout.size(); ++i) {
+        /** @todo some way to iterate set bits */
         if(!dataIdsToLayout[i])
             continue;
 

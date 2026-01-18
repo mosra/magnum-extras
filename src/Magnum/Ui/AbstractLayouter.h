@@ -547,7 +547,7 @@ class MAGNUM_UI_EXPORT AbstractLayouter {
          * @p nodePaddings, @p nodeMargins, @p nodeOffsets and @p nodeSizes
          * views, which all have the same size and are guaranteed to be large
          * enough to contain any valid node ID. All @ref nodes() at indices
-         * corresponding to @p topLevelLayoutIds are guaranteed to not be
+         * corresponding to @p layoutIdsToUpdate are guaranteed to not be
          * @ref NodeHandle::Null at the time this function is called. The
          * @p topLevelLayoutIds are mutually disjoint hierarchies that don't
          * depend on each other in any way and thus are and can be processed in
