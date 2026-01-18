@@ -337,7 +337,7 @@ UiGallery::UiGallery(const Arguments& arguments): Platform::Application{argument
             _ui.createLayer(),
             Ui::DebugLayerSource::NodeHierarchy|Ui::DebugLayerSource::NodeDataDetails,
             Ui::DebugLayerFlag::NodeInspect));
-        debugLayer.setLayerName(_ui.baseLayer(), "BaseLayer", [](UnsignedInt style) -> Containers::StringView {
+        debugLayer.setLayerName(_ui.baseLayer(), "Base", [](UnsignedInt style) -> Containers::StringView {
             switch(Ui::Implementation::BaseStyle(style)) {
                 #define _c(name, ...) case Ui::Implementation::BaseStyle::name: return #name;
                 #include "Magnum/Ui/Implementation/baseStyleUniformsMcssDark.h"
@@ -345,7 +345,7 @@ UiGallery::UiGallery(const Arguments& arguments): Platform::Application{argument
             }
             CORRADE_INTERNAL_ASSERT_UNREACHABLE();
         });
-        debugLayer.setLayerName(_ui.textLayer(), "TextLayer", [](UnsignedInt style) -> Containers::StringView {
+        debugLayer.setLayerName(_ui.textLayer(), "Text", [](UnsignedInt style) -> Containers::StringView {
             switch(Ui::Implementation::TextStyle(style)) {
                 #define _c(name, suffix, ...) case Ui::Implementation::TextStyle::name##suffix: return #name #suffix;
                 #define _e _c
@@ -357,8 +357,8 @@ UiGallery::UiGallery(const Arguments& arguments): Platform::Application{argument
             }
             CORRADE_INTERNAL_ASSERT_UNREACHABLE();
         });
-        debugLayer.setLayerName(_ui.eventLayer(), "EventLayer");
-        debugLayer.setLayerName(_ui.layoutLayer(), "LayoutLayer", [](UnsignedInt style) -> Containers::StringView {
+        debugLayer.setLayerName(_ui.eventLayer(), "Event");
+        debugLayer.setLayerName(_ui.layoutLayer(), "Layout", [](UnsignedInt style) -> Containers::StringView {
             switch(Ui::Implementation::LayoutStyle(style)) {
                 #define _c(name, ...) case Ui::Implementation::LayoutStyle::name: return #name;
                 #include "Magnum/Ui/Implementation/layoutStyleMcssDark.h"
