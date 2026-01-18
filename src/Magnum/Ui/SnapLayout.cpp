@@ -245,32 +245,46 @@ LayoutHandle AbstractSnapLayout::layout() const {
     return layoutHandle(_layouter->handle(), _layout);
 }
 
+void AbstractSnapLayout::setDefaultChildSnap(const Snaps snaps) {
+    /* Add the PropagateMargin flag to axes which don't have IgnoreOverflow
+       already, as that would conflict */
+    /** @todo feels like a shitty workaround, better ideas? */
+    SnapLayoutFlags flags = _layouter->flags(_layout);
+    if(!(flags & SnapLayoutFlag::IgnoreOverflowX))
+        flags |= SnapLayoutFlag::PropagateMarginX;
+    if(!(flags & SnapLayoutFlag::IgnoreOverflowY))
+        flags |= SnapLayoutFlag::PropagateMarginY;
+    _layouter->setFlags(_layout, flags);
+
+    setChildSnap(snaps);
+}
+
 /* Depending on the compiler these need an explicit export otherwise the
    specialization doesn't get exported. Worked on x86 Linux, doesn't work on
    ARM64 Linux, macOS and Windows. Huh. */
-template<> MAGNUM_UI_EXPORT void AbstractSnapLayout::setChildSnapFor<BasicSnapLayoutColumn>() {
-    setChildSnap(Snap::Bottom);
+template<> MAGNUM_UI_EXPORT void AbstractSnapLayout::setDefaultChildSnapFor<BasicSnapLayoutColumn>() {
+    setDefaultChildSnap(Snap::Bottom);
 }
-template<> MAGNUM_UI_EXPORT void AbstractSnapLayout::setChildSnapFor<BasicSnapLayoutColumnLeft>() {
-    setChildSnap(Snap::BottomLeft|Snap::InsideX);
+template<> MAGNUM_UI_EXPORT void AbstractSnapLayout::setDefaultChildSnapFor<BasicSnapLayoutColumnLeft>() {
+    setDefaultChildSnap(Snap::BottomLeft|Snap::InsideX);
 }
-template<> MAGNUM_UI_EXPORT void AbstractSnapLayout::setChildSnapFor<BasicSnapLayoutColumnRight>() {
-    setChildSnap(Snap::BottomRight|Snap::InsideX);
+template<> MAGNUM_UI_EXPORT void AbstractSnapLayout::setDefaultChildSnapFor<BasicSnapLayoutColumnRight>() {
+    setDefaultChildSnap(Snap::BottomRight|Snap::InsideX);
 }
-template<> MAGNUM_UI_EXPORT void AbstractSnapLayout::setChildSnapFor<BasicSnapLayoutColumnFill>() {
-    setChildSnap(Snap::Bottom|Snap::FillX);
+template<> MAGNUM_UI_EXPORT void AbstractSnapLayout::setDefaultChildSnapFor<BasicSnapLayoutColumnFill>() {
+    setDefaultChildSnap(Snap::Bottom|Snap::FillX);
 }
-template<> MAGNUM_UI_EXPORT void AbstractSnapLayout::setChildSnapFor<BasicSnapLayoutRow>() {
-    setChildSnap(Snap::Right);
+template<> MAGNUM_UI_EXPORT void AbstractSnapLayout::setDefaultChildSnapFor<BasicSnapLayoutRow>() {
+    setDefaultChildSnap(Snap::Right);
 }
-template<> MAGNUM_UI_EXPORT void AbstractSnapLayout::setChildSnapFor<BasicSnapLayoutRowTop>() {
-    setChildSnap(Snap::TopRight|Snap::InsideY);
+template<> MAGNUM_UI_EXPORT void AbstractSnapLayout::setDefaultChildSnapFor<BasicSnapLayoutRowTop>() {
+    setDefaultChildSnap(Snap::TopRight|Snap::InsideY);
 }
-template<> MAGNUM_UI_EXPORT void AbstractSnapLayout::setChildSnapFor<BasicSnapLayoutRowBottom>() {
-    setChildSnap(Snap::BottomRight|Snap::InsideY);
+template<> MAGNUM_UI_EXPORT void AbstractSnapLayout::setDefaultChildSnapFor<BasicSnapLayoutRowBottom>() {
+    setDefaultChildSnap(Snap::BottomRight|Snap::InsideY);
 }
-template<> MAGNUM_UI_EXPORT void AbstractSnapLayout::setChildSnapFor<BasicSnapLayoutRowFill>() {
-    setChildSnap(Snap::Right|Snap::FillY);
+template<> MAGNUM_UI_EXPORT void AbstractSnapLayout::setDefaultChildSnapFor<BasicSnapLayoutRowFill>() {
+    setDefaultChildSnap(Snap::Right|Snap::FillY);
 }
 
 template class MAGNUM_UI_EXPORT BasicSnapLayout<UserInterface>;

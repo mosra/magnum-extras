@@ -737,7 +737,7 @@ void SnapLayoutTest::convertSpecialized() {
         CORRADE_COMPARE(&layout.layouter(), &ui.snapLayouter());
         CORRADE_COMPARE(layout.node(), layouts[i].node());
         CORRADE_COMPARE(layout.layout(), layouts[i].layout());
-        CORRADE_COMPARE(layout.flags(), SnapLayoutFlags{});
+        CORRADE_COMPARE(layout.flags(), SnapLayoutFlag::PropagateMargin);
         ++i;
     }
 
@@ -751,10 +751,17 @@ void SnapLayoutTest::convertSpecialized() {
     CORRADE_COMPARE(layoutRowBottom.childSnap(), Snap::BottomRight|Snap::InsideY);
     CORRADE_COMPARE(layoutRowFill.childSnap(), Snap::Right|Snap::FillY);
 
-    /* Layout that already has flags shouldn't have them overwritten */
-    SnapLayout layoutFlags{Anchor{ui, {}, Vector2{}}, SnapLayoutFlag::IgnoreOverflowX};
-    SnapLayoutRow layoutRowFlags = layoutFlags;
-    CORRADE_COMPARE(layoutRowFlags.flags(), SnapLayoutFlag::IgnoreOverflowX);
+    /* Layout that already has IgnoreOverflow* flags shouldn't have them
+       overwritten with PropagateMargin* */
+    SnapLayout layoutFlagsX{Anchor{ui, {}, Vector2{}}, SnapLayoutFlag::IgnoreOverflowX};
+    SnapLayout layoutFlagsY{Anchor{ui, {}, Vector2{}}, SnapLayoutFlag::IgnoreOverflowY};
+    SnapLayout layoutFlags{Anchor{ui, {}, Vector2{}}, SnapLayoutFlag::IgnoreOverflow};
+    SnapLayoutRow layoutRowFlags = layoutFlagsX;
+    SnapLayoutColumnFill layoutColumnFillFlags = layoutFlagsY;
+    SnapLayoutRowTop layoutRowTopFlags = layoutFlags;
+    CORRADE_COMPARE(layoutRowFlags.flags(), SnapLayoutFlag::IgnoreOverflowX|SnapLayoutFlag::PropagateMarginY);
+    CORRADE_COMPARE(layoutColumnFillFlags.flags(), SnapLayoutFlag::IgnoreOverflowY|SnapLayoutFlag::PropagateMarginX);
+    CORRADE_COMPARE(layoutRowTopFlags.flags(), SnapLayoutFlag::IgnoreOverflow);
 
     /* Converting layouts between different types shouldn't be allowed, only
        to a specialized type and back. Using is_constructible as it's a

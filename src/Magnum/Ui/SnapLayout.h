@@ -354,7 +354,16 @@ class MAGNUM_UI_EXPORT AbstractSnapLayout {
          *
          * Initially, a layout has the flags that were passed to the
          * constructor, to @ref root() @ref child() or @ref sibling(), which
-         * are by default none.
+         * are by default none. The @ref BasicSnapLayoutColumn,
+         * @ref BasicSnapLayoutColumnLeft, @ref BasicSnapLayoutColumnRight,
+         * @ref BasicSnapLayoutColumnFill, @ref BasicSnapLayoutRow,
+         * @ref BasicSnapLayoutRowTop, @ref BasicSnapLayoutRowBottom and
+         * @ref BasicSnapLayoutRowFill subclasses implicitly add
+         * @ref SnapLayoutFlag::PropagateMarginX and
+         * @relativeref{SnapLayoutFlag,PropagateMarginY} unless
+         * @relativeref{SnapLayoutFlag,IgnoreOverflowX} and
+         * @relativeref{SnapLayoutFlag,IgnoreOverflowY} is already specified in
+         * given direction.
          *
          * Calls @ref SnapLayouter::setFlags() internally, see its
          * documentation for more information.
@@ -560,9 +569,12 @@ class MAGNUM_UI_EXPORT AbstractSnapLayout {
 
         /* Deinlined specializations for BasicSnapLayoutColumn and such in
            SnapLayout.cpp */
-        template<template<class> class> void setChildSnapFor();
+        template<template<class> class> void setDefaultChildSnapFor();
 
     private:
+        /* Called from (deinlined) setDefaultChildSnapFor() above */
+        MAGNUM_UI_LOCAL void setDefaultChildSnap(Snaps snaps);
+
         AbstractUserInterface* _ui;
         SnapLayouter* _layouter;
         NodeHandle _node;
@@ -993,7 +1005,7 @@ template<class UserInterface> class BasicSnapLayout: public AbstractSnapLayout {
            which has deinlined specializations in SnapLayout.cpp, during
            construction */
         template<template<class> class T> explicit BasicSnapLayout(const BasicSnapLayout<UserInterface>& other, T<UserInterface>&): AbstractSnapLayout{other} {
-            setChildSnapFor<T>();
+            setDefaultChildSnapFor<T>();
         }
 
     private:
@@ -1018,7 +1030,12 @@ template<class UserInterface> class BasicSnapLayoutColumn: public BasicSnapLayou
         /**
          * @brief Construct from an unspecialized layout
          *
-         * Calls @ref setChildSnap() with @ref Snap::Bottom.
+         * Calls @ref setChildSnap() with @ref Snap::Bottom and @ref addFlags()
+         * with @ref SnapLayoutFlag::PropagateMarginX and
+         * @relativeref{SnapLayoutFlag,PropagateMarginY} unless
+         * @relativeref{SnapLayoutFlag,IgnoreOverflowX} and
+         * @relativeref{SnapLayoutFlag,IgnoreOverflowY} is already specified in
+         * given direction.
          */
         /*implicit*/ BasicSnapLayoutColumn(const BasicSnapLayout<UserInterface>& layout): BasicSnapLayout<UserInterface>{layout, *this} {}
 
@@ -1041,7 +1058,12 @@ template<class UserInterface> class BasicSnapLayoutColumnLeft: public BasicSnapL
          * @brief Construct from an unspecialized layout
          *
          * Calls @ref setChildSnap() with
-         * @link Snap::BottomLeft @endlink|@ref Snap::InsideX.
+         * @link Snap::BottomLeft @endlink|@ref Snap::InsideX and
+         * @ref addFlags() with @ref SnapLayoutFlag::PropagateMarginX and
+         * @relativeref{SnapLayoutFlag,PropagateMarginY} unless
+         * @relativeref{SnapLayoutFlag,IgnoreOverflowX} and
+         * @relativeref{SnapLayoutFlag,IgnoreOverflowY} is already specified in
+         * given direction.
          */
         /*implicit*/ BasicSnapLayoutColumnLeft(const BasicSnapLayout<UserInterface>& layout): BasicSnapLayout<UserInterface>{layout, *this} {}
 
@@ -1064,7 +1086,12 @@ template<class UserInterface> class BasicSnapLayoutColumnRight: public BasicSnap
          * @brief Construct from an unspecialized layout
          *
          * Calls @ref setChildSnap() with
-         * @link Snap::BottomRight @endlink|@ref Snap::InsideX.
+         * @link Snap::BottomRight @endlink|@ref Snap::InsideX and
+         * @ref addFlags() with @ref SnapLayoutFlag::PropagateMarginX and
+         * @relativeref{SnapLayoutFlag,PropagateMarginY} unless
+         * @relativeref{SnapLayoutFlag,IgnoreOverflowX} and
+         * @relativeref{SnapLayoutFlag,IgnoreOverflowY} is already specified in
+         * given direction.
          */
         /*implicit*/ BasicSnapLayoutColumnRight(const BasicSnapLayout<UserInterface>& layout): BasicSnapLayout<UserInterface>{layout, *this} {}
 
@@ -1087,7 +1114,12 @@ template<class UserInterface> class BasicSnapLayoutColumnFill: public BasicSnapL
          * @brief Construct from an unspecialized layout
          *
          * Calls @ref setChildSnap() with
-         * @link Snap::Bottom @endlink|@ref Snap::FillX.
+         * @link Snap::Bottom @endlink|@ref Snap::FillX and @ref addFlags()
+         * with @ref SnapLayoutFlag::PropagateMarginX and
+         * @relativeref{SnapLayoutFlag,PropagateMarginY} unless
+         * @relativeref{SnapLayoutFlag,IgnoreOverflowX} and
+         * @relativeref{SnapLayoutFlag,IgnoreOverflowY} is already specified in
+         * given direction.
          */
         /*implicit*/ BasicSnapLayoutColumnFill(const BasicSnapLayout<UserInterface>& layout): BasicSnapLayout<UserInterface>{layout, *this} {}
 
@@ -1109,7 +1141,12 @@ template<class UserInterface> class BasicSnapLayoutRow: public BasicSnapLayout<U
         /**
          * @brief Construct from an unspecialized layout
          *
-         * Calls @ref setChildSnap() with @ref Snap::Right.
+         * Calls @ref setChildSnap() with @ref Snap::Right and @ref addFlags()
+         * with @ref SnapLayoutFlag::PropagateMarginX and
+         * @relativeref{SnapLayoutFlag,PropagateMarginY} unless
+         * @relativeref{SnapLayoutFlag,IgnoreOverflowX} and
+         * @relativeref{SnapLayoutFlag,IgnoreOverflowY} is already specified in
+         * given direction.
          */
         /*implicit*/ BasicSnapLayoutRow(const BasicSnapLayout<UserInterface>& layout): BasicSnapLayout<UserInterface>{layout, *this} {}
 
@@ -1132,7 +1169,12 @@ template<class UserInterface> class BasicSnapLayoutRowTop: public BasicSnapLayou
          * @brief Construct from an unspecialized layout
          *
          * Calls @ref setChildSnap() with
-         * @link Snap::TopRight @endlink|@ref Snap::InsideY.
+         * @link Snap::TopRight @endlink|@ref Snap::InsideY and @ref addFlags()
+         * with @ref SnapLayoutFlag::PropagateMarginX and
+         * @relativeref{SnapLayoutFlag,PropagateMarginY} unless
+         * @relativeref{SnapLayoutFlag,IgnoreOverflowX} and
+         * @relativeref{SnapLayoutFlag,IgnoreOverflowY} is already specified in
+         * given direction.
          */
         /*implicit*/ BasicSnapLayoutRowTop(const BasicSnapLayout<UserInterface>& layout): BasicSnapLayout<UserInterface>{layout, *this} {}
 
@@ -1155,7 +1197,12 @@ template<class UserInterface> class BasicSnapLayoutRowBottom: public BasicSnapLa
          * @brief Construct from an unspecialized layout
          *
          * Calls @ref setChildSnap() with
-         * @link Snap::BottomRight @endlink|@ref Snap::InsideY.
+         * @link Snap::BottomRight @endlink|@ref Snap::InsideY and
+         * @ref addFlags() with @ref SnapLayoutFlag::PropagateMarginX and
+         * @relativeref{SnapLayoutFlag,PropagateMarginY} unless
+         * @relativeref{SnapLayoutFlag,IgnoreOverflowX} and
+         * @relativeref{SnapLayoutFlag,IgnoreOverflowY} is already specified in
+         * given direction.
          */
         /*implicit*/ BasicSnapLayoutRowBottom(const BasicSnapLayout<UserInterface>& layout): BasicSnapLayout<UserInterface>{layout, *this} {}
 
@@ -1178,7 +1225,12 @@ template<class UserInterface> class BasicSnapLayoutRowFill: public BasicSnapLayo
          * @brief Construct from an unspecialized layout
          *
          * Calls @ref setChildSnap() with
-         * @link Snap::Right @endlink|@ref Snap::FillY.
+         * @link Snap::Right @endlink|@ref Snap::FillY and
+         * @ref addFlags() with @ref SnapLayoutFlag::PropagateMarginX and
+         * @relativeref{SnapLayoutFlag,PropagateMarginY} unless
+         * @relativeref{SnapLayoutFlag,IgnoreOverflowX} and
+         * @relativeref{SnapLayoutFlag,IgnoreOverflowY} is already specified in
+         * given direction.
          */
         /*implicit*/ BasicSnapLayoutRowFill(const BasicSnapLayout<UserInterface>& layout): BasicSnapLayout<UserInterface>{layout, *this} {}
 
