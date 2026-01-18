@@ -171,6 +171,7 @@ enum class Snap: UnsignedByte {
 
     /**
      * Alias to specifying both @ref Snap::InsideX and @ref Snap::InsideY.
+     * Implicit when snapping to a parent.
      * @m_since_latest_{extras}
      */
     Inside = InsideX|InsideY,
@@ -395,7 +396,8 @@ class MAGNUM_UI_EXPORT SnapLayouter: public AbstractLayouter {
          * If @p node is root, @p snapTarget can be @ref LayoutHandle::Null to
          * snap to the whole UI. Otherwise @p snapTarget is expected to be
          * coming from the same layouter and assigned to either a parent or a
-         * sibling of @p node.
+         * sibling of @p node. If @p snapTarget is a parent, @ref Snap::Inside
+         * is implicitly used in addition to what's specified in @p snap.
          *
          * Note that explicitly snapped layouts aren't considered in any way
          * when calculating parent layout sizes and paddings and thus may

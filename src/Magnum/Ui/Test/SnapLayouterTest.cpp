@@ -2498,7 +2498,8 @@ void SnapLayouterTest::addRemoveExplicitSnap() {
     CORRADE_COMPARE(layouter.previous(layoutHandleData(root2Layout)), LayoutHandle::Null);
     CORRADE_COMPARE(layouter.next(layoutHandleData(root2Layout)), LayoutHandle::Null);
 
-    /* Layout that's snapped to a parent, with flags */
+    /* Layout that's snapped to a parent, being implicitly treated as inside,
+       with flags */
     LayoutHandle root1Child1Layout = layouter.add(root1Child1, Snap::BottomRight, root1Layout, SnapLayoutFlag::IgnoreOverflowY);
     CORRADE_COMPARE(layouter.firstChild(root1Layout), LayoutHandle::Null);
     CORRADE_COMPARE(layouter.firstExplicitSnap(root1Layout), root1Child1Layout);
@@ -3545,17 +3546,18 @@ void SnapLayouterTest::updateDataOrder() {
     NodeHandle node1 = ui.createNode({}, {70.0f, 90.0f});
     /*LayoutHandle layout1 =*/ layouter.add(node1, Snap::Bottom|Snap::Right, LayoutHandle::Null);
 
-    /* A layout snapped outside of a (non-layouted) node, inheriting its offset
-       in addition to having its own offset preserved */
+    /* A layout snapped outside of a sibling (non-layouted) node, inheriting
+       its offset in addition to having its own offset preserved */
     LayoutHandle nodeChildLayout = layouter.add(nodeChild);
     NodeHandle node2 = ui.createNode(nodeRoot, {0.3f, -0.2f}, {0.0f, 25.0f});
     /*LayoutHandle layout2 =*/ layouter.add(node2, Snap::Left|Snap::Right|Snap::Top|Snap::NoPadY, nodeChildLayout);
 
-    /* A layout snapped inside of a (non-layouted) node, not inheriting its
-       offset but having its own offset preserved */
+    /* A layout snapped inside of a parent (non-layouted) node, not inheriting
+       its offset but having its own offset preserved. The Snap::Inside is
+       implicit in this case. */
     LayoutHandle nodeRootLayout = layouter.add(nodeRoot);
     NodeHandle node3 = ui.createNode(nodeRoot, {0.9f, 0.6f}, {10.0f, 0.0f});
-    LayoutHandle layout3 = layouter.add(node3, Snap::Top|Snap::Bottom|Snap::Right|Snap::Inside|Snap::NoPadX, nodeRootLayout);
+    LayoutHandle layout3 = layouter.add(node3, Snap::Top|Snap::Bottom|Snap::Right|Snap::NoPadX, nodeRootLayout);
 
     /* Three child nodes & layouts for node3, ordered at the bottom, right to
        left, with no X padding, but with X/Y shift due to offset. All variants
@@ -3960,9 +3962,9 @@ void SnapLayouterTest::updatePropagateChildSizes() {
     if(data.explicitlySnappedNodes) {
         /* These shouldn't affect the rest of the layout in any way (so yeah
            they'll overlap) */
-        layouter.add(explicit1, Snap::BottomLeft|Snap::Inside, centerLayout);
+        layouter.add(explicit1, Snap::BottomLeft, centerLayout); /* Inside implicit */
         layouter.add(explicit2, Snap::BottomRight, topLayout);
-        layouter.add(explicit3, Snap::Left|Snap::Inside, innerLayout);
+        layouter.add(explicit3, Snap::Left, innerLayout); /* Inside implicit */
     }
 
     /* Capture correct function name */

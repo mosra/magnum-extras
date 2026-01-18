@@ -979,12 +979,16 @@ void SnapLayouter::doUpdate(const Containers::BitArrayView layoutIdsToUpdate, co
             targetSize = nodeSizes[targetNodeId];
 
             /* If the target is a parent, don't include its offset in the
-               calculation */
-            if(layout.flags >= SnapLayoutFlagExplicitSnapToParent)
+               calculation, and implicitly snap inside */
+            if(layout.flags >= SnapLayoutFlagExplicitSnapToParent) {
                 targetOffset = {};
-            /* Otherwise the nodes are siblings, in which case do include it */
-            else
-                targetOffset = nodeOffsets[targetNodeId];
+                snap |= Snap::Inside;
+
+            /* Otherwise the nodes are siblings, in which case do include it.
+               The snap is taken as-is, if it contains Snap::Inside then it's
+               on the user to ensure it isn't prone to draw/event ordering
+               issues. */
+            } else targetOffset = nodeOffsets[targetNodeId];
 
             targetPadding = nodePaddings[targetNodeId];
             targetMargin = nodeMargins[targetNodeId];
