@@ -2716,7 +2716,9 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
          *      instances set and advertise @ref LayerFeature::Layout, and
          *      calls @ref AbstractLayer::layout() to populate per-node layout
          *      properties
-         * -    Performs layout calculation
+         * -    Performs layout calculation by calling
+         *      @ref AbstractLayouter::layout() based on dependency order of
+         *      layout subtrees
          * -    Calculates absolute offsets for visible nodes
          * -    Culls invisible nodes, calculates clip rectangles
          * -    Propagates @ref NodeFlag::Disabled and @ref NodeFlag::NoEvents
