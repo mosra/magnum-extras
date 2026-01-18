@@ -82,7 +82,7 @@ CORRADE_ENUMSET_OPERATORS(LayouterFeatures)
 @brief Layouter state
 @m_since_latest_{extras}
 
-Used to decide whether @ref AbstractLayouter::update() (called from
+Used to decide whether @ref AbstractLayouter::layout() (called from
 @ref AbstractUserInterface::update()) need to be called to relayout the nodes
 before the interface is drawn. See @ref UserInterfaceState for interface-wide
 state.
@@ -90,28 +90,28 @@ state.
 */
 enum class LayouterState: UnsignedByte {
     /**
-     * @ref AbstractLayouter::update() (which is called from
+     * @ref AbstractLayouter::layout() (which is called from
      * @ref AbstractUserInterface::update()) needs to be called to recalculate
      * the layout after a change. Has to be explicitly set by the layouter
      * implementation using @ref AbstractLayouter::setNeedsUpdate(), is reset
-     * next time @ref AbstractLayouter::update() is called. Implied by
+     * next time @ref AbstractLayouter::layout() is called. Implied by
      * @ref LayouterState::NeedsAssignmentUpdate.
      *
      * Note that there's also interface-wide
      * @ref UserInterfaceState::NeedsLayoutAssignmentUpdate, which is set when
      * the node hierarchy or the node layout assignments changed. The two flags
      * are set independently, but both of them imply
-     * @ref AbstractLayouter::update() needs to be called.
+     * @ref AbstractLayouter::layout() needs to be called.
      */
     NeedsUpdate = 1 << 0,
 
     /**
-     * @ref AbstractLayouter::update() (which is called from
+     * @ref AbstractLayouter::layout() (which is called from
      * @ref AbstractUserInterface::update()) needs to be called to refresh the
      * layouts assigned to visible node hierarchy after the assignments were
      * changed. Set implicitly after every @ref AbstractLayouter::add() and
      * @ref AbstractLayouter::remove() call, is reset next time
-     * @ref AbstractLayouter::update() is called. Implies
+     * @ref AbstractLayouter::layout() is called. Implies
      * @ref LayouterState::NeedsUpdate.
      */
     NeedsAssignmentUpdate = NeedsUpdate|(1 << 1),
@@ -206,7 +206,7 @@ class MAGNUM_UI_EXPORT AbstractLayouter {
          *
          * Meant to be called by layouter implementations when the layouts get
          * modified. See the flag for more information.
-         * @see @ref state(), @ref update()
+         * @see @ref state(), @ref layout()
          */
         void setNeedsUpdate();
 
@@ -346,7 +346,7 @@ class MAGNUM_UI_EXPORT AbstractLayouter {
         void cleanNodes(const Containers::StridedArrayView1D<const UnsignedShort>& nodeHandleGenerations);
 
         /**
-         * @brief Update selected top-level layouts
+         * @brief Calculate selected top-level layouts
          *
          * Used internally from @ref AbstractUserInterface::update(). Exposed
          * just for testing purposes, there should be no need to call this
@@ -360,7 +360,7 @@ class MAGNUM_UI_EXPORT AbstractLayouter {
          * and @p nodeSizes views have all the same size. The @p nodeMaxSizes,
          * @p nodeAspectRatios, @p nodePaddings, @p nodeMargins, @p nodeOffsets
          * and @p nodeSizes views should be large enough to contain any valid
-         * node ID. Delegates to @ref doUpdate(), see its documentation for
+         * node ID. Delegates to @ref doLayout(), see its documentation for
          * more information about the arguments.
          *
          * Calling this function resets @ref LayouterState::NeedsUpdate and
@@ -368,7 +368,7 @@ class MAGNUM_UI_EXPORT AbstractLayouter {
          * behavior of this function is independent of @ref state() --- it
          * performs the update always regardless of what flags are set.
          */
-        void update(Containers::BitArrayView layoutIdsToUpdate, const Containers::StridedArrayView1D<const UnsignedInt>& topLevelLayoutIds, const Containers::StridedArrayView1D<Vector2>& nodeMinSizes, const Containers::StridedArrayView1D<Vector2>& nodeMaxSizes, const Containers::StridedArrayView1D<Float>& nodeAspectRatios, const Containers::StridedArrayView1D<Vector4>& nodePaddings, const Containers::StridedArrayView1D<Vector4>& nodeMargins, const Containers::StridedArrayView1D<Vector2>& nodeOffsets, const Containers::StridedArrayView1D<Vector2>& nodeSizes);
+        void layout(Containers::BitArrayView layoutIdsToUpdate, const Containers::StridedArrayView1D<const UnsignedInt>& topLevelLayoutIds, const Containers::StridedArrayView1D<Vector2>& nodeMinSizes, const Containers::StridedArrayView1D<Vector2>& nodeMaxSizes, const Containers::StridedArrayView1D<Float>& nodeAspectRatios, const Containers::StridedArrayView1D<Vector4>& nodePaddings, const Containers::StridedArrayView1D<Vector4>& nodeMargins, const Containers::StridedArrayView1D<Vector2>& nodeOffsets, const Containers::StridedArrayView1D<Vector2>& nodeSizes);
 
     protected:
         /**
@@ -483,7 +483,7 @@ class MAGNUM_UI_EXPORT AbstractLayouter {
          * on the UI size.
          *
          * Note that compared to @ref AbstractLayer::doSetSize(), a followup
-         * @ref doUpdate() call isn't implicitly made after UI size changed
+         * @ref doLayout() call isn't implicitly made after UI size changed
          * because the layout may not be depending on it for anything.
          * Explicitly call @ref setNeedsUpdate() in the implementation if the
          * layout *is* depending on the UI size and requires an update after.
@@ -514,7 +514,7 @@ class MAGNUM_UI_EXPORT AbstractLayouter {
         virtual void doClean(Containers::BitArrayView layoutIdsToRemove);
 
         /**
-         * @brief Update selected top-level layouts
+         * @brief Calculate selected top-level layouts
          * @param[in] layoutIdsToUpdate Layout IDs to update
          * @param[in] topLevelLayoutIds Top-level layout IDs to update from
          * @param[in,out] nodeMinSizes  Minimal node sizes indexed by node ID
@@ -530,7 +530,7 @@ class MAGNUM_UI_EXPORT AbstractLayouter {
          * @param[in,out] nodeOffsets   Node offsets indexed by node ID
          * @param[in,out] nodeSizes     Node sizes indexed by node ID
          *
-         * Implementation for @ref update(), which is called from
+         * Implementation for @ref layout(), which is called from
          * @ref AbstractUserInterface::update() whenever
          * @ref UserInterfaceState::NeedsLayoutUpdate or any of the states that
          * imply it are present in @ref AbstractUserInterface::state(). Is
@@ -594,19 +594,18 @@ class MAGNUM_UI_EXPORT AbstractLayouter {
          * modify these arbitrarily, without taking the update rules specified
          * in @ref AbstractLayer::doLayout() into account.
          *
-         * Unlike @ref AbstractLayer::doUpdate(), calls to this function may
-         * happen several times with different @p layoutIdsToUpdate and
-         * @p topLevelLayoutIds, ordered relative to calls to other layouters
-         * on which output this layouter may depend or wich may depend on
-         * output of this layouter. The set of layout IDs in both arguments is
-         * disjoint among the calls to this functions, i.e. the function is
-         * never called twice with the same ID present. This function may get
-         * also called with @p layoutIdsToUpdate having all bits zero and
-         * @p topLevelLayoutIds being empty, for example when
+         * Calls to this function may happen several times with different
+         * @p layoutIdsToUpdate and @p topLevelLayoutIds, ordered relative to
+         * calls to other layouters on which output this layouter may depend or
+         * wich may depend on output of this layouter. The set of layout IDs in
+         * both arguments is disjoint among the calls to this functions, i.e.
+         * the function is never called twice with the same ID present. This
+         * function may get also called with @p layoutIdsToUpdate having all
+         * bits zero and @p topLevelLayoutIds being empty, for example when
          * @ref setNeedsUpdate() was called but the layouter doesn't have any
          * layouts currently visible.
          */
-        virtual void doUpdate(Containers::BitArrayView layoutIdsToUpdate, const Containers::StridedArrayView1D<const UnsignedInt>& topLevelLayoutIds, const Containers::StridedArrayView1D<Vector2>& nodeMinSizes, const Containers::StridedArrayView1D<Vector2>& nodeMaxSizes, const Containers::StridedArrayView1D<Float>& nodeAspectRatios, const Containers::StridedArrayView1D<Vector4>& nodePaddings, const Containers::StridedArrayView1D<Vector4>& nodeMargins, const Containers::StridedArrayView1D<Vector2>& nodeOffsets, const Containers::StridedArrayView1D<Vector2>& nodeSizes) = 0;
+        virtual void doLayout(Containers::BitArrayView layoutIdsToUpdate, const Containers::StridedArrayView1D<const UnsignedInt>& topLevelLayoutIds, const Containers::StridedArrayView1D<Vector2>& nodeMinSizes, const Containers::StridedArrayView1D<Vector2>& nodeMaxSizes, const Containers::StridedArrayView1D<Float>& nodeAspectRatios, const Containers::StridedArrayView1D<Vector4>& nodePaddings, const Containers::StridedArrayView1D<Vector4>& nodeMargins, const Containers::StridedArrayView1D<Vector2>& nodeOffsets, const Containers::StridedArrayView1D<Vector2>& nodeSizes) = 0;
 
         /* Common implementation for remove(LayoutHandle) and
            remove(LayouterDataHandle) */

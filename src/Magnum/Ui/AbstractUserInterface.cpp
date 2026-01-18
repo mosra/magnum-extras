@@ -3493,7 +3493,7 @@ AbstractUserInterface& AbstractUserInterface::update() {
             AbstractLayouter* const instance = state.layouters[state.topLevelLayoutLayouterIds[i]].used.instance.get();
             CORRADE_INTERNAL_ASSERT(instance);
 
-            instance->update(
+            instance->layout(
                 state.layoutMasks.sliceSize(offset, instance->capacity()),
                 state.topLevelLayoutIds.slice(
                     state.topLevelLayoutOffsets[i],
@@ -3518,7 +3518,7 @@ AbstractUserInterface& AbstractUserInterface::update() {
         for(Layouter& layouter: state.layouters) {
             AbstractLayouter* const instance = layouter.used.instance.get();
             if(instance && instance->state() & LayouterState::NeedsAssignmentUpdate) {
-                instance->update(
+                instance->layout(
                     /** @todo yeah and this allocation REALLY isn't great */
                     Containers::BitArray{ValueInit, instance->capacity()},
                     {},

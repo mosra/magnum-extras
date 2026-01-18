@@ -93,11 +93,11 @@ struct SnapLayouterTest: TestSuite::Tester {
     void clean();
     void cleanInvalid();
 
-    void updateEmpty();
-    void updateDataOrder();
-    void updateLayoutProperties();
-    void updateChildSnap();
-    void updatePropagateChildSizes();
+    void layoutEmpty();
+    void layoutDataOrder();
+    void layoutLayoutProperties();
+    void layoutChildSnap();
+    void layoutPropagateChildSizes();
 };
 
 const struct {
@@ -1061,7 +1061,7 @@ const struct {
 const struct {
     const char* name;
     bool recycledLayouts, shuffledChildLayouts, removedLayouts;
-} UpdateDataOrderData[]{
+} LayoutDataOrderData[]{
     {"",
         false, false, false},
     {"layouts recycled in shuffled order",
@@ -1086,7 +1086,7 @@ const struct {
        is {50, 100}. A constant node offset is additionally supplied by the
        test case, which is added to the expectedOffset. */
     Vector2 expectedOffset, expectedSize;
-} UpdateLayoutPropertiesData[]{
+} LayoutLayoutPropertiesData[]{
     /* Tests just that the padding / margin properties get used at all.
        Complete behavior tested in snap(), an "integration test" with multiple
        nodes having different paddings and margins is in updateDataOrder(). */
@@ -1162,7 +1162,7 @@ const struct {
     Float padding, childMargin;
     /* Parent is {100, 200}, the three children are {20, 30} originally */
     Vector2 offset, advance, childSize;
-} UpdateChildSnapData[]{
+} LayoutChildSnapData[]{
     {Snap::Left,
         nullptr, 0.0f, 0.0f,
         {80.0f, 85.0f}, {-20.0f, 0.0f}, {20.0f, 30.0f}},
@@ -1276,7 +1276,7 @@ const struct {
     Vector2 expectedInnerSize;
     Float expectedInnerCenterY;
     Float expectedCenterHeight, expectedCenterOffsetY, expectedCenterLeftEdge;
-} UpdatePropagateChildSizesData[]{
+} LayoutPropagateChildSizesData[]{
     {"with no explicitly snapped nodes",
         {}, {},
         {0.0f, 40.0f}, {}, false,
@@ -1527,19 +1527,19 @@ SnapLayouterTest::SnapLayouterTest() {
               &SnapLayouterTest::clean,
               &SnapLayouterTest::cleanInvalid,
 
-              &SnapLayouterTest::updateEmpty});
+              &SnapLayouterTest::layoutEmpty});
 
-    addInstancedTests({&SnapLayouterTest::updateDataOrder},
-        Containers::arraySize(UpdateDataOrderData));
+    addInstancedTests({&SnapLayouterTest::layoutDataOrder},
+        Containers::arraySize(LayoutDataOrderData));
 
-    addInstancedTests({&SnapLayouterTest::updateLayoutProperties},
-        Containers::arraySize(UpdateLayoutPropertiesData));
+    addInstancedTests({&SnapLayouterTest::layoutLayoutProperties},
+        Containers::arraySize(LayoutLayoutPropertiesData));
 
-    addInstancedTests({&SnapLayouterTest::updateChildSnap},
-        Containers::arraySize(UpdateChildSnapData));
+    addInstancedTests({&SnapLayouterTest::layoutChildSnap},
+        Containers::arraySize(LayoutChildSnapData));
 
-    addInstancedTests({&SnapLayouterTest::updatePropagateChildSizes},
-        Containers::arraySize(UpdatePropagateChildSizesData));
+    addInstancedTests({&SnapLayouterTest::layoutPropagateChildSizes},
+        Containers::arraySize(LayoutPropagateChildSizesData));
 }
 
 void SnapLayouterTest::debugSnap() {
@@ -3419,20 +3419,20 @@ void SnapLayouterTest::cleanInvalid() {
         TestSuite::Compare::String);
 }
 
-void SnapLayouterTest::updateEmpty() {
+void SnapLayouterTest::layoutEmpty() {
     SnapLayouter layouter{layouterHandle(0, 1)};
 
-    /* Required to be called before update() (because AbstractUserInterface
+    /* Required to be called before layout() (because AbstractUserInterface
        guarantees the same on a higher level), not needed for anything here */
     layouter.setSize({1, 1});
 
     /* It shouldn't crash or do anything weird */
-    layouter.update({}, {}, {}, {}, {}, {}, {}, {}, {});
+    layouter.layout({}, {}, {}, {}, {}, {}, {}, {}, {});
     CORRADE_VERIFY(true);
 }
 
-void SnapLayouterTest::updateDataOrder() {
-    auto&& data = UpdateDataOrderData[testCaseInstanceId()];
+void SnapLayouterTest::layoutDataOrder() {
+    auto&& data = LayoutDataOrderData[testCaseInstanceId()];
     setTestCaseDescription(data.name);
 
     AbstractUserInterface ui{{100, 100}};
@@ -3627,7 +3627,7 @@ void SnapLayouterTest::updateDataOrder() {
         using AbstractLayouter::add;
 
         LayouterFeatures doFeatures() const override { return {}; }
-        void doUpdate(Containers::BitArrayView, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Float>&, const Containers::StridedArrayView1D<Vector4>&, const Containers::StridedArrayView1D<Vector4>&, const Containers::StridedArrayView1D<Vector2>& nodeOffsets, const Containers::StridedArrayView1D<Vector2>& nodeSizes) override {
+        void doLayout(Containers::BitArrayView, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Float>&, const Containers::StridedArrayView1D<Vector4>&, const Containers::StridedArrayView1D<Vector4>&, const Containers::StridedArrayView1D<Vector2>& nodeOffsets, const Containers::StridedArrayView1D<Vector2>& nodeSizes) override {
             /* Skipping the last 5 removed nodes, as their sizes/offsets are
                left at random */
             CORRADE_COMPARE_AS(nodeOffsets.exceptSuffix(5), Containers::stridedArrayView<Vector2>({
@@ -3683,8 +3683,8 @@ void SnapLayouterTest::updateDataOrder() {
     CORRADE_COMPARE(dummyLayouter.called, 1);
 }
 
-void SnapLayouterTest::updateLayoutProperties() {
-    auto&& data = UpdateLayoutPropertiesData[testCaseInstanceId()];
+void SnapLayouterTest::layoutLayoutProperties() {
+    auto&& data = LayoutLayoutPropertiesData[testCaseInstanceId()];
     setTestCaseDescription(data.name);
 
     AbstractUserInterface ui{{500, 600}};
@@ -3743,7 +3743,7 @@ void SnapLayouterTest::updateLayoutProperties() {
         using AbstractLayouter::add;
 
         LayouterFeatures doFeatures() const override { return {}; }
-        void doUpdate(Containers::BitArrayView, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<Vector2>& nodeMinSizes, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Float>&, const Containers::StridedArrayView1D<Vector4>&, const Containers::StridedArrayView1D<Vector4>&, const Containers::StridedArrayView1D<Vector2>& nodeOffsets, const Containers::StridedArrayView1D<Vector2>& nodeSizes) override {
+        void doLayout(Containers::BitArrayView, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<Vector2>& nodeMinSizes, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Float>&, const Containers::StridedArrayView1D<Vector4>&, const Containers::StridedArrayView1D<Vector4>&, const Containers::StridedArrayView1D<Vector2>& nodeOffsets, const Containers::StridedArrayView1D<Vector2>& nodeSizes) override {
             /* The offset should always include the node-specific offset,
                subtract it for comparison */
             CORRADE_COMPARE(nodeOffsets[7 /*node*/] - (Vector2{0.25f, 0.75f}), _expectedOffset);
@@ -3769,8 +3769,8 @@ void SnapLayouterTest::updateLayoutProperties() {
     CORRADE_COMPARE(dummyLayouter.called, 1);
 }
 
-void SnapLayouterTest::updateChildSnap() {
-    auto&& data = UpdateChildSnapData[testCaseInstanceId()];
+void SnapLayouterTest::layoutChildSnap() {
+    auto&& data = LayoutChildSnapData[testCaseInstanceId()];
     {
         Containers::String out;
         {
@@ -3836,7 +3836,7 @@ void SnapLayouterTest::updateChildSnap() {
 
         LayouterFeatures doFeatures() const override { return {}; }
 
-        void doUpdate(Containers::BitArrayView, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Float>&, const Containers::StridedArrayView1D<Vector4>&, const Containers::StridedArrayView1D<Vector4>&, const Containers::StridedArrayView1D<Vector2>& nodeOffsets, const Containers::StridedArrayView1D<Vector2>& nodeSizes) override {
+        void doLayout(Containers::BitArrayView, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Float>&, const Containers::StridedArrayView1D<Vector4>&, const Containers::StridedArrayView1D<Vector4>&, const Containers::StridedArrayView1D<Vector2>& nodeOffsets, const Containers::StridedArrayView1D<Vector2>& nodeSizes) override {
             CORRADE_COMPARE_AS(nodeOffsets, Containers::stridedArrayView<Vector2>({
                 {15.0f, 35.0f},
                 _offset,
@@ -3864,8 +3864,8 @@ void SnapLayouterTest::updateChildSnap() {
     CORRADE_COMPARE(dummyLayouter.called, 1);
 }
 
-void SnapLayouterTest::updatePropagateChildSizes() {
-    auto&& data = UpdatePropagateChildSizesData[testCaseInstanceId()];
+void SnapLayouterTest::layoutPropagateChildSizes() {
+    auto&& data = LayoutPropagateChildSizesData[testCaseInstanceId()];
     setTestCaseDescription(data.name);
 
     AbstractUserInterface ui{{100, 100}};
@@ -3978,7 +3978,7 @@ void SnapLayouterTest::updatePropagateChildSizes() {
         using AbstractLayouter::add;
 
         LayouterFeatures doFeatures() const override { return {}; }
-        void doUpdate(Containers::BitArrayView, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Float>&, const Containers::StridedArrayView1D<Vector4>&, const Containers::StridedArrayView1D<Vector4>&, const Containers::StridedArrayView1D<Vector2>& nodeOffsets, const Containers::StridedArrayView1D<Vector2>& nodeSizes) override {
+        void doLayout(Containers::BitArrayView, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Float>&, const Containers::StridedArrayView1D<Vector4>&, const Containers::StridedArrayView1D<Vector4>&, const Containers::StridedArrayView1D<Vector2>& nodeOffsets, const Containers::StridedArrayView1D<Vector2>& nodeSizes) override {
             CORRADE_COMPARE_AS(nodeOffsets, Containers::stridedArrayView<Vector2>({
                 {10.0f, 5.0f},                  /*  0, outer */
                 {expectedInnerOffsetX, 5.0f},   /*  1, inner */

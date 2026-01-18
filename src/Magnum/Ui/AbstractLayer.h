@@ -1968,7 +1968,7 @@ class MAGNUM_UI_EXPORT AbstractLayer {
          *
          * Default implementation does nothing. Data collected by calls to this
          * function are subsequently passed as inputs to
-         * @ref AbstractLayouter::update() of particular layouters.
+         * @ref AbstractLayouter::layout() of particular layouters.
          */
         virtual void doLayout(Containers::BitArrayView dataIdsToLayout, const Containers::StridedArrayView1D<Vector2>& nodeMinSizes, const Containers::StridedArrayView1D<Vector2>& nodeMaxSizes, const Containers::StridedArrayView1D<Float>& nodeAspectRatios, const Containers::StridedArrayView1D<Vector4>& nodePaddings, const Containers::StridedArrayView1D<Vector4>& nodeMargins);
 

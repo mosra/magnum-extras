@@ -370,20 +370,20 @@ void AbstractLayouter::cleanNodes(const Containers::StridedArrayView1D<const Uns
 
 void AbstractLayouter::doClean(Containers::BitArrayView) {}
 
-void AbstractLayouter::update(const Containers::BitArrayView layoutIdsToUpdate, const Containers::StridedArrayView1D<const UnsignedInt>& topLevelLayoutIds, const Containers::StridedArrayView1D<Vector2>& nodeMinSizes, const Containers::StridedArrayView1D<Vector2>& nodeMaxSizes, const Containers::StridedArrayView1D<Float>& nodeAspectRatios, const Containers::StridedArrayView1D<Vector4>& nodePaddings, const Containers::StridedArrayView1D<Vector4>& nodeMargins, const Containers::StridedArrayView1D<Vector2>& nodeOffsets, const Containers::StridedArrayView1D<Vector2>& nodeSizes) {
+void AbstractLayouter::layout(const Containers::BitArrayView layoutIdsToUpdate, const Containers::StridedArrayView1D<const UnsignedInt>& topLevelLayoutIds, const Containers::StridedArrayView1D<Vector2>& nodeMinSizes, const Containers::StridedArrayView1D<Vector2>& nodeMaxSizes, const Containers::StridedArrayView1D<Float>& nodeAspectRatios, const Containers::StridedArrayView1D<Vector4>& nodePaddings, const Containers::StridedArrayView1D<Vector4>& nodeMargins, const Containers::StridedArrayView1D<Vector2>& nodeOffsets, const Containers::StridedArrayView1D<Vector2>& nodeSizes) {
     CORRADE_ASSERT(layoutIdsToUpdate.size() == capacity(),
-        "Ui::AbstractLayouter::update(): expected layoutIdsToUpdate to have" << capacity() << "bits but got" << layoutIdsToUpdate.size(), );
+        "Ui::AbstractLayouter::layout(): expected layoutIdsToUpdate to have" << capacity() << "bits but got" << layoutIdsToUpdate.size(), );
     CORRADE_ASSERT(nodeMaxSizes.size() == nodeMinSizes.size() &&
                    nodeAspectRatios.size() == nodeMinSizes.size() &&
                    nodePaddings.size() == nodeMinSizes.size() &&
                    nodeMargins.size() == nodeMinSizes.size() &&
                    nodeOffsets.size() == nodeMinSizes.size() &&
                    nodeSizes.size() == nodeMinSizes.size(),
-        "Ui::AbstractLayouter::update(): expected node min size, max size, aspect ratio, padding, margin, offset and size views to have the same size but got" << nodeMinSizes.size() << Debug::nospace << "," << nodeMaxSizes.size() << Debug::nospace << "," << nodeAspectRatios.size() << Debug::nospace << "," << nodePaddings.size() << Debug::nospace << "," << nodeMargins.size() << Debug::nospace << "," << nodeOffsets.size() << "and" << nodeSizes.size(), );
+        "Ui::AbstractLayouter::layout(): expected node min size, max size, aspect ratio, padding, margin, offset and size views to have the same size but got" << nodeMinSizes.size() << Debug::nospace << "," << nodeMaxSizes.size() << Debug::nospace << "," << nodeAspectRatios.size() << Debug::nospace << "," << nodePaddings.size() << Debug::nospace << "," << nodeMargins.size() << Debug::nospace << "," << nodeOffsets.size() << "and" << nodeSizes.size(), );
     State& state = *_state;
     CORRADE_ASSERT(state.setSizeCalled,
-        "Ui::AbstractLayouter::update(): user interface size wasn't set", );
-    doUpdate(layoutIdsToUpdate, topLevelLayoutIds, nodeMinSizes, nodeMaxSizes, nodeAspectRatios, nodePaddings, nodeMargins, nodeOffsets, nodeSizes);
+        "Ui::AbstractLayouter::layout(): user interface size wasn't set", );
+    doLayout(layoutIdsToUpdate, topLevelLayoutIds, nodeMinSizes, nodeMaxSizes, nodeAspectRatios, nodePaddings, nodeMargins, nodeOffsets, nodeSizes);
     state.state &= ~LayouterState::NeedsAssignmentUpdate;
 }
 

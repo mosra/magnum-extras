@@ -59,17 +59,17 @@ struct GenericLayouterTest: TestSuite::Tester {
 
     void clean();
 
-    void updateEmpty();
-    void updateNodeProperties();
-    void updateNodePropertiesInvalid();
-    void updateDataOrder();
+    void layoutEmpty();
+    void layoutNodeProperties();
+    void layoutNodePropertiesInvalid();
+    void layoutDataOrder();
 };
 
 const struct {
     const char* name;
     bool recycledLayouts;
     Vector2 expectedNode4Size;
-} UpdateDataOrderData[]{
+} LayoutDataOrderData[]{
     {"", false, {2*(50.0f + 0.4f), 2*(60.0f + 0.6f)}},
     {"recycled layouts", true, {2*50.0f + 0.4f, 2*60.0f + 0.6f}},
 };
@@ -87,12 +87,12 @@ GenericLayouterTest::GenericLayouterTest() {
 
               &GenericLayouterTest::clean,
 
-              &GenericLayouterTest::updateEmpty,
-              &GenericLayouterTest::updateNodeProperties,
-              &GenericLayouterTest::updateNodePropertiesInvalid});
+              &GenericLayouterTest::layoutEmpty,
+              &GenericLayouterTest::layoutNodeProperties,
+              &GenericLayouterTest::layoutNodePropertiesInvalid});
 
-    addInstancedTests({&GenericLayouterTest::updateDataOrder},
-        Containers::arraySize(UpdateDataOrderData));
+    addInstancedTests({&GenericLayouterTest::layoutDataOrder},
+        Containers::arraySize(LayoutDataOrderData));
 }
 
 void GenericLayouterTest::construct() {
@@ -249,7 +249,7 @@ void GenericLayouterTest::nodePropertiesNotInLayout() {
         Float nodeAspectRatios[1];
         Vector4 nodePaddingsMargins[1];
         char layoutsIdsToUpdate[1]{};
-        layouter.update(
+        layouter.layout(
             Containers::BitArrayView{layoutsIdsToUpdate, 0, 0},
             {},
             nodeOffsetsSizes,
@@ -322,7 +322,7 @@ void GenericLayouterTest::clean() {
     CORRADE_VERIFY(!layouter.isHandleValid(anotherNonTrivial));
 }
 
-void GenericLayouterTest::updateEmpty() {
+void GenericLayouterTest::layoutEmpty() {
     GenericLayouter layouter{layouterHandle(0, 1)};
 
     /* Required to be called before update() (because AbstractUserInterface
@@ -330,11 +330,11 @@ void GenericLayouterTest::updateEmpty() {
     layouter.setSize({1, 1});
 
     /* It shouldn't crash or do anything weird */
-    layouter.update({}, {}, {}, {}, {}, {}, {}, {}, {});
+    layouter.layout({}, {}, {}, {}, {}, {}, {}, {}, {});
     CORRADE_VERIFY(true);
 }
 
-void GenericLayouterTest::updateNodeProperties() {
+void GenericLayouterTest::layoutNodeProperties() {
     AbstractUserInterface ui{{100, 100}};
 
     /* As size is known already, setSize() is called on the layouter right
@@ -444,7 +444,7 @@ void GenericLayouterTest::updateNodeProperties() {
         char(1 << layoutHandleId(layout))
     };
 
-    layouter.update(
+    layouter.layout(
         Containers::BitArrayView{layoutsIdsToUpdate, 0, 1},
         {},
         nodeMinSizes,
@@ -477,7 +477,7 @@ void GenericLayouterTest::updateNodeProperties() {
     }), TestSuite::Compare::Container);
 }
 
-void GenericLayouterTest::updateNodePropertiesInvalid() {
+void GenericLayouterTest::layoutNodePropertiesInvalid() {
     CORRADE_SKIP_IF_NO_ASSERT();
 
     AbstractUserInterface ui{{100, 100}};
@@ -568,7 +568,7 @@ void GenericLayouterTest::updateNodePropertiesInvalid() {
     char layoutsIdsToUpdate[1]{
         char(1 << layoutHandleId(layout))
     };
-    layouter.update(
+    layouter.layout(
         Containers::BitArrayView{layoutsIdsToUpdate, 0, 1},
         {},
         nodeOffsetsSizes,
@@ -581,8 +581,8 @@ void GenericLayouterTest::updateNodePropertiesInvalid() {
     CORRADE_COMPARE(called, 1);
 }
 
-void GenericLayouterTest::updateDataOrder() {
-    auto&& data = UpdateDataOrderData[testCaseInstanceId()];
+void GenericLayouterTest::layoutDataOrder() {
+    auto&& data = LayoutDataOrderData[testCaseInstanceId()];
     setTestCaseDescription(data.name);
 
     AbstractUserInterface ui{{100, 100}};
@@ -686,7 +686,7 @@ void GenericLayouterTest::updateDataOrder() {
         using AbstractLayouter::add;
 
         LayouterFeatures doFeatures() const override { return {}; }
-        void doUpdate(Containers::BitArrayView, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Float>&, const Containers::StridedArrayView1D<Vector4>&, const Containers::StridedArrayView1D<Vector4>&, const Containers::StridedArrayView1D<Vector2>& nodeOffsets, const Containers::StridedArrayView1D<Vector2>& nodeSizes) override {
+        void doLayout(Containers::BitArrayView, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Float>&, const Containers::StridedArrayView1D<Vector4>&, const Containers::StridedArrayView1D<Vector4>&, const Containers::StridedArrayView1D<Vector2>& nodeOffsets, const Containers::StridedArrayView1D<Vector2>& nodeSizes) override {
             {
                 CORRADE_EXPECT_FAIL_IF(expectRecycled, "AbstractUserInterface currently discards extra layouts assigned to the same node, only one is executed.");
                 CORRADE_COMPARE(nodeOffsets[3], (Vector2{60.0f, 80.0f}));
