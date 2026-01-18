@@ -54,8 +54,8 @@ specified as well.
 
 If the snap results in the node being outside of the target node, margin of
 both nodes is taken into account. If the snap results in the node being inside
-the target node, padding of the target node and margin of the snapped node is
-taken into account.
+the target node, padding of the target node (but not margin of the snapped
+node) is taken into account.
 
 Specifying @ref Snap::NoPadX and/or @ref Snap::NoPadY will ignore horizontal
 and/or vertical padding and margin.
