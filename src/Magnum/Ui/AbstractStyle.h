@@ -132,7 +132,15 @@ enum class StyleFeature: UnsignedShort {
      * @see @ref UserInterface::snapLayouter(),
      *      @ref UserInterface::hasSnapLayouter()
      */
-    SnapLayouter = 1 << 7
+    SnapLayouter = 1 << 7,
+
+    /**
+     * @ref GenericLayouter style. Ensures a @ref GenericLayouter instance is
+     * set up on the @ref UserInterface.
+     * @see @ref UserInterface::genericLayouter(),
+     *      @ref UserInterface::hasGenericLayouter()
+     */
+    GenericLayouter = 1 << 8
 };
 
 /**
@@ -157,7 +165,8 @@ typedef Containers::EnumSet<StyleFeature
       UnsignedInt(StyleFeature::TextLayerAnimations)|
       UnsignedInt(StyleFeature::EventLayer)|
       UnsignedInt(StyleFeature::LayoutLayer)|
-      UnsignedInt(StyleFeature::SnapLayouter)
+      UnsignedInt(StyleFeature::SnapLayouter)|
+      UnsignedInt(StyleFeature::GenericLayouter)
     #endif
     > StyleFeatures;
 

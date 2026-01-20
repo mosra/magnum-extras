@@ -32,6 +32,7 @@
 #include "Magnum/Ui/BaseLayer.h"
 #include "Magnum/Ui/BaseLayerAnimator.h"
 #include "Magnum/Ui/EventLayer.h"
+#include "Magnum/Ui/GenericLayouter.h"
 #include "Magnum/Ui/Handle.h"
 #include "Magnum/Ui/LayoutLayer.h"
 #include "Magnum/Ui/SnapLayouter.h"
@@ -233,6 +234,30 @@ UserInterface& UserInterface::setSnapLayouterInstance(Containers::Pointer<SnapLa
     CORRADE_ASSERT(!_state->snapLayouter,
         "Ui::UserInterface::setSnapLayouterInstance(): instance already set", *this);
     _state->snapLayouter = instance.get();
+    setLayouterInstance(Utility::move(instance));
+    return *this;
+}
+
+bool UserInterface::hasGenericLayouter() const {
+    return _state->genericLayouter;
+}
+
+const GenericLayouter& UserInterface::genericLayouter() const {
+    CORRADE_ASSERT(_state->genericLayouter,
+        "Ui::UserInterface::genericLayouter(): no instance set", *_state->genericLayouter);
+    return *_state->genericLayouter;
+}
+
+GenericLayouter& UserInterface::genericLayouter() {
+    return const_cast<GenericLayouter&>(const_cast<const UserInterface&>(*this).genericLayouter());
+}
+
+UserInterface& UserInterface::setGenericLayouterInstance(Containers::Pointer<GenericLayouter>&& instance) {
+    CORRADE_ASSERT(instance,
+        "Ui::UserInterface::setGenericLayouterInstance(): instance is null", *this);
+    CORRADE_ASSERT(!_state->genericLayouter,
+        "Ui::UserInterface::setGenericLayouterInstance(): instance already set", *this);
+    _state->genericLayouter = instance.get();
     setLayouterInstance(Utility::move(instance));
     return *this;
 }

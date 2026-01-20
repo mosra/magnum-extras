@@ -35,6 +35,7 @@
 #include "Magnum/Ui/BaseLayer.h"
 #include "Magnum/Ui/BaseLayerAnimator.h"
 #include "Magnum/Ui/EventLayer.h"
+#include "Magnum/Ui/GenericLayouter.h"
 #include "Magnum/Ui/Handle.h"
 #include "Magnum/Ui/LayoutLayer.h"
 #include "Magnum/Ui/SnapLayouter.h"
@@ -79,6 +80,10 @@ struct UserInterfaceTest: TestSuite::Tester {
     void setSnapLayouterInstance();
     void setSnapLayouterInstanceInvalid();
     void snapLayouterInvalid();
+
+    void setGenericLayouterInstance();
+    void setGenericLayouterInstanceInvalid();
+    void genericLayouterInvalid();
 };
 
 const struct {
@@ -125,7 +130,11 @@ UserInterfaceTest::UserInterfaceTest() {
 
               &UserInterfaceTest::setSnapLayouterInstance,
               &UserInterfaceTest::setSnapLayouterInstanceInvalid,
-              &UserInterfaceTest::snapLayouterInvalid});
+              &UserInterfaceTest::snapLayouterInvalid,
+
+              &UserInterfaceTest::setGenericLayouterInstance,
+              &UserInterfaceTest::setGenericLayouterInstanceInvalid,
+              &UserInterfaceTest::genericLayouterInvalid});
 }
 
 void UserInterfaceTest::construct() {
@@ -150,6 +159,7 @@ void UserInterfaceTest::construct() {
     CORRADE_VERIFY(!ui.hasEventLayer());
     CORRADE_VERIFY(!ui.hasLayoutLayer());
     CORRADE_VERIFY(!ui.hasSnapLayouter());
+    CORRADE_VERIFY(!ui.hasGenericLayouter());
 }
 
 void UserInterfaceTest::constructNoCreate() {
@@ -713,6 +723,7 @@ void UserInterfaceTest::setSnapLayouterInstance() {
     CORRADE_COMPARE(ui.layouterCapacity(), 0);
     CORRADE_COMPARE(ui.layouterUsedCount(), 0);
     CORRADE_VERIFY(!ui.hasSnapLayouter());
+    CORRADE_VERIFY(!ui.hasGenericLayouter());
 
     LayouterHandle handle = ui.createLayouter();
     Containers::Pointer<SnapLayouter> layouter{InPlaceInit, handle};
@@ -721,6 +732,7 @@ void UserInterfaceTest::setSnapLayouterInstance() {
     CORRADE_COMPARE(ui.layouterCapacity(), 1);
     CORRADE_COMPARE(ui.layouterUsedCount(), 1);
     CORRADE_VERIFY(ui.hasSnapLayouter());
+    CORRADE_VERIFY(!ui.hasGenericLayouter());
     CORRADE_COMPARE(&ui.layouter(handle), pointer);
     CORRADE_COMPARE(&ui.snapLayouter(), pointer);
 }
@@ -754,6 +766,58 @@ void UserInterfaceTest::snapLayouterInvalid() {
     Error redirectError{&out};
     ui.snapLayouter();
     CORRADE_COMPARE(out, "Ui::UserInterface::snapLayouter(): no instance set\n");
+}
+
+void UserInterfaceTest::setGenericLayouterInstance() {
+    struct Interface: UserInterface {
+        explicit Interface(NoCreateT): UserInterface{NoCreate} {}
+    } ui{NoCreate};
+    CORRADE_COMPARE(ui.layouterCapacity(), 0);
+    CORRADE_COMPARE(ui.layouterUsedCount(), 0);
+    CORRADE_VERIFY(!ui.hasSnapLayouter());
+    CORRADE_VERIFY(!ui.hasGenericLayouter());
+
+    LayouterHandle handle = ui.createLayouter();
+    Containers::Pointer<GenericLayouter> layouter{InPlaceInit, handle};
+    GenericLayouter* pointer = layouter.get();
+    ui.setGenericLayouterInstance(Utility::move(layouter));
+    CORRADE_COMPARE(ui.layouterCapacity(), 1);
+    CORRADE_COMPARE(ui.layouterUsedCount(), 1);
+    CORRADE_VERIFY(!ui.hasSnapLayouter());
+    CORRADE_VERIFY(ui.hasGenericLayouter());
+    CORRADE_COMPARE(&ui.layouter(handle), pointer);
+    CORRADE_COMPARE(&ui.genericLayouter(), pointer);
+}
+
+void UserInterfaceTest::setGenericLayouterInstanceInvalid() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct Interface: UserInterface {
+        explicit Interface(NoCreateT): UserInterface{NoCreate} {}
+    } ui{NoCreate};
+    ui.setGenericLayouterInstance(Containers::pointer<GenericLayouter>(ui.createLayouter()));
+
+    Containers::String out;
+    Error redirectError{&out};
+    ui.setGenericLayouterInstance(nullptr);
+    ui.setGenericLayouterInstance(Containers::pointer<GenericLayouter>(ui.createLayouter()));
+    CORRADE_COMPARE_AS(out,
+        "Ui::UserInterface::setGenericLayouterInstance(): instance is null\n"
+        "Ui::UserInterface::setGenericLayouterInstance(): instance already set\n",
+        TestSuite::Compare::String);
+}
+
+void UserInterfaceTest::genericLayouterInvalid() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct Interface: UserInterface {
+        explicit Interface(NoCreateT): UserInterface{NoCreate} {}
+    } ui{NoCreate};
+
+    Containers::String out;
+    Error redirectError{&out};
+    ui.genericLayouter();
+    CORRADE_COMPARE(out, "Ui::UserInterface::genericLayouter(): no instance set\n");
 }
 
 }}}}

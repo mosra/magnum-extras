@@ -37,6 +37,7 @@
 #include "Magnum/Ui/BaseLayer.h"
 #include "Magnum/Ui/BaseLayerAnimator.h"
 #include "Magnum/Ui/EventLayer.h"
+#include "Magnum/Ui/GenericLayouter.h"
 #include "Magnum/Ui/LayoutLayer.h"
 #include "Magnum/Ui/SnapLayouter.h"
 #include "Magnum/Ui/TextLayer.h"
@@ -97,6 +98,7 @@ struct AbstractStyleTest: TestSuite::Tester {
     void applyLayoutLayerNotPresent();
     void applyLayoutLayerDifferentStyleCount();
     void applySnapLayouterNotPresent();
+    void applyGenericLayouterNotPresent();
 
     private:
         PluginManager::Manager<Trade::AbstractImporter> _importerManager;
@@ -107,79 +109,100 @@ const struct {
     const char* name;
     bool baseLayerPresent, baseLayerStyleAnimatorPresent;
     bool textLayerPresent, textLayerStyleAnimatorPresent;
-    bool eventLayerPresent, layoutLayerPresent, snapLayouterPresent;
+    bool eventLayerPresent, layoutLayerPresent;
+    bool snapLayouterPresent, genericLayouterPresent;
     StyleFeatures features;
     bool succeed;
 } ApplyData[]{
     {"base layer only",
         true, false,
         false, false,
-        false, false, false,
+        false, false,
+        false, false,
         StyleFeature::BaseLayer, true},
     {"base layer animations only",
         true, true,
         false, false,
-        false, false, false,
+        false, false,
+        false, false,
         StyleFeature::BaseLayerAnimations, true},
     {"base layer + base layer animations",
         true, true,
         false, false,
-        false, false, false,
+        false, false,
+        false, false,
         StyleFeature::BaseLayer|StyleFeature::BaseLayerAnimations, true},
     {"text layer only",
         false, false,
         true, false,
-        false, false, false,
+        false, false,
+        false, false,
         StyleFeature::TextLayer, true},
     {"text layer images only",
         false, false,
         true, false,
-        false, false, false,
+        false, false,
+        false, false,
         StyleFeature::TextLayerImages, true},
     {"text layer + text layer images",
         false, false,
         true, false,
-        false, false, false,
+        false, false,
+        false, false,
         StyleFeature::TextLayer|StyleFeature::TextLayerImages, true},
     {"text layer animations only",
         false, false,
         true, true,
-        false, false, false,
+        false, false,
+        false, false,
         StyleFeature::TextLayerAnimations, true},
     {"text layer + text layer animations",
         false, false,
         true, true,
-        false, false, false,
+        false, false,
+        false, false,
         StyleFeature::TextLayer|StyleFeature::TextLayerAnimations, true},
     {"event layer only",
         false, false,
         false, false,
-        true, false, false,
+        true, false,
+        false, false,
         StyleFeature::EventLayer, true},
     {"layout layer only",
         false, false,
         false, false,
-        false, true, false,
+        false, true,
+        false, false,
         StyleFeature::LayoutLayer, true},
     {"snap layouter only",
         false, false,
         false, false,
-        false, false, true,
+        false, false,
+        true, false,
         StyleFeature::SnapLayouter, true},
+    {"generic layouter only",
+        false, false,
+        false, false,
+        false, false,
+        false, true,
+        StyleFeature::GenericLayouter, true},
     {"everything except base layer (and its animations)",
         false, false,
         true, true,
-        true, true, true,
+        true, true,
+        true, true,
         ~(StyleFeature::BaseLayer|StyleFeature::BaseLayerAnimations), true},
     {"everything",
         true, true,
         true, true,
-        true, true, true,
+        true, true,
+        true, true,
         ~StyleFeatures{}, true},
     {"application failed",
         true, false,
         false, false,
-        false, false, false,
+        false, false,
+        false, false,
         StyleFeature::BaseLayer, false}
 };
 
@@ -234,7 +257,8 @@ AbstractStyleTest::AbstractStyleTest() {
               &AbstractStyleTest::applyEventLayerNotPresent,
               &AbstractStyleTest::applyLayoutLayerNotPresent,
               &AbstractStyleTest::applyLayoutLayerDifferentStyleCount,
-              &AbstractStyleTest::applySnapLayouterNotPresent});
+              &AbstractStyleTest::applySnapLayouterNotPresent,
+              &AbstractStyleTest::applyGenericLayouterNotPresent});
 }
 
 void AbstractStyleTest::debugFeature() {
@@ -859,6 +883,8 @@ void AbstractStyleTest::apply() {
         ui.setLayoutLayerInstance(Containers::pointer<LayoutLayer>(ui.createLayer(), 13u));
     if(data.snapLayouterPresent)
         ui.setSnapLayouterInstance(Containers::pointer<SnapLayouter>(ui.createLayouter()));
+    if(data.genericLayouterPresent)
+        ui.setGenericLayouterInstance(Containers::pointer<GenericLayouter>(ui.createLayouter()));
 
     Int applyCalled = 0;
     struct Style: AbstractStyle {
@@ -868,7 +894,8 @@ void AbstractStyleTest::apply() {
             return
                 StyleFeature::BaseLayer|StyleFeature::BaseLayerAnimations|
                 StyleFeature::TextLayer|StyleFeature::TextLayerImages|StyleFeature::TextLayerAnimations|
-                StyleFeature::EventLayer|StyleFeature::LayoutLayer|StyleFeature::SnapLayouter;
+                StyleFeature::EventLayer|StyleFeature::LayoutLayer|
+                StyleFeature::SnapLayouter|StyleFeature::GenericLayouter;
         }
         UnsignedInt doBaseLayerStyleUniformCount() const override { return 3; }
         UnsignedInt doBaseLayerStyleCount() const override { return 5; }
@@ -1628,22 +1655,11 @@ void AbstractStyleTest::applyLayoutLayerDifferentStyleCount() {
 void AbstractStyleTest::applySnapLayouterNotPresent() {
     CORRADE_SKIP_IF_NO_ASSERT();
 
-    struct LayerSharedBase: BaseLayer::Shared {
-        explicit LayerSharedBase(const Configuration& configuration): BaseLayer::Shared{configuration} {}
-
-        void doSetStyle(const BaseLayerCommonStyleUniform&, Containers::ArrayView<const BaseLayerStyleUniform>) override {}
-    } sharedBase{BaseLayer::Shared::Configuration{3, 5}};
-
-    struct LayerBase: BaseLayer {
-        explicit LayerBase(LayerHandle handle, LayerSharedBase& shared): BaseLayer{handle, shared} {}
-    };
-
     struct Interface: UserInterface {
         explicit Interface(NoCreateT): UserInterface{NoCreate} {}
     } ui{NoCreate};
     ui.setSize({200, 300})
-      .setBaseLayerInstance(Containers::pointer<LayerBase>(ui.createLayer(), sharedBase))
-      .setEventLayerInstance(Containers::pointer<EventLayer>(ui.createLayer()));
+      .setGenericLayouterInstance(Containers::pointer<GenericLayouter>(ui.createLayouter()));
 
     struct: AbstractStyle {
         StyleFeatures doFeatures() const override { return StyleFeature::SnapLayouter; }
@@ -1660,6 +1676,32 @@ void AbstractStyleTest::applySnapLayouterNotPresent() {
     Error redirectError{&out};
     style.apply(ui, StyleFeature::SnapLayouter, nullptr, nullptr);
     CORRADE_COMPARE(out, "Ui::AbstractStyle::apply(): snap layouter not present in the user interface\n");
+}
+
+void AbstractStyleTest::applyGenericLayouterNotPresent() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct Interface: UserInterface {
+        explicit Interface(NoCreateT): UserInterface{NoCreate} {}
+    } ui{NoCreate};
+    ui.setSize({200, 300})
+      .setSnapLayouterInstance(Containers::pointer<SnapLayouter>(ui.createLayouter()));
+
+    struct: AbstractStyle {
+        StyleFeatures doFeatures() const override { return StyleFeature::GenericLayouter; }
+        bool doApply(UserInterface&, StyleFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override {
+            CORRADE_FAIL("This shouldn't get called.");
+            return {};
+        }
+    } style;
+
+    /* Capture correct function name */
+    CORRADE_VERIFY(true);
+
+    Containers::String out;
+    Error redirectError{&out};
+    style.apply(ui, StyleFeature::GenericLayouter, nullptr, nullptr);
+    CORRADE_COMPARE(out, "Ui::AbstractStyle::apply(): generic layouter not present in the user interface\n");
 }
 
 }}}}

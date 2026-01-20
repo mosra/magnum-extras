@@ -59,6 +59,7 @@ struct UserInterface::State {
     EventLayer* eventLayer{};
     LayoutLayer* layoutLayer{};
     SnapLayouter* snapLayouter{};
+    GenericLayouter* genericLayouter{};
 };
 
 }}

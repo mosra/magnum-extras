@@ -44,16 +44,25 @@ arbitrarily modify the node offset and size as well as any associated data.
 
 @section Ui-GenericLayouter-setup Setting up a generic layouter instance
 
-The layouter doesn't have any shared state or configuration, so it's just about
+If you create a @ref UserInterfaceGL with a style and don't exclude
+@ref StyleFeature::GenericLayouter, an implicit instance is already provided
+and available through @ref UserInterface::genericLayouter(). Otherwise, the
+layouter doesn't have any shared state or configuration, so it's just about
 constructing it from a fresh @ref AbstractUserInterface::createLayouter()
-handle and passing it to @relativeref{AbstractUserInterface,setLayouterInstance()}.
-After that, assuming @ref AbstractUserInterface::draw() is called in an
-appropriate place, it's ready to use.
+handle and passing it to @ref UserInterface::setGenericLayouterInstance():
+
+@snippet Ui.cpp GenericLayouter-setup-implicit
+
+In comparison, if you want to set up a custom generic layouter that's
+independent of the one exposed through @ref UserInterface::genericLayouter(),
+pass the newly created instance to
+@ref AbstractUserInterface::setLayouterInstance() instead:
 
 @snippet Ui.cpp GenericLayouter-setup
 
-Unlike other builtin layouters, the default @ref UserInterface implementation
-doesn't implicitly provide a @ref GenericLayouter instance.
+Afterwards, with either of the above, assuming
+@ref AbstractUserInterface::draw() is called in an appropriate place, the
+layouter is ready to use.
 
 @section Ui-GenericLayouter-add Adding layouts
 

@@ -2314,6 +2314,16 @@ static_cast<void>(layouter);
 }
 
 {
+struct UserInterface: Ui::UserInterface {
+    explicit UserInterface(NoCreateT): Ui::UserInterface{NoCreate} {}
+} ui{NoCreate};
+/* [GenericLayouter-setup-implicit] */
+ui.setGenericLayouterInstance(
+    Containers::pointer<Ui::GenericLayouter>(ui.createLayouter()));
+/* [GenericLayouter-setup-implicit] */
+}
+
+{
 Ui::AbstractUserInterface ui{{100, 100}};
 /* [GenericLayouter-setup] */
 Ui::GenericLayouter& layouter = ui.setLayouterInstance(

@@ -72,12 +72,12 @@ The rest of the setup --- drawing and event handling --- is the same for all
 The above by default populates the user interface with everything a style
 provides for use by builtin widgets --- in particular, making @ref baseLayer(),
 @ref textLayer(), @ref eventLayer(), @ref layoutLayer(), @ref snapLayouter(),
-@ref baseLayerStyleAnimator() and @ref textLayerStyleAnimator() all available.
-In case you for example use just a subset of the builtin widgets that only need
-a part of the above, you can specify a @ref StyleFeatures subset. This can be
-further combined with @ref setStyle(), where, as long as you specify
-non-overlapping sets of @ref StyleFeatures, you can combine multiple styles
-together:
+@ref genericLayouter(), @ref baseLayerStyleAnimator() and
+@ref textLayerStyleAnimator() all available. In case you for example use just a
+subset of the builtin widgets that only need a part of the above, you can
+specify a @ref StyleFeatures subset. This can be further combined with
+@ref setStyle(), where, as long as you specify non-overlapping sets of
+@ref StyleFeatures, you can combine multiple styles together:
 
 @snippet Ui-gl.cpp UserInterfaceGL-setup-features
 
@@ -123,7 +123,7 @@ style is applied excluding a particular layer, layouter or animator, you can
 supply a custom instance using @ref setBaseLayerInstance(),
 @ref setTextLayerInstance(), @ref setEventLayerInstance(),
 @ref setLayoutLayerInstance(), @ref setSnapLayouterInstance(),
-@ref setBaseLayerStyleAnimatorInstance() or
+@ref setGenericLayouterInstance(), @ref setBaseLayerStyleAnimatorInstance() or
 @ref setTextLayerStyleAnimatorInstance(). Note that however, at this point,
 you're on your own when you attempt to use any builtin widgets that rely on
 given instance being set up in a particular way.
@@ -271,7 +271,7 @@ class MAGNUM_UI_EXPORT UserInterfaceGL: public UserInterface {
          * Expects that none of @ref create(), @ref tryCreate(),
          * @ref setBaseLayerInstance(), @ref setTextLayerInstance(),
          * @ref setEventLayerInstance(), @ref setLayoutLayerInstance(),
-         * @ref setSnapLayouterInstance(),
+         * @ref setSnapLayouterInstance(), @ref setGenericLayouterInstance(),
          * @ref setBaseLayerStyleAnimatorInstance(),
          * @ref setTextLayerStyleAnimatorInstance() or
          * @ref setRendererInstance() was called yet. Equivalent to calling
@@ -301,7 +301,7 @@ class MAGNUM_UI_EXPORT UserInterfaceGL: public UserInterface {
          * Expects that none of @ref create(), @ref tryCreate(),
          * @ref setBaseLayerInstance(), @ref setTextLayerInstance(),
          * @ref setEventLayerInstance(), @ref setLayoutLayerInstance(),
-         * @ref setSnapLayouterInstance(),
+         * @ref setSnapLayouterInstance(), @ref setGenericLayouterInstance(),
          * @ref setBaseLayerStyleAnimatorInstance(),
          * @ref setTextLayerStyleAnimatorInstance() or
          * @ref setRendererInstance() was called yet. Equivalent to calling
@@ -336,7 +336,7 @@ class MAGNUM_UI_EXPORT UserInterfaceGL: public UserInterface {
          * Expects that none of @ref create(), @ref tryCreate(),
          * @ref setBaseLayerInstance(), @ref setTextLayerInstance(),
          * @ref setEventLayerInstance(), @ref setLayoutLayerInstance(),
-         * @ref setSnapLayouterInstance(),
+         * @ref setSnapLayouterInstance(), @ref setGenericLayouterInstance(),
          * @ref setBaseLayerStyleAnimatorInstance(),
          * @ref setTextLayerStyleAnimatorInstance() or
          * @ref setRendererInstance() was called yet. Equivalent to calling
@@ -367,7 +367,7 @@ class MAGNUM_UI_EXPORT UserInterfaceGL: public UserInterface {
          * Expects that none of @ref create(), @ref tryCreate(),
          * @ref setBaseLayerInstance(), @ref setTextLayerInstance(),
          * @ref setEventLayerInstance(), @ref setLayoutLayerInstance(),
-         * @ref setSnapLayouterInstance(),
+         * @ref setSnapLayouterInstance(), @ref setGenericLayouterInstance(),
          * @ref setBaseLayerStyleAnimatorInstance(),
          * @ref setTextLayerStyleAnimatorInstance() or
          * @ref setRendererInstance() was called yet. Equivalent to calling
@@ -549,7 +549,7 @@ class MAGNUM_UI_EXPORT UserInterfaceGL: public UserInterface {
          *      @ref hasRendererInstance(), @ref hasBaseLayer(),
          *      @ref hasTextLayer(), @ref hasEventLayer(),
          *      @ref hasLayoutLayer(), @ref hasSnapLayouter(),
-         *      @ref hasBaseLayerStyleAnimator(),
+         *      @ref hasGenericLayouter(), @ref hasBaseLayerStyleAnimator(),
          *      @ref hasTextLayerStyleAnimator(),
          *      @ref UserInterfaceGL(const Vector2&, const Vector2&, const Vector2i&, const AbstractStyle&, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*),
          *      @ref UserInterfaceGL(const Vector2i&, const AbstractStyle&, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*)
@@ -632,6 +632,9 @@ class MAGNUM_UI_EXPORT UserInterfaceGL: public UserInterface {
         }
         UserInterfaceGL& setSnapLayouterInstance(Containers::Pointer<SnapLayouter>&& instance) {
             return static_cast<UserInterfaceGL&>(UserInterface::setSnapLayouterInstance(Utility::move(instance)));
+        }
+        UserInterfaceGL& setGenericLayouterInstance(Containers::Pointer<GenericLayouter>&& instance) {
+            return static_cast<UserInterfaceGL&>(UserInterface::setGenericLayouterInstance(Utility::move(instance)));
         }
         UserInterfaceGL& clean() {
             return static_cast<UserInterfaceGL&>(UserInterface::clean());

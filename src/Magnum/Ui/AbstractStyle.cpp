@@ -52,6 +52,7 @@ Debug& operator<<(Debug& debug, const StyleFeature value) {
         _c(EventLayer)
         _c(LayoutLayer)
         _c(SnapLayouter)
+        _c(GenericLayouter)
         #undef _c
         /* LCOV_EXCL_STOP */
     }
@@ -69,6 +70,7 @@ Debug& operator<<(Debug& debug, const StyleFeatures value) {
         StyleFeature::EventLayer,
         StyleFeature::LayoutLayer,
         StyleFeature::SnapLayouter,
+        StyleFeature::GenericLayouter,
     });
 }
 
@@ -320,6 +322,10 @@ bool AbstractStyle::apply(UserInterface& ui, const StyleFeatures features, Plugi
     if(features >= StyleFeature::SnapLayouter) {
         CORRADE_ASSERT(ui.hasSnapLayouter(),
             "Ui::AbstractStyle::apply(): snap layouter not present in the user interface", {});
+    }
+    if(features >= StyleFeature::GenericLayouter) {
+        CORRADE_ASSERT(ui.hasGenericLayouter(),
+            "Ui::AbstractStyle::apply(): generic layouter not present in the user interface", {});
     }
     #endif
 

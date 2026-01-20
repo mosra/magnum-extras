@@ -48,7 +48,7 @@ either of the classes for more information.
 Builtin widgets, deriving from the @ref Widget class, have access to this
 instance through @ref BasicWidget::ui() and generally assume that
 @ref baseLayer(), @ref textLayer(), @ref eventLayer(), @ref layoutLayer(),
-@ref snapLayouter(), @ref baseLayerStyleAnimator() and
+@ref snapLayouter(), @ref genericLayouter(), @ref baseLayerStyleAnimator() and
 @ref textLayerStyleAnimator() are available for use.
 */
 class MAGNUM_UI_EXPORT UserInterface: public AbstractUserInterface {
@@ -313,6 +313,38 @@ class MAGNUM_UI_EXPORT UserInterface: public AbstractUserInterface {
          * @see @ref hasSnapLayouter(), @ref StyleFeature::SnapLayouter
          */
         UserInterface& setSnapLayouterInstance(Containers::Pointer<SnapLayouter>&& instance);
+
+        /**
+         * @brief Whether a generic layouter instance has been set
+         *
+         * @see @ref genericLayouter(), @ref setGenericLayouterInstance()
+         */
+        bool hasGenericLayouter() const;
+
+        /**
+         * @brief Generic layouter instance
+         *
+         * Expects that an instance has been set, either by
+         * @ref setGenericLayouterInstance() or transitively by
+         * @ref UserInterfaceGL::setStyle(), @relativeref{UserInterfaceGL,create()}
+         * or a @ref UserInterfaceGL constructor taking a style instance.
+         * @see @ref StyleFeature::GenericLayouter
+         */
+        GenericLayouter& genericLayouter();
+        const GenericLayouter& genericLayouter() const; /**< @overload */
+
+        /**
+         * @brief Set a generic layouter instance
+         * @return Reference to self (for method chaining)
+         *
+         * Expects that the instance hasn't been set yet, either by this
+         * function or transitively either by @ref UserInterfaceGL::setStyle(),
+         * @relativeref{UserInterfaceGL,create()} or a @ref UserInterfaceGL
+         * constructor taking a style instance. The instance is subsequently
+         * available through @ref genericLayouter().
+         * @see @ref hasGenericLayouter(), @ref StyleFeature::GenericLayouter
+         */
+        UserInterface& setGenericLayouterInstance(Containers::Pointer<GenericLayouter>&& instance);
 
         /* Overloads to remove a WTF factor from method chaining order */
         #ifndef DOXYGEN_GENERATING_OUTPUT
