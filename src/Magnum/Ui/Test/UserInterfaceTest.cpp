@@ -214,6 +214,7 @@ void UserInterfaceTest::setBaseLayerInstance() {
     CORRADE_VERIFY(!ui.hasBaseLayer());
     CORRADE_VERIFY(!ui.hasTextLayer());
     CORRADE_VERIFY(!ui.hasEventLayer());
+    CORRADE_VERIFY(!ui.hasLayoutLayer());
 
     LayerHandle handle = ui.createLayer();
     Containers::Pointer<Layer> layer{InPlaceInit, handle, shared};
@@ -224,6 +225,7 @@ void UserInterfaceTest::setBaseLayerInstance() {
     CORRADE_VERIFY(ui.hasBaseLayer());
     CORRADE_VERIFY(!ui.hasTextLayer());
     CORRADE_VERIFY(!ui.hasEventLayer());
+    CORRADE_VERIFY(!ui.hasLayoutLayer());
     CORRADE_COMPARE(&ui.layer(handle), pointer);
     CORRADE_COMPARE(&ui.baseLayer(), pointer);
 }
@@ -404,6 +406,7 @@ void UserInterfaceTest::setTextLayerInstance() {
     CORRADE_VERIFY(!ui.hasBaseLayer());
     CORRADE_VERIFY(!ui.hasTextLayer());
     CORRADE_VERIFY(!ui.hasEventLayer());
+    CORRADE_VERIFY(!ui.hasLayoutLayer());
 
     LayerHandle handle = ui.createLayer();
     Containers::Pointer<Layer> layer{InPlaceInit, handle, shared};
@@ -414,6 +417,7 @@ void UserInterfaceTest::setTextLayerInstance() {
     CORRADE_VERIFY(!ui.hasBaseLayer());
     CORRADE_VERIFY(ui.hasTextLayer());
     CORRADE_VERIFY(!ui.hasEventLayer());
+    CORRADE_VERIFY(!ui.hasLayoutLayer());
     CORRADE_COMPARE(&ui.layer(handle), pointer);
     CORRADE_COMPARE(&ui.textLayer(), pointer);
 }
@@ -599,6 +603,7 @@ void UserInterfaceTest::setEventLayerInstance() {
     CORRADE_VERIFY(!ui.hasBaseLayer());
     CORRADE_VERIFY(!ui.hasTextLayer());
     CORRADE_VERIFY(!ui.hasEventLayer());
+    CORRADE_VERIFY(!ui.hasLayoutLayer());
 
     LayerHandle handle = ui.createLayer();
     Containers::Pointer<EventLayer> layer{InPlaceInit, handle};
@@ -609,6 +614,7 @@ void UserInterfaceTest::setEventLayerInstance() {
     CORRADE_VERIFY(!ui.hasBaseLayer());
     CORRADE_VERIFY(!ui.hasTextLayer());
     CORRADE_VERIFY(ui.hasEventLayer());
+    CORRADE_VERIFY(!ui.hasLayoutLayer());
     CORRADE_COMPARE(&ui.layer(handle), pointer);
     CORRADE_COMPARE(&ui.eventLayer(), pointer);
 }
@@ -652,6 +658,7 @@ void UserInterfaceTest::setLayoutLayerInstance() {
     CORRADE_COMPARE(ui.layerUsedCount(), 0);
     CORRADE_VERIFY(!ui.hasBaseLayer());
     CORRADE_VERIFY(!ui.hasTextLayer());
+    CORRADE_VERIFY(!ui.hasEventLayer());
     CORRADE_VERIFY(!ui.hasLayoutLayer());
 
     LayerHandle handle = ui.createLayer();
@@ -662,6 +669,7 @@ void UserInterfaceTest::setLayoutLayerInstance() {
     CORRADE_COMPARE(ui.layerUsedCount(), 1);
     CORRADE_VERIFY(!ui.hasBaseLayer());
     CORRADE_VERIFY(!ui.hasTextLayer());
+    CORRADE_VERIFY(!ui.hasEventLayer());
     CORRADE_VERIFY(ui.hasLayoutLayer());
     CORRADE_COMPARE(&ui.layer(handle), pointer);
     CORRADE_COMPARE(&ui.layoutLayer(), pointer);
