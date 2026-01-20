@@ -129,7 +129,7 @@ class MAGNUM_UI_EXPORT UserInterface: public AbstractUserInterface {
          * @brief Set a base layer style animator instance
          * @return Reference to self (for method chaining)
          *
-         * Expects that a @ref BaseLayer instance is present but the animator
+         * Expects that a base layer instance is present but the animator
          * instance hasn't been set yet, either by this function or
          * transitively either by @ref UserInterfaceGL::setStyle(),
          * @relativeref{UserInterfaceGL,create()} or a @ref UserInterfaceGL
@@ -202,7 +202,7 @@ class MAGNUM_UI_EXPORT UserInterface: public AbstractUserInterface {
          * @brief Set a text layer style animator instance
          * @return Reference to self (for method chaining)
          *
-         * Expects that a @ref TextLayer instance is present but the animator
+         * Expects that a text layer instance is present but the animator
          * instance hasn't been set yet, either by this function or
          * transitively either by @ref UserInterfaceGL::setStyle(),
          * @relativeref{UserInterfaceGL,create()} or a @ref UserInterfaceGL

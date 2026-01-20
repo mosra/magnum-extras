@@ -52,17 +52,16 @@ namespace Magnum { namespace Ui {
 */
 enum class StyleFeature: UnsignedShort {
     /**
-     * @ref BaseLayer style. Ensures a @ref BaseLayer instance with a
-     * compatible @ref BaseLayer::Shared state is set up on the
-     * @ref UserInterface, the style implementation then calls
-     * @relativeref{BaseLayer::Shared,setStyle()} and
-     * @relativeref{BaseLayer::Shared,setStyleTransition()} on it.
+     * Base layer style. Ensures a @ref BaseLayer instance with a compatible
+     * @ref BaseLayer::Shared state is set up on the @ref UserInterface, the
+     * style implementation then calls @relativeref{BaseLayer::Shared,setStyle()}
+     * and @relativeref{BaseLayer::Shared,setStyleTransition()} on it.
      * @see @ref UserInterface::baseLayer(), @ref UserInterface::hasBaseLayer()
      */
     BaseLayer = 1 << 0,
 
     /**
-     * @ref BaseLayer animations using @ref BaseLayerStyleAnimator. Can only be
+     * Base layer animations using @ref BaseLayerStyleAnimator. Can only be
      * used with @ref AbstractStyle::apply() if a @ref BaseLayerStyleAnimator
      * instance is already set up on the @ref UserInterface; can only be used
      * with @ref UserInterfaceGL::setStyle() /
@@ -75,7 +74,7 @@ enum class StyleFeature: UnsignedShort {
     BaseLayerAnimations = 1 << 1,
 
     /**
-     * @ref TextLayer style and fonts. Ensures a @ref TextLayer instance with a
+     * Text layer style and fonts. Ensures a @ref TextLayer instance with a
      * compatible @ref TextLayer::Shared state is set up on the
      * @ref UserInterface, the style implementation then calls
      * @relativeref{TextLayer::Shared,addFont()},
@@ -98,7 +97,7 @@ enum class StyleFeature: UnsignedShort {
     TextLayerImages = 1 << 3,
 
     /**
-     * @ref TextLayer animations using @ref TextLayerStyleAnimator. Can only be
+     * Text layer animations using @ref TextLayerStyleAnimator. Can only be
      * used with @ref AbstractStyle::apply() if a @ref TextLayerStyleAnimator
      * instance is already set up on the @ref UserInterface; can only be used
      * with @ref UserInterfaceGL::setStyle() /
@@ -111,32 +110,32 @@ enum class StyleFeature: UnsignedShort {
     TextLayerAnimations = 1 << 4,
 
     /**
-     * @ref EventLayer style. Ensures an @ref EventLayer instance is set up on
-     * the @ref UserInterface.
+     * Event layer style. Ensures an @ref EventLayer instance is set up on the
+     * @ref UserInterface.
      * @see @ref UserInterface::eventLayer(),
      *      @ref UserInterface::hasEventLayer()
      */
     EventLayer = 1 << 5,
 
     /**
-     * @ref LayoutLayer style. Ensures a @ref LayoutLayer instance is set up on
-     * the @ref UserInterface.
+     * Layout layer style. Ensures a @ref LayoutLayer instance is set up on the
+     * @ref UserInterface.
      * @see @ref UserInterface::layoutLayer(),
      *      @ref UserInterface::hasLayoutLayer()
      */
     LayoutLayer = 1 << 6,
 
     /**
-     * @ref SnapLayouter style. Ensures a @ref SnapLayouter instance is set up
-     * on the @ref UserInterface.
+     * Snap layouter style. Ensures a @ref SnapLayouter instance is set up on
+     * the @ref UserInterface.
      * @see @ref UserInterface::snapLayouter(),
      *      @ref UserInterface::hasSnapLayouter()
      */
     SnapLayouter = 1 << 7,
 
     /**
-     * @ref GenericLayouter style. Ensures a @ref GenericLayouter instance is
-     * set up on the @ref UserInterface.
+     * Generic layouter style. Ensures a @ref GenericLayouter instance is set
+     * up on the @ref UserInterface.
      * @see @ref UserInterface::genericLayouter(),
      *      @ref UserInterface::hasGenericLayouter()
      */
@@ -213,7 +212,8 @@ class MAGNUM_UI_EXPORT AbstractStyle {
          * @brief Style uniform count for the base layer
          *
          * Expects that @ref StyleFeature::BaseLayer is supported. The returned
-         * value is passed to the @ref BaseLayer::Shared::Configuration::Configuration(UnsignedInt, UnsignedInt)
+         * value is passed to base layer's
+         * @ref BaseLayer::Shared::Configuration::Configuration(UnsignedInt, UnsignedInt)
          * constructor by @ref UserInterfaceGL::setStyle().
          * @see @ref baseLayerStyleCount(), @ref baseLayerDynamicStyleCount(),
          *      @ref features()
@@ -224,7 +224,8 @@ class MAGNUM_UI_EXPORT AbstractStyle {
          * @brief Style count for the base layer
          *
          * Expects that @ref StyleFeature::BaseLayer is supported. The returned
-         * value is passed to the @ref BaseLayer::Shared::Configuration::Configuration(UnsignedInt, UnsignedInt)
+         * value is passed to base layer's
+         * @ref BaseLayer::Shared::Configuration::Configuration(UnsignedInt, UnsignedInt)
          * constructor by @ref UserInterfaceGL::setStyle().
          * @see @ref baseLayerStyleUniformCount(),
          *      @ref baseLayerDynamicStyleCount(), @ref features()
@@ -235,8 +236,9 @@ class MAGNUM_UI_EXPORT AbstractStyle {
          * @brief Dynamic style count for the base layer
          *
          * Expects that @ref StyleFeature::BaseLayer is supported. The returned
-         * value is passed to @ref BaseLayer::Shared::Configuration::setDynamicStyleCount()
-         * by @ref UserInterfaceGL::setStyle(). Call
+         * value is passed to base layer's
+         * @ref BaseLayer::Shared::Configuration::setDynamicStyleCount() by
+         * @ref UserInterfaceGL::setStyle(). Call
          * @ref setBaseLayerDynamicStyleCount() to increase the count if
          * needed.
          * @see @ref baseLayerStyleUniformCount(), @ref baseLayerStyleCount(),
@@ -261,9 +263,10 @@ class MAGNUM_UI_EXPORT AbstractStyle {
          * @brief Additional flags for the base layer
          *
          * Expects that @ref StyleFeature::BaseLayer is supported. The returned
-         * value is passed to @ref BaseLayer::Shared::Configuration::setFlags()
-         * by @ref UserInterfaceGL::setStyle(). Call @ref setBaseLayerFlags()
-         * to supply additional flags to add or clear from the set if needed.
+         * value is passed to base layer's
+         * @ref BaseLayer::Shared::Configuration::setFlags() by
+         * @ref UserInterfaceGL::setStyle(). Call @ref setBaseLayerFlags() to
+         * supply additional flags to add or clear from the set if needed.
          */
         BaseLayerSharedFlags baseLayerFlags() const;
 
@@ -285,7 +288,8 @@ class MAGNUM_UI_EXPORT AbstractStyle {
          * @brief Style uniform count for the text layer
          *
          * Expects that @ref StyleFeature::TextLayer is supported. The returned
-         * value is passed to the @ref TextLayer::Shared::Configuration::Configuration(UnsignedInt, UnsignedInt)
+         * value is passed to text layer's
+         * @ref TextLayer::Shared::Configuration::Configuration(UnsignedInt, UnsignedInt)
          * constructor by @ref UserInterfaceGL::setStyle().
          * @see @ref textLayerStyleCount(),
          *      @ref textLayerEditingStyleUniformCount(),
@@ -301,7 +305,8 @@ class MAGNUM_UI_EXPORT AbstractStyle {
          * @brief Style count for the text layer
          *
          * Expects that @ref StyleFeature::TextLayer is supported. The returned
-         * value is passed to the @ref TextLayer::Shared::Configuration::Configuration(UnsignedInt, UnsignedInt)
+         * value is passed to text layer's
+         * @ref TextLayer::Shared::Configuration::Configuration(UnsignedInt, UnsignedInt)
          * constructor by @ref UserInterfaceGL::setStyle().
          * @see @ref textLayerStyleUniformCount(),
          *      @ref textLayerEditingStyleUniformCount(),
@@ -317,8 +322,9 @@ class MAGNUM_UI_EXPORT AbstractStyle {
          * @brief Editing style uniform count for the text layer
          *
          * Expects that @ref StyleFeature::TextLayer is supported. The returned
-         * value is passed to @ref TextLayer::Shared::Configuration::setEditingStyleCount()
-         * by @ref UserInterfaceGL::setStyle().
+         * value is passed to text layer's
+         * @ref TextLayer::Shared::Configuration::setEditingStyleCount() by
+         * @ref UserInterfaceGL::setStyle().
          * @see @ref textLayerStyleUniformCount(), @ref textLayerStyleCount(),
          *      @ref textLayerEditingStyleCount(),
          *      @ref textLayerDynamicStyleCount(),
@@ -332,8 +338,9 @@ class MAGNUM_UI_EXPORT AbstractStyle {
          * @brief Editing style count for the text layer
          *
          * Expects that @ref StyleFeature::TextLayer is supported. The returned
-         * value is passed to @ref TextLayer::Shared::Configuration::setEditingStyleCount()
-         * by @ref UserInterfaceGL::setStyle().
+         * value is passed to text layer's
+         * @ref TextLayer::Shared::Configuration::setEditingStyleCount() by
+         * @ref UserInterfaceGL::setStyle().
          * @see @ref textLayerStyleUniformCount(), @ref textLayerStyleCount(),
          *      @ref textLayerEditingStyleUniformCount(),
          *      @ref textLayerDynamicStyleCount(),
@@ -347,8 +354,9 @@ class MAGNUM_UI_EXPORT AbstractStyle {
          * @brief Dynamic style count for the text layer
          *
          * Expects that @ref StyleFeature::TextLayer is supported. The returned
-         * value is passed to @ref TextLayer::Shared::Configuration::setDynamicStyleCount()
-         * by @ref UserInterfaceGL::setStyle(). Call
+         * value is passed to text layer's
+         * @ref TextLayer::Shared::Configuration::setDynamicStyleCount() by
+         * @ref UserInterfaceGL::setStyle(). Call
          * @ref setTextLayerDynamicStyleCount() to increase the count if
          * needed.
          * @see @ref textLayerStyleUniformCount(), @ref textLayerStyleCount(),
@@ -377,8 +385,8 @@ class MAGNUM_UI_EXPORT AbstractStyle {
          * @brief Text layer glyph cache format
          *
          * Expects that @ref StyleFeature::TextLayer is supported. The returned
-         * value is passed to the @ref Text::GlyphCacheGL constructor by
-         * @ref UserInterfaceGL::setStyle().
+         * value is passed to text layer's @ref Text::GlyphCacheGL constructor
+         * by @ref UserInterfaceGL::setStyle().
          * @see @ref textLayerStyleUniformCount(), @ref textLayerStyleCount(),
          *      @ref textLayerEditingStyleUniformCount(),
          *      @ref textLayerEditingStyleCount(),
@@ -396,7 +404,7 @@ class MAGNUM_UI_EXPORT AbstractStyle {
          * @ref StyleFeature::TextLayer. The implementation may choose to
          * return a different value based on whether
          * @ref StyleFeature::TextLayerImages is present in @p features or not.
-         * The returned value is passed to the @ref Text::GlyphCacheGL
+         * The returned value is passed to text layer's @ref Text::GlyphCacheGL
          * constructor by @ref UserInterfaceGL::setStyle(). Call
          * @ref setTextLayerGlyphCacheSize() to enlarge the glyph cache if the
          * application needs to store more glyphs.
@@ -413,8 +421,8 @@ class MAGNUM_UI_EXPORT AbstractStyle {
          * @brief Text layer glyph cache padding
          *
          * Expects that @ref StyleFeature::TextLayer is supported. The returned
-         * value is passed to the @ref Text::GlyphCacheGL constructor by
-         * @ref UserInterfaceGL::setStyle(). Call
+         * value is passed to text layer's @ref Text::GlyphCacheGL constructor
+         * by @ref UserInterfaceGL::setStyle(). Call
          * @ref setTextLayerGlyphCacheSize() to enlarge the glyph cache size or
          * padding if needed.
          * @see @ref textLayerStyleUniformCount(), @ref textLayerStyleCount(),
@@ -445,8 +453,9 @@ class MAGNUM_UI_EXPORT AbstractStyle {
          * @brief Style count for the layout layer
          *
          * Expects that @ref StyleFeature::LayoutLayer is supported. The
-         * returned value is passed to the @ref LayoutLayer::LayoutLayer(LayerHandle, UnsignedInt)
-         * constructor by @ref UserInterfaceGL::setStyle().
+         * returned value is passed to layout layer's
+         * @ref LayoutLayer::LayoutLayer(LayerHandle, UnsignedInt) constructor
+         * by @ref UserInterfaceGL::setStyle().
          * @see @ref features()
          */
         UnsignedInt layoutLayerStyleCount() const;
