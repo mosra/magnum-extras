@@ -242,9 +242,10 @@ void UserInterfaceTest::setBaseLayerInstanceInvalid() {
     Error redirectError{&out};
     ui.setBaseLayerInstance(nullptr);
     ui.setBaseLayerInstance(Containers::pointer<Layer>(ui.createLayer(), shared));
-    CORRADE_COMPARE(out,
+    CORRADE_COMPARE_AS(out,
         "Ui::UserInterface::setBaseLayerInstance(): instance is null\n"
-        "Ui::UserInterface::setBaseLayerInstance(): instance already set\n");
+        "Ui::UserInterface::setBaseLayerInstance(): instance already set\n",
+        TestSuite::Compare::String);
 }
 
 void UserInterfaceTest::baseLayerInvalid() {
@@ -439,9 +440,10 @@ void UserInterfaceTest::setTextLayerInstanceInvalid() {
     Error redirectError{&out};
     ui.setTextLayerInstance(nullptr);
     ui.setTextLayerInstance(Containers::pointer<Layer>(ui.createLayer(), shared));
-    CORRADE_COMPARE(out,
+    CORRADE_COMPARE_AS(out,
         "Ui::UserInterface::setTextLayerInstance(): instance is null\n"
-        "Ui::UserInterface::setTextLayerInstance(): instance already set\n");
+        "Ui::UserInterface::setTextLayerInstance(): instance already set\n",
+        TestSuite::Compare::String);
 }
 
 void UserInterfaceTest::textLayerInvalid() {
@@ -615,9 +617,10 @@ void UserInterfaceTest::setEventLayerInstanceInvalid() {
     Error redirectError{&out};
     ui.setEventLayerInstance(nullptr);
     ui.setEventLayerInstance(Containers::pointer<EventLayer>(ui.createLayer()));
-    CORRADE_COMPARE(out,
+    CORRADE_COMPARE_AS(out,
         "Ui::UserInterface::setEventLayerInstance(): instance is null\n"
-        "Ui::UserInterface::setEventLayerInstance(): instance already set\n");
+        "Ui::UserInterface::setEventLayerInstance(): instance already set\n",
+        TestSuite::Compare::String);
 }
 
 void UserInterfaceTest::eventLayerInvalid() {
@@ -668,9 +671,10 @@ void UserInterfaceTest::setLayoutLayerInstanceInvalid() {
     Error redirectError{&out};
     ui.setLayoutLayerInstance(nullptr);
     ui.setLayoutLayerInstance(Containers::pointer<LayoutLayer>(ui.createLayer(), 3u));
-    CORRADE_COMPARE(out,
+    CORRADE_COMPARE_AS(out,
         "Ui::UserInterface::setLayoutLayerInstance(): instance is null\n"
-        "Ui::UserInterface::setLayoutLayerInstance(): instance already set\n");
+        "Ui::UserInterface::setLayoutLayerInstance(): instance already set\n",
+        TestSuite::Compare::String);
 }
 
 void UserInterfaceTest::layoutLayerInvalid() {
@@ -717,9 +721,10 @@ void UserInterfaceTest::setSnapLayouterInstanceInvalid() {
     Error redirectError{&out};
     ui.setSnapLayouterInstance(nullptr);
     ui.setSnapLayouterInstance(Containers::pointer<SnapLayouter>(ui.createLayouter()));
-    CORRADE_COMPARE(out,
+    CORRADE_COMPARE_AS(out,
         "Ui::UserInterface::setSnapLayouterInstance(): instance is null\n"
-        "Ui::UserInterface::setSnapLayouterInstance(): instance already set\n");
+        "Ui::UserInterface::setSnapLayouterInstance(): instance already set\n",
+        TestSuite::Compare::String);
 }
 
 void UserInterfaceTest::snapLayouterInvalid() {
