@@ -42,7 +42,7 @@ namespace Magnum { namespace Ui {
 Each layout is a function that gets called on a particular node, allowing to
 arbitrarily modify the node offset and size as well as any associated data.
 
-@section Ui-GenericLayouter-setup Setting up a layouter instance
+@section Ui-GenericLayouter-setup Setting up a generic layouter instance
 
 The layouter doesn't have any shared state or configuration, so it's just about
 constructing it from a fresh @ref AbstractUserInterface::createLayouter()

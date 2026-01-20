@@ -140,7 +140,7 @@ particular node or layer data, you may want to use @ref GenericNodeAnimator or
 @ref GenericDataAnimator instead, their documentation also shows actual
 practical examples of animating node or data properties.
 
-@section Ui-GenericAnimator-setup Setting up an animator instance
+@section Ui-GenericAnimator-setup Setting up a generic animator instance
 
 The animator doesn't have any shared state or configuration, so it's just about
 constructing it from a fresh @ref AbstractUserInterface::createAnimator()
@@ -397,7 +397,7 @@ only need to interpolate various node properties without calling arbitrary
 code, prefer to use @ref NodeAnimator which is better suited for running many
 animations at once.
 
-@section Ui-GenericNodeAnimator-setup Setting up an animator instance
+@section Ui-GenericNodeAnimator-setup Setting up a generic animator instance
 
 The animator doesn't have any shared state or configuration, so it's just about
 constructing it from a fresh @ref AbstractUserInterface::createAnimator()
@@ -657,7 +657,7 @@ arbitrary data-related setters on the UI instance, on layers or elsewhere. Use
 @ref GenericNodeAnimator for animations associated with just nodes,
 @ref GenericAnimator is then for animations not tied to either.
 
-@section Ui-GenericDataAnimator-setup Setting up an animator instance
+@section Ui-GenericDataAnimator-setup Setting up a generic animator instance
 
 The animator doesn't have any shared state or configuration, so it's just about
 constructing it from a fresh @ref AbstractUserInterface::createAnimator()

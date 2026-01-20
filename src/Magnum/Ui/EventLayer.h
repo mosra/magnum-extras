@@ -133,13 +133,19 @@ doesn't have any shared state or configuration, so it's just about constructing
 it from a fresh @ref AbstractUserInterface::createLayer() handle and passing it
 to @ref UserInterface::setEventLayerInstance():
 
-@snippet Ui-gl.cpp EventLayer-setup-implicit
+@snippet Ui.cpp EventLayer-setup-implicit
 
 In comparison, if you want to set up a custom event layer that's independent of
 the one exposed through @ref UserInterface::eventLayer(), pass the newly
 created instance to @ref AbstractUserInterface::setLayerInstance() instead:
 
 @snippet Ui.cpp EventLayer-setup
+
+Afterwards, with either of the above, assuming
+@ref AbstractUserInterface::pointerPressEvent(), @relativeref{AbstractUserInterface,pointerReleaseEvent()},
+@relativeref{AbstractUserInterface,pointerMoveEvent()} and
+@relativeref{AbstractUserInterface,keyReleaseEvent()} are called in appropriate
+places, the layer is ready to use.
 
 @section Ui-EventLayer-create Creating event handlers
 

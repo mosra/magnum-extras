@@ -47,8 +47,9 @@ either of the classes for more information.
 
 Builtin widgets, deriving from the @ref Widget class, have access to this
 instance through @ref BasicWidget::ui() and generally assume that
-@ref baseLayer(), @ref textLayer(), @ref eventLayer() and @ref snapLayouter()
-are available for use.
+@ref baseLayer(), @ref textLayer(), @ref eventLayer(), @ref layoutLayer(),
+@ref snapLayouter(), @ref baseLayerStyleAnimator() and
+@ref textLayerStyleAnimator() are available for use.
 */
 class MAGNUM_UI_EXPORT UserInterface: public AbstractUserInterface {
     public:

@@ -41,6 +41,33 @@ namespace Magnum { namespace Ui {
 @brief Layout properties layer
 @m_since_latest_{extras}
 
+Allows attaching layout properties such as min/max sizes, aspect ratios,
+paddings and margins to particular nodes.
+
+@section Ui-LayoutLayer-setup Setting up a layout layer instance
+
+If you create a @ref UserInterfaceGL instance with a style and don't exclude
+@ref StyleFeature::LayoutLayer, an implicit instance is already provided and
+available through @ref UserInterface::layoutLayer().
+
+Otherwise, the layout layer is constructed from a fresh
+@ref AbstractUserInterface::createLayer() handle along with a count of how many
+distinct layout *styles* you intend to use --- which is for example the number
+@cpp 3u @ce in the following snippet. Afterwards, pass the newly created layer
+to @ref UserInterface::setLayoutLayerInstance():
+
+@snippet Ui.cpp LayoutLayer-setup-implicit
+
+In comparison, if you want to set up a custom layout layer that's independent of
+the one exposed through @ref UserInterface::layoutLayer(), pass the newly
+created instance to @ref AbstractUserInterface::setLayerInstance() instead:
+
+@snippet Ui.cpp LayoutLayer-setup
+
+Afterwards, with either of the above, assuming
+@ref AbstractUserInterface::draw() is called in an appropriate place, the layer
+is ready to use.
+
 @section Ui-LayoutLayer-debug-integration Debug layer integration
 
 When using @ref Ui-DebugLayer-node-inspect "DebugLayer node inspect" and

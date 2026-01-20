@@ -58,6 +58,7 @@
 #include "Magnum/Ui/GenericLayouter.h"
 #include "Magnum/Ui/Handle.h"
 #include "Magnum/Ui/Label.h"
+#include "Magnum/Ui/LayoutLayer.h"
 #include "Magnum/Ui/LineLayer.h"
 #include "Magnum/Ui/NodeAnimator.h"
 #include "Magnum/Ui/NodeFlags.h"
@@ -1140,6 +1141,15 @@ debugLayer.setLayerName(colorLayer, "Shiny",
 }
 
 {
+struct UserInterface: Ui::UserInterface {
+    explicit UserInterface(NoCreateT): Ui::UserInterface{NoCreate} {}
+} ui{NoCreate};
+/* [EventLayer-setup-implicit] */
+ui.setEventLayerInstance(Containers::pointer<Ui::EventLayer>(ui.createLayer()));
+/* [EventLayer-setup-implicit] */
+}
+
+{
 Ui::AbstractUserInterface ui{{100, 100}};
 /* [EventLayer-setup] */
 Ui::EventLayer& layer = ui.setLayerInstance(
@@ -1259,6 +1269,25 @@ Ui::DataHandle buttonBackground = DOXYGEN_ELLIPSIS({});
 animator.create(BaseLayerStyle::ButtonHovered, BaseLayerStyle::Button,
     Animation::Easing::cubicOut, now, 0.5_sec, buttonBackground);
 /* [BaseLayerStyleAnimator-create] */
+}
+
+{
+struct UserInterface: Ui::UserInterface {
+    explicit UserInterface(NoCreateT): Ui::UserInterface{NoCreate} {}
+} ui{NoCreate};
+/* [LayoutLayer-setup-implicit] */
+ui.setLayoutLayerInstance(
+    Containers::pointer<Ui::LayoutLayer>(ui.createLayer(), 3u));
+/* [LayoutLayer-setup-implicit] */
+}
+
+{
+Ui::AbstractUserInterface ui{{100, 100}};
+/* [LayoutLayer-setup] */
+Ui::LayoutLayer& layer = ui.setLayerInstance(
+    Containers::pointer<Ui::LayoutLayer>(ui.createLayer(), 3u));
+/* [LayoutLayer-setup] */
+static_cast<void>(layer);
 }
 
 {
@@ -2263,6 +2292,25 @@ animator.callOnce([&textLayer](Ui::DataHandle label) {
     textLayer.setText(label, "Timed out.", {});
 }, now + 10.0_sec, label);
 /* [GenericDataAnimator-callOnce] */
+}
+
+{
+struct UserInterface: Ui::UserInterface {
+    explicit UserInterface(NoCreateT): Ui::UserInterface{NoCreate} {}
+} ui{NoCreate};
+/* [SnapLayouter-setup-implicit] */
+ui.setSnapLayouterInstance(
+    Containers::pointer<Ui::SnapLayouter>(ui.createLayouter()));
+/* [SnapLayouter-setup-implicit] */
+}
+
+{
+Ui::AbstractUserInterface ui{{100, 100}};
+/* [SnapLayouter-setup] */
+Ui::SnapLayouter& layouter = ui.setLayouterInstance(
+    Containers::pointer<Ui::SnapLayouter>(ui.createLayouter()));
+/* [SnapLayouter-setup] */
+static_cast<void>(layouter);
 }
 
 {

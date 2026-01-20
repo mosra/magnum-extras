@@ -47,7 +47,7 @@ namespace Magnum { namespace Ui {
 Performs renderer state management for OpenGL layer implementations such as
 @ref BaseLayerGL or @ref TextLayerGL.
 
-@section Ui-RendererGL-setup Setting up a renderer instance
+@section Ui-RendererGL-setup Setting up an OpenGL renderer instance
 
 If you use one of the @ref UserInterfaceGL constructors taking a style,
 @ref UserInterfaceGL::create(), @relativeref{UserInterfaceGL,tryCreate()},

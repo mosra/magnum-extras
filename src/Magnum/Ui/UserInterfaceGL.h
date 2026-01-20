@@ -588,9 +588,9 @@ class MAGNUM_UI_EXPORT UserInterfaceGL: public UserInterface {
          * @return Reference to self (for method chaining)
          *
          * Expects that the instance hasn't been set yet, either by this
-         * function or transitively either by @ref setStyle() or a constructor
-         * taking a style instance. The instance is subsequently available
-         * through @ref baseLayer().
+         * function or transitively either by @ref setStyle(), @ref create() or
+         * a constructor taking a style instance. The instance is subsequently
+         * available through @ref baseLayer().
          * @see @ref hasBaseLayer(), @ref StyleFeature::BaseLayer
          */
         UserInterfaceGL& setBaseLayerInstance(Containers::Pointer<BaseLayerGL>&& instance);
@@ -600,9 +600,9 @@ class MAGNUM_UI_EXPORT UserInterfaceGL: public UserInterface {
          * @return Reference to self (for method chaining)
          *
          * Expects that the instance hasn't been set yet, either by this
-         * function or transitively either by @ref UserInterfaceGL::setStyle()
-         * or a @ref UserInterfaceGL constructor taking a style instance. The
-         * instance is subsequently available through @ref textLayer().
+         * function or transitively either by @ref setStyle(), @ref create() or
+         * a constructor taking a style instance. The instance is subsequently
+         * available through @ref textLayer().
          * @see @ref hasTextLayer(), @ref StyleFeature::TextLayer
          */
         UserInterfaceGL& setTextLayerInstance(Containers::Pointer<TextLayerGL>&& instance);

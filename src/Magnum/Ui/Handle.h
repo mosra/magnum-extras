@@ -179,8 +179,9 @@ A combination of a @ref LayerHandle and a @ref LayerDataHandle. Uses 8 bits for
 storing a layer ID, 8 bits for a layer generation, 20 bits for storing a data
 ID and 12 bits for a data generation.
 @see @ref AbstractLayer::create(), @ref AbstractLayer::remove(),
-    @ref dataHandle(), @ref dataHandleId(),
-    @ref dataHandleGeneration()
+    @ref dataHandle(), @ref dataHandleLayer(), @ref dataHandleData(),
+    @ref dataHandleLayerId(), @ref dataHandleLayerGeneration(),
+    @ref dataHandleId(), @ref dataHandleGeneration()
 */
 enum class DataHandle: UnsignedLong {
     Null = 0    /**< Null handle */
@@ -212,9 +213,9 @@ constexpr DataHandle dataHandle(LayerHandle layerHandle, UnsignedInt id, Unsigne
 @m_since_latest_{extras}
 
 Use @ref dataHandleLayer() and @ref dataHandleData() for the inverse operation.
-@see @ref dataHandle(LayerHandle, LayerDataHandle), @ref dataHandleLayerId(),
-    @ref dataHandleLayerGeneration(), @ref dataHandleId(),
-    @ref dataHandleGeneration()
+@see @ref dataHandle(LayerHandle, UnsignedInt, UnsignedInt),
+    @ref dataHandleLayerId(), @ref dataHandleLayerGeneration(),
+    @ref dataHandleId(), @ref dataHandleGeneration()
 */
 constexpr DataHandle dataHandle(LayerHandle layerHandle, LayerDataHandle layerDataHandle) {
     return DataHandle((UnsignedLong(layerHandle) << (Implementation::LayerDataHandleIdBits + Implementation::LayerDataHandleGenerationBits))|UnsignedLong(layerDataHandle));
@@ -516,8 +517,9 @@ A combination of a @ref LayouterHandle and a @ref LayouterDataHandle. Uses 8
 bits for storing a layouter ID, 8 bits for a layouter generation, 20 bits for
 storing a layouter data ID and 12 bits for a layouter data generation.
 @see @ref AbstractLayouter::add(), @ref AbstractLayouter::remove(),
-    @ref layoutHandle(), @ref layoutHandleId(),
-    @ref layoutHandleGeneration()
+    @ref layoutHandle(), @ref layoutHandleLayouter(), @ref layoutHandleData(),
+    @ref layoutHandleLayouterId(), @ref layoutHandleLayouterGeneration(),
+    @ref layoutHandleId(), @ref layoutHandleGeneration()
 */
 enum class LayoutHandle: UnsignedLong {
     Null = 0    /**< Null handle */
@@ -551,7 +553,7 @@ constexpr LayoutHandle layoutHandle(LayouterHandle layouterHandle, UnsignedInt i
 
 Use @ref layoutHandleLayouter() and @ref layoutHandleData() for the inverse
 operation.
-@see @ref layoutHandle(LayouterHandle, LayouterDataHandle),
+@see @ref layoutHandle(LayouterHandle, UnsignedInt, UnsignedInt),
     @ref layoutHandleLayouterId(), @ref layoutHandleLayouterGeneration(),
     @ref layoutHandleId(), @ref layoutHandleGeneration()
 */
@@ -792,7 +794,9 @@ Uses 8 bits for storing an animator ID, 8 bits for an animator generation, 20
 bits for storing an animator data ID and 12 bits for an animator data
 generation.
 @see @ref AbstractAnimator::create(), @ref AbstractAnimator::remove(),
-    @ref animationHandle(), @ref animationHandleId(),
+    @ref animationHandle(), @ref animationHandleAnimator(),
+    @ref animationHandleData(), @ref animationHandleAnimatorId(),
+    @ref animationHandleAnimatorGeneration(), @ref animationHandleId(),
     @ref animationHandleGeneration()
 */
 enum class AnimationHandle: UnsignedLong {
@@ -827,7 +831,7 @@ constexpr AnimationHandle animationHandle(AnimatorHandle animatorHandle, Unsigne
 
 Use @ref animationHandleAnimator() and @ref animationHandleData() for the
 inverse operation.
-@see @ref animationHandle(AnimatorHandle, AnimatorDataHandle),
+@see @ref animationHandle(AnimatorHandle, UnsignedInt, UnsignedInt),
     @ref animationHandleAnimatorId(), @ref animationHandleAnimatorGeneration(),
     @ref animationHandleId(), @ref animationHandleGeneration()
 */

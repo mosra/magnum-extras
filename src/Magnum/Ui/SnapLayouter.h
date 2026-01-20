@@ -298,6 +298,30 @@ CORRADE_ENUMSET_OPERATORS(SnapLayoutFlags)
 @brief Snap layouter
 @m_since_latest_{extras}
 
+Allows positioning nodes in columns and rows with size propagation along with
+explicitly snapping particular nodes to corners or edges of other nodes.
+
+@section Ui-SnapLayouter-setup Setting up a snap layouter instance
+
+If you create a @ref UserInterfaceGL with a style and don't exclude
+@ref StyleFeature::SnapLayouter, an implicit instance is already provided and
+available through @ref UserInterface::snapLayouter(). Otherwise, the layouter
+doesn't have any shared state or configuration, so it's just about constructing
+it from a fresh @ref AbstractUserInterface::createLayouter() handle and passing
+it to @ref UserInterface::setEventLayerInstance():
+
+@snippet Ui.cpp SnapLayouter-setup-implicit
+
+In comparison, if you want to set up a custom snap layouter that's independent
+of the one exposed through @ref UserInterface::snapLayouter(), pass the newly
+created instance to @ref AbstractUserInterface::setLayouterInstance() instead:
+
+@snippet Ui.cpp SnapLayouter-setup
+
+Afterwards, with either of the above, assuming
+@ref AbstractUserInterface::draw() is called in an appropriate place, the
+layouter is ready to use.
+
 @see @ref Snap, @ref Snaps, @ref UserInterface::snapLayouter(),
     @ref UserInterface::setSnapLayouterInstance(),
     @ref StyleFeature::SnapLayouter

@@ -1789,6 +1789,8 @@ class MAGNUM_UI_EXPORT BaseLayer::Shared::Configuration {
          * See @ref BaseLayer::setBackgroundBlurPassCount() for more
          * information and details about how it interacts with blur radius.
          *
+         * Note that these values have an effect only if
+         * @ref BaseLayerSharedFlag::BackgroundBlur is present in @ref flags().
          * Initial @p radius is @cpp 4 @ce and @p cutoff is
          * @cpp 0.5f/255.0f @ce, i.e. weights that don't contribute any value
          * even when combined from both sides of the blur circle for an

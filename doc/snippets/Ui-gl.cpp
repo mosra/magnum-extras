@@ -850,6 +850,20 @@ blurLayer.create(0, background);
 }
 
 {
+Ui::UserInterfaceGL ui{NoCreate};
+/* [BaseLayerStyleAnimator-setup-implicit] */
+/* UI style without base layer animations but with dynamic styles */
+ui.setStyle(
+    Ui::McssDarkStyle{}
+        .setBaseLayerDynamicStyleCount(10), /* adjust as needed */
+    ~Ui::StyleFeature::BaseLayerAnimations);
+
+ui.setBaseLayerStyleAnimatorInstance(
+    Containers::pointer<Ui::BaseLayerStyleAnimator>(ui.createAnimator()));
+/* [BaseLayerStyleAnimator-setup-implicit] */
+}
+
+{
 Ui::AbstractUserInterface ui{{100, 100}};
 /* [BaseLayerStyleAnimator-setup1] */
 Containers::Pointer<Ui::BaseLayerStyleAnimator> animatorInstance{InPlaceInit,
@@ -1000,6 +1014,20 @@ Ui::TextLayerGL::Shared textLayerShared{glyphCache,
 }
 
 {
+Ui::UserInterfaceGL ui{NoCreate};
+/* [TextLayerStyleAnimator-setup-implicit] */
+/* UI style without text layer animations but with dynamic styles */
+ui.setStyle(
+    Ui::McssDarkStyle{}
+        .setTextLayerDynamicStyleCount(10), /* adjust as needed */
+    ~Ui::StyleFeature::TextLayerAnimations);
+
+ui.setTextLayerStyleAnimatorInstance(
+    Containers::pointer<Ui::TextLayerStyleAnimator>(ui.createAnimator()));
+/* [TextLayerStyleAnimator-setup-implicit] */
+}
+
+{
 Ui::AbstractUserInterface ui{{100, 100}};
 Text::GlyphCacheArrayGL glyphCache{PixelFormat::R8Unorm, {8, 8, 1}};
 /* [TextLayerStyleAnimator-setup1] */
@@ -1015,13 +1043,6 @@ Ui::TextLayer& textLayer = ui.setLayerInstance(
     Containers::pointer<Ui::TextLayerGL>(ui.createLayer(), textLayerShared));
 /* [TextLayerStyleAnimator-setup1] */
 static_cast<void>(textLayer);
-}
-
-{
-Ui::UserInterfaceGL ui{NoCreate};
-/* [EventLayer-setup-implicit] */
-ui.setEventLayerInstance(Containers::pointer<Ui::EventLayer>(ui.createLayer()));
-/* [EventLayer-setup-implicit] */
 }
 
 {

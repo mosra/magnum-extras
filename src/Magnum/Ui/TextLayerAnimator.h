@@ -120,7 +120,7 @@ Each animation is a transition between two @ref TextLayer styles, with
 individual properties interpolated with an easing function.
 @ref BaseLayerStyleAnimator is a matching animator for the @ref BaseLayer.
 
-@section Ui-TextLayerStyleAnimator-setup Setting up an animator instance
+@section Ui-TextLayerStyleAnimator-setup Setting up a text layer animator instance
 
 If you create a @ref UserInterfaceGL with a style containing
 @ref McssDarkStyle::Feature::Animations or equivalent and don't exclude
@@ -128,14 +128,24 @@ If you create a @ref UserInterfaceGL with a style containing
 configured for use with builtin widgets, is already provided and available
 through @ref UserInterface::textLayerStyleAnimator().
 
-For a custom animator, first create an instance from a fresh
-@ref AbstractUserInterface::createAnimator() handle. After that, the animator
-has to be assigned to a concrete layer instance. The animations make use of
-dynamic styles, so the text layer is expected to have at least one dynamic
-style enabled with @ref TextLayer::Shared::Configuration::setDynamicStyleCount().
-The more dynamic styles are enabled, the more style animations can be running
-for given layer at the same time, but also more data need to get uploaded to
-the GPU every frame.
+Otherwise, first you need to ensure that the implicit text layer has at least
+one dynamic style enabled, as animations make use of these. This can be
+configured via @ref AbstractStyle::setTextLayerDynamicStyleCount() when setting
+up the UI style. The more dynamic styles are enabled, the more style animations
+can be running for given layer at the same time, but also more data need to get
+uploaded to the GPU every frame. Then it's just about constructing the animator
+from a fresh @ref AbstractUserInterface::createAnimator() handle and passing it
+to @ref UserInterface::setTextLayerStyleAnimatorInstance():
+
+@snippet Ui-gl.cpp TextLayerStyleAnimator-setup-implicit
+
+In comparison, if you want to set up a custom animator that's independent of
+the one exposed through @ref UserInterface::textLayerStyleAnimator(), or for a
+base layer other than @ref UserInterface::textLayer(), first create an instance
+from a fresh @ref AbstractUserInterface::createAnimator() handle. After that,
+the animator has to be assigned to a concrete layer instance. Similarly to
+above, the custom base layer is expected to have at least one dynamic style
+enabled with @ref TextLayer::Shared::Configuration::setDynamicStyleCount().
 
 @snippet Ui-gl.cpp TextLayerStyleAnimator-setup1
 
