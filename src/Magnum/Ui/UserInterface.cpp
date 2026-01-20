@@ -51,6 +51,20 @@ UserInterface::~UserInterface() = default;
 
 UserInterface& UserInterface::operator=(UserInterface&&) noexcept = default;
 
+bool UserInterface::hasBaseLayer() const {
+    return _state->baseLayer;
+}
+
+const BaseLayer& UserInterface::baseLayer() const {
+    CORRADE_ASSERT(_state->baseLayer,
+        "Ui::UserInterface::baseLayer(): no instance set", *_state->baseLayer);
+    return *_state->baseLayer;
+}
+
+BaseLayer& UserInterface::baseLayer() {
+    return const_cast<BaseLayer&>(const_cast<const UserInterface&>(*this).baseLayer());
+}
+
 UserInterface& UserInterface::setBaseLayerInstance(Containers::Pointer<BaseLayer>&& instance) {
     CORRADE_ASSERT(instance,
         "Ui::UserInterface::setBaseLayerInstance(): instance is null", *this);
@@ -59,6 +73,20 @@ UserInterface& UserInterface::setBaseLayerInstance(Containers::Pointer<BaseLayer
     _state->baseLayer = instance.get();
     setLayerInstance(Utility::move(instance));
     return *this;
+}
+
+bool UserInterface::hasBaseLayerStyleAnimator() const {
+    return _state->baseLayerStyleAnimator;
+}
+
+const BaseLayerStyleAnimator& UserInterface::baseLayerStyleAnimator() const {
+    CORRADE_ASSERT(_state->baseLayerStyleAnimator,
+        "Ui::UserInterface::baseLayerStyleAnimator(): no instance set", *_state->baseLayerStyleAnimator);
+    return *_state->baseLayerStyleAnimator;
+}
+
+BaseLayerStyleAnimator& UserInterface::baseLayerStyleAnimator() {
+    return const_cast<BaseLayerStyleAnimator&>(const_cast<const UserInterface&>(*this).baseLayerStyleAnimator());
 }
 
 UserInterface& UserInterface::setBaseLayerStyleAnimatorInstance(Containers::Pointer<BaseLayerStyleAnimator>&& instance) {
@@ -80,6 +108,20 @@ UserInterface& UserInterface::setBaseLayerStyleAnimatorInstance(Containers::Poin
     return *this;
 }
 
+bool UserInterface::hasTextLayer() const {
+    return _state->textLayer;
+}
+
+const TextLayer& UserInterface::textLayer() const {
+    CORRADE_ASSERT(_state->textLayer,
+        "Ui::UserInterface::textLayer(): no instance set", *_state->textLayer);
+    return *_state->textLayer;
+}
+
+TextLayer& UserInterface::textLayer() {
+    return const_cast<TextLayer&>(const_cast<const UserInterface&>(*this).textLayer());
+}
+
 UserInterface& UserInterface::setTextLayerInstance(Containers::Pointer<TextLayer>&& instance) {
     CORRADE_ASSERT(instance,
         "Ui::UserInterface::setTextLayerInstance(): instance is null", *this);
@@ -88,6 +130,20 @@ UserInterface& UserInterface::setTextLayerInstance(Containers::Pointer<TextLayer
     _state->textLayer = instance.get();
     setLayerInstance(Utility::move(instance));
     return *this;
+}
+
+bool UserInterface::hasTextLayerStyleAnimator() const {
+    return _state->textLayerStyleAnimator;
+}
+
+const TextLayerStyleAnimator& UserInterface::textLayerStyleAnimator() const {
+    CORRADE_ASSERT(_state->textLayerStyleAnimator,
+        "Ui::UserInterface::textLayerStyleAnimator(): no instance set", *_state->textLayerStyleAnimator);
+    return *_state->textLayerStyleAnimator;
+}
+
+TextLayerStyleAnimator& UserInterface::textLayerStyleAnimator() {
+    return const_cast<TextLayerStyleAnimator&>(const_cast<const UserInterface&>(*this).textLayerStyleAnimator());
 }
 
 UserInterface& UserInterface::setTextLayerStyleAnimatorInstance(Containers::Pointer<TextLayerStyleAnimator>&& instance) {
@@ -109,92 +165,6 @@ UserInterface& UserInterface::setTextLayerStyleAnimatorInstance(Containers::Poin
     return *this;
 }
 
-UserInterface& UserInterface::setEventLayerInstance(Containers::Pointer<EventLayer>&& instance) {
-    CORRADE_ASSERT(instance,
-        "Ui::UserInterface::setEventLayerInstance(): instance is null", *this);
-    CORRADE_ASSERT(!_state->eventLayer,
-        "Ui::UserInterface::setEventLayerInstance(): instance already set", *this);
-    _state->eventLayer = instance.get();
-    setLayerInstance(Utility::move(instance));
-    return *this;
-}
-
-UserInterface& UserInterface::setLayoutLayerInstance(Containers::Pointer<LayoutLayer>&& instance) {
-    CORRADE_ASSERT(instance,
-        "Ui::UserInterface::setLayoutLayerInstance(): instance is null", *this);
-    CORRADE_ASSERT(!_state->layoutLayer,
-        "Ui::UserInterface::setLayoutLayerInstance(): instance already set", *this);
-    _state->layoutLayer = instance.get();
-    setLayerInstance(Utility::move(instance));
-    return *this;
-}
-
-UserInterface& UserInterface::setSnapLayouterInstance(Containers::Pointer<SnapLayouter>&& instance) {
-    CORRADE_ASSERT(instance,
-        "Ui::UserInterface::setSnapLayouterInstance(): instance is null", *this);
-    CORRADE_ASSERT(!_state->snapLayouter,
-        "Ui::UserInterface::setSnapLayouterInstance(): instance already set", *this);
-    _state->snapLayouter = instance.get();
-    setLayouterInstance(Utility::move(instance));
-    return *this;
-}
-
-bool UserInterface::hasBaseLayer() const {
-    return _state->baseLayer;
-}
-
-const BaseLayer& UserInterface::baseLayer() const {
-    CORRADE_ASSERT(_state->baseLayer,
-        "Ui::UserInterface::baseLayer(): no instance set", *_state->baseLayer);
-    return *_state->baseLayer;
-}
-
-BaseLayer& UserInterface::baseLayer() {
-    return const_cast<BaseLayer&>(const_cast<const UserInterface&>(*this).baseLayer());
-}
-
-bool UserInterface::hasBaseLayerStyleAnimator() const {
-    return _state->baseLayerStyleAnimator;
-}
-
-const BaseLayerStyleAnimator& UserInterface::baseLayerStyleAnimator() const {
-    CORRADE_ASSERT(_state->baseLayerStyleAnimator,
-        "Ui::UserInterface::baseLayerStyleAnimator(): no instance set", *_state->baseLayerStyleAnimator);
-    return *_state->baseLayerStyleAnimator;
-}
-
-BaseLayerStyleAnimator& UserInterface::baseLayerStyleAnimator() {
-    return const_cast<BaseLayerStyleAnimator&>(const_cast<const UserInterface&>(*this).baseLayerStyleAnimator());
-}
-
-bool UserInterface::hasTextLayer() const {
-    return _state->textLayer;
-}
-
-const TextLayer& UserInterface::textLayer() const {
-    CORRADE_ASSERT(_state->textLayer,
-        "Ui::UserInterface::textLayer(): no instance set", *_state->textLayer);
-    return *_state->textLayer;
-}
-
-TextLayer& UserInterface::textLayer() {
-    return const_cast<TextLayer&>(const_cast<const UserInterface&>(*this).textLayer());
-}
-
-bool UserInterface::hasTextLayerStyleAnimator() const {
-    return _state->textLayerStyleAnimator;
-}
-
-const TextLayerStyleAnimator& UserInterface::textLayerStyleAnimator() const {
-    CORRADE_ASSERT(_state->textLayerStyleAnimator,
-        "Ui::UserInterface::textLayerStyleAnimator(): no instance set", *_state->textLayerStyleAnimator);
-    return *_state->textLayerStyleAnimator;
-}
-
-TextLayerStyleAnimator& UserInterface::textLayerStyleAnimator() {
-    return const_cast<TextLayerStyleAnimator&>(const_cast<const UserInterface&>(*this).textLayerStyleAnimator());
-}
-
 bool UserInterface::hasEventLayer() const {
     return _state->eventLayer;
 }
@@ -207,6 +177,16 @@ const EventLayer& UserInterface::eventLayer() const {
 
 EventLayer& UserInterface::eventLayer() {
     return const_cast<EventLayer&>(const_cast<const UserInterface&>(*this).eventLayer());
+}
+
+UserInterface& UserInterface::setEventLayerInstance(Containers::Pointer<EventLayer>&& instance) {
+    CORRADE_ASSERT(instance,
+        "Ui::UserInterface::setEventLayerInstance(): instance is null", *this);
+    CORRADE_ASSERT(!_state->eventLayer,
+        "Ui::UserInterface::setEventLayerInstance(): instance already set", *this);
+    _state->eventLayer = instance.get();
+    setLayerInstance(Utility::move(instance));
+    return *this;
 }
 
 bool UserInterface::hasLayoutLayer() const {
@@ -223,6 +203,16 @@ LayoutLayer& UserInterface::layoutLayer() {
     return const_cast<LayoutLayer&>(const_cast<const UserInterface&>(*this).layoutLayer());
 }
 
+UserInterface& UserInterface::setLayoutLayerInstance(Containers::Pointer<LayoutLayer>&& instance) {
+    CORRADE_ASSERT(instance,
+        "Ui::UserInterface::setLayoutLayerInstance(): instance is null", *this);
+    CORRADE_ASSERT(!_state->layoutLayer,
+        "Ui::UserInterface::setLayoutLayerInstance(): instance already set", *this);
+    _state->layoutLayer = instance.get();
+    setLayerInstance(Utility::move(instance));
+    return *this;
+}
+
 bool UserInterface::hasSnapLayouter() const {
     return _state->snapLayouter;
 }
@@ -235,6 +225,16 @@ const SnapLayouter& UserInterface::snapLayouter() const {
 
 SnapLayouter& UserInterface::snapLayouter() {
     return const_cast<SnapLayouter&>(const_cast<const UserInterface&>(*this).snapLayouter());
+}
+
+UserInterface& UserInterface::setSnapLayouterInstance(Containers::Pointer<SnapLayouter>&& instance) {
+    CORRADE_ASSERT(instance,
+        "Ui::UserInterface::setSnapLayouterInstance(): instance is null", *this);
+    CORRADE_ASSERT(!_state->snapLayouter,
+        "Ui::UserInterface::setSnapLayouterInstance(): instance already set", *this);
+    _state->snapLayouter = instance.get();
+    setLayouterInstance(Utility::move(instance));
+    return *this;
 }
 
 UserInterface& UserInterface::advanceAnimations(const Nanoseconds time) {
