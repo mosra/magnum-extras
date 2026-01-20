@@ -191,7 +191,7 @@ LayoutHandle AbstractLayouter::add(const NodeHandle node) {
         layout = &arrayAppend(state.layouts, InPlaceInit);
     }
 
-    const LayoutHandle handle = layoutHandle(state.handle, (layout - state.layouts), layout->used.generation);
+    const LayoutHandle handle = layoutHandle(state.handle, layout - state.layouts, layout->used.generation);
 
     /* If this layouter has unique layouts, add this as unique layout to given
        node. It requires the layouter to be added to the user interface and the
