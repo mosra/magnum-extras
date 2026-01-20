@@ -57,28 +57,36 @@ struct AbstractStyleTest: TestSuite::Tester {
 
     void noFeaturesReturned();
 
-    void styleCount();
-    void styleCountNotSupported();
-    void styleCountNotImplemented();
-    void styleCountNotImplementedDefaults();
+    void baseLayer();
+    void baseLayerNotSupported();
+    void baseLayerNotImplemented();
+    void baseLayerNotImplementedDefaults();
 
     void baseLayerDynamicStyleCountInvalid();
     void setBaseLayerDynamicStyleCount();
 
     void baseLayerFlags();
-    void baseLayerFlagsNotImplementedDefaults();
     void baseLayerFlagsInvalid();
+
+    void textLayer();
+    void textLayerNotSupported();
+    void textLayerNotImplemented();
+    void textLayerNotImplementedDefaults();
 
     void textLayerDynamicStyleCountInvalid();
     void setTextLayerDynamicStyleCount();
 
-    void textLayerGlyphCacheProperties();
-    void textLayerGlyphCachePropertiesNotSupported();
-    void textLayerGlyphCachePropertiesNotImplemented();
-    void textLayerGlyphCachePropertiesNotImplementedDefaults();
     void textLayerGlyphCacheSizeNoTextFeature();
     void textLayerGlyphCacheSizeFeaturesNotSupported();
     void setTextLayerGlyphCacheSize();
+
+    void layoutLayer();
+    void layoutLayerNotSupported();
+    void layoutLayerNotImplemented();
+    /* No defaults for not implemented layout layer properties yet */
+
+    /* SnapLayouter and GenericLayouter has no getters or setters to test,
+       verified only for apply() below */
 
     void apply();
     void applyNoSizeSet();
@@ -215,28 +223,32 @@ AbstractStyleTest::AbstractStyleTest() {
 
               &AbstractStyleTest::noFeaturesReturned,
 
-              &AbstractStyleTest::styleCount,
-              &AbstractStyleTest::styleCountNotSupported,
-              &AbstractStyleTest::styleCountNotImplemented,
-              &AbstractStyleTest::styleCountNotImplementedDefaults,
+              &AbstractStyleTest::baseLayer,
+              &AbstractStyleTest::baseLayerNotSupported,
+              &AbstractStyleTest::baseLayerNotImplemented,
+              &AbstractStyleTest::baseLayerNotImplementedDefaults,
 
               &AbstractStyleTest::baseLayerDynamicStyleCountInvalid,
               &AbstractStyleTest::setBaseLayerDynamicStyleCount,
 
               &AbstractStyleTest::baseLayerFlags,
-              &AbstractStyleTest::baseLayerFlagsNotImplementedDefaults,
               &AbstractStyleTest::baseLayerFlagsInvalid,
+
+              &AbstractStyleTest::textLayer,
+              &AbstractStyleTest::textLayerNotSupported,
+              &AbstractStyleTest::textLayerNotImplemented,
+              &AbstractStyleTest::textLayerNotImplementedDefaults,
 
               &AbstractStyleTest::textLayerDynamicStyleCountInvalid,
               &AbstractStyleTest::setTextLayerDynamicStyleCount,
 
-              &AbstractStyleTest::textLayerGlyphCacheProperties,
-              &AbstractStyleTest::textLayerGlyphCachePropertiesNotSupported,
-              &AbstractStyleTest::textLayerGlyphCachePropertiesNotImplemented,
-              &AbstractStyleTest::textLayerGlyphCachePropertiesNotImplementedDefaults,
               &AbstractStyleTest::textLayerGlyphCacheSizeNoTextFeature,
               &AbstractStyleTest::textLayerGlyphCacheSizeFeaturesNotSupported,
-              &AbstractStyleTest::setTextLayerGlyphCacheSize});
+              &AbstractStyleTest::setTextLayerGlyphCacheSize,
+
+              &AbstractStyleTest::layoutLayer,
+              &AbstractStyleTest::layoutLayerNotSupported,
+              &AbstractStyleTest::layoutLayerNotImplemented});
 
     addInstancedTests({&AbstractStyleTest::apply},
         Containers::arraySize(ApplyData));
@@ -318,38 +330,30 @@ void AbstractStyleTest::noFeaturesReturned() {
     CORRADE_COMPARE(out, "Ui::AbstractStyle::features(): implementation returned an empty set\n");
 }
 
-void AbstractStyleTest::styleCount() {
+void AbstractStyleTest::baseLayer() {
     struct: AbstractStyle {
         StyleFeatures doFeatures() const override {
-            return StyleFeature::BaseLayer|StyleFeature::TextLayer|StyleFeature::LayoutLayer;
+            /* Verify it's testing a superset, not equality */
+            return StyleFeature::BaseLayer|StyleFeature(0x1000);
         }
         UnsignedInt doBaseLayerStyleUniformCount() const override { return 3; }
         UnsignedInt doBaseLayerStyleCount() const override { return 5; }
         UnsignedInt doBaseLayerDynamicStyleCount() const override { return 11; }
-        UnsignedInt doTextLayerStyleUniformCount() const override { return 7; }
-        UnsignedInt doTextLayerStyleCount() const override { return 9; }
-        UnsignedInt doTextLayerEditingStyleUniformCount() const override { return 2; }
-        UnsignedInt doTextLayerEditingStyleCount() const override { return 4; }
-        UnsignedInt doTextLayerDynamicStyleCount() const override { return 13; }
-        UnsignedInt doLayoutLayerStyleCount() const override { return 15; }
         bool doApply(UserInterface&, StyleFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override { return {}; }
     } style;
     CORRADE_COMPARE(style.baseLayerStyleUniformCount(), 3);
     CORRADE_COMPARE(style.baseLayerStyleCount(), 5);
     CORRADE_COMPARE(style.baseLayerDynamicStyleCount(), 11);
-    CORRADE_COMPARE(style.textLayerStyleUniformCount(), 7);
-    CORRADE_COMPARE(style.textLayerStyleCount(), 9);
-    CORRADE_COMPARE(style.textLayerEditingStyleUniformCount(), 2);
-    CORRADE_COMPARE(style.textLayerEditingStyleCount(), 4);
-    CORRADE_COMPARE(style.textLayerDynamicStyleCount(), 13);
-    CORRADE_COMPARE(style.layoutLayerStyleCount(), 15);
 }
 
-void AbstractStyleTest::styleCountNotSupported() {
+void AbstractStyleTest::baseLayerNotSupported() {
     CORRADE_SKIP_IF_NO_ASSERT();
 
     struct: AbstractStyle {
-        StyleFeatures doFeatures() const override { return StyleFeatures{0x10}; }
+        StyleFeatures doFeatures() const override {
+            /* To verify it's not accidentally checking some other bit */
+            return ~StyleFeature::BaseLayer;
+        }
         UnsignedInt doBaseLayerStyleUniformCount() const override {
             CORRADE_FAIL("This shouldn't get called.");
             return {};
@@ -362,27 +366,7 @@ void AbstractStyleTest::styleCountNotSupported() {
             CORRADE_FAIL("This shouldn't get called.");
             return {};
         }
-        UnsignedInt doTextLayerStyleUniformCount() const override {
-            CORRADE_FAIL("This shouldn't get called.");
-            return {};
-        }
-        UnsignedInt doTextLayerStyleCount() const override {
-            CORRADE_FAIL("This shouldn't get called.");
-            return {};
-        }
-        UnsignedInt doTextLayerEditingStyleUniformCount() const override {
-            CORRADE_FAIL("This shouldn't get called.");
-            return {};
-        }
-        UnsignedInt doTextLayerEditingStyleCount() const override {
-            CORRADE_FAIL("This shouldn't get called.");
-            return {};
-        }
-        UnsignedInt doTextLayerDynamicStyleCount() const override {
-            CORRADE_FAIL("This shouldn't get called.");
-            return {};
-        }
-        UnsignedInt doLayoutLayerStyleCount() const override {
+        BaseLayerSharedFlags doBaseLayerFlags() const override {
             CORRADE_FAIL("This shouldn't get called.");
             return {};
         }
@@ -397,81 +381,60 @@ void AbstractStyleTest::styleCountNotSupported() {
     style.baseLayerStyleUniformCount();
     style.baseLayerStyleCount();
     style.baseLayerDynamicStyleCount();
-    style.textLayerStyleUniformCount();
-    style.textLayerStyleCount();
-    style.textLayerEditingStyleUniformCount();
-    style.textLayerEditingStyleCount();
-    style.textLayerDynamicStyleCount();
-    style.layoutLayerStyleCount();
+    style.setBaseLayerDynamicStyleCount({});
+    style.baseLayerFlags();
+    style.setBaseLayerFlags({}, {});
     CORRADE_COMPARE_AS(out,
         "Ui::AbstractStyle::baseLayerStyleUniformCount(): feature not supported\n"
         "Ui::AbstractStyle::baseLayerStyleCount(): feature not supported\n"
         "Ui::AbstractStyle::baseLayerDynamicStyleCount(): feature not supported\n"
-        "Ui::AbstractStyle::textLayerStyleUniformCount(): feature not supported\n"
-        "Ui::AbstractStyle::textLayerStyleCount(): feature not supported\n"
-        "Ui::AbstractStyle::textLayerEditingStyleUniformCount(): feature not supported\n"
-        "Ui::AbstractStyle::textLayerEditingStyleCount(): feature not supported\n"
-        "Ui::AbstractStyle::textLayerDynamicStyleCount(): feature not supported\n"
-        "Ui::AbstractStyle::layoutLayerStyleCount(): feature not supported\n",
+        "Ui::AbstractStyle::setBaseLayerDynamicStyleCount(): feature not supported\n"
+        "Ui::AbstractStyle::baseLayerFlags(): feature not supported\n"
+        "Ui::AbstractStyle::setBaseLayerFlags(): feature not supported\n",
         TestSuite::Compare::String);
 }
 
-void AbstractStyleTest::styleCountNotImplemented() {
+void AbstractStyleTest::baseLayerNotImplemented() {
     CORRADE_SKIP_IF_NO_ASSERT();
 
     struct: AbstractStyle {
         StyleFeatures doFeatures() const override {
-            return StyleFeature::BaseLayer|StyleFeature::TextLayer|StyleFeature::LayoutLayer;
+            return StyleFeature::BaseLayer;
         }
         bool doApply(UserInterface&, StyleFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override { return {}; }
     } style;
 
-    /* *DynamicStyleCount() and textLayerEditingStyle*Count() has a default
-       implementation, tested in styleCountNotImplementedDefaults() below */
-
     Containers::String out;
     Error redirectError{&out};
-    /* The *UniformCount() delegate to *Count() by default, so the assertion
-       is the same. Delegation and value propagation tested below. */
+    /* The baseLayerUniformCount() delegates to baseLayerStyleCount() by
+       default, so the assertion is the same. Delegation and value propagation
+       tested below. */
     style.baseLayerStyleUniformCount();
     style.baseLayerStyleCount();
-    style.textLayerStyleUniformCount();
-    style.textLayerStyleCount();
-    style.textLayerEditingStyleUniformCount();
-    style.textLayerEditingStyleCount();
-    style.layoutLayerStyleCount();
+    /* baseLayerDynamicStyleCount() has a default, tested in
+       baseLayerNotImplementedDefaults() below */
     CORRADE_COMPARE_AS(out,
         "Ui::AbstractStyle::baseLayerStyleCount(): feature advertised but not implemented\n"
-        "Ui::AbstractStyle::baseLayerStyleCount(): feature advertised but not implemented\n"
-        "Ui::AbstractStyle::textLayerStyleCount(): feature advertised but not implemented\n"
-        "Ui::AbstractStyle::textLayerStyleCount(): feature advertised but not implemented\n"
-        "Ui::AbstractStyle::layoutLayerStyleCount(): feature advertised but not implemented\n",
+        "Ui::AbstractStyle::baseLayerStyleCount(): feature advertised but not implemented\n",
         TestSuite::Compare::String);
 }
 
-void AbstractStyleTest::styleCountNotImplementedDefaults() {
+void AbstractStyleTest::baseLayerNotImplementedDefaults() {
     struct: AbstractStyle {
         StyleFeatures doFeatures() const override {
-            return StyleFeature::BaseLayer|StyleFeature::TextLayer;
+            return StyleFeature::BaseLayer;
         }
         UnsignedInt doBaseLayerStyleCount() const override {
             return 17;
-        }
-        UnsignedInt doTextLayerStyleCount() const override {
-            return 35;
         }
         bool doApply(UserInterface&, StyleFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override { return {}; }
     } style;
 
     CORRADE_COMPARE(style.baseLayerDynamicStyleCount(), 0);
-    CORRADE_COMPARE(style.textLayerEditingStyleUniformCount(), 0);
-    CORRADE_COMPARE(style.textLayerEditingStyleCount(), 0);
-    CORRADE_COMPARE(style.textLayerDynamicStyleCount(), 0);
-
-    /* With baseLayerStyleCount() / textLayerStyleCount() not implemented it
-       would assert, tested above */
+    /* With baseLayerStyleCount() not implemented it would assert, tested
+       above */
     CORRADE_COMPARE(style.baseLayerStyleUniformCount(), 17);
-    CORRADE_COMPARE(style.textLayerStyleUniformCount(), 35);
+    CORRADE_COMPARE(style.baseLayerFlags(), BaseLayerSharedFlags{});
 }
 
 void AbstractStyleTest::baseLayerDynamicStyleCountInvalid() {
@@ -523,7 +486,7 @@ void AbstractStyleTest::baseLayerFlags() {
         explicit Style(BaseLayerSharedFlags flags): _flags{flags} {}
 
         StyleFeatures doFeatures() const override {
-            return StyleFeature::BaseLayer|StyleFeature(0x10);
+            return StyleFeature::BaseLayer;
         }
         BaseLayerSharedFlags doBaseLayerFlags() const override {
             return _flags;
@@ -563,17 +526,6 @@ void AbstractStyleTest::baseLayerFlags() {
     CORRADE_COMPARE(styleNoRoundedCorners.baseLayerFlags(), BaseLayerSharedFlag::NoRoundedCorners);
 }
 
-void AbstractStyleTest::baseLayerFlagsNotImplementedDefaults() {
-    struct: AbstractStyle {
-        StyleFeatures doFeatures() const override {
-            return StyleFeature::BaseLayer;
-        }
-        bool doApply(UserInterface&, StyleFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override { return {}; }
-    } style;
-
-    CORRADE_COMPARE(style.baseLayerFlags(), BaseLayerSharedFlags{});
-}
-
 void AbstractStyleTest::baseLayerFlagsInvalid() {
     CORRADE_SKIP_IF_NO_ASSERT();
 
@@ -581,7 +533,7 @@ void AbstractStyleTest::baseLayerFlagsInvalid() {
         explicit Style(BaseLayerSharedFlags flags): _flags{flags} {}
 
         StyleFeatures doFeatures() const override {
-            return StyleFeature::BaseLayer|StyleFeature(0x10);
+            return StyleFeature::BaseLayer;
         }
         BaseLayerSharedFlags doBaseLayerFlags() const override {
             return _flags;
@@ -603,6 +555,162 @@ void AbstractStyleTest::baseLayerFlagsInvalid() {
         "Ui::AbstractStyle::setBaseLayerFlags(): Ui::BaseLayerSharedFlag::Textured|Ui::BaseLayerSharedFlag::NoOutline isn't allowed to be added\n"
         "Ui::AbstractStyle::setBaseLayerFlags(): Ui::BaseLayerSharedFlag::Textured|Ui::BaseLayerSharedFlag::SubdividedQuads isn't allowed to be cleared\n",
         TestSuite::Compare::String);
+}
+
+void AbstractStyleTest::textLayer() {
+    struct: AbstractStyle {
+        StyleFeatures doFeatures() const override {
+            /* Verify it's testing a superset, not equality */
+            return StyleFeature::TextLayer|StyleFeature(0x1000);
+        }
+        UnsignedInt doTextLayerStyleUniformCount() const override { return 3; }
+        UnsignedInt doTextLayerStyleCount() const override { return 5; }
+        UnsignedInt doTextLayerEditingStyleUniformCount() const override { return 11; }
+        UnsignedInt doTextLayerEditingStyleCount() const override { return 7; }
+        UnsignedInt doTextLayerDynamicStyleCount() const override { return 9; }
+        PixelFormat doTextLayerGlyphCacheFormat() const override {
+            return PixelFormat::RG32F;
+        }
+        Vector3i doTextLayerGlyphCacheSize(StyleFeatures features) const override {
+            CORRADE_COMPARE(features, StyleFeature::TextLayer|StyleFeature(0x1000));
+            return {3, 5, 18};
+        }
+        Vector2i doTextLayerGlyphCachePadding() const override {
+            return {2, 4};
+        }
+        bool doApply(UserInterface&, StyleFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override { return {}; }
+    } style;
+    CORRADE_COMPARE(style.textLayerStyleUniformCount(), 3);
+    CORRADE_COMPARE(style.textLayerStyleCount(), 5);
+    CORRADE_COMPARE(style.textLayerEditingStyleUniformCount(), 11);
+    CORRADE_COMPARE(style.textLayerEditingStyleCount(), 7);
+    CORRADE_COMPARE(style.textLayerDynamicStyleCount(), 9);
+    CORRADE_COMPARE(style.textLayerGlyphCacheFormat(), PixelFormat::RG32F);
+    CORRADE_COMPARE(style.textLayerGlyphCacheSize(StyleFeature::TextLayer|StyleFeature(0x1000)), (Vector3i{3, 5, 18}));
+    CORRADE_COMPARE(style.textLayerGlyphCachePadding(), (Vector2i{2, 4}));
+}
+
+void AbstractStyleTest::textLayerNotSupported() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct: AbstractStyle {
+        StyleFeatures doFeatures() const override {
+            /* To verify it's not accidentally checking some other bit */
+            return ~StyleFeature::TextLayer;
+        }
+        UnsignedInt doTextLayerStyleUniformCount() const override {
+            CORRADE_FAIL("This shouldn't get called.");
+            return {};
+        }
+        UnsignedInt doTextLayerStyleCount() const override {
+            CORRADE_FAIL("This shouldn't get called.");
+            return {};
+        }
+        UnsignedInt doTextLayerEditingStyleUniformCount() const override {
+            CORRADE_FAIL("This shouldn't get called.");
+            return {};
+        }
+        UnsignedInt doTextLayerEditingStyleCount() const override {
+            CORRADE_FAIL("This shouldn't get called.");
+            return {};
+        }
+        UnsignedInt doTextLayerDynamicStyleCount() const override {
+            CORRADE_FAIL("This shouldn't get called.");
+            return {};
+        }
+        PixelFormat doTextLayerGlyphCacheFormat() const override {
+            CORRADE_FAIL("This shouldn't get called.");
+            return {};
+        }
+        Vector3i doTextLayerGlyphCacheSize(StyleFeatures) const override {
+            CORRADE_FAIL("This shouldn't get called.");
+            return {};
+        }
+        Vector2i doTextLayerGlyphCachePadding() const override {
+            CORRADE_FAIL("This shouldn't get called.");
+            return {};
+        }
+        bool doApply(UserInterface&, StyleFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override { return {}; }
+    } style;
+
+    /* Capture correct function name */
+    CORRADE_VERIFY(true);
+
+    Containers::String out;
+    Error redirectError{&out};
+    style.textLayerStyleUniformCount();
+    style.textLayerStyleCount();
+    style.textLayerEditingStyleUniformCount();
+    style.textLayerEditingStyleCount();
+    style.textLayerDynamicStyleCount();
+    style.setTextLayerDynamicStyleCount({});
+    style.textLayerGlyphCacheFormat();
+    style.textLayerGlyphCacheSize(StyleFeature::TextLayer);
+    style.textLayerGlyphCachePadding();
+    style.setTextLayerGlyphCacheSize({});
+    CORRADE_COMPARE_AS(out,
+        "Ui::AbstractStyle::textLayerStyleUniformCount(): feature not supported\n"
+        "Ui::AbstractStyle::textLayerStyleCount(): feature not supported\n"
+        "Ui::AbstractStyle::textLayerEditingStyleUniformCount(): feature not supported\n"
+        "Ui::AbstractStyle::textLayerEditingStyleCount(): feature not supported\n"
+        "Ui::AbstractStyle::textLayerDynamicStyleCount(): feature not supported\n"
+        "Ui::AbstractStyle::setTextLayerDynamicStyleCount(): feature not supported\n"
+        "Ui::AbstractStyle::textLayerGlyphCacheFormat(): feature not supported\n"
+        "Ui::AbstractStyle::textLayerGlyphCacheSize(): feature not supported\n"
+        "Ui::AbstractStyle::textLayerGlyphCachePadding(): feature not supported\n"
+        "Ui::AbstractStyle::setTextLayerGlyphCacheSize(): feature not supported\n",
+        TestSuite::Compare::String);
+}
+
+void AbstractStyleTest::textLayerNotImplemented() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct: AbstractStyle {
+        StyleFeatures doFeatures() const override {
+            return StyleFeature::TextLayer;
+        }
+        bool doApply(UserInterface&, StyleFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override { return {}; }
+    } style;
+
+    Containers::String out;
+    Error redirectError{&out};
+    /* The textLayerStyleUniformCount() delegates to textLayerStyleCount() by
+       default, so the assertion is the same. Delegation and value propagation
+       tested below. */
+    style.textLayerStyleUniformCount();
+    style.textLayerStyleCount();
+    /* textLayerEditingStyleUniformCount(), textLayerEditingStyleCount(),
+       textLayerDynamicStyleCount(), textLayerGlyphCacheFormat() and
+       textLayerGlyphCachePadding() have defaults, tested below */
+    style.textLayerGlyphCacheSize(StyleFeature::TextLayer);
+    CORRADE_COMPARE_AS(out,
+        "Ui::AbstractStyle::textLayerStyleCount(): feature advertised but not implemented\n"
+        "Ui::AbstractStyle::textLayerStyleCount(): feature advertised but not implemented\n"
+        "Ui::AbstractStyle::textLayerGlyphCacheSize(): feature advertised but not implemented\n",
+        TestSuite::Compare::String);
+}
+
+void AbstractStyleTest::textLayerNotImplementedDefaults() {
+    struct: AbstractStyle {
+        StyleFeatures doFeatures() const override {
+            return StyleFeature::TextLayer;
+        }
+        UnsignedInt doTextLayerStyleCount() const override {
+            return 35;
+        }
+        bool doApply(UserInterface&, StyleFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override { return {}; }
+    } style;
+
+    CORRADE_COMPARE(style.textLayerEditingStyleUniformCount(), 0);
+    CORRADE_COMPARE(style.textLayerEditingStyleCount(), 0);
+    CORRADE_COMPARE(style.textLayerDynamicStyleCount(), 0);
+    /* With textLayerStyleCount() not implemented it would assert, tested
+       above */
+    CORRADE_COMPARE(style.textLayerStyleUniformCount(), 35);
+    CORRADE_COMPARE(style.textLayerGlyphCacheFormat(), PixelFormat::R8Unorm);
+    /* Padding is 1 by default, consistently with Text::AbstractGlyphCache */
+    CORRADE_COMPARE(style.textLayerGlyphCachePadding(), Vector2i{1});
+    /* textLayerGlyphCacheSize() asserts, tested above */
 }
 
 void AbstractStyleTest::textLayerDynamicStyleCountInvalid() {
@@ -647,97 +755,6 @@ void AbstractStyleTest::setTextLayerDynamicStyleCount() {
     /* Setting a value smaller than what style says picks the style instead */
     style.setTextLayerDynamicStyleCount(3);
     CORRADE_COMPARE(style.textLayerDynamicStyleCount(), 9);
-}
-
-void AbstractStyleTest::textLayerGlyphCacheProperties() {
-    struct: AbstractStyle {
-        StyleFeatures doFeatures() const override {
-            return StyleFeature::TextLayer|StyleFeature(0x10);
-        }
-        PixelFormat doTextLayerGlyphCacheFormat() const override {
-            return PixelFormat::RG32F;
-        }
-        Vector3i doTextLayerGlyphCacheSize(StyleFeatures features) const override {
-            CORRADE_COMPARE(features, StyleFeature::TextLayer|StyleFeature(0x10));
-            return {3, 5, 18};
-        }
-        Vector2i doTextLayerGlyphCachePadding() const override {
-            return {2, 4};
-        }
-        bool doApply(UserInterface&, StyleFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override { return {}; }
-    } style;
-    CORRADE_COMPARE(style.textLayerGlyphCacheFormat(), PixelFormat::RG32F);
-    CORRADE_COMPARE(style.textLayerGlyphCacheSize(StyleFeature::TextLayer|StyleFeature(0x10)), (Vector3i{3, 5, 18}));
-    CORRADE_COMPARE(style.textLayerGlyphCachePadding(), (Vector2i{2, 4}));
-}
-
-void AbstractStyleTest::textLayerGlyphCachePropertiesNotSupported() {
-    CORRADE_SKIP_IF_NO_ASSERT();
-
-    struct: AbstractStyle {
-        StyleFeatures doFeatures() const override {
-            return StyleFeature::BaseLayer;
-        }
-        PixelFormat doTextLayerGlyphCacheFormat() const override {
-            CORRADE_FAIL("This shouldn't get called.");
-            return {};
-        }
-        Vector3i doTextLayerGlyphCacheSize(StyleFeatures) const override {
-            CORRADE_FAIL("This shouldn't get called.");
-            return {};
-        }
-        Vector2i doTextLayerGlyphCachePadding() const override {
-            CORRADE_FAIL("This shouldn't get called.");
-            return {};
-        }
-        bool doApply(UserInterface&, StyleFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override { return {}; }
-    } style;
-
-    /* Capture correct function name */
-    CORRADE_VERIFY(true);
-
-    Containers::String out;
-    Error redirectError{&out};
-    style.textLayerGlyphCacheFormat();
-    style.textLayerGlyphCacheSize(StyleFeature::TextLayer);
-    style.textLayerGlyphCachePadding();
-    CORRADE_COMPARE_AS(out,
-        "Ui::AbstractStyle::textLayerGlyphCacheFormat(): feature not supported\n"
-        "Ui::AbstractStyle::textLayerGlyphCacheSize(): feature not supported\n"
-        "Ui::AbstractStyle::textLayerGlyphCachePadding(): feature not supported\n",
-        TestSuite::Compare::String);
-}
-
-void AbstractStyleTest::textLayerGlyphCachePropertiesNotImplemented() {
-    CORRADE_SKIP_IF_NO_ASSERT();
-
-    struct: AbstractStyle {
-        StyleFeatures doFeatures() const override {
-            return StyleFeature::TextLayer;
-        }
-        bool doApply(UserInterface&, StyleFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override { return {}; }
-    } style;
-
-    Containers::String out;
-    Error redirectError{&out};
-    /* textLayerGlyphCacheFormat() and textLayerGlyphCachePadding() have
-       defaults, tested below */
-    style.textLayerGlyphCacheSize(StyleFeature::TextLayer);
-    CORRADE_COMPARE(out, "Ui::AbstractStyle::textLayerGlyphCacheSize(): feature advertised but not implemented\n");
-}
-
-void AbstractStyleTest::textLayerGlyphCachePropertiesNotImplementedDefaults() {
-    struct: AbstractStyle {
-        StyleFeatures doFeatures() const override {
-            return StyleFeature::TextLayer;
-        }
-        bool doApply(UserInterface&, StyleFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override { return {}; }
-    } style;
-
-    CORRADE_COMPARE(style.textLayerGlyphCacheFormat(), PixelFormat::R8Unorm);
-    /* Padding is 1 by default, consistently with Text::AbstractGlyphCache */
-    CORRADE_COMPARE(style.textLayerGlyphCachePadding(), Vector2i{1});
-    /* textLayerGlyphCacheSize() asserts, tested above */
 }
 
 void AbstractStyleTest::textLayerGlyphCacheSizeNoTextFeature() {
@@ -826,6 +843,62 @@ void AbstractStyleTest::setTextLayerGlyphCacheSize() {
     style.setTextLayerGlyphCacheSize({12, 24, 12});
     CORRADE_COMPARE(style.textLayerGlyphCacheSize(StyleFeature::TextLayer), (Vector3i{16, 32, 12}));
     CORRADE_COMPARE(style.textLayerGlyphCachePadding(), (Vector2i{4, 2}));
+}
+
+void AbstractStyleTest::layoutLayer() {
+    struct: AbstractStyle {
+        StyleFeatures doFeatures() const override {
+            /* Verify it's testing a superset, not equality */
+            return StyleFeature::LayoutLayer|StyleFeature(0x1000);
+        }
+        UnsignedInt doLayoutLayerStyleCount() const override { return 15; }
+        bool doApply(UserInterface&, StyleFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override { return {}; }
+    } style;
+    CORRADE_COMPARE(style.layoutLayerStyleCount(), 15);
+}
+
+void AbstractStyleTest::layoutLayerNotSupported() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct: AbstractStyle {
+        StyleFeatures doFeatures() const override {
+            /* To verify it's not accidentally checking some other bit */
+            return ~StyleFeature::LayoutLayer;
+        }
+        UnsignedInt doLayoutLayerStyleCount() const override {
+            CORRADE_FAIL("This shouldn't get called.");
+            return {};
+        }
+        bool doApply(UserInterface&, StyleFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override { return {}; }
+    } style;
+
+    /* Capture correct function name */
+    CORRADE_VERIFY(true);
+
+    Containers::String out;
+    Error redirectError{&out};
+    style.layoutLayerStyleCount();
+    CORRADE_COMPARE_AS(out,
+        "Ui::AbstractStyle::layoutLayerStyleCount(): feature not supported\n",
+        TestSuite::Compare::String);
+}
+
+void AbstractStyleTest::layoutLayerNotImplemented() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct: AbstractStyle {
+        StyleFeatures doFeatures() const override {
+            return StyleFeature::LayoutLayer;
+        }
+        bool doApply(UserInterface&, StyleFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override { return {}; }
+    } style;
+
+    Containers::String out;
+    Error redirectError{&out};
+    style.layoutLayerStyleCount();
+    CORRADE_COMPARE_AS(out,
+        "Ui::AbstractStyle::layoutLayerStyleCount(): feature advertised but not implemented\n",
+        TestSuite::Compare::String);
 }
 
 void AbstractStyleTest::apply() {

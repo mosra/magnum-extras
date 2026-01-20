@@ -118,13 +118,15 @@ UnsignedInt AbstractStyle::doBaseLayerDynamicStyleCount() const {
 }
 
 AbstractStyle& AbstractStyle::setBaseLayerDynamicStyleCount(const UnsignedInt count) {
+    CORRADE_ASSERT(features() >= StyleFeature::BaseLayer,
+        "Ui::AbstractStyle::setBaseLayerDynamicStyleCount(): feature not supported", *this);
     _baseLayerDynamicStyleCount = count;
     return *this;
 }
 
 BaseLayerSharedFlags AbstractStyle::baseLayerFlags() const {
     CORRADE_ASSERT(features() >= StyleFeature::BaseLayer,
-        "Ui::AbstractStyle::baseLayerDynamicStyleCount(): feature not supported", {});
+        "Ui::AbstractStyle::baseLayerFlags(): feature not supported", {});
     const BaseLayerSharedFlags flags = doBaseLayerFlags();
     CORRADE_ASSERT(flags <= (BaseLayerSharedFlag::NoOutline|BaseLayerSharedFlag::NoRoundedCorners),
         "Ui::AbstractStyle::baseLayerFlags(): implementation returned disallowed" << (flags & ~(BaseLayerSharedFlag::NoOutline|BaseLayerSharedFlag::NoRoundedCorners)), {});
@@ -136,6 +138,8 @@ BaseLayerSharedFlags AbstractStyle::doBaseLayerFlags() const {
 }
 
 AbstractStyle& AbstractStyle::setBaseLayerFlags(const BaseLayerSharedFlags add, const BaseLayerSharedFlags clear) {
+    CORRADE_ASSERT(features() >= StyleFeature::BaseLayer,
+        "Ui::AbstractStyle::setBaseLayerFlags(): feature not supported", *this);
     CORRADE_ASSERT(add <= BaseLayerSharedFlag::SubdividedQuads,
         "Ui::AbstractStyle::setBaseLayerFlags():" << (add & ~BaseLayerSharedFlag::SubdividedQuads) << "isn't allowed to be added", *this);
     CORRADE_ASSERT(clear <= (BaseLayerSharedFlag::NoOutline|BaseLayerSharedFlag::NoRoundedCorners),
@@ -198,6 +202,8 @@ UnsignedInt AbstractStyle::doTextLayerDynamicStyleCount() const {
 }
 
 AbstractStyle& AbstractStyle::setTextLayerDynamicStyleCount(const UnsignedInt count) {
+    CORRADE_ASSERT(features() >= StyleFeature::TextLayer,
+        "Ui::AbstractStyle::setTextLayerDynamicStyleCount(): feature not supported", *this);
     _textLayerDynamicStyleCount = count;
     return *this;
 }
@@ -237,6 +243,8 @@ Vector2i AbstractStyle::doTextLayerGlyphCachePadding() const {
 }
 
 AbstractStyle& AbstractStyle::setTextLayerGlyphCacheSize(const Vector3i& size, const Vector2i& padding) {
+    CORRADE_ASSERT(features() >= StyleFeature::TextLayer,
+        "Ui::AbstractStyle::setTextLayerGlyphCacheSize(): feature not supported", *this);
     _textLayerGlyphCacheSize = size;
     _textLayerGlyphCachePadding = padding;
     return *this;
