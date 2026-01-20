@@ -161,6 +161,7 @@ const struct {
         StyleFeature::BaseLayer|
         StyleFeature::TextLayer|
         StyleFeature::EventLayer|
+        StyleFeature::LayoutLayer|
         StyleFeature::SnapLayouter},
 };
 
