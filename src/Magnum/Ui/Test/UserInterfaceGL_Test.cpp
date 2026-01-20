@@ -47,13 +47,22 @@ void UserInterfaceGL_Test::constructNoCreate() {
     CORRADE_COMPARE(ui.windowSize(), Vector2{});
     CORRADE_COMPARE(ui.framebufferSize(), Vector2i{});
 
-    /* Doesn't add any renderer or layers at all, not even ones without GL */
+    /* Doesn't add any renderer, layers, layouters or animators at all, not
+       even ones without GL */
     CORRADE_VERIFY(!ui.hasRendererInstance());
     CORRADE_COMPARE(ui.layerCapacity(), 0);
     CORRADE_COMPARE(ui.layerUsedCount(), 0);
+    CORRADE_COMPARE(ui.layouterCapacity(), 0);
+    CORRADE_COMPARE(ui.layouterUsedCount(), 0);
+    CORRADE_COMPARE(ui.animatorCapacity(), 0);
+    CORRADE_COMPARE(ui.animatorUsedCount(), 0);
     CORRADE_VERIFY(!ui.hasBaseLayer());
+    CORRADE_VERIFY(!ui.hasBaseLayerStyleAnimator());
     CORRADE_VERIFY(!ui.hasTextLayer());
+    CORRADE_VERIFY(!ui.hasTextLayerStyleAnimator());
     CORRADE_VERIFY(!ui.hasEventLayer());
+    CORRADE_VERIFY(!ui.hasLayoutLayer());
+    CORRADE_VERIFY(!ui.hasSnapLayouter());
 }
 
 }}}}

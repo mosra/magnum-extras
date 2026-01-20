@@ -136,11 +136,19 @@ void UserInterfaceTest::construct() {
     } ui{{100, 150}};
 
     CORRADE_COMPARE(ui.size(), (Vector2{100.0f, 150.0f}));
+    CORRADE_VERIFY(!ui.hasRendererInstance());
     CORRADE_COMPARE(ui.layerCapacity(), 0);
     CORRADE_COMPARE(ui.layerUsedCount(), 0);
+    CORRADE_COMPARE(ui.layouterCapacity(), 0);
+    CORRADE_COMPARE(ui.layouterUsedCount(), 0);
+    CORRADE_COMPARE(ui.animatorCapacity(), 0);
+    CORRADE_COMPARE(ui.animatorUsedCount(), 0);
     CORRADE_VERIFY(!ui.hasBaseLayer());
+    CORRADE_VERIFY(!ui.hasBaseLayerStyleAnimator());
     CORRADE_VERIFY(!ui.hasTextLayer());
+    CORRADE_VERIFY(!ui.hasTextLayerStyleAnimator());
     CORRADE_VERIFY(!ui.hasEventLayer());
+    CORRADE_VERIFY(!ui.hasLayoutLayer());
     CORRADE_VERIFY(!ui.hasSnapLayouter());
 }
 
