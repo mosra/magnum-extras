@@ -219,6 +219,7 @@ void UserInterfaceTest::setBaseLayerInstance() {
     struct Interface: UserInterface {
         explicit Interface(NoCreateT): UserInterface{NoCreate} {}
     } ui{NoCreate};
+    const UserInterface& cui = ui;
     CORRADE_COMPARE(ui.layerCapacity(), 0);
     CORRADE_COMPARE(ui.layerUsedCount(), 0);
     CORRADE_VERIFY(!ui.hasBaseLayer());
@@ -238,6 +239,7 @@ void UserInterfaceTest::setBaseLayerInstance() {
     CORRADE_VERIFY(!ui.hasLayoutLayer());
     CORRADE_COMPARE(&ui.layer(handle), pointer);
     CORRADE_COMPARE(&ui.baseLayer(), pointer);
+    CORRADE_COMPARE(&cui.baseLayer(), pointer);
 }
 
 void UserInterfaceTest::setBaseLayerInstanceInvalid() {
@@ -301,6 +303,7 @@ void UserInterfaceTest::setBaseLayerStyleAnimatorInstance() {
     struct Interface: UserInterface {
         explicit Interface(NoCreateT): UserInterface{NoCreate} {}
     } ui{NoCreate};
+    const UserInterface& cui = ui;
     CORRADE_COMPARE(ui.animatorCapacity(), 0);
     CORRADE_COMPARE(ui.animatorUsedCount(), 0);
     CORRADE_VERIFY(!ui.hasBaseLayerStyleAnimator());
@@ -324,6 +327,7 @@ void UserInterfaceTest::setBaseLayerStyleAnimatorInstance() {
     CORRADE_VERIFY(!ui.hasTextLayerStyleAnimator());
     CORRADE_COMPARE(&ui.animator(handle), pointer);
     CORRADE_COMPARE(&ui.baseLayerStyleAnimator(), pointer);
+    CORRADE_COMPARE(&cui.baseLayerStyleAnimator(), pointer);
     /* The default animator gets set even if it already exists */
     CORRADE_COMPARE(ui.baseLayer().defaultStyleAnimator(), pointer);
 }
@@ -411,6 +415,7 @@ void UserInterfaceTest::setTextLayerInstance() {
     struct Interface: UserInterface {
         explicit Interface(NoCreateT): UserInterface{NoCreate} {}
     } ui{NoCreate};
+    const UserInterface& cui = ui;
     CORRADE_COMPARE(ui.layerCapacity(), 0);
     CORRADE_COMPARE(ui.layerUsedCount(), 0);
     CORRADE_VERIFY(!ui.hasBaseLayer());
@@ -430,6 +435,7 @@ void UserInterfaceTest::setTextLayerInstance() {
     CORRADE_VERIFY(!ui.hasLayoutLayer());
     CORRADE_COMPARE(&ui.layer(handle), pointer);
     CORRADE_COMPARE(&ui.textLayer(), pointer);
+    CORRADE_COMPARE(&cui.textLayer(), pointer);
 }
 
 void UserInterfaceTest::setTextLayerInstanceInvalid() {
@@ -508,6 +514,7 @@ void UserInterfaceTest::setTextLayerStyleAnimatorInstance() {
     struct Interface: UserInterface {
         explicit Interface(NoCreateT): UserInterface{NoCreate} {}
     } ui{NoCreate};
+    const UserInterface& cui = ui;
     CORRADE_COMPARE(ui.animatorCapacity(), 0);
     CORRADE_COMPARE(ui.animatorUsedCount(), 0);
     CORRADE_VERIFY(!ui.hasBaseLayerStyleAnimator());
@@ -531,6 +538,7 @@ void UserInterfaceTest::setTextLayerStyleAnimatorInstance() {
     CORRADE_VERIFY(ui.hasTextLayerStyleAnimator());
     CORRADE_COMPARE(&ui.animator(handle), pointer);
     CORRADE_COMPARE(&ui.textLayerStyleAnimator(), pointer);
+    CORRADE_COMPARE(&cui.textLayerStyleAnimator(), pointer);
     /* The default animator gets set even if it already exists */
     CORRADE_COMPARE(ui.textLayer().defaultStyleAnimator(), pointer);
 }
@@ -608,6 +616,7 @@ void UserInterfaceTest::setEventLayerInstance() {
     struct Interface: UserInterface {
         explicit Interface(NoCreateT): UserInterface{NoCreate} {}
     } ui{NoCreate};
+    const UserInterface& cui = ui;
     CORRADE_COMPARE(ui.layerCapacity(), 0);
     CORRADE_COMPARE(ui.layerUsedCount(), 0);
     CORRADE_VERIFY(!ui.hasBaseLayer());
@@ -627,6 +636,7 @@ void UserInterfaceTest::setEventLayerInstance() {
     CORRADE_VERIFY(!ui.hasLayoutLayer());
     CORRADE_COMPARE(&ui.layer(handle), pointer);
     CORRADE_COMPARE(&ui.eventLayer(), pointer);
+    CORRADE_COMPARE(&cui.eventLayer(), pointer);
 }
 
 void UserInterfaceTest::setEventLayerInstanceInvalid() {
@@ -664,6 +674,7 @@ void UserInterfaceTest::setLayoutLayerInstance() {
     struct Interface: UserInterface {
         explicit Interface(NoCreateT): UserInterface{NoCreate} {}
     } ui{NoCreate};
+    const UserInterface& cui = ui;
     CORRADE_COMPARE(ui.layerCapacity(), 0);
     CORRADE_COMPARE(ui.layerUsedCount(), 0);
     CORRADE_VERIFY(!ui.hasBaseLayer());
@@ -683,6 +694,7 @@ void UserInterfaceTest::setLayoutLayerInstance() {
     CORRADE_VERIFY(ui.hasLayoutLayer());
     CORRADE_COMPARE(&ui.layer(handle), pointer);
     CORRADE_COMPARE(&ui.layoutLayer(), pointer);
+    CORRADE_COMPARE(&cui.layoutLayer(), pointer);
 }
 
 void UserInterfaceTest::setLayoutLayerInstanceInvalid() {
@@ -720,6 +732,7 @@ void UserInterfaceTest::setSnapLayouterInstance() {
     struct Interface: UserInterface {
         explicit Interface(NoCreateT): UserInterface{NoCreate} {}
     } ui{NoCreate};
+    const UserInterface& cui = ui;
     CORRADE_COMPARE(ui.layouterCapacity(), 0);
     CORRADE_COMPARE(ui.layouterUsedCount(), 0);
     CORRADE_VERIFY(!ui.hasSnapLayouter());
@@ -735,6 +748,7 @@ void UserInterfaceTest::setSnapLayouterInstance() {
     CORRADE_VERIFY(!ui.hasGenericLayouter());
     CORRADE_COMPARE(&ui.layouter(handle), pointer);
     CORRADE_COMPARE(&ui.snapLayouter(), pointer);
+    CORRADE_COMPARE(&cui.snapLayouter(), pointer);
 }
 
 void UserInterfaceTest::setSnapLayouterInstanceInvalid() {
@@ -772,6 +786,7 @@ void UserInterfaceTest::setGenericLayouterInstance() {
     struct Interface: UserInterface {
         explicit Interface(NoCreateT): UserInterface{NoCreate} {}
     } ui{NoCreate};
+    const UserInterface& cui = ui;
     CORRADE_COMPARE(ui.layouterCapacity(), 0);
     CORRADE_COMPARE(ui.layouterUsedCount(), 0);
     CORRADE_VERIFY(!ui.hasSnapLayouter());
@@ -787,6 +802,7 @@ void UserInterfaceTest::setGenericLayouterInstance() {
     CORRADE_VERIFY(ui.hasGenericLayouter());
     CORRADE_COMPARE(&ui.layouter(handle), pointer);
     CORRADE_COMPARE(&ui.genericLayouter(), pointer);
+    CORRADE_COMPARE(&cui.genericLayouter(), pointer);
 }
 
 void UserInterfaceTest::setGenericLayouterInstanceInvalid() {
