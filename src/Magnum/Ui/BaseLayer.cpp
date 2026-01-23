@@ -110,6 +110,10 @@ BaseLayerSharedFlags BaseLayer::Shared::flags() const {
     return static_cast<const State&>(*_state).flags;
 }
 
+UnsignedInt BaseLayer::Shared::backgroundBlurRadius() const {
+    return static_cast<const State&>(*_state).backgroundBlurRadius;
+}
+
 void BaseLayer::Shared::setStyleInternal(const BaseLayerCommonStyleUniform& commonUniform, const Containers::ArrayView<const BaseLayerStyleUniform> uniforms, const Containers::StridedArrayView1D<const Vector4>& stylePaddings) {
     State& state = static_cast<State&>(*_state);
     CORRADE_ASSERT(uniforms.size() == state.styleUniformCount,

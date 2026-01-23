@@ -1099,11 +1099,14 @@ void BaseLayerTest::sharedConstruct() {
     } shared{BaseLayer::Shared::Configuration{3, 5}
         .setDynamicStyleCount(4)
         .addFlags(BaseLayerSharedFlag::BackgroundBlur)
+        .setBackgroundBlurRadius(13)
     };
     CORRADE_COMPARE(shared.styleUniformCount(), 3);
     CORRADE_COMPARE(shared.styleCount(), 5);
     CORRADE_COMPARE(shared.dynamicStyleCount(), 4);
     CORRADE_COMPARE(shared.flags(), BaseLayerSharedFlag::BackgroundBlur);
+    CORRADE_COMPARE(shared.backgroundBlurRadius(), 13);
+    /** @todo verify also the cutoff once there's a getter */
 }
 
 void BaseLayerTest::sharedConstructNoCreate() {

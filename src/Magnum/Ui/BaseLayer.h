@@ -1569,6 +1569,14 @@ class MAGNUM_UI_EXPORT BaseLayer::Shared: public AbstractVisualLayer::Shared {
         BaseLayerSharedFlags flags() const;
 
         /**
+         * @brief Background blur radius
+         *
+         * Has an effect only if @ref BaseLayerSharedFlag::BackgroundBlur is
+         * present in @ref flags().
+         */
+        UnsignedInt backgroundBlurRadius() const;
+
+        /**
          * @brief Set style data with implicit mapping between styles and uniforms
          * @param commonUniform Common style uniform data
          * @param uniforms      Style uniforms
