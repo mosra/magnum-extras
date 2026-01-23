@@ -182,7 +182,7 @@ const struct {
     {"base layer only", StyleFeature::BaseLayer, StyleFeature::BaseLayer, true, 1, 0, 0, {InPlaceInit, {
         StyleFeature::BaseLayer
     }}, false, false},
-    {"base layer only, everything supported", StyleFeature::BaseLayer, StyleFeature::BaseLayer|StyleFeature::TextLayer|StyleFeature::EventLayer|StyleFeature::SnapLayouter, true, 1, 0, 0, {InPlaceInit, {
+    {"base layer only, everything supported", StyleFeature::BaseLayer, ~StyleFeatures{}, true, 1, 0, 0, {InPlaceInit, {
         StyleFeature::BaseLayer
     }}, false, false},
     {"base layer + animations only", StyleFeature::BaseLayer|StyleFeature::BaseLayerAnimations, StyleFeature::BaseLayer|StyleFeature::BaseLayerAnimations, true, 1, 0, 1, {InPlaceInit, {
@@ -199,7 +199,7 @@ const struct {
     {"text layer only", StyleFeature::TextLayer, StyleFeature::TextLayer, true, 1, 0, 0, {InPlaceInit, {
         StyleFeature::TextLayer
     }}, false, true},
-    {"text layer only, everything supported", StyleFeature::TextLayer, StyleFeature::BaseLayer|StyleFeature::TextLayer|StyleFeature::EventLayer|StyleFeature::SnapLayouter, true, 1, 0, 0, {InPlaceInit, {
+    {"text layer only, everything supported", StyleFeature::TextLayer, ~StyleFeatures{}, true, 1, 0, 0, {InPlaceInit, {
         StyleFeature::TextLayer
     }}, false, true},
     {"text layer + images only", StyleFeature::TextLayer|StyleFeature::TextLayerImages, StyleFeature::TextLayer|StyleFeature::TextLayerImages, true, 1, 0, 0, {InPlaceInit, {
