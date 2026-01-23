@@ -56,6 +56,8 @@ void UserInterfaceGL_Test::constructNoCreate() {
     CORRADE_COMPARE(ui.layouterUsedCount(), 0);
     CORRADE_COMPARE(ui.animatorCapacity(), 0);
     CORRADE_COMPARE(ui.animatorUsedCount(), 0);
+    CORRADE_VERIFY(!ui.hasBackgroundLayer());
+    CORRADE_VERIFY(!ui.hasBackgroundLayerStyleAnimator());
     CORRADE_VERIFY(!ui.hasBaseLayer());
     CORRADE_VERIFY(!ui.hasBaseLayerStyleAnimator());
     CORRADE_VERIFY(!ui.hasTextLayer());

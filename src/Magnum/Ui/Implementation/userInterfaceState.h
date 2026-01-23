@@ -52,6 +52,8 @@ struct UserInterface::State {
     Containers::Optional<PluginManager::Manager<Trade::AbstractImporter>> importerManagerStorage;
     PluginManager::Manager<Trade::AbstractImporter>* importerManager;
 
+    BaseLayer* backgroundLayer{};
+    BaseLayerStyleAnimator* backgroundLayerStyleAnimator{};
     BaseLayer* baseLayer{};
     BaseLayerStyleAnimator* baseLayerStyleAnimator{};
     TextLayer* textLayer{};

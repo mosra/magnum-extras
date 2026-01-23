@@ -53,6 +53,16 @@ struct UserInterfaceTest: TestSuite::Tester {
     void constructCopy();
     void constructMove();
 
+    void setBackgroundLayerInstance();
+    void setBackgroundLayerInstanceInvalid();
+    void backgroundLayerBaseFallback();
+    void backgroundLayerInvalid();
+
+    void setBackgroundLayerStyleAnimatorInstance();
+    void setBackgroundLayerStyleAnimatorInstanceInvalid();
+    void backgroundLayerStyleAnimatorBaseFallback();
+    void backgroundLayerStyleAnimatorInvalid();
+
     void setBaseLayerInstance();
     void setBaseLayerInstanceInvalid();
     void baseLayerInvalid();
@@ -99,6 +109,18 @@ UserInterfaceTest::UserInterfaceTest() {
               &UserInterfaceTest::constructNoCreate,
               &UserInterfaceTest::constructCopy,
               &UserInterfaceTest::constructMove,
+
+              &UserInterfaceTest::setBackgroundLayerInstance,
+              &UserInterfaceTest::setBackgroundLayerInstanceInvalid,
+              &UserInterfaceTest::backgroundLayerBaseFallback,
+              &UserInterfaceTest::backgroundLayerInvalid});
+
+    addInstancedTests({&UserInterfaceTest::setBackgroundLayerStyleAnimatorInstance},
+        Containers::arraySize(SetStyleAnimatorInstanceData));
+
+    addTests({&UserInterfaceTest::setBackgroundLayerStyleAnimatorInstanceInvalid,
+              &UserInterfaceTest::backgroundLayerStyleAnimatorBaseFallback,
+              &UserInterfaceTest::backgroundLayerStyleAnimatorInvalid,
 
               &UserInterfaceTest::setBaseLayerInstance,
               &UserInterfaceTest::setBaseLayerInstanceInvalid,
@@ -152,6 +174,8 @@ void UserInterfaceTest::construct() {
     CORRADE_COMPARE(ui.layouterUsedCount(), 0);
     CORRADE_COMPARE(ui.animatorCapacity(), 0);
     CORRADE_COMPARE(ui.animatorUsedCount(), 0);
+    CORRADE_VERIFY(!ui.hasBackgroundLayer());
+    CORRADE_VERIFY(!ui.hasBackgroundLayerStyleAnimator());
     CORRADE_VERIFY(!ui.hasBaseLayer());
     CORRADE_VERIFY(!ui.hasBaseLayerStyleAnimator());
     CORRADE_VERIFY(!ui.hasTextLayer());
@@ -205,6 +229,343 @@ void UserInterfaceTest::constructMove() {
     CORRADE_VERIFY(std::is_nothrow_move_assignable<UserInterface>::value);
 }
 
+void UserInterfaceTest::setBackgroundLayerInstance() {
+    struct LayerShared: BaseLayer::Shared {
+        explicit LayerShared(const Configuration& configuration): BaseLayer::Shared{configuration} {}
+
+        void doSetStyle(const BaseLayerCommonStyleUniform&, Containers::ArrayView<const BaseLayerStyleUniform>) override {}
+    } shared{BaseLayer::Shared::Configuration{1, 3}};
+
+    struct Layer: BaseLayer {
+        explicit Layer(LayerHandle handle, Shared& shared): BaseLayer{handle, shared} {}
+    };
+
+    struct Interface: UserInterface {
+        explicit Interface(NoCreateT): UserInterface{NoCreate} {}
+    } ui{NoCreate};
+    const UserInterface& cui = ui;
+    CORRADE_COMPARE(ui.layerCapacity(), 0);
+    CORRADE_COMPARE(ui.layerUsedCount(), 0);
+    CORRADE_VERIFY(!ui.hasBackgroundLayer());
+    CORRADE_VERIFY(!ui.hasBaseLayer());
+    CORRADE_VERIFY(!ui.hasTextLayer());
+    CORRADE_VERIFY(!ui.hasEventLayer());
+    CORRADE_VERIFY(!ui.hasLayoutLayer());
+
+    LayerHandle handle = ui.createLayer();
+    Containers::Pointer<Layer> layer{InPlaceInit, handle, shared};
+    Layer* pointer = layer.get();
+    ui.setBackgroundLayerInstance(Utility::move(layer));
+    CORRADE_COMPARE(ui.layerCapacity(), 1);
+    CORRADE_COMPARE(ui.layerUsedCount(), 1);
+    CORRADE_VERIFY(ui.hasBackgroundLayer());
+    CORRADE_VERIFY(!ui.hasBaseLayer());
+    CORRADE_VERIFY(!ui.hasTextLayer());
+    CORRADE_VERIFY(!ui.hasEventLayer());
+    CORRADE_VERIFY(!ui.hasLayoutLayer());
+    CORRADE_COMPARE(&ui.layer(handle), pointer);
+    CORRADE_COMPARE(&ui.backgroundLayer(), pointer);
+    CORRADE_COMPARE(&cui.backgroundLayer(), pointer);
+}
+
+void UserInterfaceTest::setBackgroundLayerInstanceInvalid() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct LayerShared: BaseLayer::Shared {
+        explicit LayerShared(const Configuration& configuration): BaseLayer::Shared{configuration} {}
+
+        void doSetStyle(const BaseLayerCommonStyleUniform&, Containers::ArrayView<const BaseLayerStyleUniform>) override {}
+    } shared{BaseLayer::Shared::Configuration{3, 5}};
+
+    struct Layer: BaseLayer {
+        explicit Layer(LayerHandle handle, Shared& shared): BaseLayer{handle, shared} {}
+    };
+
+    struct Interface: UserInterface {
+        explicit Interface(NoCreateT): UserInterface{NoCreate} {}
+    } ui{NoCreate};
+    ui.setBackgroundLayerInstance(Containers::pointer<Layer>(ui.createLayer(), shared));
+
+    Containers::String out;
+    Error redirectError{&out};
+    ui.setBackgroundLayerInstance(nullptr);
+    ui.setBackgroundLayerInstance(Containers::pointer<Layer>(ui.createLayer(), shared));
+    CORRADE_COMPARE_AS(out,
+        "Ui::UserInterface::setBackgroundLayerInstance(): instance is null\n"
+        "Ui::UserInterface::setBackgroundLayerInstance(): instance already set\n",
+        TestSuite::Compare::String);
+}
+
+void UserInterfaceTest::backgroundLayerBaseFallback() {
+    struct LayerShared: BaseLayer::Shared {
+        explicit LayerShared(const Configuration& configuration): BaseLayer::Shared{configuration} {}
+
+        void doSetStyle(const BaseLayerCommonStyleUniform&, Containers::ArrayView<const BaseLayerStyleUniform>) override {}
+    } shared{BaseLayer::Shared::Configuration{3, 5}};
+
+    struct Layer: BaseLayer {
+        explicit Layer(LayerHandle handle, Shared& shared): BaseLayer{handle, shared} {}
+    };
+
+    struct Interface: UserInterface {
+        explicit Interface(NoCreateT): UserInterface{NoCreate} {}
+    } ui{NoCreate};
+    ui.setBaseLayerInstance(Containers::pointer<Layer>(ui.createLayer(), shared));
+    CORRADE_VERIFY(ui.hasBaseLayer());
+
+    /* The base layer is available through backgroundLayer() as well, even
+       though hasBackgroundLayer() returns false */
+    BaseLayer& baseLayer = ui.baseLayer();
+    CORRADE_VERIFY(!ui.hasBackgroundLayer());
+    CORRADE_COMPARE(&ui.backgroundLayer(), &baseLayer);
+
+    /* Setting a background layer instance with base layer present shouldn't
+       fail, and should replace the instance available through
+       backgroundLayer() */
+    Containers::Pointer<Layer> layer{InPlaceInit, ui.createLayer(), shared};
+    Layer* pointer = layer.get();
+    ui.setBackgroundLayerInstance(Utility::move(layer));
+    CORRADE_VERIFY(ui.hasBackgroundLayer());
+    CORRADE_COMPARE(&ui.baseLayer(), &baseLayer);
+    CORRADE_COMPARE(&ui.backgroundLayer(), pointer);
+
+    /* Going in the other direction, setting base layer *after* background
+       layer shouldn't overwrite the pointer eiter */
+    Interface uiWithBackgroundLayer{NoCreate};
+    uiWithBackgroundLayer.setBackgroundLayerInstance(Containers::pointer<Layer>(uiWithBackgroundLayer.createLayer(), shared));
+    BaseLayer& backgroundLayer = uiWithBackgroundLayer.backgroundLayer();
+    uiWithBackgroundLayer.setBaseLayerInstance(Containers::pointer<Layer>(uiWithBackgroundLayer.createLayer(), shared));
+    CORRADE_VERIFY(uiWithBackgroundLayer.hasBackgroundLayer());
+    CORRADE_VERIFY(uiWithBackgroundLayer.hasBaseLayer());
+    CORRADE_COMPARE(&uiWithBackgroundLayer.backgroundLayer(), &backgroundLayer);
+    CORRADE_VERIFY(&uiWithBackgroundLayer.baseLayer() != &backgroundLayer);
+}
+
+void UserInterfaceTest::backgroundLayerInvalid() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct Interface: UserInterface {
+        explicit Interface(NoCreateT): UserInterface{NoCreate} {}
+    } ui{NoCreate};
+    CORRADE_VERIFY(!ui.hasBackgroundLayer());
+
+    Containers::String out;
+    Error redirectError{&out};
+    ui.backgroundLayer();
+    CORRADE_COMPARE(out, "Ui::UserInterface::backgroundLayer(): no instance set\n");
+}
+
+void UserInterfaceTest::setBackgroundLayerStyleAnimatorInstance() {
+    auto&& data = SetStyleAnimatorInstanceData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
+    struct LayerShared: BaseLayer::Shared {
+        explicit LayerShared(const Configuration& configuration): BaseLayer::Shared{configuration} {}
+
+        void doSetStyle(const BaseLayerCommonStyleUniform&, Containers::ArrayView<const BaseLayerStyleUniform>) override {}
+    } shared{BaseLayer::Shared::Configuration{1, 3}
+        .setDynamicStyleCount(1)
+    };
+
+    struct Layer: BaseLayer {
+        explicit Layer(LayerHandle handle, Shared& shared): BaseLayer{handle, shared} {}
+    };
+
+    struct Interface: UserInterface {
+        explicit Interface(NoCreateT): UserInterface{NoCreate} {}
+    } ui{NoCreate};
+    const UserInterface& cui = ui;
+    CORRADE_COMPARE(ui.animatorCapacity(), 0);
+    CORRADE_COMPARE(ui.animatorUsedCount(), 0);
+    CORRADE_VERIFY(!ui.hasBackgroundLayerStyleAnimator());
+    CORRADE_VERIFY(!ui.hasBaseLayerStyleAnimator());
+    CORRADE_VERIFY(!ui.hasTextLayerStyleAnimator());
+
+    ui.setBackgroundLayerInstance(Containers::pointer<Layer>(ui.createLayer(), shared));
+
+    BaseLayerStyleAnimator anotherAnimator{animatorHandle(0, 1)};
+    if(data.defaultAnimatorAlreadyExists) {
+        ui.backgroundLayer().assignAnimator(anotherAnimator);
+        ui.backgroundLayer().setDefaultStyleAnimator(&anotherAnimator);
+    }
+
+    AnimatorHandle handle = ui.createAnimator();
+    Containers::Pointer<BaseLayerStyleAnimator> animator{InPlaceInit, handle};
+    BaseLayerStyleAnimator* pointer = animator.get();
+    ui.setBackgroundLayerStyleAnimatorInstance(Utility::move(animator));
+    CORRADE_COMPARE(ui.animatorCapacity(), 1);
+    CORRADE_COMPARE(ui.animatorUsedCount(), 1);
+    CORRADE_VERIFY(ui.hasBackgroundLayerStyleAnimator());
+    CORRADE_VERIFY(!ui.hasBaseLayerStyleAnimator());
+    CORRADE_VERIFY(!ui.hasTextLayerStyleAnimator());
+    CORRADE_COMPARE(&ui.animator(handle), pointer);
+    CORRADE_COMPARE(&ui.backgroundLayerStyleAnimator(), pointer);
+    CORRADE_COMPARE(&cui.backgroundLayerStyleAnimator(), pointer);
+    /* The default animator gets set even if it already exists */
+    CORRADE_COMPARE(ui.backgroundLayer().defaultStyleAnimator(), pointer);
+}
+
+void UserInterfaceTest::setBackgroundLayerStyleAnimatorInstanceInvalid() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct LayerShared: BaseLayer::Shared {
+        explicit LayerShared(const Configuration& configuration): BaseLayer::Shared{configuration} {}
+
+        void doSetStyle(const BaseLayerCommonStyleUniform&, Containers::ArrayView<const BaseLayerStyleUniform>) override {}
+    } sharedNoDynamicStyles{BaseLayer::Shared::Configuration{3, 5}},
+      shared{BaseLayer::Shared::Configuration{3, 5}
+        .setDynamicStyleCount(1)};
+
+    struct Layer: BaseLayer {
+        explicit Layer(LayerHandle handle, Shared& shared): BaseLayer{handle, shared} {}
+    };
+
+    struct Interface: UserInterface {
+        explicit Interface(NoCreateT): UserInterface{NoCreate} {}
+    } ui{NoCreate},
+      uiInstanceAlreadySet{NoCreate},
+      uiNoBaseLayer{NoCreate},
+      uiNoDynamicStyles{NoCreate};
+    ui.setBackgroundLayerInstance(Containers::pointer<Layer>(ui.createLayer(), shared));
+    uiInstanceAlreadySet.setBackgroundLayerInstance(Containers::pointer<Layer>(uiInstanceAlreadySet.createLayer(), shared));
+    uiInstanceAlreadySet.setBackgroundLayerStyleAnimatorInstance(Containers::pointer<BaseLayerStyleAnimator>(uiInstanceAlreadySet.createAnimator()));
+    uiNoDynamicStyles.setBackgroundLayerInstance(Containers::pointer<Layer>(uiNoDynamicStyles.createLayer(), sharedNoDynamicStyles));
+
+    BaseLayer& anotherLayer = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer(), shared));
+
+    Containers::Pointer<BaseLayerStyleAnimator> alreadyAssigned{InPlaceInit, animatorHandle(0, 1)};
+    anotherLayer.assignAnimator(*alreadyAssigned);
+
+    Containers::String out;
+    Error redirectError{&out};
+    ui.setBackgroundLayerStyleAnimatorInstance(nullptr);
+    uiInstanceAlreadySet.setBackgroundLayerStyleAnimatorInstance(Containers::pointer<BaseLayerStyleAnimator>(ui.createAnimator()));
+    uiNoBaseLayer.setBackgroundLayerStyleAnimatorInstance(Containers::pointer<BaseLayerStyleAnimator>(uiNoBaseLayer.createAnimator()));
+    uiNoDynamicStyles.setBackgroundLayerStyleAnimatorInstance(Containers::pointer<BaseLayerStyleAnimator>(uiNoDynamicStyles.createAnimator()));
+    ui.setBackgroundLayerStyleAnimatorInstance(Utility::move(alreadyAssigned));
+    CORRADE_COMPARE_AS(out,
+        "Ui::UserInterface::setBackgroundLayerStyleAnimatorInstance(): instance is null\n"
+        "Ui::UserInterface::setBackgroundLayerStyleAnimatorInstance(): instance already set\n"
+        "Ui::UserInterface::setBackgroundLayerStyleAnimatorInstance(): background layer instance not set\n"
+        "Ui::UserInterface::setBackgroundLayerStyleAnimatorInstance(): can't animate a background layer with zero dynamic styles\n"
+        "Ui::UserInterface::setBackgroundLayerStyleAnimatorInstance(): instance already assigned to Ui::LayerHandle(0x1, 0x1)\n",
+        TestSuite::Compare::String);
+}
+
+void UserInterfaceTest::backgroundLayerStyleAnimatorBaseFallback() {
+    struct LayerShared: BaseLayer::Shared {
+        explicit LayerShared(const Configuration& configuration): BaseLayer::Shared{configuration} {}
+
+        void doSetStyle(const BaseLayerCommonStyleUniform&, Containers::ArrayView<const BaseLayerStyleUniform>) override {}
+    } shared{BaseLayer::Shared::Configuration{3, 5}
+        .setDynamicStyleCount(1)};
+
+    struct Layer: BaseLayer {
+        explicit Layer(LayerHandle handle, Shared& shared): BaseLayer{handle, shared} {}
+    };
+
+    struct Interface: UserInterface {
+        explicit Interface(NoCreateT): UserInterface{NoCreate} {}
+    } ui{NoCreate};
+    ui.setBaseLayerInstance(Containers::pointer<Layer>(ui.createLayer(), shared));
+    ui.setBaseLayerStyleAnimatorInstance(Containers::pointer<BaseLayerStyleAnimator>(ui.createAnimator()));;
+    CORRADE_VERIFY(ui.hasBaseLayer());
+    CORRADE_VERIFY(ui.hasBaseLayerStyleAnimator());
+
+    /* The base layer style animator is available through
+       backgroundLayerStyleAnimator() as well, even though
+       hasBackgroundLayerStyleAnimator() returns false */
+    BaseLayerStyleAnimator& baseLayerStyleAnimator = ui.baseLayerStyleAnimator();
+    CORRADE_VERIFY(!ui.hasBackgroundLayerStyleAnimator());
+    CORRADE_COMPARE(&ui.backgroundLayerStyleAnimator(), &baseLayerStyleAnimator);
+
+    /* Setting a background layer style animator instance with base layer and
+       base layer animator present shouldn't fail, and should replace the
+       instance available through backgroundLayerStyleAnimator() */
+    ui.setBackgroundLayerInstance(Containers::pointer<Layer>(ui.createLayer(), shared));
+    Containers::Pointer<BaseLayerStyleAnimator> animator{InPlaceInit, ui.createAnimator()};
+    BaseLayerStyleAnimator* pointer = animator.get();
+    ui.setBackgroundLayerStyleAnimatorInstance(Utility::move(animator));
+    CORRADE_VERIFY(ui.hasBackgroundLayerStyleAnimator());
+    CORRADE_COMPARE(&ui.baseLayerStyleAnimator(), &baseLayerStyleAnimator);
+    CORRADE_COMPARE(&ui.backgroundLayerStyleAnimator(), pointer);
+
+    /* Going in the other direction, setting base layer style animator *after*
+       background layer style animator shouldn't overwrite the pointer eiter */
+    Interface uiWithBackgroundLayerStyleAnimator{NoCreate};
+    uiWithBackgroundLayerStyleAnimator.setBackgroundLayerInstance(Containers::pointer<Layer>(uiWithBackgroundLayerStyleAnimator.createLayer(), shared));
+    uiWithBackgroundLayerStyleAnimator.setBackgroundLayerStyleAnimatorInstance(Containers::pointer<BaseLayerStyleAnimator>(uiWithBackgroundLayerStyleAnimator.createAnimator()));
+    BaseLayerStyleAnimator& backgroundLayerStyleAnimator = uiWithBackgroundLayerStyleAnimator.backgroundLayerStyleAnimator();
+    uiWithBackgroundLayerStyleAnimator.setBaseLayerInstance(Containers::pointer<Layer>(uiWithBackgroundLayerStyleAnimator.createLayer(), shared));
+    uiWithBackgroundLayerStyleAnimator.setBaseLayerStyleAnimatorInstance(Containers::pointer<BaseLayerStyleAnimator>(uiWithBackgroundLayerStyleAnimator.createAnimator()));
+    CORRADE_VERIFY(uiWithBackgroundLayerStyleAnimator.hasBackgroundLayerStyleAnimator());
+    CORRADE_VERIFY(uiWithBackgroundLayerStyleAnimator.hasBaseLayerStyleAnimator());
+    CORRADE_COMPARE(&uiWithBackgroundLayerStyleAnimator.backgroundLayerStyleAnimator(), &backgroundLayerStyleAnimator);
+    CORRADE_VERIFY(&uiWithBackgroundLayerStyleAnimator.baseLayerStyleAnimator() != &backgroundLayerStyleAnimator);
+}
+
+void UserInterfaceTest::backgroundLayerStyleAnimatorInvalid() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct LayerShared: BaseLayer::Shared {
+        explicit LayerShared(const Configuration& configuration): BaseLayer::Shared{configuration} {}
+
+        void doSetStyle(const BaseLayerCommonStyleUniform&, Containers::ArrayView<const BaseLayerStyleUniform>) override {}
+    } shared{BaseLayer::Shared::Configuration{3, 5}
+        .setDynamicStyleCount(1)};
+
+    struct Layer: BaseLayer {
+        explicit Layer(LayerHandle handle, Shared& shared): BaseLayer{handle, shared} {}
+    };
+
+    struct Interface: UserInterface {
+        explicit Interface(NoCreateT): UserInterface{NoCreate} {}
+    } ui{NoCreate},
+      uiWithBaseLayerButNoAnimator{NoCreate},
+      uiWithBaseLayerAnimatorAndBackgroundLayerButNoBackgroundAnimator{NoCreate};
+    uiWithBaseLayerButNoAnimator.setBaseLayerInstance(Containers::pointer<Layer>(uiWithBaseLayerButNoAnimator.createLayer(), shared));
+    uiWithBaseLayerAnimatorAndBackgroundLayerButNoBackgroundAnimator.setBaseLayerInstance(Containers::pointer<Layer>(uiWithBaseLayerAnimatorAndBackgroundLayerButNoBackgroundAnimator.createLayer(), shared));
+    uiWithBaseLayerAnimatorAndBackgroundLayerButNoBackgroundAnimator.setBaseLayerStyleAnimatorInstance(Containers::pointer<BaseLayerStyleAnimator>(uiWithBaseLayerAnimatorAndBackgroundLayerButNoBackgroundAnimator.createAnimator()));
+    uiWithBaseLayerAnimatorAndBackgroundLayerButNoBackgroundAnimator.setBackgroundLayerInstance(Containers::pointer<Layer>(uiWithBaseLayerAnimatorAndBackgroundLayerButNoBackgroundAnimator.createLayer(), shared));
+
+    /* Obvious cases */
+    CORRADE_VERIFY(!ui.hasBackgroundLayerStyleAnimator());
+    CORRADE_VERIFY(!uiWithBaseLayerButNoAnimator.hasBackgroundLayerStyleAnimator());
+
+    /* If there's base layer with an animator and also a background layer but
+       with no animator, it should fail (and assert) as well */
+    CORRADE_VERIFY(!uiWithBaseLayerButNoAnimator.hasBackgroundLayerStyleAnimator());
+    CORRADE_VERIFY(uiWithBaseLayerAnimatorAndBackgroundLayerButNoBackgroundAnimator.hasBaseLayer());
+    CORRADE_VERIFY(uiWithBaseLayerAnimatorAndBackgroundLayerButNoBackgroundAnimator.hasBaseLayerStyleAnimator());
+    CORRADE_VERIFY(uiWithBaseLayerAnimatorAndBackgroundLayerButNoBackgroundAnimator.hasBackgroundLayer());
+    CORRADE_VERIFY(!uiWithBaseLayerAnimatorAndBackgroundLayerButNoBackgroundAnimator.hasBackgroundLayerStyleAnimator());
+
+    /* If there's a background layer without an animator, and *then* a base
+       layer animator is set, it shouldn't make the base layer animator act as
+       if it belongs to the background layer */
+    Interface uiWithBackgroundLayer{NoCreate};
+    uiWithBackgroundLayer.setBackgroundLayerInstance(Containers::pointer<Layer>(uiWithBackgroundLayer.createLayer(), shared));
+    uiWithBackgroundLayer.setBaseLayerInstance(Containers::pointer<Layer>(uiWithBackgroundLayer.createLayer(), shared));
+    /* It's important that this is called *after* setBackgroundLayerInstance(),
+       not before, to verify the edge case */
+    uiWithBackgroundLayer.setBaseLayerStyleAnimatorInstance(Containers::pointer<BaseLayerStyleAnimator>(uiWithBackgroundLayer.createAnimator()));
+    CORRADE_VERIFY(uiWithBackgroundLayer.hasBaseLayerStyleAnimator());
+    CORRADE_VERIFY(!uiWithBackgroundLayer.hasBackgroundLayerStyleAnimator());
+
+    Containers::String out;
+    Error redirectError{&out};
+    ui.backgroundLayerStyleAnimator();
+    uiWithBaseLayerButNoAnimator.backgroundLayerStyleAnimator();
+    uiWithBaseLayerAnimatorAndBackgroundLayerButNoBackgroundAnimator.backgroundLayerStyleAnimator();
+    uiWithBackgroundLayer.backgroundLayerStyleAnimator();
+    CORRADE_COMPARE_AS(out,
+        "Ui::UserInterface::backgroundLayerStyleAnimator(): no instance set\n"
+        "Ui::UserInterface::backgroundLayerStyleAnimator(): no instance set\n"
+        "Ui::UserInterface::backgroundLayerStyleAnimator(): no instance set\n"
+        "Ui::UserInterface::backgroundLayerStyleAnimator(): no instance set\n",
+        TestSuite::Compare::String);
+}
+
 void UserInterfaceTest::setBaseLayerInstance() {
     struct LayerShared: BaseLayer::Shared {
         explicit LayerShared(const Configuration& configuration): BaseLayer::Shared{configuration} {}
@@ -222,6 +583,7 @@ void UserInterfaceTest::setBaseLayerInstance() {
     const UserInterface& cui = ui;
     CORRADE_COMPARE(ui.layerCapacity(), 0);
     CORRADE_COMPARE(ui.layerUsedCount(), 0);
+    CORRADE_VERIFY(!ui.hasBackgroundLayer());
     CORRADE_VERIFY(!ui.hasBaseLayer());
     CORRADE_VERIFY(!ui.hasTextLayer());
     CORRADE_VERIFY(!ui.hasEventLayer());
@@ -233,6 +595,7 @@ void UserInterfaceTest::setBaseLayerInstance() {
     ui.setBaseLayerInstance(Utility::move(layer));
     CORRADE_COMPARE(ui.layerCapacity(), 1);
     CORRADE_COMPARE(ui.layerUsedCount(), 1);
+    CORRADE_VERIFY(!ui.hasBackgroundLayer());
     CORRADE_VERIFY(ui.hasBaseLayer());
     CORRADE_VERIFY(!ui.hasTextLayer());
     CORRADE_VERIFY(!ui.hasEventLayer());
@@ -306,6 +669,7 @@ void UserInterfaceTest::setBaseLayerStyleAnimatorInstance() {
     const UserInterface& cui = ui;
     CORRADE_COMPARE(ui.animatorCapacity(), 0);
     CORRADE_COMPARE(ui.animatorUsedCount(), 0);
+    CORRADE_VERIFY(!ui.hasBackgroundLayerStyleAnimator());
     CORRADE_VERIFY(!ui.hasBaseLayerStyleAnimator());
     CORRADE_VERIFY(!ui.hasTextLayerStyleAnimator());
 
@@ -323,6 +687,7 @@ void UserInterfaceTest::setBaseLayerStyleAnimatorInstance() {
     ui.setBaseLayerStyleAnimatorInstance(Utility::move(animator));
     CORRADE_COMPARE(ui.animatorCapacity(), 1);
     CORRADE_COMPARE(ui.animatorUsedCount(), 1);
+    CORRADE_VERIFY(!ui.hasBackgroundLayerStyleAnimator());
     CORRADE_VERIFY(ui.hasBaseLayerStyleAnimator());
     CORRADE_VERIFY(!ui.hasTextLayerStyleAnimator());
     CORRADE_COMPARE(&ui.animator(handle), pointer);
@@ -418,6 +783,7 @@ void UserInterfaceTest::setTextLayerInstance() {
     const UserInterface& cui = ui;
     CORRADE_COMPARE(ui.layerCapacity(), 0);
     CORRADE_COMPARE(ui.layerUsedCount(), 0);
+    CORRADE_VERIFY(!ui.hasBackgroundLayer());
     CORRADE_VERIFY(!ui.hasBaseLayer());
     CORRADE_VERIFY(!ui.hasTextLayer());
     CORRADE_VERIFY(!ui.hasEventLayer());
@@ -429,6 +795,7 @@ void UserInterfaceTest::setTextLayerInstance() {
     ui.setTextLayerInstance(Utility::move(layer));
     CORRADE_COMPARE(ui.layerCapacity(), 1);
     CORRADE_COMPARE(ui.layerUsedCount(), 1);
+    CORRADE_VERIFY(!ui.hasBackgroundLayer());
     CORRADE_VERIFY(!ui.hasBaseLayer());
     CORRADE_VERIFY(ui.hasTextLayer());
     CORRADE_VERIFY(!ui.hasEventLayer());
@@ -517,6 +884,7 @@ void UserInterfaceTest::setTextLayerStyleAnimatorInstance() {
     const UserInterface& cui = ui;
     CORRADE_COMPARE(ui.animatorCapacity(), 0);
     CORRADE_COMPARE(ui.animatorUsedCount(), 0);
+    CORRADE_VERIFY(!ui.hasBackgroundLayerStyleAnimator());
     CORRADE_VERIFY(!ui.hasBaseLayerStyleAnimator());
     CORRADE_VERIFY(!ui.hasTextLayerStyleAnimator());
 
@@ -534,6 +902,7 @@ void UserInterfaceTest::setTextLayerStyleAnimatorInstance() {
     ui.setTextLayerStyleAnimatorInstance(Utility::move(animator));
     CORRADE_COMPARE(ui.animatorCapacity(), 1);
     CORRADE_COMPARE(ui.animatorUsedCount(), 1);
+    CORRADE_VERIFY(!ui.hasBackgroundLayerStyleAnimator());
     CORRADE_VERIFY(!ui.hasBaseLayerStyleAnimator());
     CORRADE_VERIFY(ui.hasTextLayerStyleAnimator());
     CORRADE_COMPARE(&ui.animator(handle), pointer);
@@ -619,6 +988,7 @@ void UserInterfaceTest::setEventLayerInstance() {
     const UserInterface& cui = ui;
     CORRADE_COMPARE(ui.layerCapacity(), 0);
     CORRADE_COMPARE(ui.layerUsedCount(), 0);
+    CORRADE_VERIFY(!ui.hasBackgroundLayer());
     CORRADE_VERIFY(!ui.hasBaseLayer());
     CORRADE_VERIFY(!ui.hasTextLayer());
     CORRADE_VERIFY(!ui.hasEventLayer());
@@ -630,6 +1000,7 @@ void UserInterfaceTest::setEventLayerInstance() {
     ui.setEventLayerInstance(Utility::move(layer));
     CORRADE_COMPARE(ui.layerCapacity(), 1);
     CORRADE_COMPARE(ui.layerUsedCount(), 1);
+    CORRADE_VERIFY(!ui.hasBackgroundLayer());
     CORRADE_VERIFY(!ui.hasBaseLayer());
     CORRADE_VERIFY(!ui.hasTextLayer());
     CORRADE_VERIFY(ui.hasEventLayer());
@@ -677,6 +1048,7 @@ void UserInterfaceTest::setLayoutLayerInstance() {
     const UserInterface& cui = ui;
     CORRADE_COMPARE(ui.layerCapacity(), 0);
     CORRADE_COMPARE(ui.layerUsedCount(), 0);
+    CORRADE_VERIFY(!ui.hasBackgroundLayer());
     CORRADE_VERIFY(!ui.hasBaseLayer());
     CORRADE_VERIFY(!ui.hasTextLayer());
     CORRADE_VERIFY(!ui.hasEventLayer());
@@ -688,6 +1060,7 @@ void UserInterfaceTest::setLayoutLayerInstance() {
     ui.setLayoutLayerInstance(Utility::move(layer));
     CORRADE_COMPARE(ui.layerCapacity(), 1);
     CORRADE_COMPARE(ui.layerUsedCount(), 1);
+    CORRADE_VERIFY(!ui.hasBackgroundLayer());
     CORRADE_VERIFY(!ui.hasBaseLayer());
     CORRADE_VERIFY(!ui.hasTextLayer());
     CORRADE_VERIFY(!ui.hasEventLayer());

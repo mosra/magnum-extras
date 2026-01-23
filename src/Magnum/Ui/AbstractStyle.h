@@ -52,13 +52,46 @@ namespace Magnum { namespace Ui {
 */
 enum class StyleFeature: UnsignedShort {
     /**
+     * Background layer style. Ensures a background @ref BaseLayer instance
+     * with a compatible @ref BaseLayer::Shared state is set up on the
+     * @ref UserInterface, the style implementation then calls
+     * @relativeref{BaseLayer::Shared,setStyle()} and
+     * @relativeref{BaseLayer::Shared,setStyleTransition()} on it.
+     *
+     * If @ref StyleFeature::BaseLayer is supplied but
+     * @ref StyleFeature::BackgroundLayer not, the base layer is used for
+     * backgrounds as well.
+     * @see @ref UserInterface::backgroundLayer(),
+     *      @ref UserInterface::hasBackgroundLayer()
+     */
+    BackgroundLayer = 1 << 0,
+
+    /**
+     * Background layer animations using @ref BaseLayerStyleAnimator. Can only
+     * be used with @ref AbstractStyle::apply() if a background
+     * @ref BaseLayerStyleAnimator instance is already set up on the
+     * @ref UserInterface; can only be used with @ref UserInterfaceGL::setStyle()
+     * / @relativeref{UserInterfaceGL,trySetStyle()} if set together with
+     * @ref StyleFeature::BackgroundLayer or if a background
+     * @ref BaseLayerStyleAnimator instance is already set up on the
+     * @ref UserInterface.
+     *
+     * If @ref StyleFeature::BaseLayer is supplied but
+     * @ref StyleFeature::BackgroundLayer not, the base layer, along with any
+     * animations, is used for backgrounds as well.
+     * @see @ref UserInterface::backgroundLayerStyleAnimator(),
+     *      @ref UserInterface::hasBackgroundLayerStyleAnimator()
+     */
+    BackgroundLayerAnimations = 1 << 1,
+
+    /**
      * Base layer style. Ensures a @ref BaseLayer instance with a compatible
      * @ref BaseLayer::Shared state is set up on the @ref UserInterface, the
      * style implementation then calls @relativeref{BaseLayer::Shared,setStyle()}
      * and @relativeref{BaseLayer::Shared,setStyleTransition()} on it.
      * @see @ref UserInterface::baseLayer(), @ref UserInterface::hasBaseLayer()
      */
-    BaseLayer = 1 << 0,
+    BaseLayer = 1 << 2,
 
     /**
      * Base layer animations using @ref BaseLayerStyleAnimator. Can only be
@@ -71,7 +104,7 @@ enum class StyleFeature: UnsignedShort {
      * @see @ref UserInterface::baseLayerStyleAnimator(),
      *      @ref UserInterface::hasBaseLayerStyleAnimator()
      */
-    BaseLayerAnimations = 1 << 1,
+    BaseLayerAnimations = 1 << 3,
 
     /**
      * Text layer style and fonts. Ensures a @ref TextLayer instance with a
@@ -82,7 +115,7 @@ enum class StyleFeature: UnsignedShort {
      * @relativeref{TextLayer::Shared,setStyleTransition()} on it.
      * @see @ref UserInterface::textLayer(), @ref UserInterface::hasTextLayer()
      */
-    TextLayer = 1 << 2,
+    TextLayer = 1 << 4,
 
     /**
      * Additional images such as icons for use with
@@ -94,7 +127,7 @@ enum class StyleFeature: UnsignedShort {
      * @ref StyleFeature::TextLayer or if a @ref TextLayer instance is already
      * set up on the @ref UserInterface.
      */
-    TextLayerImages = 1 << 3,
+    TextLayerImages = 1 << 5,
 
     /**
      * Text layer animations using @ref TextLayerStyleAnimator. Can only be
@@ -107,7 +140,7 @@ enum class StyleFeature: UnsignedShort {
      * @see @ref UserInterface::textLayerStyleAnimator(),
      *      @ref UserInterface::hasTextLayerStyleAnimator()
      */
-    TextLayerAnimations = 1 << 4,
+    TextLayerAnimations = 1 << 6,
 
     /**
      * Event layer style. Ensures an @ref EventLayer instance is set up on the
@@ -115,7 +148,7 @@ enum class StyleFeature: UnsignedShort {
      * @see @ref UserInterface::eventLayer(),
      *      @ref UserInterface::hasEventLayer()
      */
-    EventLayer = 1 << 5,
+    EventLayer = 1 << 7,
 
     /**
      * Layout layer style. Ensures a @ref LayoutLayer instance is set up on the
@@ -123,7 +156,7 @@ enum class StyleFeature: UnsignedShort {
      * @see @ref UserInterface::layoutLayer(),
      *      @ref UserInterface::hasLayoutLayer()
      */
-    LayoutLayer = 1 << 6,
+    LayoutLayer = 1 << 8,
 
     /**
      * Snap layouter style. Ensures a @ref SnapLayouter instance is set up on
@@ -131,7 +164,7 @@ enum class StyleFeature: UnsignedShort {
      * @see @ref UserInterface::snapLayouter(),
      *      @ref UserInterface::hasSnapLayouter()
      */
-    SnapLayouter = 1 << 7,
+    SnapLayouter = 1 << 9,
 
     /**
      * Generic layouter style. Ensures a @ref GenericLayouter instance is set
@@ -139,7 +172,7 @@ enum class StyleFeature: UnsignedShort {
      * @see @ref UserInterface::genericLayouter(),
      *      @ref UserInterface::hasGenericLayouter()
      */
-    GenericLayouter = 1 << 8
+    GenericLayouter = 1 << 10
 };
 
 /**
@@ -157,7 +190,9 @@ MAGNUM_UI_EXPORT Debug& operator<<(Debug& debug, StyleFeature value);
 */
 typedef Containers::EnumSet<StyleFeature
     #ifndef DOXYGEN_GENERATING_OUTPUT
-    , UnsignedInt(StyleFeature::BaseLayer)|
+    , UnsignedInt(StyleFeature::BackgroundLayer)|
+      UnsignedInt(StyleFeature::BackgroundLayerAnimations)|
+      UnsignedInt(StyleFeature::BaseLayer)|
       UnsignedInt(StyleFeature::BaseLayerAnimations)|
       UnsignedInt(StyleFeature::TextLayer)|
       UnsignedInt(StyleFeature::TextLayerImages)|
@@ -207,6 +242,107 @@ class MAGNUM_UI_EXPORT AbstractStyle {
          * Guaranteed to return at least one @ref StyleFeature.
          */
         StyleFeatures features() const;
+
+        /**
+         * @brief Style uniform count for the background layer
+         *
+         * Expects that @ref StyleFeature::BackgroundLayer is supported. The
+         * returned value is passed to background layer's
+         * @ref BaseLayer::Shared::Configuration::Configuration(UnsignedInt, UnsignedInt)
+         * constructor by @ref UserInterfaceGL::setStyle().
+         * @see @ref backgroundLayerStyleCount(),
+         *      @ref backgroundLayerDynamicStyleCount(), @ref features()
+         */
+        UnsignedInt backgroundLayerStyleUniformCount() const;
+
+        /**
+         * @brief Style count for the background layer
+         *
+         * Expects that @ref StyleFeature::BackgroundLayer is supported. The
+         * returned value is passed to background layer's
+         * @ref BaseLayer::Shared::Configuration::Configuration(UnsignedInt, UnsignedInt)
+         * constructor by @ref UserInterfaceGL::setStyle().
+         * @see @ref backgroundLayerStyleUniformCount(),
+         *      @ref backgroundLayerDynamicStyleCount(), @ref features()
+         */
+        UnsignedInt backgroundLayerStyleCount() const;
+
+        /**
+         * @brief Dynamic style count for the background layer
+         *
+         * Expects that @ref StyleFeature::BackgroundLayer is supported. The
+         * returned value is passed to background layer's
+         * @ref BaseLayer::Shared::Configuration::setDynamicStyleCount()
+         * by @ref UserInterfaceGL::setStyle(). Call
+         * @ref setBackgroundLayerDynamicStyleCount() to increase the count if
+         * needed.
+         * @see @ref backgroundLayerStyleUniformCount(),
+         *      @ref backgroundLayerStyleCount(), @ref features()
+         */
+        UnsignedInt backgroundLayerDynamicStyleCount() const;
+
+        /**
+         * @brief Request more background layer dynamic styles
+         * @return Reference to self (for method chaining)
+         *
+         * Expects that @ref StyleFeature::BackgroundLayer is supported. Call
+         * this function if the dynamic style count requested by the style
+         * isn't enough for extra animations and other dynamic style features
+         * used by the application. The used count will be a maximum of what
+         * the style itself returned and what was requested with this function.
+         * @see @ref backgroundLayerDynamicStyleCount(), @ref features()
+         */
+        AbstractStyle& setBackgroundLayerDynamicStyleCount(UnsignedInt count);
+
+        /**
+         * @brief Additional flags for the background layer
+         *
+         * Expects that @ref StyleFeature::BackgroundLayer is supported. The
+         * returned value is passed to background layer's
+         * @ref BaseLayer::Shared::Configuration::setFlags() by
+         * @ref UserInterfaceGL::setStyle(). Call @ref setBackgroundLayerFlags()
+         * to supply additional flags to add or clear from the set if needed.
+         */
+        BaseLayerSharedFlags backgroundLayerFlags() const;
+
+        /**
+         * @brief Set additional background layer flags
+         * @return Reference to self (for method chaining)
+         *
+         * Expects that @ref StyleFeature::BackgroundLayer is supported, @p add
+         * is a subset of @ref BaseLayerSharedFlag::SubdividedQuads, and
+         * @p clear is a subset of @ref BaseLayerSharedFlag::BackgroundBlur,
+         * @relativeref{BaseLayerSharedFlag,NoRoundedCorners} and
+         * @relativeref{BaseLayerSharedFlag,NoOutline}. Flags used are a
+         * union of what the style itself returned and what was requested in
+         * @p add, with everything in @p clear cleared from the set.
+         * @see @ref backgroundLayerFlags(), @ref features()
+         */
+        AbstractStyle& setBackgroundLayerFlags(BaseLayerSharedFlags add, BaseLayerSharedFlags clear);
+
+        /**
+         * @brief Background blur radius
+         *
+         * Expects that @ref StyleFeature::BackgroundLayer is supported. The
+         * returned value is passed to background layer's
+         * @ref BaseLayer::Shared::Configuration::setBackgroundBlurRadius() by
+         * @ref UserInterfaceGL::setStyle() and has an effect only if
+         * @ref BaseLayerSharedFlag::BackgroundBlur is present in
+         * @ref backgroundLayerFlags().
+         */
+        UnsignedInt backgroundLayerBlurRadius() const;
+
+        /**
+         * @brief Background blur sampling cutoff
+         *
+         * Expects that @ref StyleFeature::BackgroundLayer is supported. The
+         * returned value is passed to background layer's
+         * @ref BaseLayer::Shared::Configuration::setBackgroundBlurRadius() by
+         * @ref UserInterfaceGL::setStyle() and has an effect only if
+         * @ref BaseLayerSharedFlag::BackgroundBlur is present in
+         * @ref backgroundLayerFlags().
+         */
+        Float backgroundLayerBlurCutoff() const;
 
         /**
          * @brief Style uniform count for the base layer
@@ -476,25 +612,27 @@ class MAGNUM_UI_EXPORT AbstractStyle {
          * least one feature, that @p ui already contains all layers, layouters
          * and animators corresponding to @p features, that the layer shared
          * state style uniform and style count matches the subset of
-         * @ref baseLayerStyleUniformCount(), @ref baseLayerStyleCount(),
-         * @ref textLayerStyleUniformCount(), @ref textLayerStyleCount(),
-         * @ref textLayerEditingStyleUniformCount(),
+         * @ref backgroundLayerStyleUniformCount(),
+         * @ref backgroundLayerStyleCount(), @ref baseLayerStyleUniformCount(),
+         * @ref baseLayerStyleCount(), @ref textLayerStyleUniformCount(),
+         * @ref textLayerStyleCount(), @ref textLayerEditingStyleUniformCount(),
          * @ref textLayerEditingStyleCount(), @ref layoutLayerStyleCount()
          * matching @p features and the layer shared state dynamic style count
-         * is at least the subset of @ref baseLayerDynamicStyleCount(),
-         * @ref textLayerDynamicStyleCount() matching @p features.
-         * Additionally, if @ref StyleFeature::TextLayer is present in
-         * @p features, expects that the @ref TextLayer::Shared instance has a
-         * glyph cache set that matches @ref textLayerGlyphCacheFormat(), has
-         * size at least @ref textLayerGlyphCacheSize() for @p features and
-         * padding at least @ref textLayerGlyphCachePadding() and that
-         * @p fontManager is not @cpp nullptr @ce; and if
-         * @ref StyleFeature::TextLayerImages is present in @p features,
-         * expects that either the @ref TextLayer is already present in the
-         * user interface or that @ref StyleFeature::TextLayer is included in
-         * @p features as well, and that @p importerManager is not
-         * @cpp nullptr @ce. Returns @cpp true @ce on success, prints a message
-         * to @relativeref{Magnum,Error} and returns @cpp false @ce if some
+         * is at least the subset of @ref backgroundLayerDynamicStyleCount(),
+         * @ref baseLayerDynamicStyleCount(), @ref textLayerDynamicStyleCount()
+         * matching @p features. Additionally, if @ref StyleFeature::TextLayer
+         * is present in @p features, expects that the @ref TextLayer::Shared
+         * instance has a glyph cache set that matches
+         * @ref textLayerGlyphCacheFormat(), has size at least
+         * @ref textLayerGlyphCacheSize() for @p features and padding at least
+         * @ref textLayerGlyphCachePadding() and that @p fontManager is not
+         * @cpp nullptr @ce; and if @ref StyleFeature::TextLayerImages is
+         * present in @p features, expects that either the @ref TextLayer is
+         * already present in the user interface or that
+         * @ref StyleFeature::TextLayer is included in @p features as well, and
+         * that @p importerManager is not @cpp nullptr @ce. Returns
+         * @cpp true @ce on success, prints a message to
+         * @relativeref{Magnum,Error} and returns @cpp false @ce if some
          * run-time error happened during style preparation, such as a plugin
          * not being found or external data failing to load.
          */
@@ -507,6 +645,69 @@ class MAGNUM_UI_EXPORT AbstractStyle {
          * Is expected to return at least one @ref StyleFeature.
          */
         virtual StyleFeatures doFeatures() const = 0;
+
+        /**
+         * @brief Implementation for @ref backgroundLayerStyleUniformCount()
+         *
+         * Guaranteed to be called only if @ref doFeatures() contains
+         * @ref StyleFeature::BackgroundLayer. Default implementation delegates
+         * to @ref doBackgroundLayerStyleCount().
+         */
+        virtual UnsignedInt doBackgroundLayerStyleUniformCount() const;
+
+        /**
+         * @brief Implementation for @ref backgroundLayerStyleCount()
+         *
+         * Guaranteed to be called only if @ref doFeatures() contains
+         * @ref StyleFeature::BackgroundLayer. Has to be implemented if
+         * @ref doFeatures() contains @ref StyleFeature::BackgroundLayer.
+         */
+        virtual UnsignedInt doBackgroundLayerStyleCount() const;
+
+        /**
+         * @brief Implementation for @ref backgroundLayerDynamicStyleCount()
+         *
+         * Guaranteed to be called only if @ref doFeatures() contains
+         * @ref StyleFeature::BackgroundLayer. Default implementation returns
+         * @cpp 0 @ce. If @ref StyleFeature::BackgroundLayerAnimations is
+         * present in @ref doFeatures(), expects that the implementation
+         * returns at least one dynamic style.
+         */
+        virtual UnsignedInt doBackgroundLayerDynamicStyleCount() const;
+
+        /**
+         * @brief Implementation for @ref backgroundLayerFlags()
+         *
+         * Guaranteed to be called only if @ref doFeatures() contains
+         * @ref StyleFeature::BackgroundLayer. Expects that the implementation
+         * returns a subset of @ref BaseLayerSharedFlag::BackgroundBlur,
+         * @relativeref{BaseLayerSharedFlag,NoRoundedCorners} and
+         * @relativeref{BaseLayerSharedFlag,NoOutline}. Default implementation
+         * returns an empty set.
+         */
+        virtual BaseLayerSharedFlags doBackgroundLayerFlags() const;
+
+        /**
+         * @brief Implementation for @ref backgroundLayerBlurRadius()
+         *
+         * Guaranteed to be called only if @ref doFeatures() contains
+         * @ref StyleFeature::BackgroundLayer. Default implementation returns
+         * @cpp 4 @ce, consistent with @ref BaseLayer::Shared::Configuration
+         * defaults. The call to @ref BaseLayer::setBackgroundBlurPassCount(),
+         * if needed, can be done from within the @ref doApply()
+         * implementation.
+         */
+        virtual UnsignedInt doBackgroundLayerBlurRadius() const;
+
+        /**
+         * @brief Implementation for @ref backgroundLayerBlurCutoff()
+         *
+         * Guaranteed to be called only if @ref doFeatures() contains
+         * @ref StyleFeature::BackgroundLayer. Default implementation returns
+         * @cpp 0.5f/255.0f @ce, consistent with
+         * @ref BaseLayer::Shared::Configuration defaults.
+         */
+        virtual Float doBackgroundLayerBlurCutoff() const;
 
         /**
          * @brief Implementation for @ref baseLayerStyleUniformCount()
@@ -677,11 +878,15 @@ class MAGNUM_UI_EXPORT AbstractStyle {
 
         /* When more user-overridable properties are present, might want to put
            them into a PIMPL instead, and remove the Vector3 include again */
-        UnsignedInt _baseLayerDynamicStyleCount = 0;
-        UnsignedInt _textLayerDynamicStyleCount = 0;
+        UnsignedInt
+            _backgroundLayerDynamicStyleCount = 0,
+            _baseLayerDynamicStyleCount = 0,
+            _textLayerDynamicStyleCount = 0;
         Vector3i _textLayerGlyphCacheSize;
         Vector2i _textLayerGlyphCachePadding;
-        BaseLayerSharedFlags _baseLayerFlagsAdd, _baseLayerFlagsClear;
+        BaseLayerSharedFlags
+            _backgroundLayerFlagsAdd, _backgroundLayerFlagsClear,
+            _baseLayerFlagsAdd, _baseLayerFlagsClear;
 };
 
 }}

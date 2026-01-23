@@ -44,6 +44,8 @@ Debug& operator<<(Debug& debug, const StyleFeature value) {
     switch(value) {
         /* LCOV_EXCL_START */
         #define _c(value) case StyleFeature::value: return debug << "::" #value;
+        _c(BackgroundLayer)
+        _c(BackgroundLayerAnimations)
         _c(BaseLayer)
         _c(BaseLayerAnimations)
         _c(TextLayer)
@@ -62,6 +64,8 @@ Debug& operator<<(Debug& debug, const StyleFeature value) {
 
 Debug& operator<<(Debug& debug, const StyleFeatures value) {
     return Containers::enumSetDebugOutput(debug, value, "Ui::StyleFeatures{}", {
+        StyleFeature::BackgroundLayer,
+        StyleFeature::BackgroundLayerAnimations,
         StyleFeature::BaseLayer,
         StyleFeature::BaseLayerAnimations,
         StyleFeature::TextLayer,
@@ -83,6 +87,90 @@ StyleFeatures AbstractStyle::features() const {
     CORRADE_ASSERT(out,
         "Ui::AbstractStyle::features(): implementation returned an empty set", {});
     return out;
+}
+
+UnsignedInt AbstractStyle::backgroundLayerStyleUniformCount() const {
+    CORRADE_ASSERT(features() >= StyleFeature::BackgroundLayer,
+        "Ui::AbstractStyle::backgroundLayerStyleUniformCount(): feature not supported", {});
+    return doBackgroundLayerStyleUniformCount();
+}
+
+UnsignedInt AbstractStyle::doBackgroundLayerStyleUniformCount() const {
+    return doBackgroundLayerStyleCount();
+}
+
+UnsignedInt AbstractStyle::backgroundLayerStyleCount() const {
+    CORRADE_ASSERT(features() >= StyleFeature::BackgroundLayer,
+        "Ui::AbstractStyle::backgroundLayerStyleCount(): feature not supported", {});
+    return doBackgroundLayerStyleCount();
+}
+
+UnsignedInt AbstractStyle::doBackgroundLayerStyleCount() const {
+    CORRADE_ASSERT_UNREACHABLE("Ui::AbstractStyle::backgroundLayerStyleCount(): feature advertised but not implemented", {});
+}
+
+UnsignedInt AbstractStyle::backgroundLayerDynamicStyleCount() const {
+    CORRADE_ASSERT(features() >= StyleFeature::BackgroundLayer,
+        "Ui::AbstractStyle::backgroundLayerDynamicStyleCount(): feature not supported", {});
+    CORRADE_ASSERT(!(features() >= StyleFeature::BackgroundLayerAnimations) || doBackgroundLayerDynamicStyleCount(),
+        "Ui::AbstractStyle::backgroundLayerDynamicStyleCount(): implementation advertises" << StyleFeature::BackgroundLayerAnimations << "but zero dynamic styles", {});
+    return Math::max(doBackgroundLayerDynamicStyleCount(), _backgroundLayerDynamicStyleCount);
+}
+
+UnsignedInt AbstractStyle::doBackgroundLayerDynamicStyleCount() const {
+    return 0;
+}
+
+AbstractStyle& AbstractStyle::setBackgroundLayerDynamicStyleCount(const UnsignedInt count) {
+    CORRADE_ASSERT(features() >= StyleFeature::BackgroundLayer,
+        "Ui::AbstractStyle::setBackgroundLayerDynamicStyleCount(): feature not supported", *this);
+    _backgroundLayerDynamicStyleCount = count;
+    return *this;
+}
+
+BaseLayerSharedFlags AbstractStyle::backgroundLayerFlags() const {
+    CORRADE_ASSERT(features() >= StyleFeature::BackgroundLayer,
+        "Ui::AbstractStyle::backgroundLayerFlags(): feature not supported", {});
+    const BaseLayerSharedFlags flags = doBackgroundLayerFlags();
+    CORRADE_ASSERT(flags <= (BaseLayerSharedFlag::NoOutline|BaseLayerSharedFlag::NoRoundedCorners|BaseLayerSharedFlag::BackgroundBlur),
+        "Ui::AbstractStyle::backgroundLayerFlags(): implementation returned disallowed" << (flags & ~(BaseLayerSharedFlag::NoOutline|BaseLayerSharedFlag::NoRoundedCorners|BaseLayerSharedFlag::BackgroundBlur)), {});
+    return (flags|_backgroundLayerFlagsAdd)&~_backgroundLayerFlagsClear;
+}
+
+BaseLayerSharedFlags AbstractStyle::doBackgroundLayerFlags() const {
+    return {};
+}
+
+AbstractStyle& AbstractStyle::setBackgroundLayerFlags(const BaseLayerSharedFlags add, const BaseLayerSharedFlags clear) {
+    CORRADE_ASSERT(features() >= StyleFeature::BackgroundLayer,
+        "Ui::AbstractStyle::setBackgroundLayerFlags(): feature not supported", *this);
+    CORRADE_ASSERT(add <= BaseLayerSharedFlag::SubdividedQuads,
+        "Ui::AbstractStyle::setBackgroundLayerFlags():" << (add & ~BaseLayerSharedFlag::SubdividedQuads) << "isn't allowed to be added", *this);
+    CORRADE_ASSERT(clear <= (BaseLayerSharedFlag::NoOutline|BaseLayerSharedFlag::NoRoundedCorners|BaseLayerSharedFlag::BackgroundBlur),
+        "Ui::AbstractStyle::setBackgroundLayerFlags():" << (clear & ~(BaseLayerSharedFlag::NoOutline|BaseLayerSharedFlag::NoRoundedCorners|BaseLayerSharedFlag::BackgroundBlur)) << "isn't allowed to be cleared", *this);
+    _backgroundLayerFlagsAdd = add;
+    _backgroundLayerFlagsClear = clear;
+    return *this;
+}
+
+UnsignedInt AbstractStyle::backgroundLayerBlurRadius() const {
+    CORRADE_ASSERT(features() >= StyleFeature::BackgroundLayer,
+        "Ui::AbstractStyle::backgroundLayerBlurRadius(): feature not supported", {});
+    return doBackgroundLayerBlurRadius();
+}
+
+UnsignedInt AbstractStyle::doBackgroundLayerBlurRadius() const {
+    return 4;
+}
+
+Float AbstractStyle::backgroundLayerBlurCutoff() const {
+    CORRADE_ASSERT(features() >= StyleFeature::BackgroundLayer,
+        "Ui::AbstractStyle::backgroundLayerBlurCutoff(): feature not supported", {});
+    return doBackgroundLayerBlurCutoff();
+}
+
+Float AbstractStyle::doBackgroundLayerBlurCutoff() const {
+    return 0.5f/255.0f;
 }
 
 UnsignedInt AbstractStyle::baseLayerStyleUniformCount() const {
@@ -268,6 +356,25 @@ bool AbstractStyle::apply(UserInterface& ui, const StyleFeatures features, Plugi
     CORRADE_ASSERT(!ui.framebufferSize().isZero(),
         "Ui::AbstractStyle::apply(): user interface size wasn't set", {});
     #ifndef CORRADE_NO_ASSERT
+    if(features >= StyleFeature::BackgroundLayer) {
+        CORRADE_ASSERT(ui.hasBackgroundLayer(),
+            "Ui::AbstractStyle::apply(): background layer not present in the user interface", {});
+        const BaseLayer::Shared& shared = ui.backgroundLayer().shared();
+        /** @todo currently deliberately *not* verifying that the blur radius
+            matches, as I'm not sure what the right behavior should be, and if
+            it should be allowed to be overriden by the user to a different
+            value (currently for perf reasons, but with a better implementation
+            not even that should be needed) */
+        CORRADE_ASSERT(
+            shared.styleUniformCount() == backgroundLayerStyleUniformCount() &&
+            shared.styleCount() == backgroundLayerStyleCount() &&
+            shared.dynamicStyleCount() >= backgroundLayerDynamicStyleCount(),
+            "Ui::AbstractStyle::apply(): style wants" << backgroundLayerStyleUniformCount() << "uniforms," << backgroundLayerStyleCount() << "styles and at least" << backgroundLayerDynamicStyleCount() << "dynamic styles but the background layer has" << shared.styleUniformCount() << Debug::nospace << "," << shared.styleCount() << "and" << shared.dynamicStyleCount(), {});
+    }
+    if(features >= StyleFeature::BackgroundLayerAnimations) {
+        CORRADE_ASSERT(ui.hasBackgroundLayerStyleAnimator(),
+            "Ui::AbstractStyle::apply(): background layer style animator not present in the user interface", {});
+    }
     if(features >= StyleFeature::BaseLayer) {
         CORRADE_ASSERT(ui.hasBaseLayer(),
             "Ui::AbstractStyle::apply(): base layer not present in the user interface", {});

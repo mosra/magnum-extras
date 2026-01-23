@@ -48,7 +48,9 @@ namespace Magnum { namespace Ui {
 struct UserInterfaceGL::State: UserInterface::State {
     /* Not created by default in order to make the NoCreate constructor work
        without a GL context */
-    BaseLayerGL::Shared baseLayerShared{NoCreate};
+    BaseLayerGL::Shared
+        backgroundLayerShared{NoCreate},
+        baseLayerShared{NoCreate};
     TextLayerGL::Shared textLayerShared{NoCreate};
 };
 
@@ -80,9 +82,19 @@ bool UserInterfaceGL::tryCreateInternal(const AbstractStyle& style, const StyleF
     #ifndef CORRADE_NO_ASSERT
     State& state = static_cast<State&>(*_state);
     #endif
-    /* No need to test for baseLayerStyleAnimator / textLayerStyleAnimator as
-       those can be present only if baseLayer / textLayer is there already */
-    CORRADE_ASSERT(!hasRendererInstance() && !state.baseLayer && !state.textLayer && !state.eventLayer && !state.layoutLayer && !state.snapLayouter && !state.genericLayouter,
+    /* No need to test for backgroundLayerStyleAnimator /
+       baseLayerStyleAnimator / textLayerStyleAnimator as those can be present
+       only if backgroundLayer / baseLayer / textLayer is there already. Also
+       no need to special-case for the background and base layer aliasing, as
+       this is meant to fail even if just one of them is present. */
+    CORRADE_ASSERT(!hasRendererInstance() &&
+        !state.backgroundLayer &&
+        !state.baseLayer &&
+        !state.textLayer &&
+        !state.eventLayer &&
+        !state.layoutLayer &&
+        !state.snapLayouter &&
+        !state.genericLayouter,
         "Ui::UserInterfaceGL::tryCreate(): user interface already created",
         /* Has to return true with CORRADE_GRACEFUL_ASSERT so when tested
            through create() it doesn't std::exit() the whole executable */
@@ -128,11 +140,58 @@ bool UserInterfaceGL::trySetStyle(const AbstractStyle& style, const StyleFeature
 
     State& state = static_cast<State&>(*_state);
 
-    /* Create a renderer, if not already */
-    if(!hasRendererInstance())
-        setRendererInstance(Containers::pointer<RendererGL>());
+    /* Create a background layer instance first to figure out what may need to
+       be enabled for the renderer. Could also just check for BackgroundBlur
+       being present in backgroundLayerFlags(), but this future-proofs it for
+       when other effects are present. */
+    Containers::Pointer<BaseLayerGL> backgroundLayer;
+    if(features >= StyleFeature::BackgroundLayer) {
+        /* Querying the pointer alone isn't sufficient due to the base layer
+           fallback, see hasBackgroundLayer() for details */
+        CORRADE_ASSERT(!hasBackgroundLayer(),
+            "Ui::UserInterfaceGL::trySetStyle(): background layer already present", {});
+        state.backgroundLayerShared = BaseLayerGL::Shared{
+            BaseLayer::Shared::Configuration{style.backgroundLayerStyleUniformCount(),
+                                             style.backgroundLayerStyleCount()}
+                .setDynamicStyleCount(style.backgroundLayerDynamicStyleCount())
+                .addFlags(style.backgroundLayerFlags())
+                .setBackgroundBlurRadius(style.backgroundLayerBlurRadius(), style.backgroundLayerBlurCutoff())};
+        backgroundLayer.emplace(createLayer(), state.backgroundLayerShared);
+    }
 
-    /* Create layers based on what features are wanted */
+    /* Create a renderer, if not already, and enable compositing for it if the
+       background layer needs it. Otherwise check that it has compositing
+       enabled to provide a more helpful message to users than an assert coming
+       from setRendererInstance() directly. */
+    if(!hasRendererInstance())
+        setRendererInstance(Containers::pointer<RendererGL>(
+            backgroundLayer && backgroundLayer->features() >= LayerFeature::Composite ?
+                RendererGL::Flag::CompositingFramebuffer : RendererGL::Flags{}
+        ));
+    else CORRADE_ASSERT(!backgroundLayer || !(backgroundLayer->features() >= LayerFeature::Composite) || renderer().flags() >= RendererGL::Flag::CompositingFramebuffer,
+        "Ui::UserInterfaceGL::trySetStyle(): background layer style requires a framebuffer with" << RendererGL::Flag::CompositingFramebuffer << "enabled", {});
+
+    /* Create layers, layouters and animators based on what features are
+       wanted */
+    if(features >= StyleFeature::BackgroundLayer) {
+        /* Created above already */
+        setBackgroundLayerInstance(Utility::move(backgroundLayer));
+    }
+    if(features >= StyleFeature::BackgroundLayerAnimations) {
+        CORRADE_ASSERT(!hasBackgroundLayerStyleAnimator(),
+            "Ui::UserInterfaceGL::trySetStyle(): background layer style animator already present", {});
+        /* If features contain StyleFeature::BackgroundLayer,
+           state.backgroundLayer was already added above, so it's enough to
+           check background layer presence alone. However, querying the pointer
+           alone isn't sufficient due to the base layer fallback, see
+           hasBackgroundLayer() for details. Also, mention the StateFeature
+           as well to hint that they can be also applied both together. */
+        CORRADE_ASSERT(hasBackgroundLayer(),
+            "Ui::UserInterfaceGL::trySetStyle(): background layer not present and" << StyleFeature::BackgroundLayer << "isn't being applied as well for" << StyleFeature::BackgroundLayerAnimations, {});
+        CORRADE_ASSERT(state.backgroundLayer->shared().dynamicStyleCount(),
+            "Ui::UserInterfaceGL::trySetStyle():" << StyleFeature::BackgroundLayerAnimations << "requires the background layer to have least one dynamic style", {});
+        setBackgroundLayerStyleAnimatorInstance(Containers::pointer<BaseLayerStyleAnimator>(createAnimator()));
+    }
     if(features >= StyleFeature::BaseLayer) {
         CORRADE_ASSERT(!state.baseLayer,
             "Ui::UserInterfaceGL::trySetStyle(): base layer already present", {});
@@ -250,6 +309,10 @@ UserInterfaceGL& UserInterfaceGL::setStyle(const AbstractStyle& style, const Sty
 
 UserInterfaceGL& UserInterfaceGL::setStyle(const AbstractStyle& style, PluginManager::Manager<Trade::AbstractImporter>* const importerManager, PluginManager::Manager<Text::AbstractFont>* const fontManager) {
     return setStyle(style, style.features(), importerManager, fontManager);
+}
+
+UserInterfaceGL& UserInterfaceGL::setBackgroundLayerInstance(Containers::Pointer<BaseLayerGL>&& instance) {
+    return static_cast<UserInterfaceGL&>(UserInterface::setBackgroundLayerInstance(Utility::move(instance)));
 }
 
 UserInterfaceGL& UserInterfaceGL::setBaseLayerInstance(Containers::Pointer<BaseLayerGL>&& instance) {

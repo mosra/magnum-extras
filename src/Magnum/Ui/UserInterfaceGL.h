@@ -70,9 +70,10 @@ The rest of the setup --- drawing and event handling --- is the same for all
 @subsection Ui-UserInterfaceGL-setup-options Additional setup options
 
 The above by default populates the user interface with everything a style
-provides for use by builtin widgets --- in particular, making @ref baseLayer(),
-@ref textLayer(), @ref eventLayer(), @ref layoutLayer(), @ref snapLayouter(),
-@ref genericLayouter(), @ref baseLayerStyleAnimator() and
+provides for use by builtin widgets --- in particular, making
+@ref backgroundLayer(), @ref baseLayer(), @ref textLayer(), @ref eventLayer(),
+@ref layoutLayer(), @ref snapLayouter(), @ref genericLayouter(),
+@ref backgroundLayerStyleAnimator(), @ref baseLayerStyleAnimator() and
 @ref textLayerStyleAnimator() all available. In case you for example use just a
 subset of the builtin widgets that only need a part of the above, you can
 specify a @ref StyleFeatures subset. This can be further combined with
@@ -120,10 +121,12 @@ for a custom layer --- pass it to @ref setRendererInstance() and then call
 
 If a constructor or @ref create() taking a style isn't used at all, or if a
 style is applied excluding a particular layer, layouter or animator, you can
-supply a custom instance using @ref setBaseLayerInstance(),
-@ref setTextLayerInstance(), @ref setEventLayerInstance(),
-@ref setLayoutLayerInstance(), @ref setSnapLayouterInstance(),
-@ref setGenericLayouterInstance(), @ref setBaseLayerStyleAnimatorInstance() or
+supply a custom instance using @ref setBackgroundLayerInstance(),
+@ref setBaseLayerInstance(), @ref setTextLayerInstance(),
+@ref setEventLayerInstance(), @ref setLayoutLayerInstance(),
+@ref setSnapLayouterInstance(), @ref setGenericLayouterInstance(),
+@ref setBackgroundLayerStyleAnimatorInstance(),
+@ref setBaseLayerStyleAnimatorInstance() or
 @ref setTextLayerStyleAnimatorInstance(). Note that however, at this point,
 you're on your own when you attempt to use any builtin widgets that rely on
 given instance being set up in a particular way.
@@ -269,9 +272,11 @@ class MAGNUM_UI_EXPORT UserInterfaceGL: public UserInterface {
          * @return Reference to self (for method chaining)
          *
          * Expects that none of @ref create(), @ref tryCreate(),
-         * @ref setBaseLayerInstance(), @ref setTextLayerInstance(),
-         * @ref setEventLayerInstance(), @ref setLayoutLayerInstance(),
-         * @ref setSnapLayouterInstance(), @ref setGenericLayouterInstance(),
+         * @ref setBackgroundLayerInstance(), @ref setBaseLayerInstance(),
+         * @ref setTextLayerInstance(), @ref setEventLayerInstance(),
+         * @ref setLayoutLayerInstance(), @ref setSnapLayouterInstance(),
+         * @ref setGenericLayouterInstance(),
+         * @ref setBackgroundLayerStyleAnimatorInstance(),
          * @ref setBaseLayerStyleAnimatorInstance(),
          * @ref setTextLayerStyleAnimatorInstance() or
          * @ref setRendererInstance() was called yet. Equivalent to calling
@@ -299,9 +304,11 @@ class MAGNUM_UI_EXPORT UserInterfaceGL: public UserInterface {
          * @return Reference to self (for method chaining)
          *
          * Expects that none of @ref create(), @ref tryCreate(),
-         * @ref setBaseLayerInstance(), @ref setTextLayerInstance(),
-         * @ref setEventLayerInstance(), @ref setLayoutLayerInstance(),
-         * @ref setSnapLayouterInstance(), @ref setGenericLayouterInstance(),
+         * @ref setBackgroundLayerInstance(), @ref setBaseLayerInstance(),
+         * @ref setTextLayerInstance(), @ref setEventLayerInstance(),
+         * @ref setLayoutLayerInstance(), @ref setSnapLayouterInstance(),
+         * @ref setGenericLayouterInstance(),
+         * @ref setBackgroundLayerStyleAnimatorInstance(),
          * @ref setBaseLayerStyleAnimatorInstance(),
          * @ref setTextLayerStyleAnimatorInstance() or
          * @ref setRendererInstance() was called yet. Equivalent to calling
@@ -334,9 +341,11 @@ class MAGNUM_UI_EXPORT UserInterfaceGL: public UserInterface {
          * @return Reference to self (for method chaining)
          *
          * Expects that none of @ref create(), @ref tryCreate(),
-         * @ref setBaseLayerInstance(), @ref setTextLayerInstance(),
-         * @ref setEventLayerInstance(), @ref setLayoutLayerInstance(),
-         * @ref setSnapLayouterInstance(), @ref setGenericLayouterInstance(),
+         * @ref setBackgroundLayerInstance(), @ref setBaseLayerInstance(),
+         * @ref setTextLayerInstance(), @ref setEventLayerInstance(),
+         * @ref setLayoutLayerInstance(), @ref setSnapLayouterInstance(),
+         * @ref setGenericLayouterInstance(),
+         * @ref setBackgroundLayerStyleAnimatorInstance(),
          * @ref setBaseLayerStyleAnimatorInstance(),
          * @ref setTextLayerStyleAnimatorInstance() or
          * @ref setRendererInstance() was called yet. Equivalent to calling
@@ -365,9 +374,11 @@ class MAGNUM_UI_EXPORT UserInterfaceGL: public UserInterface {
          * @return Reference to self (for method chaining)
          *
          * Expects that none of @ref create(), @ref tryCreate(),
-         * @ref setBaseLayerInstance(), @ref setTextLayerInstance(),
-         * @ref setEventLayerInstance(), @ref setLayoutLayerInstance(),
-         * @ref setSnapLayouterInstance(), @ref setGenericLayouterInstance(),
+         * @ref setBackgroundLayerInstance(), @ref setBaseLayerInstance(),
+         * @ref setTextLayerInstance(), @ref setEventLayerInstance(),
+         * @ref setLayoutLayerInstance(), @ref setSnapLayouterInstance(),
+         * @ref setGenericLayouterInstance(),
+         * @ref setBackgroundLayerStyleAnimatorInstance(),
          * @ref setBaseLayerStyleAnimatorInstance(),
          * @ref setTextLayerStyleAnimatorInstance() or
          * @ref setRendererInstance() was called yet. Equivalent to calling
@@ -546,10 +557,12 @@ class MAGNUM_UI_EXPORT UserInterfaceGL: public UserInterface {
          * See its documentation for more information about style compatibility
          * restrictions.
          * @see @ref setStyle(const AbstractStyle&, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*),
-         *      @ref hasRendererInstance(), @ref hasBaseLayer(),
-         *      @ref hasTextLayer(), @ref hasEventLayer(),
+         *      @ref hasRendererInstance(), @ref hasBackgroundLayer(),
+         *      @ref hasBaseLayer(), @ref hasTextLayer(), @ref hasEventLayer(),
          *      @ref hasLayoutLayer(), @ref hasSnapLayouter(),
-         *      @ref hasGenericLayouter(), @ref hasBaseLayerStyleAnimator(),
+         *      @ref hasGenericLayouter(),
+         *      @ref hasBackgroundLayerStyleAnimator(),
+         *      @ref hasBaseLayerStyleAnimator(),
          *      @ref hasTextLayerStyleAnimator(),
          *      @ref UserInterfaceGL(const Vector2&, const Vector2&, const Vector2i&, const AbstractStyle&, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*),
          *      @ref UserInterfaceGL(const Vector2i&, const AbstractStyle&, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*)
@@ -582,6 +595,23 @@ class MAGNUM_UI_EXPORT UserInterfaceGL: public UserInterface {
          * of exiting, @cpp true @ce otherwise.
          */
         bool trySetStyle(const AbstractStyle& style, PluginManager::Manager<Trade::AbstractImporter>* importerManager = nullptr, PluginManager::Manager<Text::AbstractFont>* fontManager = nullptr);
+
+        /**
+         * @brief Set a background layer instance
+         * @return Reference to self (for method chaining)
+         *
+         * Expects that the instance hasn't been set yet, either by this
+         * function or transitively either by @ref setStyle(), @ref create() or
+         * a constructor taking a style instance. The instance is subsequently
+         * available through @ref backgroundLayer().
+         *
+         * Note that because @ref backgroundLayer() may alias @ref baseLayer()
+         * if a background layer instance isn't present, it's not recommended
+         * to call this function after any widgets have been already created,
+         * as it could lead to internal state inconsistencies.
+         * @see @ref hasBackgroundLayer(), @ref StyleFeature::BackgroundLayer
+         */
+        UserInterfaceGL& setBackgroundLayerInstance(Containers::Pointer<BaseLayerGL>&& instance);
 
         /**
          * @brief Set a base layer instance
@@ -617,6 +647,9 @@ class MAGNUM_UI_EXPORT UserInterfaceGL: public UserInterface {
         }
         UserInterfaceGL& setSize(const Vector2i& size) {
             return static_cast<UserInterfaceGL&>(UserInterface::setSize(size));
+        }
+        UserInterfaceGL& setBackgroundLayerStyleAnimatorInstance(Containers::Pointer<BaseLayerStyleAnimator>&& instance) {
+            return static_cast<UserInterfaceGL&>(UserInterface::setBackgroundLayerStyleAnimatorInstance(Utility::move(instance)));
         }
         UserInterfaceGL& setBaseLayerStyleAnimatorInstance(Containers::Pointer<BaseLayerStyleAnimator>&& instance) {
             return static_cast<UserInterfaceGL&>(UserInterface::setBaseLayerStyleAnimatorInstance(Utility::move(instance)));

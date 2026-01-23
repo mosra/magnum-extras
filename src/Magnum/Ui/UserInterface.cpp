@@ -52,6 +52,79 @@ UserInterface::~UserInterface() = default;
 
 UserInterface& UserInterface::operator=(UserInterface&&) noexcept = default;
 
+bool UserInterface::hasBackgroundLayer() const {
+    /* The backgroundLayer pointer may alias the base layer if background layer
+       hasn't been set. Return false in that case. Doing it this way rather
+       than having a special case in the backgroundLayer() accessor as that one
+       is likely to get accessed much more frequently and thus it's better to
+       not do any branching there. */
+    return _state->backgroundLayer && _state->backgroundLayer != _state->baseLayer;
+}
+
+const BaseLayer& UserInterface::backgroundLayer() const {
+    CORRADE_ASSERT(_state->backgroundLayer,
+        "Ui::UserInterface::backgroundLayer(): no instance set", *_state->baseLayer);
+    return *_state->backgroundLayer;
+}
+
+BaseLayer& UserInterface::backgroundLayer() {
+    return const_cast<BaseLayer&>(const_cast<const UserInterface&>(*this).backgroundLayer());
+}
+
+UserInterface& UserInterface::setBackgroundLayerInstance(Containers::Pointer<BaseLayer>&& instance) {
+    CORRADE_ASSERT(instance,
+        "Ui::UserInterface::setBackgroundLayerInstance(): instance is null", *this);
+    /* Querying the pointer alone isn't sufficient due to the base layer
+       fallback, see hasBackgroundLayer() for details */
+    CORRADE_ASSERT(!hasBackgroundLayer(),
+        "Ui::UserInterface::setBackgroundLayerInstance(): instance already set", *this);
+    _state->backgroundLayer = instance.get();
+    /* If a base layer animator was already set, the
+       backgroundLayerStyleAnimator pointer is aliased to it. Clear it. */
+    _state->backgroundLayerStyleAnimator = {};
+    setLayerInstance(Utility::move(instance));
+    return *this;
+}
+
+bool UserInterface::hasBackgroundLayerStyleAnimator() const {
+    /* Similar case as with hasBackgroundLayerStyleAnimator() */
+    return _state->backgroundLayerStyleAnimator && _state->backgroundLayerStyleAnimator != _state->baseLayerStyleAnimator;
+}
+
+const BaseLayerStyleAnimator& UserInterface::backgroundLayerStyleAnimator() const {
+    CORRADE_ASSERT(_state->backgroundLayerStyleAnimator,
+        "Ui::UserInterface::backgroundLayerStyleAnimator(): no instance set", *_state->backgroundLayerStyleAnimator);
+    return *_state->backgroundLayerStyleAnimator;
+}
+
+BaseLayerStyleAnimator& UserInterface::backgroundLayerStyleAnimator() {
+    return const_cast<BaseLayerStyleAnimator&>(const_cast<const UserInterface&>(*this).backgroundLayerStyleAnimator());
+}
+
+UserInterface& UserInterface::setBackgroundLayerStyleAnimatorInstance(Containers::Pointer<BaseLayerStyleAnimator>&& instance) {
+    CORRADE_ASSERT(instance,
+        "Ui::UserInterface::setBackgroundLayerStyleAnimatorInstance(): instance is null", *this);
+    /* Unlike with setBackgroundLayerInstance(), which has to use
+       hasBackgroundLayer() instead of querying the pointer, here the pointer
+       gets cleared during the setBackgroundLayerInstance() call, and is not
+       set by setBaseLayerStyleAnimatorInstance() if background layer is
+       already present. */
+    CORRADE_ASSERT(!_state->backgroundLayerStyleAnimator,
+        "Ui::UserInterface::setBackgroundLayerStyleAnimatorInstance(): instance already set", *this);
+    CORRADE_ASSERT(_state->backgroundLayer,
+        "Ui::UserInterface::setBackgroundLayerStyleAnimatorInstance(): background layer instance not set", *this);
+    CORRADE_ASSERT(_state->backgroundLayer->shared().dynamicStyleCount(),
+        "Ui::UserInterface::setBackgroundLayerStyleAnimatorInstance(): can't animate a background layer with zero dynamic styles", *this);
+    CORRADE_ASSERT(instance->layer() == LayerHandle::Null,
+        "Ui::UserInterface::setBackgroundLayerStyleAnimatorInstance(): instance already assigned to" << instance->layer(), *this);
+    _state->backgroundLayerStyleAnimator = instance.get();
+    (*_state->backgroundLayer)
+        .assignAnimator(*instance)
+        .setDefaultStyleAnimator(instance.get());
+    setStyleAnimatorInstance(Utility::move(instance));
+    return *this;
+}
+
 bool UserInterface::hasBaseLayer() const {
     return _state->baseLayer;
 }
@@ -72,6 +145,13 @@ UserInterface& UserInterface::setBaseLayerInstance(Containers::Pointer<BaseLayer
     CORRADE_ASSERT(!_state->baseLayer,
         "Ui::UserInterface::setBaseLayerInstance(): instance already set", *this);
     _state->baseLayer = instance.get();
+    /* If background layer instance isn't set, use the base layer for it. The
+       setBackgroundLayerInstance(), if called, will overwrite this back. Using
+       hasBackgroundLayer() instead of just querying the backgroundLayer
+       pointer for consistency with setBackgroundLayerInstance(),
+       setBaseLayerStyleAnimatorInstance() etc. */
+    if(!hasBackgroundLayer())
+        _state->backgroundLayer = _state->baseLayer;
     setLayerInstance(Utility::move(instance));
     return *this;
 }
@@ -102,6 +182,15 @@ UserInterface& UserInterface::setBaseLayerStyleAnimatorInstance(Containers::Poin
     CORRADE_ASSERT(instance->layer() == LayerHandle::Null,
         "Ui::UserInterface::setBaseLayerStyleAnimatorInstance(): instance already assigned to" << instance->layer(), *this);
     _state->baseLayerStyleAnimator = instance.get();
+    /* If background layer instance isn't set, use the base layer for it. The
+       setBackgroundLayerInstance(), if called, will overwrite this back. Can't
+       query just the backgroundLayer pointer as it may be already aliased to
+       baseLayer and thus not null, have to use hasBackgroundLayer(). Cannot
+       also query the backgroundLayerStyleAnimator pointer alone as, if
+       background layer is present but its animator isn't, it'd lead to
+       associating base layer animator with the background layer */
+    if(!hasBackgroundLayer())
+        _state->backgroundLayerStyleAnimator = _state->baseLayerStyleAnimator;
     (*_state->baseLayer)
         .assignAnimator(*instance)
         .setDefaultStyleAnimator(instance.get());

@@ -47,8 +47,9 @@ either of the classes for more information.
 
 Builtin widgets, deriving from the @ref Widget class, have access to this
 instance through @ref BasicWidget::ui() and generally assume that
-@ref baseLayer(), @ref textLayer(), @ref eventLayer(), @ref layoutLayer(),
-@ref snapLayouter(), @ref genericLayouter(), @ref baseLayerStyleAnimator() and
+@ref backgroundLayer(), @ref baseLayer(), @ref textLayer(), @ref eventLayer(),
+@ref layoutLayer(), @ref snapLayouter(), @ref genericLayouter(),
+@ref backgroundLayerStyleAnimator(), @ref baseLayerStyleAnimator() and
 @ref textLayerStyleAnimator() are available for use.
 */
 class MAGNUM_UI_EXPORT UserInterface: public AbstractUserInterface {
@@ -71,6 +72,110 @@ class MAGNUM_UI_EXPORT UserInterface: public AbstractUserInterface {
         UserInterface& operator=(UserInterface&&) noexcept;
 
         ~UserInterface();
+
+        /**
+         * @brief Whether a background layer instance has been set
+         *
+         * @see @ref backgroundLayer(), @ref setBackgroundLayerInstance()
+         */
+        bool hasBackgroundLayer() const;
+
+        /**
+         * @brief Background layer instance
+         *
+         * Expects that an instance of either the background or base layer has
+         * been set, either by @ref setBackgroundLayerInstance() /
+         * @ref setBaseLayerInstance() or transitively by
+         * @ref UserInterfaceGL::setStyle(), @relativeref{UserInterfaceGL,create()}
+         * or a @ref UserInterfaceGL constructor taking a style instance.
+         *
+         * If an instance of a background layer isn't present but base layer
+         * is, @ref hasBackgroundLayer() returns @cpp false @ce and this
+         * function returns the same layer as @ref baseLayer(), so widget
+         * implementations don't need to special-case styles that don't provide
+         * a dedicated background layer instance (which is the case for example
+         * when background blur isn't used).
+         * @see @ref StyleFeature::BackgroundLayer
+         */
+        BaseLayer& backgroundLayer();
+        const BaseLayer& backgroundLayer() const; /**< @overload */
+
+        /**
+         * @brief Set a background layer instance
+         * @return Reference to self (for method chaining)
+         *
+         * Expects that the instance hasn't been set yet, either by this
+         * function or transitively either by @ref UserInterfaceGL::setStyle(),
+         * @relativeref{UserInterfaceGL,create()} or a @ref UserInterfaceGL
+         * constructor taking a style instance. The instance is subsequently
+         * available through @ref backgroundLayer().
+         *
+         * Note that because @ref backgroundLayer() may alias @ref baseLayer()
+         * if a background layer instance isn't present, it's not recommended
+         * to call this function after any widgets have been already created,
+         * as it could lead to internal state inconsistencies.
+         * @see @ref hasBackgroundLayer(), @ref StyleFeature::BackgroundLayer
+         */
+        UserInterface& setBackgroundLayerInstance(Containers::Pointer<BaseLayer>&& instance);
+
+        /**
+         * @brief Whether a background layer style animator instance has been set
+         *
+         * @see @ref backgroundLayerStyleAnimator(),
+         *      @ref setBackgroundLayerStyleAnimatorInstance()
+         */
+        bool hasBackgroundLayerStyleAnimator() const;
+
+        /**
+         * @brief Background layer style animator instance
+         *
+         * Expects that either a background layer style animator instance has
+         * been set, either by @ref setBackgroundLayerStyleAnimatorInstance()
+         * or transitively by @ref UserInterfaceGL::setStyle(),
+         * @relativeref{UserInterfaceGL,create()} or a @ref UserInterfaceGL
+         * constructor taking a style instance, or that background layer
+         * *isn't* present at all, and a base layer style animator has been
+         * set.
+         *
+         * Similarly as with @ref backgroundLayer(), if an instance of a
+         * background layer isn't present but base layer along with its style
+         * animator is, @ref hasBackgroundLayerStyleAnimator() returns
+         * @cpp false @ce and this function returns the same animator as
+         * @ref baseLayerStyleAnimator(), so widget implementations don't need
+         * to special-case styles that don't provide a dedicated background
+         * layer instance (which is the case for example when background blur
+         * isn't used).
+         * @see @ref StyleFeature::BackgroundLayerAnimations
+         */
+        BaseLayerStyleAnimator& backgroundLayerStyleAnimator();
+        const BaseLayerStyleAnimator& backgroundLayerStyleAnimator() const; /**< @overload */
+
+        /**
+         * @brief Set a background layer style animator instance
+         * @return Reference to self (for method chaining)
+         *
+         * Expects that a background layer instance is present but the animator
+         * instance hasn't been set yet, either by this function or
+         * transitively either by @ref UserInterfaceGL::setStyle(),
+         * @relativeref{UserInterfaceGL,create()} or a @ref UserInterfaceGL
+         * constructor taking a style instance.
+         *
+         * The instance is internally passed to @ref BaseLayer::assignAnimator(BaseLayerStyleAnimator&)
+         * and made default with @ref BaseLayer::setDefaultStyleAnimator().
+         * It's subsequently available through
+         * @ref backgroundLayerStyleAnimator(), and also
+         * @ref BaseLayer::defaultStyleAnimator() unless some other animator
+         * becomes set as default.
+         *
+         * Note that because @ref backgroundLayerStyleAnimator() may alias
+         * @ref baseLayerStyleAnimator() if a background layer instance isn't
+         * present, it's not recommended to call this function after any
+         * widgets have been already created, as it could lead to internal
+         * state inconsistencies.
+         * @see @ref hasBackgroundLayerStyleAnimator(),
+         *      @ref StyleFeature::BackgroundLayerAnimations
+         */
+        UserInterface& setBackgroundLayerStyleAnimatorInstance(Containers::Pointer<BaseLayerStyleAnimator>&& instance);
 
         /**
          * @brief Whether a base layer instance has been set

@@ -57,6 +57,17 @@ struct AbstractStyleTest: TestSuite::Tester {
 
     void noFeaturesReturned();
 
+    void backgroundLayer();
+    void backgroundLayerNotSupported();
+    void backgroundLayerNotImplemented();
+    void backgroundLayerNotImplementedDefaults();
+
+    void backgroundLayerDynamicStyleCountInvalid();
+    void setBackgroundLayerDynamicStyleCount();
+
+    void backgroundLayerFlags();
+    void backgroundLayerFlagsInvalid();
+
     void baseLayer();
     void baseLayerNotSupported();
     void baseLayerNotImplemented();
@@ -92,6 +103,9 @@ struct AbstractStyleTest: TestSuite::Tester {
     void applyNoSizeSet();
     void applyNoFeatures();
     void applyFeaturesNotSupported();
+    void applyBackgroundLayerNotPresent();
+    void applyBackgroundLayerDifferentStyleCount();
+    void applyBackgroundLayerStyleAnimatorNotPresent();
     void applyBaseLayerNotPresent();
     void applyBaseLayerDifferentStyleCount();
     void applyBaseLayerStyleAnimatorNotPresent();
@@ -115,6 +129,7 @@ struct AbstractStyleTest: TestSuite::Tester {
 
 const struct {
     const char* name;
+    bool backgroundLayerPresent, backgroundLayerStyleAnimatorPresent;
     bool baseLayerPresent, baseLayerStyleAnimatorPresent;
     bool textLayerPresent, textLayerStyleAnimatorPresent;
     bool eventLayerPresent, layoutLayerPresent;
@@ -122,19 +137,43 @@ const struct {
     StyleFeatures features;
     bool succeed;
 } ApplyData[]{
+    {"background layer only",
+        true, false,
+        false, false,
+        false, false,
+        false, false,
+        false, false,
+        StyleFeature::BackgroundLayer, true},
+    {"background layer animations only",
+        true, true,
+        false, false,
+        false, false,
+        false, false,
+        false, false,
+        StyleFeature::BackgroundLayerAnimations, true},
+    {"background layer + base layer animations",
+        true, true,
+        false, false,
+        false, false,
+        false, false,
+        false, false,
+        StyleFeature::BackgroundLayer|StyleFeature::BackgroundLayerAnimations, true},
     {"base layer only",
+        false, false,
         true, false,
         false, false,
         false, false,
         false, false,
         StyleFeature::BaseLayer, true},
     {"base layer animations only",
+        false, false,
         true, true,
         false, false,
         false, false,
         false, false,
         StyleFeature::BaseLayerAnimations, true},
     {"base layer + base layer animations",
+        false, false,
         true, true,
         false, false,
         false, false,
@@ -142,11 +181,13 @@ const struct {
         StyleFeature::BaseLayer|StyleFeature::BaseLayerAnimations, true},
     {"text layer only",
         false, false,
+        false, false,
         true, false,
         false, false,
         false, false,
         StyleFeature::TextLayer, true},
     {"text layer images only",
+        false, false,
         false, false,
         true, false,
         false, false,
@@ -154,17 +195,20 @@ const struct {
         StyleFeature::TextLayerImages, true},
     {"text layer + text layer images",
         false, false,
+        false, false,
         true, false,
         false, false,
         false, false,
         StyleFeature::TextLayer|StyleFeature::TextLayerImages, true},
     {"text layer animations only",
         false, false,
+        false, false,
         true, true,
         false, false,
         false, false,
         StyleFeature::TextLayerAnimations, true},
     {"text layer + text layer animations",
+        false, false,
         false, false,
         true, true,
         false, false,
@@ -173,10 +217,12 @@ const struct {
     {"event layer only",
         false, false,
         false, false,
+        false, false,
         true, false,
         false, false,
         StyleFeature::EventLayer, true},
     {"layout layer only",
+        false, false,
         false, false,
         false, false,
         false, true,
@@ -186,15 +232,18 @@ const struct {
         false, false,
         false, false,
         false, false,
+        false, false,
         true, false,
         StyleFeature::SnapLayouter, true},
     {"generic layouter only",
         false, false,
         false, false,
         false, false,
+        false, false,
         false, true,
         StyleFeature::GenericLayouter, true},
     {"everything except base layer (and its animations)",
+        true, true,
         false, false,
         true, true,
         true, true,
@@ -205,8 +254,10 @@ const struct {
         true, true,
         true, true,
         true, true,
+        true, true,
         ~StyleFeatures{}, true},
     {"application failed",
+        false, false,
         true, false,
         false, false,
         false, false,
@@ -222,6 +273,17 @@ AbstractStyleTest::AbstractStyleTest() {
               &AbstractStyleTest::constructCopy,
 
               &AbstractStyleTest::noFeaturesReturned,
+
+              &AbstractStyleTest::backgroundLayer,
+              &AbstractStyleTest::backgroundLayerNotSupported,
+              &AbstractStyleTest::backgroundLayerNotImplemented,
+              &AbstractStyleTest::backgroundLayerNotImplementedDefaults,
+
+              &AbstractStyleTest::backgroundLayerDynamicStyleCountInvalid,
+              &AbstractStyleTest::setBackgroundLayerDynamicStyleCount,
+
+              &AbstractStyleTest::backgroundLayerFlags,
+              &AbstractStyleTest::backgroundLayerFlagsInvalid,
 
               &AbstractStyleTest::baseLayer,
               &AbstractStyleTest::baseLayerNotSupported,
@@ -256,6 +318,9 @@ AbstractStyleTest::AbstractStyleTest() {
     addTests({&AbstractStyleTest::applyNoFeatures,
               &AbstractStyleTest::applyFeaturesNotSupported,
               &AbstractStyleTest::applyNoSizeSet,
+              &AbstractStyleTest::applyBackgroundLayerNotPresent,
+              &AbstractStyleTest::applyBackgroundLayerDifferentStyleCount,
+              &AbstractStyleTest::applyBackgroundLayerStyleAnimatorNotPresent,
               &AbstractStyleTest::applyBaseLayerNotPresent,
               &AbstractStyleTest::applyBaseLayerDifferentStyleCount,
               &AbstractStyleTest::applyBaseLayerStyleAnimatorNotPresent,
@@ -328,6 +393,253 @@ void AbstractStyleTest::noFeaturesReturned() {
     Error redirectError{&out};
     style.features();
     CORRADE_COMPARE(out, "Ui::AbstractStyle::features(): implementation returned an empty set\n");
+}
+
+void AbstractStyleTest::backgroundLayer() {
+    struct: AbstractStyle {
+        StyleFeatures doFeatures() const override {
+            /* Verify it's testing a superset, not equality */
+            return StyleFeature::BackgroundLayer|StyleFeature(0x1000);
+        }
+        UnsignedInt doBackgroundLayerStyleUniformCount() const override { return 3; }
+        UnsignedInt doBackgroundLayerStyleCount() const override { return 5; }
+        UnsignedInt doBackgroundLayerDynamicStyleCount() const override { return 11; }
+        UnsignedInt doBackgroundLayerBlurRadius() const override { return 7; }
+        Float doBackgroundLayerBlurCutoff() const override { return 0.5f; }
+        bool doApply(UserInterface&, StyleFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override { return {}; }
+    } style;
+    CORRADE_COMPARE(style.backgroundLayerStyleUniformCount(), 3);
+    CORRADE_COMPARE(style.backgroundLayerStyleCount(), 5);
+    CORRADE_COMPARE(style.backgroundLayerDynamicStyleCount(), 11);
+    CORRADE_COMPARE(style.backgroundLayerBlurRadius(), 7);
+    CORRADE_COMPARE(style.backgroundLayerBlurCutoff(), 0.5f);
+}
+
+void AbstractStyleTest::backgroundLayerNotSupported() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct: AbstractStyle {
+        StyleFeatures doFeatures() const override {
+            /* To verify it's not accidentally checking some other bit */
+            return ~StyleFeature::BackgroundLayer;
+        }
+        UnsignedInt doBackgroundLayerStyleUniformCount() const override {
+            CORRADE_FAIL("This shouldn't get called.");
+            return {};
+        }
+        UnsignedInt doBackgroundLayerStyleCount() const override {
+            CORRADE_FAIL("This shouldn't get called.");
+            return {};
+        }
+        UnsignedInt doBackgroundLayerDynamicStyleCount() const override {
+            CORRADE_FAIL("This shouldn't get called.");
+            return {};
+        }
+        BaseLayerSharedFlags doBackgroundLayerFlags() const override {
+            CORRADE_FAIL("This shouldn't get called.");
+            return {};
+        }
+        UnsignedInt doBackgroundLayerBlurRadius() const override {
+            CORRADE_FAIL("This shouldn't get called.");
+            return {};
+        }
+        Float doBackgroundLayerBlurCutoff() const override {
+            CORRADE_FAIL("This shouldn't get called.");
+            return {};
+        }
+        bool doApply(UserInterface&, StyleFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override { return {}; }
+    } style;
+
+    /* Capture correct function name */
+    CORRADE_VERIFY(true);
+
+    Containers::String out;
+    Error redirectError{&out};
+    style.backgroundLayerStyleUniformCount();
+    style.backgroundLayerStyleCount();
+    style.backgroundLayerDynamicStyleCount();
+    style.setBackgroundLayerDynamicStyleCount({});
+    style.backgroundLayerFlags();
+    style.setBackgroundLayerFlags({}, {});
+    style.backgroundLayerBlurRadius();
+    style.backgroundLayerBlurCutoff();
+    CORRADE_COMPARE_AS(out,
+        "Ui::AbstractStyle::backgroundLayerStyleUniformCount(): feature not supported\n"
+        "Ui::AbstractStyle::backgroundLayerStyleCount(): feature not supported\n"
+        "Ui::AbstractStyle::backgroundLayerDynamicStyleCount(): feature not supported\n"
+        "Ui::AbstractStyle::setBackgroundLayerDynamicStyleCount(): feature not supported\n"
+        "Ui::AbstractStyle::backgroundLayerFlags(): feature not supported\n"
+        "Ui::AbstractStyle::setBackgroundLayerFlags(): feature not supported\n"
+        "Ui::AbstractStyle::backgroundLayerBlurRadius(): feature not supported\n"
+        "Ui::AbstractStyle::backgroundLayerBlurCutoff(): feature not supported\n",
+        TestSuite::Compare::String);
+}
+
+void AbstractStyleTest::backgroundLayerNotImplemented() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct: AbstractStyle {
+        StyleFeatures doFeatures() const override {
+            return StyleFeature::BackgroundLayer;
+        }
+        bool doApply(UserInterface&, StyleFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override { return {}; }
+    } style;
+
+    Containers::String out;
+    Error redirectError{&out};
+    /* The backgroundLayerUniformCount() delegates to
+       backgroundLayerStyleCount() by default, so the assertion is the same.
+       Delegation and value propagation tested below. */
+    style.backgroundLayerStyleUniformCount();
+    style.backgroundLayerStyleCount();
+    /* backgroundLayerDynamicStyleCount(), backgroundLayerBlurRadius() and
+       backgroundLayerBlurCutoff() have a default, tested in
+       backgroundLayerNotImplementedDefaults() below */
+    CORRADE_COMPARE_AS(out,
+        "Ui::AbstractStyle::backgroundLayerStyleCount(): feature advertised but not implemented\n"
+        "Ui::AbstractStyle::backgroundLayerStyleCount(): feature advertised but not implemented\n",
+        TestSuite::Compare::String);
+}
+
+void AbstractStyleTest::backgroundLayerNotImplementedDefaults() {
+    struct: AbstractStyle {
+        StyleFeatures doFeatures() const override {
+            return StyleFeature::BackgroundLayer;
+        }
+        UnsignedInt doBackgroundLayerStyleCount() const override {
+            return 17;
+        }
+        bool doApply(UserInterface&, StyleFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override { return {}; }
+    } style;
+
+    CORRADE_COMPARE(style.backgroundLayerDynamicStyleCount(), 0);
+    /* With backgroundLayerStyleCount() not implemented it would assert, tested
+       above */
+    CORRADE_COMPARE(style.backgroundLayerStyleUniformCount(), 17);
+    CORRADE_COMPARE(style.backgroundLayerFlags(), BaseLayerSharedFlags{});
+    CORRADE_COMPARE(style.backgroundLayerBlurRadius(), 4);
+    CORRADE_COMPARE(style.backgroundLayerBlurCutoff(), 0.5f/255.0f);
+}
+
+void AbstractStyleTest::backgroundLayerDynamicStyleCountInvalid() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct: AbstractStyle {
+        StyleFeatures doFeatures() const override {
+            return StyleFeature::BackgroundLayer|StyleFeature::BackgroundLayerAnimations;
+        }
+        /* Other layer dynamic styles set instead, to verify the correct
+           interface is checked */
+        UnsignedInt doBaseLayerDynamicStyleCount() const override { return 9; }
+        UnsignedInt doTextLayerDynamicStyleCount() const override { return 3; }
+        bool doApply(UserInterface&, StyleFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override { return {}; }
+    } style;
+
+    Containers::String out;
+    Error redirectError{&out};
+    style.backgroundLayerDynamicStyleCount();
+    CORRADE_COMPARE(out, "Ui::AbstractStyle::backgroundLayerDynamicStyleCount(): implementation advertises Ui::StyleFeature::BackgroundLayerAnimations but zero dynamic styles\n");
+}
+
+void AbstractStyleTest::setBackgroundLayerDynamicStyleCount() {
+    struct: AbstractStyle {
+        StyleFeatures doFeatures() const override {
+            return StyleFeature::BackgroundLayer;
+        }
+        UnsignedInt doBackgroundLayerDynamicStyleCount() const override { return 9; }
+        bool doApply(UserInterface&, StyleFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override { return {}; }
+    } style;
+
+    /* By default it returns what the style says */
+    CORRADE_COMPARE(style.backgroundLayerDynamicStyleCount(), 9);
+
+    /* Setting a new value */
+    style.setBackgroundLayerDynamicStyleCount(11);
+    CORRADE_COMPARE(style.backgroundLayerDynamicStyleCount(), 11);
+
+    /* Setting a new but smaller value than before */
+    style.setBackgroundLayerDynamicStyleCount(10);
+    CORRADE_COMPARE(style.backgroundLayerDynamicStyleCount(), 10);
+
+    /* Setting a value smaller than what style says picks the style instead */
+    style.setBackgroundLayerDynamicStyleCount(3);
+    CORRADE_COMPARE(style.backgroundLayerDynamicStyleCount(), 9);
+}
+
+void AbstractStyleTest::backgroundLayerFlags() {
+    struct Style: AbstractStyle {
+        explicit Style(BaseLayerSharedFlags flags): _flags{flags} {}
+
+        StyleFeatures doFeatures() const override {
+            return StyleFeature::BackgroundLayer;
+        }
+        BaseLayerSharedFlags doBackgroundLayerFlags() const override {
+            return _flags;
+        }
+        bool doApply(UserInterface&, StyleFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override { return {}; }
+
+        private:
+            BaseLayerSharedFlags _flags;
+    } styleNeither{BaseLayerSharedFlag::NoOutline|BaseLayerSharedFlag::NoRoundedCorners},
+      styleBlurNoRoundedCorners{BaseLayerSharedFlag::BackgroundBlur|BaseLayerSharedFlag::NoRoundedCorners};
+
+    /* By default it returns what the style says */
+    CORRADE_COMPARE(styleNeither.backgroundLayerFlags(), BaseLayerSharedFlag::NoOutline|BaseLayerSharedFlag::NoRoundedCorners);
+    CORRADE_COMPARE(styleBlurNoRoundedCorners.backgroundLayerFlags(), BaseLayerSharedFlag::BackgroundBlur|BaseLayerSharedFlag::NoRoundedCorners);
+
+    /* Adding / clearing no flags doesn't change anything */
+    styleBlurNoRoundedCorners.setBackgroundLayerFlags({}, {});
+    CORRADE_COMPARE(styleBlurNoRoundedCorners.backgroundLayerFlags(), BaseLayerSharedFlag::BackgroundBlur|BaseLayerSharedFlag::NoRoundedCorners);
+
+    /* Clearing a flag that isn't there doesn't change anything */
+    /** @todo test also adding a flag that is there, once such a flag is
+        allowed */
+    styleBlurNoRoundedCorners.setBackgroundLayerFlags({}, BaseLayerSharedFlag::NoOutline);
+    CORRADE_COMPARE(styleBlurNoRoundedCorners.backgroundLayerFlags(), BaseLayerSharedFlag::BackgroundBlur|BaseLayerSharedFlag::NoRoundedCorners);
+
+    /* Adding a flag that isn't there updates the style, clearing a flag that
+       is there updates it also */
+    styleBlurNoRoundedCorners.setBackgroundLayerFlags(BaseLayerSharedFlag::SubdividedQuads, {});
+    styleNeither.setBackgroundLayerFlags({}, BaseLayerSharedFlag::NoOutline);
+    CORRADE_COMPARE(styleBlurNoRoundedCorners.backgroundLayerFlags(), BaseLayerSharedFlag::SubdividedQuads|BaseLayerSharedFlag::BackgroundBlur|BaseLayerSharedFlag::NoRoundedCorners);
+    CORRADE_COMPARE(styleNeither.backgroundLayerFlags(), BaseLayerSharedFlag::NoRoundedCorners);
+
+    /* Adding no flags returns to the previous state */
+    styleNeither.setBackgroundLayerFlags({}, {});
+    styleBlurNoRoundedCorners.setBackgroundLayerFlags({}, {});
+    CORRADE_COMPARE(styleNeither.backgroundLayerFlags(), BaseLayerSharedFlag::NoOutline|BaseLayerSharedFlag::NoRoundedCorners);
+    CORRADE_COMPARE(styleBlurNoRoundedCorners.backgroundLayerFlags(), BaseLayerSharedFlag::BackgroundBlur|BaseLayerSharedFlag::NoRoundedCorners);
+}
+
+void AbstractStyleTest::backgroundLayerFlagsInvalid() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct Style: AbstractStyle {
+        explicit Style(BaseLayerSharedFlags flags): _flags{flags} {}
+
+        StyleFeatures doFeatures() const override {
+            return StyleFeature::BackgroundLayer;
+        }
+        BaseLayerSharedFlags doBackgroundLayerFlags() const override {
+            return _flags;
+        }
+        bool doApply(UserInterface&, StyleFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override { return {}; }
+
+        private:
+            BaseLayerSharedFlags _flags;
+    } style{{}},
+      styleReturnedInvalid{BaseLayerSharedFlag::SubdividedQuads|BaseLayerSharedFlag::Textured|BaseLayerSharedFlag::NoOutline};
+
+    Containers::String out;
+    Error redirectError{&out};
+    styleReturnedInvalid.backgroundLayerFlags();
+    style.setBackgroundLayerFlags(BaseLayerSharedFlag::NoOutline|BaseLayerSharedFlag::SubdividedQuads|BaseLayerSharedFlag::Textured|BaseLayerSharedFlag::BackgroundBlur, {});
+    style.setBackgroundLayerFlags({}, BaseLayerSharedFlag::NoOutline|BaseLayerSharedFlag::SubdividedQuads|BaseLayerSharedFlag::Textured|BaseLayerSharedFlag::BackgroundBlur);
+    CORRADE_COMPARE_AS(out,
+        "Ui::AbstractStyle::backgroundLayerFlags(): implementation returned disallowed Ui::BaseLayerSharedFlag::Textured|Ui::BaseLayerSharedFlag::SubdividedQuads\n"
+        "Ui::AbstractStyle::setBackgroundLayerFlags(): Ui::BaseLayerSharedFlag::Textured|Ui::BaseLayerSharedFlag::BackgroundBlur|Ui::BaseLayerSharedFlag::NoOutline isn't allowed to be added\n"
+        "Ui::AbstractStyle::setBackgroundLayerFlags(): Ui::BaseLayerSharedFlag::Textured|Ui::BaseLayerSharedFlag::SubdividedQuads isn't allowed to be cleared\n",
+        TestSuite::Compare::String);
 }
 
 void AbstractStyleTest::baseLayer() {
@@ -444,9 +756,10 @@ void AbstractStyleTest::baseLayerDynamicStyleCountInvalid() {
         StyleFeatures doFeatures() const override {
             return StyleFeature::BaseLayer|StyleFeature::BaseLayerAnimations;
         }
+        /* Other layer dynamic styles set instead, to verify the correct
+           interface is checked */
+        UnsignedInt doBackgroundLayerDynamicStyleCount() const override { return 9; }
         UnsignedInt doTextLayerDynamicStyleCount() const override { return 9; }
-        /* Text layer dynamic styles set instead of base layer, to verify the
-           correct interface is checked */
         bool doApply(UserInterface&, StyleFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override { return {}; }
     } style;
 
@@ -720,9 +1033,10 @@ void AbstractStyleTest::textLayerDynamicStyleCountInvalid() {
         StyleFeatures doFeatures() const override {
             return StyleFeature::TextLayer|StyleFeature::TextLayerAnimations;
         }
+        /* Other layer dynamic styles set instead, to verify the correct
+           interface is checked */
         UnsignedInt doBaseLayerDynamicStyleCount() const override { return 9; }
-        /* Base layer dynamic styles set instead of text layer, to verify the
-           correct interface is checked */
+        UnsignedInt doBackgroundLayerDynamicStyleCount() const override { return 3; }
         bool doApply(UserInterface&, StyleFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override { return {}; }
     } style;
 
@@ -909,7 +1223,9 @@ void AbstractStyleTest::apply() {
         explicit LayerSharedBase(const Configuration& configuration): BaseLayer::Shared{configuration} {}
 
         void doSetStyle(const BaseLayerCommonStyleUniform&, Containers::ArrayView<const BaseLayerStyleUniform>) override {}
-    } sharedBase{BaseLayer::Shared::Configuration{3, 5}
+    } sharedBackground{BaseLayer::Shared::Configuration{17, 19}
+        .setDynamicStyleCount(23)
+    }, sharedBase{BaseLayer::Shared::Configuration{3, 5}
         .setDynamicStyleCount(11)
     };
 
@@ -942,6 +1258,10 @@ void AbstractStyleTest::apply() {
         explicit Interface(NoCreateT): UserInterface{NoCreate} {}
     } ui{NoCreate};
     ui.setSize({200, 300});
+    if(data.backgroundLayerPresent)
+        ui.setBackgroundLayerInstance(Containers::pointer<LayerBase>(ui.createLayer(), sharedBackground));
+    if(data.backgroundLayerStyleAnimatorPresent)
+        ui.setBackgroundLayerStyleAnimatorInstance(Containers::pointer<BaseLayerStyleAnimator>(ui.createAnimator()));
     if(data.baseLayerPresent)
         ui.setBaseLayerInstance(Containers::pointer<LayerBase>(ui.createLayer(), sharedBase));
     if(data.baseLayerStyleAnimatorPresent)
@@ -965,11 +1285,17 @@ void AbstractStyleTest::apply() {
 
         StyleFeatures doFeatures() const override {
             return
+                StyleFeature::BackgroundLayer|StyleFeature::BackgroundLayerAnimations|
                 StyleFeature::BaseLayer|StyleFeature::BaseLayerAnimations|
                 StyleFeature::TextLayer|StyleFeature::TextLayerImages|StyleFeature::TextLayerAnimations|
                 StyleFeature::EventLayer|StyleFeature::LayoutLayer|
                 StyleFeature::SnapLayouter|StyleFeature::GenericLayouter;
         }
+        UnsignedInt doBackgroundLayerStyleUniformCount() const override { return 17; }
+        UnsignedInt doBackgroundLayerStyleCount() const override { return 19; }
+        UnsignedInt doBackgroundLayerDynamicStyleCount() const override { return 23; }
+        UnsignedInt doBackgroundLayerBlurRadius() const override { return 8; }
+        Float doBackgroundLayerBlurCutoff() const override { return 0.5f; }
         UnsignedInt doBaseLayerStyleUniformCount() const override { return 3; }
         UnsignedInt doBaseLayerStyleCount() const override { return 5; }
         UnsignedInt doBaseLayerDynamicStyleCount() const override { return 11; }
@@ -1073,32 +1399,179 @@ void AbstractStyleTest::applyNoSizeSet() {
     CORRADE_COMPARE(out, "Ui::AbstractStyle::apply(): user interface size wasn't set\n");
 }
 
-void AbstractStyleTest::applyBaseLayerNotPresent() {
+void AbstractStyleTest::applyBackgroundLayerNotPresent() {
     CORRADE_SKIP_IF_NO_ASSERT();
 
-    struct: Text::AbstractGlyphCache {
-        using Text::AbstractGlyphCache::AbstractGlyphCache;
+    struct LayerShared: BaseLayer::Shared {
+        explicit LayerShared(const Configuration& configuration): BaseLayer::Shared{configuration} {}
 
-        Text::GlyphCacheFeatures doFeatures() const override { return {}; }
-        void doSetImage(const Vector2i&, const ImageView2D&) override {}
-    } cache{PixelFormat::R8Unorm, {32, 32}};
+        void doSetStyle(const BaseLayerCommonStyleUniform&, Containers::ArrayView<const BaseLayerStyleUniform>) override {}
+    } shared{BaseLayer::Shared::Configuration{3, 5}
+        .setDynamicStyleCount(11)
+    };
 
-    struct LayerShared: TextLayer::Shared {
-        explicit LayerShared(Text::AbstractGlyphCache& glyphCache, const Configuration& configuration): TextLayer::Shared{glyphCache, configuration} {}
-
-        void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
-        void doSetEditingStyle(const TextLayerCommonEditingStyleUniform&, Containers::ArrayView<const TextLayerEditingStyleUniform>) override {}
-    } shared{cache, TextLayer::Shared::Configuration{1, 3}};
-
-    struct Layer: TextLayer {
-        explicit Layer(LayerHandle handle, Shared& shared): TextLayer{handle, shared} {}
+    struct Layer: BaseLayer {
+        explicit Layer(LayerHandle handle, Shared& shared): BaseLayer{handle, shared} {}
     };
 
     struct Interface: UserInterface {
         explicit Interface(NoCreateT): UserInterface{NoCreate} {}
     } ui{NoCreate};
     ui.setSize({200, 300})
-      .setTextLayerInstance(Containers::pointer<Layer>(ui.createLayer(), shared))
+      /* Having base layer present (which is used for ui.backgroundLayer() if
+         background layer isn't present) shouldn't be treated as if the
+         background layer is there */
+      .setBaseLayerInstance(Containers::pointer<Layer>(ui.createLayer(), shared))
+      .setEventLayerInstance(Containers::pointer<EventLayer>(ui.createLayer()));
+
+    struct: AbstractStyle {
+        StyleFeatures doFeatures() const override {
+            return StyleFeature::BackgroundLayer;
+        }
+        bool doApply(UserInterface&, StyleFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override {
+            CORRADE_FAIL("This shouldn't get called.");
+            return {};
+        }
+    } style;
+
+    /* Capture correct function name */
+    CORRADE_VERIFY(true);
+
+    Containers::String out;
+    Error redirectError{&out};
+    style.apply(ui, StyleFeature::BackgroundLayer, nullptr, nullptr);
+    CORRADE_COMPARE(out, "Ui::AbstractStyle::apply(): background layer not present in the user interface\n");
+}
+
+void AbstractStyleTest::applyBackgroundLayerDifferentStyleCount() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct LayerShared: BaseLayer::Shared {
+        explicit LayerShared(const Configuration& configuration): BaseLayer::Shared{configuration} {}
+
+        void doSetStyle(const BaseLayerCommonStyleUniform&, Containers::ArrayView<const BaseLayerStyleUniform>) override {}
+    } shared{BaseLayer::Shared::Configuration{3, 5}
+        .setDynamicStyleCount(11)
+    };
+
+    struct Layer: BaseLayer {
+        explicit Layer(LayerHandle handle, Shared& shared): BaseLayer{handle, shared} {}
+    };
+
+    struct Interface: UserInterface {
+        explicit Interface(NoCreateT): UserInterface{NoCreate} {}
+    } ui{NoCreate};
+    ui.setSize({200, 300})
+      .setBackgroundLayerInstance(Containers::pointer<Layer>(ui.createLayer(), shared));
+
+    struct Style: AbstractStyle {
+        Style(UnsignedInt styleUniformCount, UnsignedInt styleCount, UnsignedInt dynamicStyleCount): _styleUniformCount{styleUniformCount}, _styleCount{styleCount}, _dynamicStyleCount{dynamicStyleCount} {}
+
+        StyleFeatures doFeatures() const override {
+            return StyleFeature::BackgroundLayer;
+        }
+        UnsignedInt doBackgroundLayerStyleUniformCount() const override { return _styleUniformCount; }
+        UnsignedInt doBackgroundLayerStyleCount() const override { return _styleCount; }
+        UnsignedInt doBackgroundLayerDynamicStyleCount() const override { return _dynamicStyleCount; }
+        bool doApply(UserInterface& ui, StyleFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override {
+            CORRADE_FAIL_IF(
+                ui.backgroundLayer().shared().styleCount() != _styleCount ||
+                ui.backgroundLayer().shared().styleUniformCount() != _styleUniformCount ||
+                ui.backgroundLayer().shared().dynamicStyleCount() < _dynamicStyleCount,
+                "This shouldn't get called.");
+            return true;
+        }
+
+        UnsignedInt _styleUniformCount, _styleCount, _dynamicStyleCount;
+    };
+
+    /* Capture correct function name */
+    CORRADE_VERIFY(true);
+
+    /* Applying a style with a smaller or equal dynamic style count is
+       alright */
+    CORRADE_VERIFY(Style{3, 5, 11}
+        .apply(ui, StyleFeature::BackgroundLayer, nullptr, nullptr));
+    CORRADE_VERIFY(Style{3, 5, 10}
+        .apply(ui, StyleFeature::BackgroundLayer, nullptr, nullptr));
+
+    Containers::String out;
+    Error redirectError{&out};
+    Style{4, 5, 11}
+        .apply(ui, StyleFeature::BackgroundLayer, nullptr, nullptr);
+    Style{3, 4, 11}
+        .apply(ui, StyleFeature::BackgroundLayer, nullptr, nullptr);
+    Style{3, 5, 12}
+        .apply(ui, StyleFeature::BackgroundLayer, nullptr, nullptr);
+    CORRADE_COMPARE_AS(out,
+        "Ui::AbstractStyle::apply(): style wants 4 uniforms, 5 styles and at least 11 dynamic styles but the background layer has 3, 5 and 11\n"
+        "Ui::AbstractStyle::apply(): style wants 3 uniforms, 4 styles and at least 11 dynamic styles but the background layer has 3, 5 and 11\n"
+        "Ui::AbstractStyle::apply(): style wants 3 uniforms, 5 styles and at least 12 dynamic styles but the background layer has 3, 5 and 11\n",
+        TestSuite::Compare::String);
+}
+
+void AbstractStyleTest::applyBackgroundLayerStyleAnimatorNotPresent() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct LayerShared: BaseLayer::Shared {
+        explicit LayerShared(const Configuration& configuration): BaseLayer::Shared{configuration} {}
+
+        void doSetStyle(const BaseLayerCommonStyleUniform&, Containers::ArrayView<const BaseLayerStyleUniform>) override {}
+    } shared{BaseLayer::Shared::Configuration{3, 5}
+        .setDynamicStyleCount(11)
+    };
+
+    struct Layer: BaseLayer {
+        explicit Layer(LayerHandle handle, Shared& shared): BaseLayer{handle, shared} {}
+    };
+
+    struct Interface: UserInterface {
+        explicit Interface(NoCreateT): UserInterface{NoCreate} {}
+    } ui{NoCreate};
+    ui.setSize({200, 300})
+      .setBackgroundLayerInstance(Containers::pointer<Layer>(ui.createLayer(), shared));
+
+    struct: AbstractStyle {
+        StyleFeatures doFeatures() const override {
+            return StyleFeature::BackgroundLayerAnimations;
+        }
+        bool doApply(UserInterface&, StyleFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override {
+            CORRADE_FAIL("This shouldn't get called.");
+            return {};
+        }
+    } style;
+
+    /* Capture correct function name */
+    CORRADE_VERIFY(true);
+
+    Containers::String out;
+    Error redirectError{&out};
+    style.apply(ui, StyleFeature::BackgroundLayerAnimations, nullptr, nullptr);
+    CORRADE_COMPARE(out, "Ui::AbstractStyle::apply(): background layer style animator not present in the user interface\n");
+}
+
+void AbstractStyleTest::applyBaseLayerNotPresent() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct LayerShared: BaseLayer::Shared {
+        explicit LayerShared(const Configuration& configuration): BaseLayer::Shared{configuration} {}
+
+        void doSetStyle(const BaseLayerCommonStyleUniform&, Containers::ArrayView<const BaseLayerStyleUniform>) override {}
+    } shared{BaseLayer::Shared::Configuration{3, 5}
+        .setDynamicStyleCount(11)
+    };
+
+    struct Layer: BaseLayer {
+        explicit Layer(LayerHandle handle, Shared& shared): BaseLayer{handle, shared} {}
+    };
+
+    struct Interface: UserInterface {
+        explicit Interface(NoCreateT): UserInterface{NoCreate} {}
+    } ui{NoCreate};
+    ui.setSize({200, 300})
+      /* Having background layer present shouldn't be treated as if the base
+         layer is there */
+      .setBackgroundLayerInstance(Containers::pointer<Layer>(ui.createLayer(), shared))
       .setEventLayerInstance(Containers::pointer<EventLayer>(ui.createLayer()));
 
     struct: AbstractStyle {
