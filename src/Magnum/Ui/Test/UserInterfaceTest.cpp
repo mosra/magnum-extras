@@ -38,6 +38,7 @@
 #include "Magnum/Ui/GenericLayouter.h"
 #include "Magnum/Ui/Handle.h"
 #include "Magnum/Ui/LayoutLayer.h"
+#include "Magnum/Ui/NodeAnimator.h"
 #include "Magnum/Ui/SnapLayouter.h"
 #include "Magnum/Ui/TextLayer.h"
 #include "Magnum/Ui/TextLayerAnimator.h"
@@ -94,6 +95,10 @@ struct UserInterfaceTest: TestSuite::Tester {
     void setGenericLayouterInstance();
     void setGenericLayouterInstanceInvalid();
     void genericLayouterInvalid();
+
+    void setNodeAnimatorInstance();
+    void setNodeAnimatorInstanceInvalid();
+    void nodeAnimatorInvalid();
 };
 
 const struct {
@@ -156,7 +161,11 @@ UserInterfaceTest::UserInterfaceTest() {
 
               &UserInterfaceTest::setGenericLayouterInstance,
               &UserInterfaceTest::setGenericLayouterInstanceInvalid,
-              &UserInterfaceTest::genericLayouterInvalid});
+              &UserInterfaceTest::genericLayouterInvalid,
+
+              &UserInterfaceTest::setNodeAnimatorInstance,
+              &UserInterfaceTest::setNodeAnimatorInstanceInvalid,
+              &UserInterfaceTest::nodeAnimatorInvalid});
 }
 
 void UserInterfaceTest::construct() {
@@ -184,6 +193,7 @@ void UserInterfaceTest::construct() {
     CORRADE_VERIFY(!ui.hasLayoutLayer());
     CORRADE_VERIFY(!ui.hasSnapLayouter());
     CORRADE_VERIFY(!ui.hasGenericLayouter());
+    CORRADE_VERIFY(!ui.hasNodeAnimator());
 }
 
 void UserInterfaceTest::constructNoCreate() {
@@ -380,6 +390,7 @@ void UserInterfaceTest::setBackgroundLayerStyleAnimatorInstance() {
     CORRADE_VERIFY(!ui.hasBackgroundLayerStyleAnimator());
     CORRADE_VERIFY(!ui.hasBaseLayerStyleAnimator());
     CORRADE_VERIFY(!ui.hasTextLayerStyleAnimator());
+    CORRADE_VERIFY(!ui.hasNodeAnimator());
 
     ui.setBackgroundLayerInstance(Containers::pointer<Layer>(ui.createLayer(), shared));
 
@@ -398,6 +409,7 @@ void UserInterfaceTest::setBackgroundLayerStyleAnimatorInstance() {
     CORRADE_VERIFY(ui.hasBackgroundLayerStyleAnimator());
     CORRADE_VERIFY(!ui.hasBaseLayerStyleAnimator());
     CORRADE_VERIFY(!ui.hasTextLayerStyleAnimator());
+    CORRADE_VERIFY(!ui.hasNodeAnimator());
     CORRADE_COMPARE(&ui.animator(handle), pointer);
     CORRADE_COMPARE(&ui.backgroundLayerStyleAnimator(), pointer);
     CORRADE_COMPARE(&cui.backgroundLayerStyleAnimator(), pointer);
@@ -672,6 +684,7 @@ void UserInterfaceTest::setBaseLayerStyleAnimatorInstance() {
     CORRADE_VERIFY(!ui.hasBackgroundLayerStyleAnimator());
     CORRADE_VERIFY(!ui.hasBaseLayerStyleAnimator());
     CORRADE_VERIFY(!ui.hasTextLayerStyleAnimator());
+    CORRADE_VERIFY(!ui.hasNodeAnimator());
 
     ui.setBaseLayerInstance(Containers::pointer<Layer>(ui.createLayer(), shared));
 
@@ -690,6 +703,7 @@ void UserInterfaceTest::setBaseLayerStyleAnimatorInstance() {
     CORRADE_VERIFY(!ui.hasBackgroundLayerStyleAnimator());
     CORRADE_VERIFY(ui.hasBaseLayerStyleAnimator());
     CORRADE_VERIFY(!ui.hasTextLayerStyleAnimator());
+    CORRADE_VERIFY(!ui.hasNodeAnimator());
     CORRADE_COMPARE(&ui.animator(handle), pointer);
     CORRADE_COMPARE(&ui.baseLayerStyleAnimator(), pointer);
     CORRADE_COMPARE(&cui.baseLayerStyleAnimator(), pointer);
@@ -887,6 +901,7 @@ void UserInterfaceTest::setTextLayerStyleAnimatorInstance() {
     CORRADE_VERIFY(!ui.hasBackgroundLayerStyleAnimator());
     CORRADE_VERIFY(!ui.hasBaseLayerStyleAnimator());
     CORRADE_VERIFY(!ui.hasTextLayerStyleAnimator());
+    CORRADE_VERIFY(!ui.hasNodeAnimator());
 
     ui.setTextLayerInstance(Containers::pointer<Layer>(ui.createLayer(), shared));
 
@@ -905,6 +920,7 @@ void UserInterfaceTest::setTextLayerStyleAnimatorInstance() {
     CORRADE_VERIFY(!ui.hasBackgroundLayerStyleAnimator());
     CORRADE_VERIFY(!ui.hasBaseLayerStyleAnimator());
     CORRADE_VERIFY(ui.hasTextLayerStyleAnimator());
+    CORRADE_VERIFY(!ui.hasNodeAnimator());
     CORRADE_COMPARE(&ui.animator(handle), pointer);
     CORRADE_COMPARE(&ui.textLayerStyleAnimator(), pointer);
     CORRADE_COMPARE(&cui.textLayerStyleAnimator(), pointer);
@@ -1207,6 +1223,64 @@ void UserInterfaceTest::genericLayouterInvalid() {
     Error redirectError{&out};
     ui.genericLayouter();
     CORRADE_COMPARE(out, "Ui::UserInterface::genericLayouter(): no instance set\n");
+}
+
+void UserInterfaceTest::setNodeAnimatorInstance() {
+    struct Interface: UserInterface {
+        explicit Interface(NoCreateT): UserInterface{NoCreate} {}
+    } ui{NoCreate};
+    const UserInterface& cui = ui;
+    CORRADE_COMPARE(ui.layouterCapacity(), 0);
+    CORRADE_COMPARE(ui.layouterUsedCount(), 0);
+    CORRADE_VERIFY(!ui.hasBackgroundLayerStyleAnimator());
+    CORRADE_VERIFY(!ui.hasBaseLayerStyleAnimator());
+    CORRADE_VERIFY(!ui.hasTextLayerStyleAnimator());
+    CORRADE_VERIFY(!ui.hasNodeAnimator());
+
+    AnimatorHandle handle = ui.createAnimator();
+    Containers::Pointer<NodeAnimator> animator{InPlaceInit, handle};
+    NodeAnimator* pointer = animator.get();
+    ui.setNodeAnimatorInstance(Utility::move(animator));
+    CORRADE_COMPARE(ui.animatorCapacity(), 1);
+    CORRADE_COMPARE(ui.animatorUsedCount(), 1);
+    CORRADE_VERIFY(!ui.hasBackgroundLayerStyleAnimator());
+    CORRADE_VERIFY(!ui.hasBaseLayerStyleAnimator());
+    CORRADE_VERIFY(!ui.hasTextLayerStyleAnimator());
+    CORRADE_VERIFY(ui.hasNodeAnimator());
+    CORRADE_COMPARE(&ui.animator(handle), pointer);
+    CORRADE_COMPARE(&ui.nodeAnimator(), pointer);
+    CORRADE_COMPARE(&cui.nodeAnimator(), pointer);
+}
+
+void UserInterfaceTest::setNodeAnimatorInstanceInvalid() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct Interface: UserInterface {
+        explicit Interface(NoCreateT): UserInterface{NoCreate} {}
+    } ui{NoCreate};
+    ui.setNodeAnimatorInstance(Containers::pointer<NodeAnimator>(ui.createAnimator()));
+
+    Containers::String out;
+    Error redirectError{&out};
+    ui.setNodeAnimatorInstance(nullptr);
+    ui.setNodeAnimatorInstance(Containers::pointer<NodeAnimator>(ui.createAnimator()));
+    CORRADE_COMPARE_AS(out,
+        "Ui::UserInterface::setNodeAnimatorInstance(): instance is null\n"
+        "Ui::UserInterface::setNodeAnimatorInstance(): instance already set\n",
+        TestSuite::Compare::String);
+}
+
+void UserInterfaceTest::nodeAnimatorInvalid() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct Interface: UserInterface {
+        explicit Interface(NoCreateT): UserInterface{NoCreate} {}
+    } ui{NoCreate};
+
+    Containers::String out;
+    Error redirectError{&out};
+    ui.nodeAnimator();
+    CORRADE_COMPARE(out, "Ui::UserInterface::nodeAnimator(): no instance set\n");
 }
 
 }}}}

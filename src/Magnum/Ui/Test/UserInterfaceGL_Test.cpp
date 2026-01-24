@@ -66,6 +66,7 @@ void UserInterfaceGL_Test::constructNoCreate() {
     CORRADE_VERIFY(!ui.hasLayoutLayer());
     CORRADE_VERIFY(!ui.hasSnapLayouter());
     CORRADE_VERIFY(!ui.hasGenericLayouter());
+    CORRADE_VERIFY(!ui.hasNodeAnimator());
 }
 
 }}}}

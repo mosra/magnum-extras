@@ -55,6 +55,7 @@ Debug& operator<<(Debug& debug, const StyleFeature value) {
         _c(LayoutLayer)
         _c(SnapLayouter)
         _c(GenericLayouter)
+        _c(NodeAnimations)
         #undef _c
         /* LCOV_EXCL_STOP */
     }
@@ -75,6 +76,7 @@ Debug& operator<<(Debug& debug, const StyleFeatures value) {
         StyleFeature::LayoutLayer,
         StyleFeature::SnapLayouter,
         StyleFeature::GenericLayouter,
+        StyleFeature::NodeAnimations,
     });
 }
 
@@ -441,6 +443,10 @@ bool AbstractStyle::apply(UserInterface& ui, const StyleFeatures features, Plugi
     if(features >= StyleFeature::GenericLayouter) {
         CORRADE_ASSERT(ui.hasGenericLayouter(),
             "Ui::AbstractStyle::apply(): generic layouter not present in the user interface", {});
+    }
+    if(features >= StyleFeature::NodeAnimations) {
+        CORRADE_ASSERT(ui.hasNodeAnimator(),
+            "Ui::AbstractStyle::apply(): node animator not present in the user interface", {});
     }
     #endif
 

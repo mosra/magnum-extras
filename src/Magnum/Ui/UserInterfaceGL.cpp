@@ -37,6 +37,7 @@
 #include "Magnum/Ui/EventLayer.h"
 #include "Magnum/Ui/GenericLayouter.h"
 #include "Magnum/Ui/LayoutLayer.h"
+#include "Magnum/Ui/NodeAnimator.h"
 #include "Magnum/Ui/RendererGL.h"
 #include "Magnum/Ui/SnapLayouter.h"
 #include "Magnum/Ui/TextLayerGL.h"
@@ -94,7 +95,8 @@ bool UserInterfaceGL::tryCreateInternal(const AbstractStyle& style, const StyleF
         !state.eventLayer &&
         !state.layoutLayer &&
         !state.snapLayouter &&
-        !state.genericLayouter,
+        !state.genericLayouter &&
+        !state.nodeAnimator,
         "Ui::UserInterfaceGL::tryCreate(): user interface already created",
         /* Has to return true with CORRADE_GRACEFUL_ASSERT so when tested
            through create() it doesn't std::exit() the whole executable */
@@ -292,6 +294,11 @@ bool UserInterfaceGL::trySetStyle(const AbstractStyle& style, const StyleFeature
         CORRADE_ASSERT(!state.genericLayouter,
             "Ui::UserInterfaceGL::trySetStyle(): generic layouter already present", {});
         setGenericLayouterInstance(Containers::pointer<GenericLayouter>(createLayouter()));
+    }
+    if(features >= StyleFeature::NodeAnimations) {
+        CORRADE_ASSERT(!state.nodeAnimator,
+            "Ui::UserInterfaceGL::trySetStyle(): node animator already present", {});
+        setNodeAnimatorInstance(Containers::pointer<NodeAnimator>(createAnimator()));
     }
 
     return style.apply(*this, features, _state->importerManager, _state->fontManager);

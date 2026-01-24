@@ -73,12 +73,13 @@ The above by default populates the user interface with everything a style
 provides for use by builtin widgets --- in particular, making most of
 @ref backgroundLayer(), @ref baseLayer(), @ref textLayer(), @ref eventLayer(),
 @ref layoutLayer(), @ref snapLayouter(), @ref genericLayouter(),
-@ref backgroundLayerStyleAnimator(), @ref baseLayerStyleAnimator() and
-@ref textLayerStyleAnimator() available. In case you for example use just a
-subset of the builtin widgets that only need a part of the above, you can
-specify a @ref StyleFeatures subset. This can be further combined with
-@ref setStyle(), where, as long as you specify non-overlapping sets of
-@ref StyleFeatures, you can combine multiple styles together:
+@ref nodeAnimator(), @ref backgroundLayerStyleAnimator(),
+@ref baseLayerStyleAnimator() and @ref textLayerStyleAnimator() available. In
+case you for example use just a subset of the builtin widgets that only need a
+part of the above, you can specify a @ref StyleFeatures subset. This can be
+further combined with @ref setStyle(), where, as long as you specify
+non-overlapping sets of @ref StyleFeatures, you can combine multiple styles
+together:
 
 @snippet Ui-gl.cpp UserInterfaceGL-setup-features
 
@@ -125,7 +126,7 @@ supply a custom instance using @ref setBackgroundLayerInstance(),
 @ref setBaseLayerInstance(), @ref setTextLayerInstance(),
 @ref setEventLayerInstance(), @ref setLayoutLayerInstance(),
 @ref setSnapLayouterInstance(), @ref setGenericLayouterInstance(),
-@ref setBackgroundLayerStyleAnimatorInstance(),
+@ref setNodeAnimatorInstance(), @ref setBackgroundLayerStyleAnimatorInstance(),
 @ref setBaseLayerStyleAnimatorInstance() or
 @ref setTextLayerStyleAnimatorInstance(). Note that however, at this point,
 you're on your own when you attempt to use any builtin widgets that rely on
@@ -275,7 +276,7 @@ class MAGNUM_UI_EXPORT UserInterfaceGL: public UserInterface {
          * @ref setBackgroundLayerInstance(), @ref setBaseLayerInstance(),
          * @ref setTextLayerInstance(), @ref setEventLayerInstance(),
          * @ref setLayoutLayerInstance(), @ref setSnapLayouterInstance(),
-         * @ref setGenericLayouterInstance(),
+         * @ref setGenericLayouterInstance(), @ref setNodeAnimatorInstance(),
          * @ref setBackgroundLayerStyleAnimatorInstance(),
          * @ref setBaseLayerStyleAnimatorInstance(),
          * @ref setTextLayerStyleAnimatorInstance() or
@@ -307,7 +308,7 @@ class MAGNUM_UI_EXPORT UserInterfaceGL: public UserInterface {
          * @ref setBackgroundLayerInstance(), @ref setBaseLayerInstance(),
          * @ref setTextLayerInstance(), @ref setEventLayerInstance(),
          * @ref setLayoutLayerInstance(), @ref setSnapLayouterInstance(),
-         * @ref setGenericLayouterInstance(),
+         * @ref setGenericLayouterInstance(), @ref setNodeAnimatorInstance(),
          * @ref setBackgroundLayerStyleAnimatorInstance(),
          * @ref setBaseLayerStyleAnimatorInstance(),
          * @ref setTextLayerStyleAnimatorInstance() or
@@ -344,7 +345,7 @@ class MAGNUM_UI_EXPORT UserInterfaceGL: public UserInterface {
          * @ref setBackgroundLayerInstance(), @ref setBaseLayerInstance(),
          * @ref setTextLayerInstance(), @ref setEventLayerInstance(),
          * @ref setLayoutLayerInstance(), @ref setSnapLayouterInstance(),
-         * @ref setGenericLayouterInstance(),
+         * @ref setGenericLayouterInstance(), @ref setNodeAnimatorInstance(),
          * @ref setBackgroundLayerStyleAnimatorInstance(),
          * @ref setBaseLayerStyleAnimatorInstance(),
          * @ref setTextLayerStyleAnimatorInstance() or
@@ -377,7 +378,7 @@ class MAGNUM_UI_EXPORT UserInterfaceGL: public UserInterface {
          * @ref setBackgroundLayerInstance(), @ref setBaseLayerInstance(),
          * @ref setTextLayerInstance(), @ref setEventLayerInstance(),
          * @ref setLayoutLayerInstance(), @ref setSnapLayouterInstance(),
-         * @ref setGenericLayouterInstance(),
+         * @ref setGenericLayouterInstance(), @ref setNodeAnimatorInstance(),
          * @ref setBackgroundLayerStyleAnimatorInstance(),
          * @ref setBaseLayerStyleAnimatorInstance(),
          * @ref setTextLayerStyleAnimatorInstance() or
@@ -560,7 +561,7 @@ class MAGNUM_UI_EXPORT UserInterfaceGL: public UserInterface {
          *      @ref hasRendererInstance(), @ref hasBackgroundLayer(),
          *      @ref hasBaseLayer(), @ref hasTextLayer(), @ref hasEventLayer(),
          *      @ref hasLayoutLayer(), @ref hasSnapLayouter(),
-         *      @ref hasGenericLayouter(),
+         *      @ref hasGenericLayouter(), @ref hasNodeAnimator(),
          *      @ref hasBackgroundLayerStyleAnimator(),
          *      @ref hasBaseLayerStyleAnimator(),
          *      @ref hasTextLayerStyleAnimator(),
@@ -668,6 +669,9 @@ class MAGNUM_UI_EXPORT UserInterfaceGL: public UserInterface {
         }
         UserInterfaceGL& setGenericLayouterInstance(Containers::Pointer<GenericLayouter>&& instance) {
             return static_cast<UserInterfaceGL&>(UserInterface::setGenericLayouterInstance(Utility::move(instance)));
+        }
+        UserInterfaceGL& setNodeAnimatorInstance(Containers::Pointer<NodeAnimator>&& instance) {
+            return static_cast<UserInterfaceGL&>(UserInterface::setNodeAnimatorInstance(Utility::move(instance)));
         }
         UserInterfaceGL& clean() {
             return static_cast<UserInterfaceGL&>(UserInterface::clean());

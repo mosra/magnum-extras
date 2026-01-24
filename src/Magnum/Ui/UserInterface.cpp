@@ -35,6 +35,7 @@
 #include "Magnum/Ui/GenericLayouter.h"
 #include "Magnum/Ui/Handle.h"
 #include "Magnum/Ui/LayoutLayer.h"
+#include "Magnum/Ui/NodeAnimator.h"
 #include "Magnum/Ui/SnapLayouter.h"
 #include "Magnum/Ui/TextLayer.h"
 #include "Magnum/Ui/TextLayerAnimator.h"
@@ -348,6 +349,30 @@ UserInterface& UserInterface::setGenericLayouterInstance(Containers::Pointer<Gen
         "Ui::UserInterface::setGenericLayouterInstance(): instance already set", *this);
     _state->genericLayouter = instance.get();
     setLayouterInstance(Utility::move(instance));
+    return *this;
+}
+
+bool UserInterface::hasNodeAnimator() const {
+    return _state->nodeAnimator;
+}
+
+const NodeAnimator& UserInterface::nodeAnimator() const {
+    CORRADE_ASSERT(_state->nodeAnimator,
+        "Ui::UserInterface::nodeAnimator(): no instance set", *_state->nodeAnimator);
+    return *_state->nodeAnimator;
+}
+
+NodeAnimator& UserInterface::nodeAnimator() {
+    return const_cast<NodeAnimator&>(const_cast<const UserInterface&>(*this).nodeAnimator());
+}
+
+UserInterface& UserInterface::setNodeAnimatorInstance(Containers::Pointer<NodeAnimator>&& instance) {
+    CORRADE_ASSERT(instance,
+        "Ui::UserInterface::setNodeAnimatorInstance(): instance is null", *this);
+    CORRADE_ASSERT(!_state->nodeAnimator,
+        "Ui::UserInterface::setNodeAnimatorInstance(): instance already set", *this);
+    _state->nodeAnimator = instance.get();
+    setAnimatorInstance(Utility::move(instance));
     return *this;
 }
 

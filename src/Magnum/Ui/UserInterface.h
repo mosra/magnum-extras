@@ -49,7 +49,7 @@ Builtin widgets, deriving from the @ref Widget class, have access to this
 instance through @ref BasicWidget::ui() and depending on style setup generally
 assume that most of @ref backgroundLayer(), @ref baseLayer(), @ref textLayer(),
 @ref eventLayer(), @ref layoutLayer(), @ref snapLayouter(),
-@ref genericLayouter(), @ref backgroundLayerStyleAnimator(),
+@ref genericLayouter(), @ref nodeAnimator(), @ref backgroundLayerStyleAnimator(),
 @ref baseLayerStyleAnimator() and @ref textLayerStyleAnimator() is available
 for use.
 */
@@ -451,6 +451,39 @@ class MAGNUM_UI_EXPORT UserInterface: public AbstractUserInterface {
          * @see @ref hasGenericLayouter(), @ref StyleFeature::GenericLayouter
          */
         UserInterface& setGenericLayouterInstance(Containers::Pointer<GenericLayouter>&& instance);
+
+        /**
+         * @brief Whether a node animator instance has been set
+         *
+         * @see @ref nodeAnimator(), @ref setNodeAnimatorInstance()
+         */
+        bool hasNodeAnimator() const;
+
+        /**
+         * @brief Node animator instance
+         *
+         * Expects that an instance has been set, either by
+         * @ref setNodeAnimatorInstance() or transitively by
+         * @ref UserInterfaceGL::setStyle(),
+         * @relativeref{UserInterfaceGL,create()} or a @ref UserInterfaceGL
+         * constructor taking a style instance.
+         * @see @ref StyleFeature::NodeAnimations
+         */
+        NodeAnimator& nodeAnimator();
+        const NodeAnimator& nodeAnimator() const; /**< @overload */
+
+        /**
+         * @brief Set a node animator instance
+         * @return Reference to self (for method chaining)
+         *
+         * Expects that the instance hasn't been set yet, either by this
+         * function or transitively either by @ref UserInterfaceGL::setStyle(),
+         * @relativeref{UserInterfaceGL,create()} or a @ref UserInterfaceGL
+         * constructor taking a style instance. The instance is subsequently
+         * available through @ref nodeAnimator().
+         * @see @ref hasNodeAnimator(), @ref StyleFeature::NodeAnimations
+         */
+        UserInterface& setNodeAnimatorInstance(Containers::Pointer<NodeAnimator>&& instance);
 
         /* Overloads to remove a WTF factor from method chaining order */
         #ifndef DOXYGEN_GENERATING_OUTPUT

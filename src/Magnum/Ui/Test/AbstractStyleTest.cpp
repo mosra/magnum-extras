@@ -39,6 +39,7 @@
 #include "Magnum/Ui/EventLayer.h"
 #include "Magnum/Ui/GenericLayouter.h"
 #include "Magnum/Ui/LayoutLayer.h"
+#include "Magnum/Ui/NodeAnimator.h"
 #include "Magnum/Ui/SnapLayouter.h"
 #include "Magnum/Ui/TextLayer.h"
 #include "Magnum/Ui/TextLayerAnimator.h"
@@ -96,8 +97,8 @@ struct AbstractStyleTest: TestSuite::Tester {
     void layoutLayerNotImplemented();
     /* No defaults for not implemented layout layer properties yet */
 
-    /* SnapLayouter and GenericLayouter has no getters or setters to test,
-       verified only for apply() below */
+    /* SnapLayouter, GenericLayouter and NodeAnimations have no getters or
+       setters to test, verified only for apply() below */
 
     void apply();
     void applyNoSizeSet();
@@ -121,6 +122,7 @@ struct AbstractStyleTest: TestSuite::Tester {
     void applyLayoutLayerDifferentStyleCount();
     void applySnapLayouterNotPresent();
     void applyGenericLayouterNotPresent();
+    void applyNodeAnimatorNotPresent();
 
     private:
         PluginManager::Manager<Trade::AbstractImporter> _importerManager;
@@ -133,7 +135,7 @@ const struct {
     bool baseLayerPresent, baseLayerStyleAnimatorPresent;
     bool textLayerPresent, textLayerStyleAnimatorPresent;
     bool eventLayerPresent, layoutLayerPresent;
-    bool snapLayouterPresent, genericLayouterPresent;
+    bool snapLayouterPresent, genericLayouterPresent, nodeAnimatorPresent;
     StyleFeatures features;
     bool succeed;
 } ApplyData[]{
@@ -142,126 +144,133 @@ const struct {
         false, false,
         false, false,
         false, false,
-        false, false,
+        false, false, false,
         StyleFeature::BackgroundLayer, true},
     {"background layer animations only",
         true, true,
         false, false,
         false, false,
         false, false,
-        false, false,
+        false, false, false,
         StyleFeature::BackgroundLayerAnimations, true},
     {"background layer + base layer animations",
         true, true,
         false, false,
         false, false,
         false, false,
-        false, false,
+        false, false, false,
         StyleFeature::BackgroundLayer|StyleFeature::BackgroundLayerAnimations, true},
     {"base layer only",
         false, false,
         true, false,
         false, false,
         false, false,
-        false, false,
+        false, false, false,
         StyleFeature::BaseLayer, true},
     {"base layer animations only",
         false, false,
         true, true,
         false, false,
         false, false,
-        false, false,
+        false, false, false,
         StyleFeature::BaseLayerAnimations, true},
     {"base layer + base layer animations",
         false, false,
         true, true,
         false, false,
         false, false,
-        false, false,
+        false, false, false,
         StyleFeature::BaseLayer|StyleFeature::BaseLayerAnimations, true},
     {"text layer only",
         false, false,
         false, false,
         true, false,
         false, false,
-        false, false,
+        false, false, false,
         StyleFeature::TextLayer, true},
     {"text layer images only",
         false, false,
         false, false,
         true, false,
         false, false,
-        false, false,
+        false, false, false,
         StyleFeature::TextLayerImages, true},
     {"text layer + text layer images",
         false, false,
         false, false,
         true, false,
         false, false,
-        false, false,
+        false, false, false,
         StyleFeature::TextLayer|StyleFeature::TextLayerImages, true},
     {"text layer animations only",
         false, false,
         false, false,
         true, true,
         false, false,
-        false, false,
+        false, false, false,
         StyleFeature::TextLayerAnimations, true},
     {"text layer + text layer animations",
         false, false,
         false, false,
         true, true,
         false, false,
-        false, false,
+        false, false, false,
         StyleFeature::TextLayer|StyleFeature::TextLayerAnimations, true},
     {"event layer only",
         false, false,
         false, false,
         false, false,
         true, false,
-        false, false,
+        false, false, false,
         StyleFeature::EventLayer, true},
     {"layout layer only",
         false, false,
         false, false,
         false, false,
         false, true,
-        false, false,
+        false, false, false,
         StyleFeature::LayoutLayer, true},
     {"snap layouter only",
         false, false,
         false, false,
         false, false,
         false, false,
-        true, false,
+        true, false, false,
         StyleFeature::SnapLayouter, true},
     {"generic layouter only",
         false, false,
         false, false,
         false, false,
         false, false,
-        false, true,
+        false, true, false,
         StyleFeature::GenericLayouter, true},
+    {"node animations only",
+        false, false,
+        false, false,
+        false, false,
+        false, false,
+        false, false, true,
+        StyleFeature::NodeAnimations, true},
     {"everything except base layer (and its animations)",
         true, true,
         false, false,
         true, true,
         true, true,
-        true, true,
+        true, true, true,
         ~(StyleFeature::BaseLayer|StyleFeature::BaseLayerAnimations), true},
     {"everything",
         true, true,
         true, true,
         true, true,
         true, true,
-        true, true,
+        true, true, true,
         ~StyleFeatures{}, true},
     {"application failed",
         false, false,
         true, false,
         false, false,
         false, false,
-        false, false,
+        false, false, false,
         StyleFeature::BaseLayer, false}
 };
 
@@ -335,7 +344,8 @@ AbstractStyleTest::AbstractStyleTest() {
               &AbstractStyleTest::applyLayoutLayerNotPresent,
               &AbstractStyleTest::applyLayoutLayerDifferentStyleCount,
               &AbstractStyleTest::applySnapLayouterNotPresent,
-              &AbstractStyleTest::applyGenericLayouterNotPresent});
+              &AbstractStyleTest::applyGenericLayouterNotPresent,
+              &AbstractStyleTest::applyNodeAnimatorNotPresent});
 }
 
 void AbstractStyleTest::debugFeature() {
@@ -1278,6 +1288,8 @@ void AbstractStyleTest::apply() {
         ui.setSnapLayouterInstance(Containers::pointer<SnapLayouter>(ui.createLayouter()));
     if(data.genericLayouterPresent)
         ui.setGenericLayouterInstance(Containers::pointer<GenericLayouter>(ui.createLayouter()));
+    if(data.nodeAnimatorPresent)
+        ui.setNodeAnimatorInstance(Containers::pointer<NodeAnimator>(ui.createAnimator()));
 
     Int applyCalled = 0;
     struct Style: AbstractStyle {
@@ -1289,7 +1301,8 @@ void AbstractStyleTest::apply() {
                 StyleFeature::BaseLayer|StyleFeature::BaseLayerAnimations|
                 StyleFeature::TextLayer|StyleFeature::TextLayerImages|StyleFeature::TextLayerAnimations|
                 StyleFeature::EventLayer|StyleFeature::LayoutLayer|
-                StyleFeature::SnapLayouter|StyleFeature::GenericLayouter;
+                StyleFeature::SnapLayouter|StyleFeature::GenericLayouter|
+                StyleFeature::NodeAnimations;
         }
         UnsignedInt doBackgroundLayerStyleUniformCount() const override { return 17; }
         UnsignedInt doBackgroundLayerStyleCount() const override { return 19; }
@@ -2248,6 +2261,47 @@ void AbstractStyleTest::applyGenericLayouterNotPresent() {
     Error redirectError{&out};
     style.apply(ui, StyleFeature::GenericLayouter, nullptr, nullptr);
     CORRADE_COMPARE(out, "Ui::AbstractStyle::apply(): generic layouter not present in the user interface\n");
+}
+
+void AbstractStyleTest::applyNodeAnimatorNotPresent() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct LayerShared: BaseLayer::Shared {
+        explicit LayerShared(const Configuration& configuration): BaseLayer::Shared{configuration} {}
+
+        void doSetStyle(const BaseLayerCommonStyleUniform&, Containers::ArrayView<const BaseLayerStyleUniform>) override {}
+    } shared{BaseLayer::Shared::Configuration{3, 5}
+        .setDynamicStyleCount(11)
+    };
+
+    struct Layer: BaseLayer {
+        explicit Layer(LayerHandle handle, Shared& shared): BaseLayer{handle, shared} {}
+    };
+
+    struct Interface: UserInterface {
+        explicit Interface(NoCreateT): UserInterface{NoCreate} {}
+    } ui{NoCreate};
+    ui.setSize({200, 300})
+      .setBaseLayerInstance(Containers::pointer<Layer>(ui.createLayer(), shared))
+      .setBaseLayerStyleAnimatorInstance(Containers::pointer<BaseLayerStyleAnimator>(ui.createAnimator()));
+
+    struct: AbstractStyle {
+        StyleFeatures doFeatures() const override {
+            return StyleFeature::NodeAnimations;
+        }
+        bool doApply(UserInterface&, StyleFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override {
+            CORRADE_FAIL("This shouldn't get called.");
+            return {};
+        }
+    } style;
+
+    /* Capture correct function name */
+    CORRADE_VERIFY(true);
+
+    Containers::String out;
+    Error redirectError{&out};
+    style.apply(ui, StyleFeature::NodeAnimations, nullptr, nullptr);
+    CORRADE_COMPARE(out, "Ui::AbstractStyle::apply(): node animator not present in the user interface\n");
 }
 
 }}}}
