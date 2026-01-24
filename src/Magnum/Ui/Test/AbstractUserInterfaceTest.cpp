@@ -3208,15 +3208,15 @@ void AbstractUserInterfaceTest::animatorSetInstance() {
         DataAnimator* fifthInstancePointer = fifthInstance.get();
         StyleAnimator* sixthInstancePointer = sixthInstance.get();
         /* Set them in different order, shouldn't matter */
-        GenericAnimator& fourthInstanceReference = ui.setGenericAnimatorInstance(Utility::move(fourthInstance));
+        GenericAnimator& fourthInstanceReference = ui.setAnimatorInstance(Utility::move(fourthInstance));
         CORRADE_VERIFY(ui.hasAnimatorInstance(fourth));
-        StyleAnimator& sixthInstanceReference = ui.setStyleAnimatorInstance(Utility::move(sixthInstance));
+        StyleAnimator& sixthInstanceReference = ui.setAnimatorInstance(Utility::move(sixthInstance));
         CORRADE_VERIFY(ui.hasAnimatorInstance(sixth));
-        NodeAnimator& secondInstanceReference = ui.setNodeAnimatorInstance(Utility::move(secondInstance));
+        NodeAnimator& secondInstanceReference = ui.setAnimatorInstance(Utility::move(secondInstance));
         CORRADE_VERIFY(ui.hasAnimatorInstance(second));
-        DataAnimator& fifthInstanceReference = ui.setDataAnimatorInstance(Utility::move(fifthInstance));
+        DataAnimator& fifthInstanceReference = ui.setAnimatorInstance(Utility::move(fifthInstance));
         CORRADE_VERIFY(ui.hasAnimatorInstance(fifth));
-        GenericAnimator& firstInstanceReference = ui.setGenericAnimatorInstance(Utility::move(firstInstance));
+        GenericAnimator& firstInstanceReference = ui.setAnimatorInstance(Utility::move(firstInstance));
         CORRADE_VERIFY(ui.hasAnimatorInstance(first));
         CORRADE_VERIFY(!ui.hasAnimatorInstance(third));
         CORRADE_COMPARE(ui.animatorCapacity(), 6);
@@ -3294,7 +3294,7 @@ void AbstractUserInterfaceTest::animatorSetInstanceBeforeLayers() {
 
         void doAdvance(Containers::BitArrayView, Containers::BitArrayView, Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&) override {}
     };
-    ui.setGenericAnimatorInstance(Containers::pointer<GenericAnimator>(ui.createAnimator()));
+    ui.setAnimatorInstance(Containers::pointer<GenericAnimator>(ui.createAnimator()));
 
     ui.createLayer();
 
@@ -3313,7 +3313,7 @@ void AbstractUserInterfaceTest::animatorSetInstanceBeforeLayers() {
             return {};
         }
     };
-    ui.setNodeAnimatorInstance(Containers::pointer<NodeAnimator>(ui.createAnimator()));
+    ui.setAnimatorInstance(Containers::pointer<NodeAnimator>(ui.createAnimator()));
 
     /* Cannot really verify the internals, so testing just something silly */
     CORRADE_COMPARE(ui.layerCapacity(), 1);
@@ -3379,35 +3379,35 @@ void AbstractUserInterfaceTest::animatorSetInstanceInvalid() {
     AbstractUserInterface ui{{100, 100}};
 
     AnimatorHandle handle = ui.createAnimator();
-    ui.setGenericAnimatorInstance(Containers::pointer<GenericAnimator>(handle));
+    ui.setAnimatorInstance(Containers::pointer<GenericAnimator>(handle));
 
     Containers::String out;
     Error redirectError{&out};
-    ui.setGenericAnimatorInstance(nullptr);
-    ui.setNodeAnimatorInstance(nullptr);
-    ui.setDataAnimatorInstance(nullptr);
-    ui.setStyleAnimatorInstance(nullptr);
-    ui.setGenericAnimatorInstance(Containers::pointer<GenericAnimator>(AnimatorHandle(0xabcd)));
-    ui.setGenericAnimatorInstance(Containers::pointer<GenericAnimator>(handle));
-    ui.setGenericAnimatorInstance(Containers::pointer<GenericDataAnimator>(ui.createAnimator()));
-    ui.setDataAnimatorInstance(Containers::pointer<DataAnimator>(ui.createAnimator()));
-    ui.setStyleAnimatorInstance(Containers::pointer<StyleAnimator>(ui.createAnimator()));
-    ui.setNodeAnimatorInstance(Containers::pointer<NodeAnimatorWithoutFeature>(ui.createAnimator()));
-    ui.setDataAnimatorInstance(Containers::pointer<DataAnimatorWithoutFeature>(ui.createAnimator()));
-    ui.setStyleAnimatorInstance(Containers::pointer<StyleAnimatorWithoutFeature>(ui.createAnimator()));
+    ui.setAnimatorInstance(Containers::Pointer<AbstractGenericAnimator>{});
+    ui.setAnimatorInstance(Containers::Pointer<AbstractNodeAnimator>{});
+    ui.setAnimatorInstance(Containers::Pointer<AbstractDataAnimator>{});
+    ui.setAnimatorInstance(Containers::Pointer<AbstractStyleAnimator>{});
+    ui.setAnimatorInstance(Containers::pointer<GenericAnimator>(AnimatorHandle(0xabcd)));
+    ui.setAnimatorInstance(Containers::pointer<GenericAnimator>(handle));
+    ui.setAnimatorInstance(Containers::pointer<GenericDataAnimator>(ui.createAnimator()));
+    ui.setAnimatorInstance(Containers::pointer<DataAnimator>(ui.createAnimator()));
+    ui.setAnimatorInstance(Containers::pointer<StyleAnimator>(ui.createAnimator()));
+    ui.setAnimatorInstance(Containers::pointer<NodeAnimatorWithoutFeature>(ui.createAnimator()));
+    ui.setAnimatorInstance(Containers::pointer<DataAnimatorWithoutFeature>(ui.createAnimator()));
+    ui.setAnimatorInstance(Containers::pointer<StyleAnimatorWithoutFeature>(ui.createAnimator()));
     CORRADE_COMPARE_AS(out,
-        "Ui::AbstractUserInterface::setGenericAnimatorInstance(): instance is null\n"
-        "Ui::AbstractUserInterface::setNodeAnimatorInstance(): instance is null\n"
-        "Ui::AbstractUserInterface::setDataAnimatorInstance(): instance is null\n"
-        "Ui::AbstractUserInterface::setStyleAnimatorInstance(): instance is null\n"
-        "Ui::AbstractUserInterface::setGenericAnimatorInstance(): invalid handle Ui::AnimatorHandle(0xcd, 0xab)\n"
-        "Ui::AbstractUserInterface::setGenericAnimatorInstance(): instance for Ui::AnimatorHandle(0x0, 0x1) already set\n"
-        "Ui::AbstractUserInterface::setGenericAnimatorInstance(): no layer set for a data attachment animator\n"
-        "Ui::AbstractUserInterface::setDataAnimatorInstance(): no layer set for a data attachment animator\n"
-        "Ui::AbstractUserInterface::setStyleAnimatorInstance(): no layer set for a data attachment animator\n"
-        "Ui::AbstractUserInterface::setNodeAnimatorInstance(): Ui::AnimatorFeature::NodeAttachment not advertised for a node animator\n"
-        "Ui::AbstractUserInterface::setDataAnimatorInstance(): Ui::AnimatorFeature::DataAttachment not advertised for a data animator\n"
-        "Ui::AbstractUserInterface::setStyleAnimatorInstance(): Ui::AnimatorFeature::DataAttachment not advertised for a style animator\n",
+        "Ui::AbstractUserInterface::setAnimatorInstance(): instance is null\n"
+        "Ui::AbstractUserInterface::setAnimatorInstance(): instance is null\n"
+        "Ui::AbstractUserInterface::setAnimatorInstance(): instance is null\n"
+        "Ui::AbstractUserInterface::setAnimatorInstance(): instance is null\n"
+        "Ui::AbstractUserInterface::setAnimatorInstance(): invalid handle Ui::AnimatorHandle(0xcd, 0xab)\n"
+        "Ui::AbstractUserInterface::setAnimatorInstance(): instance for Ui::AnimatorHandle(0x0, 0x1) already set\n"
+        "Ui::AbstractUserInterface::setAnimatorInstance(): no layer set for a data attachment animator\n"
+        "Ui::AbstractUserInterface::setAnimatorInstance(): no layer set for a data attachment animator\n"
+        "Ui::AbstractUserInterface::setAnimatorInstance(): no layer set for a data attachment animator\n"
+        "Ui::AbstractUserInterface::setAnimatorInstance(): Ui::AnimatorFeature::NodeAttachment not advertised for a node animator\n"
+        "Ui::AbstractUserInterface::setAnimatorInstance(): Ui::AnimatorFeature::DataAttachment not advertised for a data animator\n"
+        "Ui::AbstractUserInterface::setAnimatorInstance(): Ui::AnimatorFeature::DataAttachment not advertised for a style animator\n",
         TestSuite::Compare::String);
 }
 
@@ -3424,7 +3424,7 @@ void AbstractUserInterfaceTest::animatorGetInvalid() {
     AbstractUserInterface ui{{100, 100}};
     /* Need at least one animator to be present so animator() asserts can
        return something */
-    ui.setGenericAnimatorInstance(Containers::pointer<Animator>(ui.createAnimator()));
+    ui.setAnimatorInstance(Containers::pointer<Animator>(ui.createAnimator()));
 
     const AbstractUserInterface& cui = ui;
 
@@ -5304,7 +5304,7 @@ void AbstractUserInterfaceTest::animation() {
     CORRADE_VERIFY(!ui.isHandleValid(animationHandle1));
 
     /* Valid when is */
-    ui.setGenericAnimatorInstance(Utility::move(animator));
+    ui.setAnimatorInstance(Utility::move(animator));
     CORRADE_VERIFY(ui.isHandleValid(animationHandle1));
     CORRADE_VERIFY(ui.isHandleValid(animationHandle1));
 
@@ -5335,7 +5335,7 @@ void AbstractUserInterfaceTest::animationAttachNode() {
         }
         void doAdvance(Containers::BitArrayView, Containers::BitArrayView, Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&) override {}
     };
-    Animator& animator = ui.setGenericAnimatorInstance(Containers::pointer<Animator>(ui.createAnimator()));
+    Animator& animator = ui.setAnimatorInstance(Containers::pointer<Animator>(ui.createAnimator()));
 
     AnimationHandle handle = animator.create(0_nsec, 1_nsec);
     CORRADE_COMPARE(animator.node(handle), NodeHandle::Null);
@@ -5368,7 +5368,7 @@ void AbstractUserInterfaceTest::animationAttachNodeInvalid() {
         }
         void doAdvance(Containers::BitArrayView, Containers::BitArrayView, Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&) override {}
     };
-    Animator& animator = ui.setGenericAnimatorInstance(Containers::pointer<Animator>(ui.createAnimator()));
+    Animator& animator = ui.setAnimatorInstance(Containers::pointer<Animator>(ui.createAnimator()));
 
     AnimationHandle animation = animator.create(0_nsec, 1_nsec);
 
@@ -5401,7 +5401,7 @@ void AbstractUserInterfaceTest::animationAttachNodeInvalidFeatures() {
         }
         void doAdvance(Containers::BitArrayView, Containers::BitArrayView, Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&) override {}
     };
-    ui.setGenericAnimatorInstance(Containers::pointer<Animator>(animatorHandle));
+    ui.setAnimatorInstance(Containers::pointer<Animator>(animatorHandle));
 
     AnimationHandle handle = ui.animator<Animator>(animatorHandle).create(0_nsec, 1_nsec);
 
@@ -5439,7 +5439,7 @@ void AbstractUserInterfaceTest::animationAttachData() {
     };
     Containers::Pointer<Animator> instance{InPlaceInit, ui.createAnimator()};
     instance->setLayer(layer);
-    Animator& animator = ui.setGenericAnimatorInstance(Utility::move(instance));
+    Animator& animator = ui.setAnimatorInstance(Utility::move(instance));
 
     AnimationHandle handle = animator.create(0_nsec, 1_nsec);
     CORRADE_COMPARE(animator.data(handle), DataHandle::Null);
@@ -5487,7 +5487,7 @@ void AbstractUserInterfaceTest::animationAttachDataInvalid() {
     };
     Containers::Pointer<Animator> instance{InPlaceInit, ui.createAnimator()};
     instance->setLayer(layer1);
-    Animator& animator = ui.setGenericAnimatorInstance(Utility::move(instance));
+    Animator& animator = ui.setAnimatorInstance(Utility::move(instance));
 
     AnimationHandle animation = animator.create(0_nsec, 1_nsec);
 
@@ -5531,7 +5531,7 @@ void AbstractUserInterfaceTest::animationAttachDataInvalidFeatures() {
         }
         void doAdvance(Containers::BitArrayView, Containers::BitArrayView, Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&) override {}
     };
-    Animator& animator = ui.setGenericAnimatorInstance(Containers::pointer<Animator>(ui.createAnimator()));
+    Animator& animator = ui.setAnimatorInstance(Containers::pointer<Animator>(ui.createAnimator()));
 
     DataHandle data = layer.create();
     AnimationHandle handle = animator.create(0_nsec, 1_nsec);
@@ -5907,7 +5907,7 @@ void AbstractUserInterfaceTest::cleanNoOp() {
             }
             void doAdvance(Containers::BitArrayView, Containers::BitArrayView, Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&) override {}
         };
-        ui.setGenericAnimatorInstance(Containers::pointer<Animator>(animatorHandle1));
+        ui.setAnimatorInstance(Containers::pointer<Animator>(animatorHandle1));
 
         /* Animation attached to the root node */
         animatorData1 = ui.animator<Animator>(animatorHandle1).create(0_nsec, 1_nsec, root);
@@ -5927,7 +5927,7 @@ void AbstractUserInterfaceTest::cleanNoOp() {
         };
         Containers::Pointer<Animator> instance{InPlaceInit, animatorHandle2};
         instance->setLayer(ui.layer(layerHandle));
-        Animator& animator = ui.setGenericAnimatorInstance(Utility::move(instance));
+        Animator& animator = ui.setAnimatorInstance(Utility::move(instance));
 
         /* Animation attached to data attached to the root node */
         animatorData2 = animator.create(0_nsec, 1_nsec, layerData);
@@ -6068,8 +6068,8 @@ void AbstractUserInterfaceTest::cleanRemoveAttachedData() {
                 AnimatorFeatures _features;
         };
         if(data.nodeAttachmentAnimators) {
-            ui.setGenericAnimatorInstance(Containers::pointer<Animator>(animatorHandle1, AnimatorFeature::NodeAttachment));
-            ui.setGenericAnimatorInstance(Containers::pointer<Animator>(animatorHandle3, AnimatorFeature::NodeAttachment));
+            ui.setAnimatorInstance(Containers::pointer<Animator>(animatorHandle1, AnimatorFeature::NodeAttachment));
+            ui.setAnimatorInstance(Containers::pointer<Animator>(animatorHandle3, AnimatorFeature::NodeAttachment));
 
             /* Animations attached to both nodes, from both animators, in
                random order */
@@ -6080,7 +6080,7 @@ void AbstractUserInterfaceTest::cleanRemoveAttachedData() {
         }
 
         /* This one has no node attachment, should be skipped in clean() */
-        ui.setGenericAnimatorInstance(Containers::pointer<Animator>(animatorHandle2, AnimatorFeatures{}));
+        ui.setAnimatorInstance(Containers::pointer<Animator>(animatorHandle2, AnimatorFeatures{}));
         animatorData3 = ui.animator<Animator>(animatorHandle2).create(0_nsec, 1_nsec);
 
         if(data.dataAttachmentAnimators) {
@@ -6088,8 +6088,8 @@ void AbstractUserInterfaceTest::cleanRemoveAttachedData() {
             Containers::Pointer<Animator> instanceLayer2{InPlaceInit, animatorHandle5, AnimatorFeature::DataAttachment};
             instanceLayer1->setLayer(ui.layer(layerHandle1));
             instanceLayer2->setLayer(ui.layer(layerHandle2));
-            Animator& animatorLayer1 = ui.setGenericAnimatorInstance(Utility::move(instanceLayer1));
-            Animator& animatorLayer2 = ui.setGenericAnimatorInstance(Utility::move(instanceLayer2));
+            Animator& animatorLayer1 = ui.setAnimatorInstance(Utility::move(instanceLayer1));
+            Animator& animatorLayer2 = ui.setAnimatorInstance(Utility::move(instanceLayer2));
 
             /* Animation attached to data from both animators, in random order,
                two animations to one data in one case */
@@ -6236,7 +6236,7 @@ void AbstractUserInterfaceTest::cleanRemoveNestedNodes() {
             }
             void doAdvance(Containers::BitArrayView, Containers::BitArrayView, Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&) override {}
         };
-        ui.setGenericAnimatorInstance(Containers::pointer<Animator>(animatorHandle1));
+        ui.setAnimatorInstance(Containers::pointer<Animator>(animatorHandle1));
 
         /* Animations attached to the leaf nodes */
         animatorData1 = ui.animator<Animator>(animatorHandle1).create(0_nsec, 1_nsec, second1);
@@ -6258,7 +6258,7 @@ void AbstractUserInterfaceTest::cleanRemoveNestedNodes() {
         };
         Containers::Pointer<Animator> instance{InPlaceInit, animatorHandle2};
         instance->setLayer(ui.layer(layerHandle));
-        Animator& animator = ui.setGenericAnimatorInstance(Utility::move(instance));
+        Animator& animator = ui.setAnimatorInstance(Utility::move(instance));
 
         /* Animations attached to data attached to the leaf nodes */
         animatorData4 = animator.create(0_nsec, 1_nsec, layerData1);
@@ -6404,7 +6404,7 @@ void AbstractUserInterfaceTest::cleanRemoveNestedNodesRecycledHandle() {
             }
             void doAdvance(Containers::BitArrayView, Containers::BitArrayView, Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&) override {}
         };
-        ui.setGenericAnimatorInstance(Containers::pointer<Animator>(animatorHandle1));
+        ui.setAnimatorInstance(Containers::pointer<Animator>(animatorHandle1));
 
         /* Animation attached to the leaf node */
         animatorData1 = ui.animator<Animator>(animatorHandle1).create(0_nsec, 1_nsec, second);
@@ -6424,7 +6424,7 @@ void AbstractUserInterfaceTest::cleanRemoveNestedNodesRecycledHandle() {
         };
         Containers::Pointer<Animator> instance{InPlaceInit, animatorHandle2};
         instance->setLayer(ui.layer(layerHandle));
-        Animator& animator = ui.setGenericAnimatorInstance(Utility::move(instance));
+        Animator& animator = ui.setAnimatorInstance(Utility::move(instance));
 
         /* Animation attached to the data attached to the leaf node */
         animatorData2 = animator.create(0_nsec, 1_nsec, layerData);
@@ -6520,7 +6520,7 @@ void AbstractUserInterfaceTest::cleanRemoveNestedNodesRecycledHandleOrphanedCycl
             }
             void doAdvance(Containers::BitArrayView, Containers::BitArrayView, Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&) override {}
         };
-        ui.setGenericAnimatorInstance(Containers::pointer<Animator>(animatorHandle1));
+        ui.setAnimatorInstance(Containers::pointer<Animator>(animatorHandle1));
 
         /* Animation attached to the leaf node */
         animatorData1 = ui.animator<Animator>(animatorHandle1).create(0_nsec, 1_nsec, third);
@@ -6540,7 +6540,7 @@ void AbstractUserInterfaceTest::cleanRemoveNestedNodesRecycledHandleOrphanedCycl
         };
         Containers::Pointer<Animator> instance{InPlaceInit, animatorHandle2};
         instance->setLayer(ui.layer(layerHandle));
-        Animator& animator = ui.setGenericAnimatorInstance(Utility::move(instance));
+        Animator& animator = ui.setAnimatorInstance(Utility::move(instance));
 
         /* Animation attached to the data attached to the leaf node */
         animatorData2 = animator.create(0_nsec, 1_nsec, layerData);
@@ -6633,7 +6633,7 @@ void AbstractUserInterfaceTest::cleanRemoveAll() {
             }
             void doAdvance(Containers::BitArrayView, Containers::BitArrayView, Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&) override {}
         };
-        ui.setGenericAnimatorInstance(Containers::pointer<Animator>(animatorHandle1));
+        ui.setAnimatorInstance(Containers::pointer<Animator>(animatorHandle1));
 
         /* Animations attached to the nested nodes */
         ui.animator<Animator>(animatorHandle1).create(0_nsec, 1_nsec, second);
@@ -6654,7 +6654,7 @@ void AbstractUserInterfaceTest::cleanRemoveAll() {
         };
         Containers::Pointer<Animator> instance{InPlaceInit, animatorHandle2};
         instance->setLayer(ui.layer(layerHandle));
-        Animator& animator = ui.setGenericAnimatorInstance(Utility::move(instance));
+        Animator& animator = ui.setAnimatorInstance(Utility::move(instance));
 
         /* Data attached to the data attached to the nested nodes */
         animator.create(0_nsec, 1_nsec, layerData1);
@@ -6758,11 +6758,11 @@ void AbstractUserInterfaceTest::cleanRecycledLayerWithAnimators() {
     layer2.assignAnimator(*instance21);
     instance22->setLayer(layer2);
     layer2.assignAnimator(*instance23);
-    GenericAnimator& animator11 = ui.setGenericAnimatorInstance(Utility::move(instance11));
-    GenericAnimator& animator12 = ui.setGenericAnimatorInstance(Utility::move(instance12));
-    DataAnimator& animator21 = ui.setDataAnimatorInstance(Utility::move(instance21));
-    GenericAnimator& animator22 = ui.setGenericAnimatorInstance(Utility::move(instance22));
-    StyleAnimator& animator23 = ui.setStyleAnimatorInstance(Utility::move(instance23));
+    GenericAnimator& animator11 = ui.setAnimatorInstance(Utility::move(instance11));
+    GenericAnimator& animator12 = ui.setAnimatorInstance(Utility::move(instance12));
+    DataAnimator& animator21 = ui.setAnimatorInstance(Utility::move(instance21));
+    GenericAnimator& animator22 = ui.setAnimatorInstance(Utility::move(instance22));
+    StyleAnimator& animator23 = ui.setAnimatorInstance(Utility::move(instance23));
 
     /* Create and immediately remove a node to trigger NeedsNodeClean, which
        implies NeedsDataClean on all animators */
@@ -6842,7 +6842,7 @@ void AbstractUserInterfaceTest::advanceAnimationsNoOp() {
         }
     };
 
-    GenericAnimator& animator = ui.setGenericAnimatorInstance(Containers::pointer<GenericAnimator>(ui.createAnimator()));
+    GenericAnimator& animator = ui.setAnimatorInstance(Containers::pointer<GenericAnimator>(ui.createAnimator()));
 
     /* An animation is present, but it's stopped and not scheduled for removal
        so the animator doesn't need its advance() called */
@@ -7025,18 +7025,18 @@ void AbstractUserInterfaceTest::advanceAnimations() {
     Containers::Array<Containers::Pair<AnimatorHandle, Call>> calls;
 
     /*AnimatorHandle animatorWithoutInstance =*/ ui.createAnimator();
-    GenericAnimator& animator1 = ui.setGenericAnimatorInstance(Containers::pointer<GenericAnimator>(ui.createAnimator(), AnimatorFeatures{}, calls));
-    GenericAnimator& animatorRemoved = ui.setGenericAnimatorInstance(Containers::pointer<GenericAnimator>(ui.createAnimator(), AnimatorFeatures{}, calls));
-    GenericAnimator& animatorNoAdvanceNeeded = ui.setGenericAnimatorInstance(Containers::pointer<GenericAnimator>(ui.createAnimator(), AnimatorFeatures{}, calls));
-    GenericAnimator& animator2 = ui.setGenericAnimatorInstance(Containers::pointer<GenericAnimator>(ui.createAnimator(), AnimatorFeatures{}, calls));
-    GenericAnimator& animatorNodeAttachmentNoAdvanceNeeded = ui.setGenericAnimatorInstance(Containers::pointer<GenericAnimator>(ui.createAnimator(), AnimatorFeature::NodeAttachment, calls));
-    GenericAnimator& animatorNodeAttachment = ui.setGenericAnimatorInstance(Containers::pointer<GenericAnimator>(ui.createAnimator(), AnimatorFeature::NodeAttachment, calls));
-    NodeAnimator& animatorNodeNoAdvanceNeeded = ui.setNodeAnimatorInstance(Containers::pointer<NodeAnimator>(ui.createAnimator(), calls));
-    NodeAnimator& animatorNode = ui.setNodeAnimatorInstance(Containers::pointer<NodeAnimator>(ui.createAnimator(), calls));
+    GenericAnimator& animator1 = ui.setAnimatorInstance(Containers::pointer<GenericAnimator>(ui.createAnimator(), AnimatorFeatures{}, calls));
+    GenericAnimator& animatorRemoved = ui.setAnimatorInstance(Containers::pointer<GenericAnimator>(ui.createAnimator(), AnimatorFeatures{}, calls));
+    GenericAnimator& animatorNoAdvanceNeeded = ui.setAnimatorInstance(Containers::pointer<GenericAnimator>(ui.createAnimator(), AnimatorFeatures{}, calls));
+    GenericAnimator& animator2 = ui.setAnimatorInstance(Containers::pointer<GenericAnimator>(ui.createAnimator(), AnimatorFeatures{}, calls));
+    GenericAnimator& animatorNodeAttachmentNoAdvanceNeeded = ui.setAnimatorInstance(Containers::pointer<GenericAnimator>(ui.createAnimator(), AnimatorFeature::NodeAttachment, calls));
+    GenericAnimator& animatorNodeAttachment = ui.setAnimatorInstance(Containers::pointer<GenericAnimator>(ui.createAnimator(), AnimatorFeature::NodeAttachment, calls));
+    NodeAnimator& animatorNodeNoAdvanceNeeded = ui.setAnimatorInstance(Containers::pointer<NodeAnimator>(ui.createAnimator(), calls));
+    NodeAnimator& animatorNode = ui.setAnimatorInstance(Containers::pointer<NodeAnimator>(ui.createAnimator(), calls));
 
     Containers::Pointer<GenericAnimator> animatorLayer2DataAttachmentNoAdvanceNeededInstance{InPlaceInit, ui.createAnimator(), AnimatorFeature::DataAttachment, calls};
     animatorLayer2DataAttachmentNoAdvanceNeededInstance->setLayer(layer2);
-    GenericAnimator& animatorLayer2DataAttachmentNoAdvanceNeeded = ui.setGenericAnimatorInstance(Utility::move(animatorLayer2DataAttachmentNoAdvanceNeededInstance));
+    GenericAnimator& animatorLayer2DataAttachmentNoAdvanceNeeded = ui.setAnimatorInstance(Utility::move(animatorLayer2DataAttachmentNoAdvanceNeededInstance));
 
     /* Layer 3 has generic and data animators associated */
     Containers::Pointer<GenericAnimator> animatorLayer3DataAttachmentInstance{InPlaceInit, ui.createAnimator(), AnimatorFeature::DataAttachment, calls};
@@ -7045,17 +7045,17 @@ void AbstractUserInterfaceTest::advanceAnimations() {
     animatorLayer3DataAttachmentInstance->setLayer(layer3);
     layer3.assignAnimator(*animatorLayer3DataNoAdvanceNeededInstance);
     layer3.assignAnimator(*animatorLayer3DataInstance);
-    GenericAnimator& animatorLayer3DataAttachment = ui.setGenericAnimatorInstance(Utility::move(animatorLayer3DataAttachmentInstance));
-    DataAnimator& animatorLayer3DataNoAdvanceNeeded = ui.setDataAnimatorInstance(Utility::move(animatorLayer3DataNoAdvanceNeededInstance));
-    DataAnimator& animatorLayer3Data = ui.setDataAnimatorInstance(Utility::move(animatorLayer3DataInstance));
+    GenericAnimator& animatorLayer3DataAttachment = ui.setAnimatorInstance(Utility::move(animatorLayer3DataAttachmentInstance));
+    DataAnimator& animatorLayer3DataNoAdvanceNeeded = ui.setAnimatorInstance(Utility::move(animatorLayer3DataNoAdvanceNeededInstance));
+    DataAnimator& animatorLayer3Data = ui.setAnimatorInstance(Utility::move(animatorLayer3DataInstance));
 
     /* Layer 4 has style animators associated */
     Containers::Pointer<StyleAnimator> animatorLayer4StyleNoAdvanceNeededInstance{InPlaceInit, ui.createAnimator(), calls};
     Containers::Pointer<StyleAnimator> animatorLayer4StyleInstance{InPlaceInit, ui.createAnimator(), calls};
     layer4.assignAnimator(*animatorLayer4StyleNoAdvanceNeededInstance);
     layer4.assignAnimator(*animatorLayer4StyleInstance);
-    StyleAnimator& animatorLayer4StyleNoAdvanceNeeded = ui.setStyleAnimatorInstance(Utility::move(animatorLayer4StyleNoAdvanceNeededInstance));
-    StyleAnimator& animatorLayer4Style = ui.setStyleAnimatorInstance(Utility::move(animatorLayer4StyleInstance));
+    StyleAnimator& animatorLayer4StyleNoAdvanceNeeded = ui.setAnimatorInstance(Utility::move(animatorLayer4StyleNoAdvanceNeededInstance));
+    StyleAnimator& animatorLayer4Style = ui.setAnimatorInstance(Utility::move(animatorLayer4StyleInstance));
 
     /* It's important to remove an animator that has an instance already --
        animators without an instance aren't even added to the list of animators
@@ -7347,7 +7347,7 @@ void AbstractUserInterfaceTest::advanceAnimationsGeneric() {
         Layer& layer = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer()));
         animatorInstance->setLayer(layer);
     }
-    Animator& animator = ui.setGenericAnimatorInstance(Utility::move(animatorInstance));
+    Animator& animator = ui.setAnimatorInstance(Utility::move(animatorInstance));
 
     /* Call to advance(5) advances the first. The second is already stopped so
        it just advances it with the final state. There's nothing to clean at
@@ -7510,7 +7510,7 @@ void AbstractUserInterfaceTest::advanceAnimationsNode() {
         Int advanceCallCount = 0;
         Int cleanCallCount = 0;
     };
-    Animator& animator = ui.setNodeAnimatorInstance(Containers::pointer<Animator>(ui.createAnimator()));
+    Animator& animator = ui.setAnimatorInstance(Containers::pointer<Animator>(ui.createAnimator()));
 
     NodeHandle node1 = ui.createNode({1.0f, 2.0f}, {5.0f, 6.0f});
     NodeHandle node2 = ui.createNode({3.0f, 4.0f}, {8.0f, 9.0f}, NodeFlag::Clip|NodeFlag::Disabled);
@@ -7688,7 +7688,7 @@ void AbstractUserInterfaceTest::advanceAnimationsData() {
     };
     Layer& layer = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer()));
     layer.assignAnimator(*animatorInstance);
-    Animator& animator = ui.setDataAnimatorInstance(Utility::move(animatorInstance));
+    Animator& animator = ui.setAnimatorInstance(Utility::move(animatorInstance));
 
     /* Call to advance(5) advances the first. The second is already stopped so
        it just advances it with the final state. There's nothing to clean at
@@ -7861,7 +7861,7 @@ void AbstractUserInterfaceTest::advanceAnimationsStyle() {
     };
     Layer& layer = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer()));
     layer.assignAnimator(*animatorInstance);
-    Animator& animator = ui.setStyleAnimatorInstance(Utility::move(animatorInstance));
+    Animator& animator = ui.setAnimatorInstance(Utility::move(animatorInstance));
 
     /* Call to advance(5) advances the first. The second is already stopped so
        it just advances it with the final state. There's nothing to clean at
@@ -9454,14 +9454,14 @@ void AbstractUserInterfaceTest::state() {
     AttachmentAnimator* nodeAttachmentAnimator{};
     AttachmentAnimator* dataAttachmentAnimator{};
     if(data.nodeAttachmentAnimators || data.dataAttachmentAnimators) {
-        animator = &ui.setGenericAnimatorInstance(Containers::pointer<Animator>(ui.createAnimator()));
+        animator = &ui.setAnimatorInstance(Containers::pointer<Animator>(ui.createAnimator()));
         if(data.nodeAttachmentAnimators) {
-            nodeAttachmentAnimator = &ui.setGenericAnimatorInstance(Containers::pointer<AttachmentAnimator>(ui.createAnimator(), AnimatorFeature::NodeAttachment));
+            nodeAttachmentAnimator = &ui.setAnimatorInstance(Containers::pointer<AttachmentAnimator>(ui.createAnimator(), AnimatorFeature::NodeAttachment));
         }
         if(data.dataAttachmentAnimators) {
             Containers::Pointer<AttachmentAnimator> instance{InPlaceInit, ui.createAnimator(), AnimatorFeature::DataAttachment};
             instance->setLayer(layer);
-            dataAttachmentAnimator = &ui.setGenericAnimatorInstance(Utility::move(instance));
+            dataAttachmentAnimator = &ui.setAnimatorInstance(Utility::move(instance));
         }
         CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
 
@@ -11731,7 +11731,7 @@ void AbstractUserInterfaceTest::state() {
     if(data.dataAttachmentAnimators) {
         Containers::Pointer<AttachmentAnimator> instance{InPlaceInit, ui.createAnimator(), AnimatorFeature::DataAttachment};
         instance->setLayer(anotherLayer);
-        anotherDataAttachmentAnimator = &ui.setGenericAnimatorInstance(Utility::move(instance));
+        anotherDataAttachmentAnimator = &ui.setAnimatorInstance(Utility::move(instance));
     }
 
     /* Removing data that's not attached to any node marks the layer with
@@ -12848,25 +12848,25 @@ void AbstractUserInterfaceTest::stateAnimations() {
 
         Int cleanCallCount = 0;
     };
-    Animator& animator = ui.setGenericAnimatorInstance(Containers::pointer<Animator>(ui.createAnimator()));
+    Animator& animator = ui.setAnimatorInstance(Containers::pointer<Animator>(ui.createAnimator()));
     /* GCC in Release mode complains that some of these may be used
        uninitialized, MSVC as well. They aren't. */
     NodeAnimator *nodeAnimator1{}, *nodeAnimator2{};
     DataAnimator* dataAnimator{};
     StyleAnimator* styleAnimator{};
     if(data.nodeAnimatorUpdates1)
-        nodeAnimator1 = &ui.setNodeAnimatorInstance(Containers::pointer<NodeAnimator>(ui.createAnimator(), *data.nodeAnimatorUpdates1));
+        nodeAnimator1 = &ui.setAnimatorInstance(Containers::pointer<NodeAnimator>(ui.createAnimator(), *data.nodeAnimatorUpdates1));
     if(data.nodeAnimatorUpdates2)
-        nodeAnimator2 = &ui.setNodeAnimatorInstance(Containers::pointer<NodeAnimator>(ui.createAnimator(), *data.nodeAnimatorUpdates2));
+        nodeAnimator2 = &ui.setAnimatorInstance(Containers::pointer<NodeAnimator>(ui.createAnimator(), *data.nodeAnimatorUpdates2));
     if(data.dataAnimations) {
         Containers::Pointer<DataAnimator> instance{InPlaceInit, ui.createAnimator()};
         layer.assignAnimator(*instance);
-        dataAnimator = &ui.setDataAnimatorInstance(Utility::move(instance));
+        dataAnimator = &ui.setAnimatorInstance(Utility::move(instance));
     }
     if(data.styleAnimations) {
         Containers::Pointer<StyleAnimator> instance{InPlaceInit, ui.createAnimator()};
         layer.assignAnimator(*instance);
-        styleAnimator = &ui.setStyleAnimatorInstance(Utility::move(instance));
+        styleAnimator = &ui.setAnimatorInstance(Utility::move(instance));
     }
     CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
 
@@ -13551,9 +13551,9 @@ void AbstractUserInterfaceTest::statePropagateFromAnimators() {
         void doAdvance(Containers::BitArrayView, Containers::BitArrayView, Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&) override {}
     };
     /*AnimatorHandle animatorWithoutInstance =*/ ui.createAnimator();
-    GenericAnimator& animatorRemoved = ui.setGenericAnimatorInstance(Containers::pointer<GenericAnimator>(ui.createAnimator()));
-    /*GenericAnimator& animator1 =*/ ui.setGenericAnimatorInstance(Containers::pointer<GenericAnimator>(ui.createAnimator()));
-    GenericAnimator& animator2 = ui.setGenericAnimatorInstance(Containers::pointer<GenericAnimator>(ui.createAnimator()));
+    GenericAnimator& animatorRemoved = ui.setAnimatorInstance(Containers::pointer<GenericAnimator>(ui.createAnimator()));
+    /*GenericAnimator& animator1 =*/ ui.setAnimatorInstance(Containers::pointer<GenericAnimator>(ui.createAnimator()));
+    GenericAnimator& animator2 = ui.setAnimatorInstance(Containers::pointer<GenericAnimator>(ui.createAnimator()));
 
     /* AnimatorState::NeedsAdvance on a removed animator isn't considered
        (well, because the instance is gone), and the animator without an

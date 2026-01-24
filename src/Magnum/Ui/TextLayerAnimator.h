@@ -151,8 +151,9 @@ enabled with @ref TextLayer::Shared::Configuration::setDynamicStyleCount().
 
 With the layer ready, call @ref TextLayer::assignAnimator(TextLayerStyleAnimator&)
 to assign the animator instance to the layer and then pass the animator to
-@relativeref{AbstractUserInterface,setStyleAnimatorInstance()}. Then, assuming
-@ref Ui-AbstractUserInterface-animations "the user interface is set up for animations", the animator is ready to use.
+@ref AbstractUserInterface::setAnimatorInstance(Containers::Pointer<AbstractStyleAnimator>&&).
+Then, assuming @ref Ui-AbstractUserInterface-animations "the user interface is set up for animations",
+the animator is ready to use.
 
 @snippet Ui.cpp TextLayerStyleAnimator-setup2
 

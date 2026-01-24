@@ -132,8 +132,10 @@ enabled with @ref BaseLayer::Shared::Configuration::setDynamicStyleCount().
 
 With the layer ready, call @ref BaseLayer::assignAnimator(BaseLayerStyleAnimator&)
 to assign the animator instance to the layer and then pass the animator to
-@relativeref{AbstractUserInterface,setStyleAnimatorInstance()}. Then, assuming
-@ref Ui-AbstractUserInterface-animations "the user interface is set up for animations", the animator is ready to use.
+@ref AbstractUserInterface::setAnimatorInstance(Containers::Pointer<AbstractStyleAnimator>&&).
+Then, assuming
+@ref Ui-AbstractUserInterface-animations "the user interface is set up for animations",
+the animator is ready to use.
 
 @snippet Ui.cpp BaseLayerStyleAnimator-setup2
 

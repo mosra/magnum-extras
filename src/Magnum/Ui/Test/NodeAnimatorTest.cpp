@@ -2391,7 +2391,7 @@ void NodeAnimatorTest::uiAdvance() {
     ui.createNode({}, {});
     NodeHandle node = ui.createNode({20.0f, 30.0f}, {80.0f, 100.0f});
 
-    NodeAnimator& animator = ui.setNodeAnimatorInstance(Containers::pointer<NodeAnimator>(ui.createAnimator()));
+    NodeAnimator& animator = ui.setAnimatorInstance(Containers::pointer<NodeAnimator>(ui.createAnimator()));
 
     ui.update();
     CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
@@ -2425,7 +2425,7 @@ void NodeAnimatorTest::uiAdvanceToggleReverse() {
     NodeHandle node1 = ui.createNode({}, {}, NodeFlag::NoBlur);
     NodeHandle node2 = ui.createNode({}, {});
 
-    NodeAnimator& animator = ui.setNodeAnimatorInstance(Containers::pointer<NodeAnimator>(ui.createAnimator()));
+    NodeAnimator& animator = ui.setAnimatorInstance(Containers::pointer<NodeAnimator>(ui.createAnimator()));
 
     AnimationHandle forward = animator.create(NodeAnimation{}
         .addFlagsBegin(NodeFlag::Focusable)
@@ -2470,7 +2470,7 @@ void NodeAnimatorTest::debugIntegration() {
        non-trivial value */
     ui.removeAnimator(ui.createAnimator());
     ui.removeAnimator(ui.createAnimator());
-    NodeAnimator& animator = ui.setNodeAnimatorInstance(Containers::pointer<NodeAnimator>(ui.createAnimator()));
+    NodeAnimator& animator = ui.setAnimatorInstance(Containers::pointer<NodeAnimator>(ui.createAnimator()));
     /* And also some more animations to not list a trivial handle */
     animator.create(NodeAnimation{}, nullptr, {}, {}, NodeHandle::Null);
     animator.create(NodeAnimation{}, nullptr, {}, {}, NodeHandle::Null);
@@ -2504,7 +2504,7 @@ void NodeAnimatorTest::debugIntegrationNoCallback() {
     /* Just to match the animator handle in debugIntegration() above */
     ui.removeAnimator(ui.createAnimator());
     ui.removeAnimator(ui.createAnimator());
-    NodeAnimator& animator = ui.setNodeAnimatorInstance(Containers::pointer<NodeAnimator>(ui.createAnimator()));
+    NodeAnimator& animator = ui.setAnimatorInstance(Containers::pointer<NodeAnimator>(ui.createAnimator()));
     /* ... and the data handle also */
     animator.create(NodeAnimation{}, nullptr, {}, {}, NodeHandle::Null);
     animator.create(NodeAnimation{}, nullptr, {}, {}, NodeHandle::Null);

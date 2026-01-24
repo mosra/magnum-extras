@@ -52,7 +52,7 @@ during a node animation, use @ref GenericNodeAnimator.
 
 The animator doesn't have any shared state or configuration, so it's just about
 constructing it from a fresh @ref AbstractUserInterface::createAnimator()
-handle and passing it to @relativeref{AbstractUserInterface,setNodeAnimatorInstance()}.
+handle and passing it to @relativeref{AbstractUserInterface,setAnimatorInstance(Containers::Pointer<AbstractNodeAnimator>&&)}
 After that, assuming @ref AbstractUserInterface::advanceAnimations() is called
 in an appropriate place, it's ready to use.
 

@@ -1767,10 +1767,9 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
          *
          * A handle is valid if it has been returned from @ref createAnimator()
          * before and @ref removeAnimator() wasn't called on it yet. Note that
-         * a handle is valid even if the animator instance wasn't set with
-         * @ref setGenericAnimatorInstance(), @ref setNodeAnimatorInstance(),
-         * @ref setDataAnimatorInstance() or @ref setStyleAnimatorInstance()
-         * yet. For @ref AnimatorHandle::Null always returns @cpp false @ce.
+         * a handle is valid even if the animator instance wasn't set with any
+         * of the @ref setAnimatorInstance() overloads yet. For
+         * @ref AnimatorHandle::Null always returns @cpp false @ce.
          */
         bool isHandleValid(AnimatorHandle handle) const;
 
@@ -1799,10 +1798,8 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
          * grows the storage if there's no free slots left. Expects that
          * there's at most 256 animators. The returned handle is meant to be
          * used to construct an @ref AbstractAnimator subclass and the instance
-         * then passed to @ref setGenericAnimatorInstance(),
-         * @ref setNodeAnimatorInstance(), @ref setDataAnimatorInstance() or
-         * @ref setStyleAnimatorInstance(). An animator can be removed again
-         * with @ref removeAnimator().
+         * then passed to one of the @ref setAnimatorInstance() overloads. An
+         * animator can be removed again with @ref removeAnimator().
          * @see @ref isHandleValid(AnimatorHandle) const,
          *      @ref animatorCapacity(), @ref animatorUsedCount()
          */
@@ -1811,10 +1808,9 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
         /**
          * @brief Whether an instance has been set for given animator
          *
-         * Expects that @p handle is valid. Returns @cpp true @ce if
-         * @ref setGenericAnimatorInstance(), @ref setNodeAnimatorInstance(),
-         * @ref setDataAnimatorInstance() or @ref setStyleAnimatorInstance()
-         * has been already called for @p handle, @cpp false @ce otherwise.
+         * Expects that @p handle is valid. Returns @cpp true @ce if any of the
+         * @ref setAnimatorInstance() overloads has been already called for
+         * @p handle, @cpp false @ce otherwise.
          * @see @ref animator()
          */
         bool hasAnimatorInstance(AnimatorHandle handle) const;
@@ -1825,13 +1821,11 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
          *
          * Expects that @p instance was created with an @ref AnimatorHandle
          * returned from @ref createAnimator() earlier, the handle is valid and
-         * none of @ref setGenericAnimatorInstance(),
-         * @ref setNodeAnimatorInstance(), @ref setDataAnimatorInstance() or
-         * @ref setStyleAnimatorInstance() was called for the same handle yet.
-         * Additionally, if @ref AnimatorFeature::DataAttachment is supported
-         * by @p instance, expects that
-         * @ref AbstractGenericAnimator::setLayer() has already been called on
-         * it.
+         * none of the @ref setAnimatorInstance() overloads was called for the
+         * same handle yet. Additionally, if
+         * @ref AnimatorFeature::DataAttachment is supported by @p instance,
+         * expects that @ref AbstractGenericAnimator::setLayer() has already
+         * been called on it.
          *
          * Internally, the instance is inserted into a list partitioned by
          * animator type, which is done with a @f$ \mathcal{O}(n) @f$
@@ -1840,10 +1834,14 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
          *      @ref isHandleValid(AnimatorHandle) const,
          *      @ref hasAnimatorInstance(AnimatorHandle) const
          */
-        AbstractGenericAnimator& setGenericAnimatorInstance(Containers::Pointer<AbstractGenericAnimator>&& instance);
+        AbstractGenericAnimator& setAnimatorInstance(Containers::Pointer<AbstractGenericAnimator>&& instance);
         /** @overload */
-        template<class T> T& setGenericAnimatorInstance(Containers::Pointer<T>&& instance) {
-            return static_cast<T&>(setGenericAnimatorInstance(Containers::Pointer<AbstractGenericAnimator>{Utility::move(instance)}));
+        /* Canot use is_base_of<AbstractGenericAnimator, T> as that requires
+           AbstractGenericAnimator to be defined. Same case as in
+           Containers::Pointer derived-from-base constructor, see its
+           documentation for details. */
+        template<class T, typename std::enable_if<std::is_convertible<T*, AbstractGenericAnimator*>::value, int>::type = 0> T& setAnimatorInstance(Containers::Pointer<T>&& instance) {
+            return static_cast<T&>(setAnimatorInstance(Containers::Pointer<AbstractGenericAnimator>{Utility::move(instance)}));
         }
 
         /**
@@ -1852,11 +1850,9 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
          *
          * Expects that @p instance was created with an @ref AnimatorHandle
          * returned from @ref createAnimator() earlier, the handle is valid and
-         * none of @ref setGenericAnimatorInstance(),
-         * @ref setNodeAnimatorInstance(), @ref setDataAnimatorInstance() or
-         * @ref setStyleAnimatorInstance() was called for the same handle yet.
-         * The @ref AbstractNodeAnimator is expected to advertise
-         * @ref AnimatorFeature::NodeAttachment.
+         * none of the @ref setAnimatorInstance() overloads was called for the
+         * same handle yet. The @ref AbstractNodeAnimator is expected to
+         * advertise @ref AnimatorFeature::NodeAttachment.
          *
          * Internally, the instance is inserted into a list partitioned by
          * animator type, which is done with a @f$ \mathcal{O}(n) @f$
@@ -1865,10 +1861,11 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
          *      @ref isHandleValid(AnimatorHandle) const,
          *      @ref hasAnimatorInstance(AnimatorHandle) const
          */
-        AbstractNodeAnimator& setNodeAnimatorInstance(Containers::Pointer<AbstractNodeAnimator>&& instance);
+        AbstractNodeAnimator& setAnimatorInstance(Containers::Pointer<AbstractNodeAnimator>&& instance);
         /** @overload */
-        template<class T> T& setNodeAnimatorInstance(Containers::Pointer<T>&& instance) {
-            return static_cast<T&>(setNodeAnimatorInstance(Containers::Pointer<AbstractNodeAnimator>{Utility::move(instance)}));
+        /* Canot use is_base_of<AbstractNodeAnimator, T>, like above */
+        template<class T, typename std::enable_if<std::is_convertible<T*, AbstractNodeAnimator*>::value, int>::type = 0> T& setAnimatorInstance(Containers::Pointer<T>&& instance) {
+            return static_cast<T&>(setAnimatorInstance(Containers::Pointer<AbstractNodeAnimator>{Utility::move(instance)}));
         }
 
         /**
@@ -1877,13 +1874,11 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
          *
          * Expects that @p instance was created with an @ref AnimatorHandle
          * returned from @ref createAnimator() earlier, the handle is valid and
-         * none of @ref setGenericAnimatorInstance(),
-         * @ref setNodeAnimatorInstance(), @ref setDataAnimatorInstance() or
-         * @ref setStyleAnimatorInstance() was called for the same handle yet.
-         * The @ref AbstractDataAnimator is expected to advertise
-         * @ref AnimatorFeature::DataAttachment and it's expected that
-         * @ref AbstractLayer::assignAnimator(AbstractDataAnimator&) const has
-         * already been called for it.
+         * none of the @ref setAnimatorInstance() overloads was called for the
+         * same handle yet. The @ref AbstractDataAnimator is expected to
+         * advertise @ref AnimatorFeature::DataAttachment and it's expected
+         * that @ref AbstractLayer::assignAnimator(AbstractDataAnimator&) const
+         * has already been called for it.
          *
          * Internally, the instance is inserted into a list partitioned by
          * animator type, which is done with a @f$ \mathcal{O}(n) @f$
@@ -1892,10 +1887,11 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
          *      @ref isHandleValid(AnimatorHandle) const,
          *      @ref hasAnimatorInstance(AnimatorHandle) const
          */
-        AbstractDataAnimator& setDataAnimatorInstance(Containers::Pointer<AbstractDataAnimator>&& instance);
+        AbstractDataAnimator& setAnimatorInstance(Containers::Pointer<AbstractDataAnimator>&& instance);
         /** @overload */
-        template<class T> T& setDataAnimatorInstance(Containers::Pointer<T>&& instance) {
-            return static_cast<T&>(setDataAnimatorInstance(Containers::Pointer<AbstractDataAnimator>{Utility::move(instance)}));
+        /* Canot use is_base_of<AbstractDataAnimator, T>, like above */
+        template<class T, typename std::enable_if<std::is_convertible<T*, AbstractDataAnimator*>::value, int>::type = 0> T& setAnimatorInstance(Containers::Pointer<T>&& instance) {
+            return static_cast<T&>(setAnimatorInstance(Containers::Pointer<AbstractDataAnimator>{Utility::move(instance)}));
         }
 
         /**
@@ -1904,13 +1900,11 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
          *
          * Expects that @p instance was created with an @ref AnimatorHandle
          * returned from @ref createAnimator() earlier, the handle is valid and
-         * none of @ref setGenericAnimatorInstance(),
-         * @ref setNodeAnimatorInstance(), @ref setDataAnimatorInstance() or
-         * @ref setStyleAnimatorInstance() was called for the same handle yet.
-         * The @ref AbstractStyleAnimator is expected to advertise
-         * @ref AnimatorFeature::DataAttachment and it's expected that
-         * @ref AbstractLayer::assignAnimator(AbstractStyleAnimator&) const has
-         * already been called for it.
+         * none of the @ref setAnimatorInstance() overloads was called for the
+         * same handle yet. The @ref AbstractStyleAnimator is expected to
+         * advertise @ref AnimatorFeature::DataAttachment and it's expected
+         * that @ref AbstractLayer::assignAnimator(AbstractStyleAnimator&) const
+         * has already been called for it.
          *
          * Internally, the instance is inserted into a list partitioned by
          * animator type, which is done with a @f$ \mathcal{O}(n) @f$
@@ -1919,19 +1913,18 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
          *      @ref isHandleValid(AnimatorHandle) const,
          *      @ref hasAnimatorInstance(AnimatorHandle) const
          */
-        AbstractStyleAnimator& setStyleAnimatorInstance(Containers::Pointer<AbstractStyleAnimator>&& instance);
+        AbstractStyleAnimator& setAnimatorInstance(Containers::Pointer<AbstractStyleAnimator>&& instance);
         /** @overload */
-        template<class T> T& setStyleAnimatorInstance(Containers::Pointer<T>&& instance) {
-            return static_cast<T&>(setStyleAnimatorInstance(Containers::Pointer<AbstractStyleAnimator>{Utility::move(instance)}));
+        /* Canot use is_base_of<AbstractStyleAnimator, T>, like above */
+        template<class T, typename std::enable_if<std::is_convertible<T*, AbstractStyleAnimator*>::value, int>::type = 0> T& setAnimatorInstance(Containers::Pointer<T>&& instance) {
+            return static_cast<T&>(setAnimatorInstance(Containers::Pointer<AbstractStyleAnimator>{Utility::move(instance)}));
         }
 
         /**
          * @brief Animator instance
          *
-         * Expects that @p handle is valid and that one of
-         * @ref setGenericAnimatorInstance(), @ref setNodeAnimatorInstance(),
-         * @ref setDataAnimatorInstance() or @ref setStyleAnimatorInstance()
-         * was called for it.
+         * Expects that @p handle is valid and that one of the
+         * @ref setAnimatorInstance() overloads was called for it.
          * @see @ref isHandleValid(AnimatorHandle) const,
          *      @ref hasAnimatorInstance(AnimatorHandle) const
          */
@@ -1941,11 +1934,10 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
         /**
          * @brief Animator instance in a concrete type
          *
-         * Expects that @p handle is valid and that one of
-         * @ref setGenericAnimatorInstance(), @ref setNodeAnimatorInstance(),
-         * @ref setDataAnimatorInstance() or @ref setStyleAnimatorInstance()
-         * was called for it. It's the user responsibility to ensure that @p T
-         * matches the actual instance type.
+         * Expects that @p handle is valid and that one of the
+         * @ref setAnimatorInstance() overloads was called for it. It's the
+         * user responsibility to ensure that @p T matches the actual instance
+         * type.
          * @see @ref isHandleValid(AnimatorHandle) const,
          *      @ref hasAnimatorInstance(AnimatorHandle) const
          */
@@ -3430,11 +3422,7 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
             removeUniqueLayoutFromNode() */
 
         /* Used by set*AnimatorInstance() */
-        MAGNUM_UI_LOCAL AbstractAnimator& setAnimatorInstanceInternal(
-            #ifndef CORRADE_NO_ASSERT
-            const char* messagePrefix,
-            #endif
-            Containers::Pointer<AbstractAnimator>&& instance, Int type);
+        MAGNUM_UI_LOCAL AbstractAnimator& setAnimatorInstanceInternal(Containers::Pointer<AbstractAnimator>&& instance, Int type);
         /* Used by removeNode(), advanceAnimations() and clean() */
         MAGNUM_UI_LOCAL void removeNodeInternal(UnsignedInt id);
         /* Used by setNodeFlags(), addNodeFlags() and clearNodeFlags() */

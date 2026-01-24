@@ -144,7 +144,7 @@ practical examples of animating node or data properties.
 
 The animator doesn't have any shared state or configuration, so it's just about
 constructing it from a fresh @ref AbstractUserInterface::createAnimator()
-handle and passing it to @relativeref{AbstractUserInterface,setGenericAnimatorInstance()}.
+handle and passing it to @relativeref{AbstractUserInterface,setAnimatorInstance(Containers::Pointer<AbstractGenericAnimator>&&)}.
 After that, assuming @ref AbstractUserInterface::advanceAnimations() is called
 in an appropriate place, it's ready to use.
 
@@ -401,7 +401,7 @@ animations at once.
 
 The animator doesn't have any shared state or configuration, so it's just about
 constructing it from a fresh @ref AbstractUserInterface::createAnimator()
-handle and passing it to @relativeref{AbstractUserInterface,setGenericAnimatorInstance()}.
+handle and passing it to @relativeref{AbstractUserInterface,setAnimatorInstance(Containers::Pointer<AbstractGenericAnimator>&&)}.
 After that, assuming @ref AbstractUserInterface::advanceAnimations() is called
 in an appropriate place, it's ready to use.
 
@@ -661,10 +661,10 @@ arbitrary data-related setters on the UI instance, on layers or elsewhere. Use
 
 The animator doesn't have any shared state or configuration, so it's just about
 constructing it from a fresh @ref AbstractUserInterface::createAnimator()
-handle and passing it to @relativeref{AbstractUserInterface,setGenericAnimatorInstance()}. After that,
-use @ref setLayer() to register the animator with a concrete layer instance.
-Then, assuming @ref AbstractUserInterface::advanceAnimations() is called in an
-appropriate place, the animator is ready to use.
+handle and passing it to @relativeref{AbstractUserInterface,setAnimatorInstance(Containers::Pointer<AbstractGenericAnimator>&&)}.
+After that, use @ref setLayer() to register the animator with a concrete layer
+instance. Then, assuming @ref AbstractUserInterface::advanceAnimations() is
+called in an appropriate place, the animator is ready to use.
 
 @snippet Ui.cpp GenericDataAnimator-setup
 

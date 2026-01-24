@@ -2090,7 +2090,7 @@ void AbstractVisualLayerTest::eventStyleTransitionNoOp() {
     if(data.dynamicAnimated || data.transitionPersistentAnimation) {
         Containers::Pointer<StyleLayerStyleAnimator> animatorInstance{InPlaceInit, ui.createAnimator()};
         layer.assignAnimator(*animatorInstance);
-        animator = &ui.setStyleAnimatorInstance(Utility::move(animatorInstance));
+        animator = &ui.setAnimatorInstance(Utility::move(animatorInstance));
 
         layer.setDefaultStyleAnimator(animator);
     }
@@ -2908,7 +2908,7 @@ void AbstractVisualLayerTest::eventStyleTransition() {
         Containers::Pointer<StyleLayerStyleAnimator> animatorInstance{InPlaceInit, ui.createAnimator()};
         layer.assignAnimator(*animatorInstance);
         layer.setDefaultStyleAnimator(animatorInstance.get());
-        animator = &ui.setStyleAnimatorInstance(Utility::move(animatorInstance));
+        animator = &ui.setAnimatorInstance(Utility::move(animatorInstance));
     }
     AnimationHandle dynamicAnimation = AnimationHandle::Null;
     auto moveStyleToDynamic = [&](DataHandle dataHandle) {
@@ -4595,7 +4595,7 @@ void AbstractVisualLayerTest::eventStyleTransitionNoHover() {
         Containers::Pointer<StyleLayerStyleAnimator> animatorInstance{InPlaceInit, ui.createAnimator()};
         layer.assignAnimator(*animatorInstance);
         layer.setDefaultStyleAnimator(animatorInstance.get());
-        ui.setStyleAnimatorInstance(Utility::move(animatorInstance));
+        ui.setAnimatorInstance(Utility::move(animatorInstance));
     }
 
     auto testPressRelease = [&](UnsignedInt call) {
@@ -4829,7 +4829,7 @@ void AbstractVisualLayerTest::eventStyleTransitionDisabled() {
         Containers::Pointer<StyleLayerStyleAnimator> animatorInstance{InPlaceInit, ui.createAnimator()};
         layer.assignAnimator(*animatorInstance);
         layer.setDefaultStyleAnimator(animatorInstance.get());
-        ui.setStyleAnimatorInstance(Utility::move(animatorInstance));
+        ui.setAnimatorInstance(Utility::move(animatorInstance));
         shared.setStyleAnimation<StyleIndex,
             styleIndexAnimationDoNotCall,
             styleIndexAnimationDoNotCall,
@@ -5090,7 +5090,7 @@ void AbstractVisualLayerTest::eventStyleTransitionNodeBecomesHiddenDisabledNoEve
         Containers::Pointer<StyleLayerStyleAnimator> animatorInstance{InPlaceInit, ui.createAnimator()};
         layer.assignAnimator(*animatorInstance);
         layer.setDefaultStyleAnimator(animatorInstance.get());
-        ui.setStyleAnimatorInstance(Utility::move(animatorInstance));
+        ui.setAnimatorInstance(Utility::move(animatorInstance));
         shared.setStyleAnimation<StyleIndex,
             styleIndexAnimationDoNotCall,
             styleIndexAnimationDoNotCall,
@@ -5297,7 +5297,7 @@ void AbstractVisualLayerTest::eventStyleTransitionNodeNoLongerFocusable() {
         Containers::Pointer<StyleLayerStyleAnimator> animatorInstance{InPlaceInit, ui.createAnimator()};
         layer.assignAnimator(*animatorInstance);
         layer.setDefaultStyleAnimator(animatorInstance.get());
-        ui.setStyleAnimatorInstance(Utility::move(animatorInstance));
+        ui.setAnimatorInstance(Utility::move(animatorInstance));
         shared.setStyleAnimation<StyleIndex,
             styleIndexAnimationDoNotCall,
             styleIndexAnimationDoNotCall,
@@ -5353,7 +5353,7 @@ void AbstractVisualLayerTest::eventStyleTransitionOutOfRange() {
         Containers::Pointer<StyleLayerStyleAnimator> animatorInstance{InPlaceInit, ui.createAnimator()};
         layer.assignAnimator(*animatorInstance);
         layer.setDefaultStyleAnimator(animatorInstance.get());
-        animator = &ui.setStyleAnimatorInstance(Utility::move(animatorInstance));
+        animator = &ui.setAnimatorInstance(Utility::move(animatorInstance));
 
         AnimationHandle nodeDataAnimation = animator->create(StyleIndex{}, StyleIndex::Red, -100_nsec, 1_nsec, DataHandle::Null, AnimationFlag::KeepOncePlayed);
         nodeData = layer.create(StyleCount + *layer.allocateDynamicStyle(nodeDataAnimation), node);
@@ -5608,7 +5608,7 @@ void AbstractVisualLayerTest::eventStyleTransitionInvalidAnimation() {
     Containers::Pointer<StyleLayerStyleAnimator> animatorInstance{InPlaceInit, ui.createAnimator()};
     layer.assignAnimator(*animatorInstance);
     layer.setDefaultStyleAnimator(animatorInstance.get());
-    ui.setStyleAnimatorInstance(Utility::move(animatorInstance));
+    ui.setAnimatorInstance(Utility::move(animatorInstance));
 
     shared.setStyleTransition(
         nullptr,
@@ -5790,12 +5790,12 @@ void AbstractVisualLayerTest::eventStyleTransitionDynamicStyle() {
         layer.assignAnimator(*animatorInstance);
         if(data.animator1SetDefault)
             layer.setDefaultStyleAnimator(animatorInstance.get());
-        animator1 = &ui.setStyleAnimatorInstance(Utility::move(animatorInstance));
+        animator1 = &ui.setAnimatorInstance(Utility::move(animatorInstance));
     } else CORRADE_INTERNAL_ASSERT(!data.animator1SetDefault && !data.animation1);
     if(data.animator2) {
         Containers::Pointer<StyleLayerStyleAnimator> animatorInstance{InPlaceInit, ui.createAnimator()};
         layer.assignAnimator(*animatorInstance);
-        animator2 = &ui.setStyleAnimatorInstance(Utility::move(animatorInstance));
+        animator2 = &ui.setAnimatorInstance(Utility::move(animatorInstance));
     } else CORRADE_INTERNAL_ASSERT(!data.animation2);
 
     /* And then, if there's an animator, create an animation that has a target

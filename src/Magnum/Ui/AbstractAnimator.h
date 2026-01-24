@@ -1721,7 +1721,7 @@ class AbstractAnimator::DebugIntegration {
 @brief Base for generic animators
 @m_since_latest_{extras}
 
-@see @ref AbstractUserInterface::setGenericAnimatorInstance()
+@see @ref AbstractUserInterface::setAnimatorInstance(Containers::Pointer<AbstractGenericAnimator>&&)
 */
 class MAGNUM_UI_EXPORT AbstractGenericAnimator: public AbstractAnimator {
     public:
@@ -1907,7 +1907,7 @@ CORRADE_ENUMSET_OPERATORS(NodeAnimatorUpdates)
 @brief Base for node animators
 @m_since_latest_{extras}
 
-@see @ref AbstractUserInterface::setNodeAnimatorInstance()
+@see @ref AbstractUserInterface::setAnimatorInstance(Containers::Pointer<AbstractNodeAnimator>&&)
 */
 class MAGNUM_UI_EXPORT AbstractNodeAnimator: public AbstractAnimator {
     public:
@@ -2029,7 +2029,7 @@ class MAGNUM_UI_EXPORT AbstractNodeAnimator: public AbstractAnimator {
 @brief Base for data animators
 @m_since_latest_{extras}
 
-@see @ref AbstractUserInterface::setDataAnimatorInstance(),
+@see @ref AbstractUserInterface::setAnimatorInstance(Containers::Pointer<AbstractDataAnimator>&&),
     @ref AbstractLayer::assignAnimator(AbstractDataAnimator&) const,
     @ref AbstractLayer::advanceAnimations(Nanoseconds, Containers::MutableBitArrayView, Containers::MutableBitArrayView, Containers::MutableBitArrayView, const Containers::StridedArrayView1D<Float>&, Containers::MutableBitArrayView, const Containers::Iterable<AbstractDataAnimator>&)
 */
@@ -2071,7 +2071,7 @@ class MAGNUM_UI_EXPORT AbstractDataAnimator: public AbstractAnimator {
 @brief Base for style animators
 @m_since_latest_{extras}
 
-@see @ref AbstractUserInterface::setStyleAnimatorInstance(),
+@see @ref AbstractUserInterface::setAnimatorInstance(Containers::Pointer<AbstractStyleAnimator>&&)
     @ref AbstractLayer::assignAnimator(AbstractStyleAnimator&) const,
     @ref AbstractLayer::advanceAnimations(Nanoseconds, Containers::MutableBitArrayView, Containers::MutableBitArrayView, Containers::MutableBitArrayView, const Containers::StridedArrayView1D<Float>&, Containers::MutableBitArrayView, const Containers::Iterable<AbstractStyleAnimator>&)
 */

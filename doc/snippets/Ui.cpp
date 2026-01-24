@@ -513,7 +513,7 @@ struct BaseLayer: Ui::BaseLayer {
 } baseLayer{Ui::layerHandle(0, 1), baseLayerShared};
 Ui::AbstractUserInterface ui{{100, 100}};
 /* [BaseLayer-style-animations-animator] */
-Ui::BaseLayerStyleAnimator& animator = ui.setStyleAnimatorInstance(
+Ui::BaseLayerStyleAnimator& animator = ui.setAnimatorInstance(
     Containers::pointer<Ui::BaseLayerStyleAnimator>(ui.createAnimator()));
 baseLayer
     .assignAnimator(animator)
@@ -1247,7 +1247,7 @@ Ui::BaseLayer& baseLayer = ui.layer<Ui::BaseLayer>({});
 /* [BaseLayerStyleAnimator-setup2] */
 baseLayer.assignAnimator(*animatorInstance);
 Ui::BaseLayerStyleAnimator& animator =
-    ui.setStyleAnimatorInstance(Utility::move(animatorInstance));
+    ui.setAnimatorInstance(Utility::move(animatorInstance));
 /* [BaseLayerStyleAnimator-setup2] */
 
 /* [BaseLayerStyleAnimator-setup-default] */
@@ -1470,7 +1470,7 @@ lineLayer.createStrip(2, position, {}, point);
 {
 Ui::AbstractUserInterface ui{{100, 100}};
 /* [NodeAnimator-setup] */
-Ui::NodeAnimator& animator = ui.setNodeAnimatorInstance(
+Ui::NodeAnimator& animator = ui.setAnimatorInstance(
     Containers::pointer<Ui::NodeAnimator>(ui.createAnimator()));
 /* [NodeAnimator-setup] */
 
@@ -2112,7 +2112,7 @@ Ui::TextLayer& textLayer = ui.layer<Ui::TextLayer>({});
 /* [TextLayerStyleAnimator-setup2] */
 textLayer.assignAnimator(*animatorInstance);
 Ui::TextLayerStyleAnimator& animator =
-    ui.setStyleAnimatorInstance(Utility::move(animatorInstance));
+    ui.setAnimatorInstance(Utility::move(animatorInstance));
 /* [TextLayerStyleAnimator-setup2] */
 
 /* [TextLayerStyleAnimator-setup-default] */
@@ -2138,7 +2138,7 @@ animator.create(TextLayerStyle::ButtonHovered, TextLayerStyle::Button,
 {
 Ui::AbstractUserInterface ui{{100, 100}};
 /* [GenericAnimator-setup] */
-Ui::GenericAnimator& animator = ui.setGenericAnimatorInstance(
+Ui::GenericAnimator& animator = ui.setAnimatorInstance(
     Containers::pointer<Ui::GenericAnimator>(ui.createAnimator()));
 /* [GenericAnimator-setup] */
 
@@ -2188,7 +2188,7 @@ animator.create([](Float, Ui::GenericAnimationStates state) {
 {
 Ui::AbstractUserInterface ui{{100, 100}};
 /* [GenericNodeAnimator-setup] */
-Ui::GenericNodeAnimator& animator = ui.setGenericAnimatorInstance(
+Ui::GenericNodeAnimator& animator = ui.setAnimatorInstance(
     Containers::pointer<Ui::GenericNodeAnimator>(ui.createAnimator()));
 /* [GenericNodeAnimator-setup] */
 
@@ -2251,7 +2251,7 @@ Ui::AbstractUserInterface ui{{100, 100}};
 /* [GenericDataAnimator-setup] */
 Ui::AbstractLayer& layer = DOXYGEN_ELLIPSIS(ui.layer({}));
 
-Ui::GenericDataAnimator& animator = ui.setGenericAnimatorInstance(
+Ui::GenericDataAnimator& animator = ui.setAnimatorInstance(
     Containers::pointer<Ui::GenericDataAnimator>(ui.createAnimator()));
 animator.setLayer(layer);
 /* [GenericDataAnimator-setup] */

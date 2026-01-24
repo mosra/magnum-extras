@@ -121,7 +121,7 @@ UserInterface& UserInterface::setBackgroundLayerStyleAnimatorInstance(Containers
     (*_state->backgroundLayer)
         .assignAnimator(*instance)
         .setDefaultStyleAnimator(instance.get());
-    setStyleAnimatorInstance(Utility::move(instance));
+    setAnimatorInstance(Utility::move(instance));
     return *this;
 }
 
@@ -194,7 +194,7 @@ UserInterface& UserInterface::setBaseLayerStyleAnimatorInstance(Containers::Poin
     (*_state->baseLayer)
         .assignAnimator(*instance)
         .setDefaultStyleAnimator(instance.get());
-    setStyleAnimatorInstance(Utility::move(instance));
+    setAnimatorInstance(Utility::move(instance));
     return *this;
 }
 
@@ -251,7 +251,7 @@ UserInterface& UserInterface::setTextLayerStyleAnimatorInstance(Containers::Poin
     (*_state->textLayer)
         .assignAnimator(*instance)
         .setDefaultStyleAnimator(instance.get());
-    setStyleAnimatorInstance(Utility::move(instance));
+    setAnimatorInstance(Utility::move(instance));
     return *this;
 }
 

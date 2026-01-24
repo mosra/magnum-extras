@@ -546,7 +546,7 @@ debugLayer.setLayerName(layoutLayer, "Layout", [](UnsignedInt style) {
         ui.createAnimator();
         ui.createAnimator();
         ui.removeAnimator(ui.createAnimator());
-        Ui::NodeAnimator& nodeAnimator = ui.setNodeAnimatorInstance(Containers::pointer<Ui::NodeAnimator>(ui.createAnimator()));
+        Ui::NodeAnimator& nodeAnimator = ui.setAnimatorInstance(Containers::pointer<Ui::NodeAnimator>(ui.createAnimator()));
         debugLayer.setAnimatorName(nodeAnimator, "Node");
         Ui::NodeHandle nodeAnimatedNode = ui.createNode(parent, {}, {});
         nodeAnimator.create(Ui::NodeAnimation{}, nullptr, -10_nsec, 20_nsec, Ui::NodeHandle::Null);

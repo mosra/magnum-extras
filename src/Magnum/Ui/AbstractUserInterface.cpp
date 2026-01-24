@@ -1651,78 +1651,57 @@ bool AbstractUserInterface::hasAnimatorInstance(const AnimatorHandle handle) con
     return !!_state->animators[animatorHandleId(handle)].used.instance;
 }
 
-AbstractGenericAnimator& AbstractUserInterface::setGenericAnimatorInstance(Containers::Pointer<AbstractGenericAnimator>&& instance) {
-    AbstractAnimator& animator = setAnimatorInstanceInternal(
-        #ifndef CORRADE_NO_ASSERT
-        "Ui::AbstractUserInterface::setGenericAnimatorInstance():",
-        #endif
-        Utility::move(instance), Int(Implementation::AnimatorType::Generic));
+AbstractGenericAnimator& AbstractUserInterface::setAnimatorInstance(Containers::Pointer<AbstractGenericAnimator>&& instance) {
+    AbstractAnimator& animator = setAnimatorInstanceInternal(Utility::move(instance), Int(Implementation::AnimatorType::Generic));
 
     return static_cast<AbstractGenericAnimator&>(animator);
 }
 
-AbstractNodeAnimator& AbstractUserInterface::setNodeAnimatorInstance(Containers::Pointer<AbstractNodeAnimator>&& instance) {
+AbstractNodeAnimator& AbstractUserInterface::setAnimatorInstance(Containers::Pointer<AbstractNodeAnimator>&& instance) {
     /* Null instance checked in setAnimatorInstanceInternal() below, avoid
        accessing it here */
     CORRADE_ASSERT(!instance || instance->features() >= AnimatorFeature::NodeAttachment,
-        "Ui::AbstractUserInterface::setNodeAnimatorInstance():" << AnimatorFeature::NodeAttachment << "not advertised for a node animator", *instance);
+        "Ui::AbstractUserInterface::setAnimatorInstance():" << AnimatorFeature::NodeAttachment << "not advertised for a node animator", *instance);
 
-    AbstractAnimator& animator = setAnimatorInstanceInternal(
-        #ifndef CORRADE_NO_ASSERT
-        "Ui::AbstractUserInterface::setNodeAnimatorInstance():",
-        #endif
-        Utility::move(instance), Int(Implementation::AnimatorType::Node));
+    AbstractAnimator& animator = setAnimatorInstanceInternal(Utility::move(instance), Int(Implementation::AnimatorType::Node));
 
     return static_cast<AbstractNodeAnimator&>(animator);
 }
 
-AbstractDataAnimator& AbstractUserInterface::setDataAnimatorInstance(Containers::Pointer<AbstractDataAnimator>&& instance) {
+AbstractDataAnimator& AbstractUserInterface::setAnimatorInstance(Containers::Pointer<AbstractDataAnimator>&& instance) {
     /* Null instance checked in setAnimatorInstanceInternal() below, avoid
        accessing it here */
     CORRADE_ASSERT(!instance || instance->features() >= AnimatorFeature::DataAttachment,
-        "Ui::AbstractUserInterface::setDataAnimatorInstance():" << AnimatorFeature::DataAttachment << "not advertised for a data animator", *instance);
+        "Ui::AbstractUserInterface::setAnimatorInstance():" << AnimatorFeature::DataAttachment << "not advertised for a data animator", *instance);
 
-    AbstractAnimator& animator = setAnimatorInstanceInternal(
-        #ifndef CORRADE_NO_ASSERT
-        "Ui::AbstractUserInterface::setDataAnimatorInstance():",
-        #endif
-        Utility::move(instance), Int(Implementation::AnimatorType::Data));
+    AbstractAnimator& animator = setAnimatorInstanceInternal(Utility::move(instance), Int(Implementation::AnimatorType::Data));
 
     return static_cast<AbstractDataAnimator&>(animator);
 }
 
-AbstractStyleAnimator& AbstractUserInterface::setStyleAnimatorInstance(Containers::Pointer<AbstractStyleAnimator>&& instance) {
+AbstractStyleAnimator& AbstractUserInterface::setAnimatorInstance(Containers::Pointer<AbstractStyleAnimator>&& instance) {
     /* Null instance checked in setAnimatorInstanceInternal() below, avoid
        accessing it here */
     CORRADE_ASSERT(!instance || instance->features() >= AnimatorFeature::DataAttachment,
-        "Ui::AbstractUserInterface::setStyleAnimatorInstance():" << AnimatorFeature::DataAttachment << "not advertised for a style animator", *instance);
+        "Ui::AbstractUserInterface::setAnimatorInstance():" << AnimatorFeature::DataAttachment << "not advertised for a style animator", *instance);
 
-    AbstractAnimator& animator = setAnimatorInstanceInternal(
-        #ifndef CORRADE_NO_ASSERT
-        "Ui::AbstractUserInterface::setStyleAnimatorInstance():",
-        #endif
-        Utility::move(instance), Int(Implementation::AnimatorType::Style));
+    AbstractAnimator& animator = setAnimatorInstanceInternal(Utility::move(instance), Int(Implementation::AnimatorType::Style));
 
     return static_cast<AbstractStyleAnimator&>(animator);
 }
 
-AbstractAnimator& AbstractUserInterface::setAnimatorInstanceInternal(
-    #ifndef CORRADE_NO_ASSERT
-    const char* const messagePrefix,
-    #endif
-    Containers::Pointer<AbstractAnimator>&& instance, const Int type)
-{
+AbstractAnimator& AbstractUserInterface::setAnimatorInstanceInternal(Containers::Pointer<AbstractAnimator>&& instance, const Int type) {
     State& state = *_state;
     CORRADE_ASSERT(instance,
-        messagePrefix << "instance is null", *state.animators[0].used.instance);
+        "Ui::AbstractUserInterface::setAnimatorInstance(): instance is null", *state.animators[0].used.instance);
     const AnimatorHandle handle = instance->handle();
     CORRADE_ASSERT(isHandleValid(handle),
-        messagePrefix << "invalid handle" << handle, *state.animators[0].used.instance);
+        "Ui::AbstractUserInterface::setAnimatorInstance(): invalid handle" << handle, *state.animators[0].used.instance);
     const UnsignedInt id = animatorHandleId(handle);
     CORRADE_ASSERT(!state.animators[id].used.instance,
-        messagePrefix << "instance for" << handle << "already set", *state.animators[0].used.instance);
+        "Ui::AbstractUserInterface::setAnimatorInstance(): instance for" << handle << "already set", *state.animators[0].used.instance);
     CORRADE_ASSERT(!(instance->features() >= AnimatorFeature::DataAttachment) || instance->layer() != LayerHandle::Null,
-        messagePrefix << "no layer set for a data attachment animator", *state.animators[0].used.instance);
+        "Ui::AbstractUserInterface::setAnimatorInstance(): no layer set for a data attachment animator", *state.animators[0].used.instance);
 
     /* Insert into the partitioned animator list based on what features are
        supported */

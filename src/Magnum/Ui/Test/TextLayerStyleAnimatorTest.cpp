@@ -3282,7 +3282,7 @@ void TextLayerStyleAnimatorTest::uiAdvance() {
 
     Containers::Pointer<TextLayerStyleAnimator> animatorInstance{InPlaceInit, ui.createAnimator()};
     layer.assignAnimator(*animatorInstance);
-    TextLayerStyleAnimator& animator = ui.setStyleAnimatorInstance(Utility::move(animatorInstance));
+    TextLayerStyleAnimator& animator = ui.setAnimatorInstance(Utility::move(animatorInstance));
 
     DataHandle data = layer.create(2, "", {});
 
@@ -3383,7 +3383,7 @@ void TextLayerStyleAnimatorTest::uiAdvanceEventTransition() {
     layer
         .assignAnimator(*animatorInstance)
         .setDefaultStyleAnimator(animatorInstance.get());
-    TextLayerStyleAnimator& animator = ui.setStyleAnimatorInstance(Utility::move(animatorInstance));
+    TextLayerStyleAnimator& animator = ui.setAnimatorInstance(Utility::move(animatorInstance));
 
     NodeHandle node = ui.createNode({}, {50, 50});
     DataHandle data = layer.create(1, "", {}, node);

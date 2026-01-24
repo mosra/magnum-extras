@@ -2786,7 +2786,7 @@ void DebugLayerTest::animatorNameNoOp() {
         AnimatorFeatures doFeatures() const override { return {}; }
         void doAdvance(Containers::BitArrayView, Containers::BitArrayView, Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&) override {}
     };
-    EmptyAnimator& emptyAnimator = ui.setGenericAnimatorInstance(Containers::pointer<EmptyAnimator>(ui.createAnimator()));
+    EmptyAnimator& emptyAnimator = ui.setAnimatorInstance(Containers::pointer<EmptyAnimator>(ui.createAnimator()));
     /* Picking a source that isn't Animators but also isn't just empty */
     DebugLayer& layer = ui.setLayerInstance(Containers::pointer<DebugLayer>(ui.createLayer(), DebugLayerSource::NodeHierarchy, DebugLayerFlags{}));
     CORRADE_COMPARE(layer.animatorName(emptyAnimator), "");
@@ -2827,8 +2827,8 @@ void DebugLayerTest::animatorName() {
     };
     Layer& layer = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer(), DebugLayerSource::Animators, DebugLayerFlags{}));
 
-    EmptyGenericAnimator& emptyAnimator1 = ui.setGenericAnimatorInstance(Containers::pointer<EmptyGenericAnimator>(ui.createAnimator()));
-    EmptyNodeAnimator& emptyAnimator2 = ui.setNodeAnimatorInstance(Containers::pointer<EmptyNodeAnimator>(ui.createAnimator()));
+    EmptyGenericAnimator& emptyAnimator1 = ui.setAnimatorInstance(Containers::pointer<EmptyGenericAnimator>(ui.createAnimator()));
+    EmptyNodeAnimator& emptyAnimator2 = ui.setAnimatorInstance(Containers::pointer<EmptyNodeAnimator>(ui.createAnimator()));
 
     /* Initially the debug layer has no animator entries */
     CORRADE_COMPARE(layer.stateData().animators.size(), 0);
@@ -2854,9 +2854,9 @@ void DebugLayerTest::animatorName() {
 
     /* Create more animators, their names are empty again, and the size of the
        internal storage doesn't update implicitly to fit those */
-    EmptyGenericAnimator& emptyAnimator3 = ui.setGenericAnimatorInstance(Containers::pointer<EmptyGenericAnimator>(ui.createAnimator()));
-    EmptyNodeAnimator& emptyAnimator4 = ui.setNodeAnimatorInstance(Containers::pointer<EmptyNodeAnimator>(ui.createAnimator()));
-    EmptyGenericAnimator& emptyAnimator5 = ui.setGenericAnimatorInstance(Containers::pointer<EmptyGenericAnimator>(ui.createAnimator()));
+    EmptyGenericAnimator& emptyAnimator3 = ui.setAnimatorInstance(Containers::pointer<EmptyGenericAnimator>(ui.createAnimator()));
+    EmptyNodeAnimator& emptyAnimator4 = ui.setAnimatorInstance(Containers::pointer<EmptyNodeAnimator>(ui.createAnimator()));
+    EmptyGenericAnimator& emptyAnimator5 = ui.setAnimatorInstance(Containers::pointer<EmptyGenericAnimator>(ui.createAnimator()));
     CORRADE_COMPARE(layer.stateData().animators.size(), 1);
     CORRADE_COMPARE(layer.animatorName(emptyAnimator3), "");
     CORRADE_COMPARE(layer.animatorName(emptyAnimator4), "");
@@ -2900,7 +2900,7 @@ void DebugLayerTest::animatorName() {
 
     /* When creating a new animator in the same slot, the new animator doesn't
        have a name yet and the old still keeps it */
-    EmptyGenericAnimator& emptyAnimator4Replacement = ui.setGenericAnimatorInstance(Containers::pointer<EmptyGenericAnimator>(ui.createAnimator()));
+    EmptyGenericAnimator& emptyAnimator4Replacement = ui.setAnimatorInstance(Containers::pointer<EmptyGenericAnimator>(ui.createAnimator()));
     CORRADE_COMPARE(animatorHandleId(emptyAnimator4Replacement.handle()), animatorHandleId(emptyAnimator4Handle));
     CORRADE_COMPARE(layer.animatorName(emptyAnimator4Handle), "Fourth");
     CORRADE_COMPARE(layer.animatorName(emptyAnimator4Replacement), "");
@@ -2915,7 +2915,7 @@ void DebugLayerTest::animatorName() {
        keep the name */
     AnimatorHandle emptyAnimator4ReplacementHandle = emptyAnimator4Replacement.handle();
     ui.removeAnimator(emptyAnimator4ReplacementHandle);
-    EmptyNodeAnimator& emptyAnimator4Replacement2 = ui.setNodeAnimatorInstance(Containers::pointer<EmptyNodeAnimator>(ui.createAnimator()));
+    EmptyNodeAnimator& emptyAnimator4Replacement2 = ui.setAnimatorInstance(Containers::pointer<EmptyNodeAnimator>(ui.createAnimator()));
     CORRADE_COMPARE(animatorHandleId(emptyAnimator4Replacement2.handle()), animatorHandleId(emptyAnimator4ReplacementHandle));
     ui.update();
     CORRADE_COMPARE(layer.animatorName(emptyAnimator4ReplacementHandle), "");
@@ -2989,7 +2989,7 @@ void DebugLayerTest::animatorNameDebugIntegration() {
     CORRADE_COMPARE(layer.stateData().animators.size(), 0);
 
     /* An animator w/o DebugIntegration doesn't have any integration */
-    EmptyAnimator& emptyAnimator1 = ui.setGenericAnimatorInstance(Containers::pointer<EmptyAnimator>(ui.createAnimator()));
+    EmptyAnimator& emptyAnimator1 = ui.setAnimatorInstance(Containers::pointer<EmptyAnimator>(ui.createAnimator()));
     layer.setAnimatorName(emptyAnimator1, "Empty 1");
     CORRADE_COMPARE(layer.stateData().animators.size(), 1);
     CORRADE_VERIFY(!layer.stateData().animators[0].integration);
@@ -2998,9 +2998,9 @@ void DebugLayerTest::animatorNameDebugIntegration() {
 
     /* Setting an animator name with a concrete type should allocate the
        DebugIntegration instance */
-    IntegratedAnimator& integratedAnimator1 = ui.setGenericAnimatorInstance(Containers::pointer<IntegratedAnimator>(ui.createAnimator()));
-    IntegratedAnimator& integratedAnimator2 = ui.setGenericAnimatorInstance(Containers::pointer<IntegratedAnimator>(ui.createAnimator()));
-    IntegratedAnimator& integratedAnimator3 = ui.setGenericAnimatorInstance(Containers::pointer<IntegratedAnimator>(ui.createAnimator()));
+    IntegratedAnimator& integratedAnimator1 = ui.setAnimatorInstance(Containers::pointer<IntegratedAnimator>(ui.createAnimator()));
+    IntegratedAnimator& integratedAnimator2 = ui.setAnimatorInstance(Containers::pointer<IntegratedAnimator>(ui.createAnimator()));
+    IntegratedAnimator& integratedAnimator3 = ui.setAnimatorInstance(Containers::pointer<IntegratedAnimator>(ui.createAnimator()));
     layer.setAnimatorName(integratedAnimator1, "Integrated");
     layer.setAnimatorName(integratedAnimator2, "Integrated 2");
     layer.setAnimatorName(integratedAnimator3, "Integrated 3");
@@ -3040,8 +3040,8 @@ void DebugLayerTest::animatorNameDebugIntegration() {
        resize the internal storage, causing the integration allocation
        references to get moved, but not the instances themselves. They
        shouldn't get deleted. */
-    /*EmptyAnimator& emptyAnimator2 =*/ ui.setGenericAnimatorInstance(Containers::pointer<EmptyAnimator>(ui.createAnimator()));
-    EmptyAnimator& emptyAnimator3 = ui.setGenericAnimatorInstance(Containers::pointer<EmptyAnimator>(ui.createAnimator()));
+    /*EmptyAnimator& emptyAnimator2 =*/ ui.setAnimatorInstance(Containers::pointer<EmptyAnimator>(ui.createAnimator()));
+    EmptyAnimator& emptyAnimator3 = ui.setAnimatorInstance(Containers::pointer<EmptyAnimator>(ui.createAnimator()));
     layer.setAnimatorName(emptyAnimator3, "Empty 3");
     CORRADE_COMPARE(layer.stateData().animators.size(), 6);
     CORRADE_COMPARE(layer.stateData().animators[1].name, "Integrated 1");
@@ -3087,7 +3087,7 @@ void DebugLayerTest::animatorNameDebugIntegration() {
        deletes the integration on next update(), if there is */
     AnimatorHandle integratedAnimator2Handle = integratedAnimator2.handle();
     ui.removeAnimator(integratedAnimator2Handle);
-    EmptyAnimator& integratedAnimator2NonIntegratedReplacement = ui.setGenericAnimatorInstance(Containers::pointer<EmptyAnimator>(ui.createAnimator()));
+    EmptyAnimator& integratedAnimator2NonIntegratedReplacement = ui.setAnimatorInstance(Containers::pointer<EmptyAnimator>(ui.createAnimator()));
     CORRADE_COMPARE(animatorHandleId(integratedAnimator2NonIntegratedReplacement.handle()), animatorHandleId(integratedAnimator2Handle));
     CORRADE_COMPARE(layer.stateData().animators[2].name, "Integrated 2");
     CORRADE_COMPARE(layer.stateData().animators[2].integration, data.used);
@@ -3202,7 +3202,7 @@ void DebugLayerTest::animatorNameDebugIntegrationExplicit() {
     /* Setting an animator name with a concrete type won't allocate the
        DebugIntegration instance, same reasoning as with layers in
        layerNameDebugIntegrationExplicit() */
-    IntegratedAnimator& integratedAnimator1 = ui.setGenericAnimatorInstance(Containers::pointer<IntegratedAnimator>(ui.createAnimator()));
+    IntegratedAnimator& integratedAnimator1 = ui.setAnimatorInstance(Containers::pointer<IntegratedAnimator>(ui.createAnimator()));
     layer.setAnimatorName(integratedAnimator1, "Integrated 1");
     CORRADE_COMPARE(layer.stateData().animators.size(), 1);
     CORRADE_COMPARE(layer.stateData().animators[0].name, "Integrated 1");
@@ -3213,7 +3213,7 @@ void DebugLayerTest::animatorNameDebugIntegrationExplicit() {
     CORRADE_COMPARE(debugIntegrationCopied, 0);
     CORRADE_COMPARE(debugIntegrationDestructed, 0);
 
-    IntegratedAnimator& integratedAnimator2 = ui.setGenericAnimatorInstance(Containers::pointer<IntegratedAnimator>(ui.createAnimator()));
+    IntegratedAnimator& integratedAnimator2 = ui.setAnimatorInstance(Containers::pointer<IntegratedAnimator>(ui.createAnimator()));
     {
         IntegratedAnimator::DebugIntegration integration{1337, 4.5f};
         layer.setAnimatorName(integratedAnimator2, "Integrated 2", integration);
@@ -3303,7 +3303,7 @@ void DebugLayerTest::animatorNameDebugIntegrationExplicitRvalue() {
     /* Setting an animator name with a concrete type won't allocate the
        DebugIntegration instance, same reasoning as with layers in
        layerNameDebugIntegrationExplicit() */
-    IntegratedAnimator& integratedAnimator1 = ui.setGenericAnimatorInstance(Containers::pointer<IntegratedAnimator>(ui.createAnimator()));
+    IntegratedAnimator& integratedAnimator1 = ui.setAnimatorInstance(Containers::pointer<IntegratedAnimator>(ui.createAnimator()));
     layer.setAnimatorName(integratedAnimator1, "Integrated 1");
     CORRADE_COMPARE(layer.stateData().animators.size(), 1);
     CORRADE_COMPARE(layer.stateData().animators[0].name, "Integrated 1");
@@ -3314,7 +3314,7 @@ void DebugLayerTest::animatorNameDebugIntegrationExplicitRvalue() {
     CORRADE_COMPARE(debugIntegrationMoved, 0);
     CORRADE_COMPARE(debugIntegrationDestructed, 0);
 
-    IntegratedAnimator& integratedAnimator2 = ui.setGenericAnimatorInstance(Containers::pointer<IntegratedAnimator>(ui.createAnimator()));
+    IntegratedAnimator& integratedAnimator2 = ui.setAnimatorInstance(Containers::pointer<IntegratedAnimator>(ui.createAnimator()));
     layer.setAnimatorName(integratedAnimator2, "Integrated 2", IntegratedAnimator::DebugIntegration{1337, 4.5f});
     CORRADE_COMPARE(layer.stateData().animators.size(), 2);
     CORRADE_COMPARE(layer.stateData().animators[1].name, "Integrated 2");
@@ -3365,7 +3365,7 @@ void DebugLayerTest::animatorNameDebugIntegrationCopyConstructPlainStruct() {
         AnimatorFeatures doFeatures() const override { return {}; }
         void doAdvance(Containers::BitArrayView, Containers::BitArrayView, Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&) override {}
     };
-    IntegratedAnimator& integratedAnimator = ui.setGenericAnimatorInstance(Containers::pointer<IntegratedAnimator>(ui.createAnimator()));
+    IntegratedAnimator& integratedAnimator = ui.setAnimatorInstance(Containers::pointer<IntegratedAnimator>(ui.createAnimator()));
 
     /* This needs special handling on GCC 4.8, where
        new DebugIntegration{integration} (copy-construction) attempts to
@@ -3405,8 +3405,8 @@ void DebugLayerTest::animatorNameDebugIntegrationMoveConstructPlainStruct() {
         AnimatorFeatures doFeatures() const override { return {}; }
         void doAdvance(Containers::BitArrayView, Containers::BitArrayView, Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&) override {}
     };
-    IntegratedAnimator& integratedLayer1 = ui.setGenericAnimatorInstance(Containers::pointer<IntegratedAnimator>(ui.createAnimator()));
-    IntegratedAnimator& integratedLayer2 = ui.setGenericAnimatorInstance(Containers::pointer<IntegratedAnimator>(ui.createAnimator()));
+    IntegratedAnimator& integratedLayer1 = ui.setAnimatorInstance(Containers::pointer<IntegratedAnimator>(ui.createAnimator()));
+    IntegratedAnimator& integratedLayer2 = ui.setAnimatorInstance(Containers::pointer<IntegratedAnimator>(ui.createAnimator()));
 
     /* This needs special handling on GCC 4.8, where
        new DebugIntegration{Utility::move(integration)} attempts to convert
@@ -3439,8 +3439,8 @@ void DebugLayerTest::animatorNameInvalid() {
         AnimatorFeatures doFeatures() const override { return {}; }
         void doAdvance(Containers::BitArrayView, Containers::BitArrayView, Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&) override {}
     };
-    EmptyAnimator& animator = ui.setGenericAnimatorInstance(Containers::pointer<EmptyAnimator>(ui.createAnimator()));
-    EmptyAnimator& animatorAnotherUi = uiAnother.setGenericAnimatorInstance(Containers::pointer<EmptyAnimator>(uiAnother.createAnimator()));
+    EmptyAnimator& animator = ui.setAnimatorInstance(Containers::pointer<EmptyAnimator>(ui.createAnimator()));
+    EmptyAnimator& animatorAnotherUi = uiAnother.setAnimatorInstance(Containers::pointer<EmptyAnimator>(uiAnother.createAnimator()));
     EmptyAnimator animatorArtificialHandle{animatorHandle(0xab, 0x12)};
 
     struct IntegratedAnimator: AbstractGenericAnimator {
@@ -3455,8 +3455,8 @@ void DebugLayerTest::animatorNameInvalid() {
         AnimatorFeatures doFeatures() const override { return {}; }
         void doAdvance(Containers::BitArrayView, Containers::BitArrayView, Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&) override {}
     };
-    IntegratedAnimator& integratedAnimator = ui.setGenericAnimatorInstance(Containers::pointer<IntegratedAnimator>(ui.createAnimator()));
-    IntegratedAnimator& integratedAnimatorAnotherUi = uiAnother.setGenericAnimatorInstance(Containers::pointer<IntegratedAnimator>(uiAnother.createAnimator()));
+    IntegratedAnimator& integratedAnimator = ui.setAnimatorInstance(Containers::pointer<IntegratedAnimator>(ui.createAnimator()));
+    IntegratedAnimator& integratedAnimatorAnotherUi = uiAnother.setAnimatorInstance(Containers::pointer<IntegratedAnimator>(uiAnother.createAnimator()));
     IntegratedAnimator::DebugIntegration integration;
 
     Containers::String out;
@@ -3534,7 +3534,7 @@ void DebugLayerTest::preUpdateNoOp() {
         }
         void doAdvance(Containers::BitArrayView, Containers::BitArrayView, Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&) override {}
     };
-    ui.setGenericAnimatorInstance(Containers::pointer<EmptyGenericAnimator>(ui.createAnimator()));
+    ui.setAnimatorInstance(Containers::pointer<EmptyGenericAnimator>(ui.createAnimator()));
 
     /* Initially the layer will have nothing */
     struct Layer: DebugLayer {
@@ -3803,7 +3803,7 @@ void DebugLayerTest::preUpdateTrackAnimators() {
         AnimatorFeatures doFeatures() const override { return AnimatorFeature::NodeAttachment; }
         NodeAnimatorUpdates doAdvance(Containers::BitArrayView, Containers::BitArrayView, Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Float>&, const Containers::StridedArrayView1D<NodeFlags>&, Containers::MutableBitArrayView) override { return {}; }
     };
-    EmptyGenericAnimator& emptyAnimator1 = ui.setGenericAnimatorInstance(Containers::pointer<EmptyGenericAnimator>(ui.createAnimator()));
+    EmptyGenericAnimator& emptyAnimator1 = ui.setAnimatorInstance(Containers::pointer<EmptyGenericAnimator>(ui.createAnimator()));
 
     /* Initially the layer will have nothing even though there are some
        animators already, it'll however set a state to trigger population on
@@ -3835,8 +3835,8 @@ void DebugLayerTest::preUpdateTrackAnimators() {
         TestSuite::Compare::GreaterOrEqual);
 
     /* Adding more animators resizes the internal storage after update */
-    EmptyNodeAnimator& emptyAnimator2 = ui.setNodeAnimatorInstance(Containers::pointer<EmptyNodeAnimator>(ui.createAnimator()));
-    EmptyGenericAnimator& emptyAnimator3 = ui.setGenericAnimatorInstance(Containers::pointer<EmptyGenericAnimator>(ui.createAnimator()));
+    EmptyNodeAnimator& emptyAnimator2 = ui.setAnimatorInstance(Containers::pointer<EmptyNodeAnimator>(ui.createAnimator()));
+    EmptyGenericAnimator& emptyAnimator3 = ui.setAnimatorInstance(Containers::pointer<EmptyGenericAnimator>(ui.createAnimator()));
     ui.update();
     CORRADE_COMPARE(layer.stateData().animators.size(), 3);
     CORRADE_COMPARE(layer.usedCount(), 0);
@@ -3853,7 +3853,7 @@ void DebugLayerTest::preUpdateTrackAnimators() {
     AnimatorHandle emptyAnimator2Handle = emptyAnimator2.handle();
     ui.removeAnimator(emptyAnimator2Handle);
     ui.removeAnimator(emptyAnimator1);
-    EmptyGenericAnimator& emptyAnimator2Replacement = ui.setGenericAnimatorInstance(Containers::pointer<EmptyGenericAnimator>(ui.createAnimator()));
+    EmptyGenericAnimator& emptyAnimator2Replacement = ui.setAnimatorInstance(Containers::pointer<EmptyGenericAnimator>(ui.createAnimator()));
     ui.update();
     CORRADE_COMPARE(animatorHandleId(emptyAnimator2Replacement.handle()), animatorHandleId(emptyAnimator2Handle));
     CORRADE_COMPARE(layer.stateData().animators.size(), 3);
@@ -4238,27 +4238,27 @@ void DebugLayerTest::nodeInspect() {
     };
 
     /* Animators are always printed in the handle ID order */
-    EmptyNodeAnimator& emptyAnimator1 = ui.setNodeAnimatorInstance(Containers::pointer<EmptyNodeAnimator>(ui.createAnimator()));
+    EmptyNodeAnimator& emptyAnimator1 = ui.setAnimatorInstance(Containers::pointer<EmptyNodeAnimator>(ui.createAnimator()));
     emptyAnimator1.create(50_nsec, 10_nsec, node); /* scheduled */
     emptyAnimator1.create(-50_nsec, 10_nsec, node, AnimationFlag::KeepOncePlayed); /* stopped */
     emptyAnimator1.create(-50_nsec, 10_nsec, node, AnimationFlag::KeepOncePlayed); /* stopped */
     emptyAnimator1.create(Nanoseconds::max(), 10_nsec, node, AnimationFlag::KeepOncePlayed); /* reserved */
-    EmptyNodeAnimator& emptyAnimator2 = ui.setNodeAnimatorInstance(Containers::pointer<EmptyNodeAnimator>(ui.createAnimator()));
+    EmptyNodeAnimator& emptyAnimator2 = ui.setAnimatorInstance(Containers::pointer<EmptyNodeAnimator>(ui.createAnimator()));
     emptyAnimator2.create(50_nsec, 10_nsec, node); /* scheduled */
     /* Animator that gets subsequently removed and replaced with another, and
        thus data from it shouldn't be counted, neither the name should be
        used ... */
-    EmptyNodeAnimator& removedAnimator1 = ui.setNodeAnimatorInstance(Containers::pointer<EmptyNodeAnimator>(ui.createAnimator()));
+    EmptyNodeAnimator& removedAnimator1 = ui.setAnimatorInstance(Containers::pointer<EmptyNodeAnimator>(ui.createAnimator()));
     removedAnimator1.create(50_nsec, 10_nsec, node);
     removedAnimator1.create(50_nsec, 10_nsec, node);
     /* Animator that gets subsequently removed but not replaced with another,
        so its slot should get skipped as invalid */
-    EmptyNodeAnimator& removedAnimator2 = ui.setNodeAnimatorInstance(Containers::pointer<EmptyNodeAnimator>(ui.createAnimator()));
+    EmptyNodeAnimator& removedAnimator2 = ui.setAnimatorInstance(Containers::pointer<EmptyNodeAnimator>(ui.createAnimator()));
     removedAnimator2.create(50_nsec, 10_nsec, node);
     removedAnimator2.create(50_nsec, 10_nsec, node);
     /* Animator without an instance */
     /*AnimatorHandle instancelessAnimator =*/ ui.createAnimator();
-    IntegratedAnimator& integratedAnimator = ui.setGenericAnimatorInstance(Containers::pointer<IntegratedAnimator>(ui.createAnimator()));
+    IntegratedAnimator& integratedAnimator = ui.setAnimatorInstance(Containers::pointer<IntegratedAnimator>(ui.createAnimator()));
     integratedAnimator.create(-1_nsec, 10_nsec, node); /* playing */
     integratedAnimator.create(-1_nsec, 10_nsec, node); /* playing */
     AnimationHandle integratedAnimatorPaused = integratedAnimator.create(-1_nsec, 10_nsec, node); /* paused */
@@ -4267,10 +4267,10 @@ void DebugLayerTest::nodeInspect() {
        but so far there's nothing that'd make them show. */
     Containers::Pointer<EmptyDataAnimator> dataAnimatorInstance{InPlaceInit, ui.createAnimator()};
     dataAnimatorInstance->setLayer(emptyLayer3);
-    EmptyDataAnimator& dataAnimator = ui.setGenericAnimatorInstance(Utility::move(dataAnimatorInstance));
+    EmptyDataAnimator& dataAnimator = ui.setAnimatorInstance(Utility::move(dataAnimatorInstance));
     dataAnimator.create(50_nsec, 10_nsec, emptyLayer3Data1);
     dataAnimator.create(50_nsec, 10_nsec, emptyLayer3Data2);
-    EmptyNodeAnimator& emptyAnimator3 = ui.setNodeAnimatorInstance(Containers::pointer<EmptyNodeAnimator>(ui.createAnimator()));
+    EmptyNodeAnimator& emptyAnimator3 = ui.setAnimatorInstance(Containers::pointer<EmptyNodeAnimator>(ui.createAnimator()));
     emptyAnimator3.create(-1_nsec, 10_nsec, node); /* playing */
     emptyAnimator3.create(-50_nsec, 10_nsec, node, AnimationFlag::KeepOncePlayed); /* stopped */
 
@@ -4335,14 +4335,14 @@ void DebugLayerTest::nodeInspect() {
        removedAnimator */
     EmptyLayer& unknownLayer1 = ui.setLayerInstance(Containers::pointer<EmptyLayer>(ui.createLayer()));
     EmptyLayouter& unknownLayouter1 = ui.setLayouterInstance(Containers::pointer<EmptyLayouter>(ui.createLayouter()));
-    EmptyNodeAnimator& unknownAnimator1 = ui.setNodeAnimatorInstance(Containers::pointer<EmptyNodeAnimator>(ui.createAnimator()));
+    EmptyNodeAnimator& unknownAnimator1 = ui.setAnimatorInstance(Containers::pointer<EmptyNodeAnimator>(ui.createAnimator()));
     unknownLayer1.create(node);
     unknownLayouter1.add(node);
     unknownAnimator1.create(50_nsec, 1_nsec, node);
     /* These are new */
     EmptyLayer& unknownLayer2 = ui.setLayerInstance(Containers::pointer<EmptyLayer>(ui.createLayer()));
     EmptyLayouter& unknownLayouter2 = ui.setLayouterInstance(Containers::pointer<EmptyLayouter>(ui.createLayouter()));
-    EmptyNodeAnimator& unknownAnimator2 = ui.setNodeAnimatorInstance(Containers::pointer<EmptyNodeAnimator>(ui.createAnimator()));
+    EmptyNodeAnimator& unknownAnimator2 = ui.setAnimatorInstance(Containers::pointer<EmptyNodeAnimator>(ui.createAnimator()));
     unknownLayer2.create(node);
     unknownLayouter2.add(node);
     unknownAnimator2.create(50_nsec, 1_nsec, node);
@@ -4612,25 +4612,25 @@ void DebugLayerTest::nodeInspectNoCallback() {
 
         int value = 69420;
     };
-    EmptyNodeAnimator& emptyAnimator1 = ui.setNodeAnimatorInstance(Containers::pointer<EmptyNodeAnimator>(ui.createAnimator()));
+    EmptyNodeAnimator& emptyAnimator1 = ui.setAnimatorInstance(Containers::pointer<EmptyNodeAnimator>(ui.createAnimator()));
     emptyAnimator1.create(50_nsec, 10_nsec, node); /* scheduled */
     emptyAnimator1.create(-50_nsec, 10_nsec, node, AnimationFlag::KeepOncePlayed); /* stopped */
     emptyAnimator1.create(-50_nsec, 10_nsec, node, AnimationFlag::KeepOncePlayed); /* stopped */
     emptyAnimator1.create(Nanoseconds::max(), 10_nsec, node, AnimationFlag::KeepOncePlayed); /* reserved */
-    EmptyNodeAnimator& emptyAnimator2 = ui.setNodeAnimatorInstance(Containers::pointer<EmptyNodeAnimator>(ui.createAnimator()));
+    EmptyNodeAnimator& emptyAnimator2 = ui.setAnimatorInstance(Containers::pointer<EmptyNodeAnimator>(ui.createAnimator()));
     emptyAnimator2.create(50_nsec, 10_nsec, node); /* scheduled */
     /* Animators that were removed / w/o an instance in nodeInspect() above */
     ui.createAnimator();
     ui.createAnimator();
     ui.createAnimator();
-    IntegratedAnimator& integratedAnimator = ui.setGenericAnimatorInstance(Containers::pointer<IntegratedAnimator>(ui.createAnimator()));
+    IntegratedAnimator& integratedAnimator = ui.setAnimatorInstance(Containers::pointer<IntegratedAnimator>(ui.createAnimator()));
     integratedAnimator.create(-1_nsec, 10_nsec, node); /* playing */
     integratedAnimator.create(-1_nsec, 10_nsec, node); /* playing */
     AnimationHandle integratedAnimatorPaused = integratedAnimator.create(-1_nsec, 10_nsec, node); /* paused */
     integratedAnimator.pause(integratedAnimatorPaused, -25_nsec);
     /* Data animator that was unused in nodeInspect() above */
     ui.createAnimator();
-    EmptyNodeAnimator& emptyAnimator3 = ui.setNodeAnimatorInstance(Containers::pointer<EmptyNodeAnimator>(ui.createAnimator()));
+    EmptyNodeAnimator& emptyAnimator3 = ui.setAnimatorInstance(Containers::pointer<EmptyNodeAnimator>(ui.createAnimator()));
     emptyAnimator3.create(-1_nsec, 10_nsec, node); /* playing */
     emptyAnimator3.create(-50_nsec, 10_nsec, node, AnimationFlag::KeepOncePlayed); /* stopped */
 
@@ -5011,7 +5011,7 @@ void DebugLayerTest::nodeInspectAnimatorDebugIntegrationExplicit() {
 
         int value = 69420;
     };
-    IntegratedAnimator& integratedAnimator = ui.setGenericAnimatorInstance(Containers::pointer<IntegratedAnimator>(ui.createAnimator()));
+    IntegratedAnimator& integratedAnimator = ui.setAnimatorInstance(Containers::pointer<IntegratedAnimator>(ui.createAnimator()));
     integratedAnimator.create(-1_nsec, 10_nsec, node); /* playing */
     AnimationHandle integratedAnimatorPaused = integratedAnimator.create(-1_nsec, 10_nsec, node); /* paused */
     integratedAnimator.pause(integratedAnimatorPaused, -25_nsec);
@@ -5084,7 +5084,7 @@ void DebugLayerTest::nodeInspectAnimatorDebugIntegrationExplicitRvalue() {
             return AnimatorFeature::NodeAttachment;
         }
     };
-    IntegratedAnimator& integratedAnimator = ui.setGenericAnimatorInstance(Containers::pointer<IntegratedAnimator>(ui.createAnimator()));
+    IntegratedAnimator& integratedAnimator = ui.setAnimatorInstance(Containers::pointer<IntegratedAnimator>(ui.createAnimator()));
     integratedAnimator.create(-1_nsec, 10_nsec, node); /* playing */
     AnimationHandle integratedAnimatorPaused = integratedAnimator.create(-1_nsec, 10_nsec, node); /* paused */
     integratedAnimator.pause(integratedAnimatorPaused, -25_nsec);
@@ -5382,7 +5382,7 @@ void DebugLayerTest::nodeInspectSkipNoData() {
     };
     EmptyLayer& emptyLayer = ui.setLayerInstance(Containers::pointer<EmptyLayer>(ui.createLayer()));
     EmptyLayouter& emptyLayouter = ui.setLayouterInstance(Containers::pointer<EmptyLayouter>(ui.createLayouter()));
-    EmptyAnimator& emptyAnimator = ui.setGenericAnimatorInstance(Containers::pointer<EmptyAnimator>(ui.createAnimator()));
+    EmptyAnimator& emptyAnimator = ui.setAnimatorInstance(Containers::pointer<EmptyAnimator>(ui.createAnimator()));
 
     /* A node below, optionally with a single data attached */
     NodeHandle below = ui.createNode({}, {100, 100});
@@ -5961,7 +5961,7 @@ void DebugLayerTest::nodeHighlightConditionData() {
         customLayouter->add(9, node1);
         customLayouter->remove(removed);
     } else if(data.animator) {
-        customAnimator = &ui.setGenericAnimatorInstance(Containers::pointer<CustomAnimator>(ui.createAnimator()));
+        customAnimator = &ui.setAnimatorInstance(Containers::pointer<CustomAnimator>(ui.createAnimator()));
         customAnimator->create(12, node3);
         customAnimator->create(3, node1);
         customAnimator->create(7, node2EventuallyRemoved);
@@ -6226,7 +6226,7 @@ void DebugLayerTest::nodeHighlightConditionData() {
     } else if(data.animator) {
         AnimatorHandle customAnimatorHandle = customAnimator->handle();
         ui.removeAnimator(customAnimatorHandle);
-        CustomAnimator& customAnimatorReplacement = ui.setGenericAnimatorInstance(Containers::pointer<CustomAnimator>(ui.createAnimator()));
+        CustomAnimator& customAnimatorReplacement = ui.setAnimatorInstance(Containers::pointer<CustomAnimator>(ui.createAnimator()));
         CORRADE_COMPARE(animatorHandleId(customAnimatorReplacement.handle()), animatorHandleId(customAnimatorHandle));
         customAnimatorReplacement.create(0, node5);
         CORRADE_VERIFY(!layer.highlightNodes(customAnimatorReplacement, [](const CustomAnimator&, AnimatorDataHandle) {
@@ -6299,7 +6299,7 @@ void DebugLayerTest::nodeHighlightConditionDataFunctions() {
         emptyLayouter->add(node1);
         emptyLayouter->add(node2);
     } else if(data.animator) {
-        emptyAnimator = &ui.setGenericAnimatorInstance(Containers::pointer<EmptyAnimator>(ui.createAnimator()));
+        emptyAnimator = &ui.setAnimatorInstance(Containers::pointer<EmptyAnimator>(ui.createAnimator()));
         emptyAnimator->create({}, {}, node3);
         emptyAnimator->create({}, {}, node1);
         emptyAnimator->create({}, {}, node2);
@@ -6504,10 +6504,10 @@ void DebugLayerTest::nodeHighlightInvalid() {
         private:
             AnimatorFeatures _features;
     };
-    EmptyAnimator& emptyAnimator = ui.setGenericAnimatorInstance(Containers::pointer<EmptyAnimator>(ui.createAnimator(), AnimatorFeature::NodeAttachment));
-    EmptyAnimator& animatorAnotherUi = uiAnother.setGenericAnimatorInstance(Containers::pointer<EmptyAnimator>(uiAnother.createAnimator(), AnimatorFeature::NodeAttachment));
+    EmptyAnimator& emptyAnimator = ui.setAnimatorInstance(Containers::pointer<EmptyAnimator>(ui.createAnimator(), AnimatorFeature::NodeAttachment));
+    EmptyAnimator& animatorAnotherUi = uiAnother.setAnimatorInstance(Containers::pointer<EmptyAnimator>(uiAnother.createAnimator(), AnimatorFeature::NodeAttachment));
     EmptyAnimator animatorArtificialHandle{animatorHandle(0xab, 0x12), AnimatorFeature::NodeAttachment};
-    EmptyAnimator& animatorNoNodeAttachments = ui.setGenericAnimatorInstance(Containers::pointer<EmptyAnimator>(ui.createAnimator(), AnimatorFeatures{}));
+    EmptyAnimator& animatorNoNodeAttachments = ui.setAnimatorInstance(Containers::pointer<EmptyAnimator>(ui.createAnimator(), AnimatorFeatures{}));
 
     /* Calling functionality getters / setters is valid on a layer that doesn't
        have the feature enabled or isn't part of the UI. The actual state
