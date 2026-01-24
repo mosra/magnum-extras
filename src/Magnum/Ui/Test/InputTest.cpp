@@ -134,9 +134,9 @@ void InputTest::setStyle() {
     input.setStyle(InputStyle::Success);
     CORRADE_COMPARE(input.style(), InputStyle::Success);
     CORRADE_COMPARE(ui.baseLayer().style(input.backgroundData()),
-        UnsignedInt(Implementation::BaseStyle::InputSuccessInactiveOut));
+        UnsignedInt(Implementation::BaseStyle::InputSuccess));
     CORRADE_COMPARE(ui.textLayer().style(input.textData()),
-        UnsignedInt(Implementation::TextStyle::InputSuccessInactiveOut));
+        UnsignedInt(Implementation::TextStyle::InputSuccess));
 }
 
 void InputTest::setStyleWhileActive() {
@@ -144,9 +144,9 @@ void InputTest::setStyleWhileActive() {
     CORRADE_COMPARE(input.style(), InputStyle::Success);
 
     CORRADE_COMPARE(ui.baseLayer().style(input.backgroundData()),
-        UnsignedInt(Implementation::BaseStyle::InputSuccessInactiveOut));
+        UnsignedInt(Implementation::BaseStyle::InputSuccess));
     CORRADE_COMPARE(ui.textLayer().style(input.textData()),
-        UnsignedInt(Implementation::TextStyle::InputSuccessInactiveOut));
+        UnsignedInt(Implementation::TextStyle::InputSuccess));
 
     FocusEvent focusEvent{{}};
     CORRADE_VERIFY(ui.focusEvent(input, focusEvent));

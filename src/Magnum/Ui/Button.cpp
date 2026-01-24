@@ -72,7 +72,7 @@ using Implementation::LayoutStyle;
 
 BaseStyle baseLayerStyle(const ButtonStyle style) {
     switch(style) {
-        #define _c(style) case ButtonStyle::style: return BaseStyle::Button ## style ## InactiveOut;
+        #define _c(style) case ButtonStyle::style: return BaseStyle::Button ## style;
         _c(Default)
         _c(Primary)
         _c(Success)
@@ -98,7 +98,7 @@ TextStyle textLayerStyleIconOnly(const ButtonStyle style) {
         case ButtonStyle::Dim:
             return TextStyle::ButtonIconOnly;
         case ButtonStyle::Flat:
-            return TextStyle::ButtonFlatInactiveOutIconOnly;
+            return TextStyle::ButtonFlatIconOnly;
     }
 
     CORRADE_INTERNAL_ASSERT_UNREACHABLE(); /* LCOV_EXCL_LINE */
@@ -115,7 +115,7 @@ TextStyle textLayerStyleTextOnly(const ButtonStyle style) {
         case ButtonStyle::Dim:
             return TextStyle::ButtonTextOnly;
         case ButtonStyle::Flat:
-            return TextStyle::ButtonFlatInactiveOutTextOnly;
+            return TextStyle::ButtonFlatTextOnly;
     }
 
     CORRADE_INTERNAL_ASSERT_UNREACHABLE(); /* LCOV_EXCL_LINE */
@@ -132,7 +132,7 @@ TextStyle textLayerStyleIcon(const ButtonStyle style) {
         case ButtonStyle::Dim:
             return TextStyle::ButtonIcon;
         case ButtonStyle::Flat:
-            return TextStyle::ButtonFlatInactiveOutIcon;
+            return TextStyle::ButtonFlatIcon;
     }
 
     CORRADE_INTERNAL_ASSERT_UNREACHABLE(); /* LCOV_EXCL_LINE */
@@ -149,7 +149,7 @@ TextStyle textLayerStyleText(const ButtonStyle style) {
         case ButtonStyle::Dim:
             return TextStyle::ButtonText;
         case ButtonStyle::Flat:
-            return TextStyle::ButtonFlatInactiveOutText;
+            return TextStyle::ButtonFlatText;
     }
 
     CORRADE_INTERNAL_ASSERT_UNREACHABLE(); /* LCOV_EXCL_LINE */

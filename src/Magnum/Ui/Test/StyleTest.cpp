@@ -815,7 +815,7 @@ void StyleTest::removePreviousAnimationForBlinkingCursor() {
     /* Not using Input as that would require also the base layer, setting up a
        styled data directly */
     NodeHandle node = ui.createNode({}, {100, 100}, NodeFlag::Focusable);
-    DataHandle data = ui.textLayer().create(Implementation::TextStyle::InputDangerInactiveOut, "", {}, node);
+    DataHandle data = ui.textLayer().create(Implementation::TextStyle::InputDanger, "", {}, node);
 
     /* Press switches to InputDangerPressed, immediately */
     PointerEvent pressEvent{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};

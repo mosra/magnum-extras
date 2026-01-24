@@ -69,7 +69,7 @@ namespace {
 
 BaseStyle baseLayerStyle(const InputStyle style) {
     switch(style) {
-        #define _c(style) case InputStyle::style: return BaseStyle::Input ## style ## InactiveOut;
+        #define _c(style) case InputStyle::style: return BaseStyle::Input ## style;
         _c(Default)
         _c(Success)
         _c(Warning)
@@ -84,15 +84,15 @@ BaseStyle baseLayerStyle(const InputStyle style) {
 TextStyle textLayerStyle(const InputStyle style) {
     switch(style) {
         case InputStyle::Default:
-            return TextStyle::InputDefaultInactiveOut;
+            return TextStyle::InputDefault;
         case InputStyle::Success:
-            return TextStyle::InputSuccessInactiveOut;
+            return TextStyle::InputSuccess;
         case InputStyle::Warning:
-            return TextStyle::InputWarningInactiveOut;
+            return TextStyle::InputWarning;
         case InputStyle::Danger:
-            return TextStyle::InputDangerInactiveOut;
+            return TextStyle::InputDanger;
         case InputStyle::Flat:
-            return TextStyle::InputFlatInactiveOut;
+            return TextStyle::InputFlat;
     }
 
     CORRADE_INTERNAL_ASSERT_UNREACHABLE(); /* LCOV_EXCL_LINE */

@@ -88,139 +88,139 @@ Containers::StaticArray<7, BaseStyle> styleTransition(const BaseStyle index) {
                     BaseStyle::Default,
                     BaseStyle::Default,
                     BaseStyle::Default};
-        case BaseStyle::ButtonDefaultInactiveOut:
-        case BaseStyle::ButtonDefaultInactiveOver:
-        case BaseStyle::ButtonDefaultPressedOut:
-        case BaseStyle::ButtonDefaultPressedOver:
-            return {BaseStyle::ButtonDefaultInactiveOut,
-                    BaseStyle::ButtonDefaultInactiveOver,
-                    BaseStyle::ButtonDefaultInactiveOut,
-                    BaseStyle::ButtonDefaultInactiveOver,
-                    BaseStyle::ButtonDefaultPressedOut,
-                    BaseStyle::ButtonDefaultPressedOver,
+        case BaseStyle::ButtonDefault:
+        case BaseStyle::ButtonDefaultHovered:
+        case BaseStyle::ButtonDefaultPressed:
+        case BaseStyle::ButtonDefaultPressedHovered:
+            return {BaseStyle::ButtonDefault,
+                    BaseStyle::ButtonDefaultHovered,
+                    BaseStyle::ButtonDefault,
+                    BaseStyle::ButtonDefaultHovered,
+                    BaseStyle::ButtonDefaultPressed,
+                    BaseStyle::ButtonDefaultPressedHovered,
                     BaseStyle::ButtonDefaultDisabled};
-        case BaseStyle::ButtonPrimaryInactiveOut:
-        case BaseStyle::ButtonPrimaryInactiveOver:
-        case BaseStyle::ButtonPrimaryPressedOut:
-        case BaseStyle::ButtonPrimaryPressedOver:
-            return {BaseStyle::ButtonPrimaryInactiveOut,
-                    BaseStyle::ButtonPrimaryInactiveOver,
-                    BaseStyle::ButtonPrimaryInactiveOut,
-                    BaseStyle::ButtonPrimaryInactiveOver,
-                    BaseStyle::ButtonPrimaryPressedOut,
-                    BaseStyle::ButtonPrimaryPressedOver,
+        case BaseStyle::ButtonPrimary:
+        case BaseStyle::ButtonPrimaryHovered:
+        case BaseStyle::ButtonPrimaryPressed:
+        case BaseStyle::ButtonPrimaryPressedHovered:
+            return {BaseStyle::ButtonPrimary,
+                    BaseStyle::ButtonPrimaryHovered,
+                    BaseStyle::ButtonPrimary,
+                    BaseStyle::ButtonPrimaryHovered,
+                    BaseStyle::ButtonPrimaryPressed,
+                    BaseStyle::ButtonPrimaryPressedHovered,
                     BaseStyle::ButtonPrimaryDisabled};
-        case BaseStyle::ButtonSuccessInactiveOut:
-        case BaseStyle::ButtonSuccessInactiveOver:
-        case BaseStyle::ButtonSuccessPressedOut:
-        case BaseStyle::ButtonSuccessPressedOver:
-            return {BaseStyle::ButtonSuccessInactiveOut,
-                    BaseStyle::ButtonSuccessInactiveOver,
-                    BaseStyle::ButtonSuccessInactiveOut,
-                    BaseStyle::ButtonSuccessInactiveOver,
-                    BaseStyle::ButtonSuccessPressedOut,
-                    BaseStyle::ButtonSuccessPressedOver,
+        case BaseStyle::ButtonSuccess:
+        case BaseStyle::ButtonSuccessHovered:
+        case BaseStyle::ButtonSuccessPressed:
+        case BaseStyle::ButtonSuccessPressedHovered:
+            return {BaseStyle::ButtonSuccess,
+                    BaseStyle::ButtonSuccessHovered,
+                    BaseStyle::ButtonSuccess,
+                    BaseStyle::ButtonSuccessHovered,
+                    BaseStyle::ButtonSuccessPressed,
+                    BaseStyle::ButtonSuccessPressedHovered,
                     BaseStyle::ButtonSuccessDisabled};
-        case BaseStyle::ButtonWarningInactiveOut:
-        case BaseStyle::ButtonWarningInactiveOver:
-        case BaseStyle::ButtonWarningPressedOut:
-        case BaseStyle::ButtonWarningPressedOver:
-            return {BaseStyle::ButtonWarningInactiveOut,
-                    BaseStyle::ButtonWarningInactiveOver,
-                    BaseStyle::ButtonWarningInactiveOut,
-                    BaseStyle::ButtonWarningInactiveOver,
-                    BaseStyle::ButtonWarningPressedOut,
-                    BaseStyle::ButtonWarningPressedOver,
+        case BaseStyle::ButtonWarning:
+        case BaseStyle::ButtonWarningHovered:
+        case BaseStyle::ButtonWarningPressed:
+        case BaseStyle::ButtonWarningPressedHovered:
+            return {BaseStyle::ButtonWarning,
+                    BaseStyle::ButtonWarningHovered,
+                    BaseStyle::ButtonWarning,
+                    BaseStyle::ButtonWarningHovered,
+                    BaseStyle::ButtonWarningPressed,
+                    BaseStyle::ButtonWarningPressedHovered,
                     BaseStyle::ButtonWarningDisabled};
-        case BaseStyle::ButtonDangerInactiveOut:
-        case BaseStyle::ButtonDangerInactiveOver:
-        case BaseStyle::ButtonDangerPressedOut:
-        case BaseStyle::ButtonDangerPressedOver:
-            return {BaseStyle::ButtonDangerInactiveOut,
-                    BaseStyle::ButtonDangerInactiveOver,
-                    BaseStyle::ButtonDangerInactiveOut,
-                    BaseStyle::ButtonDangerInactiveOver,
-                    BaseStyle::ButtonDangerPressedOut,
-                    BaseStyle::ButtonDangerPressedOver,
+        case BaseStyle::ButtonDanger:
+        case BaseStyle::ButtonDangerHovered:
+        case BaseStyle::ButtonDangerPressed:
+        case BaseStyle::ButtonDangerPressedHovered:
+            return {BaseStyle::ButtonDanger,
+                    BaseStyle::ButtonDangerHovered,
+                    BaseStyle::ButtonDanger,
+                    BaseStyle::ButtonDangerHovered,
+                    BaseStyle::ButtonDangerPressed,
+                    BaseStyle::ButtonDangerPressedHovered,
                     BaseStyle::ButtonDangerDisabled};
-        case BaseStyle::ButtonInfoInactiveOut:
-        case BaseStyle::ButtonInfoInactiveOver:
-        case BaseStyle::ButtonInfoPressedOut:
-        case BaseStyle::ButtonInfoPressedOver:
-            return {BaseStyle::ButtonInfoInactiveOut,
-                    BaseStyle::ButtonInfoInactiveOver,
-                    BaseStyle::ButtonInfoInactiveOut,
-                    BaseStyle::ButtonInfoInactiveOver,
-                    BaseStyle::ButtonInfoPressedOut,
-                    BaseStyle::ButtonInfoPressedOver,
+        case BaseStyle::ButtonInfo:
+        case BaseStyle::ButtonInfoHovered:
+        case BaseStyle::ButtonInfoPressed:
+        case BaseStyle::ButtonInfoPressedHovered:
+            return {BaseStyle::ButtonInfo,
+                    BaseStyle::ButtonInfoHovered,
+                    BaseStyle::ButtonInfo,
+                    BaseStyle::ButtonInfoHovered,
+                    BaseStyle::ButtonInfoPressed,
+                    BaseStyle::ButtonInfoPressedHovered,
                     BaseStyle::ButtonInfoDisabled};
-        case BaseStyle::ButtonDimInactiveOut:
-        case BaseStyle::ButtonDimInactiveOver:
-        case BaseStyle::ButtonDimPressedOut:
-        case BaseStyle::ButtonDimPressedOver:
-            return {BaseStyle::ButtonDimInactiveOut,
-                    BaseStyle::ButtonDimInactiveOver,
-                    BaseStyle::ButtonDimInactiveOut,
-                    BaseStyle::ButtonDimInactiveOver,
-                    BaseStyle::ButtonDimPressedOut,
-                    BaseStyle::ButtonDimPressedOver,
+        case BaseStyle::ButtonDim:
+        case BaseStyle::ButtonDimHovered:
+        case BaseStyle::ButtonDimPressed:
+        case BaseStyle::ButtonDimPressedHovered:
+            return {BaseStyle::ButtonDim,
+                    BaseStyle::ButtonDimHovered,
+                    BaseStyle::ButtonDim,
+                    BaseStyle::ButtonDimHovered,
+                    BaseStyle::ButtonDimPressed,
+                    BaseStyle::ButtonDimPressedHovered,
                     BaseStyle::ButtonDimDisabled};
-        case BaseStyle::ButtonFlatInactiveOut:
-        case BaseStyle::ButtonFlatInactiveOver:
-        case BaseStyle::ButtonFlatPressedOut:
-        case BaseStyle::ButtonFlatPressedOver:
-            return {BaseStyle::ButtonFlatInactiveOut,
-                    BaseStyle::ButtonFlatInactiveOver,
-                    BaseStyle::ButtonFlatInactiveOut,
-                    BaseStyle::ButtonFlatInactiveOver,
-                    BaseStyle::ButtonFlatPressedOut,
-                    BaseStyle::ButtonFlatPressedOver,
+        case BaseStyle::ButtonFlat:
+        case BaseStyle::ButtonFlatHovered:
+        case BaseStyle::ButtonFlatPressed:
+        case BaseStyle::ButtonFlatPressedHovered:
+            return {BaseStyle::ButtonFlat,
+                    BaseStyle::ButtonFlatHovered,
+                    BaseStyle::ButtonFlat,
+                    BaseStyle::ButtonFlatHovered,
+                    BaseStyle::ButtonFlatPressed,
+                    BaseStyle::ButtonFlatPressedHovered,
                     BaseStyle::ButtonFlatDisabled};
-        case BaseStyle::InputDefaultInactiveOut:
-        case BaseStyle::InputDefaultInactiveOver:
+        case BaseStyle::InputDefault:
+        case BaseStyle::InputDefaultHovered:
         case BaseStyle::InputDefaultFocused:
-            return {BaseStyle::InputDefaultInactiveOut,
-                    BaseStyle::InputDefaultInactiveOver,
+            return {BaseStyle::InputDefault,
+                    BaseStyle::InputDefaultHovered,
                     BaseStyle::InputDefaultFocused,
                     BaseStyle::InputDefaultFocused,
                     BaseStyle::InputDefaultFocused,
                     BaseStyle::InputDefaultFocused,
                     BaseStyle::InputDefaultDisabled};
-        case BaseStyle::InputSuccessInactiveOut:
-        case BaseStyle::InputSuccessInactiveOver:
+        case BaseStyle::InputSuccess:
+        case BaseStyle::InputSuccessHovered:
         case BaseStyle::InputSuccessFocused:
-            return {BaseStyle::InputSuccessInactiveOut,
-                    BaseStyle::InputSuccessInactiveOver,
+            return {BaseStyle::InputSuccess,
+                    BaseStyle::InputSuccessHovered,
                     BaseStyle::InputSuccessFocused,
                     BaseStyle::InputSuccessFocused,
                     BaseStyle::InputSuccessFocused,
                     BaseStyle::InputSuccessFocused,
                     BaseStyle::InputSuccessDisabled};
-        case BaseStyle::InputWarningInactiveOut:
-        case BaseStyle::InputWarningInactiveOver:
+        case BaseStyle::InputWarning:
+        case BaseStyle::InputWarningHovered:
         case BaseStyle::InputWarningFocused:
-            return {BaseStyle::InputWarningInactiveOut,
-                    BaseStyle::InputWarningInactiveOver,
+            return {BaseStyle::InputWarning,
+                    BaseStyle::InputWarningHovered,
                     BaseStyle::InputWarningFocused,
                     BaseStyle::InputWarningFocused,
                     BaseStyle::InputWarningFocused,
                     BaseStyle::InputWarningFocused,
                     BaseStyle::InputWarningDisabled};
-        case BaseStyle::InputDangerInactiveOut:
-        case BaseStyle::InputDangerInactiveOver:
+        case BaseStyle::InputDanger:
+        case BaseStyle::InputDangerHovered:
         case BaseStyle::InputDangerFocused:
-            return {BaseStyle::InputDangerInactiveOut,
-                    BaseStyle::InputDangerInactiveOver,
+            return {BaseStyle::InputDanger,
+                    BaseStyle::InputDangerHovered,
                     BaseStyle::InputDangerFocused,
                     BaseStyle::InputDangerFocused,
                     BaseStyle::InputDangerFocused,
                     BaseStyle::InputDangerFocused,
                     BaseStyle::InputDangerDisabled};
-        case BaseStyle::InputFlatInactiveOut:
-        case BaseStyle::InputFlatInactiveOver:
+        case BaseStyle::InputFlat:
+        case BaseStyle::InputFlatHovered:
         case BaseStyle::InputFlatFocused:
-            return {BaseStyle::InputFlatInactiveOut,
-                    BaseStyle::InputFlatInactiveOver,
+            return {BaseStyle::InputFlat,
+                    BaseStyle::InputFlatHovered,
                     BaseStyle::InputFlatFocused,
                     BaseStyle::InputFlatFocused,
                     BaseStyle::InputFlatFocused,
@@ -336,49 +336,49 @@ Containers::StaticArray<7, TextStyle> styleTransition(const TextStyle index) {
                     TextStyle::ButtonPressedText,
                     TextStyle::ButtonPressedText,
                     TextStyle::ButtonDisabledText};
-        case TextStyle::ButtonFlatInactiveOutIconOnly:
-        case TextStyle::ButtonFlatInactiveOverIconOnly:
-        case TextStyle::ButtonFlatPressedOutIconOnly:
-        case TextStyle::ButtonFlatPressedOverIconOnly:
-            return {TextStyle::ButtonFlatInactiveOutIconOnly,
-                    TextStyle::ButtonFlatInactiveOverIconOnly,
-                    TextStyle::ButtonFlatInactiveOutIconOnly,
-                    TextStyle::ButtonFlatInactiveOverIconOnly,
-                    TextStyle::ButtonFlatPressedOutIconOnly,
-                    TextStyle::ButtonFlatPressedOverIconOnly,
+        case TextStyle::ButtonFlatIconOnly:
+        case TextStyle::ButtonFlatHoveredIconOnly:
+        case TextStyle::ButtonFlatPressedIconOnly:
+        case TextStyle::ButtonFlatPressedHoveredIconOnly:
+            return {TextStyle::ButtonFlatIconOnly,
+                    TextStyle::ButtonFlatHoveredIconOnly,
+                    TextStyle::ButtonFlatIconOnly,
+                    TextStyle::ButtonFlatHoveredIconOnly,
+                    TextStyle::ButtonFlatPressedIconOnly,
+                    TextStyle::ButtonFlatPressedHoveredIconOnly,
                     TextStyle::ButtonFlatDisabledIconOnly};
-        case TextStyle::ButtonFlatInactiveOutTextOnly:
-        case TextStyle::ButtonFlatInactiveOverTextOnly:
-        case TextStyle::ButtonFlatPressedOutTextOnly:
-        case TextStyle::ButtonFlatPressedOverTextOnly:
-            return {TextStyle::ButtonFlatInactiveOutTextOnly,
-                    TextStyle::ButtonFlatInactiveOverTextOnly,
-                    TextStyle::ButtonFlatInactiveOutTextOnly,
-                    TextStyle::ButtonFlatInactiveOverTextOnly,
-                    TextStyle::ButtonFlatPressedOutTextOnly,
-                    TextStyle::ButtonFlatPressedOverTextOnly,
+        case TextStyle::ButtonFlatTextOnly:
+        case TextStyle::ButtonFlatHoveredTextOnly:
+        case TextStyle::ButtonFlatPressedTextOnly:
+        case TextStyle::ButtonFlatPressedHoveredTextOnly:
+            return {TextStyle::ButtonFlatTextOnly,
+                    TextStyle::ButtonFlatHoveredTextOnly,
+                    TextStyle::ButtonFlatTextOnly,
+                    TextStyle::ButtonFlatHoveredTextOnly,
+                    TextStyle::ButtonFlatPressedTextOnly,
+                    TextStyle::ButtonFlatPressedHoveredTextOnly,
                     TextStyle::ButtonFlatDisabledTextOnly};
-        case TextStyle::ButtonFlatInactiveOutIcon:
-        case TextStyle::ButtonFlatInactiveOverIcon:
-        case TextStyle::ButtonFlatPressedOutIcon:
-        case TextStyle::ButtonFlatPressedOverIcon:
-            return {TextStyle::ButtonFlatInactiveOutIcon,
-                    TextStyle::ButtonFlatInactiveOverIcon,
-                    TextStyle::ButtonFlatInactiveOutIcon,
-                    TextStyle::ButtonFlatInactiveOverIcon,
-                    TextStyle::ButtonFlatPressedOutIcon,
-                    TextStyle::ButtonFlatPressedOverIcon,
+        case TextStyle::ButtonFlatIcon:
+        case TextStyle::ButtonFlatHoveredIcon:
+        case TextStyle::ButtonFlatPressedIcon:
+        case TextStyle::ButtonFlatPressedHoveredIcon:
+            return {TextStyle::ButtonFlatIcon,
+                    TextStyle::ButtonFlatHoveredIcon,
+                    TextStyle::ButtonFlatIcon,
+                    TextStyle::ButtonFlatHoveredIcon,
+                    TextStyle::ButtonFlatPressedIcon,
+                    TextStyle::ButtonFlatPressedHoveredIcon,
                     TextStyle::ButtonFlatDisabledIcon};
-        case TextStyle::ButtonFlatInactiveOutText:
-        case TextStyle::ButtonFlatInactiveOverText:
-        case TextStyle::ButtonFlatPressedOutText:
-        case TextStyle::ButtonFlatPressedOverText:
-            return {TextStyle::ButtonFlatInactiveOutText,
-                    TextStyle::ButtonFlatInactiveOverText,
-                    TextStyle::ButtonFlatInactiveOutText,
-                    TextStyle::ButtonFlatInactiveOverText,
-                    TextStyle::ButtonFlatPressedOutText,
-                    TextStyle::ButtonFlatPressedOverText,
+        case TextStyle::ButtonFlatText:
+        case TextStyle::ButtonFlatHoveredText:
+        case TextStyle::ButtonFlatPressedText:
+        case TextStyle::ButtonFlatPressedHoveredText:
+            return {TextStyle::ButtonFlatText,
+                    TextStyle::ButtonFlatHoveredText,
+                    TextStyle::ButtonFlatText,
+                    TextStyle::ButtonFlatHoveredText,
+                    TextStyle::ButtonFlatPressedText,
+                    TextStyle::ButtonFlatPressedHoveredText,
                     TextStyle::ButtonFlatDisabledText};
         case TextStyle::LabelDefaultIcon:
             return {index, index, index, index, index, index,
@@ -422,56 +422,56 @@ Containers::StaticArray<7, TextStyle> styleTransition(const TextStyle index) {
         case TextStyle::LabelDimText:
             return {index, index, index, index, index, index,
                     TextStyle::LabelDimDisabledText};
-        case TextStyle::InputDefaultInactiveOut:
-        case TextStyle::InputDefaultInactiveOver:
+        case TextStyle::InputDefault:
+        case TextStyle::InputDefaultHovered:
         case TextStyle::InputDefaultFocused:
         case TextStyle::InputDefaultPressed:
-            return {TextStyle::InputDefaultInactiveOut,
-                    TextStyle::InputDefaultInactiveOver,
+            return {TextStyle::InputDefault,
+                    TextStyle::InputDefaultHovered,
                     TextStyle::InputDefaultFocused,
                     TextStyle::InputDefaultFocused,
                     TextStyle::InputDefaultPressed,
                     TextStyle::InputDefaultPressed,
                     TextStyle::InputDefaultDisabled};
-        case TextStyle::InputSuccessInactiveOut:
-        case TextStyle::InputSuccessInactiveOver:
+        case TextStyle::InputSuccess:
+        case TextStyle::InputSuccessHovered:
         case TextStyle::InputSuccessFocused:
         case TextStyle::InputSuccessPressed:
-            return {TextStyle::InputSuccessInactiveOut,
-                    TextStyle::InputSuccessInactiveOver,
+            return {TextStyle::InputSuccess,
+                    TextStyle::InputSuccessHovered,
                     TextStyle::InputSuccessFocused,
                     TextStyle::InputSuccessFocused,
                     TextStyle::InputSuccessPressed,
                     TextStyle::InputSuccessPressed,
                     TextStyle::InputSuccessDisabled};
-        case TextStyle::InputWarningInactiveOut:
-        case TextStyle::InputWarningInactiveOver:
+        case TextStyle::InputWarning:
+        case TextStyle::InputWarningHovered:
         case TextStyle::InputWarningFocused:
         case TextStyle::InputWarningPressed:
-            return {TextStyle::InputWarningInactiveOut,
-                    TextStyle::InputWarningInactiveOver,
+            return {TextStyle::InputWarning,
+                    TextStyle::InputWarningHovered,
                     TextStyle::InputWarningFocused,
                     TextStyle::InputWarningFocused,
                     TextStyle::InputWarningPressed,
                     TextStyle::InputWarningPressed,
                     TextStyle::InputWarningDisabled};
-        case TextStyle::InputDangerInactiveOut:
-        case TextStyle::InputDangerInactiveOver:
+        case TextStyle::InputDanger:
+        case TextStyle::InputDangerHovered:
         case TextStyle::InputDangerFocused:
         case TextStyle::InputDangerPressed:
-            return {TextStyle::InputDangerInactiveOut,
-                    TextStyle::InputDangerInactiveOver,
+            return {TextStyle::InputDanger,
+                    TextStyle::InputDangerHovered,
                     TextStyle::InputDangerFocused,
                     TextStyle::InputDangerFocused,
                     TextStyle::InputDangerPressed,
                     TextStyle::InputDangerPressed,
                     TextStyle::InputDangerDisabled};
-        case TextStyle::InputFlatInactiveOut:
-        case TextStyle::InputFlatInactiveOver:
+        case TextStyle::InputFlat:
+        case TextStyle::InputFlatHovered:
         case TextStyle::InputFlatFocused:
         case TextStyle::InputFlatPressed:
-            return {TextStyle::InputFlatInactiveOut,
-                    TextStyle::InputFlatInactiveOver,
+            return {TextStyle::InputFlat,
+                    TextStyle::InputFlatHovered,
                     TextStyle::InputFlatFocused,
                     TextStyle::InputFlatFocused,
                     TextStyle::InputFlatPressed,
