@@ -70,11 +70,11 @@ The rest of the setup --- drawing and event handling --- is the same for all
 @subsection Ui-UserInterfaceGL-setup-options Additional setup options
 
 The above by default populates the user interface with everything a style
-provides for use by builtin widgets --- in particular, making
+provides for use by builtin widgets --- in particular, making most of
 @ref backgroundLayer(), @ref baseLayer(), @ref textLayer(), @ref eventLayer(),
 @ref layoutLayer(), @ref snapLayouter(), @ref genericLayouter(),
 @ref backgroundLayerStyleAnimator(), @ref baseLayerStyleAnimator() and
-@ref textLayerStyleAnimator() all available. In case you for example use just a
+@ref textLayerStyleAnimator() available. In case you for example use just a
 subset of the builtin widgets that only need a part of the above, you can
 specify a @ref StyleFeatures subset. This can be further combined with
 @ref setStyle(), where, as long as you specify non-overlapping sets of

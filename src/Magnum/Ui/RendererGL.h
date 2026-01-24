@@ -84,6 +84,10 @@ framebuffer after the UI is drawn:
 
 @snippet Ui-sdl2.cpp RendererGL-compositing-framebuffer-draw
 
+Resizing the framebuffer when window size changes is handled automatically from
+@ref AbstractUserInterface::setSize(), for that you don't need to do anything
+extra in your viewport event implementation.
+
 @note This class is available only if Magnum is compiled with
     @ref MAGNUM_TARGET_GL enabled (done by default). See @ref building-features
     for more information.
@@ -113,7 +117,8 @@ class MAGNUM_UI_EXPORT RendererGL: public AbstractRenderer {
              * @ref compositingFramebuffer() at frame start, drawing all
              * content underneath the UI to it, and ultimately blitting it back
              * to the main / default application framebuffer after the UI is
-             * drawn.
+             * drawn. See @ref Ui-RendererGL-compositing-framebuffer "the class documentation"
+             * for an example.
              */
             CompositingFramebuffer = 1 << 0,
         };

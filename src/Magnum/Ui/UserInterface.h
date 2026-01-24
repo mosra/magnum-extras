@@ -46,11 +46,12 @@ setup is handled by the @ref UserInterfaceGL subclass. See documentation of
 either of the classes for more information.
 
 Builtin widgets, deriving from the @ref Widget class, have access to this
-instance through @ref BasicWidget::ui() and generally assume that
-@ref backgroundLayer(), @ref baseLayer(), @ref textLayer(), @ref eventLayer(),
-@ref layoutLayer(), @ref snapLayouter(), @ref genericLayouter(),
-@ref backgroundLayerStyleAnimator(), @ref baseLayerStyleAnimator() and
-@ref textLayerStyleAnimator() are available for use.
+instance through @ref BasicWidget::ui() and depending on style setup generally
+assume that most of @ref backgroundLayer(), @ref baseLayer(), @ref textLayer(),
+@ref eventLayer(), @ref layoutLayer(), @ref snapLayouter(),
+@ref genericLayouter(), @ref backgroundLayerStyleAnimator(),
+@ref baseLayerStyleAnimator() and @ref textLayerStyleAnimator() is available
+for use.
 */
 class MAGNUM_UI_EXPORT UserInterface: public AbstractUserInterface {
     public:
