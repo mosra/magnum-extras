@@ -120,11 +120,8 @@ if(CORRADE_TARGET_MSVC AND NOT CORRADE_TARGET_CLANG_CL AND NOT CORRADE_MSVC2015_
 endif()
 
 set_property(TARGET
-    UiAnchorTest
-    UiHandleTest
-    UiDebugLayerTest
-    UiSnapLayoutTest
-    UiTextLayerTest
+    UiHandleTest # Asserts in most *Handle() helpers
+    UiTextLayerTest # Asserts in fontHandle() and related helpers
     APPEND PROPERTY COMPILE_DEFINITIONS "CORRADE_GRACEFUL_ASSERT")
 
 if(NOT CORRADE_TARGET_ANDROID)
