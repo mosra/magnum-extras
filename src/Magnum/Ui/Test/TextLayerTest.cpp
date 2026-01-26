@@ -166,7 +166,9 @@ struct TextLayerTest: TestSuite::Tester {
     void dynamicStyleNoDynamicStyles();
     void dynamicStyleInvalid();
 
-    /* remove() and setText() tested here as well */
+    /* remove() and setText() tested here as well, updateText() partially also,
+       just to verify that it performs glyph run replacement correctly, tested
+       further in updateText() below */
     template<class StyleIndex, class GlyphIndex> void createRemoveSet();
     void createRemoveHandleRecycle();
     void createStyleOutOfRange();
@@ -536,46 +538,53 @@ const struct {
     UnsignedInt styleCount, dynamicStyleCount;
     TextLayerFlags layerFlags;
     Containers::Optional<TextDataFlags> flags;
+    bool updateEditableTextInsteadOfSet;
 } CreateRemoveSetData[]{
     {"create",
         NodeHandle::Null, LayerState::NeedsDataUpdate,
-        false, false, false, false, 3, 0, {}, {}},
+        false, false, false, false, 3, 0, {}, {}, false},
     {"create and attach",
         nodeHandle(9872, 0xbeb), LayerState::NeedsNodeOffsetSizeUpdate|LayerState::NeedsAttachmentUpdate|LayerState::NeedsDataUpdate,
-        false, false, false, false, 3, 0, {}, {}},
+        false, false, false, false, 3, 0, {}, {}, false},
     {"LayerDataHandle overloads",
         NodeHandle::Null, LayerState::NeedsDataUpdate,
-        true, false, false, false, 3, 0, {}, {}},
+        true, false, false, false, 3, 0, {}, {}, false},
     {"custom fonts",
         NodeHandle::Null, LayerState::NeedsDataUpdate,
-        false, true, false, false, 3, 0, {}, {}},
+        false, true, false, false, 3, 0, {}, {}, false},
     {"custom fonts, null style fonts",
         NodeHandle::Null, LayerState::NeedsDataUpdate,
-        false, true, false, true, 3, 0, {}, {}},
+        false, true, false, true, 3, 0, {}, {}, false},
     {"custom fonts, LayerDataHandle overloads",
         NodeHandle::Null, LayerState::NeedsDataUpdate,
-        true, true, false, false, 3, 0, {}, {}},
+        true, true, false, false, 3, 0, {}, {}, false},
     {"custom alignment",
         NodeHandle::Null, LayerState::NeedsDataUpdate,
-        false, false, true, false, 3, 0, {}, {}},
+        false, false, true, false, 3, 0, {}, {}, false},
     {"dynamic styles",
         NodeHandle::Null, LayerState::NeedsCommonDataUpdate|LayerState::NeedsDataUpdate,
-        false, false, false, false, 1, 2, {}, {}},
+        false, false, false, false, 1, 2, {}, {}, false},
     {"dynamic styles, custom alignment",
         NodeHandle::Null, LayerState::NeedsCommonDataUpdate|LayerState::NeedsDataUpdate,
-        false, false, true, false, 1, 2, {}, {}},
+        false, false, true, false, 1, 2, {}, {}, false},
     {"transformable",
         NodeHandle::Null, LayerState::NeedsDataUpdate,
-        false, false, false, false, 3, 0, TextLayerFlag::Transformable, {}},
+        false, false, false, false, 3, 0, TextLayerFlag::Transformable, {}, false},
     {"editable",
         NodeHandle::Null, LayerState::NeedsDataUpdate,
-        false, false, false, false, 3, 0, {}, ~~TextDataFlag::Editable},
+        false, false, false, false, 3, 0, {}, ~~TextDataFlag::Editable, false},
     {"editable, create and attach",
         nodeHandle(9872, 0xbeb), LayerState::NeedsNodeOffsetSizeUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsAttachmentUpdate|LayerState::NeedsDataUpdate,
-        false, false, false, false, 3, 0, {}, ~~TextDataFlag::Editable},
+        false, false, false, false, 3, 0, {}, ~~TextDataFlag::Editable, false},
     {"editable, LayerDataHandle overloads",
         NodeHandle::Null, LayerState::NeedsDataUpdate,
-        true, false, false, false, 3, 0, {}, ~~TextDataFlag::Editable},
+        true, false, false, false, 3, 0, {}, ~~TextDataFlag::Editable, false},
+    {"editable, use updateText() instead of setText()",
+        NodeHandle::Null, LayerState::NeedsDataUpdate,
+        false, false, false, false, 3, 0, {}, ~~TextDataFlag::Editable, true},
+    {"editable, use updateText() instead of setText(), LayerDataHandle overloads",
+        NodeHandle::Null, LayerState::NeedsDataUpdate,
+        true, false, false, false, 3, 0, {}, ~~TextDataFlag::Editable, true},
 };
 
 const struct {
@@ -6052,9 +6061,9 @@ template<class StyleIndex, class GlyphIndex> void TextLayerTest::createRemoveSet
         Containers::arrayView(fonts).prefix(data.styleCount),
         Containers::arrayView(alignment).prefix(data.styleCount),
         {}, {}, {},
-        /* Right now, create(), setText() etc doesn't do anything with editing
-           styles, only update() does, so they don't need to be present at
-           all */
+        /* Right now, create(), setText(), updateText() etc doesn't do anything
+           with editing styles, only update() does, so they don't need to be
+           present at all */
         {}, {},
         {});
 
@@ -6515,9 +6524,11 @@ template<class StyleIndex, class GlyphIndex> void TextLayerTest::createRemoveSet
     CORRADE_COMPARE(layer.flags(second), data.flags ? *data.flags : TextDataFlags{});
     CORRADE_COMPARE(layer.flags(secondGlyph), TextDataFlags{});
     if(data.layerDataHandleOverloads) {
+        /* Have to pass the flags explicitly because otherwise it'll retain
+           the previous (empty) flags. Thus also not dealing with
+           data.updateEditableTextInsteadOfSet here because the original isn't
+           editable. */
         data.flags ?
-            /* Have to pass the flags explicitly because otherwise it'll retain
-               the previous (empty) flags */
             layer.setText(dataHandleData(secondGlyph), "hey", textProperties, *data.flags) :
             layer.setText(dataHandleData(secondGlyph), "hey", textProperties);
         layer.setGlyph(dataHandleData(second),
@@ -6533,6 +6544,10 @@ template<class StyleIndex, class GlyphIndex> void TextLayerTest::createRemoveSet
            to remove. But it again causes the text run to be removed. */
         layer.setGlyph(dataHandleData(third), GlyphIndex(33), textProperties);
     } else {
+        /* Have to pass the flags explicitly because otherwise it'll retain
+           the previous (empty) flags. Thus also not dealing with
+           data.updateEditableTextInsteadOfSet here because the original isn't
+           editable. */
         data.flags ?
             layer.setText(secondGlyph, "hey", textProperties, *data.flags) :
             layer.setText(secondGlyph, "hey", textProperties);
@@ -6754,22 +6769,53 @@ template<class StyleIndex, class GlyphIndex> void TextLayerTest::createRemoveSet
             TestSuite::Compare::String);
     }
 
-    /* Finally, modify the text and glyph without switching to each other. In
-       case of editable text, it should properly mark the existing text run as
-       unused, OTOH in case of the glyph it shouldn't as there's no existing
-       text run. */
-    if(data.flags && *data.flags >= TextDataFlag::Editable) {
+    /* Finally, modify the text and glyph without switching to each other */
+    if(data.updateEditableTextInsteadOfSet) {
+        /* There was "hey" originally, fully replace with "ahoy" to have
+            behavior equivalent to setText() */
+        data.layerDataHandleOverloads ?
+            layer.updateText(dataHandleData(secondGlyph), 0, 3, 0, "ahoy", 0, 0) :
+            layer.updateText(secondGlyph, 0, 3, 0, "ahoy", 0, 0);
+    } else {
         /* Not passing any flags will preserve the previous flags */
         data.layerDataHandleOverloads ?
             layer.setText(dataHandleData(secondGlyph), "ahoy", textProperties) :
             layer.setText(secondGlyph, "ahoy", textProperties);
-        layer.setGlyph(second,
-            data.customFont ? GlyphIndex(66) : GlyphIndex(13),
-            textProperties);
-        CORRADE_COMPARE(layer.flags(second), TextDataFlags{});
-        CORRADE_COMPARE(layer.flags(secondGlyph), data.flags ? *data.flags : TextDataFlags{});
-        /* Not checking the glyph cluster runs, there's no new variant to
-           catch */
+    }
+    layer.setGlyph(second,
+        data.customFont ? GlyphIndex(66) : GlyphIndex(13),
+        textProperties);
+    CORRADE_COMPARE(layer.flags(second), TextDataFlags{});
+    CORRADE_COMPARE(layer.flags(secondGlyph), data.flags ? *data.flags : TextDataFlags{});
+
+    /* Previous glyph runs should be marked as unused */
+    CORRADE_COMPARE(layer.state(), data.state|LayerState::NeedsDataClean|LayerState::NeedsDataUpdate);
+    CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().data).slice(&Implementation::TextLayerData::glyphRun), Containers::arrayView({
+        0u, 1u, 10u, 9u, 8u, 4u, 7u, 0xffffffffu
+    }), TestSuite::Compare::Container);
+    if(data.customFont)
+        CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().glyphRuns).slice(&Implementation::TextLayerGlyphRun::glyphOffset), Containers::arrayView({
+            0u, 5u, 0xffffffffu, 0xffffffffu, 0xffffffffu, 0xffffffffu, 0xffffffffu, 14u, 16u, 17u, 21u
+        }), TestSuite::Compare::Container);
+    else
+        CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().glyphRuns).slice(&Implementation::TextLayerGlyphRun::glyphOffset), Containers::arrayView({
+            0u, 5u, 0xffffffffu, 0xffffffffu, 0xffffffffu, 0xffffffffu, 0xffffffffu, 12u, 14u, 15u, 16u
+        }), TestSuite::Compare::Container);
+    CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().glyphRuns).slice(&Implementation::TextLayerGlyphRun::glyphCount), Containers::arrayView({
+        5u, 1u, 1u, 1u, 2u, data.customFont ? 3u : 1u, 1u, 2u, 1u, data.customFont ? 4u : 1u, 1u
+    }), TestSuite::Compare::Container);
+    /* Not verifying TextLayerGlyphData::glyphId and position as there's no new
+       variant to check */
+    CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().glyphRuns).slice(&Implementation::TextLayerGlyphRun::data), Containers::arrayView({
+        0u, 1u, 2u, 3u, 5u, 3u, 2u, 6u, 4u, 3u, 2u
+    }), TestSuite::Compare::Container);
+
+    /* In case of editable text, it should properly mark the existing text run
+       as unused, OTOH in case of the glyph it shouldn't as there's no existing
+       text run. */
+    if(data.flags && *data.flags >= TextDataFlag::Editable) {
+        /* Not verifying TextLayerGlyphData::glyphCluster as there's no new
+           variant to check */
         CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().data).slice(&Implementation::TextLayerData::textRun), Containers::arrayView({
             0u, 0xffffffffu, 0xffffffffu, 6u, 0xffffffffu, 3u, 0xffffffffu, 4u
         }), TestSuite::Compare::Container);
@@ -7182,6 +7228,10 @@ void TextLayerTest::updateText() {
 
     struct Layer: TextLayer {
         explicit Layer(LayerHandle handle, Shared& shared): TextLayer{handle, shared} {}
+
+        const State& stateData() const {
+            return static_cast<const State&>(*_state);
+        }
     } layer{layerHandle(0, 1), shared};
 
     /* Required to be called before update() (because AbstractUserInterface
@@ -7199,9 +7249,12 @@ void TextLayerTest::updateText() {
     CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
     CORRADE_COMPARE(layer.glyphCount(text), 5);
 
-    /* Clear the state flags */
+    /* Clear the state flags. This performs recompaction and there should be
+       one glyph and one text run for each data. */
     layer.update(LayerState::NeedsDataUpdate, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
     CORRADE_COMPARE(layer.state(), LayerStates{});
+    CORRADE_COMPARE(layer.stateData().glyphRuns.size(), 3);
+    CORRADE_COMPARE(layer.stateData().textRuns.size(), 3);
 
     /* Various variants of a no-op operation, neither sets any flags */
     layer.updateText(text, 0, 0, 0, "", 5);
@@ -7222,9 +7275,11 @@ void TextLayerTest::updateText() {
     /* No reshaping should be done in this case however */
     CORRADE_COMPARE(layer.glyphCount(text), 5);
 
-    /* Clear the state flags */
+    /* Clear the state flags. Runs didn't change by the above. */
     layer.update(LayerState::NeedsDataUpdate, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
     CORRADE_COMPARE(layer.state(), LayerStates{});
+    CORRADE_COMPARE(layer.stateData().glyphRuns.size(), 3);
+    CORRADE_COMPARE(layer.stateData().textRuns.size(), 3);
 
     /* Updating just the selection sets an update flag as well */
     layer.updateText(text, 0, 0, 0, "", 3, 4);
@@ -7234,78 +7289,111 @@ void TextLayerTest::updateText() {
     /* No reshaping should be done in this case however */
     CORRADE_COMPARE(layer.glyphCount(text), 5);
 
-    /* Clear the state flags */
+    /* Clear the state flags, again runs didn't change */
     layer.update(LayerState::NeedsDataUpdate, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
     CORRADE_COMPARE(layer.state(), LayerStates{});
+    CORRADE_COMPARE(layer.stateData().glyphRuns.size(), 3);
+    CORRADE_COMPARE(layer.stateData().textRuns.size(), 3);
 
-    /* Insertion at the very end, putting cursor right after */
+    /* Insertion at the very end, putting cursor right after. This adds a new
+       glyph & text run and marks the original ones as unused. */
     layer.updateText(text, 0, 0, 5, "oo?!", 9);
     CORRADE_COMPARE(layer.text(text), "hellooo?!");
     CORRADE_COMPARE(layer.cursor(text), Containers::pair(9u, 9u));
     CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
+    CORRADE_COMPARE(layer.stateData().glyphRuns.size(), 4);
+    CORRADE_COMPARE(layer.stateData().textRuns.size(), 4);
     /* Lazy verification that the text gets implicitly reshaped */
     CORRADE_COMPARE(layer.glyphCount(text), 9);
 
-    /* Clear the state flags */
+    /* Clear the state flags. The recompaction removes the unused runs
+       again. */
     layer.update(LayerState::NeedsDataUpdate, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
     CORRADE_COMPARE(layer.state(), LayerStates{});
+    CORRADE_COMPARE(layer.stateData().glyphRuns.size(), 3);
+    CORRADE_COMPARE(layer.stateData().textRuns.size(), 3);
 
     /* Removal at the very end, putting cursor back at the end; LayerDataHandle
-       overload with implicit selection */
+       overload with implicit selection. Again adds new runs and marks
+       originals as unused. */
     layer.updateText(dataHandleData(text), 6, 3, 0, "", 4);
     CORRADE_COMPARE(layer.text(text), "helloo");
     CORRADE_COMPARE(layer.cursor(text), Containers::pair(4u, 4u));
     CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
+    CORRADE_COMPARE(layer.stateData().glyphRuns.size(), 4);
+    CORRADE_COMPARE(layer.stateData().textRuns.size(), 4);
     /* Lazy verification that the text gets implicitly reshaped */
     CORRADE_COMPARE(layer.glyphCount(text), 6);
 
-    /* Clear the state flags */
+    /* Clear the state flags. The recompaction removes the unused runs
+       again. */
     layer.update(LayerState::NeedsDataUpdate, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
     CORRADE_COMPARE(layer.state(), LayerStates{});
+    CORRADE_COMPARE(layer.stateData().glyphRuns.size(), 3);
+    CORRADE_COMPARE(layer.stateData().textRuns.size(), 3);
 
     /* Insertion at the end after a removed portion, cursor & selection inside
-       it */
+       it. Again adds new runs and marks originals as unused. */
     layer.updateText(text, 1, 4, 2, "vercrafts", 5, 3);
     CORRADE_COMPARE(layer.text(text), "hovercrafts");
     CORRADE_COMPARE(layer.cursor(text), Containers::pair(5u, 3u));
     CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
+    CORRADE_COMPARE(layer.stateData().glyphRuns.size(), 4);
+    CORRADE_COMPARE(layer.stateData().textRuns.size(), 4);
     /* Lazy verification that the text gets implicitly reshaped */
     CORRADE_COMPARE(layer.glyphCount(text), 11);
 
-    /* Clear the state flags */
+    /* Clear the state flags. The recompaction removes the unused runs
+       again. */
     layer.update(LayerState::NeedsDataUpdate, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
     CORRADE_COMPARE(layer.state(), LayerStates{});
+    CORRADE_COMPARE(layer.stateData().glyphRuns.size(), 3);
+    CORRADE_COMPARE(layer.stateData().textRuns.size(), 3);
 
     /* Insertion before a removed portion, cursor inside it; LayerDataHandle
-       overload with explicit selection */
+       overload with explicit selection. Again adds new runs and marks
+       originals as unused. */
     layer.updateText(dataHandleData(text), 5, 5, 2, "ldo", 4, 3);
     CORRADE_COMPARE(layer.text(text), "holdovers");
     CORRADE_COMPARE(layer.cursor(text), Containers::pair(4u, 3u));
     CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
+    CORRADE_COMPARE(layer.stateData().glyphRuns.size(), 4);
+    CORRADE_COMPARE(layer.stateData().textRuns.size(), 4);
     /* Lazy verification that the text gets implicitly reshaped */
     CORRADE_COMPARE(layer.glyphCount(text), 9);
 
-    /* Clear the state flags */
+    /* Clear the state flags. The recompaction removes the unused runs
+       again. */
     layer.update(LayerState::NeedsDataUpdate, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
     CORRADE_COMPARE(layer.state(), LayerStates{});
+    CORRADE_COMPARE(layer.stateData().glyphRuns.size(), 3);
+    CORRADE_COMPARE(layer.stateData().textRuns.size(), 3);
 
-    /* Removing everything */
+    /* Removing everything. Adds a new text run. doesn't add any new glyph run.
+       Marks both the original runs as unused. */
     layer.updateText(text, 0, 9, 0, "", 0);
     CORRADE_COMPARE(layer.text(text), "");
     CORRADE_COMPARE(layer.cursor(text), Containers::pair(0u, 0u));
     CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
+    CORRADE_COMPARE(layer.stateData().glyphRuns.size(), 3);
+    CORRADE_COMPARE(layer.stateData().textRuns.size(), 4);
     /* Lazy verification that the text gets implicitly reshaped */
     CORRADE_COMPARE(layer.glyphCount(text), 0);
 
-    /* Clear the state flags */
+    /* Clear the state flags. The recompaction removes the unused runs, so
+       there's now one glyph run less. */
     layer.update(LayerState::NeedsDataUpdate, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
     CORRADE_COMPARE(layer.state(), LayerStates{});
+    CORRADE_COMPARE(layer.stateData().glyphRuns.size(), 2);
+    CORRADE_COMPARE(layer.stateData().textRuns.size(), 3);
 
     /* This is a no-op again */
     layer.updateText(text, 0, 0, 0, "", 0);
     CORRADE_COMPARE(layer.text(text), "");
     CORRADE_COMPARE(layer.cursor(text), Containers::pair(0u, 0u));
     CORRADE_COMPARE(layer.state(), LayerStates{});
+    CORRADE_COMPARE(layer.stateData().glyphRuns.size(), 2);
+    CORRADE_COMPARE(layer.stateData().textRuns.size(), 3);
     /* Lazy verification that the text gets implicitly reshaped */
     CORRADE_COMPARE(layer.glyphCount(text), 0);
 
