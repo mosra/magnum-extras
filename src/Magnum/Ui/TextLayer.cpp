@@ -2173,6 +2173,11 @@ void TextLayer::doUpdate(const LayerStates states, const Containers::StridedArra
         update the actual index buffer etc anyway, so a dedicated state won't
         make that update any smaller, and we'd now trigger it from clean() and
         remove() as well, which we didn't need to before */
+    /** @todo or, rather, maintain an index of the lowest glyph / text run that
+        got marked as unused and recompact only from there, which makes this a
+        no-op for all irrelevent style / color / ... updates, and much more
+        performant when just a small set of data is repeatedly updated as those
+        will stay at the end */
     if(states >= LayerState::NeedsDataUpdate) {
         std::size_t outputGlyphDataOffset = 0;
         std::size_t outputGlyphRunOffset = 0;
