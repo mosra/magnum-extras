@@ -353,6 +353,7 @@ LayoutHandle SnapLayouter::addInternal(const NodeHandle node, const Snaps snap, 
     return handle;
 }
 
+#ifndef CORRADE_NO_ASSERT
 namespace {
 
 UnsignedInt layoutChildCount(const Containers::ArrayView<const Layout> layouts, const LayouterDataHandle firstChild) {
@@ -370,12 +371,13 @@ UnsignedInt layoutChildCount(const Containers::ArrayView<const Layout> layouts, 
 }
 
 }
+#endif
 
 void SnapLayouter::remove(const LayoutHandle handle) {
     CORRADE_ASSERT(isHandleValid(handle),
         "Ui::SnapLayouter::remove(): invalid handle" << handle, );
-    const State& state = *_state;
     #ifndef CORRADE_NO_ASSERT
+    const State& state = *_state;
     const Layout& layout = state.layouts[layoutHandleId(handle)];
     CORRADE_ASSERT(layout.firstChild == LayouterDataHandle::Null && layout.firstExplicitSnap == LayouterDataHandle::Null,
         "Ui::SnapLayouter::remove(): cannot remove" << handle << "with" << layoutChildCount(state.layouts, layout.firstChild) << "children and" << layoutChildCount(state.layouts, layout.firstExplicitSnap) << "dependent layouts", );
@@ -387,8 +389,8 @@ void SnapLayouter::remove(const LayoutHandle handle) {
 void SnapLayouter::remove(const LayouterDataHandle handle) {
     CORRADE_ASSERT(isHandleValid(handle),
         "Ui::SnapLayouter::remove(): invalid handle" << handle, );
-    const State& state = *_state;
     #ifndef CORRADE_NO_ASSERT
+    const State& state = *_state;
     const Layout& layout = state.layouts[layouterDataHandleId(handle)];
     CORRADE_ASSERT(layout.firstChild == LayouterDataHandle::Null && layout.firstExplicitSnap == LayouterDataHandle::Null,
         "Ui::SnapLayouter::remove(): cannot remove" << handle << "with" << layoutChildCount(state.layouts, layout.firstChild) << "children and" << layoutChildCount(state.layouts, layout.firstExplicitSnap) << "dependent layouts", );
