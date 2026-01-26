@@ -7222,6 +7222,10 @@ void TextLayerTest::updateText() {
     /* No reshaping should be done in this case however */
     CORRADE_COMPARE(layer.glyphCount(text), 5);
 
+    /* Clear the state flags */
+    layer.update(LayerState::NeedsDataUpdate, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
+    CORRADE_COMPARE(layer.state(), LayerStates{});
+
     /* Updating just the selection sets an update flag as well */
     layer.updateText(text, 0, 0, 0, "", 3, 4);
     CORRADE_COMPARE(layer.text(text), "hello");
@@ -7229,6 +7233,10 @@ void TextLayerTest::updateText() {
     CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
     /* No reshaping should be done in this case however */
     CORRADE_COMPARE(layer.glyphCount(text), 5);
+
+    /* Clear the state flags */
+    layer.update(LayerState::NeedsDataUpdate, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
+    CORRADE_COMPARE(layer.state(), LayerStates{});
 
     /* Insertion at the very end, putting cursor right after */
     layer.updateText(text, 0, 0, 5, "oo?!", 9);
