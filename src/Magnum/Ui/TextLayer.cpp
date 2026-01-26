@@ -1041,8 +1041,12 @@ void TextLayer::shapeTextInternal(const UnsignedInt id, const UnsignedInt style,
     data.alignment = Text::alignmentForDirection(alignment,
         properties.layoutDirection(),
         shaper.direction());
-    /* If the rendering resulted in no glyphs, there's no glyph run to
-       reference */
+    /* Save the glyph run reference. If the rendering resulted in no glyphs,
+       there's no glyph run. Any previous run for this data should have been
+       marked as unused in previous remove(), setText() or updateText() before
+       calling this function. Cannot really add an assert for this, as this
+       variable might be garbage memory when it's freshly allocated instead of
+       recycled. */
     data.glyphRun =  rectangleRunRange.second().size() ? glyphRunOffset : ~UnsignedInt{};
 
     /* If the text is editable, its cluster info was filled by the
@@ -1099,9 +1103,7 @@ void TextLayer::shapeRememberTextInternal(
             properties.shapeDirection() != Text::ShapeDirection::BottomToTop,
             messagePrefix << "vertical shape direction for an editable text is not implemented yet, sorry", );
 
-        /* Add a new text run. Any previous run for this data was marked as
-           unused in previous remove() or in setText() before calling this
-           function. */
+        /* Add a new text run */
         const UnsignedInt textRun = state.textRuns.size();
         const UnsignedInt textOffset = state.textData.size();
         arrayAppend(state.textData, text);
@@ -1122,7 +1124,11 @@ void TextLayer::shapeRememberTextInternal(
         run.alignment = properties._alignment;
         run.direction = properties._direction;
 
-        /* Save the text run reference */
+        /* Save the text run reference. Any previous run for this data should
+           have been marked as unused in previous remove(), setText() or
+           updateText() before calling this function. Cannot really add an
+           assert for this, as this variable might be garbage memory when it's
+           freshly allocated instead of recycled. */
         data.textRun = textRun;
 
     /* Otherwise mark it as having no associated text run */
@@ -1668,6 +1674,11 @@ void TextLayer::updateTextInternal(const UnsignedInt id, const UnsignedInt remov
             text.sliceSize(insertOffset, insertText.size()));
     }
 
+    /* If the text has any glyphs, mark the original glyph run as unused. It'll
+       be removed during the next recompaction in doUpdate(). */
+    if(data.glyphRun != ~UnsignedInt{})
+        state.glyphRuns[data.glyphRun].glyphOffset = ~UnsignedInt{};
+
     /* Mark the previous run (potentially reallocated somewhere) as unused.
        It'll be removed during the next recompaction run in doUpdate(). Save
        the new run reference. */
@@ -2193,7 +2204,10 @@ void TextLayer::doUpdate(const LayerStates states, const Containers::StridedArra
             ++outputGlyphRunOffset;
         }
 
-        /* Remove the now-unused data from the end */
+        /* Remove the now-unused data from the end. The glyph run count has no
+           relation to data count so there cannot be any more sanity checks --
+           empty texts have no glyph run at all, and complex texts might have
+           multiple of them, for example one for each line. */
         CORRADE_INTERNAL_ASSERT(outputGlyphDataOffset <= state.glyphData.size());
         CORRADE_INTERNAL_ASSERT(outputGlyphRunOffset <= state.glyphRuns.size());
         arrayResize(state.glyphData, outputGlyphDataOffset);
@@ -2233,7 +2247,11 @@ void TextLayer::doUpdate(const LayerStates states, const Containers::StridedArra
             ++outputTextRunOffset;
         }
 
-        /* Remove the now-unused data from the end */
+        /* Remove the now-unused data from the end. Currently there should be
+           exactly one text run for each editable text, but that might change
+           when complex / multi-line text editing is implemented, so as with
+           glyph runs above there isn't really anything else to sanity
+           check. */
         CORRADE_INTERNAL_ASSERT(outputTextDataOffset <= state.textData.size());
         CORRADE_INTERNAL_ASSERT(outputTextRunOffset <= state.textRuns.size());
         arrayResize(state.textData, outputTextDataOffset);
