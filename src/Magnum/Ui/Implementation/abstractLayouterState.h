@@ -103,7 +103,7 @@ struct AbstractLayouter::State {
     AbstractUserInterface* ui = nullptr;
 
     Containers::Array<Implementation::Layout> layouts;
-    /* Indices in the `layouts` array. The Layout then has a nextFree member
+    /* Indices in the `layouts` array. The Layout then has a free.next member
        containing the next free index. New layouts get taken from the front,
        removed are put at the end. A value of ~UnsignedInt{} means there's no
        (first/next/last) free layout. */

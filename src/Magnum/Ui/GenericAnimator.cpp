@@ -85,7 +85,7 @@ struct GenericAnimator::State {
     Containers::Array<Animation> animations;
 };
 
-GenericAnimator::GenericAnimator(AnimatorHandle handle): AbstractGenericAnimator{handle}, _state{InPlaceInit} {}
+GenericAnimator::GenericAnimator(const AnimatorHandle handle): AbstractGenericAnimator{handle}, _state{InPlaceInit} {}
 
 GenericAnimator::GenericAnimator(GenericAnimator&&) noexcept = default;
 
@@ -178,12 +178,12 @@ void GenericAnimator::removeInternal(const UnsignedInt id) {
     _state->animations[id].animation = {};
 }
 
-void GenericAnimator::remove(AnimationHandle handle) {
+void GenericAnimator::remove(const AnimationHandle handle) {
     AbstractGenericAnimator::remove(handle);
     removeInternal(animationHandleId(handle));
 }
 
-void GenericAnimator::remove(AnimatorDataHandle handle) {
+void GenericAnimator::remove(const AnimatorDataHandle handle) {
     AbstractGenericAnimator::remove(handle);
     removeInternal(animatorDataHandleId(handle));
 }
@@ -191,13 +191,13 @@ void GenericAnimator::remove(AnimatorDataHandle handle) {
 auto GenericAnimator::easing(const AnimationHandle handle) const -> Float(*)(Float) {
     CORRADE_ASSERT(isHandleValid(handle),
         "Ui::GenericAnimator::easing(): invalid handle" << handle, {});
-    return static_cast<const State&>(*_state).animations[animationHandleId(handle)].easing;
+    return _state->animations[animationHandleId(handle)].easing;
 }
 
 auto GenericAnimator::easing(const AnimatorDataHandle handle) const -> Float(*)(Float) {
     CORRADE_ASSERT(isHandleValid(handle),
         "Ui::GenericAnimator::easing(): invalid handle" << handle, {});
-    return static_cast<const State&>(*_state).animations[animatorDataHandleId(handle)].easing;
+    return _state->animations[animatorDataHandleId(handle)].easing;
 }
 
 AnimatorFeatures GenericAnimator::doFeatures() const { return {}; }
@@ -259,7 +259,7 @@ struct GenericNodeAnimator::State {
     Containers::Array<Animation> animations;
 };
 
-GenericNodeAnimator::GenericNodeAnimator(AnimatorHandle handle): AbstractGenericAnimator{handle}, _state{InPlaceInit} {}
+GenericNodeAnimator::GenericNodeAnimator(const AnimatorHandle handle): AbstractGenericAnimator{handle}, _state{InPlaceInit} {}
 
 GenericNodeAnimator::GenericNodeAnimator(GenericNodeAnimator&&) noexcept = default;
 
@@ -352,12 +352,12 @@ void GenericNodeAnimator::removeInternal(const UnsignedInt id) {
     _state->animations[id].animation = {};
 }
 
-void GenericNodeAnimator::remove(AnimationHandle handle) {
+void GenericNodeAnimator::remove(const AnimationHandle handle) {
     AbstractGenericAnimator::remove(handle);
     removeInternal(animationHandleId(handle));
 }
 
-void GenericNodeAnimator::remove(AnimatorDataHandle handle) {
+void GenericNodeAnimator::remove(const AnimatorDataHandle handle) {
     AbstractGenericAnimator::remove(handle);
     removeInternal(animatorDataHandleId(handle));
 }
@@ -365,13 +365,13 @@ void GenericNodeAnimator::remove(AnimatorDataHandle handle) {
 auto GenericNodeAnimator::easing(const AnimationHandle handle) const -> Float(*)(Float) {
     CORRADE_ASSERT(isHandleValid(handle),
         "Ui::GenericNodeAnimator::easing(): invalid handle" << handle, {});
-    return static_cast<const State&>(*_state).animations[animationHandleId(handle)].easing;
+    return _state->animations[animationHandleId(handle)].easing;
 }
 
 auto GenericNodeAnimator::easing(const AnimatorDataHandle handle) const -> Float(*)(Float) {
     CORRADE_ASSERT(isHandleValid(handle),
         "Ui::GenericNodeAnimator::easing(): invalid handle" << handle, {});
-    return static_cast<const State&>(*_state).animations[animatorDataHandleId(handle)].easing;
+    return _state->animations[animatorDataHandleId(handle)].easing;
 }
 
 AnimatorFeatures GenericNodeAnimator::doFeatures() const {
@@ -408,7 +408,7 @@ struct GenericDataAnimator::State {
     Containers::Array<Animation> animations;
 };
 
-GenericDataAnimator::GenericDataAnimator(AnimatorHandle handle): AbstractGenericAnimator{handle}, _state{InPlaceInit} {}
+GenericDataAnimator::GenericDataAnimator(const AnimatorHandle handle): AbstractGenericAnimator{handle}, _state{InPlaceInit} {}
 
 GenericDataAnimator::GenericDataAnimator(GenericDataAnimator&&) noexcept = default;
 
@@ -537,12 +537,12 @@ void GenericDataAnimator::removeInternal(const UnsignedInt id) {
     _state->animations[id].animation = {};
 }
 
-void GenericDataAnimator::remove(AnimationHandle handle) {
+void GenericDataAnimator::remove(const AnimationHandle handle) {
     AbstractGenericAnimator::remove(handle);
     removeInternal(animationHandleId(handle));
 }
 
-void GenericDataAnimator::remove(AnimatorDataHandle handle) {
+void GenericDataAnimator::remove(const AnimatorDataHandle handle) {
     AbstractGenericAnimator::remove(handle);
     removeInternal(animatorDataHandleId(handle));
 }
@@ -550,13 +550,13 @@ void GenericDataAnimator::remove(AnimatorDataHandle handle) {
 auto GenericDataAnimator::easing(const AnimationHandle handle) const -> Float(*)(Float) {
     CORRADE_ASSERT(isHandleValid(handle),
         "Ui::GenericDataAnimator::easing(): invalid handle" << handle, {});
-    return static_cast<const State&>(*_state).animations[animationHandleId(handle)].easing;
+    return _state->animations[animationHandleId(handle)].easing;
 }
 
 auto GenericDataAnimator::easing(const AnimatorDataHandle handle) const -> Float(*)(Float) {
     CORRADE_ASSERT(isHandleValid(handle),
         "Ui::GenericDataAnimator::easing(): invalid handle" << handle, {});
-    return static_cast<const State&>(*_state).animations[animatorDataHandleId(handle)].easing;
+    return _state->animations[animatorDataHandleId(handle)].easing;
 }
 
 AnimatorFeatures GenericDataAnimator::doFeatures() const {

@@ -69,8 +69,8 @@ union AbstractLayerData {
            next time it gets used */
         UnsignedShort generation;
 
-        /* Also has to be preserved in order to know whether the animation is
-           used or not even if it's in the free list */
+        /* Also has to be preserved in order to know whether the data is used
+           or not even if it's in the free list */
         bool used;
 
         /* One byte free */
@@ -110,7 +110,7 @@ struct AbstractLayer::State {
     AbstractUserInterface* ui = nullptr;
 
     Containers::Array<Implementation::AbstractLayerData> data;
-    /* Indices in the data array. The AbstractLayerData then has a nextFree
+    /* Indices in the data array. The AbstractLayerData then has a free.next
        member containing the next free index. New data get taken from the
        front, removed are put at the end. A value of ~UnsignedInt{} means
        there's no (first/next/last) free data. */

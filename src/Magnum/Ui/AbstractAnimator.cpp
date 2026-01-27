@@ -241,7 +241,7 @@ struct AbstractAnimator::State {
     LayerHandle layer = LayerHandle::Null;
 
     Containers::Array<Animation> animations;
-    /* Indices in the `animations` array. The Animation then has a nextFree
+    /* Indices in the `animations` array. The Animation then has a free.next
        member containing the next free index. New animations get taken from the
        front, removed are put at the end. A value of ~UnsignedInt{} means
        there's no (first/next/last) free animation. */
@@ -412,7 +412,7 @@ AnimationHandle AbstractAnimator::create(const Nanoseconds start, const Nanoseco
     /* Find the first free animation if there is, update the free index to
        point to the next one (or none) */
     Animation* animation;
-    if(state.firstFree!= ~UnsignedInt{}) {
+    if(state.firstFree != ~UnsignedInt{}) {
         animation = &state.animations[state.firstFree];
 
         if(state.firstFree == state.lastFree) {

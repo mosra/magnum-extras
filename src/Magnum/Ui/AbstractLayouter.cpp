@@ -174,7 +174,7 @@ LayoutHandle AbstractLayouter::add(const NodeHandle node) {
     /* Find the first free layout if there is, update the free index to point
        to the next one (or none) */
     Implementation::Layout* layout;
-    if(state.firstFree!= ~UnsignedInt{}) {
+    if(state.firstFree != ~UnsignedInt{}) {
         layout = &state.layouts[state.firstFree];
 
         if(state.firstFree == state.lastFree) {

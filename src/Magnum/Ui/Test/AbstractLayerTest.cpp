@@ -768,7 +768,7 @@ void AbstractLayerTest::createRemove() {
     CORRADE_COMPARE(layer.capacity(), 2);
     CORRADE_COMPARE(layer.usedCount(), 1);
 
-    /* Using also the LayouterDataHandle overload */
+    /* Using also the LayerDataHandle overload */
     layer.remove(dataHandleData(second));
     CORRADE_VERIFY(!layer.isHandleValid(first));
     CORRADE_VERIFY(!layer.isHandleValid(second));

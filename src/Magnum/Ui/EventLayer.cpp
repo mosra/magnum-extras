@@ -104,7 +104,7 @@ struct EventLayer::State {
     UnsignedInt usedScopedConnectionCount = 0;
 };
 
-EventConnection::EventConnection(EventLayer& layer, DataHandle data) noexcept: _layer{layer}, _data{LayerDataHandle(UnsignedLong(data))} {
+EventConnection::EventConnection(EventLayer& layer, const DataHandle data) noexcept: _layer{layer}, _data{LayerDataHandle(UnsignedLong(data))} {
     layer._state->data[dataHandleId(data)].hasScopedConnection = true;
     ++layer._state->usedScopedConnectionCount;
 }
@@ -126,7 +126,7 @@ DataHandle EventConnection::release() {
     return data;
 }
 
-EventLayer::EventLayer(LayerHandle handle): AbstractLayer{handle}, _state{InPlaceInit} {}
+EventLayer::EventLayer(const LayerHandle handle): AbstractLayer{handle}, _state{InPlaceInit} {}
 
 EventLayer::EventLayer(EventLayer&& other) noexcept: AbstractLayer{Utility::move(other)}, _state{Utility::move(other._state)} {
     /* _state may be nullptr after a (destructive) move */
@@ -495,12 +495,12 @@ DataHandle EventLayer::onBlur(const NodeHandle node, Containers::Function<void()
         })));
 }
 
-void EventLayer::remove(DataHandle handle) {
+void EventLayer::remove(const DataHandle handle) {
     AbstractLayer::remove(handle);
     removeInternal(dataHandleId(handle));
 }
 
-void EventLayer::remove(LayerDataHandle handle) {
+void EventLayer::remove(const LayerDataHandle handle) {
     AbstractLayer::remove(handle);
     removeInternal(layerDataHandleId(handle));
 }

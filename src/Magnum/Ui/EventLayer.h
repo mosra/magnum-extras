@@ -368,8 +368,8 @@ class MAGNUM_UI_EXPORT EventLayer: public AbstractLayer {
          * @brief Count of allocated connections
          *
          * Always at most @ref usedCount(). Counts all connections that capture
-         * non-trivially-destructible state or state that's too large to be
-         * stored in-place. The operation is done with a @f$ \mathcal{O}(n) @f$
+         * non-trivially-copyable state or state that's too large to be stored
+         * in-place. The operation is done with a @f$ \mathcal{O}(n) @f$
          * complexity where @f$ n @f$ is @ref capacity().
          * @todoc fix the isAllocated link once Doxygen stops being shit -- it
          *      works only from Containers themselves
@@ -900,12 +900,10 @@ class MAGNUM_UI_EXPORT EventLayer: public AbstractLayer {
         /**
          * @brief Remove a connection assuming it belongs to this layer
          *
-         * Delegates to @ref AbstractLayer::remove(LayerDataHandle) and
-         * additionally calls a destructor on the captured function state, if
-         * it's not trivially destructible. The @p handle becomes invalid,
-         * which means that any existing @ref EventConnection instance for it
-         * will not attempt to remove it again.
-         * @see @ref usedAllocatedConnectionCount()
+         * Compared to @ref remove(DataHandle) delegates to
+         * @ref AbstractLayer::remove(LayerDataHandle) instead.
+         * @see @ref isHandleValid(LayerDataHandle) const,
+         *      @ref dataHandleData()
          */
         void remove(LayerDataHandle handle);
 

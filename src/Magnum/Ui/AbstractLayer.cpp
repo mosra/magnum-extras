@@ -267,7 +267,7 @@ DataHandle AbstractLayer::create(const NodeHandle node) {
     /* Find the first free data if there is, update the free index to point to
        the next one (or none) */
     Implementation::AbstractLayerData* data;
-    if(state.firstFree!= ~UnsignedInt{}) {
+    if(state.firstFree != ~UnsignedInt{}) {
         data = &state.data[state.firstFree];
 
         if(state.firstFree == state.lastFree) {

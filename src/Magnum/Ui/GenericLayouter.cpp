@@ -60,7 +60,7 @@ struct GenericLayouter::State {
     Containers::StridedArrayView1D<Vector4> nodeMargins;
 };
 
-GenericLayouter::GenericLayouter(LayouterHandle handle): AbstractLayouter{handle}, _state{InPlaceInit} {}
+GenericLayouter::GenericLayouter(const LayouterHandle handle): AbstractLayouter{handle}, _state{InPlaceInit} {}
 
 GenericLayouter::GenericLayouter(GenericLayouter&&) noexcept = default;
 
