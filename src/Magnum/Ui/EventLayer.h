@@ -92,6 +92,13 @@ class MAGNUM_UI_EXPORT EventConnection {
         DataHandle data() const;
 
         /**
+         * @brief Connection data handle
+         *
+         * Same as @ref data().
+         */
+        /*implicit*/ operator DataHandle() const { return data(); }
+
+        /**
          * @brief Release the connection
          *
          * Returns @ref data() and sets it to @ref DataHandle::Null so it's no

@@ -542,6 +542,7 @@ void EventLayerTest::eventConnectionConstruct() {
     CORRADE_COMPARE(&a.layer(), &layer);
     CORRADE_COMPARE(&const_cast<const EventConnection&>(a).layer(), &layer);
     CORRADE_COMPARE(a.data(), dataHandle(layer.handle(), 0, 1));
+    CORRADE_COMPARE(a, dataHandle(layer.handle(), 0, 1));
     CORRADE_COMPARE(layer.usedCount(), 1);
     CORRADE_COMPARE(layer.usedScopedConnectionCount(), 1);
 }
@@ -562,6 +563,7 @@ void EventLayerTest::eventConnectionConstructMove() {
         EventConnection b = Utility::move(a);
         CORRADE_COMPARE(&b.layer(), &layer);
         CORRADE_COMPARE(b.data(), dataHandle(layer.handle(), 0, 1));
+        CORRADE_COMPARE(b, dataHandle(layer.handle(), 0, 1));
         CORRADE_COMPARE(layer.usedCount(), 1);
         CORRADE_COMPARE(layer.usedScopedConnectionCount(), 1);
 
@@ -572,6 +574,7 @@ void EventLayerTest::eventConnectionConstructMove() {
         c = Utility::move(b);
         CORRADE_COMPARE(&c.layer(), &layer);
         CORRADE_COMPARE(c.data(), dataHandle(layer.handle(), 0, 1));
+        CORRADE_COMPARE(c, dataHandle(layer.handle(), 0, 1));
         CORRADE_COMPARE(layer.usedCount(), 2);
         CORRADE_COMPARE(layer.usedScopedConnectionCount(), 2);
     }
@@ -869,7 +872,7 @@ void EventLayerTest::connectScoped() {
         CORRADE_COMPARE(functorOutput, 2*3*5);
         CORRADE_COMPARE(&connection.layer(), &layer);
         CORRADE_COMPARE(connection.data(), dataHandle(layer.handle(), 3, 1));
-        CORRADE_COMPARE(layer.node(connection.data()), node);
+        CORRADE_COMPARE(layer.node(connection), node);
 
         CORRADE_COMPARE(layer.usedCount(), 4);
         CORRADE_COMPARE(layer.usedScopedConnectionCount(), 1);
@@ -955,13 +958,13 @@ void EventLayerTest::removeScoped() {
         CORRADE_COMPARE(layer.usedAllocatedConnectionCount(), 1);
         CORRADE_COMPARE(destructedCount, 1);
 
-        layer.remove(trivial.data());
+        layer.remove(trivial);
         CORRADE_COMPARE(layer.usedCount(), 1);
         CORRADE_COMPARE(layer.usedScopedConnectionCount(), 1);
         CORRADE_COMPARE(layer.usedAllocatedConnectionCount(), 1);
         CORRADE_COMPARE(destructedCount, 1);
 
-        layer.remove(nonTrivial.data());
+        layer.remove(nonTrivial);
         CORRADE_COMPARE(layer.usedCount(), 0);
         CORRADE_COMPARE(layer.usedScopedConnectionCount(), 0);
         CORRADE_COMPARE(layer.usedAllocatedConnectionCount(), 0);
