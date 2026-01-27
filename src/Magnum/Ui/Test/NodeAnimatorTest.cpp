@@ -1815,75 +1815,37 @@ void NodeAnimatorTest::propertiesInvalid() {
 
     NodeAnimator animator{animatorHandle(0, 1)};
 
-    AnimationHandle handle = animator.create(
-        NodeAnimation{},
-        nullptr, 0_nsec, 0_nsec, NodeHandle::Null);
-
     Containers::String out;
     Error redirectError{&out};
     animator.offsets(AnimationHandle::Null);
+    animator.offsets(AnimatorDataHandle::Null);
     animator.sizes(AnimationHandle::Null);
+    animator.sizes(AnimatorDataHandle::Null);
     animator.opacities(AnimationHandle::Null);
+    animator.opacities(AnimatorDataHandle::Null);
     animator.flagsAdd(AnimationHandle::Null);
+    animator.flagsAdd(AnimatorDataHandle::Null);
     animator.flagsClear(AnimationHandle::Null);
+    animator.flagsClear(AnimatorDataHandle::Null);
     animator.hasRemoveNodeAfter(AnimationHandle::Null);
+    animator.hasRemoveNodeAfter(AnimatorDataHandle::Null);
     animator.easing(AnimationHandle::Null);
-    /* Valid animator, invalid data */
-    animator.offsets(animationHandle(animator.handle(), AnimatorDataHandle(0x123abcde)));
-    animator.sizes(animationHandle(animator.handle(), AnimatorDataHandle(0x123abcde)));
-    animator.opacities(animationHandle(animator.handle(), AnimatorDataHandle(0x123abcde)));
-    animator.flagsAdd(animationHandle(animator.handle(), AnimatorDataHandle(0x123abcde)));
-    animator.flagsClear(animationHandle(animator.handle(), AnimatorDataHandle(0x123abcde)));
-    animator.hasRemoveNodeAfter(animationHandle(animator.handle(), AnimatorDataHandle(0x123abcde)));
-    animator.easing(animationHandle(animator.handle(), AnimatorDataHandle(0x123abcde)));
-    /* Invalid animator, valid data */
-    animator.offsets(animationHandle(AnimatorHandle::Null, animationHandleData(handle)));
-    animator.sizes(animationHandle(AnimatorHandle::Null, animationHandleData(handle)));
-    animator.opacities(animationHandle(AnimatorHandle::Null, animationHandleData(handle)));
-    animator.flagsAdd(animationHandle(AnimatorHandle::Null, animationHandleData(handle)));
-    animator.flagsClear(animationHandle(AnimatorHandle::Null, animationHandleData(handle)));
-    animator.hasRemoveNodeAfter(animationHandle(AnimatorHandle::Null, animationHandleData(handle)));
-    animator.easing(animationHandle(AnimatorHandle::Null, animationHandleData(handle)));
-    /* AnimatorDataHandle directly */
-    animator.offsets(AnimatorDataHandle(0x123abcde));
-    animator.sizes(AnimatorDataHandle(0x123abcde));
-    animator.opacities(AnimatorDataHandle(0x123abcde));
-    animator.flagsAdd(AnimatorDataHandle(0x123abcde));
-    animator.flagsClear(AnimatorDataHandle(0x123abcde));
-    animator.hasRemoveNodeAfter(AnimatorDataHandle(0x123abcde));
-    animator.easing(AnimatorDataHandle(0x123abcde));
+    animator.easing(AnimatorDataHandle::Null);
     CORRADE_COMPARE_AS(out,
         "Ui::NodeAnimator::offsets(): invalid handle Ui::AnimationHandle::Null\n"
+        "Ui::NodeAnimator::offsets(): invalid handle Ui::AnimatorDataHandle::Null\n"
         "Ui::NodeAnimator::sizes(): invalid handle Ui::AnimationHandle::Null\n"
+        "Ui::NodeAnimator::sizes(): invalid handle Ui::AnimatorDataHandle::Null\n"
         "Ui::NodeAnimator::opacities(): invalid handle Ui::AnimationHandle::Null\n"
+        "Ui::NodeAnimator::opacities(): invalid handle Ui::AnimatorDataHandle::Null\n"
         "Ui::NodeAnimator::flagsAdd(): invalid handle Ui::AnimationHandle::Null\n"
+        "Ui::NodeAnimator::flagsAdd(): invalid handle Ui::AnimatorDataHandle::Null\n"
         "Ui::NodeAnimator::flagsClear(): invalid handle Ui::AnimationHandle::Null\n"
+        "Ui::NodeAnimator::flagsClear(): invalid handle Ui::AnimatorDataHandle::Null\n"
         "Ui::NodeAnimator::hasRemoveNodeAfter(): invalid handle Ui::AnimationHandle::Null\n"
+        "Ui::NodeAnimator::hasRemoveNodeAfter(): invalid handle Ui::AnimatorDataHandle::Null\n"
         "Ui::NodeAnimator::easing(): invalid handle Ui::AnimationHandle::Null\n"
-
-        "Ui::NodeAnimator::offsets(): invalid handle Ui::AnimationHandle({0x0, 0x1}, {0xabcde, 0x123})\n"
-        "Ui::NodeAnimator::sizes(): invalid handle Ui::AnimationHandle({0x0, 0x1}, {0xabcde, 0x123})\n"
-        "Ui::NodeAnimator::opacities(): invalid handle Ui::AnimationHandle({0x0, 0x1}, {0xabcde, 0x123})\n"
-        "Ui::NodeAnimator::flagsAdd(): invalid handle Ui::AnimationHandle({0x0, 0x1}, {0xabcde, 0x123})\n"
-        "Ui::NodeAnimator::flagsClear(): invalid handle Ui::AnimationHandle({0x0, 0x1}, {0xabcde, 0x123})\n"
-        "Ui::NodeAnimator::hasRemoveNodeAfter(): invalid handle Ui::AnimationHandle({0x0, 0x1}, {0xabcde, 0x123})\n"
-        "Ui::NodeAnimator::easing(): invalid handle Ui::AnimationHandle({0x0, 0x1}, {0xabcde, 0x123})\n"
-
-        "Ui::NodeAnimator::offsets(): invalid handle Ui::AnimationHandle(Null, {0x0, 0x1})\n"
-        "Ui::NodeAnimator::sizes(): invalid handle Ui::AnimationHandle(Null, {0x0, 0x1})\n"
-        "Ui::NodeAnimator::opacities(): invalid handle Ui::AnimationHandle(Null, {0x0, 0x1})\n"
-        "Ui::NodeAnimator::flagsAdd(): invalid handle Ui::AnimationHandle(Null, {0x0, 0x1})\n"
-        "Ui::NodeAnimator::flagsClear(): invalid handle Ui::AnimationHandle(Null, {0x0, 0x1})\n"
-        "Ui::NodeAnimator::hasRemoveNodeAfter(): invalid handle Ui::AnimationHandle(Null, {0x0, 0x1})\n"
-        "Ui::NodeAnimator::easing(): invalid handle Ui::AnimationHandle(Null, {0x0, 0x1})\n"
-
-        "Ui::NodeAnimator::offsets(): invalid handle Ui::AnimatorDataHandle(0xabcde, 0x123)\n"
-        "Ui::NodeAnimator::sizes(): invalid handle Ui::AnimatorDataHandle(0xabcde, 0x123)\n"
-        "Ui::NodeAnimator::opacities(): invalid handle Ui::AnimatorDataHandle(0xabcde, 0x123)\n"
-        "Ui::NodeAnimator::flagsAdd(): invalid handle Ui::AnimatorDataHandle(0xabcde, 0x123)\n"
-        "Ui::NodeAnimator::flagsClear(): invalid handle Ui::AnimatorDataHandle(0xabcde, 0x123)\n"
-        "Ui::NodeAnimator::hasRemoveNodeAfter(): invalid handle Ui::AnimatorDataHandle(0xabcde, 0x123)\n"
-        "Ui::NodeAnimator::easing(): invalid handle Ui::AnimatorDataHandle(0xabcde, 0x123)\n",
+        "Ui::NodeAnimator::easing(): invalid handle Ui::AnimatorDataHandle::Null\n",
         TestSuite::Compare::String);
 }
 

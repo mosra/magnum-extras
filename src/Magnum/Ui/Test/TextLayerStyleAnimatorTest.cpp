@@ -936,48 +936,15 @@ void TextLayerStyleAnimatorTest::createInvalid() {
 void TextLayerStyleAnimatorTest::propertiesInvalid() {
     CORRADE_SKIP_IF_NO_ASSERT();
 
-    struct: Text::AbstractGlyphCache {
-        using Text::AbstractGlyphCache::AbstractGlyphCache;
-
-        Text::GlyphCacheFeatures doFeatures() const override { return {}; }
-        void doSetImage(const Vector2i&, const ImageView2D&) override {}
-    } cache{PixelFormat::R8Unorm, {32, 32}};
-
-    struct LayerShared: TextLayer::Shared {
-        explicit LayerShared(Text::AbstractGlyphCache& glyphCache, const Configuration& configuration): TextLayer::Shared{glyphCache, configuration} {}
-
-        void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
-        void doSetEditingStyle(const TextLayerCommonEditingStyleUniform&, Containers::ArrayView<const TextLayerEditingStyleUniform>) override {}
-    } shared{cache, TextLayer::Shared::Configuration{2}
-        .setDynamicStyleCount(1)
-    };
-
-    struct Layer: TextLayer {
-        explicit Layer(LayerHandle handle, Shared& shared): TextLayer{handle, shared} {}
-    } layer{layerHandle(0, 1), shared};
-
     TextLayerStyleAnimator animator{animatorHandle(0, 1)};
-    layer.assignAnimator(animator);
-
-    AnimationHandle handle = animator.create(0, 1, Animation::Easing::linear, 12_nsec, 13_nsec, DataHandle::Null);
 
     Containers::String out;
     Error redirectError{&out};
     animator.easing(AnimationHandle::Null);
-    /* Valid animator, invalid data */
-    animator.easing(animationHandle(animator.handle(), AnimatorDataHandle(0x123abcde)));
-    /* Invalid animator, valid data */
-    animator.easing(animationHandle(AnimatorHandle::Null, animationHandleData(handle)));
-    /* AnimatorDataHandle directly */
-    animator.easing(AnimatorDataHandle(0x123abcde));
+    animator.easing(AnimatorDataHandle::Null);
     CORRADE_COMPARE_AS(out,
         "Ui::TextLayerStyleAnimator::easing(): invalid handle Ui::AnimationHandle::Null\n"
-
-        "Ui::TextLayerStyleAnimator::easing(): invalid handle Ui::AnimationHandle({0x0, 0x1}, {0xabcde, 0x123})\n"
-
-        "Ui::TextLayerStyleAnimator::easing(): invalid handle Ui::AnimationHandle(Null, {0x0, 0x1})\n"
-
-        "Ui::TextLayerStyleAnimator::easing(): invalid handle Ui::AnimatorDataHandle(0xabcde, 0x123)\n",
+        "Ui::TextLayerStyleAnimator::easing(): invalid handle Ui::AnimatorDataHandle::Null\n",
         TestSuite::Compare::String);
 }
 

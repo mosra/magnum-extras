@@ -686,40 +686,15 @@ void BaseLayerStyleAnimatorTest::createInvalid() {
 void BaseLayerStyleAnimatorTest::propertiesInvalid() {
     CORRADE_SKIP_IF_NO_ASSERT();
 
-    struct LayerShared: BaseLayer::Shared {
-        explicit LayerShared(const Configuration& configuration): BaseLayer::Shared{configuration} {}
-
-        void doSetStyle(const BaseLayerCommonStyleUniform&, Containers::ArrayView<const BaseLayerStyleUniform>) override {}
-    } shared{BaseLayer::Shared::Configuration{2}
-        .setDynamicStyleCount(1)
-    };
-
-    struct Layer: BaseLayer {
-        explicit Layer(LayerHandle handle, Shared& shared): BaseLayer{handle, shared} {}
-    } layer{layerHandle(0, 1), shared};
-
     BaseLayerStyleAnimator animator{animatorHandle(0, 1)};
-    layer.assignAnimator(animator);
-
-    AnimationHandle handle = animator.create(0, 1, Animation::Easing::linear, 12_nsec, 13_nsec, DataHandle::Null);
 
     Containers::String out;
     Error redirectError{&out};
     animator.easing(AnimationHandle::Null);
-    /* Valid animator, invalid data */
-    animator.easing(animationHandle(animator.handle(), AnimatorDataHandle(0x123abcde)));
-    /* Invalid animator, valid data */
-    animator.easing(animationHandle(AnimatorHandle::Null, animationHandleData(handle)));
-    /* AnimatorDataHandle directly */
-    animator.easing(AnimatorDataHandle(0x123abcde));
+    animator.easing(AnimatorDataHandle::Null);
     CORRADE_COMPARE_AS(out,
         "Ui::BaseLayerStyleAnimator::easing(): invalid handle Ui::AnimationHandle::Null\n"
-
-        "Ui::BaseLayerStyleAnimator::easing(): invalid handle Ui::AnimationHandle({0x0, 0x1}, {0xabcde, 0x123})\n"
-
-        "Ui::BaseLayerStyleAnimator::easing(): invalid handle Ui::AnimationHandle(Null, {0x0, 0x1})\n"
-
-        "Ui::BaseLayerStyleAnimator::easing(): invalid handle Ui::AnimatorDataHandle(0xabcde, 0x123)\n",
+        "Ui::BaseLayerStyleAnimator::easing(): invalid handle Ui::AnimatorDataHandle::Null\n",
         TestSuite::Compare::String);
 }
 

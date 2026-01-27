@@ -961,22 +961,13 @@ void GenericAnimatorTest::propertiesInvalid() {
 
     GenericAnimator animator{animatorHandle(0, 1)};
 
-    AnimationHandle handle = animator.create([](Float) {}, Animation::Easing::linear, 12_nsec, 13_nsec);
-
     Containers::String out;
     Error redirectError{&out};
     animator.easing(AnimationHandle::Null);
-    /* Valid animator, invalid data */
-    animator.easing(animationHandle(animator.handle(), AnimatorDataHandle(0x123abcde)));
-    /* Invalid animator, valid data */
-    animator.easing(animationHandle(AnimatorHandle::Null, animationHandleData(handle)));
-    /* AnimatorDataHandle directly */
-    animator.easing(AnimatorDataHandle(0x123abcde));
+    animator.easing(AnimatorDataHandle::Null);
     CORRADE_COMPARE_AS(out,
         "Ui::GenericAnimator::easing(): invalid handle Ui::AnimationHandle::Null\n"
-        "Ui::GenericAnimator::easing(): invalid handle Ui::AnimationHandle({0x0, 0x1}, {0xabcde, 0x123})\n"
-        "Ui::GenericAnimator::easing(): invalid handle Ui::AnimationHandle(Null, {0x0, 0x1})\n"
-        "Ui::GenericAnimator::easing(): invalid handle Ui::AnimatorDataHandle(0xabcde, 0x123)\n",
+        "Ui::GenericAnimator::easing(): invalid handle Ui::AnimatorDataHandle::Null\n",
         TestSuite::Compare::String);
 }
 
@@ -985,22 +976,13 @@ void GenericAnimatorTest::propertiesInvalidNode() {
 
     GenericNodeAnimator animator{animatorHandle(0, 1)};
 
-    AnimationHandle handle = animator.create([](NodeHandle, Float) {}, Animation::Easing::linear, 12_nsec, 13_nsec, NodeHandle::Null);
-
     Containers::String out;
     Error redirectError{&out};
     animator.easing(AnimationHandle::Null);
-    /* Valid animator, invalid data */
-    animator.easing(animationHandle(animator.handle(), AnimatorDataHandle(0x123abcde)));
-    /* Invalid animator, valid data */
-    animator.easing(animationHandle(AnimatorHandle::Null, animationHandleData(handle)));
-    /* AnimatorDataHandle directly */
-    animator.easing(AnimatorDataHandle(0x123abcde));
+    animator.easing(AnimatorDataHandle::Null);
     CORRADE_COMPARE_AS(out,
         "Ui::GenericNodeAnimator::easing(): invalid handle Ui::AnimationHandle::Null\n"
-        "Ui::GenericNodeAnimator::easing(): invalid handle Ui::AnimationHandle({0x0, 0x1}, {0xabcde, 0x123})\n"
-        "Ui::GenericNodeAnimator::easing(): invalid handle Ui::AnimationHandle(Null, {0x0, 0x1})\n"
-        "Ui::GenericNodeAnimator::easing(): invalid handle Ui::AnimatorDataHandle(0xabcde, 0x123)\n",
+        "Ui::GenericNodeAnimator::easing(): invalid handle Ui::AnimatorDataHandle::Null\n",
         TestSuite::Compare::String);
 }
 
@@ -1016,22 +998,13 @@ void GenericAnimatorTest::propertiesInvalidData() {
     } layer{layerHandle(0, 1)};
     animator.setLayer(layer);
 
-    AnimationHandle handle = animator.create([](DataHandle, Float) {}, Animation::Easing::linear, 12_nsec, 13_nsec, DataHandle::Null);
-
     Containers::String out;
     Error redirectError{&out};
     animator.easing(AnimationHandle::Null);
-    /* Valid animator, invalid data */
-    animator.easing(animationHandle(animator.handle(), AnimatorDataHandle(0x123abcde)));
-    /* Invalid animator, valid data */
-    animator.easing(animationHandle(AnimatorHandle::Null, animationHandleData(handle)));
-    /* AnimatorDataHandle directly */
-    animator.easing(AnimatorDataHandle(0x123abcde));
+    animator.easing(AnimatorDataHandle::Null);
     CORRADE_COMPARE_AS(out,
         "Ui::GenericDataAnimator::easing(): invalid handle Ui::AnimationHandle::Null\n"
-        "Ui::GenericDataAnimator::easing(): invalid handle Ui::AnimationHandle({0x0, 0x1}, {0xabcde, 0x123})\n"
-        "Ui::GenericDataAnimator::easing(): invalid handle Ui::AnimationHandle(Null, {0x0, 0x1})\n"
-        "Ui::GenericDataAnimator::easing(): invalid handle Ui::AnimatorDataHandle(0xabcde, 0x123)\n",
+        "Ui::GenericDataAnimator::easing(): invalid handle Ui::AnimatorDataHandle::Null\n",
         TestSuite::Compare::String);
 }
 

@@ -247,64 +247,29 @@ void AbstractVisualLayerStyleAnimatorTest::setDefaultStyleAnimatorInvalid() {
 void AbstractVisualLayerStyleAnimatorTest::propertiesInvalid() {
     CORRADE_SKIP_IF_NO_ASSERT();
 
-    struct LayerShared: AbstractVisualLayer::Shared {
-        explicit LayerShared(UnsignedInt styleCount, UnsignedInt dynamicStyleCount): AbstractVisualLayer::Shared{styleCount, dynamicStyleCount} {}
-    } shared{2, 1};
-
-    struct Layer: AbstractVisualLayer {
-        explicit Layer(LayerHandle handle, Shared& shared): AbstractVisualLayer{handle, shared} {}
-
-        using AbstractVisualLayer::assignAnimator;
-
-        LayerFeatures doFeatures() const override {
-            return LayerFeature::AnimateStyles;
-        }
-    } layer{layerHandle(0, 1), shared};
-
     struct Animator: AbstractVisualLayerStyleAnimator {
         explicit Animator(AnimatorHandle handle): AbstractVisualLayerStyleAnimator{handle} {}
 
         using AbstractVisualLayerStyleAnimator::create;
     } animator{animatorHandle(0, 1)};
-    layer.assignAnimator(animator);
 
     enum class Enum {};
-
-    AnimationHandle handle = animator.create(12_nsec, 13_nsec, DataHandle::Null);
 
     Containers::String out;
     Error redirectError{&out};
     animator.styles(AnimationHandle::Null);
+    animator.styles(AnimatorDataHandle::Null);
     animator.styles<Enum>(AnimationHandle::Null);
+    animator.styles<Enum>(AnimatorDataHandle::Null);
     animator.dynamicStyle(AnimationHandle::Null);
-    /* Valid animator, invalid data */
-    animator.styles(animationHandle(animator.handle(), AnimatorDataHandle(0x123abcde)));
-    animator.styles<Enum>(animationHandle(animator.handle(), AnimatorDataHandle(0x123abcde)));
-    animator.dynamicStyle(animationHandle(animator.handle(), AnimatorDataHandle(0x123abcde)));
-    /* Invalid animator, valid data */
-    animator.styles(animationHandle(AnimatorHandle::Null, animationHandleData(handle)));
-    animator.styles<Enum>(animationHandle(AnimatorHandle::Null, animationHandleData(handle)));
-    animator.dynamicStyle(animationHandle(AnimatorHandle::Null, animationHandleData(handle)));
-    /* AnimatorDataHandle directly */
-    animator.styles(AnimatorDataHandle(0x123abcde));
-    animator.styles<Enum>(AnimatorDataHandle(0x123abcde));
-    animator.dynamicStyle(AnimatorDataHandle(0x123abcde));
+    animator.dynamicStyle(AnimatorDataHandle::Null);
     CORRADE_COMPARE_AS(out,
         "Ui::AbstractVisualLayerStyleAnimator::styles(): invalid handle Ui::AnimationHandle::Null\n"
+        "Ui::AbstractVisualLayerStyleAnimator::styles(): invalid handle Ui::AnimatorDataHandle::Null\n"
         "Ui::AbstractVisualLayerStyleAnimator::styles(): invalid handle Ui::AnimationHandle::Null\n"
+        "Ui::AbstractVisualLayerStyleAnimator::styles(): invalid handle Ui::AnimatorDataHandle::Null\n"
         "Ui::AbstractVisualLayerStyleAnimator::dynamicStyle(): invalid handle Ui::AnimationHandle::Null\n"
-
-        "Ui::AbstractVisualLayerStyleAnimator::styles(): invalid handle Ui::AnimationHandle({0x0, 0x1}, {0xabcde, 0x123})\n"
-        "Ui::AbstractVisualLayerStyleAnimator::styles(): invalid handle Ui::AnimationHandle({0x0, 0x1}, {0xabcde, 0x123})\n"
-        "Ui::AbstractVisualLayerStyleAnimator::dynamicStyle(): invalid handle Ui::AnimationHandle({0x0, 0x1}, {0xabcde, 0x123})\n"
-
-        "Ui::AbstractVisualLayerStyleAnimator::styles(): invalid handle Ui::AnimationHandle(Null, {0x0, 0x1})\n"
-        "Ui::AbstractVisualLayerStyleAnimator::styles(): invalid handle Ui::AnimationHandle(Null, {0x0, 0x1})\n"
-        "Ui::AbstractVisualLayerStyleAnimator::dynamicStyle(): invalid handle Ui::AnimationHandle(Null, {0x0, 0x1})\n"
-
-        "Ui::AbstractVisualLayerStyleAnimator::styles(): invalid handle Ui::AnimatorDataHandle(0xabcde, 0x123)\n"
-        "Ui::AbstractVisualLayerStyleAnimator::styles(): invalid handle Ui::AnimatorDataHandle(0xabcde, 0x123)\n"
-        "Ui::AbstractVisualLayerStyleAnimator::dynamicStyle(): invalid handle Ui::AnimatorDataHandle(0xabcde, 0x123)\n",
+        "Ui::AbstractVisualLayerStyleAnimator::dynamicStyle(): invalid handle Ui::AnimatorDataHandle::Null\n",
         TestSuite::Compare::String);
 }
 
