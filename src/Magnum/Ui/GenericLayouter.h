@@ -131,7 +131,7 @@ class MAGNUM_UI_EXPORT GenericLayouter: public AbstractLayouter {
         GenericLayouter& operator=(GenericLayouter&&) noexcept;
 
         /**
-         * @brief Count of allocated layouts
+         * @brief Count of allocated layout functions
          *
          * Always at most @ref usedCount(). Counts all layout functions that
          * capture non-trivially-copyable state or state that's too large to be
@@ -141,7 +141,7 @@ class MAGNUM_UI_EXPORT GenericLayouter: public AbstractLayouter {
          *      works only from Containers themselves
          * @see @ref Corrade::Containers::Function "Containers::Function<R(Args...)>::isAllocated()"
          */
-        UnsignedInt usedAllocatedLayoutCount() const;
+        std::size_t usedAllocatedCount() const;
 
         /**
          * @brief Add a layout assigned to given node
@@ -184,6 +184,29 @@ class MAGNUM_UI_EXPORT GenericLayouter: public AbstractLayouter {
          *      @ref layoutHandleData()
          */
         void remove(LayouterDataHandle handle);
+
+        /**
+         * @brief Whether given layout function is allocated
+         *
+         * Returns @cpp true @ce if given layout function captures
+         * non-trivially-copyable state or state that's too large to be stored
+         * in-place, @cpp false @ce otherwise. Expects that @p handle is valid.
+         * @see @ref isHandleValid(LayoutHandle) const,
+         *      @ref Corrade::Containers::Function "Containers::Function<R(Args...)>::isAllocated()",
+         *      @ref usedAllocatedCount()
+         */
+        bool isAllocated(LayoutHandle handle) const;
+
+        /**
+         * @brief Whether given layout function is allocated assuming it belongs to this layouter
+         *
+         * Like @ref isAllocated(LayoutHandle) const but without checking
+         * that @p handle indeed belongs to this animator. See its
+         * documentation for more information.
+         * @see @ref isHandleValid(LayouterDataHandle) const,
+         *      @ref layoutHandleData()
+         */
+        bool isAllocated(LayouterDataHandle handle) const;
 
         /**
          * @brief Node offset in current layout, relative to its parent

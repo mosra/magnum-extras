@@ -244,7 +244,7 @@ void GenericAnimatorTest::construct() {
 
     CORRADE_COMPARE(animator.features(), AnimatorFeatures{});
     CORRADE_COMPARE(animator.handle(), animatorHandle(0xab, 0x12));
-    CORRADE_COMPARE(animator.usedAllocatedAnimationCount(), 0);
+    CORRADE_COMPARE(animator.usedAllocatedCount(), 0);
     /* The rest is the same as in AbstractAnimatorTest::constructGeneric() */
 }
 
@@ -253,7 +253,7 @@ void GenericAnimatorTest::constructNode() {
 
     CORRADE_COMPARE(animator.features(), AnimatorFeature::NodeAttachment);
     CORRADE_COMPARE(animator.handle(), animatorHandle(0xab, 0x12));
-    CORRADE_COMPARE(animator.usedAllocatedAnimationCount(), 0);
+    CORRADE_COMPARE(animator.usedAllocatedCount(), 0);
     /* The rest is the same as in AbstractAnimatorTest::constructGeneric() */
 }
 
@@ -262,7 +262,7 @@ void GenericAnimatorTest::constructData() {
 
     CORRADE_COMPARE(animator.features(), AnimatorFeature::DataAttachment);
     CORRADE_COMPARE(animator.handle(), animatorHandle(0xab, 0x12));
-    CORRADE_COMPARE(animator.usedAllocatedAnimationCount(), 0);
+    CORRADE_COMPARE(animator.usedAllocatedCount(), 0);
     CORRADE_COMPARE(animator.layer(), LayerHandle::Null);
     /* The rest is the same as in AbstractAnimatorTest::constructGeneric() */
 
@@ -396,11 +396,12 @@ void GenericAnimatorTest::createRemove() {
             }, Animation::Easing::bounceOut, 137_nsec, 277_nsec, 3, AnimationFlag::KeepOncePlayed);
     }
     CORRADE_COMPARE(animator.usedCount(), 1);
-    CORRADE_COMPARE(animator.usedAllocatedAnimationCount(), 0);
+    CORRADE_COMPARE(animator.usedAllocatedCount(), 0);
     CORRADE_COMPARE(animator.started(trivial), 137_nsec);
     CORRADE_COMPARE(animator.duration(trivial), data.once ? 0_nsec : 277_nsec);
     CORRADE_COMPARE(animator.repeatCount(trivial), data.implicitRepeat ? 1 : 3);
     CORRADE_COMPARE(animator.flags(trivial), AnimationFlag::KeepOncePlayed);
+    CORRADE_VERIFY(!animator.isAllocated(trivial));
     CORRADE_COMPARE(animator.easing(trivial), data.once ? nullptr : Animation::Easing::bounceOut);
 
     /* The temporary gets destructed right away */
@@ -419,26 +420,27 @@ void GenericAnimatorTest::createRemove() {
             nonTrivial = animator.create(NonTrivial{destructedCount}, Animation::Easing::smootherstep, 226_nsec, 191_nsec, 0, AnimationFlags{0x80});
     }
     CORRADE_COMPARE(animator.usedCount(), 2);
-    CORRADE_COMPARE(animator.usedAllocatedAnimationCount(), 1);
+    CORRADE_COMPARE(animator.usedAllocatedCount(), 1);
     CORRADE_COMPARE(animator.started(nonTrivial), 226_nsec);
     CORRADE_COMPARE(animator.duration(nonTrivial), data.once ? 0_nsec : 191_nsec);
     CORRADE_COMPARE(animator.repeatCount(nonTrivial), data.implicitRepeat ? 1 : 0);
     CORRADE_COMPARE(animator.flags(nonTrivial), AnimationFlags{0x80});
-    /* Testing also the other overload. The other getters are tested in
+    /* Testing also the other overloads. The other getters are tested in
        AbstractAnimatorTest already. */
+    CORRADE_VERIFY(animator.isAllocated(animationHandleData(nonTrivial)));
     CORRADE_COMPARE(animator.easing(animationHandleData(nonTrivial)), data.once ? nullptr : Animation::Easing::smootherstep);
     CORRADE_COMPARE(destructedCount, 1);
 
     animator.remove(trivial);
     CORRADE_COMPARE(animator.usedCount(), 1);
-    CORRADE_COMPARE(animator.usedAllocatedAnimationCount(), 1);
+    CORRADE_COMPARE(animator.usedAllocatedCount(), 1);
     CORRADE_COMPARE(destructedCount, 1);
 
     /* Verifying also the other handle overload. They should both delegate into
        the same internal implementation. */
     animator.remove(animationHandleData(nonTrivial));
     CORRADE_COMPARE(animator.usedCount(), 0);
-    CORRADE_COMPARE(animator.usedAllocatedAnimationCount(), 0);
+    CORRADE_COMPARE(animator.usedAllocatedCount(), 0);
     CORRADE_COMPARE(destructedCount, 2);
 }
 
@@ -500,12 +502,13 @@ void GenericAnimatorTest::createRemoveNode() {
             }, Animation::Easing::bounceOut, 137_nsec, 277_nsec, nodeHandle(0x12345, 0xabc), 3, AnimationFlag::KeepOncePlayed);
     }
     CORRADE_COMPARE(animator.usedCount(), 1);
-    CORRADE_COMPARE(animator.usedAllocatedAnimationCount(), 0);
+    CORRADE_COMPARE(animator.usedAllocatedCount(), 0);
     CORRADE_COMPARE(animator.started(trivial), 137_nsec);
     CORRADE_COMPARE(animator.duration(trivial), data.once ? 0_nsec : 277_nsec);
     CORRADE_COMPARE(animator.repeatCount(trivial), data.implicitRepeat ? 1 : 3);
     CORRADE_COMPARE(animator.flags(trivial), AnimationFlag::KeepOncePlayed);
     CORRADE_COMPARE(animator.node(trivial), nodeHandle(0x12345, 0xabc));
+    CORRADE_VERIFY(!animator.isAllocated(trivial));
     CORRADE_COMPARE(animator.easing(trivial), data.once ? nullptr : Animation::Easing::bounceOut);
 
     /* The temporary gets destructed right away */
@@ -524,27 +527,28 @@ void GenericAnimatorTest::createRemoveNode() {
             nonTrivial = animator.create(NonTrivial{destructedCount}, Animation::Easing::smootherstep, 226_nsec, 191_nsec, nodeHandle(0x67890, 0xdef), 0, AnimationFlags{0x80});
     }
     CORRADE_COMPARE(animator.usedCount(), 2);
-    CORRADE_COMPARE(animator.usedAllocatedAnimationCount(), 1);
+    CORRADE_COMPARE(animator.usedAllocatedCount(), 1);
     CORRADE_COMPARE(animator.started(nonTrivial), 226_nsec);
     CORRADE_COMPARE(animator.duration(nonTrivial), data.once ? 0_nsec : 191_nsec);
     CORRADE_COMPARE(animator.repeatCount(nonTrivial), data.implicitRepeat ? 1 : 0);
     CORRADE_COMPARE(animator.flags(nonTrivial), AnimationFlags{0x80});
     CORRADE_COMPARE(animator.node(nonTrivial), nodeHandle(0x67890, 0xdef));
-    /* Testing also the other overload. The other getters are tested in
+    /* Testing also the other overloads. The other getters are tested in
        AbstractAnimatorTest already. */
+    CORRADE_VERIFY(animator.isAllocated(animationHandleData(nonTrivial)));
     CORRADE_COMPARE(animator.easing(animationHandleData(nonTrivial)), data.once ? nullptr : Animation::Easing::smootherstep);
     CORRADE_COMPARE(destructedCount, 1);
 
     animator.remove(trivial);
     CORRADE_COMPARE(animator.usedCount(), 1);
-    CORRADE_COMPARE(animator.usedAllocatedAnimationCount(), 1);
+    CORRADE_COMPARE(animator.usedAllocatedCount(), 1);
     CORRADE_COMPARE(destructedCount, 1);
 
     /* Verifying also the other handle overload. They should both delegate into
        the same internal implementation. */
     animator.remove(animationHandleData(nonTrivial));
     CORRADE_COMPARE(animator.usedCount(), 0);
-    CORRADE_COMPARE(animator.usedAllocatedAnimationCount(), 0);
+    CORRADE_COMPARE(animator.usedAllocatedCount(), 0);
     CORRADE_COMPARE(destructedCount, 2);
 }
 
@@ -613,12 +617,13 @@ void GenericAnimatorTest::createRemoveData() {
             }, Animation::Easing::bounceOut, 137_nsec, 277_nsec, dataHandle(layer.handle(), 0x12345, 0xabc), 3, AnimationFlag::KeepOncePlayed);
     }
     CORRADE_COMPARE(animator.usedCount(), 1);
-    CORRADE_COMPARE(animator.usedAllocatedAnimationCount(), 0);
+    CORRADE_COMPARE(animator.usedAllocatedCount(), 0);
     CORRADE_COMPARE(animator.started(trivial), 137_nsec);
     CORRADE_COMPARE(animator.duration(trivial), data.once ? 0_nsec : 277_nsec);
     CORRADE_COMPARE(animator.repeatCount(trivial), data.implicitRepeat ? 1 : 3);
     CORRADE_COMPARE(animator.flags(trivial), AnimationFlag::KeepOncePlayed);
     CORRADE_COMPARE(animator.data(trivial), dataHandle(layer.handle(), 0x12345, 0xabc));
+    CORRADE_VERIFY(!animator.isAllocated(trivial));
     CORRADE_COMPARE(animator.easing(trivial), data.once ? nullptr : Animation::Easing::bounceOut);
 
     /* The temporary gets destructed right away. Testing also the
@@ -638,27 +643,28 @@ void GenericAnimatorTest::createRemoveData() {
             nonTrivial = animator.create(NonTrivial{destructedCount}, Animation::Easing::smootherstep, 226_nsec, 191_nsec, layerDataHandle(0x67890, 0xdef), 0, AnimationFlags{0x80});
     }
     CORRADE_COMPARE(animator.usedCount(), 2);
-    CORRADE_COMPARE(animator.usedAllocatedAnimationCount(), 1);
+    CORRADE_COMPARE(animator.usedAllocatedCount(), 1);
     CORRADE_COMPARE(animator.started(nonTrivial), 226_nsec);
     CORRADE_COMPARE(animator.duration(nonTrivial), data.once ? 0_nsec : 191_nsec);
     CORRADE_COMPARE(animator.repeatCount(nonTrivial), data.implicitRepeat ? 1 : 0);
     CORRADE_COMPARE(animator.flags(nonTrivial), AnimationFlags{0x80});
     CORRADE_COMPARE(animator.data(nonTrivial), dataHandle(layer.handle(), 0x67890, 0xdef));
-    /* Testing also the other overload. The other getters are tested in
+    /* Testing also the other overloads. The other getters are tested in
        AbstractAnimatorTest already. */
+    CORRADE_VERIFY(animator.isAllocated(animationHandleData(nonTrivial)));
     CORRADE_COMPARE(animator.easing(animationHandleData(nonTrivial)), data.once ? nullptr : Animation::Easing::smootherstep);
     CORRADE_COMPARE(destructedCount, 1);
 
     animator.remove(trivial);
     CORRADE_COMPARE(animator.usedCount(), 1);
-    CORRADE_COMPARE(animator.usedAllocatedAnimationCount(), 1);
+    CORRADE_COMPARE(animator.usedAllocatedCount(), 1);
     CORRADE_COMPARE(destructedCount, 1);
 
     /* Verifying also the other handle overload. They should both delegate into
        the same internal implementation. */
     animator.remove(animationHandleData(nonTrivial));
     CORRADE_COMPARE(animator.usedCount(), 0);
-    CORRADE_COMPARE(animator.usedAllocatedAnimationCount(), 0);
+    CORRADE_COMPARE(animator.usedAllocatedCount(), 0);
     CORRADE_COMPARE(destructedCount, 2);
 }
 
@@ -963,9 +969,13 @@ void GenericAnimatorTest::propertiesInvalid() {
 
     Containers::String out;
     Error redirectError{&out};
+    animator.isAllocated(AnimationHandle::Null);
+    animator.isAllocated(AnimatorDataHandle::Null);
     animator.easing(AnimationHandle::Null);
     animator.easing(AnimatorDataHandle::Null);
     CORRADE_COMPARE_AS(out,
+        "Ui::GenericAnimator::isAllocated(): invalid handle Ui::AnimationHandle::Null\n"
+        "Ui::GenericAnimator::isAllocated(): invalid handle Ui::AnimatorDataHandle::Null\n"
         "Ui::GenericAnimator::easing(): invalid handle Ui::AnimationHandle::Null\n"
         "Ui::GenericAnimator::easing(): invalid handle Ui::AnimatorDataHandle::Null\n",
         TestSuite::Compare::String);
@@ -978,9 +988,13 @@ void GenericAnimatorTest::propertiesInvalidNode() {
 
     Containers::String out;
     Error redirectError{&out};
+    animator.isAllocated(AnimationHandle::Null);
+    animator.isAllocated(AnimatorDataHandle::Null);
     animator.easing(AnimationHandle::Null);
     animator.easing(AnimatorDataHandle::Null);
     CORRADE_COMPARE_AS(out,
+        "Ui::GenericNodeAnimator::isAllocated(): invalid handle Ui::AnimationHandle::Null\n"
+        "Ui::GenericNodeAnimator::isAllocated(): invalid handle Ui::AnimatorDataHandle::Null\n"
         "Ui::GenericNodeAnimator::easing(): invalid handle Ui::AnimationHandle::Null\n"
         "Ui::GenericNodeAnimator::easing(): invalid handle Ui::AnimatorDataHandle::Null\n",
         TestSuite::Compare::String);
@@ -1000,9 +1014,13 @@ void GenericAnimatorTest::propertiesInvalidData() {
 
     Containers::String out;
     Error redirectError{&out};
+    animator.isAllocated(AnimationHandle::Null);
+    animator.isAllocated(AnimatorDataHandle::Null);
     animator.easing(AnimationHandle::Null);
     animator.easing(AnimatorDataHandle::Null);
     CORRADE_COMPARE_AS(out,
+        "Ui::GenericDataAnimator::isAllocated(): invalid handle Ui::AnimationHandle::Null\n"
+        "Ui::GenericDataAnimator::isAllocated(): invalid handle Ui::AnimatorDataHandle::Null\n"
         "Ui::GenericDataAnimator::easing(): invalid handle Ui::AnimationHandle::Null\n"
         "Ui::GenericDataAnimator::easing(): invalid handle Ui::AnimatorDataHandle::Null\n",
         TestSuite::Compare::String);
@@ -1044,17 +1062,20 @@ void GenericAnimatorTest::clean() {
 
     AnimationHandle trivial = animator.create([](Float) {}, Animation::Easing::bounceOut, 137_nsec, 277_nsec, 3, AnimationFlag::KeepOncePlayed);
     CORRADE_COMPARE(animator.usedCount(), 1);
-    CORRADE_COMPARE(animator.usedAllocatedAnimationCount(), 0);
+    CORRADE_COMPARE(animator.usedAllocatedCount(), 0);
+    CORRADE_VERIFY(!animator.isAllocated(trivial));
 
     /* The temporary gets destructed right away */
     AnimationHandle nonTrivial = animator.create(NonTrivial{destructedCount}, Animation::Easing::smootherstep, 226_nsec, 191_nsec, 0, AnimationFlags{0x80});
     CORRADE_COMPARE(animator.usedCount(), 2);
-    CORRADE_COMPARE(animator.usedAllocatedAnimationCount(), 1);
+    CORRADE_COMPARE(animator.usedAllocatedCount(), 1);
+    CORRADE_VERIFY(animator.isAllocated(nonTrivial));
     CORRADE_COMPARE(destructedCount, 1);
 
     AnimationHandle another = animator.create([](Float) {}, Animation::Easing::bounceOut, 137_nsec, 277_nsec, 3, AnimationFlag::KeepOncePlayed);
     CORRADE_COMPARE(animator.usedCount(), 3);
-    CORRADE_COMPARE(animator.usedAllocatedAnimationCount(), 1);
+    CORRADE_COMPARE(animator.usedAllocatedCount(), 1);
+    CORRADE_VERIFY(!animator.isAllocated(another));
     CORRADE_COMPARE(destructedCount, 1);
 
     /* The temporary gets destructed right away */
@@ -1066,14 +1087,15 @@ void GenericAnimatorTest::clean() {
     else
         anotherNonTrivial = animator.create(NonTrivial{anotherDestructedCount}, Animation::Easing::smootherstep, 226_nsec, 191_nsec, 0, AnimationFlags{0x80});
     CORRADE_COMPARE(animator.usedCount(), 4);
-    CORRADE_COMPARE(animator.usedAllocatedAnimationCount(), 2);
+    CORRADE_COMPARE(animator.usedAllocatedCount(), 2);
+    CORRADE_VERIFY(animator.isAllocated(anotherNonTrivial));
     CORRADE_COMPARE(anotherDestructedCount, 1);
 
     /* It should remove two but call just one destructor */
     UnsignedByte animationIdsToRemove[]{(1 << 0)|(1 << 3)};
     animator.clean(Containers::BitArrayView{animationIdsToRemove, 0, 4});
     CORRADE_COMPARE(animator.usedCount(), 2);
-    CORRADE_COMPARE(animator.usedAllocatedAnimationCount(), 1);
+    CORRADE_COMPARE(animator.usedAllocatedCount(), 1);
     CORRADE_COMPARE(destructedCount, 1);
     CORRADE_COMPARE(anotherDestructedCount, 2);
     CORRADE_VERIFY(!animator.isHandleValid(trivial));
@@ -1118,17 +1140,20 @@ void GenericAnimatorTest::cleanNode() {
 
     AnimationHandle trivial = animator.create([](NodeHandle, Float) {}, Animation::Easing::bounceOut, 137_nsec, 277_nsec, NodeHandle::Null, 3, AnimationFlag::KeepOncePlayed);
     CORRADE_COMPARE(animator.usedCount(), 1);
-    CORRADE_COMPARE(animator.usedAllocatedAnimationCount(), 0);
+    CORRADE_COMPARE(animator.usedAllocatedCount(), 0);
+    CORRADE_VERIFY(!animator.isAllocated(trivial));
 
     /* The temporary gets destructed right away */
     AnimationHandle nonTrivial = animator.create(NonTrivial{destructedCount}, Animation::Easing::smootherstep, 226_nsec, 191_nsec, NodeHandle::Null, 0, AnimationFlags{0x80});
     CORRADE_COMPARE(animator.usedCount(), 2);
-    CORRADE_COMPARE(animator.usedAllocatedAnimationCount(), 1);
+    CORRADE_COMPARE(animator.usedAllocatedCount(), 1);
+    CORRADE_VERIFY(animator.isAllocated(nonTrivial));
     CORRADE_COMPARE(destructedCount, 1);
 
     AnimationHandle another = animator.create([](NodeHandle, Float) {}, Animation::Easing::bounceOut, 137_nsec, 277_nsec, NodeHandle::Null, 3, AnimationFlag::KeepOncePlayed);
     CORRADE_COMPARE(animator.usedCount(), 3);
-    CORRADE_COMPARE(animator.usedAllocatedAnimationCount(), 1);
+    CORRADE_COMPARE(animator.usedAllocatedCount(), 1);
+    CORRADE_VERIFY(!animator.isAllocated(another));
     CORRADE_COMPARE(destructedCount, 1);
 
     /* The temporary gets destructed right away */
@@ -1140,14 +1165,15 @@ void GenericAnimatorTest::cleanNode() {
     else
         anotherNonTrivial = animator.create(NonTrivial{anotherDestructedCount}, Animation::Easing::smootherstep, 226_nsec, 191_nsec, NodeHandle::Null, 0, AnimationFlags{0x80});
     CORRADE_COMPARE(animator.usedCount(), 4);
-    CORRADE_COMPARE(animator.usedAllocatedAnimationCount(), 2);
+    CORRADE_COMPARE(animator.usedAllocatedCount(), 2);
+    CORRADE_VERIFY(animator.isAllocated(anotherNonTrivial));
     CORRADE_COMPARE(anotherDestructedCount, 1);
 
     /* It should remove two but call just one destructor */
     UnsignedByte animationIdsToRemove[]{(1 << 0)|(1 << 3)};
     animator.clean(Containers::BitArrayView{animationIdsToRemove, 0, 4});
     CORRADE_COMPARE(animator.usedCount(), 2);
-    CORRADE_COMPARE(animator.usedAllocatedAnimationCount(), 1);
+    CORRADE_COMPARE(animator.usedAllocatedCount(), 1);
     CORRADE_COMPARE(destructedCount, 1);
     CORRADE_COMPARE(anotherDestructedCount, 2);
     CORRADE_VERIFY(!animator.isHandleValid(trivial));
@@ -1199,17 +1225,20 @@ void GenericAnimatorTest::cleanData() {
 
     AnimationHandle trivial = animator.create([](DataHandle, Float) {}, Animation::Easing::bounceOut, 137_nsec, 277_nsec, DataHandle::Null, 3, AnimationFlag::KeepOncePlayed);
     CORRADE_COMPARE(animator.usedCount(), 1);
-    CORRADE_COMPARE(animator.usedAllocatedAnimationCount(), 0);
+    CORRADE_COMPARE(animator.usedAllocatedCount(), 0);
+    CORRADE_VERIFY(!animator.isAllocated(trivial));
 
     /* The temporary gets destructed right away */
     AnimationHandle nonTrivial = animator.create(NonTrivial{destructedCount}, Animation::Easing::smootherstep, 226_nsec, 191_nsec, DataHandle::Null, 0, AnimationFlags{0x80});
     CORRADE_COMPARE(animator.usedCount(), 2);
-    CORRADE_COMPARE(animator.usedAllocatedAnimationCount(), 1);
+    CORRADE_COMPARE(animator.usedAllocatedCount(), 1);
+    CORRADE_VERIFY(animator.isAllocated(nonTrivial));
     CORRADE_COMPARE(destructedCount, 1);
 
     AnimationHandle another = animator.create([](DataHandle, Float) {}, Animation::Easing::bounceOut, 137_nsec, 277_nsec, DataHandle::Null, 3, AnimationFlag::KeepOncePlayed);
     CORRADE_COMPARE(animator.usedCount(), 3);
-    CORRADE_COMPARE(animator.usedAllocatedAnimationCount(), 1);
+    CORRADE_COMPARE(animator.usedAllocatedCount(), 1);
+    CORRADE_VERIFY(!animator.isAllocated(another));
     CORRADE_COMPARE(destructedCount, 1);
 
     /* The temporary gets destructed right away */
@@ -1221,14 +1250,15 @@ void GenericAnimatorTest::cleanData() {
     else
         anotherNonTrivial = animator.create(NonTrivial{anotherDestructedCount}, Animation::Easing::smootherstep, 226_nsec, 191_nsec, DataHandle::Null, 0, AnimationFlags{0x80});
     CORRADE_COMPARE(animator.usedCount(), 4);
-    CORRADE_COMPARE(animator.usedAllocatedAnimationCount(), 2);
+    CORRADE_COMPARE(animator.usedAllocatedCount(), 2);
+    CORRADE_VERIFY(animator.isAllocated(anotherNonTrivial));
     CORRADE_COMPARE(anotherDestructedCount, 1);
 
     /* It should remove two but call just one destructor */
     UnsignedByte animationIdsToRemove[]{(1 << 0)|(1 << 3)};
     animator.clean(Containers::BitArrayView{animationIdsToRemove, 0, 4});
     CORRADE_COMPARE(animator.usedCount(), 2);
-    CORRADE_COMPARE(animator.usedAllocatedAnimationCount(), 1);
+    CORRADE_COMPARE(animator.usedAllocatedCount(), 1);
     CORRADE_COMPARE(destructedCount, 1);
     CORRADE_COMPARE(anotherDestructedCount, 2);
     CORRADE_VERIFY(!animator.isHandleValid(trivial));

@@ -93,8 +93,8 @@ GenericAnimator::~GenericAnimator() = default;
 
 GenericAnimator& GenericAnimator::operator=(GenericAnimator&&) noexcept = default;
 
-UnsignedInt GenericAnimator::usedAllocatedAnimationCount() const {
-    UnsignedInt count = 0;
+std::size_t GenericAnimator::usedAllocatedCount() const {
+    std::size_t count = 0;
     for(const Animation& animation: _state->animations)
         if(animation.animation.isAllocated())
             ++count;
@@ -188,6 +188,18 @@ void GenericAnimator::remove(const AnimatorDataHandle handle) {
     removeInternal(animatorDataHandleId(handle));
 }
 
+bool GenericAnimator::isAllocated(const AnimationHandle handle) const {
+    CORRADE_ASSERT(isHandleValid(handle),
+        "Ui::GenericAnimator::isAllocated(): invalid handle" << handle, {});
+    return _state->animations[animationHandleId(handle)].animation.isAllocated();
+}
+
+bool GenericAnimator::isAllocated(const AnimatorDataHandle handle) const {
+    CORRADE_ASSERT(isHandleValid(handle),
+        "Ui::GenericAnimator::isAllocated(): invalid handle" << handle, {});
+    return _state->animations[animatorDataHandleId(handle)].animation.isAllocated();
+}
+
 auto GenericAnimator::easing(const AnimationHandle handle) const -> Float(*)(Float) {
     CORRADE_ASSERT(isHandleValid(handle),
         "Ui::GenericAnimator::easing(): invalid handle" << handle, {});
@@ -267,8 +279,8 @@ GenericNodeAnimator::~GenericNodeAnimator() = default;
 
 GenericNodeAnimator& GenericNodeAnimator::operator=(GenericNodeAnimator&&) noexcept = default;
 
-UnsignedInt GenericNodeAnimator::usedAllocatedAnimationCount() const {
-    UnsignedInt count = 0;
+std::size_t GenericNodeAnimator::usedAllocatedCount() const {
+    std::size_t count = 0;
     for(const Animation& animation: _state->animations)
         if(animation.animation.isAllocated())
             ++count;
@@ -362,6 +374,18 @@ void GenericNodeAnimator::remove(const AnimatorDataHandle handle) {
     removeInternal(animatorDataHandleId(handle));
 }
 
+bool GenericNodeAnimator::isAllocated(const AnimationHandle handle) const {
+    CORRADE_ASSERT(isHandleValid(handle),
+        "Ui::GenericNodeAnimator::isAllocated(): invalid handle" << handle, {});
+    return _state->animations[animationHandleId(handle)].animation.isAllocated();
+}
+
+bool GenericNodeAnimator::isAllocated(const AnimatorDataHandle handle) const {
+    CORRADE_ASSERT(isHandleValid(handle),
+        "Ui::GenericNodeAnimator::isAllocated(): invalid handle" << handle, {});
+    return _state->animations[animatorDataHandleId(handle)].animation.isAllocated();
+}
+
 auto GenericNodeAnimator::easing(const AnimationHandle handle) const -> Float(*)(Float) {
     CORRADE_ASSERT(isHandleValid(handle),
         "Ui::GenericNodeAnimator::easing(): invalid handle" << handle, {});
@@ -416,8 +440,8 @@ GenericDataAnimator::~GenericDataAnimator() = default;
 
 GenericDataAnimator& GenericDataAnimator::operator=(GenericDataAnimator&&) noexcept = default;
 
-UnsignedInt GenericDataAnimator::usedAllocatedAnimationCount() const {
-    UnsignedInt count = 0;
+std::size_t GenericDataAnimator::usedAllocatedCount() const {
+    std::size_t count = 0;
     for(const Animation& animation: _state->animations)
         if(animation.animation.isAllocated())
             ++count;
@@ -545,6 +569,18 @@ void GenericDataAnimator::remove(const AnimationHandle handle) {
 void GenericDataAnimator::remove(const AnimatorDataHandle handle) {
     AbstractGenericAnimator::remove(handle);
     removeInternal(animatorDataHandleId(handle));
+}
+
+bool GenericDataAnimator::isAllocated(const AnimationHandle handle) const {
+    CORRADE_ASSERT(isHandleValid(handle),
+        "Ui::GenericDataAnimator::isAllocated(): invalid handle" << handle, {});
+    return _state->animations[animationHandleId(handle)].animation.isAllocated();
+}
+
+bool GenericDataAnimator::isAllocated(const AnimatorDataHandle handle) const {
+    CORRADE_ASSERT(isHandleValid(handle),
+        "Ui::GenericDataAnimator::isAllocated(): invalid handle" << handle, {});
+    return _state->animations[animatorDataHandleId(handle)].animation.isAllocated();
 }
 
 auto GenericDataAnimator::easing(const AnimationHandle handle) const -> Float(*)(Float) {

@@ -42,7 +42,7 @@ namespace Magnum { namespace Ui {
 @m_since_latest_{extras}
 
 Performs automatic removal of a connection on destruction. Each instance with
-non-null @ref data() counts towards @ref EventLayer::usedScopedConnectionCount().
+non-null @ref data() counts towards @ref EventLayer::usedScopedCount().
 */
 class MAGNUM_UI_EXPORT EventConnection {
     public:
@@ -351,7 +351,7 @@ class MAGNUM_UI_EXPORT EventLayer: public AbstractLayer {
         /**
          * @brief Destructor
          *
-         * Expects that @ref usedScopedConnectionCount() is @cpp 0 @ce.
+         * Expects that @ref usedScopedCount() is @cpp 0 @ce.
          */
         ~EventLayer() override;
 
@@ -368,8 +368,9 @@ class MAGNUM_UI_EXPORT EventLayer: public AbstractLayer {
          * destroyed after all scoped connections are removed, as the
          * @ref EventConnection destructors would then access a dangling layer
          * pointer.
+         * @see @ref usedAllocatedCount()
          */
-        UnsignedInt usedScopedConnectionCount() const;
+        std::size_t usedScopedCount() const;
 
         /**
          * @brief Count of allocated connections
@@ -380,9 +381,10 @@ class MAGNUM_UI_EXPORT EventLayer: public AbstractLayer {
          * complexity where @f$ n @f$ is @ref capacity().
          * @todoc fix the isAllocated link once Doxygen stops being shit -- it
          *      works only from Containers themselves
-         * @see @ref Corrade::Containers::Function "Containers::Function<R(Args...)>::isAllocated()"
+         * @see @ref Corrade::Containers::Function "Containers::Function<R(Args...)>::isAllocated()",
+         *      @ref isAllocated(), @ref usedScopedCount()
          */
-        UnsignedInt usedAllocatedConnectionCount() const;
+        std::size_t usedAllocatedCount() const;
 
         /** @brief Distance threshold for fallthrough drag */
         Float dragThreshold() const;
@@ -900,7 +902,7 @@ class MAGNUM_UI_EXPORT EventLayer: public AbstractLayer {
          * trivially destructible. The @p handle becomes invalid, which means
          * that any existing @ref EventConnection instance for it will not
          * attempt to remove it again.
-         * @see @ref usedAllocatedConnectionCount()
+         * @see @ref usedAllocatedCount(), @ref isAllocated()
          */
         void remove(DataHandle handle);
 
@@ -913,6 +915,32 @@ class MAGNUM_UI_EXPORT EventLayer: public AbstractLayer {
          *      @ref dataHandleData()
          */
         void remove(LayerDataHandle handle);
+
+        /* There is no isScoped() because only the total reference count is
+           maintained */
+
+        /**
+         * @brief Whether given connection is allocated
+         *
+         * Returns @cpp true @ce if given connection captures
+         * non-trivially-copyable state or state that's too large to be stored
+         * in-place, @cpp false @ce otherwise. Expects that @p handle is valid.
+         * @see @ref isHandleValid(DataHandle) const,
+         *      @ref Corrade::Containers::Function "Containers::Function<R(Args...)>::isAllocated()",
+         *      @ref usedAllocatedCount()
+         */
+        bool isAllocated(DataHandle handle) const;
+
+        /**
+         * @brief Whether given connection is allocated assuming it belongs to this layer
+         *
+         * Like @ref isAllocated(DataHandle) const but without checking that
+         * @p handle indeed belongs to this layer. See its documentation for
+         * more information.
+         * @see @ref isHandleValid(LayerDataHandle) const,
+         *      @ref dataHandleData()
+         */
+        bool isAllocated(LayerDataHandle handle) const;
 
     private:
         friend DebugIntegration;

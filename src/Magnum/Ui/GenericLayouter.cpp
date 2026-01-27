@@ -68,8 +68,8 @@ GenericLayouter::~GenericLayouter() = default;
 
 GenericLayouter& GenericLayouter::operator=(GenericLayouter&&) noexcept = default;
 
-UnsignedInt GenericLayouter::usedAllocatedLayoutCount() const {
-    UnsignedInt count = 0;
+std::size_t GenericLayouter::usedAllocatedCount() const {
+    std::size_t count = 0;
     for(const Layout& layout: _state->layouts)
         if(layout.layout.isAllocated())
             ++count;
@@ -111,6 +111,18 @@ void GenericLayouter::remove(const LayoutHandle handle) {
 void GenericLayouter::remove(const LayouterDataHandle handle) {
     AbstractLayouter::remove(handle);
     removeInternal(layouterDataHandleId(handle));
+}
+
+bool GenericLayouter::isAllocated(const LayoutHandle handle) const {
+    CORRADE_ASSERT(isHandleValid(handle),
+        "Ui::GenericLayouter::isAllocated(): invalid handle" << handle, {});
+    return _state->layouts[layoutHandleId(handle)].layout.isAllocated();
+}
+
+bool GenericLayouter::isAllocated(const LayouterDataHandle handle) const {
+    CORRADE_ASSERT(isHandleValid(handle),
+        "Ui::GenericLayouter::isAllocated(): invalid handle" << handle, {});
+    return _state->layouts[layouterDataHandleId(handle)].layout.isAllocated();
 }
 
 Vector2 GenericLayouter::nodeOffset(const NodeHandle node) const {

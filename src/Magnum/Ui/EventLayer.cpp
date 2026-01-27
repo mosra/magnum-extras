@@ -160,12 +160,12 @@ LayerFeatures EventLayer::doFeatures() const {
     return LayerFeature::Event;
 }
 
-UnsignedInt EventLayer::usedScopedConnectionCount() const {
+std::size_t EventLayer::usedScopedCount() const {
     return _state->usedScopedConnectionCount;
 }
 
-UnsignedInt EventLayer::usedAllocatedConnectionCount() const {
-    UnsignedInt count = 0;
+std::size_t EventLayer::usedAllocatedCount() const {
+    std::size_t count = 0;
     for(const Data& data: _state->data)
         if(data.slot.isAllocated())
             ++count;
@@ -524,6 +524,18 @@ void EventLayer::removeInternal(const UnsignedInt id) {
         state.twoFingerGestureData = ~UnsignedInt{};
         state.twoFingerGesture = Platform::TwoFingerGesture{};
     }
+}
+
+bool EventLayer::isAllocated(const DataHandle handle) const {
+    CORRADE_ASSERT(isHandleValid(handle),
+        "Ui::EventLayer::isAllocated(): invalid handle" << handle, {});
+    return _state->data[dataHandleId(handle)].slot.isAllocated();
+}
+
+bool EventLayer::isAllocated(const LayerDataHandle handle) const {
+    CORRADE_ASSERT(isHandleValid(handle),
+        "Ui::EventLayer::isAllocated(): invalid handle" << handle, {});
+    return _state->data[layerDataHandleId(handle)].slot.isAllocated();
 }
 
 void EventLayer::doClean(const Containers::BitArrayView dataIdsToRemove) {

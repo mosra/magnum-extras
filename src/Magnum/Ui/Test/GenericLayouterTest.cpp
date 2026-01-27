@@ -55,6 +55,8 @@ struct GenericLayouterTest: TestSuite::Tester {
     /* There's no assert to trigger in remove() other than what's checked by
        AbstractAnimator::remove() already */
 
+    void invalidHandle();
+
     void nodePropertiesNotInLayout();
 
     void clean();
@@ -83,6 +85,8 @@ GenericLayouterTest::GenericLayouterTest() {
               &GenericLayouterTest::addRemoveHandleRecycle,
               &GenericLayouterTest::addInvalid,
 
+              &GenericLayouterTest::invalidHandle,
+
               &GenericLayouterTest::nodePropertiesNotInLayout,
 
               &GenericLayouterTest::clean,
@@ -100,7 +104,7 @@ void GenericLayouterTest::construct() {
 
     CORRADE_COMPARE(layouter.features(), LayouterFeatures{});
     CORRADE_COMPARE(layouter.handle(), layouterHandle(0xab, 0x12));
-    CORRADE_COMPARE(layouter.usedAllocatedLayoutCount(), 0);
+    CORRADE_COMPARE(layouter.usedAllocatedCount(), 0);
 }
 
 void GenericLayouterTest::constructCopy() {
@@ -142,24 +146,27 @@ void GenericLayouterTest::addRemove() {
         CORRADE_FAIL("This should never be called.");
     });
     CORRADE_COMPARE(layouter.usedCount(), 1);
-    CORRADE_COMPARE(layouter.usedAllocatedLayoutCount(), 0);
+    CORRADE_COMPARE(layouter.usedAllocatedCount(), 0);
     CORRADE_COMPARE(layouter.node(trivial), nodeHandle(0x12345, 0xabc));
+    CORRADE_VERIFY(!layouter.isAllocated(trivial));
 
     LayoutHandle nonTrivial = layouter.add(nodeHandle(0x67890, 0xdef), NonTrivial{destructedCount});
     CORRADE_COMPARE(layouter.usedCount(), 2);
-    CORRADE_COMPARE(layouter.usedAllocatedLayoutCount(), 1);
+    CORRADE_COMPARE(layouter.usedAllocatedCount(), 1);
     CORRADE_COMPARE(layouter.node(nonTrivial), nodeHandle(0x67890, 0xdef));
+    /* Verifying also the other overload */
+    CORRADE_VERIFY(layouter.isAllocated(layoutHandleData(nonTrivial)));
 
     layouter.remove(trivial);
     CORRADE_COMPARE(layouter.usedCount(), 1);
-    CORRADE_COMPARE(layouter.usedAllocatedLayoutCount(), 1);
+    CORRADE_COMPARE(layouter.usedAllocatedCount(), 1);
     CORRADE_COMPARE(destructedCount, 1);
 
     /* Verifying also the other handle overload. They should both delegate into
        the same internal implementation. */
     layouter.remove(layoutHandleData(nonTrivial));
     CORRADE_COMPARE(layouter.usedCount(), 0);
-    CORRADE_COMPARE(layouter.usedAllocatedLayoutCount(), 0);
+    CORRADE_COMPARE(layouter.usedAllocatedCount(), 0);
     CORRADE_COMPARE(destructedCount, 2);
 }
 
@@ -205,6 +212,21 @@ void GenericLayouterTest::addInvalid() {
     Error redirectError{&out};
     layouter.add(nodeHandle(0, 1), {});
     CORRADE_COMPARE(out, "Ui::GenericLayouter::add(): layout is null\n");
+}
+
+void GenericLayouterTest::invalidHandle() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    GenericLayouter layouter{layouterHandle(0, 1)};
+
+    Containers::String out;
+    Error redirectError{&out};
+    layouter.isAllocated(LayoutHandle::Null);
+    layouter.isAllocated(LayouterDataHandle::Null);
+    CORRADE_COMPARE_AS(out,
+        "Ui::GenericLayouter::isAllocated(): invalid handle Ui::LayoutHandle::Null\n"
+        "Ui::GenericLayouter::isAllocated(): invalid handle Ui::LayouterDataHandle::Null\n",
+        TestSuite::Compare::String);
 }
 
 void GenericLayouterTest::nodePropertiesNotInLayout() {
@@ -285,23 +307,27 @@ void GenericLayouterTest::clean() {
 
     LayoutHandle trivial = layouter.add(nodeHandle(0, 7), [](const GenericLayouter&, Vector2&, Vector2&) {});
     CORRADE_COMPARE(layouter.usedCount(), 1);
-    CORRADE_COMPARE(layouter.usedAllocatedLayoutCount(), 0);
+    CORRADE_COMPARE(layouter.usedAllocatedCount(), 0);
+    CORRADE_VERIFY(!layouter.isAllocated(trivial));
 
     /* The temporary gets destructed right away */
     LayoutHandle nonTrivial = layouter.add(nodeHandle(1, 11), NonTrivial{destructedCount});
     CORRADE_COMPARE(layouter.usedCount(), 2);
-    CORRADE_COMPARE(layouter.usedAllocatedLayoutCount(), 1);
+    CORRADE_COMPARE(layouter.usedAllocatedCount(), 1);
+    CORRADE_VERIFY(layouter.isAllocated(nonTrivial));
     CORRADE_COMPARE(destructedCount, 1);
 
     LayoutHandle another = layouter.add(nodeHandle(2, 23), [](const GenericLayouter&, Vector2&, Vector2&) {});
     CORRADE_COMPARE(layouter.usedCount(), 3);
-    CORRADE_COMPARE(layouter.usedAllocatedLayoutCount(), 1);
+    CORRADE_COMPARE(layouter.usedAllocatedCount(), 1);
+    CORRADE_VERIFY(!layouter.isAllocated(another));
     CORRADE_COMPARE(destructedCount, 1);
 
     /* The temporary gets destructed right away */
     LayoutHandle anotherNonTrivial = layouter.add(nodeHandle(3, 17), NonTrivial{anotherDestructedCount});
     CORRADE_COMPARE(layouter.usedCount(), 4);
-    CORRADE_COMPARE(layouter.usedAllocatedLayoutCount(), 2);
+    CORRADE_COMPARE(layouter.usedAllocatedCount(), 2);
+    CORRADE_VERIFY(layouter.isAllocated(anotherNonTrivial));
     CORRADE_COMPARE(anotherDestructedCount, 1);
 
     /* It should remove two but call just one destructor */
@@ -313,7 +339,7 @@ void GenericLayouterTest::clean() {
     };
     layouter.cleanNodes(nodeHandleGenerations);
     CORRADE_COMPARE(layouter.usedCount(), 2);
-    CORRADE_COMPARE(layouter.usedAllocatedLayoutCount(), 1);
+    CORRADE_COMPARE(layouter.usedAllocatedCount(), 1);
     CORRADE_COMPARE(destructedCount, 1);
     CORRADE_COMPARE(anotherDestructedCount, 2);
     CORRADE_VERIFY(!layouter.isHandleValid(trivial));

@@ -249,9 +249,10 @@ class MAGNUM_UI_EXPORT GenericAnimator: public AbstractGenericAnimator {
          * complexity where @f$ n @f$ is @ref capacity().
          * @todoc fix the isAllocated link once Doxygen stops being shit -- it
          *      works only from Containers themselves
-         * @see @ref Corrade::Containers::Function "Containers::Function<R(Args...)>::isAllocated()"
+         * @see @ref Corrade::Containers::Function "Containers::Function<R(Args...)>::isAllocated()",
+         *      @ref isAllocated()
          */
-        UnsignedInt usedAllocatedAnimationCount() const;
+        std::size_t usedAllocatedCount() const;
 
         /**
          * @brief Create an animation
@@ -349,6 +350,29 @@ class MAGNUM_UI_EXPORT GenericAnimator: public AbstractGenericAnimator {
          *      @ref animationHandleData()
          */
         void remove(AnimatorDataHandle handle);
+
+        /**
+         * @brief Whether given animation function is allocated
+         *
+         * Returns @cpp true @ce if given animation function captures
+         * non-trivially-copyable state or state that's too large to be stored
+         * in-place, @cpp false @ce otherwise. Expects that @p handle is valid.
+         * @see @ref isHandleValid(AnimationHandle) const,
+         *      @ref Corrade::Containers::Function "Containers::Function<R(Args...)>::isAllocated()",
+         *      @ref usedAllocatedCount()
+         */
+        bool isAllocated(AnimationHandle handle) const;
+
+        /**
+         * @brief Whether given animation function is allocated assuming it belongs to this animator
+         *
+         * Like @ref isAllocated(AnimationHandle) const but without checking
+         * that @p handle indeed belongs to this animator. See its
+         * documentation for more information.
+         * @see @ref isHandleValid(AnimatorDataHandle) const,
+         *      @ref animationHandleData()
+         */
+        bool isAllocated(AnimatorDataHandle handle) const;
 
         /**
          * @brief Animation easing function
@@ -505,9 +529,10 @@ class MAGNUM_UI_EXPORT GenericNodeAnimator: public AbstractGenericAnimator {
          * complexity where @f$ n @f$ is @ref capacity().
          * @todoc fix the isAllocated link once Doxygen stops being shit -- it
          *      works only from Containers themselves
-         * @see @ref Corrade::Containers::Function "Containers::Function<R(Args...)>::isAllocated()"
+         * @see @ref Corrade::Containers::Function "Containers::Function<R(Args...)>::isAllocated()",
+         *      @ref isAllocated()
          */
-        UnsignedInt usedAllocatedAnimationCount() const;
+        std::size_t usedAllocatedCount() const;
 
         /**
          * @brief Create an animation
@@ -611,6 +636,29 @@ class MAGNUM_UI_EXPORT GenericNodeAnimator: public AbstractGenericAnimator {
          *      @ref animationHandleData()
          */
         void remove(AnimatorDataHandle handle);
+
+        /**
+         * @brief Whether given animation function is allocated
+         *
+         * Returns @cpp true @ce if given animation function captures
+         * non-trivially-copyable state or state that's too large to be stored
+         * in-place, @cpp false @ce otherwise. Expects that @p handle is valid.
+         * @see @ref isHandleValid(AnimationHandle) const,
+         *      @ref Corrade::Containers::Function "Containers::Function<R(Args...)>::isAllocated()",
+         *      @ref usedAllocatedCount()
+         */
+        bool isAllocated(AnimationHandle handle) const;
+
+        /**
+         * @brief Whether given animation function is allocated assuming it belongs to this animator
+         *
+         * Like @ref isAllocated(AnimationHandle) const but without checking
+         * that @p handle indeed belongs to this animator. See its
+         * documentation for more information.
+         * @see @ref isHandleValid(AnimatorDataHandle) const,
+         *      @ref animationHandleData()
+         */
+        bool isAllocated(AnimatorDataHandle handle) const;
 
         /**
          * @brief Animation easing function
@@ -765,9 +813,10 @@ class MAGNUM_UI_EXPORT GenericDataAnimator: public AbstractGenericAnimator {
          * complexity where @f$ n @f$ is @ref capacity().
          * @todoc fix the isAllocated link once Doxygen stops being shit -- it
          *      works only from Containers themselves
-         * @see @ref Corrade::Containers::Function "Containers::Function<R(Args...)>::isAllocated()"
+         * @see @ref Corrade::Containers::Function "Containers::Function<R(Args...)>::isAllocated()",
+         *      @ref isAllocated()
          */
-        UnsignedInt usedAllocatedAnimationCount() const;
+        std::size_t usedAllocatedCount() const;
 
         /**
          * @brief Create an animation
@@ -935,6 +984,29 @@ class MAGNUM_UI_EXPORT GenericDataAnimator: public AbstractGenericAnimator {
          *      @ref animationHandleData()
          */
         void remove(AnimatorDataHandle handle);
+
+        /**
+         * @brief Whether given animation function is allocated
+         *
+         * Returns @cpp true @ce if given animation function captures
+         * non-trivially-copyable state or state that's too large to be stored
+         * in-place, @cpp false @ce otherwise. Expects that @p handle is valid.
+         * @see @ref isHandleValid(AnimationHandle) const,
+         *      @ref Corrade::Containers::Function "Containers::Function<R(Args...)>::isAllocated()",
+         *      @ref usedAllocatedCount()
+         */
+        bool isAllocated(AnimationHandle handle) const;
+
+        /**
+         * @brief Whether given animation function is allocated assuming it belongs to this animator
+         *
+         * Like @ref isAllocated(AnimationHandle) const but without checking
+         * that @p handle indeed belongs to this animator. See its
+         * documentation for more information.
+         * @see @ref isHandleValid(AnimatorDataHandle) const,
+         *      @ref animationHandleData()
+         */
+        bool isAllocated(AnimatorDataHandle handle) const;
 
         /**
          * @brief Animation easing function
