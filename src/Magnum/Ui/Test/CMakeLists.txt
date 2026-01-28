@@ -52,6 +52,7 @@ corrade_add_test(UiBaseLayerTest BaseLayerTest.cpp LIBRARIES MagnumUiTestLib)
 corrade_add_test(UiBaseLayerStyleAnimatorTest BaseLayerStyleAnimatorTest.cpp LIBRARIES MagnumUiTestLib)
 corrade_add_test(UiBlurShaderTest BlurShaderTest.cpp LIBRARIES MagnumUi)
 corrade_add_test(UiButtonTest ButtonTest.cpp LIBRARIES MagnumUi)
+corrade_add_test(UiDataLayerTest DataLayerTest.cpp LIBRARIES MagnumUiTestLib)
 corrade_add_test(UiDebugLayerTest DebugLayerTest.cpp LIBRARIES MagnumUiTestLib)
 corrade_add_test(UiEventTest EventTest.cpp LIBRARIES MagnumUiTestLib)
 corrade_add_test(UiEventLayerTest EventLayerTest.cpp LIBRARIES MagnumUiTestLib)
@@ -90,12 +91,13 @@ if(CORRADE_TARGET_EMSCRIPTEN)
     if(CMAKE_VERSION VERSION_LESS 3.13)
         message(FATAL_ERROR "CMake 3.13+ is required in order to specify Emscripten linker options")
     endif()
-    # It allocates 1M data / nodes to test boundary conditions, needs more
-    # memory
+    # These allocate 1M data / storages / nodes to test boundary conditions,
+    # need more memory
     target_link_options(UiAbstractAnimatorTest PRIVATE "SHELL:-s ALLOW_MEMORY_GROWTH=1")
     target_link_options(UiAbstractLayerTest PRIVATE "SHELL:-s ALLOW_MEMORY_GROWTH=1")
     target_link_options(UiAbstractLayouterTest PRIVATE "SHELL:-s ALLOW_MEMORY_GROWTH=1")
     target_link_options(UiAbstractUserInterfaceTest PRIVATE "SHELL:-s ALLOW_MEMORY_GROWTH=1")
+    target_link_options(UiDataLayerTest PRIVATE "SHELL:-s ALLOW_MEMORY_GROWTH=1")
 endif()
 
 # Deliberately doesn't link to MagnumUi in order to be able to iterate on the
@@ -120,6 +122,8 @@ if(CORRADE_TARGET_MSVC AND NOT CORRADE_TARGET_CLANG_CL AND NOT CORRADE_MSVC2015_
 endif()
 
 set_property(TARGET
+    UiDataLayerTest # Asserts in storageHandle() helpers, and graceful assert
+                    # propagation in DataLayer::createStorage<T>()
     UiHandleTest # Asserts in most *Handle() helpers
     UiTextLayerTest # Asserts in fontHandle() and related helpers
     APPEND PROPERTY COMPILE_DEFINITIONS "CORRADE_GRACEFUL_ASSERT")

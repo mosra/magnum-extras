@@ -452,7 +452,7 @@ struct TextLayerEditingStyleUniform {
 
 /* Unlike DataHandle, NodeHandle etc., which are global to the whole Ui
    library, FontHandle is specific to the TextLayer and thus isn't defined in
-   Handle.h but here */
+   Handle.h but here. Similar case is with StorageHandle in DataLayer. */
 
 namespace Implementation {
     enum: UnsignedInt {

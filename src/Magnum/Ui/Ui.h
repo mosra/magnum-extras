@@ -35,6 +35,14 @@
 #ifndef DOXYGEN_GENERATING_OUTPUT
 namespace Magnum { namespace Ui {
 
+/* Used by both Handle.h and DataLayer.h */
+namespace Implementation {
+    enum: UnsignedInt {
+        LayerHandleIdBits = 8,
+        LayerHandleGenerationBits = 8
+    };
+}
+
 enum class DataHandle: UnsignedLong;
 enum class LayerHandle: UnsignedShort;
 enum class LayerDataHandle: UnsignedInt;
@@ -71,6 +79,8 @@ class BaseLayerGL;
 #endif
 enum class BaseLayerSharedFlag: UnsignedByte;
 typedef Containers::EnumSet<BaseLayerSharedFlag> BaseLayerSharedFlags;
+
+class DataLayer;
 
 class DebugLayer;
 #ifdef MAGNUM_TARGET_GL

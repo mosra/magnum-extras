@@ -39,12 +39,8 @@
 
 namespace Magnum { namespace Ui {
 
-namespace Implementation {
-    enum: UnsignedInt {
-        LayerHandleIdBits = 8,
-        LayerHandleGenerationBits = 8
-    };
-}
+/* Implementation::LayerHandleIdBits and LayerHandleGenerationBits in Ui.h as
+   they're needed by DataLayer.h as well */
 
 /**
 @brief Layer handle
