@@ -897,12 +897,13 @@ class MAGNUM_UI_EXPORT EventLayer: public AbstractLayer {
         /**
          * @brief Remove a connection
          *
-         * Delegates to @ref AbstractLayer::remove(DataHandle) and additionally
-         * calls a destructor on the captured function state, if it's not
-         * trivially destructible. The @p handle becomes invalid, which means
-         * that any existing @ref EventConnection instance for it will not
-         * attempt to remove it again.
-         * @see @ref usedAllocatedCount(), @ref isAllocated()
+         * Expects that @p handle is valid. Calls a destructor on the captured
+         * update function state, if it's not trivially destructible. The
+         * @p handle becomes invalid, which means that any existing
+         * @ref EventConnection instance for it will not attempt to remove it
+         * again. Delegates to @ref AbstractLayer::remove(DataHandle), see its
+         * documentation for detailed description of all constraints.
+         * @see @ref isHandleValid(DataHandle) const, @ref isAllocated()
          */
         void remove(DataHandle handle);
 

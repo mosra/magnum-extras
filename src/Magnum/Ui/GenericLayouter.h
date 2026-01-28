@@ -167,11 +167,11 @@ class MAGNUM_UI_EXPORT GenericLayouter: public AbstractLayouter {
         /**
          * @brief Remove a layout
          *
-         * Expects that @p handle is valid.
-         *
+         * Expects that @p handle is valid. Calls a destructor on the captured
+         * layout function state, if it's not trivially destructible.
          * Delegates to @ref AbstractLayouter::remove(LayoutHandle), see its
          * documentation for detailed description of all constraints.
-         * @see @ref isHandleValid(LayoutHandle) const
+         * @see @ref isHandleValid(LayoutHandle) const, @ref isAllocated()
          */
         void remove(LayoutHandle handle);
 

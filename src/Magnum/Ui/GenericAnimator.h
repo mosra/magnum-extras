@@ -334,10 +334,11 @@ class MAGNUM_UI_EXPORT GenericAnimator: public AbstractGenericAnimator {
         /**
          * @brief Remove an animation
          *
-         * Expects that @p handle is valid. Delegates to
-         * @ref AbstractAnimator::remove(AnimationHandle), see its
+         * Expects that @p handle is valid. Calls a destructor on the captured
+         * animation function state, if it's not trivially destructible.
+         * Delegates to @ref AbstractAnimator::remove(AnimationHandle), see its
          * documentation for detailed description of all constraints.
-         * @see @ref isHandleValid(AnimationHandle) const
+         * @see @ref isHandleValid(AnimationHandle) const, @ref isAllocated()
          */
         void remove(AnimationHandle handle);
 
@@ -620,10 +621,11 @@ class MAGNUM_UI_EXPORT GenericNodeAnimator: public AbstractGenericAnimator {
         /**
          * @brief Remove an animation
          *
-         * Expects that @p handle is valid. Delegates to
-         * @ref AbstractAnimator::remove(AnimationHandle), see its
+         * Expects that @p handle is valid. Calls a destructor on the captured
+         * animation function state, if it's not trivially destructible.
+         * Delegates to @ref AbstractAnimator::remove(AnimationHandle), see its
          * documentation for detailed description of all constraints.
-         * @see @ref isHandleValid(AnimationHandle) const
+         * @see @ref isHandleValid(AnimationHandle) const, @ref isAllocated()
          */
         void remove(AnimationHandle handle);
 
@@ -968,10 +970,11 @@ class MAGNUM_UI_EXPORT GenericDataAnimator: public AbstractGenericAnimator {
         /**
          * @brief Remove an animation
          *
-         * Expects that @p handle is valid. Delegates to
-         * @ref AbstractAnimator::remove(AnimationHandle), see its
+         * Expects that @p handle is valid. Calls a destructor on the captured
+         * animation function state, if it's not trivially destructible.
+         * Delegates to @ref AbstractAnimator::remove(AnimationHandle), see its
          * documentation for detailed description of all constraints.
-         * @see @ref isHandleValid(AnimationHandle) const
+         * @see @ref isHandleValid(AnimationHandle) const, @ref isAllocated()
          */
         void remove(AnimationHandle handle);
 
