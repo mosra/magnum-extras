@@ -132,16 +132,19 @@ namespace {
 
 union Layer {
     explicit Layer() noexcept: used{} {}
+
     Layer(const Layer&) = delete;
     Layer(Layer&& other) noexcept: used{Utility::move(other.used)} {}
+
     ~Layer() {
         used.instance.~Pointer();
     }
+
     Layer& operator=(const Layer&) = delete;
-    Layer& operator=(Layer&& other) noexcept {
-        Utility::swap(other.used, used);
-        return *this;
-    }
+    /* The layers are only ever move-constructed if arrayAppend() reallocates,
+       other than that they shouldn't be move-assigned as that'd break
+       association with their ID, which is implicitly the array index */
+    Layer& operator=(Layer&&) = delete;
 
     struct Used {
         /* Except for the generation, instance, which is reset during
@@ -232,16 +235,19 @@ static_assert(
 
 union Layouter {
     explicit Layouter() noexcept: used{} {}
+
     Layouter(const Layouter&) = delete;
     Layouter(Layouter&& other) noexcept: used{Utility::move(other.used)} {}
+
     ~Layouter() {
         used.instance.~Pointer();
     }
+
     Layouter& operator=(const Layouter&) = delete;
-    Layouter& operator=(Layouter&& other) noexcept {
-        Utility::swap(other.used, used);
-        return *this;
-    }
+    /* The layouters are only ever move-constructed if arrayAppend()
+       reallocates, other than that they shouldn't be move-assigned as that'd
+       break association with their ID, which is implicitly the array index */
+    Layouter& operator=(Layouter&&) = delete;
 
     struct Used {
         /* Except for the generation (and instance, which is reset during
@@ -310,16 +316,19 @@ static_assert(
 
 union Animator {
     explicit Animator() noexcept: used{} {}
+
     Animator(const Animator&) = delete;
     Animator(Animator&& other) noexcept: used{Utility::move(other.used)} {}
+
     ~Animator() {
         used.instance.~Pointer();
     }
+
     Animator& operator=(const Animator&) = delete;
-    Animator& operator=(Animator&& other) noexcept {
-        Utility::swap(other.used, used);
-        return *this;
-    }
+    /* The animators are only ever move-constructed if arrayAppend()
+       reallocates, other than that they shouldn't be move-assigned as that'd
+       break association with their ID, which is implicitly the array index */
+    Animator& operator=(Animator&&) = delete;
 
     struct Used {
         /* Except for the generation (and instance, which is reset during
