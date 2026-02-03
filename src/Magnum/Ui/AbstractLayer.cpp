@@ -313,6 +313,9 @@ void AbstractLayer::remove(const DataHandle handle) {
     State& state = *_state;
     /* Mark the layer as needing a cleanData() call for any assigned
        animators */
+    /** @todo make it set NeedsDataClean only if any animators are actually
+        attached (is it possible to refcount these in assignAnimator(), and
+        then when the animator is removed, decrease the refcount again?) */
     state.state |= LayerState::NeedsDataClean;
 
     /* If the data was attached to a node, mark the layer also as needing a
@@ -334,6 +337,9 @@ void AbstractLayer::remove(const LayerDataHandle handle) {
     State& state = *_state;
     /* Mark the layer as needing a cleanData() call for any assigned
        animators */
+    /** @todo make it set NeedsDataClean only if any animators are actually
+        attached (is it possible to refcount these in assignAnimator(), and
+        then when the animator is removed, decrease the refcount again?) */
     state.state |= LayerState::NeedsDataClean;
 
     /* If the data was attached to a node, mark the layer also as needing a
