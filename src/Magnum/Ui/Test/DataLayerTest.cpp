@@ -1602,9 +1602,21 @@ void DataLayerTest::createRemove() {
     CORRADE_COMPARE(layer.storageReferenceCount(storage3D), 0);
     CORRADE_COMPARE(layer.capacity(), 1);
     CORRADE_COMPARE(layer.usedCount(), 1);
-    CORRADE_COMPARE(layer.usedAllocatedCount(), 0);
+    {
+        #ifdef CORRADE_MSVC2017_COMPATIBILITY
+        /* Same case as in Corrade's Containers/Test/FunctionTest.cpp */
+        CORRADE_EXPECT_FAIL("All lambdas are non-trivially-copyable on MSVC 2015 and 2017.");
+        #endif
+        CORRADE_COMPARE(layer.usedAllocatedCount(), 0);
+    }
     CORRADE_COMPARE(layer.node(trivial), NodeHandle::Null);
-    CORRADE_VERIFY(!layer.isAllocated(trivial));
+    {
+        #ifdef CORRADE_MSVC2017_COMPATIBILITY
+        /* Same case as in Corrade's Containers/Test/FunctionTest.cpp */
+        CORRADE_EXPECT_FAIL("All lambdas are non-trivially-copyable on MSVC 2015 and 2017.");
+        #endif
+        CORRADE_VERIFY(!layer.isAllocated(trivial));
+    }
     CORRADE_VERIFY(layer.isDirty(trivial));
     CORRADE_COMPARE(layer.storage(trivial), storage);
     CORRADE_COMPARE(layer.index(trivial), (Containers::Size3D{0, 0, 0}));
@@ -1625,7 +1637,13 @@ void DataLayerTest::createRemove() {
     CORRADE_COMPARE(layer.storageReferenceCount(storage3D), 0);
     CORRADE_COMPARE(layer.capacity(), 2);
     CORRADE_COMPARE(layer.usedCount(), 2);
-    CORRADE_COMPARE(layer.usedAllocatedCount(), 1);
+    {
+        #ifdef CORRADE_MSVC2017_COMPATIBILITY
+        /* Same case as in Corrade's Containers/Test/FunctionTest.cpp */
+        CORRADE_EXPECT_FAIL("All lambdas are non-trivially-copyable on MSVC 2015 and 2017.");
+        #endif
+        CORRADE_COMPARE(layer.usedAllocatedCount(), 1);
+    }
     CORRADE_COMPARE(layer.node(nonTrivial), nodeHandle(0x12345, 0xabc));
     CORRADE_VERIFY(layer.isAllocated(nonTrivial));
     CORRADE_VERIFY(layer.isDirty(nonTrivial));
@@ -1647,9 +1665,21 @@ void DataLayerTest::createRemove() {
     CORRADE_COMPARE(layer.storageReferenceCount(storage3D), 0);
     CORRADE_COMPARE(layer.capacity(), 3);
     CORRADE_COMPARE(layer.usedCount(), 3);
-    CORRADE_COMPARE(layer.usedAllocatedCount(), 1);
+    {
+        #ifdef CORRADE_MSVC2017_COMPATIBILITY
+        /* Same case as in Corrade's Containers/Test/FunctionTest.cpp */
+        CORRADE_EXPECT_FAIL("All lambdas are non-trivially-copyable on MSVC 2015 and 2017.");
+        #endif
+        CORRADE_COMPARE(layer.usedAllocatedCount(), 1);
+    }
     CORRADE_COMPARE(layer.node(trivial1D), NodeHandle::Null);
-    CORRADE_VERIFY(!layer.isAllocated(dataHandleData(trivial1D)));
+    {
+        #ifdef CORRADE_MSVC2017_COMPATIBILITY
+        /* Same case as in Corrade's Containers/Test/FunctionTest.cpp */
+        CORRADE_EXPECT_FAIL("All lambdas are non-trivially-copyable on MSVC 2015 and 2017.");
+        #endif
+        CORRADE_VERIFY(!layer.isAllocated(dataHandleData(trivial1D)));
+    }
     CORRADE_VERIFY(layer.isDirty(dataHandleData(trivial1D)));
     CORRADE_COMPARE(layer.storage(dataHandleData(trivial1D)), storage1D);
     CORRADE_COMPARE(layer.index(dataHandleData(trivial1D)), (Containers::Size3D{0, 0, 13}));
@@ -1670,7 +1700,13 @@ void DataLayerTest::createRemove() {
     CORRADE_COMPARE(layer.storageReferenceCount(storage3D), 0);
     CORRADE_COMPARE(layer.capacity(), 4);
     CORRADE_COMPARE(layer.usedCount(), 4);
-    CORRADE_COMPARE(layer.usedAllocatedCount(), 2);
+    {
+        #ifdef CORRADE_MSVC2017_COMPATIBILITY
+        /* Same case as in Corrade's Containers/Test/FunctionTest.cpp */
+        CORRADE_EXPECT_FAIL("All lambdas are non-trivially-copyable on MSVC 2015 and 2017.");
+        #endif
+        CORRADE_COMPARE(layer.usedAllocatedCount(), 2);
+    }
     CORRADE_COMPARE(layer.node(nonTrivial1D), nodeHandle(0xabcde, 0x123));
     CORRADE_VERIFY(layer.isAllocated(nonTrivial1D));
     CORRADE_VERIFY(layer.isDirty(nonTrivial1D));
@@ -1691,9 +1727,21 @@ void DataLayerTest::createRemove() {
     CORRADE_COMPARE(layer.storageReferenceCount(storage3D), 0);
     CORRADE_COMPARE(layer.capacity(), 5);
     CORRADE_COMPARE(layer.usedCount(), 5);
-    CORRADE_COMPARE(layer.usedAllocatedCount(), 2);
+    {
+        #ifdef CORRADE_MSVC2017_COMPATIBILITY
+        /* Same case as in Corrade's Containers/Test/FunctionTest.cpp */
+        CORRADE_EXPECT_FAIL("All lambdas are non-trivially-copyable on MSVC 2015 and 2017.");
+        #endif
+        CORRADE_COMPARE(layer.usedAllocatedCount(), 2);
+    }
     CORRADE_COMPARE(layer.node(trivial2D), nodeHandle(0x54321, 0xedc));
-    CORRADE_VERIFY(!layer.isAllocated(trivial2D));
+    {
+        #ifdef CORRADE_MSVC2017_COMPATIBILITY
+        /* Same case as in Corrade's Containers/Test/FunctionTest.cpp */
+        CORRADE_EXPECT_FAIL("All lambdas are non-trivially-copyable on MSVC 2015 and 2017.");
+        #endif
+        CORRADE_VERIFY(!layer.isAllocated(trivial2D));
+    }
     CORRADE_VERIFY(layer.isDirty(trivial2D));
     CORRADE_COMPARE(layer.storage(trivial2D), storage2D);
     CORRADE_COMPARE(layer.index(trivial2D), (Containers::Size3D{0, 2, 5}));
@@ -1714,7 +1762,13 @@ void DataLayerTest::createRemove() {
     CORRADE_COMPARE(layer.storageReferenceCount(storage3D), 0);
     CORRADE_COMPARE(layer.capacity(), 6);
     CORRADE_COMPARE(layer.usedCount(), 6);
-    CORRADE_COMPARE(layer.usedAllocatedCount(), 3);
+    {
+        #ifdef CORRADE_MSVC2017_COMPATIBILITY
+        /* Same case as in Corrade's Containers/Test/FunctionTest.cpp */
+        CORRADE_EXPECT_FAIL("All lambdas are non-trivially-copyable on MSVC 2015 and 2017.");
+        #endif
+        CORRADE_COMPARE(layer.usedAllocatedCount(), 3);
+    }
     CORRADE_COMPARE(layer.node(nonTrivial2D), nodeHandle(0xfedcb, 0x321));
     CORRADE_VERIFY(layer.isAllocated(nonTrivial2D));
     CORRADE_VERIFY(layer.isDirty(nonTrivial2D));
@@ -1735,9 +1789,21 @@ void DataLayerTest::createRemove() {
     CORRADE_COMPARE(layer.storageReferenceCount(storage3D), 1);
     CORRADE_COMPARE(layer.capacity(), 7);
     CORRADE_COMPARE(layer.usedCount(), 7);
-    CORRADE_COMPARE(layer.usedAllocatedCount(), 3);
+    {
+        #ifdef CORRADE_MSVC2017_COMPATIBILITY
+        /* Same case as in Corrade's Containers/Test/FunctionTest.cpp */
+        CORRADE_EXPECT_FAIL("All lambdas are non-trivially-copyable on MSVC 2015 and 2017.");
+        #endif
+        CORRADE_COMPARE(layer.usedAllocatedCount(), 3);
+    }
     CORRADE_COMPARE(layer.node(trivial3D), nodeHandle(0x67890, 0xaba));
-    CORRADE_VERIFY(!layer.isAllocated(trivial3D));
+    {
+        #ifdef CORRADE_MSVC2017_COMPATIBILITY
+        /* Same case as in Corrade's Containers/Test/FunctionTest.cpp */
+        CORRADE_EXPECT_FAIL("All lambdas are non-trivially-copyable on MSVC 2015 and 2017.");
+        #endif
+        CORRADE_VERIFY(!layer.isAllocated(trivial3D));
+    }
     CORRADE_VERIFY(layer.isDirty(trivial3D));
     CORRADE_COMPARE(layer.storage(trivial3D), storage3D);
     CORRADE_COMPARE(layer.index(trivial3D), (Containers::Size3D{1, 3, 2}));
@@ -1759,7 +1825,13 @@ void DataLayerTest::createRemove() {
     CORRADE_COMPARE(layer.storageReferenceCount(storage3D), 2);
     CORRADE_COMPARE(layer.capacity(), 8);
     CORRADE_COMPARE(layer.usedCount(), 8);
-    CORRADE_COMPARE(layer.usedAllocatedCount(), 4);
+    {
+        #ifdef CORRADE_MSVC2017_COMPATIBILITY
+        /* Same case as in Corrade's Containers/Test/FunctionTest.cpp */
+        CORRADE_EXPECT_FAIL("All lambdas are non-trivially-copyable on MSVC 2015 and 2017.");
+        #endif
+        CORRADE_COMPARE(layer.usedAllocatedCount(), 4);
+    }
     CORRADE_COMPARE(layer.node(nonTrivial3D), nodeHandle(0x98765, 0xbeb));
     CORRADE_VERIFY(layer.isAllocated(nonTrivial3D));
     CORRADE_VERIFY(layer.isDirty(nonTrivial3D));
@@ -1813,7 +1885,13 @@ void DataLayerTest::createRemove() {
     CORRADE_COMPARE(layer.storageReferenceCount(storage3D), 2);
     CORRADE_COMPARE(layer.capacity(), 8);
     CORRADE_COMPARE(layer.usedCount(), 7);
-    CORRADE_COMPARE(layer.usedAllocatedCount(), 4);
+    {
+        #ifdef CORRADE_MSVC2017_COMPATIBILITY
+        /* Same case as in Corrade's Containers/Test/FunctionTest.cpp */
+        CORRADE_EXPECT_FAIL("All lambdas are non-trivially-copyable on MSVC 2015 and 2017.");
+        #endif
+        CORRADE_COMPARE(layer.usedAllocatedCount(), 4);
+    }
 
     /* Removing data with a non-trivial function calls its destructor, this
        time on the internal instance */
@@ -1828,7 +1906,13 @@ void DataLayerTest::createRemove() {
     CORRADE_COMPARE(layer.storageReferenceCount(storage3D), 2);
     CORRADE_COMPARE(layer.capacity(), 8);
     CORRADE_COMPARE(layer.usedCount(), 6);
-    CORRADE_COMPARE(layer.usedAllocatedCount(), 3);
+    {
+        #ifdef CORRADE_MSVC2017_COMPATIBILITY
+        /* Same case as in Corrade's Containers/Test/FunctionTest.cpp */
+        CORRADE_EXPECT_FAIL("All lambdas are non-trivially-copyable on MSVC 2015 and 2017.");
+        #endif
+        CORRADE_COMPARE(layer.usedAllocatedCount(), 3);
+    }
 
     /* Another non-trivial function, LayerDataHandle overload */
     layer.remove(dataHandleData(nonTrivial));
@@ -1842,7 +1926,13 @@ void DataLayerTest::createRemove() {
     CORRADE_COMPARE(layer.storageReferenceCount(storage3D), 2);
     CORRADE_COMPARE(layer.capacity(), 8);
     CORRADE_COMPARE(layer.usedCount(), 5);
-    CORRADE_COMPARE(layer.usedAllocatedCount(), 2);
+    {
+        #ifdef CORRADE_MSVC2017_COMPATIBILITY
+        /* Same case as in Corrade's Containers/Test/FunctionTest.cpp */
+        CORRADE_EXPECT_FAIL("All lambdas are non-trivially-copyable on MSVC 2015 and 2017.");
+        #endif
+        CORRADE_COMPARE(layer.usedAllocatedCount(), 2);
+    }
 
     /* Can remove the no-longer referenced storage now as well */
     layer.removeStorage(storage2D);
@@ -2018,7 +2108,13 @@ void DataLayerTest::createMemberFunction() {
        to be used or some such */
     CORRADE_COMPARE(layer.capacity(), 4);
     CORRADE_COMPARE(layer.usedCount(), 4);
-    CORRADE_COMPARE(layer.usedAllocatedCount(), 0);
+    {
+        #ifdef CORRADE_MSVC2017_COMPATIBILITY
+        /* Same case as in Corrade's Containers/Test/FunctionTest.cpp */
+        CORRADE_EXPECT_FAIL("All lambdas are non-trivially-copyable on MSVC 2015 and 2017.");
+        #endif
+        CORRADE_COMPARE(layer.usedAllocatedCount(), 0);
+    }
 }
 
 void DataLayerTest::createOverloaded() {
@@ -2120,7 +2216,13 @@ void DataLayerTest::createOverloaded() {
        to be used by accident or some such */
     CORRADE_COMPARE(layer.capacity(), 4);
     CORRADE_COMPARE(layer.usedCount(), 4);
-    CORRADE_COMPARE(layer.usedAllocatedCount(), 0);
+    {
+        #ifdef CORRADE_MSVC2017_COMPATIBILITY
+        /* Same case as in Corrade's Containers/Test/FunctionTest.cpp */
+        CORRADE_EXPECT_FAIL("All lambdas are non-trivially-copyable on MSVC 2015 and 2017.");
+        #endif
+        CORRADE_COMPARE(layer.usedAllocatedCount(), 0);
+    }
 }
 
 void DataLayerTest::createOverloadedMemberFunction() {
@@ -2219,7 +2321,13 @@ void DataLayerTest::createOverloadedMemberFunction() {
        to be used by accident or some such */
     CORRADE_COMPARE(layer.capacity(), 4);
     CORRADE_COMPARE(layer.usedCount(), 4);
-    CORRADE_COMPARE(layer.usedAllocatedCount(), 0);
+    {
+        #ifdef CORRADE_MSVC2017_COMPATIBILITY
+        /* Same case as in Corrade's Containers/Test/FunctionTest.cpp */
+        CORRADE_EXPECT_FAIL("All lambdas are non-trivially-copyable on MSVC 2015 and 2017.");
+        #endif
+        CORRADE_COMPARE(layer.usedAllocatedCount(), 0);
+    }
 }
 
 void DataLayerTest::createInvalid() {
