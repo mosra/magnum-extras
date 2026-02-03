@@ -132,12 +132,12 @@ namespace {
 
 union Layer {
     explicit Layer() noexcept: used{} {}
-    Layer(const Layer&&) = delete;
+    Layer(const Layer&) = delete;
     Layer(Layer&& other) noexcept: used{Utility::move(other.used)} {}
     ~Layer() {
         used.instance.~Pointer();
     }
-    Layer& operator=(const Layer&&) = delete;
+    Layer& operator=(const Layer&) = delete;
     Layer& operator=(Layer&& other) noexcept {
         Utility::swap(other.used, used);
         return *this;
@@ -232,12 +232,12 @@ static_assert(
 
 union Layouter {
     explicit Layouter() noexcept: used{} {}
-    Layouter(const Layouter&&) = delete;
+    Layouter(const Layouter&) = delete;
     Layouter(Layouter&& other) noexcept: used{Utility::move(other.used)} {}
     ~Layouter() {
         used.instance.~Pointer();
     }
-    Layouter& operator=(const Layouter&&) = delete;
+    Layouter& operator=(const Layouter&) = delete;
     Layouter& operator=(Layouter&& other) noexcept {
         Utility::swap(other.used, used);
         return *this;
@@ -310,12 +310,12 @@ static_assert(
 
 union Animator {
     explicit Animator() noexcept: used{} {}
-    Animator(const Animator&&) = delete;
+    Animator(const Animator&) = delete;
     Animator(Animator&& other) noexcept: used{Utility::move(other.used)} {}
     ~Animator() {
         used.instance.~Pointer();
     }
-    Animator& operator=(const Animator&&) = delete;
+    Animator& operator=(const Animator&) = delete;
     Animator& operator=(Animator&& other) noexcept {
         Utility::swap(other.used, used);
         return *this;
