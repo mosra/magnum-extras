@@ -669,13 +669,18 @@ class MAGNUM_UI_EXPORT DataLayer: public AbstractLayer {
          * @todoc fix the create() links once Doxygen stops being shit
          * @see @ref isStorageDirty()
          */
-        template<class Storage> DataHandle create(const Storage& storage, Containers::Function<void(
+        template<class Storage> DataHandle create(const Storage& storage,
             #ifdef DOXYGEN_GENERATING_OUTPUT
-            T /* To make the signature less confusing */
+            Containers::Function<void(T)>&& /* For a less confusing signature */
+            #elif defined(CORRADE_TARGET_GCC) && !defined(CORRADE_TARGET_CLANG) && __GNUC__ < 5
+            /* GCC 4.8 fails to match T without the std::common_type. GCC 5+
+               works. Similar trick is used in the create() overloads with an
+               explicit member, where it's needed for all compilers. */
+            typename std::common_type<Containers::Function<void(decltype(*std::declval<Storage>()))>>::type&&
             #else
-            decltype(*std::declval<Storage>())
+            Containers::Function<void(decltype(*std::declval<Storage>()))>&&
             #endif
-        )>&& update, NodeHandle node =
+        update, NodeHandle node =
             #ifdef DOXYGEN_GENERATING_OUTPUT
             NodeHandle::Null
             #else
@@ -756,13 +761,16 @@ class MAGNUM_UI_EXPORT DataLayer: public AbstractLayer {
          * @todoc fix the create() links once Doxygen stops being shit
          * @see @ref isStorageDirty(), @ref storageSize()
          */
-        template<class Storage> DataHandle create(const Storage& storage, std::size_t index, Containers::Function<void(
+        template<class Storage> DataHandle create(const Storage& storage, std::size_t index,
             #ifdef DOXYGEN_GENERATING_OUTPUT
-            T /* To make the signature less confusing */
+            Containers::Function<void(T)>&& /* For a less confusing signature */
+            #elif defined(CORRADE_TARGET_GCC) && !defined(CORRADE_TARGET_CLANG) && __GNUC__ < 5
+            /* GCC 4.8 fails to match T w/o the std::common_type, see above */
+            typename std::common_type<Containers::Function<void(decltype(std::declval<Storage>()[std::size_t{}]))>>::type&&
             #else
-            decltype(std::declval<Storage>()[std::size_t{}])
+            Containers::Function<void(decltype(std::declval<Storage>()[std::size_t{}]))>&&
             #endif
-        )>&& update, NodeHandle node =
+        update, NodeHandle node =
             #ifdef DOXYGEN_GENERATING_OUTPUT
             NodeHandle::Null
             #else
@@ -836,13 +844,16 @@ class MAGNUM_UI_EXPORT DataLayer: public AbstractLayer {
          * @todoc fix the create() links once Doxygen stops being shit
          * @see @ref isStorageDirty(), @ref storageSize()
          */
-        template<class Storage> DataHandle create(const Storage& storage, const Containers::Size2D& index, Containers::Function<void(
+        template<class Storage> DataHandle create(const Storage& storage, const Containers::Size2D& index,
             #ifdef DOXYGEN_GENERATING_OUTPUT
-            T /* To make the signature less confusing */
+            Containers::Function<void(T)>&& /* For a less confusing signature */
+            #elif defined(CORRADE_TARGET_GCC) && !defined(CORRADE_TARGET_CLANG) && __GNUC__ < 5
+            /* GCC 4.8 fails to match T w/o the std::common_type, see above */
+            typename std::common_type<Containers::Function<void(decltype(std::declval<Storage>()[Containers::Size2D{}]))>>::type&&
             #else
-            decltype(std::declval<Storage>()[Containers::Size2D{}])
+            Containers::Function<void(decltype(std::declval<Storage>()[Containers::Size2D{}]))>&&
             #endif
-        )>&& update, NodeHandle node =
+        update, NodeHandle node =
             #ifdef DOXYGEN_GENERATING_OUTPUT
             NodeHandle::Null
             #else
@@ -915,13 +926,16 @@ class MAGNUM_UI_EXPORT DataLayer: public AbstractLayer {
          * @todoc fix the create() links once Doxygen stops being shit
          * @see @ref isStorageDirty(), @ref storageSize()
          */
-        template<class Storage> DataHandle create(const Storage& storage, const Containers::Size3D& index, Containers::Function<void(
+        template<class Storage> DataHandle create(const Storage& storage, const Containers::Size3D& index,
             #ifdef DOXYGEN_GENERATING_OUTPUT
-            T /* To make the signature less confusing */
+            Containers::Function<void(T)>&& /* For a less confusing signature */
+            #elif defined(CORRADE_TARGET_GCC) && !defined(CORRADE_TARGET_CLANG) && __GNUC__ < 5
+            /* GCC 4.8 fails to match T w/o the std::common_type, see above */
+            typename std::common_type<Containers::Function<void(decltype(std::declval<Storage>()[Containers::Size3D{}]))>>::type&&
             #else
-            decltype(std::declval<Storage>()[Containers::Size3D{}])
+            Containers::Function<void(decltype(std::declval<Storage>()[Containers::Size3D{}]))>&&
             #endif
-        )>&& update, NodeHandle node =
+        update, NodeHandle node =
             #ifdef DOXYGEN_GENERATING_OUTPUT
             NodeHandle::Null
             #else
