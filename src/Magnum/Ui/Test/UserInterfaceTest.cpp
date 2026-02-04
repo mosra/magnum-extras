@@ -34,6 +34,7 @@
 
 #include "Magnum/Ui/BaseLayer.h"
 #include "Magnum/Ui/BaseLayerAnimator.h"
+#include "Magnum/Ui/DataLayer.h"
 #include "Magnum/Ui/EventLayer.h"
 #include "Magnum/Ui/GenericLayouter.h"
 #include "Magnum/Ui/Handle.h"
@@ -53,6 +54,10 @@ struct UserInterfaceTest: TestSuite::Tester {
     void constructNoCreate();
     void constructCopy();
     void constructMove();
+
+    void setDataLayerInstance();
+    void setDataLayerInstanceInvalid();
+    void dataLayerInvalid();
 
     void setBackgroundLayerInstance();
     void setBackgroundLayerInstanceInvalid();
@@ -114,6 +119,10 @@ UserInterfaceTest::UserInterfaceTest() {
               &UserInterfaceTest::constructNoCreate,
               &UserInterfaceTest::constructCopy,
               &UserInterfaceTest::constructMove,
+
+              &UserInterfaceTest::setDataLayerInstance,
+              &UserInterfaceTest::setDataLayerInstanceInvalid,
+              &UserInterfaceTest::dataLayerInvalid,
 
               &UserInterfaceTest::setBackgroundLayerInstance,
               &UserInterfaceTest::setBackgroundLayerInstanceInvalid,
@@ -183,6 +192,7 @@ void UserInterfaceTest::construct() {
     CORRADE_COMPARE(ui.layouterUsedCount(), 0);
     CORRADE_COMPARE(ui.animatorCapacity(), 0);
     CORRADE_COMPARE(ui.animatorUsedCount(), 0);
+    CORRADE_VERIFY(!ui.hasDataLayer());
     CORRADE_VERIFY(!ui.hasBackgroundLayer());
     CORRADE_VERIFY(!ui.hasBackgroundLayerStyleAnimator());
     CORRADE_VERIFY(!ui.hasBaseLayer());
@@ -239,6 +249,68 @@ void UserInterfaceTest::constructMove() {
     CORRADE_VERIFY(std::is_nothrow_move_assignable<UserInterface>::value);
 }
 
+void UserInterfaceTest::setDataLayerInstance() {
+    struct Interface: UserInterface {
+        explicit Interface(NoCreateT): UserInterface{NoCreate} {}
+    } ui{NoCreate};
+    const UserInterface& cui = ui;
+    CORRADE_COMPARE(ui.layerCapacity(), 0);
+    CORRADE_COMPARE(ui.layerUsedCount(), 0);
+    CORRADE_VERIFY(!ui.hasDataLayer());
+    CORRADE_VERIFY(!ui.hasBackgroundLayer());
+    CORRADE_VERIFY(!ui.hasBaseLayer());
+    CORRADE_VERIFY(!ui.hasTextLayer());
+    CORRADE_VERIFY(!ui.hasEventLayer());
+    CORRADE_VERIFY(!ui.hasLayoutLayer());
+
+    LayerHandle handle = ui.createLayer();
+    Containers::Pointer<DataLayer> layer{InPlaceInit, handle};
+    DataLayer* pointer = layer.get();
+    ui.setDataLayerInstance(Utility::move(layer));
+    CORRADE_COMPARE(ui.layerCapacity(), 1);
+    CORRADE_COMPARE(ui.layerUsedCount(), 1);
+    CORRADE_VERIFY(ui.hasDataLayer());
+    CORRADE_VERIFY(!ui.hasBackgroundLayer());
+    CORRADE_VERIFY(!ui.hasBaseLayer());
+    CORRADE_VERIFY(!ui.hasTextLayer());
+    CORRADE_VERIFY(!ui.hasEventLayer());
+    CORRADE_VERIFY(!ui.hasLayoutLayer());
+    CORRADE_COMPARE(&ui.layer(handle), pointer);
+    CORRADE_COMPARE(&ui.dataLayer(), pointer);
+    CORRADE_COMPARE(&cui.dataLayer(), pointer);
+}
+
+void UserInterfaceTest::setDataLayerInstanceInvalid() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct Interface: UserInterface {
+        explicit Interface(NoCreateT): UserInterface{NoCreate} {}
+    } ui{NoCreate};
+    ui.setDataLayerInstance(Containers::pointer<DataLayer>(ui.createLayer()));
+
+    Containers::String out;
+    Error redirectError{&out};
+    ui.setDataLayerInstance(nullptr);
+    ui.setDataLayerInstance(Containers::pointer<DataLayer>(ui.createLayer()));
+    CORRADE_COMPARE_AS(out,
+        "Ui::UserInterface::setDataLayerInstance(): instance is null\n"
+        "Ui::UserInterface::setDataLayerInstance(): instance already set\n",
+        TestSuite::Compare::String);
+}
+
+void UserInterfaceTest::dataLayerInvalid() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct Interface: UserInterface {
+        explicit Interface(NoCreateT): UserInterface{NoCreate} {}
+    } ui{NoCreate};
+
+    Containers::String out;
+    Error redirectError{&out};
+    ui.dataLayer();
+    CORRADE_COMPARE(out, "Ui::UserInterface::dataLayer(): no instance set\n");
+}
+
 void UserInterfaceTest::setBackgroundLayerInstance() {
     struct LayerShared: BaseLayer::Shared {
         explicit LayerShared(const Configuration& configuration): BaseLayer::Shared{configuration} {}
@@ -256,6 +328,7 @@ void UserInterfaceTest::setBackgroundLayerInstance() {
     const UserInterface& cui = ui;
     CORRADE_COMPARE(ui.layerCapacity(), 0);
     CORRADE_COMPARE(ui.layerUsedCount(), 0);
+    CORRADE_VERIFY(!ui.hasDataLayer());
     CORRADE_VERIFY(!ui.hasBackgroundLayer());
     CORRADE_VERIFY(!ui.hasBaseLayer());
     CORRADE_VERIFY(!ui.hasTextLayer());
@@ -268,6 +341,7 @@ void UserInterfaceTest::setBackgroundLayerInstance() {
     ui.setBackgroundLayerInstance(Utility::move(layer));
     CORRADE_COMPARE(ui.layerCapacity(), 1);
     CORRADE_COMPARE(ui.layerUsedCount(), 1);
+    CORRADE_VERIFY(!ui.hasDataLayer());
     CORRADE_VERIFY(ui.hasBackgroundLayer());
     CORRADE_VERIFY(!ui.hasBaseLayer());
     CORRADE_VERIFY(!ui.hasTextLayer());
@@ -595,6 +669,7 @@ void UserInterfaceTest::setBaseLayerInstance() {
     const UserInterface& cui = ui;
     CORRADE_COMPARE(ui.layerCapacity(), 0);
     CORRADE_COMPARE(ui.layerUsedCount(), 0);
+    CORRADE_VERIFY(!ui.hasDataLayer());
     CORRADE_VERIFY(!ui.hasBackgroundLayer());
     CORRADE_VERIFY(!ui.hasBaseLayer());
     CORRADE_VERIFY(!ui.hasTextLayer());
@@ -607,6 +682,7 @@ void UserInterfaceTest::setBaseLayerInstance() {
     ui.setBaseLayerInstance(Utility::move(layer));
     CORRADE_COMPARE(ui.layerCapacity(), 1);
     CORRADE_COMPARE(ui.layerUsedCount(), 1);
+    CORRADE_VERIFY(!ui.hasDataLayer());
     CORRADE_VERIFY(!ui.hasBackgroundLayer());
     CORRADE_VERIFY(ui.hasBaseLayer());
     CORRADE_VERIFY(!ui.hasTextLayer());
@@ -797,6 +873,7 @@ void UserInterfaceTest::setTextLayerInstance() {
     const UserInterface& cui = ui;
     CORRADE_COMPARE(ui.layerCapacity(), 0);
     CORRADE_COMPARE(ui.layerUsedCount(), 0);
+    CORRADE_VERIFY(!ui.hasDataLayer());
     CORRADE_VERIFY(!ui.hasBackgroundLayer());
     CORRADE_VERIFY(!ui.hasBaseLayer());
     CORRADE_VERIFY(!ui.hasTextLayer());
@@ -809,6 +886,7 @@ void UserInterfaceTest::setTextLayerInstance() {
     ui.setTextLayerInstance(Utility::move(layer));
     CORRADE_COMPARE(ui.layerCapacity(), 1);
     CORRADE_COMPARE(ui.layerUsedCount(), 1);
+    CORRADE_VERIFY(!ui.hasDataLayer());
     CORRADE_VERIFY(!ui.hasBackgroundLayer());
     CORRADE_VERIFY(!ui.hasBaseLayer());
     CORRADE_VERIFY(ui.hasTextLayer());
@@ -1004,6 +1082,7 @@ void UserInterfaceTest::setEventLayerInstance() {
     const UserInterface& cui = ui;
     CORRADE_COMPARE(ui.layerCapacity(), 0);
     CORRADE_COMPARE(ui.layerUsedCount(), 0);
+    CORRADE_VERIFY(!ui.hasDataLayer());
     CORRADE_VERIFY(!ui.hasBackgroundLayer());
     CORRADE_VERIFY(!ui.hasBaseLayer());
     CORRADE_VERIFY(!ui.hasTextLayer());
@@ -1016,6 +1095,7 @@ void UserInterfaceTest::setEventLayerInstance() {
     ui.setEventLayerInstance(Utility::move(layer));
     CORRADE_COMPARE(ui.layerCapacity(), 1);
     CORRADE_COMPARE(ui.layerUsedCount(), 1);
+    CORRADE_VERIFY(!ui.hasDataLayer());
     CORRADE_VERIFY(!ui.hasBackgroundLayer());
     CORRADE_VERIFY(!ui.hasBaseLayer());
     CORRADE_VERIFY(!ui.hasTextLayer());
@@ -1064,6 +1144,7 @@ void UserInterfaceTest::setLayoutLayerInstance() {
     const UserInterface& cui = ui;
     CORRADE_COMPARE(ui.layerCapacity(), 0);
     CORRADE_COMPARE(ui.layerUsedCount(), 0);
+    CORRADE_VERIFY(!ui.hasDataLayer());
     CORRADE_VERIFY(!ui.hasBackgroundLayer());
     CORRADE_VERIFY(!ui.hasBaseLayer());
     CORRADE_VERIFY(!ui.hasTextLayer());
@@ -1076,6 +1157,7 @@ void UserInterfaceTest::setLayoutLayerInstance() {
     ui.setLayoutLayerInstance(Utility::move(layer));
     CORRADE_COMPARE(ui.layerCapacity(), 1);
     CORRADE_COMPARE(ui.layerUsedCount(), 1);
+    CORRADE_VERIFY(!ui.hasDataLayer());
     CORRADE_VERIFY(!ui.hasBackgroundLayer());
     CORRADE_VERIFY(!ui.hasBaseLayer());
     CORRADE_VERIFY(!ui.hasTextLayer());

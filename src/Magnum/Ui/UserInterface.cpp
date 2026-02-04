@@ -31,6 +31,7 @@
 
 #include "Magnum/Ui/BaseLayer.h"
 #include "Magnum/Ui/BaseLayerAnimator.h"
+#include "Magnum/Ui/DataLayer.h"
 #include "Magnum/Ui/EventLayer.h"
 #include "Magnum/Ui/GenericLayouter.h"
 #include "Magnum/Ui/Handle.h"
@@ -52,6 +53,30 @@ UserInterface::UserInterface(UserInterface&&) noexcept = default;
 UserInterface::~UserInterface() = default;
 
 UserInterface& UserInterface::operator=(UserInterface&&) noexcept = default;
+
+bool UserInterface::hasDataLayer() const {
+    return _state->dataLayer;
+}
+
+const DataLayer& UserInterface::dataLayer() const {
+    CORRADE_ASSERT(_state->dataLayer,
+        "Ui::UserInterface::dataLayer(): no instance set", *_state->dataLayer);
+    return *_state->dataLayer;
+}
+
+DataLayer& UserInterface::dataLayer() {
+    return const_cast<DataLayer&>(const_cast<const UserInterface&>(*this).dataLayer());
+}
+
+UserInterface& UserInterface::setDataLayerInstance(Containers::Pointer<DataLayer>&& instance) {
+    CORRADE_ASSERT(instance,
+        "Ui::UserInterface::setDataLayerInstance(): instance is null", *this);
+    CORRADE_ASSERT(!_state->dataLayer,
+        "Ui::UserInterface::setDataLayerInstance(): instance already set", *this);
+    _state->dataLayer = instance.get();
+    setLayerInstance(Utility::move(instance));
+    return *this;
+}
 
 bool UserInterface::hasBackgroundLayer() const {
     /* The backgroundLayer pointer may alias the base layer if background layer

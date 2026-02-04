@@ -52,6 +52,14 @@ namespace Magnum { namespace Ui {
 */
 enum class StyleFeature: UnsignedShort {
     /**
+     * Data layer style. Ensures a @ref DataLayer instance is set up on the
+     * @ref UserInterface.
+     * @see @ref UserInterface::dataLayer(),
+     *      @ref UserInterface::hasDataLayer()
+     */
+    DataLayer = 1 << 0,
+
+    /**
      * Background layer style. Ensures a background @ref BaseLayer instance
      * with a compatible @ref BaseLayer::Shared state is set up on the
      * @ref UserInterface, the style implementation then calls
@@ -64,7 +72,7 @@ enum class StyleFeature: UnsignedShort {
      * @see @ref UserInterface::backgroundLayer(),
      *      @ref UserInterface::hasBackgroundLayer()
      */
-    BackgroundLayer = 1 << 0,
+    BackgroundLayer = 1 << 1,
 
     /**
      * Background layer animations using @ref BaseLayerStyleAnimator. Can only
@@ -82,7 +90,7 @@ enum class StyleFeature: UnsignedShort {
      * @see @ref UserInterface::backgroundLayerStyleAnimator(),
      *      @ref UserInterface::hasBackgroundLayerStyleAnimator()
      */
-    BackgroundLayerAnimations = 1 << 1,
+    BackgroundLayerAnimations = 1 << 2,
 
     /**
      * Base layer style. Ensures a @ref BaseLayer instance with a compatible
@@ -91,7 +99,7 @@ enum class StyleFeature: UnsignedShort {
      * and @relativeref{BaseLayer::Shared,setStyleTransition()} on it.
      * @see @ref UserInterface::baseLayer(), @ref UserInterface::hasBaseLayer()
      */
-    BaseLayer = 1 << 2,
+    BaseLayer = 1 << 3,
 
     /**
      * Base layer animations using @ref BaseLayerStyleAnimator. Can only be
@@ -104,7 +112,7 @@ enum class StyleFeature: UnsignedShort {
      * @see @ref UserInterface::baseLayerStyleAnimator(),
      *      @ref UserInterface::hasBaseLayerStyleAnimator()
      */
-    BaseLayerAnimations = 1 << 3,
+    BaseLayerAnimations = 1 << 4,
 
     /**
      * Text layer style and fonts. Ensures a @ref TextLayer instance with a
@@ -115,7 +123,7 @@ enum class StyleFeature: UnsignedShort {
      * @relativeref{TextLayer::Shared,setStyleTransition()} on it.
      * @see @ref UserInterface::textLayer(), @ref UserInterface::hasTextLayer()
      */
-    TextLayer = 1 << 4,
+    TextLayer = 1 << 5,
 
     /**
      * Additional images such as icons for use with
@@ -127,7 +135,7 @@ enum class StyleFeature: UnsignedShort {
      * @ref StyleFeature::TextLayer or if a @ref TextLayer instance is already
      * set up on the @ref UserInterface.
      */
-    TextLayerImages = 1 << 5,
+    TextLayerImages = 1 << 6,
 
     /**
      * Text layer animations using @ref TextLayerStyleAnimator. Can only be
@@ -140,7 +148,7 @@ enum class StyleFeature: UnsignedShort {
      * @see @ref UserInterface::textLayerStyleAnimator(),
      *      @ref UserInterface::hasTextLayerStyleAnimator()
      */
-    TextLayerAnimations = 1 << 6,
+    TextLayerAnimations = 1 << 7,
 
     /**
      * Event layer style. Ensures an @ref EventLayer instance is set up on the
@@ -148,7 +156,7 @@ enum class StyleFeature: UnsignedShort {
      * @see @ref UserInterface::eventLayer(),
      *      @ref UserInterface::hasEventLayer()
      */
-    EventLayer = 1 << 7,
+    EventLayer = 1 << 8,
 
     /**
      * Layout layer style. Ensures a @ref LayoutLayer instance is set up on the
@@ -156,7 +164,7 @@ enum class StyleFeature: UnsignedShort {
      * @see @ref UserInterface::layoutLayer(),
      *      @ref UserInterface::hasLayoutLayer()
      */
-    LayoutLayer = 1 << 8,
+    LayoutLayer = 1 << 9,
 
     /**
      * Snap layouter style. Ensures a @ref SnapLayouter instance is set up on
@@ -164,7 +172,7 @@ enum class StyleFeature: UnsignedShort {
      * @see @ref UserInterface::snapLayouter(),
      *      @ref UserInterface::hasSnapLayouter()
      */
-    SnapLayouter = 1 << 9,
+    SnapLayouter = 1 << 10,
 
     /**
      * Generic layouter style. Ensures a @ref GenericLayouter instance is set
@@ -172,7 +180,7 @@ enum class StyleFeature: UnsignedShort {
      * @see @ref UserInterface::genericLayouter(),
      *      @ref UserInterface::hasGenericLayouter()
      */
-    GenericLayouter = 1 << 10,
+    GenericLayouter = 1 << 11,
 
     /**
      * Node animations. Ensures a @ref NodeAnimator instance is set up on the
@@ -180,7 +188,7 @@ enum class StyleFeature: UnsignedShort {
      * @see @ref UserInterface::nodeAnimator(),
      *      @ref UserInterface::hasNodeAnimator()
      */
-    NodeAnimations = 1 << 11,
+    NodeAnimations = 1 << 12,
 };
 
 /**
@@ -198,7 +206,8 @@ MAGNUM_UI_EXPORT Debug& operator<<(Debug& debug, StyleFeature value);
 */
 typedef Containers::EnumSet<StyleFeature
     #ifndef DOXYGEN_GENERATING_OUTPUT
-    , UnsignedInt(StyleFeature::BackgroundLayer)|
+    , UnsignedInt(StyleFeature::DataLayer)|
+      UnsignedInt(StyleFeature::BackgroundLayer)|
       UnsignedInt(StyleFeature::BackgroundLayerAnimations)|
       UnsignedInt(StyleFeature::BaseLayer)|
       UnsignedInt(StyleFeature::BaseLayerAnimations)|

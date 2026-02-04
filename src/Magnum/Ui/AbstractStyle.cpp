@@ -44,6 +44,7 @@ Debug& operator<<(Debug& debug, const StyleFeature value) {
     switch(value) {
         /* LCOV_EXCL_START */
         #define _c(value) case StyleFeature::value: return debug << "::" #value;
+        _c(DataLayer)
         _c(BackgroundLayer)
         _c(BackgroundLayerAnimations)
         _c(BaseLayer)
@@ -65,6 +66,7 @@ Debug& operator<<(Debug& debug, const StyleFeature value) {
 
 Debug& operator<<(Debug& debug, const StyleFeatures value) {
     return Containers::enumSetDebugOutput(debug, value, "Ui::StyleFeatures{}", {
+        StyleFeature::DataLayer,
         StyleFeature::BackgroundLayer,
         StyleFeature::BackgroundLayerAnimations,
         StyleFeature::BaseLayer,
@@ -358,6 +360,10 @@ bool AbstractStyle::apply(UserInterface& ui, const StyleFeatures features, Plugi
     CORRADE_ASSERT(!ui.framebufferSize().isZero(),
         "Ui::AbstractStyle::apply(): user interface size wasn't set", {});
     #ifndef CORRADE_NO_ASSERT
+    if(features >= StyleFeature::DataLayer) {
+        CORRADE_ASSERT(ui.hasDataLayer(),
+            "Ui::AbstractStyle::apply(): data layer not present in the user interface", {});
+    }
     if(features >= StyleFeature::BackgroundLayer) {
         CORRADE_ASSERT(ui.hasBackgroundLayer(),
             "Ui::AbstractStyle::apply(): background layer not present in the user interface", {});

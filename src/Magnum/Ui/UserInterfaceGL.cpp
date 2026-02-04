@@ -34,6 +34,7 @@
 #include "Magnum/Ui/AbstractStyle.h"
 #include "Magnum/Ui/BaseLayerGL.h"
 #include "Magnum/Ui/BaseLayerAnimator.h"
+#include "Magnum/Ui/DataLayer.h"
 #include "Magnum/Ui/EventLayer.h"
 #include "Magnum/Ui/GenericLayouter.h"
 #include "Magnum/Ui/LayoutLayer.h"
@@ -89,6 +90,7 @@ bool UserInterfaceGL::tryCreateInternal(const AbstractStyle& style, const StyleF
        no need to special-case for the background and base layer aliasing, as
        this is meant to fail even if just one of them is present. */
     CORRADE_ASSERT(!hasRendererInstance() &&
+        !state.dataLayer &&
         !state.backgroundLayer &&
         !state.baseLayer &&
         !state.textLayer &&
@@ -175,6 +177,11 @@ bool UserInterfaceGL::trySetStyle(const AbstractStyle& style, const StyleFeature
 
     /* Create layers, layouters and animators based on what features are
        wanted */
+    if(features >= StyleFeature::DataLayer) {
+        CORRADE_ASSERT(!state.dataLayer,
+            "Ui::UserInterfaceGL::trySetStyle(): data layer already present", {});
+        setDataLayerInstance(Containers::pointer<DataLayer>(createLayer()));
+    }
     if(features >= StyleFeature::BackgroundLayer) {
         /* Created above already */
         setBackgroundLayerInstance(Utility::move(backgroundLayer));

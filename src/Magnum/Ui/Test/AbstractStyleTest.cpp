@@ -36,6 +36,7 @@
 #include "Magnum/Ui/AbstractStyle.h"
 #include "Magnum/Ui/BaseLayer.h"
 #include "Magnum/Ui/BaseLayerAnimator.h"
+#include "Magnum/Ui/DataLayer.h"
 #include "Magnum/Ui/EventLayer.h"
 #include "Magnum/Ui/GenericLayouter.h"
 #include "Magnum/Ui/LayoutLayer.h"
@@ -104,6 +105,7 @@ struct AbstractStyleTest: TestSuite::Tester {
     void applyNoSizeSet();
     void applyNoFeatures();
     void applyFeaturesNotSupported();
+    void applyDataLayerNotPresent();
     void applyBackgroundLayerNotPresent();
     void applyBackgroundLayerDifferentStyleCount();
     void applyBackgroundLayerStyleAnimatorNotPresent();
@@ -131,6 +133,7 @@ struct AbstractStyleTest: TestSuite::Tester {
 
 const struct {
     const char* name;
+    bool dataLayerPresent;
     bool backgroundLayerPresent, backgroundLayerStyleAnimatorPresent;
     bool baseLayerPresent, baseLayerStyleAnimatorPresent;
     bool textLayerPresent, textLayerStyleAnimatorPresent;
@@ -139,7 +142,16 @@ const struct {
     StyleFeatures features;
     bool succeed;
 } ApplyData[]{
+    {"data layer only",
+        true,
+        false, false,
+        false, false,
+        false, false,
+        false, false,
+        false, false, false,
+        StyleFeature::DataLayer, true},
     {"background layer only",
+        false,
         true, false,
         false, false,
         false, false,
@@ -147,6 +159,7 @@ const struct {
         false, false, false,
         StyleFeature::BackgroundLayer, true},
     {"background layer animations only",
+        false,
         true, true,
         false, false,
         false, false,
@@ -154,6 +167,7 @@ const struct {
         false, false, false,
         StyleFeature::BackgroundLayerAnimations, true},
     {"background layer + base layer animations",
+        false,
         true, true,
         false, false,
         false, false,
@@ -161,6 +175,7 @@ const struct {
         false, false, false,
         StyleFeature::BackgroundLayer|StyleFeature::BackgroundLayerAnimations, true},
     {"base layer only",
+        false,
         false, false,
         true, false,
         false, false,
@@ -168,6 +183,7 @@ const struct {
         false, false, false,
         StyleFeature::BaseLayer, true},
     {"base layer animations only",
+        false,
         false, false,
         true, true,
         false, false,
@@ -175,6 +191,7 @@ const struct {
         false, false, false,
         StyleFeature::BaseLayerAnimations, true},
     {"base layer + base layer animations",
+        false,
         false, false,
         true, true,
         false, false,
@@ -182,6 +199,7 @@ const struct {
         false, false, false,
         StyleFeature::BaseLayer|StyleFeature::BaseLayerAnimations, true},
     {"text layer only",
+        false,
         false, false,
         false, false,
         true, false,
@@ -189,6 +207,7 @@ const struct {
         false, false, false,
         StyleFeature::TextLayer, true},
     {"text layer images only",
+        false,
         false, false,
         false, false,
         true, false,
@@ -196,6 +215,7 @@ const struct {
         false, false, false,
         StyleFeature::TextLayerImages, true},
     {"text layer + text layer images",
+        false,
         false, false,
         false, false,
         true, false,
@@ -203,6 +223,7 @@ const struct {
         false, false, false,
         StyleFeature::TextLayer|StyleFeature::TextLayerImages, true},
     {"text layer animations only",
+        false,
         false, false,
         false, false,
         true, true,
@@ -210,6 +231,7 @@ const struct {
         false, false, false,
         StyleFeature::TextLayerAnimations, true},
     {"text layer + text layer animations",
+        false,
         false, false,
         false, false,
         true, true,
@@ -217,6 +239,7 @@ const struct {
         false, false, false,
         StyleFeature::TextLayer|StyleFeature::TextLayerAnimations, true},
     {"event layer only",
+        false,
         false, false,
         false, false,
         false, false,
@@ -224,6 +247,7 @@ const struct {
         false, false, false,
         StyleFeature::EventLayer, true},
     {"layout layer only",
+        false,
         false, false,
         false, false,
         false, false,
@@ -231,6 +255,7 @@ const struct {
         false, false, false,
         StyleFeature::LayoutLayer, true},
     {"snap layouter only",
+        false,
         false, false,
         false, false,
         false, false,
@@ -238,6 +263,7 @@ const struct {
         true, false, false,
         StyleFeature::SnapLayouter, true},
     {"generic layouter only",
+        false,
         false, false,
         false, false,
         false, false,
@@ -245,6 +271,7 @@ const struct {
         false, true, false,
         StyleFeature::GenericLayouter, true},
     {"node animations only",
+        false,
         false, false,
         false, false,
         false, false,
@@ -252,6 +279,7 @@ const struct {
         false, false, true,
         StyleFeature::NodeAnimations, true},
     {"everything except base layer (and its animations)",
+        true,
         true, true,
         false, false,
         true, true,
@@ -259,6 +287,7 @@ const struct {
         true, true, true,
         ~(StyleFeature::BaseLayer|StyleFeature::BaseLayerAnimations), true},
     {"everything",
+        true,
         true, true,
         true, true,
         true, true,
@@ -266,6 +295,7 @@ const struct {
         true, true, true,
         ~StyleFeatures{}, true},
     {"application failed",
+        false,
         false, false,
         true, false,
         false, false,
@@ -327,6 +357,7 @@ AbstractStyleTest::AbstractStyleTest() {
     addTests({&AbstractStyleTest::applyNoFeatures,
               &AbstractStyleTest::applyFeaturesNotSupported,
               &AbstractStyleTest::applyNoSizeSet,
+              &AbstractStyleTest::applyDataLayerNotPresent,
               &AbstractStyleTest::applyBackgroundLayerNotPresent,
               &AbstractStyleTest::applyBackgroundLayerDifferentStyleCount,
               &AbstractStyleTest::applyBackgroundLayerStyleAnimatorNotPresent,
@@ -1268,6 +1299,8 @@ void AbstractStyleTest::apply() {
         explicit Interface(NoCreateT): UserInterface{NoCreate} {}
     } ui{NoCreate};
     ui.setSize({200, 300});
+    if(data.dataLayerPresent)
+        ui.setDataLayerInstance(Containers::pointer<DataLayer>(ui.createLayer()));
     if(data.backgroundLayerPresent)
         ui.setBackgroundLayerInstance(Containers::pointer<LayerBase>(ui.createLayer(), sharedBackground));
     if(data.backgroundLayerStyleAnimatorPresent)
@@ -1297,6 +1330,7 @@ void AbstractStyleTest::apply() {
 
         StyleFeatures doFeatures() const override {
             return
+                StyleFeature::DataLayer|
                 StyleFeature::BackgroundLayer|StyleFeature::BackgroundLayerAnimations|
                 StyleFeature::BaseLayer|StyleFeature::BaseLayerAnimations|
                 StyleFeature::TextLayer|StyleFeature::TextLayerImages|StyleFeature::TextLayerAnimations|
@@ -1410,6 +1444,37 @@ void AbstractStyleTest::applyNoSizeSet() {
     Error redirectError{&out};
     style.apply(ui, StyleFeature::TextLayer, nullptr, nullptr);
     CORRADE_COMPARE(out, "Ui::AbstractStyle::apply(): user interface size wasn't set\n");
+}
+
+void AbstractStyleTest::applyDataLayerNotPresent() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct Interface: UserInterface {
+        explicit Interface(NoCreateT): UserInterface{NoCreate} {}
+    } ui{NoCreate};
+    ui.setSize({200, 300})
+      /* Have two other layers present to test that it's not just checking if
+         any layers are there at all */
+      .setLayoutLayerInstance(Containers::pointer<LayoutLayer>(ui.createLayer(), 3u))
+      .setEventLayerInstance(Containers::pointer<EventLayer>(ui.createLayer()));
+
+    struct: AbstractStyle {
+        StyleFeatures doFeatures() const override {
+            return StyleFeature::DataLayer;
+        }
+        bool doApply(UserInterface&, StyleFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override {
+            CORRADE_FAIL("This shouldn't get called.");
+            return {};
+        }
+    } style;
+
+    /* Capture correct function name */
+    CORRADE_VERIFY(true);
+
+    Containers::String out;
+    Error redirectError{&out};
+    style.apply(ui, StyleFeature::DataLayer, nullptr, nullptr);
+    CORRADE_COMPARE(out, "Ui::AbstractStyle::apply(): data layer not present in the user interface\n");
 }
 
 void AbstractStyleTest::applyBackgroundLayerNotPresent() {

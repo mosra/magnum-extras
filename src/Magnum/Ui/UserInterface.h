@@ -47,8 +47,8 @@ either of the classes for more information.
 
 Builtin widgets, deriving from the @ref Widget class, have access to this
 instance through @ref BasicWidget::ui() and depending on style setup generally
-assume that most of @ref backgroundLayer(), @ref baseLayer(), @ref textLayer(),
-@ref eventLayer(), @ref layoutLayer(), @ref snapLayouter(),
+assume that most of @ref dataLayer(), @ref backgroundLayer(), @ref baseLayer(),
+@ref textLayer(), @ref eventLayer(), @ref layoutLayer(), @ref snapLayouter(),
 @ref genericLayouter(), @ref nodeAnimator(), @ref backgroundLayerStyleAnimator(),
 @ref baseLayerStyleAnimator() and @ref textLayerStyleAnimator() is available
 for use.
@@ -73,6 +73,38 @@ class MAGNUM_UI_EXPORT UserInterface: public AbstractUserInterface {
         UserInterface& operator=(UserInterface&&) noexcept;
 
         ~UserInterface();
+
+        /**
+         * @brief Whether a data layer instance has been set
+         *
+         * @see @ref dataLayer(), @ref setDataLayerInstance()
+         */
+        bool hasDataLayer() const;
+
+        /**
+         * @brief Data layer instance
+         *
+         * Expects that an instance has been set, either by
+         * @ref setDataLayerInstance() or transitively by
+         * @ref UserInterfaceGL::setStyle(), @relativeref{UserInterfaceGL,create()}
+         * or a @ref UserInterfaceGL constructor taking a style instance.
+         * @see @ref StyleFeature::DataLayer
+         */
+        DataLayer& dataLayer();
+        const DataLayer& dataLayer() const; /**< @overload */
+
+        /**
+         * @brief Set a data layer instance
+         * @return Reference to self (for method chaining)
+         *
+         * Expects that the instance hasn't been set yet, either by this
+         * function or transitively either by @ref UserInterfaceGL::setStyle(),
+         * @relativeref{UserInterfaceGL,create()} or a @ref UserInterfaceGL
+         * constructor taking a style instance. The instance is subsequently
+         * available through @ref dataLayer().
+         * @see @ref hasDataLayer(), @ref StyleFeature::DataLayer
+         */
+        UserInterface& setDataLayerInstance(Containers::Pointer<DataLayer>&& instance);
 
         /**
          * @brief Whether a background layer instance has been set
