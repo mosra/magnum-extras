@@ -51,6 +51,7 @@
 #include "Magnum/Ui/Anchor.h"
 #include "Magnum/Ui/BaseLayer.h"
 #include "Magnum/Ui/BaseLayerAnimator.h"
+#include "Magnum/Ui/DataLayer.h"
 #include "Magnum/Ui/DebugLayer.h"
 #include "Magnum/Ui/Event.h"
 #include "Magnum/Ui/EventLayer.h"
@@ -1051,6 +1052,24 @@ DOXYGEN_ELLIPSIS()
 baseLayer.recycleDynamicStyle(*dynamicStyleId);
 /* [BaseLayer-dynamic-styles-allocate] */
 }
+}
+
+{
+struct UserInterface: Ui::UserInterface {
+    explicit UserInterface(NoCreateT): Ui::UserInterface{NoCreate} {}
+} ui{NoCreate};
+/* [DataLayer-setup-implicit] */
+ui.setDataLayerInstance(Containers::pointer<Ui::DataLayer>(ui.createLayer()));
+/* [DataLayer-setup-implicit] */
+}
+
+{
+Ui::AbstractUserInterface ui{{100, 100}};
+/* [DataLayer-setup] */
+Ui::DataLayer& layer = ui.setLayerInstance(
+    Containers::pointer<Ui::DataLayer>(ui.createLayer()));
+/* [DataLayer-setup] */
+static_cast<void>(layer);
 }
 
 {

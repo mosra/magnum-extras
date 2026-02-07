@@ -321,6 +321,27 @@ class AbstractStorage;
 /**
 @brief Data binding layer
 @m_since_latest_{extras}
+
+@section Ui-DataLayer-setup Setting up a data layer instance
+
+If you create a @ref UserInterfaceGL with a style and don't exclude
+@ref StyleFeature::DataLayer, an implicit instance is already provided and
+available through @ref UserInterface::dataLayer(). Otherwise, the layer doesn't
+have any shared state or configuration, so it's just about constructing it from
+a fresh @ref AbstractUserInterface::createLayer() handle and passing it to
+@ref UserInterface::setDataLayerInstance():
+
+@snippet Ui.cpp DataLayer-setup-implicit
+
+In comparison, if you want to set up a custom data layer that's independent of
+the one exposed through @ref UserInterface::dataLayer(), pass the newly created
+instance to @ref AbstractUserInterface::setLayerInstance() instead:
+
+@snippet Ui.cpp DataLayer-setup
+
+Afterwards, with either of the above, assuming
+@ref AbstractUserInterface::draw() is called in an appropriate place, the
+layer is ready to use.
 */
 class MAGNUM_UI_EXPORT DataLayer: public AbstractLayer {
     public:
