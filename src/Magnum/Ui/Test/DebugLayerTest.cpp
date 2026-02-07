@@ -137,6 +137,8 @@ struct DebugLayerTest: TestSuite::Tester {
         void nodeHighlightNodeRemoved();
         void nodeHighlightInvalid();
 
+        void nodeInspectHighlightFallthroughPointerEvents();
+
         void updateEmpty();
         void updateDataOrder();
 };
@@ -968,7 +970,9 @@ DebugLayerTest::DebugLayerTest() {
     addInstancedTests({&DebugLayerTest::nodeHighlightNodeRemoved},
         Containers::arraySize(NodeInspectHighlightNodeRemovedData));
 
-    addTests({&DebugLayerTest::nodeHighlightInvalid});
+    addTests({&DebugLayerTest::nodeHighlightInvalid,
+
+              &DebugLayerTest::nodeInspectHighlightFallthroughPointerEvents});
 
     addInstancedTests({&DebugLayerTest::updateEmpty},
         Containers::arraySize(LayerDrawData));
@@ -7007,6 +7011,45 @@ void DebugLayerTest::nodeHighlightInvalid() {
         "Ui::DebugLayer::highlightNodes(): condition is null\n"
         "Ui::DebugLayer::highlightNodes(): condition is null\n",
         TestSuite::Compare::String);
+}
+
+void DebugLayerTest::nodeInspectHighlightFallthroughPointerEvents() {
+    AbstractUserInterface ui{{100, 100}};
+
+    /* Nodes to catch the events on. The child has a non-trivial handle to make
+       it clearer which gets actually picked. */
+    NodeHandle node = ui.createNode({}, {100, 100}, NodeFlag::FallthroughPointerEvents);
+    ui.createNode({}, {});
+    ui.createNode({}, {});
+    ui.removeNode(ui.createNode({}, {}));
+    ui.removeNode(ui.createNode({}, {}));
+    ui.removeNode(ui.createNode({}, {}));
+    NodeHandle child = ui.createNode(node, {}, {50, 50});
+
+    DebugLayer& layer = ui.setLayerInstance(Containers::pointer<DebugLayer>(ui.createLayer(), DebugLayerSource::Nodes, DebugLayerFlag::NodeInspect));
+
+    /* Pressing on the child should inspect only the child alone, not fall
+       through and call the callback twice */
+    Int callbackCalled = 0;
+    layer.setNodeInspectCallback([&callbackCalled](Containers::StringView message) {
+        CORRADE_COMPARE(message, "Node {0x3, 0x4}");
+        ++callbackCalled;
+    });
+    PointerEvent press1{{}, PointerEventSource::Mouse, Pointer::MouseRight, true, 0, Modifier::Ctrl};
+    CORRADE_VERIFY(ui.pointerPressEvent({30, 30}, press1));
+    CORRADE_COMPARE(layer.currentInspectedNode(), child);
+    CORRADE_COMPARE(callbackCalled, 1);
+
+    /* Similarly, highlighting the child should only highlight that one and not
+       the fallthrough parent as well */
+    PointerEvent press2{{}, PointerEventSource::Mouse, Pointer::MouseRight, true, 0, Modifier::Shift|Modifier::Ctrl};
+    CORRADE_VERIFY(ui.pointerPressEvent({30, 30}, press2));
+    CORRADE_COMPARE_AS(layer.currentHighlightedNodes(), Containers::stridedArrayView({
+        false,
+        false,
+        false,
+        true,
+    }).sliceBit(0), TestSuite::Compare::Container);
 }
 
 void DebugLayerTest::updateEmpty() {

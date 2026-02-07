@@ -1637,11 +1637,12 @@ void DebugLayer::doUpdate(const LayerStates states, const Containers::StridedArr
 }
 
 void DebugLayer::doPointerPressEvent(const UnsignedInt dataId, PointerEvent& event) {
-    /* If node inspect isn't enabled or the event isn't primary, nothing to
-       do */
+    /* If node inspect isn't enabled, the event isn't primary or it fell
+       through from somewhere else, nothing to do */
     State& state = *_state;
     if(!(state.flags >= DebugLayerFlag::NodeInspect) ||
-       !event.isPrimary())
+       !event.isPrimary() ||
+       event.isFallthrough())
         return;
 
     /* Node inspect */
