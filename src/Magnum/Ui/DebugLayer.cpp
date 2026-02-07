@@ -563,8 +563,8 @@ NodeHandle DebugLayer::currentInspectedNode() const {
 bool DebugLayer::inspectNode(const NodeHandle handle) {
     /* Handles with zero generation are never valid, and their bit pattern
        might get internally abused to store other information, so disallow
-       them. OTOH I feel this isn't important to mention in nodeName() docs, as
-       it's a low-level property most users don't need to be aware of.
+       them. OTOH I feel this isn't important to mention in inspectNode() docs,
+       as it's a low-level property most users don't need to be aware of.
 
        This is only done here and not in inspectNodeInternal(), that function
        is only called from an event handler which should get the node handle
@@ -575,7 +575,7 @@ bool DebugLayer::inspectNode(const NodeHandle handle) {
 }
 
 /* Is called from doPointerPressEvent() with
-   DebugLayerFlag::NodeInspectSkipEmpty optionally set to allow skipping empty
+   DebugLayerFlag::NodeInspectSkipNoData optionally set to allow skipping empty
    nodes from a UI interaction but not from a programmatic inspectNode()
    call */
 bool DebugLayer::inspectNodeInternal(const NodeHandle handle, const DebugLayerFlags flags) {
@@ -593,7 +593,7 @@ bool DebugLayer::inspectNodeInternal(const NodeHandle handle, const DebugLayerFl
         /* This can only happen when called from inspectNode(), not from
            doPointerPressEvent(), as there update() is called before and the
            handle is always valid. In other words, that function can assume
-           `false` is returned only if NodeInspectSkipEmpty is set and given
+           `false` is returned only if NodeInspectSkipNoData is set and given
            node is indeed empty. */
         CORRADE_INTERNAL_ASSERT(!flags);
 
@@ -1068,10 +1068,10 @@ bool DebugLayer::highlightNode(const NodeHandle node) {
     State& state = *_state;
     /* Handles with zero generation are never valid, and their bit pattern
        might get internally abused to store other information, so disallow
-       them. OTOH I feel this isn't important to mention in nodeName() docs, as
-       it's a low-level property most users don't need to be aware of. This
-       check is also a superset of a check for NodeHandle::Null, which is not
-       allowed either. */
+       them. OTOH I feel this isn't important to mention in highlightNode()
+       docs, as it's a low-level property most users don't need to be aware of.
+       This check is also a superset of a check for NodeHandle::Null, which is
+       not allowed either. */
     CORRADE_ASSERT(nodeHandleGeneration(node),
         "Ui::DebugLayer::highlightNode(): invalid handle" << node, {});
     CORRADE_ASSERT(state.sources >= DebugLayerSource::Nodes,

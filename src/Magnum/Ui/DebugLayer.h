@@ -1184,8 +1184,7 @@ class MAGNUM_UI_EXPORT DebugLayer: public AbstractLayer {
          * If the layer is instantiated as @ref DebugLayerGL and @p node wasn't
          * already highlighted before, calling this function causes
          * @ref LayerState::NeedsDataUpdate to be set.
-         * @see @ref setNodeHighlightColorMap(),
-         *      @ref clearHighlightedNodes()
+         * @see @ref setNodeHighlightColorMap()
          */
         bool highlightNode(NodeHandle node);
 
