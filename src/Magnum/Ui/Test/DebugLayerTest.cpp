@@ -127,7 +127,9 @@ struct DebugLayerTest: TestSuite::Tester {
 
         void nodeHighlightSetters();
         /* Tests also currentHighlightedNodes() and clearHighlightedNodes() */
+        void nodeHighlightNoOp();
         void nodeHighlight();
+        void nodeHighlightGestureConflictWithInspect();
         void nodeHighlightConditionResetCounters();
         void nodeHighlightConditionNodes();
         void nodeHighlightConditionData();
@@ -290,7 +292,7 @@ const struct {
         PointerEventSource::Mouse, Pointer::MouseRight, {}, true},
     {"too many modifiers",
         DebugLayerSource::Nodes, DebugLayerFlag::NodeInspect, {},
-        PointerEventSource::Mouse, Pointer::MouseRight, Modifier::Ctrl|Modifier::Shift, true},
+        PointerEventSource::Mouse, Pointer::MouseRight, Modifier::Ctrl|Modifier::Alt, true},
     {"accepting also touches, but the touch is not primary",
         DebugLayerSource::Nodes, DebugLayerFlag::NodeInspect,
         Pointer::Finger|Pointer::MouseRight,
@@ -683,6 +685,73 @@ const struct {
 const struct {
     const char* name;
     DebugLayerSources sources;
+    DebugLayerFlags flags;
+    Pointers acceptedPointers;
+    PointerEventSource pointerSource;
+    Pointer pointer;
+    Modifiers modifiers;
+    bool primary;
+} NodeHighlightNoOpData[]{
+    {"nothing enabled",
+        {}, {}, {},
+        PointerEventSource::Mouse, Pointer::MouseRight, Modifier::Shift|Modifier::Ctrl, true},
+    {"node inspect not enabled",
+        DebugLayerSource::Nodes, {}, {},
+        PointerEventSource::Mouse, Pointer::MouseRight, Modifier::Shift|Modifier::Ctrl, true},
+    {"different mouse pointer",
+        DebugLayerSource::Nodes, DebugLayerFlag::NodeInspect, {},
+        PointerEventSource::Mouse, Pointer::MouseMiddle, Modifier::Shift|Modifier::Ctrl, true},
+    {"different pen pointer",
+        DebugLayerSource::Nodes, DebugLayerFlag::NodeInspect, {},
+        PointerEventSource::Pen, Pointer::Pen, Modifier::Shift|Modifier::Ctrl, true},
+    {"too little modifiers",
+        DebugLayerSource::Nodes, DebugLayerFlag::NodeInspect, {},
+        PointerEventSource::Mouse, Pointer::MouseRight, {}, true},
+    {"too many modifiers",
+        DebugLayerSource::Nodes, DebugLayerFlag::NodeInspect, {},
+        PointerEventSource::Mouse, Pointer::MouseRight, Modifier::Shift|Modifier::Ctrl|Modifier::Alt, true},
+    {"accepting also touches, but the touch is not primary",
+        DebugLayerSource::Nodes, DebugLayerFlag::NodeInspect,
+        Pointer::Finger|Pointer::MouseRight,
+        PointerEventSource::Touch, Pointer::Finger, Modifier::Shift|Modifier::Ctrl, false},
+};
+
+const struct {
+    TestSuite::TestCaseDescriptionSourceLocation name;
+    DebugLayerFlags flags;
+    LayerFeatures features;
+    LayerStates expectedState;
+    Pointers acceptedPointers;
+    Modifiers acceptedModifiers;
+    PointerEventSource pointerSource;
+    Pointer pointer;
+} NodeHighlightData[]{
+    /* These two verify that the programmatic APIs work even w/o NodeInspect
+       enabled */
+    {"node inspect not enabled",
+        {}, {}, {},
+        {}, {}, PointerEventSource::Mouse, Pointer::MouseRight},
+    {"node inspect not enabled, layer with Draw",
+        {}, {}, {},
+        {}, {}, PointerEventSource::Mouse, Pointer::MouseRight},
+    {"",
+        DebugLayerFlag::NodeInspect, {}, {},
+        {}, {}, PointerEventSource::Mouse, Pointer::MouseRight},
+    {"layer with Draw",
+        DebugLayerFlag::NodeInspect, LayerFeature::Draw, LayerState::NeedsDataUpdate,
+        {}, {}, PointerEventSource::Mouse, Pointer::MouseRight},
+    {"different used pointer",
+        DebugLayerFlag::NodeInspect, {}, {},
+        {}, {}, PointerEventSource::Pen, Pointer::Eraser},
+    {"different accepted and used pointer",
+        DebugLayerFlag::NodeInspect, {}, {},
+        Pointer::Finger|Pointer::Pen, Modifier::Ctrl|Modifier::Shift|Modifier::Alt,
+        PointerEventSource::Pen, Pointer::Pen},
+};
+
+const struct {
+    const char* name;
+    DebugLayerSources sources;
     bool layer, layouter, animator;
     LayerFeatures features;
     LayerStates expectedState;
@@ -870,9 +939,16 @@ DebugLayerTest::DebugLayerTest() {
     addInstancedTests({&DebugLayerTest::nodeInspectSkipNoData},
         Containers::arraySize(NodeInspectSkipNoDataData));
 
-    addInstancedTests({&DebugLayerTest::nodeHighlightSetters,
-                       &DebugLayerTest::nodeHighlight},
+    addInstancedTests({&DebugLayerTest::nodeHighlightSetters},
         Containers::arraySize(LayerDrawData));
+
+    addInstancedTests({&DebugLayerTest::nodeHighlightNoOp},
+        Containers::arraySize(NodeHighlightNoOpData));
+
+    addInstancedTests({&DebugLayerTest::nodeHighlight},
+        Containers::arraySize(NodeHighlightData));
+
+    addTests({&DebugLayerTest::nodeHighlightGestureConflictWithInspect});
 
     addInstancedTests({&DebugLayerTest::nodeHighlightConditionNodes},
         Containers::arraySize(LayerDrawData),
@@ -5457,6 +5533,7 @@ void DebugLayerTest::nodeHighlightSetters() {
     CORRADE_COMPARE_AS(layer.nodeHighlightColorMap(), Containers::arrayView({
         0x00ffff_rgb
     }), TestSuite::Compare::Container);
+    CORRADE_COMPARE(layer.nodeHighlightGesture(), Containers::pair(Pointer::MouseRight|Pointer::Eraser, Modifier::Shift|Modifier::Ctrl));
     CORRADE_COMPARE(layer.nodeHighlightColorMapAlpha(), 0.25f);
 
     /* Changing the color map causes NeedsDataUpdate to be set, but only if the
@@ -5490,16 +5567,85 @@ void DebugLayerTest::nodeHighlightSetters() {
     CORRADE_COMPARE(layer.nodeHighlightColorMap().data(), colormap2);
     CORRADE_COMPARE(layer.nodeHighlightColorMapAlpha(), 0.25f);
     CORRADE_COMPARE(layer.state(), data.expectedState);
+
+    /* Clear the state flags */
+    layer.update(LayerState::NeedsDataUpdate, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
+    CORRADE_COMPARE(layer.state(), LayerStates{});
+
+    layer.setNodeHighlightGesture(Pointer::MouseMiddle|Pointer::Finger, Modifier::Alt|Modifier::Shift);
+    CORRADE_COMPARE(layer.nodeHighlightGesture(), Containers::pair(Pointer::MouseMiddle|Pointer::Finger, Modifier::Alt|Modifier::Shift));
+    /* Setting the gesture doesn't need any update */
+    CORRADE_COMPARE(layer.state(), LayerStates{});
+}
+
+void DebugLayerTest::nodeHighlightNoOp() {
+    auto&& data = NodeHighlightNoOpData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
+    AbstractUserInterface ui{{100, 100}};
+
+    /* Node to catch the event on */
+    NodeHandle node = ui.createNode({}, {100, 100});
+
+    /* Layer to have the event fall to always */
+    struct FallbackLayer: AbstractLayer {
+        using AbstractLayer::AbstractLayer;
+        using AbstractLayer::create;
+
+        LayerFeatures doFeatures() const override {
+            return LayerFeature::Event;
+        }
+
+        void doPointerPressEvent(UnsignedInt, PointerEvent&) override {
+            ++called;
+        }
+
+        Int called = 0;
+    };
+    FallbackLayer& fallbackLayer = ui.setLayerInstance(Containers::pointer<FallbackLayer>(ui.createLayer()));
+    fallbackLayer.create(node);
+
+    /* Debug layer on top */
+    DebugLayer& layer = ui.setLayerInstance(Containers::pointer<DebugLayer>(ui.createLayer(), data.sources, data.flags));
+    if(data.acceptedPointers)
+        layer.setNodeHighlightGesture(data.acceptedPointers, Modifier::Shift|Modifier::Ctrl);
+
+    /* The update should trigger the layer to create a data attached to the
+       sole node */
+    ui.update();
+    CORRADE_COMPARE(ui.state(), data.sources >= DebugLayerSource::Nodes ? UserInterfaceState::NeedsDataUpdate : UserInterfaceStates{});
+    CORRADE_COMPARE(layer.usedCount(), data.flags >= DebugLayerFlag::NodeInspect ? 1 : 0);
+
+    /* The event should not be accepted, should produce no callback, but should
+       fall through to the data under on the same node */
+    PointerEvent event{{}, data.pointerSource, data.pointer, data.primary, 0, data.modifiers};
+    CORRADE_VERIFY(!ui.pointerPressEvent({50, 50}, event));
+    if(data.sources >= DebugLayerSource::Nodes)
+        CORRADE_COMPARE_AS(layer.currentHighlightedNodes(), Containers::stridedArrayView({
+            false
+        }).sliceBit(0), TestSuite::Compare::Container);
+    CORRADE_COMPARE(fallbackLayer.called, 1);
+
+    /* If the feature is enabled and we provide a correct gesture, it should
+       work. (All test case instances are expected to allow Shift+Ctrl+RMB.) */
+    if(data.flags >= DebugLayerFlag::NodeInspect) {
+        PointerEvent another{{}, PointerEventSource::Mouse, Pointer::MouseRight, true, 0, Modifier::Shift|Modifier::Ctrl};
+        CORRADE_VERIFY(ui.pointerPressEvent({50, 50}, another));
+        CORRADE_COMPARE_AS(layer.currentHighlightedNodes(), Containers::stridedArrayView({
+            true
+        }).sliceBit(0), TestSuite::Compare::Container);
+        CORRADE_COMPARE(fallbackLayer.called, 2);
+    }
 }
 
 void DebugLayerTest::nodeHighlight() {
-    auto&& data = LayerDrawData[testCaseInstanceId()];
+    auto&& data = NodeHighlightData[testCaseInstanceId()];
     setTestCaseDescription(data.name);
 
     AbstractUserInterface ui{{100, 100}};
 
     struct Layer: DebugLayer {
-        explicit Layer(LayerHandle handle, LayerFeatures features): DebugLayer{handle, DebugLayerSource::Nodes, {}}, _features{features} {}
+        explicit Layer(LayerHandle handle, DebugLayerSources sources, DebugLayerFlags flags, LayerFeatures features): DebugLayer{handle, sources, flags}, _features{features} {}
 
         LayerFeatures doFeatures() const override {
             return DebugLayer::doFeatures()|_features;
@@ -5508,15 +5654,17 @@ void DebugLayerTest::nodeHighlight() {
         private:
             LayerFeatures _features;
     };
-    DebugLayer& layer = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer(), data.features));
-    CORRADE_COMPARE(layer.state(), LayerState::NeedsCommonDataUpdate);
+    DebugLayer& layer = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer(), DebugLayerSource::Nodes, data.flags, data.features));
+    if(data.acceptedPointers)
+        layer.setNodeHighlightGesture(data.acceptedPointers, data.acceptedModifiers);
 
     /* A bunch of nodes to highlight, some with a non-trivial generation */
-    NodeHandle node0 = ui.createNode({}, {});
-    NodeHandle node1 = ui.createNode({}, {});
+    ui.removeNode(ui.createNode({}, {}));
+    NodeHandle node0 = ui.createNode({40, 20}, {20, 30});
+    NodeHandle node1 = ui.createNode({60, 20}, {20, 30});
     ui.removeNode(ui.createNode({}, {}));
     ui.removeNode(ui.createNode({}, {}));
-    NodeHandle node2 = ui.createNode({}, {});
+    NodeHandle node2 = ui.createNode({80, 20}, {20, 30});
 
     /* By default the layer knows about no nodes and highlighting isn't
        possible */
@@ -5524,14 +5672,18 @@ void DebugLayerTest::nodeHighlight() {
     }).sliceBit(0), TestSuite::Compare::Container);
     CORRADE_VERIFY(!layer.highlightNode(node0));
     CORRADE_VERIFY(!layer.highlightNode(node2));
-    CORRADE_COMPARE(layer.state(), LayerState::NeedsCommonDataUpdate);
+    if(data.flags >= DebugLayerFlag::NodeInspect)
+        CORRADE_COMPARE(layer.currentInspectedNode(), NodeHandle::Null);
     CORRADE_COMPARE_AS(layer.currentHighlightedNodes(), Containers::stridedArrayView<bool>({
         /* empty */
     }).sliceBit(0), TestSuite::Compare::Container);
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsCommonDataUpdate);
 
     /* Updating fills the mask for all nodes */
     ui.update();
-    CORRADE_COMPARE_AS(layer.currentHighlightedNodes(), Containers::stridedArrayView<bool>({
+    if(data.flags >= DebugLayerFlag::NodeInspect)
+        CORRADE_COMPARE(layer.currentInspectedNode(), NodeHandle::Null);
+    CORRADE_COMPARE_AS(layer.currentHighlightedNodes(), Containers::stridedArrayView({
         false,
         false,
         false,
@@ -5541,7 +5693,9 @@ void DebugLayerTest::nodeHighlight() {
     /* Highlighting a known node works and sets NeedsDataUpdate if the layer
        draws anything */
     CORRADE_VERIFY(layer.highlightNode(node1));
-    CORRADE_COMPARE_AS(layer.currentHighlightedNodes(), Containers::stridedArrayView<bool>({
+    if(data.flags >= DebugLayerFlag::NodeInspect)
+        CORRADE_COMPARE(layer.currentInspectedNode(), NodeHandle::Null);
+    CORRADE_COMPARE_AS(layer.currentHighlightedNodes(), Containers::stridedArrayView({
         false,
         true,
         false,
@@ -5555,11 +5709,28 @@ void DebugLayerTest::nodeHighlight() {
     /* Highlighting a node that's already highligted returns true but doesn't
        set NeedsDataUpdate */
     CORRADE_VERIFY(layer.highlightNode(node1));
-    CORRADE_COMPARE_AS(layer.currentHighlightedNodes(), Containers::stridedArrayView<bool>({
+    if(data.flags >= DebugLayerFlag::NodeInspect)
+        CORRADE_COMPARE(layer.currentInspectedNode(), NodeHandle::Null);
+    CORRADE_COMPARE_AS(layer.currentHighlightedNodes(), Containers::stridedArrayView({
         false,
         true,
         false,
     }).sliceBit(0), TestSuite::Compare::Container);
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsCommonDataUpdate);
+
+    /* Highlighting another node */
+    CORRADE_VERIFY(layer.highlightNode(node0));
+    if(data.flags >= DebugLayerFlag::NodeInspect)
+        CORRADE_COMPARE(layer.currentInspectedNode(), NodeHandle::Null);
+    CORRADE_COMPARE_AS(layer.currentHighlightedNodes(), Containers::stridedArrayView({
+        true,
+        true,
+        false,
+    }).sliceBit(0), TestSuite::Compare::Container);
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsCommonDataUpdate|data.expectedState);
+
+    /* Update to reset the state */
+    ui.update();
     CORRADE_COMPARE(layer.state(), LayerState::NeedsCommonDataUpdate);
 
     /* Create more nodes, the layer isn't aware of them yet so cannot highlight
@@ -5567,11 +5738,13 @@ void DebugLayerTest::nodeHighlight() {
     NodeHandle node3 = ui.createNode({}, {});
     ui.removeNode(ui.createNode({}, {}));
     ui.removeNode(ui.createNode({}, {}));
-    NodeHandle node4 = ui.createNode({}, {});
+    NodeHandle node4 = ui.createNode({80, 40}, {20, 30});
     NodeHandle node5 = ui.createNode({}, {});
     CORRADE_VERIFY(!layer.highlightNode(node5));
-    CORRADE_COMPARE_AS(layer.currentHighlightedNodes(), Containers::stridedArrayView<bool>({
-        false,
+    if(data.flags >= DebugLayerFlag::NodeInspect)
+        CORRADE_COMPARE(layer.currentInspectedNode(), NodeHandle::Null);
+    CORRADE_COMPARE_AS(layer.currentHighlightedNodes(), Containers::stridedArrayView({
+        true,
         true,
         false,
     }).sliceBit(0), TestSuite::Compare::Container);
@@ -5582,8 +5755,10 @@ void DebugLayerTest::nodeHighlight() {
     layer.setNodeName(node4, "hello");
     CORRADE_VERIFY(!layer.highlightNode(node3));
     CORRADE_VERIFY(layer.highlightNode(node4));
-    CORRADE_COMPARE_AS(layer.currentHighlightedNodes(), Containers::stridedArrayView<bool>({
-        false,
+    if(data.flags >= DebugLayerFlag::NodeInspect)
+        CORRADE_COMPARE(layer.currentInspectedNode(), NodeHandle::Null);
+    CORRADE_COMPARE_AS(layer.currentHighlightedNodes(), Containers::stridedArrayView({
+        true,
         true,
         false,
         false,
@@ -5594,8 +5769,8 @@ void DebugLayerTest::nodeHighlight() {
     /* Update to reset the state. This makes the layer aware of node5 as
        well. */
     ui.update();
-    CORRADE_COMPARE_AS(layer.currentHighlightedNodes(), Containers::stridedArrayView<bool>({
-        false,
+    CORRADE_COMPARE_AS(layer.currentHighlightedNodes(), Containers::stridedArrayView({
+        true,
         true,
         false,
         false,
@@ -5604,23 +5779,83 @@ void DebugLayerTest::nodeHighlight() {
     }).sliceBit(0), TestSuite::Compare::Container);
     CORRADE_COMPARE(layer.state(), LayerState::NeedsCommonDataUpdate);
 
-    /* Highlighting a node with a generation different from the one that is
-       known to the layer doesn't highlight it, even though it's a node that's
-       valid. Similarly, highlighting a node that has an ID larger than what's
-       known by the layer doesn't work even though the handle is valid. Neither
-       operation results in anything that'd warrant NeedsDataUpdate. */
+    /* Highlighting or clearing a node with a generation different from the one
+       that is known to the layer doesn't highlight it, even though it's a node
+       that's valid. Similarly, highlighting a node that has an ID larger than
+       what's known by the layer doesn't work even though the handle is valid.
+       Neither operation results in anything that'd warrant NeedsDataUpdate.
+
+       Behavior when a highlighted node is removed is tested in
+       nodeHighlightNodeRemoved() below. */
     ui.removeNode(node2);
     NodeHandle node2Replacement = ui.createNode({}, {});
     NodeHandle node6 = ui.createNode({}, {});
     CORRADE_COMPARE(nodeHandleId(node2Replacement), nodeHandleId(node2));
     CORRADE_VERIFY(!layer.highlightNode(node2Replacement));
+    CORRADE_VERIFY(!layer.clearHighlightedNode(node2Replacement));
     CORRADE_VERIFY(!layer.highlightNode(node6));
-    CORRADE_COMPARE_AS(layer.currentHighlightedNodes(), Containers::stridedArrayView<bool>({
-        false,
+    CORRADE_VERIFY(!layer.clearHighlightedNode(node6));
+    if(data.flags >= DebugLayerFlag::NodeInspect)
+        CORRADE_COMPARE(layer.currentInspectedNode(), NodeHandle::Null);
+    CORRADE_COMPARE_AS(layer.currentHighlightedNodes(), Containers::stridedArrayView({
+        true,
         true,
         false,
         false,
         true,
+        false,
+    }).sliceBit(0), TestSuite::Compare::Container);
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsCommonDataUpdate);
+
+    /* Update to reset the state. This makes the layer aware of node6. */
+    ui.update();
+    CORRADE_COMPARE_AS(layer.currentHighlightedNodes(), Containers::stridedArrayView({
+        true,
+        true,
+        false,
+        false,
+        true,
+        false,
+        false, /* node6 */
+    }).sliceBit(0), TestSuite::Compare::Container);
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsCommonDataUpdate);
+
+    /* Clearing a node that is valid but isn't highlighted returns true but
+       does nothing */
+    CORRADE_VERIFY(layer.clearHighlightedNode(node3));
+    CORRADE_COMPARE_AS(layer.currentHighlightedNodes(), Containers::stridedArrayView({
+        true,
+        true,
+        false,
+        false,
+        true,
+        false,
+        false,
+    }).sliceBit(0), TestSuite::Compare::Container);
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsCommonDataUpdate);
+
+    /* Clearing a node that's highlighted results in NeedsDataUpdate */
+    CORRADE_VERIFY(layer.clearHighlightedNode(node1));
+    CORRADE_COMPARE_AS(layer.currentHighlightedNodes(), Containers::stridedArrayView({
+        true,
+        false,
+        false,
+        false,
+        true,
+        false,
+        false,
+    }).sliceBit(0), TestSuite::Compare::Container);
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsCommonDataUpdate|data.expectedState);
+
+    /* Update to reset the state */
+    ui.update();
+    CORRADE_COMPARE_AS(layer.currentHighlightedNodes(), Containers::stridedArrayView({
+        true,
+        false,
+        false,
+        false,
+        true,
+        false,
         false,
     }).sliceBit(0), TestSuite::Compare::Container);
     CORRADE_COMPARE(layer.state(), LayerState::NeedsCommonDataUpdate);
@@ -5628,7 +5863,8 @@ void DebugLayerTest::nodeHighlight() {
     /* Clearing highlighted nodes results in NeedsDataUpdate if the layer draws
        anything */
     layer.clearHighlightedNodes();
-    CORRADE_COMPARE_AS(layer.currentHighlightedNodes(), Containers::stridedArrayView<bool>({
+    CORRADE_COMPARE_AS(layer.currentHighlightedNodes(), Containers::stridedArrayView({
+        false,
         false,
         false,
         false,
@@ -5637,26 +5873,12 @@ void DebugLayerTest::nodeHighlight() {
         false,
     }).sliceBit(0), TestSuite::Compare::Container);
     CORRADE_COMPARE(layer.state(), LayerState::NeedsCommonDataUpdate|data.expectedState);
-
-    /* Update to reset the state. This makes the layer aware of node6 as
-       well. */
-    ui.update();
-    CORRADE_COMPARE_AS(layer.currentHighlightedNodes(), Containers::stridedArrayView<bool>({
-        false,
-        false,
-        false,
-        false,
-        false,
-        false,
-        false, /* node6 */
-    }).sliceBit(0), TestSuite::Compare::Container);
-    CORRADE_COMPARE(layer.state(), LayerState::NeedsCommonDataUpdate);
 
     /* Clearing if there's nothing to clear sets it too, because that's a
        simpler operation than counting set bits */
     /** @todo update once BitArrayView implements any() */
     layer.clearHighlightedNodes();
-    CORRADE_COMPARE_AS(layer.currentHighlightedNodes(), Containers::stridedArrayView<bool>({
+    CORRADE_COMPARE_AS(layer.currentHighlightedNodes(), Containers::stridedArrayView({
         false,
         false,
         false,
@@ -5666,6 +5888,123 @@ void DebugLayerTest::nodeHighlight() {
         false,
     }).sliceBit(0), TestSuite::Compare::Container);
     CORRADE_COMPARE(layer.state(), LayerState::NeedsCommonDataUpdate|data.expectedState);
+
+    /* While programmatic highlight works with just DebugLayerSource::Nodes,
+       events need DebugLayerFlag::NodeInspect enabled. */
+    if(data.flags >= DebugLayerFlag::NodeInspect) {
+        PointerEvent press1{{}, data.pointerSource, data.pointer, true, 0, data.acceptedPointers ? data.acceptedModifiers : Modifier::Shift|Modifier::Ctrl};
+        CORRADE_VERIFY(ui.pointerPressEvent({65, 35}, press1));
+        CORRADE_COMPARE(layer.currentInspectedNode(), NodeHandle::Null);
+        CORRADE_COMPARE_AS(layer.currentHighlightedNodes(), Containers::stridedArrayView<bool>({
+            false,
+            true,
+            false,
+            false,
+            false,
+            false,
+            false,
+        }).sliceBit(0), TestSuite::Compare::Container);
+
+        /* Highlight another node by an event */
+        PointerEvent press2{{}, data.pointerSource, data.pointer, true, 0, data.acceptedPointers ? data.acceptedModifiers : Modifier::Shift|Modifier::Ctrl};
+        CORRADE_VERIFY(ui.pointerPressEvent({85, 44}, press2));
+        CORRADE_COMPARE(layer.currentInspectedNode(), NodeHandle::Null);
+        CORRADE_COMPARE_AS(layer.currentHighlightedNodes(), Containers::stridedArrayView({
+            false,
+            true,
+            false,
+            false,
+            true, /* node4 */
+            false,
+            false,
+        }).sliceBit(0), TestSuite::Compare::Container);
+
+        /* Clicking completely outside of anything doesn't remove the highlight
+           (as there's no way to do that, apart from temporarily making the
+           node focusable and focused, which would interfere with styling) */
+        PointerEvent press3{{}, data.pointerSource, data.pointer, true, 0, data.acceptedPointers ? data.acceptedModifiers : Modifier::Shift|Modifier::Ctrl};
+        CORRADE_VERIFY(!ui.pointerPressEvent({100, 100}, press3));
+        CORRADE_COMPARE(layer.currentInspectedNode(), NodeHandle::Null);
+        CORRADE_COMPARE_AS(layer.currentHighlightedNodes(), Containers::stridedArrayView({
+            false,
+            true,
+            false,
+            false,
+            true, /* node4 */
+            false,
+            false,
+        }).sliceBit(0), TestSuite::Compare::Container);
+
+        /* Clicking on some highlighted node again removes the highlight */
+        PointerEvent press4{{}, data.pointerSource, data.pointer, true, 0, data.acceptedPointers ? data.acceptedModifiers : Modifier::Shift|Modifier::Ctrl};
+        CORRADE_VERIFY(ui.pointerPressEvent({90, 55}, press4));
+        CORRADE_COMPARE(layer.currentInspectedNode(), NodeHandle::Null);
+        CORRADE_COMPARE_AS(layer.currentHighlightedNodes(), Containers::stridedArrayView({
+            false,
+            true,
+            false,
+            false,
+            false,
+            false,
+            false,
+        }).sliceBit(0), TestSuite::Compare::Container);
+    }
+}
+
+void DebugLayerTest::nodeHighlightGestureConflictWithInspect() {
+    AbstractUserInterface ui{{100, 100}};
+
+    /* Node to catch the event on */
+    NodeHandle node = ui.createNode({}, {50, 100});
+    /*NodeHandle another =*/ ui.createNode({50, 0}, {50, 100});
+
+    DebugLayer& layer = ui.setLayerInstance(Containers::pointer<DebugLayer>(ui.createLayer(), DebugLayerSource::Nodes, DebugLayerFlag::NodeInspect));
+    Int callbackCalled = 0;
+    layer
+        .setNodeInspectGesture(Pointer::MouseMiddle|Pointer::MouseRight, Modifier::Ctrl|Modifier::Alt)
+        .setNodeHighlightGesture(Pointer::Pen|Pointer::MouseRight, Modifier::Ctrl|Modifier::Alt)
+        .setNodeInspectCallback([&callbackCalled](Containers::StringView) {
+            ++callbackCalled;
+        });
+
+    /* While Ctrl-Alt-MouseRight triggers both inspect and highlight, inspect
+       gets a priority and nothing is highlighted */
+    PointerEvent press1{{}, PointerEventSource::Mouse, Pointer::MouseRight, true, 0, Modifier::Ctrl|Modifier::Alt};
+    CORRADE_VERIFY(ui.pointerPressEvent({30, 50}, press1));
+    CORRADE_COMPARE(layer.currentInspectedNode(), node);
+    CORRADE_COMPARE(callbackCalled, 1);
+    CORRADE_COMPARE_AS(layer.currentHighlightedNodes(), Containers::stridedArrayView({
+        false,
+        false,
+    }).sliceBit(0), TestSuite::Compare::Container);
+
+    /* Clear the inspected node, calls the callback with an empty string */
+    CORRADE_VERIFY(layer.inspectNode(NodeHandle::Null));
+    CORRADE_COMPARE(callbackCalled, 2);
+    CORRADE_COMPARE_AS(layer.currentHighlightedNodes(), Containers::stridedArrayView({
+        false,
+        false,
+    }).sliceBit(0), TestSuite::Compare::Container);
+
+    /* Ctrl-Alt-Pen triggers only highlight */
+    PointerEvent press2{{}, PointerEventSource::Pen, Pointer::Pen, true, 0, Modifier::Ctrl|Modifier::Alt};
+    CORRADE_VERIFY(ui.pointerPressEvent({70, 50}, press2));
+    CORRADE_COMPARE(layer.currentInspectedNode(), NodeHandle::Null);
+    CORRADE_COMPARE(callbackCalled, 2);
+    CORRADE_COMPARE_AS(layer.currentHighlightedNodes(), Containers::stridedArrayView({
+        false,
+        true,
+    }).sliceBit(0), TestSuite::Compare::Container);
+
+    /* Ctrl-Alt-MouseMiddle triggers only inspect */
+    PointerEvent press3{{}, PointerEventSource::Mouse, Pointer::MouseRight, true, 0, Modifier::Ctrl|Modifier::Alt};
+    CORRADE_VERIFY(ui.pointerPressEvent({40, 50}, press3));
+    CORRADE_COMPARE(layer.currentInspectedNode(), node);
+    CORRADE_COMPARE(callbackCalled, 3);
+    CORRADE_COMPARE_AS(layer.currentHighlightedNodes(), Containers::stridedArrayView({
+        false,
+        true,
+    }).sliceBit(0), TestSuite::Compare::Container);
 }
 
 Int conditionCalled = 0;
@@ -6468,7 +6807,7 @@ void DebugLayerTest::nodeHighlightInvalid() {
 
     AbstractUserInterface ui{{100, 100}};
     AbstractUserInterface uiAnother{{100, 100}};
-    DebugLayer layerNoNodes{layerHandle(0, 1), {}, {}};
+    DebugLayer layerNoNodesNoInspect{layerHandle(0, 1), {}, {}};
     DebugLayer& layerOnlyNodes = ui.setLayerInstance(Containers::pointer<DebugLayer>(ui.createLayer(), DebugLayerSource::Nodes, DebugLayerFlags{}));
     DebugLayer& layerOnlyLayers = ui.setLayerInstance(Containers::pointer<DebugLayer>(ui.createLayer(), DebugLayerSource::Layers, DebugLayerFlags{}));
     DebugLayer& layerOnlyLayouters = ui.setLayerInstance(Containers::pointer<DebugLayer>(ui.createLayer(), DebugLayerSource::Layouters, DebugLayerFlags{}));
@@ -6512,36 +6851,44 @@ void DebugLayerTest::nodeHighlightInvalid() {
     /* Calling functionality getters / setters is valid on a layer that doesn't
        have the feature enabled or isn't part of the UI. The actual state
        queries and updates can't be called tho. */
-    layerNoNodes.nodeHighlightColorMap();
-    layerNoNodes.nodeHighlightColorMapAlpha();
+    layerNoNodesNoInspect.nodeHighlightColorMap();
+    layerNoNodesNoInspect.nodeHighlightColorMapAlpha();
+    layerNoNodesNoInspect.nodeHighlightGesture();
     Color3ub colormap[1];
-    layerNoNodes.setNodeHighlightColorMap(colormap);
+    layerNoNodesNoInspect.setNodeHighlightColorMap(colormap);
+    layerNoNodesNoInspect.setNodeHighlightGesture(Pointer::MouseRight, {});
 
     Containers::String out;
     Error redirectError{&out};
-    layerNoNodes.setNodeHighlightColorMap({});
+    layerNoNodesNoInspect.setNodeHighlightColorMap({});
+    layerNoNodesNoInspect.setNodeHighlightGesture({}, Modifier::Ctrl);
 
-    layerNoNodes.currentHighlightedNodes();
+    layerNoNodesNoInspect.currentHighlightedNodes();
     layerNoUi.currentHighlightedNodes();
 
-    layerNoNodes.clearHighlightedNodes();
+    layerNoNodesNoInspect.clearHighlightedNodes();
     layerNoUi.clearHighlightedNodes();
 
-    layerNoNodes.highlightNode(nodeHandle(0, 1));
+    layerNoNodesNoInspect.highlightNode(nodeHandle(0, 1));
     layerNoUi.highlightNode(nodeHandle(0, 1));
     layer.highlightNode(NodeHandle::Null);
     layer.highlightNode(nodeHandle(0xabcde, 0x0));
 
-    layerNoNodes.highlightNodes([](const AbstractUserInterface&, NodeHandle) {
+    layerNoNodesNoInspect.clearHighlightedNode(nodeHandle(0, 1));
+    layerNoUi.clearHighlightedNode(nodeHandle(0, 1));
+    layer.clearHighlightedNode(NodeHandle::Null);
+    layer.clearHighlightedNode(nodeHandle(0xabcde, 0x0));
+
+    layerNoNodesNoInspect.highlightNodes([](const AbstractUserInterface&, NodeHandle) {
         return false;
     });
-    layerNoNodes.highlightNodes(emptyLayer, [](const EmptyLayer&, LayerDataHandle) {
+    layerNoNodesNoInspect.highlightNodes(emptyLayer, [](const EmptyLayer&, LayerDataHandle) {
         return false;
     });
-    layerNoNodes.highlightNodes(emptyLayouter, [](const EmptyLayouter&, LayouterDataHandle) {
+    layerNoNodesNoInspect.highlightNodes(emptyLayouter, [](const EmptyLayouter&, LayouterDataHandle) {
         return false;
     });
-    layerNoNodes.highlightNodes(emptyAnimator, [](const EmptyAnimator&, AnimatorDataHandle) {
+    layerNoNodesNoInspect.highlightNodes(emptyAnimator, [](const EmptyAnimator&, AnimatorDataHandle) {
         return false;
     });
     layerOnlyLayers.highlightNodes(emptyLayer, [](const EmptyLayer&, LayerDataHandle) {
@@ -6608,6 +6955,7 @@ void DebugLayerTest::nodeHighlightInvalid() {
     layer.highlightNodes(emptyAnimator, static_cast<bool(*)(const EmptyAnimator&, AnimatorDataHandle)>(nullptr));
     CORRADE_COMPARE_AS(out,
         "Ui::DebugLayer::setNodeHighlightColorMap(): expected colormap to have at least one element\n"
+        "Ui::DebugLayer::setNodeHighlightGesture(): expected at least one pointer\n"
 
         "Ui::DebugLayer::currentHighlightedNodes(): Ui::DebugLayerSource::Nodes not enabled\n"
         "Ui::DebugLayer::currentHighlightedNodes(): layer not part of a user interface\n"
@@ -6619,6 +6967,11 @@ void DebugLayerTest::nodeHighlightInvalid() {
         "Ui::DebugLayer::highlightNode(): layer not part of a user interface\n"
         "Ui::DebugLayer::highlightNode(): invalid handle Ui::NodeHandle::Null\n"
         "Ui::DebugLayer::highlightNode(): invalid handle Ui::NodeHandle(0xabcde, 0x0)\n"
+
+        "Ui::DebugLayer::clearHighlightedNode(): Ui::DebugLayerSource::Nodes not enabled\n"
+        "Ui::DebugLayer::clearHighlightedNode(): layer not part of a user interface\n"
+        "Ui::DebugLayer::clearHighlightedNode(): invalid handle Ui::NodeHandle::Null\n"
+        "Ui::DebugLayer::clearHighlightedNode(): invalid handle Ui::NodeHandle(0xabcde, 0x0)\n"
 
         "Ui::DebugLayer::highlightNodes(): Ui::DebugLayerSource::Nodes not enabled\n"
         "Ui::DebugLayer::highlightNodes(): Ui::DebugLayerSource::Nodes|Ui::DebugLayerSource::Layers not enabled\n"

@@ -1021,6 +1021,18 @@ DebugLayer& DebugLayer::setNodeHighlightColorMap(const Containers::ArrayView<con
     return *this;
 }
 
+Containers::Pair<Pointers, Modifiers> DebugLayer::nodeHighlightGesture() const {
+    return {_state->nodeHighlightPointers, _state->nodeHighlightModifiers};
+}
+
+DebugLayer& DebugLayer::setNodeHighlightGesture(const Pointers pointers, const Modifiers modifiers) {
+    CORRADE_ASSERT(pointers,
+        "Ui::DebugLayer::setNodeHighlightGesture(): expected at least one pointer", *this);
+    _state->nodeHighlightPointers = pointers;
+    _state->nodeHighlightModifiers = modifiers;
+    return *this;
+}
+
 Containers::BitArrayView DebugLayer::currentHighlightedNodes() const {
     const State& state = *_state;
     CORRADE_ASSERT(state.sources >= DebugLayerSource::Nodes,
@@ -1069,19 +1081,59 @@ bool DebugLayer::highlightNode(const NodeHandle node) {
 
     const UnsignedInt nodeId = nodeHandleId(node);
     if(nodeId < state.nodes.size() && node == state.nodes[nodeId].handle) {
-        if(!state.currentHighlightedNodes[nodeId]) {
-            state.currentHighlightedNodes.set(nodeId);
-
-            /* If this is a subclass that draws, trigger an update so the
-               colors are recalculated */
-            if(doFeatures() >= LayerFeature::Draw)
-                setNeedsUpdate(LayerState::NeedsDataUpdate);
-        }
-
+        highlightNodeInternal(nodeId);
         return true;
     }
 
     return false;
+}
+
+void DebugLayer::highlightNodeInternal(const UnsignedInt nodeId) {
+    State& state = *_state;
+    if(!state.currentHighlightedNodes[nodeId]) {
+        state.currentHighlightedNodes.set(nodeId);
+
+        /* If this is a subclass that draws, trigger an update so the colors
+           are recalculated */
+        if(doFeatures() >= LayerFeature::Draw)
+            setNeedsUpdate(LayerState::NeedsDataUpdate);
+    }
+}
+
+bool DebugLayer::clearHighlightedNode(const NodeHandle node) {
+    State& state = *_state;
+    /* Handles with zero generation are never valid, and their bit pattern
+       might get internally abused to store other information, so disallow
+       them. OTOH I feel this isn't important to mention in
+       clearHighlightedNode() docs, as it's a low-level property most users
+       don't need to be aware of. This check is also a superset of a check for
+       NodeHandle::Null, which is not allowed either. */
+    CORRADE_ASSERT(nodeHandleGeneration(node),
+        "Ui::DebugLayer::clearHighlightedNode(): invalid handle" << node, {});
+    CORRADE_ASSERT(state.sources >= DebugLayerSource::Nodes,
+        "Ui::DebugLayer::clearHighlightedNode():" << DebugLayerSource::Nodes << "not enabled", {});
+    CORRADE_ASSERT(hasUi(),
+        "Ui::DebugLayer::clearHighlightedNode(): layer not part of a user interface", {});
+
+    const UnsignedInt nodeId = nodeHandleId(node);
+    if(nodeId < state.nodes.size() && node == state.nodes[nodeId].handle) {
+        clearHighlightedNodeInternal(nodeId);
+        return true;
+    }
+
+    return false;
+}
+
+void DebugLayer::clearHighlightedNodeInternal(const UnsignedInt nodeId) {
+    State& state = *_state;
+    if(state.currentHighlightedNodes[nodeId]) {
+        state.currentHighlightedNodes.reset(nodeId);
+
+        /* If this is a subclass that draws, trigger an update so the colors
+           are recalculated */
+        if(doFeatures() >= LayerFeature::Draw)
+            setNeedsUpdate(LayerState::NeedsDataUpdate);
+    }
 }
 
 bool DebugLayer::highlightNodes(bool(*const condition)(const AbstractUserInterface&, NodeHandle)) {
@@ -1585,27 +1637,47 @@ void DebugLayer::doUpdate(const LayerStates states, const Containers::StridedArr
 }
 
 void DebugLayer::doPointerPressEvent(const UnsignedInt dataId, PointerEvent& event) {
-    /* Accept presses only if node inspect is enabled, the pointer is among one
-       of the expected, is primary and the modifiers match exactly */
+    /* If node inspect isn't enabled or the event isn't primary, nothing to
+       do */
     State& state = *_state;
     if(!(state.flags >= DebugLayerFlag::NodeInspect) ||
-       !event.isPrimary() ||
-       !(event.pointer() <= state.nodeInspectPointers) ||
-       event.modifiers() != state.nodeInspectModifiers)
+       !event.isPrimary())
         return;
 
-    /* If the node that's clicked on is currently being inspected, remove the
-       highlight */
-    const NodeHandle nodeHandle = nodes()[dataId];
-    if(state.currentInspectedNode == nodeHandle)
-        inspectNodeInternal(NodeHandle::Null, {});
+    /* Node inspect */
+    if(event.pointer() <= state.nodeInspectPointers && event.modifiers() == state.nodeInspectModifiers) {
+        /* If the node that's clicked on is currently being inspected, remove
+           the highlight */
+        const NodeHandle nodeHandle = nodes()[dataId];
+        if(state.currentInspectedNode == nodeHandle)
+            inspectNodeInternal(NodeHandle::Null, {});
 
-    /* Otherwise inspect the node. If NodeInspectSkipEmpty is enabled in flags,
-       the function doesn't print anything and returns false if there's no
-       data, layout or animation attached. In that case return without
-       accepting the event so it propagates further. */
-    else if(!inspectNodeInternal(nodeHandle, state.flags & DebugLayerFlag::NodeInspectSkipNoData))
-        return;
+        /* Otherwise inspect the node. If NodeInspectSkipNoData is enabled in
+           flags, the function doesn't print anything and returns false if
+           there's no data, layout or animation attached. In that case return
+           without accepting the event so it propagates further. */
+        else if(!inspectNodeInternal(nodeHandle, state.flags & DebugLayerFlag::NodeInspectSkipNoData))
+            return;
+
+    /* Node highlight. In case the highlight gesture overlaps with inspect,
+       inspect gets a priority. */
+    } else if(event.pointer() <= state.nodeHighlightPointers && event.modifiers() == state.nodeHighlightModifiers) {
+        /* If the node that's clicked on is currently highlighted, remove the
+           highlight. Assuming update() is called implicitly before the event
+           handler, the class knows about this node handle already. */
+        const NodeHandle nodeHandle = nodes()[dataId];
+        const UnsignedInt nodeId = nodeHandleId(nodeHandle);
+        CORRADE_INTERNAL_ASSERT(nodeId < state.currentHighlightedNodes.size() && nodeHandle == state.nodes[nodeId].handle);
+        if(state.currentHighlightedNodes[nodeId])
+            clearHighlightedNodeInternal(nodeId);
+
+        /* Otherwise highlight the node. The NodeInspectSkipNoData flag doesn't
+           have any effect here, as highlighting would need to enumerate data
+           attachments like inspect does. */
+        else highlightNodeInternal(nodeId);
+
+    /* Unrecognized gesture, don't accept the event */
+    } else return;
 
     /* Accept the event to prevent it from propagating to other nodes, even in
        case we're clicking second time to remove the highlight */

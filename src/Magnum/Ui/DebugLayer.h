@@ -163,23 +163,28 @@ MAGNUM_UI_EXPORT Debug& operator<<(Debug& debug, DebugLayerSources value);
 */
 enum class DebugLayerFlag: UnsignedByte {
     /**
-     * Highlight and show details of a node on pointer press or after calling
-     * @ref DebugLayer::inspectNode() programmatically. Expects that at least
-     * @ref DebugLayerSource::Nodes is enabled, subset of
-     * @ref DebugLayerFlag::NodeInspectSkipNoData. See
-     * @ref Ui-DebugLayer-node-inspect for more information.
+     * Highlight various nodes and show their details on pointer press or after
+     * calling @ref DebugLayer::inspectNode() programmatically. Expects that at
+     * least @ref DebugLayerSource::Nodes is enabled. Subset of
+     * @ref DebugLayerFlag::NodeInspectSkipNoData. Note that node highlighting
+     * with @ref DebugLayer::highlightNode() doesn't require this flag, only
+     * @ref DebugLayerSource::Nodes. See @ref Ui-DebugLayer-node-inspect and
+     * @ref Ui-DebugLayer-node-highlight for more information.
      * @see @ref DebugLayer::setNodeInspectColor(),
      *      @ref DebugLayer::setNodeInspectGesture(),
-     *      @ref DebugLayer::setNodeInspectCallback()
+     *      @ref DebugLayer::setNodeInspectCallback(),
+     *      @ref DebugLayer::setNodeHighlightColorMap(),
+     *      @ref DebugLayer::setNodeHighlightGesture()
      */
     NodeInspect = 1 << 0,
 
     /**
-     * Like @ref DebugLayerFlag::NodeInspect, but pointer press skips nodes
-     * that have no data attachments, i.e. invisible and not reacting to
-     * events. Has no effect when calling @ref DebugLayer::inspectNode()
-     * programmatically. Expects that @ref DebugLayerSource::NodeData is
-     * enabled, superset of @ref DebugLayerFlag::NodeInspect.
+     * Like @ref DebugLayerFlag::NodeInspect, but inspection via pointer press
+     * skips nodes that have no data attachments, i.e. invisible and not
+     * reacting to events. Has no effect on node highlight, has no effect when
+     * calling @ref DebugLayer::inspectNode() programmatically. Expects that
+     * @ref DebugLayerSource::NodeData is enabled, superset of
+     * @ref DebugLayerFlag::NodeInspect.
      *
      * Useful in case the UI errorneously contains nodes covering large
      * portions of the screen, making it impossible to inspect nodes
@@ -447,35 +452,49 @@ to react to events.
 @section Ui-DebugLayer-node-highlight Highlighting nodes
 
 Besides inspecting a single individual node to see details about what's all
-attached to it, it's possible to programmatically highlight nodes in the UI by
-passing their handle to @ref highlightNode(). This is useful for example in
-case you have a node in the code and want to see where it appears in the UI.
-In the following snippet, the `button` from above would get highlighted like
-this, resulting in it having a cyan overlay. The function returns @cpp false @ce
-in case given node handle is unknown to the debug layer, which is often the
-case if no UI draw or update happened since the node was created:
-
-@snippet ui-debuglayer.cpp button-highlight
+attached to it, it's possible to highlight a set of nodes for visual
+comparison. With @ref DebugLayerFlag::NodeInspect enabled, highlighting can be
+done with @m_class{m-label m-warning} **Shift**
+@m_class{m-label m-warning} **Ctrl**
+@m_class{m-label m-default} **right mouse button** (or
+@m_class{m-label m-warning} **Shift** @m_class{m-label m-warning} **Ctrl**
+@m_class{m-label m-default} **pen eraser** in case of a pen input). Clicking
+the `button` from above would make it highlighted like this, resulting in it
+having a cyan overlay.
 
 @image html ui-debuglayer-node-highlight.png width=128px
 
-The highlights are additive, meaning additional calls to @ref highlightNode()
-will highlight more nodes. The set of currently highlighted node IDs can be
-queried with @ref currentHighlightedNodes() and all highlights cleared with
-@ref clearHighlightedNodes(). To better distinguish multiple highlighted nodes
-from each other, a color map can be supplied with @ref setNodeHighlightColorMap(),
-where different colors get used based on node ID. The @ref DebugTools::ColorMap
-namespace contains several builtin ones or you can supply any arbitrary array
-of 8-bit colors:
+The highlights are additive, meaning additional clicks will highlight more
+nodes and clicking on an already highlighted node will remove its highlight.
+Like with node inspect, you can change the gesture with
+@ref setNodeHighlightGesture(). To better distinguish multiple highlighted
+nodes from each other, a color map can be supplied with
+@ref setNodeHighlightColorMap(), where different colors get used based on node
+ID. The @ref DebugTools::ColorMap namespace contains several builtin ones or
+you can supply any arbitrary array of 8-bit colors:
 
 @snippet Ui.cpp DebugLayer-node-highlight-colormap
 
-The @ref highlightNodes() overloads then allow highlighting nodes based on
-various conditions either on the nodes themselves or on data, layouts and
-animations attached to those. Each of these overloads accepts a function which
-if returns @cpp true @ce, causes given node (or node given data / layout /
-animation is attached to) to be highlighted. For example, highlighting all
-top-level nodes in the UI to discover unnecessary extra draw calls:
+Highlighting particular nodes can also be done programmatically by passing
+their handle to @ref highlightNode(). This is useful for example in case you
+have a node in the code and want to see where it appears in the UI. The
+function returns @cpp false @ce in case given node handle is unknown to the
+debug layer, which is often the case if no UI draw or update happened since the
+node was created:
+
+@snippet ui-debuglayer.cpp button-highlight
+
+Additional calls to @ref highlightNode() will highlight more nodes,
+@ref clearHighlightedNode() will then clear individual highlights. The set of
+currently highlighted node IDs can be queried with
+@ref currentHighlightedNodes(), and all highlights cleared with
+@ref clearHighlightedNodes(). The @ref highlightNodes() overloads then allow
+highlighting nodes based on various conditions either on the nodes themselves
+or on data, layouts and animations attached to those. Each of these overloads
+accepts a function which if returns @cpp true @ce, causes given node (or node
+given data / layout / animation is attached to) to be highlighted. For example,
+highlighting all top-level nodes in the UI to discover unnecessary extra draw
+calls:
 
 @snippet Ui.cpp DebugLayer-node-highlight-condition-node
 
@@ -963,6 +982,9 @@ class MAGNUM_UI_EXPORT DebugLayer: public AbstractLayer {
          * the pointer. The currently inspected node is available in
          * @ref currentInspectedNode(), you can also use @ref inspectNode() to
          * perform a node inspect programmatically.
+         *
+         * If the same gesture is used for both @ref setNodeInspectGesture()
+         * and @ref setNodeHighlightGesture(), node inspect gets a priority.
          * @see @ref setNodeInspectColor(),
          *      @ref setNodeInspectCallback()
          */
@@ -1075,6 +1097,37 @@ class MAGNUM_UI_EXPORT DebugLayer: public AbstractLayer {
          */
         DebugLayer& setNodeHighlightColorMap(Containers::ArrayView<const Vector3ub> colors, Float alpha = 0.25f);
 
+        /** @brief Node highlight gesture */
+        Containers::Pair<Pointers, Modifiers> nodeHighlightGesture() const;
+
+        /**
+         * @brief Set node highlight gesture
+         * @return Reference to self (for method chaining)
+         *
+         * Used only if @ref DebugLayerFlag::NodeInspect is enabled, ignored
+         * otherwise. Compared to node inspection, highlight doesn't print
+         * node details and allows highlighting more than one node at once. A
+         * highlight happens on a press of a pointer that's among @p pointers
+         * with modifiers being exactly @p modifiers. Pressing on a different
+         * node adds to the set of highlighted nodes, pressing on a node that's
+         * currently highlighted removes the highlight. Expects that
+         * @p pointers are non-empty. Default is a combination of
+         * @ref Pointer::MouseRight and @ref Pointer::Eraser, and
+         * @ref Modifier::Shift together with @ref Modifier::Ctrl, i.e. pressing either
+         * @m_class{m-label m-warning} **Shift** @m_class{m-label m-warning} **Ctrl**
+         * @m_class{m-label m-default} **right mouse button** or
+         * @m_class{m-label m-warning} **Shift** @m_class{m-label m-warning} **Ctrl**
+         * @m_class{m-label m-default} **pen eraser** will highlight a node
+         * under the pointer. The set of currently highlighted nodes is
+         * available in @ref currentHighlightedNodes(), you can also use
+         * @ref highlightNode() to perform a node inspect programmatically.
+         *
+         * If the same gesture is used for both @ref setNodeInspectGesture()
+         * and @ref setNodeHighlightGesture(), node inspect gets a priority.
+         * @see @ref setNodeHighlightColorMap(),
+         */
+        DebugLayer& setNodeHighlightGesture(Pointers pointers, Modifiers modifiers);
+
         /**
          * @brief Currently highlighted nodes
          *
@@ -1096,6 +1149,7 @@ class MAGNUM_UI_EXPORT DebugLayer: public AbstractLayer {
          *
          * Expects that @ref DebugLayerSource::Nodes is enabled. Clears all
          * nodes highlighted by @ref highlightNode() and @ref highlightNodes().
+         * Use @ref clearHighlightedNode() to clear individual node highlights.
          * Note that the @ref currentInspectedNode() isn't affected by this
          * function.
          * @see @ref currentHighlightedNodes()
@@ -1119,12 +1173,13 @@ class MAGNUM_UI_EXPORT DebugLayer: public AbstractLayer {
          * function does nothing and returns @cpp false @ce.
          *
          * The highlights are additive, meaning calling this function multiple
-         * times will make more nodes highlighted. Use
-         * @ref clearHighlightedNodes() to clear all highlights. You can use
-         * the @ref highlightNodes() variants to highlight nodes based on
-         * various conditions queried on the nodes themselves or on data,
-         * layouts and animations attached to those. See also @ref inspectNode()
-         * for highlighting a node and printing its details.
+         * times will make more nodes highlighted. Use @ref clearHighlightedNode()
+         * to clear an individual highight and @ref clearHighlightedNodes() to
+         * clear all highlights. You can use the @ref highlightNodes() variants
+         * to highlight nodes based on various conditions queried on the nodes
+         * themselves or on data, layouts and animations attached to those. See
+         * also @ref inspectNode() for highlighting a node and printing its
+         * details.
          *
          * If the layer is instantiated as @ref DebugLayerGL and @p node wasn't
          * already highlighted before, calling this function causes
@@ -1133,6 +1188,29 @@ class MAGNUM_UI_EXPORT DebugLayer: public AbstractLayer {
          *      @ref clearHighlightedNodes()
          */
         bool highlightNode(NodeHandle node);
+
+        /**
+         * @brief Clear a highlighted node
+         *
+         * Expects that @ref DebugLayerSource::Nodes is enabled, the layer has
+         * been already passed to @ref AbstractUserInterface::setLayerInstance()
+         * and that @p node isn't @ref NodeHandle::Null.
+         *
+         * If @p node is a known handle and this is a @ref DebugLayerGL
+         * instance, a visual highlight is removed if there's any, and the
+         * function returns @cpp true @ce.
+         *
+         * If @p node is not a known handle (for example an invalid handle of a
+         * now-removed node, or a handle of a newly created node but
+         * @ref AbstractUserInterface::update() wasn't called since), the
+         * function does nothing and returns @cpp false @ce.
+         *
+         * If the layer is instantiated as @ref DebugLayerGL and @p node was
+         * highlighted before, calling this function causes
+         * @ref LayerState::NeedsDataUpdate to be set.
+         * @see @ref clearHighlightedNodes()
+         */
+        bool clearHighlightedNode(NodeHandle node);
 
         /**
          * @brief Highlight nodes based on a condition
@@ -1307,6 +1385,8 @@ class MAGNUM_UI_EXPORT DebugLayer: public AbstractLayer {
         void** setAnimatorNameDebugIntegration(const AbstractAnimator& instance, const Containers::StringView& name, void(*deleter)(void*), void(*print)(void*, Debug&, const AbstractAnimator&, const Containers::StringView&, AnimatorDataHandle));
 
         MAGNUM_UI_LOCAL bool inspectNodeInternal(NodeHandle node, DebugLayerFlags flags);
+        MAGNUM_UI_LOCAL void highlightNodeInternal(UnsignedInt nodeId);
+        MAGNUM_UI_LOCAL void clearHighlightedNodeInternal(UnsignedInt nodeId);
 
         bool highlightNodesInternal(const AbstractLayer& layer, bool(*condition)(const AbstractLayer&, void(*)(), LayerDataHandle), void(*functor)());
         bool highlightNodesInternal(const AbstractLayouter& layouter, bool(*condition)(const AbstractLayouter&, void(*)(), LayouterDataHandle), void(*functor)());
