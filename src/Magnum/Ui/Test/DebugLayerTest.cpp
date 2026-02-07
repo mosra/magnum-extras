@@ -4042,6 +4042,8 @@ void DebugLayerTest::nodeInspectNoOp() {
        fall through to the data under on the same node */
     PointerEvent event{{}, data.pointerSource, data.pointer, data.primary, 0, data.modifiers};
     CORRADE_VERIFY(!ui.pointerPressEvent({50, 50}, event));
+    if(data.flags >= DebugLayerFlag::NodeInspect)
+        CORRADE_COMPARE(layer.currentInspectedNode(), NodeHandle::Null);
     CORRADE_COMPARE(callbackCalled, 0);
     CORRADE_COMPARE(fallbackLayer.called, 1);
 
@@ -4050,6 +4052,7 @@ void DebugLayerTest::nodeInspectNoOp() {
     if(data.flags >= DebugLayerFlag::NodeInspect) {
         PointerEvent another{{}, PointerEventSource::Mouse, Pointer::MouseRight, true, 0, Modifier::Ctrl};
         CORRADE_VERIFY(ui.pointerPressEvent({50, 50}, another));
+        CORRADE_COMPARE(layer.currentInspectedNode(), node);
         CORRADE_COMPARE(callbackCalled, 1);
         CORRADE_COMPARE(fallbackLayer.called, 2);
     }
