@@ -47,7 +47,6 @@
 
 #include "Magnum/Ui/AbstractUserInterface.h"
 #include "Magnum/Ui/DebugLayerGL.h"
-#include "Magnum/Ui/Event.h"
 #include "Magnum/Ui/Handle.h"
 #include "Magnum/Ui/NodeFlags.h"
 #include "Magnum/Ui/RendererGL.h"
