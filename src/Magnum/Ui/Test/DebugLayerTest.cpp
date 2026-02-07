@@ -797,41 +797,45 @@ const struct {
     DebugLayerFlags flags;
     LayerStates states;
     bool emptyUpdate, expectDataUpdated;
+    Containers::Optional<Float> colorMapScale;
 } UpdateDataOrderData[]{
     {"node inspect, empty update",
         LayerFeature::Draw, DebugLayerFlag::NodeInspect,
-        LayerState::NeedsDataUpdate, true, false},
+        LayerState::NeedsDataUpdate, true, false, {}},
     {"node inspect, node offset/size update only",
         LayerFeature::Draw, DebugLayerFlag::NodeInspect,
-        LayerState::NeedsNodeOffsetSizeUpdate, false, true},
+        LayerState::NeedsNodeOffsetSizeUpdate, false, true, {}},
     {"node inspect, node order update only",
         LayerFeature::Draw, DebugLayerFlag::NodeInspect,
-        LayerState::NeedsNodeOrderUpdate, false, true},
+        LayerState::NeedsNodeOrderUpdate, false, true, {}},
     /* These five shouldn't cause anything to be done in update(), resulting in
        the draw offset array to be empty */
     {"node inspect, no Draw feature",
         {}, DebugLayerFlag::NodeInspect,
-        LayerState::NeedsDataUpdate, false, false},
+        LayerState::NeedsDataUpdate, false, false, {}},
     {"node inspect, node enabled update only",
         LayerFeature::Draw, DebugLayerFlag::NodeInspect,
-        LayerState::NeedsNodeEnabledUpdate, false, false},
+        LayerState::NeedsNodeEnabledUpdate, false, false, {}},
     {"node inspect, node opacity update only",
         LayerFeature::Draw, DebugLayerFlag::NodeInspect,
-        LayerState::NeedsNodeOpacityUpdate, false, false},
+        LayerState::NeedsNodeOpacityUpdate, false, false, {}},
     {"node inspect, shared data update only",
         LayerFeature::Draw, DebugLayerFlag::NodeInspect,
-        LayerState::NeedsSharedDataUpdate, false, false},
+        LayerState::NeedsSharedDataUpdate, false, false, {}},
     {"node inspect, common data update only",
         LayerFeature::Draw, DebugLayerFlag::NodeInspect,
-        LayerState::NeedsCommonDataUpdate, false, false},
+        LayerState::NeedsCommonDataUpdate, false, false, {}},
     /* This creates data on-demand for just the highlighted nodes, not
        implicitly for all */
     {"node highlight, empty update",
         LayerFeature::Draw, DebugLayerFlags{},
-        LayerState::NeedsDataUpdate, true, false},
+        LayerState::NeedsDataUpdate, true, false, {}},
     {"node highlight, node offset/size update",
         LayerFeature::Draw, DebugLayerFlags{},
-        LayerState::NeedsNodeOffsetSizeUpdate, false, true},
+        LayerState::NeedsNodeOffsetSizeUpdate, false, true, {}},
+    {"node highlight, node offset/size update, custom colormap scale",
+        LayerFeature::Draw, DebugLayerFlags{},
+        LayerState::NeedsNodeOffsetSizeUpdate, false, true, 3.0f},
 };
 
 DebugLayerTest::DebugLayerTest() {
@@ -5542,6 +5546,7 @@ void DebugLayerTest::nodeHighlightSetters() {
     }), TestSuite::Compare::Container);
     CORRADE_COMPARE(layer.nodeHighlightGesture(), Containers::pair(Pointer::MouseRight|Pointer::Eraser, Modifier::Shift|Modifier::Ctrl));
     CORRADE_COMPARE(layer.nodeHighlightColorMapAlpha(), 0.25f);
+    CORRADE_COMPARE(layer.nodeHighlightColorMapScale(), 1.0f);
 
     /* Changing the color map causes NeedsDataUpdate to be set, but only if the
        layer draws anything. The data are just referenced, not copied
@@ -5550,20 +5555,21 @@ void DebugLayerTest::nodeHighlightSetters() {
         0xff00ff_rgb,
         0x00ff00_rgb
     };
-    layer.setNodeHighlightColorMap(colormap, 0.75f);
+    layer.setNodeHighlightColorMap(colormap, 0.75f, 37.0f);
     CORRADE_COMPARE_AS(layer.nodeHighlightColorMap(), Containers::arrayView({
         0xff00ff_rgb,
         0x00ff00_rgb
     }), TestSuite::Compare::Container);
     CORRADE_COMPARE(layer.nodeHighlightColorMap().data(), colormap);
     CORRADE_COMPARE(layer.nodeHighlightColorMapAlpha(), 0.75f);
+    CORRADE_COMPARE(layer.nodeHighlightColorMapScale(), 37.0f);
     CORRADE_COMPARE(layer.state(), data.expectedState);
 
     /* Clear the state flags */
     layer.update(LayerState::NeedsDataUpdate, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
     CORRADE_COMPARE(layer.state(), LayerStates{});
 
-    /* Default alpha */
+    /* Default alpha & scale */
     Color3ub colormap2[]{
         0xffff00_rgb
     };
@@ -5573,6 +5579,7 @@ void DebugLayerTest::nodeHighlightSetters() {
     }), TestSuite::Compare::Container);
     CORRADE_COMPARE(layer.nodeHighlightColorMap().data(), colormap2);
     CORRADE_COMPARE(layer.nodeHighlightColorMapAlpha(), 0.25f);
+    CORRADE_COMPARE(layer.nodeHighlightColorMapScale(), 1.0f);
     CORRADE_COMPARE(layer.state(), data.expectedState);
 
     /* Clear the state flags */
@@ -6860,6 +6867,7 @@ void DebugLayerTest::nodeHighlightInvalid() {
        queries and updates can't be called tho. */
     layerNoNodesNoInspect.nodeHighlightColorMap();
     layerNoNodesNoInspect.nodeHighlightColorMapAlpha();
+    layerNoNodesNoInspect.nodeHighlightColorMapScale();
     layerNoNodesNoInspect.nodeHighlightGesture();
     Color3ub colormap[1];
     layerNoNodesNoInspect.setNodeHighlightColorMap(colormap);
@@ -7104,7 +7112,10 @@ void DebugLayerTest::updateDataOrder() {
     layer.setNodeInspectColor(0xff3366cc_rgbaf);
 
     /* Colormap so every node below is interpolated _exactly_ on a dedicated
-       entry */
+       entry. If scale is specified, the colormap sampling wraps around and the
+       colors are picked from index 1*3 mod 7 = 3, 3*3 mod 7 = 2 and 6*3 mod 7
+       = 4. Note that the arrays have to be defined in the function scope, not
+       inside the branches, as otherwise their contents will get stomped on. */
     Color3ub colormap[]{
         0xff0000_rgb,
         0x00ff00_rgb, /* node1 */
@@ -7115,7 +7126,22 @@ void DebugLayerTest::updateDataOrder() {
         0xffffff_rgb, /* node6 */
         0x000000_rgb
     };
-    layer.setNodeHighlightColorMap(colormap, 0.5f);
+    Color3ub colormapScaled[]{
+        {},
+        {},
+        0x00ffff_rgb, /* node3 */
+        0x00ff00_rgb, /* node1 */
+        0xffffff_rgb, /* node6 */
+        {},
+        {},
+        {},
+    };
+    if(!data.colorMapScale) {
+        layer.setNodeHighlightColorMap(colormap, 0.5f);
+    } else {
+        CORRADE_INTERNAL_ASSERT(data.colorMapScale == 3.0f);
+        layer.setNodeHighlightColorMap(colormapScaled, 0.5f, *data.colorMapScale);
+    }
 
     /* Create nodes in a way that there's a non-trivial mapping from node IDs
        to debug layer data IDs, as checked below */

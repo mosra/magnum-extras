@@ -1004,13 +1004,18 @@ Float DebugLayer::nodeHighlightColorMapAlpha() const {
     return _state->nodeHighlightColorMapAlpha;
 }
 
-DebugLayer& DebugLayer::setNodeHighlightColorMap(const Containers::ArrayView<const Vector3ub> colormap, const Float alpha) {
+Float DebugLayer::nodeHighlightColorMapScale() const {
+    return _state->nodeHighlightColorMapScale;
+}
+
+DebugLayer& DebugLayer::setNodeHighlightColorMap(const Containers::ArrayView<const Vector3ub> colormap, const Float alpha, const Float scale) {
     CORRADE_ASSERT(!colormap.isEmpty(),
         "Ui::DebugLayer::setNodeHighlightColorMap(): expected colormap to have at least one element", *this);
 
     State& state = *_state;
     state.nodeHighlightColorMap = colormap;
     state.nodeHighlightColorMapAlpha = alpha;
+    state.nodeHighlightColorMapScale = scale;
 
     /* If this is a subclass that draws, trigger an update so the colors are
        recalculated */
@@ -1581,9 +1586,12 @@ void DebugLayer::doUpdate(const LayerStates states, const Containers::StridedArr
             state.nodeInspectColor :
             /** @todo might want to switch to sampleSrgb() once everything is
                 sRGB-ready */
+            /** @todo the fract() will never pick exactly the last colormap
+                item because for 1.0f it'll wrap back to 0.0f; likely not much
+                of a problem in practice but it's there */
             Color4{
                 TextureTools::sampleLinear(state.nodeHighlightColorMap,
-                    Float(nodeId)/(state.nodes.size() - 1)),
+                    Math::fract(nodeId*state.nodeHighlightColorMapScale/(state.nodes.size() - 1))),
                 state.nodeHighlightColorMapAlpha
             }.premultiplied();
 

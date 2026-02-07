@@ -193,6 +193,7 @@ struct DebugLayer::State {
     Pointers nodeHighlightPointers = Pointer::MouseRight|Pointer::Eraser;
     Modifiers nodeHighlightModifiers = Modifier::Shift|Modifier::Ctrl;
     Float nodeHighlightColorMapAlpha = 0.25f;
+    Float nodeHighlightColorMapScale = 1.0f;
     /* 2 bytes free */
     Containers::Function<void(Containers::StringView)> nodeInspectCallback;
 

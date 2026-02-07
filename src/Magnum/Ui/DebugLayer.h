@@ -1071,6 +1071,9 @@ class MAGNUM_UI_EXPORT DebugLayer: public AbstractLayer {
         /** @brief Node highlight color map alpha */
         Float nodeHighlightColorMapAlpha() const;
 
+        /** @brief Node highlight color map scale */
+        Float nodeHighlightColorMapScale() const;
+
         /**
          * @brief Set node highlight color map
          * @return Reference to self (for method chaining)
@@ -1083,19 +1086,25 @@ class MAGNUM_UI_EXPORT DebugLayer: public AbstractLayer {
          * @ref setNodeHighlightColorMap() is called with a different color
          * map.
          *
-         * The first element from @p colors is used to highlight a node with ID
-         * @cpp 0 @ce, the last element for a node with ID right below
-         * @ref AbstractUserInterface::nodeCapacity(), IDs in between get a
-         * linear interpolation between nearest elements. All @p colors are
-         * made four-component and premultiplied with @p alpha when applied.
-         * Default is a map with a single @cpp 0x00ffff_rgb @ce color, i.e. the
-         * same color used for all nodes.
+         * With @p scale of @cpp 1.0f @ce, the first element from @p colors is
+         * used to highlight a node with ID @cpp 0 @ce, the last element for a
+         * node with ID right below @ref AbstractUserInterface::nodeCapacity(),
+         * IDs in between get a linear interpolation between nearest elements.
+         * All @p colors are made four-component and premultiplied with
+         * @p alpha when applied. Default is a map with a single
+         * @cpp 0x00ffff_rgb @ce color, i.e. the same color used for all nodes.
+         *
+         * If the user interface has many nodes, higlighting nodes with nearby
+         * IDs will give them very similar colors. This can be circumvented by
+         * setting a larger @p scale, which spreads out the color map sampling.
+         * Prime numbers such as @cpp 37.0f @ce work best to cover the color
+         * map without reusing similar colors too often.
          *
          * If the layer is instantiated as @ref DebugLayerGL, calling this
          * function causes @ref LayerState::NeedsDataUpdate to be set.
          * @see @ref DebugTools::ColorMap, @ref setNodeInspectColor()
          */
-        DebugLayer& setNodeHighlightColorMap(Containers::ArrayView<const Vector3ub> colors, Float alpha = 0.25f);
+        DebugLayer& setNodeHighlightColorMap(Containers::ArrayView<const Vector3ub> colors, Float alpha = 0.25f, Float scale = 1.0f);
 
         /** @brief Node highlight gesture */
         Containers::Pair<Pointers, Modifiers> nodeHighlightGesture() const;
