@@ -14696,7 +14696,24 @@ void AbstractUserInterfaceTest::eventNodePropagation() {
         }
     };
 
-    /* If the layouter is enabled, all nodes are shifted & scaled which makes
+    /*     0   10  15    35           45      55  105 120       200
+         0 +------------------------------------------------..--+
+           |notInOrder; hidden; disabled; noEvents              |
+        20 |   +--------------------------------..-----+        |
+           |   |bottom                                 |        |
+        25 |   |   +----------------------------..-+   |        |
+           |   |   |top                            |   |        |
+        55 |   |   |      +-----------+            |   |        |
+           |   |   |      |topNested; |            |   |        |
+           |   |   |      | removed +---------+    |   |        |
+        65 |   |   |      +---------|topNested|    |   |        |
+           |   |   |                | Outside |    |   |        |
+           |   |   |                +---------+    |   |        |
+        70 |   +---+----------------------------..-+---+        |
+          ...                                                  ...
+       200 +------------------------------------------------..--+
+
+       If the layouter is enabled, all nodes are shifted & scaled which makes
        them completely unreachable by events, and the layouter then undoes
        that */
     Vector2 baseNodeOffset{0.0f, data.layouter ? 1000.0f : 0.0f};
@@ -14710,13 +14727,16 @@ void AbstractUserInterfaceTest::eventNodePropagation() {
     NodeHandle topNested = ui.createNode(top,
         baseNodeOffset + Vector2{20.0f, 30.0f},
         baseNodeScale*Vector2{10.0f, 10.0f});
+    NodeHandle topNestedOutside = ui.createNode(topNested,
+        baseNodeOffset + Vector2{7.5f, 7.5f},
+        baseNodeScale*Vector2{10.0f, 10.0f});
+    /* These five should all be invisible for events */
     NodeHandle removed = ui.createNode(topNested,
         baseNodeOffset,
         baseNodeScale*Vector2{10.0f, 10.0f});
     NodeHandle notInOrder = ui.createNode(
         baseNodeOffset,
         baseNodeScale*Vector2{200.0f, 200.0f});
-    /* These three should all be invisible for events */
     NodeHandle hidden = ui.createNode(
         baseNodeOffset,
         baseNodeScale*Vector2{200.0f, 200.0f}, NodeFlag::Hidden);
@@ -14726,9 +14746,6 @@ void AbstractUserInterfaceTest::eventNodePropagation() {
     NodeHandle noEvents = ui.createNode(
         baseNodeOffset,
         baseNodeScale*Vector2{200.0f, 200.0f}, NodeFlag::NoEvents);
-    NodeHandle topNestedOutside = ui.createNode(topNested,
-        baseNodeOffset + Vector2{7.5f, 7.5f},
-        baseNodeScale*Vector2{10.0f, 10.0f});
 
     /* Update explicitly before adding the layouters / layers as
        NeedsLayoutUpdate and NeedsDataAttachmentUpdate is a subset of this, and
