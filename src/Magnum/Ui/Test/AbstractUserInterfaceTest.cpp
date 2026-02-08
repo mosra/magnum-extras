@@ -14696,22 +14696,23 @@ void AbstractUserInterfaceTest::eventNodePropagation() {
         }
     };
 
-    /*     0   10  15    35           45      55  105 120       200
-         0 +------------------------------------------------..--+
-           |notInOrder; hidden; disabled; noEvents              |
-        20 |   +--------------------------------..-----+        |
-           |   |bottom                                 |        |
-        25 |   |   +----------------------------..-+   |        |
-           |   |   |top                            |   |        |
-        55 |   |   |      +-----------+            |   |        |
-           |   |   |      |topNested; |            |   |        |
-           |   |   |      | removed +---------+    |   |        |
-        65 |   |   |      +---------|topNested|    |   |        |
-           |   |   |                | Outside |    |   |        |
-           |   |   |                +---------+    |   |        |
-        70 |   +---+----------------------------..-+---+        |
-          ...                                                  ...
-       200 +------------------------------------------------..--+
+    /*     0   10  15  30 35    40    45      55  80   105  115 120  200
+         0 +-------------------------------------------------------..-+
+           |notInOrder; hidden; disabled; noEvents                    |
+        20 |   +----------------------------------+-----------+-+     |
+           |   |bottom                            |bottmNested| |     |
+        25 |   |   +------------------------------|Overlap1;2 | |     |
+        30 |   |   |top                           +-----------+ |     |
+           |   |   |                                    |       |     |
+        55 |   |   |      +-----------+                 |       |     |
+           |   |   |      | topNested;|                 |       |     |
+           |   |   |      | removed +---------+         |       |     |
+        65 |   |   |    +-------+   |topNested|         |       |     |
+           |   |   |    |topOver|   | Outside |         |       |     |
+           |   |   |    |lap1;2 |   +---------+         |       |     |
+        70 |   +---+----+-------+-----+-----------------+-------+     |
+          ...                                                        ...
+       200 +-------------------------------------------------------..-+
 
        If the layouter is enabled, all nodes are shifted & scaled which makes
        them completely unreachable by events, and the layouter then undoes
@@ -14721,12 +14722,24 @@ void AbstractUserInterfaceTest::eventNodePropagation() {
     NodeHandle bottom = ui.createNode(
         baseNodeOffset + Vector2{10.0f, 20.0f},
         baseNodeScale*Vector2{110.0f, 50.0f});
+    NodeHandle bottomNestedOverlap1 = ui.createNode(bottom,
+        baseNodeOffset + Vector2{70.0f, 0.0f},
+        baseNodeScale*Vector2{35.0f, 10.0f});
+    NodeHandle bottomNestedOverlap2 = ui.createNode(bottom,
+        baseNodeOffset + Vector2{70.0f, 0.0f},
+        baseNodeScale*Vector2{35.0f, 10.0f});
     NodeHandle top = ui.createNode(
         baseNodeOffset + Vector2{15.0f, 25.0f},
         baseNodeScale*Vector2{90.0f, 45.0f});
     NodeHandle topNested = ui.createNode(top,
         baseNodeOffset + Vector2{20.0f, 30.0f},
-        baseNodeScale*Vector2{10.0f, 10.0f});
+        baseNodeScale*Vector2{10.0f, 15.0f});
+    NodeHandle topOverlap1 = ui.createNode(top,
+        baseNodeOffset + Vector2{15.0f, 40.0f},
+        baseNodeScale*Vector2{10.0f, 5.0f});
+    NodeHandle topOverlap2 = ui.createNode(top,
+        baseNodeOffset + Vector2{15.0f, 40.0f},
+        baseNodeScale*Vector2{10.0f, 5.0f});
     NodeHandle topNestedOutside = ui.createNode(topNested,
         baseNodeOffset + Vector2{7.5f, 7.5f},
         baseNodeScale*Vector2{10.0f, 10.0f});
@@ -14761,8 +14774,12 @@ void AbstractUserInterfaceTest::eventNodePropagation() {
     if(data.layouter) {
         Layouter& layouter = ui.setLayouterInstance(Containers::pointer<Layouter>(ui.createLayouter()));
         layouter.add(bottom);
+        layouter.add(bottomNestedOverlap1);
+        layouter.add(bottomNestedOverlap2);
         layouter.add(top);
         layouter.add(topNested);
+        layouter.add(topOverlap1);
+        layouter.add(topOverlap2);
         layouter.add(removed);
         layouter.add(hidden);
         layouter.add(disabled);
@@ -14792,9 +14809,13 @@ void AbstractUserInterfaceTest::eventNodePropagation() {
        way */
     DataHandle bottomData1 = layer1Instance->create(bottom);
     /*DataHandle bottomData2 =*/ layer2Instance->create(bottom);
+    DataHandle bottomNestedOverlap2Data = layer1Instance->create(bottomNestedOverlap2);
+    DataHandle bottomNestedOverlap1Data = layer3Instance->create(bottomNestedOverlap1);
     DataHandle topNestedData1 = layer3Instance->create(topNested);
     DataHandle topNestedData2 = layer1Instance->create(topNested);
     DataHandle topNestedData3 = layer3Instance->create(topNested);
+    DataHandle topOverlap1Data = layer1Instance->create(topOverlap1);
+    DataHandle topOverlap2Data = layer3Instance->create(topOverlap2);
     DataHandle topNestedOutsideData = layer3Instance->create(topNestedOutside);
     /*DataHandle notInOrderData =*/ layer1Instance->create(notInOrder);
     /*DataHandle hiddenData =*/ layer2Instance->create(hidden);
@@ -14827,25 +14848,25 @@ void AbstractUserInterfaceTest::eventNodePropagation() {
 
     ui.clearNodeOrder(notInOrder);
     ui.removeNode(removed);
-    CORRADE_COMPARE(ui.layer(layer1).usedCount(), 4);
+    CORRADE_COMPARE(ui.layer(layer1).usedCount(), 6);
     CORRADE_COMPARE(ui.layer(layer2).usedCount(), 2);
-    CORRADE_COMPARE(ui.layer(layer3).usedCount(), 6);
+    CORRADE_COMPARE(ui.layer(layer3).usedCount(), 8);
     CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeClean);
 
     if(data.clean) {
         ui.clean();
-        CORRADE_COMPARE(ui.layer(layer1).usedCount(), 4);
+        CORRADE_COMPARE(ui.layer(layer1).usedCount(), 6);
         CORRADE_COMPARE(ui.layer(layer2).usedCount(), 2);
-        CORRADE_COMPARE(ui.layer(layer3).usedCount(), 5);
+        CORRADE_COMPARE(ui.layer(layer3).usedCount(), 7);
         CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeUpdate);
     }
 
     /* update() should call clean() only if needed */
     if(data.update) {
         ui.update();
-        CORRADE_COMPARE(ui.layer(layer1).usedCount(), 4);
+        CORRADE_COMPARE(ui.layer(layer1).usedCount(), 6);
         CORRADE_COMPARE(ui.layer(layer2).usedCount(), 2);
-        CORRADE_COMPARE(ui.layer(layer3).usedCount(), 5);
+        CORRADE_COMPARE(ui.layer(layer3).usedCount(), 7);
         CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
     }
 
@@ -14985,6 +15006,44 @@ void AbstractUserInterfaceTest::eventNodePropagation() {
             /* It's at {3.5f, 3.5f} for topNestedOutside, but that's outside
                of topNested so it isn't considered */
             {topData, {31.0f, 41.0f}, true},
+        })), TestSuite::Compare::Container);
+
+    /* If two neighbor nodes overlap, nodes with lower ID should receive the
+       event first. Data ID has no effect on this. Making all layers not accept
+       the events to see the whole sequence. */
+    } {
+        CORRADE_COMPARE_AS(nodeHandleId(topNested), nodeHandleId(topOverlap1),
+            TestSuite::Compare::Less);
+        CORRADE_COMPARE_AS(nodeHandleId(topOverlap1), nodeHandleId(topOverlap2),
+            TestSuite::Compare::Less);
+
+        layer1Accept = layer2Accept = layer3Accept = false;
+        eventCalls = {};
+        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
+        CORRADE_VERIFY(!ui.pointerPressEvent({360.0f, 6600.0f}, event));
+        CORRADE_COMPARE_AS(eventCalls, (Containers::arrayView<Containers::Triple<DataHandle, Vector2, bool>>({
+            {topNestedData3, {1.0f, 11.0f}, false},
+            {topNestedData1, {1.0f, 11.0f}, false},
+            {topNestedData2, {1.0f, 11.0f}, false},
+            {topOverlap1Data, {6.0f, 1.0f}, false},
+            {topOverlap2Data, {6.0f, 1.0f}, false},
+            {topData, {21.0f, 41.0f}, false},
+            {bottomData1, {26.0f, 46.0f}, false}
+        })), TestSuite::Compare::Container);
+
+    /* Same case, just in a different place in the hierarchy */
+    } {
+        CORRADE_COMPARE_AS(nodeHandleId(bottomNestedOverlap1), nodeHandleId(bottomNestedOverlap2),
+            TestSuite::Compare::Less);
+
+        layer1Accept = layer2Accept = layer3Accept = false;
+        eventCalls = {};
+        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
+        CORRADE_VERIFY(!ui.pointerPressEvent({1100.0f, 2500.0f}, event));
+        CORRADE_COMPARE_AS(eventCalls, (Containers::arrayView<Containers::Triple<DataHandle, Vector2, bool>>({
+            {bottomNestedOverlap1Data, {30.0f, 5.0f}, false},
+            {bottomNestedOverlap2Data, {30.0f, 5.0f}, false},
+            {bottomData1, {100.0f, 5.0f}, false}
         })), TestSuite::Compare::Container);
     }
 
