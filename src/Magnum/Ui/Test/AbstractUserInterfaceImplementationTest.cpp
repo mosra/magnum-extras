@@ -48,7 +48,7 @@ struct AbstractUserInterfaceImplementationTest: TestSuite::Tester {
     void orderVisibleNodesDepthFirstSingleBranch();
     void orderVisibleNodesDepthFirstNoTopLevelNodes();
 
-    void visibleTopLevelNodeIndices();
+    void reverseVisibleNodeIndices();
 
     void propagateNodeFlagToChildren();
 
@@ -480,7 +480,7 @@ AbstractUserInterfaceImplementationTest::AbstractUserInterfaceImplementationTest
               &AbstractUserInterfaceImplementationTest::orderVisibleNodesDepthFirstSingleBranch,
               &AbstractUserInterfaceImplementationTest::orderVisibleNodesDepthFirstNoTopLevelNodes,
 
-              &AbstractUserInterfaceImplementationTest::visibleTopLevelNodeIndices,
+              &AbstractUserInterfaceImplementationTest::reverseVisibleNodeIndices,
 
               &AbstractUserInterfaceImplementationTest::propagateNodeFlagToChildren,
 
@@ -796,34 +796,62 @@ void AbstractUserInterfaceImplementationTest::orderVisibleNodesDepthFirstNoTopLe
     CORRADE_COMPARE(count, 0);
 }
 
-void AbstractUserInterfaceImplementationTest::visibleTopLevelNodeIndices() {
+void AbstractUserInterfaceImplementationTest::reverseVisibleNodeIndices() {
     /* Mostly like the output in the orderVisibleNodesDepthFirst() case */
     UnsignedInt visibleNodeChildrenCounts[]{
         /* First node has no children */
-        0,
+        0,                                  /* 0 */
 
         /* Next has one child */
-        1,
-            0,
+        1,                                  /* 1 */
+            0,                              /* 2 */
 
         /* Next has 6 children */
-        6,
-            2,
-                1,
-                    0,
-            0,
-            1,
-                0,
+        6,                                  /* 3 */
+            2,                              /* 4 */
+                1,                          /* 5 */
+                    0,                      /* 6 */
+            0,                              /* 7 */
+            1,                              /* 8 */
+                0,                          /* 9 */
 
         /* Next has none again */
-        0,
+        0,                                  /* 10 */
     };
 
-    UnsignedInt visibleTopLevelNodeIndices[5];
-    std::size_t count = Implementation::visibleTopLevelNodeIndicesInto(visibleNodeChildrenCounts, visibleTopLevelNodeIndices);
-    CORRADE_COMPARE(count, 4);
-    CORRADE_COMPARE_AS(Containers::arrayView(visibleTopLevelNodeIndices).prefix(count), Containers::arrayView<UnsignedInt>({
-        0, 1, 3, 10
+    /* Produces indices into the original array which allow to iterate in
+       reverse direction */
+    UnsignedInt reverseVisibleNodeIndices[Containers::arraySize(visibleNodeChildrenCounts)];
+    Implementation::reverseVisibleNodeIndicesInto(visibleNodeChildrenCounts, reverseVisibleNodeIndices);
+    CORRADE_COMPARE_AS(Containers::arrayView(reverseVisibleNodeIndices), Containers::arrayView<UnsignedInt>({
+        10,
+        3,
+            8,
+                9,
+            7,
+            4,
+                5,
+                    6,
+        1,
+            2,
+        0
+    }), TestSuite::Compare::Container);
+
+    /* Verify that the operation roundtrips -- first populata reverse children
+       count array */
+    UnsignedInt reverseVisibleNodeChildrenCounts[Containers::arraySize(visibleNodeChildrenCounts)];
+    for(std::size_t i = 0; i != Containers::arraySize(visibleNodeChildrenCounts); ++i)
+        reverseVisibleNodeChildrenCounts[i] = visibleNodeChildrenCounts[reverseVisibleNodeIndices[i]];
+
+    /* Then create a reverse index mapping for the reversed children count
+       array, and apply the mapping on the original reverse mapping. The result
+       should be a trivial sequence again. */
+    UnsignedInt reverseReverseVisibleNodeIndices[Containers::arraySize(visibleNodeChildrenCounts)];
+    Implementation::reverseVisibleNodeIndicesInto(reverseVisibleNodeChildrenCounts, reverseReverseVisibleNodeIndices);
+    for(std::size_t i = 0; i != Containers::arraySize(visibleNodeChildrenCounts); ++i)
+        reverseReverseVisibleNodeIndices[i] = reverseVisibleNodeIndices[reverseReverseVisibleNodeIndices[i]];
+    CORRADE_COMPARE_AS(Containers::arrayView(reverseReverseVisibleNodeIndices), Containers::arrayView<UnsignedInt>({
+        0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10
     }), TestSuite::Compare::Container);
 }
 

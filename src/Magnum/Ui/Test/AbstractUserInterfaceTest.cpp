@@ -15008,9 +15008,9 @@ void AbstractUserInterfaceTest::eventNodePropagation() {
             {topData, {31.0f, 41.0f}, true},
         })), TestSuite::Compare::Container);
 
-    /* If two neighbor nodes overlap, nodes with lower ID should receive the
-       event first. Data ID has no effect on this. Making all layers not accept
-       the events to see the whole sequence. */
+    /* If two neighbor nodes overlap, nodes with lower ID are drawn first and
+       thus they should receive the events last. Data ID has no effect on this.
+       Making all layers not accept the events to see the whole sequence. */
     } {
         CORRADE_COMPARE_AS(nodeHandleId(topNested), nodeHandleId(topOverlap1),
             TestSuite::Compare::Less);
@@ -15022,11 +15022,11 @@ void AbstractUserInterfaceTest::eventNodePropagation() {
         PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
         CORRADE_VERIFY(!ui.pointerPressEvent({360.0f, 6600.0f}, event));
         CORRADE_COMPARE_AS(eventCalls, (Containers::arrayView<Containers::Triple<DataHandle, Vector2, bool>>({
+            {topOverlap2Data, {6.0f, 1.0f}, false},
+            {topOverlap1Data, {6.0f, 1.0f}, false},
             {topNestedData3, {1.0f, 11.0f}, false},
             {topNestedData1, {1.0f, 11.0f}, false},
             {topNestedData2, {1.0f, 11.0f}, false},
-            {topOverlap1Data, {6.0f, 1.0f}, false},
-            {topOverlap2Data, {6.0f, 1.0f}, false},
             {topData, {21.0f, 41.0f}, false},
             {bottomData1, {26.0f, 46.0f}, false}
         })), TestSuite::Compare::Container);
@@ -15041,8 +15041,8 @@ void AbstractUserInterfaceTest::eventNodePropagation() {
         PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
         CORRADE_VERIFY(!ui.pointerPressEvent({1100.0f, 2500.0f}, event));
         CORRADE_COMPARE_AS(eventCalls, (Containers::arrayView<Containers::Triple<DataHandle, Vector2, bool>>({
-            {bottomNestedOverlap1Data, {30.0f, 5.0f}, false},
             {bottomNestedOverlap2Data, {30.0f, 5.0f}, false},
+            {bottomNestedOverlap1Data, {30.0f, 5.0f}, false},
             {bottomData1, {100.0f, 5.0f}, false}
         })), TestSuite::Compare::Container);
     }

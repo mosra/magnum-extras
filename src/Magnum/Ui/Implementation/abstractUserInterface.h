@@ -247,12 +247,76 @@ std::size_t orderVisibleNodesDepthFirstInto(const Containers::StridedArrayView1D
     return outputOffset;
 }
 
-std::size_t visibleTopLevelNodeIndicesInto(const Containers::StridedArrayView1D<const UnsignedInt>& visibleNodeChildrenCounts, const Containers::StridedArrayView1D<UnsignedInt>& visibleTopLevelNodeIndices) {
-    UnsignedInt offset = 0;
-    for(UnsignedInt visibleTopLevelNodeIndex = 0; visibleTopLevelNodeIndex != visibleNodeChildrenCounts.size(); visibleTopLevelNodeIndex += visibleNodeChildrenCounts[visibleTopLevelNodeIndex] + 1)
-        visibleTopLevelNodeIndices[offset++] = visibleTopLevelNodeIndex;
+/* Populates an array to be able to traverse the visibleNodeChildrenCounts and
+   visibleNodeIds arrays in reverse (i.e., not in draw order but in event
+   processing order). Expects that both `visibleNodeChildrenCounts` and
+   `reverseIndices` have the same size.
 
-    return offset;
+   The function is rather simple, but deserves an explanation. Let's say
+   there's five nodes in the following hierarchy, node A having 3 children (B,
+   C, D) and node B 1 child (C), as shown on the left:
+
+             ---------->        <----------
+    index    0 1 2 3 4 5        2 1 3 0 5 4
+             A       E                A   E
+    node       B   D   F          B D   F
+                 C              C
+    child    3 1 0 0 1 0
+    count
+
+   In order to iterate depth-first in reverse, the top-level nodes are E with 0
+   children, followed by A with 3 children, and inside A it's first D with 0
+   children, then B and then B's child C, as shown on the right, just going
+   in opposite direction. Converted to indices to the original node sequence
+   it's 4, 0, 3, 1, 2.
+
+    step 1  _ _ _ A _ _
+    step 2  _ B _ A _ _
+    step 3  C B _ A _ _
+    step 4  C B D A _ _
+    step 5  C B D A _ E
+    step 6  C B D A F E
+            <----------
+            2 1 3 0 5 4
+
+   If we'd go through the reversed sequence from left-to-right, we can see that
+   A is simply placed after all its children (step 1). Then, B is placed after
+   its only child (step 2). Then, C doesn't have any children so it's placed at
+   the first free index (step 3). Then, D again doesn't have any children so
+   it's placed at the next free index (step 4). E has one child, so it's again
+   placed one item after the first free index (step 5). F, with no children, is
+   then placed at the (remaining) first free index, and that's all input
+   exhausted. The reverse iteration is done from the end, thus the final index
+   output is 4, 5, 0, 3, 1, 2. */
+void reverseVisibleNodeIndicesInto(const Containers::StridedArrayView1D<const UnsignedInt>& visibleNodeChildrenCounts, const Containers::StridedArrayView1D<UnsignedInt>& reverseIndices) {
+    CORRADE_INTERNAL_ASSERT(reverseIndices.size() == visibleNodeChildrenCounts.size());
+
+    /* Mark all indices in the output as not written yet */
+    for(UnsignedInt& i: reverseIndices)
+        i = ~UnsignedInt{};
+
+    /* The following code is simpler to reason about if both arrays are indexed
+       from 0. We however need the reverse indices to be populated from the
+       other side, so write the output to a flipped view. */
+    const Containers::StridedArrayView1D<UnsignedInt> reverseIndicesFlipped = reverseIndices.flipped<0>();
+
+    std::size_t in = 0;
+    for(std::size_t out = 0; out != reverseIndicesFlipped.size(); ) {
+        /* Index already written to this location from before, advance to the
+           next output position without using anything from the input */
+        if(reverseIndicesFlipped[out] != ~UnsignedInt{}) {
+            ++out;
+
+        /* Otherwise write the next input index to a position after all
+           children, without advancing the output position. If children count
+           is 0, the output index will be advanced in the next iteration. */
+        } else {
+            reverseIndicesFlipped[out + visibleNodeChildrenCounts[in]] = in;
+            ++in;
+        }
+    }
+
+    CORRADE_INTERNAL_ASSERT(in == visibleNodeChildrenCounts.size());
 }
 
 /* The `visibleNodeIds` and `visibleNodeChildrenCounts` are outputs of

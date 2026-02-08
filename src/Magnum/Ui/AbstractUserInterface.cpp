@@ -676,7 +676,7 @@ struct AbstractUserInterface::State {
     Containers::ArrayTuple nodeStateStorage;
     Containers::ArrayView<UnsignedInt> preLayoutVisibleNodeIds;
     Containers::ArrayView<UnsignedInt> preLayoutVisibleNodeChildrenCounts;
-    Containers::StridedArrayView1D<UnsignedInt> visibleFrontToBackTopLevelNodeIndices;
+    Containers::ArrayView<UnsignedInt> reversePreLayoutVisibleNodeIndices;
     Containers::ArrayView<Vector2> nodeOffsets;
     Containers::ArrayView<Vector2> nodeSizes;
     Containers::ArrayView<Vector2> absoluteNodeOffsets;
@@ -3260,7 +3260,7 @@ AbstractUserInterface& AbstractUserInterface::update() {
         state.nodeStateStorage = Containers::ArrayTuple{
             {NoInit, state.nodes.size(), state.preLayoutVisibleNodeIds},
             {NoInit, state.nodes.size(), state.preLayoutVisibleNodeChildrenCounts},
-            {NoInit, state.nodeOrder.size(), state.visibleFrontToBackTopLevelNodeIndices},
+            {NoInit, state.nodes.size(), state.reversePreLayoutVisibleNodeIndices},
             {NoInit, state.nodes.size(), state.nodeOffsets},
             {NoInit, state.nodes.size(), state.nodeSizes},
             {NoInit, state.nodes.size(), state.absoluteNodeOffsets},
@@ -3291,14 +3291,12 @@ AbstractUserInterface& AbstractUserInterface::update() {
                 parentsToProcess, state.preLayoutVisibleNodeIds, state.preLayoutVisibleNodeChildrenCounts);
             state.preLayoutVisibleNodeIds = state.preLayoutVisibleNodeIds.prefix(visibleCount);
             state.preLayoutVisibleNodeChildrenCounts = state.preLayoutVisibleNodeChildrenCounts.prefix(visibleCount);
+            state.reversePreLayoutVisibleNodeIndices = state.reversePreLayoutVisibleNodeIndices.prefix(visibleCount);
         }
 
-        /* 2. Create a front-to-back index map for visible top-level nodes,
-           i.e. populate it in a flipped order. */
-        {
-            const std::size_t count = Implementation::visibleTopLevelNodeIndicesInto(state.preLayoutVisibleNodeChildrenCounts, state.visibleFrontToBackTopLevelNodeIndices.flipped<0>());
-            state.visibleFrontToBackTopLevelNodeIndices = state.visibleFrontToBackTopLevelNodeIndices.exceptPrefix(state.visibleFrontToBackTopLevelNodeIndices.size() - count);
-        }
+        /* 2. The above iterates in draw order, create an index buffer to
+           iterate in reverse order for event handling. */
+        Implementation::reverseVisibleNodeIndicesInto(state.preLayoutVisibleNodeChildrenCounts, state.reversePreLayoutVisibleNodeIndices);
     }
 
     /* If no layout assignment update is needed, the
@@ -4320,7 +4318,7 @@ template<class Event, void(AbstractLayer::*function)(UnsignedInt, Event&)> bool 
     return acceptedByAnyData;
 }
 
-template<class Event, void(AbstractLayer::*function)(UnsignedInt, Event&)> NodeHandle AbstractUserInterface::callEvent(const Vector2& globalPositionScaled, const UnsignedInt visibleNodeIndex, Event& event) {
+template<class Event, void(AbstractLayer::*function)(UnsignedInt, Event&)> NodeHandle AbstractUserInterface::callEvent(const Vector2& globalPositionScaled, const UnsignedInt reverseVisibleNodeIndex, Event& event) {
     /* The accept state should be initially false as we exit once it becomes
        true. */
     CORRADE_INTERNAL_ASSERT(!event._accepted);
@@ -4331,6 +4329,7 @@ template<class Event, void(AbstractLayer::*function)(UnsignedInt, Event&)> NodeH
        wouldn't return early, it wouldn't call anything anyway because the
        `state.visibleNodeEventDataOffsets` ranges for these is empty but why do
        all that extra work in the first place. */
+    const UnsignedInt visibleNodeIndex = state.reversePreLayoutVisibleNodeIndices[reverseVisibleNodeIndex];
     const UnsignedInt nodeId = state.preLayoutVisibleNodeIds[visibleNodeIndex];
     if(!state.visibleEventNodeMask[nodeId])
         return {};
@@ -4346,8 +4345,8 @@ template<class Event, void(AbstractLayer::*function)(UnsignedInt, Event&)> NodeH
     /** @todo maintain some info about how many actual event handlers is in
         particular subtrees, to not have to do complex hit testing when there's
         nothing to call anyway? especially for move events and such */
-    for(UnsignedInt i = 1, iMax = state.preLayoutVisibleNodeChildrenCounts[visibleNodeIndex] + 1; i != iMax; i += state.preLayoutVisibleNodeChildrenCounts[visibleNodeIndex + i] + 1) {
-        const NodeHandle called = callEvent<Event, function>(globalPositionScaled, visibleNodeIndex + i, event);
+    for(UnsignedInt i = 1, iMax = state.preLayoutVisibleNodeChildrenCounts[visibleNodeIndex] + 1; i != iMax; i += state.preLayoutVisibleNodeChildrenCounts[state.reversePreLayoutVisibleNodeIndices[reverseVisibleNodeIndex + i]] + 1) {
+        const NodeHandle called = callEvent<Event, function>(globalPositionScaled, reverseVisibleNodeIndex + i, event);
         if(called != NodeHandle::Null)
             return called;
     }
@@ -4365,8 +4364,9 @@ template<class Event, void(AbstractLayer::*function)(UnsignedInt, Event&)> NodeH
        event processing. Is a no-op if there's nothing to update or clean. */
     update();
 
-    for(const UnsignedInt visibleTopLevelNodeIndex: _state->visibleFrontToBackTopLevelNodeIndices) {
-        const NodeHandle called = callEvent<Event, function>(globalPositionScaled, visibleTopLevelNodeIndex, event);
+    State& state = *_state;
+    for(UnsignedInt reverseVisibleNodeIndex = 0; reverseVisibleNodeIndex != state.reversePreLayoutVisibleNodeIndices.size(); reverseVisibleNodeIndex += state.preLayoutVisibleNodeChildrenCounts[state.reversePreLayoutVisibleNodeIndices[reverseVisibleNodeIndex]] + 1) {
+        const NodeHandle called = callEvent<Event, function>(globalPositionScaled, reverseVisibleNodeIndex, event);
         if(called != NodeHandle::Null)
             return called;
     }
