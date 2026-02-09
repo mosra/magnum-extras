@@ -43,7 +43,7 @@ Containers::Pair<Vector2, Vector4> childLayoutSizeMargin(const Snaps childSnap, 
         nodeSizes.size() == nodeMinSizes.size() &&
         nodeMargins.size() == nodeMinSizes.size() &&
         firstChildLayout != LayouterDataHandle::Null &&
-        layoutNodes.size() == nextLayout.size());
+        nextLayout.size() == layoutNodes.size());
 
     /* First figure out margin component indices based on child snap. The order
        is left (0), top (1), right (2), bottom (3). */
