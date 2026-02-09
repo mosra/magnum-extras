@@ -418,11 +418,16 @@ class MAGNUM_UI_EXPORT SnapLayouter: public AbstractLayouter {
          * sibling of @p node. If @p snapTarget is a parent, @ref Snap::Inside
          * is implicitly used in addition to what's specified in @p snap.
          *
-         * Note that explicitly snapped layouts aren't considered in any way
-         * when calculating parent layout sizes and paddings and thus may
-         * overflow the parent node area. Use @ref add(NodeHandle, LayoutHandle, SnapLayoutFlags)
-         * for implicit child layouts which then propagate their total size and
-         * margin to the parent.
+         * Note that explicitly snapped layouts aren't fully considered when
+         * calculating parent layout sizes and paddings and thus may overflow
+         * the parent node area in certain cases. In particular, only sizes of
+         * explicitly snapped *child* layouts are considered, not explicitly
+         * snapped neighbors. Additionally, if
+         * @ref SnapLayoutFlag::PropagateMargin is enabled, margins of
+         * explicitly snapped layouts are completely ignored and don't
+         * propagate anywhere. Use @ref add(NodeHandle, LayoutHandle, SnapLayoutFlags)
+         * for implicit child layouts which propagate their total size and
+         * margin to the parent in all cases.
          *
          * Delegates to @ref AbstractLayouter::add(), see its documentation for
          * detailed description of all constraints.

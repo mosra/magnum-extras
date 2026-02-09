@@ -309,6 +309,101 @@ Containers::Pair<Vector2, Vector4> childLayoutSizeMargin(const Snaps childSnap, 
     return {outSize, outMargin};
 }
 
+/* Used by explicitlySnappedChildLayoutSize() so has to be defined here */
+constexpr SnapLayoutFlag SnapLayoutFlagExplicitSnapToParent = SnapLayoutFlag(0x80);
+
+/* Calculates max size of direct explicitly snapped child layouts along with
+   the corresponding padding and margin. Compared to childLayoutSizeMargin()
+   this is basically just calculating the max value as the explicit snaps don't
+   have any positioning constraints relative to each other. Explicitly snapped
+   neighbors and neighbors of child layouts are deliberately ignored.
+
+   The `flags` are also not used in any way except for the internal
+   SnapLayoutFlagExplicitSnapToParent bit. */
+Vector2 explicitlySnappedChildLayoutSize(const SnapLayoutFlags parentFlags, const Vector4& parentPadding, const Containers::StridedArrayView1D<const Vector2>& nodeMinSizes, const Containers::StridedArrayView1D<const Vector4>& nodeMargins, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, const LayouterDataHandle firstExplicitSnapLayout, const Containers::StridedArrayView1D<const NodeHandle>& layoutNodes, const Containers::StridedArrayView1D<const SnapLayoutFlags>& flags, const Containers::StridedArrayView1D<const Snaps>& explicitSnaps, const Containers::StridedArrayView1D<const LayouterDataHandle>& nextLayout) {
+    CORRADE_INTERNAL_ASSERT(
+        nodeSizes.size() == nodeMinSizes.size() &&
+        nodeMargins.size() == nodeMinSizes.size() &&
+        firstExplicitSnapLayout != LayouterDataHandle::Null &&
+        flags.size() == layoutNodes.size() &&
+        explicitSnaps.size() == layoutNodes.size() &&
+        nextLayout.size() == layoutNodes.size());
+
+    LayouterDataHandle explicitSnapLayout = firstExplicitSnapLayout;
+    Vector2 maxSizeWithMarginPadding;
+    do {
+        const UnsignedInt layoutId = layouterDataHandleId(explicitSnapLayout);
+
+        /* Consider the layout only if it's snapped to a parent and not a
+           sibling */
+        if(flags[layoutId] >= SnapLayoutFlagExplicitSnapToParent) {
+            const Snaps snap = explicitSnaps[layoutId];
+            const UnsignedInt nodeId = nodeHandleId(layoutNodes[layoutId]);
+            const Vector4 margin = nodeMargins[nodeId];
+
+            /* If horizontal overflow is ignored, nothing to do here */
+            if(!(parentFlags >= SnapLayoutFlag::IgnoreOverflowX)) {
+                Float width = Math::max(nodeSizes[nodeId].x(),
+                                        nodeMinSizes[nodeId].x());
+
+                /* If all horizontal padding is ignored, use just the width
+                   alone */
+                if(snap >= Snap::NoPadX) {
+                    /* Nothing */
+
+                /* Otherwise, if margin is propagated outside, add just parent
+                   horizontal padding alone */
+                /** @todo collect the total margin and return it for
+                    propagation, if such use case becomes important. Need to
+                    differ between side/center/fill snapping for each, which
+                    makes it rather complex for testing. */
+                } else if(parentFlags >= SnapLayoutFlag::PropagateMarginX) {
+                    width += Math::gather<0, 2>(parentPadding).sum();
+
+                /* Otherwise add max of horizontal margin and padding */
+                } else {
+                    width += Math::max(Math::gather<0, 2>(margin),
+                                       Math::gather<0, 2>(parentPadding)).sum();
+                }
+
+                maxSizeWithMarginPadding.x() = Math::max(maxSizeWithMarginPadding.x(), width);
+            }
+
+            /* If vertical overflow is ignored, nothing to do here */
+            if(!(parentFlags >= SnapLayoutFlag::IgnoreOverflowY)) {
+                Float height = Math::max(nodeSizes[nodeId].y(),
+                                        nodeMinSizes[nodeId].y());
+
+                /* If all vertical padding is ignored, use just the height
+                   alone */
+                if(snap >= Snap::NoPadY) {
+                    /* Nothing */
+
+                /* Otherwise, if margin is propagated outside, add just parent
+                   vertical padding alone */
+                /** @todo collect the total margin and return it for
+                    propagation, if such use case becomes important. Need to
+                    differ between side/center/fill snapping for each, which
+                    makes it rather complex for testing. */
+                } else if(parentFlags >= SnapLayoutFlag::PropagateMarginY) {
+                    height += Math::gather<1, 3>(parentPadding).sum();
+
+                /* Otherwise add max of vertical margin and padding */
+                } else {
+                    height += Math::max(Math::gather<1, 3>(margin),
+                                        Math::gather<1, 3>(parentPadding)).sum();
+                }
+
+                maxSizeWithMarginPadding.y() = Math::max(maxSizeWithMarginPadding.y(), height);
+            }
+        }
+
+        explicitSnapLayout = nextLayout[layoutId];
+    } while(explicitSnapLayout != firstExplicitSnapLayout);
+
+    return maxSizeWithMarginPadding;
+}
+
 /* Calculates the actual layout size, padding and margin from the layout and
    node properties and output from the childLayoutSizeMargin() above. Is a
    separate function because that makes it easier to test, and

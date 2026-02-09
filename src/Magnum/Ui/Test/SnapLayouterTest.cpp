@@ -66,6 +66,8 @@ struct SnapLayouterTest: TestSuite::Tester {
     void childLayoutSizeSide();
     void childLayoutSizeForward();
 
+    void explicitlySnappedChildLayoutSize();
+
     void orderLayoutsBreadthFirstEmpty();
     void orderLayoutsBreadthFirst();
 
@@ -1052,6 +1054,110 @@ const struct {
 
 const struct {
     const char* name;
+    SnapLayoutFlags parentFlags;
+    Vector4 parentPadding;
+    Snaps snaps[3];
+    Vector2 nodeSizes[3];
+    Vector4 nodeMargins[3];
+    Vector2 expected;
+} ExplicitlySnappedChildLayoutSizeData[]{
+    {"no padding or margin",
+        {}, {},
+        {{}, {}, {}},
+        /* Max X in second, max Y in last */
+        {{20.0f, 10.0f}, {30.0f, 15.0f}, {10.0f, 40.0f}},
+        {{}, {}, {}},
+        {30.0f, 40.0f}},
+    {"padding only",
+        {}, {1.0f, 2.0f, 3.0f, 4.0f},
+        {{}, {}, {}},
+        /* Max X in second, max Y in last */
+        {{20.0f, 10.0f}, {26.0f, 15.0f}, {10.0f, 34.0f}},
+        {{}, {}, {}},
+        {30.0f, 40.0f}},
+    {"margin only",
+        {}, {},
+        {{}, {}, {}},
+        /* Max X in second, max Y in last, but only if margin is applied */
+        {{20.0f, 10.0f}, {10.0f, 15.0f}, {10.0f, 10.0f}},
+        {{}, {10.0f, 0.0f, 10.0f, 0.0f}, {0.0f, 20.0f, 0.0f, 10.0f}},
+        {30.0f, 40.0f}},
+    {"padding + margin",
+        {}, {10.0f, 0.0f, 0.0f, 5.0f},
+        {{}, {}, {}},
+        /* Max X in second, max Y in last, but only with max(margin, padding);
+           left and bottom padding is larger, top and right margin is larger */
+        {{20.0f, 10.0f}, {15.0f, 15.0f}, {10.0f, 10.0f}},
+        {{}, {0.0f, 0.0f, 5.0f, 0.0f}, {0.0f, 25.0f, 0.0f, 0.0f}},
+        {30.0f, 40.0f}},
+    {"padding + margin, IgnoreOverflow",
+        SnapLayoutFlag::IgnoreOverflow, Vector4{3.0f},
+        {{}, {}, {}},
+        /* Max X in second, max Y in last */
+        {{20.0f, 10.0f}, {24.0f, 15.0f}, {10.0f, 34.0f}},
+        {Vector4{3.0f}, Vector4{3.0f}, Vector4{3.0f}},
+        {0.0f, 0.0f}},
+    {"padding + margin, IgnoreOverflowX",
+        SnapLayoutFlag::IgnoreOverflowX, Vector4{3.0f},
+        {{}, {}, {}},
+        /* Max X in second, max Y in last */
+        {{20.0f, 10.0f}, {30.0f, 15.0f}, {10.0f, 34.0f}},
+        {Vector4{3.0f}, Vector4{3.0f}, Vector4{3.0f}},
+        {0.0f, 40.0f}},
+    {"padding + margin, IgnoreOverflowY",
+        SnapLayoutFlag::IgnoreOverflowY, Vector4{3.0f},
+        {{}, {}, {}},
+        /* Max X in second, max Y in last */
+        {{20.0f, 10.0f}, {24.0f, 15.0f}, {10.0f, 40.0f}},
+        {Vector4{3.0f}, Vector4{3.0f}, Vector4{3.0f}},
+        {30.0f, 0.0f}},
+    {"padding + margin, PropagateMargin",
+        SnapLayoutFlag::PropagateMargin, Vector4{3.0f},
+        {{}, {}, {}},
+        /* Max X in second, max Y in last, padding included but margin not */
+        {{20.0f, 10.0f}, {24.0f, 15.0f}, {10.0f, 34.0f}},
+        {Vector4{7.0f}, Vector4{7.0f}, Vector4{7.0f}},
+        {30.0f, 40.0f}},
+    {"padding + margin, PropagateMarginX",
+        SnapLayoutFlag::PropagateMarginX, Vector4{3.0f},
+        {{}, {}, {}},
+        /* Max X in second, max Y in last, padding included but margin not */
+        {{20.0f, 10.0f}, {24.0f, 15.0f}, {10.0f, 26.0f}},
+        {Vector4{7.0f}, Vector4{7.0f}, Vector4{7.0f}},
+        {30.0f, 40.0f}},
+    {"padding + margin, PropagateMarginY",
+        SnapLayoutFlag::PropagateMarginY, Vector4{3.0f},
+        {{}, {}, {}},
+        /* Max X in second, max Y in last, padding included but margin not */
+        {{15.0f, 10.0f}, {16.0f, 15.0f}, {10.0f, 34.0f}},
+        {Vector4{7.0f}, Vector4{7.0f}, Vector4{7.0f}},
+        {30.0f, 40.0f}},
+    {"padding + margin, NoPad",
+        {}, Vector4{3.0f},
+        {{}, Snap::NoPad, Snap::NoPad},
+        /* Max X in second, max Y in last */
+        {{20.0f, 10.0f}, {30.0f, 15.0f}, {10.0f, 40.0f}},
+        {Vector4{3.0f}, Vector4{3.0f}, Vector4{3.0f}},
+        {30.0f, 40.0f}},
+    {"padding + margin, NoPadX/Y",
+        {}, Vector4{3.0f},
+        {{}, Snap::NoPadX, Snap::NoPadY},
+        /* Max X in second, max Y in last */
+        {{20.0f, 10.0f}, {30.0f, 15.0f}, {10.0f, 40.0f}},
+        {Vector4{3.0f}, Vector4{3.0f}, Vector4{3.0f}},
+        {30.0f, 40.0f}},
+    {"padding + margin, arbitrary snaps",
+        {}, Vector4{3.0f},
+        {Snap::Fill, Snap::Right, Snap::Top},
+        /* Max X in second, max Y in last. The snaps don't affect the size in
+           any way */
+        {{20.0f, 10.0f}, {24.0f, 15.0f}, {10.0f, 34.0f}},
+        {Vector4{3.0f}, Vector4{3.0f}, Vector4{3.0f}},
+        {30.0f, 40.0f}},
+};
+
+const struct {
+    const char* name;
     bool clean;
 } AddRemoveData[]{
     {"", false},
@@ -1113,13 +1219,12 @@ const struct {
         Snap::BottomRight, false, false, false,
         {410.0f, 610.0f}, {50.0f, 100.0f}},
     {"margin, min size, fill",
-        0.0f, 0.0f, 10.0f, {900.0f, 1500.0f},
-        Snap::Fill, true, false, true,
-        /* The size is ignored when filling; the node also is a child, so
-           its offset is relative to parent */
-        /** @todo what to do here instead? the parent doesn't have a layout to
-            be enlarged */
-        {10.0f, 10.0f}, {80.0f, 180.0f}},
+        0.0f, 0.0f, 10.0f, {150.0f, 300.0f},
+        Snap::Fill, true, false, false,
+        /* The node is a child, so its offset is relative to parent. The min
+           size causes the parent to be enlarged, so the node gets exactly
+           what was specified as minimum. */
+        {10.0f, 10.0f}, {150.0f, 300.0f}},
     {"min size, centered",
         0.0f, 0.0f, 0.0f, {70.0f, 120.0f},
         {}, true, false, false,
@@ -1128,10 +1233,10 @@ const struct {
     {"large, min size, centered",
         0.0f, 0.0f, 0.0f, {150.0f, 300.0f},
         {}, true, false, false,
-        /* The node is a child, so its offset is relative to parent */
-        /** @todo here it should likely also enlarge the parent, if it has a
-            layout? */
-        {-25.0f, -50.0f}, {150.0f, 300.0f}},
+        /* The min size causes the parent to be enlarged, so the node gets
+           exactly what was specified as minimum. And because the parent is as
+           large as the child, there's no offset at all. */
+        {0.0f, 0.0f}, {150.0f, 300.0f}},
     {"min X size, outside, margin, fill Y",
         0.0f, 0.0f, 10.0f, {350.0f, 0.0f},
         Snap::Right|Snap::FillY, false, false, false,
@@ -1140,8 +1245,8 @@ const struct {
         0.0f, 0.0f, 10.0f, {350.0f, 1500.0f},
         Snap::Right|Snap::FillY, false, false, true,
         /* The Y size is ignored in this case as well */
-        /** @todo should probably enlarge the target node as well? here it
-            doesn't have a layout to affect */
+        /** @todo should probably enlarge the target node as well if snapping
+            a sibling to it with Fill? */
         {410.0f, 400.0f}, {350.0f, 200.0f}},
     {"min Y size, outside, margin, fill X",
         0.0f, 0.0f, 10.0f, {0.0f, 150.0f},
@@ -1268,6 +1373,8 @@ const struct {
     Vector2 innerSize;
     SnapLayoutFlags innerFlags;
     bool innerReverseDirection;
+    Vector2 leftSize, explicit4Size, explicit4MinSize;
+    bool explicit4IsSibling;
     Float centerHeight;
     SnapLayoutFlags centerFlags;
     bool explicitlySnappedNodes;
@@ -1280,6 +1387,7 @@ const struct {
     {"with no explicitly snapped nodes",
         {}, {},
         {0.0f, 40.0f}, {}, false,
+        {15.0f, 15.0f}, {}, {}, false,
         0.0f, {}, false,
         {50.0f, 50.0f}, 0.0f,
         {50.0f, 40.0f}, 0.0f,
@@ -1287,6 +1395,7 @@ const struct {
     {"",
         {}, {},
         {0.0f, 40.0f}, {}, false,
+        {15.0f, 15.0f}, {}, {}, false,
         0.0f, {}, true,
         {50.0f, 50.0f}, 0.0f,
         {50.0f, 40.0f}, 0.0f,
@@ -1294,6 +1403,7 @@ const struct {
     {"exactly outer size, ignored overflow",
         {50.0f, 50.0f}, SnapLayoutFlag::IgnoreOverflow,
         {0.0f, 40.0f}, {}, false,
+        {15.0f, 15.0f}, {}, {}, false,
         0.0f, {}, true,
         /* Same as above */
         {50.0f, 50.0f}, 0.0f,
@@ -1302,6 +1412,7 @@ const struct {
     {"small outer size, ignored overflow",
         {30.0f, 30.0f}, SnapLayoutFlag::IgnoreOverflow,
         {0.0f, 40.0f}, {}, false,
+        {15.0f, 15.0f}, {}, {}, false,
         0.0f, {}, true,
         /* Negative inner X offset because it overflows */
         {30.0f, 30.0f}, -10.0f,
@@ -1310,6 +1421,7 @@ const struct {
     {"small outer size, ignored X overflow",
         {30.0f, 30.0f}, SnapLayoutFlag::IgnoreOverflowX,
         {0.0f, 40.0f}, {}, false,
+        {15.0f, 15.0f}, {}, {}, false,
         0.0f, {}, true,
         /* Negative inner X offset because it overflows, Y size is enlarged */
         {30.0f, 50.0f}, -10.0f,
@@ -1318,6 +1430,7 @@ const struct {
     {"small outer size, ignored Y overflow",
         {30.0f, 30.0f}, SnapLayoutFlag::IgnoreOverflowY,
         {0.0f, 40.0f}, {}, false,
+        {15.0f, 15.0f}, {}, {}, false,
         0.0f, {}, true,
         /* Only X size is enlarged */
         {50.0f, 30.0f}, 0.0f,
@@ -1326,6 +1439,7 @@ const struct {
     {"large outer size",
         {100.0f, 100.0f}, {},
         {0.0f, 40.0f}, {}, false,
+        {15.0f, 15.0f}, {}, {}, false,
         0.0f, {}, true,
         {100.0f, 100.0f}, 25.0f,
         {50.0f, 40.0f}, 0.0f,
@@ -1333,6 +1447,7 @@ const struct {
     {"large outer size, ignored overflow",
         {100.0f, 100.0f}, SnapLayoutFlag::IgnoreOverflow,
         {0.0f, 40.0f}, {}, false,
+        {15.0f, 15.0f}, {}, {}, false,
         0.0f, {}, true,
         /* Same as above */
         {100.0f, 100.0f}, 25.0f,
@@ -1341,6 +1456,7 @@ const struct {
     {"exact inner width, ignored X overflow",
         {}, {},
         {50.0f, 40.0f}, SnapLayoutFlag::IgnoreOverflowX, false,
+        {15.0f, 15.0f}, {}, {}, false,
         0.0f, {}, true,
         {50.0f, 50.0f}, 0.0f,
         {50.0f, 40.0f}, 0.0f,
@@ -1348,6 +1464,7 @@ const struct {
     {"small inner width, ignored X overflow",
         {}, {},
         {30.0f, 40.0f}, SnapLayoutFlag::IgnoreOverflowX, false,
+        {15.0f, 15.0f}, {}, {}, false,
         0.0f, {}, true,
         /* The outer also becomes smaller because there's nothing to tell it
            that it should get larger */
@@ -1357,6 +1474,7 @@ const struct {
     {"large inner width",
         {}, {},
         {100.0f, 40.0f}, {}, false,
+        {15.0f, 15.0f}, {}, {}, false,
         0.0f, {}, true,
         /* Enlarges the outer node */
         {100.0f, 50.0f}, 0.0f,
@@ -1365,6 +1483,7 @@ const struct {
     {"large inner width, ignored X overflow",
         {}, {},
         {100.0f, 40.0f}, SnapLayoutFlag::IgnoreOverflowX, false,
+        {15.0f, 15.0f}, {}, {}, false,
         0.0f, {}, true,
         /* Enlarges the outer node in this case as well, the Ignore is only
            taken into account for children */
@@ -1374,6 +1493,7 @@ const struct {
     {"inner with ignored Y overflow",
         {}, {},
         {0.0f, 40.0f}, SnapLayoutFlag::IgnoreOverflowY, false,
+        {15.0f, 15.0f}, {}, {}, false,
         0.0f, {}, true,
         {50.0f, 50.0f}, 0.0f,
         /* Inner contents are not aligned with the `right` padding taken into
@@ -1383,6 +1503,7 @@ const struct {
     {"exact center height, ignored Y overflow",
         {}, {},
         {0.0f, 40.0f}, {}, false,
+        {15.0f, 15.0f}, {}, {}, false,
         25.0f, SnapLayoutFlag::IgnoreOverflowY, true,
         {50.0f, 50.0f}, 0.0f,
         {50.0f, 40.0f}, 0.0f,
@@ -1390,6 +1511,7 @@ const struct {
     {"small center height, ignored Y overflow",
         {}, {},
         {0.0f, 40.0f}, {}, false,
+        {15.0f, 15.0f}, {}, {}, false,
         15.0f, SnapLayoutFlag::IgnoreOverflowY, true,
         {50.0f, 50.0f}, 0.0f,
         {50.0f, 40.0f}, 0.0f,
@@ -1398,6 +1520,7 @@ const struct {
     {"large center height, ignored Y overflow",
         {}, {},
         {0.0f, 40.0f}, {}, false,
+        {15.0f, 15.0f}, {}, {}, false,
         35.0f, SnapLayoutFlag::IgnoreOverflowY, true,
         {50.0f, 50.0f}, 0.0f,
         {50.0f, 40.0f}, 0.0f,
@@ -1406,6 +1529,7 @@ const struct {
     {"center with ignored X overflow",
         {}, {},
         {0.0f, 40.0f}, {}, false,
+        {15.0f, 15.0f}, {}, {}, false,
         0.0f, SnapLayoutFlag::IgnoreOverflowX, true,
         {50.0f, 50.0f}, 0.0f,
         {50.0f, 40.0f}, 0.0f,
@@ -1416,6 +1540,7 @@ const struct {
     {"inner with X margin propagated",
         {}, {},
         {0.0f, 40.0f}, SnapLayoutFlag::PropagateMarginX, false,
+        {15.0f, 15.0f}, {}, {}, false,
         0.0f, {}, true,
         {50.0f, 50.0f}, 0.0f,
         /* The inner width is without the right-side margin, other than that
@@ -1425,6 +1550,7 @@ const struct {
     {"inner with X margin propagated, reverse layout direction",
         {}, {},
         {0.0f, 40.0f}, SnapLayoutFlag::PropagateMarginX, true,
+        {15.0f, 15.0f}, {}, {}, false,
         0.0f, {}, true,
         /* Same as above, the right node (which is snapped to the parent)
            should be placed without horizontal margin applied */
@@ -1434,6 +1560,7 @@ const struct {
     {"inner with zero Y size and Y margin propagated",
         {}, {},
         {}, SnapLayoutFlag::PropagateMarginY, false,
+        {15.0f, 15.0f}, {}, {}, false,
         0.0f, {}, true,
         /* The outer Y padding cancels out with the margin propagated from the
            inner, so the height is smaller */
@@ -1444,6 +1571,7 @@ const struct {
     {"inner with zero Y size and Y margin propagated, reverse layout direction",
         {}, {},
         {}, SnapLayoutFlag::PropagateMarginY, true,
+        {15.0f, 15.0f}, {}, {}, false,
         0.0f, {}, true,
         /* Same as above, the right node (which is snapped to the parent)
            should be placed without vertical margin applied */
@@ -1453,6 +1581,7 @@ const struct {
     {"inner with zero size and margin propagated",
         {}, {},
         {}, SnapLayoutFlag::PropagateMargin, false,
+        {15.0f, 15.0f}, {}, {}, false,
         0.0f, {}, true,
         /* Combination of the above, basically */
         {50.0f, 40.0f}, 0.0f,
@@ -1461,11 +1590,60 @@ const struct {
     {"inner with zero size and margin propagated, reverse layout direction",
         {}, {},
         {}, SnapLayoutFlag::PropagateMargin, true,
+        {15.0f, 15.0f}, {}, {}, false,
         0.0f, {}, true,
         /* Same as above, the right node (which is snapped to the parent)
            should be placed without margin applied */
         {50.0f, 40.0f}, 0.0f,
         {45.0f, 25.0f}, -5.0f,
+        25.0f, 5.0f, 5.0f},
+    {"left width propagated from an explicitly snapped child",
+        {}, {},
+        {0.0f, 40.0f}, {}, false,
+        {0.0f, 15.0f}, {5.0f, 0.0f}, {}, false,
+        0.0f, {}, true,
+        {50.0f, 50.0f}, 0.0f,
+        {50.0f, 40.0f}, 0.0f,
+        25.0f, 5.0f, 5.0f},
+    {"left height propagated from an explicitly snapped child",
+        {}, {},
+        {0.0f, 40.0f}, {}, false,
+        {15.0f, 0.0f}, {0.0f, 15.0f}, {}, false,
+        0.0f, {}, true,
+        {50.0f, 50.0f}, 0.0f,
+        {50.0f, 40.0f}, 0.0f,
+        25.0f, 5.0f, 5.0f},
+    {"left size propagated from an explicitly snapped child",
+        {}, {},
+        {0.0f, 40.0f}, {}, false,
+        {0.0f, 0.0f}, {5.0f, 15.0f}, {}, false,
+        0.0f, {}, true,
+        {50.0f, 50.0f}, 0.0f,
+        {50.0f, 40.0f}, 0.0f,
+        25.0f, 5.0f, 5.0f},
+    {"left size propagated from an explicitly snapped child size + min X size",
+        {}, {},
+        {0.0f, 40.0f}, {}, false,
+        {0.0f, 0.0f}, {0.0f, 15.0f}, {5.0f, 0.0f}, false,
+        0.0f, {}, true,
+        {50.0f, 50.0f}, 0.0f,
+        {50.0f, 40.0f}, 0.0f,
+        25.0f, 5.0f, 5.0f},
+    {"left size propagated from an explicitly snapped child size + min Y size",
+        {}, {},
+        {0.0f, 40.0f}, {}, false,
+        {0.0f, 0.0f}, {5.0f, 0.0f}, {0.0f, 15.0f}, false,
+        0.0f, {}, true,
+        {50.0f, 50.0f}, 0.0f,
+        {50.0f, 40.0f}, 0.0f,
+        25.0f, 5.0f, 5.0f},
+    {"left size not affected by an explicitly snapped sibling",
+        {}, {},
+        {0.0f, 40.0f}, {}, false,
+        {15.0f, 15.0f}, {500.0f, 500.0f}, {}, true,
+        0.0f, {}, true,
+        {50.0f, 50.0f}, 0.0f,
+        {50.0f, 40.0f}, 0.0f,
         25.0f, 5.0f, 5.0f},
 };
 
@@ -1497,6 +1675,9 @@ SnapLayouterTest::SnapLayouterTest() {
 
     addInstancedTests({&SnapLayouterTest::childLayoutSizeForward},
         Containers::arraySize(ChildLayoutSizeForwardData));
+
+    addInstancedTests({&SnapLayouterTest::explicitlySnappedChildLayoutSize},
+        Containers::arraySize(ExplicitlySnappedChildLayoutSizeData));
 
     addTests({&SnapLayouterTest::orderLayoutsBreadthFirstEmpty,
               &SnapLayouterTest::orderLayoutsBreadthFirst,
@@ -2054,6 +2235,84 @@ void SnapLayouterTest::childLayoutSizeForward() {
             CORRADE_COMPARE(offsetSize2, Containers::pair(expectedChildOffsets[rotation][2], sizes[rotation][2]));
         }
     }
+}
+
+void SnapLayouterTest::explicitlySnappedChildLayoutSize() {
+    auto&& data = ExplicitlySnappedChildLayoutSizeData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
+    struct Layout {
+        NodeHandle node;
+        LayouterDataHandle next;
+        SnapLayoutFlags flags;
+        Snaps explicitSnap;
+    } layouts[]{
+        {},
+        {nodeHandle(3, 0xbeb),                  /* layout 1 */
+         layouterDataHandle(4, 0x444),
+         Implementation::SnapLayoutFlagExplicitSnapToParent,
+         data.snaps[1]}, /* use the same data index as node 3 below */
+        {nodeHandle(8, 0xaba),                  /* layout 2 */
+         layouterDataHandle(1, 0x111),
+         Implementation::SnapLayoutFlagExplicitSnapToParent,
+         data.snaps[0]}, /* use the same data index as node 8 below */
+        {},
+        {nodeHandle(2, 0x111),                  /* layout 4, skipped */
+         layouterDataHandle(5, 0x555),
+         {}, /* not snapped to a parent */
+         {}},
+        {nodeHandle(6, 0xcec),                  /* layout 5 */
+         layouterDataHandle(2, 0x222),
+         Implementation::SnapLayoutFlagExplicitSnapToParent,
+         data.snaps[2]}, /* use the same data index as node 6 below */
+    };
+
+    /* Unlike with childLayoutSizeMargin(), the algorithm is not
+       order-dependent so we're not shuffling the node data in any way. */
+    struct Node {
+        Vector2 zero;
+        Vector2 size;
+        Vector4 margin;
+    } nodes[9];
+    nodes[8].size = data.nodeSizes[0];
+    nodes[8].margin = data.nodeMargins[0];
+    nodes[3].size = data.nodeSizes[1];
+    nodes[3].margin = data.nodeMargins[1];
+    nodes[6].size = data.nodeSizes[2];
+    nodes[6].margin = data.nodeMargins[2];
+    /* Node 2 is used by layout 4, which is skipped because it snaps to a
+       sibling, so the size & margin shouldn't affect anything */
+    nodes[2].size = Vector2{99999.0f};
+    nodes[2].margin = Vector4{99999.0f};
+
+    /* Node size passed directly */
+    CORRADE_COMPARE(Implementation::explicitlySnappedChildLayoutSize(
+        data.parentFlags,
+        data.parentPadding,
+        Containers::stridedArrayView(nodes).slice(&Node::zero), /* minSize */
+        Containers::stridedArrayView(nodes).slice(&Node::margin),
+        Containers::stridedArrayView(nodes).slice(&Node::size), /* size */
+        layouterDataHandle(1, 0x111),
+        Containers::stridedArrayView(layouts).slice(&Layout::node),
+        Containers::stridedArrayView(layouts).slice(&Layout::flags),
+        Containers::stridedArrayView(layouts).slice(&Layout::explicitSnap),
+        Containers::stridedArrayView(layouts).slice(&Layout::next)
+    ), data.expected);
+
+    /* Node size passed as a min size and a different layout order, should work
+       the same */
+    CORRADE_COMPARE(Implementation::explicitlySnappedChildLayoutSize(
+        data.parentFlags,
+        data.parentPadding,
+        Containers::stridedArrayView(nodes).slice(&Node::size), /* minSize */
+        Containers::stridedArrayView(nodes).slice(&Node::margin),
+        Containers::stridedArrayView(nodes).slice(&Node::zero), /* size */
+        layouterDataHandle(4, 0x444),
+        Containers::stridedArrayView(layouts).slice(&Layout::node),
+        Containers::stridedArrayView(layouts).slice(&Layout::flags),
+        Containers::stridedArrayView(layouts).slice(&Layout::explicitSnap),
+        Containers::stridedArrayView(layouts).slice(&Layout::next)
+    ), data.expected);
 }
 
 void SnapLayouterTest::orderLayoutsBreadthFirstEmpty() {
@@ -3879,12 +4138,12 @@ void SnapLayouterTest::layoutPropagateChildSizes() {
     20 ||          +---+-----+---+  @@@@@  || top, fixed width and height
        ||          |   |     |   |  @@@@@  ||
     25 ||+--------+|   +-----+-----+@@@@@  ||
-       |||        ||   @@@@  |x2 | |@@@@@  ||
-    30 ||+---+    ||   +--+  +-----++---+@@|| middle, min width, fixed height,
-       |||x3 |    ||   |  |      |@@|   |@@||         bottom & top margin
-    35 |||   |    |+---+--+      |@@+---+@@||
-       |||   |    ||x1 |@@@      |  @@@@@  ||
-    40 ||+---+----+|@@@|-----+   |  @@@@@  || bottom, fixed width, min height,
+       |||       #||   @@@@  |x2 | |@@@@@  ||
+    30 ||+---+   #||   +--+  +-----++---+@@|| middle, min width, fixed height,
+       |||x3 |   #||   |  |      |@@|   |@@||         bottom & top margin
+    35 |||@+----+#|+---+--+      |@@+---+@@||
+       |||@| |x4|#||x1 |@@@      |  @@@@@  ||
+    40 ||+@+----+-+|@@@|-----+   |  @@@@@  || bottom, fixed width, min height,
        ||          |@@@|     |   |  @@@@@  ||         left margin
     45 ||          +---+-----+---+  @@@@@  ||
        ||                           @@@@@  ||
@@ -3894,7 +4153,7 @@ void SnapLayouterTest::layoutPropagateChildSizes() {
        |####################################|
     60 +------------------------------------+
         left,       center,         right,
-        fixed size  ??? height,     min width and height,
+        ??? size    ??? height,     min width and height,
                     fixed width     margin on all sides
 
        The left margin of `bottom` node causes all three to shift to the right,
@@ -3905,7 +4164,9 @@ void SnapLayouterTest::layoutPropagateChildSizes() {
        the extra left-side padding used by children. The `explicit2` (x2) is
        snapped to the bottom right of `top`, it doesn't affect the `center`
        node size and overflows. The `explicit3` (x3) is snapped to left of
-       `inner`, it ignores the vertical shift of children. */
+       `inner`, it ignores the vertical shift of children. The `explicit4` is
+       snapped inside `left`, either as a sibling or as a child, and its size
+       optionally affects `left` size. */
 
     NodeHandle outer = ui.createNode({10.0f, 5.0f}, data.outerSize);
     NodeHandle inner = ui.createNode(outer, {}, data.innerSize);
@@ -3913,11 +4174,12 @@ void SnapLayouterTest::layoutPropagateChildSizes() {
     NodeHandle right = ui.createNode(inner, {}, {});
     NodeHandle middle = ui.createNode(center, {}, {0.0f, 5.0f});
     NodeHandle top = ui.createNode(center, {}, {10.0f, 5.0f});
-    NodeHandle left = ui.createNode(inner, {}, {15.0f, 15.0f});
+    NodeHandle left = ui.createNode(inner, {}, data.leftSize);
     NodeHandle bottom = ui.createNode(center, {}, {10.0f, 0.0f});
     NodeHandle explicit1 = ui.createNode(center, {}, {5.0f, 10.0f});
     NodeHandle explicit2 = ui.createNode(center, {}, {10.0f, 5.0f});
     NodeHandle explicit3 = ui.createNode(inner, {}, {5.0f, 10.0f});
+    NodeHandle explicit4 = ui.createNode(data.explicit4IsSibling ? inner : left, {}, data.explicit4Size);
 
     struct LayoutLayer: AbstractLayer {
         using AbstractLayer::AbstractLayer;
@@ -3933,14 +4195,22 @@ void SnapLayouterTest::layoutPropagateChildSizes() {
 
             nodeMinSizes[4 /*middle*/].x() = 5.0f;
             nodeMargins[4 /*middle*/] = {0.0f, 5.0f, 0.0f, 5.0f};
+            nodePaddings[6 /*left*/] = {0.0f, 0.0f, 5.0f, 0.0f};
             nodeMinSizes[7 /*bottom*/].y() = 5.0f;
             nodeMargins[7 /*bottom*/] = {5.0f, 0.0f, 0.0f, 0.0f};
+
+            nodeMinSizes[11 /*explicit4*/] = explicit4MinSize;
+            /* Top/bottom margin isn't used because of NoPadY */
+            nodeMargins[11 /*explicit4*/] = {5.0f, 5000.0f, 0.0f, 5000.0f};
+
             ++called;
         }
 
+        Vector2 explicit4MinSize;
         Int called = 0;
     };
     LayoutLayer& layoutLayer = ui.setLayerInstance(Containers::pointer<LayoutLayer>(ui.createLayer()));
+    layoutLayer.explicit4MinSize = data.explicit4MinSize;
 
     SnapLayouter& layouter = ui.setLayouterInstance(Containers::pointer<SnapLayouter>(ui.createLayouter()));
     layouter.add(outer, data.outerFlags);
@@ -3967,6 +4237,7 @@ void SnapLayouterTest::layoutPropagateChildSizes() {
         layouter.add(explicit1, Snap::BottomLeft, centerLayout); /* Inside implicit */
         layouter.add(explicit2, Snap::BottomRight, topLayout);
         layouter.add(explicit3, Snap::Left, innerLayout); /* Inside implicit */
+        layouter.add(explicit4, Snap::BottomLeft|Snap::Inside|Snap::NoPadY, leftLayout);
     }
 
     /* Capture correct function name */
@@ -3999,6 +4270,8 @@ void SnapLayouterTest::layoutPropagateChildSizes() {
                     Vector2{expectedCenterLeftEdge + 10.0f, 5.0f} : Vector2{},
                 explicitlySnappedNodes ?        /* 10, explicit3 */
                     Vector2{0.0f, (expectedInnerSize.y() - 10.0f)*0.5f} : Vector2{},
+                explicitlySnappedNodes ?        /* 11, explicit4 */
+                    expectedExplicit4Offset : Vector2{},
             }), TestSuite::Compare::Container);
             CORRADE_COMPARE_AS(nodeSizes, Containers::stridedArrayView<Vector2>({
                 expectedOuterSize,              /*  0, outer */
@@ -4012,6 +4285,7 @@ void SnapLayouterTest::layoutPropagateChildSizes() {
                 {5.0f, 10.0f},                  /*  8, explicit1 (unchanged) */
                 {10.0f, 5.0f},                  /*  9, explicit2 (unchanged) */
                 {5.0f, 10.0f},                  /* 10, explicit3 (unchanged) */
+                expectedExplicit4Size,          /* 11, explicit4 */
             }), TestSuite::Compare::Container);
             ++called;
         }
@@ -4020,6 +4294,7 @@ void SnapLayouterTest::layoutPropagateChildSizes() {
         Float expectedInnerOffsetX;
         Vector2 expectedInnerSize;
         Float expectedInnerCenterY;
+        Vector2 expectedExplicit4Offset, expectedExplicit4Size;
         Float expectedCenterHeight, expectedCenterOffsetY;
         Float expectedCenterLeftEdge;
         bool explicitlySnappedNodes;
@@ -4030,6 +4305,9 @@ void SnapLayouterTest::layoutPropagateChildSizes() {
     dummyLayouter.expectedInnerOffsetX = data.expectedInnerOffsetX;
     dummyLayouter.expectedInnerSize = data.expectedInnerSize;
     dummyLayouter.expectedInnerCenterY = data.expectedInnerCenterY;
+    dummyLayouter.expectedExplicit4Offset = {5.0f,
+        (data.explicit4IsSibling ? 25.0f : 15.0f) - Math::max(data.explicit4Size.y(), data.explicit4MinSize.y())};
+    dummyLayouter.expectedExplicit4Size = Math::max(data.explicit4Size, data.explicit4MinSize);
     dummyLayouter.expectedCenterHeight = data.expectedCenterHeight;
     dummyLayouter.expectedCenterOffsetY = data.expectedCenterOffsetY;
     dummyLayouter.expectedCenterLeftEdge = data.expectedCenterLeftEdge;

@@ -140,8 +140,9 @@ namespace {
    them off in flags() and disallow them from being set in setFlags(),
    addFlags() and clearFlags(). */
 constexpr SnapLayoutFlag SnapLayoutFlagHasExplicitSnap = SnapLayoutFlag(0x40);
-constexpr SnapLayoutFlag SnapLayoutFlagExplicitSnapToParent = SnapLayoutFlag(0x80);
-constexpr SnapLayoutFlags SnapLayoutFlagMask = ~(SnapLayoutFlagHasExplicitSnap|SnapLayoutFlagExplicitSnapToParent);
+/* SnapLayoutFlagExplicitSnapToParent defined in Implementation/snapLayouter.h
+   as it's used by the helper utils as well */
+constexpr SnapLayoutFlags SnapLayoutFlagMask = ~(SnapLayoutFlagHasExplicitSnap|Implementation::SnapLayoutFlagExplicitSnapToParent);
 
 struct Layout {
     SnapLayoutFlags flags;
@@ -310,7 +311,7 @@ LayoutHandle SnapLayouter::addInternal(const NodeHandle node, const Snaps snap, 
         "Ui::SnapLayouter::add(): expected target to be assigned to either" << nodeParent << "or a child of it but" << target << "is a child of" << ui().nodeParent(this->node(target)), {});
 
     Layout& layout = state.layouts[id];
-    layout.flags = flags|SnapLayoutFlagHasExplicitSnap|(target == parentHandle ? SnapLayoutFlagExplicitSnapToParent : SnapLayoutFlags{});
+    layout.flags = flags|SnapLayoutFlagHasExplicitSnap|(target == parentHandle ? Implementation::SnapLayoutFlagExplicitSnapToParent : SnapLayoutFlags{});
     layout.childSnap = Snap::Bottom;
     layout.firstChildSnap = Snap::Top|Snap::Inside;
     layout.firstChild = LayouterDataHandle::Null;
@@ -848,15 +849,18 @@ void SnapLayouter::doLayout(const Containers::BitArrayView layoutIdsToUpdate, co
         const UnsignedInt layoutId = layoutIds[i - 1];
         const Layout& layout = state.layouts[layoutId];
 
-        /* If there are no children, nothing to calculate */
-        if(layout.firstChild == LayouterDataHandle::Null)
+        /* If there are no children and no explicitly snapped children either,
+           nothing to calculate */
+        if(layout.firstChild == LayouterDataHandle::Null &&
+           layout.firstExplicitSnap == LayouterDataHandle::Null)
             continue;
 
-        /* If the layout ignores overflow in both directions, we don't need to
-           calculate the child size and padding at all, as it won't get used
-           anyway. */
+        /* If the layout has no children or ignores overflow in both
+           directions, we can't / don't need to calculate the child size and
+           padding at all, as it won't get used anyway. */
         const UnsignedInt nodeId = nodeHandleId(nodes[layoutId]);
         const Containers::Pair<Vector2, Vector4> childLayoutSizeMargin =
+            layout.firstChild == LayouterDataHandle::Null ||
             layout.flags >= SnapLayoutFlag::IgnoreOverflow ?
                 Containers::Pair<Vector2, Vector4>{} :
                 Implementation::childLayoutSizeMargin(
@@ -880,7 +884,29 @@ void SnapLayouter::doLayout(const Containers::BitArrayView layoutIdsToUpdate, co
                 nodeMargins[nodeId],
                 childLayoutSizeMargin.first(),
                 childLayoutSizeMargin.second());
-        nodeSizes[nodeId] = layoutSizePaddingMargin.first();
+
+        /* Consider also explicitly snapped child nodes for the size, again not
+           even call the function if there are no explicitly snapped children
+           or overflow is ignored in both directions. Their margin currently
+           isn't considered for propagation, it's really just the sizes with
+           the max of margin and padding used. */
+        const Vector2 explicitlySnappedChildLayoutSize =
+            layout.firstExplicitSnap == LayouterDataHandle::Null ||
+            layout.flags >= SnapLayoutFlag::IgnoreOverflow ?
+                Vector2{} :
+                Implementation::explicitlySnappedChildLayoutSize(
+                    layout.flags,
+                    nodePaddings[nodeId],
+                    nodeMinSizes,
+                    nodeMargins,
+                    nodeSizes,
+                    layout.firstExplicitSnap,
+                    nodes,
+                    stridedArrayView(state.layouts).slice(&Layout::flags),
+                    stridedArrayView(state.layouts).slice(&Layout::explicitSnap),
+                    stridedArrayView(state.layouts).slice(&Layout::next));
+
+        nodeSizes[nodeId] = Math::max(layoutSizePaddingMargin.first(), explicitlySnappedChildLayoutSize);
         childLayoutPaddings[layoutId] = layoutSizePaddingMargin.second();
         nodeMargins[nodeId] = layoutSizePaddingMargin.third();
     }
@@ -992,7 +1018,7 @@ void SnapLayouter::doLayout(const Containers::BitArrayView layoutIdsToUpdate, co
 
             /* If the target is a parent, don't include its offset in the
                calculation, and implicitly snap inside */
-            if(layout.flags >= SnapLayoutFlagExplicitSnapToParent) {
+            if(layout.flags >= Implementation::SnapLayoutFlagExplicitSnapToParent) {
                 targetOffset = {};
                 snap |= Snap::Inside;
 
