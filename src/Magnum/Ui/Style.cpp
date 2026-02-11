@@ -29,7 +29,6 @@
 
 #include <Corrade/Containers/EnumSet.hpp>
 #include <Corrade/Containers/Optional.h>
-#include <Corrade/Containers/StaticArray.h>
 #include <Corrade/Containers/StridedArrayView.h>
 #include <Corrade/Utility/Algorithms.h>
 #include <Corrade/Utility/Resource.h>
@@ -69,11 +68,24 @@ namespace Implementation {
 
 namespace {
 
-/* The returned values are in order InactiveOut, InactiveOver, FocusedOut,
-   FocusedOver, PressedOut, PressedOver, Disabled (i.e., the same order as the
-   arguments in setStyleTransition()). Styles that don't have a focused variant
-   reuse the inactive one there. */
-Containers::StaticArray<7, BaseStyle> styleTransition(const BaseStyle index) {
+template<class Style> struct Transition {
+    /* All variants using the same style + disabled */
+    /*implicit*/ Transition(Style style, Style disabled): inactiveOut{style}, inactiveOver{style}, focusedOut{style}, focusedOver{style}, pressedOut{style}, pressedOver{style}, disabled{disabled} {}
+    /* The full set */
+    /*implicit*/ Transition(Style inactiveOut, Style inactiveOver, Style focusedOut, Style focusedOver, Style pressedOut, Style pressedOver, Style disabled): inactiveOut{inactiveOut}, inactiveOver{inactiveOver}, focusedOut{focusedOut}, focusedOver{focusedOver}, pressedOut{pressedOut}, pressedOver{pressedOver}, disabled{disabled} {}
+    /* No focused style */
+    /*implicit*/ Transition(Style inactiveOut, Style inactiveOver, Style pressedOut, Style pressedOver, Style disabled): inactiveOut{inactiveOut}, inactiveOver{inactiveOver}, focusedOut{pressedOut}, focusedOver{pressedOver}, pressedOut{pressedOut}, pressedOver{pressedOver}, disabled{disabled} {}
+
+    Style inactiveOut;
+    Style inactiveOver;
+    Style focusedOut;
+    Style focusedOver;
+    Style pressedOut;
+    Style pressedOver;
+    Style disabled;
+};
+
+Transition<BaseStyle> styleTransition(const BaseStyle index) {
     /* LCOV_EXCL_START. Even if I manage to hit all cases here, it still
        reports just one line from each return expression as covered. Which adds
        so much false positives to the output that it's not worth for me to try
@@ -82,19 +94,12 @@ Containers::StaticArray<7, BaseStyle> styleTransition(const BaseStyle index) {
     switch(index) {
         case BaseStyle::Default:
             return {BaseStyle::Default,
-                    BaseStyle::Default,
-                    BaseStyle::Default,
-                    BaseStyle::Default,
-                    BaseStyle::Default,
-                    BaseStyle::Default,
                     BaseStyle::Default};
         case BaseStyle::ButtonDefault:
         case BaseStyle::ButtonDefaultHovered:
         case BaseStyle::ButtonDefaultPressed:
         case BaseStyle::ButtonDefaultPressedHovered:
             return {BaseStyle::ButtonDefault,
-                    BaseStyle::ButtonDefaultHovered,
-                    BaseStyle::ButtonDefault,
                     BaseStyle::ButtonDefaultHovered,
                     BaseStyle::ButtonDefaultPressed,
                     BaseStyle::ButtonDefaultPressedHovered,
@@ -105,8 +110,6 @@ Containers::StaticArray<7, BaseStyle> styleTransition(const BaseStyle index) {
         case BaseStyle::ButtonPrimaryPressedHovered:
             return {BaseStyle::ButtonPrimary,
                     BaseStyle::ButtonPrimaryHovered,
-                    BaseStyle::ButtonPrimary,
-                    BaseStyle::ButtonPrimaryHovered,
                     BaseStyle::ButtonPrimaryPressed,
                     BaseStyle::ButtonPrimaryPressedHovered,
                     BaseStyle::ButtonPrimaryDisabled};
@@ -115,8 +118,6 @@ Containers::StaticArray<7, BaseStyle> styleTransition(const BaseStyle index) {
         case BaseStyle::ButtonSuccessPressed:
         case BaseStyle::ButtonSuccessPressedHovered:
             return {BaseStyle::ButtonSuccess,
-                    BaseStyle::ButtonSuccessHovered,
-                    BaseStyle::ButtonSuccess,
                     BaseStyle::ButtonSuccessHovered,
                     BaseStyle::ButtonSuccessPressed,
                     BaseStyle::ButtonSuccessPressedHovered,
@@ -127,8 +128,6 @@ Containers::StaticArray<7, BaseStyle> styleTransition(const BaseStyle index) {
         case BaseStyle::ButtonWarningPressedHovered:
             return {BaseStyle::ButtonWarning,
                     BaseStyle::ButtonWarningHovered,
-                    BaseStyle::ButtonWarning,
-                    BaseStyle::ButtonWarningHovered,
                     BaseStyle::ButtonWarningPressed,
                     BaseStyle::ButtonWarningPressedHovered,
                     BaseStyle::ButtonWarningDisabled};
@@ -137,8 +136,6 @@ Containers::StaticArray<7, BaseStyle> styleTransition(const BaseStyle index) {
         case BaseStyle::ButtonDangerPressed:
         case BaseStyle::ButtonDangerPressedHovered:
             return {BaseStyle::ButtonDanger,
-                    BaseStyle::ButtonDangerHovered,
-                    BaseStyle::ButtonDanger,
                     BaseStyle::ButtonDangerHovered,
                     BaseStyle::ButtonDangerPressed,
                     BaseStyle::ButtonDangerPressedHovered,
@@ -149,8 +146,6 @@ Containers::StaticArray<7, BaseStyle> styleTransition(const BaseStyle index) {
         case BaseStyle::ButtonInfoPressedHovered:
             return {BaseStyle::ButtonInfo,
                     BaseStyle::ButtonInfoHovered,
-                    BaseStyle::ButtonInfo,
-                    BaseStyle::ButtonInfoHovered,
                     BaseStyle::ButtonInfoPressed,
                     BaseStyle::ButtonInfoPressedHovered,
                     BaseStyle::ButtonInfoDisabled};
@@ -160,8 +155,6 @@ Containers::StaticArray<7, BaseStyle> styleTransition(const BaseStyle index) {
         case BaseStyle::ButtonDimPressedHovered:
             return {BaseStyle::ButtonDim,
                     BaseStyle::ButtonDimHovered,
-                    BaseStyle::ButtonDim,
-                    BaseStyle::ButtonDimHovered,
                     BaseStyle::ButtonDimPressed,
                     BaseStyle::ButtonDimPressedHovered,
                     BaseStyle::ButtonDimDisabled};
@@ -170,8 +163,6 @@ Containers::StaticArray<7, BaseStyle> styleTransition(const BaseStyle index) {
         case BaseStyle::ButtonFlatPressed:
         case BaseStyle::ButtonFlatPressedHovered:
             return {BaseStyle::ButtonFlat,
-                    BaseStyle::ButtonFlatHovered,
-                    BaseStyle::ButtonFlat,
                     BaseStyle::ButtonFlatHovered,
                     BaseStyle::ButtonFlatPressed,
                     BaseStyle::ButtonFlatPressedHovered,
@@ -228,11 +219,6 @@ Containers::StaticArray<7, BaseStyle> styleTransition(const BaseStyle index) {
                     BaseStyle::InputFlatDisabled};
         case BaseStyle::PanelBackground:
             return {BaseStyle::PanelBackground,
-                    BaseStyle::PanelBackground,
-                    BaseStyle::PanelBackground,
-                    BaseStyle::PanelBackground,
-                    BaseStyle::PanelBackground,
-                    BaseStyle::PanelBackground,
                     BaseStyle::PanelBackgroundDisabled};
         case BaseStyle::ButtonDefaultDisabled:
         case BaseStyle::ButtonPrimaryDisabled:
@@ -258,34 +244,30 @@ Containers::StaticArray<7, BaseStyle> styleTransition(const BaseStyle index) {
 }
 
 BaseStyle styleTransitionToInactiveOut(const BaseStyle index) {
-    return styleTransition(index)[0];
+    return styleTransition(index).inactiveOut;
 }
 BaseStyle styleTransitionToInactiveOver(const BaseStyle index) {
-    return styleTransition(index)[1];
+    return styleTransition(index).inactiveOver;
 }
 BaseStyle styleTransitionToFocusedOut(const BaseStyle index) {
-    return styleTransition(index)[2];
+    return styleTransition(index).focusedOut;
 }
 BaseStyle styleTransitionToFocusedOver(const BaseStyle index) {
-    return styleTransition(index)[3];
+    return styleTransition(index).focusedOver;
 }
 BaseStyle styleTransitionToPressedOut(const BaseStyle index) {
-    return styleTransition(index)[4];
+    return styleTransition(index).pressedOut;
 }
 BaseStyle styleTransitionToPressedOver(const BaseStyle index) {
-    return styleTransition(index)[5];
+    return styleTransition(index).pressedOver;
 }
 BaseStyle styleTransitionToDisabled(const BaseStyle index) {
-    return styleTransition(index)[6];
+    return styleTransition(index).disabled;
 }
 
 namespace {
 
-/* The returned values are in order InactiveOut, InactiveOver, FocusedOut,
-   FocusedOver, PressedOut, PressedOver, Disabled (i.e., the same order as the
-   arguments in setStyleTransition()). Styles that don't have a focused variant
-   reuse the inactive one there. */
-Containers::StaticArray<7, TextStyle> styleTransition(const TextStyle index) {
+Transition<TextStyle> styleTransition(const TextStyle index) {
     /* LCOV_EXCL_START. Even if I manage to hit all cases here, it still
        reports just one line from each return expression as covered. Which adds
        so much false positives to the output that it's not worth for me to try
@@ -294,17 +276,10 @@ Containers::StaticArray<7, TextStyle> styleTransition(const TextStyle index) {
     switch(index) {
         case TextStyle::Default:
             return {TextStyle::Default,
-                    TextStyle::Default,
-                    TextStyle::Default,
-                    TextStyle::Default,
-                    TextStyle::Default,
-                    TextStyle::Default,
                     TextStyle::Default};
         case TextStyle::ButtonIconOnly:
         case TextStyle::ButtonPressedIconOnly:
             return {TextStyle::ButtonIconOnly,
-                    TextStyle::ButtonIconOnly,
-                    TextStyle::ButtonIconOnly,
                     TextStyle::ButtonIconOnly,
                     TextStyle::ButtonPressedIconOnly,
                     TextStyle::ButtonPressedIconOnly,
@@ -313,8 +288,6 @@ Containers::StaticArray<7, TextStyle> styleTransition(const TextStyle index) {
         case TextStyle::ButtonPressedTextOnly:
             return {TextStyle::ButtonTextOnly,
                     TextStyle::ButtonTextOnly,
-                    TextStyle::ButtonTextOnly,
-                    TextStyle::ButtonTextOnly,
                     TextStyle::ButtonPressedTextOnly,
                     TextStyle::ButtonPressedTextOnly,
                     TextStyle::ButtonDisabledTextOnly};
@@ -322,16 +295,12 @@ Containers::StaticArray<7, TextStyle> styleTransition(const TextStyle index) {
         case TextStyle::ButtonPressedIcon:
             return {TextStyle::ButtonIcon,
                     TextStyle::ButtonIcon,
-                    TextStyle::ButtonIcon,
-                    TextStyle::ButtonIcon,
                     TextStyle::ButtonPressedIcon,
                     TextStyle::ButtonPressedIcon,
                     TextStyle::ButtonDisabledIcon};
         case TextStyle::ButtonText:
         case TextStyle::ButtonPressedText:
             return {TextStyle::ButtonText,
-                    TextStyle::ButtonText,
-                    TextStyle::ButtonText,
                     TextStyle::ButtonText,
                     TextStyle::ButtonPressedText,
                     TextStyle::ButtonPressedText,
@@ -342,8 +311,6 @@ Containers::StaticArray<7, TextStyle> styleTransition(const TextStyle index) {
         case TextStyle::ButtonFlatPressedHoveredIconOnly:
             return {TextStyle::ButtonFlatIconOnly,
                     TextStyle::ButtonFlatHoveredIconOnly,
-                    TextStyle::ButtonFlatIconOnly,
-                    TextStyle::ButtonFlatHoveredIconOnly,
                     TextStyle::ButtonFlatPressedIconOnly,
                     TextStyle::ButtonFlatPressedHoveredIconOnly,
                     TextStyle::ButtonFlatDisabledIconOnly};
@@ -352,8 +319,6 @@ Containers::StaticArray<7, TextStyle> styleTransition(const TextStyle index) {
         case TextStyle::ButtonFlatPressedTextOnly:
         case TextStyle::ButtonFlatPressedHoveredTextOnly:
             return {TextStyle::ButtonFlatTextOnly,
-                    TextStyle::ButtonFlatHoveredTextOnly,
-                    TextStyle::ButtonFlatTextOnly,
                     TextStyle::ButtonFlatHoveredTextOnly,
                     TextStyle::ButtonFlatPressedTextOnly,
                     TextStyle::ButtonFlatPressedHoveredTextOnly,
@@ -364,8 +329,6 @@ Containers::StaticArray<7, TextStyle> styleTransition(const TextStyle index) {
         case TextStyle::ButtonFlatPressedHoveredIcon:
             return {TextStyle::ButtonFlatIcon,
                     TextStyle::ButtonFlatHoveredIcon,
-                    TextStyle::ButtonFlatIcon,
-                    TextStyle::ButtonFlatHoveredIcon,
                     TextStyle::ButtonFlatPressedIcon,
                     TextStyle::ButtonFlatPressedHoveredIcon,
                     TextStyle::ButtonFlatDisabledIcon};
@@ -375,52 +338,50 @@ Containers::StaticArray<7, TextStyle> styleTransition(const TextStyle index) {
         case TextStyle::ButtonFlatPressedHoveredText:
             return {TextStyle::ButtonFlatText,
                     TextStyle::ButtonFlatHoveredText,
-                    TextStyle::ButtonFlatText,
-                    TextStyle::ButtonFlatHoveredText,
                     TextStyle::ButtonFlatPressedText,
                     TextStyle::ButtonFlatPressedHoveredText,
                     TextStyle::ButtonFlatDisabledText};
         case TextStyle::LabelDefaultIcon:
-            return {index, index, index, index, index, index,
+            return {TextStyle::LabelDefaultIcon,
                     TextStyle::LabelDefaultDisabledIcon};
         case TextStyle::LabelDefaultText:
-            return {index, index, index, index, index, index,
+            return {TextStyle::LabelDefaultText,
                     TextStyle::LabelDefaultDisabledText};
         case TextStyle::LabelPrimaryIcon:
-            return {index, index, index, index, index, index,
+            return {TextStyle::LabelPrimaryIcon,
                     TextStyle::LabelPrimaryDisabledIcon};
         case TextStyle::LabelPrimaryText:
-            return {index, index, index, index, index, index,
+            return {TextStyle::LabelPrimaryText,
                     TextStyle::LabelPrimaryDisabledText};
         case TextStyle::LabelSuccessIcon:
-            return {index, index, index, index, index, index,
+            return {TextStyle::LabelSuccessIcon,
                     TextStyle::LabelSuccessDisabledIcon};
         case TextStyle::LabelSuccessText:
-            return {index, index, index, index, index, index,
+            return {TextStyle::LabelSuccessText,
                     TextStyle::LabelSuccessDisabledText};
         case TextStyle::LabelWarningIcon:
-            return {index, index, index, index, index, index,
+            return {TextStyle::LabelWarningIcon,
                     TextStyle::LabelWarningDisabledIcon};
         case TextStyle::LabelWarningText:
-            return {index, index, index, index, index, index,
+            return {TextStyle::LabelWarningText,
                     TextStyle::LabelWarningDisabledText};
         case TextStyle::LabelDangerIcon:
-            return {index, index, index, index, index, index,
+            return {TextStyle::LabelDangerIcon,
                     TextStyle::LabelDangerDisabledIcon};
         case TextStyle::LabelDangerText:
-            return {index, index, index, index, index, index,
+            return {TextStyle::LabelDangerText,
                     TextStyle::LabelDangerDisabledText};
         case TextStyle::LabelInfoIcon:
-            return {index, index, index, index, index, index,
+            return {TextStyle::LabelInfoIcon,
                     TextStyle::LabelInfoDisabledIcon};
         case TextStyle::LabelInfoText:
-            return {index, index, index, index, index, index,
+            return {TextStyle::LabelInfoText,
                     TextStyle::LabelInfoDisabledText};
         case TextStyle::LabelDimIcon:
-            return {index, index, index, index, index, index,
+            return {TextStyle::LabelDimIcon,
                     TextStyle::LabelDimDisabledIcon};
         case TextStyle::LabelDimText:
-            return {index, index, index, index, index, index,
+            return {TextStyle::LabelDimText,
                     TextStyle::LabelDimDisabledText};
         case TextStyle::InputDefault:
         case TextStyle::InputDefaultHovered:
@@ -519,25 +480,25 @@ Containers::StaticArray<7, TextStyle> styleTransition(const TextStyle index) {
 }
 
 TextStyle styleTransitionToInactiveOut(const TextStyle index) {
-    return styleTransition(index)[0];
+    return styleTransition(index).inactiveOut;
 }
 TextStyle styleTransitionToInactiveOver(const TextStyle index) {
-    return styleTransition(index)[1];
+    return styleTransition(index).inactiveOver;
 }
 TextStyle styleTransitionToFocusedOut(const TextStyle index) {
-    return styleTransition(index)[2];
+    return styleTransition(index).focusedOut;
 }
 TextStyle styleTransitionToFocusedOver(const TextStyle index) {
-    return styleTransition(index)[3];
+    return styleTransition(index).focusedOver;
 }
 TextStyle styleTransitionToPressedOut(const TextStyle index) {
-    return styleTransition(index)[4];
+    return styleTransition(index).pressedOut;
 }
 TextStyle styleTransitionToPressedOver(const TextStyle index) {
-    return styleTransition(index)[5];
+    return styleTransition(index).pressedOver;
 }
 TextStyle styleTransitionToDisabled(const TextStyle index) {
-    return styleTransition(index)[6];
+    return styleTransition(index).disabled;
 }
 
 namespace {
