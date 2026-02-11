@@ -1853,13 +1853,14 @@ void SnapLayouterTest::childLayoutSizeSide() {
                 Containers::stridedArrayView(layouts).slice(&Layout::next));
             CORRADE_COMPARE(sizeMargin, Containers::pair(expectedSizes[rotation], expectedMargins[rotation]));
 
-            /* Node size passed as a min size, should work the same */
+            /* Node size passed as a min size and a different layout order,
+               should work the same */
             sizeMargin = Implementation::childLayoutSizeMargin(
                 snap,
                 Containers::stridedArrayView(nodes).slice(&Node::size), /* minSize */
                 Containers::stridedArrayView(nodes).slice(&Node::margin),
                 Containers::stridedArrayView(nodes).slice(&Node::zero), /* size */
-                layouterDataHandle(2, 0x222),
+                layouterDataHandle(1, 0x111),
                 Containers::stridedArrayView(layouts).slice(&Layout::node),
                 Containers::stridedArrayView(layouts).slice(&Layout::next));
             CORRADE_COMPARE(sizeMargin, Containers::pair(expectedSizes[rotation], expectedMargins[rotation]));
