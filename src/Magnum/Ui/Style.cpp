@@ -86,157 +86,62 @@ template<class Style> struct Transition {
 };
 
 Transition<BaseStyle> styleTransition(const BaseStyle index) {
-    /* LCOV_EXCL_START. Even if I manage to hit all cases here, it still
-       reports just one line from each return expression as covered. Which adds
-       so much false positives to the output that it's not worth for me to try
-       to fix this. */
-    /** @todo look at this again when gcov / lcov fixes itself */
     switch(index) {
-        case BaseStyle::Default:
-            return {BaseStyle::Default,
-                    BaseStyle::Default};
-        case BaseStyle::ButtonDefault:
-        case BaseStyle::ButtonDefaultHovered:
-        case BaseStyle::ButtonDefaultPressed:
-        case BaseStyle::ButtonDefaultPressedHovered:
-            return {BaseStyle::ButtonDefault,
-                    BaseStyle::ButtonDefaultHovered,
-                    BaseStyle::ButtonDefaultPressed,
-                    BaseStyle::ButtonDefaultPressedHovered,
-                    BaseStyle::ButtonDefaultDisabled};
-        case BaseStyle::ButtonPrimary:
-        case BaseStyle::ButtonPrimaryHovered:
-        case BaseStyle::ButtonPrimaryPressed:
-        case BaseStyle::ButtonPrimaryPressedHovered:
-            return {BaseStyle::ButtonPrimary,
-                    BaseStyle::ButtonPrimaryHovered,
-                    BaseStyle::ButtonPrimaryPressed,
-                    BaseStyle::ButtonPrimaryPressedHovered,
-                    BaseStyle::ButtonPrimaryDisabled};
-        case BaseStyle::ButtonSuccess:
-        case BaseStyle::ButtonSuccessHovered:
-        case BaseStyle::ButtonSuccessPressed:
-        case BaseStyle::ButtonSuccessPressedHovered:
-            return {BaseStyle::ButtonSuccess,
-                    BaseStyle::ButtonSuccessHovered,
-                    BaseStyle::ButtonSuccessPressed,
-                    BaseStyle::ButtonSuccessPressedHovered,
-                    BaseStyle::ButtonSuccessDisabled};
-        case BaseStyle::ButtonWarning:
-        case BaseStyle::ButtonWarningHovered:
-        case BaseStyle::ButtonWarningPressed:
-        case BaseStyle::ButtonWarningPressedHovered:
-            return {BaseStyle::ButtonWarning,
-                    BaseStyle::ButtonWarningHovered,
-                    BaseStyle::ButtonWarningPressed,
-                    BaseStyle::ButtonWarningPressedHovered,
-                    BaseStyle::ButtonWarningDisabled};
-        case BaseStyle::ButtonDanger:
-        case BaseStyle::ButtonDangerHovered:
-        case BaseStyle::ButtonDangerPressed:
-        case BaseStyle::ButtonDangerPressedHovered:
-            return {BaseStyle::ButtonDanger,
-                    BaseStyle::ButtonDangerHovered,
-                    BaseStyle::ButtonDangerPressed,
-                    BaseStyle::ButtonDangerPressedHovered,
-                    BaseStyle::ButtonDangerDisabled};
-        case BaseStyle::ButtonInfo:
-        case BaseStyle::ButtonInfoHovered:
-        case BaseStyle::ButtonInfoPressed:
-        case BaseStyle::ButtonInfoPressedHovered:
-            return {BaseStyle::ButtonInfo,
-                    BaseStyle::ButtonInfoHovered,
-                    BaseStyle::ButtonInfoPressed,
-                    BaseStyle::ButtonInfoPressedHovered,
-                    BaseStyle::ButtonInfoDisabled};
-        case BaseStyle::ButtonDim:
-        case BaseStyle::ButtonDimHovered:
-        case BaseStyle::ButtonDimPressed:
-        case BaseStyle::ButtonDimPressedHovered:
-            return {BaseStyle::ButtonDim,
-                    BaseStyle::ButtonDimHovered,
-                    BaseStyle::ButtonDimPressed,
-                    BaseStyle::ButtonDimPressedHovered,
-                    BaseStyle::ButtonDimDisabled};
-        case BaseStyle::ButtonFlat:
-        case BaseStyle::ButtonFlatHovered:
-        case BaseStyle::ButtonFlatPressed:
-        case BaseStyle::ButtonFlatPressedHovered:
-            return {BaseStyle::ButtonFlat,
-                    BaseStyle::ButtonFlatHovered,
-                    BaseStyle::ButtonFlatPressed,
-                    BaseStyle::ButtonFlatPressedHovered,
-                    BaseStyle::ButtonFlatDisabled};
-        case BaseStyle::InputDefault:
-        case BaseStyle::InputDefaultHovered:
-        case BaseStyle::InputDefaultFocused:
-            return {BaseStyle::InputDefault,
-                    BaseStyle::InputDefaultHovered,
-                    BaseStyle::InputDefaultFocused,
-                    BaseStyle::InputDefaultFocused,
-                    BaseStyle::InputDefaultFocused,
-                    BaseStyle::InputDefaultFocused,
-                    BaseStyle::InputDefaultDisabled};
-        case BaseStyle::InputSuccess:
-        case BaseStyle::InputSuccessHovered:
-        case BaseStyle::InputSuccessFocused:
-            return {BaseStyle::InputSuccess,
-                    BaseStyle::InputSuccessHovered,
-                    BaseStyle::InputSuccessFocused,
-                    BaseStyle::InputSuccessFocused,
-                    BaseStyle::InputSuccessFocused,
-                    BaseStyle::InputSuccessFocused,
-                    BaseStyle::InputSuccessDisabled};
-        case BaseStyle::InputWarning:
-        case BaseStyle::InputWarningHovered:
-        case BaseStyle::InputWarningFocused:
-            return {BaseStyle::InputWarning,
-                    BaseStyle::InputWarningHovered,
-                    BaseStyle::InputWarningFocused,
-                    BaseStyle::InputWarningFocused,
-                    BaseStyle::InputWarningFocused,
-                    BaseStyle::InputWarningFocused,
-                    BaseStyle::InputWarningDisabled};
-        case BaseStyle::InputDanger:
-        case BaseStyle::InputDangerHovered:
-        case BaseStyle::InputDangerFocused:
-            return {BaseStyle::InputDanger,
-                    BaseStyle::InputDangerHovered,
-                    BaseStyle::InputDangerFocused,
-                    BaseStyle::InputDangerFocused,
-                    BaseStyle::InputDangerFocused,
-                    BaseStyle::InputDangerFocused,
-                    BaseStyle::InputDangerDisabled};
-        case BaseStyle::InputFlat:
-        case BaseStyle::InputFlatHovered:
-        case BaseStyle::InputFlatFocused:
-            return {BaseStyle::InputFlat,
-                    BaseStyle::InputFlatHovered,
-                    BaseStyle::InputFlatFocused,
-                    BaseStyle::InputFlatFocused,
-                    BaseStyle::InputFlatFocused,
-                    BaseStyle::InputFlatFocused,
-                    BaseStyle::InputFlatDisabled};
-        case BaseStyle::PanelBackground:
-            return {BaseStyle::PanelBackground,
-                    BaseStyle::PanelBackgroundDisabled};
-        case BaseStyle::ButtonDefaultDisabled:
-        case BaseStyle::ButtonPrimaryDisabled:
-        case BaseStyle::ButtonSuccessDisabled:
-        case BaseStyle::ButtonWarningDisabled:
-        case BaseStyle::ButtonDangerDisabled:
-        case BaseStyle::ButtonInfoDisabled:
-        case BaseStyle::ButtonDimDisabled:
-        case BaseStyle::ButtonFlatDisabled:
-        case BaseStyle::InputDefaultDisabled:
-        case BaseStyle::InputSuccessDisabled:
-        case BaseStyle::InputWarningDisabled:
-        case BaseStyle::InputDangerDisabled:
-        case BaseStyle::InputFlatDisabled:
-        case BaseStyle::PanelBackgroundDisabled:
-            CORRADE_INTERNAL_ASSERT_UNREACHABLE();
+        #define _c(style)                                                   \
+            case BaseStyle::style:                                          \
+                return {BaseStyle::style,                                   \
+                        BaseStyle::style};
+        #define _cDisabled(style)                                           \
+            case BaseStyle::style:                                          \
+                return {BaseStyle::style,                                   \
+                        BaseStyle::style ## Disabled};                      \
+            case BaseStyle::style ## Disabled:                              \
+                CORRADE_INTERNAL_ASSERT_UNREACHABLE();
+        #define _cHoveredPressedPressedHoveredDisabled(style)               \
+            case BaseStyle::style:                                          \
+            case BaseStyle::style ## Hovered:                               \
+            case BaseStyle::style ## Pressed:                               \
+            case BaseStyle::style ## PressedHovered:                        \
+                return {BaseStyle::style,                                   \
+                        BaseStyle::style ## Hovered,                        \
+                        BaseStyle::style ## Pressed,                        \
+                        BaseStyle::style ## PressedHovered,                 \
+                        BaseStyle::style ## Disabled};                      \
+            case BaseStyle::style ## Disabled:                              \
+                CORRADE_INTERNAL_ASSERT_UNREACHABLE();
+        #define _cHoveredFocusedDisabled(style)                             \
+            case BaseStyle::style:                                          \
+            case BaseStyle::style ## Hovered:                               \
+            case BaseStyle::style ## Focused:                               \
+                return {BaseStyle::style,                                   \
+                        BaseStyle::style ## Hovered,                        \
+                        BaseStyle::style ## Focused,                        \
+                        BaseStyle::style ## Focused,                        \
+                        BaseStyle::style ## Focused,                        \
+                        BaseStyle::style ## Focused,                        \
+                        BaseStyle::style ## Disabled};                      \
+            case BaseStyle::style ## Disabled:                              \
+                CORRADE_INTERNAL_ASSERT_UNREACHABLE();
+        _c(Default)
+        _cHoveredPressedPressedHoveredDisabled(ButtonDefault)
+        _cHoveredPressedPressedHoveredDisabled(ButtonPrimary)
+        _cHoveredPressedPressedHoveredDisabled(ButtonSuccess)
+        _cHoveredPressedPressedHoveredDisabled(ButtonWarning)
+        _cHoveredPressedPressedHoveredDisabled(ButtonDanger)
+        _cHoveredPressedPressedHoveredDisabled(ButtonInfo)
+        _cHoveredPressedPressedHoveredDisabled(ButtonDim)
+        _cHoveredPressedPressedHoveredDisabled(ButtonFlat)
+        _cHoveredFocusedDisabled(InputDefault)
+        _cHoveredFocusedDisabled(InputSuccess)
+        _cHoveredFocusedDisabled(InputWarning)
+        _cHoveredFocusedDisabled(InputDanger)
+        _cHoveredFocusedDisabled(InputFlat)
+        _cDisabled(PanelBackground)
+        #undef _cHoveredFocusedDisabled
+        #undef _cHoveredPressedPressedHoveredDisabled
+        #undef _cDisabled
+        #undef _c
     }
-    /* LCOV_EXCL_STOP */
 
     CORRADE_INTERNAL_ASSERT_UNREACHABLE(); /* LCOV_EXCL_LINE */
 }
@@ -268,211 +173,88 @@ BaseStyle styleTransitionToDisabled(const BaseStyle index) {
 namespace {
 
 Transition<TextStyle> styleTransition(const TextStyle index) {
-    /* LCOV_EXCL_START. Even if I manage to hit all cases here, it still
-       reports just one line from each return expression as covered. Which adds
-       so much false positives to the output that it's not worth for me to try
-       to fix this. */
-    /** @todo look at this again when gcov / lcov fixes itself */
     switch(index) {
-        case TextStyle::Default:
-            return {TextStyle::Default,
-                    TextStyle::Default};
-        case TextStyle::ButtonIconOnly:
-        case TextStyle::ButtonPressedIconOnly:
-            return {TextStyle::ButtonIconOnly,
-                    TextStyle::ButtonIconOnly,
-                    TextStyle::ButtonPressedIconOnly,
-                    TextStyle::ButtonPressedIconOnly,
-                    TextStyle::ButtonDisabledIconOnly};
-        case TextStyle::ButtonTextOnly:
-        case TextStyle::ButtonPressedTextOnly:
-            return {TextStyle::ButtonTextOnly,
-                    TextStyle::ButtonTextOnly,
-                    TextStyle::ButtonPressedTextOnly,
-                    TextStyle::ButtonPressedTextOnly,
-                    TextStyle::ButtonDisabledTextOnly};
-        case TextStyle::ButtonIcon:
-        case TextStyle::ButtonPressedIcon:
-            return {TextStyle::ButtonIcon,
-                    TextStyle::ButtonIcon,
-                    TextStyle::ButtonPressedIcon,
-                    TextStyle::ButtonPressedIcon,
-                    TextStyle::ButtonDisabledIcon};
-        case TextStyle::ButtonText:
-        case TextStyle::ButtonPressedText:
-            return {TextStyle::ButtonText,
-                    TextStyle::ButtonText,
-                    TextStyle::ButtonPressedText,
-                    TextStyle::ButtonPressedText,
-                    TextStyle::ButtonDisabledText};
-        case TextStyle::ButtonFlatIconOnly:
-        case TextStyle::ButtonFlatHoveredIconOnly:
-        case TextStyle::ButtonFlatPressedIconOnly:
-        case TextStyle::ButtonFlatPressedHoveredIconOnly:
-            return {TextStyle::ButtonFlatIconOnly,
-                    TextStyle::ButtonFlatHoveredIconOnly,
-                    TextStyle::ButtonFlatPressedIconOnly,
-                    TextStyle::ButtonFlatPressedHoveredIconOnly,
-                    TextStyle::ButtonFlatDisabledIconOnly};
-        case TextStyle::ButtonFlatTextOnly:
-        case TextStyle::ButtonFlatHoveredTextOnly:
-        case TextStyle::ButtonFlatPressedTextOnly:
-        case TextStyle::ButtonFlatPressedHoveredTextOnly:
-            return {TextStyle::ButtonFlatTextOnly,
-                    TextStyle::ButtonFlatHoveredTextOnly,
-                    TextStyle::ButtonFlatPressedTextOnly,
-                    TextStyle::ButtonFlatPressedHoveredTextOnly,
-                    TextStyle::ButtonFlatDisabledTextOnly};
-        case TextStyle::ButtonFlatIcon:
-        case TextStyle::ButtonFlatHoveredIcon:
-        case TextStyle::ButtonFlatPressedIcon:
-        case TextStyle::ButtonFlatPressedHoveredIcon:
-            return {TextStyle::ButtonFlatIcon,
-                    TextStyle::ButtonFlatHoveredIcon,
-                    TextStyle::ButtonFlatPressedIcon,
-                    TextStyle::ButtonFlatPressedHoveredIcon,
-                    TextStyle::ButtonFlatDisabledIcon};
-        case TextStyle::ButtonFlatText:
-        case TextStyle::ButtonFlatHoveredText:
-        case TextStyle::ButtonFlatPressedText:
-        case TextStyle::ButtonFlatPressedHoveredText:
-            return {TextStyle::ButtonFlatText,
-                    TextStyle::ButtonFlatHoveredText,
-                    TextStyle::ButtonFlatPressedText,
-                    TextStyle::ButtonFlatPressedHoveredText,
-                    TextStyle::ButtonFlatDisabledText};
-        case TextStyle::LabelDefaultIcon:
-            return {TextStyle::LabelDefaultIcon,
-                    TextStyle::LabelDefaultDisabledIcon};
-        case TextStyle::LabelDefaultText:
-            return {TextStyle::LabelDefaultText,
-                    TextStyle::LabelDefaultDisabledText};
-        case TextStyle::LabelPrimaryIcon:
-            return {TextStyle::LabelPrimaryIcon,
-                    TextStyle::LabelPrimaryDisabledIcon};
-        case TextStyle::LabelPrimaryText:
-            return {TextStyle::LabelPrimaryText,
-                    TextStyle::LabelPrimaryDisabledText};
-        case TextStyle::LabelSuccessIcon:
-            return {TextStyle::LabelSuccessIcon,
-                    TextStyle::LabelSuccessDisabledIcon};
-        case TextStyle::LabelSuccessText:
-            return {TextStyle::LabelSuccessText,
-                    TextStyle::LabelSuccessDisabledText};
-        case TextStyle::LabelWarningIcon:
-            return {TextStyle::LabelWarningIcon,
-                    TextStyle::LabelWarningDisabledIcon};
-        case TextStyle::LabelWarningText:
-            return {TextStyle::LabelWarningText,
-                    TextStyle::LabelWarningDisabledText};
-        case TextStyle::LabelDangerIcon:
-            return {TextStyle::LabelDangerIcon,
-                    TextStyle::LabelDangerDisabledIcon};
-        case TextStyle::LabelDangerText:
-            return {TextStyle::LabelDangerText,
-                    TextStyle::LabelDangerDisabledText};
-        case TextStyle::LabelInfoIcon:
-            return {TextStyle::LabelInfoIcon,
-                    TextStyle::LabelInfoDisabledIcon};
-        case TextStyle::LabelInfoText:
-            return {TextStyle::LabelInfoText,
-                    TextStyle::LabelInfoDisabledText};
-        case TextStyle::LabelDimIcon:
-            return {TextStyle::LabelDimIcon,
-                    TextStyle::LabelDimDisabledIcon};
-        case TextStyle::LabelDimText:
-            return {TextStyle::LabelDimText,
-                    TextStyle::LabelDimDisabledText};
-        case TextStyle::InputDefault:
-        case TextStyle::InputDefaultHovered:
-        case TextStyle::InputDefaultFocused:
-        case TextStyle::InputDefaultPressed:
-            return {TextStyle::InputDefault,
-                    TextStyle::InputDefaultHovered,
-                    TextStyle::InputDefaultFocused,
-                    TextStyle::InputDefaultFocused,
-                    TextStyle::InputDefaultPressed,
-                    TextStyle::InputDefaultPressed,
-                    TextStyle::InputDefaultDisabled};
-        case TextStyle::InputSuccess:
-        case TextStyle::InputSuccessHovered:
-        case TextStyle::InputSuccessFocused:
-        case TextStyle::InputSuccessPressed:
-            return {TextStyle::InputSuccess,
-                    TextStyle::InputSuccessHovered,
-                    TextStyle::InputSuccessFocused,
-                    TextStyle::InputSuccessFocused,
-                    TextStyle::InputSuccessPressed,
-                    TextStyle::InputSuccessPressed,
-                    TextStyle::InputSuccessDisabled};
-        case TextStyle::InputWarning:
-        case TextStyle::InputWarningHovered:
-        case TextStyle::InputWarningFocused:
-        case TextStyle::InputWarningPressed:
-            return {TextStyle::InputWarning,
-                    TextStyle::InputWarningHovered,
-                    TextStyle::InputWarningFocused,
-                    TextStyle::InputWarningFocused,
-                    TextStyle::InputWarningPressed,
-                    TextStyle::InputWarningPressed,
-                    TextStyle::InputWarningDisabled};
-        case TextStyle::InputDanger:
-        case TextStyle::InputDangerHovered:
-        case TextStyle::InputDangerFocused:
-        case TextStyle::InputDangerPressed:
-            return {TextStyle::InputDanger,
-                    TextStyle::InputDangerHovered,
-                    TextStyle::InputDangerFocused,
-                    TextStyle::InputDangerFocused,
-                    TextStyle::InputDangerPressed,
-                    TextStyle::InputDangerPressed,
-                    TextStyle::InputDangerDisabled};
-        case TextStyle::InputFlat:
-        case TextStyle::InputFlatHovered:
-        case TextStyle::InputFlatFocused:
-        case TextStyle::InputFlatPressed:
-            return {TextStyle::InputFlat,
-                    TextStyle::InputFlatHovered,
-                    TextStyle::InputFlatFocused,
-                    TextStyle::InputFlatFocused,
-                    TextStyle::InputFlatPressed,
-                    TextStyle::InputFlatPressed,
-                    TextStyle::InputFlatDisabled};
-        case TextStyle::ButtonDisabledIconOnly:
-        case TextStyle::ButtonDisabledTextOnly:
-        case TextStyle::ButtonDisabledIcon:
-        case TextStyle::ButtonDisabledText:
-        case TextStyle::ButtonFlatDisabledIconOnly:
-        case TextStyle::ButtonFlatDisabledTextOnly:
-        case TextStyle::ButtonFlatDisabledIcon:
-        case TextStyle::ButtonFlatDisabledText:
-        case TextStyle::LabelDefaultDisabledIcon:
-        case TextStyle::LabelDefaultDisabledText:
-        case TextStyle::LabelPrimaryDisabledIcon:
-        case TextStyle::LabelPrimaryDisabledText:
-        case TextStyle::LabelSuccessDisabledIcon:
-        case TextStyle::LabelSuccessDisabledText:
-        case TextStyle::LabelWarningDisabledIcon:
-        case TextStyle::LabelWarningDisabledText:
-        case TextStyle::LabelDangerDisabledIcon:
-        case TextStyle::LabelDangerDisabledText:
-        case TextStyle::LabelInfoDisabledIcon:
-        case TextStyle::LabelInfoDisabledText:
-        case TextStyle::LabelDimDisabledIcon:
-        case TextStyle::LabelDimDisabledText:
-        case TextStyle::InputDefaultFocusedBlink:
-        case TextStyle::InputDefaultDisabled:
-        case TextStyle::InputSuccessFocusedBlink:
-        case TextStyle::InputSuccessDisabled:
-        case TextStyle::InputWarningFocusedBlink:
-        case TextStyle::InputWarningDisabled:
-        case TextStyle::InputDangerFocusedBlink:
-        case TextStyle::InputDangerDisabled:
-        case TextStyle::InputFlatFocusedBlink:
-        case TextStyle::InputFlatDisabled:
-            CORRADE_INTERNAL_ASSERT_UNREACHABLE();
+        #define _c(style, suffix)                                           \
+            case TextStyle::style ## suffix:                                \
+                return {TextStyle::style ## suffix,                         \
+                        TextStyle::style ## suffix};
+        #define _cDisabled(style, suffix)                                   \
+            case TextStyle::style ## suffix:                                \
+                return {TextStyle::style ## suffix,                         \
+                        TextStyle::style ## Disabled ## suffix};            \
+            case TextStyle::style ## Disabled ## suffix:                    \
+                CORRADE_INTERNAL_ASSERT_UNREACHABLE();
+        #define _cPressedDisabled(style, suffix)                            \
+            case TextStyle::style ## suffix:                                \
+            case TextStyle::style ## Pressed ## suffix:                     \
+                return {TextStyle::style ## suffix,                         \
+                        TextStyle::style ## suffix,                         \
+                        TextStyle::style ## Pressed ## suffix,              \
+                        TextStyle::style ## Pressed ## suffix,              \
+                        TextStyle::style ## Disabled ## suffix};            \
+            case TextStyle::style ## Disabled ## suffix:                    \
+                CORRADE_INTERNAL_ASSERT_UNREACHABLE();
+        #define _cHoveredPressedPressedHoveredDisabled(style, suffix)       \
+            case TextStyle::style ## suffix:                                \
+            case TextStyle::style ## Hovered ## suffix:                     \
+            case TextStyle::style ## Pressed ## suffix:                     \
+            case TextStyle::style ## PressedHovered ## suffix:              \
+                return {TextStyle::style ## suffix,                         \
+                        TextStyle::style ## Hovered ## suffix,              \
+                        TextStyle::style ## Pressed ## suffix,              \
+                        TextStyle::style ## PressedHovered ## suffix,       \
+                        TextStyle::style ## Disabled ## suffix};            \
+            case TextStyle::style ## Disabled ## suffix:                    \
+                CORRADE_INTERNAL_ASSERT_UNREACHABLE();
+        #define _cHoveredFocusedBlinkPressedDisabled(style, suffix)         \
+            case TextStyle::style ## suffix:                                \
+            case TextStyle::style ## Hovered ## suffix:                     \
+            case TextStyle::style ## Focused ## suffix:                     \
+            case TextStyle::style ## Pressed ## suffix:                     \
+                return {TextStyle::style ## suffix,                         \
+                        TextStyle::style ## Hovered ## suffix,              \
+                        TextStyle::style ## Focused ## suffix,              \
+                        TextStyle::style ## Focused ## suffix,              \
+                        TextStyle::style ## Pressed ## suffix,              \
+                        TextStyle::style ## Pressed ## suffix,              \
+                        TextStyle::style ## Disabled ## suffix};            \
+            case TextStyle::style ## FocusedBlink ## suffix:                \
+            case TextStyle::style ## Disabled ## suffix:                    \
+                CORRADE_INTERNAL_ASSERT_UNREACHABLE();
+        _c(Default,)
+        _cPressedDisabled(Button,IconOnly)
+        _cPressedDisabled(Button,TextOnly)
+        _cPressedDisabled(Button,Icon)
+        _cPressedDisabled(Button,Text)
+        _cHoveredPressedPressedHoveredDisabled(ButtonFlat,IconOnly)
+        _cHoveredPressedPressedHoveredDisabled(ButtonFlat,TextOnly)
+        _cHoveredPressedPressedHoveredDisabled(ButtonFlat,Icon)
+        _cHoveredPressedPressedHoveredDisabled(ButtonFlat,Text)
+        _cDisabled(LabelDefault,Icon)
+        _cDisabled(LabelDefault,Text)
+        _cDisabled(LabelPrimary,Icon)
+        _cDisabled(LabelPrimary,Text)
+        _cDisabled(LabelSuccess,Icon)
+        _cDisabled(LabelSuccess,Text)
+        _cDisabled(LabelWarning,Icon)
+        _cDisabled(LabelWarning,Text)
+        _cDisabled(LabelDanger,Icon)
+        _cDisabled(LabelDanger,Text)
+        _cDisabled(LabelInfo,Icon)
+        _cDisabled(LabelInfo,Text)
+        _cDisabled(LabelDim,Icon)
+        _cDisabled(LabelDim,Text)
+        _cHoveredFocusedBlinkPressedDisabled(InputDefault,)
+        _cHoveredFocusedBlinkPressedDisabled(InputSuccess,)
+        _cHoveredFocusedBlinkPressedDisabled(InputWarning,)
+        _cHoveredFocusedBlinkPressedDisabled(InputDanger,)
+        _cHoveredFocusedBlinkPressedDisabled(InputFlat,)
+        #undef _cHoveredFocusedBlinkPressedDisabled
+        #undef _cHoveredPressedPressedHoveredDisabled
+        #undef _cPressedDisabled
+        #undef _cDisabled
+        #undef _c
     }
-    /* LCOV_EXCL_STOP */
 
     CORRADE_INTERNAL_ASSERT_UNREACHABLE(); /* LCOV_EXCL_LINE */
 }
