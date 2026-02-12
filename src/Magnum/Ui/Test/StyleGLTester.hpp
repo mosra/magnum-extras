@@ -1,3 +1,5 @@
+#ifndef Magnum_Ui_Test_StyleGLTester_hpp
+#define Magnum_Ui_Test_StyleGLTester_hpp
 /*
     This file is part of Magnum.
 
@@ -29,7 +31,6 @@
 #include <Corrade/PluginManager/PluginMetadata.h>
 #include <Corrade/TestSuite/Compare/Numeric.h>
 #include <Corrade/Utility/ConfigurationGroup.h>
-#include <Corrade/Utility/Format.h>
 #include <Corrade/Utility/Path.h>
 #include <Magnum/Image.h>
 #include <Magnum/ImageView.h>
@@ -44,16 +45,11 @@
 #include "Magnum/Ui/Anchor.h"
 #include "Magnum/Ui/BaseLayerGL.h"
 #include "Magnum/Ui/BaseLayerAnimator.h"
-#include "Magnum/Ui/Button.h"
 #include "Magnum/Ui/Event.h"
 #include "Magnum/Ui/Handle.h"
-#include "Magnum/Ui/Input.h"
-#include "Magnum/Ui/Label.h"
 #include "Magnum/Ui/LayoutLayer.h"
 #include "Magnum/Ui/NodeFlags.h"
-#include "Magnum/Ui/Panel.h"
 #include "Magnum/Ui/RendererGL.h"
-#include "Magnum/Ui/Style.h"
 #include "Magnum/Ui/TextLayerGL.h"
 #include "Magnum/Ui/TextLayerAnimator.h"
 #include "Magnum/Ui/UserInterfaceGL.h"
@@ -62,291 +58,41 @@
 
 namespace Magnum { namespace Ui { namespace Test { namespace {
 
-struct StyleGLTest: GL::OpenGLTester {
-    explicit StyleGLTest();
+struct Style {
+    const char* name;
+    const char* filePrefix;
+    bool hasAnimations;
+    Containers::Pointer<AbstractStyle> style;
+};
 
-    void render();
+enum class Flag {
+    HoveredPressed = 1 << 0,
+    Focused = 1 << 1,
+    Disabled = 1 << 2,
+    XfailLlvmpipe20 = 1 << 3
+};
+typedef Containers::EnumSet<Flag> Flags;
+
+CORRADE_ENUMSET_OPERATORS(Flags)
+
+struct StyleGLTester: GL::OpenGLTester {
+    explicit StyleGLTester(const Containers::ArrayView<const Style>& styles);
+
+    void render(NodeHandle(*create)(UserInterface& ui, Int style, Int counter), const Style& styleData, const char* filename, Flags flags, Int styleCount, Nanoseconds animationDelta, Float maxThreshold, Float meanThreshold);
+
+    std::size_t styleCount() const { return _styles.size(); }
 
     private:
         PluginManager::Manager<Text::AbstractFont> _fontManager;
         PluginManager::Manager<Trade::AbstractImporter> _importerManager;
+        Containers::ArrayView<const Style> _styles;
         Containers::Array<UserInterfaceGL> _styleUis;
         Containers::Array<UserInterfaceGL> _uis;
 };
 
 using namespace Math::Literals;
 
-const struct {
-    const char* name;
-    const char* filePrefix;
-    bool hasAnimations;
-    Containers::Pointer<AbstractStyle> style;
-} StyleData[]{
-    {"m.css dark", "mcss-dark-", false, Containers::pointer<McssDarkStyle>()},
-    {"m.css dark SubdividedQuads", "mcss-dark-", false, []{
-        Containers::Pointer<McssDarkStyle> style{InPlaceInit};
-        style->setBaseLayerFlags(BaseLayerSharedFlag::SubdividedQuads, {});
-        return style;
-    }()},
-    {"m.css dark, EssentialAnimations", "mcss-dark-", true, Containers::pointer<McssDarkStyle>(McssDarkStyle::Feature::EssentialAnimations)},
-    /* With full animations the longest duration is half a second */
-    {"m.css dark, Animations", "mcss-dark-", true, Containers::pointer<McssDarkStyle>(McssDarkStyle::Feature::Animations)},
-};
-
-const struct {
-    const char* name;
-    const char* filename;
-    struct RenderDataProperties {
-        Int styleCount;
-        bool hoveredPressed, focused, disabled;
-        Nanoseconds animationDelta;
-        Float maxThreshold, meanThreshold;
-        bool xfailLlvmpipe20;
-    } properties;
-    NodeHandle(*create)(UserInterface& ui, Int style, Int counter);
-} RenderData[]{
-    {"button text + icon, stateless", "button-text-icon.png",
-        /* Button fade out animations are all 0.5 sec */
-        {8, true, false, true, 0.5_sec, 2.0f, 0.0399f, true},
-        [](UserInterface& ui, Int style, Int counter) {
-            /** @todo differently wide icons to test alignment */
-            return button({ui, {}, {96, 36}}, counter % 2 ? Icon::No : Icon::Yes, counter % 2 ? "Bye" : "Hello!", ButtonStyle(style)).node();
-        }},
-    {"button text + icon", nullptr, {},
-        [](UserInterface& ui, Int style, Int counter) {
-            return Button{{ui, {}, {96, 36}}, counter % 2 ? Icon::No : Icon::Yes, counter % 2 ? "Bye" : "Hello!", ButtonStyle(style)}.release();
-        }},
-    {"button text + icon, setters", nullptr, {},
-        [](UserInterface& ui, Int style, Int counter) {
-            Button button{{ui, {}, {96, 36}}, Icon::No, "Hey", ButtonStyle(style)};
-            button.setIcon(counter % 2 ? Icon::No : Icon::Yes);
-            button.setText(counter % 2 ? "Bye" : "Hello!");
-            return button.release();
-        }},
-    {"button text + icon, setters on empty", nullptr, {},
-        [](UserInterface& ui, Int style, Int counter) {
-            Button button{{ui, {}, {96, 36}}, Icon::None, "", ButtonStyle(style)};
-            button.setIcon(counter % 2 ? Icon::No : Icon::Yes);
-            button.setText(counter % 2 ? "Bye" : "Hello!");
-            return button.release();
-        }},
-    {"button text + icon, setters on empty, different order", nullptr, {},
-        [](UserInterface& ui, Int style, Int counter) {
-            Button button{{ui, {}, {96, 36}}, Icon::None, "", ButtonStyle(style)};
-            button.setText(counter % 2 ? "Bye" : "Hello!");
-            button.setIcon(counter % 2 ? Icon::No : Icon::Yes);
-            return button.release();
-        }},
-    {"button text + icon, setStyle()", nullptr, {},
-        [](UserInterface& ui, Int style, Int counter) {
-            Button button{{ui, {}, {96, 36}}, counter % 2 ? Icon::No : Icon::Yes, counter % 2 ? "Bye" : "Hello!", ButtonStyle(style == 0 ? 1 : 0)};
-            button.setStyle(ButtonStyle(style));
-            return button.release();
-        }},
-    {"button text + icon, setStyle() on empty, setters", nullptr, {},
-        [](UserInterface& ui, Int style, Int counter) {
-            Button button{{ui, {}, {96, 36}}, Icon::None, "", ButtonStyle(style == 0 ? 1 : 0)};
-            button.setStyle(ButtonStyle(style));
-            button.setIcon(counter % 2 ? Icon::No : Icon::Yes);
-            button.setText(counter % 2 ? "Bye" : "Hello!");
-            return button.release();
-        }},
-
-    {"button text, stateless", "button-text.png",
-        /* Button fade out animations are all 0.5 sec */
-        {8, true, false, true, 0.5_sec, 2.0f, 0.0386f, true},
-        [](UserInterface& ui, Int style, Int counter) {
-            return button({ui, {}, {64, 36}}, counter % 2 ? "Bye" : "Hello!", ButtonStyle(style)).node();
-        }},
-    {"button text", nullptr, {},
-        [](UserInterface& ui, Int style, Int counter) {
-            return Button{{ui, {}, {64, 36}}, counter % 2 ? "Bye" : "Hello!", ButtonStyle(style)}.release();
-        }},
-    {"button text, setters", nullptr, {},
-        [](UserInterface& ui, Int style, Int counter) {
-            Button button{{ui, {}, {64, 36}}, "Hey", ButtonStyle(style)};
-            button.setText(counter % 2 ? "Bye" : "Hello!");
-            return button.release();
-        }},
-    {"button text, setters on empty", nullptr, {},
-        [](UserInterface& ui, Int style, Int counter) {
-            Button button{{ui, {}, {64, 36}}, "", ButtonStyle(style)};
-            button.setText(counter % 2 ? "Bye" : "Hello!");
-            return button.release();
-        }},
-    {"button text, setStyle()", nullptr, {},
-        [](UserInterface& ui, Int style, Int counter) {
-            Button button{{ui, {}, {64, 36}}, counter % 2 ? "Bye" : "Hello!", ButtonStyle(style == 0 ? 1 : 0)};
-            button.setStyle(ButtonStyle(style));
-            return button.release();
-        }},
-    {"button text, setStyle() on empty, setters", nullptr, {},
-        [](UserInterface& ui, Int style, Int counter) {
-            Button button{{ui, {}, {64, 36}}, "", ButtonStyle(style == 0 ? 1 : 0)};
-            button.setStyle(ButtonStyle(style));
-            button.setText(counter % 2 ? "Bye" : "Hello!");
-            return button.release();
-        }},
-
-    {"button icon, stateless", "button-icon.png",
-        /* Button fade out animations are all 0.5 sec */
-        {8, true, false, true, 0.5_sec, 1.25f, 0.0278f, true},
-        [](UserInterface& ui, Int style, Int counter) {
-            /** @todo differently wide icons to test alignment */
-            return button({ui, {}, {48, 36}}, counter % 2 ? Icon::Yes : Icon::No, ButtonStyle(style)).node();
-        }},
-    {"button icon", nullptr, {},
-        [](UserInterface& ui, Int style, Int counter) {
-            return Button{{ui, {}, {48, 36}}, counter % 2 ? Icon::Yes : Icon::No, ButtonStyle(style)}.release();
-        }},
-    {"button icon, setters", nullptr, {},
-        [](UserInterface& ui, Int style, Int counter) {
-            Button button{{ui, {}, {48, 36}}, Icon::Yes, ButtonStyle(style)};
-            button.setIcon(counter % 2 ? Icon::Yes : Icon::No);
-            return button.release();
-        }},
-    {"button icon, setters on empty", nullptr, {},
-        [](UserInterface& ui, Int style, Int counter) {
-            Button button{{ui, {}, {48, 36}}, Icon::None, ButtonStyle(style)};
-            button.setIcon(counter % 2 ? Icon::Yes : Icon::No);
-            return button.release();
-        }},
-    {"button icon, setStyle()", nullptr, {},
-        [](UserInterface& ui, Int style, Int counter) {
-            Button button{{ui, {}, {48, 36}}, counter % 2 ? Icon::Yes : Icon::No, ButtonStyle(style == 0 ? 1 : 0)};
-            button.setStyle(ButtonStyle(style));
-            return button.release();
-        }},
-    {"button icon, setStyle() on empty, setters", nullptr, {},
-        [](UserInterface& ui, Int style, Int counter) {
-            Button button{{ui, {}, {48, 36}}, Icon::None, ButtonStyle(style == 0 ? 1 : 0)};
-            button.setStyle(ButtonStyle(style));
-            button.setIcon(counter % 2 ? Icon::Yes : Icon::No);
-            return button.release();
-        }},
-
-    {"label text, stateless", "label-text.png",
-        /* Label has no animations */
-        {7, false, false, true, {}, 2.0f, 0.0248f, false},
-        [](UserInterface& ui, Int style, Int counter) {
-            return label({ui, {}, {52, 36}}, counter % 3 ? "Bye" : "Hello!", LabelStyle(style)).node();
-        }},
-    {"label text", nullptr, {},
-        [](UserInterface& ui, Int style, Int counter) {
-            return Label{{ui, {}, {52, 36}}, counter % 3 ? "Bye" : "Hello!", LabelStyle(style)}.release();
-        }},
-    {"label text, setters", nullptr, {},
-        [](UserInterface& ui, Int style, Int counter) {
-            Label label{{ui, {}, {52, 36}}, "Hey", LabelStyle(style)};
-            label.setText(counter % 3 ? "Bye" : "Hello!");
-            return label.release();
-        }},
-    {"label text, setters from empty", nullptr, {},
-        [](UserInterface& ui, Int style, Int counter) {
-            Label label{{ui, {}, {52, 36}}, "", LabelStyle(style)};
-            label.setText(counter % 3 ? "Bye" : "Hello!");
-            return label.release();
-        }},
-    {"label text, setStyle()", nullptr, {},
-        [](UserInterface& ui, Int style, Int counter) {
-            Label label{{ui, {}, {52, 36}}, counter % 3 ? "Bye" : "Hello!", LabelStyle(style == 0 ? 1 : 0)};
-            label.setStyle(LabelStyle(style));
-            return label.release();
-        }},
-    {"label text, setStyle() on empty, setters", nullptr, {},
-        [](UserInterface& ui, Int style, Int counter) {
-            Label label{{ui, {}, {52, 36}}, "", LabelStyle(style == 0 ? 1 : 0)};
-            label.setStyle(LabelStyle(style));
-            label.setText(counter % 3 ? "Bye" : "Hello!");
-            return label.release();
-        }},
-
-    {"label icon, stateless", "label-icon.png",
-        /* Label has no animations */
-        {7, false, false, true, {}, 1.75f, 0.0099f, false},
-        [](UserInterface& ui, Int style, Int counter) {
-            /** @todo differently wide icons to test alignment */
-            return label({ui, {}, {48, 36}}, counter % 3 ? Icon::Yes : Icon::No, LabelStyle(style)).node();
-        }},
-    {"label icon", nullptr, {},
-        [](UserInterface& ui, Int style, Int counter) {
-            return Label{{ui, {}, {48, 36}}, counter % 3 ? Icon::Yes : Icon::No, LabelStyle(style)}.release();
-        }},
-    {"label icon, setters", nullptr, {},
-        [](UserInterface& ui, Int style, Int counter) {
-            Label label{{ui, {}, {48, 36}}, Icon::Yes, LabelStyle(style)};
-            label.setIcon(counter % 3 ? Icon::Yes : Icon::No);
-            return label.release();
-        }},
-    {"label icon, setters on empty", nullptr, {},
-        [](UserInterface& ui, Int style, Int counter) {
-            Label label{{ui, {}, {48, 36}}, Icon::None, LabelStyle(style)};
-            label.setIcon(counter % 3 ? Icon::Yes : Icon::No);
-            return label.release();
-        }},
-    {"label icon, setStyle()", nullptr, {},
-        [](UserInterface& ui, Int style, Int counter) {
-            Label label{{ui, {}, {48, 36}}, counter % 3 ? Icon::Yes : Icon::No, LabelStyle(style == 0 ? 1 : 0)};
-            label.setStyle(LabelStyle(style));
-            return label.release();
-        }},
-    {"label icon, setStyle() on empty, setters", nullptr, {},
-        [](UserInterface& ui, Int style, Int counter) {
-            Label label{{ui, {}, {48, 36}}, Icon::None, LabelStyle(style == 0 ? 1 : 0)};
-            label.setStyle(LabelStyle(style));
-            label.setIcon(counter % 3 ? Icon::Yes : Icon::No);
-            return label.release();
-        }},
-
-    {"input", "input.png",
-        /* Input cursor blinking lasts 0.55 sec and is reversed every other
-           iteration, so it'll be fully visible at twice as much */
-        {5, true, true, true, 0.55_sec*2, 2.0f, 0.02292f, true},
-        [](UserInterface& ui, Int style, Int counter) {
-            Input input{{ui, {}, {64, 36}}, counter % 2 ? "Edit..." : "Type?", InputStyle(style)};
-            /** @todo use a cursor setting API once it exists */
-            ui.textLayer().setCursor(input.textData(), counter % 2 ? 2 : 5, counter % 2 ? 5 : 2);
-            return input.release();
-        }},
-    {"input, setters", nullptr, {},
-        [](UserInterface& ui, Int style, Int counter) {
-            Input input{{ui, {}, {64, 36}}, "", InputStyle(style)};
-            input.setText(counter % 2 ? "Edit..." : "Type?");
-            /** @todo use a cursor setting API once it exists */
-            ui.textLayer().setCursor(input.textData(), counter % 2 ? 2 : 5, counter % 2 ? 5 : 2);
-            return input.release();
-        }},
-    {"input, setStyle()", nullptr, {},
-        [](UserInterface& ui, Int style, Int counter) {
-            Input input{{ui, {}, {64, 36}}, counter % 2 ? "Edit..." : "Type?", InputStyle(style == 0 ? 1 : 0)};
-            input.setStyle(InputStyle(style));
-            /** @todo use a cursor setting API once it exists */
-            ui.textLayer().setCursor(input.textData(), counter % 2 ? 2 : 5, counter % 2 ? 5 : 2);
-            return input.release();
-        }},
-
-    {"panel, stateless", "panel.png",
-        /* Panel has no animations */
-        {2, false, false, true, {}, 0.25f, 0.0339f, false},
-        [](UserInterface& ui, Int style, Int) {
-            return panel({ui, {}, {48, 36}}, PanelStyle(style)).node();
-        }},
-    {"panel", nullptr, {},
-        [](UserInterface& ui, Int style, Int) {
-            return Panel{{ui, {}, {48, 36}},PanelStyle(style)}.release();
-        }},
-    {"panel, setStyle()", nullptr, {},
-        [](UserInterface& ui, Int style, Int) {
-            Panel panel{{ui, {}, {48, 36}},PanelStyle(style == 0 ? 1 : 0)};
-            panel.setStyle(PanelStyle(style));
-            return panel.release();
-        }},
-};
-
-StyleGLTest::StyleGLTest() {
-    addInstancedTests({&StyleGLTest::render},
-        Containers::arraySize(RenderData)*Containers::arraySize(StyleData));
-
+StyleGLTester::StyleGLTester(const Containers::ArrayView<const Style>& styles): _styles{styles} {
     /* Prefer the StbImageImporter so we can keep files small but always import
        them as four-channel */
     if(PluginManager::PluginMetadata* metadata = _importerManager.metadata("StbImageImporter")) {
@@ -366,19 +112,13 @@ StyleGLTest::StyleGLTest() {
     if(!(GL::Context::current().detectedDriver() & GL::Context::DetectedDriver::SwiftShader))
     #endif
     {
-        _styleUis = Containers::Array<UserInterfaceGL>{DirectInit, Containers::arraySize(StyleData), NoCreate};
-        for(std::size_t i = 0; i != _styleUis.size(); ++i)
-            _styleUis[i].create({1024, 1024}, *StyleData[i].style, &_importerManager, &_fontManager);
+        _styleUis = Containers::Array<UserInterfaceGL>{DirectInit, styles.size(), NoCreate};
+        for(std::size_t i = 0; i != styles.size(); ++i)
+            _styleUis[i].create({1024, 1024}, *styles[i].style, &_importerManager, &_fontManager);
     }
 }
 
-void StyleGLTest::render() {
-    UnsignedInt dataIndex = testCaseInstanceId() / Containers::arraySize(StyleData);
-    auto&& data = RenderData[dataIndex];
-    UnsignedInt styleDataIndex = testCaseInstanceId() % Containers::arraySize(StyleData);
-    auto&& styleData = StyleData[styleDataIndex];
-    setTestCaseDescription(Utility::format("{}, {}", styleData.name, data.name));
-
+void StyleGLTester::render(NodeHandle(*create)(UserInterface& ui, Int style, Int counter), const Style& styleData, const char* const filename, const Flags flags, const Int styleCount, const Nanoseconds animationDelta, const Float maxThreshold, const Float meanThreshold) {
     if(!(_importerManager.load("AnyImageImporter") & PluginManager::LoadState::Loaded) ||
        !(_importerManager.load("StbImageImporter") & PluginManager::LoadState::Loaded))
         CORRADE_SKIP("AnyImageImporter / StbImageImporter plugins not found.");
@@ -399,15 +139,6 @@ void StyleGLTest::render() {
         CORRADE_SKIP("UBOs with dynamically indexed arrays don't seem to work on SwiftShader, can't test.");
     #endif
 
-    /* The properties like expected output or which states are meant to be
-       tested are usually the same for a set of variants. If the filename isn't
-       set, go back in the data, find one where it is, and that's where the
-       properties come from as well */
-    UnsignedInt filenameIndex = dataIndex;
-    while(!RenderData[filenameIndex].filename)
-        --filenameIndex;
-    auto&& properties = RenderData[filenameIndex].properties;
-
     /* As an UI instance has a global concept of a currently hovered / pressed
        / ... node, we have to have several instances in order to render
        multiple widgets in a hovered state at once. Yes, it's nasty, in a way.
@@ -418,19 +149,20 @@ void StyleGLTest::render() {
        Which means it's the same count of extra styles (hovered, focused,
        pressed) like when handling just hover + press (hovered, pressed,
        hovered + pressed). */
-    const std::size_t stateCount = 1 + (properties.hoveredPressed ? (properties.focused ? 3 : 3) : 0) + (properties.disabled ? 1 : 0);
-    Containers::Array<UserInterfaceGL> uis{DirectInit, properties.styleCount*stateCount, NoCreate};
+    const std::size_t stateCount = 1 + (flags >= Flag::HoveredPressed ? (flags >= Flag::Focused ? 3 : 3) : 0) + (flags >= Flag::Disabled ? 1 : 0);
+    Containers::Array<UserInterfaceGL> uis{DirectInit, styleCount*stateCount, NoCreate};
     for(UserInterfaceGL& ui: uis) {
         ui
             .setSize({1024, 1024})
-            /* Not a compositing renderer with its own framebuffer as that would
-            mean each instance would get its own, horrible inefficiency */
+            /* Not a compositing renderer with its own framebuffer as that
+               would mean each instance would get its own, horrible
+               inefficiency */
             /** @todo allow a setting non-owned renderer instance maybe? */
             .setRendererInstance(Containers::pointer<RendererGL>())
-            .setBaseLayerInstance(Containers::pointer<BaseLayerGL>(ui.createLayer(), static_cast<BaseLayerGL::Shared&>(_styleUis[styleDataIndex].baseLayer().shared())))
-            .setTextLayerInstance(Containers::pointer<TextLayerGL>(ui.createLayer(), static_cast<TextLayerGL::Shared&>(_styleUis[styleDataIndex].textLayer().shared())))
+            .setBaseLayerInstance(Containers::pointer<BaseLayerGL>(ui.createLayer(), static_cast<BaseLayerGL::Shared&>(_styleUis[&styleData - _styles.data()].baseLayer().shared())))
+            .setTextLayerInstance(Containers::pointer<TextLayerGL>(ui.createLayer(), static_cast<TextLayerGL::Shared&>(_styleUis[&styleData - _styles.data()].textLayer().shared())))
             /* Event layer not needed for anything yet */
-            .setLayoutLayerInstance(Containers::pointer<LayoutLayer>(ui.createLayer(), _styleUis[styleDataIndex].layoutLayer().styleCount()));
+            .setLayoutLayerInstance(Containers::pointer<LayoutLayer>(ui.createLayer(), _styleUis[&styleData - _styles.data()].layoutLayer().styleCount()));
 
         /* If dynamic styles are present (because the style requested them for
            animators), add also default style animators. Can't hook to just
@@ -444,29 +176,29 @@ void StyleGLTest::render() {
 
     const Vector2 padding{8.0f};
     Nanoseconds now = 1773.0_sec;
-    const Nanoseconds delta = StyleData[styleDataIndex].hasAnimations ? properties.animationDelta : 0_nsec;
+    const Nanoseconds delta = styleData.hasAnimations ? animationDelta : 0_nsec;
 
     Int counter = 0;
     Vector2 size;
-    for(Int style = 0; style != properties.styleCount; ++style) {
+    for(Int style = 0; style != styleCount; ++style) {
         {
             UserInterfaceGL& ui = uis[style*stateCount + 0];
-            NodeHandle node = data.create(ui, style, counter++);
+            NodeHandle node = create(ui, style, counter++);
             size = ui.nodeSize(node);
             ui.setNodeOffset(node, padding + (padding + size)*Vector2{Vector2i{0, style}});
         }
 
-        if(properties.focused) {
+        if(flags >= Flag::Focused) {
             {
                 UserInterfaceGL& ui = uis[style*stateCount + 1];
-                NodeHandle hover = data.create(ui, style, counter++);
+                NodeHandle hover = create(ui, style, counter++);
                 ui.setNodeOffset(hover, padding + (padding + size)*Vector2{Vector2i{1, style}});
 
                 PointerMoveEvent move{now, PointerEventSource::Pen, {}, {}, true, 0, {}};
                 CORRADE_VERIFY(ui.pointerMoveEvent(ui.nodeOffset(hover) + ui.nodeSize(hover)*0.5f, move));
             } {
                 UserInterfaceGL& ui = uis[style*stateCount + 2];
-                NodeHandle pressed = data.create(ui, style, counter++);
+                NodeHandle pressed = create(ui, style, counter++);
                 ui.setNodeOffset(pressed, padding + (padding + size)*Vector2{Vector2i{2, style}});
 
                 /* The node should become focused as well */
@@ -476,7 +208,7 @@ void StyleGLTest::render() {
             } {
 
                 UserInterfaceGL& ui = uis[style*stateCount + 3];
-                NodeHandle focused = data.create(ui, style, counter++);
+                NodeHandle focused = create(ui, style, counter++);
                 ui.setNodeOffset(focused, padding + (padding + size)*Vector2{Vector2i{3, style}});
 
                 /* The node should become focused without a press */
@@ -485,17 +217,17 @@ void StyleGLTest::render() {
                 CORRADE_COMPARE(ui.currentFocusedNode(), focused);
             }
 
-        } else if(properties.hoveredPressed) {
+        } else if(flags >= Flag::HoveredPressed) {
             {
                 UserInterfaceGL& ui = uis[style*stateCount + 1];
-                NodeHandle hover = data.create(ui, style, counter++);
+                NodeHandle hover = create(ui, style, counter++);
                 ui.setNodeOffset(hover, padding + (padding + size)*Vector2{Vector2i{1, style}});
 
                 PointerMoveEvent move{now, PointerEventSource::Mouse, {}, {}, true, 0, {}};
                 CORRADE_VERIFY(ui.pointerMoveEvent(ui.nodeOffset(hover) + ui.nodeSize(hover)*0.5f, move));
             } {
                 UserInterfaceGL& ui = uis[style*stateCount + 2];
-                NodeHandle pressedHover = data.create(ui, style, counter++);
+                NodeHandle pressedHover = create(ui, style, counter++);
                 ui.setNodeOffset(pressedHover, padding + (padding + size)*Vector2{Vector2i{2, style}});
 
                 PointerMoveEvent move{now, PointerEventSource::Mouse, {}, {}, true, 0, {}};
@@ -505,7 +237,7 @@ void StyleGLTest::render() {
                 CORRADE_VERIFY(ui.pointerPressEvent(ui.nodeOffset(pressedHover) + ui.nodeSize(pressedHover)*0.5f, press));
             } {
                 UserInterfaceGL& ui = uis[style*stateCount + 3];
-                NodeHandle pressed = data.create(ui, style, counter++);
+                NodeHandle pressed = create(ui, style, counter++);
                 ui.setNodeOffset(pressed, padding + (padding + size)*Vector2{Vector2i{3, style}});
 
                 PointerEvent press{now, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
@@ -513,10 +245,10 @@ void StyleGLTest::render() {
             }
         }
 
-        if(properties.disabled) {
-            UserInterfaceGL& ui = uis[style*stateCount + (properties.hoveredPressed ? 4 : 1)];
-            NodeHandle disabled = data.create(ui, style, counter++);
-            ui.setNodeOffset(disabled, padding + (padding + size)*Vector2{Vector2i{properties.hoveredPressed ? 4 : 1, style}});
+        if(flags >= Flag::Disabled) {
+            UserInterfaceGL& ui = uis[style*stateCount + (flags >= Flag::HoveredPressed ? 4 : 1)];
+            NodeHandle disabled = create(ui, style, counter++);
+            ui.setNodeOffset(disabled, padding + (padding + size)*Vector2{Vector2i{flags >= Flag::HoveredPressed ? 4 : 1, style}});
 
             ui.addNodeFlags(disabled, NodeFlag::Disabled);
         }
@@ -525,7 +257,7 @@ void StyleGLTest::render() {
     /* Calculate the actual UI size. To avoid strange issues with events not
        being handled etc., it should always be smaller than the original set
        above. */
-    const Vector2i uiSize = Vector2i{padding} + Vector2i{size + padding}*Vector2i{1 + (properties.hoveredPressed ? 3 : 0) + (properties.disabled ? 1 : 0), properties.styleCount};
+    const Vector2i uiSize = Vector2i{padding} + Vector2i{size + padding}*Vector2i{1 + (flags >= Flag::HoveredPressed ? 3 : 0) + (flags >= Flag::Disabled ? 1 : 0), styleCount};
     CORRADE_COMPARE_AS(Vector2{uiSize},
         uis[0].size(),
         TestSuite::Compare::LessOrEqual);
@@ -560,18 +292,18 @@ void StyleGLTest::render() {
     MAGNUM_VERIFY_NO_GL_ERROR();
 
     {
-        CORRADE_EXPECT_FAIL_IF(properties.xfailLlvmpipe20 && GL::Context::current().rendererString().contains("llvmpipe") && GL::Context::current().versionString().contains("Mesa 20"),
+        CORRADE_EXPECT_FAIL_IF(flags >= Flag::XfailLlvmpipe20 && GL::Context::current().rendererString().contains("llvmpipe") && GL::Context::current().versionString().contains("Mesa 20"),
             "Mesa llvmpipe 20 renders the text in a completely different color for some reason.");
         CORRADE_COMPARE_WITH(framebuffer.read({{}, uiSize}, {PixelFormat::RGBA8Unorm}),
-            Utility::Path::join({UI_TEST_DIR, "StyleTestFiles", Containers::StringView{styleData.filePrefix} + RenderData[filenameIndex].filename}),
-            (DebugTools::CompareImageToFile{_importerManager, properties.maxThreshold, properties.meanThreshold}));
+            Utility::Path::join({UI_TEST_DIR, "StyleTestFiles", Containers::StringView{styleData.filePrefix} + filename}),
+            (DebugTools::CompareImageToFile{_importerManager, maxThreshold, meanThreshold}));
     }
 
     /* Verify that hovering the pressed and focused widgets doesn't have any
        difference in visuals */
-    if(properties.focused) {
+    if(flags >= Flag::Focused) {
         /* Focused + pressed widget, should have no difference when hovered */
-        for(Int style = 0; style != properties.styleCount; ++style) {
+        for(Int style = 0; style != styleCount; ++style) {
             UserInterfaceGL& ui = uis[style*stateCount + 2];
             /* We don't record the node handles, but each UI should have just
                one so this artificial one should be correct */
@@ -583,7 +315,7 @@ void StyleGLTest::render() {
         }
 
         /* Focused widget, should have no difference when hovered */
-        for(Int style = 0; style != properties.styleCount; ++style) {
+        for(Int style = 0; style != styleCount; ++style) {
             UserInterfaceGL& ui = uis[style*stateCount + 3];
             NodeHandle node = nodeHandle(0, 1);
             CORRADE_VERIFY(ui.isHandleValid(node));
@@ -595,9 +327,9 @@ void StyleGLTest::render() {
     /* Verify that roundtrip state changes result in the same visuals as
        originally. In order to handle animations correctly, the roundtrip is
        with animationAdvance() in the middle. */
-    } else if(properties.hoveredPressed) {
+    } else if(flags >= Flag::HoveredPressed) {
         /* Pointer enter and leave on the inactive widget */
-        for(Int style = 0; style != properties.styleCount; ++style) {
+        for(Int style = 0; style != styleCount; ++style) {
             UserInterfaceGL& ui = uis[style*stateCount];
             NodeHandle node = nodeHandle(0, 1);
             CORRADE_VERIFY(ui.isHandleValid(node));
@@ -609,7 +341,7 @@ void StyleGLTest::render() {
         }
 
         /* Pointer leave and enter on the hovered widget */
-        for(Int style = 0; style != properties.styleCount; ++style) {
+        for(Int style = 0; style != styleCount; ++style) {
             UserInterfaceGL& ui = uis[style*stateCount + 1];
             NodeHandle node = nodeHandle(0, 1);
             CORRADE_VERIFY(ui.isHandleValid(node));
@@ -620,9 +352,9 @@ void StyleGLTest::render() {
             CORRADE_VERIFY(!ui.pointerMoveEvent(ui.nodeOffset(node) + ui.nodeSize(node)*1.5f, moveOut));
         }
 
-        if(properties.focused) {
+        if(flags >= Flag::Focused) {
             /* Release on the focused + pressed widget */
-            for(Int style = 0; style != properties.styleCount; ++style) {
+            for(Int style = 0; style != styleCount; ++style) {
                 UserInterfaceGL& ui = uis[style*stateCount + 2];
                 NodeHandle node = nodeHandle(0, 1);
                 CORRADE_VERIFY(ui.isHandleValid(node));
@@ -634,7 +366,7 @@ void StyleGLTest::render() {
             }
 
             /* Press on the focused widget */
-            for(Int style = 0; style != properties.styleCount; ++style) {
+            for(Int style = 0; style != styleCount; ++style) {
                 UserInterfaceGL& ui = uis[style*stateCount + 2];
                 NodeHandle node = nodeHandle(0, 1);
                 CORRADE_VERIFY(ui.isHandleValid(node));
@@ -647,7 +379,7 @@ void StyleGLTest::render() {
 
         } else {
             /* Pointer leave on the pressed + hovered widget */
-            for(Int style = 0; style != properties.styleCount; ++style) {
+            for(Int style = 0; style != styleCount; ++style) {
                 UserInterfaceGL& ui = uis[style*stateCount + 2];
                 NodeHandle node = nodeHandle(0, 1);
                 CORRADE_VERIFY(ui.isHandleValid(node));
@@ -660,7 +392,7 @@ void StyleGLTest::render() {
             }
 
             /* Pointer enter on the pressed widget */
-            for(Int style = 0; style != properties.styleCount; ++style) {
+            for(Int style = 0; style != styleCount; ++style) {
                 UserInterfaceGL& ui = uis[style*stateCount + 3];
                 NodeHandle node = nodeHandle(0, 1);
                 CORRADE_VERIFY(ui.isHandleValid(node));
@@ -680,7 +412,7 @@ void StyleGLTest::render() {
         now += delta;
 
         /* Pointer leave on the inactive widget */
-        for(Int style = 0; style != properties.styleCount; ++style) {
+        for(Int style = 0; style != styleCount; ++style) {
             UserInterfaceGL& ui = uis[style*stateCount];
             NodeHandle node = nodeHandle(0, 1);
             CORRADE_VERIFY(ui.isHandleValid(node));
@@ -690,7 +422,7 @@ void StyleGLTest::render() {
         }
 
         /* Pointer enter on the hovered widget */
-        for(Int style = 0; style != properties.styleCount; ++style) {
+        for(Int style = 0; style != styleCount; ++style) {
             UserInterfaceGL& ui = uis[style*stateCount + 1];
             NodeHandle node = nodeHandle(0, 1);
             CORRADE_VERIFY(ui.isHandleValid(node));
@@ -699,9 +431,9 @@ void StyleGLTest::render() {
             CORRADE_VERIFY(ui.pointerMoveEvent(ui.nodeOffset(node) + ui.nodeSize(node)*0.5f, moveOver));
         }
 
-        if(properties.focused) {
+        if(flags >= Flag::Focused) {
             /* Press again on the focused + pressed widget */
-            for(Int style = 0; style != properties.styleCount; ++style) {
+            for(Int style = 0; style != styleCount; ++style) {
                 UserInterfaceGL& ui = uis[style*stateCount + 2];
                 NodeHandle node = nodeHandle(0, 1);
                 CORRADE_VERIFY(ui.isHandleValid(node));
@@ -711,7 +443,7 @@ void StyleGLTest::render() {
             }
 
             /* Release again on the focused widget */
-            for(Int style = 0; style != properties.styleCount; ++style) {
+            for(Int style = 0; style != styleCount; ++style) {
                 UserInterfaceGL& ui = uis[style*stateCount + 2];
                 NodeHandle node = nodeHandle(0, 1);
                 CORRADE_VERIFY(ui.isHandleValid(node));
@@ -722,7 +454,7 @@ void StyleGLTest::render() {
 
         } else {
             /* Pointer enter on the pressed + hovered widget */
-            for(Int style = 0; style != properties.styleCount; ++style) {
+            for(Int style = 0; style != styleCount; ++style) {
                 UserInterfaceGL& ui = uis[style*stateCount + 2];
                 NodeHandle node = nodeHandle(0, 1);
                 CORRADE_VERIFY(ui.isHandleValid(node));
@@ -732,7 +464,7 @@ void StyleGLTest::render() {
             }
 
             /* Pointer leave on the pressed widget */
-            for(Int style = 0; style != properties.styleCount; ++style) {
+            for(Int style = 0; style != styleCount; ++style) {
                 UserInterfaceGL& ui = uis[style*stateCount + 3];
                 NodeHandle node = nodeHandle(0, 1);
                 CORRADE_VERIFY(ui.isHandleValid(node));
@@ -755,15 +487,15 @@ void StyleGLTest::render() {
         MAGNUM_VERIFY_NO_GL_ERROR();
 
         {
-            CORRADE_EXPECT_FAIL_IF(properties.xfailLlvmpipe20 && GL::Context::current().rendererString().contains("llvmpipe") && GL::Context::current().versionString().contains("Mesa 20"),
+            CORRADE_EXPECT_FAIL_IF(flags >= Flag::XfailLlvmpipe20 && GL::Context::current().rendererString().contains("llvmpipe") && GL::Context::current().versionString().contains("Mesa 20"),
                 "Mesa llvmpipe 20 renders the text in a completely different color for some reason.");
             CORRADE_COMPARE_WITH(framebuffer.read({{}, uiSize}, {PixelFormat::RGBA8Unorm}),
-                Utility::Path::join({UI_TEST_DIR, "StyleTestFiles", Containers::StringView{styleData.filePrefix} + RenderData[filenameIndex].filename}),
-                (DebugTools::CompareImageToFile{_importerManager, properties.maxThreshold, properties.meanThreshold}));
+                Utility::Path::join({UI_TEST_DIR, "StyleTestFiles", Containers::StringView{styleData.filePrefix} + filename}),
+                (DebugTools::CompareImageToFile{_importerManager, maxThreshold, meanThreshold}));
         }
     }
 }
 
 }}}}
 
-CORRADE_TEST_MAIN(Magnum::Ui::Test::StyleGLTest)
+#endif

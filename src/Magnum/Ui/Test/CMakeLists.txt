@@ -416,32 +416,6 @@ if(MAGNUM_BUILD_GL_TESTS)
             MagnumUiTestLib
             Magnum::OpenGLTester)
 
-    corrade_add_test(UiStyleGLTest StyleGLTest.cpp
-        LIBRARIES
-            MagnumUi
-            Magnum::DebugTools
-            Magnum::OpenGLTester
-        FILES
-            StyleTestFiles/mcss-dark-button-text-icon.png
-            StyleTestFiles/mcss-dark-button-text.png
-            StyleTestFiles/mcss-dark-button-icon.png
-            StyleTestFiles/mcss-dark-input.png
-            StyleTestFiles/mcss-dark-label-text.png
-            StyleTestFiles/mcss-dark-label-icon.png
-            StyleTestFiles/mcss-dark-panel.png)
-    target_include_directories(UiStyleGLTest PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
-    if(MAGNUM_BUILD_STATIC)
-        if(Magnum_AnyImageImporter_FOUND)
-            target_link_libraries(UiStyleGLTest PRIVATE Magnum::AnyImageImporter)
-        endif()
-        if(MagnumPlugins_StbImageImporter_FOUND)
-            target_link_libraries(UiStyleGLTest PRIVATE MagnumPlugins::StbImageImporter)
-        endif()
-        if(MagnumPlugins_StbTrueTypeFont_FOUND)
-            target_link_libraries(UiStyleGLTest PRIVATE MagnumPlugins::StbTrueTypeFont)
-        endif()
-    endif()
-
     corrade_add_test(UiTextLayerGLTest TextLayerGLTest.cpp
         LIBRARIES
             MagnumUiTestLib
@@ -498,6 +472,40 @@ if(MAGNUM_BUILD_GL_TESTS)
         LIBRARIES
             MagnumUiTestLib
             Magnum::OpenGLTester)
+
+    corrade_add_test(UiButtonGLTest ButtonGLTest.cpp
+        FILES
+            StyleTestFiles/mcss-dark-button-text-icon.png
+            StyleTestFiles/mcss-dark-button-text.png
+            StyleTestFiles/mcss-dark-button-icon.png)
+    corrade_add_test(UiInputGLTest InputGLTest.cpp
+        FILES
+            StyleTestFiles/mcss-dark-input.png)
+    corrade_add_test(UiLabelGLTest LabelGLTest.cpp
+        FILES
+            StyleTestFiles/mcss-dark-label-text.png
+            StyleTestFiles/mcss-dark-label-icon.png)
+    corrade_add_test(UiPanelGLTest PanelGLTest.cpp
+        FILES
+            StyleTestFiles/mcss-dark-panel.png)
+    foreach(_widget Button Input Label Panel)
+        target_link_libraries(Ui${_widget}GLTest PRIVATE
+            MagnumUi
+            Magnum::DebugTools
+            Magnum::OpenGLTester)
+        target_include_directories(Ui${_widget}GLTest PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
+        if(MAGNUM_BUILD_STATIC)
+            if(Magnum_AnyImageImporter_FOUND)
+                target_link_libraries(Ui${_widget}GLTest PRIVATE Magnum::AnyImageImporter)
+            endif()
+            if(MagnumPlugins_StbImageImporter_FOUND)
+                target_link_libraries(Ui${_widget}GLTest PRIVATE MagnumPlugins::StbImageImporter)
+            endif()
+            if(MagnumPlugins_StbTrueTypeFont_FOUND)
+                target_link_libraries(Ui${_widget}GLTest PRIVATE MagnumPlugins::StbTrueTypeFont)
+            endif()
+        endif()
+    endforeach()
 
     if(CORRADE_TARGET_EMSCRIPTEN)
         if(CMAKE_VERSION VERSION_LESS 3.13)
