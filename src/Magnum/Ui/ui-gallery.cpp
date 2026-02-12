@@ -38,6 +38,7 @@
 #endif
 #include <Magnum/Text/Alignment.h>
 
+#include "Magnum/Ui/AbstractStyle.hpp" /* for DebugLayer style names */
 #include "Magnum/Ui/Anchor.h"
 #include "Magnum/Ui/Application.h"
 #include "Magnum/Ui/BaseLayer.h" /* for DebugLayer style names */
@@ -53,7 +54,6 @@
 #include "Magnum/Ui/SnapLayout.h"
 #include "Magnum/Ui/SnapLayouter.h"
 #include "Magnum/Ui/Style.h"
-#include "Magnum/Ui/Style.hpp" /* for DebugLayer style names */
 #include "Magnum/Ui/TextLayer.h" /* for DebugLayer style names */
 #include "Magnum/Ui/LayoutLayer.h" /* for DebugLayer style names */
 #include "Magnum/Ui/TextProperties.h"

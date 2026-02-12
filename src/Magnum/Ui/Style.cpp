@@ -25,7 +25,6 @@
 */
 
 #include "Style.h"
-#include "Style.hpp"
 
 #include <Corrade/Containers/EnumSet.hpp>
 #include <Corrade/Containers/Optional.h>
@@ -44,6 +43,7 @@
 #include <Magnum/Trade/AbstractImporter.h>
 #include <Magnum/Trade/ImageData.h>
 
+#include "Magnum/Ui/AbstractStyle.hpp"
 #include "Magnum/Ui/BaseLayer.h"
 #include "Magnum/Ui/BaseLayerAnimator.h"
 #include "Magnum/Ui/EventLayer.h"
@@ -53,6 +53,7 @@
 #include "Magnum/Ui/TextLayer.h"
 #include "Magnum/Ui/TextLayerAnimator.h"
 #include "Magnum/Ui/UserInterface.h"
+#include "Magnum/Ui/Implementation/Style.hpp"
 
 #ifdef MAGNUM_UI_BUILD_STATIC
 static void importShaderResources() {
@@ -65,223 +66,6 @@ namespace Magnum { namespace Ui {
 using namespace Math::Literals;
 
 namespace Implementation {
-
-namespace {
-
-template<class Style> struct Transition {
-    /* All variants using the same style + disabled */
-    /*implicit*/ Transition(Style style, Style disabled): inactiveOut{style}, inactiveOver{style}, focusedOut{style}, focusedOver{style}, pressedOut{style}, pressedOver{style}, disabled{disabled} {}
-    /* The full set */
-    /*implicit*/ Transition(Style inactiveOut, Style inactiveOver, Style focusedOut, Style focusedOver, Style pressedOut, Style pressedOver, Style disabled): inactiveOut{inactiveOut}, inactiveOver{inactiveOver}, focusedOut{focusedOut}, focusedOver{focusedOver}, pressedOut{pressedOut}, pressedOver{pressedOver}, disabled{disabled} {}
-    /* No focused style */
-    /*implicit*/ Transition(Style inactiveOut, Style inactiveOver, Style pressedOut, Style pressedOver, Style disabled): inactiveOut{inactiveOut}, inactiveOver{inactiveOver}, focusedOut{pressedOut}, focusedOver{pressedOver}, pressedOut{pressedOut}, pressedOver{pressedOver}, disabled{disabled} {}
-
-    Style inactiveOut;
-    Style inactiveOver;
-    Style focusedOut;
-    Style focusedOver;
-    Style pressedOut;
-    Style pressedOver;
-    Style disabled;
-};
-
-Transition<BaseStyle> styleTransition(const BaseStyle index) {
-    switch(index) {
-        #define _c(style)                                                   \
-            case BaseStyle::style:                                          \
-                return {BaseStyle::style,                                   \
-                        BaseStyle::style};
-        #define _cDisabled(style)                                           \
-            case BaseStyle::style:                                          \
-                return {BaseStyle::style,                                   \
-                        BaseStyle::style ## Disabled};                      \
-            case BaseStyle::style ## Disabled:                              \
-                CORRADE_INTERNAL_ASSERT_UNREACHABLE();
-        #define _cHoveredPressedPressedHoveredDisabled(style)               \
-            case BaseStyle::style:                                          \
-            case BaseStyle::style ## Hovered:                               \
-            case BaseStyle::style ## Pressed:                               \
-            case BaseStyle::style ## PressedHovered:                        \
-                return {BaseStyle::style,                                   \
-                        BaseStyle::style ## Hovered,                        \
-                        BaseStyle::style ## Pressed,                        \
-                        BaseStyle::style ## PressedHovered,                 \
-                        BaseStyle::style ## Disabled};                      \
-            case BaseStyle::style ## Disabled:                              \
-                CORRADE_INTERNAL_ASSERT_UNREACHABLE();
-        #define _cHoveredFocusedDisabled(style)                             \
-            case BaseStyle::style:                                          \
-            case BaseStyle::style ## Hovered:                               \
-            case BaseStyle::style ## Focused:                               \
-                return {BaseStyle::style,                                   \
-                        BaseStyle::style ## Hovered,                        \
-                        BaseStyle::style ## Focused,                        \
-                        BaseStyle::style ## Focused,                        \
-                        BaseStyle::style ## Focused,                        \
-                        BaseStyle::style ## Focused,                        \
-                        BaseStyle::style ## Disabled};                      \
-            case BaseStyle::style ## Disabled:                              \
-                CORRADE_INTERNAL_ASSERT_UNREACHABLE();
-        _c(Default)
-        _cHoveredPressedPressedHoveredDisabled(ButtonDefault)
-        _cHoveredPressedPressedHoveredDisabled(ButtonPrimary)
-        _cHoveredPressedPressedHoveredDisabled(ButtonSuccess)
-        _cHoveredPressedPressedHoveredDisabled(ButtonWarning)
-        _cHoveredPressedPressedHoveredDisabled(ButtonDanger)
-        _cHoveredPressedPressedHoveredDisabled(ButtonInfo)
-        _cHoveredPressedPressedHoveredDisabled(ButtonDim)
-        _cHoveredPressedPressedHoveredDisabled(ButtonFlat)
-        _cHoveredFocusedDisabled(InputDefault)
-        _cHoveredFocusedDisabled(InputSuccess)
-        _cHoveredFocusedDisabled(InputWarning)
-        _cHoveredFocusedDisabled(InputDanger)
-        _cHoveredFocusedDisabled(InputFlat)
-        _cDisabled(PanelBackground)
-        #undef _cHoveredFocusedDisabled
-        #undef _cHoveredPressedPressedHoveredDisabled
-        #undef _cDisabled
-        #undef _c
-    }
-
-    CORRADE_INTERNAL_ASSERT_UNREACHABLE(); /* LCOV_EXCL_LINE */
-}
-
-}
-
-BaseStyle styleTransitionToInactiveOut(const BaseStyle index) {
-    return styleTransition(index).inactiveOut;
-}
-BaseStyle styleTransitionToInactiveOver(const BaseStyle index) {
-    return styleTransition(index).inactiveOver;
-}
-BaseStyle styleTransitionToFocusedOut(const BaseStyle index) {
-    return styleTransition(index).focusedOut;
-}
-BaseStyle styleTransitionToFocusedOver(const BaseStyle index) {
-    return styleTransition(index).focusedOver;
-}
-BaseStyle styleTransitionToPressedOut(const BaseStyle index) {
-    return styleTransition(index).pressedOut;
-}
-BaseStyle styleTransitionToPressedOver(const BaseStyle index) {
-    return styleTransition(index).pressedOver;
-}
-BaseStyle styleTransitionToDisabled(const BaseStyle index) {
-    return styleTransition(index).disabled;
-}
-
-namespace {
-
-Transition<TextStyle> styleTransition(const TextStyle index) {
-    switch(index) {
-        #define _c(style, suffix)                                           \
-            case TextStyle::style ## suffix:                                \
-                return {TextStyle::style ## suffix,                         \
-                        TextStyle::style ## suffix};
-        #define _cDisabled(style, suffix)                                   \
-            case TextStyle::style ## suffix:                                \
-                return {TextStyle::style ## suffix,                         \
-                        TextStyle::style ## Disabled ## suffix};            \
-            case TextStyle::style ## Disabled ## suffix:                    \
-                CORRADE_INTERNAL_ASSERT_UNREACHABLE();
-        #define _cPressedDisabled(style, suffix)                            \
-            case TextStyle::style ## suffix:                                \
-            case TextStyle::style ## Pressed ## suffix:                     \
-                return {TextStyle::style ## suffix,                         \
-                        TextStyle::style ## suffix,                         \
-                        TextStyle::style ## Pressed ## suffix,              \
-                        TextStyle::style ## Pressed ## suffix,              \
-                        TextStyle::style ## Disabled ## suffix};            \
-            case TextStyle::style ## Disabled ## suffix:                    \
-                CORRADE_INTERNAL_ASSERT_UNREACHABLE();
-        #define _cHoveredPressedPressedHoveredDisabled(style, suffix)       \
-            case TextStyle::style ## suffix:                                \
-            case TextStyle::style ## Hovered ## suffix:                     \
-            case TextStyle::style ## Pressed ## suffix:                     \
-            case TextStyle::style ## PressedHovered ## suffix:              \
-                return {TextStyle::style ## suffix,                         \
-                        TextStyle::style ## Hovered ## suffix,              \
-                        TextStyle::style ## Pressed ## suffix,              \
-                        TextStyle::style ## PressedHovered ## suffix,       \
-                        TextStyle::style ## Disabled ## suffix};            \
-            case TextStyle::style ## Disabled ## suffix:                    \
-                CORRADE_INTERNAL_ASSERT_UNREACHABLE();
-        #define _cHoveredFocusedBlinkPressedDisabled(style, suffix)         \
-            case TextStyle::style ## suffix:                                \
-            case TextStyle::style ## Hovered ## suffix:                     \
-            case TextStyle::style ## Focused ## suffix:                     \
-            case TextStyle::style ## Pressed ## suffix:                     \
-                return {TextStyle::style ## suffix,                         \
-                        TextStyle::style ## Hovered ## suffix,              \
-                        TextStyle::style ## Focused ## suffix,              \
-                        TextStyle::style ## Focused ## suffix,              \
-                        TextStyle::style ## Pressed ## suffix,              \
-                        TextStyle::style ## Pressed ## suffix,              \
-                        TextStyle::style ## Disabled ## suffix};            \
-            case TextStyle::style ## FocusedBlink ## suffix:                \
-            case TextStyle::style ## Disabled ## suffix:                    \
-                CORRADE_INTERNAL_ASSERT_UNREACHABLE();
-        _c(Default,)
-        _cPressedDisabled(Button,IconOnly)
-        _cPressedDisabled(Button,TextOnly)
-        _cPressedDisabled(Button,Icon)
-        _cPressedDisabled(Button,Text)
-        _cHoveredPressedPressedHoveredDisabled(ButtonFlat,IconOnly)
-        _cHoveredPressedPressedHoveredDisabled(ButtonFlat,TextOnly)
-        _cHoveredPressedPressedHoveredDisabled(ButtonFlat,Icon)
-        _cHoveredPressedPressedHoveredDisabled(ButtonFlat,Text)
-        _cDisabled(LabelDefault,Icon)
-        _cDisabled(LabelDefault,Text)
-        _cDisabled(LabelPrimary,Icon)
-        _cDisabled(LabelPrimary,Text)
-        _cDisabled(LabelSuccess,Icon)
-        _cDisabled(LabelSuccess,Text)
-        _cDisabled(LabelWarning,Icon)
-        _cDisabled(LabelWarning,Text)
-        _cDisabled(LabelDanger,Icon)
-        _cDisabled(LabelDanger,Text)
-        _cDisabled(LabelInfo,Icon)
-        _cDisabled(LabelInfo,Text)
-        _cDisabled(LabelDim,Icon)
-        _cDisabled(LabelDim,Text)
-        _cHoveredFocusedBlinkPressedDisabled(InputDefault,)
-        _cHoveredFocusedBlinkPressedDisabled(InputSuccess,)
-        _cHoveredFocusedBlinkPressedDisabled(InputWarning,)
-        _cHoveredFocusedBlinkPressedDisabled(InputDanger,)
-        _cHoveredFocusedBlinkPressedDisabled(InputFlat,)
-        #undef _cHoveredFocusedBlinkPressedDisabled
-        #undef _cHoveredPressedPressedHoveredDisabled
-        #undef _cPressedDisabled
-        #undef _cDisabled
-        #undef _c
-    }
-
-    CORRADE_INTERNAL_ASSERT_UNREACHABLE(); /* LCOV_EXCL_LINE */
-}
-
-}
-
-TextStyle styleTransitionToInactiveOut(const TextStyle index) {
-    return styleTransition(index).inactiveOut;
-}
-TextStyle styleTransitionToInactiveOver(const TextStyle index) {
-    return styleTransition(index).inactiveOver;
-}
-TextStyle styleTransitionToFocusedOut(const TextStyle index) {
-    return styleTransition(index).focusedOut;
-}
-TextStyle styleTransitionToFocusedOver(const TextStyle index) {
-    return styleTransition(index).focusedOver;
-}
-TextStyle styleTransitionToPressedOut(const TextStyle index) {
-    return styleTransition(index).pressedOut;
-}
-TextStyle styleTransitionToPressedOver(const TextStyle index) {
-    return styleTransition(index).pressedOver;
-}
-TextStyle styleTransitionToDisabled(const TextStyle index) {
-    return styleTransition(index).disabled;
-}
 
 namespace {
 

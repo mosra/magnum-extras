@@ -72,7 +72,7 @@
 
 #include "Magnum/Ui/BaseLayer.h"
 #include "Magnum/Ui/Handle.h"
-#include "Magnum/Ui/Style.hpp"
+#include "Magnum/Ui/AbstractStyle.hpp"
 #include "Magnum/Ui/TextProperties.h"
 #endif
 

@@ -28,11 +28,11 @@
 
 #include <Corrade/Utility/Assert.h>
 
+#include "Magnum/Ui/AbstractStyle.hpp"
 #include "Magnum/Ui/Anchor.h"
 #include "Magnum/Ui/BaseLayer.h"
 #include "Magnum/Ui/Handle.h"
 #include "Magnum/Ui/LayoutLayer.h"
-#include "Magnum/Ui/Style.hpp"
 #include "Magnum/Ui/UserInterface.h"
 
 namespace Magnum { namespace Ui {

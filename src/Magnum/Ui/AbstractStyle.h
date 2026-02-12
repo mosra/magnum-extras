@@ -230,6 +230,17 @@ CORRADE_ENUMSET_OPERATORS(StyleFeatures)
 */
 MAGNUM_UI_EXPORT Debug& operator<<(Debug& debug, StyleFeatures value);
 
+namespace Implementation {
+    /* Used by various tests, less wasteful to have here than in the
+       potentially huge AbstractStyle.hpp */
+    enum: UnsignedInt {
+        BaseStyleCount = 63,
+        TextStyleCount = 91,
+        LayoutStyleCount = 4,
+        IconCount = 2
+    };
+}
+
 /**
 @brief Base for @ref UserInterface styles
 @m_since_latest_{extras}

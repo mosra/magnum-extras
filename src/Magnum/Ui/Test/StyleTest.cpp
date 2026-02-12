@@ -40,6 +40,7 @@
 #include <Magnum/TextureTools/Atlas.h>
 #include <Magnum/Trade/AbstractImporter.h>
 
+#include "Magnum/Ui/AbstractStyle.hpp"
 #include "Magnum/Ui/BaseLayer.h"
 #include "Magnum/Ui/BaseLayerAnimator.h"
 #include "Magnum/Ui/Event.h"
@@ -49,11 +50,11 @@
 #include "Magnum/Ui/NodeFlags.h"
 #include "Magnum/Ui/SnapLayouter.h"
 #include "Magnum/Ui/Style.h"
-#include "Magnum/Ui/Style.hpp"
 #include "Magnum/Ui/TextLayer.h"
 #include "Magnum/Ui/TextLayerAnimator.h"
 #include "Magnum/Ui/TextProperties.h"
 #include "Magnum/Ui/UserInterface.h"
+#include "Magnum/Ui/Implementation/Style.hpp"
 
 namespace Magnum { namespace Ui { namespace Test { namespace {
 

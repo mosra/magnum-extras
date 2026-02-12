@@ -1,5 +1,5 @@
-#ifndef Magnum_Ui_Style_hpp
-#define Magnum_Ui_Style_hpp
+#ifndef Magnum_Ui_AbstractStyle_hpp
+#define Magnum_Ui_AbstractStyle_hpp
 /*
     This file is part of Magnum.
 
@@ -30,8 +30,9 @@
 @brief Style IDs for builtin widgets
 @m_since_latest_{extras}
 
-Exposed for purposes of creating derived variants of builtin widgets. There
-should be no need to use anything from this header from application code.
+Exposed for purposes of creating derived variants of builtin widgets and for
+custom style implementation. There should be no need to use anything from this
+header from application code.
 */
 
 #include <Magnum/Magnum.h>
@@ -131,47 +132,6 @@ MAGNUM_UI_EXPORT BaseStyle styleTransitionToFocusedOver(BaseStyle index);
 MAGNUM_UI_EXPORT BaseStyle styleTransitionToPressedOut(BaseStyle index);
 MAGNUM_UI_EXPORT BaseStyle styleTransitionToPressedOver(BaseStyle index);
 MAGNUM_UI_EXPORT BaseStyle styleTransitionToDisabled(BaseStyle index);
-
-enum class TextStyleUniform: UnsignedInt {
-    Default,
-
-    Button,
-    ButtonDisabled,
-
-    ButtonFlat,
-    ButtonFlatHovered,
-    ButtonFlatPressed,
-    ButtonFlatPressedHovered,
-    ButtonFlatDisabled,
-
-    LabelDefault,
-    LabelDefaultDisabled,
-    LabelPrimary,
-    LabelPrimaryDisabled,
-    LabelSuccess,
-    LabelSuccessDisabled,
-    LabelWarning,
-    LabelWarningDisabled,
-    LabelDanger,
-    LabelDangerDisabled,
-    LabelInfo,
-    LabelInfoDisabled,
-    LabelDim,
-    LabelDimDisabled,
-
-    InputDefault,
-    InputDefaultDisabled,
-    InputSuccess,
-    InputSuccessDisabled,
-    InputWarning,
-    InputWarningDisabled,
-    InputDanger,
-    InputDangerDisabled,
-    InputFlat,
-    InputFlatDisabled,
-
-    InputSelection,
-};
 
 enum class TextStyle: UnsignedShort {
     /* All properties left at defaults. Not used by builtin widgets, meant to
@@ -275,30 +235,6 @@ enum class TextStyle: UnsignedShort {
     InputFlatFocusedBlink,
     InputFlatPressed,
     InputFlatDisabled,
-};
-
-enum class TextEditingStyle: UnsignedShort {
-    InputCursorNone,
-
-    InputCursorDefault,
-    InputCursorFocusedDefault,
-    InputSelectionDefault,
-
-    InputCursorSuccess,
-    InputCursorFocusedSuccess,
-    InputSelectionSuccess,
-
-    InputCursorWarning,
-    InputCursorFocusedWarning,
-    InputSelectionWarning,
-
-    InputCursorDanger,
-    InputCursorFocusedDanger,
-    InputSelectionDanger,
-
-    InputCursorFlat,
-    InputCursorFocusedFlat,
-    InputSelectionFlat,
 };
 
 MAGNUM_UI_EXPORT TextStyle styleTransitionToInactiveOut(TextStyle index);

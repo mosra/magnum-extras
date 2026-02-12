@@ -99,6 +99,7 @@ set(MagnumUi_HEADERS
     AbstractLayouter.h
     AbstractRenderer.h
     AbstractStyle.h
+    AbstractStyle.hpp
     AbstractUserInterface.h
     AbstractVisualLayer.h
     AbstractVisualLayerAnimator.h
@@ -126,7 +127,6 @@ set(MagnumUi_HEADERS
     SnapLayout.hpp
     SnapLayouter.h
     Style.h
-    Style.hpp
     TextLayer.h
     TextLayerAnimator.h
     TextProperties.h
@@ -146,6 +146,7 @@ set(MagnumUi_PRIVATE_HEADERS
     Implementation/debugLayerState.h
     Implementation/lineLayerState.h
     Implementation/lineMiterLimit.h
+    Implementation/Style.hpp
     Implementation/textLayerState.h
     Implementation/textStyleMcssDark.h
     Implementation/textStyleUniformsMcssDark.h

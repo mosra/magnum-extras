@@ -35,21 +35,6 @@
 
 namespace Magnum { namespace Ui {
 
-namespace Implementation {
-    /* Used by various tests, less wasteful to have here than in the
-       potentially huge Style.hpp */
-    enum: UnsignedInt {
-        BaseStyleCount = 63,
-        BaseStyleUniformCount = BaseStyleCount,
-        TextStyleCount = 91,
-        TextStyleUniformCount = 33,
-        TextEditingStyleCount = 16,
-        TextEditingStyleUniformCount = TextEditingStyleCount,
-        LayoutStyleCount = 4,
-        IconCount = 2
-    };
-}
-
 /**
 @brief Style for builtin widgets based on the [m.css](https://mcss.mosra.cz) dark theme
 @m_since_latest_{extras}

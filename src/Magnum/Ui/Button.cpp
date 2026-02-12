@@ -31,13 +31,13 @@
 #include <Magnum/Math/Vector2.h>
 #include <Magnum/Text/Alignment.h>
 
+#include "Magnum/Ui/AbstractStyle.hpp"
 #include "Magnum/Ui/Anchor.h"
 #include "Magnum/Ui/BaseLayer.h"
 #include "Magnum/Ui/Handle.h"
 #include "Magnum/Ui/Icon.h"
 #include "Magnum/Ui/LayoutLayer.h"
 #include "Magnum/Ui/Style.h"
-#include "Magnum/Ui/Style.hpp"
 #include "Magnum/Ui/TextLayer.h"
 #include "Magnum/Ui/TextProperties.h"
 #include "Magnum/Ui/UserInterface.h"
