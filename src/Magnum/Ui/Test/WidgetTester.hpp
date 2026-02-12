@@ -58,9 +58,13 @@ struct TestUserInterface: UserInterface {
 };
 
 struct TestBaseLayerShared: BaseLayer::Shared {
-    explicit TestBaseLayerShared(): BaseLayer::Shared{Configuration{Implementation::BaseStyleCount}} {
-        BaseLayerStyleUniform uniforms[Implementation::BaseStyleCount];
-        setStyle(BaseLayerCommonStyleUniform{}, uniforms, {});
+    explicit TestBaseLayerShared(): BaseLayer::Shared{Configuration{1, Implementation::BaseStyleCount}} {
+        BaseLayerStyleUniform uniforms[1];
+        UnsignedInt styleToUniform[]{0};
+        setStyle(BaseLayerCommonStyleUniform{},
+            uniforms,
+            Containers::stridedArrayView(styleToUniform).broadcasted<0>(Implementation::BaseStyleCount),
+            {});
 
         setStyleTransition<Implementation::BaseStyle,
             Implementation::styleTransitionToInactiveOut,
@@ -80,16 +84,16 @@ struct TestBaseLayer: BaseLayer {
 };
 
 struct TestTextLayerShared: TextLayer::Shared {
-    explicit TestTextLayerShared(): TextLayer::Shared{glyphCache, Configuration{Implementation::TextStyleUniformCount, Implementation::TextStyleCount}} {
+    explicit TestTextLayerShared(): TextLayer::Shared{glyphCache, Configuration{1, Implementation::TextStyleCount}} {
         font.openFile("", 16.0f);
         glyphCache.addFont(Implementation::IconCount + 1, &font);
 
         FontHandle fontHandle[]{addFont(font, 16.0f)};
         Text::Alignment alignment[]{Text::Alignment::MiddleCenter};
-        TextLayerStyleUniform uniforms[Implementation::TextStyleUniformCount];
-        UnsignedInt styles[]{0};
+        TextLayerStyleUniform uniforms[1];
+        UnsignedInt styleToUniform[]{0};
         setStyle(TextLayerCommonStyleUniform{}, uniforms,
-            Containers::stridedArrayView(styles).broadcasted<0>(Implementation::TextStyleCount),
+            Containers::stridedArrayView(styleToUniform).broadcasted<0>(Implementation::TextStyleCount),
             Containers::stridedArrayView(fontHandle).broadcasted<0>(Implementation::TextStyleCount),
             Containers::stridedArrayView(alignment).broadcasted<0>(Implementation::TextStyleCount),
             {}, {}, {}, {}, {}, {});
