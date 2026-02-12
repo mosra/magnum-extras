@@ -56,6 +56,7 @@ endif()
 set(MagnumUi_SRCS
     Button.cpp
     Handle.cpp
+    Icon.cpp
     Input.cpp
     Label.cpp
     NodeFlags.cpp
@@ -113,6 +114,7 @@ set(MagnumUi_HEADERS
     GenericAnimator.h
     GenericLayouter.h
     Handle.h
+    Icon.h
     Input.h
     Label.h
     LayoutLayer.h

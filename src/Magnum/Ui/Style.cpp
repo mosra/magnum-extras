@@ -342,22 +342,6 @@ template<Float(*cursorBlinkEasing)(Float)> AnimationHandle styleAnimationPersist
 
 }
 
-Debug& operator<<(Debug& debug, const Icon value) {
-    debug << "Ui::Icon" << Debug::nospace;
-
-    switch(value) {
-        /* LCOV_EXCL_START */
-        #define _c(value) case Icon::value: return debug << "::" #value;
-        _c(None)
-        _c(Yes)
-        _c(No)
-        #undef _c
-        /* LCOV_EXCL_STOP */
-    }
-
-    return debug << "(" << Debug::nospace << Debug::hex << UnsignedInt(value) << Debug::nospace << ")";
-}
-
 Debug& operator<<(Debug& debug, const McssDarkStyle::Feature value) {
     debug << "Ui::McssDarkStyle::Feature" << Debug::nospace;
 

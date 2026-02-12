@@ -45,6 +45,7 @@
 #include "Magnum/Ui/Button.h"
 #include "Magnum/Ui/DebugLayerGL.h"
 #include "Magnum/Ui/Event.h"
+#include "Magnum/Ui/Icon.h"
 #include "Magnum/Ui/Input.h"
 #include "Magnum/Ui/Label.h"
 #include "Magnum/Ui/NodeFlags.h"

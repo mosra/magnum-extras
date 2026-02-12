@@ -60,7 +60,6 @@ namespace Magnum { namespace Ui { namespace Test { namespace {
 struct StyleTest: TestSuite::Tester {
     explicit StyleTest();
 
-    void debugIcon();
     void debugFeature();
     void debugFeatures();
     void debugFeaturesSupersets();
@@ -138,8 +137,7 @@ const struct {
 };
 
 StyleTest::StyleTest() {
-    addTests({&StyleTest::debugIcon,
-              &StyleTest::debugFeature,
+    addTests({&StyleTest::debugFeature,
               &StyleTest::debugFeatures,
               &StyleTest::debugFeaturesSupersets,
 
@@ -166,12 +164,6 @@ using Implementation::TextStyle;
 using Implementation::TextStyleUniform;
 using Implementation::TextEditingStyle;
 using Implementation::LayoutStyle;
-
-void StyleTest::debugIcon() {
-    Containers::String out;
-    Debug{&out} << Icon::Yes << Icon(0xdeadcafe);
-    CORRADE_COMPARE(out, "Ui::Icon::Yes Ui::Icon(0xdeadcafe)\n");
-}
 
 void StyleTest::debugFeature() {
     Containers::String out;

@@ -34,6 +34,7 @@
 #include "Magnum/Ui/Anchor.h"
 #include "Magnum/Ui/BaseLayer.h"
 #include "Magnum/Ui/Handle.h"
+#include "Magnum/Ui/Icon.h"
 #include "Magnum/Ui/LayoutLayer.h"
 #include "Magnum/Ui/Style.h"
 #include "Magnum/Ui/Style.hpp"

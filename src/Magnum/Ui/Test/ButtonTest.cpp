@@ -30,6 +30,7 @@
 #include "Magnum/Ui/Anchor.h"
 #include "Magnum/Ui/Button.h"
 #include "Magnum/Ui/Event.h"
+#include "Magnum/Ui/Icon.h"
 #include "Magnum/Ui/TextProperties.h"
 #include "Magnum/Ui/Test/WidgetTester.hpp"
 

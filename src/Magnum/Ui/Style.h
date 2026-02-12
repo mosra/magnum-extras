@@ -27,36 +27,13 @@
 */
 
 /** @file
- * @brief Class @ref Magnum::Ui::McssDarkStyle, enum @ref Magnum::Ui::Icon
+ * @brief Class @ref Magnum::Ui::McssDarkStyle
  * @m_since_latest_{extras}
  */
 
 #include "Magnum/Ui/AbstractStyle.h"
 
 namespace Magnum { namespace Ui {
-
-/**
-@brief Icon
-@m_since_latest_{extras}
-
-For use in @ref Button and other widgets.
-*/
-enum class Icon: UnsignedInt {
-    /**
-     * No icon. When returned, means given widget has no icon. When passed as
-     * an argument, causes a widget icon to be unset.
-     */
-    None = 0,
-
-    Yes,        /**< Yes */
-    No          /**< No */
-};
-
-/**
-@debugoperatorenum{Icon}
-@m_since_latest_{extras}
-*/
-MAGNUM_UI_EXPORT Debug& operator<<(Debug& debug, Icon value);
 
 namespace Implementation {
     /* Used by various tests, less wasteful to have here than in the

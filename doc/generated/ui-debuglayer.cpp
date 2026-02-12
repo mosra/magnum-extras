@@ -56,6 +56,7 @@
 #include "Magnum/Ui/BaseLayerGL.h"
 #include "Magnum/Ui/EventLayer.h"
 #include "Magnum/Ui/Handle.h"
+#include "Magnum/Ui/Icon.h"
 #include "Magnum/Ui/LayoutLayer.h"
 #include "Magnum/Ui/LineLayerGL.h"
 #include "Magnum/Ui/NodeAnimator.h"

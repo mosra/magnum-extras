@@ -26,6 +26,7 @@
 
 #include <Corrade/Utility/Format.h>
 
+#include "Magnum/Ui/Icon.h"
 #include "Magnum/Ui/Label.h"
 #include "Magnum/Ui/Style.h"
 #include "Magnum/Ui/Test/StyleGLTester.hpp"

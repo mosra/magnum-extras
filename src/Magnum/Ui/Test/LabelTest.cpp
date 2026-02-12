@@ -28,6 +28,7 @@
 #include <Corrade/TestSuite/Compare/Numeric.h>
 
 #include "Magnum/Ui/Anchor.h"
+#include "Magnum/Ui/Icon.h"
 #include "Magnum/Ui/Label.h"
 #include "Magnum/Ui/TextProperties.h"
 #include "Magnum/Ui/Test/WidgetTester.hpp"
