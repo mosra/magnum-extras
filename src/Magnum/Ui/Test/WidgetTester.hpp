@@ -1,5 +1,5 @@
-#ifndef Magnum_Ui_Test_WidgetTest_hpp
-#define Magnum_Ui_Test_WidgetTest_hpp
+#ifndef Magnum_Ui_Test_WidgetTester_hpp
+#define Magnum_Ui_Test_WidgetTester_hpp
 /*
     This file is part of Magnum.
 
