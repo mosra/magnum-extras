@@ -857,8 +857,8 @@ void DataLayer::setIndex(const LayerDataHandle handle, const std::size_t index) 
 }
 
 void DataLayer::setIndexInternal(const UnsignedInt id, const std::size_t index) {
-    State& state = *_state;
     #ifndef CORRADE_NO_ASSERT
+    State& state = *_state;
     const Containers::Size3D& size = state.storages[extractStorageId(state.data[id].storageIdDirtyLinearizedIndex)].used.size;
     #endif
     CORRADE_ASSERT(size[0] == 1 && size[1] == 1,
@@ -879,8 +879,8 @@ void DataLayer::setIndex(const LayerDataHandle handle, const Containers::Size2D&
 }
 
 void DataLayer::setIndexInternal(const UnsignedInt id, const Containers::Size2D& index) {
-    State& state = *_state;
     #ifndef CORRADE_NO_ASSERT
+    State& state = *_state;
     const Containers::Size3D& size = state.storages[extractStorageId(state.data[id].storageIdDirtyLinearizedIndex)].used.size;
     #endif
     CORRADE_ASSERT(size[0] == 1,
