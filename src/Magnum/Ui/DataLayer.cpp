@@ -167,8 +167,19 @@ union Storage {
             } allocated;
 
             /* This field should be 8-byte aligned if everything packs well,
-               see the static_assert below */
-            char inPlace[sizeof(Allocated)];
+               see the static_assert below. Making it four pointers large
+               allows to store a pointer + Stride3D for generic strided views
+               without an allocation on both 32-bit and 64-bit platforms.
+               However, on 32-bit platforms four pointers makes the Storage
+               36 bytes large, which doesn't align, so make it five pointers
+               there instead. */
+            /** @todo this could be even 16-byte aligned now, do that once the
+                Array allocators guarantee that */
+            #ifndef CORRADE_TARGET_32BIT
+            char inPlace[4*sizeof(std::size_t)];
+            #else
+            char inPlace[5*sizeof(std::size_t)];
+            #endif
         } data;
     } used;
 

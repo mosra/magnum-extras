@@ -301,7 +301,11 @@ CORRADE_ENUMSET_OPERATORS(StorageFlags)
 namespace Implementation {
     enum: std::size_t {
         /* Used by AbstractStorage interfaces as well as DataLayer internals */
-        DataLayerStorageMaxInPlaceSize = 3*sizeof(std::size_t),
+        #ifndef CORRADE_TARGET_32BIT
+        DataLayerStorageMaxInPlaceSize = 4*sizeof(std::size_t)
+        #else
+        DataLayerStorageMaxInPlaceSize = 5*sizeof(std::size_t)
+        #endif
     };
     /* The only way to pass type-erased AbstractStorage subclass function
        pointers around is to reinterpret them as plain data of sufficient size.
