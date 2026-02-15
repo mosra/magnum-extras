@@ -538,8 +538,8 @@ class MAGNUM_UI_EXPORT UserInterfaceGL: public UserInterface {
          * @ref ThemeFeature::TextLayerImages and @p importerManager is
          * @cpp nullptr @ce, an internal importer plugin manager instance is
          * created. The function then calls @ref AbstractTheme::apply() to
-         * apply the theme to those layers and layouters. If it fails, the
-         * program exits, see @ref trySetTheme() for an alternative.
+         * apply the theme to those layers, layouters and animators. If it
+         * fails, the program exits, see @ref trySetTheme() for an alternative.
          *
          * Expects that user interface size is already set, either using the
          * constructor or by calling @ref setSize(). Expects that @p features

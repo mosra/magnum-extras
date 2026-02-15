@@ -160,7 +160,8 @@ enum class ThemeFeature: UnsignedShort {
 
     /**
      * Layout layer. Ensures a @ref LayoutLayer instance is set up on the
-     * @ref UserInterface.
+     * @ref UserInterface, the theme implementation then calls
+     * @ref LayoutLayer::setStyle() on it.
      * @see @ref UserInterface::layoutLayer(),
      *      @ref UserInterface::hasLayoutLayer()
      */
@@ -880,15 +881,16 @@ class MAGNUM_UI_EXPORT AbstractTheme {
          * error happens, should print a message to @relativeref{Magnum,Error}
          * and return @cpp false @ce.
          *
-         * The @p ui is guaranteed to have user interface set for the theme to
-         * use to calculate font rasterization and icon sizes, for example. The
-         * @p features are guaranteed to be a subset of @ref features() and
-         * contain at least one feature, that @p ui already contains all
-         * layers, layouters and animators corresponding to @p features, that
-         * the layer shared state style uniform and style count matches the
-         * subset of @ref baseLayerStyleUniformCount(),
-         * @ref baseLayerStyleCount(), @ref textLayerStyleUniformCount(),
-         * @ref textLayerStyleCount(), @ref textLayerEditingStyleUniformCount(),
+         * The @p ui is guaranteed to have user interface size set for the
+         * theme to use to calculate font rasterization and icon sizes, for
+         * example. The @p features are guaranteed to be a subset of
+         * @ref features() and contain at least one feature, it's guaranteed
+         * that @p ui already contains all layers, layouters and animators
+         * corresponding to @p features, that the layer shared state style
+         * uniform and style count matches the subset of
+         * @ref baseLayerStyleUniformCount(), @ref baseLayerStyleCount(),
+         * @ref textLayerStyleUniformCount(), @ref textLayerStyleCount(),
+         * @ref textLayerEditingStyleUniformCount(),
          * @ref textLayerEditingStyleCount(), @ref layoutLayerStyleCount()
          * matching @p features and the layer shared state dynamic style count
          * is at least the subset of @ref baseLayerDynamicStyleCount(),

@@ -66,6 +66,13 @@ class MAGNUM_UI_EXPORT McssDarkTheme: public AbstractTheme {
             /**
              * Enable just essential animations, which is currently a blinking
              * cursor for text editing. Subset of @ref Feature::Animations.
+             *
+             * Note that the application needs to be @ref Ui-AbstractUserInterface-animations "set up for animations"
+             * in order to have them played at all. Without the application
+             * setup the animations will either forever stay in a scheduled
+             * state, making various UI operations feel stuck, or they'll be
+             * always treated as already finished, causing no visual difference
+             * compared to this flag not enabled.
              */
             EssentialAnimations = 1 << 0,
 
@@ -73,8 +80,15 @@ class MAGNUM_UI_EXPORT McssDarkTheme: public AbstractTheme {
              * Enable all animations, which include fade out on pointer out,
              * release and blur, as well as an animated text editing cursor.
              * Superset of @ref Feature::EssentialAnimations.
+             *
+             * Note that the application needs to be @ref Ui-AbstractUserInterface-animations "set up for animations"
+             * in order to have them played at all. Without the application
+             * setup the animations will either forever stay in a scheduled
+             * state, making various UI operations feel stuck, or they'll be
+             * always treated as already finished, causing no visual difference
+             * compared to this flag not enabled.
              */
-            Animations = EssentialAnimations|(1 << 1)
+            Animations = EssentialAnimations|(1 << 1),
         };
 
         /**
@@ -92,9 +106,11 @@ class MAGNUM_UI_EXPORT McssDarkTheme: public AbstractTheme {
 
     private:
         MAGNUM_UI_LOCAL ThemeFeatures doFeatures() const override;
+
         MAGNUM_UI_LOCAL UnsignedInt doBaseLayerStyleUniformCount() const override;
         MAGNUM_UI_LOCAL UnsignedInt doBaseLayerStyleCount() const override;
         MAGNUM_UI_LOCAL UnsignedInt doBaseLayerDynamicStyleCount() const override;
+
         MAGNUM_UI_LOCAL UnsignedInt doTextLayerStyleUniformCount() const override;
         MAGNUM_UI_LOCAL UnsignedInt doTextLayerStyleCount() const override;
         MAGNUM_UI_LOCAL UnsignedInt doTextLayerDynamicStyleCount() const override;
@@ -102,6 +118,7 @@ class MAGNUM_UI_EXPORT McssDarkTheme: public AbstractTheme {
         MAGNUM_UI_LOCAL UnsignedInt doTextLayerEditingStyleCount() const override;
         MAGNUM_UI_LOCAL Vector3i doTextLayerGlyphCacheSize(ThemeFeatures features) const override;
         MAGNUM_UI_LOCAL UnsignedInt doLayoutLayerStyleCount() const override;
+
         MAGNUM_UI_LOCAL bool doApply(UserInterface& ui, ThemeFeatures features, PluginManager::Manager<Trade::AbstractImporter>* importerManager, PluginManager::Manager<Text::AbstractFont>* fontManager) const override;
 
         Features _features;

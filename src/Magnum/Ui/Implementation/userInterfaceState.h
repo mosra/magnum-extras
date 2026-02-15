@@ -52,6 +52,9 @@ struct UserInterface::State {
     Containers::Optional<PluginManager::Manager<Trade::AbstractImporter>> importerManagerStorage;
     PluginManager::Manager<Trade::AbstractImporter>* importerManager;
 
+    /* Ideally, to avoid indirections, those would be members in the
+       UserInterface class, but as access to each through baseLayer() etc. is
+       guarded by an assert, it wouldn't really help much */
     DataLayer* dataLayer{};
     BaseLayer* backgroundLayer{};
     BaseLayerStyleAnimator* backgroundLayerStyleAnimator{};

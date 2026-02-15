@@ -49,12 +49,12 @@
 #include "Magnum/Ui/Icon.h"
 #include "Magnum/Ui/Input.h"
 #include "Magnum/Ui/Label.h"
+#include "Magnum/Ui/LayoutLayer.h" /* for DebugLayer style names */
 #include "Magnum/Ui/NodeFlags.h"
 #include "Magnum/Ui/Panel.h"
 #include "Magnum/Ui/SnapLayout.h"
 #include "Magnum/Ui/SnapLayouter.h"
 #include "Magnum/Ui/TextLayer.h" /* for DebugLayer style names */
-#include "Magnum/Ui/LayoutLayer.h" /* for DebugLayer style names */
 #include "Magnum/Ui/TextProperties.h"
 #include "Magnum/Ui/Theme.h"
 #include "Magnum/Ui/UserInterfaceGL.h"

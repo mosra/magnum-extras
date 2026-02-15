@@ -2030,10 +2030,13 @@ class MAGNUM_UI_EXPORT AbstractLayer {
          *
          * All @ref nodes() at indices corresponding to @p dataIds are
          * guaranteed to not be @ref NodeHandle::Null at the time this function
-         * is called. The @p nodeOffsets, @p nodeSizes, @p nodeOpacities and
-         * @p nodesDisabled arrays may contain random or uninitialized values
-         * for nodes different than those referenced from @p dataIds, such as
-         * for nodes that are not currently visible or freed node handles.
+         * is called. The @p nodeOffsets, @p nodeSizes and @p nodeOpacities
+         * arrays may contain random or uninitialized values for nodes
+         * different than those referenced from @p dataIds, such as for nodes
+         * that are not currently visible or freed node handles, the
+         * @p nodesEnabled is guaranteed to only have bits set for enabled
+         * nodes that are also visible, bits corresponding to enabled but
+         * invisible nodes or freed node handles are not set.
          *
          * The node data are meant to be clipped by rects defined in
          * @p clipRectOffsets and @p clipRectSizes. The @p clipRectIds and
