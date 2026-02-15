@@ -641,9 +641,9 @@ class MAGNUM_UI_EXPORT EventLayer: public AbstractLayer {
          * @see @ref Ui-EventLayer-drag, @ref PointerMoveEvent::isPrimary(),
          *      @ref PointerMoveEvent::isFallthrough()
          */
-        DataHandle onDrag(NodeHandle node, Containers::Function<void(const Vector2& relativePosition)>&& slot);
+        DataHandle onDrag(NodeHandle node, Containers::Function<void(const Vector2& offset)>&& slot);
         /** @overload */
-        DataHandle onDrag(NodeHandle node, Containers::Function<void(const Vector2& position, const Vector2& relativePosition)>&& slot);
+        DataHandle onDrag(NodeHandle node, Containers::Function<void(const Vector2& position, const Vector2& offset)>&& slot);
 
         /**
          * @brief Scoped connection to a drag
@@ -652,11 +652,11 @@ class MAGNUM_UI_EXPORT EventLayer: public AbstractLayer {
          * when the returned @ref EventConnection gets destroyed.
          * @see @ref Ui-EventLayer-create
          */
-        EventConnection onDragScoped(NodeHandle node, Containers::Function<void(const Vector2& relativePosition)>&& slot) {
+        EventConnection onDragScoped(NodeHandle node, Containers::Function<void(const Vector2& offset)>&& slot) {
             return EventConnection{*this, onDrag(node, Utility::move(slot))};
         }
         /** @overload */
-        EventConnection onDragScoped(NodeHandle node, Containers::Function<void(const Vector2& position, const Vector2& relativePosition)>&& slot) {
+        EventConnection onDragScoped(NodeHandle node, Containers::Function<void(const Vector2& position, const Vector2& offset)>&& slot) {
             return EventConnection{*this, onDrag(node, Utility::move(slot))};
         }
 
@@ -720,9 +720,9 @@ class MAGNUM_UI_EXPORT EventLayer: public AbstractLayer {
          * @ref onDragOrScrollScoped() for a scoped alternative.
          * @see @ref Ui-EventLayer-scroll
          */
-        DataHandle onDragOrScroll(NodeHandle node, Containers::Function<void(const Vector2& relativePosition)>&& slot);
+        DataHandle onDragOrScroll(NodeHandle node, Containers::Function<void(const Vector2& offset)>&& slot);
         /** @overload */
-        DataHandle onDragOrScroll(NodeHandle node, Containers::Function<void(const Vector2& position, const Vector2& relativePosition)>&& slot);
+        DataHandle onDragOrScroll(NodeHandle node, Containers::Function<void(const Vector2& position, const Vector2& offset)>&& slot);
 
         /**
          * @brief Scoped connection to a drag or scroll
@@ -731,11 +731,11 @@ class MAGNUM_UI_EXPORT EventLayer: public AbstractLayer {
          * when the returned @ref EventConnection gets destroyed.
          * @see @ref Ui-EventLayer-create
          */
-        EventConnection onDragOrScrollScoped(NodeHandle node, Containers::Function<void(const Vector2& relativePosition)>&& slot) {
+        EventConnection onDragOrScrollScoped(NodeHandle node, Containers::Function<void(const Vector2& offset)>&& slot) {
             return EventConnection{*this, onDragOrScroll(node, Utility::move(slot))};
         }
         /** @overload */
-        EventConnection onDragOrScrollScoped(NodeHandle node, Containers::Function<void(const Vector2& position, const Vector2& relativePosition)>&& slot) {
+        EventConnection onDragOrScrollScoped(NodeHandle node, Containers::Function<void(const Vector2& position, const Vector2& offset)>&& slot) {
             return EventConnection{*this, onDragOrScroll(node, Utility::move(slot))};
         }
 

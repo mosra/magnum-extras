@@ -2187,10 +2187,10 @@ void EventLayerTest::drag() {
     EventLayer layer{layerHandle(0, 1)};
 
     Int called = 0;
-    Vector2 calledRelativePosition;
-    auto slot = [&called, &calledRelativePosition](const Vector2& relativePosition) {
+    Vector2 calledOffset;
+    auto slot = [&called, &calledOffset](const Vector2& offset) {
         ++called;
-        calledRelativePosition += relativePosition;
+        calledOffset += offset;
     };
     DataHandle handle = data.dragOrScroll ?
         layer.onDragOrScroll(nodeHandle(0, 1), slot) :
@@ -2217,7 +2217,7 @@ void EventLayerTest::drag() {
         event.setCaptured(true);
         layer.pointerMoveEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 1);
-        CORRADE_COMPARE(calledRelativePosition, (Vector2{-1.0f, 2.4f}));
+        CORRADE_COMPARE(calledOffset, (Vector2{-1.0f, 2.4f}));
     } {
         PointerMoveEvent event{{}, PointerEventSource::Mouse, {}, Pointer::MouseMiddle, true, 0, {}};
         event.setCaptured(true);
@@ -2233,7 +2233,7 @@ void EventLayerTest::drag() {
         event.setCaptured(true);
         layer.pointerMoveEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 2);
-        CORRADE_COMPARE(calledRelativePosition, (Vector2{-0.5f, 1.4f}));
+        CORRADE_COMPARE(calledOffset, (Vector2{-0.5f, 1.4f}));
     } {
         PointerMoveEvent event{{}, PointerEventSource::Touch, {}, Pointer::Finger|Pointer::Eraser, false, 0, {}, {0.5f, -1.0f}};
         event.setCaptured(true);
@@ -2244,7 +2244,7 @@ void EventLayerTest::drag() {
         event.setCaptured(true);
         layer.pointerMoveEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 3);
-        CORRADE_COMPARE(calledRelativePosition, (Vector2{0.5f, 0.9f}));
+        CORRADE_COMPARE(calledOffset, (Vector2{0.5f, 0.9f}));
     } {
         PointerMoveEvent event{{}, PointerEventSource::Pen, {}, Pointer::Eraser, true, 0, {}};
         event.setCaptured(true);
@@ -2426,8 +2426,8 @@ void EventLayerTest::dragFromUserInterface() {
         {25, 50}, {50, 25});
 
     Int called = 0;
-    auto slot = [&called](const Vector2& relativePosition) {
-        CORRADE_COMPARE(relativePosition, (Vector2{-5.0f, -10.0f}));
+    auto slot = [&called](const Vector2& offset) {
+        CORRADE_COMPARE(offset, (Vector2{-5.0f, -10.0f}));
         ++called;
     };
     data.dragOrScroll ?
@@ -2435,9 +2435,9 @@ void EventLayerTest::dragFromUserInterface() {
         layer.onDrag(node, slot);
 
     Int positionCalled = 0;
-    auto positionSlot = [&positionCalled](const Vector2& position, const Vector2& relativePosition) {
+    auto positionSlot = [&positionCalled](const Vector2& position, const Vector2& offset) {
         CORRADE_COMPARE(position, (Vector2{20.0f, 5.0f}));
-        CORRADE_COMPARE(relativePosition, (Vector2{-5.0f, -10.0f}));
+        CORRADE_COMPARE(offset, (Vector2{-5.0f, -10.0f}));
         ++positionCalled;
     };
     data.dragOrScroll ?
@@ -2517,15 +2517,15 @@ void EventLayerTest::dragFromUserInterfaceFallthroughThreshold() {
         the same node, add them both instead of having an instanced test
         case */
     if(data.positionCallback) {
-        auto slot = [&belowCalled](const Vector2&, const Vector2& relativePosition) {
-            belowCalled += relativePosition;
+        auto slot = [&belowCalled](const Vector2&, const Vector2& offset) {
+            belowCalled += offset;
         };
         data.dragOrScroll ?
             layer.onDragOrScroll(nodeBelow, slot) :
             layer.onDrag(nodeBelow, slot);
     } else {
-        auto slot = [&belowCalled](const Vector2& relativePosition) {
-            belowCalled += relativePosition;
+        auto slot = [&belowCalled](const Vector2& offset) {
+            belowCalled += offset;
         };
         data.dragOrScroll ?
             layer.onDragOrScroll(nodeBelow, slot) :
@@ -2540,8 +2540,8 @@ void EventLayerTest::dragFromUserInterfaceFallthroughThreshold() {
 
     Vector2 aboveCalled;
     NodeHandle nodeAbove = ui.createNode(nodeBetween, {}, {100, 100});
-    layer.onDrag(nodeAbove, [&aboveCalled](const Vector2& relativePosition) {
-        aboveCalled += relativePosition;
+    layer.onDrag(nodeAbove, [&aboveCalled](const Vector2& offset) {
+        aboveCalled += offset;
     });
 
     /* Set the threshold lower, sqrt(3*3 + 4*4) = 5 */

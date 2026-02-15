@@ -783,8 +783,8 @@ Ui::EventLayer& eventLayer = ui.setLayerInstance(
 
 Ui::NodeHandle panel{}, title{};
 /* [AbstractUserInterface-layers-create-data] */
-eventLayer.onDrag(title, [panel, &ui](const Vector2& relativePosition) {
-    ui.setNodeOffset(panel, ui.nodeOffset(panel) + relativePosition);
+eventLayer.onDrag(title, [panel, &ui](const Vector2& offset) {
+    ui.setNodeOffset(panel, ui.nodeOffset(panel) + offset);
 });
 /* [AbstractUserInterface-layers-create-data] */
 }
@@ -1221,17 +1221,17 @@ Ui::NodeHandle scrollbar = DOXYGEN_ELLIPSIS({});
 Ui::NodeHandle scrollarea = ui.createNode(DOXYGEN_ELLIPSIS({}, {}), Ui::NodeFlag::Clip);
 Ui::NodeHandle contents = ui.createNode(scrollarea, DOXYGEN_ELLIPSIS({}, {}));
 
-layer.onDrag(scrollbar, [&ui, scrollarea, contents](const Vector2& relativePosition) {
+layer.onDrag(scrollbar, [&ui, scrollarea, contents](const Vector2& offset) {
     ui.setNodeOffsetY(contents, Math::clamp(
-        ui.nodeOffset(contents).y() - relativePosition.y(),
+        ui.nodeOffset(contents).y() - offset.y(),
         ui.nodeSize(scrollarea).y() - ui.nodeSize(contents).y(), 0.0f));
 });
 /* [EventLayer-drag] */
 
 /* [EventLayer-drag-to-scroll] */
-layer.onDrag(scrollarea, [&ui, scrollarea, contents](const Vector2& relativePosition) {
+layer.onDrag(scrollarea, [&ui, scrollarea, contents](const Vector2& offset) {
     ui.setNodeOffset(contents, Math::clamp(
-        ui.nodeOffset(contents) + relativePosition,
+        ui.nodeOffset(contents) + offset,
         ui.nodeSize(scrollarea) - ui.nodeSize(contents), Vector2{0.0f}));
 });
 /* [EventLayer-drag-to-scroll] */
@@ -1247,8 +1247,8 @@ Ui::EventLayer layer{Ui::layerHandle(0, 1)};
 /* [EventLayer-pinch] */
 Ui::NodeHandle canvas = DOXYGEN_ELLIPSIS({});
 
-layer.onDrag(canvas, [canvas](const Vector2& position, const Vector2& relativePosition) {
-    DOXYGEN_IGNORE(static_cast<void>(position);static_cast<void>(relativePosition);static_cast<void>(canvas);)// Draw ...
+layer.onDrag(canvas, [canvas](const Vector2& position, const Vector2& offset) {
+    DOXYGEN_IGNORE(static_cast<void>(position);static_cast<void>(offset);static_cast<void>(canvas);)// Draw ...
 });
 layer.onPinch(canvas, [&ui, canvas](const Vector2&, const Vector2& relativeTranslation, const Complex&, Float) {
     ui.setNodeOffset(canvas, ui.nodeOffset(canvas) + relativeTranslation);
