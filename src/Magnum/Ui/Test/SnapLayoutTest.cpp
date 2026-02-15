@@ -41,8 +41,10 @@ namespace Magnum { namespace Ui { namespace Test { namespace {
 struct SnapLayoutTest: TestSuite::Tester {
     explicit SnapLayoutTest();
 
-    template<class T> void construct();
-    void constructImplicitLayouter();
+    template<class T> void constructFromAnchor();
+    template<class T> void constructFromNode();
+    void constructImplicitLayouterFromAnchor();
+    void constructImplicitLayouterFromNode();
     template<class T> void constructCreateLayout();
     void constructCreateLayoutImplicitLayouter();
     template<class T> void constructCreateLayoutExplicitSnap();
@@ -81,9 +83,12 @@ struct {
 };
 
 SnapLayoutTest::SnapLayoutTest() {
-    addInstancedTests({&SnapLayoutTest::construct<AbstractSnapLayout>,
-                       &SnapLayoutTest::construct<SnapLayout>,
-                       &SnapLayoutTest::constructImplicitLayouter},
+    addInstancedTests({&SnapLayoutTest::constructFromAnchor<AbstractSnapLayout>,
+                       &SnapLayoutTest::constructFromAnchor<SnapLayout>,
+                       &SnapLayoutTest::constructFromNode<AbstractSnapLayout>,
+                       &SnapLayoutTest::constructFromNode<SnapLayout>,
+                       &SnapLayoutTest::constructImplicitLayouterFromAnchor,
+                       &SnapLayoutTest::constructImplicitLayouterFromNode},
         Containers::arraySize(ConstructData));
 
     addTests({&SnapLayoutTest::constructCreateLayout<AbstractSnapLayout>,
@@ -141,7 +146,7 @@ template<> struct SnapLayoutTraits<SnapLayout> {
     static const char* name() { return "SnapLayout"; }
 };
 
-template<class T> void SnapLayoutTest::construct() {
+template<class T> void SnapLayoutTest::constructFromAnchor() {
     auto&& data = ConstructData[testCaseInstanceId()];
     setTestCaseTemplateName(SnapLayoutTraits<T>::name());
     setTestCaseDescription(data.name);
@@ -186,7 +191,52 @@ template<class T> void SnapLayoutTest::construct() {
     CORRADE_COMPARE(layouter.usedCount(), 4);
 }
 
-void SnapLayoutTest::constructImplicitLayouter() {
+template<class T> void SnapLayoutTest::constructFromNode() {
+    auto&& data = ConstructData[testCaseInstanceId()];
+    setTestCaseTemplateName(SnapLayoutTraits<T>::name());
+    setTestCaseDescription(data.name);
+
+    struct Interface: SnapLayoutTraits<T>::UserInterfaceType {
+        explicit Interface(NoCreateT): SnapLayoutTraits<T>::UserInterfaceType{NoCreate} {}
+    } ui{NoCreate};
+
+    SnapLayouter& layouter = ui.setLayouterInstance(Containers::pointer<SnapLayouter>(ui.createLayouter()));
+
+    /* Create some extra nodes and layouts to not have the anchor and layout
+       with trivial handles */
+    layouter.add(ui.createNode({}, {}));
+    layouter.add(ui.createNode({}, {}));
+    layouter.add(ui.createNode({}, {}));
+    layouter.remove(layouter.add(ui.createNode({}, {})));
+    ui.createNode({}, {});
+    ui.removeNode(ui.createNode({}, {}));
+    ui.removeNode(ui.createNode({}, {}));
+
+    typename SnapLayoutTraits<T>::AnchorType anchor{ui, {}, {}};
+    CORRADE_COMPARE(anchor.node(), nodeHandle(5, 3));
+
+    if(data.layoutExists)
+        layouter.add(anchor);
+
+    T layout{ui, layouter, anchor.node()};
+    CORRADE_COMPARE(&layout.ui(), &ui);
+    CORRADE_COMPARE(&layout.layouter(), &layouter);
+    CORRADE_COMPARE(layout.node(), anchor.node());
+    CORRADE_COMPARE(layout, anchor.node());
+    CORRADE_COMPARE(layout.layout(), layoutHandle(layouter.handle(), 3, 2));
+    CORRADE_COMPARE(layout, layoutHandle(layouter.handle(), 3, 2));
+    CORRADE_VERIFY(layouter.isHandleValid(layout));
+    CORRADE_VERIFY(!layouter.hasExplicitSnap(layout));
+    CORRADE_COMPARE(layouter.node(layout), anchor.node());
+    CORRADE_COMPARE(layouter.flags(layout), SnapLayoutFlags{});
+    CORRADE_COMPARE(layouter.childSnap(layout), Snap::Bottom);
+
+    /* There should be no additional layouts created besides the ones known
+       above */
+    CORRADE_COMPARE(layouter.usedCount(), 4);
+}
+
+void SnapLayoutTest::constructImplicitLayouterFromAnchor() {
     auto&& data = ConstructData[testCaseInstanceId()];
     setTestCaseDescription(data.name);
 
@@ -230,6 +280,50 @@ void SnapLayoutTest::constructImplicitLayouter() {
     CORRADE_COMPARE(ui.snapLayouter().usedCount(), 4);
 }
 
+void SnapLayoutTest::constructImplicitLayouterFromNode() {
+    auto&& data = ConstructData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
+    struct Interface: UserInterface {
+        explicit Interface(NoCreateT): UserInterface{NoCreate} {}
+    } ui{NoCreate};
+
+    ui.setSnapLayouterInstance(Containers::pointer<SnapLayouter>(ui.createLayouter()));
+
+    /* Create some extra nodes and layouts to not have the anchor and layout
+       with trivial handles */
+    ui.snapLayouter().add(ui.createNode({}, {}));
+    ui.snapLayouter().add(ui.createNode({}, {}));
+    ui.snapLayouter().add(ui.createNode({}, {}));
+    ui.snapLayouter().remove(ui.snapLayouter().add(ui.createNode({}, {})));
+    ui.createNode({}, {});
+    ui.removeNode(ui.createNode({}, {}));
+    ui.removeNode(ui.createNode({}, {}));
+
+    Anchor anchor{ui, {}, {}};
+    CORRADE_COMPARE(anchor.node(), nodeHandle(5, 3));
+
+    if(data.layoutExists)
+        ui.snapLayouter().add(anchor);
+
+    SnapLayout layout{ui, anchor.node()};
+    CORRADE_COMPARE(&layout.ui(), &ui);
+    CORRADE_COMPARE(&layout.layouter(), &ui.snapLayouter());
+    CORRADE_COMPARE(layout.node(), anchor.node());
+    CORRADE_COMPARE(layout, anchor.node());
+    CORRADE_COMPARE(layout.layout(), layoutHandle(ui.snapLayouter().handle(), 3, 2));
+    CORRADE_COMPARE(layout, layoutHandle(ui.snapLayouter().handle(), 3, 2));
+    CORRADE_VERIFY(ui.snapLayouter().isHandleValid(layout));
+    CORRADE_VERIFY(!ui.snapLayouter().hasExplicitSnap(layout));
+    CORRADE_COMPARE(ui.snapLayouter().node(layout), anchor.node());
+    CORRADE_COMPARE(ui.snapLayouter().flags(layout), SnapLayoutFlags{});
+    CORRADE_COMPARE(ui.snapLayouter().childSnap(layout), Snap::Bottom);
+
+    /* There should be no additional layouts created besides the ones known
+       above */
+    CORRADE_COMPARE(ui.snapLayouter().usedCount(), 4);
+}
+
 template<class T> void SnapLayoutTest::constructCreateLayout() {
     setTestCaseTemplateName(SnapLayoutTraits<T>::name());
 
@@ -250,64 +344,109 @@ template<class T> void SnapLayoutTest::constructCreateLayout() {
     NodeHandle rootNode = ui.createNode({}, {});
     LayoutHandle root = layouter.add(rootNode);
 
-    typename SnapLayoutTraits<T>::AnchorType firstAnchor{ui, rootNode, {}, {}};
-    typename SnapLayoutTraits<T>::AnchorType secondAnchor{ui, rootNode, {}, {}};
-    typename SnapLayoutTraits<T>::AnchorType thirdAnchor{ui, rootNode, {}, {}};
-    CORRADE_COMPARE(firstAnchor.node(), nodeHandle(4, 1));
-    CORRADE_COMPARE(secondAnchor.node(), nodeHandle(5, 1));
-    CORRADE_COMPARE(thirdAnchor.node(), nodeHandle(6, 1));
+    typename SnapLayoutTraits<T>::AnchorType firstAnchor1{ui, rootNode, {}, {}};
+    typename SnapLayoutTraits<T>::AnchorType firstAnchor2{ui, rootNode, {}, {}};
+    typename SnapLayoutTraits<T>::AnchorType secondAnchor1{ui, rootNode, {}, {}};
+    typename SnapLayoutTraits<T>::AnchorType secondAnchor2{ui, rootNode, {}, {}};
+    typename SnapLayoutTraits<T>::AnchorType thirdAnchor1{ui, rootNode, {}, {}};
+    typename SnapLayoutTraits<T>::AnchorType thirdAnchor2{ui, rootNode, {}, {}};
+    CORRADE_COMPARE(firstAnchor1.node(), nodeHandle(4, 1));
+    CORRADE_COMPARE(firstAnchor2.node(), nodeHandle(5, 1));
+    CORRADE_COMPARE(secondAnchor1.node(), nodeHandle(6, 1));
+    CORRADE_COMPARE(secondAnchor2.node(), nodeHandle(7, 1));
+    CORRADE_COMPARE(thirdAnchor1.node(), nodeHandle(8, 1));
+    CORRADE_COMPARE(thirdAnchor2.node(), nodeHandle(9, 1));
 
     /* No `before` layout */
-    T first{layouter, firstAnchor, SnapLayoutFlag::IgnoreOverflowX};
-    CORRADE_COMPARE(&first.ui(), &ui);
-    CORRADE_COMPARE(&first.layouter(), &layouter);
-    CORRADE_COMPARE(first.node(), firstAnchor.node());
-    CORRADE_COMPARE(first, firstAnchor.node());
-    CORRADE_COMPARE(first.layout(), layoutHandle(layouter.handle(), 3, 1));
-    CORRADE_COMPARE(first, layoutHandle(layouter.handle(), 3, 1));
-    CORRADE_VERIFY(layouter.isHandleValid(first));
-    CORRADE_VERIFY(!layouter.hasExplicitSnap(first));
-    CORRADE_COMPARE(layouter.node(first), firstAnchor.node());
-    CORRADE_COMPARE(layouter.flags(first), SnapLayoutFlag::IgnoreOverflowX);
-    CORRADE_COMPARE(layouter.childSnap(first), Snap::Bottom);
+    T first1{layouter, firstAnchor1, SnapLayoutFlag::IgnoreOverflowX};
+    T first2{ui, layouter, firstAnchor2.node(), SnapLayoutFlag::IgnoreOverflowX};
+    CORRADE_COMPARE(&first1.ui(), &ui);
+    CORRADE_COMPARE(&first2.ui(), &ui);
+    CORRADE_COMPARE(&first1.layouter(), &layouter);
+    CORRADE_COMPARE(&first2.layouter(), &layouter);
+    CORRADE_COMPARE(first1.node(), firstAnchor1.node());
+    CORRADE_COMPARE(first2.node(), firstAnchor2.node());
+    CORRADE_COMPARE(first1, firstAnchor1.node());
+    CORRADE_COMPARE(first2, firstAnchor2.node());
+    CORRADE_COMPARE(first1.layout(), layoutHandle(layouter.handle(), 3, 1));
+    CORRADE_COMPARE(first2.layout(), layoutHandle(layouter.handle(), 4, 1));
+    CORRADE_COMPARE(first1, first1.layout());
+    CORRADE_COMPARE(first2, first2.layout());
+    CORRADE_VERIFY(layouter.isHandleValid(first1));
+    CORRADE_VERIFY(layouter.isHandleValid(first2));
+    CORRADE_VERIFY(!layouter.hasExplicitSnap(first1));
+    CORRADE_VERIFY(!layouter.hasExplicitSnap(first2));
+    CORRADE_COMPARE(layouter.node(first1), firstAnchor1.node());
+    CORRADE_COMPARE(layouter.node(first2), firstAnchor2.node());
+    CORRADE_COMPARE(layouter.flags(first1), SnapLayoutFlag::IgnoreOverflowX);
+    CORRADE_COMPARE(layouter.flags(first2), SnapLayoutFlag::IgnoreOverflowX);
+    CORRADE_COMPARE(layouter.childSnap(first1), Snap::Bottom);
+    CORRADE_COMPARE(layouter.childSnap(first2), Snap::Bottom);
 
     /* "Before" layout as a LayoutHandle */
-    T second{layouter, secondAnchor, LayoutHandle{first}, SnapLayoutFlag::PropagateMarginY};
-    CORRADE_COMPARE(&second.ui(), &ui);
-    CORRADE_COMPARE(&second.layouter(), &layouter);
-    CORRADE_COMPARE(second.node(), secondAnchor.node());
-    CORRADE_COMPARE(second, secondAnchor.node());
-    CORRADE_COMPARE(second.layout(), layoutHandle(layouter.handle(), 4, 1));
-    CORRADE_COMPARE(second, layoutHandle(layouter.handle(), 4, 1));
-    CORRADE_VERIFY(layouter.isHandleValid(second));
-    CORRADE_VERIFY(!layouter.hasExplicitSnap(second));
-    CORRADE_COMPARE(layouter.node(second), secondAnchor.node());
-    CORRADE_COMPARE(layouter.flags(second), SnapLayoutFlag::PropagateMarginY);
-    CORRADE_COMPARE(layouter.childSnap(second), Snap::Bottom);
+    T second1{layouter, secondAnchor1, LayoutHandle{first1}, SnapLayoutFlag::PropagateMarginY};
+    T second2{ui, layouter, secondAnchor2.node(), LayoutHandle{first1}, SnapLayoutFlag::PropagateMarginY};
+    CORRADE_COMPARE(&second1.ui(), &ui);
+    CORRADE_COMPARE(&second2.ui(), &ui);
+    CORRADE_COMPARE(&second1.layouter(), &layouter);
+    CORRADE_COMPARE(&second2.layouter(), &layouter);
+    CORRADE_COMPARE(second1.node(), secondAnchor1.node());
+    CORRADE_COMPARE(second2.node(), secondAnchor2.node());
+    CORRADE_COMPARE(second1, secondAnchor1.node());
+    CORRADE_COMPARE(second2, secondAnchor2.node());
+    CORRADE_COMPARE(second1.layout(), layoutHandle(layouter.handle(), 5, 1));
+    CORRADE_COMPARE(second2.layout(), layoutHandle(layouter.handle(), 6, 1));
+    CORRADE_COMPARE(second1, second1.layout());
+    CORRADE_COMPARE(second2, second2.layout());
+    CORRADE_VERIFY(layouter.isHandleValid(second1));
+    CORRADE_VERIFY(layouter.isHandleValid(second2));
+    CORRADE_VERIFY(!layouter.hasExplicitSnap(second1));
+    CORRADE_VERIFY(!layouter.hasExplicitSnap(second2));
+    CORRADE_COMPARE(layouter.node(second1), secondAnchor1.node());
+    CORRADE_COMPARE(layouter.node(second2), secondAnchor2.node());
+    CORRADE_COMPARE(layouter.flags(second1), SnapLayoutFlag::PropagateMarginY);
+    CORRADE_COMPARE(layouter.flags(second2), SnapLayoutFlag::PropagateMarginY);
+    CORRADE_COMPARE(layouter.childSnap(second1), Snap::Bottom);
+    CORRADE_COMPARE(layouter.childSnap(second2), Snap::Bottom);
 
     /* "Before" layout as a LayouterDataHandle */
-    T third{layouter, thirdAnchor, layoutHandleData(first), SnapLayoutFlag::IgnoreOverflow};
-    CORRADE_COMPARE(&third.ui(), &ui);
-    CORRADE_COMPARE(&third.layouter(), &layouter);
-    CORRADE_COMPARE(third.node(), thirdAnchor.node());
-    CORRADE_COMPARE(third, thirdAnchor.node());
-    CORRADE_COMPARE(third.layout(), layoutHandle(layouter.handle(), 5, 1));
-    CORRADE_COMPARE(third, layoutHandle(layouter.handle(), 5, 1));
-    CORRADE_VERIFY(layouter.isHandleValid(third));
-    CORRADE_VERIFY(!layouter.hasExplicitSnap(third));
-    CORRADE_COMPARE(layouter.node(third), thirdAnchor.node());
-    CORRADE_COMPARE(layouter.flags(third), SnapLayoutFlag::IgnoreOverflow);
-    CORRADE_COMPARE(layouter.childSnap(third), Snap::Bottom);
+    T third1{layouter, thirdAnchor1, layoutHandleData(first1), SnapLayoutFlag::IgnoreOverflow};
+    T third2{ui, layouter, thirdAnchor2.node(), layoutHandleData(first1), SnapLayoutFlag::IgnoreOverflow};
+    CORRADE_COMPARE(&third1.ui(), &ui);
+    CORRADE_COMPARE(&third2.ui(), &ui);
+    CORRADE_COMPARE(&third1.layouter(), &layouter);
+    CORRADE_COMPARE(&third2.layouter(), &layouter);
+    CORRADE_COMPARE(third1.node(), thirdAnchor1.node());
+    CORRADE_COMPARE(third2.node(), thirdAnchor2.node());
+    CORRADE_COMPARE(third1, thirdAnchor1.node());
+    CORRADE_COMPARE(third2, thirdAnchor2.node());
+    CORRADE_COMPARE(third1.layout(), layoutHandle(layouter.handle(), 7, 1));
+    CORRADE_COMPARE(third2.layout(), layoutHandle(layouter.handle(), 8, 1));
+    CORRADE_COMPARE(third1, third1.layout());
+    CORRADE_COMPARE(third2, third2.layout());
+    CORRADE_VERIFY(layouter.isHandleValid(third1));
+    CORRADE_VERIFY(layouter.isHandleValid(third2));
+    CORRADE_VERIFY(!layouter.hasExplicitSnap(third1));
+    CORRADE_VERIFY(!layouter.hasExplicitSnap(third2));
+    CORRADE_COMPARE(layouter.node(third1), thirdAnchor1.node());
+    CORRADE_COMPARE(layouter.node(third2), thirdAnchor2.node());
+    CORRADE_COMPARE(layouter.flags(third1), SnapLayoutFlag::IgnoreOverflow);
+    CORRADE_COMPARE(layouter.flags(third2), SnapLayoutFlag::IgnoreOverflow);
+    CORRADE_COMPARE(layouter.childSnap(third1), Snap::Bottom);
+    CORRADE_COMPARE(layouter.childSnap(third2), Snap::Bottom);
 
     /* Verify the order arguments were actually used */
-    CORRADE_COMPARE(layouter.firstChild(root), second);
-    CORRADE_COMPARE(layouter.next(second), third);
-    CORRADE_COMPARE(layouter.next(third), first);
-    CORRADE_COMPARE(layouter.next(first), LayoutHandle::Null);
+    CORRADE_COMPARE(layouter.firstChild(root), second1);
+    CORRADE_COMPARE(layouter.next(second1), second2);
+    CORRADE_COMPARE(layouter.next(second2), third1);
+    CORRADE_COMPARE(layouter.next(third1), third2);
+    CORRADE_COMPARE(layouter.next(third2), first1);
+    CORRADE_COMPARE(layouter.next(first1), first2);
+    CORRADE_COMPARE(layouter.next(first2), LayoutHandle::Null);
 
     /* There should be no additional layouts created besides the ones known
        above */
-    CORRADE_COMPARE(layouter.usedCount(), 6);
+    CORRADE_COMPARE(layouter.usedCount(), 3 + 2*3);
 }
 
 void SnapLayoutTest::constructCreateLayoutImplicitLayouter() {
@@ -328,64 +467,109 @@ void SnapLayoutTest::constructCreateLayoutImplicitLayouter() {
     NodeHandle rootNode = ui.createNode({}, {});
     LayoutHandle root = ui.snapLayouter().add(rootNode);
 
-    Anchor firstAnchor{ui, rootNode, {}, {}};
-    Anchor secondAnchor{ui, rootNode, {}, {}};
-    Anchor thirdAnchor{ui, rootNode, {}, {}};
-    CORRADE_COMPARE(firstAnchor.node(), nodeHandle(4, 1));
-    CORRADE_COMPARE(secondAnchor.node(), nodeHandle(5, 1));
-    CORRADE_COMPARE(thirdAnchor.node(), nodeHandle(6, 1));
+    Anchor firstAnchor1{ui, rootNode, {}, {}};
+    Anchor firstAnchor2{ui, rootNode, {}, {}};
+    Anchor secondAnchor1{ui, rootNode, {}, {}};
+    Anchor secondAnchor2{ui, rootNode, {}, {}};
+    Anchor thirdAnchor1{ui, rootNode, {}, {}};
+    Anchor thirdAnchor2{ui, rootNode, {}, {}};
+    CORRADE_COMPARE(firstAnchor1.node(), nodeHandle(4, 1));
+    CORRADE_COMPARE(firstAnchor2.node(), nodeHandle(5, 1));
+    CORRADE_COMPARE(secondAnchor1.node(), nodeHandle(6, 1));
+    CORRADE_COMPARE(secondAnchor2.node(), nodeHandle(7, 1));
+    CORRADE_COMPARE(thirdAnchor1.node(), nodeHandle(8, 1));
+    CORRADE_COMPARE(thirdAnchor2.node(), nodeHandle(9, 1));
 
     /* No `before` layout */
-    SnapLayout first{firstAnchor, SnapLayoutFlag::IgnoreOverflowX};
-    CORRADE_COMPARE(&first.ui(), &ui);
-    CORRADE_COMPARE(&first.layouter(), &ui.snapLayouter());
-    CORRADE_COMPARE(first.node(), firstAnchor.node());
-    CORRADE_COMPARE(first, firstAnchor.node());
-    CORRADE_COMPARE(first.layout(), layoutHandle(ui.snapLayouter().handle(), 3, 1));
-    CORRADE_COMPARE(first, layoutHandle(ui.snapLayouter().handle(), 3, 1));
-    CORRADE_VERIFY(ui.snapLayouter().isHandleValid(first));
-    CORRADE_VERIFY(!ui.snapLayouter().hasExplicitSnap(first));
-    CORRADE_COMPARE(ui.snapLayouter().node(first), firstAnchor.node());
-    CORRADE_COMPARE(ui.snapLayouter().flags(first), SnapLayoutFlag::IgnoreOverflowX);
-    CORRADE_COMPARE(ui.snapLayouter().childSnap(first), Snap::Bottom);
+    SnapLayout first1{firstAnchor1, SnapLayoutFlag::IgnoreOverflowX};
+    SnapLayout first2{ui, firstAnchor2.node(), SnapLayoutFlag::IgnoreOverflowX};
+    CORRADE_COMPARE(&first1.ui(), &ui);
+    CORRADE_COMPARE(&first2.ui(), &ui);
+    CORRADE_COMPARE(&first1.layouter(), &ui.snapLayouter());
+    CORRADE_COMPARE(&first2.layouter(), &ui.snapLayouter());
+    CORRADE_COMPARE(first1.node(), firstAnchor1.node());
+    CORRADE_COMPARE(first2.node(), firstAnchor2.node());
+    CORRADE_COMPARE(first1, firstAnchor1.node());
+    CORRADE_COMPARE(first2, firstAnchor2.node());
+    CORRADE_COMPARE(first1.layout(), layoutHandle(ui.snapLayouter().handle(), 3, 1));
+    CORRADE_COMPARE(first2.layout(), layoutHandle(ui.snapLayouter().handle(), 4, 1));
+    CORRADE_COMPARE(first1, first1.layout());
+    CORRADE_COMPARE(first2, first2.layout());
+    CORRADE_VERIFY(ui.snapLayouter().isHandleValid(first1));
+    CORRADE_VERIFY(ui.snapLayouter().isHandleValid(first2));
+    CORRADE_VERIFY(!ui.snapLayouter().hasExplicitSnap(first1));
+    CORRADE_VERIFY(!ui.snapLayouter().hasExplicitSnap(first2));
+    CORRADE_COMPARE(ui.snapLayouter().node(first1), firstAnchor1.node());
+    CORRADE_COMPARE(ui.snapLayouter().node(first2), firstAnchor2.node());
+    CORRADE_COMPARE(ui.snapLayouter().flags(first1), SnapLayoutFlag::IgnoreOverflowX);
+    CORRADE_COMPARE(ui.snapLayouter().flags(first2), SnapLayoutFlag::IgnoreOverflowX);
+    CORRADE_COMPARE(ui.snapLayouter().childSnap(first1), Snap::Bottom);
+    CORRADE_COMPARE(ui.snapLayouter().childSnap(first2), Snap::Bottom);
 
     /* "Before" layout as a LayoutHandle */
-    SnapLayout second{secondAnchor, LayoutHandle{first}, SnapLayoutFlag::PropagateMarginY};
-    CORRADE_COMPARE(&second.ui(), &ui);
-    CORRADE_COMPARE(&second.layouter(), &ui.snapLayouter());
-    CORRADE_COMPARE(second.node(), secondAnchor.node());
-    CORRADE_COMPARE(second, secondAnchor.node());
-    CORRADE_COMPARE(second.layout(), layoutHandle(ui.snapLayouter().handle(), 4, 1));
-    CORRADE_COMPARE(second, layoutHandle(ui.snapLayouter().handle(), 4, 1));
-    CORRADE_VERIFY(ui.snapLayouter().isHandleValid(second));
-    CORRADE_VERIFY(!ui.snapLayouter().hasExplicitSnap(second));
-    CORRADE_COMPARE(ui.snapLayouter().node(second), secondAnchor.node());
-    CORRADE_COMPARE(ui.snapLayouter().flags(second), SnapLayoutFlag::PropagateMarginY);
-    CORRADE_COMPARE(ui.snapLayouter().childSnap(second), Snap::Bottom);
+    SnapLayout second1{secondAnchor1, LayoutHandle{first1}, SnapLayoutFlag::PropagateMarginY};
+    SnapLayout second2{ui, secondAnchor2.node(), LayoutHandle{first1}, SnapLayoutFlag::PropagateMarginY};
+    CORRADE_COMPARE(&second1.ui(), &ui);
+    CORRADE_COMPARE(&second2.ui(), &ui);
+    CORRADE_COMPARE(&second1.layouter(), &ui.snapLayouter());
+    CORRADE_COMPARE(&second2.layouter(), &ui.snapLayouter());
+    CORRADE_COMPARE(second1.node(), secondAnchor1.node());
+    CORRADE_COMPARE(second2.node(), secondAnchor2.node());
+    CORRADE_COMPARE(second1, secondAnchor1.node());
+    CORRADE_COMPARE(second2, secondAnchor2.node());
+    CORRADE_COMPARE(second1.layout(), layoutHandle(ui.snapLayouter().handle(), 5, 1));
+    CORRADE_COMPARE(second2.layout(), layoutHandle(ui.snapLayouter().handle(), 6, 1));
+    CORRADE_COMPARE(second1, second1.layout());
+    CORRADE_COMPARE(second2, second2.layout());
+    CORRADE_VERIFY(ui.snapLayouter().isHandleValid(second1));
+    CORRADE_VERIFY(ui.snapLayouter().isHandleValid(second2));
+    CORRADE_VERIFY(!ui.snapLayouter().hasExplicitSnap(second1));
+    CORRADE_VERIFY(!ui.snapLayouter().hasExplicitSnap(second2));
+    CORRADE_COMPARE(ui.snapLayouter().node(second1), secondAnchor1.node());
+    CORRADE_COMPARE(ui.snapLayouter().node(second2), secondAnchor2.node());
+    CORRADE_COMPARE(ui.snapLayouter().flags(second1), SnapLayoutFlag::PropagateMarginY);
+    CORRADE_COMPARE(ui.snapLayouter().flags(second2), SnapLayoutFlag::PropagateMarginY);
+    CORRADE_COMPARE(ui.snapLayouter().childSnap(second1), Snap::Bottom);
+    CORRADE_COMPARE(ui.snapLayouter().childSnap(second2), Snap::Bottom);
 
     /* "Before" layout as a LayouterDataHandle */
-    SnapLayout third{thirdAnchor, layoutHandleData(first), SnapLayoutFlag::IgnoreOverflow};
-    CORRADE_COMPARE(&third.ui(), &ui);
-    CORRADE_COMPARE(&third.layouter(), &ui.snapLayouter());
-    CORRADE_COMPARE(third.node(), thirdAnchor.node());
-    CORRADE_COMPARE(third, thirdAnchor.node());
-    CORRADE_COMPARE(third.layout(), layoutHandle(ui.snapLayouter().handle(), 5, 1));
-    CORRADE_COMPARE(third, layoutHandle(ui.snapLayouter().handle(), 5, 1));
-    CORRADE_VERIFY(ui.snapLayouter().isHandleValid(third));
-    CORRADE_VERIFY(!ui.snapLayouter().hasExplicitSnap(third));
-    CORRADE_COMPARE(ui.snapLayouter().node(third), thirdAnchor.node());
-    CORRADE_COMPARE(ui.snapLayouter().flags(third), SnapLayoutFlag::IgnoreOverflow);
-    CORRADE_COMPARE(ui.snapLayouter().childSnap(third), Snap::Bottom);
+    SnapLayout third1{thirdAnchor1, layoutHandleData(first1), SnapLayoutFlag::IgnoreOverflow};
+    SnapLayout third2{ui, thirdAnchor2.node(), layoutHandleData(first1), SnapLayoutFlag::IgnoreOverflow};
+    CORRADE_COMPARE(&third1.ui(), &ui);
+    CORRADE_COMPARE(&third2.ui(), &ui);
+    CORRADE_COMPARE(&third1.layouter(), &ui.snapLayouter());
+    CORRADE_COMPARE(&third2.layouter(), &ui.snapLayouter());
+    CORRADE_COMPARE(third1.node(), thirdAnchor1.node());
+    CORRADE_COMPARE(third2.node(), thirdAnchor2.node());
+    CORRADE_COMPARE(third1, thirdAnchor1.node());
+    CORRADE_COMPARE(third2, thirdAnchor2.node());
+    CORRADE_COMPARE(third1.layout(), layoutHandle(ui.snapLayouter().handle(), 7, 1));
+    CORRADE_COMPARE(third2.layout(), layoutHandle(ui.snapLayouter().handle(), 8, 1));
+    CORRADE_COMPARE(third1, third1.layout());
+    CORRADE_COMPARE(third2, third2.layout());
+    CORRADE_VERIFY(ui.snapLayouter().isHandleValid(third1));
+    CORRADE_VERIFY(ui.snapLayouter().isHandleValid(third2));
+    CORRADE_VERIFY(!ui.snapLayouter().hasExplicitSnap(third1));
+    CORRADE_VERIFY(!ui.snapLayouter().hasExplicitSnap(third2));
+    CORRADE_COMPARE(ui.snapLayouter().node(third1), thirdAnchor1.node());
+    CORRADE_COMPARE(ui.snapLayouter().node(third2), thirdAnchor2.node());
+    CORRADE_COMPARE(ui.snapLayouter().flags(third1), SnapLayoutFlag::IgnoreOverflow);
+    CORRADE_COMPARE(ui.snapLayouter().flags(third2), SnapLayoutFlag::IgnoreOverflow);
+    CORRADE_COMPARE(ui.snapLayouter().childSnap(third1), Snap::Bottom);
+    CORRADE_COMPARE(ui.snapLayouter().childSnap(third2), Snap::Bottom);
 
     /* Verify the order arguments were actually used */
-    CORRADE_COMPARE(ui.snapLayouter().firstChild(root), second);
-    CORRADE_COMPARE(ui.snapLayouter().next(second), third);
-    CORRADE_COMPARE(ui.snapLayouter().next(third), first);
-    CORRADE_COMPARE(ui.snapLayouter().next(first), LayoutHandle::Null);
+    CORRADE_COMPARE(ui.snapLayouter().firstChild(root), second1);
+    CORRADE_COMPARE(ui.snapLayouter().next(second1), second2);
+    CORRADE_COMPARE(ui.snapLayouter().next(second2), third1);
+    CORRADE_COMPARE(ui.snapLayouter().next(third1), third2);
+    CORRADE_COMPARE(ui.snapLayouter().next(third2), first1);
+    CORRADE_COMPARE(ui.snapLayouter().next(first1), first2);
+    CORRADE_COMPARE(ui.snapLayouter().next(first2), LayoutHandle::Null);
 
     /* There should be no additional layouts created besides the ones known
        above */
-    CORRADE_COMPARE(ui.snapLayouter().usedCount(), 6);
+    CORRADE_COMPARE(ui.snapLayouter().usedCount(), 3 + 2*3);
 }
 
 template<class T> void SnapLayoutTest::constructCreateLayoutExplicitSnap() {
@@ -407,46 +591,78 @@ template<class T> void SnapLayoutTest::constructCreateLayoutExplicitSnap() {
     NodeHandle targetNode = ui.createNode({}, {});
     LayoutHandle target = layouter.add(targetNode);
 
-    typename SnapLayoutTraits<T>::AnchorType firstAnchor{ui, {}, {}};
-    typename SnapLayoutTraits<T>::AnchorType secondAnchor{ui, {}, {}};
-    CORRADE_COMPARE(firstAnchor.node(), nodeHandle(4, 1));
-    CORRADE_COMPARE(secondAnchor.node(), nodeHandle(5, 1));
+    typename SnapLayoutTraits<T>::AnchorType firstAnchor1{ui, {}, {}};
+    typename SnapLayoutTraits<T>::AnchorType firstAnchor2{ui, {}, {}};
+    typename SnapLayoutTraits<T>::AnchorType secondAnchor1{ui, {}, {}};
+    typename SnapLayoutTraits<T>::AnchorType secondAnchor2{ui, {}, {}};
+    CORRADE_COMPARE(firstAnchor1.node(), nodeHandle(4, 1));
+    CORRADE_COMPARE(firstAnchor2.node(), nodeHandle(5, 1));
+    CORRADE_COMPARE(secondAnchor1.node(), nodeHandle(6, 1));
+    CORRADE_COMPARE(secondAnchor2.node(), nodeHandle(7, 1));
 
     /* LayoutHandle snap target */
-    T first{layouter, firstAnchor, Snap::Top|Snap::NoPad, target, SnapLayoutFlag::IgnoreOverflowX};
-    CORRADE_COMPARE(&first.ui(), &ui);
-    CORRADE_COMPARE(&first.layouter(), &layouter);
-    CORRADE_COMPARE(first.node(), firstAnchor.node());
-    CORRADE_COMPARE(first, firstAnchor.node());
-    CORRADE_COMPARE(first.layout(), layoutHandle(layouter.handle(), 3, 1));
-    CORRADE_COMPARE(first, layoutHandle(layouter.handle(), 3, 1));
-    CORRADE_VERIFY(layouter.isHandleValid(first));
-    CORRADE_VERIFY(layouter.hasExplicitSnap(first));
-    CORRADE_COMPARE(layouter.node(first), firstAnchor.node());
-    CORRADE_COMPARE(layouter.flags(first), SnapLayoutFlag::IgnoreOverflowX);
-    CORRADE_COMPARE(layouter.explicitSnap(first), Snap::Top|Snap::NoPad);
-    CORRADE_COMPARE(layouter.explicitSnapTarget(first), target);
-    CORRADE_COMPARE(layouter.childSnap(first), Snap::Bottom);
+    T first1{layouter, firstAnchor1, Snap::Top|Snap::NoPad, target, SnapLayoutFlag::IgnoreOverflowX};
+    T first2{ui, layouter, firstAnchor2.node(), Snap::Top|Snap::NoPad, target, SnapLayoutFlag::IgnoreOverflowX};
+    CORRADE_COMPARE(&first1.ui(), &ui);
+    CORRADE_COMPARE(&first2.ui(), &ui);
+    CORRADE_COMPARE(&first1.layouter(), &layouter);
+    CORRADE_COMPARE(&first2.layouter(), &layouter);
+    CORRADE_COMPARE(first1.node(), firstAnchor1.node());
+    CORRADE_COMPARE(first2.node(), firstAnchor2.node());
+    CORRADE_COMPARE(first1, firstAnchor1.node());
+    CORRADE_COMPARE(first2, firstAnchor2.node());
+    CORRADE_COMPARE(first1.layout(), layoutHandle(layouter.handle(), 3, 1));
+    CORRADE_COMPARE(first2.layout(), layoutHandle(layouter.handle(), 4, 1));
+    CORRADE_COMPARE(first1, first1.layout());
+    CORRADE_COMPARE(first2, first2.layout());
+    CORRADE_VERIFY(layouter.isHandleValid(first1));
+    CORRADE_VERIFY(layouter.isHandleValid(first2));
+    CORRADE_VERIFY(layouter.hasExplicitSnap(first1));
+    CORRADE_VERIFY(layouter.hasExplicitSnap(first2));
+    CORRADE_COMPARE(layouter.node(first1), firstAnchor1.node());
+    CORRADE_COMPARE(layouter.node(first2), firstAnchor2.node());
+    CORRADE_COMPARE(layouter.flags(first1), SnapLayoutFlag::IgnoreOverflowX);
+    CORRADE_COMPARE(layouter.flags(first2), SnapLayoutFlag::IgnoreOverflowX);
+    CORRADE_COMPARE(layouter.explicitSnap(first1), Snap::Top|Snap::NoPad);
+    CORRADE_COMPARE(layouter.explicitSnap(first2), Snap::Top|Snap::NoPad);
+    CORRADE_COMPARE(layouter.explicitSnapTarget(first1), target);
+    CORRADE_COMPARE(layouter.explicitSnapTarget(first2), target);
+    CORRADE_COMPARE(layouter.childSnap(first1), Snap::Bottom);
+    CORRADE_COMPARE(layouter.childSnap(first2), Snap::Bottom);
 
     /* LayouterDataHandle snap target */
-    T second{layouter, secondAnchor, Snap::BottomRight, layoutHandleData(target), SnapLayoutFlag::PropagateMarginY};
-    CORRADE_COMPARE(&second.ui(), &ui);
-    CORRADE_COMPARE(&second.layouter(), &layouter);
-    CORRADE_COMPARE(second.node(), secondAnchor.node());
-    CORRADE_COMPARE(second, secondAnchor.node());
-    CORRADE_COMPARE(second.layout(), layoutHandle(layouter.handle(), 4, 1));
-    CORRADE_COMPARE(second, layoutHandle(layouter.handle(), 4, 1));
-    CORRADE_VERIFY(layouter.isHandleValid(second));
-    CORRADE_VERIFY(layouter.hasExplicitSnap(second));
-    CORRADE_COMPARE(layouter.node(second), secondAnchor.node());
-    CORRADE_COMPARE(layouter.flags(second), SnapLayoutFlag::PropagateMarginY);
-    CORRADE_COMPARE(layouter.explicitSnap(second), Snap::BottomRight);
-    CORRADE_COMPARE(layouter.explicitSnapTarget(second), target);
-    CORRADE_COMPARE(layouter.childSnap(second), Snap::Bottom);
+    T second1{layouter, secondAnchor1, Snap::BottomRight, layoutHandleData(target), SnapLayoutFlag::PropagateMarginY};
+    T second2{ui, layouter, secondAnchor2.node(), Snap::BottomRight, layoutHandleData(target), SnapLayoutFlag::PropagateMarginY};
+    CORRADE_COMPARE(&second1.ui(), &ui);
+    CORRADE_COMPARE(&second2.ui(), &ui);
+    CORRADE_COMPARE(&second1.layouter(), &layouter);
+    CORRADE_COMPARE(&second2.layouter(), &layouter);
+    CORRADE_COMPARE(second1.node(), secondAnchor1.node());
+    CORRADE_COMPARE(second2.node(), secondAnchor2.node());
+    CORRADE_COMPARE(second1, secondAnchor1.node());
+    CORRADE_COMPARE(second2, secondAnchor2.node());
+    CORRADE_COMPARE(second1.layout(), layoutHandle(layouter.handle(), 5, 1));
+    CORRADE_COMPARE(second2.layout(), layoutHandle(layouter.handle(), 6, 1));
+    CORRADE_COMPARE(second1, second1.layout());
+    CORRADE_COMPARE(second2, second2.layout());
+    CORRADE_VERIFY(layouter.isHandleValid(second1));
+    CORRADE_VERIFY(layouter.isHandleValid(second2));
+    CORRADE_VERIFY(layouter.hasExplicitSnap(second1));
+    CORRADE_VERIFY(layouter.hasExplicitSnap(second2));
+    CORRADE_COMPARE(layouter.node(second1), secondAnchor1.node());
+    CORRADE_COMPARE(layouter.node(second2), secondAnchor2.node());
+    CORRADE_COMPARE(layouter.flags(second1), SnapLayoutFlag::PropagateMarginY);
+    CORRADE_COMPARE(layouter.flags(second2), SnapLayoutFlag::PropagateMarginY);
+    CORRADE_COMPARE(layouter.explicitSnap(second1), Snap::BottomRight);
+    CORRADE_COMPARE(layouter.explicitSnap(second2), Snap::BottomRight);
+    CORRADE_COMPARE(layouter.explicitSnapTarget(second1), target);
+    CORRADE_COMPARE(layouter.explicitSnapTarget(second2), target);
+    CORRADE_COMPARE(layouter.childSnap(second1), Snap::Bottom);
+    CORRADE_COMPARE(layouter.childSnap(second2), Snap::Bottom);
 
     /* There should be no additional layouts created besides the ones known
        above */
-    CORRADE_COMPARE(layouter.usedCount(), 5);
+    CORRADE_COMPARE(layouter.usedCount(), 3 + 2*2);
 }
 
 void SnapLayoutTest::constructCreateLayoutExplicitSnapImplicitLayouter() {
@@ -466,46 +682,78 @@ void SnapLayoutTest::constructCreateLayoutExplicitSnapImplicitLayouter() {
     NodeHandle targetNode = ui.createNode({}, {});
     LayoutHandle target = ui.snapLayouter().add(targetNode);
 
-    Anchor firstAnchor{ui, {}, {}};
-    Anchor secondAnchor{ui, {}, {}};
-    CORRADE_COMPARE(firstAnchor.node(), nodeHandle(4, 1));
-    CORRADE_COMPARE(secondAnchor.node(), nodeHandle(5, 1));
+    Anchor firstAnchor1{ui, {}, {}};
+    Anchor firstAnchor2{ui, {}, {}};
+    Anchor secondAnchor1{ui, {}, {}};
+    Anchor secondAnchor2{ui, {}, {}};
+    CORRADE_COMPARE(firstAnchor1.node(), nodeHandle(4, 1));
+    CORRADE_COMPARE(firstAnchor2.node(), nodeHandle(5, 1));
+    CORRADE_COMPARE(secondAnchor1.node(), nodeHandle(6, 1));
+    CORRADE_COMPARE(secondAnchor2.node(), nodeHandle(7, 1));
 
     /* LayoutHandle snap target */
-    SnapLayout first{firstAnchor, Snap::Top|Snap::NoPad, target, SnapLayoutFlag::IgnoreOverflowX};
-    CORRADE_COMPARE(&first.ui(), &ui);
-    CORRADE_COMPARE(&first.layouter(), &ui.snapLayouter());
-    CORRADE_COMPARE(first.node(), firstAnchor.node());
-    CORRADE_COMPARE(first, firstAnchor.node());
-    CORRADE_COMPARE(first.layout(), layoutHandle(ui.snapLayouter().handle(), 3, 1));
-    CORRADE_COMPARE(first, layoutHandle(ui.snapLayouter().handle(), 3, 1));
-    CORRADE_VERIFY(ui.snapLayouter().isHandleValid(first));
-    CORRADE_VERIFY(ui.snapLayouter().hasExplicitSnap(first));
-    CORRADE_COMPARE(ui.snapLayouter().node(first), firstAnchor.node());
-    CORRADE_COMPARE(ui.snapLayouter().flags(first), SnapLayoutFlag::IgnoreOverflowX);
-    CORRADE_COMPARE(ui.snapLayouter().explicitSnap(first), Snap::Top|Snap::NoPad);
-    CORRADE_COMPARE(ui.snapLayouter().explicitSnapTarget(first), target);
-    CORRADE_COMPARE(ui.snapLayouter().childSnap(first), Snap::Bottom);
+    SnapLayout first1{firstAnchor1, Snap::Top|Snap::NoPad, target, SnapLayoutFlag::IgnoreOverflowX};
+    SnapLayout first2{ui, firstAnchor2.node(), Snap::Top|Snap::NoPad, target, SnapLayoutFlag::IgnoreOverflowX};
+    CORRADE_COMPARE(&first1.ui(), &ui);
+    CORRADE_COMPARE(&first2.ui(), &ui);
+    CORRADE_COMPARE(&first1.layouter(), &ui.snapLayouter());
+    CORRADE_COMPARE(&first2.layouter(), &ui.snapLayouter());
+    CORRADE_COMPARE(first1.node(), firstAnchor1.node());
+    CORRADE_COMPARE(first2.node(), firstAnchor2.node());
+    CORRADE_COMPARE(first1, firstAnchor1.node());
+    CORRADE_COMPARE(first2, firstAnchor2.node());
+    CORRADE_COMPARE(first1.layout(), layoutHandle(ui.snapLayouter().handle(), 3, 1));
+    CORRADE_COMPARE(first2.layout(), layoutHandle(ui.snapLayouter().handle(), 4, 1));
+    CORRADE_COMPARE(first1, first1.layout());
+    CORRADE_COMPARE(first2, first2.layout());
+    CORRADE_VERIFY(ui.snapLayouter().isHandleValid(first1));
+    CORRADE_VERIFY(ui.snapLayouter().isHandleValid(first2));
+    CORRADE_VERIFY(ui.snapLayouter().hasExplicitSnap(first1));
+    CORRADE_VERIFY(ui.snapLayouter().hasExplicitSnap(first2));
+    CORRADE_COMPARE(ui.snapLayouter().node(first1), firstAnchor1.node());
+    CORRADE_COMPARE(ui.snapLayouter().node(first2), firstAnchor2.node());
+    CORRADE_COMPARE(ui.snapLayouter().flags(first1), SnapLayoutFlag::IgnoreOverflowX);
+    CORRADE_COMPARE(ui.snapLayouter().flags(first2), SnapLayoutFlag::IgnoreOverflowX);
+    CORRADE_COMPARE(ui.snapLayouter().explicitSnap(first1), Snap::Top|Snap::NoPad);
+    CORRADE_COMPARE(ui.snapLayouter().explicitSnap(first2), Snap::Top|Snap::NoPad);
+    CORRADE_COMPARE(ui.snapLayouter().explicitSnapTarget(first1), target);
+    CORRADE_COMPARE(ui.snapLayouter().explicitSnapTarget(first2), target);
+    CORRADE_COMPARE(ui.snapLayouter().childSnap(first1), Snap::Bottom);
+    CORRADE_COMPARE(ui.snapLayouter().childSnap(first2), Snap::Bottom);
 
     /* LayouterDataHandle snap target */
-    SnapLayout second{secondAnchor, Snap::BottomRight, layoutHandleData(target), SnapLayoutFlag::PropagateMarginY};
-    CORRADE_COMPARE(&second.ui(), &ui);
-    CORRADE_COMPARE(&second.layouter(), &ui.snapLayouter());
-    CORRADE_COMPARE(second.node(), secondAnchor.node());
-    CORRADE_COMPARE(second, secondAnchor.node());
-    CORRADE_COMPARE(second.layout(), layoutHandle(ui.snapLayouter().handle(), 4, 1));
-    CORRADE_COMPARE(second, layoutHandle(ui.snapLayouter().handle(), 4, 1));
-    CORRADE_VERIFY(ui.snapLayouter().isHandleValid(second));
-    CORRADE_VERIFY(ui.snapLayouter().hasExplicitSnap(second));
-    CORRADE_COMPARE(ui.snapLayouter().node(second), secondAnchor.node());
-    CORRADE_COMPARE(ui.snapLayouter().flags(second), SnapLayoutFlag::PropagateMarginY);
-    CORRADE_COMPARE(ui.snapLayouter().explicitSnap(second), Snap::BottomRight);
-    CORRADE_COMPARE(ui.snapLayouter().explicitSnapTarget(second), target);
-    CORRADE_COMPARE(ui.snapLayouter().childSnap(second), Snap::Bottom);
+    SnapLayout second1{secondAnchor1, Snap::BottomRight, layoutHandleData(target), SnapLayoutFlag::PropagateMarginY};
+    SnapLayout second2{ui, secondAnchor2.node(), Snap::BottomRight, layoutHandleData(target), SnapLayoutFlag::PropagateMarginY};
+    CORRADE_COMPARE(&second1.ui(), &ui);
+    CORRADE_COMPARE(&second2.ui(), &ui);
+    CORRADE_COMPARE(&second1.layouter(), &ui.snapLayouter());
+    CORRADE_COMPARE(&second2.layouter(), &ui.snapLayouter());
+    CORRADE_COMPARE(second1.node(), secondAnchor1.node());
+    CORRADE_COMPARE(second2.node(), secondAnchor2.node());
+    CORRADE_COMPARE(second1, secondAnchor1.node());
+    CORRADE_COMPARE(second2, secondAnchor2.node());
+    CORRADE_COMPARE(second1.layout(), layoutHandle(ui.snapLayouter().handle(), 5, 1));
+    CORRADE_COMPARE(second2.layout(), layoutHandle(ui.snapLayouter().handle(), 6, 1));
+    CORRADE_COMPARE(second1, second1.layout());
+    CORRADE_COMPARE(second2, second2.layout());
+    CORRADE_VERIFY(ui.snapLayouter().isHandleValid(second1));
+    CORRADE_VERIFY(ui.snapLayouter().isHandleValid(second2));
+    CORRADE_VERIFY(ui.snapLayouter().hasExplicitSnap(second1));
+    CORRADE_VERIFY(ui.snapLayouter().hasExplicitSnap(second2));
+    CORRADE_COMPARE(ui.snapLayouter().node(second1), secondAnchor1.node());
+    CORRADE_COMPARE(ui.snapLayouter().node(second2), secondAnchor2.node());
+    CORRADE_COMPARE(ui.snapLayouter().flags(second1), SnapLayoutFlag::PropagateMarginY);
+    CORRADE_COMPARE(ui.snapLayouter().flags(second2), SnapLayoutFlag::PropagateMarginY);
+    CORRADE_COMPARE(ui.snapLayouter().explicitSnap(second1), Snap::BottomRight);
+    CORRADE_COMPARE(ui.snapLayouter().explicitSnap(second2), Snap::BottomRight);
+    CORRADE_COMPARE(ui.snapLayouter().explicitSnapTarget(second1), target);
+    CORRADE_COMPARE(ui.snapLayouter().explicitSnapTarget(second2), target);
+    CORRADE_COMPARE(ui.snapLayouter().childSnap(second1), Snap::Bottom);
+    CORRADE_COMPARE(ui.snapLayouter().childSnap(second2), Snap::Bottom);
 
     /* There should be no additional layouts created besides the ones known
        above */
-    CORRADE_COMPARE(ui.snapLayouter().usedCount(), 5);
+    CORRADE_COMPARE(ui.snapLayouter().usedCount(), 3 + 2*2);
 }
 
 template<class T> void SnapLayoutTest::constructInvalid() {
@@ -561,6 +809,13 @@ template<class T> void SnapLayoutTest::constructInvalid() {
     T{layouterInvalidHandle, anchor, SnapLayoutFlags{}};
     T{layouterInvalidHandle, anchor, Snaps{}, LayoutHandle::Null};
     T{layouterInvalidHandle, anchor, Snaps{}, LayouterDataHandle::Null};
+    /* Same, but with a node instead of an anchor */
+    T{ui, layouterInvalidHandle, anchor.node()};
+    T{ui, layouterInvalidHandle, anchor.node(), LayoutHandle::Null};
+    T{ui, layouterInvalidHandle, anchor.node(), LayouterDataHandle::Null};
+    T{ui, layouterInvalidHandle, anchor.node(), SnapLayoutFlags{}};
+    T{ui, layouterInvalidHandle, anchor.node(), Snaps{}, LayoutHandle::Null};
+    T{ui, layouterInvalidHandle, anchor.node(), Snaps{}, LayouterDataHandle::Null};
     /* Valid handle, but different instance */
     T{layouterAnotherUi, anchor};
     T{layouterAnotherUi, anchor, LayoutHandle::Null};
@@ -568,13 +823,26 @@ template<class T> void SnapLayoutTest::constructInvalid() {
     T{layouterAnotherUi, anchor, SnapLayoutFlags{}};
     T{layouterAnotherUi, anchor, Snaps{}, LayoutHandle::Null};
     T{layouterAnotherUi, anchor, Snaps{}, LayouterDataHandle::Null};
-    /* Layout already present. The layouter + anchor constructor is the only
-       which allows this. */
+    /* Same, but with a node instead of an anchor */
+    T{ui, layouterAnotherUi, anchor.node()};
+    T{ui, layouterAnotherUi, anchor.node(), LayoutHandle::Null};
+    T{ui, layouterAnotherUi, anchor.node(), LayouterDataHandle::Null};
+    T{ui, layouterAnotherUi, anchor.node(), SnapLayoutFlags{}};
+    T{ui, layouterAnotherUi, anchor.node(), Snaps{}, LayoutHandle::Null};
+    T{ui, layouterAnotherUi, anchor.node(), Snaps{}, LayouterDataHandle::Null};
+    /* Layout already present. The layouter + anchor / ui + layouter + node
+       constructor is the only which allows this. */
     T{layouter, anchorLayoutAlreadyPresent, LayoutHandle::Null};
     T{layouter, anchorLayoutAlreadyPresent, LayouterDataHandle::Null};
     T{layouter, anchorLayoutAlreadyPresent, SnapLayoutFlags{}};
     T{layouter, anchorLayoutAlreadyPresent, Snaps{}, LayoutHandle::Null};
     T{layouter, anchorLayoutAlreadyPresent, Snaps{}, LayouterDataHandle::Null};
+    /* Same, but with a node instead of an anchor */
+    T{ui, layouter, anchorLayoutAlreadyPresent.node(), LayoutHandle::Null};
+    T{ui, layouter, anchorLayoutAlreadyPresent.node(), LayouterDataHandle::Null};
+    T{ui, layouter, anchorLayoutAlreadyPresent.node(), SnapLayoutFlags{}};
+    T{ui, layouter, anchorLayoutAlreadyPresent.node(), Snaps{}, LayoutHandle::Null};
+    T{ui, layouter, anchorLayoutAlreadyPresent.node(), Snaps{}, LayouterDataHandle::Null};
     CORRADE_COMPARE_AS(out,
         "Ui::AbstractSnapLayout: layouter and anchor not part of the same UI\n"
         "Ui::AbstractSnapLayout: layouter and anchor not part of the same UI\n"
@@ -583,12 +851,32 @@ template<class T> void SnapLayoutTest::constructInvalid() {
         "Ui::AbstractSnapLayout: layouter and anchor not part of the same UI\n"
         "Ui::AbstractSnapLayout: layouter and anchor not part of the same UI\n"
 
+        "Ui::AbstractSnapLayout: layouter not part of the UI\n"
+        "Ui::AbstractSnapLayout: layouter not part of the UI\n"
+        "Ui::AbstractSnapLayout: layouter not part of the UI\n"
+        "Ui::AbstractSnapLayout: layouter not part of the UI\n"
+        "Ui::AbstractSnapLayout: layouter not part of the UI\n"
+        "Ui::AbstractSnapLayout: layouter not part of the UI\n"
+
         "Ui::AbstractSnapLayout: layouter and anchor not part of the same UI\n"
         "Ui::AbstractSnapLayout: layouter and anchor not part of the same UI\n"
         "Ui::AbstractSnapLayout: layouter and anchor not part of the same UI\n"
         "Ui::AbstractSnapLayout: layouter and anchor not part of the same UI\n"
         "Ui::AbstractSnapLayout: layouter and anchor not part of the same UI\n"
         "Ui::AbstractSnapLayout: layouter and anchor not part of the same UI\n"
+
+        "Ui::AbstractSnapLayout: layouter not part of the UI\n"
+        "Ui::AbstractSnapLayout: layouter not part of the UI\n"
+        "Ui::AbstractSnapLayout: layouter not part of the UI\n"
+        "Ui::AbstractSnapLayout: layouter not part of the UI\n"
+        "Ui::AbstractSnapLayout: layouter not part of the UI\n"
+        "Ui::AbstractSnapLayout: layouter not part of the UI\n"
+
+        "Ui::AbstractSnapLayout: Ui::NodeHandle(0x3, 0x4) already has Ui::LayoutHandle({0x2, 0x3}, {0x1, 0x2}) assigned\n"
+        "Ui::AbstractSnapLayout: Ui::NodeHandle(0x3, 0x4) already has Ui::LayoutHandle({0x2, 0x3}, {0x1, 0x2}) assigned\n"
+        "Ui::AbstractSnapLayout: Ui::NodeHandle(0x3, 0x4) already has Ui::LayoutHandle({0x2, 0x3}, {0x1, 0x2}) assigned\n"
+        "Ui::AbstractSnapLayout: Ui::NodeHandle(0x3, 0x4) already has Ui::LayoutHandle({0x2, 0x3}, {0x1, 0x2}) assigned\n"
+        "Ui::AbstractSnapLayout: Ui::NodeHandle(0x3, 0x4) already has Ui::LayoutHandle({0x2, 0x3}, {0x1, 0x2}) assigned\n"
 
         "Ui::AbstractSnapLayout: Ui::NodeHandle(0x3, 0x4) already has Ui::LayoutHandle({0x2, 0x3}, {0x1, 0x2}) assigned\n"
         "Ui::AbstractSnapLayout: Ui::NodeHandle(0x3, 0x4) already has Ui::LayoutHandle({0x2, 0x3}, {0x1, 0x2}) assigned\n"
@@ -636,13 +924,26 @@ void SnapLayoutTest::constructInvalidImplicitLayouter() {
     SnapLayout{anchorUiNoSnapLayouter, SnapLayoutFlags{}};
     SnapLayout{anchorUiNoSnapLayouter, Snaps{}, LayoutHandle::Null};
     SnapLayout{anchorUiNoSnapLayouter, Snaps{}, LayouterDataHandle::Null};
-    /* Layout already present. The layouter + anchor constructor is the only
-       which allows this. */
+    /* Same, but with a node instead of an anchor */
+    SnapLayout{uiNoSnapLayouter, anchorUiNoSnapLayouter.node()};
+    SnapLayout{uiNoSnapLayouter, anchorUiNoSnapLayouter.node(), LayoutHandle::Null};
+    SnapLayout{uiNoSnapLayouter, anchorUiNoSnapLayouter.node(), LayouterDataHandle::Null};
+    SnapLayout{uiNoSnapLayouter, anchorUiNoSnapLayouter.node(), SnapLayoutFlags{}};
+    SnapLayout{uiNoSnapLayouter, anchorUiNoSnapLayouter.node(), Snaps{}, LayoutHandle::Null};
+    SnapLayout{uiNoSnapLayouter, anchorUiNoSnapLayouter.node(), Snaps{}, LayouterDataHandle::Null};
+    /* Layout already present. The layouter + anchor / ui + layouter + node
+       constructor is the only which allows this. */
     SnapLayout{anchorLayoutAlreadyPresent, LayoutHandle::Null};
     SnapLayout{anchorLayoutAlreadyPresent, LayouterDataHandle::Null};
     SnapLayout{anchorLayoutAlreadyPresent, SnapLayoutFlags{}};
     SnapLayout{anchorLayoutAlreadyPresent, Snaps{}, LayoutHandle::Null};
     SnapLayout{anchorLayoutAlreadyPresent, Snaps{}, LayouterDataHandle::Null};
+    /* Same, but with a node instead of an anchor */
+    SnapLayout{ui, anchorLayoutAlreadyPresent.node(), LayoutHandle::Null};
+    SnapLayout{ui, anchorLayoutAlreadyPresent.node(), LayouterDataHandle::Null};
+    SnapLayout{ui, anchorLayoutAlreadyPresent.node(), SnapLayoutFlags{}};
+    SnapLayout{ui, anchorLayoutAlreadyPresent.node(), Snaps{}, LayoutHandle::Null};
+    SnapLayout{ui, anchorLayoutAlreadyPresent.node(), Snaps{}, LayouterDataHandle::Null};
     CORRADE_COMPARE_AS(out,
         "Ui::BasicSnapLayout: SnapLayouter not present in the UI\n"
         "Ui::BasicSnapLayout: SnapLayouter not present in the UI\n"
@@ -650,6 +951,19 @@ void SnapLayoutTest::constructInvalidImplicitLayouter() {
         "Ui::BasicSnapLayout: SnapLayouter not present in the UI\n"
         "Ui::BasicSnapLayout: SnapLayouter not present in the UI\n"
         "Ui::BasicSnapLayout: SnapLayouter not present in the UI\n"
+
+        "Ui::BasicSnapLayout: SnapLayouter not present in the UI\n"
+        "Ui::BasicSnapLayout: SnapLayouter not present in the UI\n"
+        "Ui::BasicSnapLayout: SnapLayouter not present in the UI\n"
+        "Ui::BasicSnapLayout: SnapLayouter not present in the UI\n"
+        "Ui::BasicSnapLayout: SnapLayouter not present in the UI\n"
+        "Ui::BasicSnapLayout: SnapLayouter not present in the UI\n"
+
+        "Ui::AbstractSnapLayout: Ui::NodeHandle(0x3, 0x4) already has Ui::LayoutHandle({0x2, 0x3}, {0x1, 0x2}) assigned\n"
+        "Ui::AbstractSnapLayout: Ui::NodeHandle(0x3, 0x4) already has Ui::LayoutHandle({0x2, 0x3}, {0x1, 0x2}) assigned\n"
+        "Ui::AbstractSnapLayout: Ui::NodeHandle(0x3, 0x4) already has Ui::LayoutHandle({0x2, 0x3}, {0x1, 0x2}) assigned\n"
+        "Ui::AbstractSnapLayout: Ui::NodeHandle(0x3, 0x4) already has Ui::LayoutHandle({0x2, 0x3}, {0x1, 0x2}) assigned\n"
+        "Ui::AbstractSnapLayout: Ui::NodeHandle(0x3, 0x4) already has Ui::LayoutHandle({0x2, 0x3}, {0x1, 0x2}) assigned\n"
 
         "Ui::AbstractSnapLayout: Ui::NodeHandle(0x3, 0x4) already has Ui::LayoutHandle({0x2, 0x3}, {0x1, 0x2}) assigned\n"
         "Ui::AbstractSnapLayout: Ui::NodeHandle(0x3, 0x4) already has Ui::LayoutHandle({0x2, 0x3}, {0x1, 0x2}) assigned\n"

@@ -98,33 +98,63 @@ AbstractSnapLayout AbstractSnapLayout::sibling(SnapLayouter& layouter, const Sna
     return AbstractSnapLayout{ui, &layouter, child, layoutHandleData(layout)};
 }
 
-AbstractSnapLayout::AbstractSnapLayout(NoInitT, const AbstractAnchor& anchor): _ui{&anchor.ui()}, _node{anchor.node()} {}
+AbstractSnapLayout::AbstractSnapLayout(NoInitT, AbstractUserInterface& ui, const NodeHandle node): _ui{&ui}, _node{node} {}
 
-AbstractSnapLayout::AbstractSnapLayout(SnapLayouter& layouter, const AbstractAnchor& anchor): AbstractSnapLayout{NoInit, anchor} {
+AbstractSnapLayout::AbstractSnapLayout(AbstractUserInterface& ui, SnapLayouter& layouter, const NodeHandle node): AbstractSnapLayout{NoInit, ui, node} {
+    CORRADE_ASSERT(ui.isHandleValid(layouter.handle()) && &ui.layouter(layouter.handle()) == &layouter,
+        "Ui::AbstractSnapLayout: layouter not part of the UI", );
+    addLayout(layouter);
+}
+
+AbstractSnapLayout::AbstractSnapLayout(SnapLayouter& layouter, const AbstractAnchor& anchor): AbstractSnapLayout{NoInit, anchor.ui(), anchor.node()} {
     CORRADE_ASSERT(_ui->isHandleValid(layouter.handle()) && &_ui->layouter(layouter.handle()) == &layouter,
         "Ui::AbstractSnapLayout: layouter and anchor not part of the same UI", );
     addLayout(layouter);
 }
 
-AbstractSnapLayout::AbstractSnapLayout(SnapLayouter& layouter, const AbstractAnchor& anchor, const LayoutHandle before, const SnapLayoutFlags flags): AbstractSnapLayout{NoInit, anchor} {
+AbstractSnapLayout::AbstractSnapLayout(AbstractUserInterface& ui, SnapLayouter& layouter, const NodeHandle node, const LayoutHandle before, const SnapLayoutFlags flags): AbstractSnapLayout{NoInit, ui, node} {
+    CORRADE_ASSERT(ui.isHandleValid(layouter.handle()) && &ui.layouter(layouter.handle()) == &layouter,
+        "Ui::AbstractSnapLayout: layouter not part of the UI", );
+    addLayout(layouter, before, flags);
+}
+
+AbstractSnapLayout::AbstractSnapLayout(SnapLayouter& layouter, const AbstractAnchor& anchor, const LayoutHandle before, const SnapLayoutFlags flags): AbstractSnapLayout{NoInit, anchor.ui(), anchor.node()} {
     CORRADE_ASSERT(_ui->isHandleValid(layouter.handle()) && &_ui->layouter(layouter.handle()) == &layouter,
         "Ui::AbstractSnapLayout: layouter and anchor not part of the same UI", );
     addLayout(layouter, before, flags);
 }
 
-AbstractSnapLayout::AbstractSnapLayout(SnapLayouter& layouter, const AbstractAnchor& anchor, const LayouterDataHandle before, const SnapLayoutFlags flags): _ui{&anchor.ui()}, _layouter{&layouter}, _node{anchor.node()} {
+AbstractSnapLayout::AbstractSnapLayout(AbstractUserInterface& ui, SnapLayouter& layouter, const NodeHandle node, const LayouterDataHandle before, const SnapLayoutFlags flags): AbstractSnapLayout{NoInit, ui, node} {
+    CORRADE_ASSERT(ui.isHandleValid(layouter.handle()) && &ui.layouter(layouter.handle()) == &layouter,
+        "Ui::AbstractSnapLayout: layouter not part of the UI", );
+    addLayout(layouter, before, flags);
+}
+
+AbstractSnapLayout::AbstractSnapLayout(SnapLayouter& layouter, const AbstractAnchor& anchor, const LayouterDataHandle before, const SnapLayoutFlags flags): AbstractSnapLayout{NoInit, anchor.ui(), anchor.node()} {
     CORRADE_ASSERT(_ui->isHandleValid(layouter.handle()) && &_ui->layouter(layouter.handle()) == &layouter,
         "Ui::AbstractSnapLayout: layouter and anchor not part of the same UI", );
     addLayout(layouter, before, flags);
 }
 
-AbstractSnapLayout::AbstractSnapLayout(SnapLayouter& layouter, const AbstractAnchor& anchor, const Snaps snap, const LayoutHandle snapTarget, const SnapLayoutFlags flags): _ui{&anchor.ui()}, _layouter{&layouter}, _node{anchor.node()} {
+AbstractSnapLayout::AbstractSnapLayout(AbstractUserInterface& ui, SnapLayouter& layouter, const NodeHandle node, const Snaps snap, const LayoutHandle snapTarget, const SnapLayoutFlags flags): AbstractSnapLayout{NoInit, ui, node} {
+    CORRADE_ASSERT(ui.isHandleValid(layouter.handle()) && &ui.layouter(layouter.handle()) == &layouter,
+        "Ui::AbstractSnapLayout: layouter not part of the UI", );
+    addLayout(layouter, snap, snapTarget, flags);
+}
+
+AbstractSnapLayout::AbstractSnapLayout(SnapLayouter& layouter, const AbstractAnchor& anchor, const Snaps snap, const LayoutHandle snapTarget, const SnapLayoutFlags flags): AbstractSnapLayout{NoInit, anchor.ui(), anchor.node()} {
     CORRADE_ASSERT(_ui->isHandleValid(layouter.handle()) && &_ui->layouter(layouter.handle()) == &layouter,
         "Ui::AbstractSnapLayout: layouter and anchor not part of the same UI", );
     addLayout(layouter, snap, snapTarget, flags);
 }
 
-AbstractSnapLayout::AbstractSnapLayout(SnapLayouter& layouter, const AbstractAnchor& anchor, const Snaps snap, const LayouterDataHandle snapTarget, const SnapLayoutFlags flags): _ui{&anchor.ui()}, _layouter{&layouter}, _node{anchor.node()} {
+AbstractSnapLayout::AbstractSnapLayout(AbstractUserInterface& ui, SnapLayouter& layouter, const NodeHandle node, const Snaps snap, const LayouterDataHandle snapTarget, const SnapLayoutFlags flags): AbstractSnapLayout{NoInit, ui, node} {
+    CORRADE_ASSERT(ui.isHandleValid(layouter.handle()) && &ui.layouter(layouter.handle()) == &layouter,
+        "Ui::AbstractSnapLayout: layouter not part of the UI", );
+    addLayout(layouter, snap, snapTarget, flags);
+}
+
+AbstractSnapLayout::AbstractSnapLayout(SnapLayouter& layouter, const AbstractAnchor& anchor, const Snaps snap, const LayouterDataHandle snapTarget, const SnapLayoutFlags flags): AbstractSnapLayout{NoInit, anchor.ui(), anchor.node()} {
     CORRADE_ASSERT(_ui->isHandleValid(layouter.handle()) && &_ui->layouter(layouter.handle()) == &layouter,
         "Ui::AbstractSnapLayout: layouter and anchor not part of the same UI", );
     addLayout(layouter, snap, snapTarget, flags);

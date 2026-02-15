@@ -40,35 +40,45 @@
 namespace Magnum { namespace Ui {
 
 #ifndef DOXYGEN_GENERATING_OUTPUT
-template<class UserInterface> BasicSnapLayout<UserInterface>::BasicSnapLayout(const BasicAnchor<UserInterface>& anchor): AbstractSnapLayout{NoInit, anchor} {
-    CORRADE_ASSERT(ui().hasSnapLayouter(),
+template<class UserInterface> BasicSnapLayout<UserInterface>::BasicSnapLayout(UserInterface& ui, const NodeHandle node): AbstractSnapLayout{NoInit, ui, node} {
+    CORRADE_ASSERT(ui.hasSnapLayouter(),
         "Ui::BasicSnapLayout: SnapLayouter not present in the UI", );
-    addLayout(ui().snapLayouter());
+    addLayout(ui.snapLayouter());
 }
 
-template<class UserInterface> BasicSnapLayout<UserInterface>::BasicSnapLayout(const BasicAnchor<UserInterface>& anchor, const LayoutHandle before, const SnapLayoutFlags flags): AbstractSnapLayout{NoInit, anchor} {
-    CORRADE_ASSERT(ui().hasSnapLayouter(),
+template<class UserInterface> BasicSnapLayout<UserInterface>::BasicSnapLayout(const BasicAnchor<UserInterface>& anchor): BasicSnapLayout{anchor.ui(), anchor.node()} {}
+
+template<class UserInterface> BasicSnapLayout<UserInterface>::BasicSnapLayout(UserInterface& ui, const NodeHandle node, const LayoutHandle before, const SnapLayoutFlags flags): AbstractSnapLayout{NoInit, ui, node} {
+    CORRADE_ASSERT(ui.hasSnapLayouter(),
         "Ui::BasicSnapLayout: SnapLayouter not present in the UI", );
-    addLayout(ui().snapLayouter(), before, flags);
+    addLayout(ui.snapLayouter(), before, flags);
 }
 
-template<class UserInterface> BasicSnapLayout<UserInterface>::BasicSnapLayout(const BasicAnchor<UserInterface>& anchor, const LayouterDataHandle before, const SnapLayoutFlags flags): AbstractSnapLayout{NoInit, anchor} {
-    CORRADE_ASSERT(ui().hasSnapLayouter(),
+template<class UserInterface> BasicSnapLayout<UserInterface>::BasicSnapLayout(const BasicAnchor<UserInterface>& anchor, const LayoutHandle before, const SnapLayoutFlags flags): BasicSnapLayout{anchor.ui(), anchor.node(), before, flags} {}
+
+template<class UserInterface> BasicSnapLayout<UserInterface>::BasicSnapLayout(UserInterface& ui, const NodeHandle node, const LayouterDataHandle before, const SnapLayoutFlags flags): AbstractSnapLayout{NoInit, ui, node} {
+    CORRADE_ASSERT(ui.hasSnapLayouter(),
         "Ui::BasicSnapLayout: SnapLayouter not present in the UI", );
-    addLayout(ui().snapLayouter(), before, flags);
+    addLayout(ui.snapLayouter(), before, flags);
 }
 
-template<class UserInterface> BasicSnapLayout<UserInterface>::BasicSnapLayout(const BasicAnchor<UserInterface>& anchor, const Snaps snap, const LayoutHandle snapTarget, const SnapLayoutFlags flags): AbstractSnapLayout{NoInit, anchor} {
-    CORRADE_ASSERT(ui().hasSnapLayouter(),
+template<class UserInterface> BasicSnapLayout<UserInterface>::BasicSnapLayout(const BasicAnchor<UserInterface>& anchor, const LayouterDataHandle before, const SnapLayoutFlags flags): BasicSnapLayout{anchor.ui(), anchor.node(), before, flags} {}
+
+template<class UserInterface> BasicSnapLayout<UserInterface>::BasicSnapLayout(UserInterface& ui, const NodeHandle node, const Snaps snap, const LayoutHandle snapTarget, const SnapLayoutFlags flags): AbstractSnapLayout{NoInit, ui, node} {
+    CORRADE_ASSERT(ui.hasSnapLayouter(),
         "Ui::BasicSnapLayout: SnapLayouter not present in the UI", );
-    addLayout(ui().snapLayouter(), snap, snapTarget, flags);
+    addLayout(ui.snapLayouter(), snap, snapTarget, flags);
 }
 
-template<class UserInterface> BasicSnapLayout<UserInterface>::BasicSnapLayout(const BasicAnchor<UserInterface>& anchor, const Snaps snap, const LayouterDataHandle snapTarget, const SnapLayoutFlags flags): AbstractSnapLayout{NoInit, anchor} {
-    CORRADE_ASSERT(ui().hasSnapLayouter(),
+template<class UserInterface> BasicSnapLayout<UserInterface>::BasicSnapLayout(const BasicAnchor<UserInterface>& anchor, const Snaps snap, const LayoutHandle snapTarget, const SnapLayoutFlags flags): BasicSnapLayout{anchor.ui(), anchor.node(), snap, snapTarget, flags} {}
+
+template<class UserInterface> BasicSnapLayout<UserInterface>::BasicSnapLayout(UserInterface& ui, const NodeHandle node, const Snaps snap, const LayouterDataHandle snapTarget, const SnapLayoutFlags flags): AbstractSnapLayout{NoInit, ui, node} {
+    CORRADE_ASSERT(ui.hasSnapLayouter(),
         "Ui::BasicSnapLayout: SnapLayouter not present in the UI", );
-    addLayout(ui().snapLayouter(), snap, snapTarget, flags);
+    addLayout(ui.snapLayouter(), snap, snapTarget, flags);
 }
+
+template<class UserInterface> BasicSnapLayout<UserInterface>::BasicSnapLayout(const BasicAnchor<UserInterface>& anchor, const Snaps snap, const LayouterDataHandle snapTarget, const SnapLayoutFlags flags): BasicSnapLayout{anchor.ui(), anchor.node(), snap, snapTarget, flags} {}
 
 template<class UserInterface> UserInterface& BasicSnapLayout<UserInterface>::ui() const {
     return static_cast<UserInterface&>(AbstractSnapLayout::ui());
