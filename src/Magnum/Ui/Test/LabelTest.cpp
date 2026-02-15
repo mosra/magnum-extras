@@ -88,9 +88,12 @@ LabelTest::LabelTest() {
         &LabelTest::constructTextStateless,
         &LabelTest::constructTextTextProperties,
         &LabelTest::constructTextTextPropertiesStateless,
-        &LabelTest::constructNoCreate
     }, &WidgetTester::setup,
        &WidgetTester::teardown);
+
+    addTests<LabelTest>({&LabelTest::constructNoCreate},
+        &WidgetTester::setupNoCreate,
+        &WidgetTester::teardownNoCreate);
 
     addInstancedTests<LabelTest>({&LabelTest::setStyle},
         Containers::arraySize(SetStyleData),
@@ -249,10 +252,6 @@ void LabelTest::constructNoCreate() {
     Label label{NoCreate};
     CORRADE_COMPARE(label.node(), NodeHandle::Null);
     CORRADE_COMPARE(label.data(), DataHandle::Null);
-
-    /* Can only verify that the layout data were not created, they're not
-       saved */
-    CORRADE_COMPARE(ui.layoutLayer().usedCount(), 0);
 }
 
 void LabelTest::setStyle() {

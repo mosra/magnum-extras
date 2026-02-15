@@ -57,8 +57,14 @@ PanelTest::PanelTest() {
         &PanelTest::constructDefaultStateless,
         &PanelTest::constructFilled,
         &PanelTest::constructFilledStateless,
-        &PanelTest::constructNoCreate,
+    }, &WidgetTester::setup,
+       &WidgetTester::teardown);
 
+    addTests<PanelTest>({&PanelTest::constructNoCreate},
+        &WidgetTester::setupNoCreate,
+        &WidgetTester::teardownNoCreate);
+
+    addTests<PanelTest>({
         &PanelTest::setStyleNoOp,
         &PanelTest::setStyleFromNoBackground,
         &PanelTest::setStyleToNoBackground,
@@ -124,10 +130,6 @@ void PanelTest::constructNoCreate() {
     Panel label{NoCreate};
     CORRADE_COMPARE(label.node(), NodeHandle::Null);
     CORRADE_COMPARE(label.backgroundData(), DataHandle::Null);
-
-    /* Can only verify that the layout data were not created, they're not
-       saved */
-    CORRADE_COMPARE(ui.layoutLayer().usedCount(), 0);
 }
 
 void PanelTest::setStyleNoOp() {

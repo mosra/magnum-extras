@@ -59,9 +59,15 @@ InputTest::InputTest() {
 
     addTests<InputTest>({
         &InputTest::construct,
-        &InputTest::constructTextProperties,
-        &InputTest::constructNoCreate,
+        &InputTest::constructTextProperties
+    }, &WidgetTester::setup,
+       &WidgetTester::teardown);
 
+    addTests<InputTest>({&InputTest::constructNoCreate},
+        &WidgetTester::setupNoCreate,
+        &WidgetTester::teardownNoCreate);
+
+    addTests<InputTest>({
         &InputTest::setStyle,
         &InputTest::setStyleWhileActive,
 
@@ -121,10 +127,6 @@ void InputTest::constructNoCreate() {
     CORRADE_COMPARE(input.node(), NodeHandle::Null);
     CORRADE_COMPARE(input.backgroundData(), DataHandle::Null);
     CORRADE_COMPARE(input.textData(), DataHandle::Null);
-
-    /* Can only verify that the layout data were not created, they're not
-       saved */
-    CORRADE_COMPARE(ui.layoutLayer().usedCount(), 0);
 }
 
 void InputTest::setStyle() {

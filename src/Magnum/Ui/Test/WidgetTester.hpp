@@ -178,6 +178,8 @@ struct WidgetTester: TestSuite::Tester {
 
     void setup();
     void teardown();
+    void setupNoCreate();
+    void teardownNoCreate();
 
     TestBaseLayerShared baseLayerShared;
     TestTextLayerShared textLayerShared;
@@ -219,6 +221,24 @@ void WidgetTester::teardown() {
     rootAnchor = Widget{NoCreate};
 }
 
+void WidgetTester::setupNoCreate() {
+    CORRADE_INTERNAL_ASSERT(!ui.isHandleValid(rootAnchor));
+    CORRADE_INTERNAL_ASSERT(ui.nodeUsedCount() == 0);
+    CORRADE_INTERNAL_ASSERT(ui.baseLayer().usedCount() == 0);
+    CORRADE_INTERNAL_ASSERT(ui.textLayer().usedCount() == 0);
+    CORRADE_INTERNAL_ASSERT(ui.layoutLayer().usedCount() == 0);
+    /* Set to invalid to prevent the node from being used by accident. Again
+       again yeah, I know. */
+    rootAnchor = Widget{NoCreate};
+}
+
+void WidgetTester::teardownNoCreate() {
+    CORRADE_INTERNAL_ASSERT(!ui.isHandleValid(rootAnchor));
+    CORRADE_INTERNAL_ASSERT(ui.nodeUsedCount() == 0);
+    CORRADE_INTERNAL_ASSERT(ui.baseLayer().usedCount() == 0);
+    CORRADE_INTERNAL_ASSERT(ui.textLayer().usedCount() == 0);
+    CORRADE_INTERNAL_ASSERT(ui.layoutLayer().usedCount() == 0);
+}
 
 }}}}
 

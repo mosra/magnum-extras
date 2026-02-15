@@ -97,9 +97,12 @@ ButtonTest::ButtonTest() {
         &ButtonTest::constructIconTextStateless,
         &ButtonTest::constructIconTextTextProperties,
         &ButtonTest::constructIconTextTextPropertiesStateless,
-        &ButtonTest::constructNoCreate,
     }, &WidgetTester::setup,
        &WidgetTester::teardown);
+
+    addTests<ButtonTest>({&ButtonTest::constructNoCreate},
+        &WidgetTester::setupNoCreate,
+        &WidgetTester::teardownNoCreate);
 
     addInstancedTests<ButtonTest>({&ButtonTest::setStyle},
         Containers::arraySize(SetStyleData),
@@ -385,10 +388,6 @@ void ButtonTest::constructNoCreate() {
     CORRADE_COMPARE(button.backgroundData(), DataHandle::Null);
     CORRADE_COMPARE(button.iconData(), DataHandle::Null);
     CORRADE_COMPARE(button.textData(), DataHandle::Null);
-
-    /* Can only verify that the layout data were not created, they're not
-       saved */
-    CORRADE_COMPARE(ui.layoutLayer().usedCount(), 0);
 }
 
 void ButtonTest::setStyle() {
