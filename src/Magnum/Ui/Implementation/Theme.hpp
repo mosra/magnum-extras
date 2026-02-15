@@ -1,5 +1,5 @@
-#ifndef Magnum_Ui_Implementation_Style_hpp
-#define Magnum_Ui_Implementation_Style_hpp
+#ifndef Magnum_Ui_Implementation_Theme_hpp
+#define Magnum_Ui_Implementation_Theme_hpp
 /*
     This file is part of Magnum.
 
@@ -26,7 +26,7 @@
     DEALINGS IN THE SOFTWARE.
 */
 
-#include "Magnum/Ui/AbstractStyle.h" /* BaseStyleCount and such */
+#include "Magnum/Ui/AbstractTheme.h" /* BaseStyleCount and such */
 
 namespace Magnum { namespace Ui { namespace Implementation {
 

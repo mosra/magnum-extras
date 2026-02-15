@@ -57,8 +57,8 @@
 #include "Magnum/Ui/NodeFlags.h"
 #include "Magnum/Ui/SnapLayout.h"
 #include "Magnum/Ui/SnapLayouter.h"
-#include "Magnum/Ui/Style.h"
 #include "Magnum/Ui/TextLayer.h" /** @todo remove once extra glyph cache fill is done better */
+#include "Magnum/Ui/Theme.h"
 #include "Magnum/Ui/UserInterfaceGL.h"
 
 #ifdef CORRADE_IS_DEBUG_BUILD
@@ -72,7 +72,7 @@
 
 #include "Magnum/Ui/BaseLayer.h"
 #include "Magnum/Ui/Handle.h"
-#include "Magnum/Ui/AbstractStyle.hpp"
+#include "Magnum/Ui/AbstractTheme.hpp"
 #include "Magnum/Ui/TextProperties.h"
 #endif
 
@@ -176,7 +176,7 @@ class Player: public Platform::ScreenedApplication {
 Overlay::Overlay(Platform::ScreenedApplication& application):
     Platform::Screen{application, PropagatedEvent::Draw|PropagatedEvent::Input},
     ui{application,
-        Ui::McssDarkStyle{Ui::McssDarkStyle::Feature::Animations}
+        Ui::McssDarkTheme{Ui::McssDarkTheme::Feature::Animations}
             #ifdef CORRADE_TARGET_EMSCRIPTEN
             /* For the info / error popups and popup background. Use a larger
                value to not clash with style animations. */

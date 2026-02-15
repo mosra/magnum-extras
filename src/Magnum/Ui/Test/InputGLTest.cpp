@@ -27,12 +27,12 @@
 #include <Corrade/Utility/Format.h>
 
 #include "Magnum/Ui/Input.h"
-#include "Magnum/Ui/Style.h"
-#include "Magnum/Ui/Test/StyleGLTester.hpp"
+#include "Magnum/Ui/Theme.h"
+#include "Magnum/Ui/Test/ThemeGLTester.hpp"
 
 namespace Magnum { namespace Ui { namespace Test { namespace {
 
-struct InputGLTest: StyleGLTester {
+struct InputGLTest: ThemeGLTester {
     explicit InputGLTest();
 
     void test();
@@ -40,15 +40,15 @@ struct InputGLTest: StyleGLTester {
 
 using namespace Math::Literals;
 
-const Style StyleData[]{
-    {"m.css dark", "mcss-dark-", false, Containers::pointer<McssDarkStyle>()},
+const Theme ThemeData[]{
+    {"m.css dark", "mcss-dark-", false, Containers::pointer<McssDarkTheme>()},
     {"m.css dark SubdividedQuads", "mcss-dark-", false, []{
-        Containers::Pointer<McssDarkStyle> style{InPlaceInit};
+        Containers::Pointer<McssDarkTheme> style{InPlaceInit};
         style->setBaseLayerFlags(BaseLayerSharedFlag::SubdividedQuads, {});
         return style;
     }()},
-    {"m.css dark, EssentialAnimations", "mcss-dark-", true, Containers::pointer<McssDarkStyle>(McssDarkStyle::Feature::EssentialAnimations)},
-    {"m.css dark, Animations", "mcss-dark-", true, Containers::pointer<McssDarkStyle>(McssDarkStyle::Feature::Animations)},
+    {"m.css dark, EssentialAnimations", "mcss-dark-", true, Containers::pointer<McssDarkTheme>(McssDarkTheme::Feature::EssentialAnimations)},
+    {"m.css dark, Animations", "mcss-dark-", true, Containers::pointer<McssDarkTheme>(McssDarkTheme::Feature::Animations)},
 };
 
 const struct {
@@ -80,22 +80,22 @@ const struct {
         }},
 };
 
-InputGLTest::InputGLTest(): StyleGLTester{StyleData} {
+InputGLTest::InputGLTest(): ThemeGLTester{ThemeData} {
     addInstancedTests({&InputGLTest::test},
-        Containers::arraySize(TestData)*styleCount());
+        Containers::arraySize(TestData)*themeCount());
 }
 
 void InputGLTest::test() {
-    auto&& data = TestData[testCaseInstanceId()/styleCount()];
-    auto&& styleData = StyleData[testCaseInstanceId()%styleCount()];
+    auto&& data = TestData[testCaseInstanceId()/themeCount()];
+    auto&& themeData = ThemeData[testCaseInstanceId()%themeCount()];
     if(!data.name)
-        setTestCaseDescription(styleData.name);
+        setTestCaseDescription(themeData.name);
     else
-        setTestCaseDescription(Utility::format("{}, {}", data.name, styleData.name));
+        setTestCaseDescription(Utility::format("{}, {}", data.name, themeData.name));
 
     CORRADE_VERIFY(true); /* Capture correct function name */
 
-    StyleGLTester::render(data.create, styleData, "input.png",
+    ThemeGLTester::render(data.create, themeData, "input.png",
         Flag::HoveredPressed|Flag::Focused|Flag::Disabled|Flag::XfailLlvmpipe20,
         /* Input cursor blinking lasts 0.55 sec and is reversed every other
            iteration, so it'll be fully visible at twice as much */

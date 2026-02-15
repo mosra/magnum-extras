@@ -133,8 +133,8 @@ with arbitrary functions handling them.
 
 @section Ui-EventLayer-setup Setting up an event layer instance
 
-If you create a @ref UserInterfaceGL instance with a style and don't exclude
-@ref StyleFeature::EventLayer, an implicit instance is already provided and
+If you create a @ref UserInterfaceGL instance with a theme and don't exclude
+@ref ThemeFeature::EventLayer, an implicit instance is already provided and
 available through @ref UserInterface::eventLayer(). Otherwise, the event layer
 doesn't have any shared state or configuration, so it's just about constructing
 it from a fresh @ref AbstractUserInterface::createLayer() handle and passing it

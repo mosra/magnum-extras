@@ -46,7 +46,7 @@ setup is handled by the @ref UserInterfaceGL subclass. See documentation of
 either of the classes for more information.
 
 Builtin widgets, deriving from the @ref Widget class, have access to this
-instance through @ref BasicWidget::ui() and depending on style setup generally
+instance through @ref BasicWidget::ui() and depending on theme setup generally
 assume that most of @ref dataLayer(), @ref backgroundLayer(), @ref baseLayer(),
 @ref textLayer(), @ref eventLayer(), @ref layoutLayer(), @ref snapLayouter(),
 @ref genericLayouter(), @ref nodeAnimator(), @ref backgroundLayerStyleAnimator(),
@@ -86,9 +86,9 @@ class MAGNUM_UI_EXPORT UserInterface: public AbstractUserInterface {
          *
          * Expects that an instance has been set, either by
          * @ref setDataLayerInstance() or transitively by
-         * @ref UserInterfaceGL::setStyle(), @relativeref{UserInterfaceGL,create()}
-         * or a @ref UserInterfaceGL constructor taking a style instance.
-         * @see @ref StyleFeature::DataLayer
+         * @ref UserInterfaceGL::setTheme(), @relativeref{UserInterfaceGL,create()}
+         * or a @ref UserInterfaceGL constructor taking a theme instance.
+         * @see @ref ThemeFeature::DataLayer
          */
         DataLayer& dataLayer();
         const DataLayer& dataLayer() const; /**< @overload */
@@ -98,11 +98,11 @@ class MAGNUM_UI_EXPORT UserInterface: public AbstractUserInterface {
          * @return Reference to self (for method chaining)
          *
          * Expects that the instance hasn't been set yet, either by this
-         * function or transitively either by @ref UserInterfaceGL::setStyle(),
+         * function or transitively either by @ref UserInterfaceGL::setTheme(),
          * @relativeref{UserInterfaceGL,create()} or a @ref UserInterfaceGL
-         * constructor taking a style instance. The instance is subsequently
+         * constructor taking a theme instance. The instance is subsequently
          * available through @ref dataLayer().
-         * @see @ref hasDataLayer(), @ref StyleFeature::DataLayer
+         * @see @ref hasDataLayer(), @ref ThemeFeature::DataLayer
          */
         UserInterface& setDataLayerInstance(Containers::Pointer<DataLayer>&& instance);
 
@@ -119,16 +119,16 @@ class MAGNUM_UI_EXPORT UserInterface: public AbstractUserInterface {
          * Expects that an instance of either the background or base layer has
          * been set, either by @ref setBackgroundLayerInstance() /
          * @ref setBaseLayerInstance() or transitively by
-         * @ref UserInterfaceGL::setStyle(), @relativeref{UserInterfaceGL,create()}
-         * or a @ref UserInterfaceGL constructor taking a style instance.
+         * @ref UserInterfaceGL::setTheme(), @relativeref{UserInterfaceGL,create()}
+         * or a @ref UserInterfaceGL constructor taking a theme instance.
          *
          * If an instance of a background layer isn't present but base layer
          * is, @ref hasBackgroundLayer() returns @cpp false @ce and this
          * function returns the same layer as @ref baseLayer(), so widget
-         * implementations don't need to special-case styles that don't provide
+         * implementations don't need to special-case themes that don't provide
          * a dedicated background layer instance (which is the case for example
          * when background blur isn't used).
-         * @see @ref StyleFeature::BackgroundLayer
+         * @see @ref ThemeFeature::BackgroundLayer
          */
         BaseLayer& backgroundLayer();
         const BaseLayer& backgroundLayer() const; /**< @overload */
@@ -138,16 +138,16 @@ class MAGNUM_UI_EXPORT UserInterface: public AbstractUserInterface {
          * @return Reference to self (for method chaining)
          *
          * Expects that the instance hasn't been set yet, either by this
-         * function or transitively either by @ref UserInterfaceGL::setStyle(),
+         * function or transitively either by @ref UserInterfaceGL::setTheme(),
          * @relativeref{UserInterfaceGL,create()} or a @ref UserInterfaceGL
-         * constructor taking a style instance. The instance is subsequently
+         * constructor taking a theme instance. The instance is subsequently
          * available through @ref backgroundLayer().
          *
          * Note that because @ref backgroundLayer() may alias @ref baseLayer()
          * if a background layer instance isn't present, it's not recommended
          * to call this function after any widgets have been already created,
          * as it could lead to internal state inconsistencies.
-         * @see @ref hasBackgroundLayer(), @ref StyleFeature::BackgroundLayer
+         * @see @ref hasBackgroundLayer(), @ref ThemeFeature::BackgroundLayer
          */
         UserInterface& setBackgroundLayerInstance(Containers::Pointer<BaseLayer>&& instance);
 
@@ -164,9 +164,9 @@ class MAGNUM_UI_EXPORT UserInterface: public AbstractUserInterface {
          *
          * Expects that either a background layer style animator instance has
          * been set, either by @ref setBackgroundLayerStyleAnimatorInstance()
-         * or transitively by @ref UserInterfaceGL::setStyle(),
+         * or transitively by @ref UserInterfaceGL::setTheme(),
          * @relativeref{UserInterfaceGL,create()} or a @ref UserInterfaceGL
-         * constructor taking a style instance, or that background layer
+         * constructor taking a theme instance, or that background layer
          * *isn't* present at all, and a base layer style animator has been
          * set.
          *
@@ -175,10 +175,10 @@ class MAGNUM_UI_EXPORT UserInterface: public AbstractUserInterface {
          * animator is, @ref hasBackgroundLayerStyleAnimator() returns
          * @cpp false @ce and this function returns the same animator as
          * @ref baseLayerStyleAnimator(), so widget implementations don't need
-         * to special-case styles that don't provide a dedicated background
+         * to special-case themes that don't provide a dedicated background
          * layer instance (which is the case for example when background blur
          * isn't used).
-         * @see @ref StyleFeature::BackgroundLayerAnimations
+         * @see @ref ThemeFeature::BackgroundLayerAnimations
          */
         BaseLayerStyleAnimator& backgroundLayerStyleAnimator();
         const BaseLayerStyleAnimator& backgroundLayerStyleAnimator() const; /**< @overload */
@@ -189,9 +189,9 @@ class MAGNUM_UI_EXPORT UserInterface: public AbstractUserInterface {
          *
          * Expects that a background layer instance is present but the animator
          * instance hasn't been set yet, either by this function or
-         * transitively either by @ref UserInterfaceGL::setStyle(),
+         * transitively either by @ref UserInterfaceGL::setTheme(),
          * @relativeref{UserInterfaceGL,create()} or a @ref UserInterfaceGL
-         * constructor taking a style instance.
+         * constructor taking a theme instance.
          *
          * The instance is internally passed to @ref BaseLayer::assignAnimator(BaseLayerStyleAnimator&)
          * and made default with @ref BaseLayer::setDefaultStyleAnimator().
@@ -206,7 +206,7 @@ class MAGNUM_UI_EXPORT UserInterface: public AbstractUserInterface {
          * widgets have been already created, as it could lead to internal
          * state inconsistencies.
          * @see @ref hasBackgroundLayerStyleAnimator(),
-         *      @ref StyleFeature::BackgroundLayerAnimations
+         *      @ref ThemeFeature::BackgroundLayerAnimations
          */
         UserInterface& setBackgroundLayerStyleAnimatorInstance(Containers::Pointer<BaseLayerStyleAnimator>&& instance);
 
@@ -222,9 +222,9 @@ class MAGNUM_UI_EXPORT UserInterface: public AbstractUserInterface {
          *
          * Expects that an instance has been set, either by
          * @ref setBaseLayerInstance() or transitively by
-         * @ref UserInterfaceGL::setStyle(), @relativeref{UserInterfaceGL,create()}
-         * or a @ref UserInterfaceGL constructor taking a style instance.
-         * @see @ref StyleFeature::BaseLayer
+         * @ref UserInterfaceGL::setTheme(), @relativeref{UserInterfaceGL,create()}
+         * or a @ref UserInterfaceGL constructor taking a theme instance.
+         * @see @ref ThemeFeature::BaseLayer
          */
         BaseLayer& baseLayer();
         const BaseLayer& baseLayer() const; /**< @overload */
@@ -234,11 +234,11 @@ class MAGNUM_UI_EXPORT UserInterface: public AbstractUserInterface {
          * @return Reference to self (for method chaining)
          *
          * Expects that the instance hasn't been set yet, either by this
-         * function or transitively either by @ref UserInterfaceGL::setStyle(),
+         * function or transitively either by @ref UserInterfaceGL::setTheme(),
          * @relativeref{UserInterfaceGL,create()} or a @ref UserInterfaceGL
-         * constructor taking a style instance. The instance is subsequently
+         * constructor taking a theme instance. The instance is subsequently
          * available through @ref baseLayer().
-         * @see @ref hasBaseLayer(), @ref StyleFeature::BaseLayer
+         * @see @ref hasBaseLayer(), @ref ThemeFeature::BaseLayer
          */
         UserInterface& setBaseLayerInstance(Containers::Pointer<BaseLayer>&& instance);
 
@@ -255,10 +255,10 @@ class MAGNUM_UI_EXPORT UserInterface: public AbstractUserInterface {
          *
          * Expects that an instance has been set, either by
          * @ref setBaseLayerStyleAnimatorInstance() or transitively by
-         * @ref UserInterfaceGL::setStyle(),
+         * @ref UserInterfaceGL::setTheme(),
          * @relativeref{UserInterfaceGL,create()} or a @ref UserInterfaceGL
-         * constructor taking a style instance.
-         * @see @ref StyleFeature::BaseLayerAnimations
+         * constructor taking a theme instance.
+         * @see @ref ThemeFeature::BaseLayerAnimations
          */
         BaseLayerStyleAnimator& baseLayerStyleAnimator();
         const BaseLayerStyleAnimator& baseLayerStyleAnimator() const; /**< @overload */
@@ -269,9 +269,9 @@ class MAGNUM_UI_EXPORT UserInterface: public AbstractUserInterface {
          *
          * Expects that a base layer instance is present but the animator
          * instance hasn't been set yet, either by this function or
-         * transitively either by @ref UserInterfaceGL::setStyle(),
+         * transitively either by @ref UserInterfaceGL::setTheme(),
          * @relativeref{UserInterfaceGL,create()} or a @ref UserInterfaceGL
-         * constructor taking a style instance.
+         * constructor taking a theme instance.
          *
          * The instance is internally passed to @ref BaseLayer::assignAnimator(BaseLayerStyleAnimator&)
          * and made default with @ref BaseLayer::setDefaultStyleAnimator().
@@ -279,7 +279,7 @@ class MAGNUM_UI_EXPORT UserInterface: public AbstractUserInterface {
          * and also @ref BaseLayer::defaultStyleAnimator() unless some other
          * animator becomes set as default.
          * @see @ref hasBaseLayerStyleAnimator(),
-         *      @ref StyleFeature::BaseLayerAnimations
+         *      @ref ThemeFeature::BaseLayerAnimations
          */
         UserInterface& setBaseLayerStyleAnimatorInstance(Containers::Pointer<BaseLayerStyleAnimator>&& instance);
 
@@ -295,9 +295,9 @@ class MAGNUM_UI_EXPORT UserInterface: public AbstractUserInterface {
          *
          * Expects that an instance has been set, either by
          * @ref setTextLayerInstance() or transitively by
-         * @ref UserInterfaceGL::setStyle(), @relativeref{UserInterfaceGL,create()}
-         * or a @ref UserInterfaceGL constructor taking a style instance.
-         * @see @ref StyleFeature::TextLayer
+         * @ref UserInterfaceGL::setTheme(), @relativeref{UserInterfaceGL,create()}
+         * or a @ref UserInterfaceGL constructor taking a theme instance.
+         * @see @ref ThemeFeature::TextLayer
          */
         TextLayer& textLayer();
         const TextLayer& textLayer() const; /**< @overload */
@@ -307,11 +307,11 @@ class MAGNUM_UI_EXPORT UserInterface: public AbstractUserInterface {
          * @return Reference to self (for method chaining)
          *
          * Expects that the instance hasn't been set yet, either by this
-         * function or transitively either by @ref UserInterfaceGL::setStyle(),
+         * function or transitively either by @ref UserInterfaceGL::setTheme(),
          * @relativeref{UserInterfaceGL,create()} or a @ref UserInterfaceGL
-         * constructor taking a style instance. The instance is subsequently
+         * constructor taking a theme instance. The instance is subsequently
          * available through @ref textLayer().
-         * @see @ref hasTextLayer(), @ref StyleFeature::TextLayer
+         * @see @ref hasTextLayer(), @ref ThemeFeature::TextLayer
          */
         UserInterface& setTextLayerInstance(Containers::Pointer<TextLayer>&& instance);
 
@@ -328,10 +328,10 @@ class MAGNUM_UI_EXPORT UserInterface: public AbstractUserInterface {
          *
          * Expects that an instance has been set, either by
          * @ref setTextLayerStyleAnimatorInstance() or transitively by
-         * @ref UserInterfaceGL::setStyle(),
+         * @ref UserInterfaceGL::setTheme(),
          * @relativeref{UserInterfaceGL,create()} or a @ref UserInterfaceGL
-         * constructor taking a style instance.
-         * @see @ref StyleFeature::TextLayerAnimations
+         * constructor taking a theme instance.
+         * @see @ref ThemeFeature::TextLayerAnimations
          */
         TextLayerStyleAnimator& textLayerStyleAnimator();
         const TextLayerStyleAnimator& textLayerStyleAnimator() const; /**< @overload */
@@ -342,9 +342,9 @@ class MAGNUM_UI_EXPORT UserInterface: public AbstractUserInterface {
          *
          * Expects that a text layer instance is present but the animator
          * instance hasn't been set yet, either by this function or
-         * transitively either by @ref UserInterfaceGL::setStyle(),
+         * transitively either by @ref UserInterfaceGL::setTheme(),
          * @relativeref{UserInterfaceGL,create()} or a @ref UserInterfaceGL
-         * constructor taking a style instance.
+         * constructor taking a theme instance.
          *
          * The instance is internally passed to @ref TextLayer::assignAnimator(TextLayerStyleAnimator&)
          * and made default with @ref BaseLayer::setDefaultStyleAnimator().
@@ -352,7 +352,7 @@ class MAGNUM_UI_EXPORT UserInterface: public AbstractUserInterface {
          * and also @ref TextLayer::defaultStyleAnimator() unless some other
          * animator becomes set as default.
          * @see @ref hasTextLayerStyleAnimator(),
-         *      @ref StyleFeature::TextLayerAnimations
+         *      @ref ThemeFeature::TextLayerAnimations
          */
         UserInterface& setTextLayerStyleAnimatorInstance(Containers::Pointer<TextLayerStyleAnimator>&& instance);
 
@@ -368,9 +368,9 @@ class MAGNUM_UI_EXPORT UserInterface: public AbstractUserInterface {
          *
          * Expects that an instance has been set, either by
          * @ref setEventLayerInstance() or transitively by
-         * @ref UserInterfaceGL::setStyle(), @relativeref{UserInterfaceGL,create()}
-         * or a @ref UserInterfaceGL constructor taking a style instance.
-         * @see @ref StyleFeature::EventLayer
+         * @ref UserInterfaceGL::setTheme(), @relativeref{UserInterfaceGL,create()}
+         * or a @ref UserInterfaceGL constructor taking a theme instance.
+         * @see @ref ThemeFeature::EventLayer
          */
         EventLayer& eventLayer();
         const EventLayer& eventLayer() const; /**< @overload */
@@ -380,11 +380,11 @@ class MAGNUM_UI_EXPORT UserInterface: public AbstractUserInterface {
          * @return Reference to self (for method chaining)
          *
          * Expects that the instance hasn't been set yet, either by this
-         * function or transitively either by @ref UserInterfaceGL::setStyle(),
+         * function or transitively either by @ref UserInterfaceGL::setTheme(),
          * @relativeref{UserInterfaceGL,create()} or a @ref UserInterfaceGL
-         * constructor taking a style instance. The instance is subsequently
+         * constructor taking a theme instance. The instance is subsequently
          * available through @ref eventLayer().
-         * @see @ref hasEventLayer(), @ref StyleFeature::EventLayer
+         * @see @ref hasEventLayer(), @ref ThemeFeature::EventLayer
          */
         UserInterface& setEventLayerInstance(Containers::Pointer<EventLayer>&& instance);
 
@@ -400,9 +400,9 @@ class MAGNUM_UI_EXPORT UserInterface: public AbstractUserInterface {
          *
          * Expects that an instance has been set, either by
          * @ref setLayoutLayerInstance() or transitively by
-         * @ref UserInterfaceGL::setStyle(), @relativeref{UserInterfaceGL,create()}
-         * or a @ref UserInterfaceGL constructor taking a style instance.
-         * @see @ref StyleFeature::LayoutLayer
+         * @ref UserInterfaceGL::setTheme(), @relativeref{UserInterfaceGL,create()}
+         * or a @ref UserInterfaceGL constructor taking a theme instance.
+         * @see @ref ThemeFeature::LayoutLayer
          */
         LayoutLayer& layoutLayer();
         const LayoutLayer& layoutLayer() const; /**< @overload */
@@ -412,11 +412,11 @@ class MAGNUM_UI_EXPORT UserInterface: public AbstractUserInterface {
          * @return Reference to self (for method chaining)
          *
          * Expects that the instance hasn't been set yet, either by this
-         * function or transitively either by @ref UserInterfaceGL::setStyle(),
+         * function or transitively either by @ref UserInterfaceGL::setTheme(),
          * @relativeref{UserInterfaceGL,create()} or a @ref UserInterfaceGL
-         * constructor taking a style instance. The instance is subsequently
+         * constructor taking a theme instance. The instance is subsequently
          * available through @ref layoutLayer().
-         * @see @ref hasLayoutLayer(), @ref StyleFeature::LayoutLayer
+         * @see @ref hasLayoutLayer(), @ref ThemeFeature::LayoutLayer
          */
         UserInterface& setLayoutLayerInstance(Containers::Pointer<LayoutLayer>&& instance);
 
@@ -432,9 +432,9 @@ class MAGNUM_UI_EXPORT UserInterface: public AbstractUserInterface {
          *
          * Expects that an instance has been set, either by
          * @ref setSnapLayouterInstance() or transitively by
-         * @ref UserInterfaceGL::setStyle(), @relativeref{UserInterfaceGL,create()}
-         * or a @ref UserInterfaceGL constructor taking a style instance.
-         * @see @ref StyleFeature::SnapLayouter
+         * @ref UserInterfaceGL::setTheme(), @relativeref{UserInterfaceGL,create()}
+         * or a @ref UserInterfaceGL constructor taking a theme instance.
+         * @see @ref ThemeFeature::SnapLayouter
          */
         SnapLayouter& snapLayouter();
         const SnapLayouter& snapLayouter() const; /**< @overload */
@@ -444,11 +444,11 @@ class MAGNUM_UI_EXPORT UserInterface: public AbstractUserInterface {
          * @return Reference to self (for method chaining)
          *
          * Expects that the instance hasn't been set yet, either by this
-         * function or transitively either by @ref UserInterfaceGL::setStyle(),
+         * function or transitively either by @ref UserInterfaceGL::setTheme(),
          * @relativeref{UserInterfaceGL,create()} or a @ref UserInterfaceGL
-         * constructor taking a style instance. The instance is subsequently
+         * constructor taking a theme instance. The instance is subsequently
          * available through @ref snapLayouter().
-         * @see @ref hasSnapLayouter(), @ref StyleFeature::SnapLayouter
+         * @see @ref hasSnapLayouter(), @ref ThemeFeature::SnapLayouter
          */
         UserInterface& setSnapLayouterInstance(Containers::Pointer<SnapLayouter>&& instance);
 
@@ -464,9 +464,9 @@ class MAGNUM_UI_EXPORT UserInterface: public AbstractUserInterface {
          *
          * Expects that an instance has been set, either by
          * @ref setGenericLayouterInstance() or transitively by
-         * @ref UserInterfaceGL::setStyle(), @relativeref{UserInterfaceGL,create()}
-         * or a @ref UserInterfaceGL constructor taking a style instance.
-         * @see @ref StyleFeature::GenericLayouter
+         * @ref UserInterfaceGL::setTheme(), @relativeref{UserInterfaceGL,create()}
+         * or a @ref UserInterfaceGL constructor taking a theme instance.
+         * @see @ref ThemeFeature::GenericLayouter
          */
         GenericLayouter& genericLayouter();
         const GenericLayouter& genericLayouter() const; /**< @overload */
@@ -476,11 +476,11 @@ class MAGNUM_UI_EXPORT UserInterface: public AbstractUserInterface {
          * @return Reference to self (for method chaining)
          *
          * Expects that the instance hasn't been set yet, either by this
-         * function or transitively either by @ref UserInterfaceGL::setStyle(),
+         * function or transitively either by @ref UserInterfaceGL::setTheme(),
          * @relativeref{UserInterfaceGL,create()} or a @ref UserInterfaceGL
-         * constructor taking a style instance. The instance is subsequently
+         * constructor taking a theme instance. The instance is subsequently
          * available through @ref genericLayouter().
-         * @see @ref hasGenericLayouter(), @ref StyleFeature::GenericLayouter
+         * @see @ref hasGenericLayouter(), @ref ThemeFeature::GenericLayouter
          */
         UserInterface& setGenericLayouterInstance(Containers::Pointer<GenericLayouter>&& instance);
 
@@ -496,10 +496,10 @@ class MAGNUM_UI_EXPORT UserInterface: public AbstractUserInterface {
          *
          * Expects that an instance has been set, either by
          * @ref setNodeAnimatorInstance() or transitively by
-         * @ref UserInterfaceGL::setStyle(),
+         * @ref UserInterfaceGL::setTheme(),
          * @relativeref{UserInterfaceGL,create()} or a @ref UserInterfaceGL
-         * constructor taking a style instance.
-         * @see @ref StyleFeature::NodeAnimations
+         * constructor taking a theme instance.
+         * @see @ref ThemeFeature::NodeAnimations
          */
         NodeAnimator& nodeAnimator();
         const NodeAnimator& nodeAnimator() const; /**< @overload */
@@ -509,11 +509,11 @@ class MAGNUM_UI_EXPORT UserInterface: public AbstractUserInterface {
          * @return Reference to self (for method chaining)
          *
          * Expects that the instance hasn't been set yet, either by this
-         * function or transitively either by @ref UserInterfaceGL::setStyle(),
+         * function or transitively either by @ref UserInterfaceGL::setTheme(),
          * @relativeref{UserInterfaceGL,create()} or a @ref UserInterfaceGL
-         * constructor taking a style instance. The instance is subsequently
+         * constructor taking a theme instance. The instance is subsequently
          * available through @ref nodeAnimator().
-         * @see @ref hasNodeAnimator(), @ref StyleFeature::NodeAnimations
+         * @see @ref hasNodeAnimator(), @ref ThemeFeature::NodeAnimations
          */
         UserInterface& setNodeAnimatorInstance(Containers::Pointer<NodeAnimator>&& instance);
 

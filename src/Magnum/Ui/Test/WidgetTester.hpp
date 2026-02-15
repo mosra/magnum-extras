@@ -35,8 +35,8 @@
 #include <Magnum/Text/Alignment.h>
 #include <Magnum/Text/Script.h>
 
-#include "Magnum/Ui/AbstractStyle.h"
-#include "Magnum/Ui/AbstractStyle.hpp"
+#include "Magnum/Ui/AbstractTheme.h"
+#include "Magnum/Ui/AbstractTheme.hpp"
 #include "Magnum/Ui/BaseLayer.h"
 #include "Magnum/Ui/Handle.h"
 #include "Magnum/Ui/LayoutLayer.h"

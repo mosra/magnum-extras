@@ -44,8 +44,8 @@ arbitrarily modify the node offset and size as well as any associated data.
 
 @section Ui-GenericLayouter-setup Setting up a generic layouter instance
 
-If you create a @ref UserInterfaceGL with a style and don't exclude
-@ref StyleFeature::GenericLayouter, an implicit instance is already provided
+If you create a @ref UserInterfaceGL with a theme and don't exclude
+@ref ThemeFeature::GenericLayouter, an implicit instance is already provided
 and available through @ref UserInterface::genericLayouter(). Otherwise, the
 layouter doesn't have any shared state or configuration, so it's just about
 constructing it from a fresh @ref AbstractUserInterface::createLayouter()

@@ -324,8 +324,8 @@ class AbstractStorage;
 
 @section Ui-DataLayer-setup Setting up a data layer instance
 
-If you create a @ref UserInterfaceGL with a style and don't exclude
-@ref StyleFeature::DataLayer, an implicit instance is already provided and
+If you create a @ref UserInterfaceGL with a theme and don't exclude
+@ref ThemeFeature::DataLayer, an implicit instance is already provided and
 available through @ref UserInterface::dataLayer(). Otherwise, the layer doesn't
 have any shared state or configuration, so it's just about constructing it from
 a fresh @ref AbstractUserInterface::createLayer() handle and passing it to

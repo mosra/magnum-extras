@@ -1,5 +1,5 @@
-#ifndef Magnum_Ui_Style_h
-#define Magnum_Ui_Style_h
+#ifndef Magnum_Ui_Theme_h
+#define Magnum_Ui_Theme_h
 /*
     This file is part of Magnum.
 
@@ -27,27 +27,27 @@
 */
 
 /** @file
- * @brief Class @ref Magnum::Ui::McssDarkStyle
+ * @brief Class @ref Magnum::Ui::McssDarkTheme
  * @m_since_latest_{extras}
  */
 
-#include "Magnum/Ui/AbstractStyle.h"
+#include "Magnum/Ui/AbstractTheme.h"
 
 namespace Magnum { namespace Ui {
 
 /**
-@brief Style for builtin widgets based on the [m.css](https://mcss.mosra.cz) dark theme
+@brief Theme for builtin widgets based on the [m.css](https://mcss.mosra.cz) dark theme
 @m_since_latest_{extras}
 
 An instance of this class is meant to be passed to the @ref UserInterfaceGL
 constructor, to @ref UserInterfaceGL::create(), @relativeref{UserInterfaceGL,tryCreate()}
-or @relativeref{UserInterfaceGL,setStyle()}. See the
+or @relativeref{UserInterfaceGL,setTheme()}. See the
 @ref AbstractUserInterface "AbstractUserInterface introduction docs" for a
 step-by-step guide for setting up an user interface.
 
-@section Ui-McssDarkStyle-animations Style animations
+@section Ui-McssDarkTheme-animations Theme animations
 
-By default the style is created without any animations to make the initial UI
+By default the theme is created without any animations to make the initial UI
 setup easier. Once the application is @ref Ui-AbstractUserInterface-animations "set up for animations",
 you can pass @ref Feature::Animations to the constructor to enable fade out
 animations in certain style transitions and an animated cursor in text editing
@@ -55,12 +55,12 @@ fields. In comparison, for a distraction-less behavior,
 @ref Feature::EssentialAnimations is just the text editing cursor alone,
 blinking without any smooth transition.
 */
-class MAGNUM_UI_EXPORT McssDarkStyle: public AbstractStyle {
+class MAGNUM_UI_EXPORT McssDarkTheme: public AbstractTheme {
     public:
         /**
-         * @brief Style feature
+         * @brief Theme feature
          *
-         * @see @ref Features, @ref McssDarkStyle()
+         * @see @ref Features, @ref McssDarkTheme()
          */
         enum class Feature: UnsignedByte {
             /**
@@ -78,20 +78,20 @@ class MAGNUM_UI_EXPORT McssDarkStyle: public AbstractStyle {
         };
 
         /**
-         * @brief Style features
+         * @brief Theme features
          *
-         * @see @ref McssDarkStyle()
+         * @see @ref McssDarkTheme()
          */
         typedef Containers::EnumSet<Feature> Features;
 
         /**
          * @brief Constructor
-         * @param features  Style features to enable
+         * @param features  Theme features to enable
          */
-        explicit McssDarkStyle(Features features = {});
+        explicit McssDarkTheme(Features features = {});
 
     private:
-        MAGNUM_UI_LOCAL StyleFeatures doFeatures() const override;
+        MAGNUM_UI_LOCAL ThemeFeatures doFeatures() const override;
         MAGNUM_UI_LOCAL UnsignedInt doBaseLayerStyleUniformCount() const override;
         MAGNUM_UI_LOCAL UnsignedInt doBaseLayerStyleCount() const override;
         MAGNUM_UI_LOCAL UnsignedInt doBaseLayerDynamicStyleCount() const override;
@@ -100,26 +100,26 @@ class MAGNUM_UI_EXPORT McssDarkStyle: public AbstractStyle {
         MAGNUM_UI_LOCAL UnsignedInt doTextLayerDynamicStyleCount() const override;
         MAGNUM_UI_LOCAL UnsignedInt doTextLayerEditingStyleUniformCount() const override;
         MAGNUM_UI_LOCAL UnsignedInt doTextLayerEditingStyleCount() const override;
-        MAGNUM_UI_LOCAL Vector3i doTextLayerGlyphCacheSize(StyleFeatures features) const override;
+        MAGNUM_UI_LOCAL Vector3i doTextLayerGlyphCacheSize(ThemeFeatures features) const override;
         MAGNUM_UI_LOCAL UnsignedInt doLayoutLayerStyleCount() const override;
-        MAGNUM_UI_LOCAL bool doApply(UserInterface& ui, StyleFeatures features, PluginManager::Manager<Trade::AbstractImporter>* importerManager, PluginManager::Manager<Text::AbstractFont>* fontManager) const override;
+        MAGNUM_UI_LOCAL bool doApply(UserInterface& ui, ThemeFeatures features, PluginManager::Manager<Trade::AbstractImporter>* importerManager, PluginManager::Manager<Text::AbstractFont>* fontManager) const override;
 
         Features _features;
 };
 
 /**
-@debugoperatorclassenum{McssDarkStyle,McssDarkStyle::Feature}
+@debugoperatorclassenum{McssDarkTheme,McssDarkTheme::Feature}
 @m_since_latest_{extras}
 */
-MAGNUM_UI_EXPORT Debug& operator<<(Debug& debug, McssDarkStyle::Feature value);
+MAGNUM_UI_EXPORT Debug& operator<<(Debug& debug, McssDarkTheme::Feature value);
 
 /**
-@debugoperatorclassenum{McssDarkStyle,McssDarkStyle::Features}
+@debugoperatorclassenum{McssDarkTheme,McssDarkTheme::Features}
 @m_since_latest_{extras}
 */
-MAGNUM_UI_EXPORT Debug& operator<<(Debug& debug, McssDarkStyle::Features value);
+MAGNUM_UI_EXPORT Debug& operator<<(Debug& debug, McssDarkTheme::Features value);
 
-CORRADE_ENUMSET_OPERATORS(McssDarkStyle::Features)
+CORRADE_ENUMSET_OPERATORS(McssDarkTheme::Features)
 
 }}
 

@@ -1,5 +1,5 @@
-#ifndef Magnum_Ui_Test_StyleGLTester_hpp
-#define Magnum_Ui_Test_StyleGLTester_hpp
+#ifndef Magnum_Ui_Test_ThemeGLTester_hpp
+#define Magnum_Ui_Test_ThemeGLTester_hpp
 /*
     This file is part of Magnum.
 
@@ -58,11 +58,11 @@
 
 namespace Magnum { namespace Ui { namespace Test { namespace {
 
-struct Style {
+struct Theme {
     const char* name;
     const char* filePrefix;
     bool hasAnimations;
-    Containers::Pointer<AbstractStyle> style;
+    Containers::Pointer<AbstractTheme> theme;
 };
 
 enum class Flag {
@@ -75,24 +75,24 @@ typedef Containers::EnumSet<Flag> Flags;
 
 CORRADE_ENUMSET_OPERATORS(Flags)
 
-struct StyleGLTester: GL::OpenGLTester {
-    explicit StyleGLTester(const Containers::ArrayView<const Style>& styles);
+struct ThemeGLTester: GL::OpenGLTester {
+    explicit ThemeGLTester(const Containers::ArrayView<const Theme>& styles);
 
-    void render(NodeHandle(*create)(UserInterface& ui, Int style, Int counter), const Style& styleData, const char* filename, Flags flags, Int styleCount, Nanoseconds animationDelta, Float maxThreshold, Float meanThreshold);
+    void render(NodeHandle(*create)(UserInterface& ui, Int style, Int counter), const Theme& themeData, const char* filename, Flags flags, Int styleCount, Nanoseconds animationDelta, Float maxThreshold, Float meanThreshold);
 
-    std::size_t styleCount() const { return _styles.size(); }
+    std::size_t themeCount() const { return _themes.size(); }
 
     private:
         PluginManager::Manager<Text::AbstractFont> _fontManager;
         PluginManager::Manager<Trade::AbstractImporter> _importerManager;
-        Containers::ArrayView<const Style> _styles;
-        Containers::Array<UserInterfaceGL> _styleUis;
+        Containers::ArrayView<const Theme> _themes;
+        Containers::Array<UserInterfaceGL> _themeUis;
         Containers::Array<UserInterfaceGL> _uis;
 };
 
 using namespace Math::Literals;
 
-StyleGLTester::StyleGLTester(const Containers::ArrayView<const Style>& styles): _styles{styles} {
+ThemeGLTester::ThemeGLTester(const Containers::ArrayView<const Theme>& themes): _themes{themes} {
     /* Prefer the StbImageImporter so we can keep files small but always import
        them as four-channel */
     if(PluginManager::PluginMetadata* metadata = _importerManager.metadata("StbImageImporter")) {
@@ -105,20 +105,20 @@ StyleGLTester::StyleGLTester(const Containers::ArrayView<const Style>& styles): 
         _fontManager.setPreferredPlugins("TrueTypeFont", {"StbTrueTypeFont"});
     }
 
-    /* Create just one actually filled UI for each possible style. Skip this on
+    /* Create just one actually filled UI for each possible theme. Skip this on
        SwiftShader as it counts UBO size towards the uniform count limit, dying
        during shader compilation already if there's more than 256 vectors. */
     #if defined(MAGNUM_TARGET_GLES) && !defined(MAGNUM_TARGET_WEBGL)
     if(!(GL::Context::current().detectedDriver() & GL::Context::DetectedDriver::SwiftShader))
     #endif
     {
-        _styleUis = Containers::Array<UserInterfaceGL>{DirectInit, styles.size(), NoCreate};
-        for(std::size_t i = 0; i != styles.size(); ++i)
-            _styleUis[i].create({1024, 1024}, *styles[i].style, &_importerManager, &_fontManager);
+        _themeUis = Containers::Array<UserInterfaceGL>{DirectInit, themes.size(), NoCreate};
+        for(std::size_t i = 0; i != themes.size(); ++i)
+            _themeUis[i].create({1024, 1024}, *themes[i].theme, &_importerManager, &_fontManager);
     }
 }
 
-void StyleGLTester::render(NodeHandle(*create)(UserInterface& ui, Int style, Int counter), const Style& styleData, const char* const filename, const Flags flags, const Int styleCount, const Nanoseconds animationDelta, const Float maxThreshold, const Float meanThreshold) {
+void ThemeGLTester::render(NodeHandle(*create)(UserInterface& ui, Int style, Int counter), const Theme& themeData, const char* const filename, const Flags flags, const Int styleCount, const Nanoseconds animationDelta, const Float maxThreshold, const Float meanThreshold) {
     if(!(_importerManager.load("AnyImageImporter") & PluginManager::LoadState::Loaded) ||
        !(_importerManager.load("StbImageImporter") & PluginManager::LoadState::Loaded))
         CORRADE_SKIP("AnyImageImporter / StbImageImporter plugins not found.");
@@ -159,15 +159,15 @@ void StyleGLTester::render(NodeHandle(*create)(UserInterface& ui, Int style, Int
                inefficiency */
             /** @todo allow a setting non-owned renderer instance maybe? */
             .setRendererInstance(Containers::pointer<RendererGL>())
-            .setBaseLayerInstance(Containers::pointer<BaseLayerGL>(ui.createLayer(), static_cast<BaseLayerGL::Shared&>(_styleUis[&styleData - _styles.data()].baseLayer().shared())))
-            .setTextLayerInstance(Containers::pointer<TextLayerGL>(ui.createLayer(), static_cast<TextLayerGL::Shared&>(_styleUis[&styleData - _styles.data()].textLayer().shared())))
+            .setBaseLayerInstance(Containers::pointer<BaseLayerGL>(ui.createLayer(), static_cast<BaseLayerGL::Shared&>(_themeUis[&themeData - _themes.data()].baseLayer().shared())))
+            .setTextLayerInstance(Containers::pointer<TextLayerGL>(ui.createLayer(), static_cast<TextLayerGL::Shared&>(_themeUis[&themeData - _themes.data()].textLayer().shared())))
             /* Event layer not needed for anything yet */
-            .setLayoutLayerInstance(Containers::pointer<LayoutLayer>(ui.createLayer(), _styleUis[&styleData - _styles.data()].layoutLayer().styleCount()));
+            .setLayoutLayerInstance(Containers::pointer<LayoutLayer>(ui.createLayer(), _themeUis[&themeData - _themes.data()].layoutLayer().styleCount()));
 
-        /* If dynamic styles are present (because the style requested them for
+        /* If dynamic styles are present (because the theme requested them for
            animators), add also default style animators. Can't hook to just
-           StyleData::hasAnimations, as presence of the animator might differ
-           for each layer. */
+           Theme::hasAnimations, as presence of the animator might differ for
+           each layer. */
         if(ui.baseLayer().shared().dynamicStyleCount())
             ui.setBaseLayerStyleAnimatorInstance(Containers::pointer<BaseLayerStyleAnimator>(ui.createAnimator()));
         if(ui.textLayer().shared().dynamicStyleCount())
@@ -176,7 +176,7 @@ void StyleGLTester::render(NodeHandle(*create)(UserInterface& ui, Int style, Int
 
     const Vector2 padding{8.0f};
     Nanoseconds now = 1773.0_sec;
-    const Nanoseconds delta = styleData.hasAnimations ? animationDelta : 0_nsec;
+    const Nanoseconds delta = themeData.hasAnimations ? animationDelta : 0_nsec;
 
     Int counter = 0;
     Vector2 size;
@@ -295,7 +295,7 @@ void StyleGLTester::render(NodeHandle(*create)(UserInterface& ui, Int style, Int
         CORRADE_EXPECT_FAIL_IF(flags >= Flag::XfailLlvmpipe20 && GL::Context::current().rendererString().contains("llvmpipe") && GL::Context::current().versionString().contains("Mesa 20"),
             "Mesa llvmpipe 20 renders the text in a completely different color for some reason.");
         CORRADE_COMPARE_WITH(framebuffer.read({{}, uiSize}, {PixelFormat::RGBA8Unorm}),
-            Utility::Path::join({UI_TEST_DIR, "StyleTestFiles", Containers::StringView{styleData.filePrefix} + filename}),
+            Utility::Path::join({UI_TEST_DIR, "ThemeTestFiles", Containers::StringView{themeData.filePrefix} + filename}),
             (DebugTools::CompareImageToFile{_importerManager, maxThreshold, meanThreshold}));
     }
 
@@ -490,7 +490,7 @@ void StyleGLTester::render(NodeHandle(*create)(UserInterface& ui, Int style, Int
             CORRADE_EXPECT_FAIL_IF(flags >= Flag::XfailLlvmpipe20 && GL::Context::current().rendererString().contains("llvmpipe") && GL::Context::current().versionString().contains("Mesa 20"),
                 "Mesa llvmpipe 20 renders the text in a completely different color for some reason.");
             CORRADE_COMPARE_WITH(framebuffer.read({{}, uiSize}, {PixelFormat::RGBA8Unorm}),
-                Utility::Path::join({UI_TEST_DIR, "StyleTestFiles", Containers::StringView{styleData.filePrefix} + filename}),
+                Utility::Path::join({UI_TEST_DIR, "ThemeTestFiles", Containers::StringView{themeData.filePrefix} + filename}),
                 (DebugTools::CompareImageToFile{_importerManager, maxThreshold, meanThreshold}));
         }
     }

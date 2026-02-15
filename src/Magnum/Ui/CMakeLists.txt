@@ -61,7 +61,7 @@ set(MagnumUi_SRCS
     Label.cpp
     NodeFlags.cpp
     Panel.cpp
-    Style.cpp
+    Theme.cpp
     ${MagnumUi_RESOURCES})
 
 set(MagnumUi_GracefulAssert_SRCS
@@ -69,7 +69,7 @@ set(MagnumUi_GracefulAssert_SRCS
     AbstractLayer.cpp
     AbstractLayouter.cpp
     AbstractRenderer.cpp
-    AbstractStyle.cpp
+    AbstractTheme.cpp
     AbstractUserInterface.cpp
     AbstractVisualLayer.cpp
     AbstractVisualLayerAnimator.cpp
@@ -98,8 +98,8 @@ set(MagnumUi_HEADERS
     AbstractLayer.h
     AbstractLayouter.h
     AbstractRenderer.h
-    AbstractStyle.h
-    AbstractStyle.hpp
+    AbstractTheme.h
+    AbstractTheme.hpp
     AbstractUserInterface.h
     AbstractVisualLayer.h
     AbstractVisualLayerAnimator.h
@@ -126,10 +126,10 @@ set(MagnumUi_HEADERS
     SnapLayout.h
     SnapLayout.hpp
     SnapLayouter.h
-    Style.h
     TextLayer.h
     TextLayerAnimator.h
     TextProperties.h
+    Theme.h
     UserInterface.h
     Ui.h
     Widget.h
@@ -146,10 +146,10 @@ set(MagnumUi_PRIVATE_HEADERS
     Implementation/debugLayerState.h
     Implementation/lineLayerState.h
     Implementation/lineMiterLimit.h
-    Implementation/Style.hpp
     Implementation/textLayerState.h
     Implementation/textStyleMcssDark.h
     Implementation/textStyleUniformsMcssDark.h
+    Implementation/Theme.hpp
     Implementation/userInterfaceState.h)
 
 if(MAGNUM_TARGET_GL)

@@ -1,5 +1,5 @@
-#ifndef Magnum_Ui_AbstractStyle_h
-#define Magnum_Ui_AbstractStyle_h
+#ifndef Magnum_Ui_AbstractTheme_h
+#define Magnum_Ui_AbstractTheme_h
 /*
     This file is part of Magnum.
 
@@ -27,7 +27,7 @@
 */
 
 /** @file
- * @brief Class @ref Magnum::Ui::AbstractStyle, enum @ref Magnum::Ui::StyleFeature, enum set @ref Magnum::Ui::StyleFeatures
+ * @brief Class @ref Magnum::Ui::AbstractTheme, enum @ref Magnum::Ui::ThemeFeature, enum set @ref Magnum::Ui::ThemeFeatures
  * @m_since_latest_{extras}
  */
 
@@ -43,16 +43,16 @@
 namespace Magnum { namespace Ui {
 
 /**
-@brief Feature supplied by a style
+@brief Feature supplied by a theme
 @m_since_latest_{extras}
 
-@see @ref StyleFeatures, @ref AbstractStyle::features(),
-    @ref AbstractStyle::apply(), @ref UserInterfaceGL::setStyle(),
-    @ref UserInterfaceGL::trySetStyle()
+@see @ref ThemeFeatures, @ref AbstractTheme::features(),
+    @ref AbstractTheme::apply(), @ref UserInterfaceGL::setTheme(),
+    @ref UserInterfaceGL::trySetTheme()
 */
-enum class StyleFeature: UnsignedShort {
+enum class ThemeFeature: UnsignedShort {
     /**
-     * Data layer style. Ensures a @ref DataLayer instance is set up on the
+     * Data layer. Ensures a @ref DataLayer instance is set up on the
      * @ref UserInterface.
      * @see @ref UserInterface::dataLayer(),
      *      @ref UserInterface::hasDataLayer()
@@ -62,12 +62,12 @@ enum class StyleFeature: UnsignedShort {
     /**
      * Background layer style. Ensures a background @ref BaseLayer instance
      * with a compatible @ref BaseLayer::Shared state is set up on the
-     * @ref UserInterface, the style implementation then calls
+     * @ref UserInterface, the theme implementation then calls
      * @relativeref{BaseLayer::Shared,setStyle()} and
      * @relativeref{BaseLayer::Shared,setStyleTransition()} on it.
      *
-     * If @ref StyleFeature::BaseLayer is supplied but
-     * @ref StyleFeature::BackgroundLayer not, the base layer is used for
+     * If @ref ThemeFeature::BaseLayer is supplied but
+     * @ref ThemeFeature::BackgroundLayer not, the base layer is used for
      * backgrounds as well.
      * @see @ref UserInterface::backgroundLayer(),
      *      @ref UserInterface::hasBackgroundLayer()
@@ -76,16 +76,16 @@ enum class StyleFeature: UnsignedShort {
 
     /**
      * Background layer animations using @ref BaseLayerStyleAnimator. Can only
-     * be used with @ref AbstractStyle::apply() if a background
+     * be used with @ref AbstractTheme::apply() if a background
      * @ref BaseLayerStyleAnimator instance is already set up on the
-     * @ref UserInterface; can only be used with @ref UserInterfaceGL::setStyle()
-     * / @relativeref{UserInterfaceGL,trySetStyle()} if set together with
-     * @ref StyleFeature::BackgroundLayer or if a background
+     * @ref UserInterface; can only be used with @ref UserInterfaceGL::setTheme()
+     * / @relativeref{UserInterfaceGL,trySetTheme()} if set together with
+     * @ref ThemeFeature::BackgroundLayer or if a background
      * @ref BaseLayerStyleAnimator instance is already set up on the
      * @ref UserInterface.
      *
-     * If @ref StyleFeature::BaseLayer is supplied but
-     * @ref StyleFeature::BackgroundLayer not, the base layer, along with any
+     * If @ref ThemeFeature::BaseLayer is supplied but
+     * @ref ThemeFeature::BackgroundLayer not, the base layer, along with any
      * animations, is used for backgrounds as well.
      * @see @ref UserInterface::backgroundLayerStyleAnimator(),
      *      @ref UserInterface::hasBackgroundLayerStyleAnimator()
@@ -95,7 +95,7 @@ enum class StyleFeature: UnsignedShort {
     /**
      * Base layer style. Ensures a @ref BaseLayer instance with a compatible
      * @ref BaseLayer::Shared state is set up on the @ref UserInterface, the
-     * style implementation then calls @relativeref{BaseLayer::Shared,setStyle()}
+     * theme implementation then calls @relativeref{BaseLayer::Shared,setStyle()}
      * and @relativeref{BaseLayer::Shared,setStyleTransition()} on it.
      * @see @ref UserInterface::baseLayer(), @ref UserInterface::hasBaseLayer()
      */
@@ -103,11 +103,11 @@ enum class StyleFeature: UnsignedShort {
 
     /**
      * Base layer animations using @ref BaseLayerStyleAnimator. Can only be
-     * used with @ref AbstractStyle::apply() if a @ref BaseLayerStyleAnimator
+     * used with @ref AbstractTheme::apply() if a @ref BaseLayerStyleAnimator
      * instance is already set up on the @ref UserInterface; can only be used
-     * with @ref UserInterfaceGL::setStyle() /
-     * @relativeref{UserInterfaceGL,trySetStyle()} if set together with
-     * @ref StyleFeature::BaseLayer or if a @ref BaseLayerStyleAnimator
+     * with @ref UserInterfaceGL::setTheme() /
+     * @relativeref{UserInterfaceGL,trySetTheme()} if set together with
+     * @ref ThemeFeature::BaseLayer or if a @ref BaseLayerStyleAnimator
      * instance is already set up on the @ref UserInterface.
      * @see @ref UserInterface::baseLayerStyleAnimator(),
      *      @ref UserInterface::hasBaseLayerStyleAnimator()
@@ -117,7 +117,7 @@ enum class StyleFeature: UnsignedShort {
     /**
      * Text layer style and fonts. Ensures a @ref TextLayer instance with a
      * compatible @ref TextLayer::Shared state is set up on the
-     * @ref UserInterface, the style implementation then calls
+     * @ref UserInterface, the theme implementation then calls
      * @relativeref{TextLayer::Shared,addFont()},
      * @relativeref{TextLayer::Shared,setStyle()} and
      * @relativeref{TextLayer::Shared,setStyleTransition()} on it.
@@ -128,22 +128,22 @@ enum class StyleFeature: UnsignedShort {
     /**
      * Additional images such as icons for use with
      * @ref TextLayer::createGlyph(). Can only be used with
-     * @ref AbstractStyle::apply() if a @ref TextLayer instance is already set
+     * @ref AbstractTheme::apply() if a @ref TextLayer instance is already set
      * up on the @ref UserInterface; can only be used with
-     * @ref UserInterfaceGL::setStyle() /
-     * @relativeref{UserInterfaceGL,trySetStyle()} if set together with
-     * @ref StyleFeature::TextLayer or if a @ref TextLayer instance is already
+     * @ref UserInterfaceGL::setTheme() /
+     * @relativeref{UserInterfaceGL,trySetTheme()} if set together with
+     * @ref ThemeFeature::TextLayer or if a @ref TextLayer instance is already
      * set up on the @ref UserInterface.
      */
     TextLayerImages = 1 << 6,
 
     /**
      * Text layer animations using @ref TextLayerStyleAnimator. Can only be
-     * used with @ref AbstractStyle::apply() if a @ref TextLayerStyleAnimator
+     * used with @ref AbstractTheme::apply() if a @ref TextLayerStyleAnimator
      * instance is already set up on the @ref UserInterface; can only be used
-     * with @ref UserInterfaceGL::setStyle() /
-     * @relativeref{UserInterfaceGL,trySetStyle()} if set together with
-     * @ref StyleFeature::TextLayer or if a @ref TextLayerStyleAnimator
+     * with @ref UserInterfaceGL::setTheme() /
+     * @relativeref{UserInterfaceGL,trySetTheme()} if set together with
+     * @ref ThemeFeature::TextLayer or if a @ref TextLayerStyleAnimator
      * instance is already set up on the @ref UserInterface.
      * @see @ref UserInterface::textLayerStyleAnimator(),
      *      @ref UserInterface::hasTextLayerStyleAnimator()
@@ -151,7 +151,7 @@ enum class StyleFeature: UnsignedShort {
     TextLayerAnimations = 1 << 7,
 
     /**
-     * Event layer style. Ensures an @ref EventLayer instance is set up on the
+     * Event layer. Ensures an @ref EventLayer instance is set up on the
      * @ref UserInterface.
      * @see @ref UserInterface::eventLayer(),
      *      @ref UserInterface::hasEventLayer()
@@ -159,7 +159,7 @@ enum class StyleFeature: UnsignedShort {
     EventLayer = 1 << 8,
 
     /**
-     * Layout layer style. Ensures a @ref LayoutLayer instance is set up on the
+     * Layout layer. Ensures a @ref LayoutLayer instance is set up on the
      * @ref UserInterface.
      * @see @ref UserInterface::layoutLayer(),
      *      @ref UserInterface::hasLayoutLayer()
@@ -167,16 +167,16 @@ enum class StyleFeature: UnsignedShort {
     LayoutLayer = 1 << 9,
 
     /**
-     * Snap layouter style. Ensures a @ref SnapLayouter instance is set up on
-     * the @ref UserInterface.
+     * Snap layouter. Ensures a @ref SnapLayouter instance is set up on the
+     * @ref UserInterface.
      * @see @ref UserInterface::snapLayouter(),
      *      @ref UserInterface::hasSnapLayouter()
      */
     SnapLayouter = 1 << 10,
 
     /**
-     * Generic layouter style. Ensures a @ref GenericLayouter instance is set
-     * up on the @ref UserInterface.
+     * Generic layouter. Ensures a @ref GenericLayouter instance is set up on
+     * the @ref UserInterface.
      * @see @ref UserInterface::genericLayouter(),
      *      @ref UserInterface::hasGenericLayouter()
      */
@@ -192,47 +192,47 @@ enum class StyleFeature: UnsignedShort {
 };
 
 /**
-@debugoperatorenum{StyleFeature}
+@debugoperatorenum{ThemeFeature}
 @m_since_latest_{extras}
 */
-MAGNUM_UI_EXPORT Debug& operator<<(Debug& debug, StyleFeature value);
+MAGNUM_UI_EXPORT Debug& operator<<(Debug& debug, ThemeFeature value);
 
 /**
-@brief Features supplied by a style
+@brief Features supplied by a theme
 @m_since_latest_{extras}
 
-@see @ref AbstractStyle::features(), @ref AbstractStyle::apply(),
-    @ref UserInterfaceGL::setStyle(), @ref UserInterfaceGL::trySetStyle()
+@see @ref AbstractTheme::features(), @ref AbstractTheme::apply(),
+    @ref UserInterfaceGL::setTheme(), @ref UserInterfaceGL::trySetTheme()
 */
-typedef Containers::EnumSet<StyleFeature
+typedef Containers::EnumSet<ThemeFeature
     #ifndef DOXYGEN_GENERATING_OUTPUT
-    , UnsignedInt(StyleFeature::DataLayer)|
-      UnsignedInt(StyleFeature::BackgroundLayer)|
-      UnsignedInt(StyleFeature::BackgroundLayerAnimations)|
-      UnsignedInt(StyleFeature::BaseLayer)|
-      UnsignedInt(StyleFeature::BaseLayerAnimations)|
-      UnsignedInt(StyleFeature::TextLayer)|
-      UnsignedInt(StyleFeature::TextLayerImages)|
-      UnsignedInt(StyleFeature::TextLayerAnimations)|
-      UnsignedInt(StyleFeature::EventLayer)|
-      UnsignedInt(StyleFeature::LayoutLayer)|
-      UnsignedInt(StyleFeature::SnapLayouter)|
-      UnsignedInt(StyleFeature::GenericLayouter)|
-      UnsignedInt(StyleFeature::NodeAnimations)
+    , UnsignedInt(ThemeFeature::DataLayer)|
+      UnsignedInt(ThemeFeature::BackgroundLayer)|
+      UnsignedInt(ThemeFeature::BackgroundLayerAnimations)|
+      UnsignedInt(ThemeFeature::BaseLayer)|
+      UnsignedInt(ThemeFeature::BaseLayerAnimations)|
+      UnsignedInt(ThemeFeature::TextLayer)|
+      UnsignedInt(ThemeFeature::TextLayerImages)|
+      UnsignedInt(ThemeFeature::TextLayerAnimations)|
+      UnsignedInt(ThemeFeature::EventLayer)|
+      UnsignedInt(ThemeFeature::LayoutLayer)|
+      UnsignedInt(ThemeFeature::SnapLayouter)|
+      UnsignedInt(ThemeFeature::GenericLayouter)|
+      UnsignedInt(ThemeFeature::NodeAnimations)
     #endif
-    > StyleFeatures;
+    > ThemeFeatures;
 
-CORRADE_ENUMSET_OPERATORS(StyleFeatures)
+CORRADE_ENUMSET_OPERATORS(ThemeFeatures)
 
 /**
-@debugoperatorenum{StyleFeatures}
+@debugoperatorenum{ThemeFeatures}
 @m_since_latest_{extras}
 */
-MAGNUM_UI_EXPORT Debug& operator<<(Debug& debug, StyleFeatures value);
+MAGNUM_UI_EXPORT Debug& operator<<(Debug& debug, ThemeFeatures value);
 
 namespace Implementation {
     /* Used by various tests, less wasteful to have here than in the
-       potentially huge AbstractStyle.hpp */
+       potentially huge AbstractTheme.hpp */
     enum: UnsignedInt {
         BaseStyleCount = 63,
         TextStyleCount = 91,
@@ -242,43 +242,43 @@ namespace Implementation {
 }
 
 /**
-@brief Base for @ref UserInterface styles
+@brief Base for @ref UserInterface themes
 @m_since_latest_{extras}
 
-@section Ui-AbstractStyle-subclassing Subclassing
+@section Ui-AbstractTheme-subclassing Subclassing
 
 A subclass implements at least @ref doFeatures() and @ref doApply(), and then a
 subset of the other virtual functions based on what features are actually
-supplied by the style. See their documentation for more information.
+supplied by the theme. See their documentation for more information.
 
-@see @ref UserInterfaceGL::setStyle(),
-    @ref UserInterfaceGL::UserInterfaceGL(const Vector2&, const Vector2&, const Vector2i&, const AbstractStyle&, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*),
-    @ref UserInterfaceGL::UserInterfaceGL(const Vector2i&, const AbstractStyle&, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*),
+@see @ref UserInterfaceGL::setTheme(),
+    @ref UserInterfaceGL::UserInterfaceGL(const Vector2&, const Vector2&, const Vector2i&, const AbstractTheme&, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*),
+    @ref UserInterfaceGL::UserInterfaceGL(const Vector2i&, const AbstractTheme&, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*),
 */
-class MAGNUM_UI_EXPORT AbstractStyle {
+class MAGNUM_UI_EXPORT AbstractTheme {
     public:
-        explicit AbstractStyle();
+        explicit AbstractTheme();
 
         /* Not strictly needed as the class is trivially destructible, but
            derived classes might not be trivially destructible anymore which
            would leak their state if deleted through the base pointer. And
            Clang warns even if the subclass is trivially destructible. */
-        virtual ~AbstractStyle();
+        virtual ~AbstractTheme();
 
         /**
-         * @brief Features supplied by a style
+         * @brief Features supplied by a theme
          *
-         * Guaranteed to return at least one @ref StyleFeature.
+         * Guaranteed to return at least one @ref ThemeFeature.
          */
-        StyleFeatures features() const;
+        ThemeFeatures features() const;
 
         /**
          * @brief Style uniform count for the background layer
          *
-         * Expects that @ref StyleFeature::BackgroundLayer is supported. The
+         * Expects that @ref ThemeFeature::BackgroundLayer is supported. The
          * returned value is passed to background layer's
          * @ref BaseLayer::Shared::Configuration::Configuration(UnsignedInt, UnsignedInt)
-         * constructor by @ref UserInterfaceGL::setStyle().
+         * constructor by @ref UserInterfaceGL::setTheme().
          * @see @ref backgroundLayerStyleCount(),
          *      @ref backgroundLayerDynamicStyleCount(), @ref features()
          */
@@ -287,10 +287,10 @@ class MAGNUM_UI_EXPORT AbstractStyle {
         /**
          * @brief Style count for the background layer
          *
-         * Expects that @ref StyleFeature::BackgroundLayer is supported. The
+         * Expects that @ref ThemeFeature::BackgroundLayer is supported. The
          * returned value is passed to background layer's
          * @ref BaseLayer::Shared::Configuration::Configuration(UnsignedInt, UnsignedInt)
-         * constructor by @ref UserInterfaceGL::setStyle().
+         * constructor by @ref UserInterfaceGL::setTheme().
          * @see @ref backgroundLayerStyleUniformCount(),
          *      @ref backgroundLayerDynamicStyleCount(), @ref features()
          */
@@ -299,10 +299,10 @@ class MAGNUM_UI_EXPORT AbstractStyle {
         /**
          * @brief Dynamic style count for the background layer
          *
-         * Expects that @ref StyleFeature::BackgroundLayer is supported. The
+         * Expects that @ref ThemeFeature::BackgroundLayer is supported. The
          * returned value is passed to background layer's
          * @ref BaseLayer::Shared::Configuration::setDynamicStyleCount()
-         * by @ref UserInterfaceGL::setStyle(). Call
+         * by @ref UserInterfaceGL::setTheme(). Call
          * @ref setBackgroundLayerDynamicStyleCount() to increase the count if
          * needed.
          * @see @ref backgroundLayerStyleUniformCount(),
@@ -314,22 +314,22 @@ class MAGNUM_UI_EXPORT AbstractStyle {
          * @brief Request more background layer dynamic styles
          * @return Reference to self (for method chaining)
          *
-         * Expects that @ref StyleFeature::BackgroundLayer is supported. Call
-         * this function if the dynamic style count requested by the style
+         * Expects that @ref ThemeFeature::BackgroundLayer is supported. Call
+         * this function if the dynamic style count requested by the theme
          * isn't enough for extra animations and other dynamic style features
          * used by the application. The used count will be a maximum of what
-         * the style itself returned and what was requested with this function.
+         * the theme itself returned and what was requested with this function.
          * @see @ref backgroundLayerDynamicStyleCount(), @ref features()
          */
-        AbstractStyle& setBackgroundLayerDynamicStyleCount(UnsignedInt count);
+        AbstractTheme& setBackgroundLayerDynamicStyleCount(UnsignedInt count);
 
         /**
          * @brief Additional flags for the background layer
          *
-         * Expects that @ref StyleFeature::BackgroundLayer is supported. The
+         * Expects that @ref ThemeFeature::BackgroundLayer is supported. The
          * returned value is passed to background layer's
          * @ref BaseLayer::Shared::Configuration::setFlags() by
-         * @ref UserInterfaceGL::setStyle(). Call @ref setBackgroundLayerFlags()
+         * @ref UserInterfaceGL::setTheme(). Call @ref setBackgroundLayerFlags()
          * to supply additional flags to add or clear from the set if needed.
          */
         BaseLayerSharedFlags backgroundLayerFlags() const;
@@ -338,24 +338,24 @@ class MAGNUM_UI_EXPORT AbstractStyle {
          * @brief Set additional background layer flags
          * @return Reference to self (for method chaining)
          *
-         * Expects that @ref StyleFeature::BackgroundLayer is supported, @p add
+         * Expects that @ref ThemeFeature::BackgroundLayer is supported, @p add
          * is a subset of @ref BaseLayerSharedFlag::SubdividedQuads, and
          * @p clear is a subset of @ref BaseLayerSharedFlag::BackgroundBlur,
          * @relativeref{BaseLayerSharedFlag,NoRoundedCorners} and
-         * @relativeref{BaseLayerSharedFlag,NoOutline}. Flags used are a
-         * union of what the style itself returned and what was requested in
-         * @p add, with everything in @p clear cleared from the set.
+         * @relativeref{BaseLayerSharedFlag,NoOutline}. Flags used are a union
+         * of what the theme itself returned and what was requested in @p add,
+         * with everything in @p clear cleared from the set.
          * @see @ref backgroundLayerFlags(), @ref features()
          */
-        AbstractStyle& setBackgroundLayerFlags(BaseLayerSharedFlags add, BaseLayerSharedFlags clear);
+        AbstractTheme& setBackgroundLayerFlags(BaseLayerSharedFlags add, BaseLayerSharedFlags clear);
 
         /**
          * @brief Background blur radius
          *
-         * Expects that @ref StyleFeature::BackgroundLayer is supported. The
+         * Expects that @ref ThemeFeature::BackgroundLayer is supported. The
          * returned value is passed to background layer's
          * @ref BaseLayer::Shared::Configuration::setBackgroundBlurRadius() by
-         * @ref UserInterfaceGL::setStyle() and has an effect only if
+         * @ref UserInterfaceGL::setTheme() and has an effect only if
          * @ref BaseLayerSharedFlag::BackgroundBlur is present in
          * @ref backgroundLayerFlags().
          */
@@ -364,10 +364,10 @@ class MAGNUM_UI_EXPORT AbstractStyle {
         /**
          * @brief Background blur sampling cutoff
          *
-         * Expects that @ref StyleFeature::BackgroundLayer is supported. The
+         * Expects that @ref ThemeFeature::BackgroundLayer is supported. The
          * returned value is passed to background layer's
          * @ref BaseLayer::Shared::Configuration::setBackgroundBlurRadius() by
-         * @ref UserInterfaceGL::setStyle() and has an effect only if
+         * @ref UserInterfaceGL::setTheme() and has an effect only if
          * @ref BaseLayerSharedFlag::BackgroundBlur is present in
          * @ref backgroundLayerFlags().
          */
@@ -376,10 +376,10 @@ class MAGNUM_UI_EXPORT AbstractStyle {
         /**
          * @brief Style uniform count for the base layer
          *
-         * Expects that @ref StyleFeature::BaseLayer is supported. The returned
+         * Expects that @ref ThemeFeature::BaseLayer is supported. The returned
          * value is passed to base layer's
          * @ref BaseLayer::Shared::Configuration::Configuration(UnsignedInt, UnsignedInt)
-         * constructor by @ref UserInterfaceGL::setStyle().
+         * constructor by @ref UserInterfaceGL::setTheme().
          * @see @ref baseLayerStyleCount(), @ref baseLayerDynamicStyleCount(),
          *      @ref features()
          */
@@ -388,10 +388,10 @@ class MAGNUM_UI_EXPORT AbstractStyle {
         /**
          * @brief Style count for the base layer
          *
-         * Expects that @ref StyleFeature::BaseLayer is supported. The returned
+         * Expects that @ref ThemeFeature::BaseLayer is supported. The returned
          * value is passed to base layer's
          * @ref BaseLayer::Shared::Configuration::Configuration(UnsignedInt, UnsignedInt)
-         * constructor by @ref UserInterfaceGL::setStyle().
+         * constructor by @ref UserInterfaceGL::setTheme().
          * @see @ref baseLayerStyleUniformCount(),
          *      @ref baseLayerDynamicStyleCount(), @ref features()
          */
@@ -400,10 +400,10 @@ class MAGNUM_UI_EXPORT AbstractStyle {
         /**
          * @brief Dynamic style count for the base layer
          *
-         * Expects that @ref StyleFeature::BaseLayer is supported. The returned
+         * Expects that @ref ThemeFeature::BaseLayer is supported. The returned
          * value is passed to base layer's
          * @ref BaseLayer::Shared::Configuration::setDynamicStyleCount() by
-         * @ref UserInterfaceGL::setStyle(). Call
+         * @ref UserInterfaceGL::setTheme(). Call
          * @ref setBaseLayerDynamicStyleCount() to increase the count if
          * needed.
          * @see @ref baseLayerStyleUniformCount(), @ref baseLayerStyleCount(),
@@ -415,22 +415,22 @@ class MAGNUM_UI_EXPORT AbstractStyle {
          * @brief Request more base layer dynamic styles
          * @return Reference to self (for method chaining)
          *
-         * Expects that @ref StyleFeature::BaseLayer is supported. Call this
-         * function if the dynamic style count requested by the style isn't
+         * Expects that @ref ThemeFeature::BaseLayer is supported. Call this
+         * function if the dynamic style count requested by the theme isn't
          * enough for extra animations and other dynamic style features used by
-         * the application. The used count will be a maximum of what the style
+         * the application. The used count will be a maximum of what the theme
          * itself returned and what was requested with this function.
          * @see @ref baseLayerDynamicStyleCount(), @ref features()
          */
-        AbstractStyle& setBaseLayerDynamicStyleCount(UnsignedInt count);
+        AbstractTheme& setBaseLayerDynamicStyleCount(UnsignedInt count);
 
         /**
          * @brief Additional flags for the base layer
          *
-         * Expects that @ref StyleFeature::BaseLayer is supported. The returned
+         * Expects that @ref ThemeFeature::BaseLayer is supported. The returned
          * value is passed to base layer's
          * @ref BaseLayer::Shared::Configuration::setFlags() by
-         * @ref UserInterfaceGL::setStyle(). Call @ref setBaseLayerFlags() to
+         * @ref UserInterfaceGL::setTheme(). Call @ref setBaseLayerFlags() to
          * supply additional flags to add or clear from the set if needed.
          */
         BaseLayerSharedFlags baseLayerFlags() const;
@@ -439,23 +439,23 @@ class MAGNUM_UI_EXPORT AbstractStyle {
          * @brief Set additional base layer flags
          * @return Reference to self (for method chaining)
          *
-         * Expects that @ref StyleFeature::BaseLayer is supported, @p add is a
-         * subset of @ref BaseLayerSharedFlag::SubdividedQuads, and @p clear is a
-         * subset of @ref BaseLayerSharedFlag::NoRoundedCorners and
+         * Expects that @ref ThemeFeature::BaseLayer is supported, @p add is a
+         * subset of @ref BaseLayerSharedFlag::SubdividedQuads, and @p clear is
+         * a subset of @ref BaseLayerSharedFlag::NoRoundedCorners and
          * @relativeref{BaseLayerSharedFlag,NoOutline}. Flags used are a union
-         * of what the style itself returned and what was requested in @p add,
+         * of what the theme itself returned and what was requested in @p add,
          * with everything in @p clear cleared from the set.
          * @see @ref baseLayerFlags(), @ref features()
          */
-        AbstractStyle& setBaseLayerFlags(BaseLayerSharedFlags add, BaseLayerSharedFlags clear);
+        AbstractTheme& setBaseLayerFlags(BaseLayerSharedFlags add, BaseLayerSharedFlags clear);
 
         /**
          * @brief Style uniform count for the text layer
          *
-         * Expects that @ref StyleFeature::TextLayer is supported. The returned
+         * Expects that @ref ThemeFeature::TextLayer is supported. The returned
          * value is passed to text layer's
          * @ref TextLayer::Shared::Configuration::Configuration(UnsignedInt, UnsignedInt)
-         * constructor by @ref UserInterfaceGL::setStyle().
+         * constructor by @ref UserInterfaceGL::setTheme().
          * @see @ref textLayerStyleCount(),
          *      @ref textLayerEditingStyleUniformCount(),
          *      @ref textLayerEditingStyleCount(),
@@ -469,10 +469,10 @@ class MAGNUM_UI_EXPORT AbstractStyle {
         /**
          * @brief Style count for the text layer
          *
-         * Expects that @ref StyleFeature::TextLayer is supported. The returned
+         * Expects that @ref ThemeFeature::TextLayer is supported. The returned
          * value is passed to text layer's
          * @ref TextLayer::Shared::Configuration::Configuration(UnsignedInt, UnsignedInt)
-         * constructor by @ref UserInterfaceGL::setStyle().
+         * constructor by @ref UserInterfaceGL::setTheme().
          * @see @ref textLayerStyleUniformCount(),
          *      @ref textLayerEditingStyleUniformCount(),
          *      @ref textLayerEditingStyleCount(),
@@ -486,10 +486,10 @@ class MAGNUM_UI_EXPORT AbstractStyle {
         /**
          * @brief Editing style uniform count for the text layer
          *
-         * Expects that @ref StyleFeature::TextLayer is supported. The returned
+         * Expects that @ref ThemeFeature::TextLayer is supported. The returned
          * value is passed to text layer's
          * @ref TextLayer::Shared::Configuration::setEditingStyleCount() by
-         * @ref UserInterfaceGL::setStyle().
+         * @ref UserInterfaceGL::setTheme().
          * @see @ref textLayerStyleUniformCount(), @ref textLayerStyleCount(),
          *      @ref textLayerEditingStyleCount(),
          *      @ref textLayerDynamicStyleCount(),
@@ -502,10 +502,10 @@ class MAGNUM_UI_EXPORT AbstractStyle {
         /**
          * @brief Editing style count for the text layer
          *
-         * Expects that @ref StyleFeature::TextLayer is supported. The returned
+         * Expects that @ref ThemeFeature::TextLayer is supported. The returned
          * value is passed to text layer's
          * @ref TextLayer::Shared::Configuration::setEditingStyleCount() by
-         * @ref UserInterfaceGL::setStyle().
+         * @ref UserInterfaceGL::setTheme().
          * @see @ref textLayerStyleUniformCount(), @ref textLayerStyleCount(),
          *      @ref textLayerEditingStyleUniformCount(),
          *      @ref textLayerDynamicStyleCount(),
@@ -518,10 +518,10 @@ class MAGNUM_UI_EXPORT AbstractStyle {
         /**
          * @brief Dynamic style count for the text layer
          *
-         * Expects that @ref StyleFeature::TextLayer is supported. The returned
+         * Expects that @ref ThemeFeature::TextLayer is supported. The returned
          * value is passed to text layer's
          * @ref TextLayer::Shared::Configuration::setDynamicStyleCount() by
-         * @ref UserInterfaceGL::setStyle(). Call
+         * @ref UserInterfaceGL::setTheme(). Call
          * @ref setTextLayerDynamicStyleCount() to increase the count if
          * needed.
          * @see @ref textLayerStyleUniformCount(), @ref textLayerStyleCount(),
@@ -537,21 +537,21 @@ class MAGNUM_UI_EXPORT AbstractStyle {
          * @brief Request more text layer dynamic styles
          * @return Reference to self (for method chaining)
          *
-         * Expects that @ref StyleFeature::TextLayer is supported. Call this
-         * function if the dynamic style count requested by the style isn't
+         * Expects that @ref ThemeFeature::TextLayer is supported. Call this
+         * function if the dynamic style count requested by the theme isn't
          * enough for extra animations and other dynamic style features used by
-         * the application. The used count will be a maximum of what the style
+         * the application. The used count will be a maximum of what the theme
          * itself returned and what was requested with this function.
          * @see @ref textLayerDynamicStyleCount(), @ref features()
          */
-        AbstractStyle& setTextLayerDynamicStyleCount(UnsignedInt count);
+        AbstractTheme& setTextLayerDynamicStyleCount(UnsignedInt count);
 
         /**
          * @brief Text layer glyph cache format
          *
-         * Expects that @ref StyleFeature::TextLayer is supported. The returned
+         * Expects that @ref ThemeFeature::TextLayer is supported. The returned
          * value is passed to text layer's @ref Text::GlyphCacheGL constructor
-         * by @ref UserInterfaceGL::setStyle().
+         * by @ref UserInterfaceGL::setTheme().
          * @see @ref textLayerStyleUniformCount(), @ref textLayerStyleCount(),
          *      @ref textLayerEditingStyleUniformCount(),
          *      @ref textLayerEditingStyleCount(),
@@ -564,13 +564,13 @@ class MAGNUM_UI_EXPORT AbstractStyle {
         /**
          * @brief Text layer glyph cache size
          *
-         * Expects that @ref StyleFeature::TextLayer is supported and that
+         * Expects that @ref ThemeFeature::TextLayer is supported and that
          * @p features are a subset of @ref features() and contain at least
-         * @ref StyleFeature::TextLayer. The implementation may choose to
+         * @ref ThemeFeature::TextLayer. The implementation may choose to
          * return a different value based on whether
-         * @ref StyleFeature::TextLayerImages is present in @p features or not.
+         * @ref ThemeFeature::TextLayerImages is present in @p features or not.
          * The returned value is passed to text layer's @ref Text::GlyphCacheGL
-         * constructor by @ref UserInterfaceGL::setStyle(). Call
+         * constructor by @ref UserInterfaceGL::setTheme(). Call
          * @ref setTextLayerGlyphCacheSize() to enlarge the glyph cache if the
          * application needs to store more glyphs.
          * @see @ref textLayerStyleUniformCount(), @ref textLayerStyleCount(),
@@ -580,14 +580,14 @@ class MAGNUM_UI_EXPORT AbstractStyle {
          *      @ref textLayerGlyphCacheFormat(),
          *      @ref textLayerGlyphCachePadding(), @ref features()
          */
-        Vector3i textLayerGlyphCacheSize(StyleFeatures features) const;
+        Vector3i textLayerGlyphCacheSize(ThemeFeatures features) const;
 
         /**
          * @brief Text layer glyph cache padding
          *
-         * Expects that @ref StyleFeature::TextLayer is supported. The returned
+         * Expects that @ref ThemeFeature::TextLayer is supported. The returned
          * value is passed to text layer's @ref Text::GlyphCacheGL constructor
-         * by @ref UserInterfaceGL::setStyle(). Call
+         * by @ref UserInterfaceGL::setTheme(). Call
          * @ref setTextLayerGlyphCacheSize() to enlarge the glyph cache size or
          * padding if needed.
          * @see @ref textLayerStyleUniformCount(), @ref textLayerStyleCount(),
@@ -603,37 +603,37 @@ class MAGNUM_UI_EXPORT AbstractStyle {
          * @brief Request a larger glyph cache size
          * @return Reference to self (for method chaining)
          *
-         * Expects that @ref StyleFeature::TextLayer is supported. Call this
-         * function if the glyph cache size requested by the style isn't enough
+         * Expects that @ref ThemeFeature::TextLayer is supported. Call this
+         * function if the glyph cache size requested by the theme isn't enough
          * for extra glyphs used by the application, if the application adds
          * additional fonts or other image data to it or if additional padding
          * is needed. The used size and padding will be a maximum of what the
-         * style itself returned and what was requested with this function.
+         * theme itself returned and what was requested with this function.
          * @see @ref textLayerGlyphCacheSize(),
          *      @ref textLayerGlyphCachePadding(), @ref features()
          */
-        AbstractStyle& setTextLayerGlyphCacheSize(const Vector3i& size, const Vector2i& padding = {});
+        AbstractTheme& setTextLayerGlyphCacheSize(const Vector3i& size, const Vector2i& padding = {});
 
         /**
          * @brief Style count for the layout layer
          *
-         * Expects that @ref StyleFeature::LayoutLayer is supported. The
+         * Expects that @ref ThemeFeature::LayoutLayer is supported. The
          * returned value is passed to layout layer's
          * @ref LayoutLayer::LayoutLayer(LayerHandle, UnsignedInt) constructor
-         * by @ref UserInterfaceGL::setStyle().
+         * by @ref UserInterfaceGL::setTheme().
          * @see @ref features()
          */
         UnsignedInt layoutLayerStyleCount() const;
 
         /**
-         * @brief Apply the style
+         * @brief Apply the theme
          *
-         * Used internally from @ref UserInterfaceGL::setStyle() /
-         * @relativeref{UserInterfaceGL,trySetStyle()}, you'll likely want to
-         * call that function instead if setting up a style on a new
+         * Used internally from @ref UserInterfaceGL::setTheme() /
+         * @relativeref{UserInterfaceGL,trySetTheme()}, you'll likely want to
+         * call that function instead if setting up a theme on a new
          * @ref UserInterface instance. Direct use of this function is mainly
-         * for applying another compatible style to a user interface that
-         * already has a style set.
+         * for applying another compatible theme to a user interface that
+         * already has a theme set.
          *
          * Expects that @p ui has user interface size already set, either using
          * the constructor or by calling @ref UserInterface::setSize(). Expects
@@ -649,37 +649,37 @@ class MAGNUM_UI_EXPORT AbstractStyle {
          * matching @p features and the layer shared state dynamic style count
          * is at least the subset of @ref backgroundLayerDynamicStyleCount(),
          * @ref baseLayerDynamicStyleCount(), @ref textLayerDynamicStyleCount()
-         * matching @p features. Additionally, if @ref StyleFeature::TextLayer
+         * matching @p features. Additionally, if @ref ThemeFeature::TextLayer
          * is present in @p features, expects that the @ref TextLayer::Shared
          * instance has a glyph cache set that matches
          * @ref textLayerGlyphCacheFormat(), has size at least
          * @ref textLayerGlyphCacheSize() for @p features and padding at least
          * @ref textLayerGlyphCachePadding() and that @p fontManager is not
-         * @cpp nullptr @ce; and if @ref StyleFeature::TextLayerImages is
+         * @cpp nullptr @ce; and if @ref ThemeFeature::TextLayerImages is
          * present in @p features, expects that either the @ref TextLayer is
          * already present in the user interface or that
-         * @ref StyleFeature::TextLayer is included in @p features as well, and
+         * @ref ThemeFeature::TextLayer is included in @p features as well, and
          * that @p importerManager is not @cpp nullptr @ce. Returns
          * @cpp true @ce on success, prints a message to
          * @relativeref{Magnum,Error} and returns @cpp false @ce if some
-         * run-time error happened during style preparation, such as a plugin
+         * run-time error happened during theme preparation, such as a plugin
          * not being found or external data failing to load.
          */
-        bool apply(UserInterface& ui, StyleFeatures features, PluginManager::Manager<Trade::AbstractImporter>* importerManager, PluginManager::Manager<Text::AbstractFont>* fontManager) const;
+        bool apply(UserInterface& ui, ThemeFeatures features, PluginManager::Manager<Trade::AbstractImporter>* importerManager, PluginManager::Manager<Text::AbstractFont>* fontManager) const;
 
     private:
         /**
          * @brief Implementation for @ref features()
          *
-         * Is expected to return at least one @ref StyleFeature.
+         * Is expected to return at least one @ref ThemeFeature.
          */
-        virtual StyleFeatures doFeatures() const = 0;
+        virtual ThemeFeatures doFeatures() const = 0;
 
         /**
          * @brief Implementation for @ref backgroundLayerStyleUniformCount()
          *
          * Guaranteed to be called only if @ref doFeatures() contains
-         * @ref StyleFeature::BackgroundLayer. Default implementation delegates
+         * @ref ThemeFeature::BackgroundLayer. Default implementation delegates
          * to @ref doBackgroundLayerStyleCount().
          */
         virtual UnsignedInt doBackgroundLayerStyleUniformCount() const;
@@ -688,8 +688,8 @@ class MAGNUM_UI_EXPORT AbstractStyle {
          * @brief Implementation for @ref backgroundLayerStyleCount()
          *
          * Guaranteed to be called only if @ref doFeatures() contains
-         * @ref StyleFeature::BackgroundLayer. Has to be implemented if
-         * @ref doFeatures() contains @ref StyleFeature::BackgroundLayer.
+         * @ref ThemeFeature::BackgroundLayer. Has to be implemented if
+         * @ref doFeatures() contains @ref ThemeFeature::BackgroundLayer.
          */
         virtual UnsignedInt doBackgroundLayerStyleCount() const;
 
@@ -697,8 +697,8 @@ class MAGNUM_UI_EXPORT AbstractStyle {
          * @brief Implementation for @ref backgroundLayerDynamicStyleCount()
          *
          * Guaranteed to be called only if @ref doFeatures() contains
-         * @ref StyleFeature::BackgroundLayer. Default implementation returns
-         * @cpp 0 @ce. If @ref StyleFeature::BackgroundLayerAnimations is
+         * @ref ThemeFeature::BackgroundLayer. Default implementation returns
+         * @cpp 0 @ce. If @ref ThemeFeature::BackgroundLayerAnimations is
          * present in @ref doFeatures(), expects that the implementation
          * returns at least one dynamic style.
          */
@@ -708,7 +708,7 @@ class MAGNUM_UI_EXPORT AbstractStyle {
          * @brief Implementation for @ref backgroundLayerFlags()
          *
          * Guaranteed to be called only if @ref doFeatures() contains
-         * @ref StyleFeature::BackgroundLayer. Expects that the implementation
+         * @ref ThemeFeature::BackgroundLayer. Expects that the implementation
          * returns a subset of @ref BaseLayerSharedFlag::BackgroundBlur,
          * @relativeref{BaseLayerSharedFlag,NoRoundedCorners} and
          * @relativeref{BaseLayerSharedFlag,NoOutline}. Default implementation
@@ -720,7 +720,7 @@ class MAGNUM_UI_EXPORT AbstractStyle {
          * @brief Implementation for @ref backgroundLayerBlurRadius()
          *
          * Guaranteed to be called only if @ref doFeatures() contains
-         * @ref StyleFeature::BackgroundLayer. Default implementation returns
+         * @ref ThemeFeature::BackgroundLayer. Default implementation returns
          * @cpp 4 @ce, consistent with @ref BaseLayer::Shared::Configuration
          * defaults. The call to @ref BaseLayer::setBackgroundBlurPassCount(),
          * if needed, can be done from within the @ref doApply()
@@ -732,7 +732,7 @@ class MAGNUM_UI_EXPORT AbstractStyle {
          * @brief Implementation for @ref backgroundLayerBlurCutoff()
          *
          * Guaranteed to be called only if @ref doFeatures() contains
-         * @ref StyleFeature::BackgroundLayer. Default implementation returns
+         * @ref ThemeFeature::BackgroundLayer. Default implementation returns
          * @cpp 0.5f/255.0f @ce, consistent with
          * @ref BaseLayer::Shared::Configuration defaults.
          */
@@ -742,7 +742,7 @@ class MAGNUM_UI_EXPORT AbstractStyle {
          * @brief Implementation for @ref baseLayerStyleUniformCount()
          *
          * Guaranteed to be called only if @ref doFeatures() contains
-         * @ref StyleFeature::BaseLayer. Default implementation delegates to
+         * @ref ThemeFeature::BaseLayer. Default implementation delegates to
          * @ref doBaseLayerStyleCount().
          */
         virtual UnsignedInt doBaseLayerStyleUniformCount() const;
@@ -751,8 +751,8 @@ class MAGNUM_UI_EXPORT AbstractStyle {
          * @brief Implementation for @ref baseLayerStyleCount()
          *
          * Guaranteed to be called only if @ref doFeatures() contains
-         * @ref StyleFeature::BaseLayer. Has to be implemented if
-         * @ref doFeatures() contains @ref StyleFeature::BaseLayer.
+         * @ref ThemeFeature::BaseLayer. Has to be implemented if
+         * @ref doFeatures() contains @ref ThemeFeature::BaseLayer.
          */
         virtual UnsignedInt doBaseLayerStyleCount() const;
 
@@ -760,8 +760,8 @@ class MAGNUM_UI_EXPORT AbstractStyle {
          * @brief Implementation for @ref baseLayerDynamicStyleCount()
          *
          * Guaranteed to be called only if @ref doFeatures() contains
-         * @ref StyleFeature::BaseLayer. Default implementation returns
-         * @cpp 0 @ce. If @ref StyleFeature::BaseLayerAnimations is present in
+         * @ref ThemeFeature::BaseLayer. Default implementation returns
+         * @cpp 0 @ce. If @ref ThemeFeature::BaseLayerAnimations is present in
          * @ref doFeatures(), expects that the implementation returns at least
          * one dynamic style.
          */
@@ -771,7 +771,7 @@ class MAGNUM_UI_EXPORT AbstractStyle {
          * @brief Implementation for @ref baseLayerFlags()
          *
          * Guaranteed to be called only if @ref doFeatures() contains
-         * @ref StyleFeature::BaseLayer. Expects that the implementation
+         * @ref ThemeFeature::BaseLayer. Expects that the implementation
          * returns a subset of @ref BaseLayerSharedFlag::NoRoundedCorners and
          * @relativeref{BaseLayerSharedFlag,NoOutline}. Default implementation
          * returns an empty set.
@@ -782,7 +782,7 @@ class MAGNUM_UI_EXPORT AbstractStyle {
          * @brief Implementation for @ref textLayerStyleUniformCount()
          *
          * Guaranteed to be called only if @ref doFeatures() contains
-         * @ref StyleFeature::TextLayer. Default implementation delegates to
+         * @ref ThemeFeature::TextLayer. Default implementation delegates to
          * @ref doTextLayerStyleCount().
          */
         virtual UnsignedInt doTextLayerStyleUniformCount() const;
@@ -791,8 +791,8 @@ class MAGNUM_UI_EXPORT AbstractStyle {
          * @brief Implementation for @ref textLayerStyleCount()
          *
          * Guaranteed to be called only if @ref doFeatures() contains
-         * @ref StyleFeature::TextLayer. Has to be implemented if
-         * @ref doFeatures() contains @ref StyleFeature::TextLayer.
+         * @ref ThemeFeature::TextLayer. Has to be implemented if
+         * @ref doFeatures() contains @ref ThemeFeature::TextLayer.
          */
         virtual UnsignedInt doTextLayerStyleCount() const;
 
@@ -800,7 +800,7 @@ class MAGNUM_UI_EXPORT AbstractStyle {
          * @brief Implementation for @ref textLayerEditingStyleUniformCount()
          *
          * Guaranteed to be called only if @ref doFeatures() contains
-         * @ref StyleFeature::TextLayer. Default implementation delegates to
+         * @ref ThemeFeature::TextLayer. Default implementation delegates to
          * @ref doTextLayerEditingStyleCount().
          */
         virtual UnsignedInt doTextLayerEditingStyleUniformCount() const;
@@ -809,7 +809,7 @@ class MAGNUM_UI_EXPORT AbstractStyle {
          * @brief Implementation for @ref textLayerEditingStyleCount()
          *
          * Guaranteed to be called only if @ref doFeatures() contains
-         * @ref StyleFeature::TextLayer. Default implementation returns
+         * @ref ThemeFeature::TextLayer. Default implementation returns
          * @cpp 0 @ce.
          */
         virtual UnsignedInt doTextLayerEditingStyleCount() const;
@@ -818,8 +818,8 @@ class MAGNUM_UI_EXPORT AbstractStyle {
          * @brief Implementation for @ref textLayerDynamicStyleCount()
          *
          * Guaranteed to be called only if @ref doFeatures() contains
-         * @ref StyleFeature::TextLayer. Default implementation returns
-         * @cpp 0 @ce. If @ref StyleFeature::TextLayerAnimations is present in
+         * @ref ThemeFeature::TextLayer. Default implementation returns
+         * @cpp 0 @ce. If @ref ThemeFeature::TextLayerAnimations is present in
          * @ref doFeatures(), expects that the implementation returns at least
          * one dynamic style.
          */
@@ -829,7 +829,7 @@ class MAGNUM_UI_EXPORT AbstractStyle {
          * @brief Implementation for @ref textLayerGlyphCacheFormat()
          *
          * Guaranteed to be called only if @ref doFeatures() contains
-         * @ref StyleFeature::TextLayer. Default implementation returns
+         * @ref ThemeFeature::TextLayer. Default implementation returns
          * @ref PixelFormat::R8Unorm.
          */
         virtual PixelFormat doTextLayerGlyphCacheFormat() const;
@@ -838,18 +838,18 @@ class MAGNUM_UI_EXPORT AbstractStyle {
          * @brief Implementation for @ref textLayerGlyphCacheSize()
          *
          * Guaranteed to be called only if @ref doFeatures() contains
-         * @ref StyleFeature::TextLayer. The @p features are guaranteed to be a
+         * @ref ThemeFeature::TextLayer. The @p features are guaranteed to be a
          * subset of @ref features() and contain at least
-         * @ref StyleFeature::TextLayer. Has to be implemented if
-         * @ref doFeatures() contains @ref StyleFeature::TextLayer.
+         * @ref ThemeFeature::TextLayer. Has to be implemented if
+         * @ref doFeatures() contains @ref ThemeFeature::TextLayer.
          */
-        virtual Vector3i doTextLayerGlyphCacheSize(StyleFeatures features) const;
+        virtual Vector3i doTextLayerGlyphCacheSize(ThemeFeatures features) const;
 
         /**
          * @brief Implementation for @ref textLayerGlyphCacheFormat()
          *
          * Guaranteed to be called only if @ref doFeatures() contains
-         * @ref StyleFeature::TextLayer. Default implementation returns
+         * @ref ThemeFeature::TextLayer. Default implementation returns
          * @cpp {1, 1} @ce, consistently with default padding in
          * @ref Text::AbstractGlyphCache, to prevent artifacts. See
          * @ref Text-AbstractGlyphCache-padding for more information.
@@ -860,8 +860,8 @@ class MAGNUM_UI_EXPORT AbstractStyle {
          * @brief Implementation for @ref layoutLayerStyleCount()
          *
          * Guaranteed to be called only if @ref doFeatures() contains
-         * @ref StyleFeature::LayoutLayer. Has to be implemented if
-         * @ref doFeatures() contains @ref StyleFeature::LayoutLayer.
+         * @ref ThemeFeature::LayoutLayer. Has to be implemented if
+         * @ref doFeatures() contains @ref ThemeFeature::LayoutLayer.
          */
         virtual UnsignedInt doLayoutLayerStyleCount() const;
 
@@ -880,7 +880,7 @@ class MAGNUM_UI_EXPORT AbstractStyle {
          * error happens, should print a message to @relativeref{Magnum,Error}
          * and return @cpp false @ce.
          *
-         * The @p ui is guaranteed to have user interface set for the style to
+         * The @p ui is guaranteed to have user interface set for the theme to
          * use to calculate font rasterization and icon sizes, for example. The
          * @p features are guaranteed to be a subset of @ref features() and
          * contain at least one feature, that @p ui already contains all
@@ -893,17 +893,17 @@ class MAGNUM_UI_EXPORT AbstractStyle {
          * matching @p features and the layer shared state dynamic style count
          * is at least the subset of @ref baseLayerDynamicStyleCount(),
          * @ref textLayerDynamicStyleCount() matching @p features.
-         * Additionally, if @ref StyleFeature::TextLayer is present in
+         * Additionally, if @ref ThemeFeature::TextLayer is present in
          * @p features, the @ref TextLayer::Shared instance is guaranteed to
          * have a glyph cache set that matches
          * @ref textLayerGlyphCacheFormat(), with a size at least
          * @ref textLayerGlyphCacheSize() for @p features and padding at least
          * @ref textLayerGlyphCachePadding(), and @p fontManager is guaranteed
          * to not be @cpp nullptr @ce; and if
-         * @ref StyleFeature::TextLayerImages is present in @p features, the
+         * @ref ThemeFeature::TextLayerImages is present in @p features, the
          * @p importerManager is guaranteed to not be @cpp nullptr @ce.
          */
-        virtual bool doApply(UserInterface& ui, StyleFeatures features, PluginManager::Manager<Trade::AbstractImporter>* importerManager, PluginManager::Manager<Text::AbstractFont>* fontManager) const = 0;
+        virtual bool doApply(UserInterface& ui, ThemeFeatures features, PluginManager::Manager<Trade::AbstractImporter>* importerManager, PluginManager::Manager<Text::AbstractFont>* fontManager) const = 0;
 
         /* When more user-overridable properties are present, might want to put
            them into a PIMPL instead, and remove the Vector3 include again */

@@ -24,7 +24,7 @@
     DEALINGS IN THE SOFTWARE.
 */
 
-#include "Style.h"
+#include "Theme.h"
 
 #include <Corrade/Containers/EnumSet.hpp>
 #include <Corrade/Containers/Optional.h>
@@ -43,7 +43,7 @@
 #include <Magnum/Trade/AbstractImporter.h>
 #include <Magnum/Trade/ImageData.h>
 
-#include "Magnum/Ui/AbstractStyle.hpp"
+#include "Magnum/Ui/AbstractTheme.hpp"
 #include "Magnum/Ui/BaseLayer.h"
 #include "Magnum/Ui/BaseLayerAnimator.h"
 #include "Magnum/Ui/EventLayer.h"
@@ -53,7 +53,7 @@
 #include "Magnum/Ui/TextLayer.h"
 #include "Magnum/Ui/TextLayerAnimator.h"
 #include "Magnum/Ui/UserInterface.h"
-#include "Magnum/Ui/Implementation/Style.hpp"
+#include "Magnum/Ui/Implementation/Theme.hpp"
 
 #ifdef MAGNUM_UI_BUILD_STATIC
 static void importShaderResources() {
@@ -126,12 +126,12 @@ template<Float(*cursorBlinkEasing)(Float)> AnimationHandle styleAnimationPersist
 
 }
 
-Debug& operator<<(Debug& debug, const McssDarkStyle::Feature value) {
-    debug << "Ui::McssDarkStyle::Feature" << Debug::nospace;
+Debug& operator<<(Debug& debug, const McssDarkTheme::Feature value) {
+    debug << "Ui::McssDarkTheme::Feature" << Debug::nospace;
 
     switch(value) {
         /* LCOV_EXCL_START */
-        #define _c(value) case McssDarkStyle::Feature::value: return debug << "::" #value;
+        #define _c(value) case McssDarkTheme::Feature::value: return debug << "::" #value;
         _c(EssentialAnimations)
         _c(Animations)
         #undef _c
@@ -141,11 +141,11 @@ Debug& operator<<(Debug& debug, const McssDarkStyle::Feature value) {
     return debug << "(" << Debug::nospace << Debug::hex << UnsignedByte(value) << Debug::nospace << ")";
 }
 
-Debug& operator<<(Debug& debug, const McssDarkStyle::Features value) {
-    return Containers::enumSetDebugOutput(debug, value, "Ui::McssDarkStyle::Features{}", {
-        McssDarkStyle::Feature::Animations,
+Debug& operator<<(Debug& debug, const McssDarkTheme::Features value) {
+    return Containers::enumSetDebugOutput(debug, value, "Ui::McssDarkTheme::Features{}", {
+        McssDarkTheme::Feature::Animations,
         /* Implied by Animations, has to be after */
-        McssDarkStyle::Feature::EssentialAnimations,
+        McssDarkTheme::Feature::EssentialAnimations,
     });
 }
 
@@ -260,69 +260,69 @@ static_assert(Implementation::LayoutStyleCount == Containers::arraySize(LayoutSt
 
 }
 
-McssDarkStyle::McssDarkStyle(const Features features): _features{features} {}
+McssDarkTheme::McssDarkTheme(const Features features): _features{features} {}
 
-StyleFeatures McssDarkStyle::doFeatures() const {
-    return StyleFeature::BaseLayer|
-           StyleFeature::TextLayer|
-           StyleFeature::TextLayerImages|
-           StyleFeature::EventLayer|
-           StyleFeature::LayoutLayer|
-           StyleFeature::SnapLayouter|
+ThemeFeatures McssDarkTheme::doFeatures() const {
+    return ThemeFeature::BaseLayer|
+           ThemeFeature::TextLayer|
+           ThemeFeature::TextLayerImages|
+           ThemeFeature::EventLayer|
+           ThemeFeature::LayoutLayer|
+           ThemeFeature::SnapLayouter|
            /* Essential animations are currently just (text layer) cursor
               blinking */
-           (_features >= Feature::Animations ? StyleFeature::BaseLayerAnimations|StyleFeature::TextLayerAnimations : StyleFeatures{})|
-           (_features >= Feature::EssentialAnimations ? StyleFeature::TextLayerAnimations : StyleFeatures{});
+           (_features >= Feature::Animations ? ThemeFeature::BaseLayerAnimations|ThemeFeature::TextLayerAnimations : ThemeFeatures{})|
+           (_features >= Feature::EssentialAnimations ? ThemeFeature::TextLayerAnimations : ThemeFeatures{});
 }
 
-UnsignedInt McssDarkStyle::doBaseLayerStyleUniformCount() const {
+UnsignedInt McssDarkTheme::doBaseLayerStyleUniformCount() const {
     return Implementation::BaseStyleUniformCount;
 }
 
-UnsignedInt McssDarkStyle::doBaseLayerStyleCount() const {
+UnsignedInt McssDarkTheme::doBaseLayerStyleCount() const {
     return Implementation::BaseStyleCount;
 }
 
-UnsignedInt McssDarkStyle::doBaseLayerDynamicStyleCount() const {
+UnsignedInt McssDarkTheme::doBaseLayerDynamicStyleCount() const {
     return _features >= Feature::Animations ? 10 : 0;
 }
 
-UnsignedInt McssDarkStyle::doTextLayerStyleUniformCount() const {
+UnsignedInt McssDarkTheme::doTextLayerStyleUniformCount() const {
     return Implementation::TextStyleUniformCount;
 }
 
-UnsignedInt McssDarkStyle::doTextLayerStyleCount() const {
+UnsignedInt McssDarkTheme::doTextLayerStyleCount() const {
     return Implementation::TextStyleCount;
 }
 
-UnsignedInt McssDarkStyle::doTextLayerDynamicStyleCount() const {
+UnsignedInt McssDarkTheme::doTextLayerDynamicStyleCount() const {
     /* For essential animations, assuming there's just one blinking cursor at a
        time, add one dynamic style, and one more for safety */
     return _features >= Feature::Animations ? 10 :
         _features >= Feature::EssentialAnimations ? 2 : 0;
 }
 
-UnsignedInt McssDarkStyle::doTextLayerEditingStyleUniformCount() const {
+UnsignedInt McssDarkTheme::doTextLayerEditingStyleUniformCount() const {
     return Implementation::TextEditingStyleUniformCount;
 }
 
-UnsignedInt McssDarkStyle::doTextLayerEditingStyleCount() const {
+UnsignedInt McssDarkTheme::doTextLayerEditingStyleCount() const {
     return Implementation::TextEditingStyleCount;
 }
 
-Vector3i McssDarkStyle::doTextLayerGlyphCacheSize(StyleFeatures) const {
+Vector3i McssDarkTheme::doTextLayerGlyphCacheSize(ThemeFeatures) const {
     /* 256x256 is enough only for DPI scale of 1, adding some extra space */
     /** @todo Make this dependent on DPI scale */
     return {512, 512, 1};
 }
 
-UnsignedInt McssDarkStyle::doLayoutLayerStyleCount() const {
+UnsignedInt McssDarkTheme::doLayoutLayerStyleCount() const {
     return Implementation::LayoutStyleCount;
 }
 
-bool McssDarkStyle::doApply(UserInterface& ui, const StyleFeatures features, PluginManager::Manager<Trade::AbstractImporter>* importerManager, PluginManager::Manager<Text::AbstractFont>* fontManager) const {
+bool McssDarkTheme::doApply(UserInterface& ui, const ThemeFeatures features, PluginManager::Manager<Trade::AbstractImporter>* importerManager, PluginManager::Manager<Text::AbstractFont>* fontManager) const {
     /* Base layer style */
-    if(features >= StyleFeature::BaseLayer) {
+    if(features >= ThemeFeature::BaseLayer) {
         ui.baseLayer().shared()
             .setStyle(
                 BaseCommonStyleUniformMcssDark,
@@ -340,7 +340,7 @@ bool McssDarkStyle::doApply(UserInterface& ui, const StyleFeatures features, Plu
 
     /* Animations for the base layer. Advertised only if they were enabled
        during construction. */
-    if(features >= StyleFeature::BaseLayerAnimations) {
+    if(features >= ThemeFeature::BaseLayerAnimations) {
         CORRADE_INTERNAL_ASSERT(_features >= Feature::Animations);
         ui.baseLayer().shared().setStyleAnimation<BaseStyle,
             nullptr,
@@ -354,7 +354,7 @@ bool McssDarkStyle::doApply(UserInterface& ui, const StyleFeatures features, Plu
        MSVC says iconFont might be used uninitialized without the {}. It won't,
        the thing is just stupid. */
     Ui::FontHandle iconFont{};
-    if(features & (StyleFeature::TextLayer|StyleFeature::TextLayerImages)) {
+    if(features & (ThemeFeature::TextLayer|ThemeFeature::TextLayerImages)) {
         #ifdef MAGNUM_UI_BUILD_STATIC
         importShaderResources();
         #endif
@@ -374,15 +374,15 @@ bool McssDarkStyle::doApply(UserInterface& ui, const StyleFeatures features, Plu
     /* Text layer fonts and style */
     /** @todo figure out how to apply another style and replace the previous
         now-unused font *somehow*, such as by keeping track of which fonts
-        correspond to which StyleFeature, and then pruning the cache also */
-    if(features >= StyleFeature::TextLayer) {
+        correspond to which ThemeFeature, and then pruning the cache also */
+    if(features >= ThemeFeature::TextLayer) {
         TextLayer::Shared& shared = ui.textLayer().shared();
         Text::AbstractGlyphCache& glyphCache = shared.glyphCache();
         const Utility::Resource rs{"MagnumUi"_s};
 
         Containers::Pointer<Text::AbstractFont> font = fontManager->loadAndInstantiate("TrueTypeFont");
         if(!font || !font->openData(rs.getRaw("SourceSans3-Regular.otf"_s), 16.0f*2*(Vector2{ui.framebufferSize()}/ui.size()).max())) {
-            Error{} << "Ui::McssDarkStyle::apply(): cannot open a font";
+            Error{} << "Ui::McssDarkTheme::apply(): cannot open a font";
             return {};
         }
         /** @todo fail if this fails, once the function doesn't return void */
@@ -436,7 +436,7 @@ bool McssDarkStyle::doApply(UserInterface& ui, const StyleFeatures features, Plu
     }
 
     /* Text layer images */
-    if(features >= StyleFeature::TextLayerImages) {
+    if(features >= ThemeFeature::TextLayerImages) {
         TextLayer::Shared& shared = ui.textLayer().shared();
         Text::AbstractGlyphCache& glyphCache = shared.glyphCache();
         const Utility::Resource rs{"MagnumUi"_s};
@@ -444,7 +444,7 @@ bool McssDarkStyle::doApply(UserInterface& ui, const StyleFeatures features, Plu
         Containers::Pointer<Trade::AbstractImporter> importer = importerManager->loadAndInstantiate("AnyImageImporter");
         Containers::Optional<Trade::ImageData2D> image;
         if(!importer || !importer->openMemory(rs.getRaw("icons.png")) || !(image = importer->image2D(0))) {
-            Error{} << "Ui::McssDarkStyle::apply(): cannot open an icon atlas";
+            Error{} << "Ui::McssDarkTheme::apply(): cannot open an icon atlas";
             return {};
         }
 
@@ -457,7 +457,7 @@ bool McssDarkStyle::doApply(UserInterface& ui, const StyleFeatures features, Plu
            important that it isn't expanded to 16 bits or to floats, for
            example. */
         if(pixelFormatChannelFormat(image->format()) != PixelFormat::R8Unorm) {
-            Error{} << "Ui::McssDarkStyle::apply(): expected" << PixelFormat::R8Unorm << "icons but got an image with" << image->format();
+            Error{} << "Ui::McssDarkTheme::apply(): expected" << PixelFormat::R8Unorm << "icons but got an image with" << image->format();
             return {};
         }
         const std::size_t channelSize = image->pixelSize()/pixelFormatChannelCount(image->format());
@@ -469,7 +469,7 @@ bool McssDarkStyle::doApply(UserInterface& ui, const StyleFeatures features, Plu
         CORRADE_INTERNAL_ASSERT(image->size().x() % image->size().y() == 0);
         Vector3i offsets[Implementation::IconCount];
         if(!glyphCache.atlas().add(Containers::stridedArrayView(&imageSize, 1).broadcasted<0>(Implementation::IconCount), offsets)) {
-            Error{} << "Ui::McssDarkStyle::apply(): cannot fit" << Implementation::IconCount << "icons into the glyph cache";
+            Error{} << "Ui::McssDarkTheme::apply(): cannot fit" << Implementation::IconCount << "icons into the glyph cache";
             return {};
         }
 
@@ -507,7 +507,7 @@ bool McssDarkStyle::doApply(UserInterface& ui, const StyleFeatures features, Plu
 
     /* Animations for the text layer. Advertised only if they were enabled
        during construction. */
-    if(features >= StyleFeature::TextLayerAnimations) {
+    if(features >= ThemeFeature::TextLayerAnimations) {
         if(_features >= Feature::Animations)
             ui.textLayer().shared().setStyleAnimation<TextStyle,
                 nullptr,
@@ -522,14 +522,14 @@ bool McssDarkStyle::doApply(UserInterface& ui, const StyleFeatures features, Plu
     }
 
     /* Event layer */
-    if(features >= StyleFeature::EventLayer) {
+    if(features >= ThemeFeature::EventLayer) {
         /* Right now nothing to set here. It's present in features() mainly in
            order to make UserInterface implicitly add this layer for use by the
            application. */
     }
 
     /* Layout layer. So far just min sizes, paddings and margins. */
-    if(features >= StyleFeature::LayoutLayer) {
+    if(features >= ThemeFeature::LayoutLayer) {
         ui.layoutLayer().setStyle(
             Containers::stridedArrayView(LayoutStylesMcssDark).slice(&std::remove_all_extents<decltype(LayoutStylesMcssDark)>::type::minSize),
             {},
@@ -539,7 +539,7 @@ bool McssDarkStyle::doApply(UserInterface& ui, const StyleFeatures features, Plu
     }
 
     /* Snap layouter */
-    if(features >= StyleFeature::SnapLayouter) {
+    if(features >= ThemeFeature::SnapLayouter) {
         /* Right now nothing to set here. It's present in features() mainly in
            order to make UserInterface implicitly add this layer for use by the
            application. */

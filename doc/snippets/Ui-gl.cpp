@@ -50,10 +50,10 @@
 #include "Magnum/Ui/Handle.h"
 #include "Magnum/Ui/LineLayerGL.h"
 #include "Magnum/Ui/RendererGL.h"
-#include "Magnum/Ui/Style.h"
 #include "Magnum/Ui/TextLayerGL.h"
 #include "Magnum/Ui/TextLayerAnimator.h"
 #include "Magnum/Ui/TextProperties.h"
+#include "Magnum/Ui/Theme.h"
 #include "Magnum/Ui/UserInterfaceGL.h"
 
 #define DOXYGEN_ELLIPSIS(...) __VA_ARGS__
@@ -660,7 +660,7 @@ void mainUiGL() {
 {
 /* Used by both AbstractUserInterface and UserInterfaceGL docs */
 /* [UserInterfaceGL-setup] */
-Ui::UserInterfaceGL ui{{800, 600}, Ui::McssDarkStyle{}};
+Ui::UserInterfaceGL ui{{800, 600}, Ui::McssDarkTheme{}};
 /* [UserInterfaceGL-setup] */
 
 /* [AbstractUserInterface-setup-blend] */
@@ -694,21 +694,21 @@ ui.setRendererInstance(Containers::pointer<Ui::RendererGL>());
 }
 
 {
-struct: Ui::AbstractStyle {
-    Ui::StyleFeatures doFeatures() const override { return {}; }
-    bool doApply(Ui::UserInterface&, Ui::StyleFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override {
+struct: Ui::AbstractTheme {
+    Ui::ThemeFeatures doFeatures() const override { return {}; }
+    bool doApply(Ui::UserInterface&, Ui::ThemeFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override {
         return false;
     }
 } myCustomStyle;
 /* [UserInterfaceGL-setup-features] */
-/* Pick everything except icons from the builtin style */
-Ui::UserInterfaceGL ui{{800, 600}, Ui::McssDarkStyle{},
-    ~Ui::StyleFeature::TextLayerImages};
+/* Pick everything except icons from the builtin theme */
+Ui::UserInterfaceGL ui{{800, 600}, Ui::McssDarkTheme{},
+    ~Ui::ThemeFeature::TextLayerImages};
 
 DOXYGEN_ELLIPSIS()
 
-/* Use icons from a custom style instead */
-ui.setStyle(myCustomStyle, Ui::StyleFeature::TextLayerImages);
+/* Use icons from a custom theme instead */
+ui.setTheme(myCustomStyle, Ui::ThemeFeature::TextLayerImages);
 /* [UserInterfaceGL-setup-features] */
 }
 
@@ -718,7 +718,7 @@ PluginManager::Manager<Trade::AbstractImporter> importerManager;
 PluginManager::Manager<Text::AbstractFont> fontManager;
 DOXYGEN_ELLIPSIS()
 
-Ui::UserInterfaceGL ui{DOXYGEN_ELLIPSIS({}, Ui::McssDarkStyle{}), &importerManager, &fontManager};
+Ui::UserInterfaceGL ui{DOXYGEN_ELLIPSIS({}, Ui::McssDarkTheme{}), &importerManager, &fontManager};
 /* [UserInterfaceGL-setup-managers] */
 }
 
@@ -729,15 +729,15 @@ Ui::UserInterfaceGL ui{NoCreate};
 ui
     .setRendererInstance(Containers::pointer<Ui::RendererGL>(DOXYGEN_ELLIPSIS()))
     .setSize(DOXYGEN_ELLIPSIS({}))
-    .setStyle(Ui::McssDarkStyle{});
+    .setTheme(Ui::McssDarkTheme{});
 /* [UserInterfaceGL-setup-renderer] */
 }
 
 {
 Ui::BaseLayerGL::Shared shared{Ui::BaseLayerGL::Shared::Configuration{1}};
 /* [UserInterfaceGL-setup-layer] */
-Ui::UserInterfaceGL ui{DOXYGEN_ELLIPSIS({}), Ui::McssDarkStyle{},
-    ~Ui::StyleFeature::BaseLayer};
+Ui::UserInterfaceGL ui{DOXYGEN_ELLIPSIS({}), Ui::McssDarkTheme{},
+    ~Ui::ThemeFeature::BaseLayer};
 
 DOXYGEN_ELLIPSIS()
 
@@ -852,11 +852,11 @@ blurLayer.create(0, background);
 {
 Ui::UserInterfaceGL ui{NoCreate};
 /* [BaseLayerStyleAnimator-setup-implicit] */
-/* UI style without base layer animations but with dynamic styles */
-ui.setStyle(
-    Ui::McssDarkStyle{}
+/* UI theme without base layer animations but with dynamic styles */
+ui.setTheme(
+    Ui::McssDarkTheme{}
         .setBaseLayerDynamicStyleCount(10), /* adjust as needed */
-    ~Ui::StyleFeature::BaseLayerAnimations);
+    ~Ui::ThemeFeature::BaseLayerAnimations);
 
 ui.setBaseLayerStyleAnimatorInstance(
     Containers::pointer<Ui::BaseLayerStyleAnimator>(ui.createAnimator()));
@@ -1016,11 +1016,11 @@ Ui::TextLayerGL::Shared textLayerShared{glyphCache,
 {
 Ui::UserInterfaceGL ui{NoCreate};
 /* [TextLayerStyleAnimator-setup-implicit] */
-/* UI style without text layer animations but with dynamic styles */
-ui.setStyle(
-    Ui::McssDarkStyle{}
+/* UI theme without text layer animations but with dynamic styles */
+ui.setTheme(
+    Ui::McssDarkTheme{}
         .setTextLayerDynamicStyleCount(10), /* adjust as needed */
-    ~Ui::StyleFeature::TextLayerAnimations);
+    ~Ui::ThemeFeature::TextLayerAnimations);
 
 ui.setTextLayerStyleAnimatorInstance(
     Containers::pointer<Ui::TextLayerStyleAnimator>(ui.createAnimator()));

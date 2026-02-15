@@ -103,15 +103,15 @@ individual properties interpolated with an easing function.
 
 @section Ui-BaseLayerStyleAnimator-setup Setting up a base layer animator instance
 
-If you create a @ref UserInterfaceGL with a style containing
-@ref McssDarkStyle::Feature::Animations or equivalent and don't exclude
-@ref StyleFeature::BaseLayerAnimations, an implicit instance of the class,
+If you create a @ref UserInterfaceGL with a theme containing
+@ref McssDarkTheme::Feature::Animations or equivalent and don't exclude
+@ref ThemeFeature::BaseLayerAnimations, an implicit instance of the class,
 configured for use with builtin widgets, is already provided and available
 through @ref UserInterface::baseLayerStyleAnimator().
 
 Otherwise, first you need to ensure that the implicit base layer has at least
 one dynamic style enabled, as animations make use of these. This can be
-configured via @ref AbstractStyle::setBaseLayerDynamicStyleCount() when setting
+configured via @ref AbstractTheme::setBaseLayerDynamicStyleCount() when setting
 up the UI style. The more dynamic styles are enabled, the more style animations
 can be running for given layer at the same time, but also more data need to get
 uploaded to the GPU every frame. Then it's just about constructing the animator

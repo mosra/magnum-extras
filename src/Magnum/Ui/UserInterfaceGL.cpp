@@ -31,7 +31,7 @@
 #include <Magnum/Math/Vector2.h>
 #include <Magnum/Text/GlyphCacheGL.h>
 
-#include "Magnum/Ui/AbstractStyle.h"
+#include "Magnum/Ui/AbstractTheme.h"
 #include "Magnum/Ui/BaseLayerGL.h"
 #include "Magnum/Ui/BaseLayerAnimator.h"
 #include "Magnum/Ui/DataLayer.h"
@@ -58,29 +58,29 @@ struct UserInterfaceGL::State: UserInterface::State {
 
 UserInterfaceGL::UserInterfaceGL(NoCreateT): UserInterface{NoCreate, Containers::pointer<State>()} {}
 
-UserInterfaceGL::UserInterfaceGL(const Vector2i& size, const AbstractStyle& style, const StyleFeatures styleFeatures, PluginManager::Manager<Trade::AbstractImporter>* const importerManager, PluginManager::Manager<Text::AbstractFont>* const fontManager): UserInterfaceGL{Vector2{size}, Vector2{size}, size, style, styleFeatures, importerManager, fontManager} {}
+UserInterfaceGL::UserInterfaceGL(const Vector2i& size, const AbstractTheme& theme, const ThemeFeatures themeFeatures, PluginManager::Manager<Trade::AbstractImporter>* const importerManager, PluginManager::Manager<Text::AbstractFont>* const fontManager): UserInterfaceGL{Vector2{size}, Vector2{size}, size, theme, themeFeatures, importerManager, fontManager} {}
 
-UserInterfaceGL::UserInterfaceGL(const Vector2i& size, const AbstractStyle& style, PluginManager::Manager<Trade::AbstractImporter>* const importerManager, PluginManager::Manager<Text::AbstractFont>* const fontManager): UserInterfaceGL{size, style, style.features(), importerManager, fontManager} {}
+UserInterfaceGL::UserInterfaceGL(const Vector2i& size, const AbstractTheme& theme, PluginManager::Manager<Trade::AbstractImporter>* const importerManager, PluginManager::Manager<Text::AbstractFont>* const fontManager): UserInterfaceGL{size, theme, theme.features(), importerManager, fontManager} {}
 
-UserInterfaceGL& UserInterfaceGL::createInternal(const AbstractStyle& style, const StyleFeatures styleFeatures, PluginManager::Manager<Trade::AbstractImporter>* const importerManager, PluginManager::Manager<Text::AbstractFont>* const fontManager) {
-    if(!tryCreateInternal(style, styleFeatures, importerManager, fontManager))
+UserInterfaceGL& UserInterfaceGL::createInternal(const AbstractTheme& theme, const ThemeFeatures themeFeatures, PluginManager::Manager<Trade::AbstractImporter>* const importerManager, PluginManager::Manager<Text::AbstractFont>* const fontManager) {
+    if(!tryCreateInternal(theme, themeFeatures, importerManager, fontManager))
         std::exit(1); /* LCOV_EXCL_LINE */
     return *this;
 }
 
-UserInterfaceGL& UserInterfaceGL::createInternal(const AbstractStyle& style, PluginManager::Manager<Trade::AbstractImporter>* const importerManager, PluginManager::Manager<Text::AbstractFont>* const fontManager) {
-    return createInternal(style, style.features(), importerManager, fontManager);
+UserInterfaceGL& UserInterfaceGL::createInternal(const AbstractTheme& theme, PluginManager::Manager<Trade::AbstractImporter>* const importerManager, PluginManager::Manager<Text::AbstractFont>* const fontManager) {
+    return createInternal(theme, theme.features(), importerManager, fontManager);
 }
 
-UserInterfaceGL& UserInterfaceGL::create(const Vector2i& size, const AbstractStyle& style, const StyleFeatures styleFeatures, PluginManager::Manager<Trade::AbstractImporter>* const importerManager, PluginManager::Manager<Text::AbstractFont>* const fontManager) {
-    return create(Vector2{size}, Vector2{size}, size, style, styleFeatures, importerManager, fontManager);
+UserInterfaceGL& UserInterfaceGL::create(const Vector2i& size, const AbstractTheme& theme, const ThemeFeatures themeFeatures, PluginManager::Manager<Trade::AbstractImporter>* const importerManager, PluginManager::Manager<Text::AbstractFont>* const fontManager) {
+    return create(Vector2{size}, Vector2{size}, size, theme, themeFeatures, importerManager, fontManager);
 }
 
-UserInterfaceGL& UserInterfaceGL::create(const Vector2i& size, const AbstractStyle& style, PluginManager::Manager<Trade::AbstractImporter>* const importerManager, PluginManager::Manager<Text::AbstractFont>* const fontManager) {
-    return create(size, style, style.features(), importerManager, fontManager);
+UserInterfaceGL& UserInterfaceGL::create(const Vector2i& size, const AbstractTheme& theme, PluginManager::Manager<Trade::AbstractImporter>* const importerManager, PluginManager::Manager<Text::AbstractFont>* const fontManager) {
+    return create(size, theme, theme.features(), importerManager, fontManager);
 }
 
-bool UserInterfaceGL::tryCreateInternal(const AbstractStyle& style, const StyleFeatures styleFeatures, PluginManager::Manager<Trade::AbstractImporter>* const importerManager, PluginManager::Manager<Text::AbstractFont>* const fontManager) {
+bool UserInterfaceGL::tryCreateInternal(const AbstractTheme& theme, const ThemeFeatures themeFeatures, PluginManager::Manager<Trade::AbstractImporter>* const importerManager, PluginManager::Manager<Text::AbstractFont>* const fontManager) {
     #ifndef CORRADE_NO_ASSERT
     State& state = static_cast<State&>(*_state);
     #endif
@@ -103,19 +103,19 @@ bool UserInterfaceGL::tryCreateInternal(const AbstractStyle& style, const StyleF
         /* Has to return true with CORRADE_GRACEFUL_ASSERT so when tested
            through create() it doesn't std::exit() the whole executable */
         true);
-    return trySetStyle(style, styleFeatures, importerManager, fontManager);
+    return trySetTheme(theme, themeFeatures, importerManager, fontManager);
 }
 
-bool UserInterfaceGL::tryCreateInternal(const AbstractStyle& style, PluginManager::Manager<Trade::AbstractImporter>* const importerManager, PluginManager::Manager<Text::AbstractFont>* const fontManager) {
-    return tryCreateInternal(style, style.features(), importerManager, fontManager);
+bool UserInterfaceGL::tryCreateInternal(const AbstractTheme& theme, PluginManager::Manager<Trade::AbstractImporter>* const importerManager, PluginManager::Manager<Text::AbstractFont>* const fontManager) {
+    return tryCreateInternal(theme, theme.features(), importerManager, fontManager);
 }
 
-bool UserInterfaceGL::tryCreate(const Vector2i& size, const AbstractStyle& style, const StyleFeatures styleFeatures, PluginManager::Manager<Trade::AbstractImporter>* const importerManager, PluginManager::Manager<Text::AbstractFont>* const fontManager) {
-    return tryCreate(Vector2{size}, Vector2{size}, size, style, styleFeatures, importerManager, fontManager);
+bool UserInterfaceGL::tryCreate(const Vector2i& size, const AbstractTheme& theme, const ThemeFeatures themeFeatures, PluginManager::Manager<Trade::AbstractImporter>* const importerManager, PluginManager::Manager<Text::AbstractFont>* const fontManager) {
+    return tryCreate(Vector2{size}, Vector2{size}, size, theme, themeFeatures, importerManager, fontManager);
 }
 
-bool UserInterfaceGL::tryCreate(const Vector2i& size, const AbstractStyle& style, PluginManager::Manager<Trade::AbstractImporter>* const importerManager, PluginManager::Manager<Text::AbstractFont>* const fontManager) {
-    return tryCreate(size, style, style.features(), importerManager, fontManager);
+bool UserInterfaceGL::tryCreate(const Vector2i& size, const AbstractTheme& theme, PluginManager::Manager<Trade::AbstractImporter>* const importerManager, PluginManager::Manager<Text::AbstractFont>* const fontManager) {
+    return tryCreate(size, theme, theme.features(), importerManager, fontManager);
 }
 
 UserInterfaceGL& UserInterfaceGL::setRendererInstance(Containers::Pointer<RendererGL>&& instance) {
@@ -131,15 +131,15 @@ const RendererGL& UserInterfaceGL::renderer() const {
     return static_cast<const RendererGL&>(UserInterface::renderer());
 }
 
-bool UserInterfaceGL::trySetStyle(const AbstractStyle& style, const StyleFeatures features, PluginManager::Manager<Trade::AbstractImporter>* const importerManager, PluginManager::Manager<Text::AbstractFont>* const fontManager) {
+bool UserInterfaceGL::trySetTheme(const AbstractTheme& theme, const ThemeFeatures features, PluginManager::Manager<Trade::AbstractImporter>* const importerManager, PluginManager::Manager<Text::AbstractFont>* const fontManager) {
     CORRADE_ASSERT(features,
-        "Ui::UserInterfaceGL::trySetStyle(): no features specified", {});
-    CORRADE_ASSERT(features <= style.features(),
-        "Ui::UserInterfaceGL::trySetStyle():" << features << "not a subset of supported" << style.features(), {});
+        "Ui::UserInterfaceGL::trySetTheme(): no features specified", {});
+    CORRADE_ASSERT(features <= theme.features(),
+        "Ui::UserInterfaceGL::trySetTheme():" << features << "not a subset of supported" << theme.features(), {});
     CORRADE_ASSERT(!framebufferSize().isZero(),
-        "Ui::UserInterfaceGL::trySetStyle(): user interface size wasn't set",
+        "Ui::UserInterfaceGL::trySetTheme(): user interface size wasn't set",
         /* Has to return true with CORRADE_GRACEFUL_ASSERT so when tested
-           through setStyle() it doesn't std::exit() the whole executable */
+           through setTheme() it doesn't std::exit() the whole executable */
         true);
 
     State& state = static_cast<State&>(*_state);
@@ -149,17 +149,17 @@ bool UserInterfaceGL::trySetStyle(const AbstractStyle& style, const StyleFeature
        being present in backgroundLayerFlags(), but this future-proofs it for
        when other effects are present. */
     Containers::Pointer<BaseLayerGL> backgroundLayer;
-    if(features >= StyleFeature::BackgroundLayer) {
+    if(features >= ThemeFeature::BackgroundLayer) {
         /* Querying the pointer alone isn't sufficient due to the base layer
            fallback, see hasBackgroundLayer() for details */
         CORRADE_ASSERT(!hasBackgroundLayer(),
-            "Ui::UserInterfaceGL::trySetStyle(): background layer already present", {});
+            "Ui::UserInterfaceGL::trySetTheme(): background layer already present", {});
         state.backgroundLayerShared = BaseLayerGL::Shared{
-            BaseLayer::Shared::Configuration{style.backgroundLayerStyleUniformCount(),
-                                             style.backgroundLayerStyleCount()}
-                .setDynamicStyleCount(style.backgroundLayerDynamicStyleCount())
-                .addFlags(style.backgroundLayerFlags())
-                .setBackgroundBlurRadius(style.backgroundLayerBlurRadius(), style.backgroundLayerBlurCutoff())};
+            BaseLayer::Shared::Configuration{theme.backgroundLayerStyleUniformCount(),
+                                             theme.backgroundLayerStyleCount()}
+                .setDynamicStyleCount(theme.backgroundLayerDynamicStyleCount())
+                .addFlags(theme.backgroundLayerFlags())
+                .setBackgroundBlurRadius(theme.backgroundLayerBlurRadius(), theme.backgroundLayerBlurCutoff())};
         backgroundLayer.emplace(createLayer(), state.backgroundLayerShared);
     }
 
@@ -173,70 +173,70 @@ bool UserInterfaceGL::trySetStyle(const AbstractStyle& style, const StyleFeature
                 RendererGL::Flag::CompositingFramebuffer : RendererGL::Flags{}
         ));
     else CORRADE_ASSERT(!backgroundLayer || !(backgroundLayer->features() >= LayerFeature::Composite) || renderer().flags() >= RendererGL::Flag::CompositingFramebuffer,
-        "Ui::UserInterfaceGL::trySetStyle(): background layer style requires a framebuffer with" << RendererGL::Flag::CompositingFramebuffer << "enabled", {});
+        "Ui::UserInterfaceGL::trySetTheme(): background layer style requires a framebuffer with" << RendererGL::Flag::CompositingFramebuffer << "enabled", {});
 
     /* Create layers, layouters and animators based on what features are
        wanted */
-    if(features >= StyleFeature::DataLayer) {
+    if(features >= ThemeFeature::DataLayer) {
         CORRADE_ASSERT(!state.dataLayer,
-            "Ui::UserInterfaceGL::trySetStyle(): data layer already present", {});
+            "Ui::UserInterfaceGL::trySetTheme(): data layer already present", {});
         setDataLayerInstance(Containers::pointer<DataLayer>(createLayer()));
     }
-    if(features >= StyleFeature::BackgroundLayer) {
+    if(features >= ThemeFeature::BackgroundLayer) {
         /* Created above already */
         setBackgroundLayerInstance(Utility::move(backgroundLayer));
     }
-    if(features >= StyleFeature::BackgroundLayerAnimations) {
+    if(features >= ThemeFeature::BackgroundLayerAnimations) {
         CORRADE_ASSERT(!hasBackgroundLayerStyleAnimator(),
-            "Ui::UserInterfaceGL::trySetStyle(): background layer style animator already present", {});
-        /* If features contain StyleFeature::BackgroundLayer,
+            "Ui::UserInterfaceGL::trySetTheme(): background layer style animator already present", {});
+        /* If features contain ThemeFeature::BackgroundLayer,
            state.backgroundLayer was already added above, so it's enough to
            check background layer presence alone. However, querying the pointer
            alone isn't sufficient due to the base layer fallback, see
            hasBackgroundLayer() for details. Also, mention the StateFeature
            as well to hint that they can be also applied both together. */
         CORRADE_ASSERT(hasBackgroundLayer(),
-            "Ui::UserInterfaceGL::trySetStyle(): background layer not present and" << StyleFeature::BackgroundLayer << "isn't being applied as well for" << StyleFeature::BackgroundLayerAnimations, {});
+            "Ui::UserInterfaceGL::trySetTheme(): background layer not present and" << ThemeFeature::BackgroundLayer << "isn't being applied as well for" << ThemeFeature::BackgroundLayerAnimations, {});
         CORRADE_ASSERT(state.backgroundLayer->shared().dynamicStyleCount(),
-            "Ui::UserInterfaceGL::trySetStyle():" << StyleFeature::BackgroundLayerAnimations << "requires the background layer to have least one dynamic style", {});
+            "Ui::UserInterfaceGL::trySetTheme():" << ThemeFeature::BackgroundLayerAnimations << "requires the background layer to have least one dynamic style", {});
         setBackgroundLayerStyleAnimatorInstance(Containers::pointer<BaseLayerStyleAnimator>(createAnimator()));
     }
-    if(features >= StyleFeature::BaseLayer) {
+    if(features >= ThemeFeature::BaseLayer) {
         CORRADE_ASSERT(!state.baseLayer,
-            "Ui::UserInterfaceGL::trySetStyle(): base layer already present", {});
+            "Ui::UserInterfaceGL::trySetTheme(): base layer already present", {});
         state.baseLayerShared = BaseLayerGL::Shared{
-            BaseLayer::Shared::Configuration{style.baseLayerStyleUniformCount(),
-                                             style.baseLayerStyleCount()}
-                .setDynamicStyleCount(style.baseLayerDynamicStyleCount())
-                .addFlags(style.baseLayerFlags())};
+            BaseLayer::Shared::Configuration{theme.baseLayerStyleUniformCount(),
+                                             theme.baseLayerStyleCount()}
+                .setDynamicStyleCount(theme.baseLayerDynamicStyleCount())
+                .addFlags(theme.baseLayerFlags())};
         setBaseLayerInstance(Containers::pointer<BaseLayerGL>(createLayer(), state.baseLayerShared));
     }
-    if(features >= StyleFeature::BaseLayerAnimations) {
+    if(features >= ThemeFeature::BaseLayerAnimations) {
         CORRADE_ASSERT(!state.baseLayerStyleAnimator,
-            "Ui::UserInterfaceGL::trySetStyle(): base layer style animator already present", {});
-        /* If features contain StyleFeature::BaseLayer, state.baseLayer was
+            "Ui::UserInterfaceGL::trySetTheme(): base layer style animator already present", {});
+        /* If features contain ThemeFeature::BaseLayer, state.baseLayer was
            already added above, so it's enough to check state.baseLayer alone.
            However, mention the StateFeature as well to hint that they can be
            also applied both together. */
         CORRADE_ASSERT(state.baseLayer,
-            "Ui::UserInterfaceGL::trySetStyle(): base layer not present and" << StyleFeature::BaseLayer << "isn't being applied as well for" << StyleFeature::BaseLayerAnimations, {});
+            "Ui::UserInterfaceGL::trySetTheme(): base layer not present and" << ThemeFeature::BaseLayer << "isn't being applied as well for" << ThemeFeature::BaseLayerAnimations, {});
         CORRADE_ASSERT(state.baseLayer->shared().dynamicStyleCount(),
-            "Ui::UserInterfaceGL::trySetStyle():" << StyleFeature::BaseLayerAnimations << "requires the base layer to have least one dynamic style", {});
+            "Ui::UserInterfaceGL::trySetTheme():" << ThemeFeature::BaseLayerAnimations << "requires the base layer to have least one dynamic style", {});
         setBaseLayerStyleAnimatorInstance(Containers::pointer<BaseLayerStyleAnimator>(createAnimator()));
     }
-    if(features >= StyleFeature::TextLayer) {
+    if(features >= ThemeFeature::TextLayer) {
         CORRADE_ASSERT(!state.textLayer,
-            "Ui::UserInterfaceGL::trySetStyle(): text layer already present", {});
+            "Ui::UserInterfaceGL::trySetTheme(): text layer already present", {});
         state.textLayerShared = TextLayerGL::Shared{
             Text::GlyphCacheArrayGL{
-                style.textLayerGlyphCacheFormat(),
-                style.textLayerGlyphCacheSize(features),
-                style.textLayerGlyphCachePadding()},
-            TextLayer::Shared::Configuration{style.textLayerStyleUniformCount(),
-                                             style.textLayerStyleCount()}
-                .setEditingStyleCount(style.textLayerEditingStyleUniformCount(),
-                                      style.textLayerEditingStyleCount())
-                .setDynamicStyleCount(style.textLayerDynamicStyleCount())};
+                theme.textLayerGlyphCacheFormat(),
+                theme.textLayerGlyphCacheSize(features),
+                theme.textLayerGlyphCachePadding()},
+            TextLayer::Shared::Configuration{theme.textLayerStyleUniformCount(),
+                                             theme.textLayerStyleCount()}
+                .setEditingStyleCount(theme.textLayerEditingStyleUniformCount(),
+                                      theme.textLayerEditingStyleCount())
+                .setDynamicStyleCount(theme.textLayerDynamicStyleCount())};
         setTextLayerInstance(Containers::pointer<TextLayerGL>(createLayer(), state.textLayerShared));
 
         /* Create a local font plugin manager if external wasn't passed. If the
@@ -250,13 +250,13 @@ bool UserInterfaceGL::trySetStyle(const AbstractStyle& style, const StyleFeature
             _state->fontManager = &*_state->fontManagerStorage;
         }
     }
-    if(features >= StyleFeature::TextLayerImages) {
-        /* If features contain StyleFeature::TextLayer, state.textLayer was
+    if(features >= ThemeFeature::TextLayerImages) {
+        /* If features contain ThemeFeature::TextLayer, state.textLayer was
            already added above, so it's enough to check state.textLayer alone.
            However, mention the StateFeature as well to hint that they can be
            also applied both together. */
         CORRADE_ASSERT(state.textLayer,
-            "Ui::UserInterfaceGL::trySetStyle(): text layer not present and" << StyleFeature::TextLayer << "isn't being applied as well for" << StyleFeature::TextLayerImages, {});
+            "Ui::UserInterfaceGL::trySetTheme(): text layer not present and" << ThemeFeature::TextLayer << "isn't being applied as well for" << ThemeFeature::TextLayerImages, {});
 
         /* Create a local importer plugin manager if external wasn't passed. If
            the text layer isn't present, the manager shouldn't be present
@@ -269,60 +269,60 @@ bool UserInterfaceGL::trySetStyle(const AbstractStyle& style, const StyleFeature
             _state->importerManager = &*_state->importerManagerStorage;
         }
     }
-    if(features >= StyleFeature::TextLayerAnimations) {
+    if(features >= ThemeFeature::TextLayerAnimations) {
         CORRADE_ASSERT(!state.textLayerStyleAnimator,
-            "Ui::UserInterfaceGL::trySetStyle(): text layer style animator already present", {});
-        /* If features contain StyleFeature::TextLayer, state.textLayer was
+            "Ui::UserInterfaceGL::trySetTheme(): text layer style animator already present", {});
+        /* If features contain ThemeFeature::TextLayer, state.textLayer was
            already added above, so it's enough to check state.textLayer alone.
            However, mention the StateFeature as well to hint that they can be
            also applied both together. */
         CORRADE_ASSERT(state.textLayer,
-            "Ui::UserInterfaceGL::trySetStyle(): text layer not present and" << StyleFeature::TextLayer << "isn't being applied as well for" << StyleFeature::TextLayerAnimations, {});
+            "Ui::UserInterfaceGL::trySetTheme(): text layer not present and" << ThemeFeature::TextLayer << "isn't being applied as well for" << ThemeFeature::TextLayerAnimations, {});
         CORRADE_ASSERT(state.textLayer->shared().dynamicStyleCount(),
-            "Ui::UserInterfaceGL::trySetStyle():" << StyleFeature::TextLayerAnimations << "requires the text layer to have least one dynamic style", {});
+            "Ui::UserInterfaceGL::trySetTheme():" << ThemeFeature::TextLayerAnimations << "requires the text layer to have least one dynamic style", {});
         setTextLayerStyleAnimatorInstance(Containers::pointer<TextLayerStyleAnimator>(createAnimator()));
     }
-    if(features >= StyleFeature::EventLayer) {
+    if(features >= ThemeFeature::EventLayer) {
         CORRADE_ASSERT(!state.eventLayer,
-            "Ui::UserInterfaceGL::trySetStyle(): event layer already present", {});
+            "Ui::UserInterfaceGL::trySetTheme(): event layer already present", {});
         setEventLayerInstance(Containers::pointer<EventLayer>(createLayer()));
     }
-    if(features >= StyleFeature::LayoutLayer) {
+    if(features >= ThemeFeature::LayoutLayer) {
         CORRADE_ASSERT(!state.layoutLayer,
-            "Ui::UserInterfaceGL::trySetStyle(): layout layer already present", {});
-        setLayoutLayerInstance(Containers::pointer<LayoutLayer>(createLayer(), style.layoutLayerStyleCount()));
+            "Ui::UserInterfaceGL::trySetTheme(): layout layer already present", {});
+        setLayoutLayerInstance(Containers::pointer<LayoutLayer>(createLayer(), theme.layoutLayerStyleCount()));
     }
-    if(features >= StyleFeature::SnapLayouter) {
+    if(features >= ThemeFeature::SnapLayouter) {
         CORRADE_ASSERT(!state.snapLayouter,
-            "Ui::UserInterfaceGL::trySetStyle(): snap layouter already present", {});
+            "Ui::UserInterfaceGL::trySetTheme(): snap layouter already present", {});
         setSnapLayouterInstance(Containers::pointer<SnapLayouter>(createLayouter()));
     }
-    if(features >= StyleFeature::GenericLayouter) {
+    if(features >= ThemeFeature::GenericLayouter) {
         CORRADE_ASSERT(!state.genericLayouter,
-            "Ui::UserInterfaceGL::trySetStyle(): generic layouter already present", {});
+            "Ui::UserInterfaceGL::trySetTheme(): generic layouter already present", {});
         setGenericLayouterInstance(Containers::pointer<GenericLayouter>(createLayouter()));
     }
-    if(features >= StyleFeature::NodeAnimations) {
+    if(features >= ThemeFeature::NodeAnimations) {
         CORRADE_ASSERT(!state.nodeAnimator,
-            "Ui::UserInterfaceGL::trySetStyle(): node animator already present", {});
+            "Ui::UserInterfaceGL::trySetTheme(): node animator already present", {});
         setNodeAnimatorInstance(Containers::pointer<NodeAnimator>(createAnimator()));
     }
 
-    return style.apply(*this, features, _state->importerManager, _state->fontManager);
+    return theme.apply(*this, features, _state->importerManager, _state->fontManager);
 }
 
-bool UserInterfaceGL::trySetStyle(const AbstractStyle& style, PluginManager::Manager<Trade::AbstractImporter>* const importerManager, PluginManager::Manager<Text::AbstractFont>* const fontManager) {
-    return trySetStyle(style, style.features(), importerManager, fontManager);
+bool UserInterfaceGL::trySetTheme(const AbstractTheme& theme, PluginManager::Manager<Trade::AbstractImporter>* const importerManager, PluginManager::Manager<Text::AbstractFont>* const fontManager) {
+    return trySetTheme(theme, theme.features(), importerManager, fontManager);
 }
 
-UserInterfaceGL& UserInterfaceGL::setStyle(const AbstractStyle& style, const StyleFeatures features, PluginManager::Manager<Trade::AbstractImporter>* const importerManager, PluginManager::Manager<Text::AbstractFont>* const fontManager) {
-    if(!trySetStyle(style, features, importerManager, fontManager))
+UserInterfaceGL& UserInterfaceGL::setTheme(const AbstractTheme& theme, const ThemeFeatures features, PluginManager::Manager<Trade::AbstractImporter>* const importerManager, PluginManager::Manager<Text::AbstractFont>* const fontManager) {
+    if(!trySetTheme(theme, features, importerManager, fontManager))
         std::exit(1); /* LCOV_EXCL_LINE */
     return *this;
 }
 
-UserInterfaceGL& UserInterfaceGL::setStyle(const AbstractStyle& style, PluginManager::Manager<Trade::AbstractImporter>* const importerManager, PluginManager::Manager<Text::AbstractFont>* const fontManager) {
-    return setStyle(style, style.features(), importerManager, fontManager);
+UserInterfaceGL& UserInterfaceGL::setTheme(const AbstractTheme& theme, PluginManager::Manager<Trade::AbstractImporter>* const importerManager, PluginManager::Manager<Text::AbstractFont>* const fontManager) {
+    return setTheme(theme, theme.features(), importerManager, fontManager);
 }
 
 UserInterfaceGL& UserInterfaceGL::setBackgroundLayerInstance(Containers::Pointer<BaseLayerGL>&& instance) {

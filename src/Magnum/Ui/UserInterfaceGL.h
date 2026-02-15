@@ -58,9 +58,9 @@ class is a common interface not tied to OpenGL.
 @section Ui-UserInterfaceGL-setup Setting up a user interface instance
 
 The simplest variant of the constructor takes a UI size, in respect to which
-all contents as well as input events get positioned, and a style instance
-describing how the widgets all look like. At the moment, @ref McssDarkStyle is
-the only style provided by the library itself.
+all contents as well as input events get positioned, and a theme instance
+describing how the widgets all look like. At the moment, @ref McssDarkTheme is
+the only theme provided by the library itself.
 
 @snippet Ui-gl.cpp UserInterfaceGL-setup
 
@@ -69,16 +69,16 @@ The rest of the setup --- drawing and event handling --- is the same for all
 
 @subsection Ui-UserInterfaceGL-setup-options Additional setup options
 
-The above by default populates the user interface with everything a style
+The above by default populates the user interface with everything a theme
 provides for use by builtin widgets --- in particular, making most of
 @ref dataLayer(), @ref backgroundLayer(), @ref baseLayer(), @ref textLayer(),
 @ref eventLayer(), @ref layoutLayer(), @ref snapLayouter(),
 @ref genericLayouter(), @ref nodeAnimator(), @ref backgroundLayerStyleAnimator(),
 @ref baseLayerStyleAnimator() and @ref textLayerStyleAnimator() available. In
 case you for example use just a subset of the builtin widgets that only need a
-part of the above, you can specify a @ref StyleFeatures subset. This can be
-further combined with @ref setStyle(), where, as long as you specify
-non-overlapping sets of @ref StyleFeatures, you can combine multiple styles
+part of the above, you can specify a @ref ThemeFeatures subset. This can be
+further combined with @ref setTheme(), where, as long as you specify
+non-overlapping sets of @ref ThemeFeatures, you can combine multiple themes
 together:
 
 @snippet Ui-gl.cpp UserInterfaceGL-setup-features
@@ -105,23 +105,23 @@ The @ref create() as well as the main constructor both exit the application if
 something goes wrong such as if a font plugin cannot be loaded. If you want to
 deal with potential errors more gracefully or try out several options,
 @ref tryCreate() returns @cpp false @ce instead of exiting, and there's a
-@ref trySetStyle() counterpart as well.
+@ref trySetTheme() counterpart as well.
 
 @subsection Ui-UserInterfaceGL-setup-renderer Supplying a custom renderer instance
 
-Setting a style either in the constructor or in @ref create() / @ref tryCreate()
+Setting a theme either in the constructor or in @ref create() / @ref tryCreate()
 implicitly sets up a @ref RendererGL instance. If you want to supply a custom
 one --- for example to set up a @ref Ui-RendererGL-compositing-framebuffer "compositing framebuffer"
 for a custom layer --- pass it to @ref setRendererInstance() and then call
-@ref setSize() and @ref setStyle() / @ref trySetStyle() instead of
+@ref setSize() and @ref setTheme() / @ref trySetTheme() instead of
 @ref create() / @ref tryCreate():
 
 @snippet Ui-gl.cpp UserInterfaceGL-setup-renderer
 
 @subsection Ui-UserInterfaceGL-setup-layers Supplying custom layer and layouter instances
 
-If a constructor or @ref create() taking a style isn't used at all, or if a
-style is applied excluding a particular layer, layouter or animator, you can
+If a constructor or @ref create() taking a theme isn't used at all, or if a
+theme is applied excluding a particular layer, layouter or animator, you can
 supply a custom instance using @ref setDataLayerInstance(),
 @ref setBackgroundLayerInstance(), @ref setBaseLayerInstance(),
 @ref setTextLayerInstance(), @ref setEventLayerInstance(),
@@ -142,7 +142,7 @@ class MAGNUM_UI_EXPORT UserInterfaceGL: public UserInterface {
          *
          * You're expected to call @ref create() or @ref tryCreate() afterwards
          * in order to define the UI size and coordinate scaling and set up a
-         * style.
+         * theme.
          */
         explicit UserInterfaceGL(NoCreateT);
 
@@ -154,109 +154,109 @@ class MAGNUM_UI_EXPORT UserInterfaceGL: public UserInterface {
          *      events are related
          * @param framebufferSize   Size of the window framebuffer. On some
          *      platforms with HiDPI screens may be different from window size.
-         * @param style             Style instance to use
+         * @param theme             Theme instance to use
          * @param importerManager   Optional plugin manager instance for image
          *      loading
          * @param fontManager       Optional plugin manager instance for font
          *      loading
          *
          * Equivalent to constructing with @ref UserInterfaceGL(NoCreateT)
-         * and then calling @ref create(const Vector2&, const Vector2&, const Vector2i&, const AbstractStyle&, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*).
+         * and then calling @ref create(const Vector2&, const Vector2&, const Vector2i&, const AbstractTheme&, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*).
          * See documentation of these functions for more information. In
-         * particular, if style application fails, the program exits. Use the
+         * particular, if theme application fails, the program exits. Use the
          * @ref UserInterfaceGL(NoCreateT) constructor in combination with
          * @ref tryCreate() for a more graceful failure handling.
          */
-        explicit UserInterfaceGL(const Vector2& size, const Vector2& windowSize, const Vector2i& framebufferSize, const AbstractStyle& style, PluginManager::Manager<Trade::AbstractImporter>* importerManager = nullptr, PluginManager::Manager<Text::AbstractFont>* fontManager = nullptr): UserInterfaceGL{NoCreate} {
-            create(size, windowSize, framebufferSize, style, importerManager, fontManager);
+        explicit UserInterfaceGL(const Vector2& size, const Vector2& windowSize, const Vector2i& framebufferSize, const AbstractTheme& theme, PluginManager::Manager<Trade::AbstractImporter>* importerManager = nullptr, PluginManager::Manager<Text::AbstractFont>* fontManager = nullptr): UserInterfaceGL{NoCreate} {
+            create(size, windowSize, framebufferSize, theme, importerManager, fontManager);
         }
 
         /**
          * @brief Construct with properties taken from an application instance
          * @param application       Application instance to query properties
          *      from
-         * @param style             Style instance to use
+         * @param theme             Theme instance to use
          * @param importerManager   Optional plugin manager instance for image
          *      loading
          * @param fontManager       Optional plugin manager instance for font
          *      loading
          *
          * Equivalent to constructing with @ref UserInterfaceGL(NoCreateT)
-         * and then calling @ref create(const Application&, const AbstractStyle&, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*).
+         * and then calling @ref create(const Application&, const AbstractTheme&, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*).
          * See documentation of these functions for more information. In
-         * particular, if style application fails, the program exits. Use the
+         * particular, if theme application fails, the program exits. Use the
          * @ref UserInterfaceGL(NoCreateT) constructor in combination with
          * @ref tryCreate() for a more graceful failure handling.
          */
-        template<class Application, class = decltype(Implementation::ApplicationSizeConverter<Application>::set(std::declval<AbstractUserInterface&>(), std::declval<const Application&>()))> explicit UserInterfaceGL(const Application& application, const AbstractStyle& style, PluginManager::Manager<Trade::AbstractImporter>* importerManager = nullptr, PluginManager::Manager<Text::AbstractFont>* fontManager = nullptr): UserInterfaceGL{NoCreate} {
-            create(application, style, importerManager, fontManager);
+        template<class Application, class = decltype(Implementation::ApplicationSizeConverter<Application>::set(std::declval<AbstractUserInterface&>(), std::declval<const Application&>()))> explicit UserInterfaceGL(const Application& application, const AbstractTheme& theme, PluginManager::Manager<Trade::AbstractImporter>* importerManager = nullptr, PluginManager::Manager<Text::AbstractFont>* fontManager = nullptr): UserInterfaceGL{NoCreate} {
+            create(application, theme, importerManager, fontManager);
         }
 
         /**
-         * @brief Construct with a subset of the style
+         * @brief Construct with a subset of the theme
          * @param size              Size of the user interface to which
          *      everything is positioned
          * @param windowSize        Size of the window to which all input
          *      events are related
          * @param framebufferSize   Size of the window framebuffer. On some
          *      platforms with HiDPI screens may be different from window size.
-         * @param style             Style instance to use
-         * @param styleFeatures     Style features to apply
+         * @param theme             Theme instance to use
+         * @param themeFeatures     Theme features to apply
          * @param importerManager   Optional plugin manager instance for image
          *      loading
          * @param fontManager       Optional plugin manager instance for font
          *      loading
          *
          * Equivalent to constructing with @ref UserInterfaceGL(NoCreateT)
-         * and then calling @ref create(const Vector2&, const Vector2&, const Vector2i&, const AbstractStyle&, StyleFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*).
+         * and then calling @ref create(const Vector2&, const Vector2&, const Vector2i&, const AbstractTheme&, ThemeFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*).
          * See documentation of these functions for more information. In
-         * particular, if style application fails, the program exits. Use the
+         * particular, if theme application fails, the program exits. Use the
          * @ref UserInterfaceGL(NoCreateT) constructor in combination with
          * @ref tryCreate() for a more graceful failure handling.
          */
-        explicit UserInterfaceGL(const Vector2& size, const Vector2& windowSize, const Vector2i& framebufferSize, const AbstractStyle& style, StyleFeatures styleFeatures, PluginManager::Manager<Trade::AbstractImporter>* importerManager = nullptr, PluginManager::Manager<Text::AbstractFont>* fontManager = nullptr): UserInterfaceGL{NoCreate} {
-            create(size, windowSize, framebufferSize, style, styleFeatures, importerManager, fontManager);
+        explicit UserInterfaceGL(const Vector2& size, const Vector2& windowSize, const Vector2i& framebufferSize, const AbstractTheme& theme, ThemeFeatures themeFeatures, PluginManager::Manager<Trade::AbstractImporter>* importerManager = nullptr, PluginManager::Manager<Text::AbstractFont>* fontManager = nullptr): UserInterfaceGL{NoCreate} {
+            create(size, windowSize, framebufferSize, theme, themeFeatures, importerManager, fontManager);
         }
 
         /**
-         * @brief Construct with a subset of the style with properties taken from an application instance
+         * @brief Construct with a subset of the theme with properties taken from an application instance
          * @param application       Application instance to query properties
          *      from
-         * @param style             Style instance to use
-         * @param styleFeatures     Style features to apply
+         * @param theme             Theme instance to use
+         * @param themeFeatures     Theme features to apply
          * @param importerManager   Optional plugin manager instance for image
          *      loading
          * @param fontManager       Optional plugin manager instance for font
          *      loading
          *
          * Equivalent to constructing with @ref UserInterfaceGL(NoCreateT)
-         * and then calling @ref create(const Application&, const AbstractStyle&, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*).
+         * and then calling @ref create(const Application&, const AbstractTheme&, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*).
          * See documentation of these functions for more information. In
-         * particular, if style application fails, the program exits. Use the
+         * particular, if theme application fails, the program exits. Use the
          * @ref UserInterfaceGL(NoCreateT) constructor in combination with
          * @ref tryCreate() for a more graceful failure handling.
          */
-        template<class Application, class = decltype(Implementation::ApplicationSizeConverter<Application>::set(std::declval<AbstractUserInterface&>(), std::declval<const Application&>()))> explicit UserInterfaceGL(const Application& application, const AbstractStyle& style, StyleFeatures styleFeatures, PluginManager::Manager<Trade::AbstractImporter>* importerManager = nullptr, PluginManager::Manager<Text::AbstractFont>* fontManager = nullptr): UserInterfaceGL{NoCreate} {
-            create(application, style, styleFeatures, importerManager, fontManager);
+        template<class Application, class = decltype(Implementation::ApplicationSizeConverter<Application>::set(std::declval<AbstractUserInterface&>(), std::declval<const Application&>()))> explicit UserInterfaceGL(const Application& application, const AbstractTheme& theme, ThemeFeatures themeFeatures, PluginManager::Manager<Trade::AbstractImporter>* importerManager = nullptr, PluginManager::Manager<Text::AbstractFont>* fontManager = nullptr): UserInterfaceGL{NoCreate} {
+            create(application, theme, themeFeatures, importerManager, fontManager);
         }
 
         /**
          * @brief Construct with an unscaled size
          *
-         * Delegates to @ref UserInterfaceGL(const Vector2&, const Vector2&, const Vector2i&, const AbstractStyle&, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*)
+         * Delegates to @ref UserInterfaceGL(const Vector2&, const Vector2&, const Vector2i&, const AbstractTheme&, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*)
          * with all sizes set to @p size. Doing so assumes that the coordinate
          * system in which events are passed matches framebuffer size.
          */
-        explicit UserInterfaceGL(const Vector2i& size, const AbstractStyle& style, PluginManager::Manager<Trade::AbstractImporter>* importerManager = nullptr, PluginManager::Manager<Text::AbstractFont>* fontManager = nullptr);
+        explicit UserInterfaceGL(const Vector2i& size, const AbstractTheme& theme, PluginManager::Manager<Trade::AbstractImporter>* importerManager = nullptr, PluginManager::Manager<Text::AbstractFont>* fontManager = nullptr);
 
         /**
-         * @brief Construct with an unscaled size and a subset of the style
+         * @brief Construct with an unscaled size and a subset of the theme
          *
-         * Delegates to @ref UserInterfaceGL(const Vector2&, const Vector2&, const Vector2i&, const AbstractStyle&, StyleFeatures features, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*)
+         * Delegates to @ref UserInterfaceGL(const Vector2&, const Vector2&, const Vector2i&, const AbstractTheme&, ThemeFeatures features, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*)
          * with all sizes set to @p size. Doing so assumes that the coordinate
          * system in which events are passed matches framebuffer size.
          */
-        explicit UserInterfaceGL(const Vector2i& size, const AbstractStyle& style, StyleFeatures styleFeatures, PluginManager::Manager<Trade::AbstractImporter>* importerManager = nullptr, PluginManager::Manager<Text::AbstractFont>* fontManager = nullptr);
+        explicit UserInterfaceGL(const Vector2i& size, const AbstractTheme& theme, ThemeFeatures themeFeatures, PluginManager::Manager<Trade::AbstractImporter>* importerManager = nullptr, PluginManager::Manager<Text::AbstractFont>* fontManager = nullptr);
 
         /**
          * @brief Create the user interface
@@ -266,7 +266,7 @@ class MAGNUM_UI_EXPORT UserInterfaceGL: public UserInterface {
          *      events are related
          * @param framebufferSize   Size of the window framebuffer. On some
          *      platforms with HiDPI screens may be different from window size.
-         * @param style             Style instance to use
+         * @param theme             Theme instance to use
          * @param importerManager   Optional plugin manager instance for image
          *      loading
          * @param fontManager       Optional plugin manager instance for font
@@ -284,22 +284,22 @@ class MAGNUM_UI_EXPORT UserInterfaceGL: public UserInterface {
          * @ref setTextLayerStyleAnimatorInstance() or
          * @ref setRendererInstance() was called yet. Equivalent to calling
          * @ref setSize(const Vector2&, const Vector2&, const Vector2i&)
-         * followed by @ref setStyle(const AbstractStyle&, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*).
+         * followed by @ref setTheme(const AbstractTheme&, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*).
          * See documentation of these functions for more information and
-         * alternative ways to create the user interface. If style application
+         * alternative ways to create the user interface. If theme application
          * fails during the creation process, the program exits. Use
          * @ref tryCreate() for a more graceful failure handling.
          */
-        UserInterfaceGL& create(const Vector2& size, const Vector2& windowSize, const Vector2i& framebufferSize, const AbstractStyle& style, PluginManager::Manager<Trade::AbstractImporter>* importerManager = nullptr, PluginManager::Manager<Text::AbstractFont>* fontManager = nullptr) {
+        UserInterfaceGL& create(const Vector2& size, const Vector2& windowSize, const Vector2i& framebufferSize, const AbstractTheme& theme, PluginManager::Manager<Trade::AbstractImporter>* importerManager = nullptr, PluginManager::Manager<Text::AbstractFont>* fontManager = nullptr) {
             setSize(size, windowSize, framebufferSize);
-            return createInternal(style, importerManager, fontManager);
+            return createInternal(theme, importerManager, fontManager);
         }
 
         /**
          * @brief Create the user interface with properties taken from an application instance
          * @param application       Application instance to query properties
          *      from
-         * @param style             Style instance to use
+         * @param theme             Theme instance to use
          * @param importerManager   Optional plugin manager instance for image
          *      loading
          * @param fontManager       Optional plugin manager instance for font
@@ -317,27 +317,27 @@ class MAGNUM_UI_EXPORT UserInterfaceGL: public UserInterface {
          * @ref setTextLayerStyleAnimatorInstance() or
          * @ref setRendererInstance() was called yet. Equivalent to calling
          * @ref setSize(const ApplicationOrViewportEvent&) followed by
-         * @ref setStyle(const AbstractStyle&, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*).
+         * @ref setTheme(const AbstractTheme&, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*).
          * See documentation of these functions for more information and
-         * alternative ways to create the user interface. If style application
+         * alternative ways to create the user interface. If theme application
          * fails during the creation process, the program exits. Use
          * @ref tryCreate() for a more graceful failure handling.
          */
-        template<class Application, class = decltype(Implementation::ApplicationSizeConverter<Application>::set(std::declval<AbstractUserInterface&>(), std::declval<const Application&>()))> UserInterfaceGL& create(const Application& application, const AbstractStyle& style, PluginManager::Manager<Trade::AbstractImporter>* importerManager = nullptr, PluginManager::Manager<Text::AbstractFont>* fontManager = nullptr) {
+        template<class Application, class = decltype(Implementation::ApplicationSizeConverter<Application>::set(std::declval<AbstractUserInterface&>(), std::declval<const Application&>()))> UserInterfaceGL& create(const Application& application, const AbstractTheme& theme, PluginManager::Manager<Trade::AbstractImporter>* importerManager = nullptr, PluginManager::Manager<Text::AbstractFont>* fontManager = nullptr) {
             setSize(application);
-            return createInternal(style, importerManager, fontManager);
+            return createInternal(theme, importerManager, fontManager);
         }
 
         /**
-         * @brief Create the user interface with a subset of the style
+         * @brief Create the user interface with a subset of the theme
          * @param size              Size of the user interface to which
          *      everything is positioned
          * @param windowSize        Size of the window to which all input
          *      events are related
          * @param framebufferSize   Size of the window framebuffer. On some
          *      platforms with HiDPI screens may be different from window size.
-         * @param style             Style instance to use
-         * @param styleFeatures     Style features to apply
+         * @param theme             Theme instance to use
+         * @param themeFeatures     Theme features to apply
          * @param importerManager   Optional plugin manager instance for image
          *      loading
          * @param fontManager       Optional plugin manager instance for font
@@ -355,23 +355,23 @@ class MAGNUM_UI_EXPORT UserInterfaceGL: public UserInterface {
          * @ref setTextLayerStyleAnimatorInstance() or
          * @ref setRendererInstance() was called yet. Equivalent to calling
          * @ref setSize(const Vector2&, const Vector2&, const Vector2i&)
-         * followed by @ref setStyle(const AbstractStyle&, StyleFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*).
+         * followed by @ref setTheme(const AbstractTheme&, ThemeFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*).
          * See documentation of these functions for more information and
-         * alternative ways to create the user interface. If style application
+         * alternative ways to create the user interface. If theme application
          * fails during the creation process, the program exits. Use
          * @ref tryCreate() for a more graceful failure handling.
          */
-        UserInterfaceGL& create(const Vector2& size, const Vector2& windowSize, const Vector2i& framebufferSize, const AbstractStyle& style, StyleFeatures styleFeatures, PluginManager::Manager<Trade::AbstractImporter>* importerManager = nullptr, PluginManager::Manager<Text::AbstractFont>* fontManager = nullptr) {
+        UserInterfaceGL& create(const Vector2& size, const Vector2& windowSize, const Vector2i& framebufferSize, const AbstractTheme& theme, ThemeFeatures themeFeatures, PluginManager::Manager<Trade::AbstractImporter>* importerManager = nullptr, PluginManager::Manager<Text::AbstractFont>* fontManager = nullptr) {
             setSize(size, windowSize, framebufferSize);
-            return createInternal(style, styleFeatures, importerManager, fontManager);
+            return createInternal(theme, themeFeatures, importerManager, fontManager);
         }
 
         /**
-         * @brief Create the user interface with a subset of the style with properties taken from an application instance
+         * @brief Create the user interface with a subset of the theme with properties taken from an application instance
          * @param application       Application instance to query properties
          *      from
-         * @param style             Style instance to use
-         * @param styleFeatures     Style features to apply
+         * @param theme             Theme instance to use
+         * @param themeFeatures     Theme features to apply
          * @param importerManager   Optional plugin manager instance for image
          *      loading
          * @param fontManager       Optional plugin manager instance for font
@@ -389,120 +389,120 @@ class MAGNUM_UI_EXPORT UserInterfaceGL: public UserInterface {
          * @ref setTextLayerStyleAnimatorInstance() or
          * @ref setRendererInstance() was called yet. Equivalent to calling
          * @ref setSize(const ApplicationOrViewportEvent&) followed by
-         * @ref setStyle(const AbstractStyle&, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*).
+         * @ref setTheme(const AbstractTheme&, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*).
          * See documentation of these functions for more information and
-         * alternative ways to create the user interface. If style application
+         * alternative ways to create the user interface. If theme application
          * fails during the creation process, the program exits. Use
          * @ref tryCreate() for a more graceful failure handling.
          */
-        template<class Application, class = decltype(Implementation::ApplicationSizeConverter<Application>::set(std::declval<AbstractUserInterface&>(), std::declval<const Application&>()))> UserInterfaceGL& create(const Application& application, const AbstractStyle& style, StyleFeatures styleFeatures, PluginManager::Manager<Trade::AbstractImporter>* importerManager = nullptr, PluginManager::Manager<Text::AbstractFont>* fontManager = nullptr) {
+        template<class Application, class = decltype(Implementation::ApplicationSizeConverter<Application>::set(std::declval<AbstractUserInterface&>(), std::declval<const Application&>()))> UserInterfaceGL& create(const Application& application, const AbstractTheme& theme, ThemeFeatures themeFeatures, PluginManager::Manager<Trade::AbstractImporter>* importerManager = nullptr, PluginManager::Manager<Text::AbstractFont>* fontManager = nullptr) {
             setSize(application);
-            return createInternal(style, styleFeatures, importerManager, fontManager);
+            return createInternal(theme, themeFeatures, importerManager, fontManager);
         }
 
         /**
          * @brief Create the user interface with an unscaled size
          *
-         * Delegates to @ref create(const Vector2&, const Vector2&, const Vector2i&, const AbstractStyle&, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*)
+         * Delegates to @ref create(const Vector2&, const Vector2&, const Vector2i&, const AbstractTheme&, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*)
          * with all sizes set to @p size. Doing so assumes that the coordinate
          * system in which events are passed matches framebuffer size.
          */
-        UserInterfaceGL& create(const Vector2i& size, const AbstractStyle& style, PluginManager::Manager<Trade::AbstractImporter>* importerManager = nullptr, PluginManager::Manager<Text::AbstractFont>* fontManager = nullptr);
+        UserInterfaceGL& create(const Vector2i& size, const AbstractTheme& theme, PluginManager::Manager<Trade::AbstractImporter>* importerManager = nullptr, PluginManager::Manager<Text::AbstractFont>* fontManager = nullptr);
 
         /**
-         * @brief Create the user interface with an unscaled size and a subset of the style
+         * @brief Create the user interface with an unscaled size and a subset of the theme
          *
-         * Delegates to @ref create(const Vector2&, const Vector2&, const Vector2i&, const AbstractStyle&, StyleFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*)
+         * Delegates to @ref create(const Vector2&, const Vector2&, const Vector2i&, const AbstractTheme&, ThemeFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*)
          * with all sizes set to @p size. Doing so assumes that the coordinate
          * system in which events are passed matches framebuffer size.
          */
-        UserInterfaceGL& create(const Vector2i& size, const AbstractStyle& style, StyleFeatures styleFeatures, PluginManager::Manager<Trade::AbstractImporter>* importerManager = nullptr, PluginManager::Manager<Text::AbstractFont>* fontManager = nullptr);
+        UserInterfaceGL& create(const Vector2i& size, const AbstractTheme& theme, ThemeFeatures themeFeatures, PluginManager::Manager<Trade::AbstractImporter>* importerManager = nullptr, PluginManager::Manager<Text::AbstractFont>* fontManager = nullptr);
 
         /**
          * @brief Try to create the user interface
          *
-         * Unlike @ref create(const Vector2&, const Vector2&, const Vector2i&, const AbstractStyle&, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*)
-         * returns @cpp false @ce if @ref AbstractStyle::apply() failed instead
+         * Unlike @ref create(const Vector2&, const Vector2&, const Vector2i&, const AbstractTheme&, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*)
+         * returns @cpp false @ce if @ref AbstractTheme::apply() failed instead
          * of exiting, @cpp true @ce otherwise. Equivalent to calling
          * @ref setSize(const Vector2&, const Vector2&, const Vector2i&)
-         * followed by @ref trySetStyle(const AbstractStyle&, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*).
+         * followed by @ref trySetTheme(const AbstractTheme&, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*).
          */
-        bool tryCreate(const Vector2& size, const Vector2& windowSize, const Vector2i& framebufferSize, const AbstractStyle& style, PluginManager::Manager<Trade::AbstractImporter>* importerManager = nullptr, PluginManager::Manager<Text::AbstractFont>* fontManager = nullptr) {
+        bool tryCreate(const Vector2& size, const Vector2& windowSize, const Vector2i& framebufferSize, const AbstractTheme& theme, PluginManager::Manager<Trade::AbstractImporter>* importerManager = nullptr, PluginManager::Manager<Text::AbstractFont>* fontManager = nullptr) {
             setSize(size, windowSize, framebufferSize);
-            return tryCreateInternal(style, importerManager, fontManager);
+            return tryCreateInternal(theme, importerManager, fontManager);
         }
 
         /**
          * @brief Try to create the user interface with properties taken from an application instance
          *
-         * Unlike @ref create(const Application&, const AbstractStyle&, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*)
-         * returns @cpp false @ce if @ref AbstractStyle::apply() failed instead
+         * Unlike @ref create(const Application&, const AbstractTheme&, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*)
+         * returns @cpp false @ce if @ref AbstractTheme::apply() failed instead
          * of exiting, @cpp true @ce otherwise. Equivalent to calling
          * @ref setSize(const ApplicationOrViewportEvent&) followed by
-         * @ref trySetStyle(const AbstractStyle&, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*).
+         * @ref trySetTheme(const AbstractTheme&, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*).
          */
-        template<class Application, class = decltype(Implementation::ApplicationSizeConverter<Application>::set(std::declval<AbstractUserInterface&>(), std::declval<const Application&>()))> bool tryCreate(const Application& application, const AbstractStyle& style, PluginManager::Manager<Trade::AbstractImporter>* importerManager = nullptr, PluginManager::Manager<Text::AbstractFont>* fontManager = nullptr) {
+        template<class Application, class = decltype(Implementation::ApplicationSizeConverter<Application>::set(std::declval<AbstractUserInterface&>(), std::declval<const Application&>()))> bool tryCreate(const Application& application, const AbstractTheme& theme, PluginManager::Manager<Trade::AbstractImporter>* importerManager = nullptr, PluginManager::Manager<Text::AbstractFont>* fontManager = nullptr) {
             setSize(application);
-            return tryCreateInternal(style, importerManager, fontManager);
+            return tryCreateInternal(theme, importerManager, fontManager);
         }
 
         /**
-         * @brief Try to create the user interface with a subset of the style
+         * @brief Try to create the user interface with a subset of the theme
          *
-         * Unlike @ref create(const Vector2&, const Vector2&, const Vector2i&, const AbstractStyle&, StyleFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*)
-         * returns @cpp false @ce if @ref AbstractStyle::apply() failed instead
+         * Unlike @ref create(const Vector2&, const Vector2&, const Vector2i&, const AbstractTheme&, ThemeFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*)
+         * returns @cpp false @ce if @ref AbstractTheme::apply() failed instead
          * of exiting, @cpp true @ce otherwise. Equivalent to calling
          * @ref setSize(const Vector2&, const Vector2&, const Vector2i&)
-         * followed by @ref trySetStyle(const AbstractStyle&, StyleFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*).
+         * followed by @ref trySetTheme(const AbstractTheme&, ThemeFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*).
          */
-        bool tryCreate(const Vector2& size, const Vector2& windowSize, const Vector2i& framebufferSize, const AbstractStyle& style, StyleFeatures styleFeatures, PluginManager::Manager<Trade::AbstractImporter>* importerManager = nullptr, PluginManager::Manager<Text::AbstractFont>* fontManager = nullptr) {
+        bool tryCreate(const Vector2& size, const Vector2& windowSize, const Vector2i& framebufferSize, const AbstractTheme& theme, ThemeFeatures themeFeatures, PluginManager::Manager<Trade::AbstractImporter>* importerManager = nullptr, PluginManager::Manager<Text::AbstractFont>* fontManager = nullptr) {
             setSize(size, windowSize, framebufferSize);
-            return tryCreateInternal(style, styleFeatures, importerManager, fontManager);
+            return tryCreateInternal(theme, themeFeatures, importerManager, fontManager);
         }
 
         /**
-         * @brief Try to create the user interface with a subset of the style with properties taken from an application instance
+         * @brief Try to create the user interface with a subset of the theme with properties taken from an application instance
          *
-         * Unlike @ref create(const Application&, const AbstractStyle&, StyleFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*)
-         * returns @cpp false @ce if @ref AbstractStyle::apply() failed instead
+         * Unlike @ref create(const Application&, const AbstractTheme&, ThemeFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*)
+         * returns @cpp false @ce if @ref AbstractTheme::apply() failed instead
          * of exiting, @cpp true @ce otherwise. Equivalent to calling
          * @ref setSize(const ApplicationOrViewportEvent&) followed by
-         * @ref trySetStyle(const AbstractStyle&, StyleFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*).
+         * @ref trySetTheme(const AbstractTheme&, ThemeFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*).
          */
-        template<class Application, class = decltype(Implementation::ApplicationSizeConverter<Application>::set(std::declval<AbstractUserInterface&>(), std::declval<const Application&>()))> bool tryCreate(const Application& application, const AbstractStyle& style, StyleFeatures styleFeatures, PluginManager::Manager<Trade::AbstractImporter>* importerManager = nullptr, PluginManager::Manager<Text::AbstractFont>* fontManager = nullptr) {
+        template<class Application, class = decltype(Implementation::ApplicationSizeConverter<Application>::set(std::declval<AbstractUserInterface&>(), std::declval<const Application&>()))> bool tryCreate(const Application& application, const AbstractTheme& theme, ThemeFeatures themeFeatures, PluginManager::Manager<Trade::AbstractImporter>* importerManager = nullptr, PluginManager::Manager<Text::AbstractFont>* fontManager = nullptr) {
             setSize(application);
-            return tryCreateInternal(style, styleFeatures, importerManager, fontManager);
+            return tryCreateInternal(theme, themeFeatures, importerManager, fontManager);
         }
 
         /**
          * @brief Try to create the user interface with an unscaled size
          *
-         * Unlike @ref create(const Vector2i&, const AbstractStyle&, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*)
-         * returns @cpp false @ce if @ref AbstractStyle::apply() failed instead
+         * Unlike @ref create(const Vector2i&, const AbstractTheme&, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*)
+         * returns @cpp false @ce if @ref AbstractTheme::apply() failed instead
          * of exiting, @cpp true @ce otherwise. Equivalent to calling
          * @ref setSize(const Vector2i&) followed by
-         * @ref trySetStyle(const AbstractStyle&, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*).
+         * @ref trySetTheme(const AbstractTheme&, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*).
          */
-        bool tryCreate(const Vector2i& size, const AbstractStyle& style, PluginManager::Manager<Trade::AbstractImporter>* importerManager = nullptr, PluginManager::Manager<Text::AbstractFont>* fontManager = nullptr);
+        bool tryCreate(const Vector2i& size, const AbstractTheme& theme, PluginManager::Manager<Trade::AbstractImporter>* importerManager = nullptr, PluginManager::Manager<Text::AbstractFont>* fontManager = nullptr);
 
         /**
-         * @brief Try to create the user interface with an unscaled size and a subset of the style
+         * @brief Try to create the user interface with an unscaled size and a subset of the theme
          *
-         * Unlike @ref create(const Vector2i&, const AbstractStyle&, StyleFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*)
-         * returns @cpp false @ce if @ref AbstractStyle::apply() failed instead
+         * Unlike @ref create(const Vector2i&, const AbstractTheme&, ThemeFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*)
+         * returns @cpp false @ce if @ref AbstractTheme::apply() failed instead
          * of exiting, @cpp true @ce otherwise. Equivalent to calling
          * @ref setSize(const Vector2i&) followed by
-         * @ref trySetStyle(const AbstractStyle&, StyleFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*).
+         * @ref trySetTheme(const AbstractTheme&, ThemeFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*).
          */
-        bool tryCreate(const Vector2i& size, const AbstractStyle& style, StyleFeatures styleFeatures, PluginManager::Manager<Trade::AbstractImporter>* importerManager = nullptr, PluginManager::Manager<Text::AbstractFont>* fontManager = nullptr);
+        bool tryCreate(const Vector2i& size, const AbstractTheme& theme, ThemeFeatures themeFeatures, PluginManager::Manager<Trade::AbstractImporter>* importerManager = nullptr, PluginManager::Manager<Text::AbstractFont>* fontManager = nullptr);
 
         /**
          * @brief Set renderer instance
          * @return Reference to self (for method chaining)
          *
          * Expects that the instance hasn't been set yet, either by this
-         * function or transitively either by @ref UserInterfaceGL::setStyle()
-         * or a @ref UserInterfaceGL constructor taking a style instance. The
+         * function or transitively either by @ref UserInterfaceGL::setTheme()
+         * or a @ref UserInterfaceGL constructor taking a theme instance. The
          * instance is subsequently available through @ref renderer().
          * @see @ref hasRendererInstance()
          */
@@ -513,16 +513,16 @@ class MAGNUM_UI_EXPORT UserInterfaceGL: public UserInterface {
          *
          * Expects that an instance has been set, either by
          * @ref setRendererInstance() or transitively by
-         * @ref UserInterfaceGL::setStyle() or a @ref UserInterfaceGL
-         * constructor taking a style instance.
+         * @ref UserInterfaceGL::setTheme() or a @ref UserInterfaceGL
+         * constructor taking a theme instance.
          */
         RendererGL& renderer();
         const RendererGL& renderer() const; /**< @overload */
 
         /**
-         * @brief Set features from a style
-         * @param style             Style instance
-         * @param features          Style features to apply
+         * @brief Set features from a theme
+         * @param theme             Theme instance to use
+         * @param features      Theme features to apply
          * @param importerManager   Optional plugin manager instance for image
          *      loading
          * @param fontManager       Optional plugin manager instance for font
@@ -532,37 +532,37 @@ class MAGNUM_UI_EXPORT UserInterfaceGL: public UserInterface {
          * If a renderer isn't present yet, sets its instance. Then creates
          * layer and layouter instances corresponding to all @p features with
          * style uniform count, style count and other parameters coming from
-         * @p style. If @p features contain @ref StyleFeature::TextLayer and
+         * @p theme. If @p features contain @ref ThemeFeature::TextLayer and
          * @p fontManager is @cpp nullptr @ce, an internal font plugin manager
          * instance is created; if @p features contain
-         * @ref StyleFeature::TextLayerImages and @p importerManager is
+         * @ref ThemeFeature::TextLayerImages and @p importerManager is
          * @cpp nullptr @ce, an internal importer plugin manager instance is
-         * created. The function then calls @ref AbstractStyle::apply() to
-         * apply the style to those layers and layouters. If it fails, the
-         * program exits, see @ref trySetStyle() for an alternative.
+         * created. The function then calls @ref AbstractTheme::apply() to
+         * apply the theme to those layers and layouters. If it fails, the
+         * program exits, see @ref trySetTheme() for an alternative.
          *
          * Expects that user interface size is already set, either using the
          * constructor or by calling @ref setSize(). Expects that @p features
-         * are a subset of @ref AbstractStyle::features() of @p style, contain
+         * are a subset of @ref AbstractTheme::features() of @p theme, contain
          * at least one feature and that the user interface doesn't yet contain
          * any layers or layouters corresponding to @p features as documented
-         * in the @ref StyleFeature enum values.
+         * in the @ref ThemeFeature enum values.
          *
          * @m_class{m-note m-warning}
          *
          * @par
-         *      Currently, if @p features contain @ref StyleFeature::TextLayer,
-         *      the @ref AbstractStyle::textLayerGlyphCacheSize() depth is
+         *      Currently, if @p features contain @ref ThemeFeature::TextLayer,
+         *      the @ref AbstractTheme::textLayerGlyphCacheSize() depth is
          *      expected to be @cpp 1 @ce, as @ref Text::GlyphCacheGL doesn't
          *      support arrays yet.
          *
-         * While it's not allowed to set style features more than once for one
+         * While it's not allowed to set theme features more than once for one
          * particular layer, it's possible to call this function multiple times
-         * with mutually disjoint @p features. To replace a layer style with
-         * another compatible style, call @ref AbstractStyle::apply() directly.
-         * See its documentation for more information about style compatibility
+         * with mutually disjoint @p features. To replace a layer theme with
+         * another compatible theme, call @ref AbstractTheme::apply() directly.
+         * See its documentation for more information about theme compatibility
          * restrictions.
-         * @see @ref setStyle(const AbstractStyle&, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*),
+         * @see @ref setTheme(const AbstractTheme&, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*),
          *      @ref hasRendererInstance(), @ref hasDataLayer(),
          *      @ref hasBackgroundLayer(), @ref hasBaseLayer(),
          *      @ref hasTextLayer(), @ref hasEventLayer(),
@@ -571,52 +571,52 @@ class MAGNUM_UI_EXPORT UserInterfaceGL: public UserInterface {
          *      @ref hasBackgroundLayerStyleAnimator(),
          *      @ref hasBaseLayerStyleAnimator(),
          *      @ref hasTextLayerStyleAnimator(),
-         *      @ref UserInterfaceGL(const Vector2&, const Vector2&, const Vector2i&, const AbstractStyle&, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*),
-         *      @ref UserInterfaceGL(const Vector2i&, const AbstractStyle&, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*)
+         *      @ref UserInterfaceGL(const Vector2&, const Vector2&, const Vector2i&, const AbstractTheme&, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*),
+         *      @ref UserInterfaceGL(const Vector2i&, const AbstractTheme&, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*)
          */
-        UserInterfaceGL& setStyle(const AbstractStyle& style, StyleFeatures features, PluginManager::Manager<Trade::AbstractImporter>* importerManager = nullptr, PluginManager::Manager<Text::AbstractFont>* fontManager = nullptr);
+        UserInterfaceGL& setTheme(const AbstractTheme& theme, ThemeFeatures features, PluginManager::Manager<Trade::AbstractImporter>* importerManager = nullptr, PluginManager::Manager<Text::AbstractFont>* fontManager = nullptr);
 
         /**
-         * @brief Set all features from a style
+         * @brief Set all features from a theme
          * @return Reference to self (for method chaining)
          *
-         * Equivalent to calling @ref setStyle(const AbstractStyle&, StyleFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*)
-         * with @p features set to @ref AbstractStyle::features() of @p style.
+         * Equivalent to calling @ref setTheme(const AbstractTheme&, ThemeFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*)
+         * with @p features set to @ref AbstractTheme::features() of @p theme.
          */
-        UserInterfaceGL& setStyle(const AbstractStyle& style, PluginManager::Manager<Trade::AbstractImporter>* importerManager = nullptr, PluginManager::Manager<Text::AbstractFont>* fontManager = nullptr);
+        UserInterfaceGL& setTheme(const AbstractTheme& theme, PluginManager::Manager<Trade::AbstractImporter>* importerManager = nullptr, PluginManager::Manager<Text::AbstractFont>* fontManager = nullptr);
 
         /**
-         * @brief Try to set features from a style
+         * @brief Try to set features from a theme
          *
-         * Unlike @ref setStyle(const AbstractStyle&, StyleFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*)
-         * returns @cpp false @ce if @ref AbstractStyle::apply() failed instead
+         * Unlike @ref setTheme(const AbstractTheme&, ThemeFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*)
+         * returns @cpp false @ce if @ref AbstractTheme::apply() failed instead
          * of exiting, @cpp true @ce otherwise.
          */
-        bool trySetStyle(const AbstractStyle& style, StyleFeatures features, PluginManager::Manager<Trade::AbstractImporter>* importerManager = nullptr, PluginManager::Manager<Text::AbstractFont>* fontManager = nullptr);
+        bool trySetTheme(const AbstractTheme& theme, ThemeFeatures features, PluginManager::Manager<Trade::AbstractImporter>* importerManager = nullptr, PluginManager::Manager<Text::AbstractFont>* fontManager = nullptr);
 
         /**
-         * @brief Try to set all features from a style
+         * @brief Try to set all features from a theme
          *
-         * Unlike @ref setStyle(const AbstractStyle&, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*)
-         * returns @cpp false @ce if @ref AbstractStyle::apply() failed instead
+         * Unlike @ref setTheme(const AbstractTheme&, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*)
+         * returns @cpp false @ce if @ref AbstractTheme::apply() failed instead
          * of exiting, @cpp true @ce otherwise.
          */
-        bool trySetStyle(const AbstractStyle& style, PluginManager::Manager<Trade::AbstractImporter>* importerManager = nullptr, PluginManager::Manager<Text::AbstractFont>* fontManager = nullptr);
+        bool trySetTheme(const AbstractTheme& theme, PluginManager::Manager<Trade::AbstractImporter>* importerManager = nullptr, PluginManager::Manager<Text::AbstractFont>* fontManager = nullptr);
 
         /**
          * @brief Set a background layer instance
          * @return Reference to self (for method chaining)
          *
          * Expects that the instance hasn't been set yet, either by this
-         * function or transitively either by @ref setStyle(), @ref create() or
-         * a constructor taking a style instance. The instance is subsequently
+         * function or transitively either by @ref setTheme(), @ref create() or
+         * a constructor taking a theme instance. The instance is subsequently
          * available through @ref backgroundLayer().
          *
          * Note that because @ref backgroundLayer() may alias @ref baseLayer()
          * if a background layer instance isn't present, it's not recommended
          * to call this function after any widgets have been already created,
          * as it could lead to internal state inconsistencies.
-         * @see @ref hasBackgroundLayer(), @ref StyleFeature::BackgroundLayer
+         * @see @ref hasBackgroundLayer(), @ref ThemeFeature::BackgroundLayer
          */
         UserInterfaceGL& setBackgroundLayerInstance(Containers::Pointer<BaseLayerGL>&& instance);
 
@@ -625,10 +625,10 @@ class MAGNUM_UI_EXPORT UserInterfaceGL: public UserInterface {
          * @return Reference to self (for method chaining)
          *
          * Expects that the instance hasn't been set yet, either by this
-         * function or transitively either by @ref setStyle(), @ref create() or
-         * a constructor taking a style instance. The instance is subsequently
+         * function or transitively either by @ref setTheme(), @ref create() or
+         * a constructor taking a theme instance. The instance is subsequently
          * available through @ref baseLayer().
-         * @see @ref hasBaseLayer(), @ref StyleFeature::BaseLayer
+         * @see @ref hasBaseLayer(), @ref ThemeFeature::BaseLayer
          */
         UserInterfaceGL& setBaseLayerInstance(Containers::Pointer<BaseLayerGL>&& instance);
 
@@ -637,10 +637,10 @@ class MAGNUM_UI_EXPORT UserInterfaceGL: public UserInterface {
          * @return Reference to self (for method chaining)
          *
          * Expects that the instance hasn't been set yet, either by this
-         * function or transitively either by @ref setStyle(), @ref create() or
-         * a constructor taking a style instance. The instance is subsequently
+         * function or transitively either by @ref setTheme(), @ref create() or
+         * a constructor taking a theme instance. The instance is subsequently
          * available through @ref textLayer().
-         * @see @ref hasTextLayer(), @ref StyleFeature::TextLayer
+         * @see @ref hasTextLayer(), @ref ThemeFeature::TextLayer
          */
         UserInterfaceGL& setTextLayerInstance(Containers::Pointer<TextLayerGL>&& instance);
 
@@ -697,10 +697,10 @@ class MAGNUM_UI_EXPORT UserInterfaceGL: public UserInterface {
     private:
         struct State;
 
-        UserInterfaceGL& createInternal(const AbstractStyle& style, StyleFeatures styleFeatures, PluginManager::Manager<Trade::AbstractImporter>* importerManager, PluginManager::Manager<Text::AbstractFont>* fontManager);
-        UserInterfaceGL& createInternal(const AbstractStyle& style, PluginManager::Manager<Trade::AbstractImporter>* importerManager, PluginManager::Manager<Text::AbstractFont>* fontManager);
-        bool tryCreateInternal(const AbstractStyle& style, StyleFeatures styleFeatures, PluginManager::Manager<Trade::AbstractImporter>* importerManager, PluginManager::Manager<Text::AbstractFont>* fontManager);
-        bool tryCreateInternal(const AbstractStyle& style, PluginManager::Manager<Trade::AbstractImporter>* importerManager, PluginManager::Manager<Text::AbstractFont>* fontManager);
+        UserInterfaceGL& createInternal(const AbstractTheme& theme, ThemeFeatures themeFeatures, PluginManager::Manager<Trade::AbstractImporter>* importerManager, PluginManager::Manager<Text::AbstractFont>* fontManager);
+        UserInterfaceGL& createInternal(const AbstractTheme& theme, PluginManager::Manager<Trade::AbstractImporter>* importerManager, PluginManager::Manager<Text::AbstractFont>* fontManager);
+        bool tryCreateInternal(const AbstractTheme& theme, ThemeFeatures themeFeatures, PluginManager::Manager<Trade::AbstractImporter>* importerManager, PluginManager::Manager<Text::AbstractFont>* fontManager);
+        bool tryCreateInternal(const AbstractTheme& theme, PluginManager::Manager<Trade::AbstractImporter>* importerManager, PluginManager::Manager<Text::AbstractFont>* fontManager);
 };
 
 }}

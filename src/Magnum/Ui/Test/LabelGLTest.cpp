@@ -28,12 +28,12 @@
 
 #include "Magnum/Ui/Icon.h"
 #include "Magnum/Ui/Label.h"
-#include "Magnum/Ui/Style.h"
-#include "Magnum/Ui/Test/StyleGLTester.hpp"
+#include "Magnum/Ui/Theme.h"
+#include "Magnum/Ui/Test/ThemeGLTester.hpp"
 
 namespace Magnum { namespace Ui { namespace Test { namespace {
 
-struct LabelGLTest: StyleGLTester {
+struct LabelGLTest: ThemeGLTester {
     explicit LabelGLTest();
 
     void text();
@@ -42,8 +42,8 @@ struct LabelGLTest: StyleGLTester {
 
 using namespace Math::Literals;
 
-const Style StyleData[]{
-    {"m.css dark", "mcss-dark-", false, Containers::pointer<McssDarkStyle>()},
+const Theme ThemeData[]{
+    {"m.css dark", "mcss-dark-", false, Containers::pointer<McssDarkTheme>()},
     /* No SubdividedQuads as labels currently don't have any backgrounds, no
        animations either */
 };
@@ -127,39 +127,39 @@ const struct {
         }},
 };
 
-LabelGLTest::LabelGLTest(): StyleGLTester{StyleData} {
+LabelGLTest::LabelGLTest(): ThemeGLTester{ThemeData} {
     addInstancedTests({&LabelGLTest::text},
-        Containers::arraySize(TextData)*styleCount());
+        Containers::arraySize(TextData)*themeCount());
 
     addInstancedTests({&LabelGLTest::icon},
-        Containers::arraySize(IconData)*styleCount());
+        Containers::arraySize(IconData)*themeCount());
 }
 
 void LabelGLTest::text() {
-    auto&& data = TextData[testCaseInstanceId()/styleCount()];
-    auto&& styleData = StyleData[testCaseInstanceId()%styleCount()];
+    auto&& data = TextData[testCaseInstanceId()/themeCount()];
+    auto&& themeData = ThemeData[testCaseInstanceId()%themeCount()];
     if(!data.name)
-        setTestCaseDescription(styleData.name);
+        setTestCaseDescription(themeData.name);
     else
-        setTestCaseDescription(Utility::format("{}, {}", data.name, styleData.name));
+        setTestCaseDescription(Utility::format("{}, {}", data.name, themeData.name));
 
     CORRADE_VERIFY(true); /* Capture correct function name */
 
-    StyleGLTester::render(data.create, styleData, "label-text.png",
+    ThemeGLTester::render(data.create, themeData, "label-text.png",
         Flag::Disabled, 7, {}, 2.0f, 0.0248f);
 }
 
 void LabelGLTest::icon() {
-    auto&& data = IconData[testCaseInstanceId()/styleCount()];
-    auto&& styleData = StyleData[testCaseInstanceId()%styleCount()];
+    auto&& data = IconData[testCaseInstanceId()/themeCount()];
+    auto&& themeData = ThemeData[testCaseInstanceId()%themeCount()];
     if(!data.name)
-        setTestCaseDescription(styleData.name);
+        setTestCaseDescription(themeData.name);
     else
-        setTestCaseDescription(Utility::format("{}, {}", data.name, styleData.name));
+        setTestCaseDescription(Utility::format("{}, {}", data.name, themeData.name));
 
     CORRADE_VERIFY(true); /* Capture correct function name */
 
-    StyleGLTester::render(data.create, styleData, "label-icon.png",
+    ThemeGLTester::render(data.create, themeData, "label-icon.png",
         Flag::Disabled, 7, {}, 1.75f, 0.0099f);
 }
 

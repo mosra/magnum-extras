@@ -31,7 +31,7 @@
 #include <Magnum/Math/Vector2.h>
 #include <Magnum/Text/Alignment.h>
 
-#include "Magnum/Ui/AbstractStyle.hpp"
+#include "Magnum/Ui/AbstractTheme.hpp"
 #include "Magnum/Ui/Anchor.h"
 #include "Magnum/Ui/BaseLayer.h"
 #include "Magnum/Ui/Handle.h"

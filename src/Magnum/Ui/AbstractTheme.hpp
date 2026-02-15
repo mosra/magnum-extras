@@ -1,5 +1,5 @@
-#ifndef Magnum_Ui_AbstractStyle_hpp
-#define Magnum_Ui_AbstractStyle_hpp
+#ifndef Magnum_Ui_AbstractTheme_hpp
+#define Magnum_Ui_AbstractTheme_hpp
 /*
     This file is part of Magnum.
 

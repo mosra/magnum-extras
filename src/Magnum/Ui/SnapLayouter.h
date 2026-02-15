@@ -303,8 +303,8 @@ explicitly snapping particular nodes to corners or edges of other nodes.
 
 @section Ui-SnapLayouter-setup Setting up a snap layouter instance
 
-If you create a @ref UserInterfaceGL with a style and don't exclude
-@ref StyleFeature::SnapLayouter, an implicit instance is already provided and
+If you create a @ref UserInterfaceGL with a theme and don't exclude
+@ref ThemeFeature::SnapLayouter, an implicit instance is already provided and
 available through @ref UserInterface::snapLayouter(). Otherwise, the layouter
 doesn't have any shared state or configuration, so it's just about constructing
 it from a fresh @ref AbstractUserInterface::createLayouter() handle and passing
@@ -324,7 +324,7 @@ layouter is ready to use.
 
 @see @ref Snap, @ref Snaps, @ref UserInterface::snapLayouter(),
     @ref UserInterface::setSnapLayouterInstance(),
-    @ref StyleFeature::SnapLayouter
+    @ref ThemeFeature::SnapLayouter
 */
 class MAGNUM_UI_EXPORT SnapLayouter: public AbstractLayouter {
     public:

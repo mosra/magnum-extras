@@ -42,7 +42,7 @@ corrade_add_test(UiAbstractAnimatorTest AbstractAnimatorTest.cpp LIBRARIES Magnu
 corrade_add_test(UiAbstractLayerTest AbstractLayerTest.cpp LIBRARIES MagnumUiTestLib)
 corrade_add_test(UiAbstractLayouterTest AbstractLayouterTest.cpp LIBRARIES MagnumUiTestLib)
 corrade_add_test(UiAbstractRendererTest AbstractRendererTest.cpp LIBRARIES MagnumUiTestLib)
-corrade_add_test(UiAbstractStyleTest AbstractStyleTest.cpp LIBRARIES MagnumUiTestLib)
+corrade_add_test(UiAbstractThemeTest AbstractThemeTest.cpp LIBRARIES MagnumUiTestLib)
 corrade_add_test(UiAbstractUserInterfaceTest AbstractUserInterfaceTest.cpp LIBRARIES MagnumUiTestLib)
 corrade_add_test(UiAbstractVisualLayerTest AbstractVisualLayerTest.cpp LIBRARIES MagnumUiTestLib)
 corrade_add_test(UiAbstractVisualLayerStyleAnima___Test AbstractVisualLayerStyleAnimatorTest.cpp LIBRARIES MagnumUiTestLib)
@@ -70,16 +70,16 @@ corrade_add_test(UiPanelTest PanelTest.cpp LIBRARIES MagnumUi)
 corrade_add_test(UiSnapLayouterTest SnapLayouterTest.cpp LIBRARIES MagnumUiTestLib)
 corrade_add_test(UiSnapLayoutTest SnapLayoutTest.cpp LIBRARIES MagnumUiTestLib)
 
-corrade_add_test(UiStyleTest StyleTest.cpp LIBRARIES MagnumUi)
+corrade_add_test(UiThemeTest ThemeTest.cpp LIBRARIES MagnumUi)
 if(MAGNUM_BUILD_STATIC)
     if(Magnum_AnyImageImporter_FOUND)
-        target_link_libraries(UiStyleTest PRIVATE Magnum::AnyImageImporter)
+        target_link_libraries(UiThemeTest PRIVATE Magnum::AnyImageImporter)
     endif()
     if(MagnumPlugins_StbImageImporter_FOUND)
-        target_link_libraries(UiStyleTest PRIVATE MagnumPlugins::StbImageImporter)
+        target_link_libraries(UiThemeTest PRIVATE MagnumPlugins::StbImageImporter)
     endif()
     if(MagnumPlugins_StbTrueTypeFont_FOUND)
-        target_link_libraries(UiStyleTest PRIVATE MagnumPlugins::StbTrueTypeFont)
+        target_link_libraries(UiThemeTest PRIVATE MagnumPlugins::StbTrueTypeFont)
     endif()
 endif()
 
@@ -476,19 +476,19 @@ if(MAGNUM_BUILD_GL_TESTS)
 
     corrade_add_test(UiButtonGLTest ButtonGLTest.cpp
         FILES
-            StyleTestFiles/mcss-dark-button-text-icon.png
-            StyleTestFiles/mcss-dark-button-text.png
-            StyleTestFiles/mcss-dark-button-icon.png)
+            ThemeTestFiles/mcss-dark-button-text-icon.png
+            ThemeTestFiles/mcss-dark-button-text.png
+            ThemeTestFiles/mcss-dark-button-icon.png)
     corrade_add_test(UiInputGLTest InputGLTest.cpp
         FILES
-            StyleTestFiles/mcss-dark-input.png)
+            ThemeTestFiles/mcss-dark-input.png)
     corrade_add_test(UiLabelGLTest LabelGLTest.cpp
         FILES
-            StyleTestFiles/mcss-dark-label-text.png
-            StyleTestFiles/mcss-dark-label-icon.png)
+            ThemeTestFiles/mcss-dark-label-text.png
+            ThemeTestFiles/mcss-dark-label-icon.png)
     corrade_add_test(UiPanelGLTest PanelGLTest.cpp
         FILES
-            StyleTestFiles/mcss-dark-panel.png)
+            ThemeTestFiles/mcss-dark-panel.png)
     foreach(_widget Button Input Label Panel)
         target_link_libraries(Ui${_widget}GLTest PRIVATE
             MagnumUi

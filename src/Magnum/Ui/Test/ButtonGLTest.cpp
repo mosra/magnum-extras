@@ -28,12 +28,12 @@
 
 #include "Magnum/Ui/Button.h"
 #include "Magnum/Ui/Icon.h"
-#include "Magnum/Ui/Style.h"
-#include "Magnum/Ui/Test/StyleGLTester.hpp"
+#include "Magnum/Ui/Theme.h"
+#include "Magnum/Ui/Test/ThemeGLTester.hpp"
 
 namespace Magnum { namespace Ui { namespace Test { namespace {
 
-struct ButtonGLTest: StyleGLTester {
+struct ButtonGLTest: ThemeGLTester {
     explicit ButtonGLTest();
 
     void textIcon();
@@ -43,15 +43,15 @@ struct ButtonGLTest: StyleGLTester {
 
 using namespace Math::Literals;
 
-const Style StyleData[]{
-    {"m.css dark", "mcss-dark-", false, Containers::pointer<McssDarkStyle>()},
+const Theme ThemeData[]{
+    {"m.css dark", "mcss-dark-", false, Containers::pointer<McssDarkTheme>()},
     {"m.css dark SubdividedQuads", "mcss-dark-", false, []{
-        Containers::Pointer<McssDarkStyle> style{InPlaceInit};
+        Containers::Pointer<McssDarkTheme> style{InPlaceInit};
         style->setBaseLayerFlags(BaseLayerSharedFlag::SubdividedQuads, {});
         return style;
     }()},
     /* No EssentialAnimations as those aren't affecting Button in any way */
-    {"m.css dark, Animations", "mcss-dark-", true, Containers::pointer<McssDarkStyle>(McssDarkStyle::Feature::Animations)},
+    {"m.css dark, Animations", "mcss-dark-", true, Containers::pointer<McssDarkTheme>(McssDarkTheme::Feature::Animations)},
 };
 
 const struct {
@@ -183,60 +183,60 @@ const struct {
         }},
 };
 
-ButtonGLTest::ButtonGLTest(): StyleGLTester{StyleData} {
+ButtonGLTest::ButtonGLTest(): ThemeGLTester{ThemeData} {
     addInstancedTests({&ButtonGLTest::textIcon},
-        Containers::arraySize(TextIconData)*styleCount());
+        Containers::arraySize(TextIconData)*themeCount());
 
     addInstancedTests({&ButtonGLTest::text},
-        Containers::arraySize(TextData)*styleCount());
+        Containers::arraySize(TextData)*themeCount());
 
     addInstancedTests({&ButtonGLTest::icon},
-        Containers::arraySize(IconData)*styleCount());
+        Containers::arraySize(IconData)*themeCount());
 }
 
 void ButtonGLTest::textIcon() {
-    auto&& data = TextIconData[testCaseInstanceId()/styleCount()];
-    auto&& styleData = StyleData[testCaseInstanceId()%styleCount()];
+    auto&& data = TextIconData[testCaseInstanceId()/themeCount()];
+    auto&& themeData = ThemeData[testCaseInstanceId()%themeCount()];
     if(!data.name)
-        setTestCaseDescription(styleData.name);
+        setTestCaseDescription(themeData.name);
     else
-        setTestCaseDescription(Utility::format("{}, {}", data.name, styleData.name));
+        setTestCaseDescription(Utility::format("{}, {}", data.name, themeData.name));
 
     CORRADE_VERIFY(true); /* Capture correct function name */
 
-    StyleGLTester::render(data.create, styleData, "button-text-icon.png",
+    ThemeGLTester::render(data.create, themeData, "button-text-icon.png",
         Flag::HoveredPressed|Flag::Disabled|Flag::XfailLlvmpipe20,
         /* Button fade out animations are all 0.5 sec */
         8, 0.5_sec, 2.0f, 0.0399f);
 }
 
 void ButtonGLTest::text() {
-    auto&& data = TextData[testCaseInstanceId()/styleCount()];
-    auto&& styleData = StyleData[testCaseInstanceId()%styleCount()];
+    auto&& data = TextData[testCaseInstanceId()/themeCount()];
+    auto&& themeData = ThemeData[testCaseInstanceId()%themeCount()];
     if(!data.name)
-        setTestCaseDescription(styleData.name);
+        setTestCaseDescription(themeData.name);
     else
-        setTestCaseDescription(Utility::format("{}, {}", data.name, styleData.name));
+        setTestCaseDescription(Utility::format("{}, {}", data.name, themeData.name));
 
     CORRADE_VERIFY(true); /* Capture correct function name */
 
-    StyleGLTester::render(data.create, styleData, "button-text.png",
+    ThemeGLTester::render(data.create, themeData, "button-text.png",
         Flag::HoveredPressed|Flag::Disabled|Flag::XfailLlvmpipe20,
         /* Button fade out animations are all 0.5 sec */
         8, 0.5_sec, 2.0f, 0.0386f);
 }
 
 void ButtonGLTest::icon() {
-    auto&& data = IconData[testCaseInstanceId()/styleCount()];
-    auto&& styleData = StyleData[testCaseInstanceId()%styleCount()];
+    auto&& data = IconData[testCaseInstanceId()/themeCount()];
+    auto&& themeData = ThemeData[testCaseInstanceId()%themeCount()];
     if(!data.name)
-        setTestCaseDescription(styleData.name);
+        setTestCaseDescription(themeData.name);
     else
-        setTestCaseDescription(Utility::format("{}, {}", data.name, styleData.name));
+        setTestCaseDescription(Utility::format("{}, {}", data.name, themeData.name));
 
     CORRADE_VERIFY(true); /* Capture correct function name */
 
-    StyleGLTester::render(data.create, styleData, "button-icon.png",
+    ThemeGLTester::render(data.create, themeData, "button-icon.png",
         Flag::HoveredPressed|Flag::Disabled|Flag::XfailLlvmpipe20,
         /* Button fade out animations are all 0.5 sec */
         8, 0.5_sec, 1.25f, 0.0278f);

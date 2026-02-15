@@ -46,8 +46,8 @@ paddings and margins to particular nodes.
 
 @section Ui-LayoutLayer-setup Setting up a layout layer instance
 
-If you create a @ref UserInterfaceGL instance with a style and don't exclude
-@ref StyleFeature::LayoutLayer, an implicit instance is already provided and
+If you create a @ref UserInterfaceGL instance with a theme and don't exclude
+@ref ThemeFeature::LayoutLayer, an implicit instance is already provided and
 available through @ref UserInterface::layoutLayer().
 
 Otherwise, the layout layer is constructed from a fresh

@@ -64,9 +64,9 @@
 #include "Magnum/Ui/RendererGL.h"
 #include "Magnum/Ui/SnapLayout.h"
 #include "Magnum/Ui/SnapLayouter.h"
-#include "Magnum/Ui/Style.h"
 #include "Magnum/Ui/TextLayerGL.h"
 #include "Magnum/Ui/TextProperties.h"
+#include "Magnum/Ui/Theme.h"
 #include "Magnum/Ui/UserInterfaceGL.h"
 #include "Magnum/Ui/DebugLayerGL.h"
 
@@ -189,7 +189,7 @@ int UiDebugLayer::exec() {
         .setRendererInstance(Containers::pointer<Ui::RendererGL>(Ui::RendererGL::Flag::CompositingFramebuffer))
         /* The actual framebuffer size is 2x the UI size */
         .setSize({128.0f, 48.0f}, Vector2{ImageSize}, ImageSize)
-        .setStyle(Ui::McssDarkStyle{});
+        .setTheme(Ui::McssDarkTheme{});
 
     /* Button code, default visual state with no highlight. Adding some extra
        nodes and data to have the listed handles non-trivial. */

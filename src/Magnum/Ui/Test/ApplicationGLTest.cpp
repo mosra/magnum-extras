@@ -27,7 +27,7 @@
 #include <Magnum/GL/OpenGLTester.h>
 #include <Magnum/Math/Vector2.h>
 
-#include "Magnum/Ui/AbstractStyle.h"
+#include "Magnum/Ui/AbstractTheme.h"
 #include "Magnum/Ui/Application.h"
 #include "Magnum/Ui/UserInterfaceGL.h"
 
@@ -85,18 +85,18 @@ void ApplicationGLTest::construct() {
     setTestCaseDescription(data.name);
 
     const CustomApplication application{{100, 200}, {300, 400}, {1.25f, 1.33333333f}};
-    struct: AbstractStyle {
-        StyleFeatures doFeatures() const override {
-            return StyleFeature::EventLayer;
+    struct: AbstractTheme {
+        ThemeFeatures doFeatures() const override {
+            return ThemeFeature::EventLayer;
         }
-        bool doApply(UserInterface&, StyleFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override {
+        bool doApply(UserInterface&, ThemeFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override {
             return true;
         }
     } style;
 
     Containers::Optional<UserInterfaceGL> ui;
     if(data.styleSubset)
-        ui.emplace(application, style, StyleFeature::EventLayer);
+        ui.emplace(application, style, ThemeFeature::EventLayer);
     else
         ui.emplace(application, style);
     CORRADE_COMPARE(ui->size(), (Vector2{80.0f, 150.0f}));
@@ -109,11 +109,11 @@ void ApplicationGLTest::create() {
     setTestCaseDescription(data.name);
 
     const CustomApplication application{{100, 200}, {300, 400}, {1.25f, 1.33333333f}};
-    struct: AbstractStyle {
-        StyleFeatures doFeatures() const override {
-            return StyleFeature::EventLayer;
+    struct: AbstractTheme {
+        ThemeFeatures doFeatures() const override {
+            return ThemeFeature::EventLayer;
         }
-        bool doApply(UserInterface&, StyleFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override {
+        bool doApply(UserInterface&, ThemeFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override {
             return true;
         }
     } style;
@@ -121,12 +121,12 @@ void ApplicationGLTest::create() {
     UserInterfaceGL ui{NoCreate};
     if(data.tryCreate) {
         if(data.styleSubset)
-            ui.tryCreate(application, style, StyleFeature::EventLayer);
+            ui.tryCreate(application, style, ThemeFeature::EventLayer);
         else
             ui.tryCreate(application, style);
     } else {
         if(data.styleSubset)
-            ui.create(application, style, StyleFeature::EventLayer);
+            ui.create(application, style, ThemeFeature::EventLayer);
         else
             ui.create(application, style);
     }

@@ -450,8 +450,8 @@ optionally with texturing and background blur.
 
 @section Ui-BaseLayer-setup Setting up a base layer instance
 
-If you create a @ref UserInterfaceGL with a style and don't exclude
-@ref StyleFeature::BaseLayer, an implicit instance of the @ref BaseLayerGL
+If you create a @ref UserInterfaceGL with a theme and don't exclude
+@ref ThemeFeature::BaseLayer, an implicit instance of the @ref BaseLayerGL
 subclass, configured for use with builtin widgets, is already provided and
 available through @ref UserInterface::baseLayer().
 

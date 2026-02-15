@@ -37,7 +37,7 @@
 #ifdef MAGNUM_TARGET_GL
 #include "Magnum/Ui/RendererGL.h"
 #endif
-#include "Magnum/Ui/Style.h"
+#include "Magnum/Ui/Theme.h"
 #ifdef MAGNUM_TARGET_GL
 #include "Magnum/Ui/UserInterfaceGL.h"
 #endif
@@ -54,7 +54,7 @@ void foo() {
 /* [AbstractUserInterface-dpi-ratio] */
 Ui::UserInterfaceGL ui{
     Vector2{windowSize()}/dpiScaling(),
-    Vector2{windowSize()}, framebufferSize(), DOXYGEN_ELLIPSIS(Ui::McssDarkStyle{})};
+    Vector2{windowSize()}, framebufferSize(), DOXYGEN_ELLIPSIS(Ui::McssDarkTheme{})};
 /* [AbstractUserInterface-dpi-ratio] */
 }
 
@@ -63,7 +63,7 @@ Ui::UserInterfaceGL ui{
 Ui::UserInterfaceGL ui{
     Math::clamp({640.0f, 360.0f}, {1920.0f, 1080.0f},
         Vector2{windowSize()}/dpiScaling()),
-    Vector2{windowSize()}, framebufferSize(), DOXYGEN_ELLIPSIS(Ui::McssDarkStyle{})};
+    Vector2{windowSize()}, framebufferSize(), DOXYGEN_ELLIPSIS(Ui::McssDarkTheme{})};
 /* [AbstractUserInterface-dpi-clamp] */
 }
 
@@ -71,7 +71,7 @@ Ui::UserInterfaceGL ui{
 /* [AbstractUserInterface-dpi-fixed] */
 Ui::UserInterfaceGL ui(
     {800, 600},
-    Vector2{windowSize()}, framebufferSize(), DOXYGEN_ELLIPSIS(Ui::McssDarkStyle{}));
+    Vector2{windowSize()}, framebufferSize(), DOXYGEN_ELLIPSIS(Ui::McssDarkTheme{}));
 /* [AbstractUserInterface-dpi-fixed] */
 }
 }
@@ -90,7 +90,7 @@ class MyApplication: public Platform::Application {
     public:
         explicit MyApplication(const Arguments& arguments):
             Platform::Application{arguments},
-            _ui{*this, Ui::McssDarkStyle{}}
+            _ui{*this, Ui::McssDarkTheme{}}
         {
             DOXYGEN_ELLIPSIS()
         }
@@ -215,14 +215,14 @@ void MyApplication::pointerPressEvent(PointerEvent& event) {
 DOXYGEN_ELLIPSIS()
 /* [AbstractUserInterface-animations-events] */
 
-/* [AbstractUserInterface-animations-style-features] */
+/* [AbstractUserInterface-animations-theme-features] */
 MyApplication::MyApplication(const Arguments& arguments):
     Platform::Application{arguments},
-    _ui{*this, Ui::McssDarkStyle{Ui::McssDarkStyle::Feature::Animations}}
+    _ui{*this, Ui::McssDarkTheme{Ui::McssDarkTheme::Feature::Animations}}
 {
     DOXYGEN_ELLIPSIS()
 }
-/* [AbstractUserInterface-animations-style-features] */
+/* [AbstractUserInterface-animations-theme-features] */
 #endif
 
 }
@@ -271,7 +271,7 @@ MyApplication::MyApplication(const Arguments& arguments):
     DOXYGEN_ELLIPSIS()
 
     create(DOXYGEN_ELLIPSIS());
-    _ui.create(DOXYGEN_ELLIPSIS(*this), Ui::McssDarkStyle{});
+    _ui.create(DOXYGEN_ELLIPSIS(*this), Ui::McssDarkTheme{});
 }
 /* [UserInterfaceGL-setup-delayed] */
 #endif
@@ -297,10 +297,10 @@ MyApplication::MyApplication(const Arguments& arguments): Platform::Application{
     _ui.setRendererInstance(Containers::pointer<Ui::RendererGL>(
         Ui::RendererGL::Flag::CompositingFramebuffer));
 
-    /* Then add appropriate compositing layers, set a style, etc */
+    /* Then add appropriate compositing layers, set a theme, etc */
     _ui
         .setSize(DOXYGEN_ELLIPSIS({}))
-        .setStyle(DOXYGEN_ELLIPSIS(Ui::McssDarkStyle{}))
+        .setTheme(DOXYGEN_ELLIPSIS(Ui::McssDarkTheme{}))
         DOXYGEN_ELLIPSIS();
 
     DOXYGEN_ELLIPSIS()

@@ -890,8 +890,8 @@ capabilities.
 
 @section Ui-TextLayer-setup Setting up a text layer instance
 
-If you create a @ref UserInterfaceGL with a style and don't exclude
-@ref StyleFeature::TextLayer, an implicit instance of the @ref TextLayerGL
+If you create a @ref UserInterfaceGL with a theme and don't exclude
+@ref ThemeFeature::TextLayer, an implicit instance of the @ref TextLayerGL
 subclass, configured for use with builtin widgets, is already provided and
 available through @ref UserInterface::textLayer().
 

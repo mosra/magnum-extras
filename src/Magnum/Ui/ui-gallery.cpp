@@ -38,7 +38,7 @@
 #endif
 #include <Magnum/Text/Alignment.h>
 
-#include "Magnum/Ui/AbstractStyle.hpp" /* for DebugLayer style names */
+#include "Magnum/Ui/AbstractTheme.hpp" /* for DebugLayer style names */
 #include "Magnum/Ui/Anchor.h"
 #include "Magnum/Ui/Application.h"
 #include "Magnum/Ui/BaseLayer.h" /* for DebugLayer style names */
@@ -53,10 +53,10 @@
 #include "Magnum/Ui/Panel.h"
 #include "Magnum/Ui/SnapLayout.h"
 #include "Magnum/Ui/SnapLayouter.h"
-#include "Magnum/Ui/Style.h"
 #include "Magnum/Ui/TextLayer.h" /* for DebugLayer style names */
 #include "Magnum/Ui/LayoutLayer.h" /* for DebugLayer style names */
 #include "Magnum/Ui/TextProperties.h"
+#include "Magnum/Ui/Theme.h"
 #include "Magnum/Ui/UserInterfaceGL.h"
 
 namespace Magnum {
@@ -154,13 +154,13 @@ UiGallery::UiGallery(const Arguments& arguments): Platform::Application{argument
         .addSkippedPrefix("magnum", "engine-specific options")
         .parse(arguments.argc, arguments.argv);
 
-    Ui::McssDarkStyle::Features features;
+    Ui::McssDarkTheme::Features features;
     {
         const Containers::StringView animations = args.value<Containers::StringView>("animations");
         if(animations == "all"_s)
-            features |= Ui::McssDarkStyle::Feature::Animations;
+            features |= Ui::McssDarkTheme::Feature::Animations;
         else if(animations == "essential"_s)
-            features |= Ui::McssDarkStyle::Feature::EssentialAnimations;
+            features |= Ui::McssDarkTheme::Feature::EssentialAnimations;
         else if(animations != "none"_s)
             Fatal{} << "Expected --animations to be all, essential or none but got" << animations;
     }
@@ -172,7 +172,7 @@ UiGallery::UiGallery(const Arguments& arguments): Platform::Application{argument
         .setTitle("Magnum::Ui Gallery"_s)
         .setWindowFlags(Configuration::WindowFlag::Resizable));
 
-    _ui.create(*this, Ui::McssDarkStyle{features});
+    _ui.create(*this, Ui::McssDarkTheme{features});
 
     /* Set up the profiler, if enabled */
     if(args.isSet("profile")) {

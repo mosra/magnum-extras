@@ -49,12 +49,12 @@ Performs renderer state management for OpenGL layer implementations such as
 
 @section Ui-RendererGL-setup Setting up an OpenGL renderer instance
 
-If you use one of the @ref UserInterfaceGL constructors taking a style,
+If you use one of the @ref UserInterfaceGL constructors taking a theme,
 @ref UserInterfaceGL::create(), @relativeref{UserInterfaceGL,tryCreate()},
-@relativeref{UserInterfaceGL,setStyle()} or
-@relativeref{UserInterfaceGL,trySetStyle()}, an implicit renderer instance is
+@relativeref{UserInterfaceGL,setTheme()} or
+@relativeref{UserInterfaceGL,trySetTheme()}, an implicit renderer instance is
 already set up by those. If you don't, or if you want to set up a
-custom-configured renderer before specifying a style, pass its instance to
+custom-configured renderer before specifying a theme, pass its instance to
 @ref AbstractUserInterface::setRendererInstance():
 
 @snippet Ui-gl.cpp RendererGL-setup
