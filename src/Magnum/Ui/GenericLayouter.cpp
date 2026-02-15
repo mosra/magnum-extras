@@ -43,7 +43,7 @@ namespace {
    different arguments */
 struct Layout {
     Containers::FunctionData layout;
-    void(*call)(Layout&, const GenericLayouter&, Vector2&, Vector2&);
+    void(*call)(Layout&, const GenericLayouter&, NodeHandle, Vector2&, Vector2&);
 };
 
 }
@@ -77,21 +77,40 @@ std::size_t GenericLayouter::usedAllocatedCount() const {
     return count;
 }
 
-LayoutHandle GenericLayouter::add(const NodeHandle node, Containers::Function<void(const GenericLayouter&, Vector2&, Vector2&)>&& layout) {
+LayoutHandle GenericLayouter::addInternal(const NodeHandle node) {
     State& state = *_state;
-    CORRADE_ASSERT(layout,
-        "Ui::GenericLayouter::add(): layout is null", {});
-
     const LayoutHandle handle = AbstractLayouter::add(node);
     const UnsignedInt id = layoutHandleId(handle);
     if(id >= state.layouts.size())
         /* Can't use NoInit because of non-trivial types */
         arrayResize(state.layouts, ValueInit, id + 1);
 
-    Layout& layoutData = state.layouts[id];
+    return handle;
+}
+
+LayoutHandle GenericLayouter::add(const NodeHandle node, Containers::Function<void(const GenericLayouter&, Vector2&, Vector2&)>&& layout) {
+    CORRADE_ASSERT(layout,
+        "Ui::GenericLayouter::add(): layout is null", {});
+
+    const LayoutHandle handle = addInternal(node);
+    Layout& layoutData = _state->layouts[layoutHandleId(handle)];
     layoutData.layout = Utility::move(layout);
-    layoutData.call = [](Layout& layout, const GenericLayouter& layouter, Vector2& nodeOffset, Vector2& nodeSize) {
+    layoutData.call = [](Layout& layout, const GenericLayouter& layouter, const NodeHandle, Vector2& nodeOffset, Vector2& nodeSize) {
         static_cast<Containers::Function<void(const GenericLayouter&, Vector2&, Vector2&)>&>(layout.layout)(layouter, nodeOffset, nodeSize);
+    };
+
+    return handle;
+}
+
+LayoutHandle GenericLayouter::add(const NodeHandle node, Containers::Function<void(const GenericLayouter&, NodeHandle, Vector2&, Vector2&)>&& layout) {
+    CORRADE_ASSERT(layout,
+        "Ui::GenericLayouter::add(): layout is null", {});
+
+    const LayoutHandle handle = addInternal(node);
+    Layout& layoutData = _state->layouts[layoutHandleId(handle)];
+    layoutData.layout = Utility::move(layout);
+    layoutData.call = [](Layout& layout, const GenericLayouter& layouter, const NodeHandle node, Vector2& nodeOffset, Vector2& nodeSize) {
+        static_cast<Containers::Function<void(const GenericLayouter&, NodeHandle, Vector2&, Vector2&)>&>(layout.layout)(layouter, node, nodeOffset, nodeSize);
     };
 
     return handle;
@@ -241,7 +260,9 @@ void GenericLayouter::doLayout(const Containers::BitArrayView layoutIdsToUpdate,
             continue;
 
         Layout& layout = state.layouts[i];
-        layout.call(layout, *this, nodeOffsets[nodeHandleId(nodes[i])], nodeSizes[nodeHandleId(nodes[i])]);
+        const NodeHandle node = nodes[i];
+        const UnsignedInt nodeId = nodeHandleId(node);
+        layout.call(layout, *this, node, nodeOffsets[nodeId], nodeSizes[nodeId]);
     }
 
     /* Reset the views back so the nodeMinSize(), ... getters cannot be called

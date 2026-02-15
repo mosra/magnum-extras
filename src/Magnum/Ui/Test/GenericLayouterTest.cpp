@@ -127,7 +127,6 @@ void GenericLayouterTest::constructMove() {
 }
 
 void GenericLayouterTest::addRemove() {
-    Int destructedCount = 0;
     struct NonTrivial {
         explicit NonTrivial(int& output): destructedCount{&output} {}
         ~NonTrivial() {
@@ -139,9 +138,21 @@ void GenericLayouterTest::addRemove() {
 
         Int* destructedCount;
     };
+    struct NonTrivialWithNode {
+        explicit NonTrivialWithNode(int& output): destructedCount{&output} {}
+        ~NonTrivialWithNode() {
+            ++*destructedCount;
+        }
+        void operator()(const GenericLayouter&, NodeHandle, Vector2&, Vector2&) const {
+            CORRADE_FAIL("This should never be called.");
+        }
+
+        Int* destructedCount;
+    };
 
     GenericLayouter layouter{layouterHandle(0, 1)};
 
+    /* Trivial function */
     LayoutHandle trivial = layouter.add(nodeHandle(0x12345, 0xabc), [](const GenericLayouter&, Vector2&, Vector2&) {
         CORRADE_FAIL("This should never be called.");
     });
@@ -150,24 +161,56 @@ void GenericLayouterTest::addRemove() {
     CORRADE_COMPARE(layouter.node(trivial), nodeHandle(0x12345, 0xabc));
     CORRADE_VERIFY(!layouter.isAllocated(trivial));
 
+    /* Non-trivial function. The temporary gets destructed right away */
+    Int destructedCount = 0;
     LayoutHandle nonTrivial = layouter.add(nodeHandle(0x67890, 0xdef), NonTrivial{destructedCount});
+    CORRADE_COMPARE(destructedCount, 1);
     CORRADE_COMPARE(layouter.usedCount(), 2);
     CORRADE_COMPARE(layouter.usedAllocatedCount(), 1);
     CORRADE_COMPARE(layouter.node(nonTrivial), nodeHandle(0x67890, 0xdef));
     /* Verifying also the other overload */
     CORRADE_VERIFY(layouter.isAllocated(layoutHandleData(nonTrivial)));
 
-    layouter.remove(trivial);
-    CORRADE_COMPARE(layouter.usedCount(), 1);
+    /* Trivial function, NodeHandle overload */
+    LayoutHandle trivialWithNode = layouter.add(nodeHandle(0xabcde, 0x123), [](const GenericLayouter&, NodeHandle, Vector2&, Vector2&) {
+        CORRADE_FAIL("This should never be called.");
+    });
+    CORRADE_COMPARE(layouter.usedCount(), 3);
     CORRADE_COMPARE(layouter.usedAllocatedCount(), 1);
+    CORRADE_COMPARE(layouter.node(trivialWithNode), nodeHandle(0xabcde, 0x123));
+    CORRADE_VERIFY(!layouter.isAllocated(trivialWithNode));
+
+    /* Non-trivial function + NodeHandle overload, the temporary again gets
+       destructed right away */
+    Int destructedWithNodeCount = 0;
+    LayoutHandle nonTrivialWithNode = layouter.add(nodeHandle(0xbcdef, 0x456), NonTrivialWithNode{destructedWithNodeCount});
     CORRADE_COMPARE(destructedCount, 1);
+    CORRADE_COMPARE(destructedWithNodeCount, 1);
+    CORRADE_COMPARE(layouter.usedCount(), 4);
+    CORRADE_COMPARE(layouter.usedAllocatedCount(), 2);
+    CORRADE_COMPARE(layouter.node(nonTrivialWithNode), nodeHandle(0xbcdef, 0x456));
+    CORRADE_VERIFY(layouter.isAllocated(nonTrivialWithNode));
+
+    layouter.remove(trivial);
+    CORRADE_COMPARE(layouter.usedCount(), 3);
+    CORRADE_COMPARE(layouter.usedAllocatedCount(), 2);
+    CORRADE_COMPARE(destructedCount, 1);
+    CORRADE_COMPARE(destructedWithNodeCount, 1);
 
     /* Verifying also the other handle overload. They should both delegate into
        the same internal implementation. */
-    layouter.remove(layoutHandleData(nonTrivial));
-    CORRADE_COMPARE(layouter.usedCount(), 0);
-    CORRADE_COMPARE(layouter.usedAllocatedCount(), 0);
+    layouter.remove(layoutHandleData(nonTrivialWithNode));
+    CORRADE_COMPARE(layouter.usedCount(), 2);
+    CORRADE_COMPARE(layouter.usedAllocatedCount(), 1);
+    CORRADE_COMPARE(destructedCount, 1);
+    CORRADE_COMPARE(destructedWithNodeCount, 2);
+
+    /* Destructing the whole layer instance should destruct all remaining
+       non-trivial functions. And not the ones already removed. */
+    layouter = GenericLayouter{layouterHandle(0, 2)};
+    CORRADE_COMPARE(layouter.handle(), layouterHandle(0, 2));
     CORRADE_COMPARE(destructedCount, 2);
+    CORRADE_COMPARE(destructedWithNodeCount, 2);
 }
 
 void GenericLayouterTest::addRemoveHandleRecycle() {
@@ -210,8 +253,12 @@ void GenericLayouterTest::addInvalid() {
 
     Containers::String out;
     Error redirectError{&out};
-    layouter.add(nodeHandle(0, 1), {});
-    CORRADE_COMPARE(out, "Ui::GenericLayouter::add(): layout is null\n");
+    layouter.add(nodeHandle(0, 1), Containers::Function<void(const GenericLayouter&, Vector2&, Vector2&)>{});
+    layouter.add(nodeHandle(0, 1), Containers::Function<void(const GenericLayouter&, NodeHandle, Vector2&, Vector2&)>{});
+    CORRADE_COMPARE_AS(out,
+        "Ui::GenericLayouter::add(): layout is null\n"
+        "Ui::GenericLayouter::add(): layout is null\n",
+        TestSuite::Compare::String);
 }
 
 void GenericLayouterTest::invalidHandle() {
@@ -638,8 +685,12 @@ void GenericLayouterTest::layoutDataOrder() {
     NodeHandle node1 = ui.createNode({}, {});
     NodeHandle node2 = ui.createNode({10.0f, 20.0f}, {});
     NodeHandle node3 = ui.createNode({}, {});
+    /* Make the node4 a non-trivial handle as it's compared against below */
+    ui.removeNode(ui.createNode({}, {}));
+    ui.removeNode(ui.createNode({}, {}));
     NodeHandle node4 = ui.createNode({30.0f, 40.0f}, {50.0f, 60.0f});
     NodeHandle node5 = ui.createNode({}, {});
+    CORRADE_COMPARE(node4, nodeHandle(3, 3));
 
     if(data.recycledLayouts) {
         LayoutHandle layout1 = layouter.add(node1, [](const GenericLayouter&, Vector2&, Vector2&) {});
@@ -684,8 +735,10 @@ void GenericLayouterTest::layoutDataOrder() {
         CORRADE_FAIL("This shouldn't be called.");
     });
 
-    /* Layout affecting size and offset of a node that already has a layout */
-    layouter.add(node4, [](const GenericLayouter&, Vector2& nodeOffset, Vector2& nodeSize) {
+    /* Layout affecting size and offset of a node that already has a layout,
+       and using the NodeHandle overload */
+    layouter.add(node4, [node4](const GenericLayouter&, NodeHandle node, Vector2& nodeOffset, Vector2& nodeSize) {
+        CORRADE_COMPARE(node, node4);
         nodeOffset *= 2.0f;
         nodeSize *= 2.0f;
     });
@@ -755,6 +808,7 @@ void GenericLayouterTest::layoutDataOrder() {
     ui.update();
     CORRADE_COMPARE(layoutLayer.called, 1);
     CORRADE_COMPARE(dummyLayouter.called, 1);
+    CORRADE_COMPARE(called, 1);
 }
 
 }}}}

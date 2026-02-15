@@ -163,6 +163,8 @@ class MAGNUM_UI_EXPORT GenericLayouter: public AbstractLayouter {
          * detailed description of all constraints.
          */
         LayoutHandle add(NodeHandle node, Containers::Function<void(const GenericLayouter& layouter, Vector2& nodeOffset, Vector2& nodeSize)>&& layout);
+        /** @overload */
+        LayoutHandle add(NodeHandle node, Containers::Function<void(const GenericLayouter& layouter, NodeHandle node, Vector2& nodeOffset, Vector2& nodeSize)>&& layout);
 
         /**
          * @brief Remove a layout
@@ -284,6 +286,7 @@ class MAGNUM_UI_EXPORT GenericLayouter: public AbstractLayouter {
         Vector4 nodeMargin(NodeHandle node) const;
 
     private:
+        MAGNUM_UI_LOCAL LayoutHandle addInternal(NodeHandle node);
         MAGNUM_UI_LOCAL void removeInternal(UnsignedInt id);
 
         MAGNUM_UI_LOCAL LayouterFeatures doFeatures() const override;
