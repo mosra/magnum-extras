@@ -198,8 +198,8 @@ union Storage {
 
 static_assert(sizeof(Storage::Used::Data::inPlace) == Implementation::DataLayerStorageMaxInPlaceSize,
     "outdated Implementation::DataLayerStorageMaxInPlaceSize constant");
-static_assert(offsetof(Storage::Used::Data, inPlace) % 8 == 0,
-    "Storage in-place storage not 8-bit aligned");
+static_assert(sizeof(Storage) % 8 == 0 && offsetof(Storage::Used::Data, inPlace) % 8 == 0,
+    "Storage in-place storage not 8-byte aligned");
 
 #ifndef CORRADE_NO_STD_IS_TRIVIALLY_TRAITS
 static_assert(std::is_trivially_copyable<Storage>::value,
