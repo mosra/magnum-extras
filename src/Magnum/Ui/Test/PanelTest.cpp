@@ -25,7 +25,6 @@
 */
 
 #include <Corrade/Containers/String.h>
-#include <Corrade/TestSuite/Compare/Numeric.h>
 
 #include "Magnum/Ui/Anchor.h"
 #include "Magnum/Ui/Panel.h"
