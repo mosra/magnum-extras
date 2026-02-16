@@ -128,6 +128,8 @@ const struct {
         ThemeFeature::TextLayerAnimations, {}, 1.0f, 16.0f*2},
     {"event layer", {},
         ThemeFeature::EventLayer, {}, 1.0f, 0.0f},
+    {"layout layer", {},
+        ThemeFeature::LayoutLayer, {}, 1.0f, 0.0f},
     {"snap layouter", {},
         ThemeFeature::SnapLayouter, {}, 1.0f, 0.0f},
     {"everything",
