@@ -81,6 +81,8 @@ enum class BaseLayerSharedFlag: UnsignedByte;
 typedef Containers::EnumSet<BaseLayerSharedFlag> BaseLayerSharedFlags;
 
 class DataLayer;
+enum class DataLayerStorageHandle: UnsignedInt;
+enum class StorageHandle: UnsignedLong;
 
 class DebugLayer;
 #ifdef MAGNUM_TARGET_GL
