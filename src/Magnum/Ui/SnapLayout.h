@@ -1210,7 +1210,9 @@ template<class UserInterface> class BasicSnapLayout: public AbstractSnapLayout {
         /* Used by child(), sibling(), root() member & static functions */
         explicit BasicSnapLayout(const AbstractSnapLayout& layout): AbstractSnapLayout{layout} {}
         /* Used by child(), sibling(), root() assertions */
+        #ifndef CORRADE_NO_ASSERT
         explicit BasicSnapLayout(UserInterface& ui, SnapLayouter* layouter, NodeHandle node, LayouterDataHandle layout): AbstractSnapLayout{ui, layouter, node, layout} {}
+        #endif
 };
 
 /**
