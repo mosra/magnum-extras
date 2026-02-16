@@ -38,8 +38,12 @@
 #include "Magnum/Ui/AbstractTheme.h"
 #include "Magnum/Ui/AbstractTheme.hpp"
 #include "Magnum/Ui/BaseLayer.h"
+#include "Magnum/Ui/DataLayer.h"
+#include "Magnum/Ui/EventLayer.h"
+#include "Magnum/Ui/GenericLayouter.h"
 #include "Magnum/Ui/Handle.h"
 #include "Magnum/Ui/LayoutLayer.h"
+#include "Magnum/Ui/SnapLayouter.h"
 #include "Magnum/Ui/TextLayer.h"
 #include "Magnum/Ui/UserInterface.h"
 
@@ -50,7 +54,8 @@ namespace Magnum { namespace Ui { namespace Test { namespace {
     - Derive the test from the `WidgetTester` class
     - Use the `ui` member and parent everything to `rootNode`
     - Add tests with the `setup()` and `teardown()` routines, which will ensure
-      that everything is correctly cleaned up for the next test case
+      that everything (nodes, data, layouts, storages) is correctly cleaned up
+      for the next test case
 */
 
 struct TestUserInterface: UserInterface {
@@ -194,11 +199,20 @@ struct WidgetTester: TestSuite::Tester {
 };
 
 WidgetTester::WidgetTester() {
-    ui.setBaseLayerInstance(Containers::pointer<TestBaseLayer>(ui.createLayer(), baseLayerShared))
+    ui.setDataLayerInstance(Containers::pointer<DataLayer>(ui.createLayer()))
+      .setBaseLayerInstance(Containers::pointer<TestBaseLayer>(ui.createLayer(), baseLayerShared))
       .setTextLayerInstance(Containers::pointer<TestTextLayer>(ui.createLayer(), textLayerShared))
-      /* Event layer not needed for anything yet */
+      .setEventLayerInstance(Containers::pointer<EventLayer>(ui.createLayer()))
       .setLayoutLayerInstance(Containers::pointer<LayoutLayer>(ui.createLayer(), Implementation::LayoutStyleCount))
+      .setSnapLayouterInstance(Containers::pointer<SnapLayouter>(ui.createLayouter()))
+      .setGenericLayouterInstance(Containers::pointer<GenericLayouter>(ui.createLayouter()))
       .setSize({100, 100});
+
+    /* Base and text layer styles were set in the Test*Shared constructors
+       already. The LayoutLayer style has to be set because otherwise
+       ui.update(), which is called to remove unreferenced DataLayer storages,
+       asserts. */
+    ui.layoutLayer().setStyle({}, {}, {}, {}, {});
 }
 
 WidgetTester::~WidgetTester() {
@@ -210,20 +224,34 @@ WidgetTester::~WidgetTester() {
 void WidgetTester::setup() {
     CORRADE_INTERNAL_ASSERT(!ui.isHandleValid(rootAnchor));
     CORRADE_INTERNAL_ASSERT(ui.nodeUsedCount() == 0);
+    CORRADE_INTERNAL_ASSERT(ui.dataLayer().storageUsedCount() == 0);
+    CORRADE_INTERNAL_ASSERT(ui.dataLayer().usedCount() == 0);
     CORRADE_INTERNAL_ASSERT(ui.baseLayer().usedCount() == 0);
     CORRADE_INTERNAL_ASSERT(ui.textLayer().usedCount() == 0);
+    CORRADE_INTERNAL_ASSERT(ui.eventLayer().usedCount() == 0);
     CORRADE_INTERNAL_ASSERT(ui.layoutLayer().usedCount() == 0);
+    CORRADE_INTERNAL_ASSERT(ui.snapLayouter().usedCount() == 0);
+    CORRADE_INTERNAL_ASSERT(ui.genericLayouter().usedCount() == 0);
     rootAnchor = {ui, {}, ui.size()};
 }
 
 void WidgetTester::teardown() {
     ui.removeNode(rootAnchor);
     ui.clean();
+    /* Unreferenced storages are removed in update(), not clean() */
+    /** @todo remove this once unused storages are removed in clean() also */
+    if(ui.dataLayer().storageUsedCount())
+        ui.update();
     CORRADE_INTERNAL_ASSERT(!ui.isHandleValid(rootAnchor));
     CORRADE_INTERNAL_ASSERT(ui.nodeUsedCount() == 0);
+    CORRADE_INTERNAL_ASSERT(ui.dataLayer().storageUsedCount() == 0);
+    CORRADE_INTERNAL_ASSERT(ui.dataLayer().usedCount() == 0);
     CORRADE_INTERNAL_ASSERT(ui.baseLayer().usedCount() == 0);
     CORRADE_INTERNAL_ASSERT(ui.textLayer().usedCount() == 0);
+    CORRADE_INTERNAL_ASSERT(ui.eventLayer().usedCount() == 0);
     CORRADE_INTERNAL_ASSERT(ui.layoutLayer().usedCount() == 0);
+    CORRADE_INTERNAL_ASSERT(ui.snapLayouter().usedCount() == 0);
+    CORRADE_INTERNAL_ASSERT(ui.genericLayouter().usedCount() == 0);
     /* Reset back to invalid to avoid accidents. Again yeah, I know, this is
        abusing a construction path that shouldn't be used. */
     rootAnchor = Widget{NoCreate};
@@ -232,9 +260,14 @@ void WidgetTester::teardown() {
 void WidgetTester::setupNoCreate() {
     CORRADE_INTERNAL_ASSERT(!ui.isHandleValid(rootAnchor));
     CORRADE_INTERNAL_ASSERT(ui.nodeUsedCount() == 0);
+    CORRADE_INTERNAL_ASSERT(ui.dataLayer().storageUsedCount() == 0);
+    CORRADE_INTERNAL_ASSERT(ui.dataLayer().usedCount() == 0);
     CORRADE_INTERNAL_ASSERT(ui.baseLayer().usedCount() == 0);
     CORRADE_INTERNAL_ASSERT(ui.textLayer().usedCount() == 0);
+    CORRADE_INTERNAL_ASSERT(ui.eventLayer().usedCount() == 0);
     CORRADE_INTERNAL_ASSERT(ui.layoutLayer().usedCount() == 0);
+    CORRADE_INTERNAL_ASSERT(ui.snapLayouter().usedCount() == 0);
+    CORRADE_INTERNAL_ASSERT(ui.genericLayouter().usedCount() == 0);
     /* Set to invalid to prevent the node from being used by accident. Again
        again yeah, I know. */
     rootAnchor = Widget{NoCreate};
@@ -243,9 +276,14 @@ void WidgetTester::setupNoCreate() {
 void WidgetTester::teardownNoCreate() {
     CORRADE_INTERNAL_ASSERT(!ui.isHandleValid(rootAnchor));
     CORRADE_INTERNAL_ASSERT(ui.nodeUsedCount() == 0);
+    CORRADE_INTERNAL_ASSERT(ui.dataLayer().storageUsedCount() == 0);
+    CORRADE_INTERNAL_ASSERT(ui.dataLayer().usedCount() == 0);
     CORRADE_INTERNAL_ASSERT(ui.baseLayer().usedCount() == 0);
     CORRADE_INTERNAL_ASSERT(ui.textLayer().usedCount() == 0);
+    CORRADE_INTERNAL_ASSERT(ui.eventLayer().usedCount() == 0);
     CORRADE_INTERNAL_ASSERT(ui.layoutLayer().usedCount() == 0);
+    CORRADE_INTERNAL_ASSERT(ui.snapLayouter().usedCount() == 0);
+    CORRADE_INTERNAL_ASSERT(ui.genericLayouter().usedCount() == 0);
 }
 
 }}}}

@@ -263,16 +263,19 @@ static_assert(Implementation::LayoutStyleCount == Containers::arraySize(LayoutSt
 McssDarkTheme::McssDarkTheme(const Features features): _features{features} {}
 
 ThemeFeatures McssDarkTheme::doFeatures() const {
-    return ThemeFeature::BaseLayer|
-           ThemeFeature::TextLayer|
-           ThemeFeature::TextLayerImages|
-           ThemeFeature::EventLayer|
-           ThemeFeature::LayoutLayer|
-           ThemeFeature::SnapLayouter|
-           /* Essential animations are currently just (text layer) cursor
-              blinking */
-           (_features >= Feature::Animations ? ThemeFeature::BaseLayerAnimations|ThemeFeature::TextLayerAnimations : ThemeFeatures{})|
-           (_features >= Feature::EssentialAnimations ? ThemeFeature::TextLayerAnimations : ThemeFeatures{});
+    return
+        ThemeFeature::DataLayer|
+        ThemeFeature::BaseLayer|
+        ThemeFeature::TextLayer|
+        ThemeFeature::TextLayerImages|
+        ThemeFeature::EventLayer|
+        ThemeFeature::LayoutLayer|
+        ThemeFeature::SnapLayouter|
+        ThemeFeature::GenericLayouter|
+        /* Essential animations are currently just (text layer) cursor
+           blinking */
+        (_features >= Feature::Animations ? ThemeFeature::BaseLayerAnimations|ThemeFeature::TextLayerAnimations : ThemeFeatures{})|
+        (_features >= Feature::EssentialAnimations ? ThemeFeature::TextLayerAnimations : ThemeFeatures{});
 }
 
 UnsignedInt McssDarkTheme::doBaseLayerStyleUniformCount() const {

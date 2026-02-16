@@ -43,8 +43,10 @@
 #include "Magnum/Ui/AbstractTheme.hpp"
 #include "Magnum/Ui/BaseLayer.h"
 #include "Magnum/Ui/BaseLayerAnimator.h"
+#include "Magnum/Ui/DataLayer.h"
 #include "Magnum/Ui/Event.h"
 #include "Magnum/Ui/EventLayer.h"
+#include "Magnum/Ui/GenericLayouter.h"
 #include "Magnum/Ui/Handle.h"
 #include "Magnum/Ui/LayoutLayer.h"
 #include "Magnum/Ui/NodeFlags.h"
@@ -94,6 +96,8 @@ const struct {
     Containers::Optional<UnsignedInt> imageImporterChannelCount;
     Float dpiScaling, expectedFontSize;
 } ApplyData[]{
+    {"data layer", {},
+        ThemeFeature::DataLayer, {}, 1.0f, 0.0f},
     {"base layer only", {},
         ThemeFeature::BaseLayer, {}, 1.0f, 0.0f},
     {"base layer, animations enabled but not applied",
@@ -132,6 +136,8 @@ const struct {
         ThemeFeature::LayoutLayer, {}, 1.0f, 0.0f},
     {"snap layouter", {},
         ThemeFeature::SnapLayouter, {}, 1.0f, 0.0f},
+    {"generic layouter", {},
+        ThemeFeature::GenericLayouter, {}, 1.0f, 0.0f},
     {"everything",
         McssDarkTheme::Feature::Animations,
         ~ThemeFeatures{}, {}, 1.0f, 16.0f*2},
@@ -419,6 +425,8 @@ void ThemeTest::apply() {
     /* Window size isn't needed for anything here */
     ui.setSize(Vector2{200.0f, 300.0f}/data.dpiScaling, {1, 1}, {200, 300});
 
+    ui.setDataLayerInstance(Containers::pointer<DataLayer>(ui.createLayer()));
+
     struct BaseLayerShared: BaseLayer::Shared {
         explicit BaseLayerShared(): BaseLayer::Shared{Configuration{Implementation::BaseStyleCount}
             .setDynamicStyleCount(10) /* for animations */
@@ -459,6 +467,7 @@ void ThemeTest::apply() {
     ui.setEventLayerInstance(Containers::pointer<EventLayer>(ui.createLayer()));
     ui.setLayoutLayerInstance(Containers::pointer<LayoutLayer>(ui.createLayer(), Implementation::LayoutStyleCount));
     ui.setSnapLayouterInstance(Containers::pointer<SnapLayouter>(ui.createLayouter()));
+    ui.setGenericLayouterInstance(Containers::pointer<GenericLayouter>(ui.createLayouter()));
 
     McssDarkTheme theme{data.themeFeatures};
     /* The AbstractTheme can have the set of features bigger than what the
@@ -510,6 +519,9 @@ void ThemeTest::apply() {
         data.features >= ThemeFeature::TextLayerAnimations &&
         data.themeFeatures >= McssDarkTheme::Feature::EssentialAnimations);
 
+    if(data.features >= ThemeFeature::DataLayer) {
+        /* Nothing to check here */
+    }
     if(data.features >= ThemeFeature::TextLayer) {
         CORRADE_COMPARE(ui.textLayer().shared().fontCount(), 2);
         CORRADE_COMPARE(ui.textLayer().shared().glyphCache().fontCount(), 2);
@@ -536,6 +548,9 @@ void ThemeTest::apply() {
         /* Nothing to check here */
     }
     if(data.features >= ThemeFeature::SnapLayouter) {
+        /* Nothing to check here */
+    }
+    if(data.features >= ThemeFeature::GenericLayouter) {
         /* Nothing to check here */
     }
 }
