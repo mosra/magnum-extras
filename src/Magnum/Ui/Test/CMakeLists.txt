@@ -67,6 +67,7 @@ corrade_add_test(UiLineLayerTest LineLayerTest.cpp LIBRARIES MagnumUiTestLib)
 corrade_add_test(UiNodeAnimatorTest NodeAnimatorTest.cpp LIBRARIES MagnumUiTestLib)
 corrade_add_test(UiNodeFlagsTest NodeFlagsTest.cpp LIBRARIES MagnumUi)
 corrade_add_test(UiPanelTest PanelTest.cpp LIBRARIES MagnumUi)
+corrade_add_test(UiScrollAreaTest ScrollAreaTest.cpp LIBRARIES MagnumUiTestLib)
 corrade_add_test(UiSnapLayouterTest SnapLayouterTest.cpp LIBRARIES MagnumUiTestLib)
 corrade_add_test(UiSnapLayoutTest SnapLayoutTest.cpp LIBRARIES MagnumUiTestLib)
 
@@ -489,7 +490,12 @@ if(MAGNUM_BUILD_GL_TESTS)
     corrade_add_test(UiPanelGLTest PanelGLTest.cpp
         FILES
             ThemeTestFiles/dark-panel.png)
-    foreach(_widget Button Input Label Panel)
+    corrade_add_test(UiScrollAreaGLTest ScrollAreaGLTest.cpp
+        FILES
+            ThemeTestFiles/dark-scrollarea-x.png
+            ThemeTestFiles/dark-scrollarea-y.png
+            ThemeTestFiles/dark-scrollarea-xy.png)
+    foreach(_widget Button Input Label Panel ScrollArea)
         target_link_libraries(Ui${_widget}GLTest PRIVATE
             MagnumUi
             Magnum::DebugTools

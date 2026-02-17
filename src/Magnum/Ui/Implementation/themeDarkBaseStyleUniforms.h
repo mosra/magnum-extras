@@ -148,6 +148,38 @@ _c(InputFlatFocused,            {}, 0xa5c9ea_rgbf,
 _c(InputFlatDisabled,           {}, {},
     {0.0f, 0.0f, 0.0f, 0.0f}, Vector4{4.0f}, {4.0f, 4.0f, 4.0f, 4.0f})
 
+/* Scrollbars are overlaid on top of the contents, narrow and mostly
+   transparent when inactive and fatter and opaque when interacted with. Thumb
+   colors are the same as default button's, scrollbar background is
+   transparent in all cases. */
+/** @todo once edge/corner swizzle is a thing, there could be just one style
+    for both X and Y */
+_c(ScrollbarX,                  {}, {})
+_c(ScrollbarXHovered,           {}, {})
+_c(ScrollbarXPressed,           {}, {})
+_c(ScrollbarXDisabled,          {}, {})
+_c(ScrollbarY,                  {}, {})
+_c(ScrollbarYHovered,           {}, {})
+_c(ScrollbarYPressed,           {}, {})
+_c(ScrollbarYDisabled,          {}, {})
+/* Color, outline color, outline width, outer radius, inner radius */
+_c(ScrollbarThumbX,             0xdcdcdcff_rgbaf*0.3f, {},
+    {2.0f, 10.0f, 2.0f, 2.0f}, Vector4{0.0f}, Vector4{2.0f})
+_c(ScrollbarThumbXHovered,      0xa5c9eaff_rgbaf*0.8f, {},
+    {2.0f, 6.0f, 2.0f, 2.0f}, Vector4{0.0f}, Vector4{4.0f})
+_c(ScrollbarThumbXPressed,      0xa5c9eaff_rgbaf*0.8f, {},
+    {1.0f, 5.0f, 1.0f, 1.0f}, Vector4{0.0f}, Vector4{5.0f})
+_c(ScrollbarThumbXDisabled,     0xdcdcdcff_rgbaf*0.1f, {},
+    {2.0f, 10.0f, 2.0f, 2.0f}, Vector4{0.0f}, Vector4{2.0f})
+_c(ScrollbarThumbY,             0xdcdcdcff_rgbaf*0.3f, {},
+    {10.0f, 2.0f, 2.0f, 2.0f}, Vector4{0.0f}, Vector4{2.0f})
+_c(ScrollbarThumbYHovered,      0xa5c9eaff_rgbaf*0.8f, {},
+    {6.0f, 2.0f, 2.0f, 2.0f}, Vector4{0.0f}, Vector4{4.0f})
+_c(ScrollbarThumbYPressed,      0xa5c9eaff_rgbaf*0.8f, {},
+    {5.0f, 1.0f, 1.0f, 1.0f}, Vector4{0.0f}, Vector4{5.0f})
+_c(ScrollbarThumbYDisabled,     0xdcdcdcff_rgbaf*0.1f, {},
+    {10.0f, 2.0f, 2.0f, 2.0f}, Vector4{0.0f}, Vector4{2.0f})
+
 /* --header-background-color, with some transparency, disabled variant the same
    as elsewhere with 30% opacity */
 _c(PanelBackground,             0x22272eff_rgbaf*0.9f, 4.0f)

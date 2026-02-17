@@ -493,6 +493,17 @@ Transition<BaseStyle> styleTransition(const BaseStyle index) {
                         BaseStyle::style ## Disabled};                      \
             case BaseStyle::style ## Disabled:                              \
                 CORRADE_INTERNAL_ASSERT_UNREACHABLE();
+        #define _cHoveredPressedDisabled(style)                             \
+            case BaseStyle::style:                                          \
+            case BaseStyle::style ## Hovered:                               \
+            case BaseStyle::style ## Pressed:                               \
+                return {BaseStyle::style,                                   \
+                        BaseStyle::style ## Hovered,                        \
+                        BaseStyle::style ## Pressed,                        \
+                        BaseStyle::style ## Pressed,                        \
+                        BaseStyle::style ## Disabled};                      \
+            case BaseStyle::style ## Disabled:                              \
+                CORRADE_INTERNAL_ASSERT_UNREACHABLE();
         #define _cHoveredPressedPressedHoveredDisabled(style)               \
             case BaseStyle::style:                                          \
             case BaseStyle::style ## Hovered:                               \
@@ -533,8 +544,13 @@ Transition<BaseStyle> styleTransition(const BaseStyle index) {
         _cHoveredFocusedDisabled(InputDanger)
         _cHoveredFocusedDisabled(InputFlat)
         _cDisabled(PanelBackground)
+        _cHoveredPressedDisabled(ScrollbarX)
+        _cHoveredPressedDisabled(ScrollbarY)
+        _cHoveredPressedDisabled(ScrollbarThumbX)
+        _cHoveredPressedDisabled(ScrollbarThumbY)
         #undef _cHoveredFocusedDisabled
         #undef _cHoveredPressedPressedHoveredDisabled
+        #undef _cHoveredPressedDisabled
         #undef _cDisabled
         #undef _c
     }

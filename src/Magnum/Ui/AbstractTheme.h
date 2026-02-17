@@ -235,9 +235,9 @@ namespace Implementation {
     /* Used by various tests, less wasteful to have here than in the
        potentially huge AbstractTheme.hpp */
     enum: UnsignedInt {
-        BaseStyleCount = 63,
+        BaseStyleCount = 79,
         TextStyleCount = 91,
-        LayoutStyleCount = 4,
+        LayoutStyleCount = 14,
         IconCount = 2
     };
 }

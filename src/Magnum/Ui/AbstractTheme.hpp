@@ -121,6 +121,23 @@ enum class BaseStyle: UnsignedShort {
     InputFlatFocused,
     InputFlatDisabled,
 
+    ScrollbarX,
+    ScrollbarXHovered,
+    ScrollbarXPressed,
+    ScrollbarXDisabled,
+    ScrollbarY,
+    ScrollbarYHovered,
+    ScrollbarYPressed,
+    ScrollbarYDisabled,
+    ScrollbarThumbX,
+    ScrollbarThumbXHovered,
+    ScrollbarThumbXPressed,
+    ScrollbarThumbXDisabled,
+    ScrollbarThumbY,
+    ScrollbarThumbYHovered,
+    ScrollbarThumbYPressed,
+    ScrollbarThumbYDisabled,
+
     PanelBackground,
     PanelBackgroundDisabled,
 };
@@ -250,6 +267,17 @@ enum class LayoutStyle: UnsignedShort {
     Label,
     Input,
     Panel,
+
+    ScrollArea,
+    ScrollAreaView,
+    ScrollAreaViewOnlyX,
+    ScrollAreaViewOnlyY,
+    ScrollbarX,
+    ScrollbarOnlyX,
+    ScrollbarY,
+    ScrollbarOnlyY,
+    ScrollbarThumbX,
+    ScrollbarThumbY,
 };
 
 }}}
