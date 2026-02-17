@@ -21097,11 +21097,147 @@ void AbstractUserInterfaceTest::eventPointerFallthrough() {
             {Cancel, fallthrough4Data1, {}},
         })), TestSuite::Compare::Container);
 
+    /* Fallthrough happening from the captured node where the original event
+       wasn't accepted at all, but the fallthrough is. Should result in the
+       capture being changed and the accept status propagated to the top-level
+       ui.pointer*Event() call. */
+    } {
+        layer.accept = true;
+        layer.disableCapture = false;
+        layer.acceptFallthrough1 = {};
+        layer.acceptFallthrough2 = {};
+        layer.captureFallthrough = {};
+
+        /* Capture in a press */
+        PointerEvent press1{-1234_nsec, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
+        CORRADE_VERIFY(ui.pointerPressEvent({270.0f, 2200.0f}, press1));
+        CORRADE_COMPARE(ui.currentPressedNode(), level6Leaf2);
+        CORRADE_COMPARE(ui.currentCapturedNode(), level6Leaf2);
+
+        layer.eventCalls = {};
+        layer.accept = false;
+        layer.acceptFallthrough1 = dataHandleId(fallthrough4Data2);
+
+        /* Accepted secondary press doesn't change the pressed node but changes
+           the capture and propagates the accept status */
+        PointerEvent press{-1234_nsec, PointerEventSource::Touch, Pointer::Finger, false, 0, {}};
+        CORRADE_VERIFY(ui.pointerPressEvent({270.0f, 2200.0f}, press));
+        CORRADE_COMPARE(ui.currentPressedNode(), level6Leaf2);
+        CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentCapturedNode(), fallthrough4);
+        CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
+
+        CORRADE_COMPARE_AS(layer.eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
+            {Press|Secondary|Pressed|Captured, level6Leaf2Data, {2.0f, 2.0f}},
+            {Press|Secondary|Pressed|Captured|Fallthrough|Accepted, fallthrough4Data2, {12.0f, 7.0f}},
+            {Press|Secondary|Pressed|Captured|Fallthrough, fallthrough4Data1, {12.0f, 7.0f}},
+            {Cancel, level6Leaf2Data, {}},
+            {Press|Secondary|Pressed|Captured|Fallthrough, fallthrough1Data2, {12.0f, 12.0f}},
+            {Press|Secondary|Pressed|Captured|Fallthrough, fallthrough1Data1, {12.0f, 12.0f}},
+        })), TestSuite::Compare::Container);
+
+    /* Like above, but with a move */
+    } {
+        layer.accept = true;
+        layer.disableCapture = false;
+        layer.acceptFallthrough1 = {};
+        layer.acceptFallthrough2 = {};
+        layer.captureFallthrough = {};
+
+        /* Just to reset the currently pressed & captured node */
+        /** @todo have a pointerCancelEvent() for this */
+        PointerEvent eventReleaseReset{-1234_nsec, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
+        ui.pointerReleaseEvent({1000.0f, 1000.0f}, eventReleaseReset);
+        CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
+
+        /* Capture in a press */
+        PointerEvent press1{-1234_nsec, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
+        CORRADE_VERIFY(ui.pointerPressEvent({270.0f, 2200.0f}, press1));
+        CORRADE_COMPARE(ui.currentPressedNode(), level6Leaf2);
+        CORRADE_COMPARE(ui.currentCapturedNode(), level6Leaf2);
+
+        layer.eventCalls = {};
+        layer.accept = false;
+        layer.acceptFallthrough1 = dataHandleId(fallthrough4Data1);
+
+        /* Accepted secondary move doesn't change the hover but still
+           propagates the accept status */
+        PointerMoveEvent move{-1234_nsec, PointerEventSource::Touch, {}, Pointer::Finger, false, 0, {}};
+        CORRADE_VERIFY(ui.pointerMoveEvent({270.0f, 2200.0f}, move));
+        CORRADE_COMPARE(ui.currentPressedNode(), level6Leaf2);
+        CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentCapturedNode(), fallthrough4);
+        CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
+
+        CORRADE_COMPARE_AS(layer.eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
+            {Move|Secondary|Pressed|Captured, level6Leaf2Data, {2.0f, 2.0f}},
+            {Move|Secondary|Pressed|Captured|Fallthrough, fallthrough4Data2, {12.0f, 7.0f}},
+            {Move|Secondary|Pressed|Captured|Fallthrough|Accepted, fallthrough4Data1, {12.0f, 7.0f}},
+            {Cancel, level6Leaf2Data, {}},
+            {Move|Secondary|Pressed|Captured|Fallthrough, fallthrough1Data2, {12.0f, 12.0f}},
+            {Move|Secondary|Pressed|Captured|Fallthrough, fallthrough1Data1, {12.0f, 12.0f}},
+        })), TestSuite::Compare::Container);
+
+    /* Like above, but with a release */
+    } {
+        layer.accept = true;
+        layer.disableCapture = false;
+        layer.acceptFallthrough1 = {};
+        layer.acceptFallthrough2 = {};
+        layer.captureFallthrough = {};
+
+        /* Just to reset the currently pressed & captured node */
+        /** @todo have a pointerCancelEvent() for this */
+        PointerEvent eventReleaseReset{-1234_nsec, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
+        ui.pointerReleaseEvent({1000.0f, 1000.0f}, eventReleaseReset);
+        CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
+
+        /* Capture in a press */
+        PointerEvent press1{-1234_nsec, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
+        CORRADE_VERIFY(ui.pointerPressEvent({270.0f, 2200.0f}, press1));
+        CORRADE_COMPARE(ui.currentPressedNode(), level6Leaf2);
+        CORRADE_COMPARE(ui.currentCapturedNode(), level6Leaf2);
+
+        layer.eventCalls = {};
+        layer.accept = false;
+        layer.acceptFallthrough1 = dataHandleId(fallthrough4Data2);
+
+        /* Accepted secondary release doesn't change the press but changes the
+           capture and propagates the accept status */
+        PointerEvent release{-1234_nsec, PointerEventSource::Touch, Pointer::Finger, false, 0, {}};
+        CORRADE_VERIFY(ui.pointerReleaseEvent({270.0f, 2200.0f}, release));
+        CORRADE_COMPARE(ui.currentPressedNode(), level6Leaf2);
+        CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentCapturedNode(), fallthrough4);
+        CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
+
+        CORRADE_COMPARE_AS(layer.eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
+            {Release|Secondary|Pressed|Captured, level6Leaf2Data, {2.0f, 2.0f}},
+            {Release|Secondary|Pressed|Captured|Fallthrough|Accepted, fallthrough4Data2, {12.0f, 7.0f}},
+            {Release|Secondary|Pressed|Captured|Fallthrough, fallthrough4Data1, {12.0f, 7.0f}},
+            {Cancel, level6Leaf2Data, {}},
+            {Release|Secondary|Pressed|Captured|Fallthrough, fallthrough1Data2, {12.0f, 12.0f}},
+            {Release|Secondary|Pressed|Captured|Fallthrough, fallthrough1Data1, {12.0f, 12.0f}},
+        })), TestSuite::Compare::Container);
+
     /* With a focused node, fallthrough events send cancel to that one as
        well, without moving it anywhere else */
     } {
+        /* Just to reset the currently pressed & captured node, and moving the
+           last position back for the next move */
+        /** @todo have a pointerCancelEvent() for this */
+        PointerEvent eventReleaseReset{-1234_nsec, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
+        ui.pointerReleaseEvent({170.0f, 2200.0f}, eventReleaseReset);
+        CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
+
         ui.addNodeFlags(level3, NodeFlag::Focusable);
+        layer.accept = true;
         layer.eventCalls = {};
+        layer.acceptFallthrough1 = {};
         layer.acceptFallthrough2 = dataHandleId(fallthrough4Data1);
         layer.captureFallthrough = {};
 
