@@ -26,6 +26,7 @@
     DEALINGS IN THE SOFTWARE.
 */
 
+#include <Corrade/Containers/BitArrayView.h> /* for NodeOffsetSizeQueryLayer */
 #include <Corrade/Containers/StridedArrayView.h>
 #include <Corrade/TestSuite/Tester.h>
 #include <Magnum/PixelFormat.h>
@@ -178,6 +179,8 @@ struct TestTextLayer: TextLayer {
     explicit TestTextLayer(LayerHandle handle, Shared& shared): TextLayer{handle, shared} {}
 };
 
+struct NodeOffsetSizeQueryLayer;
+
 struct WidgetTester: TestSuite::Tester {
     explicit WidgetTester();
 
@@ -188,6 +191,14 @@ struct WidgetTester: TestSuite::Tester {
     void setupNoCreate();
     void teardownNoCreate();
 
+    /* These are used only by certain tests, and I do want the rest of the file
+       to warn if anything here goes unused, so there's an anonymous namespace
+       and a suppression */
+    CORRADE_UNUSED static Containers::Pair<Vector2, Vector2> nodeOffsetSizeAfterLayout(UserInterface& ui, NodeOffsetSizeQueryLayer& layer, NodeHandle node);
+    CORRADE_UNUSED static Vector2 nodeCenterAfterLayout(UserInterface& ui, NodeOffsetSizeQueryLayer& layer, NodeHandle node);
+    CORRADE_UNUSED Containers::Pair<Vector2, Vector2> nodeOffsetSizeAfterLayout(NodeHandle node);
+    CORRADE_UNUSED Vector2 nodeCenterAfterLayout(NodeHandle node);
+
     TestBaseLayerShared baseLayerShared;
     TestTextLayerShared textLayerShared;
     TestUserInterface ui{NoCreate};
@@ -196,6 +207,9 @@ struct WidgetTester: TestSuite::Tester {
        construction path that shouldn't be used. There's (deliberately) no
        supported way to create an invalid anchor. */
     Anchor rootAnchor = Widget{NoCreate};
+
+    private:
+        LayerHandle _nodeOffsetSizeQueryLayer = LayerHandle::Null;
 };
 
 WidgetTester::WidgetTester() {
@@ -284,6 +298,75 @@ void WidgetTester::teardownNoCreate() {
     CORRADE_INTERNAL_ASSERT(ui.layoutLayer().usedCount() == 0);
     CORRADE_INTERNAL_ASSERT(ui.snapLayouter().usedCount() == 0);
     CORRADE_INTERNAL_ASSERT(ui.genericLayouter().usedCount() == 0);
+}
+
+struct NodeOffsetSizeQueryLayer: AbstractLayer {
+    using AbstractLayer::AbstractLayer;
+
+    LayerFeatures doFeatures() const override { return {}; }
+    void doUpdate(LayerStates, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, const Containers::StridedArrayView1D<const Float>&, Containers::BitArrayView nodesEnabled, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&) override {
+        if(node != NodeHandle::Null) {
+            const UnsignedInt nodeId = nodeHandleId(node);
+            nodeEnabled = nodesEnabled[nodeId];
+            nodeOffset = nodeOffsets[nodeId];
+            nodeSize = nodeSizes[nodeId];
+        }
+    }
+
+    NodeHandle node = NodeHandle::Null;
+    bool nodeEnabled;
+    Vector2 nodeOffset, nodeSize;
+};
+
+Containers::Pair<Vector2, Vector2> WidgetTester::nodeOffsetSizeAfterLayout(UserInterface& ui, NodeOffsetSizeQueryLayer& layer, const NodeHandle node) {
+    /** @todo These are all assertions because a failure of some of these
+        usually means a test programmer error, and not an error in the tested
+        code, thus a backtrace is useful. However not always, so a
+        CORRADE_FAIL() might be nicer if there was an option to produce a
+        backtrace for such failures, such as introducing a -A / --abort-on-fail
+        option (and renaming -X to --exit-on-fail) */
+    CORRADE_ASSERT(ui.isHandleValid(node), "Node" << node << "isn't valid", {});
+
+    layer.nodeEnabled = false;
+    layer.node = node;
+    layer.setNeedsUpdate(LayerState::NeedsDataUpdate);
+
+    ui.update();
+    return {layer.nodeOffset, layer.nodeSize};
+}
+
+Containers::Pair<Vector2, Vector2> WidgetTester::nodeOffsetSizeAfterLayout(const NodeHandle node) {
+    /* Add the layer if not already */
+    if(_nodeOffsetSizeQueryLayer == LayerHandle::Null) {
+        _nodeOffsetSizeQueryLayer = ui.createLayer();
+        ui.setLayerInstance(Containers::pointer<NodeOffsetSizeQueryLayer>(_nodeOffsetSizeQueryLayer));
+    }
+
+    return nodeOffsetSizeAfterLayout(ui, ui.layer<NodeOffsetSizeQueryLayer>(_nodeOffsetSizeQueryLayer), node);
+}
+
+Vector2 WidgetTester::nodeCenterAfterLayout(UserInterface& ui, NodeOffsetSizeQueryLayer& layer, const NodeHandle node) {
+    Containers::Pair<Vector2, Vector2> offsetSize = nodeOffsetSizeAfterLayout(ui, layer, node);
+    /* Firing this here and not in nodeOffsetSizeAfterLayout() as the
+       assumption is that this function gets used for aiming events while the
+       other for checking node properties, along with verifying that a
+       particular node may have size set to zero, which then causes it to be
+       culled and thus not marked as enabled. */
+    CORRADE_ASSERT(layer.nodeEnabled,
+        "Node" << node << "that's queried for center isn't marked as enabled, maybe it's culled or outside the UI size?", {});
+    CORRADE_ASSERT(offsetSize.second().product(),
+        "Node" << node << "that's queried for center has a size of" << offsetSize.second() << Debug::nospace << ", maybe layout properties are missing?", {});
+    return offsetSize.first() + offsetSize.second()*0.5f;
+}
+
+Vector2 WidgetTester::nodeCenterAfterLayout(const NodeHandle node) {
+    /* Add the layer if not already */
+    if(_nodeOffsetSizeQueryLayer == LayerHandle::Null) {
+        _nodeOffsetSizeQueryLayer = ui.createLayer();
+        ui.setLayerInstance(Containers::pointer<NodeOffsetSizeQueryLayer>(_nodeOffsetSizeQueryLayer));
+    }
+
+    return nodeCenterAfterLayout(ui, ui.layer<NodeOffsetSizeQueryLayer>(_nodeOffsetSizeQueryLayer), node);
 }
 
 }}}}
