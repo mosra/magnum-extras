@@ -362,7 +362,9 @@ UiGallery::UiGallery(const Arguments& arguments): Platform::Application{argument
         debugLayer.setLayerName(_ui.layoutLayer(), "Layout", [](UnsignedInt style) -> Containers::StringView {
             switch(Ui::Implementation::LayoutStyle(style)) {
                 #define _c(name, ...) case Ui::Implementation::LayoutStyle::name: return #name;
+                #define _n _c
                 #include "Magnum/Ui/Implementation/layoutStyleMcssDark.h"
+                #undef _n
                 #undef _c
             }
             CORRADE_INTERNAL_ASSERT_UNREACHABLE();

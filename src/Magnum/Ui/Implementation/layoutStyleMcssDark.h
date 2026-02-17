@@ -24,7 +24,8 @@
     DEALINGS IN THE SOFTWARE.
 */
 
-/* _c() is LayoutLayer enum name, min size, padding and margin */
+/* _c() is LayoutLayer enum name, min size, padding and margin,
+   _n() is just enum name and min size with no padding or margin defined */
 
 #ifdef _c
 /* Compared to m.css, which has both and margin and padding 1rem (= 16px,

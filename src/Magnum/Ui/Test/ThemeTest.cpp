@@ -363,7 +363,9 @@ void ThemeTest::textEditingStyleMcssDark() {
 void ThemeTest::layoutStyleMcssDark() {
     const LayoutStyle styles[]{
         #define _c(style, ...) LayoutStyle::style,
+        #define _n _c
         #include "Magnum/Ui/Implementation/layoutStyleMcssDark.h"
+        #undef _n
         #undef _c
     };
 
@@ -388,7 +390,9 @@ void ThemeTest::layoutStyleMcssDark() {
                 case LayoutStyle::style: \
                     CORRADE_COMPARE(UnsignedInt(styles[i]), UnsignedInt(LayoutStyle::style)); \
                     break;
+            #define _n _c
             #include "Magnum/Ui/Implementation/layoutStyleMcssDark.h"
+            #undef _n
             #undef _c
         }
         #ifdef CORRADE_TARGET_GCC

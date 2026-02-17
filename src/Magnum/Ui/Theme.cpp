@@ -252,7 +252,9 @@ struct LayoutStyle {
 
 constexpr LayoutStyle LayoutStylesMcssDark[]{
     #define _c(style, ...) {__VA_ARGS__},
+    #define _n(style, ...) {__VA_ARGS__, Vector4{}, Vector4{}},
     #include "Magnum/Ui/Implementation/layoutStyleMcssDark.h"
+    #undef _n
     #undef _c
 };
 static_assert(Implementation::LayoutStyleCount == Containers::arraySize(LayoutStylesMcssDark),
