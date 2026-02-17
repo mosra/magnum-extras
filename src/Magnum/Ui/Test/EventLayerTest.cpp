@@ -351,9 +351,12 @@ const struct {
     Containers::Optional<Vector2> scrollStepDistance;
     Vector2 offsetMultiplier;
 } ScrollData[]{
-    {"", false, {}, Vector2{1.0f}},
-    {"drag or scroll", true, {}, Vector2{100.0f}},
-    {"drag or scroll, custom step distance", true, Vector2{50.0f, 200.0f}, {50.0f, 200.0f}},
+    {"",
+        false, {}, Vector2{1.0f}},
+    {"drag or scroll",
+        true, {}, {-100.0f, 100.0f}},
+    {"drag or scroll, custom step distance and direction",
+        true, Vector2{50.0f, -200.0f}, {50.0f, -200.0f}},
 };
 
 const struct {
@@ -369,11 +372,11 @@ const struct {
     {"with a fallthrough parent node",
         NodeFlag::FallthroughPointerEvents, true, false, {}, Vector2{1.0f}},
     {"drag or scroll, with a node below",
-        {}, false, true, {}, Vector2{100.0f}},
+        {}, false, true, {}, {-100.0f, 100.0f}},
     {"drag or scroll, with a fallthrough parent node",
-        NodeFlag::FallthroughPointerEvents, true, true, {}, Vector2{100.0f}},
-    {"drag or scroll, custom step distance",
-        {}, false, true, Vector2{50.0f, 200.0f}, {50.0f, 200.0f}},
+        NodeFlag::FallthroughPointerEvents, true, true, {}, {-100.0f, 100.0f}},
+    {"drag or scroll, custom step distance and direction",
+        {}, false, true, Vector2{50.0f, -200.0f}, {50.0f, -200.0f}},
 };
 
 const struct {
@@ -656,7 +659,7 @@ void EventLayerTest::construct() {
     CORRADE_COMPARE(layer.usedScopedCount(), 0);
     CORRADE_COMPARE(layer.usedAllocatedCount(), 0);
     CORRADE_COMPARE(layer.dragThreshold(), 16.0f);
-    CORRADE_COMPARE(layer.scrollStepDistance(), Vector2{100.0f});
+    CORRADE_COMPARE(layer.scrollStepDistance(), (Vector2{-100.0f, 100.0f}));
 }
 
 void EventLayerTest::constructCopy() {
@@ -2699,7 +2702,7 @@ void EventLayerTest::scroll() {
     setTestCaseDescription(data.name);
 
     EventLayer layer{layerHandle(0, 1)};
-    CORRADE_COMPARE(layer.scrollStepDistance(), Vector2{100.0f});
+    CORRADE_COMPARE(layer.scrollStepDistance(), (Vector2{-100.0f, 100.0f}));
 
     if(data.scrollStepDistance) {
         layer.setScrollStepDistance(*data.scrollStepDistance);

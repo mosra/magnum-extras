@@ -99,7 +99,10 @@ struct EventLayer::State {
        indicate we're not waiting on any threshold anymore. */
     Vector2 dragFallthroughPosition;
 
-    Vector2 scrollStepDistance{100.0f};
+    /* Scroll coordinates have positive X right and negative Y down. A drag
+       that corresponds to a movement right and down has to be in opposite
+       direction to a scroll, thus negative X and positive Y. */
+    Vector2 scrollStepDistance{-100.0f, 100.0f};
 
     UnsignedInt usedScopedConnectionCount = 0;
 };

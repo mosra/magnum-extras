@@ -409,7 +409,10 @@ class MAGNUM_UI_EXPORT EventLayer: public AbstractLayer {
          * scroll offset is multiplied with this value to get a movement
          * equivalent to a pointer drag. It's possible to have a different
          * horizontal and vertical distance, negative values then flip the
-         * scroll direction. Default is @cpp 100.0f @ce in both directions.
+         * scroll direction. Default is @cpp {-100.0f, 100.0f} @ce --- scroll
+         * coordinates have positive X right and negative Y down, a drag that
+         * corresponds to a movement right and down has to be in opposite
+         * direction to a scroll, thus negative X and positive Y.
          */
         EventLayer& setScrollStepDistance(const Vector2& distance);
 
