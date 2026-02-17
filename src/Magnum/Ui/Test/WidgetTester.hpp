@@ -220,7 +220,7 @@ WidgetTester::WidgetTester() {
       .setLayoutLayerInstance(Containers::pointer<LayoutLayer>(ui.createLayer(), Implementation::LayoutStyleCount))
       .setSnapLayouterInstance(Containers::pointer<SnapLayouter>(ui.createLayouter()))
       .setGenericLayouterInstance(Containers::pointer<GenericLayouter>(ui.createLayouter()))
-      .setSize({100, 100});
+      .setSize({1000, 1000});
 
     /* Base and text layer styles were set in the Test*Shared constructors
        already. The LayoutLayer style has to be set because otherwise
