@@ -3440,7 +3440,7 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
         }
         template<class Event, void(AbstractLayer::*function)(UnsignedInt, Event&)> MAGNUM_UI_LOCAL NodeHandle callEvent(const Vector2& globalPositionScaled, UnsignedInt visibleNodeIndex, Event& event);
         template<class Event, void(AbstractLayer::*function)(UnsignedInt, Event&)> MAGNUM_UI_LOCAL NodeHandle callEvent(const Vector2& globalPositionScaled, Event& event);
-        template<class Event, void(AbstractLayer::*function)(UnsignedInt, Event&)> MAGNUM_UI_LOCAL void callFallthroughPointerEvents(NodeHandle node, const Vector2& globalPositionScaled, Event& event, bool allowCapture);
+        template<class Event, void(AbstractLayer::*function)(UnsignedInt, Event&)> MAGNUM_UI_LOCAL bool callFallthroughPointerEvents(NodeHandle node, const Vector2& globalPositionScaled, Event& event, bool allowCapture);
         template<void(AbstractLayer::*function)(UnsignedInt, KeyEvent&)> MAGNUM_UI_LOCAL bool keyPressOrReleaseEvent(KeyEvent& event);
 
         /* Called from AbstractLayouter::add() */

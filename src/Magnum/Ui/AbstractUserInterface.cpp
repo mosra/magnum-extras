@@ -4374,7 +4374,7 @@ template<class Event, void(AbstractLayer::*function)(UnsignedInt, Event&)> NodeH
     return {};
 }
 
-template<class Event, void(AbstractLayer::*function)(UnsignedInt, Event&)> MAGNUM_UI_LOCAL void AbstractUserInterface::callFallthroughPointerEvents(/*mutable*/ NodeHandle targetNode, const Vector2& globalPositionScaled, Event& event, const bool allowCapture) {
+template<class Event, void(AbstractLayer::*function)(UnsignedInt, Event&)> MAGNUM_UI_LOCAL bool AbstractUserInterface::callFallthroughPointerEvents(/*mutable*/ NodeHandle targetNode, const Vector2& globalPositionScaled, Event& event, const bool allowCapture) {
     State& state = *_state;
 
     /* Mark the event as a fallthrough one from now on. The assumption is that
@@ -4384,6 +4384,7 @@ template<class Event, void(AbstractLayer::*function)(UnsignedInt, Event&)> MAGNU
     /* Go through parent nodes and call fallthrough events on all nodes that
        want them */
     NodeHandle parent = state.nodes[nodeHandleId(targetNode)].used.parent;
+    bool acceptedByAnyParentData = false;
     while(parent != NodeHandle::Null) {
         /* If the event is primary and is accepted, make the fallthrough node
            take over the current pressed / hovered / ... nodes. Secondary
@@ -4459,10 +4460,16 @@ template<class Event, void(AbstractLayer::*function)(UnsignedInt, Event&)> MAGNU
                 state.currentCapturedNode = parent;
             else
                 state.currentCapturedNode = NodeHandle::Null;
+
+            acceptedByAnyParentData = true;
         }
 
         parent = state.nodes[parentId].used.parent;
     }
+
+    /* Can't return just event._accepted, as further fallthrough resets the
+       accept status again */
+    return acceptedByAnyParentData;
 }
 
 bool AbstractUserInterface::pointerPressEvent(const Vector2& globalPosition, PointerEvent& event) {
@@ -4592,7 +4599,7 @@ bool AbstractUserInterface::pointerPressEvent(const Vector2& globalPosition, Poi
        case it wouldn't propagate anywhere, making it impossible for the
        fallthrough nodes to catch such events). */
     if(pressAcceptedByAnyData || state.currentCapturedNode != NodeHandle::Null)
-        callFallthroughPointerEvents<PointerEvent, &AbstractLayer::pointerPressEvent>(
+        pressAcceptedByAnyData |= callFallthroughPointerEvents<PointerEvent, &AbstractLayer::pointerPressEvent>(
             calledNode != NodeHandle::Null ? calledNode : state.currentCapturedNode,
             globalPositionScaled, event, /*allowCapture*/ true);
 
@@ -4674,7 +4681,7 @@ bool AbstractUserInterface::pointerReleaseEvent(const Vector2& globalPosition, P
        fallthrough nodes to catch such events). Allow them to change capture
        only if they're secondary release events. */
     if(releaseAcceptedByAnyData || state.currentCapturedNode != NodeHandle::Null)
-        callFallthroughPointerEvents<PointerEvent, &AbstractLayer::pointerReleaseEvent>(
+        releaseAcceptedByAnyData |= callFallthroughPointerEvents<PointerEvent, &AbstractLayer::pointerReleaseEvent>(
             calledNode != NodeHandle::Null ? calledNode : state.currentCapturedNode,
             globalPositionScaled, event, /*allowCapture*/ !event.isPrimary());
 
@@ -4915,7 +4922,7 @@ bool AbstractUserInterface::pointerMoveEvent(const Vector2& globalPosition, Poin
        subsequently cleared for emitting enter/leave events). */
     if(moveAcceptedByAnyData || state.currentCapturedNode != NodeHandle::Null) {
         event._relativePosition = relativePosition;
-        callFallthroughPointerEvents<PointerMoveEvent, &AbstractLayer::pointerMoveEvent>(
+        moveAcceptedByAnyData |= callFallthroughPointerEvents<PointerMoveEvent, &AbstractLayer::pointerMoveEvent>(
             calledNode != NodeHandle::Null ? calledNode : state.currentCapturedNode,
             globalPositionScaled, event, /*allowCapture*/ true);
     }
