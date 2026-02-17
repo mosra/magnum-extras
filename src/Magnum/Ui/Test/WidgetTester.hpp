@@ -176,6 +176,8 @@ struct TestTextLayer: TextLayer {
 struct WidgetTester: TestSuite::Tester {
     explicit WidgetTester();
 
+    ~WidgetTester();
+
     void setup();
     void teardown();
     void setupNoCreate();
@@ -197,6 +199,12 @@ WidgetTester::WidgetTester() {
       /* Event layer not needed for anything yet */
       .setLayoutLayerInstance(Containers::pointer<LayoutLayer>(ui.createLayer(), Implementation::LayoutStyleCount))
       .setSize({100, 100});
+}
+
+WidgetTester::~WidgetTester() {
+    /* The expectation is that all test cases which create nodes use setup and
+       teardown routines, so not even the rootAnchor should be present */
+    teardownNoCreate();
 }
 
 void WidgetTester::setup() {
