@@ -20799,7 +20799,7 @@ void AbstractUserInterfaceTest::eventPointerFallthrough() {
         })), TestSuite::Compare::Container);
 
     /* If the currently pressed / hovered node is the one the fallthrough event
-       was accepted on,  a cancel is still sent even though the current node
+       was accepted on, a cancel is still sent even though the current node
        observable from outside doesn't change. It's because some other node
        gets pressed / hovered first, and then it's changed back to the
        fallthrough node.
