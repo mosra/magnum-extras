@@ -156,7 +156,7 @@ void ThemeGLTester::render(NodeHandle(*create)(UserInterface& ui, Int style, Int
             /* Not a compositing renderer with its own framebuffer as that
                would mean each instance would get its own, horrible
                inefficiency */
-            /** @todo allow a setting non-owned renderer instance maybe? */
+            /** @todo allow setting a non-owned renderer instance maybe? */
             .setRendererInstance(Containers::pointer<RendererGL>())
             .setBaseLayerInstance(Containers::pointer<BaseLayerGL>(ui.createLayer(), static_cast<BaseLayerGL::Shared&>(_themeUis[&themeData - _themes.data()].baseLayer().shared())))
             .setTextLayerInstance(Containers::pointer<TextLayerGL>(ui.createLayer(), static_cast<TextLayerGL::Shared&>(_themeUis[&themeData - _themes.data()].textLayer().shared())))
@@ -210,7 +210,6 @@ void ThemeGLTester::render(NodeHandle(*create)(UserInterface& ui, Int style, Int
                 CORRADE_COMPARE(ui.currentPressedNode(), pressed);
                 CORRADE_COMPARE(ui.currentFocusedNode(), pressed);
             } {
-
                 UserInterfaceGL& ui = uis[style*stateCount + 3];
                 NodeHandle focused = create(ui, style, counter++);
                 ui.setNodeOffset(focused, padding + (padding + size)*Vector2{Vector2i{3, style}});
@@ -348,7 +347,7 @@ void ThemeGLTester::render(NodeHandle(*create)(UserInterface& ui, Int style, Int
        originally. In order to handle animations correctly, the roundtrip is
        with animationAdvance() in the middle. */
     } else if(flags >= Flag::HoveredPressed) {
-        /* Pointer enter and leave on the inactive widget */
+        /* Pointer enter (...and later leave) on the inactive widget */
         for(Int style = 0; style != styleCount; ++style) {
             UserInterfaceGL& ui = uis[style*stateCount];
             NodeHandle node = nodeHandle(0, 1);
@@ -363,7 +362,7 @@ void ThemeGLTester::render(NodeHandle(*create)(UserInterface& ui, Int style, Int
             CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
         }
 
-        /* Pointer leave and enter on the hovered widget */
+        /* Pointer leave (...and later enter) on the hovered widget */
         for(Int style = 0; style != styleCount; ++style) {
             UserInterfaceGL& ui = uis[style*stateCount + 1];
             NodeHandle node = nodeHandle(0, 1);
@@ -379,7 +378,7 @@ void ThemeGLTester::render(NodeHandle(*create)(UserInterface& ui, Int style, Int
         }
 
         if(flags >= Flag::Focused) {
-            /* Release on the focused + pressed widget */
+            /* Release (... and later press) on the focused + pressed widget */
             for(Int style = 0; style != styleCount; ++style) {
                 UserInterfaceGL& ui = uis[style*stateCount + 2];
                 NodeHandle node = nodeHandle(0, 1);
@@ -394,7 +393,7 @@ void ThemeGLTester::render(NodeHandle(*create)(UserInterface& ui, Int style, Int
                 CORRADE_COMPARE(ui.currentFocusedNode(), node);
             }
 
-            /* Press on the focused widget */
+            /* Press (... and later release) on the focused widget */
             for(Int style = 0; style != styleCount; ++style) {
                 UserInterfaceGL& ui = uis[style*stateCount + 2];
                 NodeHandle node = nodeHandle(0, 1);
@@ -410,7 +409,8 @@ void ThemeGLTester::render(NodeHandle(*create)(UserInterface& ui, Int style, Int
             }
 
         } else {
-            /* Pointer leave on the pressed + hovered widget */
+            /* Pointer leave (... and later enter) on the pressed + hovered
+               widget */
             for(Int style = 0; style != styleCount; ++style) {
                 UserInterfaceGL& ui = uis[style*stateCount + 2];
                 NodeHandle node = nodeHandle(0, 1);
@@ -426,7 +426,7 @@ void ThemeGLTester::render(NodeHandle(*create)(UserInterface& ui, Int style, Int
                 CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
             }
 
-            /* Pointer enter on the pressed widget */
+            /* Pointer enter (... and later leave) on the pressed widget */
             for(Int style = 0; style != styleCount; ++style) {
                 UserInterfaceGL& ui = uis[style*stateCount + 3];
                 NodeHandle node = nodeHandle(0, 1);
@@ -449,7 +449,7 @@ void ThemeGLTester::render(NodeHandle(*create)(UserInterface& ui, Int style, Int
             ui.advanceAnimations(now + delta);
         now += delta;
 
-        /* Pointer leave on the inactive widget */
+        /* Pointer leave (after previous enter) on the inactive widget */
         for(Int style = 0; style != styleCount; ++style) {
             UserInterfaceGL& ui = uis[style*stateCount];
             NodeHandle node = nodeHandle(0, 1);
@@ -462,7 +462,7 @@ void ThemeGLTester::render(NodeHandle(*create)(UserInterface& ui, Int style, Int
             CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
         }
 
-        /* Pointer enter on the hovered widget */
+        /* Pointer enter (after previous leave) on the hovered widget */
         for(Int style = 0; style != styleCount; ++style) {
             UserInterfaceGL& ui = uis[style*stateCount + 1];
             NodeHandle node = nodeHandle(0, 1);
@@ -476,7 +476,8 @@ void ThemeGLTester::render(NodeHandle(*create)(UserInterface& ui, Int style, Int
         }
 
         if(flags >= Flag::Focused) {
-            /* Press again on the focused + pressed widget */
+            /* Press (after previous release) on the focused + pressed
+               widget */
             for(Int style = 0; style != styleCount; ++style) {
                 UserInterfaceGL& ui = uis[style*stateCount + 2];
                 NodeHandle node = nodeHandle(0, 1);
@@ -489,7 +490,7 @@ void ThemeGLTester::render(NodeHandle(*create)(UserInterface& ui, Int style, Int
                 CORRADE_COMPARE(ui.currentFocusedNode(), node);
             }
 
-            /* Release again on the focused widget */
+            /* Release (after previous press) on the focused widget */
             for(Int style = 0; style != styleCount; ++style) {
                 UserInterfaceGL& ui = uis[style*stateCount + 2];
                 NodeHandle node = nodeHandle(0, 1);
@@ -503,7 +504,8 @@ void ThemeGLTester::render(NodeHandle(*create)(UserInterface& ui, Int style, Int
             }
 
         } else {
-            /* Pointer enter on the pressed + hovered widget */
+            /* Pointer enter (after previous leave) on the pressed + hovered
+               widget */
             for(Int style = 0; style != styleCount; ++style) {
                 UserInterfaceGL& ui = uis[style*stateCount + 2];
                 NodeHandle node = nodeHandle(0, 1);
@@ -516,7 +518,7 @@ void ThemeGLTester::render(NodeHandle(*create)(UserInterface& ui, Int style, Int
                 CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
             }
 
-            /* Pointer leave on the pressed widget */
+            /* Pointer leave (after previous enter) on the pressed widget */
             for(Int style = 0; style != styleCount; ++style) {
                 UserInterfaceGL& ui = uis[style*stateCount + 3];
                 NodeHandle node = nodeHandle(0, 1);
