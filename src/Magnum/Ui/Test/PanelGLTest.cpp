@@ -52,18 +52,18 @@ const Theme ThemeData[]{
 
 const struct {
     const char* name;
-    NodeHandle(*create)(UserInterface&, Int, Int);
+    NodeHandle(*create)(UserInterface&, Int, Flags, Int);
 } TestData[]{
     {"stateless",
-        [](UserInterface& ui, Int style, Int) {
+        [](UserInterface& ui, Int style, Flags, Int) {
             return panel({ui, {}, {48, 36}}, PanelStyle(style)).node();
         }},
     {nullptr,
-        [](UserInterface& ui, Int style, Int) {
+        [](UserInterface& ui, Int style, Flags, Int) {
             return Panel{{ui, {}, {48, 36}},PanelStyle(style)}.release();
         }},
     {"setStyle()",
-        [](UserInterface& ui, Int style, Int) {
+        [](UserInterface& ui, Int style, Flags, Int) {
             Panel panel{{ui, {}, {48, 36}},PanelStyle(style == 0 ? 1 : 0)};
             panel.setStyle(PanelStyle(style));
             return panel.release();

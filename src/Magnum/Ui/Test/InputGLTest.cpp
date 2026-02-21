@@ -53,17 +53,17 @@ const Theme ThemeData[]{
 
 const struct {
     const char* name;
-    NodeHandle(*create)(UserInterface&, Int, Int);
+    NodeHandle(*create)(UserInterface&, Int, Flags, Int);
 } TestData[]{
     {nullptr,
-        [](UserInterface& ui, Int style, Int counter) {
+        [](UserInterface& ui, Int style, Flags, Int counter) {
             Input input{{ui, {}, {64, 36}}, counter % 2 ? "Edit..." : "Type?", InputStyle(style)};
             /** @todo use a cursor setting API once it exists */
             ui.textLayer().setCursor(input.textData(), counter % 2 ? 2 : 5, counter % 2 ? 5 : 2);
             return input.release();
         }},
     {"setters",
-        [](UserInterface& ui, Int style, Int counter) {
+        [](UserInterface& ui, Int style, Flags, Int counter) {
             Input input{{ui, {}, {64, 36}}, "", InputStyle(style)};
             input.setText(counter % 2 ? "Edit..." : "Type?");
             /** @todo use a cursor setting API once it exists */
@@ -71,7 +71,7 @@ const struct {
             return input.release();
         }},
     {"setStyle()",
-        [](UserInterface& ui, Int style, Int counter) {
+        [](UserInterface& ui, Int style, Flags, Int counter) {
             Input input{{ui, {}, {64, 36}}, counter % 2 ? "Edit..." : "Type?", InputStyle(style == 0 ? 1 : 0)};
             input.setStyle(InputStyle(style));
             /** @todo use a cursor setting API once it exists */
