@@ -172,6 +172,11 @@ void ThemeGLTester::render(NodeHandle(*create)(UserInterface& ui, Int style, Int
             return _nodeOffsetSizeQueryLayer->nodeOffset + _nodeOffsetSizeQueryLayer->nodeSize*0.5f;
         }
 
+        /* Node of a particular widget to receive events. Since at most one
+           node of the whole UI can be hovered/pressed/focused at a time, this
+           is just one variable as well. */
+        NodeHandle node = NodeHandle::Null;
+
         private:
             NodeOffsetSizeQueryLayer* _nodeOffsetSizeQueryLayer{};
     };
@@ -219,89 +224,146 @@ void ThemeGLTester::render(NodeHandle(*create)(UserInterface& ui, Int style, Int
     Vector2 size;
     for(Int style = 0; style != styleCount; ++style) {
         {
-            UserInterfaceGL& ui = uis[style*stateCount + 0];
-            NodeHandle node = create(ui, style, counter++);
-            size = ui.nodeSize(node);
-            ui.setNodeOffset(node, padding + (padding + size)*Vector2{Vector2i{0, style}});
+            TestUserInterface& ui = uis[style*stateCount + 0];
+
+            /* The data creation function returns the node to which events
+               should be directed. For positioning use the top-level node. */
+            ui.node = create(ui, style, counter++);
+            NodeHandle topLevelNode = ui.node;
+            while(ui.nodeParent(topLevelNode) != NodeHandle::Null)
+                topLevelNode = ui.nodeParent(topLevelNode);
+
+            size = ui.nodeSize(topLevelNode);
+            ui.setNodeOffset(topLevelNode, padding + (padding + size)*Vector2{Vector2i{0, style}});
         }
 
         if(flags >= Flag::Focused) {
             {
                 TestUserInterface& ui = uis[style*stateCount + 1];
-                NodeHandle hover = create(ui, style, counter++);
-                ui.setNodeOffset(hover, padding + (padding + size)*Vector2{Vector2i{1, style}});
+
+                /* The data creation function returns the node to which events
+                   should be directed. For positioning use the top-level
+                   node. */
+                ui.node = create(ui, style, counter++);
+                NodeHandle topLevelNode = ui.node;
+                while(ui.nodeParent(topLevelNode) != NodeHandle::Null)
+                    topLevelNode = ui.nodeParent(topLevelNode);
+                ui.setNodeOffset(topLevelNode, padding + (padding + size)*Vector2{Vector2i{1, style}});
 
                 PointerMoveEvent move{now, PointerEventSource::Pen, {}, {}, true, 0, {}};
-                CORRADE_VERIFY(ui.pointerMoveEvent(ui.nodeCenterAfterLayout(hover), move));
-                CORRADE_COMPARE(ui.currentHoveredNode(), hover);
+                CORRADE_VERIFY(ui.pointerMoveEvent(ui.nodeCenterAfterLayout(ui.node), move));
+                CORRADE_COMPARE(ui.currentHoveredNode(), ui.node);
                 CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
                 CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
             } {
                 TestUserInterface& ui = uis[style*stateCount + 2];
-                NodeHandle pressed = create(ui, style, counter++);
-                ui.setNodeOffset(pressed, padding + (padding + size)*Vector2{Vector2i{2, style}});
+
+                /* The data creation function returns the node to which events
+                   should be directed. For positioning use the top-level
+                   node. */
+                ui.node = create(ui, style, counter++);
+                NodeHandle topLevelNode = ui.node;
+                while(ui.nodeParent(topLevelNode) != NodeHandle::Null)
+                    topLevelNode = ui.nodeParent(topLevelNode);
+                ui.setNodeOffset(topLevelNode, padding + (padding + size)*Vector2{Vector2i{2, style}});
 
                 /* The node should become focused as well */
                 PointerEvent press{now, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
-                CORRADE_VERIFY(ui.pointerPressEvent(ui.nodeCenterAfterLayout(pressed), press));
+                CORRADE_VERIFY(ui.pointerPressEvent(ui.nodeCenterAfterLayout(ui.node), press));
                 CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
-                CORRADE_COMPARE(ui.currentPressedNode(), pressed);
-                CORRADE_COMPARE(ui.currentFocusedNode(), pressed);
+                CORRADE_COMPARE(ui.currentPressedNode(), ui.node);
+                CORRADE_COMPARE(ui.currentFocusedNode(), ui.node);
             } {
                 TestUserInterface& ui = uis[style*stateCount + 3];
-                NodeHandle focused = create(ui, style, counter++);
-                ui.setNodeOffset(focused, padding + (padding + size)*Vector2{Vector2i{3, style}});
+
+                /* The data creation function returns the node to which events
+                   should be directed. For positioning use the top-level
+                   node. */
+                ui.node = create(ui, style, counter++);
+                NodeHandle topLevelNode = ui.node;
+                while(ui.nodeParent(topLevelNode) != NodeHandle::Null)
+                    topLevelNode = ui.nodeParent(topLevelNode);
+                ui.setNodeOffset(topLevelNode, padding + (padding + size)*Vector2{Vector2i{3, style}});
 
                 /* The node should become focused without a press */
                 FocusEvent focus{now};
-                CORRADE_VERIFY(ui.focusEvent(focused, focus));
+                CORRADE_VERIFY(ui.focusEvent(ui.node, focus));
                 CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
                 CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
-                CORRADE_COMPARE(ui.currentFocusedNode(), focused);
+                CORRADE_COMPARE(ui.currentFocusedNode(), ui.node);
             }
 
         } else if(flags >= Flag::HoveredPressed) {
             {
                 TestUserInterface& ui = uis[style*stateCount + 1];
-                NodeHandle hover = create(ui, style, counter++);
-                ui.setNodeOffset(hover, padding + (padding + size)*Vector2{Vector2i{1, style}});
+
+                /* The data creation function returns the node to which events
+                   should be directed. For positioning use the top-level
+                   node. */
+                ui.node = create(ui, style, counter++);
+                NodeHandle topLevelNode = ui.node;
+                while(ui.nodeParent(topLevelNode) != NodeHandle::Null)
+                    topLevelNode = ui.nodeParent(topLevelNode);
+                ui.setNodeOffset(topLevelNode, padding + (padding + size)*Vector2{Vector2i{1, style}});
 
                 PointerMoveEvent move{now, PointerEventSource::Mouse, {}, {}, true, 0, {}};
-                CORRADE_VERIFY(ui.pointerMoveEvent(ui.nodeCenterAfterLayout(hover), move));
-                CORRADE_COMPARE(ui.currentHoveredNode(), hover);
+                CORRADE_VERIFY(ui.pointerMoveEvent(ui.nodeCenterAfterLayout(ui.node), move));
+                CORRADE_COMPARE(ui.currentHoveredNode(), ui.node);
                 CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
                 CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
             } {
                 TestUserInterface& ui = uis[style*stateCount + 2];
-                NodeHandle pressedHover = create(ui, style, counter++);
-                ui.setNodeOffset(pressedHover, padding + (padding + size)*Vector2{Vector2i{2, style}});
+
+                /* The data creation function returns the node to which events
+                   should be directed. For positioning use the top-level
+                   node. */
+                ui.node = create(ui, style, counter++);
+                NodeHandle topLevelNode = ui.node;
+                while(ui.nodeParent(topLevelNode) != NodeHandle::Null)
+                    topLevelNode = ui.nodeParent(topLevelNode);
+                ui.setNodeOffset(topLevelNode, padding + (padding + size)*Vector2{Vector2i{2, style}});
 
                 PointerMoveEvent move{now, PointerEventSource::Mouse, {}, {}, true, 0, {}};
                 PointerEvent press{now, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
-                CORRADE_VERIFY(ui.pointerMoveEvent(ui.nodeCenterAfterLayout(pressedHover), move));
-                CORRADE_VERIFY(ui.pointerPressEvent(ui.nodeCenterAfterLayout(pressedHover), press));
-                CORRADE_COMPARE(ui.currentHoveredNode(), pressedHover);
-                CORRADE_COMPARE(ui.currentPressedNode(), pressedHover);
+                CORRADE_VERIFY(ui.pointerMoveEvent(ui.nodeCenterAfterLayout(ui.node), move));
+                CORRADE_VERIFY(ui.pointerPressEvent(ui.nodeCenterAfterLayout(ui.node), press));
+                CORRADE_COMPARE(ui.currentHoveredNode(), ui.node);
+                CORRADE_COMPARE(ui.currentPressedNode(), ui.node);
                 CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
             } {
                 TestUserInterface& ui = uis[style*stateCount + 3];
-                NodeHandle pressed = create(ui, style, counter++);
-                ui.setNodeOffset(pressed, padding + (padding + size)*Vector2{Vector2i{3, style}});
+
+                /* The data creation function returns the node to which events
+                   should be directed. For positioning use the top-level
+                   node. */
+                ui.node = create(ui, style, counter++);
+                NodeHandle topLevelNode = ui.node;
+                while(ui.nodeParent(topLevelNode) != NodeHandle::Null)
+                    topLevelNode = ui.nodeParent(topLevelNode);
+                ui.setNodeOffset(topLevelNode, padding + (padding + size)*Vector2{Vector2i{3, style}});
 
                 PointerEvent press{now, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
-                CORRADE_VERIFY(ui.pointerPressEvent(ui.nodeCenterAfterLayout(pressed), press));
+                CORRADE_VERIFY(ui.pointerPressEvent(ui.nodeCenterAfterLayout(ui.node), press));
                 CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
-                CORRADE_COMPARE(ui.currentPressedNode(), pressed);
+                CORRADE_COMPARE(ui.currentPressedNode(), ui.node);
                 CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
             }
         }
 
         if(flags >= Flag::Disabled) {
             TestUserInterface& ui = uis[style*stateCount + (flags >= Flag::HoveredPressed ? 4 : 1)];
-            NodeHandle disabled = create(ui, style, counter++);
-            ui.setNodeOffset(disabled, padding + (padding + size)*Vector2{Vector2i{flags >= Flag::HoveredPressed ? 4 : 1, style}});
 
-            ui.addNodeFlags(disabled, NodeFlag::Disabled);
+            /* The data creation function returns the node to which events
+               should be directed. For positioning use the top-level node. */
+            ui.node = create(ui, style, counter++);
+            NodeHandle topLevelNode = ui.node;
+            while(ui.nodeParent(topLevelNode) != NodeHandle::Null)
+                topLevelNode = ui.nodeParent(topLevelNode);
+            ui.setNodeOffset(topLevelNode, padding + (padding + size)*Vector2{Vector2i{flags >= Flag::HoveredPressed ? 4 : 1, style}});
+
+            /* Compared to other cases above, the whole widget is disabled, not
+               just the individual node inside */
+            ui.addNodeFlags(topLevelNode, NodeFlag::Disabled);
         }
     }
 
@@ -356,29 +418,23 @@ void ThemeGLTester::render(NodeHandle(*create)(UserInterface& ui, Int style, Int
         /* Focused + pressed widget, should have no difference when hovered */
         for(Int style = 0; style != styleCount; ++style) {
             TestUserInterface& ui = uis[style*stateCount + 2];
-            /* We don't record the node handles, but each UI should have just
-               one so this artificial one should be correct */
-            NodeHandle node = nodeHandle(0, 1);
-            CORRADE_VERIFY(ui.isHandleValid(node));
 
             PointerMoveEvent moveOver{now, PointerEventSource::Mouse, {}, {}, true, 0, {}};
-            CORRADE_VERIFY(ui.pointerMoveEvent(ui.nodeCenterAfterLayout(node), moveOver));
-            CORRADE_COMPARE(ui.currentHoveredNode(), node);
-            CORRADE_COMPARE(ui.currentPressedNode(), node);
-            CORRADE_COMPARE(ui.currentFocusedNode(), node);
+            CORRADE_VERIFY(ui.pointerMoveEvent(ui.nodeCenterAfterLayout(ui.node), moveOver));
+            CORRADE_COMPARE(ui.currentHoveredNode(), ui.node);
+            CORRADE_COMPARE(ui.currentPressedNode(), ui.node);
+            CORRADE_COMPARE(ui.currentFocusedNode(), ui.node);
         }
 
         /* Focused widget, should have no difference when hovered */
         for(Int style = 0; style != styleCount; ++style) {
             TestUserInterface& ui = uis[style*stateCount + 3];
-            NodeHandle node = nodeHandle(0, 1);
-            CORRADE_VERIFY(ui.isHandleValid(node));
 
             PointerMoveEvent moveOver{now, PointerEventSource::Mouse, {}, {}, true, 0, {}};
-            CORRADE_VERIFY(ui.pointerMoveEvent(ui.nodeCenterAfterLayout(node), moveOver));
-            CORRADE_COMPARE(ui.currentHoveredNode(), node);
+            CORRADE_VERIFY(ui.pointerMoveEvent(ui.nodeCenterAfterLayout(ui.node), moveOver));
+            CORRADE_COMPARE(ui.currentHoveredNode(), ui.node);
             CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
-            CORRADE_COMPARE(ui.currentFocusedNode(), node);
+            CORRADE_COMPARE(ui.currentFocusedNode(), ui.node);
         }
 
     /* Verify that roundtrip state changes result in the same visuals as
@@ -388,14 +444,12 @@ void ThemeGLTester::render(NodeHandle(*create)(UserInterface& ui, Int style, Int
         /* Pointer enter (...and later leave) on the inactive widget */
         for(Int style = 0; style != styleCount; ++style) {
             TestUserInterface& ui = uis[style*stateCount];
-            NodeHandle node = nodeHandle(0, 1);
-            CORRADE_VERIFY(ui.isHandleValid(node));
 
             /* Move over, making the node hovered, i.e. looking the same as in
                the second column */
             PointerMoveEvent moveOver{now, PointerEventSource::Mouse, {}, {}, true, 0, {}};
-            CORRADE_VERIFY(ui.pointerMoveEvent(ui.nodeCenterAfterLayout(node), moveOver));
-            CORRADE_COMPARE(ui.currentHoveredNode(), node);
+            CORRADE_VERIFY(ui.pointerMoveEvent(ui.nodeCenterAfterLayout(ui.node), moveOver));
+            CORRADE_COMPARE(ui.currentHoveredNode(), ui.node);
             CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
             CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
         }
@@ -403,8 +457,6 @@ void ThemeGLTester::render(NodeHandle(*create)(UserInterface& ui, Int style, Int
         /* Pointer leave (...and later enter) on the hovered widget */
         for(Int style = 0; style != styleCount; ++style) {
             TestUserInterface& ui = uis[style*stateCount + 1];
-            NodeHandle node = nodeHandle(0, 1);
-            CORRADE_VERIFY(ui.isHandleValid(node));
 
             /* Move out, making the node inactive, i.e. looking the same as in
                the first column */
@@ -419,8 +471,6 @@ void ThemeGLTester::render(NodeHandle(*create)(UserInterface& ui, Int style, Int
             /* Release (... and later press) on the focused + pressed widget */
             for(Int style = 0; style != styleCount; ++style) {
                 TestUserInterface& ui = uis[style*stateCount + 2];
-                NodeHandle node = nodeHandle(0, 1);
-                CORRADE_VERIFY(ui.isHandleValid(node));
 
                 /* Release, making the node focused but not pressed, i.e.
                    looking the same as in the fourth column. */
@@ -428,22 +478,20 @@ void ThemeGLTester::render(NodeHandle(*create)(UserInterface& ui, Int style, Int
                 CORRADE_VERIFY(ui.pointerReleaseEvent({}, release));
                 CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
                 CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
-                CORRADE_COMPARE(ui.currentFocusedNode(), node);
+                CORRADE_COMPARE(ui.currentFocusedNode(), ui.node);
             }
 
             /* Press (... and later release) on the focused widget */
             for(Int style = 0; style != styleCount; ++style) {
                 TestUserInterface& ui = uis[style*stateCount + 2];
-                NodeHandle node = nodeHandle(0, 1);
-                CORRADE_VERIFY(ui.isHandleValid(node));
 
                 /* Making the node focused and pressed, i.e.  looking the same
                    as in the third column. */
                 PointerEvent press{now, PointerEventSource::Pen, Pointer::Pen, true, 0, {}};
-                CORRADE_VERIFY(ui.pointerPressEvent(ui.nodeCenterAfterLayout(node), press));
+                CORRADE_VERIFY(ui.pointerPressEvent(ui.nodeCenterAfterLayout(ui.node), press));
                 CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
-                CORRADE_COMPARE(ui.currentPressedNode(), node);
-                CORRADE_COMPARE(ui.currentFocusedNode(), node);
+                CORRADE_COMPARE(ui.currentPressedNode(), ui.node);
+                CORRADE_COMPARE(ui.currentFocusedNode(), ui.node);
             }
 
         } else {
@@ -451,8 +499,6 @@ void ThemeGLTester::render(NodeHandle(*create)(UserInterface& ui, Int style, Int
                widget */
             for(Int style = 0; style != styleCount; ++style) {
                 TestUserInterface& ui = uis[style*stateCount + 2];
-                NodeHandle node = nodeHandle(0, 1);
-                CORRADE_VERIFY(ui.isHandleValid(node));
 
                 /* Making the node pressed but not hovered, i.e. looking the
                    same as in the fourth column. As the node is captured, the
@@ -460,22 +506,20 @@ void ThemeGLTester::render(NodeHandle(*create)(UserInterface& ui, Int style, Int
                 PointerMoveEvent moveOut{now, PointerEventSource::Mouse, {}, {}, true, 0, {}};
                 CORRADE_VERIFY(ui.pointerMoveEvent({}, moveOut));
                 CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
-                CORRADE_COMPARE(ui.currentPressedNode(), node);
+                CORRADE_COMPARE(ui.currentPressedNode(), ui.node);
                 CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
             }
 
             /* Pointer enter (... and later leave) on the pressed widget */
             for(Int style = 0; style != styleCount; ++style) {
                 TestUserInterface& ui = uis[style*stateCount + 3];
-                NodeHandle node = nodeHandle(0, 1);
-                CORRADE_VERIFY(ui.isHandleValid(node));
 
                 /* Making the node pressed + hovered, i.e. looking the same as
                    in the third column */
                 PointerMoveEvent moveOver{now, PointerEventSource::Mouse, {}, {}, true, 0, {}};
-                CORRADE_VERIFY(ui.pointerMoveEvent(ui.nodeCenterAfterLayout(node), moveOver));
-                CORRADE_COMPARE(ui.currentHoveredNode(), node);
-                CORRADE_COMPARE(ui.currentPressedNode(), node);
+                CORRADE_VERIFY(ui.pointerMoveEvent(ui.nodeCenterAfterLayout(ui.node), moveOver));
+                CORRADE_COMPARE(ui.currentHoveredNode(), ui.node);
+                CORRADE_COMPARE(ui.currentPressedNode(), ui.node);
                 CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
             }
         }
@@ -490,8 +534,6 @@ void ThemeGLTester::render(NodeHandle(*create)(UserInterface& ui, Int style, Int
         /* Pointer leave (after previous enter) on the inactive widget */
         for(Int style = 0; style != styleCount; ++style) {
             TestUserInterface& ui = uis[style*stateCount];
-            NodeHandle node = nodeHandle(0, 1);
-            CORRADE_VERIFY(ui.isHandleValid(node));
 
             PointerMoveEvent moveOut{now, PointerEventSource::Mouse, {}, {}, true, 0, {}};
             CORRADE_VERIFY(!ui.pointerMoveEvent({}, moveOut));
@@ -503,12 +545,10 @@ void ThemeGLTester::render(NodeHandle(*create)(UserInterface& ui, Int style, Int
         /* Pointer enter (after previous leave) on the hovered widget */
         for(Int style = 0; style != styleCount; ++style) {
             TestUserInterface& ui = uis[style*stateCount + 1];
-            NodeHandle node = nodeHandle(0, 1);
-            CORRADE_VERIFY(ui.isHandleValid(node));
 
             PointerMoveEvent moveOver{now, PointerEventSource::Mouse, {}, {}, true, 0, {}};
-            CORRADE_VERIFY(ui.pointerMoveEvent(ui.nodeCenterAfterLayout(node), moveOver));
-            CORRADE_COMPARE(ui.currentHoveredNode(), node);
+            CORRADE_VERIFY(ui.pointerMoveEvent(ui.nodeCenterAfterLayout(ui.node), moveOver));
+            CORRADE_COMPARE(ui.currentHoveredNode(), ui.node);
             CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
             CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
         }
@@ -518,27 +558,23 @@ void ThemeGLTester::render(NodeHandle(*create)(UserInterface& ui, Int style, Int
                widget */
             for(Int style = 0; style != styleCount; ++style) {
                 TestUserInterface& ui = uis[style*stateCount + 2];
-                NodeHandle node = nodeHandle(0, 1);
-                CORRADE_VERIFY(ui.isHandleValid(node));
 
                 PointerEvent press{now, PointerEventSource::Pen, Pointer::Pen, true, 0, {}};
-                CORRADE_VERIFY(ui.pointerPressEvent(ui.nodeCenterAfterLayout(node), press));
+                CORRADE_VERIFY(ui.pointerPressEvent(ui.nodeCenterAfterLayout(ui.node), press));
                 CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
-                CORRADE_COMPARE(ui.currentPressedNode(), node);
-                CORRADE_COMPARE(ui.currentFocusedNode(), node);
+                CORRADE_COMPARE(ui.currentPressedNode(), ui.node);
+                CORRADE_COMPARE(ui.currentFocusedNode(), ui.node);
             }
 
             /* Release (after previous press) on the focused widget */
             for(Int style = 0; style != styleCount; ++style) {
                 TestUserInterface& ui = uis[style*stateCount + 2];
-                NodeHandle node = nodeHandle(0, 1);
-                CORRADE_VERIFY(ui.isHandleValid(node));
 
                 PointerEvent release{now, PointerEventSource::Pen, Pointer::Pen, true, 0, {}};
                 CORRADE_VERIFY(ui.pointerReleaseEvent({}, release));
                 CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
                 CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
-                CORRADE_COMPARE(ui.currentFocusedNode(), node);
+                CORRADE_COMPARE(ui.currentFocusedNode(), ui.node);
             }
 
         } else {
@@ -546,27 +582,23 @@ void ThemeGLTester::render(NodeHandle(*create)(UserInterface& ui, Int style, Int
                widget */
             for(Int style = 0; style != styleCount; ++style) {
                 TestUserInterface& ui = uis[style*stateCount + 2];
-                NodeHandle node = nodeHandle(0, 1);
-                CORRADE_VERIFY(ui.isHandleValid(node));
 
                 PointerMoveEvent moveOver{now, PointerEventSource::Mouse, {}, {}, true, 0, {}};
-                CORRADE_VERIFY(ui.pointerMoveEvent(ui.nodeCenterAfterLayout(node), moveOver));
-                CORRADE_COMPARE(ui.currentHoveredNode(), node);
-                CORRADE_COMPARE(ui.currentPressedNode(), node);
+                CORRADE_VERIFY(ui.pointerMoveEvent(ui.nodeCenterAfterLayout(ui.node), moveOver));
+                CORRADE_COMPARE(ui.currentHoveredNode(), ui.node);
+                CORRADE_COMPARE(ui.currentPressedNode(), ui.node);
                 CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
             }
 
             /* Pointer leave (after previous enter) on the pressed widget */
             for(Int style = 0; style != styleCount; ++style) {
                 TestUserInterface& ui = uis[style*stateCount + 3];
-                NodeHandle node = nodeHandle(0, 1);
-                CORRADE_VERIFY(ui.isHandleValid(node));
 
                 /* As the node is captured, the event is accepted always */
                 PointerMoveEvent moveOut{now, PointerEventSource::Mouse, {}, {}, true, 0, {}};
                 CORRADE_VERIFY(ui.pointerMoveEvent({}, moveOut));
                 CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
-                CORRADE_COMPARE(ui.currentPressedNode(), node);
+                CORRADE_COMPARE(ui.currentPressedNode(), ui.node);
                 CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
             }
         }
