@@ -96,7 +96,7 @@ void InputGLTest::test() {
     CORRADE_VERIFY(true); /* Capture correct function name */
 
     ThemeGLTester::render(data.create, themeData, "input.png",
-        Flag::HoveredPressed|Flag::Focused|Flag::Disabled|Flag::XfailLlvmpipe20,
+        Flag::Hovered|Flag::Pressed|Flag::Focused|Flag::Disabled|Flag::XfailLlvmpipe20,
         /* Input cursor blinking lasts 0.55 sec and is reversed every other
            iteration, so it'll be fully visible at twice as much */
         5, 0.55_sec*2, 2.0f, 0.02292f);
