@@ -87,7 +87,6 @@ struct ThemeGLTester: GL::OpenGLTester {
         PluginManager::Manager<Trade::AbstractImporter> _importerManager;
         Containers::ArrayView<const Theme> _themes;
         Containers::Array<UserInterfaceGL> _themeUis;
-        Containers::Array<UserInterfaceGL> _uis;
 };
 
 using namespace Math::Literals;
