@@ -47,11 +47,15 @@
 #include "Magnum/Ui/Anchor.h"
 #include "Magnum/Ui/BaseLayerGL.h"
 #include "Magnum/Ui/BaseLayerAnimator.h"
+#include "Magnum/Ui/DataLayer.h"
 #include "Magnum/Ui/Event.h"
+#include "Magnum/Ui/EventLayer.h"
+#include "Magnum/Ui/GenericLayouter.h"
 #include "Magnum/Ui/Handle.h"
 #include "Magnum/Ui/LayoutLayer.h"
 #include "Magnum/Ui/NodeFlags.h"
 #include "Magnum/Ui/RendererGL.h"
+#include "Magnum/Ui/SnapLayouter.h"
 #include "Magnum/Ui/TextLayerGL.h"
 #include "Magnum/Ui/TextLayerAnimator.h"
 #include "Magnum/Ui/UserInterfaceGL.h"
@@ -220,10 +224,15 @@ void ThemeGLTester::render(NodeHandle(*create)(UserInterface& ui, Int style, Fla
                inefficiency */
             /** @todo allow setting a non-owned renderer instance maybe? */
             .setRendererInstance(Containers::pointer<RendererGL>())
+            .setDataLayerInstance(Containers::pointer<DataLayer>(ui.createLayer()))
             .setBaseLayerInstance(Containers::pointer<BaseLayerGL>(ui.createLayer(), static_cast<BaseLayerGL::Shared&>(_themeUis[&themeData - _themes.data()].baseLayer().shared())))
             .setTextLayerInstance(Containers::pointer<TextLayerGL>(ui.createLayer(), static_cast<TextLayerGL::Shared&>(_themeUis[&themeData - _themes.data()].textLayer().shared())))
-            /* Event layer not needed for anything yet */
-            .setLayoutLayerInstance(Containers::pointer<LayoutLayer>(ui.createLayer(), _themeUis[&themeData - _themes.data()].layoutLayer().styleCount()));
+            .setEventLayerInstance(Containers::pointer<EventLayer>(ui.createLayer()))
+            .setLayoutLayerInstance(Containers::pointer<LayoutLayer>(ui.createLayer(), _themeUis[&themeData - _themes.data()].layoutLayer().styleCount()))
+            .setSnapLayouterInstance(Containers::pointer<SnapLayouter>(ui.createLayouter()))
+            .setGenericLayouterInstance(Containers::pointer<GenericLayouter>(ui.createLayouter()));
+
+        themeData.theme->apply(ui, ThemeFeature::LayoutLayer, nullptr, nullptr);
 
         /* If dynamic styles are present (because the theme requested them for
            animators), add also default style animators. Can't hook to just
