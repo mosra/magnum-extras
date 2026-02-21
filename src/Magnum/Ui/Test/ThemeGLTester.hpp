@@ -372,7 +372,7 @@ void ThemeGLTester::render(NodeHandle(*create)(UserInterface& ui, Int style, Int
             /* Move out, making the node inactive, i.e. looking the same as in
                the first column */
             PointerMoveEvent moveOut{now, PointerEventSource::Mouse, {}, {}, true, 0, {}};
-            CORRADE_VERIFY(!ui.pointerMoveEvent(ui.nodeOffset(node) + ui.nodeSize(node)*1.5f, moveOut));
+            CORRADE_VERIFY(!ui.pointerMoveEvent({}, moveOut));
             CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
             CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
             CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
@@ -388,7 +388,7 @@ void ThemeGLTester::render(NodeHandle(*create)(UserInterface& ui, Int style, Int
                 /* Release, making the node focused but not pressed, i.e.
                    looking the same as in the fourth column. */
                 PointerEvent release{now, PointerEventSource::Pen, Pointer::Pen, true, 0, {}};
-                CORRADE_VERIFY(ui.pointerReleaseEvent(ui.nodeOffset(node) + ui.nodeSize(node)*1.5f, release));
+                CORRADE_VERIFY(ui.pointerReleaseEvent({}, release));
                 CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
                 CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
                 CORRADE_COMPARE(ui.currentFocusedNode(), node);
@@ -420,7 +420,7 @@ void ThemeGLTester::render(NodeHandle(*create)(UserInterface& ui, Int style, Int
                    same as in the fourth column. As the node is captured, the
                    event is accepted always. */
                 PointerMoveEvent moveOut{now, PointerEventSource::Mouse, {}, {}, true, 0, {}};
-                CORRADE_VERIFY(ui.pointerMoveEvent(ui.nodeOffset(node) + ui.nodeSize(node)*1.5f, moveOut));
+                CORRADE_VERIFY(ui.pointerMoveEvent({}, moveOut));
                 CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
                 CORRADE_COMPARE(ui.currentPressedNode(), node);
                 CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
@@ -456,7 +456,7 @@ void ThemeGLTester::render(NodeHandle(*create)(UserInterface& ui, Int style, Int
             CORRADE_VERIFY(ui.isHandleValid(node));
 
             PointerMoveEvent moveOut{now, PointerEventSource::Mouse, {}, {}, true, 0, {}};
-            CORRADE_VERIFY(!ui.pointerMoveEvent(ui.nodeOffset(node) + ui.nodeSize(node)*1.5f, moveOut));
+            CORRADE_VERIFY(!ui.pointerMoveEvent({}, moveOut));
             CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
             CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
             CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
@@ -496,7 +496,7 @@ void ThemeGLTester::render(NodeHandle(*create)(UserInterface& ui, Int style, Int
                 CORRADE_VERIFY(ui.isHandleValid(node));
 
                 PointerEvent release{now, PointerEventSource::Pen, Pointer::Pen, true, 0, {}};
-                CORRADE_VERIFY(ui.pointerReleaseEvent(ui.nodeOffset(node) + ui.nodeSize(node)*1.5f, release));
+                CORRADE_VERIFY(ui.pointerReleaseEvent({}, release));
                 CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
                 CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
                 CORRADE_COMPARE(ui.currentFocusedNode(), node);
@@ -524,7 +524,7 @@ void ThemeGLTester::render(NodeHandle(*create)(UserInterface& ui, Int style, Int
 
                 /* As the node is captured, the event is accepted always */
                 PointerMoveEvent moveOut{now, PointerEventSource::Mouse, {}, {}, true, 0, {}};
-                CORRADE_VERIFY(ui.pointerMoveEvent(ui.nodeOffset(node) + ui.nodeSize(node)*1.5f, moveOut));
+                CORRADE_VERIFY(ui.pointerMoveEvent({}, moveOut));
                 CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
                 CORRADE_COMPARE(ui.currentPressedNode(), node);
                 CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
