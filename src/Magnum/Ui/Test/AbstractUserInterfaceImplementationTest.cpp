@@ -360,15 +360,16 @@ const struct {
 const struct {
     const char* name;
     Vector2 uiOffset, uiSize;
-    NodeFlags flags[15];
-    bool visible[15];
+    NodeFlags flags[18];
+    bool visible[18];
     Containers::Array<Containers::Triple<Vector2, Vector2, UnsignedInt>> clipRects;
 } CullVisibleNodesData[]{
     {"all clipping", {}, {100.0f, 100.0f}, {
         NodeFlag::Clip, NodeFlag::Clip, NodeFlag::Clip, NodeFlag::Clip, /* 0-3 */
         NodeFlag::Clip, NodeFlag::Clip, NodeFlag::Clip, NodeFlag::Clip, /* 4-7 */
         NodeFlag::Clip, NodeFlag::Clip, NodeFlag::Clip, NodeFlag::Clip, /* 8-11 */
-        NodeFlag::Clip, NodeFlag::Clip, NodeFlag::Clip                  /* 12-14 */
+        NodeFlag::Clip, NodeFlag::Clip, NodeFlag::Clip, NodeFlag::Clip, /* 12-15 */
+        NodeFlag::Clip, NodeFlag::Clip,                                 /* 16-17 */
     }, {
         false, /* 0 */
         false, /* 1, hidden because it's clipped by 2 */
@@ -385,10 +386,14 @@ const struct {
         false, /* 12, hidden because it has zero height */
         false, /* 13, hidden because it has zero width */
         false, /* 14, hidden because it's a child of a zero-size rect */
+        false, /* 15, hidden because it's a nested child of a zero-height rect */
+        false, /* 16, hidden because it's a child of a zero-width rect */
+        false, /* 17, hidden because it's a child of a zero-height rect */
     }, {InPlaceInit, {
         {{ 0.0f, 0.0f}, { 1.0f, 2.0f}, 1}, /* Node 3 (top-level) */
-        {{ 2.0f, 0.0f}, {11.0f, 5.0f}, 5}, /* Node 7 (top-level), including
-                                              hidden 11, 14, 13, 12 */
+        {{ 2.0f, 0.0f}, {11.0f, 5.0f}, 8}, /* Node 7 (top-level), including
+                                              hidden 11, 14, 13, 17, 15, 12,
+                                              16 */
         {{ 3.0f, 2.0f}, { 5.0f, 3.0f}, 3}, /* Node 2 intersecting 7, including
                                               hidden 0, 6 */
         {{ 5.0f, 2.0f}, { 2.0f, 2.0f}, 1}, /* Node 10 intersecing 2 + 7 */
@@ -401,20 +406,38 @@ const struct {
         {},             {},             {},             {},             /* 0-3 */
         {},             {},             {},             {},             /* 4-7 */
         {},             {},             {},             {},             /* 8-11 */
-        {},             {},             {},                             /* 12-14 */
+        {},             {},             {},             {},             /* 12-15 */
+        {},             {},                                             /* 16-17 */
     }, {
-        true, true, true, true, true, true, true, true, true, true, true, true,
-        true, true, true,
+        true,  /* 0 */
+        true,  /* 1 */
+        true,  /* 2 */
+        true,  /* 3 */
+        true,  /* 4 */
+        true,  /* 5 */
+        true,  /* 6 */
+        true,  /* 7 */
+        true,  /* 8 */
+        true,  /* 9 */
+        true,  /* 10 */
+        false, /* 11, has zero size */
+        false, /* 12, has zero height */
+        false, /* 13, has zero width */
+        true,  /* 14, child of zero-size node but it doesn't clip */
+        true,  /* 15, nested child of zero-width node but it doesn't clip */
+        true,  /* 16, child of zero-height node but it doesn't clip */
+        true,  /* 17, child of zero-width node but it doesn't clip */
     }, {InPlaceInit, {
         {{}, {}, 1},  /* Top-level node 3 */
-        {{}, {}, 11}, /* Top-level node 7 */
+        {{}, {}, 14}, /* Top-level node 7 */
         {{}, {}, 3},  /* Top-level node 5 */
     }}},
     {"no clipping, culled by window edges", {2.0f, 0.0f}, {100.0f, 6.0f}, {
         {},             {},             {},             {},             /* 0-3 */
         {},             {},             {},             {},             /* 4-7 */
         {},             {},             {},             {},             /* 8-11 */
-        {},             {},             {},                             /* 12-14 */
+        {},             {},             {},             {},             /* 12-15 */
+        {},             {},                                             /* 16-17 */
     }, {
         false, /* 0, outside of the window area */
         true,  /* 1 */
@@ -428,20 +451,24 @@ const struct {
         true,  /* 8 */
         true,  /* 9 */
         true,  /* 10 */
-        true,  /* 11 */
-        true,  /* 12 */
-        true,  /* 13 */
-        true,  /* 14 */
+        false, /* 11, has zero size */
+        false, /* 12, has zero height */
+        false, /* 13, has zero width */
+        true,  /* 14, child of zero-size node but it doesn't clip */
+        true,  /* 15, nested child of zero-width node but it doesn't clip */
+        true,  /* 16, child of zero-height node but it doesn't clip */
+        true,  /* 17, child of zero-width node but it doesn't clip */
     }, {InPlaceInit, {
         {{}, {}, 1},  /* Top-level node 3 */
-        {{}, {}, 11}, /* Top-level node 7 */
+        {{}, {}, 14}, /* Top-level node 7 */
         {{}, {}, 3},  /* Top-level node 5 */
     }}},
     {"special cases", {}, {100.0f, 100.0f}, {
         {},             {},             {},             {},             /* 0-3 */
         {},             {},             {},             NodeFlag::Clip, /* 4-7 */
         NodeFlag::Clip, {},             {},             {},             /* 8-11 */
-        NodeFlag::Clip, NodeFlag::Clip, NodeFlag::Clip,                 /* 12-14 */
+        NodeFlag::Clip, NodeFlag::Clip, NodeFlag::Clip, {},             /* 12-15 */
+        {},             {},                                             /* 16-17 */
     }, {
         false, /* 0, clipped by 7 */
         true,  /* 1, outside of 2 but that one is not clipping */
@@ -456,18 +483,21 @@ const struct {
                      parent */
         true,  /* 9, outside of 5 but 5 doesn't clip */
         true,  /* 10, fully visible in 7 */
-        true,  /* 11, shown even though it has zero size as it doesn't clip */
-        false, /* 12, hidden because it clips and has zero height */
-        false, /* 13, hidden because it clips and has zero width */
+        false, /* 11, hidden even if it doesn't clip because it has zero size */
+        false, /* 12, hidden because it has zero height */
+        false, /* 13, hidden because it has zero width */
         true,  /* 14, shown even though it's a child of a zero-size rect, it
                       clips its children but not itself against the parent */
+        false, /* 15, hidden because it's a nested child of a zero-height clip rect */
+        false, /* 16, hidden because it's a child of a zero-width clip rect */
+        false, /* 17, hidden because it's a child of a zero-height clip rect */
     }, {InPlaceInit, {
         {{}, {}, 1},                       /* Node 3, not clipping */
         {{ 2.0f, 0.0f}, {11.0f, 5.0f}, 2}, /* Node 7 plus 11 */
         {{12.0f, 2.0f}, { 1.0f, 1.0f}, 1}, /* Node 14 intersecting 7 */
-        {{ 2.0f, 0.0f}, {11.0f, 5.0f}, 8}, /* Node 7 remaining, hidden 13, 12,
-                                              clipped 2, hidden 0, clipped 6,
-                                              10, 1, 4 */
+        {{ 2.0f, 0.0f}, {11.0f, 5.0f}, 11},/* Node 7 remaining, hidden 13, 17,
+                                              15, 12, 16, clipped 2, hidden 0,
+                                              clipped 6, 10, 1, 4 */
         {{}, {}, 2},                       /* Node 5 plus 9, not clipping */
         {{16.0f, 3.0f}, { 1.0f, 2.0f}, 1}, /* Node 8 */
     }}},
@@ -1702,12 +1732,14 @@ void AbstractUserInterfaceImplementationTest::cullVisibleNodes() {
         {3, 0},
 
         /* Several nested children */
-        {7, 10},
-            {11, 1}, /* Zero size, so gets skipped and its child also (if
-                        it clips) */
+        {7, 13},
+            {11, 1}, /* Zero size, gets skipped, and if clips, its child too */
                 {14, 0},
-            {13, 0}, /* Zero width, skipped if clips */
-            {12, 0}, /* Zero height, skipped if clips */
+            {13, 2}, /* Zero width, skipped, and if clips, its children too */
+                {17, 0},
+                    {15, 1},
+            {12, 1}, /* Zero height, skipped, and if clips, its child too */
+                {16, 0},
             {2, 5},
                 {0, 1}, /* Visible in 2 but not in 7, skipped if 7 clips */
                     /* Extends back to 7 but still gets skipped without testing
@@ -1729,7 +1761,7 @@ void AbstractUserInterfaceImplementationTest::cullVisibleNodes() {
        0 +---+   +-----------------------+           +---+
        1 | 3 |   | 7  +--+  +-----+ 11 12|   +-----+ | 9 |
        2 +---+   |+---|--|+ |  +--+   +--+   |     | +---+
-                 ||   |10|| |1 |4 | 13|14|   |  5  |
+                 ||   |10|| |1 |4 | 13|14-17 |  5  |
        3         || 2 |  || |  +--+   +--+   |     | +---+
        4         ||   +--+| +-----+      |   +-----+ | 8 |
        5         +|---|--||--------------+           +---+
@@ -1754,13 +1786,16 @@ void AbstractUserInterfaceImplementationTest::cullVisibleNodes() {
         {{16.0f, 3.0f}, { 1.0f, 2.0f}}, /* 8 */
         {{16.0f, 0.0f}, { 1.0f, 2.0f}}, /* 9 */
         {{ 5.0f, 1.0f}, { 2.0f, 3.0f}}, /* 10 */
-        {{12.0f, 2.0f}, { 0.0f, 0.0f}}, /* 11 */
-        {{12.0f, 2.0f}, { 1.0f, 0.0f}}, /* 12 */
-        {{12.0f, 2.0f}, { 0.0f, 1.0f}}, /* 13 */
+        {{12.0f, 2.0f}, { 0.0f, 0.0f}}, /* 11, zero size */
+        {{12.0f, 2.0f}, { 1.0f, 0.0f}}, /* 12, zero height */
+        {{12.0f, 2.0f}, { 0.0f, 1.0f}}, /* 13, zero width */
         {{12.0f, 2.0f}, { 1.0f, 1.0f}}, /* 14 */
+        {{12.0f, 2.0f}, { 1.0f, 1.0f}}, /* 15 */
+        {{12.0f, 2.0f}, { 1.0f, 1.0f}}, /* 16 */
+        {{12.0f, 2.0f}, { 1.0f, 1.0f}}, /* 17 */
     };
 
-    UnsignedShort visibleNodeMaskStorage[1];
+    UnsignedByte visibleNodeMaskStorage[3];
     Containers::MutableBitArrayView visibleNodeMask{visibleNodeMaskStorage, 0, Containers::arraySize(nodeOffsetsSizes)};
 
     /* One more item for the stack root, which is the whole UI offset + size */

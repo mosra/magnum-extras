@@ -704,13 +704,19 @@ UnsignedInt cullVisibleNodesInto(const Vector2& uiOffset, const Vector2& uiSize,
         bool visible = (parentMax > min).all() &&
                        (parentMin < max).all();
 
+        /* If the node has an empty area, itself it gets culled away, which can
+           be used for example by layouters to hide nodes. But unless it's a
+           clipping node, we still allow its children to be visible. */
+        const bool emptyArea =
+            size.x() < Math::TypeTraits<Float>::epsilon() ||
+            size.y() < Math::TypeTraits<Float>::epsilon();
+
         /* If the node is a clipping node, decide about a clip rect for its
            children */
         if(nodeFlags[nodeId] & NodeFlag::Clip) {
-            /* If the rect has an empty area, the node isn't visible no matter
+            /* If the node has an empty area, the node isn't visible no matter
                whether it passed a clip test or not */
-            if(size.x() < Math::TypeTraits<Float>::epsilon() ||
-               size.y() < Math::TypeTraits<Float>::epsilon())
+            if(emptyArea)
                 visible = false;
 
             /* For a visible node, put the clip rect intersection onto the
@@ -756,8 +762,9 @@ UnsignedInt cullVisibleNodesInto(const Vector2& uiOffset, const Vector2& uiSize,
             ++clipRectNodeCounts[clipRectsOffset];
         }
 
-        /* Save the visibility status */
-        if(visible)
+        /* Save the visibility status; if the node is visible but has an empty
+           area, mark it as invisible as well */
+        if(visible && !emptyArea)
             visibleNodeMask.set(nodeId);
 
         /* Pop the clip stack items for which all children were processed */
