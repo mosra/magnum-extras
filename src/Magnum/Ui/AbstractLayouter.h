@@ -142,6 +142,62 @@ CORRADE_ENUMSET_OPERATORS(LayouterStates)
 /**
 @brief Base for layouters
 @m_since_latest_{extras}
+
+Assigns layouts to particular nodes in the UI hierarchy, affecting node
+placement in the UI. See the
+@ref Ui-AbstractUserInterface-layouters "AbstractUserInterface class documentation"
+for introduction and overview of builtin layouters. The following sections
+describe behavior common to all layouters and provide a guide for implementing
+custom layouters from scratch.
+
+@section Ui-AbstractLayouter-handles Layout creation and removal
+
+Layouts get created using @ref add() with a @ref NodeHandle to assign the
+layout to, returning a @ref LayoutHandle. The @ref add() function is
+@cpp protected @ce on the @ref AbstractLayouter, as concrete implementations
+require additional parameters. Such as @ref SnapLayouter::add(NodeHandle, Snaps, LayoutHandle, SnapLayoutFlags)
+where you specify also where to snap the node to and how, or for example
+@ref GenericLayouter taking a callback function to execute to calculate the
+layout. Finally, various higher-level helpers such as @ref SnapLayout may call
+@ref add() only internally, exposing a whole different interface.
+
+The @ref LayoutHandle is a combination of a @ref LayouterHandle, identifying a
+particular layouter the layout is coming from, and a @ref LayouterDataHandle
+identifying the layout within given layouter, extractible using
+@ref layoutHandleLayouter() and @ref layoutHandleData(), respectively. All
+builtin layouter APIs taking a @ref LayoutHandle have overloads taking the
+smaller @ref LayouterDataHandle type as well, which is useful to save space in
+case you're storing the handles and know which layouter they come from.
+
+@snippet Ui.cpp AbstractLayouter-handles
+
+Layout lifetime is implicitly tied to a @ref NodeHandle they're assigned to, so
+if the node or any of its parents get removed, all layouts attached to it from
+all layouters get removed as well. It's also possible to remove the layout
+directly using @ref remove(), after which the @ref LayoutHandle (or
+@ref LayouterDataHandle) becomes invalid. The @ref remove() function is again
+@cpp protected @ce as concrete layouters may want to extend its behavior, such
+as is the case of @ref GenericLayouter::remove().
+
+@section Ui-AbstractLayouter-assignments Node layout assignments
+
+Compared to layers or animators, layouts have to be assigned to a non-null
+@ref NodeHandle upfront, and the assignment cannot be changed afterwards. Along
+with node parents being impossible to change, this is done in order to make
+layouter implementations simpler, without having to expensively check for
+orphans or cycles.
+
+@subsection Ui-AbstractLayouter-assignments-unique Unique node layouts
+
+To be written.
+
+@section Ui-AbstractLayouter-order Layout processing order
+
+To be written.
+
+@section Ui-AbstractLayouter-custom Creating a custom layouter
+
+To be written.
 */
 class MAGNUM_UI_EXPORT AbstractLayouter {
     public:

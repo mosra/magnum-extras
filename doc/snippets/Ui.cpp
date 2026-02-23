@@ -683,6 +683,43 @@ void mainUi() {
 struct UserInterface: Ui::UserInterface {
     explicit UserInterface(NoCreateT): Ui::UserInterface{NoCreate} {}
 } ui{NoCreate};
+/* [AbstractAnimator-handles] */
+/* Query the data given animation from an arbitrary animator is attached to */
+Ui::AnimationHandle anim = DOXYGEN_ELLIPSIS({});
+Ui::DataHandle data = ui.animator(animationHandleAnimator(anim)).data(anim);
+
+/* Remembering an animation handle from a known animator in order to update it
+   later */
+Ui::AnimatorDataHandle blink = animationHandleData(ui.nodeAnimator().create(DOXYGEN_ELLIPSIS(Ui::NodeAnimation{}, nullptr, {}, {}, Ui::NodeHandle::Null)));
+DOXYGEN_ELLIPSIS()
+ui.nodeAnimator().setRepeatCount(blink, 3);
+/* [AbstractAnimator-handles] */
+static_cast<void>(data);
+}
+
+{
+Ui::NodeAnimator nodeAnimator{Ui::animatorHandle(0, 1)};
+Ui::NodeHandle node{};
+Nanoseconds now;
+/* [AbstractAnimator-attachments] */
+/* Prepare a fade animation that isn't scheduled to play at any time, isn't
+   attached to any node and doesn't auto-remove itself once played */
+Ui::AnimationHandle fade = nodeAnimator.create(DOXYGEN_ELLIPSIS(Ui::NodeAnimation{}),
+    Animation::Easing::smoothstep, Nanoseconds::max(), 0.7_sec,
+    Ui::NodeHandle::Null, Ui::AnimationFlag::KeepOncePlayed);
+
+DOXYGEN_ELLIPSIS()
+
+/* Attach the animation to a concrete node and play it */
+nodeAnimator.attach(fade, node);
+nodeAnimator.play(fade, now);
+/* [AbstractAnimator-attachments] */
+}
+
+{
+struct UserInterface: Ui::UserInterface {
+    explicit UserInterface(NoCreateT): Ui::UserInterface{NoCreate} {}
+} ui{NoCreate};
 /* [AbstractLayer-handles] */
 /* Query the node given data from an arbitrary layer is attached to */
 Ui::DataHandle data = DOXYGEN_ELLIPSIS({});
@@ -718,6 +755,23 @@ DOXYGEN_ELLIPSIS()
 /* Show it again */
 textLayer.attach(label, node);
 /* [AbstractLayer-attachments] */
+}
+
+{
+struct UserInterface: Ui::UserInterface {
+    explicit UserInterface(NoCreateT): Ui::UserInterface{NoCreate} {}
+} ui{NoCreate};
+/* [AbstractLayouter-handles] */
+/* Query the node given layout from an arbitrary layouter is attached to */
+Ui::LayoutHandle layout = DOXYGEN_ELLIPSIS({});
+Ui::NodeHandle node = ui.layouter(layoutHandleLayouter(layout)).node(layout);
+
+/* Remembering a layout handle from a known layouter in order to update it
+   later */
+Ui::LayouterDataHandle row = layoutHandleData(ui.snapLayouter().add(DOXYGEN_ELLIPSIS(node)));
+DOXYGEN_ELLIPSIS()
+ui.snapLayouter().setChildSnap(row, Ui::Snap::Right);
+/* [AbstractLayouter-handles] */
 }
 
 {
@@ -815,6 +869,63 @@ Ui::LayerHandle overlayLayerHandle = ui.createLayer(overlayLineLayer);
 Ui::BaseLayer& overlayLayer = ui.setLayerInstance(DOXYGEN_ELLIPSIS(Containers::pointer<BaseLayer>(overlayLayerHandle, shared)));
 /* [AbstractUserInterface-layers-order] */
 static_cast<void>(overlayLayer);
+}
+
+{
+Ui::AbstractUserInterface ui{{100, 100}};
+/* [AbstractUserInterface-animators-create] */
+Ui::AnimatorHandle nodeAnimatorHandle = ui.createAnimator();
+Ui::NodeAnimator& nodeAnimator = ui.setAnimatorInstance(
+    Containers::pointer<Ui::NodeAnimator>(nodeAnimatorHandle));
+/* [AbstractUserInterface-animators-create] */
+
+Ui::NodeHandle title{};
+Nanoseconds now;
+/* [AbstractUserInterface-animators-create-animation] */
+nodeAnimator.create(
+    Ui::NodeAnimation{}
+        .fromOpacity(0.0f)
+        .toOpacity(1.0f),
+    Animation::Easing::cubicInOut, now, 1.0_sec, title,
+    0 /*repeat endlessly*/, Ui::AnimationFlag::ReverseEveryOther);
+/* [AbstractUserInterface-animators-create-animation] */
+}
+
+{
+Ui::AbstractUserInterface ui{{100, 100}};
+Ui::AnimatorHandle nodeAnimatorHandle{};
+/* [AbstractUserInterface-animators-query] */
+Ui::NodeAnimator& nodeAnimator =
+    ui.animator<Ui::NodeAnimator>(nodeAnimatorHandle);
+/* [AbstractUserInterface-animators-query] */
+static_cast<void>(nodeAnimator);
+}
+
+{
+Ui::AbstractUserInterface ui{{100, 100}};
+/* [AbstractUserInterface-layouters-create] */
+Ui::LayouterHandle genericLayouterHandle = ui.createLayouter();
+Ui::GenericLayouter& genericLayouter = ui.setLayouterInstance(
+    Containers::pointer<Ui::GenericLayouter>(genericLayouterHandle));
+/* [AbstractUserInterface-layouters-create] */
+
+Ui::NodeHandle panel{}, title{};
+/* [AbstractUserInterface-layouters-add] */
+genericLayouter.add(title, [panel](const Ui::GenericLayouter& layouter, Vector2& nodeOffset, Vector2& nodeSize) {
+    nodeSize.x() = layouter.nodeSize(panel).x()*0.5f;
+    nodeOffset.x() = layouter.nodeSize(panel).x()*0.25f;
+});
+/* [AbstractUserInterface-layouters-add] */
+}
+
+{
+Ui::AbstractUserInterface ui{{100, 100}};
+Ui::LayouterHandle genericLayouterHandle{};
+/* [AbstractUserInterface-layouters-query] */
+Ui::GenericLayouter& genericLayouter =
+    ui.layouter<Ui::GenericLayouter>(genericLayouterHandle);
+/* [AbstractUserInterface-layouters-query] */
+static_cast<void>(genericLayouter);
 }
 
 {

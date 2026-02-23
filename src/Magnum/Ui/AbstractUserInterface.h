@@ -622,20 +622,20 @@ un-hiding preserves the previous top-level node order.
 respond to events anymore and *may* also affect the visual look, depending on
 whether given UI element provides a disabled visual style.
 @ref NodeFlag::NoEvents is a subset of that, affecting only the events but not
-visuals, and can be used for example when animating a gradual transition from/to
-a disabled state, to not have the elements react to input until the animation
-finishes. Both of these again propagate to all nested nodes as well, so
-disabling a part of the UI can be done only on the enclosing node and not on
+visuals, and can be used for example when animating a gradual transition
+from/to a disabled state, to not have the elements react to input until the
+animation finishes. Both of these again propagate to all nested nodes as well,
+so disabling a part of the UI can be done only on the enclosing node and not on
 each and every child.
 
-@section Ui-AbstractUserInterface-layers Data layers
+@section Ui-AbstractUserInterface-layers Layers
 
 Next to the node hierarchy, the user interface contains a list of layers, which
 attach *data* to particular nodes. Each layer instance, derived from
 @ref AbstractLayer, defines what features its data have --- whether they draw,
-process input events, or for example act as just state storage. While nodes
-define placement and hierarchy, layers are what makes the node hierarchy
-actually draw and do something.
+process input events, supply layout properties, or for example act as just
+state storage. While nodes define placement and hierarchy, layers are what
+makes the node hierarchy actually draw and do something.
 
 While it's possible to implement all drawing and all event processing in a
 single layer, in practice a UI consists of several specialized layers. The
@@ -648,10 +648,13 @@ satisfy its needs.
 -   @ref LineLayer for antialiased line drawing,
 -   @ref EventLayer for attaching callbacks to input events like tap, click,
     drag or key press,
+-   @ref LayoutLayer that makes nodes report minimal sizes, paddings and other
+    properties to layouters,
 -   and @ref DebugLayer, a sort of a meta-layer for inspecting contents of the
     UI itself.
 
-A particular node then gets data attached from zero or more layers. As an example, continuing with the node diagram from above and visualizing data
+A particular node then gets data attached from zero or more layers. As an
+example, continuing with the node diagram from above and visualizing data
 attachments with colored outlines, the `panel` node could have attached a
 @m_class{m-label m-warning} **background** drawn by @ref BaseLayer, the `title`
 node then have attached a nested @m_class{m-label m-warning} **background**, a
@@ -686,14 +689,19 @@ how a drag handler on the `title` node could be made with the above-created
 
 @snippet Ui.cpp AbstractUserInterface-layers-create-data
 
+Each data creation function returns a @ref DataHandle, which can be
+subsequently used to change properties of given data or remove it. Consult the
+@ref AbstractLayer documentation for more information.
+
 A layer along with its instance implicitly stays alive until the end of the
 @ref AbstractUserInterface lifetime. It can be removed earlier with
 @ref removeLayer() if needed. If an instance has been set for it, it gets
-deleted, and all its data are thus removed as well. The @ref LayerHandle then
-becomes invalid. If you saved the reference to the instance, like shown above,
-it'll become dangling with no way to check if it's still valid, so if the layer
-may get removed early, be sure to always query it via its handle instead of
-keeping a reference.
+deleted, and all its data are thus removed as well. The @ref LayerHandle, and
+all @ref DataHandle "DataHandles" associated with it become invalid. If you
+saved the reference to the instance, like shown above, it'll become dangling
+with no way to check if it's still valid, so if the layer may get removed
+early, be sure to always query it via its handle instead of keeping a
+reference.
 
 @subsection Ui-AbstractUserInterface-layers-order Layer visibility order
 
@@ -726,10 +734,11 @@ line *over* the text), a solution is to add extra instances of the same layer:
 5.  `overlayLineLayer` for highlight lines from @ref LineLayer
 
 By default, the layers are drawn in the order @ref createLayer() is called, but
-you can pass an optional @ref LayerHandle saying *behind* which existing layer
-to put the new one. Unlike with top-level nodes, the layer order has to be
-specified upfront and cannot be changed afterwards. For example, inserting the
-`overlayLayer` between the `textLayer` and `overlayLayerLayer`:
+you can pass an optional @ref LayerHandle to this function saying *behind*
+which existing layer to put the new one. Unlike with top-level nodes, the layer
+order has to be specified upfront and cannot be changed afterwards. For
+example, inserting the `overlayLayer` between the `textLayer` and
+`overlayLineLayer`:
 
 @snippet Ui.cpp AbstractUserInterface-layers-order
 
@@ -758,6 +767,201 @@ example if @ref Ui-BaseLayer-style-background-blur "background blur is enabled i
     GPU-API-agnostic. Only the choice of concrete layers and renderer
     implementation defines what GPU API is actually used to put pixels on the
     screen.
+
+@section Ui-AbstractUserInterface-layouters Layouters
+
+While it's possible to have all nodes placed and sized by hand, commonly this
+is automated to some extent. Thus, in addition to layers, the user interface
+contains a list of layouters, which attach *layouts* to particular nodes. Each
+layouter calculates offsets and sizes of nodes it has layouts assigned to, the
+resulting node offsets and sizes are then used by layers to draw on the screen
+and to handle events. With no layouters present, node offsets and sizes
+specified with @ref createNode(), @ref setNodeOffset() or @ref setNodeSize()
+are used directly.
+
+The following layouters are provided, an application can again choose to
+implement a custom layouter if it needs specialized behavior.
+
+-   @ref SnapLayouter where, besides usual column and row layouts, nodes can be
+    snapped to corners and edges of other nodes,
+-   @ref GenericLayouter that allows executing arbitrary callbacks for
+    calculating a layout of particular node,
+-   and @ref YogaIntegration::Layouter, part of the Magnum Integration
+    repository, which exposes a subset of [CSS Flexbox](https://developer.mozilla.org/en-US/docs/Web/CSS/CSS_flexible_box_layout)
+    as implemented by the [Yoga Layout](https://yogalayout.dev/) library.
+
+A layouter is created with @ref createLayouter(), the resulting
+@ref LayouterHandle is then passed to a constructor of a particular
+@ref AbstractLayouter subclass, and the constructed layouter instance is then
+passed to @ref setLayouterInstance(). For example, as shown below with the
+@ref GenericLayouter. Because the layouter instance is a
+@relativeref{Corrade,Containers::Pointer}, it won't get moved anywhere
+internally afterwards and it's safe to keep a reference to it for as long as it
+exists:
+
+@snippet Ui.cpp AbstractUserInterface-layouters-create
+
+The instance can be also queried with a @ref LayouterHandle using
+@ref layouter(), but at that point it's your responsibility to ensure the type
+is correct:
+
+@snippet Ui.cpp AbstractUserInterface-layouters-query
+
+Layouter implementations may require additional constructor arguments, the full
+setup is described in documentation of each class. Similarly, how actual
+layouts are created and assigned to nodes is specific to given layouter. As
+another example, here the @ref GenericLayouter is used to make the `title` node
+50% of the `panel` width and centered inside:
+
+@m_class{m-console-wrap}
+
+@snippet Ui.cpp AbstractUserInterface-layouters-add
+
+Each layout adding function returns a @ref LayoutHandle, which can be
+subsequently used to change properties of given layout or remove it. Consult
+the @ref AbstractLayouter documentation for more information.
+
+As with layers, a layouter along with its instance implicitly stays alive until
+the end of the @ref AbstractUserInterface lifetime. It can be removed earlier
+with @ref removeLayouter() if needed. If an instance has been set for it, it
+gets deleted, and all its layouts are thus removed as well. The
+@ref LayouterHandle, and all @ref LayoutHandle "LayoutHandles" associated with
+it become invalid. If you saved the reference to the instance, like shown
+above, it'll become dangling with no way to check if it's still valid, so if
+the layouter may get removed early, be sure to always query it via its handle
+instead of keeping a reference.
+
+@subsection Ui-AbstractUserInterface-layouters-order Layout processing order
+
+A user interface can use multiple layouters and a particular node can have
+layouts from multiple layouters assigned. In such cases, each subsequent
+layouter receives node offsets, sizes and other properties produced by the
+previous layouter, which it can then adjust further.
+
+Similarly to layers, by default the layouters are executed in the order
+@ref createLayouter() is called, but you can pass an optional
+@ref LayouterHandle to this function saying *before* which existing layouter to
+put the new one. As with layers, the layouter order has to be specified upfront
+and cannot be changed afterwards.
+
+The @ref AbstractLayouter documentation contains more detailed information
+about the exact order in which layouts get calculated.
+
+@section Ui-AbstractUserInterface-animators Animators
+
+Besides layers, a renderer instance, and layouters, the user interface can
+contain animators. An animator creates *animations*, which run at specified
+time, have a certain duration, and can affect anything from nodes to layer
+data or styles.
+
+The following builtin animators are expected to cover most use cases, and an
+application can again choose to implement a custom animator for specialized
+behavior:
+
+-   @ref GenericAnimator for animating basically anything via a callback, with
+    no relation to any node or layer data,
+-   @ref GenericNodeAnimator and @ref GenericDataAnimator for callback-based
+    animations attached to particular nodes or layer data,
+-   @ref NodeAnimator for node offset, size and opacity transitions,
+-   @ref BaseLayerStyleAnimator for animating @ref BaseLayer style transitions,
+-   and @ref TextLayerStyleAnimator for animating @ref TextLayer style
+    transitions.
+
+An animator is created with @ref createAnimator(), the resulting
+@ref AnimatorHandle is then passed to a constructor of a particular
+@ref AbstractAnimator subclass, and the constructed animator instance is then
+passed to @ref setAnimatorInstance(). For example, as shown below with the
+@ref NodeAnimator. Because the animator instance is a
+@relativeref{Corrade,Containers::Pointer}, it won't get moved anywhere
+internally afterwards and it's safe to keep a reference to it for as long as it
+exists:
+
+@snippet Ui.cpp AbstractUserInterface-animators-create
+
+The instance can be also queried with a @ref AnimatorHandle using
+@ref animator(), but at that point it's your responsibility to ensure the type
+is correct:
+
+@snippet Ui.cpp AbstractUserInterface-animators-query
+
+Animator implementations may require additional constructor arguments or extra
+initialization steps after construction, the full setup is described in
+documentation of each class. Similarly, how actual animations are created and
+attached to nodes or data is specific to given animator. As another example,
+here the @ref NodeAnimator is used to make the `title` node endlessly fade in
+and out:
+
+@snippet Ui.cpp AbstractUserInterface-animators-create-animation
+
+Each animation creating function returns an @ref AnimationHandle, which can be
+subsequently used to change properties of given animation or remove it. Consult
+the @ref AbstractAnimator documentation for more information.
+
+As with layers and layouters, an animator along with its instance implicitly
+stays alive until the end of the @ref AbstractUserInterface lifetime. It can be
+removed earlier with @ref removeAnimator() if needed. If an instance has been
+set for it, it gets deleted, and all its animations are thus removed as well.
+The @ref AnimatorHandle, and all @ref AnimationHandle "AnimationHandles"
+associated with it become invalid. If you saved the reference to the instance,
+like shown above, it'll become dangling with no way to check if it's still
+valid, so if the animator may get removed early, be sure to always query it via
+its handle instead of keeping a reference.
+
+@subsection Ui-AbstractUserInterface-animators-order Animation advance order
+
+Unlike with layers and layouters, the animators don't maintain any particular
+order. Currently, the assumption is that there's always at most one animation
+affecting a particular property, and thus there's no need to order them in any
+way. Preventing animation conflicts and/or merging animations together is up to
+a particular animator implementation.
+
+@section Ui-AbstractUserInterface-update-and-draw User interface update and draw process
+
+For an overview of how various layers, layouters and animators work together,
+here's a simplified sequence of operations that could happen internally when
+calling @ref advanceAnimations() and @ref draw():
+
+1.  @ref advanceAnimations() is called:
+    1.  A set of currently active animations is collected for each animator,
+        and for each active animation am interpolation factor is calculated
+    2.  The animator advance functions get called for all active animations,
+        resulting in for example @ref NodeAnimator changing opacity of one node
+        and removing another
+2.  @ref draw() is called:
+    1.  @ref update() is called:
+        1.  @ref clean() is called, which collects children of removed nodes,
+            all data, layouts and animations attached to those, and removes
+            them as well
+        2.  A pre-update step is called for layers that have it, such as
+            @ref DebugLayer that tracks newly added nodes to make them
+            available for inspection. A second @ref clean() is called again
+            after if needed.
+        3.  A layout property step is called for layers that have it, such as
+            @ref LayoutLayer supplying min sizes and paddings
+        4.  Layouters such as @ref SnapLayouter and @ref GenericLayouter are
+            called to calculate layouts
+        5.  Invisible nodes are culled based on final node offsets and sizes
+            coming from layouters, and the nodes are ordered for drawing and
+            even  propagation
+        6.  For each layer, a set of data attached to visible nodes is
+            collected
+        7.  The set of visible data along with corresponding node offsets and
+            sizes is updated in each layer, resulting in for example
+            @ref BaseLayer repositioning its quads or @ref TextLayer centering
+            pieces of text to their containing nodes
+    2.  For each top-level node and then for each layer that draws, a sequence
+        of data attached to visible nodes is collected in draw order
+    3.  For each top-level node and then for each layer that draws, draws are
+        executed, causing for example @ref BaseLayer background to be drawn
+        first and text from @ref TextLayer drawn on top of them
+
+In practice, not the whole sequence is executed always --- for example, if just
+a style of a particular @ref BaseLayer data changed but layouts and everything
+else stays the same and no animations need to be advanced, then only the
+single layer gets updated and everything is redrawn again. Such state is
+tracked in @ref state(), @ref AbstractLayer::state(),
+@ref AbstractLayouter::state() and @ref AbstractAnimator::state(), see the
+functions and related enums for details.
 
 @section Ui-AbstractUserInterface-events Event handling
 

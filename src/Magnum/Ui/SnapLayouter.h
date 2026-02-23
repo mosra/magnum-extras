@@ -308,7 +308,7 @@ If you create a @ref UserInterfaceGL with a theme and don't exclude
 available through @ref UserInterface::snapLayouter(). Otherwise, the layouter
 doesn't have any shared state or configuration, so it's just about constructing
 it from a fresh @ref AbstractUserInterface::createLayouter() handle and passing
-it to @ref UserInterface::setEventLayerInstance():
+it to @ref UserInterface::setSnapLayouterInstance():
 
 @snippet Ui.cpp SnapLayouter-setup-implicit
 

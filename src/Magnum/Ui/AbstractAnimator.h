@@ -334,6 +334,112 @@ MAGNUM_UI_EXPORT Debug& operator<<(Debug& debug, AnimationState value);
 /**
 @brief Base for animators
 @m_since_latest_{extras}
+
+Manages animations which can be either standalone or affecting particular
+nodes, data or data styles. See the
+@ref Ui-AbstractUserInterface-animators "AbstractUserInterface class documentation"
+for introduction and overview of builtin animators. The following sections
+describe behavior common to all animators and provide a guide for implementing
+custom animators from scratch.
+
+@section Ui-AbstractAnimator-kind Generic, node and data animators
+
+As the animations can affect different things in the UI, there are three kinds
+of animators, represented by different subclasses. @ref AbstractGenericAnimator
+for animations that aren't attached to any nodes or data,
+@ref AbstractNodeAnimator for animations that can be attached to nodes, and
+@ref AbstractDataAnimator / @ref AbstractStyleAnimator for animations that can
+be attached to data. They mainly vary in the initial setup, common usage
+involves the same base @ref AbstractAnimator APIs where the only difference is
+which resource types the animations can be attached to.
+
+@section Ui-AbstractAnimator-timing Animation timing management
+
+To be written.
+
+@section Ui-AbstractAnimator-handles Animation creation and removal
+
+Animations get created using @ref create(), passing their start time, duration
+and possible other properties, optionally with a @ref NodeHandle or
+@ref DataHandle to attach them to, returning an @ref AnimationHandle. The
+@ref create() function is @cpp protected @ce on the @ref AbstractAnimator, as
+concrete implementations require additional parameters, and also restrict to
+which resource handles the animations can be attached. Such as
+@ref NodeAnimator::create() taking a helper instance describing what all to
+animate on a node, or for example @ref GenericAnimator getting a callback, not
+allowing attaching to nodes or data, and having also a @relativeref{GenericDataAnimator,callOnce()} variant that fires given
+callback exactly once.
+
+Animations are implicitly treated as "fire and forget" and they automatically
+remove itself once played. This behavior can be disabled by passing
+@ref AnimationFlag::KeepOncePlayed to @ref create() or @ref addFlags(), which
+is useful for example to prepare an animation upfront and then play it at
+appropriate times.
+
+The @ref AnimationHandle is a combination of an @ref AnimatorHandle,
+identifying a particular animator the animation is coming from, and an
+@ref AnimatorDataHandle identifying the animation within given animator,
+extractible using @ref animationHandleAnimator() and
+@ref animationHandleData(), respectively. All builtin animator APIs taking an
+@ref AnimationHandle have overloads taking the smaller @ref AnimatorDataHandle
+type as well, which is useful to save space in case you're storing the handles
+and know which animator they come from.
+
+@snippet Ui.cpp AbstractAnimator-handles
+
+Apart from the "fire and forget" behavior mentioned above, animation lifetime
+is implicitly tied to a @ref NodeHandle / @ref DataHandle they're attached to,
+if any, so if the data, the node or any of its parents get removed, all
+animations attached to it from all animators get removed as well. It's also
+possible to remove the animation directly using @ref remove(), after which the
+@ref AnimationHandle (or @ref AnimatorDataHandle) becomes invalid. The
+@ref remove() function is again @cpp protected @ce as concrete animators may
+want to extend its behavior, such as is the case of
+@ref GenericAnimator::remove().
+
+@section Ui-AbstractAnimator-attachments Node and data attachments
+
+Besides attaching directly in @ref create() or its derivatives in subclasses,
+node / data attachment can be modified using @ref attach(). The resource which
+the animation can be attached to is given by @ref AnimatorFeature::NodeAttachment
+or @relativeref{AnimatorFeature,DataAttachment} (and implicitly by whether it's
+derived from @ref AbstractGenericAnimator, @ref AbstractNodeAnimator etc.), if
+an animator advertises neither, the animation cannot be attached anywhere.
+
+An animation can be also detached from a node / data by passing
+@ref NodeHandle::Null / @ref DataHandle::Null. Compared to layers, where
+detaching a data from a node causes it to be excluded from all updates and
+rendering, here the behavior is generally animator-specific. For example, the
+@ref NodeAnimator skips animations that aren't attached to any nodes, but the
+@ref BaseLayerStyleAnimator may still update a dynamic style even though it
+isn't tied to a concrete data.
+
+Detaching and reattaching is useful for example to transfer a prepared
+animation from one node to another, or when it's for example a heavy keyframed
+animation and it makes more sense to reattach an existing instance rather than
+remove and recreate it for a different use.
+
+@snippet Ui.cpp AbstractAnimator-attachments
+
+@section Ui-AbstractAnimator-playback Animation playback options
+
+To be written.
+
+@section Ui-AbstractAnimator-custom-generic Creating a custom generic animator
+
+To be written.
+
+@section Ui-AbstractAnimator-custom-node Creating a custom node animator
+
+To be written.
+
+@section Ui-AbstractAnimator-custom-data Creating a custom data animator
+
+To be written.
+
+@section Ui-AbstractAnimator-custom-style Creating a custom style animator
+
+To be written.
 */
 class MAGNUM_UI_EXPORT AbstractAnimator {
     public:
@@ -1721,6 +1827,16 @@ class AbstractAnimator::DebugIntegration {
 @brief Base for generic animators
 @m_since_latest_{extras}
 
+A generic animator has no ability to attach to nodes or data and is thus
+suitable for animations that aren't clearly tied to a particular part of the
+UI. In comparison, the @ref AbstractNodeAnimator class is suited for animations
+affecting nodes, and @ref AbstractDataAnimator and @ref AbstractStyleAnimator
+for animations that affect data attached to nodes.
+
+See the @ref Ui-AbstractUserInterface-animators "AbstractUserInterface class documentation"
+for introduction and overview of builtin animators and the
+@ref AbstractAnimator class for more information about use and creating custom
+animators.
 @see @ref AbstractUserInterface::setAnimatorInstance(Containers::Pointer<AbstractGenericAnimator>&&)
 */
 class MAGNUM_UI_EXPORT AbstractGenericAnimator: public AbstractAnimator {
@@ -1907,6 +2023,16 @@ CORRADE_ENUMSET_OPERATORS(NodeAnimatorUpdates)
 @brief Base for node animators
 @m_since_latest_{extras}
 
+A node animator can attach animations to nodes and is thus suitable for
+animations that affect directly the node itself. In comparison, the
+@ref AbstractDataAnimator and @ref AbstractStyleAnimator classes are suited for
+animations that affect data attached to nodes, and @ref AbstractGenericAnimator
+for animations that aren't clearly tied to a particular part of the UI.
+
+See the @ref Ui-AbstractUserInterface-animators "AbstractUserInterface class documentation"
+for introduction and overview of builtin animators and the
+@ref AbstractAnimator class for more information about use and creating custom
+animators.
 @see @ref AbstractUserInterface::setAnimatorInstance(Containers::Pointer<AbstractNodeAnimator>&&)
 */
 class MAGNUM_UI_EXPORT AbstractNodeAnimator: public AbstractAnimator {
@@ -2029,6 +2155,22 @@ class MAGNUM_UI_EXPORT AbstractNodeAnimator: public AbstractAnimator {
 @brief Base for data animators
 @m_since_latest_{extras}
 
+A data animator can attach animations to data and is thus suitable for
+animations that affect data within layers. In comparison, the
+@ref AbstractStyleAnimator class is suited for animations that affect data
+styles, @ref AbstractNodeAnimator for animations affecting nodes, and
+@ref AbstractGenericAnimator for animations that aren't clearly tied to a
+particular part of the UI.
+
+See the @ref Ui-AbstractUserInterface-animators "AbstractUserInterface class documentation"
+for introduction and overview of builtin animators and the
+@ref AbstractAnimator class for more information about use and creating custom
+animators.
+
+@section Ui-AbstractDataAnimator-assign Assigning a data animator to a layer
+
+To be written.
+
 @see @ref AbstractUserInterface::setAnimatorInstance(Containers::Pointer<AbstractDataAnimator>&&),
     @ref AbstractLayer::assignAnimator(AbstractDataAnimator&) const,
     @ref AbstractLayer::advanceAnimations(Nanoseconds, Containers::MutableBitArrayView, Containers::MutableBitArrayView, Containers::MutableBitArrayView, const Containers::StridedArrayView1D<Float>&, Containers::MutableBitArrayView, const Containers::Iterable<AbstractDataAnimator>&)
@@ -2070,6 +2212,22 @@ class MAGNUM_UI_EXPORT AbstractDataAnimator: public AbstractAnimator {
 /**
 @brief Base for style animators
 @m_since_latest_{extras}
+
+A style animator, like @ref AbstractDataAnimator, can attach animations to
+data, but is additionally meant to be specialized for animating just data
+styles, not data properties themselves. In comparison, the
+@ref AbstractNodeAnimator class is suited for animations that affect nodes, and
+@ref AbstractGenericAnimator for animations that aren't clearly tied to a
+particular part of the UI.
+
+See the @ref Ui-AbstractUserInterface-animators "AbstractUserInterface class documentation"
+for introduction and overview of builtin animators and the
+@ref AbstractAnimator class for more information about use and creating custom
+animators.
+
+@section Ui-AbstractStyleAnimator-assign Assigning a style animator to a layer
+
+To be written.
 
 @see @ref AbstractUserInterface::setAnimatorInstance(Containers::Pointer<AbstractStyleAnimator>&&)
     @ref AbstractLayer::assignAnimator(AbstractStyleAnimator&) const,

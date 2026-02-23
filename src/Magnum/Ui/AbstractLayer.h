@@ -380,8 +380,8 @@ CORRADE_ENUMSET_OPERATORS(LayerStates)
 @brief Base for data layers
 @m_since_latest_{extras}
 
-Attaches data to particular nodes in the UI hierarchy, providing rendering and
-event handling functionality. See the
+Attaches data to particular nodes in the UI hierarchy, allowing the nodes to
+be drawn on screen, handle events and supply layout properties. See the
 @ref Ui-AbstractUserInterface-layers "AbstractUserInterface class documentation"
 for introduction and overview of builtin layers. The following sections
 describe behavior common to all layers and provide a guide for implementing
@@ -412,11 +412,11 @@ which layer they come from.
 
 Data lifetime is implicitly tied to a @ref NodeHandle they're attached to, if
 any, so if the node or any of its parents get removed, all data attached to it
-from all layers get removed. It's also possible to remove the data directly
-using @ref remove(), after which the @ref DataHandle (or @ref LayerDataHandle)
-becomes invalid. The @ref remove() function is again @cpp protected @ce as
-concrete layers may want to extend its behavior, such as in case of
-@ref TextLayer::remove() or @ref EventLayer::remove().
+from all layers get removed as well. It's also possible to remove the data
+directly using @ref remove(), after which the @ref DataHandle (or
+@ref LayerDataHandle) becomes invalid. The @ref remove() function is again
+@cpp protected @ce as concrete layers may want to extend its behavior, such as
+is the case of @ref TextLayer::remove() or @ref EventLayer::remove().
 
 @section Ui-AbstractLayer-attachments Node data attachments
 
@@ -910,6 +910,19 @@ for an overview of common editing behavior mapped to keyboard shortcuts.
     description of how key and text input events get propagated. Focus behavior
     is described in @relativeref{AbstractUserInterface,pointerPressEvent()} and
     @relativeref{AbstractUserInterface,focusEvent()}.
+
+@section Ui-AbstractLayer-custom-pre-update Implementing a pre-update step
+
+To be written.
+
+@section Ui-AbstractLayer-custom-layout Supplying layout properties
+
+To be written.
+
+@section Ui-AbstractLayer-custom-compositing Implementing a custom compositing layer
+
+To be written.
+
 */
 class MAGNUM_UI_EXPORT AbstractLayer {
     public:
