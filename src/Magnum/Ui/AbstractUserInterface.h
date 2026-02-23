@@ -79,8 +79,10 @@ enum class UserInterfaceState: UnsignedShort {
      * @ref AbstractUserInterface::clean() was called. Set implicitly if any of
      * the layers have @ref LayerState::NeedsAttachmentUpdate set, after every
      * @ref AbstractUserInterface::removeLayer() call and transitively after
-     * every @ref AbstractUserInterface::attachData() call, is reset next time
-     * @ref AbstractUserInterface::update() is called. Implies
+     * every @ref AbstractLayer::attach() call, after
+     * @ref AbstractLayer::create() with a non-null @ref NodeHandle and after
+     * @ref AbstractLayer::remove() for a data that's attached to a node, is
+     * reset next time @ref AbstractUserInterface::update() is called. Implies
      * @ref UserInterfaceState::NeedsDataUpdate. Implied by
      * @relativeref{UserInterfaceState,NeedsNodeEnabledUpdate},
      * @relativeref{UserInterfaceState,NeedsNodeClipUpdate},
@@ -1689,27 +1691,6 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
         void removeLayer(LayerHandle handle);
 
         /**
-         * @brief Attach data to a node
-         *
-         * A shorthand for extracting a @ref LayerHandle from @p data using
-         * @ref dataHandleLayer(), retrieving the particular layer instance
-         * using @ref layer() and then calling
-         * @ref AbstractLayer::attach(LayerDataHandle, NodeHandle) with a
-         * @ref LayerDataHandle extracted with @ref dataHandleData(). See these
-         * functions for more information. In addition to
-         * @ref AbstractLayer::attach(LayerDataHandle, NodeHandle), this
-         * function checks that @p node is either valid or
-         * @ref NodeHandle::Null.
-         *
-         * Calling this function transitively causes
-         * @ref UserInterfaceState::NeedsDataAttachmentUpdate to be set, which
-         * is a consequence of @ref LayerState::NeedsAttachmentUpdate being set
-         * by @ref AbstractLayer::attach().
-         * @see @ref update(), @ref Ui-AbstractUserInterface-layers
-         */
-        void attachData(NodeHandle node, DataHandle data);
-
-        /**
          * @}
          */
 
@@ -2168,42 +2149,6 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
          * @see @ref clean()
          */
         void removeAnimator(AnimatorHandle handle);
-
-        /**
-         * @brief Attach an animation to a node
-         *
-         * A shorthand for extracting a @ref AnimatorHandle from @p animation
-         * using @ref animationHandleAnimator(), retrieving the particular
-         * animator instance using @ref animator() and then calling
-         * @ref AbstractAnimator::attach(AnimatorDataHandle, NodeHandle) with a
-         * @ref AnimatorDataHandle extracted with @ref animationHandleData().
-         * See these functions for more information. In addition to
-         * @ref AbstractAnimator::attach(AnimatorDataHandle, NodeHandle), this
-         * function checks that @p node is either valid or
-         * @ref NodeHandle::Null.
-         */
-        void attachAnimation(NodeHandle node, AnimationHandle animation);
-
-        /**
-         * @brief Attach an animation to a data
-         *
-         * A shorthand for extracting a @ref AnimatorHandle from @p animation
-         * using @ref animationHandleAnimator(), retrieving the particular
-         * animator instance using @ref animator() and then calling
-         * @ref AbstractAnimator::attach(AnimatorDataHandle, DataHandle) with a
-         * @ref AnimatorDataHandle extracted with @ref animationHandleData().
-         * See these functions for more information. In addition to
-         * @ref AbstractAnimator::attach(AnimatorDataHandle, DataHandle), this
-         * function checks that @p data is either valid with the layer portion
-         * matching @ref AbstractAnimator::layer() of given animator or
-         * @ref DataHandle::Null.
-         *
-         * Note that unlike @ref AbstractAnimator::attach(AnimationHandle, LayerDataHandle),
-         * here's no convenience function that would take a
-         * @ref LayerDataHandle as it wouldn't be able to provide any extra
-         * checks over calling the @ref AbstractAnimator API directly.
-         */
-        void attachAnimation(DataHandle data, AnimationHandle animation);
 
         /**
          * @}

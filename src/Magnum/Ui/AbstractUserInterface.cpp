@@ -1257,20 +1257,6 @@ void AbstractUserInterface::removeLayer(const LayerHandle handle) {
     }
 }
 
-void AbstractUserInterface::attachData(const NodeHandle node, const DataHandle data) {
-    CORRADE_ASSERT(node == NodeHandle::Null || isHandleValid(node),
-        "Ui::AbstractUserInterface::attachData(): invalid handle" << node, );
-    CORRADE_ASSERT(isHandleValid(data),
-        "Ui::AbstractUserInterface::attachData(): invalid handle" << data, );
-    /** @todo this performs the data handle validity check redundantly again,
-        consider using some internal assert-less helper if it proves to be a
-        bottleneck */
-    _state->layers[dataHandleLayerId(data)].used.instance->attach(dataHandleData(data), node);
-
-    /* The AbstractLayer::attach() call then sets an appropriate LayerState,
-       nothing to set here */
-}
-
 std::size_t AbstractUserInterface::layouterCapacity() const {
     return _state->layouters.size();
 }
@@ -1809,46 +1795,6 @@ void AbstractUserInterface::removeAnimator(const AnimatorHandle handle) {
        visual change -- it's just that things that used to change as a result
        of an animation aren't changing anymore, which doesn't need any state
        flag update */
-}
-
-void AbstractUserInterface::attachAnimation(const NodeHandle node, const AnimationHandle animation) {
-    CORRADE_ASSERT(node == NodeHandle::Null || isHandleValid(node),
-        "Ui::AbstractUserInterface::attachAnimation(): invalid handle" << node, );
-    CORRADE_ASSERT(isHandleValid(animation),
-        "Ui::AbstractUserInterface::attachAnimation(): invalid handle" << animation, );
-    State& state = *_state;
-    AbstractAnimator& instance = *state.animators[animationHandleAnimatorId(animation)].used.instance;
-    CORRADE_ASSERT(instance.features() & AnimatorFeature::NodeAttachment,
-        "Ui::AbstractUserInterface::attachAnimation(): node attachment not supported by this animator", );
-    /** @todo this performs the animation handle & feature validity check
-        redundantly again, consider using some internal assert-less helper if
-        it proves to be a bottleneck */
-    instance.attach(animationHandleData(animation), node);
-
-    /* There's no state flag set by AbstractAnimator::attach(), nothing to do
-       here either */
-}
-
-void AbstractUserInterface::attachAnimation(const DataHandle data, const AnimationHandle animation) {
-    CORRADE_ASSERT(data == DataHandle::Null || isHandleValid(data),
-        "Ui::AbstractUserInterface::attachAnimation(): invalid handle" << data, );
-    CORRADE_ASSERT(isHandleValid(animation),
-        "Ui::AbstractUserInterface::attachAnimation(): invalid handle" << animation, );
-    AbstractAnimator& instance = *_state->animators[animationHandleAnimatorId(animation)].used.instance;
-    CORRADE_ASSERT(instance.features() & AnimatorFeature::DataAttachment,
-        "Ui::AbstractUserInterface::attachAnimation(): data attachment not supported by this animator", );
-    /* The instance is enforced to have a layer set in set*AnimatorInstance()
-       already, no need to check that again here */
-    CORRADE_INTERNAL_ASSERT(instance.layer() != LayerHandle::Null);
-    CORRADE_ASSERT(data == DataHandle::Null || instance.layer() == dataHandleLayer(data),
-        "Ui::AbstractUserInterface::attachAnimation(): expected a data handle with" << instance.layer() << "but got" << data, );
-    /** @todo this performs the animation handle, feature & layer validity
-        check redundantly again, consider using some internal assert-less
-        helper if it proves to be a bottleneck */
-    instance.attach(animationHandleData(animation), data);
-
-    /* There's no state flag set by AbstractAnimator::attach(), nothing to do
-       here either */
 }
 
 std::size_t AbstractUserInterface::nodeCapacity() const {

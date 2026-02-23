@@ -124,18 +124,8 @@ struct AbstractUserInterfaceTest: TestSuite::Tester {
     void nodeUniqueLayoutInvalid();
 
     void data();
-    void dataAttach();
-    void dataAttachInvalid();
-
     void layout();
-
     void animation();
-    void animationAttachNode();
-    void animationAttachNodeInvalid();
-    void animationAttachNodeInvalidFeatures();
-    void animationAttachData();
-    void animationAttachDataInvalid();
-    void animationAttachDataInvalidFeatures();
 
     void setSizeToLayers();
     void setSizeToLayouters();
@@ -1232,18 +1222,8 @@ AbstractUserInterfaceTest::AbstractUserInterfaceTest() {
               &AbstractUserInterfaceTest::nodeOrderGetSetInvalid,
 
               &AbstractUserInterfaceTest::data,
-              &AbstractUserInterfaceTest::dataAttach,
-              &AbstractUserInterfaceTest::dataAttachInvalid,
-
               &AbstractUserInterfaceTest::layout,
-
               &AbstractUserInterfaceTest::animation,
-              &AbstractUserInterfaceTest::animationAttachNode,
-              &AbstractUserInterfaceTest::animationAttachNodeInvalid,
-              &AbstractUserInterfaceTest::animationAttachNodeInvalidFeatures,
-              &AbstractUserInterfaceTest::animationAttachData,
-              &AbstractUserInterfaceTest::animationAttachDataInvalid,
-              &AbstractUserInterfaceTest::animationAttachDataInvalidFeatures,
 
               &AbstractUserInterfaceTest::setSizeToLayers,
               &AbstractUserInterfaceTest::setSizeToLayouters,
@@ -5195,52 +5175,6 @@ void AbstractUserInterfaceTest::data() {
     CORRADE_VERIFY(!ui.isHandleValid(dataHandle2));
 }
 
-void AbstractUserInterfaceTest::dataAttach() {
-    /* Event/framebuffer scaling doesn't affect these tests */
-    AbstractUserInterface ui{{100, 100}};
-    NodeHandle node = ui.createNode({}, {});
-
-    struct Layer: AbstractLayer {
-        using AbstractLayer::AbstractLayer;
-        using AbstractLayer::create;
-
-        LayerFeatures doFeatures() const override { return {}; }
-    };
-    Layer& layer = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer()));
-
-    DataHandle handle = layer.create();
-    CORRADE_COMPARE(layer.node(handle), NodeHandle::Null);
-
-    ui.attachData(node, handle);
-    CORRADE_COMPARE(layer.node(handle), node);
-
-    /* The data attachments aren't removed immediately, only during next
-       clean() -- tested in cleanRemoveAttachedData() below */
-    ui.removeNode(node);
-    CORRADE_COMPARE(layer.node(handle), node);
-
-    /* Attaching to a null node should work also, it resets the attachment */
-    ui.attachData(NodeHandle::Null, handle);
-    CORRADE_COMPARE(layer.node(handle), NodeHandle::Null);
-}
-
-void AbstractUserInterfaceTest::dataAttachInvalid() {
-    CORRADE_SKIP_IF_NO_ASSERT();
-
-    AbstractUserInterface ui{{100, 100}};
-    NodeHandle node = ui.createNode({}, {});
-
-    Containers::String out;
-    Error redirectError{&out};
-    ui.attachData(NodeHandle(0x123abcde), DataHandle::Null);
-    ui.attachData(node, DataHandle::Null);
-    ui.attachData(node, DataHandle(0x12abcde34567));
-    CORRADE_COMPARE(out,
-        "Ui::AbstractUserInterface::attachData(): invalid handle Ui::NodeHandle(0xabcde, 0x123)\n"
-        "Ui::AbstractUserInterface::attachData(): invalid handle Ui::DataHandle::Null\n"
-        "Ui::AbstractUserInterface::attachData(): invalid handle Ui::DataHandle({0xab, 0x12}, {0x34567, 0xcde})\n");
-}
-
 void AbstractUserInterfaceTest::layout() {
     /* Event/framebuffer scaling doesn't affect these tests */
     AbstractUserInterface ui{{100, 100}};
@@ -5317,230 +5251,6 @@ void AbstractUserInterfaceTest::animation() {
     ui.removeAnimator(animatorHandle);
     CORRADE_VERIFY(!ui.isHandleValid(animationHandle1));
     CORRADE_VERIFY(!ui.isHandleValid(animationHandle2));
-}
-
-void AbstractUserInterfaceTest::animationAttachNode() {
-    /* Like dataAttach(), just with an animator instead */
-
-    /* Event/framebuffer scaling doesn't affect these tests */
-    AbstractUserInterface ui{{100, 100}};
-    NodeHandle node = ui.createNode({}, {});
-
-    struct Animator: AbstractGenericAnimator {
-        using AbstractGenericAnimator::AbstractGenericAnimator;
-        using AbstractGenericAnimator::create;
-
-        AnimatorFeatures doFeatures() const override {
-            return AnimatorFeature::NodeAttachment;
-        }
-        void doAdvance(Containers::BitArrayView, Containers::BitArrayView, Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&) override {}
-    };
-    Animator& animator = ui.setAnimatorInstance(Containers::pointer<Animator>(ui.createAnimator()));
-
-    AnimationHandle handle = animator.create(0_nsec, 1_nsec);
-    CORRADE_COMPARE(animator.node(handle), NodeHandle::Null);
-
-    ui.attachAnimation(node, handle);
-    CORRADE_COMPARE(animator.node(handle), node);
-
-    /* The animation attachments aren't removed immediately, only during next
-       clean() -- tested in cleanRemoveAttachedData() below */
-    ui.removeNode(node);
-    CORRADE_COMPARE(animator.node(handle), node);
-
-    /* Attaching to a null node should work also, it resets the attachment */
-    ui.attachAnimation(NodeHandle::Null, handle);
-    CORRADE_COMPARE(animator.node(handle), NodeHandle::Null);
-}
-
-void AbstractUserInterfaceTest::animationAttachNodeInvalid() {
-    CORRADE_SKIP_IF_NO_ASSERT();
-
-    AbstractUserInterface ui{{100, 100}};
-    NodeHandle node = ui.createNode({}, {});
-
-    struct Animator: AbstractGenericAnimator {
-        using AbstractGenericAnimator::AbstractGenericAnimator;
-        using AbstractGenericAnimator::create;
-
-        AnimatorFeatures doFeatures() const override {
-            return AnimatorFeature::NodeAttachment;
-        }
-        void doAdvance(Containers::BitArrayView, Containers::BitArrayView, Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&) override {}
-    };
-    Animator& animator = ui.setAnimatorInstance(Containers::pointer<Animator>(ui.createAnimator()));
-
-    AnimationHandle animation = animator.create(0_nsec, 1_nsec);
-
-    Containers::String out;
-    Error redirectError{&out};
-    ui.attachAnimation(NodeHandle(0x123abcde), animation);
-    ui.attachAnimation(node, AnimationHandle::Null);
-    ui.attachAnimation(node, AnimationHandle(0x12abcde34567));
-    CORRADE_COMPARE(out,
-        "Ui::AbstractUserInterface::attachAnimation(): invalid handle Ui::NodeHandle(0xabcde, 0x123)\n"
-        "Ui::AbstractUserInterface::attachAnimation(): invalid handle Ui::AnimationHandle::Null\n"
-        "Ui::AbstractUserInterface::attachAnimation(): invalid handle Ui::AnimationHandle({0xab, 0x12}, {0x34567, 0xcde})\n");
-}
-
-void AbstractUserInterfaceTest::animationAttachNodeInvalidFeatures() {
-    CORRADE_SKIP_IF_NO_ASSERT();
-
-    AbstractUserInterface ui{{100, 100}};
-    AnimatorHandle animatorHandle = ui.createAnimator();
-    NodeHandle node = ui.createNode({}, {});
-
-    struct Animator: AbstractGenericAnimator {
-        using AbstractGenericAnimator::AbstractGenericAnimator;
-        using AbstractGenericAnimator::create;
-
-        AnimatorFeatures doFeatures() const override {
-            /* Not using DataAttachment as it would need also a layer to be
-               set up, etc. Not worth the pain. */
-            return {};
-        }
-        void doAdvance(Containers::BitArrayView, Containers::BitArrayView, Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&) override {}
-    };
-    ui.setAnimatorInstance(Containers::pointer<Animator>(animatorHandle));
-
-    AnimationHandle handle = ui.animator<Animator>(animatorHandle).create(0_nsec, 1_nsec);
-
-    Containers::String out;
-    Error redirectError{&out};
-    ui.attachAnimation(node, handle);
-    CORRADE_COMPARE(out,
-        "Ui::AbstractUserInterface::attachAnimation(): node attachment not supported by this animator\n");
-}
-
-void AbstractUserInterfaceTest::animationAttachData() {
-    /* Event/framebuffer scaling doesn't affect these tests */
-    AbstractUserInterface ui{{100, 100}};
-
-    struct Layer: AbstractLayer {
-        using AbstractLayer::AbstractLayer;
-        using AbstractLayer::create;
-        using AbstractLayer::remove;
-
-        LayerFeatures doFeatures() const override { return {}; }
-    };
-    Layer& layer = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer()));
-
-    DataHandle data = layer.create();
-
-    struct Animator: AbstractGenericAnimator {
-        using AbstractGenericAnimator::AbstractGenericAnimator;
-        using AbstractGenericAnimator::setLayer;
-        using AbstractGenericAnimator::create;
-
-        AnimatorFeatures doFeatures() const override {
-            return AnimatorFeature::DataAttachment;
-        }
-        void doAdvance(Containers::BitArrayView, Containers::BitArrayView, Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&) override {}
-    };
-    Containers::Pointer<Animator> instance{InPlaceInit, ui.createAnimator()};
-    instance->setLayer(layer);
-    Animator& animator = ui.setAnimatorInstance(Utility::move(instance));
-
-    AnimationHandle handle = animator.create(0_nsec, 1_nsec);
-    CORRADE_COMPARE(animator.data(handle), DataHandle::Null);
-
-    ui.attachAnimation(data, handle);
-    CORRADE_COMPARE(animator.data(handle), data);
-
-    /* The animation attachments aren't removed immediately, only during next
-       clean() -- tested in cleanRemoveAttachedData() below */
-    layer.remove(data);
-    CORRADE_COMPARE(animator.data(handle), data);
-
-    /* Attaching to a null data should work also, it resets the attachment */
-    ui.attachAnimation(DataHandle::Null, handle);
-    CORRADE_COMPARE(animator.data(handle), DataHandle::Null);
-
-    /* There's no LayerDataHandle overload as that would not add anything
-       useful (i.e., no extra checks) on top of calling
-       AbstractAnimator::attach() directly */
-}
-
-void AbstractUserInterfaceTest::animationAttachDataInvalid() {
-    CORRADE_SKIP_IF_NO_ASSERT();
-
-    AbstractUserInterface ui{{100, 100}};
-
-    struct Layer: AbstractLayer {
-        using AbstractLayer::AbstractLayer;
-        using AbstractLayer::create;
-
-        LayerFeatures doFeatures() const override { return {}; }
-    };
-    Layer& layer1 = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer()));
-    Layer& layer2 = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer()));
-
-    struct Animator: AbstractGenericAnimator {
-        using AbstractGenericAnimator::AbstractGenericAnimator;
-        using AbstractGenericAnimator::setLayer;
-        using AbstractGenericAnimator::create;
-
-        AnimatorFeatures doFeatures() const override {
-            return AnimatorFeature::DataAttachment;
-        }
-        void doAdvance(Containers::BitArrayView, Containers::BitArrayView, Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&) override {}
-    };
-    Containers::Pointer<Animator> instance{InPlaceInit, ui.createAnimator()};
-    instance->setLayer(layer1);
-    Animator& animator = ui.setAnimatorInstance(Utility::move(instance));
-
-    AnimationHandle animation = animator.create(0_nsec, 1_nsec);
-
-    DataHandle dataLayer1 = layer1.create();
-    DataHandle dataLayer2 = layer2.create();
-
-    Containers::String out;
-    Error redirectError{&out};
-    ui.attachAnimation(dataHandle(layer1.handle(), 0xabcde, 0x123), animation);
-    ui.attachAnimation(dataLayer1, AnimationHandle::Null);
-    ui.attachAnimation(dataLayer1, AnimationHandle(0x12abcde34567));
-    ui.attachAnimation(dataLayer2, animation);
-    CORRADE_COMPARE_AS(out,
-        "Ui::AbstractUserInterface::attachAnimation(): invalid handle Ui::DataHandle({0x0, 0x1}, {0xabcde, 0x123})\n"
-        "Ui::AbstractUserInterface::attachAnimation(): invalid handle Ui::AnimationHandle::Null\n"
-        "Ui::AbstractUserInterface::attachAnimation(): invalid handle Ui::AnimationHandle({0xab, 0x12}, {0x34567, 0xcde})\n"
-        "Ui::AbstractUserInterface::attachAnimation(): expected a data handle with Ui::LayerHandle(0x0, 0x1) but got Ui::DataHandle({0x1, 0x1}, {0x0, 0x1})\n",
-        TestSuite::Compare::String);
-}
-
-void AbstractUserInterfaceTest::animationAttachDataInvalidFeatures() {
-    CORRADE_SKIP_IF_NO_ASSERT();
-
-    AbstractUserInterface ui{{100, 100}};
-
-    struct Layer: AbstractLayer {
-        using AbstractLayer::AbstractLayer;
-        using AbstractLayer::create;
-
-        LayerFeatures doFeatures() const override { return {}; }
-    };
-    Layer& layer = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer()));
-
-    struct Animator: AbstractGenericAnimator {
-        using AbstractGenericAnimator::AbstractGenericAnimator;
-        using AbstractGenericAnimator::create;
-
-        AnimatorFeatures doFeatures() const override {
-            /* Not DataAttachment */
-            return AnimatorFeature::NodeAttachment;
-        }
-        void doAdvance(Containers::BitArrayView, Containers::BitArrayView, Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&) override {}
-    };
-    Animator& animator = ui.setAnimatorInstance(Containers::pointer<Animator>(ui.createAnimator()));
-
-    DataHandle data = layer.create();
-    AnimationHandle handle = animator.create(0_nsec, 1_nsec);
-
-    Containers::String out;
-    Error redirectError{&out};
-    ui.attachAnimation(data, handle);
-    CORRADE_COMPARE(out,
-        "Ui::AbstractUserInterface::attachAnimation(): data attachment not supported by this animator\n");
 }
 
 void AbstractUserInterfaceTest::setSizeToLayers() {
@@ -9532,10 +9242,10 @@ void AbstractUserInterfaceTest::state() {
 
     /* Attaching the data sets flags. Order doesn't matter, as internally it's
        always ordered by the data ID. */
-    ui.attachData(node, dataNode);
-    ui.attachData(nested1, dataNested1);
-    ui.attachData(nested2, dataNested2);
-    ui.attachData(another1, dataAnother1);
+    layer.attach(dataNode, node);
+    layer.attach(dataNested1, nested1);
+    layer.attach(dataNested2, nested2);
+    layer.attach(dataAnother1, another1);
     CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataAttachmentUpdate|data.extraExpectedAttachState);
 
     /* Calling clean() should be a no-op */

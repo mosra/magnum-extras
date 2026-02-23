@@ -889,8 +889,7 @@ class MAGNUM_UI_EXPORT AbstractAnimator {
          * Unlike with e.g. @ref AbstractLayer::attach(), calling this function
          * does *not* cause any @ref AnimatorState to be set.
          * @see @ref isHandleValid(AnimationHandle) const,
-         *      @ref create(Nanoseconds, Nanoseconds, NodeHandle, UnsignedInt, AnimationFlags),
-         *      @ref AbstractUserInterface::attachAnimation(NodeHandle, AnimationHandle)
+         *      @ref create(Nanoseconds, Nanoseconds, NodeHandle, UnsignedInt, AnimationFlags)
          */
         void attach(AnimationHandle animation, NodeHandle node);
 
@@ -966,8 +965,7 @@ class MAGNUM_UI_EXPORT AbstractAnimator {
          * does *not* cause any @ref AnimatorState to be set.
          * @see @ref isHandleValid(AnimationHandle) const,
          *      @ref dataHandleLayer(),
-         *      @ref create(Nanoseconds, Nanoseconds, DataHandle, UnsignedInt, AnimationFlags),
-         *      @ref AbstractUserInterface::attachAnimation(DataHandle, AnimationHandle)
+         *      @ref create(Nanoseconds, Nanoseconds, DataHandle, UnsignedInt, AnimationFlags)
          */
         void attach(AnimationHandle animation, DataHandle data);
 

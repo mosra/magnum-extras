@@ -1066,8 +1066,7 @@ class MAGNUM_UI_EXPORT AbstractLayer {
          * advertises @ref LayerFeature::Composite, and
          * @ref LayerState::NeedsLayoutUpdate if the layer advertises
          * @ref LayerFeature::Layout.
-         * @see @ref isHandleValid(DataHandle) const, @ref create(),
-         *      @ref AbstractUserInterface::attachData()
+         * @see @ref isHandleValid(DataHandle) const, @ref create()
          */
         void attach(DataHandle data, NodeHandle node);
 
