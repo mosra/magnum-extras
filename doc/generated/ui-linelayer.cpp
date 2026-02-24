@@ -67,7 +67,7 @@ struct UiLineLayer: Platform::WindowlessApplication {
 
 constexpr Vector2i ImageSize{512, 256};
 
-/** @todo ffs, duplicated three times, make a batch utility in Magnum */
+/** @todo ffs, duplicated six times, make a batch utility in Magnum */
 Image2D unpremultiply(Image2D image) {
     for(Containers::StridedArrayView1D<Color4ub> row: image.pixels<Color4ub>())
         for(Color4ub& pixel: row)

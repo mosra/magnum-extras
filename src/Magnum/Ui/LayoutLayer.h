@@ -47,8 +47,9 @@ paddings and margins to particular nodes.
 @section Ui-LayoutLayer-setup Setting up a layout layer instance
 
 If you create a @ref UserInterfaceGL instance with a theme and don't exclude
-@ref ThemeFeature::LayoutLayer, an implicit instance is already provided and
-available through @ref UserInterface::layoutLayer().
+@ref ThemeFeature::LayoutLayer, an implicit instance, configured for use with
+builtin widgets, is already provided and available through
+@ref UserInterface::layoutLayer().
 
 Otherwise, the layout layer is constructed from a fresh
 @ref AbstractUserInterface::createLayer() handle along with a count of how many
@@ -58,15 +59,61 @@ to @ref UserInterface::setLayoutLayerInstance():
 
 @snippet Ui.cpp LayoutLayer-setup-implicit
 
-In comparison, if you want to set up a custom layout layer that's independent of
-the one exposed through @ref UserInterface::layoutLayer(), pass the newly
+In comparison, if you want to set up a custom layout layer that's independent
+of the one exposed through @ref UserInterface::layoutLayer(), pass the newly
 created instance to @ref AbstractUserInterface::setLayerInstance() instead:
 
-@snippet Ui.cpp LayoutLayer-setup
+@snippet ui-layoutlayer.cpp setup
 
-Afterwards, with either of the above, assuming
-@ref AbstractUserInterface::draw() is called in an appropriate place, the layer
-is ready to use.
+Afterwards, in order to be able to actually use the layer, a style has to be
+set with @ref setStyle(). As an example, let's create a style with layout
+properties for a menu bar --- the menu bar itself, icons and (textual) menu
+entries inside, i.e. the @cpp 3 @ce styles we specified when constructing the
+layer above. For the purpose of this example let's specify just min sizes,
+paddings and margins for the style, and leave max sizes and aspect ratios at
+their defaults. See the @ref setStyle() function documentation for details
+about each property. Similarly to
+@ref Ui-BaseLayer-style-enums "how styles are commonly used with e.g. BaseLayer",
+we'll have an @cpp enum @ce with them:
+
+@snippet ui-layoutlayer.cpp setup-style
+
+With this, assuming @ref AbstractUserInterface::draw() is called in an
+appropriate place, the layer is ready to be used to feed the layout properties
+to a layouter instance.
+
+@section Ui-LayoutLayer-create Attaching layout properties to nodes
+
+A node is equipped with layout properties by calling @ref create() with desired
+style index and the corresponding @ref NodeHandle. Continuing with the menu bar
+example from above, the following creates a menu with two icons and three
+entries inside:
+
+@snippet ui-layoutlayer.cpp create
+
+The layout properties however don't do anything on their own, they only get
+used when actual layouts are assigned to these nodes. With a @ref SnapLayouter
+set up, we can turn the menu bar into a simple row layout:
+
+@snippet ui-layoutlayer.cpp create-layout
+
+Afterwards, when visualizing node placement, for example with
+@ref Ui-DebugLayer-node-highlight "Ui::DebugLayer node highlight", the layout
+looks like this --- the nodes didn't have explicitly specified sizes except for
+one, yet the icons have appropriate larger square sizes, menu entries are
+wider, mutually separated from each other with specified paddings, and the menu
+bar itself has a bigger padding on the sides and smaller on the top and bottom:
+
+@image html ui-layoutlayer.png width=275px
+
+Unlike layouts, multiple layout properties can be assigned to a particular
+node, and they'll be combined together --- in particular, picking the max of
+specified min sizes, paddings and margins. Note also that not all properties
+may be respected by every layouter and each layouter may implement different
+logic for conflict resolution. Consult particular layouter documentation for
+more information. For example, in case of the @ref GenericLayouter, the layout
+properties are exposed by the API, but it's up to the concrete callback
+implementation to actually use them.
 
 @section Ui-LayoutLayer-debug-integration Debug layer integration
 

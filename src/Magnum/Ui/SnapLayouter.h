@@ -298,8 +298,8 @@ CORRADE_ENUMSET_OPERATORS(SnapLayoutFlags)
 @brief Snap layouter
 @m_since_latest_{extras}
 
-Allows positioning nodes in columns and rows with size propagation along with
-explicitly snapping particular nodes to corners or edges of other nodes.
+Allows explicitly snapping particular nodes to corners or edges of other nodes
+as well as common row and column layouts with size propagation.
 
 @section Ui-SnapLayouter-setup Setting up a snap layouter instance
 
@@ -322,9 +322,178 @@ Afterwards, with either of the above, assuming
 @ref AbstractUserInterface::draw() is called in an appropriate place, the
 layouter is ready to use.
 
-@see @ref Snap, @ref Snaps, @ref UserInterface::snapLayouter(),
-    @ref UserInterface::setSnapLayouterInstance(),
-    @ref ThemeFeature::SnapLayouter
+@section Ui-SnapLayouter-concepts Core concepts
+
+Internally, the layout calculation works with nodes being *snapped* to target
+nodes according to a combination of @ref Snap values. With the target node
+shown as the @m_class{m-label m-info} **blue** rectangle below, snapping to its
+edges and corners can be achieved by combining @ref Snap::Left,
+@relativeref{Snap,Top}, @relativeref{Snap,Right}, @relativeref{Snap,Bottom}
+with @ref Snap::InsideX and @relativeref{Snap,InsideY}. For convenience there
+are various aliases, such as @ref Snap::TopLeft being a combination of
+@relativeref{Snap,Top} and @relativeref{Snap,Left}, or @ref Snap::Inside being
+@relativeref{Snap,InsideX} and @relativeref{Snap,InsideY} together.
+
+@htmlinclude ui-snaplayouter.svg
+
+Additionally, it's possible to make the snapped node fill the whole edge using
+@ref Snap::FillX and @relativeref{Snap,FillY}. The @ref Snap::FillX is just a
+convenience combination of @relativeref{Snap,Left} and @relativeref{Snap,Right},
+and @ref Snap::FillY is @relativeref{Snap,Top} and @relativeref{Snap,Bottom}
+together. @ref Snap::Fill is then @relativeref{Snap,FillX} and
+@relativeref{Snap,FillY} together.
+
+@htmlinclude ui-snaplayouter-fills.svg
+
+The layout by default takes into account margin between nodes and padding
+inside nodes, as supplied for example by the @ref LayoutLayer. In the diagram
+below, the @m_class{m-label m-info} **blue** rectangle has both a padding,
+shown as a @m_class{m-label m-warning} **yellow** outline *outside*, and
+margin, shown as a @m_class{m-label m-success} **green** outline *inside*,
+other nodes have just paddings. Neighboring padding and margins collapse
+together, picking the larger of the two. By specifying @ref Snap::NoPadX,
+@relativeref{Snap,NoPadY} or their combination, @relativeref{Snap,NoPad},
+padding and margin in given direction gets ignored.
+
+@htmlinclude ui-snaplayouter-paddings-margins.svg
+
+In the above diagram the margins and paddings are the same for all sides for
+simplicity, however they can be specified differently for each side. See
+documentation of @ref LayoutLayer for more examples.
+
+@section Ui-SnapLayouter-add Adding and removing layouts
+
+A layout is added by calling @ref add(NodeHandle, Snaps, LayoutHandle, SnapLayoutFlags) "add()"
+with a @ref NodeHandle to which the layout is assigned, @ref Snaps describing
+how to snap the node and a target @ref LayoutHandle to which to snap. The
+target layout has to be either a sibling or a parent layout, and passing
+@ref LayoutHandle::Null allows snapping a root node to the whole UI. In the
+following snippet, a `popup` node with a concrete size is centered inside the
+UI (where empty @ref Snaps mean center), an `accept` child node is placed to
+the bottom right corner of it, and a `reject` to the left next to the `accept`.
+
+@snippet ui-snaplayouter.cpp add
+
+Note that @ref Snap::Inside is used implicitly when snapping a child, which is
+the case both with the root `popup` node that's a child of the UI it's being
+snapped to, and `accept` which is a child of the `popup` it's being snapped to.
+Passing @ref Snap::Inside explicitly in those cases is allowed but unnecessary.
+If an offset is specified in addition to node size, such as @cpp {-10, -10} @ce
+in case of `accept`, it's added to the final layout offset, and affects also
+dependent layouts. When visualizing node placement, for example with
+@ref Ui-DebugLayer-node-highlight "Ui::DebugLayer node highlight", the layout
+looks like this:
+
+@image html ui-snaplayouter-add.png width=205px
+
+Calling @ref add(NodeHandle, LayoutHandle, SnapLayoutFlags) "add()" with just a
+@ref NodeHandle will make it possible to snap other nodes to the given node but
+doesn't cause the node to be repositioned in any way. For example, if we'd want
+to have the `popup` movable by the user and placed to the center of the UI just
+initially, not changing its position from the layout in any way afterwards,
+such as when the window resizes, we'd do this instead:
+
+@snippet Ui.cpp SnapLayouter-add-initial-placement
+
+Layouts from this layouter are *unique*, meaning a particular node can have
+only at most one layout from given @ref SnapLayouter instance assigned. This in
+turn means you don't strictly need to remember a @ref LayoutHandle in order to
+use it later, but can retrieve it back from its @ref NodeHandle using
+@ref AbstractUserInterface::nodeUniqueLayout():
+
+@snippet Ui.cpp SnapLayouter-query-node-unique-layout
+
+Layouts can be subsequently removed either as a consequence of removing the
+node they're assigned to, or by calling @ref remove(). Note that, at the
+moment, only layouts that don't have other layouts snapped to them can be
+removed --- i.e., while the `reject` layout or its node can be removed,
+attempting to remove the `accept` layout is an error because `reject` would
+then have nowhere to snap to.
+
+@section Ui-SnapLayouter-add-implicit Implicitly snapped layouts
+
+Explicitly specifying how and where to snap for each layout may get tedious,
+especially when forming long rows or columns. Insertion or removal of a layout
+in the middle of the sequence also isn't possible. An alternative approach in
+such cases is specifying an implicit child snap using @ref setChildSnap(), and
+then calling @ref add(NodeHandle, LayoutHandle, SnapLayoutFlags) "add()" for
+child nodes without specifying anything else:
+
+@snippet ui-snaplayouter.cpp implicit-snap
+
+In the above snippet, a `contents` layout is explicitly snapped to the center
+of the popup, and inside a `title` and `details` are placed. The child snap for
+those is configured so that subsequent children will be added to the bottom of
+the previous and fill the parent horizontally. The result is the following:
+
+@image html ui-snaplayouter-implicit-snap.png width=205px
+
+By default new child layouts are appended after all previous, insertion in the
+middle can be done by passing a @ref LayoutHandle to the
+@ref add(NodeHandle, LayoutHandle, SnapLayoutFlags) "add()" function, saying
+*before* which existing layout to insert the new one. For example, inserting a
+`subtitle` between the `title` and `details`, which would then look like this:
+
+@snippet ui-snaplayouter.cpp implicit-snap-insert
+
+@image html ui-snaplayouter-implicit-snap-insert.png width=205px
+
+Unlike with explicitly snapped layouts, removal of implicitly snapped layouts
+simply causes given layout to be simply removed from the sequence, with
+following layouts shifting into its place.
+
+@section Ui-SnapLayouter-size-propagation Size propagation
+
+You might have noticed that the `contentsNode` above didn't have any size
+specified. Its size was calculated automatically based on size of its
+(implicitly snapped) children, resulting in a size of @cpp {300, 90} @ce. The
+same works for explicitly snapped children, however at the moment only the
+direct children are counted, nodes snapped to them as neighbors are not. The
+resulting size is always a maximum of the hardcoded node size and size of the
+contents including also any margin and padding as well as min sizes, coming for
+example from the @ref LayoutLayer.
+
+If size propagation is undesirable, for example when the contents should be
+clipped instead, pass @ref SnapLayoutFlag::IgnoreOverflowX,
+@relativeref{SnapLayoutFlag,IgnoreOverflowY} or the combined
+@relativeref{SnapLayoutFlag,IgnoreOverflow}. This will cause the layout to
+ignore size of children in given direction, leaving the node at its size given
+originally.
+
+@section Ui-SnapLayouter-margin-propagation Margin propagation
+
+With more complex UIs, the layouts commonly start nesting within each other,
+such as a column layout having row layouts inside each column:
+
+@snippet ui-snaplayouter.cpp nested-layouts
+
+However, if the actual nodes within then define their own margins, as shown
+here by attaching a @ref LayoutLayer data with a margin to each, the margin
+will collapse as expected between neighboring nodes, but not across layouts:
+
+@snippet ui-snaplayouter.cpp nested-layouts-margins
+
+@image html ui-snaplayouter-nested-layouts.png width=255px
+
+While that may be desirable in certain cases, such as when either row would be
+actually some visual frame around its items, often you may want to have the
+items evenly spaced. Applying @ref SnapLayoutFlag::PropagateMargin (or again
+the direction-specific @relativeref{SnapLayoutFlag,PropagateMarginX} /
+@relativeref{SnapLayoutFlag,PropagateMarginY} variants) to both `first` and
+`second` makes the total margin of its children propagated outside --- note how
+the respective visualization rectangles shrink to tightly wrap the contents
+---, where it gets collapsed between neighboring layouts:
+
+@snippet ui-snaplayouter.cpp nested-layouts-margins-propagate
+
+@image html ui-snaplayouter-nested-layouts-propagated.png width=255px
+
+@section Ui-SnapLayouter-supported-properties Supported layout properties
+
+At the moment, min size, padding and margin layout properties coming from
+@ref LayoutLayer and other layers exposing @ref LayerFeature::Layout are taken
+into account. The implementation currently doesn't take max size or aspect
+ratio into account in any way.
 */
 class MAGNUM_UI_EXPORT SnapLayouter: public AbstractLayouter {
     public:

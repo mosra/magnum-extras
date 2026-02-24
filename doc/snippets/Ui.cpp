@@ -2451,6 +2451,29 @@ static_cast<void>(layouter);
 }
 
 {
+Ui::AbstractUserInterface ui{{100, 100}};
+Ui::SnapLayouter layouter{Ui::layouterHandle(0, 1)};
+Ui::NodeHandle popupNode{};
+/* [SnapLayouter-add-initial-placement] */
+ui.setNodeOffset(popupNode, (ui.size() - ui.nodeSize(popupNode))*0.5f);
+
+Ui::LayoutHandle popup = layouter.add(popupNode);
+/* [SnapLayouter-add-initial-placement] */
+static_cast<void>(popup);
+}
+
+{
+Ui::AbstractUserInterface ui{{100, 100}};
+Ui::SnapLayouter layouter{Ui::layouterHandle(0, 1)};
+Ui::NodeHandle popupNode{};
+
+/* [SnapLayouter-query-node-unique-layout] */
+Ui::LayouterDataHandle popup = ui.nodeUniqueLayout(popupNode, layouter);
+/* [SnapLayouter-query-node-unique-layout] */
+static_cast<void>(popup);
+}
+
+{
 struct UserInterface: Ui::UserInterface {
     explicit UserInterface(NoCreateT): Ui::UserInterface{NoCreate} {}
 } ui{NoCreate};

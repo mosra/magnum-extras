@@ -163,7 +163,7 @@ Color3 ColorLayer::color(Ui::LayerDataHandle data) const {
     return layerDataHandleId(data) == 7 ? 0x3bd267_rgbf : 0x2f83cc_rgbf;
 }
 
-/** @todo ffs, duplicated three times, make a batch utility in Magnum */
+/** @todo ffs, duplicated six times, make a batch utility in Magnum */
 Image2D unpremultiply(Image2D image) {
     for(Containers::StridedArrayView1D<Color4ub> row: image.pixels<Color4ub>())
         for(Color4ub& pixel: row)

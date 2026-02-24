@@ -31,7 +31,7 @@ project(MagnumExtrasDocumentationImageGenerator CXX)
 
 set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/../../modules/" ${CMAKE_MODULE_PATH})
 
-find_package(Magnum REQUIRED GL MeshTools Primitives Trade)
+find_package(Magnum REQUIRED DebugTools GL MeshTools Primitives Trade)
 find_package(MagnumExtras REQUIRED Ui)
 
 set_directory_properties(PROPERTIES CORRADE_USE_PEDANTIC_FLAGS ON)
@@ -62,11 +62,27 @@ target_link_libraries(ui-debuglayer PRIVATE
     Magnum::WindowlessApplication
     MagnumExtras::Ui)
 
+add_executable(ui-layoutlayer ui-layoutlayer.cpp)
+target_link_libraries(ui-layoutlayer PRIVATE
+    Magnum::DebugTools
+    Magnum::GL
+    Magnum::Trade
+    Magnum::WindowlessApplication
+    MagnumExtras::Ui)
+
 add_executable(ui-linelayer ui-linelayer.cpp)
 target_link_libraries(ui-linelayer PRIVATE
     Magnum::GL
     Magnum::MeshTools
     Magnum::Primitives
+    Magnum::Trade
+    Magnum::WindowlessApplication
+    MagnumExtras::Ui)
+
+add_executable(ui-snaplayouter ui-snaplayouter.cpp)
+target_link_libraries(ui-snaplayouter PRIVATE
+    Magnum::DebugTools
+    Magnum::GL
     Magnum::Trade
     Magnum::WindowlessApplication
     MagnumExtras::Ui)
