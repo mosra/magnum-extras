@@ -48,18 +48,28 @@ endpoints, optionally modifying node flags and allowing to automatically remove
 the node once the animation stops. If you need to execute arbitrary extra code
 during a node animation, use @ref GenericNodeAnimator.
 
-@section Ui-NodeAnimator-setup Setting up an animator instance
+@section Ui-NodeAnimator-setup Setting up a node animator instance
 
-The animator doesn't have any shared state or configuration, so it's just about
-constructing it from a fresh @ref AbstractUserInterface::createAnimator()
-handle and passing it to @relativeref{AbstractUserInterface,setAnimatorInstance(Containers::Pointer<AbstractNodeAnimator>&&)}
-After that, assuming @ref AbstractUserInterface::advanceAnimations() is called
-in an appropriate place, it's ready to use.
+If you create a @ref UserInterfaceGL with a theme containing
+@ref McssDarkTheme::Feature::Animations or equivalent and don't exclude
+@ref ThemeFeature::NodeAnimations, an implicit instance of the class,
+configured for use with builtin widgets, is already provided and available
+through @ref UserInterface::nodeAnimator(). Otherwise, the node animator
+doesn't have any shared state or configuration, so it's just about constructing
+it from a fresh @ref AbstractUserInterface::createAnimator() handle and passing
+it to @ref UserInterface::setNodeAnimatorInstance():
+
+@snippet Ui.cpp NodeAnimator-setup-implicit
+
+In comparison, if you want to set up a custom node animator that's independent
+of the one exposed through @ref UserInterface::nodeAnimator(), pass the newly
+created instance to @ref AbstractUserInterface::setAnimatorInstance(Containers::Pointer<AbstractNodeAnimator>&&) "AbstractUserInterface::setAnimatorInstance()"
+instead:
 
 @snippet Ui.cpp NodeAnimator-setup
 
-Unlike other builtin animators, the default @ref UserInterface implementation
-doesn't implicitly provide a @ref NodeAnimator instance.
+After that, assuming @ref AbstractUserInterface::advanceAnimations() is called
+in an appropriate place, it's ready to use.
 
 @section Ui-NodeAnimator-create Creating animations
 

@@ -1598,6 +1598,15 @@ lineLayer.createStrip(2, position, {}, point);
 }
 
 {
+struct UserInterface: Ui::UserInterface {
+    explicit UserInterface(NoCreateT): Ui::UserInterface{NoCreate} {}
+} ui{NoCreate};
+/* [NodeAnimator-setup-implicit] */
+ui.setNodeAnimatorInstance(Containers::pointer<Ui::NodeAnimator>(ui.createAnimator()));
+/* [NodeAnimator-setup-implicit] */
+}
+
+{
 Ui::AbstractUserInterface ui{{100, 100}};
 /* [NodeAnimator-setup] */
 Ui::NodeAnimator& animator = ui.setAnimatorInstance(
