@@ -371,49 +371,49 @@ shared.setStyleAnimation<StyleIndex,
    main2() is then outside of it to avoid "unused function" warnings */
 namespace G { namespace {
 /* [BaseLayer-style-transitions] */
-enum class BaseLayerStyle {
+enum class BaseStyle {
     Button,
     ButtonHovered,
     ButtonPressed,
     ButtonPressedHovered,
     Label
 };
-BaseLayerStyle toInactiveOut(BaseLayerStyle style) {
+BaseStyle toInactiveOut(BaseStyle style) {
     switch(style) {
-        case BaseLayerStyle::ButtonHovered:
-        case BaseLayerStyle::ButtonPressed:
-        case BaseLayerStyle::ButtonPressedHovered:
-            return BaseLayerStyle::Button;
+        case BaseStyle::ButtonHovered:
+        case BaseStyle::ButtonPressed:
+        case BaseStyle::ButtonPressedHovered:
+            return BaseStyle::Button;
         default:
             return style;
     }
 }
-BaseLayerStyle toInactiveOver(BaseLayerStyle style) {
+BaseStyle toInactiveOver(BaseStyle style) {
     switch(style) {
-        case BaseLayerStyle::Button:
-        case BaseLayerStyle::ButtonPressed:
-        case BaseLayerStyle::ButtonPressedHovered:
-            return BaseLayerStyle::ButtonHovered;
+        case BaseStyle::Button:
+        case BaseStyle::ButtonPressed:
+        case BaseStyle::ButtonPressedHovered:
+            return BaseStyle::ButtonHovered;
         default:
             return style;
     }
 }
-BaseLayerStyle toPressedOut(BaseLayerStyle style) {
+BaseStyle toPressedOut(BaseStyle style) {
     switch(style) {
-        case BaseLayerStyle::Button:
-        case BaseLayerStyle::ButtonHovered:
-        case BaseLayerStyle::ButtonPressedHovered:
-            return BaseLayerStyle::ButtonPressed;
+        case BaseStyle::Button:
+        case BaseStyle::ButtonHovered:
+        case BaseStyle::ButtonPressedHovered:
+            return BaseStyle::ButtonPressed;
         default:
             return style;
     }
 }
-BaseLayerStyle toPressedOver(BaseLayerStyle style) {
+BaseStyle toPressedOver(BaseStyle style) {
     switch(style) {
-        case BaseLayerStyle::Button:
-        case BaseLayerStyle::ButtonHovered:
-        case BaseLayerStyle::ButtonPressed:
-            return BaseLayerStyle::ButtonPressedHovered;
+        case BaseStyle::Button:
+        case BaseStyle::ButtonHovered:
+        case BaseStyle::ButtonPressed:
+            return BaseStyle::ButtonPressedHovered;
         default:
             return style;
     }
@@ -424,7 +424,7 @@ DOXYGEN_ELLIPSIS(} void main(); void main() { struct Shared: Ui::BaseLayer::Shar
     void doSetStyle(const Ui::BaseLayerCommonStyleUniform&, Containers::ArrayView<const Ui::BaseLayerStyleUniform>) override {}
 } baseLayerShared;)
 
-baseLayerShared.setStyleTransition<BaseLayerStyle,
+baseLayerShared.setStyleTransition<BaseStyle,
     toInactiveOut,
     toInactiveOver,
     nullptr,
@@ -438,27 +438,27 @@ baseLayerShared.setStyleTransition<BaseLayerStyle,
 namespace {
 /* [BaseLayer-style-transitions-deduplicated] */
 struct Transition {
-    BaseLayerStyle inactiveOut;
-    BaseLayerStyle inactiveOver;
-    BaseLayerStyle pressedOut;
-    BaseLayerStyle pressedOver;
+    BaseStyle inactiveOut;
+    BaseStyle inactiveOver;
+    BaseStyle pressedOut;
+    BaseStyle pressedOver;
 };
-Transition transition(BaseLayerStyle style) {
+Transition transition(BaseStyle style) {
     /* In C++20 you can further simplify with `using enum BaseLayerStyle` */
     switch(style) {
-        case BaseLayerStyle::Button:
-        case BaseLayerStyle::ButtonHovered:
-        case BaseLayerStyle::ButtonPressed:
-        case BaseLayerStyle::ButtonPressedHovered:
-            return {BaseLayerStyle::Button,
-                    BaseLayerStyle::ButtonHovered,
-                    BaseLayerStyle::ButtonPressed,
-                    BaseLayerStyle::ButtonPressedHovered};
+        case BaseStyle::Button:
+        case BaseStyle::ButtonHovered:
+        case BaseStyle::ButtonPressed:
+        case BaseStyle::ButtonPressedHovered:
+            return {BaseStyle::Button,
+                    BaseStyle::ButtonHovered,
+                    BaseStyle::ButtonPressed,
+                    BaseStyle::ButtonPressedHovered};
         default:
             return {style, style, style, style};
     }
 }
-template<BaseLayerStyle Transition::*member> BaseLayerStyle to(BaseLayerStyle style) {
+template<BaseStyle Transition::*member> BaseStyle to(BaseStyle style) {
     return transition(style).*member;
 }
 
@@ -467,7 +467,7 @@ DOXYGEN_ELLIPSIS(} void main2(); void main2() { struct Shared: Ui::BaseLayer::Sh
     void doSetStyle(const Ui::BaseLayerCommonStyleUniform&, Containers::ArrayView<const Ui::BaseLayerStyleUniform>) override {}
 } baseLayerShared;)
 
-baseLayerShared.setStyleTransition<BaseLayerStyle,
+baseLayerShared.setStyleTransition<BaseStyle,
     to<&Transition::inactiveOut>,
     to<&Transition::inactiveOver>,
     nullptr,
@@ -482,7 +482,7 @@ namespace {
 /* [BaseLayer-style-animations] */
 Ui::AnimationHandle styleAnimationOnEnterFocusPress(
     Ui::BaseLayerStyleAnimator& animator,
-    BaseLayerStyle sourceStyle, BaseLayerStyle targetStyle,
+    BaseStyle sourceStyle, BaseStyle targetStyle,
     Nanoseconds now, Ui::LayerDataHandle data, Ui::AnimatorDataHandle)
 {
     return animator.create(sourceStyle, targetStyle,
@@ -491,7 +491,7 @@ Ui::AnimationHandle styleAnimationOnEnterFocusPress(
 
 Ui::AnimationHandle styleAnimationOnLeaveBlurRelease(
     Ui::BaseLayerStyleAnimator& animator,
-    BaseLayerStyle sourceStyle, BaseLayerStyle targetStyle,
+    BaseStyle sourceStyle, BaseStyle targetStyle,
     Nanoseconds now, Ui::LayerDataHandle data, Ui::AnimatorDataHandle)
 {
     return animator.create(sourceStyle, targetStyle,
@@ -503,7 +503,7 @@ DOXYGEN_ELLIPSIS(} void main3(); void main3() { struct Shared: Ui::BaseLayer::Sh
     void doSetStyle(const Ui::BaseLayerCommonStyleUniform&, Containers::ArrayView<const Ui::BaseLayerStyleUniform>) override {}
 } baseLayerShared;)
 
-baseLayerShared.setStyleAnimation<BaseLayerStyle,
+baseLayerShared.setStyleAnimation<BaseStyle,
     styleAnimationOnEnterFocusPress,
     styleAnimationOnLeaveBlurRelease,
     nullptr>();
@@ -524,7 +524,7 @@ baseLayer
 
 namespace {
 /* [TextLayer-style-animations] */
-enum class TextLayerStyle {
+enum class TextStyle {
     Input,
     InputFocused,
     InputFocusedBlink,
@@ -532,17 +532,16 @@ enum class TextLayerStyle {
 };
 
 Ui::AnimationHandle styleAnimationPersistent(
-    Ui::TextLayerStyleAnimator& animator,
-    TextLayerStyle style, Nanoseconds now, Ui::LayerDataHandle data,
-    Ui::AnimatorDataHandle currentAnimation)
+    Ui::TextLayerStyleAnimator& animator, TextStyle style, Nanoseconds now,
+    Ui::LayerDataHandle data, Ui::AnimatorDataHandle currentAnimation)
 {
-    if(style == TextLayerStyle::InputFocused) {
+    if(style == TextStyle::InputFocused) {
         /* If there's a current animation, the function is required to remove
            it in order to create a different one */
         if(currentAnimation != Ui::AnimatorDataHandle::Null)
             animator.remove(currentAnimation);
         return animator.create(
-            TextLayerStyle::InputFocusedBlink, TextLayerStyle::InputFocused,
+            TextStyle::InputFocusedBlink, TextStyle::InputFocused,
             Animation::Easing::step, now, 0.5_sec, data, 0,
             Ui::AnimationFlag::ReverseEveryOther);
     }
@@ -562,7 +561,7 @@ struct Shared: Ui::TextLayer::Shared {
     void doSetEditingStyle(const Ui::TextLayerCommonEditingStyleUniform&, Containers::ArrayView<const Ui::TextLayerEditingStyleUniform>) override {}
 } textLayerShared{glyphCache};)
 
-textLayerShared.setStyleAnimation<TextLayerStyle,
+textLayerShared.setStyleAnimation<TextStyle,
     nullptr,
     nullptr,
     styleAnimationPersistent>();
@@ -971,17 +970,17 @@ baseLayer.create(1, blueBox);
 
 {
 /* [BaseLayer-style-enums] */
-enum class BaseLayerStyle {
+enum class BaseStyle {
     Default,
     Blue,
     Outline,
     Count
 };
 
-Ui::BaseLayerStyleUniform uniforms[Int(BaseLayerStyle::Count)];
-uniforms[Int(BaseLayerStyle::Blue)]
+Ui::BaseLayerStyleUniform uniforms[Int(BaseStyle::Count)];
+uniforms[Int(BaseStyle::Blue)]
     .setColor(0x2f83cc_rgbf);
-uniforms[Int(BaseLayerStyle::Outline)]
+uniforms[Int(BaseStyle::Outline)]
     .setColor(0x00000000_rgbaf)
     .setOutlineColor(0xdcdcdc_rgbf)
     .setOutlineWidth(2.0f);
@@ -989,7 +988,7 @@ baseLayerShared.setStyle(Ui::BaseLayerCommonStyleUniform{}, uniforms, {});
 
 DOXYGEN_ELLIPSIS(Ui::NodeHandle blueBox{};)
 
-baseLayer.create(BaseLayerStyle::Blue, blueBox);
+baseLayer.create(BaseStyle::Blue, blueBox);
 /* [BaseLayer-style-enums] */
 }
 
@@ -1386,7 +1385,7 @@ baseLayer.setDefaultStyleAnimator(&animator);
 
 Nanoseconds now;
 /* [BaseLayerStyleAnimator-create] */
-enum class BaseLayerStyle {
+enum class BaseStyle {
     DOXYGEN_ELLIPSIS()
     Button,
     ButtonHovered,
@@ -1395,7 +1394,7 @@ enum class BaseLayerStyle {
 
 Ui::DataHandle buttonBackground = DOXYGEN_ELLIPSIS({});
 
-animator.create(BaseLayerStyle::ButtonHovered, BaseLayerStyle::Button,
+animator.create(BaseStyle::ButtonHovered, BaseStyle::Button,
     Animation::Easing::cubicOut, now, 0.5_sec, buttonBackground);
 /* [BaseLayerStyleAnimator-create] */
 }
@@ -2260,7 +2259,7 @@ textLayer.setDefaultStyleAnimator(&animator);
 
 Nanoseconds now;
 /* [TextLayerStyleAnimator-create] */
-enum class TextLayerStyle {
+enum class TextStyle {
     DOXYGEN_ELLIPSIS()
     Button,
     ButtonHovered,
@@ -2269,7 +2268,7 @@ enum class TextLayerStyle {
 
 Ui::DataHandle buttonText = DOXYGEN_ELLIPSIS({});
 
-animator.create(TextLayerStyle::ButtonHovered, TextLayerStyle::Button,
+animator.create(TextStyle::ButtonHovered, TextStyle::Button,
     Animation::Easing::cubicOut, now, 0.5_sec, buttonText);
 /* [TextLayerStyleAnimator-create] */
 }
