@@ -370,11 +370,6 @@ void DebugLayerGLTest::drawOrder() {
     NodeHandle childBelowBlue = ui.createNode(topLevelOnTopGreen, {12.0f, 4.0f}, {16.0f, 16.0f});
     NodeHandle childAboveRed = ui.createNode(childBelowBlue, {-8.0f, 8.0f}, {16.0f, 16.0f});
 
-    /** @todo due to the fract() usage, the last element is never picked
-        exactly, so we use an extra node and an extra empty colormap entry to
-        have an exact pick for the other entries */
-    ui.createNode({}, {});
-
     /* Color maps. For sequential node order it's the colors from the above
        node handle names. */
     Color3ub colorMapSequentialNodeOrder[]{
@@ -383,10 +378,6 @@ void DebugLayerGLTest::drawOrder() {
         0xff00ff_rgb, /* 2, topLevelHiddenBlue, unused */
         0x0000ff_rgb, /* 3, childBelowBlue */
         0xff0000_rgb, /* 4, childAboveRed */
-        /** @todo due to the fract() usage, the last element is never picked
-            exactly, so we use an extra node and an extra empty colormap entry
-            to have an exact pick for the other entries */
-        {},           /* 5, unused */
     };
     /* In the other case they're shuffled, matching the numeric order in which
        the nodes were removed. */
@@ -396,10 +387,6 @@ void DebugLayerGLTest::drawOrder() {
         0xff00ff_rgb, /* 2, topLevelHiddenBlue, unused */
         0x00ff00_rgb, /* 3, topLevelOnTopGreen */
         0xff0000_rgb, /* 4, childAboveRed */
-        /** @todo due to the fract() usage, the last element is never picked
-            exactly, so we use an extra node and an extra empty colormap entry
-            to have an exact pick for the other entries */
-        {},           /* 5, unused */
     };
     debugLayer.setNodeHighlightColorMap(data.sequentialNodeOrder ?
         colorMapSequentialNodeOrder : colorMap, 1.0f);

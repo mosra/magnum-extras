@@ -1579,21 +1579,30 @@ void DebugLayer::doUpdate(const LayerStates states, const Containers::StridedArr
         if(node != state.currentInspectedNode && !state.currentHighlightedNodes[nodeId])
             continue;
 
-        /* Use the node highlight color if it's the currently highlighted node.
-           Otherwise sample the RGB colormap and premultiply the result with
-           the common alpha. */
-        const Color4 color = node == state.currentInspectedNode ?
-            state.nodeInspectColor :
-            /** @todo might want to switch to sampleSrgb() once everything is
-                sRGB-ready */
-            /** @todo the fract() will never pick exactly the last colormap
-                item because for 1.0f it'll wrap back to 0.0f; likely not much
-                of a problem in practice but it's there */
-            Color4{
+        /* Use the node highlight color if it's the currently highlighted
+           node */
+        Color4 color{NoInit};
+        if(node == state.currentInspectedNode) {
+            color = state.nodeInspectColor;
+
+        /* Otherwise sample the RGB colormap and premultiply the result with
+           the common alpha */
+        } else {
+            const Float sample = nodeId*state.nodeHighlightColorMapScale/(state.nodes.size() - 1);
+            color = Color4{
+                /** @todo might want to switch to sampleSrgb() once everything
+                    is sRGB-ready */
                 TextureTools::sampleLinear(state.nodeHighlightColorMap,
-                    Math::fract(nodeId*state.nodeHighlightColorMapScale/(state.nodes.size() - 1))),
+                    /* Use the fraction only if the sample is actually outside
+                       of the [0, 1] range, as otherwise sampling at exactly
+                       1.0 (which happens with the default scale of 1 and the
+                       highest known node ID) would effectively wrap around to
+                       0.0, producing the same color for both the first and
+                       last node. */
+                    sample > 1.0f ? Math::fract(sample) : sample),
                 state.nodeHighlightColorMapAlpha
             }.premultiplied();
+        }
 
         const Vector2 min = nodeOffsets[nodeId];
         const Vector2 max = min + nodeSizes[nodeId];
