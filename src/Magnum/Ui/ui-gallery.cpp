@@ -200,39 +200,39 @@ UiGallery::UiGallery(const Arguments& arguments): Platform::Application{argument
         "Buttons", Text::Alignment::MiddleLeft, Ui::LabelStyle::Dim);
     {
         Ui::SnapLayoutRow row = root.child();
-        Ui::button(row.child({80, 0.0f}),
+        Ui::button(row.child(),
             "Default", Ui::ButtonStyle::Default);
-        Ui::button(row.child({80, 0.0f}),
+        Ui::button(row.child(),
             "Primary", Ui::ButtonStyle::Primary);
-        Ui::button(row.child({96, 0.0f}),
+        Ui::button(row.child(),
             Ui::Icon::Yes, "Success", Ui::ButtonStyle::Success);
-        Ui::button(row.child({96, 0.0f}),
+        Ui::button(row.child(),
             Ui::Icon::No, "Warning", Ui::ButtonStyle::Warning);
-        Ui::button(row.child({96, 0.0f}),
+        Ui::button(row.child(),
             Ui::Icon::No, "Danger", Ui::ButtonStyle::Danger);
-        Ui::button(row.child({80, 0.0f}),
+        Ui::button(row.child(),
             "Info", Ui::ButtonStyle::Info);
-        Ui::button(row.child({80, 0.0f}),
+        Ui::button(row.child(),
             "Dim", Ui::ButtonStyle::Dim);
-        Ui::button(row.child({80, 0.0f}),
+        Ui::button(row.child(),
             Ui::Icon::Yes, "Flat", Ui::ButtonStyle::Flat);
     } {
         Ui::SnapLayoutRow row = root.child({}, Ui::NodeFlag::Disabled);
-        Ui::button(row.child({80, 0.0f}),
+        Ui::button(row.child(),
             "Default", Ui::ButtonStyle::Default);
-        Ui::button(row.child({80, 0.0f}),
+        Ui::button(row.child(),
             "Primary", Ui::ButtonStyle::Primary);
-        Ui::button(row.child({96, 0.0f}),
+        Ui::button(row.child(),
             Ui::Icon::Yes, "Success", Ui::ButtonStyle::Success);
-        Ui::button(row.child({96, 0.0f}),
+        Ui::button(row.child(),
             Ui::Icon::No, "Warning", Ui::ButtonStyle::Warning);
-        Ui::button(row.child({96, 0.0f}),
+        Ui::button(row.child(),
             Ui::Icon::No, "Danger", Ui::ButtonStyle::Danger);
-        Ui::button(row.child({80, 0.0f}),
+        Ui::button(row.child(),
             "Info", Ui::ButtonStyle::Info);
-        Ui::button(row.child({80, 0.0f}),
+        Ui::button(row.child(),
             "Dim", Ui::ButtonStyle::Dim);
-        Ui::button(row.child({80, 0.0f}),
+        Ui::button(row.child(),
             Ui::Icon::Yes, "Flat", Ui::ButtonStyle::Flat);
     }
 
@@ -241,35 +241,35 @@ UiGallery::UiGallery(const Arguments& arguments): Platform::Application{argument
         "Labels", Text::Alignment::MiddleLeft, Ui::LabelStyle::Dim);
     {
         Ui::SnapLayoutRow row = root.child();
-        Ui::label(row.child({72.0f, 0.0f}),
+        Ui::label(row.child(),
             "Default", Ui::LabelStyle::Default);
-        Ui::label(row.child({72.0f, 0.0f}),
+        Ui::label(row.child(),
             "Primary", Ui::LabelStyle::Primary);
-        Ui::label(row.child({72.0f, 0.0f}),
+        Ui::label(row.child(),
             "Success", Ui::LabelStyle::Success);
-        Ui::label(row.child({72.0f, 0.0f}),
+        Ui::label(row.child(),
             "Warning", Ui::LabelStyle::Warning);
-        Ui::label(row.child({72.0f, 0.0f}),
+        Ui::label(row.child(),
             "Danger", Ui::LabelStyle::Danger);
-        Ui::label(row.child({72.0f, 0.0f}),
+        Ui::label(row.child(),
             "Info", Ui::LabelStyle::Info);
-        Ui::label(row.child({72.0f, 0.0f}),
+        Ui::label(row.child(),
             "Dim", Ui::LabelStyle::Dim);
     } {
         Ui::SnapLayoutRow row = root.child({}, Ui::NodeFlag::Disabled);
-        Ui::label(row.child({72.0f, 0.0f}),
+        Ui::label(row.child(),
             "Default", Ui::LabelStyle::Default);
-        Ui::label(row.child({72.0f, 0.0f}),
+        Ui::label(row.child(),
             "Primary", Ui::LabelStyle::Primary);
-        Ui::label(row.child({72.0f, 0.0f}),
+        Ui::label(row.child(),
             "Success", Ui::LabelStyle::Success);
-        Ui::label(row.child({72.0f, 0.0f}),
+        Ui::label(row.child(),
             "Warning", Ui::LabelStyle::Warning);
-        Ui::label(row.child({72.0f, 0.0f}),
+        Ui::label(row.child(),
             "Danger", Ui::LabelStyle::Danger);
-        Ui::label(row.child({72.0f, 0.0f}),
+        Ui::label(row.child(),
             "Info", Ui::LabelStyle::Info);
-        Ui::label(row.child({72.0f, 0.0f}),
+        Ui::label(row.child(),
             "Dim", Ui::LabelStyle::Dim);
     }
 
