@@ -299,6 +299,9 @@ DataHandle AbstractLayer::create(const NodeHandle node) {
                        LayerState::NeedsNodeOffsetSizeUpdate;
         if(features >= LayerFeature::Composite)
             state.state |= LayerState::NeedsCompositeOffsetSizeUpdate;
+        /** @todo might be useful to have a per-data flag that describes
+            whether given data actually contribute to the layout, and set that
+            only for those */
         if(features >= LayerFeature::Layout)
             state.state |= LayerState::NeedsLayoutUpdate;
     }
@@ -372,6 +375,9 @@ void AbstractLayer::removeInternal(const UnsignedInt id) {
         const LayerFeatures features = this->features();
         if(features >= LayerFeature::Composite)
             state.state |= LayerState::NeedsCompositeOffsetSizeUpdate;
+        /** @todo might be useful to have a per-data flag that describes
+            whether given data actually contribute to the layout, and set that
+            only for those */
         if(features >= LayerFeature::Layout)
             state.state |= LayerState::NeedsLayoutUpdate;
     }
@@ -460,6 +466,9 @@ void AbstractLayer::attachInternal(const UnsignedInt id, const NodeHandle node) 
         state.state |= LayerState::NeedsNodeOffsetSizeUpdate;
         if(features >= LayerFeature::Composite)
             state.state |= LayerState::NeedsCompositeOffsetSizeUpdate;
+        /** @todo might be useful to have a per-data flag that describes
+            whether given data actually contribute to the layout, and set that
+            only for those */
         if(features >= LayerFeature::Layout)
             state.state |= LayerState::NeedsLayoutUpdate;
     }
