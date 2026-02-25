@@ -3583,6 +3583,12 @@ class MAGNUM_UI_EXPORT TextLayer::Shared: public AbstractVisualLayer::Shared {
          * padding has to be non-zero horizontally to actually be visible at
          * all. This is also why, unlike @ref setStyle(), the @p paddings can't
          * be left empty.
+         *
+         * Calling this function causes @ref LayerState::NeedsDataUpdate to be
+         * set on all layers that are constructed using this shared instance.
+         * If @ref dynamicStyleCount() is non-zero,
+         * @ref LayerState::NeedsCommonDataUpdate is set as well to trigger an
+         * upload of changed dynamic style uniform data.
          */
         Shared& setEditingStyle(const TextLayerCommonEditingStyleUniform& commonUniform, Containers::ArrayView<const TextLayerEditingStyleUniform> uniforms, const Containers::StridedArrayView1D<const Int>& textUniforms, const Containers::StridedArrayView1D<const Vector4>& paddings);
         /** @overload */
@@ -3628,6 +3634,12 @@ class MAGNUM_UI_EXPORT TextLayer::Shared: public AbstractVisualLayer::Shared {
          * paddings have to be non-zero horizontally to actually be visible at
          * all. This is also why, unlike @ref setStyle(), the @p stylePaddings
          * can't be left empty.
+         *
+         * Calling this function causes @ref LayerState::NeedsDataUpdate to be
+         * set on all layers that are constructed using this shared instance.
+         * If @ref dynamicStyleCount() is non-zero,
+         * @ref LayerState::NeedsCommonDataUpdate is set as well to trigger an
+         * upload of changed dynamic style uniform data.
          */
         Shared& setEditingStyle(const TextLayerCommonEditingStyleUniform& commonUniform, Containers::ArrayView<const TextLayerEditingStyleUniform> uniforms, const Containers::StridedArrayView1D<const UnsignedInt>& styleToUniform, const Containers::StridedArrayView1D<const Int>& styleTextUniforms, const Containers::StridedArrayView1D<const Vector4>& stylePaddings);
         /** @overload */
