@@ -155,7 +155,9 @@ class MAGNUM_UI_EXPORT AbstractVisualLayer: public AbstractLayer {
          * @ref Shared::totalStyleCount().
          *
          * Calling this function causes @ref LayerState::NeedsDataUpdate to be
-         * set.
+         * set. If the @p handle is attached to a node and the layer advertises
+         * @ref LayerFeature::Layout, @ref LayerState::NeedsLayoutUpdate is set
+         * as well.
          * @see @ref isHandleValid(DataHandle) const,
          *      @ref setTransitionedStyle()
          */
@@ -212,7 +214,9 @@ class MAGNUM_UI_EXPORT AbstractVisualLayer: public AbstractLayer {
          * dynamic style indices.
          *
          * Calling this function causes @ref LayerState::NeedsDataUpdate to be
-         * set.
+         * set. If the @p handle is attached to a node and the layer advertises
+         * @ref LayerFeature::Layout, @ref LayerState::NeedsLayoutUpdate is set
+         * as well.
          * @see @ref isHandleValid(DataHandle) const
          */
         void setTransitionedStyle(const AbstractUserInterface& ui, DataHandle handle, UnsignedInt style);

@@ -231,6 +231,15 @@ void AbstractVisualLayer::setStyleInternal(const UnsignedInt id, const UnsignedI
     _state->styles[id] = style;
     /* _state->calculatedStyles is filled by AbstractVisualLayer::doUpdate() */
     setNeedsUpdate(LayerState::NeedsDataUpdate);
+    /* If the data is attached and this is a layout layer, the style likely
+       affects layout properties. Trigger a layout update as well. */
+    /** @todo this is too broad, LayerFeature::Layout may be used also by
+        layers where the style doesn't necessarily (or always) affect the
+        layout, or two styles may affect the layout the same way and thus this
+        isn't needed, etc; see also a todo in transitionStyle() below; plus the
+        virtual call is rather nasty... */
+    if(nodes()[id] != NodeHandle::Null && features() >= LayerFeature::Layout)
+        setNeedsUpdate(LayerState::NeedsLayoutUpdate);
 }
 
 void AbstractVisualLayer::setTransitionedStyle(const AbstractUserInterface& ui, const DataHandle handle, const UnsignedInt style) {
@@ -266,8 +275,7 @@ void AbstractVisualLayer::setTransitionedStyleInternal(const AbstractUserInterfa
     else transition = hovered ?
         sharedState.styleTransitionToInactiveOver :
         sharedState.styleTransitionToInactiveOut;
-    state.styles[layerDataHandleId(handle)] = transition(style);
-    setNeedsUpdate(LayerState::NeedsDataUpdate);
+    setStyleInternal(layerDataHandleId(handle), transition(style));
 }
 
 UnsignedInt AbstractVisualLayer::dynamicStyleUsedCount() const {
@@ -518,6 +526,13 @@ void AbstractVisualLayer::transitionStyle(
     if(animation == AnimationHandle::Null && persistentAnimation == AnimationHandle::Null) {
         style = nextStyle;
         setNeedsUpdate(LayerState::NeedsDataUpdate);
+        /** @todo might want to trigger also NeedsLayoutUpdate if the layer
+            exposes LayerFeature::Layout -- so far not doing this as it would
+            mean a lot of style triggers on hover and such even though nothing
+            actually may cause the layout to change (such as padding or text
+            size); similar nasty case is with style transitioning to disabled
+            which is done too late to trigger a layout change; here it'd also
+            mean calling the virtual doFeatures() every time :( */
     }
 }
 

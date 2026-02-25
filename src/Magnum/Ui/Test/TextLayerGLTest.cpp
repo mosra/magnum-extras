@@ -2732,7 +2732,7 @@ void TextLayerGLTest::renderDynamicStyles() {
         layer = &ui.setLayerInstance(Containers::pointer<TextLayerGL>(ui.createLayer(), layerShared));
         CORRADE_COMPARE(layer->state(), LayerStates{});
     } else {
-        CORRADE_COMPARE(layer->state(), LayerState::NeedsDataUpdate|LayerState::NeedsCommonDataUpdate);
+        CORRADE_COMPARE(layer->state(), LayerState::NeedsDataUpdate|LayerState::NeedsCommonDataUpdate|LayerState::NeedsLayoutUpdate);
     }
 
     if(data.dynamicStyleUniform) {
@@ -2807,8 +2807,9 @@ void TextLayerGLTest::renderDynamicStyles() {
                 {data.dynamicLeftPadding, 0.0f, 0.0f, 0.0f});
         }
 
-        /* The NeedsDataUpdate is from an earlier setStyle() */
-        CORRADE_COMPARE(layer->state(), LayerState::NeedsDataUpdate|LayerState::NeedsCommonDataUpdate);
+        /* The NeedsDataUpdate/NeedsLayoutUpdate is from an earlier
+           setStyle() */
+        CORRADE_COMPARE(layer->state(), LayerState::NeedsDataUpdate|LayerState::NeedsCommonDataUpdate|LayerState::NeedsLayoutUpdate);
     }
 
     /* Undo the padding coming from the style to have the result always the
@@ -2869,7 +2870,7 @@ void TextLayerGLTest::renderDynamicStyles() {
                 {data.styleUniformSelectionText ? 1 : -1, -1, -1, -1},
                 {{}, {}, data.cursorPadding, {}});
         }
-        CORRADE_COMPARE(layer->state(), LayerState::NeedsDataUpdate|LayerState::NeedsCommonDataUpdate);
+        CORRADE_COMPARE(layer->state(), LayerState::NeedsDataUpdate|LayerState::NeedsCommonDataUpdate|LayerState::NeedsLayoutUpdate);
     }
     if(data.secondaryDynamicStyleUpload) {
         if(data.dynamicStyleUniformCursor && data.dynamicStyleUniformSelection) {

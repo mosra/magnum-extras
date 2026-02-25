@@ -161,12 +161,34 @@ Debug& operator<<(Debug& debug, StyleIndex value) {
 
 const struct {
     const char* name;
+    LayerFeatures extraLayerFeatures;
     UnsignedInt styleCount, dynamicStyleCount;
+    NodeHandle node;
+    LayerStates expectedExtraState, expectedExtraCreateState;
 } SetStyleData[]{
-    {"", 67, 0},
+    {"", {},
+        67, 0, NodeHandle::Null, {}, {}},
+    {"attached", {},
+        67, 0, nodeHandle(0x12345, 0xabc), {},
+        LayerState::NeedsNodeOffsetSizeUpdate|LayerState::NeedsAttachmentUpdate},
     /* 37 is used as one style ID and 66 as the other, make sure the actual
        style count is less than that in both cases */
-    {"dynamic styles", 29, 38},
+    {"dynamic styles", {},
+        29, 38, NodeHandle::Null, {}, {}},
+    {"layout layer", LayerFeature::Layout,
+        67, 0, NodeHandle::Null, {}, {}},
+    {"layout layer, attached", LayerFeature::Layout,
+        67, 0, nodeHandle(0x12345, 0xabc), LayerState::NeedsLayoutUpdate,
+        LayerState::NeedsNodeOffsetSizeUpdate|LayerState::NeedsAttachmentUpdate},
+};
+
+const struct {
+    const char* name;
+    LayerFeatures extraLayerFeatures;
+    LayerStates expectedExtraState;
+} SetTransitionedStyleData[]{
+    {"", {}, {}},
+    {"layout layer", LayerFeature::Layout, LayerState::NeedsLayoutUpdate},
 };
 
 const struct {
@@ -671,8 +693,10 @@ AbstractVisualLayerTest::AbstractVisualLayerTest() {
         &AbstractVisualLayerTest::setStyle<Enum>},
         Containers::arraySize(SetStyleData));
 
-    addTests({&AbstractVisualLayerTest::setTransitionedStyle,
-              &AbstractVisualLayerTest::setTransitionedStyleInEvent,
+    addInstancedTests({&AbstractVisualLayerTest::setTransitionedStyle},
+        Containers::arraySize(SetTransitionedStyleData));
+
+    addTests({&AbstractVisualLayerTest::setTransitionedStyleInEvent,
               &AbstractVisualLayerTest::invalidHandle});
 
     addInstancedTests({&AbstractVisualLayerTest::styleOutOfRange},
@@ -942,14 +966,14 @@ struct StyleLayerShared: AbstractVisualLayer::Shared {
     _MAGNUMEXTRAS_UI_ABSTRACTVISUALLAYER_SHARED_SUBCLASS_ANIMATION_IMPLEMENTATION(StyleLayerStyleAnimator)
 };
 struct StyleLayer: AbstractVisualLayer {
-    explicit StyleLayer(LayerHandle handle, Shared& shared): AbstractVisualLayer{handle, shared} {}
+    explicit StyleLayer(LayerHandle handle, Shared& shared, LayerFeatures extraFeatures = {}): AbstractVisualLayer{handle, shared}, _extraFeatures{extraFeatures} {}
 
     using AbstractVisualLayer::assignAnimator;
     using AbstractVisualLayer::setDefaultStyleAnimator;
     using AbstractVisualLayer::remove;
 
     LayerFeatures doFeatures() const override {
-        return AbstractVisualLayer::doFeatures()|LayerFeature::AnimateStyles;
+        return AbstractVisualLayer::doFeatures()|LayerFeature::AnimateStyles|_extraFeatures;
     }
     const State& stateData() const { return static_cast<const State&>(*_state); }
 
@@ -988,6 +1012,9 @@ struct StyleLayer: AbstractVisualLayer {
     }
 
     Containers::Array<Containers::Pair<UnsignedInt, UnsignedInt>> data;
+
+    private:
+        LayerFeatures _extraFeatures;
 };
 
 template<class T> void AbstractVisualLayerTest::setStyle() {
@@ -996,36 +1023,39 @@ template<class T> void AbstractVisualLayerTest::setStyle() {
     setTestCaseTemplateName(std::is_same<T, Enum>::value ? "Enum" : "UnsignedInt");
 
     StyleLayerShared shared{data.styleCount, data.dynamicStyleCount};
-    StyleLayer layer{layerHandle(0, 1), shared};
+    StyleLayer layer{layerHandle(0, 1), shared, data.extraLayerFeatures};
 
     /* Just to be sure the setters aren't picking up the first ever data
        always */
     layer.create(2);
 
-    DataHandle layerData = layer.create(StyleCount + 0);
+    DataHandle layerData = layer.create(StyleCount + 0, data.node);
     CORRADE_COMPARE(layer.style(layerData), StyleCount + 0);
-    CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate|data.expectedExtraCreateState|data.expectedExtraState);
 
     /* Clear the state flags */
-    layer.update(LayerState::NeedsDataUpdate, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
+    layer.update(LayerState::NeedsDataUpdate|data.expectedExtraCreateState|data.expectedExtraState, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
     CORRADE_COMPARE(layer.state(), LayerStates{});
 
     /* Setting a style marks the layer as dirty */
     layer.setStyle(layerData, T(37));
     CORRADE_COMPARE(layer.style(layerData), 37);
-    CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate|data.expectedExtraState);
 
     /* Clear the state flags */
-    layer.update(LayerState::NeedsDataUpdate, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
+    layer.update(LayerState::NeedsDataUpdate|data.expectedExtraState, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
     CORRADE_COMPARE(layer.state(), LayerStates{});
 
     /* Testing also the other overload */
     layer.setStyle(dataHandleData(layerData), T(66));
     CORRADE_COMPARE(layer.style(layerData), 66);
-    CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate|data.expectedExtraState);
 }
 
 void AbstractVisualLayerTest::setTransitionedStyle() {
+    auto&& data = SetTransitionedStyleData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
     AbstractUserInterface ui{{100, 100}};
 
     enum Style {
@@ -1166,7 +1196,14 @@ void AbstractVisualLayerTest::setTransitionedStyle() {
             CORRADE_FAIL("This shouldn't be called");
             CORRADE_INTERNAL_ASSERT_UNREACHABLE();
         });
-    StyleLayer& layer = ui.setLayerInstance(Containers::pointer<StyleLayer>(ui.createLayer(), shared));
+    StyleLayer& layer = ui.setLayerInstance(Containers::pointer<StyleLayer>(ui.createLayer(), shared, data.extraLayerFeatures));
+
+    /* Setting a transitioned style on a non-attached node is the same as
+       calling setStyle() directly, it also doesn't set any extra LayerState */
+    DataHandle notAttached = layer.create(InactiveOut1);
+    layer.setTransitionedStyle(ui, notAttached, PressedOver2);
+    CORRADE_COMPARE(layer.style(notAttached), PressedOver2);
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
 
     /* Node 2 is first, to avoid accidentally matching the order, Neither of
        the two are Focusable initially, to test pointerPressEvent() without the
@@ -1181,12 +1218,17 @@ void AbstractVisualLayerTest::setTransitionedStyle() {
     CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
     CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
 
+    /* Clear the state bits */
+    ui.update();
+    CORRADE_COMPARE(layer.state(), LayerStates{});
+
     /* Setting a transitioned style picks InactiveOut. Switching the IDs to be
        sure it actually changed. */
     layer.setTransitionedStyle(ui, data1, PressedOut2);
     layer.setTransitionedStyle(ui, data2, InactiveOver1);
     CORRADE_COMPARE(layer.style(data1), InactiveOut2);
     CORRADE_COMPARE(layer.style(data2), InactiveOut1);
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate|data.expectedExtraState);
 
     /* Hovering node 2 causes the style to be changed to InactiveOver */
     {
@@ -1198,6 +1240,10 @@ void AbstractVisualLayerTest::setTransitionedStyle() {
         CORRADE_COMPARE(layer.style(data2), InactiveOver1);
     }
 
+    /* Clear the state bits */
+    ui.update();
+    CORRADE_COMPARE(layer.state(), LayerStates{});
+
     /* Setting a transitioned style (switching IDs again) picks InactiveOver
        for the hovered node, the other stays InactiveOut. Using the integer
        overload. */
@@ -1205,6 +1251,7 @@ void AbstractVisualLayerTest::setTransitionedStyle() {
     layer.setTransitionedStyle(ui, data2, UnsignedInt(PressedOut2));
     CORRADE_COMPARE(layer.style(data1), InactiveOut1);
     CORRADE_COMPARE(layer.style(data2), InactiveOver2);
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate|data.expectedExtraState);
 
     /* Pressing on node 2 causes the style to be changed to PressedOver */
     {
@@ -1216,6 +1263,10 @@ void AbstractVisualLayerTest::setTransitionedStyle() {
         CORRADE_COMPARE(layer.style(data2), PressedOver2);
     }
 
+    /* Clear the state bits */
+    ui.update();
+    CORRADE_COMPARE(layer.state(), LayerStates{});
+
     /* Setting a transitioned style (switching IDs again) picks PressedOver
        for the pressed & hovered node, the other again stays InactiveOut.
        Using the LayerDataHandle overload. */
@@ -1223,6 +1274,7 @@ void AbstractVisualLayerTest::setTransitionedStyle() {
     layer.setTransitionedStyle(ui, dataHandleData(data2), InactiveOut1);
     CORRADE_COMPARE(layer.style(data1), InactiveOut2);
     CORRADE_COMPARE(layer.style(data2), PressedOver1);
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate|data.expectedExtraState);
 
     /* Moving onto node 1 causes the style to be changed to PressedOut. No
        node is hovered due to event capture on node 2. */
@@ -1235,6 +1287,10 @@ void AbstractVisualLayerTest::setTransitionedStyle() {
         CORRADE_COMPARE(layer.style(data2), PressedOut1);
     }
 
+    /* Clear the state bits */
+    ui.update();
+    CORRADE_COMPARE(layer.state(), LayerStates{});
+
     /* Setting a transitioned style (switching IDs again) picks PressedOut
        for the pressed node, the other again stays InactiveOut. Using the
        integer + LayerDataHandle overload. */
@@ -1242,6 +1298,7 @@ void AbstractVisualLayerTest::setTransitionedStyle() {
     layer.setTransitionedStyle(ui, dataHandleData(data2), UnsignedInt(PressedOver2));
     CORRADE_COMPARE(layer.style(data1), InactiveOut1);
     CORRADE_COMPARE(layer.style(data2), PressedOut2);
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate|data.expectedExtraState);
 
     /* Releasing causes the style to be changed to InactiveOut */
     {
@@ -1253,12 +1310,17 @@ void AbstractVisualLayerTest::setTransitionedStyle() {
         CORRADE_COMPARE(layer.style(data2), InactiveOut2);
     }
 
+    /* Clear the state bits */
+    ui.update();
+    CORRADE_COMPARE(layer.state(), LayerStates{});
+
     /* Setting a transitioned style (switching IDs again) picks InactiveOut
        for both */
     layer.setTransitionedStyle(ui, data1, PressedOut2);
     layer.setTransitionedStyle(ui, data2, InactiveOver1);
     CORRADE_COMPARE(layer.style(data1), InactiveOut2);
     CORRADE_COMPARE(layer.style(data2), InactiveOut1);
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate|data.expectedExtraState);
 
     /* Make node2 focusable for the rest of the test case */
     ui.addNodeFlags(node2, NodeFlag::Focusable);
@@ -1273,12 +1335,17 @@ void AbstractVisualLayerTest::setTransitionedStyle() {
         CORRADE_COMPARE(layer.style(data2), FocusedOut1);
     }
 
+    /* Clear the state bits */
+    ui.update();
+    CORRADE_COMPARE(layer.state(), LayerStates{});
+
     /* Setting a transitioned style (switching IDs again) picks FocusedOut
        for the focused node, the other stays InactiveOut */
     layer.setTransitionedStyle(ui, data1, FocusedOver1);
     layer.setTransitionedStyle(ui, data2, InactiveOut2);
     CORRADE_COMPARE(layer.style(data1), InactiveOut1);
     CORRADE_COMPARE(layer.style(data2), FocusedOut2);
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate|data.expectedExtraState);
 
     /* Pressing on node 2 causes the style to be changed to PressedOut, as it
        has a priority over focus */
@@ -1291,12 +1358,17 @@ void AbstractVisualLayerTest::setTransitionedStyle() {
         CORRADE_COMPARE(layer.style(data2), PressedOut2);
     }
 
+    /* Clear the state bits */
+    ui.update();
+    CORRADE_COMPARE(layer.state(), LayerStates{});
+
     /* Setting a transitioned style (switching IDs again) should pick
        PressedOut for the focused node as well, the other stays InactiveOut */
     layer.setTransitionedStyle(ui, data1, FocusedOut2);
     layer.setTransitionedStyle(ui, data2, InactiveOver1);
     CORRADE_COMPARE(layer.style(data1), InactiveOut2);
     CORRADE_COMPARE(layer.style(data2), PressedOut1);
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate|data.expectedExtraState);
 
     /* Hovering on node 2 while being pressed & focused makes PressedOver win
        again over FocusedOver */
@@ -1309,12 +1381,17 @@ void AbstractVisualLayerTest::setTransitionedStyle() {
         CORRADE_COMPARE(layer.style(data2), PressedOver1);
     }
 
+    /* Clear the state bits */
+    ui.update();
+    CORRADE_COMPARE(layer.state(), LayerStates{});
+
     /* Setting a transitioned style (switching IDs again) should pick
        PressedOver again, the other stays InactiveOut */
     layer.setTransitionedStyle(ui, data1, FocusedOver1);
     layer.setTransitionedStyle(ui, data2, InactiveOut2);
     CORRADE_COMPARE(layer.style(data1), InactiveOut1);
     CORRADE_COMPARE(layer.style(data2), PressedOver2);
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate|data.expectedExtraState);
 
     /* Releasing causes the style to be changed to FocusedOver */
     {
@@ -1326,12 +1403,17 @@ void AbstractVisualLayerTest::setTransitionedStyle() {
         CORRADE_COMPARE(layer.style(data2), FocusedOver2);
     }
 
+    /* Clear the state bits */
+    ui.update();
+    CORRADE_COMPARE(layer.state(), LayerStates{});
+
     /* Setting a transitioned style (switching IDs again) picks FocusedOver for
        the focused node, the other stays InactiveOut */
     layer.setTransitionedStyle(ui, data1, FocusedOver2);
     layer.setTransitionedStyle(ui, data2, PressedOut1);
     CORRADE_COMPARE(layer.style(data1), InactiveOut2);
     CORRADE_COMPARE(layer.style(data2), FocusedOver1);
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate|data.expectedExtraState);
 }
 
 void AbstractVisualLayerTest::setTransitionedStyleInEvent() {

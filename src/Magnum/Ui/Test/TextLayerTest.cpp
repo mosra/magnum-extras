@@ -174,6 +174,7 @@ struct TextLayerTest: TestSuite::Tester {
     void createStyleOutOfRange();
     void createNoStyleSet();
 
+    void setTextSetGlyph();
     void setCursor();
     void setCursorInvalid();
     void updateText();
@@ -206,6 +207,10 @@ struct TextLayerTest: TestSuite::Tester {
 
     /* assignAnimator(), setDefaultStyleAnimator() and advanceAnimations()
        tested in TextLayerStyleAnimatorTest */
+
+    void layoutEmpty();
+    void layout();
+    void layoutNoStyleSet();
 
     void updateEmpty();
     void updateCleanDataOrder();
@@ -240,9 +245,12 @@ const struct {
 const struct {
     const char* name;
     TextLayerFlags layerFlags;
+    LayerFeatures expectedExtraFeatures;
 } ConstructData[]{
-    {"", {}},
-    {"transformable", TextLayerFlag::Transformable}
+    {"", {}, LayerFeature::Layout},
+    /* If Transformable is enabled, it shouldn't advertise
+       LayerFeature::Layout */
+    {"transformable", TextLayerFlag::Transformable, {}}
 };
 
 const struct {
@@ -304,19 +312,19 @@ const struct {
         Text::Alignment::MiddleCenter, Text::Alignment::MiddleCenter,
         {}, {},
         {3.5f, 0.5f, 1.5f, 2.5f}, Vector4{2.0f},
-        LayerState::NeedsCommonDataUpdate|LayerState::NeedsDataUpdate},
+        LayerState::NeedsCommonDataUpdate|LayerState::NeedsDataUpdate|LayerState::NeedsLayoutUpdate},
     {"different font, default alignment and features, non-zero padding",
         true,
         Text::Alignment::MiddleCenter, Text::Alignment::MiddleCenter,
         {}, {},
         {3.5f, 0.5f, 1.5f, 2.5f}, Vector4{2.0f},
-        LayerState::NeedsCommonDataUpdate|LayerState::NeedsDataUpdate},
+        LayerState::NeedsCommonDataUpdate|LayerState::NeedsDataUpdate|LayerState::NeedsLayoutUpdate},
     {"different alignment, default font and features, non-zero padding",
         false,
         Text::Alignment::MiddleCenterIntegral, Text::Alignment::TopLeft,
         {}, {},
         {3.5f, 0.5f, 1.5f, 2.5f}, Vector4{2.0f},
-        LayerState::NeedsCommonDataUpdate|LayerState::NeedsDataUpdate},
+        LayerState::NeedsCommonDataUpdate|LayerState::NeedsDataUpdate|LayerState::NeedsLayoutUpdate},
     {"different features, default font and alignment, non-zero padding",
         false,
         Text::Alignment::MiddleCenterIntegral, Text::Alignment::TopLeft,
@@ -327,7 +335,7 @@ const struct {
             Text::Feature::TabularFigures,
         }},
         {3.5f, 0.5f, 1.5f, 2.5f}, Vector4{2.0f},
-        LayerState::NeedsCommonDataUpdate|LayerState::NeedsDataUpdate},
+        LayerState::NeedsCommonDataUpdate|LayerState::NeedsDataUpdate|LayerState::NeedsLayoutUpdate},
     {"different font, alignment and features, non-zero padding",
         true,
         Text::Alignment::TopLeft, Text::Alignment::MiddleCenterIntegral,
@@ -338,7 +346,7 @@ const struct {
             Text::Feature::TabularFigures,
         }},
         {3.5f, 0.5f, 1.5f, 2.5f}, Vector4{2.0f},
-        LayerState::NeedsCommonDataUpdate|LayerState::NeedsDataUpdate},
+        LayerState::NeedsCommonDataUpdate|LayerState::NeedsDataUpdate|LayerState::NeedsLayoutUpdate},
 };
 
 const struct {
@@ -363,12 +371,14 @@ const struct {
         Vector4{1.0f, 2.0f, 3.0f, 4.0f}, Vector4{1.0f, 2.0f, 3.0f, 4.0f},
         {}, {},
         false, false,
-        LayerState::NeedsDataUpdate|LayerState::NeedsCommonDataUpdate},
+        LayerState::NeedsDataUpdate|LayerState::NeedsCommonDataUpdate|LayerState::NeedsLayoutUpdate},
     {"cursor style, cursor padding different",
         {}, {},
         Vector4{1.0f, 2.0f, 3.0f, 4.0f}, Vector4{1.0f, 2.0f, 4.0f, 4.0f},
         {}, {},
         false, false,
+        /** @todo include NeedsLayoutUpdate once cursor padding gets considered
+            for layout */
         LayerState::NeedsDataUpdate|LayerState::NeedsCommonDataUpdate},
     {"selection style, everything stays the same",
         {}, {},
@@ -384,12 +394,13 @@ const struct {
         {}, {},
         Vector4{1.0f, 2.0f, 3.0f, 4.0f}, Vector4{1.0f, 2.0f, 3.0f, 4.0f},
         true, true,
-        LayerState::NeedsDataUpdate|LayerState::NeedsCommonDataUpdate},
+        LayerState::NeedsDataUpdate|LayerState::NeedsCommonDataUpdate|LayerState::NeedsLayoutUpdate},
     {"selection style, selection padding different",
         {}, {},
         {}, {},
         Vector4{1.0f, 2.0f, 3.0f, 4.0f}, Vector4{1.0f, 2.0f, 4.0f, 4.0f},
         true, true,
+        /* Selection padding doesn't affect layout */
         LayerState::NeedsDataUpdate|LayerState::NeedsCommonDataUpdate},
     {"selection style, text uniform becomes set",
         {}, {},
@@ -421,18 +432,21 @@ const struct {
         Vector4{1.0f, 2.0f, 3.0f, 4.0f}, Vector4{1.0f, 2.0f, 3.0f, 4.0f},
         Vector4{5.0f, 6.0f, 7.0f, 8.0f}, Vector4{5.0f, 6.0f, 7.0f, 8.0f},
         true, true,
-        LayerState::NeedsDataUpdate|LayerState::NeedsCommonDataUpdate},
+        LayerState::NeedsDataUpdate|LayerState::NeedsCommonDataUpdate|LayerState::NeedsLayoutUpdate},
     {"cursor + selection style, cursor padding different",
         {}, {},
         Vector4{1.0f, 2.0f, 3.0f, 4.0f}, Vector4{1.0f, 2.0f, 3.0f, 4.0f},
         Vector4{5.0f, 6.0f, 7.0f, 8.0f}, Vector4{5.0f, 6.0f, 7.0f, 7.0f},
         true, true,
+        /** @todo include NeedsLayoutUpdate once cursor padding gets considered
+            for layout */
         LayerState::NeedsDataUpdate|LayerState::NeedsCommonDataUpdate},
     {"cursor + selection style, selection padding different",
         {}, {},
         Vector4{1.0f, 2.0f, 3.0f, 4.0f}, Vector4{1.0f, 2.0f, 4.0f, 4.0f},
         Vector4{5.0f, 6.0f, 7.0f, 8.0f}, Vector4{5.0f, 6.0f, 7.0f, 8.0f},
         true, true,
+        /* Selection padding doesn't affect layout */
         LayerState::NeedsDataUpdate|LayerState::NeedsCommonDataUpdate},
     {"cursor + selection style, text uniform becomes set",
         {}, {},
@@ -544,7 +558,7 @@ const struct {
         NodeHandle::Null, {},
         false, false, false, false, 3, 0, {}, {}, false},
     {"create and attach",
-        nodeHandle(9872, 0xbeb), LayerState::NeedsNodeOffsetSizeUpdate|LayerState::NeedsAttachmentUpdate,
+        nodeHandle(9872, 0xbeb), LayerState::NeedsNodeOffsetSizeUpdate|LayerState::NeedsAttachmentUpdate|LayerState::NeedsLayoutUpdate,
         false, false, false, false, 3, 0, {}, {}, false},
     {"LayerDataHandle overloads",
         NodeHandle::Null, {},
@@ -570,11 +584,14 @@ const struct {
     {"transformable",
         NodeHandle::Null, {},
         false, false, false, false, 3, 0, TextLayerFlag::Transformable, {}, false},
+    {"transformable, create and attach",
+        nodeHandle(9872, 0xbeb), LayerState::NeedsNodeOffsetSizeUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsAttachmentUpdate,
+        false, false, false, false, 3, 0, TextLayerFlag::Transformable, {}, false},
     {"editable",
         NodeHandle::Null, {},
         false, false, false, false, 3, 0, {}, ~~TextDataFlag::Editable, false},
     {"editable, create and attach",
-        nodeHandle(9872, 0xbeb), LayerState::NeedsNodeOffsetSizeUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsAttachmentUpdate,
+        nodeHandle(9872, 0xbeb), LayerState::NeedsNodeOffsetSizeUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsAttachmentUpdate|LayerState::NeedsLayoutUpdate,
         false, false, false, false, 3, 0, {}, ~~TextDataFlag::Editable, false},
     {"editable, LayerDataHandle overloads",
         NodeHandle::Null, {},
@@ -608,10 +625,39 @@ const struct {
 const struct {
     const char* name;
     UnsignedInt styleCount, dynamicStyleCount;
-} CreateUpdateNoStyleSetData[]{
+} CreateLayoutUpdateNoStyleSetData[]{
     {"", 1, 0},
     {"dynamic styles", 1, 5},
     {"dynamic styles only", 0, 5}
+};
+
+const struct {
+    const char* name;
+    bool setGlyph;
+    NodeHandle node;
+    TextLayerFlags flags;
+    LayerStates expectedExtraState, expectedExtraCreateState;
+} SetTextSetGlyphData[]{
+    {"", false,
+        NodeHandle::Null, {}, {}, {}},
+    {"attached", false,
+        nodeHandle(0x12345, 0xabc), {}, LayerState::NeedsLayoutUpdate,
+        LayerState::NeedsNodeOffsetSizeUpdate|LayerState::NeedsAttachmentUpdate},
+    {"transformable", false,
+        NodeHandle::Null, TextLayerFlag::Transformable, {}, {}},
+    {"transformable, attached", false,
+        nodeHandle(0x12345, 0xabc), TextLayerFlag::Transformable, {},
+        LayerState::NeedsNodeOffsetSizeUpdate|LayerState::NeedsAttachmentUpdate},
+    {"set glyph", true,
+        NodeHandle::Null, {}, {}, {}},
+    {"set glyph, attached", true,
+        nodeHandle(0x12345, 0xabc), {}, LayerState::NeedsLayoutUpdate,
+        LayerState::NeedsNodeOffsetSizeUpdate|LayerState::NeedsAttachmentUpdate},
+    {"set glyph, transformable", true,
+        NodeHandle::Null, TextLayerFlag::Transformable, {}, {}},
+    {"set glyph, transformable, attached", true,
+        nodeHandle(0x12345, 0xabc), TextLayerFlag::Transformable, {},
+        LayerState::NeedsNodeOffsetSizeUpdate|LayerState::NeedsAttachmentUpdate},
 };
 
 const struct {
@@ -639,6 +685,18 @@ const struct {
         TextProperties{}
             .setShapeDirection(Text::ShapeDirection::BottomToTop),
         "vertical shape direction for an editable text is not implemented yet, sorry"},
+};
+
+const struct {
+    const char* name;
+    NodeHandle node;
+    LayerStates expectedExtraState, expectedExtraCreateState;
+} UpdateTextSetPaddingData[]{
+    {"",
+        NodeHandle::Null, {}, {}},
+    {"attached",
+        nodeHandle(0x12345, 0xabc), LayerState::NeedsLayoutUpdate,
+        LayerState::NeedsNodeOffsetSizeUpdate|LayerState::NeedsAttachmentUpdate},
 };
 
 const struct {
@@ -975,6 +1033,34 @@ const struct {
 };
 
 const struct {
+    const char* name;
+    bool emptyLayout;
+    UnsignedInt styleCount, dynamicStyleCount;
+    Vector4 paddingFromStyle;
+    Vector4 paddingFromData;
+    Vector2 expectedNode3MinSize;
+} LayoutData[]{
+    {"empty layout", true, 3, 0,
+        {}, {}, {}},
+    {"", false, 3, 0,
+        {}, {}, {4.5f, 7.0f}},
+    {"padding from style", false, 3, 0,
+        {0.01f, 0.2f, 0.05f, 0.9f}, {}, {4.56f, 7.1f}},
+    {"padding from data", false, 3, 0,
+        {}, {0.01f, 0.2f, 0.05f, 0.9f}, {4.56f, 7.1f}},
+    {"padding from both style and data", false, 3, 0,
+        {0.01f, 0.1f, 0.03f, 0.4f}, {0.0f, 0.1f, 0.02f, 0.5f}, {4.56f, 7.1f}},
+    {"dynamic style", false, 2, 1,
+        {}, {}, {4.5f, 7.0f}},
+    {"dynamic style, padding from style", false, 2, 1,
+        {0.01f, 0.2f, 0.05f, 0.9f}, {}, {4.56f, 7.1f}},
+    {"dynamic style, padding from data", false, 2, 1,
+        {}, {0.01f, 0.2f, 0.05f, 0.9f}, {4.56f, 7.1f}},
+    {"dynamic style, padding from both style and data", false, 2, 1,
+        {0.01f, 0.1f, 0.03f, 0.4f}, {0.0f, 0.1f, 0.02f, 0.5f}, {4.56f, 7.1f}},
+};
+
+const struct {
     TestSuite::TestCaseDescriptionSourceLocation name;
     bool emptyUpdate;
     UnsignedInt styleCount, editingStyleCount, dynamicStyleCount;
@@ -1308,25 +1394,58 @@ const struct {
 const struct {
     const char* name;
     UnsignedInt editingStyleCount, dynamicStyleCount;
+    TextLayerFlags layerFlags;
     bool setStyle, setEditingStyle;
-    LayerStates extraState;
+    LayerStates extraInitialState, extraState;
 } SharedNeedsUpdateStatePropagatedToLayersData[]{
     {"",
-        0, 0, true, false, {}},
+        0, 0, {},
+        true, false, {}, LayerState::NeedsLayoutUpdate},
     {"dynamic styles",
-        0, 5, true, false, LayerState::NeedsCommonDataUpdate},
+        0, 5, {},
+        true, false, {}, LayerState::NeedsLayoutUpdate|LayerState::NeedsCommonDataUpdate},
     {"editing styles, set base style only",
-        1, 0, true, false, {}},
+        1, 0, {},
+        true, false, {}, LayerState::NeedsLayoutUpdate},
     {"editing styles + dynamic styles, set base style only",
-        1, 5, true, false, LayerState::NeedsCommonDataUpdate},
+        1, 5, {},
+        true, false, {}, LayerState::NeedsLayoutUpdate|LayerState::NeedsCommonDataUpdate},
     {"editing styles, set editing style only",
-        1, 0, false, true, {}},
+        1, 0, {},
+        false, true, LayerState::NeedsLayoutUpdate, {}},
     {"editing styles + dynamic styles, set editing style only",
-        1, 5, false, true, LayerState::NeedsCommonDataUpdate},
+        1, 5, {},
+        false, true, LayerState::NeedsLayoutUpdate, LayerState::NeedsCommonDataUpdate},
     {"editing styles, set both",
-        1, 0, true, true, {}},
+        1, 0, {},
+        true, true, {}, LayerState::NeedsLayoutUpdate},
     {"editing styles + dynamic styles, set both",
-        1, 5, true, true, LayerState::NeedsCommonDataUpdate},
+        1, 5, {},
+        true, true, {}, LayerState::NeedsLayoutUpdate|LayerState::NeedsCommonDataUpdate},
+    {"transformable layers",
+        0, 0, TextLayerFlag::Transformable,
+        true, false, {}, {}},
+    {"transformable layers, dynamic styles",
+        0, 5, TextLayerFlag::Transformable,
+        true, false, {}, LayerState::NeedsCommonDataUpdate},
+    {"transformable layers, editing styles, set base style only",
+        1, 0, TextLayerFlag::Transformable,
+        true, false, {}, {}},
+    {"transformable layers, editing styles + dynamic styles, set base style only",
+        1, 5, TextLayerFlag::Transformable,
+        true, false, {}, LayerState::NeedsCommonDataUpdate},
+    {"transformable layers, editing styles, set editing style only",
+        1, 0, TextLayerFlag::Transformable,
+        false, true, {}, {}},
+    {"transformable layers, editing styles + dynamic styles, set editing style only",
+        1, 5, TextLayerFlag::Transformable,
+        false, true, {}, LayerState::NeedsCommonDataUpdate},
+    {"transformable layers, editing styles, set both",
+        1, 0, TextLayerFlag::Transformable,
+        true, true, {}, {}},
+    {"transformable layers, editing styles + dynamic styles, set both",
+        1, 5, TextLayerFlag::Transformable,
+        true, true, {}, LayerState::NeedsCommonDataUpdate},
 };
 
 const struct {
@@ -1558,12 +1677,18 @@ TextLayerTest::TextLayerTest() {
         Containers::arraySize(CreateStyleOutOfRangeData));
 
     addInstancedTests({&TextLayerTest::createNoStyleSet},
-        Containers::arraySize(CreateUpdateNoStyleSetData));
+        Containers::arraySize(CreateLayoutUpdateNoStyleSetData));
+
+    addInstancedTests({&TextLayerTest::setTextSetGlyph},
+        Containers::arraySize(SetTextSetGlyphData));
 
     addTests({&TextLayerTest::setCursor,
-              &TextLayerTest::setCursorInvalid,
-              &TextLayerTest::updateText,
-              &TextLayerTest::updateTextInvalid});
+              &TextLayerTest::setCursorInvalid});
+
+    addInstancedTests({&TextLayerTest::updateText},
+        Containers::arraySize(UpdateTextSetPaddingData));
+
+    addTests({&TextLayerTest::updateTextInvalid});
 
     addInstancedTests({&TextLayerTest::editText},
         Containers::arraySize(EditData));
@@ -1583,9 +1708,12 @@ TextLayerTest::TextLayerTest() {
 
     addRepeatedTests({&TextLayerTest::createSetUpdateTextFromLayerItself}, 10);
 
-    addTests({&TextLayerTest::setColor,
-              &TextLayerTest::setPadding,
-              &TextLayerTest::setPaddingInvalid,
+    addTests({&TextLayerTest::setColor});
+
+    addInstancedTests({&TextLayerTest::setPadding},
+        Containers::arraySize(UpdateTextSetPaddingData));
+
+    addTests({&TextLayerTest::setPaddingInvalid,
               &TextLayerTest::setTransformation,
               &TextLayerTest::setTransformationInvalid,
 
@@ -1598,7 +1726,15 @@ TextLayerTest::TextLayerTest() {
               &TextLayerTest::noFontInstance,
               &TextLayerTest::glyphOutOfRange,
 
-              &TextLayerTest::updateEmpty});
+              &TextLayerTest::layoutEmpty});
+
+    addInstancedTests({&TextLayerTest::layout},
+        Containers::arraySize(LayoutData));
+
+    addInstancedTests({&TextLayerTest::layoutNoStyleSet},
+        Containers::arraySize(CreateLayoutUpdateNoStyleSetData));
+
+    addTests({&TextLayerTest::updateEmpty});
 
     addInstancedTests({&TextLayerTest::updateCleanDataOrder},
         Containers::arraySize(UpdateCleanDataOrderData));
@@ -1614,7 +1750,7 @@ TextLayerTest::TextLayerTest() {
 
     addInstancedTests({&TextLayerTest::updateNoStyleSet,
                        &TextLayerTest::updateNoEditingStyleSet},
-        Containers::arraySize(CreateUpdateNoStyleSetData));
+        Containers::arraySize(CreateLayoutUpdateNoStyleSetData));
 
     addInstancedTests({&TextLayerTest::sharedNeedsUpdateStatePropagatedToLayers},
         Containers::arraySize(SharedNeedsUpdateStatePropagatedToLayersData));
@@ -5092,6 +5228,7 @@ void TextLayerTest::construct() {
     /* Const overload */
     CORRADE_COMPARE(&static_cast<const Layer&>(layer).shared(), &shared);
     CORRADE_COMPARE(layer.flags(), data.layerFlags);
+    CORRADE_COMPARE(layer.features(), LayerFeature::Draw|LayerFeature::Event|data.expectedExtraFeatures);
 }
 
 void TextLayerTest::constructCopy() {
@@ -6562,6 +6699,10 @@ template<class StyleIndex, class GlyphIndex> void TextLayerTest::createRemoveSet
     CORRADE_COMPARE(layer.flags(fifth), TextDataFlags{});
     CORRADE_COMPARE(layer.flags(third), TextDataFlags{});
 
+    /* NeedsLayoutUpdate being set by setText(), setGlyph() is tested in
+       setTextSetGlyph() below, as here it'd mean doing update() calls in
+       between which would make it impossible to test how the unused text runs
+       pile up */
     CORRADE_COMPARE(layer.state(), data.extraState|LayerState::NeedsDataClean|LayerState::NeedsDataUpdate);
     CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().data).slice(&Implementation::TextLayerData::glyphRun), Containers::arrayView({
         0u, 1u, 6u, 5u, 8u, 4u, 7u, 0xffffffffu
@@ -6995,7 +7136,7 @@ void TextLayerTest::createStyleOutOfRange() {
 }
 
 void TextLayerTest::createNoStyleSet() {
-    auto&& data = CreateUpdateNoStyleSetData[testCaseInstanceId()];
+    auto&& data = CreateLayoutUpdateNoStyleSetData[testCaseInstanceId()];
     setTestCaseDescription(data.name);
 
     CORRADE_SKIP_IF_NO_ASSERT();
@@ -7029,6 +7170,73 @@ void TextLayerTest::createNoStyleSet() {
     CORRADE_COMPARE(out,
         "Ui::TextLayer::create(): no style data was set\n"
         "Ui::TextLayer::createGlyph(): no style data was set\n");
+}
+
+void TextLayerTest::setTextSetGlyph() {
+    auto&& data = SetTextSetGlyphData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
+    /* The actual glyphs runs and such produced, orphaned etc. by setText()
+       and setGlyph() are tested in createRemoveSetText() above, this verifies
+       that it triggers correct LayerState updates with update() calls in
+       between */
+
+    struct: Text::AbstractFont {
+        Text::FontFeatures doFeatures() const override { return {}; }
+        bool doIsOpened() const override { return true; }
+        void doClose() override {}
+
+        void doGlyphIdsInto(const Containers::StridedArrayView1D<const char32_t>&, const Containers::StridedArrayView1D<UnsignedInt>&) override {}
+        Vector2 doGlyphSize(UnsignedInt) override { return {}; }
+        Vector2 doGlyphAdvance(UnsignedInt) override { return {}; }
+        Containers::Pointer<Text::AbstractShaper> doCreateShaper() override { return Containers::pointer<OneGlyphShaper>(*this); }
+    } font;
+
+    struct: Text::AbstractGlyphCache {
+        using Text::AbstractGlyphCache::AbstractGlyphCache;
+
+        Text::GlyphCacheFeatures doFeatures() const override { return {}; }
+        void doSetImage(const Vector2i&, const ImageView2D&) override {}
+    } cache{PixelFormat::R8Unorm, {32, 32, 2}};
+    cache.addFont(67, &font);
+
+    struct LayerShared: TextLayer::Shared {
+        explicit LayerShared(Text::AbstractGlyphCache& glyphCache, const Configuration& configuration): TextLayer::Shared{glyphCache, configuration} {}
+
+        void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
+        void doSetEditingStyle(const TextLayerCommonEditingStyleUniform&, Containers::ArrayView<const TextLayerEditingStyleUniform>) override {}
+    } shared{cache, TextLayer::Shared::Configuration{1}};
+    shared.setStyle(TextLayerCommonStyleUniform{},
+        {TextLayerStyleUniform{}},
+        {shared.addFont(font, 1.0f)},
+        {Text::Alignment::MiddleCenter},
+        {}, {}, {}, {}, {}, {});
+
+    struct Layer: TextLayer {
+        explicit Layer(LayerHandle handle, Shared& shared, TextLayerFlags flags): TextLayer{handle, shared, flags} {}
+    } layer{layerHandle(0, 1), shared, data.flags};
+
+    /* Required to be called before update() (because AbstractUserInterface
+       guarantees the same on a higher level), not needed for anything here */
+    layer.setSize({1, 1}, {1, 1});
+
+    /* Just to be sure the setters aren't picking up the first ever data
+       always */
+    layer.create(0, "", {});
+
+    DataHandle textData = layer.create(0, "", {}, data.node);
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate|data.expectedExtraState|data.expectedExtraCreateState);
+
+    /* Clear the state flags */
+    layer.update(LayerState::NeedsDataUpdate|data.expectedExtraState|data.expectedExtraCreateState, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
+    CORRADE_COMPARE(layer.state(), LayerStates{});
+
+    /* Setting a text or a glyph marks the layer as dirty */
+    if(data.setGlyph)
+        layer.setGlyph(textData, 13, {});
+    else
+        layer.setText(textData, "hello", {});
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate|data.expectedExtraState);
 }
 
 void TextLayerTest::setCursor() {
@@ -7195,6 +7403,9 @@ void TextLayerTest::setCursorInvalid() {
 }
 
 void TextLayerTest::updateText() {
+    auto&& data = UpdateTextSetPaddingData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
     struct: Text::AbstractFont {
         Text::FontFeatures doFeatures() const override { return {}; }
         bool doIsOpened() const override { return true; }
@@ -7242,16 +7453,16 @@ void TextLayerTest::updateText() {
        in subsequent updateText(); have also some text before and after to
        catch weird overlaps and OOB issues */
     layer.create(2, "aaaa", {}, TextDataFlag::Editable);
-    DataHandle text = layer.create(2, "hello", {}, TextDataFlag::Editable);
+    DataHandle text = layer.create(2, "hello", {}, TextDataFlag::Editable, data.node);
     layer.create(2, "bb", {}, TextDataFlag::Editable);
     CORRADE_COMPARE(layer.text(text), "hello");
     CORRADE_COMPARE(layer.cursor(text), Containers::pair(5u, 5u));
-    CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate|data.expectedExtraState|data.expectedExtraCreateState);
     CORRADE_COMPARE(layer.glyphCount(text), 5);
 
     /* Clear the state flags. This performs recompaction and there should be
        one glyph and one text run for each data. */
-    layer.update(LayerState::NeedsDataUpdate, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
+    layer.update(LayerState::NeedsDataUpdate|data.expectedExtraState|data.expectedExtraCreateState, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
     CORRADE_COMPARE(layer.state(), LayerStates{});
     CORRADE_COMPARE(layer.stateData().glyphRuns.size(), 3);
     CORRADE_COMPARE(layer.stateData().textRuns.size(), 3);
@@ -7267,7 +7478,8 @@ void TextLayerTest::updateText() {
     /* No reshaping should be done in this case */
     CORRADE_COMPARE(layer.glyphCount(text), 5);
 
-    /* Updating cursor location alone sets an update flag */
+    /* Updating cursor location alone sets an update flag, but not
+       NeedsLayoutUpdate */
     layer.updateText(text, 0, 0, 0, "", 3);
     CORRADE_COMPARE(layer.text(text), "hello");
     CORRADE_COMPARE(layer.cursor(text), Containers::pair(3u, 3u));
@@ -7281,7 +7493,8 @@ void TextLayerTest::updateText() {
     CORRADE_COMPARE(layer.stateData().glyphRuns.size(), 3);
     CORRADE_COMPARE(layer.stateData().textRuns.size(), 3);
 
-    /* Updating just the selection sets an update flag as well */
+    /* Updating just the selection sets an update flag as well, again not
+       NeedsLayoutUpdate */
     layer.updateText(text, 0, 0, 0, "", 3, 4);
     CORRADE_COMPARE(layer.text(text), "hello");
     CORRADE_COMPARE(layer.cursor(text), Containers::pair(3u, 4u));
@@ -7300,7 +7513,7 @@ void TextLayerTest::updateText() {
     layer.updateText(text, 0, 0, 5, "oo?!", 9);
     CORRADE_COMPARE(layer.text(text), "hellooo?!");
     CORRADE_COMPARE(layer.cursor(text), Containers::pair(9u, 9u));
-    CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate|data.expectedExtraState);
     CORRADE_COMPARE(layer.stateData().glyphRuns.size(), 4);
     CORRADE_COMPARE(layer.stateData().textRuns.size(), 4);
     /* Lazy verification that the text gets implicitly reshaped */
@@ -7308,7 +7521,7 @@ void TextLayerTest::updateText() {
 
     /* Clear the state flags. The recompaction removes the unused runs
        again. */
-    layer.update(LayerState::NeedsDataUpdate, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
+    layer.update(LayerState::NeedsDataUpdate|data.expectedExtraState, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
     CORRADE_COMPARE(layer.state(), LayerStates{});
     CORRADE_COMPARE(layer.stateData().glyphRuns.size(), 3);
     CORRADE_COMPARE(layer.stateData().textRuns.size(), 3);
@@ -7319,7 +7532,7 @@ void TextLayerTest::updateText() {
     layer.updateText(dataHandleData(text), 6, 3, 0, "", 4);
     CORRADE_COMPARE(layer.text(text), "helloo");
     CORRADE_COMPARE(layer.cursor(text), Containers::pair(4u, 4u));
-    CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate|data.expectedExtraState);
     CORRADE_COMPARE(layer.stateData().glyphRuns.size(), 4);
     CORRADE_COMPARE(layer.stateData().textRuns.size(), 4);
     /* Lazy verification that the text gets implicitly reshaped */
@@ -7327,7 +7540,7 @@ void TextLayerTest::updateText() {
 
     /* Clear the state flags. The recompaction removes the unused runs
        again. */
-    layer.update(LayerState::NeedsDataUpdate, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
+    layer.update(LayerState::NeedsDataUpdate|data.expectedExtraState, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
     CORRADE_COMPARE(layer.state(), LayerStates{});
     CORRADE_COMPARE(layer.stateData().glyphRuns.size(), 3);
     CORRADE_COMPARE(layer.stateData().textRuns.size(), 3);
@@ -7337,7 +7550,7 @@ void TextLayerTest::updateText() {
     layer.updateText(text, 1, 4, 2, "vercrafts", 5, 3);
     CORRADE_COMPARE(layer.text(text), "hovercrafts");
     CORRADE_COMPARE(layer.cursor(text), Containers::pair(5u, 3u));
-    CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate|data.expectedExtraState);
     CORRADE_COMPARE(layer.stateData().glyphRuns.size(), 4);
     CORRADE_COMPARE(layer.stateData().textRuns.size(), 4);
     /* Lazy verification that the text gets implicitly reshaped */
@@ -7345,7 +7558,7 @@ void TextLayerTest::updateText() {
 
     /* Clear the state flags. The recompaction removes the unused runs
        again. */
-    layer.update(LayerState::NeedsDataUpdate, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
+    layer.update(LayerState::NeedsDataUpdate|data.expectedExtraState, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
     CORRADE_COMPARE(layer.state(), LayerStates{});
     CORRADE_COMPARE(layer.stateData().glyphRuns.size(), 3);
     CORRADE_COMPARE(layer.stateData().textRuns.size(), 3);
@@ -7356,7 +7569,7 @@ void TextLayerTest::updateText() {
     layer.updateText(dataHandleData(text), 5, 5, 2, "ldo", 4, 3);
     CORRADE_COMPARE(layer.text(text), "holdovers");
     CORRADE_COMPARE(layer.cursor(text), Containers::pair(4u, 3u));
-    CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate|data.expectedExtraState);
     CORRADE_COMPARE(layer.stateData().glyphRuns.size(), 4);
     CORRADE_COMPARE(layer.stateData().textRuns.size(), 4);
     /* Lazy verification that the text gets implicitly reshaped */
@@ -7364,7 +7577,7 @@ void TextLayerTest::updateText() {
 
     /* Clear the state flags. The recompaction removes the unused runs
        again. */
-    layer.update(LayerState::NeedsDataUpdate, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
+    layer.update(LayerState::NeedsDataUpdate|data.expectedExtraState, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
     CORRADE_COMPARE(layer.state(), LayerStates{});
     CORRADE_COMPARE(layer.stateData().glyphRuns.size(), 3);
     CORRADE_COMPARE(layer.stateData().textRuns.size(), 3);
@@ -7374,7 +7587,7 @@ void TextLayerTest::updateText() {
     layer.updateText(text, 0, 9, 0, "", 0);
     CORRADE_COMPARE(layer.text(text), "");
     CORRADE_COMPARE(layer.cursor(text), Containers::pair(0u, 0u));
-    CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate|data.expectedExtraState);
     CORRADE_COMPARE(layer.stateData().glyphRuns.size(), 3);
     CORRADE_COMPARE(layer.stateData().textRuns.size(), 4);
     /* Lazy verification that the text gets implicitly reshaped */
@@ -7382,7 +7595,7 @@ void TextLayerTest::updateText() {
 
     /* Clear the state flags. The recompaction removes the unused runs, so
        there's now one glyph run less. */
-    layer.update(LayerState::NeedsDataUpdate, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
+    layer.update(LayerState::NeedsDataUpdate|data.expectedExtraState, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
     CORRADE_COMPARE(layer.state(), LayerStates{});
     CORRADE_COMPARE(layer.stateData().glyphRuns.size(), 2);
     CORRADE_COMPARE(layer.stateData().textRuns.size(), 3);
@@ -7531,8 +7744,7 @@ void TextLayerTest::editText() {
 
     /* The cursor should always be at the end of the input text even in
        presence of weird data. Update it to what's desired. */
-    CORRADE_COMPARE(layer.cursor(text).first(), Containers::StringView{data.text}.size());
-    CORRADE_COMPARE(layer.cursor(text).second(), Containers::StringView{data.text}.size());
+    CORRADE_COMPARE(layer.cursor(text), Containers::pair(UnsignedInt(Containers::StringView{data.text}.size()), UnsignedInt(Containers::StringView{data.text}.size())));
     if(data.selection)
         layer.setCursor(text, data.cursor, *data.selection);
     else
@@ -7546,6 +7758,25 @@ void TextLayerTest::editText() {
     CORRADE_COMPARE(layer.text(text), data.expected);
     CORRADE_COMPARE(layer.cursor(text), data.expectedCursor);
     CORRADE_COMPARE(layer.state(), data.expectedState);
+
+    /* Create another text, this time assigned to a node */
+    DataHandle assigned = layer.create(2, data.text, {}, TextDataFlag::Editable, nodeHandle(0x12345, 0xabc));
+    CORRADE_COMPARE(layer.cursor(assigned), Containers::pair(UnsignedInt(Containers::StringView{data.text}.size()), UnsignedInt(Containers::StringView{data.text}.size())));
+    if(data.selection)
+        layer.setCursor(assigned, data.cursor, *data.selection);
+    else
+        layer.setCursor(assigned, data.cursor);
+
+    /* Clear the state flags */
+    layer.update(LayerState::NeedsDataUpdate|LayerState::NeedsLayoutUpdate|LayerState::NeedsNodeOffsetSizeUpdate|LayerState::NeedsAttachmentUpdate, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
+    CORRADE_COMPARE(layer.state(), LayerStates{});
+
+    /* Editing should trigger NeedsLayoutUpdate as well if and only if the
+       actual text changes, not otherwise */
+    layer.editText(assigned, data.edit, data.insert);
+    CORRADE_COMPARE(layer.text(assigned), data.expected);
+    CORRADE_COMPARE(layer.cursor(assigned), data.expectedCursor);
+    CORRADE_COMPARE(layer.state(), data.expectedState|(Containers::StringView{data.expected} == Containers::StringView{data.text} ? LayerStates{} : LayerState::NeedsLayoutUpdate));
 }
 
 void TextLayerTest::editTextInvalid() {
@@ -8291,6 +8522,9 @@ void TextLayerTest::setColor() {
 }
 
 void TextLayerTest::setPadding() {
+    auto&& data = UpdateTextSetPaddingData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
     struct: Text::AbstractFont {
         Text::FontFeatures doFeatures() const override { return {}; }
         bool doIsOpened() const override { return true; }
@@ -8335,45 +8569,45 @@ void TextLayerTest::setPadding() {
     layer.create(0, "", {});
 
     /* There's nothing that would work differently for createGlyph() */
-    DataHandle data = layer.create(0, "", {});
-    CORRADE_COMPARE(layer.padding(data), Vector4{0.0f});
-    CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
+    DataHandle textData = layer.create(0, "", {}, data.node);
+    CORRADE_COMPARE(layer.padding(textData), Vector4{0.0f});
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate|data.expectedExtraState|data.expectedExtraCreateState);
 
     /* Clear the state flags */
-    layer.update(LayerState::NeedsDataUpdate, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
+    layer.update(LayerState::NeedsDataUpdate|data.expectedExtraState|data.expectedExtraCreateState, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
     CORRADE_COMPARE(layer.state(), LayerStates{});
 
     /* Setting a padding marks the layer as dirty */
-    layer.setPadding(data, {2.0f, 4.0f, 3.0f, 1.0f});
-    CORRADE_COMPARE(layer.padding(data), (Vector4{2.0f, 4.0f, 3.0f, 1.0f}));
-    CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
+    layer.setPadding(textData, {2.0f, 4.0f, 3.0f, 1.0f});
+    CORRADE_COMPARE(layer.padding(textData), (Vector4{2.0f, 4.0f, 3.0f, 1.0f}));
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate|data.expectedExtraState);
 
     /* Clear the state flags */
-    layer.update(LayerState::NeedsDataUpdate, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
+    layer.update(LayerState::NeedsDataUpdate|data.expectedExtraState, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
     CORRADE_COMPARE(layer.state(), LayerStates{});
 
     /* Testing also the other overload */
-    layer.setPadding(dataHandleData(data), {1.0f, 2.0f, 3.0f, 4.0f});
-    CORRADE_COMPARE(layer.padding(dataHandleData(data)), (Vector4{1.0f, 2.0f, 3.0f, 4.0f}));
-    CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
+    layer.setPadding(dataHandleData(textData), {1.0f, 2.0f, 3.0f, 4.0f});
+    CORRADE_COMPARE(layer.padding(dataHandleData(textData)), (Vector4{1.0f, 2.0f, 3.0f, 4.0f}));
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate|data.expectedExtraState);
 
     /* Clear the state flags */
-    layer.update(LayerState::NeedsDataUpdate, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
+    layer.update(LayerState::NeedsDataUpdate|data.expectedExtraState, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
     CORRADE_COMPARE(layer.state(), LayerStates{});
 
     /* Single-value padding */
-    layer.setPadding(data, 4.0f);
-    CORRADE_COMPARE(layer.padding(data), Vector4{4.0f});
-    CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
+    layer.setPadding(textData, 4.0f);
+    CORRADE_COMPARE(layer.padding(textData), Vector4{4.0f});
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate|data.expectedExtraState);
 
     /* Clear the state flags */
-    layer.update(LayerState::NeedsDataUpdate, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
+    layer.update(LayerState::NeedsDataUpdate|data.expectedExtraState, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
     CORRADE_COMPARE(layer.state(), LayerStates{});
 
     /* Testing also the other overload */
-    layer.setPadding(dataHandleData(data), 3.0f);
-    CORRADE_COMPARE(layer.padding(dataHandleData(data)), Vector4{3.0f});
-    CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
+    layer.setPadding(dataHandleData(textData), 3.0f);
+    CORRADE_COMPARE(layer.padding(dataHandleData(textData)), Vector4{3.0f});
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate|data.expectedExtraState);
 }
 
 void TextLayerTest::setPaddingInvalid() {
@@ -9139,6 +9373,257 @@ void TextLayerTest::glyphOutOfRange() {
     CORRADE_COMPARE(out,
         "Ui::TextLayer::createGlyph(): glyph 56 out of range for 56 glyphs in glyph cache font 1\n"
         "Ui::TextLayer::setGlyph(): glyph 56 out of range for 56 glyphs in glyph cache font 1\n");
+}
+
+void TextLayerTest::layoutEmpty() {
+    struct: Text::AbstractFont {
+        Text::FontFeatures doFeatures() const override { return {}; }
+        bool doIsOpened() const override { return true; }
+        void doClose() override {}
+
+        void doGlyphIdsInto(const Containers::StridedArrayView1D<const char32_t>&, const Containers::StridedArrayView1D<UnsignedInt>&) override {}
+        Vector2 doGlyphSize(UnsignedInt) override { return {}; }
+        Vector2 doGlyphAdvance(UnsignedInt) override { return {}; }
+        Containers::Pointer<Text::AbstractShaper> doCreateShaper() override { return {}; }
+    } font;
+
+    struct: Text::AbstractGlyphCache {
+        using Text::AbstractGlyphCache::AbstractGlyphCache;
+
+        Text::GlyphCacheFeatures doFeatures() const override { return {}; }
+        void doSetImage(const Vector2i&, const ImageView2D&) override {}
+    } cache{PixelFormat::R8Unorm, {32, 32, 2}};
+    cache.addFont(56, &font);
+
+    struct LayerShared: TextLayer::Shared {
+        explicit LayerShared(Text::AbstractGlyphCache& glyphCache, const Configuration& configuration): TextLayer::Shared{glyphCache, configuration} {}
+
+        void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
+        void doSetEditingStyle(const TextLayerCommonEditingStyleUniform&, Containers::ArrayView<const TextLayerEditingStyleUniform>) override {}
+    } shared{cache, TextLayer::Shared::Configuration{1}};
+
+    FontHandle fontHandle = shared.addFont(font, 1.0f);
+    shared.setStyle(
+        TextLayerCommonStyleUniform{},
+        {TextLayerStyleUniform{}},
+        {fontHandle},
+        {Text::Alignment::MiddleCenter},
+        {}, {}, {}, {}, {}, {});
+
+    struct Layer: TextLayer {
+        explicit Layer(LayerHandle handle, Shared& shared): TextLayer{handle, shared} {}
+    } layer{layerHandle(0, 1), shared};
+
+    /* Shouldn't crash or do anything weird */
+    layer.layout({}, {}, {}, {}, {}, {});
+    CORRADE_VERIFY(true);
+}
+
+void TextLayerTest::layout() {
+    auto&& data = LayoutData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
+    /* A font that produces the same glyph with the same advance for all input
+       characters */
+    struct: Text::AbstractFont {
+        Text::FontFeatures doFeatures() const override { return {}; }
+        bool doIsOpened() const override { return _opened; }
+        Properties doOpenFile(Containers::StringView, Float) override {
+            _opened = true;
+            return {16.0f, 8.0f, -4.0f, 16.0f, 1};
+        }
+        void doClose() override { _opened = false; }
+
+        void doGlyphIdsInto(const Containers::StridedArrayView1D<const char32_t>&, const Containers::StridedArrayView1D<UnsignedInt>&) override {}
+        Vector2 doGlyphSize(UnsignedInt) override { return {}; }
+        Vector2 doGlyphAdvance(UnsignedInt) override { return {}; }
+        Containers::Pointer<Text::AbstractShaper> doCreateShaper() override {
+            struct Shaper: Text::AbstractShaper {
+                using Text::AbstractShaper::AbstractShaper;
+
+                UnsignedInt doShape(Containers::StringView, UnsignedInt begin, UnsignedInt end, Containers::ArrayView<const Text::FeatureRange>) override {
+                    return end - begin;
+                }
+                void doGlyphIdsInto(const Containers::StridedArrayView1D<UnsignedInt>& ids) const override {
+                    for(UnsignedInt& i: ids)
+                        i = 0;
+                }
+                void doGlyphOffsetsAdvancesInto(const Containers::StridedArrayView1D<Vector2>& offsets, const Containers::StridedArrayView1D<Vector2>& advances) const override {
+                    for(Vector2& i: offsets)
+                        i = {};
+                    for(Vector2& i: advances)
+                        i = {3.0f, 0.0f};
+                }
+                void doGlyphClustersInto(const Containers::StridedArrayView1D<UnsignedInt>&) const override {
+                    CORRADE_INTERNAL_ASSERT_UNREACHABLE();
+                }
+            };
+            return Containers::pointer<Shaper>(*this);
+        }
+
+        bool _opened = false;
+    } font;
+    font.openFile({}, 0.0f);
+
+    /* The advances alone are enough to give us text sizes, no need to fill the
+       cache with anything */
+    struct: Text::AbstractGlyphCache {
+        using Text::AbstractGlyphCache::AbstractGlyphCache;
+
+        Text::GlyphCacheFeatures doFeatures() const override { return {}; }
+        void doSetImage(const Vector2i&, const ImageView2D&) override {}
+    } cache{PixelFormat::R8Unorm, {32, 32}};
+    cache.addFont(1, &font);
+
+    struct LayerShared: TextLayer::Shared {
+        explicit LayerShared(Text::AbstractGlyphCache& glyphCache, const Configuration& configuration): TextLayer::Shared{glyphCache, configuration} {}
+
+        void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
+        void doSetEditingStyle(const TextLayerCommonEditingStyleUniform&, Containers::ArrayView<const TextLayerEditingStyleUniform>) override {}
+    } shared{cache, TextLayer::Shared::Configuration{1, data.styleCount}
+        .setDynamicStyleCount(data.dynamicStyleCount)
+    };
+
+    FontHandle largeFont = shared.addFont(font, 16.0f);
+    FontHandle smallFont = shared.addFont(font, 8.0f);
+
+    if(data.styleCount == 3) {
+        shared.setStyle(TextLayerCommonStyleUniform{},
+            {TextLayerStyleUniform{}},
+            {0, 0, 0},
+            {smallFont, largeFont, smallFont},
+            {Text::Alignment::MiddleCenter,
+             Text::Alignment::MiddleCenter,
+             Text::Alignment::MiddleCenter},
+            {}, {}, {}, {}, {},
+            {{}, {}, data.paddingFromStyle});
+    } else if(data.styleCount == 2) {
+        shared.setStyle(TextLayerCommonStyleUniform{},
+            {TextLayerStyleUniform{}},
+            {0, 0},
+            {smallFont, largeFont},
+            {Text::Alignment::MiddleCenter,
+             Text::Alignment::MiddleCenter},
+            {}, {}, {}, {}, {},
+            {{}, {}});
+    }
+
+    struct Layer: TextLayer {
+        explicit Layer(LayerHandle handle, Shared& shared): TextLayer{handle, shared} {}
+    } layer{layerHandle(0, 1), shared};
+
+    if(data.styleCount == 2) {
+        CORRADE_INTERNAL_ASSERT(data.dynamicStyleCount == 1);
+        layer.setDynamicStyle(0, TextLayerStyleUniform{}, smallFont, Text::Alignment::MiddleCenter, {}, data.paddingFromStyle);
+    }
+
+    /* Data not attached to anything, shouldn't result in node 0 getting a min
+       size or some such */
+    /*DataHandle notAttached =*/ layer.create(0, "hello", {});
+
+    /* Node containing a single text, potentially with a dynamic style and
+       padding. Generation doesn't matter, just has to be non-zero. */
+    NodeHandle node3 = nodeHandle(3, 0x333);
+    DataHandle node3Data = layer.create(2, "hey", {}, node3);
+    if(!data.paddingFromData.isZero())
+        layer.setPadding(node3Data, data.paddingFromData);
+    /* 3x3-unit advance, 12 unit height, half size */
+    CORRADE_COMPARE(layer.size(node3Data), (Vector2{4.5f, 6.0f}));
+
+    /* Data attached to node 1 but not used when calling update(), again
+       shouldn't cause the node 1 min size to be populated */
+    NodeHandle node1 = nodeHandle(1, 0x111);
+    /*DataHandle node1DataNotUsed =*/ layer.create(0, "YEH", {}, node1);
+
+    /* Node containing two texts, one wider and the other taller */
+    NodeHandle node5 = nodeHandle(5, 0x555);
+    DataHandle node5Data1 = layer.create(1, "what's up?!", {}, node5);
+    DataHandle node5Data2 = layer.create(0, "got\nsome\n...\nlines", {}, node5);
+    /* 11x3-unit advance, 12 unit height */
+    CORRADE_COMPARE(layer.size(node5Data1), (Vector2{33.0f, 12.0f}));
+    /* 5x3-unit advance, 16 unit line advance, 12 unit height, half size */
+    CORRADE_COMPARE(layer.size(node5Data2), (Vector2{7.5f, 30.0f}));
+
+    /* Only the min sizes are actually filled, the rest is passed through */
+    Vector2 nodeMinSizes[6]{
+        {},
+        {},
+        /* There's no node 2 used, this should stay untouched even though it's
+           negative */
+        {-4.0f, -5.0f},
+        /* This is larger than the node3Data size on Y to verify the min sizes
+           aren't completely overwritten. With padding included it gets
+           overwritten. */
+        {4.0f, 7.0f},
+        {},
+        {}
+    };
+    Vector2 nodeMaxSizes[6];
+    Float nodeAspectRatios[6];
+    Vector4 nodePaddingsMargins[6];
+    UnsignedByte dataIdsToLayoutData[1]{};
+    Containers::MutableBitArrayView dataIdsToLayout{dataIdsToLayoutData, 0, 5};
+
+    /* An empty layout should not change anything */
+    if(data.emptyLayout) {
+        layer.layout(dataIdsToLayout, nodeMinSizes, nodeMaxSizes, nodeAspectRatios, nodePaddingsMargins, nodePaddingsMargins);
+        CORRADE_COMPARE_AS(Containers::arrayView(nodeMinSizes), Containers::arrayView<Vector2>({
+            {},
+            {},
+            {-4.0f, -5.0f},
+            {4.0f, 7.0f},
+            {},
+            {}
+        }), TestSuite::Compare::Container);
+        return;
+    }
+
+    dataIdsToLayout.set(dataHandleId(node3Data));
+    dataIdsToLayout.set(dataHandleId(node5Data1));
+    dataIdsToLayout.set(dataHandleId(node5Data2));
+    layer.layout(dataIdsToLayout, nodeMinSizes, nodeMaxSizes, nodeAspectRatios, nodePaddingsMargins, nodePaddingsMargins);
+    CORRADE_COMPARE_AS(Containers::arrayView(nodeMinSizes), Containers::arrayView<Vector2>({
+        {},
+        {},
+        {-4.0f, -5.0f},
+        data.expectedNode3MinSize,
+        {},
+        {33.0f, 30.0f}
+    }), TestSuite::Compare::Container);
+}
+
+void TextLayerTest::layoutNoStyleSet() {
+    auto&& data = CreateLayoutUpdateNoStyleSetData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct: Text::AbstractGlyphCache {
+        using Text::AbstractGlyphCache::AbstractGlyphCache;
+
+        Text::GlyphCacheFeatures doFeatures() const override { return {}; }
+        void doSetImage(const Vector2i&, const ImageView2D&) override {}
+    } cache{PixelFormat::R8Unorm, {32, 32}};
+
+    struct LayerShared: TextLayer::Shared {
+        explicit LayerShared(Text::AbstractGlyphCache& glyphCache, const Configuration& configuration): TextLayer::Shared{glyphCache, configuration} {}
+
+        void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
+        void doSetEditingStyle(const TextLayerCommonEditingStyleUniform&, Containers::ArrayView<const TextLayerEditingStyleUniform>) override {}
+    /* It should complain regardless of dynamic style count and even if the
+       style count is 0 as the common uniform is still used in that case */
+    } shared{cache, TextLayer::Shared::Configuration{data.styleCount}
+        .setDynamicStyleCount(data.dynamicStyleCount)
+    };
+
+    struct Layer: TextLayer {
+        explicit Layer(LayerHandle handle, Shared& shared): TextLayer{handle, shared} {}
+    } layer{layerHandle(0, 1), shared};
+
+    Containers::String out;
+    Error redirectError{&out};
+    layer.layout({}, {}, {}, {}, {}, {});
+    CORRADE_COMPARE(out, "Ui::TextLayer::layout(): no style data was set\n");
 }
 
 void TextLayerTest::updateEmpty() {
@@ -11104,7 +11589,7 @@ void TextLayerTest::updateTransformation() {
 }
 
 void TextLayerTest::updateNoStyleSet() {
-    auto&& data = CreateUpdateNoStyleSetData[testCaseInstanceId()];
+    auto&& data = CreateLayoutUpdateNoStyleSetData[testCaseInstanceId()];
     setTestCaseDescription(data.name);
 
     CORRADE_SKIP_IF_NO_ASSERT();
@@ -11142,7 +11627,7 @@ void TextLayerTest::updateNoStyleSet() {
 }
 
 void TextLayerTest::updateNoEditingStyleSet() {
-    auto&& data = CreateUpdateNoStyleSetData[testCaseInstanceId()];
+    auto&& data = CreateLayoutUpdateNoStyleSetData[testCaseInstanceId()];
     setTestCaseDescription(data.name);
 
     CORRADE_SKIP_IF_NO_ASSERT();
@@ -11219,13 +11704,13 @@ void TextLayerTest::sharedNeedsUpdateStatePropagatedToLayers() {
     };
 
     struct Layer: TextLayer {
-        explicit Layer(LayerHandle handle, Shared& shared): TextLayer{handle, shared} {}
+        explicit Layer(LayerHandle handle, Shared& shared, TextLayerFlags flags): TextLayer{handle, shared, flags} {}
     };
 
     /* Initially no state is set */
-    Layer layer1{layerHandle(0, 1), shared};
-    Layer layer2{layerHandle(0, 1), shared};
-    Layer layer3{layerHandle(0, 1), shared};
+    Layer layer1{layerHandle(0, 1), shared, data.layerFlags};
+    Layer layer2{layerHandle(0, 1), shared, data.layerFlags};
+    Layer layer3{layerHandle(0, 1), shared, data.layerFlags};
     CORRADE_COMPARE(layer1.state(), LayerStates{});
     CORRADE_COMPARE(layer2.state(), LayerStates{});
     CORRADE_COMPARE(layer3.state(), LayerStates{});
@@ -11253,21 +11738,21 @@ void TextLayerTest::sharedNeedsUpdateStatePropagatedToLayers() {
             {TextLayerEditingStyleUniform{}},
             {},
             {{}});
-    CORRADE_COMPARE(layer1.state(), LayerState::NeedsDataUpdate|LayerState::NeedsCommonDataUpdate|data.extraState);
-    CORRADE_COMPARE(layer2.state(), LayerState::NeedsDataUpdate|data.extraState);
-    CORRADE_COMPARE(layer3.state(), LayerState::NeedsDataUpdate|LayerState::NeedsSharedDataUpdate|data.extraState);
+    CORRADE_COMPARE(layer1.state(), LayerState::NeedsDataUpdate|LayerState::NeedsCommonDataUpdate|data.extraState|data.extraInitialState);
+    CORRADE_COMPARE(layer2.state(), LayerState::NeedsDataUpdate|data.extraState|data.extraInitialState);
+    CORRADE_COMPARE(layer3.state(), LayerState::NeedsDataUpdate|LayerState::NeedsSharedDataUpdate|data.extraState|data.extraInitialState);
 
     /* Updating one doesn't cause the flag to be reset on others */
-    layer2.update(LayerState::NeedsDataUpdate|data.extraState, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
-    CORRADE_COMPARE(layer1.state(), LayerState::NeedsDataUpdate|LayerState::NeedsCommonDataUpdate|data.extraState);
+    layer2.update(LayerState::NeedsDataUpdate|data.extraState|data.extraInitialState, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
+    CORRADE_COMPARE(layer1.state(), LayerState::NeedsDataUpdate|LayerState::NeedsCommonDataUpdate|data.extraState|data.extraInitialState);
     CORRADE_COMPARE(layer2.state(), LayerStates{});
-    CORRADE_COMPARE(layer3.state(), LayerState::NeedsDataUpdate|LayerState::NeedsSharedDataUpdate|data.extraState);
+    CORRADE_COMPARE(layer3.state(), LayerState::NeedsDataUpdate|LayerState::NeedsSharedDataUpdate|data.extraState|data.extraInitialState);
 
     /* Updating another still doesn't */
     layer1.update(LayerState::NeedsDataUpdate, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
     CORRADE_COMPARE(layer1.state(), LayerState::NeedsCommonDataUpdate);
     CORRADE_COMPARE(layer2.state(), LayerStates{});
-    CORRADE_COMPARE(layer3.state(), LayerState::NeedsDataUpdate|LayerState::NeedsSharedDataUpdate|data.extraState);
+    CORRADE_COMPARE(layer3.state(), LayerState::NeedsDataUpdate|LayerState::NeedsSharedDataUpdate|data.extraState|data.extraInitialState);
 
     /* Calling setStyle() / setEditingStyle() again sets
        LayerState::Needs*DataUpdate again, even if the data may be the same, as
@@ -11286,7 +11771,7 @@ void TextLayerTest::sharedNeedsUpdateStatePropagatedToLayers() {
             {{}});
     CORRADE_COMPARE(layer1.state(), LayerState::NeedsDataUpdate|LayerState::NeedsCommonDataUpdate|data.extraState);
     CORRADE_COMPARE(layer2.state(), LayerState::NeedsDataUpdate|data.extraState);
-    CORRADE_COMPARE(layer3.state(), LayerState::NeedsDataUpdate|LayerState::NeedsSharedDataUpdate|data.extraState);
+    CORRADE_COMPARE(layer3.state(), LayerState::NeedsDataUpdate|LayerState::NeedsSharedDataUpdate|data.extraState|data.extraInitialState);
 
     /* Creating a new layer with the shared state that had setStyle() called a
        few times doesn't mark it as needing an update because there's no data
@@ -11294,7 +11779,7 @@ void TextLayerTest::sharedNeedsUpdateStatePropagatedToLayers() {
        shared-state-dependent setup during construction already. For dynamic
        styles it'll perform the upload on the first update() regardless on the
        LayerState. */
-    Layer layer4{layerHandle(0, 1), shared};
+    Layer layer4{layerHandle(0, 1), shared, data.layerFlags};
     CORRADE_COMPARE(layer4.state(), LayerStates{});
 
     /* But calling setStyle() / setEditingStyle() next time will */
@@ -11311,7 +11796,7 @@ void TextLayerTest::sharedNeedsUpdateStatePropagatedToLayers() {
             {{}});
     CORRADE_COMPARE(layer1.state(), LayerState::NeedsDataUpdate|LayerState::NeedsCommonDataUpdate|data.extraState);
     CORRADE_COMPARE(layer2.state(), LayerState::NeedsDataUpdate|data.extraState);
-    CORRADE_COMPARE(layer3.state(), LayerState::NeedsDataUpdate|LayerState::NeedsSharedDataUpdate|data.extraState);
+    CORRADE_COMPARE(layer3.state(), LayerState::NeedsDataUpdate|LayerState::NeedsSharedDataUpdate|data.extraState|data.extraInitialState);
     CORRADE_COMPARE(layer4.state(), LayerState::NeedsDataUpdate|data.extraState);
 
     /* Updating again resets just one */
@@ -11533,7 +12018,7 @@ void TextLayerTest::keyTextEvent() {
         CORRADE_VERIFY(ui.keyPressEvent(event));
         CORRADE_COMPARE(layer.text(text), "helo");
         CORRADE_COMPARE(layer.cursor(text), Containers::pair(2u, 2u));
-        CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
+        CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate|LayerState::NeedsLayoutUpdate);
 
         /* Reset state flags */
         ui.update();
@@ -11543,7 +12028,7 @@ void TextLayerTest::keyTextEvent() {
         CORRADE_VERIFY(ui.keyPressEvent(event));
         CORRADE_COMPARE(layer.text(text), "heo");
         CORRADE_COMPARE(layer.cursor(text), Containers::pair(2u, 2u));
-        CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
+        CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate|LayerState::NeedsLayoutUpdate);
 
         /* Reset state flags */
         ui.update();
@@ -11555,7 +12040,7 @@ void TextLayerTest::keyTextEvent() {
         CORRADE_VERIFY(ui.textInputEvent(event));
         CORRADE_COMPARE(layer.text(text), "heavenly mayo");
         CORRADE_COMPARE(layer.cursor(text), Containers::pair(12u, 12u));
-        CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
+        CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate|LayerState::NeedsLayoutUpdate);
 
         /* Reset state flags */
         ui.update();

@@ -316,23 +316,28 @@ const struct {
 
 const struct {
     const char* name;
+    TextLayerFlags layerFlags;
     bool editingStyles;
     UnsignedInt uniform, editingUniform;
     Vector4 padding, editingPadding;
     bool expectDataChanges, expectCommonDataChanges;
+    LayerStates expectedExtraState;
 } LayerAdvanceData[]{
-    {"uniform changes",
-        false, 0, 0, {}, {}, false, true},
-    {"padding changes",
-        false, 2, 0, Vector4{2.0f}, {}, true, false},
-    {"uniform + padding changes",
-        false, 0, 0, Vector4{2.0f}, {}, true, true},
-    {"editing styles, uniform changes",
-        true, 2, 0, {}, {}, false, true},
-    {"editing styles, padding changes",
-        true, 2, 1, {}, Vector4{2.0f}, true, false},
-    {"editing styles, uniform + padding changes",
-        true, 2, 0, Vector4{2.0f}, {}, true, true},
+    {"uniform changes", {},
+        false, 0, 0, {}, {}, false, true, {}},
+    {"padding changes", {},
+        false, 2, 0, Vector4{2.0f}, {}, true, false, LayerState::NeedsLayoutUpdate},
+    {"padding changes, transformable layer", TextLayerFlag::Transformable,
+        false, 2, 0, Vector4{2.0f}, {}, true, false, {}},
+    {"uniform + padding changes", {},
+        false, 0, 0, Vector4{2.0f}, {}, true, true, LayerState::NeedsLayoutUpdate},
+    {"editing styles, uniform changes", {},
+        true, 2, 0, {}, {}, false, true, {}},
+    /* Editing styles don't influence layout properties at the moment */
+    {"editing styles, padding changes", {},
+        true, 2, 1, {}, Vector4{2.0f}, true, false, {}},
+    {"editing styles, uniform + padding changes", {},
+        true, 2, 0, {}, Vector4{2.0f}, true, true, {}},
 };
 
 TextLayerStyleAnimatorTest::TextLayerStyleAnimatorTest() {
@@ -3093,12 +3098,12 @@ void TextLayerStyleAnimatorTest::layerAdvance() {
         {Vector4{data.editingPadding}, {}});
 
     struct Layer: TextLayer {
-        explicit Layer(LayerHandle handle, Shared& shared): TextLayer{handle, shared} {}
+        explicit Layer(LayerHandle handle, Shared& shared, TextLayerFlags flags): TextLayer{handle, shared, flags} {}
 
         TextLayer::State& stateData() {
             return static_cast<TextLayer::State&>(*_state);
         }
-    } layer{layerHandle(0, 1), shared};
+    } layer{layerHandle(0, 1), shared, data.layerFlags};
 
     /* Required to be called before update() (because AbstractUserInterface
        guarantees the same on a higher level), not needed for anything here */
@@ -3136,12 +3141,12 @@ void TextLayerStyleAnimatorTest::layerAdvance() {
         CORRADE_COMPARE(layer.dynamicEditingStyleUniforms()[2*0 + 1].backgroundColor, data.expectCommonDataChanges ? Color4{0.625f} : Color4{1.0f});
         CORRADE_COMPARE(layer.dynamicEditingStylePaddings()[2*0 + 1], Vector4{data.editingPadding}*0.25f);
     }
-    CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate|LayerState::NeedsCommonDataUpdate);
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate|LayerState::NeedsCommonDataUpdate|data.expectedExtraState);
     CORRADE_VERIFY(layer.stateData().dynamicStyleChanged);
     CORRADE_COMPARE(layer.stateData().dynamicEditingStyleChanged, data.editingStyles);
 
     /* Advancing the first animation to 1/2, which sets just what's expected */
-    layer.update(LayerState::NeedsDataUpdate|LayerState::NeedsCommonDataUpdate, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
+    layer.update(LayerState::NeedsDataUpdate|LayerState::NeedsCommonDataUpdate|data.expectedExtraState, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
     layer.stateData().dynamicStyleChanged = false;
     layer.stateData().dynamicEditingStyleChanged = false;
     layer.advanceAnimations(10_nsec, activeStorage, startedStorage, stoppedStorage, factorStorage, removeStorage, {animator2, animatorEmpty, animator1});
@@ -3155,14 +3160,15 @@ void TextLayerStyleAnimatorTest::layerAdvance() {
     }
     CORRADE_COMPARE(layer.state(),
         (data.expectDataChanges ? LayerState::NeedsDataUpdate : LayerStates{})|
-        (data.expectCommonDataChanges ? LayerState::NeedsCommonDataUpdate : LayerStates{}));
+        (data.expectCommonDataChanges ? LayerState::NeedsCommonDataUpdate : LayerStates{})|
+        data.expectedExtraState);
     CORRADE_COMPARE(layer.stateData().dynamicStyleChanged, !data.editingStyles && data.expectCommonDataChanges);
     CORRADE_COMPARE(layer.stateData().dynamicEditingStyleChanged, data.editingStyles && data.expectCommonDataChanges);
 
     /* Advancing both the first animation to 3/4 and second animation directly
        to the final style. It should thus set both the update and the style
        change. */
-    layer.update(LayerState::NeedsDataUpdate|LayerState::NeedsCommonDataUpdate, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
+    layer.update(LayerState::NeedsDataUpdate|LayerState::NeedsCommonDataUpdate|data.expectedExtraState, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
     layer.stateData().dynamicStyleChanged = false;
     layer.stateData().dynamicEditingStyleChanged = false;
     layer.advanceAnimations(15_nsec, activeStorage, startedStorage, stoppedStorage, factorStorage, removeStorage, {animator2, animatorEmpty, animator1});
@@ -3171,13 +3177,15 @@ void TextLayerStyleAnimatorTest::layerAdvance() {
     CORRADE_COMPARE(layer.style(data2), shared.styleCount() + 0);
     CORRADE_COMPARE(layer.dynamicStyleUniforms()[0].color, !data.editingStyles && data.expectCommonDataChanges ? Color4{0.625f} : Color4{0.25f});
     CORRADE_COMPARE(layer.dynamicStylePaddings()[0], Vector4{data.padding}*0.75f);
-    CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate|(data.expectCommonDataChanges ? LayerState::NeedsCommonDataUpdate : LayerStates{}));
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate|
+        (data.expectCommonDataChanges ? LayerState::NeedsCommonDataUpdate : LayerStates{})|
+        data.expectedExtraState);
     CORRADE_COMPARE(layer.stateData().dynamicStyleChanged, !data.editingStyles && data.expectCommonDataChanges);
     CORRADE_COMPARE(layer.stateData().dynamicEditingStyleChanged, data.editingStyles && data.expectCommonDataChanges);
 
     /* Advancing the first animation to the end & the final style. Only the
        style data is updated, no uniforms or paddings. */
-    layer.update(LayerState::NeedsDataUpdate|LayerState::NeedsCommonDataUpdate, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
+    layer.update(LayerState::NeedsDataUpdate|LayerState::NeedsCommonDataUpdate|data.expectedExtraState, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
     layer.stateData().dynamicStyleChanged = false;
     layer.stateData().dynamicEditingStyleChanged = false;
     layer.advanceAnimations(20_nsec, activeStorage, startedStorage, stoppedStorage, factorStorage, removeStorage, {animator2, animatorEmpty, animator1});

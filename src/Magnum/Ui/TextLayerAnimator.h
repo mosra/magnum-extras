@@ -60,7 +60,8 @@ enum class TextLayerStyleAnimatorUpdate: UnsignedByte {
     /**
      * Style padding. Equivalently to calling @ref TextLayer::setDynamicStyle()
      * with a different padding value, causes @ref LayerState::NeedsDataUpdate
-     * to be set.
+     * to be set, and @ref LayerState::NeedsLayoutUpdate as well unless the
+     * layer has @ref TextLayerFlag::Transformable enabled.
      */
     Padding = 1 << 1,
 

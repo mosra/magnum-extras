@@ -535,10 +535,13 @@ enum class TextLayerFlag: UnsignedByte {
      * and @relativeref{TextLayer,scale()}. This feature replaces custom text
      * padding, meaning that @ref TextLayer::setPadding() cannot be called with
      * this flag enabled. Only the paddings supplied via
-     * @ref TextLayer::Shared::setStyle() are used. At the moment, text also
-     * can't be marked as @ref TextDataFlag::Editable if this flag is enabled,
-     * as cursor placement with arbitrarily transformed text isn't implemented
-     * yet.
+     * @ref TextLayer::Shared::setStyle() are used.
+     *
+     * With this flag enabled, the layer doesn't use the text size to provide
+     * @ref Ui-TextLayer-layout-properties "min node size layout properties".
+     * At the moment, text also can't be marked as @ref TextDataFlag::Editable
+     * if this flag is enabled, as cursor placement with arbitrarily
+     * transformed text isn't implemented yet.
      *
      * Note that internally the glyph quad transformation is performed on the
      * CPU side, which may have performance implications if enabled globally
@@ -1552,6 +1555,26 @@ editing styles you want to have for a particular dynamic style, use
 @ref setDynamicStyleWithCursor(), @ref setDynamicStyleWithSelection() or
 @ref setDynamicStyleWithCursorSelection() instead of @ref setDynamicStyle().
 
+@section Ui-TextLayer-layout-properties Providing layout properties to layouters
+
+The text layer uses size of the laid out text along with padding coming both
+from the style and @ref setPadding() to provide a min size layout property to
+the node the data is attached to. This info is subsequently combined with
+info coming for example from @ref LayoutLayer and picked up by layouters such
+as @ref SnapLayouter.
+
+The layout properties aren't provided if @ref TextLayerFlag::Transformable is
+enabled on the layer, as it's often likely undesirable to have the node size
+change wildly based on text rotation and transformations.
+
+@m_class{m-note m-warning}
+
+@par
+    Layout change currently isn't triggered when styles change based on pointer
+    input or due to nodes being disabled, thus to prevent visual artifacts you
+    may want to ensure that all state variants for a particular style have the
+    same combined horizontal and vertical padding.
+
 @section Ui-TextLayer-style-animations Animating styles and style transitions
 
 Similarly to @ref Ui-BaseLayer-style-animations "BaseLayer style animations",
@@ -1924,11 +1947,12 @@ class MAGNUM_UI_EXPORT TextLayer: public AbstractVisualLayer {
          * Calling this function causes @ref LayerState::NeedsCommonDataUpdate
          * to be set to trigger an upload of changed dynamic style uniform
          * data. If @p padding changed, @ref LayerState::NeedsDataUpdate gets
-         * set as well. On the other hand, changing the @p font, @p alignment
-         * or @p features doesn't cause @ref LayerState::NeedsDataUpdate to be
-         * set --- the @p font, @p alignment and @p features get only used in
-         * the following call to @ref create(), @ref createGlyph(),
-         * @ref setText() or @ref setGlyph().
+         * set as well, and unless @ref TextLayerFlag::Transformable is
+         * enabled, @ref LayerState::NeedsLayoutUpdate also. On the other hand,
+         * changing the @p font, @p alignment or @p features doesn't cause
+         * @ref LayerState::NeedsDataUpdate to be set --- the @p font,
+         * @p alignment and @p features get only used in the following call to
+         * @ref create(), @ref createGlyph(), @ref setText() or @ref setGlyph().
          *
          * This function doesn't set any cursor or selection style, meaning
          * they won't be shown at all if using this style for a
@@ -1980,13 +2004,15 @@ class MAGNUM_UI_EXPORT TextLayer: public AbstractVisualLayer {
          *
          * Calling this function causes @ref LayerState::NeedsCommonDataUpdate
          * to be set to trigger an upload of changed dynamic style uniform
-         * data. If @p padding, @p cursorPadding or @p selectionPadding
-         * changed, @ref LayerState::NeedsDataUpdate gets set as well. On the
-         * other hand, changing the @p font, @p alignment or @p features
-         * doesn't cause any state flag to be set --- the @p font, @p alignment
-         * and @p features get only used in the following call to
-         * @ref create(), @ref createGlyph(), @ref setText() or
-         * @ref setGlyph().
+         * data. If @p padding changed, @ref LayerState::NeedsDataUpdate gets
+         * set as well, and unless @ref TextLayerFlag::Transformable is
+         * enabled, @ref LayerState::NeedsLayoutUpdate also. If
+         * @p cursorPadding or @p selectionPadding changed,
+         * @ref LayerState::NeedsDataUpdate gets set as well. On the other
+         * hand, changing the @p font, @p alignment or @p features doesn't
+         * cause any state flag to be set --- the @p font, @p alignment and
+         * @p features get only used in the following call to @ref create(),
+         * @ref createGlyph(), @ref setText() or @ref setGlyph().
          *
          * Note that while @p selectionPadding is merely a way to visually
          * fine-tune the appearance, @p cursorPadding has to be non-zero
@@ -2514,7 +2540,9 @@ class MAGNUM_UI_EXPORT TextLayer: public AbstractVisualLayer {
          * by the style are used for editable text.
          *
          * Calling this function causes @ref LayerState::NeedsDataUpdate to be
-         * set.
+         * set, and if @ref TextLayerFlag::Transformable isn't enabled and
+         * @p handle is attached to a node, @ref LayerState::NeedsLayoutUpdate
+         * as well.
          * @see @ref setCursor(), @ref updateText(), @ref editText(),
          *      @ref isHandleValid(DataHandle) const,
          *      @ref Shared::isHandleValid(FontHandle) const
@@ -2588,7 +2616,10 @@ class MAGNUM_UI_EXPORT TextLayer: public AbstractVisualLayer {
          * Calling this function causes @ref LayerState::NeedsDataUpdate to be
          * set, unless the operation performed is a no-op, which is when both
          * @p removeSize and @p insertText size are both @cpp 0 @ce and
-         * @p cursor is equal to @ref cursor().
+         * @p cursor is equal to @ref cursor(). Additionally, if @p handle is
+         * attached to a node and the actual text changes, i.e., unless both
+         * @p removeSize and @p insertText are @cpp 0 @ce,
+         * @ref LayerState::NeedsLayoutUpdate is set as well.
          * @see @ref setText(), @ref isHandleValid(DataHandle) const,
          *      @ref flags(DataHandle) const
          */
@@ -2642,7 +2673,9 @@ class MAGNUM_UI_EXPORT TextLayer: public AbstractVisualLayer {
          * Calling this function causes @ref LayerState::NeedsDataUpdate to be
          * set, unless the operation performed is a no-op such as inserting
          * empty text or moving a cursor / deleting a character with there
-         * being no character to move over or delete.
+         * being no character to move over or delete. Additionally, if
+         * @p handle is attached to a node and the actual text changes,
+         * @ref LayerState::NeedsLayoutUpdate is set as well.
          * @see @ref setText(), @ref flags(DataHandle) const,
          *      @ref isHandleValid(DataHandle) const
          */
@@ -2685,7 +2718,9 @@ class MAGNUM_UI_EXPORT TextLayer: public AbstractVisualLayer {
          * representation of both is the same.
          *
          * Calling this function causes @ref LayerState::NeedsDataUpdate to be
-         * set.
+         * set, and if @ref TextLayerFlag::Transformable isn't enabled and
+         * @p handle is attached to a node, @ref LayerState::NeedsLayoutUpdate
+         * as well.
          * @see @ref isHandleValid(DataHandle) const,
          *      @ref Shared::isHandleValid(FontHandle) const,
          *      @ref Shared::glyphCacheFontId()
@@ -2813,7 +2848,8 @@ class MAGNUM_UI_EXPORT TextLayer: public AbstractVisualLayer {
          * way.
          *
          * Calling this function causes @ref LayerState::NeedsDataUpdate to be
-         * set.
+         * set, and if @p handle is attached to a node,
+         * @ref LayerState::NeedsLayoutUpdate as well.
          * @see @ref isHandleValid(DataHandle) const
          */
         void setPadding(DataHandle handle, const Vector4& padding);
@@ -3080,6 +3116,7 @@ class MAGNUM_UI_EXPORT TextLayer: public AbstractVisualLayer {
            that's on the subclass */
         LayerFeatures doFeatures() const override;
 
+        void doLayout(Containers::BitArrayView dataIdsToLayout, const Containers::StridedArrayView1D<Vector2>& nodeMinSizes, const Containers::StridedArrayView1D<Vector2>& nodeMaxSizes, const Containers::StridedArrayView1D<Float>& nodeAspectRatios, const Containers::StridedArrayView1D<Vector4>& nodePaddings, const Containers::StridedArrayView1D<Vector4>& nodeMargins) override;
         void doUpdate(LayerStates states, const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectDataCounts, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, const Containers::StridedArrayView1D<const Float>& nodeOpacities, Containers::BitArrayView nodesEnabled, const Containers::StridedArrayView1D<const Vector2>& clipRectOffsets, const Containers::StridedArrayView1D<const Vector2>& clipRectSizes, const Containers::StridedArrayView1D<const Vector2>& compositeRectOffsets, const Containers::StridedArrayView1D<const Vector2>& compositeRectSizes) override;
 
     private:
@@ -3459,8 +3496,10 @@ class MAGNUM_UI_EXPORT TextLayer::Shared: public AbstractVisualLayer::Shared {
          * instead.
          *
          * Calling this function causes @ref LayerState::NeedsDataUpdate to be
-         * set on all layers that are constructed using this shared instance.
-         * If @ref dynamicStyleCount() is non-zero,
+         * set on all layers that are constructed using this shared instance,
+         * and additionally also @ref LayerState::NeedsLayoutUpdate on layers
+         * that don't have @ref TextLayerFlag::Transformable enabled. If
+         * @ref dynamicStyleCount() is non-zero,
          * @ref LayerState::NeedsCommonDataUpdate is set as well to trigger an
          * upload of changed dynamic style uniform data.
          * @see @ref isHandleValid(FontHandle) const
@@ -3532,8 +3571,10 @@ class MAGNUM_UI_EXPORT TextLayer::Shared: public AbstractVisualLayer::Shared {
          * convenience overload instead.
          *
          * Calling this function causes @ref LayerState::NeedsDataUpdate to be
-         * set on all layers that are constructed using this shared instance.
-         * If @ref dynamicStyleCount() is non-zero,
+         * set on all layers that are constructed using this shared instance,
+         * and additionally also @ref LayerState::NeedsLayoutUpdate on layers
+         * that don't have @ref TextLayerFlag::Transformable enabled. If
+         * @ref dynamicStyleCount() is non-zero,
          * @ref LayerState::NeedsCommonDataUpdate is set as well to trigger an
          * upload of changed dynamic style uniform data.
          * @see @ref isHandleValid(FontHandle) const

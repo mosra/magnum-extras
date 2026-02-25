@@ -739,6 +739,11 @@ void TextLayer::setDynamicStyleInternal(
     if(style.padding != padding) {
         style.padding = padding;
         setNeedsUpdate(LayerState::NeedsDataUpdate);
+
+        /* If the layer isn't transformable, for which no layout properties are
+           provided, trigger also layout update */
+        if(!(state.flags >= TextLayerFlag::Transformable))
+            setNeedsUpdate(LayerState::NeedsLayoutUpdate);
     }
 }
 
@@ -1549,6 +1554,11 @@ void TextLayer::setTextInternal(const UnsignedInt id, const Containers::StringVi
         #endif
         id, data.style, text, properties, flags);
     setNeedsUpdate(LayerState::NeedsDataUpdate);
+
+    /* If the layer isn't transformable, for which no layout properties are
+       provided, and the text is attached, trigger also layout update */
+    if(!(state.flags >= TextLayerFlag::Transformable) && nodes()[id] != NodeHandle::Null)
+        setNeedsUpdate(LayerState::NeedsLayoutUpdate);
 }
 
 void TextLayer::updateText(const DataHandle handle, const UnsignedInt removeOffset, const UnsignedInt removeSize, const UnsignedInt insertOffset, const Containers::StringView insertText, const UnsignedInt cursor, const UnsignedInt selection) {
@@ -1705,6 +1715,14 @@ void TextLayer::updateTextInternal(const UnsignedInt id, const UnsignedInt remov
     setCursorInternal(id, cursor, selection);
 
     setNeedsUpdate(LayerState::NeedsDataUpdate);
+
+    /* If we got here, the text changed and thus NeedsLayoutUpdate has to be
+       triggered as well. Editable text is not possible on a layer with
+       Transformable enabled, no need to check that. */
+    if(nodes()[id] != NodeHandle::Null) {
+        CORRADE_INTERNAL_DEBUG_ASSERT(!(state.flags >= TextLayerFlag::Transformable));
+        setNeedsUpdate(LayerState::NeedsLayoutUpdate);
+    }
 }
 
 void TextLayer::editText(const DataHandle handle, const TextEdit edit, const Containers::StringView insert) {
@@ -1891,6 +1909,11 @@ void TextLayer::setGlyphInternal(const UnsignedInt id, const UnsignedInt glyph, 
         #endif
         id, data.style, glyph, properties);
     setNeedsUpdate(LayerState::NeedsDataUpdate);
+
+    /* If the layer isn't transformable, for which no layout properties are
+       provided, and the text is attached, trigger also layout update */
+    if(!(state.flags >= TextLayerFlag::Transformable) && nodes()[id] != NodeHandle::Null)
+        setNeedsUpdate(LayerState::NeedsLayoutUpdate);
 }
 
 Color4 TextLayer::color(const DataHandle handle) const {
@@ -1959,6 +1982,11 @@ void TextLayer::setPaddingInternal(const UnsignedInt id, const Vector4& padding)
         "Ui::TextLayer::setPadding(): per-data padding not available on a" << TextLayerFlag::Transformable << "layer", );
     state.data[id].padding = padding;
     setNeedsUpdate(LayerState::NeedsDataUpdate);
+
+    /* If the the text is attached, trigger also layout update. Padding cannot
+       be set for a transformable layer, that's already asserted above. */
+    if(nodes()[id] != NodeHandle::Null)
+        setNeedsUpdate(LayerState::NeedsLayoutUpdate);
 }
 
 Containers::Pair<Vector2, Complex> TextLayer::transformation(const DataHandle handle) const {
@@ -2007,6 +2035,9 @@ void TextLayer::setTransformationInternal(const UnsignedInt id, const Vector2& t
         "Ui::TextLayer::setTransformation(): layer isn't" << TextLayerFlag::Transformable, );
     state.data[id].transformation = {translation, rotation*scaling};
     setNeedsUpdate(LayerState::NeedsDataUpdate);
+    /* Transformable layer isn't providing layout properties, so no
+       NeedsLayoutUpdate here */
+    CORRADE_INTERNAL_DEBUG_ASSERT(!(features() >= LayerFeature::Layout));
 }
 
 void TextLayer::translate(const DataHandle handle, const Vector2& translation) {
@@ -2027,6 +2058,9 @@ void TextLayer::translateInternal(const UnsignedInt id, const Vector2& translati
         "Ui::TextLayer::translate(): layer isn't" << TextLayerFlag::Transformable, );
     state.data[id].transformation.translation += translation;
     setNeedsUpdate(LayerState::NeedsDataUpdate);
+    /* Transformable layer isn't providing layout properties, so no
+       NeedsLayoutUpdate here */
+    CORRADE_INTERNAL_DEBUG_ASSERT(!(features() >= LayerFeature::Layout));
 }
 
 void TextLayer::rotate(const DataHandle handle, const Complex& rotation) {
@@ -2056,6 +2090,9 @@ void TextLayer::rotateInternal(const UnsignedInt id, const Complex& rotation) {
     Implementation::TextLayerData::Transformation& transformation = state.data[id].transformation;
     transformation.rotationScaling = rotation*transformation.rotationScaling;
     setNeedsUpdate(LayerState::NeedsDataUpdate);
+    /* Transformable layer isn't providing layout properties, so no
+       NeedsLayoutUpdate here */
+    CORRADE_INTERNAL_DEBUG_ASSERT(!(features() >= LayerFeature::Layout));
 }
 
 void TextLayer::scale(const DataHandle handle, const Float scaling) {
@@ -2076,10 +2113,16 @@ void TextLayer::scaleInternal(const UnsignedInt id, const Float scaling) {
         "Ui::TextLayer::scale(): layer isn't" << TextLayerFlag::Transformable, );
     state.data[id].transformation.rotationScaling *= scaling;
     setNeedsUpdate(LayerState::NeedsDataUpdate);
+    /* Transformable layer isn't providing layout properties, so no
+       NeedsLayoutUpdate here */
+    CORRADE_INTERNAL_DEBUG_ASSERT(!(features() >= LayerFeature::Layout));
 }
 
 LayerFeatures TextLayer::doFeatures() const {
-    return AbstractVisualLayer::doFeatures()|(static_cast<const Shared::State&>(_state->shared).dynamicStyleCount ? LayerFeature::AnimateStyles : LayerFeatures{})|LayerFeature::Draw;
+    return AbstractVisualLayer::doFeatures()|
+        LayerFeature::Draw|
+        (static_cast<const Shared::State&>(_state->shared).dynamicStyleCount ? LayerFeature::AnimateStyles : LayerFeatures{})|
+        (static_cast<const State&>(*_state).flags >= TextLayerFlag::Transformable ? LayerFeatures{} : LayerFeature::Layout);
 }
 
 LayerStates TextLayer::doState() const {
@@ -2097,6 +2140,12 @@ LayerStates TextLayer::doState() const {
         if(sharedState.dynamicStyleCount)
             states |= LayerState::NeedsCommonDataUpdate;
     }
+    /* Unless the texts are transformable, for which no layout properties are
+       provided, potential changes to paddings can affect layouts too */
+    /** @todo move to the above once editing style changes have effect on
+        layouts as well */
+    if(state.styleUpdateStamp != sharedState.styleUpdateStamp && !(state.flags >= TextLayerFlag::Transformable))
+        states |= LayerState::NeedsLayoutUpdate;
     return states;
 }
 
@@ -2140,6 +2189,10 @@ void TextLayer::doAdvanceAnimations(const Nanoseconds time, const Containers::Mu
 
     if(updates & (TextLayerStyleAnimatorUpdate::Style|TextLayerStyleAnimatorUpdate::Padding|TextLayerStyleAnimatorUpdate::EditingPadding))
         setNeedsUpdate(LayerState::NeedsDataUpdate);
+    /* If padding is updated and the layer isn't transformable, for which no
+       layout properties are provided, trigger also layout update */
+    if(updates >= TextLayerStyleAnimatorUpdate::Padding && !(state.flags >= TextLayerFlag::Transformable))
+        setNeedsUpdate(LayerState::NeedsLayoutUpdate);
     if(updates >= TextLayerStyleAnimatorUpdate::Uniform) {
         setNeedsUpdate(LayerState::NeedsCommonDataUpdate);
         state.dynamicStyleChanged = true;
@@ -2147,6 +2200,55 @@ void TextLayer::doAdvanceAnimations(const Nanoseconds time, const Containers::Mu
     if(updates >= TextLayerStyleAnimatorUpdate::EditingUniform) {
         setNeedsUpdate(LayerState::NeedsCommonDataUpdate);
         state.dynamicEditingStyleChanged = true;
+    }
+}
+
+void TextLayer::doLayout(const Containers::BitArrayView dataIdsToLayout, const Containers::StridedArrayView1D<Vector2>& nodeMinSizes, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Float>&, const Containers::StridedArrayView1D<Vector4>&, const Containers::StridedArrayView1D<Vector4>&) {
+    auto& state = static_cast<State&>(*_state);
+    Shared::State& sharedState = static_cast<Shared::State&>(state.shared);
+    /* Technically needed only if there's any actual data to update, but
+       require it always for consistency (and easier testing) */
+    CORRADE_ASSERT(sharedState.setStyleCalled,
+        "Ui::TextLayer::layout(): no style data was set", );
+    /* If the layer has Transformable enabled, it doesn't expose
+       LayerFeature::Layout so it shouldn't get here */
+    CORRADE_INTERNAL_DEBUG_ASSERT(!(state.flags >= TextLayerFlag::Transformable));
+
+    const Containers::StridedArrayView1D<const NodeHandle> nodes = this->nodes();
+    for(std::size_t i = 0; i != dataIdsToLayout.size(); ++i) {
+        /** @todo some way to iterate set bits */
+        if(!dataIdsToLayout[i])
+            continue;
+
+        const Implementation::TextLayerData& data = state.data[i];
+
+        /* Total padding coming from both (dynamic) style and the data */
+        Vector4 padding = state.flags >= TextLayerFlag::Transformable ? Vector4{} : data.padding;
+        /* Can't use data.calculatedStyle because it's not filled yet at this
+           point (it's filled in doUpdate(), which gets run only once all
+           layouts are known, and this function feeds the input to the layout
+           calculation */
+        /** @todo which means that, if a disabled style has a different padding
+            than the non-disabled one, it *doesn't* get used, maybe hint at
+            that in the docs or maybe just don't use data.calculatedStyle for
+            calculating padding in doUpdate() either? */
+        if(data.style < sharedState.styleCount)
+            padding += sharedState.styles[data.style].padding;
+        else {
+            CORRADE_INTERNAL_DEBUG_ASSERT(data.style < sharedState.styleCount + sharedState.dynamicStyleCount);
+            padding += state.dynamicStyles[data.style - sharedState.styleCount].padding;
+        }
+
+        /* The min size is defined by size of the actual text and its padding
+           from both sides ((left, top) and (right, bottom)) */
+        const Vector2 minSize = data.rectangle.size() +
+            Math::gather<0, 1>(padding) +
+            Math::gather<2, 3>(padding);
+        /* Only data that are attached are passed to this function, so nodes[i]
+           is never NodeHandle::Null */
+        CORRADE_INTERNAL_DEBUG_ASSERT(nodes[i] != NodeHandle::Null);
+        Vector2& nodeMinSize = nodeMinSizes[nodeHandleId(nodes[i])];
+        nodeMinSize = Math::max(nodeMinSize, minSize);
     }
 }
 
