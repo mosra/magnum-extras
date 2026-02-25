@@ -533,7 +533,7 @@ Debug& operator<<(Debug& debug, Enum value) {
 const struct {
     const char* name;
     NodeHandle node;
-    LayerStates state;
+    LayerStates extraState;
     bool layerDataHandleOverloads, customFont, customAlignment, nullStyleFonts;
     UnsignedInt styleCount, dynamicStyleCount;
     TextLayerFlags layerFlags;
@@ -541,49 +541,49 @@ const struct {
     bool updateEditableTextInsteadOfSet;
 } CreateRemoveSetData[]{
     {"create",
-        NodeHandle::Null, LayerState::NeedsDataUpdate,
+        NodeHandle::Null, {},
         false, false, false, false, 3, 0, {}, {}, false},
     {"create and attach",
-        nodeHandle(9872, 0xbeb), LayerState::NeedsNodeOffsetSizeUpdate|LayerState::NeedsAttachmentUpdate|LayerState::NeedsDataUpdate,
+        nodeHandle(9872, 0xbeb), LayerState::NeedsNodeOffsetSizeUpdate|LayerState::NeedsAttachmentUpdate,
         false, false, false, false, 3, 0, {}, {}, false},
     {"LayerDataHandle overloads",
-        NodeHandle::Null, LayerState::NeedsDataUpdate,
+        NodeHandle::Null, {},
         true, false, false, false, 3, 0, {}, {}, false},
     {"custom fonts",
-        NodeHandle::Null, LayerState::NeedsDataUpdate,
+        NodeHandle::Null, {},
         false, true, false, false, 3, 0, {}, {}, false},
     {"custom fonts, null style fonts",
-        NodeHandle::Null, LayerState::NeedsDataUpdate,
+        NodeHandle::Null, {},
         false, true, false, true, 3, 0, {}, {}, false},
     {"custom fonts, LayerDataHandle overloads",
-        NodeHandle::Null, LayerState::NeedsDataUpdate,
+        NodeHandle::Null, {},
         true, true, false, false, 3, 0, {}, {}, false},
     {"custom alignment",
-        NodeHandle::Null, LayerState::NeedsDataUpdate,
+        NodeHandle::Null, {},
         false, false, true, false, 3, 0, {}, {}, false},
     {"dynamic styles",
-        NodeHandle::Null, LayerState::NeedsCommonDataUpdate|LayerState::NeedsDataUpdate,
+        NodeHandle::Null, LayerState::NeedsCommonDataUpdate,
         false, false, false, false, 1, 2, {}, {}, false},
     {"dynamic styles, custom alignment",
-        NodeHandle::Null, LayerState::NeedsCommonDataUpdate|LayerState::NeedsDataUpdate,
+        NodeHandle::Null, LayerState::NeedsCommonDataUpdate,
         false, false, true, false, 1, 2, {}, {}, false},
     {"transformable",
-        NodeHandle::Null, LayerState::NeedsDataUpdate,
+        NodeHandle::Null, {},
         false, false, false, false, 3, 0, TextLayerFlag::Transformable, {}, false},
     {"editable",
-        NodeHandle::Null, LayerState::NeedsDataUpdate,
+        NodeHandle::Null, {},
         false, false, false, false, 3, 0, {}, ~~TextDataFlag::Editable, false},
     {"editable, create and attach",
-        nodeHandle(9872, 0xbeb), LayerState::NeedsNodeOffsetSizeUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsAttachmentUpdate|LayerState::NeedsDataUpdate,
+        nodeHandle(9872, 0xbeb), LayerState::NeedsNodeOffsetSizeUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsAttachmentUpdate,
         false, false, false, false, 3, 0, {}, ~~TextDataFlag::Editable, false},
     {"editable, LayerDataHandle overloads",
-        NodeHandle::Null, LayerState::NeedsDataUpdate,
+        NodeHandle::Null, {},
         true, false, false, false, 3, 0, {}, ~~TextDataFlag::Editable, false},
     {"editable, use updateText() instead of setText()",
-        NodeHandle::Null, LayerState::NeedsDataUpdate,
+        NodeHandle::Null, {},
         false, false, false, false, 3, 0, {}, ~~TextDataFlag::Editable, true},
     {"editable, use updateText() instead of setText(), LayerDataHandle overloads",
-        NodeHandle::Null, LayerState::NeedsDataUpdate,
+        NodeHandle::Null, {},
         true, false, false, false, 3, 0, {}, ~~TextDataFlag::Editable, true},
 };
 
@@ -6115,7 +6115,7 @@ template<class StyleIndex, class GlyphIndex> void TextLayerTest::createRemoveSet
         CORRADE_COMPARE(layer.transformation(first), Containers::pair(Vector2{}, Complex{Math::IdentityInit}));
     else
         CORRADE_COMPARE(layer.padding(first), Vector4{0.0f});
-    CORRADE_COMPARE(layer.state(), data.state);
+    CORRADE_COMPARE(layer.state(), data.extraState|LayerState::NeedsDataUpdate);
 
     /* Single (invalid) glyph; createGlyph() takes no TextDataFlags */
     DataHandle firstGlyph = layer.createGlyph(
@@ -6135,7 +6135,7 @@ template<class StyleIndex, class GlyphIndex> void TextLayerTest::createRemoveSet
         CORRADE_COMPARE(layer.transformation(firstGlyph), Containers::pair(Vector2{}, Complex{Math::IdentityInit}));
     else
         CORRADE_COMPARE(layer.padding(firstGlyph), Vector4{0.0f});
-    CORRADE_COMPARE(layer.state(), data.state);
+    CORRADE_COMPARE(layer.state(), data.extraState|LayerState::NeedsDataUpdate);
 
     /* Default null node, testing also the getter overloads and templates;
        having a non-default alignment */
@@ -6191,7 +6191,7 @@ template<class StyleIndex, class GlyphIndex> void TextLayerTest::createRemoveSet
         else
             CORRADE_COMPARE(layer.padding(second), Vector4{0.0f});
     }
-    CORRADE_COMPARE(layer.state(), data.state);
+    CORRADE_COMPARE(layer.state(), data.extraState|LayerState::NeedsDataUpdate);
 
     /* Single glyph with default node; again createGlyph() takes no
        TextDataFlags */
@@ -6212,7 +6212,7 @@ template<class StyleIndex, class GlyphIndex> void TextLayerTest::createRemoveSet
         CORRADE_COMPARE(layer.transformation(secondGlyph), Containers::pair(Vector2{}, Complex{Math::IdentityInit}));
     else
         CORRADE_COMPARE(layer.padding(secondGlyph), Vector4{0.0f});
-    CORRADE_COMPARE(layer.state(), data.state);
+    CORRADE_COMPARE(layer.state(), data.extraState|LayerState::NeedsDataUpdate);
 
     /* Empty text */
     DataHandle third = data.flags ?
@@ -6249,7 +6249,7 @@ template<class StyleIndex, class GlyphIndex> void TextLayerTest::createRemoveSet
         CORRADE_COMPARE(layer.transformation(third), Containers::pair(Vector2{}, Complex{Math::IdentityInit}));
     else
         CORRADE_COMPARE(layer.padding(third), Vector4{0.0f});
-    CORRADE_COMPARE(layer.state(), data.state);
+    CORRADE_COMPARE(layer.state(), data.extraState|LayerState::NeedsDataUpdate);
 
     DataHandle fourth = data.flags ?
         layer.create(
@@ -6282,7 +6282,7 @@ template<class StyleIndex, class GlyphIndex> void TextLayerTest::createRemoveSet
         CORRADE_COMPARE(layer.transformation(fourth), Containers::pair(Vector2{}, Complex{Math::IdentityInit}));
     else
         CORRADE_COMPARE(layer.padding(fourth), Vector4{0.0f});
-    CORRADE_COMPARE(layer.state(), data.state);
+    CORRADE_COMPARE(layer.state(), data.extraState|LayerState::NeedsDataUpdate);
 
     /* Empty text that is never editable and thus has neither a glyph nor a
        text run */
@@ -6301,7 +6301,7 @@ template<class StyleIndex, class GlyphIndex> void TextLayerTest::createRemoveSet
         CORRADE_COMPARE(layer.transformation(fifth), Containers::pair(Vector2{}, Complex{Math::IdentityInit}));
     else
         CORRADE_COMPARE(layer.padding(fifth), Vector4{0.0f});
-    CORRADE_COMPARE(layer.state(), data.state);
+    CORRADE_COMPARE(layer.state(), data.extraState|LayerState::NeedsDataUpdate);
 
     /* Another empty text, again also editable */
     DataHandle sixth = data.flags ?
@@ -6334,7 +6334,7 @@ template<class StyleIndex, class GlyphIndex> void TextLayerTest::createRemoveSet
         CORRADE_COMPARE(layer.transformation(sixth), Containers::pair(Vector2{}, Complex{Math::IdentityInit}));
     else
         CORRADE_COMPARE(layer.padding(sixth), Vector4{0.0f});
-    CORRADE_COMPARE(layer.state(), data.state);
+    CORRADE_COMPARE(layer.state(), data.extraState|LayerState::NeedsDataUpdate);
 
     /* There should be five glyph runs, assigned to data that resulted in
        non-zero glyphs */
@@ -6454,7 +6454,7 @@ template<class StyleIndex, class GlyphIndex> void TextLayerTest::createRemoveSet
     data.layerDataHandleOverloads ?
         layer.remove(dataHandleData(sixth)) :
         layer.remove(sixth);
-    CORRADE_COMPARE(layer.state(), data.state|LayerState::NeedsDataClean);
+    CORRADE_COMPARE(layer.state(), data.extraState|LayerState::NeedsDataClean|LayerState::NeedsDataUpdate);
     CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().data).slice(&Implementation::TextLayerData::glyphRun), Containers::arrayView({
         0u, 1u, 2u, 3u, 0xffffffffu, 4u, 0xffffffffu, 0xffffffffu
     }), TestSuite::Compare::Container);
@@ -6562,7 +6562,7 @@ template<class StyleIndex, class GlyphIndex> void TextLayerTest::createRemoveSet
     CORRADE_COMPARE(layer.flags(fifth), TextDataFlags{});
     CORRADE_COMPARE(layer.flags(third), TextDataFlags{});
 
-    CORRADE_COMPARE(layer.state(), data.state|LayerState::NeedsDataClean|LayerState::NeedsDataUpdate);
+    CORRADE_COMPARE(layer.state(), data.extraState|LayerState::NeedsDataClean|LayerState::NeedsDataUpdate);
     CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().data).slice(&Implementation::TextLayerData::glyphRun), Containers::arrayView({
         0u, 1u, 6u, 5u, 8u, 4u, 7u, 0xffffffffu
     }), TestSuite::Compare::Container);
@@ -6789,7 +6789,7 @@ template<class StyleIndex, class GlyphIndex> void TextLayerTest::createRemoveSet
     CORRADE_COMPARE(layer.flags(secondGlyph), data.flags ? *data.flags : TextDataFlags{});
 
     /* Previous glyph runs should be marked as unused */
-    CORRADE_COMPARE(layer.state(), data.state|LayerState::NeedsDataClean|LayerState::NeedsDataUpdate);
+    CORRADE_COMPARE(layer.state(), data.extraState|LayerState::NeedsDataClean|LayerState::NeedsDataUpdate);
     CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().data).slice(&Implementation::TextLayerData::glyphRun), Containers::arrayView({
         0u, 1u, 10u, 9u, 8u, 4u, 7u, 0xffffffffu
     }), TestSuite::Compare::Container);
