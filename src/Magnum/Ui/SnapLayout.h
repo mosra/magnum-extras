@@ -664,11 +664,10 @@ class MAGNUM_UI_EXPORT AbstractSnapLayout {
         /* Deinlined specializations for BasicSnapLayoutColumn and such in
            SnapLayout.cpp */
         template<template<class> class> void setDefaultChildSnapFor();
+        /* Called from specialized BasicSnapLayoutColumn etc. constructors */
+        void setDefaultPropagateMargin();
 
     private:
-        /* Called from (deinlined) setDefaultChildSnapFor() above */
-        MAGNUM_UI_LOCAL void setDefaultChildSnap(Snaps snaps);
-
         AbstractUserInterface* _ui;
         SnapLayouter* _layouter;
         NodeHandle _node;
@@ -1204,6 +1203,10 @@ template<class UserInterface> class BasicSnapLayout: public AbstractSnapLayout {
            construction */
         template<template<class> class T> explicit BasicSnapLayout(const BasicSnapLayout<UserInterface>& other, T<UserInterface>&): AbstractSnapLayout{other} {
             setDefaultChildSnapFor<T>();
+            setDefaultPropagateMargin();
+        }
+        template<template<class> class T> explicit BasicSnapLayout(const BasicAnchor<UserInterface>& anchor, T<UserInterface>&): BasicSnapLayout{anchor} {
+            setDefaultChildSnapFor<T>();
         }
 
     private:
@@ -1228,6 +1231,13 @@ horizontally. Meant to be used through concrete a typedef such as
 template<class UserInterface> class BasicSnapLayoutColumn: public BasicSnapLayout<UserInterface> {
     public:
         /**
+         * @brief Construct from an anchor
+         *
+         * Calls @ref setChildSnap() with @ref Snap::Bottom.
+         */
+        /*implicit*/ BasicSnapLayoutColumn(const BasicAnchor<UserInterface>& anchor): BasicSnapLayout<UserInterface>{anchor, *this} {}
+
+        /**
          * @brief Construct from an unspecialized layout
          *
          * Calls @ref setChildSnap() with @ref Snap::Bottom and @ref addFlags()
@@ -1235,7 +1245,8 @@ template<class UserInterface> class BasicSnapLayoutColumn: public BasicSnapLayou
          * @relativeref{SnapLayoutFlag,PropagateMarginY} unless
          * @relativeref{SnapLayoutFlag,IgnoreOverflowX} and
          * @relativeref{SnapLayoutFlag,IgnoreOverflowY} is already specified in
-         * given direction.
+         * given direction, allowing margins from nested widgets to be
+         * collapsed with parent's neigbors as well.
          */
         /*implicit*/ BasicSnapLayoutColumn(const BasicSnapLayout<UserInterface>& layout): BasicSnapLayout<UserInterface>{layout, *this} {}
 
@@ -1255,6 +1266,14 @@ be used through concrete a typedef such as @ref SnapLayoutColumnLeft.
 template<class UserInterface> class BasicSnapLayoutColumnLeft: public BasicSnapLayout<UserInterface> {
     public:
         /**
+         * @brief Construct from an anchor
+         *
+         * Calls @ref setChildSnap() with
+         * @link Snap::BottomLeft @endlink|@ref Snap::InsideX.
+         */
+        /*implicit*/ BasicSnapLayoutColumnLeft(const BasicAnchor<UserInterface>& anchor): BasicSnapLayout<UserInterface>{anchor, *this} {}
+
+        /**
          * @brief Construct from an unspecialized layout
          *
          * Calls @ref setChildSnap() with
@@ -1263,7 +1282,8 @@ template<class UserInterface> class BasicSnapLayoutColumnLeft: public BasicSnapL
          * @relativeref{SnapLayoutFlag,PropagateMarginY} unless
          * @relativeref{SnapLayoutFlag,IgnoreOverflowX} and
          * @relativeref{SnapLayoutFlag,IgnoreOverflowY} is already specified in
-         * given direction.
+         * given direction, allowing margins from nested widgets to be
+         * collapsed with parent's neigbors as well.
          */
         /*implicit*/ BasicSnapLayoutColumnLeft(const BasicSnapLayout<UserInterface>& layout): BasicSnapLayout<UserInterface>{layout, *this} {}
 
@@ -1283,6 +1303,14 @@ be used through concrete a typedef such as @ref SnapLayoutColumnRight.
 template<class UserInterface> class BasicSnapLayoutColumnRight: public BasicSnapLayout<UserInterface> {
     public:
         /**
+         * @brief Construct from an anchor
+         *
+         * Calls @ref setChildSnap() with
+         * @link Snap::BottomRight @endlink|@ref Snap::InsideX.
+         */
+        /*implicit*/ BasicSnapLayoutColumnRight(const BasicAnchor<UserInterface>& anchor): BasicSnapLayout<UserInterface>{anchor, *this} {}
+
+        /**
          * @brief Construct from an unspecialized layout
          *
          * Calls @ref setChildSnap() with
@@ -1291,7 +1319,8 @@ template<class UserInterface> class BasicSnapLayoutColumnRight: public BasicSnap
          * @relativeref{SnapLayoutFlag,PropagateMarginY} unless
          * @relativeref{SnapLayoutFlag,IgnoreOverflowX} and
          * @relativeref{SnapLayoutFlag,IgnoreOverflowY} is already specified in
-         * given direction.
+         * given direction, allowing margins from nested widgets to be
+         * collapsed with parent's neigbors as well.
          */
         /*implicit*/ BasicSnapLayoutColumnRight(const BasicSnapLayout<UserInterface>& layout): BasicSnapLayout<UserInterface>{layout, *this} {}
 
@@ -1311,6 +1340,14 @@ Meant to be used through concrete a typedef such as @ref SnapLayoutColumnFill.
 template<class UserInterface> class BasicSnapLayoutColumnFill: public BasicSnapLayout<UserInterface> {
     public:
         /**
+         * @brief Construct from an anchor
+         *
+         * Calls @ref setChildSnap() with
+         * @link Snap::Bottom @endlink|@ref Snap::FillX.
+         */
+        /*implicit*/ BasicSnapLayoutColumnFill(const BasicAnchor<UserInterface>& anchor): BasicSnapLayout<UserInterface>{anchor, *this} {}
+
+        /**
          * @brief Construct from an unspecialized layout
          *
          * Calls @ref setChildSnap() with
@@ -1319,7 +1356,8 @@ template<class UserInterface> class BasicSnapLayoutColumnFill: public BasicSnapL
          * @relativeref{SnapLayoutFlag,PropagateMarginY} unless
          * @relativeref{SnapLayoutFlag,IgnoreOverflowX} and
          * @relativeref{SnapLayoutFlag,IgnoreOverflowY} is already specified in
-         * given direction.
+         * given direction, allowing margins from nested widgets to be
+         * collapsed with parent's neigbors as well.
          */
         /*implicit*/ BasicSnapLayoutColumnFill(const BasicSnapLayout<UserInterface>& layout): BasicSnapLayout<UserInterface>{layout, *this} {}
 
@@ -1339,6 +1377,13 @@ Meant to be used through concrete a typedef such as @ref SnapLayoutRow.
 template<class UserInterface> class BasicSnapLayoutRow: public BasicSnapLayout<UserInterface> {
     public:
         /**
+         * @brief Construct from an anchor
+         *
+         * Calls @ref setChildSnap() with @ref Snap::Right.
+         */
+        /*implicit*/ BasicSnapLayoutRow(const BasicAnchor<UserInterface>& anchor): BasicSnapLayout<UserInterface>{anchor, *this} {}
+
+        /**
          * @brief Construct from an unspecialized layout
          *
          * Calls @ref setChildSnap() with @ref Snap::Right and @ref addFlags()
@@ -1346,7 +1391,8 @@ template<class UserInterface> class BasicSnapLayoutRow: public BasicSnapLayout<U
          * @relativeref{SnapLayoutFlag,PropagateMarginY} unless
          * @relativeref{SnapLayoutFlag,IgnoreOverflowX} and
          * @relativeref{SnapLayoutFlag,IgnoreOverflowY} is already specified in
-         * given direction.
+         * given direction, allowing margins from nested widgets to be
+         * collapsed with parent's neigbors as well.
          */
         /*implicit*/ BasicSnapLayoutRow(const BasicSnapLayout<UserInterface>& layout): BasicSnapLayout<UserInterface>{layout, *this} {}
 
@@ -1366,6 +1412,14 @@ used through concrete a typedef such as @ref SnapLayoutRowTop.
 template<class UserInterface> class BasicSnapLayoutRowTop: public BasicSnapLayout<UserInterface> {
     public:
         /**
+         * @brief Construct from an anchor
+         *
+         * Calls @ref setChildSnap() with
+         * @link Snap::TopRight @endlink|@ref Snap::InsideY.
+         */
+        /*implicit*/ BasicSnapLayoutRowTop(const BasicAnchor<UserInterface>& anchor): BasicSnapLayout<UserInterface>{anchor, *this} {}
+
+        /**
          * @brief Construct from an unspecialized layout
          *
          * Calls @ref setChildSnap() with
@@ -1374,7 +1428,8 @@ template<class UserInterface> class BasicSnapLayoutRowTop: public BasicSnapLayou
          * @relativeref{SnapLayoutFlag,PropagateMarginY} unless
          * @relativeref{SnapLayoutFlag,IgnoreOverflowX} and
          * @relativeref{SnapLayoutFlag,IgnoreOverflowY} is already specified in
-         * given direction.
+         * given direction, allowing margins from nested widgets to be
+         * collapsed with parent's neigbors as well.
          */
         /*implicit*/ BasicSnapLayoutRowTop(const BasicSnapLayout<UserInterface>& layout): BasicSnapLayout<UserInterface>{layout, *this} {}
 
@@ -1394,6 +1449,14 @@ to be used through concrete a typedef such as @ref SnapLayoutRowBottom.
 template<class UserInterface> class BasicSnapLayoutRowBottom: public BasicSnapLayout<UserInterface> {
     public:
         /**
+         * @brief Construct from an anchor
+         *
+         * Calls @ref setChildSnap() with
+         * @link Snap::BottomRight @endlink|@ref Snap::InsideY.
+         */
+        /*implicit*/ BasicSnapLayoutRowBottom(const BasicAnchor<UserInterface>& anchor): BasicSnapLayout<UserInterface>{anchor, *this} {}
+
+        /**
          * @brief Construct from an unspecialized layout
          *
          * Calls @ref setChildSnap() with
@@ -1402,7 +1465,8 @@ template<class UserInterface> class BasicSnapLayoutRowBottom: public BasicSnapLa
          * @relativeref{SnapLayoutFlag,PropagateMarginY} unless
          * @relativeref{SnapLayoutFlag,IgnoreOverflowX} and
          * @relativeref{SnapLayoutFlag,IgnoreOverflowY} is already specified in
-         * given direction.
+         * given direction, allowing margins from nested widgets to be
+         * collapsed with parent's neigbors as well.
          */
         /*implicit*/ BasicSnapLayoutRowBottom(const BasicSnapLayout<UserInterface>& layout): BasicSnapLayout<UserInterface>{layout, *this} {}
 
@@ -1422,6 +1486,14 @@ Meant to be used through concrete a typedef such as @ref SnapLayoutRowFill.
 template<class UserInterface> class BasicSnapLayoutRowFill: public BasicSnapLayout<UserInterface> {
     public:
         /**
+         * @brief Construct from an anchor
+         *
+         * Calls @ref setChildSnap() with
+         * @link Snap::Right @endlink|@ref Snap::FillY.
+         */
+        /*implicit*/ BasicSnapLayoutRowFill(const BasicAnchor<UserInterface>& anchor): BasicSnapLayout<UserInterface>{anchor, *this} {}
+
+        /**
          * @brief Construct from an unspecialized layout
          *
          * Calls @ref setChildSnap() with
@@ -1430,7 +1502,8 @@ template<class UserInterface> class BasicSnapLayoutRowFill: public BasicSnapLayo
          * @relativeref{SnapLayoutFlag,PropagateMarginY} unless
          * @relativeref{SnapLayoutFlag,IgnoreOverflowX} and
          * @relativeref{SnapLayoutFlag,IgnoreOverflowY} is already specified in
-         * given direction.
+         * given direction, allowing margins from nested widgets to be
+         * collapsed with parent's neigbors as well.
          */
         /*implicit*/ BasicSnapLayoutRowFill(const BasicSnapLayout<UserInterface>& layout): BasicSnapLayout<UserInterface>{layout, *this} {}
 

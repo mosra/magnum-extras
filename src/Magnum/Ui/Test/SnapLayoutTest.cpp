@@ -74,12 +74,20 @@ struct SnapLayoutTest: TestSuite::Tester {
     void staticInvalidImplicitLayouter();
 };
 
-struct {
+const struct {
     const char* name;
     bool layoutExists;
 } ConstructData[]{
     {"", false},
     {"layout already exists", true},
+};
+
+const struct {
+    const char* name;
+    bool fromLayout;
+} ConvertSpecializedData[]{
+    {"from an Anchor", false},
+    {"from a SnapLayout", true}
 };
 
 SnapLayoutTest::SnapLayoutTest() {
@@ -102,10 +110,12 @@ SnapLayoutTest::SnapLayoutTest() {
               &SnapLayoutTest::constructInvalidImplicitLayouter,
 
               &SnapLayoutTest::convertAnchor<AbstractSnapLayout>,
-              &SnapLayoutTest::convertAnchor<SnapLayout>,
-              &SnapLayoutTest::convertSpecialized,
+              &SnapLayoutTest::convertAnchor<SnapLayout>});
 
-              &SnapLayoutTest::flags<AbstractSnapLayout>,
+    addInstancedTests({&SnapLayoutTest::convertSpecialized},
+        Containers::arraySize(ConvertSpecializedData));
+
+    addTests({&SnapLayoutTest::flags<AbstractSnapLayout>,
               &SnapLayoutTest::flags<SnapLayout>,
               &SnapLayoutTest::childSnap<AbstractSnapLayout>,
               &SnapLayoutTest::childSnap<SnapLayout>,
@@ -1005,21 +1015,34 @@ template<class T> void SnapLayoutTest::convertAnchor() {
 }
 
 void SnapLayoutTest::convertSpecialized() {
+    auto&& data = ConvertSpecializedData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
     struct Interface: UserInterface {
         explicit Interface(NoCreateT): UserInterface{NoCreate} {}
     } ui{NoCreate};
 
     ui.setSnapLayouterInstance(Containers::pointer<SnapLayouter>(ui.createLayouter()));
 
+    Anchor anchors[]{
+        Anchor{ui, {}, Vector2{}},
+        Anchor{ui, {}, Vector2{}},
+        Anchor{ui, {}, Vector2{}},
+        Anchor{ui, {}, Vector2{}},
+        Anchor{ui, {}, Vector2{}},
+        Anchor{ui, {}, Vector2{}},
+        Anchor{ui, {}, Vector2{}},
+        Anchor{ui, {}, Vector2{}},
+    };
     SnapLayout layouts[]{
-        SnapLayout{Anchor{ui, {}, Vector2{}}},
-        SnapLayout{Anchor{ui, {}, Vector2{}}},
-        SnapLayout{Anchor{ui, {}, Vector2{}}},
-        SnapLayout{Anchor{ui, {}, Vector2{}}},
-        SnapLayout{Anchor{ui, {}, Vector2{}}},
-        SnapLayout{Anchor{ui, {}, Vector2{}}},
-        SnapLayout{Anchor{ui, {}, Vector2{}}},
-        SnapLayout{Anchor{ui, {}, Vector2{}}},
+        SnapLayout{anchors[0]},
+        SnapLayout{anchors[1]},
+        SnapLayout{anchors[2]},
+        SnapLayout{anchors[3]},
+        SnapLayout{anchors[4]},
+        SnapLayout{anchors[5]},
+        SnapLayout{anchors[6]},
+        SnapLayout{anchors[7]},
     };
     for(auto&& layout: layouts) {
         CORRADE_ITERATION(layout.node());
@@ -1027,14 +1050,22 @@ void SnapLayoutTest::convertSpecialized() {
         CORRADE_COMPARE(layout.childSnap(), Snap::Bottom);
     }
 
-    SnapLayoutColumn layoutColumn = layouts[0];
-    SnapLayoutColumnLeft layoutColumnLeft = layouts[1];
-    SnapLayoutColumnRight layoutColumnRight = layouts[2];
-    SnapLayoutColumnFill layoutColumnFill = layouts[3];
-    SnapLayoutRow layoutRow = layouts[4];
-    SnapLayoutRowTop layoutRowTop = layouts[5];
-    SnapLayoutRowBottom layoutRowBottom = layouts[6];
-    SnapLayoutRowFill layoutRowFill = layouts[7];
+    SnapLayoutColumn layoutColumn = data.fromLayout ?
+        SnapLayoutColumn{layouts[0]} : SnapLayoutColumn{anchors[0]};
+    SnapLayoutColumnLeft layoutColumnLeft = data.fromLayout ?
+        SnapLayoutColumnLeft{layouts[1]} : SnapLayoutColumnLeft{anchors[1]};
+    SnapLayoutColumnRight layoutColumnRight = data.fromLayout ?
+        SnapLayoutColumnRight{layouts[2]} : SnapLayoutColumnRight{anchors[2]};
+    SnapLayoutColumnFill layoutColumnFill = data.fromLayout ?
+        SnapLayoutColumnFill{layouts[3]} : SnapLayoutColumnFill{anchors[3]};
+    SnapLayoutRow layoutRow = data.fromLayout ?
+        SnapLayoutRow{layouts[4]} : SnapLayoutRow{anchors[4]};
+    SnapLayoutRowTop layoutRowTop = data.fromLayout ?
+        SnapLayoutRowTop{layouts[5]} : SnapLayoutRowTop{anchors[5]};
+    SnapLayoutRowBottom layoutRowBottom = data.fromLayout ?
+        SnapLayoutRowBottom{layouts[6]} : SnapLayoutRowBottom{anchors[6]};
+    SnapLayoutRowFill layoutRowFill = data.fromLayout ?
+        SnapLayoutRowFill{layouts[7]} : SnapLayoutRowFill{anchors[7]};
 
     /* Common properties that should be set for all */
     Int i = 0;
@@ -1051,7 +1082,9 @@ void SnapLayoutTest::convertSpecialized() {
         CORRADE_COMPARE(&layout.layouter(), &ui.snapLayouter());
         CORRADE_COMPARE(layout.node(), layouts[i].node());
         CORRADE_COMPARE(layout.layout(), layouts[i].layout());
-        CORRADE_COMPARE(layout.flags(), SnapLayoutFlag::PropagateMargin);
+        /* Margin propagation should be set only if creating from a layout */
+        CORRADE_COMPARE(layout.flags(), data.fromLayout ?
+            SnapLayoutFlag::PropagateMargin : SnapLayoutFlags{});
         ++i;
     }
 
