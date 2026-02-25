@@ -1934,10 +1934,8 @@ class MAGNUM_UI_EXPORT AbstractLayer {
          * layouter to make use of these properties. Called only if
          * @ref LayerFeature::Layout is supported, is always called after
          * @ref doPreUpdate() and @ref doClean(), and before @ref doUpdate(),
-         * @ref doComposite() and @ref doDraw(), with at least one
-         * @ref doSetSize() call happening at some point before. Individual
-         * layers in the user interface have this function called in a back to
-         * front order.
+         * @ref doComposite() and @ref doDraw(). Individual layers in the user
+         * interface have this function called in a back to front order.
          *
          * Data IDs present in @p dataIdsToLayout are guaranteed to be attached
          * to visible (and thus non-null) nodes. Node handles corresponding to

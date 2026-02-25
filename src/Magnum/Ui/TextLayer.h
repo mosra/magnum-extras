@@ -588,7 +588,9 @@ enum class TextDataFlag: UnsignedByte {
      * Editable text. If data that have it enabled are attached to a currently
      * focused node, the layer reacts to text input and key events, allowing to
      * edit the contents. Unlike non-editable text, the contents are also
-     * accessible through @ref TextLayer::text().
+     * accessible through @ref TextLayer::text(). At the monent cannot be used
+     * on layers that have @ref TextLayerFlag::Transformable enabled, as cursor
+     * placement with arbitrarily transformed text isn't implemented yet.
      *
      * If editing styles are present and used by given style, the cursor
      * position and/or selection is drawn as well.
