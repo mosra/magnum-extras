@@ -199,7 +199,7 @@ void ThemeTest::debugFeaturesSupersets() {
 void ThemeTest::baseStyleDark() {
     const BaseStyle styleUniforms[]{
         #define _c(style, ...) BaseStyle::style,
-        #include "Magnum/Ui/Implementation/baseStyleUniformsMcssDark.h"
+        #include "Magnum/Ui/Implementation/themeDarkBaseStyleUniforms.h"
         #undef _c
     };
 
@@ -225,7 +225,7 @@ void ThemeTest::baseStyleDark() {
                 case BaseStyle::style: \
                     CORRADE_COMPARE(UnsignedInt(styleUniforms[i]), UnsignedInt(BaseStyle::style)); \
                     break;
-            #include "Magnum/Ui/Implementation/baseStyleUniformsMcssDark.h"
+            #include "Magnum/Ui/Implementation/themeDarkBaseStyleUniforms.h"
             #undef _c
         }
         #ifdef CORRADE_TARGET_GCC
@@ -239,7 +239,7 @@ void ThemeTest::textStyleDark() {
         #define _c(style, suffix, ...) TextStyle::style ## suffix,
         #define _s _c
         #define _e _c
-        #include "Magnum/Ui/Implementation/textStyleMcssDark.h"
+        #include "Magnum/Ui/Implementation/themeDarkTextStyles.h"
         #undef _c
         #undef _s
         #undef _e
@@ -270,7 +270,7 @@ void ThemeTest::textStyleDark() {
                     break;
             #define _s _c
             #define _e _c
-            #include "Magnum/Ui/Implementation/textStyleMcssDark.h"
+            #include "Magnum/Ui/Implementation/themeDarkTextStyles.h"
             #undef _c
             #undef _s
             #undef _e
@@ -284,7 +284,7 @@ void ThemeTest::textStyleDark() {
 void ThemeTest::textStyleUniformsDark() {
     const TextStyleUniform styleUniforms[]{
         #define _c(value, ...) TextStyleUniform::value,
-        #include "Magnum/Ui/Implementation/textStyleUniformsMcssDark.h"
+        #include "Magnum/Ui/Implementation/themeDarkTextStyleUniforms.h"
         #undef _c
     };
 
@@ -309,7 +309,7 @@ void ThemeTest::textStyleUniformsDark() {
                 case TextStyleUniform::style: \
                     CORRADE_COMPARE(UnsignedInt(styleUniforms[i]), UnsignedInt(TextStyleUniform::style)); \
                     break;
-            #include "Magnum/Ui/Implementation/textStyleUniformsMcssDark.h"
+            #include "Magnum/Ui/Implementation/themeDarkTextStyleUniforms.h"
             #undef _c
         }
         #ifdef CORRADE_TARGET_GCC
@@ -322,7 +322,7 @@ void ThemeTest::textEditingStyleDark() {
     const TextEditingStyle styleUniforms[]{
         #define _c(style, ...) TextEditingStyle::style,
         #define _s _c
-        #include "Magnum/Ui/Implementation/textEditingStyleMcssDark.h"
+        #include "Magnum/Ui/Implementation/themeDarkTextEditingStyles.h"
         #undef _s
         #undef _c
     };
@@ -350,7 +350,7 @@ void ThemeTest::textEditingStyleDark() {
                     CORRADE_COMPARE(UnsignedInt(styleUniforms[i]), UnsignedInt(TextEditingStyle::style)); \
                     break;
             #define _s _c
-            #include "Magnum/Ui/Implementation/textEditingStyleMcssDark.h"
+            #include "Magnum/Ui/Implementation/themeDarkTextEditingStyles.h"
             #undef _s
             #undef _c
         }
@@ -364,7 +364,7 @@ void ThemeTest::layoutStyleDark() {
     const LayoutStyle styles[]{
         #define _c(style, ...) LayoutStyle::style,
         #define _n _c
-        #include "Magnum/Ui/Implementation/layoutStyleMcssDark.h"
+        #include "Magnum/Ui/Implementation/themeDarkLayoutStyles.h"
         #undef _n
         #undef _c
     };
@@ -391,7 +391,7 @@ void ThemeTest::layoutStyleDark() {
                     CORRADE_COMPARE(UnsignedInt(styles[i]), UnsignedInt(LayoutStyle::style)); \
                     break;
             #define _n _c
-            #include "Magnum/Ui/Implementation/layoutStyleMcssDark.h"
+            #include "Magnum/Ui/Implementation/themeDarkLayoutStyles.h"
             #undef _n
             #undef _c
         }

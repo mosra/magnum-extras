@@ -142,14 +142,16 @@ set(MagnumUi_PRIVATE_HEADERS
     Implementation/abstractVisualLayerState.h
     Implementation/abstractVisualLayerAnimatorState.h
     Implementation/baseLayerState.h
-    Implementation/baseStyleUniformsMcssDark.h
     Implementation/debugLayerState.h
     Implementation/lineLayerState.h
     Implementation/lineMiterLimit.h
     Implementation/textLayerState.h
-    Implementation/textStyleMcssDark.h
-    Implementation/textStyleUniformsMcssDark.h
     Implementation/Theme.hpp
+    Implementation/themeDarkBaseStyleUniforms.h
+    Implementation/themeDarkLayoutStyles.h
+    Implementation/themeDarkTextEditingStyles.h
+    Implementation/themeDarkTextStyles.h
+    Implementation/themeDarkTextStyleUniforms.h
     Implementation/userInterfaceState.h)
 
 if(MAGNUM_TARGET_GL)

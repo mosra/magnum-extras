@@ -165,7 +165,7 @@ constexpr /* Trust me, you don't want to be on this compiler */
 #endif
 const BaseLayerStyleUniform BaseStyleUniformsDark[]{
     #define _c(style, ...) {__VA_ARGS__},
-    #include "Magnum/Ui/Implementation/baseStyleUniformsMcssDark.h"
+    #include "Magnum/Ui/Implementation/themeDarkBaseStyleUniforms.h"
     #undef _c
 };
 static_assert(Implementation::BaseStyleUniformCount == Containers::arraySize(BaseStyleUniformsDark),
@@ -180,7 +180,7 @@ constexpr /* Trust me, you don't want to be on this compiler */
 #endif
 const TextLayerStyleUniform TextStyleUniformsDark[]{
     #define _c(style, ...) {__VA_ARGS__},
-    #include "Magnum/Ui/Implementation/textStyleUniformsMcssDark.h"
+    #include "Magnum/Ui/Implementation/themeDarkTextStyleUniforms.h"
     #undef _c
 };
 static_assert(Implementation::TextStyleUniformCount == Containers::arraySize(TextStyleUniformsDark),
@@ -195,7 +195,7 @@ constexpr struct {
     #define _c(style, suffix, font, alignment, ...) {UnsignedInt(TextStyleUniform::style), Text::Alignment::alignment, -1, -1, __VA_ARGS__},
     #define _s(style, suffix, selectionStyle, font, alignment, ...) {UnsignedInt(TextStyleUniform::style), Text::Alignment::alignment, -1, Int(Implementation::TextEditingStyle::selectionStyle), __VA_ARGS__},
     #define _e(style, suffix, cursorStyle, selectionStyle, font, alignment, ...) {UnsignedInt(TextStyleUniform::style), Text::Alignment::alignment, Int(Implementation::TextEditingStyle::cursorStyle), Int(Implementation::TextEditingStyle::selectionStyle), __VA_ARGS__},
-    #include "Magnum/Ui/Implementation/textStyleMcssDark.h"
+    #include "Magnum/Ui/Implementation/themeDarkTextStyles.h"
     #undef _e
     #undef _s
     #undef _c
@@ -212,7 +212,7 @@ constexpr /* Trust me, you don't want to be on this compiler */
 const TextLayerEditingStyleUniform TextEditingStyleUniformsDark[]{
     #define _c(style, padding0, padding1, padding2, padding3, ...) {__VA_ARGS__},
     #define _s(style, textUniform, padding0, padding1, padding2, padding3, ...) {__VA_ARGS__},
-    #include "Magnum/Ui/Implementation/textEditingStyleMcssDark.h"
+    #include "Magnum/Ui/Implementation/themeDarkTextEditingStyles.h"
     #undef _c
     #undef _s
 };
@@ -225,7 +225,7 @@ constexpr struct {
 } TextEditingStylesDark[]{
     #define _c(style, padding0, padding1, padding2, padding3, ...) {-1, padding0, padding1, padding2, padding3},
     #define _s(style, textUniform, padding0, padding1, padding2, padding3, ...) {Int(TextStyleUniform::textUniform), padding0, padding1, padding2, padding3},
-    #include "Magnum/Ui/Implementation/textEditingStyleMcssDark.h"
+    #include "Magnum/Ui/Implementation/themeDarkTextEditingStyles.h"
     #undef _c
     #undef _s
 };
@@ -253,7 +253,7 @@ struct LayoutStyle {
 constexpr LayoutStyle LayoutStylesDark[]{
     #define _c(style, ...) {__VA_ARGS__},
     #define _n(style, ...) {__VA_ARGS__, Vector4{}, Vector4{}},
-    #include "Magnum/Ui/Implementation/layoutStyleMcssDark.h"
+    #include "Magnum/Ui/Implementation/themeDarkLayoutStyles.h"
     #undef _n
     #undef _c
 };
@@ -407,7 +407,7 @@ bool DarkTheme::doApply(UserInterface& ui, const ThemeFeatures features, PluginM
             #define _c(style, suffix, font, ...) font,
             #define _e(style, suffix, cursorStyle, selectionStyle, font, ...) font,
             #define _s(style, suffix, selectionStyle, font, ...) font,
-            #include "Magnum/Ui/Implementation/textStyleMcssDark.h"
+            #include "Magnum/Ui/Implementation/themeDarkTextStyles.h"
             #undef _c
             #undef _e
             #undef _s

@@ -341,7 +341,7 @@ UiGallery::UiGallery(const Arguments& arguments): Platform::Application{argument
         debugLayer.setLayerName(_ui.baseLayer(), "Base", [](UnsignedInt style) -> Containers::StringView {
             switch(Ui::Implementation::BaseStyle(style)) {
                 #define _c(name, ...) case Ui::Implementation::BaseStyle::name: return #name;
-                #include "Magnum/Ui/Implementation/baseStyleUniformsMcssDark.h"
+                #include "Magnum/Ui/Implementation/themeDarkBaseStyleUniforms.h"
                 #undef _c
             }
             CORRADE_INTERNAL_ASSERT_UNREACHABLE();
@@ -351,7 +351,7 @@ UiGallery::UiGallery(const Arguments& arguments): Platform::Application{argument
                 #define _c(name, suffix, ...) case Ui::Implementation::TextStyle::name##suffix: return #name #suffix;
                 #define _e _c
                 #define _s _c
-                #include "Magnum/Ui/Implementation/textStyleMcssDark.h"
+                #include "Magnum/Ui/Implementation/themeDarkTextStyles.h"
                 #undef _c
                 #undef _e
                 #undef _s
@@ -363,7 +363,7 @@ UiGallery::UiGallery(const Arguments& arguments): Platform::Application{argument
             switch(Ui::Implementation::LayoutStyle(style)) {
                 #define _c(name, ...) case Ui::Implementation::LayoutStyle::name: return #name;
                 #define _n _c
-                #include "Magnum/Ui/Implementation/layoutStyleMcssDark.h"
+                #include "Magnum/Ui/Implementation/themeDarkLayoutStyles.h"
                 #undef _n
                 #undef _c
             }
