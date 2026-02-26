@@ -51,7 +51,7 @@ during a node animation, use @ref GenericNodeAnimator.
 @section Ui-NodeAnimator-setup Setting up a node animator instance
 
 If you create a @ref UserInterfaceGL with a theme containing
-@ref McssDarkTheme::Feature::Animations or equivalent and don't exclude
+@ref DarkTheme::Feature::Animations or equivalent and don't exclude
 @ref ThemeFeature::NodeAnimations, an implicit instance of the class,
 configured for use with builtin widgets, is already provided and available
 through @ref UserInterface::nodeAnimator(). Otherwise, the node animator

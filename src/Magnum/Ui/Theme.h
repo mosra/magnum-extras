@@ -27,7 +27,7 @@
 */
 
 /** @file
- * @brief Class @ref Magnum::Ui::McssDarkTheme
+ * @brief Class @ref Magnum::Ui::DarkTheme
  * @m_since_latest_{extras}
  */
 
@@ -45,7 +45,7 @@ or @relativeref{UserInterfaceGL,setTheme()}. See the
 @ref AbstractUserInterface "AbstractUserInterface introduction docs" for a
 step-by-step guide for setting up an user interface.
 
-@section Ui-McssDarkTheme-animations Theme animations
+@section Ui-DarkTheme-animations Theme animations
 
 By default the theme is created without any animations to make the initial UI
 setup easier. Once the application is @ref Ui-AbstractUserInterface-animations "set up for animations",
@@ -55,12 +55,12 @@ fields. In comparison, for a distraction-less behavior,
 @ref Feature::EssentialAnimations is just the text editing cursor alone,
 blinking without any smooth transition.
 */
-class MAGNUM_UI_EXPORT McssDarkTheme: public AbstractTheme {
+class MAGNUM_UI_EXPORT DarkTheme: public AbstractTheme {
     public:
         /**
          * @brief Theme feature
          *
-         * @see @ref Features, @ref McssDarkTheme()
+         * @see @ref Features, @ref DarkTheme()
          */
         enum class Feature: UnsignedByte {
             /**
@@ -94,7 +94,7 @@ class MAGNUM_UI_EXPORT McssDarkTheme: public AbstractTheme {
         /**
          * @brief Theme features
          *
-         * @see @ref McssDarkTheme()
+         * @see @ref DarkTheme()
          */
         typedef Containers::EnumSet<Feature> Features;
 
@@ -102,7 +102,7 @@ class MAGNUM_UI_EXPORT McssDarkTheme: public AbstractTheme {
          * @brief Constructor
          * @param features  Theme features to enable
          */
-        explicit McssDarkTheme(Features features = {});
+        explicit DarkTheme(Features features = {});
 
     private:
         MAGNUM_UI_LOCAL ThemeFeatures doFeatures() const override;
@@ -125,18 +125,18 @@ class MAGNUM_UI_EXPORT McssDarkTheme: public AbstractTheme {
 };
 
 /**
-@debugoperatorclassenum{McssDarkTheme,McssDarkTheme::Feature}
+@debugoperatorclassenum{DarkTheme,DarkTheme::Feature}
 @m_since_latest_{extras}
 */
-MAGNUM_UI_EXPORT Debug& operator<<(Debug& debug, McssDarkTheme::Feature value);
+MAGNUM_UI_EXPORT Debug& operator<<(Debug& debug, DarkTheme::Feature value);
 
 /**
-@debugoperatorclassenum{McssDarkTheme,McssDarkTheme::Features}
+@debugoperatorclassenum{DarkTheme,DarkTheme::Features}
 @m_since_latest_{extras}
 */
-MAGNUM_UI_EXPORT Debug& operator<<(Debug& debug, McssDarkTheme::Features value);
+MAGNUM_UI_EXPORT Debug& operator<<(Debug& debug, DarkTheme::Features value);
 
-CORRADE_ENUMSET_OPERATORS(McssDarkTheme::Features)
+CORRADE_ENUMSET_OPERATORS(DarkTheme::Features)
 
 }}
 

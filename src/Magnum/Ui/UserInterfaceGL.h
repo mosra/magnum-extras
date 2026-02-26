@@ -59,8 +59,8 @@ class is a common interface not tied to OpenGL.
 
 The simplest variant of the constructor takes a UI size, in respect to which
 all contents as well as input events get positioned, and a theme instance
-describing how the widgets all look like. At the moment, @ref McssDarkTheme is
-the only theme provided by the library itself.
+describing how the widgets all look like. At the moment, @ref DarkTheme is the
+only theme provided by the library itself.
 
 @snippet Ui-gl.cpp UserInterfaceGL-setup
 

@@ -660,7 +660,7 @@ void mainUiGL() {
 {
 /* Used by both AbstractUserInterface and UserInterfaceGL docs */
 /* [UserInterfaceGL-setup] */
-Ui::UserInterfaceGL ui{{800, 600}, Ui::McssDarkTheme{}};
+Ui::UserInterfaceGL ui{{800, 600}, Ui::DarkTheme{}};
 /* [UserInterfaceGL-setup] */
 
 /* [AbstractUserInterface-setup-blend] */
@@ -702,7 +702,7 @@ struct: Ui::AbstractTheme {
 } myCustomStyle;
 /* [UserInterfaceGL-setup-features] */
 /* Pick everything except icons from the builtin theme */
-Ui::UserInterfaceGL ui{{800, 600}, Ui::McssDarkTheme{},
+Ui::UserInterfaceGL ui{{800, 600}, Ui::DarkTheme{},
     ~Ui::ThemeFeature::TextLayerImages};
 
 DOXYGEN_ELLIPSIS()
@@ -718,7 +718,7 @@ PluginManager::Manager<Trade::AbstractImporter> importerManager;
 PluginManager::Manager<Text::AbstractFont> fontManager;
 DOXYGEN_ELLIPSIS()
 
-Ui::UserInterfaceGL ui{DOXYGEN_ELLIPSIS({}, Ui::McssDarkTheme{}), &importerManager, &fontManager};
+Ui::UserInterfaceGL ui{DOXYGEN_ELLIPSIS({}, Ui::DarkTheme{}), &importerManager, &fontManager};
 /* [UserInterfaceGL-setup-managers] */
 }
 
@@ -729,14 +729,14 @@ Ui::UserInterfaceGL ui{NoCreate};
 ui
     .setRendererInstance(Containers::pointer<Ui::RendererGL>(DOXYGEN_ELLIPSIS()))
     .setSize(DOXYGEN_ELLIPSIS({}))
-    .setTheme(Ui::McssDarkTheme{});
+    .setTheme(Ui::DarkTheme{});
 /* [UserInterfaceGL-setup-renderer] */
 }
 
 {
 Ui::BaseLayerGL::Shared shared{Ui::BaseLayerGL::Shared::Configuration{1}};
 /* [UserInterfaceGL-setup-layer] */
-Ui::UserInterfaceGL ui{DOXYGEN_ELLIPSIS({}), Ui::McssDarkTheme{},
+Ui::UserInterfaceGL ui{DOXYGEN_ELLIPSIS({}), Ui::DarkTheme{},
     ~Ui::ThemeFeature::BaseLayer};
 
 DOXYGEN_ELLIPSIS()
@@ -854,7 +854,7 @@ Ui::UserInterfaceGL ui{NoCreate};
 /* [BaseLayerStyleAnimator-setup-implicit] */
 /* UI theme without base layer animations but with dynamic styles */
 ui.setTheme(
-    Ui::McssDarkTheme{}
+    Ui::DarkTheme{}
         .setBaseLayerDynamicStyleCount(10), /* adjust as needed */
     ~Ui::ThemeFeature::BaseLayerAnimations);
 
@@ -1018,7 +1018,7 @@ Ui::UserInterfaceGL ui{NoCreate};
 /* [TextLayerStyleAnimator-setup-implicit] */
 /* UI theme without text layer animations but with dynamic styles */
 ui.setTheme(
-    Ui::McssDarkTheme{}
+    Ui::DarkTheme{}
         .setTextLayerDynamicStyleCount(10), /* adjust as needed */
     ~Ui::ThemeFeature::TextLayerAnimations);
 

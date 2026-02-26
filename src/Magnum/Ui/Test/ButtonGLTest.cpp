@@ -44,14 +44,14 @@ struct ButtonGLTest: ThemeGLTester {
 using namespace Math::Literals;
 
 const Theme ThemeData[]{
-    {"m.css dark", "mcss-dark-", false, Containers::pointer<McssDarkTheme>()},
-    {"m.css dark SubdividedQuads", "mcss-dark-", false, []{
-        Containers::Pointer<McssDarkTheme> style{InPlaceInit};
+    {"dark", "dark-", false, Containers::pointer<DarkTheme>()},
+    {"dark SubdividedQuads", "dark-", false, []{
+        Containers::Pointer<DarkTheme> style{InPlaceInit};
         style->setBaseLayerFlags(BaseLayerSharedFlag::SubdividedQuads, {});
         return style;
     }()},
     /* No EssentialAnimations as those aren't affecting Button in any way */
-    {"m.css dark, Animations", "mcss-dark-", true, Containers::pointer<McssDarkTheme>(McssDarkTheme::Feature::Animations)},
+    {"dark, Animations", "dark-", true, Containers::pointer<DarkTheme>(DarkTheme::Feature::Animations)},
 };
 
 const struct {

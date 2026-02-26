@@ -163,7 +163,7 @@ DepthReinterpretShader::DepthReinterpretShader() {
 #endif
 
 constexpr const Float WidgetHeight{36.0f};
-constexpr const Float PaddingY{10.0f}; /* same as in Ui::McssDarkTheme() */
+constexpr const Float PaddingY{10.0f}; /* same as in Ui::DarkTheme() */
 constexpr const Vector2 ButtonSize{112.0f, WidgetHeight};
 constexpr const Float LabelHeight{36.0f};
 constexpr const Vector2 ControlSize{56.0f, WidgetHeight};

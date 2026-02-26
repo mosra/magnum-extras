@@ -54,7 +54,7 @@ void foo() {
 /* [AbstractUserInterface-dpi-ratio] */
 Ui::UserInterfaceGL ui{
     Vector2{windowSize()}/dpiScaling(),
-    Vector2{windowSize()}, framebufferSize(), DOXYGEN_ELLIPSIS(Ui::McssDarkTheme{})};
+    Vector2{windowSize()}, framebufferSize(), DOXYGEN_ELLIPSIS(Ui::DarkTheme{})};
 /* [AbstractUserInterface-dpi-ratio] */
 }
 
@@ -63,7 +63,7 @@ Ui::UserInterfaceGL ui{
 Ui::UserInterfaceGL ui{
     Math::clamp({640.0f, 360.0f}, {1920.0f, 1080.0f},
         Vector2{windowSize()}/dpiScaling()),
-    Vector2{windowSize()}, framebufferSize(), DOXYGEN_ELLIPSIS(Ui::McssDarkTheme{})};
+    Vector2{windowSize()}, framebufferSize(), DOXYGEN_ELLIPSIS(Ui::DarkTheme{})};
 /* [AbstractUserInterface-dpi-clamp] */
 }
 
@@ -71,7 +71,7 @@ Ui::UserInterfaceGL ui{
 /* [AbstractUserInterface-dpi-fixed] */
 Ui::UserInterfaceGL ui(
     {800, 600},
-    Vector2{windowSize()}, framebufferSize(), DOXYGEN_ELLIPSIS(Ui::McssDarkTheme{}));
+    Vector2{windowSize()}, framebufferSize(), DOXYGEN_ELLIPSIS(Ui::DarkTheme{}));
 /* [AbstractUserInterface-dpi-fixed] */
 }
 }
@@ -90,7 +90,7 @@ class MyApplication: public Platform::Application {
     public:
         explicit MyApplication(const Arguments& arguments):
             Platform::Application{arguments},
-            _ui{*this, Ui::McssDarkTheme{}}
+            _ui{*this, Ui::DarkTheme{}}
         {
             DOXYGEN_ELLIPSIS()
         }
@@ -218,7 +218,7 @@ DOXYGEN_ELLIPSIS()
 /* [AbstractUserInterface-animations-theme-features] */
 MyApplication::MyApplication(const Arguments& arguments):
     Platform::Application{arguments},
-    _ui{*this, Ui::McssDarkTheme{Ui::McssDarkTheme::Feature::Animations}}
+    _ui{*this, Ui::DarkTheme{Ui::DarkTheme::Feature::Animations}}
 {
     DOXYGEN_ELLIPSIS()
 }
@@ -271,7 +271,7 @@ MyApplication::MyApplication(const Arguments& arguments):
     DOXYGEN_ELLIPSIS()
 
     create(DOXYGEN_ELLIPSIS());
-    _ui.create(DOXYGEN_ELLIPSIS(*this), Ui::McssDarkTheme{});
+    _ui.create(DOXYGEN_ELLIPSIS(*this), Ui::DarkTheme{});
 }
 /* [UserInterfaceGL-setup-delayed] */
 #endif
@@ -300,7 +300,7 @@ MyApplication::MyApplication(const Arguments& arguments): Platform::Application{
     /* Then add appropriate compositing layers, set a theme, etc */
     _ui
         .setSize(DOXYGEN_ELLIPSIS({}))
-        .setTheme(DOXYGEN_ELLIPSIS(Ui::McssDarkTheme{}))
+        .setTheme(DOXYGEN_ELLIPSIS(Ui::DarkTheme{}))
         DOXYGEN_ELLIPSIS();
 
     DOXYGEN_ELLIPSIS()

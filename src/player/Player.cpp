@@ -176,7 +176,7 @@ class Player: public Platform::ScreenedApplication {
 Overlay::Overlay(Platform::ScreenedApplication& application):
     Platform::Screen{application, PropagatedEvent::Draw|PropagatedEvent::Input},
     ui{application,
-        Ui::McssDarkTheme{Ui::McssDarkTheme::Feature::Animations}
+        Ui::DarkTheme{Ui::DarkTheme::Feature::Animations}
             #ifdef CORRADE_TARGET_EMSCRIPTEN
             /* For the info / error popups and popup background. Use a larger
                value to not clash with style animations. */

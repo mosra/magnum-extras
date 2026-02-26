@@ -154,13 +154,13 @@ UiGallery::UiGallery(const Arguments& arguments): Platform::Application{argument
         .addSkippedPrefix("magnum", "engine-specific options")
         .parse(arguments.argc, arguments.argv);
 
-    Ui::McssDarkTheme::Features features;
+    Ui::DarkTheme::Features features;
     {
         const Containers::StringView animations = args.value<Containers::StringView>("animations");
         if(animations == "all"_s)
-            features |= Ui::McssDarkTheme::Feature::Animations;
+            features |= Ui::DarkTheme::Feature::Animations;
         else if(animations == "essential"_s)
-            features |= Ui::McssDarkTheme::Feature::EssentialAnimations;
+            features |= Ui::DarkTheme::Feature::EssentialAnimations;
         else if(animations != "none"_s)
             Fatal{} << "Expected --animations to be all, essential or none but got" << animations;
     }
@@ -172,7 +172,7 @@ UiGallery::UiGallery(const Arguments& arguments): Platform::Application{argument
         .setTitle("Magnum::Ui Gallery"_s)
         .setWindowFlags(Configuration::WindowFlag::Resizable));
 
-    _ui.create(*this, Ui::McssDarkTheme{features});
+    _ui.create(*this, Ui::DarkTheme{features});
 
     /* Set up the profiler, if enabled */
     if(args.isSet("profile")) {

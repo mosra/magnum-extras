@@ -126,12 +126,12 @@ template<Float(*cursorBlinkEasing)(Float)> AnimationHandle styleAnimationPersist
 
 }
 
-Debug& operator<<(Debug& debug, const McssDarkTheme::Feature value) {
-    debug << "Ui::McssDarkTheme::Feature" << Debug::nospace;
+Debug& operator<<(Debug& debug, const DarkTheme::Feature value) {
+    debug << "Ui::DarkTheme::Feature" << Debug::nospace;
 
     switch(value) {
         /* LCOV_EXCL_START */
-        #define _c(value) case McssDarkTheme::Feature::value: return debug << "::" #value;
+        #define _c(value) case DarkTheme::Feature::value: return debug << "::" #value;
         _c(EssentialAnimations)
         _c(Animations)
         #undef _c
@@ -141,11 +141,11 @@ Debug& operator<<(Debug& debug, const McssDarkTheme::Feature value) {
     return debug << "(" << Debug::nospace << Debug::hex << UnsignedByte(value) << Debug::nospace << ")";
 }
 
-Debug& operator<<(Debug& debug, const McssDarkTheme::Features value) {
-    return Containers::enumSetDebugOutput(debug, value, "Ui::McssDarkTheme::Features{}", {
-        McssDarkTheme::Feature::Animations,
+Debug& operator<<(Debug& debug, const DarkTheme::Features value) {
+    return Containers::enumSetDebugOutput(debug, value, "Ui::DarkTheme::Features{}", {
+        DarkTheme::Feature::Animations,
         /* Implied by Animations, has to be after */
-        McssDarkTheme::Feature::EssentialAnimations,
+        DarkTheme::Feature::EssentialAnimations,
     });
 }
 
@@ -158,32 +158,32 @@ using Implementation::TextStyleUniform;
 namespace {
 
 /* 1 (true, screen)-pixel radius independently of UI scale */
-constexpr BaseLayerCommonStyleUniform BaseCommonStyleUniformMcssDark{1.0f};
+constexpr BaseLayerCommonStyleUniform BaseCommonStyleUniformDark{1.0f};
 
 #ifndef CORRADE_MSVC2015_COMPATIBILITY
 constexpr /* Trust me, you don't want to be on this compiler */
 #endif
-const BaseLayerStyleUniform BaseStyleUniformsMcssDark[]{
+const BaseLayerStyleUniform BaseStyleUniformsDark[]{
     #define _c(style, ...) {__VA_ARGS__},
     #include "Magnum/Ui/Implementation/baseStyleUniformsMcssDark.h"
     #undef _c
 };
-static_assert(Implementation::BaseStyleUniformCount == Containers::arraySize(BaseStyleUniformsMcssDark),
+static_assert(Implementation::BaseStyleUniformCount == Containers::arraySize(BaseStyleUniformsDark),
     "outdated BaseStyleUniformCount value");
-static_assert(Implementation::BaseStyleCount == Containers::arraySize(BaseStyleUniformsMcssDark),
+static_assert(Implementation::BaseStyleCount == Containers::arraySize(BaseStyleUniformsDark),
     "outdated BaseStyleCount value");
 
-constexpr TextLayerCommonStyleUniform TextCommonStyleUniformMcssDark{};
+constexpr TextLayerCommonStyleUniform TextCommonStyleUniformDark{};
 
 #ifndef CORRADE_MSVC2015_COMPATIBILITY
 constexpr /* Trust me, you don't want to be on this compiler */
 #endif
-const TextLayerStyleUniform TextStyleUniformsMcssDark[]{
+const TextLayerStyleUniform TextStyleUniformsDark[]{
     #define _c(style, ...) {__VA_ARGS__},
     #include "Magnum/Ui/Implementation/textStyleUniformsMcssDark.h"
     #undef _c
 };
-static_assert(Implementation::TextStyleUniformCount == Containers::arraySize(TextStyleUniformsMcssDark),
+static_assert(Implementation::TextStyleUniformCount == Containers::arraySize(TextStyleUniformsDark),
     "outdated TextStyleUniformCount value");
 
 constexpr struct {
@@ -191,7 +191,7 @@ constexpr struct {
     Text::Alignment alignment;
     Int cursorStyle, selectionStyle;
     Vector4 padding;
-} TextStylesMcssDark[]{
+} TextStylesDark[]{
     #define _c(style, suffix, font, alignment, ...) {UnsignedInt(TextStyleUniform::style), Text::Alignment::alignment, -1, -1, __VA_ARGS__},
     #define _s(style, suffix, selectionStyle, font, alignment, ...) {UnsignedInt(TextStyleUniform::style), Text::Alignment::alignment, -1, Int(Implementation::TextEditingStyle::selectionStyle), __VA_ARGS__},
     #define _e(style, suffix, cursorStyle, selectionStyle, font, alignment, ...) {UnsignedInt(TextStyleUniform::style), Text::Alignment::alignment, Int(Implementation::TextEditingStyle::cursorStyle), Int(Implementation::TextEditingStyle::selectionStyle), __VA_ARGS__},
@@ -200,42 +200,42 @@ constexpr struct {
     #undef _s
     #undef _c
 };
-static_assert(Implementation::TextStyleCount == Containers::arraySize(TextStylesMcssDark),
+static_assert(Implementation::TextStyleCount == Containers::arraySize(TextStylesDark),
     "outdated TextStyleCount value");
 
 /* 1 (true, screen)-pixel radius independently of UI scale */
-constexpr TextLayerCommonEditingStyleUniform TextCommonEditingStyleUniformMcssDark{1.0f};
+constexpr TextLayerCommonEditingStyleUniform TextCommonEditingStyleUniformDark{1.0f};
 
 #ifndef CORRADE_MSVC2015_COMPATIBILITY
 constexpr /* Trust me, you don't want to be on this compiler */
 #endif
-const TextLayerEditingStyleUniform TextEditingStyleUniformsMcssDark[]{
+const TextLayerEditingStyleUniform TextEditingStyleUniformsDark[]{
     #define _c(style, padding0, padding1, padding2, padding3, ...) {__VA_ARGS__},
     #define _s(style, textUniform, padding0, padding1, padding2, padding3, ...) {__VA_ARGS__},
     #include "Magnum/Ui/Implementation/textEditingStyleMcssDark.h"
     #undef _c
     #undef _s
 };
-static_assert(Implementation::TextEditingStyleUniformCount == Containers::arraySize(TextEditingStyleUniformsMcssDark),
+static_assert(Implementation::TextEditingStyleUniformCount == Containers::arraySize(TextEditingStyleUniformsDark),
     "outdated TextEditingStyleUniformCount value");
 
 constexpr struct {
     Int textUniform;
     Vector4 padding;
-} TextEditingStylesMcssDark[]{
+} TextEditingStylesDark[]{
     #define _c(style, padding0, padding1, padding2, padding3, ...) {-1, padding0, padding1, padding2, padding3},
     #define _s(style, textUniform, padding0, padding1, padding2, padding3, ...) {Int(TextStyleUniform::textUniform), padding0, padding1, padding2, padding3},
     #include "Magnum/Ui/Implementation/textEditingStyleMcssDark.h"
     #undef _c
     #undef _s
 };
-static_assert(Implementation::TextEditingStyleCount == Containers::arraySize(TextEditingStylesMcssDark),
+static_assert(Implementation::TextEditingStyleCount == Containers::arraySize(TextEditingStylesDark),
     "outdated TextEditingStyleCount value");
 
 /* MSVC 2015, 2017 and 2019 cannot handle this in the form of
     constexpr struct LayoutStyle {
         constexpr LayoutStyle(...);
-    } LayoutStylesMcssDark[]{
+    } LayoutStylesDark[]{
         ...
     };
    complaining that the LayoutStyle constructor isn't constexpr. Splitting the
@@ -250,21 +250,21 @@ struct LayoutStyle {
     Vector4 margin;
 };
 
-constexpr LayoutStyle LayoutStylesMcssDark[]{
+constexpr LayoutStyle LayoutStylesDark[]{
     #define _c(style, ...) {__VA_ARGS__},
     #define _n(style, ...) {__VA_ARGS__, Vector4{}, Vector4{}},
     #include "Magnum/Ui/Implementation/layoutStyleMcssDark.h"
     #undef _n
     #undef _c
 };
-static_assert(Implementation::LayoutStyleCount == Containers::arraySize(LayoutStylesMcssDark),
+static_assert(Implementation::LayoutStyleCount == Containers::arraySize(LayoutStylesDark),
     "outdated LayoutStyleCount value");
 
 }
 
-McssDarkTheme::McssDarkTheme(const Features features): _features{features} {}
+DarkTheme::DarkTheme(const Features features): _features{features} {}
 
-ThemeFeatures McssDarkTheme::doFeatures() const {
+ThemeFeatures DarkTheme::doFeatures() const {
     return
         ThemeFeature::DataLayer|
         ThemeFeature::BaseLayer|
@@ -280,58 +280,58 @@ ThemeFeatures McssDarkTheme::doFeatures() const {
         (_features >= Feature::EssentialAnimations ? ThemeFeature::TextLayerAnimations : ThemeFeatures{});
 }
 
-UnsignedInt McssDarkTheme::doBaseLayerStyleUniformCount() const {
+UnsignedInt DarkTheme::doBaseLayerStyleUniformCount() const {
     return Implementation::BaseStyleUniformCount;
 }
 
-UnsignedInt McssDarkTheme::doBaseLayerStyleCount() const {
+UnsignedInt DarkTheme::doBaseLayerStyleCount() const {
     return Implementation::BaseStyleCount;
 }
 
-UnsignedInt McssDarkTheme::doBaseLayerDynamicStyleCount() const {
+UnsignedInt DarkTheme::doBaseLayerDynamicStyleCount() const {
     return _features >= Feature::Animations ? 10 : 0;
 }
 
-UnsignedInt McssDarkTheme::doTextLayerStyleUniformCount() const {
+UnsignedInt DarkTheme::doTextLayerStyleUniformCount() const {
     return Implementation::TextStyleUniformCount;
 }
 
-UnsignedInt McssDarkTheme::doTextLayerStyleCount() const {
+UnsignedInt DarkTheme::doTextLayerStyleCount() const {
     return Implementation::TextStyleCount;
 }
 
-UnsignedInt McssDarkTheme::doTextLayerDynamicStyleCount() const {
+UnsignedInt DarkTheme::doTextLayerDynamicStyleCount() const {
     /* For essential animations, assuming there's just one blinking cursor at a
        time, add one dynamic style, and one more for safety */
     return _features >= Feature::Animations ? 10 :
         _features >= Feature::EssentialAnimations ? 2 : 0;
 }
 
-UnsignedInt McssDarkTheme::doTextLayerEditingStyleUniformCount() const {
+UnsignedInt DarkTheme::doTextLayerEditingStyleUniformCount() const {
     return Implementation::TextEditingStyleUniformCount;
 }
 
-UnsignedInt McssDarkTheme::doTextLayerEditingStyleCount() const {
+UnsignedInt DarkTheme::doTextLayerEditingStyleCount() const {
     return Implementation::TextEditingStyleCount;
 }
 
-Vector3i McssDarkTheme::doTextLayerGlyphCacheSize(ThemeFeatures) const {
+Vector3i DarkTheme::doTextLayerGlyphCacheSize(ThemeFeatures) const {
     /* 256x256 is enough only for DPI scale of 1, adding some extra space */
     /** @todo Make this dependent on DPI scale */
     return {512, 512, 1};
 }
 
-UnsignedInt McssDarkTheme::doLayoutLayerStyleCount() const {
+UnsignedInt DarkTheme::doLayoutLayerStyleCount() const {
     return Implementation::LayoutStyleCount;
 }
 
-bool McssDarkTheme::doApply(UserInterface& ui, const ThemeFeatures features, PluginManager::Manager<Trade::AbstractImporter>* importerManager, PluginManager::Manager<Text::AbstractFont>* fontManager) const {
+bool DarkTheme::doApply(UserInterface& ui, const ThemeFeatures features, PluginManager::Manager<Trade::AbstractImporter>* importerManager, PluginManager::Manager<Text::AbstractFont>* fontManager) const {
     /* Base layer style */
     if(features >= ThemeFeature::BaseLayer) {
         ui.baseLayer().shared()
             .setStyle(
-                BaseCommonStyleUniformMcssDark,
-                BaseStyleUniformsMcssDark,
+                BaseCommonStyleUniformDark,
+                BaseStyleUniformsDark,
                 {})
             .setStyleTransition<BaseStyle,
                 Implementation::styleTransitionToInactiveOut,
@@ -387,7 +387,7 @@ bool McssDarkTheme::doApply(UserInterface& ui, const ThemeFeatures features, Plu
 
         Containers::Pointer<Text::AbstractFont> font = fontManager->loadAndInstantiate("TrueTypeFont");
         if(!font || !font->openData(rs.getRaw("SourceSans3-Regular.otf"_s), 16.0f*2*(Vector2{ui.framebufferSize()}/ui.size()).max())) {
-            Error{} << "Ui::McssDarkTheme::apply(): cannot open a font";
+            Error{} << "Ui::DarkTheme::apply(): cannot open a font";
             return {};
         }
         /** @todo fail if this fails, once the function doesn't return void */
@@ -415,21 +415,21 @@ bool McssDarkTheme::doApply(UserInterface& ui, const ThemeFeatures features, Plu
 
         shared
             .setStyle(
-                TextCommonStyleUniformMcssDark,
-                TextStyleUniformsMcssDark,
-                Containers::stridedArrayView(TextStylesMcssDark).slice(&std::remove_all_extents<decltype(TextStylesMcssDark)>::type::uniform),
+                TextCommonStyleUniformDark,
+                TextStyleUniformsDark,
+                Containers::stridedArrayView(TextStylesDark).slice(&std::remove_all_extents<decltype(TextStylesDark)>::type::uniform),
                 fontHandles,
-                Containers::stridedArrayView(TextStylesMcssDark).slice(&std::remove_all_extents<decltype(TextStylesMcssDark)>::type::alignment),
+                Containers::stridedArrayView(TextStylesDark).slice(&std::remove_all_extents<decltype(TextStylesDark)>::type::alignment),
                 /* No features coming from style used yet */
                 {}, {}, {},
-                Containers::stridedArrayView(TextStylesMcssDark).slice(&std::remove_all_extents<decltype(TextStylesMcssDark)>::type::cursorStyle),
-                Containers::stridedArrayView(TextStylesMcssDark).slice(&std::remove_all_extents<decltype(TextStylesMcssDark)>::type::selectionStyle),
-                Containers::stridedArrayView(TextStylesMcssDark).slice(&std::remove_all_extents<decltype(TextStylesMcssDark)>::type::padding))
+                Containers::stridedArrayView(TextStylesDark).slice(&std::remove_all_extents<decltype(TextStylesDark)>::type::cursorStyle),
+                Containers::stridedArrayView(TextStylesDark).slice(&std::remove_all_extents<decltype(TextStylesDark)>::type::selectionStyle),
+                Containers::stridedArrayView(TextStylesDark).slice(&std::remove_all_extents<decltype(TextStylesDark)>::type::padding))
             .setEditingStyle(
-                TextCommonEditingStyleUniformMcssDark,
-                TextEditingStyleUniformsMcssDark,
-                Containers::stridedArrayView(TextEditingStylesMcssDark).slice(&std::remove_all_extents<decltype(TextEditingStylesMcssDark)>::type::textUniform),
-                Containers::stridedArrayView(TextEditingStylesMcssDark).slice(&std::remove_all_extents<decltype(TextEditingStylesMcssDark)>::type::padding))
+                TextCommonEditingStyleUniformDark,
+                TextEditingStyleUniformsDark,
+                Containers::stridedArrayView(TextEditingStylesDark).slice(&std::remove_all_extents<decltype(TextEditingStylesDark)>::type::textUniform),
+                Containers::stridedArrayView(TextEditingStylesDark).slice(&std::remove_all_extents<decltype(TextEditingStylesDark)>::type::padding))
             .setStyleTransition<TextStyle,
                 Implementation::styleTransitionToInactiveOut,
                 Implementation::styleTransitionToInactiveOver,
@@ -449,7 +449,7 @@ bool McssDarkTheme::doApply(UserInterface& ui, const ThemeFeatures features, Plu
         Containers::Pointer<Trade::AbstractImporter> importer = importerManager->loadAndInstantiate("AnyImageImporter");
         Containers::Optional<Trade::ImageData2D> image;
         if(!importer || !importer->openMemory(rs.getRaw("icons.png")) || !(image = importer->image2D(0))) {
-            Error{} << "Ui::McssDarkTheme::apply(): cannot open an icon atlas";
+            Error{} << "Ui::DarkTheme::apply(): cannot open an icon atlas";
             return {};
         }
 
@@ -462,7 +462,7 @@ bool McssDarkTheme::doApply(UserInterface& ui, const ThemeFeatures features, Plu
            important that it isn't expanded to 16 bits or to floats, for
            example. */
         if(pixelFormatChannelFormat(image->format()) != PixelFormat::R8Unorm) {
-            Error{} << "Ui::McssDarkTheme::apply(): expected" << PixelFormat::R8Unorm << "icons but got an image with" << image->format();
+            Error{} << "Ui::DarkTheme::apply(): expected" << PixelFormat::R8Unorm << "icons but got an image with" << image->format();
             return {};
         }
         const std::size_t channelSize = image->pixelSize()/pixelFormatChannelCount(image->format());
@@ -474,7 +474,7 @@ bool McssDarkTheme::doApply(UserInterface& ui, const ThemeFeatures features, Plu
         CORRADE_INTERNAL_ASSERT(image->size().x() % image->size().y() == 0);
         Vector3i offsets[Implementation::IconCount];
         if(!glyphCache.atlas().add(Containers::stridedArrayView(&imageSize, 1).broadcasted<0>(Implementation::IconCount), offsets)) {
-            Error{} << "Ui::McssDarkTheme::apply(): cannot fit" << Implementation::IconCount << "icons into the glyph cache";
+            Error{} << "Ui::DarkTheme::apply(): cannot fit" << Implementation::IconCount << "icons into the glyph cache";
             return {};
         }
 
@@ -536,11 +536,11 @@ bool McssDarkTheme::doApply(UserInterface& ui, const ThemeFeatures features, Plu
     /* Layout layer. So far just min sizes, paddings and margins. */
     if(features >= ThemeFeature::LayoutLayer) {
         ui.layoutLayer().setStyle(
-            Containers::stridedArrayView(LayoutStylesMcssDark).slice(&std::remove_all_extents<decltype(LayoutStylesMcssDark)>::type::minSize),
+            Containers::stridedArrayView(LayoutStylesDark).slice(&std::remove_all_extents<decltype(LayoutStylesDark)>::type::minSize),
             {},
             {},
-            Containers::stridedArrayView(LayoutStylesMcssDark).slice(&std::remove_all_extents<decltype(LayoutStylesMcssDark)>::type::padding),
-            Containers::stridedArrayView(LayoutStylesMcssDark).slice(&std::remove_all_extents<decltype(LayoutStylesMcssDark)>::type::margin));
+            Containers::stridedArrayView(LayoutStylesDark).slice(&std::remove_all_extents<decltype(LayoutStylesDark)>::type::padding),
+            Containers::stridedArrayView(LayoutStylesDark).slice(&std::remove_all_extents<decltype(LayoutStylesDark)>::type::margin));
     }
 
     /* Snap layouter */

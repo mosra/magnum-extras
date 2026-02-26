@@ -67,11 +67,11 @@ struct ThemeTest: TestSuite::Tester {
     void debugFeatures();
     void debugFeaturesSupersets();
 
-    void baseStyleMcssDark();
-    void textStyleMcssDark();
-    void textStyleUniformsMcssDark();
-    void textEditingStyleMcssDark();
-    void layoutStyleMcssDark();
+    void baseStyleDark();
+    void textStyleDark();
+    void textStyleUniformsDark();
+    void textEditingStyleDark();
+    void layoutStyleDark();
 
     void apply();
     void applyTextLayerCannotOpenFont();
@@ -91,7 +91,7 @@ using namespace Math::Literals;
 
 const struct {
     const char* name;
-    McssDarkTheme::Features themeFeatures;
+    DarkTheme::Features themeFeatures;
     ThemeFeatures features;
     Containers::Optional<UnsignedInt> imageImporterChannelCount;
     Float dpiScaling, expectedFontSize;
@@ -101,14 +101,14 @@ const struct {
     {"base layer only", {},
         ThemeFeature::BaseLayer, {}, 1.0f, 0.0f},
     {"base layer, animations enabled but not applied",
-        McssDarkTheme::Feature::Animations,
+        DarkTheme::Feature::Animations,
         ThemeFeature::BaseLayer, {}, 1.0f, 0.0f},
     /* There are currently no essential animations in BaseLayer */
     {"base layer + base layer animations",
-        McssDarkTheme::Feature::Animations,
+        DarkTheme::Feature::Animations,
         ThemeFeature::BaseLayer|ThemeFeature::BaseLayerAnimations, {}, 1.0f, 0.0f},
     {"base layer animations only",
-        McssDarkTheme::Feature::Animations,
+        DarkTheme::Feature::Animations,
         ThemeFeature::BaseLayerAnimations, {}, 1.0f, 0.0f},
     {"text layer only", {},
         ThemeFeature::TextLayer, {}, 1.0f, 16.0f*2},
@@ -119,16 +119,16 @@ const struct {
     {"text layer images only, imported as RG", {},
         ThemeFeature::TextLayerImages, 2, 1.0f, 16.0f*2},
     {"text layer, animations enabled but not applied",
-        McssDarkTheme::Feature::Animations,
+        DarkTheme::Feature::Animations,
         ThemeFeature::TextLayer, {}, 1.0f, 16.0f*2},
     {"text layer + essential text layer animations",
-        McssDarkTheme::Feature::EssentialAnimations,
+        DarkTheme::Feature::EssentialAnimations,
         ThemeFeature::TextLayer|ThemeFeature::TextLayerAnimations, {}, 1.0f, 16.0f*2},
     {"text layer + text layer animations",
-        McssDarkTheme::Feature::Animations,
+        DarkTheme::Feature::Animations,
         ThemeFeature::TextLayer|ThemeFeature::TextLayerAnimations, {}, 1.0f, 16.0f*2},
     {"text layer animations only",
-        McssDarkTheme::Feature::Animations,
+        DarkTheme::Feature::Animations,
         ThemeFeature::TextLayerAnimations, {}, 1.0f, 16.0f*2},
     {"event layer", {},
         ThemeFeature::EventLayer, {}, 1.0f, 0.0f},
@@ -139,7 +139,7 @@ const struct {
     {"generic layouter", {},
         ThemeFeature::GenericLayouter, {}, 1.0f, 0.0f},
     {"everything",
-        McssDarkTheme::Feature::Animations,
+        DarkTheme::Feature::Animations,
         ~ThemeFeatures{}, {}, 1.0f, 16.0f*2},
     {"text layer + text layer images, 0.625x DPI scaling", {},
         ThemeFeature::TextLayer|ThemeFeature::TextLayerImages, {}, 0.625f, 10.0f*2},
@@ -150,11 +150,11 @@ ThemeTest::ThemeTest() {
               &ThemeTest::debugFeatures,
               &ThemeTest::debugFeaturesSupersets,
 
-              &ThemeTest::baseStyleMcssDark,
-              &ThemeTest::textStyleMcssDark,
-              &ThemeTest::textStyleUniformsMcssDark,
-              &ThemeTest::textEditingStyleMcssDark,
-              &ThemeTest::layoutStyleMcssDark});
+              &ThemeTest::baseStyleDark,
+              &ThemeTest::textStyleDark,
+              &ThemeTest::textStyleUniformsDark,
+              &ThemeTest::textEditingStyleDark,
+              &ThemeTest::layoutStyleDark});
 
     addInstancedTests({&ThemeTest::apply},
         Containers::arraySize(ApplyData));
@@ -176,14 +176,14 @@ using Implementation::LayoutStyle;
 
 void ThemeTest::debugFeature() {
     Containers::String out;
-    Debug{&out} << McssDarkTheme::Feature::Animations << McssDarkTheme::Feature(0xbe);
-    CORRADE_COMPARE(out, "Ui::McssDarkTheme::Feature::Animations Ui::McssDarkTheme::Feature(0xbe)\n");
+    Debug{&out} << DarkTheme::Feature::Animations << DarkTheme::Feature(0xbe);
+    CORRADE_COMPARE(out, "Ui::DarkTheme::Feature::Animations Ui::DarkTheme::Feature(0xbe)\n");
 }
 
 void ThemeTest::debugFeatures() {
     Containers::String out;
-    Debug{&out} << (McssDarkTheme::Feature::EssentialAnimations|McssDarkTheme::Feature(0x80)) << McssDarkTheme::Features{};
-    CORRADE_COMPARE(out, "Ui::McssDarkTheme::Feature::EssentialAnimations|Ui::McssDarkTheme::Feature(0x80) Ui::McssDarkTheme::Features{}\n");
+    Debug{&out} << (DarkTheme::Feature::EssentialAnimations|DarkTheme::Feature(0x80)) << DarkTheme::Features{};
+    CORRADE_COMPARE(out, "Ui::DarkTheme::Feature::EssentialAnimations|Ui::DarkTheme::Feature(0x80) Ui::DarkTheme::Features{}\n");
 }
 
 void ThemeTest::debugFeaturesSupersets() {
@@ -191,12 +191,12 @@ void ThemeTest::debugFeaturesSupersets() {
        printed */
     {
         Containers::String out;
-        Debug{&out} << (McssDarkTheme::Feature::EssentialAnimations|McssDarkTheme::Feature::Animations);
-        CORRADE_COMPARE(out, "Ui::McssDarkTheme::Feature::Animations\n");
+        Debug{&out} << (DarkTheme::Feature::EssentialAnimations|DarkTheme::Feature::Animations);
+        CORRADE_COMPARE(out, "Ui::DarkTheme::Feature::Animations\n");
     }
 }
 
-void ThemeTest::baseStyleMcssDark() {
+void ThemeTest::baseStyleDark() {
     const BaseStyle styleUniforms[]{
         #define _c(style, ...) BaseStyle::style,
         #include "Magnum/Ui/Implementation/baseStyleUniformsMcssDark.h"
@@ -234,7 +234,7 @@ void ThemeTest::baseStyleMcssDark() {
     }
 }
 
-void ThemeTest::textStyleMcssDark() {
+void ThemeTest::textStyleDark() {
     const TextStyle styles[]{
         #define _c(style, suffix, ...) TextStyle::style ## suffix,
         #define _s _c
@@ -281,7 +281,7 @@ void ThemeTest::textStyleMcssDark() {
     }
 }
 
-void ThemeTest::textStyleUniformsMcssDark() {
+void ThemeTest::textStyleUniformsDark() {
     const TextStyleUniform styleUniforms[]{
         #define _c(value, ...) TextStyleUniform::value,
         #include "Magnum/Ui/Implementation/textStyleUniformsMcssDark.h"
@@ -318,7 +318,7 @@ void ThemeTest::textStyleUniformsMcssDark() {
     }
 }
 
-void ThemeTest::textEditingStyleMcssDark() {
+void ThemeTest::textEditingStyleDark() {
     const TextEditingStyle styleUniforms[]{
         #define _c(style, ...) TextEditingStyle::style,
         #define _s _c
@@ -360,7 +360,7 @@ void ThemeTest::textEditingStyleMcssDark() {
     }
 }
 
-void ThemeTest::layoutStyleMcssDark() {
+void ThemeTest::layoutStyleDark() {
     const LayoutStyle styles[]{
         #define _c(style, ...) LayoutStyle::style,
         #define _n _c
@@ -473,11 +473,10 @@ void ThemeTest::apply() {
     ui.setSnapLayouterInstance(Containers::pointer<SnapLayouter>(ui.createLayouter()));
     ui.setGenericLayouterInstance(Containers::pointer<GenericLayouter>(ui.createLayouter()));
 
-    McssDarkTheme theme{data.themeFeatures};
+    DarkTheme theme{data.themeFeatures};
     /* The AbstractTheme can have the set of features bigger than what the
-       particular McssDarkTheme supports, which would then fail if
-       data.features is ~ThemeFeatures{}. Make it an union with what's actually
-       supported. */
+       particular DarkTheme supports, which would then fail if data.features is
+       ~ThemeFeatures{}. Make it an union with what's actually supported. */
     CORRADE_VERIFY(theme.apply(ui, data.features & theme.features(), &importerManager, &_fontManager));
 
     /* Style transition for disabled functions should be set if base / text
@@ -499,29 +498,29 @@ void ThemeTest::apply() {
 
     CORRADE_COMPARE(ui.baseLayer().shared().styleAnimationOnLeave(),
         data.features >= ThemeFeature::BaseLayerAnimations &&
-        data.themeFeatures >= McssDarkTheme::Feature::Animations);
+        data.themeFeatures >= DarkTheme::Feature::Animations);
     CORRADE_COMPARE(ui.textLayer().shared().styleAnimationOnLeave(),
         data.features >= ThemeFeature::TextLayerAnimations &&
-        data.themeFeatures >= McssDarkTheme::Feature::Animations);
+        data.themeFeatures >= DarkTheme::Feature::Animations);
 
     CORRADE_COMPARE(ui.baseLayer().shared().styleAnimationOnBlur(),
         data.features >= ThemeFeature::BaseLayerAnimations &&
-        data.themeFeatures >= McssDarkTheme::Feature::Animations);
+        data.themeFeatures >= DarkTheme::Feature::Animations);
     CORRADE_COMPARE(ui.textLayer().shared().styleAnimationOnBlur(),
         data.features >= ThemeFeature::TextLayerAnimations &&
-        data.themeFeatures >= McssDarkTheme::Feature::Animations);
+        data.themeFeatures >= DarkTheme::Feature::Animations);
 
     CORRADE_COMPARE(ui.baseLayer().shared().styleAnimationOnRelease(),
         data.features >= ThemeFeature::BaseLayerAnimations &&
-        data.themeFeatures >= McssDarkTheme::Feature::Animations);
+        data.themeFeatures >= DarkTheme::Feature::Animations);
     CORRADE_COMPARE(ui.textLayer().shared().styleAnimationOnRelease(),
         data.features >= ThemeFeature::TextLayerAnimations &&
-        data.themeFeatures >= McssDarkTheme::Feature::Animations);
+        data.themeFeatures >= DarkTheme::Feature::Animations);
 
     CORRADE_VERIFY(!ui.baseLayer().shared().styleAnimationPersistent());
     CORRADE_COMPARE(ui.textLayer().shared().styleAnimationPersistent(),
         data.features >= ThemeFeature::TextLayerAnimations &&
-        data.themeFeatures >= McssDarkTheme::Feature::EssentialAnimations);
+        data.themeFeatures >= DarkTheme::Feature::EssentialAnimations);
 
     if(data.features >= ThemeFeature::DataLayer) {
         /* Nothing to check here */
@@ -594,13 +593,13 @@ void ThemeTest::applyTextLayerCannotOpenFont() {
     };
     ui.setTextLayerInstance(Containers::pointer<Layer>(ui.createLayer(), layerShared));
 
-    McssDarkTheme theme;
+    DarkTheme theme;
 
     Containers::String out;
     Error redirectError{&out};
     CORRADE_VERIFY(!theme.apply(ui, ThemeFeature::TextLayer, nullptr, &fontManager));
     CORRADE_COMPARE_AS(out,
-        "\nUi::McssDarkTheme::apply(): cannot open a font\n",
+        "\nUi::DarkTheme::apply(): cannot open a font\n",
         TestSuite::Compare::StringHasSuffix);
 }
 
@@ -639,13 +638,13 @@ void ThemeTest::applyTextLayerImagesCannotOpen() {
     };
     ui.setTextLayerInstance(Containers::pointer<Layer>(ui.createLayer(), layerShared));
 
-    McssDarkTheme theme;
+    DarkTheme theme;
 
     Containers::String out;
     Error redirectError{&out};
     CORRADE_VERIFY(!theme.apply(ui, ThemeFeature::TextLayerImages, &importerManager, nullptr));
     CORRADE_COMPARE_AS(out,
-        "\nUi::McssDarkTheme::apply(): cannot open an icon atlas\n",
+        "\nUi::DarkTheme::apply(): cannot open an icon atlas\n",
         TestSuite::Compare::StringHasSuffix);
 }
 
@@ -685,12 +684,12 @@ void ThemeTest::applyTextLayerImagesCannotFit() {
     };
     ui.setTextLayerInstance(Containers::pointer<Layer>(ui.createLayer(), layerShared));
 
-    McssDarkTheme theme;
+    DarkTheme theme;
 
     Containers::String out;
     Error redirectError{&out};
     CORRADE_VERIFY(!theme.apply(ui, ThemeFeature::TextLayerImages, &_importerManager, nullptr));
-    CORRADE_COMPARE(out, "Ui::McssDarkTheme::apply(): cannot fit 2 icons into the glyph cache\n");
+    CORRADE_COMPARE(out, "Ui::DarkTheme::apply(): cannot fit 2 icons into the glyph cache\n");
 }
 
 void ThemeTest::applyTextLayerImagesUnexpectedFormat() {
@@ -731,12 +730,12 @@ void ThemeTest::applyTextLayerImagesUnexpectedFormat() {
     };
     ui.setTextLayerInstance(Containers::pointer<Layer>(ui.createLayer(), layerShared));
 
-    McssDarkTheme theme;
+    DarkTheme theme;
 
     Containers::String out;
     Error redirectError{&out};
     CORRADE_VERIFY(!theme.apply(ui, ThemeFeature::TextLayerImages, &importerManager, nullptr));
-    CORRADE_COMPARE(out, "Ui::McssDarkTheme::apply(): expected PixelFormat::R8Unorm icons but got an image with PixelFormat::R32F\n");
+    CORRADE_COMPARE(out, "Ui::DarkTheme::apply(): expected PixelFormat::R8Unorm icons but got an image with PixelFormat::R32F\n");
 }
 
 void ThemeTest::applyTextLayerTwice() {
@@ -774,7 +773,7 @@ void ThemeTest::applyTextLayerTwice() {
     };
     ui.setTextLayerInstance(Containers::pointer<TestTextLayer>(ui.createLayer(), textLayerShared));
 
-    McssDarkTheme theme;
+    DarkTheme theme;
     CORRADE_VERIFY(theme.apply(ui, ThemeFeature::TextLayer|ThemeFeature::TextLayerImages, &_importerManager, &_fontManager));
     CORRADE_COMPARE(ui.textLayer().shared().fontCount(), 2);
     CORRADE_COMPARE(ui.textLayer().shared().glyphCache().fontCount(), 2);
@@ -823,7 +822,7 @@ void ThemeTest::removePreviousAnimationForBlinkingCursor() {
     ui.setTextLayerInstance(Containers::pointer<TestTextLayer>(ui.createLayer(), textLayerShared));
     ui.setTextLayerStyleAnimatorInstance(Containers::pointer<TextLayerStyleAnimator>(ui.createAnimator()));
 
-    McssDarkTheme theme{McssDarkTheme::Feature::Animations};
+    DarkTheme theme{DarkTheme::Feature::Animations};
     CORRADE_VERIFY(theme.apply(ui, ThemeFeature::TextLayer|ThemeFeature::TextLayerAnimations, nullptr, &_fontManager));
 
     /* Not using Input as that would require also the base layer, setting up a

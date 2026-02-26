@@ -104,7 +104,7 @@ individual properties interpolated with an easing function.
 @section Ui-BaseLayerStyleAnimator-setup Setting up a base layer animator instance
 
 If you create a @ref UserInterfaceGL with a theme containing
-@ref McssDarkTheme::Feature::Animations or equivalent and don't exclude
+@ref DarkTheme::Feature::Animations or equivalent and don't exclude
 @ref ThemeFeature::BaseLayerAnimations, an implicit instance of the class,
 configured for use with builtin widgets, is already provided and available
 through @ref UserInterface::baseLayerStyleAnimator().

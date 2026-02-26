@@ -189,7 +189,7 @@ int UiDebugLayer::exec() {
         .setRendererInstance(Containers::pointer<Ui::RendererGL>(Ui::RendererGL::Flag::CompositingFramebuffer))
         /* The actual framebuffer size is 2x the UI size */
         .setSize({128.0f, 48.0f}, Vector2{ImageSize}, ImageSize)
-        .setTheme(Ui::McssDarkTheme{});
+        .setTheme(Ui::DarkTheme{});
 
     /* Button code, default visual state with no highlight. Adding some extra
        nodes and data to have the listed handles non-trivial. */

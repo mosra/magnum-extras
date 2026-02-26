@@ -296,7 +296,7 @@ instantiate the user interface through the @ref UserInterfaceGL subclass, which
 by default includes everything that's needed by builtin widgets. The
 constructor takes a UI size, in respect to which all contents as well as input
 events get positioned, and a theme instance describing how the widgets will
-look like. At the moment, @ref McssDarkTheme is the only theme provided by the
+look like. At the moment, @ref DarkTheme is the only theme provided by the
 library itself.
 
 @snippet Ui-gl.cpp UserInterfaceGL-setup
@@ -442,10 +442,10 @@ the time next animation advance happens.
 
 @snippet Ui-sdl2.cpp AbstractUserInterface-animations-events
 
-With everything set up, you can enable @ref McssDarkTheme::Feature::Animations
-in the builtin theme, which will perform various fade out animations as well as
+With everything set up, you can enable @ref DarkTheme::Feature::Animations in
+the builtin theme, which will perform various fade out animations as well as
 a blinking cursor in text input fields. The builtin theme has more animation
-options, see @ref Ui-McssDarkTheme-animations for details.
+options, see @ref Ui-DarkTheme-animations for details.
 
 @snippet Ui-sdl2.cpp AbstractUserInterface-animations-theme-features
 

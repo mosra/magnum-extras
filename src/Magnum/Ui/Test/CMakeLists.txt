@@ -476,19 +476,19 @@ if(MAGNUM_BUILD_GL_TESTS)
 
     corrade_add_test(UiButtonGLTest ButtonGLTest.cpp
         FILES
-            ThemeTestFiles/mcss-dark-button-text-icon.png
-            ThemeTestFiles/mcss-dark-button-text.png
-            ThemeTestFiles/mcss-dark-button-icon.png)
+            ThemeTestFiles/dark-button-text-icon.png
+            ThemeTestFiles/dark-button-text.png
+            ThemeTestFiles/dark-button-icon.png)
     corrade_add_test(UiInputGLTest InputGLTest.cpp
         FILES
-            ThemeTestFiles/mcss-dark-input.png)
+            ThemeTestFiles/dark-input.png)
     corrade_add_test(UiLabelGLTest LabelGLTest.cpp
         FILES
-            ThemeTestFiles/mcss-dark-label-text.png
-            ThemeTestFiles/mcss-dark-label-icon.png)
+            ThemeTestFiles/dark-label-text.png
+            ThemeTestFiles/dark-label-icon.png)
     corrade_add_test(UiPanelGLTest PanelGLTest.cpp
         FILES
-            ThemeTestFiles/mcss-dark-panel.png)
+            ThemeTestFiles/dark-panel.png)
     foreach(_widget Button Input Label Panel)
         target_link_libraries(Ui${_widget}GLTest PRIVATE
             MagnumUi

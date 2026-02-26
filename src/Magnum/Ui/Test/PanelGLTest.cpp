@@ -41,9 +41,9 @@ struct PanelGLTest: ThemeGLTester {
 using namespace Math::Literals;
 
 const Theme ThemeData[]{
-    {"m.css dark", "mcss-dark-", false, Containers::pointer<McssDarkTheme>()},
-    {"m.css dark SubdividedQuads", "mcss-dark-", false, []{
-        Containers::Pointer<McssDarkTheme> style{InPlaceInit};
+    {"dark", "dark-", false, Containers::pointer<DarkTheme>()},
+    {"dark SubdividedQuads", "dark-", false, []{
+        Containers::Pointer<DarkTheme> style{InPlaceInit};
         style->setBaseLayerFlags(BaseLayerSharedFlag::SubdividedQuads, {});
         return style;
     }()},

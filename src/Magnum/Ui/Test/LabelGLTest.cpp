@@ -43,7 +43,7 @@ struct LabelGLTest: ThemeGLTester {
 using namespace Math::Literals;
 
 const Theme ThemeData[]{
-    {"m.css dark", "mcss-dark-", false, Containers::pointer<McssDarkTheme>()},
+    {"dark", "dark-", false, Containers::pointer<DarkTheme>()},
     /* No SubdividedQuads as labels currently don't have any backgrounds, no
        animations either */
 };
