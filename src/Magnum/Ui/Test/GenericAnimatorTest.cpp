@@ -867,11 +867,11 @@ void GenericAnimatorTest::createInvalid() {
     animator.create([](Float, GenericAnimationStates) {}, nullptr, 0_nsec, 1_nsec, 0, AnimationFlags{});
     animator.create([](Float, GenericAnimationStates) {}, nullptr, 0_nsec, 1_nsec, AnimationFlags{});
     CORRADE_COMPARE_AS(out,
-        "Ui::GenericAnimator::create(): animation is null\n"
-        "Ui::GenericAnimator::create(): animation is null\n"
-        "Ui::GenericAnimator::create(): animation is null\n"
-        "Ui::GenericAnimator::create(): animation is null\n"
-        "Ui::GenericAnimator::callOnce(): callback is null\n"
+        "Ui::GenericAnimator::create(): function is null\n"
+        "Ui::GenericAnimator::create(): function is null\n"
+        "Ui::GenericAnimator::create(): function is null\n"
+        "Ui::GenericAnimator::create(): function is null\n"
+        "Ui::GenericAnimator::callOnce(): function is null\n"
         "Ui::GenericAnimator::create(): easing is null\n"
         "Ui::GenericAnimator::create(): easing is null\n"
         "Ui::GenericAnimator::create(): easing is null\n"
@@ -896,11 +896,11 @@ void GenericAnimatorTest::createInvalidNode() {
     animator.create([](NodeHandle, Float, GenericAnimationStates) {}, nullptr, 0_nsec, 1_nsec, NodeHandle::Null, 0, AnimationFlags{});
     animator.create([](NodeHandle, Float, GenericAnimationStates) {}, nullptr, 0_nsec, 1_nsec, NodeHandle::Null, AnimationFlags{});
     CORRADE_COMPARE_AS(out,
-        "Ui::GenericNodeAnimator::create(): animation is null\n"
-        "Ui::GenericNodeAnimator::create(): animation is null\n"
-        "Ui::GenericNodeAnimator::create(): animation is null\n"
-        "Ui::GenericNodeAnimator::create(): animation is null\n"
-        "Ui::GenericNodeAnimator::callOnce(): callback is null\n"
+        "Ui::GenericNodeAnimator::create(): function is null\n"
+        "Ui::GenericNodeAnimator::create(): function is null\n"
+        "Ui::GenericNodeAnimator::create(): function is null\n"
+        "Ui::GenericNodeAnimator::create(): function is null\n"
+        "Ui::GenericNodeAnimator::callOnce(): function is null\n"
         "Ui::GenericNodeAnimator::create(): easing is null\n"
         "Ui::GenericNodeAnimator::create(): easing is null\n"
         "Ui::GenericNodeAnimator::create(): easing is null\n"
@@ -941,16 +941,16 @@ void GenericAnimatorTest::createInvalidData() {
     animator.create([](DataHandle, Float, GenericAnimationStates) {}, nullptr, 0_nsec, 1_nsec, LayerDataHandle::Null, 0, AnimationFlags{});
     animator.create([](DataHandle, Float, GenericAnimationStates) {}, nullptr, 0_nsec, 1_nsec, LayerDataHandle::Null, AnimationFlags{});
     CORRADE_COMPARE_AS(out,
-        "Ui::GenericDataAnimator::create(): animation is null\n"
-        "Ui::GenericDataAnimator::create(): animation is null\n"
-        "Ui::GenericDataAnimator::create(): animation is null\n"
-        "Ui::GenericDataAnimator::create(): animation is null\n"
-        "Ui::GenericDataAnimator::create(): animation is null\n"
-        "Ui::GenericDataAnimator::create(): animation is null\n"
-        "Ui::GenericDataAnimator::create(): animation is null\n"
-        "Ui::GenericDataAnimator::create(): animation is null\n"
-        "Ui::GenericDataAnimator::callOnce(): callback is null\n"
-        "Ui::GenericDataAnimator::callOnce(): callback is null\n"
+        "Ui::GenericDataAnimator::create(): function is null\n"
+        "Ui::GenericDataAnimator::create(): function is null\n"
+        "Ui::GenericDataAnimator::create(): function is null\n"
+        "Ui::GenericDataAnimator::create(): function is null\n"
+        "Ui::GenericDataAnimator::create(): function is null\n"
+        "Ui::GenericDataAnimator::create(): function is null\n"
+        "Ui::GenericDataAnimator::create(): function is null\n"
+        "Ui::GenericDataAnimator::create(): function is null\n"
+        "Ui::GenericDataAnimator::callOnce(): function is null\n"
+        "Ui::GenericDataAnimator::callOnce(): function is null\n"
         "Ui::GenericDataAnimator::create(): easing is null\n"
         "Ui::GenericDataAnimator::create(): easing is null\n"
         "Ui::GenericDataAnimator::create(): easing is null\n"

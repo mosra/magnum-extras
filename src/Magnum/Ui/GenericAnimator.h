@@ -256,9 +256,9 @@ class MAGNUM_UI_EXPORT GenericAnimator: public AbstractGenericAnimator {
 
         /**
          * @brief Create an animation
-         * @param animation     Animation function
+         * @param function      Animation function
          * @param easing        Easing function between @cpp 0.0f @ce and
-         *      @cpp 1.0f @ce, applied to the @p factor passed to @p animation.
+         *      @cpp 1.0f @ce, applied to the @p factor passed to @p function.
          *      Pick one from @ref Animation::BasicEasing "Animation::Easing"
          *      or supply a custom one.
          * @param start         Time at which the animation starts. Use
@@ -269,7 +269,7 @@ class MAGNUM_UI_EXPORT GenericAnimator: public AbstractGenericAnimator {
          *      indefinitely repeating animation.
          * @param flags         Flags
          *
-         * Expects that both @p animation and @p easing are not @cpp nullptr @ce.
+         * Expects that both @p function and @p easing are not @cpp nullptr @ce.
          * Delegates to @ref AbstractAnimator::create(Nanoseconds, Nanoseconds, UnsignedInt, AnimationFlags),
          * see its documentation for detailed description of all constraints.
          *
@@ -284,7 +284,7 @@ class MAGNUM_UI_EXPORT GenericAnimator: public AbstractGenericAnimator {
          * You can also use the @ref GenericAnimationStates overload below to
          * hook directly to the start and stop.
          */
-        AnimationHandle create(Containers::Function<void(Float factor)>&& animation, Float(*easing)(Float), Nanoseconds start, Nanoseconds duration, UnsignedInt repeatCount = 1, AnimationFlags flags = {});
+        AnimationHandle create(Containers::Function<void(Float factor)>&& function, Float(*easing)(Float), Nanoseconds start, Nanoseconds duration, UnsignedInt repeatCount = 1, AnimationFlags flags = {});
 
         /**
          * @brief Create an animation
@@ -294,7 +294,7 @@ class MAGNUM_UI_EXPORT GenericAnimator: public AbstractGenericAnimator {
          * @todoc fix the overload references once Doxygen can link to
          *      functions taking function pointers
          */
-        AnimationHandle create(Containers::Function<void(Float factor)>&& animation, Float(*easing)(Float), Nanoseconds start, Nanoseconds duration, AnimationFlags flags);
+        AnimationHandle create(Containers::Function<void(Float factor)>&& function, Float(*easing)(Float), Nanoseconds start, Nanoseconds duration, AnimationFlags flags);
 
         /**
          * @brief Create an animation with an extra state input
@@ -305,7 +305,7 @@ class MAGNUM_UI_EXPORT GenericAnimator: public AbstractGenericAnimator {
          * of particular @ref GenericAnimationState values for detailed
          * behavior description.
          */
-        AnimationHandle create(Containers::Function<void(Float factor, GenericAnimationStates state)>&& animation, Float(*easing)(Float), Nanoseconds start, Nanoseconds duration, UnsignedInt repeatCount = 1, AnimationFlags flags = {});
+        AnimationHandle create(Containers::Function<void(Float factor, GenericAnimationStates state)>&& function, Float(*easing)(Float), Nanoseconds start, Nanoseconds duration, UnsignedInt repeatCount = 1, AnimationFlags flags = {});
 
         /**
          * @brief Create an animation with an extra state input
@@ -315,21 +315,21 @@ class MAGNUM_UI_EXPORT GenericAnimator: public AbstractGenericAnimator {
          * @todoc fix the overload references once Doxygen can link to
          *      functions taking function pointers
          */
-        AnimationHandle create(Containers::Function<void(Float factor, GenericAnimationStates state)>&& animation, Float(*easing)(Float), Nanoseconds start, Nanoseconds duration, AnimationFlags flags);
+        AnimationHandle create(Containers::Function<void(Float factor, GenericAnimationStates state)>&& function, Float(*easing)(Float), Nanoseconds start, Nanoseconds duration, AnimationFlags flags);
 
         /**
          * @brief Call a function once at specified time
-         * @param callback      Function to call
-         * @param at            Time at which the callback gets called. Use
+         * @param function      Function to call
+         * @param at            Time at which the function gets called. Use
          *      @ref Nanoseconds::max() for creating a stopped animation.
          * @param flags         Flags
          *
-         * Expects that @p callback is not @cpp nullptr @ce. Delegates to
+         * Expects that @p function is not @cpp nullptr @ce. Delegates to
          * @ref AbstractAnimator::create(Nanoseconds, Nanoseconds, UnsignedInt, AnimationFlags)
          * with @p duration set to @cpp 0_nsec @ce, see its documentation for
          * detailed description of all constraints.
          */
-        AnimationHandle callOnce(Containers::Function<void()>&& callback, Nanoseconds at, AnimationFlags flags = {});
+        AnimationHandle callOnce(Containers::Function<void()>&& function, Nanoseconds at, AnimationFlags flags = {});
 
         /**
          * @brief Remove an animation
@@ -537,9 +537,9 @@ class MAGNUM_UI_EXPORT GenericNodeAnimator: public AbstractGenericAnimator {
 
         /**
          * @brief Create an animation
-         * @param animation     Animation function
+         * @param function      Animation function
          * @param easing        Easing function between @cpp 0.0f @ce and
-         *      @cpp 1.0f @ce, applied to the @p factor passed to @p animation.
+         *      @cpp 1.0f @ce, applied to the @p factor passed to @p function.
          *      Pick one from @ref Animation::BasicEasing "Animation::Easing"
          *      or supply a custom one.
          * @param start         Time at which the animation starts. Use
@@ -553,7 +553,7 @@ class MAGNUM_UI_EXPORT GenericNodeAnimator: public AbstractGenericAnimator {
          *      indefinitely repeating animation.
          * @param flags         Flags
          *
-         * Expects that both @p animation and @p easing are not @cpp nullptr @ce.
+         * Expects that both @p function and @p easing are not @cpp nullptr @ce.
          * Delegates to @ref AbstractAnimator::create(Nanoseconds, Nanoseconds, NodeHandle, UnsignedInt, AnimationFlags),
          * see its documentation for detailed description of all constraints.
          *
@@ -568,7 +568,7 @@ class MAGNUM_UI_EXPORT GenericNodeAnimator: public AbstractGenericAnimator {
          * You can also use the @ref GenericAnimationStates overload below to
          * hook directly to the start and stop.
          */
-        AnimationHandle create(Containers::Function<void(NodeHandle node, Float factor)>&& animation, Float(*easing)(Float), Nanoseconds start, Nanoseconds duration, NodeHandle node, UnsignedInt repeatCount = 1, AnimationFlags flags = {});
+        AnimationHandle create(Containers::Function<void(NodeHandle node, Float factor)>&& function, Float(*easing)(Float), Nanoseconds start, Nanoseconds duration, NodeHandle node, UnsignedInt repeatCount = 1, AnimationFlags flags = {});
 
         /**
          * @brief Create an animation
@@ -578,7 +578,7 @@ class MAGNUM_UI_EXPORT GenericNodeAnimator: public AbstractGenericAnimator {
          * @todoc fix the overload references once Doxygen can link to
          *      functions taking function pointers
          */
-        AnimationHandle create(Containers::Function<void(NodeHandle node, Float factor)>&& animation, Float(*easing)(Float), Nanoseconds start, Nanoseconds duration, NodeHandle node, AnimationFlags flags);
+        AnimationHandle create(Containers::Function<void(NodeHandle node, Float factor)>&& function, Float(*easing)(Float), Nanoseconds start, Nanoseconds duration, NodeHandle node, AnimationFlags flags);
 
         /**
          * @brief Create an animation with an extra state input
@@ -589,7 +589,7 @@ class MAGNUM_UI_EXPORT GenericNodeAnimator: public AbstractGenericAnimator {
          * of particular @ref GenericAnimationState values for detailed
          * behavior description.
          */
-        AnimationHandle create(Containers::Function<void(NodeHandle node, Float factor, GenericAnimationStates state)>&& animation, Float(*easing)(Float), Nanoseconds start, Nanoseconds duration, NodeHandle node, UnsignedInt repeatCount = 1, AnimationFlags flags = {});
+        AnimationHandle create(Containers::Function<void(NodeHandle node, Float factor, GenericAnimationStates state)>&& function, Float(*easing)(Float), Nanoseconds start, Nanoseconds duration, NodeHandle node, UnsignedInt repeatCount = 1, AnimationFlags flags = {});
 
         /**
          * @brief Create an animation with an extra state input
@@ -599,24 +599,24 @@ class MAGNUM_UI_EXPORT GenericNodeAnimator: public AbstractGenericAnimator {
          * @todoc fix the overload references once Doxygen can link to
          *      functions taking function pointers
          */
-        AnimationHandle create(Containers::Function<void(NodeHandle node, Float factor, GenericAnimationStates state)>&& animation, Float(*easing)(Float), Nanoseconds start, Nanoseconds duration, NodeHandle node, AnimationFlags flags);
+        AnimationHandle create(Containers::Function<void(NodeHandle node, Float factor, GenericAnimationStates state)>&& function, Float(*easing)(Float), Nanoseconds start, Nanoseconds duration, NodeHandle node, AnimationFlags flags);
 
         /**
          * @brief Call a function once at specified time
-         * @param callback      Function to call
-         * @param at            Time at which the callback gets called. Use
+         * @param function      Function to call
+         * @param at            Time at which the function gets called. Use
          *      @ref Nanoseconds::max() for creating a stopped animation.
          * @param node          Node the animation is attached to. Use
          *      @ref NodeHandle::Null to create an animation that isn't
          *      attached to any node.
          * @param flags         Flags
          *
-         * Expects that @p callback is not @cpp nullptr @ce. Delegates to
+         * Expects that @p function is not @cpp nullptr @ce. Delegates to
          * @ref AbstractAnimator::create(Nanoseconds, Nanoseconds, NodeHandle, UnsignedInt, AnimationFlags)
          * with @p duration set to @cpp 0_nsec @ce, see its documentation for
          * detailed description of all constraints.
          */
-        AnimationHandle callOnce(Containers::Function<void(NodeHandle node)>&& callback, Nanoseconds at, NodeHandle node, AnimationFlags flags = {});
+        AnimationHandle callOnce(Containers::Function<void(NodeHandle node)>&& function, Nanoseconds at, NodeHandle node, AnimationFlags flags = {});
 
         /**
          * @brief Remove an animation
@@ -822,9 +822,9 @@ class MAGNUM_UI_EXPORT GenericDataAnimator: public AbstractGenericAnimator {
 
         /**
          * @brief Create an animation
-         * @param animation     Animation function
+         * @param function      Animation function
          * @param easing        Easing function between @cpp 0.0f @ce and
-         *      @cpp 1.0f @ce, applied to the @p factor passed to @p animation.
+         *      @cpp 1.0f @ce, applied to the @p factor passed to @p function.
          *      Pick one from @ref Animation::BasicEasing "Animation::Easing"
          *      or supply a custom one.
          * @param start         Time at which the animation starts. Use
@@ -839,7 +839,7 @@ class MAGNUM_UI_EXPORT GenericDataAnimator: public AbstractGenericAnimator {
          * @param flags         Flags
          *
          * Expects that @ref setLayer() has been already called and that both
-         * @p animation and @p easing are not @cpp nullptr @ce. Delegates to
+         * @p function and @p easing are not @cpp nullptr @ce. Delegates to
          * @ref AbstractAnimator::create(Nanoseconds, Nanoseconds, DataHandle, UnsignedInt, AnimationFlags),
          * see its documentation for detailed description of all constraints.
          *
@@ -859,7 +859,7 @@ class MAGNUM_UI_EXPORT GenericDataAnimator: public AbstractGenericAnimator {
          * You can also use the @ref GenericAnimationStates overload below to
          * hook directly to the start and stop.
          */
-        AnimationHandle create(Containers::Function<void(DataHandle data, Float factor)>&& animation, Float(*easing)(Float), Nanoseconds start, Nanoseconds duration, DataHandle data, UnsignedInt repeatCount = 1, AnimationFlags flags = {});
+        AnimationHandle create(Containers::Function<void(DataHandle data, Float factor)>&& function, Float(*easing)(Float), Nanoseconds start, Nanoseconds duration, DataHandle data, UnsignedInt repeatCount = 1, AnimationFlags flags = {});
 
         /**
          * @brief Create an animation
@@ -869,7 +869,7 @@ class MAGNUM_UI_EXPORT GenericDataAnimator: public AbstractGenericAnimator {
          * @todoc fix the overload references once Doxygen can link to
          *      functions taking function pointers
          */
-        AnimationHandle create(Containers::Function<void(DataHandle data, Float factor)>&& animation, Float(*easing)(Float), Nanoseconds start, Nanoseconds duration, DataHandle data, AnimationFlags flags);
+        AnimationHandle create(Containers::Function<void(DataHandle data, Float factor)>&& function, Float(*easing)(Float), Nanoseconds start, Nanoseconds duration, DataHandle data, AnimationFlags flags);
 
         /**
          * @brief Create an animation with an extra state input
@@ -880,7 +880,7 @@ class MAGNUM_UI_EXPORT GenericDataAnimator: public AbstractGenericAnimator {
          * of particular @ref GenericAnimationState values for detailed
          * behavior description.
          */
-        AnimationHandle create(Containers::Function<void(DataHandle data, Float factor, GenericAnimationStates state)>&& animation, Float(*easing)(Float), Nanoseconds start, Nanoseconds duration, DataHandle data, UnsignedInt repeatCount = 1, AnimationFlags flags = {});
+        AnimationHandle create(Containers::Function<void(DataHandle data, Float factor, GenericAnimationStates state)>&& function, Float(*easing)(Float), Nanoseconds start, Nanoseconds duration, DataHandle data, UnsignedInt repeatCount = 1, AnimationFlags flags = {});
 
         /**
          * @brief Create an animation with an extra state input
@@ -890,7 +890,7 @@ class MAGNUM_UI_EXPORT GenericDataAnimator: public AbstractGenericAnimator {
          * @todoc fix the overload references once Doxygen can link to
          *      functions taking function pointers
          */
-        AnimationHandle create(Containers::Function<void(DataHandle node, Float factor, GenericAnimationStates state)>&& animation, Float(*easing)(Float), Nanoseconds start, Nanoseconds duration, DataHandle data, AnimationFlags flags);
+        AnimationHandle create(Containers::Function<void(DataHandle node, Float factor, GenericAnimationStates state)>&& function, Float(*easing)(Float), Nanoseconds start, Nanoseconds duration, DataHandle data, AnimationFlags flags);
 
         /**
          * @brief Create an animation assuming the data it's attached to belongs to the layer the animator is registered with
@@ -904,7 +904,7 @@ class MAGNUM_UI_EXPORT GenericDataAnimator: public AbstractGenericAnimator {
          * @ref DataHandle passed to @p animator is matching the layer handle
          * passed to @ref setLayer().
          */
-        AnimationHandle create(Containers::Function<void(DataHandle data, Float factor)>&& animator, Float(*easing)(Float), Nanoseconds start, Nanoseconds duration, LayerDataHandle data, UnsignedInt repeatCount = 1, AnimationFlags flags = {});
+        AnimationHandle create(Containers::Function<void(DataHandle data, Float factor)>&& function, Float(*easing)(Float), Nanoseconds start, Nanoseconds duration, LayerDataHandle data, UnsignedInt repeatCount = 1, AnimationFlags flags = {});
 
         /**
          * @brief Create an animation animation assuming the data it's attached to belongs to the layer the animator is registered with
@@ -925,7 +925,7 @@ class MAGNUM_UI_EXPORT GenericDataAnimator: public AbstractGenericAnimator {
          * of particular @ref GenericAnimationState values for detailed
          * behavior description.
          */
-        AnimationHandle create(Containers::Function<void(DataHandle data, Float factor, GenericAnimationStates state)>&& animator, Float(*easing)(Float), Nanoseconds start, Nanoseconds duration, LayerDataHandle data, UnsignedInt repeatCount = 1, AnimationFlags flags = {});
+        AnimationHandle create(Containers::Function<void(DataHandle data, Float factor, GenericAnimationStates state)>&& function, Float(*easing)(Float), Nanoseconds start, Nanoseconds duration, LayerDataHandle data, UnsignedInt repeatCount = 1, AnimationFlags flags = {});
 
         /**
          * @brief Create an animation assuming the data it's attached to belongs to the layer the animator is registered with, with an extra state input
@@ -935,23 +935,24 @@ class MAGNUM_UI_EXPORT GenericDataAnimator: public AbstractGenericAnimator {
          * @todoc fix the overload references once Doxygen can link to
          *      functions taking function pointers
          */
-        AnimationHandle create(Containers::Function<void(DataHandle node, Float factor, GenericAnimationStates state)>&& animation, Float(*easing)(Float), Nanoseconds start, Nanoseconds duration, LayerDataHandle data, AnimationFlags flags);
+        AnimationHandle create(Containers::Function<void(DataHandle node, Float factor, GenericAnimationStates state)>&& function, Float(*easing)(Float), Nanoseconds start, Nanoseconds duration, LayerDataHandle data, AnimationFlags flags);
+
         /**
          * @brief Call a function once at specified time
-         * @param callback      Function to call
-         * @param at            Time at which the callback gets called. Use
+         * @param function      Function to call
+         * @param at            Time at which the function gets called. Use
          *      @ref Nanoseconds::max() for creating a stopped animation.
          * @param data          Data the animation is attached to. Use
          *      @ref DataHandle::Null to create an animation that isn't
          *      attached to any data.
          * @param flags         Flags
          *
-         * Expects that @p callback is not @cpp nullptr @ce. Delegates to
+         * Expects that @p function is not @cpp nullptr @ce. Delegates to
          * @ref AbstractAnimator::create(Nanoseconds, Nanoseconds, DataHandle, UnsignedInt, AnimationFlags)
          * with @p duration set to @cpp 0_nsec @ce, see its documentation for
          * more information.
          */
-        AnimationHandle callOnce(Containers::Function<void(DataHandle data)>&& callback, Nanoseconds at, DataHandle data, AnimationFlags flags = {});
+        AnimationHandle callOnce(Containers::Function<void(DataHandle data)>&& function, Nanoseconds at, DataHandle data, AnimationFlags flags = {});
 
         /**
          * @brief Call a function once at specified time assuming the data it's attached to belongs to the layer the animator is registered with
@@ -962,10 +963,10 @@ class MAGNUM_UI_EXPORT GenericDataAnimator: public AbstractGenericAnimator {
          *
          * Unless @p data is @ref LayerDataHandle::Null or the animation is
          * subsequently detached from the data, the layer portion of the
-         * @ref DataHandle passed to @p animator is matching the layer handle
+         * @ref DataHandle passed to @p function is matching the layer handle
          * passed to @ref setLayer().
          */
-        AnimationHandle callOnce(Containers::Function<void(DataHandle data)>&& callback, Nanoseconds at, LayerDataHandle data, AnimationFlags flags = {});
+        AnimationHandle callOnce(Containers::Function<void(DataHandle data)>&& function, Nanoseconds at, LayerDataHandle data, AnimationFlags flags = {});
 
         /**
          * @brief Remove an animation

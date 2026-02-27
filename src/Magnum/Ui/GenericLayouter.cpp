@@ -42,7 +42,7 @@ namespace {
 /* Done this way to prepare for each layout function potentially taking
    different arguments */
 struct Layout {
-    Containers::FunctionData layout;
+    Containers::FunctionData function;
     void(*call)(Layout&, const GenericLayouter&, NodeHandle, Vector2&, Vector2&);
 };
 
@@ -71,7 +71,7 @@ GenericLayouter& GenericLayouter::operator=(GenericLayouter&&) noexcept = defaul
 std::size_t GenericLayouter::usedAllocatedCount() const {
     std::size_t count = 0;
     for(const Layout& layout: _state->layouts)
-        if(layout.layout.isAllocated())
+        if(layout.function.isAllocated())
             ++count;
 
     return count;
@@ -88,29 +88,29 @@ LayoutHandle GenericLayouter::addInternal(const NodeHandle node) {
     return handle;
 }
 
-LayoutHandle GenericLayouter::add(const NodeHandle node, Containers::Function<void(const GenericLayouter&, Vector2&, Vector2&)>&& layout) {
-    CORRADE_ASSERT(layout,
-        "Ui::GenericLayouter::add(): layout is null", {});
+LayoutHandle GenericLayouter::add(const NodeHandle node, Containers::Function<void(const GenericLayouter&, Vector2&, Vector2&)>&& function) {
+    CORRADE_ASSERT(function,
+        "Ui::GenericLayouter::add(): function is null", {});
 
     const LayoutHandle handle = addInternal(node);
     Layout& layoutData = _state->layouts[layoutHandleId(handle)];
-    layoutData.layout = Utility::move(layout);
+    layoutData.function = Utility::move(function);
     layoutData.call = [](Layout& layout, const GenericLayouter& layouter, const NodeHandle, Vector2& nodeOffset, Vector2& nodeSize) {
-        static_cast<Containers::Function<void(const GenericLayouter&, Vector2&, Vector2&)>&>(layout.layout)(layouter, nodeOffset, nodeSize);
+        static_cast<Containers::Function<void(const GenericLayouter&, Vector2&, Vector2&)>&>(layout.function)(layouter, nodeOffset, nodeSize);
     };
 
     return handle;
 }
 
-LayoutHandle GenericLayouter::add(const NodeHandle node, Containers::Function<void(const GenericLayouter&, NodeHandle, Vector2&, Vector2&)>&& layout) {
-    CORRADE_ASSERT(layout,
-        "Ui::GenericLayouter::add(): layout is null", {});
+LayoutHandle GenericLayouter::add(const NodeHandle node, Containers::Function<void(const GenericLayouter&, NodeHandle, Vector2&, Vector2&)>&& function) {
+    CORRADE_ASSERT(function,
+        "Ui::GenericLayouter::add(): function is null", {});
 
     const LayoutHandle handle = addInternal(node);
     Layout& layoutData = _state->layouts[layoutHandleId(handle)];
-    layoutData.layout = Utility::move(layout);
+    layoutData.function = Utility::move(function);
     layoutData.call = [](Layout& layout, const GenericLayouter& layouter, const NodeHandle node, Vector2& nodeOffset, Vector2& nodeSize) {
-        static_cast<Containers::Function<void(const GenericLayouter&, NodeHandle, Vector2&, Vector2&)>&>(layout.layout)(layouter, node, nodeOffset, nodeSize);
+        static_cast<Containers::Function<void(const GenericLayouter&, NodeHandle, Vector2&, Vector2&)>&>(layout.function)(layouter, node, nodeOffset, nodeSize);
     };
 
     return handle;
@@ -119,7 +119,7 @@ LayoutHandle GenericLayouter::add(const NodeHandle node, Containers::Function<vo
 void GenericLayouter::removeInternal(const UnsignedInt id) {
     /* Set the layout function to an empty instance to call any captured state
        destructors */
-    _state->layouts[id].layout = {};
+    _state->layouts[id].function = {};
 }
 
 void GenericLayouter::remove(const LayoutHandle handle) {
@@ -135,13 +135,13 @@ void GenericLayouter::remove(const LayouterDataHandle handle) {
 bool GenericLayouter::isAllocated(const LayoutHandle handle) const {
     CORRADE_ASSERT(isHandleValid(handle),
         "Ui::GenericLayouter::isAllocated(): invalid handle" << handle, {});
-    return _state->layouts[layoutHandleId(handle)].layout.isAllocated();
+    return _state->layouts[layoutHandleId(handle)].function.isAllocated();
 }
 
 bool GenericLayouter::isAllocated(const LayouterDataHandle handle) const {
     CORRADE_ASSERT(isHandleValid(handle),
         "Ui::GenericLayouter::isAllocated(): invalid handle" << handle, {});
-    return _state->layouts[layouterDataHandleId(handle)].layout.isAllocated();
+    return _state->layouts[layouterDataHandleId(handle)].function.isAllocated();
 }
 
 Vector2 GenericLayouter::nodeOffset(const NodeHandle node) const {

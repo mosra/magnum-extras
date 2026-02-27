@@ -70,7 +70,7 @@ Debug& operator<<(Debug& debug, const GenericAnimationStates value) {
 namespace {
 
 struct Animation {
-    Containers::FunctionData animation;
+    Containers::FunctionData function;
     Float(*easing)(Float);
     /** @todo ideally this would be inlined directly inside FunctionData.call,
         somehow -- e.g. an extra template argument to Function that decouples
@@ -96,54 +96,54 @@ GenericAnimator& GenericAnimator::operator=(GenericAnimator&&) noexcept = defaul
 std::size_t GenericAnimator::usedAllocatedCount() const {
     std::size_t count = 0;
     for(const Animation& animation: _state->animations)
-        if(animation.animation.isAllocated())
+        if(animation.function.isAllocated())
             ++count;
 
     return count;
 }
 
-AnimationHandle GenericAnimator::create(Containers::Function<void(Float)>&& animation, Float(*const easing)(Float), const Nanoseconds start, const Nanoseconds duration, const UnsignedInt repeatCount, const AnimationFlags flags) {
-    CORRADE_ASSERT(animation,
-        "Ui::GenericAnimator::create(): animation is null", {});
+AnimationHandle GenericAnimator::create(Containers::Function<void(Float)>&& function, Float(*const easing)(Float), const Nanoseconds start, const Nanoseconds duration, const UnsignedInt repeatCount, const AnimationFlags flags) {
+    CORRADE_ASSERT(function,
+        "Ui::GenericAnimator::create(): function is null", {});
     CORRADE_ASSERT(easing,
         "Ui::GenericAnimator::create(): easing is null", {});
 
     const AnimationHandle handle = createInternal(start, duration, repeatCount, flags);
 
     Animation& animationData = _state->animations[animationHandleId(handle)];
-    animationData.animation = Utility::move(animation);
+    animationData.function = Utility::move(function);
     animationData.easing = easing;
     animationData.call = [](Animation& animation, NodeHandle, DataHandle, Float factor, GenericAnimationStates) {
-        static_cast<Containers::Function<void(Float)>&>(animation.animation)(animation.easing(factor));
+        static_cast<Containers::Function<void(Float)>&>(animation.function)(animation.easing(factor));
     };
 
     return handle;
 }
 
-AnimationHandle GenericAnimator::create(Containers::Function<void(Float)>&& animation, Float(*const easing)(Float), const Nanoseconds start, const Nanoseconds duration, const AnimationFlags flags) {
-    return create(Utility::move(animation), easing, start, duration, 1, flags);
+AnimationHandle GenericAnimator::create(Containers::Function<void(Float)>&& function, Float(*const easing)(Float), const Nanoseconds start, const Nanoseconds duration, const AnimationFlags flags) {
+    return create(Utility::move(function), easing, start, duration, 1, flags);
 }
 
-AnimationHandle GenericAnimator::create(Containers::Function<void(Float, GenericAnimationStates)>&& animation, Float(*const easing)(Float), const Nanoseconds start, const Nanoseconds duration, const UnsignedInt repeatCount, const AnimationFlags flags) {
-    CORRADE_ASSERT(animation,
-        "Ui::GenericAnimator::create(): animation is null", {});
+AnimationHandle GenericAnimator::create(Containers::Function<void(Float, GenericAnimationStates)>&& function, Float(*const easing)(Float), const Nanoseconds start, const Nanoseconds duration, const UnsignedInt repeatCount, const AnimationFlags flags) {
+    CORRADE_ASSERT(function,
+        "Ui::GenericAnimator::create(): function is null", {});
     CORRADE_ASSERT(easing,
         "Ui::GenericAnimator::create(): easing is null", {});
 
     const AnimationHandle handle = createInternal(start, duration, repeatCount, flags);
 
     Animation& animationData = _state->animations[animationHandleId(handle)];
-    animationData.animation = Utility::move(animation);
+    animationData.function = Utility::move(function);
     animationData.easing = easing;
     animationData.call = [](Animation& animation, NodeHandle, DataHandle, Float factor, GenericAnimationStates state) {
-        static_cast<Containers::Function<void(Float, GenericAnimationStates)>&>(animation.animation)(animation.easing(factor), state);
+        static_cast<Containers::Function<void(Float, GenericAnimationStates)>&>(animation.function)(animation.easing(factor), state);
     };
 
     return handle;
 }
 
-AnimationHandle GenericAnimator::create(Containers::Function<void(Float, GenericAnimationStates)>&& animation, Float(*const easing)(Float), const Nanoseconds start, const Nanoseconds duration, const AnimationFlags flags) {
-    return create(Utility::move(animation), easing, start, duration, 1, flags);
+AnimationHandle GenericAnimator::create(Containers::Function<void(Float, GenericAnimationStates)>&& function, Float(*const easing)(Float), const Nanoseconds start, const Nanoseconds duration, const AnimationFlags flags) {
+    return create(Utility::move(function), easing, start, duration, 1, flags);
 }
 
 AnimationHandle GenericAnimator::createInternal(const Nanoseconds start, const Nanoseconds duration, const UnsignedInt repeatCount, const AnimationFlags flags) {
@@ -155,18 +155,18 @@ AnimationHandle GenericAnimator::createInternal(const Nanoseconds start, const N
     return handle;
 }
 
-AnimationHandle GenericAnimator::callOnce(Containers::Function<void()>&& callback, const Nanoseconds at, const AnimationFlags flags) {
-    CORRADE_ASSERT(callback,
-        "Ui::GenericAnimator::callOnce(): callback is null", {});
+AnimationHandle GenericAnimator::callOnce(Containers::Function<void()>&& function, const Nanoseconds at, const AnimationFlags flags) {
+    CORRADE_ASSERT(function,
+        "Ui::GenericAnimator::callOnce(): function is null", {});
 
     const AnimationHandle handle = createInternal(at, 0_nsec, 1, flags);
 
     Animation& animationData = _state->animations[animationHandleId(handle)];
-    animationData.animation = Utility::move(callback);
+    animationData.function = Utility::move(function);
     animationData.easing = nullptr;
     animationData.call = [](Animation& animation, NodeHandle, DataHandle, Float, GenericAnimationStates state) {
         if(state & GenericAnimationState::Stopped)
-            static_cast<Containers::Function<void()>&>(animation.animation)();
+            static_cast<Containers::Function<void()>&>(animation.function)();
     };
 
     return handle;
@@ -175,7 +175,7 @@ AnimationHandle GenericAnimator::callOnce(Containers::Function<void()>&& callbac
 void GenericAnimator::removeInternal(const UnsignedInt id) {
     /* Set the animation to an empty instance to call any captured state
        destructors */
-    _state->animations[id].animation = {};
+    _state->animations[id].function = {};
 }
 
 void GenericAnimator::remove(const AnimationHandle handle) {
@@ -191,13 +191,13 @@ void GenericAnimator::remove(const AnimatorDataHandle handle) {
 bool GenericAnimator::isAllocated(const AnimationHandle handle) const {
     CORRADE_ASSERT(isHandleValid(handle),
         "Ui::GenericAnimator::isAllocated(): invalid handle" << handle, {});
-    return _state->animations[animationHandleId(handle)].animation.isAllocated();
+    return _state->animations[animationHandleId(handle)].function.isAllocated();
 }
 
 bool GenericAnimator::isAllocated(const AnimatorDataHandle handle) const {
     CORRADE_ASSERT(isHandleValid(handle),
         "Ui::GenericAnimator::isAllocated(): invalid handle" << handle, {});
-    return _state->animations[animatorDataHandleId(handle)].animation.isAllocated();
+    return _state->animations[animatorDataHandleId(handle)].function.isAllocated();
 }
 
 auto GenericAnimator::easing(const AnimationHandle handle) const -> Float(*)(Float) {
@@ -282,47 +282,47 @@ GenericNodeAnimator& GenericNodeAnimator::operator=(GenericNodeAnimator&&) noexc
 std::size_t GenericNodeAnimator::usedAllocatedCount() const {
     std::size_t count = 0;
     for(const Animation& animation: _state->animations)
-        if(animation.animation.isAllocated())
+        if(animation.function.isAllocated())
             ++count;
 
     return count;
 }
 
-AnimationHandle GenericNodeAnimator::create(Containers::Function<void(NodeHandle, Float)>&& animation, Float(*const easing)(Float), const Nanoseconds start, const Nanoseconds duration, const NodeHandle node, const UnsignedInt repeatCount, const AnimationFlags flags) {
-    CORRADE_ASSERT(animation,
-        "Ui::GenericNodeAnimator::create(): animation is null", {});
+AnimationHandle GenericNodeAnimator::create(Containers::Function<void(NodeHandle, Float)>&& function, Float(*const easing)(Float), const Nanoseconds start, const Nanoseconds duration, const NodeHandle node, const UnsignedInt repeatCount, const AnimationFlags flags) {
+    CORRADE_ASSERT(function,
+        "Ui::GenericNodeAnimator::create(): function is null", {});
     CORRADE_ASSERT(easing,
         "Ui::GenericNodeAnimator::create(): easing is null", {});
 
     const AnimationHandle handle = createInternal(start, duration, node, repeatCount, flags);
 
     Animation& animationData = _state->animations[animationHandleId(handle)];
-    animationData.animation = Utility::move(animation);
+    animationData.function = Utility::move(function);
     animationData.easing = easing;
     animationData.call = [](Animation& animation, NodeHandle node, DataHandle, Float factor, GenericAnimationStates) {
-        static_cast<Containers::Function<void(NodeHandle, Float)>&>(animation.animation)(node, animation.easing(factor));
+        static_cast<Containers::Function<void(NodeHandle, Float)>&>(animation.function)(node, animation.easing(factor));
     };
 
     return handle;
 }
 
-AnimationHandle GenericNodeAnimator::create(Containers::Function<void(NodeHandle, Float)>&& animation, Float(*const easing)(Float), const Nanoseconds start, const Nanoseconds duration, const NodeHandle node, const AnimationFlags flags) {
-    return create(Utility::move(animation), easing, start, duration, node, 1, flags);
+AnimationHandle GenericNodeAnimator::create(Containers::Function<void(NodeHandle, Float)>&& function, Float(*const easing)(Float), const Nanoseconds start, const Nanoseconds duration, const NodeHandle node, const AnimationFlags flags) {
+    return create(Utility::move(function), easing, start, duration, node, 1, flags);
 }
 
-AnimationHandle GenericNodeAnimator::create(Containers::Function<void(NodeHandle, Float, GenericAnimationStates)>&& animation, Float(*const easing)(Float), const Nanoseconds start, const Nanoseconds duration, const NodeHandle node, const UnsignedInt repeatCount, const AnimationFlags flags) {
-    CORRADE_ASSERT(animation,
-        "Ui::GenericNodeAnimator::create(): animation is null", {});
+AnimationHandle GenericNodeAnimator::create(Containers::Function<void(NodeHandle, Float, GenericAnimationStates)>&& function, Float(*const easing)(Float), const Nanoseconds start, const Nanoseconds duration, const NodeHandle node, const UnsignedInt repeatCount, const AnimationFlags flags) {
+    CORRADE_ASSERT(function,
+        "Ui::GenericNodeAnimator::create(): function is null", {});
     CORRADE_ASSERT(easing,
         "Ui::GenericNodeAnimator::create(): easing is null", {});
 
     const AnimationHandle handle = createInternal(start, duration, node, repeatCount, flags);
 
     Animation& animationData = _state->animations[animationHandleId(handle)];
-    animationData.animation = Utility::move(animation);
+    animationData.function = Utility::move(function);
     animationData.easing = easing;
     animationData.call = [](Animation& animation, NodeHandle node, DataHandle, Float factor, GenericAnimationStates state) {
-        static_cast<Containers::Function<void(NodeHandle, Float, GenericAnimationStates)>&>(animation.animation)(node, animation.easing(factor), state);
+        static_cast<Containers::Function<void(NodeHandle, Float, GenericAnimationStates)>&>(animation.function)(node, animation.easing(factor), state);
     };
 
     return handle;
@@ -341,18 +341,18 @@ AnimationHandle GenericNodeAnimator::createInternal(const Nanoseconds start, con
     return handle;
 }
 
-AnimationHandle GenericNodeAnimator::callOnce(Containers::Function<void(NodeHandle)>&& callback, const Nanoseconds at, const NodeHandle node, const AnimationFlags flags) {
-    CORRADE_ASSERT(callback,
-        "Ui::GenericNodeAnimator::callOnce(): callback is null", {});
+AnimationHandle GenericNodeAnimator::callOnce(Containers::Function<void(NodeHandle)>&& function, const Nanoseconds at, const NodeHandle node, const AnimationFlags flags) {
+    CORRADE_ASSERT(function,
+        "Ui::GenericNodeAnimator::callOnce(): function is null", {});
 
     const AnimationHandle handle = createInternal(at, 0_nsec, node, 1, flags);
 
     Animation& animationData = _state->animations[animationHandleId(handle)];
-    animationData.animation = Utility::move(callback);
+    animationData.function = Utility::move(function);
     animationData.easing = nullptr;
     animationData.call = [](Animation& animation, NodeHandle node, DataHandle, Float, GenericAnimationStates state) {
         if(state & GenericAnimationState::Stopped)
-            static_cast<Containers::Function<void(NodeHandle)>&>(animation.animation)(node);
+            static_cast<Containers::Function<void(NodeHandle)>&>(animation.function)(node);
     };
 
     return handle;
@@ -361,7 +361,7 @@ AnimationHandle GenericNodeAnimator::callOnce(Containers::Function<void(NodeHand
 void GenericNodeAnimator::removeInternal(const UnsignedInt id) {
     /* Set the animation to an empty instance to call any captured state
        destructors */
-    _state->animations[id].animation = {};
+    _state->animations[id].function = {};
 }
 
 void GenericNodeAnimator::remove(const AnimationHandle handle) {
@@ -377,13 +377,13 @@ void GenericNodeAnimator::remove(const AnimatorDataHandle handle) {
 bool GenericNodeAnimator::isAllocated(const AnimationHandle handle) const {
     CORRADE_ASSERT(isHandleValid(handle),
         "Ui::GenericNodeAnimator::isAllocated(): invalid handle" << handle, {});
-    return _state->animations[animationHandleId(handle)].animation.isAllocated();
+    return _state->animations[animationHandleId(handle)].function.isAllocated();
 }
 
 bool GenericNodeAnimator::isAllocated(const AnimatorDataHandle handle) const {
     CORRADE_ASSERT(isHandleValid(handle),
         "Ui::GenericNodeAnimator::isAllocated(): invalid handle" << handle, {});
-    return _state->animations[animatorDataHandleId(handle)].animation.isAllocated();
+    return _state->animations[animatorDataHandleId(handle)].function.isAllocated();
 }
 
 auto GenericNodeAnimator::easing(const AnimationHandle handle) const -> Float(*)(Float) {
@@ -443,50 +443,50 @@ GenericDataAnimator& GenericDataAnimator::operator=(GenericDataAnimator&&) noexc
 std::size_t GenericDataAnimator::usedAllocatedCount() const {
     std::size_t count = 0;
     for(const Animation& animation: _state->animations)
-        if(animation.animation.isAllocated())
+        if(animation.function.isAllocated())
             ++count;
 
     return count;
 }
 
-AnimationHandle GenericDataAnimator::create(Containers::Function<void(DataHandle, Float)>&& animation, Float(*const easing)(Float), const Nanoseconds start, const Nanoseconds duration, const DataHandle data, const UnsignedInt repeatCount, const AnimationFlags flags) {
+AnimationHandle GenericDataAnimator::create(Containers::Function<void(DataHandle, Float)>&& function, Float(*const easing)(Float), const Nanoseconds start, const Nanoseconds duration, const DataHandle data, const UnsignedInt repeatCount, const AnimationFlags flags) {
     const AnimationHandle handle = AbstractGenericAnimator::create(start, duration, data, repeatCount, flags);
-    createInternal(handle, Utility::move(animation), easing);
+    createInternal(handle, Utility::move(function), easing);
     return handle;
 }
 
-AnimationHandle GenericDataAnimator::create(Containers::Function<void(DataHandle, Float)>&& animation, Float(*const easing)(Float), const Nanoseconds start, const Nanoseconds duration, const DataHandle data, const AnimationFlags flags) {
-    return create(Utility::move(animation), easing, start, duration, data, 1, flags);
+AnimationHandle GenericDataAnimator::create(Containers::Function<void(DataHandle, Float)>&& function, Float(*const easing)(Float), const Nanoseconds start, const Nanoseconds duration, const DataHandle data, const AnimationFlags flags) {
+    return create(Utility::move(function), easing, start, duration, data, 1, flags);
 }
 
-AnimationHandle GenericDataAnimator::create(Containers::Function<void(DataHandle, Float)>&& animation, Float(*const easing)(Float), const Nanoseconds start, const Nanoseconds duration, const LayerDataHandle data, const UnsignedInt repeatCount, const AnimationFlags flags) {
+AnimationHandle GenericDataAnimator::create(Containers::Function<void(DataHandle, Float)>&& function, Float(*const easing)(Float), const Nanoseconds start, const Nanoseconds duration, const LayerDataHandle data, const UnsignedInt repeatCount, const AnimationFlags flags) {
     const AnimationHandle handle = AbstractGenericAnimator::create(start, duration, data, repeatCount, flags);
-    createInternal(handle, Utility::move(animation), easing);
+    createInternal(handle, Utility::move(function), easing);
     return handle;
 }
 
-AnimationHandle GenericDataAnimator::create(Containers::Function<void(DataHandle, Float)>&& animation, Float(*const easing)(Float), const Nanoseconds start, const Nanoseconds duration, const LayerDataHandle data, const AnimationFlags flags) {
-    return create(Utility::move(animation), easing, start, duration, data, 1, flags);
+AnimationHandle GenericDataAnimator::create(Containers::Function<void(DataHandle, Float)>&& function, Float(*const easing)(Float), const Nanoseconds start, const Nanoseconds duration, const LayerDataHandle data, const AnimationFlags flags) {
+    return create(Utility::move(function), easing, start, duration, data, 1, flags);
 }
 
-AnimationHandle GenericDataAnimator::create(Containers::Function<void(DataHandle, Float, GenericAnimationStates)>&& animation, Float(*const easing)(Float), const Nanoseconds start, const Nanoseconds duration, const DataHandle data, const UnsignedInt repeatCount, const AnimationFlags flags) {
+AnimationHandle GenericDataAnimator::create(Containers::Function<void(DataHandle, Float, GenericAnimationStates)>&& function, Float(*const easing)(Float), const Nanoseconds start, const Nanoseconds duration, const DataHandle data, const UnsignedInt repeatCount, const AnimationFlags flags) {
     const AnimationHandle handle = AbstractGenericAnimator::create(start, duration, data, repeatCount, flags);
-    createInternal(handle, Utility::move(animation), easing);
+    createInternal(handle, Utility::move(function), easing);
     return handle;
 }
 
-AnimationHandle GenericDataAnimator::create(Containers::Function<void(DataHandle, Float, GenericAnimationStates)>&& animation, Float(*const easing)(Float), const Nanoseconds start, const Nanoseconds duration, const DataHandle data, const AnimationFlags flags) {
-    return create(Utility::move(animation), easing, start, duration, data, 1, flags);
+AnimationHandle GenericDataAnimator::create(Containers::Function<void(DataHandle, Float, GenericAnimationStates)>&& function, Float(*const easing)(Float), const Nanoseconds start, const Nanoseconds duration, const DataHandle data, const AnimationFlags flags) {
+    return create(Utility::move(function), easing, start, duration, data, 1, flags);
 }
 
-AnimationHandle GenericDataAnimator::create(Containers::Function<void(DataHandle, Float, GenericAnimationStates)>&& animation, Float(*const easing)(Float), const Nanoseconds start, const Nanoseconds duration, const LayerDataHandle data, const UnsignedInt repeatCount, const AnimationFlags flags) {
+AnimationHandle GenericDataAnimator::create(Containers::Function<void(DataHandle, Float, GenericAnimationStates)>&& function, Float(*const easing)(Float), const Nanoseconds start, const Nanoseconds duration, const LayerDataHandle data, const UnsignedInt repeatCount, const AnimationFlags flags) {
     const AnimationHandle handle = AbstractGenericAnimator::create(start, duration, data, repeatCount, flags);
-    createInternal(handle, Utility::move(animation), easing);
+    createInternal(handle, Utility::move(function), easing);
     return handle;
 }
 
-AnimationHandle GenericDataAnimator::create(Containers::Function<void(DataHandle, Float, GenericAnimationStates)>&& animation, Float(*const easing)(Float), const Nanoseconds start, const Nanoseconds duration, const LayerDataHandle data, const AnimationFlags flags) {
-    return create(Utility::move(animation), easing, start, duration, data, 1, flags);
+AnimationHandle GenericDataAnimator::create(Containers::Function<void(DataHandle, Float, GenericAnimationStates)>&& function, Float(*const easing)(Float), const Nanoseconds start, const Nanoseconds duration, const LayerDataHandle data, const AnimationFlags flags) {
+    return create(Utility::move(function), easing, start, duration, data, 1, flags);
 }
 
 void GenericDataAnimator::createInternal(const AnimationHandle handle) {
@@ -496,69 +496,69 @@ void GenericDataAnimator::createInternal(const AnimationHandle handle) {
         arrayResize(state.animations, id + 1);
 }
 
-void GenericDataAnimator::createInternal(const AnimationHandle handle, Containers::Function<void(DataHandle, Float)>&& animation, Float(*const easing)(Float)) {
-    CORRADE_ASSERT(animation,
-        "Ui::GenericDataAnimator::create(): animation is null", );
+void GenericDataAnimator::createInternal(const AnimationHandle handle, Containers::Function<void(DataHandle, Float)>&& function, Float(*const easing)(Float)) {
+    CORRADE_ASSERT(function,
+        "Ui::GenericDataAnimator::create(): function is null", );
     CORRADE_ASSERT(easing,
         "Ui::GenericDataAnimator::create(): easing is null", );
 
     createInternal(handle);
 
     Animation& animationData = _state->animations[animationHandleId(handle)];
-    animationData.animation = Utility::move(animation);
+    animationData.function = Utility::move(function);
     animationData.easing = easing;
     animationData.call = [](Animation& animation, NodeHandle, DataHandle data, Float factor, GenericAnimationStates) {
-        static_cast<Containers::Function<void(DataHandle, Float)>&>(animation.animation)(data, animation.easing(factor));
+        static_cast<Containers::Function<void(DataHandle, Float)>&>(animation.function)(data, animation.easing(factor));
     };
 }
 
-void GenericDataAnimator::createInternal(const AnimationHandle handle, Containers::Function<void(DataHandle, Float, GenericAnimationStates)>&& animation, Float(*const easing)(Float)) {
-    CORRADE_ASSERT(animation,
-        "Ui::GenericDataAnimator::create(): animation is null", );
+void GenericDataAnimator::createInternal(const AnimationHandle handle, Containers::Function<void(DataHandle, Float, GenericAnimationStates)>&& function, Float(*const easing)(Float)) {
+    CORRADE_ASSERT(function,
+        "Ui::GenericDataAnimator::create(): function is null", );
     CORRADE_ASSERT(easing,
         "Ui::GenericDataAnimator::create(): easing is null", );
 
     createInternal(handle);
 
     Animation& animationData = _state->animations[animationHandleId(handle)];
-    animationData.animation = Utility::move(animation);
+    animationData.function = Utility::move(function);
     animationData.easing = easing;
     animationData.call = [](Animation& animation, NodeHandle, DataHandle data, Float factor, GenericAnimationStates state) {
-        static_cast<Containers::Function<void(DataHandle, Float, GenericAnimationStates)>&>(animation.animation)(data, animation.easing(factor), state);
+        static_cast<Containers::Function<void(DataHandle, Float, GenericAnimationStates)>&>(animation.function)(data, animation.easing(factor), state);
     };
 }
 
-AnimationHandle GenericDataAnimator::callOnce(Containers::Function<void(DataHandle)>&& callback, const Nanoseconds at, const DataHandle data, const AnimationFlags flags) {
+AnimationHandle GenericDataAnimator::callOnce(Containers::Function<void(DataHandle)>&& function, const Nanoseconds at, const DataHandle data, const AnimationFlags flags) {
     const AnimationHandle handle = AbstractGenericAnimator::create(at, 0_nsec, data, flags);
-    callOnceInternal(handle, Utility::move(callback));
+    callOnceInternal(handle, Utility::move(function));
     return handle;
 }
 
-AnimationHandle GenericDataAnimator::callOnce(Containers::Function<void(DataHandle)>&& callback, const Nanoseconds at, const LayerDataHandle data, const AnimationFlags flags) {
+AnimationHandle GenericDataAnimator::callOnce(Containers::Function<void(DataHandle)>&& function, const Nanoseconds at, const LayerDataHandle data, const AnimationFlags flags) {
     const AnimationHandle handle = AbstractGenericAnimator::create(at, 0_nsec, data, flags);
-    callOnceInternal(handle, Utility::move(callback));
+    callOnceInternal(handle, Utility::move(function));
     return handle;
 }
 
-void GenericDataAnimator::callOnceInternal(const AnimationHandle handle, Containers::Function<void(DataHandle)>&& callback) {
-    CORRADE_ASSERT(callback,
-        "Ui::GenericDataAnimator::callOnce(): callback is null", );
+void GenericDataAnimator::callOnceInternal(const AnimationHandle handle, Containers::Function<void(DataHandle)>&& function) {
+    CORRADE_ASSERT(function,
+        "Ui::GenericDataAnimator::callOnce(): function is null", );
 
     createInternal(handle);
 
     Animation& animationData = _state->animations[animationHandleId(handle)];
-    animationData.animation = Utility::move(callback);
+    animationData.function = Utility::move(function);
     animationData.easing = nullptr;
     animationData.call = [](Animation& animation, NodeHandle, DataHandle data, Float, GenericAnimationStates state) {
         if(state & GenericAnimationState::Stopped)
-            static_cast<Containers::Function<void(DataHandle)>&>(animation.animation)(data);
+            static_cast<Containers::Function<void(DataHandle)>&>(animation.function)(data);
     };
 }
 
 void GenericDataAnimator::removeInternal(const UnsignedInt id) {
     /* Set the animation to an empty instance to call any captured state
        destructors */
-    _state->animations[id].animation = {};
+    _state->animations[id].function = {};
 }
 
 void GenericDataAnimator::remove(const AnimationHandle handle) {
@@ -574,13 +574,13 @@ void GenericDataAnimator::remove(const AnimatorDataHandle handle) {
 bool GenericDataAnimator::isAllocated(const AnimationHandle handle) const {
     CORRADE_ASSERT(isHandleValid(handle),
         "Ui::GenericDataAnimator::isAllocated(): invalid handle" << handle, {});
-    return _state->animations[animationHandleId(handle)].animation.isAllocated();
+    return _state->animations[animationHandleId(handle)].function.isAllocated();
 }
 
 bool GenericDataAnimator::isAllocated(const AnimatorDataHandle handle) const {
     CORRADE_ASSERT(isHandleValid(handle),
         "Ui::GenericDataAnimator::isAllocated(): invalid handle" << handle, {});
-    return _state->animations[animatorDataHandleId(handle)].animation.isAllocated();
+    return _state->animations[animatorDataHandleId(handle)].function.isAllocated();
 }
 
 auto GenericDataAnimator::easing(const AnimationHandle handle) const -> Float(*)(Float) {

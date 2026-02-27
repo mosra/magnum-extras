@@ -146,10 +146,10 @@ class MAGNUM_UI_EXPORT GenericLayouter: public AbstractLayouter {
         /**
          * @brief Add a layout assigned to given node
          * @param node      Node to assign the layout to
-         * @param layout    Function to perform the layout operation
+         * @param function  Function to perform the layout operation
          * @return New layout handle
          *
-         * Expects that the @p layout is not @cpp nullptr @ce. The function
+         * Expects that the @p function is not @cpp nullptr @ce. The function
          * gets called as part of layout update if @p node is visible. When
          * executed, the function can query @ref nodeOffset(), @ref nodeSize(),
          * @ref nodeMinSize(), @ref nodeMaxSize(), @ref nodeAspectRatio(),
@@ -162,9 +162,9 @@ class MAGNUM_UI_EXPORT GenericLayouter: public AbstractLayouter {
          * Delegates to @ref AbstractLayouter::add(), see its documentation for
          * detailed description of all constraints.
          */
-        LayoutHandle add(NodeHandle node, Containers::Function<void(const GenericLayouter& layouter, Vector2& nodeOffset, Vector2& nodeSize)>&& layout);
+        LayoutHandle add(NodeHandle node, Containers::Function<void(const GenericLayouter& layouter, Vector2& nodeOffset, Vector2& nodeSize)>&& function);
         /** @overload */
-        LayoutHandle add(NodeHandle node, Containers::Function<void(const GenericLayouter& layouter, NodeHandle node, Vector2& nodeOffset, Vector2& nodeSize)>&& layout);
+        LayoutHandle add(NodeHandle node, Containers::Function<void(const GenericLayouter& layouter, NodeHandle node, Vector2& nodeOffset, Vector2& nodeSize)>&& function);
 
         /**
          * @brief Remove a layout

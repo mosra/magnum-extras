@@ -256,8 +256,8 @@ void GenericLayouterTest::addInvalid() {
     layouter.add(nodeHandle(0, 1), Containers::Function<void(const GenericLayouter&, Vector2&, Vector2&)>{});
     layouter.add(nodeHandle(0, 1), Containers::Function<void(const GenericLayouter&, NodeHandle, Vector2&, Vector2&)>{});
     CORRADE_COMPARE_AS(out,
-        "Ui::GenericLayouter::add(): layout is null\n"
-        "Ui::GenericLayouter::add(): layout is null\n",
+        "Ui::GenericLayouter::add(): function is null\n"
+        "Ui::GenericLayouter::add(): function is null\n",
         TestSuite::Compare::String);
 }
 
