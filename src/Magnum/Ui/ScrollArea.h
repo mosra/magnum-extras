@@ -233,6 +233,10 @@ class MAGNUM_UI_EXPORT ScrollArea: public Widget {
          */
         StorageHandle scrollYStorage() const;
 
+        #ifndef DOXYGEN_GENERATING_OUTPUT
+        _MAGNUM_UI_WIDGET_SUBCLASS_IMPLEMENTATION(ScrollArea) /* LCOV_EXCL_LINE */
+        #endif
+
     private:
         NodeHandle _viewNode, _contentsNode,
             _scrollbarXNode, _scrollbarThumbXNode,

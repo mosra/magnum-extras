@@ -319,7 +319,7 @@ ScrollArea::ScrollArea(const Anchor anchor, const ScrollAreaFlags flags): Widget
        appropriate. */
     ui().addNodeFlags(_viewNode, NodeFlag::Clip|(flags >= ScrollAreaFlag::NoContentsDrag ?
         NodeFlags{} : NodeFlag::FallthroughPointerEvents));
-    SnapLayout viewLayout{{ui(), _viewNode}, Snap::Fill, layout,
+    SnapLayout viewLayout{ui(), _viewNode, Snap::Fill, layout,
         (flags >= ScrollAreaFlag::OnlyX ?
             SnapLayoutFlags{} : SnapLayoutFlag::IgnoreOverflowY)|
         (flags >= ScrollAreaFlag::OnlyY ?
