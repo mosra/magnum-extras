@@ -49,6 +49,7 @@ struct ScrollAreaTest: WidgetTester {
     void construct();
     void constructOnlyX();
     void constructOnlyY();
+    void constructNonOwned();
     void constructNoCreate();
     void constructInvalid();
 
@@ -561,6 +562,10 @@ ScrollAreaTest::ScrollAreaTest() {
        &WidgetTester::setup,
        &WidgetTester::teardown);
 
+    addTests<ScrollAreaTest>({&ScrollAreaTest::constructNonOwned},
+        &WidgetTester::setup,
+        &WidgetTester::teardown);
+
     addTests<ScrollAreaTest>({&ScrollAreaTest::constructNoCreate},
         &WidgetTester::setupNoCreate,
         &WidgetTester::teardownNoCreate);
@@ -788,6 +793,18 @@ void ScrollAreaTest::constructOnlyY() {
        being called yet should be a no-op */
     scroll.scrollToPercentageY(34.0f);
     CORRADE_COMPARE(scroll.scrollPercentage(), Vector2{});
+}
+
+void ScrollAreaTest::constructNonOwned() {
+    /* All the properties are verified in construct*() above, check just that
+       it propagates all arguments properly */
+
+    ScrollArea scroll{NonOwned, {rootAnchor, {}, {32, 16}}, ScrollAreaFlags{0x80}};
+    CORRADE_COMPARE(ui.nodeParent(scroll), rootAnchor);
+    CORRADE_COMPARE(ui.nodeSize(scroll), (Vector2{32, 16}));
+    CORRADE_VERIFY(!scroll.isOwned());
+
+    CORRADE_COMPARE(scroll.flags(), ScrollAreaFlags{0x80});
 }
 
 void ScrollAreaTest::constructNoCreate() {

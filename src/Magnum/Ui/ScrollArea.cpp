@@ -565,6 +565,10 @@ ScrollArea::ScrollArea(const Anchor anchor, const ScrollAreaFlags flags): Widget
     } else CORRADE_INTERNAL_ASSERT_UNREACHABLE(); /* LCOV_EXCL_LINE */
 }
 
+ScrollArea::ScrollArea(NonOwnedT, const Anchor anchor, const ScrollAreaFlags flags): ScrollArea{anchor, flags} {
+    makeNonOwned();
+}
+
 Anchor ScrollArea::contents() const {
     return {ui(), _contentsNode};
 }

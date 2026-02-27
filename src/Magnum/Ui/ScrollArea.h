@@ -108,6 +108,18 @@ class MAGNUM_UI_EXPORT ScrollArea: public Widget {
          */
         explicit ScrollArea(Anchor anchor, ScrollAreaFlags flags = {});
 
+        /**
+         * @brief Construct a non-owned scroll area
+         *
+         * Like @ref ScrollArea(Anchor, ScrollAreaFlags) but the widget node
+         * doesn't get removed on destruction. Instead, it gets removed either
+         * once any parent node is removed, or when
+         * @ref AbstractUserInterface::removeNode() is explicitly called on
+         * @ref node().
+         * @see @ref isOwned()
+         */
+        explicit ScrollArea(NonOwnedT, Anchor anchor, ScrollAreaFlags flags = {});
+
         /** @copydoc AbstractWidget::AbstractWidget(NoCreateT) */
         explicit ScrollArea(NoCreateT): Widget{NoCreate}, _viewNode{}, _contentsNode{}, _scrollbarXNode{}, _scrollbarThumbXNode{}, _scrollbarYNode{}, _scrollbarThumbYNode{}, _scrollXStorage{}, _scrollYStorage{} {}
 
