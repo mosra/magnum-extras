@@ -192,8 +192,8 @@ UiGallery::UiGallery(const Arguments& arguments): Platform::Application{argument
     }
 
     /* Wrap everything in a single panel to get some basic paddings and such */
-    Ui::Anchor panel = Ui::panel(Ui::SnapLayout::root(_ui, Ui::Snap::Fill|Ui::Snap::NoPad));
-    Ui::SnapLayoutColumnFill root = Ui::SnapLayout::child(panel);
+    Ui::Panel panel{Ui::NonOwned, Ui::SnapLayout::root(_ui, Ui::Snap::Fill|Ui::Snap::NoPad)};
+    Ui::SnapLayoutColumnFill root = panel.contents();
 
     /* Buttons */
     Ui::label(root.child(),

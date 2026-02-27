@@ -37,10 +37,8 @@ struct PanelTest: WidgetTester {
 
     void debugStyle();
 
-    void constructDefault();
-    void constructDefaultStateless();
-    void constructFilled();
-    void constructFilledStateless();
+    void construct();
+    void constructNonOwned();
     void constructNoCreate();
 
     void setStyleNoOp();
@@ -48,16 +46,26 @@ struct PanelTest: WidgetTester {
     void setStyleToNoBackground();
 };
 
+const struct {
+    const char* name;
+    PanelStyle style;
+    bool hasBackground;
+} ConstructData[]{
+    {"default", PanelStyle::Default, false},
+    {"filled", PanelStyle::Filled, true}
+};
+
 PanelTest::PanelTest() {
     addTests({&PanelTest::debugStyle});
 
-    addTests<PanelTest>({
-        &PanelTest::constructDefault,
-        &PanelTest::constructDefaultStateless,
-        &PanelTest::constructFilled,
-        &PanelTest::constructFilledStateless,
-    }, &WidgetTester::setup,
-       &WidgetTester::teardown);
+    addInstancedTests<PanelTest>({&PanelTest::construct},
+        Containers::arraySize(ConstructData),
+        &WidgetTester::setup,
+        &WidgetTester::teardown);
+
+    addTests<PanelTest>({&PanelTest::constructNonOwned},
+        &WidgetTester::setup,
+        &WidgetTester::teardown);
 
     addTests<PanelTest>({&PanelTest::constructNoCreate},
         &WidgetTester::setupNoCreate,
@@ -77,54 +85,41 @@ void PanelTest::debugStyle() {
     CORRADE_COMPARE(out, "Ui::PanelStyle::Filled Ui::PanelStyle(0xef)\n");
 }
 
-void PanelTest::constructDefault() {
-    Panel panel{{rootAnchor, {}, {32, 16}}, PanelStyle::Default};
+void PanelTest::construct() {
+    auto&& data = ConstructData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
+    Panel panel{{rootAnchor, {}, {32, 16}}, data.style};
     CORRADE_COMPARE(ui.nodeParent(panel), rootAnchor);
     CORRADE_COMPARE(ui.nodeSize(panel), (Vector2{32, 16}));
     CORRADE_VERIFY(panel.isOwned());
 
-    CORRADE_COMPARE(panel.style(), PanelStyle::Default);
+    CORRADE_COMPARE(panel.style(), data.style);
+    CORRADE_COMPARE(&panel.contents().ui(), &ui);
+    /* Yep, it's the same node, the contents() are provided for API consistency
+       with other container widgets, which may have the actual contents in
+       nested nodes */
+    CORRADE_COMPARE(panel.contents().node(), panel.node());
 
-    CORRADE_COMPARE(panel.backgroundData(), DataHandle::Null);
+    if(data.hasBackground)
+        CORRADE_VERIFY(ui.isHandleValid(panel.backgroundData()));
+    else
+        CORRADE_COMPARE(panel.backgroundData(),  DataHandle::Null);
 
     /* Can only verify that the layout data were created, they're not saved */
     CORRADE_COMPARE(ui.layoutLayer().usedCount(), 1);
 }
 
-void PanelTest::constructDefaultStateless() {
-    NodeHandle node = panel({rootAnchor, {}, {32, 16}}, PanelStyle::Default);
-    CORRADE_COMPARE(ui.nodeParent(node), rootAnchor);
-    CORRADE_COMPARE(ui.nodeSize(node), (Vector2{32, 16}));
+void PanelTest::constructNonOwned() {
+    /* All the properties are verified in construct*() above, check just that
+       it propagates all arguments properly */
 
-    /* Can only verify that the data were (not) created, nothing else. Visually
-       tested in StyleGLTest. */
-    CORRADE_COMPARE(ui.baseLayer().usedCount(), 0);
-    CORRADE_COMPARE(ui.layoutLayer().usedCount(), 1);
-}
-
-void PanelTest::constructFilled() {
-    Panel panel{{rootAnchor, {}, {32, 16}}, PanelStyle::Filled};
+    Panel panel{NonOwned, {rootAnchor, {}, {32, 16}}, PanelStyle::Filled};
     CORRADE_COMPARE(ui.nodeParent(panel), rootAnchor);
     CORRADE_COMPARE(ui.nodeSize(panel), (Vector2{32, 16}));
-    CORRADE_VERIFY(panel.isOwned());
+    CORRADE_VERIFY(!panel.isOwned());
 
     CORRADE_COMPARE(panel.style(), PanelStyle::Filled);
-
-    CORRADE_VERIFY(ui.isHandleValid(panel.backgroundData()));
-
-    /* Can only verify that the layout data were created, they're not saved */
-    CORRADE_COMPARE(ui.layoutLayer().usedCount(), 1);
-}
-
-void PanelTest::constructFilledStateless() {
-    NodeHandle node = panel({rootAnchor, {}, {32, 16}}, PanelStyle::Filled);
-    CORRADE_COMPARE(ui.nodeParent(node), rootAnchor);
-    CORRADE_COMPARE(ui.nodeSize(node), (Vector2{32, 16}));
-
-    /* Can only verify that the data were created, nothing else. Visually
-       tested in StyleGLTest. */
-    CORRADE_COMPARE(ui.baseLayer().usedCount(), 1);
-    CORRADE_COMPARE(ui.layoutLayer().usedCount(), 1);
 }
 
 void PanelTest::constructNoCreate() {

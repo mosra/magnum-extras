@@ -54,19 +54,15 @@ const struct {
     const char* name;
     NodeHandle(*create)(UserInterface&, Int, Flags, Int);
 } TestData[]{
-    {"stateless",
-        [](UserInterface& ui, Int style, Flags, Int) {
-            return panel({ui, {}, {48, 36}}, PanelStyle(style)).node();
-        }},
     {nullptr,
         [](UserInterface& ui, Int style, Flags, Int) {
-            return Panel{{ui, {}, {48, 36}},PanelStyle(style)}.release();
+            return Panel{NonOwned, {ui, {}, {48, 36}},PanelStyle(style)}.node();
         }},
     {"setStyle()",
         [](UserInterface& ui, Int style, Flags, Int) {
-            Panel panel{{ui, {}, {48, 36}},PanelStyle(style == 0 ? 1 : 0)};
+            Panel panel{NonOwned, {ui, {}, {48, 36}},PanelStyle(style == 0 ? 1 : 0)};
             panel.setStyle(PanelStyle(style));
-            return panel.release();
+            return panel.node();
         }},
 };
 

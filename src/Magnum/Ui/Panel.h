@@ -27,7 +27,7 @@
 */
 
 /** @file
- * @brief Class @ref Magnum::Ui::Panel, function @ref Magnum::Ui::panel(), enum @ref Magnum::Ui::PanelStyle
+ * @brief Class @ref Magnum::Ui::Panel, enum @ref Magnum::Ui::PanelStyle
  * @m_since_latest_{extras}
  */
 
@@ -39,7 +39,7 @@ namespace Magnum { namespace Ui {
 @brief Panel style
 @m_since_latest_{extras}
 
-@see @ref Panel, @ref panel()
+@see @ref Panel
 */
 enum class PanelStyle: UnsignedByte {
     Default,    /** Default with no background */
@@ -62,10 +62,20 @@ class MAGNUM_UI_EXPORT Panel: public Widget {
          * @brief Constructor
          * @param anchor            Positioning anchor
          * @param style             Panel style
-         *
-         * @see @ref panel(Anchor, PanelStyle)
          */
         explicit Panel(Anchor anchor, PanelStyle style = PanelStyle::Default);
+
+        /**
+         * @brief Construct a non-owned panel
+         *
+         * Like @ref Panel(Anchor, PanelStyle) but the widget node doesn't get
+         * removed on destruction. Instead, it gets removed either once any
+         * parent node is removed, or when
+         * @ref AbstractUserInterface::removeNode() is explicitly called on
+         * @ref node().
+         * @see @ref isOwned()
+         */
+        explicit Panel(NonOwnedT, Anchor anchor, PanelStyle style = PanelStyle::Default);
 
         /** @copydoc AbstractWidget::AbstractWidget(NoCreateT) */
         explicit Panel(NoCreateT): Widget{NoCreate}, _style{}, _backgroundData{} {}
@@ -78,6 +88,13 @@ class MAGNUM_UI_EXPORT Panel: public Widget {
          * @return Reference to self (for method chaining)
          */
         Panel& setStyle(PanelStyle style);
+
+        /**
+         * @brief Contents
+         *
+         * Use the returned anchor to put widgets inside the panel.
+         */
+        Anchor contents() const;
 
         /**
          * @brief Background data or @ref DataHandle::Null
@@ -96,21 +113,6 @@ class MAGNUM_UI_EXPORT Panel: public Widget {
         /* 2 bytes free (_style fits into padding of Widget) */
         LayerDataHandle _backgroundData;
 };
-
-/**
-@brief Stateless panel widget
-@param anchor           Positioning anchor
-@param style            Panel style
-@return The @p anchor verbatim
-@m_since_latest_{extras}
-
-Compared to @ref Panel::Panel(Anchor, PanelStyle) this creates a
-stateless panel that doesn't have any class instance that would need to be kept
-in scope and eventually destructed, making it more lightweight. As a
-consequence it can't have its style subsequently changed and is removed only
-when the node or its parent get removed.
-*/
-MAGNUM_UI_EXPORT Anchor panel(Anchor anchor, PanelStyle style = PanelStyle::Default);
 
 }}
 

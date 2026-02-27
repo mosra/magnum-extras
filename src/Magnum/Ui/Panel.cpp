@@ -64,6 +64,10 @@ Panel::Panel(const Anchor anchor, const PanelStyle style): Widget{anchor}, _styl
         dataHandleData(ui().baseLayer().create(BaseStyle::PanelBackground, node()));
 }
 
+Panel::Panel(NonOwnedT, const Anchor anchor, const PanelStyle style): Panel{anchor, style} {
+    makeNonOwned();
+}
+
 Panel& Panel::setStyle(const PanelStyle style) {
     /* Create a data for the background, if switching from an empty
        background */
@@ -84,18 +88,16 @@ Panel& Panel::setStyle(const PanelStyle style) {
     return *this;
 }
 
+Anchor Panel::contents() const {
+    /* Yes, it's currently the panel node itself. But this makes the usage
+       consistent with the ScrollArea and other APIs. */
+    return {ui(), node()};
+}
+
 DataHandle Panel::backgroundData() const {
     /* The data is implicitly from the base layer */
     return _backgroundData == LayerDataHandle::Null ? DataHandle::Null :
         dataHandle(ui().baseLayer(), _backgroundData);
-}
-
-Anchor panel(const Anchor anchor, const PanelStyle style) {
-    anchor.ui().layoutLayer().create(LayoutStyle::Panel, anchor.node());
-
-    if(style != PanelStyle::Default)
-        anchor.ui().baseLayer().create(BaseStyle::PanelBackground, anchor.node());
-    return anchor;
 }
 
 }}
