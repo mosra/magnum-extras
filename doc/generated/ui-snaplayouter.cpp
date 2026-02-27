@@ -136,6 +136,7 @@ Ui::NodeHandle detailsNode = ui.createNode(contentsNode, {}, {300, 40});
 Ui::LayoutHandle contents = layouter.add(contentsNode, Ui::Snaps{}, popup);
 layouter.setChildSnap(contents, Ui::Snap::Bottom|Ui::Snap::FillX);
 
+/* Implicit child layouts */
 Ui::LayoutHandle title = layouter.add(titleNode);
 Ui::LayoutHandle details = layouter.add(detailsNode);
 /* [implicit-snap] */

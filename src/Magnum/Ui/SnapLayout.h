@@ -374,7 +374,7 @@ class MAGNUM_UI_EXPORT AbstractSnapLayout {
          * but without checking that @p snapTarget indeed belongs to
          * @p layouter. See documentation for more information.
          *
-         * Calls @ref SnapLayouter::add(NodeHandle, LayouterDataHandle, SnapLayoutFlags)
+         * Calls @ref SnapLayouter::add(NodeHandle, Snaps, LayouterDataHandle, SnapLayoutFlags)
          * internally, see its documentation for detailed description of all
          * constraints.
          */
@@ -404,7 +404,7 @@ class MAGNUM_UI_EXPORT AbstractSnapLayout {
          * but without checking that @p snapTarget indeed belongs to
          * @p layouter. See documentation for more information.
          *
-         * Calls @ref SnapLayouter::add(NodeHandle, LayouterDataHandle, SnapLayoutFlags)
+         * Calls @ref SnapLayouter::add(NodeHandle, Snaps, LayouterDataHandle, SnapLayoutFlags)
          * internally, see its documentation for detailed description of all
          * constraints.
          */

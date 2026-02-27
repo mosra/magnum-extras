@@ -351,19 +351,22 @@ below, the @m_class{m-label m-info} **blue** rectangle has both a padding,
 shown as a @m_class{m-label m-warning} **yellow** outline *outside*, and
 margin, shown as a @m_class{m-label m-success} **green** outline *inside*,
 other nodes have just paddings. Neighboring padding and margins collapse
-together, picking the larger of the two. By specifying @ref Snap::NoPadX,
-@relativeref{Snap,NoPadY} or their combination, @relativeref{Snap,NoPad},
-padding and margin in given direction gets ignored.
+together, picking the larger of the two.
 
 @htmlinclude ui-snaplayouter-paddings-margins.svg
 
-In the above diagram the margins and paddings are the same for all sides for
-simplicity, however they can be specified differently for each side. See
-documentation of @ref LayoutLayer for more examples.
+In rare cases it may be needed to ignore the padding and margin, which can be
+done by specifying @ref Snap::NoPadX, @relativeref{Snap,NoPadY} or their
+combination, @relativeref{Snap,NoPad}. This is however considered a workaround
+and layouts in general shouldn't need to use these.
+
+Note that in the above diagram the margins and paddings are the same for all
+sides for simplicity, however they can be specified differently for each side.
+See documentation of @ref LayoutLayer for more examples.
 
 @section Ui-SnapLayouter-add Adding and removing layouts
 
-A layout is added by calling @ref add(NodeHandle, Snaps, LayoutHandle, SnapLayoutFlags) "add()"
+An *explicitly snapped* layout is added by calling @ref add(NodeHandle, Snaps, LayoutHandle, SnapLayoutFlags) "add()"
 with a @ref NodeHandle to which the layout is assigned, @ref Snaps describing
 how to snap the node and a target @ref LayoutHandle to which to snap. The
 target layout has to be either a sibling or a parent layout, and passing
@@ -374,50 +377,41 @@ the bottom right corner of it, and a `reject` to the left next to the `accept`.
 
 @snippet ui-snaplayouter.cpp add
 
-Note that @ref Snap::Inside is used implicitly when snapping a child, which is
-the case both with the root `popup` node that's a child of the UI it's being
-snapped to, and `accept` which is a child of the `popup` it's being snapped to.
-Passing @ref Snap::Inside explicitly in those cases is allowed but unnecessary.
-If an offset is specified in addition to node size, such as @cpp {-10, -10} @ce
-in case of `accept`, it's added to the final layout offset, and affects also
-dependent layouts. When visualizing node placement, for example with
-@ref Ui-DebugLayer-node-highlight "Ui::DebugLayer node highlight", the layout
-looks like this:
+Note that @ref Snap::Inside is automatic when snapping a child node to its
+parent, which is the case both with the root `popup` node that's a child of the
+UI it's being snapped to, and `accept` which is a child of the `popup` it's
+being snapped to. You can pass @ref Snap::Inside in those cases but it's
+unnecessary. If an offset is specified in addition to node size, such as
+@cpp {-10, -10} @ce in case of `accept`, it's added to the final layout offset,
+and affects also dependent layouts. When visualizing node placement, for
+example with @ref Ui-DebugLayer-node-highlight "Ui::DebugLayer node highlight",
+the layout will look like this:
 
 @image html ui-snaplayouter-add.png width=205px
 
-Calling @ref add(NodeHandle, LayoutHandle, SnapLayoutFlags) "add()" with just a
-@ref NodeHandle will make it possible to snap other nodes to the given node but
-doesn't cause the node to be repositioned in any way. For example, if we'd want
-to have the `popup` movable by the user and placed to the center of the UI just
-initially, not changing its position from the layout in any way afterwards,
-such as when the window resizes, we'd do this instead:
-
-@snippet Ui.cpp SnapLayouter-add-initial-placement
-
-Layouts from this layouter are *unique*, meaning a particular node can have
-only at most one layout from given @ref SnapLayouter instance assigned. This in
-turn means you don't strictly need to remember a @ref LayoutHandle in order to
-use it later, but can retrieve it back from its @ref NodeHandle using
+@ref SnapLayouter layouts are *unique*, meaning a particular node can have only
+at most one layout from given layouter instance assigned. This in turn means
+you don't strictly need to remember a @ref LayoutHandle in order to use it
+later, but can retrieve it back from its @ref NodeHandle using
 @ref AbstractUserInterface::nodeUniqueLayout():
 
 @snippet Ui.cpp SnapLayouter-query-node-unique-layout
 
 Layouts can be subsequently removed either as a consequence of removing the
-node they're assigned to, or by calling @ref remove(). Note that, at the
-moment, only layouts that don't have other layouts snapped to them can be
-removed --- i.e., while the `reject` layout or its node can be removed,
-attempting to remove the `accept` layout is an error because `reject` would
-then have nowhere to snap to.
+node they're assigned to, or by calling @ref remove(). Note that only layouts
+that don't have sibling layouts explicitly snapped to them can be removed ---
+i.e., while the `reject` layout or its node can be removed, attempting to
+remove the `accept` layout is an error because `reject` would then have nowhere
+to snap to.
 
-@section Ui-SnapLayouter-add-implicit Implicitly snapped layouts
+@subsection Ui-SnapLayouter-add-implicit Implicitly snapped layouts
 
-Explicitly specifying how and where to snap for each layout may get tedious,
-especially when forming long rows or columns. Insertion or removal of a layout
-in the middle of the sequence also isn't possible. An alternative approach in
-such cases is specifying an implicit child snap using @ref setChildSnap(), and
-then calling @ref add(NodeHandle, LayoutHandle, SnapLayoutFlags) "add()" for
-child nodes without specifying anything else:
+While explicit snapping offers the most flexibility, it may get tedius when
+forming long chains of snapped nodes. Insertion or removal of a layout in the
+middle of such a chain also isn't possible. An alternative approach in such
+cases is specifying an implicit child snap using @ref setChildSnap(), and
+then calling an *implicit* @ref add(NodeHandle, LayoutHandle, SnapLayoutFlags) "add()"
+for all child nodes without specifying anything else for them:
 
 @snippet ui-snaplayouter.cpp implicit-snap
 
@@ -431,16 +425,26 @@ the previous and fill the parent horizontally. The result is the following:
 By default new child layouts are appended after all previous, insertion in the
 middle can be done by passing a @ref LayoutHandle to the
 @ref add(NodeHandle, LayoutHandle, SnapLayoutFlags) "add()" function, saying
-*before* which existing layout to insert the new one. For example, inserting a
+* *before* which existing layout to insert the new one. For example, inserting a
 `subtitle` between the `title` and `details`, which would then look like this:
 
 @snippet ui-snaplayouter.cpp implicit-snap-insert
 
 @image html ui-snaplayouter-implicit-snap-insert.png width=205px
 
-Unlike with explicitly snapped layouts, removal of implicitly snapped layouts
-simply causes given layout to be simply removed from the sequence, with
-following layouts shifting into its place.
+Unlike with explicitly snapped layouts, calling @ref remove() on an implicitly
+snapped layout simply causes it to be removed from the sequence, with following
+layouts shifting into its place.
+
+Finally, calling the implicit @ref add(NodeHandle, LayoutHandle, SnapLayoutFlags) "add()"
+on a node that has no parent layout allows using this node as a target or
+parent of other layouts but doesn't cause the node offset to be affected by the
+layout process in any way. For example, if we'd want to have the original
+`popup` node movable by the user and placed to the center of the UI just
+initially, not changing its position from the layout in any way afterwards,
+such as when the window resizes, we'd do this instead:
+
+@snippet Ui.cpp SnapLayouter-add-initial-placement
 
 @section Ui-SnapLayouter-size-propagation Size propagation
 
@@ -541,7 +545,7 @@ class MAGNUM_UI_EXPORT SnapLayouter: public AbstractLayouter {
          *
          * Use @ref add(NodeHandle, Snaps, LayoutHandle, SnapLayoutFlags) for
          * explicitly snapping to given layout without taking @ref childSnap()
-         * into account and without affecting the parent layout size.
+         * into account.
          *
          * Delegates to @ref AbstractLayouter::add(), see its documentation for
          * detailed description of all constraints.
