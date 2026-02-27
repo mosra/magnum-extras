@@ -819,7 +819,7 @@ void EventLayerTest::invalidSlot() {
     Containers::String out;
     Error redirectError{&out};
     layer.onBlur(nodeHandle(0, 1), nullptr);
-    CORRADE_COMPARE(out, "Ui::EventLayer: slot is null\n");
+    CORRADE_COMPARE(out, "Ui::EventLayer: function is null\n");
 }
 
 void EventLayerTest::connect() {
@@ -1016,8 +1016,8 @@ void EventLayerTest::connectRemoveHandleRecycle() {
     layer.remove(second);
     CORRADE_COMPARE(destructedCount1, 2);
 
-    /* Data that reuses a previous slot should not call the destructor on the
-       previous function again or some such crazy stuff */
+    /* Data that reuses a previous function should not call the destructor on
+       the previous function again or some such crazy stuff */
     DataHandle second2 = layer.onTapOrClick(nodeHandle(3, 4), NonTrivial{destructedCount2});
     CORRADE_COMPARE(dataHandleId(second2), dataHandleId(second));
     CORRADE_COMPARE(destructedCount1, 2);
@@ -2191,13 +2191,13 @@ void EventLayerTest::drag() {
 
     Int called = 0;
     Vector2 calledOffset;
-    auto slot = [&called, &calledOffset](const Vector2& offset) {
+    auto function = [&called, &calledOffset](const Vector2& offset) {
         ++called;
         calledOffset += offset;
     };
     DataHandle handle = data.dragOrScroll ?
-        layer.onDragOrScroll(nodeHandle(0, 1), slot) :
-        layer.onDrag(nodeHandle(0, 1), slot);
+        layer.onDragOrScroll(nodeHandle(0, 1), function) :
+        layer.onDrag(nodeHandle(0, 1), function);
 
     /* Should only get fired for a move with mouse left, *primary* finger or
        pen present among pointers() and only if the event is captured (i.e.,
@@ -2296,12 +2296,12 @@ void EventLayerTest::dragPress() {
     EventLayer layer{layerHandle(0, 1)};
 
     Int called = 0;
-    auto slot = [&called](const Vector2&) {
+    auto function = [&called](const Vector2&) {
         ++called;
     };
     DataHandle handle = data.dragOrScroll ?
-        layer.onDragOrScroll(nodeHandle(0, 1), slot) :
-        layer.onDrag(nodeHandle(0, 1), slot);
+        layer.onDragOrScroll(nodeHandle(0, 1), function) :
+        layer.onDrag(nodeHandle(0, 1), function);
 
     /* The press event should get accepted for *captured* mouse left, *primary*
        finger or pen to prevent it from being propagated further if no other
@@ -2429,13 +2429,13 @@ void EventLayerTest::dragFromUserInterface() {
         {25, 50}, {50, 25});
 
     Int called = 0;
-    auto slot = [&called](const Vector2& offset) {
+    auto function = [&called](const Vector2& offset) {
         CORRADE_COMPARE(offset, (Vector2{-5.0f, -10.0f}));
         ++called;
     };
     data.dragOrScroll ?
-        layer.onDragOrScroll(node, slot) :
-        layer.onDrag(node, slot);
+        layer.onDragOrScroll(node, function) :
+        layer.onDrag(node, function);
 
     Int positionCalled = 0;
     auto positionSlot = [&positionCalled](const Vector2& position, const Vector2& offset) {
@@ -2520,19 +2520,19 @@ void EventLayerTest::dragFromUserInterfaceFallthroughThreshold() {
         the same node, add them both instead of having an instanced test
         case */
     if(data.positionCallback) {
-        auto slot = [&belowCalled](const Vector2&, const Vector2& offset) {
+        auto function = [&belowCalled](const Vector2&, const Vector2& offset) {
             belowCalled += offset;
         };
         data.dragOrScroll ?
-            layer.onDragOrScroll(nodeBelow, slot) :
-            layer.onDrag(nodeBelow, slot);
+            layer.onDragOrScroll(nodeBelow, function) :
+            layer.onDrag(nodeBelow, function);
     } else {
-        auto slot = [&belowCalled](const Vector2& offset) {
+        auto function = [&belowCalled](const Vector2& offset) {
             belowCalled += offset;
         };
         data.dragOrScroll ?
-            layer.onDragOrScroll(nodeBelow, slot) :
-            layer.onDrag(nodeBelow, slot);
+            layer.onDragOrScroll(nodeBelow, function) :
+            layer.onDrag(nodeBelow, function);
     }
 
     Int betweenCalled = 0;
@@ -3291,7 +3291,8 @@ void EventLayerTest::pinchFromUserInterface() {
         CORRADE_COMPARE(called, 0);
         CORRADE_COMPARE(belowCalled, 0);
 
-    /* A move of one of the two fingers makes the slot called, rotating 180° */
+    /* A move of one of the two fingers makes the function called, rotating
+       180° */
     } {
         expected.position = {25.0f, 17.5f};
         expected.relativeTranslation = {0.0f, -5.0f};

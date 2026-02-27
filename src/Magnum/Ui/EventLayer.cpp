@@ -58,7 +58,7 @@ namespace Implementation {
 namespace {
 
 struct Data {
-    Containers::FunctionData slot;
+    Containers::FunctionData function;
     Implementation::EventType eventType;
     bool hasScopedConnection;
     /* 6+ bytes free */
@@ -137,8 +137,8 @@ EventLayer::~EventLayer() {
     CORRADE_ASSERT(!_state || !_state->usedScopedConnectionCount,
         "Ui::EventLayer: destructed with" << _state->usedScopedConnectionCount << "scoped connections still active", );
 
-    /* Destructors on any state captured in slots are called automatically on
-       the Array destruction */
+    /* Destructors on any state captured in functions are called automatically
+       on the Array destruction */
 }
 
 EventLayer& EventLayer::operator=(EventLayer&& other) noexcept {
@@ -165,7 +165,7 @@ std::size_t EventLayer::usedScopedCount() const {
 std::size_t EventLayer::usedAllocatedCount() const {
     std::size_t count = 0;
     for(const Data& data: _state->data)
-        if(data.slot.isAllocated())
+        if(data.function.isAllocated())
             ++count;
 
     return count;
@@ -189,12 +189,12 @@ EventLayer& EventLayer::setScrollStepDistance(const Vector2& distance) {
     return *this;
 }
 
-DataHandle EventLayer::create(const NodeHandle node, const Implementation::EventType eventType, Containers::FunctionData&& slot, void(*call)()) {
-    CORRADE_ASSERT(slot,
+DataHandle EventLayer::create(const NodeHandle node, const Implementation::EventType eventType, Containers::FunctionData&& function, void(*call)()) {
+    CORRADE_ASSERT(function,
         /* saying create() would be confusing, and passing onPress(),
            onPressScoped() etc as a string just for the assert from all
            variants seems excessive */
-        "Ui::EventLayer: slot is null", {});
+        "Ui::EventLayer: function is null", {});
 
     State& state = static_cast<State&>(*_state);
     const DataHandle handle = AbstractLayer::create(node);
@@ -206,14 +206,14 @@ DataHandle EventLayer::create(const NodeHandle node, const Implementation::Event
 
     Data& data = state.data[id];
     data.eventType = eventType;
-    data.slot = Utility::move(slot);
+    data.function = Utility::move(function);
     data.hasScopedConnection = false;
     data.call = call;
     return handle;
 }
 
-DataHandle EventLayer::onPress(const NodeHandle node, Containers::Function<void()>&& slot) {
-    return create(node, Implementation::EventType::Press, Utility::move(slot),
+DataHandle EventLayer::onPress(const NodeHandle node, Containers::Function<void()>&& function) {
+    return create(node, Implementation::EventType::Press, Utility::move(function),
         reinterpret_cast<void(*)()>(
             /* The + is to decay the lambda to a function pointer so we can
                cast it. MSVC 2015 says "error C2593: 'operator +' is ambiguous"
@@ -224,272 +224,272 @@ DataHandle EventLayer::onPress(const NodeHandle node, Containers::Function<void(
             #else
             static_cast<void(*)(Containers::FunctionData&, const PointerEvent&)>
             #endif
-        ([](Containers::FunctionData& slot, const PointerEvent&) {
-            static_cast<Containers::Function<void()>&>(slot)();
+        ([](Containers::FunctionData& function, const PointerEvent&) {
+            static_cast<Containers::Function<void()>&>(function)();
         })));
 }
 
-DataHandle EventLayer::onPress(const NodeHandle node, Containers::Function<void(const Vector2&)>&& slot) {
-    return create(node, Implementation::EventType::Press, Utility::move(slot),
+DataHandle EventLayer::onPress(const NodeHandle node, Containers::Function<void(const Vector2&)>&& function) {
+    return create(node, Implementation::EventType::Press, Utility::move(function),
         reinterpret_cast<void(*)()>(
             #ifndef CORRADE_MSVC2015_COMPATIBILITY
             +
             #else
             static_cast<void(*)(Containers::FunctionData&, const PointerEvent&)>
             #endif
-        ([](Containers::FunctionData& slot, const PointerEvent& event) {
-            static_cast<Containers::Function<void(const Vector2&)>&>(slot)(event.position());
+        ([](Containers::FunctionData& function, const PointerEvent& event) {
+            static_cast<Containers::Function<void(const Vector2&)>&>(function)(event.position());
         })));
 }
 
-DataHandle EventLayer::onRelease(const NodeHandle node, Containers::Function<void()>&& slot) {
-    return create(node, Implementation::EventType::Release, Utility::move(slot),
+DataHandle EventLayer::onRelease(const NodeHandle node, Containers::Function<void()>&& function) {
+    return create(node, Implementation::EventType::Release, Utility::move(function),
         reinterpret_cast<void(*)()>(
             #ifndef CORRADE_MSVC2015_COMPATIBILITY
             +
             #else
             static_cast<void(*)(Containers::FunctionData&, const PointerEvent&)>
             #endif
-        ([](Containers::FunctionData& slot, const PointerEvent&) {
-            static_cast<Containers::Function<void()>&>(slot)();
+        ([](Containers::FunctionData& function, const PointerEvent&) {
+            static_cast<Containers::Function<void()>&>(function)();
         })));
 }
 
-DataHandle EventLayer::onRelease(const NodeHandle node, Containers::Function<void(const Vector2&)>&& slot) {
-    return create(node, Implementation::EventType::Release, Utility::move(slot),
+DataHandle EventLayer::onRelease(const NodeHandle node, Containers::Function<void(const Vector2&)>&& function) {
+    return create(node, Implementation::EventType::Release, Utility::move(function),
         reinterpret_cast<void(*)()>(
             #ifndef CORRADE_MSVC2015_COMPATIBILITY
             +
             #else
             static_cast<void(*)(Containers::FunctionData&, const PointerEvent&)>
             #endif
-        ([](Containers::FunctionData& slot, const PointerEvent& event) {
-            static_cast<Containers::Function<void(const Vector2&)>&>(slot)(event.position());
+        ([](Containers::FunctionData& function, const PointerEvent& event) {
+            static_cast<Containers::Function<void(const Vector2&)>&>(function)(event.position());
         })));
 }
 
-DataHandle EventLayer::onTapOrClick(const NodeHandle node, Containers::Function<void()>&& slot) {
-    return create(node, Implementation::EventType::TapOrClick, Utility::move(slot),
+DataHandle EventLayer::onTapOrClick(const NodeHandle node, Containers::Function<void()>&& function) {
+    return create(node, Implementation::EventType::TapOrClick, Utility::move(function),
         reinterpret_cast<void(*)()>(
             #ifndef CORRADE_MSVC2015_COMPATIBILITY
             +
             #else
             static_cast<void(*)(Containers::FunctionData&, const PointerEvent&)>
             #endif
-        ([](Containers::FunctionData& slot, const PointerEvent&) {
-            static_cast<Containers::Function<void()>&>(slot)();
+        ([](Containers::FunctionData& function, const PointerEvent&) {
+            static_cast<Containers::Function<void()>&>(function)();
         })));
 }
 
-DataHandle EventLayer::onTapOrClick(const NodeHandle node, Containers::Function<void(const Vector2&)>&& slot) {
-    return create(node, Implementation::EventType::TapOrClick, Utility::move(slot),
+DataHandle EventLayer::onTapOrClick(const NodeHandle node, Containers::Function<void(const Vector2&)>&& function) {
+    return create(node, Implementation::EventType::TapOrClick, Utility::move(function),
         reinterpret_cast<void(*)()>(
             #ifndef CORRADE_MSVC2015_COMPATIBILITY
             +
             #else
             static_cast<void(*)(Containers::FunctionData&, const PointerEvent&)>
             #endif
-        ([](Containers::FunctionData& slot, const PointerEvent& event) {
-            static_cast<Containers::Function<void(const Vector2&)>&>(slot)(event.position());
+        ([](Containers::FunctionData& function, const PointerEvent& event) {
+            static_cast<Containers::Function<void(const Vector2&)>&>(function)(event.position());
         })));
 }
 
-DataHandle EventLayer::onMiddleClick(const NodeHandle node, Containers::Function<void()>&& slot) {
-    return create(node, Implementation::EventType::MiddleClick, Utility::move(slot),
+DataHandle EventLayer::onMiddleClick(const NodeHandle node, Containers::Function<void()>&& function) {
+    return create(node, Implementation::EventType::MiddleClick, Utility::move(function),
         reinterpret_cast<void(*)()>(
             #ifndef CORRADE_MSVC2015_COMPATIBILITY
             +
             #else
             static_cast<void(*)(Containers::FunctionData&, const PointerEvent&)>
             #endif
-        ([](Containers::FunctionData& slot, const PointerEvent&) {
-            static_cast<Containers::Function<void()>&>(slot)();
+        ([](Containers::FunctionData& function, const PointerEvent&) {
+            static_cast<Containers::Function<void()>&>(function)();
         })));
 }
 
-DataHandle EventLayer::onMiddleClick(const NodeHandle node, Containers::Function<void(const Vector2&)>&& slot) {
-    return create(node, Implementation::EventType::MiddleClick, Utility::move(slot),
+DataHandle EventLayer::onMiddleClick(const NodeHandle node, Containers::Function<void(const Vector2&)>&& function) {
+    return create(node, Implementation::EventType::MiddleClick, Utility::move(function),
         reinterpret_cast<void(*)()>(
             #ifndef CORRADE_MSVC2015_COMPATIBILITY
             +
             #else
             static_cast<void(*)(Containers::FunctionData&, const PointerEvent&)>
             #endif
-        ([](Containers::FunctionData& slot, const PointerEvent& event) {
-            static_cast<Containers::Function<void(const Vector2&)>&>(slot)(event.position());
+        ([](Containers::FunctionData& function, const PointerEvent& event) {
+            static_cast<Containers::Function<void(const Vector2&)>&>(function)(event.position());
         })));
 }
 
-DataHandle EventLayer::onRightClick(const NodeHandle node, Containers::Function<void()>&& slot) {
-    return create(node, Implementation::EventType::RightClick, Utility::move(slot),
+DataHandle EventLayer::onRightClick(const NodeHandle node, Containers::Function<void()>&& function) {
+    return create(node, Implementation::EventType::RightClick, Utility::move(function),
         reinterpret_cast<void(*)()>(
             #ifndef CORRADE_MSVC2015_COMPATIBILITY
             +
             #else
             static_cast<void(*)(Containers::FunctionData&, const PointerEvent&)>
             #endif
-        ([](Containers::FunctionData& slot, const PointerEvent&) {
-            static_cast<Containers::Function<void()>&>(slot)();
+        ([](Containers::FunctionData& function, const PointerEvent&) {
+            static_cast<Containers::Function<void()>&>(function)();
         })));
 }
 
-DataHandle EventLayer::onRightClick(const NodeHandle node, Containers::Function<void(const Vector2&)>&& slot) {
-    return create(node, Implementation::EventType::RightClick, Utility::move(slot),
+DataHandle EventLayer::onRightClick(const NodeHandle node, Containers::Function<void(const Vector2&)>&& function) {
+    return create(node, Implementation::EventType::RightClick, Utility::move(function),
         reinterpret_cast<void(*)()>(
             #ifndef CORRADE_MSVC2015_COMPATIBILITY
             +
             #else
             static_cast<void(*)(Containers::FunctionData&, const PointerEvent&)>
             #endif
-        ([](Containers::FunctionData& slot, const PointerEvent& event) {
-            static_cast<Containers::Function<void(const Vector2&)>&>(slot)(event.position());
+        ([](Containers::FunctionData& function, const PointerEvent& event) {
+            static_cast<Containers::Function<void(const Vector2&)>&>(function)(event.position());
         })));
 }
 
-DataHandle EventLayer::onDrag(const NodeHandle node, Containers::Function<void(const Vector2&)>&& slot) {
-    return create(node, Implementation::EventType::Drag, Utility::move(slot),
+DataHandle EventLayer::onDrag(const NodeHandle node, Containers::Function<void(const Vector2&)>&& function) {
+    return create(node, Implementation::EventType::Drag, Utility::move(function),
         reinterpret_cast<void(*)()>(
             #ifndef CORRADE_MSVC2015_COMPATIBILITY
             +
             #else
             static_cast<void(*)(Containers::FunctionData&, const PointerMoveEvent&, const Vector2&)>
             #endif
-        ([](Containers::FunctionData& slot, const PointerMoveEvent&, const Vector2& relativePosition) {
+        ([](Containers::FunctionData& function, const PointerMoveEvent&, const Vector2& relativePosition) {
             /* The relative position is supplied custom in case of drag event
                fallthrough so it cannot be event.relativePosition() */
-            static_cast<Containers::Function<void(const Vector2&)>&>(slot)(relativePosition);
+            static_cast<Containers::Function<void(const Vector2&)>&>(function)(relativePosition);
         })));
 }
 
-DataHandle EventLayer::onDrag(const NodeHandle node, Containers::Function<void(const Vector2&, const Vector2&)>&& slot) {
-    return create(node, Implementation::EventType::Drag, Utility::move(slot),
+DataHandle EventLayer::onDrag(const NodeHandle node, Containers::Function<void(const Vector2&, const Vector2&)>&& function) {
+    return create(node, Implementation::EventType::Drag, Utility::move(function),
         reinterpret_cast<void(*)()>(
             #ifndef CORRADE_MSVC2015_COMPATIBILITY
             +
             #else
             static_cast<void(*)(Containers::FunctionData&, const PointerMoveEvent&, const Vector2&)>
             #endif
-        ([](Containers::FunctionData& slot, const PointerMoveEvent& event, const Vector2& relativePosition) {
+        ([](Containers::FunctionData& function, const PointerMoveEvent& event, const Vector2& relativePosition) {
             /* The relative position is supplied custom in case of drag event
                fallthrough so it cannot be event.relativePosition() */
-            static_cast<Containers::Function<void(const Vector2&, const Vector2&)>&>(slot)(event.position(), relativePosition);
+            static_cast<Containers::Function<void(const Vector2&, const Vector2&)>&>(function)(event.position(), relativePosition);
         })));
 }
 
-DataHandle EventLayer::onScroll(const NodeHandle node, Containers::Function<void(const Vector2&)>&& slot) {
-    return create(node, Implementation::EventType::Scroll, Utility::move(slot),
+DataHandle EventLayer::onScroll(const NodeHandle node, Containers::Function<void(const Vector2&)>&& function) {
+    return create(node, Implementation::EventType::Scroll, Utility::move(function),
         reinterpret_cast<void(*)()>(
             #ifndef CORRADE_MSVC2015_COMPATIBILITY
             +
             #else
             static_cast<void(*)(Containers::FunctionData&, const ScrollEvent&)>
             #endif
-        ([](Containers::FunctionData& slot, const ScrollEvent& event) {
-            static_cast<Containers::Function<void(const Vector2&)>&>(slot)(event.offset());
+        ([](Containers::FunctionData& function, const ScrollEvent& event) {
+            static_cast<Containers::Function<void(const Vector2&)>&>(function)(event.offset());
         })));
 }
 
-DataHandle EventLayer::onScroll(const NodeHandle node, Containers::Function<void(const Vector2&, const Vector2&)>&& slot) {
-    return create(node, Implementation::EventType::Scroll, Utility::move(slot),
+DataHandle EventLayer::onScroll(const NodeHandle node, Containers::Function<void(const Vector2&, const Vector2&)>&& function) {
+    return create(node, Implementation::EventType::Scroll, Utility::move(function),
         reinterpret_cast<void(*)()>(
             #ifndef CORRADE_MSVC2015_COMPATIBILITY
             +
             #else
             static_cast<void(*)(Containers::FunctionData&, const ScrollEvent&)>
             #endif
-        ([](Containers::FunctionData& slot, const ScrollEvent& event) {
-            static_cast<Containers::Function<void(const Vector2&, const Vector2&)>&>(slot)(event.position(), event.offset());
+        ([](Containers::FunctionData& function, const ScrollEvent& event) {
+            static_cast<Containers::Function<void(const Vector2&, const Vector2&)>&>(function)(event.position(), event.offset());
         })));
 }
 
-DataHandle EventLayer::onDragOrScroll(const NodeHandle node, Containers::Function<void(const Vector2&)>&& slot) {
-    return create(node, Implementation::EventType::DragOrScroll, Utility::move(slot),
+DataHandle EventLayer::onDragOrScroll(const NodeHandle node, Containers::Function<void(const Vector2&)>&& function) {
+    return create(node, Implementation::EventType::DragOrScroll, Utility::move(function),
         reinterpret_cast<void(*)()>(
             #ifndef CORRADE_MSVC2015_COMPATIBILITY
             +
             #else
             static_cast<void(*)(Containers::FunctionData&, const Vector2&, const Vector2&)>
             #endif
-        ([](Containers::FunctionData& slot, const Vector2&, const Vector2& offset) {
-            static_cast<Containers::Function<void(const Vector2&)>&>(slot)(offset);
+        ([](Containers::FunctionData& function, const Vector2&, const Vector2& offset) {
+            static_cast<Containers::Function<void(const Vector2&)>&>(function)(offset);
         })));
 }
 
-DataHandle EventLayer::onDragOrScroll(const NodeHandle node, Containers::Function<void(const Vector2&, const Vector2&)>&& slot) {
-    return create(node, Implementation::EventType::DragOrScroll, Utility::move(slot),
+DataHandle EventLayer::onDragOrScroll(const NodeHandle node, Containers::Function<void(const Vector2&, const Vector2&)>&& function) {
+    return create(node, Implementation::EventType::DragOrScroll, Utility::move(function),
         reinterpret_cast<void(*)()>(
             #ifndef CORRADE_MSVC2015_COMPATIBILITY
             +
             #else
             static_cast<void(*)(Containers::FunctionData&, const Vector2&, const Vector2&)>
             #endif
-        ([](Containers::FunctionData& slot, const Vector2& position, const Vector2& offset) {
-            static_cast<Containers::Function<void(const Vector2&, const Vector2&)>&>(slot)(position, offset);
+        ([](Containers::FunctionData& function, const Vector2& position, const Vector2& offset) {
+            static_cast<Containers::Function<void(const Vector2&, const Vector2&)>&>(function)(position, offset);
         })));
 }
 
-DataHandle EventLayer::onPinch(const NodeHandle node, Containers::Function<void(const Vector2&, const Vector2&, const Complex&, Float)>&& slot) {
-    return create(node, Implementation::EventType::Pinch, Utility::move(slot),
+DataHandle EventLayer::onPinch(const NodeHandle node, Containers::Function<void(const Vector2&, const Vector2&, const Complex&, Float)>&& function) {
+    return create(node, Implementation::EventType::Pinch, Utility::move(function),
         reinterpret_cast<void(*)()>(
             #ifndef CORRADE_MSVC2015_COMPATIBILITY
             +
             #else
             static_cast<void(*)(Containers::FunctionData&, const Platform::TwoFingerGesture&)>
             #endif
-        ([](Containers::FunctionData& slot, const Platform::TwoFingerGesture& gesture) {
-            static_cast<Containers::Function<void(const Vector2&, const Vector2&, const Complex&, Float)>&>(slot)(gesture.position(), gesture.relativeTranslation(), gesture.relativeRotation(), gesture.relativeScaling());
+        ([](Containers::FunctionData& function, const Platform::TwoFingerGesture& gesture) {
+            static_cast<Containers::Function<void(const Vector2&, const Vector2&, const Complex&, Float)>&>(function)(gesture.position(), gesture.relativeTranslation(), gesture.relativeRotation(), gesture.relativeScaling());
         })));
 }
 
-DataHandle EventLayer::onEnter(const NodeHandle node, Containers::Function<void()>&& slot) {
-    return create(node, Implementation::EventType::Enter, Utility::move(slot),
+DataHandle EventLayer::onEnter(const NodeHandle node, Containers::Function<void()>&& function) {
+    return create(node, Implementation::EventType::Enter, Utility::move(function),
         reinterpret_cast<void(*)()>(
             #ifndef CORRADE_MSVC2015_COMPATIBILITY
             +
             #else
             static_cast<void(*)(Containers::FunctionData&, const PointerMoveEvent&)>
             #endif
-        ([](Containers::FunctionData& slot, const PointerMoveEvent&) {
-            static_cast<Containers::Function<void()>&>(slot)();
+        ([](Containers::FunctionData& function, const PointerMoveEvent&) {
+            static_cast<Containers::Function<void()>&>(function)();
         })));
 }
 
-DataHandle EventLayer::onLeave(const NodeHandle node, Containers::Function<void()>&& slot) {
-    return create(node, Implementation::EventType::Leave, Utility::move(slot),
+DataHandle EventLayer::onLeave(const NodeHandle node, Containers::Function<void()>&& function) {
+    return create(node, Implementation::EventType::Leave, Utility::move(function),
         reinterpret_cast<void(*)()>(
             #ifndef CORRADE_MSVC2015_COMPATIBILITY
             +
             #else
             static_cast<void(*)(Containers::FunctionData&, const PointerMoveEvent&)>
             #endif
-        ([](Containers::FunctionData& slot, const PointerMoveEvent&) {
-            static_cast<Containers::Function<void()>&>(slot)();
+        ([](Containers::FunctionData& function, const PointerMoveEvent&) {
+            static_cast<Containers::Function<void()>&>(function)();
         })));
 }
 
-DataHandle EventLayer::onFocus(const NodeHandle node, Containers::Function<void()>&& slot) {
-    return create(node, Implementation::EventType::Focus, Utility::move(slot),
+DataHandle EventLayer::onFocus(const NodeHandle node, Containers::Function<void()>&& function) {
+    return create(node, Implementation::EventType::Focus, Utility::move(function),
         reinterpret_cast<void(*)()>(
             #ifndef CORRADE_MSVC2015_COMPATIBILITY
             +
             #else
             static_cast<void(*)(Containers::FunctionData&, const FocusEvent&)>
             #endif
-        ([](Containers::FunctionData& slot, const FocusEvent&) {
-            static_cast<Containers::Function<void()>&>(slot)();
+        ([](Containers::FunctionData& function, const FocusEvent&) {
+            static_cast<Containers::Function<void()>&>(function)();
         })));
 }
 
-DataHandle EventLayer::onBlur(const NodeHandle node, Containers::Function<void()>&& slot) {
-    return create(node, Implementation::EventType::Blur, Utility::move(slot),
+DataHandle EventLayer::onBlur(const NodeHandle node, Containers::Function<void()>&& function) {
+    return create(node, Implementation::EventType::Blur, Utility::move(function),
         reinterpret_cast<void(*)()>(
             #ifndef CORRADE_MSVC2015_COMPATIBILITY
             +
             #else
             static_cast<void(*)(Containers::FunctionData&, const FocusEvent&)>
             #endif
-        ([](Containers::FunctionData& slot, const FocusEvent&) {
-            static_cast<Containers::Function<void()>&>(slot)();
+        ([](Containers::FunctionData& function, const FocusEvent&) {
+            static_cast<Containers::Function<void()>&>(function)();
         })));
 }
 
@@ -507,9 +507,9 @@ void EventLayer::removeInternal(const UnsignedInt id) {
     State& state = *_state;
     Data& data = state.data[id];
 
-    /* Set the slot to an empty instance to call any captured state
+    /* Set the function to an empty instance to call any captured state
        destructors */
-    data.slot = {};
+    data.function = {};
 
     /* If the connection was scoped, decrement the counter. No need to reset
        the hasScopedConnection bit, as the data won't be touched again until
@@ -527,13 +527,13 @@ void EventLayer::removeInternal(const UnsignedInt id) {
 bool EventLayer::isAllocated(const DataHandle handle) const {
     CORRADE_ASSERT(isHandleValid(handle),
         "Ui::EventLayer::isAllocated(): invalid handle" << handle, {});
-    return _state->data[dataHandleId(handle)].slot.isAllocated();
+    return _state->data[dataHandleId(handle)].function.isAllocated();
 }
 
 bool EventLayer::isAllocated(const LayerDataHandle handle) const {
     CORRADE_ASSERT(isHandleValid(handle),
         "Ui::EventLayer::isAllocated(): invalid handle" << handle, {});
-    return _state->data[layerDataHandleId(handle)].slot.isAllocated();
+    return _state->data[layerDataHandleId(handle)].function.isAllocated();
 }
 
 void EventLayer::doClean(const Containers::BitArrayView dataIdsToRemove) {
@@ -614,7 +614,7 @@ void EventLayer::doPointerPressEvent(const UnsignedInt dataId, PointerEvent& eve
     if(data.eventType == Implementation::EventType::Press &&
         event.pointer() & (Pointer::MouseLeft|Pointer::Finger|Pointer::Pen))
     {
-        reinterpret_cast<void(*)(Containers::FunctionData&, const PointerEvent&)>(data.call)(data.slot, event);
+        reinterpret_cast<void(*)(Containers::FunctionData&, const PointerEvent&)>(data.call)(data.function, event);
         event.setAccepted();
         return;
     }
@@ -664,7 +664,7 @@ void EventLayer::doPointerReleaseEvent(const UnsignedInt dataId, PointerEvent& e
     if(data.eventType == Implementation::EventType::Release &&
         event.pointer() & (Pointer::MouseLeft|Pointer::Finger|Pointer::Pen))
     {
-        reinterpret_cast<void(*)(Containers::FunctionData&, const PointerEvent&)>(data.call)(data.slot, event);
+        reinterpret_cast<void(*)(Containers::FunctionData&, const PointerEvent&)>(data.call)(data.function, event);
         event.setAccepted();
         return;
     }
@@ -683,7 +683,7 @@ void EventLayer::doPointerReleaseEvent(const UnsignedInt dataId, PointerEvent& e
          (data.eventType == Implementation::EventType::RightClick &&
             event.pointer() == Pointer::MouseRight))
     ) {
-        reinterpret_cast<void(*)(Containers::FunctionData&, const PointerEvent&)>(data.call)(data.slot, event);
+        reinterpret_cast<void(*)(Containers::FunctionData&, const PointerEvent&)>(data.call)(data.function, event);
         event.setAccepted();
         return;
     }
@@ -711,9 +711,9 @@ void EventLayer::doPointerMoveEvent(const UnsignedInt dataId, PointerMoveEvent& 
         if(state.dragFallthroughData == dataId) {
             if((state.dragFallthroughPosition - event.position()).dot() >= state.dragThresholdSquared) {
                 if(data.eventType == Implementation::EventType::Drag)
-                    reinterpret_cast<void(*)(Containers::FunctionData&, const PointerMoveEvent&, const Vector2&)>(data.call)(data.slot, event, event.position() - state.dragFallthroughPosition);
+                    reinterpret_cast<void(*)(Containers::FunctionData&, const PointerMoveEvent&, const Vector2&)>(data.call)(data.function, event, event.position() - state.dragFallthroughPosition);
                 else if(data.eventType == Implementation::EventType::DragOrScroll)
-                    reinterpret_cast<void(*)(Containers::FunctionData&, const Vector2&, const Vector2&)>(data.call)(data.slot, event.position(), event.position() - state.dragFallthroughPosition);
+                    reinterpret_cast<void(*)(Containers::FunctionData&, const Vector2&, const Vector2&)>(data.call)(data.function, event.position(), event.position() - state.dragFallthroughPosition);
                 else CORRADE_INTERNAL_ASSERT_UNREACHABLE(); /* LCOV_EXCL_LINE */
                 event.setAccepted();
             } else return;
@@ -743,15 +743,15 @@ void EventLayer::doPointerMoveEvent(const UnsignedInt dataId, PointerMoveEvent& 
         }
 
         /* ... but afterwards, if this event was actually used and the gesture
-           is recognized, we also call the slot. If the event wasn't used, the
-           gesture could still be recognized, but it'd repeatedly give the same
-           data unrelated to the actual input event, leading to a broken
+           is recognized, we also call the function. If the event wasn't used,
+           the gesture could still be recognized, but it'd repeatedly give the
+           same data unrelated to the actual input event, leading to a broken
            behavior. */
         if(state.twoFingerGesture.moveEvent(event)) {
             event.setAccepted();
 
             if(state.twoFingerGesture)
-                reinterpret_cast<void(*)(Containers::FunctionData&, const Platform::TwoFingerGesture&)>(data.call)(data.slot, state.twoFingerGesture);
+                reinterpret_cast<void(*)(Containers::FunctionData&, const Platform::TwoFingerGesture&)>(data.call)(data.function, state.twoFingerGesture);
         }
 
         return;
@@ -771,9 +771,9 @@ void EventLayer::doPointerMoveEvent(const UnsignedInt dataId, PointerMoveEvent& 
        event.isCaptured() && !state.twoFingerGesture)
     {
         if(data.eventType == Implementation::EventType::Drag)
-            reinterpret_cast<void(*)(Containers::FunctionData&, const PointerMoveEvent&, const Vector2&)>(data.call)(data.slot, event, event.relativePosition());
+            reinterpret_cast<void(*)(Containers::FunctionData&, const PointerMoveEvent&, const Vector2&)>(data.call)(data.function, event, event.relativePosition());
         else if(data.eventType == Implementation::EventType::DragOrScroll)
-            reinterpret_cast<void(*)(Containers::FunctionData&, const Vector2&, const Vector2&)>(data.call)(data.slot, event.position(), event.relativePosition());
+            reinterpret_cast<void(*)(Containers::FunctionData&, const Vector2&, const Vector2&)>(data.call)(data.function, event.position(), event.relativePosition());
         else CORRADE_INTERNAL_ASSERT_UNREACHABLE(); /* LCOV_EXCL_LINE */
         event.setAccepted();
     }
@@ -794,7 +794,7 @@ void EventLayer::doPointerEnterEvent(const UnsignedInt dataId, PointerMoveEvent&
 
     Data& data = _state->data[dataId];
     if(data.eventType == Implementation::EventType::Enter) {
-        reinterpret_cast<void(*)(Containers::FunctionData&, const PointerMoveEvent&)>(data.call)(data.slot, event);
+        reinterpret_cast<void(*)(Containers::FunctionData&, const PointerMoveEvent&)>(data.call)(data.function, event);
         /* Accept status is ignored on enter/leave events, no need to call
            setAccepted() */
     }
@@ -809,7 +809,7 @@ void EventLayer::doPointerLeaveEvent(const UnsignedInt dataId, PointerMoveEvent&
 
     Data& data = _state->data[dataId];
     if(data.eventType == Implementation::EventType::Leave) {
-        reinterpret_cast<void(*)(Containers::FunctionData&, const PointerMoveEvent&)>(data.call)(data.slot, event);
+        reinterpret_cast<void(*)(Containers::FunctionData&, const PointerMoveEvent&)>(data.call)(data.function, event);
         /* Accept status is ignored on enter/leave events, no need to call
            setAccepted() */
     }
@@ -832,10 +832,10 @@ void EventLayer::doScrollEvent(const UnsignedInt dataId, ScrollEvent& event) {
     Data& data = state.data[dataId];
 
     if(data.eventType == Implementation::EventType::Scroll) {
-        reinterpret_cast<void(*)(Containers::FunctionData&, const ScrollEvent&)>(data.call)(data.slot, event);
+        reinterpret_cast<void(*)(Containers::FunctionData&, const ScrollEvent&)>(data.call)(data.function, event);
         event.setAccepted();
     } else if(data.eventType == Implementation::EventType::DragOrScroll) {
-        reinterpret_cast<void(*)(Containers::FunctionData&, const Vector2&, const Vector2&)>(data.call)(data.slot, event.position(), event.offset()*state.scrollStepDistance);
+        reinterpret_cast<void(*)(Containers::FunctionData&, const Vector2&, const Vector2&)>(data.call)(data.function, event.position(), event.offset()*state.scrollStepDistance);
         event.setAccepted();
     }
 }
@@ -843,7 +843,7 @@ void EventLayer::doScrollEvent(const UnsignedInt dataId, ScrollEvent& event) {
 void EventLayer::doFocusEvent(const UnsignedInt dataId, FocusEvent& event) {
     Data& data = _state->data[dataId];
     if(data.eventType == Implementation::EventType::Focus) {
-        reinterpret_cast<void(*)(Containers::FunctionData&, const FocusEvent&)>(data.call)(data.slot, event);
+        reinterpret_cast<void(*)(Containers::FunctionData&, const FocusEvent&)>(data.call)(data.function, event);
         event.setAccepted();
     }
 }
@@ -851,7 +851,7 @@ void EventLayer::doFocusEvent(const UnsignedInt dataId, FocusEvent& event) {
 void EventLayer::doBlurEvent(const UnsignedInt dataId, FocusEvent& event) {
     Data& data = _state->data[dataId];
     if(data.eventType == Implementation::EventType::Blur) {
-        reinterpret_cast<void(*)(Containers::FunctionData&, const FocusEvent&)>(data.call)(data.slot, event);
+        reinterpret_cast<void(*)(Containers::FunctionData&, const FocusEvent&)>(data.call)(data.function, event);
         /* Accept status is ignored on blur events, no need to call
            setAccepted() */
     }
@@ -916,7 +916,7 @@ void EventLayer::DebugIntegration::print(Debug& debug, const EventLayer& layer, 
             debug << "a pinch gesture";
             break;
     }
-    if(dataInstance.slot.isAllocated())
+    if(dataInstance.function.isAllocated())
         debug << Debug::nospace << "," << Debug::color(Debug::Color::Magenta) << "allocated" << Debug::resetColor;
     debug << Debug::newline;
 }

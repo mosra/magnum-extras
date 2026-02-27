@@ -38,7 +38,7 @@
 namespace Magnum { namespace Ui {
 
 /**
-@brief Connection in the @ref EventLayer
+@brief Scoped @ref EventLayer connection
 @m_since_latest_{extras}
 
 Performs automatic removal of a connection on destruction. Each instance with
@@ -125,8 +125,7 @@ namespace Implementation {
 @brief Event handling layer
 @m_since_latest_{extras}
 
-Provides signal/slot-like functionality, connecting events happening on nodes
-with arbitrary functions handling them.
+Perform arbitrary function calls based on events happening on concrete nodes.
 
 @section Ui-EventLayer-setup Setting up an event layer instance
 
@@ -415,215 +414,226 @@ class MAGNUM_UI_EXPORT EventLayer: public AbstractLayer {
 
         /**
          * @brief Connect to a finger / pen tap or left mouse press
+         * @return New data handle
          *
-         * The @p slot, optionally receiving a node-relative position of the
-         * press, is called when a @ref Pointer::MouseLeft, primary
+         * The @p function, optionally receiving a node-relative position of
+         * the press, is called when a @ref Pointer::MouseLeft, primary
          * @ref Pointer::Finger or @ref Pointer::Pen press happens on the
          * @p node, and it isn't a fallthrough event from a child node. Expects
-         * that the @p slot is not @cpp nullptr @ce.
+         * that the @p function is not @cpp nullptr @ce.
          *
          * Use @ref onTapOrClick() for a combined press and release. The
          * returned @ref DataHandle is automatically removed once @p node or
          * any of its parents is removed, it's the caller responsibility to
-         * ensure it doesn't outlive the state captured in the @p slot. See
+         * ensure it doesn't outlive the state captured in the @p function. See
          * @ref onPressScoped() for a scoped alternative.
          * @see @ref Ui-EventLayer-tap-click-press-release,
          *      @ref PointerEvent::isPrimary(),
          *      @ref PointerEvent::isFallthrough()
          */
-        DataHandle onPress(NodeHandle node, Containers::Function<void()>&& slot);
+        DataHandle onPress(NodeHandle node, Containers::Function<void()>&& function);
         /** @overload */
-        DataHandle onPress(NodeHandle node, Containers::Function<void(const Vector2& position)>&& slot);
+        DataHandle onPress(NodeHandle node, Containers::Function<void(const Vector2& position)>&& function);
 
         /**
          * @brief Scoped connection to a finger / pen tap or left mouse press
+         * @return Event connection instance
          *
          * Compared to @ref onPress() the connection is removed automatically
          * when the returned @ref EventConnection gets destroyed.
          * @see @ref Ui-EventLayer-create
          */
-        EventConnection onPressScoped(NodeHandle node, Containers::Function<void()>&& slot) {
-            return EventConnection{*this, onPress(node, Utility::move(slot))};
+        EventConnection onPressScoped(NodeHandle node, Containers::Function<void()>&& function) {
+            return EventConnection{*this, onPress(node, Utility::move(function))};
         }
         /** @overload */
-        EventConnection onPressScoped(NodeHandle node, Containers::Function<void(const Vector2& position)>&& slot) {
-            return EventConnection{*this, onPress(node, Utility::move(slot))};
+        EventConnection onPressScoped(NodeHandle node, Containers::Function<void(const Vector2& position)>&& function) {
+            return EventConnection{*this, onPress(node, Utility::move(function))};
         }
 
         /**
          * @brief Connect to a finger / pen tap or left mouse release
+         * @return New data handle
          *
-         * The @p slot, optionally receiving a node-relative position of the
-         * release, is called when a @ref Pointer::MouseLeft, primary
+         * The @p function, optionally receiving a node-relative position of
+         * the release, is called when a @ref Pointer::MouseLeft, primary
          * @ref Pointer::Finger or @ref Pointer::Pen release happens on the
          * @p node, and it isn't a fallthrough event from a child node. Expects
-         * that the @p slot is not @cpp nullptr @ce.
+         * that the @p function is not @cpp nullptr @ce.
          *
          * Use @ref onTapOrClick() for a combined press and release. The
          * returned @ref DataHandle is automatically removed once @p node or
          * any of its parents is removed, it's the caller responsibility to
-         * ensure it doesn't outlive the state captured in the @p slot. See
+         * ensure it doesn't outlive the state captured in the @p function. See
          * @ref onReleaseScoped() for a scoped alternative.
          * @see @ref Ui-EventLayer-tap-click-press-release,
          *      @ref PointerEvent::isPrimary(),
          *      @ref PointerEvent::isFallthrough()
          */
-        DataHandle onRelease(NodeHandle node, Containers::Function<void()>&& slot);
+        DataHandle onRelease(NodeHandle node, Containers::Function<void()>&& function);
         /** @overload */
-        DataHandle onRelease(NodeHandle node, Containers::Function<void(const Vector2& position)>&& slot);
+        DataHandle onRelease(NodeHandle node, Containers::Function<void(const Vector2& position)>&& function);
 
         /**
          * @brief Scoped connection to a finger / pen tap or left mouse release
+         * @return Event connection instance
          *
          * Compared to @ref onRelease() the connection is removed automatically
          * when the returned @ref EventConnection gets destroyed.
          * @see @ref Ui-EventLayer-create
          */
-        EventConnection onReleaseScoped(NodeHandle node, Containers::Function<void()>&& slot) {
-            return EventConnection{*this, onRelease(node, Utility::move(slot))};
+        EventConnection onReleaseScoped(NodeHandle node, Containers::Function<void()>&& function) {
+            return EventConnection{*this, onRelease(node, Utility::move(function))};
         }
         /** @overload */
-        EventConnection onReleaseScoped(NodeHandle node, Containers::Function<void(const Vector2& position)>&& slot) {
-            return EventConnection{*this, onRelease(node, Utility::move(slot))};
+        EventConnection onReleaseScoped(NodeHandle node, Containers::Function<void(const Vector2& position)>&& function) {
+            return EventConnection{*this, onRelease(node, Utility::move(function))};
         }
 
         /**
          * @brief Connect to a finger / pen tap or left mouse click
+         * @return New data handle
          *
-         * The @p slot, optionally receiving a node-relative position of the
-         * tap or click, is called when a @ref Pointer::MouseLeft, primary
+         * The @p function, optionally receiving a node-relative position of
+         * the tap or click, is called when a @ref Pointer::MouseLeft, primary
          * @ref Pointer::Finger or @ref Pointer::Pen release happens on the
          * @p node after a previous primary pointer press, and it isn't a
          * fallthrough event from a child node. If event capture is disabled by
-         * any event handler on given node, the slot is called only if the
+         * any event handler on given node, the function is called only if the
          * pointer didn't leave the node area between a press and a release.
-         * Expects that the @p slot is not @cpp nullptr @ce.
+         * Expects that the @p function is not @cpp nullptr @ce.
          *
          * Use @ref onRightClick() and @ref onMiddleClick() to handle
          * @ref Pointer::MouseRight and @ref Pointer::MouseMiddle clicks. The
          * returned @ref DataHandle is automatically removed once @p node or
          * any of its parents is removed, it's the caller responsibility to
-         * ensure it doesn't outlive the state captured in the @p slot. See
+         * ensure it doesn't outlive the state captured in the @p function. See
          * @ref onTapOrClickScoped() for a scoped alternative.
          * @see @ref Ui-EventLayer-tap-click-press-release,
          *      @ref PointerEvent::isPrimary(),
          *      @ref PointerEvent::isFallthrough()
          */
-        DataHandle onTapOrClick(NodeHandle node, Containers::Function<void()>&& slot);
+        DataHandle onTapOrClick(NodeHandle node, Containers::Function<void()>&& function);
         /** @overload */
-        DataHandle onTapOrClick(NodeHandle node, Containers::Function<void(const Vector2& position)>&& slot);
+        DataHandle onTapOrClick(NodeHandle node, Containers::Function<void(const Vector2& position)>&& function);
 
         /**
          * @brief Scoped connection to a finger / pen tap or left mouse click
+         * @return Event connection instance
          *
          * Compared to @ref onTapOrClick() the connection is removed
          * automatically when the returned @ref EventConnection gets destroyed.
          * @see @ref Ui-EventLayer-create
          */
-        EventConnection onTapOrClickScoped(NodeHandle node, Containers::Function<void()>&& slot) {
-            return EventConnection{*this, onTapOrClick(node, Utility::move(slot))};
+        EventConnection onTapOrClickScoped(NodeHandle node, Containers::Function<void()>&& function) {
+            return EventConnection{*this, onTapOrClick(node, Utility::move(function))};
         }
         /** @overload */
-        EventConnection onTapOrClickScoped(NodeHandle node, Containers::Function<void(const Vector2& position)>&& slot) {
-            return EventConnection{*this, onTapOrClick(node, Utility::move(slot))};
+        EventConnection onTapOrClickScoped(NodeHandle node, Containers::Function<void(const Vector2& position)>&& function) {
+            return EventConnection{*this, onTapOrClick(node, Utility::move(function))};
         }
 
         /**
          * @brief Connect to a middle mouse click
+         * @return New data handle
          *
-         * The @p slot, optionally receiving a node-relative position of the
-         * click, is called when a @ref Pointer::MouseMiddle release happens on
-         * the @p node after a previous pointer press, and it isn't a
-         * fallthrough event from a child node. If event capture is disabled by
-         * any event handler on given node, the slot is called only if the
-         * pointer didn't leave the node area between a press and a release.
-         * Expects that the @p slot is not @cpp nullptr @ce.
+         * The @p function, optionally receiving a node-relative position of
+         * the click, is called when a @ref Pointer::MouseMiddle release
+         * happens on the @p node after a previous pointer press, and it isn't
+         * a fallthrough event from a child node. If event capture is disabled
+         * by any event handler on given node, the function is called only if
+         * the pointer didn't leave the node area between a press and a
+         * release. Expects that the @p function is not @cpp nullptr @ce.
          *
          * Use @ref onTapOrClick() and @ref onRightClick() to handle
          * @ref Pointer::MouseLeft / @ref Pointer::Finger / @ref Pointer::Pen
          * and @ref Pointer::MouseRight clicks. The returned @ref DataHandle is
          * automatically removed once @p node or any of its parents is removed,
          * it's the caller responsibility to ensure it doesn't outlive the
-         * state captured in the @p slot. See @ref onMiddleClickScoped() for a
-         * scoped alternative.
+         * state captured in the @p function. See @ref onMiddleClickScoped()
+         * for a scoped alternative.
          * @see @ref Ui-EventLayer-tap-click-press-release,
          *      @ref PointerEvent::isFallthrough()
          */
-        DataHandle onMiddleClick(NodeHandle node, Containers::Function<void()>&& slot);
+        DataHandle onMiddleClick(NodeHandle node, Containers::Function<void()>&& function);
         /** @overload */
-        DataHandle onMiddleClick(NodeHandle node, Containers::Function<void(const Vector2& position)>&& slot);
+        DataHandle onMiddleClick(NodeHandle node, Containers::Function<void(const Vector2& position)>&& function);
 
         /**
          * @brief Scoped connection to a middle mouse click
+         * @return Event connection instance
          *
          * Compared to @ref onMiddleClick() the connection is removed
          * automatically when the returned @ref EventConnection gets destroyed.
          * @see @ref Ui-EventLayer-create
          */
-        EventConnection onMiddleClickScoped(NodeHandle node, Containers::Function<void()>&& slot) {
-            return EventConnection{*this, onMiddleClick(node, Utility::move(slot))};
+        EventConnection onMiddleClickScoped(NodeHandle node, Containers::Function<void()>&& function) {
+            return EventConnection{*this, onMiddleClick(node, Utility::move(function))};
         }
         /** @overload */
-        EventConnection onMiddleClickScoped(NodeHandle node, Containers::Function<void(const Vector2& position)>&& slot) {
-            return EventConnection{*this, onMiddleClick(node, Utility::move(slot))};
+        EventConnection onMiddleClickScoped(NodeHandle node, Containers::Function<void(const Vector2& position)>&& function) {
+            return EventConnection{*this, onMiddleClick(node, Utility::move(function))};
         }
 
         /**
          * @brief Connect to a right mouse click
+         * @return New data handle
          *
-         * The @p slot, optionally receiving a node-relative position of the
-         * click, is called when a @ref Pointer::MouseRight release happens on
-         * the @p node after a previous pointer press, and it isn't a
+         * The @p function, optionally receiving a node-relative position of
+         * the click, is called when a @ref Pointer::MouseRight release happens
+         * on the @p node after a previous pointer press, and it isn't a
          * fallthrough event from a child node. If event capture is disabled by
-         * any event handler on given node, the slot is called only if the
+         * any event handler on given node, the function is called only if the
          * pointer didn't leave the node area between a press and a release.
-         * Expects that the @p slot is not @cpp nullptr @ce.
+         * Expects that the @p function is not @cpp nullptr @ce.
          *
          * Use @ref onTapOrClick() and @ref onRightClick() to handle
          * @ref Pointer::MouseLeft / @ref Pointer::Finger / @ref Pointer::Pen
          * and @ref Pointer::MouseRight clicks. The returned @ref DataHandle is
          * automatically removed once @p node or any of its parents is removed,
          * it's the caller responsibility to ensure it doesn't outlive the
-         * state captured in the @p slot. See @ref onMiddleClickScoped() for a
-         * scoped alternative.
+         * state captured in the @p function. See @ref onMiddleClickScoped()
+         * for a scoped alternative.
          * @see @ref Ui-EventLayer-tap-click-press-release,
          *      @ref PointerEvent::isFallthrough()
          */
-        DataHandle onRightClick(NodeHandle node, Containers::Function<void()>&& slot);
+        DataHandle onRightClick(NodeHandle node, Containers::Function<void()>&& function);
         /** @overload */
-        DataHandle onRightClick(NodeHandle node, Containers::Function<void(const Vector2& position)>&& slot);
+        DataHandle onRightClick(NodeHandle node, Containers::Function<void(const Vector2& position)>&& function);
 
         /**
          * @brief Scoped connection to a right mouse click
+         * @return Event connection instance
          *
          * Compared to @ref onRightClick() the connection is removed
          * automatically when the returned @ref EventConnection gets destroyed.
          * @see @ref Ui-EventLayer-create
          */
-        EventConnection onRightClickScoped(NodeHandle node, Containers::Function<void()>&& slot) {
-            return EventConnection{*this, onRightClick(node, Utility::move(slot))};
+        EventConnection onRightClickScoped(NodeHandle node, Containers::Function<void()>&& function) {
+            return EventConnection{*this, onRightClick(node, Utility::move(function))};
         }
         /** @overload */
-        EventConnection onRightClickScoped(NodeHandle node, Containers::Function<void(const Vector2& position)>&& slot) {
-            return EventConnection{*this, onRightClick(node, Utility::move(slot))};
+        EventConnection onRightClickScoped(NodeHandle node, Containers::Function<void(const Vector2& position)>&& function) {
+            return EventConnection{*this, onRightClick(node, Utility::move(function))};
         }
 
         /**
          * @brief Connect to a drag
+         * @return New data handle
          *
-         * The @p slot, receiving the movement delta and optionally also a
+         * The @p function, receiving the movement delta and optionally also a
          * node-relative position at which the move happened, is called when a
          * @ref Pointer::MouseLeft, primary @ref Pointer::Finger or
-         * @ref Pointer::Pen move happens on the @p node. To prevent the slot
-         * from being triggered by drags that originated outside of @p node,
-         * it's called only if the move event is captured on given node.
-         * Expects that the @p slot is not @cpp nullptr @ce.
+         * @ref Pointer::Pen move happens on the @p node. To prevent the
+         * function from being triggered by drags that originated outside of
+         * @p node, it's called only if the move event is captured on given
+         * node. Expects that the @p function is not @cpp nullptr @ce.
          *
          * See @ref Ui-EventLayer-drag-to-scroll for additional considerations
          * when implementing scrollable views. In particular, if the event is
-         * originating on given node, the @p slot gets called immediately. If
-         * it's a fallthrough event from a child node, the @p slot gets called
-         * after the distance reaches the threshold configurable with
+         * originating on given node, the @p function gets called immediately.
+         * If it's a fallthrough event from a child node, the @p function gets
+         * called after the distance reaches the threshold configurable with
          * @ref setDragThreshold(), at which point which the event capture is
          * transferred to @p node.
          *
@@ -636,36 +646,38 @@ class MAGNUM_UI_EXPORT EventLayer: public AbstractLayer {
          *
          * The returned @ref DataHandle is automatically removed once @p node
          * or any of its parents is removed, it's the caller responsibility to
-         * ensure it doesn't outlive the state captured in the @p slot. See
+         * ensure it doesn't outlive the state captured in the @p function. See
          * @ref onDragScoped() for a scoped alternative.
          * @see @ref Ui-EventLayer-drag, @ref PointerMoveEvent::isPrimary(),
          *      @ref PointerMoveEvent::isFallthrough()
          */
-        DataHandle onDrag(NodeHandle node, Containers::Function<void(const Vector2& offset)>&& slot);
+        DataHandle onDrag(NodeHandle node, Containers::Function<void(const Vector2& offset)>&& function);
         /** @overload */
-        DataHandle onDrag(NodeHandle node, Containers::Function<void(const Vector2& position, const Vector2& offset)>&& slot);
+        DataHandle onDrag(NodeHandle node, Containers::Function<void(const Vector2& position, const Vector2& offset)>&& function);
 
         /**
          * @brief Scoped connection to a drag
+         * @return Event connection instance
          *
          * Compared to @ref onDrag() the connection is removed automatically
          * when the returned @ref EventConnection gets destroyed.
          * @see @ref Ui-EventLayer-create
          */
-        EventConnection onDragScoped(NodeHandle node, Containers::Function<void(const Vector2& offset)>&& slot) {
-            return EventConnection{*this, onDrag(node, Utility::move(slot))};
+        EventConnection onDragScoped(NodeHandle node, Containers::Function<void(const Vector2& offset)>&& function) {
+            return EventConnection{*this, onDrag(node, Utility::move(function))};
         }
         /** @overload */
-        EventConnection onDragScoped(NodeHandle node, Containers::Function<void(const Vector2& position, const Vector2& offset)>&& slot) {
-            return EventConnection{*this, onDrag(node, Utility::move(slot))};
+        EventConnection onDragScoped(NodeHandle node, Containers::Function<void(const Vector2& position, const Vector2& offset)>&& function) {
+            return EventConnection{*this, onDrag(node, Utility::move(function))};
         }
 
         /**
          * @brief Connect to a scroll
+         * @return New data handle
          *
-         * The @p slot, receiving the scroll offset and optionally also a
+         * The @p function, receiving the scroll offset and optionally also a
          * node-relative position at which the scroll happened, is called when
-         * a scroll happens on the @p node. Expects that the @p slot is not
+         * a scroll happens on the @p node. Expects that the @p function is not
          * @cpp nullptr @ce.
          *
          * Note that unlike @ref onDrag(), the offset is not in UI units, but
@@ -676,31 +688,33 @@ class MAGNUM_UI_EXPORT EventLayer: public AbstractLayer {
          *
          * The returned @ref DataHandle is automatically removed once @p node
          * or any of its parents is removed, it's the caller responsibility to
-         * ensure it doesn't outlive the state captured in the @p slot. See
+         * ensure it doesn't outlive the state captured in the @p function. See
          * @ref onScrollScoped() for a scoped alternative.
          * @see @ref Ui-EventLayer-scroll
          */
-        DataHandle onScroll(NodeHandle node, Containers::Function<void(const Vector2& offset)>&& slot);
+        DataHandle onScroll(NodeHandle node, Containers::Function<void(const Vector2& offset)>&& function);
         /** @overload */
-        DataHandle onScroll(NodeHandle node, Containers::Function<void(const Vector2& position, const Vector2& offset)>&& slot);
+        DataHandle onScroll(NodeHandle node, Containers::Function<void(const Vector2& position, const Vector2& offset)>&& function);
 
         /**
          * @brief Scoped connection to a scroll
+         * @return Event connection instance
          *
          * Compared to @ref onScroll() the connection is removed automatically
          * when the returned @ref EventConnection gets destroyed.
          * @see @ref Ui-EventLayer-create
          */
-        EventConnection onScrollScoped(NodeHandle node, Containers::Function<void(const Vector2& offset)>&& slot) {
-            return EventConnection{*this, onScroll(node, Utility::move(slot))};
+        EventConnection onScrollScoped(NodeHandle node, Containers::Function<void(const Vector2& offset)>&& function) {
+            return EventConnection{*this, onScroll(node, Utility::move(function))};
         }
         /** @overload */
-        EventConnection onScrollScoped(NodeHandle node, Containers::Function<void(const Vector2& position, const Vector2& offset)>&& slot) {
-            return EventConnection{*this, onScroll(node, Utility::move(slot))};
+        EventConnection onScrollScoped(NodeHandle node, Containers::Function<void(const Vector2& position, const Vector2& offset)>&& function) {
+            return EventConnection{*this, onScroll(node, Utility::move(function))};
         }
 
         /**
          * @brief Connect to a drag or scroll
+         * @return New data handle
          *
          * Combines @ref onDrag() and @ref onScroll() in a single event
          * handler, meant to be used to implement scrollable views that work
@@ -708,48 +722,50 @@ class MAGNUM_UI_EXPORT EventLayer: public AbstractLayer {
          * for more information, especially related to pointer event
          * fallthrough.
          *
-         * If the @p slot is called in response to a scroll, the scroll offset
-         * is multiplied with a factor configurable with
+         * If the @p function is called in response to a scroll, the scroll
+         * offset is multiplied with a factor configurable with
          * @ref setScrollStepDistance() to get an equivalent of a pointer drag
          * distance. You can specify a different horizontal and vertical value,
          * if needed.
          *
          * The returned @ref DataHandle is automatically removed once @p node
          * or any of its parents is removed, it's the caller responsibility to
-         * ensure it doesn't outlive the state captured in the @p slot. See
+         * ensure it doesn't outlive the state captured in the @p function. See
          * @ref onDragOrScrollScoped() for a scoped alternative.
          * @see @ref Ui-EventLayer-scroll
          */
-        DataHandle onDragOrScroll(NodeHandle node, Containers::Function<void(const Vector2& offset)>&& slot);
+        DataHandle onDragOrScroll(NodeHandle node, Containers::Function<void(const Vector2& offset)>&& function);
         /** @overload */
-        DataHandle onDragOrScroll(NodeHandle node, Containers::Function<void(const Vector2& position, const Vector2& offset)>&& slot);
+        DataHandle onDragOrScroll(NodeHandle node, Containers::Function<void(const Vector2& position, const Vector2& offset)>&& function);
 
         /**
          * @brief Scoped connection to a drag or scroll
+         * @return Event connection instance
          *
          * Compared to @ref onDragOrScroll() the connection is removed automatically
          * when the returned @ref EventConnection gets destroyed.
          * @see @ref Ui-EventLayer-create
          */
-        EventConnection onDragOrScrollScoped(NodeHandle node, Containers::Function<void(const Vector2& offset)>&& slot) {
-            return EventConnection{*this, onDragOrScroll(node, Utility::move(slot))};
+        EventConnection onDragOrScrollScoped(NodeHandle node, Containers::Function<void(const Vector2& offset)>&& function) {
+            return EventConnection{*this, onDragOrScroll(node, Utility::move(function))};
         }
         /** @overload */
-        EventConnection onDragOrScrollScoped(NodeHandle node, Containers::Function<void(const Vector2& position, const Vector2& offset)>&& slot) {
-            return EventConnection{*this, onDragOrScroll(node, Utility::move(slot))};
+        EventConnection onDragOrScrollScoped(NodeHandle node, Containers::Function<void(const Vector2& position, const Vector2& offset)>&& function) {
+            return EventConnection{*this, onDragOrScroll(node, Utility::move(function))};
         }
 
         /**
          * @brief Connect to a two-finger pinch, zoom or pan gesture
+         * @return New data handle
          *
-         * The @p slot is called when two or more @ref Pointer::Finger are
+         * The @p function is called when two or more @ref Pointer::Finger are
          * pressed and move over the @p node area, and it isn't a fallthrough
          * event from a child node. It receives a node-relative centroid
          * position between the two presses, translation of the centroid
          * relative to previous state of the two fingers, their relative
          * rotation and scaling. @ref Platform::TwoFingerGesture is used
          * internally, see its documentation for more information. Expects that
-         * the @p slot is not @cpp nullptr @ce.
+         * the @p function is not @cpp nullptr @ce.
          *
          * By default, the gesture is tracked as long as the primary finger is
          * pressed, even if the fingers are outside of the node area. If
@@ -767,131 +783,140 @@ class MAGNUM_UI_EXPORT EventLayer: public AbstractLayer {
          * The returned @ref DataHandle is automatically removed once
          * @p node or any of its parents is removed, it's the caller
          * responsibility to ensure it doesn't outlive the state captured in
-         * the @p slot. See @ref onPinchScoped() for a scoped alternative.
+         * the @p function. See @ref onPinchScoped() for a scoped alternative.
          * @see @ref Ui-EventLayer-pinch,
          *      @ref PointerMoveEvent::isFallthrough()
          */
-        DataHandle onPinch(NodeHandle node, Containers::Function<void(const Vector2& position, const Vector2& relativeTranslation, const Complex& relativeRotation, Float relativeScaling)>&& slot);
+        DataHandle onPinch(NodeHandle node, Containers::Function<void(const Vector2& position, const Vector2& relativeTranslation, const Complex& relativeRotation, Float relativeScaling)>&& function);
 
         /**
          * @brief Scoped connection to a two-finger pinch, zoom or pan gesture
+         * @return Event connection instance
          *
          * Compared to @ref onPinch() the connection is removed automatically
          * when the returned @ref EventConnection gets destroyed.
          * @see @ref Ui-EventLayer-create
          */
-        EventConnection onPinchScoped(NodeHandle node, Containers::Function<void(const Vector2& position, const Vector2& relativeTranslation, const Complex& relativeRotation, Float relativeScaling)>&& slot) {
-            return EventConnection{*this, onPinch(node, Utility::move(slot))};
+        EventConnection onPinchScoped(NodeHandle node, Containers::Function<void(const Vector2& position, const Vector2& relativeTranslation, const Complex& relativeRotation, Float relativeScaling)>&& function) {
+            return EventConnection{*this, onPinch(node, Utility::move(function))};
         }
 
         /**
          * @brief Connect to a pointer enter
+         * @return New data handle
          *
-         * The @p slot is called when a primary pointer moves over the
+         * The @p function is called when a primary pointer moves over the
          * @p node area, and it isn't a fallthrough event from a child node.
-         * Expects that the @p slot is not @cpp nullptr @ce.
+         * Expects that the @p function is not @cpp nullptr @ce.
          *
          * Use @ref onLeave() to hadle the opposite case. The returned
          * @ref DataHandle is automatically removed once @p node or any of its
          * parents is removed, it's the caller responsibility to ensure it
-         * doesn't outlive the state captured in the @p slot. See
+         * doesn't outlive the state captured in the @p function. See
          * @ref onEnterScoped() for a scoped alternative.
          * @see @ref Ui-EventLayer-press-release-enter-leave-focus-blur,
          *      @ref PointerMoveEvent::isPrimary(),
          *      @ref PointerMoveEvent::isFallthrough()
          */
-        DataHandle onEnter(NodeHandle node, Containers::Function<void()>&& slot);
+        DataHandle onEnter(NodeHandle node, Containers::Function<void()>&& function);
 
         /**
          * @brief Scoped connection to a pointer enter
+         * @return Event connection instance
          *
          * Compared to @ref onEnter() the connection is removed automatically
          * when the returned @ref EventConnection gets destroyed.
          * @see @ref Ui-EventLayer-create
          */
-        EventConnection onEnterScoped(NodeHandle node, Containers::Function<void()>&& slot) {
-            return EventConnection{*this, onEnter(node, Utility::move(slot))};
+        EventConnection onEnterScoped(NodeHandle node, Containers::Function<void()>&& function) {
+            return EventConnection{*this, onEnter(node, Utility::move(function))};
         }
 
         /**
          * @brief Connect to a pointer leave
+         * @return New data handle
          *
-         * The @p slot is called when a primary pointer moves out of the
+         * The @p function is called when a primary pointer moves out of the
          * @p node area, and it isn't a fallthrough event from a child node.
-         * Expects that the @p slot is not @cpp nullptr @ce.
+         * Expects that the @p function is not @cpp nullptr @ce.
          *
          * Use @ref onEnter() to hadle the opposite case. The returned
          * @ref DataHandle is automatically removed once @p node or any of its
          * parents is removed, it's the caller responsibility to ensure it
-         * doesn't outlive the state captured in the @p slot. See
+         * doesn't outlive the state captured in the @p function. See
          * @ref onLeaveScoped() for a scoped alternative.
          * @see @ref Ui-EventLayer-press-release-enter-leave-focus-blur,
          *      @ref PointerMoveEvent::isPrimary(),
          *      @ref PointerMoveEvent::isFallthrough()
          */
-        DataHandle onLeave(NodeHandle node, Containers::Function<void()>&& slot);
+        DataHandle onLeave(NodeHandle node, Containers::Function<void()>&& function);
 
         /**
          * @brief Scoped connection to a pointer leave
+         * @return Event connection instance
          *
          * Compared to @ref onLeave() the connection is removed automatically
          * when the returned @ref EventConnection gets destroyed.
          * @see @ref Ui-EventLayer-create
          */
-        EventConnection onLeaveScoped(NodeHandle node, Containers::Function<void()>&& slot) {
-            return EventConnection{*this, onLeave(node, Utility::move(slot))};
+        EventConnection onLeaveScoped(NodeHandle node, Containers::Function<void()>&& function) {
+            return EventConnection{*this, onLeave(node, Utility::move(function))};
         }
 
         /**
          * @brief Connect to a focus
+         * @return New data handle
          *
-         * The @p slot is called when a @p node is focused. Expects that the
-         * @p slot is not @cpp nullptr @ce.
+         * The @p function is called when a @p node is focused. Expects that
+         * the @p function is not @cpp nullptr @ce.
          *
          * Use @ref onBlur() to hadle the opposite case. The returned
          * @ref DataHandle is automatically removed once @p node or any of its
          * parents is removed, it's the caller responsibility to ensure it
-         * doesn't outlive the state captured in the @p slot. See
+         * doesn't outlive the state captured in the @p function. See
          * @ref onFocusScoped() for a scoped alternative.
          * @see @ref Ui-EventLayer-press-release-enter-leave-focus-blur
          */
-        DataHandle onFocus(NodeHandle node, Containers::Function<void()>&& slot);
+        DataHandle onFocus(NodeHandle node, Containers::Function<void()>&& function);
 
         /**
          * @brief Scoped connection to a focus
+         * @return Event connection instance
          *
          * Compared to @ref onFocus() the connection is removed automatically
          * when the returned @ref EventConnection gets destroyed.
          * @see @ref Ui-EventLayer-create
          */
-        EventConnection onFocusScoped(NodeHandle node, Containers::Function<void()>&& slot) {
-            return EventConnection{*this, onFocus(node, Utility::move(slot))};
+        EventConnection onFocusScoped(NodeHandle node, Containers::Function<void()>&& callback) {
+            return EventConnection{*this, onFocus(node, Utility::move(callback))};
         }
 
         /**
          * @brief Connect to a blur
+         * @return New data handle
          *
-         * The @p slot is called when the @p node is blurred. Expects that the
-         * @p slot is not @cpp nullptr @ce.
+         * The @p function is called when the @p node is blurred. Expects that
+         * the @p function is not @cpp nullptr @ce.
          *
          * Use @ref onFocus() to hadle the opposite case. The returned
          * @ref DataHandle is automatically removed once @p node or any of its
-         * parents is removed, it's the caller responsibility to ensure it
-         * doesn't outlive the state captured in the @p slot. See
+         * parents is removed, it's the caller responsibility t oensure it
+         * doesn't outlive the state captured in the @p function. See
          * @ref onBlurScoped() for a scoped alternative.
          * @see @ref Ui-EventLayer-press-release-enter-leave-focus-blur
          */
-        DataHandle onBlur(NodeHandle node, Containers::Function<void()>&& slot);
+        DataHandle onBlur(NodeHandle node, Containers::Function<void()>&& function);
 
         /**
          * @brief Scoped connection to a pointer leave
+         * @return Event connection instance
          *
          * Compared to @ref onBlur() the connection is removed automatically
          * when the returned @ref EventConnection gets destroyed.
          * @see @ref Ui-EventLayer-create
          */
-        EventConnection onBlurScoped(NodeHandle node, Containers::Function<void()>&& slot) {
-            return EventConnection{*this, onBlur(node, Utility::move(slot))};
+        EventConnection onBlurScoped(NodeHandle node, Containers::Function<void()>&& callback) {
+            return EventConnection{*this, onBlur(node, Utility::move(callback))};
         }
 
         /**
@@ -949,7 +974,7 @@ class MAGNUM_UI_EXPORT EventLayer: public AbstractLayer {
         friend EventConnection;
 
         /* Used internally from all templated create() overloads below */
-        MAGNUM_UI_LOCAL DataHandle create(NodeHandle node, Implementation::EventType eventType, Containers::FunctionData&& slot, void(*call)());
+        MAGNUM_UI_LOCAL DataHandle create(NodeHandle node, Implementation::EventType eventType, Containers::FunctionData&& function, void(*call)());
         MAGNUM_UI_LOCAL void removeInternal(UnsignedInt id);
 
         MAGNUM_UI_LOCAL LayerFeatures doFeatures() const override;
