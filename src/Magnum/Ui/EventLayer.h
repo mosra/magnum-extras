@@ -32,6 +32,7 @@
  */
 
 #include <Corrade/Containers/Reference.h>
+#include <Corrade/Utility/Macros.h> /* CORRADE_NODISCARD() */
 
 #include "Magnum/Ui/AbstractLayer.h"
 
@@ -443,11 +444,11 @@ class MAGNUM_UI_EXPORT EventLayer: public AbstractLayer {
          * when the returned @ref EventConnection gets destroyed.
          * @see @ref Ui-EventLayer-create
          */
-        EventConnection onPressScoped(NodeHandle node, Containers::Function<void()>&& function) {
+        CORRADE_NODISCARD("the call is removed when the returned EventConnection is destructed") EventConnection onPressScoped(NodeHandle node, Containers::Function<void()>&& function) {
             return EventConnection{*this, onPress(node, Utility::move(function))};
         }
         /** @overload */
-        EventConnection onPressScoped(NodeHandle node, Containers::Function<void(const Vector2& position)>&& function) {
+        CORRADE_NODISCARD("the call is removed when the returned EventConnection is destructed") EventConnection onPressScoped(NodeHandle node, Containers::Function<void(const Vector2& position)>&& function) {
             return EventConnection{*this, onPress(node, Utility::move(function))};
         }
 
@@ -482,11 +483,11 @@ class MAGNUM_UI_EXPORT EventLayer: public AbstractLayer {
          * when the returned @ref EventConnection gets destroyed.
          * @see @ref Ui-EventLayer-create
          */
-        EventConnection onReleaseScoped(NodeHandle node, Containers::Function<void()>&& function) {
+        CORRADE_NODISCARD("the call is removed when the returned EventConnection is destructed") EventConnection onReleaseScoped(NodeHandle node, Containers::Function<void()>&& function) {
             return EventConnection{*this, onRelease(node, Utility::move(function))};
         }
         /** @overload */
-        EventConnection onReleaseScoped(NodeHandle node, Containers::Function<void(const Vector2& position)>&& function) {
+        CORRADE_NODISCARD("the call is removed when the returned EventConnection is destructed") EventConnection onReleaseScoped(NodeHandle node, Containers::Function<void(const Vector2& position)>&& function) {
             return EventConnection{*this, onRelease(node, Utility::move(function))};
         }
 
@@ -525,11 +526,11 @@ class MAGNUM_UI_EXPORT EventLayer: public AbstractLayer {
          * automatically when the returned @ref EventConnection gets destroyed.
          * @see @ref Ui-EventLayer-create
          */
-        EventConnection onTapOrClickScoped(NodeHandle node, Containers::Function<void()>&& function) {
+        CORRADE_NODISCARD("the call is removed when the returned EventConnection is destructed") EventConnection onTapOrClickScoped(NodeHandle node, Containers::Function<void()>&& function) {
             return EventConnection{*this, onTapOrClick(node, Utility::move(function))};
         }
         /** @overload */
-        EventConnection onTapOrClickScoped(NodeHandle node, Containers::Function<void(const Vector2& position)>&& function) {
+        CORRADE_NODISCARD("the call is removed when the returned EventConnection is destructed") EventConnection onTapOrClickScoped(NodeHandle node, Containers::Function<void(const Vector2& position)>&& function) {
             return EventConnection{*this, onTapOrClick(node, Utility::move(function))};
         }
 
@@ -567,11 +568,11 @@ class MAGNUM_UI_EXPORT EventLayer: public AbstractLayer {
          * automatically when the returned @ref EventConnection gets destroyed.
          * @see @ref Ui-EventLayer-create
          */
-        EventConnection onMiddleClickScoped(NodeHandle node, Containers::Function<void()>&& function) {
+        CORRADE_NODISCARD("the call is removed when the returned EventConnection is destructed") EventConnection onMiddleClickScoped(NodeHandle node, Containers::Function<void()>&& function) {
             return EventConnection{*this, onMiddleClick(node, Utility::move(function))};
         }
         /** @overload */
-        EventConnection onMiddleClickScoped(NodeHandle node, Containers::Function<void(const Vector2& position)>&& function) {
+        CORRADE_NODISCARD("the call is removed when the returned EventConnection is destructed") EventConnection onMiddleClickScoped(NodeHandle node, Containers::Function<void(const Vector2& position)>&& function) {
             return EventConnection{*this, onMiddleClick(node, Utility::move(function))};
         }
 
@@ -609,11 +610,11 @@ class MAGNUM_UI_EXPORT EventLayer: public AbstractLayer {
          * automatically when the returned @ref EventConnection gets destroyed.
          * @see @ref Ui-EventLayer-create
          */
-        EventConnection onRightClickScoped(NodeHandle node, Containers::Function<void()>&& function) {
+        CORRADE_NODISCARD("the call is removed when the returned EventConnection is destructed") EventConnection onRightClickScoped(NodeHandle node, Containers::Function<void()>&& function) {
             return EventConnection{*this, onRightClick(node, Utility::move(function))};
         }
         /** @overload */
-        EventConnection onRightClickScoped(NodeHandle node, Containers::Function<void(const Vector2& position)>&& function) {
+        CORRADE_NODISCARD("the call is removed when the returned EventConnection is destructed") EventConnection onRightClickScoped(NodeHandle node, Containers::Function<void(const Vector2& position)>&& function) {
             return EventConnection{*this, onRightClick(node, Utility::move(function))};
         }
 
@@ -663,11 +664,11 @@ class MAGNUM_UI_EXPORT EventLayer: public AbstractLayer {
          * when the returned @ref EventConnection gets destroyed.
          * @see @ref Ui-EventLayer-create
          */
-        EventConnection onDragScoped(NodeHandle node, Containers::Function<void(const Vector2& offset)>&& function) {
+        CORRADE_NODISCARD("the call is removed when the returned EventConnection is destructed") EventConnection onDragScoped(NodeHandle node, Containers::Function<void(const Vector2& offset)>&& function) {
             return EventConnection{*this, onDrag(node, Utility::move(function))};
         }
         /** @overload */
-        EventConnection onDragScoped(NodeHandle node, Containers::Function<void(const Vector2& position, const Vector2& offset)>&& function) {
+        CORRADE_NODISCARD("the call is removed when the returned EventConnection is destructed") EventConnection onDragScoped(NodeHandle node, Containers::Function<void(const Vector2& position, const Vector2& offset)>&& function) {
             return EventConnection{*this, onDrag(node, Utility::move(function))};
         }
 
@@ -704,11 +705,11 @@ class MAGNUM_UI_EXPORT EventLayer: public AbstractLayer {
          * when the returned @ref EventConnection gets destroyed.
          * @see @ref Ui-EventLayer-create
          */
-        EventConnection onScrollScoped(NodeHandle node, Containers::Function<void(const Vector2& offset)>&& function) {
+        CORRADE_NODISCARD("the call is removed when the returned EventConnection is destructed") EventConnection onScrollScoped(NodeHandle node, Containers::Function<void(const Vector2& offset)>&& function) {
             return EventConnection{*this, onScroll(node, Utility::move(function))};
         }
         /** @overload */
-        EventConnection onScrollScoped(NodeHandle node, Containers::Function<void(const Vector2& position, const Vector2& offset)>&& function) {
+        CORRADE_NODISCARD("the call is removed when the returned EventConnection is destructed") EventConnection onScrollScoped(NodeHandle node, Containers::Function<void(const Vector2& position, const Vector2& offset)>&& function) {
             return EventConnection{*this, onScroll(node, Utility::move(function))};
         }
 
@@ -746,11 +747,11 @@ class MAGNUM_UI_EXPORT EventLayer: public AbstractLayer {
          * when the returned @ref EventConnection gets destroyed.
          * @see @ref Ui-EventLayer-create
          */
-        EventConnection onDragOrScrollScoped(NodeHandle node, Containers::Function<void(const Vector2& offset)>&& function) {
+        CORRADE_NODISCARD("the call is removed when the returned EventConnection is destructed") EventConnection onDragOrScrollScoped(NodeHandle node, Containers::Function<void(const Vector2& offset)>&& function) {
             return EventConnection{*this, onDragOrScroll(node, Utility::move(function))};
         }
         /** @overload */
-        EventConnection onDragOrScrollScoped(NodeHandle node, Containers::Function<void(const Vector2& position, const Vector2& offset)>&& function) {
+        CORRADE_NODISCARD("the call is removed when the returned EventConnection is destructed") EventConnection onDragOrScrollScoped(NodeHandle node, Containers::Function<void(const Vector2& position, const Vector2& offset)>&& function) {
             return EventConnection{*this, onDragOrScroll(node, Utility::move(function))};
         }
 
@@ -797,7 +798,7 @@ class MAGNUM_UI_EXPORT EventLayer: public AbstractLayer {
          * when the returned @ref EventConnection gets destroyed.
          * @see @ref Ui-EventLayer-create
          */
-        EventConnection onPinchScoped(NodeHandle node, Containers::Function<void(const Vector2& position, const Vector2& relativeTranslation, const Complex& relativeRotation, Float relativeScaling)>&& function) {
+        CORRADE_NODISCARD("the call is removed when the returned EventConnection is destructed") EventConnection onPinchScoped(NodeHandle node, Containers::Function<void(const Vector2& position, const Vector2& relativeTranslation, const Complex& relativeRotation, Float relativeScaling)>&& function) {
             return EventConnection{*this, onPinch(node, Utility::move(function))};
         }
 
@@ -828,7 +829,7 @@ class MAGNUM_UI_EXPORT EventLayer: public AbstractLayer {
          * when the returned @ref EventConnection gets destroyed.
          * @see @ref Ui-EventLayer-create
          */
-        EventConnection onEnterScoped(NodeHandle node, Containers::Function<void()>&& function) {
+        CORRADE_NODISCARD("the call is removed when the returned EventConnection is destructed") EventConnection onEnterScoped(NodeHandle node, Containers::Function<void()>&& function) {
             return EventConnection{*this, onEnter(node, Utility::move(function))};
         }
 
@@ -859,7 +860,7 @@ class MAGNUM_UI_EXPORT EventLayer: public AbstractLayer {
          * when the returned @ref EventConnection gets destroyed.
          * @see @ref Ui-EventLayer-create
          */
-        EventConnection onLeaveScoped(NodeHandle node, Containers::Function<void()>&& function) {
+        CORRADE_NODISCARD("the call is removed when the returned EventConnection is destructed") EventConnection onLeaveScoped(NodeHandle node, Containers::Function<void()>&& function) {
             return EventConnection{*this, onLeave(node, Utility::move(function))};
         }
 
@@ -887,7 +888,7 @@ class MAGNUM_UI_EXPORT EventLayer: public AbstractLayer {
          * when the returned @ref EventConnection gets destroyed.
          * @see @ref Ui-EventLayer-create
          */
-        EventConnection onFocusScoped(NodeHandle node, Containers::Function<void()>&& callback) {
+        CORRADE_NODISCARD("the call is removed when the returned EventConnection is destructed") EventConnection onFocusScoped(NodeHandle node, Containers::Function<void()>&& callback) {
             return EventConnection{*this, onFocus(node, Utility::move(callback))};
         }
 
@@ -915,7 +916,7 @@ class MAGNUM_UI_EXPORT EventLayer: public AbstractLayer {
          * when the returned @ref EventConnection gets destroyed.
          * @see @ref Ui-EventLayer-create
          */
-        EventConnection onBlurScoped(NodeHandle node, Containers::Function<void()>&& callback) {
+        CORRADE_NODISCARD("the call is removed when the returned EventConnection is destructed") EventConnection onBlurScoped(NodeHandle node, Containers::Function<void()>&& callback) {
             return EventConnection{*this, onBlur(node, Utility::move(callback))};
         }
 
