@@ -175,18 +175,22 @@ template<class T> void WidgetTest::constructMove() {
 
     struct Interface: WidgetTraits<T>::UserInterfaceType {
         explicit Interface(NoCreateT): WidgetTraits<T>::UserInterfaceType{NoCreate} {}
-    } ui{NoCreate};
+    } ui{NoCreate},
+      ui2{NoCreate};
     NodeHandle node = ui.createNode({}, {});
 
     T a{ui, node};
 
     T b{Utility::move(a)};
+    CORRADE_COMPARE(&b.ui(), &ui);
     CORRADE_COMPARE(b.node(), node);
     CORRADE_COMPARE(a.node(), NodeHandle::Null);
 
-    NodeHandle node2 = ui.createNode({}, {});
-    T c{ui, node2};
+    NodeHandle node2 = ui2.createNode({}, {});
+    T c{ui2, node2};
     c = Utility::move(b);
+    CORRADE_COMPARE(&c.ui(), &ui);
+    CORRADE_COMPARE(&b.ui(), &ui2);
     CORRADE_COMPARE(c.node(), node);
     CORRADE_COMPARE(b.node(), node2);
 }
