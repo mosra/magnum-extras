@@ -37,11 +37,6 @@
 
 namespace Magnum { namespace Ui {
 
-/* EventConnection converts DataHandle to LayerDataHandle by taking the lower
-   32 bits. Check that the bit counts didn't get out of sync since that
-   assumption. */
-static_assert(Implementation::LayerDataHandleIdBits + Implementation::LayerDataHandleGenerationBits == 32, "EventConnection DataHandle to LayerDataHandle conversion needs an update");
-
 namespace Implementation {
     enum class EventType: UnsignedByte {
         Enter,
@@ -107,7 +102,7 @@ struct EventLayer::State {
     UnsignedInt usedScopedConnectionCount = 0;
 };
 
-EventConnection::EventConnection(EventLayer& layer, const DataHandle data) noexcept: _layer{layer}, _data{LayerDataHandle(UnsignedLong(data))} {
+EventConnection::EventConnection(EventLayer& layer, const DataHandle data) noexcept: _layer{layer}, _data{dataHandleData(data)} {
     layer._state->data[dataHandleId(data)].hasScopedConnection = true;
     ++layer._state->usedScopedConnectionCount;
 }

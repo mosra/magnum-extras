@@ -47,8 +47,7 @@ AbstractWidget::AbstractWidget(const AbstractAnchor& anchor): _ui{&anchor.ui()},
 }
 
 AbstractWidget::AbstractWidget(AbstractWidget&& other) noexcept: _ui{other._ui}, _node{other._node} {
-    /* not using NodeHandle::Null to not need to include Handle.h */
-    other._node = NodeHandle{};
+    other._node = NodeHandle::Null;
 }
 
 AbstractWidget::~AbstractWidget() {

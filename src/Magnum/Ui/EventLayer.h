@@ -111,9 +111,6 @@ class MAGNUM_UI_EXPORT EventConnection {
     private:
         friend EventLayer;
 
-        /* LayerDataHandle is the lower 32 bits of DataHandle. Not using
-           dataHandleData() to avoid dependency on Handle.h, additionally
-           checked with a static_assert() in the source file. */
         explicit EventConnection(EventLayer& layer, DataHandle data) noexcept;
 
         Containers::Reference<EventLayer> _layer;
