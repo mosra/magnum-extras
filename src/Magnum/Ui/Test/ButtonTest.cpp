@@ -142,6 +142,9 @@ void ButtonTest::constructEmpty() {
     CORRADE_COMPARE(ui.nodeSize(button1), (Vector2{32, 16}));
     CORRADE_COMPARE(ui.nodeSize(button2), (Vector2{32, 16}));
     CORRADE_COMPARE(ui.nodeSize(button3), (Vector2{32, 16}));
+    CORRADE_VERIFY(button1.isOwned());
+    CORRADE_VERIFY(button2.isOwned());
+    CORRADE_VERIFY(button3.isOwned());
 
     CORRADE_COMPARE(button1.style(), ButtonStyle::Success);
     CORRADE_COMPARE(button2.style(), ButtonStyle::Success);
@@ -189,6 +192,8 @@ void ButtonTest::constructIconOnly() {
     CORRADE_COMPARE(ui.nodeParent(button2), rootAnchor);
     CORRADE_COMPARE(ui.nodeSize(button1), (Vector2{32, 16}));
     CORRADE_COMPARE(ui.nodeSize(button2), (Vector2{32, 16}));
+    CORRADE_VERIFY(button1.isOwned());
+    CORRADE_VERIFY(button2.isOwned());
 
     CORRADE_COMPARE(button1.style(), ButtonStyle::Danger);
     CORRADE_COMPARE(button2.style(), ButtonStyle::Danger);
@@ -230,6 +235,8 @@ void ButtonTest::constructTextOnly() {
     CORRADE_COMPARE(ui.nodeParent(button2), rootAnchor);
     CORRADE_COMPARE(ui.nodeSize(button1), (Vector2{32, 16}));
     CORRADE_COMPARE(ui.nodeSize(button2), (Vector2{32, 16}));
+    CORRADE_VERIFY(button1.isOwned());
+    CORRADE_VERIFY(button2.isOwned());
 
     CORRADE_COMPARE(button1.style(), ButtonStyle::Primary);
     CORRADE_COMPARE(button2.style(), ButtonStyle::Primary);
@@ -275,6 +282,8 @@ void ButtonTest::constructTextOnlyTextProperties() {
     CORRADE_COMPARE(ui.nodeParent(button2), rootAnchor);
     CORRADE_COMPARE(ui.nodeSize(button1), (Vector2{32, 16}));
     CORRADE_COMPARE(ui.nodeSize(button2), (Vector2{32, 16}));
+    CORRADE_VERIFY(button1.isOwned());
+    CORRADE_VERIFY(button2.isOwned());
 
     CORRADE_COMPARE(button1.style(), ButtonStyle::Info);
     CORRADE_COMPARE(button2.style(), ButtonStyle::Info);
@@ -319,6 +328,7 @@ void ButtonTest::constructIconText() {
     Button button{{rootAnchor, {}, {32, 16}}, Icon::No, "bye!", ButtonStyle::Dim};
     CORRADE_COMPARE(ui.nodeParent(button), rootAnchor);
     CORRADE_COMPARE(ui.nodeSize(button), (Vector2{32, 16}));
+    CORRADE_VERIFY(button.isOwned());
 
     CORRADE_COMPARE(button.style(), ButtonStyle::Dim);
     CORRADE_COMPARE(button.icon(), Icon::No);
@@ -351,6 +361,7 @@ void ButtonTest::constructIconTextTextProperties() {
         ButtonStyle::Warning};
     CORRADE_COMPARE(ui.nodeParent(button), rootAnchor);
     CORRADE_COMPARE(ui.nodeSize(button), (Vector2{32, 16}));
+    CORRADE_VERIFY(button.isOwned());
 
     CORRADE_COMPARE(button.style(), ButtonStyle::Warning);
     CORRADE_COMPARE(button.icon(), Icon::No);

@@ -185,7 +185,7 @@ class MAGNUM_UI_EXPORT Button: public Widget {
 
     private:
         ButtonStyle _style;
-        /* 3 bytes free */
+        /* 2 bytes free (_style fits into padding of Widget) */
         Icon _icon;
         LayerDataHandle _backgroundData, _iconData, _textData;
 };

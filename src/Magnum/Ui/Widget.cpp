@@ -35,23 +35,23 @@
 
 namespace Magnum { namespace Ui {
 
-AbstractWidget::AbstractWidget(AbstractUserInterface& ui, NodeHandle node): _ui{&ui}, _node{node} {
+AbstractWidget::AbstractWidget(AbstractUserInterface& ui, NodeHandle node): _ui{&ui}, _node{node}, _owned{true} {
     CORRADE_ASSERT(ui.isHandleValid(node),
         "Ui::AbstractWidget: invalid handle" << node, );
 }
 
-AbstractWidget::AbstractWidget(const AbstractAnchor& anchor): _ui{&anchor.ui()}, _node{anchor.node()} {
+AbstractWidget::AbstractWidget(const AbstractAnchor& anchor): _ui{&anchor.ui()}, _node{anchor.node()}, _owned{true} {
     /* No validity assertion here as the anchor takes care of that already. If
        the node got removed since the anchor was created, that's not our
        problem tho. */
 }
 
-AbstractWidget::AbstractWidget(AbstractWidget&& other) noexcept: _ui{other._ui}, _node{other._node} {
+AbstractWidget::AbstractWidget(AbstractWidget&& other) noexcept: _ui{other._ui}, _node{other._node}, _owned{other._owned} {
     other._node = NodeHandle::Null;
 }
 
 AbstractWidget::~AbstractWidget() {
-    if(_node != NodeHandle::Null) {
+    if(_owned && _node != NodeHandle::Null) {
         CORRADE_ASSERT(_ui->isHandleValid(_node),
             "Ui::AbstractWidget: invalid handle" << _node << "on destruction", );
         _ui->removeNode(_node);
@@ -59,8 +59,9 @@ AbstractWidget::~AbstractWidget() {
 }
 
 AbstractWidget& AbstractWidget::operator=(AbstractWidget&& other) noexcept {
-    Utility::swap(_ui, other._ui);
-    Utility::swap(_node, other._node);
+    Utility::swap(other._ui, _ui);
+    Utility::swap(other._node, _node);
+    Utility::swap(other._owned, _owned);
     return *this;
 }
 

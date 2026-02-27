@@ -130,6 +130,8 @@ void LabelTest::constructEmpty() {
     CORRADE_COMPARE(ui.nodeParent(label2), rootAnchor);
     CORRADE_COMPARE(ui.nodeSize(label1), (Vector2{32, 16}));
     CORRADE_COMPARE(ui.nodeSize(label2), (Vector2{32, 16}));
+    CORRADE_VERIFY(label1.isOwned());
+    CORRADE_VERIFY(label2.isOwned());
 
     CORRADE_COMPARE(label1.style(), LabelStyle::Success);
     CORRADE_COMPARE(label2.style(), LabelStyle::Success);
@@ -161,6 +163,7 @@ void LabelTest::constructIcon() {
     Label label{{rootAnchor, {}, {32, 16}}, Icon::Yes, LabelStyle::Warning};
     CORRADE_COMPARE(ui.nodeParent(label), rootAnchor);
     CORRADE_COMPARE(ui.nodeSize(label), (Vector2{32, 16}));
+    CORRADE_VERIFY(label.isOwned());
 
     CORRADE_COMPARE(label.style(), LabelStyle::Warning);
     CORRADE_COMPARE(label.icon(), Icon::Yes);
@@ -189,6 +192,7 @@ void LabelTest::constructText() {
     CORRADE_COMPARE(ui.nodeParent(label), rootAnchor);
     CORRADE_COMPARE(ui.nodeOffset(label), Vector2{});
     CORRADE_COMPARE(ui.nodeSize(label), (Vector2{32, 16}));
+    CORRADE_VERIFY(label.isOwned());
 
     CORRADE_COMPARE(label.style(), LabelStyle::Danger);
     CORRADE_COMPARE(label.icon(), Icon::None);
@@ -220,6 +224,7 @@ void LabelTest::constructTextTextProperties() {
     CORRADE_COMPARE(ui.nodeParent(label), rootAnchor);
     CORRADE_COMPARE(ui.nodeOffset(label), Vector2{});
     CORRADE_COMPARE(ui.nodeSize(label), (Vector2{32, 16}));
+    CORRADE_VERIFY(label.isOwned());
 
     CORRADE_COMPARE(label.style(), LabelStyle::Info);
     CORRADE_COMPARE(label.icon(), Icon::None);

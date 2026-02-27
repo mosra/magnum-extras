@@ -27,7 +27,7 @@
 */
 
 /** @file
- * @brief Class @ref Magnum::Ui::AbstractWidget, @ref Magnum::Ui::BasicWidget, typedef @ref Magnum::Ui::Widget
+ * @brief Class @ref Magnum::Ui::AbstractWidget, @ref Magnum::Ui::BasicWidget, typedef @ref Magnum::Ui::Widget, tag type @ref Magnum::Ui::NonOwnedT, tag @ref Magnum::Ui::NonOwned
  * @m_since_latest_{extras}
  */
 
@@ -38,6 +38,35 @@
 #include "Magnum/Ui/visibility.h"
 
 namespace Magnum { namespace Ui {
+
+/**
+@brief Non-owned construction tag type
+@m_since_latest_{extras}
+
+Used to distinguish widget construction that doesn't own the underlying
+@ref NodeHandle.
+@see @ref NonOwned,
+    @ref AbstractWidget::AbstractWidget(NonOwnedT, AbstractUserInterface&, NodeHandle),
+    @ref AbstractWidget::AbstractWidget(NonOwnedT, const AbstractAnchor&)
+*/
+struct NonOwnedT {
+    #ifndef DOXYGEN_GENERATING_OUTPUT
+    struct Init {};
+    /* Explicit constructor to avoid ambiguous calls when using {} */
+    constexpr explicit NonOwnedT(Init) {}
+    #endif
+};
+
+/**
+@brief No-owned construction tag
+@m_since_latest_{extras}
+
+Use for constructiing widgets without them owning the underlying
+@ref NodeHandle, and thus not removing it on destruction.
+@see @ref AbstractWidget::AbstractWidget(NonOwnedT, AbstractUserInterface&, NodeHandle),
+    @ref AbstractWidget::AbstractWidget(NonOwnedT, const AbstractAnchor&)
+*/
+constexpr NonOwnedT NonOwned{NonOwnedT::Init{}};
 
 /**
 @brief Base for stateful widgets
@@ -73,12 +102,30 @@ class MAGNUM_UI_EXPORT AbstractWidget {
         explicit AbstractWidget(AbstractUserInterface& ui, NodeHandle node);
 
         /**
+         * @brief Construct a non-owned widget
+         * @param ui        User interface instance
+         * @param node      Node to create the widget on
+         *
+         * The @p node is expected to be valid in @p ui. Compared to
+         * @ref AbstractWidget(AbstractUserInterface&, NodeHandle) the @p node
+         * doesn't get removed on destruction. Instead, it gets removed either
+         * once any parent node is removed, or when
+         * @ref AbstractUserInterface::removeNode() is explicitly called on
+         * @ref node().
+         * @see @ref AbstractUserInterface::isHandleValid(NodeHandle) const,
+         *      @ref isOwned()
+         */
+        explicit AbstractWidget(NonOwnedT, AbstractUserInterface& ui, NodeHandle node): AbstractWidget{ui, node} {
+            _owned = false;
+        }
+
+        /**
          * @brief Construct with no underlying node
          *
          * The instance is equivalent to a moved-out state, i.e. not usable
          * for anything. Move another instance over it to make it useful.
          */
-        explicit AbstractWidget(NoCreateT): _ui{}, _node{} {}
+        explicit AbstractWidget(NoCreateT): _ui{}, _node{}, _owned{} {}
 
         /**
          * @brief Construct from a positioning anchor
@@ -89,6 +136,22 @@ class MAGNUM_UI_EXPORT AbstractWidget {
         /* Could be by-value but then it'd need the Anchor.h include for
            BasicWidget below */
         explicit AbstractWidget(const AbstractAnchor& anchor);
+
+        /**
+         * @brief Construct a non-owned widget from a positioning anchor
+         *
+         * The @ref ui() and @ref node() is set to @ref AbstractAnchor::ui()
+         * and @ref AbstractAnchor::node(). Compared to
+         * @ref AbstractWidget(const AbstractAnchor&) the widget node doesn't
+         * get removed on destruction. Instead, it gets removed either once any
+         * parent node is removed, or when
+         * @ref AbstractUserInterface::removeNode() is explicitly called on
+         * @ref node().
+         * @see @ref isOwned()
+         */
+        explicit AbstractWidget(NonOwnedT, const AbstractAnchor& anchor): AbstractWidget{anchor} {
+            _owned = false;
+        }
 
         /** @brief Copying is not allowed */
         AbstractWidget(const AbstractWidget&) = delete;
@@ -104,10 +167,11 @@ class MAGNUM_UI_EXPORT AbstractWidget {
         /**
          * @brief Destructor
          *
-         * If @ref node() is not @ref NodeHandle::Null, expects it to be valid
-         * and calls @ref AbstractUserInterface::removeNode(). If @ref node()
-         * is @ref NodeHandle::Null, the destructor is guaranteed to not access
-         * @ref ui() in any way.
+         * If @ref isOwned() is @cpp true @ce and @ref node() is not
+         * @ref NodeHandle::Null, expects it to be valid and calls
+         * @ref AbstractUserInterface::removeNode(). If @ref isOwned() is
+         * @cpp false @ce or @ref node() is @ref NodeHandle::Null, the
+         * destructor is guaranteed to not access @ref ui() in any way.
          * @see @ref release(),
          *      @ref AbstractUserInterface::isHandleValid(NodeHandle) const
          */
@@ -118,6 +182,18 @@ class MAGNUM_UI_EXPORT AbstractWidget {
 
         /** @brief Move assignment */
         AbstractWidget& operator=(AbstractWidget&& other) noexcept;
+
+        /**
+         * @brief Whether the widget is owned
+         *
+         * Returns @cpp false @ce if the widget was constructed using either
+         * @ref AbstractWidget(NonOwnedT, AbstractUserInterface&, NodeHandle)
+         * or @ref AbstractWidget(NonOwnedT, const AbstractAnchor&),
+         * @cpp true @ce otherwise. If the widget is owned, the underlying
+         * @ref node() gets removed on destruction.
+         * @see @link ~AbstractWidget() @endlink, @ref release()
+         */
+        bool isOwned() const { return _owned; }
 
         /** @brief User interface instance this widget is part of */
         AbstractUserInterface& ui() const { return *_ui; }
@@ -190,13 +266,32 @@ class MAGNUM_UI_EXPORT AbstractWidget {
          * stateless one, and gets removed either when
          * @ref AbstractUserInterface::removeNode() is explicitly called on the
          * returned handle or if any parent node is removed.
-         * @see @ref AbstractUserInterface::isHandleValid(NodeHandle) const
+         *
+         * Instead of calling this function to prevent a widget destructor from
+         * removing the node you can also construct the widget using the
+         * @ref NonOwned tag, if the subclass exposes it, or call a stateless
+         * widget function instead of creating an instance instead (such as
+         * @ref button() instead of making a @ref Button instance).
+         * @see @ref AbstractUserInterface::isHandleValid(NodeHandle) const,
+         *      @ref isOwned()
          */
         NodeHandle release();
+
+    #ifdef DOXYGEN_GENERATING_OUTPUT
+    private:
+    #else
+    protected:
+    #endif
+        /* To avoid subclass NonOwned constructor variants duplicating all the
+           logic they should delegate to the non-NonOwned variant and then call
+           this function */
+        void makeNonOwned() { _owned = false; }
 
     private:
         AbstractUserInterface* _ui;
         NodeHandle _node;
+        bool _owned;
+        /* 3 bytes free */
 };
 
 #ifndef DOXYGEN_GENERATING_OUTPUT
@@ -222,6 +317,9 @@ template<class UserInterface> class BasicWidget: public AbstractWidget {
         /** @copydoc AbstractWidget::AbstractWidget(AbstractUserInterface&, NodeHandle) */
         explicit BasicWidget(UserInterface& ui, NodeHandle node): AbstractWidget{ui, node} {}
 
+        /** @copydoc AbstractWidget::AbstractWidget(NonOwnedT, AbstractUserInterface&, NodeHandle) */
+        explicit BasicWidget(NonOwnedT, UserInterface& ui, NodeHandle node): AbstractWidget{NonOwned, ui, node} {}
+
         /** @copydoc AbstractWidget::AbstractWidget(const AbstractAnchor&) */
         /* Could be by-value but then it'd need the Anchor.h include */
         explicit BasicWidget(const BasicAnchor<UserInterface>& anchor):
@@ -232,6 +330,10 @@ template<class UserInterface> class BasicWidget: public AbstractWidget {
                Back in 2010 doing this caused me to fail a uni assignment, I
                still stand behind doing it to untangle complex dependencies. */
             AbstractWidget{reinterpret_cast<const AbstractAnchor&>(anchor)} {}
+
+        /** @copydoc AbstractWidget::AbstractWidget(NonOwnedT, const AbstractAnchor&) */
+        explicit BasicWidget(NonOwnedT, const BasicAnchor<UserInterface>& anchor):
+            AbstractWidget{NonOwned, reinterpret_cast<const AbstractAnchor&>(anchor)} {}
 
         /** @copydoc AbstractWidget::AbstractWidget(NoCreateT) */
         explicit BasicWidget(NoCreateT): AbstractWidget{NoCreate} {}

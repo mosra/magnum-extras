@@ -81,6 +81,7 @@ void PanelTest::constructDefault() {
     Panel panel{{rootAnchor, {}, {32, 16}}, PanelStyle::Default};
     CORRADE_COMPARE(ui.nodeParent(panel), rootAnchor);
     CORRADE_COMPARE(ui.nodeSize(panel), (Vector2{32, 16}));
+    CORRADE_VERIFY(panel.isOwned());
 
     CORRADE_COMPARE(panel.style(), PanelStyle::Default);
 
@@ -105,6 +106,7 @@ void PanelTest::constructFilled() {
     Panel panel{{rootAnchor, {}, {32, 16}}, PanelStyle::Filled};
     CORRADE_COMPARE(ui.nodeParent(panel), rootAnchor);
     CORRADE_COMPARE(ui.nodeSize(panel), (Vector2{32, 16}));
+    CORRADE_VERIFY(panel.isOwned());
 
     CORRADE_COMPARE(panel.style(), PanelStyle::Filled);
 

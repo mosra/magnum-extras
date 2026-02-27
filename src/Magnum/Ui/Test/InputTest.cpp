@@ -90,6 +90,7 @@ void InputTest::construct() {
     CORRADE_COMPARE(ui.nodeParent(input), rootAnchor);
     CORRADE_COMPARE(ui.nodeSize(input), (Vector2{32, 16}));
     CORRADE_COMPARE(ui.nodeFlags(input), NodeFlag::Focusable);
+    CORRADE_VERIFY(input.isOwned());
 
     CORRADE_COMPARE(input.style(), InputStyle::Warning);
     CORRADE_COMPARE(input.text(), "hello");
@@ -109,6 +110,7 @@ void InputTest::constructTextProperties() {
     CORRADE_COMPARE(ui.nodeParent(input), rootAnchor);
     CORRADE_COMPARE(ui.nodeSize(input), (Vector2{32, 16}));
     CORRADE_COMPARE(ui.nodeFlags(input), NodeFlag::Focusable);
+    CORRADE_VERIFY(input.isOwned());
 
     CORRADE_COMPARE(input.style(), InputStyle::Flat);
     CORRADE_COMPARE(input.text(), "hello");

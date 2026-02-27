@@ -133,7 +133,7 @@ class MAGNUM_UI_EXPORT Input: public Widget {
 
     private:
         InputStyle _style;
-        /* 3 bytes free */
+        /* 2 bytes free (_style fits into padding of Widget) */
         LayerDataHandle _backgroundData, _textData;
 };
 

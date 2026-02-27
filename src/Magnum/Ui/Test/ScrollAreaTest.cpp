@@ -623,6 +623,7 @@ void ScrollAreaTest::construct() {
     ScrollArea scroll{{rootAnchor, {}, {32, 16}}, data.flags};
     CORRADE_COMPARE(ui.nodeParent(scroll), rootAnchor);
     CORRADE_COMPARE(ui.nodeSize(scroll), (Vector2{32, 16}));
+    CORRADE_VERIFY(scroll.isOwned());
 
     CORRADE_COMPARE(scroll.flags(), data.flags);
     CORRADE_COMPARE(scroll.scrollPercentage(), Vector2{});
@@ -689,6 +690,7 @@ void ScrollAreaTest::constructOnlyX() {
     ScrollArea scroll{{rootAnchor, {}, {32, 16}}, ScrollAreaFlag::OnlyX|data.flags};
     CORRADE_COMPARE(ui.nodeParent(scroll), rootAnchor);
     CORRADE_COMPARE(ui.nodeSize(scroll), (Vector2{32, 16}));
+    CORRADE_VERIFY(scroll.isOwned());
 
     CORRADE_COMPARE(scroll.flags(), ScrollAreaFlag::OnlyX|data.flags);
     CORRADE_COMPARE(scroll.scrollPercentage(), Vector2{});
@@ -743,6 +745,7 @@ void ScrollAreaTest::constructOnlyY() {
     ScrollArea scroll{{rootAnchor, {}, {32, 16}}, ScrollAreaFlag::OnlyY|data.flags};
     CORRADE_COMPARE(ui.nodeParent(scroll), rootAnchor);
     CORRADE_COMPARE(ui.nodeSize(scroll), (Vector2{32, 16}));
+    CORRADE_VERIFY(scroll.isOwned());
 
     CORRADE_COMPARE(scroll.flags(), ScrollAreaFlag::OnlyY|data.flags);
     CORRADE_COMPARE(scroll.scrollPercentage(), Vector2{});

@@ -93,7 +93,7 @@ class MAGNUM_UI_EXPORT Panel: public Widget {
 
     private:
         PanelStyle _style;
-        /* 3 bytes free */
+        /* 2 bytes free (_style fits into padding of Widget) */
         LayerDataHandle _backgroundData;
 };
 

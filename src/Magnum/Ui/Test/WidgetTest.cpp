@@ -41,8 +41,10 @@ struct WidgetTest: TestSuite::Tester {
     explicit WidgetTest();
 
     template<class T> void construct();
+    template<class T> void constructNonOwned();
     template<class T> void constructInvalid();
     template<class T> void constructFromAnchor();
+    template<class T> void constructFromAnchorNonOwned();
     template<class T> void constructNoCreate();
     template<class T> void constructCopy();
     template<class T> void constructMove();
@@ -58,10 +60,14 @@ struct WidgetTest: TestSuite::Tester {
 WidgetTest::WidgetTest() {
     addTests({&WidgetTest::construct<AbstractWidget>,
               &WidgetTest::construct<Widget>,
+              &WidgetTest::constructNonOwned<AbstractWidget>,
+              &WidgetTest::constructNonOwned<Widget>,
               &WidgetTest::constructInvalid<AbstractWidget>,
               &WidgetTest::constructInvalid<Widget>,
               &WidgetTest::constructFromAnchor<AbstractWidget>,
               &WidgetTest::constructFromAnchor<Widget>,
+              &WidgetTest::constructFromAnchorNonOwned<AbstractWidget>,
+              &WidgetTest::constructFromAnchorNonOwned<Widget>,
               &WidgetTest::constructNoCreate<AbstractWidget>,
               &WidgetTest::constructNoCreate<Widget>,
               &WidgetTest::constructCopy<AbstractWidget>,
@@ -99,6 +105,7 @@ template<class T> void WidgetTest::construct() {
 
     {
         T widget{ui, node};
+        CORRADE_VERIFY(widget.isOwned());
         CORRADE_COMPARE(&widget.ui(), &ui);
         CORRADE_COMPARE(widget.node(), node);
         CORRADE_COMPARE(NodeHandle{widget}, node);
@@ -110,6 +117,30 @@ template<class T> void WidgetTest::construct() {
 
     /* And removed on destruction */
     CORRADE_VERIFY(!ui.isHandleValid(node));
+}
+
+template<class T> void WidgetTest::constructNonOwned() {
+    setTestCaseTemplateName(WidgetTraits<T>::name());
+
+    struct Interface: WidgetTraits<T>::UserInterfaceType {
+        explicit Interface(NoCreateT): WidgetTraits<T>::UserInterfaceType{NoCreate} {}
+    } ui{NoCreate};
+    NodeHandle node = ui.createNode({}, {});
+
+    {
+        T widget{NonOwned, ui, node};
+        CORRADE_VERIFY(!widget.isOwned());
+        CORRADE_COMPARE(&widget.ui(), &ui);
+        CORRADE_COMPARE(widget.node(), node);
+        CORRADE_COMPARE(NodeHandle{widget}, node);
+        CORRADE_VERIFY(!widget.isHidden());
+
+        /* The node becomes just referenced by the widget */
+        CORRADE_VERIFY(ui.isHandleValid(node));
+    }
+
+    /* And not removed on destruction */
+    CORRADE_VERIFY(ui.isHandleValid(node));
 }
 
 template<class T> void WidgetTest::constructInvalid() {
@@ -140,6 +171,7 @@ template<class T> void WidgetTest::constructFromAnchor() {
 
     {
         T widget{a};
+        CORRADE_VERIFY(widget.isOwned());
         CORRADE_COMPARE(&widget.ui(), &ui);
         CORRADE_COMPARE(widget.node(), a.node());
 
@@ -151,6 +183,29 @@ template<class T> void WidgetTest::constructFromAnchor() {
     CORRADE_VERIFY(!ui.isHandleValid(a.node()));
 }
 
+template<class T> void WidgetTest::constructFromAnchorNonOwned() {
+    setTestCaseTemplateName(WidgetTraits<T>::name());
+
+    struct Interface: WidgetTraits<T>::UserInterfaceType {
+        explicit Interface(NoCreateT): WidgetTraits<T>::UserInterfaceType{NoCreate} {}
+    } ui{NoCreate};
+
+    typename WidgetTraits<T>::AnchorType a{ui, ui.createNode({}, {})};
+
+    {
+        T widget{NonOwned, a};
+        CORRADE_VERIFY(!widget.isOwned());
+        CORRADE_COMPARE(&widget.ui(), &ui);
+        CORRADE_COMPARE(widget.node(), a.node());
+
+        /* The node becomes just referenced by the widget */
+        CORRADE_VERIFY(ui.isHandleValid(a.node()));
+    }
+
+    /* And not removed on destruction */
+    CORRADE_VERIFY(ui.isHandleValid(a.node()));
+}
+
 template<class T> void WidgetTest::constructNoCreate() {
     setTestCaseTemplateName(WidgetTraits<T>::name());
 
@@ -159,6 +214,9 @@ template<class T> void WidgetTest::constructNoCreate() {
     } ui{NoCreate};
 
     T widget{NoCreate};
+    /* This is false because it makes more sense to just initialize all
+       contents to zero */
+    CORRADE_VERIFY(!widget.isOwned());
     CORRADE_COMPARE(&widget.ui(), nullptr);
     CORRADE_COMPARE(widget.node(), NodeHandle::Null);
 }
@@ -177,22 +235,45 @@ template<class T> void WidgetTest::constructMove() {
         explicit Interface(NoCreateT): WidgetTraits<T>::UserInterfaceType{NoCreate} {}
     } ui{NoCreate},
       ui2{NoCreate};
-    NodeHandle node = ui.createNode({}, {});
+    NodeHandle node1 = ui.createNode({}, {});
+    NodeHandle node2 = ui.createNode({}, {});
 
-    T a{ui, node};
+    T a1{ui, node1};
+    T a2{NonOwned, ui, node2};
 
-    T b{Utility::move(a)};
-    CORRADE_COMPARE(&b.ui(), &ui);
-    CORRADE_COMPARE(b.node(), node);
-    CORRADE_COMPARE(a.node(), NodeHandle::Null);
+    T b1 = Utility::move(a1);
+    T b2 = Utility::move(a2);
+    CORRADE_VERIFY(b1.isOwned());
+    CORRADE_VERIFY(!b2.isOwned());
+    CORRADE_COMPARE(&b1.ui(), &ui);
+    CORRADE_COMPARE(&b2.ui(), &ui);
+    CORRADE_COMPARE(b1.node(), node1);
+    CORRADE_COMPARE(b2.node(), node2);
+    /* The owned bit stays unchanged but the node becomes null */
+    CORRADE_VERIFY(a1.isOwned());
+    CORRADE_VERIFY(!a2.isOwned());
+    CORRADE_COMPARE(a1.node(), NodeHandle::Null);
+    CORRADE_COMPARE(a2.node(), NodeHandle::Null);
 
-    NodeHandle node2 = ui2.createNode({}, {});
-    T c{ui2, node2};
-    c = Utility::move(b);
-    CORRADE_COMPARE(&c.ui(), &ui);
-    CORRADE_COMPARE(&b.ui(), &ui2);
-    CORRADE_COMPARE(c.node(), node);
-    CORRADE_COMPARE(b.node(), node2);
+    NodeHandle node3 = ui2.createNode({}, {});
+    NodeHandle node4 = ui2.createNode({}, {});
+    T c1{ui2, node3};
+    T c2{ui2, node4};
+    c1 = Utility::move(b1);
+    c2 = Utility::move(b2);
+    /* The UI reference, the owned bit and the node should be swapped */
+    CORRADE_COMPARE(&c1.ui(), &ui);
+    CORRADE_COMPARE(&c2.ui(), &ui);
+    CORRADE_COMPARE(&b1.ui(), &ui2);
+    CORRADE_COMPARE(&b2.ui(), &ui2);
+    CORRADE_VERIFY(c1.isOwned());
+    CORRADE_VERIFY(!c2.isOwned());
+    CORRADE_VERIFY(b1.isOwned());
+    CORRADE_VERIFY(b2.isOwned());
+    CORRADE_COMPARE(c1.node(), node1);
+    CORRADE_COMPARE(c2.node(), node2);
+    CORRADE_COMPARE(b1.node(), node3);
+    CORRADE_COMPARE(b2.node(), node4);
 }
 
 void WidgetTest::destructInvalidNode() {
@@ -297,6 +378,8 @@ void WidgetTest::release() {
         NodeHandle released = widget->release();
         CORRADE_COMPARE(released, node);
         CORRADE_COMPARE(widget->node(), NodeHandle::Null);
+        /* The owned state doesn't get changed by the release */
+        CORRADE_VERIFY(widget->isOwned());
     }
 
     /* Destructing a released widget once the UI is gone should be possible
