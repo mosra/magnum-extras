@@ -31,7 +31,6 @@
  * @m_since_latest_{extras}
  */
 
-#include <Corrade/Containers/Reference.h>
 #include <Corrade/Utility/Macros.h> /* CORRADE_NODISCARD() */
 
 #include "Magnum/Ui/AbstractLayer.h"
@@ -82,8 +81,8 @@ class MAGNUM_UI_EXPORT EventConnection {
          * If @ref data() is @ref DataHandle::Null, the reference may be
          * dangling.
          */
-        EventLayer& layer() { return _layer; }
-        const EventLayer& layer() const { return _layer; } /**< @overload */
+        EventLayer& layer() { return *_layer; }
+        const EventLayer& layer() const { return *_layer; } /**< @overload */
 
         /**
          * @brief Connection data handle
@@ -114,7 +113,7 @@ class MAGNUM_UI_EXPORT EventConnection {
 
         explicit EventConnection(EventLayer& layer, DataHandle data) noexcept;
 
-        Containers::Reference<EventLayer> _layer;
+        EventLayer* _layer;
         LayerDataHandle _data;
 };
 

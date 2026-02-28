@@ -102,7 +102,7 @@ struct EventLayer::State {
     UnsignedInt usedScopedConnectionCount = 0;
 };
 
-EventConnection::EventConnection(EventLayer& layer, const DataHandle data) noexcept: _layer{layer}, _data{dataHandleData(data)} {
+EventConnection::EventConnection(EventLayer& layer, const DataHandle data) noexcept: _layer{&layer}, _data{dataHandleData(data)} {
     layer._state->data[dataHandleId(data)].hasScopedConnection = true;
     ++layer._state->usedScopedConnectionCount;
 }
