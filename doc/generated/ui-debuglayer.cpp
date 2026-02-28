@@ -200,9 +200,9 @@ int UiDebugLayer::exec() {
     Ui::SnapLayout root = Ui::SnapLayout::root(ui, Ui::Snap::Fill);
     ui.removeNode(ui.createNode({}, {}));
     Ui::SnapLayout hidden = Ui::SnapLayout::root(ui, Ui::Snap::Fill, {}, Ui::NodeFlag::Hidden);
-    Ui::button(hidden.child(), Ui::Icon::Yes, "Accept");
-    Ui::button(hidden.child(), Ui::Icon::Yes, "Accept");
-    Ui::button(hidden.child(), Ui::Icon::Yes, "Accept");
+    Ui::button(hidden.child(), Ui::Icon::Yes, "Accept", nullptr);
+    Ui::button(hidden.child(), Ui::Icon::Yes, "Accept", nullptr);
+    Ui::button(hidden.child(), Ui::Icon::Yes, "Accept", nullptr);
     /* Yeah this one deletes itself right away */
     Ui::Button{hidden.child(), ""};
 
@@ -217,9 +217,7 @@ int UiDebugLayer::exec() {
         ui.update();
 
 /* [button] */
-Ui::NodeHandle button = Ui::button(DOXYGEN_ELLIPSIS(root.child({}, {112, 32})), Ui::Icon::Yes, "Accept");
-
-ui.eventLayer().onTapOrClick(button, []{
+Ui::NodeHandle button = Ui::button(DOXYGEN_ELLIPSIS(root.child({}, {112, 32})), Ui::Icon::Yes, "Accept", []{
     DOXYGEN_ELLIPSIS()
 });
 /* [button] */

@@ -24,6 +24,7 @@
     DEALINGS IN THE SOFTWARE.
 */
 
+#include <Corrade/Containers/Function.h>
 #include <Corrade/Utility/Arguments.h>
 #include <Magnum/DebugTools/FrameProfiler.h>
 #include <Magnum/Math/Color.h>
@@ -201,39 +202,39 @@ UiGallery::UiGallery(const Arguments& arguments): Platform::Application{argument
     {
         Ui::SnapLayoutRow row = root.child();
         Ui::button(row.child(),
-            "Default", Ui::ButtonStyle::Default);
+            "Default", nullptr, Ui::ButtonStyle::Default);
         Ui::button(row.child(),
-            "Primary", Ui::ButtonStyle::Primary);
+            "Primary", nullptr, Ui::ButtonStyle::Primary);
         Ui::button(row.child(),
-            Ui::Icon::Yes, "Success", Ui::ButtonStyle::Success);
+            Ui::Icon::Yes, "Success", nullptr, Ui::ButtonStyle::Success);
         Ui::button(row.child(),
-            Ui::Icon::No, "Warning", Ui::ButtonStyle::Warning);
+            Ui::Icon::No, "Warning", nullptr, Ui::ButtonStyle::Warning);
         Ui::button(row.child(),
-            Ui::Icon::No, "Danger", Ui::ButtonStyle::Danger);
+            Ui::Icon::No, "Danger", nullptr, Ui::ButtonStyle::Danger);
         Ui::button(row.child(),
-            "Info", Ui::ButtonStyle::Info);
+            "Info", nullptr, Ui::ButtonStyle::Info);
         Ui::button(row.child(),
-            "Dim", Ui::ButtonStyle::Dim);
+            "Dim", nullptr, Ui::ButtonStyle::Dim);
         Ui::button(row.child(),
-            Ui::Icon::Yes, "Flat", Ui::ButtonStyle::Flat);
+            Ui::Icon::Yes, "Flat", nullptr, Ui::ButtonStyle::Flat);
     } {
         Ui::SnapLayoutRow row = root.child({}, Ui::NodeFlag::Disabled);
         Ui::button(row.child(),
-            "Default", Ui::ButtonStyle::Default);
+            "Default", nullptr, Ui::ButtonStyle::Default);
         Ui::button(row.child(),
-            "Primary", Ui::ButtonStyle::Primary);
+            "Primary", nullptr, Ui::ButtonStyle::Primary);
         Ui::button(row.child(),
-            Ui::Icon::Yes, "Success", Ui::ButtonStyle::Success);
+            Ui::Icon::Yes, "Success", nullptr, Ui::ButtonStyle::Success);
         Ui::button(row.child(),
-            Ui::Icon::No, "Warning", Ui::ButtonStyle::Warning);
+            Ui::Icon::No, "Warning", nullptr, Ui::ButtonStyle::Warning);
         Ui::button(row.child(),
-            Ui::Icon::No, "Danger", Ui::ButtonStyle::Danger);
+            Ui::Icon::No, "Danger", nullptr, Ui::ButtonStyle::Danger);
         Ui::button(row.child(),
-            "Info", Ui::ButtonStyle::Info);
+            "Info", nullptr, Ui::ButtonStyle::Info);
         Ui::button(row.child(),
-            "Dim", Ui::ButtonStyle::Dim);
+            "Dim", nullptr, Ui::ButtonStyle::Dim);
         Ui::button(row.child(),
-            Ui::Icon::Yes, "Flat", Ui::ButtonStyle::Flat);
+            Ui::Icon::Yes, "Flat", nullptr, Ui::ButtonStyle::Flat);
     }
 
     /* Labels */

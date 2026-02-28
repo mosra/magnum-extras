@@ -54,7 +54,6 @@ else()
 endif()
 
 set(MagnumUi_SRCS
-    Button.cpp
     Handle.cpp
     Icon.cpp
     Input.cpp
@@ -76,6 +75,7 @@ set(MagnumUi_GracefulAssert_SRCS
     Anchor.cpp
     BaseLayer.cpp
     BaseLayerAnimator.cpp
+    Button.cpp
     DataLayer.cpp
     DebugLayer.cpp
     Event.cpp

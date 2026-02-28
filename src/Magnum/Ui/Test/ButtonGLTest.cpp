@@ -61,7 +61,7 @@ const struct {
     {"stateless",
         [](UserInterface& ui, Int style, Flags, Int counter) {
             /** @todo differently wide icons to test alignment */
-            return button({ui, {}, {96, 36}}, counter % 2 ? Icon::No : Icon::Yes, counter % 2 ? "Bye" : "Hello!", ButtonStyle(style)).node();
+            return button({ui, {}, {96, 36}}, counter % 2 ? Icon::No : Icon::Yes, counter % 2 ? "Bye" : "Hello!", nullptr, ButtonStyle(style)).node();
         }},
     {nullptr,
         [](UserInterface& ui, Int style, Flags, Int counter) {
@@ -110,7 +110,7 @@ const struct {
 } TextData[]{
     {"stateless",
         [](UserInterface& ui, Int style, Flags, Int counter) {
-            return button({ui, {}, {64, 36}}, counter % 2 ? "Bye" : "Hello!", ButtonStyle(style)).node();
+            return button({ui, {}, {64, 36}}, counter % 2 ? "Bye" : "Hello!", nullptr, ButtonStyle(style)).node();
         }},
     {nullptr,
         [](UserInterface& ui, Int style, Flags, Int counter) {
@@ -150,7 +150,7 @@ const struct {
     {"stateless",
         [](UserInterface& ui, Int style, Flags, Int counter) {
             /** @todo differently wide icons to test alignment */
-            return button({ui, {}, {48, 36}}, counter % 2 ? Icon::Yes : Icon::No, ButtonStyle(style)).node();
+            return button({ui, {}, {48, 36}}, counter % 2 ? Icon::Yes : Icon::No, nullptr, ButtonStyle(style)).node();
         }},
     {nullptr,
         [](UserInterface& ui, Int style, Flags, Int counter) {

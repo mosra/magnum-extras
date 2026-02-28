@@ -27,6 +27,7 @@
 #include "Button.h"
 
 #include <Corrade/Containers/StringView.h>
+#include <Corrade/Containers/Function.h>
 #include <Corrade/Utility/Assert.h>
 #include <Magnum/Math/Vector2.h>
 #include <Magnum/Text/Alignment.h>
@@ -34,6 +35,7 @@
 #include "Magnum/Ui/AbstractTheme.hpp"
 #include "Magnum/Ui/Anchor.h"
 #include "Magnum/Ui/BaseLayer.h"
+#include "Magnum/Ui/EventLayer.h"
 #include "Magnum/Ui/Handle.h"
 #include "Magnum/Ui/Icon.h"
 #include "Magnum/Ui/LayoutLayer.h"
@@ -221,6 +223,18 @@ Button::Button(const Anchor anchor, const Containers::StringView text, const Tex
 
 Button::Button(const Anchor anchor, const Containers::StringView text, const ButtonStyle style): Button{anchor, text, {}, style} {}
 
+DataHandle Button::onTrigger(Containers::Function<void()>&& function) {
+    CORRADE_ASSERT(function,
+        "Ui::Button::onTrigger(): function is null", {});
+    return ui().eventLayer().onTapOrClick(node(), Utility::move(function));
+}
+
+EventConnection Button::onTriggerScoped(Containers::Function<void()>&& function) {
+    CORRADE_ASSERT(function,
+        "Ui::Button::onTriggerScoped(): function is null", {});
+    return ui().eventLayer().onTapOrClickScoped(node(), Utility::move(function));
+}
+
 Button& Button::setStyle(const ButtonStyle style) {
     _style = style;
     ui().baseLayer().setTransitionedStyle(ui(), _backgroundData, baseLayerStyle(style));
@@ -292,25 +306,27 @@ DataHandle Button::textData() const {
         dataHandle(ui().textLayer(), _textData);
 }
 
-Anchor button(const Anchor anchor, const Icon icon, const Containers::StringView text, const TextProperties& textProperties, const ButtonStyle style) {
+Anchor button(const Anchor anchor, const Icon icon, const Containers::StringView text, const TextProperties& textProperties, Containers::Function<void()>&& trigger, const ButtonStyle style) {
     buttonInternal(anchor.ui(), anchor.node(), icon, text, textProperties, style);
+    if(trigger)
+        anchor.ui().eventLayer().onTapOrClick(anchor.node(), Utility::move(trigger));
     return anchor;
 }
 
-Anchor button(const Anchor anchor, const Icon icon, const Containers::StringView text, const ButtonStyle style) {
-    return button(anchor, icon, text, {}, style);
+Anchor button(const Anchor anchor, const Icon icon, const Containers::StringView text, Containers::Function<void()>&& trigger, const ButtonStyle style) {
+    return button(anchor, icon, text, {}, Utility::move(trigger), style);
 }
 
-Anchor button(const Anchor anchor, const Icon icon, const ButtonStyle style) {
-    return button(anchor, icon, {}, {}, style);
+Anchor button(const Anchor anchor, const Icon icon, Containers::Function<void()>&& trigger, const ButtonStyle style) {
+    return button(anchor, icon, {}, {}, Utility::move(trigger), style);
 }
 
-Anchor button(const Anchor anchor, const Containers::StringView text, const TextProperties& textProperties, const ButtonStyle style) {
-    return button(anchor, Icon::None, text, textProperties, style);
+Anchor button(const Anchor anchor, const Containers::StringView text, const TextProperties& textProperties, Containers::Function<void()>&& trigger, const ButtonStyle style) {
+    return button(anchor, Icon::None, text, textProperties, Utility::move(trigger), style);
 }
 
-Anchor button(const Anchor anchor, const Containers::StringView text, const ButtonStyle style) {
-    return button(anchor, text, {}, style);
+Anchor button(const Anchor anchor, const Containers::StringView text, Containers::Function<void()>&& trigger, const ButtonStyle style) {
+    return button(anchor, text, {}, Utility::move(trigger), style);
 }
 
 }}

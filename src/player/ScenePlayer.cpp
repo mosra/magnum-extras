@@ -488,10 +488,10 @@ ScenePlayer::ScenePlayer(Platform::ScreenedApplication& application, const Ui::A
     _toggleObjectVisualization{Ui::SnapLayout::sibling(Ui::Snap::Bottom, _toggleShadeless, ButtonSize), "Object centers"_s},
     _cycleMeshVisualization{Ui::SnapLayout::sibling(Ui::Snap::Bottom, _toggleShadeless, ButtonSize, Ui::NodeFlag::Hidden), "Wireframe"_s},
     _animationControls{Ui::SnapLayout::child(Ui::Snap::Fill|Ui::Snap::NoPad, _screen, {}, Ui::NodeFlag::Hidden)},
-    _animationBackward{Ui::button(Ui::SnapLayout::child(Ui::Snap::BottomLeft, {_ui, _animationControls}, HalfControlSize), "«"_s)},
+    _animationBackward{Ui::button(Ui::SnapLayout::child(Ui::Snap::BottomLeft, {_ui, _animationControls}, HalfControlSize), "«"_s, nullptr)},
     _animationPlayPause{Ui::SnapLayout::sibling(Ui::Snap::Right, {_ui, _animationBackward}, ControlSize), "Pause"_s, Ui::ButtonStyle::Warning},
-    _animationStop{Ui::button(Ui::SnapLayout::sibling(Ui::Snap::Right, {_ui, _animationPlayPause}, ControlSize), "Stop"_s, Ui::ButtonStyle::Danger)},
-    _animationForward{Ui::button(Ui::SnapLayout::sibling(Ui::Snap::Right, {_ui, _animationStop}, HalfControlSize), "»"_s)},
+    _animationStop{Ui::button(Ui::SnapLayout::sibling(Ui::Snap::Right, {_ui, _animationPlayPause}, ControlSize), "Stop"_s, nullptr, Ui::ButtonStyle::Danger)},
+    _animationForward{Ui::button(Ui::SnapLayout::sibling(Ui::Snap::Right, {_ui, _animationStop}, HalfControlSize), "»"_s, nullptr)},
     _animationProgress{Ui::SnapLayout::sibling(Ui::Snap::Right, {_ui, _animationForward}, LabelSize), {}}
 {
     /** @todo clean this up once all the right-side buttons can be stuffed into

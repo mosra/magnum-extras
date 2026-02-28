@@ -25,7 +25,10 @@
 */
 
 #include <Corrade/Containers/String.h>
+#include <Corrade/Containers/StringIterable.h>
 #include <Corrade/TestSuite/Compare/Numeric.h>
+#include <Corrade/TestSuite/Compare/String.h>
+#include <Corrade/TestSuite/Compare/SortedContainer.h>
 
 #include "Magnum/Ui/Anchor.h"
 #include "Magnum/Ui/Button.h"
@@ -55,6 +58,10 @@ struct ButtonTest: WidgetTester {
     void constructIconTextTextPropertiesStateless();
     void constructNoCreate();
 
+    void onTrigger();
+    void onTriggerScoped();
+    void onTriggerInvalid();
+
     void setStyle();
     void setStyleWhileActive();
 
@@ -72,6 +79,23 @@ struct ButtonTest: WidgetTester {
 
 const struct {
     const char* name;
+    /* Three different function so we can distinguish which button was
+       triggered */
+    void(*function1)();
+    void(*function2)();
+    void(*function3)();
+    std::size_t expectedEventCount;
+} ConstructStatelessData[]{
+    {"",
+        []{ Debug{} << "Button 1 triggered!"; },
+        []{ Debug{} << "Button 2 triggered!"; },
+        []{ Debug{} << "Button 3 triggered!"; }, 1},
+    {"null trigger",
+        nullptr, nullptr, nullptr, 0}
+};
+
+const struct {
+    const char* name;
     Icon icon;
     const char* text;
 } SetStyleData[]{
@@ -84,25 +108,69 @@ const struct {
 ButtonTest::ButtonTest() {
     addTests({&ButtonTest::debugStyle});
 
-    addTests<ButtonTest>({
-        &ButtonTest::constructEmpty,
-        &ButtonTest::constructEmptyStateless,
-        &ButtonTest::constructIconOnly,
-        &ButtonTest::constructIconOnlyStateless,
-        &ButtonTest::constructTextOnly,
-        &ButtonTest::constructTextOnlyStateless,
-        &ButtonTest::constructTextOnlyTextProperties,
-        &ButtonTest::constructTextOnlyTextPropertiesStateless,
-        &ButtonTest::constructIconText,
-        &ButtonTest::constructIconTextStateless,
-        &ButtonTest::constructIconTextTextProperties,
-        &ButtonTest::constructIconTextTextPropertiesStateless,
-    }, &WidgetTester::setup,
-       &WidgetTester::teardown);
+    addTests<ButtonTest>({&ButtonTest::constructEmpty},
+        &WidgetTester::setup,
+        &WidgetTester::teardown);
+
+    addInstancedTests<ButtonTest>({&ButtonTest::constructEmptyStateless},
+        Containers::arraySize(ConstructStatelessData),
+        &WidgetTester::setup,
+        &WidgetTester::teardown);
+
+    addTests<ButtonTest>({&ButtonTest::constructIconOnly},
+        &WidgetTester::setup,
+        &WidgetTester::teardown);
+
+    addInstancedTests<ButtonTest>({&ButtonTest::constructIconOnlyStateless},
+        Containers::arraySize(ConstructStatelessData),
+        &WidgetTester::setup,
+        &WidgetTester::teardown);
+
+    addTests<ButtonTest>({&ButtonTest::constructTextOnly},
+        &WidgetTester::setup,
+        &WidgetTester::teardown);
+
+    addInstancedTests<ButtonTest>({&ButtonTest::constructTextOnlyStateless},
+        Containers::arraySize(ConstructStatelessData),
+        &WidgetTester::setup,
+        &WidgetTester::teardown);
+
+    addTests<ButtonTest>({&ButtonTest::constructTextOnlyTextProperties},
+        &WidgetTester::setup,
+        &WidgetTester::teardown);
+
+    addInstancedTests<ButtonTest>({&ButtonTest::constructTextOnlyTextPropertiesStateless},
+        Containers::arraySize(ConstructStatelessData),
+        &WidgetTester::setup,
+        &WidgetTester::teardown);
+
+    addTests<ButtonTest>({&ButtonTest::constructIconText},
+        &WidgetTester::setup,
+        &WidgetTester::teardown);
+
+    addInstancedTests<ButtonTest>({&ButtonTest::constructIconTextStateless},
+        Containers::arraySize(ConstructStatelessData),
+        &WidgetTester::setup,
+        &WidgetTester::teardown);
+
+    addTests<ButtonTest>({&ButtonTest::constructIconTextTextProperties},
+        &WidgetTester::setup,
+        &WidgetTester::teardown);
+
+    addInstancedTests<ButtonTest>({&ButtonTest::constructIconTextTextPropertiesStateless},
+        Containers::arraySize(ConstructStatelessData),
+        &WidgetTester::setup,
+        &WidgetTester::teardown);
 
     addTests<ButtonTest>({&ButtonTest::constructNoCreate},
         &WidgetTester::setupNoCreate,
         &WidgetTester::teardownNoCreate);
+
+    addTests<ButtonTest>({&ButtonTest::onTrigger,
+                          &ButtonTest::onTriggerScoped,
+                          &ButtonTest::onTriggerInvalid},
+        &WidgetTester::setup,
+        &WidgetTester::teardown);
 
     addInstancedTests<ButtonTest>({&ButtonTest::setStyle},
         Containers::arraySize(SetStyleData),
@@ -168,9 +236,12 @@ void ButtonTest::constructEmpty() {
 }
 
 void ButtonTest::constructEmptyStateless() {
-    NodeHandle node1 = button({rootAnchor, {}, {32, 16}}, Icon::None, ButtonStyle::Success);
-    NodeHandle node2 = button({rootAnchor, {}, {32, 16}}, "", ButtonStyle::Success);
-    NodeHandle node3 = button({rootAnchor, {}, {32, 16}}, Icon::None, "", ButtonStyle::Success);
+    auto&& data = ConstructStatelessData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
+    NodeHandle node1 = button({rootAnchor, {}, {32, 16}}, Icon::None, data.function1, ButtonStyle::Success);
+    NodeHandle node2 = button({rootAnchor, {32, 0}, {32, 16}}, "", data.function2, ButtonStyle::Success);
+    NodeHandle node3 = button({rootAnchor, {64, 0}, {32, 16}}, Icon::None, "", data.function3, ButtonStyle::Success);
     CORRADE_COMPARE(ui.nodeParent(node1), rootAnchor);
     CORRADE_COMPARE(ui.nodeParent(node2), rootAnchor);
     CORRADE_COMPARE(ui.nodeParent(node3), rootAnchor);
@@ -183,6 +254,23 @@ void ButtonTest::constructEmptyStateless() {
     CORRADE_COMPARE(ui.baseLayer().usedCount(), 3);
     CORRADE_COMPARE(ui.textLayer().usedCount(), 0);
     CORRADE_COMPARE(ui.layoutLayer().usedCount(), 3);
+    CORRADE_COMPARE(ui.eventLayer().usedCount(), data.expectedEventCount*3);
+
+    /* Triggering the buttons should call the function, if set */
+    Containers::String out;
+    Debug redirectOutput{&out};
+    for(Float i = 0; i != 3; ++i) {
+        CORRADE_ITERATION(i);
+        PointerEvent press{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
+        PointerEvent release{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
+        CORRADE_VERIFY(ui.pointerPressEvent({16 + i*32, 8}, press));
+        CORRADE_VERIFY(ui.pointerReleaseEvent({16 + i*32, 8}, release));
+    }
+    CORRADE_COMPARE_AS(out, data.expectedEventCount ?
+        "Button 1 triggered!\n"
+        "Button 2 triggered!\n"
+        "Button 3 triggered!\n" : "",
+        TestSuite::Compare::String);
 }
 
 void ButtonTest::constructIconOnly() {
@@ -214,8 +302,11 @@ void ButtonTest::constructIconOnly() {
 }
 
 void ButtonTest::constructIconOnlyStateless() {
-    NodeHandle node1 = button({rootAnchor, {}, {32, 16}}, Icon::Yes, ButtonStyle::Danger);
-    NodeHandle node2 = button({rootAnchor, {}, {32, 16}}, Icon::Yes, "", ButtonStyle::Danger);
+    auto&& data = ConstructStatelessData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
+    NodeHandle node1 = button({rootAnchor, {}, {32, 16}}, Icon::Yes, data.function1, ButtonStyle::Danger);
+    NodeHandle node2 = button({rootAnchor, {32, 0}, {32, 16}}, Icon::Yes, "", data.function2, ButtonStyle::Danger);
     CORRADE_COMPARE(ui.nodeParent(node1), rootAnchor);
     CORRADE_COMPARE(ui.nodeParent(node2), rootAnchor);
     CORRADE_COMPARE(ui.nodeSize(node1), (Vector2{32, 16}));
@@ -226,6 +317,22 @@ void ButtonTest::constructIconOnlyStateless() {
     CORRADE_COMPARE(ui.baseLayer().usedCount(), 2);
     CORRADE_COMPARE(ui.textLayer().usedCount(), 2);
     CORRADE_COMPARE(ui.layoutLayer().usedCount(), 2);
+    CORRADE_COMPARE(ui.eventLayer().usedCount(), data.expectedEventCount*2);
+
+    /* Triggering the buttons should call the function, if set */
+    Containers::String out;
+    Debug redirectOutput{&out};
+    for(Float i = 0; i != 2; ++i) {
+        CORRADE_ITERATION(i);
+        PointerEvent press{{}, PointerEventSource::Touch, Pointer::Finger, true, 0, {}};
+        PointerEvent release{{}, PointerEventSource::Touch, Pointer::Finger, true, 0, {}};
+        CORRADE_VERIFY(ui.pointerPressEvent({16 + i*32, 8}, press));
+        CORRADE_VERIFY(ui.pointerReleaseEvent({16 + i*32, 8}, release));
+    }
+    CORRADE_COMPARE_AS(out, data.expectedEventCount ?
+        "Button 1 triggered!\n"
+        "Button 2 triggered!\n" : "",
+        TestSuite::Compare::String);
 }
 
 void ButtonTest::constructTextOnly() {
@@ -257,8 +364,11 @@ void ButtonTest::constructTextOnly() {
 }
 
 void ButtonTest::constructTextOnlyStateless() {
-    NodeHandle node1 = button({rootAnchor, {}, {32, 16}}, "hello!", ButtonStyle::Primary);
-    NodeHandle node2 = button({rootAnchor, {}, {32, 16}}, Icon::None, "hello!", ButtonStyle::Primary);
+    auto&& data = ConstructStatelessData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
+    NodeHandle node1 = button({rootAnchor, {}, {32, 16}}, "hello!", data.function1, ButtonStyle::Primary);
+    NodeHandle node2 = button({rootAnchor, {32, 0}, {32, 16}}, Icon::None, "hello!", data.function2, ButtonStyle::Primary);
     CORRADE_COMPARE(ui.nodeParent(node1), rootAnchor);
     CORRADE_COMPARE(ui.nodeParent(node2), rootAnchor);
     CORRADE_COMPARE(ui.nodeSize(node1), (Vector2{32, 16}));
@@ -269,6 +379,22 @@ void ButtonTest::constructTextOnlyStateless() {
     CORRADE_COMPARE(ui.baseLayer().usedCount(), 2);
     CORRADE_COMPARE(ui.textLayer().usedCount(), 2);
     CORRADE_COMPARE(ui.layoutLayer().usedCount(), 2);
+    CORRADE_COMPARE(ui.eventLayer().usedCount(), data.expectedEventCount*2);
+
+    /* Triggering the buttons should call the function, if set */
+    Containers::String out;
+    Debug redirectOutput{&out};
+    for(Float i = 0; i != 2; ++i) {
+        CORRADE_ITERATION(i);
+        PointerEvent press{{}, PointerEventSource::Pen, Pointer::Pen, true, 0, {}};
+        PointerEvent release{{}, PointerEventSource::Pen, Pointer::Pen, true, 0, {}};
+        CORRADE_VERIFY(ui.pointerPressEvent({16 + i*32, 8}, press));
+        CORRADE_VERIFY(ui.pointerReleaseEvent({16 + i*32, 8}, release));
+    }
+    CORRADE_COMPARE_AS(out, data.expectedEventCount ?
+        "Button 1 triggered!\n"
+        "Button 2 triggered!\n" : "",
+        TestSuite::Compare::String);
 }
 
 void ButtonTest::constructTextOnlyTextProperties() {
@@ -305,11 +431,14 @@ void ButtonTest::constructTextOnlyTextProperties() {
 }
 
 void ButtonTest::constructTextOnlyTextPropertiesStateless() {
+    auto&& data = ConstructStatelessData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
     NodeHandle node1 = button({rootAnchor, {}, {32, 16}}, "hello!",
-        TextProperties{}.setScript(Text::Script::Braille),
+        TextProperties{}.setScript(Text::Script::Braille), data.function1,
         ButtonStyle::Info);
-    NodeHandle node2 = button({rootAnchor, {}, {32, 16}}, Icon::None, "hello!",
-        TextProperties{}.setScript(Text::Script::Braille),
+    NodeHandle node2 = button({rootAnchor, {32, 0}, {32, 16}}, Icon::None, "hello!",
+        TextProperties{}.setScript(Text::Script::Braille), data.function2,
         ButtonStyle::Info);
     CORRADE_COMPARE(ui.nodeParent(node1), rootAnchor);
     CORRADE_COMPARE(ui.nodeParent(node2), rootAnchor);
@@ -322,6 +451,22 @@ void ButtonTest::constructTextOnlyTextPropertiesStateless() {
     CORRADE_COMPARE(ui.baseLayer().usedCount(), 2);
     CORRADE_COMPARE(ui.textLayer().usedCount(), 2);
     CORRADE_COMPARE(ui.layoutLayer().usedCount(), 2);
+    CORRADE_COMPARE(ui.eventLayer().usedCount(), data.expectedEventCount*2);
+
+    /* Triggering the buttons should call the function, if set */
+    Containers::String out;
+    Debug redirectOutput{&out};
+    for(Float i = 0; i != 2; ++i) {
+        CORRADE_ITERATION(i);
+        PointerEvent press{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
+        PointerEvent release{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
+        CORRADE_VERIFY(ui.pointerPressEvent({16 + i*32, 8}, press));
+        CORRADE_VERIFY(ui.pointerReleaseEvent({16 + i*32, 8}, release));
+    }
+    CORRADE_COMPARE_AS(out, data.expectedEventCount ?
+        "Button 1 triggered!\n"
+        "Button 2 triggered!\n" : "",
+        TestSuite::Compare::String);
 }
 
 void ButtonTest::constructIconText() {
@@ -344,7 +489,10 @@ void ButtonTest::constructIconText() {
 }
 
 void ButtonTest::constructIconTextStateless() {
-    NodeHandle node = button({rootAnchor, {}, {32, 16}}, Icon::No, "bye!", ButtonStyle::Dim);
+    auto&& data = ConstructStatelessData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
+    NodeHandle node = button({rootAnchor, {}, {32, 16}}, Icon::No, "bye!", data.function1, ButtonStyle::Dim);
     CORRADE_COMPARE(ui.nodeParent(node), rootAnchor);
     CORRADE_COMPARE(ui.nodeSize(node), (Vector2{32, 16}));
 
@@ -353,6 +501,18 @@ void ButtonTest::constructIconTextStateless() {
     CORRADE_COMPARE(ui.baseLayer().usedCount(), 1);
     CORRADE_COMPARE(ui.textLayer().usedCount(), 2);
     CORRADE_COMPARE(ui.layoutLayer().usedCount(), 1);
+    CORRADE_COMPARE(ui.eventLayer().usedCount(), data.expectedEventCount);
+
+    /* Triggering the button should call the function, if set */
+    Containers::String out;
+    Debug redirectOutput{&out};
+    PointerEvent press{{}, PointerEventSource::Touch, Pointer::Finger, true, 0, {}};
+    PointerEvent release{{}, PointerEventSource::Touch, Pointer::Finger, true, 0, {}};
+    CORRADE_VERIFY(ui.pointerPressEvent({16, 8}, press));
+    CORRADE_VERIFY(ui.pointerReleaseEvent({16, 8}, release));
+    CORRADE_COMPARE_AS(out, data.expectedEventCount ?
+        "Button 1 triggered!\n" : "",
+        TestSuite::Compare::String);
 }
 
 void ButtonTest::constructIconTextTextProperties() {
@@ -379,8 +539,11 @@ void ButtonTest::constructIconTextTextProperties() {
 }
 
 void ButtonTest::constructIconTextTextPropertiesStateless() {
+    auto&& data = ConstructStatelessData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
     NodeHandle node = button({rootAnchor, {}, {32, 16}}, Icon::No, "bye!",
-        TextProperties{}.setScript(Text::Script::Braille),
+        TextProperties{}.setScript(Text::Script::Braille), data.function2,
         ButtonStyle::Warning);
     CORRADE_COMPARE(ui.nodeParent(node), rootAnchor);
     CORRADE_COMPARE(ui.nodeSize(node), (Vector2{32, 16}));
@@ -391,6 +554,18 @@ void ButtonTest::constructIconTextTextPropertiesStateless() {
     CORRADE_COMPARE(ui.baseLayer().usedCount(), 1);
     CORRADE_COMPARE(ui.textLayer().usedCount(), 2);
     CORRADE_COMPARE(ui.layoutLayer().usedCount(), 1);
+    CORRADE_COMPARE(ui.eventLayer().usedCount(), data.expectedEventCount);
+
+    /* Triggering the button should call the function, if set */
+    Containers::String out;
+    Debug redirectOutput{&out};
+    PointerEvent press{{}, PointerEventSource::Pen, Pointer::Pen, true, 0, {}};
+    PointerEvent release{{}, PointerEventSource::Pen, Pointer::Pen, true, 0, {}};
+    CORRADE_VERIFY(ui.pointerPressEvent({16, 8}, press));
+    CORRADE_VERIFY(ui.pointerReleaseEvent({16, 8}, release));
+    CORRADE_COMPARE_AS(out, data.expectedEventCount ?
+        "Button 2 triggered!\n" : "",
+        TestSuite::Compare::String);
 }
 
 void ButtonTest::constructNoCreate() {
@@ -399,6 +574,114 @@ void ButtonTest::constructNoCreate() {
     CORRADE_COMPARE(button.backgroundData(), DataHandle::Null);
     CORRADE_COMPARE(button.iconData(), DataHandle::Null);
     CORRADE_COMPARE(button.textData(), DataHandle::Null);
+}
+
+void ButtonTest::onTrigger() {
+    Button button{{rootAnchor, {}, {32, 16}}, "hello"};
+
+    /* Triggering the button should call all set functions */
+    button.onTrigger([]{
+        Debug{} << "Button triggered!";
+    });
+    button.onTrigger([]{
+        Debug{} << "Another trigger.";
+    });
+    button.onTrigger([]{
+        Debug{} << "One more?";
+    });
+
+    Containers::String out;
+    Debug redirectOutput{&out};
+    PointerEvent press{{}, PointerEventSource::Pen, Pointer::Pen, true, 0, {}};
+    PointerEvent release{{}, PointerEventSource::Pen, Pointer::Pen, true, 0, {}};
+    CORRADE_VERIFY(ui.pointerPressEvent({16, 8}, press));
+    CORRADE_VERIFY(ui.pointerReleaseEvent({16, 8}, release));
+    /* There is no guarantee on the order in which the functions are called */
+    CORRADE_COMPARE_AS(out.splitWithoutEmptyParts('\n'), (Containers::StringIterable{
+        "Another trigger.",
+        "Button triggered!",
+        "One more?"
+    }), TestSuite::Compare::SortedContainer);
+}
+
+void ButtonTest::onTriggerScoped() {
+    Button button{{rootAnchor, {}, {32, 16}}, "hello"};
+
+    EventConnection first = button.onTriggerScoped([]{
+        Debug{} << "Button triggered!";
+    });
+    EventConnection second = button.onTriggerScoped([]{
+        Debug{} << "Another trigger.";
+    });
+    EventConnection third = button.onTriggerScoped([]{
+        Debug{} << "One more?";
+    });
+
+    {
+        Containers::String out;
+        Debug redirectOutput{&out};
+        PointerEvent press{{}, PointerEventSource::Pen, Pointer::Pen, true, 0, {}};
+        PointerEvent release{{}, PointerEventSource::Pen, Pointer::Pen, true, 0, {}};
+        CORRADE_VERIFY(ui.pointerPressEvent({16, 8}, press));
+        CORRADE_VERIFY(ui.pointerReleaseEvent({16, 8}, release));
+        /* There is no guarantee on the order in which the functions are
+           called */
+        CORRADE_COMPARE_AS(out.splitWithoutEmptyParts('\n'), (Containers::StringIterable{
+            "Button triggered!",
+            "Another trigger.",
+            "One more?",
+        }), TestSuite::Compare::SortedContainer);
+    }
+
+    /* Remove the second trigger */
+    second = {};
+
+    {
+        Containers::String out;
+        Debug redirectOutput{&out};
+        PointerEvent press{{}, PointerEventSource::Pen, Pointer::Pen, true, 0, {}};
+        PointerEvent release{{}, PointerEventSource::Pen, Pointer::Pen, true, 0, {}};
+        CORRADE_VERIFY(ui.pointerPressEvent({16, 8}, press));
+        CORRADE_VERIFY(ui.pointerReleaseEvent({16, 8}, release));
+        /* There is no guarantee on the order in which the functions are
+           called */
+        CORRADE_COMPARE_AS(out.splitWithoutEmptyParts('\n'), (Containers::StringIterable{
+            "Button triggered!",
+            "One more?",
+        }), TestSuite::Compare::SortedContainer);
+    }
+
+    /* Remove both other triggers */
+    first = {};
+    third = {};
+
+    {
+        Containers::String out;
+        Debug redirectOutput{&out};
+        PointerEvent press{{}, PointerEventSource::Pen, Pointer::Pen, true, 0, {}};
+        PointerEvent release{{}, PointerEventSource::Pen, Pointer::Pen, true, 0, {}};
+        CORRADE_VERIFY(ui.pointerPressEvent({16, 8}, press));
+        CORRADE_VERIFY(ui.pointerReleaseEvent({16, 8}, release));
+        CORRADE_COMPARE(out, "");
+    }
+}
+
+void ButtonTest::onTriggerInvalid() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    Button button{{rootAnchor, {}, {32, 16}}, "hello"};
+
+    Containers::String out;
+    Error redirectError{&out};
+    button.onTrigger(nullptr);
+    /* Cast to avoid the nodiscard warning. A plain static_cast or a
+       constructor EventConnection{} cast still causes a warning on GCC because
+       fuck me. */
+    EventConnection connection = button.onTriggerScoped(nullptr);
+    CORRADE_COMPARE_AS(out,
+        "Ui::Button::onTrigger(): function is null\n"
+        "Ui::Button::onTriggerScoped(): function is null\n",
+        TestSuite::Compare::String);
 }
 
 void ButtonTest::setStyle() {

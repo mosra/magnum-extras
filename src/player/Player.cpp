@@ -195,10 +195,10 @@ Overlay::Overlay(Platform::ScreenedApplication& application):
 {
     Ui::NodeHandle hideControls = Ui::button(
         Ui::SnapLayout::child(Ui::Snap::TopRight, {ui, controls}, ButtonSize),
-        "Controls"_s, Ui::ButtonStyle::Success);
+        "Controls"_s, nullptr, Ui::ButtonStyle::Success);
     Ui::NodeHandle showControls = Ui::button(
         Ui::SnapLayout::child(Ui::Snap::TopRight, {ui, window}, ButtonSize, Ui::NodeFlag::Hidden),
-        "Controls"_s, Ui::ButtonStyle::Flat);
+        "Controls"_s, nullptr, Ui::ButtonStyle::Flat);
     ui.eventLayer().onTapOrClick(hideControls, [this, showControls]{
         CORRADE_INTERNAL_ASSERT(!(ui.nodeFlags(controls) >= Ui::NodeFlag::Hidden));
         ui.addNodeFlags(controls, Ui::NodeFlag::Hidden);
@@ -216,7 +216,7 @@ Overlay::Overlay(Platform::ScreenedApplication& application):
     fullSize = Ui::Button{
         Ui::SnapLayout::sibling(Ui::Snap::Bottom, {ui, hideControls}, ButtonSize),
         "Full size"};
-    ui.eventLayer().onTapOrClick(fullSize, [this]{
+    fullSize.onTrigger([this]{
         /* Can't be inside the branch because then this cursed message happens:
             Fatal: Unexpected arg0 type (select) in call to: emscripten_asm_const_int */
         #pragma GCC diagnostic push
@@ -275,12 +275,9 @@ Overlay::Overlay(Platform::ScreenedApplication& application):
         ui.setNodeOffset(errorMessage, {0.0f, 15.0f});
         ui.textLayer().create(Ui::Implementation::TextStyle::LabelDimText, "Try with another file or check the browser\nconsole for details. Bug reports welcome.", {}, dialog);
 
-        Ui::NodeHandle close = Ui::button(
-            dialog.child(Ui::Snap::Bottom, ButtonSize),
-            "Oh well", Ui::ButtonStyle::Danger);
-        ui.eventLayer().onTapOrClick(close, [this]{
-            ui.clearNodeOrder(error);
-        });
+        Ui::button(dialog.child(Ui::Snap::Bottom, ButtonSize), "Oh well",
+            [this]{ ui.clearNodeOrder(error); },
+            Ui::ButtonStyle::Danger);
     }
     #endif
 }

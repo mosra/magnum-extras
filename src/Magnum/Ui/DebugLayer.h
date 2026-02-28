@@ -320,8 +320,8 @@ to highlight any node in the hierarchy and see its details.
 before any layouters are run, @relativeref{DebugLayerSource,NodeHierarchy}
 additionally shows info about parent and child nodes and
 @relativeref{DebugLayerSource,NodeData} also lists data attachments. Let's say
-we have a @ref Ui::Button placed somewhere in the UI, reacting to a tap or
-click:
+we have a @ref Ui::Button placed somewhere in the UI, with a function to call
+when triggered:
 
 @snippet ui-debuglayer.cpp button
 

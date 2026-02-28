@@ -31,6 +31,8 @@
  * @m_since_latest_{extras}
  */
 
+#include <Corrade/Utility/Macros.h> /* CORRADE_NODISCARD() */
+
 #include "Magnum/Ui/Widget.h"
 
 namespace Magnum { namespace Ui {
@@ -72,8 +74,9 @@ class MAGNUM_UI_EXPORT Button: public Widget {
          * @param style             Button style
          *
          * The button can be subsequently converted to text-only or icon + text
-         * using @ref setIcon() and @ref setText().
-         * @see @ref button(Anchor, Icon, ButtonStyle)
+         * using @ref setIcon() and @ref setText(). Use @ref onTrigger() to
+         * connect the button to an action.
+         * @see @ref button(Anchor, Icon, Containers::Function<void()>&&, ButtonStyle)
          */
         explicit Button(Anchor anchor, Icon icon, ButtonStyle style = ButtonStyle::Default);
 
@@ -86,8 +89,9 @@ class MAGNUM_UI_EXPORT Button: public Widget {
          * @param style             Button style
          *
          * The button can be subsequently converted to icon-only or icon + text
-         * using @ref setIcon() and @ref setText().
-         * @see @ref button(Anchor, Containers::StringView, const TextProperties&, ButtonStyle)
+         * using @ref setIcon() and @ref setText(). Use @ref onTrigger() to
+         * connect the button to an action.
+         * @see @ref button(Anchor, Containers::StringView, const TextProperties&, Containers::Function<void()>&&, ButtonStyle)
          */
         explicit Button(Anchor anchor, Containers::StringView text, const TextProperties& textProperties, ButtonStyle style = ButtonStyle::Default);
         /** @overload */
@@ -104,8 +108,9 @@ class MAGNUM_UI_EXPORT Button: public Widget {
          * @param style             Button style
          *
          * The button can be subsequently converted to icon-only or text-only
-         * using @ref setIcon() and @ref setText().
-         * @see @ref button(Anchor, Icon, Containers::StringView, const TextProperties&, ButtonStyle)
+         * using @ref setIcon() and @ref setText(). Use @ref onTrigger() to
+         * connect the button to an action.
+         * @see @ref button(Anchor, Icon, Containers::StringView, const TextProperties&, Containers::Function<void()>&&, ButtonStyle)
          */
         explicit Button(Anchor anchor, Icon icon, Containers::StringView text, const TextProperties& textProperties, ButtonStyle style = ButtonStyle::Default);
         /** @overload */
@@ -156,6 +161,34 @@ class MAGNUM_UI_EXPORT Button: public Widget {
         #endif
 
         /**
+         * @brief Connect to the button being triggered
+         * @return New data handle
+         *
+         * Expects that the @p function is not @cpp nullptr @ce. Unless
+         * explicitly removed through the returned @ref DataHandle, the
+         * callback is active until the button itself is removed. See
+         * @ref onTriggerScoped() for an alternative.
+         *
+         * Subsequent calls to this function don't replace existing calls but
+         * add to them. There is no guarantee on the order in which multiple
+         * functions are called.
+         *
+         * Delegates to @ref EventLayer::onTapOrClick(), see its documentation
+         * for detailed behavior description.
+         */
+        DataHandle onTrigger(Containers::Function<void()>&& function);
+
+        /**
+         * @brief Scoped connection to the button being triggered
+         * @return Event connection instance
+         *
+         * Expects that the @p function is not @cpp nullptr @ce. Compared to
+         * @ref onTrigger(), the callback is removed when the returned
+         * @ref EventConnection is destructed.
+         */
+        CORRADE_NODISCARD("the call is removed when the returned EventConnection is destructed") EventConnection onTriggerScoped(Containers::Function<void()>&& function);
+
+        /**
          * @brief Background data
          *
          * Exposed mainly for testing purposes, not meant to be modified
@@ -195,6 +228,8 @@ class MAGNUM_UI_EXPORT Button: public Widget {
 @param anchor           Positioning anchor
 @param icon             Button icon. Passing @ref Icon::None makes the button
     empty.
+@param trigger          Function to execute when the button is triggered or
+    @cpp nullptr @ce
 @param style            Button style
 @return The @p anchor verbatim
 @m_since_latest_{extras}
@@ -204,16 +239,22 @@ stateless button that doesn't have any class instance that would need to be
 kept in scope and eventually destructed, making it more lightweight. As a
 consequence it can't have its style, icon or text subsequently changed and is
 removed only when the node or its parent get removed.
+
+The @p trigger function, if not @cpp nullptr @ce, gets called when the button
+is triggered. Internally it's passed to @ref EventLayer::onTapOrClick(), see
+its documentation for detailed behavior description.
 */
-MAGNUM_UI_EXPORT Anchor button(Anchor anchor, Icon icon, ButtonStyle style = ButtonStyle::Default);
+MAGNUM_UI_EXPORT Anchor button(Anchor anchor, Icon icon, Containers::Function<void()>&& trigger, ButtonStyle style = ButtonStyle::Default);
 
 /**
 @brief Stateless text button widget
 @param anchor           Positioning anchor
 @param text             Button text. Passing an empty string makes the button
     empty.
-@param style            Button style
 @param textProperties   Text shaping and layouting properties
+@param trigger          Function to execute when the button is triggered or
+    @cpp nullptr @ce
+@param style            Button style
 @return The @p anchor verbatim
 @m_since_latest_{extras}
 
@@ -222,13 +263,17 @@ this creates a stateless button that doesn't have any class instance that would
 need to be kept in scope and eventually destructed, making it more lightweight.
 As a consequence it can't have its style, icon or text subsequently changed and
 is removed only when the node or its parent get removed.
+
+The @p trigger function, if not @cpp nullptr @ce, gets called when the button
+is triggered. Internally it's passed to @ref EventLayer::onTapOrClick(), see
+its documentation for detailed behavior description.
 */
-MAGNUM_UI_EXPORT Anchor button(Anchor anchor, Containers::StringView text, const TextProperties& textProperties, ButtonStyle style = ButtonStyle::Default);
+MAGNUM_UI_EXPORT Anchor button(Anchor anchor, Containers::StringView text, const TextProperties& textProperties, Containers::Function<void()>&& trigger, ButtonStyle style = ButtonStyle::Default);
 /**
 @overload
 @m_since_latest_{extras}
 */
-MAGNUM_UI_EXPORT Anchor button(Anchor anchor, Containers::StringView text, ButtonStyle style = ButtonStyle::Default);
+MAGNUM_UI_EXPORT Anchor button(Anchor anchor, Containers::StringView text, Containers::Function<void()>&& trigger, ButtonStyle style = ButtonStyle::Default);
 
 /**
 @brief Stateless icon + text button widget
@@ -238,6 +283,8 @@ MAGNUM_UI_EXPORT Anchor button(Anchor anchor, Containers::StringView text, Butto
 @param text             Button text. Passing an empty string creates the button
     without a text.
 @param textProperties   Text shaping and layouting properties
+@param trigger          Function to execute when the button is triggered or
+    @cpp nullptr @ce
 @param style            Button style
 @return The @p anchor verbatim
 @m_since_latest_{extras}
@@ -247,13 +294,17 @@ this creates a stateless button that doesn't have any class instance that would
 need to be kept in scope and eventually destructed, making it more lightweight.
 As a consequence it can't have its style, icon or text subsequently changed and
 is removed only when the node or its parent get removed.
+
+The @p trigger function, if not @cpp nullptr @ce, gets called when the button
+is triggered. Internally it's passed to @ref EventLayer::onTapOrClick(), see
+its documentation for detailed behavior description.
 */
-MAGNUM_UI_EXPORT Anchor button(Anchor anchor, Icon icon, Containers::StringView text, const TextProperties& textProperties, ButtonStyle style = ButtonStyle::Default);
+MAGNUM_UI_EXPORT Anchor button(Anchor anchor, Icon icon, Containers::StringView text, const TextProperties& textProperties, Containers::Function<void()>&& trigger, ButtonStyle style = ButtonStyle::Default);
 /**
 @overload
 @m_since_latest_{extras}
 */
-MAGNUM_UI_EXPORT Anchor button(Anchor anchor, Icon icon, Containers::StringView text, ButtonStyle style = ButtonStyle::Default);
+MAGNUM_UI_EXPORT Anchor button(Anchor anchor, Icon icon, Containers::StringView text, Containers::Function<void()>&& trigger, ButtonStyle style = ButtonStyle::Default);
 
 }}
 
