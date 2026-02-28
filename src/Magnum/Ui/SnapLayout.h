@@ -97,10 +97,11 @@ class MAGNUM_UI_EXPORT AbstractSnapLayout {
          *
          * Expects that @p layouter is part of the same user interface as
          * @p anchor. If the node in @p anchor already has a layout from
-         * @p layouter assigned, uses it, otherwise adds a new one to it. Use
-         * the @ref AbstractSnapLayout(SnapLayouter&, const AbstractAnchor& anchor, LayoutHandle, SnapLayoutFlags)
-         * overload to add a new layout always together with specifying its
-         * properties.
+         * @p layouter assigned, uses it, otherwise adds a new one to it. To
+         * add a layout to an existing node with full control over its
+         * properties use the @ref SnapLayouter::add() or
+         * @relativeref{SnapLayouter,addExplicit()} APIs directly and pass the
+         * resulting @ref LayoutHandle to @ref AbstractSnapLayout(AbstractUserInterface&, SnapLayouter&, LayoutHandle).
          *
          * Calls @ref SnapLayouter::add() internally, see its documentation for
          * detailed description of all constraints.
@@ -115,10 +116,11 @@ class MAGNUM_UI_EXPORT AbstractSnapLayout {
          *
          * Expects that @p layouter is part of @p ui and @p node is valid. If
          * the @p node already has a layout from @p layouter assigned, uses it,
-         * otherwise adds a new one to it. Use
-         * the @ref AbstractSnapLayout(SnapLayouter&, const AbstractAnchor& anchor, LayoutHandle, SnapLayoutFlags)
-         * overload to add a new layout always together with specifying its
-         * properties.
+         * otherwise adds a new one to it. To add a layout to an existing node
+         * with full control over its properties use the
+         * @ref SnapLayouter::add() or @relativeref{SnapLayouter,addExplicit()}
+         * APIs directly and pass the resulting @ref LayoutHandle to
+         * @ref AbstractSnapLayout(AbstractUserInterface&, SnapLayouter&, LayoutHandle).
          *
          * Calls @ref SnapLayouter::add() internally, see its documentation for
          * detailed description of all constraints.
@@ -126,136 +128,17 @@ class MAGNUM_UI_EXPORT AbstractSnapLayout {
         explicit AbstractSnapLayout(AbstractUserInterface& ui, SnapLayouter& layouter, NodeHandle node);
 
         /**
-         * @brief Construct a layout on an existing node
-         * @param layouter      Layouter instance
-         * @param anchor        Anchor to which to assign the layout
-         * @param before        Sibling layout to order before or
-         *      @ref LayoutHandle::Null if ordered as last
-         * @param flags         Layout flags
-         *
-         * Assigns a new layout to an existing node contained in @p anchor.
-         * Expects that @p layouter is part of the same user interface as
-         * @p anchor, and that the node in @p anchor doesn't have a layout from
-         * @p layouter assigned yet. Use the @ref AbstractSnapLayout(SnapLayouter&, const AbstractAnchor&)
-         * overload to add a new layout only if it isn't assigned yet.
-         *
-         * Use the @ref child(), @ref root()  or @ref sibling() static
-         * functions for a combined operation of creating a node and assigning
-         * a layout to it, you can also call member @ref child() and
-         * @ref sibling() on an existing layout instance for the same effect.
-         *
-         * Calls @ref SnapLayouter::add() internally, see its documentation for
-         * detailed description of all constraints.
-         */
-        explicit AbstractSnapLayout(SnapLayouter& layouter, const AbstractAnchor& anchor, LayoutHandle before, SnapLayoutFlags flags = {});
-        /** @overload */
-        explicit AbstractSnapLayout(SnapLayouter& layouter, const AbstractAnchor& anchor, SnapLayoutFlags layoutFlags): AbstractSnapLayout{layouter, anchor, LayoutHandle{}, layoutFlags} {}
-
-        /**
-         * @brief Construct a layout on an existing node, ordered before given layout assuming the layout belongs to the same layouter
-         *
-         * Like @ref AbstractSnapLayout(SnapLayouter&, const AbstractAnchor&, LayoutHandle, SnapLayoutFlags)
-         * but without checking that @p layoutBefore indeed belongs to
-         * @p layouter. See documentation for more information.
-         *
-         * Calls @ref SnapLayouter::add() internally, see its documentation for
-         * detailed description of all constraints.
-         */
-        explicit AbstractSnapLayout(SnapLayouter& layouter, const AbstractAnchor& anchor, LayouterDataHandle layoutBefore, SnapLayoutFlags layoutFlags = {});
-
-        /**
-         * @brief Construct a layout on an existing node
+         * @brief Construct from an existing layout handle
          * @param ui            User interface instance
          * @param layouter      Layouter instance
-         * @param node          Node to which to assign the layout
-         * @param before        Sibling layout to order before or
-         *      @ref LayoutHandle::Null if ordered as last
-         * @param flags         Layout flags
+         * @param layout        Layout handle
          *
-         * Assigns a new layout to an existing @p node. Expects that
-         * @p layouter is part of @p ui, @p node is valid, and that @p node
-         * doesn't have a layout from @p layouter assigned yet. Use the
-         * @ref AbstractSnapLayout(AbstractUserInterface&, SnapLayouter&, NodeHandle)
-         * overload to add a new layout only if it isn't assigned yet.
-         *
-         * Use the @ref child(), @ref root()  or @ref sibling() static
-         * functions for a combined operation of creating a node and assigning
-         * a layout to it, you can also call member @ref child() and
-         * @ref sibling() on an existing layout instance for the same effect.
-         *
-         * Calls @ref SnapLayouter::add() internally, see its documentation for
-         * detailed description of all constraints.
+         * Expects that @p layouter is part of @p ui and @p layout is a valid
+         * handle coming from @p layouter.
          */
-        explicit AbstractSnapLayout(AbstractUserInterface& ui, SnapLayouter& layouter, NodeHandle node, LayoutHandle before, SnapLayoutFlags flags = {});
+        explicit AbstractSnapLayout(AbstractUserInterface& ui, SnapLayouter& layouter, LayoutHandle layout);
         /** @overload */
-        explicit AbstractSnapLayout(AbstractUserInterface& ui, SnapLayouter& layouter, NodeHandle node, SnapLayoutFlags layoutFlags): AbstractSnapLayout{ui, layouter, node, LayoutHandle{}, layoutFlags} {}
-
-        /**
-         * @brief Construct a layout on an existing node, ordered before given layout assuming the layout belongs to the same layouter
-         *
-         * Like @ref AbstractSnapLayout(AbstractUserInterface&, SnapLayouter&, NodeHandle, LayoutHandle, SnapLayoutFlags)
-         * but without checking that @p layoutBefore indeed belongs to
-         * @p layouter. See documentation for more information.
-         *
-         * Calls @ref SnapLayouter::add() internally, see its documentation for
-         * detailed description of all constraints.
-         */
-        explicit AbstractSnapLayout(AbstractUserInterface& ui, SnapLayouter& layouter, NodeHandle node, LayouterDataHandle layoutBefore, SnapLayoutFlags layoutFlags = {});
-
-        /**
-         * @brief Construct an explicitly snapped layout on an existing node
-         * @param layouter      Layouter instance
-         * @param anchor        Anchor to which to assign the layout
-         * @param snap          How to snap
-         * @param snapTarget    Target to snap to or
-         *      @ref LayoutHandle::Null to snap a root @p anchor to the UI
-         *      itself
-         * @param flags         Layout flags
-         *
-         * Calls @ref SnapLayouter::addExplicit() internally, see its
-         * documentation for detailed description of all constraints.
-         */
-        explicit AbstractSnapLayout(SnapLayouter& layouter, const AbstractAnchor& anchor, Snaps snap, LayoutHandle snapTarget, SnapLayoutFlags flags = {});
-
-        /**
-         * @brief Construct an explicitly snapped layout on an existing node, assuming the target belongs to the same layouter
-         *
-         * Like @ref AbstractSnapLayout(SnapLayouter&, const AbstractAnchor&, Snaps, LayoutHandle, SnapLayoutFlags)
-         * but without checking that @p snapTarget indeed belongs to
-         * @p layouter. See documentation for more information.
-         *
-         * Calls @ref SnapLayouter::addExplicit() internally, see its
-         * documentation for detailed description of all constraints.
-         */
-        explicit AbstractSnapLayout(SnapLayouter& layouter, const AbstractAnchor& anchor, Snaps snap, LayouterDataHandle snapTarget, SnapLayoutFlags flags = {});
-
-        /**
-         * @brief Construct an explicitly snapped layout on an existing node
-         * @param ui            User interface instance
-         * @param layouter      Layouter instance
-         * @param node          Node to which to assign the layout
-         * @param snap          How to snap
-         * @param snapTarget    Target to snap to or
-         *      @ref LayoutHandle::Null to snap a root @p anchor to the UI
-         *      itself
-         * @param flags         Layout flags
-         *
-         * Calls @ref SnapLayouter::addExplicit() internally, see its
-         * documentation for detailed description of all constraints.
-         */
-        explicit AbstractSnapLayout(AbstractUserInterface& ui, SnapLayouter& layouter, NodeHandle node, Snaps snap, LayoutHandle snapTarget, SnapLayoutFlags flags = {});
-
-        /**
-         * @brief Construct an explicitly snapped layout on an existing node, assuming the target belongs to the same layouter
-         *
-         * Like @ref AbstractSnapLayout(AbstractUserInterface& ui, SnapLayouter&, NodeHandle, Snaps, LayoutHandle, SnapLayoutFlags)
-         * but without checking that @p snapTarget indeed belongs to
-         * @p layouter. See documentation for more information.
-         *
-         * Calls @ref SnapLayouter::addExplicit() internally, see its
-         * documentation for detailed description of all constraints.
-         */
-        explicit AbstractSnapLayout(AbstractUserInterface& ui, SnapLayouter& layouter, NodeHandle node, Snaps snap, LayouterDataHandle snapTarget, SnapLayoutFlags flags = {});
+        explicit AbstractSnapLayout(AbstractUserInterface& ui, SnapLayouter& layouter, LayouterDataHandle layout);
 
         /** @brief User interface instance */
         AbstractUserInterface& ui() const { return *_ui; }
@@ -480,7 +363,7 @@ class MAGNUM_UI_EXPORT AbstractSnapLayout {
         /* Delegated to by all constructors, including BasicSnapLayout
            constructors. Populates just the _ui and _node members, _layouter
            and _layout is left uninitialized. */
-        explicit AbstractSnapLayout(NoInitT, AbstractUserInterface& ui, NodeHandle node);
+        explicit AbstractSnapLayout(NoInitT, AbstractUserInterface& ui);
         /* Takes layouter as a pointer and not a reference so it can be used
            also in assertions for UserInterface::snapLayouter() not existing.
            Used also by BasicSnapLayout assertions so it's protected. */
@@ -489,11 +372,9 @@ class MAGNUM_UI_EXPORT AbstractSnapLayout {
         /* Common code used by all constructor variants as well as
            BasicSnapLayout constructors, as regular functions so various
            asserts can happen before initializing the members */
-        void addLayout(SnapLayouter& layouter);
-        void addLayout(SnapLayouter& layouter, LayoutHandle before, SnapLayoutFlags flags);
-        void addLayout(SnapLayouter& layouter, LayouterDataHandle before, SnapLayoutFlags flags);
-        void addExplicitLayout(SnapLayouter& layouter, Snaps snap, LayoutHandle snapTarget, SnapLayoutFlags flags);
-        void addExplicitLayout(SnapLayouter& layouter, Snaps snap, LayouterDataHandle snapTarget, SnapLayoutFlags flags);
+        void addLayout(SnapLayouter& layouter, NodeHandle node);
+        void useLayout(SnapLayouter& layouter, LayoutHandle layout);
+        void useLayout(SnapLayouter& layouter, LayouterDataHandle layout);
 
         /* Deinlined specializations for BasicSnapLayoutColumn and such in
            SnapLayout.cpp */
@@ -597,172 +478,27 @@ template<class UserInterface> class BasicSnapLayout: public AbstractSnapLayout {
         explicit BasicSnapLayout(UserInterface& ui, NodeHandle node);
 
         /**
-         * @brief @copybrief AbstractSnapLayout::AbstractSnapLayout(SnapLayouter&, const AbstractAnchor&, LayoutHandle, SnapLayoutFlags)
+         * @brief @copybrief AbstractSnapLayout::AbstractSnapLayout(AbstractUserInterface&, SnapLayouter&, LayoutHandle)
          *
-         * Like @ref AbstractSnapLayout::AbstractSnapLayout(SnapLayouter&, const AbstractAnchor&, LayoutHandle, SnapLayoutFlags)
-         * but accepting a concrete anchor instance.
-         */
-        explicit BasicSnapLayout(SnapLayouter& layouter, const BasicAnchor<UserInterface>& anchor, LayoutHandle before, SnapLayoutFlags flags = {}): AbstractSnapLayout{layouter, anchor, before, flags} {}
-        /** @overload */
-        explicit BasicSnapLayout(SnapLayouter& layouter, const BasicAnchor<UserInterface>& anchor, SnapLayoutFlags layoutFlags): BasicSnapLayout{layouter, anchor, LayoutHandle{}, layoutFlags} {}
-
-        /**
-         * @brief @copybrief AbstractSnapLayout::AbstractSnapLayout(SnapLayouter&, const AbstractAnchor&, LayouterDataHandle, SnapLayoutFlags)
-         *
-         * Like @ref AbstractSnapLayout::AbstractSnapLayout(SnapLayouter&, const AbstractAnchor&, LayouterDataHandle, SnapLayoutFlags)
-         * but accepting a concrete anchor instance.
-         */
-        explicit BasicSnapLayout(SnapLayouter& layouter, const BasicAnchor<UserInterface>& anchor, LayouterDataHandle before, SnapLayoutFlags flags = {}): AbstractSnapLayout{layouter, anchor, before, flags} {}
-
-        /**
-         * @brief @copybrief AbstractSnapLayout::AbstractSnapLayout(AbstractUserInterface&, SnapLayouter&, NodeHandle, LayoutHandle, SnapLayoutFlags)
-         *
-         * Like @ref AbstractSnapLayout::AbstractSnapLayout(AbstractUserInterface&, SnapLayouter&, NodeHandle, LayoutHandle, SnapLayoutFlags)
+         * Like @ref AbstractSnapLayout::AbstractSnapLayout(AbstractUserInterface&, SnapLayouter&, LayoutHandle)
          * but accepting a concrete user interface instance.
          */
-        explicit BasicSnapLayout(UserInterface& ui, SnapLayouter& layouter, NodeHandle node, LayoutHandle before, SnapLayoutFlags flags = {}): AbstractSnapLayout{ui, layouter, node, before, flags} {}
+        explicit BasicSnapLayout(UserInterface& ui, SnapLayouter& layouter, LayoutHandle layout): AbstractSnapLayout{ui, layouter, layout} {}
         /** @overload */
-        explicit BasicSnapLayout(UserInterface& ui, SnapLayouter& layouter, NodeHandle node, SnapLayoutFlags layoutFlags): BasicSnapLayout{ui, layouter, node, LayoutHandle{}, layoutFlags} {}
+        explicit BasicSnapLayout(UserInterface& ui, SnapLayouter& layouter, LayouterDataHandle layout): AbstractSnapLayout{ui, layouter, layout} {}
 
         /**
-         * @brief @copybrief AbstractSnapLayout::AbstractSnapLayout(AbstractUserInterface&, SnapLayouter&, NodeHandle, LayouterDataHandle, SnapLayoutFlags)
+         * @brief @copybrief AbstractSnapLayout::AbstractSnapLayout(AbstractUserInterface&, SnapLayouter&, LayoutHandle)
          *
-         * Like @ref AbstractSnapLayout::AbstractSnapLayout(AbstractUserInterface&, SnapLayouter&, NodeHandle, LayouterDataHandle, SnapLayoutFlags)
-         * but accepting a concrete user interface instance.
-         */
-        explicit BasicSnapLayout(UserInterface& ui, SnapLayouter& layouter, NodeHandle node, LayouterDataHandle before, SnapLayoutFlags flags = {}): AbstractSnapLayout{ui, layouter, node, before, flags} {}
-
-        /**
-         * @brief @copybrief AbstractSnapLayout::AbstractSnapLayout(SnapLayouter&, const AbstractAnchor&, LayoutHandle, SnapLayoutFlags)
-         *
-         * Like @ref AbstractSnapLayout::AbstractSnapLayout(SnapLayouter&, const AbstractAnchor&, LayoutHandle, SnapLayoutFlags)
-         * but using the default @ref SnapLayouter instance available through
-         * @ref UserInterface::snapLayouter() and accepting a concrete anchor
-         * instance. Expects that the user interface referenced in @p anchor
-         * contains a @ref SnapLayouter instance.
-         * @see @ref UserInterface::hasSnapLayouter()
-         */
-        explicit BasicSnapLayout(const BasicAnchor<UserInterface>& anchor, LayoutHandle before, SnapLayoutFlags flags = {});
-        /** @overload */
-        explicit BasicSnapLayout(const BasicAnchor<UserInterface>& anchor, SnapLayoutFlags layoutFlags): BasicSnapLayout{anchor, LayoutHandle{}, layoutFlags} {}
-
-        /**
-         * @brief @copybrief AbstractSnapLayout::AbstractSnapLayout(SnapLayouter&, const AbstractAnchor&, LayouterDataHandle, SnapLayoutFlags)
-         *
-         * Like @ref AbstractSnapLayout::AbstractSnapLayout(SnapLayouter&, const AbstractAnchor&, LayouterDataHandle, SnapLayoutFlags)
-         * but using the default @ref SnapLayouter instance available through
-         * @ref UserInterface::snapLayouter() and accepting a concrete anchor
-         * instance. Expects that the user interface referenced in @p anchor
-         * contains a @ref SnapLayouter instance.
-         * @see @ref UserInterface::hasSnapLayouter()
-         */
-        explicit BasicSnapLayout(const BasicAnchor<UserInterface>& anchor, LayouterDataHandle before, SnapLayoutFlags flags = {});
-
-        /**
-         * @brief @copybrief AbstractSnapLayout::AbstractSnapLayout(AbstractUserInterface&, SnapLayouter&, NodeHandle, LayoutHandle, SnapLayoutFlags)
-         *
-         * Like @ref AbstractSnapLayout::AbstractSnapLayout(AbstractUserInterface&, SnapLayouter&, NodeHandle, LayoutHandle, SnapLayoutFlags)
+         * Like @ref AbstractSnapLayout::AbstractSnapLayout(AbstractUserInterface&, SnapLayouter&, LayoutHandle)
          * but accepting a concrete user interface instance and using the
          * default @ref SnapLayouter available through
          * @ref UserInterface::snapLayouter(). Expects that the @p ui contains
          * a @ref SnapLayouter instance.
-         * @see @ref UserInterface::hasSnapLayouter()
          */
-        explicit BasicSnapLayout(UserInterface& ui, NodeHandle node, LayoutHandle before, SnapLayoutFlags flags = {});
+        explicit BasicSnapLayout(UserInterface& ui, LayoutHandle layout);
         /** @overload */
-        explicit BasicSnapLayout(UserInterface& ui, NodeHandle node, SnapLayoutFlags layoutFlags): BasicSnapLayout{ui, node, LayoutHandle{}, layoutFlags} {}
-
-        /**
-         * @brief @copybrief AbstractSnapLayout::AbstractSnapLayout(AbstractUserInterface&, SnapLayouter&, NodeHandle, LayouterDataHandle, SnapLayoutFlags)
-         *
-         * Like @ref AbstractSnapLayout::AbstractSnapLayout(AbstractUserInterface&, SnapLayouter&, NodeHandle, LayouterDataHandle, SnapLayoutFlags)
-         * but accepting a concrete user interface instance and using the
-         * default @ref SnapLayouter available through
-         * @ref UserInterface::snapLayouter(). Expects that the @p ui contains
-         * a @ref SnapLayouter instance.
-         * @see @ref UserInterface::hasSnapLayouter()
-         */
-        explicit BasicSnapLayout(UserInterface& ui, NodeHandle node, LayouterDataHandle before, SnapLayoutFlags flags = {});
-
-        /**
-         * @brief @copybrief AbstractSnapLayout::AbstractSnapLayout(SnapLayouter&, const AbstractAnchor&, Snaps, LayoutHandle, SnapLayoutFlags)
-         *
-         * Like @ref AbstractSnapLayout::AbstractSnapLayout(SnapLayouter&, const AbstractAnchor&, Snaps, LayoutHandle, SnapLayoutFlags)
-         * but accepting a concrete anchor instance.
-         */
-        explicit BasicSnapLayout(SnapLayouter& layouter, const BasicAnchor<UserInterface>& anchor, Snaps snap, LayoutHandle snapTarget, SnapLayoutFlags flags = {}): AbstractSnapLayout{layouter, anchor, snap, snapTarget, flags} {}
-
-        /**
-         * @brief @copybrief AbstractSnapLayout::AbstractSnapLayout(SnapLayouter&, const AbstractAnchor&, Snaps, LayouterDataHandle, SnapLayoutFlags)
-         *
-         * Like @ref AbstractSnapLayout::AbstractSnapLayout(SnapLayouter&, const AbstractAnchor&, Snaps, LayouterDataHandle, SnapLayoutFlags)
-         * but accepting a concrete anchor instance.
-         */
-        explicit BasicSnapLayout(SnapLayouter& layouter, const BasicAnchor<UserInterface>& anchor, Snaps snap, LayouterDataHandle snapTarget, SnapLayoutFlags flags = {}): AbstractSnapLayout{layouter, anchor, snap, snapTarget, flags} {}
-
-        /**
-         * @brief @copybrief AbstractSnapLayout::AbstractSnapLayout(AbstractUserInterface&, SnapLayouter&, NodeHandle, Snaps, LayoutHandle, SnapLayoutFlags)
-         *
-         * Like @ref AbstractSnapLayout::AbstractSnapLayout(AbstractUserInterface&, SnapLayouter&, NodeHandle, Snaps, LayoutHandle, SnapLayoutFlags)
-         * but accepting a concrete user interface instance.
-         */
-        explicit BasicSnapLayout(UserInterface& ui, SnapLayouter& layouter, NodeHandle node, Snaps snap, LayoutHandle snapTarget, SnapLayoutFlags flags = {}): AbstractSnapLayout{ui, layouter, node, snap, snapTarget, flags} {}
-
-        /**
-         * @brief @copybrief AbstractSnapLayout::AbstractSnapLayout(AbstractUserInterface&, SnapLayouter&, NodeHandle, Snaps, LayouterDataHandle, SnapLayoutFlags)
-         *
-         * Like @ref AbstractSnapLayout::AbstractSnapLayout(AbstractUserInterface&, SnapLayouter&, NodeHandle, Snaps, LayouterDataHandle, SnapLayoutFlags)
-         * but accepting a concrete user interface instance.
-         */
-        explicit BasicSnapLayout(UserInterface& ui, SnapLayouter& layouter, NodeHandle node, Snaps snap, LayouterDataHandle snapTarget, SnapLayoutFlags flags = {}): AbstractSnapLayout{ui, layouter, node, snap, snapTarget, flags} {}
-
-        /**
-         * @brief @copybrief AbstractSnapLayout::AbstractSnapLayout(SnapLayouter&, const AbstractAnchor&, Snaps, LayoutHandle, SnapLayoutFlags)
-         *
-         * Like @ref AbstractSnapLayout::AbstractSnapLayout(SnapLayouter&, const AbstractAnchor&, Snaps, LayoutHandle, SnapLayoutFlags)
-         * but using the default @ref SnapLayouter instance available through
-         * @ref UserInterface::snapLayouter() and accepting a concrete anchor
-         * instance. Expects that the user interface referenced in @p anchor
-         * contains a @ref SnapLayouter instance.
-         * @see @ref UserInterface::hasSnapLayouter()
-         */
-        explicit BasicSnapLayout(const BasicAnchor<UserInterface>& anchor, Snaps snap, LayoutHandle snapTarget, SnapLayoutFlags flags = {});
-
-        /**
-         * @brief @copybrief AbstractSnapLayout::AbstractSnapLayout(SnapLayouter&, const AbstractAnchor&, Snaps, LayouterDataHandle, SnapLayoutFlags)
-         *
-         * Like @ref AbstractSnapLayout::AbstractSnapLayout(SnapLayouter&, const AbstractAnchor&, Snaps, LayouterDataHandle, SnapLayoutFlags)
-         * but using the default @ref SnapLayouter instance available through
-         * @ref UserInterface::snapLayouter() and accepting a concrete anchor
-         * instance. Expects that the user interface referenced in @p anchor
-         * contains a @ref SnapLayouter instance.
-         * @see @ref UserInterface::hasSnapLayouter()
-         */
-        explicit BasicSnapLayout(const BasicAnchor<UserInterface>& anchor, Snaps snap, LayouterDataHandle snapTarget, SnapLayoutFlags flags = {});
-
-        /**
-         * @brief @copybrief AbstractSnapLayout::AbstractSnapLayout(AbstractUserInterface&, SnapLayouter&, NodeHandle, Snaps, LayoutHandle, SnapLayoutFlags)
-         *
-         * Like @ref AbstractSnapLayout::AbstractSnapLayout(AbstractUserInterface&, SnapLayouter&, NodeHandle, Snaps, LayoutHandle, SnapLayoutFlags)
-         * but accepting a concrete user interface instance and using the
-         * default @ref SnapLayouter available through
-         * @ref UserInterface::snapLayouter(). Expects that the @p ui contains
-         * a @ref SnapLayouter instance.
-         * @see @ref UserInterface::hasSnapLayouter()
-         */
-        explicit BasicSnapLayout(UserInterface& ui, NodeHandle node, Snaps snap, LayoutHandle snapTarget, SnapLayoutFlags flags = {});
-
-        /**
-         * @brief @copybrief AbstractSnapLayout::AbstractSnapLayout(AbstractUserInterface&, SnapLayouter&, NodeHandle, Snaps, LayouterDataHandle, SnapLayoutFlags)
-         *
-         * Like @ref AbstractSnapLayout::AbstractSnapLayout(AbstractUserInterface&, SnapLayouter&, NodeHandle, Snaps, LayouterDataHandle, SnapLayoutFlags)
-         * but accepting a concrete user interface instance and using the
-         * default @ref SnapLayouter available through
-         * @ref UserInterface::snapLayouter(). Expects that the @p ui contains
-         * a @ref SnapLayouter instance.
-         * @see @ref UserInterface::hasSnapLayouter()
-         */
-        explicit BasicSnapLayout(UserInterface& ui, NodeHandle node, Snaps snap, LayouterDataHandle snapTarget, SnapLayoutFlags flags = {});
+        explicit BasicSnapLayout(UserInterface& ui, LayouterDataHandle layout);
 
         /** @brief User interface instance */
         UserInterface& ui() const;

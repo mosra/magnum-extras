@@ -319,11 +319,12 @@ ScrollArea::ScrollArea(const Anchor anchor, const ScrollAreaFlags flags): Widget
        appropriate. */
     ui().addNodeFlags(_viewNode, NodeFlag::Clip|(flags >= ScrollAreaFlag::NoContentsDrag ?
         NodeFlags{} : NodeFlag::FallthroughPointerEvents));
-    SnapLayout viewLayout{ui(), _viewNode, Snap::Fill, layout,
+    SnapLayout viewLayout{ui(), ui().snapLayouter().addExplicit(
+        _viewNode, Snap::Fill, layout,
         (flags >= ScrollAreaFlag::OnlyX ?
             SnapLayoutFlags{} : SnapLayoutFlag::IgnoreOverflowY)|
         (flags >= ScrollAreaFlag::OnlyY ?
-            SnapLayoutFlags{} : SnapLayoutFlag::IgnoreOverflowX)};
+            SnapLayoutFlags{} : SnapLayoutFlag::IgnoreOverflowX))};
     {
         LayoutStyle style;
         if(!(flags & (ScrollAreaFlag::OnlyX|ScrollAreaFlag::OnlyY)))
@@ -350,7 +351,8 @@ ScrollArea::ScrollArea(const Anchor anchor, const ScrollAreaFlags flags): Widget
         /* Layout for the scrollbar node, snapped to the whole right edge. The
            LayoutStyle supplies size constraints and margins, BaseStyle the
            actual visuals. */
-        SnapLayout scrollbarXLayout{ui(), _scrollbarXNode, Snap::Bottom|Snap::FillX, layout};
+        SnapLayout scrollbarXLayout{ui(), ui().snapLayouter().addExplicit(
+            _scrollbarXNode, Snap::Bottom|Snap::FillX, layout)};
         ui().layoutLayer().create(flags >= ScrollAreaFlag::OnlyX ?
             LayoutStyle::ScrollbarOnlyX : LayoutStyle::ScrollbarX, _scrollbarXNode);
         ui().baseLayer().create(BaseStyle::ScrollbarX, _scrollbarXNode);
@@ -439,7 +441,8 @@ ScrollArea::ScrollArea(const Anchor anchor, const ScrollAreaFlags flags): Widget
        but in the other direction. */
     if(!(flags >= ScrollAreaFlag::OnlyX)) {
         /* Layout for the scrollbar node, snapped to the whole right edge */
-        SnapLayout scrollbarLayout{ui(), _scrollbarYNode, Snap::Right|Snap::FillY, layout};
+        SnapLayout scrollbarLayout{ui(), ui().snapLayouter().addExplicit(
+            _scrollbarYNode, Snap::Right|Snap::FillY, layout)};
         ui().layoutLayer().create(flags >= ScrollAreaFlag::OnlyY ?
             LayoutStyle::ScrollbarOnlyY : LayoutStyle::ScrollbarY, _scrollbarYNode);
         ui().baseLayer().create(BaseStyle::ScrollbarY, _scrollbarYNode);

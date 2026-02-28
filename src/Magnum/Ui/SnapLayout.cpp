@@ -44,70 +44,26 @@ AbstractSnapLayout AbstractSnapLayout::root(AbstractUserInterface& ui, SnapLayou
     return AbstractSnapLayout{ui, &layouter, root, layoutHandleData(layout)};
 }
 
-AbstractSnapLayout::AbstractSnapLayout(NoInitT, AbstractUserInterface& ui, const NodeHandle node): _ui{&ui}, _node{node} {}
+AbstractSnapLayout::AbstractSnapLayout(NoInitT, AbstractUserInterface& ui): _ui{&ui} {}
 
-AbstractSnapLayout::AbstractSnapLayout(AbstractUserInterface& ui, SnapLayouter& layouter, const NodeHandle node): AbstractSnapLayout{NoInit, ui, node} {
+AbstractSnapLayout::AbstractSnapLayout(AbstractUserInterface& ui, SnapLayouter& layouter, const NodeHandle node): AbstractSnapLayout{NoInit, ui} {
     CORRADE_ASSERT(ui.isHandleValid(layouter.handle()) && &ui.layouter(layouter.handle()) == &layouter,
         "Ui::AbstractSnapLayout: layouter not part of the UI", );
-    addLayout(layouter);
+    addLayout(layouter, node);
 }
 
-AbstractSnapLayout::AbstractSnapLayout(SnapLayouter& layouter, const AbstractAnchor& anchor): AbstractSnapLayout{NoInit, anchor.ui(), anchor.node()} {
+AbstractSnapLayout::AbstractSnapLayout(SnapLayouter& layouter, const AbstractAnchor& anchor): AbstractSnapLayout{NoInit, anchor.ui()} {
     CORRADE_ASSERT(_ui->isHandleValid(layouter.handle()) && &_ui->layouter(layouter.handle()) == &layouter,
         "Ui::AbstractSnapLayout: layouter and anchor not part of the same UI", );
-    addLayout(layouter);
+    addLayout(layouter, anchor.node());
 }
 
-AbstractSnapLayout::AbstractSnapLayout(AbstractUserInterface& ui, SnapLayouter& layouter, const NodeHandle node, const LayoutHandle before, const SnapLayoutFlags flags): AbstractSnapLayout{NoInit, ui, node} {
-    CORRADE_ASSERT(ui.isHandleValid(layouter.handle()) && &ui.layouter(layouter.handle()) == &layouter,
-        "Ui::AbstractSnapLayout: layouter not part of the UI", );
-    addLayout(layouter, before, flags);
-}
+void AbstractSnapLayout::addLayout(SnapLayouter& layouter, const NodeHandle node) {
+    CORRADE_ASSERT(_ui->isHandleValid(node),
+        "Ui::AbstractSnapLayout: invalid handle" << node, );
 
-AbstractSnapLayout::AbstractSnapLayout(SnapLayouter& layouter, const AbstractAnchor& anchor, const LayoutHandle before, const SnapLayoutFlags flags): AbstractSnapLayout{NoInit, anchor.ui(), anchor.node()} {
-    CORRADE_ASSERT(_ui->isHandleValid(layouter.handle()) && &_ui->layouter(layouter.handle()) == &layouter,
-        "Ui::AbstractSnapLayout: layouter and anchor not part of the same UI", );
-    addLayout(layouter, before, flags);
-}
-
-AbstractSnapLayout::AbstractSnapLayout(AbstractUserInterface& ui, SnapLayouter& layouter, const NodeHandle node, const LayouterDataHandle before, const SnapLayoutFlags flags): AbstractSnapLayout{NoInit, ui, node} {
-    CORRADE_ASSERT(ui.isHandleValid(layouter.handle()) && &ui.layouter(layouter.handle()) == &layouter,
-        "Ui::AbstractSnapLayout: layouter not part of the UI", );
-    addLayout(layouter, before, flags);
-}
-
-AbstractSnapLayout::AbstractSnapLayout(SnapLayouter& layouter, const AbstractAnchor& anchor, const LayouterDataHandle before, const SnapLayoutFlags flags): AbstractSnapLayout{NoInit, anchor.ui(), anchor.node()} {
-    CORRADE_ASSERT(_ui->isHandleValid(layouter.handle()) && &_ui->layouter(layouter.handle()) == &layouter,
-        "Ui::AbstractSnapLayout: layouter and anchor not part of the same UI", );
-    addLayout(layouter, before, flags);
-}
-
-AbstractSnapLayout::AbstractSnapLayout(AbstractUserInterface& ui, SnapLayouter& layouter, const NodeHandle node, const Snaps snap, const LayoutHandle snapTarget, const SnapLayoutFlags flags): AbstractSnapLayout{NoInit, ui, node} {
-    CORRADE_ASSERT(ui.isHandleValid(layouter.handle()) && &ui.layouter(layouter.handle()) == &layouter,
-        "Ui::AbstractSnapLayout: layouter not part of the UI", );
-    addExplicitLayout(layouter, snap, snapTarget, flags);
-}
-
-AbstractSnapLayout::AbstractSnapLayout(SnapLayouter& layouter, const AbstractAnchor& anchor, const Snaps snap, const LayoutHandle snapTarget, const SnapLayoutFlags flags): AbstractSnapLayout{NoInit, anchor.ui(), anchor.node()} {
-    CORRADE_ASSERT(_ui->isHandleValid(layouter.handle()) && &_ui->layouter(layouter.handle()) == &layouter,
-        "Ui::AbstractSnapLayout: layouter and anchor not part of the same UI", );
-    addExplicitLayout(layouter, snap, snapTarget, flags);
-}
-
-AbstractSnapLayout::AbstractSnapLayout(AbstractUserInterface& ui, SnapLayouter& layouter, const NodeHandle node, const Snaps snap, const LayouterDataHandle snapTarget, const SnapLayoutFlags flags): AbstractSnapLayout{NoInit, ui, node} {
-    CORRADE_ASSERT(ui.isHandleValid(layouter.handle()) && &ui.layouter(layouter.handle()) == &layouter,
-        "Ui::AbstractSnapLayout: layouter not part of the UI", );
-    addExplicitLayout(layouter, snap, snapTarget, flags);
-}
-
-AbstractSnapLayout::AbstractSnapLayout(SnapLayouter& layouter, const AbstractAnchor& anchor, const Snaps snap, const LayouterDataHandle snapTarget, const SnapLayoutFlags flags): AbstractSnapLayout{NoInit, anchor.ui(), anchor.node()} {
-    CORRADE_ASSERT(_ui->isHandleValid(layouter.handle()) && &_ui->layouter(layouter.handle()) == &layouter,
-        "Ui::AbstractSnapLayout: layouter and anchor not part of the same UI", );
-    addExplicitLayout(layouter, snap, snapTarget, flags);
-}
-
-void AbstractSnapLayout::addLayout(SnapLayouter& layouter) {
     _layouter = &layouter;
+    _node = node;
 
     /* Use existing layout if there is for given node. The node being valid is
        already checked by AbstractAnchor that was passed to the constructor. */
@@ -117,48 +73,36 @@ void AbstractSnapLayout::addLayout(SnapLayouter& layouter) {
         _layout = layoutHandleData(layouter.add(_node));
 }
 
-void AbstractSnapLayout::addLayout(SnapLayouter& layouter, const LayoutHandle before, const SnapLayoutFlags flags) {
-    _layouter = &layouter;
-
-    #ifndef CORRADE_NO_ASSERT
-    const LayouterDataHandle existingLayout = _ui->nodeUniqueLayout(_node, layouter);
-    CORRADE_ASSERT(existingLayout == LayouterDataHandle::Null,
-        "Ui::AbstractSnapLayout:" << _node << "already has" << layoutHandle(_layouter->handle(), existingLayout) << "assigned", );
-    #endif
-    _layout = layoutHandleData(layouter.add(_node, before, flags));
+AbstractSnapLayout::AbstractSnapLayout(AbstractUserInterface& ui, SnapLayouter& layouter, const LayoutHandle layout): AbstractSnapLayout{NoInit, ui} {
+    CORRADE_ASSERT(ui.isHandleValid(layouter.handle()) && &ui.layouter(layouter.handle()) == &layouter,
+        "Ui::AbstractSnapLayout: layouter not part of the UI", );
+    useLayout(layouter, layout);
 }
 
-void AbstractSnapLayout::addLayout(SnapLayouter& layouter, const LayouterDataHandle before, const SnapLayoutFlags flags) {
-    _layouter = &layouter;
-
-    #ifndef CORRADE_NO_ASSERT
-    const LayouterDataHandle existingLayout = _ui->nodeUniqueLayout(_node, layouter);
-    CORRADE_ASSERT(existingLayout == LayouterDataHandle::Null,
-        "Ui::AbstractSnapLayout:" << _node << "already has" << layoutHandle(_layouter->handle(), existingLayout) << "assigned", );
-    #endif
-    _layout = layoutHandleData(layouter.add(_node, before, flags));
+AbstractSnapLayout::AbstractSnapLayout(AbstractUserInterface& ui, SnapLayouter& layouter, const LayouterDataHandle layout): AbstractSnapLayout{NoInit, ui} {
+    CORRADE_ASSERT(ui.isHandleValid(layouter.handle()) && &ui.layouter(layouter.handle()) == &layouter,
+        "Ui::AbstractSnapLayout: layouter not part of the UI", );
+    useLayout(layouter, layout);
 }
 
-void AbstractSnapLayout::addExplicitLayout(SnapLayouter& layouter, const Snaps snap, const LayoutHandle snapTarget, const SnapLayoutFlags flags) {
-    _layouter = &layouter;
+void AbstractSnapLayout::useLayout(SnapLayouter& layouter, LayoutHandle layout) {
+    CORRADE_ASSERT(layoutHandleLayouter(layout) == layouter.handle(),
+        "Ui::AbstractSnapLayout:" << layout << "not coming from" << layouter.handle(), );
+    CORRADE_ASSERT(layouter.isHandleValid(layout),
+        "Ui::AbstractSnapLayout: invalid handle" << layout, );
 
-    #ifndef CORRADE_NO_ASSERT
-    const LayouterDataHandle existingLayout = _ui->nodeUniqueLayout(_node, layouter);
-    CORRADE_ASSERT(existingLayout == LayouterDataHandle::Null,
-        "Ui::AbstractSnapLayout:" << _node << "already has" << layoutHandle(_layouter->handle(), existingLayout) << "assigned", );
-    #endif
-    _layout = layoutHandleData(layouter.addExplicit(_node, snap, snapTarget, flags));
+    _layouter = &layouter;
+    _node = layouter.node(layout);
+    _layout = layoutHandleData(layout);
 }
 
-void AbstractSnapLayout::addExplicitLayout(SnapLayouter& layouter, const Snaps snap, const LayouterDataHandle snapTarget, const SnapLayoutFlags flags) {
-    _layouter = &layouter;
+void AbstractSnapLayout::useLayout(SnapLayouter& layouter, LayouterDataHandle layout) {
+    CORRADE_ASSERT(layouter.isHandleValid(layout),
+        "Ui::AbstractSnapLayout: invalid handle" << layout, );
 
-    #ifndef CORRADE_NO_ASSERT
-    const LayouterDataHandle existingLayout = _ui->nodeUniqueLayout(_node, layouter);
-    CORRADE_ASSERT(existingLayout == LayouterDataHandle::Null,
-        "Ui::AbstractSnapLayout:" << _node << "already has" << layoutHandle(_layouter->handle(), existingLayout) << "assigned", );
-    #endif
-    _layout = layoutHandleData(layouter.addExplicit(_node, snap, snapTarget, flags));
+    _layouter = &layouter;
+    _node = layouter.node(layout);
+    _layout = layout;
 }
 
 AbstractSnapLayout::operator AbstractAnchor() const {
