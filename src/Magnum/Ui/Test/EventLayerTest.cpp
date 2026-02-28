@@ -45,6 +45,7 @@ namespace Magnum { namespace Ui { namespace Test { namespace {
 struct EventLayerTest: TestSuite::Tester {
     explicit EventLayerTest();
 
+    void eventConnectionConstructDefault();
     void eventConnectionConstruct();
     void eventConnectionConstructCopy();
     void eventConnectionConstructMove();
@@ -438,7 +439,8 @@ const struct {
 };
 
 EventLayerTest::EventLayerTest() {
-    addTests({&EventLayerTest::eventConnectionConstruct,
+    addTests({&EventLayerTest::eventConnectionConstructDefault,
+              &EventLayerTest::eventConnectionConstruct,
               &EventLayerTest::eventConnectionConstructCopy,
               &EventLayerTest::eventConnectionConstructMove,
               &EventLayerTest::eventConnectionDestructMovedOut,
@@ -540,6 +542,14 @@ EventLayerTest::EventLayerTest() {
         Containers::arraySize(DebugIntegrationData));
 
     addTests({&EventLayerTest::debugIntegrationNoCallback});
+}
+
+void EventLayerTest::eventConnectionConstructDefault() {
+    EventConnection a;
+    CORRADE_COMPARE(&a.layer(), nullptr);
+    CORRADE_COMPARE(&const_cast<const EventConnection&>(a).layer(), nullptr);
+    CORRADE_COMPARE(a.data(), DataHandle::Null);
+    CORRADE_COMPARE(a, DataHandle::Null);
 }
 
 void EventLayerTest::eventConnectionConstruct() {

@@ -41,11 +41,25 @@ namespace Magnum { namespace Ui {
 @brief Scoped @ref EventLayer connection
 @m_since_latest_{extras}
 
-Performs automatic removal of a connection on destruction. Each instance with
-non-null @ref data() counts towards @ref EventLayer::usedScopedCount().
+Returned from @ref EventLayer `on*Scoped()` APIs, removes the connection when
+destructed or when a default-constructed @ref EventConnection is assigned to
+the instance.
+
+Each instance with non-null @ref data() counts towards
+@ref EventLayer::usedScopedCount().
 */
 class MAGNUM_UI_EXPORT EventConnection {
     public:
+        /**
+         * @brief Default constructor
+         *
+         * The instance is equivalent to a moved-out state, i.e. not usable
+         * for anything. Move another instance over it to make it useful.
+         * Conversely, assigning the default-constructed instance over an
+         * active scoped connection removes the connection.
+         */
+        /*implicit*/ EventConnection() noexcept: _layer{}, _data{} {}
+
         /** @brief Copying is not allowed */
         EventConnection(const EventConnection&) = delete;
 
