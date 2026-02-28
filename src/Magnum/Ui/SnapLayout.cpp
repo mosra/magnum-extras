@@ -35,9 +35,9 @@
 
 namespace Magnum { namespace Ui {
 
-AbstractSnapLayout AbstractSnapLayout::root(AbstractUserInterface& ui, SnapLayouter& layouter, const Snaps snap, const Vector2& nodeSize, const NodeFlags nodeFlags, const SnapLayoutFlags layoutFlags) {
+AbstractSnapLayout AbstractSnapLayout::snapRoot(AbstractUserInterface& ui, SnapLayouter& layouter, const Snaps snap, const Vector2& nodeSize, const NodeFlags nodeFlags, const SnapLayoutFlags layoutFlags) {
     CORRADE_ASSERT(ui.isHandleValid(layouter.handle()) && &ui.layouter(layouter.handle()) == &layouter,
-        "Ui::AbstractSnapLayout::root(): layouter not part of the UI",
+        "Ui::AbstractSnapLayout::snapRoot(): layouter not part of the UI",
         (AbstractSnapLayout{ui, &layouter, {}, {}}));
     const NodeHandle root = ui.createNode({}, nodeSize, nodeFlags);
     const LayoutHandle layout = layouter.addExplicit(root, snap, LayoutHandle::Null, layoutFlags);
@@ -149,13 +149,13 @@ AbstractSnapLayout AbstractSnapLayout::child(const Vector2& nodeSize, const Node
     return AbstractSnapLayout{*_ui, _layouter, child, layoutHandleData(layout)};
 }
 
-AbstractSnapLayout AbstractSnapLayout::child(const Snaps snap, const Vector2& nodeSize, const NodeFlags nodeFlags, const SnapLayoutFlags layoutFlags) {
+AbstractSnapLayout AbstractSnapLayout::snapChild(const Snaps snap, const Vector2& nodeSize, const NodeFlags nodeFlags, const SnapLayoutFlags layoutFlags) {
     const NodeHandle child = _ui->createNode(_node, {}, nodeSize, nodeFlags);
     const LayoutHandle layout = _layouter->addExplicit(child, snap, _layout, layoutFlags);
     return AbstractSnapLayout{*_ui, _layouter, child, layoutHandleData(layout)};
 }
 
-AbstractSnapLayout AbstractSnapLayout::sibling(const Snaps snap, const Vector2& nodeSize, const NodeFlags nodeFlags, const SnapLayoutFlags layoutFlags) {
+AbstractSnapLayout AbstractSnapLayout::snapSibling(const Snaps snap, const Vector2& nodeSize, const NodeFlags nodeFlags, const SnapLayoutFlags layoutFlags) {
     const NodeHandle sibling = _ui->createNode(_ui->nodeParent(_node), {}, nodeSize, nodeFlags);
     const LayoutHandle layout = _layouter->addExplicit(sibling, snap, _layout, layoutFlags);
     return AbstractSnapLayout{*_ui, _layouter, sibling, layoutHandleData(layout)};

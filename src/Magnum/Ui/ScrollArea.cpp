@@ -342,7 +342,7 @@ ScrollArea::ScrollArea(const Anchor anchor, const ScrollAreaFlags flags): Widget
        correct behavior the layout shouldn't add any offset to the node, thus
        we're snapping to TopLeft. If scrolling only in one direction, the other
        is made to fill the view contents. */
-    _contentsNode = viewLayout.child(Snap::TopLeft|
+    _contentsNode = viewLayout.snapChild(Snap::TopLeft|
         (flags >= ScrollAreaFlag::OnlyY ? Snap::FillX : Snaps{})|
         (flags >= ScrollAreaFlag::OnlyX ? Snap::FillY : Snaps{}));
 
@@ -359,7 +359,7 @@ ScrollArea::ScrollArea(const Anchor anchor, const ScrollAreaFlags flags): Widget
 
         /* Scrollbar thumb. The LayoutStyle defines its minimal width, other
            than that it's set to fill the scrollbar horizontally. */
-        _scrollbarThumbXNode = scrollbarXLayout.child(Snap::FillY|Snap::Left);
+        _scrollbarThumbXNode = scrollbarXLayout.snapChild(Snap::FillY|Snap::Left);
         ui().layoutLayer().create(LayoutStyle::ScrollbarThumbX, _scrollbarThumbXNode);
         ui().baseLayer().create(BaseStyle::ScrollbarThumbX, _scrollbarThumbXNode);
 
@@ -449,7 +449,7 @@ ScrollArea::ScrollArea(const Anchor anchor, const ScrollAreaFlags flags): Widget
 
         /* Scrollbar thumb. The LayoutStyle defines its minimal height, other
            than that it's set to fill the scrollbar horizontally. */
-        _scrollbarThumbYNode = scrollbarLayout.child(Snap::FillX|Snap::Top);
+        _scrollbarThumbYNode = scrollbarLayout.snapChild(Snap::FillX|Snap::Top);
         ui().layoutLayer().create(LayoutStyle::ScrollbarThumbY, _scrollbarThumbYNode);
         ui().baseLayer().create(BaseStyle::ScrollbarThumbY, _scrollbarThumbYNode);
 

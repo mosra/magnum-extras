@@ -68,11 +68,11 @@ template<class UserInterface> BasicSnapLayout<UserInterface>::operator BasicAnch
     return BasicAnchor<UserInterface>{ui(), node()};
 }
 
-template<class UserInterface> BasicSnapLayout<UserInterface> BasicSnapLayout<UserInterface>::root(UserInterface& ui, const Snaps snap, const Vector2& nodeSize, const NodeFlags nodeFlags, const SnapLayoutFlags layoutFlags) {
+template<class UserInterface> BasicSnapLayout<UserInterface> BasicSnapLayout<UserInterface>::snapRoot(UserInterface& ui, const Snaps snap, const Vector2& nodeSize, const NodeFlags nodeFlags, const SnapLayoutFlags layoutFlags) {
     CORRADE_ASSERT(ui.hasSnapLayouter(),
-        "Ui::BasicSnapLayout::root(): SnapLayouter not present in the UI",
+        "Ui::BasicSnapLayout::snapRoot(): SnapLayouter not present in the UI",
         (BasicSnapLayout<UserInterface>{ui, {}, {}, {}}));
-    return root(ui, ui.snapLayouter(), snap, nodeSize, nodeFlags, layoutFlags);
+    return snapRoot(ui, ui.snapLayouter(), snap, nodeSize, nodeFlags, layoutFlags);
 }
 #endif
 

@@ -60,10 +60,10 @@ struct SnapLayoutTest: TestSuite::Tester {
     template<class T> void childExplicitSnap();
     template<class T> void siblingExplicitSnap();
 
-    template<class T> void staticRootExplicitSnap();
-    void staticRootExplicitSnapImplicitLayouter();
-    template<class T> void staticInvalid();
-    void staticInvalidImplicitLayouter();
+    template<class T> void rootExplicitSnap();
+    void rootExplicitSnapImplicitLayouter();
+    template<class T> void rootExplicitSnapInvalid();
+    void rootExplicitSnapInvalidImplicitLayouter();
 };
 
 const struct {
@@ -116,12 +116,12 @@ SnapLayoutTest::SnapLayoutTest() {
               &SnapLayoutTest::siblingExplicitSnap<AbstractSnapLayout>,
               &SnapLayoutTest::siblingExplicitSnap<SnapLayout>,
 
-              &SnapLayoutTest::staticRootExplicitSnap<AbstractSnapLayout>,
-              &SnapLayoutTest::staticRootExplicitSnap<SnapLayout>,
-              &SnapLayoutTest::staticRootExplicitSnapImplicitLayouter,
-              &SnapLayoutTest::staticInvalid<AbstractSnapLayout>,
-              &SnapLayoutTest::staticInvalid<SnapLayout>,
-              &SnapLayoutTest::staticInvalidImplicitLayouter});
+              &SnapLayoutTest::rootExplicitSnap<AbstractSnapLayout>,
+              &SnapLayoutTest::rootExplicitSnap<SnapLayout>,
+              &SnapLayoutTest::rootExplicitSnapImplicitLayouter,
+              &SnapLayoutTest::rootExplicitSnapInvalid<AbstractSnapLayout>,
+              &SnapLayoutTest::rootExplicitSnapInvalid<SnapLayout>,
+              &SnapLayoutTest::rootExplicitSnapInvalidImplicitLayouter});
 }
 
 template<class> struct SnapLayoutTraits;
@@ -866,7 +866,7 @@ template<class T> void SnapLayoutTest::childExplicitSnap() {
     CORRADE_COMPARE(layout.layout(), layoutHandle(layouter.handle(), 2, 1));
 
     /* With NodeFlags */
-    T child1 = layout.child(Snap::TopRight, {3.0f, 5.0f}, NodeFlag::NoEvents, SnapLayoutFlag::IgnoreOverflowY);
+    T child1 = layout.snapChild(Snap::TopRight, {3.0f, 5.0f}, NodeFlag::NoEvents, SnapLayoutFlag::IgnoreOverflowY);
     CORRADE_COMPARE(&child1.ui(), &ui);
     CORRADE_COMPARE(&child1.layouter(), &layouter);
     CORRADE_COMPARE(child1.node(), nodeHandle(4, 1));
@@ -885,7 +885,7 @@ template<class T> void SnapLayoutTest::childExplicitSnap() {
     CORRADE_COMPARE(layouter.childSnap(child1), Snap::Bottom);
 
     /* No NodeFlags */
-    T child2 = layout.child(Snap::Bottom|Snap::FillX|Snap::NoPad, {4.0f, 6.0f}, SnapLayoutFlag::PropagateMarginX);
+    T child2 = layout.snapChild(Snap::Bottom|Snap::FillX|Snap::NoPad, {4.0f, 6.0f}, SnapLayoutFlag::PropagateMarginX);
     CORRADE_COMPARE(&child2.ui(), &ui);
     CORRADE_COMPARE(&child2.layouter(), &layouter);
     CORRADE_COMPARE(child2.node(), nodeHandle(5, 1));
@@ -931,7 +931,7 @@ template<class T> void SnapLayoutTest::siblingExplicitSnap() {
     CORRADE_COMPARE(layout.layout(), layoutHandle(layouter.handle(), 2, 1));
 
     /* With NodeFlags */
-    T sibling1 = layout.sibling(Snap::TopRight, {3.0f, 5.0f}, NodeFlag::NoEvents, SnapLayoutFlag::IgnoreOverflowY);
+    T sibling1 = layout.snapSibling(Snap::TopRight, {3.0f, 5.0f}, NodeFlag::NoEvents, SnapLayoutFlag::IgnoreOverflowY);
     CORRADE_COMPARE(&sibling1.ui(), &ui);
     CORRADE_COMPARE(&sibling1.layouter(), &layouter);
     CORRADE_COMPARE(sibling1.node(), nodeHandle(5, 1));
@@ -950,7 +950,7 @@ template<class T> void SnapLayoutTest::siblingExplicitSnap() {
     CORRADE_COMPARE(layouter.childSnap(sibling1), Snap::Bottom);
 
     /* No NodeFlags */
-    T sibling2 = layout.sibling(Snap::Bottom|Snap::FillX|Snap::NoPad, {4.0f, 6.0f}, SnapLayoutFlag::PropagateMarginX);
+    T sibling2 = layout.snapSibling(Snap::Bottom|Snap::FillX|Snap::NoPad, {4.0f, 6.0f}, SnapLayoutFlag::PropagateMarginX);
     CORRADE_COMPARE(&sibling2.ui(), &ui);
     CORRADE_COMPARE(&sibling2.layouter(), &layouter);
     CORRADE_COMPARE(sibling2.node(), nodeHandle(6, 1));
@@ -974,7 +974,7 @@ template<class T> void SnapLayoutTest::siblingExplicitSnap() {
     CORRADE_COMPARE(layouter.usedCount(), 5);
 }
 
-template<class T> void SnapLayoutTest::staticRootExplicitSnap() {
+template<class T> void SnapLayoutTest::rootExplicitSnap() {
     setTestCaseTemplateName(SnapLayoutTraits<T>::name());
 
     struct Interface: SnapLayoutTraits<T>::UserInterfaceType {
@@ -990,7 +990,7 @@ template<class T> void SnapLayoutTest::staticRootExplicitSnap() {
     ui.createNode({}, {});
 
     /* With NodeFlags */
-    T root1 = T::root(ui, layouter, Snap::TopRight, {3.0f, 5.0f}, NodeFlag::Disabled, SnapLayoutFlag::IgnoreOverflowY);
+    T root1 = T::snapRoot(ui, layouter, Snap::TopRight, {3.0f, 5.0f}, NodeFlag::Disabled, SnapLayoutFlag::IgnoreOverflowY);
     CORRADE_COMPARE(&root1.ui(), &ui);
     CORRADE_COMPARE(&root1.layouter(), &layouter);
     CORRADE_COMPARE(root1.node(), nodeHandle(3, 1));
@@ -1009,7 +1009,7 @@ template<class T> void SnapLayoutTest::staticRootExplicitSnap() {
     CORRADE_COMPARE(layouter.childSnap(root1), Snap::Bottom);
 
     /* Without NodeFlags */
-    T root2 = T::root(ui, layouter, Snap::Fill, {4.0f, 6.0f}, SnapLayoutFlag::PropagateMarginX);
+    T root2 = T::snapRoot(ui, layouter, Snap::Fill, {4.0f, 6.0f}, SnapLayoutFlag::PropagateMarginX);
     CORRADE_COMPARE(&root2.ui(), &ui);
     CORRADE_COMPARE(&root2.layouter(), &layouter);
     CORRADE_COMPARE(root2.node(), nodeHandle(4, 1));
@@ -1033,7 +1033,7 @@ template<class T> void SnapLayoutTest::staticRootExplicitSnap() {
     CORRADE_COMPARE(layouter.usedCount(), 4);
 }
 
-void SnapLayoutTest::staticRootExplicitSnapImplicitLayouter() {
+void SnapLayoutTest::rootExplicitSnapImplicitLayouter() {
     struct Interface: UserInterface {
         explicit Interface(NoCreateT): UserInterface{NoCreate} {}
     } ui{NoCreate};
@@ -1047,7 +1047,7 @@ void SnapLayoutTest::staticRootExplicitSnapImplicitLayouter() {
     ui.createNode({}, {});
 
     /* With NodeFlags */
-    SnapLayout root1 = SnapLayout::root(ui, Snap::TopRight, {3.0f, 5.0f}, NodeFlag::Disabled, SnapLayoutFlag::IgnoreOverflowY);
+    SnapLayout root1 = SnapLayout::snapRoot(ui, Snap::TopRight, {3.0f, 5.0f}, NodeFlag::Disabled, SnapLayoutFlag::IgnoreOverflowY);
     CORRADE_COMPARE(&root1.ui(), &ui);
     CORRADE_COMPARE(&root1.layouter(), &ui.snapLayouter());
     CORRADE_COMPARE(root1.node(), nodeHandle(3, 1));
@@ -1066,7 +1066,7 @@ void SnapLayoutTest::staticRootExplicitSnapImplicitLayouter() {
     CORRADE_COMPARE(ui.snapLayouter().childSnap(root1), Snap::Bottom);
 
     /* Without NodeFlags */
-    SnapLayout root2 = SnapLayout::root(ui, Snap::Fill, {4.0f, 6.0f}, SnapLayoutFlag::PropagateMarginX);
+    SnapLayout root2 = SnapLayout::snapRoot(ui, Snap::Fill, {4.0f, 6.0f}, SnapLayoutFlag::PropagateMarginX);
     CORRADE_COMPARE(&root2.ui(), &ui);
     CORRADE_COMPARE(&root2.layouter(), &ui.snapLayouter());
     CORRADE_COMPARE(root2.node(), nodeHandle(4, 1));
@@ -1090,7 +1090,7 @@ void SnapLayoutTest::staticRootExplicitSnapImplicitLayouter() {
     CORRADE_COMPARE(ui.snapLayouter().usedCount(), 4);
 }
 
-template<class T> void SnapLayoutTest::staticInvalid() {
+template<class T> void SnapLayoutTest::rootExplicitSnapInvalid() {
     setTestCaseTemplateName(SnapLayoutTraits<T>::name());
 
     CORRADE_SKIP_IF_NO_ASSERT();
@@ -1124,21 +1124,21 @@ template<class T> void SnapLayoutTest::staticInvalid() {
     Containers::String out;
     Error redirectError{&out};
     /* Layouter handle not valid in the UI */
-    T::root(ui, layouterInvalidHandle, Snaps{}, {}, NodeFlags{});
-    T::root(ui, layouterInvalidHandle, Snaps{}, {}, SnapLayoutFlags{});
+    T::snapRoot(ui, layouterInvalidHandle, Snaps{}, {}, NodeFlags{});
+    T::snapRoot(ui, layouterInvalidHandle, Snaps{}, {}, SnapLayoutFlags{});
     /* Valid handle, but different instance */
-    T::root(ui, layouterAnotherUi, Snaps{}, {}, NodeFlags{});
-    T::root(ui, layouterAnotherUi, Snaps{}, {}, SnapLayoutFlags{});
+    T::snapRoot(ui, layouterAnotherUi, Snaps{}, {}, NodeFlags{});
+    T::snapRoot(ui, layouterAnotherUi, Snaps{}, {}, SnapLayoutFlags{});
     CORRADE_COMPARE_AS(out,
-        "Ui::AbstractSnapLayout::root(): layouter not part of the UI\n"
-        "Ui::AbstractSnapLayout::root(): layouter not part of the UI\n"
+        "Ui::AbstractSnapLayout::snapRoot(): layouter not part of the UI\n"
+        "Ui::AbstractSnapLayout::snapRoot(): layouter not part of the UI\n"
 
-        "Ui::AbstractSnapLayout::root(): layouter not part of the UI\n"
-        "Ui::AbstractSnapLayout::root(): layouter not part of the UI\n",
+        "Ui::AbstractSnapLayout::snapRoot(): layouter not part of the UI\n"
+        "Ui::AbstractSnapLayout::snapRoot(): layouter not part of the UI\n",
         TestSuite::Compare::String);
 }
 
-void SnapLayoutTest::staticInvalidImplicitLayouter() {
+void SnapLayoutTest::rootExplicitSnapInvalidImplicitLayouter() {
     CORRADE_SKIP_IF_NO_ASSERT();
 
     struct Interface: UserInterface {
@@ -1148,11 +1148,11 @@ void SnapLayoutTest::staticInvalidImplicitLayouter() {
 
     Containers::String out;
     Error redirectError{&out};
-    SnapLayout::root(uiNoSnapLayouter, Snaps{}, {}, NodeFlags{});
-    SnapLayout::root(uiNoSnapLayouter, Snaps{}, {}, SnapLayoutFlags{});
+    SnapLayout::snapRoot(uiNoSnapLayouter, Snaps{}, {}, NodeFlags{});
+    SnapLayout::snapRoot(uiNoSnapLayouter, Snaps{}, {}, SnapLayoutFlags{});
     CORRADE_COMPARE_AS(out,
-        "Ui::BasicSnapLayout::root(): SnapLayouter not present in the UI\n"
-        "Ui::BasicSnapLayout::root(): SnapLayouter not present in the UI\n",
+        "Ui::BasicSnapLayout::snapRoot(): SnapLayouter not present in the UI\n"
+        "Ui::BasicSnapLayout::snapRoot(): SnapLayouter not present in the UI\n",
         TestSuite::Compare::String);
 }
 

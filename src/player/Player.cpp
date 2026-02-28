@@ -184,8 +184,8 @@ Overlay::Overlay(Platform::ScreenedApplication& application):
             .setBaseLayerDynamicStyleCount(15)
             #endif
     },
-    window{Ui::SnapLayout::root(ui, Ui::Snap::Fill|Ui::Snap::NoPad, {})},
-    controls{Ui::SnapLayout{ui, window}.child(Ui::Snap::Fill|Ui::Snap::NoPad, {}
+    window{Ui::SnapLayout::snapRoot(ui, Ui::Snap::Fill|Ui::Snap::NoPad, {})},
+    controls{Ui::SnapLayout{ui, window}.snapChild(Ui::Snap::Fill|Ui::Snap::NoPad, {}
         #ifdef CORRADE_TARGET_EMSCRIPTEN
         /* By default a drop hint is shown on Emscripten and controls are
            hidden */
@@ -194,10 +194,10 @@ Overlay::Overlay(Platform::ScreenedApplication& application):
     )}
 {
     Ui::NodeHandle hideControls = Ui::button(
-        Ui::SnapLayout{ui, controls}.child(Ui::Snap::TopRight, ButtonSize),
+        Ui::SnapLayout{ui, controls}.snapChild(Ui::Snap::TopRight, ButtonSize),
         "Controls"_s, nullptr, Ui::ButtonStyle::Success);
     Ui::NodeHandle showControls = Ui::button(
-        Ui::SnapLayout{ui, window}.child(Ui::Snap::TopRight, ButtonSize, Ui::NodeFlag::Hidden),
+        Ui::SnapLayout{ui, window}.snapChild(Ui::Snap::TopRight, ButtonSize, Ui::NodeFlag::Hidden),
         "Controls"_s, nullptr, Ui::ButtonStyle::Flat);
     ui.eventLayer().onTapOrClick(hideControls, [this, showControls]{
         CORRADE_INTERNAL_ASSERT(!(ui.nodeFlags(controls) >= Ui::NodeFlag::Hidden));
@@ -214,7 +214,7 @@ Overlay::Overlay(Platform::ScreenedApplication& application):
 
     #ifdef CORRADE_TARGET_EMSCRIPTEN
     fullSize = Ui::Button{
-        Ui::SnapLayout{ui, hideControls}.sibling(Ui::Snap::Bottom, ButtonSize),
+        Ui::SnapLayout{ui, hideControls}.snapSibling(Ui::Snap::Bottom, ButtonSize),
         "Full size"};
     fullSize.onTrigger([this]{
         /* Can't be inside the branch because then this cursed message happens:
@@ -252,10 +252,10 @@ Overlay::Overlay(Platform::ScreenedApplication& application):
         .setColor(0x702b2aff_rgbaf*0.8f) /* m.css danger */
         .setCornerRadius(4.0f), {});
     /* Drop hint dialog. Shown initially, hidden once there's something loaded */
-    dropHint = Ui::SnapLayout::root(ui, Ui::Snap::Fill|Ui::Snap::NoPad);
+    dropHint = Ui::SnapLayout::snapRoot(ui, Ui::Snap::Fill|Ui::Snap::NoPad);
     {
         ui.baseLayer().create(ui.baseLayer().shared().styleCount() + style0, dropHint);
-        Ui::NodeHandle dialog = Ui::SnapLayout{ui, dropHint}.child({}, {540, 140});
+        Ui::NodeHandle dialog = Ui::SnapLayout{ui, dropHint}.snapChild({}, {540, 140});
         ui.baseLayer().create(ui.baseLayer().shared().styleCount() + style1, dialog);
         Ui::DataHandle hint = ui.textLayer().create(Ui::Implementation::TextStyle::LabelInfoText, "Drag&drop a file and everything it references here to play it.", {}, dialog);
         ui.textLayer().setPadding(hint, {0.0f, -30.0f, 0.0f, 30.0f});
@@ -263,19 +263,19 @@ Overlay::Overlay(Platform::ScreenedApplication& application):
         ui.textLayer().setPadding(disclaimer, {0.0f, 20.0f, 0.0f, -20.0f});
     }
     /* Error dialog. Hidden initially, shown if there's a loading error. */
-    error = Ui::SnapLayout::root(ui, Ui::Snap::Fill|Ui::Snap::NoPad);
+    error = Ui::SnapLayout::snapRoot(ui, Ui::Snap::Fill|Ui::Snap::NoPad);
     ui.clearNodeOrder(error);
     {
         ui.baseLayer().create(ui.baseLayer().shared().styleCount() + style0, error);
-        Ui::SnapLayout dialog = Ui::SnapLayout{ui, error}.child({}, {440, 200});
+        Ui::SnapLayout dialog = Ui::SnapLayout{ui, error}.snapChild({}, {440, 200});
         ui.baseLayer().create(ui.baseLayer().shared().styleCount() + style2, dialog);
         errorMessage = Ui::Label{
-            dialog.child(Ui::Snap::Top, LabelSize),
+            dialog.snapChild(Ui::Snap::Top, LabelSize),
             "No recognizable file dropped.", Ui::LabelStyle::Danger};
         ui.setNodeOffset(errorMessage, {0.0f, 15.0f});
         ui.textLayer().create(Ui::Implementation::TextStyle::LabelDimText, "Try with another file or check the browser\nconsole for details. Bug reports welcome.", {}, dialog);
 
-        Ui::button(dialog.child(Ui::Snap::Bottom, ButtonSize), "Oh well",
+        Ui::button(dialog.snapChild(Ui::Snap::Bottom, ButtonSize), "Oh well",
             [this]{ ui.clearNodeOrder(error); },
             Ui::ButtonStyle::Danger);
     }

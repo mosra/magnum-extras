@@ -100,8 +100,8 @@ class ImagePlayer: public AbstractPlayer {
 
 ImagePlayer::ImagePlayer(Platform::ScreenedApplication& application, const Ui::Anchor controls):
     AbstractPlayer{application, PropagatedEvent::Draw|PropagatedEvent::Input},
-    _screen{Ui::SnapLayout{controls}.child(Ui::Snap::Fill|Ui::Snap::NoPad)},
-    _imageInfo{Ui::SnapLayout{_screen}.child(Ui::Snap::TopLeft, LabelSize), {}, Ui::LabelStyle::Dim}
+    _screen{Ui::SnapLayout{controls}.snapChild(Ui::Snap::Fill|Ui::Snap::NoPad)},
+    _imageInfo{Ui::SnapLayout{_screen}.snapChild(Ui::Snap::TopLeft, LabelSize), {}, Ui::LabelStyle::Dim}
 {
     /* Prepare the square mesh and initial projection equal to framebuffer size */
     _square = MeshTools::compile(Primitives::squareSolid(Primitives::SquareFlag::TextureCoordinates));

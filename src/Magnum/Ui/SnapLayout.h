@@ -72,22 +72,20 @@ class MAGNUM_UI_EXPORT AbstractSnapLayout {
          * the user interface itself. Expects that @p layouter is part of
          * @p ui.
          *
-         * Use @ref child(Snaps, const Vector2&, NodeFlags, SnapLayoutFlags) to
-         * create an explicitly snapped child and
-         * @ref sibling(Snaps, const Vector2&, NodeFlags, SnapLayoutFlags) to
-         * create an explicitly snapped sibling node, use
-         * @ref child(const Vector2&, NodeFlags, LayoutHandle, SnapLayoutFlags)
-         * to add a child layout positioned according to
-         * @ref SnapLayouter::childSnap() defined by a parent layout.
+         * Use @ref snapChild() on an @ref AbstractSnapLayout instance to
+         * create an explicitly snapped child node and @ref snapSibling() to
+         * create an explicitly snapped sibling, use @ref child() to add a
+         * child layout positioned according to @ref SnapLayouter::childSnap()
+         * defined by a parent layout.
          *
          * Calls @ref AbstractUserInterface::createNode() and
          * @ref SnapLayouter::addExplicit() internally, see their documentation
          * for detailed description of all constraints.
          */
-        static AbstractSnapLayout root(AbstractUserInterface& ui, SnapLayouter& layouter, Snaps snap, const Vector2& nodeSize = {}, NodeFlags nodeFlags = {}, SnapLayoutFlags layoutFlags = {});
+        static AbstractSnapLayout snapRoot(AbstractUserInterface& ui, SnapLayouter& layouter, Snaps snap, const Vector2& nodeSize = {}, NodeFlags nodeFlags = {}, SnapLayoutFlags layoutFlags = {});
         /** @overload */
-        static AbstractSnapLayout root(AbstractUserInterface& ui, SnapLayouter& layouter, Snaps snap, const Vector2& nodeSize, SnapLayoutFlags layoutFlags) {
-            return root(ui, layouter, snap, nodeSize, {}, layoutFlags);
+        static AbstractSnapLayout snapRoot(AbstractUserInterface& ui, SnapLayouter& layouter, Snaps snap, const Vector2& nodeSize, SnapLayoutFlags layoutFlags) {
+            return snapRoot(ui, layouter, snap, nodeSize, {}, layoutFlags);
         }
 
         /**
@@ -172,14 +170,14 @@ class MAGNUM_UI_EXPORT AbstractSnapLayout {
          * @brief Set layout flags
          * @return Reference to self (for method chaining)
          *
-         * Initially, a layout has the flags that were passed to the
-         * constructor, to @ref root() @ref child() or @ref sibling(), which
-         * are by default none. The @ref BasicSnapLayoutColumn,
-         * @ref BasicSnapLayoutColumnLeft, @ref BasicSnapLayoutColumnRight,
-         * @ref BasicSnapLayoutColumnFill, @ref BasicSnapLayoutRow,
-         * @ref BasicSnapLayoutRowTop, @ref BasicSnapLayoutRowBottom and
-         * @ref BasicSnapLayoutRowFill subclasses implicitly add
-         * @ref SnapLayoutFlag::PropagateMarginX and
+         * Initially, a layout has the flags that were passed to
+         * @ref snapRoot(), @ref snapChild(), @ref snapSibling() or
+         * @ref child(), which are by default none. The
+         * @ref BasicSnapLayoutColumn, @ref BasicSnapLayoutColumnLeft,
+         * @ref BasicSnapLayoutColumnRight, @ref BasicSnapLayoutColumnFill,
+         * @ref BasicSnapLayoutRow, @ref BasicSnapLayoutRowTop,
+         * @ref BasicSnapLayoutRowBottom and @ref BasicSnapLayoutRowFill
+         * subclasses implicitly add @ref SnapLayoutFlag::PropagateMarginX and
          * @relativeref{SnapLayoutFlag,PropagateMarginY} unless
          * @relativeref{SnapLayoutFlag,IgnoreOverflowX} and
          * @relativeref{SnapLayoutFlag,IgnoreOverflowY} is already specified in
@@ -248,10 +246,9 @@ class MAGNUM_UI_EXPORT AbstractSnapLayout {
          *
          * Creates a node that's a child of @ref node() and assigns a layout to
          * it. The child layout is positioned according to @ref childSnap().
-         * Use @ref child(Snaps, const Vector2&, NodeFlags, SnapLayoutFlags) to
-         * snap a child layout explicitly, use
-         * @ref sibling(Snaps, const Vector2&, NodeFlags, SnapLayoutFlags) to
-         * create an explicitly snapped sibling instead of a child.
+         * Use @ref snapChild() to snap a child layout explicitly, use
+         * @ref snapSibling() to create an explicitly snapped sibling instead
+         * of a child.
          *
          * The @ref BasicSnapLayout subclass and its various typedefs such as
          * @ref SnapLayout return a concrete layout instance.
@@ -306,11 +303,9 @@ class MAGNUM_UI_EXPORT AbstractSnapLayout {
          * @return New layout instance
          *
          * Creates a node that's a child of @ref node(), and assigns a layout
-         * explicitly snapped to it. Use
-         * @ref sibling(Snaps, const Vector2&, NodeFlags, SnapLayoutFlags) to
-         * create an explicitly snapped sibling instead of a child, use
-         * @ref child(const Vector2&, NodeFlags, LayoutHandle, SnapLayoutFlags)
-         * to add a child layout positioned implicitly according to
+         * explicitly snapped to it. Use @ref snapSibling() to create an
+         * explicitly snapped sibling instead of a child, use @ref child() to
+         * add a child layout positioned implicitly according to
          * @ref childSnap().
          *
          * The @ref BasicSnapLayout subclass and its various typedefs such as
@@ -320,10 +315,10 @@ class MAGNUM_UI_EXPORT AbstractSnapLayout {
          * @ref SnapLayouter::addExplicit() internally, see their documentation
          * for detailed description of all constraints.
          */
-        AbstractSnapLayout child(Snaps snap, const Vector2& nodeSize = {}, NodeFlags nodeFlags = {}, SnapLayoutFlags layoutFlags = {});
+        AbstractSnapLayout snapChild(Snaps snap, const Vector2& nodeSize = {}, NodeFlags nodeFlags = {}, SnapLayoutFlags layoutFlags = {});
         /** @overload */
-        AbstractSnapLayout child(Snaps snap, const Vector2& nodeSize, SnapLayoutFlags layoutFlags) {
-            return child(snap, nodeSize, {}, layoutFlags);
+        AbstractSnapLayout snapChild(Snaps snap, const Vector2& nodeSize, SnapLayoutFlags layoutFlags) {
+            return snapChild(snap, nodeSize, {}, layoutFlags);
         }
 
         /**
@@ -335,11 +330,9 @@ class MAGNUM_UI_EXPORT AbstractSnapLayout {
          * @return New layout instance
          *
          * Creates a node with the same parent as @ref node(), and assigns a
-         * layout explicitly snapped to it. Use
-         * @ref child(Snaps, const Vector2&, NodeFlags, SnapLayoutFlags) to
-         * create an explicitly snapped child instead of a sibling, use
-         * @ref child(const Vector2&, NodeFlags, LayoutHandle, SnapLayoutFlags)
-         * to add a child layout positioned implicitly according to
+         * layout explicitly snapped to it. Use @ref snapChild() to create an
+         * explicitly snapped child instead of a sibling, use @ref child() to
+         * add a child layout positioned implicitly according to
          * @ref childSnap().
          *
          * The @ref BasicSnapLayout subclass and its various typedefs such as
@@ -349,10 +342,10 @@ class MAGNUM_UI_EXPORT AbstractSnapLayout {
          * @ref SnapLayouter::addExplicit() internally, see their documentation
          * for detailed description of all constraints.
          */
-        AbstractSnapLayout sibling(Snaps snap, const Vector2& nodeSize = {}, NodeFlags nodeFlags = {}, SnapLayoutFlags layoutFlags = {});
+        AbstractSnapLayout snapSibling(Snaps snap, const Vector2& nodeSize = {}, NodeFlags nodeFlags = {}, SnapLayoutFlags layoutFlags = {});
         /** @overload */
-        AbstractSnapLayout sibling(Snaps snap, const Vector2& nodeSize, SnapLayoutFlags layoutFlags) {
-            return sibling(snap, nodeSize, {}, layoutFlags);
+        AbstractSnapLayout snapSibling(Snaps snap, const Vector2& nodeSize, SnapLayoutFlags layoutFlags) {
+            return snapSibling(snap, nodeSize, {}, layoutFlags);
         }
 
     #ifdef DOXYGEN_GENERATING_OUTPUT
@@ -407,34 +400,34 @@ class documentation for more information.
 template<class UserInterface> class BasicSnapLayout: public AbstractSnapLayout {
     public:
         /**
-         * @brief @copybrief AbstractSnapLayout::root(AbstractUserInterface&, SnapLayouter&, Snaps, const Vector2&, NodeFlags, SnapLayoutFlags)
+         * @brief @copybrief AbstractSnapLayout::snapRoot(AbstractUserInterface&, SnapLayouter&, Snaps, const Vector2&, NodeFlags, SnapLayoutFlags)
          *
-         * Like @ref AbstractSnapLayout::root(AbstractUserInterface&, SnapLayouter&, Snaps, const Vector2&, NodeFlags, SnapLayoutFlags)
-         * but returning a concrete layout instance. Use @ref root(UserInterface&, Snaps, const Vector2&, NodeFlags, SnapLayoutFlags)
+         * Like @ref AbstractSnapLayout::snapRoot(AbstractUserInterface&, SnapLayouter&, Snaps, const Vector2&, NodeFlags, SnapLayoutFlags)
+         * but returning a concrete layout instance. Use @ref snapRoot(UserInterface&, Snaps, const Vector2&, NodeFlags, SnapLayoutFlags)
          * to use the default @ref SnapLayouter instance available through
          * @ref UserInterface::snapLayouter().
          */
-        static BasicSnapLayout<UserInterface> root(UserInterface& ui, SnapLayouter& layouter, Snaps snap, const Vector2& nodeSize = {}, NodeFlags nodeFlags = {}, SnapLayoutFlags layoutFlags = {}) {
-            return BasicSnapLayout<UserInterface>{AbstractSnapLayout::root(ui, layouter, snap, nodeSize, nodeFlags, layoutFlags)};
+        static BasicSnapLayout<UserInterface> snapRoot(UserInterface& ui, SnapLayouter& layouter, Snaps snap, const Vector2& nodeSize = {}, NodeFlags nodeFlags = {}, SnapLayoutFlags layoutFlags = {}) {
+            return BasicSnapLayout<UserInterface>{AbstractSnapLayout::snapRoot(ui, layouter, snap, nodeSize, nodeFlags, layoutFlags)};
         }
         /** @overload */
-        static BasicSnapLayout<UserInterface> root(UserInterface& ui, SnapLayouter& layouter, Snaps snap, const Vector2& nodeSize, SnapLayoutFlags layoutFlags) {
-            return root(ui, layouter, snap, nodeSize, {}, layoutFlags);
+        static BasicSnapLayout<UserInterface> snapRoot(UserInterface& ui, SnapLayouter& layouter, Snaps snap, const Vector2& nodeSize, SnapLayoutFlags layoutFlags) {
+            return snapRoot(ui, layouter, snap, nodeSize, {}, layoutFlags);
         }
 
         /**
          * @brief Create an explicitly snapped root layout using the default layouter in given user interface
          *
-         * Like @ref AbstractSnapLayout::root(AbstractUserInterface&, SnapLayouter&, Snaps, const Vector2&, NodeFlags, SnapLayoutFlags)
+         * Like @ref AbstractSnapLayout::snapRoot(AbstractUserInterface&, SnapLayouter&, Snaps, const Vector2&, NodeFlags, SnapLayoutFlags)
          * but using the default @ref SnapLayouter instance available through
          * @ref UserInterface::snapLayouter(), and returning a concrete layout
          * instance. Expects that @p ui contains a @ref SnapLayouter instance.
          * @see @ref UserInterface::hasSnapLayouter()
          */
-        static BasicSnapLayout<UserInterface> root(UserInterface& ui, Snaps snap, const Vector2& nodeSize = {}, NodeFlags nodeFlags = {}, SnapLayoutFlags layoutFlags = {});
+        static BasicSnapLayout<UserInterface> snapRoot(UserInterface& ui, Snaps snap, const Vector2& nodeSize = {}, NodeFlags nodeFlags = {}, SnapLayoutFlags layoutFlags = {});
         /** @overload */
-        static BasicSnapLayout<UserInterface> root(UserInterface& ui, Snaps snap, const Vector2& nodeSize, SnapLayoutFlags layoutFlags) {
-            return root(ui, snap, nodeSize, {}, layoutFlags);
+        static BasicSnapLayout<UserInterface> snapRoot(UserInterface& ui, Snaps snap, const Vector2& nodeSize, SnapLayoutFlags layoutFlags) {
+            return snapRoot(ui, snap, nodeSize, {}, layoutFlags);
         }
 
         /**
@@ -550,31 +543,31 @@ template<class UserInterface> class BasicSnapLayout: public AbstractSnapLayout {
         }
 
         /**
-         * @brief @copybrief AbstractSnapLayout::child(Snaps, const Vector2&, NodeFlags, SnapLayoutFlags)
+         * @brief @copybrief AbstractSnapLayout::snapChild(Snaps, const Vector2&, NodeFlags, SnapLayoutFlags)
          *
-         * Like @ref AbstractSnapLayout::child(Snaps, const Vector2&, NodeFlags, SnapLayoutFlags)
+         * Like @ref AbstractSnapLayout::snapChild(Snaps, const Vector2&, NodeFlags, SnapLayoutFlags)
          * but returning a concrete layout instance.
          */
-        BasicSnapLayout<UserInterface> child(Snaps snap, const Vector2& nodeSize = {}, NodeFlags nodeFlags = {}, SnapLayoutFlags layoutFlags = {}) {
-            return BasicSnapLayout<UserInterface>{AbstractSnapLayout::child(snap, nodeSize, nodeFlags, layoutFlags)};
+        BasicSnapLayout<UserInterface> snapChild(Snaps snap, const Vector2& nodeSize = {}, NodeFlags nodeFlags = {}, SnapLayoutFlags layoutFlags = {}) {
+            return BasicSnapLayout<UserInterface>{AbstractSnapLayout::snapChild(snap, nodeSize, nodeFlags, layoutFlags)};
         }
         /** @overload */
-        BasicSnapLayout<UserInterface> child(Snaps snap, const Vector2& nodeSize, SnapLayoutFlags layoutFlags) {
-            return child(snap, nodeSize, NodeFlags{}, layoutFlags);
+        BasicSnapLayout<UserInterface> snapChild(Snaps snap, const Vector2& nodeSize, SnapLayoutFlags layoutFlags) {
+            return snapChild(snap, nodeSize, NodeFlags{}, layoutFlags);
         }
 
         /**
-         * @brief @copybrief AbstractSnapLayout::sibling(Snaps, const Vector2&, NodeFlags, SnapLayoutFlags)
+         * @brief @copybrief AbstractSnapLayout::snapSibling(Snaps, const Vector2&, NodeFlags, SnapLayoutFlags)
          *
-         * Like @ref AbstractSnapLayout::sibling(Snaps, const Vector2&, NodeFlags, SnapLayoutFlags)
+         * Like @ref AbstractSnapLayout::snapSibling(Snaps, const Vector2&, NodeFlags, SnapLayoutFlags)
          * but returning a concrete layout instance.
          */
-        BasicSnapLayout<UserInterface> sibling(Snaps snap, const Vector2& nodeSize = {}, NodeFlags nodeFlags = {}, SnapLayoutFlags layoutFlags = {}) {
-            return BasicSnapLayout<UserInterface>{AbstractSnapLayout::sibling(snap, nodeSize, nodeFlags, layoutFlags)};
+        BasicSnapLayout<UserInterface> snapSibling(Snaps snap, const Vector2& nodeSize = {}, NodeFlags nodeFlags = {}, SnapLayoutFlags layoutFlags = {}) {
+            return BasicSnapLayout<UserInterface>{AbstractSnapLayout::snapSibling(snap, nodeSize, nodeFlags, layoutFlags)};
         }
         /** @overload */
-        BasicSnapLayout<UserInterface> sibling(Snaps snap, const Vector2& nodeSize, SnapLayoutFlags layoutFlags) {
-            return sibling(snap, nodeSize, NodeFlags{}, layoutFlags);
+        BasicSnapLayout<UserInterface> snapSibling(Snaps snap, const Vector2& nodeSize, SnapLayoutFlags layoutFlags) {
+            return snapSibling(snap, nodeSize, NodeFlags{}, layoutFlags);
         }
 
         /* Overloads to remove a WTF factor from method chaining order */
