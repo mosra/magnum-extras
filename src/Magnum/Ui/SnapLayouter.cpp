@@ -260,27 +260,27 @@ LayoutHandle SnapLayouter::addInternal(const NodeHandle node, const LayouterData
     return handle;
 }
 
-LayoutHandle SnapLayouter::add(const NodeHandle node, const Snaps snap, const LayoutHandle target, const SnapLayoutFlags flags) {
+LayoutHandle SnapLayouter::addExplicit(const NodeHandle node, const Snaps snap, const LayoutHandle target, const SnapLayoutFlags flags) {
     CORRADE_ASSERT(target == LayoutHandle::Null || isHandleValid(target),
-        "Ui::SnapLayouter::add(): invalid target handle" << target, {});
-    return addInternal(node, snap, layoutHandleData(target), flags);
+        "Ui::SnapLayouter::addExplicit(): invalid target handle" << target, {});
+    return addExplicitInternal(node, snap, layoutHandleData(target), flags);
 }
 
-LayoutHandle SnapLayouter::add(const NodeHandle node, const Snaps snap, const LayouterDataHandle target, const SnapLayoutFlags flags) {
+LayoutHandle SnapLayouter::addExplicit(const NodeHandle node, const Snaps snap, const LayouterDataHandle target, const SnapLayoutFlags flags) {
     CORRADE_ASSERT(target == LayouterDataHandle::Null || isHandleValid(target),
-        "Ui::SnapLayouter::add(): invalid target handle" << target, {});
-    return addInternal(node, snap, target, flags);
+        "Ui::SnapLayouter::addExplicit(): invalid target handle" << target, {});
+    return addExplicitInternal(node, snap, target, flags);
 }
 
-LayoutHandle SnapLayouter::addInternal(const NodeHandle node, const Snaps snap, const LayouterDataHandle target, const SnapLayoutFlags flags) {
+LayoutHandle SnapLayouter::addExplicitInternal(const NodeHandle node, const Snaps snap, const LayouterDataHandle target, const SnapLayoutFlags flags) {
     /* We're abusing the top two bits for distinguishing implicitly and
        explicitly snapped layouts, don't allow them to be set */
     CORRADE_ASSERT(!(flags & ~SnapLayoutFlagMask),
-        "Ui::SnapLayouter::add(): invalid flags" << flags, {});
+        "Ui::SnapLayouter::addExplicit(): invalid flags" << flags, {});
     CORRADE_ASSERT(
         !(flags >= (SnapLayoutFlag::IgnoreOverflowX|SnapLayoutFlag::PropagateMarginX)) &&
         !(flags >= (SnapLayoutFlag::IgnoreOverflowY|SnapLayoutFlag::PropagateMarginY)),
-        "Ui::SnapLayouter::add():" << (flags & SnapLayoutFlag::IgnoreOverflow) << "and" << (flags & SnapLayoutFlag::PropagateMargin) << "are mutually exclusive", {});
+        "Ui::SnapLayouter::addExplicit():" << (flags & SnapLayoutFlag::IgnoreOverflow) << "and" << (flags & SnapLayoutFlag::PropagateMargin) << "are mutually exclusive", {});
 
     State& state = *_state;
 
@@ -299,7 +299,7 @@ LayoutHandle SnapLayouter::addInternal(const NodeHandle node, const Snaps snap, 
     /* If the target is null, it means snapping either to the parent node,
        which then has to have a layout, or to the UI itself, if node is root */
     CORRADE_ASSERT(target != LayouterDataHandle::Null || nodeParent == NodeHandle::Null,
-        "Ui::SnapLayouter::add(): can't snap a non-root" << node << "to the whole UI", {});
+        "Ui::SnapLayouter::addExplicit(): can't snap a non-root" << node << "to the whole UI", {});
 
     /* If the target isn't a parent, expect that it's a sibling and it's
        snapping outside. If the target is a parent, it's snapping inside
@@ -308,7 +308,7 @@ LayoutHandle SnapLayouter::addInternal(const NodeHandle node, const Snaps snap, 
         assigned to isn't anymore, and thus querying the parent blows up, what
         to do? */
     CORRADE_ASSERT(target == parentHandle || ui().nodeParent(this->node(target)) == nodeParent,
-        "Ui::SnapLayouter::add(): expected target to be assigned to either" << nodeParent << "or a child of it but" << target << "is a child of" << ui().nodeParent(this->node(target)), {});
+        "Ui::SnapLayouter::addExplicit(): expected target to be assigned to either" << nodeParent << "or a child of it but" << target << "is a child of" << ui().nodeParent(this->node(target)), {});
 
     Layout& layout = state.layouts[id];
     layout.flags = flags|SnapLayoutFlagHasExplicitSnap|(target == parentHandle ? Implementation::SnapLayoutFlagExplicitSnapToParent : SnapLayoutFlags{});

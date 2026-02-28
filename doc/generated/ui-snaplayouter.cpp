@@ -111,9 +111,11 @@ Ui::NodeHandle popupNode = ui.createNode({}, {400, 250});
 Ui::NodeHandle acceptNode = ui.createNode(popupNode, {-10, -10}, {150, 50});
 Ui::NodeHandle rejectNode = ui.createNode(popupNode, {}, {150, 50});
 
-Ui::LayoutHandle popup = layouter.add(popupNode, Ui::Snaps{}, Ui::LayoutHandle::Null);
-Ui::LayoutHandle accept = layouter.add(acceptNode, Ui::Snap::BottomRight, popup);
-Ui::LayoutHandle reject = layouter.add(rejectNode, Ui::Snap::Left, accept);
+Ui::LayoutHandle popup = layouter.addExplicit(popupNode,
+                                        Ui::Snaps{}, Ui::LayoutHandle::Null);
+Ui::LayoutHandle accept = layouter.addExplicit(acceptNode,
+                                        Ui::Snap::BottomRight, popup);
+Ui::LayoutHandle reject = layouter.addExplicit(rejectNode, Ui::Snap::Left, accept);
 /* [add] */
     static_cast<void>(reject);
 
@@ -133,7 +135,7 @@ Ui::NodeHandle contentsNode = ui.createNode(popupNode, {}, {});
 Ui::NodeHandle titleNode = ui.createNode(contentsNode, {}, {300, 30});
 Ui::NodeHandle detailsNode = ui.createNode(contentsNode, {}, {300, 40});
 
-Ui::LayoutHandle contents = layouter.add(contentsNode, Ui::Snaps{}, popup);
+Ui::LayoutHandle contents = layouter.addExplicit(contentsNode, Ui::Snaps{}, popup);
 layouter.setChildSnap(contents, Ui::Snap::Bottom|Ui::Snap::FillX);
 
 /* Implicit child layouts */

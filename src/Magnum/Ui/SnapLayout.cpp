@@ -66,7 +66,7 @@ AbstractSnapLayout AbstractSnapLayout::root(AbstractUserInterface& ui, SnapLayou
         "Ui::AbstractSnapLayout::root(): layouter not part of the UI",
         (AbstractSnapLayout{ui, &layouter, {}, {}}));
     const NodeHandle root = ui.createNode({}, nodeSize, nodeFlags);
-    const LayoutHandle layout = layouter.add(root, snap, LayoutHandle::Null, layoutFlags);
+    const LayoutHandle layout = layouter.addExplicit(root, snap, LayoutHandle::Null, layoutFlags);
     return AbstractSnapLayout{ui, &layouter, root, layoutHandleData(layout)};
 }
 
@@ -80,7 +80,7 @@ AbstractSnapLayout AbstractSnapLayout::child(SnapLayouter& layouter, const Snaps
         "Ui::AbstractSnapLayout::child():" << parent.node() << "doesn't have any layout from" << layouter.handle() << "assigned",
         (AbstractSnapLayout{ui, &layouter, {}, {}}));
     const NodeHandle child = ui.createNode(parent, {}, nodeSize, nodeFlags);
-    const LayoutHandle layout = layouter.add(child, snap, parentLayout, layoutFlags);
+    const LayoutHandle layout = layouter.addExplicit(child, snap, parentLayout, layoutFlags);
     return AbstractSnapLayout{ui, &layouter, child, layoutHandleData(layout)};
 }
 
@@ -94,7 +94,7 @@ AbstractSnapLayout AbstractSnapLayout::sibling(SnapLayouter& layouter, const Sna
         "Ui::AbstractSnapLayout::sibling():" << target.node() << "doesn't have any layout from" << layouter.handle() << "assigned",
         (AbstractSnapLayout{ui, &layouter, {}, {}}));
     const NodeHandle child = ui.createNode(ui.nodeParent(target), {}, nodeSize, nodeFlags);
-    const LayoutHandle layout = layouter.add(child, snap, targetLayout, layoutFlags);
+    const LayoutHandle layout = layouter.addExplicit(child, snap, targetLayout, layoutFlags);
     return AbstractSnapLayout{ui, &layouter, child, layoutHandleData(layout)};
 }
 
@@ -139,25 +139,25 @@ AbstractSnapLayout::AbstractSnapLayout(SnapLayouter& layouter, const AbstractAnc
 AbstractSnapLayout::AbstractSnapLayout(AbstractUserInterface& ui, SnapLayouter& layouter, const NodeHandle node, const Snaps snap, const LayoutHandle snapTarget, const SnapLayoutFlags flags): AbstractSnapLayout{NoInit, ui, node} {
     CORRADE_ASSERT(ui.isHandleValid(layouter.handle()) && &ui.layouter(layouter.handle()) == &layouter,
         "Ui::AbstractSnapLayout: layouter not part of the UI", );
-    addLayout(layouter, snap, snapTarget, flags);
+    addExplicitLayout(layouter, snap, snapTarget, flags);
 }
 
 AbstractSnapLayout::AbstractSnapLayout(SnapLayouter& layouter, const AbstractAnchor& anchor, const Snaps snap, const LayoutHandle snapTarget, const SnapLayoutFlags flags): AbstractSnapLayout{NoInit, anchor.ui(), anchor.node()} {
     CORRADE_ASSERT(_ui->isHandleValid(layouter.handle()) && &_ui->layouter(layouter.handle()) == &layouter,
         "Ui::AbstractSnapLayout: layouter and anchor not part of the same UI", );
-    addLayout(layouter, snap, snapTarget, flags);
+    addExplicitLayout(layouter, snap, snapTarget, flags);
 }
 
 AbstractSnapLayout::AbstractSnapLayout(AbstractUserInterface& ui, SnapLayouter& layouter, const NodeHandle node, const Snaps snap, const LayouterDataHandle snapTarget, const SnapLayoutFlags flags): AbstractSnapLayout{NoInit, ui, node} {
     CORRADE_ASSERT(ui.isHandleValid(layouter.handle()) && &ui.layouter(layouter.handle()) == &layouter,
         "Ui::AbstractSnapLayout: layouter not part of the UI", );
-    addLayout(layouter, snap, snapTarget, flags);
+    addExplicitLayout(layouter, snap, snapTarget, flags);
 }
 
 AbstractSnapLayout::AbstractSnapLayout(SnapLayouter& layouter, const AbstractAnchor& anchor, const Snaps snap, const LayouterDataHandle snapTarget, const SnapLayoutFlags flags): AbstractSnapLayout{NoInit, anchor.ui(), anchor.node()} {
     CORRADE_ASSERT(_ui->isHandleValid(layouter.handle()) && &_ui->layouter(layouter.handle()) == &layouter,
         "Ui::AbstractSnapLayout: layouter and anchor not part of the same UI", );
-    addLayout(layouter, snap, snapTarget, flags);
+    addExplicitLayout(layouter, snap, snapTarget, flags);
 }
 
 void AbstractSnapLayout::addLayout(SnapLayouter& layouter) {
@@ -193,7 +193,7 @@ void AbstractSnapLayout::addLayout(SnapLayouter& layouter, const LayouterDataHan
     _layout = layoutHandleData(layouter.add(_node, before, flags));
 }
 
-void AbstractSnapLayout::addLayout(SnapLayouter& layouter, const Snaps snap, const LayoutHandle snapTarget, const SnapLayoutFlags flags) {
+void AbstractSnapLayout::addExplicitLayout(SnapLayouter& layouter, const Snaps snap, const LayoutHandle snapTarget, const SnapLayoutFlags flags) {
     _layouter = &layouter;
 
     #ifndef CORRADE_NO_ASSERT
@@ -201,10 +201,10 @@ void AbstractSnapLayout::addLayout(SnapLayouter& layouter, const Snaps snap, con
     CORRADE_ASSERT(existingLayout == LayouterDataHandle::Null,
         "Ui::AbstractSnapLayout:" << _node << "already has" << layoutHandle(_layouter->handle(), existingLayout) << "assigned", );
     #endif
-    _layout = layoutHandleData(layouter.add(_node, snap, snapTarget, flags));
+    _layout = layoutHandleData(layouter.addExplicit(_node, snap, snapTarget, flags));
 }
 
-void AbstractSnapLayout::addLayout(SnapLayouter& layouter, const Snaps snap, const LayouterDataHandle snapTarget, const SnapLayoutFlags flags) {
+void AbstractSnapLayout::addExplicitLayout(SnapLayouter& layouter, const Snaps snap, const LayouterDataHandle snapTarget, const SnapLayoutFlags flags) {
     _layouter = &layouter;
 
     #ifndef CORRADE_NO_ASSERT
@@ -212,7 +212,7 @@ void AbstractSnapLayout::addLayout(SnapLayouter& layouter, const Snaps snap, con
     CORRADE_ASSERT(existingLayout == LayouterDataHandle::Null,
         "Ui::AbstractSnapLayout:" << _node << "already has" << layoutHandle(_layouter->handle(), existingLayout) << "assigned", );
     #endif
-    _layout = layoutHandleData(layouter.add(_node, snap, snapTarget, flags));
+    _layout = layoutHandleData(layouter.addExplicit(_node, snap, snapTarget, flags));
 }
 
 AbstractSnapLayout::operator AbstractAnchor() const {
@@ -261,13 +261,13 @@ AbstractSnapLayout AbstractSnapLayout::child(const Vector2& nodeSize, const Node
 
 AbstractSnapLayout AbstractSnapLayout::child(const Snaps snap, const Vector2& nodeSize, const NodeFlags nodeFlags, const SnapLayoutFlags layoutFlags) {
     const NodeHandle child = _ui->createNode(_node, {}, nodeSize, nodeFlags);
-    const LayoutHandle layout = _layouter->add(child, snap, _layout, layoutFlags);
+    const LayoutHandle layout = _layouter->addExplicit(child, snap, _layout, layoutFlags);
     return AbstractSnapLayout{*_ui, _layouter, child, layoutHandleData(layout)};
 }
 
 AbstractSnapLayout AbstractSnapLayout::sibling(const Snaps snap, const Vector2& nodeSize, const NodeFlags nodeFlags, const SnapLayoutFlags layoutFlags) {
     const NodeHandle sibling = _ui->createNode(_ui->nodeParent(_node), {}, nodeSize, nodeFlags);
-    const LayoutHandle layout = _layouter->add(sibling, snap, _layout, layoutFlags);
+    const LayoutHandle layout = _layouter->addExplicit(sibling, snap, _layout, layoutFlags);
     return AbstractSnapLayout{*_ui, _layouter, sibling, layoutHandleData(layout)};
 }
 

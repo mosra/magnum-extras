@@ -87,9 +87,8 @@ class MAGNUM_UI_EXPORT AbstractSnapLayout {
          * constructor.
          *
          * Calls @ref AbstractUserInterface::createNode() and
-         * @ref SnapLayouter::add(NodeHandle, LayoutHandle, SnapLayoutFlags)
-         * internally, see their documentation for detailed description of all
-         * constraints.
+         * @ref SnapLayouter::add() internally, see their documentation for
+         * detailed description of all constraints.
          */
         /* The AbstractAnchor could be by-value but then it'd need the Anchor.h
            include for all inline functions. Same in all cases below. */
@@ -121,9 +120,8 @@ class MAGNUM_UI_EXPORT AbstractSnapLayout {
          * @p layouter. See its documentation for more information.
          *
          * Calls @ref AbstractUserInterface::createNode() and
-         * @ref SnapLayouter::add(NodeHandle, LayouterDataHandle, SnapLayoutFlags)
-         * internally, see their documentation for detailed description of all
-         * constraints.
+         * @ref SnapLayouter::add() internally, see their documentation for
+         * detailed description of all constraints.
          */
         static AbstractSnapLayout child(SnapLayouter& layouter, const AbstractAnchor& parent, const Vector2& nodeSize, NodeFlags nodeFlags, LayouterDataHandle layoutBefore, SnapLayoutFlags layoutFlags = {});
         /** @overload */
@@ -154,9 +152,8 @@ class MAGNUM_UI_EXPORT AbstractSnapLayout {
          * @ref SnapLayouter::childSnap() defined by a parent layout.
          *
          * Calls @ref AbstractUserInterface::createNode() and
-         * @ref SnapLayouter::add(NodeHandle, Snaps, LayoutHandle, SnapLayoutFlags)
-         * internally, see their documentation for detailed description of all
-         * constraints.
+         * @ref SnapLayouter::addExplicit() internally, see their documentation
+         * for detailed description of all constraints.
          */
         static AbstractSnapLayout root(AbstractUserInterface& ui, SnapLayouter& layouter, Snaps snap, const Vector2& nodeSize = {}, NodeFlags nodeFlags = {}, SnapLayoutFlags layoutFlags = {});
         /** @overload */
@@ -188,9 +185,8 @@ class MAGNUM_UI_EXPORT AbstractSnapLayout {
          * @ref SnapLayouter::childSnap() defined by a parent layout.
          *
          * Calls @ref AbstractUserInterface::createNode() and
-         * @ref SnapLayouter::add(NodeHandle, Snaps, LayoutHandle, SnapLayoutFlags)
-         * internally, see their documentation for detailed description of all
-         * constraints.
+         * @ref SnapLayouter::addExplicit() internally, see their documentation
+         * for detailed description of all constraints.
          */
         static AbstractSnapLayout child(SnapLayouter& layouter, Snaps snap, const AbstractAnchor& parent, const Vector2& nodeSize = {}, NodeFlags nodeFlags = {}, SnapLayoutFlags layoutFlags = {});
         /** @overload */
@@ -223,9 +219,8 @@ class MAGNUM_UI_EXPORT AbstractSnapLayout {
          * @ref SnapLayouter::childSnap() defined by a parent layout.
          *
          * Calls @ref AbstractUserInterface::createNode() and
-         * @ref SnapLayouter::add(NodeHandle, Snaps, LayoutHandle, SnapLayoutFlags)
-         * internally, see their documentation for detailed description of all
-         * constraints.
+         * @ref SnapLayouter::addExplicit() internally, see their documentation
+         * for detailed description of all constraints.
          */
         static AbstractSnapLayout sibling(SnapLayouter& layouter, Snaps snap, const AbstractAnchor& target, const Vector2& nodeSize = {}, NodeFlags nodeFlags = {}, SnapLayoutFlags layoutFlags = {});
         /** @overload */
@@ -245,9 +240,8 @@ class MAGNUM_UI_EXPORT AbstractSnapLayout {
          * overload to add a new layout always together with specifying its
          * properties.
          *
-         * Calls @ref SnapLayouter::add(NodeHandle, LayoutHandle, SnapLayoutFlags)
-         * internally, see its documentation for detailed description of all
-         * constraints.
+         * Calls @ref SnapLayouter::add() internally, see its documentation for
+         * detailed description of all constraints.
          */
         explicit AbstractSnapLayout(SnapLayouter& layouter, const AbstractAnchor& anchor);
 
@@ -264,9 +258,8 @@ class MAGNUM_UI_EXPORT AbstractSnapLayout {
          * overload to add a new layout always together with specifying its
          * properties.
          *
-         * Calls @ref SnapLayouter::add(NodeHandle, LayoutHandle, SnapLayoutFlags)
-         * internally, see its documentation for detailed description of all
-         * constraints.
+         * Calls @ref SnapLayouter::add() internally, see its documentation for
+         * detailed description of all constraints.
          */
         explicit AbstractSnapLayout(AbstractUserInterface& ui, SnapLayouter& layouter, NodeHandle node);
 
@@ -289,9 +282,8 @@ class MAGNUM_UI_EXPORT AbstractSnapLayout {
          * a layout to it, you can also call member @ref child() and
          * @ref sibling() on an existing layout instance for the same effect.
          *
-         * Calls @ref SnapLayouter::add(NodeHandle, LayoutHandle, SnapLayoutFlags)
-         * internally, see its documentation for detailed description of all
-         * constraints.
+         * Calls @ref SnapLayouter::add() internally, see its documentation for
+         * detailed description of all constraints.
          */
         explicit AbstractSnapLayout(SnapLayouter& layouter, const AbstractAnchor& anchor, LayoutHandle before, SnapLayoutFlags flags = {});
         /** @overload */
@@ -304,9 +296,8 @@ class MAGNUM_UI_EXPORT AbstractSnapLayout {
          * but without checking that @p layoutBefore indeed belongs to
          * @p layouter. See documentation for more information.
          *
-         * Calls @ref SnapLayouter::add(NodeHandle, LayouterDataHandle, SnapLayoutFlags)
-         * internally, see its documentation for detailed description of all
-         * constraints.
+         * Calls @ref SnapLayouter::add() internally, see its documentation for
+         * detailed description of all constraints.
          */
         explicit AbstractSnapLayout(SnapLayouter& layouter, const AbstractAnchor& anchor, LayouterDataHandle layoutBefore, SnapLayoutFlags layoutFlags = {});
 
@@ -330,9 +321,8 @@ class MAGNUM_UI_EXPORT AbstractSnapLayout {
          * a layout to it, you can also call member @ref child() and
          * @ref sibling() on an existing layout instance for the same effect.
          *
-         * Calls @ref SnapLayouter::add(NodeHandle, LayoutHandle, SnapLayoutFlags)
-         * internally, see its documentation for detailed description of all
-         * constraints.
+         * Calls @ref SnapLayouter::add() internally, see its documentation for
+         * detailed description of all constraints.
          */
         explicit AbstractSnapLayout(AbstractUserInterface& ui, SnapLayouter& layouter, NodeHandle node, LayoutHandle before, SnapLayoutFlags flags = {});
         /** @overload */
@@ -345,9 +335,8 @@ class MAGNUM_UI_EXPORT AbstractSnapLayout {
          * but without checking that @p layoutBefore indeed belongs to
          * @p layouter. See documentation for more information.
          *
-         * Calls @ref SnapLayouter::add(NodeHandle, LayouterDataHandle, SnapLayoutFlags)
-         * internally, see its documentation for detailed description of all
-         * constraints.
+         * Calls @ref SnapLayouter::add() internally, see its documentation for
+         * detailed description of all constraints.
          */
         explicit AbstractSnapLayout(AbstractUserInterface& ui, SnapLayouter& layouter, NodeHandle node, LayouterDataHandle layoutBefore, SnapLayoutFlags layoutFlags = {});
 
@@ -361,9 +350,8 @@ class MAGNUM_UI_EXPORT AbstractSnapLayout {
          *      itself
          * @param flags         Layout flags
          *
-         * Calls @ref SnapLayouter::add(NodeHandle, Snaps, LayoutHandle, SnapLayoutFlags)
-         * internally, see its documentation for detailed description of all
-         * constraints.
+         * Calls @ref SnapLayouter::addExplicit() internally, see its
+         * documentation for detailed description of all constraints.
          */
         explicit AbstractSnapLayout(SnapLayouter& layouter, const AbstractAnchor& anchor, Snaps snap, LayoutHandle snapTarget, SnapLayoutFlags flags = {});
 
@@ -374,9 +362,8 @@ class MAGNUM_UI_EXPORT AbstractSnapLayout {
          * but without checking that @p snapTarget indeed belongs to
          * @p layouter. See documentation for more information.
          *
-         * Calls @ref SnapLayouter::add(NodeHandle, Snaps, LayouterDataHandle, SnapLayoutFlags)
-         * internally, see its documentation for detailed description of all
-         * constraints.
+         * Calls @ref SnapLayouter::addExplicit() internally, see its
+         * documentation for detailed description of all constraints.
          */
         explicit AbstractSnapLayout(SnapLayouter& layouter, const AbstractAnchor& anchor, Snaps snap, LayouterDataHandle snapTarget, SnapLayoutFlags flags = {});
 
@@ -391,9 +378,8 @@ class MAGNUM_UI_EXPORT AbstractSnapLayout {
          *      itself
          * @param flags         Layout flags
          *
-         * Calls @ref SnapLayouter::add(NodeHandle, Snaps, LayoutHandle, SnapLayoutFlags)
-         * internally, see its documentation for detailed description of all
-         * constraints.
+         * Calls @ref SnapLayouter::addExplicit() internally, see its
+         * documentation for detailed description of all constraints.
          */
         explicit AbstractSnapLayout(AbstractUserInterface& ui, SnapLayouter& layouter, NodeHandle node, Snaps snap, LayoutHandle snapTarget, SnapLayoutFlags flags = {});
 
@@ -404,9 +390,8 @@ class MAGNUM_UI_EXPORT AbstractSnapLayout {
          * but without checking that @p snapTarget indeed belongs to
          * @p layouter. See documentation for more information.
          *
-         * Calls @ref SnapLayouter::add(NodeHandle, Snaps, LayouterDataHandle, SnapLayoutFlags)
-         * internally, see its documentation for detailed description of all
-         * constraints.
+         * Calls @ref SnapLayouter::addExplicit() internally, see its
+         * documentation for detailed description of all constraints.
          */
         explicit AbstractSnapLayout(AbstractUserInterface& ui, SnapLayouter& layouter, NodeHandle node, Snaps snap, LayouterDataHandle snapTarget, SnapLayoutFlags flags = {});
 
@@ -530,9 +515,8 @@ class MAGNUM_UI_EXPORT AbstractSnapLayout {
          * @ref AbstractSnapLayout instance.
          *
          * Calls @ref AbstractUserInterface::createNode() and
-         * @ref SnapLayouter::add(NodeHandle, LayoutHandle, SnapLayoutFlags)
-         * internally, see their documentation for detailed description of all
-         * constraints.
+         * @ref SnapLayouter::add() internally, see their documentation for
+         * detailed description of all constraints.
          */
         AbstractSnapLayout child(const Vector2& nodeSize = {}, NodeFlags nodeFlags = {}, LayoutHandle layoutBefore =
             #ifdef DOXYGEN_GENERATING_OUTPUT
@@ -562,9 +546,8 @@ class MAGNUM_UI_EXPORT AbstractSnapLayout {
          * @ref layouter(). See its documentation for more information.
          *
          * Calls @ref AbstractUserInterface::createNode() and
-         * @ref SnapLayouter::add(NodeHandle, LayouterDataHandle, SnapLayoutFlags)
-         * internally, see their documentation for detailed description of all
-         * constraints.
+         * @ref SnapLayouter::add() internally, see their documentation for
+         * detailed description of all constraints.
          */
         AbstractSnapLayout child(const Vector2& nodeSize, NodeFlags nodeFlags, LayouterDataHandle layoutBefore, SnapLayoutFlags layoutFlags = {});
         /** @overload */
@@ -595,9 +578,8 @@ class MAGNUM_UI_EXPORT AbstractSnapLayout {
          * existing @ref AbstractSnapLayout instance.
          *
          * Calls @ref AbstractUserInterface::createNode() and
-         * @ref SnapLayouter::add(NodeHandle, Snaps, LayoutHandle, SnapLayoutFlags)
-         * internally, see their documentation for detailed description of all
-         * constraints.
+         * @ref SnapLayouter::addExplicit() internally, see their documentation
+         * for detailed description of all constraints.
          */
         AbstractSnapLayout child(Snaps snap, const Vector2& nodeSize = {}, NodeFlags nodeFlags = {}, SnapLayoutFlags layoutFlags = {});
         /** @overload */
@@ -628,9 +610,8 @@ class MAGNUM_UI_EXPORT AbstractSnapLayout {
          * existing @ref AbstractSnapLayout instance.
          *
          * Calls @ref AbstractUserInterface::createNode() and
-         * @ref SnapLayouter::add(NodeHandle, Snaps, LayoutHandle, SnapLayoutFlags)
-         * internally, see their documentation for detailed description of all
-         * constraints.
+         * @ref SnapLayouter::addExplicit() internally, see their documentation
+         * for detailed description of all constraints.
          */
         AbstractSnapLayout sibling(Snaps snap, const Vector2& nodeSize = {}, NodeFlags nodeFlags = {}, SnapLayoutFlags layoutFlags = {});
         /** @overload */
@@ -658,8 +639,8 @@ class MAGNUM_UI_EXPORT AbstractSnapLayout {
         void addLayout(SnapLayouter& layouter);
         void addLayout(SnapLayouter& layouter, LayoutHandle before, SnapLayoutFlags flags);
         void addLayout(SnapLayouter& layouter, LayouterDataHandle before, SnapLayoutFlags flags);
-        void addLayout(SnapLayouter& layouter, Snaps snap, LayoutHandle snapTarget, SnapLayoutFlags flags);
-        void addLayout(SnapLayouter& layouter, Snaps snap, LayouterDataHandle snapTarget, SnapLayoutFlags flags);
+        void addExplicitLayout(SnapLayouter& layouter, Snaps snap, LayoutHandle snapTarget, SnapLayoutFlags flags);
+        void addExplicitLayout(SnapLayouter& layouter, Snaps snap, LayouterDataHandle snapTarget, SnapLayoutFlags flags);
 
         /* Deinlined specializations for BasicSnapLayoutColumn and such in
            SnapLayout.cpp */

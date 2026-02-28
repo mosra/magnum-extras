@@ -2591,7 +2591,7 @@ void SnapLayouterTest::addRemove() {
     /* Layout that's explicitly snapped isn't added to the child list even
        though it's assigned to a node that's a sibling of the others. It's
        added to the snap list of the target however. */
-    LayoutHandle root1ExplicitSnapLayout = layouter.add(root1ExplicitSnap, Snap::Left|Snap::NoPadY, root1Child2Layout);
+    LayoutHandle root1ExplicitSnapLayout = layouter.addExplicit(root1ExplicitSnap, Snap::Left|Snap::NoPadY, root1Child2Layout);
     CORRADE_COMPARE(layouter.firstChild(root1Layout), root1Child1Layout);
     CORRADE_COMPARE(layouter.firstExplicitSnap(root1Layout), LayoutHandle::Null);
     CORRADE_COMPARE(layouter.firstExplicitSnap(root1Child2Layout), root1ExplicitSnapLayout);
@@ -2736,7 +2736,7 @@ void SnapLayouterTest::addRemoveExplicitSnap() {
     NodeHandle root3 = ui.createNode({}, {});
 
     /* Layout snapped to the whole UI, acting as a target to others */
-    LayoutHandle root1Layout = layouter.add(root1, Snap::Top|Snap::FillX, LayoutHandle::Null);
+    LayoutHandle root1Layout = layouter.addExplicit(root1, Snap::Top|Snap::FillX, LayoutHandle::Null);
     CORRADE_COMPARE(layouter.node(root1Layout), root1);
     CORRADE_COMPARE(layouter.flags(root1Layout), SnapLayoutFlags{});
     CORRADE_COMPARE(layouter.firstChild(root1Layout), LayoutHandle::Null);
@@ -2748,7 +2748,7 @@ void SnapLayouterTest::addRemoveExplicitSnap() {
     CORRADE_COMPARE(layouter.next(root1Layout), LayoutHandle::Null);
 
     /* Layout again snapped to the whole UI, LayouterDataHandle overloads */
-    LayoutHandle root2Layout = layouter.add(root2, Snap::Right, LayouterDataHandle::Null);
+    LayoutHandle root2Layout = layouter.addExplicit(root2, Snap::Right, LayouterDataHandle::Null);
     CORRADE_COMPARE(layouter.node(root2Layout), root2);
     CORRADE_COMPARE(layouter.flags(layoutHandleData(root2Layout)), SnapLayoutFlags{});
     CORRADE_COMPARE(layouter.firstChild(layoutHandleData(root2Layout)), LayoutHandle::Null);
@@ -2761,7 +2761,7 @@ void SnapLayouterTest::addRemoveExplicitSnap() {
 
     /* Layout that's snapped to a parent, being implicitly treated as inside,
        with flags */
-    LayoutHandle root1Child1Layout = layouter.add(root1Child1, Snap::BottomRight, root1Layout, SnapLayoutFlag::IgnoreOverflowY);
+    LayoutHandle root1Child1Layout = layouter.addExplicit(root1Child1, Snap::BottomRight, root1Layout, SnapLayoutFlag::IgnoreOverflowY);
     CORRADE_COMPARE(layouter.firstChild(root1Layout), LayoutHandle::Null);
     CORRADE_COMPARE(layouter.firstExplicitSnap(root1Layout), root1Child1Layout);
     CORRADE_COMPARE(layouter.node(root1Child1Layout), root1Child1);
@@ -2775,7 +2775,7 @@ void SnapLayouterTest::addRemoveExplicitSnap() {
     CORRADE_COMPARE(layouter.next(root1Child1Layout), LayoutHandle::Null);
 
     /* Layout that's snapped to a parent, and explicitly snapped inside */
-    LayoutHandle root1Child2Layout = layouter.add(root1Child2, Snap::TopRight|Snap::Inside, root1Layout);
+    LayoutHandle root1Child2Layout = layouter.addExplicit(root1Child2, Snap::TopRight|Snap::Inside, root1Layout);
     CORRADE_COMPARE(layouter.firstChild(root1Layout), LayoutHandle::Null);
     CORRADE_COMPARE(layouter.firstExplicitSnap(root1Layout), root1Child1Layout);
     CORRADE_COMPARE(layouter.node(root1Child2Layout), root1Child2);
@@ -2806,7 +2806,7 @@ void SnapLayouterTest::addRemoveExplicitSnap() {
 
     /* Layout that's snapped to a sibling doesn't get inserted into the
        parent's list either. LayouterDataHandle overloads, with flags */
-    LayoutHandle root1Child3Layout = layouter.add(root1Child3, Snap::Left|Snap::NoPadX, layoutHandleData(root1Child1Layout), SnapLayoutFlag::IgnoreOverflowX);
+    LayoutHandle root1Child3Layout = layouter.addExplicit(root1Child3, Snap::Left|Snap::NoPadX, layoutHandleData(root1Child1Layout), SnapLayoutFlag::IgnoreOverflowX);
     CORRADE_COMPARE(layouter.firstChild(root1Layout), root1ImplicitSnapLayout);
     CORRADE_COMPARE(layouter.firstExplicitSnap(root1Layout), root1Child1Layout);
     CORRADE_COMPARE(layouter.node(root1Child3Layout), root1Child3);
@@ -2825,7 +2825,7 @@ void SnapLayouterTest::addRemoveExplicitSnap() {
 
     /* Another layout, snapped as a sibling to the root layout, gets added to
        the list along the layouts assigned to node children */
-    LayoutHandle root3Layout = layouter.add(root3, Snap::Top|Snap::NoPadY, root1Layout, SnapLayoutFlag::IgnoreOverflow);
+    LayoutHandle root3Layout = layouter.addExplicit(root3, Snap::Top|Snap::NoPadY, root1Layout, SnapLayoutFlag::IgnoreOverflow);
     CORRADE_COMPARE(layouter.firstChild(root1Layout), root1ImplicitSnapLayout);
     CORRADE_COMPARE(layouter.firstExplicitSnap(root1Layout), root1Child1Layout);
     CORRADE_COMPARE(layouter.node(root3Layout), root3);
@@ -2922,8 +2922,8 @@ void SnapLayouterTest::addRemoveHandleRecycle() {
     LayoutHandle second = layouter.add(child0);
     LayoutHandle implicit1 = layouter.add(child1, SnapLayoutFlags{0x08});
     LayoutHandle implicit2 = layouter.add(child2, SnapLayoutFlags{0x10});
-    LayoutHandle explicit1 = layouter.add(child3, Snap::Left, first, SnapLayoutFlags{0x20});
-    LayoutHandle explicit2 = layouter.add(child4, Snap::Right, first, SnapLayoutFlags{0x30});
+    LayoutHandle explicit1 = layouter.addExplicit(child3, Snap::Left, first, SnapLayoutFlags{0x20});
+    LayoutHandle explicit2 = layouter.addExplicit(child4, Snap::Right, first, SnapLayoutFlags{0x30});
     layouter.setChildSnap(implicit1, Snap::Top|Snap::FillX);
     layouter.setChildSnap(implicit2, Snap::Right|Snap::FillY);
     layouter.setChildSnap(explicit1, Snap::Top|Snap::NoPadX);
@@ -2957,7 +2957,7 @@ void SnapLayouterTest::addRemoveHandleRecycle() {
     CORRADE_COMPARE(layouter.next(implicit1Replacement), LayoutHandle::Null);
 
     layouter.remove(explicit1);
-    LayoutHandle explicit1Replacement = layouter.add(child3, Snap::Right|Snap::NoPad, second);
+    LayoutHandle explicit1Replacement = layouter.addExplicit(child3, Snap::Right|Snap::NoPad, second);
     CORRADE_COMPARE(layoutHandleId(explicit1Replacement), layoutHandleId(explicit1));
     CORRADE_COMPARE(layouter.flags(explicit1Replacement), SnapLayoutFlags{});
     CORRADE_COMPARE(layouter.childSnap(explicit1Replacement), Snap::Bottom);
@@ -2967,7 +2967,7 @@ void SnapLayouterTest::addRemoveHandleRecycle() {
 
     /* ... and then with the other kind */
     layouter.remove(implicit2);
-    LayoutHandle implicit2ExplicitReplacement = layouter.add(child2, Snap::FillY|Snap::NoPadX, second);
+    LayoutHandle implicit2ExplicitReplacement = layouter.addExplicit(child2, Snap::FillY|Snap::NoPadX, second);
     CORRADE_COMPARE(layoutHandleId(implicit2ExplicitReplacement), layoutHandleId(implicit2));
     CORRADE_COMPARE(layouter.flags(implicit2ExplicitReplacement), SnapLayoutFlags{});
     CORRADE_COMPARE(layouter.childSnap(implicit2ExplicitReplacement), Snap::Bottom);
@@ -3019,8 +3019,8 @@ void SnapLayouterTest::addInvalid() {
     /* Invalid before or target handle */
     layouter.add(ui.createNode({}, {}), differentLayouterLayout);
     layouter.add(ui.createNode({}, {}), layouterDataHandle(0xabcde, 0x123));
-    layouter.add(ui.createNode({}, {}), Snap::Left, differentLayouterLayout);
-    layouter.add(ui.createNode({}, {}), Snap::Left, layouterDataHandle(0xabcde, 0x123));
+    layouter.addExplicit(ui.createNode({}, {}), Snap::Left, differentLayouterLayout);
+    layouter.addExplicit(ui.createNode({}, {}), Snap::Left, layouterDataHandle(0xabcde, 0x123));
     /* Before handle should be null but isn't */
     layouter.add(nodeWithNoParent, layout);
     layouter.add(nodeWithNoParent2, layoutHandleData(layout));
@@ -3030,17 +3030,17 @@ void SnapLayouterTest::addInvalid() {
     layouter.add(node1, layout);
     layouter.add(node2, layoutHandleData(layout));
     /* Layout not a sibling or parent of node */
-    layouter.add(node3, Snap::Top, notSiblingOrParentLayoutOfNodeLayout);
-    layouter.add(node4, Snap::Top, layoutHandleData(notSiblingOrParentLayoutOfNodeLayout));
+    layouter.addExplicit(node3, Snap::Top, notSiblingOrParentLayoutOfNodeLayout);
+    layouter.addExplicit(node4, Snap::Top, layoutHandleData(notSiblingOrParentLayoutOfNodeLayout));
     /* Snapping a non-root node to the UI */
-    layouter.add(node5, Snap::Fill, LayoutHandle::Null);
-    layouter.add(node6, Snap::Fill, LayouterDataHandle::Null);
+    layouter.addExplicit(node5, Snap::Fill, LayoutHandle::Null);
+    layouter.addExplicit(node6, Snap::Fill, LayouterDataHandle::Null);
     /* Invalid SnapLayoutFlags are tested along with setters in flagsInvalid() */
     CORRADE_COMPARE_AS(out,
         "Ui::SnapLayouter::add(): invalid before handle Ui::LayoutHandle({0x1, 0x1}, {0x0, 0x1})\n"
         "Ui::SnapLayouter::add(): invalid before handle Ui::LayouterDataHandle(0xabcde, 0x123)\n"
-        "Ui::SnapLayouter::add(): invalid target handle Ui::LayoutHandle({0x1, 0x1}, {0x0, 0x1})\n"
-        "Ui::SnapLayouter::add(): invalid target handle Ui::LayouterDataHandle(0xabcde, 0x123)\n"
+        "Ui::SnapLayouter::addExplicit(): invalid target handle Ui::LayoutHandle({0x1, 0x1}, {0x0, 0x1})\n"
+        "Ui::SnapLayouter::addExplicit(): invalid target handle Ui::LayouterDataHandle(0xabcde, 0x123)\n"
 
         "Ui::SnapLayouter::add(): expected before to be null for Ui::NodeHandle(0x0, 0x1) without a parent layout but got Ui::LayouterDataHandle(0x1, 0x1)\n"
         "Ui::SnapLayouter::add(): expected before to be null for Ui::NodeHandle(0x1, 0x1) without a parent layout but got Ui::LayouterDataHandle(0x1, 0x1)\n"
@@ -3050,11 +3050,11 @@ void SnapLayouterTest::addInvalid() {
         "Ui::SnapLayouter::add(): expected before to be a child of Ui::NodeHandle(0x6, 0x1) but Ui::LayouterDataHandle(0x1, 0x1) is a child of Ui::NodeHandle::Null\n"
         "Ui::SnapLayouter::add(): expected before to be a child of Ui::NodeHandle(0x6, 0x1) but Ui::LayouterDataHandle(0x1, 0x1) is a child of Ui::NodeHandle::Null\n"
 
-        "Ui::SnapLayouter::add(): expected target to be assigned to either Ui::NodeHandle(0x6, 0x1) or a child of it but Ui::LayouterDataHandle(0x2, 0x1) is a child of Ui::NodeHandle(0x7, 0x1)\n"
-        "Ui::SnapLayouter::add(): expected target to be assigned to either Ui::NodeHandle(0x6, 0x1) or a child of it but Ui::LayouterDataHandle(0x2, 0x1) is a child of Ui::NodeHandle(0x7, 0x1)\n"
+        "Ui::SnapLayouter::addExplicit(): expected target to be assigned to either Ui::NodeHandle(0x6, 0x1) or a child of it but Ui::LayouterDataHandle(0x2, 0x1) is a child of Ui::NodeHandle(0x7, 0x1)\n"
+        "Ui::SnapLayouter::addExplicit(): expected target to be assigned to either Ui::NodeHandle(0x6, 0x1) or a child of it but Ui::LayouterDataHandle(0x2, 0x1) is a child of Ui::NodeHandle(0x7, 0x1)\n"
 
-        "Ui::SnapLayouter::add(): can't snap a non-root Ui::NodeHandle(0xb, 0x1) to the whole UI\n"
-        "Ui::SnapLayouter::add(): can't snap a non-root Ui::NodeHandle(0xc, 0x1) to the whole UI\n",
+        "Ui::SnapLayouter::addExplicit(): can't snap a non-root Ui::NodeHandle(0xb, 0x1) to the whole UI\n"
+        "Ui::SnapLayouter::addExplicit(): can't snap a non-root Ui::NodeHandle(0xc, 0x1) to the whole UI\n",
         TestSuite::Compare::String);
 }
 
@@ -3072,7 +3072,7 @@ void SnapLayouterTest::removeInvalid() {
     NodeHandle withDependent = ui.createNode({}, {});
     NodeHandle dependent = ui.createNode({}, {});
     LayoutHandle withDependentLayout = layouter.add(withDependent);
-    layouter.add(dependent, Snap::Bottom, withDependentLayout);
+    layouter.addExplicit(dependent, Snap::Bottom, withDependentLayout);
 
     NodeHandle withBoth = ui.createNode({}, {});
     NodeHandle child1 = ui.createNode(withBoth, {}, {});
@@ -3083,9 +3083,9 @@ void SnapLayouterTest::removeInvalid() {
     LayoutHandle withBothLayoutLayout = layouter.add(withBoth);
     layouter.add(child1);
     layouter.add(child2);
-    layouter.add(child3, Snap::Left, withBothLayoutLayout);
-    layouter.add(dependent1, Snap::Top, withBothLayoutLayout);
-    layouter.add(dependent2, Snap::Top, withBothLayoutLayout);
+    layouter.addExplicit(child3, Snap::Left, withBothLayoutLayout);
+    layouter.addExplicit(dependent1, Snap::Top, withBothLayoutLayout);
+    layouter.addExplicit(dependent2, Snap::Top, withBothLayoutLayout);
 
     Containers::String out;
     Error redirectError{&out};
@@ -3185,7 +3185,7 @@ void SnapLayouterTest::invalidExplicitSnap() {
     SnapLayouter& layouter = ui.setLayouterInstance(Containers::pointer<SnapLayouter>(ui.createLayouter()));
 
     LayoutHandle implicitSnap = layouter.add(ui.createNode({}, {}));
-    LayoutHandle explicitSnap = layouter.add(ui.createNode({}, {}), {}, LayoutHandle::Null);
+    LayoutHandle explicitSnap = layouter.addExplicit(ui.createNode({}, {}), {}, LayoutHandle::Null);
     CORRADE_VERIFY(!layouter.hasExplicitSnap(implicitSnap));
     CORRADE_VERIFY(layouter.hasExplicitSnap(explicitSnap));
 
@@ -3220,7 +3220,7 @@ void SnapLayouterTest::flags() {
        implicit and explicit snaps and doesn't affect the explicitness. */
     /*LayoutHandle layout0 =*/ layouter.add(node0);
     LayoutHandle layout1 = layouter.add(node1, SnapLayoutFlag::IgnoreOverflowX);
-    LayoutHandle layout2 = layouter.add(node2, Snap::Left, LayoutHandle::Null, SnapLayoutFlag::IgnoreOverflowY);
+    LayoutHandle layout2 = layouter.addExplicit(node2, Snap::Left, LayoutHandle::Null, SnapLayoutFlag::IgnoreOverflowY);
     CORRADE_VERIFY(!layouter.hasExplicitSnap(layout1));
     CORRADE_VERIFY(layouter.hasExplicitSnap(layout2));
     CORRADE_COMPARE(layouter.flags(layout1), SnapLayoutFlag::IgnoreOverflowX);
@@ -3338,8 +3338,8 @@ void SnapLayouterTest::flagsInvalid() {
     /* Using illegal bits */
     layouter.add(ui.createNode({}, {}), SnapLayoutFlags{0x40}|SnapLayoutFlag::IgnoreOverflow);
     layouter.add(ui.createNode({}, {}), SnapLayoutFlags{0x80}|SnapLayoutFlag::IgnoreOverflowX);
-    layouter.add(ui.createNode({}, {}), Snaps{}, layout, SnapLayoutFlags{0x40}|SnapLayoutFlag::IgnoreOverflowY);
-    layouter.add(ui.createNode({}, {}), Snaps{}, layout, SnapLayoutFlags{0x80}|SnapLayoutFlag::IgnoreOverflow);
+    layouter.addExplicit(ui.createNode({}, {}), {}, layout, SnapLayoutFlags{0x40}|SnapLayoutFlag::IgnoreOverflowY);
+    layouter.addExplicit(ui.createNode({}, {}), {}, layout, SnapLayoutFlags{0x80}|SnapLayoutFlag::IgnoreOverflow);
     layouter.setFlags(layout, SnapLayoutFlags{0x80}|SnapLayoutFlag::IgnoreOverflowX);
     layouter.setFlags(layoutHandleData(layout), SnapLayoutFlags{0x80}|SnapLayoutFlag::IgnoreOverflowX);
     layouter.setFlags(layout, SnapLayoutFlags{0x40}|SnapLayoutFlag::IgnoreOverflowY);
@@ -3363,13 +3363,13 @@ void SnapLayouterTest::flagsInvalid() {
     layouter.add(ui.createNode({}, {}), SnapLayoutFlag::IgnoreOverflow|SnapLayoutFlag::PropagateMarginY);
     layouter.add(ui.createNode({}, {}), SnapLayoutFlag::IgnoreOverflow|SnapLayoutFlag::PropagateMargin);
     /* Explicir snap variant */
-    layouter.add(ui.createNode({}, {}), Snaps{}, layout, SnapLayoutFlag::IgnoreOverflowX|SnapLayoutFlag::PropagateMarginX);
-    layouter.add(ui.createNode({}, {}), Snaps{}, layout, SnapLayoutFlag::IgnoreOverflowX|SnapLayoutFlag::PropagateMargin);
-    layouter.add(ui.createNode({}, {}), Snaps{}, layout, SnapLayoutFlag::IgnoreOverflowY|SnapLayoutFlag::PropagateMarginY);
-    layouter.add(ui.createNode({}, {}), Snaps{}, layout, SnapLayoutFlag::IgnoreOverflowY|SnapLayoutFlag::PropagateMargin);
-    layouter.add(ui.createNode({}, {}), Snaps{}, layout, SnapLayoutFlag::IgnoreOverflow|SnapLayoutFlag::PropagateMarginX);
-    layouter.add(ui.createNode({}, {}), Snaps{}, layout, SnapLayoutFlag::IgnoreOverflow|SnapLayoutFlag::PropagateMarginY);
-    layouter.add(ui.createNode({}, {}), Snaps{}, layout, SnapLayoutFlag::IgnoreOverflow|SnapLayoutFlag::PropagateMargin);
+    layouter.addExplicit(ui.createNode({}, {}), {}, layout, SnapLayoutFlag::IgnoreOverflowX|SnapLayoutFlag::PropagateMarginX);
+    layouter.addExplicit(ui.createNode({}, {}), {}, layout, SnapLayoutFlag::IgnoreOverflowX|SnapLayoutFlag::PropagateMargin);
+    layouter.addExplicit(ui.createNode({}, {}), {}, layout, SnapLayoutFlag::IgnoreOverflowY|SnapLayoutFlag::PropagateMarginY);
+    layouter.addExplicit(ui.createNode({}, {}), {}, layout, SnapLayoutFlag::IgnoreOverflowY|SnapLayoutFlag::PropagateMargin);
+    layouter.addExplicit(ui.createNode({}, {}), {}, layout, SnapLayoutFlag::IgnoreOverflow|SnapLayoutFlag::PropagateMarginX);
+    layouter.addExplicit(ui.createNode({}, {}), {}, layout, SnapLayoutFlag::IgnoreOverflow|SnapLayoutFlag::PropagateMarginY);
+    layouter.addExplicit(ui.createNode({}, {}), {}, layout, SnapLayoutFlag::IgnoreOverflow|SnapLayoutFlag::PropagateMargin);
 
     layouter.setFlags(layout, SnapLayoutFlag::IgnoreOverflowX|SnapLayoutFlag::PropagateMarginX);
     layouter.setFlags(layout, SnapLayoutFlag::IgnoreOverflowX|SnapLayoutFlag::PropagateMargin);
@@ -3411,8 +3411,8 @@ void SnapLayouterTest::flagsInvalid() {
     CORRADE_COMPARE_AS(out,
         "Ui::SnapLayouter::add(): invalid flags Ui::SnapLayoutFlag::IgnoreOverflow|Ui::SnapLayoutFlag(0x40)\n"
         "Ui::SnapLayouter::add(): invalid flags Ui::SnapLayoutFlag::IgnoreOverflowX|Ui::SnapLayoutFlag(0x80)\n"
-        "Ui::SnapLayouter::add(): invalid flags Ui::SnapLayoutFlag::IgnoreOverflowY|Ui::SnapLayoutFlag(0x40)\n"
-        "Ui::SnapLayouter::add(): invalid flags Ui::SnapLayoutFlag::IgnoreOverflow|Ui::SnapLayoutFlag(0x80)\n"
+        "Ui::SnapLayouter::addExplicit(): invalid flags Ui::SnapLayoutFlag::IgnoreOverflowY|Ui::SnapLayoutFlag(0x40)\n"
+        "Ui::SnapLayouter::addExplicit(): invalid flags Ui::SnapLayoutFlag::IgnoreOverflow|Ui::SnapLayoutFlag(0x80)\n"
         "Ui::SnapLayouter::setFlags(): invalid flags Ui::SnapLayoutFlag::IgnoreOverflowX|Ui::SnapLayoutFlag(0x80)\n"
         "Ui::SnapLayouter::setFlags(): invalid flags Ui::SnapLayoutFlag::IgnoreOverflowX|Ui::SnapLayoutFlag(0x80)\n"
         "Ui::SnapLayouter::setFlags(): invalid flags Ui::SnapLayoutFlag::IgnoreOverflowY|Ui::SnapLayoutFlag(0x40)\n"
@@ -3434,13 +3434,13 @@ void SnapLayouterTest::flagsInvalid() {
         "Ui::SnapLayouter::add(): Ui::SnapLayoutFlag::IgnoreOverflow and Ui::SnapLayoutFlag::PropagateMarginY are mutually exclusive\n"
         "Ui::SnapLayouter::add(): Ui::SnapLayoutFlag::IgnoreOverflow and Ui::SnapLayoutFlag::PropagateMargin are mutually exclusive\n"
         /* Explicit snap variants */
-        "Ui::SnapLayouter::add(): Ui::SnapLayoutFlag::IgnoreOverflowX and Ui::SnapLayoutFlag::PropagateMarginX are mutually exclusive\n"
-        "Ui::SnapLayouter::add(): Ui::SnapLayoutFlag::IgnoreOverflowX and Ui::SnapLayoutFlag::PropagateMargin are mutually exclusive\n"
-        "Ui::SnapLayouter::add(): Ui::SnapLayoutFlag::IgnoreOverflowY and Ui::SnapLayoutFlag::PropagateMarginY are mutually exclusive\n"
-        "Ui::SnapLayouter::add(): Ui::SnapLayoutFlag::IgnoreOverflowY and Ui::SnapLayoutFlag::PropagateMargin are mutually exclusive\n"
-        "Ui::SnapLayouter::add(): Ui::SnapLayoutFlag::IgnoreOverflow and Ui::SnapLayoutFlag::PropagateMarginX are mutually exclusive\n"
-        "Ui::SnapLayouter::add(): Ui::SnapLayoutFlag::IgnoreOverflow and Ui::SnapLayoutFlag::PropagateMarginY are mutually exclusive\n"
-        "Ui::SnapLayouter::add(): Ui::SnapLayoutFlag::IgnoreOverflow and Ui::SnapLayoutFlag::PropagateMargin are mutually exclusive\n"
+        "Ui::SnapLayouter::addExplicit(): Ui::SnapLayoutFlag::IgnoreOverflowX and Ui::SnapLayoutFlag::PropagateMarginX are mutually exclusive\n"
+        "Ui::SnapLayouter::addExplicit(): Ui::SnapLayoutFlag::IgnoreOverflowX and Ui::SnapLayoutFlag::PropagateMargin are mutually exclusive\n"
+        "Ui::SnapLayouter::addExplicit(): Ui::SnapLayoutFlag::IgnoreOverflowY and Ui::SnapLayoutFlag::PropagateMarginY are mutually exclusive\n"
+        "Ui::SnapLayouter::addExplicit(): Ui::SnapLayoutFlag::IgnoreOverflowY and Ui::SnapLayoutFlag::PropagateMargin are mutually exclusive\n"
+        "Ui::SnapLayouter::addExplicit(): Ui::SnapLayoutFlag::IgnoreOverflow and Ui::SnapLayoutFlag::PropagateMarginX are mutually exclusive\n"
+        "Ui::SnapLayouter::addExplicit(): Ui::SnapLayoutFlag::IgnoreOverflow and Ui::SnapLayoutFlag::PropagateMarginY are mutually exclusive\n"
+        "Ui::SnapLayouter::addExplicit(): Ui::SnapLayoutFlag::IgnoreOverflow and Ui::SnapLayoutFlag::PropagateMargin are mutually exclusive\n"
 
         "Ui::SnapLayouter::setFlags(): Ui::SnapLayoutFlag::IgnoreOverflowX and Ui::SnapLayoutFlag::PropagateMarginX are mutually exclusive\n"
         "Ui::SnapLayouter::setFlags(): Ui::SnapLayoutFlag::IgnoreOverflowX and Ui::SnapLayoutFlag::PropagateMargin are mutually exclusive\n"
@@ -3491,7 +3491,7 @@ void SnapLayouterTest::childSnap() {
     /* By default, the child snap is Bottom for both implicitly and explicitly
        snapped layouts */
     LayoutHandle layout1 = layouter.add(node1);
-    LayoutHandle layout2 = layouter.add(node2, Snap::Left, LayoutHandle::Null);
+    LayoutHandle layout2 = layouter.addExplicit(node2, Snap::Left, LayoutHandle::Null);
     CORRADE_COMPARE(layouter.childSnap(layout1), Snap::Bottom);
     CORRADE_COMPARE(layouter.childSnap(layout2), Snap::Bottom);
     CORRADE_COMPARE(layouter.state(), LayouterState::NeedsAssignmentUpdate);
@@ -3609,10 +3609,10 @@ void SnapLayouterTest::clean() {
     LayoutHandle nestedLayout = layouter.add(nested);
     LayoutHandle child1Layout = layouter.add(child1);
     LayoutHandle child2Layout = layouter.add(child2);
-    LayoutHandle child3Layout = layouter.add(child3, Snap::Top, child1Layout);
-    LayoutHandle sibling1Layout = layouter.add(sibling1, Snap::Right, nestedLayout);
-    LayoutHandle rootSiblingLayout = layouter.add(rootSibling, Snap::Right, rootLayout);
-    LayoutHandle sibling2Layout = layouter.add(sibling2, Snap::Right, nestedLayout);
+    LayoutHandle child3Layout = layouter.addExplicit(child3, Snap::Top, child1Layout);
+    LayoutHandle sibling1Layout = layouter.addExplicit(sibling1, Snap::Right, nestedLayout);
+    LayoutHandle rootSiblingLayout = layouter.addExplicit(rootSibling, Snap::Right, rootLayout);
+    LayoutHandle sibling2Layout = layouter.addExplicit(sibling2, Snap::Right, nestedLayout);
     CORRADE_COMPARE(layouter.capacity(), 8);
     CORRADE_COMPARE(layouter.firstChild(rootLayout), nestedLayout);
     CORRADE_COMPARE(layouter.firstExplicitSnap(rootLayout), rootSiblingLayout);
@@ -3662,10 +3662,10 @@ void SnapLayouterTest::cleanInvalid() {
     layouter.remove(layouter.add(nested));
     LayoutHandle nestedLayout = layouter.add(nested);
     LayoutHandle child1Layout = layouter.add(child1);
-    layouter.add(child2, Snap::Top, child1Layout);
-    layouter.add(rootSibling, Snap::Right, rootLayout);
-    layouter.add(sibling1, Snap::Right, nestedLayout);
-    layouter.add(sibling2, Snap::Right, nestedLayout);
+    layouter.addExplicit(child2, Snap::Top, child1Layout);
+    layouter.addExplicit(rootSibling, Snap::Right, rootLayout);
+    layouter.addExplicit(sibling1, Snap::Right, nestedLayout);
+    layouter.addExplicit(sibling2, Snap::Right, nestedLayout);
     ui.removeNode(nested);
 
     /* This should match what's in the assert below */
@@ -3805,20 +3805,20 @@ void SnapLayouterTest::layoutDataOrder() {
     NodeHandle nodeRoot = ui.createNode({10.0f, 40.0f}, {100.0f, 200.0f});
     NodeHandle nodeChild = ui.createNode(nodeRoot, {30.0f, 20.0f}, {50.0f, 150.0f});
     NodeHandle node1 = ui.createNode({}, {70.0f, 90.0f});
-    /*LayoutHandle layout1 =*/ layouter.add(node1, Snap::Bottom|Snap::Right, LayoutHandle::Null);
+    /*LayoutHandle layout1 =*/ layouter.addExplicit(node1, Snap::Bottom|Snap::Right, LayoutHandle::Null);
 
     /* A layout snapped outside of a sibling (non-layouted) node, inheriting
        its offset in addition to having its own offset preserved */
     LayoutHandle nodeChildLayout = layouter.add(nodeChild);
     NodeHandle node2 = ui.createNode(nodeRoot, {0.3f, -0.2f}, {0.0f, 25.0f});
-    /*LayoutHandle layout2 =*/ layouter.add(node2, Snap::Left|Snap::Right|Snap::Top|Snap::NoPadY, nodeChildLayout);
+    /*LayoutHandle layout2 =*/ layouter.addExplicit(node2, Snap::Left|Snap::Right|Snap::Top|Snap::NoPadY, nodeChildLayout);
 
     /* A layout snapped inside of a parent (non-layouted) node, not inheriting
        its offset but having its own offset preserved. The Snap::Inside is
        implicit in this case. */
     LayoutHandle nodeRootLayout = layouter.add(nodeRoot);
     NodeHandle node3 = ui.createNode(nodeRoot, {0.9f, 0.6f}, {10.0f, 0.0f});
-    LayoutHandle layout3 = layouter.add(node3, Snap::Top|Snap::Bottom|Snap::Right|Snap::NoPadX, nodeRootLayout);
+    LayoutHandle layout3 = layouter.addExplicit(node3, Snap::Top|Snap::Bottom|Snap::Right|Snap::NoPadX, nodeRootLayout);
 
     /* Three child nodes & layouts for node3, ordered at the bottom, right to
        left, with no X padding, but with X/Y shift due to offset. All variants
@@ -3840,12 +3840,12 @@ void SnapLayouterTest::layoutDataOrder() {
     /* A layout relative to layouted node with an offset, should inerit that
        offset in addition to its own, and match its Y size */
     NodeHandle node4 = ui.createNode(nodeRoot, {0.2f, -0.5f}, {20.0f, 0.0f});
-    LayoutHandle layout4 = layouter.add(node4, Snap::Top|Snap::Bottom|Snap::Left, layout3);
+    LayoutHandle layout4 = layouter.addExplicit(node4, Snap::Top|Snap::Bottom|Snap::Left, layout3);
 
     /* A layout that's further dependent on previous, match its XY size & being
        inside */
     NodeHandle node5 = ui.createNode(node4, {0.02f, -0.05f}, {});
-    /*LayoutHandle layout5 =*/ layouter.add(node5, Snap::Top|Snap::Bottom|Snap::Left|Snap::Right, layout4);
+    /*LayoutHandle layout5 =*/ layouter.addExplicit(node5, Snap::Top|Snap::Bottom|Snap::Left|Snap::Right, layout4);
 
     /* Layouts that are root / children / dependent on the above but
        subsequently removed, to verify they're not taken into account when
@@ -3859,9 +3859,9 @@ void SnapLayouterTest::layoutDataOrder() {
     if(data.removedLayouts) {
         LayoutHandle layout6 = layouter.add(node6);
         layouter.add(node7);
-        layouter.add(node8, Snap::Top, layout6);
+        layouter.addExplicit(node8, Snap::Top, layout6);
         layouter.add(node9);
-        layouter.add(node10, Snap::Top, nodeRootLayout);
+        layouter.addExplicit(node10, Snap::Top, nodeRootLayout);
     }
 
     /* Removing the nodes + clean() instead of removing the layouts one by one
@@ -3993,7 +3993,7 @@ void SnapLayouterTest::layoutLayoutProperties() {
     NodeHandle node = ui.createNode(data.child ? targetNode : NodeHandle::Null, {0.25f, 0.75f}, {50.0f, 100.0f});
     CORRADE_COMPARE(nodeHandleId(targetNode), 3);
     CORRADE_COMPARE(nodeHandleId(node), 7);
-    layouter.add(node, data.snap, data.targetUi ? LayoutHandle::Null : targetNodeLayout);
+    layouter.addExplicit(node, data.snap, data.targetUi ? LayoutHandle::Null : targetNodeLayout);
 
     /* Add a dummy second layouter because that's the easiest way to verify the
        calculated node offsets / sizes */
@@ -4072,7 +4072,7 @@ void SnapLayouterTest::layoutChildSnap() {
     /* Empty Snaps and all Snaps bit set are abused for verifying the default
        behavior, i.e. what gets filled by one of the two add() variants */
     LayoutHandle rootLayout = data.snap == ~Snaps{} ?
-        layouter.add(root, Snap::TopLeft, LayoutHandle::Null) :
+        layouter.addExplicit(root, Snap::TopLeft, LayoutHandle::Null) :
         layouter.add(root);
     if(data.snap && data.snap != ~Snaps{})
         layouter.setChildSnap(rootLayout, data.snap);
@@ -4234,10 +4234,10 @@ void SnapLayouterTest::layoutPropagateChildSizes() {
     if(data.explicitlySnappedNodes) {
         /* These shouldn't affect the rest of the layout in any way (so yeah
            they'll overlap) */
-        layouter.add(explicit1, Snap::BottomLeft, centerLayout); /* Inside implicit */
-        layouter.add(explicit2, Snap::BottomRight, topLayout);
-        layouter.add(explicit3, Snap::Left, innerLayout); /* Inside implicit */
-        layouter.add(explicit4, Snap::BottomLeft|Snap::Inside|Snap::NoPadY, leftLayout);
+        layouter.addExplicit(explicit1, Snap::BottomLeft, centerLayout); /* Inside implicit */
+        layouter.addExplicit(explicit2, Snap::BottomRight, topLayout);
+        layouter.addExplicit(explicit3, Snap::Left, innerLayout); /* Inside implicit */
+        layouter.addExplicit(explicit4, Snap::BottomLeft|Snap::Inside|Snap::NoPadY, leftLayout);
     }
 
     /* Capture correct function name */

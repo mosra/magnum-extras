@@ -155,8 +155,8 @@ custom layouters from scratch.
 Layouts get created using @ref add() with a @ref NodeHandle to assign the
 layout to, returning a @ref LayoutHandle. The @ref add() function is
 @cpp protected @ce on the @ref AbstractLayouter, as concrete implementations
-require additional parameters. Such as @ref SnapLayouter::add(NodeHandle, Snaps, LayoutHandle, SnapLayoutFlags)
-where you specify also where to snap the node to and how, or for example
+require additional parameters. Such as @ref SnapLayouter::add() where you can
+specify also where in a sequence to insert the layout, or for example
 @ref GenericLayouter taking a callback function to execute to calculate the
 layout. Finally, various higher-level helpers such as @ref SnapLayout may call
 @ref add() only internally, exposing a whole different interface.
