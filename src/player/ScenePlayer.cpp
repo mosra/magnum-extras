@@ -479,20 +479,20 @@ class JointDrawable: public SceneGraph::Drawable3D {
 ScenePlayer::ScenePlayer(Platform::ScreenedApplication& application, const Ui::Anchor controls, DebugTools::FrameProfilerGL::Values profilerValues):
     AbstractPlayer{application, PropagatedEvent::Draw|PropagatedEvent::Input},
     _ui(controls.ui()),
-    _screen{Ui::SnapLayout::child(Ui::Snap::Fill|Ui::Snap::NoPad, controls, {})},
-    _modelInfo{Ui::SnapLayout::child(Ui::Snap::TopLeft, _screen, LabelSize),
+    _screen{Ui::SnapLayout{controls}.child(Ui::Snap::Fill|Ui::Snap::NoPad)},
+    _modelInfo{Ui::SnapLayout{_screen}.child(Ui::Snap::TopLeft, LabelSize),
         {}, Text::Alignment::LineLeft, Ui::LabelStyle::Dim},
-    _objectInfo{Ui::SnapLayout::child(Ui::Snap::TopLeft, _screen, LabelSize, Ui::NodeFlag::Hidden),
+    _objectInfo{Ui::SnapLayout{_screen}.child(Ui::Snap::TopLeft, LabelSize, Ui::NodeFlag::Hidden),
         {}, Text::Alignment::LineLeft, Ui::LabelStyle::Dim},
-    _toggleShadeless{Ui::SnapLayout::child(Ui::Snap::TopRight, _screen, ButtonSize), "Shadeless"_s},
-    _toggleObjectVisualization{Ui::SnapLayout::sibling(Ui::Snap::Bottom, _toggleShadeless, ButtonSize), "Object centers"_s},
-    _cycleMeshVisualization{Ui::SnapLayout::sibling(Ui::Snap::Bottom, _toggleShadeless, ButtonSize, Ui::NodeFlag::Hidden), "Wireframe"_s},
-    _animationControls{Ui::SnapLayout::child(Ui::Snap::Fill|Ui::Snap::NoPad, _screen, {}, Ui::NodeFlag::Hidden)},
-    _animationBackward{Ui::button(Ui::SnapLayout::child(Ui::Snap::BottomLeft, {_ui, _animationControls}, HalfControlSize), "«"_s, nullptr)},
-    _animationPlayPause{Ui::SnapLayout::sibling(Ui::Snap::Right, {_ui, _animationBackward}, ControlSize), "Pause"_s, Ui::ButtonStyle::Warning},
-    _animationStop{Ui::button(Ui::SnapLayout::sibling(Ui::Snap::Right, {_ui, _animationPlayPause}, ControlSize), "Stop"_s, nullptr, Ui::ButtonStyle::Danger)},
-    _animationForward{Ui::button(Ui::SnapLayout::sibling(Ui::Snap::Right, {_ui, _animationStop}, HalfControlSize), "»"_s, nullptr)},
-    _animationProgress{Ui::SnapLayout::sibling(Ui::Snap::Right, {_ui, _animationForward}, LabelSize), {}}
+    _toggleShadeless{Ui::SnapLayout{_screen}.child(Ui::Snap::TopRight, ButtonSize), "Shadeless"_s},
+    _toggleObjectVisualization{Ui::SnapLayout{_toggleShadeless}.sibling(Ui::Snap::Bottom, ButtonSize), "Object centers"_s},
+    _cycleMeshVisualization{Ui::SnapLayout{_toggleShadeless}.sibling(Ui::Snap::Bottom, ButtonSize, Ui::NodeFlag::Hidden), "Wireframe"_s},
+    _animationControls{Ui::SnapLayout{_screen}.child(Ui::Snap::Fill|Ui::Snap::NoPad, {}, Ui::NodeFlag::Hidden)},
+    _animationBackward{Ui::button(Ui::SnapLayout{_ui, _animationControls}.child(Ui::Snap::BottomLeft, HalfControlSize), "«"_s, nullptr)},
+    _animationPlayPause{Ui::SnapLayout{_ui, _animationBackward}.sibling(Ui::Snap::Right, ControlSize), "Pause"_s, Ui::ButtonStyle::Warning},
+    _animationStop{Ui::button(Ui::SnapLayout{_ui, _animationPlayPause}.sibling(Ui::Snap::Right, ControlSize), "Stop"_s, nullptr, Ui::ButtonStyle::Danger)},
+    _animationForward{Ui::button(Ui::SnapLayout{_ui, _animationStop}.sibling(Ui::Snap::Right, HalfControlSize), "»"_s, nullptr)},
+    _animationProgress{Ui::SnapLayout{_ui, _animationForward}.sibling(Ui::Snap::Right, LabelSize), {}}
 {
     /** @todo clean this up once all the right-side buttons can be stuffed into
         a single implicit layout */

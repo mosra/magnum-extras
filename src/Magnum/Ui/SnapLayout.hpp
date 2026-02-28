@@ -88,55 +88,11 @@ template<class UserInterface> BasicSnapLayout<UserInterface>::operator BasicAnch
     return BasicAnchor<UserInterface>{ui(), node()};
 }
 
-template<class UserInterface> BasicSnapLayout<UserInterface> BasicSnapLayout<UserInterface>::child(SnapLayouter& layouter, const BasicAnchor<UserInterface>& parent, const Vector2& nodeSize, const NodeFlags nodeFlags, const LayoutHandle layoutBefore, const SnapLayoutFlags layoutFlags) {
-    return BasicSnapLayout<UserInterface>{AbstractSnapLayout::child(layouter, parent, nodeSize, nodeFlags, layoutBefore, layoutFlags)};
-}
-
-template<class UserInterface> BasicSnapLayout<UserInterface> BasicSnapLayout<UserInterface>::child(SnapLayouter& layouter, const BasicAnchor<UserInterface>& parent, const Vector2& nodeSize, const NodeFlags nodeFlags, const LayouterDataHandle layoutBefore, const SnapLayoutFlags layoutFlags) {
-    return BasicSnapLayout<UserInterface>{AbstractSnapLayout::child(layouter, parent, nodeSize, nodeFlags, layoutBefore, layoutFlags)};
-}
-
-template<class UserInterface> BasicSnapLayout<UserInterface> BasicSnapLayout<UserInterface>::child(const BasicAnchor<UserInterface>& parent, const Vector2& nodeSize, const NodeFlags nodeFlags, const LayoutHandle layoutBefore, const SnapLayoutFlags layoutFlags) {
-    CORRADE_ASSERT(parent.ui().hasSnapLayouter(),
-        "Ui::BasicSnapLayout::child(): SnapLayouter not present in the UI",
-        (BasicSnapLayout<UserInterface>{parent.ui(), {}, {}, {}}));
-    return child(parent.ui().snapLayouter(), parent, nodeSize, nodeFlags, layoutBefore, layoutFlags);
-}
-
-template<class UserInterface> BasicSnapLayout<UserInterface> BasicSnapLayout<UserInterface>::child(const BasicAnchor<UserInterface>& parent, const Vector2& nodeSize, const NodeFlags nodeFlags, const LayouterDataHandle layoutBefore, const SnapLayoutFlags layoutFlags) {
-    CORRADE_ASSERT(parent.ui().hasSnapLayouter(),
-        "Ui::BasicSnapLayout::child(): SnapLayouter not present in the UI",
-        (BasicSnapLayout<UserInterface>{parent.ui(), {}, {}, {}}));
-    return child(parent.ui().snapLayouter(), parent, nodeSize, nodeFlags, layoutBefore, layoutFlags);
-}
-
 template<class UserInterface> BasicSnapLayout<UserInterface> BasicSnapLayout<UserInterface>::root(UserInterface& ui, const Snaps snap, const Vector2& nodeSize, const NodeFlags nodeFlags, const SnapLayoutFlags layoutFlags) {
     CORRADE_ASSERT(ui.hasSnapLayouter(),
         "Ui::BasicSnapLayout::root(): SnapLayouter not present in the UI",
         (BasicSnapLayout<UserInterface>{ui, {}, {}, {}}));
     return root(ui, ui.snapLayouter(), snap, nodeSize, nodeFlags, layoutFlags);
-}
-
-template<class UserInterface> BasicSnapLayout<UserInterface> BasicSnapLayout<UserInterface>::child(SnapLayouter& layouter, const Snaps snap, const BasicAnchor<UserInterface>& parent, const Vector2& nodeSize, NodeFlags nodeFlags, const SnapLayoutFlags layoutFlags) {
-    return BasicSnapLayout<UserInterface>{AbstractSnapLayout::child(layouter, snap, parent, nodeSize, nodeFlags, layoutFlags)};
-}
-
-template<class UserInterface> BasicSnapLayout<UserInterface> BasicSnapLayout<UserInterface>::child(const Snaps snap, const BasicAnchor<UserInterface>& parent, const Vector2& nodeSize, const NodeFlags nodeFlags, const SnapLayoutFlags layoutFlags) {
-    CORRADE_ASSERT(parent.ui().hasSnapLayouter(),
-        "Ui::BasicSnapLayout::child(): SnapLayouter not present in the UI",
-        (BasicSnapLayout<UserInterface>{parent.ui(), {}, {}, {}}));
-    return child(parent.ui().snapLayouter(), snap, parent, nodeSize, nodeFlags, layoutFlags);
-}
-
-template<class UserInterface> BasicSnapLayout<UserInterface> BasicSnapLayout<UserInterface>::sibling(SnapLayouter& layouter, const Snaps snap, const BasicAnchor<UserInterface>& target, const Vector2& nodeSize, const NodeFlags nodeFlags, const SnapLayoutFlags layoutFlags) {
-    return BasicSnapLayout<UserInterface>{AbstractSnapLayout::sibling(layouter, snap, target, nodeSize, nodeFlags, layoutFlags)};
-}
-
-template<class UserInterface> BasicSnapLayout<UserInterface> BasicSnapLayout<UserInterface>::sibling(const Snaps snap, const BasicAnchor<UserInterface>& target, const Vector2& nodeSize, const NodeFlags nodeFlags, const SnapLayoutFlags layoutFlags) {
-    CORRADE_ASSERT(target.ui().hasSnapLayouter(),
-        "Ui::BasicSnapLayout::sibling(): SnapLayouter not present in the UI",
-        (BasicSnapLayout<UserInterface>{target.ui(), {}, {}, {}}));
-    return sibling(target.ui().snapLayouter(), snap, target, nodeSize, nodeFlags, layoutFlags);
 }
 #endif
 

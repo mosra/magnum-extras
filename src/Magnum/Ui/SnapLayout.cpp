@@ -35,32 +35,6 @@
 
 namespace Magnum { namespace Ui {
 
-AbstractSnapLayout AbstractSnapLayout::child(SnapLayouter& layouter, const AbstractAnchor& parent, const Vector2& nodeSize, const NodeFlags nodeFlags, const LayoutHandle layoutBefore, const SnapLayoutFlags layoutFlags) {
-    AbstractUserInterface& ui = parent.ui();
-    CORRADE_ASSERT(ui.isHandleValid(layouter.handle()) && &ui.layouter(layouter.handle()) == &layouter,
-        "Ui::AbstractSnapLayout::child(): layouter and parent not part of the same UI",
-        (AbstractSnapLayout{ui, &layouter, {}, {}}));
-    CORRADE_ASSERT(ui.nodeUniqueLayout(parent, layouter) != LayouterDataHandle::Null,
-        "Ui::AbstractSnapLayout::child():" << parent.node() << "doesn't have any layout from" << layouter.handle() << "assigned",
-        (AbstractSnapLayout{ui, &layouter, {}, {}}));
-    const NodeHandle child = ui.createNode(parent, {}, nodeSize, nodeFlags);
-    const LayoutHandle layout = layouter.add(child, layoutBefore, layoutFlags);
-    return AbstractSnapLayout{ui, &layouter, child, layoutHandleData(layout)};
-}
-
-AbstractSnapLayout AbstractSnapLayout::child(SnapLayouter& layouter, const AbstractAnchor& parent, const Vector2& nodeSize, const NodeFlags nodeFlags, const LayouterDataHandle layoutBefore, const SnapLayoutFlags layoutFlags) {
-    AbstractUserInterface& ui = parent.ui();
-    CORRADE_ASSERT(ui.isHandleValid(layouter.handle()) && &ui.layouter(layouter.handle()) == &layouter,
-        "Ui::AbstractSnapLayout::child(): layouter and parent not part of the same UI",
-        (AbstractSnapLayout{ui, &layouter, {}, {}}));
-    CORRADE_ASSERT(ui.nodeUniqueLayout(parent, layouter) != LayouterDataHandle::Null,
-        "Ui::AbstractSnapLayout::child():" << parent.node() << "doesn't have any layout from" << layouter.handle() << "assigned",
-        (AbstractSnapLayout{ui, &layouter, {}, {}}));
-    const NodeHandle child = ui.createNode(parent, {}, nodeSize, nodeFlags);
-    const LayoutHandle layout = layouter.add(child, layoutBefore, layoutFlags);
-    return AbstractSnapLayout{ui, &layouter, child, layoutHandleData(layout)};
-}
-
 AbstractSnapLayout AbstractSnapLayout::root(AbstractUserInterface& ui, SnapLayouter& layouter, const Snaps snap, const Vector2& nodeSize, const NodeFlags nodeFlags, const SnapLayoutFlags layoutFlags) {
     CORRADE_ASSERT(ui.isHandleValid(layouter.handle()) && &ui.layouter(layouter.handle()) == &layouter,
         "Ui::AbstractSnapLayout::root(): layouter not part of the UI",
@@ -68,34 +42,6 @@ AbstractSnapLayout AbstractSnapLayout::root(AbstractUserInterface& ui, SnapLayou
     const NodeHandle root = ui.createNode({}, nodeSize, nodeFlags);
     const LayoutHandle layout = layouter.addExplicit(root, snap, LayoutHandle::Null, layoutFlags);
     return AbstractSnapLayout{ui, &layouter, root, layoutHandleData(layout)};
-}
-
-AbstractSnapLayout AbstractSnapLayout::child(SnapLayouter& layouter, const Snaps snap, const AbstractAnchor& parent, const Vector2& nodeSize, const NodeFlags nodeFlags, const SnapLayoutFlags layoutFlags) {
-    AbstractUserInterface& ui = parent.ui();
-    CORRADE_ASSERT(ui.isHandleValid(layouter.handle()) && &ui.layouter(layouter.handle()) == &layouter,
-        "Ui::AbstractSnapLayout::child(): layouter and parent not part of the same UI",
-        (AbstractSnapLayout{ui, &layouter, {}, {}}));
-    const LayouterDataHandle parentLayout = ui.nodeUniqueLayout(parent, layouter);
-    CORRADE_ASSERT(parentLayout != LayouterDataHandle::Null,
-        "Ui::AbstractSnapLayout::child():" << parent.node() << "doesn't have any layout from" << layouter.handle() << "assigned",
-        (AbstractSnapLayout{ui, &layouter, {}, {}}));
-    const NodeHandle child = ui.createNode(parent, {}, nodeSize, nodeFlags);
-    const LayoutHandle layout = layouter.addExplicit(child, snap, parentLayout, layoutFlags);
-    return AbstractSnapLayout{ui, &layouter, child, layoutHandleData(layout)};
-}
-
-AbstractSnapLayout AbstractSnapLayout::sibling(SnapLayouter& layouter, const Snaps snap, const AbstractAnchor& target, const Vector2& nodeSize, const NodeFlags nodeFlags, const SnapLayoutFlags layoutFlags) {
-    AbstractUserInterface& ui = target.ui();
-    CORRADE_ASSERT(ui.isHandleValid(layouter.handle()) && &ui.layouter(layouter.handle()) == &layouter,
-        "Ui::AbstractSnapLayout::sibling(): layouter and target not part of the same UI",
-        (AbstractSnapLayout{ui, &layouter, {}, {}}));
-    const LayouterDataHandle targetLayout = ui.nodeUniqueLayout(target, layouter);
-    CORRADE_ASSERT(targetLayout != LayouterDataHandle::Null,
-        "Ui::AbstractSnapLayout::sibling():" << target.node() << "doesn't have any layout from" << layouter.handle() << "assigned",
-        (AbstractSnapLayout{ui, &layouter, {}, {}}));
-    const NodeHandle child = ui.createNode(ui.nodeParent(target), {}, nodeSize, nodeFlags);
-    const LayoutHandle layout = layouter.addExplicit(child, snap, targetLayout, layoutFlags);
-    return AbstractSnapLayout{ui, &layouter, child, layoutHandleData(layout)};
 }
 
 AbstractSnapLayout::AbstractSnapLayout(NoInitT, AbstractUserInterface& ui, const NodeHandle node): _ui{&ui}, _node{node} {}

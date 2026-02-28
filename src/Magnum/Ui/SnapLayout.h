@@ -59,77 +59,6 @@ on the unspecialized @ref BasicSnapLayout / @ref SnapLayout.
 class MAGNUM_UI_EXPORT AbstractSnapLayout {
     public:
         /**
-         * @brief Create a child layout
-         * @param layouter      Layouter instance
-         * @param parent        Parent anchor
-         * @param nodeSize      Child node size
-         * @param nodeFlags     Child node flags
-         * @param layoutBefore  Child layout to order before or
-         *      @ref LayoutHandle::Null if ordered as last
-         * @param layoutFlags   Layout flags
-         * @return New layout instance
-         *
-         * Creates a node that's child of @p parent and assigns a layout to it.
-         * The child layout is positioned according to
-         * @ref SnapLayouter::childSnap() defined by the @p parent layout.
-         * Expects that @p layouter is part of the same user interface as
-         * @p parent, and that the node in @p parent already has a layout from
-         * @p layouter assigned.
-         *
-         * Use @ref child(SnapLayouter&, Snaps, const AbstractAnchor&, const Vector2&, NodeFlags, SnapLayoutFlags)
-         * to snap a child layout explicitly, use
-         * @ref sibling(SnapLayouter&, Snaps, const AbstractAnchor&, const Vector2&, NodeFlags, SnapLayoutFlags)
-         * to create an explicitly snapped sibling instead of a child and
-         * @ref root(AbstractUserInterface&, SnapLayouter&, Snaps, const Vector2&, NodeFlags, SnapLayoutFlags)
-         * to create an explicitly snapped root layout. Creating a layout for
-         * an already existing node can be done using the
-         * @ref AbstractSnapLayout(SnapLayouter&, const AbstractAnchor& anchor)
-         * constructor.
-         *
-         * Calls @ref AbstractUserInterface::createNode() and
-         * @ref SnapLayouter::add() internally, see their documentation for
-         * detailed description of all constraints.
-         */
-        /* The AbstractAnchor could be by-value but then it'd need the Anchor.h
-           include for all inline functions. Same in all cases below. */
-        static AbstractSnapLayout child(SnapLayouter& layouter, const AbstractAnchor& parent, const Vector2& nodeSize = {}, NodeFlags nodeFlags = {}, LayoutHandle layoutBefore =
-            #ifdef DOXYGEN_GENERATING_OUTPUT
-            LayoutHandle::Null,
-            #else
-            LayoutHandle{}, /* To not have to include Handle.h */
-            #endif
-            SnapLayoutFlags layoutFlags = {});
-        /** @overload */
-        static AbstractSnapLayout child(SnapLayouter& layouter, const AbstractAnchor& parent, const Vector2& nodeSize, LayoutHandle layoutBefore, SnapLayoutFlags layoutFlags = {}) {
-            return child(layouter, parent, nodeSize, {}, layoutBefore, layoutFlags);
-        }
-        /** @overload */
-        static AbstractSnapLayout child(SnapLayouter& layouter, const AbstractAnchor& parent, const Vector2& nodeSize, NodeFlags nodeFlags, SnapLayoutFlags layoutFlags) {
-            return child(layouter, parent, nodeSize, nodeFlags, LayoutHandle{}, layoutFlags);
-        }
-        /** @overload */
-        static AbstractSnapLayout child(SnapLayouter& layouter, const AbstractAnchor& parent, const Vector2& nodeSize, SnapLayoutFlags layoutFlags) {
-            return child(layouter, parent, nodeSize, NodeFlags{}, layoutFlags);
-        }
-
-        /**
-         * @brief Create a child layout, ordered before given layout assuming the layout belongs to the same layouter
-         *
-         * Like @ref child(SnapLayouter&, const AbstractAnchor&, const Vector2&, NodeFlags, LayoutHandle, SnapLayoutFlags)
-         * but without checking that @p layoutBefore indeed belongs to
-         * @p layouter. See its documentation for more information.
-         *
-         * Calls @ref AbstractUserInterface::createNode() and
-         * @ref SnapLayouter::add() internally, see their documentation for
-         * detailed description of all constraints.
-         */
-        static AbstractSnapLayout child(SnapLayouter& layouter, const AbstractAnchor& parent, const Vector2& nodeSize, NodeFlags nodeFlags, LayouterDataHandle layoutBefore, SnapLayoutFlags layoutFlags = {});
-        /** @overload */
-        static AbstractSnapLayout child(SnapLayouter& layouter, const AbstractAnchor& parent, const Vector2& nodeSize, LayouterDataHandle layoutBefore, SnapLayoutFlags layoutFlags = {}) {
-            return child(layouter, parent, nodeSize, NodeFlags{}, layoutBefore, layoutFlags);
-        }
-
-        /**
          * @brief Create an explicitly snapped root layout
          * @param ui               User interface instance
          * @param layouter         Layouter instance
@@ -143,11 +72,11 @@ class MAGNUM_UI_EXPORT AbstractSnapLayout {
          * the user interface itself. Expects that @p layouter is part of
          * @p ui.
          *
-         * Use @ref child(SnapLayouter&, Snaps, const AbstractAnchor&, const Vector2&, NodeFlags, SnapLayoutFlags)
-         * to create an explicitly snapped child and
-         * @ref sibling(SnapLayouter&, Snaps, const AbstractAnchor&, const Vector2&, NodeFlags, SnapLayoutFlags)
-         * to create an explicitly snapped sibling node, use
-         * @ref child(SnapLayouter&, const AbstractAnchor&, const Vector2&, NodeFlags, LayoutHandle, SnapLayoutFlags)
+         * Use @ref child(Snaps, const Vector2&, NodeFlags, SnapLayoutFlags) to
+         * create an explicitly snapped child and
+         * @ref sibling(Snaps, const Vector2&, NodeFlags, SnapLayoutFlags) to
+         * create an explicitly snapped sibling node, use
+         * @ref child(const Vector2&, NodeFlags, LayoutHandle, SnapLayoutFlags)
          * to add a child layout positioned according to
          * @ref SnapLayouter::childSnap() defined by a parent layout.
          *
@@ -159,73 +88,6 @@ class MAGNUM_UI_EXPORT AbstractSnapLayout {
         /** @overload */
         static AbstractSnapLayout root(AbstractUserInterface& ui, SnapLayouter& layouter, Snaps snap, const Vector2& nodeSize, SnapLayoutFlags layoutFlags) {
             return root(ui, layouter, snap, nodeSize, {}, layoutFlags);
-        }
-
-        /**
-         * @brief Create an explicitly snapped child layout
-         * @param layouter         Layouter instance
-         * @param snap             How to snap to the @p parent
-         * @param parent           Parent anchor to snap to
-         * @param nodeSize         Child node size
-         * @param nodeFlags        Child node flags
-         * @param layoutFlags      Layout flags
-         * @return New layout instance
-         *
-         * Creates a node that's child of @p parent and assigns a layout
-         * explicitly snapped to it. Expects that @p layouter is part of the
-         * same user interface as @p parent, and that the node in @p parent
-         * already has a layout from @p layouter assigned.
-         *
-         * Use @ref sibling(SnapLayouter&, Snaps, const AbstractAnchor&, const Vector2&, NodeFlags, SnapLayoutFlags)
-         * to create an explicitly snapped sibling instead of a child and
-         * @ref root(AbstractUserInterface&, SnapLayouter&, Snaps, const Vector2&, NodeFlags, SnapLayoutFlags)
-         * to create an explicitly snapped root node, use
-         * @ref child(SnapLayouter&, const AbstractAnchor&, const Vector2&, NodeFlags, LayoutHandle, SnapLayoutFlags)
-         * to add a child layout positioned according to
-         * @ref SnapLayouter::childSnap() defined by a parent layout.
-         *
-         * Calls @ref AbstractUserInterface::createNode() and
-         * @ref SnapLayouter::addExplicit() internally, see their documentation
-         * for detailed description of all constraints.
-         */
-        static AbstractSnapLayout child(SnapLayouter& layouter, Snaps snap, const AbstractAnchor& parent, const Vector2& nodeSize = {}, NodeFlags nodeFlags = {}, SnapLayoutFlags layoutFlags = {});
-        /** @overload */
-        static AbstractSnapLayout child(SnapLayouter& layouter, Snaps snap, const AbstractAnchor& parent, const Vector2& nodeSize, SnapLayoutFlags layoutFlags) {
-            return child(layouter, snap, parent, nodeSize, {}, layoutFlags);
-        }
-
-        /**
-         * @brief Create an explicitly snapped sibling layout
-         * @param layouter         Layouter instance
-         * @param snap             How to snap to the @p target
-         * @param target           Target anchor to snap to
-         * @param nodeSize         Node size
-         * @param nodeFlags        Node flags
-         * @param layoutFlags      Layout flags
-         * @return New layout instance
-         *
-         * Creates a node with the same parent as @p target, and assigns it a
-         * layout that's explicitly snapped to @p target. Expects that
-         * @p layouter is part of the same user interface as @p target, and
-         * that the node in @p target already has a layout from @p layouter
-         * assigned.
-         *
-         * Use @ref child(SnapLayouter&, Snaps, const AbstractAnchor&, const Vector2&, NodeFlags, SnapLayoutFlags)
-         * and specializations to create an explicitly snapped child instead of
-         * a sibling and @ref root(AbstractUserInterface&, SnapLayouter&, Snaps, const Vector2&, NodeFlags, SnapLayoutFlags)
-         * to create an explicitly snapped root node, use
-         * @ref child(SnapLayouter&, const AbstractAnchor&, const Vector2&, NodeFlags, LayoutHandle, SnapLayoutFlags)
-         * to add a child layout positioned according to
-         * @ref SnapLayouter::childSnap() defined by a parent layout.
-         *
-         * Calls @ref AbstractUserInterface::createNode() and
-         * @ref SnapLayouter::addExplicit() internally, see their documentation
-         * for detailed description of all constraints.
-         */
-        static AbstractSnapLayout sibling(SnapLayouter& layouter, Snaps snap, const AbstractAnchor& target, const Vector2& nodeSize = {}, NodeFlags nodeFlags = {}, SnapLayoutFlags layoutFlags = {});
-        /** @overload */
-        static AbstractSnapLayout sibling(SnapLayouter& layouter, Snaps snap, const AbstractAnchor& target, const Vector2& nodeSize, SnapLayoutFlags layoutFlags) {
-            return sibling(layouter, snap, target, nodeSize, {}, layoutFlags);
         }
 
         /**
@@ -509,10 +371,7 @@ class MAGNUM_UI_EXPORT AbstractSnapLayout {
          * create an explicitly snapped sibling instead of a child.
          *
          * The @ref BasicSnapLayout subclass and its various typedefs such as
-         * @ref SnapLayout return a concrete layout instance. You can also use
-         * the static @ref child(SnapLayouter&, const AbstractAnchor&, const Vector2&, NodeFlags, LayoutHandle, SnapLayoutFlags)
-         * function to create a child layout without an existing
-         * @ref AbstractSnapLayout instance.
+         * @ref SnapLayout return a concrete layout instance.
          *
          * Calls @ref AbstractUserInterface::createNode() and
          * @ref SnapLayouter::add() internally, see their documentation for
@@ -572,10 +431,7 @@ class MAGNUM_UI_EXPORT AbstractSnapLayout {
          * @ref childSnap().
          *
          * The @ref BasicSnapLayout subclass and its various typedefs such as
-         * @ref SnapLayout return a concrete layout instance. You can also use
-         * the static @ref child(SnapLayouter&, Snaps, const AbstractAnchor&, const Vector2&, NodeFlags, SnapLayoutFlags)
-         * function to create an explicitly snapped child layout without an
-         * existing @ref AbstractSnapLayout instance.
+         * @ref SnapLayout return a concrete layout instance.
          *
          * Calls @ref AbstractUserInterface::createNode() and
          * @ref SnapLayouter::addExplicit() internally, see their documentation
@@ -604,10 +460,7 @@ class MAGNUM_UI_EXPORT AbstractSnapLayout {
          * @ref childSnap().
          *
          * The @ref BasicSnapLayout subclass and its various typedefs such as
-         * @ref SnapLayout return a concrete layout instance. You can also use
-         * the static @ref sibling(SnapLayouter&, Snaps, const AbstractAnchor&, const Vector2&, NodeFlags, SnapLayoutFlags)
-         * function to create an explicitly snapped sibling layout without an
-         * existing @ref AbstractSnapLayout instance.
+         * @ref SnapLayout return a concrete layout instance.
          *
          * Calls @ref AbstractUserInterface::createNode() and
          * @ref SnapLayouter::addExplicit() internally, see their documentation
@@ -673,107 +526,6 @@ class documentation for more information.
 template<class UserInterface> class BasicSnapLayout: public AbstractSnapLayout {
     public:
         /**
-         * @brief @copybrief AbstractSnapLayout::child(SnapLayouter&, const AbstractAnchor&, const Vector2&, NodeFlags, LayoutHandle, SnapLayoutFlags)
-         *
-         * Like @ref AbstractSnapLayout::child(SnapLayouter&, const AbstractAnchor&, const Vector2&, NodeFlags, LayoutHandle, SnapLayoutFlags)
-         * but returning a concrete layout instance. Use
-         * @ref child(const BasicAnchor<UserInterface>&, const Vector2&, NodeFlags, LayoutHandle, SnapLayoutFlags)
-         * to use the default @ref SnapLayouter instance available through
-         * @ref UserInterface::snapLayouter(). If you have an exising layout
-         * instance, there's @ref child(const Vector2&, NodeFlags, LayoutHandle, SnapLayoutFlags)
-         * which is equivalent to this function.
-         */
-        /* The BasicAnchor could be by-value but then it'd need the Anchor.h
-           include for all inline functions. Same in all cases below. */
-        static BasicSnapLayout<UserInterface> child(SnapLayouter& layouter, const BasicAnchor<UserInterface>& parent, const Vector2& nodeSize = {}, NodeFlags nodeFlags = {}, LayoutHandle layoutBefore =
-            #ifdef DOXYGEN_GENERATING_OUTPUT
-            LayoutHandle::Null,
-            #else
-            LayoutHandle{}, /* To not have to include Handle.h */
-            #endif
-            SnapLayoutFlags layoutFlags = {});
-        /** @overload */
-        static BasicSnapLayout<UserInterface> child(SnapLayouter& layouter, const BasicAnchor<UserInterface>& parent, const Vector2& nodeSize, LayoutHandle layoutBefore, SnapLayoutFlags layoutFlags = {}) {
-            return child(layouter, parent, nodeSize, {}, layoutBefore, layoutFlags);
-        }
-        /** @overload */
-        static BasicSnapLayout<UserInterface> child(SnapLayouter& layouter, const BasicAnchor<UserInterface>& parent, const Vector2& nodeSize, NodeFlags nodeFlags, SnapLayoutFlags layoutFlags) {
-            return child(layouter, parent, nodeSize, nodeFlags, LayoutHandle{}, layoutFlags);
-        }
-        /** @overload */
-        static BasicSnapLayout<UserInterface> child(SnapLayouter& layouter, const BasicAnchor<UserInterface>& parent, const Vector2& nodeSize, SnapLayoutFlags layoutFlags) {
-            return child(layouter, parent, nodeSize, NodeFlags{}, layoutFlags);
-        }
-
-        /**
-         * @brief @copybrief AbstractSnapLayout::child(SnapLayouter&, const AbstractAnchor&, const Vector2&, NodeFlags, LayouterDataHandle, SnapLayoutFlags)
-         *
-         * Like @ref AbstractSnapLayout::child(SnapLayouter&, const AbstractAnchor&, const Vector2&, NodeFlags, LayouterDataHandle, SnapLayoutFlags)
-         * but returning a concrete layout instance. If you have an exising
-         * layout instance, there's @ref child(const Vector2&, NodeFlags, LayouterDataHandle, SnapLayoutFlags)
-         * which is equivalent to this function.
-         */
-        static BasicSnapLayout<UserInterface> child(SnapLayouter& layouter, const BasicAnchor<UserInterface>& parent, const Vector2& nodeSize, NodeFlags nodeFlags, LayouterDataHandle layoutBefore, SnapLayoutFlags layoutFlags = {});
-        /** @overload */
-        static BasicSnapLayout<UserInterface> child(SnapLayouter& layouter, const BasicAnchor<UserInterface>& parent, const Vector2& nodeSize, LayouterDataHandle layoutBefore, SnapLayoutFlags layoutFlags = {}) {
-            return child(layouter, parent, nodeSize, NodeFlags{}, layoutBefore, layoutFlags);
-        }
-
-        /**
-         * @brief Create a child layout using the default layouter in given user interface
-         *
-         * Like @ref AbstractSnapLayout::child(SnapLayouter&, const AbstractAnchor&, const Vector2&, NodeFlags, LayoutHandle, SnapLayoutFlags)
-         * but using the default @ref SnapLayouter instance available through
-         * @ref UserInterface::snapLayouter(), and returning a concrete layout
-         * instance. Expects that the user interface referenced in @p parent
-         * contains a @ref SnapLayouter instance.
-         *
-         * If you have an exising layout instance, there's
-         * @ref child(const Vector2&, NodeFlags, LayoutHandle, SnapLayoutFlags)
-         * which is equivalent to this function.
-         * @see @ref UserInterface::hasSnapLayouter()
-         */
-        static BasicSnapLayout<UserInterface> child(const BasicAnchor<UserInterface>& parent, const Vector2& nodeSize = {}, NodeFlags nodeFlags = {}, LayoutHandle layoutBefore =
-            #ifdef DOXYGEN_GENERATING_OUTPUT
-            LayoutHandle::Null,
-            #else
-            LayoutHandle{}, /* To not have to include Handle.h */
-            #endif
-            SnapLayoutFlags layoutFlags = {});
-        /** @overload */
-        static BasicSnapLayout<UserInterface> child(const BasicAnchor<UserInterface>& parent, const Vector2& nodeSize, LayoutHandle layoutBefore, SnapLayoutFlags layoutFlags = {}) {
-            return child(parent, nodeSize, {}, layoutBefore, layoutFlags);
-        }
-        /** @overload */
-        static BasicSnapLayout<UserInterface> child(const BasicAnchor<UserInterface>& parent, const Vector2& nodeSize, NodeFlags nodeFlags, SnapLayoutFlags layoutFlags) {
-            return child(parent, nodeSize, nodeFlags, LayoutHandle{}, layoutFlags);
-        }
-        /** @overload */
-        static BasicSnapLayout<UserInterface> child(const BasicAnchor<UserInterface>& parent, const Vector2& nodeSize, SnapLayoutFlags layoutFlags) {
-            return child(parent, nodeSize, NodeFlags{}, layoutFlags);
-        }
-
-        /**
-         * @brief Create a child layout using the default layouter in given user interface, ordered before given layout assuming the layout belongs to the same layouter
-         *
-         * Like @ref AbstractSnapLayout::child(SnapLayouter&, const AbstractAnchor&, const Vector2&, NodeFlags, LayouterDataHandle, SnapLayoutFlags)
-         * but using the default @ref SnapLayouter instance available through
-         * @ref UserInterface::snapLayouter(), and returning a concrete layout
-         * instance. Expects that the user interface referenced in @p parent
-         * contains a @ref SnapLayouter instance.
-         *
-         * If you have an exising layout instance, there's
-         * @ref child(const Vector2&, NodeFlags, LayouterDataHandle, SnapLayoutFlags)
-         * which is equivalent to this function.
-         * @see @ref UserInterface::hasSnapLayouter()
-         */
-        static BasicSnapLayout<UserInterface> child(const BasicAnchor<UserInterface>& parent, const Vector2& nodeSize, NodeFlags nodeFlags, LayouterDataHandle layoutBefore, SnapLayoutFlags layoutFlags = {});
-        /** @overload */
-        static BasicSnapLayout<UserInterface> child(const BasicAnchor<UserInterface>& parent, const Vector2& nodeSize, LayouterDataHandle layoutBefore, SnapLayoutFlags layoutFlags = {}) {
-            return child(parent, nodeSize, {}, layoutBefore, layoutFlags);
-        }
-
-        /**
          * @brief @copybrief AbstractSnapLayout::root(AbstractUserInterface&, SnapLayouter&, Snaps, const Vector2&, NodeFlags, SnapLayoutFlags)
          *
          * Like @ref AbstractSnapLayout::root(AbstractUserInterface&, SnapLayouter&, Snaps, const Vector2&, NodeFlags, SnapLayoutFlags)
@@ -802,75 +554,6 @@ template<class UserInterface> class BasicSnapLayout: public AbstractSnapLayout {
         /** @overload */
         static BasicSnapLayout<UserInterface> root(UserInterface& ui, Snaps snap, const Vector2& nodeSize, SnapLayoutFlags layoutFlags) {
             return root(ui, snap, nodeSize, {}, layoutFlags);
-        }
-
-        /**
-         * @brief @copybrief AbstractSnapLayout::child(SnapLayouter&, Snaps, const AbstractAnchor&, const Vector2&, NodeFlags, SnapLayoutFlags)
-         *
-         * Like @ref AbstractSnapLayout::child(SnapLayouter&, Snaps, const AbstractAnchor&, const Vector2&, NodeFlags, SnapLayoutFlags)
-         * but returning a concrete layout instance. Use
-         * @ref child(Snaps, const BasicAnchor<UserInterface>&, const Vector2&, NodeFlags, SnapLayoutFlags)
-         * to use the default @ref SnapLayouter instance available through
-         * @ref UserInterface::snapLayouter(). If you have an existing layout
-         * instance, there's @ref child(Snaps, const Vector2&, NodeFlags, SnapLayoutFlags)
-         * which is equivalent to this function.
-         */
-        static BasicSnapLayout<UserInterface> child(SnapLayouter& layouter, Snaps snap, const BasicAnchor<UserInterface>& parent, const Vector2& nodeSize = {}, NodeFlags nodeFlags = {}, SnapLayoutFlags layoutFlags = {});
-        /** @overload */
-        static BasicSnapLayout<UserInterface> child(SnapLayouter& layouter, Snaps snap, const BasicAnchor<UserInterface>& parent, const Vector2& nodeSize, SnapLayoutFlags layoutFlags) {
-            return child(layouter, snap, parent, nodeSize, {}, layoutFlags);
-        }
-
-        /**
-         * @brief Create an explicitly snapped child layout using the default layouter in given user interface
-         *
-         * Like @ref AbstractSnapLayout::child(SnapLayouter&, Snaps, const AbstractAnchor&, const Vector2&, NodeFlags, SnapLayoutFlags)
-         * but using the default @ref SnapLayouter instance available through
-         * @ref UserInterface::snapLayouter(), and returning a concrete layout
-         * instance. Expects that the user interface referenced in @p parent
-         * contains a @ref SnapLayouter instance.
-         *
-         * If you have an existing layout instance, there's
-         * @ref child(Snaps, const Vector2&, NodeFlags, SnapLayoutFlags)
-         * which is equivalent to this function.
-         * @see @ref UserInterface::hasSnapLayouter()
-         */
-        static BasicSnapLayout<UserInterface> child(Snaps snap, const BasicAnchor<UserInterface>& parent, const Vector2& nodeSize = {}, NodeFlags nodeFlags = {}, SnapLayoutFlags layoutFlags = {});
-        /** @overload */
-        static BasicSnapLayout<UserInterface> child(Snaps snap, const BasicAnchor<UserInterface>& parent, const Vector2& nodeSize, SnapLayoutFlags layoutFlags) {
-            return child(snap, parent, nodeSize, {}, layoutFlags);
-        }
-
-        /**
-         * @brief @copybrief AbstractSnapLayout::sibling(SnapLayouter&, Snaps, const AbstractAnchor&, const Vector2&, NodeFlags, SnapLayoutFlags)
-         *
-         * Like @ref AbstractSnapLayout::sibling(SnapLayouter&, Snaps, const AbstractAnchor&, const Vector2&, NodeFlags, SnapLayoutFlags)
-         * but returning a concrete layout instance. Use @ref sibling(Snaps, const BasicAnchor<UserInterface>&, const Vector2&, NodeFlags, SnapLayoutFlags)
-         * to use the default @ref SnapLayouter instance available through
-         * @ref UserInterface::snapLayouter(). If you have an existing layout
-         * instance, there's @ref sibling(Snaps, const Vector2&, NodeFlags, SnapLayoutFlags)
-         * which is equivalent to this function.
-         */
-        static BasicSnapLayout<UserInterface> sibling(SnapLayouter& layouter, Snaps snap, const BasicAnchor<UserInterface>& target, const Vector2& nodeSize = {}, NodeFlags nodeFlags = {}, SnapLayoutFlags layoutFlags = {});
-        /** @overload */
-        static BasicSnapLayout<UserInterface> sibling(SnapLayouter& layouter, Snaps snap, const BasicAnchor<UserInterface>& target, const Vector2& nodeSize, SnapLayoutFlags layoutFlags) {
-            return sibling(layouter, snap, target, nodeSize, {}, layoutFlags);
-        }
-
-        /**
-         * @brief Create an explicitly snapped sibling layout using the default layouter in given user interface
-         *
-         * Like @ref AbstractSnapLayout::sibling(SnapLayouter&, Snaps, const AbstractAnchor&, const Vector2&, NodeFlags, SnapLayoutFlags)
-         * but using the default @ref SnapLayouter instance available through
-         * @ref UserInterface::snapLayouter(), and returning a concrete layout
-         * instance. Expects that the user interface referenced in @p target
-         * contains a @ref SnapLayouter instance.
-         * @see @ref UserInterface::hasSnapLayouter()
-         */
-        static BasicSnapLayout<UserInterface> sibling(Snaps snap, const BasicAnchor<UserInterface>& target, const Vector2& nodeSize = {}, NodeFlags nodeFlags = {}, SnapLayoutFlags layoutFlags = {});
-        /** @overload */
-        static BasicSnapLayout<UserInterface> sibling(Snaps snap, const BasicAnchor<UserInterface>& target, const Vector2& nodeSize, SnapLayoutFlags layoutFlags) {
-            return sibling(snap, target, nodeSize, {}, layoutFlags);
         }
 
         /**

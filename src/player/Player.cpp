@@ -185,7 +185,7 @@ Overlay::Overlay(Platform::ScreenedApplication& application):
             #endif
     },
     window{Ui::SnapLayout::root(ui, Ui::Snap::Fill|Ui::Snap::NoPad, {})},
-    controls{Ui::SnapLayout::child(Ui::Snap::Fill|Ui::Snap::NoPad, {ui, window}, {}
+    controls{Ui::SnapLayout{ui, window}.child(Ui::Snap::Fill|Ui::Snap::NoPad, {}
         #ifdef CORRADE_TARGET_EMSCRIPTEN
         /* By default a drop hint is shown on Emscripten and controls are
            hidden */
@@ -194,10 +194,10 @@ Overlay::Overlay(Platform::ScreenedApplication& application):
     )}
 {
     Ui::NodeHandle hideControls = Ui::button(
-        Ui::SnapLayout::child(Ui::Snap::TopRight, {ui, controls}, ButtonSize),
+        Ui::SnapLayout{ui, controls}.child(Ui::Snap::TopRight, ButtonSize),
         "Controls"_s, nullptr, Ui::ButtonStyle::Success);
     Ui::NodeHandle showControls = Ui::button(
-        Ui::SnapLayout::child(Ui::Snap::TopRight, {ui, window}, ButtonSize, Ui::NodeFlag::Hidden),
+        Ui::SnapLayout{ui, window}.child(Ui::Snap::TopRight, ButtonSize, Ui::NodeFlag::Hidden),
         "Controls"_s, nullptr, Ui::ButtonStyle::Flat);
     ui.eventLayer().onTapOrClick(hideControls, [this, showControls]{
         CORRADE_INTERNAL_ASSERT(!(ui.nodeFlags(controls) >= Ui::NodeFlag::Hidden));
@@ -214,7 +214,7 @@ Overlay::Overlay(Platform::ScreenedApplication& application):
 
     #ifdef CORRADE_TARGET_EMSCRIPTEN
     fullSize = Ui::Button{
-        Ui::SnapLayout::sibling(Ui::Snap::Bottom, {ui, hideControls}, ButtonSize),
+        Ui::SnapLayout{ui, hideControls}.sibling(Ui::Snap::Bottom, ButtonSize),
         "Full size"};
     fullSize.onTrigger([this]{
         /* Can't be inside the branch because then this cursed message happens:
@@ -255,7 +255,7 @@ Overlay::Overlay(Platform::ScreenedApplication& application):
     dropHint = Ui::SnapLayout::root(ui, Ui::Snap::Fill|Ui::Snap::NoPad);
     {
         ui.baseLayer().create(ui.baseLayer().shared().styleCount() + style0, dropHint);
-        Ui::NodeHandle dialog = Ui::SnapLayout::child({}, {ui, dropHint}, {540, 140});
+        Ui::NodeHandle dialog = Ui::SnapLayout{ui, dropHint}.child({}, {540, 140});
         ui.baseLayer().create(ui.baseLayer().shared().styleCount() + style1, dialog);
         Ui::DataHandle hint = ui.textLayer().create(Ui::Implementation::TextStyle::LabelInfoText, "Drag&drop a file and everything it references here to play it.", {}, dialog);
         ui.textLayer().setPadding(hint, {0.0f, -30.0f, 0.0f, 30.0f});
@@ -267,7 +267,7 @@ Overlay::Overlay(Platform::ScreenedApplication& application):
     ui.clearNodeOrder(error);
     {
         ui.baseLayer().create(ui.baseLayer().shared().styleCount() + style0, error);
-        Ui::SnapLayout dialog = Ui::SnapLayout::child({}, {ui, error}, {440, 200});
+        Ui::SnapLayout dialog = Ui::SnapLayout{ui, error}.child({}, {440, 200});
         ui.baseLayer().create(ui.baseLayer().shared().styleCount() + style2, dialog);
         errorMessage = Ui::Label{
             dialog.child(Ui::Snap::Top, LabelSize),
