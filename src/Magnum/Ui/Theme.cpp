@@ -390,13 +390,16 @@ bool DarkTheme::doApply(UserInterface& ui, const ThemeFeatures features, PluginM
             Error{} << "Ui::DarkTheme::apply(): cannot open a font";
             return {};
         }
-        /** @todo fail if this fails, once the function doesn't return void */
         /** @todo configurable way to fill the cache, or switch to on-demand
             by default once AbstractFont can fill the cache with glyph IDs */
-        font->fillGlyphCache(glyphCache,
+        if(!font->fillGlyphCache(glyphCache,
             "abcdefghijklmnopqrstuvwxyz"
             "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-            "0123456789 _.,-+=*:;?!@$&#/\\|`\"'<>()[]{}%…");
+            "0123456789 _.,-+=*:;?!@$&#/\\|`\"'<>()[]{}%…")
+        ) {
+            Error{} << "Ui::DarkTheme::apply(): cannot fill a glyph cache";
+            return {};
+        }
 
         /* Main font */
         const Ui::FontHandle mainFont = shared.addFont(Utility::move(font), 16.0f);

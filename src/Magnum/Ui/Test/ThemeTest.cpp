@@ -75,6 +75,7 @@ struct ThemeTest: TestSuite::Tester {
 
     void apply();
     void applyTextLayerCannotOpenFont();
+    void applyTextLayerCannotFillCache();
     void applyTextLayerImagesCannotOpen();
     void applyTextLayerImagesCannotFit();
     void applyTextLayerImagesUnexpectedFormat();
@@ -160,6 +161,7 @@ ThemeTest::ThemeTest() {
         Containers::arraySize(ApplyData));
 
     addTests({&ThemeTest::applyTextLayerCannotOpenFont,
+              &ThemeTest::applyTextLayerCannotFillCache,
               &ThemeTest::applyTextLayerImagesCannotOpen,
               &ThemeTest::applyTextLayerImagesCannotFit,
               &ThemeTest::applyTextLayerImagesUnexpectedFormat,
@@ -598,8 +600,55 @@ void ThemeTest::applyTextLayerCannotOpenFont() {
     Containers::String out;
     Error redirectError{&out};
     CORRADE_VERIFY(!theme.apply(ui, ThemeFeature::TextLayer, nullptr, &fontManager));
+    /* Error from the PluginManager is printed before */
     CORRADE_COMPARE_AS(out,
         "\nUi::DarkTheme::apply(): cannot open a font\n",
+        TestSuite::Compare::StringHasSuffix);
+}
+
+void ThemeTest::applyTextLayerCannotFillCache() {
+    if(!(_fontManager.load("TrueTypeFont") & PluginManager::LoadState::Loaded))
+        CORRADE_SKIP("TrueTypeFont plugin not found.");
+
+    struct Interface: UserInterface {
+        explicit Interface(NoCreateT): UserInterface{NoCreate} {}
+    } ui{NoCreate};
+    ui.setSize({200, 300});
+
+    struct: Text::AbstractGlyphCache {
+        using Text::AbstractGlyphCache::AbstractGlyphCache;
+
+        Text::GlyphCacheFeatures doFeatures() const override { return {}; }
+        void doSetImage(const Vector2i&, const ImageView2D&) override {}
+    } glyphCache{PixelFormat::R8Unorm, {512, 512}};
+
+    /* Add a monster image to the atlas which in turn should make it impossible
+       to put anything else there */
+    Vector2i offset[1];
+    CORRADE_VERIFY(glyphCache.atlas().add({{500, 500}}, offset));
+
+    struct LayerShared: TextLayer::Shared {
+        explicit LayerShared(Text::AbstractGlyphCache& glyphCache): TextLayer::Shared{glyphCache, Configuration{Implementation::TextStyleUniformCount, Implementation::TextStyleCount}
+            .setEditingStyleCount(Implementation::TextEditingStyleCount)
+        } {}
+
+        void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
+        void doSetEditingStyle(const TextLayerCommonEditingStyleUniform&, Containers::ArrayView<const TextLayerEditingStyleUniform>) override {}
+    } layerShared{glyphCache};
+
+    struct Layer: TextLayer {
+        explicit Layer(LayerHandle handle, Shared& shared): TextLayer{handle, shared} {}
+    };
+    ui.setTextLayerInstance(Containers::pointer<Layer>(ui.createLayer(), layerShared));
+
+    DarkTheme theme;
+
+    Containers::String out;
+    Error redirectError{&out};
+    CORRADE_VERIFY(!theme.apply(ui, ThemeFeature::TextLayer, nullptr, &_fontManager));
+    /* Error from the font fillGlyphCache() is printed before */
+    CORRADE_COMPARE_AS(out,
+        "\nUi::DarkTheme::apply(): cannot fill a glyph cache\n",
         TestSuite::Compare::StringHasSuffix);
 }
 
