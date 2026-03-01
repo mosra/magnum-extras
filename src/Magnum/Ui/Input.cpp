@@ -67,7 +67,7 @@ Debug& operator<<(Debug& debug, const InputStyle value) {
 
 namespace {
 
-BaseStyle baseLayerStyle(const InputStyle style) {
+BaseStyle baseStyle(const InputStyle style) {
     switch(style) {
         #define _c(style) case InputStyle::style: return BaseStyle::Input ## style;
         _c(Default)
@@ -81,7 +81,7 @@ BaseStyle baseLayerStyle(const InputStyle style) {
     CORRADE_INTERNAL_ASSERT_UNREACHABLE(); /* LCOV_EXCL_LINE */
 }
 
-TextStyle textLayerStyle(const InputStyle style) {
+TextStyle textStyle(const InputStyle style) {
     switch(style) {
         case InputStyle::Default:
             return TextStyle::InputDefault;
@@ -104,8 +104,8 @@ Input::Input(const Anchor anchor, const Containers::StringView text, const TextP
     ui().addNodeFlags(node(), NodeFlag::Focusable);
     ui().layoutLayer().create(LayoutStyle::Input, node());
 
-    _backgroundData = dataHandleData(ui().baseLayer().create(baseLayerStyle(style), node()));
-    _textData = dataHandleData(ui().textLayer().create(textLayerStyle(style), text, textProperties, TextDataFlag::Editable, node()));
+    _backgroundData = dataHandleData(ui().baseLayer().create(baseStyle(style), node()));
+    _textData = dataHandleData(ui().textLayer().create(textStyle(style), text, textProperties, TextDataFlag::Editable, node()));
 }
 
 Input::Input(const Anchor anchor, const Containers::StringView text, const InputStyle style): Input{anchor, text, {}, style} {}
@@ -114,8 +114,8 @@ Input::Input(const Anchor anchor, const InputStyle style): Input{anchor, {}, sty
 
 Input& Input::setStyle(const InputStyle style) {
     _style = style;
-    ui().baseLayer().setTransitionedStyle(ui(), _backgroundData, baseLayerStyle(style));
-    ui().textLayer().setTransitionedStyle(ui(), _textData, textLayerStyle(style));
+    ui().baseLayer().setTransitionedStyle(ui(), _backgroundData, baseStyle(style));
+    ui().textLayer().setTransitionedStyle(ui(), _textData, textStyle(style));
     /** @todo re-set the text if font / alignment ... changed */
     return *this;
 }

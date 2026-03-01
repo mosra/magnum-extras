@@ -73,7 +73,7 @@ using Implementation::BaseStyle;
 using Implementation::TextStyle;
 using Implementation::LayoutStyle;
 
-BaseStyle baseLayerStyle(const ButtonStyle style) {
+BaseStyle baseStyle(const ButtonStyle style) {
     switch(style) {
         #define _c(style) case ButtonStyle::style: return BaseStyle::Button ## style;
         _c(Default)
@@ -90,7 +90,7 @@ BaseStyle baseLayerStyle(const ButtonStyle style) {
     CORRADE_INTERNAL_ASSERT_UNREACHABLE(); /* LCOV_EXCL_LINE */
 }
 
-TextStyle textLayerStyleIconOnly(const ButtonStyle style) {
+TextStyle textStyleIconOnly(const ButtonStyle style) {
     switch(style) {
         case ButtonStyle::Default:
         case ButtonStyle::Primary:
@@ -107,7 +107,7 @@ TextStyle textLayerStyleIconOnly(const ButtonStyle style) {
     CORRADE_INTERNAL_ASSERT_UNREACHABLE(); /* LCOV_EXCL_LINE */
 }
 
-TextStyle textLayerStyleTextOnly(const ButtonStyle style) {
+TextStyle textStyleTextOnly(const ButtonStyle style) {
     switch(style) {
         case ButtonStyle::Default:
         case ButtonStyle::Primary:
@@ -124,7 +124,7 @@ TextStyle textLayerStyleTextOnly(const ButtonStyle style) {
     CORRADE_INTERNAL_ASSERT_UNREACHABLE(); /* LCOV_EXCL_LINE */
 }
 
-TextStyle textLayerStyleIcon(const ButtonStyle style) {
+TextStyle textStyleIcon(const ButtonStyle style) {
     switch(style) {
         case ButtonStyle::Default:
         case ButtonStyle::Primary:
@@ -141,7 +141,7 @@ TextStyle textLayerStyleIcon(const ButtonStyle style) {
     CORRADE_INTERNAL_ASSERT_UNREACHABLE(); /* LCOV_EXCL_LINE */
 }
 
-TextStyle textLayerStyleText(const ButtonStyle style) {
+TextStyle textStyleText(const ButtonStyle style) {
     switch(style) {
         case ButtonStyle::Default:
         case ButtonStyle::Primary:
@@ -165,18 +165,18 @@ void alignIconText(TextLayer& textLayer, const ButtonStyle style, const LayerDat
     if(icon != LayerDataHandle::Null && text != LayerDataHandle::Null) {
         /** @todo handle vertical / sideways buttons as well, eventually */
         textLayer.setPadding(icon, {0.0f, 0.0f, textLayer.size(text).x(), 0.0f});
-        textLayer.setStyle(icon, textLayerStyleIcon(style));
-        textLayer.setStyle(text, textLayerStyleText(style));
+        textLayer.setStyle(icon, textStyleIcon(style));
+        textLayer.setStyle(text, textStyleText(style));
 
     /* Otherwise, if there's just an icon, reset its padding back to 0, and
        pick a style for correct alignment */
     } else if(icon != LayerDataHandle::Null) {
         textLayer.setPadding(icon, {});
-        textLayer.setStyle(icon, textLayerStyleIconOnly(style));
+        textLayer.setStyle(icon, textStyleIconOnly(style));
 
     /* Otherwise, if there's just a text, pick a style for correct alignment */
     } else if(text != LayerDataHandle::Null) {
-        textLayer.setStyle(text, textLayerStyleTextOnly(style));
+        textLayer.setStyle(text, textStyleTextOnly(style));
     }
 }
 
@@ -193,14 +193,14 @@ ButtonData buttonInternal(UserInterface& ui, const NodeHandle node, const Icon i
        updated */
     ui.layoutLayer().create(LayoutStyle::Button, node);
 
-    out.background = dataHandleData(ui.baseLayer().create(baseLayerStyle(style), node));
+    out.background = dataHandleData(ui.baseLayer().create(baseStyle(style), node));
 
     /* Style ID for these two is corrected in alignIconText() below */
     TextLayer& textLayer = ui.textLayer();
     if(icon != Icon::None)
-        out.icon = dataHandleData(textLayer.createGlyph(textLayerStyleIconOnly(style), icon, {}, node));
+        out.icon = dataHandleData(textLayer.createGlyph(textStyleIconOnly(style), icon, {}, node));
     if(text)
-        out.text = dataHandleData(textLayer.create(textLayerStyleTextOnly(style), text, properties, node));
+        out.text = dataHandleData(textLayer.create(textStyleTextOnly(style), text, properties, node));
     alignIconText(textLayer, style, out.icon, out.text);
 
     return out;
@@ -237,13 +237,13 @@ EventConnection Button::onTriggerScoped(Containers::Function<void()>&& function)
 
 Button& Button::setStyle(const ButtonStyle style) {
     _style = style;
-    ui().baseLayer().setTransitionedStyle(ui(), _backgroundData, baseLayerStyle(style));
+    ui().baseLayer().setTransitionedStyle(ui(), _backgroundData, baseStyle(style));
     if(_textData != LayerDataHandle::Null)
         ui().textLayer().setTransitionedStyle(ui(), _textData,
-            (_iconData == LayerDataHandle::Null ? textLayerStyleTextOnly : textLayerStyleText)(style));
+            (_iconData == LayerDataHandle::Null ? textStyleTextOnly : textStyleText)(style));
     if(_iconData != LayerDataHandle::Null)
         ui().textLayer().setTransitionedStyle(ui(), _iconData,
-            (_textData == LayerDataHandle::Null ? textLayerStyleIconOnly : textLayerStyleIcon)(style));
+            (_textData == LayerDataHandle::Null ? textStyleIconOnly : textStyleIcon)(style));
     return *this;
 }
 
@@ -254,7 +254,7 @@ Button& Button::setIcon(const Icon icon) {
     if(icon != Icon::None) {
         if(_iconData == LayerDataHandle::Null)
             /* Style ID is corrected in alignIconText() below */
-            _iconData = dataHandleData(textLayer.createGlyph(textLayerStyleIconOnly(_style), icon, {}, node()));
+            _iconData = dataHandleData(textLayer.createGlyph(textStyleIconOnly(_style), icon, {}, node()));
         else textLayer.setGlyph(_iconData, icon, {});
     } else if(_iconData != LayerDataHandle::Null) {
         textLayer.remove(_iconData);
@@ -271,7 +271,7 @@ Button& Button::setText(const Containers::StringView text, const TextProperties&
     if(text) {
         if(_textData == LayerDataHandle::Null)
             /* Style ID is corrected in alignIconText() below */
-            _textData = dataHandleData(textLayer.create(textLayerStyleTextOnly(_style), text, textProperties, node()));
+            _textData = dataHandleData(textLayer.create(textStyleTextOnly(_style), text, textProperties, node()));
         else
             textLayer.setText(_textData, text, textProperties);
     } else if(_textData != LayerDataHandle::Null) {

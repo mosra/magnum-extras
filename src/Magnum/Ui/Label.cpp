@@ -69,7 +69,7 @@ namespace {
 using Implementation::TextStyle;
 using Implementation::LayoutStyle;
 
-TextStyle textLayerStyleIcon(const LabelStyle style) {
+TextStyle textStyleIcon(const LabelStyle style) {
     switch(style) {
         case LabelStyle::Default:   return TextStyle::LabelDefaultIcon;
         case LabelStyle::Primary:   return TextStyle::LabelPrimaryIcon;
@@ -83,7 +83,7 @@ TextStyle textLayerStyleIcon(const LabelStyle style) {
     CORRADE_INTERNAL_ASSERT_UNREACHABLE(); /* LCOV_EXCL_LINE */
 }
 
-TextStyle textLayerStyleText(const LabelStyle style) {
+TextStyle textStyleText(const LabelStyle style) {
     switch(style) {
         case LabelStyle::Default:   return TextStyle::LabelDefaultText;
         case LabelStyle::Primary:   return TextStyle::LabelPrimaryText;
@@ -105,7 +105,7 @@ Label::Label(const Anchor anchor, const Icon icon, const LabelStyle style): Widg
     ui().layoutLayer().create(LayoutStyle::Label, node());
 
     _data = icon == Icon::None ? LayerDataHandle::Null :
-        dataHandleData(ui().textLayer().createGlyph(textLayerStyleIcon(style), icon, {}, node()));
+        dataHandleData(ui().textLayer().createGlyph(textStyleIcon(style), icon, {}, node()));
 }
 
 Label::Label(const Anchor anchor, const Containers::StringView text, const TextProperties& textProperties, const LabelStyle style): Widget{anchor}, _style{style}, _icon{Icon::None} {
@@ -114,7 +114,7 @@ Label::Label(const Anchor anchor, const Containers::StringView text, const TextP
     ui().layoutLayer().create(LayoutStyle::Label, node());
 
     _data = !text ? LayerDataHandle::Null :
-        dataHandleData(ui().textLayer().create(textLayerStyleText(style), text, textProperties, node()));
+        dataHandleData(ui().textLayer().create(textStyleText(style), text, textProperties, node()));
 }
 
 Label::Label(const Anchor anchor, const Containers::StringView text, const LabelStyle style): Label{anchor, text, {}, style} {}
@@ -122,7 +122,7 @@ Label::Label(const Anchor anchor, const Containers::StringView text, const Label
 Label& Label::setStyle(const LabelStyle style) {
     _style = style;
     if(_data != LayerDataHandle::Null)
-        ui().textLayer().setStyle(_data, (_icon == Icon::None ? textLayerStyleText : textLayerStyleIcon)(style));
+        ui().textLayer().setStyle(_data, (_icon == Icon::None ? textStyleText : textStyleIcon)(style));
     return *this;
 }
 
@@ -132,7 +132,7 @@ Label& Label::setIcon(const Icon icon) {
     _icon = icon;
     if(icon != Icon::None) {
         if(_data == LayerDataHandle::Null)
-            _data = dataHandleData(textLayer.createGlyph(textLayerStyleIcon(_style), icon, {}, node()));
+            _data = dataHandleData(textLayer.createGlyph(textStyleIcon(_style), icon, {}, node()));
         else textLayer.setGlyph(_data, icon, {});
     } else if(_data != LayerDataHandle::Null) {
         textLayer.remove(_data);
@@ -148,7 +148,7 @@ Label& Label::setText(const Containers::StringView text, const TextProperties& t
     _icon = Icon::None;
     if(text) {
         if(_data == LayerDataHandle::Null)
-            _data = dataHandleData(textLayer.create(textLayerStyleText(_style), text, textProperties, node()));
+            _data = dataHandleData(textLayer.create(textStyleText(_style), text, textProperties, node()));
         else
             textLayer.setText(_data, text, textProperties);
     } else if(_data != LayerDataHandle::Null) {
@@ -173,7 +173,7 @@ Anchor label(const Anchor anchor, const Containers::StringView text, const TextP
     anchor.ui().layoutLayer().create(LayoutStyle::Label, anchor.node());
 
     if(text)
-        anchor.ui().textLayer().create(textLayerStyleText(style), text, textProperties, anchor.node());
+        anchor.ui().textLayer().create(textStyleText(style), text, textProperties, anchor.node());
     return anchor;
 }
 
@@ -185,7 +185,7 @@ Anchor label(const Anchor anchor, const Icon icon, const LabelStyle style) {
     anchor.ui().layoutLayer().create(LayoutStyle::Label, anchor.node());
 
     if(icon != Icon::None)
-        anchor.ui().textLayer().createGlyph(textLayerStyleIcon(style), icon, {}, anchor.node());
+        anchor.ui().textLayer().createGlyph(textStyleIcon(style), icon, {}, anchor.node());
     return anchor;
 }
 
