@@ -86,21 +86,31 @@ void InputTest::debugStyle() {
 }
 
 void InputTest::construct() {
-    Input input{{rootAnchor, {}, {32, 16}}, "hello", InputStyle::Warning};
-    CORRADE_COMPARE(ui.nodeParent(input), rootAnchor);
-    CORRADE_COMPARE(ui.nodeSize(input), (Vector2{32, 16}));
-    CORRADE_COMPARE(ui.nodeFlags(input), NodeFlag::Focusable);
-    CORRADE_VERIFY(input.isOwned());
+    Input input1{{rootAnchor, {}, {32, 16}}, "hello", InputStyle::Warning};
+    Input input2{{rootAnchor, {}, {16, 32}}, InputStyle::Flat};
+    CORRADE_COMPARE(ui.nodeParent(input1), rootAnchor);
+    CORRADE_COMPARE(ui.nodeParent(input2), rootAnchor);
+    CORRADE_COMPARE(ui.nodeSize(input1), (Vector2{32, 16}));
+    CORRADE_COMPARE(ui.nodeSize(input2), (Vector2{16, 32}));
+    CORRADE_COMPARE(ui.nodeFlags(input1), NodeFlag::Focusable);
+    CORRADE_COMPARE(ui.nodeFlags(input2), NodeFlag::Focusable);
+    CORRADE_VERIFY(input1.isOwned());
+    CORRADE_VERIFY(input2.isOwned());
 
-    CORRADE_COMPARE(input.style(), InputStyle::Warning);
-    CORRADE_COMPARE(input.text(), "hello");
+    CORRADE_COMPARE(input1.style(), InputStyle::Warning);
+    CORRADE_COMPARE(input2.style(), InputStyle::Flat);
+    CORRADE_COMPARE(input1.text(), "hello");
+    CORRADE_COMPARE(input2.text(), "");
 
-    CORRADE_VERIFY(ui.isHandleValid(input.backgroundData()));
-    CORRADE_VERIFY(ui.isHandleValid(input.textData()));
-    CORRADE_COMPARE(ui.textLayer().glyphCount(input.textData()), 5);
+    CORRADE_VERIFY(ui.isHandleValid(input1.backgroundData()));
+    CORRADE_VERIFY(ui.isHandleValid(input2.backgroundData()));
+    CORRADE_VERIFY(ui.isHandleValid(input1.textData()));
+    CORRADE_VERIFY(ui.isHandleValid(input2.textData()));
+    CORRADE_COMPARE(ui.textLayer().glyphCount(input1.textData()), 5);
+    CORRADE_COMPARE(ui.textLayer().glyphCount(input2.textData()), 0);
 
     /* Can only verify that the layout data were created, they're not saved */
-    CORRADE_COMPARE(ui.layoutLayer().usedCount(), 1);
+    CORRADE_COMPARE(ui.layoutLayer().usedCount(), 2);
 }
 
 void InputTest::constructTextProperties() {

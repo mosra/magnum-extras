@@ -71,6 +71,8 @@ class MAGNUM_UI_EXPORT Input: public Widget {
         explicit Input(Anchor anchor, Containers::StringView text, const TextProperties& textProperties, InputStyle style = InputStyle::Default);
         /** @overload */
         explicit Input(Anchor anchor, Containers::StringView text, InputStyle style = InputStyle::Default);
+        /** @overload */
+        explicit Input(Anchor anchor, InputStyle style = InputStyle::Default);
 
         /** @copydoc AbstractWidget::AbstractWidget(NoCreateT) */
         explicit Input(NoCreateT): Widget{NoCreate}, _style{}, _backgroundData{}, _textData{} {}

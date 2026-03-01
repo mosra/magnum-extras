@@ -110,6 +110,8 @@ Input::Input(const Anchor anchor, const Containers::StringView text, const TextP
 
 Input::Input(const Anchor anchor, const Containers::StringView text, const InputStyle style): Input{anchor, text, {}, style} {}
 
+Input::Input(const Anchor anchor, const InputStyle style): Input{anchor, {}, style} {}
+
 Input& Input::setStyle(const InputStyle style) {
     _style = style;
     ui().baseLayer().setTransitionedStyle(ui(), _backgroundData, baseLayerStyle(style));
