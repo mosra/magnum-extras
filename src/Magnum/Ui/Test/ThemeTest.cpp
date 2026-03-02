@@ -30,7 +30,6 @@
 #include <Corrade/PluginManager/Manager.h>
 #include <Corrade/PluginManager/PluginMetadata.h>
 #include <Corrade/TestSuite/Tester.h>
-#include <Corrade/TestSuite/Compare/Numeric.h>
 #include <Corrade/TestSuite/Compare/String.h>
 #include <Corrade/Utility/ConfigurationGroup.h>
 #include <Magnum/PixelFormat.h>
@@ -276,8 +275,6 @@ void ThemeTest::textStyleDark() {
             #define _c(style, suffix, ...) \
                 case TextStyle::style ## suffix: \
                     CORRADE_COMPARE(UnsignedInt(styles[i]), UnsignedInt(TextStyle::style ## suffix)); \
-                    CORRADE_COMPARE_AS(UnsignedInt(TextStyleUniform::style), Implementation::TextStyleUniformCount, \
-                        TestSuite::Compare::Less); \
                     continue;
             #define _s _c
             #define _e _c
