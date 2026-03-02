@@ -231,17 +231,6 @@ CORRADE_ENUMSET_OPERATORS(ThemeFeatures)
 */
 MAGNUM_UI_EXPORT Debug& operator<<(Debug& debug, ThemeFeatures value);
 
-namespace Implementation {
-    /* Used by various tests, less wasteful to have here than in the
-       potentially huge AbstractTheme.hpp */
-    enum: UnsignedInt {
-        BaseStyleCount = 79,
-        TextStyleCount = 91,
-        LayoutStyleCount = 14,
-        IconCount = 2
-    };
-}
-
 /**
 @brief Base for @ref UserInterface themes
 @m_since_latest_{extras}

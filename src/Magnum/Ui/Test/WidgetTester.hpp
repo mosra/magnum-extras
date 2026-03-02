@@ -37,7 +37,7 @@
 #include <Magnum/Text/Script.h>
 
 #include "Magnum/Ui/AbstractTheme.h"
-#include "Magnum/Ui/AbstractTheme.hpp"
+#include "Magnum/Ui/AbstractTheme.hpp" /* styleTransition*() functions */
 #include "Magnum/Ui/BaseLayer.h"
 #include "Magnum/Ui/DataLayer.h"
 #include "Magnum/Ui/EventLayer.h"
@@ -64,12 +64,15 @@ struct TestUserInterface: UserInterface {
 };
 
 struct TestBaseLayerShared: BaseLayer::Shared {
+    /* If a widget creation asserts due to a style being out of bounds, run the
+       UiThemeTest to figure out what the BaseStyleCount should be updated
+       to */
     explicit TestBaseLayerShared(): BaseLayer::Shared{Configuration{1, Implementation::BaseStyleCount}} {
         BaseLayerStyleUniform uniforms[1];
         UnsignedInt styleToUniform[]{0};
         setStyle(BaseLayerCommonStyleUniform{},
             uniforms,
-            Containers::stridedArrayView(styleToUniform).broadcasted<0>(Implementation::BaseStyleCount),
+            Containers::stridedArrayView(styleToUniform).broadcasted<0>(styleCount()),
             {});
 
         setStyleTransition<Implementation::BaseStyle,
@@ -90,6 +93,9 @@ struct TestBaseLayer: BaseLayer {
 };
 
 struct TestTextLayerShared: TextLayer::Shared {
+    /* If a widget creation asserts due to a style being out of bounds, run the
+       UiThemeTest to figure out what the TextStyleCount should be updated
+       to */
     explicit TestTextLayerShared(): TextLayer::Shared{glyphCache, Configuration{1, Implementation::TextStyleCount}} {
         font.openFile("", 16.0f);
         glyphCache.addFont(Implementation::IconCount + 1, &font);
@@ -99,9 +105,9 @@ struct TestTextLayerShared: TextLayer::Shared {
         TextLayerStyleUniform uniforms[1];
         UnsignedInt styleToUniform[]{0};
         setStyle(TextLayerCommonStyleUniform{}, uniforms,
-            Containers::stridedArrayView(styleToUniform).broadcasted<0>(Implementation::TextStyleCount),
-            Containers::stridedArrayView(fontHandle).broadcasted<0>(Implementation::TextStyleCount),
-            Containers::stridedArrayView(alignment).broadcasted<0>(Implementation::TextStyleCount),
+            Containers::stridedArrayView(styleToUniform).broadcasted<0>(styleCount()),
+            Containers::stridedArrayView(fontHandle).broadcasted<0>(styleCount()),
+            Containers::stridedArrayView(alignment).broadcasted<0>(styleCount()),
             {}, {}, {}, {}, {}, {});
 
         setStyleTransition<Implementation::TextStyle,
@@ -217,6 +223,9 @@ WidgetTester::WidgetTester() {
       .setBaseLayerInstance(Containers::pointer<TestBaseLayer>(ui.createLayer(), baseLayerShared))
       .setTextLayerInstance(Containers::pointer<TestTextLayer>(ui.createLayer(), textLayerShared))
       .setEventLayerInstance(Containers::pointer<EventLayer>(ui.createLayer()))
+    /* If a widget creation asserts due to a style being out of bounds, run the
+       UiThemeTest to figure out what the LayoutStyleCount should be updated
+       to */
       .setLayoutLayerInstance(Containers::pointer<LayoutLayer>(ui.createLayer(), Implementation::LayoutStyleCount))
       .setSnapLayouterInstance(Containers::pointer<SnapLayouter>(ui.createLayouter()))
       .setGenericLayouterInstance(Containers::pointer<GenericLayouter>(ui.createLayouter()))

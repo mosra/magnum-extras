@@ -26,16 +26,9 @@
     DEALINGS IN THE SOFTWARE.
 */
 
-#include "Magnum/Ui/AbstractTheme.h" /* BaseStyleCount and such */
+#include "Magnum/Types.h"
 
 namespace Magnum { namespace Ui { namespace Implementation {
-
-enum: UnsignedInt {
-    BaseStyleUniformCount = BaseStyleCount,
-    TextStyleUniformCount = 33,
-    TextEditingStyleCount = 16,
-    TextEditingStyleUniformCount = TextEditingStyleCount,
-};
 
 enum class TextStyleUniform: UnsignedInt {
     Default,

@@ -43,6 +43,20 @@ header from application code.
 #ifndef DOXYGEN_GENERATING_OUTPUT
 namespace Magnum { namespace Ui { namespace Implementation {
 
+/* To be used by custom theme implementations to appropriately size the style
+   data arrays. Deliberately *not* used by the builtin theme itself to allow
+   for fast iterations without having to adjust these values each time a style
+   gets added.
+
+   Be sure to run UiThemeTest after adding new styles to keep these constants
+   up-to-date. */
+enum: UnsignedInt {
+    BaseStyleCount = 79,
+    TextStyleCount = 91,
+    LayoutStyleCount = 14,
+    IconCount = 2
+};
+
 enum class BaseStyle: UnsignedShort {
     /* All properties left at defaults. Not used by builtin widgets, meant to
        be used by application code for ad-hoc drawing. */

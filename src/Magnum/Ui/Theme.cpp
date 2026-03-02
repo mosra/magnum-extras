@@ -168,10 +168,6 @@ const BaseLayerStyleUniform BaseStyleUniformsDark[]{
     #include "Magnum/Ui/Implementation/themeDarkBaseStyleUniforms.h"
     #undef _c
 };
-static_assert(Implementation::BaseStyleUniformCount == Containers::arraySize(BaseStyleUniformsDark),
-    "outdated BaseStyleUniformCount value");
-static_assert(Implementation::BaseStyleCount == Containers::arraySize(BaseStyleUniformsDark),
-    "outdated BaseStyleCount value");
 
 constexpr TextLayerCommonStyleUniform TextCommonStyleUniformDark{};
 
@@ -183,8 +179,6 @@ const TextLayerStyleUniform TextStyleUniformsDark[]{
     #include "Magnum/Ui/Implementation/themeDarkTextStyleUniforms.h"
     #undef _c
 };
-static_assert(Implementation::TextStyleUniformCount == Containers::arraySize(TextStyleUniformsDark),
-    "outdated TextStyleUniformCount value");
 
 constexpr struct {
     UnsignedInt uniform;
@@ -200,8 +194,6 @@ constexpr struct {
     #undef _s
     #undef _c
 };
-static_assert(Implementation::TextStyleCount == Containers::arraySize(TextStylesDark),
-    "outdated TextStyleCount value");
 
 /* 1 (true, screen)-pixel radius independently of UI scale */
 constexpr TextLayerCommonEditingStyleUniform TextCommonEditingStyleUniformDark{1.0f};
@@ -216,8 +208,6 @@ const TextLayerEditingStyleUniform TextEditingStyleUniformsDark[]{
     #undef _c
     #undef _s
 };
-static_assert(Implementation::TextEditingStyleUniformCount == Containers::arraySize(TextEditingStyleUniformsDark),
-    "outdated TextEditingStyleUniformCount value");
 
 constexpr struct {
     Int textUniform;
@@ -229,8 +219,6 @@ constexpr struct {
     #undef _c
     #undef _s
 };
-static_assert(Implementation::TextEditingStyleCount == Containers::arraySize(TextEditingStylesDark),
-    "outdated TextEditingStyleCount value");
 
 /* MSVC 2015, 2017 and 2019 cannot handle this in the form of
     constexpr struct LayoutStyle {
@@ -257,8 +245,6 @@ constexpr LayoutStyle LayoutStylesDark[]{
     #undef _n
     #undef _c
 };
-static_assert(Implementation::LayoutStyleCount == Containers::arraySize(LayoutStylesDark),
-    "outdated LayoutStyleCount value");
 
 }
 
@@ -281,11 +267,12 @@ ThemeFeatures DarkTheme::doFeatures() const {
 }
 
 UnsignedInt DarkTheme::doBaseLayerStyleUniformCount() const {
-    return Implementation::BaseStyleUniformCount;
+    return Containers::arraySize(BaseStyleUniformsDark);
 }
 
 UnsignedInt DarkTheme::doBaseLayerStyleCount() const {
-    return Implementation::BaseStyleCount;
+    /* There's currently no deduplication done for base layer styles */
+    return Containers::arraySize(BaseStyleUniformsDark);
 }
 
 UnsignedInt DarkTheme::doBaseLayerDynamicStyleCount() const {
@@ -293,11 +280,11 @@ UnsignedInt DarkTheme::doBaseLayerDynamicStyleCount() const {
 }
 
 UnsignedInt DarkTheme::doTextLayerStyleUniformCount() const {
-    return Implementation::TextStyleUniformCount;
+    return Containers::arraySize(TextStyleUniformsDark);
 }
 
 UnsignedInt DarkTheme::doTextLayerStyleCount() const {
-    return Implementation::TextStyleCount;
+    return Containers::arraySize(TextStylesDark);
 }
 
 UnsignedInt DarkTheme::doTextLayerDynamicStyleCount() const {
@@ -308,11 +295,11 @@ UnsignedInt DarkTheme::doTextLayerDynamicStyleCount() const {
 }
 
 UnsignedInt DarkTheme::doTextLayerEditingStyleUniformCount() const {
-    return Implementation::TextEditingStyleUniformCount;
+    return Containers::arraySize(TextEditingStyleUniformsDark);
 }
 
 UnsignedInt DarkTheme::doTextLayerEditingStyleCount() const {
-    return Implementation::TextEditingStyleCount;
+    return Containers::arraySize(TextEditingStylesDark);
 }
 
 Vector3i DarkTheme::doTextLayerGlyphCacheSize(ThemeFeatures) const {
@@ -322,7 +309,7 @@ Vector3i DarkTheme::doTextLayerGlyphCacheSize(ThemeFeatures) const {
 }
 
 UnsignedInt DarkTheme::doLayoutLayerStyleCount() const {
-    return Implementation::LayoutStyleCount;
+    return Containers::arraySize(LayoutStylesDark);
 }
 
 bool DarkTheme::doApply(UserInterface& ui, const ThemeFeatures features, PluginManager::Manager<Trade::AbstractImporter>* importerManager, PluginManager::Manager<Text::AbstractFont>* fontManager) const {

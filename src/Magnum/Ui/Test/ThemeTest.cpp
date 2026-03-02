@@ -197,29 +197,53 @@ void ThemeTest::debugFeaturesSupersets() {
     }
 }
 
+/* These arrays are used by the following test cases, either to verify the
+   contents or just to get their actual size */
+const BaseStyle BaseStyleUniforms[]{
+    #define _c(style, ...) BaseStyle::style,
+    #include "Magnum/Ui/Implementation/themeDarkBaseStyleUniforms.h"
+    #undef _c
+};
+const TextStyle TextStyles[]{
+    #define _c(style, suffix, ...) TextStyle::style ## suffix,
+    #define _s _c
+    #define _e _c
+    #include "Magnum/Ui/Implementation/themeDarkTextStyles.h"
+    #undef _c
+    #undef _s
+    #undef _e
+};
+const TextStyleUniform TextStyleUniforms[]{
+    #define _c(value, ...) TextStyleUniform::value,
+    #include "Magnum/Ui/Implementation/themeDarkTextStyleUniforms.h"
+    #undef _c
+};
+const TextEditingStyle TextEditingStyleUniforms[]{
+    #define _c(style, ...) TextEditingStyle::style,
+    #define _s _c
+    #include "Magnum/Ui/Implementation/themeDarkTextEditingStyles.h"
+    #undef _s
+    #undef _c
+};
+const LayoutStyle LayoutStyles[]{
+    #define _c(style, ...) LayoutStyle::style,
+    #define _n _c
+    #include "Magnum/Ui/Implementation/themeDarkLayoutStyles.h"
+    #undef _n
+    #undef _c
+};
+
 void ThemeTest::baseStyleDark() {
-    const BaseStyle styleUniforms[]{
-        #define _c(style, ...) BaseStyle::style,
-        #include "Magnum/Ui/Implementation/themeDarkBaseStyleUniforms.h"
-        #undef _c
-    };
-
-    /* Verify that the harcoded BaseStyleCount matches the actual number of
-       entries in the mapping. The same should be a static_assert() in
-       Theme.cpp already, here it's just a sanity check. */
-    CORRADE_COMPARE(Implementation::BaseStyleCount, Containers::arraySize(styleUniforms));
-    CORRADE_COMPARE(Implementation::BaseStyleUniformCount, Containers::arraySize(styleUniforms));
-
     /* This checks that:
         - the mapping contains entries for all enum values (otherwise -Wswitch
           would trigger)
         - none of the values are duplicated (otherwise it'd be a syntax error)
         - the position of the value in the mapping corresponds to the enum
-          value (by checking against the styleUniforms[] above)
+          value (by checking against the BaseStyleUniforms[] above)
         - there are no extra values in the array that wouldn't be handled by
           any of the switch cases */
     UnsignedInt unhandledCount = 0;
-    for(UnsignedInt i = 0; i != Implementation::BaseStyleCount; ++i) {
+    for(UnsignedInt i = 0; i != Containers::arraySize(BaseStyleUniforms); ++i) {
         #ifdef CORRADE_TARGET_GCC
         #pragma GCC diagnostic push
         #pragma GCC diagnostic error "-Wswitch"
@@ -227,7 +251,7 @@ void ThemeTest::baseStyleDark() {
         switch(BaseStyle(i)) {
             #define _c(style, ...) \
                 case BaseStyle::style: \
-                    CORRADE_COMPARE(UnsignedInt(styleUniforms[i]), UnsignedInt(BaseStyle::style)); \
+                    CORRADE_COMPARE(UnsignedInt(BaseStyleUniforms[i]), UnsignedInt(BaseStyle::style)); \
                     continue;
             #include "Magnum/Ui/Implementation/themeDarkBaseStyleUniforms.h"
             #undef _c
@@ -239,34 +263,27 @@ void ThemeTest::baseStyleDark() {
         ++unhandledCount;
     }
     CORRADE_COMPARE(unhandledCount, 0);
+
+    /* Verify that the harcoded StyleCount matches the actual number of entries
+       in the mapping. If it won't, custom theme implementations in user code
+       would break and mock themes in WidgetTester may cause OOB assertions if
+       a widget test picks a style ID that's not less than the outdated
+       value. But most code can still compile correctly and work, which is
+       important for fast iteration when adding new styles. */
+    CORRADE_COMPARE(Implementation::BaseStyleCount, Containers::arraySize(BaseStyleUniforms));
 }
 
 void ThemeTest::textStyleDark() {
-    const TextStyle styles[]{
-        #define _c(style, suffix, ...) TextStyle::style ## suffix,
-        #define _s _c
-        #define _e _c
-        #include "Magnum/Ui/Implementation/themeDarkTextStyles.h"
-        #undef _c
-        #undef _s
-        #undef _e
-    };
-
-    /* Verify that the harcoded TextStyleCount matches the actual number of
-       entries in the mapping. The same should be a static_assert() in
-       Theme.cpp already, here it's just a sanity check. */
-    CORRADE_COMPARE(Implementation::TextStyleCount, Containers::arraySize(styles));
-
     /* This checks that:
         - the mapping contains entries for all enum values (otherwise -Wswitch
           would trigger)
         - none of the values are duplicated (otherwise it'd be a syntax error)
         - the position of the value in the mapping corresponds to the enum
-          value (by checking against the styles[] above)
+          value (by checking against the TextStyles[] above)
         - there are no extra values in the array that wouldn't be handled by
           any of the switch cases */
     UnsignedInt unhandledCount = 0;
-    for(UnsignedInt i = 0; i != Implementation::TextStyleCount; ++i) {
+    for(UnsignedInt i = 0; i != Containers::arraySize(TextStyles); ++i) {
         #ifdef CORRADE_TARGET_GCC
         #pragma GCC diagnostic push
         #pragma GCC diagnostic error "-Wswitch"
@@ -274,7 +291,7 @@ void ThemeTest::textStyleDark() {
         switch(TextStyle(i)) {
             #define _c(style, suffix, ...) \
                 case TextStyle::style ## suffix: \
-                    CORRADE_COMPARE(UnsignedInt(styles[i]), UnsignedInt(TextStyle::style ## suffix)); \
+                    CORRADE_COMPARE(UnsignedInt(TextStyles[i]), UnsignedInt(TextStyle::style ## suffix)); \
                     continue;
             #define _s _c
             #define _e _c
@@ -290,30 +307,27 @@ void ThemeTest::textStyleDark() {
         ++unhandledCount;
     }
     CORRADE_COMPARE(unhandledCount, 0);
+
+    /* Verify that the harcoded StyleCount matches the actual number of entries
+       in the mapping. If it won't, custom theme implementations in user code
+       would break and mock themes in WidgetTester may cause OOB assertions if
+       a widget test picks a style ID that's not less than the outdated
+       value. But most code can still compile correctly and work, which is
+       important for fast iteration when adding new styles. */
+    CORRADE_COMPARE(Implementation::TextStyleCount, Containers::arraySize(TextStyles));
 }
 
 void ThemeTest::textStyleUniformsDark() {
-    const TextStyleUniform styleUniforms[]{
-        #define _c(value, ...) TextStyleUniform::value,
-        #include "Magnum/Ui/Implementation/themeDarkTextStyleUniforms.h"
-        #undef _c
-    };
-
-    /* Verify that the harcoded TextStyleUniformCount matches the actual number
-       of entries in the mapping. The same should be a static_assert() in
-       Theme.cpp already, here it's just a sanity check. */
-    CORRADE_COMPARE(Implementation::TextStyleUniformCount, Containers::arraySize(styleUniforms));
-
     /* This checks that:
         - the mapping contains entries for all enum values (otherwise -Wswitch
           would trigger)
         - none of the values are duplicated (otherwise it'd be a syntax error)
         - the position of the value in the mapping corresponds to the enum
-          value (by checking against the styleUniforms[] above)
+          value (by checking against the TextStyleUniforms[] above)
         - there are no extra values in the array that wouldn't be handled by
           any of the switch cases */
     UnsignedInt unhandledCount = 0;
-    for(UnsignedInt i = 0; i != Implementation::TextStyleUniformCount; ++i) {
+    for(UnsignedInt i = 0; i != Containers::arraySize(TextStyleUniforms); ++i) {
         #ifdef CORRADE_TARGET_GCC
         #pragma GCC diagnostic push
         #pragma GCC diagnostic error "-Wswitch"
@@ -321,7 +335,7 @@ void ThemeTest::textStyleUniformsDark() {
         switch(TextStyleUniform(i)) {
             #define _c(style, ...) \
                 case TextStyleUniform::style: \
-                    CORRADE_COMPARE(UnsignedInt(styleUniforms[i]), UnsignedInt(TextStyleUniform::style)); \
+                    CORRADE_COMPARE(UnsignedInt(TextStyleUniforms[i]), UnsignedInt(TextStyleUniform::style)); \
                     continue;
             #include "Magnum/Ui/Implementation/themeDarkTextStyleUniforms.h"
             #undef _c
@@ -333,33 +347,24 @@ void ThemeTest::textStyleUniformsDark() {
         ++unhandledCount;
     }
     CORRADE_COMPARE(unhandledCount, 0);
+
+    /* Unlike with TextStyle, the count of uniforms is considered an
+       implementation detail, isn't exposed as a hardcoded value anywhere, and
+       thus doesn't need to be compared to the size of the TextStyleUniforms
+       array. */
 }
 
 void ThemeTest::textEditingStyleDark() {
-    const TextEditingStyle styleUniforms[]{
-        #define _c(style, ...) TextEditingStyle::style,
-        #define _s _c
-        #include "Magnum/Ui/Implementation/themeDarkTextEditingStyles.h"
-        #undef _s
-        #undef _c
-    };
-
-    /* Verify that the harcoded BaseStyleCount matches the actual number of
-       entries in the mapping. The same should be a static_assert() in
-       Theme.cpp already, here it's just a sanity check. */
-    CORRADE_COMPARE(Implementation::TextEditingStyleCount, Containers::arraySize(styleUniforms));
-    CORRADE_COMPARE(Implementation::TextEditingStyleUniformCount, Containers::arraySize(styleUniforms));
-
     /* This checks that:
         - the mapping contains entries for all enum values (otherwise -Wswitch
           would trigger)
         - none of the values are duplicated (otherwise it'd be a syntax error)
         - the position of the value in the mapping corresponds to the enum
-          value (by checking against the styleUniforms[] above)
+          value (by checking against the TextEditingStyleUniforms[] above)
         - there are no extra values in the array that wouldn't be handled by
           any of the switch cases */
     UnsignedInt unhandledCount = 0;
-    for(UnsignedInt i = 0; i != Implementation::TextEditingStyleCount; ++i) {
+    for(UnsignedInt i = 0; i != Containers::arraySize(TextEditingStyleUniforms); ++i) {
         #ifdef CORRADE_TARGET_GCC
         #pragma GCC diagnostic push
         #pragma GCC diagnostic error "-Wswitch"
@@ -367,7 +372,7 @@ void ThemeTest::textEditingStyleDark() {
         switch(TextEditingStyle(i)) {
             #define _c(style, ...) \
                 case TextEditingStyle::style: \
-                    CORRADE_COMPARE(UnsignedInt(styleUniforms[i]), UnsignedInt(TextEditingStyle::style)); \
+                    CORRADE_COMPARE(UnsignedInt(TextEditingStyleUniforms[i]), UnsignedInt(TextEditingStyle::style)); \
                     continue;
             #define _s _c
             #include "Magnum/Ui/Implementation/themeDarkTextEditingStyles.h"
@@ -381,32 +386,24 @@ void ThemeTest::textEditingStyleDark() {
         ++unhandledCount;
     }
     CORRADE_COMPARE(unhandledCount, 0);
+
+    /* Unlike with TextStyle, the count of editing styles is considered an
+       implementation detail, isn't exposed as a hardcoded value anywhere, and
+       thus doesn't need to be compared to the size of the TextStyleUniforms
+       array. */
 }
 
 void ThemeTest::layoutStyleDark() {
-    const LayoutStyle styles[]{
-        #define _c(style, ...) LayoutStyle::style,
-        #define _n _c
-        #include "Magnum/Ui/Implementation/themeDarkLayoutStyles.h"
-        #undef _n
-        #undef _c
-    };
-
-    /* Verify that the harcoded LayoutStyleCount matches the actual number of
-       entries in the mapping. The same should be a static_assert() in
-       Theme.cpp already, here it's just a sanity check. */
-    CORRADE_COMPARE(Implementation::LayoutStyleCount, Containers::arraySize(styles));
-
     /* This checks that:
         - the mapping contains entries for all enum values (otherwise -Wswitch
           would trigger)
         - none of the values are duplicated (otherwise it'd be a syntax error)
         - the position of the value in the mapping corresponds to the enum
-          value (by checking against the styles[] above)
+          value (by checking against the LayoutStyles[] above)
         - there are no extra values in the array that wouldn't be handled by
           any of the switch cases */
     UnsignedInt unhandledCount = 0;
-    for(UnsignedInt i = 0; i != Implementation::LayoutStyleCount; ++i) {
+    for(UnsignedInt i = 0; i != Containers::arraySize(LayoutStyles); ++i) {
         #ifdef CORRADE_TARGET_GCC
         #pragma GCC diagnostic push
         #pragma GCC diagnostic error "-Wswitch"
@@ -414,7 +411,7 @@ void ThemeTest::layoutStyleDark() {
         switch(LayoutStyle(i)) {
             #define _c(style, ...) \
                 case LayoutStyle::style: \
-                    CORRADE_COMPARE(UnsignedInt(styles[i]), UnsignedInt(LayoutStyle::style)); \
+                    CORRADE_COMPARE(UnsignedInt(LayoutStyles[i]), UnsignedInt(LayoutStyle::style)); \
                     continue;
             #define _n _c
             #include "Magnum/Ui/Implementation/themeDarkLayoutStyles.h"
@@ -428,6 +425,14 @@ void ThemeTest::layoutStyleDark() {
         ++unhandledCount;
     }
     CORRADE_COMPARE(unhandledCount, 0);
+
+    /* Verify that the harcoded StyleCount matches the actual number of entries
+       in the mapping. If it won't, custom theme implementations in user code
+       would break and mock themes in WidgetTester may cause OOB assertions if
+       a widget test picks a style ID that's not less than the outdated
+       value. But most code can still compile correctly and work, which is
+       important for fast iteration when adding new styles. */
+    CORRADE_COMPARE(Implementation::LayoutStyleCount, Containers::arraySize(LayoutStyles));
 }
 
 void ThemeTest::apply() {
@@ -461,7 +466,7 @@ void ThemeTest::apply() {
     ui.setDataLayerInstance(Containers::pointer<DataLayer>(ui.createLayer()));
 
     struct BaseLayerShared: BaseLayer::Shared {
-        explicit BaseLayerShared(): BaseLayer::Shared{Configuration{Implementation::BaseStyleCount}
+        explicit BaseLayerShared(): BaseLayer::Shared{Configuration{Containers::arraySize(BaseStyleUniforms)}
             .setDynamicStyleCount(10) /* for animations */
         } {}
 
@@ -482,8 +487,8 @@ void ThemeTest::apply() {
     } glyphCache{PixelFormat::R8Unorm, {512, 512}};
 
     struct TestTextLayerShared: TextLayer::Shared {
-        explicit TestTextLayerShared(Text::AbstractGlyphCache& glyphCache): TextLayer::Shared{glyphCache, Configuration{Implementation::TextStyleUniformCount, Implementation::TextStyleCount}
-            .setEditingStyleCount(Implementation::TextEditingStyleCount)
+        explicit TestTextLayerShared(Text::AbstractGlyphCache& glyphCache): TextLayer::Shared{glyphCache, Configuration{Containers::arraySize(TextStyleUniforms), Containers::arraySize(TextStyles)}
+            .setEditingStyleCount(Containers::arraySize(TextEditingStyleUniforms))
             .setDynamicStyleCount(10) /* for animations */
         } {}
 
@@ -498,7 +503,7 @@ void ThemeTest::apply() {
     ui.setTextLayerStyleAnimatorInstance(Containers::pointer<TextLayerStyleAnimator>(ui.createAnimator()));
 
     ui.setEventLayerInstance(Containers::pointer<EventLayer>(ui.createLayer()));
-    ui.setLayoutLayerInstance(Containers::pointer<LayoutLayer>(ui.createLayer(), Implementation::LayoutStyleCount));
+    ui.setLayoutLayerInstance(Containers::pointer<LayoutLayer>(ui.createLayer(), Containers::arraySize(LayoutStyles)));
     ui.setSnapLayouterInstance(Containers::pointer<SnapLayouter>(ui.createLayouter()));
     ui.setGenericLayouterInstance(Containers::pointer<GenericLayouter>(ui.createLayouter()));
 
@@ -609,8 +614,8 @@ void ThemeTest::applyTextLayerCannotOpenFont() {
     } glyphCache{PixelFormat::R8Unorm, {512, 512}};
 
     struct LayerShared: TextLayer::Shared {
-        explicit LayerShared(Text::AbstractGlyphCache& glyphCache): TextLayer::Shared{glyphCache, Configuration{Implementation::TextStyleUniformCount, Implementation::TextStyleCount}
-            .setEditingStyleCount(Implementation::TextEditingStyleCount)
+        explicit LayerShared(Text::AbstractGlyphCache& glyphCache): TextLayer::Shared{glyphCache, Configuration{Containers::arraySize(TextStyleUniforms), Containers::arraySize(TextStyles)}
+            .setEditingStyleCount(Containers::arraySize(TextEditingStyleUniforms))
         } {}
 
         void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
@@ -655,8 +660,8 @@ void ThemeTest::applyTextLayerCannotFillCache() {
     CORRADE_VERIFY(glyphCache.atlas().add({{500, 500}}, offset));
 
     struct LayerShared: TextLayer::Shared {
-        explicit LayerShared(Text::AbstractGlyphCache& glyphCache): TextLayer::Shared{glyphCache, Configuration{Implementation::TextStyleUniformCount, Implementation::TextStyleCount}
-            .setEditingStyleCount(Implementation::TextEditingStyleCount)
+        explicit LayerShared(Text::AbstractGlyphCache& glyphCache): TextLayer::Shared{glyphCache, Configuration{Containers::arraySize(TextStyleUniforms), Containers::arraySize(TextStyles)}
+            .setEditingStyleCount(Containers::arraySize(TextEditingStyleUniforms))
         } {}
 
         void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
@@ -701,8 +706,8 @@ void ThemeTest::applyTextLayerImagesCannotOpen() {
     } glyphCache{PixelFormat::R8Unorm, {512, 512}};
 
     struct LayerShared: TextLayer::Shared {
-        explicit LayerShared(Text::AbstractGlyphCache& glyphCache): TextLayer::Shared{glyphCache, Configuration{Implementation::TextStyleUniformCount, Implementation::TextStyleCount}
-            .setEditingStyleCount(Implementation::TextEditingStyleCount)
+        explicit LayerShared(Text::AbstractGlyphCache& glyphCache): TextLayer::Shared{glyphCache, Configuration{Containers::arraySize(TextStyleUniforms), Containers::arraySize(TextStyles)}
+            .setEditingStyleCount(Containers::arraySize(TextEditingStyleUniforms))
         } {}
 
         void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
@@ -747,8 +752,8 @@ void ThemeTest::applyTextLayerImagesCannotFit() {
     CORRADE_VERIFY(glyphCache.atlas().add({{500, 500}}, offset));
 
     struct LayerShared: TextLayer::Shared {
-        explicit LayerShared(Text::AbstractGlyphCache& glyphCache): TextLayer::Shared{glyphCache, Configuration{Implementation::TextStyleUniformCount, Implementation::TextStyleCount}
-            .setEditingStyleCount(Implementation::TextEditingStyleCount)
+        explicit LayerShared(Text::AbstractGlyphCache& glyphCache): TextLayer::Shared{glyphCache, Configuration{Containers::arraySize(TextStyleUniforms), Containers::arraySize(TextStyles)}
+            .setEditingStyleCount(Containers::arraySize(TextEditingStyleUniforms))
         } {}
 
         void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
@@ -793,8 +798,8 @@ void ThemeTest::applyTextLayerImagesUnexpectedFormat() {
     } glyphCache{PixelFormat::R8Unorm, {512, 512}};
 
     struct LayerShared: TextLayer::Shared {
-        explicit LayerShared(Text::AbstractGlyphCache& glyphCache): TextLayer::Shared{glyphCache, Configuration{Implementation::TextStyleUniformCount, Implementation::TextStyleCount}
-            .setEditingStyleCount(Implementation::TextEditingStyleCount)
+        explicit LayerShared(Text::AbstractGlyphCache& glyphCache): TextLayer::Shared{glyphCache, Configuration{Containers::arraySize(TextStyleUniforms), Containers::arraySize(TextStyles)}
+            .setEditingStyleCount(Containers::arraySize(TextEditingStyleUniforms))
         } {}
 
         void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
@@ -836,8 +841,8 @@ void ThemeTest::applyTextLayerTwice() {
     } glyphCache{PixelFormat::R8Unorm, {512, 512}};
 
     struct TestTextLayerShared: TextLayer::Shared {
-        explicit TestTextLayerShared(Text::AbstractGlyphCache& glyphCache): TextLayer::Shared{glyphCache, Configuration{Implementation::TextStyleUniformCount, Implementation::TextStyleCount}
-            .setEditingStyleCount(Implementation::TextEditingStyleCount)
+        explicit TestTextLayerShared(Text::AbstractGlyphCache& glyphCache): TextLayer::Shared{glyphCache, Configuration{Containers::arraySize(TextStyleUniforms), Containers::arraySize(TextStyles)}
+            .setEditingStyleCount(Containers::arraySize(TextEditingStyleUniforms))
         } {}
 
         void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
@@ -883,8 +888,8 @@ void ThemeTest::removePreviousAnimationForBlinkingCursor() {
     } glyphCache{PixelFormat::R8Unorm, {512, 512}};
 
     struct TestTextLayerShared: TextLayer::Shared {
-        explicit TestTextLayerShared(Text::AbstractGlyphCache& glyphCache): TextLayer::Shared{glyphCache, Configuration{Implementation::TextStyleUniformCount, Implementation::TextStyleCount}
-            .setEditingStyleCount(Implementation::TextEditingStyleCount)
+        explicit TestTextLayerShared(Text::AbstractGlyphCache& glyphCache): TextLayer::Shared{glyphCache, Configuration{Containers::arraySize(TextStyleUniforms), Containers::arraySize(TextStyles)}
+            .setEditingStyleCount(Containers::arraySize(TextEditingStyleUniforms))
             .setDynamicStyleCount(10) /* for animations */
         } {}
 
@@ -924,7 +929,7 @@ void ThemeTest::removePreviousAnimationForBlinkingCursor() {
     /* After an advance it changes to a dynamic style that's associated with an
        animation */
     ui.advanceAnimations(667.0_sec);
-    CORRADE_COMPARE(ui.textLayer().style(data), Implementation::TextStyleCount + 0);
+    CORRADE_COMPARE(ui.textLayer().style(data), Containers::arraySize(TextStyles) + 0);
     AnimationHandle animation = ui.textLayer().dynamicStyleAnimation(0);
     CORRADE_COMPARE(ui.textLayerStyleAnimator().styles(animation), Containers::pair(
         UnsignedInt(Implementation::TextStyle::InputDangerFocusedBlink),

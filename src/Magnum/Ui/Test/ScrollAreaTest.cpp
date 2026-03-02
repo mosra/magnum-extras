@@ -1167,12 +1167,14 @@ template<UnsignedInt nodeCount, ScrollAreaFlag flag> void ScrollAreaTest::scroll
        Even though this is creating the whole UI so many times, it doesn't seem
        to make any significant dent in the total test run time. Interesting. */
 
+    DarkTheme theme;
+
     TestUserInterface ui{NoCreate};
     ui.setDataLayerInstance(Containers::pointer<DataLayer>(ui.createLayer()))
       .setBaseLayerInstance(Containers::pointer<TestBaseLayer>(ui.createLayer(), baseLayerShared))
       /* The text layer isn't used for anything by this widget */
       .setEventLayerInstance(Containers::pointer<EventLayer>(ui.createLayer()))
-      .setLayoutLayerInstance(Containers::pointer<LayoutLayer>(ui.createLayer(), Implementation::LayoutStyleCount))
+      .setLayoutLayerInstance(Containers::pointer<LayoutLayer>(ui.createLayer(), theme.layoutLayerStyleCount()))
       .setSnapLayouterInstance(Containers::pointer<SnapLayouter>(ui.createLayouter()))
       .setGenericLayouterInstance(Containers::pointer<GenericLayouter>(ui.createLayouter()))
       .setSize({100, 100});
@@ -1180,7 +1182,7 @@ template<UnsignedInt nodeCount, ScrollAreaFlag flag> void ScrollAreaTest::scroll
     /* Need the LayoutLayer populated with actual real paddings and min sizes
        as otherwise most inner nodes would have zero sizes, being impossible to
        fire events on */
-    CORRADE_VERIFY(DarkTheme{}.apply(ui, ThemeFeature::LayoutLayer, {}, {}));
+    CORRADE_VERIFY(theme.apply(ui, ThemeFeature::LayoutLayer, {}, {}));
 
     /* If this is the first repeat, fill the index array, otherwise turn it
        into the next permutation. Cannot just call std::next_permutation() in a
