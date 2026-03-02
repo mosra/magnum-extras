@@ -71,13 +71,15 @@ using Implementation::LayoutStyle;
 
 TextStyle textStyleIcon(const LabelStyle style) {
     switch(style) {
-        case LabelStyle::Default:   return TextStyle::LabelDefaultIcon;
-        case LabelStyle::Primary:   return TextStyle::LabelPrimaryIcon;
-        case LabelStyle::Success:   return TextStyle::LabelSuccessIcon;
-        case LabelStyle::Warning:   return TextStyle::LabelWarningIcon;
-        case LabelStyle::Danger:    return TextStyle::LabelDangerIcon;
-        case LabelStyle::Info:      return TextStyle::LabelInfoIcon;
-        case LabelStyle::Dim:       return TextStyle::LabelDimIcon;
+        #define _c(style) case LabelStyle::style: return TextStyle::Label ## style ## Icon;
+        _c(Default)
+        _c(Primary)
+        _c(Success)
+        _c(Warning)
+        _c(Danger)
+        _c(Info)
+        _c(Dim)
+        #undef _c
     }
 
     CORRADE_INTERNAL_ASSERT_UNREACHABLE(); /* LCOV_EXCL_LINE */
@@ -85,13 +87,15 @@ TextStyle textStyleIcon(const LabelStyle style) {
 
 TextStyle textStyleText(const LabelStyle style) {
     switch(style) {
-        case LabelStyle::Default:   return TextStyle::LabelDefaultText;
-        case LabelStyle::Primary:   return TextStyle::LabelPrimaryText;
-        case LabelStyle::Success:   return TextStyle::LabelSuccessText;
-        case LabelStyle::Warning:   return TextStyle::LabelWarningText;
-        case LabelStyle::Danger:    return TextStyle::LabelDangerText;
-        case LabelStyle::Info:      return TextStyle::LabelInfoText;
-        case LabelStyle::Dim:       return TextStyle::LabelDimText;
+        #define _c(style) case LabelStyle::style: return TextStyle::Label ## style ## Text;
+        _c(Default)
+        _c(Primary)
+        _c(Success)
+        _c(Warning)
+        _c(Danger)
+        _c(Info)
+        _c(Dim)
+        #undef _c
     }
 
     CORRADE_INTERNAL_ASSERT_UNREACHABLE(); /* LCOV_EXCL_LINE */

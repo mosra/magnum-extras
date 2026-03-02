@@ -83,16 +83,13 @@ BaseStyle baseStyle(const InputStyle style) {
 
 TextStyle textStyle(const InputStyle style) {
     switch(style) {
-        case InputStyle::Default:
-            return TextStyle::InputDefault;
-        case InputStyle::Success:
-            return TextStyle::InputSuccess;
-        case InputStyle::Warning:
-            return TextStyle::InputWarning;
-        case InputStyle::Danger:
-            return TextStyle::InputDanger;
-        case InputStyle::Flat:
-            return TextStyle::InputFlat;
+        #define _c(style) case InputStyle::style: return TextStyle::Input ## style;
+        _c(Default)
+        _c(Success)
+        _c(Warning)
+        _c(Danger)
+        _c(Flat)
+        #undef _c
     }
 
     CORRADE_INTERNAL_ASSERT_UNREACHABLE(); /* LCOV_EXCL_LINE */
