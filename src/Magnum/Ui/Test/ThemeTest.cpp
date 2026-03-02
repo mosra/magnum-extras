@@ -409,7 +409,7 @@ void ThemeTest::layoutStyleDark() {
         - there are no extra values in the array that wouldn't be handled by
           any of the switch cases */
     UnsignedInt unhandledCount = 0;
-    for(UnsignedInt i = 0; i != Implementation::BaseStyleCount; ++i) {
+    for(UnsignedInt i = 0; i != Implementation::LayoutStyleCount; ++i) {
         #ifdef CORRADE_TARGET_GCC
         #pragma GCC diagnostic push
         #pragma GCC diagnostic error "-Wswitch"
