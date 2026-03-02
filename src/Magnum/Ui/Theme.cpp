@@ -516,13 +516,6 @@ bool DarkTheme::doApply(UserInterface& ui, const ThemeFeatures features, PluginM
         else CORRADE_INTERNAL_ASSERT_UNREACHABLE(); /* LCOV_EXCL_LINE */
     }
 
-    /* Event layer */
-    if(features >= ThemeFeature::EventLayer) {
-        /* Right now nothing to set here. It's present in features() mainly in
-           order to make UserInterface implicitly add this layer for use by the
-           application. */
-    }
-
     /* Layout layer. So far just min sizes, paddings and margins. */
     if(features >= ThemeFeature::LayoutLayer) {
         ui.layoutLayer().setStyle(
@@ -533,12 +526,10 @@ bool DarkTheme::doApply(UserInterface& ui, const ThemeFeatures features, PluginM
             Containers::stridedArrayView(LayoutStylesDark).slice(&std::remove_all_extents<decltype(LayoutStylesDark)>::type::margin));
     }
 
-    /* Snap layouter */
-    if(features >= ThemeFeature::SnapLayouter) {
-        /* Right now nothing to set here. It's present in features() mainly in
-           order to make UserInterface implicitly add this layer for use by the
-           application. */
-    }
+    /* DataLayer, EventLayer, LayoutLayer, SnapLayouter, GenericLayouter have
+       nothing to be set here right now. They're present in features() mainly
+       in order to make UserInterface implicitly add these for use by the
+       widget implementations. */
 
     return true;
 }
