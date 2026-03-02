@@ -215,8 +215,11 @@ void ThemeTest::baseStyleDark() {
         - the mapping contains entries for all enum values (otherwise -Wswitch
           would trigger)
         - none of the values are duplicated (otherwise it'd be a syntax error)
-        - and the position of the value in the mapping corresponds to the
-          enum value (by checking against the styles[] above) */
+        - the position of the value in the mapping corresponds to the enum
+          value (by checking against the styleUniforms[] above)
+        - there are no extra values in the array that wouldn't be handled by
+          any of the switch cases */
+    UnsignedInt unhandledCount = 0;
     for(UnsignedInt i = 0; i != Implementation::BaseStyleCount; ++i) {
         #ifdef CORRADE_TARGET_GCC
         #pragma GCC diagnostic push
@@ -226,14 +229,17 @@ void ThemeTest::baseStyleDark() {
             #define _c(style, ...) \
                 case BaseStyle::style: \
                     CORRADE_COMPARE(UnsignedInt(styleUniforms[i]), UnsignedInt(BaseStyle::style)); \
-                    break;
+                    continue;
             #include "Magnum/Ui/Implementation/themeDarkBaseStyleUniforms.h"
             #undef _c
         }
         #ifdef CORRADE_TARGET_GCC
         #pragma GCC diagnostic pop
         #endif
+
+        ++unhandledCount;
     }
+    CORRADE_COMPARE(unhandledCount, 0);
 }
 
 void ThemeTest::textStyleDark() {
@@ -256,8 +262,11 @@ void ThemeTest::textStyleDark() {
         - the mapping contains entries for all enum values (otherwise -Wswitch
           would trigger)
         - none of the values are duplicated (otherwise it'd be a syntax error)
-        - and the position of the value in the mapping corresponds to the
-          enum value (by checking against the styles[] above) */
+        - the position of the value in the mapping corresponds to the enum
+          value (by checking against the styles[] above)
+        - there are no extra values in the array that wouldn't be handled by
+          any of the switch cases */
+    UnsignedInt unhandledCount = 0;
     for(UnsignedInt i = 0; i != Implementation::TextStyleCount; ++i) {
         #ifdef CORRADE_TARGET_GCC
         #pragma GCC diagnostic push
@@ -269,7 +278,7 @@ void ThemeTest::textStyleDark() {
                     CORRADE_COMPARE(UnsignedInt(styles[i]), UnsignedInt(TextStyle::style ## suffix)); \
                     CORRADE_COMPARE_AS(UnsignedInt(TextStyleUniform::style), Implementation::TextStyleUniformCount, \
                         TestSuite::Compare::Less); \
-                    break;
+                    continue;
             #define _s _c
             #define _e _c
             #include "Magnum/Ui/Implementation/themeDarkTextStyles.h"
@@ -280,7 +289,10 @@ void ThemeTest::textStyleDark() {
         #ifdef CORRADE_TARGET_GCC
         #pragma GCC diagnostic pop
         #endif
+
+        ++unhandledCount;
     }
+    CORRADE_COMPARE(unhandledCount, 0);
 }
 
 void ThemeTest::textStyleUniformsDark() {
@@ -299,8 +311,11 @@ void ThemeTest::textStyleUniformsDark() {
         - the mapping contains entries for all enum values (otherwise -Wswitch
           would trigger)
         - none of the values are duplicated (otherwise it'd be a syntax error)
-        - and the position of the value in the mapping corresponds to the
-          enum value (by checking against the styles[] above) */
+        - the position of the value in the mapping corresponds to the enum
+          value (by checking against the styleUniforms[] above)
+        - there are no extra values in the array that wouldn't be handled by
+          any of the switch cases */
+    UnsignedInt unhandledCount = 0;
     for(UnsignedInt i = 0; i != Implementation::TextStyleUniformCount; ++i) {
         #ifdef CORRADE_TARGET_GCC
         #pragma GCC diagnostic push
@@ -310,14 +325,17 @@ void ThemeTest::textStyleUniformsDark() {
             #define _c(style, ...) \
                 case TextStyleUniform::style: \
                     CORRADE_COMPARE(UnsignedInt(styleUniforms[i]), UnsignedInt(TextStyleUniform::style)); \
-                    break;
+                    continue;
             #include "Magnum/Ui/Implementation/themeDarkTextStyleUniforms.h"
             #undef _c
         }
         #ifdef CORRADE_TARGET_GCC
         #pragma GCC diagnostic pop
         #endif
+
+        ++unhandledCount;
     }
+    CORRADE_COMPARE(unhandledCount, 0);
 }
 
 void ThemeTest::textEditingStyleDark() {
@@ -339,8 +357,11 @@ void ThemeTest::textEditingStyleDark() {
         - the mapping contains entries for all enum values (otherwise -Wswitch
           would trigger)
         - none of the values are duplicated (otherwise it'd be a syntax error)
-        - and the position of the value in the mapping corresponds to the
-          enum value (by checking against the styles[] above) */
+        - the position of the value in the mapping corresponds to the enum
+          value (by checking against the styleUniforms[] above)
+        - there are no extra values in the array that wouldn't be handled by
+          any of the switch cases */
+    UnsignedInt unhandledCount = 0;
     for(UnsignedInt i = 0; i != Implementation::TextEditingStyleCount; ++i) {
         #ifdef CORRADE_TARGET_GCC
         #pragma GCC diagnostic push
@@ -350,7 +371,7 @@ void ThemeTest::textEditingStyleDark() {
             #define _c(style, ...) \
                 case TextEditingStyle::style: \
                     CORRADE_COMPARE(UnsignedInt(styleUniforms[i]), UnsignedInt(TextEditingStyle::style)); \
-                    break;
+                    continue;
             #define _s _c
             #include "Magnum/Ui/Implementation/themeDarkTextEditingStyles.h"
             #undef _s
@@ -359,7 +380,10 @@ void ThemeTest::textEditingStyleDark() {
         #ifdef CORRADE_TARGET_GCC
         #pragma GCC diagnostic pop
         #endif
+
+        ++unhandledCount;
     }
+    CORRADE_COMPARE(unhandledCount, 0);
 }
 
 void ThemeTest::layoutStyleDark() {
@@ -380,8 +404,11 @@ void ThemeTest::layoutStyleDark() {
         - the mapping contains entries for all enum values (otherwise -Wswitch
           would trigger)
         - none of the values are duplicated (otherwise it'd be a syntax error)
-        - and the position of the value in the mapping corresponds to the
-          enum value (by checking against the styles[] above) */
+        - the position of the value in the mapping corresponds to the enum
+          value (by checking against the styles[] above)
+        - there are no extra values in the array that wouldn't be handled by
+          any of the switch cases */
+    UnsignedInt unhandledCount = 0;
     for(UnsignedInt i = 0; i != Implementation::BaseStyleCount; ++i) {
         #ifdef CORRADE_TARGET_GCC
         #pragma GCC diagnostic push
@@ -391,7 +418,7 @@ void ThemeTest::layoutStyleDark() {
             #define _c(style, ...) \
                 case LayoutStyle::style: \
                     CORRADE_COMPARE(UnsignedInt(styles[i]), UnsignedInt(LayoutStyle::style)); \
-                    break;
+                    continue;
             #define _n _c
             #include "Magnum/Ui/Implementation/themeDarkLayoutStyles.h"
             #undef _n
@@ -400,7 +427,10 @@ void ThemeTest::layoutStyleDark() {
         #ifdef CORRADE_TARGET_GCC
         #pragma GCC diagnostic pop
         #endif
+
+        ++unhandledCount;
     }
+    CORRADE_COMPARE(unhandledCount, 0);
 }
 
 void ThemeTest::apply() {
