@@ -221,24 +221,24 @@ constexpr struct {
 };
 
 /* MSVC 2015, 2017 and 2019 cannot handle this in the form of
-    constexpr struct LayoutStyle {
-        constexpr LayoutStyle(...);
+    constexpr struct LayoutLayerStyle {
+        constexpr LayoutLayerStyle(...);
     } LayoutStylesDark[]{
         ...
     };
-   complaining that the LayoutStyle constructor isn't constexpr. Splitting the
-   struct and array definition makes it work. MSVC 2022 works. */
+   complaining that the LayoutLayerStyle constructor isn't constexpr. Splitting
+   the struct and array definition makes it work. MSVC 2022 works. */
 /** @todo clean this up once MSVC 2017 and 2019 is gone */
-struct LayoutStyle {
-    constexpr /*implicit*/ LayoutStyle(const Vector2& minSize, const Vector4& padding, const Vector4& margin): minSize{minSize}, padding{padding}, margin{margin} {}
-    constexpr /*implicit*/ LayoutStyle(const Vector2& minSize, const Vector2& padding, const Vector2& margin): minSize{minSize}, padding{padding.x(), padding.y(), padding.x(), padding.y()}, margin{margin.x(), margin.y(), margin.x(), margin.y()} {}
+struct LayoutLayerStyle {
+    constexpr /*implicit*/ LayoutLayerStyle(const Vector2& minSize, const Vector4& padding, const Vector4& margin): minSize{minSize}, padding{padding}, margin{margin} {}
+    constexpr /*implicit*/ LayoutLayerStyle(const Vector2& minSize, const Vector2& padding, const Vector2& margin): minSize{minSize}, padding{padding.x(), padding.y(), padding.x(), padding.y()}, margin{margin.x(), margin.y(), margin.x(), margin.y()} {}
 
     Vector2 minSize;
     Vector4 padding;
     Vector4 margin;
 };
 
-constexpr LayoutStyle LayoutStylesDark[]{
+constexpr LayoutLayerStyle LayoutStylesDark[]{
     #define _c(style, ...) {__VA_ARGS__},
     #define _n(style, ...) {__VA_ARGS__, Vector4{}, Vector4{}},
     #include "Magnum/Ui/Implementation/themeDarkLayoutStyles.h"

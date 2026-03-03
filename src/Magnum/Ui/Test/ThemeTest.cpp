@@ -896,13 +896,13 @@ void ThemeTest::removePreviousAnimationForBlinkingCursor() {
     /* Not using Input as that would require also the base layer, setting up a
        styled data directly */
     NodeHandle node = ui.createNode({}, {100, 100}, NodeFlag::Focusable);
-    DataHandle data = ui.textLayer().create(Implementation::TextStyle::InputDanger, "", {}, node);
+    DataHandle data = ui.textLayer().create(TextStyle::InputDanger, "", {}, node);
 
     /* Press switches to InputDangerPressed, immediately */
     PointerEvent pressEvent{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
     CORRADE_VERIFY(ui.pointerPressEvent({50, 50}, pressEvent));
     CORRADE_COMPARE(ui.textLayerStyleAnimator().capacity(), 0);
-    CORRADE_COMPARE(ui.textLayer().style(data), UnsignedInt(Implementation::TextStyle::InputDangerPressed));
+    CORRADE_COMPARE(ui.textLayer().style(data), UnsignedInt(TextStyle::InputDangerPressed));
 
     /* Release makes a transition animation, and then directly after a
        persistent animation, removing the transition. Initially the style is
@@ -911,7 +911,7 @@ void ThemeTest::removePreviousAnimationForBlinkingCursor() {
     CORRADE_VERIFY(ui.pointerReleaseEvent({50, 50}, releaseEvent));
     CORRADE_COMPARE(ui.textLayerStyleAnimator().capacity(), 1);
     CORRADE_COMPARE(ui.currentFocusedNode(), node);
-    CORRADE_COMPARE(ui.textLayer().style(data), UnsignedInt(Implementation::TextStyle::InputDangerPressed));
+    CORRADE_COMPARE(ui.textLayer().style(data), UnsignedInt(TextStyle::InputDangerPressed));
 
     /* After an advance it changes to a dynamic style that's associated with an
        animation */
@@ -919,8 +919,8 @@ void ThemeTest::removePreviousAnimationForBlinkingCursor() {
     CORRADE_COMPARE(ui.textLayer().style(data), Containers::arraySize(TextStyles) + 0);
     AnimationHandle animation = ui.textLayer().dynamicStyleAnimation(0);
     CORRADE_COMPARE(ui.textLayerStyleAnimator().styles(animation), Containers::pair(
-        UnsignedInt(Implementation::TextStyle::InputDangerFocusedBlink),
-        UnsignedInt(Implementation::TextStyle::InputDangerFocused)));
+        UnsignedInt(TextStyle::InputDangerFocusedBlink),
+        UnsignedInt(TextStyle::InputDangerFocused)));
     /* The animation has a handle with generation 2 as it replaces the
        previously made transition animation */
     CORRADE_COMPARE(animationHandleData(animation), animatorDataHandle(0, 2));

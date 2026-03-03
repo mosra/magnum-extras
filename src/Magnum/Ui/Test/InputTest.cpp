@@ -79,6 +79,9 @@ InputTest::InputTest() {
        &WidgetTester::teardown);
 }
 
+using Implementation::BaseStyle;
+using Implementation::TextStyle;
+
 void InputTest::debugStyle() {
     Containers::String out;
     Debug{&out} << InputStyle::Warning << InputStyle(0xef);
@@ -148,9 +151,9 @@ void InputTest::setStyle() {
     input.setStyle(InputStyle::Success);
     CORRADE_COMPARE(input.style(), InputStyle::Success);
     CORRADE_COMPARE(ui.baseLayer().style(input.backgroundData()),
-        UnsignedInt(Implementation::BaseStyle::InputSuccess));
+        UnsignedInt(BaseStyle::InputSuccess));
     CORRADE_COMPARE(ui.textLayer().style(input.textData()),
-        UnsignedInt(Implementation::TextStyle::InputSuccess));
+        UnsignedInt(TextStyle::InputSuccess));
 }
 
 void InputTest::setStyleWhileActive() {
@@ -158,25 +161,25 @@ void InputTest::setStyleWhileActive() {
     CORRADE_COMPARE(input.style(), InputStyle::Success);
 
     CORRADE_COMPARE(ui.baseLayer().style(input.backgroundData()),
-        UnsignedInt(Implementation::BaseStyle::InputSuccess));
+        UnsignedInt(BaseStyle::InputSuccess));
     CORRADE_COMPARE(ui.textLayer().style(input.textData()),
-        UnsignedInt(Implementation::TextStyle::InputSuccess));
+        UnsignedInt(TextStyle::InputSuccess));
 
     FocusEvent focusEvent{{}};
     CORRADE_VERIFY(ui.focusEvent(input, focusEvent));
     CORRADE_COMPARE(ui.currentFocusedNode(), input);
 
     /* Verify that style transition works */
-    CORRADE_COMPARE(ui.baseLayer().style(input.backgroundData()), UnsignedInt(Implementation::BaseStyle::InputSuccessFocused));
-    CORRADE_COMPARE(ui.textLayer().style(input.textData()), UnsignedInt(Implementation::TextStyle::InputSuccessFocused));
+    CORRADE_COMPARE(ui.baseLayer().style(input.backgroundData()), UnsignedInt(BaseStyle::InputSuccessFocused));
+    CORRADE_COMPARE(ui.textLayer().style(input.textData()), UnsignedInt(TextStyle::InputSuccessFocused));
 
     input.setStyle(InputStyle::Default);
     CORRADE_COMPARE(input.style(), InputStyle::Default);
 
     /* All styles should now be changed in a way that preserves the current
        focused state */
-    CORRADE_COMPARE(ui.baseLayer().style(input.backgroundData()), UnsignedInt(Implementation::BaseStyle::InputDefaultFocused));
-    CORRADE_COMPARE(ui.textLayer().style(input.textData()), UnsignedInt(Implementation::TextStyle::InputDefaultFocused));
+    CORRADE_COMPARE(ui.baseLayer().style(input.backgroundData()), UnsignedInt(BaseStyle::InputDefaultFocused));
+    CORRADE_COMPARE(ui.textLayer().style(input.textData()), UnsignedInt(TextStyle::InputDefaultFocused));
 }
 
 void InputTest::setText() {

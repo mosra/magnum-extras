@@ -194,6 +194,9 @@ ButtonTest::ButtonTest() {
        &WidgetTester::teardown);
 }
 
+using Implementation::BaseStyle;
+using Implementation::TextStyle;
+
 void ButtonTest::debugStyle() {
     Containers::String out;
     Debug{&out} << ButtonStyle::Success << ButtonStyle(0xef);
@@ -701,7 +704,7 @@ void ButtonTest::setStyle() {
     button.setStyle(ButtonStyle::Success);
     CORRADE_COMPARE(button.style(), ButtonStyle::Success);
     CORRADE_COMPARE(ui.baseLayer().style(button.backgroundData()),
-        UnsignedInt(Implementation::BaseStyle::ButtonSuccess));
+        UnsignedInt(BaseStyle::ButtonSuccess));
     /* These have different combinations based on whether just one or both are
        present, verifying just that it's different. StyleGLTest verifies the
        actual visuals and thus also catches potential mismatches. */
@@ -719,27 +722,27 @@ void ButtonTest::setStyleWhileActive() {
     Button button{{rootAnchor, {}, {32, 16}}, Icon::No, "yes", ButtonStyle::Primary};
     CORRADE_COMPARE(button.style(), ButtonStyle::Primary);
 
-    CORRADE_COMPARE(ui.baseLayer().style(button.backgroundData()), UnsignedInt(Implementation::BaseStyle::ButtonPrimary));
-    CORRADE_COMPARE(ui.textLayer().style(button.iconData()), UnsignedInt(Implementation::TextStyle::ButtonIcon));
-    CORRADE_COMPARE(ui.textLayer().style(button.textData()), UnsignedInt(Implementation::TextStyle::ButtonText));
+    CORRADE_COMPARE(ui.baseLayer().style(button.backgroundData()), UnsignedInt(BaseStyle::ButtonPrimary));
+    CORRADE_COMPARE(ui.textLayer().style(button.iconData()), UnsignedInt(TextStyle::ButtonIcon));
+    CORRADE_COMPARE(ui.textLayer().style(button.textData()), UnsignedInt(TextStyle::ButtonText));
 
     PointerEvent pressEvent{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
     CORRADE_VERIFY(ui.pointerPressEvent({16, 8}, pressEvent));
     CORRADE_COMPARE(ui.currentPressedNode(), button);
 
     /* Verify that style transition works */
-    CORRADE_COMPARE(ui.baseLayer().style(button.backgroundData()), UnsignedInt(Implementation::BaseStyle::ButtonPrimaryPressed));
-    CORRADE_COMPARE(ui.textLayer().style(button.iconData()), UnsignedInt(Implementation::TextStyle::ButtonPressedIcon));
-    CORRADE_COMPARE(ui.textLayer().style(button.textData()), UnsignedInt(Implementation::TextStyle::ButtonPressedText));
+    CORRADE_COMPARE(ui.baseLayer().style(button.backgroundData()), UnsignedInt(BaseStyle::ButtonPrimaryPressed));
+    CORRADE_COMPARE(ui.textLayer().style(button.iconData()), UnsignedInt(TextStyle::ButtonPressedIcon));
+    CORRADE_COMPARE(ui.textLayer().style(button.textData()), UnsignedInt(TextStyle::ButtonPressedText));
 
     button.setStyle(ButtonStyle::Flat);
     CORRADE_COMPARE(button.style(), ButtonStyle::Flat);
 
     /* All styles should now be changed in a way that preserves the current
        pressed state */
-    CORRADE_COMPARE(ui.baseLayer().style(button.backgroundData()), UnsignedInt(Implementation::BaseStyle::ButtonFlatPressed));
-    CORRADE_COMPARE(ui.textLayer().style(button.iconData()), UnsignedInt(Implementation::TextStyle::ButtonFlatPressedIcon));
-    CORRADE_COMPARE(ui.textLayer().style(button.textData()), UnsignedInt(Implementation::TextStyle::ButtonFlatPressedText));
+    CORRADE_COMPARE(ui.baseLayer().style(button.backgroundData()), UnsignedInt(BaseStyle::ButtonFlatPressed));
+    CORRADE_COMPARE(ui.textLayer().style(button.iconData()), UnsignedInt(TextStyle::ButtonFlatPressedIcon));
+    CORRADE_COMPARE(ui.textLayer().style(button.textData()), UnsignedInt(TextStyle::ButtonFlatPressedText));
 }
 
 void ButtonTest::setIcon() {
