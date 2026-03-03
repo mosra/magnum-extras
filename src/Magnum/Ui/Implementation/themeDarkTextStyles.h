@@ -148,6 +148,61 @@ _c(InputFlatFocusedBlink, Main, MiddleLeft, {10.0f, 4.0f, 6.0f, 4.0f},
 _c(InputFlatPressed, Main, MiddleLeft, {10.0f, 5.0f, 6.0f, 3.0f},
     14 /* InputCursorFocusedFlat */, 15 /* InputSelectionFlat */)
 _c(InputFlatDisabled, Main, MiddleLeft, {10.0f, 4.0f, 6.0f, 4.0f})
+_c(InputDefaultPassword, Password, MiddleLeft, {10.0f, 4.0f, 6.0f, 4.0f},
+    0 /* InputCursorNone */, 3 /* InputSelectionDefault */)
+_c(InputDefaultPasswordHovered, Password, MiddleLeft, {10.0f, 4.0f, 6.0f, 4.0f},
+    1 /* InputCursorDefault */, 3 /* InputSelectionDefault */)
+_c(InputDefaultPasswordFocused, Password, MiddleLeft, {10.0f, 4.0f, 6.0f, 4.0f},
+    2 /* InputCursorFocusedDefault */, 3 /* InputSelectionDefault */)
+_c(InputDefaultPasswordFocusedBlink, Password, MiddleLeft, {10.0f, 4.0f, 6.0f, 4.0f},
+    0 /* InputCursorNone */, 3 /* InputSelectionDefault */)
+_c(InputDefaultPasswordPressed, Password, MiddleLeft, {10.0f, 5.0f, 6.0f, 3.0f},
+    2 /* InputCursorFocusedDefault */, 3 /* InputSelectionDefault */)
+_c(InputDefaultPasswordDisabled, Password, MiddleLeft, {10.0f, 4.0f, 6.0f, 4.0f})
+_c(InputSuccessPassword, Password, MiddleLeft, {10.0f, 4.0f, 6.0f, 4.0f},
+    0 /* InputCursorNone */, 6 /* InputSelectionSuccess */)
+_c(InputSuccessPasswordHovered, Password, MiddleLeft, {10.0f, 4.0f, 6.0f, 4.0f},
+    4 /* InputCursorSuccess */, 6 /* InputSelectionSuccess */)
+_c(InputSuccessPasswordFocused, Password, MiddleLeft, {10.0f, 4.0f, 6.0f, 4.0f},
+    5 /* InputCursorFocusedSuccess */, 6 /* InputSelectionSuccess */)
+_c(InputSuccessPasswordFocusedBlink, Password, MiddleLeft, {10.0f, 4.0f, 6.0f, 4.0f},
+    0 /* InputCursorNone */, 6 /* InputSelectionSuccess */)
+_c(InputSuccessPasswordPressed, Password, MiddleLeft, {10.0f, 5.0f, 6.0f, 3.0f},
+    5 /* InputCursorFocusedSuccess */, 6 /* InputSelectionSuccess */)
+_c(InputSuccessPasswordDisabled, Password, MiddleLeft, {10.0f, 4.0f, 6.0f, 4.0f})
+_c(InputWarningPassword, Password, MiddleLeft, {10.0f, 4.0f, 6.0f, 4.0f},
+    0 /* InputCursorNone */, 9 /* InputSelectionWarning */)
+_c(InputWarningPasswordHovered, Password, MiddleLeft, {10.0f, 4.0f, 6.0f, 4.0f},
+    7 /* InputCursorWarning */, 9 /* InputSelectionWarning */)
+_c(InputWarningPasswordFocused, Password, MiddleLeft, {10.0f, 4.0f, 6.0f, 4.0f},
+    8 /* InputCursorFocusedWarning */, 9 /* InputSelectionWarning */)
+_c(InputWarningPasswordFocusedBlink, Password, MiddleLeft, {10.0f, 4.0f, 6.0f, 4.0f},
+    0 /* InputCursorNone */, 9 /* InputSelectionWarning */)
+_c(InputWarningPasswordPressed, Password, MiddleLeft, {10.0f, 5.0f, 6.0f, 3.0f},
+    8 /* InputCursorFocusedWarning */, 9 /* InputSelectionWarning */)
+_c(InputWarningPasswordDisabled, Password, MiddleLeft, {10.0f, 4.0f, 6.0f, 4.0f})
+_c(InputDangerPassword, Password, MiddleLeft, {10.0f, 4.0f, 6.0f, 4.0f},
+    0 /* InputCursorNone */, 12 /* InputSelectionDanger */)
+_c(InputDangerPasswordHovered, Password, MiddleLeft, {10.0f, 4.0f, 6.0f, 4.0f},
+    10 /* InputCursorDanger */, 12 /* InputSelectionDanger */)
+_c(InputDangerPasswordFocused, Password, MiddleLeft, {10.0f, 4.0f, 6.0f, 4.0f},
+    11 /* InputCursorFocusedDanger */, 12 /* InputSelectionDanger */)
+_c(InputDangerPasswordFocusedBlink, Password, MiddleLeft, {10.0f, 4.0f, 6.0f, 4.0f},
+    0 /* InputCursorNone */, 12 /* InputSelectionDanger */)
+_c(InputDangerPasswordPressed, Password, MiddleLeft, {10.0f, 5.0f, 6.0f, 3.0f},
+    11 /* InputCursorFocusedDanger */, 12 /* InputSelectionDanger */)
+_c(InputDangerPasswordDisabled, Password, MiddleLeft, {10.0f, 4.0f, 6.0f, 4.0f})
+_c(InputFlatPassword, Password, MiddleLeft, {10.0f, 4.0f, 6.0f, 4.0f},
+    0 /* InputCursorNone */, 15 /* InputSelectionFlat */)
+_c(InputFlatPasswordHovered, Password, MiddleLeft, {10.0f, 4.0f, 6.0f, 4.0f},
+    13 /* InputCursorFlat */, 15 /* InputSelectionFlat */)
+_c(InputFlatPasswordFocused, Password, MiddleLeft, {10.0f, 4.0f, 6.0f, 4.0f},
+    14 /* InputCursorFocusedFlat */, 15 /* InputSelectionFlat */)
+_c(InputFlatPasswordFocusedBlink, Password, MiddleLeft, {10.0f, 4.0f, 6.0f, 4.0f},
+    0 /* InputCursorNone */, 15 /* InputSelectionFlat */)
+_c(InputFlatPasswordPressed, Password, MiddleLeft, {10.0f, 5.0f, 6.0f, 3.0f},
+    14 /* InputCursorFocusedFlat */, 15 /* InputSelectionFlat */)
+_c(InputFlatPasswordDisabled, Password, MiddleLeft, {10.0f, 4.0f, 6.0f, 4.0f})
 #endif
 /* Style -> uniform ID in themeDarkTextStyleUniforms.h */
 #ifdef _u
@@ -155,5 +210,7 @@ _u(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20,
    21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39,
    40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58,
    59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77,
-   78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94)
+   78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96,
+   97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112,
+   113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124)
 #endif

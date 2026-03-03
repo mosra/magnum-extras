@@ -556,47 +556,77 @@ void dark(Containers::ArrayView<Ui::BaseLayerStyleUniform> baseUniforms, Contain
                    TextStyle::InputDefaultHovered,
                    TextStyle::InputDefaultFocused,
                    TextStyle::InputDefaultFocusedBlink,
-                   TextStyle::InputDefaultPressed})
+                   TextStyle::InputDefaultPressed,
+                   TextStyle::InputDefaultPassword,
+                   TextStyle::InputDefaultPasswordHovered,
+                   TextStyle::InputDefaultPasswordFocused,
+                   TextStyle::InputDefaultPasswordFocusedBlink,
+                   TextStyle::InputDefaultPasswordPressed})
         textUniforms[Int(i)].setColor(0xdcdcdc_rgbf);
-    textUniforms[Int(TextStyle::InputDefaultDisabled)]
-        .setColor({0xdcdcdc_rgbf, disabledOpacity});
+    for(auto&& i: {TextStyle::InputDefaultDisabled,
+                   TextStyle::InputDefaultPasswordDisabled})
+        textUniforms[Int(i)].setColor({0xdcdcdc_rgbf, disabledOpacity});
 
     for(auto&& i: {TextStyle::InputSuccess,
                    TextStyle::InputSuccessHovered,
                    TextStyle::InputSuccessFocused,
                    TextStyle::InputSuccessFocusedBlink,
-                   TextStyle::InputSuccessPressed})
+                   TextStyle::InputSuccessPressed,
+                   TextStyle::InputSuccessPassword,
+                   TextStyle::InputSuccessPasswordHovered,
+                   TextStyle::InputSuccessPasswordFocused,
+                   TextStyle::InputSuccessPasswordFocusedBlink,
+                   TextStyle::InputSuccessPasswordPressed})
         textUniforms[Int(i)].setColor(0xacecbe_rgbf);
-    textUniforms[Int(TextStyle::InputSuccessDisabled)]
-        .setColor({0xacecbe_rgbf, disabledOpacity});
+    for(auto&& i: {TextStyle::InputSuccessDisabled,
+                   TextStyle::InputSuccessPasswordDisabled})
+        textUniforms[Int(i)].setColor({0xacecbe_rgbf, disabledOpacity});
 
     for(auto&& i: {TextStyle::InputWarning,
                    TextStyle::InputWarningHovered,
                    TextStyle::InputWarningFocused,
                    TextStyle::InputWarningFocusedBlink,
-                   TextStyle::InputWarningPressed})
+                   TextStyle::InputWarningPressed,
+                   TextStyle::InputWarningPassword,
+                   TextStyle::InputWarningPasswordHovered,
+                   TextStyle::InputWarningPasswordFocused,
+                   TextStyle::InputWarningPasswordFocusedBlink,
+                   TextStyle::InputWarningPasswordPressed})
         textUniforms[Int(i)].setColor(0xe9ecae_rgbf);
-    textUniforms[Int(TextStyle::InputWarningDisabled)]
-        .setColor({0xe9ecae_rgbf, disabledOpacity});
+    for(auto&& i: {TextStyle::InputWarningDisabled,
+                   TextStyle::InputWarningPasswordDisabled})
+        textUniforms[Int(i)].setColor({0xe9ecae_rgbf, disabledOpacity});
 
     for(auto&& i: {TextStyle::InputDanger,
                    TextStyle::InputDangerHovered,
                    TextStyle::InputDangerFocused,
                    TextStyle::InputDangerFocusedBlink,
-                   TextStyle::InputDangerPressed})
+                   TextStyle::InputDangerPressed,
+                   TextStyle::InputDangerPassword,
+                   TextStyle::InputDangerPasswordHovered,
+                   TextStyle::InputDangerPasswordFocused,
+                   TextStyle::InputDangerPasswordFocusedBlink,
+                   TextStyle::InputDangerPasswordPressed})
         textUniforms[Int(i)].setColor(0xff9391_rgbf);
-    textUniforms[Int(TextStyle::InputDangerDisabled)]
-        .setColor({0xff9391_rgbf, disabledOpacity});
+    for(auto&& i: {TextStyle::InputDangerDisabled,
+                   TextStyle::InputDangerPasswordDisabled})
+        textUniforms[Int(i)].setColor({0xff9391_rgbf, disabledOpacity});
 
     /* Flat input text is --link-active-color */
     for(auto&& i: {TextStyle::InputFlat,
                    TextStyle::InputFlatHovered,
                    TextStyle::InputFlatFocused,
                    TextStyle::InputFlatFocusedBlink,
-                   TextStyle::InputFlatPressed})
+                   TextStyle::InputFlatPressed,
+                   TextStyle::InputFlatPassword,
+                   TextStyle::InputFlatPasswordHovered,
+                   TextStyle::InputFlatPasswordFocused,
+                   TextStyle::InputFlatPasswordFocusedBlink,
+                   TextStyle::InputFlatPasswordPressed})
         textUniforms[Int(i)].setColor(0xa5c9ea_rgbf);
-    textUniforms[Int(TextStyle::InputFlatDisabled)]
-        .setColor({0xa5c9ea_rgbf, disabledOpacity});
+    for(auto&& i: {TextStyle::InputFlatDisabled,
+                   TextStyle::InputFlatPasswordDisabled})
+        textUniforms[Int(i)].setColor({0xa5c9ea_rgbf, disabledOpacity});
 
     /* Cursor and selection style assignment. Disabled styles have neither
        cursor nor selection visible. */
@@ -607,75 +637,125 @@ void dark(Containers::ArrayView<Ui::BaseLayerStyleUniform> baseUniforms, Contain
                    TextStyle::InputDefaultHovered,
                    TextStyle::InputDefaultFocused,
                    TextStyle::InputDefaultFocusedBlink,
-                   TextStyle::InputDefaultPressed})
+                   TextStyle::InputDefaultPressed,
+                   TextStyle::InputDefaultPassword,
+                   TextStyle::InputDefaultPasswordHovered,
+                   TextStyle::InputDefaultPasswordFocused,
+                   TextStyle::InputDefaultPasswordFocusedBlink,
+                   TextStyle::InputDefaultPasswordPressed})
         textStyles[Int(i)].selectionStyle = TextEditingStyle::InputSelectionDefault;
     for(auto&& i: {TextStyle::InputDefault,
-                   TextStyle::InputDefaultFocusedBlink})
+                   TextStyle::InputDefaultFocusedBlink,
+                   TextStyle::InputDefaultPassword,
+                   TextStyle::InputDefaultPasswordFocusedBlink})
         textStyles[Int(i)].cursorStyle = TextEditingStyle::InputCursorNone;
-    textStyles[Int(TextStyle::InputDefaultHovered)]
-        .cursorStyle = TextEditingStyle::InputCursorDefault;
+    for(auto&& i: {TextStyle::InputDefaultHovered,
+                   TextStyle::InputDefaultPasswordHovered})
+        textStyles[Int(i)].cursorStyle = TextEditingStyle::InputCursorDefault;
     for(auto&& i: {TextStyle::InputDefaultFocused,
-                   TextStyle::InputDefaultPressed})
+                   TextStyle::InputDefaultPressed,
+                   TextStyle::InputDefaultPasswordFocused,
+                   TextStyle::InputDefaultPasswordPressed})
         textStyles[Int(i)].cursorStyle = TextEditingStyle::InputCursorFocusedDefault;
 
     for(auto&& i: {TextStyle::InputSuccess,
                    TextStyle::InputSuccessHovered,
                    TextStyle::InputSuccessFocused,
                    TextStyle::InputSuccessFocusedBlink,
-                   TextStyle::InputSuccessPressed})
+                   TextStyle::InputSuccessPressed,
+                   TextStyle::InputSuccessPassword,
+                   TextStyle::InputSuccessPasswordHovered,
+                   TextStyle::InputSuccessPasswordFocused,
+                   TextStyle::InputSuccessPasswordFocusedBlink,
+                   TextStyle::InputSuccessPasswordPressed})
         textStyles[Int(i)].selectionStyle = TextEditingStyle::InputSelectionSuccess;
     for(auto&& i: {TextStyle::InputSuccess,
-                   TextStyle::InputSuccessFocusedBlink})
+                   TextStyle::InputSuccessFocusedBlink,
+                   TextStyle::InputSuccessPassword,
+                   TextStyle::InputSuccessPasswordFocusedBlink})
         textStyles[Int(i)].cursorStyle = TextEditingStyle::InputCursorNone;
-    textStyles[Int(TextStyle::InputSuccessHovered)]
-        .cursorStyle = TextEditingStyle::InputCursorSuccess;
+    for(auto&& i: {TextStyle::InputSuccessHovered,
+                   TextStyle::InputSuccessPasswordHovered})
+        textStyles[Int(i)].cursorStyle = TextEditingStyle::InputCursorSuccess;
     for(auto&& i: {TextStyle::InputSuccessFocused,
-                   TextStyle::InputSuccessPressed})
+                   TextStyle::InputSuccessPressed,
+                   TextStyle::InputSuccessPasswordFocused,
+                   TextStyle::InputSuccessPasswordPressed})
         textStyles[Int(i)].cursorStyle = TextEditingStyle::InputCursorFocusedSuccess;
 
     for(auto&& i: {TextStyle::InputWarning,
                    TextStyle::InputWarningHovered,
                    TextStyle::InputWarningFocused,
                    TextStyle::InputWarningFocusedBlink,
-                   TextStyle::InputWarningPressed})
+                   TextStyle::InputWarningPressed,
+                   TextStyle::InputWarningPassword,
+                   TextStyle::InputWarningPasswordHovered,
+                   TextStyle::InputWarningPasswordFocused,
+                   TextStyle::InputWarningPasswordFocusedBlink,
+                   TextStyle::InputWarningPasswordPressed})
         textStyles[Int(i)].selectionStyle = TextEditingStyle::InputSelectionWarning;
     for(auto&& i: {TextStyle::InputWarning,
-                   TextStyle::InputWarningFocusedBlink})
+                   TextStyle::InputWarningFocusedBlink,
+                   TextStyle::InputWarningPassword,
+                   TextStyle::InputWarningPasswordFocusedBlink})
         textStyles[Int(i)].cursorStyle = TextEditingStyle::InputCursorNone;
-    textStyles[Int(TextStyle::InputWarningHovered)]
-        .cursorStyle = TextEditingStyle::InputCursorWarning;
+    for(auto&& i: {TextStyle::InputWarningHovered,
+                   TextStyle::InputWarningPasswordHovered})
+        textStyles[Int(i)].cursorStyle = TextEditingStyle::InputCursorWarning;
     for(auto&& i: {TextStyle::InputWarningFocused,
-                   TextStyle::InputWarningPressed})
+                   TextStyle::InputWarningPressed,
+                   TextStyle::InputWarningPasswordFocused,
+                   TextStyle::InputWarningPasswordPressed})
         textStyles[Int(i)].cursorStyle = TextEditingStyle::InputCursorFocusedWarning;
 
     for(auto&& i: {TextStyle::InputDanger,
                    TextStyle::InputDangerHovered,
                    TextStyle::InputDangerFocused,
                    TextStyle::InputDangerFocusedBlink,
-                   TextStyle::InputDangerPressed})
+                   TextStyle::InputDangerPressed,
+                   TextStyle::InputDangerPassword,
+                   TextStyle::InputDangerPasswordHovered,
+                   TextStyle::InputDangerPasswordFocused,
+                   TextStyle::InputDangerPasswordFocusedBlink,
+                   TextStyle::InputDangerPasswordPressed})
         textStyles[Int(i)].selectionStyle = TextEditingStyle::InputSelectionDanger;
     for(auto&& i: {TextStyle::InputDanger,
-                   TextStyle::InputDangerFocusedBlink})
+                   TextStyle::InputDangerFocusedBlink,
+                   TextStyle::InputDangerPassword,
+                   TextStyle::InputDangerPasswordFocusedBlink})
         textStyles[Int(i)].cursorStyle = TextEditingStyle::InputCursorNone;
-    textStyles[Int(TextStyle::InputDangerHovered)]
-        .cursorStyle = TextEditingStyle::InputCursorDanger;
+    for(auto&& i: {TextStyle::InputDangerHovered,
+                   TextStyle::InputDangerPasswordHovered})
+        textStyles[Int(i)].cursorStyle = TextEditingStyle::InputCursorDanger;
     for(auto&& i: {TextStyle::InputDangerFocused,
-                   TextStyle::InputDangerPressed})
+                   TextStyle::InputDangerPressed,
+                   TextStyle::InputDangerPasswordFocused,
+                   TextStyle::InputDangerPasswordPressed})
         textStyles[Int(i)].cursorStyle = TextEditingStyle::InputCursorFocusedDanger;
 
     for(auto&& i: {TextStyle::InputFlat,
                    TextStyle::InputFlatHovered,
                    TextStyle::InputFlatFocused,
                    TextStyle::InputFlatFocusedBlink,
-                   TextStyle::InputFlatPressed})
+                   TextStyle::InputFlatPressed,
+                   TextStyle::InputFlatPassword,
+                   TextStyle::InputFlatPasswordHovered,
+                   TextStyle::InputFlatPasswordFocused,
+                   TextStyle::InputFlatPasswordFocusedBlink,
+                   TextStyle::InputFlatPasswordPressed})
         textStyles[Int(i)].selectionStyle = TextEditingStyle::InputSelectionFlat;
     for(auto&& i: {TextStyle::InputFlat,
-                   TextStyle::InputFlatFocusedBlink})
+                   TextStyle::InputFlatFocusedBlink,
+                   TextStyle::InputFlatPassword,
+                   TextStyle::InputFlatPasswordFocusedBlink})
         textStyles[Int(i)].cursorStyle = TextEditingStyle::InputCursorNone;
-    textStyles[Int(TextStyle::InputFlatHovered)]
-        .cursorStyle = TextEditingStyle::InputCursorFlat;
+    for(auto&& i: {TextStyle::InputFlatHovered,
+                   TextStyle::InputFlatPasswordHovered})
+        textStyles[Int(i)].cursorStyle = TextEditingStyle::InputCursorFlat;
     for(auto&& i: {TextStyle::InputFlatFocused,
-                   TextStyle::InputFlatPressed})
+                   TextStyle::InputFlatPressed,
+                   TextStyle::InputFlatPasswordFocused,
+                   TextStyle::InputFlatPasswordPressed})
         textStyles[Int(i)].cursorStyle = TextEditingStyle::InputCursorFocusedFlat;
 
     /* No cursor. Is Used to have all Input* styles with both selection and
@@ -760,6 +840,39 @@ void dark(Containers::ArrayView<Ui::BaseLayerStyleUniform> baseUniforms, Contain
                    TextEditingStyle::InputSelectionFlat})
         textSelectionUniforms[Int(i)].setColor({0x22272e_rgbf});
 
+    /* Password font for password inputs */
+    for(auto&& i: {TextStyle::InputDefaultPassword,
+                   TextStyle::InputDefaultPasswordHovered,
+                   TextStyle::InputDefaultPasswordFocused,
+                   TextStyle::InputDefaultPasswordFocusedBlink,
+                   TextStyle::InputDefaultPasswordPressed,
+                   TextStyle::InputDefaultPasswordDisabled,
+                   TextStyle::InputSuccessPassword,
+                   TextStyle::InputSuccessPasswordHovered,
+                   TextStyle::InputSuccessPasswordFocused,
+                   TextStyle::InputSuccessPasswordFocusedBlink,
+                   TextStyle::InputSuccessPasswordPressed,
+                   TextStyle::InputSuccessPasswordDisabled,
+                   TextStyle::InputWarningPassword,
+                   TextStyle::InputWarningPasswordHovered,
+                   TextStyle::InputWarningPasswordFocused,
+                   TextStyle::InputWarningPasswordFocusedBlink,
+                   TextStyle::InputWarningPasswordPressed,
+                   TextStyle::InputWarningPasswordDisabled,
+                   TextStyle::InputDangerPassword,
+                   TextStyle::InputDangerPasswordHovered,
+                   TextStyle::InputDangerPasswordFocused,
+                   TextStyle::InputDangerPasswordFocusedBlink,
+                   TextStyle::InputDangerPasswordPressed,
+                   TextStyle::InputDangerPasswordDisabled,
+                   TextStyle::InputFlatPassword,
+                   TextStyle::InputFlatPasswordHovered,
+                   TextStyle::InputFlatPasswordFocused,
+                   TextStyle::InputFlatPasswordFocusedBlink,
+                   TextStyle::InputFlatPasswordPressed,
+                   TextStyle::InputFlatPasswordDisabled})
+        textStyles[Int(i)].font = TextFont::Password;
+
     /* All inputs align to left */
     for(auto&& i: {TextStyle::InputDefault,
                    TextStyle::InputDefaultHovered,
@@ -767,30 +880,60 @@ void dark(Containers::ArrayView<Ui::BaseLayerStyleUniform> baseUniforms, Contain
                    TextStyle::InputDefaultFocusedBlink,
                    TextStyle::InputDefaultPressed,
                    TextStyle::InputDefaultDisabled,
+                   TextStyle::InputDefaultPassword,
+                   TextStyle::InputDefaultPasswordHovered,
+                   TextStyle::InputDefaultPasswordFocused,
+                   TextStyle::InputDefaultPasswordFocusedBlink,
+                   TextStyle::InputDefaultPasswordPressed,
+                   TextStyle::InputDefaultPasswordDisabled,
                    TextStyle::InputSuccess,
                    TextStyle::InputSuccessHovered,
                    TextStyle::InputSuccessFocused,
                    TextStyle::InputSuccessFocusedBlink,
                    TextStyle::InputSuccessPressed,
                    TextStyle::InputSuccessDisabled,
+                   TextStyle::InputSuccessPassword,
+                   TextStyle::InputSuccessPasswordHovered,
+                   TextStyle::InputSuccessPasswordFocused,
+                   TextStyle::InputSuccessPasswordFocusedBlink,
+                   TextStyle::InputSuccessPasswordPressed,
+                   TextStyle::InputSuccessPasswordDisabled,
                    TextStyle::InputWarning,
                    TextStyle::InputWarningHovered,
                    TextStyle::InputWarningFocused,
                    TextStyle::InputWarningFocusedBlink,
                    TextStyle::InputWarningPressed,
                    TextStyle::InputWarningDisabled,
+                   TextStyle::InputWarningPassword,
+                   TextStyle::InputWarningPasswordHovered,
+                   TextStyle::InputWarningPasswordFocused,
+                   TextStyle::InputWarningPasswordFocusedBlink,
+                   TextStyle::InputWarningPasswordPressed,
+                   TextStyle::InputWarningPasswordDisabled,
                    TextStyle::InputDanger,
                    TextStyle::InputDangerHovered,
                    TextStyle::InputDangerFocused,
                    TextStyle::InputDangerFocusedBlink,
                    TextStyle::InputDangerPressed,
                    TextStyle::InputDangerDisabled,
+                   TextStyle::InputDangerPassword,
+                   TextStyle::InputDangerPasswordHovered,
+                   TextStyle::InputDangerPasswordFocused,
+                   TextStyle::InputDangerPasswordFocusedBlink,
+                   TextStyle::InputDangerPasswordPressed,
+                   TextStyle::InputDangerPasswordDisabled,
                    TextStyle::InputFlat,
                    TextStyle::InputFlatHovered,
                    TextStyle::InputFlatFocused,
                    TextStyle::InputFlatFocusedBlink,
                    TextStyle::InputFlatPressed,
-                   TextStyle::InputFlatDisabled})
+                   TextStyle::InputFlatDisabled,
+                   TextStyle::InputFlatPassword,
+                   TextStyle::InputFlatPasswordHovered,
+                   TextStyle::InputFlatPasswordFocused,
+                   TextStyle::InputFlatPasswordFocusedBlink,
+                   TextStyle::InputFlatPasswordPressed,
+                   TextStyle::InputFlatPasswordDisabled})
         textStyles[Int(i)].alignment = Text::Alignment::MiddleLeft;
 
     /* Input padding. Pressed shift by one unit down, like buttons. */
@@ -799,32 +942,62 @@ void dark(Containers::ArrayView<Ui::BaseLayerStyleUniform> baseUniforms, Contain
                    TextStyle::InputDefaultFocused,
                    TextStyle::InputDefaultFocusedBlink,
                    TextStyle::InputDefaultDisabled,
+                   TextStyle::InputDefaultPassword,
+                   TextStyle::InputDefaultPasswordHovered,
+                   TextStyle::InputDefaultPasswordFocused,
+                   TextStyle::InputDefaultPasswordFocusedBlink,
+                   TextStyle::InputDefaultPasswordDisabled,
                    TextStyle::InputSuccess,
                    TextStyle::InputSuccessHovered,
                    TextStyle::InputSuccessFocused,
                    TextStyle::InputSuccessFocusedBlink,
                    TextStyle::InputSuccessDisabled,
+                   TextStyle::InputSuccessPassword,
+                   TextStyle::InputSuccessPasswordHovered,
+                   TextStyle::InputSuccessPasswordFocused,
+                   TextStyle::InputSuccessPasswordFocusedBlink,
+                   TextStyle::InputSuccessPasswordDisabled,
                    TextStyle::InputWarning,
                    TextStyle::InputWarningHovered,
                    TextStyle::InputWarningFocused,
                    TextStyle::InputWarningFocusedBlink,
                    TextStyle::InputWarningDisabled,
+                   TextStyle::InputWarningPassword,
+                   TextStyle::InputWarningPasswordHovered,
+                   TextStyle::InputWarningPasswordFocused,
+                   TextStyle::InputWarningPasswordFocusedBlink,
+                   TextStyle::InputWarningPasswordDisabled,
                    TextStyle::InputDanger,
                    TextStyle::InputDangerHovered,
                    TextStyle::InputDangerFocused,
                    TextStyle::InputDangerFocusedBlink,
                    TextStyle::InputDangerDisabled,
+                   TextStyle::InputDangerPassword,
+                   TextStyle::InputDangerPasswordHovered,
+                   TextStyle::InputDangerPasswordFocused,
+                   TextStyle::InputDangerPasswordFocusedBlink,
+                   TextStyle::InputDangerPasswordDisabled,
                    TextStyle::InputFlat,
                    TextStyle::InputFlatHovered,
                    TextStyle::InputFlatFocused,
                    TextStyle::InputFlatFocusedBlink,
-                   TextStyle::InputFlatDisabled})
+                   TextStyle::InputFlatDisabled,
+                   TextStyle::InputFlatPassword,
+                   TextStyle::InputFlatPasswordHovered,
+                   TextStyle::InputFlatPasswordFocused,
+                   TextStyle::InputFlatPasswordFocusedBlink,
+                   TextStyle::InputFlatPasswordDisabled})
         textStyles[Int(i)].padding = {10.0f, 4.0f,  6.0f, 4.0f};
     for(auto&& i: {TextStyle::InputDefaultPressed,
+                   TextStyle::InputDefaultPasswordPressed,
                    TextStyle::InputSuccessPressed,
+                   TextStyle::InputSuccessPasswordPressed,
                    TextStyle::InputWarningPressed,
+                   TextStyle::InputWarningPasswordPressed,
                    TextStyle::InputDangerPressed,
-                   TextStyle::InputFlatPressed})
+                   TextStyle::InputDangerPasswordPressed,
+                   TextStyle::InputFlatPressed,
+                   TextStyle::InputFlatPasswordPressed})
         textStyles[Int(i)].padding = {10.0f, 5.0f,  6.0f, 3.0f};
 
     /* Input spans the same height as a button */

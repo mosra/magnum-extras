@@ -27,6 +27,7 @@
 #include <Corrade/Utility/Format.h>
 
 #include "Magnum/Ui/Input.h"
+#include "Magnum/Ui/TextProperties.h"
 #include "Magnum/Ui/Theme.h"
 #include "Magnum/Ui/Test/ThemeGLTester.hpp"
 
@@ -36,6 +37,8 @@ struct InputGLTest: ThemeGLTester {
     explicit InputGLTest();
 
     void test();
+    void password();
+    void passwordFontOverride();
 };
 
 using namespace Math::Literals;
@@ -80,9 +83,44 @@ const struct {
         }},
 };
 
+const struct {
+    const char* name;
+    NodeHandle(*create)(UserInterface&, Int, Flags, Int);
+} PasswordData[]{
+    {nullptr,
+        [](UserInterface& ui, Int style, Flags, Int counter) {
+            PasswordInput input{{ui, {}, {64, 36}}, counter % 2 ? "Edit..." : "Type?", InputStyle(style)};
+            /** @todo use a cursor setting API once it exists */
+            ui.textLayer().setCursor(input.textData(), counter % 2 ? 2 : 5, counter % 2 ? 5 : 2);
+            return input.release();
+        }},
+    {"setters",
+        [](UserInterface& ui, Int style, Flags, Int counter) {
+            PasswordInput input{{ui, {}, {64, 36}}, "", InputStyle(style)};
+            input.setText(counter % 2 ? "Edit..." : "Type?");
+            /** @todo use a cursor setting API once it exists */
+            ui.textLayer().setCursor(input.textData(), counter % 2 ? 2 : 5, counter % 2 ? 5 : 2);
+            return input.release();
+        }},
+    {"setStyle()",
+        [](UserInterface& ui, Int style, Flags, Int counter) {
+            PasswordInput input{{ui, {}, {64, 36}}, counter % 2 ? "Edit..." : "Type?", InputStyle(style == 0 ? 1 : 0)};
+            input.setStyle(InputStyle(style));
+            /** @todo use a cursor setting API once it exists */
+            ui.textLayer().setCursor(input.textData(), counter % 2 ? 2 : 5, counter % 2 ? 5 : 2);
+            return input.release();
+        }},
+};
+
 InputGLTest::InputGLTest(): ThemeGLTester{ThemeData} {
     addInstancedTests({&InputGLTest::test},
         Containers::arraySize(TestData)*themeCount());
+
+    addInstancedTests({&InputGLTest::password},
+        Containers::arraySize(PasswordData)*themeCount());
+
+    addInstancedTests({&InputGLTest::passwordFontOverride},
+        themeCount());
 }
 
 void InputGLTest::test() {
@@ -99,6 +137,51 @@ void InputGLTest::test() {
         Flag::Hovered|Flag::Pressed|Flag::Focused|Flag::Disabled|Flag::XfailLlvmpipe20,
         /* Input cursor blinking lasts 0.55 sec and is reversed every other
            iteration, so it'll be fully visible at twice as much */
+        5, 0.55_sec*2, 2.0f, 0.02292f);
+}
+
+void InputGLTest::password() {
+    auto&& data = PasswordData[testCaseInstanceId()/themeCount()];
+    auto&& themeData = ThemeData[testCaseInstanceId()%themeCount()];
+    if(!data.name)
+        setTestCaseDescription(themeData.name);
+    else
+        setTestCaseDescription(Utility::format("{}, {}", data.name, themeData.name));
+
+    /* Right now the only difference is that the password entry displays
+       bullets for all characters, nothing else. Eventually it may differ with
+       a show / hide icon, for example. */
+
+    CORRADE_VERIFY(true); /* Capture correct function name */
+
+    ThemeGLTester::render(data.create, themeData, "input-password.png",
+        Flag::Hovered|Flag::Pressed|Flag::Focused|Flag::Disabled|Flag::XfailLlvmpipe20,
+        /* Same values as in test() */
+        5, 0.55_sec*2, 2.0f, 0.02292f);
+}
+
+void InputGLTest::passwordFontOverride() {
+    auto&& themeData = ThemeData[testCaseInstanceId()%themeCount()];
+    setTestCaseDescription(themeData.name);
+
+    /* If the font is overriden to the default one, the output should be the
+       same as with a regular Input */
+    /** @todo once there's a button to show/hide the password, it will no
+        longer be and this case needs further update */
+
+    CORRADE_VERIFY(true); /* Capture correct function name */
+
+    ThemeGLTester::render(
+        [](UserInterface& ui, Int style, Flags, Int counter) {
+            /** @todo the fontHandle() is hardcoded, ideally there would be a
+                way to query particular style fonts */
+            PasswordInput input{{ui, {}, {64, 36}}, counter % 2 ? "Edit..." : "Type?", fontHandle(2, 1), InputStyle(style)};
+            /** @todo use a cursor setting API once it exists */
+            ui.textLayer().setCursor(input.textData(), counter % 2 ? 2 : 5, counter % 2 ? 5 : 2);
+            return input.release();
+        }, themeData, "input.png",
+        Flag::Hovered|Flag::Pressed|Flag::Focused|Flag::Disabled|Flag::XfailLlvmpipe20,
+        /* Same values as in test() */
         5, 0.55_sec*2, 2.0f, 0.02292f);
 }
 

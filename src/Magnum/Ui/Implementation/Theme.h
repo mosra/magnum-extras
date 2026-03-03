@@ -31,6 +31,7 @@ namespace Magnum { namespace Ui { namespace Implementation {
 /* Used by GenerateTheme.cpp and Ui/Theme.cpp */
 enum class TextFont {
     Main,
+    Password,
     Icon,
     Large,
     LargeIcon,

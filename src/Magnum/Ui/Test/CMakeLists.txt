@@ -482,7 +482,8 @@ if(MAGNUM_BUILD_GL_TESTS)
             ThemeTestFiles/dark-button-icon.png)
     corrade_add_test(UiInputGLTest InputGLTest.cpp
         FILES
-            ThemeTestFiles/dark-input.png)
+            ThemeTestFiles/dark-input.png
+            ThemeTestFiles/dark-input-password.png)
     corrade_add_test(UiLabelGLTest LabelGLTest.cpp
         FILES
             ThemeTestFiles/dark-label-text.png

@@ -35,12 +35,16 @@
 #ifndef DOXYGEN_GENERATING_OUTPUT
 namespace Magnum { namespace Ui {
 
-/* Used by both Handle.h and DataLayer.h */
 namespace Implementation {
+    /* Used by both Handle.h and DataLayer.h */
     enum: UnsignedInt {
         LayerHandleIdBits = 8,
         LayerHandleGenerationBits = 8
     };
+    /* Used in certain widget implementations */
+    enum class BaseStyle: UnsignedShort;
+    enum class TextStyle: UnsignedShort;
+    enum class LayoutStyle: UnsignedShort;
 }
 
 enum class DataHandle: UnsignedLong;

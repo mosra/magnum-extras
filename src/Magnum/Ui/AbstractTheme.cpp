@@ -663,10 +663,15 @@ Transition<TextStyle> styleTransition(const TextStyle index) {
         _cDisabled(LabelTitle,Icon)
         _cDisabled(LabelTitle,Text)
         _cHoveredFocusedBlinkPressedDisabled(InputDefault,)
+        _cHoveredFocusedBlinkPressedDisabled(InputDefaultPassword,)
         _cHoveredFocusedBlinkPressedDisabled(InputSuccess,)
+        _cHoveredFocusedBlinkPressedDisabled(InputSuccessPassword,)
         _cHoveredFocusedBlinkPressedDisabled(InputWarning,)
+        _cHoveredFocusedBlinkPressedDisabled(InputWarningPassword,)
         _cHoveredFocusedBlinkPressedDisabled(InputDanger,)
+        _cHoveredFocusedBlinkPressedDisabled(InputDangerPassword,)
         _cHoveredFocusedBlinkPressedDisabled(InputFlat,)
+        _cHoveredFocusedBlinkPressedDisabled(InputFlatPassword,)
         #undef _cHoveredFocusedBlinkPressedDisabled
         #undef _cHoveredPressedPressedHoveredDisabled
         #undef _cPressedDisabled

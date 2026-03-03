@@ -264,6 +264,41 @@ enum class TextStyle: UnsignedShort {
     InputFlatPressed,
     InputFlatDisabled,
 
+    InputDefaultPassword,
+    InputDefaultPasswordHovered,
+    InputDefaultPasswordFocused,
+    InputDefaultPasswordFocusedBlink,
+    InputDefaultPasswordPressed,
+    InputDefaultPasswordDisabled,
+
+    InputSuccessPassword,
+    InputSuccessPasswordHovered,
+    InputSuccessPasswordFocused,
+    InputSuccessPasswordFocusedBlink,
+    InputSuccessPasswordPressed,
+    InputSuccessPasswordDisabled,
+
+    InputWarningPassword,
+    InputWarningPasswordHovered,
+    InputWarningPasswordFocused,
+    InputWarningPasswordFocusedBlink,
+    InputWarningPasswordPressed,
+    InputWarningPasswordDisabled,
+
+    InputDangerPassword,
+    InputDangerPasswordHovered,
+    InputDangerPasswordFocused,
+    InputDangerPasswordFocusedBlink,
+    InputDangerPasswordPressed,
+    InputDangerPasswordDisabled,
+
+    InputFlatPassword,
+    InputFlatPasswordHovered,
+    InputFlatPasswordFocused,
+    InputFlatPasswordFocusedBlink,
+    InputFlatPasswordPressed,
+    InputFlatPasswordDisabled,
+
     Count /* Style count. Has to stay last. */
 };
 

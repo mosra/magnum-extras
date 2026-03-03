@@ -27,9 +27,11 @@
 #include <Corrade/Containers/Optional.h>
 #include <Corrade/Containers/StridedArrayView.h>
 #include <Corrade/Containers/StringIterable.h>
+#include <Corrade/Containers/Triple.h>
 #include <Corrade/PluginManager/Manager.h>
 #include <Corrade/PluginManager/PluginMetadata.h>
 #include <Corrade/TestSuite/Tester.h>
+#include <Corrade/TestSuite/Compare/Container.h>
 #include <Corrade/TestSuite/Compare/String.h>
 #include <Corrade/Utility/ConfigurationGroup.h>
 #include <Magnum/PixelFormat.h>
@@ -55,6 +57,7 @@
 #include "Magnum/Ui/TextProperties.h"
 #include "Magnum/Ui/Theme.h"
 #include "Magnum/Ui/UserInterface.h"
+#include "Magnum/Ui/Implementation/PasswordFont.h"
 
 namespace Magnum { namespace Ui { namespace Test { namespace {
 
@@ -68,6 +71,9 @@ struct ThemeTest: TestSuite::Tester {
     void baseStyleDark();
     void textStyleDark();
     void layoutStyleDark();
+
+    void passwordFont();
+    void passwordFontShape();
 
     void apply();
     void applyTextLayerCannotOpenFont();
@@ -85,6 +91,39 @@ struct ThemeTest: TestSuite::Tester {
 };
 
 using namespace Math::Literals;
+
+const struct {
+    const char* name;
+    const char* text;
+    UnsignedInt begin, end;
+    Containers::Array<UnsignedInt> expectedClusters;
+} PasswordFontShapeData[]{
+    {"empty", "", 0, ~UnsignedInt{}, {}},
+    {"", "hello", 0, ~UnsignedInt{}, {InPlaceInit, {
+        0, 1, 2, 3, 4
+    }}},
+    {"substring", "well, hello there", 6, 11, {InPlaceInit, {
+        6, 7, 8, 9, 10
+    }}},
+    {"UTF-8", "hýžděnky", 0, ~UnsignedInt{}, {InPlaceInit, {
+     /* h  ý  ž  d  ě  n  k  y */
+        0, 1, 3, 5, 6, 8, 9, 10
+    }}},
+    /* Should treat the invalid sequences as single bytes and still continue
+       after */
+    {"invalid UTF-8", "hy\xff\xffěnky", 0, ~UnsignedInt{}, {InPlaceInit, {
+     /* h  y  FF FF ě  n  k  y */
+        0, 1, 2, 3, 4, 6, 7, 8
+    }}},
+    {"start in the middle of a UTF-8 char", "hýžděnky", 2, ~UnsignedInt{}, {InPlaceInit, {
+     /* (cut off) ý  ž  d  ě  n  k  y */
+                  2, 3, 5, 6, 8, 9, 10
+    }}},
+    {"end in the middle of a UTF-8 char", "hýžděnky", 0, 7, {InPlaceInit, {
+     /* h  ý  ž  d  ě (cut off) */
+        0, 1, 3, 5, 6
+    }}},
+};
 
 const struct {
     const char* name;
@@ -149,7 +188,12 @@ ThemeTest::ThemeTest() {
 
               &ThemeTest::baseStyleDark,
               &ThemeTest::textStyleDark,
-              &ThemeTest::layoutStyleDark});
+              &ThemeTest::layoutStyleDark,
+
+              &ThemeTest::passwordFont});
+
+    addInstancedTests({&ThemeTest::passwordFontShape},
+        Containers::arraySize(PasswordFontShapeData));
 
     addInstancedTests({&ThemeTest::apply},
         Containers::arraySize(ApplyData));
@@ -352,6 +396,193 @@ void ThemeTest::layoutStyleDark() {
     CORRADE_COMPARE(Int(LayoutStyle::Count), Containers::arraySize(LayoutStyles));
 }
 
+void ThemeTest::passwordFont() {
+    struct: Text::AbstractFont {
+        Text::FontFeatures doFeatures() const override {
+            return Text::FontFeature::OpenData;
+        }
+        Properties doOpenData(Containers::ArrayView<const char>, Float) override {
+            _opened = true;
+            return {12.34f, 6.54f, -1.23f, 23.45f, 2024};
+        }
+        /** @todo gah, can we do without this?! ugh */
+        bool doIsOpened() const override { return _opened; }
+
+        void doClose() override {
+            CORRADE_INTERNAL_ASSERT_UNREACHABLE();
+        }
+        void doGlyphIdsInto(const Containers::StridedArrayView1D<const char32_t>&, const Containers::StridedArrayView1D<UnsignedInt>&) override {
+            CORRADE_INTERNAL_ASSERT_UNREACHABLE();
+        }
+        Vector2 doGlyphSize(UnsignedInt) override {
+            CORRADE_INTERNAL_ASSERT_UNREACHABLE();
+        }
+        Vector2 doGlyphAdvance(UnsignedInt glyph) override {
+            CORRADE_COMPARE(glyph, 1337);
+            return {3.14f, 0.0f};
+        }
+        Containers::Pointer<Text::AbstractShaper> doCreateShaper() override {
+            CORRADE_INTERNAL_ASSERT_UNREACHABLE();
+        }
+
+        private:
+            bool _opened = false;
+    } font;
+    CORRADE_VERIFY(font.openData({}, {}));
+
+    struct: Text::AbstractGlyphCache {
+        using Text::AbstractGlyphCache::AbstractGlyphCache;
+
+        Text::GlyphCacheFeatures doFeatures() const override { return {}; }
+        void doSetImage(const Vector2i&, const ImageView2D&) override {}
+    } cache{PixelFormat::R8Unorm, {64, 64, 7}, {3, 7}};
+
+    /* Insert the original glyph from the font. The {3, 7} padding will be
+       added to it. */
+    UnsignedInt originalGlyph = cache.addGlyph(cache.addFont(2024, &font), 1337,
+        {5, 11}, 5, Range2Di::fromSize({27, 31}, {13, 11}));
+
+    /* The font should register itself in the cache and add the above glyph as
+       its own glyph 0 */
+    Implementation::PasswordFont passwordFont{cache, font, 1337};
+    /** @todo gah, can we do without this?! ugh */
+    CORRADE_VERIFY(passwordFont.openData({}, 12.34f));
+    UnsignedInt passwordGlyph = cache.glyphId(*cache.findFont(passwordFont), 0);
+    CORRADE_VERIFY(passwordGlyph != originalGlyph);
+
+    /* It should expose the exact same metrics as the original font, except for
+       glyph count */
+    CORRADE_COMPARE(passwordFont.size(), 12.34f);
+    CORRADE_COMPARE(passwordFont.ascent(), 6.54f);
+    CORRADE_COMPARE(passwordFont.descent(), -1.23f);
+    CORRADE_COMPARE(passwordFont.lineHeight(), 23.45f);
+    CORRADE_COMPARE(passwordFont.glyphCount(), 1);
+
+    /* Both the original glyph and the one from the password font should occupy
+       the exact same place */
+    for(UnsignedInt glyph: {originalGlyph, passwordGlyph}) {
+        CORRADE_ITERATION(glyph);
+        CORRADE_COMPARE(cache.glyph(glyph), Containers::triple(
+            Vector2i{5 - 3, 11 - 7}, 5,
+            Range2Di::fromSize({27 - 3, 31 - 7}, {13 + 2*3, 11 + 2*7})));
+    }
+
+    /* Shaping a trivial text should give the expected advance unscaled. Tested
+       further in passwordFontShape() below. */
+    Containers::Pointer<Text::AbstractShaper> shaper = passwordFont.createShaper();
+    CORRADE_COMPARE(shaper->shape("hey"), 3);
+
+    Vector2 offsets[3];
+    Vector2 advances[3];
+    shaper->glyphOffsetsAdvancesInto(offsets, advances);
+    CORRADE_COMPARE_AS(Containers::arrayView(advances), Containers::arrayView<Vector2>({
+        {3.14f, 0.0f},
+        {3.14f, 0.0f},
+        {3.14f, 0.0f},
+    }), TestSuite::Compare::Container);
+}
+
+void ThemeTest::passwordFontShape() {
+    auto&& data = PasswordFontShapeData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
+    /* Testing all shaping properties as well as handling of (broken) UTF-8.
+       Compared to passwordFont() the cache isn't filled as it isn't used for
+       anything when shaping. */
+
+    struct: Text::AbstractFont {
+        Text::FontFeatures doFeatures() const override {
+            return Text::FontFeature::OpenData;
+        }
+        Properties doOpenData(Containers::ArrayView<const char>, Float) override {
+            _opened = true;
+            /* The metrics aren't used for anything when shaping, only glyph
+               count is important for the cache */
+            return {0.0f, 0.0f, 0.0f, 0.0f, 4042};
+        }
+        /** @todo gah, can we do without this?! ugh */
+        bool doIsOpened() const override { return _opened; }
+
+        void doClose() override {
+            CORRADE_INTERNAL_ASSERT_UNREACHABLE();
+        }
+        void doGlyphIdsInto(const Containers::StridedArrayView1D<const char32_t>&, const Containers::StridedArrayView1D<UnsignedInt>&) override {
+            CORRADE_INTERNAL_ASSERT_UNREACHABLE();
+        }
+        Vector2 doGlyphSize(UnsignedInt) override {
+            CORRADE_INTERNAL_ASSERT_UNREACHABLE();
+        }
+        Vector2 doGlyphAdvance(UnsignedInt glyph) override {
+            CORRADE_COMPARE(glyph, 3117);
+            return {3.14f, 0.0f};
+        }
+        Containers::Pointer<Text::AbstractShaper> doCreateShaper() override {
+            CORRADE_INTERNAL_ASSERT_UNREACHABLE();
+        }
+
+        private:
+            bool _opened = false;
+    } font;
+    CORRADE_VERIFY(font.openData({}, {}));
+
+    struct: Text::AbstractGlyphCache {
+        using Text::AbstractGlyphCache::AbstractGlyphCache;
+
+        Text::GlyphCacheFeatures doFeatures() const override { return {}; }
+        void doSetImage(const Vector2i&, const ImageView2D&) override {}
+    } cache{PixelFormat::R8Unorm, {32, 32}, {}};
+
+    /* Making the cache aware of the font and adding the glyph as well, even
+       though empty, as PasswordFont asserts it's there. Using a zero padding
+       for the cache so we don't need to deal with that here, the cached glyph
+       isn't used for anything during shaping. */
+    cache.addGlyph(cache.addFont(font.glyphCount(), &font), 3117, {}, {});
+
+    /* Scaling the advance 2x */
+    Implementation::PasswordFont passwordFont{cache, font, 3117, 2.0f};
+    /** @todo gah, can we do without this?! ugh */
+    CORRADE_VERIFY(passwordFont.openData({}, 0.0f));
+
+    /* Shaping a trivial text should give the expected advance unscaled. Tested
+       further in passwordFontShape() below. */
+    Containers::Pointer<Text::AbstractShaper> shaper = passwordFont.createShaper();
+    CORRADE_COMPARE(shaper->shape(data.text, data.begin, data.end), data.expectedClusters.size());
+
+    struct Output {
+        UnsignedInt id;
+        UnsignedInt cluster;
+        Vector2 offset;
+        Vector2 advance;
+    };
+    Containers::Array<Output> output{NoInit, data.expectedClusters.size()};
+    shaper->glyphIdsInto(
+        stridedArrayView(output).slice(&Output::id));
+    shaper->glyphOffsetsAdvancesInto(
+        stridedArrayView(output).slice(&Output::offset),
+        stridedArrayView(output).slice(&Output::advance));
+    shaper->glyphClustersInto(
+        stridedArrayView(output).slice(&Output::cluster));
+    /* It's just glyph 0 always */
+    CORRADE_COMPARE_AS(
+        stridedArrayView(output).slice(&Output::id),
+        Containers::stridedArrayView({0u}).broadcasted<0>(output.size()),
+        TestSuite::Compare::Container);
+    CORRADE_COMPARE_AS(
+        stridedArrayView(output).slice(&Output::cluster),
+        stridedArrayView(data.expectedClusters),
+        TestSuite::Compare::Container);
+    /* Offsets are zero */
+    CORRADE_COMPARE_AS(
+        stridedArrayView(output).slice(&Output::offset),
+        Containers::stridedArrayView({Vector2{}}).broadcasted<0>(output.size()),
+        TestSuite::Compare::Container);
+    /* Advance is constant, multiplied by the factor passed in constructor */
+    CORRADE_COMPARE_AS(
+        stridedArrayView(output).slice(&Output::advance),
+        Containers::stridedArrayView({Vector2{6.28f, 0.0f}}).broadcasted<0>(output.size()),
+        TestSuite::Compare::Container);
+}
+
 void ThemeTest::apply() {
     auto&& data = ApplyData[testCaseInstanceId()];
     setTestCaseDescription(data.name);
@@ -477,22 +708,25 @@ void ThemeTest::apply() {
         /* Nothing to check here */
     }
     if(data.features >= ThemeFeature::TextLayer) {
-        CORRADE_COMPARE(ui.textLayer().shared().fontCount(), 4);
-        CORRADE_COMPARE(ui.textLayer().shared().glyphCache().fontCount(), 3);
+        CORRADE_COMPARE(ui.textLayer().shared().fontCount(), 5);
+        CORRADE_COMPARE(ui.textLayer().shared().glyphCache().fontCount(), 4);
 
+        /* Enumerating only real fonts, icon font is currently instanceless */
+        /** @todo update once icons are a real font also */
         /** @todo there's no way to get a font handle out of a style, have to
             fake it like this */
         CORRADE_COMPARE(ui.textLayer().shared().font(fontHandle(2, 1)).size(), data.expectedFontSize);
-        CORRADE_COMPARE(ui.textLayer().shared().font(fontHandle(3, 1)).size(), data.expectedFontSize*3/2);
+        CORRADE_COMPARE(ui.textLayer().shared().font(fontHandle(3, 1)).size(), data.expectedFontSize);
+        CORRADE_COMPARE(ui.textLayer().shared().font(fontHandle(4, 1)).size(), data.expectedFontSize*3/2);
 
         /* No other way to check the contents. Widget visuals tested in
            <Widget>GLTest. */
     }
     if(data.features >= ThemeFeature::TextLayerImages) {
         CORRADE_COMPARE(ui.textLayer().shared().fontCount(),
-            data.features >= ThemeFeature::TextLayer ? 4 : 2);
+            data.features >= ThemeFeature::TextLayer ? 5 : 2);
         CORRADE_COMPARE(ui.textLayer().shared().glyphCache().fontCount(),
-            data.features >= ThemeFeature::TextLayer ? 3 : 1);
+            data.features >= ThemeFeature::TextLayer ? 4 : 1);
         /* No other way to check the contents. Widget visuals tested in
            <Widget>GLTest. */
     }
@@ -774,13 +1008,13 @@ void ThemeTest::applyTextLayerTwice() {
 
     DarkTheme theme;
     CORRADE_VERIFY(theme.apply(ui, ThemeFeature::TextLayer|ThemeFeature::TextLayerImages, &_importerManager, &_fontManager));
-    CORRADE_COMPARE(ui.textLayer().shared().fontCount(), 4);
-    CORRADE_COMPARE(ui.textLayer().shared().glyphCache().fontCount(), 3);
+    CORRADE_COMPARE(ui.textLayer().shared().fontCount(), 5);
+    CORRADE_COMPARE(ui.textLayer().shared().glyphCache().fontCount(), 4);
 
     CORRADE_EXPECT_FAIL("This shouldn't fail but should instead replace the previous font and image font, *somehow*.");
     CORRADE_VERIFY(theme.apply(ui, ThemeFeature::TextLayer|ThemeFeature::TextLayerImages, &_importerManager, &_fontManager));
-    CORRADE_COMPARE(ui.textLayer().shared().fontCount(), 4);
-    CORRADE_COMPARE(ui.textLayer().shared().glyphCache().fontCount(), 3);
+    CORRADE_COMPARE(ui.textLayer().shared().fontCount(), 5);
+    CORRADE_COMPARE(ui.textLayer().shared().glyphCache().fontCount(), 4);
 }
 
 void ThemeTest::removePreviousAnimationForBlinkingCursor() {

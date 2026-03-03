@@ -27,7 +27,7 @@
 */
 
 /** @file
- * @brief Class @ref Magnum::Ui::Input, enum @ref Magnum::Ui::InputStyle
+ * @brief Class @ref Magnum::Ui::Input, @ref Magnum::Ui::PasswordInput, enum @ref Magnum::Ui::InputStyle
  * @m_since_latest_{extras}
  */
 
@@ -58,6 +58,8 @@ MAGNUM_UI_EXPORT Debug& operator<<(Debug& debug, InputStyle value);
 /**
 @brief Input widget
 @m_since_latest_{extras}
+
+@see @ref PasswordInput
 */
 class MAGNUM_UI_EXPORT Input: public Widget {
     public:
@@ -133,10 +135,51 @@ class MAGNUM_UI_EXPORT Input: public Widget {
         _MAGNUM_UI_WIDGET_SUBCLASS_IMPLEMENTATION(Input) /* LCOV_EXCL_LINE */
         #endif
 
+    #ifdef DOXYGEN_GENERATING_OUTPUT
+    private:
+    #else
+    protected:
+    #endif
+        explicit MAGNUM_UI_LOCAL Input(Anchor anchor, Containers::StringView text, const TextProperties& textProperties, InputStyle style, Implementation::TextStyle(*textStyle)(InputStyle));
+        MAGNUM_UI_LOCAL Input& setStyleInternal(InputStyle, Implementation::TextStyle(*textStyle)(InputStyle));
+
     private:
         InputStyle _style;
         /* 2 bytes free (_style fits into padding of Widget) */
         LayerDataHandle _backgroundData, _textData;
+};
+
+/**
+@brief Password input widget
+@m_since_latest_{extras}
+
+Compared to @ref Input displays the entered text as a sequence of dots.
+*/
+class MAGNUM_UI_EXPORT PasswordInput: public Input {
+    public:
+        /**
+         * @brief Constructor
+         * @param anchor            Positioning anchor
+         * @param text              Pre-filled input text
+         * @param textProperties    Text shaping and layouting properties
+         * @param style             Input style
+         */
+        explicit PasswordInput(Anchor anchor, Containers::StringView text, const TextProperties& textProperties, InputStyle style = InputStyle::Default);
+        /** @overload */
+        explicit PasswordInput(Anchor anchor, Containers::StringView text, InputStyle style = InputStyle::Default);
+        /** @overload */
+        explicit PasswordInput(Anchor anchor, InputStyle style = InputStyle::Default);
+
+        /** @copydoc AbstractWidget::AbstractWidget(NoCreateT) */
+        explicit PasswordInput(NoCreateT): Input{NoCreate} {}
+
+        /* Mostly just overloads to remove a WTF factor from method chaining
+           order */
+        #ifndef DOXYGEN_GENERATING_OUTPUT
+        PasswordInput& setStyle(InputStyle style);
+        PasswordInput& setText(Containers::StringView text, const TextProperties& textProperties);
+        PasswordInput& setText(Containers::StringView text);
+        #endif
 };
 
 }}

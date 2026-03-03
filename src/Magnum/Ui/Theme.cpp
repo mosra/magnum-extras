@@ -53,6 +53,7 @@
 #include "Magnum/Ui/TextLayer.h"
 #include "Magnum/Ui/TextLayerAnimator.h"
 #include "Magnum/Ui/UserInterface.h"
+#include "Magnum/Ui/Implementation/PasswordFont.h"
 #include "Magnum/Ui/Implementation/Theme.h" /* TextFont enum */
 
 #ifdef MAGNUM_UI_BUILD_STATIC
@@ -81,28 +82,38 @@ AnimationHandle styleAnimationOnLeaveBlurRelease(TextLayerStyleAnimator& animato
     Feature::EssentialAnimations */
 template<Float(*cursorBlinkEasing)(Float)> AnimationHandle styleAnimationPersistent(TextLayerStyleAnimator& animator, const TextStyle style, const Nanoseconds time, const LayerDataHandle data, const AnimatorDataHandle currentAnimation) {
     if(style == TextStyle::InputDefaultFocused ||
+       style == TextStyle::InputDefaultPasswordFocused ||
        style == TextStyle::InputSuccessFocused ||
+       style == TextStyle::InputSuccessPasswordFocused ||
        style == TextStyle::InputWarningFocused ||
+       style == TextStyle::InputWarningPasswordFocused ||
        style == TextStyle::InputDangerFocused ||
-       style == TextStyle::InputFlatFocused)
+       style == TextStyle::InputDangerPasswordFocused ||
+       style == TextStyle::InputFlatFocused ||
+       style == TextStyle::InputFlatPasswordFocused)
     {
         /* It's just +1 but let's not have it too cryptic here. The compiler
            hopefully optimizes this? */
         TextStyle sourceStyle;
         switch(style) {
             case TextStyle::InputDefaultFocused:
+            case TextStyle::InputDefaultPasswordFocused:
                 sourceStyle = TextStyle::InputDefaultFocusedBlink;
                 break;
             case TextStyle::InputSuccessFocused:
+            case TextStyle::InputSuccessPasswordFocused:
                 sourceStyle = TextStyle::InputSuccessFocusedBlink;
                 break;
             case TextStyle::InputWarningFocused:
+            case TextStyle::InputWarningPasswordFocused:
                 sourceStyle = TextStyle::InputWarningFocusedBlink;
                 break;
             case TextStyle::InputDangerFocused:
+            case TextStyle::InputDangerPasswordFocused:
                 sourceStyle = TextStyle::InputDangerFocusedBlink;
                 break;
             case TextStyle::InputFlatFocused:
+            case TextStyle::InputFlatPasswordFocused:
                 sourceStyle = TextStyle::InputFlatFocusedBlink;
                 break;
             /* LCOV_EXCL_START */
@@ -397,13 +408,26 @@ bool DarkTheme::doApply(UserInterface& ui, const ThemeFeatures features, PluginM
         for(Text::AbstractFont* const i: {&*font, &*fontLarge}) if(!i->fillGlyphCache(glyphCache,
             "abcdefghijklmnopqrstuvwxyz"
             "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-            "0123456789 _.,-+=*:;?!@$&#/\\|`\"'<>()[]{}%…")
+            "0123456789 _.,-+=*:;?!@$&#/\\|`\"'<>()[]{}%…"
+            /* Bullet used by the password font */
+            "•")
         ) {
             Error{} << "Ui::DarkTheme::apply(): cannot fill a glyph cache";
             return {};
         }
 
+        /* Password font. Takes the bullet glyph from the main font. I hope the
+           char32_t literal doesn't cause some bad shit on MSVC. The 1.3333f
+           scale is based on vibes, default 1.0f was too terse, 2.0f is too
+           wide. */
+        const UnsignedInt passwordFontBulletGlyph = font->glyphId(U'•');
+        CORRADE_INTERNAL_ASSERT(passwordFontBulletGlyph != 0);
+        Containers::Pointer<Implementation::PasswordFont> passwordFont{InPlaceInit, glyphCache, *font, passwordFontBulletGlyph, 1.3333f};
+        /** @todo create some interface for "always open" fonts, ugh */
+        CORRADE_INTERNAL_ASSERT_OUTPUT(passwordFont->openData({}, font->size()));
+
         fonts[Int(TextFont::Main)] = shared.addFont(Utility::move(font), 16.0f);
+        fonts[Int(TextFont::Password)] = shared.addFont(Utility::move(passwordFont), 16.0f);
         fonts[Int(TextFont::Large)] = shared.addFont(Utility::move(fontLarge), 24.0f);
 
         /* Font handles matching all styles. References either the `mainFont`

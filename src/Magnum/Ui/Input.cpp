@@ -97,7 +97,7 @@ TextStyle textStyle(const InputStyle style) {
 
 }
 
-Input::Input(const Anchor anchor, const Containers::StringView text, const TextProperties& textProperties, const InputStyle style): Widget{anchor}, _style{style} {
+Input::Input(const Anchor anchor, const Containers::StringView text, const TextProperties& textProperties, const InputStyle style, Implementation::TextStyle(*const textStyle)(InputStyle)): Widget{anchor}, _style{style} {
     ui().addNodeFlags(node(), NodeFlag::Focusable);
     ui().layoutLayer().create(LayoutStyle::Input, node());
 
@@ -105,15 +105,22 @@ Input::Input(const Anchor anchor, const Containers::StringView text, const TextP
     _textData = dataHandleData(ui().textLayer().create(textStyle(style), text, textProperties, TextDataFlag::Editable, node()));
 }
 
+Input::Input(const Anchor anchor, const Containers::StringView text, const TextProperties& textProperties, const InputStyle style): Input{anchor, text, textProperties, style, textStyle} {}
+
 Input::Input(const Anchor anchor, const Containers::StringView text, const InputStyle style): Input{anchor, text, {}, style} {}
 
 Input::Input(const Anchor anchor, const InputStyle style): Input{anchor, {}, style} {}
 
-Input& Input::setStyle(const InputStyle style) {
+Input& Input::setStyleInternal(const InputStyle style, Implementation::TextStyle(*const textStyle)(InputStyle)) {
     _style = style;
     ui().baseLayer().setTransitionedStyle(ui(), _backgroundData, baseStyle(style));
     ui().textLayer().setTransitionedStyle(ui(), _textData, textStyle(style));
     /** @todo re-set the text if font / alignment ... changed */
+    return *this;
+}
+
+Input& Input::setStyle(const InputStyle style) {
+    setStyleInternal(style, textStyle);
     return *this;
 }
 
@@ -142,6 +149,43 @@ Input& Input::setText(const Containers::StringView text, const TextProperties& t
 
 Input& Input::setText(const Containers::StringView text) {
     return setText(text, {});
+}
+
+namespace {
+
+TextStyle passwordTextStyle(const InputStyle style) {
+    switch(style) {
+        #define _c(style) case InputStyle::style: return TextStyle::Input ## style ## Password;
+        _c(Default)
+        _c(Success)
+        _c(Warning)
+        _c(Danger)
+        _c(Flat)
+        #undef _c
+    }
+
+    CORRADE_INTERNAL_ASSERT_UNREACHABLE(); /* LCOV_EXCL_LINE */
+}
+
+}
+
+PasswordInput::PasswordInput(const Anchor anchor, const Containers::StringView text, const TextProperties& textProperties, const InputStyle style): Input{anchor, text, textProperties, style, passwordTextStyle} {}
+
+PasswordInput::PasswordInput(const Anchor anchor, const Containers::StringView text, const InputStyle style): PasswordInput{anchor, text, {}, style} {}
+
+PasswordInput::PasswordInput(const Anchor anchor, const InputStyle style): PasswordInput{anchor, {}, style} {}
+
+PasswordInput& PasswordInput::setStyle(const InputStyle style) {
+    setStyleInternal(style, passwordTextStyle);
+    return *this;
+}
+
+PasswordInput& PasswordInput::setText(const Containers::StringView text, const TextProperties& textProperties) {
+    return static_cast<PasswordInput&>(Input::setText(text, textProperties));
+}
+
+PasswordInput& PasswordInput::setText(const Containers::StringView text) {
+    return static_cast<PasswordInput&>(Input::setText(text));
 }
 
 }}

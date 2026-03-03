@@ -48,10 +48,10 @@ struct InputTest: WidgetTester {
     void setStyle();
     void setStyleWhileActive();
 
-    void setText();
-    void setTextTextProperties();
+    template<class T> void setText();
+    template<class T> void setTextTextProperties();
 
-    void edit();
+    template<class T> void edit();
 };
 
 InputTest::InputTest() {
@@ -71,10 +71,13 @@ InputTest::InputTest() {
         &InputTest::setStyle,
         &InputTest::setStyleWhileActive,
 
-        &InputTest::setText,
-        &InputTest::setTextTextProperties,
+        &InputTest::setText<Input>,
+        &InputTest::setText<PasswordInput>,
+        &InputTest::setTextTextProperties<Input>,
+        &InputTest::setTextTextProperties<PasswordInput>,
 
-        &InputTest::edit
+        &InputTest::edit<Input>,
+        &InputTest::edit<PasswordInput>
     }, &WidgetTester::setup,
        &WidgetTester::teardown);
 }
@@ -90,100 +93,191 @@ void InputTest::debugStyle() {
 
 void InputTest::construct() {
     Input input1{{rootAnchor, {}, {32, 16}}, "hello", InputStyle::Warning};
+    PasswordInput input1Password{{rootAnchor, {}, {32, 16}}, "hello", InputStyle::Warning};
     Input input2{{rootAnchor, {}, {16, 32}}, InputStyle::Flat};
+    PasswordInput input2Password{{rootAnchor, {}, {16, 32}}, InputStyle::Flat};
     CORRADE_COMPARE(ui.nodeParent(input1), rootAnchor);
+    CORRADE_COMPARE(ui.nodeParent(input1Password), rootAnchor);
     CORRADE_COMPARE(ui.nodeParent(input2), rootAnchor);
+    CORRADE_COMPARE(ui.nodeParent(input2Password), rootAnchor);
     CORRADE_COMPARE(ui.nodeSize(input1), (Vector2{32, 16}));
+    CORRADE_COMPARE(ui.nodeSize(input1Password), (Vector2{32, 16}));
     CORRADE_COMPARE(ui.nodeSize(input2), (Vector2{16, 32}));
+    CORRADE_COMPARE(ui.nodeSize(input2Password), (Vector2{16, 32}));
     CORRADE_COMPARE(ui.nodeFlags(input1), NodeFlag::Focusable);
+    CORRADE_COMPARE(ui.nodeFlags(input1Password), NodeFlag::Focusable);
     CORRADE_COMPARE(ui.nodeFlags(input2), NodeFlag::Focusable);
+    CORRADE_COMPARE(ui.nodeFlags(input2Password), NodeFlag::Focusable);
     CORRADE_VERIFY(input1.isOwned());
+    CORRADE_VERIFY(input1Password.isOwned());
     CORRADE_VERIFY(input2.isOwned());
+    CORRADE_VERIFY(input2Password.isOwned());
 
     CORRADE_COMPARE(input1.style(), InputStyle::Warning);
+    CORRADE_COMPARE(input1Password.style(), InputStyle::Warning);
     CORRADE_COMPARE(input2.style(), InputStyle::Flat);
+    CORRADE_COMPARE(input2Password.style(), InputStyle::Flat);
+    /* The password input should store the text as well */
     CORRADE_COMPARE(input1.text(), "hello");
+    CORRADE_COMPARE(input1Password.text(), "hello");
     CORRADE_COMPARE(input2.text(), "");
+    CORRADE_COMPARE(input2Password.text(), "");
 
     CORRADE_VERIFY(ui.isHandleValid(input1.backgroundData()));
+    CORRADE_VERIFY(ui.isHandleValid(input1Password.backgroundData()));
     CORRADE_VERIFY(ui.isHandleValid(input2.backgroundData()));
+    CORRADE_VERIFY(ui.isHandleValid(input2Password.backgroundData()));
     CORRADE_VERIFY(ui.isHandleValid(input1.textData()));
+    CORRADE_VERIFY(ui.isHandleValid(input1Password.textData()));
     CORRADE_VERIFY(ui.isHandleValid(input2.textData()));
+    CORRADE_VERIFY(ui.isHandleValid(input2Password.textData()));
     CORRADE_COMPARE(ui.textLayer().glyphCount(input1.textData()), 5);
+    CORRADE_COMPARE(ui.textLayer().glyphCount(input1Password.textData()), 5);
     CORRADE_COMPARE(ui.textLayer().glyphCount(input2.textData()), 0);
+    CORRADE_COMPARE(ui.textLayer().glyphCount(input2Password.textData()), 0);
+
+    /* The password inputs should have different text style to choose a
+       different font */
+    CORRADE_COMPARE(ui.textLayer().style(input1.textData()), UnsignedInt(TextStyle::InputWarning));
+    CORRADE_COMPARE(ui.textLayer().style(input1Password.textData()), UnsignedInt(TextStyle::InputWarningPassword));
+    CORRADE_COMPARE(ui.textLayer().style(input2.textData()), UnsignedInt(TextStyle::InputFlat));
+    CORRADE_COMPARE(ui.textLayer().style(input2Password.textData()), UnsignedInt(TextStyle::InputFlatPassword));
 
     /* Can only verify that the layout data were created, they're not saved */
-    CORRADE_COMPARE(ui.layoutLayer().usedCount(), 2);
+    CORRADE_COMPARE(ui.layoutLayer().usedCount(), 4);
 }
 
 void InputTest::constructTextProperties() {
     Input input{{rootAnchor, {}, {32, 16}}, "hello",
             TextProperties{}.setScript(Text::Script::Braille),
             InputStyle::Flat};
+    PasswordInput inputPassword{{rootAnchor, {}, {32, 16}}, "hello",
+            TextProperties{}.setScript(Text::Script::Braille),
+            InputStyle::Flat};
     CORRADE_COMPARE(ui.nodeParent(input), rootAnchor);
+    CORRADE_COMPARE(ui.nodeParent(inputPassword), rootAnchor);
     CORRADE_COMPARE(ui.nodeSize(input), (Vector2{32, 16}));
+    CORRADE_COMPARE(ui.nodeSize(inputPassword), (Vector2{32, 16}));
     CORRADE_COMPARE(ui.nodeFlags(input), NodeFlag::Focusable);
+    CORRADE_COMPARE(ui.nodeFlags(inputPassword), NodeFlag::Focusable);
     CORRADE_VERIFY(input.isOwned());
+    CORRADE_VERIFY(inputPassword.isOwned());
 
     CORRADE_COMPARE(input.style(), InputStyle::Flat);
+    CORRADE_COMPARE(inputPassword.style(), InputStyle::Flat);
+    /* The password input should store the text as well */
     CORRADE_COMPARE(input.text(), "hello");
+    CORRADE_COMPARE(inputPassword.text(), "hello");
 
     CORRADE_VERIFY(ui.isHandleValid(input.backgroundData()));
+    CORRADE_VERIFY(ui.isHandleValid(inputPassword.backgroundData()));
     CORRADE_VERIFY(ui.isHandleValid(input.textData()));
+    CORRADE_VERIFY(ui.isHandleValid(inputPassword.textData()));
     /* Multiplied by 6 because of the Braille script */
     CORRADE_COMPARE(ui.textLayer().glyphCount(input.textData()), 5*6);
+    CORRADE_COMPARE(ui.textLayer().glyphCount(inputPassword.textData()), 5*6);
+
+    /* The password inputs should have different text style to choose a
+       different font */
+    CORRADE_COMPARE(ui.textLayer().style(input.textData()), UnsignedInt(TextStyle::InputFlat));
+    CORRADE_COMPARE(ui.textLayer().style(inputPassword.textData()), UnsignedInt(TextStyle::InputFlatPassword));
 
     /* Can only verify that the layout data were created, they're not saved */
-    CORRADE_COMPARE(ui.layoutLayer().usedCount(), 1);
+    CORRADE_COMPARE(ui.layoutLayer().usedCount(), 2);
 }
 
 void InputTest::constructNoCreate() {
     Input input{NoCreate};
+    PasswordInput inputPassword{NoCreate};
     CORRADE_COMPARE(input.node(), NodeHandle::Null);
+    CORRADE_COMPARE(inputPassword.node(), NodeHandle::Null);
     CORRADE_COMPARE(input.backgroundData(), DataHandle::Null);
+    CORRADE_COMPARE(inputPassword.backgroundData(), DataHandle::Null);
     CORRADE_COMPARE(input.textData(), DataHandle::Null);
+    CORRADE_COMPARE(inputPassword.textData(), DataHandle::Null);
 }
 
 void InputTest::setStyle() {
     Input input{{rootAnchor, {}, {32, 16}}, "hello", InputStyle::Danger};
+    PasswordInput inputPassword{{rootAnchor, {}, {32, 16}}, "hello", InputStyle::Danger};
     CORRADE_COMPARE(input.style(), InputStyle::Danger);
+    CORRADE_COMPARE(inputPassword.style(), InputStyle::Danger);
 
+    /* The password inputs should have different text style to choose a
+       different font */
     input.setStyle(InputStyle::Success);
+    inputPassword.setStyle(InputStyle::Success);
     CORRADE_COMPARE(input.style(), InputStyle::Success);
+    CORRADE_COMPARE(inputPassword.style(), InputStyle::Success);
     CORRADE_COMPARE(ui.baseLayer().style(input.backgroundData()),
+        UnsignedInt(BaseStyle::InputSuccess));
+    CORRADE_COMPARE(ui.baseLayer().style(inputPassword.backgroundData()),
         UnsignedInt(BaseStyle::InputSuccess));
     CORRADE_COMPARE(ui.textLayer().style(input.textData()),
         UnsignedInt(TextStyle::InputSuccess));
+    CORRADE_COMPARE(ui.textLayer().style(inputPassword.textData()),
+        UnsignedInt(TextStyle::InputSuccessPassword));
 }
 
 void InputTest::setStyleWhileActive() {
     Input input{{rootAnchor, {}, {32, 16}}, "hello", InputStyle::Success};
+    PasswordInput inputPassword{{rootAnchor, {}, {32, 16}}, "hello", InputStyle::Success};
     CORRADE_COMPARE(input.style(), InputStyle::Success);
+    CORRADE_COMPARE(inputPassword.style(), InputStyle::Success);
 
-    CORRADE_COMPARE(ui.baseLayer().style(input.backgroundData()),
-        UnsignedInt(BaseStyle::InputSuccess));
-    CORRADE_COMPARE(ui.textLayer().style(input.textData()),
-        UnsignedInt(TextStyle::InputSuccess));
+    /* The password inputs should have different text style to choose a
+       different font */
+    CORRADE_COMPARE(ui.baseLayer().style(input.backgroundData()), UnsignedInt(BaseStyle::InputSuccess));
+    CORRADE_COMPARE(ui.baseLayer().style(inputPassword.backgroundData()), UnsignedInt(BaseStyle::InputSuccess));
+    CORRADE_COMPARE(ui.textLayer().style(input.textData()), UnsignedInt(TextStyle::InputSuccess));
+    CORRADE_COMPARE(ui.textLayer().style(inputPassword.textData()), UnsignedInt(TextStyle::InputSuccessPassword));
 
-    FocusEvent focusEvent{{}};
-    CORRADE_VERIFY(ui.focusEvent(input, focusEvent));
-    CORRADE_COMPARE(ui.currentFocusedNode(), input);
+    {
+        FocusEvent focusEvent{{}};
+        CORRADE_VERIFY(ui.focusEvent(input, focusEvent));
+        CORRADE_COMPARE(ui.currentFocusedNode(), input);
 
-    /* Verify that style transition works */
-    CORRADE_COMPARE(ui.baseLayer().style(input.backgroundData()), UnsignedInt(BaseStyle::InputSuccessFocused));
-    CORRADE_COMPARE(ui.textLayer().style(input.textData()), UnsignedInt(TextStyle::InputSuccessFocused));
+        /* Verify that style transition works */
+        CORRADE_COMPARE(ui.baseLayer().style(input.backgroundData()), UnsignedInt(BaseStyle::InputSuccessFocused));
+        CORRADE_COMPARE(ui.textLayer().style(input.textData()), UnsignedInt(TextStyle::InputSuccessFocused));
 
-    input.setStyle(InputStyle::Default);
-    CORRADE_COMPARE(input.style(), InputStyle::Default);
+        input.setStyle(InputStyle::Default);
+        CORRADE_COMPARE(input.style(), InputStyle::Default);
 
-    /* All styles should now be changed in a way that preserves the current
-       focused state */
-    CORRADE_COMPARE(ui.baseLayer().style(input.backgroundData()), UnsignedInt(BaseStyle::InputDefaultFocused));
-    CORRADE_COMPARE(ui.textLayer().style(input.textData()), UnsignedInt(TextStyle::InputDefaultFocused));
+        /* All styles should now be changed in a way that preserves the current
+           focused state */
+        CORRADE_COMPARE(ui.baseLayer().style(input.backgroundData()), UnsignedInt(BaseStyle::InputDefaultFocused));
+        CORRADE_COMPARE(ui.textLayer().style(input.textData()), UnsignedInt(TextStyle::InputDefaultFocused));
+
+    /* Same for the password input, which should use different text styles */
+    } {
+        FocusEvent focusEvent{{}};
+        CORRADE_VERIFY(ui.focusEvent(inputPassword, focusEvent));
+        CORRADE_COMPARE(ui.currentFocusedNode(), inputPassword);
+
+        CORRADE_COMPARE(ui.baseLayer().style(inputPassword.backgroundData()), UnsignedInt(BaseStyle::InputSuccessFocused));
+        CORRADE_COMPARE(ui.textLayer().style(inputPassword.textData()), UnsignedInt(TextStyle::InputSuccessPasswordFocused));
+
+        inputPassword.setStyle(InputStyle::Default);
+        CORRADE_COMPARE(inputPassword.style(), InputStyle::Default);
+
+        CORRADE_COMPARE(ui.baseLayer().style(inputPassword.backgroundData()), UnsignedInt(BaseStyle::InputDefaultFocused));
+        CORRADE_COMPARE(ui.textLayer().style(inputPassword.textData()), UnsignedInt(TextStyle::InputDefaultPasswordFocused));
+    }
 }
 
-void InputTest::setText() {
-    Input input{{rootAnchor, {}, {32, 16}}, "hiya"};
+template<class> struct InputTraits;
+template<> struct InputTraits<Input> {
+    static const char* name() { return "Input"; }
+};
+template<> struct InputTraits<PasswordInput> {
+    static const char* name() { return "PasswordInput"; }
+};
+
+template<class T> void InputTest::setText() {
+    setTestCaseTemplateName(InputTraits<T>::name());
+
+    T input{{rootAnchor, {}, {32, 16}}, "hiya"};
     CORRADE_COMPARE(input.text(), "hiya");
     CORRADE_COMPARE(ui.textLayer().glyphCount(input.textData()), 4);
 
@@ -193,8 +287,10 @@ void InputTest::setText() {
     CORRADE_COMPARE(ui.textLayer().glyphCount(input.textData()), 7);
 }
 
-void InputTest::setTextTextProperties() {
-    Input input{{rootAnchor, {}, {32, 16}}, "hiya"};
+template<class T> void InputTest::setTextTextProperties() {
+    setTestCaseTemplateName(InputTraits<T>::name());
+
+    T input{{rootAnchor, {}, {32, 16}}, "hiya"};
     CORRADE_COMPARE(input.text(), "hiya");
     CORRADE_COMPARE(ui.textLayer().glyphCount(input.textData()), 4);
 
@@ -206,8 +302,10 @@ void InputTest::setTextTextProperties() {
     CORRADE_COMPARE(ui.textLayer().glyphCount(input.textData()), 7*6);
 }
 
-void InputTest::edit() {
-    Input input{{rootAnchor, {}, {32, 16}}, "set"};
+template<class T> void InputTest::edit() {
+    setTestCaseTemplateName(InputTraits<T>::name());
+
+    T input{{rootAnchor, {}, {32, 16}}, "set"};
     /** @todo use a cursor API once it exists */
     CORRADE_COMPARE(ui.textLayer().cursor(input.textData()), Containers::pair(3u, 3u));
 

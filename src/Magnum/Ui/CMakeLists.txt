@@ -148,6 +148,7 @@ set(MagnumUi_PRIVATE_HEADERS
     Implementation/lineLayerState.h
     Implementation/lineMiterLimit.h
     Implementation/textLayerState.h
+    Implementation/PasswordFont.h
     Implementation/Theme.h
     Implementation/themeDarkBaseStyleUniforms.h
     Implementation/themeDarkLayoutStyles.h
