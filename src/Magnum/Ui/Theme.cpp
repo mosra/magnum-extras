@@ -416,11 +416,16 @@ bool DarkTheme::doApply(UserInterface& ui, const ThemeFeatures features, PluginM
             return {};
         }
 
-        /* Password font. Takes the bullet glyph from the main font. I hope the
-           char32_t literal doesn't cause some bad shit on MSVC. The 1.3333f
-           scale is based on vibes, default 1.0f was too terse, 2.0f is too
-           wide. */
-        const UnsignedInt passwordFontBulletGlyph = font->glyphId(U'•');
+        /* Password font. Takes the bullet glyph from the main font. The
+           1.3333f scale is based on vibes, default 1.0f was too terse, 2.0f is
+           too wide. */
+        const UnsignedInt passwordFontBulletGlyph = font->glyphId(
+            #ifdef CORRADE_TARGET_MSVC
+            0x2022 /* "error C2015: too many characters in constant", lol, FFS */
+            #else
+            U'•'
+            #endif
+        );
         CORRADE_INTERNAL_ASSERT(passwordFontBulletGlyph != 0);
         Containers::Pointer<Implementation::PasswordFont> passwordFont{InPlaceInit, glyphCache, *font, passwordFontBulletGlyph, 1.3333f};
         /** @todo create some interface for "always open" fonts, ugh */
