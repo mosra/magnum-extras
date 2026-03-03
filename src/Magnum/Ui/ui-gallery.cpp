@@ -351,13 +351,9 @@ UiGallery::UiGallery(const Arguments& arguments): Platform::Application{argument
         });
         debugLayer.setLayerName(_ui.textLayer(), "Text", [](UnsignedInt style) -> Containers::StringView {
             switch(Ui::Implementation::TextStyle(style)) {
-                #define _c(name, suffix, ...) case Ui::Implementation::TextStyle::name##suffix: return #name #suffix;
-                #define _e _c
-                #define _s _c
+                #define _c(name, ...) case Ui::Implementation::TextStyle::name: return #name;
                 #include "Magnum/Ui/Implementation/themeDarkTextStyles.h"
                 #undef _c
-                #undef _e
-                #undef _s
                 case Ui::Implementation::TextStyle::Count:
                     CORRADE_INTERNAL_ASSERT_UNREACHABLE();
             }
@@ -367,9 +363,7 @@ UiGallery::UiGallery(const Arguments& arguments): Platform::Application{argument
         debugLayer.setLayerName(_ui.layoutLayer(), "Layout", [](UnsignedInt style) -> Containers::StringView {
             switch(Ui::Implementation::LayoutStyle(style)) {
                 #define _c(name, ...) case Ui::Implementation::LayoutStyle::name: return #name;
-                #define _n _c
                 #include "Magnum/Ui/Implementation/themeDarkLayoutStyles.h"
-                #undef _n
                 #undef _c
                 case Ui::Implementation::LayoutStyle::Count:
                     CORRADE_INTERNAL_ASSERT_UNREACHABLE();

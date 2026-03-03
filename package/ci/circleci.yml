@@ -306,6 +306,9 @@ jobs:
       CONFIGURATION: Debug
       # STUPID yml interprets unquoted ON as a boolean
       TARGET_EGL: "ON"
+      # The UiGenerateTheme relies on __PRETTY_FUNCTION__ showing enum names,
+      # which is only since GCC 9+
+      UI_CHECK_GENERATE_THEME: "OFF"
     steps:
     # libidn11 needed by CMake
     - install-base-linux:
@@ -414,6 +417,9 @@ jobs:
       CONFIGURATION: Debug
       # STUPID yml interprets unquoted ON as a boolean
       TARGET_EGL: "ON"
+      # The UiGenerateTheme relies on __PRETTY_FUNCTION__ showing enum names,
+      # which is only since GCC 9+
+      UI_CHECK_GENERATE_THEME: "OFF"
     steps:
     # libidn11 needed by CMake
     - install-base-linux:
@@ -438,6 +444,9 @@ jobs:
       CONFIGURATION: Release
       # STUPID yml interprets unquoted ON as a boolean
       TARGET_EGL: "ON"
+      # The UiGenerateTheme relies on __PRETTY_FUNCTION__ showing enum names,
+      # which is only since GCC 9+
+      UI_CHECK_GENERATE_THEME: "OFF"
     steps:
     # libidn11 needed by CMake
     - install-base-linux:

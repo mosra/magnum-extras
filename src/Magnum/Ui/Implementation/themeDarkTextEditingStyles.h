@@ -24,48 +24,28 @@
     DEALINGS IN THE SOFTWARE.
 */
 
-/* _c() is TextEditingStyle enum name, TextStyle enum name, padding, then
-   TextEditingStyleUniform constructor arguments. _s() is then additionally
-   with a selection override for the TextStyle as the second argument.
+/* This file is generated using GenerateTheme.cpp, don't edit directly */
 
-   Put into a dedicated file to be able to put as much as possible into
-   constexpr arrays without losing the correspondence between TextEditingStyle
-   and the actual items. Matching order tested in StyleTest, see all #includes
-   of this file in Style.cpp for actual uses.
-
-   So far there's no need to have a different count of styles and uniforms, so
-   it's all together, and the file is included once to extract uniform data and
-   once to extract other style properties. To not need to wrap the padding in
-   ()s, _c is expected to take all four values of it separately. */
-
-#if defined(_c) && defined(_s)
-/* No cursor. Used to have all Input* styles with both selection and cursor
-   style so the animations can transition between them without problems. */
-_c(InputCursorNone,                     {0.0f, 0.0f, 0.0f, 0.0f}, {}, {})
-
-/* Input cursor is always --*-link-active-color. 80% opacity when hovered,
-   fully opaque when focused, apart from the 80% opacity matching the outline
-   and left edge color. Selection is --*-color with 40% opacity. */
-_c(InputCursorDefault,                  {0.5f, 2.5f, 1.5f, 2.5f}, 0xa5c9eaff_rgbaf*0.8f, 1.5f)
-_c(InputCursorFocusedDefault,           {0.5f, 3.5f, 2.5f, 3.5f}, 0xa5c9ea_rgbf, 1.5f)
-_s(InputSelectionDefault,InputSelection,{1.0f, 2.0f, 1.0f, 2.0f}, 0xdcdcdcff_rgbaf*0.4f, 4.0f)
-
-_c(InputCursorSuccess,                  {0.5f, 2.5f, 1.5f, 2.5f}, 0xacecbeff_rgbaf*0.8f, 1.5f)
-_c(InputCursorFocusedSuccess,           {0.5f, 3.5f, 2.5f, 3.5f}, 0xacecbeff_rgbaf, 1.5f)
-_s(InputSelectionSuccess,InputSelection,{1.0f, 2.0f, 1.0f, 2.0f}, 0x3bd267ff_rgbaf*0.4f, 4.0f)
-
-_c(InputCursorWarning,                  {0.5f, 2.5f, 1.5f, 2.5f}, 0xe9ecaeff_rgbaf*0.8f, 1.5f)
-_c(InputCursorFocusedWarning,           {0.5f, 3.5f, 2.5f, 3.5f}, 0xe9ecaeff_rgbaf, 1.5f)
-_s(InputSelectionWarning,InputSelection,{1.0f, 2.0f, 1.0f, 2.0f}, 0xc7cf2fff_rgbaf*0.4f, 4.0f)
-
-_c(InputCursorDanger,                   {0.5f, 2.5f, 1.5f, 2.5f}, 0xff9391ff_rgbaf*0.8f, 1.5f)
-_c(InputCursorFocusedDanger,            {0.5f, 3.5f, 2.5f, 3.5f}, 0xff9391ff_rgbaf, 1.5f)
-_s(InputSelectionDanger, InputSelection,{1.0f, 2.0f, 1.0f, 2.0f}, 0xcd3431ff_rgbaf*0.4f, 4.0f)
-
-/* Flat input cursor is --link-color when hovered, and --link-active-color when
-   focused, always opaque, matching the outline. Selection is --link-color with
-   40% opacity. */
-_c(InputCursorFlat,                     {0.5f, 2.5f, 1.5f, 2.5f}, 0x5b9dd9_rgbf, 1.5f)
-_c(InputCursorFocusedFlat,              {0.5f, 3.5f, 2.5f, 3.5f}, 0xa5c9ea_rgbf, 1.5f)
-_s(InputSelectionFlat,   InputSelection,{1.0f, 2.0f, 1.0f, 2.0f}, 0x5b9dd9ff_rgbaf*0.4f, 4.0f)
+/* Padding, TextLayerEditingStyleUniform constructor arguments */
+#ifdef _c
+_c({0.0f, 0.0f, 0.0f, 0.0f}, {}, 0.0f) /* InputCursorNone */
+_c({0.5f, 2.5f, 1.5f, 2.5f}, 0xa5c9eaff_rgbaf*0.8f, 1.5f) /* InputCursorDefault */
+_c({0.5f, 3.5f, 2.5f, 3.5f}, 0xa5c9ea_rgbf, 1.5f) /* InputCursorFocusedDefault */
+_c({1.0f, 2.0f, 1.0f, 2.0f}, 0xdcdcdcff_rgbaf*0.4f, 4.0f) /* InputSelectionDefault */
+_c({0.5f, 2.5f, 1.5f, 2.5f}, 0xacecbeff_rgbaf*0.8f, 1.5f) /* InputCursorSuccess */
+_c({0.5f, 3.5f, 2.5f, 3.5f}, 0xacecbe_rgbf, 1.5f) /* InputCursorFocusedSuccess */
+_c({1.0f, 2.0f, 1.0f, 2.0f}, 0x3bd267ff_rgbaf*0.4f, 4.0f) /* InputSelectionSuccess */
+_c({0.5f, 2.5f, 1.5f, 2.5f}, 0xe9ecaeff_rgbaf*0.8f, 1.5f) /* InputCursorWarning */
+_c({0.5f, 3.5f, 2.5f, 3.5f}, 0xe9ecae_rgbf, 1.5f) /* InputCursorFocusedWarning */
+_c({1.0f, 2.0f, 1.0f, 2.0f}, 0xc7cf2fff_rgbaf*0.4f, 4.0f) /* InputSelectionWarning */
+_c({0.5f, 2.5f, 1.5f, 2.5f}, 0xff9391ff_rgbaf*0.8f, 1.5f) /* InputCursorDanger */
+_c({0.5f, 3.5f, 2.5f, 3.5f}, 0xff9391_rgbf, 1.5f) /* InputCursorFocusedDanger */
+_c({1.0f, 2.0f, 1.0f, 2.0f}, 0xcd3431ff_rgbaf*0.4f, 4.0f) /* InputSelectionDanger */
+_c({0.5f, 2.5f, 1.5f, 2.5f}, 0x5b9dd9_rgbf, 1.5f) /* InputCursorFlat */
+_c({0.5f, 3.5f, 2.5f, 3.5f}, 0xa5c9ea_rgbf, 1.5f) /* InputCursorFocusedFlat */
+_c({1.0f, 2.0f, 1.0f, 2.0f}, 0x5b9dd9ff_rgbaf*0.4f, 4.0f) /* InputSelectionFlat */
+#endif
+/* Style -> selection uniform ID in themeDarkTextStyleUniforms.h */
+#ifdef _u
+_u(91, 92, 93, 94, 95, 96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106)
 #endif

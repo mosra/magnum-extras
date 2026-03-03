@@ -53,7 +53,7 @@
 #include "Magnum/Ui/TextLayer.h"
 #include "Magnum/Ui/TextLayerAnimator.h"
 #include "Magnum/Ui/UserInterface.h"
-#include "Magnum/Ui/Implementation/Theme.hpp"
+#include "Magnum/Ui/Implementation/Theme.h" /* TextFont enum */
 
 #ifdef MAGNUM_UI_BUILD_STATIC
 static void importShaderResources() {
@@ -153,7 +153,7 @@ using namespace Containers::Literals;
 using namespace Math::Literals;
 using Implementation::BaseStyle;
 using Implementation::TextStyle;
-using Implementation::TextStyleUniform;
+using Implementation::TextFont;
 
 namespace {
 
@@ -175,24 +175,38 @@ constexpr TextLayerCommonStyleUniform TextCommonStyleUniformDark{};
 constexpr /* Trust me, you don't want to be on this compiler */
 #endif
 const TextLayerStyleUniform TextStyleUniformsDark[]{
-    #define _c(style, ...) {__VA_ARGS__},
+    #define _c(...) {__VA_ARGS__},
     #include "Magnum/Ui/Implementation/themeDarkTextStyleUniforms.h"
     #undef _c
 };
 
-constexpr struct {
-    UnsignedInt uniform;
+/* MSVC 2015, 2017 and 2019 cannot handle this in the form of
+    constexpr struct TextLayerStyle {
+        constexpr TextLayerStyle(...);
+    } LayoutStylesDark[]{
+        ...
+    };
+   complaining that the TextLayerStyle constructor isn't constexpr. Splitting
+   the struct and array definition makes it work. MSVC 2022 works. */
+/** @todo clean this up once MSVC 2017 and 2019 is gone */
+struct TextLayerStyle {
+    constexpr /*implicit*/ TextLayerStyle(Text::Alignment alignment, const Vector4& padding): alignment{alignment}, padding{padding}, cursorStyle{-1}, selectionStyle{-1} {}
+    constexpr /*implicit*/ TextLayerStyle(Text::Alignment alignment, const Vector4& padding, Int cursorStyle, Int selectionStyle): alignment{alignment}, padding{padding}, cursorStyle{cursorStyle}, selectionStyle{selectionStyle} {}
+
     Text::Alignment alignment;
-    Int cursorStyle, selectionStyle;
     Vector4 padding;
-} TextStylesDark[]{
-    #define _c(style, suffix, font, alignment, ...) {UnsignedInt(TextStyleUniform::style), Text::Alignment::alignment, -1, -1, __VA_ARGS__},
-    #define _s(style, suffix, selectionStyle, font, alignment, ...) {UnsignedInt(TextStyleUniform::style), Text::Alignment::alignment, -1, Int(Implementation::TextEditingStyle::selectionStyle), __VA_ARGS__},
-    #define _e(style, suffix, cursorStyle, selectionStyle, font, alignment, ...) {UnsignedInt(TextStyleUniform::style), Text::Alignment::alignment, Int(Implementation::TextEditingStyle::cursorStyle), Int(Implementation::TextEditingStyle::selectionStyle), __VA_ARGS__},
+    Int cursorStyle, selectionStyle;
+};
+
+constexpr TextLayerStyle TextStylesDark[]{
+    #define _c(style, font, alignment, ...) {Text::Alignment::alignment, __VA_ARGS__},
     #include "Magnum/Ui/Implementation/themeDarkTextStyles.h"
-    #undef _e
-    #undef _s
     #undef _c
+};
+constexpr UnsignedInt TextStyleUniformMappingDark[]{
+    #define _u(...) __VA_ARGS__
+    #include "Magnum/Ui/Implementation/themeDarkTextStyles.h"
+    #undef _u
 };
 
 /* 1 (true, screen)-pixel radius independently of UI scale */
@@ -202,22 +216,20 @@ constexpr TextLayerCommonEditingStyleUniform TextCommonEditingStyleUniformDark{1
 constexpr /* Trust me, you don't want to be on this compiler */
 #endif
 const TextLayerEditingStyleUniform TextEditingStyleUniformsDark[]{
-    #define _c(style, padding0, padding1, padding2, padding3, ...) {__VA_ARGS__},
-    #define _s(style, textUniform, padding0, padding1, padding2, padding3, ...) {__VA_ARGS__},
+    #define _c(padding0, padding1, padding2, padding3, ...) {__VA_ARGS__},
     #include "Magnum/Ui/Implementation/themeDarkTextEditingStyles.h"
     #undef _c
-    #undef _s
 };
 
-constexpr struct {
-    Int textUniform;
-    Vector4 padding;
-} TextEditingStylesDark[]{
-    #define _c(style, padding0, padding1, padding2, padding3, ...) {-1, padding0, padding1, padding2, padding3},
-    #define _s(style, textUniform, padding0, padding1, padding2, padding3, ...) {Int(TextStyleUniform::textUniform), padding0, padding1, padding2, padding3},
+constexpr Vector4 TextEditingStylePaddingsDark[]{
+    #define _c(padding0, padding1, padding2, padding3, ...) padding0, padding1, padding2, padding3,
     #include "Magnum/Ui/Implementation/themeDarkTextEditingStyles.h"
     #undef _c
-    #undef _s
+};
+constexpr Int TextEditingStyleUniformMappingDark[]{
+    #define _u(...) __VA_ARGS__
+    #include "Magnum/Ui/Implementation/themeDarkTextEditingStyles.h"
+    #undef _u
 };
 
 /* MSVC 2015, 2017 and 2019 cannot handle this in the form of
@@ -230,6 +242,7 @@ constexpr struct {
    the struct and array definition makes it work. MSVC 2022 works. */
 /** @todo clean this up once MSVC 2017 and 2019 is gone */
 struct LayoutLayerStyle {
+    constexpr /*implicit*/ LayoutLayerStyle(const Vector2& minSize): minSize{minSize} {}
     constexpr /*implicit*/ LayoutLayerStyle(const Vector2& minSize, const Vector4& padding, const Vector4& margin): minSize{minSize}, padding{padding}, margin{margin} {}
     constexpr /*implicit*/ LayoutLayerStyle(const Vector2& minSize, const Vector2& padding, const Vector2& margin): minSize{minSize}, padding{padding.x(), padding.y(), padding.x(), padding.y()}, margin{margin.x(), margin.y(), margin.x(), margin.y()} {}
 
@@ -240,9 +253,7 @@ struct LayoutLayerStyle {
 
 constexpr LayoutLayerStyle LayoutStylesDark[]{
     #define _c(style, ...) {__VA_ARGS__},
-    #define _n(style, ...) {__VA_ARGS__, Vector4{}, Vector4{}},
     #include "Magnum/Ui/Implementation/themeDarkLayoutStyles.h"
-    #undef _n
     #undef _c
 };
 
@@ -299,7 +310,7 @@ UnsignedInt DarkTheme::doTextLayerEditingStyleUniformCount() const {
 }
 
 UnsignedInt DarkTheme::doTextLayerEditingStyleCount() const {
-    return Containers::arraySize(TextEditingStylesDark);
+    return Containers::arraySize(TextEditingStyleUniformMappingDark);
 }
 
 Vector3i DarkTheme::doTextLayerGlyphCacheSize(ThemeFeatures) const {
@@ -340,12 +351,12 @@ bool DarkTheme::doApply(UserInterface& ui, const ThemeFeatures features, PluginM
             nullptr>();
     }
 
-    /* Icon font. Add also if just the text layer style is applied (where it
-       gets assigned to icon styles, but without any icons actually loaded).
+    /* List of font handles to be referenced by particular text styles using
+       the TextFont enum */
+    Ui::FontHandle fonts[Int(TextFont::Count)]{};
 
-       MSVC says iconFont might be used uninitialized without the {}. It won't,
-       the thing is just stupid. */
-    Ui::FontHandle iconFont{};
+    /* Icon font. Add also if just the text layer style is applied (where it
+       gets assigned to icon styles, but without any icons actually loaded). */
     if(features & (ThemeFeature::TextLayer|ThemeFeature::TextLayerImages)) {
         #ifdef MAGNUM_UI_BUILD_STATIC
         importShaderResources();
@@ -360,7 +371,7 @@ bool DarkTheme::doApply(UserInterface& ui, const ThemeFeatures features, PluginM
         /** @todo some DPI-aware machinery here, such as picking one of
             multiple icon images depending on the DPI scaling, or maybe just
             put these into a font */
-        iconFont = shared.addInstancelessFont(iconFontId, 24.0f/64.0f);
+        fonts[Int(TextFont::Icon)] = shared.addInstancelessFont(iconFontId, 24.0f/64.0f);
     }
 
     /* Text layer fonts and style */
@@ -388,26 +399,21 @@ bool DarkTheme::doApply(UserInterface& ui, const ThemeFeatures features, PluginM
             return {};
         }
 
-        /* Main font */
-        const Ui::FontHandle mainFont = shared.addFont(Utility::move(font), 16.0f);
+        fonts[Int(TextFont::Main)] = shared.addFont(Utility::move(font), 16.0f);
 
         /* Font handles matching all styles. References either the `mainFont`
            or the `iconFont` defined above. */
         const Ui::FontHandle fontHandles[]{
-            #define _c(style, suffix, font, ...) font,
-            #define _e(style, suffix, cursorStyle, selectionStyle, font, ...) font,
-            #define _s(style, suffix, selectionStyle, font, ...) font,
+            #define _c(style, font, ...) fonts[Int(TextFont::font)],
             #include "Magnum/Ui/Implementation/themeDarkTextStyles.h"
             #undef _c
-            #undef _e
-            #undef _s
         };
 
         shared
             .setStyle(
                 TextCommonStyleUniformDark,
                 TextStyleUniformsDark,
-                Containers::stridedArrayView(TextStylesDark).slice(&std::remove_all_extents<decltype(TextStylesDark)>::type::uniform),
+                TextStyleUniformMappingDark,
                 fontHandles,
                 Containers::stridedArrayView(TextStylesDark).slice(&std::remove_all_extents<decltype(TextStylesDark)>::type::alignment),
                 /* No features coming from style used yet */
@@ -418,8 +424,8 @@ bool DarkTheme::doApply(UserInterface& ui, const ThemeFeatures features, PluginM
             .setEditingStyle(
                 TextCommonEditingStyleUniformDark,
                 TextEditingStyleUniformsDark,
-                Containers::stridedArrayView(TextEditingStylesDark).slice(&std::remove_all_extents<decltype(TextEditingStylesDark)>::type::textUniform),
-                Containers::stridedArrayView(TextEditingStylesDark).slice(&std::remove_all_extents<decltype(TextEditingStylesDark)>::type::padding))
+                TextEditingStyleUniformMappingDark,
+                TextEditingStylePaddingsDark)
             .setStyleTransition<TextStyle,
                 Implementation::styleTransitionToInactiveOut,
                 Implementation::styleTransitionToInactiveOver,
@@ -469,7 +475,7 @@ bool DarkTheme::doApply(UserInterface& ui, const ThemeFeatures features, PluginM
         }
 
         /* The font was added above, query the glyph cache ID of it */
-        const UnsignedInt iconFontId = shared.glyphCacheFontId(iconFont);
+        const UnsignedInt iconFontId = shared.glyphCacheFontId(fonts[Int(TextFont::Icon)]);
 
         /* Copy the image data */
         Containers::StridedArrayView3D<const char> src = image->pixels();

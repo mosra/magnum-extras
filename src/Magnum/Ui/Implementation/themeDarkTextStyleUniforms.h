@@ -24,59 +24,117 @@
     DEALINGS IN THE SOFTWARE.
 */
 
-/* TextStyleUniform enum name, then TextLayerStyleUniform constructor
-   arguments. Put into a dedicated file to be able to put as much as possible
-   into constexpr arrays without losing the correspondence between TextStyle
-   and the actual items. Matching order tested in StyleTest, see all #includes
-   of this file in Style.cpp for actual uses. */
+/* This file is generated using GenerateTheme.cpp, don't edit directly */
 
+/* TextLayerStyleUniform constructor arguments */
 #ifdef _c
-_c(Default, )
+_c() /* Default */
+_c(0x22272e_rgbf) /* ButtonIconOnly */
+_c(0x22272e_rgbf) /* ButtonTextOnly */
+_c(0x22272e_rgbf) /* ButtonIcon */
+_c(0x22272e_rgbf) /* ButtonText */
+_c(0x22272e_rgbf) /* ButtonPressedIconOnly */
+_c(0x22272e_rgbf) /* ButtonPressedTextOnly */
+_c(0x22272e_rgbf) /* ButtonPressedIcon */
+_c(0x22272e_rgbf) /* ButtonPressedText */
+_c(0x2f363fff_rgbaf*0.8f) /* ButtonDisabledIconOnly */
+_c(0x2f363fff_rgbaf*0.8f) /* ButtonDisabledTextOnly */
+_c(0x2f363fff_rgbaf*0.8f) /* ButtonDisabledIcon */
+_c(0x2f363fff_rgbaf*0.8f) /* ButtonDisabledText */
+_c(0x5b9dd9_rgbf) /* ButtonFlatIconOnly */
+_c(0x5b9dd9_rgbf) /* ButtonFlatTextOnly */
+_c(0x5b9dd9_rgbf) /* ButtonFlatIcon */
+_c(0x5b9dd9_rgbf) /* ButtonFlatText */
+_c(0xa5c9ea_rgbf) /* ButtonFlatHoveredIconOnly */
+_c(0xa5c9ea_rgbf) /* ButtonFlatHoveredTextOnly */
+_c(0xa5c9ea_rgbf) /* ButtonFlatHoveredIcon */
+_c(0xa5c9ea_rgbf) /* ButtonFlatHoveredText */
+_c(0x5b9dd9_rgbf) /* ButtonFlatPressedIconOnly */
+_c(0x5b9dd9_rgbf) /* ButtonFlatPressedTextOnly */
+_c(0x5b9dd9_rgbf) /* ButtonFlatPressedIcon */
+_c(0x5b9dd9_rgbf) /* ButtonFlatPressedText */
+_c(0xa5c9ea_rgbf) /* ButtonFlatPressedHoveredIconOnly */
+_c(0xa5c9ea_rgbf) /* ButtonFlatPressedHoveredTextOnly */
+_c(0xa5c9ea_rgbf) /* ButtonFlatPressedHoveredIcon */
+_c(0xa5c9ea_rgbf) /* ButtonFlatPressedHoveredText */
+_c(0x5b9dd9ff_rgbaf*0.3f) /* ButtonFlatDisabledIconOnly */
+_c(0x5b9dd9ff_rgbaf*0.3f) /* ButtonFlatDisabledTextOnly */
+_c(0x5b9dd9ff_rgbaf*0.3f) /* ButtonFlatDisabledIcon */
+_c(0x5b9dd9ff_rgbaf*0.3f) /* ButtonFlatDisabledText */
+_c(0xdcdcdc_rgbf) /* LabelDefaultIcon */
+_c(0xdcdcdc_rgbf) /* LabelDefaultText */
+_c(0xdcdcdcff_rgbaf*0.3f) /* LabelDefaultDisabledIcon */
+_c(0xdcdcdcff_rgbaf*0.3f) /* LabelDefaultDisabledText */
+_c(0xa5c9ea_rgbf) /* LabelPrimaryIcon */
+_c(0xa5c9ea_rgbf) /* LabelPrimaryText */
+_c(0xa5c9eaff_rgbaf*0.3f) /* LabelPrimaryDisabledIcon */
+_c(0xa5c9eaff_rgbaf*0.3f) /* LabelPrimaryDisabledText */
+_c(0x3bd267_rgbf) /* LabelSuccessIcon */
+_c(0x3bd267_rgbf) /* LabelSuccessText */
+_c(0x3bd267ff_rgbaf*0.3f) /* LabelSuccessDisabledIcon */
+_c(0x3bd267ff_rgbaf*0.3f) /* LabelSuccessDisabledText */
+_c(0xc7cf2f_rgbf) /* LabelWarningIcon */
+_c(0xc7cf2f_rgbf) /* LabelWarningText */
+_c(0xc7cf2fff_rgbaf*0.3f) /* LabelWarningDisabledIcon */
+_c(0xc7cf2fff_rgbaf*0.3f) /* LabelWarningDisabledText */
+_c(0xcd3431_rgbf) /* LabelDangerIcon */
+_c(0xcd3431_rgbf) /* LabelDangerText */
+_c(0xcd3431ff_rgbaf*0.3f) /* LabelDangerDisabledIcon */
+_c(0xcd3431ff_rgbaf*0.3f) /* LabelDangerDisabledText */
+_c(0x2f83cc_rgbf) /* LabelInfoIcon */
+_c(0x2f83cc_rgbf) /* LabelInfoText */
+_c(0x2f83ccff_rgbaf*0.3f) /* LabelInfoDisabledIcon */
+_c(0x2f83ccff_rgbaf*0.3f) /* LabelInfoDisabledText */
+_c(0x747474_rgbf) /* LabelDimIcon */
+_c(0x747474_rgbf) /* LabelDimText */
+_c(0x747474ff_rgbaf*0.3f) /* LabelDimDisabledIcon */
+_c(0x747474ff_rgbaf*0.3f) /* LabelDimDisabledText */
+_c(0xdcdcdc_rgbf) /* InputDefault */
+_c(0xdcdcdc_rgbf) /* InputDefaultHovered */
+_c(0xdcdcdc_rgbf) /* InputDefaultFocused */
+_c(0xdcdcdc_rgbf) /* InputDefaultFocusedBlink */
+_c(0xdcdcdc_rgbf) /* InputDefaultPressed */
+_c(0xdcdcdcff_rgbaf*0.3f) /* InputDefaultDisabled */
+_c(0xacecbe_rgbf) /* InputSuccess */
+_c(0xacecbe_rgbf) /* InputSuccessHovered */
+_c(0xacecbe_rgbf) /* InputSuccessFocused */
+_c(0xacecbe_rgbf) /* InputSuccessFocusedBlink */
+_c(0xacecbe_rgbf) /* InputSuccessPressed */
+_c(0xacecbeff_rgbaf*0.3f) /* InputSuccessDisabled */
+_c(0xe9ecae_rgbf) /* InputWarning */
+_c(0xe9ecae_rgbf) /* InputWarningHovered */
+_c(0xe9ecae_rgbf) /* InputWarningFocused */
+_c(0xe9ecae_rgbf) /* InputWarningFocusedBlink */
+_c(0xe9ecae_rgbf) /* InputWarningPressed */
+_c(0xe9ecaeff_rgbaf*0.3f) /* InputWarningDisabled */
+_c(0xff9391_rgbf) /* InputDanger */
+_c(0xff9391_rgbf) /* InputDangerHovered */
+_c(0xff9391_rgbf) /* InputDangerFocused */
+_c(0xff9391_rgbf) /* InputDangerFocusedBlink */
+_c(0xff9391_rgbf) /* InputDangerPressed */
+_c(0xff9391ff_rgbaf*0.3f) /* InputDangerDisabled */
+_c(0xa5c9ea_rgbf) /* InputFlat */
+_c(0xa5c9ea_rgbf) /* InputFlatHovered */
+_c(0xa5c9ea_rgbf) /* InputFlatFocused */
+_c(0xa5c9ea_rgbf) /* InputFlatFocusedBlink */
+_c(0xa5c9ea_rgbf) /* InputFlatPressed */
+_c(0xa5c9eaff_rgbaf*0.3f) /* InputFlatDisabled */
 
-/* Button text color is always --button-background-color. Compared to the
-   background the text is fully opaque. Disabled text color is
-   --background-color with 80% opacity. */
-_c(Button,                      0x22272e_rgbf)
-_c(ButtonDisabled,              0x2f363fff_rgbaf*0.8f)
-
-/* Flat button is styled the same as links (--link-color, --link-active-color).
-   Disabled state is 30% opacity same as with button background color. */
-_c(ButtonFlat,                  0x5b9dd9_rgbf)
-_c(ButtonFlatHovered,           0xa5c9ea_rgbf)
-_c(ButtonFlatPressed,           0x5b9dd9_rgbf)
-_c(ButtonFlatPressedHovered,    0xa5c9ea_rgbf)
-_c(ButtonFlatDisabled,          0x5b9dd9ff_rgbaf*0.3f)
-
-/* Labels the same as --*-color. Disabled state is 30% opacity, same as with
-   button background color. */
-_c(LabelDefault,                0xdcdcdc_rgbf)
-_c(LabelDefaultDisabled,        0xdcdcdcff_rgbaf*0.3f)
-_c(LabelPrimary,                0xa5c9ea_rgbf)
-_c(LabelPrimaryDisabled,        0xa5c9eaff_rgbaf*0.3f)
-_c(LabelSuccess,                0x3bd267_rgbf)
-_c(LabelSuccessDisabled,        0x3bd267ff_rgbaf*0.3f)
-_c(LabelWarning,                0xc7cf2f_rgbf)
-_c(LabelWarningDisabled,        0xc7cf2fff_rgbaf*0.3f)
-_c(LabelDanger,                 0xcd3431_rgbf)
-_c(LabelDangerDisabled,         0xcd3431ff_rgbaf*0.3f)
-_c(LabelInfo,                   0x2f83cc_rgbf)
-_c(LabelInfoDisabled,           0x2f83ccff_rgbaf*0.3f)
-_c(LabelDim,                    0x747474_rgbf)
-_c(LabelDimDisabled,            0x747474ff_rgbaf*0.3f)
-
-/* Input text is always the same regardless of hover, --*-link-active-color.
-   Disabled again 30% opacity. */
-_c(InputDefault,                0xdcdcdc_rgbf)
-_c(InputDefaultDisabled,        0xdcdcdcff_rgbaf*0.3f)
-_c(InputSuccess,                0xacecbe_rgbf)
-_c(InputSuccessDisabled,        0xacecbeff_rgbaf*0.3f)
-_c(InputWarning,                0xe9ecae_rgbf)
-_c(InputWarningDisabled,        0xe9ecaeff_rgbaf*0.3f)
-_c(InputDanger,                 0xff9391_rgbf)
-_c(InputDangerDisabled,         0xff9391ff_rgbaf*0.3f)
-/* Flat input text is --link-active-color */
-_c(InputFlat,                   0xa5c9ea_rgbf)
-_c(InputFlatDisabled,           0xa5c9eaff_rgbaf*0.3f)
-/* Selection is --button-background-color, same as with button text */
-_c(InputSelection,              0x22272e_rgbf)
+/* Editing styles */
+_c() /* InputCursorNone */
+_c() /* InputCursorDefault */
+_c() /* InputCursorFocusedDefault */
+_c(0x22272e_rgbf) /* InputSelectionDefault */
+_c() /* InputCursorSuccess */
+_c() /* InputCursorFocusedSuccess */
+_c(0x22272e_rgbf) /* InputSelectionSuccess */
+_c() /* InputCursorWarning */
+_c() /* InputCursorFocusedWarning */
+_c(0x22272e_rgbf) /* InputSelectionWarning */
+_c() /* InputCursorDanger */
+_c() /* InputCursorFocusedDanger */
+_c(0x22272e_rgbf) /* InputSelectionDanger */
+_c() /* InputCursorFlat */
+_c() /* InputCursorFocusedFlat */
+_c(0x22272e_rgbf) /* InputSelectionFlat */
 #endif

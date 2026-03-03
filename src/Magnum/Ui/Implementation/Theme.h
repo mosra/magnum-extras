@@ -1,5 +1,5 @@
-#ifndef Magnum_Ui_Implementation_Theme_hpp
-#define Magnum_Ui_Implementation_Theme_hpp
+#ifndef Magnum_Ui_Implementation_Theme_h
+#define Magnum_Ui_Implementation_Theme_h
 /*
     This file is part of Magnum.
 
@@ -26,73 +26,14 @@
     DEALINGS IN THE SOFTWARE.
 */
 
-#include "Magnum/Types.h"
-
 namespace Magnum { namespace Ui { namespace Implementation {
 
-enum class TextStyleUniform: UnsignedInt {
-    Default,
+/* Used by GenerateTheme.cpp and Ui/Theme.cpp */
+enum class TextFont {
+    Main,
+    Icon,
 
-    Button,
-    ButtonDisabled,
-
-    ButtonFlat,
-    ButtonFlatHovered,
-    ButtonFlatPressed,
-    ButtonFlatPressedHovered,
-    ButtonFlatDisabled,
-
-    LabelDefault,
-    LabelDefaultDisabled,
-    LabelPrimary,
-    LabelPrimaryDisabled,
-    LabelSuccess,
-    LabelSuccessDisabled,
-    LabelWarning,
-    LabelWarningDisabled,
-    LabelDanger,
-    LabelDangerDisabled,
-    LabelInfo,
-    LabelInfoDisabled,
-    LabelDim,
-    LabelDimDisabled,
-
-    InputDefault,
-    InputDefaultDisabled,
-    InputSuccess,
-    InputSuccessDisabled,
-    InputWarning,
-    InputWarningDisabled,
-    InputDanger,
-    InputDangerDisabled,
-    InputFlat,
-    InputFlatDisabled,
-
-    InputSelection,
-};
-
-enum class TextEditingStyle: UnsignedShort {
-    InputCursorNone,
-
-    InputCursorDefault,
-    InputCursorFocusedDefault,
-    InputSelectionDefault,
-
-    InputCursorSuccess,
-    InputCursorFocusedSuccess,
-    InputSelectionSuccess,
-
-    InputCursorWarning,
-    InputCursorFocusedWarning,
-    InputSelectionWarning,
-
-    InputCursorDanger,
-    InputCursorFocusedDanger,
-    InputSelectionDanger,
-
-    InputCursorFlat,
-    InputCursorFocusedFlat,
-    InputSelectionFlat,
+    Count
 };
 
 }}}

@@ -24,147 +24,132 @@
     DEALINGS IN THE SOFTWARE.
 */
 
-/* _c() is TextStyleUniform enum name, TextStyle enum name suffix, font handle,
-   alignment, padding. _e() is for editing styles with cursor & selection
-   TextEditingStyle enum name as third and fourth argument, _s() then for
-   selection-only styles with just cursor TextEditingStyle as third argument.
+/* This file is generated using GenerateTheme.cpp, don't edit directly */
 
-   Put into a dedicated file to be able to put as much as possible into
-   constexpr arrays without losing the correspondence between TextStyle and the
-   actual items. Matching order tested in StyleTest, see all #includes of this
-   file in Style.cpp for actual uses. */
-
-#if defined(_c) && defined(_s) && defined(_e)
-_c(Default,,                        mainFont, MiddleCenter, {})
-/* Generally the horizontal padding is 6 and vertical 4. The button itself has
-   a min height specified, so the vertical padding is here only for cases with
-   larger fonts. */
-_c(Button,IconOnly,                 iconFont, MiddleCenter, { 6.0f, 4.0f,  6.0f, 4.0f})
-_c(Button,TextOnly,                 mainFont, MiddleCenter, { 6.0f, 4.0f,  6.0f, 4.0f})
-/* Assuming a 24x24 icon and 6-pixel gap between, for the icon the right-side
-   padding has to include the extra gap as well. The button widget then further
-   expands the padding by the actual text size. */
-_c(Button,Icon,                     iconFont, MiddleCenter, { 6.0f, 4.0f, 12.0f, 4.0f})
-/* Conversely, the text then has to include both the icon size and the gap in
-   the left-side padding */
-_c(Button,Text,                     mainFont, MiddleCenter, {36.0f, 4.0f,  6.0f, 4.0f})
-/* Pressed buttons have their icons and text shifted down by 1 pixel */
-_c(Button,PressedIconOnly,          mainFont, MiddleCenter, { 6.0f, 5.0f,  6.0f, 3.0f})
-_c(Button,PressedTextOnly,          mainFont, MiddleCenter, { 6.0f, 5.0f,  6.0f, 3.0f})
-_c(Button,PressedIcon,              iconFont, MiddleCenter, { 6.0f, 5.0f, 12.0f, 3.0f})
-_c(Button,PressedText,              mainFont, MiddleCenter, {36.0f, 5.0f,  6.0f, 3.0f})
-_c(ButtonDisabled,IconOnly,         iconFont, MiddleCenter, { 6.0f, 4.0f,  6.0f, 4.0f})
-_c(ButtonDisabled,TextOnly,         mainFont, MiddleCenter, { 6.0f, 4.0f,  6.0f, 4.0f})
-_c(ButtonDisabled,Icon,             iconFont, MiddleCenter, { 6.0f, 4.0f, 12.0f, 4.0f})
-_c(ButtonDisabled,Text,             mainFont, MiddleCenter, {36.0f, 4.0f,  6.0f, 4.0f})
-
-_c(ButtonFlat,IconOnly,             iconFont, MiddleCenter, { 6.0f, 4.0f,  6.0f, 4.0f})
-_c(ButtonFlat,TextOnly,             mainFont, MiddleCenter, { 6.0f, 4.0f,  6.0f, 4.0f})
-_c(ButtonFlat,Icon,                 iconFont, MiddleCenter, { 6.0f, 4.0f, 12.0f, 4.0f})
-_c(ButtonFlat,Text,                 mainFont, MiddleCenter, {36.0f, 4.0f,  6.0f, 4.0f})
-_c(ButtonFlatHovered,IconOnly,      iconFont, MiddleCenter, { 6.0f, 4.0f,  6.0f, 4.0f})
-_c(ButtonFlatHovered,TextOnly,      mainFont, MiddleCenter, { 6.0f, 4.0f,  6.0f, 4.0f})
-_c(ButtonFlatHovered,Icon,          iconFont, MiddleCenter, { 6.0f, 4.0f, 12.0f, 4.0f})
-_c(ButtonFlatHovered,Text,          mainFont, MiddleCenter, {36.0f, 4.0f,  6.0f, 4.0f})
-_c(ButtonFlatPressed,IconOnly,      mainFont, MiddleCenter, { 6.0f, 5.0f,  6.0f, 3.0f})
-_c(ButtonFlatPressed,TextOnly,      mainFont, MiddleCenter, { 6.0f, 5.0f,  6.0f, 3.0f})
-_c(ButtonFlatPressed,Icon,          iconFont, MiddleCenter, { 6.0f, 5.0f, 12.0f, 3.0f})
-_c(ButtonFlatPressed,Text,          mainFont, MiddleCenter, {36.0f, 5.0f,  6.0f, 3.0f})
-_c(ButtonFlatPressedHovered,IconOnly,mainFont,MiddleCenter, { 6.0f, 5.0f,  6.0f, 3.0f})
-_c(ButtonFlatPressedHovered,TextOnly,mainFont,MiddleCenter, { 6.0f, 5.0f,  6.0f, 3.0f})
-_c(ButtonFlatPressedHovered,Icon,   iconFont, MiddleCenter, { 6.0f, 5.0f, 12.0f, 3.0f})
-_c(ButtonFlatPressedHovered,Text,   mainFont, MiddleCenter, {36.0f, 5.0f,  6.0f, 3.0f})
-_c(ButtonFlatDisabled,IconOnly,     iconFont, MiddleCenter, { 6.0f, 4.0f,  6.0f, 4.0f})
-_c(ButtonFlatDisabled,TextOnly,     mainFont, MiddleCenter, { 6.0f, 4.0f,  6.0f, 4.0f})
-_c(ButtonFlatDisabled,Icon,         iconFont, MiddleCenter, { 6.0f, 4.0f, 12.0f, 4.0f})
-_c(ButtonFlatDisabled,Text,         mainFont, MiddleCenter, {36.0f, 4.0f,  6.0f, 4.0f})
-
-_c(LabelDefault,Icon,               iconFont, MiddleCenter, { 0.0f, 0.0f,  0.0f, 0.0f})
-_c(LabelDefault,Text,               mainFont, MiddleCenter, { 0.0f, 0.0f,  0.0f, 0.0f})
-_c(LabelDefaultDisabled,Icon,       iconFont, MiddleCenter, { 0.0f, 0.0f,  0.0f, 0.0f})
-_c(LabelDefaultDisabled,Text,       mainFont, MiddleCenter, { 0.0f, 0.0f,  0.0f, 0.0f})
-_c(LabelPrimary,Icon,               iconFont, MiddleCenter, { 0.0f, 0.0f,  0.0f, 0.0f})
-_c(LabelPrimary,Text,               mainFont, MiddleCenter, { 0.0f, 0.0f,  0.0f, 0.0f})
-_c(LabelPrimaryDisabled,Icon,       iconFont, MiddleCenter, { 0.0f, 0.0f,  0.0f, 0.0f})
-_c(LabelPrimaryDisabled,Text,       mainFont, MiddleCenter, { 0.0f, 0.0f,  0.0f, 0.0f})
-_c(LabelSuccess,Icon,               iconFont, MiddleCenter, { 0.0f, 0.0f,  0.0f, 0.0f})
-_c(LabelSuccess,Text,               mainFont, MiddleCenter, { 0.0f, 0.0f,  0.0f, 0.0f})
-_c(LabelSuccessDisabled,Icon,       iconFont, MiddleCenter, { 0.0f, 0.0f,  0.0f, 0.0f})
-_c(LabelSuccessDisabled,Text,       mainFont, MiddleCenter, { 0.0f, 0.0f,  0.0f, 0.0f})
-_c(LabelWarning,Icon,               iconFont, MiddleCenter, { 0.0f, 0.0f,  0.0f, 0.0f})
-_c(LabelWarning,Text,               mainFont, MiddleCenter, { 0.0f, 0.0f,  0.0f, 0.0f})
-_c(LabelWarningDisabled,Icon,       iconFont, MiddleCenter, { 0.0f, 0.0f,  0.0f, 0.0f})
-_c(LabelWarningDisabled,Text,       mainFont, MiddleCenter, { 0.0f, 0.0f,  0.0f, 0.0f})
-_c(LabelDanger,Icon,                iconFont, MiddleCenter, { 0.0f, 0.0f,  0.0f, 0.0f})
-_c(LabelDanger,Text,                mainFont, MiddleCenter, { 0.0f, 0.0f,  0.0f, 0.0f})
-_c(LabelDangerDisabled,Icon,        iconFont, MiddleCenter, { 0.0f, 0.0f,  0.0f, 0.0f})
-_c(LabelDangerDisabled,Text,        mainFont, MiddleCenter, { 0.0f, 0.0f,  0.0f, 0.0f})
-_c(LabelInfo,Icon,                  iconFont, MiddleCenter, { 0.0f, 0.0f,  0.0f, 0.0f})
-_c(LabelInfo,Text,                  mainFont, MiddleCenter, { 0.0f, 0.0f,  0.0f, 0.0f})
-_c(LabelInfoDisabled,Icon,          iconFont, MiddleCenter, { 0.0f, 0.0f,  0.0f, 0.0f})
-_c(LabelInfoDisabled,Text,          mainFont, MiddleCenter, { 0.0f, 0.0f,  0.0f, 0.0f})
-_c(LabelDim,Icon,                   iconFont, MiddleCenter, { 0.0f, 0.0f,  0.0f, 0.0f})
-_c(LabelDim,Text,                   mainFont, MiddleCenter, { 0.0f, 0.0f,  0.0f, 0.0f})
-_c(LabelDimDisabled,Icon,           iconFont, MiddleCenter, { 0.0f, 0.0f,  0.0f, 0.0f})
-_c(LabelDimDisabled,Text,           mainFont, MiddleCenter, { 0.0f, 0.0f,  0.0f, 0.0f})
-
-_e(InputDefault,,               InputCursorNone,        InputSelectionDefault,
-                                    mainFont, MiddleLeft,   {10.0f, 4.0f,  6.0f, 4.0f})
-_e(InputDefault,Hovered,        InputCursorDefault,     InputSelectionDefault,
-                                    mainFont, MiddleLeft,   {10.0f, 4.0f,  6.0f, 4.0f})
-_e(InputDefault,Focused,        InputCursorFocusedDefault,InputSelectionDefault,
-                                    mainFont, MiddleLeft,   {10.0f, 4.0f,  6.0f, 4.0f})
-_e(InputDefault,FocusedBlink,   InputCursorNone,        InputSelectionDefault,
-                                    mainFont, MiddleLeft,   {10.0f, 4.0f,  6.0f, 4.0f})
-_e(InputDefault,Pressed,        InputCursorFocusedDefault,InputSelectionDefault,
-                                    mainFont, MiddleLeft,   {10.0f, 5.0f,  6.0f, 3.0f})
-_c(InputDefaultDisabled,,           mainFont, MiddleLeft,   {10.0f, 4.0f,  6.0f, 4.0f})
-
-_e(InputSuccess,,               InputCursorNone,        InputSelectionSuccess,
-                                    mainFont, MiddleLeft,   {10.0f, 4.0f,  6.0f, 4.0f})
-_e(InputSuccess,Hovered,        InputCursorSuccess,     InputSelectionSuccess,
-                                    mainFont, MiddleLeft,   {10.0f, 4.0f,  6.0f, 4.0f})
-_e(InputSuccess,Focused,        InputCursorFocusedSuccess,InputSelectionSuccess,
-                                    mainFont, MiddleLeft,   {10.0f, 4.0f,  6.0f, 4.0f})
-_e(InputSuccess,FocusedBlink,   InputCursorNone,        InputSelectionSuccess,
-                                    mainFont, MiddleLeft,   {10.0f, 4.0f,  6.0f, 4.0f})
-_e(InputSuccess,Pressed,        InputCursorFocusedSuccess,InputSelectionSuccess,
-                                    mainFont, MiddleLeft,   {10.0f, 5.0f,  6.0f, 3.0f})
-_c(InputSuccessDisabled,,           mainFont, MiddleLeft,   {10.0f, 4.0f,  6.0f, 4.0f})
-
-_e(InputWarning,,               InputCursorNone,        InputSelectionWarning,
-                                    mainFont, MiddleLeft,   {10.0f, 4.0f,  6.0f, 4.0f})
-_e(InputWarning,Hovered,        InputCursorWarning,     InputSelectionWarning,
-                                    mainFont, MiddleLeft,   {10.0f, 4.0f,  6.0f, 4.0f})
-_e(InputWarning,Focused,        InputCursorFocusedWarning,InputSelectionWarning,
-                                    mainFont, MiddleLeft,   {10.0f, 4.0f,  6.0f, 4.0f})
-_e(InputWarning,FocusedBlink,   InputCursorNone,        InputSelectionWarning,
-                                    mainFont, MiddleLeft,   {10.0f, 4.0f,  6.0f, 4.0f})
-_e(InputWarning,Pressed,        InputCursorFocusedWarning,InputSelectionWarning,
-                                    mainFont, MiddleLeft,   {10.0f, 5.0f,  6.0f, 3.0f})
-_c(InputWarningDisabled,,           mainFont, MiddleLeft,   {10.0f, 4.0f,  6.0f, 4.0f})
-
-_e(InputDanger,,                InputCursorNone,        InputSelectionDanger,
-                                    mainFont, MiddleLeft,   {10.0f, 4.0f,  6.0f, 4.0f})
-_e(InputDanger,Hovered,         InputCursorDanger,      InputSelectionDanger,
-                                    mainFont, MiddleLeft,   {10.0f, 4.0f,  6.0f, 4.0f})
-_e(InputDanger,Focused,         InputCursorFocusedDanger,InputSelectionDanger,
-                                    mainFont, MiddleLeft,   {10.0f, 4.0f,  6.0f, 4.0f})
-_e(InputDanger,FocusedBlink,    InputCursorNone,        InputSelectionDanger,
-                                    mainFont, MiddleLeft,   {10.0f, 4.0f,  6.0f, 4.0f})
-_e(InputDanger,Pressed,         InputCursorFocusedDanger,InputSelectionDanger,
-                                    mainFont, MiddleLeft,   {10.0f, 5.0f,  6.0f, 3.0f})
-_c(InputDangerDisabled,,            mainFont, MiddleLeft,   {10.0f, 4.0f,  6.0f, 4.0f})
-
-_e(InputFlat,,                  InputCursorNone,        InputSelectionFlat,
-                                    mainFont, MiddleLeft,   {10.0f, 4.0f,  6.0f, 4.0f})
-_e(InputFlat,Hovered,           InputCursorFlat,        InputSelectionFlat,
-                                    mainFont, MiddleLeft,   {10.0f, 4.0f,  6.0f, 4.0f})
-_e(InputFlat,Focused,           InputCursorFocusedFlat, InputSelectionFlat,
-                                    mainFont, MiddleLeft,   {10.0f, 4.0f,  6.0f, 4.0f})
-_e(InputFlat,FocusedBlink,      InputCursorNone,        InputSelectionFlat,
-                                    mainFont, MiddleLeft,   {10.0f, 4.0f,  6.0f, 4.0f})
-_e(InputFlat,Pressed,           InputCursorFocusedFlat, InputSelectionFlat,
-                                    mainFont, MiddleLeft,   {10.0f, 5.0f,  6.0f, 3.0f})
-_c(InputFlatDisabled,,              mainFont, MiddleLeft,   {10.0f, 4.0f,  6.0f, 4.0f})
+/* TextStyle enum name, TextFont enum name, alignment, padding */
+#ifdef _c
+_c(Default, Main, MiddleCenter, {})
+_c(ButtonIconOnly, Icon, MiddleCenter, {6.0f, 4.0f, 6.0f, 4.0f})
+_c(ButtonTextOnly, Main, MiddleCenter, {6.0f, 4.0f, 6.0f, 4.0f})
+_c(ButtonIcon, Icon, MiddleCenter, {6.0f, 4.0f, 12.0f, 4.0f})
+_c(ButtonText, Main, MiddleCenter, {36.0f, 4.0f, 6.0f, 4.0f})
+_c(ButtonPressedIconOnly, Icon, MiddleCenter, {6.0f, 5.0f, 6.0f, 3.0f})
+_c(ButtonPressedTextOnly, Main, MiddleCenter, {6.0f, 5.0f, 6.0f, 3.0f})
+_c(ButtonPressedIcon, Icon, MiddleCenter, {6.0f, 5.0f, 12.0f, 3.0f})
+_c(ButtonPressedText, Main, MiddleCenter, {36.0f, 5.0f, 6.0f, 3.0f})
+_c(ButtonDisabledIconOnly, Icon, MiddleCenter, {6.0f, 4.0f, 6.0f, 4.0f})
+_c(ButtonDisabledTextOnly, Main, MiddleCenter, {6.0f, 4.0f, 6.0f, 4.0f})
+_c(ButtonDisabledIcon, Icon, MiddleCenter, {6.0f, 4.0f, 12.0f, 4.0f})
+_c(ButtonDisabledText, Main, MiddleCenter, {36.0f, 4.0f, 6.0f, 4.0f})
+_c(ButtonFlatIconOnly, Icon, MiddleCenter, {6.0f, 4.0f, 6.0f, 4.0f})
+_c(ButtonFlatTextOnly, Main, MiddleCenter, {6.0f, 4.0f, 6.0f, 4.0f})
+_c(ButtonFlatIcon, Icon, MiddleCenter, {6.0f, 4.0f, 12.0f, 4.0f})
+_c(ButtonFlatText, Main, MiddleCenter, {36.0f, 4.0f, 6.0f, 4.0f})
+_c(ButtonFlatHoveredIconOnly, Icon, MiddleCenter, {6.0f, 4.0f, 6.0f, 4.0f})
+_c(ButtonFlatHoveredTextOnly, Main, MiddleCenter, {6.0f, 4.0f, 6.0f, 4.0f})
+_c(ButtonFlatHoveredIcon, Icon, MiddleCenter, {6.0f, 4.0f, 12.0f, 4.0f})
+_c(ButtonFlatHoveredText, Main, MiddleCenter, {36.0f, 4.0f, 6.0f, 4.0f})
+_c(ButtonFlatPressedIconOnly, Icon, MiddleCenter, {6.0f, 5.0f, 6.0f, 3.0f})
+_c(ButtonFlatPressedTextOnly, Main, MiddleCenter, {6.0f, 5.0f, 6.0f, 3.0f})
+_c(ButtonFlatPressedIcon, Icon, MiddleCenter, {6.0f, 5.0f, 12.0f, 3.0f})
+_c(ButtonFlatPressedText, Main, MiddleCenter, {36.0f, 5.0f, 6.0f, 3.0f})
+_c(ButtonFlatPressedHoveredIconOnly, Icon, MiddleCenter, {6.0f, 5.0f, 6.0f, 3.0f})
+_c(ButtonFlatPressedHoveredTextOnly, Main, MiddleCenter, {6.0f, 5.0f, 6.0f, 3.0f})
+_c(ButtonFlatPressedHoveredIcon, Icon, MiddleCenter, {6.0f, 5.0f, 12.0f, 3.0f})
+_c(ButtonFlatPressedHoveredText, Main, MiddleCenter, {36.0f, 5.0f, 6.0f, 3.0f})
+_c(ButtonFlatDisabledIconOnly, Main, MiddleCenter, {6.0f, 4.0f, 6.0f, 4.0f})
+_c(ButtonFlatDisabledTextOnly, Main, MiddleCenter, {6.0f, 4.0f, 6.0f, 4.0f})
+_c(ButtonFlatDisabledIcon, Main, MiddleCenter, {6.0f, 4.0f, 12.0f, 4.0f})
+_c(ButtonFlatDisabledText, Main, MiddleCenter, {36.0f, 4.0f, 6.0f, 4.0f})
+_c(LabelDefaultIcon, Icon, MiddleCenter, {})
+_c(LabelDefaultText, Main, MiddleCenter, {})
+_c(LabelDefaultDisabledIcon, Icon, MiddleCenter, {})
+_c(LabelDefaultDisabledText, Main, MiddleCenter, {})
+_c(LabelPrimaryIcon, Icon, MiddleCenter, {})
+_c(LabelPrimaryText, Main, MiddleCenter, {})
+_c(LabelPrimaryDisabledIcon, Icon, MiddleCenter, {})
+_c(LabelPrimaryDisabledText, Main, MiddleCenter, {})
+_c(LabelSuccessIcon, Icon, MiddleCenter, {})
+_c(LabelSuccessText, Main, MiddleCenter, {})
+_c(LabelSuccessDisabledIcon, Icon, MiddleCenter, {})
+_c(LabelSuccessDisabledText, Main, MiddleCenter, {})
+_c(LabelWarningIcon, Icon, MiddleCenter, {})
+_c(LabelWarningText, Main, MiddleCenter, {})
+_c(LabelWarningDisabledIcon, Icon, MiddleCenter, {})
+_c(LabelWarningDisabledText, Main, MiddleCenter, {})
+_c(LabelDangerIcon, Icon, MiddleCenter, {})
+_c(LabelDangerText, Main, MiddleCenter, {})
+_c(LabelDangerDisabledIcon, Icon, MiddleCenter, {})
+_c(LabelDangerDisabledText, Main, MiddleCenter, {})
+_c(LabelInfoIcon, Icon, MiddleCenter, {})
+_c(LabelInfoText, Main, MiddleCenter, {})
+_c(LabelInfoDisabledIcon, Icon, MiddleCenter, {})
+_c(LabelInfoDisabledText, Main, MiddleCenter, {})
+_c(LabelDimIcon, Icon, MiddleCenter, {})
+_c(LabelDimText, Main, MiddleCenter, {})
+_c(LabelDimDisabledIcon, Icon, MiddleCenter, {})
+_c(LabelDimDisabledText, Main, MiddleCenter, {})
+_c(InputDefault, Main, MiddleLeft, {10.0f, 4.0f, 6.0f, 4.0f},
+    0 /* InputCursorNone */, 3 /* InputSelectionDefault */)
+_c(InputDefaultHovered, Main, MiddleLeft, {10.0f, 4.0f, 6.0f, 4.0f},
+    1 /* InputCursorDefault */, 3 /* InputSelectionDefault */)
+_c(InputDefaultFocused, Main, MiddleLeft, {10.0f, 4.0f, 6.0f, 4.0f},
+    2 /* InputCursorFocusedDefault */, 3 /* InputSelectionDefault */)
+_c(InputDefaultFocusedBlink, Main, MiddleLeft, {10.0f, 4.0f, 6.0f, 4.0f},
+    0 /* InputCursorNone */, 3 /* InputSelectionDefault */)
+_c(InputDefaultPressed, Main, MiddleLeft, {10.0f, 5.0f, 6.0f, 3.0f},
+    2 /* InputCursorFocusedDefault */, 3 /* InputSelectionDefault */)
+_c(InputDefaultDisabled, Main, MiddleLeft, {10.0f, 4.0f, 6.0f, 4.0f})
+_c(InputSuccess, Main, MiddleLeft, {10.0f, 4.0f, 6.0f, 4.0f},
+    0 /* InputCursorNone */, 6 /* InputSelectionSuccess */)
+_c(InputSuccessHovered, Main, MiddleLeft, {10.0f, 4.0f, 6.0f, 4.0f},
+    4 /* InputCursorSuccess */, 6 /* InputSelectionSuccess */)
+_c(InputSuccessFocused, Main, MiddleLeft, {10.0f, 4.0f, 6.0f, 4.0f},
+    5 /* InputCursorFocusedSuccess */, 6 /* InputSelectionSuccess */)
+_c(InputSuccessFocusedBlink, Main, MiddleLeft, {10.0f, 4.0f, 6.0f, 4.0f},
+    0 /* InputCursorNone */, 6 /* InputSelectionSuccess */)
+_c(InputSuccessPressed, Main, MiddleLeft, {10.0f, 5.0f, 6.0f, 3.0f},
+    5 /* InputCursorFocusedSuccess */, 6 /* InputSelectionSuccess */)
+_c(InputSuccessDisabled, Main, MiddleLeft, {10.0f, 4.0f, 6.0f, 4.0f})
+_c(InputWarning, Main, MiddleLeft, {10.0f, 4.0f, 6.0f, 4.0f},
+    0 /* InputCursorNone */, 9 /* InputSelectionWarning */)
+_c(InputWarningHovered, Main, MiddleLeft, {10.0f, 4.0f, 6.0f, 4.0f},
+    7 /* InputCursorWarning */, 9 /* InputSelectionWarning */)
+_c(InputWarningFocused, Main, MiddleLeft, {10.0f, 4.0f, 6.0f, 4.0f},
+    8 /* InputCursorFocusedWarning */, 9 /* InputSelectionWarning */)
+_c(InputWarningFocusedBlink, Main, MiddleLeft, {10.0f, 4.0f, 6.0f, 4.0f},
+    0 /* InputCursorNone */, 9 /* InputSelectionWarning */)
+_c(InputWarningPressed, Main, MiddleLeft, {10.0f, 5.0f, 6.0f, 3.0f},
+    8 /* InputCursorFocusedWarning */, 9 /* InputSelectionWarning */)
+_c(InputWarningDisabled, Main, MiddleLeft, {10.0f, 4.0f, 6.0f, 4.0f})
+_c(InputDanger, Main, MiddleLeft, {10.0f, 4.0f, 6.0f, 4.0f},
+    0 /* InputCursorNone */, 12 /* InputSelectionDanger */)
+_c(InputDangerHovered, Main, MiddleLeft, {10.0f, 4.0f, 6.0f, 4.0f},
+    10 /* InputCursorDanger */, 12 /* InputSelectionDanger */)
+_c(InputDangerFocused, Main, MiddleLeft, {10.0f, 4.0f, 6.0f, 4.0f},
+    11 /* InputCursorFocusedDanger */, 12 /* InputSelectionDanger */)
+_c(InputDangerFocusedBlink, Main, MiddleLeft, {10.0f, 4.0f, 6.0f, 4.0f},
+    0 /* InputCursorNone */, 12 /* InputSelectionDanger */)
+_c(InputDangerPressed, Main, MiddleLeft, {10.0f, 5.0f, 6.0f, 3.0f},
+    11 /* InputCursorFocusedDanger */, 12 /* InputSelectionDanger */)
+_c(InputDangerDisabled, Main, MiddleLeft, {10.0f, 4.0f, 6.0f, 4.0f})
+_c(InputFlat, Main, MiddleLeft, {10.0f, 4.0f, 6.0f, 4.0f},
+    0 /* InputCursorNone */, 15 /* InputSelectionFlat */)
+_c(InputFlatHovered, Main, MiddleLeft, {10.0f, 4.0f, 6.0f, 4.0f},
+    13 /* InputCursorFlat */, 15 /* InputSelectionFlat */)
+_c(InputFlatFocused, Main, MiddleLeft, {10.0f, 4.0f, 6.0f, 4.0f},
+    14 /* InputCursorFocusedFlat */, 15 /* InputSelectionFlat */)
+_c(InputFlatFocusedBlink, Main, MiddleLeft, {10.0f, 4.0f, 6.0f, 4.0f},
+    0 /* InputCursorNone */, 15 /* InputSelectionFlat */)
+_c(InputFlatPressed, Main, MiddleLeft, {10.0f, 5.0f, 6.0f, 3.0f},
+    14 /* InputCursorFocusedFlat */, 15 /* InputSelectionFlat */)
+_c(InputFlatDisabled, Main, MiddleLeft, {10.0f, 4.0f, 6.0f, 4.0f})
+#endif
+/* Style -> uniform ID in themeDarkTextStyleUniforms.h */
+#ifdef _u
+_u(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20,
+   21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39,
+   40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58,
+   59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77,
+   78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90)
 #endif

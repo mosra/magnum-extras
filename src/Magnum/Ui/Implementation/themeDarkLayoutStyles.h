@@ -24,32 +24,22 @@
     DEALINGS IN THE SOFTWARE.
 */
 
-/* _c() is LayoutLayer enum name, min size, padding and margin,
-   _n() is just enum name and min size with no padding or margin defined */
+/* This file is generated using GenerateTheme.cpp, don't edit directly */
 
+/* LayoutStyle enum name, min size[, padding, margin] */
 #ifdef _c
-/* Compared to m.css, which has both and margin and padding 1rem (= 16px,
-   matching font size), the spacing is slightly reduced here. */
 _c(Button, {0.0f, 36.0f}, {}, {12.0f, 10.0f})
 _c(Label, {0.0f, 24.0f}, {}, {12.0f, 10.0f})
 _c(Input, {0.0f, 36.0f}, {}, {12.0f, 10.0f})
 _c(Panel, {}, {16.0f, 12.0f}, {12.0f, 10.0f})
-
-_n(ScrollArea, {})
-_n(ScrollAreaView, {})
-_n(ScrollAreaViewOnlyX, {})
-_n(ScrollAreaViewOnlyY, {})
-/* The bottom-side margin for ScrollbarX and right-side margin for ScrollbarY
-   is picked in a way that doesn't make the two thumbs (visually) overlap. It
-   causes the active scrollbar area to overlap though, but as that's just a
-   small square it shouldn't cause any practical issues. */
-/** @todo even just the 6 unit gap looks kinda ugly when sizes are tiny, any
-    idea how to improve that? with less than 6 the event handling overlaps too
-    much that even the test fails to pick the correct node to highlight */
+_c(ScrollArea, {})
+_c(ScrollAreaView, {})
+_c(ScrollAreaViewOnlyX, {})
+_c(ScrollAreaViewOnlyY, {})
 _c(ScrollbarX, {32.0f, 16.0f}, {}, {0.0f, 0.0f, 6.0f, 0.0f})
-_n(ScrollbarOnlyX, {32.0f, 16.0f})
+_c(ScrollbarOnlyX, {32.0f, 16.0f})
 _c(ScrollbarY, {16.0f, 32.0f}, {}, {0.0f, 0.0f, 0.0f, 6.0f})
-_n(ScrollbarOnlyY, {16.0f, 32.0f})
-_n(ScrollbarThumbX, {21.0f, 16.0f})
-_n(ScrollbarThumbY, {16.0f, 21.0f})
+_c(ScrollbarOnlyY, {16.0f, 32.0f})
+_c(ScrollbarThumbX, {21.0f, 16.0f})
+_c(ScrollbarThumbY, {16.0f, 21.0f})
 #endif
