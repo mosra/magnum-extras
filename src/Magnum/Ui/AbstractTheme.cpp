@@ -660,6 +660,8 @@ Transition<TextStyle> styleTransition(const TextStyle index) {
         _cDisabled(LabelInfo,Text)
         _cDisabled(LabelDim,Icon)
         _cDisabled(LabelDim,Text)
+        _cDisabled(LabelTitle,Icon)
+        _cDisabled(LabelTitle,Text)
         _cHoveredFocusedBlinkPressedDisabled(InputDefault,)
         _cHoveredFocusedBlinkPressedDisabled(InputSuccess,)
         _cHoveredFocusedBlinkPressedDisabled(InputWarning,)

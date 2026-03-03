@@ -70,10 +70,24 @@ const struct {
     const char* name;
     Icon icon;
     const char* text;
+    LabelStyle originalStyle, changedStyle;
+    bool expectLayoutStyleChange;
 } SetStyleData[]{
-    {"empty", Icon::None, nullptr},
-    {"icon", Icon::No, nullptr},
-    {"text", Icon::None, "hello"},
+    {"empty",
+        Icon::None, nullptr,
+        LabelStyle::Dim, LabelStyle::Success, false},
+    {"icon",
+        Icon::No, nullptr,
+        LabelStyle::Dim, LabelStyle::Success, false},
+    {"text",
+        Icon::None, "hello",
+        LabelStyle::Dim, LabelStyle::Success, false},
+    {"text, from title style",
+        Icon::None, "hello",
+        LabelStyle::Title, LabelStyle::Success, true},
+    {"text, to title style",
+        Icon::None, "hello",
+        LabelStyle::Dim, LabelStyle::Title, true},
 };
 
 LabelTest::LabelTest() {
@@ -139,9 +153,8 @@ void LabelTest::constructEmpty() {
     CORRADE_COMPARE(label2.icon(), Icon::None);
     CORRADE_COMPARE(label1.data(), DataHandle::Null);
     CORRADE_COMPARE(label2.data(), DataHandle::Null);
-
-    /* Can only verify that the layout data were created, they're not saved */
-    CORRADE_COMPARE(ui.layoutLayer().usedCount(), 2);
+    CORRADE_VERIFY(ui.isHandleValid(label1.layoutData()));
+    CORRADE_VERIFY(ui.isHandleValid(label2.layoutData()));
 }
 
 void LabelTest::constructEmptyStateless() {
@@ -169,10 +182,8 @@ void LabelTest::constructIcon() {
     CORRADE_COMPARE(label.icon(), Icon::Yes);
 
     CORRADE_VERIFY(ui.isHandleValid(label.data()));
+    CORRADE_VERIFY(ui.isHandleValid(label.layoutData()));
     CORRADE_COMPARE(ui.textLayer().glyphCount(label.data()), 1);
-
-    /* Can only verify that the layout data were created, they're not saved */
-    CORRADE_COMPARE(ui.layoutLayer().usedCount(), 1);
 }
 
 void LabelTest::constructIconStateless() {
@@ -198,10 +209,8 @@ void LabelTest::constructText() {
     CORRADE_COMPARE(label.icon(), Icon::None);
 
     CORRADE_VERIFY(ui.isHandleValid(label.data()));
+    CORRADE_VERIFY(ui.isHandleValid(label.layoutData()));
     CORRADE_COMPARE(ui.textLayer().glyphCount(label.data()), 6);
-
-    /* Can only verify that the layout data were created, they're not saved */
-    CORRADE_COMPARE(ui.layoutLayer().usedCount(), 1);
 }
 
 void LabelTest::constructTextStateless() {
@@ -230,11 +239,9 @@ void LabelTest::constructTextTextProperties() {
     CORRADE_COMPARE(label.icon(), Icon::None);
 
     CORRADE_VERIFY(ui.isHandleValid(label.data()));
+    CORRADE_VERIFY(ui.isHandleValid(label.layoutData()));
     /* Multiplied by 6 because of the Braille script */
     CORRADE_COMPARE(ui.textLayer().glyphCount(label.data()), 6*6);
-
-    /* Can only verify that the layout data were created, they're not saved */
-    CORRADE_COMPARE(ui.layoutLayer().usedCount(), 1);
 }
 
 void LabelTest::constructTextTextPropertiesStateless() {
@@ -257,6 +264,7 @@ void LabelTest::constructNoCreate() {
     Label label{NoCreate};
     CORRADE_COMPARE(label.node(), NodeHandle::Null);
     CORRADE_COMPARE(label.data(), DataHandle::Null);
+    CORRADE_COMPARE(label.layoutData(), DataHandle::Null);
 }
 
 void LabelTest::setStyle() {
@@ -264,23 +272,31 @@ void LabelTest::setStyle() {
     setTestCaseDescription(data.name);
 
     Label label = data.text ?
-        Label{{rootAnchor, {}, {32, 16}}, data.text, LabelStyle::Dim} :
-        Label{{rootAnchor, {}, {32, 16}}, data.icon, LabelStyle::Dim};
-    CORRADE_COMPARE(label.style(), LabelStyle::Dim);
+        Label{{rootAnchor, {}, {32, 16}}, data.text, data.originalStyle} :
+        Label{{rootAnchor, {}, {32, 16}}, data.icon, data.originalStyle};
+    CORRADE_COMPARE(label.style(), data.originalStyle);
 
+    UnsignedInt previousLayoutStyle = ui.layoutLayer().style(label.layoutData());
     UnsignedInt previousStyle;
     if(data.text || data.icon != Icon::None)
         previousStyle = ui.textLayer().style(label.data());
     else CORRADE_COMPARE(label.data(), DataHandle::Null);
 
-    /* The style change should result in different layer style being used */
-    label.setStyle(LabelStyle::Success);
-    CORRADE_COMPARE(label.style(), LabelStyle::Success);
+    /* The style change should result in different text layer style being
+       used */
+    label.setStyle(data.changedStyle);
+    CORRADE_COMPARE(label.style(), data.changedStyle);
     if(data.text || data.icon != Icon::None)
         CORRADE_COMPARE_AS(ui.textLayer().style(label.data()),
             previousStyle,
             TestSuite::Compare::NotEqual);
     else CORRADE_COMPARE(label.data(), DataHandle::Null);
+
+    /* ... and optionally layout layer style as well */
+    if(data.expectLayoutStyleChange)
+        CORRADE_COMPARE_AS(ui.layoutLayer().style(label.layoutData()),
+            previousLayoutStyle,
+            TestSuite::Compare::NotEqual);
 }
 
 void LabelTest::setIcon() {

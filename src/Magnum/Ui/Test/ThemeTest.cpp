@@ -401,7 +401,7 @@ void ThemeTest::apply() {
 
         Text::GlyphCacheFeatures doFeatures() const override { return {}; }
         void doSetImage(const Vector2i&, const ImageView2D&) override {}
-    } glyphCache{PixelFormat::R8Unorm, {512, 512}};
+    } glyphCache{PixelFormat::R8Unorm, {1024, 512}};
 
     struct TestTextLayerShared: TextLayer::Shared {
         explicit TestTextLayerShared(Text::AbstractGlyphCache& glyphCache): TextLayer::Shared{glyphCache, Configuration{TextStyleUniformCount, TextStyleCount}
@@ -477,21 +477,22 @@ void ThemeTest::apply() {
         /* Nothing to check here */
     }
     if(data.features >= ThemeFeature::TextLayer) {
-        CORRADE_COMPARE(ui.textLayer().shared().fontCount(), 2);
-        CORRADE_COMPARE(ui.textLayer().shared().glyphCache().fontCount(), 2);
+        CORRADE_COMPARE(ui.textLayer().shared().fontCount(), 4);
+        CORRADE_COMPARE(ui.textLayer().shared().glyphCache().fontCount(), 3);
 
         /** @todo there's no way to get a font handle out of a style, have to
             fake it like this */
-        CORRADE_COMPARE(ui.textLayer().shared().font(fontHandle(1, 1)).size(), data.expectedFontSize);
+        CORRADE_COMPARE(ui.textLayer().shared().font(fontHandle(2, 1)).size(), data.expectedFontSize);
+        CORRADE_COMPARE(ui.textLayer().shared().font(fontHandle(3, 1)).size(), data.expectedFontSize*3/2);
 
         /* No other way to check the contents. Widget visuals tested in
            <Widget>GLTest. */
     }
     if(data.features >= ThemeFeature::TextLayerImages) {
         CORRADE_COMPARE(ui.textLayer().shared().fontCount(),
-            data.features >= ThemeFeature::TextLayer ? 2 : 1);
+            data.features >= ThemeFeature::TextLayer ? 4 : 2);
         CORRADE_COMPARE(ui.textLayer().shared().glyphCache().fontCount(),
-            data.features >= ThemeFeature::TextLayer ? 2 : 1);
+            data.features >= ThemeFeature::TextLayer ? 3 : 1);
         /* No other way to check the contents. Widget visuals tested in
            <Widget>GLTest. */
     }
@@ -528,7 +529,7 @@ void ThemeTest::applyTextLayerCannotOpenFont() {
 
         Text::GlyphCacheFeatures doFeatures() const override { return {}; }
         void doSetImage(const Vector2i&, const ImageView2D&) override {}
-    } glyphCache{PixelFormat::R8Unorm, {512, 512}};
+    } glyphCache{PixelFormat::R8Unorm, {1024, 512}};
 
     struct LayerShared: TextLayer::Shared {
         explicit LayerShared(Text::AbstractGlyphCache& glyphCache): TextLayer::Shared{glyphCache, Configuration{TextStyleUniformCount, TextStyleCount}
@@ -569,7 +570,7 @@ void ThemeTest::applyTextLayerCannotFillCache() {
 
         Text::GlyphCacheFeatures doFeatures() const override { return {}; }
         void doSetImage(const Vector2i&, const ImageView2D&) override {}
-    } glyphCache{PixelFormat::R8Unorm, {512, 512}};
+    } glyphCache{PixelFormat::R8Unorm, {1024, 512}};
 
     /* Add a monster image to the atlas which in turn should make it impossible
        to put anything else there */
@@ -620,7 +621,7 @@ void ThemeTest::applyTextLayerImagesCannotOpen() {
 
         Text::GlyphCacheFeatures doFeatures() const override { return {}; }
         void doSetImage(const Vector2i&, const ImageView2D&) override {}
-    } glyphCache{PixelFormat::R8Unorm, {512, 512}};
+    } glyphCache{PixelFormat::R8Unorm, {1024, 512}};
 
     struct LayerShared: TextLayer::Shared {
         explicit LayerShared(Text::AbstractGlyphCache& glyphCache): TextLayer::Shared{glyphCache, Configuration{TextStyleUniformCount, TextStyleCount}
@@ -661,12 +662,12 @@ void ThemeTest::applyTextLayerImagesCannotFit() {
 
         Text::GlyphCacheFeatures doFeatures() const override { return {}; }
         void doSetImage(const Vector2i&, const ImageView2D&) override {}
-    } glyphCache{PixelFormat::R8Unorm, {512, 512}};
+    } glyphCache{PixelFormat::R8Unorm, {1024, 512}};
 
     /* Add a monster image to the atlas which in turn should make it impossible
        to put anything else there */
     Vector2i offset[1];
-    CORRADE_VERIFY(glyphCache.atlas().add({{500, 500}}, offset));
+    CORRADE_VERIFY(glyphCache.atlas().add({{1000, 500}}, offset));
 
     struct LayerShared: TextLayer::Shared {
         explicit LayerShared(Text::AbstractGlyphCache& glyphCache): TextLayer::Shared{glyphCache, Configuration{TextStyleUniformCount, TextStyleCount}
@@ -712,7 +713,7 @@ void ThemeTest::applyTextLayerImagesUnexpectedFormat() {
 
         Text::GlyphCacheFeatures doFeatures() const override { return {}; }
         void doSetImage(const Vector2i&, const ImageView2D&) override {}
-    } glyphCache{PixelFormat::R8Unorm, {512, 512}};
+    } glyphCache{PixelFormat::R8Unorm, {1024, 512}};
 
     struct LayerShared: TextLayer::Shared {
         explicit LayerShared(Text::AbstractGlyphCache& glyphCache): TextLayer::Shared{glyphCache, Configuration{TextStyleUniformCount, TextStyleCount}
@@ -755,7 +756,7 @@ void ThemeTest::applyTextLayerTwice() {
 
         Text::GlyphCacheFeatures doFeatures() const override { return {}; }
         void doSetImage(const Vector2i&, const ImageView2D&) override {}
-    } glyphCache{PixelFormat::R8Unorm, {512, 512}};
+    } glyphCache{PixelFormat::R8Unorm, {1024, 512}};
 
     struct TestTextLayerShared: TextLayer::Shared {
         explicit TestTextLayerShared(Text::AbstractGlyphCache& glyphCache): TextLayer::Shared{glyphCache, Configuration{TextStyleUniformCount, TextStyleCount}
@@ -773,13 +774,13 @@ void ThemeTest::applyTextLayerTwice() {
 
     DarkTheme theme;
     CORRADE_VERIFY(theme.apply(ui, ThemeFeature::TextLayer|ThemeFeature::TextLayerImages, &_importerManager, &_fontManager));
-    CORRADE_COMPARE(ui.textLayer().shared().fontCount(), 2);
-    CORRADE_COMPARE(ui.textLayer().shared().glyphCache().fontCount(), 2);
+    CORRADE_COMPARE(ui.textLayer().shared().fontCount(), 4);
+    CORRADE_COMPARE(ui.textLayer().shared().glyphCache().fontCount(), 3);
 
     CORRADE_EXPECT_FAIL("This shouldn't fail but should instead replace the previous font and image font, *somehow*.");
     CORRADE_VERIFY(theme.apply(ui, ThemeFeature::TextLayer|ThemeFeature::TextLayerImages, &_importerManager, &_fontManager));
-    CORRADE_COMPARE(ui.textLayer().shared().fontCount(), 2);
-    CORRADE_COMPARE(ui.textLayer().shared().glyphCache().fontCount(), 2);
+    CORRADE_COMPARE(ui.textLayer().shared().fontCount(), 4);
+    CORRADE_COMPARE(ui.textLayer().shared().glyphCache().fontCount(), 3);
 }
 
 void ThemeTest::removePreviousAnimationForBlinkingCursor() {
@@ -802,7 +803,7 @@ void ThemeTest::removePreviousAnimationForBlinkingCursor() {
 
         Text::GlyphCacheFeatures doFeatures() const override { return {}; }
         void doSetImage(const Vector2i&, const ImageView2D&) override {}
-    } glyphCache{PixelFormat::R8Unorm, {512, 512}};
+    } glyphCache{PixelFormat::R8Unorm, {1024, 512}};
 
     struct TestTextLayerShared: TextLayer::Shared {
         explicit TestTextLayerShared(Text::AbstractGlyphCache& glyphCache): TextLayer::Shared{glyphCache, Configuration{TextStyleUniformCount, TextStyleCount}

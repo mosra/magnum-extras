@@ -89,6 +89,10 @@ _c(0x747474_rgbf) /* LabelDimIcon */
 _c(0x747474_rgbf) /* LabelDimText */
 _c(0x747474ff_rgbaf*0.3f) /* LabelDimDisabledIcon */
 _c(0x747474ff_rgbaf*0.3f) /* LabelDimDisabledText */
+_c(0xdcdcdc_rgbf) /* LabelTitleIcon */
+_c(0xdcdcdc_rgbf) /* LabelTitleText */
+_c(0xdcdcdcff_rgbaf*0.3f) /* LabelTitleDisabledIcon */
+_c(0xdcdcdcff_rgbaf*0.3f) /* LabelTitleDisabledText */
 _c(0xdcdcdc_rgbf) /* InputDefault */
 _c(0xdcdcdc_rgbf) /* InputDefaultHovered */
 _c(0xdcdcdc_rgbf) /* InputDefaultFocused */

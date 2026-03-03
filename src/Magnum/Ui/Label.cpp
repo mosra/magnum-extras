@@ -57,6 +57,7 @@ Debug& operator<<(Debug& debug, const LabelStyle value) {
         _c(Danger)
         _c(Info)
         _c(Dim)
+        _c(Title)
         #undef _c
         /* LCOV_EXCL_STOP */
     }
@@ -79,6 +80,7 @@ TextStyle textStyleIcon(const LabelStyle style) {
         _c(Danger)
         _c(Info)
         _c(Dim)
+        _c(Title)
         #undef _c
     }
 
@@ -95,7 +97,25 @@ TextStyle textStyleText(const LabelStyle style) {
         _c(Danger)
         _c(Info)
         _c(Dim)
+        _c(Title)
         #undef _c
+    }
+
+    CORRADE_INTERNAL_ASSERT_UNREACHABLE(); /* LCOV_EXCL_LINE */
+}
+
+LayoutStyle layoutStyle(const LabelStyle style) {
+    switch(style) {
+        case LabelStyle::Default:
+        case LabelStyle::Primary:
+        case LabelStyle::Success:
+        case LabelStyle::Warning:
+        case LabelStyle::Danger:
+        case LabelStyle::Info:
+        case LabelStyle::Dim:
+            return LayoutStyle::Label;
+        case LabelStyle::Title:
+            return LayoutStyle::LabelTitle;
     }
 
     CORRADE_INTERNAL_ASSERT_UNREACHABLE(); /* LCOV_EXCL_LINE */
@@ -104,18 +124,14 @@ TextStyle textStyleText(const LabelStyle style) {
 }
 
 Label::Label(const Anchor anchor, const Icon icon, const LabelStyle style): Widget{anchor}, _style{style}, _icon{icon} {
-    /* The LayoutLayer data aren't stored because currently they're never
-       updated */
-    ui().layoutLayer().create(LayoutStyle::Label, node());
+    _layoutData = dataHandleData(ui().layoutLayer().create(layoutStyle(style), node()));
 
     _data = icon == Icon::None ? LayerDataHandle::Null :
         dataHandleData(ui().textLayer().createGlyph(textStyleIcon(style), icon, {}, node()));
 }
 
 Label::Label(const Anchor anchor, const Containers::StringView text, const TextProperties& textProperties, const LabelStyle style): Widget{anchor}, _style{style}, _icon{Icon::None} {
-    /* The LayoutLayer data aren't stored because currently they're never
-       updated */
-    ui().layoutLayer().create(LayoutStyle::Label, node());
+    _layoutData = dataHandleData(ui().layoutLayer().create(layoutStyle(style), node()));
 
     _data = !text ? LayerDataHandle::Null :
         dataHandleData(ui().textLayer().create(textStyleText(style), text, textProperties, node()));
@@ -125,6 +141,7 @@ Label::Label(const Anchor anchor, const Containers::StringView text, const Label
 
 Label& Label::setStyle(const LabelStyle style) {
     _style = style;
+    ui().layoutLayer().setStyle(_layoutData, layoutStyle(style));
     if(_data != LayerDataHandle::Null)
         ui().textLayer().setStyle(_data, (_icon == Icon::None ? textStyleText : textStyleIcon)(style));
     return *this;
@@ -173,8 +190,15 @@ DataHandle Label::data() const {
         dataHandle(ui().textLayer(), _data);
 }
 
+DataHandle Label::layoutData() const {
+    /* The data is implicitly from the layout layer. The _layoutData can be
+       null only with a NoCreated instance. */
+    return _layoutData == LayerDataHandle::Null ? DataHandle::Null :
+        dataHandle(ui().layoutLayer(), _layoutData);
+}
+
 Anchor label(const Anchor anchor, const Containers::StringView text, const TextProperties& textProperties, const LabelStyle style) {
-    anchor.ui().layoutLayer().create(LayoutStyle::Label, anchor.node());
+    anchor.ui().layoutLayer().create(layoutStyle(style), anchor.node());
 
     if(text)
         anchor.ui().textLayer().create(textStyleText(style), text, textProperties, anchor.node());
@@ -186,7 +210,7 @@ Anchor label(const Anchor anchor, const Containers::StringView text, const Label
 }
 
 Anchor label(const Anchor anchor, const Icon icon, const LabelStyle style) {
-    anchor.ui().layoutLayer().create(LayoutStyle::Label, anchor.node());
+    anchor.ui().layoutLayer().create(layoutStyle(style), anchor.node());
 
     if(icon != Icon::None)
         anchor.ui().textLayer().createGlyph(textStyleIcon(style), icon, {}, anchor.node());

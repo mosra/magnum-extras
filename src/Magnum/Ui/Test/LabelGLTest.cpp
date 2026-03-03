@@ -76,6 +76,10 @@ const struct {
         [](UserInterface& ui, Int style, Flags, Int counter) {
             Label label{{ui, {}, {52, 36}}, counter % 3 ? "Bye" : "Hello!", LabelStyle(style == 0 ? 1 : 0)};
             label.setStyle(LabelStyle(style));
+            /* The title style uses a different font and thus the text has to
+               be reset to make it use the new font */
+            if(label.style() == LabelStyle::Title)
+                label.setText(counter % 3 ? "Bye" : "Hello!");
             return label.release();
         }},
     {"setStyle() on empty, setters",
@@ -116,6 +120,10 @@ const struct {
         [](UserInterface& ui, Int style, Flags, Int counter) {
             Label label{{ui, {}, {48, 36}}, counter % 3 ? Icon::Yes : Icon::No, LabelStyle(style == 0 ? 1 : 0)};
             label.setStyle(LabelStyle(style));
+            /* The title style uses a different font and thus the icon has to
+               be reset to make it use the new font */
+            if(label.style() == LabelStyle::Title)
+                label.setIcon(counter % 3 ? Icon::Yes : Icon::No);
             return label.release();
         }},
     {"setStyle() on empty, setters",
@@ -146,7 +154,7 @@ void LabelGLTest::text() {
     CORRADE_VERIFY(true); /* Capture correct function name */
 
     ThemeGLTester::render(data.create, themeData, "label-text.png",
-        Flag::Disabled, 7, {}, 2.0f, 0.0248f);
+        Flag::Disabled, 8, {}, 2.0f, 0.0276f);
 }
 
 void LabelGLTest::icon() {
@@ -160,7 +168,7 @@ void LabelGLTest::icon() {
     CORRADE_VERIFY(true); /* Capture correct function name */
 
     ThemeGLTester::render(data.create, themeData, "label-icon.png",
-        Flag::Disabled, 7, {}, 1.75f, 0.0099f);
+        Flag::Disabled, 8, {}, 1.75f, 0.011f);
 }
 
 }}}}

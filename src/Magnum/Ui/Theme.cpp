@@ -314,9 +314,8 @@ UnsignedInt DarkTheme::doTextLayerEditingStyleCount() const {
 }
 
 Vector3i DarkTheme::doTextLayerGlyphCacheSize(ThemeFeatures) const {
-    /* 256x256 is enough only for DPI scale of 1, adding some extra space */
     /** @todo Make this dependent on DPI scale */
-    return {512, 512, 1};
+    return {1024, 512, 1};
 }
 
 UnsignedInt DarkTheme::doLayoutLayerStyleCount() const {
@@ -366,12 +365,13 @@ bool DarkTheme::doApply(UserInterface& ui, const ThemeFeatures features, PluginM
         Text::AbstractGlyphCache& glyphCache = shared.glyphCache();
         /* The Icon enum reserves 0 for an invalid glyph, so add 1 */
         const UnsignedInt iconFontId = glyphCache.addFont(Implementation::IconCount + 1);
-        /* The input is 64x64 squares, which are meant to be shown as 24x24
-           squares in the UI units */
+        /* The input is 64x64 squares, which are meant to be shown as 24x24 /
+           32x32 squares in the UI units */
         /** @todo some DPI-aware machinery here, such as picking one of
             multiple icon images depending on the DPI scaling, or maybe just
             put these into a font */
         fonts[Int(TextFont::Icon)] = shared.addInstancelessFont(iconFontId, 24.0f/64.0f);
+        fonts[Int(TextFont::LargeIcon)] = shared.addInstancelessFont(iconFontId, 32.0f/64.0f);
     }
 
     /* Text layer fonts and style */
@@ -384,13 +384,17 @@ bool DarkTheme::doApply(UserInterface& ui, const ThemeFeatures features, PluginM
         const Utility::Resource rs{"MagnumUi"_s};
 
         Containers::Pointer<Text::AbstractFont> font = fontManager->loadAndInstantiate("TrueTypeFont");
-        if(!font || !font->openData(rs.getRaw("SourceSans3-Regular.otf"_s), 16.0f*2*(Vector2{ui.framebufferSize()}/ui.size()).max())) {
+        Containers::Pointer<Text::AbstractFont> fontLarge = fontManager->loadAndInstantiate("TrueTypeFont");
+        if(!font || !fontLarge ||
+           !font->openData(rs.getRaw("SourceSans3-Regular.otf"_s), 16.0f*2*(Vector2{ui.framebufferSize()}/ui.size()).max()) ||
+           !fontLarge->openData(rs.getRaw("SourceSans3-Regular.otf"_s), 24.0f*2*(Vector2{ui.framebufferSize()}/ui.size()).max()))
+        {
             Error{} << "Ui::DarkTheme::apply(): cannot open a font";
             return {};
         }
         /** @todo configurable way to fill the cache, or switch to on-demand
             by default once AbstractFont can fill the cache with glyph IDs */
-        if(!font->fillGlyphCache(glyphCache,
+        for(Text::AbstractFont* const i: {&*font, &*fontLarge}) if(!i->fillGlyphCache(glyphCache,
             "abcdefghijklmnopqrstuvwxyz"
             "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
             "0123456789 _.,-+=*:;?!@$&#/\\|`\"'<>()[]{}%…")
@@ -400,6 +404,7 @@ bool DarkTheme::doApply(UserInterface& ui, const ThemeFeatures features, PluginM
         }
 
         fonts[Int(TextFont::Main)] = shared.addFont(Utility::move(font), 16.0f);
+        fonts[Int(TextFont::Large)] = shared.addFont(Utility::move(fontLarge), 24.0f);
 
         /* Font handles matching all styles. References either the `mainFont`
            or the `iconFont` defined above. */

@@ -224,6 +224,10 @@ enum class TextStyle: UnsignedShort {
     LabelDimText,
     LabelDimDisabledIcon,
     LabelDimDisabledText,
+    LabelTitleIcon,
+    LabelTitleText,
+    LabelTitleDisabledIcon,
+    LabelTitleDisabledText,
 
     InputDefault,
     InputDefaultHovered,
@@ -274,6 +278,7 @@ MAGNUM_UI_EXPORT TextStyle styleTransitionToDisabled(TextStyle index);
 enum class LayoutStyle: UnsignedShort {
     Button,
     Label,
+    LabelTitle,
     Input,
     Panel,
 

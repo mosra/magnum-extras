@@ -32,6 +32,8 @@ namespace Magnum { namespace Ui { namespace Implementation {
 enum class TextFont {
     Main,
     Icon,
+    Large,
+    LargeIcon,
 
     Count
 };

@@ -49,6 +49,7 @@ enum class LabelStyle: UnsignedByte {
     Danger,         /**< Danger */
     Info,           /**< Info */
     Dim,            /**< Dim */
+    Title,          /**< Title, with a larger text */
 };
 
 /**
@@ -93,7 +94,7 @@ class MAGNUM_UI_EXPORT Label: public Widget {
         explicit Label(Anchor anchor, Containers::StringView text, LabelStyle style = LabelStyle::Default);
 
         /** @copydoc AbstractWidget::AbstractWidget(NoCreateT) */
-        explicit Label(NoCreateT): Widget{NoCreate}, _style{}, _icon{}, _data{} {}
+        explicit Label(NoCreateT): Widget{NoCreate}, _style{}, _icon{}, _data{}, _layoutData{} {}
 
         /** @brief Style */
         LabelStyle style() const { return _style; }
@@ -104,7 +105,8 @@ class MAGNUM_UI_EXPORT Label: public Widget {
          *
          * Note that calling this function doesn't change the font if the new
          * style uses a different one, you have to call @ref setText()
-         * afterwards to make it pick it up.
+         * afterwards to make it pick it up. This is the case especially when
+         * switching to or from @ref LabelStyle::Title.
          * @see @ref setIcon(), @ref setText()
          */
         Label& setStyle(LabelStyle style);
@@ -151,6 +153,14 @@ class MAGNUM_UI_EXPORT Label: public Widget {
          */
         DataHandle data() const;
 
+        /**
+         * @brief Layout data
+         *
+         * Exposed mainly for testing purposes, not meant to be modified
+         * directly.
+         */
+        DataHandle layoutData() const;
+
         #ifndef DOXYGEN_GENERATING_OUTPUT
         _MAGNUM_UI_WIDGET_SUBCLASS_IMPLEMENTATION(Label) /* LCOV_EXCL_LINE */
         #endif
@@ -160,6 +170,7 @@ class MAGNUM_UI_EXPORT Label: public Widget {
         /* 2 bytes free (_style fits into padding of Widget) */
         Icon _icon;
         LayerDataHandle _data;
+        LayerDataHandle _layoutData;
 };
 
 /**

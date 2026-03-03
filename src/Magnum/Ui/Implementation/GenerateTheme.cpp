@@ -403,6 +403,13 @@ void dark(Containers::ArrayView<Ui::BaseLayerStyleUniform> baseUniforms, Contain
                    TextStyle::LabelDimDisabledText})
         textUniforms[Int(i)].setColor({0x747474_rgbf, disabledOpacity});
 
+    for(auto&& i: {TextStyle::LabelTitleIcon,
+                   TextStyle::LabelTitleText})
+        textUniforms[Int(i)].setColor(0xdcdcdc_rgbf);
+    for(auto&& i: {TextStyle::LabelTitleDisabledIcon,
+                   TextStyle::LabelTitleDisabledText})
+        textUniforms[Int(i)].setColor({0xdcdcdc_rgbf, disabledOpacity});
+
     /* Label icon font */
     for(auto&& i: {TextStyle::LabelDefaultIcon,
                    TextStyle::LabelDefaultDisabledIcon,
@@ -420,8 +427,19 @@ void dark(Containers::ArrayView<Ui::BaseLayerStyleUniform> baseUniforms, Contain
                    TextStyle::LabelDimDisabledIcon})
         textStyles[Int(i)].font = TextFont::Icon;
 
+    /* Large label font / icon font */
+    for(auto&& i: {TextStyle::LabelTitleText,
+                   TextStyle::LabelTitleDisabledText})
+        textStyles[Int(i)].font = TextFont::Large;
+    for(auto&& i: {TextStyle::LabelTitleIcon,
+                   TextStyle::LabelTitleDisabledIcon})
+        textStyles[Int(i)].font = TextFont::LargeIcon;
+
     layoutStyles[Int(LayoutStyle::Label)].minSize = {0.0f, 24.0f};
+    /* Title label spans the same height as a button */
+    layoutStyles[Int(LayoutStyle::LabelTitle)].minSize = {0.0f, 36.0f};
     layoutStyles[Int(LayoutStyle::Label)].margin = leafWidgetMargin;
+    layoutStyles[Int(LayoutStyle::LabelTitle)].margin = leafWidgetMargin;
 
     /* Inputs -------------------------------------------------------------- */
 
