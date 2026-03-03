@@ -43,17 +43,8 @@ header from application code.
 #ifndef DOXYGEN_GENERATING_OUTPUT
 namespace Magnum { namespace Ui { namespace Implementation {
 
-/* To be used by custom theme implementations to appropriately size the style
-   data arrays. Deliberately *not* used by the builtin theme itself to allow
-   for fast iterations without having to adjust these values each time a style
-   gets added.
-
-   Be sure to run UiThemeTest after adding new styles to keep these constants
-   up-to-date. */
 enum: UnsignedInt {
-    BaseStyleCount = 79,
-    TextStyleCount = 91,
-    LayoutStyleCount = 14,
+    /** @todo drop this once icons are coming from a font as well */
     IconCount = 2
 };
 
@@ -154,6 +145,8 @@ enum class BaseStyle: UnsignedShort {
 
     PanelBackground,
     PanelBackgroundDisabled,
+
+    Count /* Style count. Has to stay last. */
 };
 
 MAGNUM_UI_EXPORT BaseStyle styleTransitionToInactiveOut(BaseStyle index);
@@ -266,6 +259,8 @@ enum class TextStyle: UnsignedShort {
     InputFlatFocusedBlink,
     InputFlatPressed,
     InputFlatDisabled,
+
+    Count /* Style count. Has to stay last. */
 };
 
 MAGNUM_UI_EXPORT TextStyle styleTransitionToInactiveOut(TextStyle index);
@@ -292,6 +287,8 @@ enum class LayoutStyle: UnsignedShort {
     ScrollbarOnlyY,
     ScrollbarThumbX,
     ScrollbarThumbY,
+
+    Count /* Style count. Has to stay last. */
 };
 
 }}}

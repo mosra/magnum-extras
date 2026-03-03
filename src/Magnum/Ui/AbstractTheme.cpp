@@ -553,6 +553,10 @@ Transition<BaseStyle> styleTransition(const BaseStyle index) {
         #undef _cHoveredPressedDisabled
         #undef _cDisabled
         #undef _c
+        /* LCOV_EXCL_START */
+        case BaseStyle::Count:
+            CORRADE_INTERNAL_ASSERT_UNREACHABLE();
+        /* LCOV_EXCL_STOP */
     }
 
     CORRADE_INTERNAL_ASSERT_UNREACHABLE(); /* LCOV_EXCL_LINE */
@@ -666,6 +670,10 @@ Transition<TextStyle> styleTransition(const TextStyle index) {
         #undef _cPressedDisabled
         #undef _cDisabled
         #undef _c
+        /* LCOV_EXCL_START */
+        case TextStyle::Count:
+            CORRADE_INTERNAL_ASSERT_UNREACHABLE();
+        /* LCOV_EXCL_STOP */
     }
 
     CORRADE_INTERNAL_ASSERT_UNREACHABLE(); /* LCOV_EXCL_LINE */

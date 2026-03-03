@@ -344,6 +344,8 @@ UiGallery::UiGallery(const Arguments& arguments): Platform::Application{argument
                 #define _c(name, ...) case Ui::Implementation::BaseStyle::name: return #name;
                 #include "Magnum/Ui/Implementation/themeDarkBaseStyleUniforms.h"
                 #undef _c
+                case Ui::Implementation::BaseStyle::Count:
+                    CORRADE_INTERNAL_ASSERT_UNREACHABLE();
             }
             CORRADE_INTERNAL_ASSERT_UNREACHABLE();
         });
@@ -356,6 +358,8 @@ UiGallery::UiGallery(const Arguments& arguments): Platform::Application{argument
                 #undef _c
                 #undef _e
                 #undef _s
+                case Ui::Implementation::TextStyle::Count:
+                    CORRADE_INTERNAL_ASSERT_UNREACHABLE();
             }
             CORRADE_INTERNAL_ASSERT_UNREACHABLE();
         });
@@ -367,6 +371,8 @@ UiGallery::UiGallery(const Arguments& arguments): Platform::Application{argument
                 #include "Magnum/Ui/Implementation/themeDarkLayoutStyles.h"
                 #undef _n
                 #undef _c
+                case Ui::Implementation::LayoutStyle::Count:
+                    CORRADE_INTERNAL_ASSERT_UNREACHABLE();
             }
             CORRADE_INTERNAL_ASSERT_UNREACHABLE();
         });

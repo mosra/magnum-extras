@@ -255,6 +255,8 @@ void ThemeTest::baseStyleDark() {
                     continue;
             #include "Magnum/Ui/Implementation/themeDarkBaseStyleUniforms.h"
             #undef _c
+            case BaseStyle::Count:
+                CORRADE_INTERNAL_ASSERT_UNREACHABLE();
         }
         #ifdef CORRADE_TARGET_GCC
         #pragma GCC diagnostic pop
@@ -264,13 +266,10 @@ void ThemeTest::baseStyleDark() {
     }
     CORRADE_COMPARE(unhandledCount, 0);
 
-    /* Verify that the harcoded StyleCount matches the actual number of entries
-       in the mapping. If it won't, custom theme implementations in user code
-       would break and mock themes in WidgetTester may cause OOB assertions if
-       a widget test picks a style ID that's not less than the outdated
-       value. But most code can still compile correctly and work, which is
-       important for fast iteration when adding new styles. */
-    CORRADE_COMPARE(Implementation::BaseStyleCount, Containers::arraySize(BaseStyleUniforms));
+    /* Just a sanity check. If this fails, the Count isn't the last value of
+       the enum, it has an explicit value assigned or the theme header contains
+       some strange extra values. */
+    CORRADE_COMPARE(Int(BaseStyle::Count), Containers::arraySize(BaseStyleUniforms));
 }
 
 void ThemeTest::textStyleDark() {
@@ -299,6 +298,8 @@ void ThemeTest::textStyleDark() {
             #undef _c
             #undef _s
             #undef _e
+            case TextStyle::Count:
+                CORRADE_INTERNAL_ASSERT_UNREACHABLE();
         }
         #ifdef CORRADE_TARGET_GCC
         #pragma GCC diagnostic pop
@@ -308,13 +309,10 @@ void ThemeTest::textStyleDark() {
     }
     CORRADE_COMPARE(unhandledCount, 0);
 
-    /* Verify that the harcoded StyleCount matches the actual number of entries
-       in the mapping. If it won't, custom theme implementations in user code
-       would break and mock themes in WidgetTester may cause OOB assertions if
-       a widget test picks a style ID that's not less than the outdated
-       value. But most code can still compile correctly and work, which is
-       important for fast iteration when adding new styles. */
-    CORRADE_COMPARE(Implementation::TextStyleCount, Containers::arraySize(TextStyles));
+    /* Just a sanity check. If this fails, the Count isn't the last value of
+       the enum, it has an explicit value assigned or the theme header contains
+       some strange extra values. */
+    CORRADE_COMPARE(Int(TextStyle::Count), Containers::arraySize(TextStyles));
 }
 
 void ThemeTest::textStyleUniformsDark() {
@@ -347,11 +345,6 @@ void ThemeTest::textStyleUniformsDark() {
         ++unhandledCount;
     }
     CORRADE_COMPARE(unhandledCount, 0);
-
-    /* Unlike with TextStyle, the count of uniforms is considered an
-       implementation detail, isn't exposed as a hardcoded value anywhere, and
-       thus doesn't need to be compared to the size of the TextStyleUniforms
-       array. */
 }
 
 void ThemeTest::textEditingStyleDark() {
@@ -386,11 +379,6 @@ void ThemeTest::textEditingStyleDark() {
         ++unhandledCount;
     }
     CORRADE_COMPARE(unhandledCount, 0);
-
-    /* Unlike with TextStyle, the count of editing styles is considered an
-       implementation detail, isn't exposed as a hardcoded value anywhere, and
-       thus doesn't need to be compared to the size of the TextStyleUniforms
-       array. */
 }
 
 void ThemeTest::layoutStyleDark() {
@@ -417,6 +405,8 @@ void ThemeTest::layoutStyleDark() {
             #include "Magnum/Ui/Implementation/themeDarkLayoutStyles.h"
             #undef _n
             #undef _c
+            case LayoutStyle::Count:
+                CORRADE_INTERNAL_ASSERT_UNREACHABLE();
         }
         #ifdef CORRADE_TARGET_GCC
         #pragma GCC diagnostic pop
@@ -426,13 +416,10 @@ void ThemeTest::layoutStyleDark() {
     }
     CORRADE_COMPARE(unhandledCount, 0);
 
-    /* Verify that the harcoded StyleCount matches the actual number of entries
-       in the mapping. If it won't, custom theme implementations in user code
-       would break and mock themes in WidgetTester may cause OOB assertions if
-       a widget test picks a style ID that's not less than the outdated
-       value. But most code can still compile correctly and work, which is
-       important for fast iteration when adding new styles. */
-    CORRADE_COMPARE(Implementation::LayoutStyleCount, Containers::arraySize(LayoutStyles));
+    /* Just a sanity check. If this fails, the Count isn't the last value of
+       the enum, it has an explicit value assigned or the theme header contains
+       some strange extra values. */
+    CORRADE_COMPARE(Int(LayoutStyle::Count), Containers::arraySize(LayoutStyles));
 }
 
 void ThemeTest::apply() {

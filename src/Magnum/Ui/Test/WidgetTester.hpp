@@ -67,7 +67,7 @@ struct TestBaseLayerShared: BaseLayer::Shared {
     /* If a widget creation asserts due to a style being out of bounds, run the
        UiThemeTest to figure out what the BaseStyleCount should be updated
        to */
-    explicit TestBaseLayerShared(): BaseLayer::Shared{Configuration{1, Implementation::BaseStyleCount}} {
+    explicit TestBaseLayerShared(): BaseLayer::Shared{Configuration{1, UnsignedInt(Implementation::BaseStyle::Count)}} {
         BaseLayerStyleUniform uniforms[1];
         UnsignedInt styleToUniform[]{0};
         setStyle(BaseLayerCommonStyleUniform{},
@@ -96,7 +96,7 @@ struct TestTextLayerShared: TextLayer::Shared {
     /* If a widget creation asserts due to a style being out of bounds, run the
        UiThemeTest to figure out what the TextStyleCount should be updated
        to */
-    explicit TestTextLayerShared(): TextLayer::Shared{glyphCache, Configuration{1, Implementation::TextStyleCount}} {
+    explicit TestTextLayerShared(): TextLayer::Shared{glyphCache, Configuration{1, UnsignedInt(Implementation::TextStyle::Count)}} {
         font.openFile("", 16.0f);
         glyphCache.addFont(Implementation::IconCount + 1, &font);
 
@@ -226,7 +226,7 @@ WidgetTester::WidgetTester() {
     /* If a widget creation asserts due to a style being out of bounds, run the
        UiThemeTest to figure out what the LayoutStyleCount should be updated
        to */
-      .setLayoutLayerInstance(Containers::pointer<LayoutLayer>(ui.createLayer(), Implementation::LayoutStyleCount))
+      .setLayoutLayerInstance(Containers::pointer<LayoutLayer>(ui.createLayer(), UnsignedInt(Implementation::LayoutStyle::Count)))
       .setSnapLayouterInstance(Containers::pointer<SnapLayouter>(ui.createLayouter()))
       .setGenericLayouterInstance(Containers::pointer<GenericLayouter>(ui.createLayouter()))
       .setSize({1000, 1000});
