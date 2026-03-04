@@ -282,9 +282,11 @@ void dark(Containers::ArrayView<Ui::BaseLayerStyleUniform> baseUniforms, Contain
                    TextStyle::ButtonFlatDisabledText})
         textUniforms[Int(i)].setColor({0x5b9dd9_rgbf, disabledOpacity});
 
-    /* Button text padding. Generally the horizontal padding is 6 and vertical
-       4. The button itself has a min height specified, so the vertical padding
-       is here only for cases with larger fonts. */
+    /* Button text padding. The button itself has a min height specified, so
+       the vertical padding is here only for cases with larger fonts. */
+    const Vector2 buttonPadding{6.0f, 4.0f};
+    const Float buttonIconGap = 6.0f;
+    const Float buttonIconSize = 24.0f;
     for(auto&& i: {TextStyle::ButtonIconOnly,
                    TextStyle::ButtonTextOnly,
                    TextStyle::ButtonDisabledIconOnly,
@@ -295,16 +297,22 @@ void dark(Containers::ArrayView<Ui::BaseLayerStyleUniform> baseUniforms, Contain
                    TextStyle::ButtonFlatHoveredTextOnly,
                    TextStyle::ButtonFlatDisabledIconOnly,
                    TextStyle::ButtonFlatDisabledTextOnly})
-        textStyles[Int(i)].padding = {6.0f, 4.0f, 6.0f, 4.0f};
-    /* Assuming a 24x24 icon and 6-unit gap between, for the icon the
-       right-side padding has to include the extra gap as well. The button
-       widget then further expands the padding by the actual text size. */
+        textStyles[Int(i)].padding = {buttonPadding.x(),
+                                      buttonPadding.y(),
+                                      buttonPadding.x(),
+                                      buttonPadding.y()};
+    /* Assuming an icon and a gap between, for the icon the right-side padding
+       has to include the extra gap as well. The button widget then further
+       expands the padding by the actual text size. */
     for(auto&& i: {TextStyle::ButtonIcon,
                    TextStyle::ButtonDisabledIcon,
                    TextStyle::ButtonFlatIcon,
                    TextStyle::ButtonFlatHoveredIcon,
                    TextStyle::ButtonFlatDisabledIcon})
-        textStyles[Int(i)].padding = {6.0f, 4.0f, 12.0f, 4.0f};
+        textStyles[Int(i)].padding = {buttonPadding.x(),
+                                      buttonPadding.y(),
+                                      buttonPadding.x() + buttonIconGap,
+                                      buttonPadding.y()};
     /* Conversely, the text then has to include both the icon size and the gap
        in the left-side padding */
     for(auto&& i: {TextStyle::ButtonText,
@@ -312,23 +320,37 @@ void dark(Containers::ArrayView<Ui::BaseLayerStyleUniform> baseUniforms, Contain
                    TextStyle::ButtonFlatText,
                    TextStyle::ButtonFlatHoveredText,
                    TextStyle::ButtonFlatDisabledText})
-        textStyles[Int(i)].padding = {36.0f, 4.0f, 6.0f, 4.0f};
-    /* Pressed buttons have their icons and text shifted down by 1 unit */
+        textStyles[Int(i)].padding = {buttonPadding.x() + buttonIconSize + buttonIconGap,
+                                      buttonPadding.y(),
+                                      buttonPadding.x(),
+                                      buttonPadding.y()};
+    /* Pressed buttons have their icons and text shifted down by 1 unit.
+       Subtract the padding on the other side so it doesn't make the button
+       larger with larger fonts. */
     for(auto&& i: {TextStyle::ButtonPressedIconOnly,
                    TextStyle::ButtonPressedTextOnly,
                    TextStyle::ButtonFlatPressedIconOnly,
                    TextStyle::ButtonFlatPressedTextOnly,
                    TextStyle::ButtonFlatPressedHoveredIconOnly,
                    TextStyle::ButtonFlatPressedHoveredTextOnly})
-        textStyles[Int(i)].padding = {6.0f, 5.0f, 6.0f, 3.0f};
+        textStyles[Int(i)].padding = {buttonPadding.x(),
+                                      buttonPadding.y() + 1.0f,
+                                      buttonPadding.x(),
+                                      buttonPadding.y() - 1.0f};
     for(auto&& i: {TextStyle::ButtonPressedIcon,
                    TextStyle::ButtonFlatPressedIcon,
                    TextStyle::ButtonFlatPressedHoveredIcon})
-        textStyles[Int(i)].padding = {6.0f, 5.0f, 12.0f, 3.0f};
+        textStyles[Int(i)].padding = {buttonPadding.x(),
+                                      buttonPadding.y() + 1.0f,
+                                      buttonPadding.x() + buttonIconGap,
+                                      buttonPadding.y() - 1.0f};
     for(auto&& i: {TextStyle::ButtonPressedText,
                    TextStyle::ButtonFlatPressedText,
                    TextStyle::ButtonFlatPressedHoveredText})
-        textStyles[Int(i)].padding = {36.0f, 5.0f, 6.0f, 3.0f};
+        textStyles[Int(i)].padding = {buttonPadding.x() + buttonIconSize + buttonIconGap,
+                                      buttonPadding.y() + 1.0f,
+                                      buttonPadding.x(),
+                                      buttonPadding.y() - 1.0f};
 
     /* Icon font assignment */
     for(auto&& i: {TextStyle::ButtonIconOnly,
@@ -515,6 +537,7 @@ void dark(Containers::ArrayView<Ui::BaseLayerStyleUniform> baseUniforms, Contain
        only when hovered or focused. Make sure the inner outline radius is same
        as outer if the outline has zero width, to not have fade out animations
        look weird. */
+    const Float inputSideOutline = 4.0f;
     for(auto&& i: {BaseStyle::InputDefault,
                    BaseStyle::InputDefaultHovered,
                    BaseStyle::InputDefaultDisabled,
@@ -529,16 +552,16 @@ void dark(Containers::ArrayView<Ui::BaseLayerStyleUniform> baseUniforms, Contain
                    BaseStyle::InputDangerDisabled})
         baseUniforms[Int(i)]
             /* left, top, right, bottom */
-            .setOutlineWidth({4.0f, 0.0f, 0.0f, 0.0f})
+            .setOutlineWidth({inputSideOutline, 0.0f, 0.0f, 0.0f})
             .setCornerRadius(cornerRadius)
-            .setInnerOutlineCornerRadius({0.0f, 0.0f, 4.0f, 4.0f});
+            .setInnerOutlineCornerRadius({0.0f, 0.0f, cornerRadius, cornerRadius});
     for(auto&& i: {BaseStyle::InputFlat,
                    BaseStyle::InputFlatDisabled})
         baseUniforms[Int(i)]
             /* left, top, right, bottom */
             .setOutlineWidth({0.0f, 0.0f, 0.0f, 0.0f})
             .setCornerRadius(cornerRadius)
-            .setInnerOutlineCornerRadius({4.0f, 4.0f, 4.0f, 4.0f});
+            .setInnerOutlineCornerRadius(cornerRadius);
     for(auto&& i: {BaseStyle::InputDefaultFocused,
                    BaseStyle::InputSuccessFocused,
                    BaseStyle::InputWarningFocused,
@@ -546,9 +569,9 @@ void dark(Containers::ArrayView<Ui::BaseLayerStyleUniform> baseUniforms, Contain
                    BaseStyle::InputFlatHovered,
                    BaseStyle::InputFlatFocused})
         baseUniforms[Int(i)]
-            .setOutlineWidth({4.0f, 1.0f, 1.0f, 1.0f})
+            .setOutlineWidth({inputSideOutline, 1.0f, 1.0f, 1.0f})
             .setCornerRadius(cornerRadius)
-            .setInnerOutlineCornerRadius({1.0f, 1.0f, 3.0f, 3.0f});
+            .setInnerOutlineCornerRadius({1.0f, 1.0f, cornerRadius - 1.0f, cornerRadius - 1.0f});
 
     /* Input text is always the same regardless of hover, --*-link-active-
        color. Disabled again 30% opacity. */
@@ -936,7 +959,8 @@ void dark(Containers::ArrayView<Ui::BaseLayerStyleUniform> baseUniforms, Contain
                    TextStyle::InputFlatPasswordDisabled})
         textStyles[Int(i)].alignment = Text::Alignment::MiddleLeft;
 
-    /* Input padding. Pressed shift by one unit down, like buttons. */
+    /* Input padding, same as with a button but includes the left-side outline.
+       Pressed shifts by one unit down, again like buttons. */
     for(auto&& i: {TextStyle::InputDefault,
                    TextStyle::InputDefaultHovered,
                    TextStyle::InputDefaultFocused,
@@ -987,7 +1011,10 @@ void dark(Containers::ArrayView<Ui::BaseLayerStyleUniform> baseUniforms, Contain
                    TextStyle::InputFlatPasswordFocused,
                    TextStyle::InputFlatPasswordFocusedBlink,
                    TextStyle::InputFlatPasswordDisabled})
-        textStyles[Int(i)].padding = {10.0f, 4.0f,  6.0f, 4.0f};
+        textStyles[Int(i)].padding = {buttonPadding.x() + inputSideOutline,
+                                      buttonPadding.y(),
+                                      buttonPadding.x(),
+                                      buttonPadding.y()};
     for(auto&& i: {TextStyle::InputDefaultPressed,
                    TextStyle::InputDefaultPasswordPressed,
                    TextStyle::InputSuccessPressed,
@@ -998,7 +1025,10 @@ void dark(Containers::ArrayView<Ui::BaseLayerStyleUniform> baseUniforms, Contain
                    TextStyle::InputDangerPasswordPressed,
                    TextStyle::InputFlatPressed,
                    TextStyle::InputFlatPasswordPressed})
-        textStyles[Int(i)].padding = {10.0f, 5.0f,  6.0f, 3.0f};
+        textStyles[Int(i)].padding = {buttonPadding.x() + inputSideOutline,
+                                      buttonPadding.y() + 1.0f,
+                                      buttonPadding.x(),
+                                      buttonPadding.y() - 1.0f};
 
     /* Input spans the same height as a button */
     layoutStyles[Int(LayoutStyle::Input)].minSize = {0.0f, 36.0f};
