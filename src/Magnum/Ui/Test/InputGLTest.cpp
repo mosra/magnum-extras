@@ -60,14 +60,14 @@ const struct {
 } TestData[]{
     {nullptr,
         [](UserInterface& ui, Int style, Flags, Int counter) {
-            Input input{{ui, {}, {64, 36}}, counter % 2 ? "Edit..." : "Type?", InputStyle(style)};
+            Input input{Anchor{ui, {}, {64, 36}}, counter % 2 ? "Edit..." : "Type?", InputStyle(style)};
             /** @todo use a cursor setting API once it exists */
             ui.textLayer().setCursor(input.textData(), counter % 2 ? 2 : 5, counter % 2 ? 5 : 2);
             return input.release();
         }},
     {"setters",
         [](UserInterface& ui, Int style, Flags, Int counter) {
-            Input input{{ui, {}, {64, 36}}, "", InputStyle(style)};
+            Input input{Anchor{ui, {}, {64, 36}}, "", InputStyle(style)};
             input.setText(counter % 2 ? "Edit..." : "Type?");
             /** @todo use a cursor setting API once it exists */
             ui.textLayer().setCursor(input.textData(), counter % 2 ? 2 : 5, counter % 2 ? 5 : 2);
@@ -75,7 +75,7 @@ const struct {
         }},
     {"setStyle()",
         [](UserInterface& ui, Int style, Flags, Int counter) {
-            Input input{{ui, {}, {64, 36}}, counter % 2 ? "Edit..." : "Type?", InputStyle(style == 0 ? 1 : 0)};
+            Input input{Anchor{ui, {}, {64, 36}}, counter % 2 ? "Edit..." : "Type?", InputStyle(style == 0 ? 1 : 0)};
             input.setStyle(InputStyle(style));
             /** @todo use a cursor setting API once it exists */
             ui.textLayer().setCursor(input.textData(), counter % 2 ? 2 : 5, counter % 2 ? 5 : 2);
@@ -89,14 +89,14 @@ const struct {
 } PasswordData[]{
     {nullptr,
         [](UserInterface& ui, Int style, Flags, Int counter) {
-            PasswordInput input{{ui, {}, {64, 36}}, counter % 2 ? "Edit..." : "Type?", InputStyle(style)};
+            PasswordInput input{Anchor{ui, {}, {64, 36}}, counter % 2 ? "Edit..." : "Type?", InputStyle(style)};
             /** @todo use a cursor setting API once it exists */
             ui.textLayer().setCursor(input.textData(), counter % 2 ? 2 : 5, counter % 2 ? 5 : 2);
             return input.release();
         }},
     {"setters",
         [](UserInterface& ui, Int style, Flags, Int counter) {
-            PasswordInput input{{ui, {}, {64, 36}}, "", InputStyle(style)};
+            PasswordInput input{Anchor{ui, {}, {64, 36}}, "", InputStyle(style)};
             input.setText(counter % 2 ? "Edit..." : "Type?");
             /** @todo use a cursor setting API once it exists */
             ui.textLayer().setCursor(input.textData(), counter % 2 ? 2 : 5, counter % 2 ? 5 : 2);
@@ -104,7 +104,7 @@ const struct {
         }},
     {"setStyle()",
         [](UserInterface& ui, Int style, Flags, Int counter) {
-            PasswordInput input{{ui, {}, {64, 36}}, counter % 2 ? "Edit..." : "Type?", InputStyle(style == 0 ? 1 : 0)};
+            PasswordInput input{Anchor{ui, {}, {64, 36}}, counter % 2 ? "Edit..." : "Type?", InputStyle(style == 0 ? 1 : 0)};
             input.setStyle(InputStyle(style));
             /** @todo use a cursor setting API once it exists */
             ui.textLayer().setCursor(input.textData(), counter % 2 ? 2 : 5, counter % 2 ? 5 : 2);
@@ -175,7 +175,7 @@ void InputGLTest::passwordFontOverride() {
         [](UserInterface& ui, Int style, Flags, Int counter) {
             /** @todo the fontHandle() is hardcoded, ideally there would be a
                 way to query particular style fonts */
-            PasswordInput input{{ui, {}, {64, 36}}, counter % 2 ? "Edit..." : "Type?", fontHandle(2, 1), InputStyle(style)};
+            PasswordInput input{Anchor{ui, {}, {64, 36}}, counter % 2 ? "Edit..." : "Type?", fontHandle(2, 1), InputStyle(style)};
             /** @todo use a cursor setting API once it exists */
             ui.textLayer().setCursor(input.textData(), counter % 2 ? 2 : 5, counter % 2 ? 5 : 2);
             return input.release();

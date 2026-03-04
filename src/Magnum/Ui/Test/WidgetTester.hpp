@@ -255,7 +255,7 @@ void WidgetTester::setup() {
     CORRADE_INTERNAL_ASSERT(ui.layoutLayer().usedCount() == 0);
     CORRADE_INTERNAL_ASSERT(ui.snapLayouter().usedCount() == 0);
     CORRADE_INTERNAL_ASSERT(ui.genericLayouter().usedCount() == 0);
-    root = {ui, {}, ui.size()};
+    root = Anchor{ui, {}, ui.size()};
 }
 
 void WidgetTester::teardown() {

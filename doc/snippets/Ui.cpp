@@ -1205,7 +1205,7 @@ struct UserInterface: Ui::UserInterface {
 } ui{NoCreate};
 Ui::DebugLayer debugLayer{Ui::layerHandle(0, 1), {}, {}};
 /* [DebugLayer-node-inspect-callback] */
-Ui::Label details{DOXYGEN_ELLIPSIS({ui, {}, {}}, "")};
+Ui::Label details{DOXYGEN_ELLIPSIS(Ui::Anchor{ui, {}, {}}, "")};
 
 DOXYGEN_ELLIPSIS()
 

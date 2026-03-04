@@ -149,6 +149,7 @@ template<class T> void AnchorTest::constructCreateNode() {
     NodeHandle parent = ui.createNode({}, {});
     CORRADE_COMPARE(parent, nodeHandle(2, 2));
 
+    /* Is *not* implicit because it'd be rather cryptic in common use */
     T anchor{ui, parent, {1.0f, 2.0f}, {3.0f, 4.0f}, NodeFlag::Disabled};
     CORRADE_COMPARE(&anchor.ui(), &ui);
     CORRADE_COMPARE(anchor.node(), nodeHandle(3, 1));
@@ -174,6 +175,7 @@ template<class T> void AnchorTest::constructCreateNodeParentAnchor() {
     T parent{ui, {}, {}};
     CORRADE_COMPARE(parent.node(), nodeHandle(3, 2));
 
+    /* Is *not* implicit because it'd be rather cryptic in common use */
     T anchor{parent, {1.0f, 2.0f}, {3.0f, 4.0f}, NodeFlag::Disabled};
     CORRADE_COMPARE(&anchor.ui(), &ui);
     CORRADE_COMPARE(ui.nodeParent(anchor), parent.node());
@@ -193,6 +195,7 @@ template<class T> void AnchorTest::constructCreateNodeRoot() {
     ui.createNode({}, {});
     ui.removeNode(ui.createNode({}, {}));
 
+    /* Is *not* implicit because it'd be rather cryptic in common use */
     T anchor{ui, {1.0f, 2.0f}, {3.0f, 4.0f}, NodeFlag::Disabled};
     CORRADE_COMPARE(&anchor.ui(), &ui);
     CORRADE_COMPARE(anchor.node(), nodeHandle(1, 2));

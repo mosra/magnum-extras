@@ -61,42 +61,42 @@ const struct {
     {"stateless",
         [](UserInterface& ui, Int style, Flags, Int counter) {
             /** @todo differently wide icons to test alignment */
-            return button({ui, {}, {96, 36}}, counter % 2 ? Icon::No : Icon::Yes, counter % 2 ? "Bye" : "Hello!", nullptr, ButtonStyle(style)).node();
+            return button(Anchor{ui, {}, {96, 36}}, counter % 2 ? Icon::No : Icon::Yes, counter % 2 ? "Bye" : "Hello!", nullptr, ButtonStyle(style)).node();
         }},
     {nullptr,
         [](UserInterface& ui, Int style, Flags, Int counter) {
-            return Button{{ui, {}, {96, 36}}, counter % 2 ? Icon::No : Icon::Yes, counter % 2 ? "Bye" : "Hello!", ButtonStyle(style)}.release();
+            return Button{Anchor{ui, {}, {96, 36}}, counter % 2 ? Icon::No : Icon::Yes, counter % 2 ? "Bye" : "Hello!", ButtonStyle(style)}.release();
         }},
     {"setters",
         [](UserInterface& ui, Int style, Flags, Int counter) {
-            Button button{{ui, {}, {96, 36}}, Icon::No, "Hey", ButtonStyle(style)};
+            Button button{Anchor{ui, {}, {96, 36}}, Icon::No, "Hey", ButtonStyle(style)};
             button.setIcon(counter % 2 ? Icon::No : Icon::Yes);
             button.setText(counter % 2 ? "Bye" : "Hello!");
             return button.release();
         }},
     {"setters on empty",
         [](UserInterface& ui, Int style, Flags, Int counter) {
-            Button button{{ui, {}, {96, 36}}, Icon::None, "", ButtonStyle(style)};
+            Button button{Anchor{ui, {}, {96, 36}}, Icon::None, "", ButtonStyle(style)};
             button.setIcon(counter % 2 ? Icon::No : Icon::Yes);
             button.setText(counter % 2 ? "Bye" : "Hello!");
             return button.release();
         }},
     {"setters on empty, different order",
         [](UserInterface& ui, Int style, Flags, Int counter) {
-            Button button{{ui, {}, {96, 36}}, Icon::None, "", ButtonStyle(style)};
+            Button button{Anchor{ui, {}, {96, 36}}, Icon::None, "", ButtonStyle(style)};
             button.setText(counter % 2 ? "Bye" : "Hello!");
             button.setIcon(counter % 2 ? Icon::No : Icon::Yes);
             return button.release();
         }},
     {"setStyle()",
         [](UserInterface& ui, Int style, Flags, Int counter) {
-            Button button{{ui, {}, {96, 36}}, counter % 2 ? Icon::No : Icon::Yes, counter % 2 ? "Bye" : "Hello!", ButtonStyle(style == 0 ? 1 : 0)};
+            Button button{Anchor{ui, {}, {96, 36}}, counter % 2 ? Icon::No : Icon::Yes, counter % 2 ? "Bye" : "Hello!", ButtonStyle(style == 0 ? 1 : 0)};
             button.setStyle(ButtonStyle(style));
             return button.release();
         }},
     {"setStyle() on empty, setters",
         [](UserInterface& ui, Int style, Flags, Int counter) {
-            Button button{{ui, {}, {96, 36}}, Icon::None, "", ButtonStyle(style == 0 ? 1 : 0)};
+            Button button{Anchor{ui, {}, {96, 36}}, Icon::None, "", ButtonStyle(style == 0 ? 1 : 0)};
             button.setStyle(ButtonStyle(style));
             button.setIcon(counter % 2 ? Icon::No : Icon::Yes);
             button.setText(counter % 2 ? "Bye" : "Hello!");
@@ -110,33 +110,33 @@ const struct {
 } TextData[]{
     {"stateless",
         [](UserInterface& ui, Int style, Flags, Int counter) {
-            return button({ui, {}, {64, 36}}, counter % 2 ? "Bye" : "Hello!", nullptr, ButtonStyle(style)).node();
+            return button(Anchor{ui, {}, {64, 36}}, counter % 2 ? "Bye" : "Hello!", nullptr, ButtonStyle(style)).node();
         }},
     {nullptr,
         [](UserInterface& ui, Int style, Flags, Int counter) {
-            return Button{{ui, {}, {64, 36}}, counter % 2 ? "Bye" : "Hello!", ButtonStyle(style)}.release();
+            return Button{Anchor{ui, {}, {64, 36}}, counter % 2 ? "Bye" : "Hello!", ButtonStyle(style)}.release();
         }},
     {"setters",
         [](UserInterface& ui, Int style, Flags, Int counter) {
-            Button button{{ui, {}, {64, 36}}, "Hey", ButtonStyle(style)};
+            Button button{Anchor{ui, {}, {64, 36}}, "Hey", ButtonStyle(style)};
             button.setText(counter % 2 ? "Bye" : "Hello!");
             return button.release();
         }},
     {"setters on empty",
         [](UserInterface& ui, Int style, Flags, Int counter) {
-            Button button{{ui, {}, {64, 36}}, "", ButtonStyle(style)};
+            Button button{Anchor{ui, {}, {64, 36}}, "", ButtonStyle(style)};
             button.setText(counter % 2 ? "Bye" : "Hello!");
             return button.release();
         }},
     {"setStyle()",
         [](UserInterface& ui, Int style, Flags, Int counter) {
-            Button button{{ui, {}, {64, 36}}, counter % 2 ? "Bye" : "Hello!", ButtonStyle(style == 0 ? 1 : 0)};
+            Button button{Anchor{ui, {}, {64, 36}}, counter % 2 ? "Bye" : "Hello!", ButtonStyle(style == 0 ? 1 : 0)};
             button.setStyle(ButtonStyle(style));
             return button.release();
         }},
     {"setStyle() on empty, setters",
         [](UserInterface& ui, Int style, Flags, Int counter) {
-            Button button{{ui, {}, {64, 36}}, "", ButtonStyle(style == 0 ? 1 : 0)};
+            Button button{Anchor{ui, {}, {64, 36}}, "", ButtonStyle(style == 0 ? 1 : 0)};
             button.setStyle(ButtonStyle(style));
             button.setText(counter % 2 ? "Bye" : "Hello!");
             return button.release();
@@ -150,33 +150,33 @@ const struct {
     {"stateless",
         [](UserInterface& ui, Int style, Flags, Int counter) {
             /** @todo differently wide icons to test alignment */
-            return button({ui, {}, {48, 36}}, counter % 2 ? Icon::Yes : Icon::No, nullptr, ButtonStyle(style)).node();
+            return button(Anchor{ui, {}, {48, 36}}, counter % 2 ? Icon::Yes : Icon::No, nullptr, ButtonStyle(style)).node();
         }},
     {nullptr,
         [](UserInterface& ui, Int style, Flags, Int counter) {
-            return Button{{ui, {}, {48, 36}}, counter % 2 ? Icon::Yes : Icon::No, ButtonStyle(style)}.release();
+            return Button{Anchor{ui, {}, {48, 36}}, counter % 2 ? Icon::Yes : Icon::No, ButtonStyle(style)}.release();
         }},
     {"setters",
         [](UserInterface& ui, Int style, Flags, Int counter) {
-            Button button{{ui, {}, {48, 36}}, Icon::Yes, ButtonStyle(style)};
+            Button button{Anchor{ui, {}, {48, 36}}, Icon::Yes, ButtonStyle(style)};
             button.setIcon(counter % 2 ? Icon::Yes : Icon::No);
             return button.release();
         }},
     {"setters on empty",
         [](UserInterface& ui, Int style, Flags, Int counter) {
-            Button button{{ui, {}, {48, 36}}, Icon::None, ButtonStyle(style)};
+            Button button{Anchor{ui, {}, {48, 36}}, Icon::None, ButtonStyle(style)};
             button.setIcon(counter % 2 ? Icon::Yes : Icon::No);
             return button.release();
         }},
     {"setStyle()",
         [](UserInterface& ui, Int style, Flags, Int counter) {
-            Button button{{ui, {}, {48, 36}}, counter % 2 ? Icon::Yes : Icon::No, ButtonStyle(style == 0 ? 1 : 0)};
+            Button button{Anchor{ui, {}, {48, 36}}, counter % 2 ? Icon::Yes : Icon::No, ButtonStyle(style == 0 ? 1 : 0)};
             button.setStyle(ButtonStyle(style));
             return button.release();
         }},
     {"setStyle() on empty, setters",
         [](UserInterface& ui, Int style, Flags, Int counter) {
-            Button button{{ui, {}, {48, 36}}, Icon::None, ButtonStyle(style == 0 ? 1 : 0)};
+            Button button{Anchor{ui, {}, {48, 36}}, Icon::None, ButtonStyle(style == 0 ? 1 : 0)};
             button.setStyle(ButtonStyle(style));
             button.setIcon(counter % 2 ? Icon::Yes : Icon::No);
             return button.release();

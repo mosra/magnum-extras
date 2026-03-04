@@ -105,7 +105,7 @@ void ScrollAreaGLTest::x() {
            rectangle; add it as the first so below the data layer */
         BaseLayer& contentsRectLayer = ui.setLayerInstance(Containers::pointer<BaseLayerGL>(ui.createLayer(ui.dataLayer()), ScrollAreaGLTest::instance().contentsRectLayerShared));
 
-        ScrollArea scroll{{ui, {}, {60, 40}}, ScrollAreaFlag::OnlyX};
+        ScrollArea scroll{Anchor{ui, {}, {60, 40}}, ScrollAreaFlag::OnlyX};
         contentsRectLayer.create(0, scroll.contentsNode());
         if(style == 0 || style == 1)
             ui.setNodeSizeX(scroll.contentsNode(), 90);
@@ -141,7 +141,7 @@ void ScrollAreaGLTest::y() {
 
         BaseLayer& contentsRectLayer = ui.setLayerInstance(Containers::pointer<BaseLayerGL>(ui.createLayer(ui.dataLayer()), ScrollAreaGLTest::instance().contentsRectLayerShared));
 
-        ScrollArea scroll{{ui, {}, {40, 60}}, ScrollAreaFlag::OnlyY};
+        ScrollArea scroll{Anchor{ui, {}, {40, 60}}, ScrollAreaFlag::OnlyY};
         contentsRectLayer.create(0, scroll.contentsNode());
         if(style == 0 || style == 1)
             ui.setNodeSizeY(scroll.contentsNode(), 90);
@@ -191,7 +191,7 @@ void ScrollAreaGLTest::xy() {
 
         BaseLayer& contentsRectLayer = ui.setLayerInstance(Containers::pointer<BaseLayerGL>(ui.createLayer(ui.dataLayer()), ScrollAreaGLTest::instance().contentsRectLayerShared));
 
-        ScrollArea scroll{{ui, {}, {80, 80}}};
+        ScrollArea scroll{Anchor{ui, {}, {80, 80}}};
         contentsRectLayer.create(0, scroll.contentsNode());
         if(style == 0 || style == 1 || style == 2 || style == 3)
             ui.setNodeSize(scroll.contentsNode(), {120, 120});

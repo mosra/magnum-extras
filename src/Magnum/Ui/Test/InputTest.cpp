@@ -92,10 +92,10 @@ void InputTest::debugStyle() {
 }
 
 void InputTest::construct() {
-    Input input1{{root, {}, {32, 16}}, "hello", InputStyle::Warning};
-    PasswordInput input1Password{{root, {}, {32, 16}}, "hello", InputStyle::Warning};
-    Input input2{{root, {}, {16, 32}}, InputStyle::Flat};
-    PasswordInput input2Password{{root, {}, {16, 32}}, InputStyle::Flat};
+    Input input1{Anchor{root, {}, {32, 16}}, "hello", InputStyle::Warning};
+    PasswordInput input1Password{Anchor{root, {}, {32, 16}}, "hello", InputStyle::Warning};
+    Input input2{Anchor{root, {}, {16, 32}}, InputStyle::Flat};
+    PasswordInput input2Password{Anchor{root, {}, {16, 32}}, InputStyle::Flat};
     CORRADE_COMPARE(ui.nodeParent(input1), root);
     CORRADE_COMPARE(ui.nodeParent(input1Password), root);
     CORRADE_COMPARE(ui.nodeParent(input2), root);
@@ -148,10 +148,10 @@ void InputTest::construct() {
 }
 
 void InputTest::constructTextProperties() {
-    Input input{{root, {}, {32, 16}}, "hello",
+    Input input{Anchor{root, {}, {32, 16}}, "hello",
             TextProperties{}.setScript(Text::Script::Braille),
             InputStyle::Flat};
-    PasswordInput inputPassword{{root, {}, {32, 16}}, "hello",
+    PasswordInput inputPassword{Anchor{root, {}, {32, 16}}, "hello",
             TextProperties{}.setScript(Text::Script::Braille),
             InputStyle::Flat};
     CORRADE_COMPARE(ui.nodeParent(input), root);
@@ -198,8 +198,8 @@ void InputTest::constructNoCreate() {
 }
 
 void InputTest::setStyle() {
-    Input input{{root, {}, {32, 16}}, "hello", InputStyle::Danger};
-    PasswordInput inputPassword{{root, {}, {32, 16}}, "hello", InputStyle::Danger};
+    Input input{Anchor{root, {}, {32, 16}}, "hello", InputStyle::Danger};
+    PasswordInput inputPassword{Anchor{root, {}, {32, 16}}, "hello", InputStyle::Danger};
     CORRADE_COMPARE(input.style(), InputStyle::Danger);
     CORRADE_COMPARE(inputPassword.style(), InputStyle::Danger);
 
@@ -220,8 +220,8 @@ void InputTest::setStyle() {
 }
 
 void InputTest::setStyleWhileActive() {
-    Input input{{root, {}, {32, 16}}, "hello", InputStyle::Success};
-    PasswordInput inputPassword{{root, {}, {32, 16}}, "hello", InputStyle::Success};
+    Input input{Anchor{root, {}, {32, 16}}, "hello", InputStyle::Success};
+    PasswordInput inputPassword{Anchor{root, {}, {32, 16}}, "hello", InputStyle::Success};
     CORRADE_COMPARE(input.style(), InputStyle::Success);
     CORRADE_COMPARE(inputPassword.style(), InputStyle::Success);
 
@@ -277,7 +277,7 @@ template<> struct InputTraits<PasswordInput> {
 template<class T> void InputTest::setText() {
     setTestCaseTemplateName(InputTraits<T>::name());
 
-    T input{{root, {}, {32, 16}}, "hiya"};
+    T input{Anchor{root, {}, {32, 16}}, "hiya"};
     CORRADE_COMPARE(input.text(), "hiya");
     CORRADE_COMPARE(ui.textLayer().glyphCount(input.textData()), 4);
 
@@ -290,7 +290,7 @@ template<class T> void InputTest::setText() {
 template<class T> void InputTest::setTextTextProperties() {
     setTestCaseTemplateName(InputTraits<T>::name());
 
-    T input{{root, {}, {32, 16}}, "hiya"};
+    T input{Anchor{root, {}, {32, 16}}, "hiya"};
     CORRADE_COMPARE(input.text(), "hiya");
     CORRADE_COMPARE(ui.textLayer().glyphCount(input.textData()), 4);
 
@@ -305,7 +305,7 @@ template<class T> void InputTest::setTextTextProperties() {
 template<class T> void InputTest::edit() {
     setTestCaseTemplateName(InputTraits<T>::name());
 
-    T input{{root, {}, {32, 16}}, "set"};
+    T input{Anchor{root, {}, {32, 16}}, "set"};
     /** @todo use a cursor API once it exists */
     CORRADE_COMPARE(ui.textLayer().cursor(input.textData()), Containers::pair(3u, 3u));
 
