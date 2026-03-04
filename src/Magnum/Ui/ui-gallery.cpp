@@ -256,6 +256,8 @@ UiGallery::UiGallery(const Arguments& arguments): Platform::Application{argument
             "Info", Ui::LabelStyle::Info);
         Ui::label(row.child(),
             "Dim", Ui::LabelStyle::Dim);
+        Ui::label(row.child(),
+            "Title", Ui::LabelStyle::Title);
     } {
         Ui::SnapLayoutRow row = root.child({}, Ui::NodeFlag::Disabled);
         Ui::label(row.child(),
@@ -272,6 +274,8 @@ UiGallery::UiGallery(const Arguments& arguments): Platform::Application{argument
             "Info", Ui::LabelStyle::Info);
         Ui::label(row.child(),
             "Dim", Ui::LabelStyle::Dim);
+        Ui::label(row.child(),
+            "Title", Ui::LabelStyle::Title);
     }
 
     /* Inputs */
@@ -312,6 +316,42 @@ UiGallery::UiGallery(const Arguments& arguments): Platform::Application{argument
         Ui::Input{row.child({128, 0.0f}),
             "Danger", Ui::InputStyle::Danger}.release();
         Ui::Input{row.child({128, 0.0f}),
+            "Flat", Ui::InputStyle::Flat}.release();
+    } {
+        Ui::SnapLayoutRow row = root.child();
+        Ui::PasswordInput inputDefault{row.child({128, 0.0f}),
+            "Default", Ui::InputStyle::Default};
+        Ui::PasswordInput inputSuccess{row.child({128, 0.0f}),
+            "Success", Ui::InputStyle::Success};
+        Ui::PasswordInput inputWarning{row.child({128, 0.0f}),
+            "Warning", Ui::InputStyle::Warning};
+        Ui::PasswordInput inputDanger{row.child({128, 0.0f}),
+            "Danger", Ui::InputStyle::Danger};
+        Ui::PasswordInput inputFlat{row.child({128, 0.0f}),
+            "Flat", Ui::InputStyle::Flat};
+
+        /** @todo provide some APIs on the Input directly */
+        _ui.textLayer().setCursor(inputDefault.textData(), 7, 2);
+        _ui.textLayer().setCursor(inputSuccess.textData(), 3, 6);
+        _ui.textLayer().setCursor(inputWarning.textData(), 7, 0);
+        _ui.textLayer().setCursor(inputDanger.textData(), 0, 3);
+        _ui.textLayer().setCursor(inputFlat.textData(), 3, 1);
+        inputDefault.release();
+        inputSuccess.release();
+        inputWarning.release();
+        inputDanger.release();
+        inputFlat.release();
+    } {
+        Ui::SnapLayoutRow row = root.child({}, Ui::NodeFlag::Disabled);
+        Ui::PasswordInput{row.child({128, 0.0f}),
+            "Default", Ui::InputStyle::Default}.release();
+        Ui::PasswordInput{row.child({128, 0.0f}),
+            "Succes", Ui::InputStyle::Success}.release();
+        Ui::PasswordInput{row.child({128, 0.0f}),
+            "Warning", Ui::InputStyle::Warning}.release();
+        Ui::PasswordInput{row.child({128, 0.0f}),
+            "Danger", Ui::InputStyle::Danger}.release();
+        Ui::PasswordInput{row.child({128, 0.0f}),
             "Flat", Ui::InputStyle::Flat}.release();
     }
 
