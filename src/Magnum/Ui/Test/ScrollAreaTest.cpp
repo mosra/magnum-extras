@@ -625,8 +625,8 @@ void ScrollAreaTest::construct() {
     /* The flags may contain ScrollAreaFlag::NoContentsDrag, but it should
        result in no difference in registered events and such, as the contents
        still react to scroll in that case */
-    ScrollArea scroll{{rootAnchor, {}, {32, 16}}, data.flags};
-    CORRADE_COMPARE(ui.nodeParent(scroll), rootAnchor);
+    ScrollArea scroll{{root, {}, {32, 16}}, data.flags};
+    CORRADE_COMPARE(ui.nodeParent(scroll), root);
     CORRADE_COMPARE(ui.nodeSize(scroll), (Vector2{32, 16}));
     CORRADE_VERIFY(scroll.isOwned());
 
@@ -692,8 +692,8 @@ void ScrollAreaTest::constructOnlyX() {
     /* Subset of construct(), verifying that the correct members get
        populated for given dimension */
 
-    ScrollArea scroll{{rootAnchor, {}, {32, 16}}, ScrollAreaFlag::OnlyX|data.flags};
-    CORRADE_COMPARE(ui.nodeParent(scroll), rootAnchor);
+    ScrollArea scroll{{root, {}, {32, 16}}, ScrollAreaFlag::OnlyX|data.flags};
+    CORRADE_COMPARE(ui.nodeParent(scroll), root);
     CORRADE_COMPARE(ui.nodeSize(scroll), (Vector2{32, 16}));
     CORRADE_VERIFY(scroll.isOwned());
 
@@ -747,8 +747,8 @@ void ScrollAreaTest::constructOnlyY() {
     /* Subset of construct(), verifying that the correct members get
        populated for given dimension */
 
-    ScrollArea scroll{{rootAnchor, {}, {32, 16}}, ScrollAreaFlag::OnlyY|data.flags};
-    CORRADE_COMPARE(ui.nodeParent(scroll), rootAnchor);
+    ScrollArea scroll{{root, {}, {32, 16}}, ScrollAreaFlag::OnlyY|data.flags};
+    CORRADE_COMPARE(ui.nodeParent(scroll), root);
     CORRADE_COMPARE(ui.nodeSize(scroll), (Vector2{32, 16}));
     CORRADE_VERIFY(scroll.isOwned());
 
@@ -799,8 +799,8 @@ void ScrollAreaTest::constructNonOwned() {
     /* All the properties are verified in construct*() above, check just that
        it propagates all arguments properly */
 
-    ScrollArea scroll{NonOwned, {rootAnchor, {}, {32, 16}}, ScrollAreaFlags{0x80}};
-    CORRADE_COMPARE(ui.nodeParent(scroll), rootAnchor);
+    ScrollArea scroll{NonOwned, {root, {}, {32, 16}}, ScrollAreaFlags{0x80}};
+    CORRADE_COMPARE(ui.nodeParent(scroll), root);
     CORRADE_COMPARE(ui.nodeSize(scroll), (Vector2{32, 16}));
     CORRADE_VERIFY(!scroll.isOwned());
 
@@ -825,7 +825,7 @@ void ScrollAreaTest::constructInvalid() {
 
     Containers::String out;
     Error redirectError{&out};
-    ScrollArea{{rootAnchor, {}, {32, 16}}, ScrollAreaFlag::OnlyX|ScrollAreaFlag::OnlyY};
+    ScrollArea{{root, {}, {32, 16}}, ScrollAreaFlag::OnlyX|ScrollAreaFlag::OnlyY};
     CORRADE_COMPARE(out, "Ui::ScrollArea: Ui::ScrollAreaFlag::OnlyX and Ui::ScrollAreaFlag::OnlyY are mutually exclusive\n");
 }
 
@@ -845,7 +845,7 @@ template<ScrollAreaFlag flag> void ScrollAreaTest::scrollX() {
     setTestCaseDescription(data.name);
     setTestCaseTemplateName(ScrollAreaFlagTraits<flag>::name());
 
-    ScrollArea scroll{{rootAnchor, {150.0f, 350.0f}, {data.size, 300.0f}}, flag|data.extraFlags};
+    ScrollArea scroll{{root, {150.0f, 350.0f}, {data.size, 300.0f}}, flag|data.extraFlags};
     /* It should be fine for the other direction to have a zero size, even if
        scrolling in both directions. What matters is the view size, which is
        guarded by layout min sizes. */
@@ -969,7 +969,7 @@ template<ScrollAreaFlag flag> void ScrollAreaTest::scrollY() {
     /* Like scrollX(), just with dimensions flipped. Everything should behave
        exactly the same. */
 
-    ScrollArea scroll{{rootAnchor, {350.0f, 150.0f}, {300.0f, data.size}}, flag|data.extraFlags};
+    ScrollArea scroll{{root, {350.0f, 150.0f}, {300.0f, data.size}}, flag|data.extraFlags};
     /* It should be fine for the other direction to have a zero size, even if
        scrolling in both directions. What matters is the view size, which is
        guarded by layout min sizes. */
@@ -1100,7 +1100,7 @@ void ScrollAreaTest::dragFallthrough() {
             ui.eventLayer().dragThreshold(),
             TestSuite::Compare::Less);
 
-    ScrollArea scroll{{rootAnchor, {200.0f, 300.0f}, {100.0f, 100.0f}}, data.flags};
+    ScrollArea scroll{{root, {200.0f, 300.0f}, {100.0f, 100.0f}}, data.flags};
 
     /* Make the contents large enough and reacting to a tap or click */
     ui.setNodeSize(scroll.contents(), {

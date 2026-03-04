@@ -212,7 +212,7 @@ struct WidgetTester: TestSuite::Tester {
        before it's populated in setup(). Yeah, I know, this is abusing a
        construction path that shouldn't be used. There's (deliberately) no
        supported way to create an invalid anchor. */
-    Anchor rootAnchor = Widget{NoCreate};
+    Anchor root = Widget{NoCreate};
 
     private:
         LayerHandle _nodeOffsetSizeQueryLayer = LayerHandle::Null;
@@ -245,7 +245,7 @@ WidgetTester::~WidgetTester() {
 }
 
 void WidgetTester::setup() {
-    CORRADE_INTERNAL_ASSERT(!ui.isHandleValid(rootAnchor));
+    CORRADE_INTERNAL_ASSERT(!ui.isHandleValid(root));
     CORRADE_INTERNAL_ASSERT(ui.nodeUsedCount() == 0);
     CORRADE_INTERNAL_ASSERT(ui.dataLayer().storageUsedCount() == 0);
     CORRADE_INTERNAL_ASSERT(ui.dataLayer().usedCount() == 0);
@@ -255,17 +255,17 @@ void WidgetTester::setup() {
     CORRADE_INTERNAL_ASSERT(ui.layoutLayer().usedCount() == 0);
     CORRADE_INTERNAL_ASSERT(ui.snapLayouter().usedCount() == 0);
     CORRADE_INTERNAL_ASSERT(ui.genericLayouter().usedCount() == 0);
-    rootAnchor = {ui, {}, ui.size()};
+    root = {ui, {}, ui.size()};
 }
 
 void WidgetTester::teardown() {
-    ui.removeNode(rootAnchor);
+    ui.removeNode(root);
     ui.clean();
     /* Unreferenced storages are removed in update(), not clean() */
     /** @todo remove this once unused storages are removed in clean() also */
     if(ui.dataLayer().storageUsedCount())
         ui.update();
-    CORRADE_INTERNAL_ASSERT(!ui.isHandleValid(rootAnchor));
+    CORRADE_INTERNAL_ASSERT(!ui.isHandleValid(root));
     CORRADE_INTERNAL_ASSERT(ui.nodeUsedCount() == 0);
     CORRADE_INTERNAL_ASSERT(ui.dataLayer().storageUsedCount() == 0);
     CORRADE_INTERNAL_ASSERT(ui.dataLayer().usedCount() == 0);
@@ -277,11 +277,11 @@ void WidgetTester::teardown() {
     CORRADE_INTERNAL_ASSERT(ui.genericLayouter().usedCount() == 0);
     /* Reset back to invalid to avoid accidents. Again yeah, I know, this is
        abusing a construction path that shouldn't be used. */
-    rootAnchor = Widget{NoCreate};
+    root = Widget{NoCreate};
 }
 
 void WidgetTester::setupNoCreate() {
-    CORRADE_INTERNAL_ASSERT(!ui.isHandleValid(rootAnchor));
+    CORRADE_INTERNAL_ASSERT(!ui.isHandleValid(root));
     CORRADE_INTERNAL_ASSERT(ui.nodeUsedCount() == 0);
     CORRADE_INTERNAL_ASSERT(ui.dataLayer().storageUsedCount() == 0);
     CORRADE_INTERNAL_ASSERT(ui.dataLayer().usedCount() == 0);
@@ -293,11 +293,11 @@ void WidgetTester::setupNoCreate() {
     CORRADE_INTERNAL_ASSERT(ui.genericLayouter().usedCount() == 0);
     /* Set to invalid to prevent the node from being used by accident. Again
        again yeah, I know. */
-    rootAnchor = Widget{NoCreate};
+    root = Widget{NoCreate};
 }
 
 void WidgetTester::teardownNoCreate() {
-    CORRADE_INTERNAL_ASSERT(!ui.isHandleValid(rootAnchor));
+    CORRADE_INTERNAL_ASSERT(!ui.isHandleValid(root));
     CORRADE_INTERNAL_ASSERT(ui.nodeUsedCount() == 0);
     CORRADE_INTERNAL_ASSERT(ui.dataLayer().storageUsedCount() == 0);
     CORRADE_INTERNAL_ASSERT(ui.dataLayer().usedCount() == 0);

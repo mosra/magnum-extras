@@ -89,8 +89,8 @@ void PanelTest::construct() {
     auto&& data = ConstructData[testCaseInstanceId()];
     setTestCaseDescription(data.name);
 
-    Panel panel{{rootAnchor, {}, {32, 16}}, data.style};
-    CORRADE_COMPARE(ui.nodeParent(panel), rootAnchor);
+    Panel panel{{root, {}, {32, 16}}, data.style};
+    CORRADE_COMPARE(ui.nodeParent(panel), root);
     CORRADE_COMPARE(ui.nodeSize(panel), (Vector2{32, 16}));
     CORRADE_VERIFY(panel.isOwned());
 
@@ -114,8 +114,8 @@ void PanelTest::constructNonOwned() {
     /* All the properties are verified in construct*() above, check just that
        it propagates all arguments properly */
 
-    Panel panel{NonOwned, {rootAnchor, {}, {32, 16}}, PanelStyle::Filled};
-    CORRADE_COMPARE(ui.nodeParent(panel), rootAnchor);
+    Panel panel{NonOwned, {root, {}, {32, 16}}, PanelStyle::Filled};
+    CORRADE_COMPARE(ui.nodeParent(panel), root);
     CORRADE_COMPARE(ui.nodeSize(panel), (Vector2{32, 16}));
     CORRADE_VERIFY(!panel.isOwned());
 
@@ -129,8 +129,8 @@ void PanelTest::constructNoCreate() {
 }
 
 void PanelTest::setStyleNoOp() {
-    Panel a{{rootAnchor, {}, {32, 16}}, PanelStyle::Default};
-    Panel b{{rootAnchor, {}, {32, 16}}, PanelStyle::Filled};
+    Panel a{{root, {}, {32, 16}}, PanelStyle::Default};
+    Panel b{{root, {}, {32, 16}}, PanelStyle::Filled};
     CORRADE_COMPARE(a.style(), PanelStyle::Default);
     CORRADE_COMPARE(b.style(), PanelStyle::Filled);
     CORRADE_COMPARE(a.backgroundData(), DataHandle::Null);
@@ -150,7 +150,7 @@ void PanelTest::setStyleNoOp() {
 
 void PanelTest::setStyleFromNoBackground() {
     /* Default style is ... the default */
-    Panel panel{{rootAnchor, {}, {32, 16}}};
+    Panel panel{{root, {}, {32, 16}}};
     CORRADE_COMPARE(panel.style(), PanelStyle::Default);
     CORRADE_COMPARE(panel.backgroundData(), DataHandle::Null);
 
@@ -161,7 +161,7 @@ void PanelTest::setStyleFromNoBackground() {
 }
 
 void PanelTest::setStyleToNoBackground() {
-    Panel panel{{rootAnchor, {}, {32, 16}}, PanelStyle::Filled};
+    Panel panel{{root, {}, {32, 16}}, PanelStyle::Filled};
     CORRADE_COMPARE(panel.style(), PanelStyle::Filled);
     CORRADE_VERIFY(ui.isHandleValid(panel.backgroundData()));
 
