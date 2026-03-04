@@ -284,7 +284,7 @@ void dark(Containers::ArrayView<Ui::BaseLayerStyleUniform> baseUniforms, Contain
 
     /* Button text padding. The button itself has a min height specified, so
        the vertical padding is here only for cases with larger fonts. */
-    const Vector2 buttonPadding{6.0f, 4.0f};
+    const Vector2 buttonPadding{10.0f, 4.0f};
     const Float buttonIconGap = 6.0f;
     const Float buttonIconSize = 24.0f;
     for(auto&& i: {TextStyle::ButtonIconOnly,
@@ -959,8 +959,12 @@ void dark(Containers::ArrayView<Ui::BaseLayerStyleUniform> baseUniforms, Contain
                    TextStyle::InputFlatPasswordDisabled})
         textStyles[Int(i)].alignment = Text::Alignment::MiddleLeft;
 
-    /* Input padding, same as with a button but includes the left-side outline.
-       Pressed shifts by one unit down, again like buttons. */
+    /* Input padding. Is less than a button as that makes more sense, but
+       together with the left-side outline the left-side padding should be the
+       same as button for nice visual alignment. Pressed shifts by one unit
+       down, like buttons. */
+    const Vector2 inputPadding{6.0f, 4.0f};
+    CORRADE_INTERNAL_ASSERT(inputPadding.x() + inputSideOutline == buttonPadding.x());
     for(auto&& i: {TextStyle::InputDefault,
                    TextStyle::InputDefaultHovered,
                    TextStyle::InputDefaultFocused,
@@ -1011,10 +1015,10 @@ void dark(Containers::ArrayView<Ui::BaseLayerStyleUniform> baseUniforms, Contain
                    TextStyle::InputFlatPasswordFocused,
                    TextStyle::InputFlatPasswordFocusedBlink,
                    TextStyle::InputFlatPasswordDisabled})
-        textStyles[Int(i)].padding = {buttonPadding.x() + inputSideOutline,
-                                      buttonPadding.y(),
-                                      buttonPadding.x(),
-                                      buttonPadding.y()};
+        textStyles[Int(i)].padding = {inputPadding.x() + inputSideOutline,
+                                      inputPadding.y(),
+                                      inputPadding.x(),
+                                      inputPadding.y()};
     for(auto&& i: {TextStyle::InputDefaultPressed,
                    TextStyle::InputDefaultPasswordPressed,
                    TextStyle::InputSuccessPressed,
@@ -1025,10 +1029,10 @@ void dark(Containers::ArrayView<Ui::BaseLayerStyleUniform> baseUniforms, Contain
                    TextStyle::InputDangerPasswordPressed,
                    TextStyle::InputFlatPressed,
                    TextStyle::InputFlatPasswordPressed})
-        textStyles[Int(i)].padding = {buttonPadding.x() + inputSideOutline,
-                                      buttonPadding.y() + 1.0f,
-                                      buttonPadding.x(),
-                                      buttonPadding.y() - 1.0f};
+        textStyles[Int(i)].padding = {inputPadding.x() + inputSideOutline,
+                                      inputPadding.y() + 1.0f,
+                                      inputPadding.x(),
+                                      inputPadding.y() - 1.0f};
 
     /* Input spans the same height as a button */
     layoutStyles[Int(LayoutStyle::Input)].minSize = {0.0f, 36.0f};
