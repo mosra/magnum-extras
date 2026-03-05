@@ -77,17 +77,14 @@ A move-only owning wrapper over a @ref NodeHandle along with an
 @ref Widget typedef then restrict the type to a concrete user interface
 instance.
 
-Stateful widgets (such as a @ref Button) are meant to be used when their visual
-state will need be modified during their lifetime (for example, a button
-changing its color or text), or when the widget implementation maintains a
-state that is regularly queried by the application (for example, an input text
-label, or a list selection).
+@section Ui-AbstractWidget-widgets-anchors-nodes Widgets, anchors and nodes
 
-In comparison, stateless widgets (such as a @ref button()) are only set up once
-and then live until removed, either explicitly through their @ref NodeHandle,
-or implicitly when the parent nodes are removed. Stateless widgets are more
-lightweight as no individual destructors need to be called for them and should
-be preferred where possible.
+To be written.
+
+@section Ui-AbstractWidget-stateful-stateless Stateful, non-owned and stateless widgets
+
+To be written.
+
 */
 class MAGNUM_UI_EXPORT AbstractWidget {
     public:

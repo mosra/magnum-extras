@@ -58,7 +58,7 @@ set(MAGNUM_WITH_UI ON CACHE BOOL "" FORCE)
 add_subdirectory(magnum-extras EXCLUDE_FROM_ALL)
 @endcode
 
-Additional apps are built separately. See the
+Additional apps are built separately. See @ref ui, the
 @ref magnum-ui-gallery "magnum-ui-gallery" app documentation,
 @ref building-extras and @ref cmake-extras for more information.
 

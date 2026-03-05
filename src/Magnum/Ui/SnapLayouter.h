@@ -498,6 +498,10 @@ At the moment, min size, padding and margin layout properties coming from
 @ref LayoutLayer and other layers exposing @ref LayerFeature::Layout are taken
 into account. The implementation currently doesn't take max size or aspect
 ratio into account in any way.
+
+@section Ui-SnapLayouter-snaplayout High-level APIs for widget placement
+
+To be written.
 */
 class MAGNUM_UI_EXPORT SnapLayouter: public AbstractLayouter {
     public:

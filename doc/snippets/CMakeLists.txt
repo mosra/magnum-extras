@@ -37,6 +37,7 @@ set_directory_properties(PROPERTIES
     CORRADE_CXX_STANDARD 11
     CORRADE_USE_PEDANTIC_FLAGS ON)
 
+find_package(Magnum REQUIRED DebugTools)
 find_package(Magnum COMPONENTS Sdl2Application)
 
 if(MAGNUM_WITH_UI)
@@ -60,8 +61,43 @@ if(MAGNUM_WITH_UI)
         add_library(snippets-Ui-sdl2 STATIC ${EXCLUDE_FROM_ALL_IF_TEST_TARGET}
             Ui-sdl2.cpp)
         target_link_libraries(snippets-Ui-sdl2 PRIVATE MagnumUi Magnum::Sdl2Application)
+
         if(CORRADE_TESTSUITE_TEST_TARGET)
             add_dependencies(${CORRADE_TESTSUITE_TEST_TARGET} snippets-Ui-sdl2)
+        endif()
+    endif()
+
+    if(MAGNUM_TARGET_GL AND Magnum_Sdl2Application_FOUND)
+        add_executable(ui-getting-started ${EXCLUDE_FROM_ALL_IF_TEST_TARGET} ui-getting-started.cpp)
+        target_link_libraries(ui-getting-started PRIVATE
+            MagnumUi
+            Magnum::Sdl2Application)
+
+        if(MAGNUM_TARGET_EGL)
+            find_package(Magnum REQUIRED WindowlessEglApplication)
+        elseif(CORRADE_TARGET_IOS)
+            find_package(Magnum REQUIRED WindowlessIosApplication)
+        elseif(CORRADE_TARGET_APPLE)
+            find_package(Magnum REQUIRED WindowlessCglApplication)
+        elseif(CORRADE_TARGET_UNIX)
+            find_package(Magnum REQUIRED WindowlessGlxApplication)
+        elseif(CORRADE_TARGET_WINDOWS)
+            find_package(Magnum REQUIRED WindowlessWglApplication)
+        else()
+            message(FATAL_ERROR "No windowless application available on this platform")
+        endif()
+
+        add_executable(ui-getting-started2 ${EXCLUDE_FROM_ALL_IF_TEST_TARGET} ui-getting-started2.cpp)
+        target_link_libraries(ui-getting-started2 PRIVATE
+            MagnumUi
+            Magnum::DebugTools
+            Magnum::Sdl2Application
+            Magnum::WindowlessApplication)
+
+        if(CORRADE_TESTSUITE_TEST_TARGET)
+            add_dependencies(${CORRADE_TESTSUITE_TEST_TARGET}
+                ui-getting-started
+                ui-getting-started2)
         endif()
     endif()
 endif()

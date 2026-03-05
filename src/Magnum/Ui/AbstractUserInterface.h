@@ -449,6 +449,10 @@ options, see @ref Ui-DarkTheme-animations for details.
 
 @snippet Ui-sdl2.cpp AbstractUserInterface-animations-theme-features
 
+@section Ui-AbstractUserInterface-widgets Concept of a high-level widget
+
+To be written.
+
 @section Ui-AbstractUserInterface-handles Handles and resource ownership
 
 Unlike traditional toolkits, which commonly use pointers to UI elements

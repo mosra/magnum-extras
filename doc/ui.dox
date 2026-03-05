@@ -26,13 +26,395 @@
 
 namespace Magnum {
 
-/** @page ui UI library
-@brief Basic overview of the @ref Magnum::Ui library
+/** @page ui Tutorial for the Magnum UI library
+@brief Get started with the @ref Ui library using a bootstrap project
 
 @tableofcontents
 @m_footernavigation
 
-To be written.
+This tutorial builds upon the base @ref getting-started "Getting Started Guide",
+with a focus on setting up and using the @ref Ui library to create a simple
+user interface. You're encouraged to go through that one first if you haven't
+already.
+
+@section ui-bootstrap 1. Download the bootstrap project
+
+In the `ui` branch of the [bootstrap repository](https://github.com/mosra/magnum-bootstrap) is a minimal setup for a UI application. Download the branch as an
+archive and extract it somewhere:
+
+@m_div{m-button m-primary} <a href="https://github.com/mosra/magnum-bootstrap/archive/ui.zip">@m_div{m-big}ui.zip@m_enddiv @m_div{m-small} download the project @m_enddiv </a> @m_enddiv
+
+@subsection ui-setup-subproject 1a. Option A: add dependencies as CMake subprojects
+
+The UI library is located in the [Magnum Extras](https://github.com/mosra/magnum-extras)
+repository and additionally relies on font and image loading plugins to be able
+to draw text and icons. Like before, the easiest way without having to install
+anything is adding those as CMake subprojects, for an alternative, see
+@ref ui-setup-install below. Clone the relevant repositories like this (or use
+`git submodule add`, if you already have a Git repository):
+
+@code{.sh}
+cd /path/to/the/extracted/bootstrap/project
+git clone https://github.com/mosra/corrade.git
+git clone https://github.com/mosra/magnum.git
+git clone https://github.com/mosra/magnum-plugins.git
+git clone https://github.com/mosra/magnum-extras.git
+@endcode
+
+Then open the `CMakeLists.txt` file in the root of the bootstrap project and
+add the new subdirectories using @cmake add_subdirectory() @ce so the file
+looks like below. The `EXCLUDE_FROM_ALL` arguments ensure only the parts you
+actually use are built (and excludes the subdirectories from the `install`
+target as well), and the final @cmake add_dependencies() @ce call makes sure
+that by the time your executable is built, the plugins it dynamically loads are
+ready as well:
+
+@code{.cmake}
+cmake_minimum_required(VERSION 3.5...3.10)
+project(MyApplication)
+
+set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/modules/" ${CMAKE_MODULE_PATH})
+
+# Add Corrade and Magnum as subprojects, enable the application, required
+# plugins and the UI library itself
+add_subdirectory(corrade EXCLUDE_FROM_ALL)
+add_subdirectory(magnum EXCLUDE_FROM_ALL)
+add_subdirectory(magnum-plugins EXCLUDE_FROM_ALL)
+add_subdirectory(magnum-extras EXCLUDE_FROM_ALL)
+set(MAGNUM_WITH_SDL2APPLICATION ON CACHE BOOL "" FORCE)
+set(MAGNUM_WITH_STBIMAGEIMPORTER ON CACHE BOOL "" FORCE)
+set(MAGNUM_WITH_STBTRUETYPEFONT ON CACHE BOOL "" FORCE)
+set(MAGNUM_WITH_UI ON CACHE BOOL "" FORCE)
+
+add_subdirectory(src)
+
+# And make sure the plugins get built as dependencies of the main executable
+add_dependencies(MyApplication Magnum::StbTrueTypeFont Magnum::StbImageImporter)
+@endcode
+
+The above doesn't rely on any additional dependencies besides SDL2, which you
+should already have set up from the base @ref getting-started "Getting Started Guide".
+Check it for more information if you want to have it as a CMake subproject as
+well.
+
+@subsection ui-setup-install 1b. Option B: install Magnum separately and let CMake find it
+
+You likely already have Magnum packages ready for your platform:
+
+-   @ref building-packages-arch
+-   @ref building-packages-deb
+-   @ref building-packages-rpm
+-   @ref building-packages-brew
+-   @ref building-packages-gentoo
+-   @ref building-packages-msys
+-   @ref building-packages-cpm
+-   @ref building-packages-vcpkg
+
+Note that besides `corrade` and `magnum` you'll need also the `magnum-plugins`
+and `magnum-extras` packages. Everything the UI library relies on is included
+in the default set of libraries enabled by all packages.
+
+If you cannot use a package, follow the manual building guide for
+@ref building-corrade-manual "Corrade", @ref building-manual "Magnum",
+@ref building-plugins-manual "Magnum Plugins" and
+@ref building-extras-manual "Magnum Extras" to build & install everything.
+Enable `MAGNUM_WITH_SDL2APPLICATION` for Magnum, `MAGNUM_WITH_STBIMAGEIMPORTER`
+and `MAGNUM_WITH_STBTRUETYPEFONT` for Magnum Plugins, and `MAGNUM_WITH_UI` for
+Magnum Extras.
+
+Once you install everything, you don't need to edit the bootstrap project
+`CMakeLists.txt` in any way, worst case you may have to pass
+`CMAKE_PREFIX_PATH` to CMake if you installed the dependencies to a
+non-standard location.
+
+@section ui-review 2. Review project structure
+
+Compared to the base bootstrap project @ref getting-started-review "used in the Getting Started Guide",
+there's just one extra file, `modules/FindMagnumExtras.cmake`, which takes care
+of finding the UI library. But again there's no need to pay attention to
+contents of the `modules/` directory, its main purpose is to make the initial
+CMake experience better.
+
+The `src/CMakeLists.txt` file contains additional bits for finding & linking
+the UI library, other than that it's the same as before. The font and image
+plugins are loaded dynamically at runtime and thus don't require any CMake
+setup:
+
+@code{.cmake}
+find_package(Magnum REQUIRED Sdl2Application)
+find_package(MagnumExtras REQUIRED Ui)
+
+set_directory_properties(PROPERTIES CORRADE_USE_PEDANTIC_FLAGS ON)
+
+add_executable(MyApplication MyApplication.cpp)
+target_link_libraries(MyApplication PRIVATE
+    Magnum::Application
+    Magnum::Magnum
+    MagnumExtras::Ui)
+@endcode
+
+All scaffolding for the UI library is then inside `MyApplication.cpp`. The
+application class has a @ref Ui::UserInterfaceGL member, which sets up
+everything for drawing the UI via OpenGL, and implements handlers for passing
+all events through to the UI:
+
+@snippet ui-getting-started.cpp class
+
+The application sets up a resizable window and the builtin @ref Ui::DarkTheme
+with UI animations enabled. Animations require a time source, which is
+implemented below in the @cpp now() @ce function that's subsequently passed
+around. The @cpp viewportEvent() @ce propagates window size changes to the UI,
+@cpp drawEvent() @ce takes care of UI animations and redrawing, and the
+@cpp pointerPressEvent() @ce and all other event implementations just proxy the
+events to the UI without doing anything else.
+
+@snippet ui-getting-started.cpp methods
+
+<b></b>
+
+@m_class{m-note m-info}
+
+@par
+    In practice you may want to have other things done in addition to the UI,
+    for example draw an interactive 3D view underneath. For that reason the
+    connection between the application and the UI isn't abstracted away,
+    allowing you to inject arbitrary other code into any of the event handlers.
+
+@section ui-run 3. Build & run the project
+
+To verify the initial setup, let's build and run the project first. The build
+workflow is no different @ref getting-started-build "from the base Getting Started Guide":
+
+-   If you went with the CMake subproject approach (@ref ui-setup-subproject "Option A"
+    above), the project is configured to place all binaries into a common
+    location, the application will be placed in `Debug/bin/MyApplication` (on
+    Windows along with all DLLs it needs), and plugins that the UI library
+    automatically loads will be in `Debug/lib/magnum-d` (or `Debug/bin/magnum-d`
+    on Windows).
+-   If you went with @ref ui-setup-install "Option B", externally installed
+    Magnum, the executable gets placed into its default location in
+    `src/MyApplication`, and libraries and plugins get loaded automatically
+    from where CMake found them, worst case on Windows you may need to adjust
+    @cb{.bat} %PATH% @ce.
+
+@image html getting-started.png width=410px
+
+If everything goes well, you should end up with a completely blank window like
+above. The UI *is* there, all ready, but so far contains nothing. Let's fix
+that now.
+
+@section ui-button Your first button
+
+The most essential interactive piece of a UI is usually a button. Here it's
+exposed as a @ref Ui::Button, which is a *widget class* that creates the button
+on construction and removes it from the UI when destructed. We'll thus add it
+as a `_button` member and initialize it in the application constructor using a
+@ref Ui::Anchor, a text, and an optional @ref Ui::ButtonStyle.
+
+@snippet ui-getting-started2.cpp button
+
+The @ref Ui::Anchor takes care of positioning the widget and accepts a position
+and a size. Here we size it to @cpp {100, 40} @ce and place it in the center of
+the window. When you build and open the application again, you'll be greeted by
+a button looking like this, just interactive, reacting to hover and press:
+
+@image html ui-getting-started-button.png width=110px
+
+<b></b>
+
+@m_class{m-note m-info}
+
+@par
+    Interacting with the button causes the application to redraw as needed,
+    including when any fade in / fade out animations are playing. Other than
+    that, the application stays idle waiting for user input, saving power. If
+    your other code in fact requires constant redrawing, call
+    @relativeref{Platform::Sdl2Application,redraw()} in the @cpp drawEvent() @ce
+    unconditionally.
+
+To make the button do something when clicked, we'll pass a lambda to
+@ref Ui::Button::onTrigger(). The function actually takes a
+@ref Corrade::Containers::Function<R(Args...)> "Containers::Function" that can
+wrap any function object, so be sure to @cpp #include @ce it to have the
+lambda properly recognized. Here we'll make the button just switch the style
+between a green and a red one:
+
+@snippet ui-getting-started2.cpp button-trigger
+
+@section ui-defer-create Deferring widget member creation
+
+Having to set up widgets inside the application constructor initializer list,
+like shown above, is rather limiting and quickly becomes a burden. A common
+pattern is to instead initialize the widget members using the @ref NoCreate tag
+(i.e., here with the @ref Ui::Button::Button(NoCreateT) constructor), and then
+replace them with real instances from within common constructor code:
+
+@snippet ui-getting-started2.cpp button-nocreate
+
+<b></b>
+
+@m_class{m-note m-warning}
+
+@par
+    Note that the @ref NoCreate instances are invalid and calling anything on
+    those would likely blow up. This is why an explicit tag is used, to ensure
+    that the decision to defer the widget creation is not accidental. For more
+    safety at the cost of some extra overhead put the widget in a
+    @relativeref{Corrade,Containers::Optional} instead of using the
+    @ref NoCreate tag.
+
+@section ui-automatic-positioning Automatic widget position and size
+
+Finally, while it's possible to have the UI built with hardcoded widget
+positions and sizes, commonly the widgets are organized in a layout hierarchy
+that takes care of this automatically. First, let's use a layout just for the
+lone button --- we'll use @ref Ui::SnapLayout::snapRoot(), which snaps a widget
+to the whole UI, and pass it as an anchor to the @ref Ui::Button constructor.
+The empty @ref Ui::Snaps mean snapping it, well, *nowhere*, thus to the center:
+
+@snippet ui-getting-started2.cpp button-layout
+
+The function takes an optional size argument as well, but here we omit it,
+making the layout pick a size on its own --- the theme specifies all sizing and
+spacing, and the button is additionally made large enough to fit its label.
+Additionally, compared to manual placement, the widget now also stays in the
+center when the window gets resized:
+
+@image html ui-getting-started-button-layout.png width=100px
+
+@section ui-layouts Widget layouts
+
+Now let's finally move on to something non-trivial. A [login wall](https://en.wiktionary.org/wiki/login_wall)
+is easily among the *most loved* UI patterns, so let's create one. In addition
+to a button we'll need a bunch of @ref Ui::Label instances and two
+@ref Ui::Input widgets:
+
+@snippet ui-getting-started2.cpp login-members
+
+In the constructor we'll take the the anchor coming from
+@ref Ui::SnapLayout::snapRoot() --- again centering in the window --- and turn
+it into a @ref Ui::SnapLayoutColumn. Calling @relativeref{Ui::SnapLayout,child()}
+on the layout then puts the widgets one after another into a column. For the
+labels and buttons we again don't need to specify sizes as the widgets will
+size themselves based on contents, however the inputs have no contents on their
+own and thus we'll give them a reasonable width explicitly:
+
+@snippet ui-getting-started2.cpp login
+
+<b></b>
+
+@m_class{m-note m-info}
+
+@par
+    Note that the @ref Ui::SnapLayout instances are transient and don't need to
+    be preserved, unlike widgets they aren't owning anything. You can store
+    them as members if you plan to add more widgets but they can also be
+    recreated later from just a widget reference.
+
+When you build and run, the form will look like this. Beautiful, isn't it?
+Almost alive.
+
+@image html ui-getting-started-login.png width=210px
+
+@section ui-stateful-stateless-widgets Stateful and stateless widgets
+
+One important aspect of the @ref Ui library is that internally only the
+essential data needed for drawing the UI and handling events are stored. A
+@ref Ui::ButtonStyle, for example, is a high-level user-facing concept of the
+@ref Ui::Button class, but internally it gets translated to individual text and
+background styles and nothing needs to know it's a button. Similarly, the
+button text is internally just a sequence of font glyphs, as unlike an
+@ref Ui::Input the button text isn't going to be edited in response to an event
+and thus storing the source string would be needless overhead.
+
+A consequence of the above is that the widget classes are just a stateful
+interface for the application code, allowing it to access and modify widget
+properties. But apart from user callbacks like the lambdas passed to
+@ref Ui::Button::onTrigger(), the widget instances are not accessed in any way
+when the UI is drawn and events are processed. Thus, if the application itself
+doesn't need to access the widgets, there's no point in keeping them.
+
+As mentioned above, the default behavior is that destructing a widget class
+removes the widget, which is a common [RAII](https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization)
+expectation. So just turning the widget members into local variables isn't
+going to work. Instead, widgets support construction using the
+@ref Ui::NonOwned tag (such as @ref Ui::Button::Button(NonOwnedT, Anchor, Containers::StringView, const TextProperties&, ButtonStyle) "Ui::Button::Button(NonOwnedT, Anchor, Containers::StringView, …)"),
+which effectively makes the destructors no-op. These widgets then get
+implicitly removed once any of their parents is removed, such as the layout
+they're in.
+
+In conclusion, from the layout we have we only need to access the `_username`
+and `_password` from the button trigger function. Everything else can be
+switched to stateless variants, i.e. along with removing the `_titleLabel`, `_usernameLabel`, `_passwordLabel` and `_signIn` members. For buttons and
+labels we can even use the @ref Ui::button(Anchor, Containers::StringView, const TextProperties&, Containers::Function<void()>&&, ButtonStyle) "Ui::button()"
+and @ref Ui::label(Anchor, Containers::StringView, const TextProperties&, LabelStyle) "Ui::label()"
+convenience functions that create *stateless* widgets with no actual instance:
+
+@snippet ui-getting-started2.cpp login-stateless
+
+With this change, there should be no visual difference, but the code is simpler
+and uses slightly less memory.
+
+@section ui-container-widgets Container widgets
+
+Besides leaf widgets like labels, buttons or inputs, there are *container*
+widgets, with other widgets placed inside. Let's put our form into a nice tidy
+@ref Ui::Panel --- we'll use it as the top-level widget instead of the `layout`
+we've made above, and form a column layout out of @ref Ui::Panel::contents(),
+which makes the panel wrap the contents:
+
+@snippet ui-getting-started2.cpp login-container
+
+<b></b>
+
+@m_class{m-note m-info}
+
+@par
+    In the above snippet you can see that the @ref Ui::Panel is created as
+    @ref Ui::NonOwned, as it's also never going to be touched again after. In
+    case of the panel there's no corresponding stateless widget function as in
+    order to fill it we need to access @ref Ui::Panel::contents() on the class
+    instance.
+
+@image html ui-getting-started-login-container.png width=240px
+
+Another container widget is for example the @ref Ui::ScrollArea, which
+implements a clipped view that can be dragged and scrolled.
+
+@section ui-nested-layouts Nested layouts
+
+Finally, the above is just a plain column layout that's wasting a lot of
+vertical space, and we're likely not making an iPhone UI just yet. So let's
+make it a bit more compact, aligning the labels next to the input fields in
+nested @ref Ui::SnapLayoutRow instances instead:
+
+@snippet ui-getting-started2.cpp login-compact
+
+@image html ui-getting-started-login-compact.png width=330px
+
+The theme and layout algorithm again makes sure everything is evenly spaced and
+lined up. For simplicity we aligned everything to the right by switching the
+`layout` to @ref Ui::SnapLayoutColumnRight, another option would be for example
+making the title and sign up layouts @cpp 200 @ce units wide as well to center
+them relative to the input fields.
+
+@section ui-next And now what?
+
+The above guided you through the initial setup for a user interface and
+explained essential concepts and workflows with the library. More UI tutorials
+are being written, for now feel free to dig deeper:
+
+-   The @ref Ui::AbstractUserInterface documentation has a more detailed
+    description of the application setup as well as all underlying concepts
+    that power the library
+-   The @ref Ui::AbstractWidget class describes relation between widgets,
+    anchors and nodes, and expands on the concept of stateful and stateless
+    widgets and ownership
+-   Capabilities of the builtin layout engine are described in the
+    @ref Ui::SnapLayouter class docs, along with the high-level interfaces used
+    for widget placement
+-   Everything else, including a list of builtin widgets is accessible from the
+    @ref Ui namespace docs
 
 */
 
