@@ -214,10 +214,10 @@ void LabelTest::constructText() {
 }
 
 void LabelTest::constructTextStateless() {
-    NodeHandle node1 = label(Anchor{root, {}, {32, 16}}, "hello!", LabelStyle::Warning);
-    CORRADE_COMPARE(ui.nodeParent(node1), root);
-    CORRADE_COMPARE(ui.nodeOffset(node1), Vector2{});
-    CORRADE_COMPARE(ui.nodeSize(node1), (Vector2{32, 16}));
+    NodeHandle node = label(Anchor{root, {}, {32, 16}}, "hello!", LabelStyle::Warning);
+    CORRADE_COMPARE(ui.nodeParent(node), root);
+    CORRADE_COMPARE(ui.nodeOffset(node), Vector2{});
+    CORRADE_COMPARE(ui.nodeSize(node), (Vector2{32, 16}));
 
     /* Can only verify that the data were created, nothing else. Visually
        tested in StyleGLTest. */
