@@ -76,7 +76,6 @@ class MAGNUM_UI_EXPORT Button: public Widget {
          * The button can be subsequently converted to text-only or icon + text
          * using @ref setIcon() and @ref setText(). Use @ref onTrigger() to
          * connect the button to an action.
-         * @see @ref button(Anchor, Icon, Containers::Function<void()>&&, ButtonStyle)
          */
         explicit Button(Anchor anchor, Icon icon, ButtonStyle style = ButtonStyle::Default);
 
@@ -91,7 +90,6 @@ class MAGNUM_UI_EXPORT Button: public Widget {
          * The button can be subsequently converted to icon-only or icon + text
          * using @ref setIcon() and @ref setText(). Use @ref onTrigger() to
          * connect the button to an action.
-         * @see @ref button(Anchor, Containers::StringView, const TextProperties&, Containers::Function<void()>&&, ButtonStyle)
          */
         explicit Button(Anchor anchor, Containers::StringView text, const TextProperties& textProperties, ButtonStyle style = ButtonStyle::Default);
         /** @overload */
@@ -110,11 +108,53 @@ class MAGNUM_UI_EXPORT Button: public Widget {
          * The button can be subsequently converted to icon-only or text-only
          * using @ref setIcon() and @ref setText(). Use @ref onTrigger() to
          * connect the button to an action.
-         * @see @ref button(Anchor, Icon, Containers::StringView, const TextProperties&, Containers::Function<void()>&&, ButtonStyle)
          */
         explicit Button(Anchor anchor, Icon icon, Containers::StringView text, const TextProperties& textProperties, ButtonStyle style = ButtonStyle::Default);
         /** @overload */
         explicit Button(Anchor anchor, Icon icon, Containers::StringView text, ButtonStyle style = ButtonStyle::Default);
+
+        /**
+         * @brief Construct a non-owned icon button
+         *
+         * Like @ref Button(Anchor, Icon, ButtonStyle) but the widget node
+         * doesn't get removed on destruction. Instead, it gets removed either
+         * once any parent node is removed, or when
+         * @ref AbstractUserInterface::removeNode() is explicitly called on
+         * @ref node().
+         * @see @ref isOwned(),
+         *      @ref button(Anchor, Icon, Containers::Function<void()>&&, ButtonStyle)
+         */
+        explicit Button(NonOwnedT, Anchor anchor, Icon icon, ButtonStyle style = ButtonStyle::Default);
+
+        /**
+         * @brief Construct a non-owned text button
+         *
+         * Like @ref Button(Anchor, Containers::StringView, const TextProperties&, ButtonStyle)
+         * but the widget node doesn't get removed on destruction. Instead, it
+         * gets removed either once any parent node is removed, or when
+         * @ref AbstractUserInterface::removeNode() is explicitly called on
+         * @ref node().
+         * @see @ref isOwned(),
+         *      @ref button(Anchor, Containers::StringView, const TextProperties&, Containers::Function<void()>&&, ButtonStyle)
+         */
+        explicit Button(NonOwnedT, Anchor anchor, Containers::StringView text, const TextProperties& textProperties, ButtonStyle style = ButtonStyle::Default);
+        /** @overload */
+        explicit Button(NonOwnedT, Anchor anchor, Containers::StringView text, ButtonStyle style = ButtonStyle::Default);
+
+        /**
+         * @brief Construct a non-owned icon + text button
+         *
+         * Like @ref Button(Anchor, Icon, Containers::StringView, const TextProperties&, ButtonStyle)
+         * but the widget node doesn't get removed on destruction. Instead, it
+         * gets removed either once any parent node is removed, or when
+         * @ref AbstractUserInterface::removeNode() is explicitly called on
+         * @ref node().
+         * @see @ref isOwned(),
+         *      @ref button(Anchor, Icon, Containers::StringView, const TextProperties&, Containers::Function<void()>&&, ButtonStyle)
+         */
+        explicit Button(NonOwnedT, Anchor anchor, Icon icon, Containers::StringView text, const TextProperties& textProperties, ButtonStyle style = ButtonStyle::Default);
+        /** @overload */
+        explicit Button(NonOwnedT, Anchor anchor, Icon icon, Containers::StringView text, ButtonStyle style = ButtonStyle::Default);
 
         /** @copydoc AbstractWidget::AbstractWidget(NoCreateT) */
         explicit Button(NoCreateT): Widget{NoCreate}, _style{}, _icon{}, _backgroundData{}, _iconData{}, _textData{} {}
@@ -234,15 +274,10 @@ class MAGNUM_UI_EXPORT Button: public Widget {
 @return The @p anchor verbatim
 @m_since_latest_{extras}
 
-Compared to @ref Button::Button(Anchor, Icon, ButtonStyle) this creates a
-stateless button that doesn't have any class instance that would need to be
-kept in scope and eventually destructed, making it more lightweight. As a
-consequence it can't have its style, icon or text subsequently changed and is
-removed only when the node or its parent get removed.
-
-The @p trigger function, if not @cpp nullptr @ce, gets called when the button
-is triggered. Internally it's passed to @ref EventLayer::onTapOrClick(), see
-its documentation for detailed behavior description.
+Equivalent to constructing a non-owned @ref Button using
+@ref Button::Button(NonOwnedT, Anchor, Icon, ButtonStyle), passing @p trigger to
+@ref Button::onTrigger() if it's not @cpp nullptr @ce, and discarding the
+stateful instance. See documentation of these functions for more information.
 */
 MAGNUM_UI_EXPORT Anchor button(Anchor anchor, Icon icon, Containers::Function<void()>&& trigger, ButtonStyle style = ButtonStyle::Default);
 
@@ -258,15 +293,11 @@ MAGNUM_UI_EXPORT Anchor button(Anchor anchor, Icon icon, Containers::Function<vo
 @return The @p anchor verbatim
 @m_since_latest_{extras}
 
-Compared to @ref Button::Button(Anchor, Containers::StringView, const TextProperties&, ButtonStyle)
-this creates a stateless button that doesn't have any class instance that would
-need to be kept in scope and eventually destructed, making it more lightweight.
-As a consequence it can't have its style, icon or text subsequently changed and
-is removed only when the node or its parent get removed.
-
-The @p trigger function, if not @cpp nullptr @ce, gets called when the button
-is triggered. Internally it's passed to @ref EventLayer::onTapOrClick(), see
-its documentation for detailed behavior description.
+Equivalent to constructing a non-owned @ref Button using
+@ref Button::Button(NonOwnedT, Anchor, Containers::StringView, const TextProperties&, ButtonStyle),
+passing @p trigger to @ref Button::onTrigger() if it's not @cpp nullptr @ce,
+and discarding the stateful instance. See documentation of these functions for
+more information.
 */
 MAGNUM_UI_EXPORT Anchor button(Anchor anchor, Containers::StringView text, const TextProperties& textProperties, Containers::Function<void()>&& trigger, ButtonStyle style = ButtonStyle::Default);
 /**
@@ -289,15 +320,11 @@ MAGNUM_UI_EXPORT Anchor button(Anchor anchor, Containers::StringView text, Conta
 @return The @p anchor verbatim
 @m_since_latest_{extras}
 
-Compared to @ref Button::Button(Anchor, Icon, Containers::StringView, const TextProperties&, ButtonStyle)
-this creates a stateless button that doesn't have any class instance that would
-need to be kept in scope and eventually destructed, making it more lightweight.
-As a consequence it can't have its style, icon or text subsequently changed and
-is removed only when the node or its parent get removed.
-
-The @p trigger function, if not @cpp nullptr @ce, gets called when the button
-is triggered. Internally it's passed to @ref EventLayer::onTapOrClick(), see
-its documentation for detailed behavior description.
+Equivalent to constructing a non-owned @ref Button using
+@ref Button::Button(NonOwnedT, Anchor, Icon, Containers::StringView, const TextProperties&, ButtonStyle),
+passing @p trigger to @ref Button::onTrigger() if it's not @cpp nullptr @ce,
+and discarding the stateful instance. See documentation of these functions for
+more information.
 */
 MAGNUM_UI_EXPORT Anchor button(Anchor anchor, Icon icon, Containers::StringView text, const TextProperties& textProperties, Containers::Function<void()>&& trigger, ButtonStyle style = ButtonStyle::Default);
 /**

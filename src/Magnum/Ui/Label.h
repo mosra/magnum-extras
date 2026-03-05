@@ -73,7 +73,6 @@ class MAGNUM_UI_EXPORT Label: public Widget {
          *
          * The label can be subsequently converted to a text label using
          * @ref setText().
-         * @see @ref label(Anchor, Icon, LabelStyle)
          */
         explicit Label(Anchor anchor, Icon icon, LabelStyle style = LabelStyle::Default);
 
@@ -87,11 +86,36 @@ class MAGNUM_UI_EXPORT Label: public Widget {
          *
          * The label can be subsequently converted to an icon label using
          * @ref setIcon().
-         * @see @ref label(Anchor, Containers::StringView, const TextProperties&, LabelStyle)
          */
         explicit Label(Anchor anchor, Containers::StringView text, const TextProperties& textProperties, LabelStyle style = LabelStyle::Default);
         /** @overload */
         explicit Label(Anchor anchor, Containers::StringView text, LabelStyle style = LabelStyle::Default);
+
+        /**
+         * @brief Construct a non-owned icon label
+         *
+         * Like @ref Label(Anchor, Icon, LabelStyle) but the widget node
+         * doesn't get removed on destruction. Instead, it gets removed either
+         * once any parent node is removed, or when
+         * @ref AbstractUserInterface::removeNode() is explicitly called on
+         * @ref node().
+         * @see @ref isOwned(), @ref label(Anchor, Icon, LabelStyle)
+         */
+        explicit Label(NonOwnedT, Anchor anchor, Icon icon, LabelStyle style = LabelStyle::Default);
+
+        /**
+         * @brief Construct a non-owned text label
+         *
+         * Like @ref Label(Anchor, Containers::StringView, const TextProperties&, LabelStyle)
+         * but the widget node doesn't get removed on destruction. Instead, it
+         * gets removed either once any parent node is removed, or when
+         * @ref AbstractUserInterface::removeNode() is explicitly called on
+         * @ref node().
+         * @see @ref isOwned(), @ref label(Anchor, Containers::StringView, const TextProperties&, LabelStyle)
+         */
+        explicit Label(NonOwnedT, Anchor anchor, Containers::StringView text, const TextProperties& textProperties, LabelStyle style = LabelStyle::Default);
+        /** @overload */
+        explicit Label(NonOwnedT, Anchor anchor, Containers::StringView text, LabelStyle style = LabelStyle::Default);
 
         /** @copydoc AbstractWidget::AbstractWidget(NoCreateT) */
         explicit Label(NoCreateT): Widget{NoCreate}, _style{}, _icon{}, _data{}, _layoutData{} {}
@@ -182,11 +206,9 @@ class MAGNUM_UI_EXPORT Label: public Widget {
 @return The @p anchor verbatim
 @m_since_latest_{extras}
 
-Compared to @ref Label::Label(Anchor, Icon, LabelStyle) this creates a
-stateless label that doesn't have any class instance that would need to be kept
-in scope and eventually destructed, making it more lightweight. As a
-consequence it can't have its style, icon or text subsequently changed and is
-removed only when the node or its parent get removed.
+Equivalent to constructing a non-owned @ref Label using
+@ref Label::Label(NonOwnedT, Anchor, Icon, LabelStyle) and discarding the
+stateful instance. See its documentation for more information.
 */
 MAGNUM_UI_EXPORT Anchor label(Anchor anchor, Icon icon, LabelStyle style = LabelStyle::Default);
 
@@ -200,11 +222,10 @@ MAGNUM_UI_EXPORT Anchor label(Anchor anchor, Icon icon, LabelStyle style = Label
 @return The @p anchor verbatim
 @m_since_latest_{extras}
 
-Compared to @ref Label::Label(Anchor, Containers::StringView, const TextProperties&, LabelStyle)
-this creates a stateless label that doesn't have any class instance that would
-need to be kept in scope and eventually destructed, making it more lightweight.
-As a consequence it can't have its style, icon or text subsequently changed and
-is removed only when the node or its parent get removed.
+Equivalent to constructing a non-owned @ref Label using
+@ref Label::Label(NonOwnedT, Anchor, Containers::StringView, const TextProperties&, LabelStyle)
+and discarding the stateful instance. See its documentation for more
+information.
 */
 MAGNUM_UI_EXPORT Anchor label(Anchor anchor, Containers::StringView text, const TextProperties& textProperties, LabelStyle style = LabelStyle::Default);
 /**

@@ -58,36 +58,36 @@ const struct {
         }},
     {nullptr,
         [](UserInterface& ui, Int style, Flags, Int counter) {
-            return Label{Anchor{ui, {}, {52, 36}}, counter % 3 ? "Bye" : "Hello!", LabelStyle(style)}.release();
+            return Label{NonOwned, Anchor{ui, {}, {52, 36}}, counter % 3 ? "Bye" : "Hello!", LabelStyle(style)}.node();
         }},
     {"setters",
         [](UserInterface& ui, Int style, Flags, Int counter) {
-            Label label{Anchor{ui, {}, {52, 36}}, "Hey", LabelStyle(style)};
+            Label label{NonOwned, Anchor{ui, {}, {52, 36}}, "Hey", LabelStyle(style)};
             label.setText(counter % 3 ? "Bye" : "Hello!");
-            return label.release();
+            return label.node();
         }},
     {"setters from empty",
         [](UserInterface& ui, Int style, Flags, Int counter) {
-            Label label{Anchor{ui, {}, {52, 36}}, "", LabelStyle(style)};
+            Label label{NonOwned, Anchor{ui, {}, {52, 36}}, "", LabelStyle(style)};
             label.setText(counter % 3 ? "Bye" : "Hello!");
-            return label.release();
+            return label.node();
         }},
     {"setStyle()",
         [](UserInterface& ui, Int style, Flags, Int counter) {
-            Label label{Anchor{ui, {}, {52, 36}}, counter % 3 ? "Bye" : "Hello!", LabelStyle(style == 0 ? 1 : 0)};
+            Label label{NonOwned, Anchor{ui, {}, {52, 36}}, counter % 3 ? "Bye" : "Hello!", LabelStyle(style == 0 ? 1 : 0)};
             label.setStyle(LabelStyle(style));
             /* The title style uses a different font and thus the text has to
                be reset to make it use the new font */
             if(label.style() == LabelStyle::Title)
                 label.setText(counter % 3 ? "Bye" : "Hello!");
-            return label.release();
+            return label.node();
         }},
     {"setStyle() on empty, setters",
         [](UserInterface& ui, Int style, Flags, Int counter) {
-            Label label{Anchor{ui, {}, {52, 36}}, "", LabelStyle(style == 0 ? 1 : 0)};
+            Label label{NonOwned, Anchor{ui, {}, {52, 36}}, "", LabelStyle(style == 0 ? 1 : 0)};
             label.setStyle(LabelStyle(style));
             label.setText(counter % 3 ? "Bye" : "Hello!");
-            return label.release();
+            return label.node();
         }},
 };
 
@@ -102,36 +102,36 @@ const struct {
         }},
     {nullptr,
         [](UserInterface& ui, Int style, Flags, Int counter) {
-            return Label{Anchor{ui, {}, {48, 36}}, counter % 3 ? Icon::Yes : Icon::No, LabelStyle(style)}.release();
+            return Label{NonOwned, Anchor{ui, {}, {48, 36}}, counter % 3 ? Icon::Yes : Icon::No, LabelStyle(style)}.node();
         }},
     {"setters",
         [](UserInterface& ui, Int style, Flags, Int counter) {
-            Label label{Anchor{ui, {}, {48, 36}}, Icon::Yes, LabelStyle(style)};
+            Label label{NonOwned, Anchor{ui, {}, {48, 36}}, Icon::Yes, LabelStyle(style)};
             label.setIcon(counter % 3 ? Icon::Yes : Icon::No);
-            return label.release();
+            return label.node();
         }},
     {"setters on empty",
         [](UserInterface& ui, Int style, Flags, Int counter) {
-            Label label{Anchor{ui, {}, {48, 36}}, Icon::None, LabelStyle(style)};
+            Label label{NonOwned, Anchor{ui, {}, {48, 36}}, Icon::None, LabelStyle(style)};
             label.setIcon(counter % 3 ? Icon::Yes : Icon::No);
-            return label.release();
+            return label.node();
         }},
     {"setStyle()",
         [](UserInterface& ui, Int style, Flags, Int counter) {
-            Label label{Anchor{ui, {}, {48, 36}}, counter % 3 ? Icon::Yes : Icon::No, LabelStyle(style == 0 ? 1 : 0)};
+            Label label{NonOwned, Anchor{ui, {}, {48, 36}}, counter % 3 ? Icon::Yes : Icon::No, LabelStyle(style == 0 ? 1 : 0)};
             label.setStyle(LabelStyle(style));
             /* The title style uses a different font and thus the icon has to
                be reset to make it use the new font */
             if(label.style() == LabelStyle::Title)
                 label.setIcon(counter % 3 ? Icon::Yes : Icon::No);
-            return label.release();
+            return label.node();
         }},
     {"setStyle() on empty, setters",
         [](UserInterface& ui, Int style, Flags, Int counter) {
-            Label label{Anchor{ui, {}, {48, 36}}, Icon::None, LabelStyle(style == 0 ? 1 : 0)};
+            Label label{NonOwned, Anchor{ui, {}, {48, 36}}, Icon::None, LabelStyle(style == 0 ? 1 : 0)};
             label.setStyle(LabelStyle(style));
             label.setIcon(counter % 3 ? Icon::Yes : Icon::No);
-            return label.release();
+            return label.node();
         }},
 };
 

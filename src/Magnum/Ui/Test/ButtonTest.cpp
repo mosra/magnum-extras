@@ -45,16 +45,23 @@ struct ButtonTest: WidgetTester {
     void debugStyle();
 
     void constructEmpty();
+    /* No constructEmptyNonOwned() as it's just a special case of the others
+       and the other *NonOwned() variants test it sufficiently */
     void constructEmptyStateless();
     void constructIconOnly();
+    void constructIconOnlyNonOwned();
     void constructIconOnlyStateless();
     void constructTextOnly();
+    void constructTextOnlyNonOwned();
     void constructTextOnlyStateless();
     void constructTextOnlyTextProperties();
+    void constructTextOnlyTextPropertiesNonOwned();
     void constructTextOnlyTextPropertiesStateless();
     void constructIconText();
+    void constructIconTextNonOwned();
     void constructIconTextStateless();
     void constructIconTextTextProperties();
+    void constructIconTextTextPropertiesNonOwned();
     void constructIconTextTextPropertiesStateless();
     void constructNoCreate();
 
@@ -117,7 +124,8 @@ ButtonTest::ButtonTest() {
         &WidgetTester::setup,
         &WidgetTester::teardown);
 
-    addTests<ButtonTest>({&ButtonTest::constructIconOnly},
+    addTests<ButtonTest>({&ButtonTest::constructIconOnly,
+                          &ButtonTest::constructIconOnlyNonOwned},
         &WidgetTester::setup,
         &WidgetTester::teardown);
 
@@ -126,7 +134,8 @@ ButtonTest::ButtonTest() {
         &WidgetTester::setup,
         &WidgetTester::teardown);
 
-    addTests<ButtonTest>({&ButtonTest::constructTextOnly},
+    addTests<ButtonTest>({&ButtonTest::constructTextOnly,
+                          &ButtonTest::constructTextOnlyNonOwned},
         &WidgetTester::setup,
         &WidgetTester::teardown);
 
@@ -135,7 +144,8 @@ ButtonTest::ButtonTest() {
         &WidgetTester::setup,
         &WidgetTester::teardown);
 
-    addTests<ButtonTest>({&ButtonTest::constructTextOnlyTextProperties},
+    addTests<ButtonTest>({&ButtonTest::constructTextOnlyTextProperties,
+                          &ButtonTest::constructTextOnlyTextPropertiesNonOwned},
         &WidgetTester::setup,
         &WidgetTester::teardown);
 
@@ -144,7 +154,8 @@ ButtonTest::ButtonTest() {
         &WidgetTester::setup,
         &WidgetTester::teardown);
 
-    addTests<ButtonTest>({&ButtonTest::constructIconText},
+    addTests<ButtonTest>({&ButtonTest::constructIconText,
+                          &ButtonTest::constructIconTextNonOwned},
         &WidgetTester::setup,
         &WidgetTester::teardown);
 
@@ -153,7 +164,8 @@ ButtonTest::ButtonTest() {
         &WidgetTester::setup,
         &WidgetTester::teardown);
 
-    addTests<ButtonTest>({&ButtonTest::constructIconTextTextProperties},
+    addTests<ButtonTest>({&ButtonTest::constructIconTextTextProperties,
+                          &ButtonTest::constructIconTextTextPropertiesNonOwned},
         &WidgetTester::setup,
         &WidgetTester::teardown);
 
@@ -252,6 +264,10 @@ void ButtonTest::constructEmptyStateless() {
     CORRADE_COMPARE(ui.nodeSize(node2), (Vector2{32, 16}));
     CORRADE_COMPARE(ui.nodeSize(node3), (Vector2{32, 16}));
 
+    /* Internally it should create a non-owned button, if it doesn't then this
+       would remove everything */
+    ui.clean();
+
     /* Can only verify that the data were created, nothing else. Visually
        tested in StyleGLTest. */
     CORRADE_COMPARE(ui.baseLayer().usedCount(), 3);
@@ -304,6 +320,25 @@ void ButtonTest::constructIconOnly() {
     CORRADE_COMPARE(ui.layoutLayer().usedCount(), 2);
 }
 
+void ButtonTest::constructIconOnlyNonOwned() {
+    /* All the properties are verified in constructIconOnly() above, check just
+       that it propagates all arguments properly */
+
+    Button button1{NonOwned, Anchor{root, {}, {32, 16}}, Icon::Yes, ButtonStyle::Danger};
+    Button button2{NonOwned, Anchor{root, {}, {32, 16}}, Icon::No, "", ButtonStyle::Warning};
+    CORRADE_COMPARE(ui.nodeParent(button1), root);
+    CORRADE_COMPARE(ui.nodeParent(button2), root);
+    CORRADE_COMPARE(ui.nodeSize(button1), (Vector2{32, 16}));
+    CORRADE_COMPARE(ui.nodeSize(button2), (Vector2{32, 16}));
+    CORRADE_VERIFY(!button1.isOwned());
+    CORRADE_VERIFY(!button2.isOwned());
+
+    CORRADE_COMPARE(button1.style(), ButtonStyle::Danger);
+    CORRADE_COMPARE(button2.style(), ButtonStyle::Warning);
+    CORRADE_COMPARE(button1.icon(), Icon::Yes);
+    CORRADE_COMPARE(button2.icon(), Icon::No);
+}
+
 void ButtonTest::constructIconOnlyStateless() {
     auto&& data = ConstructStatelessData[testCaseInstanceId()];
     setTestCaseDescription(data.name);
@@ -314,6 +349,10 @@ void ButtonTest::constructIconOnlyStateless() {
     CORRADE_COMPARE(ui.nodeParent(node2), root);
     CORRADE_COMPARE(ui.nodeSize(node1), (Vector2{32, 16}));
     CORRADE_COMPARE(ui.nodeSize(node2), (Vector2{32, 16}));
+
+    /* Internally it should create a non-owned button, if it doesn't then this
+       would remove everything */
+    ui.clean();
 
     /* Can only verify that the data were created, nothing else. Visually
        tested in StyleGLTest. */
@@ -366,6 +405,27 @@ void ButtonTest::constructTextOnly() {
     CORRADE_COMPARE(ui.layoutLayer().usedCount(), 2);
 }
 
+void ButtonTest::constructTextOnlyNonOwned() {
+    /* All the properties are verified in constructTextOnly() above, check just
+       that it propagates all arguments properly */
+
+    Button button1{NonOwned, Anchor{root, {}, {32, 16}}, "hello!", ButtonStyle::Primary};
+    Button button2{NonOwned, Anchor{root, {}, {32, 16}}, Icon::None, "hello", ButtonStyle::Default};
+    CORRADE_COMPARE(ui.nodeParent(button1), root);
+    CORRADE_COMPARE(ui.nodeParent(button2), root);
+    CORRADE_COMPARE(ui.nodeSize(button1), (Vector2{32, 16}));
+    CORRADE_COMPARE(ui.nodeSize(button2), (Vector2{32, 16}));
+    CORRADE_VERIFY(!button1.isOwned());
+    CORRADE_VERIFY(!button2.isOwned());
+
+    CORRADE_COMPARE(button1.style(), ButtonStyle::Primary);
+    CORRADE_COMPARE(button2.style(), ButtonStyle::Default);
+    CORRADE_COMPARE(button1.icon(), Icon::None);
+    CORRADE_COMPARE(button2.icon(), Icon::None);
+    CORRADE_COMPARE(ui.textLayer().glyphCount(button1.textData()), 6);
+    CORRADE_COMPARE(ui.textLayer().glyphCount(button2.textData()), 5);
+}
+
 void ButtonTest::constructTextOnlyStateless() {
     auto&& data = ConstructStatelessData[testCaseInstanceId()];
     setTestCaseDescription(data.name);
@@ -376,6 +436,10 @@ void ButtonTest::constructTextOnlyStateless() {
     CORRADE_COMPARE(ui.nodeParent(node2), root);
     CORRADE_COMPARE(ui.nodeSize(node1), (Vector2{32, 16}));
     CORRADE_COMPARE(ui.nodeSize(node2), (Vector2{32, 16}));
+
+    /* Internally it should create a non-owned button, if it doesn't then this
+       would remove everything */
+    ui.clean();
 
     /* Can only verify that the data were created, nothing else. Visually
        tested in StyleGLTest. */
@@ -433,6 +497,32 @@ void ButtonTest::constructTextOnlyTextProperties() {
     CORRADE_COMPARE(ui.layoutLayer().usedCount(), 2);
 }
 
+void ButtonTest::constructTextOnlyTextPropertiesNonOwned() {
+    /* All the properties are verified in constructTextOnlyTextProperties()
+       above, check just that it propagates all arguments properly */
+
+    Button button1{NonOwned, Anchor{root, {}, {32, 16}}, "hello!",
+        TextProperties{}.setScript(Text::Script::Braille),
+        ButtonStyle::Info};
+    Button button2{NonOwned, Anchor{root, {}, {32, 16}}, Icon::None, "hello",
+        TextProperties{}.setScript(Text::Script::Braille),
+        ButtonStyle::Flat};
+    CORRADE_COMPARE(ui.nodeParent(button1), root);
+    CORRADE_COMPARE(ui.nodeParent(button2), root);
+    CORRADE_COMPARE(ui.nodeSize(button1), (Vector2{32, 16}));
+    CORRADE_COMPARE(ui.nodeSize(button2), (Vector2{32, 16}));
+    CORRADE_VERIFY(!button1.isOwned());
+    CORRADE_VERIFY(!button2.isOwned());
+
+    CORRADE_COMPARE(button1.style(), ButtonStyle::Info);
+    CORRADE_COMPARE(button2.style(), ButtonStyle::Flat);
+    CORRADE_COMPARE(button1.icon(), Icon::None);
+    CORRADE_COMPARE(button2.icon(), Icon::None);
+    /* Multiplied by 6 because of the Braille script */
+    CORRADE_COMPARE(ui.textLayer().glyphCount(button1.textData()), 6*6);
+    CORRADE_COMPARE(ui.textLayer().glyphCount(button2.textData()), 5*6);
+}
+
 void ButtonTest::constructTextOnlyTextPropertiesStateless() {
     auto&& data = ConstructStatelessData[testCaseInstanceId()];
     setTestCaseDescription(data.name);
@@ -447,6 +537,10 @@ void ButtonTest::constructTextOnlyTextPropertiesStateless() {
     CORRADE_COMPARE(ui.nodeParent(node2), root);
     CORRADE_COMPARE(ui.nodeSize(node1), (Vector2{32, 16}));
     CORRADE_COMPARE(ui.nodeSize(node2), (Vector2{32, 16}));
+
+    /* Internally it should create a non-owned button, if it doesn't then this
+       would remove everything */
+    ui.clean();
 
     /* Can only verify that the data were created, nothing else. Visually
        tested in StyleGLTest. */
@@ -491,6 +585,20 @@ void ButtonTest::constructIconText() {
     CORRADE_COMPARE(ui.layoutLayer().usedCount(), 1);
 }
 
+void ButtonTest::constructIconTextNonOwned() {
+    /* All the properties are verified in constructIconText() above, check
+       just that it propagates all arguments properly */
+
+    Button button{NonOwned, Anchor{root, {}, {32, 16}}, Icon::No, "bye!", ButtonStyle::Dim};
+    CORRADE_COMPARE(ui.nodeParent(button), root);
+    CORRADE_COMPARE(ui.nodeSize(button), (Vector2{32, 16}));
+    CORRADE_VERIFY(!button.isOwned());
+
+    CORRADE_COMPARE(button.style(), ButtonStyle::Dim);
+    CORRADE_COMPARE(button.icon(), Icon::No);
+    CORRADE_COMPARE(ui.textLayer().glyphCount(button.textData()), 4);
+}
+
 void ButtonTest::constructIconTextStateless() {
     auto&& data = ConstructStatelessData[testCaseInstanceId()];
     setTestCaseDescription(data.name);
@@ -498,6 +606,10 @@ void ButtonTest::constructIconTextStateless() {
     NodeHandle node = button(Anchor{root, {}, {32, 16}}, Icon::No, "bye!", data.function1, ButtonStyle::Dim);
     CORRADE_COMPARE(ui.nodeParent(node), root);
     CORRADE_COMPARE(ui.nodeSize(node), (Vector2{32, 16}));
+
+    /* Internally it should create a non-owned button, if it doesn't then this
+       would remove everything */
+    ui.clean();
 
     /* Can only verify that the data were created, nothing else. Visually
        tested in StyleGLTest. */
@@ -541,6 +653,23 @@ void ButtonTest::constructIconTextTextProperties() {
     CORRADE_COMPARE(ui.layoutLayer().usedCount(), 1);
 }
 
+void ButtonTest::constructIconTextTextPropertiesNonOwned() {
+    /* All the properties are verified in constructIconTextTextProperties()
+       above, check just that it propagates all arguments properly */
+
+    Button button{NonOwned, Anchor{root, {}, {32, 16}}, Icon::No, "bye!",
+        TextProperties{}.setScript(Text::Script::Braille),
+        ButtonStyle::Warning};
+    CORRADE_COMPARE(ui.nodeParent(button), root);
+    CORRADE_COMPARE(ui.nodeSize(button), (Vector2{32, 16}));
+    CORRADE_VERIFY(!button.isOwned());
+
+    CORRADE_COMPARE(button.style(), ButtonStyle::Warning);
+    CORRADE_COMPARE(button.icon(), Icon::No);
+    /* Multiplied by 6 because of the Braille script */
+    CORRADE_COMPARE(ui.textLayer().glyphCount(button.textData()), 4*6);
+}
+
 void ButtonTest::constructIconTextTextPropertiesStateless() {
     auto&& data = ConstructStatelessData[testCaseInstanceId()];
     setTestCaseDescription(data.name);
@@ -550,6 +679,10 @@ void ButtonTest::constructIconTextTextPropertiesStateless() {
         ButtonStyle::Warning);
     CORRADE_COMPARE(ui.nodeParent(node), root);
     CORRADE_COMPARE(ui.nodeSize(node), (Vector2{32, 16}));
+
+    /* Internally it should create a non-owned button, if it doesn't then this
+       would remove everything */
+    ui.clean();
 
     /* Can only verify that the data were created, nothing else. Visually
        tested in StyleGLTest. */

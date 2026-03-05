@@ -41,12 +41,17 @@ struct LabelTest: WidgetTester {
     void debugStyle();
 
     void constructEmpty();
+    /* No constructEmptyNonOwned() as it's just a special case of the others
+       and the other *NonOwned() variants test it sufficiently */
     void constructEmptyStateless();
     void constructIcon();
+    void constructIconNonOwned();
     void constructIconStateless();
     void constructText();
+    void constructTextNonOwned();
     void constructTextStateless();
     void constructTextTextProperties();
+    void constructTextTextPropertiesNonOwned();
     void constructTextTextPropertiesStateless();
     void constructNoCreate();
 
@@ -97,10 +102,13 @@ LabelTest::LabelTest() {
         &LabelTest::constructEmpty,
         &LabelTest::constructEmptyStateless,
         &LabelTest::constructIcon,
+        &LabelTest::constructIconNonOwned,
         &LabelTest::constructIconStateless,
         &LabelTest::constructText,
+        &LabelTest::constructTextNonOwned,
         &LabelTest::constructTextStateless,
         &LabelTest::constructTextTextProperties,
+        &LabelTest::constructTextTextPropertiesNonOwned,
         &LabelTest::constructTextTextPropertiesStateless,
     }, &WidgetTester::setup,
        &WidgetTester::teardown);
@@ -165,6 +173,10 @@ void LabelTest::constructEmptyStateless() {
     CORRADE_COMPARE(ui.nodeSize(node1), (Vector2{32, 16}));
     CORRADE_COMPARE(ui.nodeSize(node2), (Vector2{32, 16}));
 
+    /* Internally it should create a non-owned label, if it doesn't then this
+       would remove everything */
+    ui.clean();
+
     /* Can only verify that the data were (not) created, nothing else. Visually
        tested in StyleGLTest. */
     CORRADE_COMPARE(ui.baseLayer().usedCount(), 0);
@@ -186,10 +198,27 @@ void LabelTest::constructIcon() {
     CORRADE_COMPARE(ui.textLayer().glyphCount(label.data()), 1);
 }
 
+void LabelTest::constructIconNonOwned() {
+    /* All the properties are verified in constructIcon() above, check just
+       that it propagates all arguments properly */
+
+    Label label{NonOwned, Anchor{root, {}, {32, 16}}, Icon::Yes, LabelStyle::Warning};
+    CORRADE_COMPARE(ui.nodeParent(label), root);
+    CORRADE_COMPARE(ui.nodeSize(label), (Vector2{32, 16}));
+    CORRADE_VERIFY(!label.isOwned());
+
+    CORRADE_COMPARE(label.style(), LabelStyle::Warning);
+    CORRADE_COMPARE(label.icon(), Icon::Yes);
+}
+
 void LabelTest::constructIconStateless() {
     NodeHandle node = label(Anchor{root, {}, {32, 16}}, Icon::Yes, LabelStyle::Success);
     CORRADE_COMPARE(ui.nodeParent(node), root);
     CORRADE_COMPARE(ui.nodeSize(node), (Vector2{32, 16}));
+
+    /* Internally it should create a non-owned label, if it doesn't then this
+       would remove everything */
+    ui.clean();
 
     /* Can only verify that the data were created, nothing else. Visually
        tested in StyleGLTest. */
@@ -213,11 +242,29 @@ void LabelTest::constructText() {
     CORRADE_COMPARE(ui.textLayer().glyphCount(label.data()), 6);
 }
 
+void LabelTest::constructTextNonOwned() {
+    /* All the properties are verified in constructText() above, check just
+       that it propagates all arguments properly */
+
+    Label label{NonOwned, Anchor{root, {}, {32, 16}}, "hello!", LabelStyle::Danger};
+    CORRADE_COMPARE(ui.nodeParent(label), root);
+    CORRADE_COMPARE(ui.nodeOffset(label), Vector2{});
+    CORRADE_COMPARE(ui.nodeSize(label), (Vector2{32, 16}));
+    CORRADE_VERIFY(!label.isOwned());
+
+    CORRADE_COMPARE(label.style(), LabelStyle::Danger);
+    CORRADE_COMPARE(ui.textLayer().glyphCount(label.data()), 6);
+}
+
 void LabelTest::constructTextStateless() {
     NodeHandle node = label(Anchor{root, {}, {32, 16}}, "hello!", LabelStyle::Warning);
     CORRADE_COMPARE(ui.nodeParent(node), root);
     CORRADE_COMPARE(ui.nodeOffset(node), Vector2{});
     CORRADE_COMPARE(ui.nodeSize(node), (Vector2{32, 16}));
+
+    /* Internally it should create a non-owned label, if it doesn't then this
+       would remove everything */
+    ui.clean();
 
     /* Can only verify that the data were created, nothing else. Visually
        tested in StyleGLTest. */
@@ -244,6 +291,20 @@ void LabelTest::constructTextTextProperties() {
     CORRADE_COMPARE(ui.textLayer().glyphCount(label.data()), 6*6);
 }
 
+void LabelTest::constructTextTextPropertiesNonOwned() {
+    Label label{NonOwned, Anchor{root, {}, {32, 16}}, "hello!",
+        TextProperties{}.setScript(Text::Script::Braille),
+        LabelStyle::Info};
+    CORRADE_COMPARE(ui.nodeParent(label), root);
+    CORRADE_COMPARE(ui.nodeOffset(label), Vector2{});
+    CORRADE_COMPARE(ui.nodeSize(label), (Vector2{32, 16}));
+    CORRADE_VERIFY(!label.isOwned());
+
+    CORRADE_COMPARE(label.style(), LabelStyle::Info);
+    /* Multiplied by 6 because of the Braille script */
+    CORRADE_COMPARE(ui.textLayer().glyphCount(label.data()), 6*6);
+}
+
 void LabelTest::constructTextTextPropertiesStateless() {
     NodeHandle node = label(Anchor{root, {}, {32, 16}}, "hello!",
         TextProperties{}.setScript(Text::Script::Braille),
@@ -251,6 +312,10 @@ void LabelTest::constructTextTextPropertiesStateless() {
     CORRADE_COMPARE(ui.nodeParent(node), root);
     CORRADE_COMPARE(ui.nodeOffset(node), Vector2{});
     CORRADE_COMPARE(ui.nodeSize(node), (Vector2{32, 16}));
+
+    /* Internally it should create a non-owned label, if it doesn't then this
+       would remove everything */
+    ui.clean();
 
     /* Can only verify that the data were created, nothing else. Visually
        tested in StyleGLTest. */

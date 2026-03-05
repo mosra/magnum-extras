@@ -139,6 +139,18 @@ Label::Label(const Anchor anchor, const Containers::StringView text, const TextP
 
 Label::Label(const Anchor anchor, const Containers::StringView text, const LabelStyle style): Label{anchor, text, {}, style} {}
 
+Label::Label(NonOwnedT, const Anchor anchor, const Icon icon, const LabelStyle style): Label{anchor, icon, style} {
+    makeNonOwned();
+}
+
+Label::Label(NonOwnedT, const Anchor anchor, const Containers::StringView text, const TextProperties& textProperties, const LabelStyle style): Label{anchor, text, textProperties, style} {
+    makeNonOwned();
+}
+
+Label::Label(NonOwnedT, const Anchor anchor, const Containers::StringView text, const LabelStyle style): Label{anchor, text, style} {
+    makeNonOwned();
+}
+
 Label& Label::setStyle(const LabelStyle style) {
     _style = style;
     ui().layoutLayer().setStyle(_layoutData, layoutStyle(style));
@@ -198,10 +210,7 @@ DataHandle Label::layoutData() const {
 }
 
 Anchor label(const Anchor anchor, const Containers::StringView text, const TextProperties& textProperties, const LabelStyle style) {
-    anchor.ui().layoutLayer().create(layoutStyle(style), anchor.node());
-
-    if(text)
-        anchor.ui().textLayer().create(textStyleText(style), text, textProperties, anchor.node());
+    Label{NonOwned, anchor, text, textProperties, style};
     return anchor;
 }
 
@@ -210,10 +219,7 @@ Anchor label(const Anchor anchor, const Containers::StringView text, const Label
 }
 
 Anchor label(const Anchor anchor, const Icon icon, const LabelStyle style) {
-    anchor.ui().layoutLayer().create(layoutStyle(style), anchor.node());
-
-    if(icon != Icon::None)
-        anchor.ui().textLayer().createGlyph(textStyleIcon(style), icon, {}, anchor.node());
+    Label{NonOwned, anchor, icon, style};
     return anchor;
 }
 

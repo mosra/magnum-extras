@@ -180,39 +180,21 @@ void alignIconText(TextLayer& textLayer, const ButtonStyle style, const LayerDat
     }
 }
 
-struct ButtonData {
-    LayerDataHandle background;
-    LayerDataHandle text;
-    LayerDataHandle icon;
-};
-
-ButtonData buttonInternal(UserInterface& ui, const NodeHandle node, const Icon icon, const Containers::StringView text, const TextProperties& properties, const ButtonStyle style) {
-    ButtonData out{};
-
-    /* The LayoutLayer data aren't stored because currently they're never
-       updated */
-    ui.layoutLayer().create(LayoutStyle::Button, node);
-
-    out.background = dataHandleData(ui.baseLayer().create(baseStyle(style), node));
-
-    /* Style ID for these two is corrected in alignIconText() below */
-    TextLayer& textLayer = ui.textLayer();
-    if(icon != Icon::None)
-        out.icon = dataHandleData(textLayer.createGlyph(textStyleIconOnly(style), icon, {}, node));
-    if(text)
-        out.text = dataHandleData(textLayer.create(textStyleTextOnly(style), text, properties, node));
-    alignIconText(textLayer, style, out.icon, out.text);
-
-    return out;
-}
-
 }
 
 Button::Button(const Anchor anchor, const Icon icon, const Containers::StringView text, const TextProperties& textProperties, const ButtonStyle style): Widget{anchor}, _style{style}, _icon{icon} {
-    ButtonData data = buttonInternal(ui(), node(), icon, text, textProperties, style);
-    _backgroundData = data.background;
-    _textData = data.text;
-    _iconData = data.icon;
+    /* The LayoutLayer data aren't stored because currently they're never
+       updated */
+    ui().layoutLayer().create(LayoutStyle::Button, node());
+
+    _backgroundData = dataHandleData(ui().baseLayer().create(baseStyle(style), node()));
+
+    /* Style ID for these two is corrected in alignIconText() below */
+    _iconData = icon == Icon::None ? LayerDataHandle::Null :
+        dataHandleData(ui().textLayer().createGlyph(textStyleIconOnly(style), icon, {}, node()));
+    _textData = !text ? LayerDataHandle::Null :
+        dataHandleData(ui().textLayer().create(textStyleTextOnly(style), text, textProperties, node()));
+    alignIconText(ui().textLayer(), style, _iconData, _textData);
 }
 
 Button::Button(const Anchor anchor, const Icon icon, const Containers::StringView text, const ButtonStyle style): Button{anchor, icon, text, {}, style} {}
@@ -222,6 +204,26 @@ Button::Button(const Anchor anchor, const Icon icon, const ButtonStyle style): B
 Button::Button(const Anchor anchor, const Containers::StringView text, const TextProperties& textProperties, const ButtonStyle style): Button{anchor, Icon::None, text, textProperties, style} {}
 
 Button::Button(const Anchor anchor, const Containers::StringView text, const ButtonStyle style): Button{anchor, text, {}, style} {}
+
+Button::Button(NonOwnedT, const Anchor anchor, const Icon icon, const Containers::StringView text, const TextProperties& textProperties, const ButtonStyle style): Button{anchor, icon, text, textProperties, style} {
+    makeNonOwned();
+}
+
+Button::Button(NonOwnedT, const Anchor anchor, const Icon icon, const Containers::StringView text, const ButtonStyle style): Button{anchor, icon, text, style} {
+    makeNonOwned();
+}
+
+Button::Button(NonOwnedT, const Anchor anchor, const Icon icon, const ButtonStyle style): Button{anchor, icon, style} {
+    makeNonOwned();
+}
+
+Button::Button(NonOwnedT, const Anchor anchor, const Containers::StringView text, const TextProperties& textProperties, const ButtonStyle style): Button{anchor, text, textProperties, style} {
+    makeNonOwned();
+}
+
+Button::Button(NonOwnedT, const Anchor anchor, const Containers::StringView text, const ButtonStyle style): Button{anchor, text, style} {
+    makeNonOwned();
+}
 
 DataHandle Button::onTrigger(Containers::Function<void()>&& function) {
     CORRADE_ASSERT(function,
@@ -307,9 +309,9 @@ DataHandle Button::textData() const {
 }
 
 Anchor button(const Anchor anchor, const Icon icon, const Containers::StringView text, const TextProperties& textProperties, Containers::Function<void()>&& trigger, const ButtonStyle style) {
-    buttonInternal(anchor.ui(), anchor.node(), icon, text, textProperties, style);
+    Button button{NonOwned, anchor, icon, text, textProperties, style};
     if(trigger)
-        anchor.ui().eventLayer().onTapOrClick(anchor.node(), Utility::move(trigger));
+        button.onTrigger(Utility::move(trigger));
     return anchor;
 }
 
