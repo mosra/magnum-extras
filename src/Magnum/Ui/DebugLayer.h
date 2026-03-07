@@ -26,7 +26,7 @@
     DEALINGS IN THE SOFTWARE.
 */
 
-/**
+/** @file
  * @brief Class @ref Magnum::Ui::DebugLayer, enum @ref Magnum::Ui::DebugLayerSource, @ref Magnum::Ui::DebugLayerFlag, enum set @ref Magnum::Ui::DebugLayerSources, @ref Magnum::Ui::DebugLayerFlags
  * @m_since_latest_{extras}
  */

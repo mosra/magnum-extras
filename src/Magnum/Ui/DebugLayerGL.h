@@ -26,7 +26,7 @@
     DEALINGS IN THE SOFTWARE.
 */
 
-/**
+/** @file
  * @brief Class @ref Magnum::Ui::DebugLayerGL
  * @m_since_latest_{extras}
  */
