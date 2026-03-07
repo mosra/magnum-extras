@@ -733,6 +733,8 @@ void ScrollAreaTest::construct() {
     #endif
     #if !defined(CORRADE_TARGET_32BIT) && !defined(CORRADE_MSVC2017_COMPATIBILITY)
     CORRADE_COMPARE(ui.genericLayouter().usedAllocatedCount(), 0);
+    #elif defined(CORRADE_MSVC2017_COMPATIBILITY)
+    CORRADE_COMPARE(ui.genericLayouter().usedAllocatedCount(), 3);
     #else
     CORRADE_COMPARE(ui.genericLayouter().usedAllocatedCount(), 2);
     #endif
@@ -788,6 +790,8 @@ void ScrollAreaTest::constructOnlyX() {
     #endif
     #if !defined(CORRADE_TARGET_32BIT) && !defined(CORRADE_MSVC2017_COMPATIBILITY)
     CORRADE_COMPARE(ui.genericLayouter().usedAllocatedCount(), 0);
+    #elif defined(CORRADE_MSVC2017_COMPATIBILITY)
+    CORRADE_COMPARE(ui.genericLayouter().usedAllocatedCount(), 2);
     #else
     CORRADE_COMPARE(ui.genericLayouter().usedAllocatedCount(), 1);
     #endif
@@ -843,6 +847,8 @@ void ScrollAreaTest::constructOnlyY() {
     #endif
     #if !defined(CORRADE_TARGET_32BIT) && !defined(CORRADE_MSVC2017_COMPATIBILITY)
     CORRADE_COMPARE(ui.genericLayouter().usedAllocatedCount(), 0);
+    #elif defined(CORRADE_MSVC2017_COMPATIBILITY)
+    CORRADE_COMPARE(ui.genericLayouter().usedAllocatedCount(), 2);
     #else
     CORRADE_COMPARE(ui.genericLayouter().usedAllocatedCount(), 1);
     #endif

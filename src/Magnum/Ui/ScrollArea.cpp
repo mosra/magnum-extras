@@ -105,11 +105,14 @@ struct ScrollAreaStorage: AbstractStorage {
        dirty if it changes, and returns current thumb offset and size. The min
        thumb size should be coming from the thumb node layout properties. */
     Containers::Pair<Float, Float> update(const Float viewSize, const Float scrollbarSize, const Float contentsSize, /*mutable*/ Float contentsOffset, const Float minThumbSize) {
-        /* Expect that nobody is fiddling with the offset from outside, and so
-           the offset is within bounds. It's a negative value so the comparison
-           looks weird, yes, and contents can be smaller than the view, so it's
-           clamped to not go positive. */
-        CORRADE_INTERNAL_ASSERT(contentsOffset >= Math::min(viewSize - contentsSize, 0.0f) && contentsOffset <= 0.0f);
+        /* Expect that nobody fiddled with the offset from outside, making it
+           larger than 0 (i.e., moved before the begin). OTOH, it can overflow
+           on the other side, for example if the view was scrolled to the end
+           and the view then got larger due to window resize (or vice versa, if
+           the view stays the same but the contents shrink). Clamp the offset
+           in that case so the storage has it correct. */
+        CORRADE_INTERNAL_ASSERT(contentsOffset <= 0.0f);
+        contentsOffset = Math::max(contentsOffset, Math::min(viewSize - contentsSize, 0.0f));
 
         /* The thumb size is ratio of the contents and view size applied to the
            actual scrollbar length, but at least the min size so it doesn't get
@@ -130,19 +133,28 @@ struct ScrollAreaStorage: AbstractStorage {
         const Float thumbOffset = contentsSize <= viewSize ? 0.0f :
             (scrollbarSize - thumbSize)*contentsOffset/(viewSize - contentsSize);
 
-        /* Right now the only value that actually triggers a visible update is
-           when the contents offset changes, as the generic layout takes care
-           of the thumb position and size already together with calling this
-           function. And because initially the contents node has a zero offset
-           and `data.contentsOffset` is zero-initialized, it only ends up being
-           marked as dirty once something actually moves. */
-        /** @todo may need to check the viewSize and contentsSize fields as
-            well if/once the storage is public and thus allows attaching to any
-            data change */
-        Data& data = *AbstractStorage::data<Data>();
-        if(Math::notEqual(data.contentsOffset, contentsOffset))
-            setDirty();
+        /* Note that we're *not* calling setDirty() if the offset changes as
+           a result of this update, such as when it got clamped above. The
+           storage being dirty results in setNodeOffset() to be called on the
+           UI, but this update function is called during a layout step, at
+           which point it's too late for anything to pick up the change to the
+           node offset. Best case it'd result in the change being applied next
+           frame, which is still too late and would result in weird hiccups.
+           Instead, the same clamp operation (and the same assert) is done via
+           another generic layout, which ensures that the actual offset used
+           by the layout is in bounds as well. Then, once the view gets
+           scrolled via an event, setDirty() called from there will turn the
+           original node offset in the UI and the layout node offset back in
+           sync. */
+        /** @todo may want to actually mark as dirty if the storage ever gets
+            public and user code can attach to it being dirty, but for that
+            need to first fix that the LayerState gets actually preserved
+            beyond the UI update (right now, if setDirty() is called here, the
+            storage stays marked as dirty, but the LayerState is reset back to
+            empty as this whole process happens inside layer update which
+            clears LayerState at the end */
 
+        Data& data = *AbstractStorage::data<Data>();
         data.viewSize = viewSize;
         data.scrollbarSize = scrollbarSize;
         data.contentsSize = contentsSize;
@@ -566,6 +578,28 @@ ScrollArea::ScrollArea(const Anchor anchor, const ScrollAreaFlags flags): Widget
                 dataLayer.storage<ScrollAreaStorage>(scrollYStorage).scrollViewBy(offset.y());
             });
     } else CORRADE_INTERNAL_ASSERT_UNREACHABLE(); /* LCOV_EXCL_LINE */
+
+    /* Make sure the scrolled offset doesn't go out of bounds, for example if
+       a small view got scrolled at the end and then is resized to large enough
+       that no scrolling is needed. The same clamp (and assert) is done in
+       ScrollAreaStorage::update() above, but as that function is called during
+       layout of the X/Y thumb, it cannot affect layout of the view (and it's
+       too late to call setDirty() there to have it propagated to the view
+       node), it has to be done independently here as well. The original and
+       post-layout node offset will get back in sync once the view is scrolled
+       again.
+
+       This layout-side clamping also has an effect that resizing to a larger
+       view and then back restores the exact original scroll position, without
+       shifting the view somewhere else entirely. Which is nice UX I think. */
+    {
+        /** @todo clean this up once I can use C++14 named captures */
+        const NodeHandle viewNode = _viewNode;
+        ui().genericLayouter().add(_contentsNode, [viewNode](const GenericLayouter& layouter, Vector2& nodeOffset, Vector2& nodeSize) {
+            CORRADE_INTERNAL_ASSERT(nodeOffset <= Vector2{});
+            nodeOffset = Math::max(nodeOffset, Math::min(layouter.nodeSize(viewNode) - nodeSize, Vector2{}));
+        });
+    }
 }
 
 ScrollArea::ScrollArea(NonOwnedT, const Anchor anchor, const ScrollAreaFlags flags): ScrollArea{anchor, flags} {
