@@ -57,6 +57,7 @@ struct ScrollAreaTest: WidgetTester {
     template<ScrollAreaFlag flag = ScrollAreaFlag{}> void scrollY();
 
     void dragFallthrough();
+    void widgetResized();
 
     template<UnsignedInt nodeCount, ScrollAreaFlag flag = ScrollAreaFlag{}> void scrollbarEventOrder();
 };
@@ -550,6 +551,58 @@ const struct {
         ScrollAreaFlag::NoContentsDrag|ScrollAreaFlag::OnlyY, {0.0f, 30.0f}, false},
 };
 
+const struct {
+    const char* name;
+    ScrollAreaFlags flags;
+    /* Original size is {1000, 1000}, contents size {2000, 2000} so the
+       original node offset is 10 times the percentage */
+    Vector2 scrollPercentage, newSize, expectedScrollPercentage;
+} WidgetResizedData[]{
+    {"not scrolled",
+        {}, {}, {1500.0f, 1500.0f}, {}},
+    {"not scrolled, only X",
+        ScrollAreaFlag::OnlyX, {}, {1500.0f, 0.0f}, {}},
+    {"not scrolled, only Y",
+        ScrollAreaFlag::OnlyY, {}, {0.0f, 1500.0f}, {}},
+    {"not scrolled, not scrollable in new size",
+        {}, {}, {2000.0f, 2000.0f}, {}},
+    {"not scrolled, not scrollable in new size, only X",
+        ScrollAreaFlag::OnlyX, {}, {2000.0f, 0.0f}, {}},
+    {"not scrolled, not scrollable in new size, only Y",
+        ScrollAreaFlag::OnlyY, {}, {0.0f, 2000.0f}, {}},
+    {"not scrolled, new size smaller",
+        {}, {}, {500.0f, 500.0f}, {}},
+    {"not scrolled, new size smaller, only X",
+        ScrollAreaFlag::OnlyX, {}, {500.0f, 0.0f}, {}},
+    {"not scrolled, new size smaller, only Y",
+        ScrollAreaFlag::OnlyY, {}, {0.0f, 500.0f}, {}},
+
+    {"scrolled past end in new size",
+        /* The original node offset is {600, 700}, after the resize it's
+           clamped to {500, 500} which is 100% and 100% */
+        {}, {60.0f, 70.0f}, {1500.0f, 1500.0f}, {100.0f, 100.0f}},
+    {"scrolled past end in new size, only X",
+        ScrollAreaFlag::OnlyX, {60.0f, 0.0f}, {1500.0f, 0.0f}, {100.0f, 0.0f}},
+    {"scrolled past end in new size, only Y",
+        ScrollAreaFlag::OnlyY, {0.0f, 70.0f}, {0.0f, 1500.0f}, {0.0f, 100.0f}},
+
+    {"not scrollable in new size",
+        {}, {30.0f, 20.0f}, {2000.0f, 2000.0f}, {}},
+    {"not scrollable in new size, only X",
+        ScrollAreaFlag::OnlyX, {30.0f, 0.0f}, {2000.0f, 0.0f}, {}},
+    {"not scrollable in new size, only Y",
+        ScrollAreaFlag::OnlyY, {0.0f, 20.0f}, {0.0f, 2000.0f}, {}},
+
+    {"new size smaller",
+        /* The original node offset is {600, 400}, after the resize it's 40%
+           and 20% of the new scrollable distance which is {1500, 1500} */
+        {}, {60.0f, 30.0f}, {500.0f, 500.0f}, {40.0f, 20.0f}},
+    {"new size smaller, only X",
+        ScrollAreaFlag::OnlyX, {60.0f, 0.0f}, {500.0f, 0.0f}, {40.0f, 0.0f}},
+    {"new size smaller, only Y",
+        ScrollAreaFlag::OnlyY, {0.0f, 30.0f}, {0.0f, 500.0f}, {0.0f, 20.0f}}
+};
+
 ScrollAreaTest::ScrollAreaTest() {
     addTests({&ScrollAreaTest::debugFlag,
               &ScrollAreaTest::debugFlags});
@@ -585,6 +638,11 @@ ScrollAreaTest::ScrollAreaTest() {
 
     addInstancedTests<ScrollAreaTest>({&ScrollAreaTest::dragFallthrough},
         Containers::arraySize(DragFallthroughData),
+        &WidgetTester::setup,
+        &WidgetTester::teardown);
+
+    addInstancedTests<ScrollAreaTest>({&ScrollAreaTest::widgetResized},
+        Containers::arraySize(WidgetResizedData),
         &WidgetTester::setup,
         &WidgetTester::teardown);
 
@@ -659,8 +717,8 @@ void ScrollAreaTest::construct() {
     /* One for the scroll area, one for the view, one for contents, one for
        each scrollbar and thumb */
     CORRADE_COMPARE(ui.snapLayouter().usedCount(), 3 + 2*2);
-    /* One for each thumb */
-    CORRADE_COMPARE(ui.genericLayouter().usedCount(), 2);
+    /* One for each thumb, one for the view */
+    CORRADE_COMPARE(ui.genericLayouter().usedCount(), 2 + 1);
 
     /* Verify also that we're not allocating anything by accident */
     CORRADE_COMPARE(ui.dataLayer().storageUsedAllocatedCount(), 0);
@@ -716,7 +774,7 @@ void ScrollAreaTest::constructOnlyX() {
     CORRADE_COMPARE(ui.layoutLayer().usedCount(), 2 + 1*2);
     CORRADE_COMPARE(ui.eventLayer().usedCount(), 1 + 1*2);
     CORRADE_COMPARE(ui.snapLayouter().usedCount(), 3 + 1*2);
-    CORRADE_COMPARE(ui.genericLayouter().usedCount(), 1);
+    CORRADE_COMPARE(ui.genericLayouter().usedCount(), 1 + 1);
 
     CORRADE_COMPARE(ui.dataLayer().storageUsedAllocatedCount(), 0);
     /** @todo once MSVC 2017 support is dropped, construct all callbacks with
@@ -771,7 +829,7 @@ void ScrollAreaTest::constructOnlyY() {
     CORRADE_COMPARE(ui.layoutLayer().usedCount(), 2 + 1*2);
     CORRADE_COMPARE(ui.eventLayer().usedCount(), 1 + 1*2);
     CORRADE_COMPARE(ui.snapLayouter().usedCount(), 3 + 1*2);
-    CORRADE_COMPARE(ui.genericLayouter().usedCount(), 1);
+    CORRADE_COMPARE(ui.genericLayouter().usedCount(), 1 + 1);
 
     CORRADE_COMPARE(ui.dataLayer().storageUsedAllocatedCount(), 0);
     /** @todo once MSVC 2017 support is dropped, construct all callbacks with
@@ -1151,6 +1209,34 @@ void ScrollAreaTest::dragFallthrough() {
     PointerEvent release{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0, {}};
     CORRADE_COMPARE(ui.pointerReleaseEvent(Vector2{250.0f, 350.0f} + data.offset, release), !data.expectDrag);
     CORRADE_COMPARE(clicked, data.expectDrag ? 0 : 1);
+}
+
+void ScrollAreaTest::widgetResized() {
+    auto&& data = WidgetResizedData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
+    ScrollArea scroll{Anchor{root, {}, {1000.0f, 1000.0f}}, data.flags};
+    ui.setNodeSize(scroll.contentsNode(), {2000.0f, 2000.0f});
+
+    /* Update to make the scroll area aware of its size and put it into the
+       initial position */
+    ui.update();
+    scroll.scrollToPercentage(data.scrollPercentage);
+
+    /* Updating again should make the node offset match the percentage, just
+       10x larger and negative. There should be no leftover state set. */
+    ui.update();
+    CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
+    CORRADE_COMPARE(scroll.scrollPercentage(), data.scrollPercentage);
+    CORRADE_COMPARE(nodeOffsetSizeAfterLayout(scroll.contentsNode()).first(), data.scrollPercentage*-10.0f);
+
+    /* Resize and update again. The scroll position should adapt so it's still
+       in [0%, 100%], and the actual layout node offset should match that. */
+    ui.setNodeSize(scroll, data.newSize);
+    ui.update();
+    CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
+    CORRADE_COMPARE(scroll.scrollPercentage(), data.expectedScrollPercentage);
+    CORRADE_COMPARE(nodeOffsetSizeAfterLayout(scroll.contentsNode()).first(),  data.expectedScrollPercentage*(ui.nodeSize(scroll.contentsNode()) - nodeOffsetSizeAfterLayout(scroll.viewNode()).second())/-100.0f);
 }
 
 UnsignedInt nodeIndices[7];
