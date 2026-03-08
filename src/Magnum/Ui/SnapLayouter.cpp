@@ -146,9 +146,9 @@ constexpr SnapLayoutFlags SnapLayoutFlagMask = ~(SnapLayoutFlagHasExplicitSnap|I
 
 struct Layout {
     SnapLayoutFlags flags;
-    Snaps childSnap{NoInit}, firstChildSnap{NoInit};
     /* used only if flags contain SnapLayoutFlagHasExplicitSnap */
     Snaps explicitSnap{NoInit};
+    Snaps childSnap{NoInit}, firstChildSnap{NoInit};
     LayouterDataHandle firstChild;
     LayouterDataHandle firstExplicitSnap;
     LayouterDataHandle parentOrExplicitSnapTarget;
@@ -449,6 +449,18 @@ void SnapLayouter::removeInternal(const UnsignedInt id) {
     layout.next = LayouterDataHandle::Null;
 }
 
+bool SnapLayouter::hasExplicitSnap(const LayoutHandle handle) const {
+    CORRADE_ASSERT(isHandleValid(handle),
+        "Ui::SnapLayouter::hasExplicitSnap(): invalid handle" << handle, {});
+    return _state->layouts[layoutHandleId(handle)].flags >= SnapLayoutFlagHasExplicitSnap;
+}
+
+bool SnapLayouter::hasExplicitSnap(const LayouterDataHandle handle) const {
+    CORRADE_ASSERT(isHandleValid(handle),
+        "Ui::SnapLayouter::hasExplicitSnap(): invalid handle" << handle, {});
+    return _state->layouts[layouterDataHandleId(handle)].flags >= SnapLayoutFlagHasExplicitSnap;
+}
+
 SnapLayoutFlags SnapLayouter::flags(const LayoutHandle handle) const {
     CORRADE_ASSERT(isHandleValid(handle),
         "Ui::SnapLayouter::flags(): invalid handle" << handle, {});
@@ -537,6 +549,24 @@ void SnapLayouter::clearFlagsInternal(const UnsignedInt id, const SnapLayoutFlag
     setNeedsUpdate();
 }
 
+Snaps SnapLayouter::explicitSnap(const LayoutHandle handle) const {
+    CORRADE_ASSERT(isHandleValid(handle),
+        "Ui::SnapLayouter::explicitSnap(): invalid handle" << handle, {});
+    const Layout& layout = _state->layouts[layoutHandleId(handle)];
+    CORRADE_ASSERT(layout.flags >= SnapLayoutFlagHasExplicitSnap,
+        "Ui::SnapLayouter::explicitSnap():" << handle << "doesn't have an explicit snap", {});
+    return layout.explicitSnap;
+}
+
+Snaps SnapLayouter::explicitSnap(const LayouterDataHandle handle) const {
+    CORRADE_ASSERT(isHandleValid(handle),
+        "Ui::SnapLayouter::explicitSnap(): invalid handle" << handle, {});
+    const Layout& layout = _state->layouts[layouterDataHandleId(handle)];
+    CORRADE_ASSERT(layout.flags >= SnapLayoutFlagHasExplicitSnap,
+        "Ui::SnapLayouter::explicitSnap():" << handle << "doesn't have an explicit snap", {});
+    return layout.explicitSnap;
+}
+
 Snaps SnapLayouter::childSnap(const LayoutHandle handle) const {
     CORRADE_ASSERT(isHandleValid(handle),
         "Ui::SnapLayouter::childSnap(): invalid handle" << handle, {});
@@ -570,6 +600,50 @@ void SnapLayouter::setChildSnapInternal(const UnsignedInt id, const Snaps snap) 
     setNeedsUpdate();
 }
 
+LayoutHandle SnapLayouter::parent(const LayoutHandle handle) const {
+    CORRADE_ASSERT(isHandleValid(handle),
+        "Ui::SnapLayouter::parent(): invalid handle" << handle, {});
+    const Layout& layout = _state->layouts[layoutHandleId(handle)];
+    CORRADE_ASSERT(!(layout.flags >= SnapLayoutFlagHasExplicitSnap),
+        "Ui::SnapLayouter::parent():" << handle << "has an explicit snap", {});
+    const LayouterDataHandle parent = layout.parentOrExplicitSnapTarget;
+    return parent == LayouterDataHandle::Null ?
+        LayoutHandle::Null : layoutHandle(this->handle(), parent);
+}
+
+LayoutHandle SnapLayouter::parent(const LayouterDataHandle handle) const {
+    CORRADE_ASSERT(isHandleValid(handle),
+        "Ui::SnapLayouter::parent(): invalid handle" << handle, {});
+    const Layout& layout = _state->layouts[layouterDataHandleId(handle)];
+    CORRADE_ASSERT(!(layout.flags >= SnapLayoutFlagHasExplicitSnap),
+        "Ui::SnapLayouter::parent():" << handle << "has an explicit snap", {});
+    const LayouterDataHandle parent = layout.parentOrExplicitSnapTarget;
+    return parent == LayouterDataHandle::Null ?
+        LayoutHandle::Null : layoutHandle(this->handle(), parent);
+}
+
+LayoutHandle SnapLayouter::explicitSnapTarget(const LayoutHandle handle) const {
+    CORRADE_ASSERT(isHandleValid(handle),
+        "Ui::SnapLayouter::explicitSnapTarget(): invalid handle" << handle, {});
+    const Layout& layout = _state->layouts[layoutHandleId(handle)];
+    CORRADE_ASSERT(layout.flags >= SnapLayoutFlagHasExplicitSnap,
+        "Ui::SnapLayouter::explicitSnapTarget():" << handle << "doesn't have an explicit snap", {});
+    const LayouterDataHandle target = layout.parentOrExplicitSnapTarget;
+    return target == LayouterDataHandle::Null ?
+        LayoutHandle::Null : layoutHandle(this->handle(), target);
+}
+
+LayoutHandle SnapLayouter::explicitSnapTarget(const LayouterDataHandle handle) const {
+    CORRADE_ASSERT(isHandleValid(handle),
+        "Ui::SnapLayouter::explicitSnapTarget(): invalid handle" << handle, {});
+    const Layout& layout = _state->layouts[layouterDataHandleId(handle)];
+    CORRADE_ASSERT(layout.flags >= SnapLayoutFlagHasExplicitSnap,
+        "Ui::SnapLayouter::explicitSnapTarget():" << handle << "doesn't have an explicit snap", {});
+    const LayouterDataHandle target = layout.parentOrExplicitSnapTarget;
+    return target == LayouterDataHandle::Null ?
+        LayoutHandle::Null : layoutHandle(this->handle(), target);
+}
+
 LayoutHandle SnapLayouter::firstChild(const LayoutHandle handle) const {
     CORRADE_ASSERT(isHandleValid(handle),
         "Ui::SnapLayouter::firstChild(): invalid handle" << handle, {});
@@ -600,40 +674,6 @@ LayoutHandle SnapLayouter::firstExplicitSnap(const LayouterDataHandle handle) co
     const LayouterDataHandle firstExplicitSnap = _state->layouts[layouterDataHandleId(handle)].firstExplicitSnap;
     return firstExplicitSnap == LayouterDataHandle::Null ?
         LayoutHandle::Null : layoutHandle(this->handle(), firstExplicitSnap);
-}
-
-bool SnapLayouter::hasExplicitSnap(const LayoutHandle handle) const {
-    CORRADE_ASSERT(isHandleValid(handle),
-        "Ui::SnapLayouter::hasExplicitSnap(): invalid handle" << handle, {});
-    return _state->layouts[layoutHandleId(handle)].flags >= SnapLayoutFlagHasExplicitSnap;
-}
-
-bool SnapLayouter::hasExplicitSnap(const LayouterDataHandle handle) const {
-    CORRADE_ASSERT(isHandleValid(handle),
-        "Ui::SnapLayouter::hasExplicitSnap(): invalid handle" << handle, {});
-    return _state->layouts[layouterDataHandleId(handle)].flags >= SnapLayoutFlagHasExplicitSnap;
-}
-
-LayoutHandle SnapLayouter::parent(const LayoutHandle handle) const {
-    CORRADE_ASSERT(isHandleValid(handle),
-        "Ui::SnapLayouter::parent(): invalid handle" << handle, {});
-    const Layout& layout = _state->layouts[layoutHandleId(handle)];
-    CORRADE_ASSERT(!(layout.flags >= SnapLayoutFlagHasExplicitSnap),
-        "Ui::SnapLayouter::parent():" << handle << "has an explicit snap", {});
-    const LayouterDataHandle parent = layout.parentOrExplicitSnapTarget;
-    return parent == LayouterDataHandle::Null ?
-        LayoutHandle::Null : layoutHandle(this->handle(), parent);
-}
-
-LayoutHandle SnapLayouter::parent(const LayouterDataHandle handle) const {
-    CORRADE_ASSERT(isHandleValid(handle),
-        "Ui::SnapLayouter::parent(): invalid handle" << handle, {});
-    const Layout& layout = _state->layouts[layouterDataHandleId(handle)];
-    CORRADE_ASSERT(!(layout.flags >= SnapLayoutFlagHasExplicitSnap),
-        "Ui::SnapLayouter::parent():" << handle << "has an explicit snap", {});
-    const LayouterDataHandle parent = layout.parentOrExplicitSnapTarget;
-    return parent == LayouterDataHandle::Null ?
-        LayoutHandle::Null : layoutHandle(this->handle(), parent);
 }
 
 LayoutHandle SnapLayouter::previous(const LayoutHandle handle) const {
@@ -702,46 +742,6 @@ LayoutHandle SnapLayouter::nextInternal(const LayouterDataHandle handle) const {
     /* In case there's no parent or target (and thus there's no list), or the
        handle is last in the list, return null */
     return LayoutHandle::Null;
-}
-
-Snaps SnapLayouter::explicitSnap(const LayoutHandle handle) const {
-    CORRADE_ASSERT(isHandleValid(handle),
-        "Ui::SnapLayouter::explicitSnap(): invalid handle" << handle, {});
-    const Layout& layout = _state->layouts[layoutHandleId(handle)];
-    CORRADE_ASSERT(layout.flags >= SnapLayoutFlagHasExplicitSnap,
-        "Ui::SnapLayouter::explicitSnap():" << handle << "doesn't have an explicit snap", {});
-    return layout.explicitSnap;
-}
-
-Snaps SnapLayouter::explicitSnap(const LayouterDataHandle handle) const {
-    CORRADE_ASSERT(isHandleValid(handle),
-        "Ui::SnapLayouter::explicitSnap(): invalid handle" << handle, {});
-    const Layout& layout = _state->layouts[layouterDataHandleId(handle)];
-    CORRADE_ASSERT(layout.flags >= SnapLayoutFlagHasExplicitSnap,
-        "Ui::SnapLayouter::explicitSnap():" << handle << "doesn't have an explicit snap", {});
-    return layout.explicitSnap;
-}
-
-LayoutHandle SnapLayouter::explicitSnapTarget(const LayoutHandle handle) const {
-    CORRADE_ASSERT(isHandleValid(handle),
-        "Ui::SnapLayouter::explicitSnapTarget(): invalid handle" << handle, {});
-    const Layout& layout = _state->layouts[layoutHandleId(handle)];
-    CORRADE_ASSERT(layout.flags >= SnapLayoutFlagHasExplicitSnap,
-        "Ui::SnapLayouter::explicitSnapTarget():" << handle << "doesn't have an explicit snap", {});
-    const LayouterDataHandle target = layout.parentOrExplicitSnapTarget;
-    return target == LayouterDataHandle::Null ?
-        LayoutHandle::Null : layoutHandle(this->handle(), target);
-}
-
-LayoutHandle SnapLayouter::explicitSnapTarget(const LayouterDataHandle handle) const {
-    CORRADE_ASSERT(isHandleValid(handle),
-        "Ui::SnapLayouter::explicitSnapTarget(): invalid handle" << handle, {});
-    const Layout& layout = _state->layouts[layouterDataHandleId(handle)];
-    CORRADE_ASSERT(layout.flags >= SnapLayoutFlagHasExplicitSnap,
-        "Ui::SnapLayouter::explicitSnapTarget():" << handle << "doesn't have an explicit snap", {});
-    const LayouterDataHandle target = layout.parentOrExplicitSnapTarget;
-    return target == LayouterDataHandle::Null ?
-        LayoutHandle::Null : layoutHandle(this->handle(), target);
 }
 
 LayouterFeatures SnapLayouter::doFeatures() const {

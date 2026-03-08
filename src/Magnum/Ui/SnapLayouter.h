@@ -644,6 +644,29 @@ class MAGNUM_UI_EXPORT SnapLayouter: public AbstractLayouter {
          */
         void remove(LayouterDataHandle handle);
 
+        /** @{
+         * @name Layout properties
+         */
+
+        /**
+         * @brief Whether the layout has an explicit snap
+         *
+         * Expects that @p handle is valid. Returns @cpp true @ce if the layout
+         * was created using @ref addExplicit(), @cpp false @ce otherwise.
+         */
+        bool hasExplicitSnap(LayoutHandle handle) const;
+
+        /**
+         * @brief Whether the layout has an explicit snap assuming it belongs to this layouter
+         *
+         * Like @ref hasExplicitSnap(LayoutHandle) const but without checking
+         * that @p handle indeed belongs to this layouter. See its
+         * documentation for more information.
+         * @see @ref isHandleValid(LayouterDataHandle) const,
+         *      @ref layoutHandleData()
+         */
+        bool hasExplicitSnap(LayouterDataHandle handle) const;
+
         /**
          * @brief Layout flags
          *
@@ -729,6 +752,32 @@ class MAGNUM_UI_EXPORT SnapLayouter: public AbstractLayouter {
         void clearFlags(LayouterDataHandle handle, SnapLayoutFlags flags);
 
         /**
+         * @brief Explicit layout snap
+         *
+         * Expects that @p handle is valid and has an explicit snap. Note that
+         * if @ref explicitSnapTarget() is assigned to a node that's a parent
+         * of @p handle node, @ref Snap::Inside is implicitly considered to be
+         * included as well, even if not part of the actual value.
+         *
+         * Similarly to @ref node(), @ref parent() and @ref explicitSnapTarget(),
+         * the snap cannot be changed after creation as it could break internal
+         * constraints.
+         * @see @ref isHandleValid(LayoutHandle) const, @ref hasExplicitSnap()
+         */
+        Snaps explicitSnap(LayoutHandle handle) const;
+
+        /**
+         * @brief Explicit layout snap assuming it belongs to this layouter
+         *
+         * Like @ref explicitSnap(LayoutHandle) const but without checking that
+         * @p handle indeed belongs to this layouter. See its documentation for
+         * more information.
+         * @see @ref isHandleValid(LayouterDataHandle) const,
+         *      @ref layoutHandleData()
+         */
+        Snaps explicitSnap(LayouterDataHandle handle) const;
+
+        /**
          * @brief Snap for child layouts
          *
          * Expects that @p handle is valid.
@@ -771,6 +820,75 @@ class MAGNUM_UI_EXPORT SnapLayouter: public AbstractLayouter {
          *      @ref layoutHandleData()
          */
         void setChildSnap(LayouterDataHandle handle, Snaps snap);
+
+        /**
+         * @}
+         */
+
+        /** @{
+         * @name Layout hierarchy introspection
+         */
+
+        /**
+         * @brief Parent layout
+         *
+         * Expects that @p handle is valid and doesn't have an explicit snap.
+         * Layouts with an explicit snap are not following any parent/child
+         * hierarchy, instead they have a snap target exposed by
+         * @ref explicitSnapTarget(). If there was no layout assigned to the
+         * parent node at the time @p handle was created, or @p handle is
+         * assigned to a root node, returns @ref LayoutHandle::Null.
+         * Otherwise, the handle is always valid and belonging to this
+         * layouter.
+         *
+         * Similarly to @ref node(), @ref explicitSnapTarget() and
+         * @ref explicitSnap(), the snap cannot be changed after creation as it
+         * could break internal constraints.
+         * @see @ref isHandleValid(LayoutHandle) const, @ref hasExplicitSnap(),
+         *      @ref previous(), @ref next(), @ref firstChild()
+         */
+        LayoutHandle parent(LayoutHandle handle) const;
+
+        /**
+         * @brief Parent layout assuming it belongs to this layouter
+         *
+         * Like @ref parent(LayoutHandle) const but without checking that
+         * @p handle indeed belongs to this layouter. See its documentation for
+         * more information.
+         * @see @ref isHandleValid(LayouterDataHandle) const,
+         *      @ref layoutHandleData()
+         */
+        LayoutHandle parent(LayouterDataHandle handle) const;
+
+        /**
+         * @brief Explicit layout snap target
+         *
+         * Expects that @p handle is valid and has an explicit snap. Layouts
+         * with implicit snap are following a parent/child hierarchy and
+         * expose a @ref parent(). Returns @ref LayoutHandle::Null if the
+         * layout is assigned to a root node and is snapped relative to the
+         * whole user interface. Note that the returned handle may be invalid
+         * if @ref AbstractUserInterface::removeNode() was called on the target
+         * node or its parents and @ref AbstractUserInterface::update() hasn't
+         * been called since.
+         *
+         * Similarly to @ref node(), @ref parent() and @ref explicitSnap(), the
+         * target cannot be changed after creation as it could break internal
+         * constraints.
+         * @see @ref isHandleValid(LayoutHandle) const, @ref hasExplicitSnap()
+         */
+        LayoutHandle explicitSnapTarget(LayoutHandle handle) const;
+
+        /**
+         * @brief Explicit layout snap target node assuming it belongs to this layouter
+         *
+         * Like @ref explicitSnapTarget(LayoutHandle) const but without
+         * checking that @p handle indeed belongs to this layouter. See its
+         * documentation for more information.
+         * @see @ref isHandleValid(LayouterDataHandle) const,
+         *      @ref layoutHandleData()
+         */
+        LayoutHandle explicitSnapTarget(LayouterDataHandle handle) const;
 
         /**
          * @brief First child layout
@@ -816,56 +934,6 @@ class MAGNUM_UI_EXPORT SnapLayouter: public AbstractLayouter {
          *      @ref layoutHandleData()
          */
         LayoutHandle firstExplicitSnap(LayouterDataHandle handle) const;
-
-        /**
-         * @brief Whether the layout has an explicit snap
-         *
-         * Expects that @p handle is valid. Returns @cpp true @ce if the layout
-         * was created using @ref addExplicit(), @cpp false @ce otherwise.
-         */
-        bool hasExplicitSnap(LayoutHandle handle) const;
-
-        /**
-         * @brief Whether the layout has an explicit snap assuming it belongs to this layouter
-         *
-         * Like @ref hasExplicitSnap(LayoutHandle) const but without checking
-         * that @p handle indeed belongs to this layouter. See its
-         * documentation for more information.
-         * @see @ref isHandleValid(LayouterDataHandle) const,
-         *      @ref layoutHandleData()
-         */
-        bool hasExplicitSnap(LayouterDataHandle handle) const;
-
-        /**
-         * @brief Parent layout
-         *
-         * Expects that @p handle is valid and doesn't have an explicit snap.
-         * Layouts with an explicit snap are not following any parent/child
-         * hierarchy, instead they have a snap target exposed by
-         * @ref explicitSnapTarget(). If there was no layout assigned to the
-         * parent node at the time @p handle was created, or @p handle is
-         * assigned to a root node, returns @ref LayoutHandle::Null.
-         * Otherwise, the handle is always valid and belonging to this
-         * layouter.
-         *
-         * Similarly to @ref node(), @ref explicitSnapTarget() and
-         * @ref explicitSnap(), the snap cannot be changed after creation as it
-         * could break internal constraints.
-         * @see @ref isHandleValid(LayoutHandle) const, @ref hasExplicitSnap(),
-         *      @ref previous(), @ref next(), @ref firstChild()
-         */
-        LayoutHandle parent(LayoutHandle handle) const;
-
-        /**
-         * @brief Parent layout assuming it belongs to this layouter
-         *
-         * Like @ref parent(LayoutHandle) const but without checking that
-         * @p handle indeed belongs to this layouter. See its documentation for
-         * more information.
-         * @see @ref isHandleValid(LayouterDataHandle) const,
-         *      @ref layoutHandleData()
-         */
-        LayoutHandle parent(LayouterDataHandle handle) const;
 
         /**
          * @brief Previous layout
@@ -919,62 +987,6 @@ class MAGNUM_UI_EXPORT SnapLayouter: public AbstractLayouter {
          *      @ref layoutHandleData()
          */
         LayoutHandle next(LayouterDataHandle handle) const;
-
-        /**
-         * @brief Explicit layout snap
-         *
-         * Expects that @p handle is valid and has an explicit snap. Note that
-         * if @ref explicitSnapTarget() is assigned to a node that's a parent
-         * of @p handle node, @ref Snap::Inside is implicitly considered to be
-         * included as well, even if not part of the actual value.
-         *
-         * Similarly to @ref node(), @ref parent() and @ref explicitSnapTarget(),
-         * the snap cannot be changed after creation as it could break internal
-         * constraints.
-         * @see @ref isHandleValid(LayoutHandle) const, @ref hasExplicitSnap()
-         */
-        Snaps explicitSnap(LayoutHandle handle) const;
-
-        /**
-         * @brief Explicit layout snap assuming it belongs to this layouter
-         *
-         * Like @ref explicitSnap(LayoutHandle) const but without checking that
-         * @p handle indeed belongs to this layouter. See its documentation for
-         * more information.
-         * @see @ref isHandleValid(LayouterDataHandle) const,
-         *      @ref layoutHandleData()
-         */
-        Snaps explicitSnap(LayouterDataHandle handle) const;
-
-        /**
-         * @brief Explicit layout snap target
-         *
-         * Expects that @p handle is valid and has an explicit snap. Layouts
-         * with implicit snap are following a parent/child hierarchy and
-         * expose a @ref parent(). Returns @ref LayoutHandle::Null if the
-         * layout is assigned to a root node and is snapped relative to the
-         * whole user interface. Note that the returned handle may be invalid
-         * if @ref AbstractUserInterface::removeNode() was called on the target
-         * node or its parents and @ref AbstractUserInterface::update() hasn't
-         * been called since.
-         *
-         * Similarly to @ref node(), @ref parent() and @ref explicitSnap(), the
-         * target cannot be changed after creation as it could break internal
-         * constraints.
-         * @see @ref isHandleValid(LayoutHandle) const, @ref hasExplicitSnap()
-         */
-        LayoutHandle explicitSnapTarget(LayoutHandle handle) const;
-
-        /**
-         * @brief Explicit layout snap target node assuming it belongs to this layouter
-         *
-         * Like @ref explicitSnapTarget(LayoutHandle) const but without
-         * checking that @p handle indeed belongs to this layouter. See its
-         * documentation for more information.
-         * @see @ref isHandleValid(LayouterDataHandle) const,
-         *      @ref layoutHandleData()
-         */
-        LayoutHandle explicitSnapTarget(LayouterDataHandle handle) const;
 
     private:
         MAGNUM_UI_LOCAL LayoutHandle addInternal(NodeHandle node, LayouterDataHandle before, SnapLayoutFlags flags);
