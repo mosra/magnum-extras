@@ -55,8 +55,8 @@ struct SnapLayouterTest: TestSuite::Tester {
     void debugFlags();
     void debugFlagsSupersets();
 
-    void snapInside();
-    void snap();
+    void snapInsideImplementation();
+    void snapImplementation();
 
     void layoutSizePaddingMargin();
     void layoutSizePaddingMarginPropagate();
@@ -105,7 +105,7 @@ struct SnapLayouterTest: TestSuite::Tester {
 const struct {
     Snaps snap;
     BitVector2 expected;
-} SnapInsideData[]{
+} SnapInsideImplementationData[]{
     {Snaps{}, BitVector2{3}},
     {Snap::Left|Snap::Right, BitVector2{3}},
     {Snap::Top|Snap::Bottom, BitVector2{3}},
@@ -133,7 +133,7 @@ const struct {
     /* left, top, right, bottom; components that should not be used are NaN */
     Vector4 referencePadding, referenceMargin, margin;
     Vector2 expectedOffset, expectedSize;
-} SnapData[]{
+} SnapImplementationData[]{
     /*     100   500        in all cases below, the final margin and padding
           QR A M            should be either the following or NaN if not used
              E
@@ -1658,11 +1658,11 @@ SnapLayouterTest::SnapLayouterTest() {
               &SnapLayouterTest::debugFlags,
               &SnapLayouterTest::debugFlagsSupersets});
 
-    addInstancedTests({&SnapLayouterTest::snapInside},
-        Containers::arraySize(SnapInsideData));
+    addInstancedTests({&SnapLayouterTest::snapInsideImplementation},
+        Containers::arraySize(SnapInsideImplementationData));
 
-    addInstancedTests({&SnapLayouterTest::snap},
-        Containers::arraySize(SnapData));
+    addInstancedTests({&SnapLayouterTest::snapImplementation},
+        Containers::arraySize(SnapImplementationData));
 
     addInstancedTests({&SnapLayouterTest::layoutSizePaddingMargin},
         Containers::arraySize(LayoutSizePaddingMarginData));
@@ -1826,8 +1826,8 @@ void SnapLayouterTest::debugFlagsSupersets() {
     }
 }
 
-void SnapLayouterTest::snapInside() {
-    auto&& data = SnapInsideData[testCaseInstanceId()];
+void SnapLayouterTest::snapInsideImplementation() {
+    auto&& data = SnapInsideImplementationData[testCaseInstanceId()];
     {
         Containers::String out;
         Debug{&out, Debug::Flag::NoNewlineAtTheEnd|Debug::Flag::Packed} << data.snap;
@@ -1837,8 +1837,8 @@ void SnapLayouterTest::snapInside() {
     CORRADE_COMPARE(Implementation::snapInside(data.snap), data.expected);
 }
 
-void SnapLayouterTest::snap() {
-    auto&& data = SnapData[testCaseInstanceId()];
+void SnapLayouterTest::snapImplementation() {
+    auto&& data = SnapImplementationData[testCaseInstanceId()];
     {
         Containers::String out;
         {
