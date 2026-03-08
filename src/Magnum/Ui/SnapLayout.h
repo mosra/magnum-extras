@@ -206,6 +206,25 @@ class MAGNUM_UI_EXPORT AbstractSnapLayout {
          */
         AbstractSnapLayout& clearFlags(SnapLayoutFlags flags);
 
+        /**
+         * @brief Explicit layout snap
+         *
+         * Expects that the layout was created using @ref snapRoot(),
+         * @ref snapChild() or @ref snapSibling().
+         */
+        Snaps snap() const;
+
+        /**
+         * @brief Set explicit layout snap
+         * @return Reference to self (for method chaining)
+         *
+         * Expects that the layout was created using @ref snapRoot(),
+         * @ref snapChild() or @ref snapSibling(). Calls
+         * @ref SnapLayouter::setSnap() internally, see its documentation for
+         * detailed description of all constraints.
+         */
+        AbstractSnapLayout& setSnap(Snaps snap);
+
         /** @brief Snap for child layouts */
         Snaps childSnap() const;
 
@@ -572,6 +591,9 @@ template<class UserInterface> class BasicSnapLayout: public AbstractSnapLayout {
 
         /* Overloads to remove a WTF factor from method chaining order */
         #ifndef DOXYGEN_GENERATING_OUTPUT
+        BasicSnapLayout<UserInterface>& setSnap(Snaps snap) {
+            return static_cast<BasicSnapLayout<UserInterface>&>(AbstractSnapLayout::setSnap(snap));
+        }
         BasicSnapLayout<UserInterface>& setChildSnap(Snaps snap) {
             return static_cast<BasicSnapLayout<UserInterface>&>(AbstractSnapLayout::setChildSnap(snap));
         }

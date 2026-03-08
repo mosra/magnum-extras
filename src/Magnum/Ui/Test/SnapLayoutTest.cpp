@@ -54,6 +54,7 @@ struct SnapLayoutTest: TestSuite::Tester {
     void convertSpecialized();
 
     template<class T> void flags();
+    template<class T> void snap();
     template<class T> void childSnap();
 
     template<class T> void child();
@@ -106,6 +107,8 @@ SnapLayoutTest::SnapLayoutTest() {
 
     addTests({&SnapLayoutTest::flags<AbstractSnapLayout>,
               &SnapLayoutTest::flags<SnapLayout>,
+              &SnapLayoutTest::snap<AbstractSnapLayout>,
+              &SnapLayoutTest::snap<SnapLayout>,
               &SnapLayoutTest::childSnap<AbstractSnapLayout>,
               &SnapLayoutTest::childSnap<SnapLayout>,
 
@@ -683,6 +686,27 @@ template<class T> void SnapLayoutTest::flags() {
     CORRADE_COMPARE(layouter.flags(layout), SnapLayoutFlag::IgnoreOverflowY);
 }
 
+template<class T> void SnapLayoutTest::snap() {
+    setTestCaseTemplateName(SnapLayoutTraits<T>::name());
+
+    /* Testing both the base class and the template because the setters have
+       overrides returning the derived type reference for method chaining */
+
+    struct Interface: SnapLayoutTraits<T>::UserInterfaceType {
+        explicit Interface(NoCreateT): SnapLayoutTraits<T>::UserInterfaceType{NoCreate} {}
+    } ui{NoCreate};
+
+    SnapLayouter& layouter = ui.setLayouterInstance(Containers::pointer<SnapLayouter>(ui.createLayouter()));
+
+    T layout = T::snapRoot(ui, layouter, Snap::BottomRight|Snap::NoPad);
+    CORRADE_COMPARE(layout.snap(), Snap::BottomRight|Snap::NoPad);
+    CORRADE_COMPARE(layouter.snap(layout), Snap::BottomRight|Snap::NoPad);
+
+    layout.setSnap(Snap::Right|Snap::FillY);
+    CORRADE_COMPARE(layout.snap(), Snap::Right|Snap::FillY);
+    CORRADE_COMPARE(layouter.snap(layout), Snap::Right|Snap::FillY);
+}
+
 template<class T> void SnapLayoutTest::childSnap() {
     setTestCaseTemplateName(SnapLayoutTraits<T>::name());
 
@@ -880,7 +904,7 @@ template<class T> void SnapLayoutTest::childExplicitSnap() {
     CORRADE_VERIFY(layouter.hasExplicitSnap(child1));
     CORRADE_COMPARE(layouter.node(child1), child1.node());
     CORRADE_COMPARE(layouter.flags(child1), SnapLayoutFlag::IgnoreOverflowY);
-    CORRADE_COMPARE(layouter.explicitSnap(child1), Snap::TopRight);
+    CORRADE_COMPARE(layouter.snap(child1), Snap::TopRight);
     CORRADE_COMPARE(layouter.childSnap(child1), Snap::Bottom);
     CORRADE_COMPARE(layouter.explicitSnapTarget(child1), layout);
 
@@ -899,7 +923,7 @@ template<class T> void SnapLayoutTest::childExplicitSnap() {
     CORRADE_VERIFY(layouter.hasExplicitSnap(child2));
     CORRADE_COMPARE(layouter.node(child2), child2.node());
     CORRADE_COMPARE(layouter.flags(child2), SnapLayoutFlag::PropagateMarginX);
-    CORRADE_COMPARE(layouter.explicitSnap(child2), Snap::Bottom|Snap::FillX|Snap::NoPad);
+    CORRADE_COMPARE(layouter.snap(child2), Snap::Bottom|Snap::FillX|Snap::NoPad);
     CORRADE_COMPARE(layouter.childSnap(child2), Snap::Bottom);
     CORRADE_COMPARE(layouter.explicitSnapTarget(child2), layout);
 
@@ -945,7 +969,7 @@ template<class T> void SnapLayoutTest::siblingExplicitSnap() {
     CORRADE_VERIFY(layouter.hasExplicitSnap(sibling1));
     CORRADE_COMPARE(layouter.node(sibling1), sibling1.node());
     CORRADE_COMPARE(layouter.flags(sibling1), SnapLayoutFlag::IgnoreOverflowY);
-    CORRADE_COMPARE(layouter.explicitSnap(sibling1), Snap::TopRight);
+    CORRADE_COMPARE(layouter.snap(sibling1), Snap::TopRight);
     CORRADE_COMPARE(layouter.childSnap(sibling1), Snap::Bottom);
     CORRADE_COMPARE(layouter.explicitSnapTarget(sibling1), layout);
 
@@ -964,7 +988,7 @@ template<class T> void SnapLayoutTest::siblingExplicitSnap() {
     CORRADE_VERIFY(layouter.hasExplicitSnap(sibling2));
     CORRADE_COMPARE(layouter.node(sibling2), sibling2.node());
     CORRADE_COMPARE(layouter.flags(sibling2), SnapLayoutFlag::PropagateMarginX);
-    CORRADE_COMPARE(layouter.explicitSnap(sibling2), Snap::Bottom|Snap::FillX|Snap::NoPad);
+    CORRADE_COMPARE(layouter.snap(sibling2), Snap::Bottom|Snap::FillX|Snap::NoPad);
     CORRADE_COMPARE(layouter.childSnap(sibling2), Snap::Bottom);
     CORRADE_COMPARE(layouter.explicitSnapTarget(sibling2), layout);
 
@@ -1004,7 +1028,7 @@ template<class T> void SnapLayoutTest::rootExplicitSnap() {
     CORRADE_VERIFY(layouter.hasExplicitSnap(root1));
     CORRADE_COMPARE(layouter.node(root1), root1.node());
     CORRADE_COMPARE(layouter.flags(root1), SnapLayoutFlag::IgnoreOverflowY);
-    CORRADE_COMPARE(layouter.explicitSnap(root1), Snap::TopRight);
+    CORRADE_COMPARE(layouter.snap(root1), Snap::TopRight);
     CORRADE_COMPARE(layouter.childSnap(root1), Snap::Bottom);
     CORRADE_COMPARE(layouter.explicitSnapTarget(root1), LayoutHandle::Null);
 
@@ -1023,7 +1047,7 @@ template<class T> void SnapLayoutTest::rootExplicitSnap() {
     CORRADE_VERIFY(layouter.hasExplicitSnap(root2));
     CORRADE_COMPARE(layouter.node(root2), root2.node());
     CORRADE_COMPARE(layouter.flags(root2), SnapLayoutFlag::PropagateMarginX);
-    CORRADE_COMPARE(layouter.explicitSnap(root2), Snap::Fill);
+    CORRADE_COMPARE(layouter.snap(root2), Snap::Fill);
     CORRADE_COMPARE(layouter.childSnap(root2), Snap::Bottom);
     CORRADE_COMPARE(layouter.explicitSnapTarget(root2), LayoutHandle::Null);
 
@@ -1061,7 +1085,7 @@ void SnapLayoutTest::rootExplicitSnapImplicitLayouter() {
     CORRADE_VERIFY(ui.snapLayouter().hasExplicitSnap(root1));
     CORRADE_COMPARE(ui.snapLayouter().node(root1), root1.node());
     CORRADE_COMPARE(ui.snapLayouter().flags(root1), SnapLayoutFlag::IgnoreOverflowY);
-    CORRADE_COMPARE(ui.snapLayouter().explicitSnap(root1), Snap::TopRight);
+    CORRADE_COMPARE(ui.snapLayouter().snap(root1), Snap::TopRight);
     CORRADE_COMPARE(ui.snapLayouter().childSnap(root1), Snap::Bottom);
     CORRADE_COMPARE(ui.snapLayouter().explicitSnapTarget(root1), LayoutHandle::Null);
 
@@ -1080,7 +1104,7 @@ void SnapLayoutTest::rootExplicitSnapImplicitLayouter() {
     CORRADE_VERIFY(ui.snapLayouter().hasExplicitSnap(root2));
     CORRADE_COMPARE(ui.snapLayouter().node(root2), root2.node());
     CORRADE_COMPARE(ui.snapLayouter().flags(root2), SnapLayoutFlag::PropagateMarginX);
-    CORRADE_COMPARE(ui.snapLayouter().explicitSnap(root2), Snap::Fill);
+    CORRADE_COMPARE(ui.snapLayouter().snap(root2), Snap::Fill);
     CORRADE_COMPARE(ui.snapLayouter().childSnap(root2), Snap::Bottom);
     CORRADE_COMPARE(ui.snapLayouter().explicitSnapTarget(root2), LayoutHandle::Null);
 

@@ -128,6 +128,21 @@ AbstractSnapLayout& AbstractSnapLayout::clearFlags(const SnapLayoutFlags flags) 
     return *this;
 }
 
+Snaps AbstractSnapLayout::snap() const {
+    /* Deliberately *not* replicating the AbstractSnapLayouter assertions here,
+       copying them just to provide a slightly different message only adds
+       extra testing effort with questionable benefits. */
+    return _layouter->snap(_layout);
+}
+
+AbstractSnapLayout& AbstractSnapLayout::setSnap(const Snaps snap) {
+    /* Deliberately *not* replicating the AbstractSnapLayouter assertions here,
+       copying them just to provide a slightly different message only adds
+       extra testing effort with questionable benefits. */
+    _layouter->setSnap(_layout, snap);
+    return *this;
+}
+
 Snaps AbstractSnapLayout::childSnap() const {
     return _layouter->childSnap(_layout);
 }

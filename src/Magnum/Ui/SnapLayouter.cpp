@@ -147,7 +147,7 @@ constexpr SnapLayoutFlags SnapLayoutFlagMask = ~(SnapLayoutFlagHasExplicitSnap|I
 struct Layout {
     SnapLayoutFlags flags;
     /* used only if flags contain SnapLayoutFlagHasExplicitSnap */
-    Snaps explicitSnap{NoInit};
+    Snaps snap{NoInit};
     Snaps childSnap{NoInit}, firstChildSnap{NoInit};
     LayouterDataHandle firstChild;
     LayouterDataHandle firstExplicitSnap;
@@ -317,7 +317,7 @@ LayoutHandle SnapLayouter::addExplicitInternal(const NodeHandle node, const Snap
     layout.firstChildSnap = Snap::Top|Snap::Inside;
     layout.firstChild = LayouterDataHandle::Null;
     layout.firstExplicitSnap = LayouterDataHandle::Null;
-    layout.explicitSnap = snap;
+    layout.snap = snap;
     layout.parentOrExplicitSnapTarget = target;
 
     /* If the target is null, we don't insert the layout anywhere */
@@ -549,22 +549,42 @@ void SnapLayouter::clearFlagsInternal(const UnsignedInt id, const SnapLayoutFlag
     setNeedsUpdate();
 }
 
-Snaps SnapLayouter::explicitSnap(const LayoutHandle handle) const {
+Snaps SnapLayouter::snap(const LayoutHandle handle) const {
     CORRADE_ASSERT(isHandleValid(handle),
-        "Ui::SnapLayouter::explicitSnap(): invalid handle" << handle, {});
+        "Ui::SnapLayouter::snap(): invalid handle" << handle, {});
     const Layout& layout = _state->layouts[layoutHandleId(handle)];
     CORRADE_ASSERT(layout.flags >= SnapLayoutFlagHasExplicitSnap,
-        "Ui::SnapLayouter::explicitSnap():" << handle << "doesn't have an explicit snap", {});
-    return layout.explicitSnap;
+        "Ui::SnapLayouter::snap():" << handle << "doesn't have an explicit snap", {});
+    return layout.snap;
 }
 
-Snaps SnapLayouter::explicitSnap(const LayouterDataHandle handle) const {
+Snaps SnapLayouter::snap(const LayouterDataHandle handle) const {
     CORRADE_ASSERT(isHandleValid(handle),
-        "Ui::SnapLayouter::explicitSnap(): invalid handle" << handle, {});
+        "Ui::SnapLayouter::snap(): invalid handle" << handle, {});
     const Layout& layout = _state->layouts[layouterDataHandleId(handle)];
     CORRADE_ASSERT(layout.flags >= SnapLayoutFlagHasExplicitSnap,
-        "Ui::SnapLayouter::explicitSnap():" << handle << "doesn't have an explicit snap", {});
-    return layout.explicitSnap;
+        "Ui::SnapLayouter::snap():" << handle << "doesn't have an explicit snap", {});
+    return layout.snap;
+}
+
+void SnapLayouter::setSnap(const LayoutHandle handle, const Snaps snap) {
+    CORRADE_ASSERT(isHandleValid(handle),
+        "Ui::SnapLayouter::setSnap(): invalid handle" << handle, );
+    Layout& layout = _state->layouts[layoutHandleId(handle)];
+    CORRADE_ASSERT(layout.flags >= SnapLayoutFlagHasExplicitSnap,
+        "Ui::SnapLayouter::setSnap():" << handle << "doesn't have an explicit snap", );
+    layout.snap = snap;
+    setNeedsUpdate();
+}
+
+void SnapLayouter::setSnap(const LayouterDataHandle handle, const Snaps snap) {
+    CORRADE_ASSERT(isHandleValid(handle),
+        "Ui::SnapLayouter::setSnap(): invalid handle" << handle, );
+    Layout& layout = _state->layouts[layouterDataHandleId(handle)];
+    CORRADE_ASSERT(layout.flags >= SnapLayoutFlagHasExplicitSnap,
+        "Ui::SnapLayouter::setSnap():" << handle << "doesn't have an explicit snap", );
+    layout.snap = snap;
+    setNeedsUpdate();
 }
 
 Snaps SnapLayouter::childSnap(const LayoutHandle handle) const {
@@ -904,7 +924,7 @@ void SnapLayouter::doLayout(const Containers::BitArrayView layoutIdsToUpdate, co
                     layout.firstExplicitSnap,
                     nodes,
                     stridedArrayView(state.layouts).slice(&Layout::flags),
-                    stridedArrayView(state.layouts).slice(&Layout::explicitSnap),
+                    stridedArrayView(state.layouts).slice(&Layout::snap),
                     stridedArrayView(state.layouts).slice(&Layout::next));
 
         nodeSizes[nodeId] = Math::max(layoutSizePaddingMargin.first(), explicitlySnappedChildLayoutSize);
@@ -994,7 +1014,7 @@ void SnapLayouter::doLayout(const Containers::BitArrayView layoutIdsToUpdate, co
         /* Otherwise we're snapping to an explicit target. If the target is
            null, we're snapping to the whole UI. */
         } else if(layout.parentOrExplicitSnapTarget == LayouterDataHandle::Null) {
-            snap = layout.explicitSnap|Snap::Inside;
+            snap = layout.snap|Snap::Inside;
             targetOffset = {};
             targetSize = state.uiSize;
 
@@ -1014,7 +1034,7 @@ void SnapLayouter::doLayout(const Containers::BitArrayView layoutIdsToUpdate, co
         } else {
             const NodeHandle targetNode = nodes[layouterDataHandleId(layout.parentOrExplicitSnapTarget)];
             const UnsignedInt targetNodeId = nodeHandleId(targetNode);
-            snap = layout.explicitSnap;
+            snap = layout.snap;
             targetSize = nodeSizes[targetNodeId];
 
             /* If the target is a parent, don't include its offset in the

@@ -84,6 +84,8 @@ struct SnapLayouterTest: TestSuite::Tester {
     void flags();
     void flagsInvalid();
 
+    void snap();
+
     void childSnap();
     void childSnapInvalid();
 
@@ -1697,6 +1699,8 @@ SnapLayouterTest::SnapLayouterTest() {
               &SnapLayouterTest::flags,
               &SnapLayouterTest::flagsInvalid,
 
+              &SnapLayouterTest::snap,
+
               &SnapLayouterTest::childSnap,
               &SnapLayouterTest::childSnapInvalid,
 
@@ -2598,7 +2602,7 @@ void SnapLayouterTest::addRemove() {
     CORRADE_COMPARE(layouter.node(root1ExplicitSnapLayout), root1ExplicitSnap);
     CORRADE_VERIFY(layouter.hasExplicitSnap(root1ExplicitSnapLayout));
     CORRADE_COMPARE(layouter.flags(root1ExplicitSnapLayout), SnapLayoutFlags{});
-    CORRADE_COMPARE(layouter.explicitSnap(root1ExplicitSnapLayout), Snap::Left|Snap::NoPadY);
+    CORRADE_COMPARE(layouter.snap(root1ExplicitSnapLayout), Snap::Left|Snap::NoPadY);
     CORRADE_COMPARE(layouter.explicitSnapTarget(root1ExplicitSnapLayout), root1Child2Layout);
     CORRADE_COMPARE(layouter.firstChild(root1ExplicitSnapLayout), LayoutHandle::Null);
     CORRADE_COMPARE(layouter.firstChild(root1Layout), root1Child1Layout);
@@ -2740,7 +2744,7 @@ void SnapLayouterTest::addRemoveExplicitSnap() {
     CORRADE_COMPARE(layouter.node(root1Layout), root1);
     CORRADE_VERIFY(layouter.hasExplicitSnap(root1Layout));
     CORRADE_COMPARE(layouter.flags(root1Layout), SnapLayoutFlags{});
-    CORRADE_COMPARE(layouter.explicitSnap(root1Layout), Snap::Top|Snap::FillX);
+    CORRADE_COMPARE(layouter.snap(root1Layout), Snap::Top|Snap::FillX);
     CORRADE_COMPARE(layouter.explicitSnapTarget(root1Layout), LayoutHandle::Null);
     CORRADE_COMPARE(layouter.firstChild(root1Layout), LayoutHandle::Null);
     CORRADE_COMPARE(layouter.firstExplicitSnap(root1Layout), LayoutHandle::Null);
@@ -2752,7 +2756,7 @@ void SnapLayouterTest::addRemoveExplicitSnap() {
     CORRADE_COMPARE(layouter.node(root2Layout), root2);
     CORRADE_VERIFY(layouter.hasExplicitSnap(layoutHandleData(root2Layout)));
     CORRADE_COMPARE(layouter.flags(layoutHandleData(root2Layout)), SnapLayoutFlags{});
-    CORRADE_COMPARE(layouter.explicitSnap(layoutHandleData(root2Layout)), Snap::Right);
+    CORRADE_COMPARE(layouter.snap(layoutHandleData(root2Layout)), Snap::Right);
     CORRADE_COMPARE(layouter.explicitSnapTarget(layoutHandleData(root2Layout)), LayoutHandle::Null);
     CORRADE_COMPARE(layouter.firstChild(layoutHandleData(root2Layout)), LayoutHandle::Null);
     CORRADE_COMPARE(layouter.firstExplicitSnap(layoutHandleData(root2Layout)), LayoutHandle::Null);
@@ -2767,7 +2771,7 @@ void SnapLayouterTest::addRemoveExplicitSnap() {
     CORRADE_COMPARE(layouter.node(root1Child1Layout), root1Child1);
     CORRADE_VERIFY(layouter.hasExplicitSnap(root1Child1Layout));
     CORRADE_COMPARE(layouter.flags(root1Child1Layout), SnapLayoutFlag::IgnoreOverflowY);
-    CORRADE_COMPARE(layouter.explicitSnap(root1Child1Layout), Snap::BottomRight);
+    CORRADE_COMPARE(layouter.snap(root1Child1Layout), Snap::BottomRight);
     CORRADE_COMPARE(layouter.explicitSnapTarget(root1Child1Layout), root1Layout);
     CORRADE_COMPARE(layouter.firstChild(root1Child1Layout), LayoutHandle::Null);
     CORRADE_COMPARE(layouter.firstExplicitSnap(root1Child1Layout), LayoutHandle::Null);
@@ -2781,7 +2785,7 @@ void SnapLayouterTest::addRemoveExplicitSnap() {
     CORRADE_COMPARE(layouter.node(root1Child2Layout), root1Child2);
     CORRADE_VERIFY(layouter.hasExplicitSnap(root1Child2Layout));
     CORRADE_COMPARE(layouter.flags(root1Child2Layout), SnapLayoutFlags{});
-    CORRADE_COMPARE(layouter.explicitSnap(root1Child2Layout), Snap::TopRight|Snap::Inside);
+    CORRADE_COMPARE(layouter.snap(root1Child2Layout), Snap::TopRight|Snap::Inside);
     CORRADE_COMPARE(layouter.explicitSnapTarget(root1Child2Layout), root1Layout);
     CORRADE_COMPARE(layouter.firstChild(root1Child2Layout), LayoutHandle::Null);
     CORRADE_COMPARE(layouter.firstExplicitSnap(root1Child2Layout), LayoutHandle::Null);
@@ -2812,7 +2816,7 @@ void SnapLayouterTest::addRemoveExplicitSnap() {
     CORRADE_COMPARE(layouter.node(root1Child3Layout), root1Child3);
     CORRADE_VERIFY(layouter.hasExplicitSnap(layoutHandleData(root1Child3Layout)));
     CORRADE_COMPARE(layouter.flags(layoutHandleData(root1Child3Layout)), SnapLayoutFlag::IgnoreOverflowX);
-    CORRADE_COMPARE(layouter.explicitSnap(layoutHandleData(root1Child3Layout)), Snap::Left|Snap::NoPadX);
+    CORRADE_COMPARE(layouter.snap(layoutHandleData(root1Child3Layout)), Snap::Left|Snap::NoPadX);
     CORRADE_COMPARE(layouter.explicitSnapTarget(layoutHandleData(root1Child3Layout)), root1Child1Layout);
     CORRADE_COMPARE(layouter.firstChild(layoutHandleData(root1Child3Layout)), LayoutHandle::Null);
     CORRADE_COMPARE(layouter.firstExplicitSnap(layoutHandleData(root1Child3Layout)), LayoutHandle::Null);
@@ -2831,7 +2835,7 @@ void SnapLayouterTest::addRemoveExplicitSnap() {
     CORRADE_COMPARE(layouter.node(root3Layout), root3);
     CORRADE_VERIFY(layouter.hasExplicitSnap(root3Layout));
     CORRADE_COMPARE(layouter.flags(root3Layout), SnapLayoutFlag::IgnoreOverflow);
-    CORRADE_COMPARE(layouter.explicitSnap(root3Layout), Snap::Top|Snap::NoPadY);
+    CORRADE_COMPARE(layouter.snap(root3Layout), Snap::Top|Snap::NoPadY);
     CORRADE_COMPARE(layouter.explicitSnapTarget(root3Layout), root1Layout);
     CORRADE_COMPARE(layouter.firstChild(root3Layout), LayoutHandle::Null);
     CORRADE_COMPARE(layouter.firstExplicitSnap(root3Layout), LayoutHandle::Null);
@@ -2961,7 +2965,7 @@ void SnapLayouterTest::addRemoveHandleRecycle() {
     CORRADE_COMPARE(layoutHandleId(explicit1Replacement), layoutHandleId(explicit1));
     CORRADE_VERIFY(layouter.hasExplicitSnap(explicit1Replacement));
     CORRADE_COMPARE(layouter.flags(explicit1Replacement), SnapLayoutFlags{});
-    CORRADE_COMPARE(layouter.explicitSnap(explicit1Replacement), Snap::Right|Snap::NoPad);
+    CORRADE_COMPARE(layouter.snap(explicit1Replacement), Snap::Right|Snap::NoPad);
     CORRADE_COMPARE(layouter.childSnap(explicit1Replacement), Snap::Bottom);
     CORRADE_COMPARE(layouter.explicitSnapTarget(explicit1Replacement), second);
 
@@ -2971,7 +2975,7 @@ void SnapLayouterTest::addRemoveHandleRecycle() {
     CORRADE_COMPARE(layoutHandleId(implicit2ExplicitReplacement), layoutHandleId(implicit2));
     CORRADE_VERIFY(layouter.hasExplicitSnap(implicit2ExplicitReplacement));
     CORRADE_COMPARE(layouter.flags(implicit2ExplicitReplacement), SnapLayoutFlags{});
-    CORRADE_COMPARE(layouter.explicitSnap(implicit2ExplicitReplacement), Snap::FillY|Snap::NoPadX);
+    CORRADE_COMPARE(layouter.snap(implicit2ExplicitReplacement), Snap::FillY|Snap::NoPadX);
     CORRADE_COMPARE(layouter.childSnap(implicit2ExplicitReplacement), Snap::Bottom);
     CORRADE_COMPARE(layouter.explicitSnapTarget(implicit2ExplicitReplacement), second);
 
@@ -3126,8 +3130,10 @@ void SnapLayouterTest::invalidHandle() {
     layouter.addFlags(LayouterDataHandle::Null, {});
     layouter.clearFlags(LayoutHandle::Null, {});
     layouter.clearFlags(LayouterDataHandle::Null, {});
-    layouter.explicitSnap(LayoutHandle::Null);
-    layouter.explicitSnap(LayouterDataHandle::Null);
+    layouter.snap(LayoutHandle::Null);
+    layouter.snap(LayouterDataHandle::Null);
+    layouter.setSnap(LayoutHandle::Null, {});
+    layouter.setSnap(LayouterDataHandle::Null, {});
     layouter.childSnap(LayoutHandle::Null);
     layouter.childSnap(LayouterDataHandle::Null);
     layouter.setChildSnap(LayoutHandle::Null, {});
@@ -3157,8 +3163,10 @@ void SnapLayouterTest::invalidHandle() {
         "Ui::SnapLayouter::addFlags(): invalid handle Ui::LayouterDataHandle::Null\n"
         "Ui::SnapLayouter::clearFlags(): invalid handle Ui::LayoutHandle::Null\n"
         "Ui::SnapLayouter::clearFlags(): invalid handle Ui::LayouterDataHandle::Null\n"
-        "Ui::SnapLayouter::explicitSnap(): invalid handle Ui::LayoutHandle::Null\n"
-        "Ui::SnapLayouter::explicitSnap(): invalid handle Ui::LayouterDataHandle::Null\n"
+        "Ui::SnapLayouter::snap(): invalid handle Ui::LayoutHandle::Null\n"
+        "Ui::SnapLayouter::snap(): invalid handle Ui::LayouterDataHandle::Null\n"
+        "Ui::SnapLayouter::setSnap(): invalid handle Ui::LayoutHandle::Null\n"
+        "Ui::SnapLayouter::setSnap(): invalid handle Ui::LayouterDataHandle::Null\n"
         "Ui::SnapLayouter::childSnap(): invalid handle Ui::LayoutHandle::Null\n"
         "Ui::SnapLayouter::childSnap(): invalid handle Ui::LayouterDataHandle::Null\n"
         "Ui::SnapLayouter::setChildSnap(): invalid handle Ui::LayoutHandle::Null\n"
@@ -3191,15 +3199,19 @@ void SnapLayouterTest::invalidExplicitSnap() {
 
     Containers::String out;
     Error redirectError{&out};
-    layouter.explicitSnap(implicitSnap);
-    layouter.explicitSnap(layoutHandleData(implicitSnap));
+    layouter.snap(implicitSnap);
+    layouter.snap(layoutHandleData(implicitSnap));
+    layouter.setSnap(implicitSnap, {});
+    layouter.setSnap(layoutHandleData(implicitSnap), {});
     layouter.parent(explicitSnap);
     layouter.parent(layoutHandleData(explicitSnap));
     layouter.explicitSnapTarget(implicitSnap);
     layouter.explicitSnapTarget(layoutHandleData(implicitSnap));
     CORRADE_COMPARE_AS(out,
-        "Ui::SnapLayouter::explicitSnap(): Ui::LayoutHandle({0x0, 0x1}, {0x0, 0x1}) doesn't have an explicit snap\n"
-        "Ui::SnapLayouter::explicitSnap(): Ui::LayouterDataHandle(0x0, 0x1) doesn't have an explicit snap\n"
+        "Ui::SnapLayouter::snap(): Ui::LayoutHandle({0x0, 0x1}, {0x0, 0x1}) doesn't have an explicit snap\n"
+        "Ui::SnapLayouter::snap(): Ui::LayouterDataHandle(0x0, 0x1) doesn't have an explicit snap\n"
+        "Ui::SnapLayouter::setSnap(): Ui::LayoutHandle({0x0, 0x1}, {0x0, 0x1}) doesn't have an explicit snap\n"
+        "Ui::SnapLayouter::setSnap(): Ui::LayouterDataHandle(0x0, 0x1) doesn't have an explicit snap\n"
         "Ui::SnapLayouter::parent(): Ui::LayoutHandle({0x0, 0x1}, {0x1, 0x1}) has an explicit snap\n"
         "Ui::SnapLayouter::parent(): Ui::LayouterDataHandle(0x1, 0x1) has an explicit snap\n"
         "Ui::SnapLayouter::explicitSnapTarget(): Ui::LayoutHandle({0x0, 0x1}, {0x0, 0x1}) doesn't have an explicit snap\n"
@@ -3479,6 +3491,38 @@ void SnapLayouterTest::flagsInvalid() {
         /* The LayouterDataHandle overload */
         "Ui::SnapLayouter::addFlags(): Ui::SnapLayoutFlag::IgnoreOverflow and Ui::SnapLayoutFlag::PropagateMargin are mutually exclusive\n",
         TestSuite::Compare::String);
+}
+
+void SnapLayouterTest::snap() {
+    AbstractUserInterface ui{{100, 100}};
+    SnapLayouter& layouter = ui.setLayouterInstance(Containers::pointer<SnapLayouter>(ui.createLayouter()));
+
+    NodeHandle node = ui.createNode({}, {});
+
+    LayoutHandle layout = layouter.addExplicit(node, Snap::TopLeft|Snap::NoPadX, LayoutHandle::Null);
+    CORRADE_COMPARE(layouter.snap(layout), Snap::TopLeft|Snap::NoPadX);
+    CORRADE_COMPARE(layouter.childSnap(layout), Snap::Bottom);
+    CORRADE_COMPARE(layouter.state(), LayouterState::NeedsAssignmentUpdate);
+
+    /* Reset state flags */
+    ui.update();
+    CORRADE_COMPARE(layouter.state(), LayouterStates{});
+
+    /* Changing the value sets a flag. The child snap is unaffected. */
+    layouter.setSnap(layout, Snap::Right|Snap::FillY);
+    CORRADE_COMPARE(layouter.snap(layout), Snap::Right|Snap::FillY);
+    CORRADE_COMPARE(layouter.childSnap(layout), Snap::Bottom);
+    CORRADE_COMPARE(layouter.state(), LayouterState::NeedsUpdate);
+
+    /* Reset state flags */
+    ui.update();
+    CORRADE_COMPARE(layouter.state(), LayouterStates{});
+
+    /* LayouterDataHandle overload */
+    layouter.setSnap(layoutHandleData(layout), Snap::TopRight|Snap::InsideX);
+    CORRADE_COMPARE(layouter.snap(layoutHandleData(layout)), Snap::TopRight|Snap::InsideX);
+    CORRADE_COMPARE(layouter.childSnap(layout), Snap::Bottom);
+    CORRADE_COMPARE(layouter.state(), LayouterState::NeedsUpdate);
 }
 
 void SnapLayouterTest::childSnap() {
