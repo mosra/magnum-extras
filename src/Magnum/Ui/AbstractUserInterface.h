@@ -1472,8 +1472,8 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
         /** @{
          * @name Layer and data management
          *
-         * See the @ref Ui-AbstractUserInterface-layers "Data layers" section
-         * of the class documentation for more information.
+         * See the @ref Ui-AbstractUserInterface-layers "Layers" section of the
+         * class documentation for more information.
          */
 
         /**

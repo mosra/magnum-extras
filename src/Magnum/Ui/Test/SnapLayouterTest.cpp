@@ -4133,8 +4133,8 @@ void SnapLayouterTest::layoutPropagateChildSizes() {
     /* 5          20  25  30 35 40  45 50  55
     10 +------------------------------------+ outer, ??? width & height,
        |####################################|        padding top/bottom
-    15 |+----------------------------------+| inner, fixed? height, ??? width
-       ||                           @@@@@  ||
+    15 |+----------------------------------+| inner, fixed? height, ??? width,
+       ||                           @@@@@  ||        optional propagated margin
     20 ||          +---+-----+---+  @@@@@  || top, fixed width and height
        ||          |   |     |   |  @@@@@  ||
     25 ||+--------+|   +-----+-----+@@@@@  ||

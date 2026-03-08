@@ -147,7 +147,8 @@ constexpr SnapLayoutFlags SnapLayoutFlagMask = ~(SnapLayoutFlagHasExplicitSnap|I
 struct Layout {
     SnapLayoutFlags flags;
     Snaps childSnap{NoInit}, firstChildSnap{NoInit};
-    Snaps explicitSnap{NoInit}; /* used only if hasExplicitSnap is not 0 */
+    /* used only if flags contain SnapLayoutFlagHasExplicitSnap */
+    Snaps explicitSnap{NoInit};
     LayouterDataHandle firstChild;
     LayouterDataHandle firstExplicitSnap;
     LayouterDataHandle parentOrExplicitSnapTarget;
@@ -912,7 +913,7 @@ void SnapLayouter::doLayout(const Containers::BitArrayView layoutIdsToUpdate, co
     }
 
     /* Go through the layouts in their dependency order, skipping the first
-       item which was -1 */
+       item which was -1, and snap them to final positions */
     for(const UnsignedInt layoutId: layoutIds.exceptPrefix(1)) {
         /** @todo some way to iterate set bits */
         if(!layoutIdsToUpdate[layoutId])
