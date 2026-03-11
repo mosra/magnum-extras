@@ -942,127 +942,130 @@ void SnapLayouter::doLayout(const Containers::BitArrayView layoutIdsToUpdate, co
         const Layout& layout = state.layouts[layoutId];
         const UnsignedInt nodeId = nodeHandleId(nodes[layoutId]);
 
-        /* If we're a parentless node without an explicit snap, nothing to do,
-           everything is done by the dependent layouts */
-        if(!(layout.flags >= SnapLayoutFlagHasExplicitSnap) && layout.parentOrExplicitSnapTarget == LayouterDataHandle::Null)
-            continue;
+        /* If we're a parentless node without an explicit snap, there's nothing
+           to do to its size or offset, everything is done by the dependent
+           layouts */
+        if(layout.flags >= SnapLayoutFlagHasExplicitSnap || layout.parentOrExplicitSnapTarget != LayouterDataHandle::Null) {
+            /* If we're implicitly snapping to the previous sibling, figure out
+               the snap target and parameters */
+            Snaps snap{NoInit};
+            Vector2 targetOffset{NoInit}, targetSize{NoInit};
+            /* GCC is overly "helpful" and warns that targetPadding /
+               targetMargin might be used uninitialized in some cases in
+               Release builds. It isn't, and in Debug builds I'm poisoning the
+               values with NaNs below to be sure they aren't. Thus zero-init on
+               Release to silence the damn thing, even though it's completely
+               unnecessary. */
+            #ifdef CORRADE_IS_DEBUG_BUILD
+            Vector4 targetPadding{NoInit}, targetMargin{NoInit};
+            #else
+            Vector4 targetPadding{Math::ZeroInit}, targetMargin{Math::ZeroInit};
+            #endif
+            Vector4 nodeMargin{NoInit};
+            if(!(layout.flags >= SnapLayoutFlagHasExplicitSnap)) {
+                /* If this is the first child layout in the list, snap to the
+                   parent */
+                const UnsignedInt parentLayoutId = layouterDataHandleId(layout.parentOrExplicitSnapTarget);
+                const Layout& parentLayout = state.layouts[parentLayoutId];
+                if(layouterDataHandleId(parentLayout.firstChild) == layoutId) {
+                    snap = parentLayout.firstChildSnap;
+                    const UnsignedInt parentNodeId = nodeHandleId(nodes[parentLayoutId]);
+                    /* We're snapping to a parent, so its offset isn't
+                       included */
+                    targetOffset = {};
+                    targetSize = nodeSizes[parentNodeId];
+                    /* Padding is overriden from nodePaddings[parentNodeId] to
+                       have all child layouts align properly */
+                    targetPadding = childLayoutPaddings[parentLayoutId];
+                    /* Margin isn't used becase we're snapping inside, poison
+                       it with NaNs on debug builds and leave uninitialized
+                       otherwise */
+                    #ifdef CORRADE_IS_DEBUG_BUILD
+                    targetMargin = Vector4{Constants::nan()};
+                    #endif
 
-        /* If we're implicitly snapping to the previous sibling, figure out the
-           snap target and parameters */
-        Snaps snap{NoInit};
-        Vector2 targetOffset{NoInit}, targetSize{NoInit};
-        /* GCC is overly "helpful" and warns that targetPadding / targetMargin
-           might be used uninitialized in some cases in Release builds. It
-           isn't, and in Debug builds I'm poisoning the values with NaNs below
-           to be sure they aren't. Thus zero-init on Release to silence the
-           damn thing, even though it's completely unnecessary. */
-        #ifdef CORRADE_IS_DEBUG_BUILD
-        Vector4 targetPadding{NoInit}, targetMargin{NoInit};
-        #else
-        Vector4 targetPadding{Math::ZeroInit}, targetMargin{Math::ZeroInit};
-        #endif
-        Vector4 nodeMargin{NoInit};
-        if(!(layout.flags >= SnapLayoutFlagHasExplicitSnap)) {
-            /* If this is the first child layout in the list, snap to the
-               parent */
-            const UnsignedInt parentLayoutId = layouterDataHandleId(layout.parentOrExplicitSnapTarget);
-            const Layout& parentLayout = state.layouts[parentLayoutId];
-            if(layouterDataHandleId(parentLayout.firstChild) == layoutId) {
-                snap = parentLayout.firstChildSnap;
-                const UnsignedInt parentNodeId = nodeHandleId(nodes[parentLayoutId]);
-                /* We're snapping to a parent, so its offset isn't included */
+                    /* If propagating margin in either direction, don't use it
+                       for positioning of the first node */
+                    Math::scatterInto<0, 2>(nodeMargin,
+                        parentLayout.flags >= SnapLayoutFlag::PropagateMarginX ?
+                            Vector2{} :
+                            Math::gather<0, 2>(nodeMargins[nodeId]));
+                    Math::scatterInto<1, 3>(nodeMargin,
+                        parentLayout.flags >= SnapLayoutFlag::PropagateMarginY ?
+                            Vector2{} :
+                            Math::gather<1, 3>(nodeMargins[nodeId]));
+
+                /* Otherwise snap to the previous node */
+                } else {
+                    snap = parentLayout.childSnap;
+                    const UnsignedInt previousNodeId = nodeHandleId(nodes[layouterDataHandleId(layout.previous)]);
+                    /* We're snapping to a sibling, so its offset is
+                       included */
+                    targetOffset = nodeOffsets[previousNodeId];
+                    targetSize = nodeSizes[previousNodeId];
+                    /* Padding isn't used because we're snapping outside,
+                       poison it with NaNs on debug builds and leave
+                       uninitialized otherwise */
+                    #ifdef CORRADE_IS_DEBUG_BUILD
+                    targetPadding = Vector4{Constants::nan()};
+                    #endif
+                    targetMargin = nodeMargins[previousNodeId];
+                    nodeMargin = nodeMargins[nodeId];
+                }
+
+            /* Otherwise we're snapping to an explicit target. If the target is
+               null, we're snapping to the whole UI. */
+            } else if(layout.parentOrExplicitSnapTarget == LayouterDataHandle::Null) {
+                snap = layout.snap|Snap::Inside;
                 targetOffset = {};
-                targetSize = nodeSizes[parentNodeId];
-                /* Padding is overriden from nodePaddings[parentNodeId] to have
-                   all child layouts align properly */
-                targetPadding = childLayoutPaddings[parentLayoutId];
-                /* Margin isn't used becase we're snapping inside, poison it
-                   with NaNs on debug builds and leave uninitialized
-                   otherwise */
+                targetSize = state.uiSize;
+
+                /* The whole UI on its own doesn't have any padding defined,
+                   only margin of root nodes is used. */
+                targetPadding = {};
+                /* Margin shouldn't get used for anything, poison it with NaNs
+                   on debug builds and leave uninitialized otherwise */
                 #ifdef CORRADE_IS_DEBUG_BUILD
                 targetMargin = Vector4{Constants::nan()};
                 #endif
+                nodeMargin = nodeMargins[nodeId];
 
-                /* If propagating margin in either direction, don't use it for
-                   positioning of the first node */
-                Math::scatterInto<0, 2>(nodeMargin,
-                    parentLayout.flags >= SnapLayoutFlag::PropagateMarginX ?
-                        Vector2{} :
-                        Math::gather<0, 2>(nodeMargins[nodeId]));
-                Math::scatterInto<1, 3>(nodeMargin,
-                    parentLayout.flags >= SnapLayoutFlag::PropagateMarginY ?
-                        Vector2{} :
-                        Math::gather<1, 3>(nodeMargins[nodeId]));
-
-            /* Otherwise snap to the previous node */
+            /* Otherwise we're snapping relative to the target node, which
+               should have the layout already calculated at this point thanks
+               to the dependency ordering */
             } else {
-                snap = parentLayout.childSnap;
-                const UnsignedInt previousNodeId = nodeHandleId(nodes[layouterDataHandleId(layout.previous)]);
-                /* We're snapping to a sibling, so its offset is included */
-                targetOffset = nodeOffsets[previousNodeId];
-                targetSize = nodeSizes[previousNodeId];
-                /* Padding isn't used because we're snapping outside, poison it
-                   with NaNs on debug builds and leave uninitialized
-                   otherwise */
-                #ifdef CORRADE_IS_DEBUG_BUILD
-                targetPadding = Vector4{Constants::nan()};
-                #endif
-                targetMargin = nodeMargins[previousNodeId];
+                const NodeHandle targetNode = nodes[layouterDataHandleId(layout.parentOrExplicitSnapTarget)];
+                const UnsignedInt targetNodeId = nodeHandleId(targetNode);
+                snap = layout.snap;
+                targetSize = nodeSizes[targetNodeId];
+
+                /* If the target is a parent, don't include its offset in the
+                   calculation, and implicitly snap inside */
+                if(layout.flags >= Implementation::SnapLayoutFlagExplicitSnapToParent) {
+                    targetOffset = {};
+                    snap |= Snap::Inside;
+
+                /* Otherwise the nodes are siblings, in which case do include
+                   it. The snap is taken as-is, if it contains Snap::Inside
+                   then it's on the user to ensure it isn't prone to draw/event
+                   ordering issues. */
+                } else targetOffset = nodeOffsets[targetNodeId];
+
+                targetPadding = nodePaddings[targetNodeId];
+                targetMargin = nodeMargins[targetNodeId];
                 nodeMargin = nodeMargins[nodeId];
             }
 
-        /* Otherwise we're snapping to an explicit target. If the target is
-           null, we're snapping to the whole UI. */
-        } else if(layout.parentOrExplicitSnapTarget == LayouterDataHandle::Null) {
-            snap = layout.snap|Snap::Inside;
-            targetOffset = {};
-            targetSize = state.uiSize;
+            const Containers::Pair<Vector2, Vector2> out = Implementation::snap(snap,
+                targetOffset, targetSize,
+                targetPadding, targetMargin, nodeMargin,
+                Math::max(nodeSizes[nodeId], nodeMinSizes[nodeId]));
 
-            /* The whole UI on its own doesn't have any padding defined, only
-               margin of root nodes is used. */
-            targetPadding = {};
-            /* Margin shouldn't get used for anything, poison it with NaNs on
-               debug builds and leave uninitialized otherwise */
-            #ifdef CORRADE_IS_DEBUG_BUILD
-            targetMargin = Vector4{Constants::nan()};
-            #endif
-            nodeMargin = nodeMargins[nodeId];
-
-        /* Otherwise we're snapping relative to the target node, which should
-           have the layout already calculated at this point thanks to the
-           dependency ordering */
-        } else {
-            const NodeHandle targetNode = nodes[layouterDataHandleId(layout.parentOrExplicitSnapTarget)];
-            const UnsignedInt targetNodeId = nodeHandleId(targetNode);
-            snap = layout.snap;
-            targetSize = nodeSizes[targetNodeId];
-
-            /* If the target is a parent, don't include its offset in the
-               calculation, and implicitly snap inside */
-            if(layout.flags >= Implementation::SnapLayoutFlagExplicitSnapToParent) {
-                targetOffset = {};
-                snap |= Snap::Inside;
-
-            /* Otherwise the nodes are siblings, in which case do include it.
-               The snap is taken as-is, if it contains Snap::Inside then it's
-               on the user to ensure it isn't prone to draw/event ordering
-               issues. */
-            } else targetOffset = nodeOffsets[targetNodeId];
-
-            targetPadding = nodePaddings[targetNodeId];
-            targetMargin = nodeMargins[targetNodeId];
-            nodeMargin = nodeMargins[nodeId];
+            /* The original node offset is added to the calculated layout, size
+               may be (partially) replaced */
+            nodeOffsets[nodeId] += out.first();
+            nodeSizes[nodeId] = out.second();
         }
-
-        const Containers::Pair<Vector2, Vector2> out = Implementation::snap(snap,
-            targetOffset, targetSize,
-            targetPadding, targetMargin, nodeMargin,
-            Math::max(nodeSizes[nodeId], nodeMinSizes[nodeId]));
-
-        /* The original node offset is added to the calculated layout, size
-           may be (partially) replaced */
-        nodeOffsets[nodeId] += out.first();
-        nodeSizes[nodeId] = out.second();
     }
 }
 
