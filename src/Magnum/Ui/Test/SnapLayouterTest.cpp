@@ -25,6 +25,7 @@
 */
 
 #include <Corrade/Containers/BitArrayView.h>
+#include <Corrade/Containers/Optional.h>
 #include <Corrade/Containers/StridedArrayView.h>
 #include <Corrade/Containers/String.h>
 #include <Corrade/TestSuite/Tester.h>
@@ -1187,7 +1188,7 @@ const struct {
     /* Individual edges tested sufficiently in snap() */
     Float paddingTarget, marginTarget, margin;
     Vector2 minSize;
-    Snaps snap;
+    Containers::Optional<Snaps> explicitSnap;
     /* The UI has a size of {500, 600} */
     bool child, targetUi, xfailMinSize;
     /* The target is at {300, 400} with a size of {100, 200}, snapped node size
@@ -1200,41 +1201,52 @@ const struct {
        nodes having different paddings and margins is in updateDataOrder(). */
     {"target node padding, fill",
         10.0f, 0.0f, 0.0f, {},
-        Snap::Fill, true, false, false,
+        {Snap::Fill}, true, false, false,
         /* The node is a child, so its offset is relative to parent */
         {10.0f, 10.0f}, {80.0f, 180.0f}},
     {"margin, fill",
         0.0f, 0.0f, 10.0f, {},
-        Snap::Fill, true, false, false,
+        {Snap::Fill}, true, false, false,
         /* The node is a child, so its offset is relative to parent */
         {10.0f, 10.0f}, {80.0f, 180.0f}},
     {"margin, fill, target UI instead of a node",
         0.0f, 0.0f, 10.0f, {},
-        Snap::Fill, false, true, false,
+        {Snap::Fill}, false, true, false,
         {10.0f, 10.0f}, {480.0f, 580.0f}},
     {"target margin, outside",
         0.0f, 10.0f, 0.0f, {},
-        Snap::BottomRight, false, false, false,
+        {Snap::BottomRight}, false, false, false,
         {410.0f, 610.0f}, {50.0f, 100.0f}},
     {"margin, outside",
         0.0f, 0.0f, 10.0f, {},
-        Snap::BottomRight, false, false, false,
+        {Snap::BottomRight}, false, false, false,
         {410.0f, 610.0f}, {50.0f, 100.0f}},
     {"margin, min size, fill",
         0.0f, 0.0f, 10.0f, {150.0f, 300.0f},
-        Snap::Fill, true, false, false,
+        {Snap::Fill}, true, false, false,
         /* The node is a child, so its offset is relative to parent. The min
            size causes the parent to be enlarged, so the node gets exactly
            what was specified as minimum. */
         {10.0f, 10.0f}, {150.0f, 300.0f}},
     {"min size, centered",
         0.0f, 0.0f, 0.0f, {70.0f, 120.0f},
-        {}, true, false, false,
+        Snaps{}, true, false, false,
         /* The node is a child, so its offset is relative to parent */
         {15.0f, 40.0f}, {70.0f, 120.0f}},
+    {"min size, implicitly snapped as a child",
+        0.0f, 0.0f, 0.0f, {70.0f, 120.0f},
+        {}, true, false, false,
+        /* The default child snap is Bottom, so this is centered on the top
+           edge */
+        {15.0f, 0.0f}, {70.0f, 120.0f}},
+    {"min size, implicitly snapped with no parent layout",
+        0.0f, 0.0f, 0.0f, {70.0f, 120.0f},
+        {}, false, false, false,
+        /* There's no parent layout, so the offset is untouched */
+        {}, {70.0f, 120.0f}},
     {"large, min size, centered",
         0.0f, 0.0f, 0.0f, {150.0f, 300.0f},
-        {}, true, false, false,
+        Snaps{}, true, false, false,
         /* The min size causes the parent to be enlarged, so the node gets
            exactly what was specified as minimum. And because the parent is as
            large as the child, there's no offset at all. */
@@ -4037,7 +4049,10 @@ void SnapLayouterTest::layoutLayoutProperties() {
     NodeHandle node = ui.createNode(data.child ? targetNode : NodeHandle::Null, {0.25f, 0.75f}, {50.0f, 100.0f});
     CORRADE_COMPARE(nodeHandleId(targetNode), 3);
     CORRADE_COMPARE(nodeHandleId(node), 7);
-    layouter.addExplicit(node, data.snap, data.targetUi ? LayoutHandle::Null : targetNodeLayout);
+    if(data.explicitSnap)
+        layouter.addExplicit(node, *data.explicitSnap, data.targetUi ? LayoutHandle::Null : targetNodeLayout);
+    else
+        layouter.add(node);
 
     /* Add a dummy second layouter because that's the easiest way to verify the
        calculated node offsets / sizes */
