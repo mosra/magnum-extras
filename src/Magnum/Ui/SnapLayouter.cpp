@@ -829,6 +829,20 @@ void SnapLayouter::doClean(const Containers::BitArrayView layoutIdsToRemove) {
 
 void SnapLayouter::doLayout(const Containers::BitArrayView layoutIdsToUpdate, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<Vector2>& nodeMinSizes, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Float>&, const Containers::StridedArrayView1D<Vector4>& nodePaddings, const Containers::StridedArrayView1D<Vector4>& nodeMargins, const Containers::StridedArrayView1D<Vector2>& nodeOffsets, const Containers::StridedArrayView1D<Vector2>& nodeSizes) {
     const State& state = *_state;
+    const Containers::StridedArrayView1D<const NodeHandle> nodes = this->nodes();
+
+    /* Apply node min sizes to all nodes first, so we don't need to deal with
+       both arrays in all subsequent steps. Right now the algorithm doesn't
+       differentiate between the two in any way, it's just that one comes from
+       layout layers and the other directly from user code. */
+    for(std::size_t i = 0; i != layoutIdsToUpdate.size(); ++i) {
+        /** @todo some way to iterate set bits */
+        if(!layoutIdsToUpdate[i])
+            continue;
+
+        const UnsignedInt nodeId = nodeHandleId(nodes[i]);
+        nodeSizes[nodeId] = Math::max(nodeSizes[nodeId], nodeMinSizes[nodeId]);
+    }
 
     /* Order layouts breadth first in dependency order to ensure the parent /
        target layout offset / size is known when calculating child / dependent
@@ -860,8 +874,6 @@ void SnapLayouter::doLayout(const Containers::BitArrayView layoutIdsToUpdate, co
         children,
         layoutIds);
 
-    const Containers::StridedArrayView1D<const NodeHandle> nodes = this->nodes();
-
     /* Go through the layouts in their *reverse* dependency order, skipping
        also the first item which was -1, for each calculate a max of its size,
        min size and size of all implicitly snapped children including relevant
@@ -886,7 +898,6 @@ void SnapLayouter::doLayout(const Containers::BitArrayView layoutIdsToUpdate, co
                 Containers::Pair<Vector2, Vector4>{} :
                 Implementation::childLayoutSizeMargin(
                     layout.childSnap,
-                    nodeMinSizes,
                     nodeMargins,
                     nodeSizes,
                     layout.firstChild,
@@ -918,7 +929,6 @@ void SnapLayouter::doLayout(const Containers::BitArrayView layoutIdsToUpdate, co
                 Implementation::explicitlySnappedChildLayoutSize(
                     layout.flags,
                     nodePaddings[nodeId],
-                    nodeMinSizes,
                     nodeMargins,
                     nodeSizes,
                     layout.firstExplicitSnap,
@@ -944,7 +954,8 @@ void SnapLayouter::doLayout(const Containers::BitArrayView layoutIdsToUpdate, co
 
         /* If we're a parentless node without an explicit snap, there's nothing
            to do to its size or offset, everything is done by the dependent
-           layouts */
+           layouts. The node min sizes got applied to node sizes at the top
+           already. */
         if(layout.flags >= SnapLayoutFlagHasExplicitSnap || layout.parentOrExplicitSnapTarget != LayouterDataHandle::Null) {
             /* If we're implicitly snapping to the previous sibling, figure out
                the snap target and parameters */
@@ -1059,7 +1070,7 @@ void SnapLayouter::doLayout(const Containers::BitArrayView layoutIdsToUpdate, co
             const Containers::Pair<Vector2, Vector2> out = Implementation::snap(snap,
                 targetOffset, targetSize,
                 targetPadding, targetMargin, nodeMargin,
-                Math::max(nodeSizes[nodeId], nodeMinSizes[nodeId]));
+                nodeSizes[nodeId]);
 
             /* The original node offset is added to the calculated layout, size
                may be (partially) replaced */

@@ -2029,7 +2029,6 @@ void SnapLayouterTest::childLayoutSizeSide() {
             CORRADE_ITERATION("shuffle" << shuffle);
 
             struct Node {
-                Vector2 zero;
                 Vector2 size;
                 Vector4 margin;
             } nodes[9];
@@ -2039,24 +2038,20 @@ void SnapLayouterTest::childLayoutSizeSide() {
                 nodes[nodeIds[shuffle][i]].margin = margins[rotation][i];
             }
 
-            /* Node size passed directly */
             Containers::Pair<Vector2, Vector4> sizeMargin = Implementation::childLayoutSizeMargin(
                 snap,
-                Containers::stridedArrayView(nodes).slice(&Node::zero), /* minSize */
                 Containers::stridedArrayView(nodes).slice(&Node::margin),
-                Containers::stridedArrayView(nodes).slice(&Node::size), /* size */
+                Containers::stridedArrayView(nodes).slice(&Node::size),
                 layouterDataHandle(2, 0x222),
                 Containers::stridedArrayView(layouts).slice(&Layout::node),
                 Containers::stridedArrayView(layouts).slice(&Layout::next));
             CORRADE_COMPARE(sizeMargin, Containers::pair(expectedSizes[rotation], expectedMargins[rotation]));
 
-            /* Node size passed as a min size and a different layout order,
-               should work the same */
+            /* Different layout order, should work the same */
             sizeMargin = Implementation::childLayoutSizeMargin(
                 snap,
-                Containers::stridedArrayView(nodes).slice(&Node::size), /* minSize */
                 Containers::stridedArrayView(nodes).slice(&Node::margin),
-                Containers::stridedArrayView(nodes).slice(&Node::zero), /* size */
+                Containers::stridedArrayView(nodes).slice(&Node::size),
                 layouterDataHandle(1, 0x111),
                 Containers::stridedArrayView(layouts).slice(&Layout::node),
                 Containers::stridedArrayView(layouts).slice(&Layout::next));
@@ -2186,7 +2181,6 @@ void SnapLayouterTest::childLayoutSizeForward() {
             CORRADE_ITERATION(snap);
 
             struct Node {
-                Vector2 zero;
                 Vector2 size;
                 Vector4 margin;
             } nodes[9];
@@ -2196,23 +2190,10 @@ void SnapLayouterTest::childLayoutSizeForward() {
                 nodes[nodeIds[i]].margin = margins[rotation][i];
             }
 
-            /* Node size passed directly */
             Containers::Pair<Vector2, Vector4> sizeMargin = Implementation::childLayoutSizeMargin(
                 snap,
-                Containers::stridedArrayView(nodes).slice(&Node::zero), /* minSize */
                 Containers::stridedArrayView(nodes).slice(&Node::margin),
-                Containers::stridedArrayView(nodes).slice(&Node::size), /* size */
-                layouterDataHandle(2, 0x222),
-                Containers::stridedArrayView(layouts).slice(&Layout::node),
-                Containers::stridedArrayView(layouts).slice(&Layout::next));
-            CORRADE_COMPARE(sizeMargin, Containers::pair(expectedSizes[rotation], expectedMargins[rotation]));
-
-            /* Node size passed as a min size, should work the same */
-            sizeMargin = Implementation::childLayoutSizeMargin(
-                snap,
-                Containers::stridedArrayView(nodes).slice(&Node::size), /* minSize */
-                Containers::stridedArrayView(nodes).slice(&Node::margin),
-                Containers::stridedArrayView(nodes).slice(&Node::zero), /* size */
+                Containers::stridedArrayView(nodes).slice(&Node::size),
                 layouterDataHandle(2, 0x222),
                 Containers::stridedArrayView(layouts).slice(&Layout::node),
                 Containers::stridedArrayView(layouts).slice(&Layout::next));
@@ -2286,7 +2267,6 @@ void SnapLayouterTest::explicitlySnappedChildLayoutSize() {
     /* Unlike with childLayoutSizeMargin(), the algorithm is not
        order-dependent so we're not shuffling the node data in any way. */
     struct Node {
-        Vector2 zero;
         Vector2 size;
         Vector4 margin;
     } nodes[9];
@@ -2305,9 +2285,8 @@ void SnapLayouterTest::explicitlySnappedChildLayoutSize() {
     CORRADE_COMPARE(Implementation::explicitlySnappedChildLayoutSize(
         data.parentFlags,
         data.parentPadding,
-        Containers::stridedArrayView(nodes).slice(&Node::zero), /* minSize */
         Containers::stridedArrayView(nodes).slice(&Node::margin),
-        Containers::stridedArrayView(nodes).slice(&Node::size), /* size */
+        Containers::stridedArrayView(nodes).slice(&Node::size),
         layouterDataHandle(1, 0x111),
         Containers::stridedArrayView(layouts).slice(&Layout::node),
         Containers::stridedArrayView(layouts).slice(&Layout::flags),
@@ -2315,14 +2294,12 @@ void SnapLayouterTest::explicitlySnappedChildLayoutSize() {
         Containers::stridedArrayView(layouts).slice(&Layout::next)
     ), data.expected);
 
-    /* Node size passed as a min size and a different layout order, should work
-       the same */
+    /* Different layout order, should work the same */
     CORRADE_COMPARE(Implementation::explicitlySnappedChildLayoutSize(
         data.parentFlags,
         data.parentPadding,
-        Containers::stridedArrayView(nodes).slice(&Node::size), /* minSize */
         Containers::stridedArrayView(nodes).slice(&Node::margin),
-        Containers::stridedArrayView(nodes).slice(&Node::zero), /* size */
+        Containers::stridedArrayView(nodes).slice(&Node::size),
         layouterDataHandle(4, 0x444),
         Containers::stridedArrayView(layouts).slice(&Layout::node),
         Containers::stridedArrayView(layouts).slice(&Layout::flags),

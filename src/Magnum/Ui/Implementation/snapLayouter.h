@@ -38,10 +38,9 @@ namespace Magnum { namespace Ui { namespace Implementation { namespace {
    output size and margin is then meant to be passed to layoutSizePadding()
    which then calculates the actual node size and padding, which can be
    subsequently passed to snap() to position everything correctly. */
-Containers::Pair<Vector2, Vector4> childLayoutSizeMargin(const Snaps childSnap, const Containers::StridedArrayView1D<const Vector2>& nodeMinSizes, const Containers::StridedArrayView1D<const Vector4>& nodeMargins, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, const LayouterDataHandle firstChildLayout, const Containers::StridedArrayView1D<const NodeHandle>& layoutNodes, const Containers::StridedArrayView1D<const LayouterDataHandle>& nextLayout) {
+Containers::Pair<Vector2, Vector4> childLayoutSizeMargin(const Snaps childSnap, const Containers::StridedArrayView1D<const Vector4>& nodeMargins, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, const LayouterDataHandle firstChildLayout, const Containers::StridedArrayView1D<const NodeHandle>& layoutNodes, const Containers::StridedArrayView1D<const LayouterDataHandle>& nextLayout) {
     CORRADE_INTERNAL_ASSERT(
-        nodeSizes.size() == nodeMinSizes.size() &&
-        nodeMargins.size() == nodeMinSizes.size() &&
+        nodeSizes.size() == nodeMargins.size() &&
         firstChildLayout != LayouterDataHandle::Null &&
         nextLayout.size() == layoutNodes.size());
 
@@ -225,14 +224,7 @@ Containers::Pair<Vector2, Vector4> childLayoutSizeMargin(const Snaps childSnap, 
     Float maxHalfSizeSideWithMarginL = 0.0f;
     Float maxHalfSizeSideWithMarginR = 0.0f;
     do {
-        /* Take the max of the actual node size and min size. The same
-           operation will be done again later when passing arguments to snap()
-           but doing it in a single place would mean iterating all nodes first
-           (even those which aren't implicitly snapped children), which is
-           likely going to be more expensive due to cache misses than just
-           doing one extra max() */
-        const Vector2 childNodeSize = Math::max(nodeSizes[childNodeId],
-                                                nodeMinSizes[childNodeId]);
+        const Vector2 childNodeSize = nodeSizes[childNodeId];
         /* Side margins. Before/after margins are combined with the previous /
            next node margin below. */
         const Float childNodeMarginSideL = nodeMargins[childNodeId][indexSideL];
@@ -320,10 +312,9 @@ constexpr SnapLayoutFlag SnapLayoutFlagExplicitSnapToParent = SnapLayoutFlag(0x8
 
    The `flags` are also not used in any way except for the internal
    SnapLayoutFlagExplicitSnapToParent bit. */
-Vector2 explicitlySnappedChildLayoutSize(const SnapLayoutFlags parentFlags, const Vector4& parentPadding, const Containers::StridedArrayView1D<const Vector2>& nodeMinSizes, const Containers::StridedArrayView1D<const Vector4>& nodeMargins, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, const LayouterDataHandle firstExplicitSnapLayout, const Containers::StridedArrayView1D<const NodeHandle>& layoutNodes, const Containers::StridedArrayView1D<const SnapLayoutFlags>& flags, const Containers::StridedArrayView1D<const Snaps>& explicitSnaps, const Containers::StridedArrayView1D<const LayouterDataHandle>& nextLayout) {
+Vector2 explicitlySnappedChildLayoutSize(const SnapLayoutFlags parentFlags, const Vector4& parentPadding, const Containers::StridedArrayView1D<const Vector4>& nodeMargins, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, const LayouterDataHandle firstExplicitSnapLayout, const Containers::StridedArrayView1D<const NodeHandle>& layoutNodes, const Containers::StridedArrayView1D<const SnapLayoutFlags>& flags, const Containers::StridedArrayView1D<const Snaps>& explicitSnaps, const Containers::StridedArrayView1D<const LayouterDataHandle>& nextLayout) {
     CORRADE_INTERNAL_ASSERT(
-        nodeSizes.size() == nodeMinSizes.size() &&
-        nodeMargins.size() == nodeMinSizes.size() &&
+        nodeSizes.size() == nodeMargins.size() &&
         firstExplicitSnapLayout != LayouterDataHandle::Null &&
         flags.size() == layoutNodes.size() &&
         explicitSnaps.size() == layoutNodes.size() &&
@@ -340,11 +331,11 @@ Vector2 explicitlySnappedChildLayoutSize(const SnapLayoutFlags parentFlags, cons
             const Snaps snap = explicitSnaps[layoutId];
             const UnsignedInt nodeId = nodeHandleId(layoutNodes[layoutId]);
             const Vector4 margin = nodeMargins[nodeId];
+            const Vector2 size = nodeSizes[nodeId];
 
             /* If horizontal overflow is ignored, nothing to do here */
             if(!(parentFlags >= SnapLayoutFlag::IgnoreOverflowX)) {
-                Float width = Math::max(nodeSizes[nodeId].x(),
-                                        nodeMinSizes[nodeId].x());
+                Float width = size.x();
 
                 /* If all horizontal padding is ignored, use just the width
                    alone */
@@ -371,8 +362,7 @@ Vector2 explicitlySnappedChildLayoutSize(const SnapLayoutFlags parentFlags, cons
 
             /* If vertical overflow is ignored, nothing to do here */
             if(!(parentFlags >= SnapLayoutFlag::IgnoreOverflowY)) {
-                Float height = Math::max(nodeSizes[nodeId].y(),
-                                        nodeMinSizes[nodeId].y());
+                Float height = size.y();
 
                 /* If all vertical padding is ignored, use just the height
                    alone */
