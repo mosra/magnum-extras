@@ -497,10 +497,16 @@ Containers::Triple<Vector2, Vector4, Vector4> layoutSizePaddingMargin(const Snap
                according to the diagrams above. Again this can make the
                overflow negative but that's fine. */
 
+            /* Vertical filled snapping doesn't need any further adjustment.
+               The InsideX, if specified, is redundant. */
+            if((snapNoNoPad|Snap::InsideX) == (Snap::Top|Snap::FillX|Snap::InsideX) ||
+               (snapNoNoPad|Snap::InsideX) == (Snap::Bottom|Snap::FillX|Snap::InsideX))
+                do {} while(false); /* Yeah, nothing */
+
             /* Vertical centered snapping. The InsideX, if specified, is
                redundant. */
-            if((snapNoNoPad|Snap::InsideX) == (Snap::Bottom|Snap::InsideX) ||
-               (snapNoNoPad|Snap::InsideX) == (Snap::Top|Snap::InsideX))
+            else if((snapNoNoPad|Snap::InsideX) == (Snap::Bottom|Snap::InsideX) ||
+                    (snapNoNoPad|Snap::InsideX) == (Snap::Top|Snap::InsideX))
                 horizontalMarginOverflow -= Vector2{extraAvailableWidth*0.5f};
             /* Vertical snapping to the left or horizontal snapping starting
                from the left */
@@ -522,11 +528,7 @@ Containers::Triple<Vector2, Vector4, Vector4> layoutSizePaddingMargin(const Snap
                     snapNoNoPad == (Snap::TopLeft|Snap::InsideY) ||
                     snapNoNoPad == (Snap::BottomLeft|Snap::InsideY))
                 horizontalMarginOverflow[0] -= extraAvailableWidth;
-            /* Vertical filled snapping doesn't need any further adjustment.
-               The InsideX, if specified, is redundant. */
-            else if((snapNoNoPad|Snap::InsideX) != (Snap::Top|Snap::FillX|Snap::InsideX) &&
-                    (snapNoNoPad|Snap::InsideX) != (Snap::Bottom|Snap::FillX|Snap::InsideX))
-                CORRADE_INTERNAL_DEBUG_ASSERT_UNREACHABLE(); /* LCOV_EXCL_LINE */
+            else CORRADE_INTERNAL_DEBUG_ASSERT_UNREACHABLE(); /* LCOV_EXCL_LINE */
 
             /* The final margin is the maximum of node margin and the
                overflow. Assuming the node margin is always at least 0, this
@@ -543,10 +545,16 @@ Containers::Triple<Vector2, Vector4, Vector4> layoutSizePaddingMargin(const Snap
 
             Vector2 verticalMarginOverflow = Math::gather<1, 3>(childLayoutMargin) - Math::gather<1, 3>(nodePadding);
 
+            /* Horizontal filled snapping doesn't need any further adjustment.
+               The InsideY, if specified, is redundant. */
+            if((snapNoNoPad|Snap::InsideY) == (Snap::Left|Snap::FillY|Snap::InsideY) ||
+               (snapNoNoPad|Snap::InsideY) == (Snap::Right|Snap::FillY|Snap::InsideY))
+                do {} while(false); /* Yeah, nothing */
+
             /* Horizontal centered snapping. The InsideY, if specified, is
                redundant. */
-            if((snapNoNoPad|Snap::InsideY) == (Snap::Left|Snap::InsideY) ||
-               (snapNoNoPad|Snap::InsideY) == (Snap::Right|Snap::InsideY))
+            else if((snapNoNoPad|Snap::InsideY) == (Snap::Left|Snap::InsideY) ||
+                    (snapNoNoPad|Snap::InsideY) == (Snap::Right|Snap::InsideY))
                 verticalMarginOverflow -= Vector2{extraAvailableHeight*0.5f};
             /* Horizontal snapping to the top or vertical snapping starting
                from the top */
@@ -568,11 +576,7 @@ Containers::Triple<Vector2, Vector4, Vector4> layoutSizePaddingMargin(const Snap
                     snapNoNoPad == (Snap::TopLeft|Snap::InsideX) ||
                     snapNoNoPad == (Snap::TopRight|Snap::InsideX))
                 verticalMarginOverflow[0] -= extraAvailableHeight;
-            /* Horizontal filled snapping doesn't need any further adjustment.
-               The InsideY, if specified, is redundant. */
-            else if((snapNoNoPad|Snap::InsideY) != (Snap::Left|Snap::FillY|Snap::InsideY) &&
-                    (snapNoNoPad|Snap::InsideY) != (Snap::Right|Snap::FillY|Snap::InsideY))
-                CORRADE_INTERNAL_DEBUG_ASSERT_UNREACHABLE(); /* LCOV_EXCL_LINE */
+            else CORRADE_INTERNAL_DEBUG_ASSERT_UNREACHABLE(); /* LCOV_EXCL_LINE */
 
             Math::scatterInto<1, 3>(layoutMargin, Math::max(
                 Math::gather<1, 3>(layoutMargin),
