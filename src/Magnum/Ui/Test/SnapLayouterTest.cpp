@@ -62,7 +62,7 @@ struct SnapLayouterTest: TestSuite::Tester {
     void layoutSizePaddingMargin();
     void layoutSizePaddingMarginPropagate();
 
-    /* The result is fed into layoutSizePadding() and snap(), so this
+    /* The result is fed into layoutSizePaddingMargin() and snap(), so this
        subsequently tests that these two do what's expected */
     void childLayoutSizeSide();
     void childLayoutSizeForward();
@@ -2058,7 +2058,7 @@ void SnapLayouterTest::childLayoutSizeSide() {
             CORRADE_COMPARE(sizeMargin, Containers::pair(expectedSizes[rotation], expectedMargins[rotation]));
 
             /* Just to get the layout size and padding to pass to snap(), the
-               margin is unused. Tested thoroughly in layoutSizePadding()
+               margin is unused. Tested thoroughly in layoutSizePaddingMargin()
                instead. */
             Containers::Triple<Vector2, Vector4, Vector4> layoutSizePaddingMargin = Implementation::layoutSizePaddingMargin({}, snap, {}, {}, {}, sizeMargin.first(), sizeMargin.second());
 
@@ -2200,7 +2200,7 @@ void SnapLayouterTest::childLayoutSizeForward() {
             CORRADE_COMPARE(sizeMargin, Containers::pair(expectedSizes[rotation], expectedMargins[rotation]));
 
             /* Just to get the layout size and padding to pass to snap(), the
-               margin is unused. Tested thoroughly in layoutSizePadding()
+               margin is unused. Tested thoroughly in layoutSizePaddingMargin()
                instead. */
             Containers::Triple<Vector2, Vector4, Vector4> layoutSizePaddingMargin = Implementation::layoutSizePaddingMargin({}, snap, {}, {}, {}, sizeMargin.first(), sizeMargin.second());
 

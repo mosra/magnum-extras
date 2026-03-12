@@ -485,8 +485,7 @@ Containers::Triple<Vector2, Vector4, Vector4> layoutSizePaddingMargin(const Snap
                excluding the parent node horizontal padding and the child
                layout size. It cannot become negative because the layout size
                is always at least as large as what the child layout needs. */
-            const Float extraAvailableWidth = layoutSize.x() - childLayoutSize.x() -
-            nodePadding[0] - nodePadding[2];
+            const Float extraAvailableWidth = layoutSize.x() - childLayoutSize.x() - nodePadding[0] - nodePadding[2];
             CORRADE_INTERNAL_DEBUG_ASSERT(extraAvailableWidth >= 0.0f);
 
             /* Margin overflow is the horizontal child layout margin with
@@ -539,8 +538,7 @@ Containers::Triple<Vector2, Vector4, Vector4> layoutSizePaddingMargin(const Snap
 
         /* Vertical margin propagation, equivalent to above */
         if(flags >= SnapLayoutFlag::PropagateMarginY && !(childSnap >= Snap::NoPadY)) {
-            const Float extraAvailableHeight = layoutSize.y() - childLayoutSize.y() -
-            nodePadding[1] - nodePadding[3];
+            const Float extraAvailableHeight = layoutSize.y() - childLayoutSize.y() - nodePadding[1] - nodePadding[3];
             CORRADE_INTERNAL_DEBUG_ASSERT(extraAvailableHeight >= 0.0f);
 
             Vector2 verticalMarginOverflow = Math::gather<1, 3>(childLayoutMargin) - Math::gather<1, 3>(nodePadding);

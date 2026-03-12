@@ -184,7 +184,7 @@ void AbstractSnapLayout::setDefaultPropagateMargin() {
     /* Add the PropagateMargin flag to axes which don't have IgnoreOverflow
        already, as that would conflict */
     /** @todo even though this is now done only when creating a specialized
-        layout out of another layout, and not of arbitrary anchor. it feels
+        layout out of another layout, and not of arbitrary anchor, it feels
         like a shitty solution, better ideas? */
     SnapLayoutFlags flags = _layouter->flags(_layout);
     if(!(flags & SnapLayoutFlag::IgnoreOverflowX))
