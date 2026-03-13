@@ -399,7 +399,12 @@ Vector2 explicitlySnappedChildLayoutSize(const SnapLayoutFlags parentFlags, cons
    separate function because that makes it easier to test, and
    childLayoutSizeMargin() doesn't need to be called at all if flags contain
    IgnoreOverflow. */
-Containers::Triple<Vector2, Vector4, Vector4> layoutSizePaddingMargin(const SnapLayoutFlags flags, const Snaps childSnap, const Vector2& nodeSize, const Vector4& nodePadding, const Vector4& nodeMargin, const Vector2& childLayoutSize, const Vector4& childLayoutMargin) {
+struct LayoutSizePaddingMargin {
+    Vector2 size;
+    Vector4 padding;
+    Vector4 margin;
+};
+LayoutSizePaddingMargin layoutSizePaddingMargin(const SnapLayoutFlags flags, const Snaps childSnap, const Vector2& nodeSize, const Vector4& nodePadding, const Vector4& nodeMargin, const Vector2& childLayoutSize, const Vector4& childLayoutMargin) {
     /* Calculate actual layout padding:
         - It's zero on given side if padding is ignored in matching direction
         - It's same as node padding in given direction if child layout overflow

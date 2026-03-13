@@ -907,7 +907,7 @@ void SnapLayouter::doLayout(const Containers::BitArrayView layoutIdsToUpdate, co
         /* Calculate the actual layout size, padding and margin from the layout
            properties and child layout size and margin (optionally) calculated
            above */
-        const Containers::Triple<Vector2, Vector4, Vector4> layoutSizePaddingMargin =
+        const Implementation::LayoutSizePaddingMargin layoutSizePaddingMargin =
             Implementation::layoutSizePaddingMargin(
                 layout.flags,
                 layout.childSnap,
@@ -937,9 +937,9 @@ void SnapLayouter::doLayout(const Containers::BitArrayView layoutIdsToUpdate, co
                     stridedArrayView(state.layouts).slice(&Layout::snap),
                     stridedArrayView(state.layouts).slice(&Layout::next));
 
-        nodeSizes[nodeId] = Math::max(layoutSizePaddingMargin.first(), explicitlySnappedChildLayoutSize);
-        childLayoutPaddings[layoutId] = layoutSizePaddingMargin.second();
-        nodeMargins[nodeId] = layoutSizePaddingMargin.third();
+        nodeSizes[nodeId] = Math::max(layoutSizePaddingMargin.size, explicitlySnappedChildLayoutSize);
+        childLayoutPaddings[layoutId] = layoutSizePaddingMargin.padding;
+        nodeMargins[nodeId] = layoutSizePaddingMargin.margin;
     }
 
     /* Go through the layouts in their dependency order, skipping the first

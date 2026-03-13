@@ -1884,7 +1884,7 @@ void SnapLayouterTest::layoutSizePaddingMargin() {
        layoutSizePaddingMarginPropagate() below, verifying all rotations
        variants at the same time, here just verify that it
        always passes the margin through unchanged */
-    Containers::Triple<Vector2, Vector4, Vector4> out = Implementation::layoutSizePaddingMargin(
+    Implementation::LayoutSizePaddingMargin out = Implementation::layoutSizePaddingMargin(
         data.flags,
         data.extraChildSnap,
         data.nodeSize,
@@ -1892,7 +1892,9 @@ void SnapLayouterTest::layoutSizePaddingMargin() {
         {19.0f, 23.0f, 13.0f, 29.0f},
         data.childLayoutSize,
         data.childLayoutMargin);
-    CORRADE_COMPARE(out, Containers::triple(data.expectedLayoutSize, data.expectedLayoutPadding, Vector4{19.0f, 23.0f, 13.0f, 29.0f}));
+    CORRADE_COMPARE(out.size, data.expectedLayoutSize);
+    CORRADE_COMPARE(out.padding, data.expectedLayoutPadding);
+    CORRADE_COMPARE(out.margin, (Vector4{19.0f, 23.0f, 13.0f, 29.0f}));
 }
 
 void SnapLayouterTest::layoutSizePaddingMarginPropagate() {
@@ -1936,7 +1938,7 @@ void SnapLayouterTest::layoutSizePaddingMarginPropagate() {
         CORRADE_ITERATION("rotation" << rotation);
         CORRADE_ITERATION(data.snaps[rotation]);
 
-        Containers::Triple<Vector2, Vector4, Vector4> out = Implementation::layoutSizePaddingMargin(
+        Implementation::LayoutSizePaddingMargin out = Implementation::layoutSizePaddingMargin(
             data.flags[rotation % 2],
             data.snaps[rotation],
             nodeSizes[rotation],
@@ -1944,7 +1946,9 @@ void SnapLayouterTest::layoutSizePaddingMarginPropagate() {
             nodeMargins[rotation],
             childLayoutSizes[rotation],
             childLayoutMargins[rotation]);
-        CORRADE_COMPARE(out, Containers::triple(expectedLayoutSizes[rotation], expectedLayoutPaddings[rotation], expectedLayoutMargins[rotation]));
+        CORRADE_COMPARE(out.size, expectedLayoutSizes[rotation]);
+        CORRADE_COMPARE(out.padding, expectedLayoutPaddings[rotation]);
+        CORRADE_COMPARE(out.margin, expectedLayoutMargins[rotation]);
     }
 }
 
@@ -2060,15 +2064,15 @@ void SnapLayouterTest::childLayoutSizeSide() {
             /* Just to get the layout size and padding to pass to snap(), the
                margin is unused. Tested thoroughly in layoutSizePaddingMargin()
                instead. */
-            Containers::Triple<Vector2, Vector4, Vector4> layoutSizePaddingMargin = Implementation::layoutSizePaddingMargin({}, snap, {}, {}, {}, sizeMargin.first(), sizeMargin.second());
+            Implementation::LayoutSizePaddingMargin layoutSizePaddingMargin = Implementation::layoutSizePaddingMargin({}, snap, {}, {}, {}, sizeMargin.first(), sizeMargin.second());
 
             /* With the above size and padding, snapping the three nodes should
                give the expected offsets. The first child uses a different
                snap, and is affected by the reported size and padding */
             Containers::Pair<Vector2, Vector2> offsetSize0 = Implementation::snap(
                 Implementation::firstChildSnap(snap),
-                {}, layoutSizePaddingMargin.first(),
-                layoutSizePaddingMargin.second(), {},
+                {}, layoutSizePaddingMargin.size,
+                layoutSizePaddingMargin.padding, {},
                 nodes[nodeIds[shuffle][0]].margin,
                 nodes[nodeIds[shuffle][0]].size);
             CORRADE_COMPARE(offsetSize0, Containers::pair(expectedChildOffsets[rotation][0], expectedChildSizes[rotation][0]));
@@ -2202,15 +2206,15 @@ void SnapLayouterTest::childLayoutSizeForward() {
             /* Just to get the layout size and padding to pass to snap(), the
                margin is unused. Tested thoroughly in layoutSizePaddingMargin()
                instead. */
-            Containers::Triple<Vector2, Vector4, Vector4> layoutSizePaddingMargin = Implementation::layoutSizePaddingMargin({}, snap, {}, {}, {}, sizeMargin.first(), sizeMargin.second());
+            Implementation::LayoutSizePaddingMargin layoutSizePaddingMargin = Implementation::layoutSizePaddingMargin({}, snap, {}, {}, {}, sizeMargin.first(), sizeMargin.second());
 
             /* With the above size and padding, snapping the three nodes should
                give the expected offsets. The first child uses a different
                snap, and is affected by the reported size and padding */
             Containers::Pair<Vector2, Vector2> offsetSize0 = Implementation::snap(
                 Implementation::firstChildSnap(snap),
-                {}, layoutSizePaddingMargin.first(),
-                layoutSizePaddingMargin.second(), {},
+                {}, layoutSizePaddingMargin.size,
+                layoutSizePaddingMargin.padding, {},
                 nodes[nodeIds[0]].margin,
                 nodes[nodeIds[0]].size);
             CORRADE_COMPARE(offsetSize0, Containers::pair(expectedChildOffsets[rotation][0], sizes[rotation][0]));
