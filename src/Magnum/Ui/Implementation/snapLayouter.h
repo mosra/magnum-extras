@@ -394,12 +394,13 @@ Vector2 explicitlySnappedChildLayoutSize(const SnapLayoutFlags parentFlags, cons
     return maxSizeWithMarginPadding;
 }
 
-/* Calculates the actual layout size, padding and margin from the layout and
-   node properties and output from the childLayoutSizeMargin() above. Is a
-   separate function because that makes it easier to test, and
-   childLayoutSizeMargin() doesn't need to be called at all if flags contain
-   IgnoreOverflow. */
+/* Calculates the actual layout size, padded size of children alone for their
+   potential expansion, padding and margin from the layout and node properties
+   and output from the childLayoutSizeMargin() above. Is a separate function
+   because that makes it easier to test, and childLayoutSizeMargin() doesn't
+   need to be called at all if flags contain IgnoreOverflow. */
 struct LayoutSizePaddingMargin {
+    Vector2 paddedChildSize;
     Vector2 size;
     Vector4 padding;
     Vector4 margin;
@@ -428,7 +429,7 @@ LayoutSizePaddingMargin layoutSizePaddingMargin(const SnapLayoutFlags flags, con
 
     /* Minimal layout size is the actual child layout size with padding from
        both sides added */
-    const Vector2 minLayoutSize = childLayoutSize +
+    const Vector2 paddedChildLayoutSize = childLayoutSize +
         Math::gather<0, 1>(layoutPadding) +
         Math::gather<2, 3>(layoutPadding);
 
@@ -438,9 +439,9 @@ LayoutSizePaddingMargin layoutSizePaddingMargin(const SnapLayoutFlags flags, con
         - Otherwise it's the max of node size and min layout size */
     const Vector2 layoutSize{
         flags >= SnapLayoutFlag::IgnoreOverflowX ?
-            nodeSize.x() : Math::max(nodeSize.x(), minLayoutSize.x()),
+            nodeSize.x() : Math::max(nodeSize.x(), paddedChildLayoutSize.x()),
         flags >= SnapLayoutFlag::IgnoreOverflowY ?
-            nodeSize.y() : Math::max(nodeSize.y(), minLayoutSize.y())
+            nodeSize.y() : Math::max(nodeSize.y(), paddedChildLayoutSize.y())
     };
 
     /* Calculate actual layout margin. Initially it's the node margin. If
@@ -593,7 +594,7 @@ LayoutSizePaddingMargin layoutSizePaddingMargin(const SnapLayoutFlags flags, con
         CORRADE_INTERNAL_DEBUG_ASSERT((layoutMargin >= nodeMargin).all());
     }
 
-    return {layoutSize, layoutPadding, layoutMargin};
+    return {paddedChildLayoutSize, layoutSize, layoutPadding, layoutMargin};
 }
 
 /* Used by SnapLayouter::setChildSnapInternal() but also tests that verify

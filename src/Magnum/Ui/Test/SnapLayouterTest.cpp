@@ -390,69 +390,69 @@ const struct {
 };
 
 const struct {
-    const char* name;
+    TestSuite::TestCaseDescriptionSourceLocation name;
     SnapLayoutFlags flags;
     Snaps extraChildSnap;
     Vector2 nodeSize;
     Vector4 nodePadding;
     Vector2 childLayoutSize;
     Vector4 childLayoutMargin;
-    Vector2 expectedLayoutSize;
+    Vector2 expectedPaddedChildLayoutSize, expectedLayoutSize;
     Vector4 expectedLayoutPadding;
 } LayoutSizePaddingMarginData[]{
     {"no padding or margin, node size only", {}, {},
         {30.0f, 20.0f}, {},
         {}, {},
-        {30.0f, 20.0f}, {}},
+        {}, {30.0f, 20.0f}, {}},
     {"no padding or margin, child layout size only", {}, {},
         {}, {},
         {30.0f, 20.0f}, {},
-        {30.0f, 20.0f}, {}},
+        {30.0f, 20.0f}, {30.0f, 20.0f}, {}},
     {"padding, node size only", {}, {},
         {30.0f, 20.0f}, {1.0f, 2.0f, 3.0f, 4.0f},
         {}, {},
         /* The padding is applied inside so it doesn't expand the node size */
-        {30.0f, 20.0f}, {1.0f, 2.0f, 3.0f, 4.0f}},
+        {4.0f, 6.0f}, {30.0f, 20.0f}, {1.0f, 2.0f, 3.0f, 4.0f}},
     {"padding, child layout size only", {}, {},
         {}, {1.0f, 2.0f, 3.0f, 4.0f},
         {30.0f, 20.0f}, {},
-        {34.0f, 26.0f}, {1.0f, 2.0f, 3.0f, 4.0f}},
+        {34.0f, 26.0f}, {34.0f, 26.0f}, {1.0f, 2.0f, 3.0f, 4.0f}},
     {"margin, node size only", {}, {},
         {30.0f, 20.0f}, {},
         {}, {1.0f, 2.0f, 3.0f, 4.0f},
         /* The child margin is applied inside so it doesn't expand the node
            size */
-        {30.0f, 20.0f}, {1.0f, 2.0f, 3.0f, 4.0f}},
+        {4.0f, 6.0f}, {30.0f, 20.0f}, {1.0f, 2.0f, 3.0f, 4.0f}},
     {"margin, child layout size only", {}, {},
         {}, {},
         {30.0f, 20.0f}, {1.0f, 2.0f, 3.0f, 4.0f},
-        {34.0f, 26.0f}, {1.0f, 2.0f, 3.0f, 4.0f}},
+        {34.0f, 26.0f}, {34.0f, 26.0f}, {1.0f, 2.0f, 3.0f, 4.0f}},
     {"padding, margin, node size, child layout size, variant 1", {}, {},
         /* The node X size is larger than child layout X size but padding +
            margin makes the child size bigger so it's picked */
         {29.0f, 20.0f}, {1.0f, 1.0f, 3.0f, 3.0f},
       /* v      ^        ^     v     ^     v     */
         {26.0f, 10.0f}, {0.0f, 2.0f, 2.0f, 4.0f},
-        {30.0f, 20.0f}, {1.0f, 2.0f, 3.0f, 4.0f}},
+        {30.0f, 16.0f}, {30.0f, 20.0f}, {1.0f, 2.0f, 3.0f, 4.0f}},
     {"padding, margin, node size, child layout size, variant 2", {}, {},
         /* The node Y size is larger than child layout Y size but padding +
            margin makes the child size bigger so it's picked */
         {30.0f, 15.0f}, {0.0f, 2.0f, 2.0f, 4.0f},
       /* ^      v        v     ^     v     ^     */
         {20.0f, 14.0f}, {1.0f, 1.0f, 3.0f, 3.0f},
-        {30.0f, 20.0f}, {1.0f, 2.0f, 3.0f, 4.0f}},
+        {24.0f, 20.0f}, {30.0f, 20.0f}, {1.0f, 2.0f, 3.0f, 4.0f}},
     {"padding, margin, node size, child layout size, no pad, variant 1",
         {}, Snap::NoPad,
         {30.0f, 15.0f}, {1.0f, 2.0f, 3.0f, 4.0f},
       /* ^      v */
         {20.0f, 20.0f}, {1.0f, 2.0f, 3.0f, 4.0f},
-        {30.0f, 20.0f}, {}},
+        {20.0f, 20.0f}, {30.0f, 20.0f}, {}},
     {"padding, margin, node size, child layout size, no pad, variant 2",
         {}, Snap::NoPad,
         {20.0f, 20.0f}, {1.0f, 2.0f, 3.0f, 4.0f},
       /* v      ^ */
         {30.0f, 15.0f}, {1.0f, 2.0f, 3.0f, 4.0f},
-        {30.0f, 20.0f}, {}},
+        {30.0f, 15.0f}, {30.0f, 20.0f}, {}},
     {"padding, margin, node size, child layout size, no pad X, variant 1",
         {}, Snap::NoPadX,
         /* The node Y size is larger than child layout Y size but padding +
@@ -460,13 +460,13 @@ const struct {
         {30.0f, 15.0f}, {1.0f, 2.0f, 3.0f, 3.0f},
       /* ^      v              ^           v     */
         {20.0f, 14.0f}, {1.0f, 1.0f, 3.0f, 4.0f},
-        {30.0f, 20.0f}, {0.0f, 2.0f, 0.0f, 4.0f}},
+        {20.0f, 20.0f}, {30.0f, 20.0f}, {0.0f, 2.0f, 0.0f, 4.0f}},
     {"padding, margin, node size, child layout size, no pad X, variant 2",
         {}, Snap::NoPadX,
         {20.0f, 20.0f}, {1.0f, 1.0f, 3.0f, 4.0f},
       /* v      ^              v           ^     */
         {30.0f, 10.0f}, {1.0f, 2.0f, 3.0f, 3.0f},
-        {30.0f, 20.0f}, {0.0f, 2.0f, 0.0f, 4.0f}},
+        {30.0f, 16.0f}, {30.0f, 20.0f}, {0.0f, 2.0f, 0.0f, 4.0f}},
     {"padding, margin, node size, child layout size, no pad Y, variant 1",
         {}, Snap::NoPadY,
         /* The node X size is larger than child layout X size but padding +
@@ -474,85 +474,89 @@ const struct {
         {29.0f, 20.0f}, {1.0f, 2.0f, 2.0f, 4.0f},
       /* v      ^        ^           v           */
         {26.0f, 10.0f}, {0.0f, 2.0f, 3.0f, 4.0f},
-        {30.0f, 20.0f}, {1.0f, 0.0f, 3.0f, 0.0f}},
+        {30.0f, 10.0f}, {30.0f, 20.0f}, {1.0f, 0.0f, 3.0f, 0.0f}},
     {"padding, margin, node size, child layout size, no pad Y, variant 2",
         {}, Snap::NoPadY,
         {30.0f, 10.0f}, {0.0f, 2.0f, 3.0f, 4.0f},
       /* ^      v        v           ^           */
         {20.0f, 20.0f}, {1.0f, 2.0f, 2.0f, 4.0f},
-        {30.0f, 20.0f}, {1.0f, 0.0f, 3.0f, 0.0f}},
+        {24.0f, 20.0f}, {30.0f, 20.0f}, {1.0f, 0.0f, 3.0f, 0.0f}},
     {"padding, margin, node size, child layout size, ignore overflow",
         SnapLayoutFlag::IgnoreOverflow, {},
         {30.0f, 20.0f}, {1.0f, 2.0f, 3.0f, 4.0f},
-        /* The child layout size or margin isn't taken into account at all */
+        /* The child layout size or margin isn't taken into account at all for
+           the outer size */
         {50.0f, 40.0f}, {9.0f, 8.0f, 7.0f, 6.0f},
-        {30.0f, 20.0f}, {1.0f, 2.0f, 3.0f, 4.0f}},
+        {54.0f, 46.0f}, {30.0f, 20.0f}, {1.0f, 2.0f, 3.0f, 4.0f}},
     {"padding, margin, node size, child layout size, ignore overflow, no pad",
         SnapLayoutFlag::IgnoreOverflow, Snap::NoPad,
         {30.0f, 20.0f}, {1.0f, 2.0f, 3.0f, 4.0f},
-        /* The child layout size or margin isn't taken into account at all */
+        /* The child layout size or margin isn't taken into account at all for
+           the outer size */
         {50.0f, 40.0f}, {9.0f, 8.0f, 7.0f, 6.0f},
-        {30.0f, 20.0f}, {}},
+        {50.0f, 40.0f}, {30.0f, 20.0f}, {}},
     {"padding, margin, node size, child layout size, ignore overflow, no pad X",
         SnapLayoutFlag::IgnoreOverflow, Snap::NoPadX,
         {30.0f, 20.0f}, {1.0f, 2.0f, 3.0f, 4.0f},
-        /* The child layout size or margin isn't taken into account at all */
+        /* The child layout size or margin isn't taken into account at all for
+           the outer size */
         {50.0f, 40.0f}, {9.0f, 8.0f, 7.0f, 6.0f},
-        {30.0f, 20.0f}, {0.0f, 2.0f, 0.0f, 4.0f}},
+        {50.0f, 46.0f}, {30.0f, 20.0f}, {0.0f, 2.0f, 0.0f, 4.0f}},
     {"padding, margin, node size, child layout size, ignore overflow, no pad Y",
         SnapLayoutFlag::IgnoreOverflow, Snap::NoPadY,
         {30.0f, 20.0f}, {1.0f, 2.0f, 3.0f, 4.0f},
-        /* The child layout size or margin isn't taken into account at all */
+        /* The child layout size or margin isn't taken into account at all for
+           the outer size */
         {50.0f, 40.0f}, {9.0f, 8.0f, 7.0f, 6.0f},
-        {30.0f, 20.0f}, {1.0f, 0.0f, 3.0f, 0.0f}},
+        {54.0f, 40.0f}, {30.0f, 20.0f}, {1.0f, 0.0f, 3.0f, 0.0f}},
     {"padding, margin, node size, child layout size, ignore overflow X",
         SnapLayoutFlag::IgnoreOverflowX, {},
         /* The node Y size is larger than child layout Y size but padding +
            margin makes the child size bigger so it's picked */
         {30.0f, 15.0f}, {1.0f, 1.0f, 3.0f, 3.0f},
         {50.0f, 14.0f}, {9.0f, 2.0f, 7.0f, 4.0f},
-        {30.0f, 20.0f}, {1.0f, 2.0f, 3.0f, 4.0f}},
+        {54.0f, 20.0f}, {30.0f, 20.0f}, {1.0f, 2.0f, 3.0f, 4.0f}},
     {"padding, margin, node size, child layout size, ignore overflow X, no pad",
         SnapLayoutFlag::IgnoreOverflowX, Snap::NoPad,
         {30.0f, 10.0f}, {1.0f, 2.0f, 3.0f, 3.0f},
         {50.0f, 20.0f}, {9.0f, 8.0f, 7.0f, 6.0f},
-        {30.0f, 20.0f}, {}},
+        {50.0f, 20.0f}, {30.0f, 20.0f}, {}},
     {"padding, margin, node size, child layout size, ignore overflow X, no pad X",
         SnapLayoutFlag::IgnoreOverflowX, Snap::NoPadX,
         /* The node Y size is larger than child layout Y size but padding +
            margin makes the child size bigger so it's picked */
         {30.0f, 15.0f}, {1.0f, 1.0f, 3.0f, 3.0f},
         {50.0f, 14.0f}, {9.0f, 2.0f, 7.0f, 4.0f},
-        {30.0f, 20.0f}, {0.0f, 2.0f, 0.0f, 4.0f}},
+        {50.0f, 20.0f}, {30.0f, 20.0f}, {0.0f, 2.0f, 0.0f, 4.0f}},
     {"padding, margin, node size, child layout size, ignore overflow X, no pad Y",
         SnapLayoutFlag::IgnoreOverflowX, Snap::NoPadY,
         {30.0f, 19.0f}, {1.0f, 2.0f, 3.0f, 4.0f},
         {50.0f, 20.0f}, {9.0f, 8.0f, 7.0f, 6.0f},
-        {30.0f, 20.0f}, {1.0f, 0.0f, 3.0f, 0.0f}},
+        {54.0f, 20.0f}, {30.0f, 20.0f}, {1.0f, 0.0f, 3.0f, 0.0f}},
     {"padding, margin, node size, child layout size, ignore overflow Y",
         SnapLayoutFlag::IgnoreOverflowY, {},
         /* The node X size is larger than child layout X size but padding +
            margin makes the child size bigger so it's picked */
         {29.0f, 20.0f}, {0.0f, 2.0f, 2.0f, 4.0f},
         {26.0f, 40.0f}, {1.0f, 8.0f, 3.0f, 6.0f},
-        {30.0f, 20.0f}, {1.0f, 2.0f, 3.0f, 4.0f}},
+        {30.0f, 46.0f}, {30.0f, 20.0f}, {1.0f, 2.0f, 3.0f, 4.0f}},
     {"padding, margin, node size, child layout size, ignore overflow Y, no pad",
         SnapLayoutFlag::IgnoreOverflowY, Snap::NoPad,
         {20.0f, 20.0f}, {1.0f, 2.0f, 3.0f, 4.0f},
         {30.0f, 40.0f}, {9.0f, 8.0f, 7.0f, 6.0f},
-        {30.0f, 20.0f}, {}},
+        {30.0f, 40.0f}, {30.0f, 20.0f}, {}},
     {"padding, margin, node size, child layout size, ignore overflow Y, no pad X",
         SnapLayoutFlag::IgnoreOverflowY, Snap::NoPadX,
         {20.0f, 20.0f}, {1.0f, 2.0f, 3.0f, 4.0f},
         {30.0f, 40.0f}, {9.0f, 8.0f, 7.0f, 6.0f},
-        {30.0f, 20.0f}, {0.0f, 2.0f, 0.0f, 4.0f}},
+        {30.0f, 46.0f}, {30.0f, 20.0f}, {0.0f, 2.0f, 0.0f, 4.0f}},
     {"padding, margin, node size, child layout size, ignore overflow Y, no pad Y",
         SnapLayoutFlag::IgnoreOverflowY, Snap::NoPadY,
         /* The node X size is larger than child layout X size but padding +
            margin makes the child size bigger so it's picked */
         {29.0f, 20.0f}, {0.0f, 2.0f, 2.0f, 4.0f},
         {26.0f, 40.0f}, {1.0f, 8.0f, 3.0f, 6.0f},
-        {30.0f, 20.0f}, {1.0f, 0.0f, 3.0f, 0.0f}},
+        {30.0f, 40.0f}, {30.0f, 20.0f}, {1.0f, 0.0f, 3.0f, 0.0f}},
 };
 
 const struct {
@@ -570,7 +574,7 @@ const struct {
        |          9           |
        |          4           |
        +----------------------+ */
-    Vector2 expectedLayoutSize;
+    Vector2 expectedPaddedChildLayoutSize, expectedLayoutSize;
     Vector4 expectedLayoutPadding, expectedLayoutMargin;
 } LayoutSizePaddingMarginPropagateData[]{
     {"propagate both directions, node padding smaller than child margin, no node margin, center",
@@ -585,7 +589,8 @@ const struct {
            underflow by 1, bottom to overflow by 1. Right-side margin fits
            exactly without overflow. */
         {16.0f, 30.0f}, {},
-        {16.0f, 30.0f}, {3.0f, 2.0f, 1.0f, 4.0f}, {4.0f, 0.0f, 0.0f, 1.0f}},
+        {14.0f, 22.0f}, {16.0f, 30.0f},
+        {3.0f, 2.0f, 1.0f, 4.0f}, {4.0f, 0.0f, 0.0f, 1.0f}},
     /* Should be exactly the same as above */
     {"propagate both directions, node padding smaller than child margin, no node margin, center, redundant Inside",
         {SnapLayoutFlag::PropagateMargin,
@@ -595,7 +600,8 @@ const struct {
          Snap::Left|Snap::InsideY,
          Snap::Top|Snap::InsideX},
         {16.0f, 30.0f}, {},
-        {16.0f, 30.0f}, {3.0f, 2.0f, 1.0f, 4.0f}, {4.0f, 0.0f, 0.0f, 1.0f}},
+        {14.0f, 22.0f}, {16.0f, 30.0f},
+        {3.0f, 2.0f, 1.0f, 4.0f}, {4.0f, 0.0f, 0.0f, 1.0f}},
     {"propagate both directions, node padding smaller than child margin, no node margin, center, no pad",
         {SnapLayoutFlag::PropagateMargin,
          SnapLayoutFlag::PropagateMargin},
@@ -604,7 +610,7 @@ const struct {
          Snap::Left|Snap::NoPad,
          Snap::Top|Snap::NoPad},
         {16.0f, 30.0f}, {},
-        {16.0f, 30.0f}, {}, {}},
+        {10.0f, 16.0f}, {16.0f, 30.0f}, {}, {}},
     {"propagate both directions, node padding smaller than child margin, no node margin, center, no pad forward",
         {SnapLayoutFlag::PropagateMargin,
          SnapLayoutFlag::PropagateMargin},
@@ -613,7 +619,8 @@ const struct {
          Snap::Left|Snap::NoPadX,
          Snap::Top|Snap::NoPadY},
         {16.0f, 30.0f}, {},
-        {16.0f, 30.0f}, {0.0f, 2.0f, 0.0f, 4.0f}, {0.0f, 0.0f, 0.0f, 1.0f}},
+        {10.0f, 22.0f}, {16.0f, 30.0f},
+        {0.0f, 2.0f, 0.0f, 4.0f}, {0.0f, 0.0f, 0.0f, 1.0f}},
     {"propagate both directions, node padding smaller than child margin, no node margin, center, no pad side",
         {SnapLayoutFlag::PropagateMargin,
          SnapLayoutFlag::PropagateMargin},
@@ -622,7 +629,8 @@ const struct {
          Snap::Left|Snap::NoPadY,
          Snap::Top|Snap::NoPadX},
         {16.0f, 30.0f}, {},
-        {16.0f, 30.0f}, {3.0f, 0.0f, 1.0f, 0.0f}, {4.0f, 0.0f, 0.0f, 0.0f}},
+        {14.0f, 16.0f}, {16.0f, 30.0f},
+        {3.0f, 0.0f, 1.0f, 0.0f}, {4.0f, 0.0f, 0.0f, 0.0f}},
     {"propagate forward direction, node padding smaller than child margin, no node margin, center",
         {SnapLayoutFlag::PropagateMarginX,
          SnapLayoutFlag::PropagateMarginY},
@@ -633,7 +641,8 @@ const struct {
         /* Left and right same as above, vertically the margin fits exactly
            and thus affects inner padding instead of outer margin */
         {16.0f, 30.0f}, {},
-        {16.0f, 30.0f}, {3.0f, 5.0f, 1.0f, 9.0f}, {4.0f, 0.0f, 0.0f, 0.0f}},
+        {14.0f, 30.0f}, {16.0f, 30.0f},
+        {3.0f, 5.0f, 1.0f, 9.0f}, {4.0f, 0.0f, 0.0f, 0.0f}},
     {"propagate side direction, node padding smaller than child margin, no node margin, center",
         {SnapLayoutFlag::PropagateMarginY,
          SnapLayoutFlag::PropagateMarginX},
@@ -645,7 +654,8 @@ const struct {
            and thus affects inner padding and enlarges the width instead of
            overflowing into outer margin */
         {20.0f, 30.0f}, {},
-        {20.0f, 30.0f}, {7.0f, 2.0f, 3.0f, 4.0f}, {0.0f, 0.0f, 0.0f, 1.0f}},
+        {20.0f, 22.0f}, {20.0f, 30.0f},
+        {7.0f, 2.0f, 3.0f, 4.0f}, {0.0f, 0.0f, 0.0f, 1.0f}},
 
     {"propagate both directions, node padding smaller than child margin, no node margin, one side",
         {SnapLayoutFlag::PropagateMargin,
@@ -658,7 +668,8 @@ const struct {
            there's extra space of 7 on the other side, which causes the bottom
            margin to overflow by 2. Right-side margin overflows by 1. */
         {15.0f, 25.0f}, {},
-        {15.0f, 25.0f}, {3.0f, 2.0f, 1.0f, 4.0f}, {4.0f, 3.0f, 1.0f, 2.0f}},
+        {14.0f, 22.0f}, {15.0f, 25.0f},
+        {3.0f, 2.0f, 1.0f, 4.0f}, {4.0f, 3.0f, 1.0f, 2.0f}},
     {"propagate forward direction, node padding smaller than child margin, no node margin, one side",
         {SnapLayoutFlag::PropagateMarginX,
          SnapLayoutFlag::PropagateMarginY},
@@ -670,7 +681,8 @@ const struct {
         /* Left and right same as above, vertically the margin doesn't fit and
            thus affects inner padding and enlarges the height instead of
            overflowing into outer margin */
-        {15.0f, 30.0f}, {3.0f, 5.0f, 1.0f, 9.0f}, {4.0f, 0.0f, 1.0f, 0.0f}},
+        {14.0f, 30.0f}, {15.0f, 30.0f},
+        {3.0f, 5.0f, 1.0f, 9.0f}, {4.0f, 0.0f, 1.0f, 0.0f}},
     /* No point in verifying forward direction not propagated, as that's the
        same output as with the center variant above. Similarly not verifying
        the NoPad cases, as they should have been sufficiently tested with the
@@ -687,7 +699,8 @@ const struct {
            there's extra space of 2 on the other side, which causes the top
            margin to overflow by 3. Right-side margin underflows by 1. */
         {17.0f, 22.0f}, {},
-        {17.0f, 22.0f}, {3.0f, 2.0f, 1.0f, 4.0f}, {4.0f, 3.0f, 0.0f, 5.0f}},
+        {14.0f, 22.0f}, {17.0f, 22.0f},
+        {3.0f, 2.0f, 1.0f, 4.0f}, {4.0f, 3.0f, 0.0f, 5.0f}},
     {"propagate forward direction, node padding smaller than child margin, no node margin, other side",
         {SnapLayoutFlag::PropagateMarginX,
          SnapLayoutFlag::PropagateMarginY},
@@ -696,9 +709,10 @@ const struct {
          Snap::Left|Snap::Top|Snap::InsideY,
          Snap::Top|Snap::Right|Snap::InsideX},
         {17.0f, 22.0f}, {},
+        {14.0f, 30.0f}, {17.0f, 30.0f},
         /* Left and right same as above, vertically the same as with the other
            side above */
-        {17.0f, 30.0f}, {3.0f, 5.0f, 1.0f, 9.0f}, {4.0f, 0.0f, 0.0f, 0.0f}},
+        {3.0f, 5.0f, 1.0f, 9.0f}, {4.0f, 0.0f, 0.0f, 0.0f}},
     /* No point in verifying forward direction not propagated, as that's the
        same output as with the center variant above. Similarly not verifying
        the NoPad cases, as they should have been sufficiently tested with the
@@ -714,7 +728,8 @@ const struct {
         /* All margins except the right-side one are fully propagated outside,
            right-side margin overflows by 2. */
         {14.0f, 30.0f}, {},
-        {14.0f, 30.0f}, {3.0f, 2.0f, 1.0f, 4.0f}, {4.0f, 3.0f, 2.0f, 5.0f}},
+        {14.0f, 22.0f}, {14.0f, 30.0f},
+        {3.0f, 2.0f, 1.0f, 4.0f}, {4.0f, 3.0f, 2.0f, 5.0f}},
     /* Should be exactly the same as above */
     {"propagate both directions, node padding smaller than child margin, no node margin, fill, redundant Inside",
         {SnapLayoutFlag::PropagateMargin,
@@ -724,7 +739,8 @@ const struct {
          Snap::Left|Snap::FillY|Snap::InsideY,
          Snap::Top|Snap::FillX|Snap::InsideX},
         {14.0f, 30.0f}, {},
-        {14.0f, 30.0f}, {3.0f, 2.0f, 1.0f, 4.0f}, {4.0f, 3.0f, 2.0f, 5.0f}},
+        {14.0f, 22.0f}, {14.0f, 30.0f},
+        {3.0f, 2.0f, 1.0f, 4.0f}, {4.0f, 3.0f, 2.0f, 5.0f}},
     {"propagate forward direction, node padding smaller than child margin, no node margin, fill",
         {SnapLayoutFlag::PropagateMarginX,
          SnapLayoutFlag::PropagateMarginY},
@@ -735,7 +751,8 @@ const struct {
         /* Left and right same as above, vertically the margin affects inner
            padding instead of overflowing into outer margin */
         {14.0f, 30.0f}, {},
-        {14.0f, 30.0f}, {3.0f, 5.0f, 1.0f, 9.0f}, {4.0f, 0.0f, 2.0f, 0.0f}},
+        {14.0f, 30.0f}, {14.0f, 30.0f},
+        {3.0f, 5.0f, 1.0f, 9.0f}, {4.0f, 0.0f, 2.0f, 0.0f}},
     /* No point in verifying forward direction not propagated, as that's the
        same output as with the center variant above. Similarly not verifying
        the NoPad cases, as they should have been sufficiently tested with the
@@ -749,7 +766,8 @@ const struct {
          Snap::Left,
          Snap::Top},
         {0.0f, 100.0f}, {},
-        {14.0f, 100.0f}, {3.0f, 2.0f, 1.0f, 4.0f}, {4.0f, 0.0f, 2.0f, 0.0f}},
+        {14.0f, 22.0f}, {14.0f, 100.0f},
+        {3.0f, 2.0f, 1.0f, 4.0f}, {4.0f, 0.0f, 2.0f, 0.0f}},
     {"propagate both directions, node size large forward, zero side, no node margin",
         {SnapLayoutFlag::PropagateMargin,
          SnapLayoutFlag::PropagateMargin},
@@ -759,7 +777,8 @@ const struct {
          Snap::Top},
         {100.0f, 0.0f}, {},
         /* The margin before is propagated always, even with enough width */
-        {100.0f, 22.0f}, {3.0f, 2.0f, 1.0f, 4.0f}, {4.0f, 3.0f, 0.0f, 5.0f}},
+        {14.0f, 22.0f}, {100.0f, 22.0f},
+        {3.0f, 2.0f, 1.0f, 4.0f}, {4.0f, 3.0f, 0.0f, 5.0f}},
 
     {"propagate both directions, zero node size, node margin, variant 1",
         {SnapLayoutFlag::PropagateMargin,
@@ -771,7 +790,8 @@ const struct {
         {}, {2.0f, 7.0f, 3.0f, 3.0f},
         /* Margin overflow is {4, 3, 2, 5}, so a bigger value gets picked on
            top and right */
-        {14.0f, 22.0f}, {3.0f, 2.0f, 1.0f, 4.0f}, {4.0f, 7.0f, 3.0f, 5.0f}},
+        {14.0f, 22.0f}, {14.0f, 22.0f},
+        {3.0f, 2.0f, 1.0f, 4.0f}, {4.0f, 7.0f, 3.0f, 5.0f}},
     {"propagate both directions, zero node size, node margin, variant 2",
         {SnapLayoutFlag::PropagateMargin,
          SnapLayoutFlag::PropagateMargin},
@@ -782,7 +802,8 @@ const struct {
         {}, {5.0f, 2.0f, 1.0f, 7.0f},
         /* Margin overflow is {4, 3, 2, 5}, so a bigger value gets picked on
            left and bottom */
-        {14.0f, 22.0f}, {3.0f, 2.0f, 1.0f, 4.0f}, {5.0f, 3.0f, 2.0f, 7.0f}},
+        {14.0f, 22.0f}, {14.0f, 22.0f},
+        {3.0f, 2.0f, 1.0f, 4.0f}, {5.0f, 3.0f, 2.0f, 7.0f}},
 
     {"propagate both directions, zero node size, node margin all smaller, no pad forward",
         {SnapLayoutFlag::PropagateMargin,
@@ -795,7 +816,8 @@ const struct {
         /* Margin overflow is {4, 3, 2, 5}, but gets picked only on top and
            bottom. The parent node margin is used unchanged otherwise. Only the
            inner padding and size is affected by NoPad, margin isn't zeroed. */
-        {10.0f, 22.0f}, {0.0f, 2.0f, 0.0f, 4.0f}, {2.0f, 3.0f, 1.0f, 5.0f}},
+        {10.0f, 22.0f}, {10.0f, 22.0f},
+        {0.0f, 2.0f, 0.0f, 4.0f}, {2.0f, 3.0f, 1.0f, 5.0f}},
     {"propagate both directions, zero node size, node margin all smaller, no pad side",
         {SnapLayoutFlag::PropagateMargin,
          SnapLayoutFlag::PropagateMargin},
@@ -807,7 +829,8 @@ const struct {
         /* Margin overflow is {4, 3, 2, 5}, but gets picked only on left and
            right. The parent node margin is used unchanged otherwise. Only the
            inner padding and size is affected by NoPad, margin isn't zeroed. */
-        {14.0f, 16.0f}, {3.0f, 0.0f, 1.0f, 0.0f}, {4.0f, 2.0f, 2.0f, 3.0f}},
+        {14.0f, 16.0f}, {14.0f, 16.0f},
+        {3.0f, 0.0f, 1.0f, 0.0f}, {4.0f, 2.0f, 2.0f, 3.0f}},
 };
 
 const struct {
@@ -1892,6 +1915,7 @@ void SnapLayouterTest::layoutSizePaddingMargin() {
         {19.0f, 23.0f, 13.0f, 29.0f},
         data.childLayoutSize,
         data.childLayoutMargin);
+    CORRADE_COMPARE(out.paddedChildSize, data.expectedPaddedChildLayoutSize);
     CORRADE_COMPARE(out.size, data.expectedLayoutSize);
     CORRADE_COMPARE(out.padding, data.expectedLayoutPadding);
     CORRADE_COMPARE(out.margin, (Vector4{19.0f, 23.0f, 13.0f, 29.0f}));
@@ -1906,6 +1930,7 @@ void SnapLayouterTest::layoutSizePaddingMarginPropagate() {
     Vector4 nodePaddings[4];
     Vector2 childLayoutSizes[4];
     Vector4 childLayoutMargins[4];
+    Vector2 expectedPaddedChildLayoutSizes[4];
     Vector2 expectedLayoutSizes[4];
     Vector4 expectedLayoutPaddings[4];
     Vector4 expectedLayoutMargins[4];
@@ -1918,6 +1943,7 @@ void SnapLayouterTest::layoutSizePaddingMarginPropagate() {
     nodeMargins[0] = data.nodeMargin;
     childLayoutSizes[0] = {10.0f, 16.0f};
     childLayoutMargins[0] = {7.0f, 5.0f, 3.0f, 9.0f};
+    expectedPaddedChildLayoutSizes[0] = data.expectedPaddedChildLayoutSize;
     expectedLayoutSizes[0] = data.expectedLayoutSize;
     expectedLayoutPaddings[0] = data.expectedLayoutPadding;
     expectedLayoutMargins[0] = data.expectedLayoutMargin;
@@ -1929,6 +1955,7 @@ void SnapLayouterTest::layoutSizePaddingMarginPropagate() {
         nodePaddings[i + 1] = Math::gather<'w', 'x', 'y', 'z'>(nodePaddings[i]);
         childLayoutSizes[i + 1] = Math::gather<'y', 'x'>(childLayoutSizes[i]);
         childLayoutMargins[i + 1] = Math::gather<'w', 'x', 'y', 'z'>(childLayoutMargins[i]);
+        expectedPaddedChildLayoutSizes[i + 1] = Math::gather<'y', 'x'>(expectedPaddedChildLayoutSizes[i]);
         expectedLayoutSizes[i + 1] = Math::gather<'y', 'x'>(expectedLayoutSizes[i]);
         expectedLayoutPaddings[i + 1] = Math::gather<'w', 'x', 'y', 'z'>(expectedLayoutPaddings[i]);
         expectedLayoutMargins[i + 1] = Math::gather<'w', 'x', 'y', 'z'>(expectedLayoutMargins[i]);
@@ -1946,6 +1973,7 @@ void SnapLayouterTest::layoutSizePaddingMarginPropagate() {
             nodeMargins[rotation],
             childLayoutSizes[rotation],
             childLayoutMargins[rotation]);
+        CORRADE_COMPARE(out.paddedChildSize, expectedPaddedChildLayoutSizes[rotation]);
         CORRADE_COMPARE(out.size, expectedLayoutSizes[rotation]);
         CORRADE_COMPARE(out.padding, expectedLayoutPaddings[rotation]);
         CORRADE_COMPARE(out.margin, expectedLayoutMargins[rotation]);
@@ -2062,8 +2090,8 @@ void SnapLayouterTest::childLayoutSizeSide() {
             CORRADE_COMPARE(sizeMargin, Containers::pair(expectedSizes[rotation], expectedMargins[rotation]));
 
             /* Just to get the layout size and padding to pass to snap(), the
-               margin is unused. Tested thoroughly in layoutSizePaddingMargin()
-               instead. */
+               padded child size and margin is unused. Tested thoroughly in
+               layoutSizePaddingMargin() instead. */
             Implementation::LayoutSizePaddingMargin layoutSizePaddingMargin = Implementation::layoutSizePaddingMargin({}, snap, {}, {}, {}, sizeMargin.first(), sizeMargin.second());
 
             /* With the above size and padding, snapping the three nodes should
@@ -2204,8 +2232,8 @@ void SnapLayouterTest::childLayoutSizeForward() {
             CORRADE_COMPARE(sizeMargin, Containers::pair(expectedSizes[rotation], expectedMargins[rotation]));
 
             /* Just to get the layout size and padding to pass to snap(), the
-               margin is unused. Tested thoroughly in layoutSizePaddingMargin()
-               instead. */
+               padded child size and margin is unused. Tested thoroughly in
+               layoutSizePaddingMargin() instead. */
             Implementation::LayoutSizePaddingMargin layoutSizePaddingMargin = Implementation::layoutSizePaddingMargin({}, snap, {}, {}, {}, sizeMargin.first(), sizeMargin.second());
 
             /* With the above size and padding, snapping the three nodes should
