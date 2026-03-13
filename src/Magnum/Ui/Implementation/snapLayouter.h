@@ -26,6 +26,7 @@
     DEALINGS IN THE SOFTWARE.
 */
 
+#include <algorithm> /* std::sort() :( */
 #include <Corrade/Containers/StridedBitArrayView.h>
 #include <Corrade/Containers/Triple.h>
 #include <Magnum/Math/Functions.h>
@@ -595,6 +596,162 @@ LayoutSizePaddingMargin layoutSizePaddingMargin(const SnapLayoutFlags flags, con
     }
 
     return {paddedChildLayoutSize, layoutSize, layoutPadding, layoutMargin};
+}
+
+/* Expand sizes of child layouts if the `nodeSize` is larger than `nodeMinSize`
+   in the dimension matching `childSnap`, and there are actually any child
+   layouts that expand. The function modifies corresponding `nodeSizes` as a
+   result.
+
+   The `nodeIds` array is temporary storage and is assumed to be large enough
+   to contain the largest possible amount of expanding child nodes. */
+void expandChildLayouts(const Snaps childSnap, const Vector2& nodeSize, const Vector2& nodeMinSize, const Containers::StridedArrayView1D<Vector2>& nodeSizes, const LayouterDataHandle firstChildLayout, const Containers::StridedArrayView1D<const NodeHandle>& layoutNodes, const Containers::StridedArrayView1D<const Snaps>& layoutSnaps, const Containers::StridedArrayView1D<const LayouterDataHandle>& nextLayout, Containers::ArrayView<UnsignedInt> nodeIds) {
+    /* Figure out which dimension we're expanding in based on the child snap.
+       These are the same conditions as used in childLayoutSizeMargin()
+       above. */
+    /** @todo uh, maybe have some kind of a helper for those? */
+    const Snaps childSnapNoNoPad = childSnap & ~Snap::NoPad;
+    Snap snapDirection;
+    UnsignedInt sizeComponent;
+    if(
+        /* Right-to-left */
+        (childSnapNoNoPad|Snap::FillY|Snap::InsideY) == (Snap::Left|Snap::FillY|Snap::InsideY) ||
+         childSnapNoNoPad == (Snap::TopLeft|Snap::InsideY) ||
+         childSnapNoNoPad == (Snap::BottomLeft|Snap::InsideY) ||
+        /* Left-to-right */
+        (childSnapNoNoPad|Snap::FillY|Snap::InsideY) == (Snap::Right|Snap::FillY|Snap::InsideY) ||
+         childSnapNoNoPad == (Snap::TopRight|Snap::InsideY) ||
+         childSnapNoNoPad == (Snap::BottomRight|Snap::InsideY)
+    ) {
+        snapDirection = Snap::FillX;
+        sizeComponent = 0;
+    } else if(
+        /* Bottom-to-top */
+        (childSnapNoNoPad|Snap::FillX|Snap::InsideX) == (Snap::Top|Snap::FillX|Snap::InsideX) ||
+         childSnapNoNoPad == (Snap::TopLeft|Snap::InsideX) ||
+         childSnapNoNoPad == (Snap::TopRight|Snap::InsideX) ||
+        /* Top-to-bottom */
+        (childSnapNoNoPad|Snap::FillX|Snap::InsideX) == (Snap::Bottom|Snap::FillX|Snap::InsideX) ||
+         childSnapNoNoPad == (Snap::BottomLeft|Snap::InsideX) ||
+         childSnapNoNoPad == (Snap::BottomRight|Snap::InsideX)
+    ) {
+        snapDirection = Snap::FillY;
+        sizeComponent = 1;
+    } else CORRADE_INTERNAL_ASSERT_UNREACHABLE(); /* LCOV_EXCL_LINE */
+
+    /* Calculate the extra available size in the direction we're expanding in.
+       If there's none, nothing to do. Note that it can be also negative in
+       case IgnoreOverflow is set on the parent. */
+    const Float extraAvailableSize = nodeSize[sizeComponent] - nodeMinSize[sizeComponent];
+    if(extraAvailableSize <= 0.0f)
+        return;
+
+    /* First gather the total count and size of all expandable layouts
+       including the extra available size */
+    UnsignedInt expandableChildCount = 0;
+    Float totalSize = extraAvailableSize;
+    Float maxSize = 0.0f;
+    {
+        LayouterDataHandle childLayout = firstChildLayout;
+        do {
+            const UnsignedInt layoutId = layouterDataHandleId(childLayout);
+            if(layoutSnaps[layoutId] >= snapDirection) {
+                const UnsignedInt nodeId = nodeHandleId(layoutNodes[layoutId]);
+                nodeIds[expandableChildCount++] = nodeId;
+                const Float size = nodeSizes[nodeId][sizeComponent];
+                totalSize += size;
+                maxSize = Math::max(maxSize, size);
+            }
+
+            childLayout = nextLayout[layouterDataHandleId(childLayout)];
+        } while(childLayout != firstChildLayout);
+    }
+
+    /* There are no expandable children, nothing to do with the extra available
+       size */
+    if(!expandableChildCount)
+        return;
+
+    /* If all expandable children fit into the calculate size, we can simply
+       assign it to all and be done */
+    {
+        const Float sizePerChild = totalSize/expandableChildCount;
+        if(sizePerChild >= maxSize) {
+            for(UnsignedInt i = 0; i != expandableChildCount; ++i) {
+                CORRADE_INTERNAL_DEBUG_ASSERT(nodeSizes[nodeIds[i]][sizeComponent] <= sizePerChild);
+                nodeSizes[nodeIds[i]][sizeComponent] = sizePerChild;
+            }
+            return;
+        }
+    }
+
+    /* Otherwise, the goal is to have all expandable children with the same
+       minimal size, or larger. For example, if there are four expandable
+       children of sizes 10, 20, 100, 10 and the total available size is 150,
+       it'll be 15, 20, 100, 15. If the total available size would be 200, then
+       it'll be 33, 33, 100, 33, if 500 then 125, 125, 125, 125.
+
+       For this, we first need to sort the children by size. Unfortunately so
+       far I didn't figure a way to do this linearly, but the optimistic
+       assumption is that either the above trivial branch is taken, with the
+       size just being evenly distributed, or, if not, there will be at most
+       just very few expandable children, making the O(n log n) sort not too
+       expensive.
+
+                 |
+                ||
+        _______|||
+        ====||||||
+        ===|||||||
+        =|||||||||
+
+       The algorithm can be thought of as some sort of a "flood fill" of a
+       sorted bar plot -- the |s are sorted node sizes, the = and _ is filling
+       up the area above the smallest ones until all of `extraAvailableSize` is
+       exhausted. If multiple nodes have the same size, they're either all
+       expanded or all left alone, thus the sort doesn't need to preserve
+       order. */
+    std::sort(nodeIds.begin(), nodeIds.begin() + expandableChildCount, [&](UnsignedInt a, UnsignedInt b) {
+        return nodeSizes[a][sizeComponent] < nodeSizes[b][sizeComponent];
+    });
+
+    /* Now go through the sorted nodes and pick the largest prefix where the
+       total size of nodes in the prefix along with the extra available size
+       divided by size of the prefix is still greater than the last node size.
+       Size of all nodes in that prefix will then be enlarged. */
+    Float totalPrefixSize = extraAvailableSize;
+    UnsignedInt prefixChildCount = 0;
+    for(; prefixChildCount != expandableChildCount; ++prefixChildCount) {
+        const Float nodeSize = nodeSizes[nodeIds[prefixChildCount]][sizeComponent];
+        /* Could also use < here instead of <=, but that's wasteful as it'd
+           process nodes that get their size enlarged by exactly 0 */
+        if((totalPrefixSize + nodeSize)/(prefixChildCount + 1) <= nodeSize)
+            break;
+
+        totalPrefixSize += nodeSize;
+    }
+
+    /* The prefix should have at least one item (as for the first node the
+       expression is reducing basically to `if((nodeSize + ε)/1 < nodeSize)`
+       which is never true. From the other side, using up all expandable
+       children would mean there's enough space to divide it between them
+       without any expensive sorting, and that should have been handled in the
+       trivial branch above already. */
+    CORRADE_INTERNAL_ASSERT(prefixChildCount && prefixChildCount != expandableChildCount);
+    /* If there's several nodes of the same size, either all of them or none of
+       them should be used up, to not make it dependent on their order and
+       std::sort() internal. Thus the next child after the prefix (which is
+       never the full count) should be always larger. */
+    CORRADE_INTERNAL_ASSERT(nodeSizes[nodeIds[prefixChildCount]] > nodeSizes[nodeIds[prefixChildCount - 1]]);
+
+    /* Apply the final calculated size to all nodes in the prefix */
+    const Float sizePerChild = totalPrefixSize/prefixChildCount;
+    for(UnsignedInt i = 0; i != prefixChildCount; ++i) {
+        /* The prefix above should have been chosen so that we actually make
+           the sizes larger (i.e., < and not <=, as that'd be useless work) */
+        CORRADE_INTERNAL_DEBUG_ASSERT(nodeSizes[nodeIds[i]][sizeComponent] < sizePerChild);
+        nodeSizes[nodeIds[i]][sizeComponent] = sizePerChild;
+    }
 }
 
 /* Used by SnapLayouter::setChildSnapInternal() but also tests that verify

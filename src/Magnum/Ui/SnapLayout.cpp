@@ -129,9 +129,6 @@ AbstractSnapLayout& AbstractSnapLayout::clearFlags(const SnapLayoutFlags flags) 
 }
 
 Snaps AbstractSnapLayout::snap() const {
-    /* Deliberately *not* replicating the AbstractSnapLayouter assertions here,
-       copying them just to provide a slightly different message only adds
-       extra testing effort with questionable benefits. */
     return _layouter->snap(_layout);
 }
 
@@ -164,6 +161,18 @@ AbstractSnapLayout AbstractSnapLayout::child(const Vector2& nodeSize, const Node
     return AbstractSnapLayout{*_ui, _layouter, child, layoutHandleData(layout)};
 }
 
+AbstractSnapLayout AbstractSnapLayout::child(const Snaps snap, const Vector2& nodeSize, const NodeFlags nodeFlags, const LayoutHandle layoutBefore, const SnapLayoutFlags layoutFlags) {
+    const NodeHandle child = _ui->createNode(_node, {}, nodeSize, nodeFlags);
+    const LayoutHandle layout = _layouter->add(child, snap, layoutBefore, layoutFlags);
+    return AbstractSnapLayout{*_ui, _layouter, child, layoutHandleData(layout)};
+}
+
+AbstractSnapLayout AbstractSnapLayout::child(const Snaps snap, const Vector2& nodeSize, const NodeFlags nodeFlags, const LayouterDataHandle layoutBefore, const SnapLayoutFlags layoutFlags) {
+    const NodeHandle child = _ui->createNode(_node, {}, nodeSize, nodeFlags);
+    const LayoutHandle layout = _layouter->add(child, snap, layoutBefore, layoutFlags);
+    return AbstractSnapLayout{*_ui, _layouter, child, layoutHandleData(layout)};
+}
+
 AbstractSnapLayout AbstractSnapLayout::snapChild(const Snaps snap, const Vector2& nodeSize, const NodeFlags nodeFlags, const SnapLayoutFlags layoutFlags) {
     const NodeHandle child = _ui->createNode(_node, {}, nodeSize, nodeFlags);
     const LayoutHandle layout = _layouter->addExplicit(child, snap, _layout, layoutFlags);
@@ -181,15 +190,17 @@ LayoutHandle AbstractSnapLayout::layout() const {
 }
 
 void AbstractSnapLayout::setDefaultPropagateMargin() {
-    /* Add the PropagateMargin flag to axes which don't have IgnoreOverflow
-       already, as that would conflict */
+    /* Add the PropagateMargin flag to axes which don't have IgnoreOverflow or
+       implicit snap adjustment already, as that would conflict */
     /** @todo even though this is now done only when creating a specialized
         layout out of another layout, and not of arbitrary anchor, it feels
         like a shitty solution, better ideas? */
+    const Snaps snapAdjustment = _layouter->hasExplicitSnap(_layout) ?
+        Snaps{} : _layouter->snap(_layout);
     SnapLayoutFlags flags = _layouter->flags(_layout);
-    if(!(flags & SnapLayoutFlag::IgnoreOverflowX))
+    if(!(flags & SnapLayoutFlag::IgnoreOverflowX) && !(snapAdjustment >= Snap::FillX))
         flags |= SnapLayoutFlag::PropagateMarginX;
-    if(!(flags & SnapLayoutFlag::IgnoreOverflowY))
+    if(!(flags & SnapLayoutFlag::IgnoreOverflowY) && !(snapAdjustment >= Snap::FillY))
         flags |= SnapLayoutFlag::PropagateMarginY;
     _layouter->setFlags(_layout, flags);
 }

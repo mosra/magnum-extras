@@ -175,6 +175,47 @@ Ui::LayoutHandle subtitle = layouter.add(subtitleNode, /*before*/ details);
     }
 
     {
+/* [child-expansion] */
+Ui::NodeHandle root = ui.createNode({}, {});
+Ui::LayoutHandle rootLayout = layouter.addExplicit(root,
+    Ui::Snap::Fill, Ui::LayoutHandle::Null);
+layouter.setChildSnap(rootLayout, Ui::Snap::Bottom|Ui::Snap::FillX);
+
+Ui::NodeHandle menubar = ui.createNode(root, {}, {0, 16});
+Ui::NodeHandle toolbar = ui.createNode(root, {}, {0, 24});
+layouter.add(menubar);
+layouter.add(toolbar);
+
+Ui::NodeHandle main = ui.createNode(root, {}, {});
+Ui::LayoutHandle mainLayout = layouter.add(main, Ui::Snap::FillY);
+layouter.setChildSnap(mainLayout, Ui::Snap::Right|Ui::Snap::FillY);
+
+Ui::NodeHandle statusbar = ui.createNode(root, {}, {0, 16});
+layouter.add(statusbar);
+
+Ui::NodeHandle left = ui.createNode(main, {}, {});
+Ui::NodeHandle right = ui.createNode(main, {}, {});
+layouter.add(left, Ui::Snap::FillX);
+layouter.add(right, Ui::Snap::FillX);
+/* [child-expansion] */
+
+        /* Highlight everything except the root node, which is covered by all
+           others and causes the colors to blend together too much */
+        ui.update();
+        debugLayer.highlightNodes(layouter, [](const Ui::SnapLayouter&, Ui::LayouterDataHandle) {
+            return true;
+        });
+        debugLayer.clearHighlightedNode(root);
+
+        renderer.compositingFramebuffer().clearColor(0, 0x00000000_rgbaf);
+        ui.draw();
+        converter->convertToFile(unpremultiply(renderer.compositingFramebuffer().read({{}, ImageSize}, {PixelFormat::RGBA8Unorm})), "ui-snaplayouter-child-expansion.png");
+
+        ui.removeNode(root);
+        ui.update();
+    }
+
+    {
 /* [nested-layouts] */
 /* A root column layout */
 Ui::NodeHandle rootNode = DOXYGEN_ELLIPSIS(ui.createNode({5, 5}, {}));

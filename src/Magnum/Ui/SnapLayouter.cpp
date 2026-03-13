@@ -146,9 +146,7 @@ constexpr SnapLayoutFlags SnapLayoutFlagMask = ~(SnapLayoutFlagHasExplicitSnap|I
 
 struct Layout {
     SnapLayoutFlags flags;
-    /* used only if flags contain SnapLayoutFlagHasExplicitSnap */
-    Snaps snap{NoInit};
-    Snaps childSnap{NoInit}, firstChildSnap{NoInit};
+    Snaps snap{NoInit}, childSnap{NoInit}, firstChildSnap{NoInit};
     LayouterDataHandle firstChild;
     LayouterDataHandle firstExplicitSnap;
     LayouterDataHandle parentOrExplicitSnapTarget;
@@ -205,6 +203,7 @@ LayoutHandle SnapLayouter::addInternal(const NodeHandle node, const LayouterData
 
     Layout& layout = state.layouts[id];
     layout.flags = flags;
+    layout.snap = {};
     layout.childSnap = Snap::Bottom;
     layout.firstChildSnap = Snap::Top|Snap::Inside;
     layout.firstChild = LayouterDataHandle::Null;
@@ -258,6 +257,30 @@ LayoutHandle SnapLayouter::addInternal(const NodeHandle node, const LayouterData
             parentLayout.firstChild = layoutHandleData(handle);
     }
 
+    return handle;
+}
+
+LayoutHandle SnapLayouter::add(const NodeHandle node, const Snaps snaps, const LayoutHandle before, const SnapLayoutFlags flags) {
+    CORRADE_ASSERT(before == LayoutHandle::Null || isHandleValid(before),
+        "Ui::SnapLayouter::add(): invalid before handle" << before, {});
+    return addInternal(node, snaps, layoutHandleData(before), flags);
+}
+
+LayoutHandle SnapLayouter::add(const NodeHandle node, const Snaps snaps, const LayouterDataHandle before, const SnapLayoutFlags flags) {
+    CORRADE_ASSERT(before == LayouterDataHandle::Null || isHandleValid(before),
+        "Ui::SnapLayouter::add(): invalid before handle" << before, {});
+    return addInternal(node, snaps, before, flags);
+}
+
+LayoutHandle SnapLayouter::addInternal(const NodeHandle node, const Snaps snaps, const LayouterDataHandle before, const SnapLayoutFlags flags) {
+    const LayoutHandle handle = addInternal(node, before, flags);
+    CORRADE_ASSERT(_state->layouts[layoutHandleId(handle)].parentOrExplicitSnapTarget != LayouterDataHandle::Null,
+        "Ui::SnapLayouter::add(): can't set snap adjustment for" << node << "without a parent layout", {});
+    setSnapInternal(
+        #ifndef CORRADE_NO_ASSERT
+        "Ui::SnapLayouter::add():",
+        #endif
+        layoutHandleId(handle), snaps);
     return handle;
 }
 
@@ -497,6 +520,10 @@ void SnapLayouter::setFlagsInternal(const UnsignedInt id, const SnapLayoutFlags 
         !(flags >= (SnapLayoutFlag::IgnoreOverflowX|SnapLayoutFlag::PropagateMarginX)) &&
         !(flags >= (SnapLayoutFlag::IgnoreOverflowY|SnapLayoutFlag::PropagateMarginY)),
         "Ui::SnapLayouter::setFlags():" << (flags & SnapLayoutFlag::IgnoreOverflow) << "and" << (flags & SnapLayoutFlag::PropagateMargin) << "are mutually exclusive", );
+    CORRADE_ASSERT(layout.flags >= SnapLayoutFlagHasExplicitSnap ||
+        ((!(flags >= SnapLayoutFlag::PropagateMarginX) || !(layout.snap >= Snap::FillX)) &&
+        (!(flags >= SnapLayoutFlag::PropagateMarginY) || !(layout.snap >= Snap::FillY))),
+        "Ui::SnapLayouter::setFlags():" << (flags & SnapLayoutFlag::PropagateMargin) << "is mutually exclusive with" << (layout.snap & Snap::Fill) << "for an implicitly snapped layout", );
     layout.flags = (layout.flags & ~SnapLayoutFlagMask)|flags;
     setNeedsUpdate();
 }
@@ -552,39 +579,75 @@ void SnapLayouter::clearFlagsInternal(const UnsignedInt id, const SnapLayoutFlag
 Snaps SnapLayouter::snap(const LayoutHandle handle) const {
     CORRADE_ASSERT(isHandleValid(handle),
         "Ui::SnapLayouter::snap(): invalid handle" << handle, {});
-    const Layout& layout = _state->layouts[layoutHandleId(handle)];
-    CORRADE_ASSERT(layout.flags >= SnapLayoutFlagHasExplicitSnap,
-        "Ui::SnapLayouter::snap():" << handle << "doesn't have an explicit snap", {});
-    return layout.snap;
+    return _state->layouts[layoutHandleId(handle)].snap;
 }
 
 Snaps SnapLayouter::snap(const LayouterDataHandle handle) const {
     CORRADE_ASSERT(isHandleValid(handle),
         "Ui::SnapLayouter::snap(): invalid handle" << handle, {});
-    const Layout& layout = _state->layouts[layouterDataHandleId(handle)];
-    CORRADE_ASSERT(layout.flags >= SnapLayoutFlagHasExplicitSnap,
-        "Ui::SnapLayouter::snap():" << handle << "doesn't have an explicit snap", {});
-    return layout.snap;
+    return _state->layouts[layouterDataHandleId(handle)].snap;
 }
 
 void SnapLayouter::setSnap(const LayoutHandle handle, const Snaps snap) {
     CORRADE_ASSERT(isHandleValid(handle),
         "Ui::SnapLayouter::setSnap(): invalid handle" << handle, );
-    Layout& layout = _state->layouts[layoutHandleId(handle)];
-    CORRADE_ASSERT(layout.flags >= SnapLayoutFlagHasExplicitSnap,
-        "Ui::SnapLayouter::setSnap():" << handle << "doesn't have an explicit snap", );
-    layout.snap = snap;
+    #ifndef CORRADE_NO_ASSERT
+    const Layout& layout = _state->layouts[layoutHandleId(handle)];
+    #endif
+    CORRADE_ASSERT(layout.flags >= SnapLayoutFlagHasExplicitSnap || layout.parentOrExplicitSnapTarget != LayouterDataHandle::Null,
+        "Ui::SnapLayouter::setSnap(): can't set snap adjustment for" << handle << "without a parent layout", );
+    setSnapInternal(
+        #ifndef CORRADE_NO_ASSERT
+        "Ui::SnapLayouter::setSnap():",
+        #endif
+        layoutHandleId(handle), snap);
     setNeedsUpdate();
 }
 
 void SnapLayouter::setSnap(const LayouterDataHandle handle, const Snaps snap) {
     CORRADE_ASSERT(isHandleValid(handle),
         "Ui::SnapLayouter::setSnap(): invalid handle" << handle, );
-    Layout& layout = _state->layouts[layouterDataHandleId(handle)];
-    CORRADE_ASSERT(layout.flags >= SnapLayoutFlagHasExplicitSnap,
-        "Ui::SnapLayouter::setSnap():" << handle << "doesn't have an explicit snap", );
-    layout.snap = snap;
+    #ifndef CORRADE_NO_ASSERT
+    const Layout& layout = _state->layouts[layouterDataHandleId(handle)];
+    #endif
+    CORRADE_ASSERT(layout.flags >= SnapLayoutFlagHasExplicitSnap || layout.parentOrExplicitSnapTarget != LayouterDataHandle::Null,
+        "Ui::SnapLayouter::setSnap(): can't set snap adjustment for" << handle << "without a parent layout", );
+    setSnapInternal(
+        #ifndef CORRADE_NO_ASSERT
+        "Ui::SnapLayouter::setSnap():",
+        #endif
+        layouterDataHandleId(handle), snap);
     setNeedsUpdate();
+}
+
+void SnapLayouter::setSnapInternal(
+    #ifndef CORRADE_NO_ASSERT
+    const char* messagePrefix,
+    #endif
+    const UnsignedInt id, const Snaps snap)
+{
+    Layout& layout = _state->layouts[id];
+    #ifndef CORRADE_NO_ASSERT
+    if(!(layout.flags >= SnapLayoutFlagHasExplicitSnap)) {
+        /* Parent layout checked in setSnap() / add() already, as it prints the
+           whole handle */
+        CORRADE_ASSERT(
+            (snap == Snaps{} ||
+             snap == Snap::FillX ||
+             snap == Snap::FillY ||
+             snap == Snap::Fill),
+            messagePrefix << "expected a combination of" << Snap::FillX << "and" << Snap::FillY << "for an implicitly snapped layout but got" << snap, );
+        CORRADE_ASSERT(
+            (!(snap >= Snap::FillX) || !(layout.flags >= SnapLayoutFlag::PropagateMarginX)) &&
+            (!(snap >= Snap::FillY) || !(layout.flags >= SnapLayoutFlag::PropagateMarginY)),
+            messagePrefix << (snap & Snap::Fill) << "is mutually exclusive with" << (layout.flags & SnapLayoutFlag::PropagateMargin) << "for an implicitly snapped layout", );
+    }
+    #endif
+
+    layout.snap = snap;
+    /* setNeedsUpdate() expected to be called by setSnap(). This function is
+       also used from add(NodeHandle, Snaps, ...), where setNeedsUpdate() is
+       not called. */
 }
 
 Snaps SnapLayouter::childSnap(const LayoutHandle handle) const {
@@ -844,6 +907,35 @@ void SnapLayouter::doLayout(const Containers::BitArrayView layoutIdsToUpdate, co
         nodeSizes[nodeId] = Math::max(nodeSizes[nodeId], nodeMinSizes[nodeId]);
     }
 
+    /* Get the max count of expandable children per layout to size the
+       corresponding allocations for them */
+    UnsignedInt maxExpandableChildCount = 0;
+    for(std::size_t i = 0; i != layoutIdsToUpdate.size(); ++i) {
+        /** @todo some way to iterate set bits */
+        if(!layoutIdsToUpdate[i])
+            continue;
+
+        const LayouterDataHandle firstChild = state.layouts[i].firstChild;
+        if(firstChild != LayouterDataHandle::Null)  {
+            UnsignedInt count = 0;
+            LayouterDataHandle childLayout = firstChild;
+            do {
+                const Layout& layout = state.layouts[layouterDataHandleId(childLayout)];
+
+                /* Conservatively count even layouts that don't expand in the
+                   actual layout direction (such as Snap::FillX for child snap
+                   of Snap::Bottom). Such cases should be rare, worst case
+                   we'll overallocate slightly. */
+                if(layout.snap & Snap::Fill)
+                    ++count;
+
+                childLayout = layout.next;
+            } while(childLayout != firstChild);
+
+            maxExpandableChildCount = Math::max(maxExpandableChildCount, count);
+        }
+    }
+
     /* Order layouts breadth first in dependency order to ensure the parent /
        target layout offset / size is known when calculating child / dependent
        layout */
@@ -857,6 +949,7 @@ void SnapLayouter::doLayout(const Containers::BitArrayView layoutIdsToUpdate, co
         childrenOffsets are not needed anymore, make use of that once a bump
         allocator is a thing */
     Containers::ArrayView<Vector4> childLayoutPaddings;
+    Containers::ArrayView<UnsignedInt> expandableChildNodeIds;
     Containers::ArrayTuple storage{
         /* +1 for the last offset, +1 for root nodes */
         {ValueInit, state.layouts.size() + 2, childrenOffsets},
@@ -864,6 +957,7 @@ void SnapLayouter::doLayout(const Containers::BitArrayView layoutIdsToUpdate, co
         /* +1 for the first element which is -1 indicating a root */
         {NoInit, state.layouts.size() + 1, layoutIds},
         {NoInit, state.layouts.size(), childLayoutPaddings},
+        {NoInit, maxExpandableChildCount, expandableChildNodeIds},
     };
     Implementation::orderLayoutsBreadthFirstInto(
         stridedArrayView(state.layouts).slice(&Layout::parentOrExplicitSnapTarget),
@@ -937,6 +1031,12 @@ void SnapLayouter::doLayout(const Containers::BitArrayView layoutIdsToUpdate, co
                     stridedArrayView(state.layouts).slice(&Layout::snap),
                     stridedArrayView(state.layouts).slice(&Layout::next));
 
+        /* Abuse the node min size to store a size of all child layouts along
+           with padding, which will subsequently get used to expand children
+           to available size if any */
+        /** @todo this might cause issues with subsequent layouters, maybe set
+            the min size to the whole node size afterwards? */
+        nodeMinSizes[nodeId] = layoutSizePaddingMargin.paddedChildSize;
         nodeSizes[nodeId] = Math::max(layoutSizePaddingMargin.size, explicitlySnappedChildLayoutSize);
         childLayoutPaddings[layoutId] = layoutSizePaddingMargin.padding;
         nodeMargins[nodeId] = layoutSizePaddingMargin.margin;
@@ -1076,6 +1176,22 @@ void SnapLayouter::doLayout(const Containers::BitArrayView layoutIdsToUpdate, co
                may be (partially) replaced */
             nodeOffsets[nodeId] += out.first();
             nodeSizes[nodeId] = out.second();
+        }
+
+        /* If there are children, expand them, so the following iterations
+           that deal with nested and dependent layouts operate with the final
+           expanded target sizes to snap to */
+        if(layout.firstChild != LayouterDataHandle::Null) {
+            Implementation::expandChildLayouts(
+                layout.childSnap,
+                nodeSizes[nodeId],
+                nodeMinSizes[nodeId],
+                nodeSizes,
+                layout.firstChild,
+                nodes,
+                stridedArrayView(state.layouts).slice(&Layout::snap),
+                stridedArrayView(state.layouts).slice(&Layout::next),
+                expandableChildNodeIds);
         }
     }
 }

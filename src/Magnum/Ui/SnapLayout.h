@@ -206,22 +206,22 @@ class MAGNUM_UI_EXPORT AbstractSnapLayout {
          */
         AbstractSnapLayout& clearFlags(SnapLayoutFlags flags);
 
-        /**
-         * @brief Explicit layout snap
-         *
-         * Expects that the layout was created using @ref snapRoot(),
-         * @ref snapChild() or @ref snapSibling().
-         */
+        /** @brief Snap adjustment or explicit layout snap */
         Snaps snap() const;
 
         /**
-         * @brief Set explicit layout snap
+         * @brief Set snap adjustment or explicit layout snap
          * @return Reference to self (for method chaining)
          *
-         * Expects that the layout was created using @ref snapRoot(),
-         * @ref snapChild() or @ref snapSibling(). Calls
-         * @ref SnapLayouter::setSnap() internally, see its documentation for
-         * detailed description of all constraints.
+         * If the layout was created using @ref snapRoot(), @ref snapChild() or
+         * @ref snapSibling(), contains the explicit snap that was passed to
+         * those functions. If the layout was created using
+         * @ref child(Snaps, const Vector2&, NodeFlags, LayoutHandle, SnapLayoutFlags)
+         * contains the snap adjustment that was passed to the function.
+         * Otherwise the default is an empty @ref Snaps.
+         *
+         * Calls @ref SnapLayouter::setSnap() internally, see its documentation
+         * for detailed description of all constraints.
          */
         AbstractSnapLayout& setSnap(Snaps snap);
 
@@ -273,8 +273,9 @@ class MAGNUM_UI_EXPORT AbstractSnapLayout {
          * @ref SnapLayout return a concrete layout instance.
          *
          * Calls @ref AbstractUserInterface::createNode() and
-         * @ref SnapLayouter::add() internally, see their documentation for
-         * detailed description of all constraints.
+         * @ref SnapLayouter::add(NodeHandle, LayoutHandle, SnapLayoutFlags)
+         * internally, see their documentation for detailed description of all
+         * constraints.
          */
         AbstractSnapLayout child(const Vector2& nodeSize = {}, NodeFlags nodeFlags = {}, LayoutHandle layoutBefore =
             #ifdef DOXYGEN_GENERATING_OUTPUT
@@ -304,13 +305,77 @@ class MAGNUM_UI_EXPORT AbstractSnapLayout {
          * @ref layouter(). See its documentation for more information.
          *
          * Calls @ref AbstractUserInterface::createNode() and
-         * @ref SnapLayouter::add() internally, see their documentation for
-         * detailed description of all constraints.
+         * @ref SnapLayouter::add(NodeHandle, LayouterDataHandle, SnapLayoutFlags)
+         * internally, see their documentation for detailed description of all
+         * constraints.
          */
         AbstractSnapLayout child(const Vector2& nodeSize, NodeFlags nodeFlags, LayouterDataHandle layoutBefore, SnapLayoutFlags layoutFlags = {});
         /** @overload */
         AbstractSnapLayout child(const Vector2& nodeSize, LayouterDataHandle layoutBefore, SnapLayoutFlags layoutFlags = {}) {
             return child(nodeSize, {}, layoutBefore, layoutFlags);
+        }
+
+        /**
+         * @brief Create a child layout with snap adjustment
+         * @param snap          Snap adjustment, either empty or a combination
+         *      of @ref Snap::FillX and @ref Snap::FillY
+         * @param nodeSize      Child node size
+         * @param nodeFlags     Child node flags
+         * @param layoutBefore  Child layout to order before or
+         *      @ref LayoutHandle::Null if ordered as last
+         * @param layoutFlags   Layout flags
+         * @return New layout instance
+         *
+         * Creates a node that's a child of @ref node() and assigns a layout to
+         * it. The child layout is positioned according to @ref childSnap() and
+         * @p snap. Use @ref snapChild() to snap a child layout explicitly, use
+         * @ref snapSibling() to create an explicitly snapped sibling instead
+         * of a child.
+         *
+         * The @ref BasicSnapLayout subclass and its various typedefs such as
+         * @ref SnapLayout return a concrete layout instance.
+         *
+         * Calls @ref AbstractUserInterface::createNode() and
+         * @ref SnapLayouter::add(NodeHandle, Snaps, LayoutHandle, SnapLayoutFlags)
+         * internally, see their documentation for detailed description of all
+         * constraints.
+         */
+        AbstractSnapLayout child(Snaps snap, const Vector2& nodeSize = {}, NodeFlags nodeFlags = {}, LayoutHandle layoutBefore =
+            #ifdef DOXYGEN_GENERATING_OUTPUT
+            LayoutHandle::Null,
+            #else
+            LayoutHandle{}, /* To not have to include Handle.h */
+            #endif
+            SnapLayoutFlags layoutFlags = {});
+        /** @overload */
+        AbstractSnapLayout child(Snaps snap, const Vector2& nodeSize, LayoutHandle layoutBefore, SnapLayoutFlags layoutFlags = {}) {
+            return child(snap, nodeSize, {}, layoutBefore, layoutFlags);
+        }
+        /** @overload */
+        AbstractSnapLayout child(Snaps snap, const Vector2& nodeSize, NodeFlags nodeFlags, SnapLayoutFlags layoutFlags) {
+            return child(snap, nodeSize, nodeFlags, LayoutHandle{}, layoutFlags);
+        }
+        /** @overload */
+        AbstractSnapLayout child(Snaps snap, const Vector2& nodeSize, SnapLayoutFlags layoutFlags) {
+            return child(snap, nodeSize, LayoutHandle{}, layoutFlags);
+        }
+
+        /**
+         * @brief Create a child layout with snap adjustment, ordered before given layout assuming the layout belongs to the same layouter
+         *
+         * Like @ref child(Snaps, const Vector2&, NodeFlags, LayoutHandle, SnapLayoutFlags)
+         * but without checking that @p layoutBefore indeed belongs to
+         * @ref layouter(). See its documentation for more information.
+         *
+         * Calls @ref AbstractUserInterface::createNode() and
+         * @ref SnapLayouter::add(NodeHandle, Snaps, LayouterDataHandle, SnapLayoutFlags)
+         * internally, see their documentation for detailed description of all
+         * constraints.
+         */
+        AbstractSnapLayout child(Snaps snap, const Vector2& nodeSize, NodeFlags nodeFlags, LayouterDataHandle layoutBefore, SnapLayoutFlags layoutFlags = {});
+        /** @overload */
+        AbstractSnapLayout child(Snaps snap, const Vector2& nodeSize, LayouterDataHandle layoutBefore, SnapLayoutFlags layoutFlags = {}) {
+            return child(snap, nodeSize, {}, layoutBefore, layoutFlags);
         }
 
         /**
@@ -562,6 +627,49 @@ template<class UserInterface> class BasicSnapLayout: public AbstractSnapLayout {
         }
 
         /**
+         * @brief @copybrief AbstractSnapLayout::child(Snaps, const Vector2&, NodeFlags, LayoutHandle, SnapLayoutFlags)
+         *
+         * Like @ref AbstractSnapLayout::child(Snaps, const Vector2&, NodeFlags, LayoutHandle, SnapLayoutFlags)
+         * but returning a concrete layout instance.
+         */
+        BasicSnapLayout<UserInterface> child(Snaps snap, const Vector2& nodeSize = {}, NodeFlags nodeFlags = {}, LayoutHandle layoutBefore =
+            #ifdef DOXYGEN_GENERATING_OUTPUT
+            LayoutHandle::Null,
+            #else
+            LayoutHandle{}, /* To not have to include Handle.h */
+            #endif
+            SnapLayoutFlags layoutFlags = {})
+        {
+            return BasicSnapLayout<UserInterface>{AbstractSnapLayout::child(snap, nodeSize, nodeFlags, layoutBefore, layoutFlags)};
+        }
+        /** @overload */
+        BasicSnapLayout<UserInterface> child(Snaps snap, const Vector2& nodeSize, LayoutHandle layoutBefore, SnapLayoutFlags layoutFlags = {}) {
+            return child(snap, nodeSize, NodeFlags{}, layoutBefore, layoutFlags);
+        }
+        /** @overload */
+        BasicSnapLayout<UserInterface> child(Snaps snap, const Vector2& nodeSize, NodeFlags nodeFlags, SnapLayoutFlags layoutFlags) {
+            return child(snap, nodeSize, nodeFlags, LayoutHandle{}, layoutFlags);
+        }
+        /** @overload */
+        BasicSnapLayout<UserInterface> child(Snaps snap, const Vector2& nodeSize, SnapLayoutFlags layoutFlags) {
+            return child(snap, nodeSize, NodeFlags{}, layoutFlags);
+        }
+
+        /**
+         * @brief @copybrief AbstractSnapLayout::child(Snaps, const Vector2&, NodeFlags, LayouterDataHandle, SnapLayoutFlags)
+         *
+         * Like @ref AbstractSnapLayout::child(Snaps, const Vector2&, NodeFlags, LayouterDataHandle, SnapLayoutFlags)
+         * but returning a concrete layout instance.
+         */
+        BasicSnapLayout<UserInterface> child(Snaps snap, const Vector2& nodeSize, NodeFlags nodeFlags, LayouterDataHandle layoutBefore, SnapLayoutFlags layoutFlags = {}) {
+            return BasicSnapLayout<UserInterface>{AbstractSnapLayout::child(snap, nodeSize, nodeFlags, layoutBefore, layoutFlags)};
+        }
+        /** @overload */
+        BasicSnapLayout<UserInterface> child(Snaps snap, const Vector2& nodeSize, LayouterDataHandle layoutBefore, SnapLayoutFlags layoutFlags = {}) {
+            return child(snap, nodeSize, NodeFlags{}, layoutBefore, layoutFlags);
+        }
+
+        /**
          * @brief @copybrief AbstractSnapLayout::snapChild(Snaps, const Vector2&, NodeFlags, SnapLayoutFlags)
          *
          * Like @ref AbstractSnapLayout::snapChild(Snaps, const Vector2&, NodeFlags, SnapLayoutFlags)
@@ -660,8 +768,10 @@ template<class UserInterface> class BasicSnapLayoutColumn: public BasicSnapLayou
          * @relativeref{SnapLayoutFlag,PropagateMarginY} unless
          * @relativeref{SnapLayoutFlag,IgnoreOverflowX} and
          * @relativeref{SnapLayoutFlag,IgnoreOverflowY} is already specified in
-         * given direction, allowing margins from nested widgets to be
-         * collapsed with parent's neigbors as well.
+         * given direction and unless @p layout is implicitly snapped with
+         * @ref Snap::FillX and @ref Snap::FillY snap adjustment in given
+         * direction, allowing margins from nested widgets to be collapsed with
+         * parent's neigbors as well.
          */
         /*implicit*/ BasicSnapLayoutColumn(const BasicSnapLayout<UserInterface>& layout): BasicSnapLayout<UserInterface>{layout, *this} {}
 
@@ -697,8 +807,10 @@ template<class UserInterface> class BasicSnapLayoutColumnLeft: public BasicSnapL
          * @relativeref{SnapLayoutFlag,PropagateMarginY} unless
          * @relativeref{SnapLayoutFlag,IgnoreOverflowX} and
          * @relativeref{SnapLayoutFlag,IgnoreOverflowY} is already specified in
-         * given direction, allowing margins from nested widgets to be
-         * collapsed with parent's neigbors as well.
+         * given direction and unless @p layout is implicitly snapped with
+         * @ref Snap::FillX and @ref Snap::FillY snap adjustment in given
+         * direction, allowing margins from nested widgets to be collapsed with
+         * parent's neigbors as well.
          */
         /*implicit*/ BasicSnapLayoutColumnLeft(const BasicSnapLayout<UserInterface>& layout): BasicSnapLayout<UserInterface>{layout, *this} {}
 
@@ -734,8 +846,10 @@ template<class UserInterface> class BasicSnapLayoutColumnRight: public BasicSnap
          * @relativeref{SnapLayoutFlag,PropagateMarginY} unless
          * @relativeref{SnapLayoutFlag,IgnoreOverflowX} and
          * @relativeref{SnapLayoutFlag,IgnoreOverflowY} is already specified in
-         * given direction, allowing margins from nested widgets to be
-         * collapsed with parent's neigbors as well.
+         * given direction and unless @p layout is implicitly snapped with
+         * @ref Snap::FillX and @ref Snap::FillY snap adjustment in given
+         * direction, allowing margins from nested widgets to be collapsed with
+         * parent's neigbors as well.
          */
         /*implicit*/ BasicSnapLayoutColumnRight(const BasicSnapLayout<UserInterface>& layout): BasicSnapLayout<UserInterface>{layout, *this} {}
 
@@ -771,8 +885,10 @@ template<class UserInterface> class BasicSnapLayoutColumnFill: public BasicSnapL
          * @relativeref{SnapLayoutFlag,PropagateMarginY} unless
          * @relativeref{SnapLayoutFlag,IgnoreOverflowX} and
          * @relativeref{SnapLayoutFlag,IgnoreOverflowY} is already specified in
-         * given direction, allowing margins from nested widgets to be
-         * collapsed with parent's neigbors as well.
+         * given direction and unless @p layout is implicitly snapped with
+         * @ref Snap::FillX and @ref Snap::FillY snap adjustment in given
+         * direction, allowing margins from nested widgets to be collapsed with
+         * parent's neigbors as well.
          */
         /*implicit*/ BasicSnapLayoutColumnFill(const BasicSnapLayout<UserInterface>& layout): BasicSnapLayout<UserInterface>{layout, *this} {}
 
@@ -806,8 +922,10 @@ template<class UserInterface> class BasicSnapLayoutRow: public BasicSnapLayout<U
          * @relativeref{SnapLayoutFlag,PropagateMarginY} unless
          * @relativeref{SnapLayoutFlag,IgnoreOverflowX} and
          * @relativeref{SnapLayoutFlag,IgnoreOverflowY} is already specified in
-         * given direction, allowing margins from nested widgets to be
-         * collapsed with parent's neigbors as well.
+         * given direction and unless @p layout is implicitly snapped with
+         * @ref Snap::FillX and @ref Snap::FillY snap adjustment in given
+         * direction, allowing margins from nested widgets to be collapsed with
+         * parent's neigbors as well.
          */
         /*implicit*/ BasicSnapLayoutRow(const BasicSnapLayout<UserInterface>& layout): BasicSnapLayout<UserInterface>{layout, *this} {}
 
@@ -843,8 +961,10 @@ template<class UserInterface> class BasicSnapLayoutRowTop: public BasicSnapLayou
          * @relativeref{SnapLayoutFlag,PropagateMarginY} unless
          * @relativeref{SnapLayoutFlag,IgnoreOverflowX} and
          * @relativeref{SnapLayoutFlag,IgnoreOverflowY} is already specified in
-         * given direction, allowing margins from nested widgets to be
-         * collapsed with parent's neigbors as well.
+         * given direction and unless @p layout is implicitly snapped with
+         * @ref Snap::FillX and @ref Snap::FillY snap adjustment in given
+         * direction, allowing margins from nested widgets to be collapsed with
+         * parent's neigbors as well.
          */
         /*implicit*/ BasicSnapLayoutRowTop(const BasicSnapLayout<UserInterface>& layout): BasicSnapLayout<UserInterface>{layout, *this} {}
 
@@ -880,8 +1000,10 @@ template<class UserInterface> class BasicSnapLayoutRowBottom: public BasicSnapLa
          * @relativeref{SnapLayoutFlag,PropagateMarginY} unless
          * @relativeref{SnapLayoutFlag,IgnoreOverflowX} and
          * @relativeref{SnapLayoutFlag,IgnoreOverflowY} is already specified in
-         * given direction, allowing margins from nested widgets to be
-         * collapsed with parent's neigbors as well.
+         * given direction and unless @p layout is implicitly snapped with
+         * @ref Snap::FillX and @ref Snap::FillY snap adjustment in given
+         * direction, allowing margins from nested widgets to be collapsed with
+         * parent's neigbors as well.
          */
         /*implicit*/ BasicSnapLayoutRowBottom(const BasicSnapLayout<UserInterface>& layout): BasicSnapLayout<UserInterface>{layout, *this} {}
 
@@ -917,8 +1039,10 @@ template<class UserInterface> class BasicSnapLayoutRowFill: public BasicSnapLayo
          * @relativeref{SnapLayoutFlag,PropagateMarginY} unless
          * @relativeref{SnapLayoutFlag,IgnoreOverflowX} and
          * @relativeref{SnapLayoutFlag,IgnoreOverflowY} is already specified in
-         * given direction, allowing margins from nested widgets to be
-         * collapsed with parent's neigbors as well.
+         * given direction and unless @p layout is implicitly snapped with
+         * @ref Snap::FillX and @ref Snap::FillY snap adjustment in given
+         * direction, allowing margins from nested widgets to be collapsed with
+         * parent's neigbors as well.
          */
         /*implicit*/ BasicSnapLayoutRowFill(const BasicSnapLayout<UserInterface>& layout): BasicSnapLayout<UserInterface>{layout, *this} {}
 

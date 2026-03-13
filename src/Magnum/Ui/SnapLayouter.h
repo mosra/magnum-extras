@@ -132,12 +132,20 @@ enum class Snap: UnsignedByte {
 
     /**
      * Alias to specifying both @ref Snap::Left and @ref Snap::Right.
+     *
+     * Cannot be used on an implicitly snapped layout if
+     * @ref SnapLayouter::flags(LayoutHandle) const contains
+     * @ref SnapLayoutFlag::PropagateMarginX.
      * @m_since_latest_{extras}
      */
     FillX = Left|Right,
 
     /**
      * Alias to specifying both @ref Snap::Top and @ref Snap::Bottom.
+     *
+     * Cannot be used on an implicitly snapped layout if
+     * @ref SnapLayouter::flags(LayoutHandle) const contains
+     * @ref SnapLayoutFlag::PropagateMarginY.
      * @m_since_latest_{extras}
      */
     FillY = Top|Bottom,
@@ -252,7 +260,9 @@ enum class SnapLayoutFlag: UnsignedByte {
      * Propagate horizontal margin of child layouts that's larger than
      * horizontal node padding instead of expanding the node width to fit it.
      *
-     * Mutually exclusive with @ref SnapLayoutFlag::IgnoreOverflowX.
+     * Mutually exclusive with @ref SnapLayoutFlag::IgnoreOverflowX, cannot be
+     * set on an implicitly snapped layout if
+     * @ref SnapLayouter::snap(LayoutHandle) const contains @ref Snap::FillX.
      */
     PropagateMarginX = 1 << 2,
 
@@ -260,14 +270,18 @@ enum class SnapLayoutFlag: UnsignedByte {
      * Propagate vertical margin of child layouts that's larger than vertical
      * node padding instead of expanding the node height to fit it.
      *
-     * Mutually exclusive with @ref SnapLayoutFlag::IgnoreOverflowY.
+     * Mutually exclusive with @ref SnapLayoutFlag::IgnoreOverflowY, cannot be
+     * set on an implicitly snapped layout if
+     * @ref SnapLayouter::snap(LayoutHandle) const contains @ref Snap::FillY.
      */
     PropagateMarginY = 1 << 3,
 
     /**
      * Alias to specifying both @ref SnapLayoutFlag::PropagateMarginX and
      * @ref SnapLayoutFlag::PropagateMarginY. Mutually exclusive with
-     * @ref SnapLayoutFlag::IgnoreOverflow.
+     * @ref SnapLayoutFlag::IgnoreOverflow, cannot be set on an implicitly
+     * snapped layout if @ref SnapLayouter::snap(LayoutHandle) const contains
+     * @ref Snap::Fill.
      */
     PropagateMargin = PropagateMarginX|PropagateMarginY,
 };
@@ -410,8 +424,8 @@ While explicit snapping offers the most flexibility, it may get tedius when
 forming long chains of snapped nodes. Insertion or removal of a layout in the
 middle of such a chain also isn't possible. An alternative approach in such
 cases is specifying an *implicit child snap* using @ref setChildSnap(), and
-then calling @ref add() for all child nodes without specifying anything else
-for them:
+then calling @ref add(NodeHandle, LayoutHandle, SnapLayoutFlags) "add()" for
+all child nodes without specifying anything else for them:
 
 @snippet ui-snaplayouter.cpp implicit-snap
 
@@ -423,10 +437,10 @@ the previous and fill the parent horizontally. The result is the following:
 @image html ui-snaplayouter-implicit-snap.png width=205px
 
 By default new child layouts are appended after all previous, insertion in the
-middle can be done by passing a @ref LayoutHandle to the @ref add() function,
-saying *before* which existing layout to insert the new one. For example,
-inserting a `subtitle` between the `title` and `details`, which would then look
-like this:
+middle can be done by passing a @ref LayoutHandle to the
+@ref add(NodeHandle, LayoutHandle, SnapLayoutFlags) "add()" function, saying
+*before* which existing layout to insert the new one. For example, inserting a
+`subtitle` between the `title` and `details`, which would then look like this:
 
 @snippet ui-snaplayouter.cpp implicit-snap-insert
 
@@ -436,13 +450,13 @@ Unlike with explicitly snapped layouts, calling @ref remove() on an implicitly
 snapped layout simply causes it to be removed from the sequence, with following
 layouts shifting into its place.
 
-Finally, calling the implicit @ref add() on a node that has no parent layout
-allows using this node as a target or parent of other layouts but doesn't cause
-the node offset to be affected by the layout process in any way. For example,
-if we'd want to have the original `popup` node movable by the user and placed
-to the center of the UI just initially, not changing its position from the
-layout in any way afterwards, such as when the window resizes, we'd do this
-instead:
+Finally, calling the implicit @ref add(NodeHandle, LayoutHandle, SnapLayoutFlags) "add()"
+on a node that has no parent layout allows using this node as a target or
+parent of other layouts but doesn't cause the node offset to be affected by the
+layout process in any way. For example, if we'd want to have the original
+`popup` node movable by the user and placed to the center of the UI just
+initially, not changing its position from the layout in any way afterwards,
+such as when the window resizes, we'd do this instead:
 
 @snippet Ui.cpp SnapLayouter-add-initial-placement
 
@@ -463,6 +477,25 @@ clipped instead, pass @ref SnapLayoutFlag::IgnoreOverflowX,
 @relativeref{SnapLayoutFlag,IgnoreOverflow}. This will cause the layout to
 ignore size of children in given direction, leaving the node at its size given
 originally.
+
+@section Ui-SnapLayouter-child-expansion Expanding child layouts to available space
+
+A counterpart to propagating child sizes to parent layouts is an ability to
+make child layouts occupy remaining available space. This is achieved using the
+@ref add(NodeHandle, Snaps, LayoutHandle, SnapLayoutFlags) overload where you
+can pass @ref Snap::FillX or @relativeref{Snap,FillY} as a second argument to
+make the child fill available width or height. If this is done for multiple
+sibling layouts, the available space is divided evenly between them for as long
+as their min sizes allow.
+
+The following snippet shows a typical two-pane file manager layout. A `root`
+layout fills the whole window, with a fixed-height `menubar` and a `toolbar` at
+the top and `statusbar` at the bottom, and a `main` area spanning the remaining
+height. The area is then evenly split into `left` and `right`:
+
+@snippet ui-snaplayouter.cpp child-expansion
+
+@image html ui-snaplayouter-child-expansion.png width=255px
 
 @section Ui-SnapLayouter-margin-propagation Margin propagation
 
@@ -581,6 +614,43 @@ class MAGNUM_UI_EXPORT SnapLayouter: public AbstractLayouter {
         LayoutHandle add(NodeHandle node, LayouterDataHandle before, SnapLayoutFlags flags = {});
 
         /**
+         * @brief Add a layout assigned to given node with snap adjustment
+         * @param node      Node to assign the layout to
+         * @param snap      Snap adjustment, either empty or a combination of
+         *      @ref Snap::FillX and @ref Snap::FillY
+         * @param before    A layout to order before or
+         *      @ref LayoutHandle::Null if ordered as last
+         * @param flags     Layout flags
+         * @return New layout handle
+         *
+         * Equivalent to calling @ref add(NodeHandle, LayoutHandle, SnapLayoutFlags)
+         * followed by @ref setSnap(LayoutHandle, Snaps) with @p snap. See
+         * their documentation for detailed description of all constraints.
+         */
+        LayoutHandle add(NodeHandle node, Snaps snap, LayoutHandle before =
+            #ifdef DOXYGEN_GENERATING_OUTPUT
+            LayoutHandle::Null
+            #else
+            LayoutHandle{} /* To not have to include Handle.h */
+            #endif
+            , SnapLayoutFlags flags = {});
+        /** @overload */
+        LayoutHandle add(NodeHandle node, Snaps snap, SnapLayoutFlags flags) {
+            return add(node, snap, LayoutHandle{}, flags);
+        }
+
+        /**
+         * @brief Add a layout assigned to given node with snap adjustment, and before given layout assuming the layout belongs to this layouter
+         *
+         * Like @ref add(NodeHandle, Snaps, LayoutHandle, SnapLayoutFlags) but
+         * without checking that @p before indeed belongs to this layouter. See
+         * its documentation for more information.
+         * @see @ref isHandleValid(LayouterDataHandle) const,
+         *      @ref layoutHandleData()
+         */
+        LayoutHandle add(NodeHandle node, Snaps snap, LayouterDataHandle before, SnapLayoutFlags flags = {});
+
+        /**
          * @brief Add a layout snapping explicitly to given target
          * @param node          Node to assign the layout to
          * @param snap          How to snap
@@ -693,6 +763,12 @@ class MAGNUM_UI_EXPORT SnapLayouter: public AbstractLayouter {
          * that were passed to @ref add() or @ref addExplicit(), which are by
          * default none.
          *
+         * If @p handle is snapped implicitly and @ref snap(LayoutHandle) const
+         * contains @ref Snap::FillX or @relativeref{Snap,FillY},
+         * @ref SnapLayoutFlag::PropagateMarginX or
+         * @relativeref{SnapLayoutFlag,PropagateMarginX} cannot be used in
+         * given direction.
+         *
          * Calling this function causes @ref LayouterState::NeedsUpdate to be
          * set.
          * @see @ref isHandleValid(LayoutHandle) const, @ref addFlags(),
@@ -752,18 +828,18 @@ class MAGNUM_UI_EXPORT SnapLayouter: public AbstractLayouter {
         void clearFlags(LayouterDataHandle handle, SnapLayoutFlags flags);
 
         /**
-         * @brief Explicit layout snap
+         * @brief Snap adjustment or explicit layout snap
          *
-         * Expects that @p handle is valid and has an explicit snap. Note that
-         * if @ref explicitSnapTarget() is assigned to a node that's a parent
-         * of @p handle node, @ref Snap::Inside is implicitly considered to be
-         * included as well, even if not part of the actual value.
+         * Expects that @p handle is valid. Note that for explicitly snapped
+         * layouts, if @ref explicitSnapTarget() is assigned to a node that's a
+         * parent of @p handle node, @ref Snap::Inside is implicitly considered
+         * to be included as well, even if not part of the actual value.
          * @see @ref isHandleValid(LayoutHandle) const, @ref hasExplicitSnap()
          */
         Snaps snap(LayoutHandle handle) const;
 
         /**
-         * @brief Explicit layout snap assuming it belongs to this layouter
+         * @brief Snap adjustment or explicit layout snap assuming it belongs to this layouter
          *
          * Like @ref snap(LayoutHandle) const but without checking that
          * @p handle indeed belongs to this layouter. See its documentation for
@@ -774,25 +850,43 @@ class MAGNUM_UI_EXPORT SnapLayouter: public AbstractLayouter {
         Snaps snap(LayouterDataHandle handle) const;
 
         /**
-         * @brief Set explicit layout snap
+         * @brief Set snap adjustment or explicit layout snap
          *
-         * Expects that @p handle is valid and has an explicit snap. Note that
-         * if @ref explicitSnapTarget() is assigned to a node that's a parent
-         * of @p handle node, @ref Snap::Inside is implicitly considered to be
-         * included as well, even if not part of the actual value.
+         * Expects that @p handle is valid.
+         *
+         * If @p handle is snapped implicitly, it's expected to have a non-null
+         * parent layout. The @p snap is then expected to be either empty or a
+         * combination of @ref Snap::FillX and @ref Snap::FillY. If
+         * @ref childSnap() of parent layout is horizontal and @ref Snap::FillX
+         * is present in @p snap, the layout expands to available width, if
+         * @ref childSnap() of parent layout is vertical and @ref Snap::FillY
+         * is present in @p snap, the layout expands to available height. Other
+         * than that, @ref Snap::FillY is ignored for horizontal layouts and
+         * @ref Snap::FillX is ignored for vertical layouts. If
+         * @ref flags(LayoutHandle) const contain
+         * @ref SnapLayoutFlag::PropagateMarginX or
+         * @relativeref{SnapLayoutFlag,PropagateMarginX}, @ref Snap::FillX or
+         * @relativeref{Snap,FillY} cannot be used in given direction.
+         *
+         * If @p handle has an explicit snap, @p snap can be anyhting. Note
+         * that in that case, if @ref explicitSnapTarget() is assigned to a
+         * node that's a parent of @p handle node, @ref Snap::Inside is
+         * implicitly considered to be included as well, even if not part of
+         * the actual value.
          *
          * Calling this function causes @ref LayouterState::NeedsUpdate to be
          * set.
-         * @see @ref isHandleValid(LayoutHandle) const, @ref hasExplicitSnap()
+         * @see @ref isHandleValid(LayoutHandle) const, @ref hasExplicitSnap(),
+         *      @ref parent()
          */
         void setSnap(LayoutHandle handle, Snaps snap);
 
         /**
-         * @brief Set explicit layout snap assuming it belongs to this layouter
+         * @brief Set snap adjustment or explicit layout snap assuming it belongs to this layouter
          *
-         * Like @ref setExplicitSnap(LayoutHandle, Snaps) const but without
-         * checking that @p handle indeed belongs to this layouter. See its
-         * documentation for more information.
+         * Like @ref setSnap(LayoutHandle, Snaps) but without checking that
+         * @p handle indeed belongs to this layouter. See its documentation for
+         * more information.
          * @see @ref isHandleValid(LayouterDataHandle) const,
          *      @ref layoutHandleData()
          */
@@ -1010,12 +1104,18 @@ class MAGNUM_UI_EXPORT SnapLayouter: public AbstractLayouter {
 
     private:
         MAGNUM_UI_LOCAL LayoutHandle addInternal(NodeHandle node, LayouterDataHandle before, SnapLayoutFlags flags);
+        MAGNUM_UI_LOCAL LayoutHandle addInternal(NodeHandle node, Snaps snap, LayouterDataHandle before, SnapLayoutFlags flags);
         MAGNUM_UI_LOCAL LayoutHandle addExplicitInternal(NodeHandle node, Snaps snap, LayouterDataHandle target, SnapLayoutFlags flags);
         MAGNUM_UI_LOCAL void removeInternal(UnsignedInt id);
         MAGNUM_UI_LOCAL SnapLayoutFlags flagsInternal(UnsignedInt id) const;
         MAGNUM_UI_LOCAL void setFlagsInternal(UnsignedInt id, SnapLayoutFlags flags);
         MAGNUM_UI_LOCAL void addFlagsInternal(UnsignedInt id, SnapLayoutFlags flags);
         MAGNUM_UI_LOCAL void clearFlagsInternal(UnsignedInt id, SnapLayoutFlags flags);
+        MAGNUM_UI_LOCAL void setSnapInternal(
+            #ifndef CORRADE_NO_ASSERT
+            const char* messagePrefix,
+            #endif
+            UnsignedInt id, Snaps snap);
         MAGNUM_UI_LOCAL void setChildSnapInternal(UnsignedInt id, Snaps snap);
         MAGNUM_UI_LOCAL LayoutHandle previousInternal(LayouterDataHandle handle) const;
         MAGNUM_UI_LOCAL LayoutHandle nextInternal(LayouterDataHandle handle) const;
