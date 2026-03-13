@@ -1787,6 +1787,10 @@ const struct {
         5.0f, Snap::FillX, Snap::FillY,
         SnapLayoutFlag::IgnoreOverflowY, SnapLayoutFlag::IgnoreOverflowX,
         15.0f, 100.0f},
+    {"small size, expand to available size, ignore overflow in all dimensions",
+        5.0f, Snap::FillX, Snap::FillY,
+        SnapLayoutFlag::IgnoreOverflow, SnapLayoutFlag::IgnoreOverflow,
+        15.0f, 100.0f},
 
     {"large size",
         50.0f, {}, {}, {}, {},
@@ -1801,6 +1805,10 @@ const struct {
         50.0f, {}, {},
         SnapLayoutFlag::IgnoreOverflowX, SnapLayoutFlag::IgnoreOverflowY,
         50.0f, 100.0f},
+    {"large size, ignore overflow in all dimensions",
+        50.0f, {}, {},
+        SnapLayoutFlag::IgnoreOverflow, SnapLayoutFlag::IgnoreOverflow,
+        50.0f, 100.0f},
     /* This has nowhere to expand so it doesn't cause any change */
     {"large size, expand to available size",
         50.0f, Snap::FillX, Snap::FillY, {}, {},
@@ -1811,11 +1819,15 @@ const struct {
         50.0f, Snap::FillX, Snap::FillY,
         SnapLayoutFlag::IgnoreOverflowX, SnapLayoutFlag::IgnoreOverflowY,
         50.0f, 100.0f},
-    /* Combination of the above */
+    /* Combinations of the above */
     {"large size, expand to available size, ignore overflow in opposite dimension",
         50.0f, Snap::FillX, Snap::FillY,
         SnapLayoutFlag::IgnoreOverflowY, SnapLayoutFlag::IgnoreOverflowX,
         50.0f, 170.0f},
+    {"large size, expand to available size, ignore overflow in all dimensions",
+        50.0f, Snap::FillX, Snap::FillY,
+        SnapLayoutFlag::IgnoreOverflow, SnapLayoutFlag::IgnoreOverflow,
+        50.0f, 100.0f},
 };
 
 SnapLayouterTest::SnapLayouterTest() {

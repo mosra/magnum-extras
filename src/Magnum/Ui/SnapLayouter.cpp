@@ -982,13 +982,13 @@ void SnapLayouter::doLayout(const Containers::BitArrayView layoutIdsToUpdate, co
            layout.firstExplicitSnap == LayouterDataHandle::Null)
             continue;
 
-        /* If the layout has no children or ignores overflow in both
-           directions, we can't / don't need to calculate the child size and
-           padding at all, as it won't get used anyway. */
+        /* If the layout has no children, we can't calculate the child size and
+           padding at all. We however have to calculate it even if
+           IgnoreOverflow is set, as the child size may still get used to
+           expand child layouts. */
         const UnsignedInt nodeId = nodeHandleId(nodes[layoutId]);
         const Containers::Pair<Vector2, Vector4> childLayoutSizeMargin =
-            layout.firstChild == LayouterDataHandle::Null ||
-            layout.flags >= SnapLayoutFlag::IgnoreOverflow ?
+            layout.firstChild == LayouterDataHandle::Null ?
                 Containers::Pair<Vector2, Vector4>{} :
                 Implementation::childLayoutSizeMargin(
                     layout.childSnap,
@@ -1012,10 +1012,12 @@ void SnapLayouter::doLayout(const Containers::BitArrayView layoutIdsToUpdate, co
                 childLayoutSizeMargin.second());
 
         /* Consider also explicitly snapped child nodes for the size, again not
-           even call the function if there are no explicitly snapped children
-           or overflow is ignored in both directions. Their margin currently
-           isn't considered for propagation, it's really just the sizes with
-           the max of margin and padding used. */
+           even call the function if there are no explicitly snapped children.
+           Compared to implicitly snapped children above, here we don't need to
+           calculate it also if IgnoreOverflow is set, as it won't affect child
+           layout expansion in any way. Their margin currently isn't considered
+           for propagation, it's really just the sizes with the max of margin
+           and padding used. */
         const Vector2 explicitlySnappedChildLayoutSize =
             layout.firstExplicitSnap == LayouterDataHandle::Null ||
             layout.flags >= SnapLayoutFlag::IgnoreOverflow ?
