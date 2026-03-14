@@ -106,6 +106,7 @@ int UiSnapLayouter::exec() {
 
     Ui::SnapLayouter& layouter = ui.setLayouterInstance(Containers::pointer<Ui::SnapLayouter>(ui.createLayouter()));
 
+    {
 /* [add] */
 Ui::NodeHandle popupNode = ui.createNode({}, {400, 250});
 Ui::NodeHandle acceptNode = ui.createNode(popupNode, {-10, -10}, {150, 50});
@@ -117,18 +118,18 @@ Ui::LayoutHandle accept = layouter.addExplicit(acceptNode,
                                         Ui::Snap::BottomRight, popup);
 Ui::LayoutHandle reject = layouter.addExplicit(rejectNode, Ui::Snap::Left, accept);
 /* [add] */
-    static_cast<void>(reject);
+        static_cast<void>(reject);
 
-    /* Make DebugLayer aware of all nodes and highlight nodes that have a
-       layout assigned */
-    ui.update();
-    debugLayer.highlightNodes(layouter, [](const Ui::SnapLayouter&, Ui::LayouterDataHandle) {
-        return true;
-    });
+        /* Make DebugLayer aware of all nodes and highlight nodes that have a
+        layout assigned */
+        ui.update();
+        debugLayer.highlightNodes(layouter, [](const Ui::SnapLayouter&, Ui::LayouterDataHandle) {
+            return true;
+        });
 
-    renderer.compositingFramebuffer().clearColor(0, 0x00000000_rgbaf);
-    ui.draw();
-    converter->convertToFile(unpremultiply(renderer.compositingFramebuffer().read(Range2Di::fromSize({50, 0}, {410, 260}), {PixelFormat::RGBA8Unorm})), "ui-snaplayouter-add.png");
+        renderer.compositingFramebuffer().clearColor(0, 0x00000000_rgbaf);
+        ui.draw();
+        converter->convertToFile(unpremultiply(renderer.compositingFramebuffer().read(Range2Di::fromSize({50, 0}, {410, 260}), {PixelFormat::RGBA8Unorm})), "ui-snaplayouter-add.png");
 
 /* [implicit-snap] */
 Ui::NodeHandle contentsNode = ui.createNode(popupNode, {}, {});
@@ -142,36 +143,38 @@ layouter.setChildSnap(contents, Ui::Snap::Bottom|Ui::Snap::FillX);
 Ui::LayoutHandle title = layouter.add(titleNode);
 Ui::LayoutHandle details = layouter.add(detailsNode);
 /* [implicit-snap] */
-    static_cast<void>(contents);
-    static_cast<void>(title);
+        static_cast<void>(contents);
+        static_cast<void>(title);
 
-    ui.update();
-    debugLayer.highlightNodes(layouter, [](const Ui::SnapLayouter&, Ui::LayouterDataHandle) {
-        return true;
-    });
+        ui.update();
+        debugLayer.highlightNodes(layouter, [](const Ui::SnapLayouter&, Ui::LayouterDataHandle) {
+            return true;
+        });
 
-    renderer.compositingFramebuffer().clearColor(0, 0x00000000_rgbaf);
-    ui.draw();
-    converter->convertToFile(unpremultiply(renderer.compositingFramebuffer().read(Range2Di::fromSize({50, 0}, {410, 260}), {PixelFormat::RGBA8Unorm})), "ui-snaplayouter-implicit-snap.png");
+        renderer.compositingFramebuffer().clearColor(0, 0x00000000_rgbaf);
+        ui.draw();
+        converter->convertToFile(unpremultiply(renderer.compositingFramebuffer().read(Range2Di::fromSize({50, 0}, {410, 260}), {PixelFormat::RGBA8Unorm})), "ui-snaplayouter-implicit-snap.png");
 
 /* [implicit-snap-insert] */
 Ui::NodeHandle subtitleNode = ui.createNode(contentsNode, {}, {300, 20});
 Ui::LayoutHandle subtitle = layouter.add(subtitleNode, /*before*/ details);
 /* [implicit-snap-insert] */
-    static_cast<void>(subtitle);
+        static_cast<void>(subtitle);
 
-    ui.update();
-    debugLayer.highlightNodes(layouter, [](const Ui::SnapLayouter&, Ui::LayouterDataHandle) {
-        return true;
-    });
+        ui.update();
+        debugLayer.highlightNodes(layouter, [](const Ui::SnapLayouter&, Ui::LayouterDataHandle) {
+            return true;
+        });
 
-    renderer.compositingFramebuffer().clearColor(0, 0x00000000_rgbaf);
-    ui.draw();
-    converter->convertToFile(unpremultiply(renderer.compositingFramebuffer().read(Range2Di::fromSize({50, 0}, {410, 260}), {PixelFormat::RGBA8Unorm})), "ui-snaplayouter-implicit-snap-insert.png");
+        renderer.compositingFramebuffer().clearColor(0, 0x00000000_rgbaf);
+        ui.draw();
+        converter->convertToFile(unpremultiply(renderer.compositingFramebuffer().read(Range2Di::fromSize({50, 0}, {410, 260}), {PixelFormat::RGBA8Unorm})), "ui-snaplayouter-implicit-snap-insert.png");
 
-    ui.removeNode(popupNode);
-    ui.update();
+        ui.removeNode(popupNode);
+        ui.update();
+    }
 
+    {
 /* [nested-layouts] */
 /* A root column layout */
 Ui::NodeHandle rootNode = DOXYGEN_ELLIPSIS(ui.createNode({5, 5}, {}));
@@ -209,28 +212,28 @@ layoutLayer.setStyle({}, {}, {}, {}, {Vector4{20.0f}});
 for(Ui::NodeHandle node: childNodes)
     layoutLayer.create(0, node);
 /* [nested-layouts-margins] */
-    ; /* GCC complains about suspicious indentation here otherwise, lol */
 
-    ui.update();
-    debugLayer.highlightNodes(layouter, [](const Ui::SnapLayouter&, Ui::LayouterDataHandle) {
-        return true;
-    });
-    debugLayer.clearHighlightedNode(rootNode);
+        ui.update();
+        debugLayer.highlightNodes(layouter, [](const Ui::SnapLayouter&, Ui::LayouterDataHandle) {
+            return true;
+        });
+        debugLayer.clearHighlightedNode(rootNode);
 
-    renderer.compositingFramebuffer().clearColor(0, 0x00000000_rgbaf);
-    ui.draw();
-    converter->convertToFile(unpremultiply(renderer.compositingFramebuffer().read(Range2Di::fromSize({0, 30}, {510, 230}), {PixelFormat::RGBA8Unorm})), "ui-snaplayouter-nested-layouts.png");
+        renderer.compositingFramebuffer().clearColor(0, 0x00000000_rgbaf);
+        ui.draw();
+        converter->convertToFile(unpremultiply(renderer.compositingFramebuffer().read(Range2Di::fromSize({0, 30}, {510, 230}), {PixelFormat::RGBA8Unorm})), "ui-snaplayouter-nested-layouts.png");
 
 /* [nested-layouts-margins-propagate] */
 layouter.addFlags(first, Ui::SnapLayoutFlag::PropagateMargin);
 layouter.addFlags(second, Ui::SnapLayoutFlag::PropagateMargin);
 /* [nested-layouts-margins-propagate] */
 
-    /* No new nodes to highlight in this case, so just redraw */
+        /* No new nodes to highlight in this case, so just redraw */
 
-    renderer.compositingFramebuffer().clearColor(0, 0x00000000_rgbaf);
-    ui.draw();
-    converter->convertToFile(unpremultiply(renderer.compositingFramebuffer().read(Range2Di::fromSize({0, 50}, {510, 210}), {PixelFormat::RGBA8Unorm})), "ui-snaplayouter-nested-layouts-propagated.png");
+        renderer.compositingFramebuffer().clearColor(0, 0x00000000_rgbaf);
+        ui.draw();
+        converter->convertToFile(unpremultiply(renderer.compositingFramebuffer().read(Range2Di::fromSize({0, 50}, {510, 210}), {PixelFormat::RGBA8Unorm})), "ui-snaplayouter-nested-layouts-propagated.png");
+    }
 
     CORRADE_INTERNAL_ASSERT(ui.nodeCapacity() == nodeCapacity && ui.nodeUsedCount() == nodeCapacity);
 

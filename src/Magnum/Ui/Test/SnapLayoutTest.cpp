@@ -628,15 +628,17 @@ void SnapLayoutTest::convertSpecialized() {
 
     /* Layout that already has IgnoreOverflow* flags shouldn't have them
        overwritten with PropagateMargin* */
-    SnapLayout layoutFlagsX{ui, ui.snapLayouter().add(ui.createNode({}, {}), SnapLayoutFlag::IgnoreOverflowX)};
-    SnapLayout layoutFlagsY{ui, ui.snapLayouter().add(ui.createNode({}, {}), SnapLayoutFlag::IgnoreOverflowY)};
-    SnapLayout layoutFlags{ui, ui.snapLayouter().add(ui.createNode({}, {}), SnapLayoutFlag::IgnoreOverflow)};
-    SnapLayoutRow layoutRowFlags = layoutFlagsX;
-    SnapLayoutColumnFill layoutColumnFillFlags = layoutFlagsY;
-    SnapLayoutRowTop layoutRowTopFlags = layoutFlags;
-    CORRADE_COMPARE(layoutRowFlags.flags(), SnapLayoutFlag::IgnoreOverflowX|SnapLayoutFlag::PropagateMarginY);
-    CORRADE_COMPARE(layoutColumnFillFlags.flags(), SnapLayoutFlag::IgnoreOverflowY|SnapLayoutFlag::PropagateMarginX);
-    CORRADE_COMPARE(layoutRowTopFlags.flags(), SnapLayoutFlag::IgnoreOverflow);
+    {
+        SnapLayout layoutFlagsX{ui, ui.snapLayouter().add(ui.createNode({}, {}), SnapLayoutFlag::IgnoreOverflowX)};
+        SnapLayout layoutFlagsY{ui, ui.snapLayouter().add(ui.createNode({}, {}), SnapLayoutFlag::IgnoreOverflowY)};
+        SnapLayout layoutFlags{ui, ui.snapLayouter().add(ui.createNode({}, {}), SnapLayoutFlag::IgnoreOverflow)};
+        SnapLayoutRow layoutRowFlags = layoutFlagsX;
+        SnapLayoutColumnFill layoutColumnFillFlags = layoutFlagsY;
+        SnapLayoutRowTop layoutRowTopFlags = layoutFlags;
+        CORRADE_COMPARE(layoutRowFlags.flags(), SnapLayoutFlag::IgnoreOverflowX|SnapLayoutFlag::PropagateMarginY);
+        CORRADE_COMPARE(layoutColumnFillFlags.flags(), SnapLayoutFlag::IgnoreOverflowY|SnapLayoutFlag::PropagateMarginX);
+        CORRADE_COMPARE(layoutRowTopFlags.flags(), SnapLayoutFlag::IgnoreOverflow);
+    }
 
     /* Converting layouts between different types shouldn't be allowed, only
        to a specialized type and back. Using is_constructible as it's a
