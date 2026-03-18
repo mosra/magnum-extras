@@ -24,6 +24,9 @@
     DEALINGS IN THE SOFTWARE.
 */
 
+/* Usage: edit this file, save and run `ninja MagnumUi-generate-theme` to
+   regenerate all output theme*.h files */
+
 #include <Corrade/Containers/GrowableArray.h>
 #include <Corrade/Containers/Optional.h>
 #include <Corrade/Containers/Triple.h>
