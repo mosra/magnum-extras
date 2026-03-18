@@ -1732,26 +1732,30 @@ const struct {
 
 const struct {
     TestSuite::TestCaseDescriptionSourceLocation name;
-    bool minSizeInsteadOfFixed;
+    bool minSizeInsteadOfFixed, explicitFillChildrenSize;
     Snaps rootFillInsteadOfSize;
 } LayoutExpandChildLayoutsData[]{
     {"",
-        false, Snaps{}},
+        false, false, Snaps{}},
     {"root fill X instead of width",
-        false, Snap::FillX},
+        false, false, Snap::FillX},
     {"root fill Y instead of height",
-        false, Snap::FillY},
+        false, false, Snap::FillY},
     {"root fill instead of size",
-        false, Snap::Fill},
+        false, false, Snap::Fill},
+    /* The explicit size, if smaller than what the fill ends up being,
+       shouldn't affect anything in the output */
+    {"explicit size for fill children",
+        false, true, Snaps{}},
 
     {"layout min sizes instead of fixed node sizes",
-        true, Snaps{}},
+        true, false, Snaps{}},
     {"layout min sizes instead of fixed node sizes, root fill X instead of width",
-        true, Snap::FillX},
+        true, false, Snap::FillX},
     {"layout min sizes instead of fixed node sizes, root fill Y instead of height",
-        true, Snap::FillY},
+        true, false, Snap::FillY},
     {"layout min sizes instead of fixed node sizes, root fill instead of size",
-        true, Snap::Fill},
+        true, false, Snap::Fill},
 };
 
 const struct {
@@ -4957,15 +4961,21 @@ void SnapLayouterTest::layoutExpandChildLayouts() {
         data.rootFillInsteadOfSize >= Snap::FillY || data.minSizeInsteadOfFixed ? 0.0f : 80.0f
     });
     NodeHandle toolbar = ui.createNode(root, {}, {0.0f, 10.0f});
-    NodeHandle center = ui.createNode(root, {}, {});
+    NodeHandle center = ui.createNode(root, {}, {data.explicitFillChildrenSize ?
+        10.0f : 0.0f, 0.0f});
     NodeHandle left = ui.createNode(center, {}, {});
-    NodeHandle l0 = ui.createNode(left, {}, {0.0f, 10.0f});
-    NodeHandle l1 = ui.createNode(left, {}, {0.0f, 10.0f});
+    NodeHandle l0 = ui.createNode(left, {}, {data.explicitFillChildrenSize ?
+        1.0f : 0.0f, 10.0f});
+    NodeHandle l1 = ui.createNode(left, {}, {data.explicitFillChildrenSize ?
+        1.0f : 0.0f, 10.0f});
     NodeHandle main = ui.createNode(center, {}, {data.minSizeInsteadOfFixed ? 0.0f : 40.0f, 0.0f});
     NodeHandle inner = ui.createNode(main, {}, {0.0f, 15.0f});
-    NodeHandle right = ui.createNode(center, {}, {});
-    NodeHandle rTop = ui.createNode(right, {}, {});
-    NodeHandle rBottom = ui.createNode(right, {}, {});
+    NodeHandle right = ui.createNode(center, {}, {0.0f,
+        data.explicitFillChildrenSize ? 10.0f : 0.0f});
+    NodeHandle rTop = ui.createNode(right, {}, {0.0f,
+        data.explicitFillChildrenSize ? 4.0f : 0.0f});
+    NodeHandle rBottom = ui.createNode(right, {}, {0.0f,
+        data.explicitFillChildrenSize ? 7.0f : 0.0f});
     NodeHandle statusbar = ui.createNode(root, {}, {0.0f, 10.0f});
 
     struct LayoutLayer: AbstractLayer {
