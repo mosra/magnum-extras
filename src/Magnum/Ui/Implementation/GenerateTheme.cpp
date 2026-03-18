@@ -1139,7 +1139,6 @@ void dark(Containers::ArrayView<Ui::BaseLayerStyleUniform> baseUniforms, Contain
         .setCornerRadius(cornerRadius);
 
     layoutStyles[Int(LayoutStyle::Panel)].padding = contentWidgetPadding;
-    layoutStyles[Int(LayoutStyle::Panel)].margin = leafWidgetMargin;
 }
 
 /* The following is a very rudimentary enum-name-to-string conversion code.
@@ -1581,18 +1580,17 @@ int main(int argc, char** argv) {
             /* Horizontal and vertical padding & margin */
             } else if(Math::gather<0, 1>(style.padding) == Math::gather<2, 3>(style.padding) &&
                       Math::gather<0, 1>(style.margin) == Math::gather<2, 3>(style.margin)) {
-                /* No min size, both padding and margin (i.e., min size
-                   defined by the padding) */
+                /* Padding only, no min size or margin (i.e., container
+                   widgets filling available space, min size defined by
+                   padding) */
                 if(style.minSize == Vector2{} &&
                    style.padding != Vector4{} &&
-                   style.margin != Vector4{})
+                   style.margin == Vector4{})
                     arrayAppend(output, Utility::format(
-                        "_c({}, {{}}, {{{:.1f}f, {:.1f}f}}, {{{:.1f}f, {:.1f}f}})\n",
+                        "_c({}, {{}}, {{{:.1f}f, {:.1f}f}}, {{}})\n",
                         name,
                         style.padding.x(),
-                        style.padding.y(),
-                        style.margin.x(),
-                        style.margin.y()));
+                        style.padding.y()));
                 /* No padding, just min size and margin (i.e., leaf widget) */
                 else if(style.minSize != Vector2{} &&
                         style.padding == Vector4{} &&
