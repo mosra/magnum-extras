@@ -39,7 +39,7 @@ namespace Magnum { namespace Ui { namespace Implementation { namespace {
    output size and margin is then meant to be passed to layoutSizePadding()
    which then calculates the actual node size and padding, which can be
    subsequently passed to snap() to position everything correctly. */
-Containers::Pair<Vector2, Vector4> childLayoutSizeMargin(const Snaps childSnap, const Containers::StridedArrayView1D<const Vector4>& nodeMargins, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, const LayouterDataHandle firstChildLayout, const Containers::StridedArrayView1D<const NodeHandle>& layoutNodes, const Containers::StridedArrayView1D<const LayouterDataHandle>& nextLayout) {
+Containers::Triple<Vector2, Vector4, BitVector2> childLayoutSizeMargin(const Snaps childSnap, const Containers::StridedArrayView1D<const Vector4>& nodeMargins, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, const LayouterDataHandle firstChildLayout, const Containers::StridedArrayView1D<const NodeHandle>& layoutNodes, const Containers::StridedArrayView1D<const LayouterDataHandle>& nextLayout, const Containers::StridedArrayView1D<const Snaps>& layoutSnaps) {
     CORRADE_INTERNAL_ASSERT(
         nodeSizes.size() == nodeMargins.size() &&
         firstChildLayout != LayouterDataHandle::Null &&
@@ -50,6 +50,7 @@ Containers::Pair<Vector2, Vector4> childLayoutSizeMargin(const Snaps childSnap, 
     const Snaps snapNoNoPad = childSnap & ~Snap::NoPad;
     UnsignedInt indexBefore, indexAfter, indexSideL, indexSideR,
         indexSizeForward, indexSizeSide;
+    Snaps childFillSnap;
     enum Calculate {
         SideLeft,
         SideRight,
@@ -75,6 +76,7 @@ Containers::Pair<Vector2, Vector4> childLayoutSizeMargin(const Snaps childSnap, 
         indexSideR = 1;
         indexSizeForward = 0;
         indexSizeSide = 1;
+        childFillSnap = Snap::FillX;
 
         if(snapNoNoPad >= (Snap::Left|Snap::FillY))
             calculate = Calculate::Fill;
@@ -104,6 +106,7 @@ Containers::Pair<Vector2, Vector4> childLayoutSizeMargin(const Snaps childSnap, 
         indexSideR = 3;
         indexSizeForward = 0;
         indexSizeSide = 1;
+        childFillSnap = Snap::FillX;
 
         if(snapNoNoPad >= (Snap::Right|Snap::FillY))
             calculate = Calculate::Fill;
@@ -141,6 +144,7 @@ Containers::Pair<Vector2, Vector4> childLayoutSizeMargin(const Snaps childSnap, 
         indexSideR = 2;
         indexSizeForward = 1;
         indexSizeSide = 0;
+        childFillSnap = Snap::FillY;
 
         if(snapNoNoPad >= (Snap::Top|Snap::FillX))
             calculate = Calculate::Fill;
@@ -178,6 +182,7 @@ Containers::Pair<Vector2, Vector4> childLayoutSizeMargin(const Snaps childSnap, 
         indexSideR = 0;
         indexSizeForward = 1;
         indexSizeSide = 0;
+        childFillSnap = Snap::FillY;
 
         if(snapNoNoPad >= (Snap::Bottom|Snap::FillX))
             calculate = Calculate::Fill;
@@ -224,6 +229,7 @@ Containers::Pair<Vector2, Vector4> childLayoutSizeMargin(const Snaps childSnap, 
     Float maxSizeSideExceptMarginR = 0.0f;
     Float maxHalfSizeSideWithMarginL = 0.0f;
     Float maxHalfSizeSideWithMarginR = 0.0f;
+    BitVector2 hasFillChildren;
     do {
         const Vector2 childNodeSize = nodeSizes[childNodeId];
         /* Side margins. Before/after margins are combined with the previous /
@@ -259,6 +265,11 @@ Containers::Pair<Vector2, Vector4> childLayoutSizeMargin(const Snaps childSnap, 
            the max margin of all nodes, so calculate it always */
         maxSizeSideExceptMargin = Math::max(maxSizeSideExceptMargin,
                                             childNodeSize[indexSizeSide]);
+
+        /* If the child is expanding in the layout direction, remember that to
+           correctly calculate margin propagation later */
+        if(layoutSnaps[layouterDataHandleId(childLayout)] >= childFillSnap)
+            hasFillChildren.set(indexSizeForward);
 
         /* Advance to the next layout and calculate margin for it. If the next
            layout is firstChild again (i.e., we're at the end of the child
@@ -299,7 +310,7 @@ Containers::Pair<Vector2, Vector4> childLayoutSizeMargin(const Snaps childSnap, 
         } else CORRADE_INTERNAL_ASSERT_UNREACHABLE(); /* LCOV_EXCL_LINE */
     }
 
-    return {outSize, outMargin};
+    return {outSize, outMargin, hasFillChildren};
 }
 
 /* Used by explicitlySnappedChildLayoutSize() so has to be defined here */
@@ -406,7 +417,10 @@ struct LayoutSizePaddingMargin {
     Vector4 padding;
     Vector4 margin;
 };
-LayoutSizePaddingMargin layoutSizePaddingMargin(const SnapLayoutFlags flags, const Snaps childSnap, const Vector2& nodeSize, const Vector4& nodePadding, const Vector4& nodeMargin, const Vector2& childLayoutSize, const Vector4& childLayoutMargin) {
+LayoutSizePaddingMargin layoutSizePaddingMargin(const SnapLayoutFlags flags, const Snaps childSnap, const Vector2& nodeSize, const Vector4& nodePadding, const Vector4& nodeMargin, const Vector2& childLayoutSize, const Vector4& childLayoutMargin, const BitVector2 hasFillChildren) {
+    /* Only at most one bit should be set by childLayoutSizeMargin() */
+    CORRADE_INTERNAL_ASSERT(hasFillChildren != BitVector2{3});
+
     /* Calculate actual layout padding:
         - It's zero on given side if padding is ignored in matching direction
         - It's same as node padding in given direction if child layout overflow
@@ -505,8 +519,10 @@ LayoutSizePaddingMargin layoutSizePaddingMargin(const SnapLayoutFlags flags, con
                overflow negative but that's fine. */
 
             /* Vertical filled snapping doesn't need any further adjustment.
-               The InsideX, if specified, is redundant. */
-            if((snapNoNoPad|Snap::InsideX) == (Snap::Top|Snap::FillX|Snap::InsideX) ||
+               The InsideX, if specified, is redundant. Same if this is a
+               horizontal layout with children that fill available width. */
+            if(hasFillChildren[0] ||
+               (snapNoNoPad|Snap::InsideX) == (Snap::Top|Snap::FillX|Snap::InsideX) ||
                (snapNoNoPad|Snap::InsideX) == (Snap::Bottom|Snap::FillX|Snap::InsideX))
                 do {} while(false); /* Yeah, nothing */
 
@@ -553,8 +569,10 @@ LayoutSizePaddingMargin layoutSizePaddingMargin(const SnapLayoutFlags flags, con
             Vector2 verticalMarginOverflow = Math::gather<1, 3>(childLayoutMargin) - Math::gather<1, 3>(nodePadding);
 
             /* Horizontal filled snapping doesn't need any further adjustment.
-               The InsideY, if specified, is redundant. */
-            if((snapNoNoPad|Snap::InsideY) == (Snap::Left|Snap::FillY|Snap::InsideY) ||
+               The InsideY, if specified, is redundant. Same if this is a
+               vertical layout with children that fill available height. */
+            if(hasFillChildren[1] ||
+               (snapNoNoPad|Snap::InsideY) == (Snap::Left|Snap::FillY|Snap::InsideY) ||
                (snapNoNoPad|Snap::InsideY) == (Snap::Right|Snap::FillY|Snap::InsideY))
                 do {} while(false); /* Yeah, nothing */
 

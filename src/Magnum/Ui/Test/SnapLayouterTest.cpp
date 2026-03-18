@@ -568,6 +568,7 @@ const struct {
     TestSuite::TestCaseDescriptionSourceLocation name;
     SnapLayoutFlags flags[2];
     Snaps snaps[4];
+    BitVector2 hasFillChildren;
     Vector2 nodeSize;
     Vector4 nodeMargin;
     /* +----------------------+
@@ -588,7 +589,7 @@ const struct {
         {Snap::Right,
          Snap::Bottom,
          Snap::Left,
-         Snap::Top},
+         Snap::Top}, {},
         /* The left-side margin is fully propagated outside, the centering has
            extra space of 4 on each side, which causes the top margin to
            underflow by 1, bottom to overflow by 1. Right-side margin fits
@@ -603,7 +604,7 @@ const struct {
         {Snap::Right|Snap::InsideY,
          Snap::Bottom|Snap::InsideX,
          Snap::Left|Snap::InsideY,
-         Snap::Top|Snap::InsideX},
+         Snap::Top|Snap::InsideX}, {},
         {16.0f, 30.0f}, {},
         {14.0f, 22.0f}, {16.0f, 30.0f},
         {3.0f, 2.0f, 1.0f, 4.0f}, {4.0f, 0.0f, 0.0f, 1.0f}},
@@ -613,7 +614,7 @@ const struct {
         {Snap::Right|Snap::NoPad,
          Snap::Bottom|Snap::NoPad,
          Snap::Left|Snap::NoPad,
-         Snap::Top|Snap::NoPad},
+         Snap::Top|Snap::NoPad}, {},
         {16.0f, 30.0f}, {},
         {10.0f, 16.0f}, {16.0f, 30.0f}, {}, {}},
     {"propagate both directions, node padding smaller than child margin, no node margin, center, no pad forward",
@@ -622,7 +623,7 @@ const struct {
         {Snap::Right|Snap::NoPadX,
          Snap::Bottom|Snap::NoPadY,
          Snap::Left|Snap::NoPadX,
-         Snap::Top|Snap::NoPadY},
+         Snap::Top|Snap::NoPadY}, {},
         {16.0f, 30.0f}, {},
         {10.0f, 22.0f}, {16.0f, 30.0f},
         {0.0f, 2.0f, 0.0f, 4.0f}, {0.0f, 0.0f, 0.0f, 1.0f}},
@@ -632,7 +633,7 @@ const struct {
         {Snap::Right|Snap::NoPadY,
          Snap::Bottom|Snap::NoPadX,
          Snap::Left|Snap::NoPadY,
-         Snap::Top|Snap::NoPadX},
+         Snap::Top|Snap::NoPadX}, {},
         {16.0f, 30.0f}, {},
         {14.0f, 16.0f}, {16.0f, 30.0f},
         {3.0f, 0.0f, 1.0f, 0.0f}, {4.0f, 0.0f, 0.0f, 0.0f}},
@@ -642,7 +643,7 @@ const struct {
         {Snap::Right,
          Snap::Bottom,
          Snap::Left,
-         Snap::Top},
+         Snap::Top}, {},
         /* Left and right same as above, vertically the margin fits exactly
            and thus affects inner padding instead of outer margin */
         {16.0f, 30.0f}, {},
@@ -654,7 +655,7 @@ const struct {
         {Snap::Right,
          Snap::Bottom,
          Snap::Left,
-         Snap::Top},
+         Snap::Top}, {},
         /* Top and bottom same as above, horizontally the margin doesn't fit
            and thus affects inner padding and enlarges the width instead of
            overflowing into outer margin */
@@ -668,7 +669,7 @@ const struct {
         {Snap::Right|Snap::Top|Snap::InsideY,
          Snap::Bottom|Snap::Right|Snap::InsideX,
          Snap::Left|Snap::Bottom|Snap::InsideY,
-         Snap::Top|Snap::Left|Snap::InsideX},
+         Snap::Top|Snap::Left|Snap::InsideX}, {},
         /* The left-side and top-side margin is fully propagated outside,
            there's extra space of 7 on the other side, which causes the bottom
            margin to overflow by 2. Right-side margin overflows by 1. */
@@ -681,7 +682,7 @@ const struct {
         {Snap::Right|Snap::Top|Snap::InsideY,
          Snap::Bottom|Snap::Right|Snap::InsideX,
          Snap::Left|Snap::Bottom|Snap::InsideY,
-         Snap::Top|Snap::Left|Snap::InsideX},
+         Snap::Top|Snap::Left|Snap::InsideX}, {},
         {15.0f, 25.0f}, {},
         /* Left and right same as above, vertically the margin doesn't fit and
            thus affects inner padding and enlarges the height instead of
@@ -699,7 +700,7 @@ const struct {
         {Snap::Right|Snap::Bottom|Snap::InsideY,
          Snap::Bottom|Snap::Left|Snap::InsideX,
          Snap::Left|Snap::Top|Snap::InsideY,
-         Snap::Top|Snap::Right|Snap::InsideX},
+         Snap::Top|Snap::Right|Snap::InsideX}, {},
         /* The left-side and bottom-side margin is fully propagated outside,
            there's extra space of 2 on the other side, which causes the top
            margin to overflow by 3. Right-side margin underflows by 1. */
@@ -712,7 +713,7 @@ const struct {
         {Snap::Right|Snap::Bottom|Snap::InsideY,
          Snap::Bottom|Snap::Left|Snap::InsideX,
          Snap::Left|Snap::Top|Snap::InsideY,
-         Snap::Top|Snap::Right|Snap::InsideX},
+         Snap::Top|Snap::Right|Snap::InsideX}, {},
         {17.0f, 22.0f}, {},
         {14.0f, 30.0f}, {17.0f, 30.0f},
         /* Left and right same as above, vertically the same as with the other
@@ -729,7 +730,7 @@ const struct {
         {Snap::Right|Snap::FillY,
          Snap::Bottom|Snap::FillX,
          Snap::Left|Snap::FillY,
-         Snap::Top|Snap::FillX},
+         Snap::Top|Snap::FillX}, {},
         /* All margins except the right-side one are fully propagated outside,
            right-side margin overflows by 2. */
         {14.0f, 30.0f}, {},
@@ -742,7 +743,7 @@ const struct {
         {Snap::Right|Snap::FillY|Snap::InsideY,
          Snap::Bottom|Snap::FillX|Snap::InsideX,
          Snap::Left|Snap::FillY|Snap::InsideY,
-         Snap::Top|Snap::FillX|Snap::InsideX},
+         Snap::Top|Snap::FillX|Snap::InsideX}, {},
         {14.0f, 30.0f}, {},
         {14.0f, 22.0f}, {14.0f, 30.0f},
         {3.0f, 2.0f, 1.0f, 4.0f}, {4.0f, 3.0f, 2.0f, 5.0f}},
@@ -752,7 +753,7 @@ const struct {
         {Snap::Right|Snap::FillY,
          Snap::Bottom|Snap::FillX,
          Snap::Left|Snap::FillY,
-         Snap::Top|Snap::FillX},
+         Snap::Top|Snap::FillX}, {},
         /* Left and right same as above, vertically the margin affects inner
            padding instead of overflowing into outer margin */
         {14.0f, 30.0f}, {},
@@ -763,13 +764,28 @@ const struct {
        the NoPad cases, as they should have been sufficiently tested with the
        center variant. */
 
+    /* Like the "fill" cases above but with the fill coming from children
+       instead */
+    {"propagate both directions, node padding smaller than child margin, no node margin, has fill children in forward direction",
+        {SnapLayoutFlag::PropagateMargin,
+         SnapLayoutFlag::PropagateMargin},
+         /* The snap is rotated compared to above so the children fill
+            corresponds to Right|FillY etc. above */
+        {Snap::Bottom,
+         Snap::Left,
+         Snap::Top,
+         Snap::Right}, 2,
+        {14.0f, 30.0f}, {},
+        {14.0f, 22.0f}, {14.0f, 30.0f},
+        {3.0f, 2.0f, 1.0f, 4.0f}, {4.0f, 3.0f, 2.0f, 5.0f}},
+
     {"propagate both directions, node size zero forward, large side, no node margin",
         {SnapLayoutFlag::PropagateMargin,
          SnapLayoutFlag::PropagateMargin},
         {Snap::Right,
          Snap::Bottom,
          Snap::Left,
-         Snap::Top},
+         Snap::Top}, {},
         {0.0f, 100.0f}, {},
         {14.0f, 22.0f}, {14.0f, 100.0f},
         {3.0f, 2.0f, 1.0f, 4.0f}, {4.0f, 0.0f, 2.0f, 0.0f}},
@@ -779,7 +795,7 @@ const struct {
         {Snap::Right,
          Snap::Bottom,
          Snap::Left,
-         Snap::Top},
+         Snap::Top}, {},
         {100.0f, 0.0f}, {},
         /* The margin before is propagated always, even with enough width */
         {14.0f, 22.0f}, {100.0f, 22.0f},
@@ -791,7 +807,7 @@ const struct {
         {Snap::Right,
          Snap::Bottom,
          Snap::Left,
-         Snap::Top},
+         Snap::Top}, {},
         {}, {2.0f, 7.0f, 3.0f, 3.0f},
         /* Margin overflow is {4, 3, 2, 5}, so a bigger value gets picked on
            top and right */
@@ -803,7 +819,7 @@ const struct {
         {Snap::Right,
          Snap::Bottom,
          Snap::Left,
-         Snap::Top},
+         Snap::Top}, {},
         {}, {5.0f, 2.0f, 1.0f, 7.0f},
         /* Margin overflow is {4, 3, 2, 5}, so a bigger value gets picked on
            left and bottom */
@@ -816,7 +832,7 @@ const struct {
         {Snap::Right|Snap::NoPadX,
          Snap::Bottom|Snap::NoPadY,
          Snap::Left|Snap::NoPadX,
-         Snap::Top|Snap::NoPadY},
+         Snap::Top|Snap::NoPadY}, {},
         {}, {2.0f, 2.0f, 1.0f, 3.0f},
         /* Margin overflow is {4, 3, 2, 5}, but gets picked only on top and
            bottom. The parent node margin is used unchanged otherwise. Only the
@@ -829,7 +845,7 @@ const struct {
         {Snap::Right|Snap::NoPadY,
          Snap::Bottom|Snap::NoPadX,
          Snap::Left|Snap::NoPadY,
-         Snap::Top|Snap::NoPadX},
+         Snap::Top|Snap::NoPadX}, {},
         {}, {2.0f, 2.0f, 1.0f, 3.0f},
         /* Margin overflow is {4, 3, 2, 5}, but gets picked only on left and
            right. The parent node margin is used unchanged otherwise. Only the
@@ -1734,28 +1750,41 @@ const struct {
     TestSuite::TestCaseDescriptionSourceLocation name;
     bool minSizeInsteadOfFixed, explicitFillChildrenSize;
     Snaps rootFillInsteadOfSize;
+    SnapLayoutFlags mainFlags, rightFlags;
 } LayoutExpandChildLayoutsData[]{
     {"",
-        false, false, Snaps{}},
+        false, false, Snaps{}, {}, {}},
     {"root fill X instead of width",
-        false, false, Snap::FillX},
+        false, false, Snap::FillX, {}, {}},
     {"root fill Y instead of height",
-        false, false, Snap::FillY},
+        false, false, Snap::FillY, {}, {}},
     {"root fill instead of size",
-        false, false, Snap::Fill},
+        false, false, Snap::Fill, {}, {}},
     /* The explicit size, if smaller than what the fill ends up being,
        shouldn't affect anything in the output */
     {"explicit size for fill children",
-        false, true, Snaps{}},
+        false, true, Snaps{}, {}, {}},
 
     {"layout min sizes instead of fixed node sizes",
-        true, false, Snaps{}},
+        true, false, Snaps{}, {}, {}},
     {"layout min sizes instead of fixed node sizes, root fill X instead of width",
-        true, false, Snap::FillX},
+        true, false, Snap::FillX, {}, {}},
     {"layout min sizes instead of fixed node sizes, root fill Y instead of height",
-        true, false, Snap::FillY},
+        true, false, Snap::FillY, {}, {}},
     {"layout min sizes instead of fixed node sizes, root fill instead of size",
-        true, false, Snap::Fill},
+        true, false, Snap::Fill, {}, {}},
+
+    /* The edge case being tested here is hit only if the node has an explicit
+       size specified in direction of the propagation. In case of `main` it's
+       always the case. */
+    {"main propagating X margin",
+        false, false, Snaps{}, SnapLayoutFlag::PropagateMarginX, {}},
+    /* In case of `right` it's not, so test both with and without te size being
+       explicit */
+    {"right propagating Y margin",
+        false, false, Snaps{}, {}, SnapLayoutFlag::PropagateMarginY},
+    {"right propagating Y margin, explicit right height",
+        false, true, Snaps{}, {}, SnapLayoutFlag::PropagateMarginY},
 };
 
 const struct {
@@ -2066,19 +2095,27 @@ void SnapLayouterTest::layoutSizePaddingMargin() {
     /* Behavior with PropagateMargin is tested in
        layoutSizePaddingMarginPropagate() below, verifying all rotations
        variants at the same time, here just verify that it
-       always passes the margin through unchanged */
-    Implementation::LayoutSizePaddingMargin out = Implementation::layoutSizePaddingMargin(
-        data.flags,
-        data.extraChildSnap,
-        data.nodeSize,
-        data.nodePadding,
-        {19.0f, 23.0f, 13.0f, 29.0f},
-        data.childLayoutSize,
-        data.childLayoutMargin);
-    CORRADE_COMPARE(out.paddedChildSize, data.expectedPaddedChildLayoutSize);
-    CORRADE_COMPARE(out.size, data.expectedLayoutSize);
-    CORRADE_COMPARE(out.padding, data.expectedLayoutPadding);
-    CORRADE_COMPARE(out.margin, (Vector4{19.0f, 23.0f, 13.0f, 29.0f}));
+       always passes the margin through unchanged. The value of hasFillChildren
+       should also have no effect on the result without PropagateMargin. Value
+       of 0b11 is never produced by childLayoutSizeMargin() and thus the
+       layoutSizePaddingMargin() disallows it. */
+    for(BitVector2 hasFillChildren: {0, 1 /*0b01*/, 2 /* 0b10 */}) {
+        CORRADE_ITERATION(hasFillChildren);
+
+        Implementation::LayoutSizePaddingMargin out = Implementation::layoutSizePaddingMargin(
+            data.flags,
+            data.extraChildSnap,
+            data.nodeSize,
+            data.nodePadding,
+            {19.0f, 23.0f, 13.0f, 29.0f},
+            data.childLayoutSize,
+            data.childLayoutMargin,
+            hasFillChildren);
+        CORRADE_COMPARE(out.paddedChildSize, data.expectedPaddedChildLayoutSize);
+        CORRADE_COMPARE(out.size, data.expectedLayoutSize);
+        CORRADE_COMPARE(out.padding, data.expectedLayoutPadding);
+        CORRADE_COMPARE(out.margin, (Vector4{19.0f, 23.0f, 13.0f, 29.0f}));
+    }
 }
 
 void SnapLayouterTest::layoutSizePaddingMarginPropagate() {
@@ -2090,6 +2127,7 @@ void SnapLayouterTest::layoutSizePaddingMarginPropagate() {
     Vector4 nodePaddings[4];
     Vector2 childLayoutSizes[4];
     Vector4 childLayoutMargins[4];
+    BitVector2 hasFillChildren[4];
     Vector2 expectedPaddedChildLayoutSizes[4];
     Vector2 expectedLayoutSizes[4];
     Vector4 expectedLayoutPaddings[4];
@@ -2103,6 +2141,7 @@ void SnapLayouterTest::layoutSizePaddingMarginPropagate() {
     nodeMargins[0] = data.nodeMargin;
     childLayoutSizes[0] = {10.0f, 16.0f};
     childLayoutMargins[0] = {7.0f, 5.0f, 3.0f, 9.0f};
+    hasFillChildren[0] = data.hasFillChildren;
     expectedPaddedChildLayoutSizes[0] = data.expectedPaddedChildLayoutSize;
     expectedLayoutSizes[0] = data.expectedLayoutSize;
     expectedLayoutPaddings[0] = data.expectedLayoutPadding;
@@ -2115,6 +2154,9 @@ void SnapLayouterTest::layoutSizePaddingMarginPropagate() {
         nodePaddings[i + 1] = Math::gather<'w', 'x', 'y', 'z'>(nodePaddings[i]);
         childLayoutSizes[i + 1] = Math::gather<'y', 'x'>(childLayoutSizes[i]);
         childLayoutMargins[i + 1] = Math::gather<'w', 'x', 'y', 'z'>(childLayoutMargins[i]);
+        /** @todo have Math::gather for BitVector as well, this is cryptic and
+            error-prone */
+        hasFillChildren[i + 1] = hasFillChildren[i][1] + 2*hasFillChildren[i][0];
         expectedPaddedChildLayoutSizes[i + 1] = Math::gather<'y', 'x'>(expectedPaddedChildLayoutSizes[i]);
         expectedLayoutSizes[i + 1] = Math::gather<'y', 'x'>(expectedLayoutSizes[i]);
         expectedLayoutPaddings[i + 1] = Math::gather<'w', 'x', 'y', 'z'>(expectedLayoutPaddings[i]);
@@ -2132,7 +2174,8 @@ void SnapLayouterTest::layoutSizePaddingMarginPropagate() {
             nodePaddings[rotation],
             nodeMargins[rotation],
             childLayoutSizes[rotation],
-            childLayoutMargins[rotation]);
+            childLayoutMargins[rotation],
+            hasFillChildren[rotation]);
         CORRADE_COMPARE(out.paddedChildSize, expectedPaddedChildLayoutSizes[rotation]);
         CORRADE_COMPARE(out.size, expectedLayoutSizes[rotation]);
         CORRADE_COMPARE(out.padding, expectedLayoutPaddings[rotation]);
@@ -2204,6 +2247,33 @@ void SnapLayouterTest::childLayoutSizeSide() {
         expectedChildOffsets[3][j].y() = expectedSizes[3].y() + expectedMargins[3][1] + expectedMargins[3][3] - expectedChildOffsets[3][j].y() - expectedChildSizes[3][j].y();
     }
 
+    /* Different snap adjustment for layout 2, which should result in just the
+       BitVector2 return value differing, nothing else */
+    struct SnapAdjustment {
+        Snaps snapsEmpty[6]; /* should result in nothing */
+        Snaps snaps[6]; /* should result in `expected` */
+        Snaps snapsSingleDirection[6]; /* should result in `expected` */
+        Snaps snapsOtherDirection[6]; /* should result in nothing */
+        BitVector2 expected;
+    } snapAdjustments[]{
+        {{},
+         {{}, {}, Snap::Fill, {}, {}, {}}, /* layout 2 */
+         {{}, Snap::FillX, {}, {}, {}, {}}, /* layout 1 */
+         {{}, {}, Snap::FillY, {}, {}, {}}, 1},
+        {{},
+         {{}, {}, Snap::Fill, {}, {}, {}},
+         {{}, {}, {}, {}, {}, Snap::FillY}, /* layout 5 */
+         {{}, {}, Snap::FillX, {}, {}, {}}, 2},
+        {{},
+         {{}, {}, Snap::Fill, {}, {}, {}},
+         {{}, {}, Snap::FillX, {}, {}, {}}, /* layout 2 */
+         {{}, {}, Snap::FillY, {}, {}, {}}, 1},
+        {{},
+         {{}, {}, {}, {}, {}, Snap::Fill}, /* layout 5 */
+         {{}, Snap::FillY, {}, {}, {}, {}}, /* layout 1 */
+         {{}, {}, Snap::FillX, {}, {}, {}}, 2},
+    };
+
     /* The output should be the same for all rotations and node orderings */
     UnsignedInt nodeIds[][3]{
         {8, 3, 6},
@@ -2230,14 +2300,15 @@ void SnapLayouterTest::childLayoutSizeSide() {
                 nodes[nodeIds[shuffle][i]].margin = margins[rotation][i];
             }
 
-            Containers::Pair<Vector2, Vector4> sizeMargin = Implementation::childLayoutSizeMargin(
+            Containers::Triple<Vector2, Vector4, BitVector2> sizeMargin = Implementation::childLayoutSizeMargin(
                 snap,
                 Containers::stridedArrayView(nodes).slice(&Node::margin),
                 Containers::stridedArrayView(nodes).slice(&Node::size),
                 layouterDataHandle(2, 0x222),
                 Containers::stridedArrayView(layouts).slice(&Layout::node),
-                Containers::stridedArrayView(layouts).slice(&Layout::next));
-            CORRADE_COMPARE(sizeMargin, Containers::pair(expectedSizes[rotation], expectedMargins[rotation]));
+                Containers::stridedArrayView(layouts).slice(&Layout::next),
+                snapAdjustments[rotation].snapsEmpty);
+            CORRADE_COMPARE(sizeMargin, Containers::triple(expectedSizes[rotation], expectedMargins[rotation], BitVector2{}));
 
             /* Different layout order, should work the same */
             sizeMargin = Implementation::childLayoutSizeMargin(
@@ -2246,13 +2317,48 @@ void SnapLayouterTest::childLayoutSizeSide() {
                 Containers::stridedArrayView(nodes).slice(&Node::size),
                 layouterDataHandle(1, 0x111),
                 Containers::stridedArrayView(layouts).slice(&Layout::node),
-                Containers::stridedArrayView(layouts).slice(&Layout::next));
-            CORRADE_COMPARE(sizeMargin, Containers::pair(expectedSizes[rotation], expectedMargins[rotation]));
+                Containers::stridedArrayView(layouts).slice(&Layout::next),
+                snapAdjustments[rotation].snapsEmpty);
+            CORRADE_COMPARE(sizeMargin, Containers::triple(expectedSizes[rotation], expectedMargins[rotation], BitVector2{}));
+
+            /* Snap adjustments in one or both directions should propagate to
+               the output accordingly ... */
+            sizeMargin = Implementation::childLayoutSizeMargin(
+                snap,
+                Containers::stridedArrayView(nodes).slice(&Node::margin),
+                Containers::stridedArrayView(nodes).slice(&Node::size),
+                layouterDataHandle(1, 0x111),
+                Containers::stridedArrayView(layouts).slice(&Layout::node),
+                Containers::stridedArrayView(layouts).slice(&Layout::next),
+                snapAdjustments[rotation].snaps);
+            CORRADE_COMPARE(sizeMargin, Containers::triple(expectedSizes[rotation], expectedMargins[rotation], snapAdjustments[rotation].expected));
+
+            sizeMargin = Implementation::childLayoutSizeMargin(
+                snap,
+                Containers::stridedArrayView(nodes).slice(&Node::margin),
+                Containers::stridedArrayView(nodes).slice(&Node::size),
+                layouterDataHandle(1, 0x111),
+                Containers::stridedArrayView(layouts).slice(&Layout::node),
+                Containers::stridedArrayView(layouts).slice(&Layout::next),
+                snapAdjustments[rotation].snapsSingleDirection);
+            CORRADE_COMPARE(sizeMargin, Containers::triple(expectedSizes[rotation], expectedMargins[rotation], snapAdjustments[rotation].expected));
+
+            /* ... but not if in the other direction */
+            sizeMargin = Implementation::childLayoutSizeMargin(
+                snap,
+                Containers::stridedArrayView(nodes).slice(&Node::margin),
+                Containers::stridedArrayView(nodes).slice(&Node::size),
+                layouterDataHandle(1, 0x111),
+                Containers::stridedArrayView(layouts).slice(&Layout::node),
+                Containers::stridedArrayView(layouts).slice(&Layout::next),
+                snapAdjustments[rotation].snapsOtherDirection);
+            CORRADE_COMPARE(sizeMargin, Containers::triple(expectedSizes[rotation], expectedMargins[rotation], BitVector2{}));
 
             /* Just to get the layout size and padding to pass to snap(), the
-               padded child size and margin is unused. Tested thoroughly in
+               padded child size and margin is unused (and thus also the
+               hasFillChildren isn't passed). Tested thoroughly in
                layoutSizePaddingMargin() instead. */
-            Implementation::LayoutSizePaddingMargin layoutSizePaddingMargin = Implementation::layoutSizePaddingMargin({}, snap, {}, {}, {}, sizeMargin.first(), sizeMargin.second());
+            Implementation::LayoutSizePaddingMargin layoutSizePaddingMargin = Implementation::layoutSizePaddingMargin({}, snap, {}, {}, {}, sizeMargin.first(), sizeMargin.second(), BitVector2{});
 
             /* With the above size and padding, snapping the three nodes should
                give the expected offsets. The first child uses a different
@@ -2313,15 +2419,18 @@ void SnapLayouterTest::childLayoutSizeForward() {
         Snap::TopRight|Snap::InsideX|data.extraChildSnaps[1],
     };
 
+    /* Accounting for snap adjustment is tested in childLayoutSizeSide()
+       already, pass an empty set here always */
     struct Layout {
         NodeHandle node;
         LayouterDataHandle next;
+        Snaps snap;
     } layouts[]{
         {},
-        {nodeHandle(3, 0xbeb), layouterDataHandle(5, 0x555)}, /* layout 1 */
-        {nodeHandle(8, 0xaba), layouterDataHandle(1, 0x111)}, /* layout 2 */
+        {nodeHandle(3, 0xbeb), layouterDataHandle(5, 0x555), {}}, /* layout 1 */
+        {nodeHandle(8, 0xaba), layouterDataHandle(1, 0x111), {}}, /* layout 2 */
         {}, {},
-        {nodeHandle(6, 0xcec), layouterDataHandle(2, 0x222)}, /* layout 5 */
+        {nodeHandle(6, 0xcec), layouterDataHandle(2, 0x222), {}}, /* layout 5 */
     };
 
     Vector4 margins[4][3];
@@ -2382,19 +2491,21 @@ void SnapLayouterTest::childLayoutSizeForward() {
                 nodes[nodeIds[i]].margin = margins[rotation][i];
             }
 
-            Containers::Pair<Vector2, Vector4> sizeMargin = Implementation::childLayoutSizeMargin(
+            Containers::Triple<Vector2, Vector4, BitVector2> sizeMargin = Implementation::childLayoutSizeMargin(
                 snap,
                 Containers::stridedArrayView(nodes).slice(&Node::margin),
                 Containers::stridedArrayView(nodes).slice(&Node::size),
                 layouterDataHandle(2, 0x222),
                 Containers::stridedArrayView(layouts).slice(&Layout::node),
-                Containers::stridedArrayView(layouts).slice(&Layout::next));
-            CORRADE_COMPARE(sizeMargin, Containers::pair(expectedSizes[rotation], expectedMargins[rotation]));
+                Containers::stridedArrayView(layouts).slice(&Layout::next),
+                Containers::stridedArrayView(layouts).slice(&Layout::snap));
+            CORRADE_COMPARE(sizeMargin, Containers::triple(expectedSizes[rotation], expectedMargins[rotation], BitVector2{}));
 
             /* Just to get the layout size and padding to pass to snap(), the
-               padded child size and margin is unused. Tested thoroughly in
+               padded child size and margin is unused (and thus also the
+               hasFillChildren isn't passed). Tested thoroughly in
                layoutSizePaddingMargin() instead. */
-            Implementation::LayoutSizePaddingMargin layoutSizePaddingMargin = Implementation::layoutSizePaddingMargin({}, snap, {}, {}, {}, sizeMargin.first(), sizeMargin.second());
+            Implementation::LayoutSizePaddingMargin layoutSizePaddingMargin = Implementation::layoutSizePaddingMargin({}, snap, {}, {}, {}, sizeMargin.first(), sizeMargin.second(), BitVector2{});
 
             /* With the above size and padding, snapping the three nodes should
                give the expected offsets. The first child uses a different
@@ -5001,12 +5112,25 @@ void SnapLayouterTest::layoutExpandChildLayouts() {
             nodeMargins[1 /*toolbar*/] = {0.0f, 5.0f, 0.0f, 5.0f};
             nodeMargins[11 /*statusbar*/] = {0.0f, 5.0f, 0.0f, 5.0f};
 
-            /* Only left / right for `main` */
-            nodeMargins[6 /*main*/] = Vector4{5.0f, 0.0f, 5.0f, 0.0f};
+            /* Only left / right for `main`. If propagating margin from the
+               children, move the horizontal padding from `main` to `inner`. */
+            if(mainFlags >= SnapLayoutFlag::PropagateMarginX) {
+                nodeMargins[7 /*inner*/] = Vector4{5.0f, 0.0f, 5.0f, 0.0f};
+            } else {
+                nodeMargins[6 /*main*/] = Vector4{5.0f, 0.0f, 5.0f, 0.0f};
+            }
 
-            /* Only top / bottom for `right` */
+            /* Only top / bottom for `right`. If propagating margin from the
+               children, move the vertical margin from `right` to them. It has
+               to be larger to extend beyong `right` top / bottom padding
+               also. */
             nodePaddings[8 /*right*/] = {0.0f, 5.0f, 0.0f, 5.0f};
-            nodeMargins[8 /*right*/] = Vector4{0.0f, 5.0f, 0.0f, 5.0f};
+            if(rightFlags >= SnapLayoutFlag::PropagateMarginY) {
+                nodeMargins[9 /*rTop*/][1] = 10.0f;
+                nodeMargins[10 /*rBottom*/][3] = 10.0f;
+            } else {
+                nodeMargins[8 /*right*/] = Vector4{0.0f, 5.0f, 0.0f, 5.0f};
+            }
 
             /* Extra top/bottom margin for root so it stays at the same offset
                and size as if size was explicitly specified */
@@ -5018,11 +5142,14 @@ void SnapLayouterTest::layoutExpandChildLayouts() {
 
         bool minSizeInsteadOfFixed;
         Snaps rootFillInsteadOfSize;
+        SnapLayoutFlags mainFlags, rightFlags;
         Int called = 0;
     };
     LayoutLayer& layoutLayer = ui.setLayerInstance(Containers::pointer<LayoutLayer>(ui.createLayer()));
     layoutLayer.minSizeInsteadOfFixed = data.minSizeInsteadOfFixed;
     layoutLayer.rootFillInsteadOfSize = data.rootFillInsteadOfSize;
+    layoutLayer.mainFlags = data.mainFlags;
+    layoutLayer.rightFlags = data.rightFlags;
 
     SnapLayouter& layouter = ui.setLayouterInstance(Containers::pointer<SnapLayouter>(ui.createLayouter()));
 
@@ -5041,12 +5168,12 @@ void SnapLayouterTest::layoutExpandChildLayouts() {
     layouter.add(l0, Snap::FillX);
     layouter.add(l1, Snap::FillX);
 
-    LayoutHandle mainLayout = layouter.add(main);
+    LayoutHandle mainLayout = layouter.add(main, data.mainFlags);
     layouter.setChildSnap(mainLayout, Snap::BottomRight|Snap::InsideY);
     layouter.add(inner, Snap::FillX);
 
     /* The right layout is ordered bottom up just for extra fun */
-    LayoutHandle rightLayout = layouter.add(right, Snap::FillX);
+    LayoutHandle rightLayout = layouter.add(right, Snap::FillX, data.rightFlags);
     layouter.setChildSnap(rightLayout, Snap::Top|Snap::FillX);
     layouter.add(rBottom, Snap::FillY);
     layouter.add(rTop, Snap::FillY);

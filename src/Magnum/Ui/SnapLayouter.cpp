@@ -987,16 +987,17 @@ void SnapLayouter::doLayout(const Containers::BitArrayView layoutIdsToUpdate, co
            IgnoreOverflow is set, as the child size may still get used to
            expand child layouts. */
         const UnsignedInt nodeId = nodeHandleId(nodes[layoutId]);
-        const Containers::Pair<Vector2, Vector4> childLayoutSizeMargin =
+        const Containers::Triple<Vector2, Vector4, BitVector2> childLayoutSizeMargin =
             layout.firstChild == LayouterDataHandle::Null ?
-                Containers::Pair<Vector2, Vector4>{} :
+                Containers::Triple<Vector2, Vector4, BitVector2>{} :
                 Implementation::childLayoutSizeMargin(
                     layout.childSnap,
                     nodeMargins,
                     nodeSizes,
                     layout.firstChild,
                     nodes,
-                    stridedArrayView(state.layouts).slice(&Layout::next));
+                    stridedArrayView(state.layouts).slice(&Layout::next),
+                    stridedArrayView(state.layouts).slice(&Layout::snap));
 
         /* Calculate the actual layout size, padding and margin from the layout
            properties and child layout size and margin (optionally) calculated
@@ -1009,7 +1010,8 @@ void SnapLayouter::doLayout(const Containers::BitArrayView layoutIdsToUpdate, co
                 nodePaddings[nodeId],
                 nodeMargins[nodeId],
                 childLayoutSizeMargin.first(),
-                childLayoutSizeMargin.second());
+                childLayoutSizeMargin.second(),
+                childLayoutSizeMargin.third());
 
         /* Consider also explicitly snapped child nodes for the size, again not
            even call the function if there are no explicitly snapped children.
