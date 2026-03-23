@@ -87,6 +87,7 @@ typedef Containers::EnumSet<BaseLayerSharedFlag> BaseLayerSharedFlags;
 class DataLayer;
 enum class DataLayerStorageHandle: UnsignedInt;
 enum class StorageHandle: UnsignedLong;
+template<class T> class StorageQuery;
 
 class DebugLayer;
 #ifdef MAGNUM_TARGET_GL

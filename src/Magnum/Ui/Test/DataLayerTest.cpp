@@ -81,12 +81,16 @@ struct DataLayerTest: TestSuite::Tester {
 
     void invalidStorageHandle();
 
+    void queryConstructSetupTeardown();
+    void queryConstruct();
+    void queryConstructCopy();
+    void queryConstructInvalid();
+    void queryValueNoDefaultConstructor();
+    void queryValueInvalid();
+
     void createRemoveSetupTeardown();
     void createRemove();
     void createRemoveHandleRecycle();
-    void createMemberFunction();
-    void createOverloaded();
-    void createOverloadedMemberFunction();
     void createInvalid();
 
     void setIndex();
@@ -206,11 +210,17 @@ DataLayerTest::DataLayerTest() {
 
               &DataLayerTest::invalidStorageHandle});
 
+    addTests({&DataLayerTest::queryConstruct,
+              &DataLayerTest::queryConstructCopy},
+        &DataLayerTest::queryConstructSetupTeardown,
+        &DataLayerTest::queryConstructSetupTeardown);
+
+    addTests({&DataLayerTest::queryConstructInvalid,
+              &DataLayerTest::queryValueNoDefaultConstructor,
+              &DataLayerTest::queryValueInvalid});
+
     addTests({&DataLayerTest::createRemove,
-              &DataLayerTest::createRemoveHandleRecycle,
-              &DataLayerTest::createMemberFunction,
-              &DataLayerTest::createOverloaded,
-              &DataLayerTest::createOverloadedMemberFunction},
+              &DataLayerTest::createRemoveHandleRecycle},
         &DataLayerTest::createRemoveSetupTeardown,
         &DataLayerTest::createRemoveSetupTeardown);
 
@@ -1247,9 +1257,15 @@ void DataLayerTest::removeStorageInvalid() {
     CORRADE_SKIP_IF_NO_ASSERT();
 
     struct DummyStorage: AbstractStorage {
+        typedef Int Type;
+
         explicit DummyStorage(DataLayer& layer, StorageFlags flags = {}): AbstractStorage{layer, flags} {}
 
-        Int operator*() const { return 3; }
+        operator StorageQuery<Int>() const {
+            return StorageQuery<Int>{*this, [](const DummyStorage&) {
+                return 3;
+            }};
+        }
     };
 
     DataLayer layer{layerHandle(0xab, 0x12)};
@@ -1296,9 +1312,15 @@ void DataLayerTest::removeStorageInvalid() {
 
 void DataLayerTest::setStorageDirty() {
     struct DummyStorage: AbstractStorage {
+        typedef Int Type;
+
         explicit DummyStorage(DataLayer& layer, StorageFlags flags): AbstractStorage{layer, flags} {}
 
-        Int operator*() const { return {}; }
+        operator StorageQuery<Int>() const {
+            return StorageQuery<Int>{*this, [](const DummyStorage&) {
+                return 3371;
+            }};
+        }
     };
 
     DataLayer layer{layerHandle(0, 1)};
@@ -1486,60 +1508,398 @@ void DataLayerTest::invalidStorageHandle() {
         TestSuite::Compare::String);
 }
 
+Int queryCalled = 0;
+Int query1DCalled = 0;
+Int query2DCalled = 0;
+Int query3DCalled = 0;
+
+void DataLayerTest::queryConstructSetupTeardown() {
+    queryCalled =
+        query1DCalled =
+        query2DCalled =
+        query3DCalled = 0;
+}
+
+void DataLayerTest::queryConstruct() {
+    /* This verifies construction of StorageQuery types in the simplest way
+       possible, which is *not* what the intended usage is meant to be. See
+       the createRemove() test for how a storage implementation returning
+       StorageQuery instances is meant to look like. */
+
+    struct DummyStorage: AbstractStorage {
+        explicit DummyStorage(DataLayer& layer, const Containers::Size3D& size): AbstractStorage{layer, size} {}
+    };
+
+    DataLayer layer{layerHandle(0xab, 0xcd)};
+
+    /* Create some extra storages to verify it's correctly rebuilding even
+       non-trivial storage handles from the ID */
+    DummyStorage{layer, {1, 1, 1}};
+    DummyStorage{layer, {1, 1, 1}};
+    layer.removeStorage(DummyStorage{layer, {1, 1, 1}});
+    layer.removeStorage(DummyStorage{layer, {1, 1, 1}});
+    layer.removeStorage(DummyStorage{layer, {1, 1, 1}});
+    layer.removeStorage(DummyStorage{layer, {1, 1, 1}});
+    DummyStorage storage{layer, {1, 1, 1}};
+    layer.removeStorage(DummyStorage{layer, {1, 1, 1}});
+    DummyStorage storage1D{layer, {1, 1, 15}};
+    layer.removeStorage(DummyStorage{layer, {1, 1, 1}});
+    layer.removeStorage(DummyStorage{layer, {1, 1, 1}});
+    DummyStorage storage2D{layer, {1, 3, 7}};
+    layer.removeStorage(DummyStorage{layer, {1, 1, 1}});
+    layer.removeStorage(DummyStorage{layer, {1, 1, 1}});
+    layer.removeStorage(DummyStorage{layer, {1, 1, 1}});
+    DummyStorage storage3D{layer, {2, 5, 4}};
+    CORRADE_COMPARE(layer.storageCapacity(), 6);
+    CORRADE_COMPARE(layer.storageUsedCount(), 6);
+    CORRADE_COMPARE(layer.storageUsedAllocatedCount(), 0);
+    CORRADE_COMPARE(layer.capacity(), 0);
+    CORRADE_COMPARE(layer.usedCount(), 0);
+    CORRADE_COMPARE(layer.usedAllocatedCount(), 0);
+    CORRADE_COMPARE(layer.storageReferenceCount(storage), 0);
+    CORRADE_COMPARE(layer.storageReferenceCount(storage1D), 0);
+    CORRADE_COMPARE(layer.storageReferenceCount(storage2D), 0);
+    CORRADE_COMPARE(layer.storageReferenceCount(storage3D), 0);
+    CORRADE_COMPARE(layer.state(), LayerStates{});
+
+    /* The handle is checked in the query lambdas but they have no way to
+       capture anything so at least have some other place to cross-check and
+       copy from */
+    CORRADE_COMPARE(storage.handle(), Ui::storageHandle(layerHandle(0xab, 0xcd), 0x2, 0x5));
+    CORRADE_COMPARE(storage1D.handle(), Ui::storageHandle(layerHandle(0xab, 0xcd), 0x3, 0x2));
+    CORRADE_COMPARE(storage2D.handle(), Ui::storageHandle(layerHandle(0xab, 0xcd), 0x4, 0x3));
+    CORRADE_COMPARE(storage3D.handle(), Ui::storageHandle(layerHandle(0xab, 0xcd), 0x5, 0x4));
+
+    /* Single item. Creating a query doesn't actually make the storage
+       referenced nor sets any state. Only passing it to layer create() does,
+       which is tested in createRemove() below. */
+    StorageQuery<Int> single{storage, [](const DummyStorage& storage) {
+        CORRADE_COMPARE(storage.handle(), Ui::storageHandle(layerHandle(0xab, 0xcd), 0x2, 0x5));
+        ++queryCalled;
+        return 0x333;
+    }};
+    CORRADE_COMPARE(layer.storageReferenceCount(storage), 0);
+    CORRADE_COMPARE(layer.storageReferenceCount(storage1D), 0);
+    CORRADE_COMPARE(layer.storageReferenceCount(storage2D), 0);
+    CORRADE_COMPARE(layer.storageReferenceCount(storage3D), 0);
+    CORRADE_COMPARE(layer.state(), LayerStates{});
+    CORRADE_COMPARE(&single.layer(), &layer);
+    CORRADE_COMPARE(single.storage(), storage.handle());
+    CORRADE_COMPARE(single.index(), Containers::Size3D{});
+
+    /* 1D query */
+    StorageQuery<Int> oneDimension{storage1D, 13, [](const DummyStorage& storage, std::size_t index) {
+        CORRADE_COMPARE(storage.handle(), Ui::storageHandle(layerHandle(0xab, 0xcd), 0x3, 0x2));
+        CORRADE_COMPARE(index, 13);
+        ++query1DCalled;
+        return 0x4444;
+    }};
+    CORRADE_COMPARE(layer.storageReferenceCount(storage), 0);
+    CORRADE_COMPARE(layer.storageReferenceCount(storage1D), 0);
+    CORRADE_COMPARE(layer.storageReferenceCount(storage2D), 0);
+    CORRADE_COMPARE(layer.storageReferenceCount(storage3D), 0);
+    CORRADE_COMPARE(layer.state(), LayerStates{});
+    CORRADE_COMPARE(&oneDimension.layer(), &layer);
+    CORRADE_COMPARE(oneDimension.storage(), storage1D.handle());
+    CORRADE_COMPARE(oneDimension.index(), (Containers::Size3D{0, 0, 13}));
+
+    /* 2D query */
+    StorageQuery<Int> twoDimensions{storage2D, {2, 5}, [](const DummyStorage& storage, const Containers::Size2D& index) {
+        CORRADE_COMPARE(storage.handle(), Ui::storageHandle(layerHandle(0xab, 0xcd), 0x4, 0x3));
+        CORRADE_COMPARE(index, (Containers::Size2D{2, 5}));
+        ++query2DCalled;
+        return 0x55555;
+    }};
+    CORRADE_COMPARE(layer.storageReferenceCount(storage), 0);
+    CORRADE_COMPARE(layer.storageReferenceCount(storage1D), 0);
+    CORRADE_COMPARE(layer.storageReferenceCount(storage2D), 0);
+    CORRADE_COMPARE(layer.storageReferenceCount(storage3D), 0);
+    CORRADE_COMPARE(layer.state(), LayerStates{});
+    CORRADE_COMPARE(&twoDimensions.layer(), &layer);
+    CORRADE_COMPARE(twoDimensions.storage(), storage2D.handle());
+    CORRADE_COMPARE(twoDimensions.index(), (Containers::Size3D{0, 2, 5}));
+
+    /* 3D query */
+    StorageQuery<Int> threeDimensions{storage3D, {1, 3, 2}, [](const DummyStorage& storage, const Containers::Size3D& index) {
+        CORRADE_COMPARE(storage.handle(), Ui::storageHandle(layerHandle(0xab, 0xcd), 0x5, 0x4));
+        CORRADE_COMPARE(index, (Containers::Size3D{1, 3, 2}));
+        ++query3DCalled;
+        return 0x666666;
+    }};
+    CORRADE_COMPARE(layer.storageReferenceCount(storage), 0);
+    CORRADE_COMPARE(layer.storageReferenceCount(storage1D), 0);
+    CORRADE_COMPARE(layer.storageReferenceCount(storage2D), 0);
+    CORRADE_COMPARE(layer.storageReferenceCount(storage3D), 0);
+    CORRADE_COMPARE(layer.state(), LayerStates{});
+    CORRADE_COMPARE(&threeDimensions.layer(), &layer);
+    CORRADE_COMPARE(threeDimensions.storage(), storage3D.handle());
+    CORRADE_COMPARE(threeDimensions.index(), (Containers::Size3D{1, 3, 2}));
+
+    /* None of the storage queries should be called until now */
+    CORRADE_COMPARE(queryCalled, 0);
+    CORRADE_COMPARE(query1DCalled, 0);
+    CORRADE_COMPARE(query2DCalled, 0);
+    CORRADE_COMPARE(query3DCalled, 0);
+
+    /* They get called when explicitly executing the query (or later by the
+       layer preUpdate() itself, which is again tested in createRemove()
+       below) */
+    CORRADE_COMPARE(Int(single), 0x333);
+    CORRADE_COMPARE(queryCalled, 1);
+    CORRADE_COMPARE(query1DCalled, 0);
+    CORRADE_COMPARE(query2DCalled, 0);
+    CORRADE_COMPARE(query3DCalled, 0);
+
+    CORRADE_COMPARE(Int(oneDimension), 0x4444);
+    CORRADE_COMPARE(queryCalled, 1);
+    CORRADE_COMPARE(query1DCalled, 1);
+    CORRADE_COMPARE(query2DCalled, 0);
+    CORRADE_COMPARE(query3DCalled, 0);
+
+    CORRADE_COMPARE(Int(twoDimensions), 0x55555);
+    CORRADE_COMPARE(queryCalled, 1);
+    CORRADE_COMPARE(query1DCalled, 1);
+    CORRADE_COMPARE(query2DCalled, 1);
+    CORRADE_COMPARE(query3DCalled, 0);
+
+    CORRADE_COMPARE(Int(threeDimensions), 0x666666);
+    CORRADE_COMPARE(queryCalled, 1);
+    CORRADE_COMPARE(query1DCalled, 1);
+    CORRADE_COMPARE(query2DCalled, 1);
+    CORRADE_COMPARE(query3DCalled, 1);
+}
+
+void DataLayerTest::queryConstructCopy() {
+    DataLayer layer{layerHandle(0, 1)};
+
+    struct DummyStorage: AbstractStorage {
+        explicit DummyStorage(DataLayer& layer): AbstractStorage{layer, {3, 5, 17}} {}
+    } storage{layer};
+
+    StorageQuery<Int> a{storage, {2, 4, 13}, [](const DummyStorage&, const Containers::Size3D& index) {
+        CORRADE_COMPARE(index, (Containers::Size3D{2, 4, 13}));
+        ++queryCalled;
+        return 0x333;
+    }};
+    CORRADE_COMPARE(&a.layer(), &layer);
+    CORRADE_COMPARE(a.storage(), storage.handle());
+    CORRADE_COMPARE(a.index(), (Containers::Size3D{2, 4, 13}));
+    CORRADE_COMPARE(queryCalled, 0);
+    CORRADE_COMPARE(Int(a), 0x333);
+    CORRADE_COMPARE(queryCalled, 1);
+
+    StorageQuery<Int> b = a;
+    CORRADE_COMPARE(&b.layer(), &layer);
+    CORRADE_COMPARE(b.storage(), storage.handle());
+    CORRADE_COMPARE(b.index(), (Containers::Size3D{2, 4, 13}));
+    CORRADE_COMPARE(queryCalled, 1);
+    CORRADE_COMPARE(Int(b), 0x333);
+    CORRADE_COMPARE(queryCalled, 2);
+
+    #ifndef CORRADE_NO_STD_IS_TRIVIALLY_TRAITS
+    CORRADE_VERIFY(std::is_trivially_copy_constructible<StorageQuery<Int>>::value);
+    CORRADE_VERIFY(std::is_trivially_copy_assignable<StorageQuery<Int>>::value);
+    #endif
+}
+
+void DataLayerTest::queryConstructInvalid() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct DummyStorage: AbstractStorage {
+        explicit DummyStorage(DataLayer& layer, const Containers::Size3D& size): AbstractStorage{layer, size} {}
+
+        /* The internals should explicitly query AbstractStorage::size() to
+           allow subclasses to override it with different dimension count.
+           Clang says it's unused (which it is), but it's here for the reason
+           stated in this comment. */
+        CORRADE_UNUSED void size() const {
+            CORRADE_FAIL("This function shouldn't be called.");
+        }
+    };
+
+    DataLayer layer{layerHandle(0xab, 0x12)};
+    DummyStorage storage{layer, {1, 1, 1}};
+    DummyStorage storage1D{layer, {1, 1, 15}};
+    DummyStorage storage2D{layer, {1, 3, 7}};
+    DummyStorage storage3D{layer, {4, 2, 5}};
+
+    DummyStorage removedStorage{layer, {1, 1, 1}};
+    layer.removeStorage(removedStorage);
+
+    /* Indices exactly at the end shouldn't trigger an assert */
+    StorageQuery<Int>{storage, [](const DummyStorage&) { return 13; }};
+    StorageQuery<Int>{storage1D, 14, [](const DummyStorage&, std::size_t) { return 13; }};
+    StorageQuery<Int>{storage2D, {2, 6}, [](const DummyStorage&, const Containers::Size2D&) { return 13; }};
+    StorageQuery<Int>{storage3D, {3, 1, 4}, [](const DummyStorage&, const Containers::Size3D&) { return 13; }};
+
+    /* These should all fail at compile time */
+    #if 0
+    struct StorageNotTriviallyCopyable: AbstractStorage {
+        explicit StorageNotTriviallyCopyable(DataLayer& layer): AbstractStorage{layer} {}
+
+        StorageNotTriviallyCopyable(const StorageNotTriviallyCopyable& other): AbstractStorage{other} {
+            /* This is here to make it non-trivially copyable */
+        }
+    } storageNotTriviallyCopyable{layer};
+    struct StorageWithMember: AbstractStorage {
+        explicit StorageWithMember(DataLayer& layer): AbstractStorage{layer} {}
+
+        /* Even just a single byte should fail, i.e. there shouldn't be any
+           padding in AbstractStorage into which the subclass member would fit
+           and thus make the assertion not fail */
+        bool thisShouldNotBeHere;
+    } storageWithMember{layer};
+
+    StorageQuery<Int>{storageNotTriviallyCopyable, [](const StorageNotTriviallyCopyable&) { return 0; }};
+    StorageQuery<Int>{storageNotTriviallyCopyable, 0, [](const StorageNotTriviallyCopyable&, std::size_t) { return 0; }};
+    StorageQuery<Int>{storageNotTriviallyCopyable, {0, 0}, [](const StorageNotTriviallyCopyable&, const Containers::Size2D&) { return 0; }};
+    StorageQuery<Int>{storageNotTriviallyCopyable, {0, 0, 0}, [](const StorageNotTriviallyCopyable&, const Containers::Size3D&) { return 0; }};
+
+    StorageQuery<Int>{storageWithMember, [](const StorageWithMember&) { return 0; }};
+    StorageQuery<Int>{storageWithMember, 0, [](const StorageWithMember&, std::size_t) { return 0; }};
+    StorageQuery<Int>{storageWithMember, {0, 0}, [](const StorageWithMember&, const Containers::Size2D&) { return 0; }};
+    StorageQuery<Int>{storageWithMember, {0, 0, 0}, [](const StorageWithMember&, const Containers::Size3D&) { return 0; }};
+
+    StorageQuery<Int>{storage, static_cast<Int(*)(const DummyStorage&)>(nullptr)};
+    StorageQuery<Int>{storage, 0, static_cast<Int(*)(const DummyStorage&, std::size_t)>(nullptr)};
+    StorageQuery<Int>{storage, {0, 0}, static_cast<Int(*)(const DummyStorage&, const Containers::Size2D&)>(nullptr)};
+    StorageQuery<Int>{storage, {0, 0, 0}, static_cast<Int(*)(const DummyStorage&, const Containers::Size3D&)>(nullptr)};
+    #endif
+
+    Containers::String out;
+    Error redirectError{&out};
+    StorageQuery<Int>{removedStorage, [](const DummyStorage&) { return 13; }};
+    StorageQuery<Int>{removedStorage, 0, [](const DummyStorage&, std::size_t) { return 13; }};
+    StorageQuery<Int>{removedStorage, {0, 0}, [](const DummyStorage&, const Containers::Size2D&) { return 13; }};
+    StorageQuery<Int>{removedStorage, {0, 0, 0}, [](const DummyStorage&, const Containers::Size3D&) { return 13; }};
+    /* Index out of bounds in 1D, 2D and 3D */
+    StorageQuery<Int>{storage1D, 15, [](const DummyStorage&, std::size_t) { return 13; }};
+    StorageQuery<Int>{storage2D, {2, 7}, [](const DummyStorage&, const Containers::Size2D&) { return 13; }};
+    StorageQuery<Int>{storage2D, {3, 6}, [](const DummyStorage&, const Containers::Size2D&) { return 13; }};
+    StorageQuery<Int>{storage3D, {3, 1, 5}, [](const DummyStorage&, const Containers::Size3D&) { return 13; }};
+    StorageQuery<Int>{storage3D, {3, 2, 4}, [](const DummyStorage&, const Containers::Size3D&) { return 13; }};
+    StorageQuery<Int>{storage3D, {4, 1, 4}, [](const DummyStorage&, const Containers::Size3D&) { return 13; }};
+    /* No index specified for a 1D/2D/3D storage even though it's in bounds */
+    StorageQuery<Int>{storage1D, [](const DummyStorage&) { return 13; }};
+    StorageQuery<Int>{storage2D, [](const DummyStorage&) { return 13; }};
+    StorageQuery<Int>{storage3D, [](const DummyStorage&) { return 13; }};
+    /* 1D index specified for a 2D/3D storage even though it's in bounds */
+    StorageQuery<Int>{storage2D, 0, [](const DummyStorage&, std::size_t) { return 13; }};
+    StorageQuery<Int>{storage3D, 0, [](const DummyStorage&, std::size_t) { return 13; }};
+    /* 2D index specified for a 3D storage even though it's in bounds */
+    StorageQuery<Int>{storage3D, {0, 0}, [](const DummyStorage&, const Containers::Size2D&) { return 13; }};
+    CORRADE_COMPARE_AS(out,
+        "Ui::StorageQuery: invalid handle Ui::StorageHandle({0xab, 0x12}, {0x4, 0x1})\n"
+        "Ui::StorageQuery: invalid handle Ui::StorageHandle({0xab, 0x12}, {0x4, 0x1})\n"
+        "Ui::StorageQuery: invalid handle Ui::StorageHandle({0xab, 0x12}, {0x4, 0x1})\n"
+        "Ui::StorageQuery: invalid handle Ui::StorageHandle({0xab, 0x12}, {0x4, 0x1})\n"
+
+        "Ui::StorageQuery: index {0, 0, 15} out of range for {1, 1, 15} elements\n"
+        "Ui::StorageQuery: index {0, 2, 7} out of range for {1, 3, 7} elements\n"
+        "Ui::StorageQuery: index {0, 3, 6} out of range for {1, 3, 7} elements\n"
+        "Ui::StorageQuery: index {3, 1, 5} out of range for {4, 2, 5} elements\n"
+        "Ui::StorageQuery: index {3, 2, 4} out of range for {4, 2, 5} elements\n"
+        "Ui::StorageQuery: index {4, 1, 4} out of range for {4, 2, 5} elements\n"
+
+        "Ui::StorageQuery: expected a single-item storage but got a size of {1, 1, 15}\n"
+        "Ui::StorageQuery: expected a single-item storage but got a size of {1, 3, 7}\n"
+        "Ui::StorageQuery: expected a single-item storage but got a size of {4, 2, 5}\n"
+        "Ui::StorageQuery: expected a 1D storage but got a size of {1, 3, 7}\n"
+        "Ui::StorageQuery: expected a 1D storage but got a size of {4, 2, 5}\n"
+        "Ui::StorageQuery: expected a 2D storage but got a size of {4, 2, 5}\n",
+        TestSuite::Compare::String);
+}
+
+void DataLayerTest::queryValueNoDefaultConstructor() {
+    /* "Simple" StorageQuery value retrieval tested in queryConstruct()
+       already, this verifies that it works for non-trivial types as well */
+
+    DataLayer layer{layerHandle(0, 1)};
+
+    struct DummyStorage: AbstractStorage {
+        explicit DummyStorage(DataLayer& layer): AbstractStorage{layer} {}
+    } storage{layer};
+
+    struct NoDefaultConstructor {
+        explicit NoDefaultConstructor(Int a): a{a} {}
+
+        Int a;
+    };
+
+    StorageQuery<NoDefaultConstructor> query{storage, [](const DummyStorage&) {
+        return NoDefaultConstructor{0x4444};
+    }};
+
+    CORRADE_COMPARE(NoDefaultConstructor{query}.a, 0x4444);
+}
+
+void DataLayerTest::queryValueInvalid() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct DummyStorage: AbstractStorage {
+        explicit DummyStorage(DataLayer& layer): AbstractStorage{layer} {}
+    };
+
+    DataLayer layer{layerHandle(0xab, 0x12)};
+
+    /* Create some extra storages to have a non-trivial handle printed */
+    DummyStorage{layer};
+    DummyStorage{layer};
+    layer.removeStorage(DummyStorage{layer});
+    layer.removeStorage(DummyStorage{layer});
+    layer.removeStorage(DummyStorage{layer});
+    layer.removeStorage(DummyStorage{layer});
+    DummyStorage removedStorage{layer};
+
+    StorageQuery<Int> query{removedStorage, [](const DummyStorage&) {
+        CORRADE_FAIL("This shouldn't be called.");
+        return 33;
+    }};
+    layer.removeStorage(removedStorage);
+
+    Containers::String out;
+    Error redirectError{&out};
+    /* Lol, calling `Int{query}` produces a warning about unused expression?!
+       It's a non-trivial operation, so it's meaningful! */
+    Int a = query;
+    static_cast<void>(a);
+    CORRADE_COMPARE(out, "Ui::StorageQuery: invalid handle Ui::StorageHandle({0xab, 0x12}, {0x2, 0x5})\n");
+}
+
 Int storageCalled = 0;
-Int storage1DCalled = 0;
-Int storage2DCalled = 0;
-Int storage3DCalled = 0;
+Int storageImplicitCalled = 0;
 
 void DataLayerTest::createRemoveSetupTeardown() {
     storageCalled =
-        storage1DCalled =
-            storage2DCalled =
-                storage3DCalled = 0;
+        storageImplicitCalled = 0;
 }
 
 void DataLayerTest::createRemove() {
     /* Tests mainly data creation & removal along with correct destruction for
-       non-trivial functions, with the 0D/1D/2D/3D overloads. Variants taking a
-       member (function) pointer are tested in createMember*() below. */
-
-    /* Dedicated storage type per dimension count, overloads tested in
-       createOverloads() below. The getters get called below to verify the
-       member function is correctly picked and called with the right
-       arguments */
+       non-trivial functions, with also the implicit overload. The getters get
+       called below to verify the query function is correctly picked and called
+       with the right arguments. */
     struct DummyStorage: AbstractStorage {
-        explicit DummyStorage(DataLayer& layer): AbstractStorage{layer} {}
+        explicit DummyStorage(DataLayer& layer): AbstractStorage{layer, 15} {}
 
-        Int operator*() const {
-            ++storageCalled;
-            return 0x333;
+        StorageQuery<Int> operator[](std::size_t index) const {
+            return StorageQuery<Int>{*this, index, [](const DummyStorage&, std::size_t index) {
+                CORRADE_COMPARE(index, 13);
+                ++storageCalled;
+                return 0x333;
+            }};
         }
     };
-    struct DummyStorage1D: AbstractStorage {
-        explicit DummyStorage1D(DataLayer& layer): AbstractStorage{layer, 15} {}
+    struct DummyStorageImplicit: AbstractStorage {
+        typedef Int Type;
 
-        Int operator[](std::size_t index) const {
-            CORRADE_COMPARE(index, 13);
-            ++storage1DCalled;
-            return 0x4444;
-        }
-    };
-    struct DummyStorage2D: AbstractStorage {
-        explicit DummyStorage2D(DataLayer& layer): AbstractStorage{layer, {3, 7}} {}
+        explicit DummyStorageImplicit(DataLayer& layer): AbstractStorage{layer} {}
 
-        Int operator[](const Containers::Size2D& index) const {
-            CORRADE_COMPARE(index, (Containers::Size2D{2, 5}));
-            ++storage2DCalled;
-            return 0x55555;
-        }
-    };
-    struct DummyStorage3D: AbstractStorage {
-        explicit DummyStorage3D(DataLayer& layer): AbstractStorage{layer, {2, 5, 4}} {}
-
-        Int operator[](const Containers::Size3D& index) const {
-            CORRADE_COMPARE(index, (Containers::Size3D{1, 3, 2}));
-            ++storage3DCalled;
-            return 0x666666;
+        operator StorageQuery<Int>() const {
+            return StorageQuery<Int>{*this, [](const DummyStorageImplicit&) {
+                ++storageImplicitCalled;
+                return 0x4444;
+            }};
         }
     };
 
@@ -1570,36 +1930,26 @@ void DataLayerTest::createRemove() {
     layer.removeStorage(DummyStorage{layer});
     DummyStorage storage{layer};
     layer.removeStorage(DummyStorage{layer});
-    DummyStorage1D storage1D{layer};
     layer.removeStorage(DummyStorage{layer});
-    layer.removeStorage(DummyStorage{layer});
-    DummyStorage2D storage2D{layer};
-    layer.removeStorage(DummyStorage{layer});
-    layer.removeStorage(DummyStorage{layer});
-    layer.removeStorage(DummyStorage{layer});
-    DummyStorage3D storage3D{layer};
-    CORRADE_COMPARE(layer.storageCapacity(), 6);
-    CORRADE_COMPARE(layer.storageUsedCount(), 6);
+    DummyStorageImplicit storageImplicit{layer};
+    CORRADE_COMPARE(layer.storageCapacity(), 4);
+    CORRADE_COMPARE(layer.storageUsedCount(), 4);
     CORRADE_COMPARE(layer.storageUsedAllocatedCount(), 0);
     CORRADE_COMPARE(layer.capacity(), 0);
     CORRADE_COMPARE(layer.usedCount(), 0);
     CORRADE_COMPARE(layer.usedAllocatedCount(), 0);
     CORRADE_COMPARE(layer.storageReferenceCount(storage), 0);
-    CORRADE_COMPARE(layer.storageReferenceCount(storage1D), 0);
-    CORRADE_COMPARE(layer.storageReferenceCount(storage2D), 0);
-    CORRADE_COMPARE(layer.storageReferenceCount(storage3D), 0);
+    CORRADE_COMPARE(layer.storageReferenceCount(storageImplicit), 0);
     CORRADE_COMPARE(layer.state(), LayerStates{});
 
-    /* Trivial function, single item */
+    /* Trivial function */
     Int trivialCalled = 0;
-    DataHandle trivial = layer.create(storage, [&trivialCalled](const Int& value) {
+    DataHandle trivial = layer.create(storage[13], [&trivialCalled](const Int& value) {
         CORRADE_COMPARE(value, 0x333);
         ++trivialCalled;
     });
     CORRADE_COMPARE(layer.storageReferenceCount(storage), 1);
-    CORRADE_COMPARE(layer.storageReferenceCount(storage1D), 0);
-    CORRADE_COMPARE(layer.storageReferenceCount(storage2D), 0);
-    CORRADE_COMPARE(layer.storageReferenceCount(storage3D), 0);
+    CORRADE_COMPARE(layer.storageReferenceCount(storageImplicit), 0);
     CORRADE_COMPARE(layer.capacity(), 1);
     CORRADE_COMPARE(layer.usedCount(), 1);
     {
@@ -1619,22 +1969,20 @@ void DataLayerTest::createRemove() {
     }
     CORRADE_VERIFY(layer.isDirty(trivial));
     CORRADE_COMPARE(layer.storage(trivial), storage);
-    CORRADE_COMPARE(layer.index(trivial), (Containers::Size3D{0, 0, 0}));
+    CORRADE_COMPARE(layer.index(trivial), (Containers::Size3D{0, 0, 13}));
     /* Sets LayerState::NeedsCommonDataUpdate in order to make sure the update
        function is called on the next update even though the data isn't
        attached to any node or the node is not visible. */
     CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate|LayerState::NeedsCommonDataUpdate);
 
-    /* Non-trivial function, single item, attached. The temporary gets
-       destructed right away. */
+    /* Non-trivial function, attached. The temporary gets destructed right
+       away. */
     Int nonTrivialCalled = 0;
     Int destructed = 0;
-    DataHandle nonTrivial = layer.create(storage, NonTrivial{0x333, nonTrivialCalled, destructed}, nodeHandle(0x12345, 0xabc));
+    DataHandle nonTrivial = layer.create(storage[13], NonTrivial{0x333, nonTrivialCalled, destructed}, nodeHandle(0x12345, 0xabc));
     CORRADE_COMPARE(destructed, 1);
     CORRADE_COMPARE(layer.storageReferenceCount(storage), 2);
-    CORRADE_COMPARE(layer.storageReferenceCount(storage1D), 0);
-    CORRADE_COMPARE(layer.storageReferenceCount(storage2D), 0);
-    CORRADE_COMPARE(layer.storageReferenceCount(storage3D), 0);
+    CORRADE_COMPARE(layer.storageReferenceCount(storageImplicit), 0);
     CORRADE_COMPARE(layer.capacity(), 2);
     CORRADE_COMPARE(layer.usedCount(), 2);
     {
@@ -1648,21 +1996,20 @@ void DataLayerTest::createRemove() {
     CORRADE_VERIFY(layer.isAllocated(nonTrivial));
     CORRADE_VERIFY(layer.isDirty(nonTrivial));
     CORRADE_COMPARE(layer.storage(nonTrivial), storage);
-    CORRADE_COMPARE(layer.index(nonTrivial), (Containers::Size3D{0, 0, 0}));
+    CORRADE_COMPARE(layer.index(nonTrivial), (Containers::Size3D{0, 0, 13}));
     /* In this and others additional states get set for node attachment */
     CORRADE_COMPARE_AS(layer.state(), LayerState::NeedsCommonDataUpdate,
         TestSuite::Compare::GreaterOrEqual);
 
-    /* Trivial function, 1D index, not attached, LayerDataHandle overloads */
-    Int trivial1DCalled = 0;
-    DataHandle trivial1D = layer.create(storage1D, 13, [&trivial1DCalled](const Int& value) {
+    /* Trivial function, implicit, not attached, LayerDataHandle getter
+       overloads */
+    Int trivialImplicitCalled = 0;
+    DataHandle trivialImplicit = layer.create(storageImplicit, [&trivialImplicitCalled](const Int& value) {
         CORRADE_COMPARE(value, 0x4444);
-        ++trivial1DCalled;
+        ++trivialImplicitCalled;
     });
     CORRADE_COMPARE(layer.storageReferenceCount(storage), 2);
-    CORRADE_COMPARE(layer.storageReferenceCount(storage1D), 1);
-    CORRADE_COMPARE(layer.storageReferenceCount(storage2D), 0);
-    CORRADE_COMPARE(layer.storageReferenceCount(storage3D), 0);
+    CORRADE_COMPARE(layer.storageReferenceCount(storageImplicit), 1);
     CORRADE_COMPARE(layer.capacity(), 3);
     CORRADE_COMPARE(layer.usedCount(), 3);
     {
@@ -1672,32 +2019,30 @@ void DataLayerTest::createRemove() {
         #endif
         CORRADE_COMPARE(layer.usedAllocatedCount(), 1);
     }
-    CORRADE_COMPARE(layer.node(trivial1D), NodeHandle::Null);
+    CORRADE_COMPARE(layer.node(trivialImplicit), NodeHandle::Null);
     {
         #ifdef CORRADE_MSVC2017_COMPATIBILITY
         /* Same case as in Corrade's Containers/Test/FunctionTest.cpp */
         CORRADE_EXPECT_FAIL("All lambdas are non-trivially-copyable on MSVC 2015 and 2017.");
         #endif
-        CORRADE_VERIFY(!layer.isAllocated(dataHandleData(trivial1D)));
+        CORRADE_VERIFY(!layer.isAllocated(dataHandleData(trivialImplicit)));
     }
-    CORRADE_VERIFY(layer.isDirty(dataHandleData(trivial1D)));
-    CORRADE_COMPARE(layer.storage(dataHandleData(trivial1D)), storage1D);
-    CORRADE_COMPARE(layer.index(dataHandleData(trivial1D)), (Containers::Size3D{0, 0, 13}));
+    CORRADE_VERIFY(layer.isDirty(dataHandleData(trivialImplicit)));
+    CORRADE_COMPARE(layer.storage(dataHandleData(trivialImplicit)), storageImplicit);
+    CORRADE_COMPARE(layer.index(dataHandleData(trivialImplicit)), (Containers::Size3D{0, 0, 0}));
     CORRADE_COMPARE_AS(layer.state(), LayerState::NeedsCommonDataUpdate,
         TestSuite::Compare::GreaterOrEqual);
 
-    /* Non-trivial function, 1D index. If the array grows, it shouldn't cause
+    /* Non-trivial function, implicit. If the array grows, it shouldn't cause
        destructors to be called on anything existing. Again the temporary gets
        destructed right away. */
-    Int nonTrivial1DCalled = 0;
-    Int destructed1D = 0;
-    DataHandle nonTrivial1D = layer.create(storage1D, 13, NonTrivial{0x4444, nonTrivial1DCalled, destructed1D}, nodeHandle(0xabcde, 0x123));
+    Int nonTrivialImplicitCalled = 0;
+    Int destructedImplicit = 0;
+    DataHandle nonTrivialImplicit = layer.create(storageImplicit, NonTrivial{0x4444, nonTrivialImplicitCalled, destructedImplicit}, nodeHandle(0xabcde, 0x123));
     CORRADE_COMPARE(destructed, 1);
-    CORRADE_COMPARE(destructed1D, 1);
+    CORRADE_COMPARE(destructedImplicit, 1);
     CORRADE_COMPARE(layer.storageReferenceCount(storage), 2);
-    CORRADE_COMPARE(layer.storageReferenceCount(storage1D), 2);
-    CORRADE_COMPARE(layer.storageReferenceCount(storage2D), 0);
-    CORRADE_COMPARE(layer.storageReferenceCount(storage3D), 0);
+    CORRADE_COMPARE(layer.storageReferenceCount(storageImplicit), 2);
     CORRADE_COMPARE(layer.capacity(), 4);
     CORRADE_COMPARE(layer.usedCount(), 4);
     {
@@ -1707,136 +2052,11 @@ void DataLayerTest::createRemove() {
         #endif
         CORRADE_COMPARE(layer.usedAllocatedCount(), 2);
     }
-    CORRADE_COMPARE(layer.node(nonTrivial1D), nodeHandle(0xabcde, 0x123));
-    CORRADE_VERIFY(layer.isAllocated(nonTrivial1D));
-    CORRADE_VERIFY(layer.isDirty(nonTrivial1D));
-    CORRADE_COMPARE(layer.storage(nonTrivial1D), storage1D);
-    CORRADE_COMPARE(layer.index(nonTrivial1D), (Containers::Size3D{0, 0, 13}));
-    CORRADE_COMPARE_AS(layer.state(), LayerState::NeedsCommonDataUpdate,
-        TestSuite::Compare::GreaterOrEqual);
-
-    /* Trivial function, 2D index */
-    Int trivial2DCalled = 0;
-    DataHandle trivial2D = layer.create(storage2D, {2, 5}, [&trivial2DCalled](const Int& value) {
-        CORRADE_COMPARE(value, 0x55555);
-        ++trivial2DCalled;
-    }, nodeHandle(0x54321, 0xedc));
-    CORRADE_COMPARE(layer.storageReferenceCount(storage), 2);
-    CORRADE_COMPARE(layer.storageReferenceCount(storage1D), 2);
-    CORRADE_COMPARE(layer.storageReferenceCount(storage2D), 1);
-    CORRADE_COMPARE(layer.storageReferenceCount(storage3D), 0);
-    CORRADE_COMPARE(layer.capacity(), 5);
-    CORRADE_COMPARE(layer.usedCount(), 5);
-    {
-        #ifdef CORRADE_MSVC2017_COMPATIBILITY
-        /* Same case as in Corrade's Containers/Test/FunctionTest.cpp */
-        CORRADE_EXPECT_FAIL("All lambdas are non-trivially-copyable on MSVC 2015 and 2017.");
-        #endif
-        CORRADE_COMPARE(layer.usedAllocatedCount(), 2);
-    }
-    CORRADE_COMPARE(layer.node(trivial2D), nodeHandle(0x54321, 0xedc));
-    {
-        #ifdef CORRADE_MSVC2017_COMPATIBILITY
-        /* Same case as in Corrade's Containers/Test/FunctionTest.cpp */
-        CORRADE_EXPECT_FAIL("All lambdas are non-trivially-copyable on MSVC 2015 and 2017.");
-        #endif
-        CORRADE_VERIFY(!layer.isAllocated(trivial2D));
-    }
-    CORRADE_VERIFY(layer.isDirty(trivial2D));
-    CORRADE_COMPARE(layer.storage(trivial2D), storage2D);
-    CORRADE_COMPARE(layer.index(trivial2D), (Containers::Size3D{0, 2, 5}));
-    CORRADE_COMPARE_AS(layer.state(), LayerState::NeedsCommonDataUpdate,
-        TestSuite::Compare::GreaterOrEqual);
-
-    /* Non-trivial function, 2D index. Again the temporary gets destructed
-       right away. */
-    Int nonTrivial2DCalled = 0;
-    Int destructed2D = 0;
-    DataHandle nonTrivial2D = layer.create(storage2D, {2, 5}, NonTrivial{0x55555, nonTrivial2DCalled, destructed2D}, nodeHandle(0xfedcb, 0x321));
-    CORRADE_COMPARE(destructed, 1);
-    CORRADE_COMPARE(destructed1D, 1);
-    CORRADE_COMPARE(destructed2D, 1);
-    CORRADE_COMPARE(layer.storageReferenceCount(storage), 2);
-    CORRADE_COMPARE(layer.storageReferenceCount(storage1D), 2);
-    CORRADE_COMPARE(layer.storageReferenceCount(storage2D), 2);
-    CORRADE_COMPARE(layer.storageReferenceCount(storage3D), 0);
-    CORRADE_COMPARE(layer.capacity(), 6);
-    CORRADE_COMPARE(layer.usedCount(), 6);
-    {
-        #ifdef CORRADE_MSVC2017_COMPATIBILITY
-        /* Same case as in Corrade's Containers/Test/FunctionTest.cpp */
-        CORRADE_EXPECT_FAIL("All lambdas are non-trivially-copyable on MSVC 2015 and 2017.");
-        #endif
-        CORRADE_COMPARE(layer.usedAllocatedCount(), 3);
-    }
-    CORRADE_COMPARE(layer.node(nonTrivial2D), nodeHandle(0xfedcb, 0x321));
-    CORRADE_VERIFY(layer.isAllocated(nonTrivial2D));
-    CORRADE_VERIFY(layer.isDirty(nonTrivial2D));
-    CORRADE_COMPARE(layer.storage(nonTrivial2D), storage2D);
-    CORRADE_COMPARE(layer.index(nonTrivial2D), (Containers::Size3D{0, 2, 5}));
-    CORRADE_COMPARE_AS(layer.state(), LayerState::NeedsCommonDataUpdate,
-        TestSuite::Compare::GreaterOrEqual);
-
-    /* Trivial function, 3D index */
-    Int trivial3DCalled = 0;
-    DataHandle trivial3D = layer.create(storage3D, {1, 3, 2}, [&trivial3DCalled](const Int& value) {
-        CORRADE_COMPARE(value, 0x666666);
-        ++trivial3DCalled;
-    }, nodeHandle(0x67890, 0xaba));
-    CORRADE_COMPARE(layer.storageReferenceCount(storage), 2);
-    CORRADE_COMPARE(layer.storageReferenceCount(storage1D), 2);
-    CORRADE_COMPARE(layer.storageReferenceCount(storage2D), 2);
-    CORRADE_COMPARE(layer.storageReferenceCount(storage3D), 1);
-    CORRADE_COMPARE(layer.capacity(), 7);
-    CORRADE_COMPARE(layer.usedCount(), 7);
-    {
-        #ifdef CORRADE_MSVC2017_COMPATIBILITY
-        /* Same case as in Corrade's Containers/Test/FunctionTest.cpp */
-        CORRADE_EXPECT_FAIL("All lambdas are non-trivially-copyable on MSVC 2015 and 2017.");
-        #endif
-        CORRADE_COMPARE(layer.usedAllocatedCount(), 3);
-    }
-    CORRADE_COMPARE(layer.node(trivial3D), nodeHandle(0x67890, 0xaba));
-    {
-        #ifdef CORRADE_MSVC2017_COMPATIBILITY
-        /* Same case as in Corrade's Containers/Test/FunctionTest.cpp */
-        CORRADE_EXPECT_FAIL("All lambdas are non-trivially-copyable on MSVC 2015 and 2017.");
-        #endif
-        CORRADE_VERIFY(!layer.isAllocated(trivial3D));
-    }
-    CORRADE_VERIFY(layer.isDirty(trivial3D));
-    CORRADE_COMPARE(layer.storage(trivial3D), storage3D);
-    CORRADE_COMPARE(layer.index(trivial3D), (Containers::Size3D{1, 3, 2}));
-    CORRADE_COMPARE_AS(layer.state(), LayerState::NeedsCommonDataUpdate,
-        TestSuite::Compare::GreaterOrEqual);
-
-    /* Non-trivial function, 2D index. Again the temporary gets destructed
-       right away. */
-    Int nonTrivial3DCalled = 0;
-    Int destructed3D = 0;
-    DataHandle nonTrivial3D = layer.create(storage3D, {1, 3, 2}, NonTrivial{0x666666, nonTrivial3DCalled, destructed3D}, nodeHandle(0x98765, 0xbeb));
-    CORRADE_COMPARE(destructed, 1);
-    CORRADE_COMPARE(destructed1D, 1);
-    CORRADE_COMPARE(destructed2D, 1);
-    CORRADE_COMPARE(destructed3D, 1);
-    CORRADE_COMPARE(layer.storageReferenceCount(storage), 2);
-    CORRADE_COMPARE(layer.storageReferenceCount(storage1D), 2);
-    CORRADE_COMPARE(layer.storageReferenceCount(storage2D), 2);
-    CORRADE_COMPARE(layer.storageReferenceCount(storage3D), 2);
-    CORRADE_COMPARE(layer.capacity(), 8);
-    CORRADE_COMPARE(layer.usedCount(), 8);
-    {
-        #ifdef CORRADE_MSVC2017_COMPATIBILITY
-        /* Same case as in Corrade's Containers/Test/FunctionTest.cpp */
-        CORRADE_EXPECT_FAIL("All lambdas are non-trivially-copyable on MSVC 2015 and 2017.");
-        #endif
-        CORRADE_COMPARE(layer.usedAllocatedCount(), 4);
-    }
-    CORRADE_COMPARE(layer.node(nonTrivial3D), nodeHandle(0x98765, 0xbeb));
-    CORRADE_VERIFY(layer.isAllocated(nonTrivial3D));
-    CORRADE_VERIFY(layer.isDirty(nonTrivial3D));
-    CORRADE_COMPARE(layer.storage(nonTrivial3D), storage3D);
-    CORRADE_COMPARE(layer.index(nonTrivial3D), (Containers::Size3D{1, 3, 2}));
+    CORRADE_COMPARE(layer.node(nonTrivialImplicit), nodeHandle(0xabcde, 0x123));
+    CORRADE_VERIFY(layer.isAllocated(nonTrivialImplicit));
+    CORRADE_VERIFY(layer.isDirty(nonTrivialImplicit));
+    CORRADE_COMPARE(layer.storage(nonTrivialImplicit), storageImplicit);
+    CORRADE_COMPARE(layer.index(nonTrivialImplicit), (Containers::Size3D{0, 0, 0}));
     CORRADE_COMPARE_AS(layer.state(), LayerState::NeedsCommonDataUpdate,
         TestSuite::Compare::GreaterOrEqual);
 
@@ -1845,15 +2065,9 @@ void DataLayerTest::createRemove() {
     CORRADE_COMPARE(storageCalled, 0);
     CORRADE_COMPARE(trivialCalled, 0);
     CORRADE_COMPARE(nonTrivialCalled, 0);
-    CORRADE_COMPARE(storage1DCalled, 0);
-    CORRADE_COMPARE(trivial1DCalled, 0);
-    CORRADE_COMPARE(nonTrivial1DCalled, 0);
-    CORRADE_COMPARE(storage2DCalled, 0);
-    CORRADE_COMPARE(trivial2DCalled, 0);
-    CORRADE_COMPARE(nonTrivial2DCalled, 0);
-    CORRADE_COMPARE(storage3DCalled, 0);
-    CORRADE_COMPARE(trivial3DCalled, 0);
-    CORRADE_COMPARE(nonTrivial3DCalled, 0);
+    CORRADE_COMPARE(storageImplicitCalled, 0);
+    CORRADE_COMPARE(trivialImplicitCalled, 0);
+    CORRADE_COMPARE(nonTrivialImplicitCalled, 0);
 
     /* They should be all called on the very first update however. The called
        functions then verify the corrrect arguments were passed every time.
@@ -1862,70 +2076,19 @@ void DataLayerTest::createRemove() {
     CORRADE_COMPARE(storageCalled, 2);
     CORRADE_COMPARE(trivialCalled, 1);
     CORRADE_COMPARE(nonTrivialCalled, 1);
-    CORRADE_COMPARE(storage1DCalled, 2);
-    CORRADE_COMPARE(trivial1DCalled, 1);
-    CORRADE_COMPARE(nonTrivial1DCalled, 1);
-    CORRADE_COMPARE(storage2DCalled, 2);
-    CORRADE_COMPARE(trivial2DCalled, 1);
-    CORRADE_COMPARE(nonTrivial2DCalled, 1);
-    CORRADE_COMPARE(storage3DCalled, 2);
-    CORRADE_COMPARE(trivial3DCalled, 1);
-    CORRADE_COMPARE(nonTrivial3DCalled, 1);
+    CORRADE_COMPARE(storageImplicitCalled, 2);
+    CORRADE_COMPARE(trivialImplicitCalled, 1);
+    CORRADE_COMPARE(nonTrivialImplicitCalled, 1);
 
     /* Removing data with a trivial function doesn't do much apart from
        decreasing reference count */
-    layer.remove(trivial2D);
+    layer.remove(trivialImplicit);
     CORRADE_COMPARE(destructed, 1);
-    CORRADE_COMPARE(destructed1D, 1);
-    CORRADE_COMPARE(destructed2D, 1);
-    CORRADE_COMPARE(destructed3D, 1);
+    CORRADE_COMPARE(destructedImplicit, 1);
     CORRADE_COMPARE(layer.storageReferenceCount(storage), 2);
-    CORRADE_COMPARE(layer.storageReferenceCount(storage1D), 2);
-    CORRADE_COMPARE(layer.storageReferenceCount(storage2D), 1);
-    CORRADE_COMPARE(layer.storageReferenceCount(storage3D), 2);
-    CORRADE_COMPARE(layer.capacity(), 8);
-    CORRADE_COMPARE(layer.usedCount(), 7);
-    {
-        #ifdef CORRADE_MSVC2017_COMPATIBILITY
-        /* Same case as in Corrade's Containers/Test/FunctionTest.cpp */
-        CORRADE_EXPECT_FAIL("All lambdas are non-trivially-copyable on MSVC 2015 and 2017.");
-        #endif
-        CORRADE_COMPARE(layer.usedAllocatedCount(), 4);
-    }
-
-    /* Removing data with a non-trivial function calls its destructor, this
-       time on the internal instance */
-    layer.remove(nonTrivial2D);
-    CORRADE_COMPARE(destructed, 1);
-    CORRADE_COMPARE(destructed1D, 1);
-    CORRADE_COMPARE(destructed2D, 2);
-    CORRADE_COMPARE(destructed3D, 1);
-    CORRADE_COMPARE(layer.storageReferenceCount(storage), 2);
-    CORRADE_COMPARE(layer.storageReferenceCount(storage1D), 2);
-    CORRADE_COMPARE(layer.storageReferenceCount(storage2D), 0);
-    CORRADE_COMPARE(layer.storageReferenceCount(storage3D), 2);
-    CORRADE_COMPARE(layer.capacity(), 8);
-    CORRADE_COMPARE(layer.usedCount(), 6);
-    {
-        #ifdef CORRADE_MSVC2017_COMPATIBILITY
-        /* Same case as in Corrade's Containers/Test/FunctionTest.cpp */
-        CORRADE_EXPECT_FAIL("All lambdas are non-trivially-copyable on MSVC 2015 and 2017.");
-        #endif
-        CORRADE_COMPARE(layer.usedAllocatedCount(), 3);
-    }
-
-    /* Another non-trivial function, LayerDataHandle overload */
-    layer.remove(dataHandleData(nonTrivial));
-    CORRADE_COMPARE(destructed, 2);
-    CORRADE_COMPARE(destructed1D, 1);
-    CORRADE_COMPARE(destructed2D, 2);
-    CORRADE_COMPARE(destructed3D, 1);
-    CORRADE_COMPARE(layer.storageReferenceCount(storage), 1);
-    CORRADE_COMPARE(layer.storageReferenceCount(storage1D), 2);
-    CORRADE_COMPARE(layer.storageReferenceCount(storage2D), 0);
-    CORRADE_COMPARE(layer.storageReferenceCount(storage3D), 2);
-    CORRADE_COMPARE(layer.capacity(), 8);
-    CORRADE_COMPARE(layer.usedCount(), 5);
+    CORRADE_COMPARE(layer.storageReferenceCount(storageImplicit), 1);
+    CORRADE_COMPARE(layer.capacity(), 4);
+    CORRADE_COMPARE(layer.usedCount(), 3);
     {
         #ifdef CORRADE_MSVC2017_COMPATIBILITY
         /* Same case as in Corrade's Containers/Test/FunctionTest.cpp */
@@ -1934,10 +2097,38 @@ void DataLayerTest::createRemove() {
         CORRADE_COMPARE(layer.usedAllocatedCount(), 2);
     }
 
+    /* Removing data with a non-trivial function calls its destructor, this
+       time on the internal instance */
+    layer.remove(nonTrivial);
+    CORRADE_COMPARE(destructed, 2);
+    CORRADE_COMPARE(destructedImplicit, 1);
+    CORRADE_COMPARE(layer.storageReferenceCount(storage), 1);
+    CORRADE_COMPARE(layer.storageReferenceCount(storageImplicit), 1);
+    CORRADE_COMPARE(layer.capacity(), 4);
+    CORRADE_COMPARE(layer.usedCount(), 2);
+    {
+        #ifdef CORRADE_MSVC2017_COMPATIBILITY
+        /* Same case as in Corrade's Containers/Test/FunctionTest.cpp */
+        CORRADE_EXPECT_FAIL("All lambdas are non-trivially-copyable on MSVC 2015 and 2017.");
+        #endif
+        CORRADE_COMPARE(layer.usedAllocatedCount(), 1);
+    }
+
+    /* Another trivial function, LayerDataHandle overload. Only one function
+       remains, which is allocated. */
+    layer.remove(dataHandleData(trivial));
+    CORRADE_COMPARE(destructed, 2);
+    CORRADE_COMPARE(destructedImplicit, 1);
+    CORRADE_COMPARE(layer.storageReferenceCount(storage), 0);
+    CORRADE_COMPARE(layer.storageReferenceCount(storageImplicit), 1);
+    CORRADE_COMPARE(layer.capacity(), 4);
+    CORRADE_COMPARE(layer.usedCount(), 1);
+    CORRADE_COMPARE(layer.usedAllocatedCount(), 1);
+
     /* Can remove the no-longer referenced storage now as well */
-    layer.removeStorage(storage2D);
-    CORRADE_COMPARE(layer.storageCapacity(), 6);
-    CORRADE_COMPARE(layer.storageUsedCount(), 5);
+    layer.removeStorage(storage);
+    CORRADE_COMPARE(layer.storageCapacity(), 4);
+    CORRADE_COMPARE(layer.storageUsedCount(), 3);
     CORRADE_COMPARE(layer.storageUsedAllocatedCount(), 0);
 
     /* Destructing the whole layer instance should destruct all remaining
@@ -1945,18 +2136,18 @@ void DataLayerTest::createRemove() {
     layer = DataLayer{layerHandle(0, 2)};
     CORRADE_COMPARE(layer.handle(), layerHandle(0, 2));
     CORRADE_COMPARE(destructed, 2);
-    CORRADE_COMPARE(destructed1D, 2);
-    CORRADE_COMPARE(destructed2D, 2);
-    CORRADE_COMPARE(destructed3D, 2);
+    CORRADE_COMPARE(destructedImplicit, 2);
 }
 
 void DataLayerTest::createRemoveHandleRecycle() {
     struct DummyStorage: AbstractStorage {
         explicit DummyStorage(DataLayer& layer): AbstractStorage{layer, {13, 5, 22}} {}
 
-        Int operator[](const Containers::Size3D&) const {
-            CORRADE_FAIL("This should never be called.");
-            return {};
+        StorageQuery<Int> operator[](const Containers::Size3D& index) const {
+            return StorageQuery<Int>{*this, index, [](const DummyStorage&, const Containers::Size3D&) -> Int {
+                CORRADE_FAIL("This should never be called.");
+                return {};
+            }};
         }
     };
 
@@ -1979,11 +2170,11 @@ void DataLayerTest::createRemoveHandleRecycle() {
 
     DataLayer layer{layerHandle(0, 1)};
     DummyStorage storage{layer};
-    layer.create(storage, {0, 0, 0}, [](const Int&) {});
+    layer.create(storage[{0, 0, 0}], [](const Int&) {});
 
     /* The temporary gets destructed right away. Fill it with a 3D index to
        verify it gets cleared on recycle. */
-    DataHandle second = layer.create(storage, {8, 3, 16}, NonTrivial{destructed1});
+    DataHandle second = layer.create(storage[{8, 3, 16}], NonTrivial{destructed1});
     CORRADE_COMPARE(destructed1, 1);
 
     layer.remove(second);
@@ -1992,444 +2183,67 @@ void DataLayerTest::createRemoveHandleRecycle() {
     /* Data that reuses a previous slot should not call the destructor on the
        previous function again or some such crazy stuff. It should also reset
        the size and flags. */
-    DataHandle second2 = layer.create(storage, {0, 0, 0}, NonTrivial{destructed2});
+    DataHandle second2 = layer.create(storage[{0, 0, 0}], NonTrivial{destructed2});
     CORRADE_COMPARE(dataHandleId(second2), dataHandleId(second));
     CORRADE_COMPARE(layer.index(second2), Containers::Size3D{});
     CORRADE_COMPARE(destructed1, 2);
     CORRADE_COMPARE(destructed2, 1);
 }
 
-void DataLayerTest::createMemberFunction() {
-    /* Subset of createRemove() with explicit member function pointers instead
-       of the implicitly picked member to verify these are correctly called. No
-       reference count, allocated function, layer state or removal verification
-       as that shouldn't behave any different in this case. */
-
-    struct DummyStorage: AbstractStorage {
-        explicit DummyStorage(DataLayer& layer): AbstractStorage{layer} {}
-
-        Int singleValue() const {
-            ++storageCalled;
-            return 0x333;
-        }
-    };
-    struct DummyStorage1D: AbstractStorage {
-        explicit DummyStorage1D(DataLayer& layer): AbstractStorage{layer, 15} {}
-
-        Int listItem(std::size_t index) const {
-            CORRADE_COMPARE(index, 13);
-            ++storage1DCalled;
-            return 0x4444;
-        }
-    };
-    struct DummyStorage2D: AbstractStorage {
-        explicit DummyStorage2D(DataLayer& layer): AbstractStorage{layer, {3, 7}} {}
-
-        Int imageValue(const Containers::Size2D& index) const {
-            CORRADE_COMPARE(index, (Containers::Size2D{2, 5}));
-            ++storage2DCalled;
-            return 0x55555;
-        }
-    };
-    struct DummyStorage3D: AbstractStorage {
-        explicit DummyStorage3D(DataLayer& layer): AbstractStorage{layer, {2, 5, 4}} {}
-
-        Int volumeCell(const Containers::Size3D& index) const {
-            CORRADE_COMPARE(index, (Containers::Size3D{1, 3, 2}));
-            ++storage3DCalled;
-            return 0x666666;
-        }
-    };
-
-    DataLayer layer{layerHandle(0, 1)};
-
-    DummyStorage storage{layer};
-    DummyStorage1D storage1D{layer};
-    DummyStorage2D storage2D{layer};
-    DummyStorage3D storage3D{layer};
-
-    /* Single item */
-    Int firstCalled = 0;
-    DataHandle first = layer.create(storage, &DummyStorage::singleValue, [&firstCalled](const Int& value) {
-        CORRADE_COMPARE(value, 0x333);
-        ++firstCalled;
-    }, nodeHandle(0x12345, 0xabc));
-    CORRADE_COMPARE(layer.node(first), nodeHandle(0x12345, 0xabc));
-    CORRADE_VERIFY(layer.isDirty(first));
-    CORRADE_COMPARE(layer.storage(first), storage);
-    CORRADE_COMPARE(layer.index(first), (Containers::Size3D{0, 0, 0}));
-
-    /* 1D index */
-    Int secondCalled = 0;
-    DataHandle second = layer.create(storage1D, &DummyStorage1D::listItem, 13, [&secondCalled](const Int& value) {
-        CORRADE_COMPARE(value, 0x4444);
-        ++secondCalled;
-    }, nodeHandle(0xabcde, 0xabc));
-    CORRADE_COMPARE(layer.node(second), nodeHandle(0xabcde, 0xabc));
-    CORRADE_VERIFY(layer.isDirty(second));
-    CORRADE_COMPARE(layer.storage(second), storage1D);
-    CORRADE_COMPARE(layer.index(second), (Containers::Size3D{0, 0, 13}));
-
-    /* 2D index */
-    Int thirdCalled = 0;
-    DataHandle third = layer.create(storage2D, &DummyStorage2D::imageValue, {2, 5}, [&thirdCalled](const Int& value) {
-        CORRADE_COMPARE(value, 0x55555);
-        ++thirdCalled;
-    }, nodeHandle(0x54321, 0xedc));
-    CORRADE_COMPARE(layer.node(third), nodeHandle(0x54321, 0xedc));
-    CORRADE_VERIFY(layer.isDirty(third));
-    CORRADE_COMPARE(layer.storage(third), storage2D);
-    CORRADE_COMPARE(layer.index(third), (Containers::Size3D{0, 2, 5}));
-
-    /* 3D index */
-    Int fourthCalled = 0;
-    DataHandle fourth = layer.create(storage3D, &DummyStorage3D::volumeCell, {1, 3, 2}, [&fourthCalled](const Int& value) {
-        CORRADE_COMPARE(value, 0x666666);
-        ++fourthCalled;
-    }, nodeHandle(0x67890, 0xaba));
-    CORRADE_COMPARE(layer.node(fourth), nodeHandle(0x67890, 0xaba));
-    CORRADE_VERIFY(layer.isDirty(fourth));
-    CORRADE_COMPARE(layer.storage(fourth), storage3D);
-    CORRADE_COMPARE(layer.index(fourth), (Containers::Size3D{1, 3, 2}));
-
-    /* Verify that proper storage functions get called, the functions
-       themselves then again verify argument correctness. */
-    layer.preUpdate(LayerState::NeedsCommonDataUpdate);
-    CORRADE_COMPARE(storageCalled, 1);
-    CORRADE_COMPARE(firstCalled, 1);
-    CORRADE_COMPARE(storage1DCalled, 1);
-    CORRADE_COMPARE(secondCalled, 1);
-    CORRADE_COMPARE(storage2DCalled, 1);
-    CORRADE_COMPARE(thirdCalled, 1);
-    CORRADE_COMPARE(storage3DCalled, 1);
-    CORRADE_COMPARE(fourthCalled, 1);
-
-    /* Just a sanity check that these variants don't cause allocated functions
-       to be used or some such */
-    CORRADE_COMPARE(layer.capacity(), 4);
-    CORRADE_COMPARE(layer.usedCount(), 4);
-    {
-        #ifdef CORRADE_MSVC2017_COMPATIBILITY
-        /* Same case as in Corrade's Containers/Test/FunctionTest.cpp */
-        CORRADE_EXPECT_FAIL("All lambdas are non-trivially-copyable on MSVC 2015 and 2017.");
-        #endif
-        CORRADE_COMPARE(layer.usedAllocatedCount(), 0);
-    }
-}
-
-void DataLayerTest::createOverloaded() {
-    /* Subset of createRemove() with a single storage that has overloaded
-       access functions, additionally with each returning a different type. As
-       with createMemberFunction() no reference count, allocated function,
-       layer state or removal verification. */
-
-    struct DummyStorage: AbstractStorage {
-        explicit DummyStorage(DataLayer& layer, const Containers::Size3D& size): AbstractStorage{layer, size} {}
-
-        /* These get called below to verify the correct member function is
-           picked and called with the right arguments */
-        Int operator*() const {
-            ++storageCalled;
-            return 0x333;
-        }
-        Short operator[](std::size_t index) const {
-            CORRADE_COMPARE(index, 13);
-            ++storage1DCalled;
-            return 0x4444;
-        }
-        Byte operator[](const Containers::Size2D& index) const {
-            CORRADE_COMPARE(index, (Containers::Size2D{2, 5}));
-            ++storage2DCalled;
-            return 0x55;
-        }
-        Long operator[](const Containers::Size3D& index) const {
-            CORRADE_COMPARE(index, (Containers::Size3D{1, 3, 2}));
-            ++storage3DCalled;
-            return 0x666666;
-        }
-    };
-
-    DataLayer layer{layerHandle(0, 1)};
-    DummyStorage storage{layer, {1, 1, 1}};
-    DummyStorage storage1D{layer, {1, 1, 15}};
-    DummyStorage storage2D{layer, {1, 3, 7}};
-    DummyStorage storage3D{layer, {2, 5, 4}};
-
-    /* Single item. Shouldn't cause any issues, but still verify that it's
-       correctly picked even in presence of operator[]. */
-    Int firstCalled = 0;
-    DataHandle first = layer.create(storage, [&firstCalled](const Int& value) {
-        CORRADE_COMPARE(value, 0x333);
-        ++firstCalled;
-    }, nodeHandle(0x12345, 0xabc));
-    CORRADE_COMPARE(layer.node(first), nodeHandle(0x12345, 0xabc));
-    CORRADE_VERIFY(layer.isDirty(first));
-    CORRADE_COMPARE(layer.storage(first), storage);
-    CORRADE_COMPARE(layer.index(first), (Containers::Size3D{0, 0, 0}));
-
-    /* 1D index */
-    Int secondCalled = 0;
-    DataHandle second = layer.create(storage1D, 13, [&secondCalled](const Short& value) {
-        CORRADE_COMPARE(value, 0x4444);
-        ++secondCalled;
-    }, nodeHandle(0xabcde, 0xabc));
-    CORRADE_COMPARE(layer.node(second), nodeHandle(0xabcde, 0xabc));
-    CORRADE_VERIFY(layer.isDirty(second));
-    CORRADE_COMPARE(layer.storage(second), storage1D);
-    CORRADE_COMPARE(layer.index(second), (Containers::Size3D{0, 0, 13}));
-
-    /* 2D index */
-    Int thirdCalled = 0;
-    DataHandle third = layer.create(storage2D, {2, 5}, [&thirdCalled](const Byte& value) {
-        CORRADE_COMPARE(value, 0x55);
-        ++thirdCalled;
-    }, nodeHandle(0x54321, 0xedc));
-    CORRADE_COMPARE(layer.node(third), nodeHandle(0x54321, 0xedc));
-    CORRADE_VERIFY(layer.isDirty(third));
-    CORRADE_COMPARE(layer.storage(third), storage2D);
-    CORRADE_COMPARE(layer.index(third), (Containers::Size3D{0, 2, 5}));
-
-    /* 3D index */
-    Int fourthCalled = 0;
-    DataHandle fourth = layer.create(storage3D, {1, 3, 2}, [&fourthCalled](const Long& value) {
-        CORRADE_COMPARE(value, 0x666666);
-        ++fourthCalled;
-    }, nodeHandle(0x67890, 0xaba));
-    CORRADE_COMPARE(layer.node(fourth), nodeHandle(0x67890, 0xaba));
-    CORRADE_VERIFY(layer.isDirty(fourth));
-    CORRADE_COMPARE(layer.storage(fourth), storage3D);
-    CORRADE_COMPARE(layer.index(fourth), (Containers::Size3D{1, 3, 2}));
-
-    /* Verify that proper storage functions get called, the functions
-       themselves then again verify argument correctness. */
-    layer.preUpdate(LayerState::NeedsCommonDataUpdate);
-    CORRADE_COMPARE(storageCalled, 1);
-    CORRADE_COMPARE(firstCalled, 1);
-    CORRADE_COMPARE(storage1DCalled, 1);
-    CORRADE_COMPARE(secondCalled, 1);
-    CORRADE_COMPARE(storage2DCalled, 1);
-    CORRADE_COMPARE(thirdCalled, 1);
-    CORRADE_COMPARE(storage3DCalled, 1);
-    CORRADE_COMPARE(fourthCalled, 1);
-
-    /* Just a sanity check that these variants don't cause allocated functions
-       to be used by accident or some such */
-    CORRADE_COMPARE(layer.capacity(), 4);
-    CORRADE_COMPARE(layer.usedCount(), 4);
-    {
-        #ifdef CORRADE_MSVC2017_COMPATIBILITY
-        /* Same case as in Corrade's Containers/Test/FunctionTest.cpp */
-        CORRADE_EXPECT_FAIL("All lambdas are non-trivially-copyable on MSVC 2015 and 2017.");
-        #endif
-        CORRADE_COMPARE(layer.usedAllocatedCount(), 0);
-    }
-}
-
-void DataLayerTest::createOverloadedMemberFunction() {
-    /* Like createOverloaded(), just with an explicit member function used */
-
-    struct DummyStorage: AbstractStorage {
-        explicit DummyStorage(DataLayer& layer, const Containers::Size3D& size): AbstractStorage{layer, size} {}
-
-        /* These get called below to verify the correct member function is
-           picked and called with the right arguments */
-        Int thingy() const {
-            ++storageCalled;
-            return 0x333;
-        }
-        Short thingy(std::size_t index) const {
-            CORRADE_COMPARE(index, 13);
-            ++storage1DCalled;
-            return 0x4444;
-        }
-        Byte thingy(const Containers::Size2D& index) const {
-            CORRADE_COMPARE(index, (Containers::Size2D{2, 5}));
-            ++storage2DCalled;
-            return 0x55;
-        }
-        Long thingy(const Containers::Size3D& index) const {
-            CORRADE_COMPARE(index, (Containers::Size3D{1, 3, 2}));
-            ++storage3DCalled;
-            return 0x666666;
-        }
-    };
-
-    DataLayer layer{layerHandle(0, 1)};
-    DummyStorage storage{layer, {1, 1, 1}};
-    DummyStorage storage1D{layer, {1, 1, 15}};
-    DummyStorage storage2D{layer, {1, 3, 7}};
-    DummyStorage storage3D{layer, {2, 5, 4}};
-
-    /* Single item. Shouldn't cause any issues, but still verify that it's
-       correctly picked even in presence of other overloads of thingy(). */
-    Int firstCalled = 0;
-    DataHandle first = layer.create(storage, &DummyStorage::thingy, [&firstCalled](const Int& value) {
-        CORRADE_COMPARE(value, 0x333);
-        ++firstCalled;
-    }, nodeHandle(0x12345, 0xabc));
-    CORRADE_COMPARE(layer.node(first), nodeHandle(0x12345, 0xabc));
-    CORRADE_VERIFY(layer.isDirty(first));
-    CORRADE_COMPARE(layer.storage(first), storage);
-    CORRADE_COMPARE(layer.index(first), (Containers::Size3D{0, 0, 0}));
-
-    /* 1D index */
-    Int secondCalled = 0;
-    DataHandle second = layer.create(storage1D, &DummyStorage::thingy, 13, [&secondCalled](const Short& value) {
-        CORRADE_COMPARE(value, 0x4444);
-        ++secondCalled;
-    }, nodeHandle(0xabcde, 0xabc));
-    CORRADE_COMPARE(layer.node(second), nodeHandle(0xabcde, 0xabc));
-    CORRADE_VERIFY(layer.isDirty(second));
-    CORRADE_COMPARE(layer.storage(second), storage1D);
-    CORRADE_COMPARE(layer.index(second), (Containers::Size3D{0, 0, 13}));
-
-    /* 2D index */
-    Int thirdCalled = 0;
-    DataHandle third = layer.create(storage2D, &DummyStorage::thingy, {2, 5}, [&thirdCalled](const Byte& value) {
-        CORRADE_COMPARE(value, 0x55);
-        ++thirdCalled;
-    }, nodeHandle(0x54321, 0xedc));
-    CORRADE_COMPARE(layer.node(third), nodeHandle(0x54321, 0xedc));
-    CORRADE_VERIFY(layer.isDirty(third));
-    CORRADE_COMPARE(layer.storage(third), storage2D);
-    CORRADE_COMPARE(layer.index(third), (Containers::Size3D{0, 2, 5}));
-
-    /* 3D index */
-    Int fourthCalled = 0;
-    DataHandle fourth = layer.create(storage3D, &DummyStorage::thingy, {1, 3, 2}, [&fourthCalled](const Long& value) {
-        CORRADE_COMPARE(value, 0x666666);
-        ++fourthCalled;
-    }, nodeHandle(0x67890, 0xaba));
-    CORRADE_COMPARE(layer.node(fourth), nodeHandle(0x67890, 0xaba));
-    CORRADE_VERIFY(layer.isDirty(fourth));
-    CORRADE_COMPARE(layer.storage(fourth), storage3D);
-    CORRADE_COMPARE(layer.index(fourth), (Containers::Size3D{1, 3, 2}));
-
-    /* Verify that proper storage functions get called, the functions
-       themselves then again verify argument correctness. */
-    layer.preUpdate(LayerState::NeedsCommonDataUpdate);
-    CORRADE_COMPARE(storageCalled, 1);
-    CORRADE_COMPARE(firstCalled, 1);
-    CORRADE_COMPARE(storage1DCalled, 1);
-    CORRADE_COMPARE(secondCalled, 1);
-    CORRADE_COMPARE(storage2DCalled, 1);
-    CORRADE_COMPARE(thirdCalled, 1);
-    CORRADE_COMPARE(storage3DCalled, 1);
-    CORRADE_COMPARE(fourthCalled, 1);
-
-    /* Just a sanity check that these variants don't cause allocated functions
-       to be used by accident or some such */
-    CORRADE_COMPARE(layer.capacity(), 4);
-    CORRADE_COMPARE(layer.usedCount(), 4);
-    {
-        #ifdef CORRADE_MSVC2017_COMPATIBILITY
-        /* Same case as in Corrade's Containers/Test/FunctionTest.cpp */
-        CORRADE_EXPECT_FAIL("All lambdas are non-trivially-copyable on MSVC 2015 and 2017.");
-        #endif
-        CORRADE_COMPARE(layer.usedAllocatedCount(), 0);
-    }
-}
-
 void DataLayerTest::createInvalid() {
     CORRADE_SKIP_IF_NO_ASSERT();
 
     struct DummyStorage: AbstractStorage {
-        explicit DummyStorage(DataLayer& layer, const Containers::Size3D& size): AbstractStorage{layer, size} {}
+        typedef Int Type;
 
-        Int operator*() const {
-            CORRADE_INTERNAL_ASSERT_UNREACHABLE();
+        explicit DummyStorage(DataLayer& layer): AbstractStorage{layer} {}
+
+        operator StorageQuery<Int>() const {
+            return StorageQuery<Int>{*this, [](const DummyStorage&) -> Int {
+                CORRADE_INTERNAL_ASSERT_UNREACHABLE();
+            }};
         }
-        Int operator[](std::size_t) const {
-            CORRADE_INTERNAL_ASSERT_UNREACHABLE();
-        }
-        Int operator[](const Containers::Size2D&) const {
-            CORRADE_INTERNAL_ASSERT_UNREACHABLE();
-        }
-        Int operator[](const Containers::Size3D&) const {
-            CORRADE_INTERNAL_ASSERT_UNREACHABLE();
+
+        StorageQuery<Float> value() const {
+            return StorageQuery<Float>{*this, [](const DummyStorage&) -> Float {
+                CORRADE_INTERNAL_ASSERT_UNREACHABLE();
+            }};
         }
     };
 
     DataLayer layer{layerHandle(0xab, 0x12)};
-    DummyStorage storage{layer, {1, 1, 1}};
-    DummyStorage storage1D{layer, {1, 1, 15}};
-    DummyStorage storage2D{layer, {1, 3, 7}};
-    DummyStorage storage3D{layer, {4, 2, 5}};
+    DummyStorage storage{layer};
 
-    DummyStorage removedStorage{layer, {1, 1, 1}};
+    DummyStorage removedStorage{layer};
+    StorageQuery<Int> removedStorageQuery = removedStorage;
     layer.removeStorage(removedStorage);
 
     /* Storage from another layer has the same handle, but should still fail
        because the instance is different */
     DataLayer anotherLayer{layerHandle(0xab, 0x12)};
-    DummyStorage anotherLayerStorage{anotherLayer, {1, 1, 1}};
+    DummyStorage anotherLayerStorage{anotherLayer};
     CORRADE_COMPARE(anotherLayer.handle(), layer.handle());
     CORRADE_COMPARE(anotherLayerStorage.handle(), storage.handle());
 
-    /* Indices exactly at the end shouldn't trigger an assert */
-    layer.create(storage, [](const Int&) {});
-    layer.create(storage1D, 14, [](const Int&) {});
-    layer.create(storage2D, {2, 6}, [](const Int&) {});
-    layer.create(storage3D, {3, 1, 4}, [](const Int&) {});
-
     Containers::String out;
     Error redirectError{&out};
-    /* Storage from a different layer or with an invalid handle */
+    /* Storage from a different layer or with an invalid handle; all
+       overloads */
     layer.create(anotherLayerStorage, [](const Int&) {});
-    layer.create(removedStorage, [](const Int&) {});
-    /* Member being null. all dimension overloads */
-    layer.create(storage, static_cast<Int(DummyStorage::*)() const>(nullptr), [](const Int&) {});
-    layer.create(storage1D, static_cast<Int(DummyStorage::*)(std::size_t) const>(nullptr), 0, [](const Int&) {});
-    layer.create(storage2D, static_cast<Int(DummyStorage::*)(const Containers::Size2D&) const>(nullptr), {0, 0}, [](const Int&) {});
-    layer.create(storage3D, static_cast<Int(DummyStorage::*)(const Containers::Size3D&) const>(nullptr), {0, 0, 0}, [](const Int&) {});
-    /* Update being null, all dimension overloads */
+    layer.create(anotherLayerStorage.value(), [](const Float&) {});
+    /* Can't test with removedStorage or removedStorage.value() directly as
+       that'd assert during StorageQuery creation already */
+    layer.create(removedStorageQuery, [](const Int&) {});
+    /* Update being null, all overloads */
     layer.create(storage, nullptr);
-    layer.create(storage1D, 0, nullptr);
-    layer.create(storage2D, {0, 0}, nullptr);
-    layer.create(storage3D, {0, 0, 0}, nullptr);
-    /* Index out of bounds in 1D, 2D and 3D */
-    layer.create(storage1D, 15, [](const Int&) {});
-    layer.create(storage2D, {2, 7}, [](const Int&) {});
-    layer.create(storage2D, {3, 6}, [](const Int&) {});
-    layer.create(storage3D, {3, 1, 5}, [](const Int&) {});
-    layer.create(storage3D, {3, 2, 4}, [](const Int&) {});
-    layer.create(storage3D, {4, 1, 4}, [](const Int&) {});
-    /* No index specified for a 1D/2D/3D storage even though it's in bounds */
-    layer.create(storage1D, [](const Int&) {});
-    layer.create(storage2D, [](const Int&) {});
-    layer.create(storage3D, [](const Int&) {});
-    /* 1D index specified for a 2D/3D storage even though it's in bounds */
-    layer.create(storage2D, 0, [](const Int&) {});
-    layer.create(storage3D, 0, [](const Int&) {});
-    /* 2D index specified for a 3D storage even though it's in bounds */
-    layer.create(storage3D, {0, 0}, [](const Int&) {});
+    layer.create(storage.value(), nullptr);
     CORRADE_COMPARE_AS(out,
         "Ui::DataLayer::create(): storage doesn't belong to this layer\n"
-        "Ui::DataLayer::create(): invalid handle Ui::StorageHandle({0xab, 0x12}, {0x4, 0x1})\n"
-
-        "Ui::DataLayer::create(): member is null\n"
-        "Ui::DataLayer::create(): member is null\n"
-        "Ui::DataLayer::create(): member is null\n"
-        "Ui::DataLayer::create(): member is null\n"
+        "Ui::DataLayer::create(): storage doesn't belong to this layer\n"
+        "Ui::DataLayer::create(): invalid handle Ui::StorageHandle({0xab, 0x12}, {0x1, 0x1})\n"
 
         "Ui::DataLayer::create(): update is null\n"
-        "Ui::DataLayer::create(): update is null\n"
-        "Ui::DataLayer::create(): update is null\n"
-        "Ui::DataLayer::create(): update is null\n"
-
-        "Ui::DataLayer::create(): index {0, 0, 15} out of range for storage of size {1, 1, 15}\n"
-        "Ui::DataLayer::create(): index {0, 2, 7} out of range for storage of size {1, 3, 7}\n"
-        "Ui::DataLayer::create(): index {0, 3, 6} out of range for storage of size {1, 3, 7}\n"
-        "Ui::DataLayer::create(): index {3, 1, 5} out of range for storage of size {4, 2, 5}\n"
-        "Ui::DataLayer::create(): index {3, 2, 4} out of range for storage of size {4, 2, 5}\n"
-        "Ui::DataLayer::create(): index {4, 1, 4} out of range for storage of size {4, 2, 5}\n"
-
-        "Ui::DataLayer::create(): expected a single-item storage but got a size of {1, 1, 15}\n"
-        "Ui::DataLayer::create(): expected a single-item storage but got a size of {1, 3, 7}\n"
-        "Ui::DataLayer::create(): expected a single-item storage but got a size of {4, 2, 5}\n"
-        "Ui::DataLayer::create(): expected a 1D storage but got a size of {1, 3, 7}\n"
-        "Ui::DataLayer::create(): expected a 1D storage but got a size of {4, 2, 5}\n"
-        "Ui::DataLayer::create(): expected a 2D storage but got a size of {4, 2, 5}\n",
+        "Ui::DataLayer::create(): update is null\n",
         TestSuite::Compare::String);
 }
 
@@ -2437,9 +2251,21 @@ void DataLayerTest::setIndex() {
     struct DummyStorage: AbstractStorage {
         explicit DummyStorage(DataLayer& layer, const Containers::Size3D& size): AbstractStorage{layer, size} {}
 
-        Int operator[](std::size_t) const { return {}; }
-        Int operator[](const Containers::Size2D&) const { return {}; }
-        Int operator[](const Containers::Size3D&) const { return {}; }
+        StorageQuery<Int> operator[](std::size_t index) const {
+            return StorageQuery<Int>{*this, index, [](const DummyStorage&, std::size_t) {
+                return 667;
+            }};
+        }
+        StorageQuery<Int> operator[](const Containers::Size2D& index) const {
+            return StorageQuery<Int>{*this, index, [](const DummyStorage&, const Containers::Size2D&) {
+                return 667;
+            }};
+        }
+        StorageQuery<Int> operator[](const Containers::Size3D& index) const {
+            return StorageQuery<Int>{*this, index, [](const DummyStorage&, const Containers::Size3D&) {
+                return 667;
+            }};
+        }
     };
 
     DataLayer layer{layerHandle(0, 1)};
@@ -2448,13 +2274,13 @@ void DataLayerTest::setIndex() {
     DummyStorage storage3D{layer, {4, 7, 5}};
 
     /* Create a dummy data to verify it doesn't always update the first */
-    layer.create(storage3D, {1, 2, 3}, [](const Int&) {});
+    layer.create(storage3D[{1, 2, 3}], [](const Int&) {});
 
     /* By default the data is marked as dirty, and NeedsCommonDataUpdate is
        set. NeedsDataUpdate is set implicitly when creating new data. */
-    DataHandle data1D = layer.create(storage1D, 3, [](const Int&) {});
-    DataHandle data2D = layer.create(storage2D, {3, 2}, [](const Int&) {});
-    DataHandle data3D = layer.create(storage3D, {3, 2, 1}, [](const Int&) {});
+    DataHandle data1D = layer.create(storage1D[3], [](const Int&) {});
+    DataHandle data2D = layer.create(storage2D[{3, 2}], [](const Int&) {});
+    DataHandle data3D = layer.create(storage3D[{3, 2, 1}], [](const Int&) {});
     CORRADE_COMPARE(layer.index(data1D), (Containers::Size3D{0, 0, 3}));
     CORRADE_COMPARE(layer.index(data2D), (Containers::Size3D{0, 3, 2}));
     CORRADE_COMPARE(layer.index(data3D), (Containers::Size3D{3, 2, 1}));
@@ -2589,14 +2415,20 @@ void DataLayerTest::setIndexInvalid() {
     struct DummyStorage: AbstractStorage {
         explicit DummyStorage(DataLayer& layer, const Containers::Size3D& size): AbstractStorage{layer, size} {}
 
-        Int operator[](std::size_t) const {
-            CORRADE_INTERNAL_ASSERT_UNREACHABLE();
+        StorageQuery<Int> operator[](std::size_t index) const {
+            return StorageQuery<Int>{*this, index, [](const DummyStorage&, std::size_t) -> Int {
+                CORRADE_INTERNAL_ASSERT_UNREACHABLE();
+            }};
         }
-        Int operator[](const Containers::Size2D&) const {
-            CORRADE_INTERNAL_ASSERT_UNREACHABLE();
+        StorageQuery<Int> operator[](const Containers::Size2D& index) const {
+            return StorageQuery<Int>{*this, index, [](const DummyStorage&, const Containers::Size2D&) -> Int {
+                CORRADE_INTERNAL_ASSERT_UNREACHABLE();
+            }};
         }
-        Int operator[](const Containers::Size3D&) const {
-            CORRADE_INTERNAL_ASSERT_UNREACHABLE();
+        StorageQuery<Int> operator[](const Containers::Size3D& index) const {
+            return StorageQuery<Int>{*this, index, [](const DummyStorage&, const Containers::Size3D&) -> Int {
+                CORRADE_INTERNAL_ASSERT_UNREACHABLE();
+            }};
         }
     };
 
@@ -2605,9 +2437,9 @@ void DataLayerTest::setIndexInvalid() {
     DummyStorage storage2D{layer, {1, 3, 7}};
     DummyStorage storage3D{layer, {4, 2, 5}};
 
-    DataHandle data1D = layer.create(storage1D, 0, [](const Int&) {});
-    DataHandle data2D = layer.create(storage2D, {0, 0}, [](const Int&) {});
-    DataHandle data3D = layer.create(storage3D, {0, 0, 0}, [](const Int&) {});
+    DataHandle data1D = layer.create(storage1D[0], [](const Int&) {});
+    DataHandle data2D = layer.create(storage2D[{0, 0}], [](const Int&) {});
+    DataHandle data3D = layer.create(storage3D[{0, 0, 0}], [](const Int&) {});
 
     Containers::String out;
     Error redirectError{&out};
@@ -2635,20 +2467,20 @@ void DataLayerTest::setIndexInvalid() {
     layer.setIndex(data3D, {0, 0});
     layer.setIndex(dataHandleData(data3D), {0, 0});
     CORRADE_COMPARE_AS(out,
-        "Ui::DataLayer::setIndex(): index {0, 0, 15} out of range for storage of size {1, 1, 15}\n"
-        "Ui::DataLayer::setIndex(): index {0, 0, 15} out of range for storage of size {1, 1, 15}\n"
+        "Ui::DataLayer::setIndex(): index {0, 0, 15} out of range for {1, 1, 15} elements\n"
+        "Ui::DataLayer::setIndex(): index {0, 0, 15} out of range for {1, 1, 15} elements\n"
 
-        "Ui::DataLayer::setIndex(): index {0, 2, 7} out of range for storage of size {1, 3, 7}\n"
-        "Ui::DataLayer::setIndex(): index {0, 2, 7} out of range for storage of size {1, 3, 7}\n"
-        "Ui::DataLayer::setIndex(): index {0, 3, 6} out of range for storage of size {1, 3, 7}\n"
-        "Ui::DataLayer::setIndex(): index {0, 3, 6} out of range for storage of size {1, 3, 7}\n"
+        "Ui::DataLayer::setIndex(): index {0, 2, 7} out of range for {1, 3, 7} elements\n"
+        "Ui::DataLayer::setIndex(): index {0, 2, 7} out of range for {1, 3, 7} elements\n"
+        "Ui::DataLayer::setIndex(): index {0, 3, 6} out of range for {1, 3, 7} elements\n"
+        "Ui::DataLayer::setIndex(): index {0, 3, 6} out of range for {1, 3, 7} elements\n"
 
-        "Ui::DataLayer::setIndex(): index {3, 1, 5} out of range for storage of size {4, 2, 5}\n"
-        "Ui::DataLayer::setIndex(): index {3, 1, 5} out of range for storage of size {4, 2, 5}\n"
-        "Ui::DataLayer::setIndex(): index {3, 2, 4} out of range for storage of size {4, 2, 5}\n"
-        "Ui::DataLayer::setIndex(): index {3, 2, 4} out of range for storage of size {4, 2, 5}\n"
-        "Ui::DataLayer::setIndex(): index {4, 1, 4} out of range for storage of size {4, 2, 5}\n"
-        "Ui::DataLayer::setIndex(): index {4, 1, 4} out of range for storage of size {4, 2, 5}\n"
+        "Ui::DataLayer::setIndex(): index {3, 1, 5} out of range for {4, 2, 5} elements\n"
+        "Ui::DataLayer::setIndex(): index {3, 1, 5} out of range for {4, 2, 5} elements\n"
+        "Ui::DataLayer::setIndex(): index {3, 2, 4} out of range for {4, 2, 5} elements\n"
+        "Ui::DataLayer::setIndex(): index {3, 2, 4} out of range for {4, 2, 5} elements\n"
+        "Ui::DataLayer::setIndex(): index {4, 1, 4} out of range for {4, 2, 5} elements\n"
+        "Ui::DataLayer::setIndex(): index {4, 1, 4} out of range for {4, 2, 5} elements\n"
 
         "Ui::DataLayer::setIndex(): expected a 1D storage but got a size of {1, 3, 7}\n"
         "Ui::DataLayer::setIndex(): expected a 1D storage but got a size of {1, 3, 7}\n"
@@ -2705,7 +2537,11 @@ void DataLayerTest::indexLinearization() {
     struct DummyStorage: AbstractStorage {
         explicit DummyStorage(DataLayer& layer, const Containers::Size3D& size): AbstractStorage{layer, size} {}
 
-        Int operator[](const Containers::Size3D&) const { return {}; }
+        StorageQuery<Int> operator[](const Containers::Size3D& index) const {
+            return StorageQuery<Int>{*this, index, [](const DummyStorage&, const Containers::Size3D&) {
+                return 1337;
+            }};
+        }
     };
 
     DataLayer layer{layerHandle(0, 1)};
@@ -2720,13 +2556,13 @@ void DataLayerTest::indexLinearization() {
     DummyStorage storage{layer, data.size};
 
     /* Index set initially, verify it won't stomp over the other properties */
-    DataHandle indexInitial = layer.create(storage, data.index, [](const Int&) {});
+    DataHandle indexInitial = layer.create(storage[data.index], [](const Int&) {});
     CORRADE_COMPARE(layer.index(indexInitial), data.index);
     CORRADE_VERIFY(layer.isDirty(indexInitial));
     CORRADE_COMPARE(layer.storage(indexInitial), storage);
 
     /* Index set only subsequently through setIndex() */
-    DataHandle indexLater = layer.create(storage, Containers::Size3D{}, [](const Int&) {});
+    DataHandle indexLater = layer.create(storage[{}], [](const Int&) {});
     layer.setIndex(indexLater, data.index);
     CORRADE_COMPARE(layer.index(indexLater), data.index);
     CORRADE_VERIFY(layer.isDirty(indexLater));
@@ -2753,7 +2589,11 @@ void DataLayerTest::indexLinearizationFullStorageCapacity() {
     struct DummyStorage: AbstractStorage {
         explicit DummyStorage(DataLayer& layer, std::size_t size): AbstractStorage{layer, size} {}
 
-        Int operator[](std::size_t) const { return {}; }
+        StorageQuery<Int> operator[](const std::size_t index) const {
+            return StorageQuery<Int>{*this, index, [](const DummyStorage&, std::size_t) {
+                return 1337;
+            }};
+        }
     };
 
     DataLayer layer{layerHandle(0, 1)};
@@ -2767,13 +2607,13 @@ void DataLayerTest::indexLinearizationFullStorageCapacity() {
     CORRADE_COMPARE(storage.size(), (Containers::Size3D{1, 1, 1ull << 43}));
 
     /* Index set initially, verify it won't stomp over the other properties */
-    DataHandle indexInitial = layer.create(storage, (1ull << (64 - Implementation::DataLayerStorageHandleIdBits - 1)) - 1, [](const Int&) {});
+    DataHandle indexInitial = layer.create(storage[(1ull << (64 - Implementation::DataLayerStorageHandleIdBits - 1)) - 1], [](const Int&) {});
     CORRADE_COMPARE(layer.index(indexInitial), (Containers::Size3D{0, 0, (1ull << 43) - 1}));
     CORRADE_VERIFY(layer.isDirty(indexInitial));
     CORRADE_COMPARE(layer.storage(indexInitial), storage);
 
     /* Index set only subsequently through setIndex() */
-    DataHandle indexLater = layer.create(storage, 0, [](const Int&) {});
+    DataHandle indexLater = layer.create(storage[0], [](const Int&) {});
     layer.setIndex(indexLater, (1ull << (64 - Implementation::DataLayerStorageHandleIdBits - 1)) - 1);
     CORRADE_COMPARE(layer.index(indexLater), (Containers::Size3D{0, 0, (1ull << 43) - 1}));
     CORRADE_VERIFY(layer.isDirty(indexLater));
@@ -2783,11 +2623,15 @@ void DataLayerTest::indexLinearizationFullStorageCapacity() {
 
 void DataLayerTest::clean() {
     struct DummyStorage: AbstractStorage {
+        typedef Int Type;
+
         explicit DummyStorage(DataLayer& layer): AbstractStorage{layer} {}
 
-        Int operator*() const {
-            ++storageCalled;
-            return 0x333;
+        operator StorageQuery<Int>() const {
+            return StorageQuery<Int>{*this, [](const DummyStorage&) {
+                ++queryCalled;
+                return 0x333;
+            }};
         }
     };
 
@@ -2868,7 +2712,11 @@ void DataLayerTest::update() {
     struct Storage: AbstractStorage {
         explicit Storage(DataLayer& layer): AbstractStorage{layer} {}
 
-        Float leet() const { return 1.337f; }
+        StorageQuery<Float> leet() const {
+            return StorageQuery<Float>{*this, [](const Storage&) {
+                return 1.337f;
+            }};
+        }
     } storage{layer},
       storageRemoved{layer};
 
@@ -2879,8 +2727,10 @@ void DataLayerTest::update() {
                 Containers::arrayView(createInPlace<Short>()).prefix(6));
         }
 
-        Short operator[](const Containers::Size2D& index) const {
-            return data<Short>()[index[0]*3 + index[1]];
+        StorageQuery<Short> operator[](const Containers::Size2D& index) const {
+            return StorageQuery<Short>{*this, index, [](const Storage2D& storage, const Containers::Size2D& index) {
+                return storage.data<Short>()[index[0]*3 + index[1]];
+            }};
         }
 
         void set(const Containers::Size2D& index, Short value) const {
@@ -2891,17 +2741,17 @@ void DataLayerTest::update() {
 
     Int firstCalled = 0;
     Int firstExpected = 56;
-    DataHandle first = layer.create(storage2D, {1, 0}, [&firstCalled, &firstExpected](const Short& value) {
+    DataHandle first = layer.create(storage2D[{1, 0}], [&firstCalled, &firstExpected](const Short& value) {
         CORRADE_COMPARE(value, firstExpected);
         ++firstCalled;
     });
 
-    DataHandle removed = layer.create(storage, &Storage::leet, [](const Float&) {
+    DataHandle removed = layer.create(storage.leet(), [](const Float&) {
         CORRADE_FAIL("This function shouldn't be called.");
     });
 
     Int secondCalled = 0;
-    DataHandle second = layer.create(storage, &Storage::leet, [&secondCalled](const Float& value) {
+    DataHandle second = layer.create(storage.leet(), [&secondCalled](const Float& value) {
         CORRADE_COMPARE(value, 1.337f);
         ++secondCalled;
     });
@@ -2956,7 +2806,7 @@ void DataLayerTest::update() {
 
     /* Adding new data makes the layer dirty */
     Int thirdCalled = 0;
-    DataHandle third = layer.create(storage2D, {0, 2}, [&thirdCalled](const Short& value) {
+    DataHandle third = layer.create(storage2D[{0, 2}], [&thirdCalled](const Short& value) {
         CORRADE_COMPARE(value, 39);
         ++thirdCalled;
     });
@@ -3099,13 +2949,19 @@ void DataLayerTest::referenceCounted() {
         storageReferenceCountedRemovedDestructed = 0,
         storageReferenceCountedUnused2Destructed = 0;
     struct NonTrivialStorage: AbstractStorage {
+        typedef Int Type;
+
         explicit NonTrivialStorage(DataLayer& layer, Int& destructed, StorageFlags flags): AbstractStorage{layer, flags} {
             createAllocated(&destructed, 0, [](void* data, std::size_t) {
                 ++*static_cast<Int*>(data);
             });
         }
 
-        Int operator*() const { return {}; }
+        operator StorageQuery<Int>() const {
+            return StorageQuery<Int>{*this, [](const NonTrivialStorage&) -> Int {
+                return {};
+            }};
+        }
     };
 
     AbstractUserInterface ui{{100, 100}};

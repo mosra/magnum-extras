@@ -164,7 +164,11 @@ struct ScrollAreaStorage: AbstractStorage {
 
     /* When this changes, the storage is marked as dirty, and setNodeOffset*()
        gets called on the contents node */
-    Float contentsOffset() const { return data<Data>()->contentsOffset; }
+    StorageQuery<Float> contentsOffset() const {
+        return StorageQuery<Float>{*this, [](const ScrollAreaStorage& storage) {
+            return storage.data<Data>()->contentsOffset;
+        }};
+    }
 
     /* When this changes, the storage is *not* marked as dirty, as it currently
        isn't used to update anything in the UI, is only a getter for
@@ -418,7 +422,7 @@ ScrollArea::ScrollArea(const Anchor anchor, const ScrollAreaFlags flags): Widget
             /** @todo clean this up once I can use C++14 named captures */
             const NodeHandle contentsNode = _contentsNode;
             UserInterface& ui = this->ui();
-            ui.dataLayer().create(storage, &ScrollAreaStorage::contentsOffset, [&ui, contentsNode](const Float& offset) {
+            ui.dataLayer().create(storage.contentsOffset(), [&ui, contentsNode](const Float& offset) {
                 /** @todo this gets called even for the very first update()
                     because that's what the DataLayer implicitly does for all
                     newly created data bindings, it's however unnecessary as
@@ -491,7 +495,7 @@ ScrollArea::ScrollArea(const Anchor anchor, const ScrollAreaFlags flags): Widget
             /** @todo clean this up once I can use C++14 named captures */
             const NodeHandle contentsNode = _contentsNode;
             UserInterface& ui = this->ui();
-            ui.dataLayer().create(storage, &ScrollAreaStorage::contentsOffset, [&ui, contentsNode](const Float& offset) {
+            ui.dataLayer().create(storage.contentsOffset(), [&ui, contentsNode](const Float& offset) {
                 /** @todo this gets called even for the very first update(),
                     same as with the X case above */
                 ui.setNodeOffsetY(contentsNode, offset);

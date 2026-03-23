@@ -249,9 +249,8 @@ struct Data {
         64-bit values and this field only used for the storage ID */
     UnsignedLong storageIdDirtyLinearizedIndex;
 
-    Implementation::DataLayerTypeErasedFunctionPointer member;
     Containers::FunctionData update;
-    void(*updateCall)(const AbstractStorage&, const Implementation::DataLayerTypeErasedFunctionPointer&, const Containers::Size3D&, Containers::FunctionData&);
+    void(*updateCall)(const AbstractStorage&, const Containers::Size3D&, Containers::FunctionData&);
 };
 
 }
@@ -659,65 +658,11 @@ inline UnsignedInt extractStorageId(const UnsignedLong storageIdDirtyLinearizedI
 
 }
 
-DataHandle DataLayer::createInternal(const DataLayer& layer, const DataLayerStorageHandle storage, const Implementation::DataLayerTypeErasedFunctionPointer& member, void(*const updateCall)(const AbstractStorage&, const Implementation::DataLayerTypeErasedFunctionPointer&, const Containers::Size3D&, Containers::FunctionData&), Containers::FunctionData&& update, const NodeHandle node) {
-    /* To avoid duplicating the same assertion logic, delegate to the 3D
-       implementation to check that the storage is valid first and only then
-       verify the storage is indeed 1D */
-    const DataHandle handle = createInternal(layer, storage, member, updateCall, {0, 0, 0}, Utility::move(update), node);
-    #ifndef CORRADE_NO_ASSERT
-    #ifdef CORRADE_GRACEFUL_ASSERT
-    if(handle == DataHandle::Null)
-        return {};
-    #endif
-    const State& state = *_state;
-    const Containers::Size3D& size = state.storages[extractStorageId(state.data[dataHandleId(handle)].storageIdDirtyLinearizedIndex)].used.size;
-    CORRADE_ASSERT(size == (Containers::Size3D{1, 1, 1}),
-        "Ui::DataLayer::create(): expected a single-item storage but got a size of" << size, {});
-    #endif
-    return handle;
-}
-
-DataHandle DataLayer::createInternal(const DataLayer& layer, const DataLayerStorageHandle storage, const Implementation::DataLayerTypeErasedFunctionPointer& member, void(*const updateCall)(const AbstractStorage&, const Implementation::DataLayerTypeErasedFunctionPointer&, const Containers::Size3D&, Containers::FunctionData&), const std::size_t index, Containers::FunctionData&& update, const NodeHandle node) {
-    /* To avoid duplicating the same assertion logic, delegate to the 3D
-       implementation to check that the storage is valid first and only then
-       verify the storage is indeed 1D */
-    const DataHandle handle = createInternal(layer, storage, member, updateCall, {0, 0, index}, Utility::move(update), node);
-    #ifndef CORRADE_NO_ASSERT
-    #ifdef CORRADE_GRACEFUL_ASSERT
-    if(handle == DataHandle::Null)
-        return {};
-    #endif
-    const State& state = *_state;
-    const Containers::Size3D& size = state.storages[extractStorageId(state.data[dataHandleId(handle)].storageIdDirtyLinearizedIndex)].used.size;
-    CORRADE_ASSERT(size[0] == 1 && size[1] == 1,
-        "Ui::DataLayer::create(): expected a 1D storage but got a size of" << size, {});
-    #endif
-    return handle;
-}
-
-DataHandle DataLayer::createInternal(const DataLayer& layer, const DataLayerStorageHandle storage, const Implementation::DataLayerTypeErasedFunctionPointer& member, void(*const updateCall)(const AbstractStorage&, const Implementation::DataLayerTypeErasedFunctionPointer&, const Containers::Size3D&, Containers::FunctionData&), const Containers::Size2D& index, Containers::FunctionData&& update, const NodeHandle node) {
-    /* To avoid duplicating the same assertion logic, delegate to the 3D
-       implementation to check that the storage is valid first and only then
-       verify the storage is indeed 2D */
-    const DataHandle handle = createInternal(layer, storage, member, updateCall, {0, index[0], index[1]}, Utility::move(update), node);
-    #ifndef CORRADE_NO_ASSERT
-    #ifdef CORRADE_GRACEFUL_ASSERT
-    if(handle == DataHandle::Null)
-        return {};
-    #endif
-    const State& state = *_state;
-    const Containers::Size3D& size = state.storages[extractStorageId(state.data[dataHandleId(handle)].storageIdDirtyLinearizedIndex)].used.size;
-    CORRADE_ASSERT(size[0] == 1,
-        "Ui::DataLayer::create(): expected a 2D storage but got a size of" << size, {});
-    #endif
-    return handle;
-}
-
 DataHandle DataLayer::createInternal(const DataLayer&
     #ifndef CORRADE_NO_ASSERT
     layer
     #endif
-    , const DataLayerStorageHandle storage, const Implementation::DataLayerTypeErasedFunctionPointer& member, void(*const updateCall)(const AbstractStorage&, const Implementation::DataLayerTypeErasedFunctionPointer&, const Containers::Size3D&, Containers::FunctionData&), const Containers::Size3D& index, Containers::FunctionData&& update, const NodeHandle node)
+    , const DataLayerStorageHandle storage, const Containers::Size3D& index, void(*const updateCall)(const AbstractStorage&, const Containers::Size3D&, Containers::FunctionData&), Containers::FunctionData&& update, const NodeHandle node)
 {
     State& state = *_state;
     CORRADE_ASSERT(&layer == this,
@@ -726,15 +671,16 @@ DataHandle DataLayer::createInternal(const DataLayer&
        what one gets from AbstractStorage::handle() as well */
     CORRADE_ASSERT(isHandleValid(storage),
         "Ui::DataLayer::create(): invalid handle" << storageHandle(handle(), storage), {});
-    /* The member pointer is tested in the template to be non-null */
     CORRADE_ASSERT(update,
         "Ui::DataLayer::create(): update is null", {});
+    /** @todo the index being within storage size is tested by the StorageQuery
+        constructor already so it currently doesn't make sense to check it
+        again here, however it'll become important if/once storages can change
+        their size, as the StorageQuery instance could be stale at the point it
+        reaches DataLayer::create() */
 
     const UnsignedInt storageId = dataLayerStorageHandleId(storage);
     Storage& storageData = state.storages[storageId];
-    const Containers::Size3D& size = storageData.used.size;
-    CORRADE_ASSERT(index[0] < size[0] && index[1] < size[1] && index[2] < size[2],
-        "Ui::DataLayer::create(): index" << index << "out of range for storage of size" << size, {});
 
     /* Increase storage reference count */
     ++storageData.used.referenceCount;
@@ -751,11 +697,8 @@ DataHandle DataLayer::createInternal(const DataLayer&
        into a single 64-bit value. To save even more space, we'll combine the
        linearized index with the (20 bit) storage handle ID. See documentation
        of the data.storageIdLinearizedIndex member for further reasoning. */
-    data.storageIdDirtyLinearizedIndex = storageId|DataIsDirty|linearizeIndex(size, index);
+    data.storageIdDirtyLinearizedIndex = storageId|DataIsDirty|linearizeIndex(storageData.used.size, index);
 
-    /* Fucking C++, can't you just copy the array?! */
-    for(std::size_t i = 0; i != Containers::arraySize(member); ++i)
-        data.member[i] = member[i];
     data.update = Utility::move(update);
     data.updateCall = updateCall;
 
@@ -917,7 +860,7 @@ void DataLayer::setIndexInternal(const UnsignedInt id, const Containers::Size3D&
     const UnsignedInt storageId = extractStorageId(data.storageIdDirtyLinearizedIndex);
     const Containers::Size3D& size = state.storages[storageId].used.size;
     CORRADE_ASSERT(index[0] < size[0] && index[1] < size[1] && index[2] < size[2],
-        "Ui::DataLayer::setIndex(): index" << index << "out of range for storage of size" << size, );
+        "Ui::DataLayer::setIndex(): index" << index << "out of range for" << size << "elements", );
     /* As we had to extract all parts to perform the above check, we can simply
        recombine them back without having to do a masked update. */
     const UnsignedLong storageIdDirtyLinearizedIndex = storageId|linearizeIndex(size, index);
@@ -986,7 +929,6 @@ void DataLayer::doPreUpdate(const LayerStates state_) {
             temporary instance here could get it directly and skip that call */
         data.updateCall(
             AbstractStorage{*this, dataLayerStorageHandle(storageId, storage.used.generation)},
-            data.member,
             delinearizeIndex(storage.used.size, data.storageIdDirtyLinearizedIndex),
             data.update);
 

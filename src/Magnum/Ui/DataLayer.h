@@ -27,7 +27,7 @@
 */
 
 /** @file
- * @brief Class @ref Magnum::Ui::DataLayer, @ref Magnum::Ui::AbstractStorage, handle @ref Magnum::Ui::DataLayerStorageHandle, @ref Magnum::Ui::StorageHandle, enum @ref Magnum::Ui::StorageFlag, enum set @ref Magnum::Ui::StorageFlags, function @ref Magnum::Ui::dataLayerStorageHandle(), @ref Magnum::Ui::dataLayerStorageHandleId(), @ref Magnum::Ui::dataLayerStorageHandleGeneration(), @ref Magnum::Ui::storageHandle(), @ref Magnum::Ui::storageHandleLayer(), @ref Magnum::Ui::storageHandleStorage(), @ref Magnum::Ui::storageHandleLayerId(), @ref Magnum::Ui::storageHandleLayerGeneration(), @ref Magnum::Ui::storageHandleId(), @ref Magnum::Ui::storageHandleGeneration()
+ * @brief Class @ref Magnum::Ui::DataLayer, @ref Magnum::Ui::AbstractStorage, @ref Magnum::Ui::StorageQuery, handle @ref Magnum::Ui::DataLayerStorageHandle, @ref Magnum::Ui::StorageHandle, enum @ref Magnum::Ui::StorageFlag, enum set @ref Magnum::Ui::StorageFlags, function @ref Magnum::Ui::dataLayerStorageHandle(), @ref Magnum::Ui::dataLayerStorageHandleId(), @ref Magnum::Ui::dataLayerStorageHandleGeneration(), @ref Magnum::Ui::storageHandle(), @ref Magnum::Ui::storageHandleLayer(), @ref Magnum::Ui::storageHandleStorage(), @ref Magnum::Ui::storageHandleLayerId(), @ref Magnum::Ui::storageHandleLayerGeneration(), @ref Magnum::Ui::storageHandleId(), @ref Magnum::Ui::storageHandleGeneration()
  * @m_since_latest_{extras}
  */
 
@@ -307,17 +307,6 @@ namespace Implementation {
         DataLayerStorageMaxInPlaceSize = 5*sizeof(std::size_t)
         #endif
     };
-    /* The only way to pass type-erased AbstractStorage subclass function
-       pointers around is to reinterpret them as plain data of sufficient size.
-       Attempting to cast them to void(AbstractStorage::*)() and similar causes
-       "cast between incompatible pointer to member types" warning on GCC, and
-       with MSVC having certain function pointers of different size doing so
-       would be playing with fire. Containers::Function does the same, reusing
-       the size constant it has, and having static_assert() in all create()
-       overloads to ensure it's sufficiently large. Also using a std::size_t
-       array instead of plain chars to have a 4/8-byte alignment, as that's
-       likely important. */
-    using DataLayerTypeErasedFunctionPointer = std::size_t[Containers::Implementation::FunctionPointerSize];
 }
 
 class AbstractStorage;
@@ -666,162 +655,15 @@ class MAGNUM_UI_EXPORT DataLayer: public AbstractLayer {
         std::size_t usedAllocatedCount() const;
 
         /**
-         * @brief Create a data binding for a single-item storage
-         * @param storage       Storage to get the data from
+         * @brief Create a data binding
+         * @param query         Storage query
          * @param update        Function to call when data get updated
          * @param node          Node to attach to
          * @return New data handle
          *
-         * Expects that @p storage is a valid storage from this layer, it's
-         * single-item, i.e. with a size of @cpp {1, 1, 1} @ce, and @p update
-         * is not @cpp nullptr @ce. The @p update gets called with the return
-         * value of @cpp operator*() const @ce on @p storage during
-         * @ref AbstractUserInterface::update() or
-         * @relativeref{AbstractUserInterface,draw()} right after the data
-         * binding was created, and then every time @p storage is marked as
-         * dirty.
-         *
-         * Use the @ref create() "create(const Storage&, T(Storage::*)() const, Containers::Function<void(const T&)>&&, NodeHandle)"
-         * overload to query a concrete member function and the
-         * @ref create(const Storage&, std::size_t, Containers::Function<void(const T&)>&&, NodeHandle),
-         * @ref create(const Storage&, const Containers::Size2D&, Containers::Function<void(const T&)>&&, NodeHandle)
-         * and @ref create(const Storage&, const Containers::Size3D&, Containers::Function<void(const T&)>&&, NodeHandle)
-         * overloads to pick value at a concrete index from 1D, 2D and 3D
-         * storage implementations.
-         *
-         * Delegates to @ref AbstractLayer::create(), see its documentation for
-         * detailed description of all constraints. Calling this function
-         * causes @ref LayerState::NeedsCommonDataUpdate to be set.
-         * @todoc fix the create() links once Doxygen stops being shit
-         * @see @ref isStorageDirty()
-         */
-        template<class Storage> DataHandle create(const Storage& storage,
-            #ifdef DOXYGEN_GENERATING_OUTPUT
-            Containers::Function<void(const T&)>&& /* For a less confusing signature */
-            #elif defined(CORRADE_TARGET_GCC) && !defined(CORRADE_TARGET_CLANG) && __GNUC__ < 5
-            /* GCC 4.8 fails to match T without the std::common_type. GCC 5+
-               works. Similar trick is used in the create() overloads with an
-               explicit member, where it's needed for all compilers. */
-            typename std::common_type<Containers::Function<void(const decltype(*std::declval<Storage>())&)>>::type&&
-            #else
-            Containers::Function<void(const decltype(*std::declval<Storage>())&)>&&
-            #endif
-        update, NodeHandle node =
-            #ifdef DOXYGEN_GENERATING_OUTPUT
-            NodeHandle::Null
-            #else
-            NodeHandle{} /* To not have to include Handle.h */
-            #endif
-        ) {
-            /** @todo Calling the operator directly from the updateCall lambda
-                instead of through a pointer may be faster and allow further inlining. Benchmark. Similarly for the 1D/2D/3D overloads. */
-            return create<Storage>(storage, &Storage::operator*, Utility::move(update), node);
-        }
-
-        /**
-         * @brief Create a data binding for a concrete member of a single-item storage
-         * @param storage       Storage to get the data from
-         * @param member        Storage member to query
-         * @param update        Function to call when data get updated
-         * @param node          Node to attach to
-         * @return New data handle
-         *
-         * Expects that @p storage is a valid storage from this layer, it's
-         * single-item, i.e. with a size of @cpp {1, 1, 1} @ce, and @p member
-         * and @p update are not @cpp nullptr @ce. The @p update gets called
-         * with the return value of @p member on @p storage during
-         * @ref AbstractUserInterface::update() or
-         * @relativeref{AbstractUserInterface,draw()} right after the data
-         * binding was created, and then every time @p storage is marked as
-         * dirty.
-         *
-         * Use the @ref create() "create(const Storage&, T(Storage::*)(std::size_t) const, std::size_t, Containers::Function<void(const T&)>&&, NodeHandle)",
-         * @ref create() "create(const Storage&&, T(Storage::*)(const Containers::Size2D&) const, const Containers::Size2D&, Containers::Function<void(const T&)>&&, NodeHandle)"
-         * and @ref create() "create(const Storage&&, T(Storage::*)(const Containers::Size3D&) const, const Containers::Size3D&, Containers::Function<void(const T&)>&&, NodeHandle)"
-         * overloads to pick value at a concrete index from 1D, 2D and 3D storage
-         * implementations.
-         *
-         * Delegates to @ref AbstractLayer::create(), see its documentation for
-         * detailed description of all constraints. Calling this function
-         * causes @ref LayerState::NeedsCommonDataUpdate to be set.
-         * @todoc fix the create() links once Doxygen stops being shit
-         * @see @ref isStorageDirty()
-         */
-        template<class Storage, class T> DataHandle create(const Storage& storage, T(Storage::*member)() const,
-            #ifdef DOXYGEN_GENERATING_OUTPUT
-            Containers::Function<void(const T&)>&&
-            #else /* Without this, deduction of T won't work */
-            typename std::common_type<Containers::Function<void(const T&)>>::type&&
-            #endif
-        update, NodeHandle node =
-            #ifdef DOXYGEN_GENERATING_OUTPUT
-            NodeHandle::Null
-            #else
-            NodeHandle{} /* To not have to include Handle.h */
-            #endif
-        );
-
-        /**
-         * @brief Create a data binding for a 1D storage
-         * @param storage       Storage to get the data from
-         * @param index         Value index to query
-         * @param update        Function to call when data get updated
-         * @param node          Node to attach to
-         * @return New data handle
-         *
-         * Expects that @p storage is a valid storage from this layer, it's 1D,
-         * i.e. with a size of @cpp {1, 1, size} @ce, @p index is not larger
-         * than `size`, and @p update is not @cpp nullptr @ce. The @p update
-         * gets called with the return value of
-         * @cpp operator[](std::size_t) const @ce with given @p index on
-         * @p storage during @ref AbstractUserInterface::update() or
-         * @relativeref{AbstractUserInterface,draw()} right after the data
-         * binding was created, and then every time @p storage is marked as
-         * dirty.
-         *
-         * Use the @ref create() "create(const Storage&, T(Storage::*)(std::size_t) const, std::size_t, Containers::Function<void(const T&)>&&, NodeHandle)"
-         * overload to query a concrete member function.
-         *
-         * Delegates to @ref AbstractLayer::create(), see its documentation for
-         * detailed description of all constraints. Calling this function
-         * causes @ref LayerState::NeedsCommonDataUpdate to be set.
-         * @todoc fix the create() links once Doxygen stops being shit
-         * @see @ref isStorageDirty(), @ref storageSize()
-         */
-        template<class Storage> DataHandle create(const Storage& storage, std::size_t index,
-            #ifdef DOXYGEN_GENERATING_OUTPUT
-            Containers::Function<void(const T&)>&& /* For a less confusing signature */
-            #elif defined(CORRADE_TARGET_GCC) && !defined(CORRADE_TARGET_CLANG) && __GNUC__ < 5
-            /* GCC 4.8 fails to match T w/o the std::common_type, see above */
-            typename std::common_type<Containers::Function<void(const decltype(std::declval<Storage>()[std::size_t{}])&)>>::type&&
-            #else
-            Containers::Function<void(const decltype(std::declval<Storage>()[std::size_t{}])&)>&&
-            #endif
-        update, NodeHandle node =
-            #ifdef DOXYGEN_GENERATING_OUTPUT
-            NodeHandle::Null
-            #else
-            NodeHandle{} /* To not have to include Handle.h */
-            #endif
-        ) {
-            return create<Storage>(storage, &Storage::operator[], index, Utility::move(update), node);
-        }
-
-        /**
-         * @brief Create a data binding for a concrete member of a 1D storage
-         * @param storage       Storage to get the data from
-         * @param member        Storage member to query
-         * @param index         Value index to query
-         * @param update        Function to call when data get updated
-         * @param node          Node to attach to
-         * @return New data handle
-         *
-         * Expects that @p storage is a valid storage from this layer, it's 1D,
-         * i.e. with a size of @cpp {1, 1, size} @ce, @p index is not larger
-         * than `size`, and @p member and @p update are not @cpp nullptr @ce.
-         * The @p update gets called with the return value of @p member with
-         * given @p index on @p storage during
-         * @ref AbstractUserInterface::update() or
+         * Expects that @p query references a valid storage from this layer and
+         * @p update is not @cpp nullptr @ce. The @p update gets called with
+         * the result of @p query with @ref AbstractUserInterface::update() or
          * @relativeref{AbstractUserInterface,draw()} whenever either the data
          * itself or the @p storage is marked as dirty. The data is marked as
          * dirty initially.
@@ -831,55 +673,11 @@ class MAGNUM_UI_EXPORT DataLayer: public AbstractLayer {
          * causes @ref LayerState::NeedsCommonDataUpdate to be set.
          * @see @ref isStorageDirty(), @ref storageSize()
          */
-        template<class Storage, class T> DataHandle create(const Storage& storage, T(Storage::*member)(std::size_t) const, std::size_t index,
+        template<class T> DataHandle create(const StorageQuery<T>& query,
             #ifdef DOXYGEN_GENERATING_OUTPUT
             Containers::Function<void(const T&)>&&
             #else /* Without this, deduction of T won't work */
             typename std::common_type<Containers::Function<void(const T&)>>::type&&
-            #endif
-        update, NodeHandle node =
-            #ifdef DOXYGEN_GENERATING_OUTPUT
-            NodeHandle::Null
-            #else
-            NodeHandle{} /* To not have to include Handle.h */
-            #endif
-        );
-
-        /**
-         * @brief Create a data binding for a 2D storage
-         * @param storage       Storage to get the data from
-         * @param index         Value index to query
-         * @param update        Function to call when data get updated
-         * @param node          Node to attach to
-         * @return New data handle
-         *
-         * Expects that @p storage is a valid storage from this layer, it's 2D,
-         * i.e. with a size of @cpp {1, size[0], size[1]} @ce, @p index is not
-         * larger than `size`, and @p update is not @cpp nullptr @ce. The
-         * @p update gets called with the return value of
-         * @cpp operator[](const Containers::Size2D&) const @ce with given
-         * @p index on @p storage during @ref AbstractUserInterface::update()
-         * or @relativeref{AbstractUserInterface,draw()} right after the data
-         * binding was created, and then every time @p storage is marked as
-         * dirty.
-         *
-         * Use the @ref create() "create(const Storage&, T(Storage::*)(std::size_t) const, std::size_t, Containers::Function<void(const T&)>&&, NodeHandle)"
-         * overload to query a concrete member function.
-         *
-         * Delegates to @ref AbstractLayer::create(), see its documentation for
-         * detailed description of all constraints. Calling this function
-         * causes @ref LayerState::NeedsCommonDataUpdate to be set.
-         * @todoc fix the create() links once Doxygen stops being shit
-         * @see @ref isStorageDirty(), @ref storageSize()
-         */
-        template<class Storage> DataHandle create(const Storage& storage, const Containers::Size2D& index,
-            #ifdef DOXYGEN_GENERATING_OUTPUT
-            Containers::Function<void(const T&)>&& /* For a less confusing signature */
-            #elif defined(CORRADE_TARGET_GCC) && !defined(CORRADE_TARGET_CLANG) && __GNUC__ < 5
-            /* GCC 4.8 fails to match T w/o the std::common_type, see above */
-            typename std::common_type<Containers::Function<void(const decltype(std::declval<Storage>()[Containers::Size2D{}])&)>>::type&&
-            #else
-            Containers::Function<void(const decltype(std::declval<Storage>()[Containers::Size2D{}])&)>&&
             #endif
         update, NodeHandle node =
             #ifdef DOXYGEN_GENERATING_OUTPUT
@@ -888,81 +686,26 @@ class MAGNUM_UI_EXPORT DataLayer: public AbstractLayer {
             NodeHandle{} /* To not have to include Handle.h */
             #endif
         ) {
-            return create<Storage>(storage, &Storage::operator[], index, Utility::move(update), node);
+            return createInternal(*query._layer, query._storage, query._index, query._updateCall, Utility::move(update), node);
         }
 
         /**
-         * @brief Create a data binding for a concrete member of a 2D storage
-         * @param storage       Storage to get the data from
-         * @param member        Storage member to query
-         * @param index         Value index to query
-         * @param update        Function to call when data get updated
-         * @param node          Node to attach to
-         * @return New data handle
+         * @brief Create a data binding for storage's implicit type
          *
-         * Expects that @p storage is a valid storage from this layer, it's 2D,
-         * i.e. with a size of @cpp {1, size[0], size[1]} @ce, @p index is not
-         * larger than `size`, and @p member and @p update are not
-         * @cpp nullptr @ce. The @p update gets called with the return value of
-         * @p member with given @p index on @p storage during
-         * @ref AbstractUserInterface::update() or
-         * @relativeref{AbstractUserInterface,draw()} right after the data
-         * binding was created, and then every time @p storage is marked as
-         * dirty.
-         *
-         * Delegates to @ref AbstractLayer::create(), see its documentation for
-         * detailed description of all constraints. Calling this function
-         * causes @ref LayerState::NeedsCommonDataUpdate to be set.
-         * @see @ref isStorageDirty(), @ref storageSize()
+         * Assuming the @p storage has a `Type` @cpp typedef @ce which denotes
+         * what @ref StorageQuery type the storage is implicitly convertible
+         * to, delegates to @ref create(const StorageQuery<T>&, Containers::Function<void(const T&)>&&, NodeHandle)
+         * with given type. See its documentation for more information.
          */
-        template<class Storage, class T> DataHandle create(const Storage& storage, T(Storage::*member)(const Containers::Size2D&) const, const Containers::Size2D& index,
+        template<class Storage
+            #ifndef DOXYGEN_GENERATING_OUTPUT
+            , typename std::enable_if<std::is_base_of<AbstractStorage, Storage>::value, int>::type = 0
+            #endif
+        > DataHandle create(const Storage& storage,
             #ifdef DOXYGEN_GENERATING_OUTPUT
-            Containers::Function<void(const T&)>&&
+            Containers::Function<void(const typename Storage::Type&)>&&
             #else /* Without this, deduction of T won't work */
-            typename std::common_type<Containers::Function<void(const T&)>>::type&&
-            #endif
-        update, NodeHandle node =
-            #ifdef DOXYGEN_GENERATING_OUTPUT
-            NodeHandle::Null
-            #else
-            NodeHandle{} /* To not have to include Handle.h */
-            #endif
-        );
-
-        /**
-         * @brief Create a data binding for a 3D storage
-         * @param storage       Storage to get the data from
-         * @param index         Value index to query
-         * @param update        Function to call when data get updated
-         * @param node          Node to attach to
-         * @return New data handle
-         *
-         * Expects that @p storage is a valid storage from this layer, @p index
-         * is not larger than @p storage size, and @p update is not
-         * @cpp nullptr @ce. The @p update gets called with the return value of
-         * @cpp operator[](const Containers::Size3D&) const @ce with given
-         * @p index on @p storage during @ref AbstractUserInterface::update()
-         * or @relativeref{AbstractUserInterface,draw()} right after the data
-         * binding was created, and then every time @p storage is marked as
-         * dirty.
-         *
-         * Use the @ref create() "create(const Storage&, T(Storage::*)(std::size_t) const, std::size_t, Containers::Function<void(const T&)>&&, NodeHandle)"
-         * overload to query a concrete member function.
-         *
-         * Delegates to @ref AbstractLayer::create(), see its documentation for
-         * detailed description of all constraints. Calling this function
-         * causes @ref LayerState::NeedsCommonDataUpdate to be set.
-         * @todoc fix the create() links once Doxygen stops being shit
-         * @see @ref isStorageDirty(), @ref storageSize()
-         */
-        template<class Storage> DataHandle create(const Storage& storage, const Containers::Size3D& index,
-            #ifdef DOXYGEN_GENERATING_OUTPUT
-            Containers::Function<void(const T&)>&& /* For a less confusing signature */
-            #elif defined(CORRADE_TARGET_GCC) && !defined(CORRADE_TARGET_CLANG) && __GNUC__ < 5
-            /* GCC 4.8 fails to match T w/o the std::common_type, see above */
-            typename std::common_type<Containers::Function<void(const decltype(std::declval<Storage>()[Containers::Size3D{}])&)>>::type&&
-            #else
-            Containers::Function<void(const decltype(std::declval<Storage>()[Containers::Size3D{}])&)>&&
+            typename std::common_type<Containers::Function<void(const typename Storage::Type&)>>::type&&
             #endif
         update, NodeHandle node =
             #ifdef DOXYGEN_GENERATING_OUTPUT
@@ -971,45 +714,8 @@ class MAGNUM_UI_EXPORT DataLayer: public AbstractLayer {
             NodeHandle{} /* To not have to include Handle.h */
             #endif
         ) {
-            return create<Storage>(storage, &Storage::operator[], index, Utility::move(update), node);
+            return create<typename Storage::Type>(storage, Utility::move(update), node);
         }
-
-        /**
-         * @brief Create a data binding for a concrete member of a 3D storage
-         * @param storage       Storage to get the data from
-         * @param member        Storage member to query
-         * @param index         Value index to query
-         * @param update        Function to call when data get updated
-         * @param node          Node to attach to
-         * @return New data handle
-         *
-         * Expects that @p storage is a valid storage from this layer, @p index
-         * is not larger than @p storage size, and @p member and @p update are
-         * not @cpp nullptr @ce. The @p update gets called with the return
-         * value of @p member with given @p index on @p storage during
-         * @ref AbstractUserInterface::update() or
-         * @relativeref{AbstractUserInterface,draw()} right after the data
-         * binding was created, and then every time @p storage is marked as
-         * dirty.
-         *
-         * Delegates to @ref AbstractLayer::create(), see its documentation for
-         * detailed description of all constraints. Calling this function
-         * causes @ref LayerState::NeedsCommonDataUpdate to be set.
-         * @see @ref isStorageDirty(), @ref storageSize()
-         */
-        template<class Storage, class T> DataHandle create(const Storage& storage, T(Storage::*member)(const Containers::Size3D&) const, const Containers::Size3D& index,
-            #ifdef DOXYGEN_GENERATING_OUTPUT
-            Containers::Function<void(const T&)>&&
-            #else /* Without this, deduction of T won't work */
-            typename std::common_type<Containers::Function<void(const T&)>>::type&&
-            #endif
-        update, NodeHandle node =
-            #ifdef DOXYGEN_GENERATING_OUTPUT
-            NodeHandle::Null
-            #else
-            NodeHandle{} /* To not have to include Handle.h */
-            #endif
-        );
 
         /**
          * @brief Remove a data
@@ -1242,10 +948,7 @@ class MAGNUM_UI_EXPORT DataLayer: public AbstractLayer {
            create() functions, it cannot be wrapped in #ifdef CORRADE_NO_ASSERT
            because it'd cause linker errors if the library is built with
            assertions but the user project not and vice versa. */
-        DataHandle createInternal(const DataLayer& layer, DataLayerStorageHandle storage, const Implementation::DataLayerTypeErasedFunctionPointer& member, void(*updateCall)(const AbstractStorage&, const Implementation::DataLayerTypeErasedFunctionPointer&, const Containers::Size3D&, Containers::FunctionData&), Containers::FunctionData&& update, NodeHandle node);
-        DataHandle createInternal(const DataLayer& layer, DataLayerStorageHandle storage, const Implementation::DataLayerTypeErasedFunctionPointer& member, void(*updateCall)(const AbstractStorage&, const Implementation::DataLayerTypeErasedFunctionPointer&, const Containers::Size3D&, Containers::FunctionData&), std::size_t index, Containers::FunctionData&& update, NodeHandle node);
-        DataHandle createInternal(const DataLayer& layer, DataLayerStorageHandle storage, const Implementation::DataLayerTypeErasedFunctionPointer& member, void(*updateCall)(const AbstractStorage&, const Implementation::DataLayerTypeErasedFunctionPointer&, const Containers::Size3D&, Containers::FunctionData&), const Containers::Size2D& index, Containers::FunctionData&& update, NodeHandle node);
-        DataHandle createInternal(const DataLayer& layer, DataLayerStorageHandle storage, const Implementation::DataLayerTypeErasedFunctionPointer& member, void(*updateCall)(const AbstractStorage&, const Implementation::DataLayerTypeErasedFunctionPointer&, const Containers::Size3D&, Containers::FunctionData&), const Containers::Size3D& index, Containers::FunctionData&& update, NodeHandle node);
+        DataHandle createInternal(const DataLayer& layer, DataLayerStorageHandle storage, const Containers::Size3D& index, void(*updateCall)(const AbstractStorage&, const Containers::Size3D&, Containers::FunctionData&), Containers::FunctionData&& update, NodeHandle node);
         MAGNUM_UI_LOCAL void removeInternal(UnsignedInt id);
         MAGNUM_UI_LOCAL StorageHandle storageInternal(const UnsignedInt id) const;
         MAGNUM_UI_LOCAL Containers::Size3D indexInternal(const UnsignedInt id) const;
@@ -1497,6 +1200,11 @@ class MAGNUM_UI_EXPORT AbstractStorage {
            storage<T>() then just casts to a subtype which doesn't need a
            friend on the derived type anymore */
         friend DataLayer;
+        /* So StorageQuery constructor can access the _layer and _handle
+           without going through getters and having to extract the small handle
+           back, and also that it can create the storage from a layer + handle
+           in its operator T() implementation */
+        template<class> friend class StorageQuery;
 
         /* Used by DataLayer::storageInternal() as well as doPreUpdate() for
            creating temporary instances to pass to the update functions */
@@ -1505,7 +1213,165 @@ class MAGNUM_UI_EXPORT AbstractStorage {
 
         DataLayer* _layer;
         DataLayerStorageHandle _handle;
+        /* 0/4 bytes free, but with explicit padding to make non-trivial
+           subclasses fail to compile. Update when changing the members. */
+        #ifndef CORRADE_TARGET_32BIT
+        /* GCC 4.8 prints "warning: '*((void*)& storage +12)' may be used
+           "uninitialized in this function [-Wmaybe-uninitialized]" in Release
+           builds due to the anonymous padding member. We *do* want the padding
+           to check at compile time that subclasses don't add any members, so
+           turn it into a zero-initialized named member instead. GCC 5+ doesn't
+           warn. */
+        #if defined(CORRADE_TARGET_GCC) && !defined(CORRADE_TARGET_CLANG) && __GNUC__ < 5
+        UnsignedInt _pad{};
+        #else
+        UnsignedInt:32;
+        #endif
+        #endif
+};
+
+/**
+@brief @ref DataLayer storage query
+@m_since_latest_{extras}
+
+Returned from @ref AbstractStorage implementations, meant to be passed to
+@ref DataLayer::create() along with an update function.
+*/
+template<class T> class StorageQuery {
+    public:
+        /**
+         * @brief Create a query to a single-item storage
+         * @param storage   Storage instance
+         * @param query     Lambda to call on the storage to retrieve the
+         *      desired value
+         *
+         * Expects that @p storage is valid in the layer it's associated with
+         * and is single-item, i.e. with a size of @cpp {1, 1, 1} @ce. The
+         * @p query is expected to be a non-capturing lambda with given
+         * signature, *not* a function pointer.
+         */
+        template<class Storage
+            #ifndef DOXYGEN_GENERATING_OUTPUT
+            , class F, typename std::enable_if<std::is_convertible<F&&, T(*)(const Storage&)>::value, int>::type = 0
+            #endif
+        > explicit StorageQuery(const Storage& storage,
+            #ifndef DOXYGEN_GENERATING_OUTPUT
+            F query
+            #else
+            T(*query)(const Storage& storage)
+            #endif
+        );
+
+        /**
+         * @brief Create a query to a 1D storage
+         * @param storage   Storage instance
+         * @param index     Value index to query
+         * @param query     Lambda to call on the storage to retrieve the
+         *      desired value
+         *
+         * Expects that @p storage is valid in the layer it's associated with,
+         * is 1D, i.e. with a size of @cpp {1, 1, size} @ce, and @p index is
+         * not larger than `size`. The @p query is expected to be a
+         * non-capturing lambda with given signature, *not* a function pointer.
+         */
+        template<class Storage
+            #ifndef DOXYGEN_GENERATING_OUTPUT
+            , class F, typename std::enable_if<std::is_convertible<F&&, T(*)(const Storage&, std::size_t)>::value, int>::type = 0
+            #endif
+        > explicit StorageQuery(const Storage& storage, std::size_t index,
+            #ifndef DOXYGEN_GENERATING_OUTPUT
+            F query
+            #else
+            T(*query)(const Storage& storage, std::size_t index)
+            #endif
+        );
+
+        /**
+         * @brief Create a query to a 2D storage
+         * @param storage   Storage instance
+         * @param index     Value index to query
+         * @param query     Lambda to call on the storage to retrieve the
+         *      desired value
+         *
+         * Expects that @p storage is valid in the layer it's associated with,
+         * is 2D, i.e. with a size of @cpp {1, size[0], size[1]} @ce, and
+         * @p index is not larger than `size`. The @p query is expected to be a
+         * non-capturing lambda with given signature, *not* a function pointer.
+         */
+        template<class Storage
+            #ifndef DOXYGEN_GENERATING_OUTPUT
+            , class F, typename std::enable_if<std::is_convertible<F&&, T(*)(const Storage&, const Containers::Size2D&)>::value, int>::type = 0
+            #endif
+        > explicit StorageQuery(const Storage& storage, const Containers::Size2D& index,
+            #ifndef DOXYGEN_GENERATING_OUTPUT
+            F query
+            #else
+            T(*query)(const Storage& storage, const Containers::Size2D& index)
+            #endif
+        );
+
+        /**
+         * @brief Create a query to a 3D storage
+         * @param storage   Storage instance
+         * @param index     Value index to query
+         * @param query     Lambda to call on the storage to retrieve the
+         *      desired value
+         *
+         * Expects that @p storage is valid in the layer it's associated with
+         * and @p index is not larger than @p storage size. The @p query is
+         * expected to be a non-capturing lambda with given signature, *not* a
+         * function pointer.
+         */
+        template<class Storage
+            #ifndef DOXYGEN_GENERATING_OUTPUT
+            , class F, typename std::enable_if<std::is_convertible<F&&, T(*)(const Storage&, const Containers::Size3D&)>::value, int>::type = 0
+            #endif
+        > explicit StorageQuery(const Storage& storage, const Containers::Size3D& index,
+            #ifndef DOXYGEN_GENERATING_OUTPUT
+            F query
+            #else
+            T(*query)(const Storage& storage, const Containers::Size3D& index)
+            #endif
+        );
+
+        /** @brief Data layer reference */
+        DataLayer& layer() const { return *_layer; }
+
+        /**
+         * @brief Storage handle
+         *
+         * Guaranteed to be associated with @ref layer() and never
+         * @ref StorageHandle::Null.
+         */
+        StorageHandle storage() const {
+            return storageHandle(_layer->handle(), _storage);
+        }
+
+        /** @brief Data index */
+        Containers::Size3D index() const { return _index; }
+
+        /**
+         * @brief Storage value
+         *
+         * Returns value of given @ref storage() at @ref index(). Expects that
+         * @ref storage() is still valid in the @ref layer(). Meant to be used
+         * mainly for diagnostic purposes, for regular access prefer to access
+         * the storage data directly.
+         */
+        /*implicit*/ operator T() const;
+
+    private:
+        /* So it can access the _updateCall etc without having to expose those
+           via getters */
+        friend DataLayer;
+
+        explicit StorageQuery(const AbstractStorage& storage, const Containers::Size3D& index, void(*updateCall)(const AbstractStorage&, const Containers::Size3D&, Containers::FunctionData&));
+
+        DataLayer* _layer;
+        DataLayerStorageHandle _storage;
         /* 0/4 bytes free */
+        Containers::Size3D _index;
+        void(*_updateCall)(const AbstractStorage&, const Containers::Size3D&, Containers::FunctionData&);
 };
 
 template<class Storage> Storage DataLayer::storage(const StorageHandle handle) {
@@ -1531,80 +1397,118 @@ template<class Storage> Storage DataLayer::storage(const DataLayerStorageHandle 
 }
 
 #ifndef DOXYGEN_GENERATING_OUTPUT
-template<class Storage, class T> DataHandle DataLayer::create(const Storage& storage, T(Storage::*const member)() const, typename std::common_type<Containers::Function<void(const T&)>>::type&& update, const NodeHandle node) {
+template<class T> template<class Storage, class F, typename std::enable_if<std::is_convertible<F&&, T(*)(const Storage&)>::value, int>::type> StorageQuery<T>::StorageQuery(const Storage& storage, F): StorageQuery{storage, {}, [](const AbstractStorage& storage, const Containers::Size3D&, Containers::FunctionData& result) {
+    /* With a non-capturing lambda, all we need for calling it is the F type,
+       there's no point in storing the (empty) `query` instance itself. Could
+       also do `*reinterpret_cast<F*>(nullptr)` but casting from an empty
+       struct doesn't break the "`this` pointer is never null" rule and avoids
+       compiler warnings. */
+    struct {} empty;
+    reinterpret_cast<Containers::Function<void(const T&)>&>(result)(reinterpret_cast<F&>(empty)(static_cast<const Storage&>(storage)));
+}} {
     static_assert(
         #ifndef CORRADE_NO_STD_IS_TRIVIALLY_TRAITS
         std::is_trivially_copyable<Storage>::value &&
         #endif
         sizeof(Storage) == sizeof(AbstractStorage),
         "AbstractStorage subclasses expected to be trivially copyable with no extra members");
-    static_assert(sizeof(member) <= sizeof(Implementation::DataLayerTypeErasedFunctionPointer),
-        "size of member function pointer is incorrectly assumed to be smaller");
-    CORRADE_ASSERT(member,
-        "Ui::DataLayer::create(): member is null", {});
-    return createInternal(*storage._layer, storage._handle,
-        reinterpret_cast<const Implementation::DataLayerTypeErasedFunctionPointer&>(member),
-        [](const AbstractStorage& storage, const Implementation::DataLayerTypeErasedFunctionPointer& member, const Containers::Size3D&, Containers::FunctionData& update) {
-            reinterpret_cast<Containers::Function<void(const T&)>&>(update)((static_cast<const Storage&>(storage).*reinterpret_cast<T(Storage::*const&)() const>(member))());
-        },
-        Utility::move(update), node);
+    #ifndef CORRADE_NO_ASSERT
+    /* Subclasses may override size to return different dimension count, query
+       the base AbstractStorage tpe. The storage handle also may be invalid at
+       this point (checked by the delegated-to constructor) so query the size
+       only if valid. */
+    const Containers::Size3D size = _layer->isHandleValid(_storage) ? static_cast<const AbstractStorage&>(storage).size() : Containers::Size3D{1, 1, 1};
+    #endif
+    CORRADE_ASSERT(size == (Containers::Size3D{1, 1, 1}),
+        "Ui::StorageQuery: expected a single-item storage but got a size of" << size, );
+    static_assert(std::is_empty<F>::value,
+        "expected query to be a non-capturing lambda");
 }
 
-template<class Storage, class T> DataHandle DataLayer::create(const Storage& storage, T(Storage::*const member)(std::size_t) const, const std::size_t index, typename std::common_type<Containers::Function<void(const T&)>>::type&& update, const NodeHandle node) {
+template<class T> template<class Storage, class F, typename std::enable_if<std::is_convertible<F&&, T(*)(const Storage&, std::size_t)>::value, int>::type> StorageQuery<T>::StorageQuery(const Storage& storage, std::size_t index, F): StorageQuery{storage, {0, 0, index}, [](const AbstractStorage& storage, const Containers::Size3D& index, Containers::FunctionData& result) {
+    /* See above for why we're casting from an empty struct */
+    struct {} empty;
+    reinterpret_cast<Containers::Function<void(const T&)>&>(result)(reinterpret_cast<F&>(empty)(static_cast<const Storage&>(storage), index[2]));
+}} {
     static_assert(
         #ifndef CORRADE_NO_STD_IS_TRIVIALLY_TRAITS
         std::is_trivially_copyable<Storage>::value &&
         #endif
         sizeof(Storage) == sizeof(AbstractStorage),
         "AbstractStorage subclasses expected to be trivially copyable with no extra members");
-    static_assert(sizeof(member) <= sizeof(Implementation::DataLayerTypeErasedFunctionPointer),
-        "size of member function pointer is incorrectly assumed to be smaller");
-    CORRADE_ASSERT(member,
-        "Ui::DataLayer::create(): member is null", {});
-    return createInternal(*storage._layer, storage._handle,
-        reinterpret_cast<const Implementation::DataLayerTypeErasedFunctionPointer&>(member),
-        [](const AbstractStorage& storage, const Implementation::DataLayerTypeErasedFunctionPointer& member, const Containers::Size3D& index, Containers::FunctionData& update) {
-            reinterpret_cast<Containers::Function<void(const T&)>&>(update)(((static_cast<const Storage&>(storage).*reinterpret_cast<T(Storage::*const&)(std::size_t) const>(member))(index[2])));
-        },
-        index, Utility::move(update), node);
+    #ifndef CORRADE_NO_ASSERT
+    /* Base type and handle validity reasoning same as above */
+    const Containers::Size3D size = _layer->isHandleValid(_storage) ? static_cast<const AbstractStorage&>(storage).size() : Containers::Size3D{1, 1, 1};
+    #endif
+    CORRADE_ASSERT(size[0] == 1 && size[1] == 1,
+        "Ui::StorageQuery: expected a 1D storage but got a size of" << size, );
+    static_assert(std::is_empty<F>::value,
+        "expected query to be a non-capturing lambda");
 }
 
-template<class Storage, class T> DataHandle DataLayer::create(const Storage& storage, T(Storage::*const member)(const Containers::Size2D&) const, const Containers::Size2D& index, typename std::common_type<Containers::Function<void(const T&)>>::type&& update, const NodeHandle node) {
+template<class T> template<class Storage, class F, typename std::enable_if<std::is_convertible<F&&, T(*)(const Storage&, const Containers::Size2D&)>::value, int>::type> StorageQuery<T>::StorageQuery(const Storage& storage, const Containers::Size2D& index, F): StorageQuery{storage, {0, index[0], index[1]}, [](const AbstractStorage& storage, const Containers::Size3D& index, Containers::FunctionData& result) {
+    /* See above for why we're casting from an empty struct */
+    struct {} empty;
+    reinterpret_cast<Containers::Function<void(const T&)>&>(result)(reinterpret_cast<F&>(empty)(static_cast<const Storage&>(storage), {index[1], index[2]}));
+}} {
     static_assert(
         #ifndef CORRADE_NO_STD_IS_TRIVIALLY_TRAITS
         std::is_trivially_copyable<Storage>::value &&
         #endif
         sizeof(Storage) == sizeof(AbstractStorage),
         "AbstractStorage subclasses expected to be trivially copyable with no extra members");
-    static_assert(sizeof(member) <= sizeof(Implementation::DataLayerTypeErasedFunctionPointer),
-        "size of member function pointer is incorrectly assumed to be smaller");
-    CORRADE_ASSERT(member,
-        "Ui::DataLayer::create(): member is null", {});
-    return createInternal(*storage._layer, storage._handle,
-        reinterpret_cast<const Implementation::DataLayerTypeErasedFunctionPointer&>(member),
-        [](const AbstractStorage& storage, const Implementation::DataLayerTypeErasedFunctionPointer& member, const Containers::Size3D& index, Containers::FunctionData& update) {
-            reinterpret_cast<Containers::Function<void(const T&)>&>(update)((static_cast<const Storage&>(storage).*reinterpret_cast<T(Storage::*const&)(const Containers::Size2D&) const>(member))({index[1], index[2]}));
-        },
-        index, Utility::move(update), node);
+    #ifndef CORRADE_NO_ASSERT
+    /* Base type and handle validity reasoning same as above */
+    const Containers::Size3D size = _layer->isHandleValid(_storage) ? static_cast<const AbstractStorage&>(storage).size() : Containers::Size3D{1, 1, 1};
+    #endif
+    CORRADE_ASSERT(size[0] == 1,
+        "Ui::StorageQuery: expected a 2D storage but got a size of" << size, );
+    static_assert(std::is_empty<F>::value,
+        "expected query to be a non-capturing lambda");
 }
 
-template<class Storage, class T> DataHandle DataLayer::create(const Storage& storage, T(Storage::*const member)(const Containers::Size3D&) const, const Containers::Size3D& index, typename std::common_type<Containers::Function<void(const T&)>>::type&& update, const NodeHandle node) {
+template<class T> template<class Storage, class F, typename std::enable_if<std::is_convertible<F&&, T(*)(const Storage&, const Containers::Size3D&)>::value, int>::type> StorageQuery<T>::StorageQuery(const Storage& storage, const Containers::Size3D& index, F): StorageQuery{storage, index, [](const AbstractStorage& storage, const Containers::Size3D& index, Containers::FunctionData& result) {
+    /* See above for why we're casting from an empty struct */
+    struct {} empty;
+    reinterpret_cast<Containers::Function<void(const T&)>&>(result)(reinterpret_cast<F&>(empty)(static_cast<const Storage&>(storage), index));
+}} {
     static_assert(
         #ifndef CORRADE_NO_STD_IS_TRIVIALLY_TRAITS
         std::is_trivially_copyable<Storage>::value &&
         #endif
         sizeof(Storage) == sizeof(AbstractStorage),
         "AbstractStorage subclasses expected to be trivially copyable with no extra members");
-    static_assert(sizeof(member) <= sizeof(Implementation::DataLayerTypeErasedFunctionPointer),
-        "size of member function pointer is incorrectly assumed to be smaller");
-    CORRADE_ASSERT(member,
-        "Ui::DataLayer::create(): member is null", {});
-    return createInternal(*storage._layer, storage._handle,
-        reinterpret_cast<const Implementation::DataLayerTypeErasedFunctionPointer&>(member),
-        [](const AbstractStorage& storage, const Implementation::DataLayerTypeErasedFunctionPointer& member, const Containers::Size3D& index, Containers::FunctionData& update) {
-            reinterpret_cast<Containers::Function<void(const T&)>&>(update)((static_cast<const Storage&>(storage).*reinterpret_cast<T(Storage::*const&)(const Containers::Size3D&) const>(member))(index));
-        },
-        index, Utility::move(update), node);
+    static_assert(std::is_empty<F>::value,
+        "expected query to be a non-capturing lambda");
+}
+
+template<class T> StorageQuery<T>::StorageQuery(const AbstractStorage& storage, const Containers::Size3D& index, void(*updateCall)(const AbstractStorage&, const Containers::Size3D&, Containers::FunctionData&)): _layer{storage._layer}, _storage{storage._handle}, _index{index}, _updateCall{updateCall} {
+    CORRADE_ASSERT(_layer->isHandleValid(_storage),
+        "Ui::StorageQuery: invalid handle" << storageHandle(_layer->handle(), _storage), );
+    #ifndef CORRADE_NO_ASSERT
+    const Containers::Size3D& size = storage.size();
+    #endif
+    CORRADE_ASSERT(index[0] < size[0] && index[1] < size[1] && index[2] < size[2],
+        "Ui::StorageQuery: index" << index << "out of range for" << size << "elements", );
+}
+
+template<class T> StorageQuery<T>::operator T() const {
+    /* We're abusing the _updateCall function, which *passes* the storage value
+       elsewhere instead of returning it, to copy the passed value outside and
+       return it. To support non-copyable types it's an union which is
+       placement-new'd into, the assumption is that the storage wouldn't return
+       move-only types so these don't work here. */
+    union NotInitialized {
+        explicit NotInitialized() {}
+        T value;
+    } out;
+    CORRADE_ASSERT(_layer->isHandleValid(_storage),
+        "Ui::StorageQuery: invalid handle" << storageHandle(_layer->handle(), _storage), out.value);
+    Containers::Function<void(const T&)> update{[&out](const T& value) {
+        new(&out.value) T{value};
+    }};
+    _updateCall(AbstractStorage{*_layer, _storage}, _index, update);
+    return out.value;
 }
 #endif
 
