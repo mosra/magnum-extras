@@ -202,9 +202,9 @@ DataLayerTest::DataLayerTest() {
               #endif
               &DataLayerTest::removeStorageInvalid,
 
-              &DataLayerTest::invalidStorageHandle,
+              &DataLayerTest::setStorageDirty,
 
-              &DataLayerTest::setStorageDirty});
+              &DataLayerTest::invalidStorageHandle});
 
     addTests({&DataLayerTest::createRemove,
               &DataLayerTest::createRemoveHandleRecycle,

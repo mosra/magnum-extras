@@ -229,16 +229,16 @@ enum: UnsignedLong {
 
 struct Data {
     /* First Implementation::DataLayerStorageHandleIdBits (20 bits) is storage
-       index. Since the storage is reference-counted and not thus allowed to be
+       index. Since the storage is reference-counted and thus not allowed to be
        removed while data reference it, we don't need to store the
        DataLayerStorageHandle generation.
 
        The following bit denotes whether the data is dirty, to force an update
        even if the storage itself isn't. Is set upon data creation and after
-       changing data properties, such as setIndex().
+       changing data properties, such as by DataLayer::setIndex().
 
-       after that (43 bits) is a linearized storage index (basically a
-       linear data position as if the 3D storage would be contiguous). With a
+       After that (43 bits) is a linearized storage index (basically a linear
+       data position as if the 3D storage would be contiguous). With a
        byte-sized storage type, 43 bits means there's at most 8 TB of
        addressable memory, which should be plenty enough for common use
        cases. */
