@@ -1255,16 +1255,16 @@ void DataLayerTest::removeStorageInvalid() {
     DataLayer layer{layerHandle(0xab, 0x12)};
 
     DummyStorage storage{layer};
-    layer.create(storage, [](Int) {});
-    layer.create(storage, [](Int) {});
-    layer.create(storage, [](Int) {});
+    layer.create(storage, [](const Int&) {});
+    layer.create(storage, [](const Int&) {});
+    layer.create(storage, [](const Int&) {});
     CORRADE_COMPARE(storage.referenceCount(), 3);
 
     /* Reference-counted storage shouldn't behave any different, it should also
        disallow removal while used */
     DummyStorage storageReferenceCounted{layer, StorageFlag::ReferenceCounted};
-    layer.create(storageReferenceCounted, [](Int) {});
-    layer.create(storageReferenceCounted, [](Int) {});
+    layer.create(storageReferenceCounted, [](const Int&) {});
+    layer.create(storageReferenceCounted, [](const Int&) {});
     CORRADE_COMPARE(storageReferenceCounted.referenceCount(), 2);
 
     Containers::String out;
@@ -1318,7 +1318,7 @@ void DataLayerTest::setStorageDirty() {
 
     /* Create a data on one storage to make it actually used, which sets a
        layer state */
-    layer.create(storage, [](Int) {});
+    layer.create(storage, [](const Int&) {});
     CORRADE_COMPARE(layer.storageReferenceCount(storageUnused), 0);
     CORRADE_COMPARE(layer.storageReferenceCount(storage), 1);
     CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate|LayerState::NeedsCommonDataUpdate);
@@ -1548,7 +1548,7 @@ void DataLayerTest::createRemove() {
         ~NonTrivial() {
             ++*destructed;
         }
-        void operator()(Int value) const {
+        void operator()(const Int& value) const {
             CORRADE_COMPARE(value, expected);
             ++*called;
         }
@@ -1592,7 +1592,7 @@ void DataLayerTest::createRemove() {
 
     /* Trivial function, single item */
     Int trivialCalled = 0;
-    DataHandle trivial = layer.create(storage, [&trivialCalled](Int value) {
+    DataHandle trivial = layer.create(storage, [&trivialCalled](const Int& value) {
         CORRADE_COMPARE(value, 0x333);
         ++trivialCalled;
     });
@@ -1655,7 +1655,7 @@ void DataLayerTest::createRemove() {
 
     /* Trivial function, 1D index, not attached, LayerDataHandle overloads */
     Int trivial1DCalled = 0;
-    DataHandle trivial1D = layer.create(storage1D, 13, [&trivial1DCalled](Int value) {
+    DataHandle trivial1D = layer.create(storage1D, 13, [&trivial1DCalled](const Int& value) {
         CORRADE_COMPARE(value, 0x4444);
         ++trivial1DCalled;
     });
@@ -1717,7 +1717,7 @@ void DataLayerTest::createRemove() {
 
     /* Trivial function, 2D index */
     Int trivial2DCalled = 0;
-    DataHandle trivial2D = layer.create(storage2D, {2, 5}, [&trivial2DCalled](Int value) {
+    DataHandle trivial2D = layer.create(storage2D, {2, 5}, [&trivial2DCalled](const Int& value) {
         CORRADE_COMPARE(value, 0x55555);
         ++trivial2DCalled;
     }, nodeHandle(0x54321, 0xedc));
@@ -1779,7 +1779,7 @@ void DataLayerTest::createRemove() {
 
     /* Trivial function, 3D index */
     Int trivial3DCalled = 0;
-    DataHandle trivial3D = layer.create(storage3D, {1, 3, 2}, [&trivial3DCalled](Int value) {
+    DataHandle trivial3D = layer.create(storage3D, {1, 3, 2}, [&trivial3DCalled](const Int& value) {
         CORRADE_COMPARE(value, 0x666666);
         ++trivial3DCalled;
     }, nodeHandle(0x67890, 0xaba));
@@ -1970,7 +1970,7 @@ void DataLayerTest::createRemoveHandleRecycle() {
         ~NonTrivial() {
             ++*destructed;
         }
-        void operator()(Int) const {
+        void operator()(const Int&) const {
             CORRADE_FAIL("This should never be called.");
         }
 
@@ -1979,7 +1979,7 @@ void DataLayerTest::createRemoveHandleRecycle() {
 
     DataLayer layer{layerHandle(0, 1)};
     DummyStorage storage{layer};
-    layer.create(storage, {0, 0, 0}, [](Int) {});
+    layer.create(storage, {0, 0, 0}, [](const Int&) {});
 
     /* The temporary gets destructed right away. Fill it with a 3D index to
        verify it gets cleared on recycle. */
@@ -2050,7 +2050,7 @@ void DataLayerTest::createMemberFunction() {
 
     /* Single item */
     Int firstCalled = 0;
-    DataHandle first = layer.create(storage, &DummyStorage::singleValue, [&firstCalled](Int value) {
+    DataHandle first = layer.create(storage, &DummyStorage::singleValue, [&firstCalled](const Int& value) {
         CORRADE_COMPARE(value, 0x333);
         ++firstCalled;
     }, nodeHandle(0x12345, 0xabc));
@@ -2061,7 +2061,7 @@ void DataLayerTest::createMemberFunction() {
 
     /* 1D index */
     Int secondCalled = 0;
-    DataHandle second = layer.create(storage1D, &DummyStorage1D::listItem, 13, [&secondCalled](Int value) {
+    DataHandle second = layer.create(storage1D, &DummyStorage1D::listItem, 13, [&secondCalled](const Int& value) {
         CORRADE_COMPARE(value, 0x4444);
         ++secondCalled;
     }, nodeHandle(0xabcde, 0xabc));
@@ -2072,7 +2072,7 @@ void DataLayerTest::createMemberFunction() {
 
     /* 2D index */
     Int thirdCalled = 0;
-    DataHandle third = layer.create(storage2D, &DummyStorage2D::imageValue, {2, 5}, [&thirdCalled](Int value) {
+    DataHandle third = layer.create(storage2D, &DummyStorage2D::imageValue, {2, 5}, [&thirdCalled](const Int& value) {
         CORRADE_COMPARE(value, 0x55555);
         ++thirdCalled;
     }, nodeHandle(0x54321, 0xedc));
@@ -2083,7 +2083,7 @@ void DataLayerTest::createMemberFunction() {
 
     /* 3D index */
     Int fourthCalled = 0;
-    DataHandle fourth = layer.create(storage3D, &DummyStorage3D::volumeCell, {1, 3, 2}, [&fourthCalled](Int value) {
+    DataHandle fourth = layer.create(storage3D, &DummyStorage3D::volumeCell, {1, 3, 2}, [&fourthCalled](const Int& value) {
         CORRADE_COMPARE(value, 0x666666);
         ++fourthCalled;
     }, nodeHandle(0x67890, 0xaba));
@@ -2158,7 +2158,7 @@ void DataLayerTest::createOverloaded() {
     /* Single item. Shouldn't cause any issues, but still verify that it's
        correctly picked even in presence of operator[]. */
     Int firstCalled = 0;
-    DataHandle first = layer.create(storage, [&firstCalled](Int value) {
+    DataHandle first = layer.create(storage, [&firstCalled](const Int& value) {
         CORRADE_COMPARE(value, 0x333);
         ++firstCalled;
     }, nodeHandle(0x12345, 0xabc));
@@ -2169,7 +2169,7 @@ void DataLayerTest::createOverloaded() {
 
     /* 1D index */
     Int secondCalled = 0;
-    DataHandle second = layer.create(storage1D, 13, [&secondCalled](Short value) {
+    DataHandle second = layer.create(storage1D, 13, [&secondCalled](const Short& value) {
         CORRADE_COMPARE(value, 0x4444);
         ++secondCalled;
     }, nodeHandle(0xabcde, 0xabc));
@@ -2180,7 +2180,7 @@ void DataLayerTest::createOverloaded() {
 
     /* 2D index */
     Int thirdCalled = 0;
-    DataHandle third = layer.create(storage2D, {2, 5}, [&thirdCalled](Byte value) {
+    DataHandle third = layer.create(storage2D, {2, 5}, [&thirdCalled](const Byte& value) {
         CORRADE_COMPARE(value, 0x55);
         ++thirdCalled;
     }, nodeHandle(0x54321, 0xedc));
@@ -2191,7 +2191,7 @@ void DataLayerTest::createOverloaded() {
 
     /* 3D index */
     Int fourthCalled = 0;
-    DataHandle fourth = layer.create(storage3D, {1, 3, 2}, [&fourthCalled](Long value) {
+    DataHandle fourth = layer.create(storage3D, {1, 3, 2}, [&fourthCalled](const Long& value) {
         CORRADE_COMPARE(value, 0x666666);
         ++fourthCalled;
     }, nodeHandle(0x67890, 0xaba));
@@ -2263,7 +2263,7 @@ void DataLayerTest::createOverloadedMemberFunction() {
     /* Single item. Shouldn't cause any issues, but still verify that it's
        correctly picked even in presence of other overloads of thingy(). */
     Int firstCalled = 0;
-    DataHandle first = layer.create(storage, &DummyStorage::thingy, [&firstCalled](Int value) {
+    DataHandle first = layer.create(storage, &DummyStorage::thingy, [&firstCalled](const Int& value) {
         CORRADE_COMPARE(value, 0x333);
         ++firstCalled;
     }, nodeHandle(0x12345, 0xabc));
@@ -2274,7 +2274,7 @@ void DataLayerTest::createOverloadedMemberFunction() {
 
     /* 1D index */
     Int secondCalled = 0;
-    DataHandle second = layer.create(storage1D, &DummyStorage::thingy, 13, [&secondCalled](Short value) {
+    DataHandle second = layer.create(storage1D, &DummyStorage::thingy, 13, [&secondCalled](const Short& value) {
         CORRADE_COMPARE(value, 0x4444);
         ++secondCalled;
     }, nodeHandle(0xabcde, 0xabc));
@@ -2285,7 +2285,7 @@ void DataLayerTest::createOverloadedMemberFunction() {
 
     /* 2D index */
     Int thirdCalled = 0;
-    DataHandle third = layer.create(storage2D, &DummyStorage::thingy, {2, 5}, [&thirdCalled](Byte value) {
+    DataHandle third = layer.create(storage2D, &DummyStorage::thingy, {2, 5}, [&thirdCalled](const Byte& value) {
         CORRADE_COMPARE(value, 0x55);
         ++thirdCalled;
     }, nodeHandle(0x54321, 0xedc));
@@ -2296,7 +2296,7 @@ void DataLayerTest::createOverloadedMemberFunction() {
 
     /* 3D index */
     Int fourthCalled = 0;
-    DataHandle fourth = layer.create(storage3D, &DummyStorage::thingy, {1, 3, 2}, [&fourthCalled](Long value) {
+    DataHandle fourth = layer.create(storage3D, &DummyStorage::thingy, {1, 3, 2}, [&fourthCalled](const Long& value) {
         CORRADE_COMPARE(value, 0x666666);
         ++fourthCalled;
     }, nodeHandle(0x67890, 0xaba));
@@ -2367,42 +2367,42 @@ void DataLayerTest::createInvalid() {
     CORRADE_COMPARE(anotherLayerStorage.handle(), storage.handle());
 
     /* Indices exactly at the end shouldn't trigger an assert */
-    layer.create(storage, [](Int) {});
-    layer.create(storage1D, 14, [](Int) {});
-    layer.create(storage2D, {2, 6}, [](Int) {});
-    layer.create(storage3D, {3, 1, 4}, [](Int) {});
+    layer.create(storage, [](const Int&) {});
+    layer.create(storage1D, 14, [](const Int&) {});
+    layer.create(storage2D, {2, 6}, [](const Int&) {});
+    layer.create(storage3D, {3, 1, 4}, [](const Int&) {});
 
     Containers::String out;
     Error redirectError{&out};
     /* Storage from a different layer or with an invalid handle */
-    layer.create(anotherLayerStorage, [](Int) {});
-    layer.create(removedStorage, [](Int) {});
+    layer.create(anotherLayerStorage, [](const Int&) {});
+    layer.create(removedStorage, [](const Int&) {});
     /* Member being null. all dimension overloads */
-    layer.create(storage, static_cast<Int(DummyStorage::*)() const>(nullptr), [](Int) {});
-    layer.create(storage1D, static_cast<Int(DummyStorage::*)(std::size_t) const>(nullptr), 0, [](Int) {});
-    layer.create(storage2D, static_cast<Int(DummyStorage::*)(const Containers::Size2D&) const>(nullptr), {0, 0}, [](Int) {});
-    layer.create(storage3D, static_cast<Int(DummyStorage::*)(const Containers::Size3D&) const>(nullptr), {0, 0, 0}, [](Int) {});
+    layer.create(storage, static_cast<Int(DummyStorage::*)() const>(nullptr), [](const Int&) {});
+    layer.create(storage1D, static_cast<Int(DummyStorage::*)(std::size_t) const>(nullptr), 0, [](const Int&) {});
+    layer.create(storage2D, static_cast<Int(DummyStorage::*)(const Containers::Size2D&) const>(nullptr), {0, 0}, [](const Int&) {});
+    layer.create(storage3D, static_cast<Int(DummyStorage::*)(const Containers::Size3D&) const>(nullptr), {0, 0, 0}, [](const Int&) {});
     /* Update being null, all dimension overloads */
     layer.create(storage, nullptr);
     layer.create(storage1D, 0, nullptr);
     layer.create(storage2D, {0, 0}, nullptr);
     layer.create(storage3D, {0, 0, 0}, nullptr);
     /* Index out of bounds in 1D, 2D and 3D */
-    layer.create(storage1D, 15, [](Int) {});
-    layer.create(storage2D, {2, 7}, [](Int) {});
-    layer.create(storage2D, {3, 6}, [](Int) {});
-    layer.create(storage3D, {3, 1, 5}, [](Int) {});
-    layer.create(storage3D, {3, 2, 4}, [](Int) {});
-    layer.create(storage3D, {4, 1, 4}, [](Int) {});
+    layer.create(storage1D, 15, [](const Int&) {});
+    layer.create(storage2D, {2, 7}, [](const Int&) {});
+    layer.create(storage2D, {3, 6}, [](const Int&) {});
+    layer.create(storage3D, {3, 1, 5}, [](const Int&) {});
+    layer.create(storage3D, {3, 2, 4}, [](const Int&) {});
+    layer.create(storage3D, {4, 1, 4}, [](const Int&) {});
     /* No index specified for a 1D/2D/3D storage even though it's in bounds */
-    layer.create(storage1D, [](Int) {});
-    layer.create(storage2D, [](Int) {});
-    layer.create(storage3D, [](Int) {});
+    layer.create(storage1D, [](const Int&) {});
+    layer.create(storage2D, [](const Int&) {});
+    layer.create(storage3D, [](const Int&) {});
     /* 1D index specified for a 2D/3D storage even though it's in bounds */
-    layer.create(storage2D, 0, [](Int) {});
-    layer.create(storage3D, 0, [](Int) {});
+    layer.create(storage2D, 0, [](const Int&) {});
+    layer.create(storage3D, 0, [](const Int&) {});
     /* 2D index specified for a 3D storage even though it's in bounds */
-    layer.create(storage3D, {0, 0}, [](Int) {});
+    layer.create(storage3D, {0, 0}, [](const Int&) {});
     CORRADE_COMPARE_AS(out,
         "Ui::DataLayer::create(): storage doesn't belong to this layer\n"
         "Ui::DataLayer::create(): invalid handle Ui::StorageHandle({0xab, 0x12}, {0x4, 0x1})\n"
@@ -2448,13 +2448,13 @@ void DataLayerTest::setIndex() {
     DummyStorage storage3D{layer, {4, 7, 5}};
 
     /* Create a dummy data to verify it doesn't always update the first */
-    layer.create(storage3D, {1, 2, 3}, [](Int) {});
+    layer.create(storage3D, {1, 2, 3}, [](const Int&) {});
 
     /* By default the data is marked as dirty, and NeedsCommonDataUpdate is
        set. NeedsDataUpdate is set implicitly when creating new data. */
-    DataHandle data1D = layer.create(storage1D, 3, [](Int) {});
-    DataHandle data2D = layer.create(storage2D, {3, 2}, [](Int) {});
-    DataHandle data3D = layer.create(storage3D, {3, 2, 1}, [](Int) {});
+    DataHandle data1D = layer.create(storage1D, 3, [](const Int&) {});
+    DataHandle data2D = layer.create(storage2D, {3, 2}, [](const Int&) {});
+    DataHandle data3D = layer.create(storage3D, {3, 2, 1}, [](const Int&) {});
     CORRADE_COMPARE(layer.index(data1D), (Containers::Size3D{0, 0, 3}));
     CORRADE_COMPARE(layer.index(data2D), (Containers::Size3D{0, 3, 2}));
     CORRADE_COMPARE(layer.index(data3D), (Containers::Size3D{3, 2, 1}));
@@ -2605,9 +2605,9 @@ void DataLayerTest::setIndexInvalid() {
     DummyStorage storage2D{layer, {1, 3, 7}};
     DummyStorage storage3D{layer, {4, 2, 5}};
 
-    DataHandle data1D = layer.create(storage1D, 0, [](Int) {});
-    DataHandle data2D = layer.create(storage2D, {0, 0}, [](Int) {});
-    DataHandle data3D = layer.create(storage3D, {0, 0, 0}, [](Int) {});
+    DataHandle data1D = layer.create(storage1D, 0, [](const Int&) {});
+    DataHandle data2D = layer.create(storage2D, {0, 0}, [](const Int&) {});
+    DataHandle data3D = layer.create(storage3D, {0, 0, 0}, [](const Int&) {});
 
     Containers::String out;
     Error redirectError{&out};
@@ -2720,13 +2720,13 @@ void DataLayerTest::indexLinearization() {
     DummyStorage storage{layer, data.size};
 
     /* Index set initially, verify it won't stomp over the other properties */
-    DataHandle indexInitial = layer.create(storage, data.index, [](Int) {});
+    DataHandle indexInitial = layer.create(storage, data.index, [](const Int&) {});
     CORRADE_COMPARE(layer.index(indexInitial), data.index);
     CORRADE_VERIFY(layer.isDirty(indexInitial));
     CORRADE_COMPARE(layer.storage(indexInitial), storage);
 
     /* Index set only subsequently through setIndex() */
-    DataHandle indexLater = layer.create(storage, Containers::Size3D{}, [](Int) {});
+    DataHandle indexLater = layer.create(storage, Containers::Size3D{}, [](const Int&) {});
     layer.setIndex(indexLater, data.index);
     CORRADE_COMPARE(layer.index(indexLater), data.index);
     CORRADE_VERIFY(layer.isDirty(indexLater));
@@ -2767,13 +2767,13 @@ void DataLayerTest::indexLinearizationFullStorageCapacity() {
     CORRADE_COMPARE(storage.size(), (Containers::Size3D{1, 1, 1ull << 43}));
 
     /* Index set initially, verify it won't stomp over the other properties */
-    DataHandle indexInitial = layer.create(storage, (1ull << (64 - Implementation::DataLayerStorageHandleIdBits - 1)) - 1, [](Int) {});
+    DataHandle indexInitial = layer.create(storage, (1ull << (64 - Implementation::DataLayerStorageHandleIdBits - 1)) - 1, [](const Int&) {});
     CORRADE_COMPARE(layer.index(indexInitial), (Containers::Size3D{0, 0, (1ull << 43) - 1}));
     CORRADE_VERIFY(layer.isDirty(indexInitial));
     CORRADE_COMPARE(layer.storage(indexInitial), storage);
 
     /* Index set only subsequently through setIndex() */
-    DataHandle indexLater = layer.create(storage, 0, [](Int) {});
+    DataHandle indexLater = layer.create(storage, 0, [](const Int&) {});
     layer.setIndex(indexLater, (1ull << (64 - Implementation::DataLayerStorageHandleIdBits - 1)) - 1);
     CORRADE_COMPARE(layer.index(indexLater), (Containers::Size3D{0, 0, (1ull << 43) - 1}));
     CORRADE_VERIFY(layer.isDirty(indexLater));
@@ -2798,7 +2798,7 @@ void DataLayerTest::clean() {
         ~NonTrivial() {
             ++*destructedCount;
         }
-        void operator()(Int) const {
+        void operator()(const Int&) const {
             CORRADE_FAIL("This should never be called.");
         }
 
@@ -2808,7 +2808,7 @@ void DataLayerTest::clean() {
     DataLayer layer{layerHandle(0, 1)};
     DummyStorage storage{layer};
 
-    DataHandle trivial = layer.create(storage, [](Int) {}, nodeHandle(0, 7));
+    DataHandle trivial = layer.create(storage, [](const Int&) {}, nodeHandle(0, 7));
     CORRADE_COMPARE(layer.usedCount(), 1);
     CORRADE_COMPARE(layer.usedAllocatedCount(), 0);
     CORRADE_VERIFY(!layer.isAllocated(trivial));
@@ -2820,7 +2820,7 @@ void DataLayerTest::clean() {
     CORRADE_COMPARE(layer.usedAllocatedCount(), 1);
     CORRADE_VERIFY(layer.isAllocated(nonTrivial));
 
-    DataHandle another = layer.create(storage, [](Int) {}, nodeHandle(2, 23));
+    DataHandle another = layer.create(storage, [](const Int&) {}, nodeHandle(2, 23));
     CORRADE_COMPARE(layer.usedCount(), 3);
     CORRADE_COMPARE(layer.usedAllocatedCount(), 1);
     CORRADE_VERIFY(!layer.isAllocated(another));
@@ -2891,17 +2891,17 @@ void DataLayerTest::update() {
 
     Int firstCalled = 0;
     Int firstExpected = 56;
-    DataHandle first = layer.create(storage2D, {1, 0}, [&firstCalled, &firstExpected](Short value) {
+    DataHandle first = layer.create(storage2D, {1, 0}, [&firstCalled, &firstExpected](const Short& value) {
         CORRADE_COMPARE(value, firstExpected);
         ++firstCalled;
     });
 
-    DataHandle removed = layer.create(storage, &Storage::leet, [](Float) {
+    DataHandle removed = layer.create(storage, &Storage::leet, [](const Float&) {
         CORRADE_FAIL("This function shouldn't be called.");
     });
 
     Int secondCalled = 0;
-    DataHandle second = layer.create(storage, &Storage::leet, [&secondCalled](Float value) {
+    DataHandle second = layer.create(storage, &Storage::leet, [&secondCalled](const Float& value) {
         CORRADE_COMPARE(value, 1.337f);
         ++secondCalled;
     });
@@ -2956,7 +2956,7 @@ void DataLayerTest::update() {
 
     /* Adding new data makes the layer dirty */
     Int thirdCalled = 0;
-    DataHandle third = layer.create(storage2D, {0, 2}, [&thirdCalled](Short value) {
+    DataHandle third = layer.create(storage2D, {0, 2}, [&thirdCalled](const Short& value) {
         CORRADE_COMPARE(value, 39);
         ++thirdCalled;
     });
@@ -3128,8 +3128,8 @@ void DataLayerTest::referenceCounted() {
        first update() */
     NonTrivialStorage storageReferenceCountedUnused{layer, storageReferenceCountedUnusedDestructed, StorageFlag::ReferenceCounted};
     NonTrivialStorage storageReferenceCountedRemoved{layer, storageReferenceCountedRemovedDestructed, StorageFlag::ReferenceCounted};
-    DataHandle data1 = layer.create(storageReferenceCounted, [](Int) {}, node1);
-    DataHandle data2 = layer.create(storageReferenceCounted, [](Int) {}, node2);
+    DataHandle data1 = layer.create(storageReferenceCounted, [](const Int&) {}, node1);
+    DataHandle data2 = layer.create(storageReferenceCounted, [](const Int&) {}, node2);
     layer.removeStorage(storageReferenceCountedRemoved);
     CORRADE_COMPARE(storageUnusedDestructed, 0);
     CORRADE_COMPARE(storageReferenceCountedDestructed, 0);

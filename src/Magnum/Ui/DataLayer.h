@@ -681,11 +681,11 @@ class MAGNUM_UI_EXPORT DataLayer: public AbstractLayer {
          * binding was created, and then every time @p storage is marked as
          * dirty.
          *
-         * Use the @ref create() "create(const Storage&, T(Storage::*)() const, Containers::Function<void(T)>&&, NodeHandle)"
+         * Use the @ref create() "create(const Storage&, T(Storage::*)() const, Containers::Function<void(const T&)>&&, NodeHandle)"
          * overload to query a concrete member function and the
-         * @ref create(const Storage&, std::size_t, Containers::Function<void(T)>&&, NodeHandle),
-         * @ref create(const Storage&, const Containers::Size2D&, Containers::Function<void(T)>&&, NodeHandle)
-         * and @ref create(const Storage&, const Containers::Size3D&, Containers::Function<void(T)>&&, NodeHandle)
+         * @ref create(const Storage&, std::size_t, Containers::Function<void(const T&)>&&, NodeHandle),
+         * @ref create(const Storage&, const Containers::Size2D&, Containers::Function<void(const T&)>&&, NodeHandle)
+         * and @ref create(const Storage&, const Containers::Size3D&, Containers::Function<void(const T&)>&&, NodeHandle)
          * overloads to pick value at a concrete index from 1D, 2D and 3D
          * storage implementations.
          *
@@ -697,14 +697,14 @@ class MAGNUM_UI_EXPORT DataLayer: public AbstractLayer {
          */
         template<class Storage> DataHandle create(const Storage& storage,
             #ifdef DOXYGEN_GENERATING_OUTPUT
-            Containers::Function<void(T)>&& /* For a less confusing signature */
+            Containers::Function<void(const T&)>&& /* For a less confusing signature */
             #elif defined(CORRADE_TARGET_GCC) && !defined(CORRADE_TARGET_CLANG) && __GNUC__ < 5
             /* GCC 4.8 fails to match T without the std::common_type. GCC 5+
                works. Similar trick is used in the create() overloads with an
                explicit member, where it's needed for all compilers. */
-            typename std::common_type<Containers::Function<void(decltype(*std::declval<Storage>()))>>::type&&
+            typename std::common_type<Containers::Function<void(const decltype(*std::declval<Storage>())&)>>::type&&
             #else
-            Containers::Function<void(decltype(*std::declval<Storage>()))>&&
+            Containers::Function<void(const decltype(*std::declval<Storage>())&)>&&
             #endif
         update, NodeHandle node =
             #ifdef DOXYGEN_GENERATING_OUTPUT
@@ -735,9 +735,9 @@ class MAGNUM_UI_EXPORT DataLayer: public AbstractLayer {
          * binding was created, and then every time @p storage is marked as
          * dirty.
          *
-         * Use the @ref create() "create(const Storage&, T(Storage::*)(std::size_t) const, std::size_t, Containers::Function<void(T)>&&, NodeHandle)",
-         * @ref create() "create(const Storage&&, T(Storage::*)(const Containers::Size2D&) const, const Containers::Size2D&, Containers::Function<void(T)>&&, NodeHandle)"
-         * and @ref create() "create(const Storage&&, T(Storage::*)(const Containers::Size3D&) const, const Containers::Size3D&, Containers::Function<void(T)>&&, NodeHandle)"
+         * Use the @ref create() "create(const Storage&, T(Storage::*)(std::size_t) const, std::size_t, Containers::Function<void(const T&)>&&, NodeHandle)",
+         * @ref create() "create(const Storage&&, T(Storage::*)(const Containers::Size2D&) const, const Containers::Size2D&, Containers::Function<void(const T&)>&&, NodeHandle)"
+         * and @ref create() "create(const Storage&&, T(Storage::*)(const Containers::Size3D&) const, const Containers::Size3D&, Containers::Function<void(const T&)>&&, NodeHandle)"
          * overloads to pick value at a concrete index from 1D, 2D and 3D storage
          * implementations.
          *
@@ -749,9 +749,9 @@ class MAGNUM_UI_EXPORT DataLayer: public AbstractLayer {
          */
         template<class Storage, class T> DataHandle create(const Storage& storage, T(Storage::*member)() const,
             #ifdef DOXYGEN_GENERATING_OUTPUT
-            Containers::Function<void(T)>&&
+            Containers::Function<void(const T&)>&&
             #else /* Without this, deduction of T won't work */
-            typename std::common_type<Containers::Function<void(T)>>::type&&
+            typename std::common_type<Containers::Function<void(const T&)>>::type&&
             #endif
         update, NodeHandle node =
             #ifdef DOXYGEN_GENERATING_OUTPUT
@@ -779,7 +779,7 @@ class MAGNUM_UI_EXPORT DataLayer: public AbstractLayer {
          * binding was created, and then every time @p storage is marked as
          * dirty.
          *
-         * Use the @ref create() "create(const Storage&, T(Storage::*)(std::size_t) const, std::size_t, Containers::Function<void(T)>&&, NodeHandle)"
+         * Use the @ref create() "create(const Storage&, T(Storage::*)(std::size_t) const, std::size_t, Containers::Function<void(const T&)>&&, NodeHandle)"
          * overload to query a concrete member function.
          *
          * Delegates to @ref AbstractLayer::create(), see its documentation for
@@ -790,12 +790,12 @@ class MAGNUM_UI_EXPORT DataLayer: public AbstractLayer {
          */
         template<class Storage> DataHandle create(const Storage& storage, std::size_t index,
             #ifdef DOXYGEN_GENERATING_OUTPUT
-            Containers::Function<void(T)>&& /* For a less confusing signature */
+            Containers::Function<void(const T&)>&& /* For a less confusing signature */
             #elif defined(CORRADE_TARGET_GCC) && !defined(CORRADE_TARGET_CLANG) && __GNUC__ < 5
             /* GCC 4.8 fails to match T w/o the std::common_type, see above */
-            typename std::common_type<Containers::Function<void(decltype(std::declval<Storage>()[std::size_t{}]))>>::type&&
+            typename std::common_type<Containers::Function<void(const decltype(std::declval<Storage>()[std::size_t{}])&)>>::type&&
             #else
-            Containers::Function<void(decltype(std::declval<Storage>()[std::size_t{}]))>&&
+            Containers::Function<void(const decltype(std::declval<Storage>()[std::size_t{}])&)>&&
             #endif
         update, NodeHandle node =
             #ifdef DOXYGEN_GENERATING_OUTPUT
@@ -833,9 +833,9 @@ class MAGNUM_UI_EXPORT DataLayer: public AbstractLayer {
          */
         template<class Storage, class T> DataHandle create(const Storage& storage, T(Storage::*member)(std::size_t) const, std::size_t index,
             #ifdef DOXYGEN_GENERATING_OUTPUT
-            Containers::Function<void(T)>&&
+            Containers::Function<void(const T&)>&&
             #else /* Without this, deduction of T won't work */
-            typename std::common_type<Containers::Function<void(T)>>::type&&
+            typename std::common_type<Containers::Function<void(const T&)>>::type&&
             #endif
         update, NodeHandle node =
             #ifdef DOXYGEN_GENERATING_OUTPUT
@@ -863,7 +863,7 @@ class MAGNUM_UI_EXPORT DataLayer: public AbstractLayer {
          * binding was created, and then every time @p storage is marked as
          * dirty.
          *
-         * Use the @ref create() "create(const Storage&, T(Storage::*)(std::size_t) const, std::size_t, Containers::Function<void(T)>&&, NodeHandle)"
+         * Use the @ref create() "create(const Storage&, T(Storage::*)(std::size_t) const, std::size_t, Containers::Function<void(const T&)>&&, NodeHandle)"
          * overload to query a concrete member function.
          *
          * Delegates to @ref AbstractLayer::create(), see its documentation for
@@ -874,12 +874,12 @@ class MAGNUM_UI_EXPORT DataLayer: public AbstractLayer {
          */
         template<class Storage> DataHandle create(const Storage& storage, const Containers::Size2D& index,
             #ifdef DOXYGEN_GENERATING_OUTPUT
-            Containers::Function<void(T)>&& /* For a less confusing signature */
+            Containers::Function<void(const T&)>&& /* For a less confusing signature */
             #elif defined(CORRADE_TARGET_GCC) && !defined(CORRADE_TARGET_CLANG) && __GNUC__ < 5
             /* GCC 4.8 fails to match T w/o the std::common_type, see above */
-            typename std::common_type<Containers::Function<void(decltype(std::declval<Storage>()[Containers::Size2D{}]))>>::type&&
+            typename std::common_type<Containers::Function<void(const decltype(std::declval<Storage>()[Containers::Size2D{}])&)>>::type&&
             #else
-            Containers::Function<void(decltype(std::declval<Storage>()[Containers::Size2D{}]))>&&
+            Containers::Function<void(const decltype(std::declval<Storage>()[Containers::Size2D{}])&)>&&
             #endif
         update, NodeHandle node =
             #ifdef DOXYGEN_GENERATING_OUTPUT
@@ -917,9 +917,9 @@ class MAGNUM_UI_EXPORT DataLayer: public AbstractLayer {
          */
         template<class Storage, class T> DataHandle create(const Storage& storage, T(Storage::*member)(const Containers::Size2D&) const, const Containers::Size2D& index,
             #ifdef DOXYGEN_GENERATING_OUTPUT
-            Containers::Function<void(T)>&&
+            Containers::Function<void(const T&)>&&
             #else /* Without this, deduction of T won't work */
-            typename std::common_type<Containers::Function<void(T)>>::type&&
+            typename std::common_type<Containers::Function<void(const T&)>>::type&&
             #endif
         update, NodeHandle node =
             #ifdef DOXYGEN_GENERATING_OUTPUT
@@ -946,7 +946,7 @@ class MAGNUM_UI_EXPORT DataLayer: public AbstractLayer {
          * binding was created, and then every time @p storage is marked as
          * dirty.
          *
-         * Use the @ref create() "create(const Storage&, T(Storage::*)(std::size_t) const, std::size_t, Containers::Function<void(T)>&&, NodeHandle)"
+         * Use the @ref create() "create(const Storage&, T(Storage::*)(std::size_t) const, std::size_t, Containers::Function<void(const T&)>&&, NodeHandle)"
          * overload to query a concrete member function.
          *
          * Delegates to @ref AbstractLayer::create(), see its documentation for
@@ -957,12 +957,12 @@ class MAGNUM_UI_EXPORT DataLayer: public AbstractLayer {
          */
         template<class Storage> DataHandle create(const Storage& storage, const Containers::Size3D& index,
             #ifdef DOXYGEN_GENERATING_OUTPUT
-            Containers::Function<void(T)>&& /* For a less confusing signature */
+            Containers::Function<void(const T&)>&& /* For a less confusing signature */
             #elif defined(CORRADE_TARGET_GCC) && !defined(CORRADE_TARGET_CLANG) && __GNUC__ < 5
             /* GCC 4.8 fails to match T w/o the std::common_type, see above */
-            typename std::common_type<Containers::Function<void(decltype(std::declval<Storage>()[Containers::Size3D{}]))>>::type&&
+            typename std::common_type<Containers::Function<void(const decltype(std::declval<Storage>()[Containers::Size3D{}])&)>>::type&&
             #else
-            Containers::Function<void(decltype(std::declval<Storage>()[Containers::Size3D{}]))>&&
+            Containers::Function<void(const decltype(std::declval<Storage>()[Containers::Size3D{}])&)>&&
             #endif
         update, NodeHandle node =
             #ifdef DOXYGEN_GENERATING_OUTPUT
@@ -999,9 +999,9 @@ class MAGNUM_UI_EXPORT DataLayer: public AbstractLayer {
          */
         template<class Storage, class T> DataHandle create(const Storage& storage, T(Storage::*member)(const Containers::Size3D&) const, const Containers::Size3D& index,
             #ifdef DOXYGEN_GENERATING_OUTPUT
-            Containers::Function<void(T)>&&
+            Containers::Function<void(const T&)>&&
             #else /* Without this, deduction of T won't work */
-            typename std::common_type<Containers::Function<void(T)>>::type&&
+            typename std::common_type<Containers::Function<void(const T&)>>::type&&
             #endif
         update, NodeHandle node =
             #ifdef DOXYGEN_GENERATING_OUTPUT
@@ -1531,7 +1531,7 @@ template<class Storage> Storage DataLayer::storage(const DataLayerStorageHandle 
 }
 
 #ifndef DOXYGEN_GENERATING_OUTPUT
-template<class Storage, class T> DataHandle DataLayer::create(const Storage& storage, T(Storage::*const member)() const, typename std::common_type<Containers::Function<void(T)>>::type&& update, const NodeHandle node) {
+template<class Storage, class T> DataHandle DataLayer::create(const Storage& storage, T(Storage::*const member)() const, typename std::common_type<Containers::Function<void(const T&)>>::type&& update, const NodeHandle node) {
     static_assert(
         #ifndef CORRADE_NO_STD_IS_TRIVIALLY_TRAITS
         std::is_trivially_copyable<Storage>::value &&
@@ -1545,12 +1545,12 @@ template<class Storage, class T> DataHandle DataLayer::create(const Storage& sto
     return createInternal(*storage._layer, storage._handle,
         reinterpret_cast<const Implementation::DataLayerTypeErasedFunctionPointer&>(member),
         [](const AbstractStorage& storage, const Implementation::DataLayerTypeErasedFunctionPointer& member, const Containers::Size3D&, Containers::FunctionData& update) {
-            reinterpret_cast<Containers::Function<void(T)>&>(update)((static_cast<const Storage&>(storage).*reinterpret_cast<T(Storage::*const&)() const>(member))());
+            reinterpret_cast<Containers::Function<void(const T&)>&>(update)((static_cast<const Storage&>(storage).*reinterpret_cast<T(Storage::*const&)() const>(member))());
         },
         Utility::move(update), node);
 }
 
-template<class Storage, class T> DataHandle DataLayer::create(const Storage& storage, T(Storage::*const member)(std::size_t) const, const std::size_t index, typename std::common_type<Containers::Function<void(T)>>::type&& update, const NodeHandle node) {
+template<class Storage, class T> DataHandle DataLayer::create(const Storage& storage, T(Storage::*const member)(std::size_t) const, const std::size_t index, typename std::common_type<Containers::Function<void(const T&)>>::type&& update, const NodeHandle node) {
     static_assert(
         #ifndef CORRADE_NO_STD_IS_TRIVIALLY_TRAITS
         std::is_trivially_copyable<Storage>::value &&
@@ -1564,12 +1564,12 @@ template<class Storage, class T> DataHandle DataLayer::create(const Storage& sto
     return createInternal(*storage._layer, storage._handle,
         reinterpret_cast<const Implementation::DataLayerTypeErasedFunctionPointer&>(member),
         [](const AbstractStorage& storage, const Implementation::DataLayerTypeErasedFunctionPointer& member, const Containers::Size3D& index, Containers::FunctionData& update) {
-            reinterpret_cast<Containers::Function<void(T)>&>(update)(((static_cast<const Storage&>(storage).*reinterpret_cast<T(Storage::*const&)(std::size_t) const>(member))(index[2])));
+            reinterpret_cast<Containers::Function<void(const T&)>&>(update)(((static_cast<const Storage&>(storage).*reinterpret_cast<T(Storage::*const&)(std::size_t) const>(member))(index[2])));
         },
         index, Utility::move(update), node);
 }
 
-template<class Storage, class T> DataHandle DataLayer::create(const Storage& storage, T(Storage::*const member)(const Containers::Size2D&) const, const Containers::Size2D& index, typename std::common_type<Containers::Function<void(T)>>::type&& update, const NodeHandle node) {
+template<class Storage, class T> DataHandle DataLayer::create(const Storage& storage, T(Storage::*const member)(const Containers::Size2D&) const, const Containers::Size2D& index, typename std::common_type<Containers::Function<void(const T&)>>::type&& update, const NodeHandle node) {
     static_assert(
         #ifndef CORRADE_NO_STD_IS_TRIVIALLY_TRAITS
         std::is_trivially_copyable<Storage>::value &&
@@ -1583,12 +1583,12 @@ template<class Storage, class T> DataHandle DataLayer::create(const Storage& sto
     return createInternal(*storage._layer, storage._handle,
         reinterpret_cast<const Implementation::DataLayerTypeErasedFunctionPointer&>(member),
         [](const AbstractStorage& storage, const Implementation::DataLayerTypeErasedFunctionPointer& member, const Containers::Size3D& index, Containers::FunctionData& update) {
-            reinterpret_cast<Containers::Function<void(T)>&>(update)((static_cast<const Storage&>(storage).*reinterpret_cast<T(Storage::*const&)(const Containers::Size2D&) const>(member))({index[1], index[2]}));
+            reinterpret_cast<Containers::Function<void(const T&)>&>(update)((static_cast<const Storage&>(storage).*reinterpret_cast<T(Storage::*const&)(const Containers::Size2D&) const>(member))({index[1], index[2]}));
         },
         index, Utility::move(update), node);
 }
 
-template<class Storage, class T> DataHandle DataLayer::create(const Storage& storage, T(Storage::*const member)(const Containers::Size3D&) const, const Containers::Size3D& index, typename std::common_type<Containers::Function<void(T)>>::type&& update, const NodeHandle node) {
+template<class Storage, class T> DataHandle DataLayer::create(const Storage& storage, T(Storage::*const member)(const Containers::Size3D&) const, const Containers::Size3D& index, typename std::common_type<Containers::Function<void(const T&)>>::type&& update, const NodeHandle node) {
     static_assert(
         #ifndef CORRADE_NO_STD_IS_TRIVIALLY_TRAITS
         std::is_trivially_copyable<Storage>::value &&
@@ -1602,7 +1602,7 @@ template<class Storage, class T> DataHandle DataLayer::create(const Storage& sto
     return createInternal(*storage._layer, storage._handle,
         reinterpret_cast<const Implementation::DataLayerTypeErasedFunctionPointer&>(member),
         [](const AbstractStorage& storage, const Implementation::DataLayerTypeErasedFunctionPointer& member, const Containers::Size3D& index, Containers::FunctionData& update) {
-            reinterpret_cast<Containers::Function<void(T)>&>(update)((static_cast<const Storage&>(storage).*reinterpret_cast<T(Storage::*const&)(const Containers::Size3D&) const>(member))(index));
+            reinterpret_cast<Containers::Function<void(const T&)>&>(update)((static_cast<const Storage&>(storage).*reinterpret_cast<T(Storage::*const&)(const Containers::Size3D&) const>(member))(index));
         },
         index, Utility::move(update), node);
 }
