@@ -672,9 +672,10 @@ class MAGNUM_UI_EXPORT DataLayer: public AbstractLayer {
          * @param node          Node to attach to
          * @return New data handle
          *
-         * Expects that @p storage is a valid storage from this layer and
-         * @p update is not @cpp nullptr @ce. The @p update gets called with
-         * the return value of @cpp operator*() const @ce on @p storage during
+         * Expects that @p storage is a valid storage from this layer, it's
+         * single-item, i.e. with a size of @cpp {1, 1, 1} @ce, and @p update
+         * is not @cpp nullptr @ce. The @p update gets called with the return
+         * value of @cpp operator*() const @ce on @p storage during
          * @ref AbstractUserInterface::update() or
          * @relativeref{AbstractUserInterface,draw()} right after the data
          * binding was created, and then every time @p storage is marked as
@@ -725,9 +726,10 @@ class MAGNUM_UI_EXPORT DataLayer: public AbstractLayer {
          * @param node          Node to attach to
          * @return New data handle
          *
-         * Expects that @p storage is a valid storage from this layer, and
-         * @p member and @p update are not @cpp nullptr @ce. The @p update gets
-         * called with the return value of @p member on @p storage during
+         * Expects that @p storage is a valid storage from this layer, it's
+         * single-item, i.e. with a size of @cpp {1, 1, 1} @ce, and @p member
+         * and @p update are not @cpp nullptr @ce. The @p update gets called
+         * with the return value of @p member on @p storage during
          * @ref AbstractUserInterface::update() or
          * @relativeref{AbstractUserInterface,draw()} right after the data
          * binding was created, and then every time @p storage is marked as
@@ -767,12 +769,12 @@ class MAGNUM_UI_EXPORT DataLayer: public AbstractLayer {
          * @param node          Node to attach to
          * @return New data handle
          *
-         * Expects that @p storage is a valid storage from this layer, @p index
-         * is not larger than @p storage size in the *last* dimension, and
-         * @p update is not @cpp nullptr @ce. The @p update gets called with
-         * the return value of @cpp operator[](std::size_t) const @ce with
-         * given @p index on @p storage during
-         * @ref AbstractUserInterface::update() or
+         * Expects that @p storage is a valid storage from this layer, it's 1D,
+         * i.e. with a size of @cpp {1, 1, size} @ce, @p index is not larger
+         * than `size`, and @p update is not @cpp nullptr @ce. The @p update
+         * gets called with the return value of
+         * @cpp operator[](std::size_t) const @ce with given @p index on
+         * @p storage during @ref AbstractUserInterface::update() or
          * @relativeref{AbstractUserInterface,draw()} right after the data
          * binding was created, and then every time @p storage is marked as
          * dirty.
@@ -814,11 +816,12 @@ class MAGNUM_UI_EXPORT DataLayer: public AbstractLayer {
          * @param node          Node to attach to
          * @return New data handle
          *
-         * Expects that @p storage is a valid storage from this layer, @p index
-         * is not larger than @p storage size in the *last* dimension, and
-         * @p member and @p update are not @cpp nullptr @ce. The @p update gets
-         * called with the return value of @p member with given @p index on
-         * @p storage during @ref AbstractUserInterface::update() or
+         * Expects that @p storage is a valid storage from this layer, it's 1D,
+         * i.e. with a size of @cpp {1, 1, size} @ce, @p index is not larger
+         * than `size`, and @p member and @p update are not @cpp nullptr @ce.
+         * The @p update gets called with the return value of @p member with
+         * given @p index on @p storage during
+         * @ref AbstractUserInterface::update() or
          * @relativeref{AbstractUserInterface,draw()} whenever either the data
          * itself or the @p storage is marked as dirty. The data is marked as
          * dirty initially.
@@ -850,13 +853,13 @@ class MAGNUM_UI_EXPORT DataLayer: public AbstractLayer {
          * @param node          Node to attach to
          * @return New data handle
          *
-         * Expects that @p storage is a valid storage from this layer, @p index
-         * is not larger than @p storage size in the *last two* dimensions, and
-         * @p update is not @cpp nullptr @ce. The @p update gets called with
-         * the return value of @cpp operator[](const Containers::Size2D&) const @ce
-         * with given @p index on @p storage during
-         * @ref AbstractUserInterface::update() or
-         * @relativeref{AbstractUserInterface,draw()} right after the data
+         * Expects that @p storage is a valid storage from this layer, it's 2D,
+         * i.e. with a size of @cpp {1, size[0], size[1]} @ce, @p index is not
+         * larger than `size`, and @p update is not @cpp nullptr @ce. The
+         * @p update gets called with the return value of
+         * @cpp operator[](const Containers::Size2D&) const @ce with given
+         * @p index on @p storage during @ref AbstractUserInterface::update()
+         * or @relativeref{AbstractUserInterface,draw()} right after the data
          * binding was created, and then every time @p storage is marked as
          * dirty.
          *
@@ -897,11 +900,12 @@ class MAGNUM_UI_EXPORT DataLayer: public AbstractLayer {
          * @param node          Node to attach to
          * @return New data handle
          *
-         * Expects that @p storage is a valid storage from this layer, @p index
-         * is not larger than @p storage size in the *last two* dimensions, and
-         * @p member and @p update are not @cpp nullptr @ce. The @p update gets
-         * called with the return value of @p member with given @p index on
-         * @p storage during @ref AbstractUserInterface::update() or
+         * Expects that @p storage is a valid storage from this layer, it's 2D,
+         * i.e. with a size of @cpp {1, size[0], size[1]} @ce, @p index is not
+         * larger than `size`, and @p member and @p update are not
+         * @cpp nullptr @ce. The @p update gets called with the return value of
+         * @p member with given @p index on @p storage during
+         * @ref AbstractUserInterface::update() or
          * @relativeref{AbstractUserInterface,draw()} right after the data
          * binding was created, and then every time @p storage is marked as
          * dirty.
