@@ -117,14 +117,6 @@ class MAGNUM_UI_EXPORT AbstractWidget {
         }
 
         /**
-         * @brief Construct with no underlying node
-         *
-         * The instance is equivalent to a moved-out state, i.e. not usable
-         * for anything. Move another instance over it to make it useful.
-         */
-        explicit AbstractWidget(NoCreateT): _ui{}, _node{}, _owned{} {}
-
-        /**
          * @brief Construct from a positioning anchor
          *
          * The @ref ui() and @ref node() is set to @ref AbstractAnchor::ui()
@@ -149,6 +141,14 @@ class MAGNUM_UI_EXPORT AbstractWidget {
         explicit AbstractWidget(NonOwnedT, const AbstractAnchor& anchor): AbstractWidget{anchor} {
             _owned = false;
         }
+
+        /**
+         * @brief Construct with no underlying node
+         *
+         * The instance is equivalent to a moved-out state, i.e. not usable
+         * for anything. Move another instance over it to make it useful.
+         */
+        explicit AbstractWidget(NoCreateT): _ui{}, _node{}, _owned{} {}
 
         /** @brief Copying is not allowed */
         AbstractWidget(const AbstractWidget&) = delete;
