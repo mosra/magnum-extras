@@ -1128,6 +1128,56 @@ class MAGNUM_UI_EXPORT AbstractStorage {
         explicit AbstractStorage(DataLayer& layer, const Containers::Size3D& size, StorageFlags flags = {}): _layer{&layer}, _handle{layer.createStorage(size, flags)} {}
 
         /**
+         * @brief Construct a single-item storage using the default @ref DataLayer on given user interface
+         *
+         * Like @ref AbstractStorage(DataLayer&, StorageFlags) but using the
+         * default @ref DataLayer available through
+         * @ref UserInterface::dataLayer(). Expects that the @p ui contains a
+         * @ref DataLayer instance.
+         */
+        template<class UserInterface> explicit AbstractStorage(UserInterface& ui, StorageFlags flags = {}): AbstractStorage{ui, {1, 1, 1}, flags} {}
+
+        /**
+         * @brief Construct a 1D storage using the default @ref DataLayer on given user interface
+         *
+         * Like @ref AbstractStorage(DataLayer&, std::size_t, StorageFlags) but
+         * using the default @ref DataLayer available through
+         * @ref UserInterface::dataLayer(). Expects that the @p ui contains a
+         * @ref DataLayer instance.
+         */
+        template<class UserInterface> explicit AbstractStorage(UserInterface& ui, std::size_t size, StorageFlags flags = {}): AbstractStorage{ui, {1, 1, size}, flags} {}
+
+        /**
+         * @brief Construct a 2D storage using the default @ref DataLayer on given user interface
+         *
+         * Like @ref AbstractStorage(DataLayer&, const Containers::Size2D&, StorageFlags)
+         * but using the default @ref DataLayer available through
+         * @ref UserInterface::dataLayer(). Expects that the @p ui contains a
+         * @ref DataLayer instance.
+         */
+        template<class UserInterface> explicit AbstractStorage(UserInterface& ui, const Containers::Size2D& size, StorageFlags flags = {}): AbstractStorage{ui, {1, size[0], size[1]}, flags} {}
+
+        /**
+         * @brief Construct a 3D storage using the default @ref DataLayer on given user interface
+         *
+         * Like @ref AbstractStorage(DataLayer&, const Containers::Size3D&, StorageFlags)
+         * but using the default @ref DataLayer available through
+         * @ref UserInterface::dataLayer(). Expects that the @p ui contains a
+         * @ref DataLayer instance.
+         */
+        template<class UserInterface> explicit AbstractStorage(UserInterface& ui, const Containers::Size3D& size, StorageFlags flags = {})
+            /* GCC 15 (and likely others) in Release complain that _layer and
+               _handle "may be used uninitialized" here. Explicitly zero-init
+               them before filling them below to avoid this stupid warning. */
+            : _layer{}, _handle{}
+        {
+            CORRADE_ASSERT(ui.hasDataLayer(),
+                "Ui::AbstractStorage: DataLayer not present in the UI", );
+            _layer = &ui.dataLayer();
+            _handle = _layer->createStorage(size, flags);
+        }
+
+        /**
          * @brief Create a storage in-place
          *
          * Contrary to what Doxygen shows, returns reference to a

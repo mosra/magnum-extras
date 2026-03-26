@@ -40,6 +40,7 @@
 #include "Magnum/Ui/AbstractUserInterface.h" /* for referenceCounted() */
 #include "Magnum/Ui/DataLayer.h"
 #include "Magnum/Ui/Handle.h" /* for LayerHandle extraction tests */
+#include "Magnum/Ui/UserInterface.h" /* for createStorageImplicitLayer() */
 
 namespace Magnum { namespace Ui { namespace Test { namespace {
 
@@ -76,6 +77,9 @@ struct DataLayerTest: TestSuite::Tester {
     void createStorageTooLarge();
     #endif
     void removeStorageInvalid();
+
+    void createStorageImplicitLayer();
+    void createStorageImplicitLayerInvalid();
 
     void setStorageDirty();
 
@@ -205,6 +209,9 @@ DataLayerTest::DataLayerTest() {
               &DataLayerTest::createStorageTooLarge,
               #endif
               &DataLayerTest::removeStorageInvalid,
+
+              &DataLayerTest::createStorageImplicitLayer,
+              &DataLayerTest::createStorageImplicitLayerInvalid,
 
               &DataLayerTest::setStorageDirty,
 
@@ -1310,6 +1317,87 @@ void DataLayerTest::removeStorageInvalid() {
         TestSuite::Compare::String);
 }
 
+void DataLayerTest::createStorageImplicitLayer() {
+    /* Verifies just that the constructors behave equivalently to the
+       constructors taking the layer directly. Everything else is verified in
+       createRemoveStorage() already. */
+
+    struct Interface: UserInterface {
+        explicit Interface(NoCreateT): UserInterface{NoCreate} {}
+    } ui{NoCreate};
+
+    /* Create some extra layers to have a non-trivial handle */
+    ui.createLayer();
+    ui.createLayer();
+    ui.removeLayer(ui.createLayer());
+    ui.removeLayer(ui.createLayer());
+    ui.removeLayer(ui.createLayer());
+    ui.setDataLayerInstance(Containers::pointer<DataLayer>(ui.createLayer()));
+
+    struct DummyStorage: AbstractStorage {
+        explicit DummyStorage(Interface& ui, StorageFlags flags): AbstractStorage{ui, flags} {}
+        explicit DummyStorage(Interface& ui, std::size_t size, StorageFlags flags): AbstractStorage{ui, size, flags} {}
+        explicit DummyStorage(Interface& ui, const Containers::Size2D& size, StorageFlags flags): AbstractStorage{ui, size, flags} {}
+        explicit DummyStorage(Interface& ui, const Containers::Size3D& size, StorageFlags flags): AbstractStorage{ui, size, flags} {}
+    };
+
+    /* Zero dimensions */
+    DummyStorage first{ui, StorageFlags{0x18}};
+    CORRADE_COMPARE(&first.layer(), &ui.dataLayer());
+    CORRADE_COMPARE(first.handle(), Ui::storageHandle(ui.dataLayer().handle(), 0, 1));
+    CORRADE_COMPARE(first.flags(), StorageFlags{0x18});
+    CORRADE_COMPARE(first.size(), (Containers::Size3D{1, 1, 1}));
+
+    /* One dimension */
+    DummyStorage second{ui, 15, StorageFlags{0x20}};
+    CORRADE_COMPARE(&second.layer(), &ui.dataLayer());
+    CORRADE_COMPARE(second.handle(), Ui::storageHandle(ui.dataLayer().handle(), 1, 1));
+    CORRADE_COMPARE(second.flags(), StorageFlags{0x20});
+    CORRADE_COMPARE(second.size(), (Containers::Size3D{1, 1, 15}));
+
+    /* Two dimensions */
+    DummyStorage third{ui, {3, 2}, StorageFlags{0x08}};
+    CORRADE_COMPARE(&third.layer(), &ui.dataLayer());
+    CORRADE_COMPARE(third.handle(), Ui::storageHandle(ui.dataLayer().handle(), 2, 1));
+    CORRADE_COMPARE(third.flags(), StorageFlags{0x08});
+    CORRADE_COMPARE(third.size(), (Containers::Size3D{1, 3, 2}));
+
+    /* Three dimensions */
+    DummyStorage fourth{ui, {15, 32, 11}, StorageFlags{0x10}};
+    CORRADE_COMPARE(&fourth.layer(), &ui.dataLayer());
+    CORRADE_COMPARE(fourth.handle(), Ui::storageHandle(ui.dataLayer().handle(), 3, 1));
+    CORRADE_COMPARE(fourth.flags(), StorageFlags{0x10});
+    CORRADE_COMPARE(fourth.size(), (Containers::Size3D{15, 32, 11}));
+}
+
+void DataLayerTest::createStorageImplicitLayerInvalid() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct Interface: UserInterface {
+        explicit Interface(NoCreateT): UserInterface{NoCreate} {}
+    } ui{NoCreate};
+
+    struct DummyStorage: AbstractStorage {
+        explicit DummyStorage(Interface& ui): AbstractStorage{ui} {}
+        explicit DummyStorage(Interface& ui, std::size_t size): AbstractStorage{ui, size} {}
+        explicit DummyStorage(Interface& ui, const Containers::Size2D& size): AbstractStorage{ui, size} {}
+        explicit DummyStorage(Interface& ui, const Containers::Size3D& size): AbstractStorage{ui, size} {}
+    };
+
+    Containers::String out;
+    Error redirectError{&out};
+    DummyStorage{ui};
+    DummyStorage{ui, 1};
+    DummyStorage{ui, {1, 1}};
+    DummyStorage{ui, {1, 1, 1}};
+    CORRADE_COMPARE_AS(out,
+        "Ui::AbstractStorage: DataLayer not present in the UI\n"
+        "Ui::AbstractStorage: DataLayer not present in the UI\n"
+        "Ui::AbstractStorage: DataLayer not present in the UI\n"
+        "Ui::AbstractStorage: DataLayer not present in the UI\n",
+        TestSuite::Compare::String);
+}
+
 void DataLayerTest::setStorageDirty() {
     struct DummyStorage: AbstractStorage {
         typedef Int Type;
@@ -1737,7 +1825,7 @@ void DataLayerTest::queryConstructInvalid() {
     struct StorageNotTriviallyCopyable: AbstractStorage {
         explicit StorageNotTriviallyCopyable(DataLayer& layer): AbstractStorage{layer} {}
 
-        StorageNotTriviallyCopyable(const StorageNotTriviallyCopyable& other): AbstractStorage{other} {
+        StorageNotTriviallyCopyable(const StorageNotTriviallyCopyable& other): AbstractStorage{static_cast<const AbstractStorage&>(other)} {
             /* This is here to make it non-trivially copyable */
         }
     } storageNotTriviallyCopyable{layer};
